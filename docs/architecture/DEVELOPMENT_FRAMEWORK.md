@@ -2,7 +2,7 @@
 
 **ID:** DF-001
 **Версия:** 2 (после ревью Critic и Advocate, 2026-11-02)
-**Статус:** AWAITING_APPROVAL
+**Статус:** APPROVED (владелец, 2026-11-02)
 **Автор:** Orchestrator
 **Основания:** `development/phase-a/REQUIREMENTS_ANALYSIS.md`, `docs/research/PHASE_B_SUMMARY.md`, RR-004 (механизмы Claude Code)
 
