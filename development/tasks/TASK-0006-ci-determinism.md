@@ -1,7 +1,7 @@
 ---
 id: TASK-0006
 title: "CI: сборка, тесты и проверка детерминизма L1/L2"
-status: APPROVED 
+status: REVIEW 
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: orchestrator

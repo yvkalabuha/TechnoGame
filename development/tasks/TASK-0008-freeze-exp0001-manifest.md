@@ -1,7 +1,7 @@
 ---
 id: TASK-0008
 title: "Заморозка манифеста EXP-0001 и переключение Lab на интерфейс Core"
-status: IN_PROGRESS
+status: DONE
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: simulation-engineer
@@ -35,3 +35,5 @@ created: 2026-11-02
 
 ## Результат
 Этап 1 (simulation-engineer): п.5 `noise_unexplained_share`=0.3, п.2 `final_leader: raw`; манифест в Lab schema 1 (серии main/A, main/B/nu*, main/C, grid; `seeds` у серии); `manifest_hash` = `93427d5497533d1d1d5f3bd55f89daaa184720c4724f929a421fd6901c45ac15`, sha256 файла `e64b2cc7…2adb`; прототип: по-прежнему `refutes`. Исправлены 8 замечаний ревью Lab (TASK-0005). Тесты анализа 44/44, Lab selftest 15/15.
+Этап 2 (simulation-engineer): Lab→Core, `toy-funnel` зарегистрирован, дубликат интерфейса удалён; манифест перегенерирован (`n_ticks` убран из params, добавлены умолчания `B_c_tau0`/`B_delta_tau`), `manifest_hash` **fb653ab7…3900** — **заморожен** (проверено Orchestrator командой `hash`). Одна точка A/B/C (seed 1) совпадает с прототипом по значениям; golden_hash A и B = state_hash прототипа. selftest 17/17.
+Отклонено Orchestrator: условное чтение `B_*`/`C_*` в Core — косметика, изменило бы замороженный манифест.

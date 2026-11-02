@@ -7,8 +7,7 @@
 - [Факт] `manifest_hash` = SHA-256 канонического JSON (ключи по ordinal, без пробелов, числа как нормализованные decimal: `1`, `1.0`, `1e0` → `1`). Форматирование и порядок ключей на хеш не влияют; дубликаты ключей, комментарии, висящие запятые — ошибка. Число, которое decimal представил бы с округлением (> 28 значащих цифр, |x| < 1e-28, например `1e-40`), — ошибка (TASK-0008).
 - [Факт] Строки: перекодируются стандартным энкодером System.Text.Json (`JavaScriptEncoder.Default`: не-ASCII, `<>&'+` и управляющие символы → `\uXXXX`), поэтому `"é"` и `"é"` дают один хеш. Нормализации Unicode (NFC/NFD) нет: `é` (U+00E9) и `e`+U+0301 — разные строки и разные хеши.
 - [Факт] `golden_hash` = `StateHash(Table, SchemaVersion, final_tick)` из Kernel. `matrix` сам сверяет golden_hash одного (точка, seed) при разных `threads` (бесплатная L2-проверка).
-- [Факт] Пока зарегистрирована только **тестовая** модель `test.random-walk` (`model_is_test: true` в run.json). Научного смысла её результаты не имеют.
-- [Предл.] Интерфейс модели (`ILabModelFactory`/`ILabModel`) сейчас в Lab; по правилу «Core не ссылается на Lab» его нужно перенести в Core (или Kernel), когда появится Core (см. «Открытые вопросы»).
+- [Факт] (TASK-0008 этап 2) Интерфейс модели (`ILabModelFactory`, `ILabModel`, `ParamSet`, `ParamValue`, `ParamException`, `MetricFormat`) — в `Singularity.Core.Simulation`; Lab ссылается на Core и только строит `ParamValue` из JSON (`ParamValues.FromJson`). Зарегистрированы `toy-funnel` (Core, EXP-0001) и **тестовая** `test.random-walk` (`model_is_test: true`, без научного смысла).
 
 ## Запуск
 ```
@@ -35,7 +34,7 @@ hash   --manifest M [--canonical]
 
 Неизвестный ключ верхнего уровня — ошибка. Точки матрицы: серии по порядку в файле; внутри — декартово произведение осей `sweep` (оси по ordinal, последняя меняется быстрее). Параметр серии перекрывает общий; ключ и в `params`, и в `sweep` — ошибка. Порядок прогонов: точка → seed → threads; run id `p{point}-s{seed}-t{threads}`.
 
-Числа передаются модели как текст decimal: `GetFx6Raw` даёт точный raw ×10^6; больше 6 знаков после точки — ошибка, без округления.
+Числа передаются модели как текст decimal: `GetFx6Raw` даёт точный raw ×10^6 (больше 6 знаков после точки — ошибка, без округления); `GetDouble` — ближайший double к тексту, то же значение, что `float()` в Python (для коэффициентов, которые спецификация модели задаёт как double, например `dt` = 1/12 и калибровка B). Ошибка параметра модели (`ParamException`) вне прогона — код 2; внутри `run` — `status: failed` в run.json.
 
 ## Выход
 - `run`: `DIR/run.json`, `DIR/runs.csv` (1 строка), `DIR/<metric>.csv` (колонка `run` + колонки модели).
@@ -43,7 +42,7 @@ hash   --manifest M [--canonical]
 - `core_commit` = `git rev-parse HEAD`; `dirty` = есть изменения в отслеживаемых файлах (неотслеживаемые не учитываются); `dirty_untracked_src` = есть неотслеживаемые файлы в `src/` (SDK компилирует все `*.cs`, так что они меняют бинарник); вне git — `"unknown"`/`null`. `build_commit` — коммит, из которого собран бинарник (SDK дописывает `+<SourceRevisionId>` к `AssemblyInformationalVersion`); если он ≠ `core_commit`, бинарник собран не из текущего HEAD. [Предп.] Незакоммиченные правки на момент сборки `build_commit` не отражает.
 - `data_hash` = SHA-256 по файлам в ordinal-порядке путей: UTF-8 путь, байт 0, SHA-256 содержимого. Нет файлов → SHA-256 пустого входа (`e3b0…b855`).
 - `matrix`: `DIR/runs/<run>/…` (+ `log.txt`), объединённые `DIR/runs.csv` и `DIR/<metric>.csv` в порядке прогонов (не зависит от порядка завершения), `DIR/matrix.json` с `golden` по прогонам, `problems`, `thread_mismatch` и `golden_set_hash` = SHA-256 строк `"<run> <golden_hash>\n"` в порядке прогонов (только если все прогоны ok и нет `thread_mismatch`). Нечитаемый `run.json` ребёнка — статус прогона `bad-run-json`, `matrix.json` всё равно пишется. `runs.csv`: `run, series, point, seed, threads, status, golden_hash` + объединение ключей параметров.
-- [Предп.] Для EXP-0001 модель TASK-0004 объявит метрики `yearly`, `countries`, `milestones`; `runs.csv` с колонками `series/model/nu/beta/gamma/t_ref` получится, если эти величины заданы параметрами манифеста.
+- [Факт] `toy-funnel` пишет `yearly`, `countries`, `milestones`; в `runs.csv` EXP-0001 — все параметры точки (в т.ч. `model`, `nu`, `beta`, `gamma`, `t_ref`). Текст чисел отличается от прототипа (`25.32777` против `25.327770`), значения те же.
 
 ## Проверка (TASK-0005, 2026-11-02)
 - `selftest`: 13/13 PASS (канонизация, Fx6, раскладка матрицы, golden при повторе, 1 vs 4 потока, чувствительность к seed, путь ошибки, data_hash).
@@ -52,7 +51,11 @@ hash   --manifest M [--canonical]
 - `matrix` 100 прогонов (`--jobs 16` и `--jobs 3`): ok=100, thread_mismatch=0, ~2,4 с; `golden_set_hash` одинаков, объединённые CSV побайтно равны.
 - Матрица с `fail_at_tick`: exit 1, ошибки перечислены, `golden_set_hash: null`.
 
+## Проверка (TASK-0008 этап 2, 2026-11-02)
+- `selftest`: 17/17 PASS (+ длинные десятичные → точный double; `toy-funnel` из `Singularity.Core`).
+- EXP-0001, seed 1, ν=0,25: точки p0 (A), p2 (B), p4 (C) — `yearly`/`countries`/`milestones` по значениям равны свежему прогону прототипа (Fx6 — точный decimal, double — побитно); `golden_hash` A и B = `state_hash` прототипа; у C хеш другой по построению (schema 2 включает историю K). Дополнительно: p3 (B, ν=1) seed 7 — хеш равен; p0 threads 4 = threads 1. `unused_params` пуст. Скрипт: `lab/results/t8-stage2/compare.py` (не коммитится).
+
 ## Открытые вопросы
-- [Предл.] Перенести `ILabModelFactory`/`ILabModel`/`IMetricSink`/`MetricFormat` в Core (например, `Singularity.Core.Simulation`), Lab оставить хостом. Сейчас в Lab, потому что Core нет.
-- [Факт] (TASK-0008) `lab/manifests/EXP-0001.json` переведён в schema 1: модель `toy-funnel`, вариант — параметр `model` (A/B/C), серии `main/A`, `main/B/nu0.25`, `main/B/nu1.0` (калибровка B своя для каждого ν), `main/C`, `grid` (свои 50 seeds); `archetypes`/`levels` — в `params`, остальное — в `meta`. Анализ берёт группу серии до `/`.
+- [Факт] (TASK-0008) `lab/manifests/EXP-0001.json` переведён в schema 1: модель `toy-funnel`, вариант — параметр `model` (A/B/C), серии `main/A`, `main/B/nu0.25`, `main/B/nu1.0` (калибровка B своя для каждого ν), `main/C`, `grid` (свои 50 seeds); `archetypes`/`levels` — в `params`, остальное — в `meta`. Анализ берёт группу серии до `/`. Этап 2: `n_ticks` убран из `params` (длина прогона — `ticks`); `B_c_tau0`/`B_delta_tau` в общих `params` со значениями по умолчанию прототипа (1,0 / 0,25), потому что Core читает их для всех вариантов; A и C их не используют, серии `main/B/nu*` перекрывают калиброванными.
+- [Предл.] Core мог бы читать `B_*` только для варианта B и `C_*` только для C — тогда в `runs.csv` A не было бы посторонних значений. Это меняет манифест и `manifest_hash`; решать до официального прогона.
 - Тестовый проект `tests/Singularity.Lab.Tests` (вне зоны simulation-engineer) должен заменить `selftest`; архитектурный тест — правила детерминизма для `Singularity.Lab.Models.*`.

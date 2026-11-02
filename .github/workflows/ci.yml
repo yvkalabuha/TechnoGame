@@ -29,3 +29,33 @@ jobs:
           fi
       - name: Hook self-test
         run: python tools/development/test_hooks.py
+
+  dotnet:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Build
+        run: dotnet build Singularity.sln -c Release
+      # Unit, architecture and determinism (L1/L2 hash) tests: a hash mismatch fails a test.
+      - name: Test
+        run: dotnet test Singularity.sln -c Release --no-build
+      - name: Lab self-test
+        run: dotnet src/Singularity.Lab/bin/Release/net10.0/Singularity.Lab.dll selftest
+
+  analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Analysis tests
+        run: python -m unittest discover -s lab/analysis -p "test_*.py"
+

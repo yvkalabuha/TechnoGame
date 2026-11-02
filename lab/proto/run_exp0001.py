@@ -67,8 +67,13 @@ def params_for(beta, gamma, calib=None, nu=None):
 LAB_MODEL_ID = "toy-funnel"
 # Lab model inputs that are not in M.PARAMS; "model" and "nu" select the variant and the point.
 NON_SIM_PARAMS = ("archetypes", "levels", "model", "nu")
-# Sweep axes and per-series values: must not be in the base params (Lab rejects the overlap).
-SERIES_PARAMS = ("beta", "gamma", "B_c_tau0", "B_delta_tau")
+# Sweep axes: must not be in the base params (Lab rejects a key that is both a parameter and an axis).
+SERIES_PARAMS = ("beta", "gamma")
+# Not a model parameter in Lab: the run length is the manifest's top-level "ticks".
+HOST_PARAMS = ("n_ticks",)
+# B_c_tau0 / B_delta_tau stay in the base params with the M.PARAMS defaults (Core reads every key
+# for every variant; A and C ignore them, as the prototype does); main/B/nu* override them with
+# the calibrated values (series params override base params in Lab and in manifest_points).
 
 
 def lab_series(calib):
@@ -118,6 +123,7 @@ def manifest_points(man):
 def run_keys(man):
     """Run keys of the prototype, read from the manifest (same manifest as Lab)."""
     keys = []
+    assert man["ticks"] == M.PARAMS["n_ticks"], "manifest ticks != prototype n_ticks"
     for name, p, seeds in manifest_points(man):
         sim = dict(M.PARAMS)
         for k, v in p.items():
@@ -209,7 +215,7 @@ def calibrate(pool, log):
 def build_manifest(calib):
     """EXP-0001 manifest in Lab schema 1: params/series/seeds for Lab, the rest in meta."""
     import exp0001
-    base = {k: v for k, v in M.PARAMS.items() if k not in SERIES_PARAMS}
+    base = {k: v for k, v in M.PARAMS.items() if k not in SERIES_PARAMS + HOST_PARAMS}
     base["archetypes"] = M.ARCHETYPES
     base["levels"] = M.LEVELS
     return {

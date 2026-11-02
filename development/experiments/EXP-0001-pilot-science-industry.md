@@ -8,7 +8,7 @@ related: []
 # Воспроизводимость — обязательно для DONE. Lab записывает сама.
 core_commit:
 data_hash:
-manifest_hash:
+manifest_hash: fb653ab7db328bb1210dd100b0f175cdaf81a4ee524b3eaebb99574f5fb53900  # frozen 2026-11-02, sha256 file 6f521cad…146c
 manifest: lab/manifests/EXP-0001.json   # путь к манифесту в lab/
 seeds:
 threads:

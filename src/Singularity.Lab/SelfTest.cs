@@ -4,7 +4,7 @@ namespace Singularity.Lab;
 
 /// <summary>
 /// Built-in self-checks (`Singularity.Lab selftest`). A stop-gap until test-engineer adds
-/// tests/Singularity.Lab.Tests; uses only the TEST MODEL and a temporary directory.
+/// tests/Singularity.Lab.Tests; runs only the TEST MODEL (toy-funnel: registration only) and a temporary directory.
 /// </summary>
 public static class SelfTest
 {
@@ -24,6 +24,8 @@ public static class SelfTest
             ("canonical: 64-bit seed kept exactly", CanonicalBigSeed),
             ("canonical: numbers that decimal would round are rejected", CanonicalNoRounding),
             ("params: Fx6 parsing is exact, >6 decimals rejected", Fx6Params),
+            ("params: long decimals reach the model as the exact double", DoubleParams),
+            ("registry: toy-funnel comes from Singularity.Core", ToyFunnelRegistered),
             ("metrics: Fx6 formatting", Fx6Format),
             ("manifest: series x sweep expansion order", MatrixExpansion),
             ("manifest: series seeds override top-level seeds", SeriesSeeds),
@@ -141,7 +143,35 @@ public static class SelfTest
             ParamSet.ParseFx6Raw("0.0000001", "k");
             return "7 decimals accepted";
         }
-        catch (ManifestException) { return null; }
+        catch (ParamException) { return null; }
+    }
+
+    /// <summary>
+    /// Long decimals written by Python repr (dt = 1/12, B calibration) must reach Core as the same
+    /// double Python had: manifest text → canonical text → GetDouble, no Fx6 rounding on the way.
+    /// </summary>
+    private static string? DoubleParams()
+    {
+        var cases = new (string Raw, double Expected)[]
+        {
+            ("0.08333333333333333", 1.0 / 12.0), ("0.45605548915918925", 0.45605548915918925),
+            ("0.1080050200689584", 0.1080050200689584), ("100.0", 100.0), ("1e-5", 1e-5),
+        };
+        foreach (var (raw, expected) in cases)
+        {
+            using JsonDocument doc = JsonDocument.Parse(raw);
+            var p = new ParamSet([new("x", ParamValues.FromJson(doc.RootElement, "x"))]);
+            double got = p.GetDouble("x");
+            if (BitConverter.DoubleToInt64Bits(got) != BitConverter.DoubleToInt64Bits(expected))
+                return $"{raw} -> {got:R}, expected {expected:R}";
+        }
+        return null;
+    }
+
+    private static string? ToyFunnelRegistered()
+    {
+        ILabModelFactory f = ModelRegistry.Find("toy-funnel");
+        return Expect(!f.IsTestModel && f.GetType().Assembly.GetName().Name == "Singularity.Core", "toy-funnel not from Core");
     }
 
     private static string? Fx6Format()
