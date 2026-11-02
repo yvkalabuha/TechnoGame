@@ -8,7 +8,7 @@ hooks:
     - matcher: "Edit|Write"
       hooks:
         - type: command
-          command: 'python3 "${CLAUDE_PROJECT_DIR}/.claude/hooks/guard_zone.py" --agent game-designer --allow "docs/game-design/**" --allow "development/hypotheses/**" --deny "docs/game-design/research-system/**"'
+          command: 'python3 "${CLAUDE_PROJECT_DIR}/.claude/hooks/guard_zone.py" --agent game-designer --allow "docs/game-design/**" --allow "development/hypotheses/**" --allow "docs/research/RR-*.md" --deny "docs/game-design/research-system/**"'
           onFailure: block
 ---
 

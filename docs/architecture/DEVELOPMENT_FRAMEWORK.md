@@ -41,7 +41,7 @@
 
 | Агент | Ответственность | Инструменты | Зона записи | Когда вызывать |
 |---|---|---|---|---|
-| `game-designer` | Механики, игровые циклы, взаимодействие систем, игровая ценность | Read, Grep, Glob, Write, Edit, WebSearch, WebFetch | `docs/game-design/**` кроме `research-system/`; тело файлов `development/hypotheses/**` | Новая механика, гипотеза о геймплее |
+| `game-designer` | Механики, игровые циклы, взаимодействие систем, игровая ценность | Read, Grep, Glob, Write, Edit, WebSearch, WebFetch | `docs/game-design/**` кроме `research-system/`; тело файлов `development/hypotheses/**`; `docs/research/RR-*.md` (с PHASE F) | Новая механика, гипотеза о геймплее |
 | `research-scientist` | Модель науки и технологий, исторические и научные факты, источники | Read, Grep, Glob, Write, Edit, WebSearch, WebFetch | `docs/research/**`, `docs/game-design/research-system/**` | Исследование темы, проверка фактов, граф технологий |
 | `systems-architect` | Архитектура ПО, ядро, многопоточность, производительность, ADR | Read, Grep, Glob, Write, Edit, WebSearch, WebFetch | `docs/architecture/**`, `docs/decisions/ADR-*.md` | Архитектурное решение, ADR |
 | `simulation-engineer` | Математические модели, детерминизм, Simulation Lab, эксперименты | Read, Grep, Glob, Write, Edit, Bash | `src/Singularity.Lab/**`, `lab/**`, `docs/simulation/**`, тело `development/experiments/**` | Модель системы; код Lab; запуск и анализ экспериментов |
