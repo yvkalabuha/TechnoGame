@@ -40,7 +40,8 @@ DEFAULTS = {
     "c4": {"top2_share_min": 0.10, "top2_share_max": 0.40, "min_ks_d": 0.3, "max_ks_p": 0.01,
            "e_growth_years": [1910, 1930]},
     "c5": {"lag_threshold": 0.8, "min_year": 1915, "top2_share_explained": 0.7,
-           "min_explained_fraction": 0.80, "noise_in_top2_unexplained": True},
+           "min_explained_fraction": 0.80, "noise_in_top2_unexplained": True,
+           "bootstrap_reps": 1000, "bootstrap_seed": 20261103},
     "c6": {"max_diversity_ratio": 0.7, "control_models": ["B", "C"]},
     "c7": {"from_window": [1929, 1931], "to_window": [1948, 1950],
            "gain1": 1, "min_share_gain1": 0.50, "gain2": 2, "min_share_gain2": 0.15},
@@ -352,21 +353,28 @@ def crit3(runs, der, cfg):
     p = cfg["c3"]
     sci = cfg["science_archetype"]
     others = [c for c in cfg["countries"] if c != sci and c not in p["others_exclude"]]
-    stats = {"total": 0, "undiscovered": 0, "left": 0, "right": 0, "import": 0}
+    zero = {"total": 0, "undiscovered": 0, "left": 0, "right": 0, "import": 0}
+    st_a, st_o = dict(zero), dict(zero)
     per_run = []
     for run in runs:
-        a = _lags_for(run, sci, cfg["n_ticks"], stats)
+        a = _lags_for(run, sci, cfg["n_ticks"], st_a)
         o = []
         for c in others:
-            o.extend(_lags_for(run, c, cfg["n_ticks"], stats))
+            o.extend(_lags_for(run, c, cfg["n_ticks"], st_o))
         per_run.append((a, o))
+    stats = {k: st_a[k] + st_o[k] for k in zero}
     a_all = [x for a, _ in per_run for x in a]
     o_all = [x for _, o in per_run for x in o]
     ratio = _ratio(a_all, o_all)
-    left_share = stats["left"] / stats["total"] if stats["total"] else 0.0
+    # left-censoring share per group; undiscovered milestones are not in the denominator
+    left_share = {}
+    for name, st in (("a1", st_a), ("others", st_o)):
+        den = st["total"] - st["undiscovered"]
+        left_share[name] = st["left"] / den if den else 0.0
+    left_flag = max(left_share.values()) > p["max_left_censored_share"]
     if ratio is None:
-        return {"pass": None, "borderline": False, "stats": stats, "left_share": left_share,
-                "value": "N/A (no lags)"}
+        return {"pass": None, "borderline": False, "stats": stats, "stats_a1": st_a,
+                "stats_others": st_o, "left_share": left_share, "value": "N/A (no lags)"}
     rng = random.Random(p["bootstrap_seed"])
     n = len(per_run)
     boots = []
@@ -381,12 +389,12 @@ def crit3(runs, der, cfg):
             boots.append(r)
     alpha = (1.0 - cfg["ci_level"]) / 2.0
     ci = (quantile(boots, alpha), quantile(boots, 1.0 - alpha)) if boots else (None, None)
-    border = crosses(ci, p["min_lag_ratio"]) or left_share > p["max_left_censored_share"]
+    border = crosses(ci, p["min_lag_ratio"]) or left_flag
     return {"pass": ratio >= p["min_lag_ratio"], "borderline": border, "ratio": ratio, "ci": ci,
             "median_a1": statistics.median(a_all), "median_others": statistics.median(o_all),
-            "stats": stats, "left_share": left_share,
-            "value": "ratio=%s CI=[%s; %s]; left-censored=%.4f" % (
-                fmt(ratio), fmt(ci[0]), fmt(ci[1]), left_share)}
+            "stats": stats, "stats_a1": st_a, "stats_others": st_o, "left_share": left_share,
+            "value": "ratio=%s CI=[%s; %s]; left-censored A1=%.4f others=%.4f" % (
+                fmt(ratio), fmt(ci[0]), fmt(ci[1]), left_share["a1"], left_share["others"])}
 
 
 def run_features(run, cfg):
@@ -434,7 +442,7 @@ def crit4(runs, der, cfg):
 
 def decompose(lead, lag, beta, gamma, t_ref):
     """Bottleneck decomposition of ln(Power_L/Power_i) (model §6, EXP «Ревью» п.5)."""
-    gap = math.log(lead["Y_year"] / lag["Y_year"])
+    gap = safe_ln_ratio(lead["Y_year"], lag["Y_year"])
     c_tech = gamma * math.log((1 + lead["T"] / t_ref) / (1 + lag["T"] / t_ref))
     c_cap = beta * safe_ln_ratio(lead["P"], lag["P"])
     c_res = (1 - beta) * safe_ln_ratio(lead["N"], lag["N"])
@@ -464,7 +472,9 @@ def rank_components(comp):
 def crit5(runs, der, cfg):
     p = cfg["c5"]
     cases = {c: [] for c in cfg["countries"]}  # (share, explained, top_label)
+    per_run = []                               # (explained, cases) per seed: cluster bootstrap
     for run, d in zip(runs, der):
+        k_run = n_run = 0
         for y in sorted(d["power"]):
             if y < p["min_year"]:
                 continue
@@ -481,11 +491,26 @@ def crit5(runs, der, cfg):
                 if p["noise_in_top2_unexplained"] and "NOISE" in top2:
                     expl = False
                 cases[c].append((share, expl, order[0]))
+                k_run += 1 if expl else 0
+                n_run += 1
+        per_run.append((k_run, n_run))
     allc = [x for c in cfg["countries"] for x in cases[c]]
     if not allc:
         return {"pass": None, "borderline": False, "value": "N/A (no lagging cases)", "per": {}}
     frac = sum(1 for x in allc if x[1]) / len(allc)
-    ci = wilson(sum(1 for x in allc if x[1]), len(allc), cfg["wilson_z"])
+    rng = random.Random(p["bootstrap_seed"])
+    n = len(per_run)
+    boots = []
+    for _ in range(p["bootstrap_reps"]):
+        kk = nn = 0
+        for _i in range(n):
+            k_run, n_run = per_run[int(rng.random() * n)]
+            kk += k_run
+            nn += n_run
+        if nn:
+            boots.append(kk / nn)
+    alpha = (1.0 - cfg["ci_level"]) / 2.0
+    ci = (quantile(boots, alpha), quantile(boots, 1.0 - alpha)) if boots else (None, None)
     per = {}
     for c in cfg["countries"]:
         xs = cases[c]
@@ -498,7 +523,8 @@ def crit5(runs, der, cfg):
     return {"pass": frac >= p["min_explained_fraction"],
             "borderline": crosses(ci, p["min_explained_fraction"]),
             "fraction": frac, "ci": ci, "n_cases": len(allc), "per": per,
-            "value": "explained=%.4f of %d cases" % (frac, len(allc))}
+            "value": "explained=%.4f of %d cases CI=[%s; %s]" % (frac, len(allc), fmt(ci[0]),
+                                                                  fmt(ci[1]))}
 
 
 def diversity(der, cfg):
@@ -602,10 +628,12 @@ def decide(res, cfg):
         sci = cfg["science_archetype"]
         d_low = sum(1 for g in grid
                     if g["1"]["rows"][sci]["top2"] < cfg["d_trigger"]["top2_share_below"])
+        has_na = (m is not None and any(m[c]["pass"] is None for c in CRITERIA)) or any(
+            g[c]["pass"] is None for g in grid for c in CRITERIA)
         refuted = any((m is not None and m[c]["pass"] is False)
                       or crit_pass[c] < dc["grid_min_points"] for c in dc["refute_criteria"])
-        if m is None or not grid:
-            outcome = "incomplete"
+        if m is None or not grid or has_na:
+            outcome = "incomplete"   # missing data (e.g. control B/C absent) never refutes
         elif refuted:
             outcome = "refutes"
         elif m_all and n_pass >= dc["grid_min_points"]:
@@ -615,7 +643,7 @@ def decide(res, cfg):
         else:
             outcome = "rework"
         per_nu[nu] = {"main_present": m is not None, "main_pass": m_all, "main_clean": m_clean,
-                      "main_failed": m_failed, "points": pts, "n_points": len(grid),
+                      "main_failed": m_failed, "has_na": has_na, "points": pts, "n_points": len(grid),
                       "n_pass": n_pass, "n_clean": n_clean, "crit_pass": crit_pass,
                       "d_trigger": d_low >= cfg["d_trigger"]["min_points"], "d_low_points": d_low,
                       "outcome": outcome}
@@ -729,6 +757,8 @@ def render(result, cfg, hashes):
         for f in g["4"]["features"]:
             L.append("| %s | %s | %s | %s | %s |" % (f["feature"], fmt(f["D"]), fmt(f["p"]),
                                                      fmt(f["mean_in"]), fmt(f["mean_out"])))
+        L += ["", "Примечание: p — асимптотическое приближение KS (Stephens), для малых групп "
+              "приблизительно; поправки на множественные сравнения (%d признаков) нет." % len(FEATURES)]
         if g["5"]["per"]:
             L += ["", "| архетип (п.5) | n | объяснено | доля top2 p5 | p50 | p95 | " +
                   " | ".join(LABELS) + " |", "|---|---|---|---|---|---|" + "---|" * len(LABELS)]
@@ -753,8 +783,12 @@ def main(argv=None):
         ap.error("input_dir is required")
     cfg = DEFAULTS
     if a.config:
-        with open(a.config, encoding="utf-8") as f:
-            cfg = merge_config(DEFAULTS, json.load(f))
+        try:
+            with open(a.config, encoding="utf-8") as f:
+                cfg = merge_config(DEFAULTS, json.load(f))
+        except (InputError, ValueError, OSError) as e:
+            sys.stderr.write("error: config: %s\n" % e)
+            return 2
     try:
         result = analyze(load(a.input_dir, cfg), cfg)
     except InputError as e:

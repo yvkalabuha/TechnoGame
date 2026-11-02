@@ -2,6 +2,7 @@
 
 Run: python3 -m unittest discover -s lab/analysis -p 'test_*.py' -v
 """
+import contextlib
 import csv
 import io
 import math
@@ -203,16 +204,26 @@ class TestCriterion3Lag(unittest.TestCase):
         self.assertEqual(g["ci"], (2.0, 2.0))
         self.assertEqual(g["stats"], {"total": 110, "undiscovered": 10, "left": 10,
                                       "right": 10, "import": 10})
-        self.assertAlmostEqual(g["left_share"], 10 / 110)
+        self.assertEqual(g["left_share"], {"a1": 0.25, "others": 0.0})  # undiscovered excluded
         self.assertTrue(g["pass"])
         self.assertFalse(g["borderline"])
 
     def test_left_censor_flag(self):
         specs = [Spec("r%d" % i, i, milestones=self.ms(extra_left=True)) for i in range(10)]
         g = only_group(analyze(specs))["3"]
-        self.assertAlmostEqual(g["left_share"], 6 / 16)
+        self.assertAlmostEqual(g["left_share"]["others"], 5 / 11)
+        self.assertEqual(g["left_share"]["a1"], 0.25)
         self.assertTrue(g["pass"])
-        self.assertTrue(g["borderline"])       # left censoring 37.5% > 30%
+        self.assertTrue(g["borderline"])       # others: 45% > 30%
+
+    def test_left_censor_a1_only_and_denominator(self):
+        # A1: 1 left, 2 undiscovered, 1 lag 60 -> share 1/2 (would be 1/4 with undiscovered)
+        ms = [("A1", 0, 0, 5), ("A1", 1, None, None), ("A1", 2, None, None),
+              ("A1", 3, 12, 72)] + [(c, 1, 10, 40) for c in C[1:]]
+        g = only_group(analyze([Spec("r%d" % i, i, milestones=ms) for i in range(10)]))["3"]
+        self.assertEqual(g["left_share"], {"a1": 0.5, "others": 0.0})
+        self.assertEqual(g["stats_a1"]["undiscovered"], 20)
+        self.assertTrue(g["borderline"])       # only A1 above 30%
 
     def test_bootstrap_deterministic_and_borderline(self):
         specs = []
@@ -316,6 +327,30 @@ class TestCriterion5Bottlenecks(unittest.TestCase):
         self.assertFalse(g["pass"])
         cfg = X.merge_config(CFG, {"c5": {"min_explained_fraction": 0.5}})
         self.assertTrue(only_group(analyze(self.specs(), cfg))["5"]["pass"])
+
+    def test_cluster_bootstrap_ci(self):
+        # 10 seeds fully explained (A2 type), 10 seeds pure noise: correlated within seed
+        specs = []
+        for i in range(20):
+            st = {"A2": {"P": 25.0, "N": 25.0}} if i < 10 else {}
+            pw = dict(BASE, A1=1000.0, A2=1000.0 / 4.0, A3=900.0, A4=900.0, A5=900.0, A6=900.0)
+            specs.append(Spec("r%02d" % i, i, beta=0.5, power=pw, state=st))
+        g = only_group(analyze(specs))["5"]
+        self.assertEqual(g["fraction"], 0.5)
+        self.assertGreater(g["ci"][1] - g["ci"][0], 0.2)   # Wilson over 720 cases: ~0.07
+        self.assertEqual(g["ci"], only_group(analyze(specs))["5"]["ci"])
+        cfg = X.merge_config(CFG, {"c5": {"min_explained_fraction": 0.6}})
+        self.assertTrue(only_group(analyze(specs, cfg))["5"]["borderline"])
+
+    def test_zero_power(self):
+        lead = dict(STATE, Y_year=1000.0)
+        lag = dict(STATE, Y_year=0.0)
+        gap, comp = X.decompose(lead, lag, 0.5, 1.0, 100.0)
+        self.assertAlmostEqual(gap, math.log(1000.0 / 1e-12))
+        self.assertAlmostEqual(comp["NOISE"], gap)
+        pw = dict(BASE, A1=1000.0, A3=0.0)
+        g = only_group(analyze([Spec("r1", 1, power=pw)]))["5"]
+        self.assertEqual(g["per"]["A3"]["labels"]["NOISE"], 1.0)
 
     def test_noise_rule_param(self):
         # pure-noise case A3: share = 1.0 when NOISE allowed in top-2
@@ -457,6 +492,15 @@ class TestGridDecision(unittest.TestCase):
         self.assertEqual(d["per_nu"][0.25]["main_failed"], ["7"])
         self.assertEqual(d["overall"], "rework")
 
+    def test_missing_data_incomplete_not_refutes(self):
+        res = fake_res({0.25: ({"passes": {"6": None}}, self.grid(9)), 1.0: ({}, self.grid(9))})
+        d = X.decide(res, CFG)
+        self.assertEqual(d["per_nu"][0.25]["outcome"], "incomplete")
+        self.assertEqual(d["overall"], "incomplete")
+        grid = [{"passes": {"6": None}}] * 9           # control missing at all grid points
+        res = fake_res({0.25: ({}, grid), 1.0: ({}, self.grid(9))})
+        self.assertEqual(X.decide(res, CFG)["per_nu"][0.25]["outcome"], "incomplete")
+
     def test_d_trigger(self):
         low = {"a1_top2": 0.05}
         res = fake_res({0.25: ({}, [low] * 5 + [{}] * 4), 1.0: ({}, [low] * 4 + [{}] * 5)})
@@ -499,6 +543,37 @@ class TestEndToEnd(unittest.TestCase):
             self.assertEqual(X.main([d, "--config", cfgp, "--out", o3]), 0)
             with open(o3, "rb") as f:
                 self.assertNotEqual(f.read(), b1)              # config hash/thresholds differ
+
+    def test_missing_control_end_to_end(self):
+        specs = [s for s in self.specs() if s.model != "C"]
+        grid = []
+        for s in [x for x in specs if x.model == "A"]:
+            for b in (0.5, 0.625, 0.75):
+                for gm in (0.5, 0.75, 1.0):
+                    grid.append(Spec("g%s_%s_%s" % (s.rid, b, gm), s.seed, series="grid",
+                                     beta=b, gamma=gm, power=s.power, milestones=s.milestones))
+        d = analyze(specs + grid)["decision"]
+        self.assertEqual(d["overall"], "incomplete")
+
+    def test_report_ks_note(self):
+        with tempfile.TemporaryDirectory() as d:
+            write_dataset(d, self.specs())
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                X.main([d])
+            self.assertIn("асимптотическое", buf.getvalue())
+            self.assertIn("множественные сравнения", buf.getvalue())
+
+    def test_bad_config_exit_code(self):
+        with tempfile.TemporaryDirectory() as d:
+            write_dataset(d, self.specs())
+            cfgp = os.path.join(d, "bad.json")
+            with open(cfgp, "w") as f:
+                f.write('{"c1": {"max_win": 0.4}}')
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                self.assertEqual(X.main([d, "--config", cfgp]), 2)
+            self.assertIn("unknown config key", err.getvalue())
 
     def test_unknown_config_key(self):
         with self.assertRaises(X.InputError):

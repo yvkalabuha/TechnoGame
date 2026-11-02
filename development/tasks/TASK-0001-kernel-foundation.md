@@ -1,7 +1,7 @@
 ---
 id: TASK-0001
 title: "Kernel: fixed-point, детерминированная математика, RNG, таблицы, хеш состояния"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer
@@ -42,9 +42,9 @@ created: 2026-11-02
 Unit-тесты Kernel; архитектурный тест (рефлексия по IL или анализ исходников — выбрать проще и надёжнее, обосновать).
 
 ## REVIEW
-- [ ] Code review (reviewer)
-- [ ] Тесты (test-engineer)
-- [ ] Детерминизм L1/L2 — если затронуты src/
+- [x] Code review (reviewer) — approve; medium по IL-тесту → TASK-0007
+- [x] Тесты (test-engineer) — +52 теста аудита; баг F1 → TASK-0007
+- [x] Детерминизм L1/L2 — TickRunner, 1/4/8 потоков + стресс 40 форм
 
 ## Результат
 Kernel реализован developer 2026-11-02: `src/Singularity.Kernel` (Fx6, DetMath, CounterRng, Column/Table, TickRunner, StateHash), `tests/Singularity.Kernel.Tests` (69), `tests/Singularity.Architecture.Tests` (14, IL-сканер запретов), эталон `tools/reference/kernel_vectors.py`. `dotnet build` без предупреждений; `dotnet test` 83/83 (проверено Orchestrator).
