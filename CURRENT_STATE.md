@@ -9,9 +9,9 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0001 [IN_PROGRESS] Kernel: fixed-point, детерминированная математика, RNG, таблицы, хеш состояния (developer)
-- TASK-0002 [IN_PROGRESS] Анализ EXP-0001: расчёт критериев HYP-0001 на Python stdlib (simulation-engineer)
-- TASK-0003 [APPROVED] Прототип модели на Python и заморозка модели перед C# (simulation-engineer)
+- TASK-0003 [IN_PROGRESS] Прототип модели на Python и заморозка модели перед C# (simulation-engineer)
+- TASK-0001 [REVIEW] Kernel: fixed-point, детерминированная математика, RNG, таблицы, хеш состояния (developer)
+- TASK-0002 [REVIEW] Анализ EXP-0001: расчёт критериев HYP-0001 на Python stdlib (simulation-engineer)
 - TASK-0005 [APPROVED] Simulation Lab: CLI, манифест, раннер матрицы (simulation-engineer)
 <!-- registry:active:end -->
 

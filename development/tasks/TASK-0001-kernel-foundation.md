@@ -1,7 +1,7 @@
 ---
 id: TASK-0001
 title: "Kernel: fixed-point, детерминированная математика, RNG, таблицы, хеш состояния"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer
@@ -47,3 +47,5 @@ Unit-тесты Kernel; архитектурный тест (рефлексия 
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
+Kernel реализован developer 2026-11-02: `src/Singularity.Kernel` (Fx6, DetMath, CounterRng, Column/Table, TickRunner, StateHash), `tests/Singularity.Kernel.Tests` (69), `tests/Singularity.Architecture.Tests` (14, IL-сканер запретов), эталон `tools/reference/kernel_vectors.py`. `dotnet build` без предупреждений; `dotnet test` 83/83 (проверено Orchestrator).
+Отклонения: `InternalsVisibleTo` для тестов; хеш вызывается снаружи post (`StateHash.Compute`); эталонный Python-скрипт в tools/. Частоты систем и мир из нескольких таблиц — следующие задачи.

@@ -1,7 +1,7 @@
 ---
 id: TASK-0002
 title: "Анализ EXP-0001: расчёт критериев HYP-0001 на Python stdlib"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: simulation-engineer
@@ -37,3 +37,5 @@ created: 2026-11-02
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
+`lab/analysis/exp0001.py` + `test_exp0001.py` (34 теста OK, проверено Orchestrator), формат CSV — `docs/simulation/exp0001-csv-format.md`. Пороги — `DEFAULTS`, перекрываются `--config`; `--dump-config` для заморозки манифеста.
+Трактовки для утверждения при заморозке: п.2 итоговый лидер = argmax 1950; п.5 NOISE в топ-2 → необъяснено (возможен порог); N/A = не прошло; «на грани» в main → inconclusive.

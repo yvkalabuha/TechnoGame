@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Model-independent simulation kernel. Must not reference other solution projects. -->
+  <PropertyGroup>
+    <RootNamespace>Singularity.Kernel</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Tests drive the double buffer directly (CopyCurrentToNext/Swap) without a runner. -->
+    <InternalsVisibleTo Include="Singularity.Kernel.Tests" />
+  </ItemGroup>
+</Project>
