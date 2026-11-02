@@ -19,7 +19,10 @@ public static class MatrixRunner
 
     private sealed record JobResult(int ExitCode, string Status, string? Golden, string? Error, string? CoreCommit, string? ManifestHash);
 
-    public static int Run(Manifest m, string outDir, int jobs, TextWriter log)
+    /// <summary>Default per-run wall-clock limit for a child `run` process.</summary>
+    public const int DefaultRunTimeoutSeconds = 3600;
+
+    public static int Run(Manifest m, string outDir, int jobs, TextWriter log, int timeoutSeconds = DefaultRunTimeoutSeconds)
     {
         Provenance prov = Provenance.Collect(m);
         ModelRegistry.Find(m.Model); // fail fast on an unknown model
@@ -29,7 +32,7 @@ public static class MatrixRunner
         var jobList = new List<Job>();
         foreach (MatrixPoint p in m.Points)
         {
-            foreach (ulong seed in m.Seeds)
+            foreach (ulong seed in p.Seeds)
             {
                 foreach (int t in m.Threads)
                 {
@@ -39,14 +42,14 @@ public static class MatrixRunner
             }
         }
 
-        log.WriteLine($"matrix: {jobList.Count} runs ({m.Points.Count} points x {m.Seeds.Count} seeds x {m.Threads.Count} thread counts), jobs={jobs}");
+        log.WriteLine($"matrix: {jobList.Count} runs ({m.Points.Count} points, {m.Points.Sum(p => p.Seeds.Count)} point-seeds x {m.Threads.Count} thread counts), jobs={jobs}, timeout_s={timeoutSeconds}");
         DateTime startedUtc = DateTime.UtcNow;
         var clock = Stopwatch.StartNew();
         var results = new JobResult[jobList.Count];
         int done = 0;
         Parallel.For(0, jobList.Count, new ParallelOptions { MaxDegreeOfParallelism = jobs }, i =>
         {
-            results[i] = RunChild(m, jobList[i]);
+            results[i] = RunChild(m, jobList[i], timeoutSeconds);
             int n = Interlocked.Increment(ref done);
             if (n % 25 == 0 || n == jobList.Count)
                 log.WriteLine($"  {n}/{jobList.Count}");
@@ -79,7 +82,8 @@ public static class MatrixRunner
             jobList.Select(j => (j.RunId, j.Point, j.Seed, j.Threads, results[j.Index].Golden, results[j.Index].Status == "ok")).ToList());
         List<string> merged = MergeCsvs(outDir, jobList, results, problems);
 
-        string? goldenSet = problems.Count == 0 ? GoldenSetHash(jobList, results) : null;
+        // A thread mismatch means the golden hashes are not reproducible: no matrix-level hash then.
+        string? goldenSet = problems.Count == 0 && threadMismatch.Count == 0 ? GoldenSetHash(jobList, results) : null;
         WriteMatrixJson(outDir, m, prov, jobList, results, problems, threadMismatch, merged, goldenSet, startedUtc, clock.ElapsedMilliseconds, jobs);
 
         log.WriteLine($"matrix: ok={results.Count(r => r.Status == "ok")} failed={results.Count(r => r.Status != "ok")} thread_mismatch={threadMismatch.Count} elapsed_ms={clock.ElapsedMilliseconds}");
@@ -98,8 +102,12 @@ public static class MatrixRunner
         return CanonicalJson.Sha256Hex(sb.ToString());
     }
 
-    private static JobResult RunChild(Manifest m, Job job)
+    private static JobResult RunChild(Manifest m, Job job, int timeoutSeconds)
     {
+        // The matrix reuses the output directory only with --force; stale files of an earlier
+        // run (old CSVs, run.json) must not leak into this run's results.
+        if (Directory.Exists(job.Dir))
+            Directory.Delete(job.Dir, recursive: true);
         Directory.CreateDirectory(job.Dir);
         var psi = SelfInvocation();
         foreach (string a in new[]
@@ -117,23 +125,38 @@ public static class MatrixRunner
         using (Process p = Process.Start(psi)!)
         {
             Task<string> err = p.StandardError.ReadToEndAsync();
-            string output = p.StandardOutput.ReadToEnd();
-            p.WaitForExit();
+            Task<string> output = p.StandardOutput.ReadToEndAsync();
+            if (!p.WaitForExit(TimeSpan.FromSeconds(timeoutSeconds)))
+            {
+                try { p.Kill(entireProcessTree: true); } catch (InvalidOperationException) { /* already exited */ }
+                p.WaitForExit();
+                File.WriteAllText(Path.Combine(job.Dir, "log.txt"), output.Result + err.Result + $"\nkilled after {timeoutSeconds} s\n", Csv.Utf8NoBom);
+                return new JobResult(-1, "timeout", null, $"run exceeded {timeoutSeconds} s and was killed", null, null);
+            }
+            p.WaitForExit(); // flush redirected streams
             exit = p.ExitCode;
-            File.WriteAllText(Path.Combine(job.Dir, "log.txt"), output + err.Result, Csv.Utf8NoBom);
+            File.WriteAllText(Path.Combine(job.Dir, "log.txt"), output.Result + err.Result, Csv.Utf8NoBom);
         }
 
         string runJson = Path.Combine(job.Dir, RunExecutor.RunJsonFile);
         if (!File.Exists(runJson))
             return new JobResult(exit, "no-run-json", null, "child did not write run.json; see log.txt", null, null);
-        using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(runJson));
-        JsonElement r = doc.RootElement;
-        string status = r.GetProperty("status").GetString() ?? "unknown";
-        if (status == "ok" && exit != 0) status = "exit-code";
-        return new JobResult(exit, status,
-            r.GetProperty("golden_hash").ValueKind == JsonValueKind.String ? r.GetProperty("golden_hash").GetString() : null,
-            r.TryGetProperty("error", out JsonElement e) ? e.GetString() : null,
-            r.GetProperty("core_commit").GetString(), r.GetProperty("manifest_hash").GetString());
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(runJson));
+            JsonElement r = doc.RootElement;
+            string status = r.GetProperty("status").GetString() ?? "unknown";
+            if (status == "ok" && exit != 0) status = "exit-code";
+            return new JobResult(exit, status,
+                r.GetProperty("golden_hash").ValueKind == JsonValueKind.String ? r.GetProperty("golden_hash").GetString() : null,
+                r.TryGetProperty("error", out JsonElement e) ? e.GetString() : null,
+                r.GetProperty("core_commit").GetString(), r.GetProperty("manifest_hash").GetString());
+        }
+        catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException)
+        {
+            // A broken run.json is a failed run, not a crash of the whole matrix.
+            return new JobResult(exit, "bad-run-json", null, $"{e.GetType().Name}: {e.Message}", null, null);
+        }
     }
 
     /// <summary>The same Lab binary: apphost directly, or `dotnet Singularity.Lab.dll`.</summary>
@@ -210,6 +233,8 @@ public static class MatrixRunner
         w.WriteBoolean("model_is_test", ModelRegistry.Find(m.Model).IsTestModel);
         w.WriteString("core_commit", prov.CoreCommit);
         if (prov.Dirty is bool d) w.WriteBoolean("dirty", d); else w.WriteNull("dirty");
+        if (prov.DirtyUntrackedSrc is bool u) w.WriteBoolean("dirty_untracked_src", u); else w.WriteNull("dirty_untracked_src");
+        w.WriteString("build_commit", prov.BuildCommit);
         w.WriteString("manifest_hash", m.Hash);
         w.WriteString("manifest_path", m.SourcePath);
         w.WriteString("data_hash", prov.DataHash);

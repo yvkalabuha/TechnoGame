@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Domain models (world state). References only Kernel; never Lab (checked by architecture tests). -->
+  <PropertyGroup>
+    <RootNamespace>Singularity.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Singularity.Kernel\Singularity.Kernel.csproj" />
+  </ItemGroup>
+</Project>

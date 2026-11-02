@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../src/Singularity.Core/Singularity.Core.csproj" />
+    <ProjectReference Include="../../src/Singularity.Kernel/Singularity.Kernel.csproj" />
+  </ItemGroup>
+</Project>

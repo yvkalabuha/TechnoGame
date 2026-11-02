@@ -40,7 +40,7 @@ DEFAULTS = {
     "c4": {"top2_share_min": 0.10, "top2_share_max": 0.40, "min_ks_d": 0.3, "max_ks_p": 0.01,
            "e_growth_years": [1910, 1930]},
     "c5": {"lag_threshold": 0.8, "min_year": 1915, "top2_share_explained": 0.7,
-           "min_explained_fraction": 0.80, "noise_in_top2_unexplained": True,
+           "min_explained_fraction": 0.80, "noise_unexplained_share": 0.3,
            "bootstrap_reps": 1000, "bootstrap_seed": 20261103},
     "c6": {"max_diversity_ratio": 0.7, "control_models": ["B", "C"]},
     "c7": {"from_window": [1929, 1931], "to_window": [1948, 1950],
@@ -209,7 +209,8 @@ def load(input_dir, cfg):
         if rid in runs:
             raise InputError("duplicate run in runs.csv: %s" % rid)
         runs[rid] = {
-            "run": rid, "series": r["series"], "model": r["model"],
+            # Lab series "<group>/<sub>" (e.g. "main/B/nu0.25") belong to group "main"
+            "run": rid, "series": r["series"].split("/", 1)[0], "model": r["model"],
             "nu": float(r["nu"]), "beta": float(r["beta"]), "gamma": float(r["gamma"]),
             "t_ref": float(r["t_ref"]), "seed": int(r["seed"]),
             "yearly": {}, "mult": {}, "milestones": {c: [] for c in countries},
@@ -487,9 +488,10 @@ def crit5(runs, der, cfg):
                 order = rank_components(comp)
                 top2 = order[:2]
                 share = min(1.0, (comp[top2[0]] + comp[top2[1]]) / gap)
-                expl = share >= p["top2_share_explained"]
-                if p["noise_in_top2_unexplained"] and "NOISE" in top2:
-                    expl = False
+                # DECISIONS_LOG #17: unexplained only if NOISE >= noise_unexplained_share * gap
+                # (replaces "NOISE in top-2 -> unexplained"); top-2 share rule unchanged.
+                expl = (share >= p["top2_share_explained"]
+                        and comp["NOISE"] < p["noise_unexplained_share"] * gap)
                 cases[c].append((share, expl, order[0]))
                 k_run += 1 if expl else 0
                 n_run += 1

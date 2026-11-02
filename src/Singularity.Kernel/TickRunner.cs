@@ -52,8 +52,9 @@ public interface ITickSystem
 /// Chunk boundaries depend only on <c>chunkSize</c>, never on thread count, so per-chunk
 /// results and their merge order are identical for 1 or N threads.
 /// An exception thrown by <see cref="ITickSystem.Compute"/> always surfaces as
-/// <see cref="TickComputeException"/>, for any thread count. If several chunks fail in parallel,
-/// the lowest chunk among the observed failures is reported (Parallel.For may stop early).
+/// <see cref="TickComputeException"/>, for any thread count. If several chunks fail, the lowest
+/// failed chunk is reported: with one thread the run stops there; with N threads all chunks of
+/// the system still run and the lowest failure is thrown afterwards (DEBT-0002).
 /// </summary>
 public sealed class TickRunner
 {
@@ -62,6 +63,7 @@ public sealed class TickRunner
     private readonly ITickSystem[] _systems;
     private readonly int _chunkSize;
     private readonly ParallelOptions _parallel;
+    private readonly TickComputeException?[] _failures;
 
     public TickRunner(Table table, ulong seed, IReadOnlyList<ITickSystem> systems, int chunkSize, int maxThreads)
     {
@@ -73,6 +75,7 @@ public sealed class TickRunner
         _chunkSize = chunkSize;
         _parallel = new ParallelOptions { MaxDegreeOfParallelism = maxThreads };
         ChunkCount = ChunkCountFor(table.RowCount, chunkSize);
+        _failures = new TickComputeException?[ChunkCount];
     }
 
     /// <summary>
@@ -106,14 +109,25 @@ public sealed class TickRunner
             }
             else
             {
-                // Each iteration writes only its own rows/slot, so no shared writes happen here.
-                try
+                // Each iteration writes only its own rows/slot (and its own failure slot), so there are
+                // no shared writes. Failures are recorded, not thrown: every chunk runs, so the set of
+                // failed chunks, and with it the reported lowest one, does not depend on scheduling.
+                Array.Clear(_failures);
+                Parallel.For(0, ChunkCount, _parallel, chunk =>
                 {
-                    Parallel.For(0, ChunkCount, _parallel, chunk => ComputeChunk(system, context, chunk));
-                }
-                catch (AggregateException aggregate)
+                    try
+                    {
+                        ComputeChunk(system, context, chunk);
+                    }
+                    catch (TickComputeException e)
+                    {
+                        _failures[chunk] = e;
+                    }
+                });
+                for (int chunk = 0; chunk < ChunkCount; chunk++)
                 {
-                    ExceptionDispatchInfo.Capture(LowestChunkFailure(aggregate)).Throw();
+                    if (_failures[chunk] is { } failure)
+                        ExceptionDispatchInfo.Capture(failure).Throw();
                 }
             }
         }
@@ -144,24 +158,6 @@ public sealed class TickRunner
         }
     }
 
-    // Parallel.For wraps failures and may stop early, so the set of failed chunks varies;
-    // picking the lowest one keeps the reported failure as stable as the input allows.
-    private static Exception LowestChunkFailure(AggregateException aggregate)
-    {
-        Exception? lowest = null;
-        int lowestChunk = int.MaxValue;
-        foreach (Exception inner in aggregate.Flatten().InnerExceptions)
-        {
-            if (inner is not TickComputeException compute)
-                return inner;
-            if (compute.Chunk < lowestChunk)
-            {
-                lowest = compute;
-                lowestChunk = compute.Chunk;
-            }
-        }
-        return lowest ?? aggregate;
-    }
 }
 
 /// <summary>A failure inside <see cref="ITickSystem.Compute"/>; the original exception is the inner one.</summary>

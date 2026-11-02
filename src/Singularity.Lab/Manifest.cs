@@ -3,8 +3,11 @@ using System.Text.Json;
 
 namespace Singularity.Lab;
 
-/// <summary>One point of the experiment matrix: a series name plus the full parameter set.</summary>
-public sealed record MatrixPoint(int Index, string Series, IReadOnlyList<KeyValuePair<string, ParamValue>> Params)
+/// <summary>
+/// One point of the experiment matrix: a series name, the full parameter set and the seeds
+/// of its series (series "seeds" if given, else the top-level "seeds").
+/// </summary>
+public sealed record MatrixPoint(int Index, string Series, IReadOnlyList<KeyValuePair<string, ParamValue>> Params, IReadOnlyList<ulong> Seeds)
 {
     public ParamSet CreateParamSet() => new(Params);
 }
@@ -36,7 +39,7 @@ public sealed class Manifest
     public required IReadOnlyList<string> DataFiles { get; init; }
     public required IReadOnlyList<MatrixPoint> Points { get; init; }
 
-    public int RunCount => Points.Count * Seeds.Count * Threads.Count;
+    public int RunCount => Points.Sum(p => p.Seeds.Count) * Threads.Count;
 
     public static Manifest Load(string path)
     {
@@ -71,6 +74,8 @@ public sealed class Manifest
             throw new ManifestException($"Manifest schema {schema} is not supported (expected {SupportedSchema}).");
 
         var baseParams = ReadParams(root, "params", "$.params");
+        List<ulong> seeds = ReadSeeds(root, "$")
+            ?? throw new ManifestException("Manifest key 'seeds' is required.");
 
         return new Manifest
         {
@@ -82,10 +87,10 @@ public sealed class Manifest
             Model = OptionalString(root, "model") ?? throw new ManifestException("Manifest key 'model' is required."),
             Ticks = RequireLong(root, "ticks", 0, long.MaxValue),
             ChunkSize = root.TryGetProperty("chunk_size", out _) ? (int)RequireLong(root, "chunk_size", 1, int.MaxValue) : 64,
-            Seeds = ReadSeeds(root),
+            Seeds = seeds,
             Threads = ReadThreads(root),
             DataFiles = ReadData(root),
-            Points = ReadPoints(root, baseParams),
+            Points = ReadPoints(root, baseParams, seeds),
         };
     }
 
@@ -105,12 +110,12 @@ public sealed class Manifest
     /// Matrix points: for each series in file order, the cartesian product of its sweep axes,
     /// axes in ordinal key order, last axis varying fastest. No "series" → one series "default".
     /// </summary>
-    private static List<MatrixPoint> ReadPoints(JsonElement root, List<KeyValuePair<string, ParamValue>> baseParams)
+    private static List<MatrixPoint> ReadPoints(JsonElement root, List<KeyValuePair<string, ParamValue>> baseParams, List<ulong> baseSeeds)
     {
         var points = new List<MatrixPoint>();
         if (!root.TryGetProperty("series", out JsonElement series))
         {
-            AddSeries(points, "default", baseParams, [], "$");
+            AddSeries(points, "default", baseParams, [], baseSeeds, "$");
             return points;
         }
         if (series.ValueKind != JsonValueKind.Array || series.GetArrayLength() == 0)
@@ -125,7 +130,7 @@ public sealed class Manifest
                 throw new ManifestException($"{path} must be an object.");
             foreach (JsonProperty p in s.EnumerateObject())
             {
-                if (p.Name is not ("name" or "params" or "sweep"))
+                if (p.Name is not ("name" or "params" or "seeds" or "sweep"))
                     throw new ManifestException($"{path}: unknown key '{p.Name}'.");
             }
             string name = OptionalString(s, "name") ?? throw new ManifestException($"{path}.name is required.");
@@ -156,13 +161,14 @@ public sealed class Manifest
                     axes.Add((axis.Name, values));
                 }
             }
-            AddSeries(points, name, merged.ToList(), axes, path);
+            List<ulong> seriesSeeds = ReadSeeds(s, path) ?? baseSeeds; // series seeds replace top-level seeds
+            AddSeries(points, name, merged.ToList(), axes, seriesSeeds, path);
         }
         return points;
     }
 
     private static void AddSeries(List<MatrixPoint> points, string name, List<KeyValuePair<string, ParamValue>> fixedParams,
-        List<(string Key, List<ParamValue> Values)> axes, string path)
+        List<(string Key, List<ParamValue> Values)> axes, List<ulong> seeds, string path)
     {
         long total = 1;
         foreach (var axis in axes)
@@ -177,7 +183,7 @@ public sealed class Manifest
             for (int a = 0; a < axes.Count; a++)
                 p.Add(new(axes[a].Key, axes[a].Values[index[a]]));
             p.Sort((x, y) => string.CompareOrdinal(x.Key, y.Key));
-            points.Add(new MatrixPoint(points.Count, name, p));
+            points.Add(new MatrixPoint(points.Count, name, p, seeds));
 
             for (int a = axes.Count - 1; a >= 0; a--)
             {
@@ -187,38 +193,42 @@ public sealed class Manifest
         }
     }
 
-    /// <summary>Seeds: an array of non-negative integers, or {"start": a, "count": n}.</summary>
-    private static List<ulong> ReadSeeds(JsonElement root)
+    /// <summary>
+    /// Seeds of <paramref name="parent"/> (manifest root or a series): an array of non-negative
+    /// integers, or {"start": a, "count": n}. Null when the key is absent.
+    /// </summary>
+    private static List<ulong>? ReadSeeds(JsonElement parent, string parentPath)
     {
-        if (!root.TryGetProperty("seeds", out JsonElement e))
-            throw new ManifestException("Manifest key 'seeds' is required.");
+        if (!parent.TryGetProperty("seeds", out JsonElement e))
+            return null;
+        string path = $"{parentPath}.seeds";
         var seeds = new List<ulong>();
         if (e.ValueKind == JsonValueKind.Array)
         {
             int i = 0;
             foreach (JsonElement s in e.EnumerateArray())
-                seeds.Add(ParseSeed(s, $"$.seeds[{i++}]"));
+                seeds.Add(ParseSeed(s, $"{path}[{i++}]"));
         }
         else if (e.ValueKind == JsonValueKind.Object)
         {
             foreach (JsonProperty p in e.EnumerateObject())
             {
                 if (p.Name is not ("start" or "count"))
-                    throw new ManifestException($"$.seeds: unknown key '{p.Name}'.");
+                    throw new ManifestException($"{path}: unknown key '{p.Name}'.");
             }
-            ulong start = ParseSeed(e.TryGetProperty("start", out JsonElement s) ? s : throw new ManifestException("$.seeds.start is required."), "$.seeds.start");
+            ulong start = ParseSeed(e.TryGetProperty("start", out JsonElement s) ? s : throw new ManifestException($"{path}.start is required."), $"{path}.start");
             long count = RequireLong(e, "count", 1, 1_000_000);
             for (long i = 0; i < count; i++)
                 seeds.Add(checked(start + (ulong)i));
         }
         else
         {
-            throw new ManifestException("$.seeds must be an array or {\"start\", \"count\"}.");
+            throw new ManifestException($"{path} must be an array or {{\"start\", \"count\"}}.");
         }
         if (seeds.Count == 0)
-            throw new ManifestException("$.seeds is empty.");
+            throw new ManifestException($"{path} is empty.");
         if (seeds.Distinct().Count() != seeds.Count)
-            throw new ManifestException("$.seeds contains duplicates.");
+            throw new ManifestException($"{path} contains duplicates.");
         return seeds;
     }
 

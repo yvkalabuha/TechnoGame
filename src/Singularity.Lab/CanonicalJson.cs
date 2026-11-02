@@ -43,7 +43,52 @@ public static class CanonicalJson
     {
         if (!decimal.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal value))
             throw new ManifestException($"{path}: number {raw} is outside the supported decimal range.");
-        return NormalizeDecimal(value);
+        // decimal.TryParse silently rounds beyond ~28 significant digits and flushes tiny values
+        // (1e-40) to 0; two different manifests must never canonicalise to the same text.
+        string normalized = NormalizeDecimal(value);
+        if (ExactDecimalText(raw) != normalized)
+            throw new ManifestException($"{path}: number {raw} cannot be represented exactly (max 28 significant digits, |x| >= 1e-28).");
+        return normalized;
+    }
+
+    /// <summary>
+    /// Plain decimal text of a JSON number token computed from its digits alone (no rounding),
+    /// in the same form as <see cref="NormalizeDecimal"/>. Null when the exponent is absurdly large.
+    /// </summary>
+    internal static string? ExactDecimalText(string raw)
+    {
+        bool negative = raw.StartsWith('-');
+        string s = negative ? raw[1..] : raw;
+        long exponent = 0;
+        int e = s.IndexOfAny(['e', 'E']);
+        if (e >= 0)
+        {
+            if (!long.TryParse(s[(e + 1)..], NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out exponent)
+                || exponent is > 1000 or < -1000)
+                return null;
+            s = s[..e];
+        }
+        int dot = s.IndexOf('.');
+        string intPart = dot >= 0 ? s[..dot] : s;
+        string digits = dot >= 0 ? intPart + s[(dot + 1)..] : intPart;
+        long point = intPart.Length + exponent; // decimal point position within digits
+
+        int lead = 0;
+        while (lead < digits.Length && digits[lead] == '0') lead++;
+        digits = digits[lead..];
+        point -= lead;
+        digits = digits.TrimEnd('0');
+        if (digits.Length == 0)
+            return "0";
+
+        string body;
+        if (point <= 0)
+            body = "0." + new string('0', (int)-point) + digits;
+        else if (point >= digits.Length)
+            body = digits + new string('0', (int)(point - digits.Length));
+        else
+            body = digits[..(int)point] + "." + digits[(int)point..];
+        return negative ? "-" + body : body;
     }
 
     public static string NormalizeDecimal(decimal value)

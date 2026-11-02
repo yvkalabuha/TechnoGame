@@ -8,7 +8,7 @@ public static class Program
         Singularity.Lab — Simulation Lab CLI (TASK-0005)
 
           run    --manifest <json> --seed N --threads T --out <dir> [--point P] [--force] [--quiet]
-          matrix --manifest <json> --out <dir> [--jobs J] [--force]
+          matrix --manifest <json> --out <dir> [--jobs J] [--timeout SECONDS] [--force]
           hash   --manifest <json> [--canonical]     print manifest_hash (and canonical form)
           models                                     list registered models
           selftest                                   built-in self-checks (until tests/ has Lab tests)
@@ -48,6 +48,19 @@ public static class Program
             Console.Error.WriteLine($"manifest error: {e.Message}");
             return 2;
         }
+        catch (Exception e) when (e is FileNotFoundException or DirectoryNotFoundException)
+        {
+            // A missing manifest (or other input path) is an argument error.
+            Console.Error.WriteLine($"input error: {e.Message}");
+            return 2;
+        }
+        catch (Exception e)
+        {
+            // Anything else (I/O, permissions, a bug) fails the command, never with a .NET crash code.
+            Console.Error.WriteLine($"error: {e.GetType().Name}: {e.Message}");
+            Console.Error.WriteLine(e.StackTrace);
+            return 1;
+        }
     }
 
     private static int Run(Options o)
@@ -75,11 +88,12 @@ public static class Program
         Manifest m = Manifest.Load(o.Required("manifest"));
         string outDir = Path.GetFullPath(o.Required("out"));
         int jobs = o.Int("jobs", 1, 1024) ?? Environment.ProcessorCount;
+        int timeout = o.Int("timeout", 1, int.MaxValue) ?? MatrixRunner.DefaultRunTimeoutSeconds;
         bool force = o.Flag("force");
         o.CheckAllUsed();
         if (Directory.Exists(outDir) && Directory.EnumerateFileSystemEntries(outDir).Any() && !force)
             throw new UsageException($"{outDir} is not empty; use --force to reuse it.");
-        return MatrixRunner.Run(m, outDir, jobs, Console.Out);
+        return MatrixRunner.Run(m, outDir, jobs, Console.Out, timeout);
     }
 
     private static int Hash(Options o)
@@ -87,7 +101,7 @@ public static class Program
         Manifest m = Manifest.Load(o.Required("manifest"));
         bool canonical = o.Flag("canonical");
         o.CheckAllUsed();
-        Console.WriteLine($"manifest_hash={m.Hash} points={m.Points.Count} seeds={m.Seeds.Count} threads={m.Threads.Count} runs={m.RunCount}");
+        Console.WriteLine($"manifest_hash={m.Hash} points={m.Points.Count} point_seeds={m.Points.Sum(p => p.Seeds.Count)} threads={m.Threads.Count} runs={m.RunCount}");
         if (canonical) Console.WriteLine(m.CanonicalText);
         return 0;
     }

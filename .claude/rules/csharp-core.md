@@ -12,6 +12,8 @@ paths:
 - No `float`/`MathF` in world state. No `Math.Sin/Cos/Exp/Log/Pow` in world state; use Kernel implementations.
 - Money, stocks, population: fixed-point `long` types from Kernel.
 - No `DateTime.Now`, `Environment.TickCount`, `Guid.NewGuid()`, `Stopwatch` values in simulation logic.
+- The architecture test is conservative: a method that touches a hash or set type (including `IDictionary`/`ISet` interfaces) must not enumerate anything. Move the lookup into its own method.
+- `double.Parse`/`TryParse` only with an `IFormatProvider` (InvariantCulture).
 - Parallel code: the compute phase reads the previous state and writes only to its own columns or per-chunk buffers; merge applies buffers in a deterministic order. No `Parallel.ForEach` with shared writes, no `AsParallel()`.
 
 ## Structure

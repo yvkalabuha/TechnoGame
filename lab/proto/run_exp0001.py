@@ -62,6 +62,74 @@ def params_for(beta, gamma, calib=None, nu=None):
     return p
 
 
+# Lab schema 1 (docs/simulation/lab-cli.md). Series names are "<group>/<sub>"; the group
+# ("main", "grid") is what runs.csv calls `series` (analysis takes the part before "/").
+LAB_MODEL_ID = "toy-funnel"
+# Lab model inputs that are not in M.PARAMS; "model" and "nu" select the variant and the point.
+NON_SIM_PARAMS = ("archetypes", "levels", "model", "nu")
+# Sweep axes and per-series values: must not be in the base params (Lab rejects the overlap).
+SERIES_PARAMS = ("beta", "gamma", "B_c_tau0", "B_delta_tau")
+
+
+def lab_series(calib):
+    out = []
+    mx = MATRIX["main"]
+    seeds = {"start": mx["seeds"][0], "count": mx["seeds"][1] - mx["seeds"][0] + 1}
+    for model in mx["models"]:
+        fixed = {"model": model, "beta": mx["beta"][0], "gamma": mx["gamma"][0]}
+        if model == "B":  # calibrated per nu (§2.7) -> one series per nu
+            for nu in mx["nu"]:
+                out.append({"name": "main/B/nu%s" % nu, "seeds": seeds,
+                            "params": dict(fixed, nu=nu, **calib[str(nu)]["values"])})
+        else:
+            out.append({"name": "main/%s" % model, "seeds": seeds, "params": fixed,
+                        "sweep": {"nu": mx["nu"]}})
+    gx = MATRIX["grid"]
+    out.append({"name": "grid", "params": {"model": gx["models"][0]},
+                "seeds": {"start": gx["seeds"][0], "count": gx["seeds"][1] - gx["seeds"][0] + 1},
+                "sweep": {"beta": gx["beta"], "gamma": gx["gamma"], "nu": gx["nu"]}})
+    assert len(gx["models"]) == 1
+    return out
+
+
+def _seed_list(s):
+    if isinstance(s, dict):
+        return list(range(s["start"], s["start"] + s["count"]))
+    return list(s)
+
+
+def manifest_points(man):
+    """Lab expansion of a schema-1 manifest: (series, params, seeds) per point, in Lab order."""
+    base = man.get("params", {})
+    pts = []
+    for s in man["series"]:
+        merged = dict(base, **s.get("params", {}))
+        seeds = _seed_list(s.get("seeds", man["seeds"]))
+        axes = sorted(s.get("sweep", {}).items())
+        combos = [{}]
+        for key, values in axes:  # last axis varies fastest
+            assert key not in merged, "sweep axis %s is also a parameter" % key
+            combos = [dict(c, **{key: v}) for c in combos for v in values]
+        for c in combos:
+            pts.append((s["name"], dict(merged, **c), seeds))
+    return pts
+
+
+def run_keys(man):
+    """Run keys of the prototype, read from the manifest (same manifest as Lab)."""
+    keys = []
+    for name, p, seeds in manifest_points(man):
+        sim = dict(M.PARAMS)
+        for k, v in p.items():
+            if k not in NON_SIM_PARAMS:
+                sim[k] = v
+        assert p["archetypes"] == M.ARCHETYPES and p["levels"] == M.LEVELS
+        group = name.split("/", 1)[0]
+        for seed in seeds:
+            keys.append((group, p["model"], p["nu"], p["beta"], p["gamma"], seed, sim))
+    return keys
+
+
 # ---------------------------------------------------------------- workers
 
 def _job(key):
@@ -139,26 +207,37 @@ def calibrate(pool, log):
 # ---------------------------------------------------------------- manifest
 
 def build_manifest(calib):
+    """EXP-0001 manifest in Lab schema 1: params/series/seeds for Lab, the rest in meta."""
     import exp0001
+    base = {k: v for k, v in M.PARAMS.items() if k not in SERIES_PARAMS}
+    base["archetypes"] = M.ARCHETYPES
+    base["levels"] = M.LEVELS
     return {
+        "schema": 1,
         "experiment": "EXP-0001",
-        "manifest_schema": 1,
-        "freeze": "proposal (TASK-0003); manifest_hash recorded after owner approval",
-        "model_doc": "docs/simulation/toy-science-industry-model.md",
-        "csv_format": "docs/simulation/exp0001-csv-format.md",
-        "reference_implementation": "lab/proto/model.py",
-        "years": [1910, 1950], "tick": "month",
-        "params": M.PARAMS,
-        "levels": M.LEVELS,
-        "archetypes": M.ARCHETYPES,
-        "rng": {"scheme": "Kernel CounterRng (SplitMix64 chain, tools/reference/kernel_vectors.py)",
-                "keys": {"SETUP": "system 0, tick 0, entity i, n 0..3 = mult_S, mult_E, mult_Pl, mult_Nl",
-                         "SCIENCE": "system 1, tick t, entity i, n 0 = breakthrough u2",
-                         "PRODUCTION": "system 2, tick t, entity i, n 0 = output shock u1"}},
-        "matrix": MATRIX,
-        "calibration_B": {"rule": CALIBRATION, "result": calib},
-        "analysis": {"script": "lab/analysis/exp0001.py", "config": exp0001.DEFAULTS},
-        "decision_rule": "HYP-0001 rev 2 «Критерии успеха»; implemented by analysis.config.decision",
+        "description": "HYP-0001 pilot: science-industry funnel, models A/B/C, 1910-1950",
+        "model": LAB_MODEL_ID,
+        "ticks": M.PARAMS["n_ticks"],
+        "seeds": {"start": MATRIX["main"]["seeds"][0],
+                  "count": MATRIX["main"]["seeds"][1] - MATRIX["main"]["seeds"][0] + 1},
+        "threads": [1],
+        "params": base,
+        "series": lab_series(calib),
+        "meta": {
+            "freeze": "TASK-0008, DECISIONS_LOG #16-#17; manifest_hash = Singularity.Lab hash",
+            "model_doc": "docs/simulation/toy-science-industry-model.md",
+            "csv_format": "docs/simulation/exp0001-csv-format.md",
+            "reference_implementation": "lab/proto/model.py",
+            "series_naming": "<group>/<sub>; runs.csv series = group (main, grid)",
+            "years": [1910, 1950], "tick": "month",
+            "rng": {"scheme": "Kernel CounterRng (SplitMix64 chain, tools/reference/kernel_vectors.py)",
+                    "keys": {"SETUP": "system 0, tick 0, entity i, n 0..3 = mult_S, mult_E, mult_Pl, mult_Nl",
+                             "SCIENCE": "system 1, tick t, entity i, n 0 = breakthrough u2",
+                             "PRODUCTION": "system 2, tick t, entity i, n 0 = output shock u1"}},
+            "calibration_B": {"rule": CALIBRATION, "result": calib},
+            "analysis": {"script": "lab/analysis/exp0001.py", "config": exp0001.DEFAULTS},
+            "decision_rule": "HYP-0001 rev 2 «Критерии успеха»; implemented by meta.analysis.config.decision",
+        },
     }
 
 
@@ -194,16 +273,8 @@ def main(argv=None):
                                  "only before the freeze)\n" % MANIFEST)
                 return 2
 
-        keys = []
-        for series in ("main", "grid"):
-            mx = MATRIX[series]
-            for model in mx["models"]:
-                for nu in mx["nu"]:
-                    for beta in mx["beta"]:
-                        for gamma in mx["gamma"]:
-                            p = params_for(beta, gamma, calib if model == "B" else None, nu)
-                            for seed in range(mx["seeds"][0], mx["seeds"][1] + 1):
-                                keys.append((series, model, nu, beta, gamma, seed, p))
+        with open(MANIFEST, encoding="utf-8") as f:
+            keys = run_keys(json.load(f))
         log("running %d runs on %d jobs" % (len(keys), a.jobs))
         res = list(pool.map(_job, keys, chunksize=8))
     log("simulation done")
@@ -222,7 +293,7 @@ def main(argv=None):
         f.write(canonical(calib))
     cfg_path = os.path.join(a.out, "thresholds.json")
     with open(cfg_path, "w", encoding="utf-8", newline="\n") as f:
-        f.write(canonical(man["analysis"]["config"]))
+        f.write(canonical(man["meta"]["analysis"]["config"]))
     log("csv written to %s" % a.out)
     if a.analyze:
         import exp0001

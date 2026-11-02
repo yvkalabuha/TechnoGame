@@ -1,297 +1,261 @@
 {
-  "analysis": {
-    "config": {
-      "c1": {
-        "exclude_from_min_top2": [
+  "description": "HYP-0001 pilot: science-industry funnel, models A/B/C, 1910-1950",
+  "experiment": "EXP-0001",
+  "meta": {
+    "analysis": {
+      "config": {
+        "c1": {
+          "exclude_from_min_top2": [
+            "A6"
+          ],
+          "max_win_share": 0.4,
+          "min_top2_share": 0.05
+        },
+        "c2": {
+          "final_leader": "raw",
+          "hysteresis_margin": 0.05,
+          "hysteresis_years": 2,
+          "min_median_changes": 1.0,
+          "min_new_leader_share": 0.3
+        },
+        "c3": {
+          "bootstrap_reps": 1000,
+          "bootstrap_seed": 20261102,
+          "max_left_censored_share": 0.3,
+          "min_lag_ratio": 1.5,
+          "others_exclude": []
+        },
+        "c4": {
+          "e_growth_years": [
+            1910,
+            1930
+          ],
+          "max_ks_p": 0.01,
+          "min_ks_d": 0.3,
+          "top2_share_max": 0.4,
+          "top2_share_min": 0.1
+        },
+        "c5": {
+          "bootstrap_reps": 1000,
+          "bootstrap_seed": 20261103,
+          "lag_threshold": 0.8,
+          "min_explained_fraction": 0.8,
+          "min_year": 1915,
+          "noise_unexplained_share": 0.3,
+          "top2_share_explained": 0.7
+        },
+        "c6": {
+          "control_models": [
+            "B",
+            "C"
+          ],
+          "max_diversity_ratio": 0.7
+        },
+        "c7": {
+          "from_window": [
+            1929,
+            1931
+          ],
+          "gain1": 1,
+          "gain2": 2,
+          "min_share_gain1": 0.5,
+          "min_share_gain2": 0.15,
+          "to_window": [
+            1948,
+            1950
+          ]
+        },
+        "catchup_archetype": "A6",
+        "ci_level": 0.95,
+        "countries": [
+          "A1",
+          "A2",
+          "A3",
+          "A4",
+          "A5",
           "A6"
         ],
-        "max_win_share": 0.4,
-        "min_top2_share": 0.05
-      },
-      "c2": {
-        "final_leader": "raw",
-        "hysteresis_margin": 0.05,
-        "hysteresis_years": 2,
-        "min_median_changes": 1.0,
-        "min_new_leader_share": 0.3
-      },
-      "c3": {
-        "bootstrap_reps": 1000,
-        "bootstrap_seed": 20261102,
-        "max_left_censored_share": 0.3,
-        "min_lag_ratio": 1.5,
-        "others_exclude": []
-      },
-      "c4": {
-        "e_growth_years": [
-          1910,
-          1930
-        ],
-        "max_ks_p": 0.01,
-        "min_ks_d": 0.3,
-        "top2_share_max": 0.4,
-        "top2_share_min": 0.1
-      },
-      "c5": {
-        "bootstrap_reps": 1000,
-        "bootstrap_seed": 20261103,
-        "lag_threshold": 0.8,
-        "min_explained_fraction": 0.8,
-        "min_year": 1915,
-        "noise_in_top2_unexplained": true,
-        "top2_share_explained": 0.7
-      },
-      "c6": {
-        "control_models": [
-          "B",
-          "C"
-        ],
-        "max_diversity_ratio": 0.7
-      },
-      "c7": {
-        "from_window": [
-          1929,
-          1931
-        ],
-        "gain1": 1,
-        "gain2": 2,
-        "min_share_gain1": 0.5,
-        "min_share_gain2": 0.15,
-        "to_window": [
-          1948,
-          1950
-        ]
-      },
-      "catchup_archetype": "A6",
-      "ci_level": 0.95,
-      "countries": [
-        "A1",
-        "A2",
-        "A3",
-        "A4",
-        "A5",
-        "A6"
-      ],
-      "d_trigger": {
-        "min_points": 5,
-        "top2_share_below": 0.1
-      },
-      "decision": {
-        "grid_min_points": 5,
-        "main_borderline_inconclusive": true,
-        "refute_criteria": [
-          "1",
-          "6"
-        ]
-      },
-      "grid_series": "grid",
-      "main_series": "main",
-      "n_ticks": 492,
-      "primary_model": "A",
-      "science_archetype": "A1",
-      "wilson_z": 1.959963984540054,
-      "years": {
-        "end": 1950,
-        "start": 1910
-      }
-    },
-    "script": "lab/analysis/exp0001.py"
-  },
-  "archetypes": [
-    {
-      "E": "l",
-      "Nl": "m",
-      "Pl": "m",
-      "S": "h",
-      "edu": [
-        "h",
-        "l"
-      ],
-      "id": "A1",
-      "iota": 0.6
-    },
-    {
-      "E": "m",
-      "Nl": "m",
-      "Pl": "h",
-      "S": "l",
-      "edu": [
-        "m",
-        "m"
-      ],
-      "id": "A2",
-      "iota": 0.6
-    },
-    {
-      "E": "h",
-      "Nl": "l",
-      "Pl": "m",
-      "S": "m",
-      "edu": [
-        "l",
-        "h"
-      ],
-      "id": "A3",
-      "iota": 0.6
-    },
-    {
-      "E": "m",
-      "Nl": "h",
-      "Pl": "m",
-      "S": "l",
-      "edu": [
-        "l",
-        "m"
-      ],
-      "id": "A4",
-      "iota": 0.6
-    },
-    {
-      "E": "m",
-      "Nl": "m",
-      "Pl": "m",
-      "S": "m",
-      "edu": [
-        "m",
-        "m"
-      ],
-      "id": "A5",
-      "iota": 0.6
-    },
-    {
-      "E": "l",
-      "Nl": "m",
-      "Pl": "l",
-      "S": "l",
-      "edu": [
-        "sched",
-        "sched"
-      ],
-      "id": "A6",
-      "iota": 0.96
-    }
-  ],
-  "calibration_B": {
-    "result": {
-      "0.25": {
-        "ln_dev_1930": -0.06517091931055874,
-        "max_abs_ln_dev": 0.10411099563889209,
-        "rms_ln_dev": 0.062198825779280674,
-        "target_A5_mean_power": {
-          "1910": 1793.4364379200001,
-          "1930": 7085.26522182,
-          "1950": 89115.74192874001
+        "d_trigger": {
+          "min_points": 5,
+          "top2_share_below": 0.1
         },
-        "values": {
-          "B_c_tau0": 0.45605548915918925,
-          "B_delta_tau": 0.1080050200689584
+        "decision": {
+          "grid_min_points": 5,
+          "main_borderline_inconclusive": true,
+          "refute_criteria": [
+            "1",
+            "6"
+          ]
+        },
+        "grid_series": "grid",
+        "main_series": "main",
+        "n_ticks": 492,
+        "primary_model": "A",
+        "science_archetype": "A1",
+        "wilson_z": 1.959963984540054,
+        "years": {
+          "end": 1950,
+          "start": 1910
         }
       },
-      "1.0": {
-        "ln_dev_1930": -0.05797134544090973,
-        "max_abs_ln_dev": 0.10368890900665925,
-        "rms_ln_dev": 0.05974833128630671,
-        "target_A5_mean_power": {
-          "1910": 1791.43180252,
-          "1930": 7038.36925252,
-          "1950": 89232.14333586
+      "script": "lab/analysis/exp0001.py"
+    },
+    "calibration_B": {
+      "result": {
+        "0.25": {
+          "ln_dev_1930": -0.06517091931055874,
+          "max_abs_ln_dev": 0.10411099563889209,
+          "rms_ln_dev": 0.062198825779280674,
+          "target_A5_mean_power": {
+            "1910": 1793.4364379200001,
+            "1930": 7085.26522182,
+            "1950": 89115.74192874001
+          },
+          "values": {
+            "B_c_tau0": 0.45605548915918925,
+            "B_delta_tau": 0.1080050200689584
+          }
         },
-        "values": {
-          "B_c_tau0": 0.4562846855958923,
-          "B_delta_tau": 0.10798051790334284
+        "1.0": {
+          "ln_dev_1930": -0.05797134544090973,
+          "max_abs_ln_dev": 0.10368890900665925,
+          "rms_ln_dev": 0.05974833128630671,
+          "target_A5_mean_power": {
+            "1910": 1791.43180252,
+            "1930": 7038.36925252,
+            "1950": 89232.14333586
+          },
+          "values": {
+            "B_c_tau0": 0.4562846855958923,
+            "B_delta_tau": 0.10798051790334284
+          }
         }
+      },
+      "rule": {
+        "bisection_steps": 30,
+        "match": {
+          "B_c_tau0": 1910,
+          "B_delta_tau": 1950
+        },
+        "overflow": "treated as +inf",
+        "params": {
+          "B_c_tau0": [
+            0.05,
+            2.0
+          ],
+          "B_delta_tau": [
+            0.0,
+            0.5
+          ]
+        },
+        "point": "main beta/gamma, per nu",
+        "rounds": 3,
+        "seeds": [
+          10001,
+          10050
+        ],
+        "target_country": "A5",
+        "target_model": "A"
       }
     },
-    "rule": {
-      "bisection_steps": 30,
-      "match": {
-        "B_c_tau0": 1910,
-        "B_delta_tau": 1950
+    "csv_format": "docs/simulation/exp0001-csv-format.md",
+    "decision_rule": "HYP-0001 rev 2 «Критерии успеха»; implemented by meta.analysis.config.decision",
+    "freeze": "TASK-0008, DECISIONS_LOG #16-#17; manifest_hash = Singularity.Lab hash",
+    "model_doc": "docs/simulation/toy-science-industry-model.md",
+    "reference_implementation": "lab/proto/model.py",
+    "rng": {
+      "keys": {
+        "PRODUCTION": "system 2, tick t, entity i, n 0 = output shock u1",
+        "SCIENCE": "system 1, tick t, entity i, n 0 = breakthrough u2",
+        "SETUP": "system 0, tick 0, entity i, n 0..3 = mult_S, mult_E, mult_Pl, mult_Nl"
       },
-      "overflow": "treated as +inf",
-      "params": {
-        "B_c_tau0": [
-          0.05,
-          2.0
-        ],
-        "B_delta_tau": [
-          0.0,
-          0.5
-        ]
-      },
-      "point": "main beta/gamma, per nu",
-      "rounds": 3,
-      "seeds": [
-        10001,
-        10050
-      ],
-      "target_country": "A5",
-      "target_model": "A"
-    }
-  },
-  "csv_format": "docs/simulation/exp0001-csv-format.md",
-  "decision_rule": "HYP-0001 rev 2 «Критерии успеха»; implemented by analysis.config.decision",
-  "experiment": "EXP-0001",
-  "freeze": "proposal (TASK-0003); manifest_hash recorded after owner approval",
-  "levels": {
-    "h": 1.6,
-    "l": 0.6,
-    "m": 1.0
-  },
-  "manifest_schema": 1,
-  "matrix": {
-    "grid": {
-      "beta": [
-        0.5,
-        0.625,
-        0.75
-      ],
-      "gamma": [
-        0.5,
-        0.75,
-        1.0
-      ],
-      "models": [
-        "A"
-      ],
-      "nu": [
-        0.25,
-        1.0
-      ],
-      "seeds": [
-        1,
-        50
-      ]
+      "scheme": "Kernel CounterRng (SplitMix64 chain, tools/reference/kernel_vectors.py)"
     },
-    "main": {
-      "beta": [
-        0.625
-      ],
-      "gamma": [
-        1.0
-      ],
-      "models": [
-        "A",
-        "B",
-        "C"
-      ],
-      "nu": [
-        0.25,
-        1.0
-      ],
-      "seeds": [
-        1,
-        200
-      ]
-    }
+    "series_naming": "<group>/<sub>; runs.csv series = group (main, grid)",
+    "tick": "month",
+    "years": [
+      1910,
+      1950
+    ]
   },
-  "model_doc": "docs/simulation/toy-science-industry-model.md",
+  "model": "toy-funnel",
   "params": {
-    "B_c_tau0": 1.0,
-    "B_delta_tau": 0.25,
     "C_lag_months": 120,
     "C_psi": 0.45,
-    "beta": 0.625,
+    "archetypes": [
+      {
+        "E": "l",
+        "Nl": "m",
+        "Pl": "m",
+        "S": "h",
+        "edu": [
+          "h",
+          "l"
+        ],
+        "id": "A1",
+        "iota": 0.6
+      },
+      {
+        "E": "m",
+        "Nl": "m",
+        "Pl": "h",
+        "S": "l",
+        "edu": [
+          "m",
+          "m"
+        ],
+        "id": "A2",
+        "iota": 0.6
+      },
+      {
+        "E": "h",
+        "Nl": "l",
+        "Pl": "m",
+        "S": "m",
+        "edu": [
+          "l",
+          "h"
+        ],
+        "id": "A3",
+        "iota": 0.6
+      },
+      {
+        "E": "m",
+        "Nl": "h",
+        "Pl": "m",
+        "S": "l",
+        "edu": [
+          "l",
+          "m"
+        ],
+        "id": "A4",
+        "iota": 0.6
+      },
+      {
+        "E": "m",
+        "Nl": "m",
+        "Pl": "m",
+        "S": "m",
+        "edu": [
+          "m",
+          "m"
+        ],
+        "id": "A5",
+        "iota": 0.6
+      },
+      {
+        "E": "l",
+        "Nl": "m",
+        "Pl": "l",
+        "S": "l",
+        "edu": [
+          "sched",
+          "sched"
+        ],
+        "id": "A6",
+        "iota": 0.96
+      }
+    ],
     "delta_A": 0.02,
     "delta_K": 0.25,
     "delta_P": 0.05,
@@ -303,8 +267,12 @@
     ],
     "eta": 4.0,
     "g0": 0.04,
-    "gamma": 1.0,
     "kappa": 0.05,
+    "levels": {
+      "h": 1.6,
+      "l": 0.6,
+      "m": 1.0
+    },
     "milestone_count": 24,
     "milestone_q0": 100,
     "mu": 0.03,
@@ -323,18 +291,107 @@
     "w": 0.5,
     "z": 1.0
   },
-  "reference_implementation": "lab/proto/model.py",
-  "rng": {
-    "keys": {
-      "PRODUCTION": "system 2, tick t, entity i, n 0 = output shock u1",
-      "SCIENCE": "system 1, tick t, entity i, n 0 = breakthrough u2",
-      "SETUP": "system 0, tick 0, entity i, n 0..3 = mult_S, mult_E, mult_Pl, mult_Nl"
-    },
-    "scheme": "Kernel CounterRng (SplitMix64 chain, tools/reference/kernel_vectors.py)"
+  "schema": 1,
+  "seeds": {
+    "count": 200,
+    "start": 1
   },
-  "tick": "month",
-  "years": [
-    1910,
-    1950
-  ]
+  "series": [
+    {
+      "name": "main/A",
+      "params": {
+        "beta": 0.625,
+        "gamma": 1.0,
+        "model": "A"
+      },
+      "seeds": {
+        "count": 200,
+        "start": 1
+      },
+      "sweep": {
+        "nu": [
+          0.25,
+          1.0
+        ]
+      }
+    },
+    {
+      "name": "main/B/nu0.25",
+      "params": {
+        "B_c_tau0": 0.45605548915918925,
+        "B_delta_tau": 0.1080050200689584,
+        "beta": 0.625,
+        "gamma": 1.0,
+        "model": "B",
+        "nu": 0.25
+      },
+      "seeds": {
+        "count": 200,
+        "start": 1
+      }
+    },
+    {
+      "name": "main/B/nu1.0",
+      "params": {
+        "B_c_tau0": 0.4562846855958923,
+        "B_delta_tau": 0.10798051790334284,
+        "beta": 0.625,
+        "gamma": 1.0,
+        "model": "B",
+        "nu": 1.0
+      },
+      "seeds": {
+        "count": 200,
+        "start": 1
+      }
+    },
+    {
+      "name": "main/C",
+      "params": {
+        "beta": 0.625,
+        "gamma": 1.0,
+        "model": "C"
+      },
+      "seeds": {
+        "count": 200,
+        "start": 1
+      },
+      "sweep": {
+        "nu": [
+          0.25,
+          1.0
+        ]
+      }
+    },
+    {
+      "name": "grid",
+      "params": {
+        "model": "A"
+      },
+      "seeds": {
+        "count": 50,
+        "start": 1
+      },
+      "sweep": {
+        "beta": [
+          0.5,
+          0.625,
+          0.75
+        ],
+        "gamma": [
+          0.5,
+          0.75,
+          1.0
+        ],
+        "nu": [
+          0.25,
+          1.0
+        ]
+      }
+    }
+  ],
+  "threads": [
+    1
+  ],
+  "ticks": 492
 }

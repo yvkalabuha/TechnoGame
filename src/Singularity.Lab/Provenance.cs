@@ -7,11 +7,43 @@ namespace Singularity.Lab;
 /// <summary>Reproducibility fields of a run: code version and input data version.</summary>
 public sealed record Provenance(string CoreCommit, bool? Dirty, string DataHash, IReadOnlyList<DataFileHash> DataFiles)
 {
+    /// <summary>
+    /// Untracked files under src/ (the SDK compiles every *.cs there, so they change the binary).
+    /// Null outside git.
+    /// </summary>
+    public bool? DirtyUntrackedSrc { get; init; }
+
+    /// <summary>Commit the running binary was built from (SDK SourceRevisionId); "unknown" if absent.</summary>
+    public string BuildCommit { get; init; } = BinaryBuildCommit();
+
     public static Provenance Collect(Manifest manifest)
     {
         (string commit, bool? dirty) = Git(manifest.BaseDirectory);
         (string dataHash, var files) = HashData(manifest);
-        return new Provenance(commit, dirty, dataHash, files);
+        return new Provenance(commit, dirty, dataHash, files) { DirtyUntrackedSrc = UntrackedSrc(manifest.BaseDirectory) };
+    }
+
+    /// <summary>
+    /// The .NET SDK appends "+&lt;SourceRevisionId&gt;" (git HEAD at build time) to
+    /// AssemblyInformationalVersion when building inside a git work tree.
+    /// </summary>
+    public static string BinaryBuildCommit()
+    {
+        string? info = typeof(Provenance).Assembly
+            .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>()
+            .FirstOrDefault()?.InformationalVersion;
+        int plus = info?.IndexOf('+') ?? -1;
+        return plus >= 0 && plus + 1 < info!.Length ? info[(plus + 1)..] : "unknown";
+    }
+
+    /// <summary>True if git sees untracked files under the repository's src/ ("dirty" ignores untracked files).</summary>
+    public static bool? UntrackedSrc(string workDir)
+    {
+        // ":/src/" is a top-level pathspec, independent of the manifest's directory.
+        string? status = RunGit(workDir, "status", "--porcelain", "--untracked-files=all", "--", ":/src/");
+        if (status is null) return null;
+        return status.Split('\n').Any(line => line.StartsWith("??", StringComparison.Ordinal));
     }
 
     /// <summary>

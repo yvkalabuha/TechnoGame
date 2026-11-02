@@ -87,6 +87,17 @@ def only_group(res):
     return next(iter(gs.values()))
 
 
+class TestLabSeriesNames(unittest.TestCase):
+    def test_series_group_before_slash(self):
+        # Lab series "main/A" and "main/B/nu1.0" (EXP-0001 manifest) belong to group "main"
+        specs = [Spec("r1", 1, series="main/A"), Spec("r2", 2, series="main/A")]
+        with tempfile.TemporaryDirectory() as d:
+            write_dataset(d, specs)
+            runs = X.load(d, CFG)
+        self.assertEqual({r["series"] for r in runs.values()}, {"main"})
+        self.assertEqual(only_group(analyze(specs))["key"][0], "main")
+
+
 class TestStats(unittest.TestCase):
     def test_wilson(self):
         lo, hi = X.wilson(5, 10, 1.96)
@@ -308,7 +319,7 @@ class TestCriterion5Bottlenecks(unittest.TestCase):
         self.assertEqual(comp["RESOURCES"], 0.0)
         self.assertAlmostEqual(comp["CAPITAL"], math.log(2.0))
         self.assertAlmostEqual(comp["NOISE"], math.log(2.0))  # gap - (cap + res_signed)
-        # tie CAPITAL/NOISE -> CAPITAL first, NOISE second -> unexplained
+        # tie CAPITAL/NOISE -> CAPITAL first, NOISE second; NOISE = 0.5*gap -> unexplained
         self.assertEqual(X.rank_components(comp)[:2], ["CAPITAL", "NOISE"])
 
     def test_fraction_and_labels(self):
@@ -353,10 +364,43 @@ class TestCriterion5Bottlenecks(unittest.TestCase):
         self.assertEqual(g["per"]["A3"]["labels"]["NOISE"], 1.0)
 
     def test_noise_rule_param(self):
-        # pure-noise case A3: share = 1.0 when NOISE allowed in top-2
-        cfg = X.merge_config(CFG, {"c5": {"noise_in_top2_unexplained": False}})
+        # pure-noise case A3 (NOISE = gap): explained only if the NOISE threshold is above 1
+        cfg = X.merge_config(CFG, {"c5": {"noise_unexplained_share": 1.01}})
         g = only_group(analyze(self.specs(), cfg))["5"]
         self.assertEqual(g["per"]["A3"]["explained"], 1.0)
+
+    def noise_case(self, state, noise_frac, signed):
+        """One lagging country A2; gap = signed / (1 - noise_frac), so NOISE = noise_frac*gap."""
+        gap = signed / (1.0 - noise_frac)
+        pw = dict(BASE, A1=1000.0, A2=1000.0 / math.exp(gap), A3=900.0, A4=900.0, A5=900.0,
+                  A6=900.0)
+        return [Spec("r1", 1, beta=0.5, power=pw, state={"A2": state})]
+
+    def test_noise_share_rule(self):
+        # DECISIONS_LOG #17: unexplained only if NOISE >= 0.3 * gap
+        self.assertEqual(CFG["c5"]["noise_unexplained_share"], 0.3)
+        cap = {"P": 25.0}                                    # CAPITAL = 0.5*ln4, rest 0
+        ln2 = 0.5 * self.LN4
+        # NOISE in top-2 but 0.2*gap: explained (old rule said unexplained)
+        g = only_group(analyze(self.noise_case(cap, 0.2, ln2)))["5"]
+        self.assertEqual(g["per"]["A2"]["explained"], 1.0)
+        self.assertEqual(g["per"]["A2"]["p50"], 1.0)
+        # NOISE 0.35*gap: unexplained although top-2 share is 1
+        g = only_group(analyze(self.noise_case(cap, 0.35, ln2)))["5"]
+        self.assertEqual(g["per"]["A2"]["explained"], 0.0)
+        # NOISE 0.32*gap outside top-2 (CAPITAL = RESOURCES = 0.34*gap): unexplained
+        both = {"P": 25.0, "N": 25.0}
+        cfg = X.merge_config(CFG, {"c5": {"top2_share_explained": 0.6}})
+        g = only_group(analyze(self.noise_case(both, 0.32, 2 * ln2), cfg))["5"]
+        self.assertEqual(g["per"]["A2"]["labels"]["CAPITAL"], 1.0)
+        self.assertEqual(g["per"]["A2"]["explained"], 0.0)
+        cfg = X.merge_config(cfg, {"c5": {"noise_unexplained_share": 0.4}})
+        g = only_group(analyze(self.noise_case(both, 0.32, 2 * ln2), cfg))["5"]
+        self.assertEqual(g["per"]["A2"]["explained"], 1.0)
+
+    def test_final_leader_default_is_argmax_1950(self):
+        # DECISIONS_LOG #17 p.2: final leader = raw argmax of Power in 1950
+        self.assertEqual(CFG["c2"]["final_leader"], "raw")
 
 
 class TestCriterion6Controls(unittest.TestCase):

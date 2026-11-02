@@ -92,6 +92,34 @@ public class TickRunnerTests
         Assert.IsType<InvalidOperationException>(e.InnerException);
     }
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(4)]
+    [InlineData(16)]
+    public void SeveralFailingChunks_LowestIsAlwaysReported(int threads) // DEBT-0002
+    {
+        // The late low chunk sleeps so that high chunks usually fail first under N threads.
+        for (int repeat = 0; repeat < 20; repeat++)
+        {
+            var table = new Table(1000);
+            var system = new MultiFailSystem(failChunks: [97, 3, 40], slowChunk: 3);
+            var runner = new TickRunner(table, 0, [system], chunkSize: 10, maxThreads: threads);
+            var e = Assert.Throws<TickComputeException>(runner.RunTick);
+            Assert.Equal(3, e.Chunk);
+            Assert.Equal("chunk 3", e.InnerException!.Message);
+        }
+    }
+
+    [Fact]
+    public void ParallelFailure_StillRunsEveryChunk() // DEBT-0002: no early stop, so the failure set is fixed
+    {
+        var table = new Table(1000);
+        var system = new MultiFailSystem(failChunks: [0], slowChunk: -1);
+        var runner = new TickRunner(table, 0, [system], chunkSize: 10, maxThreads: 8);
+        Assert.Throws<TickComputeException>(runner.RunTick);
+        Assert.Equal(100, system.Calls);
+    }
+
     [Fact]
     public void Tick_CountsCompletedTicks()
     {
@@ -168,6 +196,29 @@ internal sealed class DiffusionTestSystem : ITickSystem
                 throw new InvalidOperationException($"Negative stock at row {row}, tick {context.Tick}.");
         }
     }
+}
+
+/// <summary>Throws in each chunk of <c>failChunks</c>; <c>slowChunk</c> sleeps before throwing. Counts Compute calls.</summary>
+internal sealed class MultiFailSystem(int[] failChunks, int slowChunk) : ITickSystem
+{
+    private int _calls;
+
+    public int Calls => _calls;
+
+    public int SystemId => 8;
+
+    public void Compute(in TickContext context, int chunk, int rowStart, int rowEnd)
+    {
+        Interlocked.Increment(ref _calls);
+        if (chunk == slowChunk)
+            Thread.Sleep(20);
+        if (Array.IndexOf(failChunks, chunk) >= 0)
+            throw new InvalidOperationException($"chunk {chunk}");
+    }
+
+    public void Merge(in TickContext context, int chunkCount) { }
+
+    public void Post(in TickContext context) { }
 }
 
 /// <summary>Throws in the chunk that contains <c>failRow</c>.</summary>

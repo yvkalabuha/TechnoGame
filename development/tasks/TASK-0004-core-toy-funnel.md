@@ -1,7 +1,7 @@
 ---
 id: TASK-0004
 title: "Core: модель ToyFunnel (A, B, C) на Kernel"
-status: IN_PROGRESS 
+status: REVIEW
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer
@@ -40,3 +40,5 @@ created: 2026-11-02
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
+`src/Singularity.Core` (Simulation/LabModel.cs, ParamSet.cs; Science/ToyFunnel), `tests/Singularity.Core.Tests` (73). Паритет с `lab/proto/model.py` бит-в-бит на 22 парах (модель, seed), включая 64 страны. Инварианты на 200 seeds × A/B/C × 2 ν. L1/L2: 1/4/8 потоков. DEBT-0002/0003 закрыты; архитектурные правила применяются к Core (Architecture 47). Проверено Orchestrator: build 0 warnings; tests 47/151/73.
+Отклонения от интерфейса Lab: без `ParamValue.From(JsonElement)`; `ParamException` вместо `ManifestException`; новые `ParamSet.GetDouble`, `MetricFormat.Real`; CSV-формат чисел отличается от прототипа (значения равны). C# пересчёт калибровки B не делался (вне критериев).

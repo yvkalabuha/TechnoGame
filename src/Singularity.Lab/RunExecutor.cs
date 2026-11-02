@@ -134,6 +134,8 @@ public static class RunExecutor
         if (golden is null) w.WriteNull("golden_hash"); else w.WriteString("golden_hash", golden);
         w.WriteString("core_commit", prov.CoreCommit);
         if (prov.Dirty is bool d) w.WriteBoolean("dirty", d); else w.WriteNull("dirty");
+        if (prov.DirtyUntrackedSrc is bool u) w.WriteBoolean("dirty_untracked_src", u); else w.WriteNull("dirty_untracked_src");
+        w.WriteString("build_commit", prov.BuildCommit);
         w.WriteString("manifest_hash", m.Hash);
         w.WriteString("manifest_path", m.SourcePath);
         w.WriteString("data_hash", prov.DataHash);

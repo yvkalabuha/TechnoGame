@@ -1,6 +1,10 @@
 using System.Collections;
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
+using System.Collections.Immutable;
+using System.Collections.Specialized;
 using System.Diagnostics;
+using System.Numerics;
 using System.Reflection;
 using System.Reflection.Emit;
 
@@ -40,11 +44,36 @@ internal static class DeterminismRules
         (typeof(ParallelEnumerable), "AsParallel"),
     ];
 
-    // Hash-ordered collections: enumerating them makes the order depend on hashing.
+    // Hash- or thread-ordered collections: enumerating them makes the order depend on hashing or
+    // scheduling. Dictionary/set interfaces are listed conservatively: the implementation behind
+    // them may be hash-based. Ordered types (SortedDictionary, ImmutableSortedSet, List…) are fine.
     private static readonly Type[] UnorderedCollections =
     [
-        typeof(Dictionary<,>), typeof(HashSet<>), typeof(ConcurrentDictionary<,>),
+        typeof(Dictionary<,>), typeof(HashSet<>), typeof(ConcurrentDictionary<,>), typeof(ConcurrentBag<>),
         typeof(Dictionary<,>.KeyCollection), typeof(Dictionary<,>.ValueCollection),
+        typeof(IDictionary<,>), typeof(IReadOnlyDictionary<,>), typeof(ISet<>), typeof(IReadOnlySet<>),
+        typeof(FrozenDictionary<,>), typeof(FrozenSet<>),
+        typeof(ImmutableDictionary<,>), typeof(ImmutableHashSet<>),
+        typeof(ImmutableDictionary<,>.Builder), typeof(ImmutableHashSet<>.Builder),
+        typeof(IImmutableDictionary<,>), typeof(IImmutableSet<>),
+    ];
+
+    private static readonly Type[] UnorderedNonGeneric =
+    [
+        typeof(Hashtable), typeof(IDictionary), typeof(HybridDictionary), typeof(StringDictionary),
+    ];
+
+    // Frozen collections hand out their keys/values as arrays in hash order.
+    private static readonly Type[] FrozenCollections = [typeof(FrozenDictionary<,>), typeof(FrozenSet<>)];
+    private static readonly string[] FrozenOrderMembers = ["get_Keys", "get_Values", "get_Items"];
+
+    // Generic math interfaces whose members are not correctly rounded (pow, exp, log, trig, cbrt,
+    // FMA…). double.Pow etc. are caught by the System.Double rule; these catch T.Pow in generic code.
+    private static readonly Type[] BannedGenericMath =
+    [
+        typeof(IPowerFunctions<>), typeof(IExponentialFunctions<>), typeof(ILogarithmicFunctions<>),
+        typeof(ITrigonometricFunctions<>), typeof(IHyperbolicFunctions<>), typeof(IRootFunctions<>),
+        typeof(IFloatingPointIeee754<>),
     ];
 
     public static List<string> Check(IEnumerable<Type> types)
@@ -107,8 +136,18 @@ internal static class DeterminismRules
         if (owner == typeof(Math) && Array.IndexOf(AllowedMath, callee.Name) < 0)
             violations.Add($"{site}: System.Math.{callee.Name} is not in the allowed list");
         if (owner == typeof(double) && callee.IsStatic && !callee.Name.StartsWith("op_", StringComparison.Ordinal) &&
-            Array.IndexOf(AllowedDoubleStatics, callee.Name) < 0)
+            Array.IndexOf(AllowedDoubleStatics, callee.Name) < 0 && !IsCultureFixedParse(callee))
             violations.Add($"{site}: System.Double.{callee.Name} is not in the allowed list");
+        if (owner is { IsInterface: true, IsGenericType: true } math &&
+            Array.IndexOf(BannedGenericMath, math.GetGenericTypeDefinition()) >= 0 &&
+            !(math.GetGenericTypeDefinition() == typeof(IRootFunctions<>) && callee.Name == "Sqrt"))
+            violations.Add($"{site}: generic math {math.Name}.{callee.Name}");
+        if (IsUnorderedType(owner) && callee.Name is "GetEnumerator" or "CopyTo")
+            violations.Add($"{site}: enumerates {owner!.Name}");
+        if (owner is { IsGenericType: true } frozen &&
+            Array.IndexOf(FrozenCollections, frozen.GetGenericTypeDefinition()) >= 0 &&
+            Array.IndexOf(FrozenOrderMembers, callee.Name) >= 0)
+            violations.Add($"{site}: {frozen.Name}.{callee.Name} exposes hash order");
         if (owner == typeof(MathF))
             violations.Add($"{site}: MathF.{callee.Name}");
         if (owner == typeof(Random) || owner == typeof(Stopwatch))
@@ -118,9 +157,6 @@ internal static class DeterminismRules
             if (owner == type && callee.Name == member)
                 violations.Add($"{site}: {name}");
         }
-        if (owner is { IsGenericType: true } generic && callee.Name == "GetEnumerator" &&
-            Array.IndexOf(UnorderedCollections, generic.GetGenericTypeDefinition()) >= 0)
-            violations.Add($"{site}: enumerates {generic.Name}");
 
         if (owner is not null)
             CheckType(owner, $"{site} calls {name}", violations);
@@ -151,12 +187,13 @@ internal static class DeterminismRules
         return false;
     }
 
+    // Any enumerator counts: e.g. foreach over FrozenDictionary.Keys goes through ImmutableArray.
     private static bool EnumeratesIndirectly(MethodBase callee)
     {
         Type? owner = callee.DeclaringType;
         if (owner == typeof(Enumerable))
             return true;
-        if (callee.Name == "GetEnumerator" && owner is not null && IsEnumerableInterface(owner))
+        if (callee.Name == "GetEnumerator")
             return true;
         return callee.GetParameters().Any(p => IsEnumerableInterface(p.ParameterType));
     }
@@ -165,16 +202,28 @@ internal static class DeterminismRules
         type == typeof(IEnumerable) ||
         (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>));
 
+    /// <summary>
+    /// double.Parse/TryParse with an explicit format provider: IEEE-correctly rounded since .NET Core 3.0,
+    /// so the result is the same everywhere. Overloads without a provider use the current culture.
+    /// </summary>
+    private static bool IsCultureFixedParse(MethodBase callee) =>
+        callee.Name is "Parse" or "TryParse" &&
+        callee.GetParameters().Any(p => p.ParameterType == typeof(IFormatProvider));
+
+    private static bool IsUnorderedType(Type? type) =>
+        type is not null &&
+        (Array.IndexOf(UnorderedNonGeneric, type) >= 0 ||
+         (type.IsGenericType && Array.IndexOf(UnorderedCollections, type.GetGenericTypeDefinition()) >= 0));
+
     private static bool ContainsUnordered(Type? type)
     {
         if (type is null)
             return false;
         if (type.HasElementType)
             return ContainsUnordered(type.GetElementType());
-        if (!type.IsGenericType)
-            return false;
-        return Array.IndexOf(UnorderedCollections, type.GetGenericTypeDefinition()) >= 0 ||
-               type.GetGenericArguments().Any(ContainsUnordered);
+        if (IsUnorderedType(type))
+            return true;
+        return type.IsGenericType && type.GetGenericArguments().Any(ContainsUnordered);
     }
 
     private static void CheckType(Type type, string site, List<string> violations)

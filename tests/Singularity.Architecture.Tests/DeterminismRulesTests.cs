@@ -1,4 +1,9 @@
+using System.Collections;
+using System.Collections.Concurrent;
+using System.Collections.Frozen;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
 
 namespace Singularity.Architecture.Tests;
 
@@ -34,6 +39,25 @@ public class DeterminismRulesTests
     [InlineData(typeof(EnumeratesHashSetViaInterface), "enumerates an unordered collection")]
     [InlineData(typeof(EnumeratesDictionaryViaLinq), "enumerates an unordered collection")]
     [InlineData(typeof(CopiesHashSetIntoList), "enumerates an unordered collection")]
+    // DEBT-0003: interfaces, frozen/immutable/legacy/concurrent collections, generic math.
+    [InlineData(typeof(EnumeratesReadOnlyDictionary), "enumerates an unordered collection")]
+    [InlineData(typeof(EnumeratesISet), "enumerates an unordered collection")]
+    [InlineData(typeof(EnumeratesReadOnlySetViaLinq), "enumerates an unordered collection")]
+    [InlineData(typeof(EnumeratesFrozenDictionary), "enumerates FrozenDictionary")]
+    [InlineData(typeof(EnumeratesFrozenKeys), "exposes hash order")]
+    [InlineData(typeof(EnumeratesFrozenSet), "enumerates FrozenSet")]
+    [InlineData(typeof(EnumeratesImmutableDictionary), "enumerates ImmutableDictionary")]
+    [InlineData(typeof(EnumeratesImmutableHashSet), "enumerates ImmutableHashSet")]
+    [InlineData(typeof(EnumeratesHashtable), "enumerates Hashtable")]
+    [InlineData(typeof(EnumeratesConcurrentBag), "enumerates ConcurrentBag")]
+    [InlineData(typeof(CopiesDictionaryKeys), "enumerates KeyCollection")]
+    [InlineData(typeof(UsesGenericPow), "generic math IPowerFunctions")]
+    [InlineData(typeof(UsesGenericExp), "generic math IExponentialFunctions")]
+    [InlineData(typeof(UsesGenericLog), "generic math ILogarithmicFunctions")]
+    [InlineData(typeof(UsesGenericSin), "generic math ITrigonometricFunctions")]
+    [InlineData(typeof(UsesGenericCbrt), "generic math IRootFunctions")]
+    [InlineData(typeof(UsesGenericFma), "generic math IFloatingPointIeee754")]
+    [InlineData(typeof(UsesCultureParse), "System.Double.Parse")]
     public void Violation_IsDetected(Type sample, string expected)
     {
         // Lambdas compile into nested types, so scan those too.
@@ -66,6 +90,168 @@ internal sealed class Clean
             sum += item;
         return sum + items.Where(i => i > 0).Sum();
     }
+
+    // Ordered dictionaries are fine. A method that touches an unordered type must not enumerate
+    // anything (conservative rule), so the lookup through the interface lives in its own method.
+    public int Sorted(SortedDictionary<string, int> map)
+    {
+        int sum = 0;
+        foreach (var pair in map)
+            sum += pair.Value;
+        return sum;
+    }
+
+    public int LookupView(IReadOnlyDictionary<string, int> view) => view.TryGetValue("a", out int v) ? v : 0;
+
+    // Generic sqrt is correctly rounded; parsing with a fixed culture is exact.
+    public static T Root<T>(T x) where T : IRootFunctions<T> => T.Sqrt(x);
+
+    public double ParseInvariant(string s) =>
+        double.Parse(s, System.Globalization.CultureInfo.InvariantCulture) +
+        (double.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double d) ? d : 0);
+}
+
+internal sealed class EnumeratesReadOnlyDictionary
+{
+    public int Run(IReadOnlyDictionary<int, int> map)
+    {
+        int sum = 0;
+        foreach (var pair in map)
+            sum += pair.Value;
+        return sum;
+    }
+}
+
+internal sealed class EnumeratesISet
+{
+    public int Run(ISet<int> set)
+    {
+        int sum = 0;
+        foreach (int item in set)
+            sum += item;
+        return sum;
+    }
+}
+
+internal sealed class EnumeratesReadOnlySetViaLinq
+{
+    public int Run(IReadOnlySet<int> set) => set.First();
+}
+
+internal sealed class EnumeratesFrozenDictionary
+{
+    public int Run(FrozenDictionary<int, int> map)
+    {
+        int sum = 0;
+        foreach (var pair in map)
+            sum += pair.Value;
+        return sum;
+    }
+}
+
+internal sealed class EnumeratesFrozenKeys
+{
+    public int Run(FrozenDictionary<int, int> map) => map.Keys[0];
+}
+
+internal sealed class EnumeratesFrozenSet
+{
+    public int Run(FrozenSet<int> set)
+    {
+        int sum = 0;
+        foreach (int item in set)
+            sum += item;
+        return sum;
+    }
+}
+
+internal sealed class EnumeratesImmutableDictionary
+{
+    public int Run(ImmutableDictionary<int, int> map)
+    {
+        int sum = 0;
+        foreach (var pair in map)
+            sum += pair.Value;
+        return sum;
+    }
+}
+
+internal sealed class EnumeratesImmutableHashSet
+{
+    public int Run(ImmutableHashSet<int> set)
+    {
+        int sum = 0;
+        foreach (int item in set)
+            sum += item;
+        return sum;
+    }
+}
+
+internal sealed class EnumeratesHashtable
+{
+    public int Run(Hashtable table)
+    {
+        int count = 0;
+        foreach (object? _ in table)
+            count++;
+        return count;
+    }
+}
+
+internal sealed class EnumeratesConcurrentBag
+{
+    public int Run(ConcurrentBag<int> bag)
+    {
+        int sum = 0;
+        foreach (int item in bag)
+            sum += item;
+        return sum;
+    }
+}
+
+internal sealed class CopiesDictionaryKeys
+{
+    public int[] Run(Dictionary<int, int> map)
+    {
+        var keys = new int[map.Count];
+        map.Keys.CopyTo(keys, 0);
+        return keys;
+    }
+}
+
+internal sealed class UsesGenericPow
+{
+    public static T Run<T>(T x, T y) where T : IPowerFunctions<T> => T.Pow(x, y);
+}
+
+internal sealed class UsesGenericExp
+{
+    public static T Run<T>(T x) where T : IExponentialFunctions<T> => T.Exp(x);
+}
+
+internal sealed class UsesGenericLog
+{
+    public static T Run<T>(T x) where T : ILogarithmicFunctions<T> => T.Log(x);
+}
+
+internal sealed class UsesGenericSin
+{
+    public static T Run<T>(T x) where T : ITrigonometricFunctions<T> => T.Sin(x);
+}
+
+internal sealed class UsesGenericCbrt
+{
+    public static T Run<T>(T x) where T : IRootFunctions<T> => T.Cbrt(x);
+}
+
+internal sealed class UsesGenericFma
+{
+    public static T Run<T>(T x) where T : IFloatingPointIeee754<T> => T.FusedMultiplyAdd(x, x, x);
+}
+
+internal sealed class UsesCultureParse
+{
+    public double Run(string s) => double.Parse(s);
 }
 
 internal sealed class UsesPow

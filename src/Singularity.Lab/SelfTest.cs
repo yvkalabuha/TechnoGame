@@ -22,9 +22,11 @@ public static class SelfTest
             ("canonical: changed value or seed changes hash", CanonicalSensitivity),
             ("canonical: duplicate key and bad JSON rejected", CanonicalRejects),
             ("canonical: 64-bit seed kept exactly", CanonicalBigSeed),
+            ("canonical: numbers that decimal would round are rejected", CanonicalNoRounding),
             ("params: Fx6 parsing is exact, >6 decimals rejected", Fx6Params),
             ("metrics: Fx6 formatting", Fx6Format),
             ("manifest: series x sweep expansion order", MatrixExpansion),
+            ("manifest: series seeds override top-level seeds", SeriesSeeds),
             ("manifest: unknown key rejected", UnknownKey),
             ("run: same seed twice -> same golden_hash", () => SameSeed(tmp)),
             ("run: threads 1 vs 4 -> same golden_hash and CSV", () => ThreadInvariance(tmp)),
@@ -83,6 +85,50 @@ public static class SelfTest
     {
         var m = Manifest.Parse(BaseManifest.Replace("[1, 2]", "[18446744073709551615, 9007199254740993]"), "/x/m.json");
         return Expect(m.Seeds[0] == ulong.MaxValue && m.Seeds[1] == 9007199254740993UL, "seed rounded");
+    }
+
+    private static string? CanonicalNoRounding()
+    {
+        // Exact values, incl. long doubles written by Python and 28 significant digits.
+        var ok = new (string Raw, string Text)[]
+        {
+            ("0.08333333333333333", "0.08333333333333333"), ("1.5e-5", "0.000015"), ("-2.50E+2", "-250"),
+            ("1234567890123456789012345678", "1234567890123456789012345678"), ("0.0", "0"), ("-0e5", "0"),
+        };
+        foreach (var (raw, text) in ok)
+        {
+            string got = CanonicalJson.CanonicalNumber(raw, "k");
+            if (got != text) return $"{raw} -> {got}, expected {text}";
+        }
+        foreach (string bad in new[] { "1e-40", "0.12345678901234567890123456789012", "12345678901234567890123456789.5" })
+        {
+            try
+            {
+                string got = CanonicalJson.CanonicalNumber(bad, "k");
+                return $"accepted {bad} as {got}";
+            }
+            catch (ManifestException) { }
+        }
+        return null;
+    }
+
+    private static string? SeriesSeeds()
+    {
+        string json = """
+            {"schema":1,"model":"test.random-walk","ticks":1,"seeds":{"start":1,"count":4},"threads":[1,2],
+             "series":[{"name":"main","sweep":{"noise":[1,2]}},
+                       {"name":"grid","seeds":[7, 9],"params":{"noise":3}}]}
+            """;
+        Manifest m = Manifest.Parse(json, "/x/m.json");
+        if (m.RunCount != (2 * 4 + 2) * 2) return $"runs={m.RunCount}";
+        if (m.Points[0].Seeds.Count != 4 || m.Points[1].Seeds[3] != 4) return "main seeds";
+        if (m.Points[2].Seeds.Count != 2 || m.Points[2].Seeds[1] != 9) return "grid seeds";
+        try
+        {
+            Manifest.Parse(json.Replace("[7, 9]", "[7, 7]"), "/x/m.json");
+            return "duplicate series seeds accepted";
+        }
+        catch (ManifestException) { return null; }
     }
 
     private static string? Fx6Params()
