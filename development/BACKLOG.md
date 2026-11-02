@@ -50,6 +50,7 @@
 | [ADR-0009](../docs/decisions/ADR-0009-data-licenses.md) | ACCEPTED | Политика лицензий внешних данных |
 | [ADR-0010](../docs/decisions/ADR-0010-data-format-modding.md) | PROPOSED | Формат данных и моддинг v0 |
 | [ADR-0011](../docs/decisions/ADR-0011-map-representation.md) | PROPOSED | Представление карты |
+| [ADR-0012](../docs/decisions/ADR-0012-deterministic-math-functions.md) | PROPOSED | Детерминированные степенные функции: PowFrac вместо Pow/Exp/Log |
 
 ## Research Reports
 
