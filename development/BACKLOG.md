@@ -33,7 +33,7 @@
 
 | ID | Статус | Название | hypothesis |
 |---|---|---|---|
-| [EXP-0001](../development/experiments/EXP-0001-pilot-science-industry.md) | PLANNED | Пилот: траектории государств с разным сочетанием науки, инженерии и производства | HYP-0001 |
+| [EXP-0001](../development/experiments/EXP-0001-pilot-science-industry.md) | RUNNING | Пилот: траектории государств с разным сочетанием науки, инженерии и производства | HYP-0001 |
 
 ## ADR
 

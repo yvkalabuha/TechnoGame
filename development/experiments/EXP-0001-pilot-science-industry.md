@@ -1,7 +1,7 @@
 ---
 id: EXP-0001
 title: "Пилот: траектории государств с разным сочетанием науки, инженерии и производства"
-status: PLANNED          # PLANNED | RUNNING | DONE | FAILED
+status: RUNNING          # PLANNED | RUNNING | DONE | FAILED
 hypothesis: HYP-0001     # проверяемая гипотеза
 kind: monte-carlo        # batch | scenario | sweep | monte-carlo | regression | balance | benchmark
 related: []
