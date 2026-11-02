@@ -38,8 +38,8 @@ created: 2026-11-02
 - [ ] Нет изменений эталонных векторов RNG и StateHash (или явное обоснование).
 
 ## REVIEW
-- [ ] Code review (reviewer)
-- [ ] Тесты (test-engineer)
+- [x] Code review (reviewer) — approve; 3 minor → DEBT-0002…0004
+- [x] Тесты — 173/173 (Architecture 26, Kernel 147), проверено Orchestrator
 
 ## Результат
 Сделано (developer, 2026-11-02). Проверка: `dotnet build` — 0 предупреждений; `dotnet test Singularity.sln` — Architecture 26/26 (было 14), Kernel 147/147 (было 135, из них 3 падали по F1). Kernel-тесты прогнаны 5 раз подряд — стабильно.
@@ -57,3 +57,5 @@ created: 2026-11-02
 Эталонные векторы RNG и StateHash не менялись (файлы `CounterRngTests`, `StateHashTests` не трогались; хеши L1/L2 совпадают).
 
 Файлы: `src/Singularity.Kernel/{TickRunner,Column,Fx6,DetMath}.cs`; `tests/Singularity.Architecture.Tests/{DeterminismRules,DeterminismRulesTests}.cs`; `tests/Singularity.Kernel.Tests/{TickRunnerTests,TableTests}.cs`, `Audit/{TickRunnerEdgeTests,DetMathPropertyTests}.cs`.
+
+_Примечание Orchestrator:_ раздел «Результат» записан developer через Bash вне зоны (FRAMEWORK_FINDINGS #5); содержание проверено и принято.
