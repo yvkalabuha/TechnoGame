@@ -59,3 +59,4 @@
 | [RR-0002](../docs/research/RR-0002-simulation-core.md) | FINAL | Ядро симуляции, многопоточность, детерминизм, Simulation Lab |
 | [RR-0003](../docs/research/RR-0003-map-techgraph-data-modding.md) | FINAL | Карта, граф технологий, данные, моддинг |
 | [RR-0004](../docs/research/RR-0004-claude-code-mechanisms.md) | FINAL | Механизмы Claude Code |
+| [RR-0008](../docs/research/RR-0008-technology-space-architecture.md) | DRAFT | Архитектура технологического пространства |
