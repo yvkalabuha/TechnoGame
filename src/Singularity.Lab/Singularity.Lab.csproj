@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Simulation Lab host (ADR-0008, TASK-0005): manifest, single run, process-per-run matrix. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Singularity.Lab</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Singularity.Kernel\Singularity.Kernel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="examples\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

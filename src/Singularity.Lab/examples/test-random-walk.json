@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "experiment": "LAB-SMOKE",
+  "description": "TEST MODEL smoke matrix for TASK-0005 acceptance: 2 points x 25 seeds x 2 thread counts = 100 runs.",
+  "model": "test.random-walk",
+  "ticks": 492,
+  "chunk_size": 64,
+  "seeds": { "start": 1, "count": 25 },
+  "threads": [1, 4],
+  "params": { "rows": 600, "start": 100, "observe_every": 12 },
+  "series": [
+    { "name": "grid", "sweep": { "noise": [0.5, 1.0] } }
+  ]
+}

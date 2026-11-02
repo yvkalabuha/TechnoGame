@@ -1,7 +1,7 @@
 ---
 id: TASK-0006
 title: "CI: сборка, тесты и проверка детерминизма L1/L2"
-status: PROPOSED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: APPROVED 
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: orchestrator
@@ -10,9 +10,9 @@ priority: medium         # high | medium | low
 needs_owner: false       # true = ждёт решения владельца
 depends_on: [TASK-0004, TASK-0005]
 related: [HYP-0001, EXP-0001]
-approved_by:             # owner | orchestrator (orchestrator — только level: light)
-approved_at:
-approval_ref:
+approved_by: orchestrator
+approved_at: 2026-11-02
+approval_ref: light, owner-approved pilot plan (#12)
 created: 2026-11-02
 ---
 

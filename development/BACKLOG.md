@@ -16,17 +16,17 @@
 |---|---|---|---|
 | [TASK-0001](../development/tasks/TASK-0001-kernel-foundation.md) | DONE | Kernel: fixed-point, детерминированная математика, RNG, таблицы, хеш состояния | MS-M0 |
 | [TASK-0002](../development/tasks/TASK-0002-exp0001-analysis.md) | DONE | Анализ EXP-0001: расчёт критериев HYP-0001 на Python stdlib | MS-M0 |
-| [TASK-0003](../development/tasks/TASK-0003-toy-model-prototype.md) | REVIEW | Прототип модели на Python и заморозка модели перед C# | MS-M0 |
-| [TASK-0004](../development/tasks/TASK-0004-core-toy-funnel.md) | PROPOSED | Core: модель ToyFunnel (A, B, C) на Kernel | MS-M0 |
-| [TASK-0005](../development/tasks/TASK-0005-lab-cli.md) | IN_PROGRESS | Simulation Lab: CLI, манифест, раннер матрицы | MS-M0 |
-| [TASK-0006](../development/tasks/TASK-0006-ci-determinism.md) | PROPOSED | CI: сборка, тесты и проверка детерминизма L1/L2 | MS-M0 |
+| [TASK-0003](../development/tasks/TASK-0003-toy-model-prototype.md) | DONE | Прототип модели на Python и заморозка модели перед C# | MS-M0 |
+| [TASK-0004](../development/tasks/TASK-0004-core-toy-funnel.md) | IN_PROGRESS | Core: модель ToyFunnel (A, B, C) на Kernel | MS-M0 |
+| [TASK-0005](../development/tasks/TASK-0005-lab-cli.md) | REVIEW | Simulation Lab: CLI, манифест, раннер матрицы | MS-M0 |
+| [TASK-0006](../development/tasks/TASK-0006-ci-determinism.md) | APPROVED | CI: сборка, тесты и проверка детерминизма L1/L2 | MS-M0 |
 | [TASK-0007](../development/tasks/TASK-0007-kernel-review-fixes.md) | IN_PROGRESS | Kernel: исправления по ревью и аудиту тестов | MS-M0 |
 
 ## Гипотезы
 
 | ID | Статус | Название |
 |---|---|---|
-| [HYP-0001](../development/hypotheses/HYP-0001-science-vs-industry.md) | UNDER_RESEARCH | Научное лидерство не даёт автоматического промышленного превосходства |
+| [HYP-0001](../development/hypotheses/HYP-0001-science-vs-industry.md) | EXPERIMENTAL | Научное лидерство не даёт автоматического промышленного превосходства |
 
 ## Эксперименты
 

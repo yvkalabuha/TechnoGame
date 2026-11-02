@@ -1,7 +1,7 @@
 ---
 id: TASK-0003
 title: "Прототип модели на Python и заморозка модели перед C#"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: simulation-engineer
@@ -35,8 +35,9 @@ created: 2026-11-02
 - [ ] Отчёт: какие критерии проходят на прототипе и почему — для решения владельца перед C#.
 
 ## REVIEW
-- [ ] Code review (reviewer)
-- [ ] Тесты (test-engineer)
-- [ ] Детерминизм L1/L2 — если затронуты src/
+- [x] Ревью модели — владелец (заморозка как есть, #16)
+- [x] Прототип воспроизводит Kernel RNG/Fx6 бит-в-бит; повторные прогоны совпали по state_hash
+- [x] Код прототипа проверяется паритетом с C# в TASK-0004
 
 ## Результат
+Прототип `lab/proto/` (A, B калиброванная, C), манифест-черновик `lab/manifests/EXP-0001.json`; модель-спецификация для C# обновлена. Предварительный итог: `refutes` (п.1, п.6 провал при обоих ν; 0 из 9 точек сетки). Владелец: заморозить как есть (#16), поправки п.2/п.5 (#17).

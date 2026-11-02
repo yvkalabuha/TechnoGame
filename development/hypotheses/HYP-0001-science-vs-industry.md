@@ -1,12 +1,12 @@
 ---
 id: HYP-0001
 title: Научное лидерство не даёт автоматического промышленного превосходства
-status: UNDER_RESEARCH
+status: EXPERIMENTAL
 systems: [science, engineering, industry, economy]
 related: [EXP-0001]
-approved_by:
-approved_at:
-approval_ref:
+approved_by: owner
+approved_at: 2026-11-02
+approval_ref: DECISIONS_LOG #16–#17
 created: 2026-11-02
 ---
 

@@ -9,9 +9,10 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0003 [IN_PROGRESS] Прототип модели на Python и заморозка модели перед C# (simulation-engineer)
+- TASK-0004 [IN_PROGRESS] Core: модель ToyFunnel (A, B, C) на Kernel (developer)
 - TASK-0007 [IN_PROGRESS] Kernel: исправления по ревью и аудиту тестов (developer)
-- TASK-0005 [APPROVED] Simulation Lab: CLI, манифест, раннер матрицы (simulation-engineer)
+- TASK-0005 [REVIEW] Simulation Lab: CLI, манифест, раннер матрицы (simulation-engineer)
+- TASK-0006 [APPROVED] CI: сборка, тесты и проверка детерминизма L1/L2 (orchestrator)
 <!-- registry:active:end -->
 
 ## Блокеры
