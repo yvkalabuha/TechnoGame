@@ -27,13 +27,13 @@
 
 | ID | Статус | Название |
 |---|---|---|
-| [HYP-0001](../development/hypotheses/HYP-0001-science-vs-industry.md) | EXPERIMENTAL | Научное лидерство не даёт автоматического промышленного превосходства |
+| [HYP-0001](../development/hypotheses/HYP-0001-science-vs-industry.md) | REJECTED | Научное лидерство не даёт автоматического промышленного превосходства |
 
 ## Эксперименты
 
 | ID | Статус | Название | hypothesis |
 |---|---|---|---|
-| [EXP-0001](../development/experiments/EXP-0001-pilot-science-industry.md) | RUNNING | Пилот: траектории государств с разным сочетанием науки, инженерии и производства | HYP-0001 |
+| [EXP-0001](../development/experiments/EXP-0001-pilot-science-industry.md) | DONE | Пилот: траектории государств с разным сочетанием науки, инженерии и производства | HYP-0001 |
 
 ## ADR
 
