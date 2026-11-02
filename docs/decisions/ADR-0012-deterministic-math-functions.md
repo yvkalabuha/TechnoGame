@@ -5,7 +5,7 @@ status: PROPOSED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJEC
 date: 2026-11-02
 supersedes:
 superseded_by:
-related: [ADR-0003, RR-0006, RR-0007]  # + docs/architecture/LAYER_CONTRACT.md
+related: [ADR-0003, RR-0006, RR-0007, RR-0008]  # + docs/architecture/LAYER_CONTRACT.md
 approved_by:
 approved_at:
 approval_ref:
