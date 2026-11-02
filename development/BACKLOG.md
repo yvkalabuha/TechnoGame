@@ -60,5 +60,6 @@
 | [RR-0003](../docs/research/RR-0003-map-techgraph-data-modding.md) | FINAL | Карта, граф технологий, данные, моддинг |
 | [RR-0004](../docs/research/RR-0004-claude-code-mechanisms.md) | FINAL | Механизмы Claude Code |
 | [RR-0005](../docs/research/RR-0005-start-date-historical-model.md) | DRAFT | Стартовая дата и историческая модель |
+| [RR-0006](../docs/research/RR-0006-economy-industrial-capability.md) | DRAFT | Экономика и промышленный потенциал: способность производить ≠ знание технологии |
 | [RR-0007](../docs/research/RR-0007-engineering-product-lifecycle.md) | DRAFT | Инженерия и жизненный цикл изделий |
 | [RR-0008](../docs/research/RR-0008-technology-space-architecture.md) | DRAFT | Архитектура технологического пространства |
