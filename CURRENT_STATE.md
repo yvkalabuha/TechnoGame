@@ -11,7 +11,6 @@
 <!-- registry:active:start -->
 - TASK-0007 [IN_PROGRESS] Kernel: исправления по ревью и аудиту тестов (developer)
 - TASK-0008 [IN_PROGRESS] Заморозка манифеста EXP-0001 и переключение Lab на интерфейс Core (simulation-engineer)
-- TASK-0004 [REVIEW] Core: модель ToyFunnel (A, B, C) на Kernel (developer)
 - TASK-0005 [REVIEW] Simulation Lab: CLI, манифест, раннер матрицы (simulation-engineer)
 - TASK-0006 [APPROVED] CI: сборка, тесты и проверка детерминизма L1/L2 (orchestrator)
 <!-- registry:active:end -->

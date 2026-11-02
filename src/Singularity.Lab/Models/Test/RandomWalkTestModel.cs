@@ -34,15 +34,15 @@ public sealed class RandomWalkTestModel : ILabModel
         ParamSet p = setup.Parameters;
         long rows = p.GetLong("rows", 64);
         if (rows < 1 || rows > 10_000_000)
-            throw new ManifestException("test.random-walk: rows must be in [1, 10^7].");
+            throw new ParamException("test.random-walk: rows must be in [1, 10^7].");
         long start = p.GetFx6Raw("start", 100 * Fx6.Scale);
         long drift = p.GetFx6Raw("drift", 0);
         long noise = p.GetFx6Raw("noise", Fx6.Scale);
         if (noise < 0 || noise > 1_000_000 * Fx6.Scale)
-            throw new ManifestException("test.random-walk: noise must be in [0, 10^6].");
+            throw new ParamException("test.random-walk: noise must be in [0, 10^6].");
         _observeEvery = p.GetLong("observe_every", 1);
         if (_observeEvery < 1)
-            throw new ManifestException("test.random-walk: observe_every must be >= 1.");
+            throw new ParamException("test.random-walk: observe_every must be >= 1.");
         long failAt = p.GetLong("fail_at_tick", -1);
 
         Table = new Table((int)rows);

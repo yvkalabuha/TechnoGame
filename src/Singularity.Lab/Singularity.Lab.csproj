@@ -8,6 +8,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Singularity.Kernel\Singularity.Kernel.csproj" />
+    <!-- Model interface (Singularity.Core.Simulation) and models; Core never references Lab. -->
+    <ProjectReference Include="..\Singularity.Core\Singularity.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

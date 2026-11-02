@@ -102,7 +102,7 @@ public sealed class Manifest
         if (obj.ValueKind != JsonValueKind.Object)
             throw new ManifestException($"{path} must be an object.");
         foreach (JsonProperty p in obj.EnumerateObject())
-            list.Add(new(p.Name, ParamValue.From(p.Value, $"{path}.{p.Name}")));
+            list.Add(new(p.Name, ParamValues.FromJson(p.Value,$"{path}.{p.Name}")));
         return list;
     }
 
@@ -157,7 +157,7 @@ public sealed class Manifest
                     var values = new List<ParamValue>();
                     int j = 0;
                     foreach (JsonElement v in axis.Value.EnumerateArray())
-                        values.Add(ParamValue.From(v, $"{path}.sweep.{axis.Name}[{j++}]"));
+                        values.Add(ParamValues.FromJson(v,$"{path}.sweep.{axis.Name}[{j++}]"));
                     axes.Add((axis.Name, values));
                 }
             }

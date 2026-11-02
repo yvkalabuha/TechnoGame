@@ -48,6 +48,12 @@ public static class Program
             Console.Error.WriteLine($"manifest error: {e.Message}");
             return 2;
         }
+        catch (ParamException e)
+        {
+            // Core reports bad model parameters with its own type (Core never references Lab).
+            Console.Error.WriteLine($"parameter error: {e.Message}");
+            return 2;
+        }
         catch (Exception e) when (e is FileNotFoundException or DirectoryNotFoundException)
         {
             // A missing manifest (or other input path) is an argument error.
