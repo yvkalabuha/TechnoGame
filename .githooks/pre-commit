@@ -1,0 +1,4 @@
+#!/bin/sh
+# Validate the project registry before every commit.
+# Enable once per clone: git config core.hooksPath .githooks
+exec python3 tools/development/registry.py check --staged

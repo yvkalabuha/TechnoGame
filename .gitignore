@@ -1,1 +1,33 @@
+# IDE
 .idea/
+.vscode/
+*.swp
+
+# Claude Code: personal and runtime files
+.claude/settings.local.json
+.claude/.state/
+.claude/agent-memory-local/
+.claude/worktrees/
+CLAUDE.local.md
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+
+# .NET
+bin/
+obj/
+*.user
+TestResults/
+artifacts/
+
+# Simulation Lab outputs (manifests, golden hashes and conclusions are committed)
+lab/results/
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key

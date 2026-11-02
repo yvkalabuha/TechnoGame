@@ -1,8 +1,16 @@
-# RR-004 — Механизмы Claude Code для фреймворка разработки
+---
+id: RR-0004
+title: Механизмы Claude Code
+status: FINAL
+date: 2026-11-02
+author: research agent (Phase B)
+---
 
-**ID:** RR-004
+# RR-0004 — Механизмы Claude Code для фреймворка разработки
+
+**ID:** RR-0004
 **Дата:** 2026-11-02
-**Статус:** DRAFT
+**Статус:** FINAL
 **Автор:** Research agent (Phase B, claude-code-guide), оформление — Orchestrator
 **Источники проверены:** 2026-11-02, официальная документация code.claude.com (список в конце)
 
