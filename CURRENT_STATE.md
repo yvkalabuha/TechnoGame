@@ -3,7 +3,7 @@
 ## Сводка
 - Фаза: PHASE E начата (пробный цикл на HYP-0001, уровень gate). Владелец одобрил старт 2026-11-02.
 - Milestone: MS-M0 — PLANNED (список задач ещё не утверждён).
-- Стек: C# / .NET 10.0.403 SDK в `~/.dotnet` (не в PATH); Python 3 + PyYAML для tooling.
+- Стек: C# / .NET 10.0.403 SDK в `~/.dotnet` (в PATH через `~/.bashrc`); Python 3 + PyYAML для tooling.
 - Утверждены: ADR-0001, ADR-0002, ADR-0009, DF-001 v2. ADR-0003…0008, 0010, 0011 — PROPOSED.
 - Последний handoff: `development/handoff/2026-11-02-2.md`.
 
