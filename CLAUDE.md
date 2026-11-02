@@ -37,7 +37,7 @@ The owner runs `/handoff`. If the session ends without it and files changed, rem
 - Choose the minimal set of agents. Run agents in parallel only for independent work.
 - Agents do not see this conversation: give them the item path, the goal, the criteria and the files to read.
 - Agents return ≤40 lines; details go into files.
-- Write zones are enforced by hooks in each agent's frontmatter. You alone change `status:` fields, tasks, DECISIONS_LOG, RISKS, TECH_DEBT, CURRENT_STATE.
+- Write zones are enforced by hooks in each agent's frontmatter, but Bash writes bypass them: after every writing agent run `python3 tools/development/zone_check.py <agent> [<agent>...]` (union for parallel agents) before committing. You alone change `status:` fields, tasks, DECISIONS_LOG, RISKS, TECH_DEBT, CURRENT_STATE.
 
 ## Process
 - Levels (DF-001 §6): **light** (task inside approved plan; you approve it) · **gate** (new mechanic, subsystem, hypothesis, ADR; critic + advocate; owner approves) · **gate+research** (fundamental, determinism, save/data format, irreversible).

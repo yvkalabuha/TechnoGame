@@ -19,6 +19,7 @@ public static class DetMath
     /// from repeated square roots, the integer part uses exponentiation by squaring.
     /// The result may differ from the exact power by a few ulps, but it is always the same.
     /// </summary>
+    /// <exception cref="OverflowException">When x^|eighths/8| or the result is not finite.</exception>
     public static double PowDyadic(double x, int eighths)
     {
         if (!double.IsFinite(x) || x < 0)
@@ -41,7 +42,19 @@ public static class DetMath
                 result *= root;
         }
 
-        return eighths < 0 ? 1.0 / result : result;
+        // x^|e| overflowing would silently give infinity, or 0 after the reciprocal.
+        CheckFinite(result, x, eighths);
+        if (eighths >= 0)
+            return result;
+        double reciprocal = 1.0 / result;
+        CheckFinite(reciprocal, x, eighths);
+        return reciprocal;
+    }
+
+    private static void CheckFinite(double value, double x, int eighths)
+    {
+        if (!double.IsFinite(value))
+            throw new OverflowException($"PowDyadic({x}, {eighths}/8) is out of the double range.");
     }
 
     private static double PowInt(double x, int n)

@@ -13,7 +13,7 @@ public class TickRunnerTests
     private static List<string> Run(ulong seed, int threads)
     {
         var table = new Table(Rows);
-        var system = new DiffusionTestSystem(table, chunkCount: (Rows + ChunkSize - 1) / ChunkSize);
+        var system = new DiffusionTestSystem(table, TickRunner.ChunkCountFor(Rows, ChunkSize));
         var runner = new TickRunner(table, seed, [system], ChunkSize, threads);
 
         var hashes = new List<string>(Ticks);
@@ -56,11 +56,47 @@ public class TickRunnerTests
         Assert.Equal(4, new TickRunner(table, 0, [], chunkSize: 256, maxThreads: 8).ChunkCount);
     }
 
+    [Theory]
+    [InlineData(0, 1, 0)]
+    [InlineData(1000, 256, 4)]
+    [InlineData(1024, 256, 4)]
+    [InlineData(10, int.MaxValue, 1)]
+    [InlineData(int.MaxValue, int.MaxValue, 1)]
+    [InlineData(int.MaxValue, 1, int.MaxValue)]
+    public void ChunkCountFor_IsCeilingWithoutOverflow(int rows, int chunkSize, int expected)
+    {
+        Assert.Equal(expected, TickRunner.ChunkCountFor(rows, chunkSize));
+    }
+
+    [Fact]
+    public void ChunkCountFor_MatchesRunner()
+    {
+        var table = new Table(1000);
+        Assert.Equal(TickRunner.ChunkCountFor(1000, 7), new TickRunner(table, 0, [], chunkSize: 7, maxThreads: 4).ChunkCount);
+        Assert.Throws<ArgumentOutOfRangeException>(() => TickRunner.ChunkCountFor(-1, 1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TickRunner.ChunkCountFor(1, 0));
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(4)]
+    [InlineData(16)]
+    public void ComputeException_SameTypeAndChunk_ForAnyThreadCount(int threads)
+    {
+        var table = new Table(100);
+        var runner = new TickRunner(table, 0, [new FailingSystem(failRow: 35)], chunkSize: 10, maxThreads: threads);
+        var e = Assert.Throws<TickComputeException>(runner.RunTick);
+        Assert.Equal(3, e.Chunk);
+        Assert.Equal(7, e.SystemId);
+        Assert.Equal(0, e.Tick);
+        Assert.IsType<InvalidOperationException>(e.InnerException);
+    }
+
     [Fact]
     public void Tick_CountsCompletedTicks()
     {
         var table = new Table(10);
-        var runner = new TickRunner(table, 0, [new DiffusionTestSystem(table, chunkCount: 1)], chunkSize: 16, maxThreads: 1);
+        var runner = new TickRunner(table, 0, [new DiffusionTestSystem(table, TickRunner.ChunkCountFor(10, 16))], chunkSize: 16, maxThreads: 1);
         runner.RunTick();
         runner.RunTick();
         Assert.Equal(2, runner.Tick);
@@ -132,4 +168,20 @@ internal sealed class DiffusionTestSystem : ITickSystem
                 throw new InvalidOperationException($"Negative stock at row {row}, tick {context.Tick}.");
         }
     }
+}
+
+/// <summary>Throws in the chunk that contains <c>failRow</c>.</summary>
+internal sealed class FailingSystem(int failRow) : ITickSystem
+{
+    public int SystemId => 7;
+
+    public void Compute(in TickContext context, int chunk, int rowStart, int rowEnd)
+    {
+        if (rowStart <= failRow && failRow < rowEnd)
+            throw new InvalidOperationException($"chunk {chunk}");
+    }
+
+    public void Merge(in TickContext context, int chunkCount) { }
+
+    public void Post(in TickContext context) { }
 }

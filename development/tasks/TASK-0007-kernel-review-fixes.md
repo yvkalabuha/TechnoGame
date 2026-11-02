@@ -42,3 +42,18 @@ created: 2026-11-02
 - [ ] Тесты (test-engineer)
 
 ## Результат
+Сделано (developer, 2026-11-02). Проверка: `dotnet build` — 0 предупреждений; `dotnet test Singularity.sln` — Architecture 26/26 (было 14), Kernel 147/147 (было 135, из них 3 падали по F1). Kernel-тесты прогнаны 5 раз подряд — стабильно.
+
+1. **F1:** `TickRunner.ChunkCountFor` считает в `long`; границы чанка в `ComputeChunk` — тоже в `long`. `HugeChunkSize_StillGivesOneChunk` зелёный.
+2. **IL-правила** (`tests/Singularity.Architecture.Tests/DeterminismRules.cs`): статические методы `System.Double` проходят через allow-list (allow-list `System.Math` + `IsFinite/IsNaN/...`, операторы `op_*`); `System.Half` запрещён; `Dictionary.KeyCollection/ValueCollection.GetEnumerator` запрещён; консервативное правило: метод, который касается неупорядоченной коллекции, не может перечислять ничего косвенно (`IEnumerable<>.GetEnumerator`, `System.Linq.Enumerable`, любой вызов с параметром `IEnumerable`/`IEnumerable<>`). 12 новых негативных примеров в `DeterminismRulesTests` — все 12 падали до правки правил; `Clean` дополнен (double.IsFinite/Sqrt, поиск в Dictionary/HashSet, LINQ по List) и остаётся чистым.
+3. Doc `ITickSystem`: постоянное состояние только в колонках `Table`.
+4. `Post` получает `TickContext` с `Tick = t+1` (= `runner.Tick`); doc `TickContext.Tick` — «индекс состояния в `Current`». Аудит-тест переименован в `Post_ContextTick_IsTheTickOfTheNewState`, ожидает 2.
+5. Исключение из `Compute` всегда `TickComputeException` (SystemId, Chunk, Tick, inner) при 1 и N потоках; при параллельном прогоне — минимальный чанк среди наблюдённых. Тест `ComputeException_SameTypeAndChunk_ForAnyThreadCount` (1/4/16 потоков).
+6. `public static int TickRunner.ChunkCountFor(rowCount, chunkSize)`; `DiffusionTestSystem` в тестах использует его.
+7. Doc `Fx6.FromDouble`: `floor(fl(value·10^6))`. `DetMath.PowDyadic` бросает `OverflowException`, если `x^|e|` или результат не конечны (переполнение `PowInt` ловится через ту же проверку). Аудит-тест `PowDyadic_LargeExponent_OverflowsToInfinity_Documented` заменён на `PowDyadic_LargeExponent_Overflow_Throws` (строже).
+8. Конструктор `Column<T>` — `private protected`; `ElementSize`/`WriteLittleEndian` — тоже `private protected` (protected-члены у класса, который нельзя наследовать вне Kernel, бессмысленны). Тест `ColumnOfT_CannotBeDerivedOutsideKernel`.
+9. Doc `Fx6`: запасы обновляются только Fx6-арифметикой, через double — только производные величины; окончательно — ADR-0003.
+
+Эталонные векторы RNG и StateHash не менялись (файлы `CounterRngTests`, `StateHashTests` не трогались; хеши L1/L2 совпадают).
+
+Файлы: `src/Singularity.Kernel/{TickRunner,Column,Fx6,DetMath}.cs`; `tests/Singularity.Architecture.Tests/{DeterminismRules,DeterminismRulesTests}.cs`; `tests/Singularity.Kernel.Tests/{TickRunnerTests,TableTests}.cs`, `Audit/{TickRunnerEdgeTests,DetMathPropertyTests}.cs`.

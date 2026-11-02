@@ -31,7 +31,8 @@ public abstract class Column<T> : Column where T : unmanaged
     private T[] _current;
     private T[] _next;
 
-    protected Column(string name, int length) : base(name)
+    // private protected: only Kernel column types exist, so the hash layout stays under Kernel control.
+    private protected Column(string name, int length) : base(name)
     {
         _current = new T[length];
         _next = new T[length];
@@ -55,9 +56,9 @@ public abstract class Column<T> : Column where T : unmanaged
 
     internal override void Swap() => (_current, _next) = (_next, _current);
 
-    protected abstract int ElementSize { get; }
+    private protected abstract int ElementSize { get; }
 
-    protected abstract void WriteLittleEndian(Span<byte> destination, T value);
+    private protected abstract void WriteLittleEndian(Span<byte> destination, T value);
 
     internal override void AppendCurrentTo(IncrementalHash hash)
     {
@@ -77,9 +78,9 @@ public sealed class LongColumn : Column<long>
 {
     internal LongColumn(string name, int length) : base(name, length) { }
 
-    protected override int ElementSize => sizeof(long);
+    private protected override int ElementSize => sizeof(long);
 
-    protected override void WriteLittleEndian(Span<byte> destination, long value) =>
+    private protected override void WriteLittleEndian(Span<byte> destination, long value) =>
         BinaryPrimitives.WriteInt64LittleEndian(destination, value);
 }
 
@@ -87,8 +88,8 @@ public sealed class IntColumn : Column<int>
 {
     internal IntColumn(string name, int length) : base(name, length) { }
 
-    protected override int ElementSize => sizeof(int);
+    private protected override int ElementSize => sizeof(int);
 
-    protected override void WriteLittleEndian(Span<byte> destination, int value) =>
+    private protected override void WriteLittleEndian(Span<byte> destination, int value) =>
         BinaryPrimitives.WriteInt32LittleEndian(destination, value);
 }

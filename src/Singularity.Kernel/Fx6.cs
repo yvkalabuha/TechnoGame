@@ -7,6 +7,10 @@ namespace Singularity.Kernel;
 /// Used for money, stocks and population. All arithmetic is checked: an overflow
 /// throws instead of silently wrapping and corrupting world state.
 /// Rounding policy everywhere is floor (towards negative infinity).
+/// Stocks (money, resources, population) are updated only with Fx6 arithmetic. Only derived
+/// quantities (rates, shares, model outputs) pass through <see cref="double"/>: a stock sent
+/// through <see cref="ToDouble"/> and back via <see cref="FromDouble"/> can come back lower (typically by 1 raw unit),
+/// and repeated round-trips drift. Final wording belongs to ADR-0003.
 /// </summary>
 public readonly struct Fx6 : IEquatable<Fx6>, IComparable<Fx6>
 {
@@ -25,7 +29,9 @@ public readonly struct Fx6 : IEquatable<Fx6>, IComparable<Fx6>
     public static Fx6 FromInt(long value) => new(checked(value * Scale));
 
     /// <summary>
-    /// The only way from <see cref="double"/> into fixed-point: floor(value * 10^6).
+    /// The only way from <see cref="double"/> into fixed-point: <c>floor(fl(value * 10^6))</c>, where
+    /// <c>fl</c> is the IEEE-754 rounded product. So the result is the floor of the rounded product,
+    /// not of the exact one: e.g. a value just below an integer step can round up first.
     /// NaN and infinities are rejected so behavioural-model errors cannot leak into state.
     /// </summary>
     public static Fx6 FromDouble(double value)

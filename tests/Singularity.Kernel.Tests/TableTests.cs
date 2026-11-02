@@ -47,4 +47,14 @@ public class TableTests
         table.Swap();
         Assert.Equal([10, 21], x.Current.ToArray());
     }
+
+    [Theory]
+    [InlineData(typeof(Column<long>))]
+    [InlineData(typeof(Column<int>))]
+    public void ColumnOfT_CannotBeDerivedOutsideKernel(Type type)
+    {
+        // private protected = FamilyAndAssembly: only Kernel types can derive and so define the hash layout.
+        var ctor = Assert.Single(type.GetConstructors(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public));
+        Assert.True(ctor.IsFamilyAndAssembly);
+    }
 }

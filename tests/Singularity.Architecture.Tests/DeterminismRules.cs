@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
@@ -12,6 +13,15 @@ namespace Singularity.Architecture.Tests;
 internal static class DeterminismRules
 {
     public static readonly string[] AllowedMath = ["Sqrt", "Floor", "Abs", "Min", "Max", "BigMul"];
+
+    // System.Double static methods: the System.Math allow-list plus exact classification checks.
+    // Operators (op_*) are exact IEEE operations and are allowed separately.
+    private static readonly string[] AllowedDoubleStatics =
+    [
+        .. AllowedMath,
+        "IsFinite", "IsNaN", "IsInfinity", "IsPositiveInfinity", "IsNegativeInfinity",
+        "IsNegative", "IsPositive", "IsNormal", "IsSubnormal", "IsInteger",
+    ];
 
     // Single-precision IL opcodes: float values can appear without a float-typed member.
     private static readonly OpCode[] FloatOpCodes =
@@ -34,6 +44,7 @@ internal static class DeterminismRules
     private static readonly Type[] UnorderedCollections =
     [
         typeof(Dictionary<,>), typeof(HashSet<>), typeof(ConcurrentDictionary<,>),
+        typeof(Dictionary<,>.KeyCollection), typeof(Dictionary<,>.ValueCollection),
     ];
 
     public static List<string> Check(IEnumerable<Type> types)
@@ -61,6 +72,11 @@ internal static class DeterminismRules
         foreach (LocalVariableInfo local in method.GetMethodBody()?.LocalVariables ?? [])
             CheckType(local.LocalType, $"{site} (local #{local.LocalIndex})", violations);
 
+        // Indirect enumeration (via an interface, LINQ or a constructor taking IEnumerable) cannot be
+        // tied to a concrete collection without data-flow analysis. Conservative rule: a method that
+        // touches an unordered collection must not enumerate anything indirectly.
+        bool touchesUnordered = TouchesUnordered(method);
+
         foreach (IlScanner.Instruction instruction in IlScanner.Read(method))
         {
             if (Array.IndexOf(FloatOpCodes, instruction.OpCode) >= 0)
@@ -70,6 +86,8 @@ internal static class DeterminismRules
             {
                 case MethodBase callee:
                     CheckCallee(callee, site, violations);
+                    if (touchesUnordered && EnumeratesIndirectly(callee))
+                        violations.Add($"{site}: enumerates an unordered collection indirectly via {callee.DeclaringType?.Name}.{callee.Name}");
                     break;
                 case FieldInfo field:
                     CheckType(field.FieldType, $"{site} uses field {field.Name}", violations);
@@ -88,6 +106,9 @@ internal static class DeterminismRules
 
         if (owner == typeof(Math) && Array.IndexOf(AllowedMath, callee.Name) < 0)
             violations.Add($"{site}: System.Math.{callee.Name} is not in the allowed list");
+        if (owner == typeof(double) && callee.IsStatic && !callee.Name.StartsWith("op_", StringComparison.Ordinal) &&
+            Array.IndexOf(AllowedDoubleStatics, callee.Name) < 0)
+            violations.Add($"{site}: System.Double.{callee.Name} is not in the allowed list");
         if (owner == typeof(MathF))
             violations.Add($"{site}: MathF.{callee.Name}");
         if (owner == typeof(Random) || owner == typeof(Stopwatch))
@@ -109,6 +130,53 @@ internal static class DeterminismRules
             CheckType(parameter.ParameterType, $"{site} calls {name} (parameter)", violations);
     }
 
+    private static bool TouchesUnordered(MethodBase method)
+    {
+        if (method.GetParameters().Any(p => ContainsUnordered(p.ParameterType)) ||
+            (method.GetMethodBody()?.LocalVariables ?? []).Any(l => ContainsUnordered(l.LocalType)))
+            return true;
+        foreach (IlScanner.Instruction instruction in IlScanner.Read(method))
+        {
+            bool hit = instruction.Operand switch
+            {
+                MethodInfo callee => ContainsUnordered(callee.DeclaringType) || ContainsUnordered(callee.ReturnType),
+                MethodBase callee => ContainsUnordered(callee.DeclaringType),
+                FieldInfo field => ContainsUnordered(field.FieldType),
+                Type type => ContainsUnordered(type),
+                _ => false,
+            };
+            if (hit)
+                return true;
+        }
+        return false;
+    }
+
+    private static bool EnumeratesIndirectly(MethodBase callee)
+    {
+        Type? owner = callee.DeclaringType;
+        if (owner == typeof(Enumerable))
+            return true;
+        if (callee.Name == "GetEnumerator" && owner is not null && IsEnumerableInterface(owner))
+            return true;
+        return callee.GetParameters().Any(p => IsEnumerableInterface(p.ParameterType));
+    }
+
+    private static bool IsEnumerableInterface(Type type) =>
+        type == typeof(IEnumerable) ||
+        (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>));
+
+    private static bool ContainsUnordered(Type? type)
+    {
+        if (type is null)
+            return false;
+        if (type.HasElementType)
+            return ContainsUnordered(type.GetElementType());
+        if (!type.IsGenericType)
+            return false;
+        return Array.IndexOf(UnorderedCollections, type.GetGenericTypeDefinition()) >= 0 ||
+               type.GetGenericArguments().Any(ContainsUnordered);
+    }
+
     private static void CheckType(Type type, string site, List<string> violations)
     {
         if (ContainsForbiddenType(type))
@@ -119,7 +187,7 @@ internal static class DeterminismRules
     {
         if (type.HasElementType)
             return ContainsForbiddenType(type.GetElementType()!);
-        if (type == typeof(float) || type == typeof(Random) || type == typeof(MathF))
+        if (type == typeof(float) || type == typeof(Half) || type == typeof(Random) || type == typeof(MathF))
             return true;
         return type.IsGenericType && !type.IsGenericTypeDefinition &&
                type.GetGenericArguments().Any(ContainsForbiddenType);

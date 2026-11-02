@@ -25,6 +25,7 @@ You did not write the artifact. You get the artifact and the criteria, not the a
 - You were started by the Orchestrator (main session). You do not see its conversation: rely on the task prompt and the files it names.
 - Do not start other agents. Do not change item statuses (`status:` fields) — the Orchestrator does that.
 - Write only inside your write zone (enforced by a hook). If a change is needed elsewhere, describe it under OPEN.
+- Create and change files only with Write/Edit, never with Bash (`sed -i`, `cat >`, `tee`, `>>`, `cp`, `mv`): Bash writes bypass the zone hook. Use Bash only to build, run and test. The Orchestrator checks every changed file against your zone.
 - Documents for the owner are in Russian; code, identifiers and file names in English. Mark claims as [Факт] (with source), [Предп.] or [Предл.].
 - Read long documents from their "Краткий вывод" section first. Check `docs/research/` before researching a topic again.
 - Never present a stub or a guess as a finished result.
