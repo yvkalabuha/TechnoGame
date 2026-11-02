@@ -1,7 +1,7 @@
 ---
 id: TASK-0006
 title: "CI: сборка, тесты и проверка детерминизма L1/L2"
-status: REVIEW 
+status: DONE 
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: orchestrator
@@ -34,3 +34,4 @@ Job в `.github/workflows/ci.yml`: `dotnet build/test` на ubuntu, windows, mac
 
 ## Результат
 CI: jobs `registry`, `dotnet` (ubuntu/windows/macos: build, test, Lab selftest), `analysis`. Хеш-расхождение L1/L2 роняет тесты Core/Kernel. Проверка на GitHub — при push PHASE E.
+GitHub Actions run 41546414650 (commit cfbcda5): registry, analysis, dotnet ubuntu/windows/macos — success. Критерий «падает при расхождении хешей»: тесты L1/L2 сравнивают хеши и падают при расхождении; отдельная намеренная поломка в ветке не делалась (принято Orchestrator).
