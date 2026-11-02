@@ -34,6 +34,7 @@ The owner runs `/handoff`. If the session ends without it and files changed, rem
 | critic, advocate | every gate-level review (`/review-gate`) |
 | reviewer | every diff in src/, tests/, mods/ |
 
+- Create or change agent files only at the end of a session: changes are not picked up by the running session. Fallback for a missing agent: `general-purpose` with the role file as instructions + `zone_check`.
 - Choose the minimal set of agents. Run agents in parallel only for independent work.
 - Agents do not see this conversation: give them the item path, the goal, the criteria and the files to read.
 - Agents return ≤40 lines; details go into files.

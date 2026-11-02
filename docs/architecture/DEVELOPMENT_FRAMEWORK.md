@@ -1,7 +1,7 @@
 # DEVELOPMENT FRAMEWORK — проект процесса разработки
 
 **ID:** DF-001
-**Версия:** 2 (после ревью Critic и Advocate, 2026-11-02)
+**Версия:** 3 (2026-11-02; v2 — после ревью Critic/Advocate; v3 — правки PHASE E F1–F7, DECISIONS_LOG #21)
 **Статус:** APPROVED (владелец, 2026-11-02)
 **Автор:** Orchestrator
 **Основания:** `development/phase-a/REQUIREMENTS_ANALYSIS.md`, `docs/research/PHASE_B_SUMMARY.md`, RR-0004 (механизмы Claude Code)
@@ -316,3 +316,16 @@ OPEN: вопросы к Orchestrator или владельцу
 | 10 | Push после каждой задачи | Advocate: быстрее обратная связь от CI | Не менялось: политика владельца — push в конце фазы. Владелец может изменить |
 | 11 | `/start` | Critic: дублирует SessionStart hook | Принято: `/start` убран |
 | 12 | Генерируемые индексы | Critic: 5 индексов не окупаются | Принято: один `BACKLOG.md` + блок в `CURRENT_STATE.md`; остальное — `registry.py list`; DECISIONS_LOG, RISKS, TECH_DEBT вручную |
+
+## 13. Изменения v3 (PHASE E, DECISIONS_LOG #21)
+
+Источник: `development/phase-e/PHASE_E_REPORT.md` §4.
+- **F1.** Принцип 4 уточнён: вне зоны запись запрещена любым способом; внутри зоны Bash-запись допустима. Orchestrator запускает `tools/development/zone_check.py <agent>…` после каждого пишущего агента (для параллельных — объединение зон).
+- **F2.** Агенты создаются и меняются в конце сессии; в текущей сессии изменения не подхватываются. Обход — `general-purpose` + файл роли + `zone_check`.
+- **F3.** В формат ответа агента добавлен список допустимых имён агентов.
+- **F4.** Раздел «Результат» задачи заполняет Orchestrator по ответу агента.
+- **F5.** Push — раз в фазу (без изменений, #22).
+- **F6.** В шаблоне эксперимента — раздел «Проверка эталона».
+- **F7.** В handoff — сумма токенов субагентов.
+- Зоны: `game-designer` и `economy-analyst` пишут `docs/research/RR-*.md` (PHASE F); `economy-analyst` добавлен (DF §2.3, условие выполнено).
+

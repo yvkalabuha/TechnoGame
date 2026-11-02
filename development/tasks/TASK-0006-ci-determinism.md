@@ -33,3 +33,4 @@ Job в `.github/workflows/ci.yml`: `dotnet build/test` на ubuntu, windows, mac
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
+CI: jobs `registry`, `dotnet` (ubuntu/windows/macos: build, test, Lab selftest), `analysis`. Хеш-расхождение L1/L2 роняет тесты Core/Kernel. Проверка на GitHub — при push PHASE E.
