@@ -313,3 +313,10 @@ unlocks_applications: [ app.nuclear_reactor, app.fission_weapon ]
 - Arthur, W. B., Polak, W. (2006). The evolution of technology within a simple computer model. Complexity 11(5) — https://doi.org/10.1002/cplx.20130
 - Arthur, W. B. (2009). The Nature of Technology. Free Press (книга)
 - Fleming, L. (2001). Recombinant Uncertainty in Technological Search. Management Science 47(1) — https://doi.org/10.1287/mnsc.47.1.117.10671
+
+---
+
+## Поправка (2026-11-02, Orchestrator, по RR-0005)
+
+- **COW (NMC, Alliances):** условия Correlates of War запрещают коммерческое использование и передачу третьим лицам без письменного разрешения (https://correlatesofwar.org/?p=66, доступ 2026-11-02). По ADR-0009 (данные без права распространения запрещены) — **не используется** ни в репозитории, ни для копирования значений. Калибровка — по другим источникам.
+- **V-Dem:** CC BY-SA 4.0 (copyleft) — только как справочник, без включения данных (ADR-0009).
