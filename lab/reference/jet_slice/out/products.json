@@ -528,5 +528,497 @@
   "start_fleet_D0_0": 1000000,
   "unpaid_0.8_no_defects": 800000
  },
- "spec": "slice-jet-aviation.md v0.10"
+ "spec": "slice-jet-aviation.md v0.10",
+ "v24": {
+  "D_ref": 740000000,
+  "accidents": [
+   {
+    "case": "forced_X_0.6_Dref",
+    "loss_acc": 200000,
+    "loss_acc_before_write_off": 1200000,
+    "written_off": 1
+   },
+   {
+    "case": "carry_fraction",
+    "loss_acc": 900000,
+    "loss_acc_before_write_off": 1900000,
+    "written_off": 1
+   },
+   {
+    "case": "no_excess",
+    "loss_acc": 0,
+    "loss_acc_before_write_off": 0,
+    "written_off": 0
+   },
+   {
+    "case": "cap_units",
+    "loss_acc": 2560000,
+    "loss_acc_before_write_off": 5560000,
+    "written_off": 3
+   }
+  ],
+  "cs_examples": {
+   "A": {
+    "AF": 3020,
+    "PU": 1487,
+    "af_class": 3,
+    "alloy_kg": 2980,
+    "proc_part": 4507,
+    "r_PU": 4,
+    "sum_AF": 2748,
+    "sum_PU": 1797,
+    "unit_cost_floor": 6737
+   },
+   "B": {
+    "AF": 2093,
+    "PU": 913,
+    "af_class": 3,
+    "alloy_kg": 2120,
+    "proc_part": 3006,
+    "r_PU": 3,
+    "sum_AF": 1905,
+    "sum_PU": 1104,
+    "unit_cost_floor": 5236
+   },
+   "C": {
+    "AF": 2093,
+    "PU": 332,
+    "af_class": 3,
+    "alloy_kg": 670,
+    "proc_part": 2425,
+    "r_PU": 2,
+    "sum_AF": 1905,
+    "sum_PU": 644,
+    "unit_cost_floor": 4655
+   }
+  },
+  "fv": {
+   "n_alloy": [
+    {
+     "alloy_kg": 670,
+     "n_budget": 400,
+     "n_v": 400,
+     "supply": 30000000000
+    },
+    {
+     "alloy_kg": 2980,
+     "n_budget": 400,
+     "n_v": 240,
+     "supply": 30000000000
+    },
+    {
+     "alloy_kg": 290,
+     "n_budget": 300,
+     "n_v": 300,
+     "supply": 5000000000
+    }
+   ],
+   "terms": [
+    {
+     "fv": 285000000,
+     "n": 300,
+     "perf_rel": 1000000,
+     "readiness": 950000
+    },
+    {
+     "fv": 227683980,
+     "n": 200,
+     "perf_rel": 1600000,
+     "readiness": 900000
+    },
+    {
+     "fv": 96747060,
+     "n": 100,
+     "perf_rel": 2600000,
+     "readiness": 600000
+    }
+   ]
+  },
+  "gen_mixed": {
+   "G2_platform_eng_g4": {
+    "g_p": 2,
+    "gen": 2
+   },
+   "G3_platform_eng_g1": {
+    "g_p": 3,
+    "gen": 2
+   },
+   "G3_platform_eng_g2": {
+    "g_p": 3,
+    "gen": 3
+   }
+  },
+  "params": {
+   "H_build": 24,
+   "a_acc": 1000,
+   "c_ref": 37,
+   "fleet_hours": 20000000,
+   "gamma_q10": 512,
+   "k_P": {
+    "P1": 400000,
+    "P2": 700000,
+    "P3": 550000
+   },
+   "k_gate": 700000,
+   "n_service_min": 50,
+   "rho_retro": 500000,
+   "t_test_min": 6
+  },
+  "readiness": {
+   "D_960_new_G3": 351352,
+   "D_eq_D_ref": 500000,
+   "D_zero": 1000000,
+   "half_paid_q09_D_370": 337500
+  },
+  "references": {
+   "G1.superior": {
+    "AF": 673,
+    "D0_novelty1_exp0": 580000000,
+    "PU": 201,
+    "W_exp0": 11600000000,
+    "af_class": 1,
+    "ai_launch_month": {
+     "P1": 16,
+     "P2": 6,
+     "P3": 6
+    },
+    "alloy_kg": 290,
+    "alts": [
+     "eng_g1",
+     "hot_nicr_forged",
+     "comp_centrifugal",
+     "af_straight",
+     "ab_none"
+    ],
+    "complexity": 29,
+    "d_gate_preliminary": 405201920,
+    "g_p": 1,
+    "gate_month_tests_only": 6,
+    "gen": 1,
+    "perf": 1000000,
+    "prc_set": [
+     38,
+     39,
+     44,
+     45,
+     48,
+     49,
+     53,
+     54
+    ],
+    "proc_part": 874,
+    "r_PU": 1,
+    "sum_AF": 537,
+    "sum_PU": 391,
+    "unit_cost_floor": 1382,
+    "upkeep": 29
+   },
+   "G2.producible": {
+    "AF": 1052,
+    "D0_novelty1_exp0": 740000000,
+    "PU": 307,
+    "W_exp0": 16428000000,
+    "af_class": 2,
+    "ai_launch_month": {
+     "P1": 24,
+     "P2": 6,
+     "P3": 14
+    },
+    "alloy_kg": 290,
+    "alts": [
+     "eng_g2",
+     "hot_nicr_forged",
+     "comp_axial",
+     "af_swept",
+     "ab_on"
+    ],
+    "complexity": 37,
+    "d_gate_preliminary": 516981760,
+    "g_p": 2,
+    "gate_month_tests_only": 6,
+    "gen": 2,
+    "perf": 2235025,
+    "prc_set": [
+     38,
+     39,
+     44,
+     45,
+     49,
+     50,
+     53,
+     54,
+     55,
+     57
+    ],
+    "proc_part": 1359,
+    "r_PU": 2,
+    "sum_AF": 968,
+    "sum_PU": 597,
+    "unit_cost_floor": 2149,
+    "upkeep": 52
+   },
+   "G2.superior": {
+    "AF": 1052,
+    "D0_novelty1_exp0": 740000000,
+    "PU": 332,
+    "W_exp0": 16428000000,
+    "af_class": 2,
+    "ai_launch_month": {
+     "P1": 24,
+     "P2": 6,
+     "P3": 14
+    },
+    "alloy_kg": 670,
+    "alts": [
+     "eng_g2",
+     "hot_sa2_forged",
+     "comp_axial",
+     "af_swept",
+     "ab_on"
+    ],
+    "complexity": 37,
+    "d_gate_preliminary": 516981760,
+    "g_p": 2,
+    "gate_month_tests_only": 6,
+    "gen": 2,
+    "perf": 2458527,
+    "prc_set": [
+     38,
+     40,
+     44,
+     45,
+     49,
+     50,
+     53,
+     54,
+     55,
+     57
+    ],
+    "proc_part": 1384,
+    "r_PU": 2,
+    "sum_AF": 968,
+    "sum_PU": 644,
+    "unit_cost_floor": 2174,
+    "upkeep": 52
+   },
+   "G3.producible": {
+    "AF": 3020,
+    "D0_novelty1_exp0": 920000000,
+    "PU": 532,
+    "W_exp0": 33488000000,
+    "af_class": 3,
+    "ai_launch_month": {
+     "P1": 31,
+     "P2": 13,
+     "P3": 21
+    },
+    "alloy_kg": 670,
+    "alts": [
+     "eng_g3",
+     "hot_sa2_forged",
+     "comp_axial",
+     "af_titanium",
+     "ab_on"
+    ],
+    "complexity": 46,
+    "d_gate_preliminary": 518000000,
+    "g_p": 3,
+    "gate_month_tests_only": 13,
+    "gen": 3,
+    "perf": 3956920,
+    "prc_set": [
+     38,
+     40,
+     42,
+     44,
+     45,
+     49,
+     50,
+     53,
+     54,
+     55,
+     56,
+     57
+    ],
+    "proc_part": 3552,
+    "r_PU": 3,
+    "sum_AF": 2748,
+    "sum_PU": 644,
+    "unit_cost_floor": 5782,
+    "upkeep": 156
+   },
+   "G3.superior": {
+    "AF": 3020,
+    "D0_novelty1_exp0": 960000000,
+    "PU": 913,
+    "W_exp0": 34944000000,
+    "af_class": 3,
+    "ai_launch_month": {
+     "P1": 32,
+     "P2": 15,
+     "P3": 22
+    },
+    "alloy_kg": 2120,
+    "alts": [
+     "eng_g3",
+     "hot_vim_cast",
+     "comp_axial",
+     "af_titanium",
+     "ab_on"
+    ],
+    "complexity": 48,
+    "d_gate_preliminary": 518000000,
+    "g_p": 3,
+    "gate_month_tests_only": 15,
+    "gen": 3,
+    "perf": 4496500,
+    "prc_set": [
+     38,
+     41,
+     42,
+     44,
+     46,
+     50,
+     51,
+     53,
+     54,
+     55,
+     56,
+     57
+    ],
+    "proc_part": 3933,
+    "r_PU": 3,
+    "sum_AF": 2748,
+    "sum_PU": 1104,
+    "unit_cost_floor": 6163,
+    "upkeep": 170
+   },
+   "G4.producible": {
+    "AF": 10316,
+    "D0_novelty1_exp0": 960000000,
+    "PU": 913,
+    "W_exp0": 59904000000,
+    "af_class": 4,
+    "ai_launch_month": {
+     "P1": 32,
+     "P2": 15,
+     "P3": 22
+    },
+    "alloy_kg": 2120,
+    "alts": [
+     "eng_g4",
+     "hot_vim_cast",
+     "comp_axial",
+     "af_mach2",
+     "ab_on"
+    ],
+    "complexity": 48,
+    "d_gate_preliminary": 518000000,
+    "g_p": 4,
+    "gate_month_tests_only": 15,
+    "gen": 4,
+    "perf": 6546375,
+    "prc_set": [
+     38,
+     41,
+     42,
+     44,
+     46,
+     50,
+     51,
+     53,
+     54,
+     55,
+     56,
+     57
+    ],
+    "proc_part": 11229,
+    "r_PU": 4,
+    "sum_AF": 2748,
+    "sum_PU": 1104,
+    "unit_cost_floor": 17262,
+    "upkeep": 478
+   },
+   "G4.superior": {
+    "AF": 10316,
+    "D0_novelty1_exp0": 980000000,
+    "PU": 1487,
+    "W_exp0": 61152000000,
+    "af_class": 4,
+    "ai_launch_month": {
+     "P1": 33,
+     "P2": 15,
+     "P3": 23
+    },
+    "alloy_kg": 2980,
+    "alts": [
+     "eng_g4",
+     "hot_vim_ds_cooled",
+     "comp_axial",
+     "af_mach2",
+     "ab_on"
+    ],
+    "complexity": 49,
+    "d_gate_preliminary": 518000000,
+    "g_p": 4,
+    "gate_month_tests_only": 15,
+    "gen": 4,
+    "perf": 7593795,
+    "prc_set": [
+     38,
+     41,
+     42,
+     43,
+     44,
+     50,
+     52,
+     53,
+     54,
+     55,
+     56,
+     57
+    ],
+    "proc_part": 11803,
+    "r_PU": 4,
+    "sum_AF": 2748,
+    "sum_PU": 1797,
+    "unit_cost_floor": 17836,
+    "upkeep": 499
+   }
+  },
+  "retro": [
+   {
+    "c_retro": 4,
+    "c_u": 240,
+    "case": "money_enough",
+    "fixed": 58000000,
+    "k_paid": 58000000,
+    "k_r": 58000000,
+    "left": 1986080,
+    "retro_pool": 384000000
+   },
+   {
+    "c_retro": 4,
+    "c_u": 240,
+    "case": "money_short",
+    "fixed": 20833333,
+    "k_paid": 20833333,
+    "k_r": 58000000,
+    "left": 1,
+    "retro_pool": 421166667
+   },
+   {
+    "c_u": null,
+    "case": "pool_empty",
+    "fixed": 58000000,
+    "left": 50000,
+    "retro_pool": 0
+   }
+  ],
+  "spec": "slice-jet-aviation.md v0.11 (contract v2.4 r1)",
+  "validator_psi": {
+   "c_max": 49,
+   "psi_c_max_over_c_ref": 662162
+  }
+ }
 }

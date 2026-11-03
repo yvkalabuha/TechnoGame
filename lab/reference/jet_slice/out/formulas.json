@@ -368,6 +368,918 @@
    }
   }
  ],
+ "cb_interface": [
+  {
+   "input": {
+    "H": {
+     "MET.precision": 4000000,
+     "MET.purity": 3900000,
+     "MET.quality_control": 3800000
+    },
+    "Hcap": {
+     "precision": 5000000,
+     "purity": 4700000,
+     "quality_control": 5000000
+    },
+    "M": {
+     "MET.precision": 4200000,
+     "MET.purity": 4100000,
+     "MET.quality_control": 4000000
+    },
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "procs": [
+     {
+      "E": 0,
+      "cluster": "MET",
+      "known": true,
+      "labour": 200000000,
+      "lic": false,
+      "planned": false,
+      "prc_id": 40,
+      "req": {
+       "precision": null,
+       "purity": 4500000,
+       "quality_control": null
+      },
+      "v": 1000000000
+     },
+     {
+      "E": 0,
+      "cluster": "MET",
+      "known": true,
+      "labour": 200000000,
+      "lic": false,
+      "planned": false,
+      "prc_id": 41,
+      "req": {
+       "precision": null,
+       "purity": 4800000,
+       "quality_control": null
+      },
+      "v": 1000000000
+     }
+    ]
+   },
+   "name": "lead_skips_saturation",
+   "note": "regression FRA*40/SUN*40 (culture-round2 10.2 p.6(i)): neighbour with SATURATION does not take the cell",
+   "output": {
+    "lead": {
+     "MET.precision": null,
+     "MET.purity": 40,
+     "MET.quality_control": null
+    },
+    "procs": [
+     {
+      "E_useful": 919,
+      "d_star": "purity",
+      "eligible": true,
+      "k_star": 500000,
+      "limiter": "EFFORT",
+      "limiter0": {
+       "purity": "EFFORT"
+      },
+      "prc_id": 40,
+      "subject_prc": 40,
+      "t_hat": {
+       "purity": 425000
+      }
+     },
+     {
+      "E_useful": 0,
+      "d_star": "purity",
+      "eligible": true,
+      "k_star": 500000,
+      "limiter": "EFFORT",
+      "limiter0": {
+       "purity": "SATURATION"
+      },
+      "prc_id": 41,
+      "subject_prc": 40,
+      "t_hat": {
+       "purity": 575000
+      }
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "H": {
+     "AERO.precision": 3500000,
+     "AERO.purity": 3500000,
+     "AERO.quality_control": 3500000
+    },
+    "Hcap": {
+     "precision": 5000000,
+     "purity": 5000000,
+     "quality_control": 5000000
+    },
+    "M": {
+     "AERO.precision": 3700000,
+     "AERO.purity": 3700000,
+     "AERO.quality_control": 3700000
+    },
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "procs": [
+     {
+      "E": 0,
+      "cluster": "AERO",
+      "known": true,
+      "labour": 200000000,
+      "lic": false,
+      "planned": false,
+      "prc_id": 55,
+      "req": {
+       "precision": 4000000,
+       "purity": null,
+       "quality_control": null
+      },
+      "v": 100000000
+     },
+     {
+      "E": 0,
+      "cluster": "AERO",
+      "known": true,
+      "labour": 200000000,
+      "lic": false,
+      "planned": false,
+      "prc_id": 56,
+      "req": {
+       "precision": 4900000,
+       "purity": null,
+       "quality_control": null
+      },
+      "v": 0
+     }
+    ]
+   },
+   "name": "lead_only_eligible",
+   "note": "regression G4-2: known q without output and outside P/O projects does not take the cell",
+   "output": {
+    "lead": {
+     "AERO.precision": 55,
+     "AERO.purity": null,
+     "AERO.quality_control": null
+    },
+    "procs": [
+     {
+      "E_useful": 14,
+      "d_star": "precision",
+      "eligible": true,
+      "k_star": 7250,
+      "limiter": "EFFORT",
+      "limiter0": {
+       "precision": "EFFORT"
+      },
+      "prc_id": 55,
+      "subject_prc": 55,
+      "t_hat": {
+       "precision": 5437
+      }
+     },
+     {
+      "E_useful": 0,
+      "d_star": "precision",
+      "eligible": false,
+      "k_star": 100000,
+      "limiter": "EFFORT",
+      "limiter0": {
+       "precision": "EFFORT"
+      },
+      "prc_id": 56,
+      "subject_prc": 55,
+      "t_hat": {
+       "precision": 90000
+      }
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "H": {
+     "AERO.precision": 3500000,
+     "AERO.purity": 3500000,
+     "AERO.quality_control": 3500000
+    },
+    "Hcap": {
+     "precision": 5000000,
+     "purity": 5000000,
+     "quality_control": 5000000
+    },
+    "M": {
+     "AERO.precision": 3700000,
+     "AERO.purity": 3700000,
+     "AERO.quality_control": 3700000
+    },
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "procs": [
+     {
+      "E": 0,
+      "cluster": "AERO",
+      "known": true,
+      "labour": 200000000,
+      "lic": false,
+      "planned": false,
+      "prc_id": 55,
+      "req": {
+       "precision": 4000000,
+       "purity": null,
+       "quality_control": null
+      },
+      "v": 100000000
+     },
+     {
+      "E": 0,
+      "cluster": "AERO",
+      "known": true,
+      "labour": 200000000,
+      "lic": false,
+      "planned": true,
+      "prc_id": 56,
+      "req": {
+       "precision": 4900000,
+       "purity": null,
+       "quality_control": null
+      },
+      "v": 0
+     }
+    ]
+   },
+   "name": "lead_planned_q",
+   "note": "same as lead_only_eligible but q is in a P/O project: lead may become q",
+   "output": {
+    "lead": {
+     "AERO.precision": 56,
+     "AERO.purity": null,
+     "AERO.quality_control": null
+    },
+    "procs": [
+     {
+      "E_useful": 0,
+      "d_star": "precision",
+      "eligible": true,
+      "k_star": 7250,
+      "limiter": "EFFORT",
+      "limiter0": {
+       "precision": "EFFORT"
+      },
+      "prc_id": 55,
+      "subject_prc": 56,
+      "t_hat": {
+       "precision": 5437
+      }
+     },
+     {
+      "E_useful": 184,
+      "d_star": "precision",
+      "eligible": true,
+      "k_star": 100000,
+      "limiter": "EFFORT",
+      "limiter0": {
+       "precision": "EFFORT"
+      },
+      "prc_id": 56,
+      "subject_prc": 56,
+      "t_hat": {
+       "precision": 90000
+      }
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "H": {
+     "MECH.precision": 3600000,
+     "MECH.purity": 3600000,
+     "MECH.quality_control": 3600000
+    },
+    "Hcap": {
+     "precision": 5000000,
+     "purity": 5000000,
+     "quality_control": 5000000
+    },
+    "M": {
+     "MECH.precision": 3300000,
+     "MECH.purity": 3300000,
+     "MECH.quality_control": 3300000
+    },
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "procs": [
+     {
+      "E": 0,
+      "cluster": "MECH",
+      "known": true,
+      "labour": 200000000,
+      "lic": false,
+      "planned": false,
+      "prc_id": 48,
+      "req": {
+       "precision": 4000000,
+       "purity": null,
+       "quality_control": 3500000
+      },
+      "v": 1000000000
+     }
+    ]
+   },
+   "name": "tooling",
+   "note": "M < H in d*: TOOLING, E_useful 0",
+   "output": {
+    "lead": {
+     "MECH.precision": null,
+     "MECH.purity": null,
+     "MECH.quality_control": null
+    },
+    "procs": [
+     {
+      "E_useful": 0,
+      "d_star": "precision",
+      "eligible": true,
+      "k_star": 500000,
+      "limiter": "TOOLING",
+      "limiter0": {
+       "precision": "TOOLING",
+       "quality_control": "TOOLING"
+      },
+      "prc_id": 48,
+      "subject_prc": 48,
+      "t_hat": {
+       "precision": 325000,
+       "quality_control": 75000
+      }
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "H": {
+     "MET.precision": 4400000,
+     "MET.purity": 4400000,
+     "MET.quality_control": 4400000
+    },
+    "Hcap": {
+     "precision": 5000000,
+     "purity": 5000000,
+     "quality_control": 5000000
+    },
+    "M": {
+     "MET.precision": 4600000,
+     "MET.purity": 4600000,
+     "MET.quality_control": 4600000
+    },
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "procs": [
+     {
+      "E": 0,
+      "cluster": "MET",
+      "known": true,
+      "labour": 200000000,
+      "lic": false,
+      "planned": false,
+      "prc_id": 38,
+      "req": {
+       "precision": 3000000,
+       "purity": 3000000,
+       "quality_control": 2500000
+      },
+      "v": 1000000000
+     }
+    ]
+   },
+   "name": "none",
+   "note": "gap = 0: NONE",
+   "output": {
+    "lead": {
+     "MET.precision": null,
+     "MET.purity": null,
+     "MET.quality_control": null
+    },
+    "procs": [
+     {
+      "E_useful": 0,
+      "d_star": "precision",
+      "eligible": true,
+      "k_star": 500000,
+      "limiter": "NONE",
+      "limiter0": {
+       "precision": "NONE",
+       "purity": "NONE",
+       "quality_control": "NONE"
+      },
+      "prc_id": 38,
+      "subject_prc": 38,
+      "t_hat": {
+       "precision": 0,
+       "purity": 0,
+       "quality_control": 0
+      }
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "H": {
+     "MET.precision": 3800000,
+     "MET.purity": 3800000,
+     "MET.quality_control": 3800000
+    },
+    "Hcap": {
+     "precision": 5000000,
+     "purity": 5000000,
+     "quality_control": 5000000
+    },
+    "M": {
+     "MET.precision": 4000000,
+     "MET.purity": 4000000,
+     "MET.quality_control": 4000000
+    },
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "procs": [
+     {
+      "E": 0,
+      "cluster": "MET",
+      "known": true,
+      "labour": 200000000,
+      "lic": false,
+      "planned": true,
+      "prc_id": 39,
+      "req": {
+       "precision": null,
+       "purity": 4000000,
+       "quality_control": 3500000
+      },
+      "v": 0
+     }
+    ]
+   },
+   "name": "lab_ceiling_planned",
+   "note": "v = 0, planned, H >= r_d - dL: LAB_CEILING, E_useful 0",
+   "output": {
+    "lead": {
+     "MET.precision": null,
+     "MET.purity": null,
+     "MET.quality_control": null
+    },
+    "procs": [
+     {
+      "E_useful": 0,
+      "d_star": "purity",
+      "eligible": true,
+      "k_star": 0,
+      "limiter": "LAB_CEILING",
+      "limiter0": {
+       "purity": "LAB_CEILING",
+       "quality_control": "NONE"
+      },
+      "prc_id": 39,
+      "subject_prc": 39,
+      "t_hat": {
+       "purity": 0,
+       "quality_control": 0
+      }
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "H": {
+     "MET.precision": 3200000,
+     "MET.purity": 3200000,
+     "MET.quality_control": 3200000
+    },
+    "Hcap": {
+     "precision": 5000000,
+     "purity": 5000000,
+     "quality_control": 5000000
+    },
+    "M": {
+     "MET.precision": 3400000,
+     "MET.purity": 3400000,
+     "MET.quality_control": 3400000
+    },
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "procs": [
+     {
+      "E": 0,
+      "cluster": "MET",
+      "known": true,
+      "labour": 200000000,
+      "lic": false,
+      "planned": true,
+      "prc_id": 39,
+      "req": {
+       "precision": null,
+       "purity": 4000000,
+       "quality_control": 3500000
+      },
+      "v": 0
+     }
+    ]
+   },
+   "name": "lab_effort_planned",
+   "note": "v = 0, planned, H < r_d - dL: EFFORT via lab part, k* = ell",
+   "output": {
+    "lead": {
+     "MET.precision": null,
+     "MET.purity": 39,
+     "MET.quality_control": null
+    },
+    "procs": [
+     {
+      "E_useful": 184,
+      "d_star": "purity",
+      "eligible": true,
+      "k_star": 100000,
+      "limiter": "EFFORT",
+      "limiter0": {
+       "purity": "EFFORT",
+       "quality_control": "LAB_CEILING"
+      },
+      "prc_id": 39,
+      "subject_prc": 39,
+      "t_hat": {
+       "purity": 30000,
+       "quality_control": 0
+      }
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "H": {
+     "MET.precision": 3500000,
+     "MET.purity": 3300000,
+     "MET.quality_control": 3200000
+    },
+    "Hcap": {
+     "precision": 5000000,
+     "purity": 5000000,
+     "quality_control": 5000000
+    },
+    "M": {
+     "MET.precision": 3700000,
+     "MET.purity": 3500000,
+     "MET.quality_control": 3400000
+    },
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "procs": [
+     {
+      "E": 919,
+      "cluster": "MET",
+      "known": true,
+      "labour": 200000000,
+      "lic": false,
+      "planned": false,
+      "prc_id": 4,
+      "req": {
+       "precision": 4000000,
+       "purity": 4000000,
+       "quality_control": 3500000
+      },
+      "v": 1000000000
+     }
+    ]
+   },
+   "name": "volume",
+   "note": "lead with E >= E_useful and k* < 1: VOLUME",
+   "output": {
+    "lead": {
+     "MET.precision": 4,
+     "MET.purity": 4,
+     "MET.quality_control": 4
+    },
+    "procs": [
+     {
+      "E_useful": 919,
+      "d_star": "purity",
+      "eligible": true,
+      "k_star": 500000,
+      "limiter": "VOLUME",
+      "limiter0": {
+       "precision": "EFFORT",
+       "purity": "EFFORT",
+       "quality_control": "EFFORT"
+      },
+      "prc_id": 4,
+      "subject_prc": 4,
+      "t_hat": {
+       "precision": 375000,
+       "purity": 475000,
+       "quality_control": 275000
+      }
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "H": {
+     "MET.precision": 3500000,
+     "MET.purity": 3300000,
+     "MET.quality_control": 3200000
+    },
+    "Hcap": {
+     "precision": 5000000,
+     "purity": 5000000,
+     "quality_control": 5000000
+    },
+    "M": {
+     "MET.precision": 3700000,
+     "MET.purity": 3500000,
+     "MET.quality_control": 3400000
+    },
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "procs": [
+     {
+      "E": 300,
+      "cluster": "MET",
+      "known": true,
+      "labour": 200000000,
+      "lic": false,
+      "planned": false,
+      "prc_id": 4,
+      "req": {
+       "precision": 4000000,
+       "purity": 4000000,
+       "quality_control": 3500000
+      },
+      "v": 1000000000
+     }
+    ]
+   },
+   "name": "effort",
+   "note": "lead with E < E_useful: EFFORT",
+   "output": {
+    "lead": {
+     "MET.precision": 4,
+     "MET.purity": 4,
+     "MET.quality_control": 4
+    },
+    "procs": [
+     {
+      "E_useful": 919,
+      "d_star": "purity",
+      "eligible": true,
+      "k_star": 500000,
+      "limiter": "EFFORT",
+      "limiter0": {
+       "precision": "EFFORT",
+       "purity": "EFFORT",
+       "quality_control": "EFFORT"
+      },
+      "prc_id": 4,
+      "subject_prc": 4,
+      "t_hat": {
+       "precision": 375000,
+       "purity": 475000,
+       "quality_control": 275000
+      }
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "H": {
+     "MET.precision": 3500000,
+     "MET.purity": 3500000,
+     "MET.quality_control": 3500000
+    },
+    "Hcap": {
+     "precision": 5000000,
+     "purity": 5000000,
+     "quality_control": 5000000
+    },
+    "M": {
+     "MET.precision": 3700000,
+     "MET.purity": 3700000,
+     "MET.quality_control": 3700000
+    },
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "procs": [
+     {
+      "E": 0,
+      "cluster": "MET",
+      "known": true,
+      "labour": 200000000,
+      "lic": false,
+      "planned": false,
+      "prc_id": 45,
+      "req": {
+       "precision": null,
+       "purity": 4000000,
+       "quality_control": null
+      },
+      "v": 200000000
+     },
+     {
+      "E": 0,
+      "cluster": "MET",
+      "known": true,
+      "labour": 200000000,
+      "lic": false,
+      "planned": false,
+      "prc_id": 49,
+      "req": {
+       "precision": null,
+       "purity": 4500000,
+       "quality_control": null
+      },
+      "v": 2000000000
+     }
+    ]
+   },
+   "name": "follower",
+   "note": "p leads no cell: limiter of lead(cell(p)), subject = lead, E_useful(p) = 0",
+   "output": {
+    "lead": {
+     "MET.precision": null,
+     "MET.purity": 49,
+     "MET.quality_control": null
+    },
+    "procs": [
+     {
+      "E_useful": 0,
+      "d_star": "purity",
+      "eligible": true,
+      "k_star": 28000,
+      "limiter": "EFFORT",
+      "limiter0": {
+       "purity": "EFFORT"
+      },
+      "prc_id": 45,
+      "subject_prc": 49,
+      "t_hat": {
+       "purity": 21000
+      }
+     },
+     {
+      "E_useful": 1838,
+      "d_star": "purity",
+      "eligible": true,
+      "k_star": 1000000,
+      "limiter": "EFFORT",
+      "limiter0": {
+       "purity": "EFFORT"
+      },
+      "prc_id": 49,
+      "subject_prc": 49,
+      "t_hat": {
+       "purity": 1250000
+      }
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "H": {
+     "MET.precision": 3200000,
+     "MET.purity": 3200000,
+     "MET.quality_control": 3200000
+    },
+    "Hcap": {
+     "precision": 5000000,
+     "purity": 5000000,
+     "quality_control": 5000000
+    },
+    "M": {
+     "MET.precision": 3400000,
+     "MET.purity": 3400000,
+     "MET.quality_control": 3400000
+    },
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "procs": [
+     {
+      "E": 0,
+      "cluster": "MET",
+      "known": true,
+      "labour": 200000000,
+      "lic": false,
+      "planned": false,
+      "prc_id": 39,
+      "req": {
+       "precision": null,
+       "purity": 4000000,
+       "quality_control": 3500000
+      },
+      "v": 0
+     }
+    ]
+   },
+   "name": "unknown_not_eligible",
+   "note": "known but no output and not planned: LAB_CEILING, no lead",
+   "output": {
+    "lead": {
+     "MET.precision": null,
+     "MET.purity": null,
+     "MET.quality_control": null
+    },
+    "procs": [
+     {
+      "E_useful": 0,
+      "d_star": "purity",
+      "eligible": false,
+      "k_star": 100000,
+      "limiter": "LAB_CEILING",
+      "limiter0": {
+       "purity": "EFFORT",
+       "quality_control": "LAB_CEILING"
+      },
+      "prc_id": 39,
+      "subject_prc": 39,
+      "t_hat": {
+       "purity": 30000,
+       "quality_control": 0
+      }
+     }
+    ]
+   }
+  }
+ ],
  "counter_rng": [
   {
    "key": [
@@ -1031,6 +1943,1404 @@
    }
   }
  ],
+ "culture_cb": [
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "cb_no_procs_floor",
+   "note": "P(c,d) empty: drive=catch=0, maint=H_floor, decay to floor",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3498500,
+    "a_r": 1000000,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 1500,
+    "dH_plus": 0,
+    "dH_plus_capped": 0,
+    "drive": 0,
+    "maint": 3000000,
+    "per_process": [],
+    "sat": 300000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "E": 1838,
+      "labour": 200000000,
+      "lic": false,
+      "prc_id": 1,
+      "r_d": 4000000,
+      "v": 5000000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "cb_full_effort",
+   "note": "x_V=1 -> c=1, E=E_full -> e_V=1, t=gap",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3512375,
+    "a_r": 1000000,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 0,
+    "dH_plus": 12375,
+    "dH_plus_capped": 12375,
+    "drive": 750000,
+    "maint": 4000000,
+    "per_process": [
+     {
+      "c": 1000000,
+      "e_L": 100000,
+      "e_V": 1000000,
+      "gap": 750000,
+      "gapL": 0,
+      "m": 1000000,
+      "maint_p": 4000000,
+      "prc_id": 1,
+      "t": 750000,
+      "v_cap": 2000000000,
+      "v_keep": 1250000000,
+      "v_tilde": 5000000000,
+      "x_E": 1000000,
+      "x_V": 1000000
+     }
+    ],
+    "sat": 300000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "E": 1838,
+      "labour": 200000000,
+      "lic": false,
+      "prc_id": 1,
+      "r_d": 4000000,
+      "v": 1000000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "cb_half_volume",
+   "note": "v=v_cap/2 -> c=SmoothStep(0.5)=0.5; E=E_full -> e_V=c",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3506187,
+    "a_r": 1000000,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 0,
+    "dH_plus": 6187,
+    "dH_plus_capped": 6187,
+    "drive": 375000,
+    "maint": 3800000,
+    "per_process": [
+     {
+      "c": 500000,
+      "e_L": 100000,
+      "e_V": 500000,
+      "gap": 750000,
+      "gapL": 0,
+      "m": 800000,
+      "maint_p": 3800000,
+      "prc_id": 1,
+      "t": 375000,
+      "v_cap": 2000000000,
+      "v_keep": 1250000000,
+      "v_tilde": 1000000000,
+      "x_E": 1000000,
+      "x_V": 500000
+     }
+    ],
+    "sat": 300000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "E": 919,
+      "labour": 200000000,
+      "lic": false,
+      "prc_id": 1,
+      "r_d": 4000000,
+      "v": 1000000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "cb_E_at_useful",
+   "note": "E=E_useful=MulCeil(0.5,E_full)=919: same t as E_full",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3506187,
+    "a_r": 1000000,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 0,
+    "dH_plus": 6187,
+    "dH_plus_capped": 6187,
+    "drive": 375000,
+    "maint": 3800000,
+    "per_process": [
+     {
+      "c": 500000,
+      "e_L": 100000,
+      "e_V": 500000,
+      "gap": 750000,
+      "gapL": 0,
+      "m": 800000,
+      "maint_p": 3800000,
+      "prc_id": 1,
+      "t": 375000,
+      "v_cap": 2000000000,
+      "v_keep": 1250000000,
+      "v_tilde": 1000000000,
+      "x_E": 500000,
+      "x_V": 500000
+     }
+    ],
+    "sat": 300000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "E": 400,
+      "labour": 200000000,
+      "lic": false,
+      "prc_id": 1,
+      "r_d": 4000000,
+      "v": 1000000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "cb_E_below_useful",
+   "note": "E < E_useful: e_V = x_E",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3502693,
+    "a_r": 1000000,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 0,
+    "dH_plus": 2693,
+    "dH_plus_capped": 2693,
+    "drive": 163220,
+    "maint": 3800000,
+    "per_process": [
+     {
+      "c": 500000,
+      "e_L": 100000,
+      "e_V": 217627,
+      "gap": 750000,
+      "gapL": 0,
+      "m": 800000,
+      "maint_p": 3800000,
+      "prc_id": 1,
+      "t": 163220,
+      "v_cap": 2000000000,
+      "v_keep": 1250000000,
+      "v_tilde": 1000000000,
+      "x_E": 217627,
+      "x_V": 500000
+     }
+    ],
+    "sat": 300000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "E": 1838,
+      "labour": 200000000,
+      "lic": false,
+      "prc_id": 1,
+      "r_d": 4500000,
+      "v": 0,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "cb_lab_only",
+   "note": "v=0, E>0: only e_L*gapL (lab part, ell=0.1); maint=H_floor",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3499325,
+    "a_r": 1000000,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 1500,
+    "dH_plus": 825,
+    "dH_plus_capped": 825,
+    "drive": 50000,
+    "maint": 3000000,
+    "per_process": [
+     {
+      "c": 0,
+      "e_L": 100000,
+      "e_V": 0,
+      "gap": 1250000,
+      "gapL": 500000,
+      "m": 0,
+      "maint_p": 3000000,
+      "prc_id": 1,
+      "t": 50000,
+      "v_cap": 2000000000,
+      "v_keep": 1250000000,
+      "v_tilde": 0,
+      "x_E": 1000000,
+      "x_V": 0
+     }
+    ],
+    "sat": 300000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "E": 1838,
+      "labour": 200000000,
+      "lic": false,
+      "prc_id": 1,
+      "r_d": 4000000,
+      "v": 0,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "cb_lab_ceiling",
+   "note": "v=0, H >= r_d - dL: gapL=0, no growth",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3498500,
+    "a_r": 1000000,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 1500,
+    "dH_plus": 0,
+    "dH_plus_capped": 0,
+    "drive": 0,
+    "maint": 3000000,
+    "per_process": [
+     {
+      "c": 0,
+      "e_L": 100000,
+      "e_V": 0,
+      "gap": 750000,
+      "gapL": 0,
+      "m": 0,
+      "maint_p": 3000000,
+      "prc_id": 1,
+      "t": 0,
+      "v_cap": 2000000000,
+      "v_keep": 1250000000,
+      "v_tilde": 0,
+      "x_E": 1000000,
+      "x_V": 0
+     }
+    ],
+    "sat": 300000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "E": 0,
+      "labour": 200000000,
+      "lic": false,
+      "prc_id": 1,
+      "r_d": 4000000,
+      "v": 5000000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "cb_E_zero_output",
+   "note": "E=0: drive=0, maint from output only (m=1)",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3500000,
+    "a_r": 1000000,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 0,
+    "dH_plus": 0,
+    "dH_plus_capped": 0,
+    "drive": 0,
+    "maint": 4000000,
+    "per_process": [
+     {
+      "c": 1000000,
+      "e_L": 0,
+      "e_V": 0,
+      "gap": 750000,
+      "gapL": 0,
+      "m": 1000000,
+      "maint_p": 4000000,
+      "prc_id": 1,
+      "t": 0,
+      "v_cap": 2000000000,
+      "v_keep": 1250000000,
+      "v_tilde": 5000000000,
+      "x_E": 0,
+      "x_V": 1000000
+     }
+    ],
+    "sat": 300000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "E": 1838,
+      "labour": 200000000,
+      "lic": true,
+      "prc_id": 1,
+      "r_d": 4000000,
+      "v": 500000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "cb_licence",
+   "note": "lic: v~=2v raises c and m",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3506187,
+    "a_r": 1000000,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 0,
+    "dH_plus": 6187,
+    "dH_plus_capped": 6187,
+    "drive": 375000,
+    "maint": 3800000,
+    "per_process": [
+     {
+      "c": 500000,
+      "e_L": 100000,
+      "e_V": 500000,
+      "gap": 750000,
+      "gapL": 0,
+      "m": 800000,
+      "maint_p": 3800000,
+      "prc_id": 1,
+      "t": 375000,
+      "v_cap": 2000000000,
+      "v_keep": 1250000000,
+      "v_tilde": 1000000000,
+      "x_E": 1000000,
+      "x_V": 500000
+     }
+    ],
+    "sat": 300000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "E": 1838,
+      "labour": 200000000,
+      "lic": false,
+      "prc_id": 1,
+      "r_d": 4000000,
+      "v": 500000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "cb_no_licence_same_v",
+   "note": "control of cb_licence",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3501633,
+    "a_r": 1000000,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 300,
+    "dH_plus": 1933,
+    "dH_plus_capped": 1933,
+    "drive": 117187,
+    "maint": 3400000,
+    "per_process": [
+     {
+      "c": 156250,
+      "e_L": 100000,
+      "e_V": 156250,
+      "gap": 750000,
+      "gapL": 0,
+      "m": 400000,
+      "maint_p": 3400000,
+      "prc_id": 1,
+      "t": 117187,
+      "v_cap": 2000000000,
+      "v_keep": 1250000000,
+      "v_tilde": 500000000,
+      "x_E": 1000000,
+      "x_V": 250000
+     }
+    ],
+    "sat": 300000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "E": 1838,
+      "labour": 200000000,
+      "lic": false,
+      "prc_id": 1,
+      "r_d": 4500000,
+      "v": 100000000,
+      "world_lead": false
+     },
+     {
+      "E": 1838,
+      "labour": 200000000,
+      "lic": false,
+      "prc_id": 2,
+      "r_d": 3000000,
+      "v": 9900000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "cb_max_not_share",
+   "note": "two processes: drive = max t_p, no dilution (#115)",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3499685,
+    "a_r": 1000000,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 1140,
+    "dH_plus": 825,
+    "dH_plus_capped": 825,
+    "drive": 50000,
+    "maint": 3120000,
+    "per_process": [
+     {
+      "c": 7250,
+      "e_L": 100000,
+      "e_V": 7250,
+      "gap": 1250000,
+      "gapL": 500000,
+      "m": 80000,
+      "maint_p": 3120000,
+      "prc_id": 1,
+      "t": 50000,
+      "v_cap": 2000000000,
+      "v_keep": 1250000000,
+      "v_tilde": 100000000,
+      "x_E": 1000000,
+      "x_V": 50000
+     },
+     {
+      "c": 1000000,
+      "e_L": 100000,
+      "e_V": 1000000,
+      "gap": 0,
+      "gapL": 0,
+      "m": 1000000,
+      "maint_p": 3000000,
+      "prc_id": 2,
+      "t": 0,
+      "v_cap": 2000000000,
+      "v_keep": 1250000000,
+      "v_tilde": 9900000000,
+      "x_E": 1000000,
+      "x_V": 1000000
+     }
+    ],
+    "sat": 300000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "E": 1838,
+      "labour": 200000000,
+      "lic": false,
+      "prc_id": 1,
+      "r_d": 4000000,
+      "v": 1000000000,
+      "world_lead": true
+     },
+     {
+      "E": 1838,
+      "labour": 200000000,
+      "lic": false,
+      "prc_id": 2,
+      "r_d": 3600000,
+      "v": 2000000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "cb_catch_world_lead",
+   "note": "catch = max t_p over world_lead processes",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3509000,
+    "a_r": 1000000,
+    "alpha_eff": 50000,
+    "catch": 375000,
+    "dH_minus": 0,
+    "dH_plus": 9000,
+    "dH_plus_capped": 9000,
+    "drive": 375000,
+    "maint": 3800000,
+    "per_process": [
+     {
+      "c": 500000,
+      "e_L": 100000,
+      "e_V": 500000,
+      "gap": 750000,
+      "gapL": 0,
+      "m": 800000,
+      "maint_p": 3800000,
+      "prc_id": 1,
+      "t": 375000,
+      "v_cap": 2000000000,
+      "v_keep": 1250000000,
+      "v_tilde": 1000000000,
+      "x_E": 1000000,
+      "x_V": 500000
+     },
+     {
+      "c": 1000000,
+      "e_L": 100000,
+      "e_V": 1000000,
+      "gap": 350000,
+      "gapL": 0,
+      "m": 1000000,
+      "maint_p": 3600000,
+      "prc_id": 2,
+      "t": 350000,
+      "v_cap": 2000000000,
+      "v_keep": 1250000000,
+      "v_tilde": 2000000000,
+      "x_E": 1000000,
+      "x_V": 1000000
+     }
+    ],
+    "sat": 300000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 0,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "E": 1838,
+      "labour": 200000000,
+      "lic": false,
+      "prc_id": 1,
+      "r_d": 4500000,
+      "v": 0,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "cb_ell_zero_ablation",
+   "note": "ell=0: v=0 gives no growth",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3498500,
+    "a_r": 1000000,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 1500,
+    "dH_plus": 0,
+    "dH_plus_capped": 0,
+    "drive": 0,
+    "maint": 3000000,
+    "per_process": [
+     {
+      "c": 0,
+      "e_L": 0,
+      "e_V": 0,
+      "gap": 1250000,
+      "gapL": 500000,
+      "m": 0,
+      "maint_p": 3000000,
+      "prc_id": 1,
+      "t": 0,
+      "v_cap": 2000000000,
+      "v_keep": 1250000000,
+      "v_tilde": 0,
+      "x_E": 1000000,
+      "x_V": 0
+     }
+    ],
+    "sat": 300000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "E": 1838,
+      "labour": 200000000,
+      "lic": false,
+      "prc_id": 1,
+      "r_d": 4000000,
+      "v": 1,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "cb_tiny_volume_floor",
+   "note": "v=1 raw: c floors to 0 raw (L4 defensive case)",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3498500,
+    "a_r": 1000000,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 1500,
+    "dH_plus": 0,
+    "dH_plus_capped": 0,
+    "drive": 0,
+    "maint": 3000000,
+    "per_process": [
+     {
+      "c": 0,
+      "e_L": 100000,
+      "e_V": 0,
+      "gap": 750000,
+      "gapL": 0,
+      "m": 0,
+      "maint_p": 3000000,
+      "prc_id": 1,
+      "t": 0,
+      "v_cap": 2000000000,
+      "v_keep": 1250000000,
+      "v_tilde": 1,
+      "x_E": 1000000,
+      "x_V": 0
+     }
+    ],
+    "sat": 300000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3200000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "d_is_qc": true,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "E": 1838,
+      "labour": 200000000,
+      "lic": false,
+      "prc_id": 1,
+      "r_d": 3500000,
+      "v": 2000000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": true,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "cb_qp_alpha_eff",
+   "note": "quality programme on qc: alpha*(1+k_qp) multiplies effort return (P-6)",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3216335,
+    "a_r": 1000000,
+    "alpha_eff": 75000,
+    "catch": 0,
+    "dH_minus": 0,
+    "dH_plus": 16335,
+    "dH_plus_capped": 16335,
+    "drive": 550000,
+    "maint": 3500000,
+    "per_process": [
+     {
+      "c": 1000000,
+      "e_L": 100000,
+      "e_V": 1000000,
+      "gap": 550000,
+      "gapL": 0,
+      "m": 1000000,
+      "maint_p": 3500000,
+      "prc_id": 1,
+      "t": 550000,
+      "v_cap": 2000000000,
+      "v_keep": 1250000000,
+      "v_tilde": 2000000000,
+      "x_E": 1000000,
+      "x_V": 1000000
+     }
+    ],
+    "sat": 360000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 2000000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 150000,
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "E": 1838,
+      "labour": 200000000,
+      "lic": false,
+      "prc_id": 1,
+      "r_d": 4500000,
+      "v": 5000000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "cb_rho_cap",
+   "note": "large drive capped by rho_max",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 2021000,
+    "a_r": 1000000,
+    "alpha_eff": 150000,
+    "catch": 0,
+    "dH_minus": 0,
+    "dH_plus": 272250,
+    "dH_plus_capped": 21000,
+    "drive": 2750000,
+    "maint": 4500000,
+    "per_process": [
+     {
+      "c": 1000000,
+      "e_L": 100000,
+      "e_V": 1000000,
+      "gap": 2750000,
+      "gapL": 2000000,
+      "m": 1000000,
+      "maint_p": 4500000,
+      "prc_id": 1,
+      "t": 2750000,
+      "v_cap": 2000000000,
+      "v_keep": 1250000000,
+      "v_tilde": 5000000000,
+      "x_E": 1000000,
+      "x_V": 1000000
+     }
+    ],
+    "sat": 600000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 500000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "E": 0,
+      "labour": 200000000,
+      "lic": false,
+      "prc_id": 1,
+      "r_d": 4000000,
+      "v": 5000000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "cb_act_low",
+   "note": "act=0.5: a_r halves the maintained level and the alpha term",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3498500,
+    "a_r": 500000,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 1500,
+    "dH_plus": 0,
+    "dH_plus_capped": 0,
+    "drive": 0,
+    "maint": 3000000,
+    "per_process": [
+     {
+      "c": 1000000,
+      "e_L": 0,
+      "e_V": 0,
+      "gap": 750000,
+      "gapL": 0,
+      "m": 1000000,
+      "maint_p": 3000000,
+      "prc_id": 1,
+      "t": 0,
+      "v_cap": 2000000000,
+      "v_keep": 1250000000,
+      "v_tilde": 5000000000,
+      "x_E": 0,
+      "x_V": 1000000
+     }
+    ],
+    "sat": 300000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [
+     {
+      "H_other": 4100000,
+      "R": 300000,
+      "cluster": "CHEM"
+     }
+    ],
+    "w": 1100000
+   },
+   "name": "cb_spill_only",
+   "note": "no process, spill from CHEM",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3498770,
+    "a_r": 1000000,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 1500,
+    "dH_plus": 270,
+    "dH_plus_capped": 270,
+    "drive": 0,
+    "maint": 3000000,
+    "per_process": [],
+    "sat": 300000,
+    "spill": 180000
+   }
+  }
+ ],
+ "culture_rules": {
+  "culture_H": "R0 v2.3 - ablation (contract v2.4 4.1 \u0417\u0430\u043c\u0435\u043d\u044f\u0435\u043c\u043e\u0441\u0442\u044c; spec v0.11 6.2)",
+  "culture_cb": "C-B v2.4 r1 - main rule (temporary, RISK-0016)"
+ },
+ "dh_forecast": [
+  {
+   "actual": 5775,
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "E": 300,
+      "labour": 200000000,
+      "lic": false,
+      "prc_id": 1,
+      "r_d": 4000000,
+      "v": 1000000000,
+      "world_lead": false
+     },
+     {
+      "E": 1838,
+      "labour": 200000000,
+      "lic": false,
+      "prc_id": 2,
+      "r_d": 3600000,
+      "v": 3000000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "rows": [
+    {
+     "E": 300,
+     "dH": 5775,
+     "prc": 1,
+     "v": "1000"
+    },
+    {
+     "E": 919,
+     "dH": 6187,
+     "prc": 1,
+     "v": "1000"
+    },
+    {
+     "E": 1838,
+     "dH": 6187,
+     "prc": 1,
+     "v": "1000"
+    },
+    {
+     "E": 919,
+     "dH": 6187,
+     "prc": 1,
+     "v": "2000"
+    },
+    {
+     "E": 0,
+     "dH": 5775,
+     "prc": 1,
+     "v": "1000"
+    },
+    {
+     "E": 0,
+     "dH": 2019,
+     "prc": 2,
+     "v": "3000"
+    },
+    {
+     "E": 300,
+     "dH": 5775,
+     "prc": 1,
+     "v": "0"
+    }
+   ]
+  }
+ ],
  "draws": [
   {
    "key": [
@@ -1153,6 +3463,1041 @@
    "profile": 2,
    "u": 18446744073709551615,
    "uniform_6_18": 18
+  }
+ ],
+ "effort_alloc": [
+  {
+   "input": {
+    "D_a": 20000,
+    "focus": [],
+    "r_ref": 25000000,
+    "site": {
+     "H": {
+      "AERO.precision": 3600000,
+      "AERO.purity": 3600000,
+      "AERO.quality_control": 3600000,
+      "CHEM.precision": 3400000,
+      "CHEM.purity": 3400000,
+      "CHEM.quality_control": 3400000,
+      "MET.precision": 3500000,
+      "MET.purity": 3300000,
+      "MET.quality_control": 3200000
+     },
+     "Hcap": {
+      "precision": 5000000,
+      "purity": 5000000,
+      "quality_control": 5000000
+     },
+     "M": {
+      "AERO.precision": 3800000,
+      "AERO.purity": 3800000,
+      "AERO.quality_control": 3800000,
+      "CHEM.precision": 3600000,
+      "CHEM.purity": 3600000,
+      "CHEM.quality_control": 3600000,
+      "MET.precision": 3700000,
+      "MET.purity": 3500000,
+      "MET.quality_control": 3400000
+     },
+     "cb": {
+      "E_full": 1838,
+      "dL": 500000,
+      "ell": 100000,
+      "k_tr": 1000000,
+      "r_cap": 10000000,
+      "r_keep": 6250000
+     },
+     "procs": [
+      {
+       "E": 0,
+       "cluster": "MET",
+       "known": true,
+       "labour": 200000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 4,
+       "req": {
+        "precision": 4000000,
+        "purity": 4000000,
+        "quality_control": 3500000
+       },
+       "v": 1000000000
+      },
+      {
+       "E": 0,
+       "cluster": "MET",
+       "known": true,
+       "labour": 50000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 6,
+       "req": {
+        "precision": 3000000,
+        "purity": 3000000,
+        "quality_control": 2500000
+       },
+       "v": 1000000000
+      },
+      {
+       "E": 0,
+       "cluster": "CHEM",
+       "known": true,
+       "labour": 100000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 40,
+       "req": {
+        "precision": null,
+        "purity": 4500000,
+        "quality_control": 4000000
+       },
+       "v": 250000000
+      },
+      {
+       "E": 0,
+       "cluster": "AERO",
+       "known": true,
+       "labour": 100000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 55,
+       "req": {
+        "precision": 4000000,
+        "purity": null,
+        "quality_control": 3500000
+       },
+       "v": 2000000000
+      },
+      {
+       "E": 0,
+       "cluster": "AERO",
+       "known": true,
+       "labour": 200000000,
+       "lic": false,
+       "planned": true,
+       "prc_id": 56,
+       "req": {
+        "precision": 4500000,
+        "purity": null,
+        "quality_control": null
+       },
+       "v": 0
+      }
+     ]
+    },
+    "v_exp": {
+     "4": 1000000000,
+     "6": 1000000000,
+     "40": 250000000,
+     "55": 2000000000,
+     "56": 500000000
+    }
+   },
+   "name": "ai_enough",
+   "note": "budget above sum E_useful: all saturate in pass 1, rest_a > 0",
+   "output": {
+    "D_a": 20000,
+    "E": {
+     "4": 919,
+     "6": 0,
+     "40": 288,
+     "55": 1838,
+     "56": 0
+    },
+    "E_useful": {
+     "4": 919,
+     "6": 0,
+     "40": 288,
+     "55": 1838,
+     "56": 0
+    },
+    "focus": [],
+    "passes": [
+     {
+      "D0": 20000,
+      "W": 570000,
+      "alloc": {
+       "4": 4912,
+       "40": 3859,
+       "55": 11228
+      },
+      "give": {
+       "4": 919,
+       "40": 288,
+       "55": 1838
+      },
+      "saturated": [
+       4,
+       40,
+       55
+      ]
+     }
+    ],
+    "rest_a": 16955,
+    "w": {
+     "4": 140000,
+     "40": 110000,
+     "55": 320000
+    }
+   }
+  },
+  {
+   "input": {
+    "D_a": 600,
+    "focus": [],
+    "r_ref": 25000000,
+    "site": {
+     "H": {
+      "AERO.precision": 3600000,
+      "AERO.purity": 3600000,
+      "AERO.quality_control": 3600000,
+      "CHEM.precision": 3400000,
+      "CHEM.purity": 3400000,
+      "CHEM.quality_control": 3400000,
+      "MET.precision": 3500000,
+      "MET.purity": 3300000,
+      "MET.quality_control": 3200000
+     },
+     "Hcap": {
+      "precision": 5000000,
+      "purity": 5000000,
+      "quality_control": 5000000
+     },
+     "M": {
+      "AERO.precision": 3800000,
+      "AERO.purity": 3800000,
+      "AERO.quality_control": 3800000,
+      "CHEM.precision": 3600000,
+      "CHEM.purity": 3600000,
+      "CHEM.quality_control": 3600000,
+      "MET.precision": 3700000,
+      "MET.purity": 3500000,
+      "MET.quality_control": 3400000
+     },
+     "cb": {
+      "E_full": 1838,
+      "dL": 500000,
+      "ell": 100000,
+      "k_tr": 1000000,
+      "r_cap": 10000000,
+      "r_keep": 6250000
+     },
+     "procs": [
+      {
+       "E": 0,
+       "cluster": "MET",
+       "known": true,
+       "labour": 200000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 4,
+       "req": {
+        "precision": 4000000,
+        "purity": 4000000,
+        "quality_control": 3500000
+       },
+       "v": 1000000000
+      },
+      {
+       "E": 0,
+       "cluster": "MET",
+       "known": true,
+       "labour": 50000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 6,
+       "req": {
+        "precision": 3000000,
+        "purity": 3000000,
+        "quality_control": 2500000
+       },
+       "v": 1000000000
+      },
+      {
+       "E": 0,
+       "cluster": "CHEM",
+       "known": true,
+       "labour": 100000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 40,
+       "req": {
+        "precision": null,
+        "purity": 4500000,
+        "quality_control": 4000000
+       },
+       "v": 250000000
+      },
+      {
+       "E": 0,
+       "cluster": "AERO",
+       "known": true,
+       "labour": 100000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 55,
+       "req": {
+        "precision": 4000000,
+        "purity": null,
+        "quality_control": 3500000
+       },
+       "v": 2000000000
+      },
+      {
+       "E": 0,
+       "cluster": "AERO",
+       "known": true,
+       "labour": 200000000,
+       "lic": false,
+       "planned": true,
+       "prc_id": 56,
+       "req": {
+        "precision": 4500000,
+        "purity": null,
+        "quality_control": null
+       },
+       "v": 0
+      }
+     ]
+    },
+    "v_exp": {
+     "4": 1000000000,
+     "6": 1000000000,
+     "40": 250000000,
+     "55": 2000000000,
+     "56": 500000000
+    }
+   },
+   "name": "ai_scarce",
+   "note": "scarce budget: one pass, proportional to w, nobody saturates",
+   "output": {
+    "D_a": 600,
+    "E": {
+     "4": 147,
+     "6": 0,
+     "40": 115,
+     "55": 336,
+     "56": 0
+    },
+    "E_useful": {
+     "4": 919,
+     "6": 0,
+     "40": 288,
+     "55": 1838,
+     "56": 0
+    },
+    "focus": [],
+    "passes": [
+     {
+      "D0": 600,
+      "W": 570000,
+      "alloc": {
+       "4": 147,
+       "40": 115,
+       "55": 336
+      },
+      "give": {
+       "4": 147,
+       "40": 115,
+       "55": 336
+      },
+      "saturated": []
+     }
+    ],
+    "rest_a": 2,
+    "w": {
+     "4": 140000,
+     "40": 110000,
+     "55": 320000
+    }
+   }
+  },
+  {
+   "input": {
+    "D_a": 2000,
+    "focus": [],
+    "r_ref": 25000000,
+    "site": {
+     "H": {
+      "AERO.precision": 3600000,
+      "AERO.purity": 3600000,
+      "AERO.quality_control": 3600000,
+      "CHEM.precision": 3400000,
+      "CHEM.purity": 3400000,
+      "CHEM.quality_control": 3400000,
+      "MET.precision": 3500000,
+      "MET.purity": 3300000,
+      "MET.quality_control": 3200000
+     },
+     "Hcap": {
+      "precision": 5000000,
+      "purity": 5000000,
+      "quality_control": 5000000
+     },
+     "M": {
+      "AERO.precision": 3800000,
+      "AERO.purity": 3800000,
+      "AERO.quality_control": 3800000,
+      "CHEM.precision": 3600000,
+      "CHEM.purity": 3600000,
+      "CHEM.quality_control": 3600000,
+      "MET.precision": 3700000,
+      "MET.purity": 3500000,
+      "MET.quality_control": 3400000
+     },
+     "cb": {
+      "E_full": 1838,
+      "dL": 500000,
+      "ell": 100000,
+      "k_tr": 1000000,
+      "r_cap": 10000000,
+      "r_keep": 6250000
+     },
+     "procs": [
+      {
+       "E": 0,
+       "cluster": "MET",
+       "known": true,
+       "labour": 200000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 4,
+       "req": {
+        "precision": 4000000,
+        "purity": 4000000,
+        "quality_control": 3500000
+       },
+       "v": 1000000000
+      },
+      {
+       "E": 0,
+       "cluster": "MET",
+       "known": true,
+       "labour": 50000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 6,
+       "req": {
+        "precision": 3000000,
+        "purity": 3000000,
+        "quality_control": 2500000
+       },
+       "v": 1000000000
+      },
+      {
+       "E": 0,
+       "cluster": "CHEM",
+       "known": true,
+       "labour": 100000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 40,
+       "req": {
+        "precision": null,
+        "purity": 4500000,
+        "quality_control": 4000000
+       },
+       "v": 250000000
+      },
+      {
+       "E": 0,
+       "cluster": "AERO",
+       "known": true,
+       "labour": 100000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 55,
+       "req": {
+        "precision": 4000000,
+        "purity": null,
+        "quality_control": 3500000
+       },
+       "v": 2000000000
+      },
+      {
+       "E": 0,
+       "cluster": "AERO",
+       "known": true,
+       "labour": 200000000,
+       "lic": false,
+       "planned": true,
+       "prc_id": 56,
+       "req": {
+        "precision": 4500000,
+        "purity": null,
+        "quality_control": null
+       },
+       "v": 0
+      }
+     ]
+    },
+    "v_exp": {
+     "4": 1000000000,
+     "6": 1000000000,
+     "40": 250000000,
+     "55": 2000000000,
+     "56": 500000000
+    }
+   },
+   "name": "ai_passes",
+   "note": "medium budget: a process saturates, the next pass shares the rest",
+   "output": {
+    "D_a": 2000,
+    "E": {
+     "4": 519,
+     "6": 0,
+     "40": 288,
+     "55": 1189,
+     "56": 0
+    },
+    "E_useful": {
+     "4": 919,
+     "6": 0,
+     "40": 288,
+     "55": 1838,
+     "56": 0
+    },
+    "focus": [],
+    "passes": [
+     {
+      "D0": 2000,
+      "W": 570000,
+      "alloc": {
+       "4": 491,
+       "40": 385,
+       "55": 1122
+      },
+      "give": {
+       "4": 491,
+       "40": 288,
+       "55": 1122
+      },
+      "saturated": [
+       40
+      ]
+     },
+     {
+      "D0": 99,
+      "W": 460000,
+      "alloc": {
+       "4": 28,
+       "55": 67
+      },
+      "give": {
+       "4": 28,
+       "55": 67
+      },
+      "saturated": []
+     }
+    ],
+    "rest_a": 4,
+    "w": {
+     "4": 140000,
+     "40": 110000,
+     "55": 320000
+    }
+   }
+  },
+  {
+   "input": {
+    "D_a": 1200,
+    "focus": [
+     40
+    ],
+    "r_ref": 25000000,
+    "site": {
+     "H": {
+      "AERO.precision": 3600000,
+      "AERO.purity": 3600000,
+      "AERO.quality_control": 3600000,
+      "CHEM.precision": 3400000,
+      "CHEM.purity": 3400000,
+      "CHEM.quality_control": 3400000,
+      "MET.precision": 3500000,
+      "MET.purity": 3300000,
+      "MET.quality_control": 3200000
+     },
+     "Hcap": {
+      "precision": 5000000,
+      "purity": 5000000,
+      "quality_control": 5000000
+     },
+     "M": {
+      "AERO.precision": 3800000,
+      "AERO.purity": 3800000,
+      "AERO.quality_control": 3800000,
+      "CHEM.precision": 3600000,
+      "CHEM.purity": 3600000,
+      "CHEM.quality_control": 3600000,
+      "MET.precision": 3700000,
+      "MET.purity": 3500000,
+      "MET.quality_control": 3400000
+     },
+     "cb": {
+      "E_full": 1838,
+      "dL": 500000,
+      "ell": 100000,
+      "k_tr": 1000000,
+      "r_cap": 10000000,
+      "r_keep": 6250000
+     },
+     "procs": [
+      {
+       "E": 0,
+       "cluster": "MET",
+       "known": true,
+       "labour": 200000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 4,
+       "req": {
+        "precision": 4000000,
+        "purity": 4000000,
+        "quality_control": 3500000
+       },
+       "v": 1000000000
+      },
+      {
+       "E": 0,
+       "cluster": "MET",
+       "known": true,
+       "labour": 50000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 6,
+       "req": {
+        "precision": 3000000,
+        "purity": 3000000,
+        "quality_control": 2500000
+       },
+       "v": 1000000000
+      },
+      {
+       "E": 0,
+       "cluster": "CHEM",
+       "known": true,
+       "labour": 100000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 40,
+       "req": {
+        "precision": null,
+        "purity": 4500000,
+        "quality_control": 4000000
+       },
+       "v": 250000000
+      },
+      {
+       "E": 0,
+       "cluster": "AERO",
+       "known": true,
+       "labour": 100000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 55,
+       "req": {
+        "precision": 4000000,
+        "purity": null,
+        "quality_control": 3500000
+       },
+       "v": 2000000000
+      },
+      {
+       "E": 0,
+       "cluster": "AERO",
+       "known": true,
+       "labour": 200000000,
+       "lic": false,
+       "planned": true,
+       "prc_id": 56,
+       "req": {
+        "precision": 4500000,
+        "purity": null,
+        "quality_control": null
+       },
+       "v": 0
+      }
+     ]
+    },
+    "v_exp": {
+     "4": 1000000000,
+     "6": 1000000000,
+     "40": 250000000,
+     "55": 2000000000,
+     "56": 500000000
+    }
+   },
+   "name": "focus_first",
+   "note": "player focus 40 first (step 0), then the AI rule",
+   "output": {
+    "D_a": 1200,
+    "E": {
+     "4": 276,
+     "6": 0,
+     "40": 288,
+     "55": 632,
+     "56": 0
+    },
+    "E_useful": {
+     "4": 919,
+     "6": 0,
+     "40": 288,
+     "55": 1838,
+     "56": 0
+    },
+    "focus": [
+     40
+    ],
+    "passes": [
+     {
+      "D0": 912,
+      "W": 460000,
+      "alloc": {
+       "4": 276,
+       "55": 632
+      },
+      "give": {
+       "4": 276,
+       "55": 632
+      },
+      "saturated": []
+     }
+    ],
+    "rest_a": 4,
+    "w": {
+     "4": 140000,
+     "55": 320000
+    }
+   }
+  },
+  {
+   "input": {
+    "D_a": 1200,
+    "focus": [
+     6,
+     4
+    ],
+    "r_ref": 25000000,
+    "site": {
+     "H": {
+      "AERO.precision": 3600000,
+      "AERO.purity": 3600000,
+      "AERO.quality_control": 3600000,
+      "CHEM.precision": 3400000,
+      "CHEM.purity": 3400000,
+      "CHEM.quality_control": 3400000,
+      "MET.precision": 3500000,
+      "MET.purity": 3300000,
+      "MET.quality_control": 3200000
+     },
+     "Hcap": {
+      "precision": 5000000,
+      "purity": 5000000,
+      "quality_control": 5000000
+     },
+     "M": {
+      "AERO.precision": 3800000,
+      "AERO.purity": 3800000,
+      "AERO.quality_control": 3800000,
+      "CHEM.precision": 3600000,
+      "CHEM.purity": 3600000,
+      "CHEM.quality_control": 3600000,
+      "MET.precision": 3700000,
+      "MET.purity": 3500000,
+      "MET.quality_control": 3400000
+     },
+     "cb": {
+      "E_full": 1838,
+      "dL": 500000,
+      "ell": 100000,
+      "k_tr": 1000000,
+      "r_cap": 10000000,
+      "r_keep": 6250000
+     },
+     "procs": [
+      {
+       "E": 0,
+       "cluster": "MET",
+       "known": true,
+       "labour": 200000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 4,
+       "req": {
+        "precision": 4000000,
+        "purity": 4000000,
+        "quality_control": 3500000
+       },
+       "v": 1000000000
+      },
+      {
+       "E": 0,
+       "cluster": "MET",
+       "known": true,
+       "labour": 50000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 6,
+       "req": {
+        "precision": 3000000,
+        "purity": 3000000,
+        "quality_control": 2500000
+       },
+       "v": 1000000000
+      },
+      {
+       "E": 0,
+       "cluster": "CHEM",
+       "known": true,
+       "labour": 100000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 40,
+       "req": {
+        "precision": null,
+        "purity": 4500000,
+        "quality_control": 4000000
+       },
+       "v": 250000000
+      },
+      {
+       "E": 0,
+       "cluster": "AERO",
+       "known": true,
+       "labour": 100000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 55,
+       "req": {
+        "precision": 4000000,
+        "purity": null,
+        "quality_control": 3500000
+       },
+       "v": 2000000000
+      },
+      {
+       "E": 0,
+       "cluster": "AERO",
+       "known": true,
+       "labour": 200000000,
+       "lic": false,
+       "planned": true,
+       "prc_id": 56,
+       "req": {
+        "precision": 4500000,
+        "purity": null,
+        "quality_control": null
+       },
+       "v": 0
+      }
+     ]
+    },
+    "v_exp": {
+     "4": 1000000000,
+     "6": 1000000000,
+     "40": 250000000,
+     "55": 2000000000,
+     "56": 500000000
+    }
+   },
+   "name": "focus_non_lead",
+   "note": "focus on a process without E_useful (6, NONE) gets 0",
+   "output": {
+    "D_a": 1200,
+    "E": {
+     "4": 919,
+     "6": 0,
+     "40": 69,
+     "55": 206,
+     "56": 0
+    },
+    "E_useful": {
+     "4": 919,
+     "6": 0,
+     "40": 288,
+     "55": 1838,
+     "56": 0
+    },
+    "focus": [
+     6,
+     4
+    ],
+    "passes": [
+     {
+      "D0": 281,
+      "W": 430000,
+      "alloc": {
+       "40": 69,
+       "55": 206
+      },
+      "give": {
+       "40": 69,
+       "55": 206
+      },
+      "saturated": []
+     }
+    ],
+    "rest_a": 6,
+    "w": {
+     "40": 110000,
+     "55": 320000
+    }
+   }
+  },
+  {
+   "input": {
+    "D_a": 0,
+    "focus": [],
+    "r_ref": 25000000,
+    "site": {
+     "H": {
+      "AERO.precision": 3600000,
+      "AERO.purity": 3600000,
+      "AERO.quality_control": 3600000,
+      "CHEM.precision": 3400000,
+      "CHEM.purity": 3400000,
+      "CHEM.quality_control": 3400000,
+      "MET.precision": 3500000,
+      "MET.purity": 3300000,
+      "MET.quality_control": 3200000
+     },
+     "Hcap": {
+      "precision": 5000000,
+      "purity": 5000000,
+      "quality_control": 5000000
+     },
+     "M": {
+      "AERO.precision": 3800000,
+      "AERO.purity": 3800000,
+      "AERO.quality_control": 3800000,
+      "CHEM.precision": 3600000,
+      "CHEM.purity": 3600000,
+      "CHEM.quality_control": 3600000,
+      "MET.precision": 3700000,
+      "MET.purity": 3500000,
+      "MET.quality_control": 3400000
+     },
+     "cb": {
+      "E_full": 1838,
+      "dL": 500000,
+      "ell": 100000,
+      "k_tr": 1000000,
+      "r_cap": 10000000,
+      "r_keep": 6250000
+     },
+     "procs": [
+      {
+       "E": 0,
+       "cluster": "MET",
+       "known": true,
+       "labour": 200000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 4,
+       "req": {
+        "precision": 4000000,
+        "purity": 4000000,
+        "quality_control": 3500000
+       },
+       "v": 1000000000
+      },
+      {
+       "E": 0,
+       "cluster": "MET",
+       "known": true,
+       "labour": 50000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 6,
+       "req": {
+        "precision": 3000000,
+        "purity": 3000000,
+        "quality_control": 2500000
+       },
+       "v": 1000000000
+      },
+      {
+       "E": 0,
+       "cluster": "CHEM",
+       "known": true,
+       "labour": 100000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 40,
+       "req": {
+        "precision": null,
+        "purity": 4500000,
+        "quality_control": 4000000
+       },
+       "v": 250000000
+      },
+      {
+       "E": 0,
+       "cluster": "AERO",
+       "known": true,
+       "labour": 100000000,
+       "lic": false,
+       "planned": false,
+       "prc_id": 55,
+       "req": {
+        "precision": 4000000,
+        "purity": null,
+        "quality_control": 3500000
+       },
+       "v": 2000000000
+      },
+      {
+       "E": 0,
+       "cluster": "AERO",
+       "known": true,
+       "labour": 200000000,
+       "lic": false,
+       "planned": true,
+       "prc_id": 56,
+       "req": {
+        "precision": 4500000,
+        "purity": null,
+        "quality_control": null
+       },
+       "v": 0
+      }
+     ]
+    },
+    "v_exp": {
+     "4": 1000000000,
+     "6": 1000000000,
+     "40": 250000000,
+     "55": 2000000000,
+     "56": 500000000
+    }
+   },
+   "name": "budget_zero",
+   "note": "D_a = 0",
+   "output": {
+    "D_a": 0,
+    "E": {
+     "4": 0,
+     "6": 0,
+     "40": 0,
+     "55": 0,
+     "56": 0
+    },
+    "E_useful": {
+     "4": 919,
+     "6": 0,
+     "40": 288,
+     "55": 1838,
+     "56": 0
+    },
+    "focus": [],
+    "passes": [],
+    "rest_a": 0,
+    "w": {
+     "4": 140000,
+     "40": 110000,
+     "55": 320000
+    }
+   }
   }
  ],
  "fx6_scale": 1000000,
@@ -1803,6 +5148,50 @@
    }
   }
  ],
+ "mul_ceil": [
+  {
+   "a": 0,
+   "b": 1838,
+   "ceil": 0,
+   "floor": 0
+  },
+  {
+   "a": 500000,
+   "b": 1838,
+   "ceil": 919,
+   "floor": 919
+  },
+  {
+   "a": 100000,
+   "b": 1838,
+   "ceil": 184,
+   "floor": 183
+  },
+  {
+   "a": 1,
+   "b": 1,
+   "ceil": 1,
+   "floor": 0
+  },
+  {
+   "a": 333333,
+   "b": 3,
+   "ceil": 1,
+   "floor": 0
+  },
+  {
+   "a": 1000000,
+   "b": 1838,
+   "ceil": 1838,
+   "floor": 1838
+  },
+  {
+   "a": 7,
+   "b": 142857,
+   "ceil": 1,
+   "floor": 0
+  }
+ ],
  "prob_check": [
   {
    "hit": false,
@@ -1908,6 +5297,576 @@
    "r": 9007199254740991,
    "threshold": 9007199254740992,
    "u": 18446744073709551615
+  }
+ ],
+ "proc_part_rps2m": [
+  {
+   "input": {
+    "AF": {
+     "eps": 10000,
+     "procs": [
+      {
+       "H": {
+        "precision": 4600000,
+        "purity": 4400000,
+        "quality_control": 4300000
+       },
+       "M": {
+        "precision": 4800000,
+        "purity": 4600000,
+        "quality_control": 4500000
+       },
+       "X": 100000000000,
+       "Xh": 800000000,
+       "base_cost": 75,
+       "known": true,
+       "l_lic": null,
+       "lam0": 300000,
+       "n_p": 1000000,
+       "prc_id": 38,
+       "req": {
+        "precision": 4000000,
+        "purity": null,
+        "quality_control": 3500000
+       }
+      },
+      {
+       "H": {
+        "precision": 4600000,
+        "purity": 4400000,
+        "quality_control": 4300000
+       },
+       "M": {
+        "precision": 4800000,
+        "purity": 4600000,
+        "quality_control": 4500000
+       },
+       "X": 100000000000,
+       "Xh": 800000000,
+       "base_cost": 462,
+       "known": true,
+       "l_lic": null,
+       "lam0": 300000,
+       "n_p": 1000000,
+       "prc_id": 53,
+       "req": {
+        "precision": 4000000,
+        "purity": null,
+        "quality_control": 3500000
+       }
+      },
+      {
+       "H": {
+        "precision": 4600000,
+        "purity": 4400000,
+        "quality_control": 4300000
+       },
+       "M": {
+        "precision": 4800000,
+        "purity": 4600000,
+        "quality_control": 4500000
+       },
+       "X": 100000000000,
+       "Xh": 800000000,
+       "base_cost": 431,
+       "known": true,
+       "l_lic": null,
+       "lam0": 300000,
+       "n_p": 1000000,
+       "prc_id": 55,
+       "req": {
+        "precision": 4000000,
+        "purity": null,
+        "quality_control": 3500000
+       }
+      }
+     ]
+    },
+    "PU": {
+     "eps": 10000,
+     "procs": [
+      {
+       "H": {
+        "precision": 4600000,
+        "purity": 4400000,
+        "quality_control": 4300000
+       },
+       "M": {
+        "precision": 4800000,
+        "purity": 4600000,
+        "quality_control": 4500000
+       },
+       "X": 100000000000,
+       "Xh": 800000000,
+       "base_cost": 168,
+       "known": true,
+       "l_lic": null,
+       "lam0": 300000,
+       "n_p": 1000000,
+       "prc_id": 54,
+       "req": {
+        "precision": 3000000,
+        "purity": 3500000,
+        "quality_control": 3000000
+       }
+      },
+      {
+       "H": {
+        "precision": 4600000,
+        "purity": 4400000,
+        "quality_control": 4300000
+       },
+       "M": {
+        "precision": 4800000,
+        "purity": 4600000,
+        "quality_control": 4500000
+       },
+       "X": 100000000000,
+       "Xh": 800000000,
+       "base_cost": 18,
+       "known": true,
+       "l_lic": null,
+       "lam0": 300000,
+       "n_p": 1000000,
+       "prc_id": 44,
+       "req": {
+        "precision": 3000000,
+        "purity": 3500000,
+        "quality_control": 3000000
+       }
+      },
+      {
+       "H": {
+        "precision": 4600000,
+        "purity": 4400000,
+        "quality_control": 4300000
+       },
+       "M": {
+        "precision": 4800000,
+        "purity": 4600000,
+        "quality_control": 4500000
+       },
+       "X": 100000000000,
+       "Xh": 800000000,
+       "base_cost": 75,
+       "known": true,
+       "l_lic": null,
+       "lam0": 300000,
+       "n_p": 1000000,
+       "prc_id": 40,
+       "req": {
+        "precision": 3000000,
+        "purity": 3500000,
+        "quality_control": 3000000
+       }
+      },
+      {
+       "H": {
+        "precision": 4600000,
+        "purity": 4400000,
+        "quality_control": 4300000
+       },
+       "M": {
+        "precision": 4800000,
+        "purity": 4600000,
+        "quality_control": 4500000
+       },
+       "X": 100000000000,
+       "Xh": 800000000,
+       "base_cost": 28,
+       "known": true,
+       "l_lic": null,
+       "lam0": 300000,
+       "n_p": 1000000,
+       "prc_id": 45,
+       "req": {
+        "precision": 3000000,
+        "purity": 3500000,
+        "quality_control": 3000000
+       }
+      },
+      {
+       "H": {
+        "precision": 4600000,
+        "purity": 4400000,
+        "quality_control": 4300000
+       },
+       "M": {
+        "precision": 4800000,
+        "purity": 4600000,
+        "quality_control": 4500000
+       },
+       "X": 100000000000,
+       "Xh": 800000000,
+       "base_cost": 93,
+       "known": true,
+       "l_lic": null,
+       "lam0": 300000,
+       "n_p": 1000000,
+       "prc_id": 49,
+       "req": {
+        "precision": 3000000,
+        "purity": 3500000,
+        "quality_control": 3000000
+       }
+      },
+      {
+       "H": {
+        "precision": 4600000,
+        "purity": 4400000,
+        "quality_control": 4300000
+       },
+       "M": {
+        "precision": 4800000,
+        "purity": 4600000,
+        "quality_control": 4500000
+       },
+       "X": 100000000000,
+       "Xh": 800000000,
+       "base_cost": 150,
+       "known": true,
+       "l_lic": null,
+       "lam0": 300000,
+       "n_p": 1000000,
+       "prc_id": 50,
+       "req": {
+        "precision": 3000000,
+        "purity": 3500000,
+        "quality_control": 3000000
+       }
+      },
+      {
+       "H": {
+        "precision": 4600000,
+        "purity": 4400000,
+        "quality_control": 4300000
+       },
+       "M": {
+        "precision": 4800000,
+        "purity": 4600000,
+        "quality_control": 4500000
+       },
+       "X": 100000000000,
+       "Xh": 800000000,
+       "base_cost": 112,
+       "known": true,
+       "l_lic": null,
+       "lam0": 300000,
+       "n_p": 1000000,
+       "prc_id": 57,
+       "req": {
+        "precision": 3000000,
+        "purity": 3500000,
+        "quality_control": 3000000
+       }
+      }
+     ]
+    },
+    "af_class": 2,
+    "r_PU": 2
+   },
+   "name": "g2_mature",
+   "note": "all PRC mature: U_PU, U_AF slightly above 1 (ramp < 1)",
+   "output": {
+    "AF": {
+     "U": 1004132,
+     "part": 1055,
+     "scale": 1086777,
+     "sum": 968
+    },
+    "PU": {
+     "U": 1000000,
+     "part": 332,
+     "scale": 515528,
+     "sum": 644
+    },
+    "proc_part": 1387
+   },
+   "print_only_common_U": 1002481
+  },
+  {
+   "input": {
+    "AF": {
+     "eps": 10000,
+     "procs": [
+      {
+       "H": {
+        "precision": 3600000,
+        "purity": 3400000,
+        "quality_control": 3300000
+       },
+       "M": {
+        "precision": 3800000,
+        "purity": 3600000,
+        "quality_control": 3500000
+       },
+       "X": 100000000000,
+       "Xh": 800000000,
+       "base_cost": 75,
+       "known": true,
+       "l_lic": null,
+       "lam0": 300000,
+       "n_p": 1000000,
+       "prc_id": 38,
+       "req": {
+        "precision": 4000000,
+        "purity": null,
+        "quality_control": 3500000
+       }
+      },
+      {
+       "H": {
+        "precision": 3600000,
+        "purity": 3400000,
+        "quality_control": 3300000
+       },
+       "M": {
+        "precision": 3800000,
+        "purity": 3600000,
+        "quality_control": 3500000
+       },
+       "X": 100000000000,
+       "Xh": 800000000,
+       "base_cost": 462,
+       "known": true,
+       "l_lic": null,
+       "lam0": 300000,
+       "n_p": 1000000,
+       "prc_id": 53,
+       "req": {
+        "precision": 4000000,
+        "purity": null,
+        "quality_control": 3500000
+       }
+      },
+      {
+       "H": {
+        "precision": 3600000,
+        "purity": 3400000,
+        "quality_control": 3300000
+       },
+       "M": {
+        "precision": 3800000,
+        "purity": 3600000,
+        "quality_control": 3500000
+       },
+       "X": 100000000000,
+       "Xh": 800000000,
+       "base_cost": 431,
+       "known": true,
+       "l_lic": null,
+       "lam0": 300000,
+       "n_p": 1000000,
+       "prc_id": 55,
+       "req": {
+        "precision": 4000000,
+        "purity": null,
+        "quality_control": 3500000
+       }
+      }
+     ]
+    },
+    "PU": {
+     "eps": 10000,
+     "procs": [
+      {
+       "H": {
+        "precision": 4600000,
+        "purity": 4400000,
+        "quality_control": 4300000
+       },
+       "M": {
+        "precision": 4800000,
+        "purity": 4600000,
+        "quality_control": 4500000
+       },
+       "X": 100000000000,
+       "Xh": 800000000,
+       "base_cost": 168,
+       "known": true,
+       "l_lic": null,
+       "lam0": 300000,
+       "n_p": 1000000,
+       "prc_id": 54,
+       "req": {
+        "precision": 3000000,
+        "purity": 3500000,
+        "quality_control": 3000000
+       }
+      },
+      {
+       "H": {
+        "precision": 4600000,
+        "purity": 4400000,
+        "quality_control": 4300000
+       },
+       "M": {
+        "precision": 4800000,
+        "purity": 4600000,
+        "quality_control": 4500000
+       },
+       "X": 100000000000,
+       "Xh": 800000000,
+       "base_cost": 18,
+       "known": true,
+       "l_lic": null,
+       "lam0": 300000,
+       "n_p": 1000000,
+       "prc_id": 44,
+       "req": {
+        "precision": 3000000,
+        "purity": 3500000,
+        "quality_control": 3000000
+       }
+      },
+      {
+       "H": {
+        "precision": 4600000,
+        "purity": 4400000,
+        "quality_control": 4300000
+       },
+       "M": {
+        "precision": 4800000,
+        "purity": 4600000,
+        "quality_control": 4500000
+       },
+       "X": 100000000000,
+       "Xh": 800000000,
+       "base_cost": 75,
+       "known": true,
+       "l_lic": null,
+       "lam0": 300000,
+       "n_p": 1000000,
+       "prc_id": 40,
+       "req": {
+        "precision": 3000000,
+        "purity": 3500000,
+        "quality_control": 3000000
+       }
+      },
+      {
+       "H": {
+        "precision": 4600000,
+        "purity": 4400000,
+        "quality_control": 4300000
+       },
+       "M": {
+        "precision": 4800000,
+        "purity": 4600000,
+        "quality_control": 4500000
+       },
+       "X": 100000000000,
+       "Xh": 800000000,
+       "base_cost": 28,
+       "known": true,
+       "l_lic": null,
+       "lam0": 300000,
+       "n_p": 1000000,
+       "prc_id": 45,
+       "req": {
+        "precision": 3000000,
+        "purity": 3500000,
+        "quality_control": 3000000
+       }
+      },
+      {
+       "H": {
+        "precision": 4600000,
+        "purity": 4400000,
+        "quality_control": 4300000
+       },
+       "M": {
+        "precision": 4800000,
+        "purity": 4600000,
+        "quality_control": 4500000
+       },
+       "X": 100000000000,
+       "Xh": 800000000,
+       "base_cost": 93,
+       "known": true,
+       "l_lic": null,
+       "lam0": 300000,
+       "n_p": 1000000,
+       "prc_id": 49,
+       "req": {
+        "precision": 3000000,
+        "purity": 3500000,
+        "quality_control": 3000000
+       }
+      },
+      {
+       "H": {
+        "precision": 4600000,
+        "purity": 4400000,
+        "quality_control": 4300000
+       },
+       "M": {
+        "precision": 4800000,
+        "purity": 4600000,
+        "quality_control": 4500000
+       },
+       "X": 100000000000,
+       "Xh": 800000000,
+       "base_cost": 150,
+       "known": true,
+       "l_lic": null,
+       "lam0": 300000,
+       "n_p": 1000000,
+       "prc_id": 50,
+       "req": {
+        "precision": 3000000,
+        "purity": 3500000,
+        "quality_control": 3000000
+       }
+      },
+      {
+       "H": {
+        "precision": 4600000,
+        "purity": 4400000,
+        "quality_control": 4300000
+       },
+       "M": {
+        "precision": 4800000,
+        "purity": 4600000,
+        "quality_control": 4500000
+       },
+       "X": 100000000000,
+       "Xh": 800000000,
+       "base_cost": 112,
+       "known": true,
+       "l_lic": null,
+       "lam0": 300000,
+       "n_p": 1000000,
+       "prc_id": 57,
+       "req": {
+        "precision": 3000000,
+        "purity": 3500000,
+        "quality_control": 3000000
+       }
+      }
+     ]
+    },
+    "af_class": 2,
+    "r_PU": 2
+   },
+   "name": "g2_weak_airframe",
+   "note": "weak airframe PRC: only U_AF grows (P-8, per block)",
+   "output": {
+    "AF": {
+     "U": 4363636,
+     "part": 4589,
+     "scale": 1086777,
+     "sum": 968
+    },
+    "PU": {
+     "U": 1000000,
+     "part": 332,
+     "scale": 515528,
+     "sum": 644
+    },
+    "proc_part": 4921
+   },
+   "print_only_common_U": 3019851
   }
  ],
  "production_profile": [
@@ -2616,6 +6575,177 @@
  ],
  "schema": "jet_slice_reference_formulas/1",
  "seed": 20261103,
+ "smoothstep01": [
+  {
+   "x": 0,
+   "y": 0
+  },
+  {
+   "x": 1,
+   "y": 0
+  },
+  {
+   "x": 999,
+   "y": 2
+  },
+  {
+   "x": 250000,
+   "y": 156250
+  },
+  {
+   "x": 500000,
+   "y": 500000
+  },
+  {
+   "x": 777777,
+   "y": 873798
+  },
+  {
+   "x": 999999,
+   "y": 999999
+  },
+  {
+   "x": 1000000,
+   "y": 1000000
+  }
+ ],
+ "split_by_site": [
+  {
+   "E_ap": 1000,
+   "name": "proportional",
+   "output": {
+    "E": {
+     "0": 300,
+     "1": 700
+    },
+    "share": {
+     "0": 300,
+     "1": 700
+    },
+    "surplus": 0
+   },
+   "sites": [
+    [
+     0,
+     300000000,
+     1000
+    ],
+    [
+     1,
+     700000000,
+     1000
+    ]
+   ]
+  },
+  {
+   "E_ap": 1001,
+   "name": "floor_remainder_to_max_v",
+   "output": {
+    "E": {
+     "0": 333,
+     "1": 668
+    },
+    "share": {
+     "0": 333,
+     "1": 668
+    },
+    "surplus": 0
+   },
+   "sites": [
+    [
+     0,
+     1000000,
+     2000
+    ],
+    [
+     1,
+     2000000,
+     2000
+    ]
+   ]
+  },
+  {
+   "E_ap": 1001,
+   "name": "tie_v_smaller_id",
+   "output": {
+    "E": {
+     "0": 501,
+     "1": 500
+    },
+    "share": {
+     "0": 501,
+     "1": 500
+    },
+    "surplus": 0
+   },
+   "sites": [
+    [
+     0,
+     1000000,
+     2000
+    ],
+    [
+     1,
+     1000000,
+     2000
+    ]
+   ]
+  },
+  {
+   "E_ap": 500,
+   "name": "sum_v_zero",
+   "output": {
+    "E": {
+     "1": 500,
+     "2": 0
+    },
+    "share": {
+     "1": 500,
+     "2": 0
+    },
+    "surplus": 0
+   },
+   "sites": [
+    [
+     1,
+     0,
+     500
+    ],
+    [
+     2,
+     0,
+     500
+    ]
+   ]
+  },
+  {
+   "E_ap": 1000,
+   "name": "cap_E_useful_surplus",
+   "output": {
+    "E": {
+     "0": 200,
+     "1": 500
+    },
+    "share": {
+     "0": 500,
+     "1": 500
+    },
+    "surplus": 300
+   },
+   "sites": [
+    [
+     0,
+     500000000,
+     200
+    ],
+    [
+     1,
+     500000000,
+     1000
+    ]
+   ]
+  }
+ ],
  "tooling_M": [
   {
    "input": {

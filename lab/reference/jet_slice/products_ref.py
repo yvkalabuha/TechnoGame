@@ -2,7 +2,10 @@
 """Independent expected values for the product layer of the jet slice (D-tests for TASK-0018).
 
 Spec: docs/simulation/slice-jet-aviation.md v0.10 §1.4, §3.3, §3.5 (A28, A31-A33), §6.1 L_P, §8.1;
-contract docs/architecture/LAYER_CONTRACT.md v2.3 §4.0, §4.4. Data: docs/research/data/jet-slice/
+contract docs/architecture/LAYER_CONTRACT.md v2.3 §4.0, §4.4. Section "v24" (spec v0.11, contract v2.4 r1 §4.4a-c,
+§9.1): R-PS2m with blocks PU/AF, fields by af_class, alloy_kg[hot_alt], g_p and gen (#70), readiness by D_ref (A35),
+series gate and d_gate (A35, A36), accidents, retrofit (A38 step 5), FV terms with gamma (§5.5). The v0.10 keys
+(generation cap, proc_scale[g]) are SUPERSEDED for v2.4 and kept only for the TASK-0018 tests at v2.3. Data: docs/research/data/jet-slice/
 (nodes.csv read at run time; product_class.md §1 and product_inputs.md §4, §6 transcribed below).
 Written from the spec, not from the C# code (#42). Python stdlib only.
 
@@ -373,6 +376,193 @@ def build():
         "start_fleet_D0_0": readiness(S, S, 0, 0),
     }
     out["cohort_retire_month"] = {str(y): cohort_retire_month(y) for y in (1945, 1946, 1960)}
+    out["v24"] = build_v24(node_gen, tier)
+    return out
+
+
+# ======================================================================== v2.4 (spec v0.11 A33, A35, A36, 5.5)
+# Composition by slots (contract v2.4 4.4a; COMPONENT_SELECTION v0.3 §1-§3; product_class.md r4/r5 §1, §1.1;
+# product_inputs.md r4 §14). Presets (AI functions outside the layer, T-3) are not reproduced here: reference
+# compositions are taken from product_class.md §2 as data. Section "v24" of products.json; the v0.10 keys above
+# stay as they were (TASK-0018 at v2.3) and are SUPERSEDED for v2.4.
+SLOTS24 = {s: {a[0]: a for a in opts} for s, opts in SLOTS}
+SLOTS24["airframe"]["af_mach2"] = ("af_mach2", 5, "1.8", [38, 53, 55, 56, 42], [(29,), (32,)])
+SLOT_ORDER = ["engine", "hot_section", "compressor", "airframe", "afterburner"]
+PU_SLOTS = ["engine", "hot_section", "compressor", "afterburner"]
+ENG_GEN = {"eng_g1": 1, "eng_g2": 2, "eng_g3": 3, "eng_g4": 4}                       # product_class.md r5
+AF_CLASS = {"af_straight": 1, "af_swept": 2, "af_milled": 3, "af_titanium": 3, "af_mach2": 4}   # r4 §1.1
+PLATFORM_MIN_RANK = {1: 1, 2: 2, 3: 3, 4: 5}
+ALLOY_KG = {"hot_nicr_forged": 290, "hot_sa2_forged": 670, "hot_vim_cast": 2120, "hot_vim_ds_cooled": 2980}  # R-AK2
+AF_FIELDS = {1: dict(h_first=9320, h_floor=2330, materials="0.000217", design_scale="1.00"),   # §14.4
+             2: dict(h_first=14760, h_floor=3690, materials="0.000329", design_scale="1.11"),
+             3: dict(h_first=41960, h_floor=10490, materials="0.000919", design_scale="1.82"),
+             4: dict(h_first=125920, h_floor=31480, materials="0.002098", design_scale="3.12")}
+PROC_SCALE_PU = {1: "0.515528", 2: "0.515528", 3: "0.827491", 4: "0.827491"}            # R-PS2m §14.3
+PROC_SCALE_AF = {1: "1.253259", 2: "1.086777", 3: "1.098982", 4: "3.754003"}
+P24 = dict(c_ref=37, k_gate=fx("0.7"), t_test_min=6, k_P={"P1": fx("0.40"), "P3": fx("0.55"), "P2": fx("0.70")},
+           a_acc=fx("0.001"), rho_retro=fx("0.5"), fleet_hours=fi(20), gamma_q10=512, H_build=24, n_service_min=50)
+REFERENCE = {   # product_class.md §2 (r4): g -> variant -> slot alternatives
+    1: {"superior": ["eng_g1", "hot_nicr_forged", "comp_centrifugal", "af_straight", "ab_none"]},
+    2: {"superior": ["eng_g2", "hot_sa2_forged", "comp_axial", "af_swept", "ab_on"],
+        "producible": ["eng_g2", "hot_nicr_forged", "comp_axial", "af_swept", "ab_on"]},
+    3: {"superior": ["eng_g3", "hot_vim_cast", "comp_axial", "af_titanium", "ab_on"],
+        "producible": ["eng_g3", "hot_sa2_forged", "comp_axial", "af_titanium", "ab_on"]},
+    4: {"superior": ["eng_g4", "hot_vim_ds_cooled", "comp_axial", "af_mach2", "ab_on"],
+        "producible": ["eng_g4", "hot_vim_cast", "comp_axial", "af_mach2", "ab_on"]},
+}
+
+
+def comp(alts):
+    """alts: slot order list -> {slot: alt tuple}."""
+    return {s: SLOTS24[s][a] for s, a in zip(SLOT_ORDER, alts)}
+
+
+def rps2m(c, u_pu=S, u_af=S):
+    """contract v2.4 4.4a: ((SumPU*U_PU)*pu[r_PU]) + ((SumAF*U_AF)*af[af_class]); SumB over prc_set ∩ B."""
+    pu = sorted({p for s in PU_SLOTS for p in c[s][3]})
+    af = sorted(set(c["airframe"][3]))
+    assert not set(pu) & set(af), "blocks must not overlap (validator)"
+    s_pu, s_af = base_sum(pu), base_sum(af)
+    r_pu = max(c[s][1] for s in PU_SLOTS)
+    k = AF_CLASS[c["airframe"][0]]
+    part_pu = 0 if s_pu == 0 else mul(mul(s_pu, u_pu), fx(PROC_SCALE_PU[r_pu]))
+    part_af = 0 if s_af == 0 else mul(mul(s_af, u_af), fx(PROC_SCALE_AF[k]))
+    return {"sum_PU": s_pu, "r_PU": r_pu, "sum_AF": s_af, "af_class": k, "PU": part_pu, "AF": part_af,
+            "proc_part": part_pu + part_af}
+
+
+def floor24(c):
+    k = AF_CLASS[c["airframe"][0]]
+    return fx(AF_FIELDS[k]["materials"]) + assembly_cost(fi(AF_FIELDS[k]["h_floor"])) + rps2m(c)["proc_part"]
+
+
+def g_p(c, app_known):
+    """contract v2.4 4.4a: max{g: APP_g known at creation and rank(airframe) >= platform_min_rank[g]}, >= 1."""
+    return max([g for g in (1, 2, 3, 4) if app_known(g) and c["airframe"][1] >= PLATFORM_MIN_RANK[g]] + [1])
+
+
+def gen24(c, gp):
+    return min(gp, ENG_GEN[c["engine"][0]] + 1)          # #70, G4-9: eng_gen field, +1 [Предл.]
+
+
+def d_ref():
+    return mul(P["d0"], fi(P24["c_ref"]))                 # D_ref = d0*c_ref = 740
+
+
+def readiness24(paid_ratio, q, d):
+    return mul(mul(min(S, paid_ratio), q), S - div(mul(P["psi_d"], d), d_ref()))    # A35
+
+
+def gate_month(d0, k=None):
+    """First month m of tests only (test_rate per month) with D_hidden <= k*D_ref and m >= t_test_min."""
+    k = P24["k_gate"] if k is None else k
+    m, t = 0, 0
+    while m < 1000:
+        m += 1
+        t += P["test_rate"]
+        if d0 - detected(t, d0) <= mul(k, d_ref()) and m >= P24["t_test_min"]:
+            return m
+    return None
+
+
+def d_gate_preliminary(d0):
+    return min(mul(P24["k_gate"], d_ref()), d0 - detected(P24["t_test_min"] * P["test_rate"], d0))   # A36 step 1
+
+
+def accidents_step(loss_acc, units, X):
+    """A36: loss_acc += (((units*fleet_hours)*a_acc)*X)/D_ref; n = min(floor(loss_acc), floor(units))."""
+    acc = loss_acc + div(mul(mul(mul(units, P24["fleet_hours"]), P24["a_acc"]), X), d_ref())
+    n = min(acc // S, units // S)
+    return {"loss_acc_before_write_off": acc, "written_off": n, "loss_acc": acc - fi(n)}
+
+
+def fix_and_retro(open_d, fix_n, retro_pool, units, floor_cost, left):
+    """Order 4.4d step 5 (A38): k_r = min(fix_n, retro_pool); c_u = c_retro*units; paid fixes only."""
+    if retro_pool <= 0:
+        return {"fixed": fix_n, "retro_pool": retro_pool, "left": left, "c_u": None}
+    k_r = min(fix_n, retro_pool)
+    c_retro = div(mul(floor_cost, P24["rho_retro"]), d_ref())
+    c_u = mul(c_retro, units)
+    k_paid = k_r if c_u == 0 else min(k_r, div(left, c_u))
+    fixed = k_paid if k_paid < k_r else fix_n
+    return {"c_retro": c_retro, "c_u": c_u, "k_r": k_r, "k_paid": k_paid, "fixed": fixed,
+            "retro_pool": retro_pool - k_paid, "left": left - mul(k_paid, c_u)}
+
+
+def fv_term(n, readiness, perf_rel):
+    return mul(mul(fi(n), readiness), pow_frac(perf_rel, P24["gamma_q10"]))            # 5.5, gamma = 0.5
+
+
+def n_alloy(supply, alloy_kg, n_budget):
+    """n_v = min(n_budget, floor((supply/alloy_kg)*H_build)), step 10 down."""
+    n = min(n_budget, mul(div(supply, fi(alloy_kg)), fi(P24["H_build"])) // S)
+    return n - n % 10
+
+
+def build_v24(node_gen, tier):
+    out = {"spec": "slice-jet-aviation.md v0.11 (contract v2.4 r1)", "D_ref": d_ref(), "params": {
+        k: v for k, v in P24.items()}}
+    refs = {}
+    for g, variants in REFERENCE.items():
+        for name, alts in variants.items():
+            c = comp(alts)
+            prc = sorted({p for a in c.values() for p in a[3]})
+            cx = complexity(prc, tier)
+            fl = floor24(c)
+            known = lambda gg, g=g: gg <= g
+            gp = g_p(c, known)
+            k = AF_CLASS[c["airframe"][0]]
+            d0 = initial_defects(S, cx, 0)
+            refs["G%d.%s" % (g, name)] = {
+                "alts": alts, "prc_set": prc, "complexity": cx, "perf": perf([c[s] for s in SLOT_ORDER]),
+                **rps2m(c), "unit_cost_floor": fl, "upkeep": upkeep(fl, cx),
+                "W_exp0": div(mul(mul(P["W0"], fi(cx)), fx(AF_FIELDS[k]["design_scale"])), S),
+                "alloy_kg": ALLOY_KG[c["hot_section"][0]], "g_p": gp, "gen": gen24(c, gp),
+                "D0_novelty1_exp0": d0, "gate_month_tests_only": gate_month(d0), "d_gate_preliminary": d_gate_preliminary(d0),
+                "ai_launch_month": {pr: gate_month(d0, kp) for pr, kp in P24["k_P"].items()}}
+    out["references"] = refs
+    assert [refs["G%d.superior" % g]["unit_cost_floor"] for g in (1, 2, 3, 4)] == [1382, 2174, 6163, 17836], \
+        "R-PS2m must reproduce product_inputs.md §9.1 exactly"
+    assert [refs["G%d.superior" % g]["proc_part"] for g in (1, 2, 3, 4)] == [874, 1384, 3933, 11803]
+    # COMPONENT_SELECTION §5 / product_inputs.md §14.7 (g_p = 3, yield = 1)
+    ex = {}
+    for name, alts in [("A", ["eng_g4", "hot_vim_ds_cooled", "comp_axial", "af_titanium", "ab_on"]),
+                       ("B", ["eng_g3", "hot_vim_cast", "comp_axial", "af_milled", "ab_on"]),
+                       ("C", ["eng_g2", "hot_sa2_forged", "comp_axial", "af_milled", "ab_on"])]:
+        c = comp(alts)
+        ex[name] = dict(rps2m(c), unit_cost_floor=floor24(c), alloy_kg=ALLOY_KG[c["hot_section"][0]])
+    assert [ex[n]["unit_cost_floor"] for n in "ABC"] == [6737, 5236, 4655]
+    out["cs_examples"] = ex
+    # gen(d) (contract 4.4a test, G4-9): platform G3 (af_titanium) with eng_g1 -> 2, eng_g2 -> 3; G2 platform + eng_g4 -> 2
+    mixed = {}
+    for name, alts, gmax in [("G3_platform_eng_g1", ["eng_g1", "hot_nicr_forged", "comp_axial", "af_titanium", "ab_on"], 3),
+                             ("G3_platform_eng_g2", ["eng_g2", "hot_nicr_forged", "comp_axial", "af_titanium", "ab_on"], 3),
+                             ("G2_platform_eng_g4", ["eng_g4", "hot_vim_ds_cooled", "comp_axial", "af_swept", "ab_on"], 4)]:
+        c = comp(alts)
+        gp = g_p(c, lambda gg, gmax=gmax: gg <= gmax)
+        mixed[name] = {"g_p": gp, "gen": gen24(c, gp)}
+    assert [mixed[k]["gen"] for k in mixed] == [2, 3, 2]
+    out["gen_mixed"] = mixed
+    # validator psi_D * c_max / c_ref < 1 over all 320 assemblies (no avail, no platform threshold)
+    import itertools
+    cmax = max(complexity(sorted({p for a in combo for p in a[3]}), tier)
+               for combo in itertools.product(*[list(SLOTS24[s].values()) for s in SLOT_ORDER]))
+    out["validator_psi"] = {"c_max": cmax, "psi_c_max_over_c_ref": div(mul(P["psi_d"], fi(cmax)), fi(P24["c_ref"]))}
+    assert out["validator_psi"]["psi_c_max_over_c_ref"] < S
+    dr = d_ref()
+    out["readiness"] = {"D_eq_D_ref": readiness24(S, S, dr), "D_zero": readiness24(S, S, 0),
+                        "D_960_new_G3": readiness24(S, S, fi(960)), "half_paid_q09_D_370": readiness24(fx("0.5"), fx("0.9"), fi(370))}
+    out["accidents"] = [dict(case=n, **accidents_step(la, fi(u), X)) for n, la, u, X in [
+        ("forced_X_0.6_Dref", 0, 100, mul(fx("0.6"), dr)), ("carry_fraction", fx("0.7"), 100, mul(fx("0.6"), dr)),
+        ("no_excess", 0, 300, 0), ("cap_units", fx("5.5"), 3, dr)]]
+    fl3 = refs["G3.superior"]["unit_cost_floor"]
+    out["retro"] = [dict(case=n, **fix_and_retro(fi(o), fi(f), fi(rp), fi(u), fl3, left)) for n, o, f, rp, u, left in [
+        ("money_enough", 400, 58, 442, 60, fx("2")), ("money_short", 400, 58, 442, 60, fx("0.005")),
+        ("pool_empty", 400, 58, 0, 60, fx("0.05"))]]
+    out["fv"] = {"terms": [{"n": n, "readiness": r, "perf_rel": pr, "fv": fv_term(n, r, pr)} for n, r, pr in [
+        (300, fx("0.95"), fx("1")), (200, fx("0.9"), fx("1.6")), (100, fx("0.6"), fx("2.6"))]],
+        "n_alloy": [{"supply": sp, "alloy_kg": kg, "n_budget": nb, "n_v": n_alloy(sp, kg, nb)} for sp, kg, nb in [
+            (fi(30000), 670, 400), (fi(30000), 2980, 400), (fi(5000), 290, 300)]]}
     return out
 
 
