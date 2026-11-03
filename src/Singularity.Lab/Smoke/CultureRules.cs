@@ -7,7 +7,7 @@ using Singularity.Kernel;
 namespace Singularity.Lab.Smoke;
 
 /// <summary>Candidate culture_H rules (docs/simulation/culture-rule-selection.md §1.1).</summary>
-internal enum CultureRule { R0, R1, R2, R1u1 }
+internal enum CultureRule { R0, R1, R2, R1u1, R1c }
 
 /// <summary>
 /// One variant of a rule: <c>u_p = min(1, v_p/v_full)^β</c>, <c>v_full = r_full·labour_p</c>, β = 1 or 0.5
@@ -20,6 +20,7 @@ internal sealed record RuleVariant(CultureRule Rule, Fx6 RFull, bool Sqrt, Fx6 U
         CultureRule.R0 => "R0",
         CultureRule.R1u1 => "R1u1",
         CultureRule.R1 => $"R1/rf{RFull}/b{(Sqrt ? "0.5" : "1")}/um{UM}",
+        CultureRule.R1c => $"R1c/rf{RFull}/um{UM}",
         _ => $"R2/rf{RFull}/b{(Sqrt ? "0.5" : "1")}",
     };
 
@@ -36,6 +37,8 @@ internal readonly record struct RuleProc(int Number, Fx6 V, Fx6 R, bool WorldLea
 internal static class CultureRuleMath
 {
     private static readonly Fx6 GapOffset = Fx6.FromRaw(250_000);
+
+    private static readonly Fx6 Two = Fx6.FromInt(2), Three = Fx6.FromInt(3);
 
     public static Fx6 Max0(Fx6 x) => x > Fx6.Zero ? x : Fx6.Zero;
 
@@ -58,6 +61,8 @@ internal static class CultureRuleMath
         Fx6 u = v / vFull;
         if (u > Fx6.One)
             u = Fx6.One;
+        if (rv.Rule == CultureRule.R1c)
+            return u * u * (Three - Two * u); // smoothstep (decision #85): ≈ 0 for a token output, flat at saturation
         return rv.Sqrt ? Sqrt(u) : u;
     }
 
@@ -473,6 +478,15 @@ internal static class CultureRules
         if (only is not null && only.StartsWith("trace:", StringComparison.Ordinal))
             return Trace(data, sc, only[6..], log);
         List<RuleVariant> variants = Variants();
+        if (only == "r1c")
+        {
+            // Decision #85, §5: grid pre-declared in culture-rule-selection.md §5.1 before this run.
+            variants = [];
+            foreach (long rf in new long[] { 6_250_000, 8_000_000, 10_000_000, 12_500_000 })
+                foreach (long um in new long[] { 250_000, 500_000 })
+                    variants.Add(new RuleVariant(CultureRule.R1c, Fx6.FromRaw(rf), false, Fx6.FromRaw(um)));
+            outDir = Path.Combine(outDir, "r1c");
+        }
         if (only == "posthoc")
         {
             // Post-hoc probe (§3), NOT selectable under §1.5: linear u between the grid nodes 6.25 and 12.5.
@@ -613,12 +627,13 @@ internal static class CultureRules
         public readonly List<string> D1 = new(), D3 = new(), C2 = new(), Notes = new();
         public int Excluded;
 
-        public bool Pass => Literal ? PassCore && K1Fail[4] == 0 : PassCore && K1Fail[6] == 0;
+        // Literal §1: raw I5 and K6 on the product g_H; deviations D-2, D-3: I5 on the effective floor, K6 per dimension.
+        public bool Pass => Literal ? PassCore && K1Fail[4] == 0 && K6Fail == 0 : PassCore && K1Fail[6] == 0 && K6DimFail == 0;
 
         public bool Literal { get; init; } = true;
 
         private bool PassCore => Window.Count > 0 && K1Fail[0] == 0 && K1Fail[1] == 0 && K1Fail[2] == 0 && K1Fail[3] == 0 && K1Fail[5] == 0 && K2aFail == 0 && K2bFail == 0 && K3Fail == 0
-            && K4aFail == 0 && K4bFail == 0 && K4cFail == 0 && K6Fail == 0;
+            && K4aFail == 0 && K4bFail == 0 && K4cFail == 0;
     }
 
     private static VariantResult Evaluate(GameData data, ScenarioData sc, RuleVariant rv, bool deviation)
