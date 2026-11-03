@@ -1,7 +1,7 @@
 ---
 id: TASK-0020
 title: "Industry и Kernel под контракт v2.4: правило культуры C-B, наладка производства"
-status: APPROVED
+status: REVIEW
 level: light
 milestone: MS-M0
 agent: developer
