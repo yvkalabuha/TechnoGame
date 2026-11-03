@@ -988,24 +988,22 @@
   },
   "retro": [
    {
-    "c_retro": 4,
-    "c_u": 240,
+    "c_u": 249,
     "case": "money_enough",
     "fixed": 58000000,
     "k_paid": 58000000,
     "k_r": 58000000,
-    "left": 1986080,
+    "left": 1985558,
     "retro_pool": 384000000
    },
    {
-    "c_retro": 4,
-    "c_u": 240,
+    "c_u": 249,
     "case": "money_short",
-    "fixed": 20833333,
-    "k_paid": 20833333,
+    "fixed": 20080321,
+    "k_paid": 20080321,
     "k_r": 58000000,
     "left": 1,
-    "retro_pool": 421166667
+    "retro_pool": 421919679
    },
    {
     "c_u": null,
@@ -1013,8 +1011,23 @@
     "fixed": 58000000,
     "left": 50000,
     "retro_pool": 0
+   },
+   {
+    "c_u": 56,
+    "case": "g1_small_floor_F9",
+    "fixed": 58000000,
+    "k_paid": 58000000,
+    "k_r": 58000000,
+    "left": 1996752,
+    "retro_pool": 384000000
    }
   ],
+  "retro_c_u_per_1000": {
+   "G1": 933,
+   "G2": 1468,
+   "G3": 4164,
+   "G4": 12051
+  },
   "spec": "slice-jet-aviation.md v0.11 (contract v2.4 r1)",
   "validator_psi": {
    "c_max": 49,

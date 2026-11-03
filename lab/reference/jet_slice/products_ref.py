@@ -477,15 +477,15 @@ def accidents_step(loss_acc, units, X):
 
 
 def fix_and_retro(open_d, fix_n, retro_pool, units, floor_cost, left):
-    """Order 4.4d step 5 (A38): k_r = min(fix_n, retro_pool); c_u = c_retro*units; paid fixes only."""
+    """Order 4.4d step 5 (A38): k_r = min(fix_n, retro_pool); paid fixes only.
+    v2.4 r2 F9: c_u = ((unit_cost_floor*rho_retro)*units)/D_ref, one floor on the whole product (Int128)."""
     if retro_pool <= 0:
         return {"fixed": fix_n, "retro_pool": retro_pool, "left": left, "c_u": None}
     k_r = min(fix_n, retro_pool)
-    c_retro = div(mul(floor_cost, P24["rho_retro"]), d_ref())
-    c_u = mul(c_retro, units)
+    c_u = (floor_cost * P24["rho_retro"] * units) // (S * d_ref())  # raw: f*rho*u / (S*D_ref), single rounding
     k_paid = k_r if c_u == 0 else min(k_r, div(left, c_u))
     fixed = k_paid if k_paid < k_r else fix_n
-    return {"c_retro": c_retro, "c_u": c_u, "k_r": k_r, "k_paid": k_paid, "fixed": fixed,
+    return {"c_u": c_u, "k_r": k_r, "k_paid": k_paid, "fixed": fixed,
             "retro_pool": retro_pool - k_paid, "left": left - mul(k_paid, c_u)}
 
 
@@ -559,6 +559,13 @@ def build_v24(node_gen, tier):
     out["retro"] = [dict(case=n, **fix_and_retro(fi(o), fi(f), fi(rp), fi(u), fl3, left)) for n, o, f, rp, u, left in [
         ("money_enough", 400, 58, 442, 60, fx("2")), ("money_short", 400, 58, 442, 60, fx("0.005")),
         ("pool_empty", 400, 58, 0, 60, fx("0.05"))]]
+    fl1 = refs["G1.superior"]["unit_cost_floor"]
+    out["retro"].append(dict(case="g1_small_floor_F9", **fix_and_retro(fi(400), fi(58), fi(442), fi(60), fl1, fx("2"))))
+    # F9: c_u = ((floor*rho)*units)/D_ref per 1000 units -> 933 / 1468 / 4164 / 12051 raw (old c_retro: 0/1/4/12 raw per unit)
+    out["retro_c_u_per_1000"] = {"G%d" % g: fix_and_retro(fi(1), fi(1), fi(1), fi(1000), refs["G%d.superior" % g]["unit_cost_floor"],
+                                                           fx("1"))["c_u"] for g in (1, 2, 3, 4)}
+    assert list(out["retro_c_u_per_1000"].values()) == [933, 1468, 4164, 12051], out["retro_c_u_per_1000"]
+    assert out["retro"][-1]["c_u"] > 0                       # F9 regression: G1 retrofit is not free
     out["fv"] = {"terms": [{"n": n, "readiness": r, "perf_rel": pr, "fv": fv_term(n, r, pr)} for n, r, pr in [
         (300, fx("0.95"), fx("1")), (200, fx("0.9"), fx("1.6")), (100, fx("0.6"), fx("2.6"))]],
         "n_alloy": [{"supply": sp, "alloy_kg": kg, "n_budget": nb, "n_v": n_alloy(sp, kg, nb)} for sp, kg, nb in [

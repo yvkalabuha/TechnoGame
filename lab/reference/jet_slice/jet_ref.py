@@ -407,6 +407,8 @@ def limiter(site, p):
     leads_any = any(lead(site, p["cluster"], dd) == p["prc_id"] for dd in active_dims(p))
     if leads_any:
         return _limiter_own(site, p), p["prc_id"]
+    if _steps_1_4(site, p, d) == "NONE":                         # v2.4 r2 F10: own NONE before the lead's limiter
+        return "NONE", p["prc_id"]
     q = lead(site, p["cluster"], d)
     if q is not None:
         return _limiter_own(site, _proc(site, q)), q
@@ -908,6 +910,9 @@ INTERFACE_CASES = [
     ("follower", "p leads no cell: limiter of lead(cell(p)), subject = lead, E_useful(p) = 0",
      site_snap({"MET": ("3.5", "3.5", "3.5")}, [SP(45, "MET", (None, "4", None), "200"),
                                                 SP(49, "MET", (None, "4.5", None), "2000")])),
+    ("follower_none_F10", "v2.4 r2 F10: p leads no cell, gap_p(d*) = 0, cell has lead 4: (NONE, p), not limiter of lead",
+     site_snap({"MET": ("3.5", "3.3", "3.2")}, [SP(4, "MET", ("4", "4", "3.5"), "1000"),
+                                                SP(6, "MET", ("3", "3", "2.5"), "1000", labour="50")])),
     ("unknown_not_eligible", "known but no output and not planned: LAB_CEILING, no lead",
      site_snap({"MET": ("3.2", "3.2", "3.2")}, [SP(39, "MET", (None, "4", "3.5"), "0")])),
 ]
@@ -1362,7 +1367,10 @@ def coverage_cb(rows):
         "E_useful_changes": len({ef["E_useful"].get("4") for ef, _ in e if ef["E_useful"].get("4")}) >= 2,
         "limiter_volume": any(v[0] == "VOLUME" for ef, _ in e for v in ef["limiter"].values()),
         "rest_returned": any(ef["rest_a"] > 0 for ef, _ in e),
-        "follower_limiter_of_lead": any(v[1] != int(k) for ef, _ in e for k, v in ef["limiter"].items()),
+        # v2.4 r2 F10: a process that leads no cell and has no gap shows its own NONE although its cell has a lead
+        # (the old key follower_limiter_of_lead is covered by formulas.json cb_interface "follower" only)
+        "non_lead_own_none_F10": any(v == ["NONE", int(k)] and int(k) not in ef["lead"].values() and ef["lead"]
+                                     for ef, _ in e for k, v in ef["limiter"].items()),
     }
 
 
