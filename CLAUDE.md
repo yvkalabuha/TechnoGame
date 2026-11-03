@@ -33,6 +33,7 @@ The owner runs `/handoff`. If the session ends without it and files changed, rem
 | test-engineer | invariants, property tests, determinism L1/L2 |
 | critic, advocate | every gate-level review (`/review-gate`) |
 | reviewer | every diff in src/, tests/, mods/ |
+| ui-art-director | visual identity, screen design, visual review of UI (may block with reasons) |
 
 - Create or change agent files only at the end of a session: changes are not picked up by the running session. Fallback for a missing agent: `general-purpose` with the role file as instructions + `zone_check`.
 - Choose the minimal set of agents. Run agents in parallel only for independent work.
