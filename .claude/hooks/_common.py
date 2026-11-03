@@ -29,9 +29,16 @@ def rel_path(data: dict, file_path: str) -> str | None:
     if not p.is_absolute():
         p = Path(data.get("cwd") or root) / p
     try:
-        return p.resolve().relative_to(root).as_posix()
+        rel = p.resolve().relative_to(root).as_posix()
     except ValueError:
         return None
+    # Agent worktrees live in .claude/worktrees/<name>/: judge the path inside the worktree.
+    prefix = ".claude/worktrees/"
+    if rel.startswith(prefix):
+        parts = rel[len(prefix):].split("/", 1)
+        if len(parts) == 2 and parts[1]:
+            return parts[1]
+    return rel
 
 
 def glob_to_regex(pattern: str) -> re.Pattern:
