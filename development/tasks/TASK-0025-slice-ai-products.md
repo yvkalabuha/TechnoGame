@@ -1,7 +1,7 @@
 ---
 id: TASK-0025
 title: "T6c: ИИ изделия — Requirement, пресеты, запуск, снятие (A40), поправка контракта r4"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -27,10 +27,10 @@ created: 2026-11-03
 - Не входит: лицензия, перебой сплава, триггеры по `why_not` (T6d); данные SUN (#127, #130–#132 — отдельная задача после этой).
 
 ## Критерии приёмки
-- [ ] Всё из спеки v0.13 §11 «T6c» и «T6c — v0.13 (контракт r4)», пункты (1)–(10).
-- [ ] Инварианты контракта r4: V1–V5 (§4.1b), (8)–(12) (§4.4e).
-- [ ] Общие пункты §11 T6a–T6d.
-- [ ] Печать на seeds 1…20 (пункт 10) приложена к «Результат».
+- [x] Всё из спеки v0.13 §11 «T6c» и «T6c — v0.13 (контракт r4)», пункты (1)–(10).
+- [x] Инварианты контракта r4: V1–V5 (§4.1b), (8)–(12) (§4.4e).
+- [x] Общие пункты §11 T6a–T6d.
+- [x] Печать на seeds 1…20 (пункт 10) приложена к «Результат».
 
 ## Тесты
 По §11; golden и окна выпуска перезаписываются с причиной (r4).
@@ -39,10 +39,10 @@ created: 2026-11-03
 Спека `docs/simulation/slice-jet-aviation.md` v0.13 (A35, A37, A40, A41, §4, §6.8, §11); контракт `docs/architecture/LAYER_CONTRACT.md` v2.4 r4 (§3.1, §4.1a–b, §4.4d–e, §5); `docs/architecture/SLICE_COMPOSITION.md` r2; `docs/game-design/COMPONENT_SELECTION.md`; TASK-0022, TASK-0023, TASK-0024 «Результат».
 
 ## REVIEW
-- [ ] Code review (reviewer) — находки high закрыты
-- [ ] Тесты (test-engineer) — проходят, покрытие достаточно
-- [ ] Детерминизм L1/L2 — если затронуты src/
-- [ ] Ревью test-engineer (2026-11-03): добавлен `tests/Singularity.Session.Tests/ProductAiContractPropertyTests.cs` (4 теста, ~65 с, зелёные, src не менялся): свойства по seeds {1,2,3,5,8,13,21,34} × 384 мес. × актор × design — журнал ИИ пуст (нет `force`), `series_forced` нет, `built_any`/`cancelled`/стадия монотонны, «снят и cancelled» ⇔ `built_any` = false, В ⇒ `built_any`, `idle_c` (счёт с месяца запуска, 0 при выпуске, заморожен вне С), ≤ 1 серийной линии на актора, Requirement повтор ≤ 1 и монотонен (12 повторов), V1/V3 на снимке каждого месяца (21 648 пар без выпуска), L1 + L2 (потоки 1/4/8, seeds 4/11/29 × 300 мес.). Багов src не найдено. Пробелы: V1 «непрерывность при первом выпуске» не наблюдается (0 случаев: у ИИ первый выпуск совпадает с месяцем запуска либо не наступает), покрыта только тестами с игроком; V2/V4 (случайные снимки) и V3 «Σ_s v_exp − Σ_s proc_v ≤ V_C + V_PO» на фикстуре «2 site» не добавлены; `idle_c` ≥ T_ab → close_line проверен только в существующих тестах.
+- [x] Code review (reviewer) — approve; M1, M2 закрыты (41392f9)
+- [x] Тесты (test-engineer) — 4 теста-свойства (284b6fb); пробелы V1 на ИИ, V2–V4, «2 site» — в T8
+- [x] Детерминизм L1/L2 — с ИИ, потоки 1/4/8
+- [x] Ревью test-engineer (2026-11-03): добавлен `tests/Singularity.Session.Tests/ProductAiContractPropertyTests.cs` (4 теста, ~65 с, зелёные, src не менялся): свойства по seeds {1,2,3,5,8,13,21,34} × 384 мес. × актор × design — журнал ИИ пуст (нет `force`), `series_forced` нет, `built_any`/`cancelled`/стадия монотонны, «снят и cancelled» ⇔ `built_any` = false, В ⇒ `built_any`, `idle_c` (счёт с месяца запуска, 0 при выпуске, заморожен вне С), ≤ 1 серийной линии на актора, Requirement повтор ≤ 1 и монотонен (12 повторов), V1/V3 на снимке каждого месяца (21 648 пар без выпуска), L1 + L2 (потоки 1/4/8, seeds 4/11/29 × 300 мес.). Багов src не найдено. Пробелы: V1 «непрерывность при первом выпуске» не наблюдается (0 случаев: у ИИ первый выпуск совпадает с месяцем запуска либо не наступает), покрыта только тестами с игроком; V2/V4 (случайные снимки) и V3 «Σ_s v_exp − Σ_s proc_v ≤ V_C + V_PO» на фикстуре «2 site» не добавлены; `idle_c` ≥ T_ab → close_line проверен только в существующих тестах.
 
 ### Ревью reviewer (2026-11-03)
 Вердикт: approve с условием M1, M2. dotnet test зелёный (Kernel 284 +1, Architecture 80, Core 822, Session 127). Детерминизм, контракт r4, CloseSeries, инварианты (8)–(10), A40 обе ветки, живость, сроки доктрин, out_lim, пресеты — без замечаний. Отклонения 1–4, 6–8 приемлемы; 5 (fv_budget) — [Предп.], к спеке; 9 (DERIV на старом корне) — вопрос simulation-engineer.
