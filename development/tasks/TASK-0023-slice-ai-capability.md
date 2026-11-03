@@ -44,6 +44,15 @@ created: 2026-11-03
 - [ ] Тесты (test-engineer) — проходят, покрытие достаточно
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
+### Ревью reviewer (2026-11-03, вставлено Orchestrator)
+Вердикт: approve. `dotnet test` зелёный (Kernel 284 +1 skip, Core 798, Architecture 77, Session 96). A39, одинаковость плана в месяце, `TrainingBudget` (§4.4d), программа качества (A41/F13), правка `PlannedVolume` + `proc_v` (A37), детерминизм, `SchemaVersion` 1→2 — соответствуют. Промежуточные коммиты 64597de, 2633d99 не собираются поодиночке (мешает только bisect).
+- **medium** `ToolingPlan.cs:57-64` — ничья A30 по номеру процесса решается по номеру строки; порядок строк не гарантирован (`IndustryLayout.FromData` — порядок таблицы узлов, по номеру только `l.Order`); в main ничья реальна (USA/GBR: 48 и 49, MECH tier 4). Fix: `foreach (int r in l.Order)`, юнит-тест с непорядковыми строками.
+- low `T6bAiCapabilityTests.cs:171,176` — тавтология и слабая проверка `tb_spent`. Fix: `tb_spent ≤ TrainingBudget` того же месяца на собранном мире или оставить юнит-тесты шага 7.
+- low `PolicyInputsAdapter.cs:27` — строка актора вместо строки site в `Limiter` (верно только при A27 site = актор). Fix: site явно или комментарий.
+- low `ToolingPlan.cs:~66,~133` — план пересчитывается в 12 вызовах на site; оставить, кэш при нужде.
+- info `SLICE_COMPOSITION.md` §2, §4 устарели (`PlannedVolume` и `proc_v`, имя `ToolingRule`) — systems-architect.
+- OPEN: SUN не производит — пробел спеки (A23, A37, A39, C-B `eligible`: плавка вне `prc_set` с `yield` 0 — замкнутый тупик), не ошибка кода; разбор у simulation-engineer.
+
 ## Результат
 **Сделано** (developer, 2026-11-03; коммиты на main, не запушено).
 - `Core.Policy.ToolingPlan` — план оснастки A39 как чистая функция `Compute(industry, inputs, m_keep, actor, t, rest_a, B_cap)`: пул `rest_a` → `B_cap`, проход 1 (поддержка A30 для `p*`), проход 2 (узкие места `M`), водопад site → кластер (порядок раскладки) → измерение, потолок ячейки `(M_cap − M_dec)·cost_M`, raw `Fx6`, без деления. Результат: `Invest(site,c,d)`, `TakenRest`, `TakenCap`, `RestReturned`, `TrainingBudget = B_cap − taken_cap`. Без кэша: каждый вызов месяца пересчитывает тот же план. `IndustrySystem` получил `Parameters` и `RestActor(actor, t)` (тот же `rest_a`, что идёт в `ToolingInvest`; общий `Allocation`).
