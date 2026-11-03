@@ -11,12 +11,16 @@ public sealed record IndustryProcessSpec(int Number, Cluster Cluster, int Discip
 /// Immutable shape of the capability layer: the site clusters (ascending <see cref="Cluster"/>), the
 /// processes by storage row (<see cref="Order"/> = rows by ascending number, the order of every sum and
 /// merge key), the owner actor row of each site, the workforce categories and requester ids (contract §4.6),
-/// and the alloy melt grades (spec §1.4).
+/// and the alloy melt grades (spec §1.4). Skilled requests carry requester_id = line_index·C + cluster_index with
+/// C = number of site clusters (spec §3.5 A26; C = 4 in the slice), so a request's cluster is requester_id mod C.
 /// </summary>
 public sealed class IndustryLayout
 {
     /// <summary>Melt processes of <c>s5.cmp.heat_resistant_alloy</c>, worst to best grade (spec §1.4).</summary>
     public static readonly ImmutableArray<int> SliceAlloyGrades = [39, 40, 41];
+
+    /// <summary>Skilled workforce category of the slice pools (0 engineer, 1 skilled; spec §1.1).</summary>
+    public const int SliceSkilled = 1;
 
     private IndustryLayout() { }
 
@@ -37,6 +41,12 @@ public sealed class IndustryLayout
 
     public required int WorkforceCategories { get; init; }
 
+    /// <summary>Workforce category whose grants make <c>act</c> (spec §3.5 A26).</summary>
+    public required int SkilledCategory { get; init; }
+
+    /// <summary><c>D_c</c>: union of <c>key_dims</c> over the cluster's processes, a dimension bit mask (spec §3.5 A25).</summary>
+    public required ImmutableArray<int> ClusterKeyDims { get; init; }
+
     /// <summary>Requester ids are 0…<c>Requesters − 1</c>, one id space for bureaus and programmes (contract §4.6).</summary>
     public required int Requesters { get; init; }
 
@@ -55,7 +65,7 @@ public sealed class IndustryLayout
     }
 
     public static IndustryLayout Create(IReadOnlyList<Cluster> clusters, IReadOnlyList<IndustryProcessSpec> processes,
-        IReadOnlyList<int> siteOwner, int workforceCategories, int requesters, IReadOnlyList<int>? alloyGrades = null)
+        IReadOnlyList<int> siteOwner, int workforceCategories, int skilledCategory, int requesters, IReadOnlyList<int>? alloyGrades = null)
     {
         for (int i = 1; i < clusters.Count; i++)
         {
@@ -64,7 +74,10 @@ public sealed class IndustryLayout
         }
         ArgumentOutOfRangeException.ThrowIfNegative(workforceCategories);
         ArgumentOutOfRangeException.ThrowIfNegative(requesters);
+        if (skilledCategory < 0 || skilledCategory >= workforceCategories)
+            throw new ArgumentOutOfRangeException(nameof(skilledCategory), skilledCategory, "The skilled category must be a workforce category.");
         var cluster = new int[processes.Count];
+        var keyDims = new int[clusters.Count];
         for (int r = 0; r < processes.Count; r++)
         {
             IndustryProcessSpec p = processes[r];
@@ -73,6 +86,10 @@ public sealed class IndustryLayout
                 throw new ArgumentException($"Process {p.Number}: cluster {p.Cluster} is not a site cluster.", nameof(processes));
             if (p.Tier < 3)
                 throw new ArgumentException($"Process {p.Number}: tier {p.Tier} is below 3.", nameof(processes));
+            int key = IndustryMath.KeyDims(p.Req, p.Tier);
+            if (key == 0)
+                throw new ArgumentException($"Process {p.Number}: no key dimension (r_d >= tier, spec §3.5 A25).", nameof(processes));
+            keyDims[cluster[r]] |= key;
             for (int q = 0; q < r; q++)
             {
                 if (processes[q].Number == p.Number)
@@ -104,6 +121,8 @@ public sealed class IndustryLayout
             Order = [.. order],
             SiteOwner = [.. siteOwner],
             WorkforceCategories = workforceCategories,
+            SkilledCategory = skilledCategory,
+            ClusterKeyDims = [.. keyDims],
             Requesters = requesters,
             AlloyGrades = [.. grades],
         };
@@ -111,7 +130,8 @@ public sealed class IndustryLayout
 
     /// <summary>
     /// Slice layout from loaded data: every PRC node in node-table order, the scenario clusters (sorted) and
-    /// disciplines, one site per actor (site row = actor row, spec §1.1), the slice alloy grades.
+    /// disciplines, one site per actor (site row = actor row, spec §1.1), the slice alloy grades;
+    /// workforce category 1 is skilled (slice pools: 0 engineer, 1 skilled).
     /// </summary>
     public static IndustryLayout FromData(NodeTable nodes, ScenarioData scenario, int workforceCategories, int requesters)
     {
@@ -129,7 +149,7 @@ public sealed class IndustryLayout
         }
         Cluster[] clusters = [.. scenario.Clusters];
         Array.Sort(clusters);
-        return Create(clusters, specs, [.. Enumerable.Range(0, scenario.ActorCount)], workforceCategories, requesters, SliceAlloyGrades);
+        return Create(clusters, specs, [.. Enumerable.Range(0, scenario.ActorCount)], workforceCategories, SliceSkilled, requesters, SliceAlloyGrades);
     }
 
     private static int IndexOf(IReadOnlyList<Cluster> clusters, Cluster c)

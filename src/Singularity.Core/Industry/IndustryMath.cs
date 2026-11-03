@@ -33,6 +33,15 @@ public readonly record struct ProcessYield(int ActiveMask, Dims3 C, Dims3 G, int
     public static ProcessYield Control(Fx6 yield) => new(0, default, default, 0, Fx6.Zero, Fx6.Zero, yield, Fx6.One);
 }
 
+/// <summary>One <c>tooling_M</c> cell step with its parts (spec §3.5 A11, A22).</summary>
+public readonly record struct ToolingStep(int K, Fx6 CostM, Fx6 MCap, Fx6 MDec, Fx6 Gain, Fx6 MNew);
+
+/// <summary>A melt grade of the alloy at a site: process number, known to the owner, snapshot yield.</summary>
+public readonly record struct AlloyMelt(int Number, bool Known, Fx6 Yield);
+
+/// <summary><c>material_availability(site, alloy)</c> (contract §5, spec §1.4): grade (−1: none), monthly supply in kg, deficit event.</summary>
+public readonly record struct AlloyAvailability(int GradeNumber, Fx6 Supply, bool Deficit);
+
 /// <summary>One process of a <c>prc_set</c> for <see cref="IndustryMath.Profile"/>.</summary>
 public readonly record struct ProfileItem(int ProcessNumber, ProcessYield Yield, bool Known, Fx6 N, Fx6 BaseCost, Fx6 ControlUnitCost = default);
 
@@ -208,15 +217,25 @@ public static class IndustryMath
         return new CultureStep(vc, drive, catchUp, maint, spillSum, hFloor, sat, alphaEff, dPlus, capped, dMinus, h + capped - dMinus);
     }
 
-    /// <summary><c>cost_M(k) = c_M·2^(k−3)</c>, <c>k = clamp(⌊M⌋, 3, 5)</c> of the cell before investment (spec §3.5 A11).</summary>
-    public static Fx6 CostM(Fx6 m, IndustryParams p)
-    {
-        long k = m.Raw < 3 * Fx6.Scale ? 3 : m.Raw >= 5 * Fx6.Scale ? 5 : m.Raw / Fx6.Scale;
-        return p.CostMByTier[(int)k - 3];
-    }
+    /// <summary>Tier <c>k = clamp(⌊M⌋, 3, 5)</c> of a cell before investment (spec §3.5 A11).</summary>
+    public static int CostTier(Fx6 m) => m.Raw < 3 * Fx6.Scale ? 3 : m.Raw >= 5 * Fx6.Scale ? 5 : (int)(m.Raw / Fx6.Scale);
 
-    /// <summary><c>M' = M + invest/cost_M − δ_M·M</c> (spec §3.2, §3.5 A11).</summary>
-    public static Fx6 Tooling(Fx6 m, Fx6 invest, Fx6 costM, Fx6 deltaM) => m + invest / costM - deltaM * m;
+    /// <summary>
+    /// One <c>tooling_M</c> cell (spec §3.2, §3.5 A11, A22): <c>M_cap = 1 + max(3, mechTier)</c>,
+    /// <c>M_dec = M − δ_M·M</c>, <c>M' = min(M_dec + invest/cost_M(k), max(M_dec, M_cap))</c>. The cap limits only
+    /// the gain; tooling above it only wears. <paramref name="mechTier"/> is the highest tier of a MECH process
+    /// admitted at the site, 0 when there is none.
+    /// </summary>
+    public static ToolingStep Tooling(Fx6 m, Fx6 invest, int mechTier, IndustryParams p)
+    {
+        int k = CostTier(m);
+        Fx6 cost = p.CostM(k);
+        Fx6 cap = Fx6.FromInt(1 + (mechTier > 3 ? mechTier : 3));
+        Fx6 dec = m - p.DeltaM * m;
+        Fx6 gain = invest / cost;
+        Fx6 grown = dec + gain, limit = dec > cap ? dec : cap;
+        return new ToolingStep(k, cost, cap, dec, gain, grown < limit ? grown : limit);
+    }
 
     /// <summary>Forgetting <c>x − δ·x</c> (contract §4.0 p. 6).</summary>
     public static Fx6 Forget(Fx6 x, Fx6 delta) => x - delta * x;
@@ -258,11 +277,25 @@ public static class IndustryMath
         }
     }
 
-    /// <summary>Alloy supply of a month: <c>min(chain output, alloy_cap·(1 − deficit))</c> (spec §1.4).</summary>
-    public static Fx6 AlloySupply(Fx6 chainOutput, Fx6 cap, Fx6 deficit)
+    /// <summary>
+    /// Alloy of a month (spec §1.4, §3.5 A23): the grade is the admitted melt (known, <c>yield &gt; 0</c> by the
+    /// snapshot) with the highest yield, a tie goes to the higher number; supply = <c>(alloy_cap·(1 − deficit))·yield</c>
+    /// kg. Without an admitted melt: grade −1, supply 0.
+    /// </summary>
+    public static AlloyAvailability AlloySupply(Fx6 cap, Fx6 deficit, ReadOnlySpan<AlloyMelt> melts)
     {
-        Fx6 limit = cap * (Fx6.One - deficit);
-        return chainOutput < limit ? chainOutput : limit;
+        int best = -1;
+        for (int i = 0; i < melts.Length; i++)
+        {
+            AlloyMelt m = melts[i];
+            if (!m.Known || m.Yield <= Fx6.Zero)
+                continue;
+            if (best < 0 || m.Yield > melts[best].Yield || (m.Yield == melts[best].Yield && m.Number > melts[best].Number))
+                best = i;
+        }
+        bool cut = deficit > Fx6.Zero;
+        return best < 0 ? new AlloyAvailability(-1, Fx6.Zero, cut)
+            : new AlloyAvailability(melts[best].Number, cap * (Fx6.One - deficit) * melts[best].Yield, cut);
     }
 
     /// <summary><c>line_capacity = supply / alloy_kg[gen]</c> (spec §1.4).</summary>
@@ -281,6 +314,48 @@ public static class IndustryMath
             granted[i] = demandByDesign[i] < left ? demandByDesign[i] : left;
             left -= granted[i];
         }
+    }
+
+    /// <summary>
+    /// <c>act[site, c] = min(1, Σ granted / Σ n)</c> over the skilled requests of the cluster (spec §3.5 A26);
+    /// no request gives 1.
+    /// </summary>
+    public static Fx6 Act(long requested, long granted)
+    {
+        if (requested == 0)
+            return Fx6.One;
+        Fx6 a = Fx6.FromInt(granted) / Fx6.FromInt(requested);
+        return a < Fx6.One ? a : Fx6.One;
+    }
+
+    /// <summary><c>key_dims(p) = {d: r_d(p) ≥ tier(p)}</c> as a bit mask over dimensions (spec §3.5 A25).</summary>
+    public static int KeyDims(Dims3 req, int tier)
+    {
+        int mask = 0;
+        for (int d = 0; d < Dims3.Count; d++)
+        {
+            if (req[d] >= Fx6.FromInt(tier))
+                mask |= 1 << d;
+        }
+        return mask;
+    }
+
+    /// <summary>
+    /// <c>capability_tier = min_{d ∈ D_c} min(culture_H, tooling_M)</c> (spec §3.5 A25); null for an empty
+    /// <paramref name="dimMask"/> (cluster without PRC). UI only.
+    /// </summary>
+    public static Fx6? CapabilityTier(Dims3 h, Dims3 m, int dimMask)
+    {
+        Fx6? tier = null;
+        for (int d = 0; d < Dims3.Count; d++)
+        {
+            if ((dimMask & (1 << d)) == 0)
+                continue;
+            Fx6 c = h[d] < m[d] ? h[d] : m[d];
+            if (tier is null || c < tier.Value)
+                tier = c;
+        }
+        return tier;
     }
 
     /// <summary>

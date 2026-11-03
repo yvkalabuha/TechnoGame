@@ -7,10 +7,7 @@ namespace Singularity.Core.Industry;
 /// <summary>A process of a <c>prc_set</c> for <see cref="IndustrySystem.Profile"/>: number, <c>n_p</c>, <c>base_cost_p</c>.</summary>
 public readonly record struct PrcSetItem(int ProcessNumber, Fx6 N, Fx6 BaseCost);
 
-/// <summary><c>material_availability(site, alloy)</c> (contract §5, spec §1.4): best produced grade (−1: none), monthly supply, deficit event.</summary>
-public readonly record struct AlloyAvailability(int GradeNumber, Fx6 Supply, bool Deficit);
-
-/// <summary>A broken capability invariant (reference README I1–I3, I6).</summary>
+/// <summary>A broken capability invariant (reference README I1–I3).</summary>
 public sealed class IndustryInvariantException(long month, int site, string message)
     : Exception($"capability invariant violated at month {month}, site {site}: {message}")
 {
@@ -21,13 +18,13 @@ public sealed class IndustryInvariantException(long month, int site, string mess
 /// <summary>
 /// Capability layer of the jet slice (contract v2.3 §4.0–4.2, §4.6; spec §3.2, §3.5, §6.1): a monthly system
 /// on a table with one row per site. Compute of month t reads only the snapshot: <c>yield_p</c> → own
-/// <c>proc_yield</c> (the yield output runs at in t), <c>culture_H</c> from <c>proc_v</c> of month t−1,
-/// <c>tooling_M</c> with the investment in force. Merge applies <c>report_output</c> by (site, prc) →
-/// <c>proc_X</c>, <c>proc_v</c>, and <c>reserve_workforce</c> by (site, cat, requester_id) → <c>granted</c>,
-/// visible at t+1. No RNG anywhere in the layer (#28). Own columns per site row: <c>ind.H.c.d</c>,
-/// <c>ind.M.c.d</c> per cluster and dimension, then per process number <c>ind.X.N</c>, <c>ind.v.N</c>,
-/// <c>ind.u.N</c> (units of the month), <c>ind.y.N</c>, then <c>ind.wf.n.k.R</c>, <c>ind.wf.granted.k.R</c>
-/// per category k and requester R.
+/// <c>proc_yield</c> (the yield output runs at in t), <c>culture_H</c> from <c>proc_v</c> of month t−1 and
+/// <c>act</c> from the skilled grants of month t−1, <c>tooling_M</c> with the investment in force under the
+/// MECH cap. Merge applies <c>report_output</c> by (site, prc) → <c>proc_X</c>, <c>proc_v</c>, and
+/// <c>reserve_workforce</c> by (site, cat, requester_id) → <c>granted</c>, visible at t+1. No RNG anywhere in
+/// the layer (#28). Own columns per site row: <c>ind.H.c.d</c>, <c>ind.M.c.d</c> per cluster and dimension,
+/// then per process number <c>ind.X.N</c>, <c>ind.v.N</c>, <c>ind.y.N</c>, then <c>ind.wf.n.k.R</c>,
+/// <c>ind.wf.granted.k.R</c> per category k and requester R.
 /// </summary>
 public sealed class IndustrySystem : ITickSystem
 {
@@ -43,12 +40,13 @@ public sealed class IndustrySystem : ITickSystem
     private readonly int _c, _n, _sites;
 
     private readonly LongColumn[] _h, _m;
-    private readonly LongColumn[] _x, _v, _u, _y;
+    private readonly LongColumn[] _x, _v, _y;
     private readonly LongColumn[] _wfN, _wfGranted;
 
     // Scratch, rewritten every step; site s only by the chunk that owns it.
     private readonly ProcessYield[] _yieldTrace;
     private readonly CultureStep[] _cultureTrace;
+    private readonly ToolingStep[] _toolingTrace;
     private readonly CultureProcess[][] _procScratch;
     private readonly CultureSpill[][] _spillScratch;
     private readonly List<IndustryMailbox> _mailboxes = new();
@@ -98,14 +96,12 @@ public sealed class IndustrySystem : ITickSystem
         }
         _x = new LongColumn[_n];
         _v = new LongColumn[_n];
-        _u = new LongColumn[_n];
         _y = new LongColumn[_n];
         foreach (int r in layout.Order)
         {
             int number = layout.Number[r];
             _x[r] = table.AddLong($"ind.X.{number}");
             _v[r] = table.AddLong($"ind.v.{number}");
-            _u[r] = table.AddLong($"ind.u.{number}");
             _y[r] = table.AddLong($"ind.y.{number}");
         }
         int wf = layout.WorkforceCategories * layout.Requesters;
@@ -142,6 +138,7 @@ public sealed class IndustrySystem : ITickSystem
 
         _yieldTrace = new ProcessYield[_sites * _n];
         _cultureTrace = new CultureStep[_sites * _c * Dims3.Count];
+        _toolingTrace = new ToolingStep[_sites * _c * Dims3.Count];
         _procScratch = new CultureProcess[chunkCount][];
         _spillScratch = new CultureSpill[chunkCount][];
         for (int k = 0; k < chunkCount; k++)
@@ -157,9 +154,14 @@ public sealed class IndustrySystem : ITickSystem
 
     public IndustryLayout Layout => _l;
 
-    /// <summary>A mailbox for one sending system with <paramref name="senderChunks"/> chunks; create before the run.</summary>
-    public IndustryMailbox CreateMailbox(int senderChunks)
+    /// <summary>
+    /// A mailbox for one sending system with <paramref name="senderChunks"/> chunks; create before the run. The
+    /// sender must run on this system's cadence, otherwise its messages would wait for a later merge.
+    /// </summary>
+    public IndustryMailbox CreateMailbox(int senderChunks, Cadence senderCadence)
     {
+        if (senderCadence != Cadence)
+            throw new ArgumentException($"A sender with cadence {senderCadence} cannot post to the {Cadence} capability merge.", nameof(senderCadence));
         var box = new IndustryMailbox(senderChunks);
         _mailboxes.Add(box);
         return box;
@@ -176,9 +178,6 @@ public sealed class IndustrySystem : ITickSystem
     /// <summary><c>proc_v</c>: labour hours of the last month step (0 without a report).</summary>
     public Fx6 ProcV(int site, int processRow) => Fx6.FromRaw(_v[processRow].Current[site]);
 
-    /// <summary>Units reported in the last month step (alloy chain output, spec §1.4).</summary>
-    public Fx6 ProcUnits(int site, int processRow) => Fx6.FromRaw(_u[processRow].Current[site]);
-
     /// <summary><c>proc_yield</c>: the yield output ran at in the last month step (0 for an unknown process).</summary>
     public Fx6 ProcYield(int site, int processRow) => Fx6.FromRaw(_y[processRow].Current[site]);
 
@@ -186,6 +185,28 @@ public sealed class IndustrySystem : ITickSystem
 
     /// <summary><c>granted</c> of the request made in the last month step (contract §4.6: visible at t+1).</summary>
     public long Granted(int site, int category, int requester) => _wfGranted[category * _l.Requesters + requester].Current[site];
+
+    /// <summary>
+    /// <c>act[site, c]</c> (spec §3.5 A26): <c>min(1, Σ granted / Σ n)</c> over the skilled requests of the cluster
+    /// in the snapshot (requester_id mod C = cluster), 1 without requests.
+    /// </summary>
+    public Fx6 Act(int site, int cluster)
+    {
+        long n = 0, g = 0;
+        for (int q = cluster; q < _l.Requesters; q += _c)
+        {
+            n += Requested(site, _l.SkilledCategory, q);
+            g += Granted(site, _l.SkilledCategory, q);
+        }
+        return IndustryMath.Act(n, g);
+    }
+
+    /// <summary>
+    /// <c>capability_tier(site, cluster)</c> (contract §5, spec §3.5 A25): min of <c>min(H, M)</c> over the
+    /// cluster's key dimensions; null for a cluster without PRC. UI only, no dynamics read it.
+    /// </summary>
+    public Fx6? CapabilityTier(int site, int cluster) =>
+        IndustryMath.CapabilityTier(Cells(_h, site, cluster), Cells(_m, site, cluster), _l.ClusterKeyDims[cluster]);
 
     /// <summary>
     /// <c>yield_p</c> of month <paramref name="month"/> from the snapshot, whether or not the owner knows the
@@ -264,21 +285,16 @@ public sealed class IndustrySystem : ITickSystem
         return sum;
     }
 
-    /// <summary>
-    /// Alloy of month <paramref name="month"/> (spec §1.4): the grade is the best melt that reported output in
-    /// month t−1; supply = <c>min(its units, alloy_cap·(1 − deficit))</c>.
-    /// </summary>
+    /// <summary>Alloy of month <paramref name="month"/> (spec §1.4, §3.5 A23) from the snapshot yields of the melts.</summary>
     public AlloyAvailability Alloy(int site, long month)
     {
-        Fx6 deficit = _inputs.AlloyDeficit(site, month);
-        for (int i = _l.AlloyGrades.Length - 1; i >= 0; i--)
+        Span<AlloyMelt> melts = stackalloc AlloyMelt[_l.AlloyGrades.Length];
+        for (int i = 0; i < melts.Length; i++)
         {
             int r = _l.AlloyGrades[i];
-            if (_u[r].Current[site] > 0)
-                return new AlloyAvailability(_l.Number[r], IndustryMath.AlloySupply(ProcUnits(site, r), _inputs.AlloyCap(site, month), deficit),
-                    deficit > Fx6.Zero);
+            melts[i] = new AlloyMelt(_l.Number[r], _inputs.KnowsProcess(site, r, month), Yield(site, r, month).Yield);
         }
-        return new AlloyAvailability(-1, Fx6.Zero, deficit > Fx6.Zero);
+        return IndustryMath.AlloySupply(_inputs.AlloyCap(site, month), _inputs.AlloyDeficit(site, month), melts);
     }
 
     /// <summary><c>line_capacity(site, prc)</c> limited by alloy (spec §1.4): supply / <c>alloy_kg[gen]</c>.</summary>
@@ -293,6 +309,9 @@ public sealed class IndustrySystem : ITickSystem
     /// <summary>Diagnostics only: the <c>culture_H</c> step of a cell in the last step (Full mode).</summary>
     public CultureStep LastCulture(int site, int cluster, Dimension dim) => _cultureTrace[(site * _c + cluster) * Dims3.Count + (int)dim];
 
+    /// <summary>Diagnostics only: the <c>tooling_M</c> step of a cell in the last step (Full mode).</summary>
+    public ToolingStep LastTooling(int site, int cluster, Dimension dim) => _toolingTrace[(site * _c + cluster) * Dims3.Count + (int)dim];
+
     /// <summary>Diagnostics only: <c>report_output</c> applied in the last merge, in (site, prc) order.</summary>
     public IReadOnlyList<OutputReport> LastReports => _lastReports;
 
@@ -303,24 +322,28 @@ public sealed class IndustrySystem : ITickSystem
         long t = MonthOf(context);
         for (int s = rowStart; s < rowEnd; s++)
         {
+            int mechTier = 0;
             for (int r = 0; r < _n; r++)
             {
                 ProcessYield y = Yield(s, r, t);
                 if (y.Yield < Fx6.Zero || y.Yield > Fx6.One)
                     throw new IndustryInvariantException(t, s, $"yield of process {_l.Number[r]} is {y.Yield}, outside [0; 1] (I3)");
                 _yieldTrace[s * _n + r] = y;
-                _y[r].Next[s] = _inputs.KnowsProcess(s, r, t) ? y.Yield.Raw : 0;
+                bool admitted = _inputs.KnowsProcess(s, r, t) && y.Yield > Fx6.Zero;
+                _y[r].Next[s] = admitted ? y.Yield.Raw : 0;
+                if (admitted && _l.Clusters[_l.ClusterIndex[r]] == Cluster.MECH && _l.Tier[r] > mechTier)
+                    mechTier = _l.Tier[r];
             }
             if (_mode != IndustryMode.Full)
                 continue; // L_C, L_C0: culture_H and tooling_M are not used (§6.1)
             bool qp = _inputs.QualityProgramme(s, t);
             for (int c = 0; c < _c; c++)
             {
-                Fx6 act = _inputs.Act(s, c, t), w = _inputs.W(s, c, t);
+                Fx6 act = Act(s, c), w = _inputs.W(s, c, t);
                 for (int d = 0; d < Dims3.Count; d++)
                 {
                     StepCulture(chunk, s, c, d, t, act, w, qp);
-                    StepTooling(s, c, d, t);
+                    StepTooling(s, c, d, t, mechTier);
                 }
             }
         }
@@ -383,20 +406,21 @@ public sealed class IndustrySystem : ITickSystem
         _h[c * Dims3.Count + d].Next[s] = step.HNew.Raw;
     }
 
-    private void StepTooling(int s, int c, int d, long t)
+    private void StepTooling(int s, int c, int d, long t, int mechTier)
     {
         Fx6 invest = _inputs.ToolingInvest(s, c, (Dimension)d, t);
         if (invest < Fx6.Zero)
             throw new IndustryInvariantException(t, s, $"negative tooling investment {invest}");
-        Fx6 m = Cell(_m, s, c, d);
-        _m[c * Dims3.Count + d].Next[s] = IndustryMath.Tooling(m, invest, IndustryMath.CostM(m, _p), _p.DeltaM).Raw;
+        ToolingStep step = IndustryMath.Tooling(Cell(_m, s, c, d), invest, mechTier, _p);
+        _toolingTrace[(s * _c + c) * Dims3.Count + d] = step;
+        _m[c * Dims3.Count + d].Next[s] = step.MNew.Raw;
     }
 
     private Fx6 ControlUnitCost(int site, int processRow, long month)
     {
         long since = _inputs.KnownSince(site, processRow, month);
         CapabilityCurve curve = _curves[_l.Tier[processRow] - 3];
-        // An unknown process has no t_known; its price is the curve start (the set is not admitted anyway).
+        // An unknown process has no t_known; its price is the curve at τ = 0 (spec §3.5 A24).
         return curve.UnitCostAt(since < 0 ? 0 : month - since);
     }
 
@@ -435,20 +459,18 @@ public sealed class IndustrySystem : ITickSystem
                     OutputReport rep = _lastReports[k++];
                     _x[r].Next[s] = (ProcX(s, r) + rep.Units).Raw;
                     _v[r].Next[s] = rep.LabourHours.Raw;
-                    _u[r].Next[s] = rep.Units.Raw;
                 }
                 else
                 {
                     _x[r].Next[s] = IndustryMath.Forget(ProcX(s, r), _p.DeltaX).Raw;
                     _v[r].Next[s] = 0;
-                    _u[r].Next[s] = 0;
                 }
             }
         }
     }
 
     // reserve_workforce (contract §4.6): by (site, cat, requester_id); granted is state, visible at t+1. A requester
-    // without a request this month has n = granted = 0.
+    // without a request this month has n = granted = 0. I6 (granted ≤ n, Σ granted ≤ avail) holds by SplitWorkforce.
     private void MergeWorkforce(long t)
     {
         for (int i = 0; i < _wfN.Length; i++)
@@ -473,27 +495,21 @@ public sealed class IndustrySystem : ITickSystem
             int i1 = i0;
             while (i1 < _requests.Count && _requests[i1].Site == head.Site && _requests[i1].Category == head.Category)
             {
-                if (i1 > i0 && _requests[i1].RequesterId == _requests[i1 - 1].RequesterId)
-                    throw new ArgumentException($"Requester {head.RequesterId} asked twice for category {head.Category} at site {head.Site}.");
-                n[i1 - i0] = _requests[i1].N;
+                WorkforceRequest q = _requests[i1];
+                if (i1 > i0 && q.RequesterId == _requests[i1 - 1].RequesterId)
+                    throw new ArgumentException($"Requester {q.RequesterId} asked twice for category {q.Category} at site {q.Site}.");
+                n[i1 - i0] = q.N;
                 i1++;
             }
             int count = i1 - i0;
-            long avail = _inputs.WorkforceAvailable(head.Site, head.Category, t);
-            IndustryMath.SplitWorkforce(avail, n[..count], granted[..count]);
-            long sum = 0;
+            IndustryMath.SplitWorkforce(_inputs.WorkforceAvailable(head.Site, head.Category, t), n[..count], granted[..count]);
             for (int j = 0; j < count; j++)
             {
                 WorkforceRequest q = _requests[i0 + j];
                 int col = q.Category * _l.Requesters + q.RequesterId;
                 _wfN[col].Next[q.Site] = q.N;
                 _wfGranted[col].Next[q.Site] = granted[j];
-                sum += granted[j];
-                if (granted[j] > q.N)
-                    throw new IndustryInvariantException(t, q.Site, $"granted {granted[j]} > n {q.N} (I6)");
             }
-            if (sum > Math.Max(avail, 0))
-                throw new IndustryInvariantException(t, head.Site, $"granted {sum} > available {avail} (I6)");
             i0 = i1;
         }
     }

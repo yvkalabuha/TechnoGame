@@ -13,7 +13,7 @@ public class IndustrySystemTests
 
     private static Fx6 D(int units) => Fx6.FromInt(units);
 
-    // ---- rig: 3 sites (owners 0, 0, 1), MET melts 39/40/41 and one CHEM process 7
+    // ---- rig: 3 sites (owners 0, 0, 1), MET melts 39/40/41, one CHEM process 7, one MECH process 48 (tier 4)
 
     private sealed class Inputs : IIndustryInputs
     {
@@ -27,8 +27,6 @@ public class IndustrySystemTests
 
         public bool KnowsProcess(int siteRow, int processRow, long month) => AllKnown && processRow != UnknownProcessRow;
 
-        public Fx6 Act(int siteRow, int cluster, long month) => Fx6.One;
-
         public Fx6 W(int siteRow, int cluster, long month) => Fx6.One;
 
         public Fx6 Hcap(int siteRow, Dimension dim, long month) => D(5);
@@ -36,6 +34,8 @@ public class IndustrySystemTests
         public bool QualityProgramme(int siteRow, long month) => Qp;
 
         public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month) => Invest;
+
+        public Fx6 LicenceShare(int siteRow, int processRow, long month) => Fx6.Zero;
 
         public long WorkforceAvailable(int siteRow, int category, long month) => Avail;
 
@@ -75,17 +75,18 @@ public class IndustrySystemTests
     {
         public Rig(IndustryMode mode = IndustryMode.Full, ImmutableArray<CapabilityCurve> curves = default, IndustryParams? p = null, int threads = 1)
         {
-            Layout = IndustryLayout.Create([Cluster.MET, Cluster.CHEM],
+            Layout = IndustryLayout.Create([Cluster.MET, Cluster.CHEM, Cluster.MECH],
             [
                 new IndustryProcessSpec(39, Cluster.MET, 0, 4, new Dims3(Fx6.Zero, D(4), F(3_500_000))),
                 new IndustryProcessSpec(40, Cluster.MET, 0, 4, new Dims3(Fx6.Zero, F(4_500_000), D(4))),
                 new IndustryProcessSpec(41, Cluster.MET, 0, 5, new Dims3(Fx6.Zero, D(5), F(4_500_000))),
                 new IndustryProcessSpec(7, Cluster.CHEM, 1, 3, new Dims3(D(3), D(3), F(2_500_000))),
-            ], [0, 0, 1], workforceCategories: 2, requesters: 3, alloyGrades: IndustryLayout.SliceAlloyGrades);
+                new IndustryProcessSpec(48, Cluster.MECH, 2, 4, new Dims3(D(4), Fx6.Zero, F(3_500_000))),
+            ], [0, 0, 1], workforceCategories: 2, skilledCategory: 1, requesters: 6, alloyGrades: IndustryLayout.SliceAlloyGrades);
             Start = new IndustryStart(Layout);
             for (int s = 0; s < 3; s++)
             {
-                for (int c = 0; c < 2; c++)
+                for (int c = 0; c < 3; c++)
                 {
                     Fx6[] h = [D(4), F(3_800_000), F(3_700_000)];
                     for (int d = 0; d < 3; d++)
@@ -94,14 +95,14 @@ public class IndustrySystemTests
                         Start.M[Start.Cell(s, c, d)] = h[d] + F(200_000);
                     }
                 }
-                for (int r = 0; r < 4; r++)
-                    Start.X[s * 4 + r] = D(1000);
+                for (int r = 0; r < Layout.ProcessCount; r++)
+                    Start.X[s * Layout.ProcessCount + r] = D(1000);
             }
             Table = new Table(3);
             Calendar = new TickCalendar(new CivilDate(1945, 9, 1));
             P = p ?? new IndustryParams();
             System = new IndustrySystem(Table, Layout, Start, P, In, TickRunner.ChunkCountFor(3, 1), mode, curves);
-            Sender = new Sender(System.CreateMailbox(3));
+            Sender = new Sender(System.CreateMailbox(3, Cadence.Monthly));
             Runner = new TickRunner(Table, 1, [System, Sender], 1, threads, Calendar);
         }
 
@@ -136,7 +137,6 @@ public class IndustrySystemTests
         IndustrySystem s = rig.System;
         Assert.Equal(D(1005), s.ProcX(1, rig.Row(7)));
         Assert.Equal(D(250), s.ProcV(1, rig.Row(7)));
-        Assert.Equal(D(5), s.ProcUnits(1, rig.Row(7)));
         // No report: proc_v = 0 and X − δ_X·X (contract §4.0 p. 6).
         Assert.Equal(D(1000) - rig.P.DeltaX * D(1000), s.ProcX(0, rig.Row(7)));
         Assert.Equal(Fx6.Zero, s.ProcV(0, rig.Row(7)));
@@ -231,26 +231,42 @@ public class IndustrySystemTests
     // ---- tooling_M (spec §3.5 A11)
 
     [Fact]
-    public void CostM_ByFloorOfMClampedTo3To5()
+    public void CostM_DerivedFromCm_ByFloorOfMClampedTo3To5()
     {
         var p = new IndustryParams();
-        Assert.Equal(F(100_000), IndustryMath.CostM(F(2_000_000), p));
-        Assert.Equal(F(100_000), IndustryMath.CostM(F(3_999_999), p));
-        Assert.Equal(F(200_000), IndustryMath.CostM(D(4), p));
-        Assert.Equal(F(400_000), IndustryMath.CostM(F(5_000_000), p));
-        Assert.Equal(F(400_000), IndustryMath.CostM(D(9), p));
+        Assert.Equal([3, 3, 4, 5, 5], new[] { F(2_000_000), F(3_999_999), D(4), D(5), D(9) }.Select(IndustryMath.CostTier));
+        Assert.Equal([F(100_000), F(200_000), F(400_000)], new[] { 3, 4, 5 }.Select(p.CostM));
+        Assert.Equal([F(30_000), F(60_000), F(120_000)], new[] { 3, 4, 5 }.Select((new IndustryParams { CM = F(30_000) }).CostM));
+        Assert.Throws<ArgumentException>(() => new IndustryParams { CM = Fx6.Zero }.Validate());
     }
 
     [Fact]
-    public void Tooling_InvestOverCostMinusWear()
+    public void Tooling_InvestOverCostMinusWear_UnderMechCap()
     {
         var rig = new Rig();
         rig.In.Invest = F(10_000);
         rig.RunThroughMonth(0);
-        // MET precision M = 4.2 → k = 4, cost 0.2: 4.2 + 0.05 − 0.005·4.2 = 4.229.
+        // MECH 48 (tier 4) is admitted: M_cap = 5. MET precision M = 4.2 → k = 4, cost 0.2: 4.2 − 0.021 + 0.05 = 4.229.
         Assert.Equal(F(4_229_000), rig.System.ToolingM(0, 0, Dimension.Precision));
-        // quality_control M = 3.9 → k = 3, cost 0.1: 3.9 + 0.1 − 0.0195 = 3.9805.
+        Assert.Equal(D(5), rig.System.LastTooling(0, 0, Dimension.Precision).MCap);
+        // quality_control M = 3.9 → k = 3, cost 0.1: 3.9 − 0.0195 + 0.1 = 3.9805.
         Assert.Equal(F(3_980_500), rig.System.ToolingM(0, 0, Dimension.QualityControl));
+    }
+
+    [Fact]
+    public void Tooling_WithoutAdmittedMech_CapIsFour_GainCutWearKept()
+    {
+        // A22: no admitted MECH process → M_cap = 1 + 3 = 4. M = 4.2 above the cap only wears; 3.9 grows to the cap.
+        var rig = new Rig();
+        rig.In.Invest = F(10_000);
+        rig.In.UnknownProcessRow = rig.Row(48);
+        rig.RunThroughMonth(0);
+        Assert.Equal(D(4), rig.System.LastTooling(0, 0, Dimension.Precision).MCap);
+        Assert.Equal(F(4_179_000), rig.System.ToolingM(0, 0, Dimension.Precision));
+        Assert.Equal(F(3_980_500), rig.System.ToolingM(0, 0, Dimension.QualityControl));
+        rig.In.Invest = F(50_000);
+        rig.RunThroughMonth(1);
+        Assert.Equal(D(4), rig.System.ToolingM(0, 0, Dimension.QualityControl)); // 3.9606 + 0.5 capped at 4
     }
 
     // ---- culture_H inputs
@@ -284,24 +300,62 @@ public class IndustrySystemTests
         Assert.False(rig.System.WorldLead(0, p39)); // site 1 has the same owner as site 0
     }
 
-    // ---- alloy (spec §1.4)
+    // ---- alloy (spec §1.4, §3.5 A23)
 
     [Fact]
-    public void Alloy_BestProducedGrade_SupplyCappedAndCutByDeficit()
+    public void Alloy_AdmittedMeltWithHighestYield_SupplyIsCapTimesYield_NoReportNeeded()
     {
         var rig = new Rig();
         rig.In.Cap = D(30);
-        rig.Sender.Reports = _ => [new OutputReport(0, 39, D(50), D(1)), new OutputReport(0, 40, D(20), D(1))];
-        rig.RunThroughMonth(0);
-        AlloyAvailability a = rig.System.Alloy(0, 1);
-        Assert.Equal(new AlloyAvailability(40, D(20), false), a);
+        IndustrySystem s = rig.System;
+        Fx6 y39 = s.Yield(0, rig.Row(39), 0).Yield, y40 = s.Yield(0, rig.Row(40), 0).Yield;
+        Assert.True(y39 > y40 && y40 > Fx6.Zero);
+        Assert.Equal(Fx6.Zero, s.Yield(0, rig.Row(41), 0).Yield); // not admitted: yield 0
+        Assert.Equal(new AlloyAvailability(39, D(30) * y39, false), s.Alloy(0, 0));
         rig.In.Deficit = F(500_000);
-        Assert.Equal(new AlloyAvailability(40, D(15), true), rig.System.Alloy(0, 1));
-        Assert.Equal(D(5), rig.System.LineCapacity(0, D(3), 1));
-        Assert.Equal(-1, rig.System.Alloy(2, 1).GradeNumber);
+        Assert.Equal(new AlloyAvailability(39, D(15) * y39, true), s.Alloy(0, 0));
+        Assert.Equal(D(15) * y39 / D(3), s.LineCapacity(0, D(3), 0));
+        rig.In.UnknownProcessRow = rig.Row(39);
+        Assert.Equal(40, s.Alloy(0, 0).GradeNumber);
+        rig.In.AllKnown = false;
+        Assert.Equal(new AlloyAvailability(-1, Fx6.Zero, true), s.Alloy(0, 0));
         var granted = new Fx6[3];
         IndustryMath.SplitAlloy(D(5), [D(2), D(4), D(1)], granted);
         Assert.Equal([D(2), D(3), Fx6.Zero], granted);
+    }
+
+    // ---- act (spec §3.5 A26), capability_tier (A25)
+
+    [Fact]
+    public void Act_FromSkilledGrantsOfTheCluster_VisibleNextMonth()
+    {
+        var rig = new Rig();
+        rig.In.Avail = 6;
+        // C = 3 clusters: requester 0 and 3 → MET, 1 → CHEM; category 0 (engineer) does not count.
+        rig.Sender.Requests = t => t == 0
+            ? [new WorkforceRequest(0, 1, 0, 6), new WorkforceRequest(0, 1, 3, 2), new WorkforceRequest(0, 1, 1, 1), new WorkforceRequest(0, 0, 2, 50)]
+            : [];
+        rig.RunThroughMonth(0);
+        // Skilled pool short: 9 asked for 6 → floors 4 (id 0), 0 (id 1), 1 (id 3), rest 1 to id 0 → 5, 0, 1.
+        Assert.Equal((5L, 0L, 1L), (rig.System.Granted(0, 1, 0), rig.System.Granted(0, 1, 1), rig.System.Granted(0, 1, 3)));
+        Assert.Equal(F(750_000), rig.System.Act(0, 0)); // MET: (5 + 1) / (6 + 2)
+        Assert.Equal(Fx6.Zero, rig.System.Act(0, 1));  // CHEM: 0 / 1
+        Assert.Equal(Fx6.One, rig.System.Act(0, 2)); // MECH: no request
+        Assert.Equal(Fx6.One, rig.System.Act(1, 0)); // other site
+        rig.RunThroughMonth(1);
+        Assert.Equal(Fx6.One, rig.System.Act(0, 0)); // month 1 made no request
+    }
+
+    [Fact]
+    public void CapabilityTier_MinOverClusterKeyDims()
+    {
+        var rig = new Rig();
+        // MET: 39 (tier 4) purity; 40 (tier 4) purity, qc; 41 (tier 5) purity → {purity, qc}.
+        Assert.Equal(0b110, rig.Layout.ClusterKeyDims[0]);
+        Assert.Equal(0b011, rig.Layout.ClusterKeyDims[1]); // CHEM 7 (tier 3): precision 3, purity 3; qc 2.5 < 3
+        Assert.Equal(0b001, rig.Layout.ClusterKeyDims[2]); // MECH 48 (tier 4): precision 4
+        Assert.Null(IndustryMath.CapabilityTier(default, default, 0)); // cluster without PRC
+        Assert.Equal(F(3_700_000), rig.System.CapabilityTier(0, 0)); // min over purity 3.8, qc 3.7 (H ≤ M)
     }
 
     // ---- controls (spec §6.1)
@@ -365,12 +419,17 @@ public class IndustrySystemTests
     }
 
     [Fact]
-    public void Layout_RejectsUnknownClusterAndDuplicateNumber()
+    public void Layout_RejectsUnknownClusterDuplicateNumberNoKeyDimAndBadSkilled()
     {
         Assert.Throws<ArgumentException>(() => IndustryLayout.Create([Cluster.MET],
-            [new IndustryProcessSpec(1, Cluster.CHEM, 0, 3, default)], [0], 0, 0));
+            [new IndustryProcessSpec(1, Cluster.CHEM, 0, 3, new Dims3(D(3), Fx6.Zero, Fx6.Zero))], [0], 1, 0, 0));
         Assert.Throws<ArgumentException>(() => IndustryLayout.Create([Cluster.MET],
-            [new IndustryProcessSpec(1, Cluster.MET, 0, 3, default), new IndustryProcessSpec(1, Cluster.MET, 0, 3, default)], [0], 0, 0));
+            [new IndustryProcessSpec(1, Cluster.MET, 0, 3, new Dims3(D(3), Fx6.Zero, Fx6.Zero)), new IndustryProcessSpec(1, Cluster.MET, 0, 3, new Dims3(D(3), Fx6.Zero, Fx6.Zero))], [0], 1, 0, 0));
+        // A25: a process needs a key dimension (r_d ≥ tier).
+        Assert.Throws<ArgumentException>(() => IndustryLayout.Create([Cluster.MET],
+            [new IndustryProcessSpec(1, Cluster.MET, 0, 4, new Dims3(F(3_500_000), Fx6.Zero, Fx6.Zero))], [0], 1, 0, 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => IndustryLayout.Create([Cluster.MET],
+            [new IndustryProcessSpec(1, Cluster.MET, 0, 3, new Dims3(D(3), Fx6.Zero, Fx6.Zero))], [0], 1, 1, 0));
     }
 
     // ---- slice data
@@ -388,7 +447,8 @@ public class IndustrySystemTests
         IndustryStart st = IndustryStart.FromScenario(sc, data.Nodes, l, p);
         int usa = sc.ActorIndex("USA"), met = l.Clusters.IndexOf(Cluster.MET);
         Assert.Equal(sc.CultureOf(usa, Cluster.MET, Dimension.Purity), st.H[st.Cell(usa, met, 1)]);
-        Assert.Equal(sc.ToolingOf(usa, Cluster.MET), st.M[st.Cell(usa, met, 2)]);
+        Assert.Equal(sc.ToolingOf(usa, Cluster.MET, Dimension.QualityControl), st.M[st.Cell(usa, met, 2)]);
+        Assert.Equal(F(3_900_000), st.M[st.Cell(usa, met, 2)]); // A20: H_qc 3.7 + 0.2, per cell
         int melt = l.RowOf(39); // nicr_alloy_melt: mastered by USA, tier 4 → 3·800
         Assert.Equal(D(2400), st.X[usa * l.ProcessCount + melt]);
         Assert.Equal(Fx6.Zero, st.X[sc.ActorIndex("SWE") * l.ProcessCount + melt]);

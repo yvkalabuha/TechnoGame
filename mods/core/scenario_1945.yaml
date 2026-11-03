@@ -41,7 +41,11 @@ define:
           CHEM: {precision: 4.00, purity: 3.80, quality_control: 3.70}
           MECH: {precision: 4.00, purity: 3.80, quality_control: 3.70}
           AERO: {precision: 4.00, purity: 3.80, quality_control: 3.70}
-        tooling_m: {MET: 4.20, CHEM: 4.20, MECH: 4.20, AERO: 4.20}
+        tooling_m:
+          MET: {precision: 4.20, purity: 4.00, quality_control: 3.90}
+          CHEM: {precision: 4.20, purity: 4.00, quality_control: 3.90}
+          MECH: {precision: 4.20, purity: 4.00, quality_control: 3.90}
+          AERO: {precision: 4.20, purity: 4.00, quality_control: 3.90}
         hcap: 5.50
         w: 1.0
         known: [s7.fnd.brayton_cycle, s8.fnd.boundary_layer, s8.fnd.compressible_flow, s5.fnd.precipitation_hardening, s8.prn.gas_turbine, s8.prn.swept_wing, s8.prn.afterburning, s8.eng.turbojet_g1, s8.eng.straight_wing_jet_airframe, s5.cmp.heat_resistant_alloy, s5.cmp.aluminium_alloy_sheet, s8.cmp.turbine_blade_forged, s5.prc.light_alloy_rolling, s5.prc.nicr_alloy_melt, s5.prc.alloying_element_refining, s5.prc.high_purity_nickel_refining, s6.prc.precision_gear_bearing, s6.prc.centrifugal_impeller_machining, s6.prc.precision_blade_forging, s8.prc.stressed_skin_assembly, s8.prc.jet_engine_assembly_test, s8.app.jet_fighter_g1]
@@ -64,7 +68,11 @@ define:
           CHEM: {precision: 3.82, purity: 3.62, quality_control: 3.52}
           MECH: {precision: 3.82, purity: 3.62, quality_control: 3.52}
           AERO: {precision: 3.82, purity: 3.62, quality_control: 3.52}
-        tooling_m: {MET: 4.02, CHEM: 4.02, MECH: 4.02, AERO: 4.02}
+        tooling_m:
+          MET: {precision: 4.02, purity: 3.82, quality_control: 3.72}
+          CHEM: {precision: 4.02, purity: 3.82, quality_control: 3.72}
+          MECH: {precision: 4.02, purity: 3.82, quality_control: 3.72}
+          AERO: {precision: 4.02, purity: 3.82, quality_control: 3.72}
         hcap: 5.32
         w: 1.0
         known: [s7.fnd.brayton_cycle, s8.fnd.boundary_layer, s8.fnd.compressible_flow, s5.fnd.precipitation_hardening, s8.prn.gas_turbine, s8.prn.swept_wing, s8.prn.afterburning, s8.eng.turbojet_g1, s8.eng.straight_wing_jet_airframe, s8.eng.turbojet_g2, s5.cmp.heat_resistant_alloy, s5.cmp.aluminium_alloy_sheet, s8.cmp.turbine_blade_forged, s5.prc.light_alloy_rolling, s5.prc.nicr_alloy_melt, s5.prc.alloying_element_refining, s5.prc.high_purity_nickel_refining, s6.prc.precision_gear_bearing, s6.prc.centrifugal_impeller_machining, s6.prc.precision_blade_forging, s8.prc.stressed_skin_assembly, s8.prc.jet_engine_assembly_test, s8.app.jet_fighter_g1]
@@ -88,8 +96,12 @@ define:
           CHEM: {precision: 3.20, purity: 3.00, quality_control: 2.90}
           MECH: {precision: 3.20, purity: 3.00, quality_control: 2.90}
           AERO: {precision: 3.20, purity: 3.00, quality_control: 2.90}
-        # +0.2 in MECH and AERO: dismantled aircraft plants (R-M, F-SC2).
-        tooling_m: {MET: 3.40, CHEM: 3.40, MECH: 3.60, AERO: 3.60}
+        # R-M per cell (spec §3.5 A20): M = H + 0.2; +0.2 more in MECH and AERO (dismantled aircraft plants, F-SC2).
+        tooling_m:
+          MET: {precision: 3.40, purity: 3.20, quality_control: 3.10}
+          CHEM: {precision: 3.40, purity: 3.20, quality_control: 3.10}
+          MECH: {precision: 3.60, purity: 3.40, quality_control: 3.30}
+          AERO: {precision: 3.60, purity: 3.40, quality_control: 3.30}
         hcap: 4.70
         w: 1.0
         # s8.prn.swept_wing is estimated without a source (F-SC1); jet_fighter_g1 is not known (no alloy).
@@ -112,7 +124,11 @@ define:
           CHEM: {precision: 3.34, purity: 3.14, quality_control: 3.04}
           MECH: {precision: 3.34, purity: 3.14, quality_control: 3.04}
           AERO: {precision: 3.34, purity: 3.14, quality_control: 3.04}
-        tooling_m: {MET: 3.54, CHEM: 3.54, MECH: 3.54, AERO: 3.54}
+        tooling_m:
+          MET: {precision: 3.54, purity: 3.34, quality_control: 3.24}
+          CHEM: {precision: 3.54, purity: 3.34, quality_control: 3.24}
+          MECH: {precision: 3.54, purity: 3.34, quality_control: 3.24}
+          AERO: {precision: 3.54, purity: 3.34, quality_control: 3.24}
         hcap: 4.84
         w: 1.0
         known: [s7.fnd.brayton_cycle, s8.fnd.boundary_layer, s8.fnd.compressible_flow, s5.fnd.precipitation_hardening, s8.prn.gas_turbine, s8.eng.turbojet_g1, s5.cmp.aluminium_alloy_sheet, s5.prc.light_alloy_rolling, s5.prc.alloying_element_refining, s6.prc.precision_gear_bearing, s8.prc.stressed_skin_assembly]
@@ -134,7 +150,11 @@ define:
           CHEM: {precision: 3.67, purity: 3.47, quality_control: 3.37}
           MECH: {precision: 3.67, purity: 3.47, quality_control: 3.37}
           AERO: {precision: 3.67, purity: 3.47, quality_control: 3.37}
-        tooling_m: {MET: 3.87, CHEM: 3.87, MECH: 3.87, AERO: 3.87}
+        tooling_m:
+          MET: {precision: 3.87, purity: 3.67, quality_control: 3.57}
+          CHEM: {precision: 3.87, purity: 3.67, quality_control: 3.57}
+          MECH: {precision: 3.87, purity: 3.67, quality_control: 3.57}
+          AERO: {precision: 3.87, purity: 3.67, quality_control: 3.57}
         hcap: 5.17
         w: 1.0
         known: [s7.fnd.brayton_cycle, s8.fnd.boundary_layer, s8.fnd.compressible_flow, s5.fnd.precipitation_hardening, s8.prn.gas_turbine, s5.cmp.aluminium_alloy_sheet, s5.prc.light_alloy_rolling, s5.prc.alloying_element_refining, s6.prc.precision_gear_bearing, s8.prc.stressed_skin_assembly]

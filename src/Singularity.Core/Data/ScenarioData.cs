@@ -7,7 +7,7 @@ namespace Singularity.Core.Data;
 /// One start scenario (slice spec §1.1, LAYER_CONTRACT §9). Actors form an SoA table in data
 /// order: the order is the actor index of RNG keys (spec §3.5 A7), so it is never re-sorted.
 /// Per-cluster and per-discipline values are flattened: <c>CultureH[(a·C + c)·3 + d]</c>,
-/// <c>ToolingM[a·C + c]</c>, <c>KD[a·D + k]</c>, where c indexes <see cref="Clusters"/>,
+/// <c>ToolingM[(a·C + c)·3 + d]</c>, <c>KD[a·D + k]</c>, where c indexes <see cref="Clusters"/>,
 /// k indexes <see cref="Disciplines"/> and d is <see cref="Dimension"/>.
 /// <see cref="Hash"/> is the scenario_hash of spec §1.1: SHA-256 of the canonical form below.
 /// </summary>
@@ -82,7 +82,8 @@ public sealed partial class ScenarioData
     public Fx6 CultureOf(int actor, Cluster cluster, Dimension dim) =>
         CultureH[(actor * Clusters.Length + ClusterIndex(cluster)) * 3 + (int)dim];
 
-    public Fx6 ToolingOf(int actor, Cluster cluster) => ToolingM[actor * Clusters.Length + ClusterIndex(cluster)];
+    public Fx6 ToolingOf(int actor, Cluster cluster, Dimension dim) =>
+        ToolingM[(actor * Clusters.Length + ClusterIndex(cluster)) * 3 + (int)dim];
 
     public Fx6 KDOf(int actor, Discipline discipline)
     {

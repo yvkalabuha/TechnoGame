@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text.Json;
 using Singularity.Core.Data;
 using Singularity.Core.Industry;
@@ -132,6 +133,129 @@ public class IndustryFormulaTests
             cases++;
         }
         Assert.Equal(3, cases);
+    }
+
+    [Fact]
+    public void ToolingM_MatchesReference()
+    {
+        // Spec §3.5 A11, A21, A22: cost_M from c_M, M_cap = 1 + max(3, mech_tier).
+        int cases = 0;
+        foreach (JsonElement c in F.GetProperty("tooling_M").EnumerateArray())
+        {
+            JsonElement i = c.GetProperty("input"), o = c.GetProperty("output");
+            var p = new IndustryParams { CM = R(i, "c_M"), DeltaM = R(i, "delta_M") };
+            JsonElement mt = i.GetProperty("mech_tier");
+            ToolingStep t = IndustryMath.Tooling(R(i, "M"), R(i, "invest"), mt.ValueKind == JsonValueKind.Null ? 0 : mt.GetInt32(), p);
+            Assert.Equal(o.GetProperty("k").GetInt32(), t.K);
+            Assert.Equal(o.GetProperty("cost_M").GetInt64(), t.CostM.Raw);
+            Assert.Equal(o.GetProperty("M_cap").GetInt64(), t.MCap.Raw);
+            Assert.Equal(o.GetProperty("M_dec").GetInt64(), t.MDec.Raw);
+            Assert.Equal(o.GetProperty("gain").GetInt64(), t.Gain.Raw);
+            Assert.True(o.GetProperty("M_new").GetInt64() == t.MNew.Raw, c.GetProperty("name").GetString());
+            cases++;
+        }
+        Assert.Equal(9, cases);
+    }
+
+    [Fact]
+    public void Alloy_MatchesReference()
+    {
+        int cases = 0;
+        foreach (JsonElement c in F.GetProperty("alloy").EnumerateArray())
+        {
+            JsonElement i = c.GetProperty("input"), o = c.GetProperty("output");
+            AlloyMelt[] melts = [.. i.GetProperty("melts").EnumerateArray()
+                .Select(m => new AlloyMelt(m.GetProperty("prc").GetInt32(), m.GetProperty("known").GetBoolean(), R(m, "yield")))];
+            AlloyAvailability a = IndustryMath.AlloySupply(R(i, "alloy_cap"), R(i, "deficit"), melts);
+            JsonElement grade = o.GetProperty("grade");
+            Assert.Equal(grade.ValueKind == JsonValueKind.Null ? -1 : grade.GetInt32(), a.GradeNumber);
+            Assert.Equal(o.GetProperty("supply").GetInt64(), a.Supply.Raw);
+            Assert.Equal(R(i, "deficit") > Fx6.Zero, a.Deficit);
+            Assert.Equal(o.GetProperty("line_capacity").GetInt64(), IndustryMath.LineCapacity(a.Supply, R(i, "alloy_kg")).Raw);
+            cases++;
+        }
+        Assert.Equal(5, cases);
+    }
+
+    [Fact]
+    public void LcProfile_MatchesReference()
+    {
+        // Spec §3.5 A24: curves per tier, τ = t − t_known, unknown → yield 0 and U at τ = 0, weighted set cost.
+        int cases = 0;
+        foreach (JsonElement c in F.GetProperty("lc_profile").EnumerateArray())
+        {
+            JsonElement i = c.GetProperty("input"), o = c.GetProperty("output");
+            var items = new List<ProfileItem>();
+            foreach (JsonElement it in i.GetProperty("items").EnumerateArray())
+            {
+                string tier = it.GetProperty("tier").GetInt32().ToString(System.Globalization.CultureInfo.InvariantCulture);
+                CapabilityCurve curve = Curve(i.GetProperty("U").GetProperty(tier), i.GetProperty("Y").GetProperty(tier));
+                JsonElement tk = it.GetProperty("t_known");
+                bool known = tk.ValueKind != JsonValueKind.Null;
+                long tau = known ? it.GetProperty("month").GetInt64() - tk.GetInt64() : 0;
+                Fx6 u = curve.UnitCostAt(tau), y = known ? curve.YieldAt(tau) : Fx6.Zero;
+                JsonElement row = o.GetProperty("procs").EnumerateArray().Single(r => r.GetProperty("prc").GetInt32() == it.GetProperty("prc").GetInt32());
+                Assert.Equal(row.GetProperty("tau").GetInt64(), tau);
+                Assert.Equal(row.GetProperty("U").GetInt64(), u.Raw);
+                Assert.Equal(row.GetProperty("yield").GetInt64(), y.Raw);
+                items.Add(new ProfileItem(it.GetProperty("prc").GetInt32(), ProcessYield.Control(y), known, R(it, "n"), R(it, "base_cost"), u));
+            }
+            ProductionProfile p = IndustryMath.Profile(items.ToArray(), new IndustryParams().Eps, control: true);
+            Assert.Equal(o.GetProperty("admitted").GetBoolean(), p.Admitted);
+            Assert.Equal(o.GetProperty("unit_cost_mult").GetInt64(), p.UnitCostMult.Raw);
+            Assert.Equal(o.GetProperty("q").GetInt64(), p.Q.Raw);
+            Assert.Equal(BottleneckSource.Control, p.BottleneckSource);
+            cases++;
+        }
+        Assert.Equal(3, cases);
+    }
+
+    [Fact]
+    public void CapabilityTier_MatchesReference()
+    {
+        int cases = 0;
+        foreach (JsonElement c in F.GetProperty("capability_tier").EnumerateArray())
+        {
+            JsonElement i = c.GetProperty("input"), o = c.GetProperty("output");
+            int mask = 0;
+            foreach (JsonElement p in i.GetProperty("procs").EnumerateArray())
+                mask |= IndustryMath.KeyDims(Dims(p.GetProperty("req")), p.GetProperty("tier").GetInt32());
+            int expectedMask = 0;
+            foreach (JsonElement d in o.GetProperty("dims").EnumerateArray())
+                expectedMask |= 1 << Array.IndexOf(DimNames, d.GetString());
+            Assert.Equal(expectedMask, mask);
+            Fx6? tier = IndustryMath.CapabilityTier(Dims(i.GetProperty("H")), Dims(i.GetProperty("M")), mask);
+            JsonElement et = o.GetProperty("tier");
+            Assert.Equal(et.ValueKind == JsonValueKind.Null ? null : et.GetInt64(), tier?.Raw);
+            cases++;
+        }
+        Assert.Equal(2, cases);
+    }
+
+    [Fact]
+    public void Act_MatchesReference()
+    {
+        int cases = 0;
+        foreach (JsonElement c in F.GetProperty("act").EnumerateArray())
+        {
+            long n = 0, g = 0;
+            foreach (JsonElement r in c.GetProperty("requests").EnumerateArray())
+            {
+                n += r[1].GetInt64();
+                g += r[2].GetInt64();
+            }
+            Assert.Equal(c.GetProperty("act").GetInt64(), IndustryMath.Act(n, g).Raw);
+            cases++;
+        }
+        Assert.Equal(3, cases);
+    }
+
+    private static CapabilityCurve Curve(JsonElement u, JsonElement y)
+    {
+        var tau = u.EnumerateArray().Select(k => k[0].GetInt32()).ToImmutableArray();
+        Assert.Equal(tau.ToArray(), y.EnumerateArray().Select(k => k[0].GetInt32()).ToArray());
+        return new CapabilityCurve(tau, [.. y.EnumerateArray().Select(k => JetReference.Raw(k[1]))],
+            [.. u.EnumerateArray().Select(k => JetReference.Raw(k[1]))]);
     }
 
     private static Dims3 Dims(JsonElement e)

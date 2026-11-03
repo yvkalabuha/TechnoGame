@@ -36,10 +36,19 @@ public sealed record IndustryParams
     public Fx6 DeltaM { get; init; } = F(5_000);
 
     /// <summary>
-    /// <c>cost_M(k)</c> for <c>k</c> = 3, 4, 5 (spec §3.5 A11): <c>c_M·2^(k−3)</c> with <c>c_M</c> = 0.1 (К).
-    /// The reference fixture replaces the whole table by 1 ("cost_M = 1").
+    /// <c>c_M</c> (spec §3.5 A11, A21): <c>cost_M(k) = c_M·2^(k−3)</c> for k = 3, 4, 5, money per unit of
+    /// <c>M</c>; 0.1 (К). The table by k is derived, never set on its own, so the 1:2:4 ratio always holds.
     /// </summary>
-    public ImmutableArray<Fx6> CostMByTier { get; init; } = [F(100_000), F(200_000), F(400_000)];
+    public Fx6 CM { get; init; } = F(100_000);
+
+    /// <summary><c>cost_M(k)</c>, k = 3…5 (spec §3.5 A11).</summary>
+    public Fx6 CostM(int k)
+    {
+        if (k < 3 || k > 5)
+            throw new ArgumentOutOfRangeException(nameof(k), k, "cost_M is defined for k = 3…5.");
+        return CM * Fx6.FromInt(1L << (k - 3));
+    }
+
     public Fx6 Eps { get; init; } = F(10_000);
 
     /// <summary><c>yield ≥ 0.7</c> of another actor makes <c>world_lead</c> (contract §4.1).</summary>
@@ -85,13 +94,8 @@ public sealed record IndustryParams
     {
         if (ActNorm <= Fx6.Zero || Lambda0 < Fx6.Zero || Lambda0 > Fx6.One || Eps <= Fx6.Zero)
             throw new ArgumentException("act_norm and ε must be positive, λ0 in [0; 1].");
-        if (CostMByTier.Length != 3)
-            throw new ArgumentException("cost_M needs one value for each of k = 3, 4, 5.");
-        foreach (Fx6 c in CostMByTier)
-        {
-            if (c <= Fx6.Zero)
-                throw new ArgumentException("cost_M must be positive.");
-        }
+        if (CM <= Fx6.Zero)
+            throw new ArgumentException("c_M must be positive.");
         foreach (Fx6 x in XHalfByTier)
         {
             if (x <= Fx6.Zero)

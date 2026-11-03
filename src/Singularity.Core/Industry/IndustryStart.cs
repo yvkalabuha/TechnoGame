@@ -26,8 +26,8 @@ public sealed class IndustryStart
     public int Cell(int site, int cluster, int dim) => (site * Layout.Clusters.Length + cluster) * Dims3.Count + dim;
 
     /// <summary>
-    /// Start from the scenario (spec §1.1): <c>culture_H</c> per (cluster, dimension); <c>tooling_M</c> is one value
-    /// per cluster in the data (R-M), copied to every dimension; <c>proc_X = proc_x_half_lives·X½(tier)</c> for the
+    /// Start from the scenario (spec §1.1): <c>culture_H</c> and <c>tooling_M</c> per (cluster, dimension) (R-M per cell,
+    /// §3.5 A20); <c>proc_X = proc_x_half_lives·X½(tier)</c> for the
     /// mastered processes (R-MS), 0 otherwise. The layout must come from <see cref="IndustryLayout.FromData"/>.
     /// </summary>
     public static IndustryStart FromScenario(ScenarioData scenario, NodeTable nodes, IndustryLayout layout, IndustryParams p)
@@ -41,7 +41,7 @@ public sealed class IndustryStart
                 for (int d = 0; d < Dims3.Count; d++)
                 {
                     start.H[start.Cell(s, c, d)] = scenario.CultureOf(a, layout.Clusters[c], (Dimension)d);
-                    start.M[start.Cell(s, c, d)] = scenario.ToolingOf(a, layout.Clusters[c]);
+                    start.M[start.Cell(s, c, d)] = scenario.ToolingOf(a, layout.Clusters[c], (Dimension)d);
                 }
             }
             foreach (int nodeRow in scenario.MasteredOf(a))

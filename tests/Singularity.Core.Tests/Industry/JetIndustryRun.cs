@@ -44,7 +44,7 @@ internal sealed class JetIndustryRun
             new CoupledKnowledgeInputs(new JetReference.Inputs(Graph, rng, KStart.ActorNumber), this), rng, chunks);
 
         Layout = IndustryLayout.Create(Clusters, ProcessSpecs(processOrder), [.. Enumerable.Range(0, actorNumbers.Length)],
-            workforceCategories: 2, requesters: 3);
+            workforceCategories: 2, skilledCategory: IndustryLayout.SliceSkilled, requesters: 3);
         Params = ReferenceParams();
         IStart = new IndustryStart(Layout);
         for (int s = 0; s < Layout.SiteCount; s++)
@@ -64,7 +64,7 @@ internal sealed class JetIndustryRun
                 IStart.X[s * Layout.ProcessCount + Layout.RowOf(int.Parse(x.Name, CultureInfo.InvariantCulture))] = JetReference.Dec(x.Value.GetString()!);
         }
         Industry = new IndustrySystem(Table, Layout, IStart, Params, inputs ?? new ReferenceIndustryInputs(this), chunks, mode, curves);
-        Lines = new ReferenceLines(this, Industry.CreateMailbox(chunks));
+        Lines = new ReferenceLines(this, Industry.CreateMailbox(chunks, Cadence.Monthly));
         Runner = new TickRunner(Table, seed, [Knowledge, Industry, Lines], chunkSize, threads, Calendar);
     }
 
@@ -114,14 +114,13 @@ internal sealed class JetIndustryRun
     public static IndustryParams ReferenceParams()
     {
         JsonElement tp = JetReference.Trajectory.GetProperty("params");
-        Fx6 costM = P(tp, "cost_M");
         return new IndustryParams
         {
             Alpha = P(tp, "alpha"), DeltaH = P(tp, "delta_H"), RhoMax = P(tp, "rho_max"), KCatch = P(tp, "k_catch"),
             Sigma = P(tp, "sigma"), PhiFloor = P(tp, "phi_floor"), Lambda0 = P(tp, "lam0"), DeltaX = P(tp, "delta_X"),
             DeltaM = P(tp, "delta_M"),
             XHalfByTier = [P(tp.GetProperty("Xh"), "3"), P(tp.GetProperty("Xh"), "4"), Fx6.FromInt(2500)],
-            CostMByTier = [costM, costM, costM], // fixture: cost_M = 1 for every k (README A11)
+            CM = P(tp, "c_M"),
             SpillPairs = [(Cluster.MET, Cluster.CHEM, P(tp, "R_MET_CHEM"))],
         };
     }
@@ -138,7 +137,10 @@ internal sealed class JetIndustryRun
         public Fx6 DisciplineVolume(int actorRow, int discipline, long month) => run.Industry.DisciplineVolume(actorRow, discipline);
     }
 
-    /// <summary>Industry inputs of the fixture: knowledge snapshot, constant act/w/Hcap, invest = δ_M·M0 (A11), no QP.</summary>
+    /// <summary>
+    /// Industry inputs of the fixture: knowledge snapshot, constant w/Hcap, invest in money
+    /// <c>(δ_M·M0)·cost_M(k(M0))</c> so that M stays at M0 (spec §3.5 A21), no QP, licence, alloy or skilled requests.
+    /// </summary>
     internal sealed class ReferenceIndustryInputs(JetIndustryRun run) : IIndustryInputs
     {
         private readonly JsonElement _tp = JetReference.Trajectory.GetProperty("params");
@@ -146,18 +148,27 @@ internal sealed class JetIndustryRun
         public bool KnowsProcess(int siteRow, int processRow, long month) =>
             run.Knowledge.IsKnown(run.Layout.SiteOwner[siteRow], run.Graph.RowOf(run.Layout.Number[processRow]));
 
-        public Fx6 Act(int siteRow, int cluster, long month) => P(_tp, "act");
-
         public Fx6 W(int siteRow, int cluster, long month) => P(_tp, "w");
 
         public Fx6 Hcap(int siteRow, Dimension dim, long month) => P(_tp, "Hcap");
 
         public bool QualityProgramme(int siteRow, long month) => false;
 
-        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month) =>
-            run.Params.DeltaM * run.IStart.M[run.IStart.Cell(siteRow, cluster, (int)dim)];
+        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month)
+        {
+            Fx6 m0 = run.IStart.M[run.IStart.Cell(siteRow, cluster, (int)dim)];
+            return run.Params.DeltaM * m0 * run.Params.CostM(IndustryMath.CostTier(m0));
+        }
+
+        public Fx6 LicenceShare(int siteRow, int processRow, long month) => Fx6.Zero;
 
         public long WorkforceAvailable(int siteRow, int category, long month) => 10;
+
+        public Fx6 AlloyCap(int siteRow, long month) => Fx6.Zero;
+
+        public Fx6 AlloyDeficit(int siteRow, long month) => Fx6.Zero;
+
+        public long KnownSince(int siteRow, int processRow, long month) => -1;
     }
 
     /// <summary>

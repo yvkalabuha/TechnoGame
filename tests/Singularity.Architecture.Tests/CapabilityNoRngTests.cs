@@ -9,6 +9,9 @@ namespace Singularity.Architecture.Tests;
 /// #28, reference README I7: the capability layer (<c>Singularity.Core.Industry</c>) has no randomness. No type of
 /// the namespace (nested and compiler-generated types included) holds, takes, returns or stores in a local a
 /// <see cref="CounterRng"/>, touches any of its members, or reads <see cref="TickContext.Rng"/>.
+/// Not transitive: a call from the namespace into another Core type that draws (or an <c>IIndustryInputs</c>
+/// implementation that does) is not seen. The layer calls only <c>Fx6</c>, Kernel tables and its own types
+/// today; reviewers check new outgoing calls.
 /// </summary>
 public class CapabilityNoRngTests
 {

@@ -192,7 +192,7 @@ public class IndustryPropertyTests
         public IdleRig()
         {
             Layout = IndustryLayout.Create([Cluster.MET],
-                [new IndustryProcessSpec(39, Cluster.MET, 0, 4, new Dims3(Fx6.Zero, D(4), F(3_500_000)))], [0], 0, 0);
+                [new IndustryProcessSpec(39, Cluster.MET, 0, 4, new Dims3(Fx6.Zero, D(4), F(3_500_000)))], [0], workforceCategories: 1, skilledCategory: 0, requesters: 0);
             Start = new IndustryStart(Layout);
             Fx6[] h = [D(4), F(4_200_000), F(3_900_000)];
             for (int d = 0; d < 3; d++)
@@ -227,8 +227,6 @@ public class IndustryPropertyTests
     {
         public bool KnowsProcess(int siteRow, int processRow, long month) => true;
 
-        public Fx6 Act(int siteRow, int cluster, long month) => Fx6.One;
-
         public Fx6 W(int siteRow, int cluster, long month) => Fx6.One;
 
         public Fx6 Hcap(int siteRow, Dimension dim, long month) => D(5);
@@ -236,6 +234,16 @@ public class IndustryPropertyTests
         public bool QualityProgramme(int siteRow, long month) => false;
 
         public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month) => Fx6.Zero;
+
+        public Fx6 LicenceShare(int siteRow, int processRow, long month) => Fx6.Zero;
+
+        public long WorkforceAvailable(int siteRow, int category, long month) => 0;
+
+        public Fx6 AlloyCap(int siteRow, long month) => Fx6.Zero;
+
+        public Fx6 AlloyDeficit(int siteRow, long month) => Fx6.Zero;
+
+        public long KnownSince(int siteRow, int processRow, long month) => -1;
     }
 
     // ---- reserve_workforce (I6, contract §4.6)

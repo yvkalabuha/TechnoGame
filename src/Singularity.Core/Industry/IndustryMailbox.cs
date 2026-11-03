@@ -10,7 +10,7 @@ public readonly record struct WorkforceRequest(int Site, int Category, int Reque
 /// Messages to the capability layer from one sending system (изделие → способность, contract §5). The
 /// sender posts in its compute of month t into the slot of its own chunk; the industry merge of the same
 /// month reads every slot, sorts by the contract key and clears the box. Per-tick scratch, not state.
-/// A sender must run on the industry cadence (monthly), otherwise its messages would wait for the next merge.
+/// The sender's cadence is checked against the industry cadence in <see cref="IndustrySystem.CreateMailbox"/>.
 /// </summary>
 public sealed class IndustryMailbox
 {

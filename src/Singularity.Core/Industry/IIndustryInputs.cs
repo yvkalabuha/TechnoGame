@@ -7,15 +7,13 @@ namespace Singularity.Core.Industry;
 /// What the capability layer reads from other layers in the compute of month t. Contract (as
 /// <c>IKnowledgeInputs</c>): every method is a pure function of the snapshot t−1 (the state after month
 /// t−1, holding the decisions in force at t) and of its arguments; no side effects, thread-safe. The layer
-/// has no RNG (#28): nothing here may draw one on its behalf either.
+/// has no RNG (#28): nothing here may draw one on its behalf either. Every member is required: a missing
+/// input must be a decision of the implementer, not a silent zero.
 /// </summary>
 public interface IIndustryInputs
 {
     /// <summary><c>p ∈ known_processes(owner(site))</c> in the snapshot (contract §5).</summary>
     bool KnowsProcess(int siteRow, int processRow, long month);
-
-    /// <summary><c>act[c]</c> (spec §3.2).</summary>
-    Fx6 Act(int siteRow, int cluster, long month);
 
     /// <summary><c>w[c]</c> (spec §3.2).</summary>
     Fx6 W(int siteRow, int cluster, long month);
@@ -30,17 +28,17 @@ public interface IIndustryInputs
     Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month);
 
     /// <summary><c>l_lic</c> of an active licence on the process at the site, 0 without one (spec §1.4).</summary>
-    Fx6 LicenceShare(int siteRow, int processRow, long month) => Fx6.Zero;
+    Fx6 LicenceShare(int siteRow, int processRow, long month);
 
     /// <summary>People available in a workforce pool (contract §4.6).</summary>
-    long WorkforceAvailable(int siteRow, int category, long month) => 0;
+    long WorkforceAvailable(int siteRow, int category, long month);
 
     /// <summary><c>alloy_cap_a</c> of the site's owner (spec §1.4).</summary>
-    Fx6 AlloyCap(int siteRow, long month) => Fx6.Zero;
+    Fx6 AlloyCap(int siteRow, long month);
 
     /// <summary><c>deficit</c> of an active alloy disruption event, 0 without one (spec §4).</summary>
-    Fx6 AlloyDeficit(int siteRow, long month) => Fx6.Zero;
+    Fx6 AlloyDeficit(int siteRow, long month);
 
     /// <summary>L_C only: month index <c>t_known</c> in whose merge the process became known to the owner, −1 if unknown (spec §6.1).</summary>
-    long KnownSince(int siteRow, int processRow, long month) => -1;
+    long KnownSince(int siteRow, int processRow, long month);
 }

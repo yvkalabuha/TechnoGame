@@ -92,7 +92,6 @@ public class IndustrySliceDeterminismTests
                 Assert.True(a.Industry.ProcX(sa, ra) == b.Industry.ProcX(sb, rb), $"t={t} actor {number} X {a.Layout.Number[ra]}");
                 Assert.True(a.Industry.ProcV(sa, ra) == b.Industry.ProcV(sb, rb));
                 Assert.True(a.Industry.ProcYield(sa, ra) == b.Industry.ProcYield(sb, rb));
-                Assert.True(a.Industry.ProcUnits(sa, ra) == b.Industry.ProcUnits(sb, rb));
             }
             for (int k = 0; k < Categories; k++)
             {
@@ -152,7 +151,7 @@ public class IndustrySliceDeterminismTests
             Layout = IndustryLayout.Create([.. baseLayout.Clusters],
                 [.. procPerm.Select(r => new IndustryProcessSpec(baseLayout.Number[r], baseLayout.Clusters[baseLayout.ClusterIndex[r]],
                     baseLayout.Discipline[r], baseLayout.Tier[r], baseLayout.Req[r]))],
-                [.. Enumerable.Range(0, actorPerm.Length)], Categories, Requesters, IndustryLayout.SliceAlloyGrades);
+                [.. Enumerable.Range(0, actorPerm.Length)], Categories, IndustryLayout.SliceSkilled, Requesters, IndustryLayout.SliceAlloyGrades);
             IStart = new IndustryStart(Layout);
             for (int s = 0; s < actorPerm.Length; s++)
             {
@@ -175,7 +174,7 @@ public class IndustrySliceDeterminismTests
             var rng = new CounterRng(seed);
             Knowledge = new KnowledgeSystem(Table, Graph, KStart, kp, new KInputs(this, rng), rng, chunks);
             Industry = new IndustrySystem(Table, Layout, IStart, ip, new IInputs(this), chunks);
-            Lines = new Sender(this, Industry.CreateMailbox(chunks));
+            Lines = new Sender(this, Industry.CreateMailbox(chunks, Cadence.Monthly));
             Runner = new TickRunner(Table, seed, [Knowledge, Industry, Lines], chunkSize, threads, Calendar);
         }
 
@@ -249,8 +248,6 @@ public class IndustrySliceDeterminismTests
     {
         public bool KnowsProcess(int siteRow, int processRow, long month) => run.Knows(siteRow, processRow);
 
-        public Fx6 Act(int siteRow, int cluster, long month) => Fx6.FromRaw(600_000 + 100_000 * ((run.ActorNumber(siteRow) + cluster) % 5));
-
         public Fx6 W(int siteRow, int cluster, long month) => Fx6.One;
 
         public Fx6 Hcap(int siteRow, Dimension dim, long month) => Fx6.FromRaw(5_000_000 + 100_000 * (int)dim);
@@ -263,6 +260,12 @@ public class IndustrySliceDeterminismTests
         public long WorkforceAvailable(int siteRow, int category, long month) => (run.ActorNumber(siteRow) + category + month) % 12;
 
         public Fx6 AlloyCap(int siteRow, long month) => Fx6.FromInt(50);
+
+        public Fx6 AlloyDeficit(int siteRow, long month) => Fx6.Zero;
+
+        public Fx6 LicenceShare(int siteRow, int processRow, long month) => Fx6.Zero;
+
+        public long KnownSince(int siteRow, int processRow, long month) => -1;
     }
 
     /// <summary>Product-layer stand-in: runs every known process with yield &gt; 0, asks for workforce in reverse id order.</summary>

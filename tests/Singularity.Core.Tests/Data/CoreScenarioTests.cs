@@ -40,9 +40,10 @@ public class CoreScenarioTests
             Assert.Equal(Fx(prec), S.CultureOf(a, c, Dimension.Precision));
             Assert.Equal(Fx(pur), S.CultureOf(a, c, Dimension.Purity));
             Assert.Equal(Fx(qc), S.CultureOf(a, c, Dimension.QualityControl));
-            // R-M: tooling = H + 0.2, SUN +0.2 more in MECH and AERO (dismantled plants).
+            // R-M per cell (spec §3.5 A20): tooling = H + 0.2, SUN +0.2 more in MECH and AERO (dismantled plants).
             Fx6 extra = id == "SUN" && c is Cluster.MECH or Cluster.AERO ? Fx("0.2") : Fx6.Zero;
-            Assert.Equal(Fx(prec) + Fx("0.2") + extra, S.ToolingOf(a, c));
+            foreach (Dimension d in Enum.GetValues<Dimension>())
+                Assert.Equal(S.CultureOf(a, c, d) + Fx("0.2") + extra, S.ToolingOf(a, c, d));
         }
         Assert.Equal(Fx(hcap), S.Hcap[a]);
         Assert.Equal(Fx(prec) + Fx("1.5"), S.Hcap[a]);   // R-HC
