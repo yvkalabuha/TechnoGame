@@ -63,7 +63,7 @@ internal sealed class JetIndustryRun
             foreach (JsonProperty x in tp.GetProperty("X0").EnumerateObject())
                 IStart.X[s * Layout.ProcessCount + Layout.RowOf(int.Parse(x.Name, CultureInfo.InvariantCulture))] = JetReference.Dec(x.Value.GetString()!);
         }
-        Industry = new IndustrySystem(Table, Layout, IStart, Params, inputs ?? new ReferenceIndustryInputs(this), chunks, mode, curves);
+        Industry = new IndustrySystem(Table, Layout, IStart, Params, inputs ?? new ReferenceIndustryInputs(this), chunks, new V23CultureRule(), mode, curves);
         Lines = new ReferenceLines(this, Industry.CreateMailbox(chunks, Cadence.Monthly));
         Runner = new TickRunner(Table, seed, [Knowledge, Industry, Lines], chunkSize, threads, Calendar);
     }

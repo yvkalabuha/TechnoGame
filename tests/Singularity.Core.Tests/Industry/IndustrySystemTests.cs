@@ -101,7 +101,7 @@ public class IndustrySystemTests
             Table = new Table(3);
             Calendar = new TickCalendar(new CivilDate(1945, 9, 1));
             P = p ?? new IndustryParams();
-            System = new IndustrySystem(Table, Layout, Start, P, In, TickRunner.ChunkCountFor(3, 1), mode, curves);
+            System = new IndustrySystem(Table, Layout, Start, P, In, TickRunner.ChunkCountFor(3, 1), new V23CultureRule(), mode, curves);
             Sender = new Sender(System.CreateMailbox(3, Cadence.Monthly));
             Runner = new TickRunner(Table, 1, [System, Sender], 1, threads, Calendar);
         }

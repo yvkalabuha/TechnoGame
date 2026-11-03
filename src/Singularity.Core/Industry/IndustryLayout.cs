@@ -4,8 +4,8 @@ using Singularity.Kernel;
 
 namespace Singularity.Core.Industry;
 
-/// <summary>One PRC for <see cref="IndustryLayout.Create"/>: stable node number, cluster, discipline index, tier, <c>r_d</c> (0 = none).</summary>
-public sealed record IndustryProcessSpec(int Number, Cluster Cluster, int Discipline, int Tier, Dims3 Req);
+/// <summary>One PRC for <see cref="IndustryLayout.Create"/>: stable node number, cluster, discipline index, tier, <c>r_d</c> (0 = none), <c>labour_p</c> (hours per unit; 0 = no output channel in the culture rule C-B).</summary>
+public sealed record IndustryProcessSpec(int Number, Cluster Cluster, int Discipline, int Tier, Dims3 Req, Fx6 Labour = default);
 
 /// <summary>
 /// Immutable shape of the capability layer: the site clusters (ascending <see cref="Cluster"/>), the
@@ -32,6 +32,9 @@ public sealed class IndustryLayout
     public required ImmutableArray<int> Discipline { get; init; }
     public required ImmutableArray<int> Tier { get; init; }
     public required ImmutableArray<Dims3> Req { get; init; }
+
+    /// <summary><c>labour_p</c> by storage row (contract §4.1: <c>v_cap = r_cap·labour_p</c>).</summary>
+    public required ImmutableArray<Fx6> Labour { get; init; }
     public required ImmutableArray<int> Order { get; init; }
 
     public int SiteCount => SiteOwner.Length;
@@ -84,6 +87,8 @@ public sealed class IndustryLayout
             cluster[r] = IndexOf(clusters, p.Cluster);
             if (cluster[r] < 0)
                 throw new ArgumentException($"Process {p.Number}: cluster {p.Cluster} is not a site cluster.", nameof(processes));
+            if (p.Labour < Fx6.Zero)
+                throw new ArgumentException($"Process {p.Number}: labour is negative.", nameof(processes));
             if (p.Tier < 3)
                 throw new ArgumentException($"Process {p.Number}: tier {p.Tier} is below 3.", nameof(processes));
             int key = IndustryMath.KeyDims(p.Req, p.Tier);
@@ -118,6 +123,7 @@ public sealed class IndustryLayout
             Discipline = [.. processes.Select(p => p.Discipline)],
             Tier = [.. processes.Select(p => p.Tier)],
             Req = [.. processes.Select(p => p.Req)],
+            Labour = [.. processes.Select(p => p.Labour)],
             Order = [.. order],
             SiteOwner = [.. siteOwner],
             WorkforceCategories = workforceCategories,

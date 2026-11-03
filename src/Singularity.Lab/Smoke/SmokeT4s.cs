@@ -400,7 +400,7 @@ internal static class SmokeT4s
 
             var table = new Table(1);
             _cal = new TickCalendar(new CivilDate(sc.StartYear, sc.StartMonth, 1));
-            _ind = new IndustrySystem(table, _l, own, ip, this, 1);
+            _ind = new IndustrySystem(table, _l, own, ip, this, 1, new V23CultureRule());
             var lines = new Lines(this, _ind.CreateMailbox(1, Cadence.Monthly));
             _runner = new TickRunner(table, 1, [_ind, lines], 1, 1, _cal);
         }

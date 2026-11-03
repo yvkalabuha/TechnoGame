@@ -173,7 +173,7 @@ public class IndustrySliceDeterminismTests
             int chunks = TickRunner.ChunkCountFor(Table.RowCount, chunkSize);
             var rng = new CounterRng(seed);
             Knowledge = new KnowledgeSystem(Table, Graph, KStart, kp, new KInputs(this, rng), rng, chunks);
-            Industry = new IndustrySystem(Table, Layout, IStart, ip, new IInputs(this), chunks);
+            Industry = new IndustrySystem(Table, Layout, IStart, ip, new IInputs(this), chunks, new V23CultureRule());
             Lines = new Sender(this, Industry.CreateMailbox(chunks, Cadence.Monthly));
             Runner = new TickRunner(Table, seed, [Knowledge, Industry, Lines], chunkSize, threads, Calendar);
         }

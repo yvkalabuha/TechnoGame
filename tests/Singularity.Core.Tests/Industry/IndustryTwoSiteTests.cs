@@ -100,7 +100,7 @@ public class IndustryTwoSiteTests
             Table = new Table(3);
             Calendar = new TickCalendar(new CivilDate(1945, 9, 1));
             int chunks = TickRunner.ChunkCountFor(3, 1);
-            System = new IndustrySystem(Table, Layout, Start, new IndustryParams(), new Inputs(), chunks);
+            System = new IndustrySystem(Table, Layout, Start, new IndustryParams(), new Inputs(), chunks, new V23CultureRule());
             Runner = new TickRunner(Table, 7, [System, new Lines(System.CreateMailbox(chunks, Cadence.Monthly), reversed)], 1, threads, Calendar);
         }
 
