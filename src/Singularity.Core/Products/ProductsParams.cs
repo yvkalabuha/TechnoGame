@@ -118,8 +118,8 @@ public sealed record ProductsParams
             throw new ArgumentException("E_B, fix_hours, service_life and the fleet_value step must be positive.");
         if (DeltaE < Fx6.Zero || DeltaE > Fx6.One || DeltaB < Fx6.Zero || DeltaB > Fx6.One || PsiD < Fx6.Zero || PsiD > Fx6.One)
             throw new ArgumentException("δ_E, δ_B and ψ_D must be in [0; 1].");
-        if (LearningQ10 <= 0 || BetaQ10 <= 0 || BetaQ10 >= DetMath.FracOne || UpkeepQ10 < 0)
-            throw new ArgumentException("q10_b > 0, 0 < q10_β < 1024 (β < 1), q10_αu ≥ 0.");
+        if (LearningQ10 < 0 || BetaQ10 <= 0 || BetaQ10 >= DetMath.FracOne || UpkeepQ10 < 0)
+            throw new ArgumentException("q10_b ≥ 0 (0 = the b = 0 channel ablation, spec §6.2), 0 < q10_β < 1024 (β < 1), q10_αu ≥ 0.");
         if (KGate < Fx6.Zero || TTestMin < 0 || AAcc < Fx6.Zero || RhoRetro < Fx6.Zero || TauDer < Fx6.Zero || TauDer > Fx6.One
             || GammaQ10 <= 0 || GammaQ10 > DetMath.FracOne || HBuild < 1 || PlanProjectDivisor < 1)
             throw new ArgumentException("k_gate, a_acc, ρ_retro ≥ 0; t_test_min ≥ 0; τ_der in [0; 1]; 0 < q10_γ ≤ 1024; H_build, r_plan divisor ≥ 1.");
