@@ -7,4 +7,15 @@
   <ItemGroup>
     <ProjectReference Include="..\Singularity.Kernel\Singularity.Kernel.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- YAML event parser for mod data (ADR-0010). MIT. Only the low-level Parser is used:
+         no deserializer, so no implicit typing; numbers are parsed by Singularity.Core.Data. -->
+    <PackageReference Include="YamlDotNet" Version="18.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Tests check the exact text-to-Fx6 parser directly. -->
+    <InternalsVisibleTo Include="Singularity.Core.Tests" />
+  </ItemGroup>
 </Project>

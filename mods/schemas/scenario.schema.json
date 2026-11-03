@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://singularity.local/schemas/scenario.schema.json",
+  "title": "Scenarios file (kind: scenario; slice spec §1.1, LAYER_CONTRACT §9)",
+  "type": "object",
+  "required": ["kind"],
+  "additionalProperties": false,
+  "properties": {
+    "kind": { "const": "scenario" },
+    "define": { "type": "array", "items": { "$ref": "#/$defs/scenario" } },
+    "override": { "type": "array", "items": { "$ref": "#/$defs/scenario" } },
+    "patch": { "type": "array", "items": { "$ref": "#/$defs/patch" } },
+    "delete": { "type": "array", "uniqueItems": true, "items": { "$ref": "common.schema.json#/$defs/localId" } }
+  },
+  "$defs": {
+    "fields": {
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/localId" },
+        "start": {
+          "type": "object",
+          "required": ["year", "month"],
+          "additionalProperties": false,
+          "properties": {
+            "year": { "type": "integer", "minimum": 1900, "maximum": 2100 },
+            "month": { "type": "integer", "minimum": 1, "maximum": 12 }
+          }
+        },
+        "clusters": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "common.schema.json#/$defs/cluster" } },
+        "disciplines": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "common.schema.json#/$defs/discipline" } },
+        "tech_lead": { "$ref": "common.schema.json#/$defs/actorId" },
+        "mastered_history": {
+          "type": "object",
+          "required": ["since_month", "proc_x_half_lives"],
+          "additionalProperties": false,
+          "properties": {
+            "since_month": { "type": "integer", "maximum": 0 },
+            "proc_x_half_lives": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "provenance": { "type": "array", "items": { "$ref": "#/$defs/provenance" } },
+        "actors": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/actor" } }
+      }
+    },
+    "scenario": {
+      "$ref": "#/$defs/fields",
+      "required": ["id", "start", "clusters", "disciplines", "tech_lead", "mastered_history", "provenance", "actors"],
+      "unevaluatedProperties": false
+    },
+    "patch": {
+      "$ref": "#/$defs/fields",
+      "required": ["id"],
+      "unevaluatedProperties": false
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["field", "rule", "sources", "estimated"],
+      "additionalProperties": false,
+      "properties": {
+        "field": { "$ref": "#/$defs/actorField" },
+        "rule": { "type": "string", "pattern": "^R-[A-Z]+$" },
+        "sources": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^S[0-9]+$" } },
+        "estimated": { "description": "true: estimated for every actor.", "type": "boolean" }
+      }
+    },
+    "actorField": {
+      "enum": ["gdp_1945", "gdppc_1945", "budget_index", "growth_pa", "culture_h", "tooling_m", "hcap", "w",
+               "known", "k_d", "k_ind", "mastered", "fleet", "trophy_engineers"]
+    },
+    "byCluster": {
+      "type": "object",
+      "propertyNames": { "$ref": "common.schema.json#/$defs/cluster" },
+      "additionalProperties": { "$ref": "common.schema.json#/$defs/nonNegFixed" }
+    },
+    "actor": {
+      "type": "object",
+      "required": ["id", "class", "gdp_1945", "gdp_year", "gdppc_1945", "budget_index", "growth_pa", "culture_h",
+                   "tooling_m", "hcap", "w", "known", "k_d", "k_ind", "mastered", "fleet", "trophy_engineers", "estimated"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/actorId" },
+        "class": { "enum": ["great", "middle", "small"] },
+        "gdp_1945": { "description": "Billion international $ 2011 (Maddison 2023).", "type": "number", "exclusiveMinimum": 0 },
+        "gdp_year": { "type": "integer", "minimum": 1900, "maximum": 2100 },
+        "gdppc_1945": { "description": "International $ 2011 per person (Maddison 2023).", "type": "number", "exclusiveMinimum": 0 },
+        "budget_index": { "type": "number", "exclusiveMinimum": 0 },
+        "growth_pa": { "description": "Annual growth as a fraction (0.0299 = 2.99%).", "type": "number" },
+        "culture_h": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/cluster" },
+          "additionalProperties": {
+            "type": "object",
+            "required": ["precision", "purity", "quality_control"],
+            "additionalProperties": false,
+            "properties": {
+              "precision": { "$ref": "common.schema.json#/$defs/nonNegFixed" },
+              "purity": { "$ref": "common.schema.json#/$defs/nonNegFixed" },
+              "quality_control": { "$ref": "common.schema.json#/$defs/nonNegFixed" }
+            }
+          }
+        },
+        "tooling_m": { "$ref": "#/$defs/byCluster" },
+        "hcap": { "$ref": "common.schema.json#/$defs/nonNegFixed" },
+        "w": { "$ref": "common.schema.json#/$defs/nonNegFixed" },
+        "known": { "$ref": "common.schema.json#/$defs/nodeIdList" },
+        "k_d": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/discipline" },
+          "additionalProperties": { "$ref": "common.schema.json#/$defs/nonNegFixed" }
+        },
+        "k_ind": { "$ref": "common.schema.json#/$defs/nonNegFixed" },
+        "mastered": { "$ref": "common.schema.json#/$defs/nodeIdList" },
+        "fleet": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["product_class", "gen", "variant", "count", "cohort_year"],
+            "additionalProperties": false,
+            "properties": {
+              "product_class": { "$ref": "common.schema.json#/$defs/localId" },
+              "gen": { "type": "integer", "minimum": 0, "maximum": 9 },
+              "variant": { "enum": ["superior", "producible"] },
+              "count": { "type": "integer", "minimum": 1 },
+              "cohort_year": { "type": "integer", "minimum": 1900, "maximum": 2100 }
+            }
+          }
+        },
+        "trophy_engineers": { "description": "People added to the engineer pool at t0 (R-ENG).", "type": "integer", "minimum": 0 },
+        "estimated": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/actorField" } }
+      }
+    }
+  }
+}

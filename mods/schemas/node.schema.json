@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://singularity.local/schemas/node.schema.json",
+  "title": "Knowledge nodes file (kind: node; RR-0008, LAYER_CONTRACT §2, slice spec §1.3)",
+  "type": "object",
+  "required": ["kind"],
+  "additionalProperties": false,
+  "properties": {
+    "kind": { "const": "node" },
+    "define": { "type": "array", "items": { "$ref": "#/$defs/node" } },
+    "override": { "type": "array", "items": { "$ref": "#/$defs/node" } },
+    "patch": { "type": "array", "items": { "$ref": "#/$defs/nodePatch" } },
+    "delete": { "$ref": "common.schema.json#/$defs/nodeIdList" }
+  },
+  "$defs": {
+    "fields": {
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/nodeId" },
+        "number": { "description": "Stable node number; RNG key (spec §3.5 A7).", "type": "integer", "minimum": 1 },
+        "type": { "enum": ["FND", "PRN", "ENG", "CMP", "PRC", "APP"] },
+        "gen": { "type": "integer", "minimum": 0, "maximum": 9 },
+        "discipline": { "$ref": "common.schema.json#/$defs/discipline" },
+        "cluster": { "$ref": "common.schema.json#/$defs/cluster" },
+        "tier": { "type": "integer", "minimum": 1, "maximum": 9 },
+        "capability_req": {
+          "description": "Sparse requirement in tier units (LAYER_CONTRACT §2).",
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "precision": { "$ref": "common.schema.json#/$defs/nonNegFixed" },
+            "purity": { "$ref": "common.schema.json#/$defs/nonNegFixed" },
+            "quality_control": { "$ref": "common.schema.json#/$defs/nonNegFixed" }
+          }
+        },
+        "requires": { "$ref": "common.schema.json#/$defs/requirement" },
+        "hazard": { "enum": ["none", "hz", "key"] },
+        "informs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["to", "weight"],
+            "additionalProperties": false,
+            "properties": {
+              "to": { "$ref": "common.schema.json#/$defs/nodeId" },
+              "weight": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+            }
+          }
+        },
+        "anchor": {
+          "description": "Historical date reference (calibration anchor C4 only).",
+          "type": "object",
+          "required": ["year", "event", "source", "estimated"],
+          "additionalProperties": false,
+          "properties": {
+            "year": { "type": "integer", "minimum": 1800, "maximum": 2100 },
+            "before": { "description": "true: the date is 'before year' (RULE-G0).", "type": "boolean" },
+            "event": { "type": "string", "minLength": 1 },
+            "source": { "type": "string", "minLength": 1 },
+            "estimated": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "node": {
+      "$ref": "#/$defs/fields",
+      "required": ["id", "number", "type", "gen", "discipline", "cluster", "requires", "hazard", "anchor"],
+      "unevaluatedProperties": false,
+      "if": { "properties": { "type": { "const": "PRC" } } },
+      "then": { "required": ["tier", "capability_req"] },
+      "else": { "not": { "anyOf": [{ "required": ["tier"] }, { "required": ["capability_req"] }] } }
+    },
+    "nodePatch": {
+      "description": "Partial node: listed top-level fields replace the existing ones.",
+      "$ref": "#/$defs/fields",
+      "required": ["id"],
+      "unevaluatedProperties": false
+    }
+  }
+}
