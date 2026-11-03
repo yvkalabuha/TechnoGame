@@ -55,25 +55,49 @@ def fx(raw):
     return raw / SCALE
 
 
-def pow_dyadic(x, eighths):
-    """Kernel.DetMath.PowDyadic for x >= 0, eighths >= 0."""
-    if not math.isfinite(x) or x < 0:
-        raise ArithmeticError("pow_dyadic base %r" % x)
+def pow_int(x, n):
+    """Kernel.DetMath.PowInt: square-and-multiply for n >= 0."""
     result = 1.0
     b = x
-    n = eighths >> 3
     while n > 0:
         if n & 1:
             result *= b
         b *= b
         n >>= 1
-    frac = eighths & 7
+    return result
+
+
+def pow_dyadic(x, eighths):
+    """Kernel.DetMath.PowDyadic: x^(eighths/8) for a finite x >= 0 (ADR-0012 order).
+
+    acc = 1; root_i = x^(2^-i) by repeated sqrt; acc *= root_i for the set fraction bits by
+    ascending i (1/2, 1/4, 1/8), stopping after the lowest set bit; then acc * x^int.
+    A negative exponent is one division 1 / x^|e|. Non-finite results are an error.
+    """
+    if not math.isfinite(x) or x < 0:
+        raise ArithmeticError("pow_dyadic base %r" % x)
+    if x == 0 and eighths < 0:
+        raise ArithmeticError("pow_dyadic 0^%d/8" % eighths)
+    k = abs(eighths)
+    frac = (k & 7) << 7  # PowFrac q10 fraction bits
+    acc = 1.0
     root = x
-    for bit in (4, 2, 1):
+    bit = 512
+    while frac != 0:
         root = math.sqrt(root)
         if frac & bit:
-            result *= root
-    return result
+            acc *= root
+            frac &= ~bit
+        bit >>= 1
+    mag = acc * pow_int(x, k >> 3)
+    if not math.isfinite(mag):
+        raise ArithmeticError("pow_dyadic overflow %r^(%d/8)" % (x, eighths))
+    if eighths >= 0:
+        return mag
+    rec = 1.0 / mag
+    if not math.isfinite(rec):
+        raise ArithmeticError("pow_dyadic overflow %r^(%d/8)" % (x, eighths))
+    return rec
 
 
 def state_hash(schema_version, tick, n_rows, columns):
