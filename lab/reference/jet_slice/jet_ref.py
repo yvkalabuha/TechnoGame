@@ -267,6 +267,97 @@ def k_ind_step(K_ind, K_d, V_d, eta, V_ref, theta_ind, delta_ind):
             "K_ind_new": add(K_ind, mul(frac, max(ZERO, ONE - div(K_ind, cap))))}
 
 
+# ---------------------------------------------------------------- spec 3.2, 3.5 A11, A20-A22: tooling_M
+def cost_M(M, c_M):
+    """A11: cost_M(k) = c_M*2^(k-3), k = clamp(floor(M), 3, 5) of the snapshot cell (before investment)."""
+    k = min(5, max(3, M // SCALE))
+    return k, mul(c_M, fi(2 ** (k - 3)))
+
+
+def tooling_step(M, invest, c_M, delta_M, mech_tier):
+    """One cell (site, c, d), industry compute of month t from the snapshot (spec 3.5 A21-A22).
+    mech_tier: max tier of MECH processes admitted at the site (known and yield > 0 by the snapshot), None if none.
+    M_cap = 1 + max(3, mech_tier). M_dec = M - delta_M*M; M_new = min(M_dec + invest/cost_M, max(M_dec, M_cap)):
+    investment never lifts M above M_cap, decay always applies, M above the cap is not cut (money beyond burns)."""
+    k, cost = cost_M(M, c_M)
+    cap = fi(1 + max(3, mech_tier or 0))
+    dec = M - mul(delta_M, M)
+    gain = div(invest, cost)
+    return {"k": k, "cost_M": cost, "M_cap": cap, "M_dec": dec, "gain": gain,
+            "M_new": min(add(dec, gain), max(dec, cap))}
+
+
+# ---------------------------------------------------------------- spec 1.4, 3.5 A23: alloy supply
+def alloy_supply(cap, deficit, melts):
+    """melts: [{prc, known, yield}] of the grades 39/40/41 at the site, yield from the snapshot (as the lines use it).
+    Grade = admitted melt (known, yield > 0) with the largest yield, tie -> larger prc number.
+    supply = (alloy_cap*(1 - deficit))*yield_grade, kg/month; no admitted melt -> grade None, supply 0."""
+    adm = [m for m in melts if m["known"] and m["yield"] > 0]
+    if not adm:
+        return {"grade": None, "supply": ZERO}
+    best = max(adm, key=lambda m: (m["yield"], m["prc"]))
+    return {"grade": best["prc"], "supply": mul(mul(cap, ONE - deficit), best["yield"])}
+
+
+def line_capacity(supply, alloy_kg):
+    return div(supply, alloy_kg)
+
+
+# ---------------------------------------------------------------- spec 6.1, 3.5 A24: L_C curve and set cost
+def interp(knots, tau):
+    """knots: [(tau_i, value_i)] strictly ascending; clamp outside; v_i + ((v_{i+1}-v_i)*(tau-tau_i))/(tau_{i+1}-tau_i)."""
+    if tau <= knots[0][0]:
+        return knots[0][1]
+    if tau >= knots[-1][0]:
+        return knots[-1][1]
+    i = 0
+    while knots[i + 1][0] <= tau:
+        i += 1
+    (t0, v0), (t1, v1) = knots[i], knots[i + 1]
+    return v0 + div(mul(v1 - v0, fi(tau - t0)), fi(t1 - t0))
+
+
+def lc_profile(items, U, Y):
+    """items: [{prc, tier, n, base_cost, t_known (None = unknown)}] for month t (field 'month').
+    tau = t - t_known; unknown -> yield 0, U at tau = 0. unit_cost_mult = (sum (n*b)*U_p) / (sum n*b), ascending prc."""
+    num = den = ZERO
+    rows = []
+    admitted = True
+    for it in sorted(items, key=lambda r: r["prc"]):
+        known = it["t_known"] is not None
+        tau = it["month"] - it["t_known"] if known else 0
+        u = interp(U[it["tier"]], tau)
+        y = interp(Y[it["tier"]], tau) if known else ZERO
+        admitted = admitted and known
+        nb = mul(it["n"], it["base_cost"])
+        num = add(num, mul(nb, u))
+        den = add(den, nb)
+        rows.append({"prc": it["prc"], "tau": tau, "U": u, "yield": y})
+    return {"admitted": admitted, "procs": rows, "unit_cost_mult": div(num, den), "q": ONE}
+
+
+# ---------------------------------------------------------------- spec 3.5 A25-A26: capability_tier, act
+def key_dims(req, tier):
+    """A25: key dims of a PRC = dims with r_d >= tier (spec 1.3 rule capability_req)."""
+    return [d for d in DIMS if req.get(d) is not None and req[d] >= fi(tier)]
+
+
+def capability_tier(H, M, cluster_procs):
+    """min over the union of key dims of the cluster's PRCs of c_d = min(H, M); None if the cluster has no PRC."""
+    dims = [d for d in DIMS if any(d in key_dims(p["req"], p["tier"]) for p in cluster_procs)]
+    if not dims:
+        return {"dims": [], "tier": None}
+    return {"dims": dims, "tier": min(min(H[d], M[d]) for d in dims)}
+
+
+def act_of(requests):
+    """A26: requests [(requester_id, n, granted)] of category skilled for (site, c), people.
+    act = min(1, sum granted / sum n); sum n = 0 -> 1."""
+    n = sum(r[1] for r in requests)
+    g = sum(r[2] for r in requests)
+    return ONE if n == 0 else min(ONE, div(fi(g), fi(n)))
+
+
 # ---------------------------------------------------------------- contract 4.6: reserve_workforce split
 def workforce_split(avail, requests):
     """requests: [(site, cat, requester_id, n)] for one (site, cat); integer people."""
@@ -353,7 +444,8 @@ PROFILE_CASES = [
 
 def formula_cases(seed):
     out = {"culture_H": [], "production_profile": [], "knowledge": [], "k_ind": [], "hazard": [],
-           "prob_check": [], "draws": [], "workforce_split": [], "counter_rng": []}
+           "prob_check": [], "draws": [], "workforce_split": [], "counter_rng": [],
+           "tooling_M": [], "alloy": [], "lc_profile": [], "capability_tier": [], "act": []}
     for name, note, inp in CULTURE_CASES:
         out["culture_H"].append({"name": name, "note": note, "input": inp, "output": culture_step(inp)})
     for name, note, procs in PROFILE_CASES:
@@ -408,6 +500,52 @@ def formula_cases(seed):
                                        "output": workforce_split(avail, reqs)})
     for v in RNG_VECTORS:
         out["counter_rng"].append({"key": list(v[:5]), "u": v[5]})
+    # tooling_M (spec 3.5 A11, A21, A22): c_M = 0.1, delta_M = 0.005
+    cM, dM = fx("0.1"), fx("0.005")
+    for name, M, inv, mt in [
+        ("k3_steady", "3.7", "0.00185", 3), ("k4_chem_precision_at_cap", "4.0", "0.004", None),
+        ("clamp_low_k3", "2.5", "0.01", None), ("k5", "5.2", "0.04", 5), ("clamp_high_k5", "6.3", "0.04", 5),
+        ("cap_binds", "3.95", "0.05", 3), ("above_cap_decay_only", "4.6", "0.02", 3),
+        ("mech_tier4_cap5", "4.6", "0.02", 4), ("no_invest_decay", "3.4", "0", 4)]:
+        out["tooling_M"].append({"name": name, "input": {"M": fx(M), "invest": fx(inv), "c_M": cM, "delta_M": dM,
+                                                         "mech_tier": mt},
+                                 "output": tooling_step(fx(M), fx(inv), cM, dM, mt)})
+    # alloy (spec 1.4, 3.5 A23): alloy_cap kg/month, deficit, melts 39/40/41 with snapshot yields
+    for name, cap, dfc, melts in [
+        ("one_grade", "1000", "0", [(39, True, "0.8"), (40, False, "0.3"), (41, False, "0")]),
+        ("new_grade_lower_yield", "1000", "0", [(39, True, "0.8"), (40, True, "0.3"), (41, False, "0")]),
+        ("tie_higher_grade", "1000", "0", [(39, True, "0.6"), (40, True, "0.6"), (41, False, "0")]),
+        ("deficit_event", "1000", "0.5", [(39, True, "0.8"), (40, True, "0.9"), (41, True, "0")]),
+        ("none_admitted", "1000", "0", [(39, False, "0.8"), (40, False, "0"), (41, False, "0")])]:
+        ms = [{"prc": p, "known": k, "yield": fx(y)} for p, k, y in melts]
+        res = alloy_supply(fx(cap), fx(dfc), ms)
+        out["alloy"].append({"name": name, "input": {"alloy_cap": fx(cap), "deficit": fx(dfc), "melts": ms,
+                                                      "alloy_kg": fx("250")},
+                             "output": res | {"line_capacity": line_capacity(res["supply"], fx("250"))}})
+    # L_C (spec 6.1, 3.5 A24): conditional curves per tier (fixture numbers, not calibrated tables)
+    U = {3: [(0, fx("2.5")), (12, fx("1.4")), (60, fx("1.05"))], 4: [(0, fx("3.2")), (24, fx("1.6")), (96, fx("1.1"))]}
+    Y = {3: [(0, fx("0.3")), (12, fx("0.7")), (60, fx("0.95"))], 4: [(0, fx("0.25")), (24, fx("0.6")), (96, fx("0.9"))]}
+    for name, month, items in [
+        ("set_mixed_tiers", 30, [(53, 3, "1", "2", 0), (39, 4, "2", "3", 10), (45, 4, "1", "5", 29)]),
+        ("unknown_process_tau0", 30, [(39, 4, "2", "3", 10), (40, 4, "1", "4", None)]),
+        ("clamp_after_last_knot", 200, [(38, 3, "1", "1", 0)])]:
+        its = [{"prc": p, "tier": tr, "n": fx(n), "base_cost": fx(b), "t_known": tk, "month": month}
+               for p, tr, n, b, tk in items]
+        out["lc_profile"].append({"name": name, "input": {"items": its, "U": {str(k): v for k, v in U.items()},
+                                                           "Y": {str(k): v for k, v in Y.items()}},
+                                  "output": lc_profile(its, U, Y)})
+    # capability_tier (A25): slice MECH and MET PRC requirements (spec 1.3), site H/M from site_dims
+    mech = [{"prc": 47, "tier": 3, "req": {"precision": fx("3.5"), "quality_control": fx("3")}},
+            {"prc": 48, "tier": 4, "req": {"precision": fx("4"), "quality_control": fx("3.5")}}]
+    met = [{"prc": 38, "tier": 3, "req": {"precision": fx("3"), "purity": fx("3"), "quality_control": fx("2.5")}},
+           {"prc": 39, "tier": 4, "req": {"purity": fx("4"), "quality_control": fx("3.5")}}]
+    for name, procs, Hc, madd in [("mech_two_procs", mech, "3.67", "0.2"), ("met_tooling_below", met, "4.0", "-0.4")]:
+        H, M = site_dims(Hc, m_add=madd)
+        out["capability_tier"].append({"name": name, "input": {"H": H, "M": M, "procs": procs},
+                                       "output": capability_tier(H, M, procs)})
+    for name, reqs in [("full", [(1, 30, 30), (2, 10, 10)]), ("short", [(1, 30, 20), (2, 10, 7)]),
+                       ("no_requests", [])]:
+        out["act"].append({"name": name, "requests": reqs, "act": act_of(reqs)})
     return out
 
 
@@ -505,7 +643,7 @@ TP = dict(  # trajectory parameters: spec 8.1 values where given, otherwise mark
     mu_K="0.01", k_node="0.05", theta_start="0.6", h_max="0.08", y_half="0.5", prog_cap="3",
     eta="0.01", V_ref="1000", theta_ind="0.25", delta_ind="0.003",
     alpha="0.05", delta_H="0.003", rho_max="0.021", k_catch="0.025", sigma="0.005", phi_floor="0.6",
-    Hcap="5", act="1", w="1.1", lam0="0.3", delta_X="0.004", delta_M="0.005", cost_M="1",
+    Hcap="5", act="1", w="1.1", lam0="0.3", delta_X="0.004", delta_M="0.005", c_M="0.1",
     Xh={3: "200", 4: "800"}, X0={6: "2000"}, H_MET="3.5", H_CHEM="3.8", R_MET_CHEM="0.3",
     K_d0={"metal": "0.5", "prop": "0.3"},
 )
@@ -524,7 +662,9 @@ def run_trajectory(seed):
         h, m = site_dims(hc)
         for d in DIMS:
             H[(c, d)], M[(c, d)] = h[d], m[d]
-    M_inv = {k: mul(T["delta_M"], m) for k, m in M.items()}
+    # fixture investment (money/month, A21): invest = (delta_M*M0)*cost_M(k(M0)), so that M stays at M0 exactly
+    M_inv = {k: mul(mul(T["delta_M"], m), cost_M(m, T["c_M"])[1]) for k, m in M.items()}
+    MECH_TIER = None   # fixture graph has no MECH process: M_cap = 1 + 3 = 4 (A22)
     X = {p: fx(TP["X0"].get(p, "0")) for p in NODES if NODES[p]["type"] == "PRC"}
     known = set(KNOWN_AT_START)
     prog = {n: ZERO for n in NODES if n not in known}
@@ -644,9 +784,9 @@ def run_trajectory(seed):
                 H_new[(c, d)] = res["H_new"]
                 culture_detail["%s.%s" % (c, d)] = {"V_c": res["V_c"], "dH_plus": res["dH_plus"],
                                                      "dH_minus": res["dH_minus"]}
-                # spec 3.2, 3.5 A11: dM = invest/cost_M - delta_M*M (industry compute, snapshot M);
-                # fixture: cost_M = 1, invest = delta_M*M0
-                M_new[(c, d)] = add(M[(c, d)], div(M_inv[(c, d)], T["cost_M"]), -mul(T["delta_M"], M[(c, d)]))
+                # spec 3.2, 3.5 A11, A21, A22: dM = invest/cost_M(k) - delta_M*M, capped by M_cap
+                # (industry compute, snapshot M); CHEM.precision M0 = 4.0 -> k = 4, M_cap = 4 (boundary)
+                M_new[(c, d)] = tooling_step(M[(c, d)], M_inv[(c, d)], T["c_M"], T["delta_M"], MECH_TIER)["M_new"]
         # AI commands for t+1
         for p in sorted(X):
             want = fx(NODES[p]["rate"]) if (p in snap_known and yields[p] > 0) else ZERO
