@@ -145,7 +145,7 @@ internal static class SmokeT4s
     }
 
     /// <summary>Requires-closure of a node (rows), the node included; an OR-group contributes its first member.</summary>
-    private static SortedSet<int> Closure(KnowledgeGraph g, int row)
+    internal static SortedSet<int> Closure(KnowledgeGraph g, int row)
     {
         var seen = new SortedSet<int>();
         var stack = new Stack<int>();
@@ -164,10 +164,10 @@ internal static class SmokeT4s
 
     // ------------------------------------------------------------------ C2
 
-    private static readonly (int Number, int Tier)[] KeyProcesses = [(40, 4), (49, 4), (41, 5), (51, 5), (52, 5)];
+    internal static readonly (int Number, int Tier)[] KeyProcesses = [(40, 4), (49, 4), (41, 5), (51, 5), (52, 5)];
 
     /// <summary>Mature direct hours per set (docs/research/data/jet-slice/product_inputs.md §4); 47 has none there.</summary>
-    private static readonly ImmutableDictionary<int, long> Labour = new Dictionary<int, long>
+    internal static readonly ImmutableDictionary<int, long> Labour = new Dictionary<int, long>
     {
         [38] = 600, [53] = 3700, [55] = 3450, [56] = 7500, [42] = 6750, [44] = 150, [54] = 1350, [39] = 225,
         [40] = 600, [41] = 1800, [45] = 225, [46] = 1200, [49] = 750, [51] = 2250, [43] = 3750, [52] = 5250,
@@ -175,7 +175,7 @@ internal static class SmokeT4s
     }.ToImmutableDictionary();
 
     /// <summary>base_cost_p in raw Fx6 (product_inputs.md §4), G2 "superior" prc_set: engine g2, hot_sa2_forged, comp_axial, af_swept, ab_on.</summary>
-    private static readonly (int Number, long BaseRaw)[] G2Superior =
+    internal static readonly (int Number, long BaseRaw)[] G2Superior =
         [(38, 60), (40, 60), (44, 15), (45, 22), (49, 75), (50, 120), (53, 370), (54, 135), (55, 345), (57, 90)];
 
     private sealed record C2Point(long Alpha, long DeltaH, long CM, int XHalfPct, long Rate);
@@ -245,7 +245,7 @@ internal static class SmokeT4s
         }
     }
 
-    private static bool IsMastered(GameData data, ScenarioData sc, int actor, int number)
+    internal static bool IsMastered(GameData data, ScenarioData sc, int actor, int number)
     {
         foreach (int row in sc.MasteredOf(actor))
         {
@@ -303,7 +303,7 @@ internal static class SmokeT4s
 
     // ------------------------------------------------------------------ the line stand (C2, C1)
 
-    private readonly record struct LineResult(long TFirst, long T07, double YieldEnd, string Bottleneck);
+    internal readonly record struct LineResult(long TFirst, long T07, double YieldEnd, string Bottleneck);
 
     /// <summary>
     /// One actor's site from the scenario, alone (no rival: <c>world_lead = 0</c>, catch-up off). Known processes =
@@ -315,7 +315,7 @@ internal static class SmokeT4s
     /// cells of running clusters up to <c>min(M_cap, max r_d)</c> of the running processes (stand rule for AI §4).
     /// No workforce requests (<c>act = 1</c>), no quality programme, no licence.
     /// </summary>
-    private sealed class LineStand : IIndustryInputs
+    internal sealed class LineStand : IIndustryInputs
     {
         private static readonly Fx6 CapShare = Fx6.FromRaw(250_000);
         private readonly IndustryLayout _l;
@@ -411,6 +411,11 @@ internal static class SmokeT4s
             if (r >= 0)
                 _known[r] = true;
         }
+
+        /// <summary>Culture-rule prototype check (culture-rule-selection.md §1.2): the core system and one month step.</summary>
+        internal IndustrySystem Industry => _ind;
+
+        internal void StepMonth(long t) => RunMonth(t);
 
         private void RunMonth(long t)
         {
