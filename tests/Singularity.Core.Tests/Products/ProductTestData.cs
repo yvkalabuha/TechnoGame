@@ -16,11 +16,13 @@ internal static class ProductTestData
     public static readonly ScenarioData Scenario = CoreData.Scenario("jet_slice_1945");
     public static readonly ProductsLayout Probe = MakeLayout(out _);
 
-    public static ProductsLayout MakeLayout(out IndustryLayout industry)
+    public static ProductsLayout MakeLayout(out IndustryLayout industry) => MakeLayout(out industry, Years);
+
+    public static ProductsLayout MakeLayout(out IndustryLayout industry, int years)
     {
         // Requesters of the capability layout must cover the product id space (lines, bureaus, fix teams).
         industry = IndustryLayout.FromData(CoreData.Nodes, Scenario, Categories, 64);
-        return ProductsLayout.FromData(CoreData.Nodes, CoreData.ProductClasses, "jet_fighter", industry, Bureaus, Scenario.StartYear, Years);
+        return ProductsLayout.FromData(CoreData.Nodes, CoreData.ProductClasses, "jet_fighter", industry, Bureaus, Scenario.StartYear, years);
     }
 
     /// <summary>Layout-global alternative index by slot and alternative id.</summary>

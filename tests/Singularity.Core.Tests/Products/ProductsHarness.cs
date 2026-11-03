@@ -13,10 +13,15 @@ namespace Singularity.Core.Tests.Products;
 /// </summary>
 internal sealed class ProductsHarness
 {
-    public ProductsHarness(int threads = 1, int chunkSize = 1, ProductsMode mode = ProductsMode.Full, ProductsParams? parameters = null)
+    /// <param name="actorPerm">Storage order of the actors: table row r holds scenario actor <c>actorPerm[r]</c>; scripts get the stable actor index.</param>
+    /// <param name="years">Cohort years of the layout (default <see cref="ProductTestData.Years"/>).</param>
+    public ProductsHarness(int threads = 1, int chunkSize = 1, ProductsMode mode = ProductsMode.Full, ProductsParams? parameters = null,
+        int[]? actorPerm = null, int years = Years)
     {
-        Layout = MakeLayout(out _);
-        Start = ProductsStart.FromScenario(Scenario, CoreData.Nodes, CoreData.ProductClasses, Layout);
+        Layout = MakeLayout(out _, years);
+        ProductsStart baseStart = ProductsStart.FromScenario(Scenario, CoreData.Nodes, CoreData.ProductClasses, Layout);
+        ActorOf = actorPerm ?? [.. Enumerable.Range(0, Scenario.ActorCount)];
+        Start = actorPerm is null ? baseStart : Permute(baseStart, ActorOf);
         Table = new Table(Scenario.ActorCount);
         Calendar = new TickCalendar(new CivilDate(Scenario.StartYear, Scenario.StartMonth, 1));
         int chunks = TickRunner.ChunkCountFor(Table.RowCount, chunkSize);
@@ -29,6 +34,12 @@ internal sealed class ProductsHarness
     }
 
     public ProductsLayout Layout { get; }
+
+    /// <summary>Scenario actor (stable index) of each table row.</summary>
+    public int[] ActorOf { get; }
+
+    /// <summary>Table row of a scenario actor.</summary>
+    public int RowOf(int actor) => Array.IndexOf(ActorOf, actor);
     public ProductsStart Start { get; }
     public Table Table { get; }
     public TickCalendar Calendar { get; }
@@ -81,6 +92,22 @@ internal sealed class ProductsHarness
 
     public string Hash() => StateHash.ComputeHex(Table, 1, Runner.Tick);
 
+    private static ProductsStart Permute(ProductsStart b, int[] perm)
+    {
+        ProductsLayout l = b.Layout;
+        var s = new ProductsStart(l, b.Actors);
+        int d = l.Designs;
+        for (int r = 0; r < perm.Length; r++)
+        {
+            int a = perm[r];
+            Array.Copy(b.Stage, a * d, s.Stage, r * d, d);
+            Array.Copy(b.Alts, a * d * l.SlotCount, s.Alts, r * d * l.SlotCount, d * l.SlotCount);
+            Array.Copy(b.Cohort, a * d * l.Years, s.Cohort, r * d * l.Years, d * l.Years);
+            Array.Copy(b.BureauExp, a * l.Bureaus, s.BureauExp, r * l.Bureaus, l.Bureaus);
+        }
+        return s;
+    }
+
     private bool StartKnows(int actor, int number)
     {
         foreach (int row in Scenario.KnownOf(actor))
@@ -93,11 +120,13 @@ internal sealed class ProductsHarness
 
     internal sealed class ScriptedInputs(ProductsHarness h) : IProductsInputs
     {
+        private int A(int row) => h.ActorOf[row];
+
         public bool Knows(int actorRow, int nodeNumber, long month) =>
-            h.Knows is null ? h.StartKnows(actorRow, nodeNumber) : h.Knows(actorRow, nodeNumber);
+            h.Knows is null ? h.StartKnows(A(actorRow), nodeNumber) : h.Knows(A(actorRow), nodeNumber);
 
         public Fx6 AdmittedYield(int siteRow, int processNumber, long month) =>
-            Knows(siteRow, processNumber, month) ? h.Yield(siteRow, processNumber) : Fx6.Zero;
+            Knows(siteRow, processNumber, month) ? h.Yield(A(siteRow), processNumber) : Fx6.Zero;
 
         public ProductionProfile Profile(int siteRow, ReadOnlySpan<PrcSetItem> prcSet, long month)
         {
@@ -111,20 +140,20 @@ internal sealed class ProductsHarness
             return IndustryMath.Profile(items, Fx6.FromRaw(10_000));
         }
 
-        public Fx6 AlloySupply(int siteRow, long month) => h.Alloy(siteRow, month);
+        public Fx6 AlloySupply(int siteRow, long month) => h.Alloy(A(siteRow), month);
 
         public long Granted(int siteRow, int category, int requesterId, long month) => h.Grants[siteRow, category, requesterId];
 
-        public Fx6 ProcurementBudget(int actorRow, long month) => h.Budget(actorRow, month);
+        public Fx6 ProcurementBudget(int actorRow, long month) => h.Budget(A(actorRow), month);
 
-        public DesignOrder? Order(int actorRow, long month) => h.Order(actorRow, month);
+        public DesignOrder? Order(int actorRow, long month) => h.Order(A(actorRow), month);
 
-        public bool LaunchSeries(int actorRow, int design, long month) => h.Launch(actorRow, design, month);
+        public bool LaunchSeries(int actorRow, int design, long month) => h.Launch(A(actorRow), design, month);
 
-        public bool CloseLine(int actorRow, int design, long month) => h.Close(actorRow, design, month);
+        public bool CloseLine(int actorRow, int design, long month) => h.Close(A(actorRow), design, month);
 
-        public Fx6 LineRate(int actorRow, int design, long month) => h.Rate(actorRow, design, month);
+        public Fx6 LineRate(int actorRow, int design, long month) => h.Rate(A(actorRow), design, month);
 
-        public long AppKnownSince(int actorRow, int gen, long month) => h.AppKnownSince(actorRow, gen);
+        public long AppKnownSince(int actorRow, int gen, long month) => h.AppKnownSince(A(actorRow), gen);
     }
 }
