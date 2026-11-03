@@ -10,7 +10,7 @@
 ## Активные задачи
 <!-- registry:active:start -->
 - TASK-0009 [REVIEW] Kernel: контрольный тест отсутствия FMA-сжатия на всех платформах CI (developer)
-- TASK-0013 [APPROVED] Формат данных среза: схемы, YAML мода core, загрузчик и валидатор (ADR-0010) (developer)
+- TASK-0013 [REVIEW] Формат данных среза: схемы, YAML мода core, загрузчик и валидатор (ADR-0010) (developer)
 - TASK-0014 [APPROVED] Core.Knowledge для среза: фронтир, c_eff, hazard, K_d, K_ind, расписания абляций (developer)
 - TASK-0015 [APPROVED] Core.Industry для среза: culture_H, tooling_M, production_profile, сплав, reserve_workforce (developer)
 - TASK-0016 [APPROVED] Спайк Godot: Core внутри Godot .NET, сборка в CI, исключение тестового кода из release (developer)
