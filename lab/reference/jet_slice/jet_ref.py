@@ -254,6 +254,19 @@ def hazard(prog, theta, h_max, y_half, u):
     return {"active": True, "y": y, "h": h, "check": chk, "opened": chk["hit"]}
 
 
+def k_ind_step(K_ind, K_d, V_d, eta, V_ref, theta_ind, delta_ind):
+    """Contract 4.3 (canonical form, 4.0). Guard (contract v2.1 + slice spec v0.6 3.5 A16): no growth
+    when K_d = 0 or when cap = theta_ind*K_d floors to 0 raw (the division would be by zero)."""
+    if V_d == 0:
+        return {"branch": "decay", "cap": None, "frac": None, "K_ind_new": K_ind - mul(delta_ind, K_ind)}
+    cap = mul(theta_ind, K_d)
+    if K_d == 0 or cap == 0:
+        return {"branch": "no_cap", "cap": cap, "frac": None, "K_ind_new": K_ind}
+    frac = div(mul(eta, V_d), add(V_d, V_ref))
+    return {"branch": "grow", "cap": cap, "frac": frac,
+            "K_ind_new": add(K_ind, mul(frac, max(ZERO, ONE - div(K_ind, cap))))}
+
+
 # ---------------------------------------------------------------- contract 4.6: reserve_workforce split
 def workforce_split(avail, requests):
     """requests: [(site, cat, requester_id, n)] for one (site, cat); integer people."""
@@ -339,7 +352,7 @@ PROFILE_CASES = [
 
 
 def formula_cases(seed):
-    out = {"culture_H": [], "production_profile": [], "knowledge": [], "hazard": [],
+    out = {"culture_H": [], "production_profile": [], "knowledge": [], "k_ind": [], "hazard": [],
            "prob_check": [], "draws": [], "workforce_split": [], "counter_rng": []}
     for name, note, inp in CULTURE_CASES:
         out["culture_H"].append({"name": name, "note": note, "input": inp, "output": culture_step(inp)})
@@ -368,6 +381,12 @@ def formula_cases(seed):
                                                     "entity": node, "n": 0},
                               "prog": fx(prog), "theta_start": th, "h_max": hm, "y_half": yh,
                               "output": hazard(fx(prog), th, hm, yh, u)})
+    ki = dict(eta=fx("0.01"), V_ref=fx("1000"), theta_ind=fx("0.25"), delta_ind=fx("0.003"))
+    for name, K_ind, K_d, V_d in [("idle_decay", "0.05", "0.5", "0"), ("grow", "0.02", "0.5", "1000"),
+                                  ("saturated_room_zero", "0.2", "0.5", "1000"), ("kd_zero", "0", "0", "500"),
+                                  ("cap_floors_to_zero", "0", "0.000003", "500"), ("cap_one_raw", "0", "0.000004", "500")]:
+        out["k_ind"].append({"name": name, "input": dict(K_ind=fx(K_ind), K_d=fx(K_d), V_d=fx(V_d), **ki),
+                             "output": k_ind_step(fx(K_ind), fx(K_d), fx(V_d), **ki)})
     for p in ["0", "0.000001", "0.08", "0.5", "1"]:
         for u in [0, (fx("0.5") * TWO53 // SCALE) << 11, M64]:
             out["prob_check"].append({"p_raw": fx(p), **prob_check(u, fx(p))})
@@ -604,13 +623,7 @@ def run_trajectory(seed):
         for d in sorted(K_ind):
             V_d = add(*[proc_v[p] for p in sorted(proc_v)
                         if NODES[p]["disc"] == d and proc_yield[p] >= fx("0.3")]) if proc_v else ZERO
-            if V_d == 0:
-                K_ind_new[d] = K_ind[d] - mul(T["delta_ind"], K_ind[d])
-            elif K_d[d] != 0:
-                frac = div(mul(T["eta"], V_d), add(V_d, T["V_ref"]))
-                K_ind_new[d] = add(K_ind[d], mul(frac, max(ZERO, ONE - div(K_ind[d], mul(T["theta_ind"], K_d[d])))))
-            else:
-                K_ind_new[d] = K_ind[d]
+            K_ind_new[d] = k_ind_step(K_ind[d], K_d[d], V_d, T["eta"], T["V_ref"], T["theta_ind"], T["delta_ind"])["K_ind_new"]
         # industry compute: yield from snapshot culture/tooling/experience -> proc_yield buffer; rate in force
         reports, yields = [], {}
         for p in sorted(X):

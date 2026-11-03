@@ -1,7 +1,7 @@
 ---
 id: TASK-0014
 title: "Core.Knowledge для среза: фронтир, c_eff, hazard, K_d, K_ind, расписания абляций"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: developer
