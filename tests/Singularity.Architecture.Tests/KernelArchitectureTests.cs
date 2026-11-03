@@ -15,6 +15,31 @@ public class KernelArchitectureTests
         Assert.Empty(DeterminismRules.Check(Kernel.GetTypes()));
     }
 
+    // ADR-0003 R3: the exact set of Kernel members that may touch double. Adding a member here
+    // means the double path in Kernel grows, which needs review against the R3 rule.
+    private static readonly string[] DoubleAllowList =
+    [
+        "CounterRng.NextUnit",
+        "CounterRng.TwoPowMinus53", // const used only by NextUnit
+        "DetMath.CheckArguments",
+        "DetMath.CheckFinite",
+        "DetMath.Finish",
+        "DetMath.PowAbs",
+        "DetMath.PowDyadic",
+        "DetMath.PowFrac",
+        "DetMath.PowFracFx",
+        "DetMath.PowInt",
+        "DetMath.Sqrt",
+        "Fx6.FromDouble",
+        "Fx6.ToDouble",
+    ];
+
+    [Fact]
+    public void Kernel_UsesDoubleOnlyInR3AllowList()
+    {
+        Assert.Equal(DoubleAllowList, DeterminismRules.DoubleUsers(Kernel.GetTypes()));
+    }
+
     [Fact]
     public void Kernel_DoesNotReferenceOtherSolutionAssemblies()
     {

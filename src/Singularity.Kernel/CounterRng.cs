@@ -40,6 +40,42 @@ public readonly struct CounterRng
     public double NextUnit(long tick, int system, int entity, int n) =>
         (NextU64(tick, system, entity, n) >> 11) * TwoPowMinus53;
 
+    // Integer draws for Core, which has no double (ADR-0003 R1-R2). Each takes one NextU64 value u
+    // and uses its top 53 bits r = u >> 11, i.e. U = r / 2^53, the same U as NextUnit.
+
+    /// <summary>
+    /// True with probability p: <c>r &lt; floor(p.Raw * 2^53 / 10^6)</c>, computed in Int128.
+    /// p &lt;= 0 is never true, p &gt;= 1 always.
+    /// </summary>
+    public static bool Chance(ulong u, Fx6 p)
+    {
+        if (p.Raw <= 0)
+            return false;
+        Int128 threshold = ((Int128)p.Raw << 53) / Fx6.Scale;
+        return (u >> 11) < threshold;
+    }
+
+    /// <summary>
+    /// Uniform integer on [lo; hi]: <c>lo + floor((hi - lo + 1) * U)</c>, exact in integers.
+    /// U has 53 bits, so spans wider than 2^53 do not reach every value.
+    /// </summary>
+    public static long UniformInt(ulong u, long lo, long hi)
+    {
+        if (hi < lo)
+            throw new ArgumentOutOfRangeException(nameof(hi), hi, "hi must be >= lo.");
+        // span <= 2^64 and r < 2^53, so the product fits into 117 bits.
+        UInt128 span = (UInt128)((Int128)hi - lo + 1);
+        return (long)((Int128)lo + (Int128)(((UInt128)(u >> 11) * span) >> 53));
+    }
+
+    /// <summary>Uniform index on [0; count): <c>floor(count * U)</c>, e.g. a profile out of 3.</summary>
+    public static int Index(ulong u, int count)
+    {
+        if (count <= 0)
+            throw new ArgumentOutOfRangeException(nameof(count), count, "count must be positive.");
+        return (int)UniformInt(u, 0, count - 1);
+    }
+
     /// <summary>SplitMix64 step: golden-gamma increment followed by the Stafford variant-13 finalizer.</summary>
     public static ulong Mix(ulong x)
     {

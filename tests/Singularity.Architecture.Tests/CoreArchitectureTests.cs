@@ -15,6 +15,31 @@ public class CoreArchitectureTests
         Assert.Empty(DeterminismRules.Check(Core.GetTypes()));
     }
 
+    // ADR-0003 R4: the only Core namespaces still allowed to use double, matched exactly
+    // (sub-namespaces get no rights). A new one needs an ADR.
+    private static readonly string[] DoubleExceptions =
+    [
+        "Singularity.Core.Science.ToyFunnel",
+        "Singularity.Core.Simulation",
+    ];
+
+    [Fact]
+    public void Core_OutsideR4Exceptions_HasNoDouble()
+    {
+        Type[] checkedTypes = Core.GetTypes().Where(t => !IsDoubleException(t)).ToArray();
+        Assert.Empty(DeterminismRules.Check(checkedTypes, forbidDouble: true));
+    }
+
+    [Fact]
+    public void R4Exceptions_AreNotStale()
+    {
+        // Each exception must still name real code; a dead entry would silently admit future code.
+        foreach (string ns in DoubleExceptions)
+            Assert.Contains(Core.GetTypes(), t => t.Namespace == ns);
+    }
+
+    private static bool IsDoubleException(Type type) => Array.IndexOf(DoubleExceptions, type.Namespace) >= 0;
+
     [Fact]
     public void Core_ReferencesOnlyKernel()
     {

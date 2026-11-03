@@ -4,6 +4,8 @@ using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
+using Singularity.Core.Simulation;
+using Singularity.Kernel;
 
 namespace Singularity.Architecture.Tests;
 
@@ -65,6 +67,113 @@ public class DeterminismRulesTests
         List<string> violations = DeterminismRules.Check(types);
         Assert.Contains(violations, v => v.Contains(expected, StringComparison.OrdinalIgnoreCase));
     }
+
+    // ADR-0003 R1: forbidDouble mode.
+    [Fact]
+    public void FixedPointCode_PassesForbidDouble()
+    {
+        Assert.Empty(DeterminismRules.Check([typeof(FixedPointOnly)], forbidDouble: true));
+    }
+
+    [Theory]
+    [InlineData(typeof(UsesDoubleLocal), "forbidden type System.Double")]
+    [InlineData(typeof(UsesDoubleLocal), "opcode ldc.r8")]
+    [InlineData(typeof(UsesDoubleField), "forbidden type System.Double")]
+    [InlineData(typeof(UsesDoubleParameter), "forbidden type System.Double")]
+    [InlineData(typeof(ConvertsToDouble), "opcode conv.r8")]
+    [InlineData(typeof(ConvertsUnsignedToDouble), "opcode conv.r.un")]
+    [InlineData(typeof(UsesDoubleArray), "System.Double")]
+    [InlineData(typeof(UsesNullableDouble), "System.Nullable`1[System.Double]")]
+    [InlineData(typeof(CallsNextUnit), "CounterRng.NextUnit (return)")]
+    [InlineData(typeof(CallsGetDouble), "ParamSet.GetDouble (return)")]
+    [InlineData(typeof(CallsToDouble), "Fx6.ToDouble (return)")]
+    [InlineData(typeof(CallsPowFrac), "DetMath.PowFrac (return)")]
+    [InlineData(typeof(CallsGenericWithDouble), "GenericHelper.Run (type argument)")]
+    public void DoubleViolation_IsDetected(Type sample, string expected)
+    {
+        Type[] types = [sample, .. sample.GetNestedTypes(IlScanner.AllDeclared)];
+        Assert.Contains(DeterminismRules.Check(types, forbidDouble: true),
+            v => v.Contains(expected, StringComparison.Ordinal));
+        // Default mode keeps double allowed (R4 exceptions, Kernel).
+        Assert.Empty(DeterminismRules.Check(types));
+    }
+
+    [Fact]
+    public void DoubleUsers_ListsEveryMemberTouchingDouble()
+    {
+        Type[] types = [typeof(FixedPointOnly), typeof(UsesDoubleLocal), typeof(UsesDoubleField), typeof(CallsToDouble)];
+        Assert.Equal(["CallsToDouble.Run", "UsesDoubleField..ctor", "UsesDoubleField.Value", "UsesDoubleLocal.Run"], DeterminismRules.DoubleUsers(types));
+    }
+}
+
+[SuppressMessage("Performance", "CA1822", Justification = "IL samples for the rule checker.")]
+internal sealed class FixedPointOnly
+{
+    // The Kernel API Core uses under R1: Fx6 powers and integer draws, no double in sight.
+    public Fx6 Run(Fx6 x, ulong u) =>
+        CounterRng.Chance(u, Fx6.FromRaw(250_000))
+            ? DetMath.PowFracFx(x, 330) + Fx6.FromRaw(CounterRng.UniformInt(u, 500_000, 1_500_000))
+            : Fx6.FromInt(CounterRng.Index(u, 3));
+}
+
+internal sealed class UsesDoubleLocal
+{
+    public long Run(long a)
+    {
+        double d = a * 0.5;
+        return (long)d;
+    }
+}
+
+internal sealed class UsesDoubleField
+{
+    public double Value = 2;
+}
+
+internal sealed class UsesDoubleParameter
+{
+    public static long Run(double x) => x > 0 ? 1 : 0;
+}
+
+internal sealed class ConvertsToDouble
+{
+    // No double local: the value lives only on the evaluation stack.
+    public static bool Run(long a, long b) => (double)a < b;
+}
+
+internal sealed class ConvertsUnsignedToDouble
+{
+    public static bool Run(ulong a, long b) => a < (double)b;
+}
+
+internal sealed class UsesDoubleArray
+{
+    public static int Run(int n) => new double[n].Length;
+}
+
+internal sealed class UsesNullableDouble
+{
+    public static bool Run(double? x) => x.HasValue;
+}
+
+internal sealed class CallsNextUnit
+{
+    public static bool Run(CounterRng rng) => rng.NextUnit(0, 0, 0, 0) < 0.5;
+}
+
+internal sealed class CallsGetDouble
+{
+    public static bool Run(ParamSet p) => p.GetDouble("x") > 0;
+}
+
+internal sealed class CallsToDouble
+{
+    public static bool Run(Fx6 x) => x.ToDouble() > 1;
+}
+
+internal sealed class CallsPowFrac
+{
+    public static long Run(long x) => (long)DetMath.PowFrac(x, 330);
 }
 
 [SuppressMessage("Performance", "CA1822", Justification = "IL samples for the rule checker.")]
@@ -398,4 +507,14 @@ internal sealed class EnumeratesDictionaryViaLinq
 internal sealed class CopiesHashSetIntoList
 {
     public List<int> Run(HashSet<int> set) => new(set);
+}
+
+internal static class GenericHelper
+{
+    public static long Run<T>(long x) => x + (typeof(T).IsValueType ? 1 : 0);
+}
+
+internal sealed class CallsGenericWithDouble
+{
+    public static long Run(long x) => GenericHelper.Run<double>(x);
 }

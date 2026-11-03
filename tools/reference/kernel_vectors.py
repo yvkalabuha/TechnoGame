@@ -1,9 +1,10 @@
-"""Independent reference for Singularity.Kernel test vectors (CounterRng, StateHash).
+"""Independent reference for Singularity.Kernel test vectors (CounterRng, StateHash, DetMath.PowFrac).
 
 Re-implements the byte-level spec in Python so the C# vectors are not just
 "whatever the C# code printed". Run: python3 tools/reference/kernel_vectors.py
 """
 import hashlib
+import math
 import struct
 
 M64 = (1 << 64) - 1
@@ -45,6 +46,36 @@ def state_hash(schema_version, tick, n_rows, columns):
     return hashlib.sha256(data).hexdigest()
 
 
+def pow_frac(x, q10):
+    """DetMath.PowFrac (ADR-0012): full 10-root loop, acc = 1, roots by ascending i, then x^int.
+    Python floats are IEEE binary64 and math.sqrt is correctly rounded, so this is bit-exact."""
+    k = abs(q10)
+    acc, root = 1.0, x
+    for i in range(1, 11):
+        root = math.sqrt(root)
+        if k & (1 << (10 - i)):
+            acc *= root
+    p, b, n = 1.0, x, k >> 10
+    while n > 0:
+        if n & 1:
+            p *= b
+        b *= b
+        n >>= 1
+    acc *= p
+    return acc if q10 >= 0 else 1.0 / acc
+
+
+POW_FRAC_CASES = [
+    (2.0, -330), (2.0, -329), (2.0, 512), (10000.0, 307), (1000000.0, 717), (1234.5, 1331),
+    (0.35, 1664), (3.0, 1023), (7.0, -1), (0.001, 4097), (1.5, 2049), (123456.789, -717),
+    (1.0000001, 1), (98765.4321, 3333),
+]
+
+
+def double_bits(v):
+    return struct.unpack('<q', struct.pack('<d', v))[0]
+
+
 if __name__ == '__main__':
     print('mix(0) = 0x%016X' % mix(0))
     for key in RNG_KEYS:
@@ -55,3 +86,6 @@ if __name__ == '__main__':
         ('i', [0, 1, -1, -2147483648]),
     ]))
     print('empty table:', state_hash(1, 0, 0, []))
+    for x, q in POW_FRAC_CASES:
+        v = pow_frac(x, q)
+        print('PowFrac(%r, %d) = %r bits 0x%016XL' % (x, q, v, double_bits(v) & M64))

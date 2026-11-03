@@ -34,6 +34,13 @@ internal static class DeterminismRules
         OpCodes.Ldelem_R4, OpCodes.Stelem_R4,
     ];
 
+    // Double-precision IL opcodes, forbidden in forbidDouble mode (ADR-0003 R1).
+    private static readonly OpCode[] DoubleOpCodes =
+    [
+        OpCodes.Ldc_R8, OpCodes.Conv_R8, OpCodes.Conv_R_Un, OpCodes.Ldind_R8, OpCodes.Stind_R8,
+        OpCodes.Ldelem_R8, OpCodes.Stelem_R8,
+    ];
+
     private static readonly (Type Type, string Member)[] BannedMembers =
     [
         (typeof(DateTime), "get_Now"), (typeof(DateTime), "get_UtcNow"), (typeof(DateTime), "get_Today"),
@@ -76,30 +83,64 @@ internal static class DeterminismRules
         typeof(IFloatingPointIeee754<>),
     ];
 
-    public static List<string> Check(IEnumerable<Type> types)
+    /// <param name="forbidDouble">
+    /// ADR-0003 R1: also reject <see cref="double"/> anywhere (fields, signatures, locals, callees,
+    /// r8 opcodes). Used for Core outside the R4 exceptions.
+    /// </param>
+    public static List<string> Check(IEnumerable<Type> types, bool forbidDouble = false)
     {
         var violations = new List<string>();
         foreach (Type type in types)
         {
             foreach (FieldInfo field in type.GetFields(IlScanner.AllDeclared))
-                CheckType(field.FieldType, $"{type}.{field.Name} (field)", violations);
+                CheckType(field.FieldType, $"{type}.{field.Name} (field)", violations, forbidDouble);
 
-            var methods = type.GetMethods(IlScanner.AllDeclared).Cast<MethodBase>()
-                .Concat(type.GetConstructors(IlScanner.AllDeclared));
-            foreach (MethodBase method in methods)
-                CheckMethod(method, $"{type}.{method.Name}", violations);
+            foreach (MethodBase method in DeclaredMethods(type))
+                CheckMethod(method, $"{type}.{method.Name}", violations, forbidDouble);
         }
         return violations;
     }
 
-    private static void CheckMethod(MethodBase method, string site, List<string> violations)
+    /// <summary>
+    /// ADR-0003 R3: the members ("Type.Member", sorted, distinct) that use <see cref="double"/> in a
+    /// field type, signature, local, callee or opcode. Compared against an exact allow-list.
+    /// </summary>
+    public static List<string> DoubleUsers(IEnumerable<Type> types)
+    {
+        var users = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (Type type in types)
+        {
+            foreach (FieldInfo field in type.GetFields(IlScanner.AllDeclared))
+            {
+                if (ContainsForbiddenType(field.FieldType, forbidDouble: true) &&
+                    !ContainsForbiddenType(field.FieldType, forbidDouble: false))
+                    users.Add($"{type.Name}.{field.Name}");
+            }
+            foreach (MethodBase method in DeclaredMethods(type))
+            {
+                // The double check only adds violations, so a longer list means the method uses double.
+                var withDouble = new List<string>();
+                var without = new List<string>();
+                CheckMethod(method, "", withDouble, forbidDouble: true);
+                CheckMethod(method, "", without, forbidDouble: false);
+                if (withDouble.Count > without.Count)
+                    users.Add($"{type.Name}.{method.Name}");
+            }
+        }
+        return [.. users];
+    }
+
+    private static IEnumerable<MethodBase> DeclaredMethods(Type type) =>
+        type.GetMethods(IlScanner.AllDeclared).Cast<MethodBase>().Concat(type.GetConstructors(IlScanner.AllDeclared));
+
+    private static void CheckMethod(MethodBase method, string site, List<string> violations, bool forbidDouble)
     {
         if (method is MethodInfo info)
-            CheckType(info.ReturnType, $"{site} (return)", violations);
+            CheckType(info.ReturnType, $"{site} (return)", violations, forbidDouble);
         foreach (ParameterInfo parameter in method.GetParameters())
-            CheckType(parameter.ParameterType, $"{site} (parameter {parameter.Name})", violations);
+            CheckType(parameter.ParameterType, $"{site} (parameter {parameter.Name})", violations, forbidDouble);
         foreach (LocalVariableInfo local in method.GetMethodBody()?.LocalVariables ?? [])
-            CheckType(local.LocalType, $"{site} (local #{local.LocalIndex})", violations);
+            CheckType(local.LocalType, $"{site} (local #{local.LocalIndex})", violations, forbidDouble);
 
         // Indirect enumeration (via an interface, LINQ or a constructor taking IEnumerable) cannot be
         // tied to a concrete collection without data-flow analysis. Conservative rule: a method that
@@ -110,25 +151,27 @@ internal static class DeterminismRules
         {
             if (Array.IndexOf(FloatOpCodes, instruction.OpCode) >= 0)
                 violations.Add($"{site}: single-precision opcode {instruction.OpCode.Name}");
+            if (forbidDouble && Array.IndexOf(DoubleOpCodes, instruction.OpCode) >= 0)
+                violations.Add($"{site}: double-precision opcode {instruction.OpCode.Name}");
 
             switch (instruction.Operand)
             {
                 case MethodBase callee:
-                    CheckCallee(callee, site, violations);
+                    CheckCallee(callee, site, violations, forbidDouble);
                     if (touchesUnordered && EnumeratesIndirectly(callee))
                         violations.Add($"{site}: enumerates an unordered collection indirectly via {callee.DeclaringType?.Name}.{callee.Name}");
                     break;
                 case FieldInfo field:
-                    CheckType(field.FieldType, $"{site} uses field {field.Name}", violations);
+                    CheckType(field.FieldType, $"{site} uses field {field.Name}", violations, forbidDouble);
                     break;
                 case Type type:
-                    CheckType(type, $"{site} uses type", violations);
+                    CheckType(type, $"{site} uses type", violations, forbidDouble);
                     break;
             }
         }
     }
 
-    private static void CheckCallee(MethodBase callee, string site, List<string> violations)
+    private static void CheckCallee(MethodBase callee, string site, List<string> violations, bool forbidDouble)
     {
         Type? owner = callee.DeclaringType;
         string name = $"{owner?.Name}.{callee.Name}";
@@ -159,11 +202,17 @@ internal static class DeterminismRules
         }
 
         if (owner is not null)
-            CheckType(owner, $"{site} calls {name}", violations);
+            CheckType(owner, $"{site} calls {name}", violations, forbidDouble);
         if (callee is MethodInfo info)
-            CheckType(info.ReturnType, $"{site} calls {name} (return)", violations);
+            CheckType(info.ReturnType, $"{site} calls {name} (return)", violations, forbidDouble);
         foreach (ParameterInfo parameter in callee.GetParameters())
-            CheckType(parameter.ParameterType, $"{site} calls {name} (parameter)", violations);
+            CheckType(parameter.ParameterType, $"{site} calls {name} (parameter)", violations, forbidDouble);
+        // Run<double>(long) -> long hides the type in the method instantiation only.
+        if (callee.IsGenericMethod)
+        {
+            foreach (Type argument in callee.GetGenericArguments())
+                CheckType(argument, $"{site} calls {name} (type argument)", violations, forbidDouble);
+        }
     }
 
     private static bool TouchesUnordered(MethodBase method)
@@ -226,19 +275,21 @@ internal static class DeterminismRules
         return type.IsGenericType && type.GetGenericArguments().Any(ContainsUnordered);
     }
 
-    private static void CheckType(Type type, string site, List<string> violations)
+    private static void CheckType(Type type, string site, List<string> violations, bool forbidDouble)
     {
-        if (ContainsForbiddenType(type))
+        if (ContainsForbiddenType(type, forbidDouble))
             violations.Add($"{site}: forbidden type {type}");
     }
 
-    private static bool ContainsForbiddenType(Type type)
+    private static bool ContainsForbiddenType(Type type, bool forbidDouble)
     {
         if (type.HasElementType)
-            return ContainsForbiddenType(type.GetElementType()!);
+            return ContainsForbiddenType(type.GetElementType()!, forbidDouble);
         if (type == typeof(float) || type == typeof(Half) || type == typeof(Random) || type == typeof(MathF))
             return true;
+        if (forbidDouble && type == typeof(double))
+            return true;
         return type.IsGenericType && !type.IsGenericTypeDefinition &&
-               type.GetGenericArguments().Any(ContainsForbiddenType);
+               type.GetGenericArguments().Any(t => ContainsForbiddenType(t, forbidDouble));
     }
 }

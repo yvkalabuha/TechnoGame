@@ -10,7 +10,6 @@
 ## Активные задачи
 <!-- registry:active:start -->
 - TASK-0009 [REVIEW] Kernel: контрольный тест отсутствия FMA-сжатия на всех платформах CI (developer)
-- TASK-0010 [REVIEW] Kernel: DetMath.PowFrac, PowFracFx и целочисленные выборки; архитектурный тест ADR-0003 R1–R3 (developer)
 - TASK-0011 [APPROVED] Данные среза «реактивная авиация»: 61 узел, класс изделия, сценарий 1945, валидатор (research-scientist)
 <!-- registry:active:end -->
 

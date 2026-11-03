@@ -1,7 +1,7 @@
 ---
 id: TASK-0010
 title: "Kernel: DetMath.PowFrac, PowFracFx и целочисленные выборки; архитектурный тест ADR-0003 R1–R3"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: developer
