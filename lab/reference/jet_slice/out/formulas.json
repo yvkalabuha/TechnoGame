@@ -1,0 +1,1925 @@
+{
+ "counter_rng": [
+  {
+   "key": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "u": 2890529318584249941
+  },
+  {
+   "key": [
+    1,
+    0,
+    0,
+    0,
+    0
+   ],
+   "u": 12668002609681447768
+  },
+  {
+   "key": [
+    0,
+    1,
+    0,
+    0,
+    0
+   ],
+   "u": 7825825808570786300
+  },
+  {
+   "key": [
+    0,
+    0,
+    1,
+    0,
+    0
+   ],
+   "u": 10721893901666933757
+  },
+  {
+   "key": [
+    0,
+    0,
+    0,
+    1,
+    0
+   ],
+   "u": 59927639813173619
+  },
+  {
+   "key": [
+    0,
+    0,
+    0,
+    0,
+    1
+   ],
+   "u": 4802495960618358224
+  },
+  {
+   "key": [
+    42,
+    1910,
+    3,
+    17,
+    2
+   ],
+   "u": 8503191970695352377
+  },
+  {
+   "key": [
+    42,
+    17,
+    3,
+    1910,
+    2
+   ],
+   "u": 8058167754343250525
+  },
+  {
+   "key": [
+    18446744073709551615,
+    -1,
+    -1,
+    -1,
+    -1
+   ],
+   "u": 4557456096393514046
+  },
+  {
+   "key": [
+    20261102,
+    69400,
+    7,
+    199,
+    3
+   ],
+   "u": 5679588637590312981
+  },
+  {
+   "key": [
+    123456789,
+    365,
+    1,
+    0,
+    0
+   ],
+   "u": 16176305577604078352
+  },
+  {
+   "key": [
+    123456789,
+    0,
+    1,
+    365,
+    0
+   ],
+   "u": 8840885159514890942
+  }
+ ],
+ "culture_H": [
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "idle_decay_to_floor",
+   "note": "V_c=0: drive=catch=maint=0, decay over H_floor=3.0",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3498500,
+    "V_c": 0,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 1500,
+    "dH_plus": 0,
+    "dH_plus_capped": 0,
+    "drive": 0,
+    "maint": 0,
+    "s_p": [],
+    "sat": 300000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 2500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "below_floor_no_change",
+   "note": "H<H_floor: no fall, no automatic rise (#30)",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 2500000,
+    "V_c": 0,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 0,
+    "dH_plus": 0,
+    "dH_plus_capped": 0,
+    "drive": 0,
+    "maint": 0,
+    "s_p": [],
+    "sat": 500000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "prc_id": 1,
+      "r_d": 4000000,
+      "v": 1000000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "single_hard_process",
+   "note": "one process above level: drive, maint=r",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3512375,
+    "V_c": 1000000000,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 0,
+    "dH_plus": 12375,
+    "dH_plus_capped": 12375,
+    "drive": 750000,
+    "maint": 4000000,
+    "s_p": [
+     {
+      "prc_id": 1,
+      "s": 1000000
+     }
+    ],
+    "sat": 300000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "prc_id": 1,
+      "r_d": 4500000,
+      "v": 10000000,
+      "world_lead": false
+     },
+     {
+      "prc_id": 2,
+      "r_d": 3000000,
+      "v": 990000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "f2_dilution_1pct",
+   "note": "F2: 1% of cluster volume gives 1% of drive",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3498751,
+    "V_c": 1000000000,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 1455,
+    "dH_plus": 206,
+    "dH_plus_capped": 206,
+    "drive": 12500,
+    "maint": 3015000,
+    "s_p": [
+     {
+      "prc_id": 1,
+      "s": 10000
+     },
+     {
+      "prc_id": 2,
+      "s": 990000
+     }
+    ],
+    "sat": 300000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "prc_id": 1,
+      "r_d": 4000000,
+      "v": 500000000,
+      "world_lead": true
+     },
+     {
+      "prc_id": 2,
+      "r_d": 3000000,
+      "v": 500000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "catch_world_lead",
+   "note": "k_catch term with world_lead=1 on the hard process",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3509000,
+    "V_c": 1000000000,
+    "alpha_eff": 50000,
+    "catch": 375000,
+    "dH_minus": 0,
+    "dH_plus": 9000,
+    "dH_plus_capped": 9000,
+    "drive": 375000,
+    "maint": 3500000,
+    "s_p": [
+     {
+      "prc_id": 1,
+      "s": 500000
+     },
+     {
+      "prc_id": 2,
+      "s": 500000
+     }
+    ],
+    "sat": 300000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 2000000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 80000,
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "prc_id": 1,
+      "r_d": 4500000,
+      "v": 1000000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "rho_max_cap",
+   "note": "large drive capped by rho_max",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 2021000,
+    "V_c": 1000000000,
+    "alpha_eff": 80000,
+    "catch": 0,
+    "dH_minus": 0,
+    "dH_plus": 145200,
+    "dH_plus_capped": 21000,
+    "drive": 2750000,
+    "maint": 4500000,
+    "s_p": [
+     {
+      "prc_id": 1,
+      "s": 1000000
+     }
+    ],
+    "sat": 600000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 5000000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "prc_id": 1,
+      "r_d": 5500000,
+      "v": 1000000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "sat_zero_at_cap",
+   "note": "H=Hcap: sat=0, only decay",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 5000000,
+    "V_c": 1000000000,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 0,
+    "dH_plus": 0,
+    "dH_plus_capped": 0,
+    "drive": 750000,
+    "maint": 5500000,
+    "s_p": [
+     {
+      "prc_id": 1,
+      "s": 1000000
+     }
+    ],
+    "sat": 0,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [
+     {
+      "H_other": 4100000,
+      "R": 300000,
+      "cluster": "CHEM"
+     }
+    ],
+    "w": 1100000
+   },
+   "name": "spill_only",
+   "note": "no output, spill from CHEM with R=0.3",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3498770,
+    "V_c": 0,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 1500,
+    "dH_plus": 270,
+    "dH_plus_capped": 270,
+    "drive": 0,
+    "maint": 0,
+    "s_p": [],
+    "sat": 300000,
+    "spill": 180000
+   }
+  },
+  {
+   "input": {
+    "H": 3200000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "d_is_qc": true,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "prc_id": 1,
+      "r_d": 3500000,
+      "v": 1000000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": true,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "qp_alpha_eff",
+   "note": "quality programme on quality_control: alpha*(1+k_qp)",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3216335,
+    "V_c": 1000000000,
+    "alpha_eff": 75000,
+    "catch": 0,
+    "dH_minus": 0,
+    "dH_plus": 16335,
+    "dH_plus_capped": 16335,
+    "drive": 550000,
+    "maint": 3500000,
+    "s_p": [
+     {
+      "prc_id": 1,
+      "s": 1000000
+     }
+    ],
+    "sat": 360000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 800000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "prc_id": 1,
+      "r_d": 4000000,
+      "v": 1000000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "act_half_maint",
+   "note": "act=0.8: maint and the alpha term scaled by act",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3509000,
+    "V_c": 1000000000,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 900,
+    "dH_plus": 9900,
+    "dH_plus_capped": 9900,
+    "drive": 750000,
+    "maint": 3200000,
+    "s_p": [
+     {
+      "prc_id": 1,
+      "s": 1000000
+     }
+    ],
+    "sat": 300000,
+    "spill": 0
+   }
+  },
+  {
+   "input": {
+    "H": 3500000,
+    "Hcap": 5000000,
+    "act": 1000000,
+    "act_norm": 1000000,
+    "alpha": 50000,
+    "d_is_qc": false,
+    "delta_H": 3000,
+    "k_catch": 25000,
+    "k_qp": 500000,
+    "phi_floor": 600000,
+    "procs": [
+     {
+      "prc_id": 1,
+      "r_d": 4000000,
+      "v": 500000000,
+      "world_lead": false
+     },
+     {
+      "prc_id": 2,
+      "r_d": 0,
+      "v": 500000000,
+      "world_lead": false
+     }
+    ],
+    "qp_active": false,
+    "rho_max": 21000,
+    "sigma": 5000,
+    "spill_in": [],
+    "w": 1100000
+   },
+   "name": "r_zero_dilutes",
+   "note": "process with r_d=0 in the cluster (A2): dilutes drive and maint",
+   "output": {
+    "H_floor": 3000000,
+    "H_new": 3504687,
+    "V_c": 1000000000,
+    "alpha_eff": 50000,
+    "catch": 0,
+    "dH_minus": 1500,
+    "dH_plus": 6187,
+    "dH_plus_capped": 6187,
+    "drive": 375000,
+    "maint": 2000000,
+    "s_p": [
+     {
+      "prc_id": 1,
+      "s": 500000
+     },
+     {
+      "prc_id": 2,
+      "s": 500000
+     }
+    ],
+    "sat": 300000,
+    "spill": 0
+   }
+  }
+ ],
+ "draws": [
+  {
+   "key": [
+    20261103,
+    0,
+    5,
+    0,
+    0
+   ],
+   "kind": "profile",
+   "u": 5138518622674204084,
+   "value": 0
+  },
+  {
+   "key": [
+    20261103,
+    0,
+    2,
+    17,
+    0
+   ],
+   "kind": "j",
+   "u": 1289369173911705501,
+   "value": 569896
+  },
+  {
+   "key": [
+    20261103,
+    0,
+    3,
+    2,
+    1
+   ],
+   "kind": "uniform_6_18",
+   "u": 5443303753539138564,
+   "value": 9
+  },
+  {
+   "key": [
+    20261103,
+    0,
+    5,
+    1,
+    0
+   ],
+   "kind": "profile",
+   "u": 7730108874499850534,
+   "value": 1
+  },
+  {
+   "key": [
+    20261103,
+    12,
+    2,
+    17,
+    0
+   ],
+   "kind": "j",
+   "u": 1366130865525632406,
+   "value": 574058
+  },
+  {
+   "key": [
+    20261103,
+    1,
+    3,
+    2,
+    1
+   ],
+   "kind": "uniform_6_18",
+   "u": 10247931931308976466,
+   "value": 13
+  },
+  {
+   "key": [
+    20261103,
+    0,
+    5,
+    2,
+    0
+   ],
+   "kind": "profile",
+   "u": 15731320731937017465,
+   "value": 2
+  },
+  {
+   "key": [
+    20261103,
+    24,
+    2,
+    17,
+    0
+   ],
+   "kind": "j",
+   "u": 5668954779434944623,
+   "value": 807314
+  },
+  {
+   "key": [
+    20261103,
+    2,
+    3,
+    2,
+    1
+   ],
+   "kind": "uniform_6_18",
+   "u": 16026473381475055347,
+   "value": 17
+  },
+  {
+   "j": 500000,
+   "kind": "edges",
+   "profile": 0,
+   "u": 0,
+   "uniform_6_18": 6
+  },
+  {
+   "j": 1500000,
+   "kind": "edges",
+   "profile": 2,
+   "u": 18446744073709551615,
+   "uniform_6_18": 18
+  }
+ ],
+ "fx6_scale": 1000000,
+ "hazard": [
+  {
+   "h_max": 80000,
+   "key": {
+    "entity": 17,
+    "n": 0,
+    "seed": 20261103,
+    "system": 1,
+    "tick": 5
+   },
+   "name": "below_threshold",
+   "output": {
+    "active": false,
+    "check": null,
+    "h": 0,
+    "opened": false,
+    "y": null
+   },
+   "prog": 590000,
+   "theta_start": 600000,
+   "y_half": 500000
+  },
+  {
+   "h_max": 80000,
+   "key": {
+    "entity": 17,
+    "n": 0,
+    "seed": 20261103,
+    "system": 1,
+    "tick": 5
+   },
+   "name": "at_threshold_h0",
+   "output": {
+    "active": true,
+    "check": {
+     "hit": false,
+     "r": 2345461280043046,
+     "threshold": 0,
+     "u": 4803504701528160019
+    },
+    "h": 0,
+    "opened": false,
+    "y": 0
+   },
+   "prog": 600000,
+   "theta_start": 600000,
+   "y_half": 500000
+  },
+  {
+   "h_max": 80000,
+   "key": {
+    "entity": 17,
+    "n": 0,
+    "seed": 20261103,
+    "system": 1,
+    "tick": 7
+   },
+   "name": "mid",
+   "output": {
+    "active": true,
+    "check": {
+     "hit": false,
+     "r": 3402297397832830,
+     "threshold": 360287970189639,
+     "u": 6967905070761636528
+    },
+    "h": 40000,
+    "opened": false,
+    "y": 500000
+   },
+   "prog": 1100000,
+   "theta_start": 600000,
+   "y_half": 500000
+  },
+  {
+   "h_max": 80000,
+   "key": {
+    "entity": 19,
+    "n": 0,
+    "seed": 20261103,
+    "system": 1,
+    "tick": 9
+   },
+   "name": "at_cap",
+   "output": {
+    "active": true,
+    "check": {
+     "hit": false,
+     "r": 8638279902026399,
+     "threshold": 596330633859382,
+     "u": 17691197239350065979
+    },
+    "h": 66206,
+    "opened": false,
+    "y": 2400000
+   },
+   "prog": 3000000,
+   "theta_start": 600000,
+   "y_half": 500000
+  },
+  {
+   "h_max": 80000,
+   "key": {
+    "entity": 23,
+    "n": 0,
+    "seed": 20261103,
+    "system": 1,
+    "tick": 7
+   },
+   "name": "mid_other_node",
+   "output": {
+    "active": true,
+    "check": {
+     "hit": false,
+     "r": 7231871740187752,
+     "threshold": 360287970189639,
+     "u": 14810873323904516494
+    },
+    "h": 40000,
+    "opened": false,
+    "y": 500000
+   },
+   "prog": 1100000,
+   "theta_start": 600000,
+   "y_half": 500000
+  },
+  {
+   "h_max": 80000,
+   "key": {
+    "entity": 17,
+    "n": 0,
+    "seed": 20261103,
+    "system": 1,
+    "tick": null
+   },
+   "name": "given_u_zero_hit",
+   "output": {
+    "active": true,
+    "check": {
+     "hit": true,
+     "r": 0,
+     "threshold": 360287970189639,
+     "u": 0
+    },
+    "h": 40000,
+    "opened": true,
+    "y": 500000
+   },
+   "prog": 1100000,
+   "theta_start": 600000,
+   "y_half": 500000
+  },
+  {
+   "h_max": 80000,
+   "key": {
+    "entity": 17,
+    "n": 0,
+    "seed": 20261103,
+    "system": 1,
+    "tick": null
+   },
+   "name": "given_u_max_miss",
+   "output": {
+    "active": true,
+    "check": {
+     "hit": false,
+     "r": 9007199254740991,
+     "threshold": 596330633859382,
+     "u": 18446744073709551615
+    },
+    "h": 66206,
+    "opened": false,
+    "y": 2400000
+   },
+   "prog": 3000000,
+   "theta_start": 600000,
+   "y_half": 500000
+  }
+ ],
+ "knowledge": [
+  {
+   "alloc": 140000,
+   "c_eff": 1200000,
+   "dprog": 116666,
+   "input": {
+    "K_ref": 1000000,
+    "Kmix": 0,
+    "c_money": 1200000,
+    "informs_w_known": [],
+    "k_K": 1000000,
+    "k_diff": 500000,
+    "known_elsewhere": false
+   },
+   "name": "plain"
+  },
+  {
+   "alloc": 140000,
+   "c_eff": 600000,
+   "dprog": 233333,
+   "input": {
+    "K_ref": 1000000,
+    "Kmix": 0,
+    "c_money": 1200000,
+    "informs_w_known": [],
+    "k_K": 1000000,
+    "k_diff": 500000,
+    "known_elsewhere": true
+   },
+   "name": "known_elsewhere"
+  },
+  {
+   "alloc": 140000,
+   "c_eff": 557275,
+   "dprog": 251222,
+   "input": {
+    "K_ref": 1000000,
+    "Kmix": 700000,
+    "c_money": 3600000,
+    "informs_w_known": [
+     300000,
+     600000
+    ],
+    "k_K": 1000000,
+    "k_diff": 500000,
+    "known_elsewhere": true
+   },
+   "name": "kmix_and_informs"
+  }
+ ],
+ "prob_check": [
+  {
+   "hit": false,
+   "p_raw": 0,
+   "r": 0,
+   "threshold": 0,
+   "u": 0
+  },
+  {
+   "hit": false,
+   "p_raw": 0,
+   "r": 4503599627370496,
+   "threshold": 0,
+   "u": 9223372036854775808
+  },
+  {
+   "hit": false,
+   "p_raw": 0,
+   "r": 9007199254740991,
+   "threshold": 0,
+   "u": 18446744073709551615
+  },
+  {
+   "hit": true,
+   "p_raw": 1,
+   "r": 0,
+   "threshold": 9007199254,
+   "u": 0
+  },
+  {
+   "hit": false,
+   "p_raw": 1,
+   "r": 4503599627370496,
+   "threshold": 9007199254,
+   "u": 9223372036854775808
+  },
+  {
+   "hit": false,
+   "p_raw": 1,
+   "r": 9007199254740991,
+   "threshold": 9007199254,
+   "u": 18446744073709551615
+  },
+  {
+   "hit": true,
+   "p_raw": 80000,
+   "r": 0,
+   "threshold": 720575940379279,
+   "u": 0
+  },
+  {
+   "hit": false,
+   "p_raw": 80000,
+   "r": 4503599627370496,
+   "threshold": 720575940379279,
+   "u": 9223372036854775808
+  },
+  {
+   "hit": false,
+   "p_raw": 80000,
+   "r": 9007199254740991,
+   "threshold": 720575940379279,
+   "u": 18446744073709551615
+  },
+  {
+   "hit": true,
+   "p_raw": 500000,
+   "r": 0,
+   "threshold": 4503599627370496,
+   "u": 0
+  },
+  {
+   "hit": false,
+   "p_raw": 500000,
+   "r": 4503599627370496,
+   "threshold": 4503599627370496,
+   "u": 9223372036854775808
+  },
+  {
+   "hit": false,
+   "p_raw": 500000,
+   "r": 9007199254740991,
+   "threshold": 4503599627370496,
+   "u": 18446744073709551615
+  },
+  {
+   "hit": true,
+   "p_raw": 1000000,
+   "r": 0,
+   "threshold": 9007199254740992,
+   "u": 0
+  },
+  {
+   "hit": true,
+   "p_raw": 1000000,
+   "r": 4503599627370496,
+   "threshold": 9007199254740992,
+   "u": 9223372036854775808
+  },
+  {
+   "hit": true,
+   "p_raw": 1000000,
+   "r": 9007199254740991,
+   "threshold": 9007199254740992,
+   "u": 18446744073709551615
+  }
+ ],
+ "production_profile": [
+  {
+   "input": {
+    "eps": 10000,
+    "procs": [
+     {
+      "H": {
+       "precision": 3500000,
+       "purity": 3300000,
+       "quality_control": 3200000
+      },
+      "M": {
+       "precision": 3700000,
+       "purity": 3500000,
+       "quality_control": 3400000
+      },
+      "X": 2000000000,
+      "Xh": 200000000,
+      "base_cost": 1000000,
+      "known": true,
+      "l_lic": null,
+      "lam0": 300000,
+      "n_p": 1000000,
+      "prc_id": 38,
+      "req": {
+       "precision": 3000000,
+       "purity": 3000000,
+       "quality_control": 2500000
+      }
+     }
+    ]
+   },
+   "name": "mature_tier3",
+   "note": "all gaps >= 0, ramp-limited (A5)",
+   "output": {
+    "admitted": true,
+    "bottleneck": {
+     "dim": null,
+     "prc": 38,
+     "src": "ramp"
+    },
+    "per_process": [
+     {
+      "Xh_eff": 200000000,
+      "base_cost": 1000000,
+      "dims": [
+       {
+        "c_d": 3500000,
+        "dim": "precision",
+        "g": 1000000,
+        "gap": 500000,
+        "src": "H"
+       },
+       {
+        "c_d": 3300000,
+        "dim": "purity",
+        "g": 1000000,
+        "gap": 300000,
+        "src": "H"
+       },
+       {
+        "c_d": 3200000,
+        "dim": "quality_control",
+        "g": 1000000,
+        "gap": 700000,
+        "src": "H"
+       }
+      ],
+      "known": true,
+      "n_p": 1000000,
+      "prc_id": 38,
+      "ramp": 936363,
+      "yc": 936363,
+      "yield": 936363
+     }
+    ],
+    "q": null,
+    "unit_cost_mult": 1067961
+   }
+  },
+  {
+   "input": {
+    "eps": 10000,
+    "procs": [
+     {
+      "H": {
+       "precision": 3800000,
+       "purity": 3600000,
+       "quality_control": 3500000
+      },
+      "M": {
+       "precision": 4000000,
+       "purity": 3800000,
+       "quality_control": 3700000
+      },
+      "X": 0,
+      "Xh": 800000000,
+      "base_cost": 1000000,
+      "known": true,
+      "l_lic": null,
+      "lam0": 300000,
+      "n_p": 1000000,
+      "prc_id": 39,
+      "req": {
+       "precision": null,
+       "purity": 4000000,
+       "quality_control": 3500000
+      }
+     }
+    ]
+   },
+   "name": "tier4_one_level_short",
+   "note": "gaps in (-1,0): (1+gap)^2 product",
+   "output": {
+    "admitted": true,
+    "bottleneck": {
+     "dim": "purity",
+     "prc": 39,
+     "src": "H"
+    },
+    "per_process": [
+     {
+      "Xh_eff": 800000000,
+      "base_cost": 1000000,
+      "dims": [
+       {
+        "c_d": 3600000,
+        "dim": "purity",
+        "g": 360000,
+        "gap": -400000,
+        "src": "H"
+       },
+       {
+        "c_d": 3500000,
+        "dim": "quality_control",
+        "g": 1000000,
+        "gap": 0,
+        "src": "H"
+       }
+      ],
+      "known": true,
+      "n_p": 1000000,
+      "prc_id": 39,
+      "ramp": 300000,
+      "yc": 108000,
+      "yield": 108000
+     }
+    ],
+    "q": null,
+    "unit_cost_mult": 9259259
+   }
+  },
+  {
+   "input": {
+    "eps": 10000,
+    "procs": [
+     {
+      "H": {
+       "precision": 3500000,
+       "purity": 3300000,
+       "quality_control": 3200000
+      },
+      "M": {
+       "precision": 3700000,
+       "purity": 3500000,
+       "quality_control": 3400000
+      },
+      "X": 0,
+      "Xh": 800000000,
+      "base_cost": 1000000,
+      "known": true,
+      "l_lic": null,
+      "lam0": 300000,
+      "n_p": 1000000,
+      "prc_id": 40,
+      "req": {
+       "precision": null,
+       "purity": 4500000,
+       "quality_control": 4000000
+      }
+     }
+    ]
+   },
+   "name": "gap_below_minus_one",
+   "note": "purity gap -1.2: g=0, not admitted, yc=eps",
+   "output": {
+    "admitted": false,
+    "bottleneck": {
+     "dim": "purity",
+     "prc": 40,
+     "src": "H"
+    },
+    "per_process": [
+     {
+      "Xh_eff": 800000000,
+      "base_cost": 1000000,
+      "dims": [
+       {
+        "c_d": 3300000,
+        "dim": "purity",
+        "g": 0,
+        "gap": -1200000,
+        "src": "H"
+       },
+       {
+        "c_d": 3200000,
+        "dim": "quality_control",
+        "g": 40000,
+        "gap": -800000,
+        "src": "H"
+       }
+      ],
+      "known": true,
+      "n_p": 1000000,
+      "prc_id": 40,
+      "ramp": 300000,
+      "yc": 10000,
+      "yield": 0
+     }
+    ],
+    "q": null,
+    "unit_cost_mult": 100000000
+   }
+  },
+  {
+   "input": {
+    "eps": 10000,
+    "procs": [
+     {
+      "H": {
+       "precision": 3500000,
+       "purity": 3300000,
+       "quality_control": 3200000
+      },
+      "M": {
+       "precision": 3700000,
+       "purity": 3500000,
+       "quality_control": 3400000
+      },
+      "X": 100000000,
+      "Xh": 200000000,
+      "base_cost": 1000000,
+      "known": false,
+      "l_lic": null,
+      "lam0": 300000,
+      "n_p": 1000000,
+      "prc_id": 41,
+      "req": {
+       "precision": 3000000,
+       "purity": 3000000,
+       "quality_control": 2500000
+      }
+     }
+    ]
+   },
+   "name": "unknown_process",
+   "note": "yield>0 but not known: not admitted",
+   "output": {
+    "admitted": false,
+    "bottleneck": {
+     "dim": null,
+     "prc": 41,
+     "src": "ramp"
+    },
+    "per_process": [
+     {
+      "Xh_eff": 200000000,
+      "base_cost": 1000000,
+      "dims": [
+       {
+        "c_d": 3500000,
+        "dim": "precision",
+        "g": 1000000,
+        "gap": 500000,
+        "src": "H"
+       },
+       {
+        "c_d": 3300000,
+        "dim": "purity",
+        "g": 1000000,
+        "gap": 300000,
+        "src": "H"
+       },
+       {
+        "c_d": 3200000,
+        "dim": "quality_control",
+        "g": 1000000,
+        "gap": 700000,
+        "src": "H"
+       }
+      ],
+      "known": false,
+      "n_p": 1000000,
+      "prc_id": 41,
+      "ramp": 533333,
+      "yc": 533333,
+      "yield": 533333
+     }
+    ],
+    "q": null,
+    "unit_cost_mult": 1875001
+   }
+  },
+  {
+   "input": {
+    "eps": 10000,
+    "procs": [
+     {
+      "H": {
+       "precision": 4200000,
+       "purity": 4000000,
+       "quality_control": 3900000
+      },
+      "M": {
+       "precision": 4400000,
+       "purity": 4200000,
+       "quality_control": 4100000
+      },
+      "X": 400000000,
+      "Xh": 800000000,
+      "base_cost": 1000000,
+      "known": true,
+      "l_lic": 500000,
+      "lam0": 300000,
+      "n_p": 1000000,
+      "prc_id": 39,
+      "req": {
+       "precision": null,
+       "purity": 4000000,
+       "quality_control": 3500000
+      }
+     }
+    ]
+   },
+   "name": "license_halves_Xh",
+   "note": "l_lic=0.5: Xh_eff = Xh*(1-l_lic)",
+   "output": {
+    "admitted": true,
+    "bottleneck": {
+     "dim": null,
+     "prc": 39,
+     "src": "ramp"
+    },
+    "per_process": [
+     {
+      "Xh_eff": 400000000,
+      "base_cost": 1000000,
+      "dims": [
+       {
+        "c_d": 4000000,
+        "dim": "purity",
+        "g": 1000000,
+        "gap": 0,
+        "src": "H"
+       },
+       {
+        "c_d": 3900000,
+        "dim": "quality_control",
+        "g": 1000000,
+        "gap": 400000,
+        "src": "H"
+       }
+      ],
+      "known": true,
+      "n_p": 1000000,
+      "prc_id": 39,
+      "ramp": 650000,
+      "yc": 650000,
+      "yield": 650000
+     }
+    ],
+    "q": null,
+    "unit_cost_mult": 1538461
+   }
+  },
+  {
+   "input": {
+    "eps": 10000,
+    "procs": [
+     {
+      "H": {
+       "precision": 3800000,
+       "purity": 3600000,
+       "quality_control": 3500000
+      },
+      "M": {
+       "precision": 4000000,
+       "purity": 3800000,
+       "quality_control": 3700000
+      },
+      "X": 100000000,
+      "Xh": 800000000,
+      "base_cost": 3000000,
+      "known": true,
+      "l_lic": null,
+      "lam0": 300000,
+      "n_p": 2000000,
+      "prc_id": 39,
+      "req": {
+       "precision": null,
+       "purity": 4000000,
+       "quality_control": 3500000
+      }
+     },
+     {
+      "H": {
+       "precision": 4000000,
+       "purity": 3800000,
+       "quality_control": 3700000
+      },
+      "M": {
+       "precision": 4200000,
+       "purity": 4000000,
+       "quality_control": 3900000
+      },
+      "X": 300000000,
+      "Xh": 800000000,
+      "base_cost": 5000000,
+      "known": true,
+      "l_lic": null,
+      "lam0": 300000,
+      "n_p": 1000000,
+      "prc_id": 45,
+      "req": {
+       "precision": null,
+       "purity": 4500000,
+       "quality_control": 3500000
+      }
+     }
+    ]
+   },
+   "name": "two_process_set",
+   "note": "unit_cost_mult over n_p*base_cost; bottleneck = argmin yield",
+   "output": {
+    "admitted": true,
+    "bottleneck": {
+     "dim": "purity",
+     "prc": 45,
+     "src": "H"
+    },
+    "per_process": [
+     {
+      "Xh_eff": 800000000,
+      "base_cost": 3000000,
+      "dims": [
+       {
+        "c_d": 3600000,
+        "dim": "purity",
+        "g": 360000,
+        "gap": -400000,
+        "src": "H"
+       },
+       {
+        "c_d": 3500000,
+        "dim": "quality_control",
+        "g": 1000000,
+        "gap": 0,
+        "src": "H"
+       }
+      ],
+      "known": true,
+      "n_p": 2000000,
+      "prc_id": 39,
+      "ramp": 377777,
+      "yc": 135999,
+      "yield": 135999
+     },
+     {
+      "Xh_eff": 800000000,
+      "base_cost": 5000000,
+      "dims": [
+       {
+        "c_d": 3800000,
+        "dim": "purity",
+        "g": 90000,
+        "gap": -700000,
+        "src": "H"
+       },
+       {
+        "c_d": 3700000,
+        "dim": "quality_control",
+        "g": 1000000,
+        "gap": 200000,
+        "src": "H"
+       }
+      ],
+      "known": true,
+      "n_p": 1000000,
+      "prc_id": 45,
+      "ramp": 490909,
+      "yc": 44181,
+      "yield": 44181
+     }
+    ],
+    "q": null,
+    "unit_cost_mult": 14298981
+   }
+  },
+  {
+   "input": {
+    "eps": 10000,
+    "procs": [
+     {
+      "H": {
+       "precision": 4000000,
+       "purity": 3800000,
+       "quality_control": 3700000
+      },
+      "M": {
+       "precision": 3600000,
+       "purity": 3400000,
+       "quality_control": 3300000
+      },
+      "X": 500000000,
+      "Xh": 800000000,
+      "base_cost": 1000000,
+      "known": true,
+      "l_lic": null,
+      "lam0": 300000,
+      "n_p": 1000000,
+      "prc_id": 48,
+      "req": {
+       "precision": 4000000,
+       "purity": null,
+       "quality_control": 3500000
+      }
+     }
+    ]
+   },
+   "name": "tooling_limits",
+   "note": "M below H: c_d=min(H,M), bottleneck src=M",
+   "output": {
+    "admitted": true,
+    "bottleneck": {
+     "dim": "precision",
+     "prc": 48,
+     "src": "M"
+    },
+    "per_process": [
+     {
+      "Xh_eff": 800000000,
+      "base_cost": 1000000,
+      "dims": [
+       {
+        "c_d": 3600000,
+        "dim": "precision",
+        "g": 360000,
+        "gap": -400000,
+        "src": "M"
+       },
+       {
+        "c_d": 3300000,
+        "dim": "quality_control",
+        "g": 640000,
+        "gap": -200000,
+        "src": "M"
+       }
+      ],
+      "known": true,
+      "n_p": 1000000,
+      "prc_id": 48,
+      "ramp": 569230,
+      "yc": 131150,
+      "yield": 131150
+     }
+    ],
+    "q": null,
+    "unit_cost_mult": 7624857
+   }
+  },
+  {
+   "input": {
+    "eps": 10000,
+    "procs": [
+     {
+      "H": {
+       "precision": 3500000,
+       "purity": 3300000,
+       "quality_control": 3200000
+      },
+      "M": {
+       "precision": 3700000,
+       "purity": 3500000,
+       "quality_control": 3400000
+      },
+      "X": 0,
+      "Xh": 200000000,
+      "base_cost": 1000000,
+      "known": true,
+      "l_lic": null,
+      "lam0": 300000,
+      "n_p": 1000000,
+      "prc_id": 53,
+      "req": {
+       "precision": 3000000,
+       "purity": null,
+       "quality_control": 3000000
+      }
+     },
+     {
+      "H": {
+       "precision": 3500000,
+       "purity": 3300000,
+       "quality_control": 3200000
+      },
+      "M": {
+       "precision": 3700000,
+       "purity": 3500000,
+       "quality_control": 3400000
+      },
+      "X": 0,
+      "Xh": 200000000,
+      "base_cost": 1000000,
+      "known": true,
+      "l_lic": null,
+      "lam0": 300000,
+      "n_p": 1000000,
+      "prc_id": 47,
+      "req": {
+       "precision": 3500000,
+       "purity": null,
+       "quality_control": 3000000
+      }
+     }
+    ]
+   },
+   "name": "tie_yield_by_id",
+   "note": "equal yields: bottleneck by prc id",
+   "output": {
+    "admitted": true,
+    "bottleneck": {
+     "dim": null,
+     "prc": 47,
+     "src": "ramp"
+    },
+    "per_process": [
+     {
+      "Xh_eff": 200000000,
+      "base_cost": 1000000,
+      "dims": [
+       {
+        "c_d": 3500000,
+        "dim": "precision",
+        "g": 1000000,
+        "gap": 0,
+        "src": "H"
+       },
+       {
+        "c_d": 3200000,
+        "dim": "quality_control",
+        "g": 1000000,
+        "gap": 200000,
+        "src": "H"
+       }
+      ],
+      "known": true,
+      "n_p": 1000000,
+      "prc_id": 47,
+      "ramp": 300000,
+      "yc": 300000,
+      "yield": 300000
+     },
+     {
+      "Xh_eff": 200000000,
+      "base_cost": 1000000,
+      "dims": [
+       {
+        "c_d": 3500000,
+        "dim": "precision",
+        "g": 1000000,
+        "gap": 500000,
+        "src": "H"
+       },
+       {
+        "c_d": 3200000,
+        "dim": "quality_control",
+        "g": 1000000,
+        "gap": 200000,
+        "src": "H"
+       }
+      ],
+      "known": true,
+      "n_p": 1000000,
+      "prc_id": 53,
+      "ramp": 300000,
+      "yc": 300000,
+      "yield": 300000
+     }
+    ],
+    "q": null,
+    "unit_cost_mult": 3333333
+   }
+  }
+ ],
+ "schema": "jet_slice_reference_formulas/1",
+ "seed": 20261103,
+ "workforce_split": [
+  {
+   "avail": 100,
+   "name": "enough",
+   "output": [
+    {
+     "granted": 40,
+     "n": 40,
+     "requester_id": 3
+    },
+    {
+     "granted": 30,
+     "n": 30,
+     "requester_id": 7
+    }
+   ],
+   "requests": [
+    [
+     0,
+     1,
+     7,
+     30
+    ],
+    [
+     0,
+     1,
+     3,
+     40
+    ]
+   ]
+  },
+  {
+   "avail": 10,
+   "name": "short_remainder",
+   "output": [
+    {
+     "granted": 4,
+     "n": 5,
+     "requester_id": 2
+    },
+    {
+     "granted": 3,
+     "n": 5,
+     "requester_id": 4
+    },
+    {
+     "granted": 3,
+     "n": 5,
+     "requester_id": 9
+    }
+   ],
+   "requests": [
+    [
+     0,
+     1,
+     9,
+     5
+    ],
+    [
+     0,
+     1,
+     2,
+     5
+    ],
+    [
+     0,
+     1,
+     4,
+     5
+    ]
+   ]
+  },
+  {
+   "avail": 7,
+   "name": "short_uneven",
+   "output": [
+    {
+     "granted": 7,
+     "n": 10,
+     "requester_id": 1
+    },
+    {
+     "granted": 0,
+     "n": 1,
+     "requester_id": 2
+    }
+   ],
+   "requests": [
+    [
+     0,
+     1,
+     1,
+     10
+    ],
+    [
+     0,
+     1,
+     2,
+     1
+    ]
+   ]
+  }
+ ]
+}
