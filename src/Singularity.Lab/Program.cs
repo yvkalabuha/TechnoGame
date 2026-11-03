@@ -13,7 +13,7 @@ public static class Program
           models                                     list registered models
           selftest                                   built-in self-checks (until tests/ has Lab tests)
           smoke-t4s --out <dir> [--mods <dir>] [--seeds N] [--only c1|c2|c3]  anchor smoke C1(yield)/C2/C3 (TASK-0017)
-          culture-rules --out <dir> [--mods <dir>] [--only check|k1|...]  culture_H rule selection (culture-rule-selection.md)
+          culture-rules --out <dir> [--mods <dir>] [--only check|gate|holdout|...]  culture_H rule selection (culture-rule-selection.md)
 
         Exit codes: 0 ok, 1 run/matrix failure or self-check failure, 2 usage or manifest error.
         Outputs belong in lab/results/ (git-ignored). Format: docs/simulation/lab-cli.md

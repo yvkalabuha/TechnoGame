@@ -137,6 +137,18 @@ internal static class CultureRuleMath
 
 internal enum StartMod { None, Edge, Hold }
 
+/// <summary>Hold-out (culture-rule-selection.md §8.2): which processes carry <c>world_lead</c> = 1 for the whole run.</summary>
+internal enum LeadMode { None, Target, Mastered }
+
+/// <summary>
+/// Hold-out stand condition (§8.2 (a), (b)): <c>act</c> of every cluster of the site and the fixed <c>world_lead</c>
+/// set. <see cref="Default"/> (act 1, no world lead) is the selection stand of §1.2 exactly.
+/// </summary>
+internal sealed record StandCondition(Fx6 Act, LeadMode Lead)
+{
+    public static readonly StandCondition Default = new(Fx6.One, LeadMode.None);
+}
+
 internal enum RunSet { Solo, Cluster, PrcSet, Mastered }
 
 /// <summary>
@@ -163,6 +175,10 @@ internal sealed class RuleStand
 
     /// <summary>Deviation D-1 (culture-rule-selection.md §2.0): tooling never limits, <c>M ≡ 6</c> in every cell.</summary>
     public static readonly ThreadLocal<bool> FreeTooling = new(() => false);
+
+    /// <summary>Hold-out condition read by the constructor (§8.2); the default leaves the stand of §1.2 unchanged.</summary>
+    public static readonly ThreadLocal<StandCondition> Condition = new(() => StandCondition.Default);
+    private readonly Fx6 _act;
     private static readonly Fx6 FreeM = Fx6.FromInt(6);
 
     public Fx6[] H { get; }
@@ -172,6 +188,13 @@ internal sealed class RuleStand
     public ProcessYield[] Y { get; }
     public IndustryLayout Layout => _l;
     public int Target { get; } = -1;
+
+    /// <summary><c>world_lead(p)</c> per row as seen by this site; fixed by <see cref="Condition"/> or written by a multi-site world before each step.</summary>
+    public bool[] WorldLead { get; }
+
+    public Fx6 Hcap => _hcap;
+
+    public Fx6 Act => _act;
     public List<string> Notes { get; } = new();
 
     public RuleStand(GameData data, ScenarioData sc, int actor, IndustryParams ip, RuleVariant rv, Fx6 rate, int target,
@@ -179,6 +202,8 @@ internal sealed class RuleStand
     {
         _p = ip;
         _freeTooling = FreeTooling.Value;
+        StandCondition cond = Condition.Value!;
+        _act = cond.Act;
         _rv = rv;
         _rate = rate;
         IndustryLayout full = IndustryLayout.FromData(data.Nodes, sc, 2, 4);
@@ -221,6 +246,10 @@ internal sealed class RuleStand
                 _ => false,
             };
         }
+
+        WorldLead = new bool[_n];
+        for (int r = 0; r < _n; r++)
+            WorldLead[r] = cond.Lead switch { LeadMode.Target => r == Target, LeadMode.Mastered => mastered[r], _ => false };
 
         IndustryStart start = IndustryStart.FromScenario(sc, data.Nodes, IndustryLayout.FromData(data.Nodes, sc, 2, 4), ip);
         H = new Fx6[_c * 3];
@@ -341,7 +370,7 @@ internal sealed class RuleStand
         }
         var newH = new Fx6[H.Length];
         var newM = new Fx6[M.Length];
-        Fx6 act = IndustryMath.Act(0, 0);
+        Fx6 act = _act; // IndustryMath.Act(0, 0) = 1 in the selection stand
         for (int c = 0; c < _c; c++)
         {
             for (int d = 0; d < 3; d++)
@@ -350,7 +379,7 @@ internal sealed class RuleStand
                 foreach (int r in _l.Order)
                 {
                     if (_l.ClusterIndex[r] == c && V[r] > Fx6.Zero)
-                        _procs[np++] = new RuleProc(_l.Number[r], V[r], _l.Req[r][d], false, _vFull[r]);
+                        _procs[np++] = new RuleProc(_l.Number[r], V[r], _l.Req[r][d], WorldLead[r], _vFull[r]);
                 }
                 int ns = 0;
                 for (int c2 = 0; c2 < _c; c2++)
@@ -484,6 +513,10 @@ internal static class CultureRules
             return 0;
         if (only is not null && only.StartsWith("trace:", StringComparison.Ordinal))
             return Trace(data, sc, only[6..], log);
+        if (only == "holdout-diag")
+            return CultureHoldout.Diag(data, sc, log); // print only: causes of the hold-out failures (§9)
+        if (only == "holdout")
+            return CultureHoldout.Run(data, sc, outDir, log); // hold-out G-4, pre-registered in culture-rule-selection.md §8
         if (only == "gate")
             return CultureGate.Run(data, sc, outDir, log); // gate 2026-11-03, culture-rule-selection.md §7
         List<RuleVariant> variants = Variants();
@@ -615,7 +648,7 @@ internal static class CultureRules
     {
         public readonly Dictionary<long, double> C1MaxDy = new();
         public readonly List<long> Window = new();
-        public readonly int[] K1Fail = new int[7]; // I1..I5 (raw maint), continuity (effective floor), I5 on the effective floor (D-2)
+        public readonly int[] K1Fail = new int[8]; // I1..I5 (raw maint), continuity (effective floor), I5 on the effective floor (D-2), I6 catch ≤ drive (hold-out HK1)
         public double K1MaxJump, K1MaxJumpEff;
         public int K2aN, K2aFail, K2bN, K2bFail;
         public double K2aWorstG = double.NaN, K2bWorstRatio = double.NaN;
@@ -624,7 +657,7 @@ internal static class CultureRules
         public double K3WorstExcess = double.NaN, K3MinRatio = double.NaN;
         public string K3WorstCase = "";
         public int K4N, K4aFail, K4bFail, K4cFail;
-        public double K4WorstT5Ratio = double.NaN;
+        public double K4WorstT5Ratio = double.NaN, K4WorstT10Ratio = double.NaN;
         public string K4WorstCase = "";
         public readonly List<string> K4Table = new();
         public int K6Fail, K6DimFail;
@@ -751,7 +784,7 @@ internal static class CultureRules
     }
 
     // K1: invariants I1–I5 on deterministic random cells.
-    internal static void K1(RuleVariant rv, VariantResult res)
+    internal static void K1(RuleVariant rv, VariantResult res, bool randomLead = false)
     {
         var rng = new SplitMix(79080);
         Cluster[] others = [Cluster.MET, Cluster.CHEM, Cluster.MECH];
@@ -768,12 +801,19 @@ internal static class CultureRules
                 nums.Add(2 + 2 * rng.Next(30)); // even numbers; odd ones are free for inserted processes
             var procs = new List<RuleProc>();
             foreach (int num in nums)
-                procs.Add(RandomProc(rng, rv, num));
+            {
+                RuleProc rp = RandomProc(rng, rv, num);
+                if (randomLead) // hold-out HK1: world_lead = 1 with probability ½ per process
+                    rp = rp with { WorldLead = rng.Next(2) == 0 };
+                procs.Add(rp);
+            }
             var spill = new CultureSpill[3];
             for (int i = 0; i < 3; i++)
                 spill[i] = new CultureSpill(p.Spill(Cluster.AERO, others[i]), Fx6.FromRaw(rng.Next(5_500_000)));
             CultureStep st = CultureRuleMath.Step(rv, cell, procs.ToArray(), spill, p);
             Fx6 dh = st.HNew - h;
+            if (st.Catch > st.Drive) // I6 (hold-out HK1)
+                res.K1Fail[7]++;
 
             // I1: an easy process (r + 0.25 ≤ H) leaves drive unchanged and does not lower ΔH.
             if (h >= Fx6.FromRaw(250_000))
@@ -964,6 +1004,9 @@ internal static class CultureRules
                 if (res.K4Table.Count < 400)
                     res.K4Table.Add($"FAIL {id}: {string.Join(' ', T.Select(D))}");
             }
+            double r10 = T[3] == 0 ? (T[2] == 0 ? 1 : double.PositiveInfinity) : T[2] / T[3];
+            if (double.IsNaN(res.K4WorstT10Ratio) || r10 > res.K4WorstT10Ratio)
+                res.K4WorstT10Ratio = r10;
             if (double.IsNaN(res.K4WorstT5Ratio) || r5 > res.K4WorstT5Ratio)
             {
                 res.K4WorstT5Ratio = r5;
