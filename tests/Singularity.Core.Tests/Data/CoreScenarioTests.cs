@@ -70,8 +70,8 @@ public class CoreScenarioTests
         for (int a = 0; a < S.ActorCount; a++)
         {
             string actor = S.ActorId[a];
-            // D1: SUN knows 58 (R-KN, #134) and FRA knows 54 (#135); nodes.csv of TASK-0011 is research-scientist's and lags behind.
             var expected = lines.Skip(1).Select(l => l.Split(','))
+                // nodes.csv known_at_start still lacks SUN/58 and FRA/54 (D1, #134, #135; scenario_1945.md has them): the one remaining correction.
                 .Where(c => c[col] == "ALL" || c[col].Split(';').Contains(actor)
                     || actor == "SUN" && c[1] == "s8.app.jet_fighter_g1" || actor == "FRA" && c[1] == "s8.prc.jet_engine_assembly_test")
                 .Select(c => c[1]).Order(StringComparer.Ordinal);

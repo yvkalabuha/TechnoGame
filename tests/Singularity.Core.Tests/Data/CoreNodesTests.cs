@@ -50,9 +50,7 @@ public class CoreNodesTests
             Assert.Equal(row["req_pur"] == "" ? Fx6.Zero : Fx(row["req_pur"]), n.ReqPurity[r]);
             Assert.Equal(row["req_qc"] == "" ? Fx6.Zero : Fx(row["req_qc"]), n.ReqQualityControl[r]);
             Assert.Equal(row["hazard"], DataNames.NameOf(DataNames.Hazards, n.Hazard[r]));
-            // D1 (#132): node 58 no longer requires the alloy (30); nodes.csv of TASK-0011 is research-scientist's and still lists it.
-            string requires = row["id"] == "s8.app.jet_fighter_g1" ? "s8.eng.turbojet_g1;s8.eng.straight_wing_jet_airframe" : row["requires"];
-            Assert.Equal(CsvRequires(requires), LoadedRequires(n, r));
+            Assert.Equal(CsvRequires(row["requires"]), LoadedRequires(n, r));
             Assert.Equal(row["anchor_year"], (n.AnchorBefore[r] ? "<" : "") + n.AnchorYear[r]);
             Assert.Equal(row["anchor_event"], n.AnchorEvent[r]);
             Assert.Equal(row["anchor_src"], n.AnchorSource[r]);

@@ -86,6 +86,8 @@ public class SubstituteTests : IDisposable
     [Fact]
     public void ReferenceCompositions_AreUnchanged_TheSubstituteNeverEntersThem()
     {
+        // The bit-exact prices of these compositions (prc_set, complexity, perf, floor, upkeep) are held by ProductsV24ReferenceTests against products.json;
+        // here the presets must still return exactly the compositions that test names (it compares the preset's alts with the reference).
         // product_class.md §2: with every node of generations <= g known and every yield 1 neither preset takes the substitute.
         Span<int> alts = stackalloc int[L.SlotCount];
         for (int gen = 1; gen <= 4; gen++)
@@ -267,6 +269,37 @@ public class SubstituteTests : IDisposable
         }
         Assert.True(steelOut > Fx6.Zero, "the steel line never produced with zero alloy supply");
         Assert.Equal(Fx6.Zero, nicrOut);
+    }
+
+    [Theory]
+    [InlineData(1450)]   // alloy for 5 nickel units a month: the steel line (processed first) must not take any of it
+    [InlineData(0)]      // disruption, deficit = 1: supply 0
+    public void AlloyFree_SteelLineLeavesTheNeighbouringNickelLinesAlloyUntouched(long supplyKg)
+    {
+        var h = new ProductsHarness
+        {
+            Knows = (a, n) => a == Gbr && L.KnownUpTo(1)(n),
+            Alloy = (_, _) => Fx6.FromInt((int)supplyKg),
+            Commands = (a, t) => a == Gbr && t == 0
+                ? [Compose(L, 1, "eng_g1", "hot_steel_g0", "comp_centrifugal", "af_straight", "ab_none"),
+                   Compose(L, 1, "eng_g1", "hot_nicr_forged", "comp_centrifugal", "af_straight", "ab_none")]
+                : [],
+        };
+        ProductsSystem p = h.Products;
+        h.Series = (a, d, t) => a == Gbr && d is 1 or 2 && p.Stage(a, d) == DesignStage.Prototype && p.GateOpen(a, d, t) ? new SeriesStart(Fx6.FromInt(10), false) : null;
+        bool both = false;
+        for (long t = 0; t < 120 && !both; t++)
+        {
+            h.RunThroughMonth(t);
+            both = p.Stage(Gbr, 1) == DesignStage.Series && p.Stage(Gbr, 2) == DesignStage.Series && p.Rate(Gbr, 1) > Fx6.Zero;
+            if (both)
+            {
+                // Design 1 (steel) goes first in the ascending design_id split; the nickel line gets exactly supply / alloy_kg.
+                Assert.Equal(Fx6.FromInt((int)supplyKg) / Fx6.FromInt(290), p.Rate(Gbr, 2));
+                Assert.True(p.Rate(Gbr, 1) > Fx6.Zero);
+            }
+        }
+        Assert.True(both, "the steel and the nickel line were never in series together");
     }
 
     [Fact]

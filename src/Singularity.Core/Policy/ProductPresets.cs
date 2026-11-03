@@ -50,13 +50,11 @@ public static class ProductPresets
     {
         ProductsLayout l = products.Layout;
         int[] own = products.Alternatives(actor, parent);
-        // The engine the preset gives (spec v0.14 §1.4): with max_eng_gen the highest known engine may be out of reach of the other slots.
-        Span<int> top = stackalloc int[l.SlotCount];
-        if (!DesignRules.Superior(l, products.Design(actor, parent, month).PlatformGen, n => products.Knows(actor, n, month), top)
-            || l.AltRank[top[l.BaseSlot]] < l.AltRank[own[l.BaseSlot]] + 1)
-            return false;
         Span<int> full = stackalloc int[l.SlotCount];
         if (!Compose(profile, products, p, actor, products.Design(actor, parent, month).PlatformGen, month, full))
+            return false;
+        // The engine of the preset the profile actually uses (spec v0.14 §1.4: max_eng_gen counted) must outrank the parent's.
+        if (l.AltRank[full[l.BaseSlot]] < l.AltRank[own[l.BaseSlot]] + 1)
             return false;
         bool changed = false;
         for (int s = 0; s < l.SlotCount; s++)
