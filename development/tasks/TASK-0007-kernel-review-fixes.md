@@ -1,7 +1,7 @@
 ---
 id: TASK-0007
 title: "Kernel: исправления по ревью и аудиту тестов"
-status: IN_PROGRESS
+status: DONE
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer

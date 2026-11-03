@@ -1,7 +1,7 @@
 ---
 id: TASK-0005
 title: "Simulation Lab: CLI, манифест, раннер матрицы"
-status: REVIEW 
+status: DONE 
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: simulation-engineer
@@ -39,3 +39,4 @@ created: 2026-11-02
 
 ## Результат
 Lab CLI (simulation-engineer): команды run/matrix/hash/models/selftest, `ILabModelFactory`, тестовая модель `test.random-walk` (`model_is_test: true`), `docs/simulation/lab-cli.md`. selftest 13/13; критерии 1–3 выполнены (проверено Orchestrator: build 0 warnings, selftest 13/13). Открыто: интерфейс модели переносится в Core (TASK-0004); манифест EXP-0001 привести к схеме Lab 1.
+После ревью (changes-requested): все 8 замечаний исправлены в TASK-0008 этап 1 (simulation-engineer), selftest 15/15 → 17/17 после этапа 2; закрыто Orchestrator 2026-11-03.

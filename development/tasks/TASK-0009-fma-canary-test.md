@@ -1,7 +1,7 @@
 ---
 id: TASK-0009
 title: "Kernel: контрольный тест отсутствия FMA-сжатия на всех платформах CI"
-status: APPROVED
+status: REVIEW
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer

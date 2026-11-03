@@ -43,7 +43,7 @@ The owner runs `/handoff`. If the session ends without it and files changed, rem
 ## Process
 - Levels (DF-001 §6): **light** (task inside approved plan; you approve it) · **gate** (new mechanic, subsystem, hypothesis, ADR; critic + advocate; owner approves) · **gate+research** (fundamental, determinism, save/data format, irreversible).
 - Owner approves in batches: milestone plan, each ADR, each mechanic. Record `approved_by`, `approved_at`, `approval_ref`.
-- Registry: `python3 tools/development/registry.py check|list|index|new`. Create items with `/new`. Never hand-edit `development/BACKLOG.md` or the generated block in `CURRENT_STATE.md`.
+- Registry: `python3 tools/development/registry.py check|list|index|new|set-status`. Change statuses only with `set-status` (never sed). Create items with `/new`. Never hand-edit `development/BACKLOG.md` or the generated block in `CURRENT_STATE.md`.
 - Record real disagreements between agents in the item ("Разногласия"); never hide them.
 - Before new research, check `docs/research/` and `registry.py list`.
 - No premature implementation, no architecture for its own sake, no stubs presented as features, no fake mechanics.

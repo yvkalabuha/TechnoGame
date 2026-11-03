@@ -9,9 +9,7 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0007 [IN_PROGRESS] Kernel: исправления по ревью и аудиту тестов (developer)
-- TASK-0005 [REVIEW] Simulation Lab: CLI, манифест, раннер матрицы (simulation-engineer)
-- TASK-0009 [APPROVED] Kernel: контрольный тест отсутствия FMA-сжатия на всех платформах CI (developer)
+- TASK-0009 [REVIEW] Kernel: контрольный тест отсутствия FMA-сжатия на всех платформах CI (developer)
 <!-- registry:active:end -->
 
 ## Блокеры

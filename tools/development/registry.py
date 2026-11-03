@@ -16,6 +16,7 @@ Usage:
   python3 tools/development/registry.py list [--type TASK] [--status DONE]
   python3 tools/development/registry.py index
   python3 tools/development/registry.py new TASK "Title of the task"
+  python3 tools/development/registry.py set-status TASK-0001 DONE
 
 Only dependency outside the standard library: PyYAML.
 """
@@ -414,6 +415,32 @@ def cmd_new(args) -> int:
 
 
 # --------------------------------------------------------------------------
+# set-status
+# --------------------------------------------------------------------------
+
+def cmd_set_status(args) -> int:
+    """Change one item's status safely (keeps any trailing comment)."""
+    items = load_items([])
+    match = [i for i in items if i.id == args.id]
+    if not match:
+        print(f"unknown id {args.id}")
+        return 1
+    it = match[0]
+    status = args.status.upper()
+    if status not in it.type.statuses:
+        print(f"status {status} not in {it.type.statuses}")
+        return 2
+    text = it.path.read_text(encoding="utf-8")
+    new, n = re.subn(r"^(status:[ \t]*)[A-Z_]+", lambda m: m.group(1) + status, text, count=1, flags=re.M)
+    if n != 1:
+        print(f"{rel(it.path)}: no status line found")
+        return 1
+    it.path.write_text(new, encoding="utf-8")
+    print(f"{it.id}: {it.meta.get('status')} -> {status}")
+    return 0
+
+
+# --------------------------------------------------------------------------
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
@@ -435,6 +462,10 @@ def main(argv: list[str] | None = None) -> int:
     n.add_argument("title")
     n.add_argument("--slug", help="ASCII file-name slug (needed for Cyrillic titles)")
     n.set_defaults(func=cmd_new)
+    st = sub.add_parser("set-status")
+    st.add_argument("id")
+    st.add_argument("status")
+    st.set_defaults(func=cmd_set_status)
     args = p.parse_args(argv)
     return args.func(args)
 
