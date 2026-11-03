@@ -1,12 +1,12 @@
 ---
 id: HYP-0002
 title: "Совместная гипотеза среза «реактивная авиация»: три слоя дают персистентное, но не предрешённое лидерство"
-status: IDEA             # IDEA | HYPOTHESIS | UNDER_RESEARCH | EXPERIMENTAL | VALIDATED | REJECTED | DEFERRED
+status: EXPERIMENTAL             # IDEA | HYPOTHESIS | UNDER_RESEARCH | EXPERIMENTAL | VALIDATED | REJECTED | DEFERRED
 systems: [knowledge, industry, products, economy, ai]
 related: [HYP-0001, EXP-0001, RR-0005, RR-0006, RR-0007, RR-0008, ADR-0012]
-approved_by:             # owner — для EXPERIMENTAL и VALIDATED
-approved_at:
-approval_ref:
+approved_by: owner
+approved_at: 2026-11-03
+approval_ref: DECISIONS_LOG #48
 created: 2026-11-03
 ---
 

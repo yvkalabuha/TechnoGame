@@ -23,13 +23,16 @@
 | [TASK-0007](../development/tasks/TASK-0007-kernel-review-fixes.md) | DONE | Kernel: исправления по ревью и аудиту тестов | MS-M0 |
 | [TASK-0008](../development/tasks/TASK-0008-freeze-exp0001-manifest.md) | DONE | Заморозка манифеста EXP-0001 и переключение Lab на интерфейс Core | MS-M0 |
 | [TASK-0009](../development/tasks/TASK-0009-fma-canary-test.md) | REVIEW | Kernel: контрольный тест отсутствия FMA-сжатия на всех платформах CI | MS-M0 |
+| [TASK-0010](../development/tasks/TASK-0010-kernel-powfrac-no-double.md) | APPROVED | Kernel: DetMath.PowFrac, PowFracFx и целочисленные выборки; архитектурный тест ADR-0003 R1–R3 | MS-M0 |
+| [TASK-0011](../development/tasks/TASK-0011-jet-slice-data.md) | APPROVED | Данные среза «реактивная авиация»: 61 узел, класс изделия, сценарий 1945, валидатор | MS-M0 |
+| [TASK-0012](../development/tasks/TASK-0012-jet-slice-reference.md) | APPROVED | Эталон для сверки среза: три формулы и ручная траектория (Python stdlib) | MS-M0 |
 
 ## Гипотезы
 
 | ID | Статус | Название |
 |---|---|---|
 | [HYP-0001](../development/hypotheses/HYP-0001-science-vs-industry.md) | REJECTED | Научное лидерство не даёт автоматического промышленного превосходства |
-| [HYP-0002](../development/hypotheses/HYP-0002-jet-aviation-slice-layers.md) | IDEA | Совместная гипотеза среза «реактивная авиация»: три слоя дают персистентное, но не предрешённое лидерство |
+| [HYP-0002](../development/hypotheses/HYP-0002-jet-aviation-slice-layers.md) | EXPERIMENTAL | Совместная гипотеза среза «реактивная авиация»: три слоя дают персистентное, но не предрешённое лидерство |
 
 ## Эксперименты
 
