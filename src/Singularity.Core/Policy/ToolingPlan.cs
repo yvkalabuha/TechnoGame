@@ -82,13 +82,15 @@ public static class ToolingPlan
             int tier = 0;
             pStar[s] = -1;
             for (int r = 0; r < n; r++)
-            {
                 yields[s][r] = industry.Yield(s, r, month);
+            // p*: ties on the tier go to the lower process number, so the scan runs in number order (Order), not in row order.
+            foreach (int r in l.Order)
+            {
                 bool admitted = inputs.KnowsProcess(s, r, month) && yields[s][r].Yield > Fx6.Zero;
                 if (admitted && l.Clusters[l.ClusterIndex[r]] == Cluster.MECH && l.Tier[r] > tier)
                 {
                     tier = l.Tier[r];
-                    pStar[s] = r;      // ties keep the lower row, rows follow the process number
+                    pStar[s] = r;
                 }
             }
             mCap[s] = Fx6.FromInt(1 + (tier > 3 ? tier : 3));

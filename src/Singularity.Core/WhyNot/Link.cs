@@ -168,6 +168,9 @@ public interface IWhyNotInputs
     /// <summary>Procurement budget of the actor in month t (the program budget of the ECONOMY link); ≥ 0.</summary>
     Fx6 ProcurementBudget(int actorRow, long month);
 
+    /// <summary>Training-series money of the line for the month (<c>TrainingBudget</c> of the product layer, step 7 pays from left + tb); ≥ 0.</summary>
+    Fx6 TrainingBudget(int actorRow, int design, long month);
+
     /// <summary>A licence for the process is on offer to the owner of the site (contract §6: the lever <c>licence</c> for <c>VOLUME</c>).</summary>
     bool LicenceOffered(int siteRow, int processNumber, long month);
 

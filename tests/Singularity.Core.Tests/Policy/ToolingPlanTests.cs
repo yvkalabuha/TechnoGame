@@ -269,4 +269,31 @@ public class ToolingPlanTests
         }
         Assert.True(lostAt is > 60 and < 120, $"control: without A30 the process should be lost within 6–10 years, lost at {lostAt}");
     }
+
+    [Fact]
+    public void A30_TieOnTier_GoesToTheLowerProcessNumber_NotTheLowerRow()
+    {
+        // Rows are not in number order: row 0 holds process 7, row 1 holds process 6; both MECH, tier 3. p* must be process 6.
+        var layout = IndustryLayout.Create([Cluster.MECH],
+            [
+                new IndustryProcessSpec(7, Cluster.MECH, 0, 3, new Dims3(Fx6.FromInt(3), Fx6.FromInt(3), F(2_500_000))),
+                new IndustryProcessSpec(6, Cluster.MECH, 0, 3, new Dims3(Fx6.FromInt(3), F(2_500_000), F(2_500_000))),
+            ],
+            siteOwner: [0], workforceCategories: 2, skilledCategory: 1, requesters: 2);
+        Assert.Equal([1, 0], layout.Order.ToArray());
+        var start = new IndustryStart(layout);
+        for (int d = 0; d < 3; d++)
+        {
+            start.H[start.Cell(0, 0, d)] = Fx6.FromInt(4);
+            start.M[start.Cell(0, 0, d)] = d == 1 ? F(2_100_000) : F(3_400_000);
+        }
+        start.X[0] = Fx6.FromInt(10_000);
+        start.X[1] = Fx6.FromInt(10_000);
+        var inputs = new Inputs { NoPlanned = true };
+        var system = new IndustrySystem(new Table(1), layout, start, new IndustryParams(), inputs, 1, new V23CultureRule());
+        ToolingPlanResult plan = ToolingPlan.Compute(system, inputs, MKeep, 0, 0, Fx6.FromInt(1), Fx6.Zero);
+        // Process 6 needs purity only up to 2.5: M_dec 2.09 ≥ 2.5 − 0.75, nothing to support. Process 7 (the lower row) would have asked for money.
+        Assert.Equal(Fx6.Zero, plan.Invest(0, 0, Dimension.Purity));
+        Assert.Equal(Fx6.Zero, plan.Total);
+    }
 }

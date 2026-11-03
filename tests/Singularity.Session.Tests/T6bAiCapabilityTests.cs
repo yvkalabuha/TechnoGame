@@ -155,28 +155,63 @@ public class T6bAiCapabilityTests(ITestOutputHelper output)
         for (long t = 0; t < 384; t++)
         {
             player.Issue(t);
-            s.StepThroughMonth(t);
-            for (int a = 0; a < w.Scenario.ActorCount; a++)
+            // Before the step: the training money of month t from the snapshot, as step 7 will see it.
+            var tbSum = new Fx6[w.Scenario.ActorCount];
+            for (int a = 0; a < tbSum.Length; a++)
             {
                 int target = w.Policy.TrainingTarget(a);
                 for (int d = 0; d < w.ProductsLayout.Designs; d++)
                 {
-                    Fx6 tb = adapter.TrainingBudget(a, d, t + 1);
+                    Fx6 tb = adapter.TrainingBudget(a, d, t);
                     if (d != target)
                         Assert.Equal(Fx6.Zero, tb);
                     else
                     {
                         seenTarget = true;
-                        Assert.True(tb >= Fx6.Zero);
-                        Assert.Equal(w.IndustryInputs.Plan(a, t + 1, w.Industry.RestActor(a, t + 1)).TrainingBudget, tb);
+                        Assert.Equal(w.IndustryInputs.Plan(a, t, w.Industry.RestActor(a, t)).TrainingBudget, tb);
                     }
+                    Assert.True(tb >= Fx6.Zero);
+                    tbSum[a] += tb;
                 }
+            }
+            s.StepThroughMonth(t);
+            for (int a = 0; a < tbSum.Length; a++)
+            {
+                Assert.True(w.Products.TrainingSpent(a) <= tbSum[a], $"month {t}, actor {a}: tb_spent above the training budget");
                 if (w.Products.TrainingSpent(a) > Fx6.Zero)
                     spentMonths++;
-                Assert.True(w.Products.TrainingSpent(a) <= w.IndustryInputs.Plan(a, t, w.Industry.RestActor(a, t)).CapBudget * Fx6.FromInt(2) + w.Products.Spent(a));
             }
         }
         Assert.True(seenTarget, "P1 never named a training target in 384 months");
         output.WriteLine($"actor-months with training money spent: {spentMonths}");
+    }
+
+    [Fact]
+    public void WhyNotToolingRate_FollowsThePlan_AndTheEconomyLinkBudgetIncludesTrainingMoney()
+    {
+        var s = SliceTestData.Create(new SliceRunConfig { Seed = 3 });
+        var player = new PlayerScript(s);
+        SliceWorld w = s.World;
+        var inputs = new WhyNotInputsAdapter(w);
+        bool positive = false;
+        for (long t = 0; t < 60; t++)
+        {
+            player.Issue(t);
+            s.StepThroughMonth(t);
+            for (int a = 0; a < w.Scenario.ActorCount; a++)
+            {
+                Assert.Equal(w.ProcurementBudget(a), inputs.ProcurementBudget(a, t + 1));
+                for (int c = 0; c < w.IndustryLayout.Clusters.Length; c++)
+                {
+                    for (int d = 0; d < Dims3.Count; d++)
+                    {
+                        Fx6 rate = inputs.ToolingRate(a, c, (Dimension)d, t + 1);
+                        Assert.True(rate >= Fx6.Zero);
+                        positive |= rate > Fx6.Zero;
+                    }
+                }
+            }
+        }
+        Assert.True(positive, "the tooling plan never raised M anywhere: ToolingRate is still a constant");
     }
 }

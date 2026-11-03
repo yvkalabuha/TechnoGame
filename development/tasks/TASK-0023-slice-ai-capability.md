@@ -80,3 +80,9 @@ created: 2026-11-03
 7. `PolicySystem` принимает `IPolicyInputs`, почтовый ящик и `qpRequesterId` (конструктор изменён).
 8. Коммиты промежуточные не все собираются поодиночке (контракт `IProductsInputs` требует адаптера Session): сборка и тесты зелёные на последнем коммите.
 
+### Исправления по ревью (developer, 2026-11-03; поверх main с T7)
+1. medium: ничья A30 в `ToolingPlan` решается обходом `l.Order` (по номеру процесса), а не по строке; тест `A30_TieOnTier_GoesToTheLowerProcessNumber_NotTheLowerRow` (строки: процесс 7, затем 6).
+2. low: слабая проверка заменена: до шага месяца считается Σ `TrainingBudget` по линиям, после шага `TrainingSpent ≤` этой суммы (собранный мир, cell 0, 384 мес.); для не-цели `tb = 0`, для цели равен `TrainingBudget` плана.
+3. low: `PolicyInputsAdapter` передаёт в `Limiter` явную строку site (`= actorRow`, комментарий про допущение A27).
+4. T7: `WhyNotInputsAdapter.ToolingRate` = чистый рост `M` за месяц при плане A39 (`invest/cost_M(k) − δ_M·M`, не меньше 0). В `IWhyNotInputs` добавлен `TrainingBudget(actor, design, month)`; звено ECONOMY сравнивает стоимость с `ProcurementBudget + TrainingBudget` линии (шаг 7 платит из `left + tb`); бюджет закупок — общий `SliceWorld.ProcurementBudget`. `SliceWorld.ProductsInputs` вынесен в свойство. Тест `WhyNotToolingRate_...` (рост положителен в части ячеек за 60 мес.). Хеши и golden не менялись.
+Тесты: Core 799, Architecture 80, Session 119, Kernel 284 (+1 пропуск) — зелёные.

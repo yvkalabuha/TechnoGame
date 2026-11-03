@@ -74,7 +74,8 @@ internal sealed class SliceWorld
         ICultureRule rule = config.Channels.HasFlag(SliceChannels.CultureR0) ? new V23CultureRule() : new CbCultureRule();
         IndustryInputs = new IndustryInputsAdapter(this);
         Industry = new IndustrySystem(Table, IndustryLayout, iStart, ip, IndustryInputs, chunks, rule);
-        Products = new ProductsSystem(Table, ProductsLayout, pStart, pp, new ProductsInputsAdapter(this), Industry.CreateMailbox(chunks, Cadence.Monthly));
+        ProductsInputs = new ProductsInputsAdapter(this);
+        Products = new ProductsSystem(Table, ProductsLayout, pStart, pp, ProductsInputs, Industry.CreateMailbox(chunks, Cadence.Monthly));
 
         StartVectors(scenario, out var actorNumber, out var budget0, out var growth, out var forced);
         BudgetAtStart = budget0;
@@ -107,6 +108,7 @@ internal sealed class SliceWorld
     public TickCalendar Calendar { get; }
     public KnowledgeSystem Knowledge { get; }
     public IndustryInputsAdapter IndustryInputs { get; }
+    public ProductsInputsAdapter ProductsInputs { get; }
     public int QualityRequester { get; }
     public IndustrySystem Industry { get; }
     public ProductsSystem Products { get; }

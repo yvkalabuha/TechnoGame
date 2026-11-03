@@ -52,7 +52,8 @@ public sealed partial class WhyNotAnalyzer
         if (stage is DesignStage.Prototype or DesignStage.Series && _i.Profile(site, DesignRules.Items(_pl, prc), month).Admitted)
         {
             Fx6 cost = _p.UnitCostAt(actor, design, month) * planned + _p.UpkeepNeeded(actor);
-            Fx6 budget = _in.ProcurementBudget(actor, month);
+            // Step 7 pays from the common money and then from the line's training money.
+            Fx6 budget = _in.ProcurementBudget(actor, month) + _in.TrainingBudget(actor, design, month);
             if (cost > budget)
             {
                 int slot = VariantSlot(actor, alts, gen, -1);
