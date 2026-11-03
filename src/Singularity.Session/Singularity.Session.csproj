@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Composition root of the jet slice (ADR-0014): the one place that assembles the world. References Core and Kernel only. -->
+  <PropertyGroup>
+    <RootNamespace>Singularity.Session</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Singularity.Kernel\Singularity.Kernel.csproj" />
+    <ProjectReference Include="..\Singularity.Core\Singularity.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Singularity.Session.Tests" />
+  </ItemGroup>
+</Project>
