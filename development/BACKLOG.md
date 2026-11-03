@@ -35,6 +35,7 @@
 | [TASK-0019](../development/tasks/TASK-0019-llm-worker-pilot.md) | REVIEW | Пилот внешней LLM (Qwen): tools/llm_worker | MS-M0 |
 | [TASK-0020](../development/tasks/TASK-0020-industry-kernel-v24.md) | DONE | Industry и Kernel под контракт v2.4: правило культуры C-B, наладка производства | MS-M0 |
 | [TASK-0021](../development/tasks/TASK-0021-products-v24-rework.md) | DONE | Доработка Core.Products (TASK-0018) под контракт v2.4 | MS-M0 |
+| [TASK-0022](../development/tasks/TASK-0022-slice-policy-session.md) | APPROVED | T6a: система политики ИИ и сборка мира среза (Session) | MS-M0 |
 
 ## Гипотезы
 
