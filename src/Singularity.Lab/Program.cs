@@ -12,6 +12,7 @@ public static class Program
           hash   --manifest <json> [--canonical]     print manifest_hash (and canonical form)
           models                                     list registered models
           selftest                                   built-in self-checks (until tests/ has Lab tests)
+          smoke-t4s --out <dir> [--mods <dir>] [--seeds N] [--only c1|c2|c3]  anchor smoke C1(yield)/C2/C3 (TASK-0017)
 
         Exit codes: 0 ok, 1 run/matrix failure or self-check failure, 2 usage or manifest error.
         Outputs belong in lab/results/ (git-ignored). Format: docs/simulation/lab-cli.md
@@ -34,6 +35,7 @@ public static class Program
                 "hash" => Hash(opts),
                 "models" => Models(),
                 "selftest" => SelfTest.Run(Console.Out),
+                "smoke-t4s" => SmokeT4s(opts),
                 _ => throw new UsageException($"Unknown command '{args[0]}'."),
             };
         }
@@ -112,6 +114,18 @@ public static class Program
         return 0;
     }
 
+    private static int SmokeT4s(Options o)
+    {
+        string outDir = Path.GetFullPath(o.Required("out"));
+        string mods = o.Optional("mods") ?? Path.Combine("mods", "core");
+        int seeds = o.Int("seeds", 2, 100_000) ?? 200;
+        string? only = o.Optional("only");
+        if (only is not null && only is not ("c1" or "c2" or "c3"))
+            throw new UsageException("--only must be c1, c2 or c3.");
+        o.CheckAllUsed();
+        return Smoke.SmokeT4s.Run(mods, outDir, seeds, only, Console.Out);
+    }
+
     private static int Models()
     {
         foreach (ILabModelFactory f in ModelRegistry.All)
@@ -156,6 +170,12 @@ internal sealed class Options
     {
         _used.Add(key);
         return _values.TryGetValue(key, out string? v) && v is not null ? v : throw new UsageException($"--{key} is required.");
+    }
+
+    public string? Optional(string key)
+    {
+        _used.Add(key);
+        return _values.TryGetValue(key, out string? v) ? v : null;
     }
 
     public int? Int(string key, int min, int max)
