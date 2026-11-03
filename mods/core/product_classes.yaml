@@ -81,8 +81,11 @@ define:
     # Per generation g (APP node of g). R-HF: h_floor = 0.25 × price target without GFE in hours,
     # h_first = h_floor/0.25. R-MF: materials_floor = GFE share × price in 1950 $ / M$. R-AK: alloy_kg =
     # engine mass (fact) × superalloy share × melt-loss factor 5. crew_req: display only (contract §4.6).
+    # G4 anchor is F-105D (r2). R-PS proc_scale[g]: multiplier of the process part of unit_cost; R-DS
+    # design_scale[g]: multiplier of W = W0·complexity (DAPCA IV check). Both are r2 proposals (F-PI5, F-PI6,
+    # decision #78), values pending the r3 data update (money unit M$ = $80 M).
     generations:
-      - {gen: 1, app: s8.app.jet_fighter_g1, h_first: 9320, h_floor: 2330, materials_floor: 0.000174, alloy_kg: 290, crew_req: 1}
-      - {gen: 2, app: s8.app.jet_fighter_g2, h_first: 14760, h_floor: 3690, materials_floor: 0.000264, alloy_kg: 670, crew_req: 1}
-      - {gen: 3, app: s8.app.jet_fighter_g3, h_first: 41960, h_floor: 10490, materials_floor: 0.000736, alloy_kg: 2120, crew_req: 1}
-      - {gen: 4, app: s8.app.jet_fighter_g4, h_first: 125440, h_floor: 31360, materials_floor: 0.003211, alloy_kg: 2980, crew_req: 1}
+      - {gen: 1, app: s8.app.jet_fighter_g1, h_first: 9320, h_floor: 2330, materials_floor: 0.000174, alloy_kg: 290, crew_req: 1, proc_scale: 0.94, design_scale: 1.00}
+      - {gen: 2, app: s8.app.jet_fighter_g2, h_first: 14760, h_floor: 3690, materials_floor: 0.000264, alloy_kg: 670, crew_req: 1, proc_scale: 0.86, design_scale: 1.11}
+      - {gen: 3, app: s8.app.jet_fighter_g3, h_first: 41960, h_floor: 10490, materials_floor: 0.000736, alloy_kg: 2120, crew_req: 1, proc_scale: 1.02, design_scale: 1.82}
+      - {gen: 4, app: s8.app.jet_fighter_g4, h_first: 125900, h_floor: 31480, materials_floor: 0.001679, alloy_kg: 2980, crew_req: 1, proc_scale: 2.59, design_scale: 3.12}

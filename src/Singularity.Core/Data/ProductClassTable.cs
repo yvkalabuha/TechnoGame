@@ -63,6 +63,12 @@ public sealed partial class ProductClassTable
     public required ImmutableArray<Fx6> GenAlloyKg { get; init; }
     public required ImmutableArray<int> GenCrewReq { get; init; }
 
+    /// <summary>R-PS: multiplier of the process part of <c>unit_cost</c> of generation g.</summary>
+    public required ImmutableArray<Fx6> GenProcScale { get; init; }
+
+    /// <summary>R-DS: multiplier of design work <c>W</c> of generation g.</summary>
+    public required ImmutableArray<Fx6> GenDesignScale { get; init; }
+
     /// <summary>Process cost row of a PRC node row in class c, or -1.</summary>
     public int ProcessRow(int classRow, int nodeRow)
     {
@@ -148,6 +154,8 @@ public sealed partial class ProductClassTable
                 w.Fixed(GenMaterialsFloor[i]);
                 w.Fixed(GenAlloyKg[i]);
                 w.Int(GenCrewReq[i]);
+                w.Fixed(GenProcScale[i]);
+                w.Fixed(GenDesignScale[i]);
             }
         }
     }
