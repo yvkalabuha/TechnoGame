@@ -1210,6 +1210,114 @@
   {
    "input": {
     "H": {
+     "MET.precision": 3500000,
+     "MET.purity": 3300000,
+     "MET.quality_control": 3200000
+    },
+    "Hcap": {
+     "precision": 5000000,
+     "purity": 5000000,
+     "quality_control": 5000000
+    },
+    "M": {
+     "MET.precision": 3700000,
+     "MET.purity": 3500000,
+     "MET.quality_control": 3400000
+    },
+    "cb": {
+     "E_full": 1838,
+     "dL": 500000,
+     "ell": 100000,
+     "k_tr": 1000000,
+     "r_cap": 10000000,
+     "r_keep": 6250000
+    },
+    "procs": [
+     {
+      "E": 0,
+      "cluster": "MET",
+      "known": true,
+      "labour": 200000000,
+      "lic": false,
+      "planned": false,
+      "prc_id": 4,
+      "req": {
+       "precision": 4000000,
+       "purity": 4000000,
+       "quality_control": 3500000
+      },
+      "v": 1000000000
+     },
+     {
+      "E": 0,
+      "cluster": "MET",
+      "known": true,
+      "labour": 50000000,
+      "lic": false,
+      "planned": false,
+      "prc_id": 6,
+      "req": {
+       "precision": 3000000,
+       "purity": 3000000,
+       "quality_control": 2500000
+      },
+      "v": 1000000000
+     }
+    ]
+   },
+   "name": "follower_none_F10",
+   "note": "v2.4 r2 F10: p leads no cell, gap_p(d*) = 0, cell has lead 4: (NONE, p), not limiter of lead",
+   "output": {
+    "lead": {
+     "MET.precision": 4,
+     "MET.purity": 4,
+     "MET.quality_control": 4
+    },
+    "procs": [
+     {
+      "E_useful": 919,
+      "d_star": "purity",
+      "eligible": true,
+      "k_star": 500000,
+      "limiter": "EFFORT",
+      "limiter0": {
+       "precision": "EFFORT",
+       "purity": "EFFORT",
+       "quality_control": "EFFORT"
+      },
+      "prc_id": 4,
+      "subject_prc": 4,
+      "t_hat": {
+       "precision": 375000,
+       "purity": 475000,
+       "quality_control": 275000
+      }
+     },
+     {
+      "E_useful": 0,
+      "d_star": "purity",
+      "eligible": true,
+      "k_star": 1000000,
+      "limiter": "NONE",
+      "limiter0": {
+       "precision": "NONE",
+       "purity": "NONE",
+       "quality_control": "NONE"
+      },
+      "prc_id": 6,
+      "subject_prc": 6,
+      "t_hat": {
+       "precision": 0,
+       "purity": 0,
+       "quality_control": 0
+      }
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "H": {
      "MET.precision": 3200000,
      "MET.purity": 3200000,
      "MET.quality_control": 3200000

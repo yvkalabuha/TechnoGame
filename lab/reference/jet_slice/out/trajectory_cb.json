@@ -25,9 +25,9 @@
  "coverage": {
   "E_useful_changes": true,
   "effort_with_output": true,
-  "follower_limiter_of_lead": true,
   "lab_effort_without_output": true,
   "limiter_volume": true,
+  "non_lead_own_none_F10": true,
   "rest_returned": true
  },
  "fx6_scale": 1000000,
@@ -225,7 +225,7 @@
       4
      ],
      "6": [
-      "LAB_CEILING",
+      "NONE",
       6
      ]
     },
@@ -3028,8 +3028,8 @@
       4
      ],
      "6": [
-      "EFFORT",
-      4
+      "NONE",
+      6
      ]
     },
     "passes": 1,
@@ -3202,8 +3202,8 @@
       4
      ],
      "6": [
-      "EFFORT",
-      4
+      "NONE",
+      6
      ]
     },
     "passes": 1,
@@ -3374,8 +3374,8 @@
       4
      ],
      "6": [
-      "EFFORT",
-      4
+      "NONE",
+      6
      ]
     },
     "passes": 1,
@@ -3546,8 +3546,8 @@
       4
      ],
      "6": [
-      "VOLUME",
-      4
+      "NONE",
+      6
      ]
     },
     "passes": 1,
@@ -3724,8 +3724,8 @@
       4
      ],
      "6": [
-      "VOLUME",
-      4
+      "NONE",
+      6
      ]
     },
     "passes": 1,
@@ -3885,8 +3885,8 @@
       4
      ],
      "6": [
-      "VOLUME",
-      4
+      "NONE",
+      6
      ]
     },
     "passes": 1,
@@ -4046,8 +4046,8 @@
       4
      ],
      "6": [
-      "VOLUME",
-      4
+      "NONE",
+      6
      ]
     },
     "passes": 1,
@@ -4207,8 +4207,8 @@
       4
      ],
      "6": [
-      "VOLUME",
-      4
+      "NONE",
+      6
      ]
     },
     "passes": 1,
