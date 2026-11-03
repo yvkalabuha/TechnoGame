@@ -1,7 +1,7 @@
 ---
 id: TASK-0026
 title: "D1: пакет стартовых данных (заменитель ранга 0, правки старта SUN/FRA/USA/GBR, узел 58)"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -25,9 +25,9 @@ created: 2026-11-03
 По спеке `docs/simulation/slice-jet-aviation.md` v0.14 §11 строка «D1», §1.1 (таблица правок 1–8), §1.4 «Поля альтернатив v0.14» (`max_eng_gen`, `alloy_free`, `upkeep_mult`, `substitute`), A23, `why_not` `ENGINE_GEN_LIMIT`; пресеты по #136. Источник данных — `docs/research/sun-start-data.md` r2 (+ раздел R-KN). Абляции §6.9 — не в этой задаче (отдельный эксперимент после D1).
 
 ## Критерии приёмки
-- [ ] Всё из §11 «D1» (схема, валидатор, writer и `data_hash`, данные mods, эталон `products_ref.py` при необходимости).
-- [ ] 8 эталонных составов `product_class.md` §2 не меняются; тест K4.
-- [ ] Общие пункты T6 (тесты, ADR-0003, нет RNG в Industry/Products, L1/L2); golden-хеши перезаписаны с причиной «D1».
+- [x] Всё из §11 «D1» (схема, валидатор, writer и `data_hash`, данные mods, эталон `products_ref.py` при необходимости).
+- [x] 8 эталонных составов `product_class.md` §2 не меняются; тест K4.
+- [x] Общие пункты T6 (тесты, ADR-0003, нет RNG в Industry/Products, L1/L2); golden-хеши перезаписаны с причиной «D1».
 
 ## Тесты
 По §11 D1.
@@ -36,9 +36,9 @@ created: 2026-11-03
 Спека v0.14 (§1.1, §1.3, §1.4, A23, §6.9, §11); `docs/research/sun-start-data.md`; `docs/game-design/rank0-steel-g1-review.md`; `docs/game-design/COMPONENT_SELECTION.md`; DECISIONS_LOG #127, #130–#136.
 
 ## REVIEW
-- [ ] Code review (reviewer) — находки high закрыты
-- [ ] Тесты (test-engineer) — проходят, покрытие достаточно
-- [ ] Детерминизм L1/L2 — если затронуты src/
+- [x] Code review (reviewer) — approve; low закрыты (ee9ab40, d1ea97a)
+- [x] Тесты — проходят (Arch 80, Kernel 284, Core 856, Session 137); покрытие оценено reviewer
+- [x] Детерминизм L1/L2 — golden перезаписаны с причиной D1
 
 ### Ревью reviewer (2026-11-03)
 Вердикт: approve. dotnet test зелёный (Arch 80, Kernel 284 +1, Core 854, Session 137). alloy_free (8 мест §1.4), upkeep·m последним множителем, спуск двигателя, правило заменителя в F-PC2/запасном, EngineLimitsHold, валидатор §1.4, writer product_classes/2, данные §1.1, K4 не тавтологичен, детерминизм — без замечаний. products_ref.py --check OK. Отклонения 2, 3, 6 приняты; 4 — уточнение спеки; 1 — временно, снято после обновления CSV.
