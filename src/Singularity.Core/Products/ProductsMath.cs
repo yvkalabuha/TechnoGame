@@ -54,10 +54,11 @@ public static class ProductsMath
     /// <summary>
     /// <c>upkeep = upkeep_base·PowFrac(complexity, q10_αu)/maintainability</c> per unit and month (contract §4.4) with
     /// <c>upkeep_base = share·unit_cost</c> (§8.1). [Предл.] <c>unit_cost</c> here is <c>unit_cost_floor</c>: a property of
-    /// the design, not of the month's yield or line experience.
+    /// the design, not of the month's yield or line experience. [Предл.] order <c>((unit_cost·PowFrac)·share)/maintainability</c>:
+    /// <c>share·unit_cost</c> first would be ≈ 5 raw for G1 and lose up to 20% to the floor.
     /// </summary>
     public static Fx6 Upkeep(Fx6 share, Fx6 unitCostFloor, int complexity, int q10, Fx6 maintainability) =>
-        share * unitCostFloor * DetMath.PowFracFx(Fx6.FromInt(complexity), q10) / maintainability;
+        unitCostFloor * DetMath.PowFracFx(Fx6.FromInt(complexity), q10) * share / maintainability;
 
     /// <summary><c>W = ((W0·complexity)·design_scale)/(1 + bureau_exp/E_B)</c> engineer-months (spec §3.3; R-DS, #78).</summary>
     public static Fx6 DesignWork(Fx6 w0, int complexity, Fx6 designScale, Fx6 bureauExp, Fx6 eb) =>

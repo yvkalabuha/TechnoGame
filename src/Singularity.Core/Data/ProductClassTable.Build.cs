@@ -24,7 +24,6 @@ public sealed partial class ProductClassTable
         var altRequires = new List<List<int[]>>();
         var hpm = new List<Fx6>();
         var wage = new List<Fx6>();
-        var bureauEngineers = new List<int>();
         var maintainability = new List<Fx6>();
         var rRef = new List<Fx6>();
         var procStart = new List<int> { 0 };
@@ -41,6 +40,7 @@ public sealed partial class ProductClassTable
         var genCrew = new List<int>();
         var genProcScale = new List<Fx6>();
         var genDesignScale = new List<Fx6>();
+        var genBureau = new List<int>();
 
         int ResolveNode(YNode at, string id) =>
             nodes.IndexOf(id) is var row and >= 0 ? row : throw DataLoadException.At(at, $"reference to unknown node '{id}'");
@@ -121,16 +121,13 @@ public sealed partial class ProductClassTable
             wage.Add(m.Fixed("wage_kh"));
             if (wage[^1] < Fx6.Zero)
                 throw DataLoadException.At(m.Required("wage_kh"), "wage_kh must not be negative");
-            bureauEngineers.Add(m.Int("bureau_engineers"));
-            if (bureauEngineers[^1] < 1)
-                throw DataLoadException.At(m.Required("bureau_engineers"), "bureau_engineers must be at least 1");
             maintainability.Add(Positive(m, "maintainability"));
             rRef.Add(Positive(m, "r_ref"));
             ReadProcesses(m.Seq("processes"), nodes, ResolveNode, [.. prc.Skip(prcStart[altStart[firstSlot]]).Distinct().Order()],
                 procNode, procN, procLabour, procBase);
             procStart.Add(procNode.Count);
             ReadGenerations(m.Seq("generations"), nodes, ResolveNode, genApp, genHFirst, genHFloor, genMaterials, genAlloy, genCrew,
-                genProcScale, genDesignScale);
+                genProcScale, genDesignScale, genBureau);
             genStart.Add(genApp.Count);
             m.End();
         }
@@ -142,12 +139,12 @@ public sealed partial class ProductClassTable
             SlotId = [.. slotId], SlotClass = [.. slotClass], SlotIsBase = [.. slotIsBase], AltStart = [.. altStart],
             AltId = [.. altId], AltSlot = [.. altSlot], AltRank = [.. altRank], AltPerfMult = [.. altPerf],
             PrcStart = [.. prcStart], Prc = [.. prc], AltRequires = RequirementLists.Build(altRequires),
-            HPm = [.. hpm], WageKh = [.. wage], BureauEngineers = [.. bureauEngineers], Maintainability = [.. maintainability],
+            HPm = [.. hpm], WageKh = [.. wage], Maintainability = [.. maintainability],
             RRef = [.. rRef], ProcStart = [.. procStart], ProcNode = [.. procNode], ProcN = [.. procN],
             ProcLabour = [.. procLabour], ProcBaseCost = [.. procBase], GenStart = [.. genStart], GenApp = [.. genApp],
             GenHFirst = [.. genHFirst], GenHFloor = [.. genHFloor], GenMaterialsFloor = [.. genMaterials],
             GenAlloyKg = [.. genAlloy], GenCrewReq = [.. genCrew],
-            GenProcScale = [.. genProcScale], GenDesignScale = [.. genDesignScale],
+            GenProcScale = [.. genProcScale], GenDesignScale = [.. genDesignScale], GenBureauEngineers = [.. genBureau],
         };
     }
 
@@ -171,7 +168,7 @@ public sealed partial class ProductClassTable
                 throw DataLoadException.At(at, $"processes: '{nodes.Id[row]}' is in no prc_set of the class");
             if (rows.Exists(r => r.Node == row))
                 throw DataLoadException.At(at, $"processes: '{nodes.Id[row]}' is listed twice");
-            rows.Add((row, Positive(p, "n"), Positive(p, "labour_hours"), Positive(p, "base_cost")));
+            rows.Add((row, Positive(p, "n_p"), Positive(p, "labour_hours"), Positive(p, "base_cost")));
             p.End();
         }
         foreach (int row in used)
@@ -191,7 +188,7 @@ public sealed partial class ProductClassTable
 
     // Generations 1..G in order, each with an APP node of that generation.
     private static void ReadGenerations(YSeq seq, NodeTable nodes, Func<YNode, string, int> resolve, List<int> app,
-        List<Fx6> hFirst, List<Fx6> hFloor, List<Fx6> materials, List<Fx6> alloy, List<int> crew, List<Fx6> procScale, List<Fx6> designScale)
+        List<Fx6> hFirst, List<Fx6> hFloor, List<Fx6> materials, List<Fx6> alloy, List<int> crew, List<Fx6> procScale, List<Fx6> designScale, List<int> bureau)
     {
         int expected = 1;
         foreach (YNode item in seq.Items)
@@ -221,6 +218,10 @@ public sealed partial class ProductClassTable
             crew.Add(crewReq);
             procScale.Add(Positive(g, "proc_scale"));
             designScale.Add(Positive(g, "design_scale"));
+            int engineers = g.Int("bureau_engineers");
+            if (engineers < 1)
+                throw DataLoadException.At(item, "bureau_engineers must be at least 1");
+            bureau.Add(engineers);
             g.End();
         }
         if (expected == 1)

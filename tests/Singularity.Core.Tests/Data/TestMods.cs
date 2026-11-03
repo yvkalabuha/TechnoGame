@@ -39,6 +39,18 @@ internal sealed class TestMods : IDisposable
         return dir;
     }
 
+    /// <summary>
+    /// A product_class file that drops generation G4 of jet_fighter (keeps the core G1–G3 rows), so a test mod can delete
+    /// the otherwise referenced node s8.app.jet_fighter_g4.
+    /// </summary>
+    public static (string Name, string Text) DropG4Class()
+    {
+        string[] rows = [.. File.ReadAllLines(Path.Combine(CoreDir, "product_classes.yaml"))
+            .Where(l => l.TrimStart().StartsWith("- {gen: ", StringComparison.Ordinal) && !l.Contains("gen: 4", StringComparison.Ordinal))];
+        Assert.Equal(3, rows.Length);
+        return ("classes.yaml", "kind: product_class\npatch:\n  - id: jet_fighter\n    generations:\n" + string.Join("\n", rows) + "\n");
+    }
+
     /// <summary>Replaces exactly one occurrence, so a test cannot silently edit nothing.</summary>
     public static string ReplaceOnce(string text, string from, string to)
     {

@@ -88,9 +88,11 @@ public sealed class ProductsLayout
     public required ImmutableArray<Fx6> ProcScale { get; init; }
     public required ImmutableArray<Fx6> DesignScale { get; init; }
 
+    /// <summary>Engineers a bureau requests per month for a design of generation g (index g − 1).</summary>
+    public required ImmutableArray<int> BureauEngineers { get; init; }
+
     public required Fx6 HPm { get; init; }
     public required Fx6 WageKh { get; init; }
-    public required int BureauEngineers { get; init; }
     public required Fx6 Maintainability { get; init; }
     public required Fx6 RRef { get; init; }
 
@@ -108,6 +110,12 @@ public sealed class ProductsLayout
     /// <summary>Calendar years with a cohort column: <c>StartYear .. StartYear + Years − 1</c>.</summary>
     public required int StartYear { get; init; }
     public required int Years { get; init; }
+
+    /// <summary>Generation of every node by stable number (index = number; −1 for unused numbers).</summary>
+    public required ImmutableArray<int> NodeGen { get; init; }
+
+    /// <summary>"The actor knows every node of generations ≤ <paramref name="gen"/>" — the condition of the reference table (product_class.md §2) and of A18.</summary>
+    public Func<int, bool> KnownUpTo(int gen) => n => n >= 0 && n < NodeGen.Length && NodeGen[n] >= 0 && NodeGen[n] <= gen;
 
     public int Designs => 2 * Generations;
 
@@ -133,6 +141,26 @@ public sealed class ProductsLayout
     {
         int i = ProcNumber.AsSpan().BinarySearch(number);
         return i >= 0 ? i : -1;
+    }
+
+    /// <summary>
+    /// <c>V_ref</c> (spec §3.5 A18, A29): the lower median over the processes of the «превосходящий» G2 project (every node of
+    /// generations ≤ 2 known) of <c>v_p = (r_ref·n_p)·labour_p</c>, labour hours per month. A data-derived constant for <c>KnowledgeParams</c>.
+    /// </summary>
+    public Fx6 ReferenceVRef()
+    {
+        Span<int> alts = stackalloc int[SlotCount];
+        if (Generations < 2 || !DesignRules.Superior(this, 2, KnownUpTo(2), alts))
+            throw new InvalidOperationException("V_ref needs a G2 design of the class.");
+        int[] prc = DesignRules.PrcSet(this, alts);
+        var v = new Fx6[prc.Length];
+        for (int i = 0; i < prc.Length; i++)
+        {
+            int k = ProcIndex(prc[i]);
+            v[i] = RRef * ProcN[k] * ProcLabour[k];
+        }
+        Array.Sort(v);
+        return v[(v.Length - 1) / 2];
     }
 
     /// <summary>Slot of an alternative.</summary>
@@ -218,6 +246,11 @@ public sealed class ProductsLayout
         }
         procs.Sort((x, y) => x.Number.CompareTo(y.Number));
 
+        var nodeGen = new int[nodes.Number.Max() + 1];
+        Array.Fill(nodeGen, -1);
+        for (int r = 0; r < nodes.Count; r++)
+            nodeGen[nodes.Number[r]] = nodes.Gen[r];
+
         int g0 = classes.GenStart[c], g1 = classes.GenStart[c + 1];
         Fx6[] Gen(ImmutableArray<Fx6> col) => [.. Enumerable.Range(g0, g1 - g0).Select(i => col[i])];
         return new ProductsLayout
@@ -235,10 +268,11 @@ public sealed class ProductsLayout
             MaterialsFloor = [.. Gen(classes.GenMaterialsFloor)], AlloyKg = [.. Gen(classes.GenAlloyKg)],
             CrewReq = [.. Enumerable.Range(g0, g1 - g0).Select(i => classes.GenCrewReq[i])],
             ProcScale = [.. Gen(classes.GenProcScale)], DesignScale = [.. Gen(classes.GenDesignScale)],
-            HPm = classes.HPm[c], WageKh = classes.WageKh[c], BureauEngineers = classes.BureauEngineers[c],
+            BureauEngineers = [.. Enumerable.Range(g0, g1 - g0).Select(i => classes.GenBureauEngineers[i])],
+            HPm = classes.HPm[c], WageKh = classes.WageKh[c],
             Maintainability = classes.Maintainability[c], RRef = classes.RRef[c],
             ClusterCount = industry.Clusters.Length, SkilledCategory = industry.SkilledCategory,
-            SiteOwner = industry.SiteOwner, Bureaus = bureaus, StartYear = startYear, Years = years,
+            NodeGen = [.. nodeGen], SiteOwner = industry.SiteOwner, Bureaus = bureaus, StartYear = startYear, Years = years,
         };
     }
 }

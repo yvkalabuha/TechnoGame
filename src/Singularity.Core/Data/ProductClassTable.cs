@@ -41,7 +41,6 @@ public sealed partial class ProductClassTable
 
     /// <summary>Full labour rate in index per 1000 hours (R-WAGE, F-PI1).</summary>
     public required ImmutableArray<Fx6> WageKh { get; init; }
-    public required ImmutableArray<int> BureauEngineers { get; init; }
     public required ImmutableArray<Fx6> Maintainability { get; init; }
 
     /// <summary>Rate of the reference line P0 (spec §3.5 A18), units per month.</summary>
@@ -68,6 +67,9 @@ public sealed partial class ProductClassTable
 
     /// <summary>R-DS: multiplier of design work <c>W</c> of generation g.</summary>
     public required ImmutableArray<Fx6> GenDesignScale { get; init; }
+
+    /// <summary>Engineers one bureau requests per month for a design of generation g.</summary>
+    public required ImmutableArray<int> GenBureauEngineers { get; init; }
 
     /// <summary>Process cost row of a PRC node row in class c, or -1.</summary>
     public int ProcessRow(int classRow, int nodeRow)
@@ -134,7 +136,6 @@ public sealed partial class ProductClassTable
             }
             w.Fixed(HPm[c]);
             w.Fixed(WageKh[c]);
-            w.Int(BureauEngineers[c]);
             w.Fixed(Maintainability[c]);
             w.Fixed(RRef[c]);
             w.Int(ProcStart[c + 1] - ProcStart[c]);
@@ -156,6 +157,7 @@ public sealed partial class ProductClassTable
                 w.Int(GenCrewReq[i]);
                 w.Fixed(GenProcScale[i]);
                 w.Fixed(GenDesignScale[i]);
+                w.Int(GenBureauEngineers[i]);
             }
         }
     }

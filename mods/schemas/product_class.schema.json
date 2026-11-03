@@ -26,7 +26,6 @@
         "slots": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/slot" } },
         "h_pm": { "description": "Hours per person-month (R-HPM).", "type": "number", "exclusiveMinimum": 0 },
         "wage_kh": { "description": "Full labour rate, budget index per 1000 hours (R-WAGE, F-PI1).", "type": "number", "minimum": 0 },
-        "bureau_engineers": { "description": "Engineers one bureau requests per month.", "type": "integer", "minimum": 1 },
         "maintainability": { "description": "Upkeep divisor.", "type": "number", "exclusiveMinimum": 0 },
         "r_ref": { "description": "Rate of the reference line P0, units per month (spec §3.5 A18).", "type": "number", "exclusiveMinimum": 0 },
         "processes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/process" } },
@@ -35,7 +34,7 @@
     },
     "productClass": {
       "$ref": "#/$defs/fields",
-      "required": ["id", "axis", "lighten_order", "slots", "h_pm", "wage_kh", "bureau_engineers", "maintainability", "r_ref", "processes", "generations"],
+      "required": ["id", "axis", "lighten_order", "slots", "h_pm", "wage_kh", "maintainability", "r_ref", "processes", "generations"],
       "unevaluatedProperties": false
     },
     "patch": {
@@ -56,11 +55,11 @@
     "process": {
       "description": "Cost inputs of one PRC of the class (R-NP, R-LAB, R-BC).",
       "type": "object",
-      "required": ["prc", "n", "labour_hours", "base_cost"],
+      "required": ["prc", "n_p", "labour_hours", "base_cost"],
       "additionalProperties": false,
       "properties": {
         "prc": { "$ref": "common.schema.json#/$defs/nodeId" },
-        "n": { "type": "number", "exclusiveMinimum": 0 },
+        "n_p": { "type": "number", "exclusiveMinimum": 0 },
         "labour_hours": { "type": "number", "exclusiveMinimum": 0 },
         "base_cost": { "type": "number", "exclusiveMinimum": 0 }
       }
@@ -68,7 +67,7 @@
     "generation": {
       "description": "Design inputs of generation gen (R-HF, R-MF, R-AK).",
       "type": "object",
-      "required": ["gen", "app", "h_first", "h_floor", "materials_floor", "alloy_kg", "crew_req", "proc_scale", "design_scale"],
+      "required": ["gen", "app", "h_first", "h_floor", "materials_floor", "alloy_kg", "crew_req", "proc_scale", "design_scale", "bureau_engineers"],
       "additionalProperties": false,
       "properties": {
         "gen": { "type": "integer", "minimum": 1 },
@@ -79,7 +78,8 @@
         "alloy_kg": { "type": "number", "exclusiveMinimum": 0 },
         "crew_req": { "type": "integer", "minimum": 1 },
         "proc_scale": { "description": "R-PS: multiplier of the process part of unit_cost.", "type": "number", "exclusiveMinimum": 0 },
-        "design_scale": { "description": "R-DS: multiplier of design work W.", "type": "number", "exclusiveMinimum": 0 }
+        "design_scale": { "description": "R-DS: multiplier of design work W.", "type": "number", "exclusiveMinimum": 0 },
+        "bureau_engineers": { "description": "Engineers one bureau requests per month for a design of this generation.", "type": "integer", "minimum": 1 }
       }
     },
     "alternative": {

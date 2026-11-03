@@ -7,10 +7,10 @@ public class DataHashTests : IDisposable
 {
     // scenario_hash of jet_slice_1945 (spec §1.1). Changing the scenario must be deliberate:
     // update this value together with the data and record it in the experiment manifest.
-    private const string ScenarioHash1945 = "3aa6bb494fc856e7f4f77f7b366fd2fd8b2efdb1ecd1c1a1f277c17711c64cbc";
+    private const string ScenarioHash1945 = "8ead6c11fe904dddf201d0d9c22569e116a22306facf4a4a65cd5b8e916063e9";
 
     // DataHash of mod core alone: nodes, product classes and scenarios. Same rule as above.
-    private const string CoreDataHash = "2a291aa543b8786484303cab2ab89a206c8d5300495ccca0bbe61eff993d9c93";
+    private const string CoreDataHash = "7f983d1340b5dd70d24c523380027d7e39c01483a10630bb563785cca9aeb196";
 
     private readonly TestMods _mods = new();
 

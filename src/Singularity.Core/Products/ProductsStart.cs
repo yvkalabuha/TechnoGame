@@ -30,7 +30,8 @@ public sealed class ProductsStart
 
     /// <summary>
     /// Start fleets of the scenario (spec §1.1, R-FL): each fleet row of this class becomes the design slot (gen, variant)
-    /// in stage В (line closed, units in service) with the «превосходящий» alternatives the actor knows at t0, and its
+    /// in stage В (line closed, units in service) with the «превосходящий» alternatives the actor knows at t0 among nodes of
+    /// generations ≤ gen, and its
     /// count goes into the cohort of <c>cohort_year</c>. [Предл.] Start designs are mature: no defects (<c>D0</c> = 0),
     /// bureau experience 0. A «технологичный» start fleet needs t0 yields and is rejected.
     /// </summary>
@@ -55,7 +56,10 @@ public sealed class ProductsStart
                     throw new ArgumentException($"Start fleet of {scenario.ActorId[a]}: no generation {gen}.", nameof(scenario));
                 if (scenario.FleetVariant[f] != DesignVariant.Superior)
                     throw new ArgumentException($"Start fleet of {scenario.ActorId[a]}: only superior start designs are supported.", nameof(scenario));
-                if (!DesignRules.Superior(layout, gen, Knows, alts))
+                // The fleet's generation bounds its technology: a G1 fleet of 1945 has G1 engines even if the actor
+                // already knows turbojet_g2 (GBR) [Предл.].
+                Func<int, bool> upTo = layout.KnownUpTo(gen);
+                if (!DesignRules.Superior(layout, gen, n => Knows(n) && upTo(n), alts))
                     throw new ArgumentException($"Start fleet of {scenario.ActorId[a]}: the actor cannot build a G{gen} design at t0.", nameof(scenario));
                 int y = scenario.FleetCohortYear[f] - layout.StartYear;
                 if (y < 0 || y >= layout.Years)

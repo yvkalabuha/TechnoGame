@@ -1,12 +1,14 @@
 using System.Reflection;
 using Singularity.Core.Industry;
 using Singularity.Core.Knowledge;
+using Singularity.Core.Products;
 using Singularity.Kernel;
 
 namespace Singularity.Architecture.Tests;
 
 /// <summary>
-/// #28, reference README I7: the capability layer (<c>Singularity.Core.Industry</c>) has no randomness. No type of
+/// #28, reference README I7: the capability (<c>Singularity.Core.Industry</c>) and product (<c>Singularity.Core.Products</c>)
+/// layers have no randomness. No type of
 /// the namespace (nested and compiler-generated types included) holds, takes, returns or stores in a local a
 /// <see cref="CounterRng"/>, touches any of its members, or reads <see cref="TickContext.Rng"/>.
 /// Not transitive: a call from the namespace into another Core type that draws (or an <c>IIndustryInputs</c>
@@ -23,6 +25,16 @@ public class CapabilityNoRngTests
         Type[] types = typeof(IndustrySystem).Assembly.GetTypes().Where(t => t.Namespace == CapabilityNamespace).ToArray();
         Assert.Contains(typeof(IndustrySystem), types);
         Assert.Contains(typeof(IndustryMath), types);
+        Assert.Empty(RngUses(types));
+    }
+
+    [Fact]
+    public void ProductLayer_UsesNoRng()
+    {
+        Type[] types = typeof(ProductsSystem).Assembly.GetTypes().Where(t => t.Namespace == "Singularity.Core.Products").ToArray();
+        Assert.Contains(typeof(ProductsSystem), types);
+        Assert.Contains(typeof(ProductsMath), types);
+        Assert.Contains(typeof(DesignRules), types);
         Assert.Empty(RngUses(types));
     }
 
