@@ -2,5 +2,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/Singularity.Kernel/Singularity.Kernel.csproj" />
     <ProjectReference Include="../../src/Singularity.Core/Singularity.Core.csproj" />
+    <ProjectReference Include="../../src/Singularity.Session/Singularity.Session.csproj" />
+    <ProjectReference Include="../../src/Singularity.Lab/Singularity.Lab.csproj" />
   </ItemGroup>
 </Project>

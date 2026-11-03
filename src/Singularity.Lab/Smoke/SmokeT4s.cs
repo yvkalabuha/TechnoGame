@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Globalization;
+using Singularity.Core;
 using Singularity.Core.Data;
 using Singularity.Core.Industry;
 using Singularity.Core.Knowledge;
@@ -14,6 +15,7 @@ namespace Singularity.Lab.Smoke;
 /// real Core systems on the Kernel <see cref="TickRunner"/> with the daily calendar and the <c>core</c> mod data;
 /// product-layer inputs are fixed stand rules written in docs/simulation/smoke-t4s.md §2. Doubles appear only in
 /// the analysis of finished runs, never in a stand's state.
+/// Its stands (<c>C3Stand</c>, <c>LineStand</c>) are single-layer stands: the slice world is assembled only by Singularity.Session.
 /// </summary>
 internal static class SmokeT4s
 {
@@ -92,6 +94,7 @@ internal static class SmokeT4s
     /// node: the node's requires-closure is known, every other frontier node has prio 0, <c>j ≡ 1</c> (no PRIO_J
     /// spread: the only noise left is the hazard draw), no industry (<c>V_d = 0</c>), no rival (<c>known_elsewhere = 0</c>).
     /// </summary>
+    [SingleLayerStand("T4s C3 stand: the knowledge layer alone, fake inputs; not evidence for the assembled slice")]
     private sealed class C3Stand : IKnowledgeInputs
     {
         public ReadOnlySpan<int> LicensedEngines(int actorRow, long month) => ReadOnlySpan<int>.Empty;
@@ -317,6 +320,7 @@ internal static class SmokeT4s
     /// cells of running clusters up to <c>min(M_cap, max r_d)</c> of the running processes (stand rule for AI §4).
     /// No workforce requests (<c>act = 1</c>), no quality programme, no licence.
     /// </summary>
+    [SingleLayerStand("T4s line stand: the capability layer alone with a product-layer stand-in; not evidence for the assembled slice")]
     internal sealed class LineStand : IIndustryInputs
     {
         public Fx6 EffortBudget(int actorRow, long month) => Fx6.Zero;

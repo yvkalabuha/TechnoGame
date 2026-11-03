@@ -196,7 +196,11 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
     /// <summary>The active culture rule (the ablation is a constructor argument).</summary>
     public ICultureRule Rule => _rule;
 
-    /// <summary>Diagnostics only: <c>rest_a</c> handed to <c>ToolingInvest</c> at the site in the last step.</summary>
+    /// <summary>
+    /// Diagnostics only: <c>rest_a</c> handed to <c>ToolingInvest</c> at the site in the last step. Checked against ADR-0013 п. 4 (T6a):
+    /// compute writes it afresh for every site of a full-model step and nothing in compute, merge or post reads it, so it carries
+    /// nothing into the next tick and is not state; it stays outside the table and is not hashed or saved.
+    /// </summary>
     public Fx6 LastRest(int site) => _lastRest[site];
 
     // ---- external functions of the culture rule (contract §4.1a): pure functions of the snapshot
