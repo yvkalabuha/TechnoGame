@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сравнение чертёжных шрифтов</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500&family=Jura:wght@400;500&family=PT+Mono&display=swap" rel="stylesheet">
+<style>
+/* OpenGost Type B (SIL OFL-1.1). The binary is NOT stored in the repo (see banner and section 8).
+   Expected location relative to this file: fonts/OpenGostTypeB-Regular.ttf. A locally installed copy also works. */
+@font-face{font-family:"OGB"; src:url("fonts/OpenGostTypeB-Regular.ttf") format("truetype"), local("OpenGost Type B TT"), local("OpenGost Type B"), local("OpenGostTypeB-Regular"); font-display:swap}
+
+/* ===== Tokens: same as drafting-kit.html (UI_DESIGN_SYSTEM v0.2) ===== */
+:root{
+  --page-bg:#E4E2DC; --page-ink:#1E1F21; --page-muted:#5A5B5C; --page-line:#C3BFB4;
+  --paper:#F2EFE6; --sheet:#FAF8F2; --hover:#E8E4D8; --ink:#1D1E20; --ink-2:#55575A; --ink-3:#6E6C66; --rule:#BCB6A8;
+  --alarm:#C42A1C; --on-alarm:#FFFFFF; --warn:#E89A1A; --command:#2347A8; --on-command:#FFFFFF;
+  --bp-ground:#1E4673; --bp-ground-2:#18395E; --bp-hover:#24527F; --bp-ink:#EEF2F0; --bp-ink-2:#B9CBDA; --bp-ink-3:#9DB5CC;
+  --bp-rule:#7FA3C7; --bp-grid:#3A6491; --bp-alarm-line:#FF9C8F;
+  --text:"Golos Text",system-ui,sans-serif; --mono:"PT Mono",monospace;
+  --f-og:"OGB","Jura",sans-serif;   /* if the file is missing the banner says so; no silent substitution is claimed */
+  --f-ju:"Jura",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--page-bg); color:var(--page-ink); font-family:var(--text); font-size:16px; line-height:1.5}
+.wrap{max-width:1320px; margin:0 auto; padding:0 16px 40px}
+h1{font-weight:500; font-size:30px; line-height:1.2; margin:28px 0 8px}
+h2{font-weight:500; font-size:22px; margin:0 0 6px}
+p{max-width:90ch; margin:0 0 10px}
+.muted,.cap{color:var(--page-muted)}
+.cap{font-size:13px}
+section{border-top:1px solid var(--page-line); padding:22px 0 10px; margin-top:20px}
+code{font-family:var(--mono); font-size:.9em}
+.banner{font-size:14px; border:1px solid var(--page-line); padding:6px 10px; margin:6px 0 0; display:block; max-width:110ch; background:var(--sheet)}
+.banner.warn{border-color:var(--alarm)}
+.banner b{font-family:var(--mono); font-weight:400}
+
+.pair{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+@media (max-width:980px){.pair{grid-template-columns:1fr}}
+.col{min-width:0}
+.col > .hd{font-family:var(--mono); font-size:13px; padding:4px 10px; background:var(--ink); color:var(--sheet); display:flex; justify-content:space-between}
+.reg{padding:16px; border:1px solid var(--page-line)}
+.reg-paper{--S:var(--sheet); --S2:var(--paper); --H:var(--hover); --X:var(--ink); --X2:var(--ink-2); --X3:var(--ink-3); --R:var(--rule); background:var(--S); color:var(--X)}
+.reg-bp{--S:var(--bp-ground); --S2:var(--bp-ground-2); --H:var(--bp-hover); --X:var(--bp-ink); --X2:var(--bp-ink-2); --X3:var(--bp-ink-3); --R:var(--bp-rule); background:var(--S); color:var(--X); background-image:
+  linear-gradient(var(--bp-grid) 1px, transparent 1px), linear-gradient(90deg, var(--bp-grid) 1px, transparent 1px); background-size:16px 16px}
+.col.og .d{font-family:var(--f-og)}
+.col.ju .d{font-family:var(--f-ju)}
+.k{font-family:var(--mono); font-size:11px; color:var(--X2); display:block; margin:10px 0 2px}
+.k:first-child{margin-top:0}
+.line{margin:0 0 2px; max-width:none; line-height:1.3}
+.line.wide{max-width:none}
+
+/* buttons (drafting-kit .btn) */
+.row{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:8px}
+.btn{font-size:14px; height:28px; padding:0 12px; border:1px solid var(--X); background:transparent; color:var(--X); display:inline-flex; align-items:center; white-space:nowrap; cursor:pointer}
+.btn:hover{background:var(--H)}
+.btn.primary{border-width:2px; padding:0 11px}
+.reg-paper .cmd{background:var(--command); color:var(--on-command); border:1px solid var(--ink)}
+.cmd{font-size:14px; height:28px; padding:0 12px; display:inline-flex; align-items:center; white-space:nowrap}
+.btnbox{width:calc(24ch + 26px); overflow:hidden}  /* visual budget marker: 24 chars of the text font + padding */
+.budget{font-family:var(--mono); font-size:11px; color:var(--X2)}
+
+/* stamp */
+table.stamp{border-collapse:collapse; width:100%; font-size:14px}
+table.stamp td,table.stamp th{border:1px solid var(--X); padding:0 8px; height:26px; text-align:left}
+table.stamp th{font-family:var(--text); font-weight:400; font-size:11px; color:var(--X2); background:var(--S2)}
+table.stamp td.big{font-size:18px; text-align:center}
+
+/* digits */
+.dig{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px 16px; font-size:18px}
+.dig span{border-bottom:1px solid var(--R); padding:2px 0}
+.wrapbox{width:220px; border:1px dashed var(--R); padding:6px; font-size:14px; line-height:1.35; margin-bottom:8px}
+.wrapbox.nh{hyphens:auto}
+
+/* checklists */
+.chk{margin-top:12px; border:1px solid var(--page-line); background:var(--sheet); padding:10px 14px; font-size:14px}
+.chk h3{margin:0 0 6px; font-size:15px; font-weight:500}
+.chk ul{list-style:none; margin:0; padding:0}
+.chk li{padding:3px 0; display:flex; gap:8px}
+.chk li::before{content:"☐"; font-family:var(--mono)}
+.chk .pre{color:var(--page-muted); font-size:12px}
+table.cmp{border-collapse:collapse; font-size:14px; width:100%}
+table.cmp td,table.cmp th{border-top:1px solid var(--page-line); padding:5px 8px; text-align:left; vertical-align:top}
+.sec-svg{display:block; width:100%; height:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Чертёжный шрифт: OpenGost Type B и Jura</h1>
+<p class="muted">Страница к решению #113 (<code>docs/decisions/DECISIONS_LOG.md</code>). Одинаковое содержимое в двух шрифтах, токены и компоненты из <code>drafting-kit.html</code> (UI_DESIGN_SYSTEM v0.2). Это не макет экрана. Данные условные.</p>
+<div class="banner" id="b-og">Проверяю OpenGost Type B…</div>
+<div class="banner" id="b-ju">Проверяю Jura…</div>
+<p class="cap" style="margin-top:8px">Левая колонка — OpenGost Type B, правая — Jura. Если файл OpenGost не найден, левая колонка показана запасным шрифтом, и это сравнение недействительно: смотрите баннер и раздел 8.</p>
+
+<script>
+/* One template, rendered twice, so both columns have identical content. */
+const T = {
+  specimens: () => `
+    <span class="k">draft.l 24 · 100%</span>
+    <p class="d line" style="font-size:24px">Истребитель второго поколения</p>
+    <p class="d line" style="font-size:24px">Second-generation fighter</p>
+    <span class="k">draft.m 18 · 100%</span>
+    <p class="d line" style="font-size:18px">Компромиссы компоновки · Ёмкость баков</p>
+    <p class="d line" style="font-size:18px">Layout trade-offs · Fuel capacity</p>
+    <span class="k">draft.s 14 · 100%</span>
+    <p class="d line" style="font-size:14px">Съешь же ещё этих мягких французских булок, да выпей чаю. ЁЙЪЫЬ щцчшю</p>
+    <p class="d line" style="font-size:14px">The quick brown fox jumps over the lazy dog. 0123456789 Il1 O0 rn m</p>
+    <span class="k">125% (24→30, 18→23, 14→18 px)</span>
+    <p class="d line" style="font-size:30px">Истребитель второго поколения</p>
+    <p class="d line" style="font-size:23px">Layout trade-offs · Fuel capacity</p>
+    <p class="d line" style="font-size:18px">Съешь же ещё этих мягких французских булок, да выпей чаю.</p>`,
+  buttons: () => `
+    <div class="row"><button class="btn d">Отправить на опытный</button><button class="btn d">Send to prototype</button><span class="cmd d">● Подтвердить приказ</span></div>
+    <div class="row"><button class="btn d primary">Применить ко всем выбр.</button><button class="btn d">Перевести на образец</button></div>
+    <div class="row"><button class="btn d">Ускорить</button><button class="btn d">Отмена</button><button class="btn d">Switch to new model!!</button></div>
+    <div class="row"><button class="btn d">ЩЩЩЩЩЩЩЩЩЩЩЩЩЩЩЩЩЩЩЩЩЩЩЩ</button></div>
+    <div class="budget">строки по 24 знака; нижняя — наихудший случай «ЩЩЩ…» (24 знака, самые широкие буквы). Сравните ширину кнопок в колонках.</div>
+    <div class="row" style="margin-top:6px"><button class="btn d">WWWWWWWWWWWWWWWWWWWWWWWW</button><button class="btn d">iiiiiiiiiiiiiiiiiiiiiiii</button></div>
+    <div class="budget">24 × «W» и 24 × «i»: разброс ширины = разброс кнопок при смене языка.</div>`,
+  stamp: () => `
+    <table class="stamp d">
+      <tr><th>Обозначение</th><th>Литера (RU)</th><th>Литера (EN)</th><th>Масштаб</th><th>Лист</th></tr>
+      <tr><td>ИЗД-17 / PRD-17</td><td class="big">П · О · С · Э</td><td class="big">D · P · S · O</td><td>1 : 50</td><td>1 / 3</td></tr>
+      <tr><td>КБ-2 · KB-2</td><td class="big">пос эо</td><td class="big">dpso</td><td>М 1:1</td><td>№ 17</td></tr>
+    </table>
+    <div class="budget" style="margin-top:4px">литеры стадий (#113): П — прототип, О — опытный, С — серийный, Э — эксплуатация; D / P / S / O — EN-аналоги.</div>`,
+  digits: () => `
+    <div class="dig d">
+      <span>2 700 кгс ± 5%</span><span>2,700 kgf ± 5%</span>
+      <span>1:50 · 1 : 50 · 1:100</span><span>№ 17 · № 1 905</span>
+      <span>45° · 11,4 м · Ø 0,8</span><span>1951-03-14 · 14.03.1951</span>
+      <span>0123456789</span><span>Il1 · O0 · 5S · 6b · 8B</span>
+      <span>≤ 80 ч · ≥ 62 ч · ≈ 3 мес</span><span>−12 °C · +40 °C · 3×10⁻³</span>
+      <span>→ ▲ ■ ● ○ ↓ ⤢ ✕</span><span>« ТРД-2 » “TRD-2”</span>
+    </div>
+    <div class="budget" style="margin-top:4px">Глифы вне набора шрифта (стрелки, ▲ ■ ● ✕) подставятся другим шрифтом: если они выглядят иначе, чем соседние, это найденная проблема.</div>`,
+  wrap: () => `
+    <div class="wrapbox d">Электромагнитнопроникаемый, сверхвысокочастотный, конструкторско-технологический</div>
+    <div class="wrapbox d nh" lang="ru">Электромагнитнопроникаемый, сверхвысокочастотный, конструкторско-технологический (hyphens:auto)</div>
+    <div class="wrapbox d">Counter-electromagnetically-superconducting, internationalization</div>
+    <div class="budget">200 px: перенос по дефису и без; длинное слово не должно ломать рамку (проверьте, где оно вылезает).</div>`
+};
+
+function renderPair(id, key, extraClass){
+  const el = document.getElementById(id);
+  const mk = (cls, name, tag) => `<div class="col ${cls}"><div class="hd"><span>${name}</span><span>${tag}</span></div><div class="reg ${extraClass||'reg-paper'}">${T[key]()}</div></div>`;
+  el.innerHTML = mk('og','OpenGost Type B','OFL-1.1') + mk('ju','Jura','OFL');
+}
+</script>
+
+<section>
+<h2>1. Образцы RU / EN: 14 / 18 / 24 и 125%</h2>
+<div class="pair" id="p-spec"></div>
+<script>renderPair('p-spec','specimens');</script>
+</section>
+
+<section>
+<h2>2. Кнопки в бюджете 24 знака</h2>
+<div class="pair" id="p-btn"></div>
+<script>renderPair('p-btn','buttons');</script>
+</section>
+
+<section>
+<h2>3. Основная надпись с литерами П/О/С/Э и D/P/S/O</h2>
+<div class="pair" id="p-stamp"></div>
+<script>renderPair('p-stamp','stamp');</script>
+</section>
+
+<section>
+<h2>4. Цифры и единицы</h2>
+<div class="pair" id="p-dig"></div>
+<script>renderPair('p-dig','digits');</script>
+</section>
+
+<section>
+<h2>5. Перенос длинных слов</h2>
+<div class="pair" id="p-wrap"></div>
+<script>renderPair('p-wrap','wrap');</script>
+</section>
+
+<section>
+<h2>6. Фрагмент синьки (штамп, размеры, выноска)</h2>
+<p class="cap">Фрагмент из <code>drafting-kit.html</code>, регистр синьки. Размеры текста 13/14/18; тексты размерных линий — чертёжным шрифтом.</p>
+<div class="pair">
+  <div class="col og"><div class="hd"><span>OpenGost Type B</span><span>blueprint</span></div><svg class="sec-svg" id="bp-og" viewBox="0 0 600 300"></svg></div>
+  <div class="col ju"><div class="hd"><span>Jura</span><span>blueprint</span></div><svg class="sec-svg" id="bp-ju" viewBox="0 0 600 300"></svg></div>
+</div>
+<script>
+(function(){
+  const frag = (fam) => `
+  <style>.t{font-family:${fam}; fill:var(--bp-ink)} .t2{font-family:${fam}; fill:var(--bp-ink-2)} .m{font-family:var(--mono); fill:var(--bp-ink-2)} .x{font-family:var(--text); fill:var(--bp-ink-2)}</style>
+  <defs><pattern id="gg" width="16" height="16" patternUnits="userSpaceOnUse"><path d="M16 0H0V16" fill="none" style="stroke:var(--bp-grid)"/></pattern>
+  <marker id="ar" viewBox="0 0 6 6" refX="6" refY="3" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L6 3L0 6z" style="fill:var(--bp-ink-2)"/></marker></defs>
+  <rect width="600" height="300" style="fill:var(--bp-ground)"/><rect width="600" height="300" fill="url(#gg)"/>
+  <rect x="4" y="4" width="592" height="292" fill="none" style="stroke:var(--bp-ink)" stroke-width="2"/>
+  <rect x="5" y="5" width="590" height="30" style="fill:var(--bp-ground-2)"/><line x1="5" y1="35" x2="595" y2="35" style="stroke:var(--bp-ink)"/>
+  <text x="14" y="25" class="m" font-size="13">КБ-2 · ИЗД-17</text><text x="130" y="27" class="t" font-size="18">Компоновка планера</text>
+  <path d="M300 60 C285 90 280 130 278 170 L274 215 L284 235 L316 235 L326 215 L322 170 C320 130 315 90 300 60Z M277 150 L120 200 L120 215 L275 195 M323 150 L480 200 L480 215 L325 195" fill="none" style="stroke:var(--bp-ink)" stroke-width="2"/>
+  <line x1="300" y1="50" x2="300" y2="250" style="stroke:var(--bp-ink-2)" stroke-dasharray="16 3 2 3"/>
+  <line x1="120" y1="250" x2="480" y2="250" style="stroke:var(--bp-ink-2)" marker-start="url(#ar)" marker-end="url(#ar)"/>
+  <text x="300" y="246" text-anchor="middle" class="t" font-size="14">размах 9,6 м · 1:50</text>
+  <line x1="480" y1="205" x2="520" y2="170" style="stroke:var(--bp-ink)"/><line x1="520" y1="170" x2="590" y2="170" style="stroke:var(--bp-ink)"/>
+  <text x="524" y="165" class="t" font-size="14">крыло 45° · 2 700 кгс ± 5%</text>
+  <text x="14" y="100" class="t2" font-size="14">Баки · Fuel</text><text x="14" y="125" class="t2" font-size="13">Двигатель ТРД-2 · №17</text>
+  <text x="195" y="150" class="t" font-size="18">А</text><text x="395" y="150" class="t" font-size="18">А</text>
+  <g style="stroke:var(--bp-ink)" fill="none"><rect x="380" y="262" width="215" height="34"/><line x1="380" y1="279" x2="595" y2="279"/><line x1="440" y1="262" x2="440" y2="296"/><line x1="500" y1="262" x2="500" y2="296"/><line x1="550" y1="262" x2="550" y2="296"/></g>
+  <g class="x" font-size="9"><text x="384" y="274" class="x">Обозначение</text><text x="444" y="274" class="x">Литера</text><text x="504" y="274" class="x">Масштаб</text><text x="554" y="274" class="x">Лист</text></g>
+  <g font-size="14"><text x="384" y="292" class="m" style="fill:var(--bp-ink)">ИЗД-17</text><text x="460" y="292" class="t">О · O</text><text x="506" y="292" class="t">1 : 50</text><text x="556" y="292" class="t">1 / 3</text></g>`;
+  document.getElementById('bp-og').innerHTML = frag('var(--f-og)');
+  document.getElementById('bp-ju').innerHTML = frag('var(--f-ju)');
+})();
+</script>
+</section>
+
+<section>
+<h2>7. Чек-листы</h2>
+<p class="cap">Я не могу открыть страницу в браузере из своей среды: рендер не проверен. Поля ☐ заполняет владелец при просмотре. «Предварительно» — ожидания из описаний шрифтов, не наблюдения. [Предп.]</p>
+<div class="pair">
+  <div class="chk"><h3>OpenGost Type B (OFL-1.1)</h3><ul>
+    <li><span>Покрытие кириллицы: все 33 буквы, Ёё, № « » — <span class="pre">предварительно: ГОСТ-шрифт, кириллица основная; проверить Ё, №, кавычки, ± ° ≈ ≤ ≥ −</span></span></li>
+    <li><span>Латиница D/P/S/O и цифры 0 / O, 1 / l / I различимы (раздел 4)</span></li>
+    <li><span>Наклон: Type B по ГОСТ 2.304 — курсив 75°; приемлем ли наклон для всего UI-заголовочного набора, включая кнопки? <span class="pre">проверить на странице</span></span></li>
+    <li><span>Кернинг/пары: заметные дыры в «ТРД», «АТ», «Ку», «ЛУ», «1:50», «№ 17»; межстрочные пропуски</span></li>
+    <li><span>Читаемость 14 px (100%) и 18 px (125%): засоры в «ш/щ/ы/ё», тонкость штриха</span></li>
+    <li><span>Ширина 24 знаков в кнопке: укладывается ли «ЩЩЩ…», «WWW…» (раздел 2)</span></li>
+    <li><span>Стрелки/значки ▲ ■ ● ✕ ⤢ → подставляются другим шрифтом и выглядят чужеродно?</span></li>
+    <li><span>Встраивание: файл в <code>fonts/</code>, лицензия OFL приложена, имя Reserved Font Name соблюдено <span class="pre">проверить в OFL.txt рядом с файлом</span></span></li>
+  </ul></div>
+  <div class="chk"><h3>Jura (SIL OFL, Google Fonts)</h3><ul>
+    <li><span>Покрытие кириллицы: Google Fonts публикует подмножества cyrillic и cyrillic-ext <span class="pre">предварительно; проверить Ё, №, « », ± ° ≈ ≤ ≥ −</span></span></li>
+    <li><span>Латиница D/P/S/O и цифры 0 / O, 1 / l / I различимы (раздел 4)</span></li>
+    <li><span>Гарнитура геометрическая, без наклона: «чертёжность» ощущается без ГОСТ-курсива? Достаточно ли похожа на техническое письмо?</span></li>
+    <li><span>Кернинг/пары: «ТРД», «АТ», «Ку», «1:50», «№ 17»; не слипаются ли «rn», «ы»</span></li>
+    <li><span>Читаемость 14 px: тонкий штрих на светлом (бумага) и светлое на синем; вес 400 против 500</span></li>
+    <li><span>Ширина 24 знаков в кнопке: укладывается ли «ЩЩЩ…», «WWW…» (раздел 2)</span></li>
+    <li><span>Стрелки/значки ▲ ■ ● ✕ ⤢ → подставляются другим шрифтом и выглядят чужеродно?</span></li>
+    <li><span>Встраивание в Godot: нужен TTF (загрузить с Google Fonts / GitHub, OFL.txt приложить); веб-подключение на этой странице не годится для игры</span></li>
+  </ul></div>
+</div>
+<table class="cmp" style="margin-top:12px">
+  <tr><th>Критерий</th><th>OpenGost Type B</th><th>Jura</th></tr>
+  <tr><td>Образ</td><td>Прямой образ ГОСТ 2.304 для основной надписи и размеров <span class="pre">[Предп.]</span></td><td>Геометрическая «техно»-гарнитура, косвенный образ чертежа <span class="pre">[Предп.]</span></td></tr>
+  <tr><td>Получение файла</td><td>Сборка из исходников (раздел 8); в репозиторий — после решения владельца (OFL)</td><td>Google Fonts, готовый TTF</td></tr>
+  <tr><td>Риск</td><td>Меньше проверок в нескольких размерах и языках; возможна неполнота знаков</td><td>Тонкий штрих; нет ГОСТ-наклона</td></tr>
+</table>
+</section>
+
+<section>
+<h2>8. Как получить файл OpenGost Type B</h2>
+<p><b>[Факт] Файл получен:</b> релиз <code>v0.4.0</code>, <code>https://codeberg.org/nadevko/opengostfonts/releases/download/v0.4.0/OpenGostFonts-0.4.0.zip</code> (2026-11-03), <code>OpenGostTypeB-Regular.ttf</code> и <code>LICENSE</code> (SIL OFL 1.1, Reserved Font Name «OpenGost Type B»). На опубликованной странице файл лежит в <code>fonts/</code> вместе с <code>fonts/OFL.txt</code>; в репозиторий не добавлен.</p>
+<p class="cap">Прежняя заметка: репозиторий <code>https://codeberg.org/nadevko/opengostfonts</code> (проверено 2026-11-03): готовых шрифтов в дереве нет (<code>src</code>, <code>scripts</code>, <code>GNUmakefile</code>, <code>LICENSE</code>), в README указано, что собранные шрифты появляются в <code>dist/</code>, пример цели — <code>make dist/OpenGostTypeA-Regular.ttf</code>. Тип B по аналогии: <code>make dist/OpenGostTypeB-Regular.ttf</code> [Предп.]. Release-ассеты и текст лицензии со страницы получить не удалось; бинарные файлы моими инструментами не скачиваются.</p>
+<p><b>Шаги.</b> 1) Склонировать репозиторий, выполнить <code>make dist/OpenGostTypeB-Regular.ttf</code> (нужны зависимости из README), либо взять готовый файл из вкладки Releases, либо из пакета дистрибутива (openSUSE, ALT Linux — по именам из drafting-kit, названия пакетов не проверены [Предп.]). 2) Положить файл в <code>docs/ui/prototypes/fonts/OpenGostTypeB-Regular.ttf</code>, рядом — текст лицензии (<code>OFL.txt</code>) и убедиться, что в нём OFL-1.1. 3) Перезагрузить страницу: баннер вверху покажет «встроен». Если путь иной, имя семейства <code>OGB</code> в <code>@font-face</code> тоже подхватит установленный локально «OpenGost Type B».</p>
+<p class="cap">Выбор шрифта, лицензия и добавление файла в репозиторий — решение владельца (ADR-0009: OFL требует одобрения).</p>
+</section>
+
+<p class="muted" style="margin-top:28px; font-size:13px">Лицензии. OpenGost Type B — SIL Open Font License 1.1, авторы и текст лицензии — в репозитории codeberg.org/nadevko/opengostfonts (источник: Open Font License 1.1, https://openfontlicense.org). Jura — SIL OFL 1.1, © The Jura Project Authors (Google Fonts, fonts.google.com/specimen/Jura). Golos Text, PT Mono — SIL OFL (Google Fonts). Шрифты не изменялись и не продаются отдельно; при встраивании в репозиторий текст OFL и уведомления об авторских правах прикладываются рядом с файлом.</p>
+</div>
+
+<script>
+(function(){
+  const bo=document.getElementById('b-og'), bj=document.getElementById('b-ju');
+  const ok=(el,t)=>{el.textContent=t;};
+  const bad=(el,h)=>{el.classList.add('warn'); el.innerHTML=h;};
+  const og=[...document.fonts].find(f=>f.family.replace(/"/g,'')==='OGB');
+  const failOg=()=>bad(bo,'OpenGost Type B: <b>файл не найден</b> (<b>fonts/OpenGostTypeB-Regular.ttf</b> отсутствует, локальной копии нет). Левая колонка показана запасным шрифтом Jura, сравнение недействительно. См. раздел 8.');
+  if(!og) failOg(); else og.load().then(()=>ok(bo,'OpenGost Type B: встроен (fonts/ или локальная копия). Левая колонка показывает именно его.')).catch(failOg);
+  document.fonts.load('16px Jura','Съешь').then(r=>{ r&&r.length?ok(bj,'Jura: загружен (Google Fonts).'):bad(bj,'Jura: <b>не загрузился</b> (нет сети?). Правая колонка показана запасным sans-serif.'); }).catch(()=>bad(bj,'Jura: ошибка загрузки.'));
+})();
+</script>
+</body>
+</html>
