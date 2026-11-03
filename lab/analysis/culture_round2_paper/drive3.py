@@ -42,7 +42,7 @@ def eval_variant(args):
                     qt = 99 if tk['Thalf'] is None else tk['Thalf']/nn['Thalf']
                     o['k2bq'].append(qt)
                     if qt < 2: o['k2bt'].append((a,p,cn,round(qt,2)))
-                if nn['T'] is None: continue
+                if nn['T'] is None or nn['G'] < 0.05: continue   # cost: same exclusion as time (G < 0.05) + T(25) finite
                 if mode=='AI': o['cost_n'] += 1
                 if tk['T'] is None: q = 99; q0 = 99
                 else:
