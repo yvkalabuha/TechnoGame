@@ -1,7 +1,7 @@
 ---
 id: TASK-0024
 title: "T7: why_not по контракту §6 и 4 сценария «первый слой»"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -27,10 +27,10 @@ created: 2026-11-03
 - Задача идёт параллельно с T6b в отдельном worktree: не менять `PolicySystem`, `ToolingInvest`, `IProductsInputs`.
 
 ## Критерии приёмки
-- [ ] Контракт §6 исполнен полностью; каждое расхождение с ним записано в «Результат».
-- [ ] 4 сценария «первый слой» (спека §6.4) — тесты.
-- [ ] Валидатор «рычаги соответствуют сборке» (§5.6 d).
-- [ ] Детерминизм: результат не зависит от порядка обхода и числа потоков; нет float.
+- [x] Контракт §6 исполнен полностью; каждое расхождение с ним записано в «Результат».
+- [x] 4 сценария «первый слой» (спека §6.4) — тесты.
+- [x] Валидатор «рычаги соответствуют сборке» (§5.6 d).
+- [x] Детерминизм: результат не зависит от порядка обхода и числа потоков; нет float.
 
 ## Тесты
 Юнит-тесты звеньев; 4 сценария; тест на `ENGINEERS` при `granted/n < 0,9` (§5.6 b); архитектурные тесты.
@@ -39,9 +39,9 @@ created: 2026-11-03
 `docs/architecture/LAYER_CONTRACT.md` v2.4 r3 §6; спека v0.12 §5.6, §6.4, §11 T7; `docs/game-design/PROCESS_DEVELOPMENT.md` §10 (слова `limiter`), `docs/game-design/STATE_WORDS.md` (если есть).
 
 ## REVIEW
-- [ ] Code review (reviewer) — находки high закрыты
-- [ ] Тесты (test-engineer) — проходят, покрытие достаточно
-- [ ] Детерминизм L1/L2 — если затронуты src/
+- [x] Code review (reviewer) — находки high закрыты (ce20529, проверено Orchestrator)
+- [x] Тесты — проходят (после слияния 18c2858: Architecture 80, Kernel 284, Core 798, Session 118); отдельный test-engineer не запускался, покрытие оценено reviewer
+- [x] Детерминизм L1/L2 — хеш не меняется с зондами why_not, потоки 1/3/4/8
 
 ### Ревью reviewer (2026-11-03)
 Вердикт: accept with fixes. dotnet test зелёный (Architecture 80, Kernel 284 +1 skip, Session 112, Core 779). Звенья, порядок, рычаги и F10 — по контракту §6. high: ExplainRequirement даёт звенья для поколения в строю (пп.1). medium: дублирование ProcurementBudget (п.2). low: пустой Assert.All, повторы AltUnavailable, eta DefectsHidden, рычаг licence у ramp. info: хуки KnowledgeSystem/ProductsSystem.UnitCostAt не меняют compute; ProgressRate под L_P. Отклонения 1–3, 5–9 приняты; 4 — с правкой eta; 10 верно, вскрывает high.
