@@ -2,11 +2,12 @@
 
 > Автор: systems-architect, 2026-11-03. Статус: **[Предл.]**, вход для T6 (ИИ и события) и закрытия DEBT-0016. Не ADR: всё ниже — локальные технические решения внутри ADR-0004, 0006, 0013, 0014 (ACCEPTED). Места, где нужно решение владельца, собраны в §11.
 > r1 (2026-11-03): под контракт v2.4 r3 — команда `cancel_design` (F14, #123) и вход `TrainingBudget` (F15, #125): §3, §4, §5, §7.2, §7.3.
+> r2 (2026-11-03): устаревшее по замечанию reviewer — правило оснастки называется `ToolingPlan` (не `ToolingRule`); `PlannedVolume` включает `proc_v` (§2, §4); под контракт v2.4 r4 (#128) — `v_exp` с `max` и `home(a)`, `planned` со стадией С (§4).
 > Источники: ADR-0002/0004/0006/0013/0014; `docs/architecture/LAYER_CONTRACT.md` §4.0, §5; спека среза `docs/simulation/slice-jet-aviation.md` §2, §3.4, §3.5 A8/A15/A30/A36/A37, §4, §6.3, §6.8, §9.1, §11; код `src/` на коммите 4d75ae0.
 
 ## Краткий вывод
 - **Сборка мира среза — только в новой сборке `Singularity.Session`** (ADR-0014 п. 1): класс `SliceWorld` строит одну `Table` (строка = актор = site, A27), пять месячных систем в фиксированном порядке, адаптеры входов, потоки RNG и фазу инициализации. `TickRunner` создаёт только `SliceSession`. Core composition root не содержит.
-- **Доменная логика остаётся в Core.** Адаптеры в Session — тонкая делегация к публичным чистым функциям Core (`BudgetMath`, `ToolingRule`, `ProductsSystem.Planned/PlannedVolume`). Формул в Session нет.
+- **Доменная логика остаётся в Core.** Адаптеры в Session — тонкая делегация к публичным чистым функциям Core (`BudgetMath`, `ToolingPlan`, `ProductsSystem.Planned/PlannedVolume`). Формул в Session нет.
 - **Две новые системы Core:** `Core.Policy.PolicySystem` (ИИ + бюджет + принятие лицензий + программа качества) и `Core.Events.EventSystem` (перебой сплава, предложения лицензий). Только они и `Knowledge` получают `CounterRng`. `Industry` и `Products` его не получают; адаптеры их входов RNG не используют (архитектурный тест расширяется на адаптеры).
 - **Решения ИИ — колонки `pol.*`**: пишутся в merge месяца t, читаются compute месяца t+1 (ADR-0006). В журнал не идут. Флага `force` у ИИ нет **структурно**: колонки и тип решения ИИ его не содержат.
 - **Внешние команды** (игрок, harness, прокси FORCE §6.8) — типизированные записи Core с ключом `(apply_tick, source_class, source_id, local_n)`. Session применяет их в начале тика, записывая в колонки `cmd.*` (владелец — `CommandState`, Core). Журнал replay = только внешние команды; кодек один для `commands.log` и для очереди в сохранении.
@@ -30,7 +31,7 @@
 | `Singularity.Session/Slice/SliceWorld.cs` | Сборка: `GameData` + `ScenarioData` + `SliceRunConfig` + параметры → `Table`, системы, адаптеры, календарь, потоки RNG; `Initialize()` (фаза инициализации) | Единственный путь сборки (ADR-0014 п. 1) |
 | `Singularity.Session/Slice/*InputsAdapter.cs` | `KnowledgeInputsAdapter`, `IndustryInputsAdapter`, `ProductsInputsAdapter`, `PolicyInputsAdapter` | Межслойные входы; чтение только снимка |
 | `Singularity.Session/SliceSession.cs` | `Submit`, `Step(n)` (синхронно, поток вызывающего), применение команд на границе тика, хеш последнего post, запись `commands.log` | ADR-0014 пп. 2, 4 |
-| `Singularity.Core/Policy/` | `PolicySystem`, `IPolicyInputs`, `PolicyParams`, `BudgetMath`, `ToolingRule`, пресет `adaptive` | ИИ среза §4, бюджет §3.4 |
+| `Singularity.Core/Policy/` | `PolicySystem`, `IPolicyInputs`, `PolicyParams`, `BudgetMath`, `ToolingPlan` (план оснастки A39; r2: в r0–r1 ошибочно `ToolingRule`), пресет `adaptive` | ИИ среза §4, бюджет §3.4 |
 | `Singularity.Core/Events/` | `EventSystem`, `EventRng` (потоки 3, 4) | События §4, §9.1 |
 | `Singularity.Core/Commands/` | `SliceCommand` (записи), `CommandKey`, `SourceClass`, `CommandValidator`, `CommandState` (колонки `cmd.*`), `CommandCodec` | Типизированные команды ADR-0014 п. 2 |
 
@@ -66,14 +67,14 @@
 | `IIndustryInputs.KnowsProcess` | `KnowledgeSystem.IsKnown` |
 | `EffortBudget` | `share_D·pol.budget` (ровно то, что Policy списывает) |
 | `EffortFocus` | `cmd.focus.k` (у ИИ фокуса нет → −1) |
-| `Planned`, `PlannedVolume` | `ProductsSystem.Planned/PlannedVolume(owner(site), number)` — только часть проектов; свой `proc_v` способность добавляет сама (`EffortAllocator`) |
-| `ToolingInvest(…, rest_a)` | `Core.Policy.ToolingRule.Invest(...)`: A30 → `rest_a` → бюджет способности, ограничения A22. Чистая функция снимка, `rest_a` и `share_cap·pol.budget` |
+| `Planned`, `PlannedVolume` | `ProductsSystem.Planned(owner(site), number)`. `PlannedVolume` = `v_exp(site, p)` целиком, **вместе с `proc_v`** [Факт: код до r4 — `IndustryInputsAdapter.PlannedVolume = Industry.ProcV + Products.PlannedVolume(owner)`; `EffortAllocator` `proc_v` сам не добавляет — текст r0–r1 был неверен]. С контракта v2.4 r4 (#128): `v_exp = max(proc_v, V_C) + V_PO` только на `home(a)`, на прочих site — `proc_v`; `planned` — стадии П, О, С (контракт §4.1a). [Предл.] `max` и выбор `home` — функция Core (например, `ProductsSystem.ExpectedVolume(actor, number, procV, isHome)`), адаптер только передаёт `ProcV` снимка |
+| `ToolingInvest(…, rest_a)` | `Core.Policy.ToolingPlan.Compute(...).Invest(...)`: A30 → `rest_a` → бюджет способности, ограничения A22. Чистая функция снимка, `rest_a` и `share_cap·pol.budget` |
 | `QualityProgramme`, `LicenceShare` | `pol.qp`, `pol.lic.*` |
 | `AlloyDeficit`, `AlloyCap` | `evt.dis.*`; данные сценария |
 | `W`, `Hcap`, `WorkforceAvailable`, `KnownSince` | данные сценария (§1.1); `KnownSince` — только в режиме L_C |
 | `IProductsInputs.ProcurementBudget` | `share_proc·pol.budget` |
 | `DesignCommands`, `StartSeries`, `CloseLine`, `LineRate` | слияние `cmd.*` (внешние) и `pol.*` (ИИ) **в порядке ключа** §7.1; `SeriesStart.Force` берётся только из `cmd.*`; для решения ИИ всегда `false`. r1: `cancel_design` — элемент `DesignCommands` (вид `Cancel`, `Target = design_id`) [Предл.]: тот же порядок команд, что у `compose`/`derive` (контракт §4.4d шаг 2) |
-| `TrainingBudget(a, d, t)` (r1, F15) | `pol.train.d` (решение месяца t−1) ? `T_a(t)` : 0, где `T_a = B_cap − taken_cap` — `Core.Policy.ToolingRule` того же месяца (тот же вызов, что в `ToolingInvest`; план одинаков во всех вызовах месяца, A39). Чистая функция снимка |
+| `TrainingBudget(a, d, t)` (r1, F15) | `pol.train.d` (решение месяца t−1) ? `T_a(t)` : 0, где `T_a = B_cap − taken_cap` — `Core.Policy.ToolingPlan` того же месяца (тот же вызов, что в `ToolingInvest`; план одинаков во всех вызовах месяца, A39). Чистая функция снимка |
 
 - [Предл.] После появления адаптеров **убрать переходные значения по умолчанию** в `IIndustryInputs` (`EffortBudget`, `EffortFocus`, `PlannedVolume`, `Planned`, перегрузка `ToolingInvest` с `rest`) и в `IKnowledgeInputs.LicensedEngines`: пропущенный вход должен быть ошибкой компиляции. `LineStand` (Lab) реализует их явно.
 - `ToolingInvest` — **правило, вызываемое в compute способности** месяца t (контракт §4.0: `rest_a` — аргумент того же compute), а не решение с лагом t → t+1. Решениями здесь являются только доли и профиль. Так уже работает `ProductsCbLinkedRunTests` (§11, О-3).
@@ -109,7 +110,7 @@
 | `set_budget_shares(actor, R, cap, D, proc, QP)` | игрок; у ИИ — колонки `pol.*` | нужна |
 | `set_effort_focus(actor, p1..p3)` | только игрок | нужна |
 | `accept_licence(actor, seller)` | игрок; у ИИ — `pol.lic.accept` | нужна |
-| `invest_tooling_M` | — | **не команда**: в контракте v2.4 §5 её нет; это правило `ToolingRule` при доле `cap`. Команда игрока — решение game-designer |
+| `invest_tooling_M` | — | **не команда**: в контракте v2.4 §5 её нет; это правило `ToolingPlan` при доле `cap`. Команда игрока — решение game-designer |
 | ~~`abandon_project`~~ → `cancel_design(actor, design)` | игрок (П или О, когда хочет); ИИ — только по A40 | r1: нужна (контракт v2.4 r3 §4.4e, F14, #123); прежняя строка «нет в контракте, не вводить в T6» снята |
 
 ### 7.3 Где команда «в силе»
@@ -167,7 +168,7 @@
 
 **Риски**
 - Р-1. Пересоздание golden-хешей (новые колонки, порядок систем, позже — тик вне хеша). Защита: причина в задаче, один пересчёт на шаг.
-- Р-2. Неполная транзитивность теста «нет RNG»: правило, вызванное из адаптера, может тянуть RNG через другой тип Core. Защита: тест на адаптеры + ревью исходящих вызовов `ToolingRule`.
+- Р-2. Неполная транзитивность теста «нет RNG»: правило, вызванное из адаптера, может тянуть RNG через другой тип Core. Защита: тест на адаптеры + ревью исходящих вызовов `ToolingPlan`.
 - Р-3. Конфигурация прогона вне таблиц (например, флаг абляции только в конструкторе) даст сохранение, которое продолжится не так. Защита: `run.*` + сверка при загрузке.
 - Р-4. `SmokeT4s.LineStand` — мир из системы Core мимо Session (ADR-0014 п. 1). [Предл.] Оставить как стенд одного слоя с маркировкой отчётов «не свидетельство Core», после T6 не расширять.
 - Р-5. `IndustrySystem._lastRest` (`Fx6[]` вне таблицы) может нарушать ADR-0013 п. 4, если значение читается в следующем тике. Проверить в ревью T6.
