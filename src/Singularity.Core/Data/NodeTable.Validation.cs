@@ -81,6 +81,7 @@ public sealed partial class NodeTable
             w.Fixed(ReqPrecision[r]);
             w.Fixed(ReqPurity[r]);
             w.Fixed(ReqQualityControl[r]);
+            w.Fixed(LabourP[r]);
             w.Str(DataNames.NameOf(DataNames.Hazards, Hazard[r]));
             Requires.WriteCanonical(w, r, this);
             w.Int(InformsStart[r + 1] - InformsStart[r]);

@@ -17,6 +17,7 @@ public sealed partial class NodeTable
         public Discipline Discipline;
         public Cluster Cluster;
         public Hazard Hazard;
+        public Fx6 LabourP;
         public readonly Fx6[] Req = new Fx6[3];
         public bool AnchorBefore, AnchorEstimated;
         public string AnchorEvent = "", AnchorSource = "";
@@ -50,14 +51,18 @@ public sealed partial class NodeTable
         {
             YNode? tier = m.Optional("tier");
             YNode? req = m.Optional("capability_req");
+            YNode? labour = m.Optional("labour_p");
             if (n.Type != NodeType.PRC)
             {
-                if (tier is not null || req is not null)
-                    throw DataLoadException.At(n.Map, $"only PRC nodes have tier and capability_req ('{n.Id}' is {n.Type})");
+                if (tier is not null || req is not null || labour is not null)
+                    throw DataLoadException.At(n.Map, $"only PRC nodes have tier, capability_req and labour_p ('{n.Id}' is {n.Type})");
                 return;
             }
-            if (tier is null || req is null)
-                throw DataLoadException.At(n.Map, $"PRC node '{n.Id}' needs tier and capability_req");
+            if (tier is null || req is null || labour is null)
+                throw DataLoadException.At(n.Map, $"PRC node '{n.Id}' needs tier, capability_req and labour_p");
+            n.LabourP = Scalars.Fixed(labour);
+            if (n.LabourP <= Fx6.Zero)
+                throw DataLoadException.At(labour, "labour_p must be greater than 0");
             n.Tier = Scalars.Int(tier);
             if (n.Tier is < 1 or > 9)
                 throw DataLoadException.At(tier, "tier must be in 1..9");

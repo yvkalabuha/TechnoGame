@@ -4,8 +4,8 @@ using Singularity.Kernel;
 
 namespace Singularity.Core.Industry;
 
-/// <summary>One PRC for <see cref="IndustryLayout.Create"/>: stable node number, cluster, discipline index, tier, <c>r_d</c> (0 = none), <c>labour_p</c> (hours per unit; 0 = no output channel in the culture rule C-B).</summary>
-public sealed record IndustryProcessSpec(int Number, Cluster Cluster, int Discipline, int Tier, Dims3 Req, Fx6 Labour = default);
+/// <summary>One PRC for <see cref="IndustryLayout.Create"/>: stable node number, cluster, discipline index, tier, <c>r_d</c> (0 = none), <c>labour_p</c> (hours per process execution; 0 = no output channel in the culture rule C-B; from data always > 0).</summary>
+public sealed record IndustryProcessSpec(int Number, Cluster Cluster, int Discipline, int Tier, Dims3 Req, Fx6 LabourP = default);
 
 /// <summary>
 /// Immutable shape of the capability layer: the site clusters (ascending <see cref="Cluster"/>), the
@@ -87,7 +87,7 @@ public sealed class IndustryLayout
             cluster[r] = IndexOf(clusters, p.Cluster);
             if (cluster[r] < 0)
                 throw new ArgumentException($"Process {p.Number}: cluster {p.Cluster} is not a site cluster.", nameof(processes));
-            if (p.Labour < Fx6.Zero)
+            if (p.LabourP < Fx6.Zero)
                 throw new ArgumentException($"Process {p.Number}: labour is negative.", nameof(processes));
             if (p.Tier < 3)
                 throw new ArgumentException($"Process {p.Number}: tier {p.Tier} is below 3.", nameof(processes));
@@ -123,7 +123,7 @@ public sealed class IndustryLayout
             Discipline = [.. processes.Select(p => p.Discipline)],
             Tier = [.. processes.Select(p => p.Tier)],
             Req = [.. processes.Select(p => p.Req)],
-            Labour = [.. processes.Select(p => p.Labour)],
+            Labour = [.. processes.Select(p => p.LabourP)],
             Order = [.. order],
             SiteOwner = [.. siteOwner],
             WorkforceCategories = workforceCategories,
@@ -151,7 +151,7 @@ public sealed class IndustryLayout
                 throw new ArgumentException($"Process {nodes.Id[r]}: discipline {nodes.Discipline[r]} is not in the scenario.", nameof(scenario));
             specs.Add(new IndustryProcessSpec(nodes.Number[r], nodes.Cluster[r], disc, nodes.Tier[r],
                 new Dims3(nodes.Requirement(r, Dimension.Precision), nodes.Requirement(r, Dimension.Purity),
-                    nodes.Requirement(r, Dimension.QualityControl))));
+                    nodes.Requirement(r, Dimension.QualityControl)), nodes.LabourP[r]));
         }
         Cluster[] clusters = [.. scenario.Clusters];
         Array.Sort(clusters);

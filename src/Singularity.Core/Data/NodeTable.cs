@@ -24,6 +24,8 @@ public sealed partial class NodeTable
     public required ImmutableArray<Fx6> ReqPrecision { get; init; }
     public required ImmutableArray<Fx6> ReqPurity { get; init; }
     public required ImmutableArray<Fx6> ReqQualityControl { get; init; }
+    /// <summary><c>labour_p</c>: hours per process execution (contract §4.1); zero for non-PRC nodes.</summary>
+    public required ImmutableArray<Fx6> LabourP { get; init; }
     public required ImmutableArray<Hazard> Hazard { get; init; }
     public required RequirementLists Requires { get; init; }
 
@@ -113,6 +115,7 @@ public sealed partial class NodeTable
             ReqPrecision = [.. raw.Select(r => r.Req[0])],
             ReqPurity = [.. raw.Select(r => r.Req[1])],
             ReqQualityControl = [.. raw.Select(r => r.Req[2])],
+            LabourP = [.. raw.Select(r => r.LabourP)],
             Hazard = [.. raw.Select(r => r.Hazard)],
             Requires = RequirementLists.Build(requires),
             InformsStart = [.. informsStart],
