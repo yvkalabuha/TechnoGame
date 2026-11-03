@@ -1,7 +1,7 @@
 ---
 id: TASK-0011
 title: "Данные среза «реактивная авиация»: 61 узел, класс изделия, сценарий 1945, валидатор"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: research-scientist
