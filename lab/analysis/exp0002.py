@@ -52,9 +52,11 @@ DEFAULTS = {
     "p1": {"pass_lo": 0.30, "pass_hi": 0.40, "fail_lo": 0.25, "fail_hi": 0.45},
     "p2": {"max_share": 0.05, "tail_counts": True},
     "p3": {"layers": ["L_K", "L_C", "L_P"], "delta_thr": 0.10, "tvd_thr": 0.15, "split_p95_max": 0.10},
-    "p4": {"max_first_share": 0.70, "min_layer_share": 0.05, "min_eng_top3": 0.80, "tol": 0.05,
+    # #77: tolerance 0.05 for the 70% bound and for (b), 0.01 for the 5% floor; (b) with no units -> n/a
+    "p4": {"max_first_share": 0.70, "min_layer_share": 0.05, "min_eng_top3": 0.80,
+           "tol_max": 0.05, "tol_min": 0.01, "tol_b": 0.05,
            "short_months_min": 6, "top_k": 3, "eng_cause": "ENGINEERS",
-           "layers": ["KNOWLEDGE", "CAPABILITY", "PRODUCT", "ECONOMY"], "b_na": "ignore"},
+           "layers": ["KNOWLEDGE", "CAPABILITY", "PRODUCT", "ECONOMY"]},
     "p5": {"levels": ["lo", "mid", "hi"], "delta_point": 0.20, "delta_ci_lo": 0.10},
     "s1": {"lo": 0.25, "hi": 0.75},
     "s2": {"min_share": 0.20, "ratio": 1.5, "star_prc_gen": {"49": 1, "40": 2, "41": 3, "51": 3, "52": 4}},
@@ -590,7 +592,7 @@ def crit_p2(main, cfg):
     elif lo > p["max_share"]:
         v = "fail"
     else:
-        v = "borderline"   # point <= 0.05 < upper, or point > 0.05 >= lower (not covered by the table)
+        v = "borderline"   # point <= 0.05 < upper, or point > 0.05 >= lower (#77)
     mid = share(sum(r["middle"] for r in main), len(main), cfg)
     return {"verdict": v, "small_lead": s, "middle_lead": mid,
             "note": "sanity check: a pass is not evidence for the hypothesis (critic 15)"}
@@ -682,36 +684,37 @@ def crit_p4(D, cfg, main_ids):
     shares = {L: (first[L] / n_ay if n_ay else None) for L in p["layers"]}
     if n_ay == 0:
         return {"verdict": "missing", "n_actor_years": 0}
-    mx = max(shares.values())
-    mn = min(shares.values())
-    if mx <= p["max_first_share"] and mn >= p["min_layer_share"]:
-        va = "pass"
-    elif mx <= p["max_first_share"] + p["tol"] and mn >= p["min_layer_share"] - p["tol"]:
-        va = "borderline"
-    else:
-        va = "fail"
     bs = share(b_k, b_n, cfg)
-    if b_n == 0:
-        vb = "na"
-    elif bs["p"] >= p["min_eng_top3"]:
-        vb = "pass"
-    elif bs["p"] >= p["min_eng_top3"] - p["tol"]:
-        vb = "borderline"
-    else:
-        vb = "fail"
-    parts = [va] + ([vb] if vb != "na" or p["b_na"] != "ignore" else [])
-    parts = ["borderline" if x == "na" else x for x in parts]
-    if "fail" in parts:
-        v = "fail"
-    elif "borderline" in parts:
-        v = "borderline"
-    else:
-        v = "pass"
+    v, va, vb = p4_verdict(shares, bs["p"] if b_n else None, cfg)
     return {"verdict": v, "a": va, "b": vb, "first_layer_share": shares, "n_actor_years": n_ay,
             "first_by_class": {c: dict(cnt) for c, cnt in sorted(by_class.items())},
             "eng_top3": bs, "eta_null_share": (null_eta / links if links else None), "links": links,
             "invalid_levers": invalid,
-            "note": "tol 0.05 on the 5% floor makes (a)-min never fail (pre-registered as written)"}
+            "note": ("(b) не применимо: нет актор-лет с granted/n < 0,9 >= %d мес.; P4 решает (a) (#77)"
+                     % p["short_months_min"]) if vb == "n/a" else ""}
+
+
+def p4_verdict(shares, b_share, cfg):
+    """P4 verdict (spec 7, #77). shares: first-link layer shares; b_share None = no units (n/a)."""
+    p = cfg["p4"]
+    mx, mn = max(shares.values()), min(shares.values())
+    if mx <= p["max_first_share"] and mn >= p["min_layer_share"]:
+        va = "pass"
+    elif mx <= p["max_first_share"] + p["tol_max"] and mn >= p["min_layer_share"] - p["tol_min"]:
+        va = "borderline"
+    else:
+        va = "fail"
+    if b_share is None:
+        vb = "n/a"
+    elif b_share >= p["min_eng_top3"]:
+        vb = "pass"
+    elif b_share >= p["min_eng_top3"] - p["tol_b"]:
+        vb = "borderline"
+    else:
+        vb = "fail"
+    parts = [va] + ([vb] if vb != "n/a" else [])
+    v = "fail" if "fail" in parts else "borderline" if "borderline" in parts else "pass"
+    return v, va, vb
 
 
 def grid_name(cfg, i, j, k):
@@ -1408,7 +1411,7 @@ def render(res, cfg, hashes):
                                                           for c, v in p4["first_by_class"].items()),
               "- доля `eta = null`: %s (звеньев %d); рычагов вне сборки: %d" % (fmt(p4["eta_null_share"]), p4["links"],
                                                                                 p4["invalid_levers"]),
-              "- примечание: %s" % p4["note"]]
+              "- примечание: %s" % (p4["note"] or "—")]
     if res["D1"]:
         d = res["D1"]
         L += ["", "## D1 `eta_hit`, D2 `why_not → смена` (диагностика)", "",
@@ -1830,6 +1833,27 @@ def selftest(quick=False):
     check("change starting in tail not counted", counted_changes(tr3, 359, 24) == [])
     check("tenures (last one cut at 359)", tenures(tr, ch, 359) == [160, 30, 170], tenures(tr, ch, 359))
     check("abs_lo", abs_lo((-0.05, 0.2)) == 0.0 and abs_lo((-0.3, -0.12)) == 0.12)
+
+    # #77: P2 and P4 edge rules
+    def p2v(k):
+        return crit_p2([{"small": 1 if i < k else 0, "middle": 0} for i in range(1000)], cfg)["verdict"]
+    check("P2 point 0.04 upper > 0.05 -> borderline", p2v(40) == "borderline", p2v(40))
+    check("P2 point 0.06 lower <= 0.05 -> borderline (#77)", p2v(60) == "borderline", p2v(60))
+    check("P2 point 0.07 lower > 0.05 -> fail", p2v(70) == "fail", p2v(70))
+    check("P2 point 0.02 upper <= 0.05 -> pass", p2v(20) == "pass", p2v(20))
+
+    def p4v(mn, mx=0.40, b=0.90):
+        sh = {"KNOWLEDGE": mx, "CAPABILITY": 1 - mx - 2 * mn - 0.0, "PRODUCT": mn, "ECONOMY": mn}
+        return p4_verdict(sh, b, cfg)
+    check("P4 (a) min 0.045 -> borderline (1 p.p. tolerance)", p4v(0.045)[1] == "borderline", p4v(0.045))
+    check("P4 (a) min 0.035 -> fail", p4v(0.035)[1] == "fail", p4v(0.035))
+    check("P4 (a) min 0.05 -> pass", p4v(0.05)[1] == "pass", p4v(0.05))
+    check("P4 (a) max 0.74 -> borderline; 0.76 -> fail",
+          p4v(0.06, mx=0.74)[1] == "borderline" and p4v(0.06, mx=0.76)[1] == "fail")
+    check("P4 (b) 0.77 -> borderline; 0.74 -> fail",
+          p4v(0.10, b=0.77)[0] == "borderline" and p4v(0.10, b=0.74)[0] == "fail")
+    check("P4 (b) no units -> n/a, P4 decided by (a)",
+          p4v(0.10, b=None) == ("pass", "pass", "n/a") and p4v(0.045, b=None) == ("borderline", "borderline", "n/a"))
 
     scenarios = [
         ("A chg=0.35, layers 0.20 -> supports", dict(chg=0.35), {"outcome": "supports", "P1": "pass", "P3": "pass"}),
