@@ -123,5 +123,13 @@ public class ProductAiRunTests
         // Launched at the doctrine's month: the decision at t − stage_o_month = the reference month for this D0, in force the month after.
         int month = PolicyLiveness.LaunchMonth(h.Params, p.InitialDefects(Gbr, 1), p.DRef, new PolicyParams().LaunchShare[(int)PolicyProfile.Quality]);
         Assert.True(month is > 0 and < 60);
+        int o = p.StageOMonth(Gbr, 1);
+        // The decision is made at t = s + month; the series is the state after month s + month + 1.
+        ProductsHarness again = Stand(new ProductsParams()).H;
+        for (long t = 0; t <= o + month; t++)
+            again.RunThroughMonth(t);
+        Assert.Equal(DesignStage.Prototype, again.Products.Stage(Gbr, 1));
+        again.RunThroughMonth(o + month + 1);
+        Assert.Equal(DesignStage.Series, again.Products.Stage(Gbr, 1));
     }
 }

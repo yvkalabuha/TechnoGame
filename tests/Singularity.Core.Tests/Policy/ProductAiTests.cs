@@ -370,4 +370,36 @@ public class ProductAiTests
         Assert.False(Out(LimiterKind.Tooling, true));
         Assert.False(Out(LimiterKind.Tooling, false));
     }
+
+    [Fact]
+    public void A40_OneWithdrawalPerGeneration_AcrossBothBranches_AlsoForAnOlderGeneration()
+    {
+        // Branch О gave up a project of G2 (cancelled); a stuck series of the same G2 in the same year is not closed, and neither a G1 one after a G1 cancel.
+        foreach (int gen in new[] { 2, 1 })
+        {
+            var rig = new Rig(PolicyProfile.Mass, s => { s.KnownGen = 3; s.Design[0] = Live(DesignStage.InService, 3); s.Design[1] = Cancelled(gen); });
+            rig.S.Design[2] = Series(gen, idle: 100, built: false);
+            rig.Month(0);
+            Assert.False(rig.Policy.AiClose(0, 2, 1));
+            rig.S.Design[3] = Prototype(0, gen, Fx6.FromInt(700), gate: true);
+            rig.Month(70);
+            Assert.DoesNotContain(rig.Commands(71), c => c.Kind == DesignCommandKind.Cancel);
+        }
+    }
+
+    [Fact]
+    public void CancelAndStart_OfOneProject_ExcludeEachOther()
+    {
+        // Stuck for T_ab months but the gate is open and the hidden defects are within k_P (a stale snapshot): the cancel wins, no launch of the same project.
+        var rig = new Rig(PolicyProfile.Mass, s => s.Design[0] = Live(DesignStage.InService, 1));
+        rig.S.Design[1] = Prototype(0, 2, Fx6.FromInt(100), gate: true);
+        rig.Month(60);                                                // t − s = 60 and a launch condition both hold
+        Assert.Null(rig.Policy.AiStart(0, 1, 61));
+        Assert.Contains(rig.Commands(61), c => c.Kind == DesignCommandKind.Cancel && c.Target == 1);
+        // A launch pending from last month: the project is not cancelled.
+        var other = new Rig(PolicyProfile.Mass, s => s.Design[0] = Live(DesignStage.InService, 1));
+        other.S.Design[1] = Prototype(0, 2, Fx6.FromInt(100), gate: true);
+        other.Month(0);
+        Assert.NotNull(other.Policy.AiStart(0, 1, 1));
+    }
 }

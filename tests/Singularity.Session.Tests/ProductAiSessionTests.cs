@@ -85,7 +85,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
                     o.OFirings++;
                     o.OByActor[a]++;
                     // (6): the AI cancels only a project in О for T_ab months or more.
-                    if (stageBefore[a, c.Target] != DesignStage.Prototype || t - w.Products.StageOMonth(a, c.Target) < TAb - 1)
+                    if (stageBefore[a, c.Target] != DesignStage.Prototype || t - w.Products.StageOMonth(a, c.Target) < TAb)
                         o.BadClose++;
                 }
                 for (int d = 0; d < designs; d++)

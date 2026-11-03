@@ -10,7 +10,8 @@ namespace Singularity.Session;
 /// project of every actor that is in stage О with the gate still closed, sends <c>start_series(…, force = true)</c> once, with the rate
 /// <c>⌊r_AI/divisor⌋</c> (divisor 1 or 4, the «предсерия»), and closes the actor's other lines like an ordinary launch (the parent of a derived
 /// design is moved by the layer). The command goes through <see cref="SliceSession.Submit"/> as <see cref="SourceClass.Harness"/>, so it is in
-/// <c>commands.log</c>; it acts from t+1, the delay of the AI's own decisions. Diagnostic: it changes no rule of main.
+/// <c>commands.log</c>; it acts from t+1, the delay of the AI's own decisions. Diagnostic: it changes no rule of main. The set of designs already
+/// forced is the proxy's own bookkeeping, not world state: it is not hashed or saved, a new proxy on a restored session starts empty.
 /// </summary>
 public sealed class ForceProxy(SliceSession session, int rateDivisor = 1)
 {

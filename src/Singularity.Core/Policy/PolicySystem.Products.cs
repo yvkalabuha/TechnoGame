@@ -186,6 +186,8 @@ public sealed partial class PolicySystem
                 if (!live && repeatOk && free > 0 && ProductPresets.Compose(profile, prod, _pp, row, g, t, alts))
                 {
                     dec.Design.Add(new DesignCommand(DesignCommandKind.Compose, g, [.. alts]));
+                    // The repeat is counted when the Requirement is issued, even if the layer later rejects the command (no bureau, capacity): the
+                    // dead end then stays visible instead of looping; the next year does not repeat it again.
                     dec.Repeat[g - 1] = gaveUp;
                     issued = true;
                 }
@@ -213,20 +215,25 @@ public sealed partial class PolicySystem
 
         // A40: one give-up per generation and month; only while the Requirement for the generation has not been repeated.
         var gaveUpNow = new bool[l.Generations + 1];
+        var cancelNow = new bool[_designs];
         for (int d = 0; d < _designs; d++)
         {
             PolicyDesign x = designs[d];
-            if (x.Stage != DesignStage.Prototype || x.StageOMonth < 0 || t - x.StageOMonth < _pp.TAb || !GiveUpAllowed(row, x.PlatformGen, gaveUpNow))
+            if (x.Stage != DesignStage.Prototype || x.StageOMonth < 0 || t - x.StageOMonth < _pp.TAb || !GiveUpAllowed(row, x.PlatformGen, gaveUpNow, designs))
+                continue;
+            // A launch decided last month is still pending in the snapshot: a launching project is not given up.
+            if (_startStamp[d].Current[row] == Stamp(t))
                 continue;
             if (Pending(_dsnStamp, row, t, k => _dsnKind[k].Current[row] == 3 && _dsnTarget[k].Current[row] == d))
                 continue;
             dec.Design.Add(new DesignCommand(DesignCommandKind.Cancel, d, []));
+            cancelNow[d] = true;
             gaveUpNow[x.PlatformGen] = true;
         }
         for (int d = 0; d < _designs; d++)
         {
             PolicyDesign x = designs[d];
-            if (x.Stage != DesignStage.Series || x.IdleMonths < _pp.TAb || !GiveUpAllowed(row, x.PlatformGen, gaveUpNow) || _closeStamp[d].Current[row] == Stamp(t))
+            if (x.Stage != DesignStage.Series || x.IdleMonths < _pp.TAb || !GiveUpAllowed(row, x.PlatformGen, gaveUpNow, designs) || _closeStamp[d].Current[row] == Stamp(t))
                 continue;
             dec.Closes.Add(d);
             gaveUpNow[x.PlatformGen] = true;
@@ -242,7 +249,9 @@ public sealed partial class PolicySystem
             for (int d = 0; d < _designs; d++)
             {
                 PolicyDesign x = designs[d];
-                if (x.Stage != DesignStage.Prototype || !x.GateOpen || x.Hidden > limit)
+                // A project cancelled this month or whose cancel is still pending does not launch.
+                if (x.Stage != DesignStage.Prototype || !x.GateOpen || x.Hidden > limit || cancelNow[d]
+                    || Pending(_dsnStamp, row, t, k => _dsnKind[k].Current[row] == 3 && _dsnTarget[k].Current[row] == d))
                     continue;
                 Fx6 procurement = Shares(row).Procurement * Budget(row);
                 dec.Starts.Add((d, PolicyRules.LineRate(procurement, x.UnitCostFloor)));
@@ -258,8 +267,18 @@ public sealed partial class PolicySystem
         return dec;
     }
 
-    private bool GiveUpAllowed(int row, int generation, bool[] gaveUpNow) =>
-        generation >= 1 && generation <= _gens && !gaveUpNow[generation] && _rep[generation - 1].Current[row] == 0;
+    // One withdrawal per (actor, g_p) for both branches (spec A40): none this month, no design of the generation already given up, no repeat made.
+    private bool GiveUpAllowed(int row, int generation, bool[] gaveUpNow, PolicyDesign[] designs)
+    {
+        if (generation < 1 || generation > _gens || gaveUpNow[generation] || _rep[generation - 1].Current[row] != 0)
+            return false;
+        foreach (PolicyDesign x in designs)
+        {
+            if (x.Cancelled && x.PlatformGen == generation)
+                return false;
+        }
+        return true;
+    }
 
     // A decision of the previous month that the layer applies only in this month's compute is still invisible in the snapshot.
     private bool Pending(IntColumn[] stamps, int row, long t, Func<int, bool> match)
@@ -289,6 +308,8 @@ public sealed partial class PolicySystem
         {
             setInt(_startStamp[d], stamp);
             setLong(_startRate[d], rate.Raw);
+            // Limitation: a start_series of the player/harness in the same month wins (the adapter takes the external command first), but this flag
+            // still gives the line to r_AI afterwards; a line whose rate must be kept is started by a command in an earlier month than the AI's start.
             setInt(_line[d], 1);
         }
         foreach (int d in dec.Closes)
