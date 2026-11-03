@@ -43,6 +43,9 @@ public sealed class ProductsSystem : ITickSystem
     private readonly ProductsMode _mode;
     private readonly int _d, _s, _y, _b;
 
+    // bureau_req[g] (§3.3, A34): computed once at construction, never in a tick.
+    private readonly int[] _bureauReq;
+
     private readonly IntColumn[] _stage, _bureauOf, _alt, _bureauDesign;
     private readonly LongColumn[] _work, _d0, _hidden, _open, _found, _hours, _lineE, _rate, _cost, _exp, _cohort;
     private readonly LongColumn _need, _paid, _spent;
@@ -70,6 +73,9 @@ public sealed class ProductsSystem : ITickSystem
         _y = layout.Years;
         _b = layout.Bureaus;
         SystemId = systemId;
+        _bureauReq = new int[layout.Generations];
+        for (int g = 0; g < layout.Generations; g++)
+            _bureauReq[g] = parameters.BureauReq(layout.DesignScale[g]);
 
         _stage = new IntColumn[_d];
         _bureauOf = new IntColumn[_d];
@@ -155,6 +161,9 @@ public sealed class ProductsSystem : ITickSystem
 
     public ProductsLayout Layout => _l;
 
+    /// <summary><c>bureau_req[g]</c>: engineers a bureau requests per month for a design of generation g (§3.3, A34).</summary>
+    public int BureauReq(int gen) => _bureauReq[gen - 1];
+
     // ---- reads of the current state (snapshot for other layers and metrics)
 
     public DesignStage Stage(int actor, int design) => (DesignStage)_stage[design].Current[actor];
@@ -225,10 +234,13 @@ public sealed class ProductsSystem : ITickSystem
     /// <c>readiness</c> of a design's cohorts (spec §3.3) from the current state and the <c>q</c> of
     /// <c>production_profile</c> of month <paramref name="month"/>; 1 under L_P (§6.1).
     /// </summary>
+    /// <exception cref="InvalidOperationException">In the full model, for an empty design slot (stage None): it has no <c>prc_set</c>.</exception>
     public Fx6 Readiness(int actor, int design, long month)
     {
         if (_mode == ProductsMode.CanonicalLp)
             return Fx6.One;
+        if (Stage(actor, design) == DesignStage.None)
+            throw new InvalidOperationException($"Design slot {design} of actor {actor} is empty: it has no readiness.");
         ProductionProfile profile = _inputs.Profile(actor, DesignRules.Items(_l, PrcSet(actor, design)), month);
         return ProductsMath.Readiness(PaidRatio(actor), profile.Q, DefectsHidden(actor, design) + DefectsOpen(actor, design),
             InitialDefects(actor, design), _p.PsiD);
@@ -382,7 +394,8 @@ public sealed class ProductsSystem : ITickSystem
         if (cur > 0)
         {
             // L_P has no variants: the canonical project takes the (g, «технологичный») slot, so start fleets in the
-            // (g, «превосходящий») slot keep their own alternatives [Предл.].
+            // (g, «превосходящий») slot keep their own alternatives (A32). Unlike the full model, a «снят» canonical slot
+            // is relaunched when its generation is again the newest due one.
             int dc = ProductsLayout.DesignId(cur, DesignVariant.Producible);
             if ((DesignStage)_stage[dc].Next[a] is DesignStage.None or DesignStage.Withdrawn)
             {
@@ -414,8 +427,8 @@ public sealed class ProductsSystem : ITickSystem
                     r = Min(_p.LpRho[g - 1] * budget, alloyLeft / _l.AlloyKg[g - 1]);
                     alloyLeft -= r * _l.AlloyKg[g - 1];
                 }
-                // §6.1: price = Σ n_p·base_cost_p·unit_cost_mult (diagnostic only; no budget is spent).
-                Set(_cost, d, a, DesignRules.BaseCostSum(_l, prc) * profile.UnitCostMult);
+                // §6.1, A33: price = ((Σ n_p·base_cost_p)·unit_cost_mult)·proc_scale[g] (print only; no budget is spent).
+                Set(_cost, d, a, ProductsMath.ProcessPart(DesignRules.BaseCostSum(_l, prc), profile.UnitCostMult, _l.ProcScale[g - 1]));
                 if (r > Fx6.Zero)
                     Produce(chunk, a, d, y, r, prc);
             }
@@ -426,13 +439,13 @@ public sealed class ProductsSystem : ITickSystem
         _spent.Next[a] = 0;
     }
 
-    // Cohorts of calendar year Y are written off when t − m0(Y) ≥ service_life, m0(Y) = month index of January of Y
-    // [Предл.: the spec ages a (design, year) cohort as a whole; January is its earliest possible unit].
+    // Cohorts of calendar year Y are written off when t − m0(Y) ≥ service_life, m0(Y) = month index of July of Y (spec §3.5
+    // A32: a (design, year) cohort ages as a whole from mid-year; with the start 1945-09, 1945 → month 178, 1946 → 190).
     private void Retire(int a, long t, TickCalendar calendar)
     {
         for (int y = 0; y < _y; y++)
         {
-            long m0 = (long)(_l.StartYear + y - calendar.Start.Year) * 12 - (calendar.Start.Month - 1);
+            long m0 = (long)(_l.StartYear + y - calendar.Start.Year) * 12 + (7 - calendar.Start.Month);
             if (t - m0 < _p.ServiceLife)
                 continue;
             for (int d = 0; d < _d; d++)
@@ -527,7 +540,7 @@ public sealed class ProductsSystem : ITickSystem
             if (d >= 0)
             {
                 _mailbox.ReserveWorkforce(chunk, new WorkforceRequest(a, ProductsLayout.EngineerCategory, _l.BureauRequester(b),
-                    _l.BureauEngineers[ProductsLayout.GenOf(d) - 1]));
+                    _bureauReq[ProductsLayout.GenOf(d) - 1]));
             }
             else if (_bureauDesign[b].Current[a] < 0)
             {
@@ -572,7 +585,7 @@ public sealed class ProductsSystem : ITickSystem
 
             Fx6 test = stage == DesignStage.InService ? Fx6.Zero : _p.TestRate;
             Fx6 hours = Get(_hours, d, a) + test + _p.KFleet * (Units(a, d) * _p.FleetHoursPerUnit);
-            Fx6 found = ProductsMath.DetectedTotal(hours, d0, _p.Lambda, _p.BetaQ10);
+            Fx6 found = ProductsMath.DetectedTotal(hours, d0, _p.LambdaD, _p.BetaQ10);
             Fx6 fresh = found - Get(_found, d, a);
             if (fresh < Fx6.Zero)
                 throw new ProductsInvariantException(t, a, $"detected defects of design {d} fell");
@@ -583,7 +596,7 @@ public sealed class ProductsSystem : ITickSystem
             Set(_open, d, a, open);
 
             long team = ProductsMath.People(open * _p.FixHours, _l.HPm);
-            long cap = _l.BureauEngineers[ProductsLayout.GenOf(d) - 1];
+            long cap = _bureauReq[ProductsLayout.GenOf(d) - 1];
             if (team > 0)
                 _mailbox.ReserveWorkforce(chunk, new WorkforceRequest(a, ProductsLayout.EngineerCategory, _l.FixRequester(d), team < cap ? team : cap));
         }

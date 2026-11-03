@@ -67,7 +67,7 @@
     "generation": {
       "description": "Design inputs of generation gen (R-HF, R-MF, R-AK).",
       "type": "object",
-      "required": ["gen", "app", "h_first", "h_floor", "materials_floor", "alloy_kg", "crew_req", "proc_scale", "design_scale", "bureau_engineers"],
+      "required": ["gen", "app", "h_first", "h_floor", "materials_floor", "alloy_kg", "crew_req", "proc_scale", "design_scale"],
       "additionalProperties": false,
       "properties": {
         "gen": { "type": "integer", "minimum": 1 },
@@ -78,8 +78,7 @@
         "alloy_kg": { "type": "number", "exclusiveMinimum": 0 },
         "crew_req": { "type": "integer", "minimum": 1 },
         "proc_scale": { "description": "R-PS: multiplier of the process part of unit_cost.", "type": "number", "exclusiveMinimum": 0 },
-        "design_scale": { "description": "R-DS: multiplier of design work W.", "type": "number", "exclusiveMinimum": 0 },
-        "bureau_engineers": { "description": "Engineers one bureau requests per month for a design of this generation.", "type": "integer", "minimum": 1 }
+        "design_scale": { "description": "R-DS: multiplier of design work W.", "type": "number", "exclusiveMinimum": 0 }
       }
     },
     "alternative": {

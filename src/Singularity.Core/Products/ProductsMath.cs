@@ -69,15 +69,15 @@ public static class ProductsMath
         d0 * novelty * Fx6.FromInt(complexity) / (Fx6.One + bureauExp / eb);
 
     /// <summary>
-    /// Defects found by cumulative hours <c>T = Σ (test_hours + k·fleet_hours)</c>: <c>min(D0, λ·PowFrac(T, q10_β))</c>
-    /// (contract §4.4, Duane form, cumulative). [Предл.] reading of <c>detected(t)</c> as the cumulative count.
+    /// Defects found by cumulative hours <c>T = Σ (test_hours + k·fleet_hours)</c> (spec §3.5 A31):
+    /// <c>D0·min(1, λ_D·PowFrac(T, q10_β))</c>, the cumulative count; floor on every <c>·</c>, monotone in T.
     /// </summary>
-    public static Fx6 DetectedTotal(Fx6 hours, Fx6 d0, Fx6 lambda, int betaQ10)
+    public static Fx6 DetectedTotal(Fx6 hours, Fx6 d0, Fx6 lambdaD, int betaQ10)
     {
         if (hours < Fx6.Zero)
             throw new ArgumentOutOfRangeException(nameof(hours), hours, "Hours cannot be negative.");
-        Fx6 found = lambda * DetMath.PowFracFx(hours, betaQ10);
-        return found < d0 ? found : d0;
+        Fx6 frac = lambdaD * DetMath.PowFracFx(hours, betaQ10);
+        return d0 * (frac < Fx6.One ? frac : Fx6.One);
     }
 
     /// <summary>

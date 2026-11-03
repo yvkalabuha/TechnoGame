@@ -10,7 +10,7 @@ public class DataHashTests : IDisposable
     private const string ScenarioHash1945 = "8ead6c11fe904dddf201d0d9c22569e116a22306facf4a4a65cd5b8e916063e9";
 
     // DataHash of mod core alone: nodes, product classes and scenarios. Same rule as above.
-    private const string CoreDataHash = "7f983d1340b5dd70d24c523380027d7e39c01483a10630bb563785cca9aeb196";
+    private const string CoreDataHash = "54f463b2f3b46a50734ea8b1a8170db733af0756442399b82583ee3ebb7be466";
 
     private readonly TestMods _mods = new();
 

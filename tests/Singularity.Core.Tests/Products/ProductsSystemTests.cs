@@ -134,28 +134,30 @@ public class ProductsSystemTests
         Assert.Equal(Fx6.FromInt(16_428), p.WorkLeft(Gbr, G2Sup));
         Assert.Equal(Fx6.FromInt(740), p.InitialDefects(Gbr, G2Sup));
         Assert.Contains(h.Requests, q => q.Site == Gbr && q.Category == ProductsLayout.EngineerCategory
-            && q.RequesterId == h.Layout.BureauRequester(0) && q.N == 500);
+            && q.RequesterId == h.Layout.BureauRequester(0) && q.N == 526);
 
-        // Progress in t = granted of t−1 (contract §4.6): none in month 0, 500 from month 1.
+        // bureau_req[G2] = ⌊500·1.11^0.5⌋ = 526 (A34). Progress in t = granted of t−1 (contract §4.6): none in month 0.
+        Assert.Equal(526, p.BureauReq(2));
         h.RunThroughMonth(1);
-        Assert.Equal(Fx6.FromInt(15_928), p.WorkLeft(Gbr, G2Sup));
+        Assert.Equal(Fx6.FromInt(15_902), p.WorkLeft(Gbr, G2Sup));
+        h.RunThroughMonth(31);
+        Assert.Equal(Fx6.FromInt(122), p.WorkLeft(Gbr, G2Sup));
         h.RunThroughMonth(32);
-        Assert.Equal(Fx6.FromInt(428), p.WorkLeft(Gbr, G2Sup));
-        h.RunThroughMonth(33);
         Assert.Equal(DesignStage.Prototype, p.Stage(Gbr, G2Sup));
         Assert.Equal(Fx6.One, p.BureauExp(Gbr, 0));
         Assert.Equal(-1, p.BureauDesign(Gbr, 0));
 
-        // Testing starts in the month W is done: T = 200 h → found 0.707106, open; a fix team of ⌈0.707106·2000/175⌉ = 9.
-        Assert.Equal(707_106, p.DefectsFound(Gbr, G2Sup).Raw);
+        // Testing starts in the month W is done: T = 200 h → found = 740·⌊0.0087·14.142135⌋ = 91.04664 (A31), open; the fix
+        // team ⌈91.04664·2000/175⌉ = 1041 is capped at bureau_req = 526.
+        Assert.Equal(91_046_640, p.DefectsFound(Gbr, G2Sup).Raw);
         Assert.Equal(p.DefectsFound(Gbr, G2Sup), p.DefectsOpen(Gbr, G2Sup));
         Assert.Equal(Fx6.FromInt(740) - p.DefectsFound(Gbr, G2Sup), p.DefectsHidden(Gbr, G2Sup));
-        Assert.Contains(h.Requests, q => q.Site == Gbr && q.RequesterId == h.Layout.FixRequester(G2Sup) && q.N == 9);
+        Assert.Contains(h.Requests, q => q.Site == Gbr && q.RequesterId == h.Layout.FixRequester(G2Sup) && q.N == 526);
 
-        // Month 34: 9·175/2000 = 0.7875 fixes clear the open defect; T = 400 h → found 1.0, the new 0.292894 are open.
-        h.RunThroughMonth(34);
-        Assert.Equal(Fx6.One, p.DefectsFound(Gbr, G2Sup));
-        Assert.Equal(292_894, p.DefectsOpen(Gbr, G2Sup).Raw);
+        // Month 33: 526·175/2000 = 46.025 fixed; T = 400 h → found 740·0.174 = 128.76, the new 37.71336 join the open ones.
+        h.RunThroughMonth(33);
+        Assert.Equal(128_760_000, p.DefectsFound(Gbr, G2Sup).Raw);
+        Assert.Equal(82_735_000, p.DefectsOpen(Gbr, G2Sup).Raw);
         // An idle bureau forgets δ_B = 0.005 of its experience (from the month after it became idle).
         Assert.Equal(Fx6.FromRaw(995_000), p.BureauExp(Gbr, 0));
     }
@@ -170,7 +172,7 @@ public class ProductsSystemTests
             GrantShare = Fx6.FromRaw(500_000),
         };
         h.RunThroughMonth(2);
-        Assert.Equal(Fx6.FromInt(16_428 - 2 * 250), h.Products.WorkLeft(Gbr, G2Sup));
+        Assert.Equal(Fx6.FromInt(16_428 - 2 * 263), h.Products.WorkLeft(Gbr, G2Sup));
     }
 
     [Fact]
@@ -206,11 +208,12 @@ public class ProductsSystemTests
     [Fact]
     public void Cohorts_AreWrittenOffAtServiceLife()
     {
-        // Cohort 1945 ages from January 1945 = month −8: written off at month 172 (1960-01); the design is then «снят».
+        // A32: cohort 1945 ages from July 1945 = month −2: written off at month 178 (1960-07); the design is then «снят».
+        // «снят» is final in the full model.
         var h = new ProductsHarness();
-        h.RunThroughMonth(171);
+        h.RunThroughMonth(177);
         Assert.Equal(Fx6.FromInt(100), h.Products.InService(Usa, G1Sup));
-        h.RunThroughMonth(172);
+        h.RunThroughMonth(178);
         Assert.Equal(Fx6.Zero, h.Products.InService(Usa, G1Sup));
         Assert.Equal(DesignStage.Withdrawn, h.Products.Stage(Usa, G1Sup));
     }

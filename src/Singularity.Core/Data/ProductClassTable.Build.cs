@@ -40,7 +40,6 @@ public sealed partial class ProductClassTable
         var genCrew = new List<int>();
         var genProcScale = new List<Fx6>();
         var genDesignScale = new List<Fx6>();
-        var genBureau = new List<int>();
 
         int ResolveNode(YNode at, string id) =>
             nodes.IndexOf(id) is var row and >= 0 ? row : throw DataLoadException.At(at, $"reference to unknown node '{id}'");
@@ -127,7 +126,7 @@ public sealed partial class ProductClassTable
                 procNode, procN, procLabour, procBase);
             procStart.Add(procNode.Count);
             ReadGenerations(m.Seq("generations"), nodes, ResolveNode, genApp, genHFirst, genHFloor, genMaterials, genAlloy, genCrew,
-                genProcScale, genDesignScale, genBureau);
+                genProcScale, genDesignScale);
             genStart.Add(genApp.Count);
             m.End();
         }
@@ -144,7 +143,7 @@ public sealed partial class ProductClassTable
             ProcLabour = [.. procLabour], ProcBaseCost = [.. procBase], GenStart = [.. genStart], GenApp = [.. genApp],
             GenHFirst = [.. genHFirst], GenHFloor = [.. genHFloor], GenMaterialsFloor = [.. genMaterials],
             GenAlloyKg = [.. genAlloy], GenCrewReq = [.. genCrew],
-            GenProcScale = [.. genProcScale], GenDesignScale = [.. genDesignScale], GenBureauEngineers = [.. genBureau],
+            GenProcScale = [.. genProcScale], GenDesignScale = [.. genDesignScale],
         };
     }
 
@@ -188,7 +187,7 @@ public sealed partial class ProductClassTable
 
     // Generations 1..G in order, each with an APP node of that generation.
     private static void ReadGenerations(YSeq seq, NodeTable nodes, Func<YNode, string, int> resolve, List<int> app,
-        List<Fx6> hFirst, List<Fx6> hFloor, List<Fx6> materials, List<Fx6> alloy, List<int> crew, List<Fx6> procScale, List<Fx6> designScale, List<int> bureau)
+        List<Fx6> hFirst, List<Fx6> hFloor, List<Fx6> materials, List<Fx6> alloy, List<int> crew, List<Fx6> procScale, List<Fx6> designScale)
     {
         int expected = 1;
         foreach (YNode item in seq.Items)
@@ -218,10 +217,6 @@ public sealed partial class ProductClassTable
             crew.Add(crewReq);
             procScale.Add(Positive(g, "proc_scale"));
             designScale.Add(Positive(g, "design_scale"));
-            int engineers = g.Int("bureau_engineers");
-            if (engineers < 1)
-                throw DataLoadException.At(item, "bureau_engineers must be at least 1");
-            bureau.Add(engineers);
             g.End();
         }
         if (expected == 1)

@@ -78,10 +78,9 @@ define:
     # 4·h_floor. R-MF: materials_floor = GFE share × price in 1950 $ / M$. R-AK: alloy_kg = engine mass (fact) ×
     # superalloy share × melt-loss factor 5. crew_req: display only (contract §4.6). R-PS proc_scale: multiplier of
     # the process part of unit_cost; R-DS design_scale: W = W0·complexity·design_scale/(1 + bureau_exp/E_B) (#78).
-    # bureau_engineers: engineers one bureau requests per month (spec §1.1 "КБ в 500 чел."; no source); a scaling
-    # rule R-BS floor(500·sqrt(design_scale)) is pending (F-PI8), so 500 for every generation for now.
+    # Bureau staff bureau_req[g] = floor(B0·design_scale^κ) is a calibration parameter, not mod data (spec §3.5 A34).
     generations:
-      - {gen: 1, app: s8.app.jet_fighter_g1, h_first: 9320, h_floor: 2330, materials_floor: 0.000217, alloy_kg: 290, crew_req: 1, proc_scale: 0.942188, design_scale: 1.00, bureau_engineers: 500}
-      - {gen: 2, app: s8.app.jet_fighter_g2, h_first: 14760, h_floor: 3690, materials_floor: 0.000329, alloy_kg: 670, crew_req: 1, proc_scale: 0.858987, design_scale: 1.11, bureau_engineers: 500}
-      - {gen: 3, app: s8.app.jet_fighter_g3, h_first: 41960, h_floor: 10490, materials_floor: 0.000919, alloy_kg: 2120, crew_req: 1, proc_scale: 1.021118, design_scale: 1.82, bureau_engineers: 500}
-      - {gen: 4, app: s8.app.jet_fighter_g4, h_first: 125920, h_floor: 31480, materials_floor: 0.002098, alloy_kg: 2980, crew_req: 1, proc_scale: 2.597030, design_scale: 3.12, bureau_engineers: 500}
+      - {gen: 1, app: s8.app.jet_fighter_g1, h_first: 9320, h_floor: 2330, materials_floor: 0.000217, alloy_kg: 290, crew_req: 1, proc_scale: 0.942188, design_scale: 1.00}
+      - {gen: 2, app: s8.app.jet_fighter_g2, h_first: 14760, h_floor: 3690, materials_floor: 0.000329, alloy_kg: 670, crew_req: 1, proc_scale: 0.858987, design_scale: 1.11}
+      - {gen: 3, app: s8.app.jet_fighter_g3, h_first: 41960, h_floor: 10490, materials_floor: 0.000919, alloy_kg: 2120, crew_req: 1, proc_scale: 1.021118, design_scale: 1.82}
+      - {gen: 4, app: s8.app.jet_fighter_g4, h_first: 125920, h_floor: 31480, materials_floor: 0.002098, alloy_kg: 2980, crew_req: 1, proc_scale: 2.597030, design_scale: 3.12}

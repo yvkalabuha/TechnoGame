@@ -8,6 +8,8 @@ namespace Singularity.Core.Products;
 /// numbers. Deterministic (#28): pure functions of what the actor knows and of snapshot yields. A design is an array
 /// of one alternative index (layout-global) per slot. The engine slot's rank is its generation: a design of
 /// generation g needs an engine of rank ≥ g (APP g requires an engine ≥ g).
+/// A32 отменён (#81): no generation cap — a project takes the best known components of any generation; стоимость по
+/// фактическим компонентам — ожидает спецификации (cost, alloy and W still come from the ordered generation g).
 /// </summary>
 public static class DesignRules
 {

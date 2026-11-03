@@ -67,10 +67,6 @@ public sealed partial class ProductClassTable
 
     /// <summary>R-DS: multiplier of design work <c>W</c> of generation g.</summary>
     public required ImmutableArray<Fx6> GenDesignScale { get; init; }
-
-    /// <summary>Engineers one bureau requests per month for a design of generation g.</summary>
-    public required ImmutableArray<int> GenBureauEngineers { get; init; }
-
     /// <summary>Process cost row of a PRC node row in class c, or -1.</summary>
     public int ProcessRow(int classRow, int nodeRow)
     {
@@ -157,7 +153,6 @@ public sealed partial class ProductClassTable
                 w.Int(GenCrewReq[i]);
                 w.Fixed(GenProcScale[i]);
                 w.Fixed(GenDesignScale[i]);
-                w.Int(GenBureauEngineers[i]);
             }
         }
     }

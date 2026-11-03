@@ -18,8 +18,12 @@ public class ProductsLinkedRunTests
     [Fact]
     public void L2_ThreeLayers_SameHashEveryMonth_ForThreadCountsAndChunkSizes()
     {
+        // The whole horizon (384 months); USA and GBR start knowing every node of G1–G2, so G2 orders, bureau work, testing,
+        // defect detection and fixing and a producing G2 series all happen inside the run.
         var runs = new[] { new Linked(1, 1), new Linked(4, 1), new Linked(8, 2), new Linked(3, 3) };
-        for (long t = 0; t < 120; t++)
+        Linked run = runs[0];
+        bool project = false, prototype = false, found = false, fixing = false, seriesG2 = false;
+        for (long t = 0; t < 384; t++)
         {
             string? first = null;
             foreach (Linked r in runs)
@@ -29,12 +33,23 @@ public class ProductsLinkedRunTests
                 first ??= h;
                 Assert.True(first == h, $"month {t}: hash differs");
             }
+            for (int a = 0; a < 2; a++)
+            {
+                for (int d = 2; d < 4; d++)
+                {
+                    DesignStage st = run.Products.Stage(a, d);
+                    project |= st == DesignStage.Project;
+                    prototype |= st == DesignStage.Prototype;
+                    seriesG2 |= st == DesignStage.Series && run.Products.Rate(a, d) > Fx6.Zero;
+                    found |= run.Products.DefectsFound(a, d) > Fx6.Zero;
+                    fixing |= run.Industry.Granted(a, ProductsLayout.EngineerCategory, run.PLayout.FixRequester(d)) > 0;
+                }
+            }
         }
-        Linked run = runs[0];
-        // Not trivial: the relaunched G1 lines of USA and GBR produced, the capability merge took the reports.
         Assert.True(run.ReportsSeen > 0);
-        Assert.True(run.Products.InService(0, 0) > Fx6.FromInt(100));
-        Assert.True(run.Products.InService(1, 0) > Fx6.FromInt(100));
+        Assert.True(project && prototype && found && fixing && seriesG2,
+            $"project {project}, prototype {prototype}, found {found}, fixing {fixing}, G2 series {seriesG2}");
+        Assert.Contains(Enumerable.Range(0, 2), a => run.Products.BureauExp(a, 0) > Fx6.Zero);
     }
 
     [Fact]
@@ -53,7 +68,17 @@ public class ProductsLinkedRunTests
             var kp = new KnowledgeParams();
             Graph = KnowledgeGraph.FromData(CoreData.Nodes, Scenario.Disciplines, kp);
             KnowledgeStart kStart = KnowledgeStart.FromScenario(Scenario, Graph);
+            // USA and GBR know every node of generations ≤ 2 at t0, so the run reaches G2 projects.
+            for (int a = 0; a < 2; a++)
+            {
+                for (int r = 0; r < Graph.Count; r++)
+                {
+                    if (Graph.Gen[r] <= 2)
+                        kStart.Known[a * Graph.Count + r] = true;
+                }
+            }
             var ip = new IndustryParams();
+            IParams = ip;
             var probe = MakeLayout(out _);
             ILayout = IndustryLayout.FromData(CoreData.Nodes, Scenario, Categories, probe.Requesters);
             IndustryStart iStart = IndustryStart.FromScenario(Scenario, CoreData.Nodes, ILayout, ip);
@@ -72,6 +97,7 @@ public class ProductsLinkedRunTests
         }
 
         public KnowledgeGraph Graph { get; }
+        public IndustryParams IParams { get; }
         public IndustryLayout ILayout { get; }
         public ProductsLayout PLayout { get; }
         public Table Table { get; }
@@ -119,7 +145,12 @@ public class ProductsLinkedRunTests
 
         public bool QualityProgramme(int siteRow, long month) => false;
 
-        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month) => Fx6.Zero;
+        // Stand-in AI: replace wear and add 0.01 M a month (spec §3.5 A11 money form), so tooling does not decay to 0.
+        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month)
+        {
+            Fx6 m = run.Industry.ToolingM(siteRow, cluster, dim);
+            return (run.IParams.DeltaM * m + Fx6.FromRaw(10_000)) * run.IParams.CostM(IndustryMath.CostTier(m));
+        }
 
         public Fx6 LicenceShare(int siteRow, int processRow, long month) => Fx6.Zero;
 

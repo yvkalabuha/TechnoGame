@@ -71,7 +71,6 @@ public class ProductDataTests : IDisposable
         Assert.Equal(procScaleRaw, Probe.ProcScale[i].Raw);
         Assert.Equal(designScaleRaw, Probe.DesignScale[i].Raw);
         Assert.Equal(1, Probe.CrewReq[i]);
-        Assert.Equal(500, Probe.BureauEngineers[i]);
     }
 
     [Theory]

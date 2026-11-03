@@ -208,7 +208,7 @@ public class ProductsInvariantTests
                         int cy = _l.StartYear + y;
                         Fx6 c = p.Cohort(a, d, cy), before = _cohort[a, d, y];
                         Assert.True(c >= Fx6.Zero, $"{ad}: negative cohort {cy}");
-                        long m0 = (long)(cy - start.Year) * 12 - (start.Month - 1);
+                        long m0 = (long)(cy - start.Year) * 12 + (7 - start.Month); // A32: cohorts age from July
                         bool retired = t - m0 >= pp.ServiceLife;
                         Fx6 expected = retired ? Fx6.Zero : before + (cy == year ? rate : Fx6.Zero);
                         Assert.True(expected == c, $"{ad}: cohort {cy} is {c}, expected {expected} (before {before}, rate {rate}, retired {retired})");
@@ -249,13 +249,13 @@ public class ProductsInvariantTests
                     {
                         int d = p.BureauDesign(q.Site, id);
                         Assert.True(d >= 0 && p.Stage(q.Site, d) == DesignStage.Project, $"month {t}: bureau {id} requests without a project");
-                        Assert.Equal(_l.BureauEngineers[ProductsLayout.GenOf(d) - 1], q.N);
+                        Assert.Equal(p.BureauReq(ProductsLayout.GenOf(d)), q.N);
                     }
                     else
                     {
                         int d = id - _l.Bureaus;
                         FixRequests++;
-                        Assert.True(q.N <= _l.BureauEngineers[ProductsLayout.GenOf(d) - 1], $"month {t}: fix team {q.N} over bureau_engineers");
+                        Assert.True(q.N <= p.BureauReq(ProductsLayout.GenOf(d)), $"month {t}: fix team {q.N} over bureau_req");
                         Assert.True(p.DefectsOpen(q.Site, d) > Fx6.Zero, $"month {t}: fix team for design {d} without open defects");
                     }
                 }

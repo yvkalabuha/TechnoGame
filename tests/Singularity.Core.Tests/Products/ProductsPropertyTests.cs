@@ -169,12 +169,12 @@ public class ProductsPropertyTests
         {
             Fx6 d0 = Rnd(rnd, 0, 1_000_000_000);
             Fx6 h1 = Rnd(rnd, 0, 1_000_000_000_000), h2 = h1 + Rnd(rnd, 0, 100_000_000_000);
-            Fx6 f1 = ProductsMath.DetectedTotal(h1, d0, p.Lambda, p.BetaQ10), f2 = ProductsMath.DetectedTotal(h2, d0, p.Lambda, p.BetaQ10);
+            Fx6 f1 = ProductsMath.DetectedTotal(h1, d0, p.LambdaD, p.BetaQ10), f2 = ProductsMath.DetectedTotal(h2, d0, p.LambdaD, p.BetaQ10);
             Assert.InRange(f1.Raw, 0, d0.Raw);
             Assert.InRange(f2.Raw, 0, d0.Raw);
             Assert.True(f2 >= f1, $"case {i}: detection fell with hours");
         }
-        Assert.Equal(Fx6.Zero, ProductsMath.DetectedTotal(Fx6.Zero, Fx6.FromInt(10), p.Lambda, p.BetaQ10));
+        Assert.Equal(Fx6.Zero, ProductsMath.DetectedTotal(Fx6.Zero, Fx6.FromInt(10), p.LambdaD, p.BetaQ10));
     }
 
     [Fact]

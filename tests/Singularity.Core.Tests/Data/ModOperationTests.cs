@@ -35,7 +35,7 @@ public class ModOperationTests : IDisposable
                             "    h_pm: 175\n    wage_kh: 0.000125\n    maintainability: 1.0\n    r_ref: 25\n" +
                             "    processes:\n      - {prc: s8.prc.jet_engine_assembly_test, n_p: 1, labour_hours: 1350, base_cost: 0.000168}\n" +
                             "    generations:\n      - {gen: 1, app: s8.app.jet_fighter_g1, h_first: 4, h_floor: 1, materials_floor: 0, alloy_kg: 1, " +
-                            "crew_req: 1, proc_scale: 1, design_scale: 1, bureau_engineers: 1}\n";
+                            "crew_req: 1, proc_scale: 1, design_scale: 1}\n";
         string a = _mods.Mod("a", DependsOnCore, ("classes.yaml", text));
         GameData data = ModLoader.Load(TestMods.CoreDir, a);
         Assert.Equal(["engine"], data.ProductClasses.SlotId.ToArray());

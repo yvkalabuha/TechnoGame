@@ -57,7 +57,8 @@ public sealed class ProductsStart
                 if (scenario.FleetVariant[f] != DesignVariant.Superior)
                     throw new ArgumentException($"Start fleet of {scenario.ActorId[a]}: only superior start designs are supported.", nameof(scenario));
                 // The fleet's generation bounds its technology: a G1 fleet of 1945 has G1 engines even if the actor
-                // already knows turbojet_g2 (GBR) [Предл.].
+                // already knows turbojet_g2 (GBR) [Предл.]. Start data only: for new projects A32 отменён (#81),
+                // стоимость по фактическим компонентам — ожидает спецификации.
                 Func<int, bool> upTo = layout.KnownUpTo(gen);
                 if (!DesignRules.Superior(layout, gen, n => Knows(n) && upTo(n), alts))
                     throw new ArgumentException($"Start fleet of {scenario.ActorId[a]}: the actor cannot build a G{gen} design at t0.", nameof(scenario));

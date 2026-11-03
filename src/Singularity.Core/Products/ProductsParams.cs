@@ -20,8 +20,8 @@ public sealed record ProductsParams
 
     public Fx6 D0Factor { get; init; } = Fx6.FromInt(20);
 
-    /// <summary><c>λ</c> of <c>detected = λ·PowFrac(T, q10_β)</c> (contract §4.4).</summary>
-    public Fx6 Lambda { get; init; } = F(50_000);
+    /// <summary><c>λ_D</c> of <c>detected = D0·min(1, λ_D·PowFrac(T, q10_β))</c> (spec §3.5 A31): share of <c>D0</c> per h^β; 0.0087 (З).</summary>
+    public Fx6 LambdaD { get; init; } = F(8_700);
 
     /// <summary><c>q10_β</c>: β = 0.5.</summary>
     public int BetaQ10 { get; init; } = 512;
@@ -38,6 +38,18 @@ public sealed record ProductsParams
     public int UpkeepQ10 { get; init; } = 512;
 
     public int ServiceLife { get; init; } = 180;
+
+    /// <summary><c>B0</c> of <c>bureau_req[g] = ⌊B0·design_scale[g]^κ⌋</c> engineers (spec §3.3, §3.5 A34; З).</summary>
+    public int B0 { get; init; } = 500;
+
+    /// <summary><c>κ</c> as q10 (ADR-0012): κ ∈ [0; 1] → 0…1024; centre 0.5 = 512 (К, C4).</summary>
+    public int KappaQ10 { get; init; } = 512;
+
+    /// <summary>
+    /// <c>bureau_req = ⌊B0·PowFrac(design_scale, q10_κ)⌋</c> whole engineers (§3.3). Evaluated once per generation when the
+    /// system is built (manifest time), never inside a tick.
+    /// </summary>
+    public int BureauReq(Fx6 designScale) => (int)((Fx6.FromInt(B0) * DetMath.PowFracFx(designScale, KappaQ10)).Raw / Fx6.Scale);
 
     /// <summary><c>W0</c>, engineer-months per unit of complexity.</summary>
     public Fx6 W0 { get; init; } = Fx6.FromInt(400);
@@ -80,6 +92,8 @@ public sealed record ProductsParams
             throw new ArgumentException("δ_E, δ_B and ψ_D must be in [0; 1].");
         if (LearningQ10 <= 0 || BetaQ10 <= 0 || BetaQ10 >= DetMath.FracOne || UpkeepQ10 < 0)
             throw new ArgumentException("q10_b > 0, 0 < q10_β < 1024 (β < 1), q10_αu ≥ 0.");
+        if (B0 < 1 || KappaQ10 < 0 || KappaQ10 > DetMath.FracOne)
+            throw new ArgumentException("B0 ≥ 1 and κ in [0; 1] (q10 0…1024).");
         if (LpTDesign.Length != LpRho.Length)
             throw new ArgumentException("L_P tables need one T_design and one ρ per generation.");
     }

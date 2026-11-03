@@ -22,7 +22,11 @@ public enum DesignStage
     /// <summary>В: the line is closed, cohorts serve.</summary>
     InService = 4,
 
-    /// <summary>«снят»: line closed and every cohort written off.</summary>
+    /// <summary>
+    /// «снят»: line closed and every cohort written off. Final in the full model (no order or launch reopens the slot); in
+    /// the L_P control a canonical (g, «технологичный») slot in this stage is relaunched when generation g is again the
+    /// newest due one.
+    /// </summary>
     Withdrawn = 5,
 }
 
@@ -87,9 +91,6 @@ public sealed class ProductsLayout
     public required ImmutableArray<int> CrewReq { get; init; }
     public required ImmutableArray<Fx6> ProcScale { get; init; }
     public required ImmutableArray<Fx6> DesignScale { get; init; }
-
-    /// <summary>Engineers a bureau requests per month for a design of generation g (index g − 1).</summary>
-    public required ImmutableArray<int> BureauEngineers { get; init; }
 
     public required Fx6 HPm { get; init; }
     public required Fx6 WageKh { get; init; }
@@ -268,7 +269,6 @@ public sealed class ProductsLayout
             MaterialsFloor = [.. Gen(classes.GenMaterialsFloor)], AlloyKg = [.. Gen(classes.GenAlloyKg)],
             CrewReq = [.. Enumerable.Range(g0, g1 - g0).Select(i => classes.GenCrewReq[i])],
             ProcScale = [.. Gen(classes.GenProcScale)], DesignScale = [.. Gen(classes.GenDesignScale)],
-            BureauEngineers = [.. Enumerable.Range(g0, g1 - g0).Select(i => classes.GenBureauEngineers[i])],
             HPm = classes.HPm[c], WageKh = classes.WageKh[c],
             Maintainability = classes.Maintainability[c], RRef = classes.RRef[c],
             ClusterCount = industry.Clusters.Length, SkilledCategory = industry.SkilledCategory,

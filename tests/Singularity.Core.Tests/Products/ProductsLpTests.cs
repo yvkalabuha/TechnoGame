@@ -95,8 +95,8 @@ public class ProductsLpTests
         Assert.Equal(Fx6.FromInt(2_900) / h.Layout.AlloyKg[0], p.Rate(1, G1Tech)); // alloy-limited: 2900 kg / alloy_kg[G1]
         Assert.True(p.Rate(1, G1Tech) < Fx6.FromInt(20));
         Assert.Equal(Fx6.FromInt(30), p.Rate(2, G1Tech));
-        // The diagnostic price is Σ n_p·base_cost_p·unit_cost_mult, nothing is spent.
-        Assert.Equal(DesignRules.BaseCostSum(h.Layout, p.PrcSet(0, G1Tech)), p.UnitCost(0, G1Tech));
+        // A33: the diagnostic price is ((Σ n_p·base_cost_p)·unit_cost_mult)·proc_scale[g]; nothing is spent.
+        Assert.Equal(DesignRules.BaseCostSum(h.Layout, p.PrcSet(0, G1Tech)) * h.Layout.ProcScale[0], p.UnitCost(0, G1Tech));
         Assert.Equal(Fx6.Zero, p.Spent(0));
     }
 
@@ -127,9 +127,9 @@ public class ProductsLpTests
     public void Lp_StartFleetsStillRetireAtServiceLife()
     {
         var h = new ProductsHarness(mode: ProductsMode.CanonicalLp, parameters: LpParams);
-        h.RunThroughMonth(171);
+        h.RunThroughMonth(177);
         Assert.Equal(Fx6.FromInt(100), h.Products.InService(Usa, G1Sup));
-        h.RunThroughMonth(172);
+        h.RunThroughMonth(178);
         Assert.Equal(Fx6.Zero, h.Products.InService(Usa, G1Sup));
         Assert.Equal(DesignStage.Withdrawn, h.Products.Stage(Usa, G1Sup));
     }
@@ -160,7 +160,7 @@ public class ProductsLpTests
     }
 
     [Fact]
-    public void Cohorts_RetireWhole_AtServiceLifeFromJanuaryOfTheirYear()
+    public void Cohorts_RetireWhole_AtServiceLifeFromJulyOfTheirYear()
     {
         var h = new ProductsHarness
         {
@@ -169,11 +169,11 @@ public class ProductsLpTests
             Rate = (_, _, _) => Fx6.FromInt(10),
         };
         int life = h.Params.ServiceLife;
-        long m45 = MonthOf(1945, 1), m46 = MonthOf(1946, 1);
+        long m45 = MonthOf(1945, 7), m46 = MonthOf(1946, 7);
         h.RunThroughMonth(m45 + life - 1);
         Assert.Equal(Fx6.FromInt(140), h.Products.Cohort(Usa, G1Sup, 1945));
         h.RunThroughMonth(m45 + life);
-        // [Предл.] whole-cohort aging: units built in December 1945 retire with the January cohort (169 months of service).
+        // A32: whole-cohort aging from July (1945 → month 178, 1946 → 190); December units serve 175 months.
         Assert.Equal(Fx6.Zero, h.Products.Cohort(Usa, G1Sup, 1945));
         Assert.Equal(Fx6.FromInt(120), h.Products.Cohort(Usa, G1Sup, 1946));
         Assert.Equal(DesignStage.InService, h.Products.Stage(Usa, G1Sup));
