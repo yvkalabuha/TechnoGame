@@ -21,23 +21,64 @@ public class StartVariantTests
     }
 
     [Fact]
-    public void FieldIndex_CountsEstimatedPairs_InCanonicalOrder_WithoutGaps()
+    public void FieldIndex_FollowsActorFieldsOrder_FilteredByEstimated()
     {
-        var seen = new List<int>();
-        Pert(0, i => { seen.Add(i); return Fx6.One; });
-        Assert.Equal(Enumerable.Range(0, seen.Count), seen);
-        // 5 actors × {budget_index, culture_h, fleet, k_d, k_ind, w} (estimated for all) + SUN's gdp_1945, gdppc_1945, growth_pa
-        // (known is a node set and tooling_m, hcap are derived: no multiplier).
-        int expected = 5 * 6;
+        string[] skipped = ["known", "mastered", "tooling_m", "hcap"];
+        var expected = new List<(int Actor, string Field)>();
         for (int a = 0; a < Original.ActorCount; a++)
         {
-            for (int e = Original.EstimatedStart[a]; e < Original.EstimatedStart[a + 1]; e++)
+            foreach (string field in ScenarioData.ActorFields)
             {
-                if (Original.Estimated[e] is "gdp_1945" or "gdppc_1945" or "growth_pa")
-                    expected++;
+                int p = Original.ProvField.IndexOf(field);
+                bool estimated = Original.ProvEstimated[p]
+                    || Enumerable.Range(Original.EstimatedStart[a], Original.EstimatedStart[a + 1] - Original.EstimatedStart[a]).Any(e => Original.Estimated[e] == field);
+                if (estimated && !skipped.Contains(field))
+                    expected.Add((a, field));
             }
         }
-        Assert.Equal(expected, seen.Count);
+        var seen = new List<int>();
+        // Multiplier i = 0.9 + i·1e-6: the scaled value tells which index a field got.
+        ScenarioData p2 = Pert(0, i => { seen.Add(i); return Fx6.FromRaw(900_000 + i); });
+        Assert.Equal(Enumerable.Range(0, expected.Count), seen);
+        foreach (string field in new[] { "budget_index", "w", "growth_pa" })
+        {
+            foreach ((int a, string f) in expected.Where(x => x.Field == field))
+            {
+                Fx6 m = Fx6.FromRaw(900_000 + expected.IndexOf((a, f)));
+                Fx6 oldV = field switch { "budget_index" => Original.BudgetIndex[a], "w" => Original.W[a], _ => Original.GrowthPa[a] };
+                Fx6 newV = field switch { "budget_index" => p2.BudgetIndex[a], "w" => p2.W[a], _ => p2.GrowthPa[a] };
+                Assert.Equal(oldV * m, newV);
+            }
+        }
+        // SUN lists gdp_1945 before budget_index in ActorFields, so its budget index is not number 0 of the actor.
+        int sun = Original.ActorIndex("SUN");
+        Assert.True(expected.IndexOf((sun, "budget_index")) > expected.IndexOf((sun, "gdp_1945")));
+    }
+
+    [Fact]
+    public void UnknownEstimatedField_Throws()
+    {
+        // trophy_engineers has a source and no multiplier rule: listing it as estimated is a data error, not a silent skip.
+        string root = SliceTestData.RepoRoot;
+        string dir = Path.Combine(Path.GetTempPath(), "sing-pert-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            foreach (string f in Directory.GetFiles(Path.Combine(root, "mods", "core")))
+            {
+                string text = File.ReadAllText(f);
+                if (Path.GetFileName(f) == "scenario_1945.yaml")
+                    text = text.Replace("        estimated: []\n      - id: GBR", "        estimated: [trophy_engineers]\n      - id: GBR");
+                File.WriteAllText(Path.Combine(dir, Path.GetFileName(f)), text);
+            }
+            GameData data = ModLoader.Load(dir);
+            ScenarioData s = data.Scenario("jet_slice_1945");
+            Assert.Throws<ArgumentOutOfRangeException>(() => s.Perturbed(_ => Fx6.One, data.Nodes, data.ProductClasses));
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
     }
 
     [Fact]

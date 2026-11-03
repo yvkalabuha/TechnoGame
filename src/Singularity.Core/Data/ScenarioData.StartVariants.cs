@@ -8,15 +8,13 @@ public sealed partial class ScenarioData
     /// <summary>The scenario actors that <c>START_SYM</c> makes equal (spec §6.5).</summary>
     public static readonly string[] SymmetricActors = ["USA", "GBR", "SUN"];
 
-    // Fields START_PERT may scale, in the canonical (ordinal) order of field names. tooling_m and hcap are derived by a rule from
-    // culture_h and get no multiplier of their own; known and mastered are node sets and never change (spec §6.5).
-    private static readonly string[] PerturbedFields =
-        ["budget_index", "culture_h", "fleet", "gdp_1945", "gdppc_1945", "growth_pa", "k_d", "k_ind", "w"];
+    // Estimated fields that get no multiplier: node sets never change, tooling_m and hcap are derived from culture_h by a rule (spec §6.5).
+    private static readonly string[] NoMultiplier = ["known", "mastered", "tooling_m", "hcap"];
 
     /// <summary>
     /// <c>START_PERT</c> (spec §6.5, v0.12): every field with <c>estimated: true</c> (scenario-wide in the provenance, or listed by the actor) is
     /// multiplied by its own multiplier from <paramref name="multiplier"/>(fieldIndex), the 0-based number of the (actor, field)
-    /// pair among such pairs in canonical order (actors in data order, fields by name). Fixed-point fields are floored products,
+    /// pair among such pairs in canonical order (actors in data order, fields in the order of <see cref="ActorFields"/>). Fixed-point fields are floored products,
     /// integer fields <c>⌊value·m⌋</c>. <c>tooling_m</c> and <c>hcap</c> keep their offset to the perturbed <c>culture_h</c>
     /// (the rule, not a multiplier). Known nodes, mastered history and class do not change.
     /// </summary>
@@ -26,9 +24,10 @@ public sealed partial class ScenarioData
         int index = 0;
         for (int a = 0; a < ActorCount; a++)
         {
-            foreach (string field in PerturbedFields)
+            // Canonical order of the scenario: ActorFields (spec §6.5); an estimated field Scale does not know throws.
+            foreach (string field in ActorFields)
             {
-                if (IsEstimated(a, field))
+                if (IsEstimated(a, field) && Array.IndexOf(NoMultiplier, field) < 0)
                     Scale(f, a, field, multiplier(index++));
             }
         }

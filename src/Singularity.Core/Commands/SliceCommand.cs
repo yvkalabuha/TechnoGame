@@ -15,7 +15,7 @@ public enum SourceClass
     /// <summary>A Lab harness (the FORCE proxy, §6.8): an external source, not the AI.</summary>
     Harness = 1,
 
-    /// <summary>Decisions of the AI; they are state columns, not journal entries, but the class keeps the key order complete.</summary>
+    /// <summary>Decisions of the AI; they are <c>pol.*</c> columns, never journal entries: Submit refuses this class. It keeps the key order complete.</summary>
     Ai = 2,
 }
 
@@ -91,7 +91,7 @@ public sealed record DeriveDesign(int Actor, int Parent, ImmutableArray<int> Alt
 
 /// <summary>
 /// <c>start_series(design, rate, force)</c>. <c>force = true</c> is allowed for the player and a harness only (#94, A36): the AI
-/// never sends it, and a command with <see cref="SourceClass.Ai"/> and <c>force</c> is refused at Submit.
+/// never sends commands at all (<see cref="SourceClass.Ai"/> is refused at Submit).
 /// </summary>
 public sealed record StartSeries(int Actor, int Design, Fx6 Rate, bool Force) : SliceCommand(Actor)
 {

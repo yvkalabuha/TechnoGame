@@ -35,14 +35,15 @@ public class CommandTests
     }
 
     [Fact]
-    public void Submit_ForceFromAi_IsRefused_ButPlayerAndHarnessMayForce()
+    public void Submit_AiSubmitsNoCommands_ButPlayerAndHarnessMayForce()
     {
         SliceSession s = Make();
-        Assert.Equal(CommandRefusal.ForceNotAllowed, s.Submit(SourceClass.Ai, 1, 0, new StartSeries(0, 0, Fx6.FromInt(5), true)).Reason);
-        Assert.True(s.Submit(SourceClass.Ai, 1, 1, new StartSeries(0, 0, Fx6.FromInt(5), false)).Accepted);
+        // The AI submits no commands at all (its decisions are pol.* columns): neither with nor without force.
+        Assert.Equal(CommandRefusal.BadSource, s.Submit(SourceClass.Ai, 1, 0, new StartSeries(0, 0, Fx6.FromInt(5), true)).Reason);
+        Assert.Equal(CommandRefusal.BadSource, s.Submit(SourceClass.Ai, 1, 1, new StartSeries(0, 0, Fx6.FromInt(5), false)).Reason);
         Assert.True(s.Submit(SourceClass.Player, 0, 0, new StartSeries(0, 0, Fx6.FromInt(5), true)).Accepted);
         Assert.True(s.Submit(SourceClass.Harness, 0, 0, new StartSeries(0, 1, Fx6.FromInt(5), true)).Accepted);
-        Assert.DoesNotContain("\"source\":2,\"source_id\":1,\"local_n\":0", s.CommandLog);
+        Assert.DoesNotContain("\"source\":2", s.CommandLog);
     }
 
     [Fact]
@@ -167,7 +168,7 @@ public class CommandTests
         [
             (SourceClass.Player, 0, new SetBudgetShares(0, Shares(500_000, 100_000, 100_000, 200_000, 100_000))),
             (SourceClass.Harness, 0, new SetBudgetShares(0, Shares(100_000, 100_000, 500_000, 200_000, 100_000))),
-            (SourceClass.Ai, 4, new SetBudgetShares(0, Shares(100_000, 500_000, 100_000, 200_000, 100_000))),
+            (SourceClass.Player, 1, new SetBudgetShares(0, Shares(100_000, 500_000, 100_000, 200_000, 100_000))),
         ];
         string? hash = null, log = null;
         foreach (int[] order in Permutations(3))
@@ -180,7 +181,7 @@ public class CommandTests
             log ??= s.CommandLog;
             Assert.Equal(hash, s.LastHash);
             Assert.Equal(log, s.CommandLog);
-            Assert.Equal(cmds[2].Command is SetBudgetShares last ? last.Shares : default, s.World.SharesOf(0));   // the AI class applies last
+            Assert.Equal(cmds[1].Command is SetBudgetShares last ? last.Shares : default, s.World.SharesOf(0));   // the Harness key sorts after both players and applies last
         }
     }
 

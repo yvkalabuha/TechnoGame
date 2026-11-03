@@ -246,14 +246,17 @@ public class PolicyAndConfigTests
         Assert.IsType<V23CultureRule>(Make(1, c => c with { Channels = SliceChannels.CultureR0 }).World.Industry.Rule);
     }
 
+    // Parameter level only: each switch runs without error and reaches the world's parameters. That a switch changes a trajectory is
+    // not asserted here: k_tr and k_qp act only once licences (T6d) and the quality programme (T6b) exist, so they are inert in this
+    // build; the effect of E ≡ 0 is checked on its own below.
     [Fact]
-    public void ChannelSwitches_AllRunOneMonth_AndTheWorldCarriesTheParameter()
+    public void ChannelSwitches_AllRunThreeMonths_AndTheWorldCarriesTheParameter()
     {
         foreach (SliceChannels channel in Enum.GetValues<SliceChannels>().Where(c => c != SliceChannels.None))
         {
             SliceSession s = Make(2, c => c with { Channels = channel });
             s.StepThroughMonth(2);
-            Assert.NotEqual(Make(2).LastHash, s.LastHash);   // the switch is part of the state (run.channels)
+            Assert.Equal((int)channel, s.World.Table.GetInt("run.channels").Current[0]);
         }
         SliceWorld w = Make(2, c => c with { Channels = SliceChannels.Alpha | SliceChannels.Eta }).World;
         Assert.Equal(Fx6.Zero, w.IndustryParameters.Alpha);

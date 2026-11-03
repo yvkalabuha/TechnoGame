@@ -28,7 +28,7 @@ public class AssembledSliceProperties
     private static List<List<Item>> Script(int seed)
     {
         var rnd = new Random(seed);
-        (SourceClass, int)[] sources = [(SourceClass.Player, 0), (SourceClass.Player, 1), (SourceClass.Harness, 0), (SourceClass.Harness, 3), (SourceClass.Ai, 2)];
+        (SourceClass, int)[] sources = [(SourceClass.Player, 0), (SourceClass.Player, 1), (SourceClass.Harness, 0), (SourceClass.Harness, 3)];
         var local = new int[sources.Length];
         var byTick = new List<List<Item>>();
         long tick = 0;
@@ -43,7 +43,7 @@ public class AssembledSliceProperties
                 SliceCommand c = rnd.Next(3) switch
                 {
                     0 => new SetBudgetShares(actor, ShareSets[rnd.Next(ShareSets.Length)]),
-                    1 => new StartSeries(actor, rnd.Next(3), Fx6.FromInt(rnd.Next(1, 40)), sources[s].Item1 != SourceClass.Ai && rnd.Next(2) == 0),
+                    1 => new StartSeries(actor, rnd.Next(3), Fx6.FromInt(rnd.Next(1, 40)), rnd.Next(2) == 0),
                     _ => new CloseLine(actor, rnd.Next(3)),
                 };
                 items.Add(new Item(tick, sources[s].Item1, sources[s].Item2, local[s]++, c));
@@ -100,7 +100,7 @@ public class AssembledSliceProperties
     }
 
     [Fact]
-    public void Journal_KeysAreStrictlyIncreasing_LocalNGrowsPerSource_AndAiNeverForces()
+    public void Journal_KeysAreStrictlyIncreasing_LocalNGrowsPerSource_AndNoAiEntries()
     {
         for (int scriptSeed = 1; scriptSeed <= 6; scriptSeed++)
         {
@@ -116,8 +116,7 @@ public class AssembledSliceProperties
                 if (last.TryGetValue((c.Key.Source, c.Key.SourceId), out int prev))
                     Assert.True(c.Key.LocalN > prev);
                 last[(c.Key.Source, c.Key.SourceId)] = c.Key.LocalN;
-                if (c.Key.Source == SourceClass.Ai)
-                    Assert.False(c.Command is StartSeries { Force: true });
+                Assert.NotEqual(SourceClass.Ai, c.Key.Source);   // AI decisions are never in the journal
                 Assert.Equal(c, CommandCodec.Decode(CommandCodec.Encode(c)));
             }
             // Every accepted submission was applied; none is left unlogged or duplicated.

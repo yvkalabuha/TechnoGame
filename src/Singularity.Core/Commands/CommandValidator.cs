@@ -8,7 +8,6 @@ public enum CommandRefusal
     None = 0,
     UnknownActor,
     BadSource,
-    ForceNotAllowed,
     FocusTooMany,
     FocusRepeat,
     FocusUnknownProcess,
@@ -41,7 +40,7 @@ public sealed record CommandLimits(int ActorCount, int SlotCount, int Designs, I
 
 /// <summary>
 /// Validation in two steps (SLICE_COMPOSITION §7.4). <see cref="CheckForm"/> runs at Submit and needs no state: the actor exists, the
-/// source may send the command (<c>force</c> never from <see cref="SourceClass.Ai"/>), focus without repeats, shares summing to 1
+/// source may send commands (never <see cref="SourceClass.Ai"/>, so <c>force</c> never comes from the AI, #94), focus without repeats, shares summing to 1
 /// exactly, five alternatives. <see cref="CheckState"/> runs at application: the focus names only processes the actor knows.
 /// Checks of the product layer (slot, bureau, gate, platform threshold) stay in the layer.
 /// </summary>
@@ -53,6 +52,9 @@ public static class CommandValidator
         CommandKey key = logged.Key;
         if (key.SourceId < 0 || key.LocalN < 0 || key.ApplyTick < 0 || !Enum.IsDefined(key.Source))
             return CommandVerdict.Refuse(CommandRefusal.BadSource, $"invalid key {key}");
+        // AI decisions are pol.* columns, never commands: nothing from SourceClass.Ai enters the journal (SLICE_COMPOSITION §7.5).
+        if (key.Source == SourceClass.Ai)
+            return CommandVerdict.Refuse(CommandRefusal.BadSource, "the AI submits no commands: its decisions are pol.* columns");
         if (c.Actor < 0 || c.Actor >= limits.ActorCount)
             return CommandVerdict.Refuse(CommandRefusal.UnknownActor, $"actor {c.Actor} does not exist");
         switch (c)
@@ -62,8 +64,6 @@ public static class CommandValidator
                     ? CommandVerdict.Ok
                     : CommandVerdict.Refuse(CommandRefusal.BadShares, $"shares must be non-negative and sum to exactly 1, got {s.Shares.Sum}");
             case SetEffortFocus f:
-                if (key.Source == SourceClass.Ai)
-                    return CommandVerdict.Refuse(CommandRefusal.BadSource, "the AI has no effort focus");
                 if (f.Processes.IsDefault || f.Processes.Length > 3)
                     return CommandVerdict.Refuse(CommandRefusal.FocusTooMany, "effort_focus holds at most 3 processes");
                 for (int i = 0; i < f.Processes.Length; i++)
@@ -92,9 +92,7 @@ public static class CommandValidator
                     return CommandVerdict.Refuse(CommandRefusal.BadDesign, $"design {s.Design} is out of range");
                 if (s.Rate.Raw < 0)
                     return CommandVerdict.Refuse(CommandRefusal.BadRate, "the rate must not be negative");
-                return s.Force && key.Source == SourceClass.Ai
-                    ? CommandVerdict.Refuse(CommandRefusal.ForceNotAllowed, "force = true is never sent by the AI (#94)")
-                    : CommandVerdict.Ok;
+                return CommandVerdict.Ok;
             case CloseLine l:
                 return l.Design < 0 || l.Design >= limits.Designs
                     ? CommandVerdict.Refuse(CommandRefusal.BadDesign, $"design {l.Design} is out of range")
