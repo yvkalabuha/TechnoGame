@@ -228,3 +228,15 @@ related: [RR-0006, RR-0007, RR-0008, HYP-0002, HYP-0003]
 - AcqNotes, Manufacturing Readiness Level — https://acqnotes.com/acqnote/tasks/manufacturing-readiness-level (2026-11-03)
 - Modus Advanced, MRL vs TRL (вторичная цитата MRL Deskbook, «related but not one-to-one») — https://www.modusadvanced.com/resources/blog/mrl-vs-trl-understanding-the-difference-between-technology-and-manufacturing-readiness (2026-11-03; первоисточник Deskbook не прочитан)
 - Внутренние: `LAYER_CONTRACT.md` v2.3; RR-0006; RR-0007; RR-0008; `slice-jet-aviation.md` §1.4; `data/jet-slice/product_class.md`; DECISIONS_LOG #19, #26, #28, #29, #30, #44, #48, #50–52; HYP-0003.
+
+## Разногласия (gate-ревью 2026-11-03)
+| # | тема | позиции | итог |
+|---|---|---|---|
+| 1 | «Новых запасов нет» при выносе двигателя | RR: только отношение BOM и `component_availability`; critic: нужен склад `component_stock[site,design]` и делёж по образцу `reserve_workforce`, это новое состояние | Принято по critic, #61; правка контракта до спецификации второго среза |
+| 2 | Совместимость | RR: гибрид, другой `mount_family` ⇒ новый вариант; advocate: по параметрам, кейсы F-4/Spey и Су-17/АЛ-21 — модификации | Владелец выбрал параметры (#63) |
+| 3 | `tech_lead` с импортными компонентами | RR: отложить в правку контракта; critic: смысловое решение, иначе #26 обходится импортом | Владелец: нужно освоить самой (#62) |
+| 4 | «Зрелость конструкции» как отдельная сущность (записка владельца) | advocate: нужна явная ось ресурса; RR и critic: отдельный запас — двойной счёт | Отдельного запаса нет; явная функция ресурса с калибровкой (#65) |
+| 5 | Число характеристик двигателя | RR: ≤ 3, в MVP 2; advocate: 2 не воспроизводят Су-22 | 3 характеристики (#65) |
+| 6 | Модернизация экземпляров двигателя (кейс F100 -220E) | advocate: нужна; RR: когорты двигателей — FUTURE | Позже (третий срез), с пометкой «C5 не воспроизводится» |
+| 7 | Отдельные документы D и G брифа | advocate: D — со второго класса компонентов, G — приёмочные сценарии сейчас | G — приёмочные сценарии (test-engineer); D — позже |
+
