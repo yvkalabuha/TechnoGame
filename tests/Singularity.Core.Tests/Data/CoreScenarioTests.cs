@@ -71,9 +71,7 @@ public class CoreScenarioTests
         {
             string actor = S.ActorId[a];
             var expected = lines.Skip(1).Select(l => l.Split(','))
-                // nodes.csv known_at_start still lacks SUN/58 and FRA/54 (D1, #134, #135; scenario_1945.md has them): the one remaining correction.
-                .Where(c => c[col] == "ALL" || c[col].Split(';').Contains(actor)
-                    || actor == "SUN" && c[1] == "s8.app.jet_fighter_g1" || actor == "FRA" && c[1] == "s8.prc.jet_engine_assembly_test")
+                .Where(c => c[col] == "ALL" || c[col].Split(';').Contains(actor))
                 .Select(c => c[1]).Order(StringComparer.Ordinal);
             var loaded = S.KnownOf(a).ToArray().Select(r => Data.Nodes.Id[r]).Order(StringComparer.Ordinal);
             Assert.Equal(expected, loaded);
