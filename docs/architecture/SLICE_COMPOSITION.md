@@ -1,6 +1,7 @@
 # Сборка мира среза «реактивная авиация» (composition root) и журнал команд
 
 > Автор: systems-architect, 2026-11-03. Статус: **[Предл.]**, вход для T6 (ИИ и события) и закрытия DEBT-0016. Не ADR: всё ниже — локальные технические решения внутри ADR-0004, 0006, 0013, 0014 (ACCEPTED). Места, где нужно решение владельца, собраны в §11.
+> r1 (2026-11-03): под контракт v2.4 r3 — команда `cancel_design` (F14, #123) и вход `TrainingBudget` (F15, #125): §3, §4, §5, §7.2, §7.3.
 > Источники: ADR-0002/0004/0006/0013/0014; `docs/architecture/LAYER_CONTRACT.md` §4.0, §5; спека среза `docs/simulation/slice-jet-aviation.md` §2, §3.4, §3.5 A8/A15/A30/A36/A37, §4, §6.3, §6.8, §9.1, §11; код `src/` на коммите 4d75ae0.
 
 ## Краткий вывод
@@ -44,7 +45,7 @@
 | `IndustrySystem` | `ind.*` | нет |
 | `ProductsSystem` | `prd.*`, счётчики отказов | нет |
 | `EventSystem` | `evt.dis.left`, `evt.dis.deficit` по актору; `evt.lic.offer.{seller}` (поколение, цена) в строке покупателя | поток E: `EVT_DIS` (3), `EVT_LIC` (4) |
-| `PolicySystem` | `pol.profile`; `pol.budget` (= `budget_a(t)` месяца, который сейчас считается); доли R/cap/D/proc/QP; `pol.qp`; `pol.req.*`; одноразовые решения месяца: `pol.design.*`, `pol.series.d{i}.rate`, `pol.close.d{i}`, `pol.rate.d{i}`, `pol.lic.accept.{seller}`; лицензии `pol.lic.*` и переводы денег | поток A: `AI` (5) |
+| `PolicySystem` | `pol.profile`; `pol.budget` (= `budget_a(t)` месяца, который сейчас считается); доли R/cap/D/proc/QP; `pol.qp`; `pol.req.*`; одноразовые решения месяца: `pol.design.*`, `pol.series.d{i}.rate`, `pol.close.d{i}`, `pol.cancel.d{i}` (r1, A40), `pol.train.d{i}` (r1, цель учебной серии A41), `pol.rate.d{i}`, `pol.lic.accept.{seller}`; счётчик повторов `Requirement` по (актор, `g*`) (A40); лицензии `pol.lic.*` и переводы денег | поток A: `AI` (5) |
 | `CommandState` (не система: пишет только между тиками) | `cmd.*` (§7.3) | нет |
 | `SliceWorld` (только при сборке) | `run.*`: флаги `FIX_K/E/A`, абляции и режимы (`ProductsMode`, `IndustryMode`, правило культуры), ячейки профилей, плечо, отпечаток параметров | `START` (6) — один раз при сборке стартовых структур (`START_PERT`) |
 
@@ -71,13 +72,14 @@
 | `AlloyDeficit`, `AlloyCap` | `evt.dis.*`; данные сценария |
 | `W`, `Hcap`, `WorkforceAvailable`, `KnownSince` | данные сценария (§1.1); `KnownSince` — только в режиме L_C |
 | `IProductsInputs.ProcurementBudget` | `share_proc·pol.budget` |
-| `DesignCommands`, `StartSeries`, `CloseLine`, `LineRate` | слияние `cmd.*` (внешние) и `pol.*` (ИИ) **в порядке ключа** §7.1; `SeriesStart.Force` берётся только из `cmd.*`; для решения ИИ всегда `false` |
+| `DesignCommands`, `StartSeries`, `CloseLine`, `LineRate` | слияние `cmd.*` (внешние) и `pol.*` (ИИ) **в порядке ключа** §7.1; `SeriesStart.Force` берётся только из `cmd.*`; для решения ИИ всегда `false`. r1: `cancel_design` — элемент `DesignCommands` (вид `Cancel`, `Target = design_id`) [Предл.]: тот же порядок команд, что у `compose`/`derive` (контракт §4.4d шаг 2) |
+| `TrainingBudget(a, d, t)` (r1, F15) | `pol.train.d` (решение месяца t−1) ? `T_a(t)` : 0, где `T_a = B_cap − taken_cap` — `Core.Policy.ToolingRule` того же месяца (тот же вызов, что в `ToolingInvest`; план одинаков во всех вызовах месяца, A39). Чистая функция снимка |
 
 - [Предл.] После появления адаптеров **убрать переходные значения по умолчанию** в `IIndustryInputs` (`EffortBudget`, `EffortFocus`, `PlannedVolume`, `Planned`, перегрузка `ToolingInvest` с `rest`) и в `IKnowledgeInputs.LicensedEngines`: пропущенный вход должен быть ошибкой компиляции. `LineStand` (Lab) реализует их явно.
 - `ToolingInvest` — **правило, вызываемое в compute способности** месяца t (контракт §4.0: `rest_a` — аргумент того же compute), а не решение с лагом t → t+1. Решениями здесь являются только доли и профиль. Так уже работает `ProductsCbLinkedRunTests` (§11, О-3).
 
 ## 5. ИИ и события
-- `PolicySystem.Compute(t)` по снимку: годовая часть при `t mod 12 = 0` и `t > 0` (доли, `prio`, `Requirement` → `compose_design` пресетом профиля, включая `adaptive`); месячная часть (темп линий, учебная серия, запуск серии при `gate_open ∧ D_hidden ≤ k_P·D_ref`, закрытие линий, программа качества, принятие лицензии). `IPolicyInputs` читает изделие и способность только через их публичные функции снимка.
+- `PolicySystem.Compute(t)` по снимку: годовая часть при `t mod 12 = 0` и `t > 0` (доли, `prio`, `Requirement` → `compose_design` пресетом профиля, включая `adaptive`); месячная часть (темп линий, учебная серия, запуск серии при `gate_open ∧ D_hidden ≤ k_P·D_ref`, закрытие линий, программа качества, принятие лицензии; r1: `cancel_design` по A40 — первым в месячной части, порядок спеки A41). `IPolicyInputs` читает изделие и способность только через их публичные функции снимка.
 - `EventSystem.Compute(t)`: hazard перебоя `EVT_DIS` (n = 0 — наступление, n = 1 — длительность 6…18), предложения `EVT_LIC` в годовой месяц; состояние — колонки `evt.*`; действует с t+1, как любое решение (§11, О-4).
 - **Потоки:** `SliceWorld` создаёт `CounterRng(seed_src)` на источник: K (`KNOW`, `PRIO_J`), E (`EVT_*`), A (`AI`), `START`; `seed_src = 0x5EED` под соответствующим `FIX_*` (§6.3). `TickRunner` получает `seed` прогона, но системы среза **не читают `TickContext.Rng`** (иначе `FIX_*` обходится).
 - **Прокси FORCE (§6.8)** — не ИИ, а внешний источник `Harness` в Lab: после шага месяца t он читает снимок через Session и подаёт `start_series(…, force = true)`; команда применяется в начале следующего тика и действует в t+1 — та же задержка, что у ИИ.
@@ -108,12 +110,12 @@
 | `set_effort_focus(actor, p1..p3)` | только игрок | нужна |
 | `accept_licence(actor, seller)` | игрок; у ИИ — `pol.lic.accept` | нужна |
 | `invest_tooling_M` | — | **не команда**: в контракте v2.4 §5 её нет; это правило `ToolingRule` при доле `cap`. Команда игрока — решение game-designer |
-| `abandon_project` | — | **нет в контракте v2.4**; не вводить в T6. Нужна ли — вопрос game-designer |
+| ~~`abandon_project`~~ → `cancel_design(actor, design)` | игрок (П или О, когда хочет); ИИ — только по A40 | r1: нужна (контракт v2.4 r3 §4.4e, F14, #123); прежняя строка «нет в контракте, не вводить в T6» снята |
 
 ### 7.3 Где команда «в силе»
 Применение = запись в `cmd.*` (Current) — состояние, поэтому оно попадает в хеш и в сохранение (ADR-0013 п. 4).
 - Постоянные настройки: `cmd.shares.*` + флаг «задано игроком», `cmd.focus.0..2`.
-- Одноразовые: фиксированное число слотов на актора с полем `stamp` = индекс месячного шага, который их потребляет (следующий после `apply_tick`). Адаптер видит слот только при `stamp == t`, поэтому очистка не нужна. [Предп.] 4 слота `compose/derive` и по одному `start_series`/`close_line`/`rate` на проект; переполнение — отказ при `Submit`.
+- Одноразовые: фиксированное число слотов на актора с полем `stamp` = индекс месячного шага, который их потребляет (следующий после `apply_tick`). Адаптер видит слот только при `stamp == t`, поэтому очистка не нужна. [Предп.] 4 слота `compose/derive` и по одному `start_series`/`close_line`/`rate`/`cancel` (r1) на проект; переполнение — отказ при `Submit`.
 
 ### 7.4 Валидация
 - **При `Submit` (форма и право, без состояния):** актор существует; `force = true` только при `SourceClass ∈ {Player, Harness}`; фокус — не больше 3, **без повторов**, номера процессов есть в раскладке; доли ≥ 0, сумма = 1 точно в `Fx6`; длина `alts` = 5. Отказ при `Submit` — исключение у отправителя; в журнал команда не попадает.
