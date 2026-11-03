@@ -1,7 +1,7 @@
 ---
 id: TASK-0025
 title: "T6c: ИИ изделия — Requirement, пресеты, запуск, снятие (A40), поправка контракта r4"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
