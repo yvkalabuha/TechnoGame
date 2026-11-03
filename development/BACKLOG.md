@@ -22,6 +22,7 @@
 | [TASK-0006](../development/tasks/TASK-0006-ci-determinism.md) | DONE | CI: сборка, тесты и проверка детерминизма L1/L2 | MS-M0 |
 | [TASK-0007](../development/tasks/TASK-0007-kernel-review-fixes.md) | IN_PROGRESS | Kernel: исправления по ревью и аудиту тестов | MS-M0 |
 | [TASK-0008](../development/tasks/TASK-0008-freeze-exp0001-manifest.md) | DONE | Заморозка манифеста EXP-0001 и переключение Lab на интерфейс Core | MS-M0 |
+| [TASK-0009](../development/tasks/TASK-0009-fma-canary-test.md) | APPROVED | Kernel: контрольный тест отсутствия FMA-сжатия на всех платформах CI | MS-M0 |
 
 ## Гипотезы
 

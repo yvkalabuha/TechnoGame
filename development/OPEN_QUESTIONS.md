@@ -2,7 +2,7 @@
 
 | # | Вопрос | Кто решает | Когда нужен ответ | Ссылка |
 |---|---|---|---|---|
-| 1 | Сжимает ли .NET JIT `a*b+c` в FMA (x64, ARM64) и как это контролировать | systems-architect (исследование) | До ACCEPTED ADR-0003 | ADR-0003 |
+| 1 | Сжимает ли .NET JIT `a*b+c` в FMA. **x64 — нет** [Факт, 2026-11-03: .NET 10.0.403, CPU с FMA, 2 млн случаев, tiered и full-opt — `a*b+c` побитно равно раздельным операциям, отличается от `Math.FusedMultiplyAdd`]. **ARM64 — не проверено**: нужен контрольный тест в Kernel.Tests, CI на macos-latest (ARM64) | developer (тест) → systems-architect (ADR-0003) | До ACCEPTED ADR-0003 | ADR-0003, TASK-0009 |
 | 2 | Совместимость ядра .NET 10 с Godot (GodotSharp на `net8.0`) | systems-architect (прототип) | После M0 | ADR-0001 |
 | 3 | Лицензии датасетов Clio-Infra | research-scientist | До импорта данных | RR-0003 |
 | 4 | Лицензия кода репозитория | владелец | До первого публичного релиза | DECISIONS_LOG #8 |
