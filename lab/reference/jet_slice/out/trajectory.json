@@ -112,6 +112,7 @@
   "actor": 0,
   "alpha": "0.05",
   "budget0": "1",
+  "cost_M": "1",
   "delta_H": "0.003",
   "delta_M": "0.005",
   "delta_X": "0.004",

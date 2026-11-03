@@ -202,7 +202,7 @@ def yield_p(p):
         if r is None or r <= 0:
             continue
         c = min(p["H"][d], p["M"][d])
-        src = "H" if p["H"][d] <= p["M"][d] else "M"      # tie -> H (A6)
+        src = "H" if p["H"][d] <= p["M"][d] else "M"      # tie H = M -> H (spec 3.5 A5)
         g = g_gap(c - r)
         acc = mul(acc, g)
         dims.append({"dim": d, "c_d": c, "src": src, "gap": c - r, "g": g})
@@ -229,7 +229,7 @@ def production_profile(case):
         bd = min(bn["dims"], key=lambda d: (d["g"], DIMS.index(d["dim"])))
         bottleneck = {"prc": bn["prc_id"], "dim": bd["dim"], "src": bd["src"]}
     else:
-        bottleneck = {"prc": bn["prc_id"], "dim": None, "src": "ramp"}   # A5
+        bottleneck = {"prc": bn["prc_id"], "dim": None, "src": "ramp"}   # spec 3.5 A5
     return {"per_process": rows, "admitted": admitted, "unit_cost_mult": ucm,
             "bottleneck": bottleneck, "q": None}                       # q_p undefined (A4)
 
@@ -412,7 +412,7 @@ TP = dict(  # trajectory parameters: spec 8.1 values where given, otherwise mark
     mu_K="0.01", k_node="0.05", theta_start="0.6", h_max="0.08", y_half="0.5", prog_cap="3",
     eta="0.01", V_ref="1000", theta_ind="0.25", delta_ind="0.003",
     alpha="0.05", delta_H="0.003", rho_max="0.021", k_catch="0.025", sigma="0.005", phi_floor="0.6",
-    Hcap="5", act="1", w="1.1", lam0="0.3", delta_X="0.004", delta_M="0.005",
+    Hcap="5", act="1", w="1.1", lam0="0.3", delta_X="0.004", delta_M="0.005", cost_M="1",
     Xh={3: "200", 4: "800"}, X0={6: "2000"}, H_MET="3.5", H_CHEM="3.8", R_MET_CHEM="0.3",
     K_d0={"metal": "0.5", "prop": "0.3"},
 )
@@ -556,8 +556,8 @@ def run_trajectory(seed):
                                                 Hcap=T["Hcap"], act=T["act"], w=T["w"]))
                 H[(c, d)] = res["H_new"]
                 culture_detail["%s.%s" % (c, d)] = {"dH_plus": res["dH_plus"], "dH_minus": res["dH_minus"]}
-                # spec 3.2: dM = invest/cost_M - delta_M*M; invest/cost_M given directly as M0*delta_M (A11)
-                M[(c, d)] = add(M[(c, d)], M_inv[(c, d)], -mul(T["delta_M"], M[(c, d)]))
+                # spec 3.2, 3.5 A11: dM = invest/cost_M - delta_M*M; fixture: cost_M = 1, invest = delta_M*M0
+                M[(c, d)] = add(M[(c, d)], div(M_inv[(c, d)], T["cost_M"]), -mul(T["delta_M"], M[(c, d)]))
         for p in sorted(X):
             if p not in v:
                 X[p] = X[p] - mul(T["delta_X"], X[p])
