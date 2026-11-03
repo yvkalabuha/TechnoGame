@@ -7,7 +7,7 @@ using Singularity.Kernel;
 namespace Singularity.Lab.Smoke;
 
 /// <summary>Candidate culture_H rules (docs/simulation/culture-rule-selection.md §1.1).</summary>
-internal enum CultureRule { R0, R1, R2, R1u1, R1c }
+internal enum CultureRule { R0, R1, R2, R1u1, R1c, CB }
 
 /// <summary>
 /// One variant of a rule: <c>u_p = min(1, v_p/v_full)^β</c>, <c>v_full = r_full·labour_p</c>, β = 1 or 0.5
@@ -15,10 +15,11 @@ internal enum CultureRule { R0, R1, R2, R1u1, R1c }
 /// <c>max(r_d·a_r, H_floor)</c> and the max over an empty set is <c>H_floor</c>, so raw <c>maint</c> equals the
 /// effective floor (same dynamics, literal I5).
 /// </summary>
-internal sealed record RuleVariant(CultureRule Rule, Fx6 RFull, bool Sqrt, Fx6 UM, bool FloorFix = false)
+internal sealed record RuleVariant(CultureRule Rule, Fx6 RFull, bool Sqrt, Fx6 UM, bool FloorFix = false, CbParams? Cb = null)
 {
     public string Label => Rule switch
     {
+        CultureRule.CB => Cb!.Label,
         CultureRule.R0 => "R0",
         CultureRule.R1u1 => "R1u1",
         CultureRule.R1 => $"R1/rf{RFull}/b{(Sqrt ? "0.5" : "1")}/um{UM}",
@@ -144,7 +145,7 @@ internal enum LeadMode { None, Target, Mastered }
 /// Hold-out stand condition (§8.2 (a), (b)): <c>act</c> of every cluster of the site and the fixed <c>world_lead</c>
 /// set. <see cref="Default"/> (act 1, no world lead) is the selection stand of §1.2 exactly.
 /// </summary>
-internal sealed record StandCondition(Fx6 Act, LeadMode Lead)
+internal sealed record StandCondition(Fx6 Act, LeadMode Lead, bool LicTarget = false)
 {
     public static readonly StandCondition Default = new(Fx6.One, LeadMode.None);
 }
@@ -195,6 +196,29 @@ internal sealed class RuleStand
     public Fx6 Hcap => _hcap;
 
     public Fx6 Act => _act;
+
+    /// <summary>C-B only (culture-round2.md §1.1.2): <c>proc_E</c> of the last month (money of process development, written in merge).</summary>
+    public Fx6[] E { get; }
+
+    /// <summary>C-B only: <c>licensed(owner, p)</c> per row, fixed for the run.</summary>
+    public bool[] Lic { get; }
+
+    /// <summary>C-B only: effort mode of the stand (§1.3: AI stub, MAX, ZERO).</summary>
+    public CbEffort Effort { get; set; } = CbEffort.AI;
+
+    /// <summary>C-B only: monthly budget of process development <c>D_a = (0.4·CapShare)·budget_index_a</c> (§1.3 п.1).</summary>
+    public Fx6 DBudget { get; }
+
+    public Fx6 Rate => _rate;
+
+    /// <summary>C-B AI stub diagnostic: months in which the running target led no cell (so its <c>E_useful</c> = 0).</summary>
+    public int TargetNoLeadMonths { get; set; }
+
+    public IndustryParams P => _p;
+
+    public RuleVariant Variant => _rv;
+
+    public Fx6 LabourOf(int row) => _labour[row];
     public List<string> Notes { get; } = new();
 
     public RuleStand(GameData data, ScenarioData sc, int actor, IndustryParams ip, RuleVariant rv, Fx6 rate, int target,
@@ -329,6 +353,11 @@ internal sealed class RuleStand
         _procs = new RuleProc[_n];
         _spill = new CultureSpill[_c];
         _invest = new Fx6[_c * 3];
+        E = new Fx6[_n];
+        Lic = new bool[_n];
+        if (cond.LicTarget && Target >= 0)
+            Lic[Target] = true;
+        DBudget = Fx6.FromRaw(400_000) * CapShare * sc.BudgetIndex[actor];
     }
 
     private void MarkKnown(int number)
@@ -389,15 +418,20 @@ internal sealed class RuleStand
                 }
                 Fx6 h = H[c * 3 + d];
                 var cell = new CultureCell(h, _hcap, act, _w, false);
-                CultureStep st = CultureRuleMath.Step(_rv, cell, _procs.AsSpan(0, np), _spill.AsSpan(0, ns), _p);
+                CultureStep st = _rv.Rule == CultureRule.CB
+                    ? CbMath.Step(this, c, d, cell, _spill.AsSpan(0, ns))
+                    : CultureRuleMath.Step(_rv, cell, _procs.AsSpan(0, np), _spill.AsSpan(0, ns), _p);
                 if (st.HNew < Fx6.Zero || (st.HNew - h).Raw > _p.RhoMax.Raw + 1 || st.HNew < (h < st.HFloor ? h : st.HFloor))
                     throw new InvalidOperationException($"culture invariant I1/I2 broken in {_l.Clusters[c]}.{(Dimension)d}: {h} → {st.HNew}");
                 newH[c * 3 + d] = st.HNew;
                 newM[c * 3 + d] = _freeTooling ? FreeM : IndustryMath.Tooling(M[c * 3 + d], _invest[c * 3 + d], mechTier, _p).MNew;
             }
         }
+        Fx6[]? newE = _rv.Rule == CultureRule.CB ? CbMath.Allocate(this) : null; // compute t from the snapshot (§1.3 п.5)
         Array.Copy(newH, H, H.Length);
         Array.Copy(newM, M, M.Length);
+        if (newE is not null)
+            Array.Copy(newE, E, E.Length); // merge t: proc_E, read by culture in t+1
         for (int r = 0; r < _n; r++)
         {
             if (_running[r] && admitted[r])
@@ -517,6 +551,8 @@ internal static class CultureRules
             return CultureHoldout.Diag(data, sc, log); // print only: causes of the hold-out failures (§9)
         if (only == "holdout")
             return CultureHoldout.Run(data, sc, outDir, log); // hold-out G-4, pre-registered in culture-rule-selection.md §8
+        if (only == "cb-print")
+            return CulturePrint.Run(data, sc, outDir, log); // owner diagnostic print, culture-round2.md §10, no pass/fail
         if (only == "gate")
             return CultureGate.Run(data, sc, outDir, log); // gate 2026-11-03, culture-rule-selection.md §7
         List<RuleVariant> variants = Variants();
