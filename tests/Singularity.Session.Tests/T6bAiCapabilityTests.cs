@@ -36,6 +36,9 @@ public class T6bAiCapabilityTests(ITestOutputHelper output)
                 Array.Clear(window);
             }
         }
+        // Windows rewritten in T6c, reason contract v2.4 r4 (#128: v_exp with stage С and the max form) and the player's A41 line rule (a new
+        // line takes over only at yield ≥ y_prod). Seed 3, scripted player (ProductAi off); T6b printed USA 690/1440/1440/1440/1470/1440/1440/1440 and
+        // GBR 276/561/672/751/792/1025/1128/1180, now USA 690/1440/1440/1440/2250/2880/2880/2880 and GBR 276/561/672/751/792/1025/1128/1323.
         // The two actors with a working start (USA, GBR) produce in every 4-year window; FRA, SWE and SUN have no producing start
         // (no project, or a melt that is never admitted) and are printed, not asserted.
         foreach (string id in new[] { "USA", "GBR" })

@@ -18,6 +18,12 @@ internal sealed class PlayerScript(SliceSession session)
     private readonly int[] _local = new int[16];
     public int Accepted, Refused;
 
+    /// <summary>Every close the rule A41 issued: month, actor, closed line, the new line and the smallest yield of its prc_set in that month.</summary>
+    public readonly List<(long Month, int Actor, int Old, int New, Fx6 MinYield)> Switches = new();
+
+    /// <summary>Months in which a newer line existed but its smallest yield was below y_prod, so the old line was kept: (month, actor, old, new, min yield).</summary>
+    public readonly List<(long Month, int Actor, int Old, int New, Fx6 MinYield)> Held = new();
+
     public void Issue(long month)
     {
         SliceWorld w = session.World;
@@ -54,12 +60,17 @@ internal sealed class PlayerScript(SliceSession session)
                 {
                     for (int e = 0; e < l.Designs; e++)
                     {
-                        if (w.Products.Stage(a, e) == DesignStage.Series && w.Products.Gen(a, e) > w.Products.Gen(a, d)
-                            && w.Products.PrcSet(a, e).All(p => YieldOf(p) >= new ProductsParams().YProd))
+                        if (w.Products.Stage(a, e) != DesignStage.Series || w.Products.Gen(a, e) <= w.Products.Gen(a, d))
+                            continue;
+                        Fx6 min = w.Products.PrcSet(a, e).Select(YieldOf).Min();
+                        if (min < new ProductsParams().YProd)
                         {
-                            Send(a, new CloseLine(a, d));
-                            break;
+                            Held.Add((month, a, d, e, min));
+                            continue;
                         }
+                        Switches.Add((month, a, d, e, min));
+                        Send(a, new CloseLine(a, d));
+                        break;
                     }
                 }
             }
