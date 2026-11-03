@@ -43,6 +43,9 @@ created: 2026-11-03
 - [ ] Тесты (test-engineer) — проходят, покрытие достаточно
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
+### Ревью reviewer (2026-11-03)
+Вердикт: accept with fixes. dotnet test зелёный (Architecture 80, Kernel 284 +1 skip, Session 112, Core 779). Звенья, порядок, рычаги и F10 — по контракту §6. high: ExplainRequirement даёт звенья для поколения в строю (пп.1). medium: дублирование ProcurementBudget (п.2). low: пустой Assert.All, повторы AltUnavailable, eta DefectsHidden, рычаг licence у ramp. info: хуки KnowledgeSystem/ProductsSystem.UnitCostAt не меняют compute; ProgressRate под L_P. Отклонения 1–3, 5–9 приняты; 4 — с правкой eta; 10 верно, вскрывает high.
+
 ## Результат
 **Сделано.** `why_not(actor, target)` — чистая функция снимка в `Singularity.Core.WhyNot` (`WhyNotAnalyzer`, `Link`, `LeverRegistry`, `LeverValidator`); наружу отдаёт `SliceSession.WhyNot(actor, target)` и `CurrentRequirement(actor)` (цель §5.6: новейшее известное APP без единицы в строю). Цели: `App(node)`, `Design(slot)`, `Requirement(g)`. Список полный, порядок — контракт §6 (слой, `yield_if_fixed` ↓, `eta` ↑ с `null` в конце, `subject_id`; хвостовые поля делают порядок полным). Слои: KNOWLEDGE (ближайший недостающий узел замыкания `requires` по остатку цены `(need−prog)·c_eff`; недоступная альтернатива слота), CAPABILITY (узкие процессы с `yield < 0,7`: H/M-источник или `ramp`; для H — `limiter` и `subject_id = subject_prc`), PRODUCT (нет проекта, `granted/n < 0,9`, `SERIES_GATE`, дефекты, дефицит сплава), ECONOMY (допущено, `unit_cost·n_plan + upkeep` выше бюджета закупок). Рычаги — только из `LeverRegistry` сборки (в срезе все; `process_development` выключен под абляцией `EffortZero`); `force_series` помечен «только игрок».
 
@@ -63,3 +66,12 @@ created: 2026-11-03
 10. Цель `CurrentRequirement` на старте сценария пуста у всех акторов (новейшее известное APP у каждого уже «в строю» по стартовому парку или APP не известно) — следующее поколение объясняется явным `Requirement(g)`.
 
 **Заметки для слияния с T6b.** (а) `WhyNotInputsAdapter.ToolingRate` подключить к правилу оснастки T6b (`IndustryMath.Tooling` с вложением плана) — сейчас 0; (б) `ProcurementBudget` в адаптере считается так же, как в `ProductsInputsAdapter` — если T6b/T6c поменяют формулу бюджета закупок, поправить обе; (в) конфликты возможны только в `SliceWorld` (+2 свойства и строка конструктора `WhyNotAnalyzer` после `RegisterRunColumns`) и в `ProductsSystem` (+1 метод рядом с `Upkeep`); (г) T6d: `LicenceOffered` читать из предложения лицензии.
+
+**Исправления по ревью.**
+1. (high) Поколение в строю (`IsFielded`, одно условие для `CurrentRequirement` и `ExplainRequirement`) даёт пустой список. Сценарии «способность» и «изделие» перестроены на невыполненное требование: USA знает все узлы, `Requirement(2)`. Новый тест `FieldedRequirement_HasNoLinks`.
+2. (medium) `SliceWorld.ProcurementBudget(actor)` — одно определение для обоих адаптеров. После слияния T6b решить, входит ли `TrainingBudget` в бюджет звена ECONOMY.
+3. (low) Пустой `Assert.All` в сценарии ECONOMY заменён на `Assert.Empty`.
+4. (low) Звенья KNOWLEDGE с одинаковыми (слой, причина, subject_id) схлопываются в одно.
+5. (low) `eta` DefectsHidden, когда допуск превышен из-за открытых дефектов: скорость бригады исправления из снимка (`granted·h_pm/fix_hours`), без учёта новых находок (отклонение).
+6. (low) Рычаг `licence` у `ramp` теперь, как у VOLUME, только при `LicenceOffered`; валидатор не требует его присутствия. Пока лицензий нет, рычаг не предлагается.
+7. (info) Под контролем L_P (`ComputeSchedule`) `ProgressRate` показывает скорость, которая в этом режиме не действует: открытие идёт по расписанию.

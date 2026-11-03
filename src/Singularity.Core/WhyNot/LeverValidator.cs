@@ -48,6 +48,6 @@ public static class LeverValidator
         _ => false,
     };
 
-    // The licence for VOLUME is offered only if a licence is on offer, which the link does not record.
-    private static bool Always(Lever lever, Link l) => !(lever == Lever.Licence && l.Cause != WhyNotCause.Ramp);
+    // The licence (for ramp as for VOLUME) is offered only if a licence is on offer, which the link does not record.
+    private static bool Always(Lever lever, Link l) => lever != Lever.Licence;
 }

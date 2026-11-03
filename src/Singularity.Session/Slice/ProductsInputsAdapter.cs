@@ -24,7 +24,7 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
 
     public long Granted(int siteRow, int category, int requesterId, long month) => world.Industry.Granted(siteRow, category, requesterId);
 
-    public Fx6 ProcurementBudget(int actorRow, long month) => world.SharesOf(actorRow).Procurement * world.Policy.Budget(actorRow);
+    public Fx6 ProcurementBudget(int actorRow, long month) => world.ProcurementBudget(actorRow);
 
     public IReadOnlyList<DesignCommand> DesignCommands(int actorRow, long month)
     {

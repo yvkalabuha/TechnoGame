@@ -145,7 +145,7 @@ public sealed partial class WhyNotAnalyzer
                 cause = WhyNotCause.Ramp;
                 int k = _pl.ProcIndex(prc[i]);
                 eta = Eta(have, need, k < 0 ? Fx6.Zero : unitsPerMonth * _pl.ProcN[k]);
-                levers = Offer(Wanted([Lever.Licence], null, slot));
+                levers = Offer(Wanted(_in.LicenceOffered(site, prc[i], month) ? [Lever.Licence] : [], null, slot));
             }
 
             Fx6 lowest = fixedYield;

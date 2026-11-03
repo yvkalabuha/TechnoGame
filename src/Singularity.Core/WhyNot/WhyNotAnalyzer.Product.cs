@@ -30,8 +30,13 @@ public sealed partial class WhyNotAnalyzer
         if (stage == DesignStage.Prototype && !_p.GateOpen(actor, design, month))
             links.Add(new Link(WhyNotLayer.Product, WhyNotCause.SeriesGate, design, hidden, gateLevel, Offer(Lever.ForceSeries), yield, MonthsToGate(actor, design, stage, month)));
         else if (stage is DesignStage.Series or DesignStage.InService && hidden + _p.DefectsOpen(actor, design) > gateLevel)
-            links.Add(new Link(WhyNotLayer.Product, WhyNotCause.DefectsHidden, design, hidden + _p.DefectsOpen(actor, design), gateLevel, [], yield,
-                hidden > gateLevel ? MonthsToGate(actor, design, stage, month) : null));
+        {
+            Fx6 total = hidden + _p.DefectsOpen(actor, design);
+            // Hidden above the level: testing brings it down (A31). Only open ones above it: the fix team does, at its granted hours.
+            Fx6 fixRate = Fx6.FromInt(_i.Granted(site, ProductsLayout.EngineerCategory, _pl.FixRequester(design))) * _pl.HPm / _pp.FixHours;
+            links.Add(new Link(WhyNotLayer.Product, WhyNotCause.DefectsHidden, design, total, gateLevel, [], yield,
+                hidden > gateLevel ? MonthsToGate(actor, design, stage, month) : Eta(total, gateLevel, fixRate)));
+        }
 
         Fx6 planned = stage == DesignStage.Series && _p.Rate(actor, design) > Fx6.Zero ? _p.Rate(actor, design) : _pl.RRef;
         if (stage != DesignStage.InService)

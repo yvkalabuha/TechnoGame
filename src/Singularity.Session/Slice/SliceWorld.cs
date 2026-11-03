@@ -114,6 +114,9 @@ internal sealed class SliceWorld
     /// <summary>Shares in force: the player's <c>set_budget_shares</c> if one was applied, else the AI profile's.</summary>
     public BudgetShares SharesOf(int actor) => Commands.SharesOverride(actor) ?? Policy.Shares(actor);
 
+    /// <summary>Procurement budget of the month in force: <c>share_P·budget_a</c> (spec §3.3, §3.4); one definition for the product layer and <c>why_not</c>.</summary>
+    public Fx6 ProcurementBudget(int actor) => SharesOf(actor).Procurement * Policy.Budget(actor);
+
     /// <summary>
     /// The channel switches (spec §6.2): each one sets exactly one parameter to its "off" value; the culture rule is chosen separately
     /// (<see cref="SliceChannels.CultureR0"/>).

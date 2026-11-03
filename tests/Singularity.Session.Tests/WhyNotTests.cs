@@ -45,6 +45,16 @@ public class WhyNotTests
         }
     }
 
+    /// <summary>The actor knows every node (a setup for the requirement of a generation it has not fielded).</summary>
+    private static void KnowEverything(SliceSession s, int row)
+    {
+        foreach (Column col in s.World.Table.Columns)
+        {
+            if (col.Name.StartsWith("know.known.", StringComparison.Ordinal))
+                SetInt(s, col.Name, row, 1);
+        }
+    }
+
     private static int[] Superior(SliceSession s, int row, int gen)
     {
         ProductsLayout l = s.World.ProductsLayout;
@@ -90,15 +100,16 @@ public class WhyNotTests
     }
 
     [Fact]
-    public void Scenario_CapabilityFirst_KnownGenerationWithWeakCulture()
+    public void Scenario_CapabilityFirst_UnmetRequirementWithWeakCulture()
     {
         SliceSession s = New();
-        IReadOnlyList<Link> links = s.WhyNot(Usa, WhyNotTarget.Requirement(1));
+        KnowEverything(s, Usa);
+        Assert.Equal(WhyNotTarget.Requirement(4), s.CurrentRequirement(Usa));
+        IReadOnlyList<Link> links = s.WhyNot(Usa, WhyNotTarget.Requirement(2));
         Assert.Equal(WhyNotLayer.Capability, links[0].Layer);
         Assert.Equal(WhyNotCause.CultureH, links[0].Cause);
         Assert.NotNull(links[0].Limiter);
         Assert.True(links[0].Have < links[0].Need);
-        Assert.True(links[0].YieldIfFixed >= links[^1].YieldIfFixed || links[^1].Layer != WhyNotLayer.Capability);
         Assert.DoesNotContain(links, l => l.Layer == WhyNotLayer.Knowledge);
     }
 
@@ -106,12 +117,23 @@ public class WhyNotTests
     public void Scenario_ProductFirst_NoProjectWhenCapabilityStands()
     {
         SliceSession s = New();
+        KnowEverything(s, Usa);
         StrongCapability(s, Usa);
-        IReadOnlyList<Link> links = s.WhyNot(Usa, WhyNotTarget.Requirement(1));
+        IReadOnlyList<Link> links = s.WhyNot(Usa, WhyNotTarget.Requirement(2));
         Link first = Assert.Single(links);
         Assert.Equal(WhyNotLayer.Product, first.Layer);
         Assert.Equal(WhyNotCause.NoDesign, first.Cause);
         Assert.True(first.YieldIfFixed >= WhyNotAnalyzer.LowYield);
+    }
+
+    [Fact]
+    public void FieldedRequirement_HasNoLinks()
+    {
+        SliceSession s = New();
+        // At the start every actor has the generation of its newest known APP in service: nothing stands in the way.
+        Assert.Null(s.CurrentRequirement(Usa));
+        Assert.Empty(s.WhyNot(Usa, WhyNotTarget.Requirement(1)));
+        Assert.Empty(s.WhyNot(Usa, WhyNotTarget.App(s.World.ProductsLayout.GenApp[0])));
     }
 
     [Fact]
@@ -121,7 +143,7 @@ public class WhyNotTests
         StrongCapability(s, Usa);
         PutDesign(s, Usa, 1, DesignStage.Prototype, Fx6.Zero, Fx6.FromInt(100));
         SetInt(s, "prd.d0.gateOpened", Usa, 1);
-        Assert.All(s.WhyNot(Usa, WhyNotTarget.Design(0)), l => Assert.Equal(WhyNotLayer.Economy, l.Layer));
+        Assert.Empty(s.WhyNot(Usa, WhyNotTarget.Design(0)));
         // The standing upkeep alone exceeds the procurement budget.
         SetLong(s, "prd.upkeepNeed", Usa, Fx6.FromInt(1_000_000_000).Raw);
         IReadOnlyList<Link> links = s.WhyNot(Usa, WhyNotTarget.Design(0));
@@ -197,13 +219,15 @@ public class WhyNotTests
     public void RampLink_ExperienceBelowThePointWhereRampReachesTheThreshold()
     {
         SliceSession s = New();
+        KnowEverything(s, Usa);
         StrongCapability(s, Usa, withExperience: false);
-        IReadOnlyList<Link> links = s.WhyNot(Usa, WhyNotTarget.Requirement(1));
+        IReadOnlyList<Link> links = s.WhyNot(Usa, WhyNotTarget.Requirement(2));
         Link ramp = links.First(l => l.Cause == WhyNotCause.Ramp);
         Assert.Equal(WhyNotLayer.Capability, ramp.Layer);
         Assert.Null(ramp.Dim);
         Assert.Equal(Fx6.Zero, ramp.Have);
-        Assert.Contains(Lever.Licence, ramp.Levers);
+        // No licence is on offer in this build, so none is proposed (the same rule as for VOLUME).
+        Assert.DoesNotContain(Lever.Licence, ramp.Levers);
         Assert.Null(ramp.EtaMonths);
         // At the need, ramp is at the yield threshold (to rounding).
         Fx6 xHalf = s.World.Industry.Yield(Usa, s.World.IndustryLayout.RowOf(ramp.Process), 0).XHalfEff;

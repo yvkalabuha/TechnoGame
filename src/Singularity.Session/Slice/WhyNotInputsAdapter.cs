@@ -11,7 +11,7 @@ namespace Singularity.Session;
 /// </summary>
 internal sealed class WhyNotInputsAdapter(SliceWorld world) : IWhyNotInputs
 {
-    public Fx6 ProcurementBudget(int actorRow, long month) => world.SharesOf(actorRow).Procurement * world.Policy.Budget(actorRow);
+    public Fx6 ProcurementBudget(int actorRow, long month) => world.ProcurementBudget(actorRow);
 
     public bool LicenceOffered(int siteRow, int processNumber, long month) => false;
 

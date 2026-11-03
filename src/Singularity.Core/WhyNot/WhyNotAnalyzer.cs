@@ -74,6 +74,19 @@ public sealed partial class WhyNotAnalyzer
                 break;
         }
         links.Sort(Link.Compare);
+        // Several slots or alternatives can point at the same missing node: one link per (layer, cause, subject).
+        for (int i = links.Count - 1; i > 0; i--)
+        {
+            for (int j = 0; j < i; j++)
+            {
+                if (links[j].Layer == links[i].Layer && links[j].Cause == links[i].Cause && links[j].SubjectId == links[i].SubjectId
+                    && links[i].Layer == WhyNotLayer.Knowledge)
+                {
+                    links.RemoveAt(i);
+                    break;
+                }
+            }
+        }
         return links;
     }
 
@@ -87,12 +100,20 @@ public sealed partial class WhyNotAnalyzer
         {
             if (!Knows(actor, _pl.GenApp[g - 1]))
                 continue;
-            bool fielded = false;
-            for (int d = 0; d < _pl.Designs && !fielded; d++)
-                fielded = _p.PlatformGen(actor, d) == g && _p.Stage(actor, d) is DesignStage.Series or DesignStage.InService && _p.InService(actor, d) > Fx6.Zero;
-            return fielded ? null : WhyNotTarget.Requirement(g);
+            return IsFielded(actor, g) ? null : WhyNotTarget.Requirement(g);
         }
         return null;
+    }
+
+    /// <summary>The requirement of generation g is met: a project of that platform generation has units in service.</summary>
+    private bool IsFielded(int actor, int gen)
+    {
+        for (int d = 0; d < _pl.Designs; d++)
+        {
+            if (_p.PlatformGen(actor, d) == gen && _p.Stage(actor, d) is DesignStage.Series or DesignStage.InService && _p.InService(actor, d) > Fx6.Zero)
+                return true;
+        }
+        return false;
     }
 
     private bool Knows(int actor, int nodeNumber)
@@ -141,6 +162,9 @@ public sealed partial class WhyNotAnalyzer
 
     private void ExplainRequirement(List<Link> links, int actor, int gen, long month)
     {
+        // A requirement already in service has nothing in its way (the same condition as CurrentRequirement).
+        if (IsFielded(actor, gen))
+            return;
         int app = _pl.GenApp[gen - 1];
         if (!Knows(actor, app))
         {
