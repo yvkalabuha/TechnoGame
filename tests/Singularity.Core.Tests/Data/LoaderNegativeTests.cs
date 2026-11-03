@@ -94,9 +94,9 @@ public class LoaderNegativeTests : IDisposable
     [Fact]
     public void StartKnowledgeNotClosed()
     {
-        // F-SC1: SUN cannot know jet_fighter_g1 without the alloy.
-        AssertFails("scenario_1945.yaml", "s8.prc.stressed_skin_assembly, s8.prc.jet_engine_assembly_test]\n        k_d: {aero: 0.25",
-            "s8.prc.stressed_skin_assembly, s8.prc.jet_engine_assembly_test, s8.app.jet_fighter_g1]\n        k_d: {aero: 0.25", "but not its requires");
+        // F-SC1: a known node needs its requirements known. SUN knows jet_fighter_g1 since D1 (#134, no alloy needed); without turbojet_g1 it is not closed.
+        AssertFails("scenario_1945.yaml", "s8.prn.swept_wing, s8.eng.turbojet_g1, s8.eng.straight_wing_jet_airframe, s5.cmp.aluminium_alloy_sheet",
+            "s8.prn.swept_wing, s8.eng.straight_wing_jet_airframe, s5.cmp.aluminium_alloy_sheet", "but not its requires");
     }
 
     [Fact]

@@ -334,6 +334,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
         Assert.Equal(x.LastHash, y.LastHash);
     }
 
-    // Seed 7, the AI on, 150 months (through month 149). First recorded in T6c.
-    private const string Golden150 = "c5867d91c50bf53d988ed51e0e4fdc1ad0225bc5fe971037083795d6e636d57b";
+    // Seed 7, the AI on, 150 months (through month 149). First recorded in T6c; re-recorded in D1 (c5867d91… before), reason: D1 — the start-data
+    // package of spec v0.14 (new start knowledge and culture cells, the hot_steel_g0 substitute and the engine descent of the presets).
+    private const string Golden150 = "e778e8cc1820cdbe8b460c4aee08dffa1611cbc52d6b934a022b0efb7445bc7b";
 }

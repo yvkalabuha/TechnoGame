@@ -108,11 +108,15 @@
       "additionalProperties": false,
       "properties": {
         "id": { "$ref": "common.schema.json#/$defs/localId" },
-        "rank": { "type": "integer", "minimum": 1 },
+        "rank": { "description": "Ascending ladder from 1; 0 only for a substitute (the loader checks).", "type": "integer", "minimum": 0 },
         "perf_mult": { "type": "number", "exclusiveMinimum": 0 },
         "eng_gen": { "description": "Engine slot only: generation of the engine alternative, 1..G_max (contract §4.4a).", "type": "integer", "minimum": 1 },
         "af_class": { "description": "Airframe slot only: platform class of the alternative.", "type": "integer", "minimum": 1 },
         "alloy_kg": { "description": "Alloy-consuming slot (hot section) only: kg of alloy per unit (R-AK2).", "type": "number", "exclusiveMinimum": 0 },
+        "max_eng_gen": { "description": "Spec v0.14 §1.4: usable only with an engine of eng_gen up to this value (cross-slot condition); not in the engine slot.", "type": "integer", "minimum": 1 },
+        "alloy_free": { "description": "Alloy slot only: needs no alloy; excludes alloy_kg.", "type": "boolean" },
+        "upkeep_mult": { "description": "Multiplier of the design upkeep, default 1.", "type": "number", "exclusiveMinimum": 0 },
+        "substitute": { "description": "A stop-gap alternative below the rank ladder; not in the engine slot; the slot keeps a non-substitute one.", "type": "boolean" },
         "prc_set": { "$ref": "common.schema.json#/$defs/nodeIdList" },
         "requires_nodes": { "$ref": "common.schema.json#/$defs/requirement" }
       }

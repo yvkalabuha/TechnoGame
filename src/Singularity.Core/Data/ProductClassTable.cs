@@ -42,6 +42,16 @@ public sealed partial class ProductClassTable
 
     /// <summary><c>alloy_kg</c> of an alternative of the alloy slot (hot section), zero for other slots (R-AK2, A23).</summary>
     public required ImmutableArray<Fx6> AltAlloyKg { get; init; }
+
+    /// <summary>
+    /// Optional alternative fields of spec v0.14 §1.4 (defaults when absent): <c>max_eng_gen</c> (0 = no limit; compared with the
+    /// <c>eng_gen</c> of the engine chosen in the same composition), <c>alloy_free</c> (needs no alloy), <c>upkeep_mult</c> (1),
+    /// <c>substitute</c> (a stop-gap alternative below the rank ladder).
+    /// </summary>
+    public required ImmutableArray<int> AltMaxEngGen { get; init; }
+    public required ImmutableArray<bool> AltAlloyFree { get; init; }
+    public required ImmutableArray<Fx6> AltUpkeepMult { get; init; }
+    public required ImmutableArray<bool> AltSubstitute { get; init; }
     public required ImmutableArray<int> PrcStart { get; init; }
     public required ImmutableArray<int> Prc { get; init; }
     public required RequirementLists AltRequires { get; init; }
@@ -126,7 +136,8 @@ public sealed partial class ProductClassTable
 
     internal void WriteCanonical(CanonicalWriter w, NodeTable nodes)
     {
-        w.Str("product_classes");
+        // Schema 2 (D1): four optional alternative fields are written for every alternative, defaults explicit.
+        w.Str("product_classes/2");
         w.Int(Count);
         for (int c = 0; c < Count; c++)
         {
@@ -149,6 +160,10 @@ public sealed partial class ProductClassTable
                     w.Int(AltEngGen[a]);
                     w.Int(AltAfClass[a]);
                     w.Fixed(AltAlloyKg[a]);
+                    w.Int(AltMaxEngGen[a]);
+                    w.Bool(AltAlloyFree[a]);
+                    w.Fixed(AltUpkeepMult[a]);
+                    w.Bool(AltSubstitute[a]);
                     w.Int(PrcStart[a + 1] - PrcStart[a]);
                     foreach (int p in PrcSet(a))
                         w.Str(nodes.Id[p]);

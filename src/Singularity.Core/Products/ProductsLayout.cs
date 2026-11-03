@@ -60,6 +60,15 @@ public sealed class ProductsLayout
     public required ImmutableArray<int> AltAfClass { get; init; }
     public required ImmutableArray<Fx6> AltAlloyKg { get; init; }
 
+    /// <summary>
+    /// Optional fields of spec v0.14 §1.4 (defaults when absent): <c>max_eng_gen</c> (0 = no limit), <c>alloy_free</c>,
+    /// <c>upkeep_mult</c> (1), <c>substitute</c>.
+    /// </summary>
+    public required ImmutableArray<int> AltMaxEngGen { get; init; }
+    public required ImmutableArray<bool> AltAlloyFree { get; init; }
+    public required ImmutableArray<Fx6> AltUpkeepMult { get; init; }
+    public required ImmutableArray<bool> AltSubstitute { get; init; }
+
     /// <summary>The airframe slot (AF block of R-PS2m) and the alloy-consuming slot (hot section).</summary>
     public required int AirframeSlot { get; init; }
     public required int AlloySlot { get; init; }
@@ -213,6 +222,10 @@ public sealed class ProductsLayout
         var altEngGen = new List<int>();
         var altAfClass = new List<int>();
         var altAlloy = new List<Fx6>();
+        var altMaxEngGen = new List<int>();
+        var altAlloyFree = new List<bool>();
+        var altUpkeep = new List<Fx6>();
+        var altSubstitute = new List<bool>();
         int airframeSlot = -1, alloySlot = -1;
         var altPrcStart = new List<int> { 0 };
         var altPrc = new List<int>();
@@ -227,8 +240,12 @@ public sealed class ProductsLayout
                 baseSlot = s;
             if (classes.SlotIsAirframe[gs])
                 airframeSlot = s;
-            if (classes.AltAlloyKg[classes.AltStart[gs]] > Fx6.Zero)
-                alloySlot = s;
+            // The alloy slot is the one whose alternatives carry alloy_kg or alloy_free (the loader guarantees exactly one).
+            for (int a = classes.AltStart[gs]; a < classes.AltStart[gs + 1]; a++)
+            {
+                if (classes.AltAlloyKg[a] > Fx6.Zero || classes.AltAlloyFree[a])
+                    alloySlot = s;
+            }
             for (int a = classes.AltStart[gs]; a < classes.AltStart[gs + 1]; a++)
             {
                 altId.Add(classes.AltId[a]);
@@ -237,6 +254,10 @@ public sealed class ProductsLayout
                 altEngGen.Add(classes.AltEngGen[a]);
                 altAfClass.Add(classes.AltAfClass[a]);
                 altAlloy.Add(classes.AltAlloyKg[a]);
+                altMaxEngGen.Add(classes.AltMaxEngGen[a]);
+                altAlloyFree.Add(classes.AltAlloyFree[a]);
+                altUpkeep.Add(classes.AltUpkeepMult[a]);
+                altSubstitute.Add(classes.AltSubstitute[a]);
                 int tier = 0;
                 var numbers = new List<int>();
                 foreach (int row in classes.PrcSet(a))
@@ -296,6 +317,7 @@ public sealed class ProductsLayout
             ProcLabour = [.. procs.Select(p => p.Labour)], ProcBaseCost = [.. procs.Select(p => p.Base)],
             ProcTier = [.. procs.Select(p => p.Tier)], ProcCluster = [.. procs.Select(p => p.Cluster)],
             AltEngGen = [.. altEngGen], AltAfClass = [.. altAfClass], AltAlloyKg = [.. altAlloy],
+            AltMaxEngGen = [.. altMaxEngGen], AltAlloyFree = [.. altAlloyFree], AltUpkeepMult = [.. altUpkeep], AltSubstitute = [.. altSubstitute],
             AirframeSlot = airframeSlot, AlloySlot = alloySlot,
             ProcInAirframe = [.. procs.Select(p => afPrc.Contains(p.Number))],
             GenApp = [.. Enumerable.Range(g0, g1 - g0).Select(i => nodes.Number[classes.GenApp[i]])],

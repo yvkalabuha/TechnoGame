@@ -277,8 +277,10 @@ public class ProductAiTests
         // Supply 400 kg a month: n_service_min/T_field = 50/24 ≈ 2,08 units a month need 2,08·alloy_kg — only the light hot sections pass.
         var rig = new Rig(PolicyProfile.Mass, s => { s.KnownGen = 3; s.Supply = Fx6.FromInt(400); s.Design[0] = Live(DesignStage.InService, 1); s.Design[1] = Live(DesignStage.InService, 2); });
         int[] alts = rig.Commands(0).Single().Alts.ToArray();
-        // No hot section fits 400 kg (the lightest burns 290 kg → 1,38 units a month < 2,08): the preset takes the lightest one.
-        Fx6 lightest = Enumerable.Range(l.AltStart[l.AlloySlot], l.AltStart[l.AlloySlot + 1] - l.AltStart[l.AlloySlot]).Select(a => l.AltAlloyKg[a]).Min();
+        // No hot section fits 400 kg (the lightest burns 290 kg → 1,38 units a month < 2,08): the preset takes the lightest one. The G3 engine
+        // rules the steel substitute out (max_eng_gen 1), and a substitute is never the lightest-one fallback when a plain alternative exists.
+        Fx6 lightest = Enumerable.Range(l.AltStart[l.AlloySlot], l.AltStart[l.AlloySlot + 1] - l.AltStart[l.AlloySlot])
+            .Where(a => !l.AltSubstitute[a]).Select(a => l.AltAlloyKg[a]).Min();
         Assert.Equal(lightest, l.AltAlloyKg[alts[l.AlloySlot]]);
         var rich = new Rig(PolicyProfile.Mass, s => { s.KnownGen = 3; s.Supply = Fx6.FromInt(1_000_000); s.Design[0] = Live(DesignStage.InService, 1); s.Design[1] = Live(DesignStage.InService, 2); });
         Assert.True(l.AltAlloyKg[rich.Commands(0).Single().Alts[l.AlloySlot]] >= lightest);

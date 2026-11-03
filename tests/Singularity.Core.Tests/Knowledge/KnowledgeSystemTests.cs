@@ -199,7 +199,7 @@ public class KnowledgeSystemTests
         Assert.Equal(Fx6.FromRaw(4_800_000), g.CostN[g.RowOf(19)]); // ENG G2: 3 × 1.6
         KnowledgeStart s = KnowledgeStart.FromScenario(Scenario, g);
         Assert.True(s.IsKnown(Scenario.ActorIndex("USA"), g.RowOf(58)));
-        Assert.False(s.IsKnown(Scenario.ActorIndex("SUN"), g.RowOf(58)));
+        Assert.True(s.IsKnown(Scenario.ActorIndex("SUN"), g.RowOf(58)));   // D1, R-KN (#134)
     }
 
     private static string RunSlice(int threads, int chunkSize, int months)

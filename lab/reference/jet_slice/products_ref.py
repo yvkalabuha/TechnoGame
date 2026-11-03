@@ -122,7 +122,8 @@ LIGHTEN_ORDER = ["hot_section", "compressor", "afterburner", "airframe"]  # F-PC
 
 # product_inputs.md §4 (r3): base_cost_p raw, labour_p h; n_p = 1 (R-NP).
 BASE_COST = {38: 75, 53: 462, 55: 431, 56: 937, 42: 843, 44: 18, 54: 168, 39: 28, 40: 75, 41: 225,
-             45: 28, 46: 150, 49: 93, 51: 281, 43: 468, 52: 656, 48: 56, 50: 150, 57: 112}
+             45: 28, 46: 150, 49: 93, 51: 281, 43: 468, 52: 656, 48: 56, 50: 150, 57: 112,
+             47: 37}   # 47: D1 (spec v0.14 §1.4), labour 300 h, floor(300·0.125); used only by the hot_steel_g0 substitute
 # product_inputs.md §6 (r3), per generation g = 1..4.
 GEN = {
     1: dict(h_first=9320, h_floor=2330, materials="0.000217", proc_scale="0.942188", design_scale="1.00"),
@@ -266,6 +267,14 @@ def upkeep(floor, cx):
     return div(mul(mul(floor, pow_frac(fi(cx), P["alpha_u_q10"])), P["upkeep_share"]), MAINTAINABILITY)
 
 
+def upkeep_m(floor, cx, alt_ids):
+    """D1 (spec v0.14 §1.4): upkeep(d) = (canonical A33 form)·m(d), m = Π upkeep_mult in slot order; m = 1 is the old value bit by bit."""
+    m = S
+    for a in alt_ids:
+        m = mul(m, fx(UPKEEP_MULT.get(a, "1")))
+    return mul(upkeep(floor, cx), m)
+
+
 def design_work(cx, g, exp):
     return div(mul(mul(P["W0"], fi(cx)), fx(GEN[g]["design_scale"])), S + div(exp, P["E_B"]))
 
@@ -389,6 +398,11 @@ SLOTS24 = {s: {a[0]: a for a in opts} for s, opts in SLOTS}
 SLOTS24["airframe"]["af_mach2"] = ("af_mach2", 5, "1.8", [38, 53, 55, 56, 42], [(29,), (32,)])
 SLOT_ORDER = ["engine", "hot_section", "compressor", "airframe", "afterburner"]
 PU_SLOTS = ["engine", "hot_section", "compressor", "afterburner"]
+# D1 (spec v0.14 §1.4): the rank-0 substitute hot section. (id, rank, perf_mult, prc_set, requires groups); fields below.
+SLOTS24["hot_section"]["hot_steel_g0"] = ("hot_steel_g0", 0, "0.9", [47], [])
+ALLOY_FREE = {"hot_steel_g0"}                      # needs no alloy: no cap, no kg
+MAX_ENG_GEN = {"hot_steel_g0": 1}                  # usable only with an engine of eng_gen <= 1
+UPKEEP_MULT = {"hot_steel_g0": "2.5"}              # m(d) = product over the chosen alternatives, default 1
 ENG_GEN = {"eng_g1": 1, "eng_g2": 2, "eng_g3": 3, "eng_g4": 4}                       # product_class.md r5
 AF_CLASS = {"af_straight": 1, "af_swept": 2, "af_milled": 3, "af_titanium": 3, "af_mach2": 4}   # r4 §1.1
 PLATFORM_MIN_RANK = {1: 1, 2: 2, 3: 3, 4: 5}
@@ -494,8 +508,8 @@ def fv_term(n, readiness, perf_rel):
 
 
 def n_alloy(supply, alloy_kg, n_budget):
-    """n_v = min(n_budget, floor((supply/alloy_kg)*H_build)), step 10 down."""
-    n = min(n_budget, mul(div(supply, fi(alloy_kg)), fi(P24["H_build"])) // S)
+    """n_v = min(n_budget, floor((supply/alloy_kg)*H_build)), step 10 down; alloy_free (alloy_kg None): n_v = n_budget (D1, spec v0.14 §1.4 item 4)."""
+    n = n_budget if alloy_kg is None else min(n_budget, mul(div(supply, fi(alloy_kg)), fi(P24["H_build"])) // S)
     return n - n % 10
 
 
@@ -570,6 +584,22 @@ def build_v24(node_gen, tier):
         (300, fx("0.95"), fx("1")), (200, fx("0.9"), fx("1.6")), (100, fx("0.6"), fx("2.6"))]],
         "n_alloy": [{"supply": sp, "alloy_kg": kg, "n_budget": nb, "n_v": n_alloy(sp, kg, nb)} for sp, kg, nb in [
             (fi(30000), 670, 400), (fi(30000), 2980, 400), (fi(5000), 290, 300)]]}
+    # D1: the steel substitute with G1 (spec v0.14 §1.4 "Числа на бумаге"): prc_set {38, 44, 47, 48, 53, 54}, complexity 20, perf 0.90,
+    # floor 1324 raw, upkeep 23 raw base x 2.5 = 57 raw; alloy_free -> n_v = n_budget whatever the supply is (zero supply included).
+    steel_alts = ["eng_g1", "hot_steel_g0", "comp_centrifugal", "af_straight", "ab_none"]
+    c = comp(steel_alts)
+    prc = sorted({p for a in c.values() for p in a[3]})
+    cx = complexity(prc, tier)
+    fl = floor24(c)
+    out["steel_g1"] = {"alts": steel_alts, "prc_set": prc, "complexity": cx, "perf": perf([c[s] for s in SLOT_ORDER]), **rps2m(c),
+                       "unit_cost_floor": fl, "upkeep_base": upkeep(fl, cx), "upkeep": upkeep_m(fl, cx, steel_alts),
+                       "alloy_free": True, "max_eng_gen": MAX_ENG_GEN["hot_steel_g0"], "gen_cap_engine": ENG_GEN["eng_g1"],
+                       "n_alloy_free": [{"supply": sp, "n_budget": nb, "n_v": n_alloy(sp, None, nb)} for sp, nb in [
+                           (0, 400), (fi(5000), 300), (fi(30000), 55)]]}
+    assert (cx, fl, out["steel_g1"]["perf"]) == (20, 1324, 900_000)
+    # m = 1 for every reference of product_class.md §2: upkeep is bit by bit the old value (checked on the v24 references)
+    for name, ref in refs.items():
+        assert upkeep_m(ref["unit_cost_floor"], ref["complexity"], ref["alts"]) == ref["upkeep"], name
     return out
 
 

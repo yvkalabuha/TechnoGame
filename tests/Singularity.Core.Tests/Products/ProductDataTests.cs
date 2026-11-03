@@ -45,10 +45,14 @@ public class ProductDataTests : IDisposable
     }
 
     [Fact]
-    public void Class_HasNineteenCostRows_NoneForUnusedGearBearing()
+    public void Class_HasTwentyCostRows_GearBearingForTheSteelSubstitute()
     {
-        Assert.Equal(19, Probe.ProcNumber.Length);
-        Assert.Equal(-1, Probe.ProcIndex(47));
+        // D1: PRC 47 joins the class with the hot_steel_g0 substitute (labour 300 h, base_cost 37 raw).
+        Assert.Equal(20, Probe.ProcNumber.Length);
+        int k47 = Probe.ProcIndex(47);
+        Assert.True(k47 >= 0);
+        Assert.Equal(Fx6.FromInt(300), Probe.ProcLabour[k47]);
+        Assert.Equal(37, Probe.ProcBaseCost[k47].Raw);
         Assert.Equal(175, Probe.HPm.Raw / Fx6.Scale);
         Assert.Equal(125, Probe.WageKh.Raw);
         Assert.Equal(Fx6.One, Probe.Maintainability);
@@ -142,7 +146,7 @@ public class ProductDataTests : IDisposable
 
     [Theory]
     [InlineData("      - {prc: s5.prc.light_alloy_rolling, n_p: 1, labour_hours: 600, base_cost: 0.000075}\n", "", "no cost row for 's5.prc.light_alloy_rolling'")]
-    [InlineData("{prc: s5.prc.light_alloy_rolling,", "{prc: s6.prc.precision_gear_bearing,", "is in no prc_set of the class")]
+    [InlineData("prc_set: [s6.prc.precision_gear_bearing]", "prc_set: [s5.prc.alloying_element_refining]", "is in no prc_set of the class")]
     [InlineData("{gen: 2, app: s8.app.jet_fighter_g2,", "{gen: 3, app: s8.app.jet_fighter_g2,", "generations must be listed as 1, 2, ...")]
     [InlineData("{gen: 2, app: s8.app.jet_fighter_g2,", "{gen: 2, app: s8.app.jet_fighter_g3,", "is not an APP node of generation 2")]
     [InlineData("h_first: 9320, h_floor: 2330,", "h_first: 2000, h_floor: 2330,", "h_floor must not exceed h_first")]
@@ -154,7 +158,7 @@ public class ProductDataTests : IDisposable
     [InlineData("{id: af_swept, rank: 2, af_class: 2,", "{id: af_swept, rank: 2, af_class: 9,", "af_class of an airframe alternative must be in 1..4")]
     [InlineData("{id: comp_axial, rank: 2,", "{id: comp_axial, rank: 2, eng_gen: 2,", "eng_gen is only allowed in the engine (base) slot")]
     [InlineData("{id: ab_on, rank: 2,", "{id: ab_on, rank: 2, af_class: 1,", "af_class is only allowed in the airframe slot")]
-    [InlineData("{id: hot_sa2_forged, rank: 2, alloy_kg: 670,", "{id: hot_sa2_forged, rank: 2,", "alloy_kg must be on all or none alternatives of a slot")]
+    [InlineData("{id: hot_sa2_forged, rank: 2, alloy_kg: 670,", "{id: hot_sa2_forged, rank: 2,", "alloy_kg or alloy_free must be on every alternative of the alloy slot or on none")]
     [InlineData("      - id: airframe\n        block: af\n", "      - id: airframe\n        block: pu\n", "needs exactly one airframe (block af) slot")]
     [InlineData("      - id: engine\n        block: pu\n", "      - id: engine\n        block: af\n", "the base (engine) slot belongs to the PU block")]
     [InlineData("      - id: engine\n        block: pu\n", "      - id: engine\n        block: xx\n", "block must be 'pu' or 'af'")]

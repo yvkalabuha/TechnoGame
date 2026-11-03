@@ -42,14 +42,15 @@ define:
         gdppc_1945: 16478
         budget_index: 1.000
         growth_pa: 0.0299
+        # D1 (#133, owner decision): CHEM purity 3.80 -> 4.00 as a scenario estimate (not by R-H-STD-t0: node 45 has no series at t0).
         culture_h:
           MET: {precision: 4.00, purity: 3.80, quality_control: 3.70}
-          CHEM: {precision: 4.00, purity: 3.80, quality_control: 3.70}
+          CHEM: {precision: 4.00, purity: 4.00, quality_control: 3.70}
           MECH: {precision: 4.00, purity: 3.80, quality_control: 3.70}
           AERO: {precision: 4.00, purity: 3.80, quality_control: 3.70}
         tooling_m:
           MET: {precision: 4.20, purity: 4.00, quality_control: 3.90}
-          CHEM: {precision: 4.20, purity: 4.00, quality_control: 3.90}
+          CHEM: {precision: 4.20, purity: 4.20, quality_control: 3.90}
           MECH: {precision: 4.20, purity: 4.00, quality_control: 3.90}
           AERO: {precision: 4.20, purity: 4.00, quality_control: 3.90}
         hcap: 5.50
@@ -69,15 +70,16 @@ define:
         gdppc_1945: 11247
         budget_index: 0.239
         growth_pa: 0.0220
+        # D1: MECH precision by R-H-STD-t0 (#130: node 49 in series at t0, Meteor 1944, r_precision 4.5 - 0.5); CHEM purity by owner decision #133.
         culture_h:
           MET: {precision: 3.82, purity: 3.62, quality_control: 3.52}
-          CHEM: {precision: 3.82, purity: 3.62, quality_control: 3.52}
-          MECH: {precision: 3.82, purity: 3.62, quality_control: 3.52}
+          CHEM: {precision: 3.82, purity: 4.00, quality_control: 3.52}
+          MECH: {precision: 4.00, purity: 3.62, quality_control: 3.52}
           AERO: {precision: 3.82, purity: 3.62, quality_control: 3.52}
         tooling_m:
           MET: {precision: 4.02, purity: 3.82, quality_control: 3.72}
-          CHEM: {precision: 4.02, purity: 3.82, quality_control: 3.72}
-          MECH: {precision: 4.02, purity: 3.82, quality_control: 3.72}
+          CHEM: {precision: 4.02, purity: 4.20, quality_control: 3.72}
+          MECH: {precision: 4.20, purity: 3.82, quality_control: 3.72}
           AERO: {precision: 4.02, purity: 3.82, quality_control: 3.72}
         hcap: 5.32
         w: 1.0
@@ -101,18 +103,21 @@ define:
           MET: {precision: 3.20, purity: 3.00, quality_control: 2.90}
           CHEM: {precision: 3.20, purity: 3.00, quality_control: 2.90}
           MECH: {precision: 3.20, purity: 3.00, quality_control: 2.90}
-          AERO: {precision: 3.20, purity: 3.00, quality_control: 2.90}
+          AERO: {precision: 3.20, purity: 3.00, quality_control: 3.50}
         # R-M per cell (spec §3.5 A20): M = H + 0.2; +0.2 more in MECH and AERO (dismantled aircraft plants, F-SC2).
         tooling_m:
           MET: {precision: 3.40, purity: 3.20, quality_control: 3.10}
           CHEM: {precision: 3.40, purity: 3.20, quality_control: 3.10}
           MECH: {precision: 3.60, purity: 3.40, quality_control: 3.30}
-          AERO: {precision: 3.60, purity: 3.40, quality_control: 3.30}
+          AERO: {precision: 3.60, purity: 3.40, quality_control: 3.90}
         hcap: 4.70
         w: 1.0
-        # s8.prn.swept_wing is estimated without a source (F-SC1); jet_fighter_g1 is not known (no alloy).
-        known: [s7.fnd.brayton_cycle, s8.fnd.boundary_layer, s8.fnd.compressible_flow, s5.fnd.precipitation_hardening, s8.prn.gas_turbine, s8.prn.swept_wing, s8.eng.turbojet_g1, s8.eng.straight_wing_jet_airframe, s5.cmp.aluminium_alloy_sheet, s5.prc.light_alloy_rolling, s5.prc.alloying_element_refining, s6.prc.precision_gear_bearing, s8.prc.stressed_skin_assembly, s8.prc.jet_engine_assembly_test]
-        k_d: {aero: 0.25, prop: 0.20, metal: 0.15, chem: 0.05, mech: 0.05}
+        # D1: K_d aero 0.25 -> 0.30 by R-KD (+58, discipline aero, #134).
+        # D1: AERO quality_control 2.90 -> 3.50 (scenario estimate, #130: the least that admits PRC 54, qc 4.0; M = H + 0.4 as in MECH/AERO).
+        # s8.prn.swept_wing is estimated without a source (F-SC1). jet_fighter_g1 (58) is known by R-KN (#134: Me 262A-1 No. 110426 at NII VVS since 30.03.1945);
+        # alloy and blade forging are not.
+        known: [s7.fnd.brayton_cycle, s8.fnd.boundary_layer, s8.fnd.compressible_flow, s5.fnd.precipitation_hardening, s8.prn.gas_turbine, s8.prn.swept_wing, s8.eng.turbojet_g1, s8.eng.straight_wing_jet_airframe, s5.cmp.aluminium_alloy_sheet, s5.prc.light_alloy_rolling, s5.prc.alloying_element_refining, s6.prc.precision_gear_bearing, s8.prc.stressed_skin_assembly, s8.prc.jet_engine_assembly_test, s8.app.jet_fighter_g1]
+        k_d: {aero: 0.30, prop: 0.20, metal: 0.15, chem: 0.05, mech: 0.05}
         k_ind: 0
         mastered: [s5.prc.light_alloy_rolling, s5.prc.alloying_element_refining, s6.prc.precision_gear_bearing, s8.prc.stressed_skin_assembly]
         fleet: []
@@ -137,8 +142,9 @@ define:
           AERO: {precision: 3.54, purity: 3.34, quality_control: 3.24}
         hcap: 4.84
         w: 1.0
-        known: [s7.fnd.brayton_cycle, s8.fnd.boundary_layer, s8.fnd.compressible_flow, s5.fnd.precipitation_hardening, s8.prn.gas_turbine, s8.eng.turbojet_g1, s5.cmp.aluminium_alloy_sheet, s5.prc.light_alloy_rolling, s5.prc.alloying_element_refining, s6.prc.precision_gear_bearing, s8.prc.stressed_skin_assembly]
-        k_d: {aero: 0.15, prop: 0.15, metal: 0.15, chem: 0.05, mech: 0.05}
+        known: [s7.fnd.brayton_cycle, s8.fnd.boundary_layer, s8.fnd.compressible_flow, s5.fnd.precipitation_hardening, s8.prn.gas_turbine, s8.eng.turbojet_g1, s5.cmp.aluminium_alloy_sheet, s5.prc.light_alloy_rolling, s5.prc.alloying_element_refining, s6.prc.precision_gear_bearing, s8.prc.stressed_skin_assembly, s8.prc.jet_engine_assembly_test]
+        # D1 (#135, R-KN applied symmetrically): PRC 54 known (captured BMW 003, Estrich group); K_d prop 0.15 -> 0.20 by R-KD (0.05 per node).
+        k_d: {aero: 0.15, prop: 0.20, metal: 0.15, chem: 0.05, mech: 0.05}
         k_ind: 0
         mastered: [s5.prc.light_alloy_rolling, s5.prc.alloying_element_refining, s6.prc.precision_gear_bearing, s8.prc.stressed_skin_assembly]
         fleet: []

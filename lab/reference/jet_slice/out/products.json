@@ -1029,6 +1029,55 @@
    "G4": 12051
   },
   "spec": "slice-jet-aviation.md v0.11 (contract v2.4 r1)",
+  "steel_g1": {
+   "AF": 673,
+   "PU": 143,
+   "af_class": 1,
+   "alloy_free": true,
+   "alts": [
+    "eng_g1",
+    "hot_steel_g0",
+    "comp_centrifugal",
+    "af_straight",
+    "ab_none"
+   ],
+   "complexity": 20,
+   "gen_cap_engine": 1,
+   "max_eng_gen": 1,
+   "n_alloy_free": [
+    {
+     "n_budget": 400,
+     "n_v": 400,
+     "supply": 0
+    },
+    {
+     "n_budget": 300,
+     "n_v": 300,
+     "supply": 5000000000
+    },
+    {
+     "n_budget": 55,
+     "n_v": 50,
+     "supply": 30000000000
+    }
+   ],
+   "perf": 900000,
+   "prc_set": [
+    38,
+    44,
+    47,
+    48,
+    53,
+    54
+   ],
+   "proc_part": 816,
+   "r_PU": 1,
+   "sum_AF": 537,
+   "sum_PU": 279,
+   "unit_cost_floor": 1324,
+   "upkeep": 57,
+   "upkeep_base": 23
+  },
   "validator_psi": {
    "c_max": 49,
    "psi_c_max_over_c_ref": 662162

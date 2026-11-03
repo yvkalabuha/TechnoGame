@@ -5,12 +5,12 @@ namespace Singularity.Core.Tests.Data;
 /// <summary>L1 identity of loaded data: stable load order and hashes (ADR-0002, ADR-0007).</summary>
 public class DataHashTests : IDisposable
 {
-    // scenario_hash of jet_slice_1945 (spec §1.1). Changing the scenario must be deliberate:
+    // scenario_hash of jet_slice_1945 (spec §1.1). Re-recorded for D1 (start-data package, spec v0.14). Changing the scenario must be deliberate:
     // update this value together with the data and record it in the experiment manifest.
-    private const string ScenarioHash1945 = "67fa9540af6d662e667727454bb5bbac81072d19be747078a33f259f78458e72";
+    private const string ScenarioHash1945 = "882b45a41e3e9bb996b2c7aecb9f360e284645d94b19c150a7ed44c6bab54d1c";
 
     // DataHash of mod core alone: nodes, product classes and scenarios. Same rule as above.
-    private const string CoreDataHash = "b8a31fbe490a19842a4f77ba2b22adddecffdc21dfab5590eee8285a6ee66155";
+    private const string CoreDataHash = "6a54ec7fed8eb020c2e3a4859b1763d2ef3fdc377d457cb48f064f8be05bde39";
 
     private readonly TestMods _mods = new();
 

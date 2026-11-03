@@ -22,8 +22,10 @@ public class LinkedRunTests
     /// player's line switch by the A41 rule (yield ≥ y_prod instead of Rate > 0).
     /// Re-recorded again in T6c (72768ab7… before), reason: schema v4 — the product-AI columns pol.dsn/start/close/line/rep and run.ai (the run is
     /// driven by the scripted player with ProductAi = false, so the trajectory is the same, only the layout of the state differs).
+    /// Re-recorded in D1 (3d5d21be… before), reason: D1 — start-data package of spec v0.14 (SUN knows 58 and has AERO qc 3.50, FRA knows 54, USA/GBR culture
+    /// cells, node 58 without 30, the hot_steel_g0 substitute in the hot-section slot and its preset rules).
     /// </summary>
-    private const string Golden60 = "3d5d21befeeb01d07f80d375fe488796cd0a9e80b667476918c8060046c4c61a";
+    private const string Golden60 = "7f7a499c12a50ce9d8050660dcdb3827050ff31012aab9e79b930c733d0f9c10";
 
     private sealed class Run
     {

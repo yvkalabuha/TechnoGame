@@ -406,8 +406,15 @@ public class WhyNotTests
     public void CurrentRequirement_IsTheNewestKnownGenerationNotFielded()
     {
         SliceSession s = New();
+        // D1 (#134): SUN knows the G1 APP at t0 and has no fleet, so its current requirement is G1; the fielded USA/GBR and the ignorant FRA/SWE have none.
+        int sun = s.World.Scenario.ActorIndex("SUN");
         for (int a = 0; a < s.World.Scenario.ActorCount; a++)
-            Assert.Null(s.CurrentRequirement(a));
+        {
+            if (a == sun)
+                Assert.Equal(WhyNotTarget.Requirement(1), s.CurrentRequirement(a));
+            else
+                Assert.Null(s.CurrentRequirement(a));
+        }
         int app = s.World.ProductsLayout.GenApp[1];
         SetInt(s, $"know.known.{app}", Usa, 1);
         Assert.Equal(WhyNotTarget.Requirement(2), s.CurrentRequirement(Usa));

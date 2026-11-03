@@ -428,7 +428,9 @@ public sealed class ProductsSystem : ITickSystem
         int[] prc = DesignRules.PrcSet(_l, alts);
         CostCard card = CardFor(actor, alts, prc, month);
         int nBudget = ProductsMath.FleetCount(card, e, UpkeepOf(alts), _p.FvHorizon, budget, _p.FvStep, _p.FvMaxUnits);
-        int n = ProductsMath.AlloyLimitedCount(nBudget, _inputs.AlloySupply(actor, month), _l.AltAlloyKg[alts[_l.AlloySlot]], _p.HBuild, _p.FvStep);
+        // alloy_free: no alloy cap, n_v = n_budget (spec v0.14 §1.4 item 4).
+        int n = DesignRules.AlloyFree(_l, alts) ? ProductsMath.AlloyFreeCount(nBudget, _p.FvStep)
+            : ProductsMath.AlloyLimitedCount(nBudget, _inputs.AlloySupply(actor, month), _l.AltAlloyKg[alts[_l.AlloySlot]], _p.HBuild, _p.FvStep);
         return (n, ProductsMath.FleetValue(n, readiness, perfRel, _p.GammaQ10));
     }
 
@@ -672,10 +674,14 @@ public sealed class ProductsSystem : ITickSystem
                 int[] prc = DesignRules.PrcSet(_l, alts);
                 CostCard card = CardFor(a, alts, prc, t);
                 Fx6 alloyKg = _l.AltAlloyKg[alts[_l.AlloySlot]];
+                bool free = DesignRules.AlloyFree(_l, alts);
                 if (_inputs.Profile(a, DesignRules.Items(_l, prc), t).Admitted)
                 {
-                    r = Min(_p.LpRho[_gp[d].Next[a] - 1] * budget, alloyLeft / alloyKg);
-                    alloyLeft -= r * alloyKg;
+                    // alloy_free: no alloy term, the line does not touch alloy_left (spec v0.14 §1.4 item 1).
+                    Fx6 rho = _p.LpRho[_gp[d].Next[a] - 1] * budget;
+                    r = free ? rho : Min(rho, alloyLeft / alloyKg);
+                    if (!free)
+                        alloyLeft -= r * alloyKg;
                 }
                 // §6.1: price = R-PS2m process part + materials_floor + h_floor hours (print only; no budget is spent).
                 Set(_cost, d, a, card.MaterialsFloor + ProductsMath.AssemblyCost(card.HFloor, card.WageKh) + card.ProcessPart);
@@ -816,6 +822,9 @@ public sealed class ProductsSystem : ITickSystem
             if (!DesignRules.Available(_l, alt, knows))
                 return CommandRejection.SlotUnavailable;
         }
+        // max_eng_gen (spec v0.14 §1.4): checked against the engine of the same composition; the rejection code is SLOT_UNAVAILABLE.
+        if (!DesignRules.EngineLimitsHold(_l, cmd.Alts.AsSpan()))
+            return CommandRejection.SlotUnavailable;
         if (!DesignRules.MeetsPlatform(_l, cmd.Alts[_l.AirframeSlot], cmd.Target))
             return CommandRejection.PlatformThreshold;
         return Create(a, cmd.Alts.AsSpan(), cmd.Alts.AsSpan(), DesignRules.PlatformGen(_l, cmd.Alts.AsSpan(), knows), -1, 1, 1);
@@ -845,6 +854,9 @@ public sealed class ProductsSystem : ITickSystem
         }
         if (n == 0)
             return CommandRejection.BadDerive;
+        // The resulting composition (parent + changes) must respect max_eng_gen: an engine step on a steel parent is refused.
+        if (!DesignRules.EngineLimitsHold(_l, alts))
+            return CommandRejection.SlotUnavailable;
         return Create(a, alts, changed[..n], _gp[parent].Next[a], parent, n, _s);
     }
 
@@ -1140,12 +1152,15 @@ public sealed class ProductsSystem : ITickSystem
                 if (_inputs.Profile(a, DesignRules.Items(_l, prc), t).Admitted)
                 {
                     Fx6 alloyKg = _l.AltAlloyKg[alts[_l.AlloySlot]];
+                    bool free = DesignRules.AlloyFree(_l, alts);
                     // r3 (F15): the common money first, then the training money of this line only; tb = 0 gives the former formula.
                     Fx6 tb = _inputs.TrainingBudget(a, d, t);
                     if (tb < Fx6.Zero)
                         throw new ProductsInvariantException(t, a, $"negative training budget {tb} for design {d}");
-                    r = Min(Min(want, alloyLeft / alloyKg), (left + tb) / cost);
-                    alloyLeft -= r * alloyKg;
+                    // alloy_free: r = min(rate, (left + tb)/unit_cost) with no alloy term; alloy_left stays (spec v0.14 §1.4 item 1).
+                    r = free ? Min(want, (left + tb) / cost) : Min(Min(want, alloyLeft / alloyKg), (left + tb) / cost);
+                    if (!free)
+                        alloyLeft -= r * alloyKg;
                     Fx6 pay = r * cost;
                     Fx6 fromLeft = pay < left ? pay : left;
                     left -= fromLeft;
@@ -1236,7 +1251,8 @@ public sealed class ProductsSystem : ITickSystem
     }
 
     private Fx6 UpkeepOf(ReadOnlySpan<int> alts) =>
-        ProductsMath.Upkeep(_p.UpkeepShare, FloorOf(alts), DesignRules.Complexity(_l, DesignRules.PrcSet(_l, alts)), _p.UpkeepQ10, _l.Maintainability);
+        ProductsMath.Upkeep(_p.UpkeepShare, FloorOf(alts), DesignRules.Complexity(_l, DesignRules.PrcSet(_l, alts)), _p.UpkeepQ10, _l.Maintainability,
+            DesignRules.UpkeepMult(_l, alts));
 
     private Fx6 UpkeepNext(int a, int d) => UpkeepOf(AltsNext(a, d));
 

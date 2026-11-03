@@ -22,6 +22,10 @@ define:
         block: pu
         base: false
         alternatives:
+          # D1 (#131, spec v0.14 §1.4): the rank-0 "substitute" (uncooled steel blades, no alloy, short engine life). perf_mult 0.90 and
+          # upkeep_mult 2.5 (= 0.5 + 0.5*4: engine share of upkeep x life ratio 25 h vs 100 h) are estimates without a source; PRC 47 is
+          # the precision gear/bearing process every actor knows. max_eng_gen 1: G2 and above need the nickel alloy (node 30).
+          - {id: hot_steel_g0, rank: 0, substitute: true, alloy_free: true, max_eng_gen: 1, upkeep_mult: 2.5, perf_mult: 0.90, prc_set: [s6.prc.precision_gear_bearing], requires_nodes: []}
           - {id: hot_nicr_forged, rank: 1, alloy_kg: 290, perf_mult: 1.0, prc_set: [s5.prc.nicr_alloy_melt, s5.prc.high_purity_nickel_refining, s6.prc.precision_blade_forging], requires_nodes: [s5.cmp.heat_resistant_alloy, s8.cmp.turbine_blade_forged]}
           - {id: hot_sa2_forged, rank: 2, alloy_kg: 670, perf_mult: 1.1, prc_set: [s5.prc.superalloy_melt_g2, s5.prc.high_purity_nickel_refining, s6.prc.precision_blade_forging], requires_nodes: [s5.cmp.heat_resistant_alloy, s8.cmp.turbine_blade_forged]}
           - {id: hot_vim_cast, rank: 3, alloy_kg: 2120, perf_mult: 1.25, prc_set: [s5.prc.vacuum_induction_melt, s5.prc.ceramic_shell_moulding, s6.prc.investment_cast_blades], requires_nodes: [s8.cmp.turbine_blade_cast]}
@@ -80,6 +84,7 @@ define:
       - {prc: s6.prc.centrifugal_impeller_machining, n_p: 1, labour_hours: 450, base_cost: 0.000056}
       - {prc: s6.prc.axial_compressor_machining, n_p: 1, labour_hours: 1200, base_cost: 0.00015}
       - {prc: s8.prc.afterburner_fabrication, n_p: 1, labour_hours: 900, base_cost: 0.000112}
+      - {prc: s6.prc.precision_gear_bearing, n_p: 1, labour_hours: 300, base_cost: 0.000037}
     # c_ref: complexity of the reference superior G2 project (contract §4.4b: D_ref = d0·c_ref); data, not calibrated.
     c_ref: 37
     # R-PS2m (product_inputs.md r4 §14.3): process part = ((ΣPU·U_PU)·proc_scale_pu[r_PU]) + ((ΣAF·U_AF)·proc_scale_af[af_class]);

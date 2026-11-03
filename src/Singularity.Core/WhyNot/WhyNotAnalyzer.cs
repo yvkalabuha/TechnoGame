@@ -171,6 +171,7 @@ public sealed partial class WhyNotAnalyzer
             AddNearestMissing(links, actor, [_kg.RowOf(app)], WhyNotCause.MissingNode, month);
             return;
         }
+        EngineGenLimitLinks(links, actor);
         int best = -1;
         for (int d = 0; d < _pl.Designs; d++)
         {

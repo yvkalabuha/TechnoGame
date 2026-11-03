@@ -23,6 +23,10 @@ public sealed partial class ProductClassTable
         var altEngGen = new List<int>();
         var altAfClass = new List<int>();
         var altAlloy = new List<Fx6>();
+        var altMaxEngGen = new List<int>();
+        var altAlloyFree = new List<bool>();
+        var altUpkeep = new List<Fx6>();
+        var altSubstitute = new List<bool>();
         var prcStart = new List<int> { 0 };
         var prc = new List<int>();
         var altRequires = new List<List<int[]>>();
@@ -107,6 +111,10 @@ public sealed partial class ProductClassTable
                     altEngGen.Add(alts[i].EngGen);
                     altAfClass.Add(alts[i].AfClass);
                     altAlloy.Add(alts[i].AlloyKg);
+                    altMaxEngGen.Add(alts[i].MaxEngGen);
+                    altAlloyFree.Add(alts[i].AlloyFree);
+                    altUpkeep.Add(alts[i].UpkeepMult);
+                    altSubstitute.Add(alts[i].Substitute);
                     prc.AddRange(alts[i].Prc);
                     prcStart.Add(prc.Count);
                     altRequires.Add(alts[i].Req);
@@ -120,7 +128,8 @@ public sealed partial class ProductClassTable
                 throw DataLoadException.At(map, $"product class '{id}' needs exactly one base slot, found {baseSlots}");
             if (afSlots != 1)
                 throw DataLoadException.At(map, $"product class '{id}' needs exactly one airframe (block af) slot, found {afSlots}");
-            CheckAlloySlot(map, id, firstSlot, slotId.Count, altStart, altAlloy);
+            CheckAlloySlot(map, id, firstSlot, slotId.Count, altStart, altAlloy, altAlloyFree);
+            CheckSubstitutes(map, id, firstSlot, slotId.Count, altStart, slotIsBase, altRank, altSubstitute);
             CheckBlocksDisjoint(map, id, firstSlot, slotId.Count, altStart, slotIsAf, prcStart, prc);
 
             // F-PC2: lighten_order lists every non-base slot exactly once.
@@ -160,6 +169,7 @@ public sealed partial class ProductClassTable
             genStart.Add(genApp.Count);
             CheckClassRefs(map, id, firstSlot, slotId.Count, altStart, slotIsAf, slotIsBase, altEngGen, altAfClass, altRank,
                 afCount, puScale.Count - puStart[^2], genApp.Count - firstGen);
+            CheckMaxEngGen(map, id, firstSlot, slotId.Count, altStart, slotIsBase, altMaxEngGen, genApp.Count - firstGen);
             m.End();
         }
 
@@ -170,6 +180,7 @@ public sealed partial class ProductClassTable
             SlotId = [.. slotId], SlotClass = [.. slotClass], SlotIsBase = [.. slotIsBase], SlotIsAirframe = [.. slotIsAf], AltStart = [.. altStart],
             AltId = [.. altId], AltSlot = [.. altSlot], AltRank = [.. altRank], AltPerfMult = [.. altPerf],
             AltEngGen = [.. altEngGen], AltAfClass = [.. altAfClass], AltAlloyKg = [.. altAlloy],
+            AltMaxEngGen = [.. altMaxEngGen], AltAlloyFree = [.. altAlloyFree], AltUpkeepMult = [.. altUpkeep], AltSubstitute = [.. altSubstitute],
             PrcStart = [.. prcStart], Prc = [.. prc], AltRequires = RequirementLists.Build(altRequires),
             HPm = [.. hpm], WageKh = [.. wage], Maintainability = [.. maintainability],
             RRef = [.. rRef], ProcStart = [.. procStart], ProcNode = [.. procNode], ProcN = [.. procN],
@@ -290,21 +301,73 @@ public sealed partial class ProductClassTable
         }
     }
 
-    // Exactly one slot carries alloy_kg on every alternative (R-AK2, A23); the other slots carry none.
-    private static void CheckAlloySlot(YMap at, string classId, int firstSlot, int endSlot, List<int> altStart, List<Fx6> alloy)
+    // Exactly one alloy slot (spec v0.14 §1.4, rule 8): every alternative has alloy_kg > 0 or alloy_free, at least one has alloy_kg > 0;
+    // the other slots have neither field. The slot is found by the fields, not by the first alternative (a substitute of rank 0 comes first).
+    private static void CheckAlloySlot(YMap at, string classId, int firstSlot, int endSlot, List<int> altStart, List<Fx6> alloy,
+        List<bool> alloyFree)
     {
         int slots = 0;
         for (int s = firstSlot; s < endSlot; s++)
         {
-            int with = 0, n = altStart[s + 1] - altStart[s];
+            int kg = 0, free = 0, n = altStart[s + 1] - altStart[s];
             for (int a = altStart[s]; a < altStart[s + 1]; a++)
-                with += alloy[a] > Fx6.Zero ? 1 : 0;
-            if (with != 0 && with != n)
-                throw DataLoadException.At(at, $"class '{classId}': alloy_kg must be on all or none alternatives of a slot");
-            slots += with != 0 ? 1 : 0;
+            {
+                kg += alloy[a] > Fx6.Zero ? 1 : 0;
+                free += alloyFree[a] ? 1 : 0;
+            }
+            if (kg + free == 0)
+                continue;
+            if (kg + free != n)
+                throw DataLoadException.At(at, $"class '{classId}': alloy_kg or alloy_free must be on every alternative of the alloy slot or on none");
+            if (kg == 0)
+                throw DataLoadException.At(at, $"class '{classId}': an alloy slot needs at least one alternative with alloy_kg (alloy_free alone is not an alloy slot)");
+            slots++;
         }
         if (slots != 1)
-            throw DataLoadException.At(at, $"class '{classId}' needs exactly one alloy slot (alloy_kg on every alternative), found {slots}");
+            throw DataLoadException.At(at, $"class '{classId}' needs exactly one alloy slot, found {slots}");
+    }
+
+    // substitute (spec v0.14 §1.4): not in the base slot; the slot keeps a non-substitute alternative; every substitute ranks strictly below all others.
+    private static void CheckSubstitutes(YMap at, string classId, int firstSlot, int endSlot, List<int> altStart, List<bool> slotIsBase,
+        List<int> rank, List<bool> substitute)
+    {
+        for (int s = firstSlot; s < endSlot; s++)
+        {
+            int minOther = int.MaxValue, maxSub = int.MinValue;
+            for (int a = altStart[s]; a < altStart[s + 1]; a++)
+            {
+                if (substitute[a])
+                    maxSub = Math.Max(maxSub, rank[a]);
+                else
+                    minOther = Math.Min(minOther, rank[a]);
+            }
+            if (maxSub == int.MinValue)
+                continue;
+            if (slotIsBase[s])
+                throw DataLoadException.At(at, $"class '{classId}': substitute is not allowed in the engine (base) slot");
+            if (minOther == int.MaxValue)
+                throw DataLoadException.At(at, $"class '{classId}': a slot with a substitute needs a non-substitute alternative");
+            if (maxSub >= minOther)
+                throw DataLoadException.At(at, $"class '{classId}': a substitute must rank strictly below every non-substitute alternative of its slot");
+        }
+    }
+
+    // max_eng_gen (spec v0.14 §1.4): 1..G_max, not in the engine (base) slot.
+    private static void CheckMaxEngGen(YMap at, string classId, int firstSlot, int endSlot, List<int> altStart, List<bool> slotIsBase,
+        List<int> maxEngGen, int generations)
+    {
+        for (int s = firstSlot; s < endSlot; s++)
+        {
+            for (int a = altStart[s]; a < altStart[s + 1]; a++)
+            {
+                if (maxEngGen[a] == 0)
+                    continue;
+                if (slotIsBase[s])
+                    throw DataLoadException.At(at, $"class '{classId}': max_eng_gen is not allowed in the engine (base) slot");
+                if (maxEngGen[a] > generations)
+                    throw DataLoadException.At(at, $"class '{classId}': max_eng_gen must be in 1..{generations} (G_max)");
+            }
+        }
     }
 
     // R-PS2m (contract §4.4a): the PRCs of the PU block and of the AF block do not overlap.
@@ -353,7 +416,8 @@ public sealed partial class ProductClassTable
             throw DataLoadException.At(at, $"class '{classId}': pu_ranks must cover ranks 1..{maxRank} of the PU slots");
     }
 
-    private readonly record struct Alt(int Rank, string Id, Fx6 Perf, int EngGen, int AfClass, Fx6 AlloyKg, int[] Prc, List<int[]> Req, YNode At);
+    private readonly record struct Alt(int Rank, string Id, Fx6 Perf, int EngGen, int AfClass, Fx6 AlloyKg, int MaxEngGen, bool AlloyFree,
+        Fx6 UpkeepMult, bool Substitute, int[] Prc, List<int[]> Req, YNode At);
 
     private static Alt ReadAlternative(YNode node, NodeTable nodes, Func<YNode, string, int> resolve)
     {
@@ -362,8 +426,9 @@ public sealed partial class ProductClassTable
         if (!ModManifest.IsLocalId(id))
             throw DataLoadException.At(node, $"alternative ID '{id}' must match [a-z][a-z0-9_]*");
         int rank = a.Int("rank");
-        if (rank < 1)
-            throw DataLoadException.At(node, "rank must be at least 1");
+        bool substitute = a.Optional("substitute") is { } sn && Scalars.Bool(sn);
+        if (rank < (substitute ? 0 : 1))
+            throw DataLoadException.At(node, substitute ? "rank must not be negative" : "rank must be at least 1 (rank 0 is for a substitute only)");
         Fx6 perf = a.Fixed("perf_mult");
         if (perf <= Fx6.Zero)
             throw DataLoadException.At(node, "perf_mult must be positive");
@@ -372,6 +437,13 @@ public sealed partial class ProductClassTable
         int engGen = a.Optional("eng_gen") is null ? 0 : a.Int("eng_gen");
         int afClass = a.Optional("af_class") is null ? 0 : a.Int("af_class");
         Fx6 alloy = a.Optional("alloy_kg") is null ? Fx6.Zero : Positive(a, "alloy_kg");
+        bool alloyFree = a.Optional("alloy_free") is { } fn && Scalars.Bool(fn);
+        if (alloyFree && alloy > Fx6.Zero)
+            throw DataLoadException.At(node, "alloy_free and alloy_kg are mutually exclusive");
+        int maxEngGen = a.Optional("max_eng_gen") is null ? 0 : a.Int("max_eng_gen");
+        if (a.Optional("max_eng_gen") is not null && maxEngGen < 1)
+            throw DataLoadException.At(node, "max_eng_gen must be at least 1");
+        Fx6 upkeepMult = a.Optional("upkeep_mult") is null ? Fx6.One : Positive(a, "upkeep_mult");
 
         var prcRows = new List<int>();
         foreach (YNode item in a.Seq("prc_set").Items)
@@ -386,6 +458,6 @@ public sealed partial class ProductClassTable
         prcRows.Sort();
         List<int[]> req = RequirementLists.ReadGroups(a.Seq("requires_nodes"), resolve);
         a.End();
-        return new Alt(rank, id, perf, engGen, afClass, alloy, [.. prcRows], req, node);
+        return new Alt(rank, id, perf, engGen, afClass, alloy, maxEngGen, alloyFree, upkeepMult, substitute, [.. prcRows], req, node);
     }
 }

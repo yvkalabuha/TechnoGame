@@ -50,6 +50,13 @@ public enum WhyNotCause
     /// <summary>PRODUCT: alloy (a CMP) is short for the planned rate, or a disruption is on.</summary>
     AlloyDeficit,
 
+    /// <summary>
+    /// PRODUCT (spec v0.14 §1.4, STATE_WORDS §9): a slot has an alternative reachable only below the known engine (<c>max_eng_gen</c>) and no
+    /// non-substitute one; <c>subject</c> = the node to learn (lever «изучить»), <c>have</c> = <c>max_eng_gen</c>, <c>need</c> = <c>eng_gen</c>
+    /// of the highest known engine, <c>Slot</c> = the slot. Not <see cref="AlloyDeficit"/>: the lever is knowledge, not supply.
+    /// </summary>
+    EngineGenLimit,
+
     /// <summary>ECONOMY: admitted but <c>unit_cost·n_plan + upkeep</c> is above the procurement budget.</summary>
     NotAffordable,
 }
@@ -79,6 +86,7 @@ public enum Lever
 /// <param name="YieldIfFixed">Yield of the bottleneck process of the product if only this link is closed (<c>have := need</c>); 0 where there is no product set.</param>
 /// <param name="EtaMonths"><c>ceil((need − have)/rate)</c> at the current speed; null when the rate is not positive («само не дойдёт»).</param>
 /// <param name="Process">The narrow process of a CAPABILITY link, −1 otherwise.</param>
+/// <param name="Slot">Product slot of an <see cref="WhyNotCause.EngineGenLimit"/> link, −1 otherwise.</param>
 /// <param name="VariantSlot">Slot to replace for <see cref="Lever.SimplifiedVariant"/> (contract §6 «читается как заменить в слоте s»), −1 without it.</param>
 public readonly record struct Link(
     WhyNotLayer Layer,
@@ -92,7 +100,8 @@ public readonly record struct Link(
     int Process = -1,
     Dimension? Dim = null,
     LimiterKind? Limiter = null,
-    int VariantSlot = -1)
+    int VariantSlot = -1,
+    int Slot = -1)
 {
     /// <summary>
     /// The contract order (§6): layer, then <c>yield_if_fixed</c> descending, then <c>eta_months</c> ascending (null last), then

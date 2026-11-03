@@ -41,4 +41,30 @@ created: 2026-11-03
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
-<!-- Заполняет исполнитель: что сделано, файлы, коммит. -->
+**Сделано (D1, спека v0.14 §11).**
+- Схема и загрузка: `ProductClassTable` (+`Build`) — поля `max_eng_gen`, `alloy_free`, `upkeep_mult`, `substitute`, ранг 0 только у `substitute`; слот сплава ищется по полям (правило 8), а не по первой альтернативе; валидатор отклоняет: `alloy_free`+`alloy_kg`, `alloy_kg: 0`, смесь `alloy_kg/alloy_free` в слоте или поле вне слота сплава, слот сплава без `alloy_kg`, `substitute` в слоте двигателя / без не-`substitute` рядом / с рангом не ниже прочих, `max_eng_gen` в слоте двигателя и вне 1..G_max, `upkeep_mult` ≤ 0. Writer: поля для каждой альтернативы с умолчаниями, версия `product_classes/2` → `data_hash` новый. JSON-схема `mods/schemas/product_class.schema.json` дополнена.
+- Core: `DesignRules` — `EngineAllows/AvailableWith/EngineLimitsHold`, `Superior`/`Producible` перебирают двигатели сверху вниз (для `producible` — от выбранного правилом слота вниз), заменитель участвует в основном правиле, пропускается в запасном варианте и F-PC2 при наличии не-`substitute`; `alloy_free` — в `L_P`, шаге 7 закупок, `FleetValue` (`ProductsMath.AlloyFreeCount`), `alloyOk` пресета, `why_not` (по флагу); `upkeep·m(d)` последним множителем (`ProductsMath.Upkeep(..., mult)`; 5-арг. форма не тронута); `compose_design`/`derive` — `SLOT_UNAVAILABLE` по итоговому составу; `DERIV` считает двигатель по `Superior`; `why_not` `ENGINE_GEN_LIMIT` (`Link.Slot`, `SubjectId` = узел рычага, `Have` = max_eng_gen, `Need` = eng_gen; `ResearchPriority` разрешён для него в `LeverValidator`).
+- Данные мода: правки 1–8 §1.1 (SUN AERO qc 3,50/3,90, GBR MECH precision 4,00/4,20, USA/GBR CHEM purity 4,00/4,20, SUN знает 58 и `K_d` aero 0,30, FRA знает 54 и `K_d` prop 0,20, узел 58 без 30), `hot_steel_g0` и строка процесса 47 в `product_classes.yaml`.
+- Эталон `products_ref.py` (`v24`): `hot_steel_g0`, `BASE_COST[47]` = 37, `upkeep_m`, `n_alloy` для `alloy_free`, секция `steel_g1` (complexity 20, floor 1324, upkeep 23 → 57 raw, perf 0,90); старые значения не менялись (diff `out/products.json` — только добавление; `--check` зелёный).
+- Тесты: `SubstituteTests` (30 кейсов: эталон стали, `m` = 1 побитно, 8 эталонов, спуск двигателя, пресеты, compose/derive, `alloy_free` в `L_P`/серии/`FV`, валидатор), `SliceStartDataTests` (K1, K4, пресет SUN, `ENGINE_GEN_LIMIT` с рычагом 30 → 33 → процессы); обновлены тесты данных (значения клеток, `known`, 18 альтернатив, 20 строк процессов, 58 без 30, замороженные хеши `data_hash`/`scenario_hash`, `CurrentRequirement` SUN). Golden-хеши `LinkedRun` и `ProductAiSession` перезаписаны, причина «D1». Полный `dotnet test` зелёный.
+
+**K4 (печать):** `FV(сталь)/FV(ранг 1)` G1 при `FvBudget`, t0: USA 83,55 / 151,90 = 0,550 (n 190 против 310); GBR 46,10 / 78,42 = 0,588 (n 190 против 290). Условие K4 выполнено. **K1:** все известные PRC всех акторов на t0 имеют `yield > 0` (минимум FRA PRC 54 = 0,000338; SUN PRC 54 = 0,037).
+
+**Отклонения от спеки / допущения (ближайшее к спеке):**
+1. `nodes.csv`/`scenario_1945.md` (docs/research, зона research-scientist) не менялись: тесты сверки с CSV (`Nodes_MatchTask0011Csv`, `KnownAtStart_MatchesNodesCsv`) содержат явные D1-поправки (58 без 30; SUN +58; FRA +54). Когда CSV обновят, поправки в тестах нужно убрать.
+2. Рычаг `ENGINE_GEN_LIMIT`: `Link.SubjectId` = номер узла для изучения (первый неизвестный `requires`/PRC не-`substitute` альтернативы с наименьшим рангом: 30, затем 33, затем 39, 45, 49), слот в новом поле `Link.Slot`.
+3. Отказ `compose_design`/`derive` по `max_eng_gen` — код `SLOT_UNAVAILABLE`; текста «max_eng_gen» в журнале нет (журнал хранит только коды).
+4. Для `producible` двигатель выбирается прежним правилом слота, ниже него — спуск при пустом слоте (спека требует спуск «сверху вниз»; при полном знании сплава результат совпадает с v0.13).
+5. `IndustryMath.LineCapacity/SplitAlloy` не менял: Products их не вызывает (расчёт в `ProductsSystem`); линии `alloy_free` туда не попадают.
+6. Формат сохранения не затронут (поля — данные мода).
+
+**Информационный прогон (не приёмка), ИИ A41 включён, 384 мес., выпуск = Σ темпа линий в серии, окна по 48 мес. (0–47 … 336–383):**
+```
+seed 3  USA 0 0 0 0 4539 4232 947 26   | GBR 0 0 0 0 197 411 459 521 | SUN 0 0 0 537 868 1169 260 26   | FRA, SWE 0
+seed 1  USA 0 0 806 3260 3407 2564 0 0 | GBR 0 0 0 0 203 396 434 535 | SUN 0 0 0 195 836 782 234 287   | FRA, SWE 0
+seed 5  USA 0 0 0 0 3988 5023 312 0    | GBR 0 0 0 0 197 411 459 521 | SUN 0 0 0 819 993 1212 1423 728 | FRA, SWE 0
+seed 7  USA 0 0 0 487 3002 265 6 0     | GBR 0 0 0 0 197 411 459 521 | SUN 0 0 0 195 836 587 241 221   | FRA, SWE 0
+seed 2  USA 0 0 0 782 1957 0 0 0       | GBR 0 0 0 0  76 320 356 393 | SUN 0 0 0 384 1066 218 249 149  | FRA, SWE 0
+seed 11 USA 0 0 0 10 266 112 0 0       | GBR 0 0 0 0 203 396 795 841 | SUN 0 0 0 384 1017 1001 219 173 | FRA, SWE 0
+```
+Первый серийный G1 SUN (стальной, `eng_g1 + hot_steel_g0`): месяц 156 (seed 3), 180 (1), 144 (5), 180 (7), 168 (2), 168 (11) — K-SUN (< 36 мес.) **не выполняется**. Диагностика seeds 3/5: SUN знает 58 с тика 0, узел 48 (PRC центробежного компрессора) открывается на месяце 123 / 113, проект — сразу после (мес. 133 / 121), серия через 23 / 23 мес.; узел 30 открывается позже или раньше 48 (75 / 132). Узкое место — срок открытия 48 в слое знаний, а не данные D1. FRA/SWE за 384 мес. серийного G1 не имеют ни в одном seed (по FRA 54 известен, но PRC 54 имеет yield ≈ 0,0003). Для USA/GBR «первый серийный G1» в этом прогоне — месяц 212 (G1-парк USA/GBR — стартовый, новая серия идёт уже по G2+).

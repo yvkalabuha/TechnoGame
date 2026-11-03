@@ -37,9 +37,10 @@ public class CoreScenarioTests
         Assert.Equal(Fx(growth), S.GrowthPa[a]);
         foreach (Cluster c in S.Clusters)
         {
-            Assert.Equal(Fx(prec), S.CultureOf(a, c, Dimension.Precision));
-            Assert.Equal(Fx(pur), S.CultureOf(a, c, Dimension.Purity));
-            Assert.Equal(Fx(qc), S.CultureOf(a, c, Dimension.QualityControl));
+            // D1 cell edits (spec §1.1 table, items 1-4) on top of the uniform R-DIM table.
+            Assert.Equal(D1Cell(id, c, Dimension.Precision, Fx(prec)), S.CultureOf(a, c, Dimension.Precision));
+            Assert.Equal(D1Cell(id, c, Dimension.Purity, Fx(pur)), S.CultureOf(a, c, Dimension.Purity));
+            Assert.Equal(D1Cell(id, c, Dimension.QualityControl, Fx(qc)), S.CultureOf(a, c, Dimension.QualityControl));
             // R-M per cell (spec §3.5 A20): tooling = H + 0.2, SUN +0.2 more in MECH and AERO (dismantled plants).
             Fx6 extra = id == "SUN" && c is Cluster.MECH or Cluster.AERO ? Fx("0.2") : Fx6.Zero;
             foreach (Dimension d in Enum.GetValues<Dimension>())
@@ -52,6 +53,15 @@ public class CoreScenarioTests
         Assert.Equal(trophy, S.TrophyEngineers[a]);
     }
 
+    // D1 (#130, #133): GBR MECH precision 4.00 (R-H-STD-t0), USA and GBR CHEM purity 4.00 (owner), SUN AERO quality_control 3.50.
+    private static Fx6 D1Cell(string actor, Cluster c, Dimension d, Fx6 uniform) => (actor, c, d) switch
+    {
+        ("GBR", Cluster.MECH, Dimension.Precision) => Fx("4.00"),
+        ("USA" or "GBR", Cluster.CHEM, Dimension.Purity) => Fx("4.00"),
+        ("SUN", Cluster.AERO, Dimension.QualityControl) => Fx("3.50"),
+        _ => uniform,
+    };
+
     [Fact]
     public void KnownAtStart_MatchesNodesCsv()
     {
@@ -60,13 +70,15 @@ public class CoreScenarioTests
         for (int a = 0; a < S.ActorCount; a++)
         {
             string actor = S.ActorId[a];
+            // D1: SUN knows 58 (R-KN, #134) and FRA knows 54 (#135); nodes.csv of TASK-0011 is research-scientist's and lags behind.
             var expected = lines.Skip(1).Select(l => l.Split(','))
-                .Where(c => c[col] == "ALL" || c[col].Split(';').Contains(actor))
+                .Where(c => c[col] == "ALL" || c[col].Split(';').Contains(actor)
+                    || actor == "SUN" && c[1] == "s8.app.jet_fighter_g1" || actor == "FRA" && c[1] == "s8.prc.jet_engine_assembly_test")
                 .Select(c => c[1]).Order(StringComparer.Ordinal);
             var loaded = S.KnownOf(a).ToArray().Select(r => Data.Nodes.Id[r]).Order(StringComparer.Ordinal);
             Assert.Equal(expected, loaded);
         }
-        Assert.Equal([22, 23, 14, 11, 10], Enumerable.Range(0, 5).Select(a => S.KnownOf(a).Length));
+        Assert.Equal([22, 23, 15, 12, 10], Enumerable.Range(0, 5).Select(a => S.KnownOf(a).Length));
     }
 
     [Fact]
@@ -148,7 +160,7 @@ public class CoreScenarioTests
         Assert.Equal(["engine", "hot_section", "compressor", "airframe", "afterburner"], pc.SlotId.ToArray());
         Assert.Equal([true, false, false, false, false], pc.SlotIsBase.ToArray());
         Assert.Equal(["hot_section", "compressor", "afterburner", "airframe"], pc.LightenOrder.Select(s => pc.SlotId[s]));
-        Assert.Equal(17, pc.AltId.Length);
+        Assert.Equal(18, pc.AltId.Length);   // 17 + the hot_steel_g0 substitute (D1)
         Assert.Equal([false, false, false, true, false], pc.SlotIsAirframe.ToArray());
         Assert.Equal(Fx("1.45"), pc.AltPerfMult[pc.AlternativeIndex(0, "hot_section", "hot_vim_ds_cooled")]);
     }

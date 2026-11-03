@@ -919,7 +919,7 @@ define:
     gen: 1
     discipline: aero
     cluster: AERO
-    requires: [s8.eng.turbojet_g1, s8.eng.straight_wing_jet_airframe, s5.cmp.heat_resistant_alloy]
+    requires: [s8.eng.turbojet_g1, s8.eng.straight_wing_jet_airframe]
     hazard: none
     anchor:
       year: 1944

@@ -56,18 +56,70 @@ public static class DesignRules
         Math.Min(platformGen, l.AltEngGen[alts[l.BaseSlot]] + 1);
 
     /// <summary>
+    /// <c>max_eng_gen</c> (spec v0.14 §1.4), the first cross-slot condition: the alternative <paramref name="alt"/> is allowed with the engine
+    /// alternative <paramref name="engineAlt"/> of the same composition when it has no limit or <c>eng_gen(engine) ≤ max_eng_gen</c>.
+    /// </summary>
+    public static bool EngineAllows(ProductsLayout l, int alt, int engineAlt) =>
+        l.AltMaxEngGen[alt] == 0 || l.AltEngGen[engineAlt] <= l.AltMaxEngGen[alt];
+
+    /// <summary><c>avail(alt | composition)</c>: <see cref="Available"/> and <see cref="EngineAllows"/> for the engine of the composition.</summary>
+    public static bool AvailableWith(ProductsLayout l, int alt, int engineAlt, Func<int, bool> knows) =>
+        EngineAllows(l, alt, engineAlt) && Available(l, alt, knows);
+
+    /// <summary>Every alternative of the composition respects its <c>max_eng_gen</c> (validation of <c>compose_design</c> and <c>derive</c>).</summary>
+    public static bool EngineLimitsHold(ProductsLayout l, ReadOnlySpan<int> alts)
+    {
+        foreach (int a in alts)
+        {
+            if (!EngineAllows(l, a, alts[l.BaseSlot]))
+                return false;
+        }
+        return true;
+    }
+
+    /// <summary>The alloy slot alternative of the composition needs no alloy (<c>alloy_free</c>): no line capacity, no alloy limit.</summary>
+    public static bool AlloyFree(ProductsLayout l, ReadOnlySpan<int> alts) => l.AltAlloyFree[alts[l.AlloySlot]];
+
+    /// <summary><c>m(d) = Π upkeep_mult</c> of the chosen alternatives in slot order (1 when none sets it).</summary>
+    public static Fx6 UpkeepMult(ProductsLayout l, ReadOnlySpan<int> alts)
+    {
+        Fx6 m = Fx6.One;
+        for (int s = 0; s < l.SlotCount; s++)
+            m *= l.AltUpkeepMult[alts[s]];
+        return m;
+    }
+
+    /// <summary>
     /// «superior»: in every slot the highest-rank available alternative (alloy and yield ignored: the quality doctrine);
     /// false if a slot has none or the best airframe is below the platform threshold of the target generation
-    /// <paramref name="targetGen"/> (<c>g*</c>).
+    /// <paramref name="targetGen"/> (<c>g*</c>). The engines are tried from the highest rank down and the first one with an alternative
+    /// in every other slot (<c>max_eng_gen</c> counted) is taken (spec v0.14 §1.4): knowing a newer engine never leaves the actor without a project.
     /// </summary>
     public static bool Superior(ProductsLayout l, int targetGen, Func<int, bool> knows, Span<int> alts)
+    {
+        for (int e = l.AltStart[l.BaseSlot + 1] - 1; e >= l.AltStart[l.BaseSlot]; e--)
+        {
+            if (Available(l, e, knows) && TrySuperior(l, e, targetGen, knows, alts))
+                return true;
+        }
+        for (int s = 0; s < l.SlotCount; s++)
+            alts[s] = -1;
+        return false;
+    }
+
+    private static bool TrySuperior(ProductsLayout l, int engine, int targetGen, Func<int, bool> knows, Span<int> alts)
     {
         for (int s = 0; s < l.SlotCount; s++)
         {
             alts[s] = -1;
+            if (s == l.BaseSlot)
+            {
+                alts[s] = engine;
+                continue;
+            }
             for (int a = l.AltStart[s + 1] - 1; a >= l.AltStart[s] && alts[s] < 0; a--)
             {
-                if (Available(l, a, knows))
+                if (AvailableWith(l, a, engine, knows))
                     alts[s] = a;
             }
             if (alts[s] < 0)
@@ -79,10 +131,12 @@ public static class DesignRules
     /// <summary>
     /// «producible» (COMPONENT_SELECTION §6, spec §1.4, A32): in every slot the highest-rank available alternative whose
     /// bottleneck process yields ≥ <paramref name="yProd"/> on the own site (an empty <c>prc_set</c> passes) and, in the alloy slot,
-    /// that satisfies <paramref name="alloyOk"/> (null: always); none — the lightest available one (the airframe not below the
-    /// platform threshold of <paramref name="targetGen"/>). If the <c>prc_set</c> then equals the superior one, the non-base slot
-    /// with the highest tier (ties by lighten order, F-PC2) that has a lower admissible alternative takes the next lower one; if
-    /// none can, the preset equals «superior» (F-PC3) and the result is false. With <paramref name="admitted"/> only alternatives
+    /// that is <c>alloy_free</c> or satisfies <paramref name="alloyOk"/> (null: always); none — the lightest available one (the airframe not below the
+    /// platform threshold of <paramref name="targetGen"/>). A substitute takes part in the main rule; the lightest-one fallback and the
+    /// lightening below skip it when the slot has a non-substitute alternative (spec v0.14 §1.4). The engine is chosen by the same rule and,
+    /// if some other slot then has no alternative (<c>max_eng_gen</c>), the next lower engine is tried. If the <c>prc_set</c> then equals the
+    /// superior one, the non-base slot with the highest tier (ties by lighten order, F-PC2) that has a lower admissible alternative takes the next
+    /// lower one; if none can, the preset equals «superior» (F-PC3) and the result is false. With <paramref name="admitted"/> only alternatives
     /// it accepts are candidates and a slot without one makes the result false; there is no «superior» twin to differ from
     /// (the canonical project of L_P, spec §6.1).
     /// </summary>
@@ -92,37 +146,48 @@ public static class DesignRules
         Span<int> sup = stackalloc int[l.SlotCount];
         if (!Superior(l, targetGen, knows, sup) && admitted is null)
             return false;
-        bool Candidate(int s, int a) => Available(l, a, knows) && (admitted?.Invoke(a) ?? true)
+        bool Candidate(int s, int a, int engine) => AvailableWith(l, a, engine, knows) && (admitted?.Invoke(a) ?? true)
             && (s != l.AirframeSlot || MeetsPlatform(l, a, targetGen));
-        for (int s = 0; s < l.SlotCount; s++)
+        bool Passes(int s, int a) => BottleneckYield(l, a, yieldOf) >= yProd
+            && (s != l.AlloySlot || l.AltAlloyFree[a] || (alloyOk?.Invoke(a) ?? true));
+
+        // The engine by the slot rule, then the lower ones while the other slots cannot be filled.
+        int preferred = -1, lowestEngine = -1;
+        for (int a = l.AltStart[l.BaseSlot + 1] - 1; a >= l.AltStart[l.BaseSlot]; a--)
         {
-            alts[s] = -1;
-            int lowest = -1;
-            for (int a = l.AltStart[s + 1] - 1; a >= l.AltStart[s]; a--)
-            {
-                if (!Candidate(s, a))
-                    continue;
-                lowest = a;
-                bool alloyPass = s != l.AlloySlot || (alloyOk?.Invoke(a) ?? true);
-                if (alts[s] < 0 && BottleneckYield(l, a, yieldOf) >= yProd && alloyPass)
-                    alts[s] = a;
-            }
-            if (alts[s] < 0)
-                alts[s] = lowest;
-            if (alts[s] < 0)
-                return false;
+            if (!Candidate(l.BaseSlot, a, a))
+                continue;
+            lowestEngine = a;
+            if (preferred < 0 && Passes(l.BaseSlot, a))
+                preferred = a;
+        }
+        if (preferred < 0)
+            preferred = lowestEngine;
+        bool built = false;
+        for (int e = preferred; e >= l.AltStart[l.BaseSlot] && !built; e--)
+        {
+            if (Candidate(l.BaseSlot, e, e))
+                built = TryProducible(l, e, Candidate, Passes, alts);
+        }
+        if (!built)
+        {
+            for (int s = 0; s < l.SlotCount; s++)
+                alts[s] = -1;
+            return false;
         }
         if (admitted is not null)
             return true;
         if (!SamePrcSet(l, alts, sup))
             return true;
+        int engineAlt = alts[l.BaseSlot];
         int best = -1, bestTier = -1, bestLower = -1;
         foreach (int s in l.LightenOrder)
         {
             int lower = -1;
+            bool hasPlain = HasPlainCandidate(l, s, engineAlt, Candidate);
             for (int a = alts[s] - 1; a >= l.AltStart[s] && lower < 0; a--)
             {
-                if (Candidate(s, a))
+                if (Candidate(s, a, engineAlt) && !(hasPlain && l.AltSubstitute[a]))
                     lower = a;
             }
             if (lower >= 0 && l.AltTier[alts[s]] > bestTier)
@@ -139,6 +204,47 @@ public static class DesignRules
         }
         alts[best] = bestLower;
         return true;
+    }
+
+    // One composition for the engine: per slot the highest alternative that passes, else the lightest candidate (a substitute only when
+    // the slot has nothing else); false if some slot has no candidate.
+    private static bool TryProducible(ProductsLayout l, int engine, Func<int, int, int, bool> candidate, Func<int, int, bool> passes, Span<int> alts)
+    {
+        for (int s = 0; s < l.SlotCount; s++)
+        {
+            alts[s] = -1;
+            if (s == l.BaseSlot)
+            {
+                alts[s] = engine;
+                continue;
+            }
+            int lowestPlain = -1, lowestAny = -1;
+            for (int a = l.AltStart[s + 1] - 1; a >= l.AltStart[s]; a--)
+            {
+                if (!candidate(s, a, engine))
+                    continue;
+                lowestAny = a;
+                if (!l.AltSubstitute[a])
+                    lowestPlain = a;
+                if (alts[s] < 0 && passes(s, a))
+                    alts[s] = a;
+            }
+            if (alts[s] < 0)
+                alts[s] = lowestPlain >= 0 ? lowestPlain : lowestAny;
+            if (alts[s] < 0)
+                return false;
+        }
+        return true;
+    }
+
+    private static bool HasPlainCandidate(ProductsLayout l, int slot, int engine, Func<int, int, int, bool> candidate)
+    {
+        for (int a = l.AltStart[slot]; a < l.AltStart[slot + 1]; a++)
+        {
+            if (!l.AltSubstitute[a] && candidate(slot, a, engine))
+                return true;
+        }
+        return false;
     }
 
     /// <summary><c>r_PU</c>: the maximum rank over the PU slots (every slot except the airframe), contract §4.4a.</summary>

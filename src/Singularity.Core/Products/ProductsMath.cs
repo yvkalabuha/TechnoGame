@@ -63,6 +63,10 @@ public static class ProductsMath
     public static Fx6 Upkeep(Fx6 share, Fx6 unitCostFloor, int complexity, int q10, Fx6 maintainability) =>
         unitCostFloor * DetMath.PowFracFx(Fx6.FromInt(complexity), q10) * share / maintainability;
 
+    /// <summary><c>upkeep(d) = Upkeep(...)·m(d)</c>, <c>m = Π upkeep_mult</c> of the chosen alternatives (spec v0.14 §1.4): the multiplier is the last factor.</summary>
+    public static Fx6 Upkeep(Fx6 share, Fx6 unitCostFloor, int complexity, int q10, Fx6 maintainability, Fx6 mult) =>
+        Upkeep(share, unitCostFloor, complexity, q10, maintainability) * mult;
+
     /// <summary><c>W = ((W0·complexity)·design_scale)/(1 + bureau_exp/E_B)</c> engineer-months (spec §3.3; R-DS, #78).</summary>
     public static Fx6 DesignWork(Fx6 w0, int complexity, Fx6 designScale, Fx6 bureauExp, Fx6 eb) =>
         w0 * Fx6.FromInt(complexity) * designScale / (Fx6.One + bureauExp / eb);
@@ -188,6 +192,12 @@ public static class ProductsMath
         long n = Math.Min(nBudget, cap);
         return (int)(n - n % step);
     }
+
+    /// <summary>
+    /// <c>n_v</c> of an <c>alloy_free</c> design (spec v0.14 §1.4 item 4): no alloy term, <c>n_v = n_budget</c> stepped down to a multiple
+    /// of <paramref name="step"/>.
+    /// </summary>
+    public static int AlloyFreeCount(int nBudget, int step) => nBudget - nBudget % step;
 
     /// <summary><c>FV_v = (n_v·readiness_v)·PowFrac(perf_rel_v, q10_γ)</c> (contract §9.1, #91).</summary>
     public static Fx6 FleetValue(int count, Fx6 readiness, Fx6 perfRel, int gammaQ10) =>

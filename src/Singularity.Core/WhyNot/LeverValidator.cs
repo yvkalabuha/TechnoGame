@@ -35,7 +35,7 @@ public static class LeverValidator
     // The «когда предлагается» table of contract §6.
     private static bool Applies(Lever lever, Link l) => lever switch
     {
-        Lever.ResearchPriority => l.Layer == WhyNotLayer.Knowledge,
+        Lever.ResearchPriority => l.Layer == WhyNotLayer.Knowledge || l.Cause == WhyNotCause.EngineGenLimit,
         Lever.TrainingSeries => l.Layer == WhyNotLayer.Capability && l.Cause == WhyNotCause.CultureH
             && l.Limiter is LimiterKind.Volume or LimiterKind.LabCeiling,
         Lever.InvestToolingM => l.Layer == WhyNotLayer.Capability && (l.Cause == WhyNotCause.ToolingM || l.Limiter == LimiterKind.Tooling),

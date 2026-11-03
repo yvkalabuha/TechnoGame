@@ -44,7 +44,8 @@ public sealed partial class WhyNotAnalyzer
             Fx6 kg = _pl.AltAlloyKg[alts[_pl.AlloySlot]];
             AlloyAvailability alloy = _i.Alloy(site, month);
             Fx6 needAlloy = kg * planned;
-            if (kg > Fx6.Zero && (alloy.Deficit || alloy.Supply < needAlloy))
+            // alloy_free is a flag, not kg = 0 (spec v0.14 §1.4 item 5): such a project has no alloy link.
+            if (!DesignRules.AlloyFree(_pl, alts) && kg > Fx6.Zero && (alloy.Deficit || alloy.Supply < needAlloy))
                 links.Add(new Link(WhyNotLayer.Product, WhyNotCause.AlloyDeficit, design, alloy.Supply, needAlloy, [], yield, null));
         }
 
@@ -60,6 +61,63 @@ public sealed partial class WhyNotAnalyzer
                 links.Add(new Link(WhyNotLayer.Economy, WhyNotCause.NotAffordable, design, budget, cost, Offer(slot >= 0 ? [Lever.SimplifiedVariant] : []), yield, null, VariantSlot: slot));
             }
         }
+    }
+
+    /// <summary>
+    /// <see cref="WhyNotCause.EngineGenLimit"/> (spec v0.14 §1.4): at the highest known engine some slot holds a known alternative that
+    /// <c>max_eng_gen</c> rules out and has no non-substitute alternative. The lever is to learn the first unknown requirement of the
+    /// lowest-rank non-substitute alternative of the slot (for the hot section: 30, then 33).
+    /// </summary>
+    private void EngineGenLimitLinks(List<Link> links, int actor)
+    {
+        int engine = -1;
+        for (int a = _pl.AltStart[_pl.BaseSlot + 1] - 1; a >= _pl.AltStart[_pl.BaseSlot] && engine < 0; a--)
+        {
+            if (DesignRules.Available(_pl, a, n => Knows(actor, n)))
+                engine = a;
+        }
+        if (engine < 0)
+            return;
+        for (int s = 0; s < _pl.SlotCount; s++)
+        {
+            int limited = -1, plain = -1, lever = -1;
+            for (int a = _pl.AltStart[s]; a < _pl.AltStart[s + 1]; a++)
+            {
+                bool known = DesignRules.Available(_pl, a, n => Knows(actor, n));
+                if (known && !DesignRules.EngineAllows(_pl, a, engine))
+                    limited = a;
+                else if (!_pl.AltSubstitute[a] && known)
+                    plain = a;
+                if (!_pl.AltSubstitute[a] && lever < 0)
+                    lever = a;
+            }
+            if (limited < 0 || plain >= 0)
+                continue;
+            int node = FirstUnknownTarget(actor, lever);
+            if (node < 0)
+                continue;
+            links.Add(new Link(WhyNotLayer.Product, WhyNotCause.EngineGenLimit, node, Fx6.FromInt(_pl.AltMaxEngGen[limited]),
+                Fx6.FromInt(_pl.AltEngGen[engine]), Offer(Lever.ResearchPriority), Fx6.Zero, null, Slot: s));
+        }
+    }
+
+    // First unknown requirement of an alternative: the first member of the first unmet group, then its processes; −1 if all are known.
+    private int FirstUnknownTarget(int actor, int alt)
+    {
+        for (int g = _pl.AltGroupStart[alt]; g < _pl.AltGroupStart[alt + 1]; g++)
+        {
+            bool any = false;
+            for (int m = _pl.GroupMemberStart[g]; m < _pl.GroupMemberStart[g + 1]; m++)
+                any |= Knows(actor, _pl.GroupMembers[m]);
+            if (!any)
+                return _pl.GroupMembers[_pl.GroupMemberStart[g]];
+        }
+        foreach (int p in _pl.PrcOf(alt))
+        {
+            if (!Knows(actor, p))
+                return p;
+        }
+        return -1;
     }
 
     private void WorkforceLink(List<Link> links, int site, int category, int requester, WhyNotCause cause, Fx6 yield, long month)

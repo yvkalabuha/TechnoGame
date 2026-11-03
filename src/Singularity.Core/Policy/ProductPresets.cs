@@ -27,7 +27,7 @@ public static class ProductPresets
         Fx6 supply = products.AlloySupply(actor, month);
         Span<int> producible = stackalloc int[l.SlotCount];
         if (!DesignRules.Producible(l, gen, Knows, q => products.AdmittedYield(actor, q, month), p.YProd,
-                hot => supply / l.AltAlloyKg[hot] >= need, producible))
+                hot => l.AltAlloyFree[hot] || supply / l.AltAlloyKg[hot] >= need, producible))
             return true;
         if (profile == PolicyProfile.Mass)
         {
@@ -43,20 +43,17 @@ public static class ProductPresets
 
     /// <summary>
     /// The <c>derive</c> of the arm DERIV (spec §6.8): the profile's preset for the parent's platform generation, as −1 («unchanged») in every
-    /// slot where it gives the parent's alternative and in the airframe slot; false unless the highest engine rank available is at least
-    /// the parent's engine rank + 1 and some slot changes.
+    /// slot where it gives the parent's alternative and in the airframe slot; false unless the engine the preset gives (the highest one the other slots
+    /// admit, <c>max_eng_gen</c> counted) is at least the parent's engine rank + 1 and some slot changes.
     /// </summary>
     public static bool Derive(PolicyProfile profile, IPolicyProducts products, PolicyParams p, int actor, int parent, long month, Span<int> alts)
     {
         ProductsLayout l = products.Layout;
         int[] own = products.Alternatives(actor, parent);
-        int best = 0;
-        for (int a = l.AltStart[l.BaseSlot]; a < l.AltStart[l.BaseSlot + 1]; a++)
-        {
-            if (DesignRules.Available(l, a, n => products.Knows(actor, n, month)) && l.AltRank[a] > best)
-                best = l.AltRank[a];
-        }
-        if (best < l.AltRank[own[l.BaseSlot]] + 1)
+        // The engine the preset gives (spec v0.14 §1.4): with max_eng_gen the highest known engine may be out of reach of the other slots.
+        Span<int> top = stackalloc int[l.SlotCount];
+        if (!DesignRules.Superior(l, products.Design(actor, parent, month).PlatformGen, n => products.Knows(actor, n, month), top)
+            || l.AltRank[top[l.BaseSlot]] < l.AltRank[own[l.BaseSlot]] + 1)
             return false;
         Span<int> full = stackalloc int[l.SlotCount];
         if (!Compose(profile, products, p, actor, products.Design(actor, parent, month).PlatformGen, month, full))
