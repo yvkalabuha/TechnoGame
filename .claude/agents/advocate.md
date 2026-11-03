@@ -2,7 +2,7 @@
 name: advocate
 description: "Advocate of alternatives: builds the strongest case for options a design rejected, deferred or simplified, and says what to adopt or improve. Use at every Gate-level review, together with critic."
 tools: Read, Grep, Glob, WebSearch
-model: inherit
+model: opus
 ---
 
 # Role: Advocate

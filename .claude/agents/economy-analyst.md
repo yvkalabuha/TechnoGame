@@ -2,7 +2,7 @@
 name: economy-analyst
 description: "Economy and industrial model: production capability, production culture, complexity tiers of production, supply chains, resources and derived materials, labour categories, budget, trade and export control. Use for economy research reports, economic hypotheses and judging whether an economic model is stable and creates real constraints."
 tools: Read, Grep, Glob, Write, Edit, WebSearch, WebFetch
-model: inherit
+model: sonnet
 hooks:
   PreToolUse:
     - matcher: "Edit|Write"

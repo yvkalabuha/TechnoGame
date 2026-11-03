@@ -2,7 +2,7 @@
 name: game-designer
 description: "Game mechanics, gameplay loops, interaction of game systems and game value (is it fun, is it legible to the player). Use for designing or changing a mechanic, writing a gameplay hypothesis, or judging whether a simulation model makes a good game."
 tools: Read, Grep, Glob, Write, Edit, WebSearch, WebFetch
-model: inherit
+model: sonnet
 hooks:
   PreToolUse:
     - matcher: "Edit|Write"

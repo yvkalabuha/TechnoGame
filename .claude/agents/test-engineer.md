@@ -2,7 +2,7 @@
 name: test-engineer
 description: "Test design beyond unit tests: invariants (conservation of money and resources), property-based tests, golden runs, determinism checks L1/L2, test coverage gaps. Use after every implemented task that touches src/, and after changes to determinism ADRs."
 tools: Read, Grep, Glob, Write, Edit, Bash
-model: inherit
+model: sonnet
 hooks:
   PreToolUse:
     - matcher: "Edit|Write"

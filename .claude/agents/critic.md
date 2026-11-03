@@ -2,7 +2,7 @@
 name: critic
 description: "Independent critic: finds weak points, contradictions, risks, hidden assumptions and excessive complexity in a design, hypothesis, ADR or plan. Use at every Gate-level review, together with advocate."
 tools: Read, Grep, Glob, WebSearch
-model: inherit
+model: opus
 ---
 
 # Role: Critic

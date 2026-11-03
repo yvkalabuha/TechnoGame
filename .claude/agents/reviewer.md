@@ -2,7 +2,7 @@
 name: reviewer
 description: "Independent code and architecture reviewer. Reviews diffs in src/, tests/ and mods/ for correctness, determinism rules, ADR compliance and test quality. Use for every code change before it is marked DONE."
 tools: Read, Grep, Glob, Bash
-model: inherit
+model: opus
 hooks:
   PreToolUse:
     - matcher: "Bash"

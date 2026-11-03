@@ -2,7 +2,7 @@
 name: systems-architect
 description: "Software architecture of the simulation core: data model, tick pipeline, multithreading, determinism rules, performance, assembly boundaries, ADRs. Use for any architectural decision or for writing and reviewing ADRs."
 tools: Read, Grep, Glob, Write, Edit, WebSearch, WebFetch
-model: inherit
+model: opus
 hooks:
   PreToolUse:
     - matcher: "Edit|Write"

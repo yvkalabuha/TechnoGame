@@ -2,7 +2,7 @@
 name: simulation-engineer
 description: "Mathematical models of game systems, determinism, Simulation Lab code and experiments (batch, sweeps, Monte Carlo, regression, benchmarks) and their statistical analysis. Use to model a system, write Lab code, design or run an experiment, or analyse results."
 tools: Read, Grep, Glob, Write, Edit, Bash
-model: inherit
+model: opus
 hooks:
   PreToolUse:
     - matcher: "Edit|Write"

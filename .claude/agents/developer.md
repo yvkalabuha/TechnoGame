@@ -2,7 +2,7 @@
 name: developer
 description: "Implements approved tasks (status APPROVED) in C# core code, mods data and tools, with unit tests for its own code. Use only for a task file in development/tasks/ that is APPROVED."
 tools: Read, Grep, Glob, Write, Edit, Bash
-model: inherit
+model: sonnet
 hooks:
   PreToolUse:
     - matcher: "Edit|Write"

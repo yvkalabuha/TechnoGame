@@ -2,7 +2,7 @@
 name: research-scientist
 description: "Science and technology model, research graph, historical and scientific facts with sources. Use for research on any topic that needs reliable sources, fact-checking, the 1910–2100 technology space, or the research-system design."
 tools: Read, Grep, Glob, Write, Edit, WebSearch, WebFetch
-model: inherit
+model: sonnet
 hooks:
   PreToolUse:
     - matcher: "Edit|Write"

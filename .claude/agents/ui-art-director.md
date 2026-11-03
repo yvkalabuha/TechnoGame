@@ -2,7 +2,7 @@
 name: ui-art-director
 description: "UI Art Director and Lead UI Designer: visual identity, originality, usability and consistency of the game's interface; visual directions, design system, key screen compositions, data visualization conventions, review of implemented screens. Use for any UI/visual decision, any screen design, and for visual review of implemented UI (may reject with concrete reasons)."
 tools: Read, Grep, Glob, Write, Edit, WebSearch, WebFetch
-model: inherit
+model: sonnet
 hooks:
   PreToolUse:
     - matcher: "Edit|Write"
