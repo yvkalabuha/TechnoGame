@@ -1,20 +1,20 @@
 ---
 id: ADR-0010
 title: "Формат данных и моддинг v0"
-status: PROPOSED
+status: ACCEPTED
 date: 2026-11-02
 supersedes:
 superseded_by:
 related: [RR-0003, ADR-0009]
-approved_by:
-approved_at:
-approval_ref:
+approved_by: owner
+approved_at: 2026-11-03
+approval_ref: DECISIONS_LOG #53
 ---
 
 # ADR-0010 — Формат данных и моддинг v0
 
 ## Решение (предложение)
-- Данные — YAML или JSON (выбор при первом наборе данных) + JSON Schema 2020-12.
+- Данные — YAML (строгий подмножество: без якорей, тегов и неявных типов; строки, похожие на bool/число, — в кавычках; проверяется схемой) + JSON Schema 2020-12. Выбор формата — DECISIONS_LOG #53.
 - Базовая игра — мод `core` в `mods/core/`, загружается тем же загрузчиком.
 - Мод: манифест (id, версия semver, зависимости с диапазонами версий).
 - Операции с объектами по ID: define, override, patch, delete. Конфликт или ссылка на несуществующий ID — громкая ошибка загрузки.

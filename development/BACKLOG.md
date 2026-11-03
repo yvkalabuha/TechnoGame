@@ -26,6 +26,9 @@
 | [TASK-0010](../development/tasks/TASK-0010-kernel-powfrac-no-double.md) | DONE | Kernel: DetMath.PowFrac, PowFracFx и целочисленные выборки; архитектурный тест ADR-0003 R1–R3 | MS-M0 |
 | [TASK-0011](../development/tasks/TASK-0011-jet-slice-data.md) | DONE | Данные среза «реактивная авиация»: 61 узел, класс изделия, сценарий 1945, валидатор | MS-M0 |
 | [TASK-0012](../development/tasks/TASK-0012-jet-slice-reference.md) | DONE | Эталон для сверки среза: три формулы и ручная траектория (Python stdlib) | MS-M0 |
+| [TASK-0013](../development/tasks/TASK-0013-jet-slice-data-format.md) | APPROVED | Формат данных среза: схемы, YAML мода core, загрузчик и валидатор (ADR-0010) | MS-M0 |
+| [TASK-0014](../development/tasks/TASK-0014-core-knowledge-slice.md) | APPROVED | Core.Knowledge для среза: фронтир, c_eff, hazard, K_d, K_ind, расписания абляций | MS-M0 |
+| [TASK-0015](../development/tasks/TASK-0015-core-industry-slice.md) | APPROVED | Core.Industry для среза: culture_H, tooling_M, production_profile, сплав, reserve_workforce | MS-M0 |
 
 ## Гипотезы
 
@@ -54,7 +57,7 @@
 | [ADR-0007](../docs/decisions/ADR-0007-collections.md) | PROPOSED | Запрет коллекций с нестабильным порядком обхода |
 | [ADR-0008](../docs/decisions/ADR-0008-simulation-lab.md) | PROPOSED | Simulation Lab: прогоны, хранение, анализ |
 | [ADR-0009](../docs/decisions/ADR-0009-data-licenses.md) | ACCEPTED | Политика лицензий внешних данных |
-| [ADR-0010](../docs/decisions/ADR-0010-data-format-modding.md) | PROPOSED | Формат данных и моддинг v0 |
+| [ADR-0010](../docs/decisions/ADR-0010-data-format-modding.md) | ACCEPTED | Формат данных и моддинг v0 |
 | [ADR-0011](../docs/decisions/ADR-0011-map-representation.md) | PROPOSED | Представление карты |
 | [ADR-0012](../docs/decisions/ADR-0012-deterministic-math-functions.md) | ACCEPTED | Детерминированные степенные функции: PowFrac вместо Pow/Exp/Log |
 
