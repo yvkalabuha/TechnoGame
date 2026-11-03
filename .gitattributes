@@ -1,0 +1,7 @@
+# Keep LF everywhere: data hashes, YAML loader tests and reference files assume LF (Windows CI failed with CRLF checkout).
+* text=auto eol=lf
+*.ttf binary
+*.otf binary
+*.png binary
+*.jpg binary
+*.zip binary
