@@ -17,6 +17,7 @@
 | `informs.csv` | рёбра `informs` (from, to, weight) |
 | `product_class.md` | слоты, альтернативы, эталонные варианты, расхождения F-PC |
 | `scenario_1945.md` | правила R-*, значения по акторам, трофейные передачи, расхождения F-SC |
+| `product_inputs.md` | входы слоя изделия (T5): денежная единица, `n_p`, `labour_p`, `base_cost_p`, `h_pm`, `wage`, `h_first`/`materials_floor`/`alloy_kg` по поколению, `alloy_cap_a`, `r_ref`/`V_ref`, запрос КБ; FINDINGS F-PI1…4 |
 
 ## Правила данных узлов
 - **Кластер не-PRC узлов** [Предл.]: metal → MET, chem → CHEM, mech → MECH, aero/prop → AERO. У PRC кластер взят из §1.3. Дисциплина APP — `aero`.
