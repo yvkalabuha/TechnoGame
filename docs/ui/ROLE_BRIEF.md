@@ -85,3 +85,7 @@ Not expensive-looking, futuristic or complicated — recognizable as this game. 
 - Explore especially a visual signature that unifies historical cartography, industrial documentation, scientific schematics and modern analytical visualization — not literal imitation of old documents, but one recognizable language.
 - Do not fix a dark or light theme in advance; explore both. A light base with coloured cartographic layers plus dark workspaces for selected analytical systems may be more interesting than another fully dark interface.
 - The UI Art Director is a permanent project agent with the right to block visually poor decisions (with justification).
+
+## Owner additions (2026-11-03, later)
+- Two languages from the start: English and Russian (#83); design for longer translated strings.
+- Style input (#84): a science-and-research mood; a drafting font after GOST 2.304 or a close equivalent (OFL/PD, Cyrillic + Latin); drafting instruments as visual motifs; crisp thin lines like engineering drawings; blueprint (white on blue, cyanotype) as a stylistic register; window frames, buttons and other controls built in the same drafting language. Integrate into direction A (#54) — e.g. blueprint as the register of engineering workspaces — and say explicitly where it conflicts.
