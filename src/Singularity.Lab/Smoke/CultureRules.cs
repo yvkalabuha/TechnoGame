@@ -11,16 +11,18 @@ internal enum CultureRule { R0, R1, R2, R1u1, R1c }
 
 /// <summary>
 /// One variant of a rule: <c>u_p = min(1, v_p/v_full)^β</c>, <c>v_full = r_full·labour_p</c>, β = 1 or 0.5
-/// (<see cref="Sqrt"/>), <c>u_m</c> of the smooth maintenance floor (R1 only).
+/// (<see cref="Sqrt"/>), <c>u_m</c> of the smooth maintenance floor (R1 only). <see cref="FloorFix"/> = gate G-5: the floor term uses
+/// <c>max(r_d·a_r, H_floor)</c> and the max over an empty set is <c>H_floor</c>, so raw <c>maint</c> equals the
+/// effective floor (same dynamics, literal I5).
 /// </summary>
-internal sealed record RuleVariant(CultureRule Rule, Fx6 RFull, bool Sqrt, Fx6 UM)
+internal sealed record RuleVariant(CultureRule Rule, Fx6 RFull, bool Sqrt, Fx6 UM, bool FloorFix = false)
 {
     public string Label => Rule switch
     {
         CultureRule.R0 => "R0",
         CultureRule.R1u1 => "R1u1",
         CultureRule.R1 => $"R1/rf{RFull}/b{(Sqrt ? "0.5" : "1")}/um{UM}",
-        CultureRule.R1c => $"R1c/rf{RFull}/um{UM}",
+        CultureRule.R1c => $"R1c/rf{RFull}/um{UM}{(FloorFix ? "/ff" : "")}",
         _ => $"R2/rf{RFull}/b{(Sqrt ? "0.5" : "1")}",
     };
 
@@ -58,6 +60,8 @@ internal static class CultureRuleMath
     {
         if (rv.Rule == CultureRule.R1u1)
             return Fx6.One;
+        if (vFull <= Fx6.Zero)
+            return Fx6.Zero; // G-6 guard: labour_p = 0 gives no saturation scale (the data validator must reject it)
         Fx6 u = v / vFull;
         if (u > Fx6.One)
             u = Fx6.One;
@@ -84,7 +88,7 @@ internal static class CultureRuleMath
             vc += procs[i].V;
         }
         Fx6 hFloor = p.PhiFloor * cell.Hcap;
-        Fx6 drive = Fx6.Zero, catchUp = Fx6.Zero, maint = Fx6.Zero;
+        Fx6 drive = Fx6.Zero, catchUp = Fx6.Zero, maint = rv.FloorFix ? hFloor : Fx6.Zero;
         if (vc != Fx6.Zero)
         {
             Fx6 actRatio = cell.Act / p.ActNorm;
@@ -109,7 +113,10 @@ internal static class CultureRuleMath
                     Fx6 share = u / rv.UM;
                     if (share > Fx6.One)
                         share = Fx6.One;
-                    Fx6 mp = hFloor + (proc.R * actRatio - hFloor) * share;
+                    Fx6 ra = proc.R * actRatio;
+                    if (rv.FloorFix && ra < hFloor)
+                        ra = hFloor;
+                    Fx6 mp = hFloor + (ra - hFloor) * share;
                     if (mp > maint)
                         maint = mp;
                 }
@@ -435,11 +442,11 @@ internal sealed class RuleStand
 internal static class CultureRules
 {
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
-    private static readonly long[] Alphas = [20_000, 35_000, 50_000, 65_000, 80_000];
-    private static readonly long[] Deltas = [1_700, 3_000, 4_300];
-    private static readonly Fx6 RNorm = Fx6.FromInt(25), RTok = Fx6.FromRaw(1_250_000);
-    private static readonly Fx6 G09 = Fx6.FromRaw(900_000);
-    private const int Horizon = 384;
+    internal static readonly long[] Alphas = [20_000, 35_000, 50_000, 65_000, 80_000];
+    internal static readonly long[] Deltas = [1_700, 3_000, 4_300];
+    internal static readonly Fx6 RNorm = Fx6.FromInt(25), RTok = Fx6.FromRaw(1_250_000);
+    internal static readonly Fx6 G09 = Fx6.FromRaw(900_000);
+    internal const int Horizon = 384;
 
     public static List<RuleVariant> Variants()
     {
@@ -477,6 +484,8 @@ internal static class CultureRules
             return 0;
         if (only is not null && only.StartsWith("trace:", StringComparison.Ordinal))
             return Trace(data, sc, only[6..], log);
+        if (only == "gate")
+            return CultureGate.Run(data, sc, outDir, log); // gate 2026-11-03, culture-rule-selection.md §7
         List<RuleVariant> variants = Variants();
         if (only == "r1c")
         {
@@ -627,22 +636,45 @@ internal static class CultureRules
         public readonly List<string> D1 = new(), D3 = new(), C2 = new(), Notes = new();
         public int Excluded;
 
-        // Literal §1: raw I5 and K6 on the product g_H; deviations D-2, D-3: I5 on the effective floor, K6 per dimension.
-        public bool Pass => Literal ? PassCore && K1Fail[4] == 0 && K6Fail == 0 : PassCore && K1Fail[6] == 0 && K6DimFail == 0;
+        public int K6FailSkip0;
+        public double K6MinGSkip0 = double.NaN;
 
-        public bool Literal { get; init; } = true;
+        // Literal §1: raw I5 and K6 on the product g_H; deviations D-2, D-3: I5 on the effective floor, K6 per dimension.
+        // Gate G-3: K6 literal g_H ≥ 0.81 with month 0 excluded.
+        public bool Pass => PassCore && (Mode.D2 ? K1Fail[6] : K1Fail[4]) == 0
+            && (Mode.D3 ? K6DimFail : Mode.K6Skip0 ? K6FailSkip0 : K6Fail) == 0;
+
+        public EvalMode Mode { get; init; } = EvalMode.Literal;
+
+        public bool Literal => !Mode.D4;
 
         private bool PassCore => Window.Count > 0 && K1Fail[0] == 0 && K1Fail[1] == 0 && K1Fail[2] == 0 && K1Fail[3] == 0 && K1Fail[5] == 0 && K2aFail == 0 && K2bFail == 0 && K3Fail == 0
             && K4aFail == 0 && K4bFail == 0 && K4cFail == 0;
     }
 
-    private static VariantResult Evaluate(GameData data, ScenarioData sc, RuleVariant rv, bool deviation)
+    /// <summary>
+    /// Which measurement deviations of §2.0 apply (D-1 tooling not limiting, D-2 I5 on the effective floor, D-3 K6 per
+    /// dimension, D-4 horizon 1200), whether K0 uses C1′ (gate G-1) and whether literal K6 skips month 0 (G-3).
+    /// </summary>
+    internal sealed record EvalMode(bool D1, bool D2, bool D3, bool D4, bool C1Prime = false, bool K6Skip0 = false)
     {
-        var res = new VariantResult { Literal = !deviation };
+        public static readonly EvalMode Literal = new(false, false, false, false);
+        public static readonly EvalMode AllDev = new(true, true, true, true);
+    }
+
+    internal static VariantResult Evaluate(GameData data, ScenarioData sc, RuleVariant rv, bool deviation) =>
+        Evaluate(data, sc, rv, deviation ? EvalMode.AllDev : EvalMode.Literal);
+
+    internal static VariantResult Evaluate(GameData data, ScenarioData sc, RuleVariant rv, EvalMode mode)
+    {
+        var res = new VariantResult { Mode = mode };
         RuleStand.FreeTooling.Value = false;
-        K0(data, sc, rv, res); // the α window is always the literal §1 K0 (real tooling)
+        if (mode.C1Prime) // the α window is always measured with real tooling
+            CultureGate.K0Prime(data, sc, rv, res, CultureGate.YSer);
+        else
+            K0(data, sc, rv, res);
         K1(rv, res);
-        RuleStand.FreeTooling.Value = deviation;
+        RuleStand.FreeTooling.Value = mode.D1;
         foreach (long a in res.Window)
         {
             foreach (long dh in Deltas)
@@ -688,7 +720,7 @@ internal static class CultureRules
     }
 
     /// <summary>unit_cost_mult per month from the snapshot (month t's yields), plus per-month maturity flags.</summary>
-    private static double[] UnitCost(RuleStand s, int months, out bool[] matureA18, out bool[] matureF2b)
+    internal static double[] UnitCost(RuleStand s, int months, out bool[] matureA18, out bool[] matureF2b)
     {
         var u = new double[months];
         matureA18 = new bool[months];
@@ -719,7 +751,7 @@ internal static class CultureRules
     }
 
     // K1: invariants I1–I5 on deterministic random cells.
-    private static void K1(RuleVariant rv, VariantResult res)
+    internal static void K1(RuleVariant rv, VariantResult res)
     {
         var rng = new SplitMix(79080);
         Cluster[] others = [Cluster.MET, Cluster.CHEM, Cluster.MECH];
@@ -828,7 +860,7 @@ internal static class CultureRules
     }
 
     // K2: no smouldering shop (hold from frontier; learn from the edge vs norm).
-    private static void K2(GameData data, ScenarioData sc, RuleVariant rv, IndustryParams ip, int actor, int proc, string id, VariantResult res)
+    internal static void K2(GameData data, ScenarioData sc, RuleVariant rv, IndustryParams ip, int actor, int proc, string id, VariantResult res)
     {
         var hold = new RuleStand(data, sc, actor, ip, rv, RTok, proc, RunSet.Solo, StartMod.Hold, false);
         int tr = hold.Target;
@@ -878,7 +910,7 @@ internal static class CultureRules
     }
 
     /// <summary>Months until g_H(target) ≥ 0.9 (0 if already at start), −1 = censored; also whether the line ever ran.</summary>
-    private static (int T, bool Started) TimeToG(RuleStand s, int horizon)
+    internal static (int T, bool Started) TimeToG(RuleStand s, int horizon)
     {
         if (s.GH(s.Target) >= G09)
             return (0, true);
@@ -893,10 +925,10 @@ internal static class CultureRules
         return (-1, started);
     }
 
-    private static double Inf(int t) => t < 0 ? double.PositiveInfinity : t;
+    internal static double Inf(int t) => t < 0 ? double.PositiveInfinity : t;
 
     // K3 (solo ≈ cluster at rate ≥ norm) and K4 (monotone with saturation).
-    private static void K34(GameData data, ScenarioData sc, RuleVariant rv, IndustryParams ip, int actor, int proc, string id, VariantResult res)
+    internal static void K34(GameData data, ScenarioData sc, RuleVariant rv, IndustryParams ip, int actor, int proc, string id, VariantResult res)
     {
         Fx6[] rates = [RTok, Fx6.FromInt(5), Fx6.FromInt(10), RNorm, Fx6.FromInt(50)];
         int horizon = res.Literal ? Horizon : 1200; // D-4
@@ -965,7 +997,7 @@ internal static class CultureRules
     }
 
     // K6: R-H-MS stability at rate 25 (D2: rate 5), D1 mean H at month 120.
-    private static void K6(GameData data, ScenarioData sc, RuleVariant rv, IndustryParams ip, int actor, string id, bool d1, VariantResult res)
+    internal static void K6(GameData data, ScenarioData sc, RuleVariant rv, IndustryParams ip, int actor, string id, bool d1, VariantResult res)
     {
         foreach (Fx6 rate in new[] { RNorm, Fx6.FromInt(5) })
         {
@@ -980,7 +1012,7 @@ internal static class CultureRules
                 }
             }
             double h0 = s.MeanH();
-            double minG = 1, minGap = 10;
+            double minG = 1, minGap = 10, minG1 = 1;
             int worstP = 0, worstGapP = 0;
             for (int t = 0; t < Horizon; t++)
             {
@@ -990,6 +1022,8 @@ internal static class CultureRules
                     if (!s.Running(r))
                         continue;
                     double g = s.GH(r).ToDouble();
+                    if (t > 0 && g < minG1)
+                        minG1 = g;
                     if (g < minG)
                     {
                         minG = g;
@@ -1014,6 +1048,10 @@ internal static class CultureRules
             {
                 if (minG < 0.81)
                     res.K6Fail++;
+                if (minG1 < 0.81)
+                    res.K6FailSkip0++;
+                if (double.IsNaN(res.K6MinGSkip0) || minG1 < res.K6MinGSkip0)
+                    res.K6MinGSkip0 = minG1;
                 if (minGap < -0.1)
                     res.K6DimFail++;
                 if (minGap < res.K6MinGap)
@@ -1094,7 +1132,7 @@ internal static class CultureRules
         }
     }
 
-    private static double P50(List<double> xs)
+    internal static double P50(List<double> xs)
     {
         if (xs.Count == 0)
             return double.NaN;
@@ -1102,11 +1140,11 @@ internal static class CultureRules
         return s[(int)Math.Floor(0.5 * (s.Length - 1))];
     }
 
-    private static string D(double x) => double.IsNaN(x) ? "" : double.IsPositiveInfinity(x) ? "inf" : x.ToString("0.###", Inv);
+    internal static string D(double x) => double.IsNaN(x) ? "" : double.IsPositiveInfinity(x) ? "inf" : x.ToString("0.###", Inv);
 
     // ------------------------------------------------------------------ output
 
-    private static void Write(string outDir, List<RuleVariant> variants, VariantResult[] results, TextWriter log)
+    internal static void Write(string outDir, List<RuleVariant> variants, VariantResult[] results, TextWriter log)
     {
         using var sum = new StreamWriter(Path.Combine(outDir, "summary.csv"));
         sum.WriteLine("variant,pass,window,c1_maxdy_by_alpha,K1_I1,K1_I2,K1_I3,K1_I4,K1_I5,K1_cont,K1_I5eff,maint_jump_raw,maint_jump_eff,K2a_fail,K2a_n,K2a_worst_g,K2b_fail,K2b_n,K2b_worst_ratio,K3_fail,K3_n,K3_worst_excess,K3_min_ratio,K4a,K4b,K4c,K4_n,K4_worst_T5_ratio,K6_fail,K6_min_g,D2_min_g_rate5,excluded");
