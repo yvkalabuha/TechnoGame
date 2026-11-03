@@ -33,6 +33,8 @@
 | [TASK-0017](../development/tasks/TASK-0017-slice-smoke-anchors.md) | APPROVED | Смоук калибровочных якорей C1–C3 на слоях знания и способности (T4s) | MS-M0 |
 | [TASK-0018](../development/tasks/TASK-0018-core-products-slice.md) | REVIEW | Core.Products для среза: КБ, варианты, line_E, дефекты, когорты, upkeep, FV, заглушка L_P (T5) | MS-M0 |
 | [TASK-0019](../development/tasks/TASK-0019-llm-worker-pilot.md) | REVIEW | Пилот внешней LLM (Qwen): tools/llm_worker | MS-M0 |
+| [TASK-0020](../development/tasks/TASK-0020-industry-kernel-v24.md) | APPROVED | Industry и Kernel под контракт v2.4: правило культуры C-B, наладка производства | MS-M0 |
+| [TASK-0021](../development/tasks/TASK-0021-products-v24-rework.md) | APPROVED | Доработка Core.Products (TASK-0018) под контракт v2.4 | MS-M0 |
 
 ## Гипотезы
 
