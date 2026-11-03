@@ -145,26 +145,32 @@
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2400,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1800,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1500,
      "dH_plus": 0
     },
     "MET.precision": {
+     "V_c": 0,
      "dH_minus": 1500,
      "dH_plus": 135
     },
     "MET.purity": {
+     "V_c": 0,
      "dH_minus": 900,
      "dH_plus": 153
     },
     "MET.quality_control": {
+     "V_c": 0,
      "dH_minus": 600,
      "dH_plus": 162
     }
@@ -203,7 +209,7 @@
      "prop": 300000
     },
     "K_ind": {
-     "metal": 5000,
+     "metal": 0,
      "prop": 0
     },
     "culture_H": {
@@ -220,6 +226,14 @@
     "proc_X": {
      "4": 0,
      "6": 2020000000
+    },
+    "proc_v": {
+     "4": 0,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 0,
+     "6": 936363
     },
     "prog": {
      "1": 437500,
@@ -250,26 +264,32 @@
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2392,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1794,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1495,
      "dH_plus": 0
     },
     "MET.precision": {
+     "V_c": 1000000000,
      "dH_minus": 1495,
      "dH_plus": 134
     },
     "MET.purity": {
+     "V_c": 1000000000,
      "dH_minus": 897,
      "dH_plus": 152
     },
     "MET.quality_control": {
+     "V_c": 1000000000,
      "dH_minus": 598,
      "dH_plus": 161
     }
@@ -308,7 +328,7 @@
      "prop": 300000
     },
     "K_ind": {
-     "metal": 9824,
+     "metal": 5000,
      "prop": 0
     },
     "culture_H": {
@@ -325,6 +345,14 @@
     "proc_X": {
      "4": 0,
      "6": 2040000000
+    },
+    "proc_v": {
+     "4": 0,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 0,
+     "6": 936936
     },
     "prog": {
      "1": 886328,
@@ -355,26 +383,32 @@
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2385,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1789,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1491,
      "dH_plus": 0
     },
     "MET.precision": {
+     "V_c": 1000000000,
      "dH_minus": 1491,
      "dH_plus": 134
     },
     "MET.purity": {
+     "V_c": 1000000000,
      "dH_minus": 895,
      "dH_plus": 151
     },
     "MET.quality_control": {
+     "V_c": 1000000000,
      "dH_minus": 597,
      "dH_plus": 160
     }
@@ -418,7 +452,7 @@
      "prop": 300000
     },
     "K_ind": {
-     "metal": 14524,
+     "metal": 9824,
      "prop": 0
     },
     "culture_H": {
@@ -436,6 +470,14 @@
     "proc_X": {
      "4": 0,
      "6": 2060000000
+    },
+    "proc_v": {
+     "4": 0,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 0,
+     "6": 937500
     },
     "prog": {
      "1": 1346560,
@@ -466,26 +508,32 @@
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2378,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1783,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1486,
      "dH_plus": 0
     },
     "MET.precision": {
+     "V_c": 1000000000,
      "dH_minus": 1487,
      "dH_plus": 133
     },
     "MET.purity": {
+     "V_c": 1000000000,
      "dH_minus": 893,
      "dH_plus": 151
     },
     "MET.quality_control": {
+     "V_c": 1000000000,
      "dH_minus": 596,
      "dH_plus": 160
     }
@@ -547,7 +595,7 @@
      "prop": 323410
     },
     "K_ind": {
-     "metal": 19088,
+     "metal": 14524,
      "prop": 0
     },
     "culture_H": {
@@ -565,6 +613,14 @@
     "proc_X": {
      "4": 0,
      "6": 2080000000
+    },
+    "proc_v": {
+     "4": 0,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 0,
+     "6": 938053
     },
     "prog": {
      "1": 1346560,
@@ -595,26 +651,32 @@
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2371,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1778,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1482,
      "dH_plus": 0
     },
     "MET.precision": {
+     "V_c": 1000000000,
      "dH_minus": 1483,
      "dH_plus": 133
     },
     "MET.purity": {
+     "V_c": 1000000000,
      "dH_minus": 891,
      "dH_plus": 150
     },
     "MET.quality_control": {
+     "V_c": 1000000000,
      "dH_minus": 594,
      "dH_plus": 159
     }
@@ -676,7 +738,7 @@
      "prop": 346870
     },
     "K_ind": {
-     "metal": 23525,
+     "metal": 19088,
      "prop": 0
     },
     "culture_H": {
@@ -694,6 +756,14 @@
     "proc_X": {
      "4": 0,
      "6": 2100000000
+    },
+    "proc_v": {
+     "4": 0,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 0,
+     "6": 938596
     },
     "prog": {
      "1": 1346560,
@@ -724,26 +794,32 @@
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2364,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1773,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1477,
      "dH_plus": 0
     },
     "MET.precision": {
+     "V_c": 1000000000,
      "dH_minus": 1479,
      "dH_plus": 133
     },
     "MET.purity": {
+     "V_c": 1000000000,
      "dH_minus": 888,
      "dH_plus": 150
     },
     "MET.quality_control": {
+     "V_c": 1000000000,
      "dH_minus": 593,
      "dH_plus": 159
     }
@@ -805,7 +881,7 @@
      "prop": 370390
     },
     "K_ind": {
-     "metal": 27843,
+     "metal": 23525,
      "prop": 0
     },
     "culture_H": {
@@ -823,6 +899,14 @@
     "proc_X": {
      "4": 0,
      "6": 2120000000
+    },
+    "proc_v": {
+     "4": 0,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 0,
+     "6": 939130
     },
     "prog": {
      "1": 1346560,
@@ -853,26 +937,32 @@
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2357,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1767,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1473,
      "dH_plus": 0
     },
     "MET.precision": {
+     "V_c": 1000000000,
      "dH_minus": 1475,
      "dH_plus": 132
     },
     "MET.purity": {
+     "V_c": 1000000000,
      "dH_minus": 886,
      "dH_plus": 149
     },
     "MET.quality_control": {
+     "V_c": 1000000000,
      "dH_minus": 592,
      "dH_plus": 158
     }
@@ -934,7 +1024,7 @@
      "prop": 393970
     },
     "K_ind": {
-     "metal": 32050,
+     "metal": 27843,
      "prop": 0
     },
     "culture_H": {
@@ -952,6 +1042,14 @@
     "proc_X": {
      "4": 0,
      "6": 2140000000
+    },
+    "proc_v": {
+     "4": 0,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 0,
+     "6": 939655
     },
     "prog": {
      "1": 1346560,
@@ -982,26 +1080,32 @@
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2350,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1762,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1468,
      "dH_plus": 0
     },
     "MET.precision": {
+     "V_c": 1000000000,
      "dH_minus": 1471,
      "dH_plus": 132
     },
     "MET.purity": {
+     "V_c": 1000000000,
      "dH_minus": 884,
      "dH_plus": 149
     },
     "MET.quality_control": {
+     "V_c": 1000000000,
      "dH_minus": 590,
      "dH_plus": 157
     }
@@ -1063,7 +1167,7 @@
      "prop": 417610
     },
     "K_ind": {
-     "metal": 36153,
+     "metal": 32050,
      "prop": 0
     },
     "culture_H": {
@@ -1081,6 +1185,14 @@
     "proc_X": {
      "4": 0,
      "6": 2160000000
+    },
+    "proc_v": {
+     "4": 0,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 0,
+     "6": 940170
     },
     "prog": {
      "1": 1346560,
@@ -1111,26 +1223,32 @@
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2343,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1757,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1464,
      "dH_plus": 0
     },
     "MET.precision": {
+     "V_c": 1000000000,
      "dH_minus": 1467,
      "dH_plus": 132
     },
     "MET.purity": {
+     "V_c": 1000000000,
      "dH_minus": 882,
      "dH_plus": 149
     },
     "MET.quality_control": {
+     "V_c": 1000000000,
      "dH_minus": 589,
      "dH_plus": 157
     }
@@ -1192,7 +1310,7 @@
      "prop": 441310
     },
     "K_ind": {
-     "metal": 40158,
+     "metal": 36153,
      "prop": 0
     },
     "culture_H": {
@@ -1210,6 +1328,14 @@
     "proc_X": {
      "4": 0,
      "6": 2180000000
+    },
+    "proc_v": {
+     "4": 0,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 0,
+     "6": 940677
     },
     "prog": {
      "1": 1346560,
@@ -1240,26 +1366,32 @@
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2335,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1751,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1459,
      "dH_plus": 0
     },
     "MET.precision": {
+     "V_c": 1000000000,
      "dH_minus": 1463,
      "dH_plus": 131
     },
     "MET.purity": {
+     "V_c": 1000000000,
      "dH_minus": 880,
      "dH_plus": 148
     },
     "MET.quality_control": {
+     "V_c": 1000000000,
      "dH_minus": 588,
      "dH_plus": 156
     }
@@ -1321,7 +1453,7 @@
      "prop": 465070
     },
     "K_ind": {
-     "metal": 44070,
+     "metal": 40158,
      "prop": 0
     },
     "culture_H": {
@@ -1339,6 +1471,14 @@
     "proc_X": {
      "4": 0,
      "6": 2200000000
+    },
+    "proc_v": {
+     "4": 0,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 0,
+     "6": 941176
     },
     "prog": {
      "1": 1346560,
@@ -1369,26 +1509,32 @@
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2328,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1746,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1455,
      "dH_plus": 0
     },
     "MET.precision": {
+     "V_c": 1000000000,
      "dH_minus": 1459,
      "dH_plus": 131
     },
     "MET.purity": {
+     "V_c": 1000000000,
      "dH_minus": 877,
      "dH_plus": 148
     },
     "MET.quality_control": {
+     "V_c": 1000000000,
      "dH_minus": 586,
      "dH_plus": 156
     }
@@ -1450,7 +1596,7 @@
      "prop": 488890
     },
     "K_ind": {
-     "metal": 47896,
+     "metal": 44070,
      "prop": 0
     },
     "culture_H": {
@@ -1468,6 +1614,14 @@
     "proc_X": {
      "4": 0,
      "6": 2220000000
+    },
+    "proc_v": {
+     "4": 0,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 0,
+     "6": 941666
     },
     "prog": {
      "1": 1346560,
@@ -1498,26 +1652,32 @@
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2321,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1741,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1451,
      "dH_plus": 0
     },
     "MET.precision": {
+     "V_c": 1000000000,
      "dH_minus": 1455,
      "dH_plus": 131
     },
     "MET.purity": {
+     "V_c": 1000000000,
      "dH_minus": 875,
      "dH_plus": 147
     },
     "MET.quality_control": {
+     "V_c": 1000000000,
      "dH_minus": 585,
      "dH_plus": 155
     }
@@ -1588,7 +1748,7 @@
      "prop": 562770
     },
     "K_ind": {
-     "metal": 51717,
+     "metal": 47896,
      "prop": 0
     },
     "culture_H": {
@@ -1608,6 +1768,14 @@
     "proc_X": {
      "4": 0,
      "6": 2240000000
+    },
+    "proc_v": {
+     "4": 0,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 0,
+     "6": 942148
     },
     "prog": {
      "1": 1346560,
@@ -1645,26 +1813,32 @@
    ],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2315,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1736,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1446,
      "dH_plus": 0
     },
     "MET.precision": {
+     "V_c": 1000000000,
      "dH_minus": 1451,
      "dH_plus": 130
     },
     "MET.purity": {
+     "V_c": 1000000000,
      "dH_minus": 873,
      "dH_plus": 147
     },
     "MET.quality_control": {
+     "V_c": 1000000000,
      "dH_minus": 584,
      "dH_plus": 155
     }
@@ -1674,12 +1848,12 @@
    ],
    "knowledge": [
     {
-     "Kmix": 864697,
+     "Kmix": 860876,
      "alloc": 360643,
-     "c_eff": 1287072,
-     "dprog": 280204,
+     "c_eff": 1289715,
+     "dprog": 279629,
      "node": 4,
-     "prog_new": 280204,
+     "prog_new": 279629,
      "w": 1000000
     }
    ],
@@ -1703,7 +1877,7 @@
      "prop": 562770
     },
     "K_ind": {
-     "metal": 55498,
+     "metal": 51717,
      "prop": 0
     },
     "culture_H": {
@@ -1724,11 +1898,19 @@
      "4": 0,
      "6": 2260000000
     },
+    "proc_v": {
+     "4": 0,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 0,
+     "6": 942622
+    },
     "prog": {
      "1": 1346560,
      "2": 824402,
      "3": 1019425,
-     "4": 280204,
+     "4": 279629,
      "5": 0
     },
     "tooling_M": {
@@ -1760,26 +1942,32 @@
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2308,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1731,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1442,
      "dH_plus": 0
     },
     "MET.precision": {
+     "V_c": 1000000000,
      "dH_minus": 1447,
      "dH_plus": 130
     },
     "MET.purity": {
+     "V_c": 1000000000,
      "dH_minus": 871,
      "dH_plus": 146
     },
     "MET.quality_control": {
+     "V_c": 1000000000,
      "dH_minus": 583,
      "dH_plus": 154
     }
@@ -1789,12 +1977,12 @@
    ],
    "knowledge": [
     {
-     "Kmix": 904538,
+     "Kmix": 900757,
      "alloc": 361545,
-     "c_eff": 1260148,
-     "dprog": 286906,
+     "c_eff": 1262654,
+     "dprog": 286337,
      "node": 4,
-     "prog_new": 567110,
+     "prog_new": 565966,
      "w": 1000000
     }
    ],
@@ -1818,7 +2006,7 @@
      "prop": 562770
     },
     "K_ind": {
-     "metal": 59244,
+     "metal": 55498,
      "prop": 0
     },
     "culture_H": {
@@ -1839,11 +2027,19 @@
      "4": 0,
      "6": 2280000000
     },
+    "proc_v": {
+     "4": 0,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 0,
+     "6": 943089
+    },
     "prog": {
      "1": 1346560,
      "2": 824402,
      "3": 1019425,
-     "4": 567110,
+     "4": 565966,
      "5": 0
     },
     "tooling_M": {
@@ -1868,26 +2064,32 @@
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2301,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1725,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1438,
      "dH_plus": 0
     },
     "MET.precision": {
+     "V_c": 1000000000,
      "dH_minus": 1443,
      "dH_plus": 130
     },
     "MET.purity": {
+     "V_c": 1000000000,
      "dH_minus": 869,
      "dH_plus": 146
     },
     "MET.quality_control": {
+     "V_c": 1000000000,
      "dH_minus": 581,
      "dH_plus": 154
     }
@@ -1897,12 +2099,12 @@
    ],
    "knowledge": [
     {
-     "Kmix": 944434,
+     "Kmix": 940688,
      "alloc": 362449,
-     "c_eff": 1234292,
-     "dprog": 293649,
+     "c_eff": 1236674,
+     "dprog": 293083,
      "node": 4,
-     "prog_new": 860759,
+     "prog_new": 859049,
      "w": 1000000
     }
    ],
@@ -1926,7 +2128,7 @@
      "prop": 562770
     },
     "K_ind": {
-     "metal": 62958,
+     "metal": 59244,
      "prop": 0
     },
     "culture_H": {
@@ -1947,11 +2149,19 @@
      "4": 0,
      "6": 2300000000
     },
+    "proc_v": {
+     "4": 0,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 0,
+     "6": 943548
+    },
     "prog": {
      "1": 1346560,
      "2": 824402,
      "3": 1019425,
-     "4": 860759,
+     "4": 859049,
      "5": 0
     },
     "tooling_M": {
@@ -1976,26 +2186,32 @@
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2294,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1720,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1433,
      "dH_plus": 0
     },
     "MET.precision": {
+     "V_c": 1000000000,
      "dH_minus": 1439,
      "dH_plus": 129
     },
     "MET.purity": {
+     "V_c": 1000000000,
      "dH_minus": 866,
      "dH_plus": 145
     },
     "MET.quality_control": {
+     "V_c": 1000000000,
      "dH_minus": 580,
      "dH_plus": 153
     }
@@ -2005,12 +2221,12 @@
    ],
    "knowledge": [
     {
-     "Kmix": 984388,
+     "Kmix": 980674,
      "alloc": 363354,
-     "c_eff": 1209440,
-     "dprog": 300431,
+     "c_eff": 1211708,
+     "dprog": 299869,
      "node": 4,
-     "prog_new": 1161190,
+     "prog_new": 1158918,
      "w": 1000000
     }
    ],
@@ -2039,7 +2255,7 @@
      "prop": 562770
     },
     "K_ind": {
-     "metal": 66708,
+     "metal": 62958,
      "prop": 0
     },
     "culture_H": {
@@ -2061,11 +2277,19 @@
      "4": 0,
      "6": 2320000000
     },
+    "proc_v": {
+     "4": 0,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 0,
+     "6": 944000
+    },
     "prog": {
      "1": 1346560,
      "2": 824402,
      "3": 1019425,
-     "4": 1161190,
+     "4": 1158918,
      "5": 0
     },
     "tooling_M": {
@@ -2098,26 +2322,32 @@
    ],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2287,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1715,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1429,
      "dH_plus": 0
     },
     "MET.precision": {
+     "V_c": 1000000000,
      "dH_minus": 1435,
      "dH_plus": 129
     },
     "MET.purity": {
+     "V_c": 1000000000,
      "dH_minus": 864,
      "dH_plus": 145
     },
     "MET.quality_control": {
+     "V_c": 1000000000,
      "dH_minus": 579,
      "dH_plus": 153
     }
@@ -2156,7 +2386,7 @@
      "prop": 562770
     },
     "K_ind": {
-     "metal": 70384,
+     "metal": 66708,
      "prop": 0
     },
     "culture_H": {
@@ -2178,11 +2408,19 @@
      "4": 0,
      "6": 2340000000
     },
+    "proc_v": {
+     "4": 0,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 2742,
+     "6": 944444
+    },
     "prog": {
      "1": 1346560,
      "2": 824402,
      "3": 1019425,
-     "4": 1161190,
+     "4": 1158918,
      "5": 303552
     },
     "tooling_M": {
@@ -2215,28 +2453,34 @@
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2280,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1710,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1425,
      "dH_plus": 0
     },
     "MET.precision": {
-     "dH_minus": 0,
-     "dH_plus": 6600
+     "V_c": 1000000000,
+     "dH_minus": 1431,
+     "dH_plus": 129
     },
     "MET.purity": {
-     "dH_minus": 0,
-     "dH_plus": 9209
+     "V_c": 1000000000,
+     "dH_minus": 862,
+     "dH_plus": 144
     },
     "MET.quality_control": {
+     "V_c": 1000000000,
      "dH_minus": 577,
-     "dH_plus": 5693
+     "dH_plus": 152
     }
    },
    "frontier": [
@@ -2279,16 +2523,16 @@
      "prop": 562770
     },
     "K_ind": {
-     "metal": 73987,
+     "metal": 70384,
      "prop": 0
     },
     "culture_H": {
      "CHEM.precision": 3757891,
      "CHEM.purity": 3568422,
      "CHEM.quality_control": 3473686,
-     "MET.precision": 3483899,
-     "MET.purity": 3296744,
-     "MET.quality_control": 3197770
+     "MET.precision": 3475997,
+     "MET.purity": 3286817,
+     "MET.quality_control": 3192229
     },
     "known": [
      1,
@@ -2301,11 +2545,19 @@
      "4": 5000000,
      "6": 2360000000
     },
+    "proc_v": {
+     "4": 1000000000,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 2710,
+     "6": 944881
+    },
     "prog": {
      "1": 1346560,
      "2": 824402,
      "3": 1019425,
-     "4": 1161190,
+     "4": 1158918,
      "5": 607862
     },
     "tooling_M": {
@@ -2330,28 +2582,34 @@
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2273,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1705,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1421,
      "dH_plus": 0
     },
     "MET.precision": {
+     "V_c": 2000000000,
      "dH_minus": 0,
-     "dH_plus": 6512
+     "dH_plus": 6616
     },
     "MET.purity": {
+     "V_c": 2000000000,
      "dH_minus": 0,
-     "dH_plus": 9068
+     "dH_plus": 9220
     },
     "MET.quality_control": {
-     "dH_minus": 593,
-     "dH_plus": 5622
+     "V_c": 2000000000,
+     "dH_minus": 576,
+     "dH_plus": 5698
     }
    },
    "frontier": [
@@ -2394,16 +2652,16 @@
      "prop": 562770
     },
     "K_ind": {
-     "metal": 77518,
+     "metal": 73987,
      "prop": 0
     },
     "culture_H": {
      "CHEM.precision": 3755618,
      "CHEM.purity": 3566717,
      "CHEM.quality_control": 3472265,
-     "MET.precision": 3490411,
-     "MET.purity": 3305812,
-     "MET.quality_control": 3202799
+     "MET.precision": 3482613,
+     "MET.purity": 3296037,
+     "MET.quality_control": 3197351
     },
     "known": [
      1,
@@ -2416,11 +2674,19 @@
      "4": 10000000,
      "6": 2380000000
     },
+    "proc_v": {
+     "4": 1000000000,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 2717,
+     "6": 945312
+    },
     "prog": {
      "1": 1346560,
      "2": 824402,
      "3": 1019425,
-     "4": 1161190,
+     "4": 1158918,
      "5": 912933
     },
     "tooling_M": {
@@ -2434,7 +2700,7 @@
    },
    "tick": 18,
    "yield_used": {
-    "4": 3055,
+    "4": 2717,
     "6": 945312
    }
   },
@@ -2445,28 +2711,34 @@
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2266,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1700,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1416,
      "dH_plus": 0
     },
     "MET.precision": {
+     "V_c": 2000000000,
      "dH_minus": 0,
-     "dH_plus": 6426
+     "dH_plus": 6528
     },
     "MET.purity": {
+     "V_c": 2000000000,
      "dH_minus": 0,
-     "dH_plus": 8930
+     "dH_plus": 9078
     },
     "MET.quality_control": {
-     "dH_minus": 608,
-     "dH_plus": 5554
+     "V_c": 2000000000,
+     "dH_minus": 592,
+     "dH_plus": 5627
     }
    },
    "frontier": [
@@ -2514,16 +2786,16 @@
      "prop": 562770
     },
     "K_ind": {
-     "metal": 80979,
+     "metal": 77518,
      "prop": 0
     },
     "culture_H": {
      "CHEM.precision": 3753352,
      "CHEM.purity": 3565017,
      "CHEM.quality_control": 3470849,
-     "MET.precision": 3496837,
-     "MET.purity": 3314742,
-     "MET.quality_control": 3207745
+     "MET.precision": 3489141,
+     "MET.purity": 3305115,
+     "MET.quality_control": 3202386
     },
     "known": [
      1,
@@ -2537,11 +2809,19 @@
      "4": 15000000,
      "6": 2400000000
     },
+    "proc_v": {
+     "4": 1000000000,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 3063,
+     "6": 945736
+    },
     "prog": {
      "1": 1346560,
      "2": 824402,
      "3": 1019425,
-     "4": 1161190,
+     "4": 1158918,
      "5": 1218767
     },
     "tooling_M": {
@@ -2555,7 +2835,7 @@
    },
    "tick": 19,
    "yield_used": {
-    "4": 3428,
+    "4": 3063,
     "6": 945736
    }
   },
@@ -2566,28 +2846,152 @@
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
+     "V_c": 0,
      "dH_minus": 2260,
      "dH_plus": 0
     },
     "CHEM.purity": {
+     "V_c": 0,
      "dH_minus": 1695,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
+     "V_c": 0,
      "dH_minus": 1412,
      "dH_plus": 0
     },
     "MET.precision": {
+     "V_c": 2000000000,
      "dH_minus": 0,
-     "dH_plus": 6341
+     "dH_plus": 6442
     },
     "MET.purity": {
+     "V_c": 2000000000,
      "dH_minus": 0,
-     "dH_plus": 8795
+     "dH_plus": 8939
     },
     "MET.quality_control": {
-     "dH_minus": 623,
-     "dH_plus": 5486
+     "V_c": 2000000000,
+     "dH_minus": 607,
+     "dH_plus": 5558
+    }
+   },
+   "frontier": [],
+   "knowledge": [],
+   "merge_discoveries": [],
+   "merge_report_output": [
+    [
+     0,
+     4,
+     5000000,
+     1000000000
+    ],
+    [
+     0,
+     6,
+     20000000,
+     1000000000
+    ]
+   ],
+   "rate_in_force": {
+    "4": 5000000,
+    "6": 20000000
+   },
+   "spent_R": 0,
+   "state_after": {
+    "K_d": {
+     "metal": 1007760,
+     "prop": 562770
+    },
+    "K_ind": {
+     "metal": 80979,
+     "prop": 0
+    },
+    "culture_H": {
+     "CHEM.precision": 3751092,
+     "CHEM.purity": 3563322,
+     "CHEM.quality_control": 3469437,
+     "MET.precision": 3495583,
+     "MET.purity": 3314054,
+     "MET.quality_control": 3207337
+    },
+    "known": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ],
+    "proc_X": {
+     "4": 20000000,
+     "6": 2420000000
+    },
+    "proc_v": {
+     "4": 1000000000,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 3437,
+     "6": 946153
+    },
+    "prog": {
+     "1": 1346560,
+     "2": 824402,
+     "3": 1019425,
+     "4": 1158918,
+     "5": 1218767
+    },
+    "tooling_M": {
+     "CHEM.precision": 4000000,
+     "CHEM.purity": 3800000,
+     "CHEM.quality_control": 3700000,
+     "MET.precision": 3700000,
+     "MET.purity": 3500000,
+     "MET.quality_control": 3400000
+    }
+   },
+   "tick": 20,
+   "yield_used": {
+    "4": 3437,
+    "6": 946153
+   }
+  },
+  {
+   "S_R": 368838,
+   "budget": 1053823,
+   "commands_applied": [],
+   "commands_issued": [],
+   "culture_detail": {
+    "CHEM.precision": {
+     "V_c": 0,
+     "dH_minus": 2253,
+     "dH_plus": 0
+    },
+    "CHEM.purity": {
+     "V_c": 0,
+     "dH_minus": 1689,
+     "dH_plus": 0
+    },
+    "CHEM.quality_control": {
+     "V_c": 0,
+     "dH_minus": 1408,
+     "dH_plus": 0
+    },
+    "MET.precision": {
+     "V_c": 2000000000,
+     "dH_minus": 0,
+     "dH_plus": 6357
+    },
+    "MET.purity": {
+     "V_c": 2000000000,
+     "dH_minus": 0,
+     "dH_plus": 8804
+    },
+    "MET.quality_control": {
+     "V_c": 2000000000,
+     "dH_minus": 622,
+     "dH_plus": 5491
     }
    },
    "frontier": [],
@@ -2622,12 +3026,12 @@
      "prop": 0
     },
     "culture_H": {
-     "CHEM.precision": 3751092,
-     "CHEM.purity": 3563322,
-     "CHEM.quality_control": 3469437,
-     "MET.precision": 3503178,
-     "MET.purity": 3323537,
-     "MET.quality_control": 3212608
+     "CHEM.precision": 3748839,
+     "CHEM.purity": 3561633,
+     "CHEM.quality_control": 3468029,
+     "MET.precision": 3501940,
+     "MET.purity": 3322858,
+     "MET.quality_control": 3212206
     },
     "known": [
      1,
@@ -2638,14 +3042,22 @@
      6
     ],
     "proc_X": {
-     "4": 20000000,
-     "6": 2420000000
+     "4": 25000000,
+     "6": 2440000000
+    },
+    "proc_v": {
+     "4": 1000000000,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 3842,
+     "6": 946564
     },
     "prog": {
      "1": 1346560,
      "2": 824402,
      "3": 1019425,
-     "4": 1161190,
+     "4": 1158918,
      "5": 1218767
     },
     "tooling_M": {
@@ -2657,41 +3069,47 @@
      "MET.quality_control": 3400000
     }
    },
-   "tick": 20,
+   "tick": 21,
    "yield_used": {
-    "4": 3832,
-    "6": 946153
+    "4": 3842,
+    "6": 946564
    }
   },
   {
-   "S_R": 368838,
-   "budget": 1053823,
+   "S_R": 369759,
+   "budget": 1056457,
    "commands_applied": [],
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
-     "dH_minus": 2253,
+     "V_c": 0,
+     "dH_minus": 2246,
      "dH_plus": 0
     },
     "CHEM.purity": {
-     "dH_minus": 1689,
+     "V_c": 0,
+     "dH_minus": 1684,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
-     "dH_minus": 1408,
+     "V_c": 0,
+     "dH_minus": 1404,
      "dH_plus": 0
     },
     "MET.precision": {
-     "dH_minus": 9,
-     "dH_plus": 6259
+     "V_c": 2000000000,
+     "dH_minus": 5,
+     "dH_plus": 6274
     },
     "MET.purity": {
+     "V_c": 2000000000,
      "dH_minus": 0,
-     "dH_plus": 8662
+     "dH_plus": 8672
     },
     "MET.quality_control": {
-     "dH_minus": 637,
-     "dH_plus": 5420
+     "V_c": 2000000000,
+     "dH_minus": 636,
+     "dH_plus": 5424
     }
    },
    "frontier": [],
@@ -2726,12 +3144,12 @@
      "prop": 0
     },
     "culture_H": {
-     "CHEM.precision": 3748839,
-     "CHEM.purity": 3561633,
-     "CHEM.quality_control": 3468029,
-     "MET.precision": 3509428,
-     "MET.purity": 3332199,
-     "MET.quality_control": 3217391
+     "CHEM.precision": 3746593,
+     "CHEM.purity": 3559949,
+     "CHEM.quality_control": 3466625,
+     "MET.precision": 3508209,
+     "MET.purity": 3331530,
+     "MET.quality_control": 3216994
     },
     "known": [
      1,
@@ -2742,14 +3160,22 @@
      6
     ],
     "proc_X": {
-     "4": 25000000,
-     "6": 2440000000
+     "4": 30000000,
+     "6": 2460000000
+    },
+    "proc_v": {
+     "4": 1000000000,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 4278,
+     "6": 946969
     },
     "prog": {
      "1": 1346560,
      "2": 824402,
      "3": 1019425,
-     "4": 1161190,
+     "4": 1158918,
      "5": 1218767
     },
     "tooling_M": {
@@ -2761,41 +3187,47 @@
      "MET.quality_control": 3400000
     }
    },
-   "tick": 21,
+   "tick": 22,
    "yield_used": {
-    "4": 4266,
-    "6": 946564
+    "4": 4278,
+    "6": 946969
    }
   },
   {
-   "S_R": 369759,
-   "budget": 1056457,
+   "S_R": 370684,
+   "budget": 1059098,
    "commands_applied": [],
    "commands_issued": [],
    "culture_detail": {
     "CHEM.precision": {
-     "dH_minus": 2246,
+     "V_c": 0,
+     "dH_minus": 2239,
      "dH_plus": 0
     },
     "CHEM.purity": {
-     "dH_minus": 1684,
+     "V_c": 0,
+     "dH_minus": 1679,
      "dH_plus": 0
     },
     "CHEM.quality_control": {
-     "dH_minus": 1404,
+     "V_c": 0,
+     "dH_minus": 1399,
      "dH_plus": 0
     },
     "MET.precision": {
-     "dH_minus": 28,
-     "dH_plus": 6178
+     "V_c": 2000000000,
+     "dH_minus": 24,
+     "dH_plus": 6192
     },
     "MET.purity": {
+     "V_c": 2000000000,
      "dH_minus": 0,
-     "dH_plus": 8533
+     "dH_plus": 8542
     },
     "MET.quality_control": {
-     "dH_minus": 652,
-     "dH_plus": 5355
+     "V_c": 2000000000,
+     "dH_minus": 650,
+     "dH_plus": 5360
     }
    },
    "frontier": [],
@@ -2830,116 +3262,12 @@
      "prop": 0
     },
     "culture_H": {
-     "CHEM.precision": 3746593,
-     "CHEM.purity": 3559949,
-     "CHEM.quality_control": 3466625,
-     "MET.precision": 3515578,
-     "MET.purity": 3340732,
-     "MET.quality_control": 3222094
-    },
-    "known": [
-     1,
-     2,
-     3,
-     4,
-     5,
-     6
-    ],
-    "proc_X": {
-     "4": 30000000,
-     "6": 2460000000
-    },
-    "prog": {
-     "1": 1346560,
-     "2": 824402,
-     "3": 1019425,
-     "4": 1161190,
-     "5": 1218767
-    },
-    "tooling_M": {
-     "CHEM.precision": 4000000,
-     "CHEM.purity": 3800000,
-     "CHEM.quality_control": 3700000,
-     "MET.precision": 3700000,
-     "MET.purity": 3500000,
-     "MET.quality_control": 3400000
-    }
-   },
-   "tick": 22,
-   "yield_used": {
-    "4": 4734,
-    "6": 946969
-   }
-  },
-  {
-   "S_R": 370684,
-   "budget": 1059098,
-   "commands_applied": [],
-   "commands_issued": [],
-   "culture_detail": {
-    "CHEM.precision": {
-     "dH_minus": 2239,
-     "dH_plus": 0
-    },
-    "CHEM.purity": {
-     "dH_minus": 1679,
-     "dH_plus": 0
-    },
-    "CHEM.quality_control": {
-     "dH_minus": 1399,
-     "dH_plus": 0
-    },
-    "MET.precision": {
-     "dH_minus": 46,
-     "dH_plus": 6098
-    },
-    "MET.purity": {
-     "dH_minus": 0,
-     "dH_plus": 8406
-    },
-    "MET.quality_control": {
-     "dH_minus": 666,
-     "dH_plus": 5292
-    }
-   },
-   "frontier": [],
-   "knowledge": [],
-   "merge_discoveries": [],
-   "merge_report_output": [
-    [
-     0,
-     4,
-     5000000,
-     1000000000
-    ],
-    [
-     0,
-     6,
-     20000000,
-     1000000000
-    ]
-   ],
-   "rate_in_force": {
-    "4": 5000000,
-    "6": 20000000
-   },
-   "spent_R": 0,
-   "state_after": {
-    "K_d": {
-     "metal": 1007760,
-     "prop": 562770
-    },
-    "K_ind": {
-     "metal": 94149,
-     "prop": 0
-    },
-    "culture_H": {
      "CHEM.precision": 3744354,
      "CHEM.purity": 3558270,
      "CHEM.quality_control": 3465226,
-     "MET.precision": 3521630,
-     "MET.purity": 3349138,
-     "MET.quality_control": 3226720
+     "MET.precision": 3514377,
+     "MET.purity": 3340072,
+     "MET.quality_control": 3221704
     },
     "known": [
      1,
@@ -2953,11 +3281,19 @@
      "4": 35000000,
      "6": 2480000000
     },
+    "proc_v": {
+     "4": 1000000000,
+     "6": 1000000000
+    },
+    "proc_yield": {
+     "4": 4747,
+     "6": 947368
+    },
     "prog": {
      "1": 1346560,
      "2": 824402,
      "3": 1019425,
-     "4": 1161190,
+     "4": 1158918,
      "5": 1218767
     },
     "tooling_M": {
@@ -2971,7 +3307,7 @@
    },
    "tick": 23,
    "yield_used": {
-    "4": 5234,
+    "4": 4747,
     "6": 947368
    }
   }

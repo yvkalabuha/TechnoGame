@@ -208,7 +208,9 @@ def yield_p(p):
         dims.append({"dim": d, "c_d": c, "src": src, "gap": c - r, "g": g})
     Xh = p["Xh"] if p.get("l_lic") is None else mul(p["Xh"], ONE - p["l_lic"])
     rp = ramp(p["X"], Xh, p["lam0"])
-    return {"prc_id": p["prc_id"], "dims": dims, "Xh_eff": Xh, "ramp": rp, "yield": mul(acc, rp)}
+    # contract 4.2 A4: q_p = g(c_qc - r_qc) if r_qc > 0, else 1
+    q_p = next((d["g"] for d in dims if d["dim"] == "quality_control"), ONE)
+    return {"prc_id": p["prc_id"], "dims": dims, "Xh_eff": Xh, "ramp": rp, "yield": mul(acc, rp), "q_p": q_p}
 
 
 def production_profile(case):
@@ -231,7 +233,7 @@ def production_profile(case):
     else:
         bottleneck = {"prc": bn["prc_id"], "dim": None, "src": "ramp"}   # spec 3.5 A5
     return {"per_process": rows, "admitted": admitted, "unit_cost_mult": ucm,
-            "bottleneck": bottleneck, "q": None}                       # q_p undefined (A4)
+            "bottleneck": bottleneck, "q": min(r["q_p"] for r in rows)}   # contract 4.2 A4
 
 
 # ---------------------------------------------------------------- slice spec 3.1: knowledge
@@ -437,6 +439,9 @@ def run_trajectory(seed):
     prog = {n: ZERO for n in NODES if n not in known}
     K_d = {k: fx(v) for k, v in TP["K_d0"].items()}
     K_ind = {k: ZERO for k in K_d}
+    # service columns "last month" (contract 4.0); fixture: no output in month -1
+    proc_v = {p: ZERO for p in X}
+    proc_yield = {p: ZERO for p in X}
     budget = T["budget0"]
     g_month = div(T["g"], fi(12))
 
@@ -515,12 +520,42 @@ def run_trajectory(seed):
             if disc is not None:
                 dK[disc] = add(dK[disc], alloc)
             know_rows.append(krow)
-        # production from snapshot culture/tooling/experience, rate in force
+        # K_ind (contract 4.0/4.3, A10): knowledge compute from the snapshot (proc_v, proc_yield of t-1,
+        # K_d, K_ind); own buffer, visible from t+1. c_eff above used the snapshot K_ind.
+        K_ind_new = {}
+        for d in sorted(K_ind):
+            V_d = add(*[proc_v[p] for p in sorted(proc_v)
+                        if NODES[p]["disc"] == d and proc_yield[p] >= fx("0.3")]) if proc_v else ZERO
+            if V_d == 0:
+                K_ind_new[d] = K_ind[d] - mul(T["delta_ind"], K_ind[d])
+            elif K_d[d] != 0:
+                frac = div(mul(T["eta"], V_d), add(V_d, T["V_ref"]))
+                K_ind_new[d] = add(K_ind[d], mul(frac, max(ZERO, ONE - div(K_ind[d], mul(T["theta_ind"], K_d[d])))))
+            else:
+                K_ind_new[d] = K_ind[d]
+        # industry compute: yield from snapshot culture/tooling/experience -> proc_yield buffer; rate in force
         reports, yields = [], {}
         for p in sorted(X):
             yields[p] = yield_of(p) if p in snap_known else ZERO
             if p in snap_known and rate[p] > 0 and yields[p] > 0:
                 reports.append((site, p, rate[p], mul(rate[p], fx(NODES[p]["labour"]))))
+        # industry compute: culture_H (contract 4.0/4.1, A3) from snapshot H and proc_v of month t-1
+        H_new, M_new, culture_detail = {}, {}, {}
+        for c in clusters:
+            for d in DIMS:
+                procs = [{"prc_id": p, "v": proc_v[p], "r_d": fx(NODES[p]["req"][DIMS.index(d)]), "world_lead": False}
+                         for p in sorted(proc_v) if proc_v[p] > 0 and NODES[p]["cluster"] == c]
+                spill_in = [{"cluster": c2, "R": R[(c, c2)], "H_other": H[(c2, d)]} for c2 in clusters if c2 != c]
+                res = culture_step(culture_base(H=H[(c, d)], procs=procs, spill_in=spill_in,
+                                                alpha=T["alpha"], delta_H=T["delta_H"], rho_max=T["rho_max"],
+                                                k_catch=T["k_catch"], sigma=T["sigma"], phi_floor=T["phi_floor"],
+                                                Hcap=T["Hcap"], act=T["act"], w=T["w"]))
+                H_new[(c, d)] = res["H_new"]
+                culture_detail["%s.%s" % (c, d)] = {"V_c": res["V_c"], "dH_plus": res["dH_plus"],
+                                                     "dH_minus": res["dH_minus"]}
+                # spec 3.2, 3.5 A11: dM = invest/cost_M - delta_M*M (industry compute, snapshot M);
+                # fixture: cost_M = 1, invest = delta_M*M0
+                M_new[(c, d)] = add(M[(c, d)], div(M_inv[(c, d)], T["cost_M"]), -mul(T["delta_M"], M[(c, d)]))
         # AI commands for t+1
         for p in sorted(X):
             want = fx(NODES[p]["rate"]) if (p in snap_known and yields[p] > 0) else ZERO
@@ -529,12 +564,17 @@ def run_trajectory(seed):
         if t > 0 and t % 12 == 0:
             pending.append({"cmd": "set_year", "year": t // 12, "j": j_for_year(t // 12),
                             "decided_at": t, "applies_at": t + 1})
-        # ---- merge
+        # ---- merge (contract 4.0): report_output by (site, prc) -> proc_X, proc_v; discoveries by (actor, node); K_d
         reports.sort(key=lambda r: (r[0], r[1]))
-        v = {}
+        got = set()
         for (_, p, units, labour) in reports:
             X[p] = add(X[p], units)
-            v[p] = labour
+            proc_v[p] = labour
+            got.add(p)
+        for p in sorted(X):
+            if p not in got:
+                proc_v[p] = ZERO
+                X[p] = X[p] - mul(T["delta_X"], X[p])
         discoveries.sort()
         for (_, n) in discoveries:
             known.add(n)
@@ -542,33 +582,13 @@ def run_trajectory(seed):
             amount = dK[d]
             opened_d = sum(1 for (_, n) in discoveries if NODES[n]["disc"] == d)
             K_d[d] = add(K_d[d], div(mul(T["mu_K"], amount), T["S_ref"]), mul(T["k_node"], fi(opened_d)))
-        # capability: culture from this tick's v_p and snapshot H (A3)
+        # end of tick: compute buffers become state (visible from t+1)
         H_snap = dict(H)
-        culture_detail = {}
-        for c in clusters:
-            for d in DIMS:
-                procs = [{"prc_id": p, "v": v[p], "r_d": fx(NODES[p]["req"][DIMS.index(d)]), "world_lead": False}
-                         for p in sorted(v) if NODES[p]["cluster"] == c]
-                spill_in = [{"cluster": c2, "R": R[(c, c2)], "H_other": H_snap[(c2, d)]} for c2 in clusters if c2 != c]
-                res = culture_step(culture_base(H=H_snap[(c, d)], procs=procs, spill_in=spill_in,
-                                                alpha=T["alpha"], delta_H=T["delta_H"], rho_max=T["rho_max"],
-                                                k_catch=T["k_catch"], sigma=T["sigma"], phi_floor=T["phi_floor"],
-                                                Hcap=T["Hcap"], act=T["act"], w=T["w"]))
-                H[(c, d)] = res["H_new"]
-                culture_detail["%s.%s" % (c, d)] = {"dH_plus": res["dH_plus"], "dH_minus": res["dH_minus"]}
-                # spec 3.2, 3.5 A11: dM = invest/cost_M - delta_M*M; fixture: cost_M = 1, invest = delta_M*M0
-                M[(c, d)] = add(M[(c, d)], div(M_inv[(c, d)], T["cost_M"]), -mul(T["delta_M"], M[(c, d)]))
-        for p in sorted(X):
-            if p not in v:
-                X[p] = X[p] - mul(T["delta_X"], X[p])
-        # ---- post: K_ind from this tick's discipline volume, merged K_d (A10)
-        for d in sorted(K_ind):
-            V_d = add(*[v[p] for p in v if NODES[p]["disc"] == d and yields[p] >= fx("0.3")]) if v else ZERO
-            if V_d == 0:
-                K_ind[d] = K_ind[d] - mul(T["delta_ind"], K_ind[d])
-            elif K_d[d] != 0:
-                frac = div(mul(T["eta"], V_d), add(V_d, T["V_ref"]))
-                K_ind[d] = add(K_ind[d], mul(frac, max(ZERO, ONE - div(K_ind[d], mul(T["theta_ind"], K_d[d])))))
+        H.update(H_new)
+        M.update(M_new)
+        K_ind = K_ind_new
+        proc_yield = dict(yields)
+        # ---- post: invariants only (contract 4.0)
         # post invariants (README I1-I6), checked on the reference itself
         assert spent <= S <= budget
         H_floor = mul(T["phi_floor"], T["Hcap"])
@@ -592,6 +612,8 @@ def run_trajectory(seed):
                 "culture_H": {"%s.%s" % k: H[k] for k in sorted(H)},
                 "tooling_M": {"%s.%s" % k: M[k] for k in sorted(M)},
                 "proc_X": {str(p): X[p] for p in sorted(X)},
+                "proc_v": {str(p): proc_v[p] for p in sorted(proc_v)},
+                "proc_yield": {str(p): proc_yield[p] for p in sorted(proc_yield)},
             },
             "culture_detail": culture_detail,
         })
