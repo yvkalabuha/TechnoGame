@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Singularity.Core.Data;
 using Singularity.Kernel;
 
@@ -39,9 +40,10 @@ public sealed class LkTables
 }
 
 /// <summary>
-/// Month from which a node is known under a knowledge-off control (§6.1): the node is opened in the
-/// merge of month step <c>due</c> [Предл.: same timing as a discovery]. Both schedules take the max over
-/// requirements (an OR-group takes its earliest member), so a known node always has known requirements.
+/// Month from which a node is known under a knowledge-off control (spec v0.6 §6.1 "Момент открытия"): the
+/// node opens in the merge of month <c>max(due, 0)</c>, like a discovery. Both schedules take the max over
+/// requirements (an OR-group takes its earliest member; "never" in a requirement makes the node "never"),
+/// so a known node always has known requirements (I5). Nodes known at the start are not touched.
 /// </summary>
 public static class KnowledgeSchedule
 {
@@ -49,14 +51,20 @@ public static class KnowledgeSchedule
     public const long AtStart = long.MinValue;
 
     /// <summary>L_K0 lags by generation G0…G4, months after the middle of the generation window (§6.1).</summary>
-    public static readonly int[] Lk0Lags = [0, 0, 24, 36, 48];
+    public static readonly ImmutableArray<int> Lk0Lags = [0, 0, 24, 36, 48];
+
+    /// <summary>
+    /// Middles of the generation windows G0…G4 as month indices from 1945-09 (§6.1 v0.6): 1 January of the
+    /// middle year, <c>12·(Y − 1945) − 8</c>; G0 and G1 at the start. Due = 0 / 0 / 88 / 208 / 340.
+    /// </summary>
+    public static readonly ImmutableArray<int> Lk0WindowMid = [0, 0, 64, 172, 292];
 
     /// <summary>
     /// L_K: per (actor, g) a "never" indicator with probability <c>p_cens</c> and a generation clock
     /// <c>T ~ U[m − hw; m + hw]</c> from stream KNOW at month 0 (§9.1); node due = <c>T + δ</c>.
     /// Result is [actorRow·N + nodeRow].
     /// </summary>
-    public static long[] BuildLk(KnowledgeGraph graph, KnowledgeStart start, LkTables tables, CounterRng know)
+    public static ImmutableArray<long> BuildLk(KnowledgeGraph graph, KnowledgeStart start, LkTables tables, CounterRng know)
     {
         int n = graph.Count;
         var due = new long[start.ActorCount * n];
@@ -88,15 +96,16 @@ public static class KnowledgeSchedule
             }
             ApplyRequirements(graph, due.AsSpan(a * n, n));
         }
-        return due;
+        return ImmutableArray.Create(due);
     }
 
     /// <summary>
-    /// L_K0: node due = <paramref name="windowMidMonth"/>[gen] + <see cref="Lk0Lags"/>[gen], the same for all
-    /// actors. The window middles are an input: the spec gives the windows only as [Предп.] years (§1.3).
+    /// L_K0: node due = window middle[gen] + <see cref="Lk0Lags"/>[gen], the same for all actors. Middles
+    /// default to <see cref="Lk0WindowMid"/>; a scenario with another start date passes its own.
     /// </summary>
-    public static long[] BuildLk0(KnowledgeGraph graph, KnowledgeStart start, IReadOnlyList<int> windowMidMonth)
+    public static ImmutableArray<long> BuildLk0(KnowledgeGraph graph, KnowledgeStart start, IReadOnlyList<int>? windowMidMonth = null)
     {
+        windowMidMonth ??= Lk0WindowMid;
         if (windowMidMonth.Count != Lk0Lags.Length)
             throw new ArgumentException($"Need {Lk0Lags.Length} window middles (G0…G4).", nameof(windowMidMonth));
         int n = graph.Count;
@@ -112,7 +121,7 @@ public static class KnowledgeSchedule
             }
             ApplyRequirements(graph, due.AsSpan(a * n, n));
         }
-        return due;
+        return ImmutableArray.Create(due);
     }
 
     // due[n] = max(due[n], max over groups of min over members), resolved depth-first; cycles are data errors.

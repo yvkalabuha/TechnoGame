@@ -3,9 +3,11 @@ using Singularity.Kernel;
 namespace Singularity.Core.Knowledge;
 
 /// <summary>
-/// What the knowledge layer reads from other layers in the compute of month t. Every value must be a
-/// pure function of the snapshot (state after month t−1) and of decisions in force at t, safe to call
-/// from several threads (compute runs in parallel over actor chunks).
+/// What the knowledge layer reads from other layers in the compute of month t.
+/// Contract: every method is a pure function of the snapshot t−1 (the Table state after month t−1, which
+/// already holds the decisions in force at t, ADR-0006) and of its arguments. No hidden state, no side
+/// effects, same answer on every call, safe to call from several threads (compute runs in parallel over
+/// actor chunks). Implementations read Table columns; they never see this month's compute output.
 /// </summary>
 public interface IKnowledgeInputs
 {

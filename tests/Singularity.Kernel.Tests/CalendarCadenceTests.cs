@@ -44,8 +44,7 @@ public class CalendarCadenceTests
         var table = new Table(1);
         var monthly = new CountingSystem(table, "monthly", Cadence.Monthly, calendar);
         var yearly = new CountingSystem(table, "yearly", Cadence.Yearly, calendar);
-        var weekly = new CountingSystem(table, "weekly", Cadence.Weekly, calendar);
-        var runner = new TickRunner(table, 1, [monthly, yearly, weekly], chunkSize: 1, maxThreads: 1, calendar);
+        var runner = new TickRunner(table, 1, [monthly, yearly], chunkSize: 1, maxThreads: 1, calendar);
         long end = calendar.TickOf(new CivilDate(2101, 1, 1));
         while (runner.Tick < end)
             runner.RunTick();
@@ -57,7 +56,6 @@ public class CalendarCadenceTests
             Assert.Equal([.. Enumerable.Range(1, 12).Select(m => new CivilDate(y, m, 1))], year);
         }
         Assert.Equal([.. Enumerable.Range(1910, 191).Select(y => new CivilDate(y, 1, 1))], yearly.Runs);
-        Assert.Equal((end + 6) / 7, weekly.Runs.Count);
         // 1912…2096 every 4 years = 47 leap years (2000 is one, 2100 is not).
         Assert.Equal(47, Enumerable.Range(1910, 191).Count(Gregorian.IsLeapYear));
         Assert.Equal(191 * 365 + 47, end);
@@ -66,18 +64,51 @@ public class CalendarCadenceTests
         Assert.Equal(191, table.GetLong("yearly").Current[0]);
     }
 
-    [Fact]
-    public void MonthIndexAndTickOfMonth_RoundTrip_MidMonthStart()
+    [Theory]
+    [InlineData(1945, 9, 15, Cadence.Monthly)]  // mid-month start
+    [InlineData(1945, 9, 1, Cadence.Yearly)]    // not 1 January
+    [InlineData(1945, 9, 1, Cadence.Weekly)]    // a Saturday, not a Monday
+    public void Runner_RejectsCalendarNotAlignedWithACadence(int y, int m, int d, Cadence cadence)
     {
-        var c = new TickCalendar(new CivilDate(1945, 9, 15));
-        Assert.Equal(-14, c.TickOfMonth(0)); // day 1 of the start month is before tick 0
-        Assert.Equal(16, c.TickOfMonth(1)); // 15 September + 16 days = 1 October
-        for (long m = 1; m < 400; m++)
+        // ADR-0004: firing index 0 must be the first full period, so the start must be a firing day.
+        var table = new Table(1);
+        var calendar = new TickCalendar(new CivilDate(y, m, d));
+        var daily = new CountingSystem(table, "daily", Cadence.Daily, calendar);
+        var other = new CountingSystem(table, "other", cadence, calendar);
+        var e = Assert.Throws<ArgumentException>(() => new TickRunner(table, 1, [daily, other], 1, 1, calendar));
+        Assert.Contains("not aligned", e.Message);
+    }
+
+    [Theory]
+    [InlineData(1945, 1, 1)]  // Monday, 1 January: aligned with all cadences
+    [InlineData(1951, 1, 1)]
+    public void Runner_AcceptsAlignedCalendar(int y, int m, int d)
+    {
+        var table = new Table(1);
+        var calendar = new TickCalendar(new CivilDate(y, m, d));
+        ITickSystem[] systems = [.. new[] { Cadence.Daily, Cadence.Weekly, Cadence.Monthly, Cadence.Yearly }
+            .Select((c, i) => new CountingSystem(table, $"s{i}", c, calendar))];
+        var runner = new TickRunner(table, 1, systems, 1, 1, calendar);
+        for (int i = 0; i < 800; i++)
+            runner.RunTick();
+        Assert.Equal(800, table.GetLong("s0").Current[0]);
+    }
+
+    [Theory]
+    [InlineData(Cadence.Daily)]
+    [InlineData(Cadence.Weekly)]
+    [InlineData(Cadence.Monthly)]
+    [InlineData(Cadence.Yearly)]
+    public void NextDue_IsTheFirstDueTickFromHere(Cadence cadence)
+    {
+        var c = new TickCalendar(new CivilDate(1945, 9, 1));
+        for (long t = -400; t < 3000; t += 3)
         {
-            Assert.Equal(m, c.MonthIndex(c.TickOfMonth(m)));
-            Assert.Equal(1, c.DateOf(c.TickOfMonth(m)).Day);
+            long next = c.NextDue(cadence, t);
+            Assert.True(c.IsDue(cadence, next));
+            for (long u = t; u < next; u++)
+                Assert.False(c.IsDue(cadence, u));
         }
-        Assert.Equal(-1, c.MonthIndex(-15));
     }
 
     [Fact]
@@ -119,24 +150,6 @@ public class CalendarCadenceTests
         Assert.Equal(new CivilDate(1945, 10, 1), monthly.Runs[1]);
     }
 
-    [Fact]
-    public void PendingCommands_ApplyAtTheNextDueTick_BeforeCompute()
-    {
-        var calendar = new TickCalendar(new CivilDate(1945, 9, 1));
-        var table = new Table(1);
-        var monthly = new CountingSystem(table, "m", Cadence.Monthly, calendar);
-        var runner = new TickRunner(table, 1, [monthly], 1, 1, calendar);
-        runner.RunTick();          // month 0
-        monthly.PendingAdd = 100;  // decided after month 0, e.g. by a player or another system
-        for (int i = 1; i < 30; i++)
-            runner.RunTick();
-        Assert.Equal(1, table.GetLong("m").Current[0]); // not applied on idle days
-        runner.RunTick();          // month 1: 1 (old) + 100 (command) + 1 (this run)
-        Assert.Equal(102, table.GetLong("m").Current[0]);
-        Assert.Equal(101, monthly.SeenAtCompute[1]); // compute of the same tick saw the command
-        Assert.Equal(0, monthly.PendingAdd);
-    }
-
     /// <summary>Counts its runs in its own column; records the date of each run.</summary>
     private sealed class CountingSystem : ITickSystem
     {
@@ -153,25 +166,12 @@ public class CalendarCadenceTests
         public int SystemId => 1;
         public Cadence Cadence { get; }
         public List<CivilDate> Runs { get; } = new();
-        public List<long> SeenAtCompute { get; } = new();
-        public long PendingAdd;
         public int ComputeCalls, MergeCalls, PostCalls;
-
-        public bool HasPendingCommands => PendingAdd != 0;
-
-        public void ApplyCommands(in TickContext context)
-        {
-            _count.Next[0] = _count.Current[0] + PendingAdd;
-            PendingAdd = 0;
-        }
 
         public void Compute(in TickContext context, int chunk, int rowStart, int rowEnd)
         {
             if (rowStart == 0)
-            {
                 Interlocked.Increment(ref ComputeCalls);
-                SeenAtCompute.Add(_count.Current[0]);
-            }
             for (int r = rowStart; r < rowEnd; r++)
                 _count.Next[r] = _count.Current[r] + 1;
         }

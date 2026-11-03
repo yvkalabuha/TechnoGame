@@ -120,6 +120,22 @@ public class KnowledgeFormulaTests
         }
     }
 
+    [Fact]
+    public void KIndStep_MatchesReference()
+    {
+        int cases = 0;
+        foreach (JsonElement c in F.GetProperty("k_ind").EnumerateArray())
+        {
+            JsonElement i = c.GetProperty("input");
+            Fx6 r = KnowledgeMath.KIndStep(JetReference.Raw(i.GetProperty("K_ind")), JetReference.Raw(i.GetProperty("K_d")),
+                JetReference.Raw(i.GetProperty("V_d")), JetReference.Raw(i.GetProperty("eta")), JetReference.Raw(i.GetProperty("V_ref")),
+                JetReference.Raw(i.GetProperty("theta_ind")), JetReference.Raw(i.GetProperty("delta_ind")));
+            Assert.Equal(c.GetProperty("output").GetProperty("K_ind_new").GetInt64(), r.Raw);
+            cases++;
+        }
+        Assert.Equal(6, cases);
+    }
+
     [Theory]
     [InlineData(0, 300_000, 0)]          // no output: K_ind decays (0 stays 0)
     [InlineData(1_000_000_000, 0, 0)]    // K_d = 0: no growth (v2.1)

@@ -1,3 +1,4 @@
+using Xunit.Abstractions;
 using System.Diagnostics;
 using Singularity.Kernel;
 
@@ -17,7 +18,7 @@ public sealed class BenchmarkFactAttribute : FactAttribute
 /// Cost of empty day ticks over a slice run: 11 688 day ticks from 1945-09-01, 384 non-empty (ADR-0006,
 /// slice spec §10: total &lt; 1 ms). Only the idle stretches between monthly ticks are timed.
 /// </summary>
-public class EmptyTickBudgetTests
+public class EmptyTickBudgetTests(ITestOutputHelper output)
 {
     private const int SliceTicks = 11_688;
 
@@ -34,29 +35,33 @@ public class EmptyTickBudgetTests
     [Trait("Category", "Benchmark")]
     public void EmptyDays_OfASliceRun_Under1Ms()
     {
-        (TimeSpan idle, _) = MeasureBest(runs: 10);
-        Assert.True(idle < TimeSpan.FromMilliseconds(1), $"empty days took {idle.TotalMilliseconds:F3} ms (budget 1 ms)");
+        foreach (int systems in new[] { 1, 6 })
+        {
+            (TimeSpan idle, _) = MeasureBest(runs: 10, systems);
+            output.WriteLine($"{systems} monthly system(s): empty days {idle.TotalMilliseconds:F3} ms");
+            Assert.True(idle < TimeSpan.FromMilliseconds(1), $"{systems} systems: empty days took {idle.TotalMilliseconds:F3} ms (budget 1 ms)");
+        }
     }
 
-    private static (TimeSpan, int) MeasureBest(int runs)
+    private static (TimeSpan, int) MeasureBest(int runs, int systemCount = 6)
     {
-        Measure(); // JIT warm-up
+        Measure(systemCount); // JIT warm-up
         TimeSpan best = TimeSpan.MaxValue;
         int idleDays = 0;
         for (int i = 0; i < runs; i++)
         {
-            (TimeSpan t, idleDays) = Measure();
+            (TimeSpan t, idleDays) = Measure(systemCount);
             best = t < best ? t : best;
         }
         return (best, idleDays);
     }
 
-    private static (TimeSpan, int) Measure()
+    private static (TimeSpan, int) Measure(int systemCount)
     {
         var cal = new TickCalendar(new CivilDate(1945, 9, 1));
         var table = new Table(5);
         // The slice has several monthly systems (knowledge, capability, AI, budget …): each one adds an IsDue check per day.
-        var systems = Enumerable.Range(0, 6).Select(i => (ITickSystem)new MonthlyNoop(table, $"s{i}")).ToArray();
+        var systems = Enumerable.Range(0, systemCount).Select(i => (ITickSystem)new MonthlyNoop(table, $"s{i}")).ToArray();
         var runner = new TickRunner(table, 1, systems, chunkSize: 1, maxThreads: 4, cal);
         long ticks = 0;
         int idleDays = 0;

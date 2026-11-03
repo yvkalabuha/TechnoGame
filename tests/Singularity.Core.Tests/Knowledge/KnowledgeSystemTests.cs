@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Singularity.Core.Data;
 using Singularity.Core.Knowledge;
 using Singularity.Core.Tests.Data;
@@ -30,6 +31,20 @@ public class KnowledgeSystemTests
     }
 
     [Fact]
+    public void Lk0_DefaultMiddles_FromSpec()
+    {
+        // §6.1 v0.6: middles 0/0/64/172/292, due = 0/0/88/208/340 (1953-01, 1963-01, 1974-01).
+        Assert.Equal([0, 0, 64, 172, 292], KnowledgeSchedule.Lk0WindowMid.ToArray());
+        KnowledgeGraph g = KnowledgeGraph.Create(
+        [.. Enumerable.Range(0, 5).Select(gen => new KnowledgeNodeSpec(gen + 1, NodeType.FND, gen, 0, false, Fx6.One, []))], ["prop"]);
+        ImmutableArray<long> due = KnowledgeSchedule.BuildLk0(g, new KnowledgeStart([0], 5, 1));
+        Assert.Equal([0L, 0, 88, 208, 340], due.ToArray());
+        var cal = new TickCalendar(new CivilDate(1945, 9, 1));
+        Assert.Equal(new CivilDate(1953, 1, 1), cal.DateOf(cal.TickOfMonth(88)));
+        Assert.Equal(new CivilDate(1974, 1, 1), cal.DateOf(cal.TickOfMonth(340)));
+    }
+
+    [Fact]
     public void Lk0_RequirementsDelayDependents()
     {
         KnowledgeGraph g = KnowledgeGraph.Create(
@@ -40,8 +55,8 @@ public class KnowledgeSystemTests
             new KnowledgeNodeSpec(4, NodeType.APP, 2, -1, false, Fx6.One, [[1, 2]]), // OR-group: earliest member
         ], ["prop"]);
         var start = new KnowledgeStart([0], 4, 1);
-        long[] due = KnowledgeSchedule.BuildLk0(g, start, [0, 0, 10, 20, 30]);
-        Assert.Equal([20 + 36, 10 + 24, 20 + 36, 10 + 24], due); // node 3 waits for node 1; node 4 needs 1 or 2
+        ImmutableArray<long> due = KnowledgeSchedule.BuildLk0(g, start, [0, 0, 10, 20, 30]);
+        Assert.Equal([20 + 36, 10 + 24, 20 + 36, 10 + 24], due.ToArray()); // node 3 waits for node 1; node 4 needs 1 or 2
     }
 
     // ---- L_K
@@ -50,7 +65,7 @@ public class KnowledgeSystemTests
     public void Lk_DrawsFromKnowStreamAtMonthZero()
     {
         var run = new JetReference.Run(mode: KnowledgeMode.ScheduleLk, schedule: (g, s) => KnowledgeSchedule.BuildLk(g, s, Tables(), Rng()));
-        long[] due = KnowledgeSchedule.BuildLk(run.Graph, run.Start, Tables(), Rng());
+        ImmutableArray<long> due = KnowledgeSchedule.BuildLk(run.Graph, run.Start, Tables(), Rng());
         // Expected clock of G1: U[m − hw; m + hw] from (seed, 0, KNOW, actor·64, 1 + g).
         long clock = CounterRng.UniformInt(Rng().NextU64(0, 1, 0, 2), 10 - 4, 10 + 4);
         Assert.Equal(clock + 2, due[run.Graph.RowOf(1)]);
@@ -68,7 +83,7 @@ public class KnowledgeSystemTests
         LkTables t = Tables();
         t.PCens[0] = Fx6.One;
         var run = new JetReference.Run();
-        long[] due = KnowledgeSchedule.BuildLk(run.Graph, run.Start, t, Rng());
+        ImmutableArray<long> due = KnowledgeSchedule.BuildLk(run.Graph, run.Start, t, Rng());
         for (int r = 0; r < run.Graph.Count; r++)
             Assert.Equal(run.Graph.Number[r] == 6 ? KnowledgeSchedule.AtStart : KnowledgeSchedule.Never, due[r]);
     }
@@ -87,30 +102,43 @@ public class KnowledgeSystemTests
 
     // ---- lic_knows (§6.7)
 
-    [Fact]
-    public void LicKnows_GrantsEngineAndDirectEngCmpRequirements_NotCountedAsDiscovery()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void LicKnows_GrantsRequiresClosure_DiscoveryWins_NoKdCredit(bool fourKnownAtStart)
     {
+        // 6 ENG ← 5 ENG ← {2 PRN ← 1 FND} and the OR-group {3 | 4}. Licence for 6 bought in month 0, applied
+        // in month 1 (§6.7 v0.6). FND 1 is cheap: its own research also opens it in month 1.
         KnowledgeGraph g = KnowledgeGraph.Create(
         [
-            new KnowledgeNodeSpec(1, NodeType.FND, 1, 0, false, Fx6.FromInt(1000), []),
-            new KnowledgeNodeSpec(2, NodeType.CMP, 1, 0, false, Fx6.FromInt(1000), []),
-            new KnowledgeNodeSpec(3, NodeType.ENG, 1, 0, true, Fx6.FromInt(1000), [[1], [2]]),
+            new KnowledgeNodeSpec(1, NodeType.FND, 1, 0, false, Fx6.FromRaw(41_700), []),
+            new KnowledgeNodeSpec(2, NodeType.PRN, 1, 0, false, Fx6.FromInt(1000), [[1]]),
+            new KnowledgeNodeSpec(3, NodeType.FND, 1, 0, false, Fx6.FromInt(1000), []),
+            new KnowledgeNodeSpec(4, NodeType.FND, 1, 0, false, Fx6.FromInt(1000), []),
+            new KnowledgeNodeSpec(5, NodeType.ENG, 1, 0, true, Fx6.FromInt(1000), [[2], [3, 4]]),
+            new KnowledgeNodeSpec(6, NodeType.ENG, 1, 0, true, Fx6.FromInt(1000), [[5]]),
         ], ["prop"]);
-        var start = new KnowledgeStart([0], 3, 1);
-        var inputs = new FixedInputs { Licences = [g.RowOf(3)], LicenceMonth = 1 };
+        var start = new KnowledgeStart([0], 6, 1);
+        start.Known[g.RowOf(4)] = fourKnownAtStart;
+        var inputs = new FixedInputs { Licences = [g.RowOf(6)], LicenceMonth = 1 };
         (TickRunner runner, KnowledgeSystem sys, TickCalendar cal) = Build(g, start, inputs, licKnows: true);
         RunThrough(runner, cal, 0);
-        Assert.False(sys.IsKnown(0, g.RowOf(3)));
-        RunThrough(runner, cal, 1);
-        Assert.True(sys.IsKnown(0, g.RowOf(3)));
-        Assert.True(sys.IsKnown(0, g.RowOf(2)));
-        Assert.False(sys.IsKnown(0, g.RowOf(1))); // FND requirement is not transferred
-        Assert.Equal([(0, 2), (0, 3)], sys.LastLicenceGrants);
-        Assert.Empty(sys.LastDiscoveries);
-        // Two months of S = 0.1 spent on nodes 1 and 2, no k_node for the licence grants.
+        Assert.False(sys.IsKnown(0, g.RowOf(1)));
+        Assert.Empty(sys.LastLicenceGrants);
+        RunThrough(runner, cal, 1); // Post checks I5 on the result
+
+        Assert.Equal([(0, 1)], sys.LastDiscoveries); // discovered and licensed in one month: a discovery
+        (int, int)[] grants = fourKnownAtStart ? [(0, 2), (0, 5), (0, 6)] : [(0, 2), (0, 3), (0, 5), (0, 6)];
+        Assert.Equal(grants, sys.LastLicenceGrants); // OR-group without a known member: lowest number (3)
+        Assert.False(fourKnownAtStart ? sys.IsKnown(0, g.RowOf(3)) : sys.IsKnown(0, g.RowOf(4)));
+        // K_d: only own research money and the own discovery (§6.7 "Учёт").
         var p = new KnowledgeParams();
-        Fx6 month = KnowledgeMath.KdDelta(Fx6.FromRaw(100_000), 0, p.MuK, p.SRef, p.KNode);
-        Assert.Equal(month + month, sys.KD(0, 0));
+        int frontier = fourKnownAtStart ? 2 : 3;
+        Fx6 s = Fx6.FromRaw(100_000), amount = Fx6.Zero;
+        for (int i = 0; i < frontier; i++)
+            amount += s * (Fx6.One / Fx6.FromInt(frontier));
+        Fx6 expected = KnowledgeMath.KdDelta(amount, 0, p.MuK, p.SRef, p.KNode) + KnowledgeMath.KdDelta(amount, 1, p.MuK, p.SRef, p.KNode);
+        Assert.Equal(expected, sys.KD(0, 0));
     }
 
     [Fact]

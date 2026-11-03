@@ -6,7 +6,7 @@ public enum Cadence
     /// <summary>Every tick.</summary>
     Daily,
 
-    /// <summary>Every 7th tick counted from the calendar start (tick 0, 7, 14, ...).</summary>
+    /// <summary>Every Monday (ISO week start; ADR-0006 "fixed day of the week").</summary>
     Weekly,
 
     /// <summary>Day 1 of each calendar month.</summary>
@@ -106,9 +106,34 @@ public sealed class TickCalendar
     public bool IsDue(Cadence cadence, long tick) => cadence switch
     {
         Cadence.Daily => true,
-        Cadence.Weekly => tick % 7 == 0,
+        Cadence.Weekly => IsMonday(tick),
         Cadence.Monthly => DateOf(tick).Day == 1,
         Cadence.Yearly => DateOf(tick) is { Month: 1, Day: 1 },
         _ => throw new ArgumentOutOfRangeException(nameof(cadence), cadence, null),
     };
+
+    /// <summary>First tick ≥ <paramref name="fromTick"/> on which a system with this cadence is due.</summary>
+    public long NextDue(Cadence cadence, long fromTick)
+    {
+        switch (cadence)
+        {
+            case Cadence.Daily:
+                return fromTick;
+            case Cadence.Weekly:
+                // 1970-01-01 (day 0) was a Thursday, so Mondays are days ≡ 4 (mod 7).
+                long day = checked(_startDay + fromTick);
+                return fromTick + FloorMod(4 - day, 7);
+            case Cadence.Monthly:
+                return DateOf(fromTick).Day == 1 ? fromTick : TickOfMonth(MonthIndex(fromTick) + 1);
+            case Cadence.Yearly:
+                CivilDate d = DateOf(fromTick);
+                return d is { Month: 1, Day: 1 } ? fromTick : TickOf(new CivilDate(d.Year + 1, 1, 1));
+            default:
+                throw new ArgumentOutOfRangeException(nameof(cadence), cadence, null);
+        }
+    }
+
+    private bool IsMonday(long tick) => FloorMod(checked(_startDay + tick) - 4, 7) == 0;
+
+    private static long FloorMod(long a, long b) => ((a % b) + b) % b;
 }

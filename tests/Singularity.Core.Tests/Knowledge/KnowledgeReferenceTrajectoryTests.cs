@@ -27,6 +27,24 @@ public class KnowledgeReferenceTrajectoryTests
     }
 
     [Fact]
+    public void TwoAlignedStarts_SameMonthlyDraws()
+    {
+        // ADR-0004: the monthly key is the month index, so another aligned start date (different month
+        // lengths before each step) gives the same draws and the same knowledge state month by month.
+        var a = new JetReference.Run();
+        var b = new JetReference.Run(startDate: new CivilDate(1950, 2, 1));
+        Assert.NotEqual(a.Calendar.TickOfMonth(5) - a.Calendar.TickOfMonth(4), b.Calendar.TickOfMonth(5) - b.Calendar.TickOfMonth(4));
+        for (long t = 0; t < JetReference.RowCount; t++)
+        {
+            a.RunThroughMonth(t);
+            b.RunThroughMonth(t);
+            Assert.Equal(StateHash.ComputeHex(a.Table, 1, 0), StateHash.ComputeHex(b.Table, 1, 0));
+            for (int r = 0; r < a.Graph.Count; r++)
+                Assert.Equal(a.System.LastStep(0, r), b.System.LastStep(0, r));
+        }
+    }
+
+    [Fact]
     public void IdleDays_ChangeNothing()
     {
         // 706 of the 730 days run no system: the table must be identical before and after them.
@@ -74,7 +92,7 @@ public class KnowledgeReferenceTrajectoryTests
             Assert.Equal(a.System.LastDiscoveries, b.System.LastDiscoveries);
             for (int ra = 0; ra < 3; ra++)
             {
-                int rb = Array.IndexOf(b.Start.ActorNumber, a.Start.ActorNumber[ra]);
+                int rb = b.Start.ActorNumber.IndexOf(a.Start.ActorNumber[ra]);
                 Assert.Equal(a.System.LastSpent(ra), b.System.LastSpent(rb));
                 for (int d = 0; d < 2; d++)
                 {

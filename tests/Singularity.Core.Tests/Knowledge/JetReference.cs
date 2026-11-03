@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text.Json;
 using Singularity.Core.Data;
 using Singularity.Core.Knowledge;
@@ -85,7 +86,7 @@ internal static class JetReference
     /// the month, profile prio (spec §4), <c>j</c> of the year in force (A8, A15) drawn by
     /// <see cref="KnowledgeRng.J"/>, and <c>V_d</c> from <c>proc_v</c>, <c>proc_yield</c> of month t−1.
     /// </summary>
-    public sealed class Inputs(KnowledgeGraph graph, CounterRng rng, int[] actorNumbers) : IKnowledgeInputs
+    public sealed class Inputs(KnowledgeGraph graph, CounterRng rng, ImmutableArray<int> actorNumbers) : IKnowledgeInputs
     {
         private readonly string _profile = Trajectory.GetProperty("setup").GetProperty("profile").GetString()!;
 
@@ -133,12 +134,12 @@ internal static class JetReference
     public sealed class Run
     {
         public Run(int threads = 1, int chunkSize = 1, int[]? nodeOrder = null, int[]? actorNumbers = null,
-            KnowledgeMode mode = KnowledgeMode.Full, Func<KnowledgeGraph, KnowledgeStart, long[]>? schedule = null,
-            bool licKnows = false)
+            KnowledgeMode mode = KnowledgeMode.Full, Func<KnowledgeGraph, KnowledgeStart, ImmutableArray<long>>? schedule = null,
+            bool licKnows = false, CivilDate? startDate = null)
         {
             actorNumbers ??= [0];
             Graph = KnowledgeGraph.Create(NodeSpecs(nodeOrder), Disciplines);
-            Start = new KnowledgeStart(actorNumbers, Graph.Count, Disciplines.Length);
+            Start = new KnowledgeStart([.. actorNumbers], Graph.Count, Disciplines.Length);
             JsonElement k0 = Trajectory.GetProperty("params").GetProperty("K_d0");
             for (int a = 0; a < actorNumbers.Length; a++)
             {
@@ -148,9 +149,9 @@ internal static class JetReference
                     Start.KD[a * Disciplines.Length + d] = Dec(k0.GetProperty(Disciplines[d]).GetString()!);
             }
             var rng = new CounterRng(Trajectory.GetProperty("seed").GetUInt64());
-            InputsImpl = new Inputs(Graph, rng, actorNumbers);
+            InputsImpl = new Inputs(Graph, rng, Start.ActorNumber);
             Table = new Table(actorNumbers.Length);
-            Calendar = new TickCalendar(StartDate);
+            Calendar = new TickCalendar(startDate ?? StartDate);
             int chunks = TickRunner.ChunkCountFor(Table.RowCount, chunkSize);
             System = new KnowledgeSystem(Table, Graph, Start, Params(), InputsImpl, rng, chunks, mode,
                 schedule?.Invoke(Graph, Start), licKnows);

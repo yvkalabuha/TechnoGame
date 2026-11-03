@@ -136,7 +136,7 @@ public class KnowledgeAuditTests
     {
         for (int ra = 0; ra < a.Start.ActorCount; ra++)
         {
-            int rb = Array.IndexOf(b.Start.ActorNumber, a.Start.ActorNumber[ra]);
+            int rb = b.Start.ActorNumber.IndexOf(a.Start.ActorNumber[ra]);
             Assert.Equal(a.System.LastSpent(ra), b.System.LastSpent(rb));
             for (int d = 0; d < a.Graph.DisciplineNames.Length; d++)
             {

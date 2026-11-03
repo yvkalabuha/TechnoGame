@@ -24,7 +24,10 @@ public sealed record KnowledgeParams
     public Fx6 ProgCap { get; init; } = Fx6.FromInt(3);
     public Fx6 Eta { get; init; } = F(10_000);
 
-    /// <summary>"V of a mature line" (§8.1); no number in the spec yet, the reference fixture uses 1000 h.</summary>
+    /// <summary>
+    /// <c>V_ref</c> (contract §4.3). 1000 h is the reference fixture value, not a spec value: the real number
+    /// comes from rule §3.5 A18 (median monthly labour of a mature-line process) once T2/T5 data exist.
+    /// </summary>
     public Fx6 VRef { get; init; } = Fx6.FromInt(1000);
     public Fx6 ThetaInd { get; init; } = F(250_000);
     public Fx6 DeltaInd { get; init; } = F(3_000);
@@ -33,8 +36,7 @@ public sealed record KnowledgeParams
     public Fx6[] CostByType { get; init; } = [Fx6.One, F(1_500_000), Fx6.FromInt(3), F(1_500_000), Fx6.FromInt(2), Fx6.One];
 
     /// <summary>
-    /// Generation multiplier of <c>c_n</c>, index = gen. §8.1 gives G1–G4 (1.0/1.6/2.5/4.0); G0 = 1 is
-    /// [Предп.]: every G0 node of the slice is known at the start, so it never costs anything.
+    /// Generation multiplier of <c>c_n</c>, index = gen: G0…G4 = 1.0/1.0/1.6/2.5/4.0 (§8.1, §3.5 A19).
     /// </summary>
     public Fx6[] CostGenMultiplier { get; init; } = [Fx6.One, Fx6.One, F(1_600_000), F(2_500_000), Fx6.FromInt(4)];
 

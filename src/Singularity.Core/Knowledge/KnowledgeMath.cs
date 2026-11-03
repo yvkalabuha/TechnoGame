@@ -44,7 +44,7 @@ public static class KnowledgeMath
 
     /// <summary>
     /// One <c>K_ind</c> step (contract §4.3). At <c>K_d = 0</c> there is no growth (v2.1); the same
-    /// holds when <c>θ_ind·K_d</c> floors to 0 raw, where the formula would divide by zero.
+    /// holds when <c>θ_ind·K_d</c> floors to 0 raw, where the formula would divide by zero (spec §3.5 A16).
     /// </summary>
     public static Fx6 KIndStep(Fx6 kInd, Fx6 kd, Fx6 volume, Fx6 eta, Fx6 vRef, Fx6 thetaInd, Fx6 deltaInd)
     {

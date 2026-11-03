@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Singularity.Core.Data;
 using Singularity.Kernel;
 
@@ -46,7 +47,7 @@ public sealed class KnowledgeSystem : ITickSystem
     private readonly IKnowledgeInputs _inputs;
     private readonly CounterRng _know;
     private readonly KnowledgeMode _mode;
-    private readonly long[]? _due;
+    private readonly ImmutableArray<long>? _due;
     private readonly bool _licKnows;
     private readonly int _n, _d, _actors;
 
@@ -56,6 +57,7 @@ public sealed class KnowledgeSystem : ITickSystem
 
     // Scratch, rewritten every step; row a only by the chunk that owns it.
     private readonly long[] _wraw, _amount;
+    private readonly bool[] _granted;
     private readonly KnowledgeNodeStep[] _trace;
     private readonly long[] _spent;
     private readonly List<(int Actor, int Row, bool Discovery)>[] _opened;
@@ -64,13 +66,13 @@ public sealed class KnowledgeSystem : ITickSystem
 
     public KnowledgeSystem(Table table, KnowledgeGraph graph, KnowledgeStart start, KnowledgeParams parameters,
         IKnowledgeInputs inputs, CounterRng know, int chunkCount, KnowledgeMode mode = KnowledgeMode.Full,
-        long[]? schedule = null, bool licenceTransfersKnowledge = false, int systemId = DefaultSystemId)
+        ImmutableArray<long>? schedule = null, bool licenceTransfersKnowledge = false, int systemId = DefaultSystemId)
     {
         if (table.RowCount != start.ActorCount)
             throw new ArgumentException($"Table has {table.RowCount} rows, the start has {start.ActorCount} actors.", nameof(table));
         if (start.NodeCount != graph.Count || start.DisciplineCount != graph.DisciplineNames.Length)
             throw new ArgumentException("Start state does not match the graph.", nameof(start));
-        if ((mode == KnowledgeMode.Full) != (schedule is null) || (schedule is not null && schedule.Length != start.ActorCount * graph.Count))
+        if ((mode == KnowledgeMode.Full) != (schedule is null) || (schedule is not null && schedule.Value.Length != start.ActorCount * graph.Count))
             throw new ArgumentException("A schedule (one entry per actor and node) is needed exactly in the schedule modes.", nameof(schedule));
         _g = graph;
         _start = start;
@@ -119,6 +121,7 @@ public sealed class KnowledgeSystem : ITickSystem
         }
 
         _wraw = new long[_actors * _n];
+        _granted = new bool[_actors * _n];
         _trace = new KnowledgeNodeStep[_actors * _n];
         _amount = new long[_actors * _d];
         _openedCount = new int[_actors * _d];
@@ -132,7 +135,7 @@ public sealed class KnowledgeSystem : ITickSystem
 
     public Cadence Cadence => Cadence.Monthly;
 
-    // ---- reads for tests, metrics and other layers (current state)
+    // ---- reads of the current state (Table columns)
 
     public bool IsKnown(int actorRow, int nodeRow) => _known[nodeRow].Current[actorRow] != 0;
 
@@ -142,15 +145,19 @@ public sealed class KnowledgeSystem : ITickSystem
 
     public Fx6 KInd(int actorRow, int discipline) => Fx6.FromRaw(_kind[discipline].Current[actorRow]);
 
-    /// <summary>R&amp;D money allocated by the actor in the last step (≤ <c>S_a</c>; the rest burns, §3.4).</summary>
+    // ---- diagnostics of the last step (tests, journals): scratch outside the Table, not state, not saved
+    // or hashed, valid only right after a step of this system. Simulation code must not read them.
+
+    /// <summary>Diagnostics only: R&amp;D money allocated by the actor in the last step (≤ <c>S_a</c>; the rest burns, §3.4).</summary>
     public Fx6 LastSpent(int actorRow) => Fx6.FromRaw(_spent[actorRow]);
 
+    /// <summary>Diagnostics only: per-node trace of the last step.</summary>
     public KnowledgeNodeStep LastStep(int actorRow, int nodeRow) => _trace[actorRow * _n + nodeRow];
 
-    /// <summary>Discoveries of the last step by (actor number, node number).</summary>
+    /// <summary>Diagnostics only: discoveries of the last step by (actor number, node number).</summary>
     public IReadOnlyList<(int ActorNumber, int NodeNumber)> LastDiscoveries => _lastDiscoveries;
 
-    /// <summary>Nodes made known by licences in the last step (<c>lic_knows</c>), by (actor number, node number).</summary>
+    /// <summary>Diagnostics only: nodes made known by licences in the last step (<c>lic_knows</c>), by (actor number, node number).</summary>
     public IReadOnlyList<(int ActorNumber, int NodeNumber)> LastLicenceGrants => _lastGrants;
 
     // ---- tick phases
@@ -217,8 +224,7 @@ public sealed class KnowledgeSystem : ITickSystem
             {
                 if (_g.IsHazard[r] && _prog[r].Current[a] > _p.ProgCap.Raw)
                     throw new KnowledgeInvariantException(month, _start.ActorNumber[a], $"hazard prog of node {_g.Number[r]} is above prog_cap (I5)");
-                // lic_knows grants an engine without its FND/PRN ancestors (§6.7), so I5 holds only without it.
-                if (!_licKnows && IsKnown(a, r) && !RequiresKnown(a, r))
+                if (IsKnown(a, r) && !RequiresKnown(a, r))
                     throw new KnowledgeInvariantException(month, _start.ActorNumber[a], $"node {_g.Number[r]} is known without its requirements (I5)");
             }
         }
@@ -296,29 +302,45 @@ public sealed class KnowledgeSystem : ITickSystem
     {
         foreach (int r in _g.Order)
         {
-            if (!IsKnown(a, r) && _due![a * _n + r] <= t)
+            if (!IsKnown(a, r) && _due!.Value[a * _n + r] <= t)
                 opened.Add((a, r, true));
         }
     }
 
-    // lic_knows (§6.7): the engine node and its unknown direct ENG/CMP requirements become known.
+    // lic_knows (§6.7, v0.6): the licensed ENG node and its whole requires-closure unknown to the buyer (any
+    // type; an OR-group without a known member brings its lowest-numbered member and that member's closure).
+    // Grants follow this actor's discoveries in the list, so a node both discovered and licensed counts as a
+    // discovery; grants never enter opened_d or amount_d.
     private void GrantLicences(int a, long t, List<(int, int, bool)> opened)
     {
+        Array.Clear(_granted, a * _n, _n);
         foreach (int r in _inputs.LicensedEngines(a, t))
         {
             if (_g.Type[r] != NodeType.ENG)
                 throw new ArgumentException($"Licence for node {_g.Number[r]}: only ENG engine nodes are licensed.");
-            if (!IsKnown(a, r))
-                opened.Add((a, r, false));
-            RequirementLists req = _g.Requires;
-            for (int g = req.GroupStart[r]; g < req.GroupStart[r + 1]; g++)
+            Grant(a, r, opened);
+        }
+    }
+
+    private void Grant(int a, int r, List<(int, int, bool)> opened)
+    {
+        if (IsKnown(a, r) || _granted[a * _n + r])
+            return;
+        _granted[a * _n + r] = true;
+        opened.Add((a, r, false));
+        RequirementLists req = _g.Requires;
+        for (int g = req.GroupStart[r]; g < req.GroupStart[r + 1]; g++)
+        {
+            int lowest = -1;
+            bool any = false;
+            foreach (int m in req.GroupMembers(g))
             {
-                foreach (int m in req.GroupMembers(g))
-                {
-                    if (_g.Type[m] is NodeType.ENG or NodeType.CMP && !IsKnown(a, m))
-                        opened.Add((a, m, false));
-                }
+                any |= IsKnown(a, m) || _granted[a * _n + m];
+                if (lowest < 0 || _g.Number[m] < _g.Number[lowest])
+                    lowest = m;
             }
+            if (!any)
+                Grant(a, lowest, opened);
         }
     }
 

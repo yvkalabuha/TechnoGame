@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Singularity.Core.Data;
 using Singularity.Kernel;
 
@@ -9,7 +10,7 @@ namespace Singularity.Core.Knowledge;
 /// </summary>
 public sealed class KnowledgeStart
 {
-    public KnowledgeStart(int[] actorNumber, int nodeCount, int disciplineCount)
+    public KnowledgeStart(ImmutableArray<int> actorNumber, int nodeCount, int disciplineCount)
     {
         ActorNumber = actorNumber;
         NodeCount = nodeCount;
@@ -20,7 +21,7 @@ public sealed class KnowledgeStart
         for (int i = 0; i < actorNumber.Length; i++)
         {
             ArgumentOutOfRangeException.ThrowIfNegative(actorNumber[i]);
-            if (Array.IndexOf(actorNumber, actorNumber[i]) != i)
+            if (actorNumber.IndexOf(actorNumber[i]) != i)
                 throw new ArgumentException($"Actor number {actorNumber[i]} is used twice.", nameof(actorNumber));
         }
     }
@@ -28,7 +29,7 @@ public sealed class KnowledgeStart
     public int ActorCount => ActorNumber.Length;
     public int NodeCount { get; }
     public int DisciplineCount { get; }
-    public int[] ActorNumber { get; }
+    public ImmutableArray<int> ActorNumber { get; }
 
     /// <summary>[actorRow·N + nodeRow].</summary>
     public bool[] Known { get; }
@@ -58,7 +59,7 @@ public sealed class KnowledgeStart
             for (int k = 0; k < d; k++)
             {
                 start.KD[a * d + k] = scenario.KDOf(a, scenario.Disciplines[k]);
-                start.KInd[a * d + k] = scenario.KInd[a]; // the scenario has one k_ind per actor (all 0 in 1945)
+                start.KInd[a * d + k] = scenario.KInd[a]; // one k_ind per actor in the scenario, copied to every discipline (§3.5 A17)
             }
         }
         return start;
