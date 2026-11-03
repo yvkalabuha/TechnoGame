@@ -1,5 +1,6 @@
 using Singularity.Core.Commands;
 using Singularity.Core.Data;
+using Singularity.Core.WhyNot;
 using Singularity.Kernel;
 
 namespace Singularity.Session;
@@ -75,6 +76,17 @@ public sealed class SliceSession
     private int? LastLocal(SourceClass source, int sourceId) => _lastLocal.TryGetValue((source, sourceId), out int last) ? last : null;
 
     private void RememberLocal(SourceClass source, int sourceId, int localN) => _lastLocal[(source, sourceId)] = localN;
+
+    /// <summary>
+    /// <c>why_not(actor, target)</c> (contract §6): the sorted list of links on the snapshot now, month t of the next monthly step. A pure read:
+    /// it changes nothing, so calling it never changes the state hash.
+    /// </summary>
+    public IReadOnlyList<Link> WhyNot(int actor, WhyNotTarget target) => _world.WhyNot.WhyNot(actor, target, NextMonth());
+
+    /// <summary>The yearly target of spec §5.6: the requirement of the newest known APP the actor has not fielded, or null.</summary>
+    public WhyNotTarget? CurrentRequirement(int actor) => _world.WhyNot.CurrentRequirement(actor);
+
+    private long NextMonth() => _world.Calendar.MonthIndex(_world.Calendar.NextDue(Cadence.Monthly, Tick));
 
     /// <summary>Runs <paramref name="ticks"/> ticks.</summary>
     public void Step(long ticks)

@@ -8,6 +8,7 @@ using Singularity.Core.Industry;
 using Singularity.Core.Knowledge;
 using Singularity.Core.Policy;
 using Singularity.Core.Products;
+using Singularity.Core.WhyNot;
 using Singularity.Kernel;
 
 namespace Singularity.Session;
@@ -50,6 +51,7 @@ internal sealed class SliceWorld
         (kp, ip, pp) = ApplyChannels(config.Channels, kp, ip, pp);
         KnowledgeParameters = kp;
         IndustryParameters = ip;
+        ProductsParameters = pp;
         PolicyParameters = new PolicyParams();
 
         Graph = KnowledgeGraph.FromData(data.Nodes, scenario.Disciplines, kp);
@@ -78,6 +80,9 @@ internal sealed class SliceWorld
         Limits = new CommandLimits(scenario.ActorCount, ProductsLayout.SlotCount, ProductsLayout.Designs,
             [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)]);
         RegisterRunColumns();
+        // why_not reads the three layers' snapshots only (contract §6); ProcessDevelopment is off in the EffortZero ablation (E_full = 0 makes it inert).
+        WhyNot = new WhyNotAnalyzer(Graph, kp, Knowledge, Industry, Products, pp, new WhyNotInputsAdapter(this),
+            new LeverRegistry(Enum.GetValues<Lever>().Where(l => l != Lever.ProcessDevelopment || !config.Channels.HasFlag(SliceChannels.EffortZero))));
 
         Policy.Initialize();
         Runner = new TickRunner(Table, config.Seed, [Knowledge, Industry, Products, Policy], config.ChunkSize, config.Threads, Calendar);
@@ -89,6 +94,7 @@ internal sealed class SliceWorld
     public SliceStreams Streams { get; }
     public KnowledgeParams KnowledgeParameters { get; }
     public IndustryParams IndustryParameters { get; }
+    public ProductsParams ProductsParameters { get; }
     public PolicyParams PolicyParameters { get; }
     public KnowledgeGraph Graph { get; }
     public IndustryLayout IndustryLayout { get; }
@@ -100,6 +106,7 @@ internal sealed class SliceWorld
     public ProductsSystem Products { get; }
     public PolicySystem Policy { get; }
     public CommandState Commands { get; }
+    public WhyNotAnalyzer WhyNot { get; }
     public CommandLimits Limits { get; }
     public TickRunner Runner { get; }
     public ImmutableArray<Fx6> BudgetAtStart { get; }
