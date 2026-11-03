@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://singularity.local/schemas/product_class.schema.json",
+  "title": "Product classes file (kind: product_class; slice spec §1.4)",
+  "type": "object",
+  "required": ["kind"],
+  "additionalProperties": false,
+  "properties": {
+    "kind": { "const": "product_class" },
+    "define": { "type": "array", "items": { "$ref": "#/$defs/productClass" } },
+    "override": { "type": "array", "items": { "$ref": "#/$defs/productClass" } },
+    "patch": { "type": "array", "items": { "$ref": "#/$defs/patch" } },
+    "delete": { "type": "array", "uniqueItems": true, "items": { "$ref": "common.schema.json#/$defs/localId" } }
+  },
+  "$defs": {
+    "fields": {
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/localId" },
+        "axis": { "const": "perf" },
+        "lighten_order": {
+          "description": "Slot tie order for the 'producible' variant (F-PC2).",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "common.schema.json#/$defs/localId" }
+        },
+        "slots": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/slot" } }
+      }
+    },
+    "productClass": {
+      "$ref": "#/$defs/fields",
+      "required": ["id", "axis", "lighten_order", "slots"],
+      "unevaluatedProperties": false
+    },
+    "patch": {
+      "$ref": "#/$defs/fields",
+      "required": ["id"],
+      "unevaluatedProperties": false
+    },
+    "slot": {
+      "type": "object",
+      "required": ["id", "base", "alternatives"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/localId" },
+        "base": { "description": "true: the slot multiplier is the base of perf (engine).", "type": "boolean" },
+        "alternatives": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/alternative" } }
+      }
+    },
+    "alternative": {
+      "type": "object",
+      "required": ["id", "rank", "perf_mult", "prc_set", "requires_nodes"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/localId" },
+        "rank": { "type": "integer", "minimum": 1 },
+        "perf_mult": { "type": "number", "exclusiveMinimum": 0 },
+        "prc_set": { "$ref": "common.schema.json#/$defs/nodeIdList" },
+        "requires_nodes": { "$ref": "common.schema.json#/$defs/requirement" }
+      }
+    }
+  }
+}

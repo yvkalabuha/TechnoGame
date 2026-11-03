@@ -1,0 +1,146 @@
+# Start scenario 1945-09 of the jet slice (TASK-0011 scenario_1945.md; spec slice-jet-aviation.md §1.1).
+# Rules R-* are defined in docs/research/data/jet-slice/scenario_1945.md §1 (written before the numbers).
+# Actor order is data: it fixes the actor index in RNG keys (spec §3.5 A7), so reordering
+# changes the scenario hash. Money: budget_index is relative to USA (= 1). Shares are fractions.
+kind: scenario
+define:
+  - id: jet_slice_1945
+    start: {year: 1945, month: 9}
+    clusters: [MET, CHEM, MECH, AERO]
+    disciplines: [aero, prop, metal, chem, mech]
+    tech_lead: USA
+    # R-MS: known tier-3/4 PRC listed in "mastered" are mastered since t0-6; proc_X(t0) = 3·X½(tier).
+    mastered_history: {since_month: -6, proc_x_half_lives: 3}
+    # Source or estimation rule of every actor field (spec §1.1 "rule before number").
+    # estimated: true = estimated for every actor; per-actor estimates are listed in actor.estimated.
+    provenance:
+      - {field: gdp_1945, rule: R-GDP, sources: [S1], estimated: false}
+      - {field: gdppc_1945, rule: R-H, sources: [S2], estimated: false}
+      - {field: budget_index, rule: R-BUD, sources: [S1], estimated: true}
+      - {field: growth_pa, rule: R-GRO, sources: [S1], estimated: false}
+      - {field: culture_h, rule: R-H, sources: [S2], estimated: true}
+      - {field: tooling_m, rule: R-M, sources: [S8, S36], estimated: true}
+      - {field: hcap, rule: R-HC, sources: [], estimated: true}
+      - {field: w, rule: R-W, sources: [], estimated: true}
+      - {field: known, rule: R-KN, sources: [S4, S5, S7, S11, S13], estimated: false}
+      - {field: k_d, rule: R-KD, sources: [], estimated: true}
+      - {field: k_ind, rule: R-KI, sources: [], estimated: true}
+      - {field: mastered, rule: R-MS, sources: [], estimated: true}
+      - {field: fleet, rule: R-FL, sources: [], estimated: true}
+      - {field: trophy_engineers, rule: R-ENG, sources: [S8, S9, S10, S11], estimated: false}
+    actors:
+      - id: USA
+        class: great
+        gdp_1945: 2314.67
+        gdp_year: 1945
+        gdppc_1945: 16478
+        budget_index: 1.000
+        growth_pa: 0.0299
+        culture_h:
+          MET: {precision: 4.00, purity: 3.80, quality_control: 3.70}
+          CHEM: {precision: 4.00, purity: 3.80, quality_control: 3.70}
+          MECH: {precision: 4.00, purity: 3.80, quality_control: 3.70}
+          AERO: {precision: 4.00, purity: 3.80, quality_control: 3.70}
+        tooling_m: {MET: 4.20, CHEM: 4.20, MECH: 4.20, AERO: 4.20}
+        hcap: 5.50
+        w: 1.0
+        known: [s7.fnd.brayton_cycle, s8.fnd.boundary_layer, s8.fnd.compressible_flow, s5.fnd.precipitation_hardening, s8.prn.gas_turbine, s8.prn.swept_wing, s8.prn.afterburning, s8.eng.turbojet_g1, s8.eng.straight_wing_jet_airframe, s5.cmp.heat_resistant_alloy, s5.cmp.aluminium_alloy_sheet, s8.cmp.turbine_blade_forged, s5.prc.light_alloy_rolling, s5.prc.nicr_alloy_melt, s5.prc.alloying_element_refining, s5.prc.high_purity_nickel_refining, s6.prc.precision_gear_bearing, s6.prc.centrifugal_impeller_machining, s6.prc.precision_blade_forging, s8.prc.stressed_skin_assembly, s8.prc.jet_engine_assembly_test, s8.app.jet_fighter_g1]
+        k_d: {aero: 0.30, prop: 0.30, metal: 0.25, chem: 0.10, mech: 0.15}
+        k_ind: 0
+        mastered: [s5.prc.light_alloy_rolling, s5.prc.alloying_element_refining, s6.prc.precision_gear_bearing, s8.prc.stressed_skin_assembly, s5.prc.nicr_alloy_melt, s5.prc.high_purity_nickel_refining, s6.prc.centrifugal_impeller_machining, s6.prc.precision_blade_forging, s8.prc.jet_engine_assembly_test]
+        fleet:
+          - {product_class: jet_fighter, gen: 1, variant: superior, count: 100, cohort_year: 1945}
+        trophy_engineers: 86
+        estimated: []
+      - id: GBR
+        class: great
+        gdp_1945: 553.15
+        gdp_year: 1945
+        gdppc_1945: 11247
+        budget_index: 0.239
+        growth_pa: 0.0220
+        culture_h:
+          MET: {precision: 3.82, purity: 3.62, quality_control: 3.52}
+          CHEM: {precision: 3.82, purity: 3.62, quality_control: 3.52}
+          MECH: {precision: 3.82, purity: 3.62, quality_control: 3.52}
+          AERO: {precision: 3.82, purity: 3.62, quality_control: 3.52}
+        tooling_m: {MET: 4.02, CHEM: 4.02, MECH: 4.02, AERO: 4.02}
+        hcap: 5.32
+        w: 1.0
+        known: [s7.fnd.brayton_cycle, s8.fnd.boundary_layer, s8.fnd.compressible_flow, s5.fnd.precipitation_hardening, s8.prn.gas_turbine, s8.prn.swept_wing, s8.prn.afterburning, s8.eng.turbojet_g1, s8.eng.straight_wing_jet_airframe, s8.eng.turbojet_g2, s5.cmp.heat_resistant_alloy, s5.cmp.aluminium_alloy_sheet, s8.cmp.turbine_blade_forged, s5.prc.light_alloy_rolling, s5.prc.nicr_alloy_melt, s5.prc.alloying_element_refining, s5.prc.high_purity_nickel_refining, s6.prc.precision_gear_bearing, s6.prc.centrifugal_impeller_machining, s6.prc.precision_blade_forging, s8.prc.stressed_skin_assembly, s8.prc.jet_engine_assembly_test, s8.app.jet_fighter_g1]
+        k_d: {aero: 0.30, prop: 0.35, metal: 0.25, chem: 0.10, mech: 0.15}
+        k_ind: 0
+        mastered: [s5.prc.light_alloy_rolling, s5.prc.alloying_element_refining, s6.prc.precision_gear_bearing, s8.prc.stressed_skin_assembly, s5.prc.nicr_alloy_melt, s5.prc.high_purity_nickel_refining, s6.prc.centrifugal_impeller_machining, s6.prc.precision_blade_forging, s8.prc.jet_engine_assembly_test]
+        fleet:
+          - {product_class: jet_fighter, gen: 1, variant: superior, count: 100, cohort_year: 1945}
+        trophy_engineers: 100
+        estimated: []
+      - id: SUN
+        class: great
+        # No Maddison GDP for 1941-1945: 1946 is used (R-GDP, estimated).
+        gdp_1945: 530.22
+        gdp_year: 1946
+        gdppc_1945: 3049
+        budget_index: 0.229
+        growth_pa: 0.0548
+        culture_h:
+          MET: {precision: 3.20, purity: 3.00, quality_control: 2.90}
+          CHEM: {precision: 3.20, purity: 3.00, quality_control: 2.90}
+          MECH: {precision: 3.20, purity: 3.00, quality_control: 2.90}
+          AERO: {precision: 3.20, purity: 3.00, quality_control: 2.90}
+        # +0.2 in MECH and AERO: dismantled aircraft plants (R-M, F-SC2).
+        tooling_m: {MET: 3.40, CHEM: 3.40, MECH: 3.60, AERO: 3.60}
+        hcap: 4.70
+        w: 1.0
+        # s8.prn.swept_wing is estimated without a source (F-SC1); jet_fighter_g1 is not known (no alloy).
+        known: [s7.fnd.brayton_cycle, s8.fnd.boundary_layer, s8.fnd.compressible_flow, s5.fnd.precipitation_hardening, s8.prn.gas_turbine, s8.prn.swept_wing, s8.eng.turbojet_g1, s8.eng.straight_wing_jet_airframe, s5.cmp.aluminium_alloy_sheet, s5.prc.light_alloy_rolling, s5.prc.alloying_element_refining, s6.prc.precision_gear_bearing, s8.prc.stressed_skin_assembly, s8.prc.jet_engine_assembly_test]
+        k_d: {aero: 0.25, prop: 0.20, metal: 0.15, chem: 0.05, mech: 0.05}
+        k_ind: 0
+        mastered: [s5.prc.light_alloy_rolling, s5.prc.alloying_element_refining, s6.prc.precision_gear_bearing, s8.prc.stressed_skin_assembly]
+        fleet: []
+        trophy_engineers: 1385
+        estimated: [gdp_1945, gdppc_1945, growth_pa, known]
+      - id: FRA
+        class: middle
+        gdp_1945: 162.81
+        gdp_year: 1945
+        gdppc_1945: 4101
+        budget_index: 0.070
+        growth_pa: 0.0662
+        culture_h:
+          MET: {precision: 3.34, purity: 3.14, quality_control: 3.04}
+          CHEM: {precision: 3.34, purity: 3.14, quality_control: 3.04}
+          MECH: {precision: 3.34, purity: 3.14, quality_control: 3.04}
+          AERO: {precision: 3.34, purity: 3.14, quality_control: 3.04}
+        tooling_m: {MET: 3.54, CHEM: 3.54, MECH: 3.54, AERO: 3.54}
+        hcap: 4.84
+        w: 1.0
+        known: [s7.fnd.brayton_cycle, s8.fnd.boundary_layer, s8.fnd.compressible_flow, s5.fnd.precipitation_hardening, s8.prn.gas_turbine, s8.eng.turbojet_g1, s5.cmp.aluminium_alloy_sheet, s5.prc.light_alloy_rolling, s5.prc.alloying_element_refining, s6.prc.precision_gear_bearing, s8.prc.stressed_skin_assembly]
+        k_d: {aero: 0.15, prop: 0.15, metal: 0.15, chem: 0.05, mech: 0.05}
+        k_ind: 0
+        mastered: [s5.prc.light_alloy_rolling, s5.prc.alloying_element_refining, s6.prc.precision_gear_bearing, s8.prc.stressed_skin_assembly]
+        fleet: []
+        trophy_engineers: 120
+        estimated: []
+      - id: SWE
+        class: small
+        gdp_1945: 54.41
+        gdp_year: 1945
+        gdppc_1945: 8201
+        budget_index: 0.024
+        growth_pa: 0.0417
+        culture_h:
+          MET: {precision: 3.67, purity: 3.47, quality_control: 3.37}
+          CHEM: {precision: 3.67, purity: 3.47, quality_control: 3.37}
+          MECH: {precision: 3.67, purity: 3.47, quality_control: 3.37}
+          AERO: {precision: 3.67, purity: 3.47, quality_control: 3.37}
+        tooling_m: {MET: 3.87, CHEM: 3.87, MECH: 3.87, AERO: 3.87}
+        hcap: 5.17
+        w: 1.0
+        known: [s7.fnd.brayton_cycle, s8.fnd.boundary_layer, s8.fnd.compressible_flow, s5.fnd.precipitation_hardening, s8.prn.gas_turbine, s5.cmp.aluminium_alloy_sheet, s5.prc.light_alloy_rolling, s5.prc.alloying_element_refining, s6.prc.precision_gear_bearing, s8.prc.stressed_skin_assembly]
+        k_d: {aero: 0.15, prop: 0.10, metal: 0.15, chem: 0.05, mech: 0.05}
+        k_ind: 0
+        mastered: [s5.prc.light_alloy_rolling, s5.prc.alloying_element_refining, s6.prc.precision_gear_bearing, s8.prc.stressed_skin_assembly]
+        fleet: []
+        trophy_engineers: 0
+        estimated: []

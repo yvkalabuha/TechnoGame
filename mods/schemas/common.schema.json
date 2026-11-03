@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://singularity.local/schemas/common.schema.json",
+  "title": "Shared definitions for mod files (ADR-0010)",
+  "$defs": {
+    "modId": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "semver": { "type": "string", "pattern": "^(0|[1-9][0-9]*)[.](0|[1-9][0-9]*)[.](0|[1-9][0-9]*)$" },
+    "nodeId": { "type": "string", "pattern": "^s[0-9]+[.](fnd|prn|eng|cmp|prc|app)[.][a-z0-9_]+$" },
+    "localId": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "actorId": { "type": "string", "pattern": "^[A-Z]{3}$" },
+    "cluster": { "enum": ["MET", "CHEM", "MECH", "ELEC", "AERO", "NUC", "ENER", "BASE"] },
+    "discipline": { "enum": ["aero", "prop", "metal", "chem", "mech"] },
+    "fixed": {
+      "description": "Fixed-point Fx6 value; the loader rejects more than 6 fractional digits.",
+      "type": "number"
+    },
+    "nonNegFixed": { "type": "number", "minimum": 0 },
+    "nodeIdList": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/nodeId" } },
+    "requirement": {
+      "description": "AND list: each item is a node id or an alternative group {any_of: [ids]}.",
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/nodeId" },
+          {
+            "type": "object",
+            "required": ["any_of"],
+            "additionalProperties": false,
+            "properties": {
+              "any_of": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "$ref": "#/$defs/nodeId" } }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

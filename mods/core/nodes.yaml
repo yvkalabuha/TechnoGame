@@ -1,0 +1,947 @@
+# Jet-slice knowledge nodes (TASK-0011 nodes.csv + informs.csv; spec slice-jet-aviation.md §1.3).
+# Converted once from the CSV tables; this file is now the source of truth.
+# number: stable node number (spec §1.3 "#"), used in RNG keys (spec §3.5 A7).
+# requires: list = AND; {any_of: [...]} = alternative group. informs: edges from this node.
+# anchor.year: first documented realisation; before: true means "<year" (RULE-G0).
+# Start knowledge lives in the scenario (scenario_1945.yaml), not here.
+kind: node
+define:
+  - id: s7.fnd.brayton_cycle
+    number: 1
+    type: FND
+    gen: 0
+    discipline: prop
+    cluster: AERO
+    requires: []
+    hazard: none
+    informs:
+      - {to: s8.eng.turbojet_g1, weight: 0.6}
+      - {to: s8.prc.jet_engine_assembly_test, weight: 0.6}
+      - {to: s8.eng.turbojet_g2, weight: 0.3}
+      - {to: s8.eng.afterburner, weight: 0.3}
+      - {to: s8.prc.afterburner_fabrication, weight: 0.3}
+      - {to: s8.eng.turbojet_g3, weight: 0.3}
+      - {to: s8.eng.air_cooled_turbine_blade, weight: 0.3}
+      - {to: s8.eng.turbofan_g4, weight: 0.3}
+    anchor:
+      year: 1945
+      before: true
+      event: "G0: до старта"
+      source: "RULE-G0"
+      estimated: true
+  - id: s8.fnd.boundary_layer
+    number: 2
+    type: FND
+    gen: 0
+    discipline: aero
+    cluster: AERO
+    requires: []
+    hazard: none
+    informs:
+      - {to: s8.prc.stressed_skin_assembly, weight: 0.6}
+      - {to: s8.eng.swept_wing_airframe, weight: 0.3}
+      - {to: s8.eng.all_moving_tail, weight: 0.3}
+      - {to: s8.prc.swept_wing_fabrication, weight: 0.3}
+      - {to: s8.eng.area_ruled_airframe, weight: 0.3}
+      - {to: s8.eng.delta_wing_airframe, weight: 0.3}
+      - {to: s8.eng.variable_geometry_inlet, weight: 0.3}
+      - {to: s8.prc.machined_integral_skins, weight: 0.3}
+      - {to: s8.eng.mach2_airframe_g4, weight: 0.3}
+    anchor:
+      year: 1904
+      event: "Прандтль: пограничный слой"
+      source: "S32"
+      estimated: false
+  - id: s8.fnd.compressible_flow
+    number: 3
+    type: FND
+    gen: 0
+    discipline: aero
+    cluster: AERO
+    requires: [s8.fnd.boundary_layer]
+    hazard: none
+    informs:
+      - {to: s8.prc.stressed_skin_assembly, weight: 0.6}
+      - {to: s8.eng.straight_wing_jet_airframe, weight: 0.6}
+      - {to: s8.eng.swept_wing_airframe, weight: 0.3}
+      - {to: s8.eng.all_moving_tail, weight: 0.3}
+      - {to: s8.prc.swept_wing_fabrication, weight: 0.3}
+      - {to: s8.eng.area_ruled_airframe, weight: 0.3}
+      - {to: s8.eng.delta_wing_airframe, weight: 0.3}
+      - {to: s8.prc.machined_integral_skins, weight: 0.3}
+      - {to: s8.eng.mach2_airframe_g4, weight: 0.3}
+    anchor:
+      year: 1945
+      before: true
+      event: "G0: до старта"
+      source: "RULE-G0"
+      estimated: true
+  - id: s5.fnd.precipitation_hardening
+    number: 4
+    type: FND
+    gen: 0
+    discipline: metal
+    cluster: MET
+    requires: []
+    hazard: none
+    informs:
+      - {to: s5.prc.light_alloy_rolling, weight: 0.6}
+      - {to: s5.prc.nicr_alloy_melt, weight: 0.6}
+      - {to: s5.prc.superalloy_melt_g2, weight: 0.3}
+      - {to: s5.prc.vacuum_induction_melt, weight: 0.3}
+      - {to: s5.prc.titanium_reduction_forging, weight: 0.3}
+      - {to: s5.prc.ds_casting, weight: 0.3}
+    anchor:
+      year: 1906
+      event: "Вильм: старение Al-Cu (дюралюминий)"
+      source: "S31"
+      estimated: false
+  - id: s8.fnd.transonic_aerodynamics
+    number: 5
+    type: FND
+    gen: 2
+    discipline: aero
+    cluster: AERO
+    requires: [s8.fnd.compressible_flow]
+    hazard: hz
+    informs:
+      - {to: s8.eng.swept_wing_airframe, weight: 0.6}
+      - {to: s8.prc.swept_wing_fabrication, weight: 0.6}
+      - {to: s8.eng.area_ruled_airframe, weight: 0.6}
+      - {to: s8.eng.variable_geometry_inlet, weight: 0.6}
+      - {to: s8.prc.machined_integral_skins, weight: 0.6}
+      - {to: s8.eng.mach2_airframe_g4, weight: 0.3}
+    anchor:
+      year: 1947
+      event: "Bell X-1: M 1.06 14.10.1947"
+      source: "S28"
+      estimated: false
+  - id: s5.fnd.high_temperature_creep
+    number: 6
+    type: FND
+    gen: 2
+    discipline: metal
+    cluster: MET
+    requires: [s5.fnd.precipitation_hardening]
+    hazard: hz
+    informs:
+      - {to: s5.prc.superalloy_melt_g2, weight: 0.6}
+      - {to: s5.prc.vacuum_induction_melt, weight: 0.6}
+      - {to: s5.prc.titanium_reduction_forging, weight: 0.6}
+      - {to: s5.prc.ds_casting, weight: 0.3}
+    anchor:
+      year: 1948
+      event: "Набарро: диффузионная ползучесть"
+      source: "S34"
+      estimated: false
+  - id: s7.fnd.turbine_heat_transfer
+    number: 7
+    type: FND
+    gen: 3
+    discipline: prop
+    cluster: AERO
+    requires: [s7.fnd.brayton_cycle, s8.fnd.boundary_layer]
+    hazard: hz
+    informs:
+      - {to: s8.eng.turbojet_g3, weight: 0.6}
+      - {to: s8.eng.turbofan_g4, weight: 0.6}
+    anchor:
+      year: 1960
+      event: "середина окна G3"
+      source: "RULE-MID"
+      estimated: true
+  - id: s5.fnd.solidification_science
+    number: 8
+    type: FND
+    gen: 3
+    discipline: metal
+    cluster: MET
+    requires: [s5.fnd.high_temperature_creep]
+    hazard: hz
+    informs:
+      - {to: s5.prc.vacuum_induction_melt, weight: 0.6}
+      - {to: s5.prc.titanium_reduction_forging, weight: 0.6}
+    anchor:
+      year: 1953
+      event: "Раттер–Чалмерс: концентрационное переохлаждение"
+      source: "S35"
+      estimated: false
+  - id: s8.prn.gas_turbine
+    number: 9
+    type: PRN
+    gen: 0
+    discipline: prop
+    cluster: AERO
+    requires: [s7.fnd.brayton_cycle]
+    hazard: none
+    anchor:
+      year: 1937
+      event: "стендовые ТРД Уиттла и фон Охайна"
+      source: "RR-0008§12"
+      estimated: false
+  - id: s8.prn.swept_wing
+    number: 10
+    type: PRN
+    gen: 1
+    discipline: aero
+    cluster: AERO
+    requires: [s8.fnd.compressible_flow]
+    hazard: none
+    anchor:
+      year: 1935
+      event: "Буземан (Volta); Джонс NACA TN 1033 — 1945"
+      source: "S13"
+      estimated: false
+  - id: s8.prn.afterburning
+    number: 11
+    type: PRN
+    gen: 1
+    discipline: prop
+    cluster: AERO
+    requires: [s8.prn.gas_turbine]
+    hazard: none
+    anchor:
+      year: 1944
+      event: "первый форсаж США (NACA AERL для GE I-A)"
+      source: "S19"
+      estimated: false
+  - id: s5.prn.gamma_prime_alloy_design
+    number: 12
+    type: PRN
+    gen: 2
+    discipline: metal
+    cluster: MET
+    requires: [s5.fnd.high_temperature_creep]
+    hazard: hz
+    anchor:
+      year: 1951
+      event: "середина окна G2"
+      source: "RULE-MID"
+      estimated: true
+  - id: s8.prn.area_rule
+    number: 13
+    type: PRN
+    gen: 2
+    discipline: aero
+    cluster: AERO
+    requires: [s8.fnd.transonic_aerodynamics]
+    hazard: hz
+    anchor:
+      year: 1952
+      event: "Уиткомб: правило площадей"
+      source: "S14"
+      estimated: false
+  - id: s8.prn.multi_spool_compression
+    number: 14
+    type: PRN
+    gen: 2
+    discipline: prop
+    cluster: AERO
+    requires: [s8.prn.gas_turbine]
+    hazard: hz
+    anchor:
+      year: 1950
+      event: "J57: первый запуск двухвального ТРД (01.1950)"
+      source: "S16"
+      estimated: false
+  - id: s8.prn.bypass_engine
+    number: 15
+    type: PRN
+    gen: 3
+    discipline: prop
+    cluster: AERO
+    requires: [s8.prn.multi_spool_compression]
+    hazard: hz
+    anchor:
+      year: 1952
+      event: "Conway RCo.2: первый запуск (07.1952)"
+      source: "S18"
+      estimated: false
+  - id: s8.prn.film_cooling
+    number: 16
+    type: PRN
+    gen: 3
+    discipline: prop
+    cluster: AERO
+    requires: [s7.fnd.turbine_heat_transfer]
+    hazard: hz
+    anchor:
+      year: 1960
+      event: "середина окна G3"
+      source: "RULE-MID"
+      estimated: true
+  - id: s8.eng.turbojet_g1
+    number: 17
+    type: ENG
+    gen: 1
+    discipline: prop
+    cluster: AERO
+    requires: [s8.prn.gas_turbine]
+    hazard: key
+    anchor:
+      year: 1944
+      event: "Meteor в строю (07.1944)"
+      source: "S7"
+      estimated: false
+  - id: s8.eng.straight_wing_jet_airframe
+    number: 18
+    type: ENG
+    gen: 1
+    discipline: aero
+    cluster: AERO
+    requires: [s8.fnd.boundary_layer]
+    hazard: none
+    anchor:
+      year: 1944
+      event: "Meteor в строю (07.1944)"
+      source: "S7"
+      estimated: false
+  - id: s8.eng.turbojet_g2
+    number: 19
+    type: ENG
+    gen: 2
+    discipline: prop
+    cluster: AERO
+    requires: [s8.eng.turbojet_g1]
+    hazard: key
+    anchor:
+      year: 1944
+      event: "Nene: первый запуск 27.10.1944"
+      source: "S4"
+      estimated: false
+  - id: s8.eng.swept_wing_airframe
+    number: 20
+    type: ENG
+    gen: 2
+    discipline: aero
+    cluster: AERO
+    requires: [s8.prn.swept_wing, s8.eng.straight_wing_jet_airframe]
+    hazard: none
+    anchor:
+      year: 1947
+      event: "F-86: первый полёт 01.10.1947"
+      source: "S27"
+      estimated: false
+  - id: s8.eng.afterburner
+    number: 21
+    type: ENG
+    gen: 2
+    discipline: prop
+    cluster: AERO
+    requires: [s8.prn.afterburning, s8.eng.turbojet_g1]
+    hazard: none
+    anchor:
+      year: 1951
+      event: "середина окна G2"
+      source: "RULE-MID"
+      estimated: true
+  - id: s8.eng.all_moving_tail
+    number: 22
+    type: ENG
+    gen: 2
+    discipline: aero
+    cluster: AERO
+    requires: [s8.fnd.transonic_aerodynamics]
+    hazard: none
+    anchor:
+      year: 1947
+      event: "X-1: цельноповоротный стабилизатор"
+      source: "S28"
+      estimated: false
+  - id: s8.eng.turbojet_g3
+    number: 23
+    type: ENG
+    gen: 3
+    discipline: prop
+    cluster: AERO
+    requires: [s8.eng.turbojet_g2, s8.prn.multi_spool_compression]
+    hazard: key
+    anchor:
+      year: 1950
+      event: "J57 (двухвальный 10 000 lbf)"
+      source: "S16"
+      estimated: false
+  - id: s8.eng.area_ruled_airframe
+    number: 24
+    type: ENG
+    gen: 3
+    discipline: aero
+    cluster: AERO
+    requires: [s8.prn.area_rule, s8.eng.swept_wing_airframe]
+    hazard: none
+    anchor:
+      year: 1954
+      event: "YF-102A: первый полёт 20.12.1954"
+      source: "S15"
+      estimated: false
+  - id: s8.eng.delta_wing_airframe
+    number: 25
+    type: ENG
+    gen: 3
+    discipline: aero
+    cluster: AERO
+    requires: [s8.eng.swept_wing_airframe, s8.fnd.transonic_aerodynamics]
+    hazard: none
+    anchor:
+      year: 1954
+      event: "YF-102A (дельта)"
+      source: "S15"
+      estimated: false
+  - id: s8.eng.variable_geometry_inlet
+    number: 26
+    type: ENG
+    gen: 3
+    discipline: aero
+    cluster: AERO
+    requires: [s8.fnd.compressible_flow, s8.eng.turbojet_g3]
+    hazard: none
+    anchor:
+      year: 1960
+      event: "середина окна G3"
+      source: "RULE-MID"
+      estimated: true
+  - id: s8.eng.air_cooled_turbine_blade
+    number: 27
+    type: ENG
+    gen: 4
+    discipline: prop
+    cluster: AERO
+    requires: [s8.prn.film_cooling, s7.fnd.turbine_heat_transfer]
+    hazard: key
+    anchor:
+      year: 1970
+      event: "середина окна G4 (Conway — первый с охлаждаемыми лопатками; дата не найдена)"
+      source: "RULE-MID"
+      estimated: true
+  - id: s8.eng.turbofan_g4
+    number: 28
+    type: ENG
+    gen: 4
+    discipline: prop
+    cluster: AERO
+    requires: [s8.eng.turbojet_g3, s8.prn.bypass_engine]
+    hazard: key
+    anchor:
+      year: 1964
+      event: "TF30 (форсажный ТРДД): первый полёт"
+      source: "S25"
+      estimated: false
+  - id: s8.eng.mach2_airframe_g4
+    number: 29
+    type: ENG
+    gen: 4
+    discipline: aero
+    cluster: AERO
+    requires: [{any_of: [s8.eng.area_ruled_airframe, s8.eng.delta_wing_airframe]}, s8.eng.variable_geometry_inlet]
+    hazard: none
+    anchor:
+      year: 1972
+      event: "F-15: первый полёт 27.07.1972"
+      source: "S26"
+      estimated: false
+  - id: s5.cmp.heat_resistant_alloy
+    number: 30
+    type: CMP
+    gen: 1
+    discipline: metal
+    cluster: MET
+    requires: [s5.fnd.precipitation_hardening]
+    hazard: key
+    anchor:
+      year: 1941
+      event: "Nimonic 80"
+      source: "S3"
+      estimated: false
+  - id: s5.cmp.aluminium_alloy_sheet
+    number: 31
+    type: CMP
+    gen: 0
+    discipline: metal
+    cluster: MET
+    requires: []
+    hazard: none
+    anchor:
+      year: 1909
+      event: "дюралюминий: лицензия Dürener Metallwerke"
+      source: "S31"
+      estimated: false
+  - id: s5.cmp.titanium_alloy
+    number: 32
+    type: CMP
+    gen: 3
+    discipline: metal
+    cluster: MET
+    requires: [s5.fnd.high_temperature_creep]
+    hazard: none
+    anchor:
+      year: 1954
+      event: "Ti-6Al-4V"
+      source: "S20"
+      estimated: false
+  - id: s8.cmp.turbine_blade_forged
+    number: 33
+    type: CMP
+    gen: 1
+    discipline: prop
+    cluster: AERO
+    requires: [s5.cmp.heat_resistant_alloy]
+    hazard: none
+    anchor:
+      year: 1941
+      event: "Nimonic 80 — стандарт роторных лопаток британских ГТД"
+      source: "S3"
+      estimated: false
+  - id: s8.cmp.turbine_blade_cast
+    number: 34
+    type: CMP
+    gen: 3
+    discipline: prop
+    cluster: AERO
+    requires: [s5.prn.gamma_prime_alloy_design, s5.cmp.heat_resistant_alloy]
+    hazard: none
+    anchor:
+      year: 1960
+      event: "середина окна G3"
+      source: "RULE-MID"
+      estimated: true
+  - id: s8.cmp.turbine_blade_cooled
+    number: 35
+    type: CMP
+    gen: 4
+    discipline: prop
+    cluster: AERO
+    requires: [s8.eng.air_cooled_turbine_blade, s8.cmp.turbine_blade_cast]
+    hazard: none
+    anchor:
+      year: 1970
+      event: "середина окна G4"
+      source: "RULE-MID"
+      estimated: true
+  - id: s8.cmp.axial_compressor_assembly
+    number: 36
+    type: CMP
+    gen: 2
+    discipline: prop
+    cluster: AERO
+    requires: [s8.eng.turbojet_g2]
+    hazard: none
+    anchor:
+      year: 1951
+      event: "середина окна G2"
+      source: "RULE-MID"
+      estimated: true
+  - id: s8.cmp.afterburner_unit
+    number: 37
+    type: CMP
+    gen: 2
+    discipline: prop
+    cluster: AERO
+    requires: [s8.eng.afterburner]
+    hazard: none
+    anchor:
+      year: 1951
+      event: "середина окна G2"
+      source: "RULE-MID"
+      estimated: true
+  - id: s5.prc.light_alloy_rolling
+    number: 38
+    type: PRC
+    gen: 0
+    discipline: metal
+    cluster: MET
+    tier: 3
+    capability_req:
+      precision: 3
+      purity: 3
+      quality_control: 2.5
+    requires: [s5.cmp.aluminium_alloy_sheet]
+    hazard: none
+    anchor:
+      year: 1909
+      event: "дюралюминий в производстве"
+      source: "S31"
+      estimated: false
+  - id: s5.prc.nicr_alloy_melt
+    number: 39
+    type: PRC
+    gen: 1
+    discipline: metal
+    cluster: MET
+    tier: 4
+    capability_req:
+      purity: 4
+      quality_control: 3.5
+    requires: [s5.cmp.heat_resistant_alloy]
+    hazard: none
+    anchor:
+      year: 1941
+      event: "Nimonic 80 в производстве"
+      source: "S3"
+      estimated: false
+  - id: s5.prc.superalloy_melt_g2
+    number: 40
+    type: PRC
+    gen: 2
+    discipline: metal
+    cluster: MET
+    tier: 4
+    capability_req:
+      purity: 4.5
+      quality_control: 4
+    requires: [s5.prc.nicr_alloy_melt, s5.prn.gamma_prime_alloy_design]
+    hazard: key
+    anchor:
+      year: 1951
+      event: "середина окна G2"
+      source: "RULE-MID"
+      estimated: true
+  - id: s5.prc.vacuum_induction_melt
+    number: 41
+    type: PRC
+    gen: 3
+    discipline: metal
+    cluster: MET
+    tier: 5
+    capability_req:
+      purity: 5
+      quality_control: 4.5
+    requires: [s5.prc.superalloy_melt_g2]
+    hazard: key
+    anchor:
+      year: 1952
+      event: "промышленная VIM суперсплавов (начало 1950-х)"
+      source: "S23"
+      estimated: false
+  - id: s5.prc.titanium_reduction_forging
+    number: 42
+    type: PRC
+    gen: 3
+    discipline: metal
+    cluster: MET
+    tier: 5
+    capability_req:
+      precision: 4
+      purity: 5
+      quality_control: 4
+    requires: [s5.cmp.titanium_alloy]
+    hazard: none
+    anchor:
+      year: 1948
+      event: "DuPont: первая продажа губчатого титана (09.1948)"
+      source: "S37"
+      estimated: false
+  - id: s5.prc.ds_casting
+    number: 43
+    type: PRC
+    gen: 4
+    discipline: metal
+    cluster: MET
+    tier: 5
+    capability_req:
+      precision: 5
+      purity: 5
+      quality_control: 5
+    requires: [s5.prc.vacuum_induction_melt, s5.fnd.solidification_science]
+    hazard: none
+    anchor:
+      year: 1969
+      event: "DS-лопатки: патент P&W 1966; первое применение J58"
+      source: "S22"
+      estimated: false
+  - id: s5.prc.alloying_element_refining
+    number: 44
+    type: PRC
+    gen: 0
+    discipline: chem
+    cluster: CHEM
+    tier: 3
+    capability_req:
+      purity: 3.5
+      quality_control: 3
+    requires: []
+    hazard: none
+    anchor:
+      year: 1945
+      before: true
+      event: "G0: до старта"
+      source: "RULE-G0"
+      estimated: true
+  - id: s5.prc.high_purity_nickel_refining
+    number: 45
+    type: PRC
+    gen: 1
+    discipline: chem
+    cluster: CHEM
+    tier: 4
+    capability_req:
+      purity: 4.5
+      quality_control: 3.5
+    requires: [s5.prc.alloying_element_refining]
+    hazard: none
+    anchor:
+      year: 1945
+      event: "окно G1"
+      source: "RULE-MID"
+      estimated: true
+  - id: s5.prc.ceramic_shell_moulding
+    number: 46
+    type: PRC
+    gen: 3
+    discipline: chem
+    cluster: CHEM
+    tier: 4
+    capability_req:
+      precision: 4
+      purity: 4
+      quality_control: 3.5
+    requires: [s5.prc.high_purity_nickel_refining]
+    hazard: none
+    anchor:
+      year: 1960
+      event: "середина окна G3"
+      source: "RULE-MID"
+      estimated: true
+  - id: s6.prc.precision_gear_bearing
+    number: 47
+    type: PRC
+    gen: 0
+    discipline: mech
+    cluster: MECH
+    tier: 3
+    capability_req:
+      precision: 3.5
+      quality_control: 3
+    requires: []
+    hazard: none
+    anchor:
+      year: 1945
+      before: true
+      event: "G0: до старта"
+      source: "RULE-G0"
+      estimated: true
+  - id: s6.prc.centrifugal_impeller_machining
+    number: 48
+    type: PRC
+    gen: 1
+    discipline: mech
+    cluster: MECH
+    tier: 4
+    capability_req:
+      precision: 4
+      quality_control: 3.5
+    requires: [s6.prc.precision_gear_bearing]
+    hazard: none
+    anchor:
+      year: 1945
+      event: "окно G1"
+      source: "RULE-MID"
+      estimated: true
+  - id: s6.prc.precision_blade_forging
+    number: 49
+    type: PRC
+    gen: 1
+    discipline: mech
+    cluster: MECH
+    tier: 4
+    capability_req:
+      precision: 4.5
+      purity: 3
+      quality_control: 4
+    requires: [s8.cmp.turbine_blade_forged]
+    hazard: key
+    anchor:
+      year: 1941
+      event: "кованые лопатки из Nimonic 80"
+      source: "S3"
+      estimated: false
+  - id: s6.prc.axial_compressor_machining
+    number: 50
+    type: PRC
+    gen: 2
+    discipline: mech
+    cluster: MECH
+    tier: 4
+    capability_req:
+      precision: 4.5
+      quality_control: 4
+    requires: [s8.cmp.axial_compressor_assembly]
+    hazard: none
+    anchor:
+      year: 1951
+      event: "середина окна G2"
+      source: "RULE-MID"
+      estimated: true
+  - id: s6.prc.investment_cast_blades
+    number: 51
+    type: PRC
+    gen: 3
+    discipline: mech
+    cluster: MECH
+    tier: 5
+    capability_req:
+      precision: 5
+      purity: 4.5
+      quality_control: 5
+    requires: [s8.cmp.turbine_blade_cast, s5.prc.ceramic_shell_moulding]
+    hazard: key
+    anchor:
+      year: 1960
+      event: "середина окна G3"
+      source: "RULE-MID"
+      estimated: true
+  - id: s6.prc.cooled_blade_drilling
+    number: 52
+    type: PRC
+    gen: 4
+    discipline: mech
+    cluster: MECH
+    tier: 5
+    capability_req:
+      precision: 5.5
+      quality_control: 5
+    requires: [s8.cmp.turbine_blade_cooled]
+    hazard: key
+    anchor:
+      year: 1970
+      event: "середина окна G4"
+      source: "RULE-MID"
+      estimated: true
+  - id: s8.prc.stressed_skin_assembly
+    number: 53
+    type: PRC
+    gen: 0
+    discipline: aero
+    cluster: AERO
+    tier: 3
+    capability_req:
+      precision: 3
+      quality_control: 3
+    requires: [s5.cmp.aluminium_alloy_sheet]
+    hazard: none
+    anchor:
+      year: 1945
+      before: true
+      event: "G0: до старта"
+      source: "RULE-G0"
+      estimated: true
+  - id: s8.prc.jet_engine_assembly_test
+    number: 54
+    type: PRC
+    gen: 1
+    discipline: prop
+    cluster: AERO
+    tier: 4
+    capability_req:
+      precision: 3.5
+      quality_control: 4
+    requires: [s8.eng.turbojet_g1]
+    hazard: none
+    anchor:
+      year: 1944
+      event: "серийные ТРД для Meteor"
+      source: "S7"
+      estimated: false
+  - id: s8.prc.swept_wing_fabrication
+    number: 55
+    type: PRC
+    gen: 2
+    discipline: aero
+    cluster: AERO
+    tier: 4
+    capability_req:
+      precision: 4
+      quality_control: 3.5
+    requires: [s8.eng.swept_wing_airframe]
+    hazard: none
+    anchor:
+      year: 1947
+      event: "F-86 (первый полёт)"
+      source: "S27"
+      estimated: false
+  - id: s8.prc.machined_integral_skins
+    number: 56
+    type: PRC
+    gen: 3
+    discipline: aero
+    cluster: AERO
+    tier: 4
+    capability_req:
+      precision: 4.5
+      quality_control: 4
+    requires: [{any_of: [s8.eng.area_ruled_airframe, s8.eng.delta_wing_airframe]}]
+    hazard: none
+    anchor:
+      year: 1960
+      event: "середина окна G3"
+      source: "RULE-MID"
+      estimated: true
+  - id: s8.prc.afterburner_fabrication
+    number: 57
+    type: PRC
+    gen: 2
+    discipline: prop
+    cluster: AERO
+    tier: 4
+    capability_req:
+      precision: 4
+      purity: 4
+      quality_control: 3.5
+    requires: [s8.cmp.afterburner_unit]
+    hazard: none
+    anchor:
+      year: 1951
+      event: "середина окна G2"
+      source: "RULE-MID"
+      estimated: true
+  - id: s8.app.jet_fighter_g1
+    number: 58
+    type: APP
+    gen: 1
+    discipline: aero
+    cluster: AERO
+    requires: [s8.eng.turbojet_g1, s8.eng.straight_wing_jet_airframe, s5.cmp.heat_resistant_alloy]
+    hazard: none
+    anchor:
+      year: 1944
+      event: "Meteor в строю (07.1944)"
+      source: "S7"
+      estimated: false
+  - id: s8.app.jet_fighter_g2
+    number: 59
+    type: APP
+    gen: 2
+    discipline: aero
+    cluster: AERO
+    requires: [s8.eng.turbojet_g2, s8.eng.swept_wing_airframe]
+    hazard: none
+    anchor:
+      year: 1947
+      event: "F-86 (первый полёт 01.10.1947)"
+      source: "S27"
+      estimated: false
+  - id: s8.app.jet_fighter_g3
+    number: 60
+    type: APP
+    gen: 3
+    discipline: aero
+    cluster: AERO
+    requires: [s8.eng.turbojet_g3, {any_of: [s8.eng.area_ruled_airframe, s8.eng.delta_wing_airframe]}, s8.eng.afterburner]
+    hazard: none
+    anchor:
+      year: 1953
+      event: "F-100: первый полёт 25.05.1953"
+      source: "S27"
+      estimated: false
+  - id: s8.app.jet_fighter_g4
+    number: 61
+    type: APP
+    gen: 4
+    discipline: aero
+    cluster: AERO
+    requires: [s8.eng.turbofan_g4, s8.eng.mach2_airframe_g4]
+    hazard: none
+    anchor:
+      year: 1972
+      event: "F-15: первый полёт 27.07.1972"
+      source: "S26"
+      estimated: false
