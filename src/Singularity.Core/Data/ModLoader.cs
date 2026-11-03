@@ -139,8 +139,15 @@ public static class ModLoader
     }
 
     // A data file present but not listed would be silently ignored; make it loud.
+    // Only the .yaml extension is valid; a *.yml file is always an error (likely a typo).
     private static void CheckUnlistedFiles(ModManifest mod)
     {
+        // Exact extension check: on Windows the pattern "*.yml" would also match *.yaml.
+        string[] yml = [.. Directory.GetFiles(mod.Directory).Where(f => Path.GetExtension(f) == ".yml")];
+        Array.Sort(yml, StringComparer.Ordinal);
+        if (yml.Length > 0)
+            throw new DataLoadException($"{yml[0]}: mod files must use the .yaml extension");
+
         string[] present = Directory.GetFiles(mod.Directory, "*.yaml");
         Array.Sort(present, StringComparer.Ordinal);
         foreach (string path in present)

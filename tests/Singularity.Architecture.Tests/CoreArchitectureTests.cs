@@ -61,6 +61,18 @@ public class CoreArchitectureTests
         Assert.Equal(["Singularity.Kernel.csproj"], fileNames);
     }
 
+    [Fact]
+    public void CoreProject_PackageReferences_AreExactlyApproved()
+    {
+        // A NuGet package in world-state code needs review (licence ADR-0009, determinism); adding
+        // one must change this list. YamlDotNet: event parser for mod data (TASK-0013, ADR-0010).
+        string csproj = Path.Combine(RepoRoot(), "src", "Singularity.Core", "Singularity.Core.csproj");
+        var packages = XDocument.Load(csproj).Descendants("PackageReference")
+            .Select(r => (string?)r.Attribute("Include") ?? "")
+            .Order(StringComparer.Ordinal);
+        Assert.Equal(["YamlDotNet"], packages);
+    }
+
     private static string RepoRoot()
     {
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)

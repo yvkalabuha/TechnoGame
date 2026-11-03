@@ -74,23 +74,17 @@ internal static class Scalars
         string fraction = dot < 0 ? "" : digits[(dot + 1)..];
         if (fraction.Length > 6)
             return null;
-        try
+        // Magnitude in Int128 so that long.MinValue (|min| = long.MaxValue + 1) is representable.
+        Int128 magnitude = 0;
+        Int128 limit = (Int128)long.MaxValue + 1;
+        foreach (char c in whole + fraction.PadRight(6, '0'))
         {
-            long raw = checked(ParseDigits(whole) * Fx6.Scale + ParseDigits(fraction.PadRight(6, '0')));
-            return Fx6.FromRaw(negative ? -raw : raw);
+            magnitude = magnitude * 10 + (c - '0');
+            if (magnitude > limit)
+                return null;   // early exit also keeps Int128 itself from overflowing
         }
-        catch (OverflowException)
-        {
-            return null;
-        }
-    }
-
-    private static long ParseDigits(string digits)
-    {
-        long value = 0;
-        foreach (char c in digits)
-            value = checked(value * 10 + (c - '0'));
-        return value;
+        Int128 raw = negative ? -magnitude : magnitude;
+        return raw > long.MaxValue ? null : Fx6.FromRaw((long)raw);
     }
 
     private static YScalar Scalar(YNode node) =>

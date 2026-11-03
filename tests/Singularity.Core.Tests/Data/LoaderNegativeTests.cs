@@ -120,4 +120,14 @@ public class LoaderNegativeTests : IDisposable
         var e = Assert.Throws<DataLoadException>(() => ModLoader.Load(core));
         Assert.Contains("not listed", e.Message);
     }
+
+    [Fact]
+    public void YmlFile_IsRejectedEvenIfUnused()
+    {
+        // Only .yaml is a data extension; a stray .yml would otherwise be ignored silently.
+        string core = _mods.CopyCore();
+        File.WriteAllText(Path.Combine(core, "extra.yml"), "kind: node\n");
+        var e = Assert.Throws<DataLoadException>(() => ModLoader.Load(core));
+        Assert.Contains("must use the .yaml extension", e.Message);
+    }
 }

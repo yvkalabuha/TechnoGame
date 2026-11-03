@@ -8,7 +8,7 @@ namespace Singularity.Core.Data.Yaml;
 /// Reads the strict YAML subset of ADR-0010 from the YamlDotNet event stream. No deserializer is
 /// used, so no value is typed implicitly: scalars keep their text and a <see cref="ScalarKind"/>.
 /// Rejected loudly: anchors, aliases, merge keys, tags, several documents, non-scalar or duplicate
-/// keys, empty/null values, YAML 1.1 implicit booleans (yes/no/on/off/y/n...) and plain scalars
+/// keys (plain keys are typed like values), empty/null values, YAML 1.1 implicit booleans (yes/no/on/off/y/n...) and plain scalars
 /// that look numeric but are not plain decimals (1e5, 0x1F, 1_000, .inf, 1945-09...). Such text
 /// must be quoted.
 /// </summary>
@@ -130,6 +130,10 @@ public static class StrictYaml
                 throw new DataLoadException($"{where}: merge keys are not allowed");
             if (key.Value.Length == 0)
                 throw new DataLoadException($"{where}: empty key");
+            // Plain keys follow the same typing rules as values: yes:/on:/1e5: are rejected,
+            // and a key that would read as a number or boolean must be quoted.
+            if (key.Style == ScalarStyle.Plain && ClassifyPlain(key.Value, where) != ScalarKind.String)
+                throw new DataLoadException($"{where}: plain key '{key.Value}' reads as a number or boolean; quote it");
             for (int i = 0; i < entries.Count; i++)
             {
                 if (string.Equals(entries[i].Key, key.Value, StringComparison.Ordinal))

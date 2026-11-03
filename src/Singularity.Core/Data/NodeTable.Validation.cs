@@ -64,6 +64,7 @@ public sealed partial class NodeTable
         }
     }
 
+    // Enums are written by their data names, so reordering a C# enum does not change DataHash.
     internal void WriteCanonical(CanonicalWriter w)
     {
         w.Str("nodes");
@@ -72,15 +73,15 @@ public sealed partial class NodeTable
         {
             w.Str(Id[r]);
             w.Int(Number[r]);
-            w.Int((int)Type[r]);
+            w.Str(DataNames.NameOf(DataNames.NodeTypes, Type[r]));
             w.Int(Gen[r]);
-            w.Int((int)Discipline[r]);
-            w.Int((int)Cluster[r]);
+            w.Str(DataNames.NameOf(DataNames.Disciplines, Discipline[r]));
+            w.Str(DataNames.NameOf(DataNames.Clusters, Cluster[r]));
             w.Int(Tier[r]);
             w.Fixed(ReqPrecision[r]);
             w.Fixed(ReqPurity[r]);
             w.Fixed(ReqQualityControl[r]);
-            w.Int((int)Hazard[r]);
+            w.Str(DataNames.NameOf(DataNames.Hazards, Hazard[r]));
             Requires.WriteCanonical(w, r, this);
             w.Int(InformsStart[r + 1] - InformsStart[r]);
             for (int e = InformsStart[r]; e < InformsStart[r + 1]; e++)

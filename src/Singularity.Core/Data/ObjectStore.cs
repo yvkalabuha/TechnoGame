@@ -8,6 +8,8 @@ namespace Singularity.Core.Data;
 /// Conflict rule: a mod may change an existing object only if it depends (transitively) on
 /// every mod that touched the object before; otherwise the result would depend on an arbitrary
 /// load order. A mod may touch an ID only once.
+/// Rule v0: a deleted ID stays deleted (tombstone): a later define or override of it fails.
+/// To replace an object, override it instead of delete + define.
 /// </summary>
 internal sealed class ObjectStore(string kind)
 {

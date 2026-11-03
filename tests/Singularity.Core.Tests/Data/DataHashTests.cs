@@ -9,9 +9,19 @@ public class DataHashTests : IDisposable
     // update this value together with the data and record it in the experiment manifest.
     private const string ScenarioHash1945 = "b35fa1c7c344bbbb359707cc08059abbcd235fe13c9b1be668323f89eb86df8c";
 
+    // DataHash of mod core alone: nodes, product classes and scenarios. Same rule as above.
+    private const string CoreDataHash = "d8306745454134078e15541f4f2f53a2a23ab33aaf89426bf7ff6bb981471ae5";
+
     private readonly TestMods _mods = new();
 
     public void Dispose() => _mods.Dispose();
+
+    [Fact]
+    public void CoreDataHash_IsFrozen()
+    {
+        string hash = ModLoader.Load(TestMods.CoreDir).DataHash;
+        Assert.True(hash == CoreDataHash, $"DataHash is {hash}");
+    }
 
     [Fact]
     public void ScenarioHash_IsFrozen()

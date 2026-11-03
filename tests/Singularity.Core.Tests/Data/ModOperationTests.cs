@@ -117,6 +117,29 @@ public class ModOperationTests : IDisposable
     }
 
     [Fact]
+    public void ModIdThatIsAYaml11Bool_MustBeQuoted()
+    {
+        string plain = _mods.Mod("no", DependsOnCore, ("nodes.yaml", PatchTransonicKey));
+        var e = Assert.Throws<DataLoadException>(() => ModLoader.Load(TestMods.CoreDir, plain));
+        Assert.Contains("implicit bool", e.Message);
+
+        File.WriteAllText(Path.Combine(plain, "mod.yaml"),
+            "id: \"no\"\nversion: \"1.0.0\"\ndependencies: " + DependsOnCore + "\nfiles: [nodes.yaml]\n");
+        Assert.Equal(["core", "no"], ModLoader.Load(TestMods.CoreDir, plain).Mods.Select(m => m.Id));
+    }
+
+    [Fact]
+    public void DeletedId_CannotBeRedefinedOrOverridden()
+    {
+        // Rule v0 (mods/README.md): a deleted ID stays deleted; replace objects with override.
+        string a = _mods.Mod("a", DependsOnCore, ("nodes.yaml", "kind: node\ndelete: [s8.app.jet_fighter_g4]\n"));
+        string b = _mods.Mod("b", "[{id: a, min: \"1.0.0\"}]", ("nodes.yaml",
+            "kind: node\noverride:\n  - {id: s8.app.jet_fighter_g4}\n"));
+        var e = Assert.Throws<DataLoadException>(() => ModLoader.Load(TestMods.CoreDir, a, b));
+        Assert.Contains("override of unknown node ID 's8.app.jet_fighter_g4'", e.Message);
+    }
+
+    [Fact]
     public void DependencyCycle_Fails()
     {
         string a = _mods.Mod("a", "[{id: b, min: \"1.0.0\"}]", ("nodes.yaml", "kind: node\n"));

@@ -21,6 +21,13 @@ public class StrictYamlTests
     [InlineData("k: \"1e5\"", ScalarKind.String)]
     public void Scalars_KeepTextAndKind(string yaml, ScalarKind kind) => Assert.Equal(kind, Value(yaml).Kind);
 
+    [Fact]
+    public void QuotedKeys_MayLookLikeBoolOrNumber()
+    {
+        var map = (YMap)StrictYaml.Parse("\"yes\": 1\n'12': 2", "t.yaml");
+        Assert.Equal(["yes", "12"], map.Entries.Select(e => e.Key));
+    }
+
     [Theory]
     [InlineData("k: yes", "implicit bool")]
     [InlineData("k: No", "implicit bool")]
@@ -38,6 +45,12 @@ public class StrictYamlTests
     [InlineData("k: 007", "ambiguous")]
     [InlineData("k: 1945-09-01", "ambiguous")]
     [InlineData("k: +1", "ambiguous")]
+    [InlineData("yes: 1", "implicit bool")]
+    [InlineData("on: 1", "implicit bool")]
+    [InlineData("null: 1", "implicit bool/null")]
+    [InlineData("1e5: 1", "ambiguous")]
+    [InlineData("12: 1", "plain key '12' reads as a number or boolean")]
+    [InlineData("true: 1", "plain key 'true' reads as a number or boolean")]
     [InlineData("a: &x 1\nk: *x", "anchors are not allowed")]
     [InlineData("k: !!str 5", "tags are not allowed")]
     [InlineData("k: 1\nk: 2", "duplicate key 'k'")]

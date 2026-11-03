@@ -208,9 +208,8 @@ public class StrictYamlPropertyTests
         Assert.Equal(ScalarKind.Number, Value("k: " + text).Kind);
     }
 
-    // BUG (TASK-0013 audit): ParseFixed builds the magnitude as a positive long before negating,
-    // so Fx6 raw long.MinValue overflows and is rejected. Remove Skip when fixed.
-    [Fact(Skip = "BUG: ParseFixed rejects Fx6 min value -9223372036854.775808 (positive magnitude overflows)")]
+    // Regression (TASK-0013 review): the magnitude of long.MinValue does not fit a positive long.
+    [Fact]
     public void ParseFixed_MinValue_IsRepresentable()
     {
         // Fx6 covers raw long.MinValue and Fx6.ToString prints it, so the text must parse back.
