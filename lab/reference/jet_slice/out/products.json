@@ -1,0 +1,532 @@
+{
+ "cohort_retire_month": {
+  "1945": 178,
+  "1946": 190,
+  "1960": 358
+ },
+ "designs_know_all_up_to_g": {
+  "G1": {
+   "bureau_req": {
+    "kappa0": 500,
+    "kappa0.5": 500,
+    "kappa1": 500
+   },
+   "producible": {
+    "D0_novelty1_exp0": 580000000,
+    "W_exp0": 11600000000,
+    "W_exp_g_minus_1": 11600000000,
+    "alts": [
+     "eng_g1",
+     "hot_nicr_forged",
+     "comp_centrifugal",
+     "af_straight",
+     "ab_none"
+    ],
+    "assembly_hours_by_E": {
+     "0": 9320000000,
+     "1": 7920685880,
+     "10": 5557541630,
+     "100": 3909621170,
+     "1000": 3084290900
+    },
+    "base_cost_sum": 928,
+    "complexity": 29,
+    "perf": 1000000,
+    "prc_set": [
+     38,
+     39,
+     44,
+     45,
+     48,
+     49,
+     53,
+     54
+    ],
+    "process_part": 874,
+    "unit_cost_by_E": {
+     "0": 2256,
+     "1": 2081,
+     "10": 1785,
+     "100": 1579,
+     "1000": 1476,
+     "10000": 1427
+    },
+    "unit_cost_floor": 1382,
+    "upkeep": 29
+   },
+   "producible_kind": "single",
+   "superior": {
+    "D0_novelty1_exp0": 580000000,
+    "W_exp0": 11600000000,
+    "W_exp_g_minus_1": 11600000000,
+    "alts": [
+     "eng_g1",
+     "hot_nicr_forged",
+     "comp_centrifugal",
+     "af_straight",
+     "ab_none"
+    ],
+    "assembly_hours_by_E": {
+     "0": 9320000000,
+     "1": 7920685880,
+     "10": 5557541630,
+     "100": 3909621170,
+     "1000": 3084290900
+    },
+    "base_cost_sum": 928,
+    "complexity": 29,
+    "perf": 1000000,
+    "prc_set": [
+     38,
+     39,
+     44,
+     45,
+     48,
+     49,
+     53,
+     54
+    ],
+    "process_part": 874,
+    "unit_cost_by_E": {
+     "0": 2256,
+     "1": 2081,
+     "10": 1785,
+     "100": 1579,
+     "1000": 1476,
+     "10000": 1427
+    },
+    "unit_cost_floor": 1382,
+    "upkeep": 29
+   }
+  },
+  "G2": {
+   "bureau_req": {
+    "kappa0": 500,
+    "kappa0.5": 526,
+    "kappa1": 555
+   },
+   "producible": {
+    "D0_novelty1_exp0": 740000000,
+    "W_exp0": 16428000000,
+    "W_exp_g_minus_1": 12321003080,
+    "alts": [
+     "eng_g2",
+     "hot_nicr_forged",
+     "comp_axial",
+     "af_swept",
+     "ab_on"
+    ],
+    "assembly_hours_by_E": {
+     "0": 14760000000,
+     "1": 12543918840,
+     "10": 8801428590,
+     "100": 6191631810,
+     "1000": 4884563700
+    },
+    "base_cost_sum": 1565,
+    "complexity": 37,
+    "perf": 2235025,
+    "prc_set": [
+     38,
+     39,
+     44,
+     45,
+     49,
+     50,
+     53,
+     54,
+     55,
+     57
+    ],
+    "process_part": 1344,
+    "unit_cost_by_E": {
+     "0": 3518,
+     "1": 3240,
+     "10": 2773,
+     "100": 2446,
+     "1000": 2283,
+     "10000": 2205
+    },
+    "unit_cost_floor": 2134,
+    "upkeep": 51
+   },
+   "producible_kind": "lightened",
+   "superior": {
+    "D0_novelty1_exp0": 740000000,
+    "W_exp0": 16428000000,
+    "W_exp_g_minus_1": 12321003080,
+    "alts": [
+     "eng_g2",
+     "hot_sa2_forged",
+     "comp_axial",
+     "af_swept",
+     "ab_on"
+    ],
+    "assembly_hours_by_E": {
+     "0": 14760000000,
+     "1": 12543918840,
+     "10": 8801428590,
+     "100": 6191631810,
+     "1000": 4884563700
+    },
+    "base_cost_sum": 1612,
+    "complexity": 37,
+    "perf": 2458527,
+    "prc_set": [
+     38,
+     40,
+     44,
+     45,
+     49,
+     50,
+     53,
+     54,
+     55,
+     57
+    ],
+    "process_part": 1384,
+    "unit_cost_by_E": {
+     "0": 3558,
+     "1": 3280,
+     "10": 2813,
+     "100": 2486,
+     "1000": 2323,
+     "10000": 2245
+    },
+    "unit_cost_floor": 2174,
+    "upkeep": 52
+   }
+  },
+  "G3": {
+   "bureau_req": {
+    "kappa0": 500,
+    "kappa0.5": 674,
+    "kappa1": 910
+   },
+   "producible": {
+    "D0_novelty1_exp0": 920000000,
+    "W_exp0": 33488000000,
+    "W_exp_g_minus_1": 20092808037,
+    "alts": [
+     "eng_g3",
+     "hot_sa2_forged",
+     "comp_axial",
+     "af_titanium",
+     "ab_on"
+    ],
+    "assembly_hours_by_E": {
+     "0": 41960000000,
+     "1": 35660083640,
+     "10": 25020863390,
+     "100": 17601685010,
+     "1000": 13885927700
+    },
+    "base_cost_sum": 3392,
+    "complexity": 46,
+    "perf": 3956920,
+    "prc_set": [
+     38,
+     40,
+     42,
+     44,
+     45,
+     49,
+     50,
+     53,
+     54,
+     55,
+     56,
+     57
+    ],
+    "process_part": 3463,
+    "unit_cost_by_E": {
+     "0": 9627,
+     "1": 8839,
+     "10": 7509,
+     "100": 6582,
+     "1000": 6117,
+     "10000": 5895
+    },
+    "unit_cost_floor": 5693,
+    "upkeep": 154
+   },
+   "producible_kind": "lightened",
+   "superior": {
+    "D0_novelty1_exp0": 960000000,
+    "W_exp0": 34944000000,
+    "W_exp_g_minus_1": 20966408386,
+    "alts": [
+     "eng_g3",
+     "hot_vim_cast",
+     "comp_axial",
+     "af_titanium",
+     "ab_on"
+    ],
+    "assembly_hours_by_E": {
+     "0": 41960000000,
+     "1": 35660083640,
+     "10": 25020863390,
+     "100": 17601685010,
+     "1000": 13885927700
+    },
+    "base_cost_sum": 3852,
+    "complexity": 48,
+    "perf": 4496500,
+    "prc_set": [
+     38,
+     41,
+     42,
+     44,
+     46,
+     50,
+     51,
+     53,
+     54,
+     55,
+     56,
+     57
+    ],
+    "process_part": 3933,
+    "unit_cost_by_E": {
+     "0": 10097,
+     "1": 9309,
+     "10": 7979,
+     "100": 7052,
+     "1000": 6587,
+     "10000": 6365
+    },
+    "unit_cost_floor": 6163,
+    "upkeep": 170
+   }
+  },
+  "G4": {
+   "bureau_req": {
+    "kappa0": 500,
+    "kappa0.5": 883,
+    "kappa1": 1560
+   },
+   "producible": {
+    "D0_novelty1_exp0": 960000000,
+    "W_exp0": 59904000000,
+    "W_exp_g_minus_1": 29952000000,
+    "alts": [
+     "eng_g4",
+     "hot_vim_cast",
+     "comp_axial",
+     "af_titanium",
+     "ab_on"
+    ],
+    "assembly_hours_by_E": {
+     "0": 125920000000,
+     "1": 107014245280,
+     "10": 75086442280,
+     "100": 52821834520,
+     "1000": 41671020400
+    },
+    "base_cost_sum": 3852,
+    "complexity": 48,
+    "perf": 5819000,
+    "prc_set": [
+     38,
+     41,
+     42,
+     44,
+     46,
+     50,
+     51,
+     53,
+     54,
+     55,
+     56,
+     57
+    ],
+    "process_part": 10003,
+    "unit_cost_by_E": {
+     "0": 27841,
+     "1": 25477,
+     "10": 21486,
+     "100": 18703,
+     "1000": 17309,
+     "10000": 16642
+    },
+    "unit_cost_floor": 16036,
+    "upkeep": 444
+   },
+   "producible_kind": "lightened",
+   "superior": {
+    "D0_novelty1_exp0": 980000000,
+    "W_exp0": 61152000000,
+    "W_exp_g_minus_1": 30576000000,
+    "alts": [
+     "eng_g4",
+     "hot_vim_ds_cooled",
+     "comp_axial",
+     "af_titanium",
+     "ab_on"
+    ],
+    "assembly_hours_by_E": {
+     "0": 125920000000,
+     "1": 107014245280,
+     "10": 75086442280,
+     "100": 52821834520,
+     "1000": 41671020400
+    },
+    "base_cost_sum": 4545,
+    "complexity": 49,
+    "perf": 6750040,
+    "prc_set": [
+     38,
+     41,
+     42,
+     43,
+     44,
+     50,
+     52,
+     53,
+     54,
+     55,
+     56,
+     57
+    ],
+    "process_part": 11803,
+    "unit_cost_by_E": {
+     "0": 29641,
+     "1": 27277,
+     "10": 23286,
+     "100": 20503,
+     "1000": 19109,
+     "10000": 18442
+    },
+    "unit_cost_floor": 17836,
+    "upkeep": 499
+   }
+  }
+ },
+ "detection": {
+  "D0": 580000000,
+  "by_hours": {
+   "0": 0,
+   "10000": 504600000,
+   "1200": 174798080,
+   "13300": 580000000,
+   "200": 71360880,
+   "2400": 247202380,
+   "4800": 349596740
+  },
+  "months_tests_only_to_share": {
+   "0.30": 6,
+   "0.45": 14,
+   "0.60": 24,
+   "1.00": 67
+  },
+  "series_20_per_month_after_24m": [
+   370803280,
+   403680000,
+   445650540,
+   494404760,
+   548135380,
+   580000000,
+   580000000,
+   580000000,
+   580000000,
+   580000000,
+   580000000,
+   580000000
+  ]
+ },
+ "generation_cap": {
+  "G1": {
+   "canonical": [
+    "eng_g1",
+    "hot_nicr_forged",
+    "comp_centrifugal",
+    "af_straight",
+    "ab_none"
+   ],
+   "equals_reference": true,
+   "superior": [
+    "eng_g1",
+    "hot_nicr_forged",
+    "comp_centrifugal",
+    "af_straight",
+    "ab_none"
+   ]
+  },
+  "G2": {
+   "canonical": [
+    "eng_g2",
+    "hot_sa2_forged",
+    "comp_axial",
+    "af_swept",
+    "ab_on"
+   ],
+   "equals_reference": true,
+   "superior": [
+    "eng_g2",
+    "hot_sa2_forged",
+    "comp_axial",
+    "af_swept",
+    "ab_on"
+   ]
+  },
+  "G2_canonical_40_not_admitted": [
+   "eng_g2",
+   "hot_nicr_forged",
+   "comp_axial",
+   "af_swept",
+   "ab_on"
+  ],
+  "G2_producible_fallback": {
+   "alts": [
+    "eng_g2",
+    "hot_nicr_forged",
+    "comp_centrifugal",
+    "af_swept",
+    "ab_on"
+   ],
+   "kind": "own"
+  },
+  "G3": {
+   "canonical": [
+    "eng_g3",
+    "hot_vim_cast",
+    "comp_axial",
+    "af_titanium",
+    "ab_on"
+   ],
+   "equals_reference": true,
+   "superior": [
+    "eng_g3",
+    "hot_vim_cast",
+    "comp_axial",
+    "af_titanium",
+    "ab_on"
+   ]
+  }
+ },
+ "lp_price_G2_ucm_1.25": 1730,
+ "params": {
+  "B0": 500,
+  "E_B": 3000000,
+  "W0": 400000000,
+  "alpha_u_q10": 512,
+  "beta_q10": 512,
+  "d0": 20000000,
+  "fix_hours": 2000000000,
+  "h_pm": 175000000,
+  "lambda_d": 8700,
+  "lr_q10": 330,
+  "psi_d": 500000,
+  "service_life": 180,
+  "test_rate": 200000000,
+  "upkeep_share": 4000,
+  "y_prod": 500000
+ },
+ "readiness": {
+  "half_open": 675000,
+  "new_design_D_eq_D0": 500000,
+  "start_fleet_D0_0": 1000000,
+  "unpaid_0.8_no_defects": 800000
+ },
+ "spec": "slice-jet-aviation.md v0.10"
+}
