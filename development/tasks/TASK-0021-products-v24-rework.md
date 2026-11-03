@@ -1,7 +1,7 @@
 ---
 id: TASK-0021
 title: "Доработка Core.Products (TASK-0018) под контракт v2.4"
-status: APPROVED
+status: DONE
 level: light
 milestone: MS-M0
 agent: developer
@@ -42,3 +42,5 @@ created: 2026-11-03
 - [ ] Детерминизм L1/L2 — затронут src/
 
 ## Результат
+
+- 2026-11-03: слито в main (4bad87d). Ревью reviewer approve, test-engineer — property и L1/L2 (golden hash связанного прогона). Отложено: DEBT-0013, DEBT-0015, DEBT-0016.
