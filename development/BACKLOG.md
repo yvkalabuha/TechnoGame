@@ -61,6 +61,8 @@
 | [ADR-0010](../docs/decisions/ADR-0010-data-format-modding.md) | ACCEPTED | Формат данных и моддинг v0 |
 | [ADR-0011](../docs/decisions/ADR-0011-map-representation.md) | PROPOSED | Представление карты |
 | [ADR-0012](../docs/decisions/ADR-0012-deterministic-math-functions.md) | ACCEPTED | Детерминированные степенные функции: PowFrac вместо Pow/Exp/Log |
+| [ADR-0013](../docs/decisions/ADR-0013-save-format-v0.md) | PROPOSED | Формат сохранения v0: бинарный снимок колонок SoA + заголовок |
+| [ADR-0014](../docs/decisions/ADR-0014-session-test-api.md) | PROPOSED | Session и Test API: единая сборка мира, команды, test mode |
 
 ## Research Reports
 
@@ -74,3 +76,4 @@
 | [RR-0006](../docs/research/RR-0006-economy-industrial-capability.md) | DRAFT | Экономика и промышленный потенциал: способность производить ≠ знание технологии |
 | [RR-0007](../docs/research/RR-0007-engineering-product-lifecycle.md) | DRAFT | Инженерия и жизненный цикл изделий |
 | [RR-0008](../docs/research/RR-0008-technology-space-architecture.md) | DRAFT | Архитектура технологического пространства |
+| [RR-0009](../docs/research/RR-0009-component-evolution-analysis.md) | DRAFT | Эволюция компонентов: анализ брифа владельца против контракта слоёв |
