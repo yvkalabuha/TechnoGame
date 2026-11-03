@@ -1,4 +1,99 @@
 {
+ "calendar": {
+  "cases": [
+   {
+    "annual_step": true,
+    "date": "1945-09-01",
+    "day_tick": 0,
+    "days_in_month": 30,
+    "month": 0
+   },
+   {
+    "annual_step": false,
+    "date": "1945-10-01",
+    "day_tick": 30,
+    "days_in_month": 31,
+    "month": 1
+   },
+   {
+    "annual_step": false,
+    "date": "1946-01-01",
+    "day_tick": 122,
+    "days_in_month": 31,
+    "month": 4
+   },
+   {
+    "annual_step": false,
+    "date": "1946-02-01",
+    "day_tick": 153,
+    "days_in_month": 28,
+    "month": 5
+   },
+   {
+    "annual_step": false,
+    "date": "1946-03-01",
+    "day_tick": 181,
+    "days_in_month": 31,
+    "month": 6
+   },
+   {
+    "annual_step": false,
+    "date": "1948-02-01",
+    "day_tick": 883,
+    "days_in_month": 29,
+    "month": 29
+   },
+   {
+    "annual_step": false,
+    "date": "1948-03-01",
+    "day_tick": 912,
+    "days_in_month": 31,
+    "month": 30
+   },
+   {
+    "annual_step": false,
+    "date": "1975-08-01",
+    "day_tick": 10926,
+    "days_in_month": 31,
+    "month": 359
+   },
+   {
+    "annual_step": true,
+    "date": "1975-09-01",
+    "day_tick": 10957,
+    "days_in_month": 30,
+    "month": 360
+   },
+   {
+    "annual_step": false,
+    "date": "1977-08-01",
+    "day_tick": 11657,
+    "days_in_month": 31,
+    "month": 383
+   },
+   {
+    "annual_step": true,
+    "date": "1977-09-01",
+    "day_tick": 11688,
+    "days_in_month": 30,
+    "month": 384
+   }
+  ],
+  "fire_day": 1,
+  "horizon": {
+   "days": 11688,
+   "last_date": "1977-08-31",
+   "last_day_tick": 11687,
+   "months": 384
+  },
+  "start_date": "1945-09-01",
+  "window": {
+   "days": 10957,
+   "last_date": "1975-08-31",
+   "last_day_tick": 10956,
+   "months": 360
+  }
+ },
  "counter_rng": [
   {
    "key": [
