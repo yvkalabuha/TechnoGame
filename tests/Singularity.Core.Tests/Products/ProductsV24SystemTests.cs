@@ -455,4 +455,73 @@ public class ProductsV24SystemTests
 
     [Fact]
     public void LayoutVersion_IsTheSecondColumnLayout_T15() => Assert.Equal(2, ProductsSystem.LayoutVersion);
+
+    // ---- parent of a live derivative (M1)
+
+    [Fact]
+    public void StartSeries_OfAParentWhoseLineMoved_IsRejected_FUTURE_P9()
+    {
+        var h = Gb(2, (a, t) => a == Gbr && t == 1 ? Derive(0, ("compressor", "comp_axial")) : []);
+        ProductsSystem p = h.Products;
+        h.Launch = (a, d, t) => a == Gbr && d == 0 && t == 0;
+        h.Rate = (a, d, t) => d == 0 ? Fx6.FromInt(10) : Fx6.Zero;
+        h.Series = (a, d, t) => a == Gbr && d == 1 && p.Stage(a, d) == DesignStage.Prototype && p.GateOpen(a, d, t) ? new SeriesStart(Fx6.Zero, false) : null;
+        long t = 1;
+        while (p.Stage(Gbr, 1) != DesignStage.Series)
+        {
+            h.RunThroughMonth(t++);
+            Assert.True(t < 90, "the derived design never reached the series");
+        }
+        Assert.Equal(DesignStage.InService, p.Stage(Gbr, 0));
+        h.Series = (a, d, tt) => a == Gbr && d == 0 ? new SeriesStart(Fx6.FromInt(5), false) : null;
+        h.RunThroughMonth(t);
+        Assert.Equal(DesignStage.InService, p.Stage(Gbr, 0));   // two lines of one platform are FUTURE (#118)
+        Assert.Equal(1, p.RejectionCount(Gbr, CommandRejection.LineTransferred));
+        Assert.Equal(Fx6.Zero, p.LineE(Gbr, 0));
+    }
+
+    // ---- T-14 Post conditions on a corrupted state (M2)
+
+    // The corruption is written in a merge after the product compute, so the product Post sees it.
+    private static void Corrupts(Action<Table> corrupt, string message)
+    {
+        var h = new ProductsHarness(corruptInMerge: corrupt);
+        var e = Assert.Throws<ProductsInvariantException>(() => h.RunThroughMonth(0));
+        Assert.Contains(message, e.Message);
+    }
+
+    private static void SetLong(Table t, string column, long value) => t.GetLong(column).Next[Usa] = value;
+
+    [Fact]
+    public void Post_Rejects_NegativeRetroPool_T14() =>
+        Corrupts(t => SetLong(t, "prd.d5.retroPool", -1), "negative retro_pool or loss_acc");
+
+    [Fact]
+    public void Post_Rejects_NegativeLossAcc_T14() =>
+        Corrupts(t => SetLong(t, "prd.d5.lossAcc", -1), "negative retro_pool or loss_acc");
+
+    [Fact]
+    public void Post_Rejects_AccidentWriteOffAboveUnitsInService_T14() =>
+        Corrupts(t => { SetLong(t, "prd.d5.lost", Fx6.Scale); SetLong(t, "prd.d5.inService0", 0); }, "accident write-off");
+
+    [Fact]
+    public void Post_Rejects_ExcessDefectsWithoutForcedSeries_T14() =>
+        Corrupts(t =>
+        {
+            // The start fleet of USA (in service, series_forced = false) gets hidden defects above its d_gate.
+            SetLong(t, "prd.d0.d0", 10 * Fx6.Scale);
+            SetLong(t, "prd.d0.hidden", 10 * Fx6.Scale);
+            SetLong(t, "prd.d0.dGate", 0);
+        }, "excess defects");
+
+    [Fact]
+    public void Post_Rejects_NegativeCohort_T14() =>
+        Corrupts(t => SetLong(t, "prd.d0.cohort.1945", -1), "negative cohort");
+
+    [Fact]
+    public void Post_AcceptsTheUncorruptedState_T14()
+    {
+        var h = new ProductsHarness(corruptInMerge: _ => { });
+        h.RunThroughMonth(0);
+    }
 }

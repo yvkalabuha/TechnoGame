@@ -52,6 +52,11 @@ public enum CommandRejection
 
     /// <summary><c>SERIES_GATE</c>: the series gate is closed and <c>force = false</c> (contract §4.4c, §6).</summary>
     SeriesGate = 6,
+
+    /// <summary>
+    /// <c>start_series</c> of a parent whose line was moved to a live derived design: two lines of one platform are FUTURE (#118).
+    /// </summary>
+    LineTransferred = 7,
 }
 
 /// <summary>

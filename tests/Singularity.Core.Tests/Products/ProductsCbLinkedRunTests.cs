@@ -15,7 +15,8 @@ namespace Singularity.Core.Tests.Products;
 public class ProductsCbLinkedRunTests
 {
     /// <summary>State hash after month 59 (tick of the last monthly step), seed 7. First recorded 2026-11-03 at contract v2.4 r2.</summary>
-    private const string GoldenHash60 = "9f196288bc12b60d77cc6561d62a7293534f86aecb0d69ce67067ca7e5b450b6";
+    // Re-frozen in the TASK-0021 review fixes: the rejection reason LineTransferred adds one product column (layout change only).
+    private const string GoldenHash60 = "1792c856dd9b7cbb733d3242ee8793ef9ff6e70703b13c990a58d17680fbd4d5";
 
     [Fact]
     public void L2_CbIndustry_Products_60Months_SameHashEveryMonth_ForThreadsAndChunks()

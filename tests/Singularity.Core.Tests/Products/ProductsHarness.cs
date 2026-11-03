@@ -16,7 +16,7 @@ internal sealed class ProductsHarness
     /// <param name="actorPerm">Storage order of the actors: table row r holds scenario actor <c>actorPerm[r]</c>; scripts get the stable actor index.</param>
     /// <param name="years">Cohort years of the layout (default <see cref="ProductTestData.Years"/>).</param>
     public ProductsHarness(int threads = 1, int chunkSize = 1, ProductsMode mode = ProductsMode.Full, ProductsParams? parameters = null,
-        int[]? actorPerm = null, int years = Years, int? maxDesigns = null)
+        int[]? actorPerm = null, int years = Years, int? maxDesigns = null, Action<Table>? corruptInMerge = null)
     {
         Layout = MakeLayout(out _, years, maxDesigns ?? Scenario.MaxDesigns);
         ProductsStart baseStart = ProductsStart.FromScenario(Scenario, CoreData.Nodes, CoreData.ProductClasses, Layout);
@@ -29,7 +29,7 @@ internal sealed class ProductsHarness
         Inputs = new ScriptedInputs(this);
         Params = parameters ?? new ProductsParams();
         Products = new ProductsSystem(Table, Layout, Start, Params, Inputs, Mailbox, mode);
-        Runner = new TickRunner(Table, 1, [Products], chunkSize, threads, Calendar);
+        Runner = new TickRunner(Table, 1, corruptInMerge is null ? [Products] : [Products, new Saboteur(corruptInMerge, Table)], chunkSize, threads, Calendar);
         Grants = new long[Table.RowCount, Categories, Layout.Requesters];
     }
 
@@ -123,6 +123,16 @@ internal sealed class ProductsHarness
                 return true;
         }
         return false;
+    }
+
+    /// <summary>Test-only system that rewrites columns of the product table in its merge, so the product Post sees a corrupted state.</summary>
+    private sealed class Saboteur(Action<Table> corrupt, Table table) : ITickSystem
+    {
+        public int SystemId => 999;
+        public Cadence Cadence => Cadence.Monthly;
+        public void Compute(in TickContext context, int chunk, int rowStart, int rowEnd) { }
+        public void Merge(in TickContext context, int chunkCount) => corrupt(table);
+        public void Post(in TickContext context) { }
     }
 
     internal sealed class ScriptedInputs(ProductsHarness h) : IProductsInputs

@@ -9,7 +9,7 @@ namespace Singularity.Core.Products;
 public readonly record struct CostCard(Fx6 HFirst, Fx6 HFloor, Fx6 WageKh, Fx6 MaterialsFloor, Fx6 ProcessPart, int LearningQ10);
 
 /// <summary>
-/// Product formulas of the slice in canonical Fx6 form (contract v2.3 §4.0, §4.4; spec §3.3, §3.5 A28, §5.5): left
+/// Product formulas of the slice in canonical Fx6 form (contract v2.4 §4.0, §4.4; spec §3.3, §3.5 A28, §5.5): left
 /// to right, floor on every <c>·</c> and <c>/</c>, powers only through <see cref="DetMath.PowFracFx"/> with integer
 /// q10 (ADR-0012, ADR-0003 R2). No RNG here or anywhere in the layer (#28).
 /// </summary>

@@ -23,9 +23,7 @@ public enum DesignStage
     InService = 4,
 
     /// <summary>
-    /// «снят»: line closed and every cohort written off. Final in the full model (no order or launch reopens the slot); in
-    /// the L_P control a canonical (g, «технологичный») slot in this stage is relaunched when generation g is again the
-    /// newest due one.
+    /// «снят»: line closed and every cohort written off. Final: no command reopens the slot, and slots are never reused.
     /// </summary>
     Withdrawn = 5,
 }

@@ -583,11 +583,11 @@ public sealed class ProductsSystem : ITickSystem
     }
 
     // The canonical project of generation g (spec §6.1): the producible preset over admitted alternatives with target g, in the
-    // lowest free slot, g_p = g; a «снят» canonical project is relaunched while g is still the newest due generation.
+    // lowest free slot, g_p = g; it is created once per generation and never relaunched.
     private void LaunchCanonical(int a, long t, int gen)
     {
         int slot = _lpSlot[gen - 1].Next[a];
-        if (slot >= 0 && (DesignStage)_stage[slot].Next[a] != DesignStage.Withdrawn)
+        if (slot >= 0)
             return;
         Span<int> alts = stackalloc int[_s];
         bool Admitted(int alt)
@@ -601,16 +601,13 @@ public sealed class ProductsSystem : ITickSystem
         }
         if (!DesignRules.Producible(_l, gen, n => _inputs.Knows(a, n, t), p => _inputs.AdmittedYield(a, p, t), _p.YProd, null, alts, Admitted))
             return;
+        slot = FreeSlot(a);
         if (slot < 0)
         {
-            slot = FreeSlot(a);
-            if (slot < 0)
-            {
-                Reject(a, CommandRejection.DesignCapacity);
-                return;
-            }
-            _lpSlot[gen - 1].Next[a] = slot;
+            Reject(a, CommandRejection.DesignCapacity);
+            return;
         }
+        _lpSlot[gen - 1].Next[a] = slot;
         for (int d = 0; d < _d; d++)
         {
             if ((DesignStage)_stage[d].Next[a] == DesignStage.Series)
@@ -831,10 +828,11 @@ public sealed class ProductsSystem : ITickSystem
     {
         for (int d = 0; d < _d; d++)
         {
-            var stage = (DesignStage)_stage[d].Next[a];
-            if (stage is (DesignStage.Prototype or DesignStage.InService) && _inputs.StartSeries(a, d, t) is { } cmd)
-                StartSeries(a, d, stage, cmd);
-            else if (stage == DesignStage.Series && _inputs.CloseLine(a, d, t))
+            // start_series is validated against the snapshot stage (contract §4.4d step 2); a line closes from the live stage.
+            var snapshot = (DesignStage)_stage[d].Current[a];
+            if (snapshot is (DesignStage.Prototype or DesignStage.InService) && _inputs.StartSeries(a, d, t) is { } cmd)
+                StartSeries(a, d, snapshot, cmd);
+            else if ((DesignStage)_stage[d].Next[a] == DesignStage.Series && _inputs.CloseLine(a, d, t))
             {
                 _stage[d].Next[a] = (int)DesignStage.InService;
                 Set(_lineE, d, a, Fx6.Zero);
@@ -848,6 +846,15 @@ public sealed class ProductsSystem : ITickSystem
     {
         if (cmd.Rate < Fx6.Zero)
             throw new ProductsInvariantException(-1, a, $"negative series rate {cmd.Rate} for design {d}");
+        for (int e = 0; e < _d; e++)
+        {
+            // The parent's line moved to a derived design in series: a second line of the platform is FUTURE (#118).
+            if (_parent[e].Next[a] == d && (DesignStage)_stage[e].Next[a] == DesignStage.Series)
+            {
+                Reject(a, CommandRejection.LineTransferred);
+                return;
+            }
+        }
         bool open = _gateOpened[d].Next[a] != 0;
         if (!open && !cmd.Force)
         {
@@ -873,7 +880,8 @@ public sealed class ProductsSystem : ITickSystem
     }
 
     // Step 3 (contract §4.4c): loss_acc += (((units·fleet_hours)·a_acc)·X)/D_ref with units and the design's hidden defects from the
-    // snapshot (d_gate of step 1); n = min(⌊loss_acc⌋, ⌊units⌋) machines are struck off the cohorts directly, no message.
+    // snapshot (d_gate of step 1); n = min(⌊loss_acc⌋, ⌊units⌋) machines are struck off the cohorts directly, no message. The loss
+    // formula reads the snapshot units, while the cap n and later c_u and upkeep use the units after retirement by age (accepted, L1).
     private void Accidents(int a)
     {
         for (int d = 0; d < _d; d++)

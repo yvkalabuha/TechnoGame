@@ -32,9 +32,9 @@ public sealed class ProductsStart
 
     /// <summary>
     /// Start fleets of the scenario (spec §1.1, R-FL): each fleet row of this class becomes the next free design slot (scenario
-    /// order, A32) in stage В (line closed, units in service) with the «превосходящий» alternatives the actor knows at t0 among
+    /// order, A32) in stage В (line closed, units in service) with the "superior" alternatives the actor knows at t0 among
     /// nodes of generations ≤ gen, <c>g_p</c> = gen, and its count goes into the cohort of <c>cohort_year</c>. [Предл.] Start
-    /// designs are mature: no defects (<c>D0</c> = 0), bureau experience 0, the series gate counts as open. A «технологичный»
+    /// designs are mature: no defects (<c>D0</c> = 0), bureau experience 0, the series gate counts as open. A "producible"
     /// start fleet needs t0 yields and is rejected.
     /// </summary>
     public static ProductsStart FromScenario(ScenarioData scenario, NodeTable nodes, ProductClassTable classes, ProductsLayout layout)
@@ -59,8 +59,8 @@ public sealed class ProductsStart
                 if (scenario.FleetVariant[f] != DesignVariant.Superior)
                     throw new ArgumentException($"Start fleet of {scenario.ActorId[a]}: only superior start designs are supported.", nameof(scenario));
                 // The fleet's generation bounds its technology: a G1 fleet of 1945 has G1 engines even if the actor
-                // already knows turbojet_g2 (GBR) [Предл.]. Start data only: for new projects A32 отменён (#81),
-                // стоимость по фактическим компонентам — ожидает спецификации.
+                // already knows turbojet_g2 (GBR) [Предл.]. Start data only: for new projects A32 is cancelled (#81),
+                // cost follows the actual components (R-PS2m).
                 Func<int, bool> upTo = layout.KnownUpTo(gen);
                 if (!DesignRules.Superior(layout, gen, n => Knows(n) && upTo(n), alts))
                     throw new ArgumentException($"Start fleet of {scenario.ActorId[a]}: the actor cannot build a G{gen} design at t0.", nameof(scenario));
