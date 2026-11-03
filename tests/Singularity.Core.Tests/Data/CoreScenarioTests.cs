@@ -148,7 +148,8 @@ public class CoreScenarioTests
         Assert.Equal(["engine", "hot_section", "compressor", "airframe", "afterburner"], pc.SlotId.ToArray());
         Assert.Equal([true, false, false, false, false], pc.SlotIsBase.ToArray());
         Assert.Equal(["hot_section", "compressor", "afterburner", "airframe"], pc.LightenOrder.Select(s => pc.SlotId[s]));
-        Assert.Equal(16, pc.AltId.Length);
+        Assert.Equal(17, pc.AltId.Length);
+        Assert.Equal([false, false, false, true, false], pc.SlotIsAirframe.ToArray());
         Assert.Equal(Fx("1.45"), pc.AltPerfMult[pc.AlternativeIndex(0, "hot_section", "hot_vim_ds_cooled")]);
     }
 }

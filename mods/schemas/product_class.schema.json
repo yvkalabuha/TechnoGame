@@ -23,12 +23,21 @@
           "uniqueItems": true,
           "items": { "$ref": "common.schema.json#/$defs/localId" }
         },
-        "slots": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/slot" } }
+        "slots": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/slot" } },
+        "h_pm": { "description": "Hours per person-month (R-HPM).", "type": "number", "exclusiveMinimum": 0 },
+        "wage_kh": { "description": "Full labour rate, budget index per 1000 hours (R-WAGE, F-PI1).", "type": "number", "minimum": 0 },
+        "maintainability": { "description": "Upkeep divisor.", "type": "number", "exclusiveMinimum": 0 },
+        "r_ref": { "description": "Rate of the reference line P0, units per month (spec §3.5 A18).", "type": "number", "exclusiveMinimum": 0 },
+        "processes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/process" } },
+        "c_ref": { "description": "complexity of the reference superior G2 project; D_ref = d0·c_ref (contract §4.4b).", "type": "integer", "minimum": 1 },
+        "pu_ranks": { "description": "R-PS2m: proc_scale_pu by r_PU = max rank over the PU slots, ranks 1..R in order.", "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/puRank" } },
+        "af_classes": { "description": "Fields by airframe class (contract §4.4a), classes 1..K in order.", "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/afClass" } },
+        "generations": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/generation" } }
       }
     },
     "productClass": {
       "$ref": "#/$defs/fields",
-      "required": ["id", "axis", "lighten_order", "slots"],
+      "required": ["id", "axis", "lighten_order", "slots", "h_pm", "wage_kh", "maintainability", "r_ref", "c_ref", "processes", "pu_ranks", "af_classes", "generations"],
       "unevaluatedProperties": false
     },
     "patch": {
@@ -38,12 +47,59 @@
     },
     "slot": {
       "type": "object",
-      "required": ["id", "base", "alternatives"],
+      "required": ["id", "block", "base", "alternatives"],
       "additionalProperties": false,
       "properties": {
         "id": { "$ref": "common.schema.json#/$defs/localId" },
+        "block": { "description": "R-PS2m block: pu (engine, hot section, compressor, afterburner) or af (airframe; exactly one slot).", "enum": ["pu", "af"] },
         "base": { "description": "true: the slot multiplier is the base of perf (engine).", "type": "boolean" },
         "alternatives": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/alternative" } }
+      }
+    },
+    "process": {
+      "description": "Cost inputs of one PRC of the class (R-NP, R-LAB, R-BC).",
+      "type": "object",
+      "required": ["prc", "n_p", "labour_hours", "base_cost"],
+      "additionalProperties": false,
+      "properties": {
+        "prc": { "$ref": "common.schema.json#/$defs/nodeId" },
+        "n_p": { "type": "number", "exclusiveMinimum": 0 },
+        "labour_hours": { "type": "number", "exclusiveMinimum": 0 },
+        "base_cost": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "puRank": {
+      "type": "object",
+      "required": ["rank", "proc_scale_pu"],
+      "additionalProperties": false,
+      "properties": {
+        "rank": { "type": "integer", "minimum": 1 },
+        "proc_scale_pu": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "afClass": {
+      "description": "Design inputs of airframe class af_class (R-HF, R-MF, R-DS, R-PS2m).",
+      "type": "object",
+      "required": ["af_class", "h_first", "h_floor", "materials_floor", "design_scale", "proc_scale_af"],
+      "additionalProperties": false,
+      "properties": {
+        "af_class": { "type": "integer", "minimum": 1 },
+        "h_first": { "type": "number", "exclusiveMinimum": 0 },
+        "h_floor": { "type": "number", "exclusiveMinimum": 0 },
+        "materials_floor": { "type": "number", "minimum": 0 },
+        "design_scale": { "description": "R-DS: multiplier of design work W.", "type": "number", "exclusiveMinimum": 0 },
+        "proc_scale_af": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "generation": {
+      "type": "object",
+      "required": ["gen", "app", "crew_req", "platform_min_rank"],
+      "additionalProperties": false,
+      "properties": {
+        "gen": { "type": "integer", "minimum": 1 },
+        "app": { "$ref": "common.schema.json#/$defs/nodeId" },
+        "crew_req": { "type": "integer", "minimum": 1 },
+        "platform_min_rank": { "description": "Minimum airframe rank for platform generation g (contract §4.4a).", "type": "integer", "minimum": 1 }
       }
     },
     "alternative": {
@@ -54,6 +110,9 @@
         "id": { "$ref": "common.schema.json#/$defs/localId" },
         "rank": { "type": "integer", "minimum": 1 },
         "perf_mult": { "type": "number", "exclusiveMinimum": 0 },
+        "eng_gen": { "description": "Engine slot only: generation of the engine alternative, 1..G_max (contract §4.4a).", "type": "integer", "minimum": 1 },
+        "af_class": { "description": "Airframe slot only: platform class of the alternative.", "type": "integer", "minimum": 1 },
+        "alloy_kg": { "description": "Alloy-consuming slot (hot section) only: kg of alloy per unit (R-AK2).", "type": "number", "exclusiveMinimum": 0 },
         "prc_set": { "$ref": "common.schema.json#/$defs/nodeIdList" },
         "requires_nodes": { "$ref": "common.schema.json#/$defs/requirement" }
       }

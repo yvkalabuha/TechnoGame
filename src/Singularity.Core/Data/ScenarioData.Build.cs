@@ -27,6 +27,13 @@ public sealed partial class ScenarioData
         if (sinceMonth > 0 || halfLives < 0)
             throw DataLoadException.At(history.Node, "mastered_history: since_month must be at most 0, proc_x_half_lives at least 0");
 
+        int maxDesigns = m.Int("max_designs");
+        if (maxDesigns < 1)
+            throw DataLoadException.At(m.Required("max_designs"), "max_designs must be at least 1");
+        Fx6 alloyRef = m.Fixed("alloy_ref_kg");
+        if (alloyRef <= Fx6.Zero)
+            throw DataLoadException.At(m.Required("alloy_ref_kg"), "alloy_ref_kg must be positive");
+
         var prov = ReadProvenance(m.Seq("provenance"));
         var actors = new ActorColumns(clusters, disciplines);
         foreach (YNode actorNode in m.Seq("actors").Items)
@@ -49,7 +56,7 @@ public sealed partial class ScenarioData
         {
             Id = id, StartYear = year, StartMonth = month,
             Clusters = [.. clusters], Disciplines = [.. disciplines],
-            TechLead = techLead, MasteredSinceMonth = sinceMonth, ProcXHalfLives = halfLives,
+            TechLead = techLead, MasteredSinceMonth = sinceMonth, ProcXHalfLives = halfLives, AlloyRefKg = alloyRef, MaxDesigns = maxDesigns,
             ProvField = [.. prov.Select(p => p.Field)], ProvRule = [.. prov.Select(p => p.Rule)],
             ProvEstimated = [.. prov.Select(p => p.Estimated)],
             ProvSourcesStart = [0, .. Prefix(prov.Select(p => p.Sources.Length))],
