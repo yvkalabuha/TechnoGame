@@ -60,7 +60,7 @@ public sealed class ProductsSystem : ITickSystem
     private readonly IntColumn[] _stage, _bureauOf, _alt, _bureauDesign, _gp, _parent, _stageO, _gateOpened, _forced, _lpSlot;
     private readonly LongColumn[] _work, _d0, _hidden, _open, _found, _hours, _lineE, _rate, _cost, _exp, _cohort;
     private readonly LongColumn[] _rateCmd, _dGate, _lossAcc, _retro, _lost, _inService0, _rejected;
-    private readonly LongColumn _need, _paid, _spent;
+    private readonly LongColumn _need, _paid, _spent, _tbSpent;
 
     public ProductsSystem(Table table, ProductsLayout layout, ProductsStart start, ProductsParams parameters,
         IProductsInputs inputs, IndustryMailbox mailbox, ProductsMode mode = ProductsMode.Full, int systemId = DefaultSystemId)
@@ -161,6 +161,7 @@ public sealed class ProductsSystem : ITickSystem
         _need = table.AddLong("prd.upkeepNeed");
         _paid = table.AddLong("prd.paidRatio");
         _spent = table.AddLong("prd.spent");
+        _tbSpent = table.AddLong("prd.tbSpent");
 
         int rows = layout.SiteCount;
         var ints = new int[rows];
@@ -352,6 +353,9 @@ public sealed class ProductsSystem : ITickSystem
     public Fx6 PaidRatio(int actor) => Fx6.FromRaw(_paid.Current[actor]);
     public Fx6 Spent(int actor) => Fx6.FromRaw(_spent.Current[actor]);
 
+    /// <summary><c>Σ_d tb_spent</c> of the last month step: money of the training series spent in step 7 (not part of <see cref="Spent"/>; contract §4.4d, F15).</summary>
+    public Fx6 TrainingSpent(int actor) => Fx6.FromRaw(_tbSpent.Current[actor]);
+
     /// <summary>Commands of the actor rejected for <paramref name="reason"/> so far (the journal of rejections, contract §3.1).</summary>
     public long RejectionCount(int actor, CommandRejection reason) => _rejected[(int)reason].Current[actor];
 
@@ -534,12 +538,14 @@ public sealed class ProductsSystem : ITickSystem
         Fx6 left = budget - paid, spent = paid;
         FixDefects(a, t, ref left, ref spent);
         DetectDefects(chunk, a);
-        Purchases(chunk, a, t, y, ref left, ref spent);
+        Fx6 tbSpent = Fx6.Zero;
+        Purchases(chunk, a, t, y, ref left, ref spent, ref tbSpent);
         if (spent > budget)
             throw new ProductsInvariantException(t, a, $"spent {spent} of {budget} (spec §3.4)");
         _need.Next[a] = need.Raw;
         _paid.Next[a] = ProductsMath.PaidRatio(paid, need).Raw;
         _spent.Next[a] = spent.Raw;
+        _tbSpent.Next[a] = tbSpent.Raw;
     }
 
     // L_P (spec §6.1): canonical project of the newest due generation, output r = min(ρ[g]·procurement budget, alloy capacity).
@@ -580,6 +586,7 @@ public sealed class ProductsSystem : ITickSystem
         _need.Next[a] = 0;
         _paid.Next[a] = Fx6.Scale;
         _spent.Next[a] = 0;
+        _tbSpent.Next[a] = 0;
     }
 
     // The canonical project of generation g (spec §6.1): the producible preset over admitted alternatives with target g, in the
@@ -977,9 +984,9 @@ public sealed class ProductsSystem : ITickSystem
     private bool DefectsApply(int a, int d) =>
         (DesignStage)_stage[d].Next[a] is DesignStage.Prototype or DesignStage.Series or DesignStage.InService && Get(_d0, d, a) > Fx6.Zero;
 
-    // Step 7 (contract §4.4d): r = min(rate asked, alloy line capacity, money left / unit_cost); lines share alloy and money in
+    // Step 7 (contract §4.4d): r = min(rate asked, alloy line capacity, (money left + training money) / unit_cost); lines share alloy and money in
     // ascending design_id (§1.4); line_E forgets δ_E and gains r.
-    private void Purchases(int chunk, int a, long t, int y, ref Fx6 left, ref Fx6 spent)
+    private void Purchases(int chunk, int a, long t, int y, ref Fx6 left, ref Fx6 spent, ref Fx6 tbSpentSum)
     {
         Fx6 alloyLeft = _inputs.AlloySupply(a, t);
         for (int d = 0; d < _d; d++)
@@ -997,11 +1004,17 @@ public sealed class ProductsSystem : ITickSystem
                 if (_inputs.Profile(a, DesignRules.Items(_l, prc), t).Admitted)
                 {
                     Fx6 alloyKg = _l.AltAlloyKg[alts[_l.AlloySlot]];
-                    r = Min(Min(want, alloyLeft / alloyKg), left / cost);
+                    // r3 (F15): the common money first, then the training money of this line only; tb = 0 gives the former formula.
+                    Fx6 tb = _inputs.TrainingBudget(a, d, t);
+                    if (tb < Fx6.Zero)
+                        throw new ProductsInvariantException(t, a, $"negative training budget {tb} for design {d}");
+                    r = Min(Min(want, alloyLeft / alloyKg), (left + tb) / cost);
                     alloyLeft -= r * alloyKg;
                     Fx6 pay = r * cost;
-                    left -= pay;
-                    spent += pay;
+                    Fx6 fromLeft = pay < left ? pay : left;
+                    left -= fromLeft;
+                    spent += fromLeft;
+                    tbSpentSum += pay - fromLeft;
                 }
                 Set(_cost, d, a, cost);
                 if (r > Fx6.Zero)

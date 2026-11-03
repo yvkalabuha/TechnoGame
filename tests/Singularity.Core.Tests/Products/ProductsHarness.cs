@@ -65,6 +65,7 @@ internal sealed class ProductsHarness
     public Func<int, long, DesignOrder?> Order { get; set; } = (_, _) => null;
     public Func<int, int, long, bool> Launch { get; set; } = (_, _, _) => false;
     public Func<int, int, long, bool> Close { get; set; } = (_, _, _) => false;
+    public Func<int, int, long, Fx6> Training { get; set; } = (_, _, _) => Fx6.Zero;
     public Func<int, int, long, Fx6?> Rate { get; set; } = (_, _, _) => null;
 
     /// <summary>Explicit commands of the script, applied after the one derived from <see cref="Order"/>.</summary>
@@ -195,6 +196,7 @@ internal sealed class ProductsHarness
         public bool CloseLine(int actorRow, int design, long month) => h.Close(A(actorRow), design, month);
 
         public Fx6? LineRate(int actorRow, int design, long month) => h.Rate(A(actorRow), design, month);
+        public Fx6 TrainingBudget(int actorRow, int design, long month) => h.Training(A(actorRow), design, month);
 
         public long AppKnownSince(int actorRow, int gen, long month) => h.AppKnownSince(A(actorRow), gen);
     }

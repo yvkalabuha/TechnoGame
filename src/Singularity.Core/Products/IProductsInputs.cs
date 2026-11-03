@@ -109,6 +109,13 @@ public interface IProductsInputs
     /// </summary>
     Fx6? LineRate(int actorRow, int design, long month);
 
+    /// <summary>
+    /// <c>TrainingBudget(actor, design, t)</c> = <c>T_a</c> of the tooling plan of month t when the line of <paramref name="design"/> is the
+    /// actor's training series, else 0 (contract §4.4d step 7, spec §3.5 A39, A41; F15); ≥ 0. Step 7 spends it after the common money
+    /// left, on that line only; what is not spent is an unspent residue of the month.
+    /// </summary>
+    Fx6 TrainingBudget(int actorRow, int design, long month);
+
     /// <summary>L_P only: month index in whose merge the APP node of the generation became known to the actor, −1 if unknown.</summary>
     long AppKnownSince(int actorRow, int gen, long month);
 }
