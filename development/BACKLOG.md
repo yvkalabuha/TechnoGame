@@ -77,3 +77,4 @@
 | [RR-0007](../docs/research/RR-0007-engineering-product-lifecycle.md) | DRAFT | Инженерия и жизненный цикл изделий |
 | [RR-0008](../docs/research/RR-0008-technology-space-architecture.md) | DRAFT | Архитектура технологического пространства |
 | [RR-0009](../docs/research/RR-0009-component-evolution-analysis.md) | DRAFT | Эволюция компонентов: анализ брифа владельца против контракта слоёв |
+| [RR-0010](../docs/research/RR-0010-supply-chains-clusters.md) | DRAFT | Цепочки поставок и промышленные кластеры: анализ пробелов и варианты модели |
