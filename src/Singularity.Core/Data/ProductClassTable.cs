@@ -34,6 +34,50 @@ public sealed partial class ProductClassTable
     public required ImmutableArray<int> Prc { get; init; }
     public required RequirementLists AltRequires { get; init; }
 
+    // ---- product-layer inputs per class (product_inputs.md; spec §3.3, contract §4.4)
+
+    /// <summary>Hours per person-month (R-HPM).</summary>
+    public required ImmutableArray<Fx6> HPm { get; init; }
+
+    /// <summary>Full labour rate in index per 1000 hours (R-WAGE, F-PI1).</summary>
+    public required ImmutableArray<Fx6> WageKh { get; init; }
+    public required ImmutableArray<Fx6> Maintainability { get; init; }
+
+    /// <summary>Rate of the reference line P0 (spec §3.5 A18), units per month.</summary>
+    public required ImmutableArray<Fx6> RRef { get; init; }
+
+    /// <summary>Process cost rows of class c: <c>ProcStart[c]..ProcStart[c+1]</c>, ascending node row.</summary>
+    public required ImmutableArray<int> ProcStart { get; init; }
+    public required ImmutableArray<int> ProcNode { get; init; }
+    public required ImmutableArray<Fx6> ProcN { get; init; }
+    public required ImmutableArray<Fx6> ProcLabour { get; init; }
+    public required ImmutableArray<Fx6> ProcBaseCost { get; init; }
+
+    /// <summary>Generation rows of class c: <c>GenStart[c]..GenStart[c+1]</c>, row i is generation i + 1.</summary>
+    public required ImmutableArray<int> GenStart { get; init; }
+    public required ImmutableArray<int> GenApp { get; init; }
+    public required ImmutableArray<Fx6> GenHFirst { get; init; }
+    public required ImmutableArray<Fx6> GenHFloor { get; init; }
+    public required ImmutableArray<Fx6> GenMaterialsFloor { get; init; }
+    public required ImmutableArray<Fx6> GenAlloyKg { get; init; }
+    public required ImmutableArray<int> GenCrewReq { get; init; }
+
+    /// <summary>R-PS: multiplier of the process part of <c>unit_cost</c> of generation g.</summary>
+    public required ImmutableArray<Fx6> GenProcScale { get; init; }
+
+    /// <summary>R-DS: multiplier of design work <c>W</c> of generation g.</summary>
+    public required ImmutableArray<Fx6> GenDesignScale { get; init; }
+    /// <summary>Process cost row of a PRC node row in class c, or -1.</summary>
+    public int ProcessRow(int classRow, int nodeRow)
+    {
+        for (int i = ProcStart[classRow]; i < ProcStart[classRow + 1]; i++)
+        {
+            if (ProcNode[i] == nodeRow)
+                return i;
+        }
+        return -1;
+    }
+
     /// <summary>Row of a class ID, or -1 (classes are sorted by ID).</summary>
     public int IndexOf(string classId)
     {
@@ -85,6 +129,30 @@ public sealed partial class ProductClassTable
                         w.Str(nodes.Id[p]);
                     AltRequires.WriteCanonical(w, a, nodes);
                 }
+            }
+            w.Fixed(HPm[c]);
+            w.Fixed(WageKh[c]);
+            w.Fixed(Maintainability[c]);
+            w.Fixed(RRef[c]);
+            w.Int(ProcStart[c + 1] - ProcStart[c]);
+            for (int i = ProcStart[c]; i < ProcStart[c + 1]; i++)
+            {
+                w.Str(nodes.Id[ProcNode[i]]);
+                w.Fixed(ProcN[i]);
+                w.Fixed(ProcLabour[i]);
+                w.Fixed(ProcBaseCost[i]);
+            }
+            w.Int(GenStart[c + 1] - GenStart[c]);
+            for (int i = GenStart[c]; i < GenStart[c + 1]; i++)
+            {
+                w.Str(nodes.Id[GenApp[i]]);
+                w.Fixed(GenHFirst[i]);
+                w.Fixed(GenHFloor[i]);
+                w.Fixed(GenMaterialsFloor[i]);
+                w.Fixed(GenAlloyKg[i]);
+                w.Int(GenCrewReq[i]);
+                w.Fixed(GenProcScale[i]);
+                w.Fixed(GenDesignScale[i]);
             }
         }
     }

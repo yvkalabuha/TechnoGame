@@ -23,6 +23,7 @@ public sealed partial class ScenarioData
         w.Str(ActorId[TechLead]);
         w.Int(MasteredSinceMonth);
         w.Int(ProcXHalfLives);
+        w.Fixed(AlloyRefKg);
 
         w.Int(ProvField.Length);
         for (int p = 0; p < ProvField.Length; p++)

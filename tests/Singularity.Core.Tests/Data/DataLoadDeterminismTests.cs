@@ -51,7 +51,7 @@ public class DataLoadDeterminismTests : IDisposable
     public void DirectoryArgumentOrder_AllPermutations_GiveOneOrderAndOneHash()
     {
         string a = _mods.Mod("a", DependsOnCore, ("n.yaml", "kind: node\npatch:\n  - {id: s8.fnd.transonic_aerodynamics, hazard: key}\n"));
-        string b = _mods.Mod("b", DependsOnCore, ("n.yaml", "kind: node\ndelete: [s8.app.jet_fighter_g4]\n"));
+        string b = _mods.Mod("b", DependsOnCore, ("n.yaml", "kind: node\ndelete: [s8.app.jet_fighter_g4]\n"), TestMods.DropG4Class());
         string c = _mods.Mod("c", "[{id: a, min: \"1.0.0\"}]", ("n.yaml", "kind: node\npatch:\n  - {id: s8.fnd.transonic_aerodynamics, hazard: none}\n"));
         string[] dirs = [TestMods.CoreDir, a, b, c];
         var hashes = new HashSet<string>();
