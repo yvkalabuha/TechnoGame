@@ -365,6 +365,16 @@ public sealed class ProductsSystem : ITickSystem
     public Fx6 Upkeep(int actor, int design) => UpkeepOf(Alternatives(actor, design));
 
     /// <summary>
+    /// <c>unit_cost</c> of a design at its current <c>line_E</c> from the <c>production_profile</c> of month <paramref name="month"/>
+    /// (contract §4.4): a pure function of the snapshot, also for a design without series (the column <see cref="UnitCost"/> is 0 there).
+    /// </summary>
+    public Fx6 UnitCostAt(int actor, int design, long month)
+    {
+        int[] alts = Alternatives(actor, design);
+        return ProductsMath.UnitCost(CardFor(actor, alts, DesignRules.PrcSet(_l, alts), month), LineE(actor, design));
+    }
+
+    /// <summary>
     /// <c>readiness</c> of a design's cohorts (contract §4.4b) from the current state and the <c>q</c> of
     /// <c>production_profile</c> of month <paramref name="month"/>; 1 under L_P (§6.1).
     /// </summary>

@@ -145,6 +145,35 @@ public sealed class KnowledgeSystem : ITickSystem
 
     public Fx6 KInd(int actorRow, int discipline) => Fx6.FromRaw(_kind[discipline].Current[actorRow]);
 
+    /// <summary>The node is unknown and its requirements are known: it is in the actor's frontier (spec §3.1).</summary>
+    public bool InFrontier(int actorRow, int nodeRow) => !IsKnown(actorRow, nodeRow) && RequiresKnown(actorRow, nodeRow);
+
+    /// <summary><c>c_eff</c> of a node for the actor in the snapshot (spec §3.1); a pure function of the snapshot.</summary>
+    public Fx6 CEff(int actorRow, int nodeRow) => CEffOf(actorRow, nodeRow, KMix(actorRow, nodeRow));
+
+    /// <summary>
+    /// <c>Δprog</c> a frontier node gets in month <paramref name="month"/> at the current budget and weights (the speed <c>why_not</c>
+    /// reads, contract §6); 0 outside the frontier. Pure function of the snapshot and the month's inputs; no RNG, no state.
+    /// </summary>
+    public Fx6 ProgressRate(int actorRow, int nodeRow, long month)
+    {
+        if (!InFrontier(actorRow, nodeRow))
+            return Fx6.Zero;
+        Fx6 wsum = Fx6.Zero, wn = Fx6.Zero;
+        foreach (int r in _g.Order)
+        {
+            if (!InFrontier(actorRow, r))
+                continue;
+            Fx6 w = _inputs.Priority(actorRow, r, month) * _inputs.J(actorRow, r, month);
+            wsum += w;
+            if (r == nodeRow)
+                wn = w;
+        }
+        if (wsum == Fx6.Zero)
+            return Fx6.Zero;
+        return _inputs.ResearchBudget(actorRow, month) * (wn / wsum) / CEff(actorRow, nodeRow);
+    }
+
     // ---- diagnostics of the last step (tests, journals): scratch outside the Table, not state, not saved
     // or hashed, valid only right after a step of this system. Simulation code must not read them.
 
@@ -257,10 +286,8 @@ public sealed class KnowledgeSystem : ITickSystem
             Fx6 alloc = s * wn;
             spent += alloc;
             int disc = _g.Discipline[r];
-            Fx6 kmix = disc < 0 ? Fx6.Zero
-                : _g.Type[r] is NodeType.ENG or NodeType.PRC ? KD(a, disc) + KInd(a, disc) : KD(a, disc);
-            Fx6 ceff = KnowledgeMath.CEff(KnowledgeMath.CMoney(_g.CostN[r], _p.SRef), _p.KDiff, KnownElsewhere(a, r),
-                _p.KK, kmix, _p.KRef, InformsSum(a, r));
+            Fx6 kmix = KMix(a, r);
+            Fx6 ceff = CEffOf(a, r, kmix);
             Fx6 dprog = alloc / ceff;
             Fx6 prog = Prog(a, r) + dprog;
             bool open;
@@ -345,6 +372,15 @@ public sealed class KnowledgeSystem : ITickSystem
     }
 
     // ---- snapshot helpers
+
+    private Fx6 KMix(int a, int r)
+    {
+        int disc = _g.Discipline[r];
+        return disc < 0 ? Fx6.Zero : _g.Type[r] is NodeType.ENG or NodeType.PRC ? KD(a, disc) + KInd(a, disc) : KD(a, disc);
+    }
+
+    private Fx6 CEffOf(int a, int r, Fx6 kmix) =>
+        KnowledgeMath.CEff(KnowledgeMath.CMoney(_g.CostN[r], _p.SRef), _p.KDiff, KnownElsewhere(a, r), _p.KK, kmix, _p.KRef, InformsSum(a, r));
 
     private bool RequiresKnown(int a, int r)
     {
