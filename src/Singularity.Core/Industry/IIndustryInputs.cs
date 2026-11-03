@@ -27,6 +27,30 @@ public interface IIndustryInputs
     /// <summary>Money invested into <c>tooling_M[site,c,d]</c> in month t (AI decision in force, spec §3.5 A11); ≥ 0.</summary>
     Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month);
 
+    /// <summary>
+    /// Same with <paramref name="restActor"/> = <c>rest_a</c> of the effort allocation of the site's owner (contract §4.1b
+    /// step 5): what the process-development item did not spend. The industry layer calls only this overload; what the
+    /// rule does not take stays with the actor's budget (#118). Transitional default = the overload without
+    /// <c>rest_a</c> (the Lab stand <c>LineStand</c> is outside this task's zone); implementers of the budget/AI
+    /// rule must override it. TECH_DEBT: make it abstract when the Lab stand is migrated.
+    /// </summary>
+    Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor) => ToolingInvest(siteRow, cluster, dim, month);
+
+    /// <summary>
+    /// <c>D_a(t) = share_D[a]·budget_a(t)</c>: the process-development item of the actor, reserved by the budget/AI
+    /// system (contract §4.0, G4-5); ≥ 0. Transitional default 0 for the Lab stand (see <see cref="ToolingInvest(int,int,Dimension,long,Fx6)"/>).
+    /// </summary>
+    Fx6 EffortBudget(int actorRow, long month) => Fx6.Zero;
+
+    /// <summary><c>effort_focus[actor, k]</c>, k = 0…2: process number of the player's k-th priority, −1 = empty (contract §3.1). No repeats. Transitional default −1.</summary>
+    int EffortFocus(int actorRow, int k, long month) => -1;
+
+    /// <summary><c>v_exp(p)</c> at the site: planned output of the lines and of the projects in stages П/О (contract §4.1b); ≥ 0. Transitional default 0.</summary>
+    Fx6 PlannedVolume(int siteRow, int processRow, long month) => Fx6.Zero;
+
+    /// <summary><c>planned(site, p)</c>: p is in the <c>prc_set</c> of a project of the owner in stage П or О (contract §4.1a). Transitional default false.</summary>
+    bool Planned(int siteRow, int processRow, long month) => false;
+
     /// <summary><c>l_lic</c> of an active licence on the process at the site, 0 without one (spec §1.4).</summary>
     Fx6 LicenceShare(int siteRow, int processRow, long month);
 

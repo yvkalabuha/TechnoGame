@@ -49,6 +49,29 @@ public sealed record IndustryParams
         return CM * Fx6.FromInt(1L << (k - 3));
     }
 
+    // ---- culture rule C-B (contract v2.4 §4.1, decisions #111, #115)
+
+    /// <summary><c>r_ref</c>: mature-line rate, units of a process per month (reference line, spec §6.4).</summary>
+    public Fx6 RRef { get; init; } = Fx6.FromInt(25);
+
+    /// <summary><c>r_cap = r_ref/2.5</c> (10): output rate at which money from output is fully useful.</summary>
+    public Fx6 RCap => RRef / F(2_500_000);
+
+    /// <summary><c>r_keep = r_ref/4</c> (6.25): output rate that fully holds the culture.</summary>
+    public Fx6 RKeep => RRef / Fx6.FromInt(4);
+
+    /// <summary><c>k_tr</c>: licence multiplier on the output channel, <c>ṽ = (1 + k_tr·lic)·v</c> (#104, #107).</summary>
+    public Fx6 KTr { get; init; } = Fx6.One;
+
+    /// <summary><c>E_full</c>: a raw literal of the manifest (1838 raw), never recomputed during a run (G4-4).</summary>
+    public Fx6 EFull { get; init; } = F(1_838);
+
+    /// <summary><c>ℓ</c>: laboratory share of money that works without output (#115); 0 only for the ablation.</summary>
+    public Fx6 Ell { get; init; } = F(100_000);
+
+    /// <summary><c>ΔL</c>: how far below <c>r_d</c> the laboratory alone can lift the culture (#115).</summary>
+    public Fx6 DeltaL { get; init; } = F(500_000);
+
     public Fx6 Eps { get; init; } = F(10_000);
 
     /// <summary><c>yield ≥ 0.7</c> of another actor makes <c>world_lead</c> (contract §4.1).</summary>
@@ -96,6 +119,8 @@ public sealed record IndustryParams
             throw new ArgumentException("act_norm and ε must be positive, λ0 in [0; 1].");
         if (CM <= Fx6.Zero)
             throw new ArgumentException("c_M must be positive.");
+        if (RRef <= Fx6.Zero || KTr < Fx6.Zero || EFull < Fx6.Zero || DeltaL < Fx6.Zero || Ell < Fx6.Zero || Ell > Fx6.One)
+            throw new ArgumentException("r_ref must be positive, k_tr, E_full, ΔL non-negative, ℓ in [0; 1].");
         foreach (Fx6 x in XHalfByTier)
         {
             if (x <= Fx6.Zero)

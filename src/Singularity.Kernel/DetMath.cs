@@ -56,6 +56,37 @@ public static class DetMath
     /// <exception cref="OverflowException">When the result does not fit into Fx6 or double.</exception>
     public static Fx6 PowFracFx(Fx6 x, int q10) => Fx6.FromDouble(PowFrac(x.ToDouble(), q10));
 
+    /// <summary>
+    /// Smoothstep on [0; 1] with ONE rounding (contract v2.4 §4.0 p. 2): <c>floor(X²·(3S − 2X) / S²)</c> raw,
+    /// X = x.Raw, S = 10^6, all in <see cref="Int128"/>. Two chained Fx6 products would round twice.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">When x is outside [0; 1].</exception>
+    public static Fx6 SmoothStep01(Fx6 x)
+    {
+        if (x.Raw < 0 || x.Raw > Fx6.Scale)
+            throw new ArgumentOutOfRangeException(nameof(x), x, "SmoothStep01 needs 0 <= x <= 1.");
+        Int128 big = x.Raw;
+        const long s = Fx6.Scale;
+        // The numerator is non-negative, so integer division is the floor.
+        return Fx6.FromRaw((long)(big * big * (3 * s - 2 * big) / ((Int128)s * s)));
+    }
+
+    /// <summary>
+    /// Product rounded UP (towards +infinity) with one rounding: <c>ceil(a.Raw·b.Raw / S)</c> raw in
+    /// <see cref="Int128"/> (contract v2.4 §4.0 p. 2). For a, b &gt;= 0.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">When a or b is negative.</exception>
+    public static Fx6 MulCeil(Fx6 a, Fx6 b)
+    {
+        if (a.Raw < 0 || b.Raw < 0)
+            throw new ArgumentOutOfRangeException(a.Raw < 0 ? nameof(a) : nameof(b), "MulCeil needs non-negative factors.");
+        Int128 n = (Int128)a.Raw * b.Raw;
+        Int128 q = n / Fx6.Scale;
+        if (n % Fx6.Scale != 0)
+            q += 1;
+        return Fx6.FromRaw(checked((long)q));
+    }
+
     private static void CheckArguments(double x, int exponent)
     {
         if (!double.IsFinite(x) || x < 0)

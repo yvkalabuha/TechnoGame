@@ -23,12 +23,15 @@ public sealed class IndustryInvariantException(long month, int site, string mess
 /// MECH cap. Merge applies <c>report_output</c> by (site, prc) → <c>proc_X</c>, <c>proc_v</c>, and
 /// <c>reserve_workforce</c> by (site, cat, requester_id) → <c>granted</c>, visible at t+1. No RNG anywhere in
 /// the layer (#28). Own columns per site row: <c>ind.H.c.d</c>, <c>ind.M.c.d</c> per cluster and dimension,
-/// then per process number <c>ind.X.N</c>, <c>ind.v.N</c>, <c>ind.y.N</c>, then <c>ind.wf.n.k.R</c>,
+/// then per process number <c>ind.X.N</c>, <c>ind.v.N</c>, <c>ind.y.N</c>, <c>ind.E.N</c> (<c>proc_E</c>, v2.4), then <c>ind.wf.n.k.R</c>,
 /// <c>ind.wf.granted.k.R</c> per category k and requester R.
 /// </summary>
-public sealed class IndustrySystem : ITickSystem
+public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
 {
     public const int DefaultSystemId = 200;
+
+    /// <summary>Slots of <c>effort_focus</c> (contract §3.1).</summary>
+    public const int EffortFocusSlots = 3;
 
     private static readonly string[] DimNames = ["precision", "purity", "quality_control"];
 
@@ -40,22 +43,22 @@ public sealed class IndustrySystem : ITickSystem
     private readonly int _c, _n, _sites;
 
     private readonly LongColumn[] _h, _m;
-    private readonly LongColumn[] _x, _v, _y;
+    private readonly LongColumn[] _x, _v, _y, _e;
+    private readonly ICultureRule _rule;
+    private readonly Fx6[] _lastRest;
     private readonly LongColumn[] _wfN, _wfGranted;
 
     // Scratch, rewritten every step; site s only by the chunk that owns it.
     private readonly ProcessYield[] _yieldTrace;
     private readonly CultureStep[] _cultureTrace;
     private readonly ToolingStep[] _toolingTrace;
-    private readonly CultureProcess[][] _procScratch;
-    private readonly CultureSpill[][] _spillScratch;
     private readonly List<IndustryMailbox> _mailboxes = new();
     private readonly List<OutputReport> _reports = new(), _lastReports = new();
     private readonly List<WorkforceRequest> _requests = new();
 
     public IndustrySystem(Table table, IndustryLayout layout, IndustryStart start, IndustryParams parameters,
         IIndustryInputs inputs, int chunkCount, IndustryMode mode = IndustryMode.Full,
-        ImmutableArray<CapabilityCurve> curves = default, int systemId = DefaultSystemId)
+        ImmutableArray<CapabilityCurve> curves = default, int systemId = DefaultSystemId, ICultureRule? rule = null)
     {
         if (table.RowCount != layout.SiteCount)
             throw new ArgumentException($"Table has {table.RowCount} rows, the layout has {layout.SiteCount} sites.", nameof(table));
@@ -76,6 +79,8 @@ public sealed class IndustrySystem : ITickSystem
         _p = parameters;
         _inputs = inputs;
         _mode = mode;
+        _rule = rule ?? new CbCultureRule();
+        _lastRest = new Fx6[layout.SiteCount];
         _curves = curves;
         _c = layout.Clusters.Length;
         _n = layout.ProcessCount;
@@ -97,12 +102,14 @@ public sealed class IndustrySystem : ITickSystem
         _x = new LongColumn[_n];
         _v = new LongColumn[_n];
         _y = new LongColumn[_n];
+        _e = new LongColumn[_n];
         foreach (int r in layout.Order)
         {
             int number = layout.Number[r];
             _x[r] = table.AddLong($"ind.X.{number}");
             _v[r] = table.AddLong($"ind.v.{number}");
             _y[r] = table.AddLong($"ind.y.{number}");
+            _e[r] = table.AddLong($"ind.E.{number}");
         }
         int wf = layout.WorkforceCategories * layout.Requesters;
         _wfN = new LongColumn[wf];
@@ -139,13 +146,6 @@ public sealed class IndustrySystem : ITickSystem
         _yieldTrace = new ProcessYield[_sites * _n];
         _cultureTrace = new CultureStep[_sites * _c * Dims3.Count];
         _toolingTrace = new ToolingStep[_sites * _c * Dims3.Count];
-        _procScratch = new CultureProcess[chunkCount][];
-        _spillScratch = new CultureSpill[chunkCount][];
-        for (int k = 0; k < chunkCount; k++)
-        {
-            _procScratch[k] = new CultureProcess[_n];
-            _spillScratch[k] = new CultureSpill[_c];
-        }
     }
 
     public int SystemId { get; }
@@ -180,6 +180,55 @@ public sealed class IndustrySystem : ITickSystem
 
     /// <summary><c>proc_yield</c>: the yield output ran at in the last month step (0 for an unknown process).</summary>
     public Fx6 ProcYield(int site, int processRow) => Fx6.FromRaw(_y[processRow].Current[site]);
+
+    /// <summary><c>proc_E</c>: money for process development the allocation gave the process in the last month step (contract §4.1b).</summary>
+    public Fx6 ProcE(int site, int processRow) => Fx6.FromRaw(_e[processRow].Current[site]);
+
+    /// <summary>The active culture rule (the ablation is a constructor argument).</summary>
+    public ICultureRule Rule => _rule;
+
+    /// <summary>Diagnostics only: <c>rest_a</c> handed to <c>ToolingInvest</c> at the site in the last step.</summary>
+    public Fx6 LastRest(int site) => _lastRest[site];
+
+    // ---- external functions of the culture rule (contract §4.1a): pure functions of the snapshot
+
+    /// <summary><c>E_useful(site, p)</c> in month <paramref name="month"/>.</summary>
+    public Fx6 EUseful(int site, int processRow, long month) => _rule.EUseful(this, site, processRow, month);
+
+    /// <summary><c>limiter(site, p)</c> in month <paramref name="month"/> (contract §4.1a, §6).</summary>
+    public CultureLimiter Limiter(int site, int processRow, long month) => _rule.Limiter(this, site, processRow, month);
+
+    /// <summary><c>dH_forecast(site, p, d, E, v)</c> (contract §4.1a): UI and why_not only.</summary>
+    public Fx6 DHForecast(int site, int processRow, Dimension dim, Fx6 e, Fx6 v, long month) =>
+        _rule.DHForecast(this, site, processRow, (int)dim, e, v, month);
+
+    IndustryParams ICultureSnapshot.Params => _p;
+
+    Fx6 ICultureSnapshot.H(int site, int cluster, int dim) => Cell(_h, site, cluster, dim);
+
+    Fx6 ICultureSnapshot.M(int site, int cluster, int dim) => Cell(_m, site, cluster, dim);
+
+    Fx6 ICultureSnapshot.Hcap(int site, int dim, long month) => _inputs.Hcap(site, (Dimension)dim, month);
+
+    Fx6 ICultureSnapshot.Act(int site, int cluster) => Act(site, cluster);
+
+    Fx6 ICultureSnapshot.W(int site, int cluster, long month) => _inputs.W(site, cluster, month);
+
+    bool ICultureSnapshot.QualityProgramme(int site, long month) => _inputs.QualityProgramme(site, month);
+
+    Fx6 ICultureSnapshot.V(int site, int processRow) => ProcV(site, processRow);
+
+    Fx6 ICultureSnapshot.E(int site, int processRow) => ProcE(site, processRow);
+
+    bool ICultureSnapshot.Licensed(int site, int processRow, long month) => _inputs.LicenceShare(site, processRow, month) > Fx6.Zero;
+
+    bool ICultureSnapshot.WorldLead(int site, int processRow) => WorldLead(site, processRow);
+
+    bool ICultureSnapshot.Knows(int site, int processRow, long month) => _inputs.KnowsProcess(site, processRow, month);
+
+    bool ICultureSnapshot.Planned(int site, int processRow, long month) => _inputs.Planned(site, processRow, month);
+
+    Fx6 ICultureSnapshot.PlannedVolume(int site, int processRow, long month) => _inputs.PlannedVolume(site, processRow, month);
 
     public long Requested(int site, int category, int requester) => _wfN[category * _l.Requesters + requester].Current[site];
 
@@ -335,15 +384,19 @@ public sealed class IndustrySystem : ITickSystem
                     mechTier = _l.Tier[r];
             }
             if (_mode != IndustryMode.Full)
-                continue; // L_C, L_C0: culture_H and tooling_M are not used (§6.1)
-            bool qp = _inputs.QualityProgramme(s, t);
+            {
+                // L_C, L_C0: culture_H and tooling_M are not used (§6.1); no money for process development.
+                for (int r = 0; r < _n; r++)
+                    _e[r].Next[s] = 0;
+                continue;
+            }
+            Fx6 rest = AllocateEffort(s, t);
             for (int c = 0; c < _c; c++)
             {
-                Fx6 act = Act(s, c), w = _inputs.W(s, c, t);
                 for (int d = 0; d < Dims3.Count; d++)
                 {
-                    StepCulture(chunk, s, c, d, t, act, w, qp);
-                    StepTooling(s, c, d, t, mechTier);
+                    StepCulture(s, c, d, t);
+                    StepTooling(s, c, d, t, mechTier, rest);
                 }
             }
         }
@@ -380,25 +433,27 @@ public sealed class IndustrySystem : ITickSystem
 
     // ---- compute parts
 
-    private void StepCulture(int chunk, int s, int c, int d, long t, Fx6 act, Fx6 w, bool qp)
+    // §4.1b: distribute D_a of the site's owner (a pure function of the snapshot), write proc_E of the site, return rest_a.
+    private Fx6 AllocateEffort(int s, long t)
     {
-        CultureProcess[] procs = _procScratch[chunk];
-        int np = 0;
-        foreach (int r in _l.Order)
-        {
-            if (_l.ClusterIndex[r] == c && _v[r].Current[s] > 0)
-                procs[np++] = new CultureProcess(_l.Number[r], ProcV(s, r), _l.Req[r][d], WorldLead(s, r));
-        }
-        CultureSpill[] spill = _spillScratch[chunk];
-        int ns = 0;
-        for (int c2 = 0; c2 < _c; c2++)
-        {
-            if (c2 != c)
-                spill[ns++] = new CultureSpill(_p.Spill(_l.Clusters[c], _l.Clusters[c2]), Cell(_h, s, c2, d));
-        }
+        int actor = _l.SiteOwner[s];
+        Span<int> focus = stackalloc int[EffortFocusSlots];
+        for (int k = 0; k < focus.Length; k++)
+            focus[k] = _inputs.EffortFocus(actor, k, t);
+        Fx6 budget = _inputs.EffortBudget(actor, t);
+        if (budget < Fx6.Zero)
+            throw new IndustryInvariantException(t, s, $"negative effort budget {budget}");
+        EffortAllocation alloc = EffortAllocator.Allocate(_rule, this, actor, t, budget, focus);
+        for (int r = 0; r < _n; r++)
+            _e[r].Next[s] = alloc.E[s * _n + r].Raw;
+        _lastRest[s] = alloc.Rest;
+        return alloc.Rest;
+    }
+
+    private void StepCulture(int s, int c, int d, long t)
+    {
         Fx6 h = Cell(_h, s, c, d);
-        var cell = new CultureCell(h, _inputs.Hcap(s, (Dimension)d, t), act, w, qp && d == (int)Dimension.QualityControl);
-        CultureStep step = IndustryMath.Culture(cell, procs.AsSpan(0, np), spill.AsSpan(0, ns), _p);
+        CultureStep step = _rule.Step(this, s, c, d, t);
         // I1, I2 (reference README): no negative culture, growth at most rho_max, no fall below min(H, H_floor).
         if (step.HNew < Fx6.Zero || (step.HNew - h).Raw > _p.RhoMax.Raw + 1 || step.HNew < (h < step.HFloor ? h : step.HFloor))
             throw new IndustryInvariantException(t, s, $"culture_H {_l.Clusters[c]}.{DimNames[d]} step {h} → {step.HNew} (I1, I2)");
@@ -406,9 +461,9 @@ public sealed class IndustrySystem : ITickSystem
         _h[c * Dims3.Count + d].Next[s] = step.HNew.Raw;
     }
 
-    private void StepTooling(int s, int c, int d, long t, int mechTier)
+    private void StepTooling(int s, int c, int d, long t, int mechTier, Fx6 restActor)
     {
-        Fx6 invest = _inputs.ToolingInvest(s, c, (Dimension)d, t);
+        Fx6 invest = _inputs.ToolingInvest(s, c, (Dimension)d, t, restActor);
         if (invest < Fx6.Zero)
             throw new IndustryInvariantException(t, s, $"negative tooling investment {invest}");
         ToolingStep step = IndustryMath.Tooling(Cell(_m, s, c, d), invest, mechTier, _p);
