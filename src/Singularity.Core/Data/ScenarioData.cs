@@ -29,6 +29,9 @@ public sealed partial class ScenarioData
     public required int MasteredSinceMonth { get; init; }
     public required int ProcXHalfLives { get; init; }
 
+    /// <summary><c>A_ref</c>, kg of alloy per month per budget index unit (R-AC, product_inputs.md §6).</summary>
+    public required Fx6 AlloyRefKg { get; init; }
+
     // Provenance rows, sorted by field name.
     public required ImmutableArray<string> ProvField { get; init; }
     public required ImmutableArray<string> ProvRule { get; init; }
@@ -78,6 +81,9 @@ public sealed partial class ScenarioData
     public ReadOnlySpan<int> KnownOf(int actor) => Known.AsSpan()[KnownStart[actor]..KnownStart[actor + 1]];
 
     public ReadOnlySpan<int> MasteredOf(int actor) => Mastered.AsSpan()[MasteredStart[actor]..MasteredStart[actor + 1]];
+
+    /// <summary><c>alloy_cap_a(t0) = ⌊A_ref·budget_index_a⌋</c> kg per month (R-AC, whole kg).</summary>
+    public Fx6 AlloyCapAtStart(int actor) => Fx6.FromInt((AlloyRefKg * BudgetIndex[actor]).Raw / Fx6.Scale);
 
     public Fx6 CultureOf(int actor, Cluster cluster, Dimension dim) =>
         CultureH[(actor * Clusters.Length + ClusterIndex(cluster)) * 3 + (int)dim];
