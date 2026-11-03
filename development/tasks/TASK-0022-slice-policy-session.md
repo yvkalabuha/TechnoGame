@@ -1,7 +1,7 @@
 ---
 id: TASK-0022
 title: "T6a: система политики ИИ и сборка мира среза (Session)"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -31,10 +31,10 @@ created: 2026-11-03
 - `IndustrySystem._lastRest` вне таблицы: проверить против ADR-0013 п.4; если нарушает — перенести в колонку.
 
 ## Критерии приёмки
-- [ ] Всё из спеки v0.12 §11 «T6a» (ключи потоков, `FIX_ALL`, `FIX_A`, доли, `START_PERT`, `START_SYM`, номер ячейки `9u + 3g + s`, A8, переключатели §6.2).
-- [ ] Общие пункты §11 T6a–T6d: `dotnet test` зелёный, ADR-0003 R1–R3 зелёный, нет `CounterRng` в `Core.Industry`/`Core.Products` и их адаптерах, L1 и L2 (threads 1/4/8, seeds 1…20) на сборке среза.
-- [ ] Мир среза собирается только через Session (архитектурный тест); `SmokeT4s.LineStand` помечен как стенд одного слоя.
-- [ ] Журнал команд пишется и читается одним кодеком; отказ `Submit` даёт причину, а не только счётчик.
+- [x] Всё из спеки v0.12 §11 «T6a» (ключи потоков, `FIX_ALL`, `FIX_A`, доли, `START_PERT`, `START_SYM`, номер ячейки `9u + 3g + s`, A8, переключатели §6.2).
+- [x] Общие пункты §11 T6a–T6d: `dotnet test` зелёный, ADR-0003 R1–R3 зелёный, нет `CounterRng` в `Core.Industry`/`Core.Products` и их адаптерах, L1 и L2 (threads 1/4/8, seeds 1…20) на сборке среза.
+- [x] Мир среза собирается только через Session (архитектурный тест); `SmokeT4s.LineStand` помечен как стенд одного слоя.
+- [x] Журнал команд пишется и читается одним кодеком; отказ `Submit` даёт причину, а не только счётчик.
 
 ## Тесты
 Тесты по §11 T6a; архитектурные тесты сборок; golden-хеш Session; L1/L2.
@@ -43,9 +43,9 @@ created: 2026-11-03
 `docs/simulation/slice-jet-aviation.md` v0.12 (§4, A8, A41, §6.2–§6.6, §9.1, §11); `docs/architecture/SLICE_COMPOSITION.md`; ADR-0004, ADR-0006, ADR-0013, ADR-0014; `.claude/rules/csharp-core.md`; DEBT-0016.
 
 ## REVIEW
-- [ ] Code review (reviewer) — находки high закрыты
-- [ ] Тесты (test-engineer) — проходят, покрытие достаточно
-- [ ] Детерминизм L1/L2 — если затронуты src/
+- [x] Code review (reviewer) — находки high закрыты (high нет; medium исправлены, 5fecbe0)
+- [x] Тесты (test-engineer) — проходят, покрытие достаточно (c4da5f8)
+- [x] Детерминизм L1/L2 — если затронуты src/ (с оговоркой DEBT-0018)
 
 ### Ревью reviewer (2026-11-03, вставлено Orchestrator: у reviewer нет записи)
 Вердикт: accept with fixes; high нет; `dotnet test` зелёный (Kernel 284 +1 skip, Core 779, Architecture 77, Session 72). Ключи §9.1, доли §4, A8, ячейка `9u+3g+s`, FIX_*, A12 совпадают со спекой; float в пути симуляции нет; `CounterRng` в адаптерах Industry/Products нет.
