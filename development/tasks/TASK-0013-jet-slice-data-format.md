@@ -1,7 +1,7 @@
 ---
 id: TASK-0013
 title: "Формат данных среза: схемы, YAML мода core, загрузчик и валидатор (ADR-0010)"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: developer
