@@ -28,8 +28,10 @@
 | [TASK-0012](../development/tasks/TASK-0012-jet-slice-reference.md) | DONE | Эталон для сверки среза: три формулы и ручная траектория (Python stdlib) | MS-M0 |
 | [TASK-0013](../development/tasks/TASK-0013-jet-slice-data-format.md) | DONE | Формат данных среза: схемы, YAML мода core, загрузчик и валидатор (ADR-0010) | MS-M0 |
 | [TASK-0014](../development/tasks/TASK-0014-core-knowledge-slice.md) | DONE | Core.Knowledge для среза: фронтир, c_eff, hazard, K_d, K_ind, расписания абляций | MS-M0 |
-| [TASK-0015](../development/tasks/TASK-0015-core-industry-slice.md) | REVIEW | Core.Industry для среза: culture_H, tooling_M, production_profile, сплав, reserve_workforce | MS-M0 |
+| [TASK-0015](../development/tasks/TASK-0015-core-industry-slice.md) | DONE | Core.Industry для среза: culture_H, tooling_M, production_profile, сплав, reserve_workforce | MS-M0 |
 | [TASK-0016](../development/tasks/TASK-0016-godot-compat-spike.md) | DONE | Спайк Godot: Core внутри Godot .NET, сборка в CI, исключение тестового кода из release | MS-M0 |
+| [TASK-0017](../development/tasks/TASK-0017-slice-smoke-anchors.md) | APPROVED | Смоук калибровочных якорей C1–C3 на слоях знания и способности (T4s) | MS-M0 |
+| [TASK-0018](../development/tasks/TASK-0018-core-products-slice.md) | APPROVED | Core.Products для среза: КБ, варианты, line_E, дефекты, когорты, upkeep, FV, заглушка L_P (T5) | MS-M0 |
 
 ## Гипотезы
 

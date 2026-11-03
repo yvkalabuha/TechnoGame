@@ -10,7 +10,8 @@
 ## Активные задачи
 <!-- registry:active:start -->
 - TASK-0009 [REVIEW] Kernel: контрольный тест отсутствия FMA-сжатия на всех платформах CI (developer)
-- TASK-0015 [REVIEW] Core.Industry для среза: culture_H, tooling_M, production_profile, сплав, reserve_workforce (developer)
+- TASK-0017 [APPROVED] Смоук калибровочных якорей C1–C3 на слоях знания и способности (T4s) (simulation-engineer)
+- TASK-0018 [APPROVED] Core.Products для среза: КБ, варианты, line_E, дефекты, когорты, upkeep, FV, заглушка L_P (T5) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
