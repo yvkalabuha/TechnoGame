@@ -30,7 +30,15 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
     {
         var list = new List<DesignCommand>();
         foreach ((CommandKind kind, int target, var alts) in world.Commands.DesignCommands(actorRow, month))
-            list.Add(new DesignCommand(kind == CommandKind.ComposeDesign ? DesignCommandKind.Compose : DesignCommandKind.Derive, target, alts));
+        {
+            DesignCommandKind k = kind switch
+            {
+                CommandKind.ComposeDesign => DesignCommandKind.Compose,
+                CommandKind.DeriveDesign => DesignCommandKind.Derive,
+                _ => DesignCommandKind.Cancel,
+            };
+            list.Add(new DesignCommand(k, target, kind == CommandKind.CancelDesign ? [] : alts));
+        }
         return list;
     }
 

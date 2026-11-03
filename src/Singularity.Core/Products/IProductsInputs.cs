@@ -13,10 +13,13 @@ public enum DesignCommandKind
 
     /// <summary><c>derive(d_parent, {slot → alt_id})</c>: a project on the platform of a design in С or В; unchanged slots are −1.</summary>
     Derive,
+
+    /// <summary><c>cancel_design(design_id)</c> (contract §4.4e, F14): an own project in П or О becomes «снят»; <c>Target</c> is the <c>design_id</c>.</summary>
+    Cancel,
 }
 
 /// <summary>
-/// A <c>compose_design</c> or <c>derive</c> command in force at month t (contract §4.4a, §5; ADR-0006, ADR-0014: applied at the
+/// A <c>compose_design</c>, <c>derive</c> or <c>cancel_design</c> command in force at month t (contract §4.4a, §4.4e, §5; ADR-0006, ADR-0014: applied at the
 /// start of the tick, in command order). <paramref name="Target"/> is the requirement generation <c>g*</c> (the newest APP the actor
 /// knows) for <see cref="DesignCommandKind.Compose"/> and the parent <c>design_id</c> for <see cref="DesignCommandKind.Derive"/>.
 /// <paramref name="Alts"/> holds one layout-global alternative index per slot (−1 = unchanged, Derive only).
@@ -57,6 +60,9 @@ public enum CommandRejection
     /// <c>start_series</c> of a parent whose line was moved to a live derived design: two lines of one platform are FUTURE (#118).
     /// </summary>
     LineTransferred = 7,
+
+    /// <summary><c>BAD_CANCEL</c>: <c>cancel_design</c> of a design that is not an own project in П or О (contract §4.4e).</summary>
+    BadCancel = 8,
 }
 
 /// <summary>
@@ -100,7 +106,7 @@ public interface IProductsInputs
     /// <summary><c>start_series(design, rate, force)</c> in force for a design in stage О or В, or null (contract §4.4c).</summary>
     SeriesStart? StartSeries(int actorRow, int design, long month);
 
-    /// <summary>Close the line of a design in series (stage С → В).</summary>
+    /// <summary>Close the line of a design in series (stage С → В; «снят» when it never produced, contract §4.4e r4).</summary>
     bool CloseLine(int actorRow, int design, long month);
 
     /// <summary>

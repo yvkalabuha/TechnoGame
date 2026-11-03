@@ -7,8 +7,11 @@ namespace Singularity.Session.Tests;
 /// <summary>
 /// A scripted player for the linked runs: through <see cref="SliceSession.Submit"/> only, like any client. Each month, per actor: a
 /// project for the newest known APP generation without one (even actors «superior», odd «producible»), the series at the gate with
-/// 30 units/month, close the line of an older generation once a newer one is in series and produces. It reads the snapshot through the world
-/// internals (a test peeks; a real client would read the published views).
+/// 30 units/month, and the line switch of spec A41 «Переключение линии у прокси игрока» (v0.13, Ф4): the older line is closed in month t when
+/// the new line of the same actor (stage С, larger gen) has the smallest <c>yield</c> of month t over its <c>prc_set</c> ≥ <c>y_prod</c>
+/// (0,5, the threshold of the <c>producible</c> preset). Not a ratio of the two rates: that would measure the competition for the
+/// procurement item, not the readiness of the new line. It reads the snapshot through the world internals (a test peeks; a real client
+/// would read the published views).
 /// </summary>
 internal sealed class PlayerScript(SliceSession session)
 {
@@ -44,15 +47,15 @@ internal sealed class PlayerScript(SliceSession session)
             }
             for (int d = 0; d < l.Designs; d++)
             {
-                // The player may force an early launch (A36). The old line is closed only once the newer one actually produces: a new
-                // generation can start with processes not admitted yet, and closing the working line then would stop all output.
+                // The player may force an early launch (A36). The old line is closed by the A41 rule (see the class summary).
                 if (w.Products.Stage(a, d) == DesignStage.Prototype)
                     Send(a, new StartSeries(a, d, Fx6.FromInt(30), !w.Products.GateOpen(a, d, month)));
                 if (w.Products.Stage(a, d) == DesignStage.Series)
                 {
                     for (int e = 0; e < l.Designs; e++)
                     {
-                        if (w.Products.Stage(a, e) == DesignStage.Series && w.Products.Gen(a, e) > w.Products.Gen(a, d) && w.Products.Rate(a, e) > Fx6.Zero)
+                        if (w.Products.Stage(a, e) == DesignStage.Series && w.Products.Gen(a, e) > w.Products.Gen(a, d)
+                            && w.Products.PrcSet(a, e).All(p => YieldOf(p) >= new ProductsParams().YProd))
                         {
                             Send(a, new CloseLine(a, d));
                             break;

@@ -2,8 +2,19 @@ using Singularity.Core.Industry;
 
 namespace Singularity.Core.Policy;
 
-/// <summary>What limits the bottleneck process of a design: the source of the profile bottleneck and <c>limiter(site, p_b)</c> (spec A41).</summary>
-public readonly record struct BottleneckLimit(BottleneckSource Source, LimiterKind Limiter);
+/// <summary>
+/// What limits the bottleneck process of a design: the source of the profile bottleneck, <c>limiter(site, p_b)</c> and whether the process
+/// has output (<c>proc_v[site, p_b] &gt; 0</c>; spec A41, v0.13 <c>out_lim</c>).
+/// </summary>
+public readonly record struct BottleneckLimit(BottleneckSource Source, LimiterKind Limiter, bool HasOutput)
+{
+    /// <summary>
+    /// <c>out_lim(site, p)</c> (spec A41-T, v0.13): the limit of the process is its output — <c>limiter ∈ {VOLUME, LAB_CEILING}</c>, or
+    /// <c>EFFORT</c> while the process has no output (a series without output leads its cell since contract r4, but tooling money does
+    /// not lift the limit there: <c>v_p = 0</c> ⇒ the useful money stops at <c>ℓ·E_full</c>).
+    /// </summary>
+    public bool OutLim => Limiter is LimiterKind.Volume or LimiterKind.LabCeiling || Limiter == LimiterKind.Effort && !HasOutput;
+}
 
 /// <summary>
 /// What the AI policy reads from the other layers in the compute of month t. As the other inputs: pure functions of the snapshot t−1, no

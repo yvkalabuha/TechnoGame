@@ -395,32 +395,45 @@ public class ProductsV24SystemTests
         Assert.Equal(Fx6.FromInt(2900) / Fx6.FromInt(670), p.Rate(Gbr, 1));
     }
 
-    // ---- planned, v_exp (T-12)
+    // ---- planned, v_exp (T-12; contract v2.4 r4: stages П, О and С)
 
     [Fact]
-    public void PlannedAndVExp_FollowProjectsInStagesPAndO_T12()
+    public void PlannedAndVExp_FollowProjectsInStagesPOAndC_T12()
     {
         var h = Gb(2, (a, t) => a == Gbr && t == 0 ? [SuperiorG2(Probe)] : []);
         ProductsSystem p = h.Products;
+        Fx6 V(int actor, int prc, Fx6 procV, bool home = true) => p.ExpectedVolume(actor, prc, procV, home);
         Assert.False(p.Planned(Gbr, 53));
-        Assert.Equal(Fx6.Zero, p.PlannedVolume(Gbr, 53));
+        Assert.Equal(Fx6.Zero, V(Gbr, 53, Fx6.Zero));
         h.RunThroughMonth(0);
         // Stage П: r_plan = r_ref/4 = 6.25 units a month, v = (r_plan·n_p)·labour_p.
         Assert.True(p.Planned(Gbr, 53));
         Assert.True(p.Planned(Gbr, 40));
         Assert.False(p.Planned(Gbr, 41));                  // not in the G2 project
         Assert.False(p.Planned(Usa, 53));
-        Assert.Equal(Fx6.FromRaw(6_250_000) * Fx6.One * Fx6.FromInt(3700), p.PlannedVolume(Gbr, 53));
-        Assert.Equal(Fx6.Zero, p.PlannedVolume(Gbr, 41));
-        Assert.Equal(Fx6.Zero, p.PlannedVolume(Gbr, 9999));
+        Assert.Equal(Fx6.FromRaw(6_250_000) * Fx6.One * Fx6.FromInt(3700), V(Gbr, 53, Fx6.Zero));
+        Assert.Equal(Fx6.Zero, V(Gbr, 41, Fx6.Zero));
+        Assert.Equal(Fx6.Zero, V(Gbr, 9999, Fx6.Zero));
         long t = 1;
         while (p.Stage(Gbr, 1) != DesignStage.Prototype)
             h.RunThroughMonth(t++);
-        Assert.Equal(Fx6.FromInt(25) * Fx6.One * Fx6.FromInt(3700), p.PlannedVolume(Gbr, 53));   // О: r_plan = r_ref
+        Fx6 asInO = Fx6.FromInt(25) * Fx6.One * Fx6.FromInt(3700);
+        Assert.Equal(asInO, V(Gbr, 53, Fx6.Zero));   // О: r_plan = r_ref
         h.Series = (a, d, tt) => a == Gbr && d == 1 ? new SeriesStart(Fx6.FromInt(5), true) : null;
         h.RunThroughMonth(t);
-        Assert.False(p.Planned(Gbr, 53));                   // a series is not planned output
-        Assert.Equal(Fx6.Zero, p.PlannedVolume(Gbr, 53));
+        // V1/V2: the series (rate 5, forced) is planned like a project in О, its first output changes nothing while proc_v ≤ V_C.
+        Assert.Equal(DesignStage.Series, p.Stage(Gbr, 1));
+        Assert.True(p.Planned(Gbr, 53));
+        Assert.Equal(asInO, V(Gbr, 53, Fx6.Zero));
+        Assert.Equal(asInO, V(Gbr, 53, Fx6.FromInt(100)));
+        Assert.Equal(Fx6.FromInt(100_000), V(Gbr, 53, Fx6.FromInt(100_000)));    // proc_v > V_C: the measured output
+        Assert.Equal(Fx6.FromInt(7), V(Gbr, 53, Fx6.FromInt(7), home: false));   // V3: the project part only on home(a)
+        // After the line is closed the series weighs 0 from the next month (С → В).
+        h.Close = (a, d, tt) => a == Gbr && d == 1;
+        h.RunThroughMonth(t + 1);
+        Assert.Equal(DesignStage.InService, p.Stage(Gbr, 1));
+        Assert.False(p.Planned(Gbr, 53));
+        Assert.Equal(Fx6.Zero, V(Gbr, 53, Fx6.Zero));
     }
 
     // ---- FV (T-11)
@@ -454,7 +467,7 @@ public class ProductsV24SystemTests
     }
 
     [Fact]
-    public void LayoutVersion_IsTheSecondColumnLayout_T15() => Assert.Equal(2, ProductsSystem.LayoutVersion);
+    public void LayoutVersion_IsTheThirdColumnLayout_T15() => Assert.Equal(3, ProductsSystem.LayoutVersion);
 
     // ---- parent of a live derivative (M1)
 

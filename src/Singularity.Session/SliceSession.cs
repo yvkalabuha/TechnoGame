@@ -62,8 +62,8 @@ public sealed class SliceSession
             return CommandVerdict.Refuse(CommandRefusal.DuplicateKey, $"command {logged.Key} was already submitted");
         if (LastLocal(source, sourceId) is int last && localN <= last)
             return CommandVerdict.Refuse(CommandRefusal.LocalNotMonotonic, $"local_n {localN} is not above {last} at {source}/{sourceId}");
-        if (command is ComposeDesign or DeriveDesign
-            && _pending.Count(p => p.Command.Actor == command.Actor && p.Command is ComposeDesign or DeriveDesign) >= CommandLimits.DesignSlots)
+        if (command is ComposeDesign or DeriveDesign or CancelDesign
+            && _pending.Count(p => p.Command.Actor == command.Actor && p.Command is ComposeDesign or DeriveDesign or CancelDesign) >= CommandLimits.DesignSlots)
             return CommandVerdict.Refuse(CommandRefusal.TooManyDesignCommands, $"actor {command.Actor} already has {CommandLimits.DesignSlots} design commands queued");
 
         int at = _pending.FindIndex(p => p.Key > logged.Key);

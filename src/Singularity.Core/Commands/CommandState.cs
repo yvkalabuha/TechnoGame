@@ -9,7 +9,7 @@ namespace Singularity.Core.Commands;
 /// system: it is written only between ticks, by <see cref="Apply"/> (the session applies the commands of a tick boundary in key
 /// order). Standing settings: <c>cmd.shares.*</c> with a "set by the player" flag and <c>cmd.focus.0..2</c>. One-shot commands live in
 /// fixed slots with a <c>stamp</c> = month index + 1 of the monthly step that consumes them: a reader sees a slot only when the stamp
-/// equals the month it computes, so nothing is ever cleared. Slots: <see cref="CommandLimits.DesignSlots"/> compose/derive per actor,
+/// equals the month it computes, so nothing is ever cleared. Slots: <see cref="CommandLimits.DesignSlots"/> compose/derive/cancel per actor,
 /// one <c>start_series</c> and one <c>close_line</c> per design.
 /// </summary>
 public sealed class CommandState
@@ -81,7 +81,8 @@ public sealed class CommandState
             var alts = new int[_altSlots];
             for (int s = 0; s < _altSlots; s++)
                 alts[s] = _dAlt[k][s].Current[actor];
-            list.Add((_dKind[k].Current[actor] == 1 ? CommandKind.ComposeDesign : CommandKind.DeriveDesign, _dTarget[k].Current[actor], [.. alts]));
+            CommandKind kind = _dKind[k].Current[actor] switch { 1 => CommandKind.ComposeDesign, 2 => CommandKind.DeriveDesign, _ => CommandKind.CancelDesign };
+            list.Add((kind, _dTarget[k].Current[actor], [.. alts]));
         }
         return list;
     }
@@ -116,18 +117,17 @@ public sealed class CommandState
                 for (int k = 0; k < _focus.Length; k++)
                     Set(_focus[k], a, k < f.Processes.Length ? f.Processes[k] + 1 : 0);
                 break;
-            case ComposeDesign or DeriveDesign:
+            case ComposeDesign or DeriveDesign or CancelDesign:
                 int slot = 0;
                 while (slot < _slots && _dStamp[slot].Current[a] == stamp)
                     slot++;
                 if (slot == _slots)
                     return CommandVerdict.Refuse(CommandRefusal.SlotOverflow, $"actor {a} already has {_slots} design commands for month {consumedAtMonth}");
-                bool compose = command is ComposeDesign;
-                Set(_dKind[slot], a, compose ? 1 : 2);
-                Set(_dTarget[slot], a, compose ? ((ComposeDesign)command).Generation : ((DeriveDesign)command).Parent);
-                ImmutableArray<int> alts = compose ? ((ComposeDesign)command).Alts : ((DeriveDesign)command).Alts;
+                Set(_dKind[slot], a, command switch { ComposeDesign => 1, DeriveDesign => 2, _ => 3 });
+                Set(_dTarget[slot], a, command switch { ComposeDesign c => c.Generation, DeriveDesign v => v.Parent, _ => ((CancelDesign)command).Design });
+                ImmutableArray<int> alts = command switch { ComposeDesign c => c.Alts, DeriveDesign v => v.Alts, _ => [] };
                 for (int i = 0; i < _altSlots; i++)
-                    Set(_dAlt[slot][i], a, alts[i]);
+                    Set(_dAlt[slot][i], a, alts.IsEmpty ? -1 : alts[i]);
                 Set(_dStamp[slot], a, stamp);
                 break;
             case StartSeries s:

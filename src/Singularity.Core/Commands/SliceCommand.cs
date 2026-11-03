@@ -51,6 +51,7 @@ public enum CommandKind
     DeriveDesign = 3,
     StartSeries = 4,
     CloseLine = 5,
+    CancelDesign = 6,
 }
 
 /// <summary>
@@ -102,6 +103,15 @@ public sealed record StartSeries(int Actor, int Design, Fx6 Rate, bool Force) : 
 public sealed record CloseLine(int Actor, int Design) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.CloseLine;
+}
+
+/// <summary>
+/// <c>cancel_design(design)</c> (contract §4.4e, F14): an own project in П or О becomes «снят». The player may send it any time; the AI only by the
+/// rule A40 (a policy decision in <c>pol.*</c>, not a journal command).
+/// </summary>
+public sealed record CancelDesign(int Actor, int Design) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.CancelDesign;
 }
 
 /// <summary>An accepted command with its key: one line of <c>commands.log</c>.</summary>

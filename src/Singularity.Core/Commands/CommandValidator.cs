@@ -34,7 +34,7 @@ public readonly record struct CommandVerdict(CommandRefusal Reason, string Messa
 /// <summary>Sizes a command is checked against, from the layouts of the world (no state).</summary>
 public sealed record CommandLimits(int ActorCount, int SlotCount, int Designs, ImmutableArray<int> ProcessNumbers)
 {
-    /// <summary><c>compose</c>/<c>derive</c> commands one actor can have in force in one month (SLICE_COMPOSITION §7.3, [Предп.] О-5).</summary>
+    /// <summary><c>compose</c>/<c>derive</c>/<c>cancel</c> commands one actor can have in force in one month (SLICE_COMPOSITION §7.3, [Предп.] О-5).</summary>
     public const int DesignSlots = 4;
 }
 
@@ -93,6 +93,10 @@ public static class CommandValidator
                 if (s.Rate.Raw < 0)
                     return CommandVerdict.Refuse(CommandRefusal.BadRate, "the rate must not be negative");
                 return CommandVerdict.Ok;
+            case CancelDesign x:
+                return x.Design < 0 || x.Design >= limits.Designs
+                    ? CommandVerdict.Refuse(CommandRefusal.BadDesign, $"design {x.Design} is out of range")
+                    : CommandVerdict.Ok;
             case CloseLine l:
                 return l.Design < 0 || l.Design >= limits.Designs
                     ? CommandVerdict.Refuse(CommandRefusal.BadDesign, $"design {l.Design} is out of range")

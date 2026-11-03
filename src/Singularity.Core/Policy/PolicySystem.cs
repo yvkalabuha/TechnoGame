@@ -202,12 +202,12 @@ public sealed class PolicySystem : ITickSystem
             _qpCount.Next[row] = count;
 
             // The training series (P1; P3 needs why_not, T6d): the newest line whose bottleneck is the stock of culture and whose process
-            // is limited by volume or by the laboratory gets T_a next month (spec A41).
+            // is limited by its output (out_lim, A41-T) gets T_a next month (spec A41).
             int train = -1;
             if (profile == PolicyProfile.Quality)
             {
                 int d = _inputs.NewestSeriesDesign(row, t);
-                if (d >= 0 && _inputs.Bottleneck(row, d, t) is { Source: BottleneckSource.H, Limiter: LimiterKind.Volume or LimiterKind.LabCeiling })
+                if (d >= 0 && _inputs.Bottleneck(row, d, t) is { Source: BottleneckSource.H, OutLim: true })
                     train = d;
             }
             _train.Next[row] = train;

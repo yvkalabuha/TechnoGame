@@ -52,6 +52,9 @@ public static class CommandCodec
             case CloseLine l:
                 sb.Append(",\"design\":").Append(I(l.Design));
                 break;
+            case CancelDesign x:
+                sb.Append(",\"design\":").Append(I(x.Design));
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(logged), c.GetType(), "Unknown command type.");
         }
@@ -82,6 +85,7 @@ public static class CommandCodec
             "derive_design" => new DeriveDesign(actor, r.GetProperty("parent").GetInt32(), ReadInts(r.GetProperty("alts"))),
             "start_series" => new StartSeries(actor, r.GetProperty("design").GetInt32(), ReadRaw(r.GetProperty("rate")), r.GetProperty("force").GetBoolean()),
             "close_line" => new CloseLine(actor, r.GetProperty("design").GetInt32()),
+            "cancel_design" => new CancelDesign(actor, r.GetProperty("design").GetInt32()),
             _ => throw new FormatException($"Unknown command kind '{kind}'."),
         };
         return new LoggedCommand(key, command);
@@ -106,6 +110,7 @@ public static class CommandCodec
         CommandKind.DeriveDesign => "derive_design",
         CommandKind.StartSeries => "start_series",
         CommandKind.CloseLine => "close_line",
+        CommandKind.CancelDesign => "cancel_design",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
 

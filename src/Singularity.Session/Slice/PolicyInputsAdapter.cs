@@ -24,7 +24,8 @@ internal sealed class PolicyInputsAdapter(SliceWorld world) : IPolicyInputs
         int row = world.IndustryLayout.RowOf(profile.BottleneckProcess);
         // Spec A27: in the slice a site is an actor, so the site row is the actor row (one site per actor; the table has one row per actor).
         int site = actorRow;
-        return row < 0 ? null : new BottleneckLimit(profile.BottleneckSource, world.Industry.Limiter(site, row, month).Value);
+        return row < 0 ? null : new BottleneckLimit(profile.BottleneckSource, world.Industry.Limiter(site, row, month).Value,
+            world.Industry.ProcV(site, row) > Fx6.Zero);
     }
 
     public bool SeriesBelowQuality(int actorRow, Fx6 threshold, long month)

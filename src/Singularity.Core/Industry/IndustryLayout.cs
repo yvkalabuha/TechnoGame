@@ -39,6 +39,9 @@ public sealed class IndustryLayout
 
     public int SiteCount => SiteOwner.Length;
 
+    /// <summary><c>home(a)</c>: the smallest site id of the actor (contract §4.1a r4), −1 for an actor without a site.</summary>
+    public int HomeSite(int actor) => SiteOwner.IndexOf(actor);
+
     /// <summary>Actor row that owns each site (contract §1: capability is keyed by site → owner_actor).</summary>
     public required ImmutableArray<int> SiteOwner { get; init; }
 

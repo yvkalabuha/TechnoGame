@@ -170,14 +170,15 @@ public class QualityProgrammeTests
     }
 
     [Fact]
-    public void TrainingTarget_OnlyForP1_OnlyWhenTheBottleneckIsHAndLimitedByVolumeOrLab()
+    public void TrainingTarget_OnlyForP1_OnlyWhenTheBottleneckIsHAndOutLim()
     {
-        BottleneckLimit Ok(LimiterKind k, BottleneckSource s = BottleneckSource.H) => new(s, k);
+        BottleneckLimit Ok(LimiterKind k, BottleneckSource s = BottleneckSource.H, bool output = true) => new(s, k, output);
         (PolicyProfile Profile, BottleneckLimit? Limit, int Expect)[] cases =
         [
             (PolicyProfile.Quality, Ok(LimiterKind.Volume), 3),
             (PolicyProfile.Quality, Ok(LimiterKind.LabCeiling), 3),
-            (PolicyProfile.Quality, Ok(LimiterKind.Effort), -1),
+            (PolicyProfile.Quality, Ok(LimiterKind.Effort), -1),                  // a line with output: tooling money lifts the limit
+            (PolicyProfile.Quality, Ok(LimiterKind.Effort, output: false), 3),    // out_lim (A41-T): a series without output is limited by output
             (PolicyProfile.Quality, Ok(LimiterKind.Tooling), -1),
             (PolicyProfile.Quality, Ok(LimiterKind.Volume, BottleneckSource.M), -1),
             (PolicyProfile.Quality, null, -1),

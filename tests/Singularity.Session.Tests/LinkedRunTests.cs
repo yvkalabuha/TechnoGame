@@ -17,8 +17,11 @@ public class LinkedRunTests
     /// Re-recorded in T6b (e495c5ab… before): the tooling plan A39/A30 now runs (before, ToolingInvest ≡ 0 and the capability decayed), the
     /// quality programme and training state are columns (schema v2), v_exp now includes proc_v (A37), and the scripted player no longer
     /// closes a working line for a newer one that does not produce yet.
+    /// Re-recorded in T6c (d9e11cf5… before), reason contract v2.4 r4 (#128): three new product columns per design (schema v3), v_exp =
+    /// max(proc_v, V_C) + V_PO with stage С planned (lines with output below r_ref now weigh r_ref in the allocation), and the
+    /// player's line switch by the A41 rule (yield ≥ y_prod instead of Rate > 0).
     /// </summary>
-    private const string Golden60 = "d9e11cf51415912eeac79997b1ed0429944b2036951d59698444f2180b76fd13";
+    private const string Golden60 = "72768ab78f72f7b35744eec23321a03b93b6ead76d9c07df672cea24f58f9d78";
 
     private sealed class Run
     {
@@ -164,7 +167,7 @@ public class LinkedRunTests
                 {
                     int number = w.IndustryLayout.Number[r];
                     plannedSeen |= w.Products.Planned(a, number);
-                    volumeSeen |= w.Products.PlannedVolume(a, number) > Fx6.Zero;
+                    volumeSeen |= w.Products.ExpectedVolume(a, number, Fx6.Zero, true) > Fx6.Zero;
                 }
             }
         }

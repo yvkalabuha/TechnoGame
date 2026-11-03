@@ -49,10 +49,13 @@ internal sealed class IndustryInputsAdapter(SliceWorld world) : IIndustryInputs
 
     public int EffortFocus(int actorRow, int k, long month) => world.Commands.Focus(actorRow, k);
 
-    // Spec A37: v_exp = proc_v of the snapshot (what the lines run now) + the planned output of the projects in П/О (the products' part).
-    public Fx6 PlannedVolume(int siteRow, int processRow, long month) =>
-        world.Industry.ProcV(siteRow, processRow)
-        + world.Products.PlannedVolume(world.IndustryLayout.SiteOwner[siteRow], world.IndustryLayout.Number[processRow]);
+    // Contract §4.1a r4, spec A37: v_exp = max(proc_v, V_C) + V_PO on home(a), proc_v elsewhere. The formula is a function of Core; the adapter passes proc_v.
+    public Fx6 PlannedVolume(int siteRow, int processRow, long month)
+    {
+        int actor = world.IndustryLayout.SiteOwner[siteRow];
+        return world.Products.ExpectedVolume(actor, world.IndustryLayout.Number[processRow], world.Industry.ProcV(siteRow, processRow),
+            world.IndustryLayout.HomeSite(actor) == siteRow);
+    }
 
     public bool Planned(int siteRow, int processRow, long month) =>
         world.Products.Planned(world.IndustryLayout.SiteOwner[siteRow], world.IndustryLayout.Number[processRow]);

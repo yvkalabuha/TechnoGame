@@ -40,9 +40,10 @@ public sealed class ProductsSystem : ITickSystem
 
     /// <summary>
     /// Column layout version of the system (T-15, #117): 1 = TASK-0018 (slot (g, variant)), 2 = contract v2.4 (slots by
-    /// capacity, gate, accident and retrofit columns). Part of the state-hash schema version of a model that hosts the system.
+    /// capacity, gate, accident and retrofit columns), 3 = contract v2.4 r4 (<c>cancelled</c>, <c>idle_c</c>, <c>built_any</c>, #128).
+    /// Part of the state-hash schema version of a model that hosts the system.
     /// </summary>
-    public const int LayoutVersion = 2;
+    public const int LayoutVersion = 3;
 
     private static readonly int RejectionKinds = Enum.GetValues<CommandRejection>().Length;
 
@@ -58,6 +59,7 @@ public sealed class ProductsSystem : ITickSystem
     private readonly int[] _bureauReq;
 
     private readonly IntColumn[] _stage, _bureauOf, _alt, _bureauDesign, _gp, _parent, _stageO, _gateOpened, _forced, _lpSlot;
+    private readonly IntColumn[] _cancelled, _idleC, _built;
     private readonly LongColumn[] _work, _d0, _hidden, _open, _found, _hours, _lineE, _rate, _cost, _exp, _cohort;
     private readonly LongColumn[] _rateCmd, _dGate, _lossAcc, _retro, _lost, _inService0, _rejected;
     private readonly LongColumn _need, _paid, _spent, _tbSpent;
@@ -98,6 +100,9 @@ public sealed class ProductsSystem : ITickSystem
         _stageO = new IntColumn[_d];
         _gateOpened = new IntColumn[_d];
         _forced = new IntColumn[_d];
+        _cancelled = new IntColumn[_d];
+        _idleC = new IntColumn[_d];
+        _built = new IntColumn[_d];
         _alt = new IntColumn[_d * _s];
         _work = new LongColumn[_d];
         _d0 = new LongColumn[_d];
@@ -125,6 +130,9 @@ public sealed class ProductsSystem : ITickSystem
             _stageO[d] = table.AddInt($"{n}.stageO");
             _gateOpened[d] = table.AddInt($"{n}.gateOpened");
             _forced[d] = table.AddInt($"{n}.forced");
+            _cancelled[d] = table.AddInt($"{n}.cancelled");
+            _idleC[d] = table.AddInt($"{n}.idleC");
+            _built[d] = table.AddInt($"{n}.builtAny");
             for (int s = 0; s < _s; s++)
                 _alt[d * _s + s] = table.AddInt($"{n}.alt.{s}");
             _work[d] = table.AddLong($"{n}.work");
@@ -177,6 +185,10 @@ public sealed class ProductsSystem : ITickSystem
             for (int a = 0; a < rows; a++)
                 ints[a] = start.Stage[a * _d + d] == DesignStage.None ? 0 : 1;
             _gateOpened[d].Load(ints);
+            // built_any: the start fleets (stage В) were built; a line never started has not (contract §3.1, r4).
+            for (int a = 0; a < rows; a++)
+                ints[a] = start.Stage[a * _d + d] == DesignStage.InService ? 1 : 0;
+            _built[d].Load(ints);
             Array.Fill(ints, -1);
             _bureauOf[d].Load(ints);
             _parent[d].Load(ints);
@@ -304,6 +316,18 @@ public sealed class ProductsSystem : ITickSystem
     /// <summary>Literal «С · досрочно»: the series was started with the gate closed (journal flag, not in formulas).</summary>
     public bool SeriesForced(int actor, int design) => _forced[design].Current[actor] != 0;
 
+    /// <summary>
+    /// «Снят без выпуска» (contract §3.1, r3/r4): cancelled by <c>cancel_design</c> from П/О or closed in С before the line ever produced.
+    /// Withdrawn after service (every cohort written off) is not cancelled.
+    /// </summary>
+    public bool Cancelled(int actor, int design) => _cancelled[design].Current[actor] != 0;
+
+    /// <summary>Consecutive months in stage С with the line's output <c>rate = 0</c>, the launch month included (contract §3.1, r4).</summary>
+    public int IdleMonths(int actor, int design) => _idleC[design].Current[actor];
+
+    /// <summary>The line of the design has produced <c>rate &gt; 0</c> in at least one month of stage С (contract §3.1, r4).</summary>
+    public bool BuiltAny(int actor, int design) => _built[design].Current[actor] != 0;
+
     public Fx6 LossAcc(int actor, int design) => Fx6.FromRaw(_lossAcc[design].Current[actor]);
     public Fx6 RetroPool(int actor, int design) => Fx6.FromRaw(_retro[design].Current[actor]);
 
@@ -409,6 +433,51 @@ public sealed class ProductsSystem : ITickSystem
     }
 
     /// <summary>
+    /// <c>FV</c> of a hypothetical project with alternatives <paramref name="alts"/> (spec §5.5, COMPONENT_SELECTION §6): the value of the
+    /// fleet of one type the actor could buy at <paramref name="budget"/>, for the preset <c>adaptive</c>. A new line (<c>E</c> = 0), the
+    /// <c>production_profile</c> of month <paramref name="month"/>, <c>readiness</c> of a project that would start with its
+    /// <c>D0</c> (bureau of the largest experience, <c>novelty</c> against the actor's designs, as <c>compose_design</c> would set it) and
+    /// everything paid, <c>perf_rel = perf</c> (the common reference cancels in the comparison of two compositions of one actor).
+    /// A pure function of the snapshot; not part of the tick.
+    /// </summary>
+    public (int Count, Fx6 Value) CandidateValue(int actor, ReadOnlySpan<int> alts, Fx6 budget, long month)
+    {
+        int[] prc = DesignRules.PrcSet(_l, alts);
+        Fx6 q = _inputs.Profile(actor, DesignRules.Items(_l, prc), month).Q;
+        var used = new List<int>();
+        for (int e = 0; e < _d; e++)
+        {
+            var st = Stage(actor, e);
+            if (st == DesignStage.None || st == DesignStage.Withdrawn && StageOMonth(actor, e) < 0)
+                continue;
+            for (int s = 0; s < _s; s++)
+                used.Add(_alt[e * _s + s].Current[actor]);
+        }
+        Fx6 exp = Fx6.Zero;
+        for (int b = 0; b < _b; b++)
+        {
+            if (BureauExp(actor, b) > exp)
+                exp = BureauExp(actor, b);
+        }
+        int complexity = DesignRules.Complexity(_l, prc);
+        Fx6 d0 = ProductsMath.InitialDefects(_p.D0Factor, DesignRules.Novelty(_l, alts, used.ToArray()), complexity, exp, _p.EB);
+        Fx6 readiness = ProductsMath.Readiness(Fx6.One, q, d0, _dRef, _p.PsiD);
+        return FleetValue(actor, alts, Fx6.Zero, readiness, DesignRules.Perf(_l, alts), budget, month);
+    }
+
+    /// <summary>Bureaus without a design in the snapshot (the AI asks before it orders a project, spec A41).</summary>
+    public int FreeBureaus(int actor)
+    {
+        int n = 0;
+        for (int b = 0; b < _b; b++)
+        {
+            if (_bureauDesign[b].Current[actor] < 0)
+                n++;
+        }
+        return n;
+    }
+
+    /// <summary>
     /// <c>FV_a = max_v FV_v</c> over the actor's designs that exist and are admitted on the site (П-11: the value of a
     /// hypothetical fleet of one type); <c>perf_rel = perf/<paramref name="perfRef"/></c>, <c>E</c> = the design's <c>line_E</c>.
     /// Zero without such a design.
@@ -431,39 +500,46 @@ public sealed class ProductsSystem : ITickSystem
     }
 
     /// <summary>
-    /// <c>planned(site, prc)</c> (contract §5, G4-2): the process is in the <c>prc_set</c> of an own project in stage П or О.
-    /// A pure function of the snapshot; <paramref name="processNumber"/> is the stable process number.
+    /// <c>planned(site, prc)</c> (contract §5, G4-2; r4, #128): the process is in the <c>prc_set</c> of an own project in stage П, О
+    /// <b>or С</b>. A pure function of the snapshot; <paramref name="processNumber"/> is the stable process number.
     /// </summary>
     public bool Planned(int actor, int processNumber)
     {
         for (int d = 0; d < _d; d++)
         {
-            if (Stage(actor, d) is (DesignStage.Project or DesignStage.Prototype) && PrcSet(actor, d).AsSpan().IndexOf(processNumber) >= 0)
+            if (Stage(actor, d) is (DesignStage.Project or DesignStage.Prototype or DesignStage.Series)
+                && PrcSet(actor, d).AsSpan().IndexOf(processNumber) >= 0)
                 return true;
         }
         return false;
     }
 
     /// <summary>
-    /// The projects' part of <c>v_exp(site, p)</c> (contract §5, spec §3.5 A37): <c>Σ (r_plan·n_p)·labour_p</c> over own projects in
-    /// stage П or О (no series yet) whose <c>prc_set</c> has p; <c>r_plan = r_ref</c> in О and <c>r_ref/divisor</c> in П. Capability adds
-    /// its own <c>proc_v</c> of the snapshot (<c>IIndustryInputs.PlannedVolume</c>).
+    /// <c>v_exp(site, p) = max(proc_v, V_C) + V_PO</c> on <c>home(a)</c>, <c>proc_v</c> on the other sites (contract §4.1a r4, spec A37).
+    /// <c>plan(d, p) = (r_plan·n_p)·labour_p</c>; <c>r_plan = r_ref</c> in О and С and <c>r_ref/divisor</c> in П; <c>V_PO</c> sums the
+    /// own projects in П and О, <c>V_C</c> those in С; В and «снят» weigh 0. A pure function of the snapshot and of <c>proc_v</c> of
+    /// the site (<paramref name="procV"/>), which the capability layer owns; the adapter only passes it in.
     /// </summary>
-    public Fx6 PlannedVolume(int actor, int processNumber)
+    /// <param name="isHome">The site is the actor's first site (<c>home(a)</c>): only there the project part is counted.</param>
+    public Fx6 ExpectedVolume(int actor, int processNumber, Fx6 procV, bool isHome)
     {
         int k = _l.ProcIndex(processNumber);
-        Fx6 sum = Fx6.Zero;
-        if (k < 0)
-            return sum;
+        if (!isHome || k < 0)
+            return procV;
+        Fx6 vPo = Fx6.Zero, vC = Fx6.Zero;
         for (int d = 0; d < _d; d++)
         {
             DesignStage stage = Stage(actor, d);
-            if (stage is not (DesignStage.Project or DesignStage.Prototype) || PrcSet(actor, d).AsSpan().IndexOf(processNumber) < 0)
+            if (stage is not (DesignStage.Project or DesignStage.Prototype or DesignStage.Series) || PrcSet(actor, d).AsSpan().IndexOf(processNumber) < 0)
                 continue;
-            Fx6 rPlan = stage == DesignStage.Prototype ? _l.RRef : _l.RRef / Fx6.FromInt(_p.PlanProjectDivisor);
-            sum += rPlan * _l.ProcN[k] * _l.ProcLabour[k];
+            Fx6 rPlan = stage == DesignStage.Project ? _l.RRef / Fx6.FromInt(_p.PlanProjectDivisor) : _l.RRef;
+            Fx6 plan = rPlan * _l.ProcN[k] * _l.ProcLabour[k];
+            if (stage == DesignStage.Series)
+                vC += plan;
+            else
+                vPo += plan;
         }
-        return sum;
+        return Max(procV, vC) + vPo;
     }
 
     // ---- tick phases
@@ -516,8 +592,23 @@ public sealed class ProductsSystem : ITickSystem
                     if (_cohort[d * _y + y].Current[a] < 0)
                         throw new ProductsInvariantException(month, a, $"negative cohort of design {d}");
                 }
+                if (_mode == ProductsMode.Full)
+                    CheckLineFlags(month, a, d, stage);
             }
         }
+    }
+
+    // Contract §4.4e r4, invariants (8)–(10): stage В ⇒ built_any; cancelled ⇒ «снят», no line, no output, built_any = false; idle_c ≥ 0 and
+    // idle_c > 0 only for a design that has been in С.
+    private void CheckLineFlags(long month, int a, int d, DesignStage stage)
+    {
+        bool cancelled = _cancelled[d].Current[a] != 0, built = _built[d].Current[a] != 0;
+        if (stage == DesignStage.InService && !built)
+            throw new ProductsInvariantException(month, a, $"design {d} is in service without ever producing (built_any = false)");
+        if (cancelled && (built || stage != DesignStage.Withdrawn || _lineE[d].Current[a] != 0 || InService(a, d) != Fx6.Zero))
+            throw new ProductsInvariantException(month, a, $"cancelled design {d} is not a withdrawn project without output");
+        if (_idleC[d].Current[a] < 0 || _idleC[d].Current[a] > 0 && stage is DesignStage.None or DesignStage.Project or DesignStage.Prototype)
+            throw new ProductsInvariantException(month, a, $"idle_c of design {d} is out of range for its stage");
     }
 
     // ---- compute parts (own row a only; reads and writes Next, which starts as a copy of the snapshot)
@@ -697,7 +788,12 @@ public sealed class ProductsSystem : ITickSystem
     {
         foreach (DesignCommand cmd in _inputs.DesignCommands(a, t))
         {
-            CommandRejection? rejected = cmd.Kind == DesignCommandKind.Compose ? Compose(a, cmd, knows) : Derive(a, cmd, knows);
+            CommandRejection? rejected = cmd.Kind switch
+            {
+                DesignCommandKind.Compose => Compose(a, cmd, knows),
+                DesignCommandKind.Derive => Derive(a, cmd, knows),
+                _ => Cancel(a, cmd.Target),
+            };
             if (rejected is { } reason)
                 Reject(a, reason);
         }
@@ -752,6 +848,21 @@ public sealed class ProductsSystem : ITickSystem
         return Create(a, alts, changed[..n], _gp[parent].Next[a], parent, n, _s);
     }
 
+    // cancel_design (contract §4.4e): an own project in П or О, judged by the live stage of step 2 (a project whose W ended in this step
+    // is already in О). The slot is final; in П the bureau is freed without the +1 bureau_exp; nothing is refunded.
+    private CommandRejection? Cancel(int a, int design)
+    {
+        if (design < 0 || design >= _d || (DesignStage)_stage[design].Next[a] is not (DesignStage.Project or DesignStage.Prototype))
+            return CommandRejection.BadCancel;
+        int bureau = _bureauOf[design].Next[a];
+        if (bureau >= 0 && _bureauDesign[bureau].Next[a] == design)
+            _bureauDesign[bureau].Next[a] = -1;
+        Set(_work, design, a, Fx6.Zero);
+        _stage[design].Next[a] = (int)DesignStage.Withdrawn;
+        _cancelled[design].Next[a] = 1;
+        return null;
+    }
+
     private bool SlotsInRange(System.Collections.Immutable.ImmutableArray<int> alts, bool allowUnchanged)
     {
         if (alts.IsDefault || alts.Length != _s)
@@ -785,7 +896,9 @@ public sealed class ProductsSystem : ITickSystem
         var used = new List<int>();
         for (int e = 0; e < _d; e++)
         {
-            if ((DesignStage)_stage[e].Next[a] == DesignStage.None)
+            // A project cancelled in П never tested its alternatives: they stay new (contract §4.4e; one cancelled in О does not).
+            var st = (DesignStage)_stage[e].Next[a];
+            if (st == DesignStage.None || st == DesignStage.Withdrawn && _stageO[e].Next[a] < 0)
                 continue;
             for (int s = 0; s < _s; s++)
                 used.Add(_alt[e * _s + s].Next[a]);
@@ -847,14 +960,27 @@ public sealed class ProductsSystem : ITickSystem
         {
             // start_series is validated against the snapshot stage (contract §4.4d step 2); a line closes from the live stage.
             var snapshot = (DesignStage)_stage[d].Current[a];
-            if (snapshot is (DesignStage.Prototype or DesignStage.InService) && _inputs.StartSeries(a, d, t) is { } cmd)
+            // A project cancelled earlier in this step (Next stage «снят») cannot start a series.
+            if (snapshot is (DesignStage.Prototype or DesignStage.InService) && (DesignStage)_stage[d].Next[a] == snapshot
+                && _inputs.StartSeries(a, d, t) is { } cmd)
                 StartSeries(a, d, snapshot, cmd);
             else if ((DesignStage)_stage[d].Next[a] == DesignStage.Series && _inputs.CloseLine(a, d, t))
-            {
-                _stage[d].Next[a] = (int)DesignStage.InService;
-                Set(_lineE, d, a, Fx6.Zero);
-            }
+                CloseSeries(a, d);
         }
+    }
+
+    // Closing a line by any path (close_line of the player or the AI, the A41 bundle, the transfer to a derived design; contract §4.4e r4):
+    // С → В if the line ever produced, otherwise «снят» with cancelled = true. line_E is lost either way; the other columns freeze.
+    private void CloseSeries(int a, int d)
+    {
+        Set(_lineE, d, a, Fx6.Zero);
+        if (_built[d].Next[a] != 0)
+        {
+            _stage[d].Next[a] = (int)DesignStage.InService;
+            return;
+        }
+        _stage[d].Next[a] = (int)DesignStage.Withdrawn;
+        _cancelled[d].Next[a] = 1;
     }
 
     // start_series (contract §4.4c): with the gate closed it is refused (SERIES_GATE) unless forced; a forced series is
@@ -889,11 +1015,11 @@ public sealed class ProductsSystem : ITickSystem
             {
                 // The line moves, it is not copied: E → τ_der·E of the snapshot, the parent's line closes (§4.4a).
                 Set(_lineE, d, a, _p.TauDer * Fx6.FromRaw(_lineE[parent].Current[a]));
-                Set(_lineE, parent, a, Fx6.Zero);
-                _stage[parent].Next[a] = (int)DesignStage.InService;
+                CloseSeries(a, parent);
             }
         }
         _stage[d].Next[a] = (int)DesignStage.Series;
+        _idleC[d].Next[a] = 0;
     }
 
     // Step 3 (contract §4.4c): loss_acc += (((units·fleet_hours)·a_acc)·X)/D_ref with units and the design's hidden defects from the
@@ -1029,6 +1155,8 @@ public sealed class ProductsSystem : ITickSystem
                 Set(_cost, d, a, cost);
                 if (r > Fx6.Zero)
                     Produce(chunk, a, d, y, r, prc);
+                // Contract §4.4d step 7 (r4): idle_c counts the months of С with a zero line output, built_any is set by the first output.
+                _idleC[d].Next[a] = r > Fx6.Zero ? 0 : _idleC[d].Next[a] + 1;
             }
             Set(_rate, d, a, r);
             Set(_lineE, d, a, e - _p.DeltaE * e + r);
@@ -1058,6 +1186,7 @@ public sealed class ProductsSystem : ITickSystem
         }
         LongColumn col = _cohort[d * _y + y];
         col.Next[a] = (Fx6.FromRaw(col.Next[a]) + r).Raw;
+        _built[d].Next[a] = 1;
     }
 
     private void Withdraw(int a)
@@ -1138,4 +1267,6 @@ public sealed class ProductsSystem : ITickSystem
     private static void Set(LongColumn[] cols, int i, int a, Fx6 v) => cols[i].Next[a] = v.Raw;
 
     private static Fx6 Min(Fx6 x, Fx6 y) => x < y ? x : y;
+
+    private static Fx6 Max(Fx6 x, Fx6 y) => x > y ? x : y;
 }
