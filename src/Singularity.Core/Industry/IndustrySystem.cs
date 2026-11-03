@@ -196,6 +196,15 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
     /// <summary>The active culture rule (the ablation is a constructor argument).</summary>
     public ICultureRule Rule => _rule;
 
+    /// <summary>Parameters of the layer (read by the tooling plan, spec §3.5 A39).</summary>
+    public IndustryParams Parameters => _p;
+
+    /// <summary>
+    /// <c>rest_a</c> of the actor in month <paramref name="month"/> (contract §4.1b step 5): a pure function of the snapshot, the same value
+    /// the compute of the month hands to <c>ToolingInvest</c>. The product layer needs it to price the training series (spec A39, A41).
+    /// </summary>
+    public Fx6 RestActor(int actorRow, long month) => Allocation(actorRow, month).Rest;
+
     /// <summary>
     /// Diagnostics only: <c>rest_a</c> handed to <c>ToolingInvest</c> at the site in the last step. Checked against ADR-0013 п. 4 (T6a):
     /// compute writes it afresh for every site of a full-model step and nothing in compute, merge or post reads it, so it carries
@@ -449,18 +458,22 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
     // §4.1b: distribute D_a of the site's owner (a pure function of the snapshot), write proc_E of the site, return rest_a.
     private Fx6 AllocateEffort(int s, long t)
     {
-        int actor = _l.SiteOwner[s];
+        EffortAllocation alloc = Allocation(_l.SiteOwner[s], t, s);
+        for (int r = 0; r < _n; r++)
+            _e[r].Next[s] = alloc.E[s * _n + r].Raw;
+        _lastRest[s] = alloc.Rest;
+        return alloc.Rest;
+    }
+
+    private EffortAllocation Allocation(int actor, long t, int site = -1)
+    {
         Span<int> focus = stackalloc int[EffortFocusSlots];
         for (int k = 0; k < focus.Length; k++)
             focus[k] = _inputs.EffortFocus(actor, k, t);
         Fx6 budget = _inputs.EffortBudget(actor, t);
         if (budget < Fx6.Zero)
-            throw new IndustryInvariantException(t, s, $"negative effort budget {budget}");
-        EffortAllocation alloc = EffortAllocator.Allocate(_rule, this, actor, t, budget, focus);
-        for (int r = 0; r < _n; r++)
-            _e[r].Next[s] = alloc.E[s * _n + r].Raw;
-        _lastRest[s] = alloc.Rest;
-        return alloc.Rest;
+            throw new IndustryInvariantException(t, site, $"negative effort budget {budget}");
+        return EffortAllocator.Allocate(_rule, this, actor, t, budget, focus);
     }
 
     private void StepCulture(int s, int c, int d, long t)
