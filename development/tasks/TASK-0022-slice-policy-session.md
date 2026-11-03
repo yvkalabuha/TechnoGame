@@ -47,6 +47,18 @@ created: 2026-11-03
 - [ ] Тесты (test-engineer) — проходят, покрытие достаточно
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
+### Ревью reviewer (2026-11-03, вставлено Orchestrator: у reviewer нет записи)
+Вердикт: accept with fixes; high нет; `dotnet test` зелёный (Kernel 284 +1 skip, Core 779, Architecture 77, Session 72). Ключи §9.1, доли §4, A8, ячейка `9u+3g+s`, FIX_*, A12 совпадают со спекой; float в пути симуляции нет; `CounterRng` в адаптерах Industry/Products нет.
+- **medium** `ScenarioData.StartVariants.cs:13-14` — номера полей START_PERT по алфавиту, спека §6.5 требует канонический порядок (`ScenarioData.ActorFields`); неизвестное estimated-поле молча пропускается. Fix: нумерация по `ActorFields` с фильтром estimated; неизвестное estimated-поле (кроме known/mastered/tooling_m/hcap) — исключение; тест сверять с `ActorFields`.
+- **medium** `CommandValidator.cs:54-66,95`, `SliceSession.Submit` — принимает команды `SourceClass.Ai` и пишет их в `commands.log`; противоречит SLICE_COMPOSITION (решения ИИ — колонки `pol.*`, не журнал). Fix: `CheckForm` отклоняет любой `SourceClass.Ai` (BadSource); порядок классов в `CommandKey` оставить; тесты переписать.
+- **medium (покрытие)** входы без правила (`ToolingInvest=0` и др.) до T6b: golden-60, L2 48 мес. и L1 384 мес. идут по деградирующему миру; выпуск проверен только первые месяцы серии через `force` игрока. Fix: T6b следующей; golden и L1 перезаписать в T6b с повторной L2; Lab/EXP на сборке T6a не запускать (DEBT-0018).
+- low `PolicyAndConfigTests.cs:250-262` — «канал меняет хеш» тавтологичен (разница из `run.channels`); `KTr`/`KQp` инертны до T6b/T6d. Fix: тест величины на стенде одного месяца или явная пометка «проверка на уровне параметра».
+- low `ScenarioData.StartVariants.cs:54-56,89` — START_SYM выводит поля по сдвигам USA; спека неоднозначна. Fix: уточнить спеку (simulation-engineer).
+- low `SliceWorld.cs:172-187` — нет отпечатка параметров в `run.*`; до T10 допустимо.
+- low `IndustryInputsAdapter.cs:20-21` — `Graph.RowOf` без проверки `row<0`. Fix: как в `ProductsInputsAdapter`.
+- low `_lastRest` вне таблицы — принято как диагностика; после загрузки пусто до первого шага.
+- Отклонения 2, 3, 6, 7, 8 приемлемы.
+
 ### Ревью test-engineer
 [Факт] Добавлен `tests/Singularity.Session.Tests/AssembledSliceProperties.cs`: 18 тестов (13 фактов + теория 8 комбинаций FIX), +~3 с. Весь набор зелёный (Session 90, Core 779, Kernel 284+1, Architecture 77); src не менялся, багов в src не найдено.
 - Журнал: один и тот же `commands.log` и хеш при любом чередовании источников (случайные сценарии, 14 тиков, смесь месячных и нечётных тиков); ключи строго растут, `local_n` растёт по источнику, ИИ никогда не форсирует, кодек круглый на каждой строке, число исходов = число строк журнала.
