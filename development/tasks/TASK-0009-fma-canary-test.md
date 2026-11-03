@@ -28,3 +28,12 @@ created: 2026-11-03
 ## Критерии приёмки
 - [ ] Тест зелёный локально и в CI на трёх ОС (результат CI — при push фазы).
 - [ ] Если на ARM64 тест упадёт — это блокер ADR-0003, а не повод ослабить тест.
+
+## Результат
+- Добавлен `tests/Singularity.Kernel.Tests/FmaContractionCanaryTests.cs` (6 тестов):
+  - таблица из 8 случаев (биты a, b, c, ожидаемые unfused и fused), посчитана заранее точной рациональной арифметикой (Python `fractions`); тест проверяет, что unfused ≠ fused и что `Math.FusedMultiplyAdd` даёт ожидаемые fused-биты;
+  - `a*b+c` в методе с `NoInlining` и раздельные `m = a*b; m + c` дают ожидаемые unfused-биты;
+  - то же выражение в горячем цикле (200 000 итераций, OSR/tier-1) и повторные вызовы `NoInlining`-метода (rejit tier-0 → tier-1);
+  - вариант со `static readonly` полями (tier-1 подставляет их как константы — проверяет и свёртку констант);
+  - 4096 случаев из `CounterRng` с c = −round(a·b): unfused = +0 точно, FMA ≠ 0 (требуется > 90% различающих случаев).
+- Проверка: `dotnet test Singularity.sln` локально (linux x64) — 47 + 157 + 73 = 277 тестов, 0 падений. [Факт] CI на windows x64 и macos ARM64 — при push фазы.
