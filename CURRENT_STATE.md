@@ -11,6 +11,8 @@
 <!-- registry:active:start -->
 - TASK-0019 [REVIEW] Пилот внешней LLM (Qwen): tools/llm_worker (developer)
 - TASK-0017 [APPROVED] Смоук калибровочных якорей C1–C3 на слоях знания и способности (T4s) (simulation-engineer)
+- TASK-0023 [APPROVED] T6b: ИИ способности — план оснастки A39, учебная серия, программа качества (developer)
+- TASK-0024 [APPROVED] T7: why_not по контракту §6 и 4 сценария «первый слой» (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
