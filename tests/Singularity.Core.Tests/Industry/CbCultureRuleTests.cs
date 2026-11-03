@@ -422,6 +422,12 @@ public class CbCultureRuleTests
             {
                 for (int d = 0; d < 3; d++)
                 {
+                    // I1, I2: no negative culture, growth <= rho_max, no fall below min(H, H_floor).
+                    CultureStep st = Rule.Step(s, 0, c, d, 0);
+                    Fx6 h = s.H(0, c, d);
+                    Assert.True(st.HNew >= Fx6.Zero);
+                    Assert.True(st.HNew - h <= s.Params.RhoMax);
+                    Assert.True(st.HNew >= (h < st.HFloor ? h : st.HFloor));
                     int lead = CbCultureRule.Lead(s, 0, c, d, 0);
                     bool anyEligibleEffort = false;
                     foreach (int r in l.Order)

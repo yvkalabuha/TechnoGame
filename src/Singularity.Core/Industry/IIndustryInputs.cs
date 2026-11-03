@@ -30,7 +30,8 @@ public interface IIndustryInputs
     /// <summary>
     /// Same with <paramref name="restActor"/> = <c>rest_a</c> of the effort allocation of the site's owner (contract §4.1b
     /// step 5): what the process-development item did not spend. The industry layer calls only this overload; what the
-    /// rule does not take stays with the actor's budget (#118). Transitional default = the overload without
+    /// rule does not take stays with the actor's budget (#118). <c>rest_a</c> is one value per actor: every site and every cell of
+    /// the actor receives the same amount, and the tooling rule must share it among them (it is not per site or per cell). Transitional default = the overload without
     /// <c>rest_a</c> (the Lab stand <c>LineStand</c> is outside this task's zone); implementers of the budget/AI
     /// rule must override it. TECH_DEBT: make it abstract when the Lab stand is migrated.
     /// </summary>

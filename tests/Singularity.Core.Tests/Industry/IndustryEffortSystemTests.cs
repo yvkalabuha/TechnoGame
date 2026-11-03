@@ -105,7 +105,7 @@ public class IndustryEffortSystemTests
             Table = new Table(3);
             Calendar = new TickCalendar(new CivilDate(1945, 9, 1));
             int chunks = TickRunner.ChunkCountFor(3, 1);
-            System = new IndustrySystem(Table, Layout, Start, new IndustryParams(), In, chunks, mode, curves, rule: rule);
+            System = new IndustrySystem(Table, Layout, Start, new IndustryParams(), In, chunks, rule ?? new CbCultureRule(), mode, curves);
             Runner = new TickRunner(Table, 1, [System, new Lines(System.CreateMailbox(chunks, Cadence.Monthly))], 1, threads, Calendar);
         }
 
@@ -128,9 +128,15 @@ public class IndustryEffortSystemTests
     }
 
     [Fact]
-    public void DefaultRule_IsCb()
+    public void Rule_IsRequired_AndCbRejectsProcessesWithoutLabour()
     {
-        Assert.IsType<CbCultureRule>(new Rig().System.Rule);
+        var rig = new Rig();
+        Assert.Throws<ArgumentNullException>(() => new IndustrySystem(new Table(3), rig.Layout, rig.Start, new IndustryParams(), rig.In, 1, null!));
+        IndustryLayout noLabour = IndustryLayout.Create([Cluster.MET],
+            [new IndustryProcessSpec(39, Cluster.MET, 0, 4, new Dims3(Fx6.Zero, D(4), F(3_500_000)))], [0], 2, 1, 4);
+        var start = new IndustryStart(noLabour);
+        Assert.Throws<ArgumentException>(() => new IndustrySystem(new Table(1), noLabour, start, new IndustryParams(), rig.In, 1, new CbCultureRule()));
+        _ = new IndustrySystem(new Table(1), noLabour, start, new IndustryParams(), rig.In, 1, new V23CultureRule()); // ablation needs no labour
     }
 
     [Fact]
@@ -239,15 +245,33 @@ public class IndustryEffortSystemTests
     }
 
     [Fact]
-    public void ExternalFunctions_AreCallableFromTheSystemSnapshot()
+    public void ExternalFunctions_EqualTheRuleEvaluatedOnTheSameSnapshot()
     {
         var rig = new Rig();
         rig.RunThroughMonth(1);
-        int r = rig.Layout.RowOf(39);
-        CultureLimiter lim = rig.System.Limiter(0, r, 2);
-        Assert.Contains(lim.SubjectProcess, rig.Layout.Number);
-        Fx6 forecast = rig.System.DHForecast(0, r, Dimension.Purity, rig.System.ProcE(0, r), rig.System.ProcV(0, r), 2);
-        Assert.True(forecast >= Fx6.Zero);
+        var rule = new CbCultureRule();
+        ICultureSnapshot snap = rig.System;
+        foreach (long month in new[] { 1L, 2L })
+        {
+            for (int site = 0; site < 3; site++)
+            {
+                for (int r = 0; r < rig.Layout.ProcessCount; r++)
+                {
+                    Assert.Equal(rule.EUseful(snap, site, r, month), rig.System.EUseful(site, r, month));
+                    Assert.Equal(rule.Limiter(snap, site, r, month), rig.System.Limiter(site, r, month));
+                    for (int d = 0; d < 3; d++)
+                    {
+                        if (rig.Layout.Req[r][d] <= Fx6.Zero)
+                            continue;
+                        Fx6 e = rig.System.ProcE(site, r), v = rig.System.ProcV(site, r);
+                        Fx6 forecast = rig.System.DHForecast(site, r, (Dimension)d, e, v, month);
+                        Assert.Equal(rule.DHForecast(snap, site, r, d, e, v, month), forecast);
+                        // At the current E and v the forecast is the capped growth the cell step computes.
+                        Assert.Equal(rule.Step(snap, site, rig.Layout.ClusterIndex[r], d, month).DHPlusCapped, forecast);
+                    }
+                }
+            }
+        }
     }
 
     [Fact]

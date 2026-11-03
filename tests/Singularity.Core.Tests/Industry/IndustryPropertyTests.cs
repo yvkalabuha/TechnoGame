@@ -203,7 +203,7 @@ public class IndustryPropertyTests
             Start.X[0] = D(2400);
             Table = new Table(1);
             Calendar = new TickCalendar(new CivilDate(1945, 9, 1));
-            System = new IndustrySystem(Table, Layout, Start, P, new IdleInputs(), 1);
+            System = new IndustrySystem(Table, Layout, Start, P, new IdleInputs(), 1, new V23CultureRule());
             Runner = new TickRunner(Table, 1, [System], 1, 1, Calendar);
         }
 

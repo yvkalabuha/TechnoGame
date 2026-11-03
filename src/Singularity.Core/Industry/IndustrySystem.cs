@@ -57,8 +57,8 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
     private readonly List<WorkforceRequest> _requests = new();
 
     public IndustrySystem(Table table, IndustryLayout layout, IndustryStart start, IndustryParams parameters,
-        IIndustryInputs inputs, int chunkCount, IndustryMode mode = IndustryMode.Full,
-        ImmutableArray<CapabilityCurve> curves = default, int systemId = DefaultSystemId, ICultureRule? rule = null)
+        IIndustryInputs inputs, int chunkCount, ICultureRule rule, IndustryMode mode = IndustryMode.Full,
+        ImmutableArray<CapabilityCurve> curves = default, int systemId = DefaultSystemId)
     {
         if (table.RowCount != layout.SiteCount)
             throw new ArgumentException($"Table has {table.RowCount} rows, the layout has {layout.SiteCount} sites.", nameof(table));
@@ -67,6 +67,15 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
         if ((mode == IndustryMode.CurveLc) == curves.IsDefault)
             throw new ArgumentException("Curves (one per tier from 3) are needed exactly in L_C mode.", nameof(curves));
         parameters.Validate();
+        if (rule is CbCultureRule && mode == IndustryMode.Full)
+        {
+            // C-B: v_cap = r_cap·labour_p; a process without labour has no output channel (contract §4.1, data validator).
+            for (int r = 0; r < layout.ProcessCount; r++)
+            {
+                if (layout.Labour[r] <= Fx6.Zero)
+                    throw new ArgumentException($"Process {layout.Number[r]}: the culture rule C-B needs labour > 0.", nameof(layout));
+            }
+        }
         if (mode == IndustryMode.CurveLc)
         {
             foreach (int tier in layout.Tier)
@@ -79,7 +88,7 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
         _p = parameters;
         _inputs = inputs;
         _mode = mode;
-        _rule = rule ?? new CbCultureRule();
+        _rule = rule ?? throw new ArgumentNullException(nameof(rule));
         _lastRest = new Fx6[layout.SiteCount];
         _curves = curves;
         _c = layout.Clusters.Length;
