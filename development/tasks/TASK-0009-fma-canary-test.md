@@ -1,7 +1,7 @@
 ---
 id: TASK-0009
 title: "Kernel: контрольный тест отсутствия FMA-сжатия на всех платформах CI"
-status: REVIEW
+status: DONE
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer
@@ -26,8 +26,8 @@ created: 2026-11-03
 Локальная проверка Orchestrator (x64): 2 млн случаев, 0 расхождений с раздельными операциями.
 
 ## Критерии приёмки
-- [ ] Тест зелёный локально и в CI на трёх ОС (результат CI — при push фазы).
-- [ ] Если на ARM64 тест упадёт — это блокер ADR-0003, а не повод ослабить тест.
+- [x] Тест зелёный локально и в CI на трёх ОС (CI b0b95cf: ubuntu, windows, macos-latest ARM64 — success, 2026-11-03).
+- [x] (не упал на ARM64) Если на ARM64 тест упадёт — это блокер ADR-0003, а не повод ослабить тест.
 
 ## Результат
 - Добавлен `tests/Singularity.Kernel.Tests/FmaContractionCanaryTests.cs` (6 тестов):

@@ -22,7 +22,7 @@
 | [TASK-0006](../development/tasks/TASK-0006-ci-determinism.md) | DONE | CI: сборка, тесты и проверка детерминизма L1/L2 | MS-M0 |
 | [TASK-0007](../development/tasks/TASK-0007-kernel-review-fixes.md) | DONE | Kernel: исправления по ревью и аудиту тестов | MS-M0 |
 | [TASK-0008](../development/tasks/TASK-0008-freeze-exp0001-manifest.md) | DONE | Заморозка манифеста EXP-0001 и переключение Lab на интерфейс Core | MS-M0 |
-| [TASK-0009](../development/tasks/TASK-0009-fma-canary-test.md) | REVIEW | Kernel: контрольный тест отсутствия FMA-сжатия на всех платформах CI | MS-M0 |
+| [TASK-0009](../development/tasks/TASK-0009-fma-canary-test.md) | DONE | Kernel: контрольный тест отсутствия FMA-сжатия на всех платформах CI | MS-M0 |
 | [TASK-0010](../development/tasks/TASK-0010-kernel-powfrac-no-double.md) | DONE | Kernel: DetMath.PowFrac, PowFracFx и целочисленные выборки; архитектурный тест ADR-0003 R1–R3 | MS-M0 |
 | [TASK-0011](../development/tasks/TASK-0011-jet-slice-data.md) | DONE | Данные среза «реактивная авиация»: 61 узел, класс изделия, сценарий 1945, валидатор | MS-M0 |
 | [TASK-0012](../development/tasks/TASK-0012-jet-slice-reference.md) | DONE | Эталон для сверки среза: три формулы и ручная траектория (Python stdlib) | MS-M0 |
