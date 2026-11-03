@@ -86,7 +86,7 @@ public class SessionArchitectureTests
     {
         Assert.False(typeof(SliceSession).Assembly.GetType("Singularity.Session.SliceWorld")!.IsPublic);
         Assert.True(typeof(SliceSession).IsPublic);
-        foreach (string name in new[] { "KnowledgeInputsAdapter", "IndustryInputsAdapter", "ProductsInputsAdapter" })
+        foreach (string name in new[] { "KnowledgeInputsAdapter", "IndustryInputsAdapter", "ProductsInputsAdapter", "PolicyInputsAdapter" })
             Assert.False(Session.GetType("Singularity.Session." + name)!.IsPublic);
     }
 
@@ -116,7 +116,7 @@ public class SessionArchitectureTests
     public void InputAdapters_OfIndustryAndProducts_UseNoRng()
     {
         var uses = new List<string>();
-        foreach (Type type in Session.GetTypes().Where(t => t.FullName!.Contains("IndustryInputsAdapter") || t.FullName.Contains("ProductsInputsAdapter")))
+        foreach (Type type in Session.GetTypes().Where(t => t.FullName!.Contains("IndustryInputsAdapter") || t.FullName.Contains("ProductsInputsAdapter") || t.FullName.Contains("PolicyInputsAdapter")))
         {
             foreach (FieldInfo f in type.GetFields(IlScanner.AllDeclared))
             {

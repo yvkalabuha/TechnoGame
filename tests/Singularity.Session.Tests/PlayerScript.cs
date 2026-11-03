@@ -7,7 +7,7 @@ namespace Singularity.Session.Tests;
 /// <summary>
 /// A scripted player for the linked runs: through <see cref="SliceSession.Submit"/> only, like any client. Each month, per actor: a
 /// project for the newest known APP generation without one (even actors «superior», odd «producible»), the series at the gate with
-/// 30 units/month, close the line of an older generation once a newer one is in series. It reads the snapshot through the world
+/// 30 units/month, close the line of an older generation once a newer one is in series and produces. It reads the snapshot through the world
 /// internals (a test peeks; a real client would read the published views).
 /// </summary>
 internal sealed class PlayerScript(SliceSession session)
@@ -44,15 +44,15 @@ internal sealed class PlayerScript(SliceSession session)
             }
             for (int d = 0; d < l.Designs; d++)
             {
-                // The player may force an early launch (A36); without the tooling rule (T6b) the capability decays, so waiting for the gate
-                // would leave the product lines no month with output at all.
+                // The player may force an early launch (A36). The old line is closed only once the newer one actually produces: a new
+                // generation can start with processes not admitted yet, and closing the working line then would stop all output.
                 if (w.Products.Stage(a, d) == DesignStage.Prototype)
                     Send(a, new StartSeries(a, d, Fx6.FromInt(30), !w.Products.GateOpen(a, d, month)));
                 if (w.Products.Stage(a, d) == DesignStage.Series)
                 {
                     for (int e = 0; e < l.Designs; e++)
                     {
-                        if (w.Products.Stage(a, e) == DesignStage.Series && w.Products.Gen(a, e) > w.Products.Gen(a, d))
+                        if (w.Products.Stage(a, e) == DesignStage.Series && w.Products.Gen(a, e) > w.Products.Gen(a, d) && w.Products.Rate(a, e) > Fx6.Zero)
                         {
                             Send(a, new CloseLine(a, d));
                             break;

@@ -39,6 +39,12 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
 
     public bool CloseLine(int actorRow, int design, long month) => world.Commands.CloseLine(actorRow, design, month);
 
+    // Spec A39, A41 (F15): T_a of this month's plan on the line the policy chose as the training series, else 0.
+    public Fx6 TrainingBudget(int actorRow, int design, long month) =>
+        world.Policy.TrainingTarget(actorRow) == design
+            ? world.IndustryInputs.Plan(actorRow, month, world.Industry.RestActor(actorRow, month)).TrainingBudget
+            : Fx6.Zero;
+
     // The AI's line rate r_AI is a T6c decision; an external start_series sets the rate of the line.
     public Fx6? LineRate(int actorRow, int design, long month) => null;
 

@@ -12,10 +12,13 @@ public class LinkedRunTests
 {
     /// <summary>
     /// State hash after month 59, seed 7, scripted player. First recorded at "composition root T6a": the world is now built by
-    /// Singularity.Session (policy columns, budget growth, run.* and cmd.* columns, no tooling rule, no V23 stand-in). It replaces the
+    /// Singularity.Session (policy columns, budget growth, run.* and cmd.* columns, no V23 stand-in). It replaces the
     /// golden of ProductsCbLinkedRunTests (1792c856…), which belonged to the test-built world.
+    /// Re-recorded in T6b (e495c5ab… before): the tooling plan A39/A30 now runs (before, ToolingInvest ≡ 0 and the capability decayed), the
+    /// quality programme and training state are columns (schema v2), v_exp now includes proc_v (A37), and the scripted player no longer
+    /// closes a working line for a newer one that does not produce yet.
     /// </summary>
-    private const string Golden60 = "e495c5ab1dc8c828eddbdbfff59ec3df759ee0fcfb816a83c4ce4267114d294e";
+    private const string Golden60 = "d9e11cf51415912eeac79997b1ed0429944b2036951d59698444f2180b76fd13";
 
     private sealed class Run
     {

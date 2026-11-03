@@ -22,7 +22,7 @@ namespace Singularity.Session;
 internal sealed class SliceWorld
 {
     /// <summary>Version of the column schema (ADR-0013 п. 2); raised with every change of the table layout (pinned by a fingerprint test).</summary>
-    public const int SchemaVersion = 1;
+    public const int SchemaVersion = 2;
 
     // Layout constants of the slice (spec §1.4, §3.3, §2): engineer and skilled pools, bureaus, cohort years 1945…1977.
     public const int WorkforceCategories = 2;
@@ -57,7 +57,9 @@ internal sealed class SliceWorld
         // The product layout fixes how many requester ids the capability layer must hold (lines, bureaus, fix teams).
         IndustryLayout probe = IndustryLayout.FromData(data.Nodes, scenario, WorkforceCategories, 64);
         int requesters = ProductsLayout.FromData(data.Nodes, data.ProductClasses, ProductClass, probe, Bureaus, scenario.StartYear, Years, scenario.MaxDesigns).Requesters;
-        IndustryLayout = IndustryLayout.FromData(data.Nodes, scenario, WorkforceCategories, requesters);
+        // One more id above every line, bureau and fix-team id: the quality programme, which the bureaus outrank in the rounding of grants (A41).
+        QualityRequester = requesters;
+        IndustryLayout = IndustryLayout.FromData(data.Nodes, scenario, WorkforceCategories, requesters + 1);
         IndustryStart iStart = IndustryStart.FromScenario(scenario, data.Nodes, IndustryLayout, ip);
         ProductsLayout = ProductsLayout.FromData(data.Nodes, data.ProductClasses, ProductClass, IndustryLayout, Bureaus, scenario.StartYear, Years, scenario.MaxDesigns);
         ProductsStart pStart = ProductsStart.FromScenario(scenario, data.Nodes, data.ProductClasses, ProductsLayout);
@@ -68,12 +70,14 @@ internal sealed class SliceWorld
 
         Knowledge = new KnowledgeSystem(Table, Graph, kStart, kp, new KnowledgeInputsAdapter(this), Streams.Know, chunks);
         ICultureRule rule = config.Channels.HasFlag(SliceChannels.CultureR0) ? new V23CultureRule() : new CbCultureRule();
-        Industry = new IndustrySystem(Table, IndustryLayout, iStart, ip, new IndustryInputsAdapter(this), chunks, rule);
+        IndustryInputs = new IndustryInputsAdapter(this);
+        Industry = new IndustrySystem(Table, IndustryLayout, iStart, ip, IndustryInputs, chunks, rule);
         Products = new ProductsSystem(Table, ProductsLayout, pStart, pp, new ProductsInputsAdapter(this), Industry.CreateMailbox(chunks, Cadence.Monthly));
 
         StartVectors(scenario, out var actorNumber, out var budget0, out var growth, out var forced);
         BudgetAtStart = budget0;
-        Policy = new PolicySystem(Table, PolicyParameters, actorNumber, budget0, growth, Streams.Ai, forced);
+        Policy = new PolicySystem(Table, PolicyParameters, actorNumber, budget0, growth, Streams.Ai, new PolicyInputsAdapter(this),
+            Industry.CreateMailbox(chunks, Cadence.Monthly), QualityRequester, forced);
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs);
         Limits = new CommandLimits(scenario.ActorCount, ProductsLayout.SlotCount, ProductsLayout.Designs,
             [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)]);
@@ -96,6 +100,8 @@ internal sealed class SliceWorld
     public Table Table { get; }
     public TickCalendar Calendar { get; }
     public KnowledgeSystem Knowledge { get; }
+    public IndustryInputsAdapter IndustryInputs { get; }
+    public int QualityRequester { get; }
     public IndustrySystem Industry { get; }
     public ProductsSystem Products { get; }
     public PolicySystem Policy { get; }

@@ -49,12 +49,39 @@ public sealed record PolicyParams
     /// <summary>Skilled workers per engineer in the base pool (spec §1.1, [Предп.]).</summary>
     public int SkilledPerEngineer { get; init; } = 10;
 
+    /// <summary>Shares of P2 during a quality programme (spec §3.5 A41, F13 closed): the 0,05 comes out of procurement.</summary>
+    public BudgetShares MassProgrammeShares { get; init; } = new(F(200_000), F(180_000), F(120_000), F(450_000), F(50_000));
+
+    /// <summary><c>m_keep</c> (spec §3.5 A30): the margin above the admission threshold the tooling plan keeps on the MECH process <c>p*</c>.</summary>
+    public Fx6 MKeep { get; init; } = F(750_000);
+
+    /// <summary>Length of a quality programme, months (spec A41).</summary>
+    public int QpMonths { get; init; } = 84;
+
+    /// <summary><c>qp_engineers = ⌊qp_share_eng·engineer_base_a⌋</c>: engineers a programme asks for (spec A41, [Предп.] 2%).</summary>
+    public Fx6 QpEngineerShare { get; init; } = F(20_000);
+
+    /// <summary>P2 starts a programme after this many consecutive months with a series below <see cref="QpQuality"/> (spec A41).</summary>
+    public int QpTriggerMonths { get; init; } = 24;
+
+    /// <summary>The quality <c>q</c> below which a series counts for the P2 trigger (spec A41).</summary>
+    public Fx6 QpQuality { get; init; } = F(700_000);
+
     public BudgetShares Shares(PolicyProfile profile) => SharesByProfile[(int)profile];
+
+    /// <summary>Shares of the profile, with the programme terms of P2 while a quality programme runs.</summary>
+    public BudgetShares Shares(PolicyProfile profile, bool programmeActive) =>
+        programmeActive && profile == PolicyProfile.Mass ? MassProgrammeShares : Shares(profile);
+
+    /// <summary><c>engineer_base_a = ⌊E_ref·budget_index⌋</c> at t0 (spec §1.1).</summary>
+    public long EngineerBase(Fx6 budgetAtStart) => (EngineerRef * budgetAtStart.Raw) / Fx6.Scale;
 
     public void Validate()
     {
         if (EngineerRef < 0 || SkilledPerEngineer < 0)
             throw new ArgumentException("E_ref and the skilled-per-engineer ratio must not be negative.");
+        if (QpMonths < 1 || QpTriggerMonths < 1 || QpEngineerShare < Fx6.Zero || MKeep < Fx6.Zero || !MassProgrammeShares.IsValid)
+            throw new ArgumentException("Quality programme parameters are out of range.");
         if (SharesByProfile.Length != 3)
             throw new ArgumentException("One share set per profile (P1, P2, P3) is required.");
         for (int i = 0; i < SharesByProfile.Length; i++)

@@ -3,9 +3,9 @@ namespace Singularity.Session.Tests;
 /// <summary>ADR-0013 п. 2: the column layout is a schema; a change without a version bump fails here.</summary>
 public class SchemaTests
 {
-    // Pair (version, fingerprint). Change both together, in one commit, with the reason.
-    private const int PinnedVersion = 1;
-    private const string PinnedFingerprint = "3e9d08bfe7e76dfdeadd73e84dc63ca288234faf84de9831a090df33fc567ba5";
+    // Pair (version, fingerprint). Change both together, in one commit, with the reason. v2 (T6b): pol.qp.*, pol.train, prd.tbSpent, one more requester (QP_REQ).
+    private const int PinnedVersion = 2;
+    private const string PinnedFingerprint = "1051e23120566ce6f5d9d6a7e09f93ae4429590d8b753746f294e47d5ffa8fc0";
 
     [Fact]
     public void ColumnLayout_MatchesThePinnedSchemaVersion()
