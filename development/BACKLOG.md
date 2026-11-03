@@ -33,6 +33,7 @@
 |---|---|---|
 | [HYP-0001](../development/hypotheses/HYP-0001-science-vs-industry.md) | REJECTED | Научное лидерство не даёт автоматического промышленного превосходства |
 | [HYP-0002](../development/hypotheses/HYP-0002-jet-aviation-slice-layers.md) | EXPERIMENTAL | Совместная гипотеза среза «реактивная авиация»: три слоя дают персистентное, но не предрешённое лидерство |
+| [HYP-0003](../development/hypotheses/HYP-0003-war-capture-transfer.md) | IDEA | Захват после победной войны: территория, заводы с повреждениями и часть знаний побеждённого |
 
 ## Эксперименты
 
