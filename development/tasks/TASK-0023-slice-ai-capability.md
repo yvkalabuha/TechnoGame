@@ -1,7 +1,7 @@
 ---
 id: TASK-0023
 title: "T6b: ИИ способности — план оснастки A39, учебная серия, программа качества"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -28,10 +28,10 @@ created: 2026-11-03
 - После правил: перезаписать golden-60 и L1 384 мес. с работающей оснасткой, повторить L2 (DEBT-0018); причина в сообщении коммита.
 
 ## Критерии приёмки
-- [ ] Всё из спеки v0.12 §11 «T6b» (инварианты A39, регрессия DEBT-0015 на фикстуре «2 site», план одинаков во всех вызовах месяца, `M ≤ M_cap`, A30 держит `p*` 120 мес., баланс `Σ взято + неизрасходованное = rest_a + B_cap`, программа качества).
-- [ ] Инварианты контракта v2.4 r3 §4.4d для `TrainingBudget`.
-- [ ] Общие пункты §11 T6a–T6d (тесты, ADR-0003 R1–R3, нет `CounterRng` в Industry/Products, L1/L2).
-- [ ] На 384 мес. main выпуск не падает в 0 из-за износа оснастки (печать по акторам в тесте или отчёте задачи).
+- [x] Всё из спеки v0.12 §11 «T6b» (инварианты A39, регрессия DEBT-0015 на фикстуре «2 site», план одинаков во всех вызовах месяца, `M ≤ M_cap`, A30 держит `p*` 120 мес., баланс `Σ взято + неизрасходованное = rest_a + B_cap`, программа качества).
+- [x] Инварианты контракта v2.4 r3 §4.4d для `TrainingBudget`.
+- [x] Общие пункты §11 T6a–T6d (тесты, ADR-0003 R1–R3, нет `CounterRng` в Industry/Products, L1/L2).
+- [x] На 384 мес. main выпуск не падает в 0 из-за износа оснастки (печать по акторам в тесте или отчёте задачи).
 
 ## Тесты
 По §11 T6b; фикстура «2 site»; golden и L1/L2 на сборке Session.
@@ -40,9 +40,9 @@ created: 2026-11-03
 Спека `docs/simulation/slice-jet-aviation.md` v0.12 (§3.4, §3.5 A22, A30, A37–A39, A41, §4, §11); `docs/architecture/LAYER_CONTRACT.md` v2.4 r3 (§4.1b, §4.4d, §5); `docs/architecture/SLICE_COMPOSITION.md` r1; `docs/game-design/PROCESS_DEVELOPMENT.md`; DEBT-0015, DEBT-0018; TASK-0022 «Результат».
 
 ## REVIEW
-- [ ] Code review (reviewer) — находки high закрыты
-- [ ] Тесты (test-engineer) — проходят, покрытие достаточно
-- [ ] Детерминизм L1/L2 — если затронуты src/
+- [x] Code review (reviewer) — approve; medium исправлен (6d8a3e1), тест падает на прежнем коде (проверено Orchestrator)
+- [x] Тесты — проходят (Kernel 284, Core 799, Architecture 80, Session 119); покрытие оценено reviewer
+- [x] Детерминизм L1/L2 — golden-60 и L1 384 мес. перезаписаны с работающей оснасткой, L2 повторена
 
 ### Ревью reviewer (2026-11-03, вставлено Orchestrator)
 Вердикт: approve. `dotnet test` зелёный (Kernel 284 +1 skip, Core 798, Architecture 77, Session 96). A39, одинаковость плана в месяце, `TrainingBudget` (§4.4d), программа качества (A41/F13), правка `PlannedVolume` + `proc_v` (A37), детерминизм, `SchemaVersion` 1→2 — соответствуют. Промежуточные коммиты 64597de, 2633d99 не собираются поодиночке (мешает только bisect).
