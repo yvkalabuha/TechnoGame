@@ -1,6 +1,6 @@
 # LAYER CONTRACT — знание → способность → изделие
 
-Статус: **DRAFT v2** · 2026-11-03 · владелец: systems-architect · сводит RR-0008 (знание), RR-0006 (способность), RR-0007 (изделие).
+Статус: **APPROVED v2 (владелец, 2026-11-03, DECISIONS_LOG #31)** · 2026-11-03 · владелец: systems-architect · сводит RR-0008 (знание), RR-0006 (способность), RR-0007 (изделие).
 Основания: решения владельца #19, #23–#30 (`docs/decisions/DECISIONS_LOG.md`), ADR-0003, `.claude/rules/csharp-core.md`.
 Связанный черновик: `docs/decisions/ADR-0012-deterministic-math-functions.md` (PROPOSED).
 **Блокер реализации:** ADR-0003 (FMA) открыт. Формулы контракта вида `a*b+c` без него не бит-точны, поэтому реализация контракта целиком ждёт ADR-0003. Сама `PowFrac` от FMA не зависит.

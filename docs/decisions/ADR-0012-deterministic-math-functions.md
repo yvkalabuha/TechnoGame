@@ -1,14 +1,14 @@
 ---
 id: ADR-0012
 title: "Детерминированные степенные функции: PowFrac вместо Pow/Exp/Log"
-status: PROPOSED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
+status: ACCEPTED
 date: 2026-11-02
 supersedes:
 superseded_by:
 related: [ADR-0003, RR-0006, RR-0007, RR-0008]  # + docs/architecture/LAYER_CONTRACT.md
-approved_by:
-approved_at:
-approval_ref:
+approved_by: owner
+approved_at: 2026-11-03
+approval_ref: DECISIONS_LOG #31
 ---
 
 # ADR-0012 — Детерминированные степенные функции: PowFrac вместо Pow/Exp/Log
