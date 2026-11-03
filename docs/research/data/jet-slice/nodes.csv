@@ -56,7 +56,7 @@ idx,id,type,gen,discipline,cluster,tier,req_prec,req_pur,req_qc,requires,hazard,
 55,s8.prc.swept_wing_fabrication,PRC,G2,aero,AERO,4,4,,3.5,s8.eng.swept_wing_airframe,none,,1947,F-86 (первый полёт),S27,false
 56,s8.prc.machined_integral_skins,PRC,G3,aero,AERO,4,4.5,,4,s8.eng.area_ruled_airframe|s8.eng.delta_wing_airframe,none,,1960,середина окна G3,RULE-MID,true
 57,s8.prc.afterburner_fabrication,PRC,G2,prop,AERO,4,4,4,3.5,s8.cmp.afterburner_unit,none,,1951,середина окна G2,RULE-MID,true
-58,s8.app.jet_fighter_g1,APP,G1,aero,AERO,,,,,s8.eng.turbojet_g1;s8.eng.straight_wing_jet_airframe;s5.cmp.heat_resistant_alloy,none,USA;GBR,1944,Meteor в строю (07.1944),S7,false
+58,s8.app.jet_fighter_g1,APP,G1,aero,AERO,,,,,s8.eng.turbojet_g1;s8.eng.straight_wing_jet_airframe,none,USA;GBR,1944,Meteor в строю (07.1944),S7,false
 59,s8.app.jet_fighter_g2,APP,G2,aero,AERO,,,,,s8.eng.turbojet_g2;s8.eng.swept_wing_airframe,none,,1947,F-86 (первый полёт 01.10.1947),S27,false
 60,s8.app.jet_fighter_g3,APP,G3,aero,AERO,,,,,s8.eng.turbojet_g3;s8.eng.area_ruled_airframe|s8.eng.delta_wing_airframe;s8.eng.afterburner,none,,1953,F-100: первый полёт 25.05.1953,S27,false
 61,s8.app.jet_fighter_g4,APP,G4,aero,AERO,,,,,s8.eng.turbofan_g4;s8.eng.mach2_airframe_g4,none,,1972,F-15: первый полёт 27.07.1972,S26,false
