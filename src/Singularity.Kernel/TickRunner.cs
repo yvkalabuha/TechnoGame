@@ -5,11 +5,12 @@ namespace Singularity.Kernel;
 /// <summary>What a system sees during one phase of a tick.</summary>
 public readonly struct TickContext
 {
-    public TickContext(Table table, CounterRng rng, long tick)
+    public TickContext(Table table, CounterRng rng, long tick, TickCalendar? calendar = null)
     {
         Table = table;
         Rng = rng;
         Tick = tick;
+        Calendar = calendar;
     }
 
     public Table Table { get; }
@@ -20,6 +21,9 @@ public readonly struct TickContext
     /// Post runs after the swap and sees t+1, the same value as <see cref="TickRunner.Tick"/>.
     /// </summary>
     public long Tick { get; }
+
+    /// <summary>Calendar of the run (null when the runner has none: then every system is daily).</summary>
+    public TickCalendar? Calendar { get; }
 }
 
 /// <summary>
@@ -45,10 +49,33 @@ public interface ITickSystem
 
     /// <summary>Sequential phase after the swap: invariants and metrics on the new <c>Current</c>.</summary>
     void Post(in TickContext context);
+
+    /// <summary>
+    /// How often the system runs. On a tick where it is not due, its Compute, Merge and Post are skipped
+    /// and its columns keep their values. Anything other than <see cref="Kernel.Cadence.Daily"/> needs a
+    /// runner with a <see cref="TickCalendar"/>.
+    /// </summary>
+    Cadence Cadence => Cadence.Daily;
+
+    /// <summary>
+    /// True when commands wait to be applied. They are applied at the start of the system's next due tick
+    /// (a command decided in month step t acts from day d(t+1), slice spec v0.5 §2); a tick that applies
+    /// commands is therefore never an empty one.
+    /// </summary>
+    bool HasPendingCommands => false;
+
+    /// <summary>
+    /// Start of tick: apply pending commands by writing <c>Next</c> of own columns; <c>Next</c> starts as a
+    /// copy of <c>Current</c> and becomes <c>Current</c> before Compute of the same tick. Called only on a due
+    /// tick when <see cref="HasPendingCommands"/> is true, in system list order.
+    /// </summary>
+    void ApplyCommands(in TickContext context) { }
 }
 
 /// <summary>
-/// Runs ticks: compute (parallel over chunks) → merge (systems in list order) → swap → post.
+/// Runs ticks: commands → compute (parallel over chunks) → merge (systems in list order) → swap → post.
+/// With a <see cref="TickCalendar"/>, only systems whose <see cref="ITickSystem.Cadence"/> is due run;
+/// a tick with no due system and no pending commands only advances the clock (no copy, no swap).
 /// Chunk boundaries depend only on <c>chunkSize</c>, never on thread count, so per-chunk
 /// results and their merge order are identical for 1 or N threads.
 /// An exception thrown by <see cref="ITickSystem.Compute"/> always surfaces as
@@ -65,13 +92,27 @@ public sealed class TickRunner
     private readonly ParallelOptions _parallel;
     private readonly TickComputeException?[] _failures;
 
-    public TickRunner(Table table, ulong seed, IReadOnlyList<ITickSystem> systems, int chunkSize, int maxThreads)
+    private readonly TickCalendar? _calendar;
+    private readonly bool[] _due;
+
+    public TickRunner(Table table, ulong seed, IReadOnlyList<ITickSystem> systems, int chunkSize, int maxThreads,
+        TickCalendar? calendar = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(chunkSize, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(maxThreads, 1);
         _table = table;
         _rng = new CounterRng(seed);
         _systems = systems.ToArray();
+        _calendar = calendar;
+        _due = new bool[_systems.Length];
+        if (calendar is null)
+        {
+            foreach (ITickSystem system in _systems)
+            {
+                if (system.Cadence != Cadence.Daily)
+                    throw new ArgumentException($"System {system.SystemId} has cadence {system.Cadence} but the runner has no calendar.", nameof(systems));
+            }
+        }
         _chunkSize = chunkSize;
         _parallel = new ParallelOptions { MaxDegreeOfParallelism = maxThreads };
         ChunkCount = ChunkCountFor(table.RowCount, chunkSize);
@@ -94,13 +135,43 @@ public sealed class TickRunner
 
     public int ChunkCount { get; }
 
+    public TickCalendar? Calendar => _calendar;
+
     public void RunTick()
     {
-        var context = new TickContext(_table, _rng, Tick);
+        var context = new TickContext(_table, _rng, Tick, _calendar);
+        bool anyDue = false, anyCommands = false;
+        for (int s = 0; s < _systems.Length; s++)
+        {
+            _due[s] = _calendar is null || _calendar.IsDue(_systems[s].Cadence, Tick);
+            anyDue |= _due[s];
+            anyCommands |= _due[s] && _systems[s].HasPendingCommands;
+        }
+
+        if (anyCommands)
+        {
+            _table.CopyCurrentToNext();
+            for (int s = 0; s < _systems.Length; s++)
+            {
+                if (_due[s] && _systems[s].HasPendingCommands)
+                    _systems[s].ApplyCommands(context);
+            }
+            _table.Swap();
+        }
+
+        if (!anyDue)
+        {
+            // Nothing runs today: the state is unchanged, only the clock moves (spec v0.5 §2).
+            Tick++;
+            return;
+        }
+
         _table.CopyCurrentToNext();
 
         for (int s = 0; s < _systems.Length; s++)
         {
+            if (!_due[s])
+                continue;
             ITickSystem system = _systems[s];
             if (_parallel.MaxDegreeOfParallelism == 1)
             {
@@ -133,14 +204,20 @@ public sealed class TickRunner
         }
 
         for (int s = 0; s < _systems.Length; s++)
-            _systems[s].Merge(context, ChunkCount);
+        {
+            if (_due[s])
+                _systems[s].Merge(context, ChunkCount);
+        }
 
         _table.Swap();
         Tick++;
 
-        var postContext = new TickContext(_table, _rng, Tick);
+        var postContext = new TickContext(_table, _rng, Tick, _calendar);
         for (int s = 0; s < _systems.Length; s++)
-            _systems[s].Post(postContext);
+        {
+            if (_due[s])
+                _systems[s].Post(postContext);
+        }
     }
 
     private void ComputeChunk(ITickSystem system, in TickContext context, int chunk)
