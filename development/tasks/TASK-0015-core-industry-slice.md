@@ -1,7 +1,7 @@
 ---
 id: TASK-0015
 title: "Core.Industry для среза: culture_H, tooling_M, production_profile, сплав, reserve_workforce"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: developer

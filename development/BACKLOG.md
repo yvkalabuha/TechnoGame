@@ -28,7 +28,7 @@
 | [TASK-0012](../development/tasks/TASK-0012-jet-slice-reference.md) | DONE | Эталон для сверки среза: три формулы и ручная траектория (Python stdlib) | MS-M0 |
 | [TASK-0013](../development/tasks/TASK-0013-jet-slice-data-format.md) | DONE | Формат данных среза: схемы, YAML мода core, загрузчик и валидатор (ADR-0010) | MS-M0 |
 | [TASK-0014](../development/tasks/TASK-0014-core-knowledge-slice.md) | DONE | Core.Knowledge для среза: фронтир, c_eff, hazard, K_d, K_ind, расписания абляций | MS-M0 |
-| [TASK-0015](../development/tasks/TASK-0015-core-industry-slice.md) | APPROVED | Core.Industry для среза: culture_H, tooling_M, production_profile, сплав, reserve_workforce | MS-M0 |
+| [TASK-0015](../development/tasks/TASK-0015-core-industry-slice.md) | REVIEW | Core.Industry для среза: culture_H, tooling_M, production_profile, сплав, reserve_workforce | MS-M0 |
 | [TASK-0016](../development/tasks/TASK-0016-godot-compat-spike.md) | DONE | Спайк Godot: Core внутри Godot .NET, сборка в CI, исключение тестового кода из release | MS-M0 |
 
 ## Гипотезы
@@ -77,3 +77,4 @@
 | [RR-0007](../docs/research/RR-0007-engineering-product-lifecycle.md) | DRAFT | Инженерия и жизненный цикл изделий |
 | [RR-0008](../docs/research/RR-0008-technology-space-architecture.md) | DRAFT | Архитектура технологического пространства |
 | [RR-0009](../docs/research/RR-0009-component-evolution-analysis.md) | DRAFT | Эволюция компонентов: анализ брифа владельца против контракта слоёв |
+| [RR-0010](../docs/research/RR-0010-supply-chains-clusters.md) | DRAFT | Цепочки поставок и промышленные кластеры: анализ пробелов и варианты модели |

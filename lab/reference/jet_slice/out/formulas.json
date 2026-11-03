@@ -1,4 +1,195 @@
 {
+ "act": [
+  {
+   "act": 1000000,
+   "name": "full",
+   "requests": [
+    [
+     1,
+     30,
+     30
+    ],
+    [
+     2,
+     10,
+     10
+    ]
+   ]
+  },
+  {
+   "act": 675000,
+   "name": "short",
+   "requests": [
+    [
+     1,
+     30,
+     20
+    ],
+    [
+     2,
+     10,
+     7
+    ]
+   ]
+  },
+  {
+   "act": 1000000,
+   "name": "no_requests",
+   "requests": []
+  }
+ ],
+ "alloy": [
+  {
+   "input": {
+    "alloy_cap": 1000000000,
+    "alloy_kg": 250000000,
+    "deficit": 0,
+    "melts": [
+     {
+      "known": true,
+      "prc": 39,
+      "yield": 800000
+     },
+     {
+      "known": false,
+      "prc": 40,
+      "yield": 300000
+     },
+     {
+      "known": false,
+      "prc": 41,
+      "yield": 0
+     }
+    ]
+   },
+   "name": "one_grade",
+   "output": {
+    "grade": 39,
+    "line_capacity": 3200000,
+    "supply": 800000000
+   }
+  },
+  {
+   "input": {
+    "alloy_cap": 1000000000,
+    "alloy_kg": 250000000,
+    "deficit": 0,
+    "melts": [
+     {
+      "known": true,
+      "prc": 39,
+      "yield": 800000
+     },
+     {
+      "known": true,
+      "prc": 40,
+      "yield": 300000
+     },
+     {
+      "known": false,
+      "prc": 41,
+      "yield": 0
+     }
+    ]
+   },
+   "name": "new_grade_lower_yield",
+   "output": {
+    "grade": 39,
+    "line_capacity": 3200000,
+    "supply": 800000000
+   }
+  },
+  {
+   "input": {
+    "alloy_cap": 1000000000,
+    "alloy_kg": 250000000,
+    "deficit": 0,
+    "melts": [
+     {
+      "known": true,
+      "prc": 39,
+      "yield": 600000
+     },
+     {
+      "known": true,
+      "prc": 40,
+      "yield": 600000
+     },
+     {
+      "known": false,
+      "prc": 41,
+      "yield": 0
+     }
+    ]
+   },
+   "name": "tie_higher_grade",
+   "output": {
+    "grade": 40,
+    "line_capacity": 2400000,
+    "supply": 600000000
+   }
+  },
+  {
+   "input": {
+    "alloy_cap": 1000000000,
+    "alloy_kg": 250000000,
+    "deficit": 500000,
+    "melts": [
+     {
+      "known": true,
+      "prc": 39,
+      "yield": 800000
+     },
+     {
+      "known": true,
+      "prc": 40,
+      "yield": 900000
+     },
+     {
+      "known": true,
+      "prc": 41,
+      "yield": 0
+     }
+    ]
+   },
+   "name": "deficit_event",
+   "output": {
+    "grade": 40,
+    "line_capacity": 1800000,
+    "supply": 450000000
+   }
+  },
+  {
+   "input": {
+    "alloy_cap": 1000000000,
+    "alloy_kg": 250000000,
+    "deficit": 0,
+    "melts": [
+     {
+      "known": false,
+      "prc": 39,
+      "yield": 800000
+     },
+     {
+      "known": false,
+      "prc": 40,
+      "yield": 0
+     },
+     {
+      "known": false,
+      "prc": 41,
+      "yield": 0
+     }
+    ]
+   },
+   "name": "none_admitted",
+   "output": {
+    "grade": null,
+    "line_capacity": 0,
+    "supply": 0
+   }
+  }
+ ],
  "calendar": {
   "cases": [
    {
@@ -94,6 +285,89 @@
    "months": 360
   }
  },
+ "capability_tier": [
+  {
+   "input": {
+    "H": {
+     "precision": 3670000,
+     "purity": 3470000,
+     "quality_control": 3370000
+    },
+    "M": {
+     "precision": 3870000,
+     "purity": 3670000,
+     "quality_control": 3570000
+    },
+    "procs": [
+     {
+      "prc": 47,
+      "req": {
+       "precision": 3500000,
+       "quality_control": 3000000
+      },
+      "tier": 3
+     },
+     {
+      "prc": 48,
+      "req": {
+       "precision": 4000000,
+       "quality_control": 3500000
+      },
+      "tier": 4
+     }
+    ]
+   },
+   "name": "mech_two_procs",
+   "output": {
+    "dims": [
+     "precision",
+     "quality_control"
+    ],
+    "tier": 3370000
+   }
+  },
+  {
+   "input": {
+    "H": {
+     "precision": 4000000,
+     "purity": 3800000,
+     "quality_control": 3700000
+    },
+    "M": {
+     "precision": 3600000,
+     "purity": 3400000,
+     "quality_control": 3300000
+    },
+    "procs": [
+     {
+      "prc": 38,
+      "req": {
+       "precision": 3000000,
+       "purity": 3000000,
+       "quality_control": 2500000
+      },
+      "tier": 3
+     },
+     {
+      "prc": 39,
+      "req": {
+       "purity": 4000000,
+       "quality_control": 3500000
+      },
+      "tier": 4
+     }
+    ]
+   },
+   "name": "met_tooling_below",
+   "output": {
+    "dims": [
+     "precision",
+     "purity"
+    ],
+    "tier": 3400000
+   }
+  }
+ ],
  "counter_rng": [
   {
    "key": [
@@ -1221,6 +1495,314 @@
    "name": "kmix_and_informs"
   }
  ],
+ "lc_profile": [
+  {
+   "input": {
+    "U": {
+     "3": [
+      [
+       0,
+       2500000
+      ],
+      [
+       12,
+       1400000
+      ],
+      [
+       60,
+       1050000
+      ]
+     ],
+     "4": [
+      [
+       0,
+       3200000
+      ],
+      [
+       24,
+       1600000
+      ],
+      [
+       96,
+       1100000
+      ]
+     ]
+    },
+    "Y": {
+     "3": [
+      [
+       0,
+       300000
+      ],
+      [
+       12,
+       700000
+      ],
+      [
+       60,
+       950000
+      ]
+     ],
+     "4": [
+      [
+       0,
+       250000
+      ],
+      [
+       24,
+       600000
+      ],
+      [
+       96,
+       900000
+      ]
+     ]
+    },
+    "items": [
+     {
+      "base_cost": 2000000,
+      "month": 30,
+      "n": 1000000,
+      "prc": 53,
+      "t_known": 0,
+      "tier": 3
+     },
+     {
+      "base_cost": 3000000,
+      "month": 30,
+      "n": 2000000,
+      "prc": 39,
+      "t_known": 10,
+      "tier": 4
+     },
+     {
+      "base_cost": 5000000,
+      "month": 30,
+      "n": 1000000,
+      "prc": 45,
+      "t_known": 29,
+      "tier": 4
+     }
+    ]
+   },
+   "name": "set_mixed_tiers",
+   "output": {
+    "admitted": true,
+    "procs": [
+     {
+      "U": 1866666,
+      "prc": 39,
+      "tau": 20,
+      "yield": 541666
+     },
+     {
+      "U": 3133333,
+      "prc": 45,
+      "tau": 1,
+      "yield": 264583
+     },
+     {
+      "U": 1268750,
+      "prc": 53,
+      "tau": 30,
+      "yield": 793750
+     }
+    ],
+    "q": 1000000,
+    "unit_cost_mult": 2261858
+   }
+  },
+  {
+   "input": {
+    "U": {
+     "3": [
+      [
+       0,
+       2500000
+      ],
+      [
+       12,
+       1400000
+      ],
+      [
+       60,
+       1050000
+      ]
+     ],
+     "4": [
+      [
+       0,
+       3200000
+      ],
+      [
+       24,
+       1600000
+      ],
+      [
+       96,
+       1100000
+      ]
+     ]
+    },
+    "Y": {
+     "3": [
+      [
+       0,
+       300000
+      ],
+      [
+       12,
+       700000
+      ],
+      [
+       60,
+       950000
+      ]
+     ],
+     "4": [
+      [
+       0,
+       250000
+      ],
+      [
+       24,
+       600000
+      ],
+      [
+       96,
+       900000
+      ]
+     ]
+    },
+    "items": [
+     {
+      "base_cost": 3000000,
+      "month": 30,
+      "n": 2000000,
+      "prc": 39,
+      "t_known": 10,
+      "tier": 4
+     },
+     {
+      "base_cost": 4000000,
+      "month": 30,
+      "n": 1000000,
+      "prc": 40,
+      "t_known": null,
+      "tier": 4
+     }
+    ]
+   },
+   "name": "unknown_process_tau0",
+   "output": {
+    "admitted": false,
+    "procs": [
+     {
+      "U": 1866666,
+      "prc": 39,
+      "tau": 20,
+      "yield": 541666
+     },
+     {
+      "U": 3200000,
+      "prc": 40,
+      "tau": 0,
+      "yield": 0
+     }
+    ],
+    "q": 1000000,
+    "unit_cost_mult": 2399999
+   }
+  },
+  {
+   "input": {
+    "U": {
+     "3": [
+      [
+       0,
+       2500000
+      ],
+      [
+       12,
+       1400000
+      ],
+      [
+       60,
+       1050000
+      ]
+     ],
+     "4": [
+      [
+       0,
+       3200000
+      ],
+      [
+       24,
+       1600000
+      ],
+      [
+       96,
+       1100000
+      ]
+     ]
+    },
+    "Y": {
+     "3": [
+      [
+       0,
+       300000
+      ],
+      [
+       12,
+       700000
+      ],
+      [
+       60,
+       950000
+      ]
+     ],
+     "4": [
+      [
+       0,
+       250000
+      ],
+      [
+       24,
+       600000
+      ],
+      [
+       96,
+       900000
+      ]
+     ]
+    },
+    "items": [
+     {
+      "base_cost": 1000000,
+      "month": 200,
+      "n": 1000000,
+      "prc": 38,
+      "t_known": 0,
+      "tier": 3
+     }
+    ]
+   },
+   "name": "clamp_after_last_knot",
+   "output": {
+    "admitted": true,
+    "procs": [
+     {
+      "U": 1050000,
+      "prc": 38,
+      "tau": 200,
+      "yield": 950000
+     }
+    ],
+    "q": 1000000,
+    "unit_cost_mult": 1050000
+   }
+  }
+ ],
  "prob_check": [
   {
    "hit": false,
@@ -2034,6 +2616,170 @@
  ],
  "schema": "jet_slice_reference_formulas/1",
  "seed": 20261103,
+ "tooling_M": [
+  {
+   "input": {
+    "M": 3700000,
+    "c_M": 100000,
+    "delta_M": 5000,
+    "invest": 1850,
+    "mech_tier": 3
+   },
+   "name": "k3_steady",
+   "output": {
+    "M_cap": 4000000,
+    "M_dec": 3681500,
+    "M_new": 3700000,
+    "cost_M": 100000,
+    "gain": 18500,
+    "k": 3
+   }
+  },
+  {
+   "input": {
+    "M": 4000000,
+    "c_M": 100000,
+    "delta_M": 5000,
+    "invest": 4000,
+    "mech_tier": null
+   },
+   "name": "k4_chem_precision_at_cap",
+   "output": {
+    "M_cap": 4000000,
+    "M_dec": 3980000,
+    "M_new": 4000000,
+    "cost_M": 200000,
+    "gain": 20000,
+    "k": 4
+   }
+  },
+  {
+   "input": {
+    "M": 2500000,
+    "c_M": 100000,
+    "delta_M": 5000,
+    "invest": 10000,
+    "mech_tier": null
+   },
+   "name": "clamp_low_k3",
+   "output": {
+    "M_cap": 4000000,
+    "M_dec": 2487500,
+    "M_new": 2587500,
+    "cost_M": 100000,
+    "gain": 100000,
+    "k": 3
+   }
+  },
+  {
+   "input": {
+    "M": 5200000,
+    "c_M": 100000,
+    "delta_M": 5000,
+    "invest": 40000,
+    "mech_tier": 5
+   },
+   "name": "k5",
+   "output": {
+    "M_cap": 6000000,
+    "M_dec": 5174000,
+    "M_new": 5274000,
+    "cost_M": 400000,
+    "gain": 100000,
+    "k": 5
+   }
+  },
+  {
+   "input": {
+    "M": 6300000,
+    "c_M": 100000,
+    "delta_M": 5000,
+    "invest": 40000,
+    "mech_tier": 5
+   },
+   "name": "clamp_high_k5",
+   "output": {
+    "M_cap": 6000000,
+    "M_dec": 6268500,
+    "M_new": 6268500,
+    "cost_M": 400000,
+    "gain": 100000,
+    "k": 5
+   }
+  },
+  {
+   "input": {
+    "M": 3950000,
+    "c_M": 100000,
+    "delta_M": 5000,
+    "invest": 50000,
+    "mech_tier": 3
+   },
+   "name": "cap_binds",
+   "output": {
+    "M_cap": 4000000,
+    "M_dec": 3930250,
+    "M_new": 4000000,
+    "cost_M": 100000,
+    "gain": 500000,
+    "k": 3
+   }
+  },
+  {
+   "input": {
+    "M": 4600000,
+    "c_M": 100000,
+    "delta_M": 5000,
+    "invest": 20000,
+    "mech_tier": 3
+   },
+   "name": "above_cap_decay_only",
+   "output": {
+    "M_cap": 4000000,
+    "M_dec": 4577000,
+    "M_new": 4577000,
+    "cost_M": 200000,
+    "gain": 100000,
+    "k": 4
+   }
+  },
+  {
+   "input": {
+    "M": 4600000,
+    "c_M": 100000,
+    "delta_M": 5000,
+    "invest": 20000,
+    "mech_tier": 4
+   },
+   "name": "mech_tier4_cap5",
+   "output": {
+    "M_cap": 5000000,
+    "M_dec": 4577000,
+    "M_new": 4677000,
+    "cost_M": 200000,
+    "gain": 100000,
+    "k": 4
+   }
+  },
+  {
+   "input": {
+    "M": 3400000,
+    "c_M": 100000,
+    "delta_M": 5000,
+    "invest": 0,
+    "mech_tier": 4
+   },
+   "name": "no_invest_decay",
+   "output": {
+    "M_cap": 5000000,
+    "M_dec": 3383000,
+    "M_new": 3383000,
+    "cost_M": 100000,
+    "gain": 0,
+    "k": 3
+   }
+  }
+ ],
  "workforce_split": [
   {
    "avail": 100,
