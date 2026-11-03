@@ -30,8 +30,6 @@ public class IndustryEffortSystemTests
 
         public bool QualityProgramme(int siteRow, long month) => false;
 
-        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month) => Fx6.Zero;
-
         public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor)
         {
             lock (RestSeen)

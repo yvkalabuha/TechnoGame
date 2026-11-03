@@ -129,6 +129,8 @@ internal sealed class JetIndustryRun
     /// <summary>Knowledge inputs: reference budget, prio, j; <c>V_d</c> from the industry snapshot (contract §5).</summary>
     private sealed class CoupledKnowledgeInputs(JetReference.Inputs reference, JetIndustryRun run) : IKnowledgeInputs
     {
+        public ReadOnlySpan<int> LicensedEngines(int actorRow, long month) => ReadOnlySpan<int>.Empty;
+
         public Fx6 ResearchBudget(int actorRow, long month) => reference.ResearchBudget(actorRow, month);
 
         public Fx6 Priority(int actorRow, int nodeRow, long month) => reference.Priority(actorRow, nodeRow, month);
@@ -144,6 +146,11 @@ internal sealed class JetIndustryRun
     /// </summary>
     internal sealed class ReferenceIndustryInputs(JetIndustryRun run) : IIndustryInputs
     {
+        public Fx6 EffortBudget(int actorRow, long month) => Fx6.Zero;
+        public int EffortFocus(int actorRow, int k, long month) => -1;
+        public bool Planned(int siteRow, int processRow, long month) => false;
+        public Fx6 PlannedVolume(int siteRow, int processRow, long month) => Fx6.Zero;
+
         public int RunNumber(int processRow) => run.Layout.Number[processRow];
 
         private readonly JsonElement _tp = JetReference.Trajectory.GetProperty("params");
@@ -157,7 +164,7 @@ internal sealed class JetIndustryRun
 
         public bool QualityProgramme(int siteRow, long month) => false;
 
-        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month)
+        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor)
         {
             Fx6 m0 = run.IStart.M[run.IStart.Cell(siteRow, cluster, (int)dim)];
             return run.Params.DeltaM * m0 * run.Params.CostM(IndustryMath.CostTier(m0));
@@ -180,6 +187,8 @@ internal sealed class JetIndustryRun
     /// </summary>
     private sealed class CbInputs(ReferenceIndustryInputs b) : IIndustryInputs
     {
+        public int EffortFocus(int actorRow, int k, long month) => -1;
+
         public bool KnowsProcess(int siteRow, int processRow, long month) => b.KnowsProcess(siteRow, processRow, month);
 
         public Fx6 W(int siteRow, int cluster, long month) => b.W(siteRow, cluster, month);
@@ -188,7 +197,7 @@ internal sealed class JetIndustryRun
 
         public bool QualityProgramme(int siteRow, long month) => false;
 
-        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month) => b.ToolingInvest(siteRow, cluster, dim, month);
+        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor) => b.ToolingInvest(siteRow, cluster, dim, month, restActor);
 
         public Fx6 LicenceShare(int siteRow, int processRow, long month) => Fx6.Zero;
 

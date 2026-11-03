@@ -178,6 +178,8 @@ public class ProductsCbLinkedRunTests
 
     private sealed class KInputs(CbLinked run, CounterRng rng) : IKnowledgeInputs
     {
+        public ReadOnlySpan<int> LicensedEngines(int actorRow, long month) => ReadOnlySpan<int>.Empty;
+
         public Fx6 ResearchBudget(int actorRow, long month) => Scenario.BudgetIndex[actorRow] * Fx6.FromRaw(280_000);
 
         public Fx6 Priority(int actorRow, int nodeRow, long month) => Fx6.One;
@@ -199,8 +201,6 @@ public class ProductsCbLinkedRunTests
         public bool QualityProgramme(int siteRow, long month) => false;
 
         // The rest of the actor is split evenly over the cells of its site (floor): never more than rest_a in total per site.
-        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month) => Fx6.Zero;
-
         public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor)
         {
             Fx6 m = run.Industry.ToolingM(siteRow, cluster, dim);

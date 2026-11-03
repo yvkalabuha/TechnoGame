@@ -17,6 +17,11 @@ public class IndustrySystemTests
 
     private sealed class Inputs : IIndustryInputs
     {
+        public Fx6 EffortBudget(int actorRow, long month) => Fx6.Zero;
+        public int EffortFocus(int actorRow, int k, long month) => -1;
+        public bool Planned(int siteRow, int processRow, long month) => false;
+        public Fx6 PlannedVolume(int siteRow, int processRow, long month) => Fx6.Zero;
+
         public bool AllKnown = true;
         public int UnknownProcessRow = -1;
         public bool Qp;
@@ -33,7 +38,7 @@ public class IndustrySystemTests
 
         public bool QualityProgramme(int siteRow, long month) => Qp;
 
-        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month) => Invest;
+        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor) => Invest;
 
         public Fx6 LicenceShare(int siteRow, int processRow, long month) => Fx6.Zero;
 

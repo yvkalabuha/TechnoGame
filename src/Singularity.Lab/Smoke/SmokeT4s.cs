@@ -94,6 +94,8 @@ internal static class SmokeT4s
     /// </summary>
     private sealed class C3Stand : IKnowledgeInputs
     {
+        public ReadOnlySpan<int> LicensedEngines(int actorRow, long month) => ReadOnlySpan<int>.Empty;
+
         private const int ActorNumber = 1;
         private readonly int _target;
         private readonly Fx6 _s;
@@ -317,6 +319,11 @@ internal static class SmokeT4s
     /// </summary>
     internal sealed class LineStand : IIndustryInputs
     {
+        public Fx6 EffortBudget(int actorRow, long month) => Fx6.Zero;
+        public int EffortFocus(int actorRow, int k, long month) => -1;
+        public bool Planned(int siteRow, int processRow, long month) => false;
+        public Fx6 PlannedVolume(int siteRow, int processRow, long month) => Fx6.Zero;
+
         private static readonly Fx6 CapShare = Fx6.FromRaw(250_000);
         private readonly IndustryLayout _l;
         private readonly IndustryParams _p;
@@ -507,7 +514,7 @@ internal static class SmokeT4s
 
         public bool QualityProgramme(int siteRow, long month) => false;
 
-        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month)
+        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor)
         {
             // Recomputed per cell from the snapshot: pure, and the canonical cell order fixes who gets the money first.
             int mechTier = 0;

@@ -232,6 +232,8 @@ public class IndustrySliceDeterminismTests
 
     private sealed class KInputs(LinkedRun run, CounterRng rng) : IKnowledgeInputs
     {
+        public ReadOnlySpan<int> LicensedEngines(int actorRow, long month) => ReadOnlySpan<int>.Empty;
+
         public Fx6 ResearchBudget(int actorRow, long month) =>
             Fx6.FromRaw(300_000 + 40_000 * run.ActorNumber(actorRow) + 1_000 * (month % 17));
 
@@ -246,6 +248,11 @@ public class IndustrySliceDeterminismTests
 
     private sealed class IInputs(LinkedRun run) : IIndustryInputs
     {
+        public Fx6 EffortBudget(int actorRow, long month) => Fx6.Zero;
+        public int EffortFocus(int actorRow, int k, long month) => -1;
+        public bool Planned(int siteRow, int processRow, long month) => false;
+        public Fx6 PlannedVolume(int siteRow, int processRow, long month) => Fx6.Zero;
+
         public bool KnowsProcess(int siteRow, int processRow, long month) => run.Knows(siteRow, processRow);
 
         public Fx6 W(int siteRow, int cluster, long month) => Fx6.One;
@@ -254,7 +261,7 @@ public class IndustrySliceDeterminismTests
 
         public bool QualityProgramme(int siteRow, long month) => run.ActorNumber(siteRow) % 3 == 0;
 
-        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month) =>
+        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor) =>
             Fx6.FromRaw(2_000 * (1 + (run.ActorNumber(siteRow) + cluster + (int)dim) % 4));
 
         public long WorkforceAvailable(int siteRow, int category, long month) => (run.ActorNumber(siteRow) + category + month) % 12;

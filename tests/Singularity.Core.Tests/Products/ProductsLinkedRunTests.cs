@@ -125,6 +125,8 @@ public class ProductsLinkedRunTests
 
     private sealed class KInputs(Linked run, CounterRng rng) : IKnowledgeInputs
     {
+        public ReadOnlySpan<int> LicensedEngines(int actorRow, long month) => ReadOnlySpan<int>.Empty;
+
         public Fx6 ResearchBudget(int actorRow, long month) => Scenario.BudgetIndex[actorRow] * Fx6.FromRaw(280_000);
 
         public Fx6 Priority(int actorRow, int nodeRow, long month) => Fx6.One;
@@ -137,6 +139,11 @@ public class ProductsLinkedRunTests
 
     private sealed class IInputs(Linked run) : IIndustryInputs
     {
+        public Fx6 EffortBudget(int actorRow, long month) => Fx6.Zero;
+        public int EffortFocus(int actorRow, int k, long month) => -1;
+        public bool Planned(int siteRow, int processRow, long month) => false;
+        public Fx6 PlannedVolume(int siteRow, int processRow, long month) => Fx6.Zero;
+
         public bool KnowsProcess(int siteRow, int processRow, long month) => run.Knows(siteRow, run.ILayout.Number[processRow]);
 
         public Fx6 W(int siteRow, int cluster, long month) => Fx6.One;
@@ -146,7 +153,7 @@ public class ProductsLinkedRunTests
         public bool QualityProgramme(int siteRow, long month) => false;
 
         // Stand-in AI: replace wear and add 0.01 M a month (spec §3.5 A11 money form), so tooling does not decay to 0.
-        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month)
+        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor)
         {
             Fx6 m = run.Industry.ToolingM(siteRow, cluster, dim);
             return (run.IParams.DeltaM * m + Fx6.FromRaw(10_000)) * run.IParams.CostM(IndustryMath.CostTier(m));

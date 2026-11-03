@@ -225,6 +225,11 @@ public class IndustryPropertyTests
 
     private sealed class IdleInputs : IIndustryInputs
     {
+        public Fx6 EffortBudget(int actorRow, long month) => Fx6.Zero;
+        public int EffortFocus(int actorRow, int k, long month) => -1;
+        public bool Planned(int siteRow, int processRow, long month) => false;
+        public Fx6 PlannedVolume(int siteRow, int processRow, long month) => Fx6.Zero;
+
         public bool KnowsProcess(int siteRow, int processRow, long month) => true;
 
         public Fx6 W(int siteRow, int cluster, long month) => Fx6.One;
@@ -233,7 +238,7 @@ public class IndustryPropertyTests
 
         public bool QualityProgramme(int siteRow, long month) => false;
 
-        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month) => Fx6.Zero;
+        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor) => Fx6.Zero;
 
         public Fx6 LicenceShare(int siteRow, int processRow, long month) => Fx6.Zero;
 

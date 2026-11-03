@@ -245,6 +245,8 @@ public class ProductsDeterminismAuditTests
 
     private sealed class KInputs(PermutedLinked run, CounterRng rng) : IKnowledgeInputs
     {
+        public ReadOnlySpan<int> LicensedEngines(int actorRow, long month) => ReadOnlySpan<int>.Empty;
+
         public Fx6 ResearchBudget(int actorRow, long month) => Scenario.BudgetIndex[actorRow] * Fx6.FromRaw(280_000);
 
         public Fx6 Priority(int actorRow, int nodeRow, long month) => Fx6.One;
@@ -257,6 +259,11 @@ public class ProductsDeterminismAuditTests
 
     private sealed class IInputs(PermutedLinked run) : IIndustryInputs
     {
+        public Fx6 EffortBudget(int actorRow, long month) => Fx6.Zero;
+        public int EffortFocus(int actorRow, int k, long month) => -1;
+        public bool Planned(int siteRow, int processRow, long month) => false;
+        public Fx6 PlannedVolume(int siteRow, int processRow, long month) => Fx6.Zero;
+
         public bool KnowsProcess(int siteRow, int processRow, long month) => run.Knows(siteRow, run.ILayout.Number[processRow]);
 
         public Fx6 W(int siteRow, int cluster, long month) => Fx6.One;
@@ -265,7 +272,7 @@ public class ProductsDeterminismAuditTests
 
         public bool QualityProgramme(int siteRow, long month) => false;
 
-        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month) => Fx6.Zero;
+        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor) => Fx6.Zero;
 
         public Fx6 LicenceShare(int siteRow, int processRow, long month) => Fx6.Zero;
 

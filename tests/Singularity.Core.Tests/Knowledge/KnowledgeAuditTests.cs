@@ -225,6 +225,8 @@ public class KnowledgeAuditTests
 
     private sealed class Inputs(KnowledgeGraph g, KnowledgeStart s, CounterRng rng) : IKnowledgeInputs
     {
+        public ReadOnlySpan<int> LicensedEngines(int actorRow, long month) => ReadOnlySpan<int>.Empty;
+
         public Fx6 ResearchBudget(int actorRow, long month) =>
             Fx6.FromRaw(200_000 + 40_000 * s.ActorNumber[actorRow] + 1_000 * (month % 17));
 

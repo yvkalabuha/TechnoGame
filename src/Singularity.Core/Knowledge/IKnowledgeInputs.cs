@@ -27,5 +27,5 @@ public interface IKnowledgeInputs
     /// ENG node rows of the engines whose licences the actor bought in month t−1; used only by the
     /// <c>lic_knows</c> diagnostic (§6.7), applied in the merge of month t.
     /// </summary>
-    ReadOnlySpan<int> LicensedEngines(int actorRow, long month) => ReadOnlySpan<int>.Empty;
+    ReadOnlySpan<int> LicensedEngines(int actorRow, long month);
 }
