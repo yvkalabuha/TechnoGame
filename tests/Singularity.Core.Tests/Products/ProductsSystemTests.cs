@@ -13,7 +13,8 @@ namespace Singularity.Core.Tests.Products;
 public class ProductsSystemTests
 {
     private const int Usa = 0, Gbr = 1, Fra = 3;
-    private const int G1Sup = 0, G1Tech = 1, G2Sup = 2;
+    // Design slots are the lowest free slot (contract §3.1): GBR's start fleet holds slot 0, its first new design takes slot 1.
+    private const int G1Sup = 0, G1Tech = 1, G2Sup = 1;
 
     [Fact]
     public void StartFleets_AreG1SuperiorInService()
@@ -240,8 +241,9 @@ public class ProductsSystemTests
         Assert.Equal(10, h.Products.PrcSet(Usa, G1Tech).Length);
         h.RunThroughMonth(5);
         Assert.Equal(DesignStage.InService, h.Products.Stage(Usa, G1Tech));
-        Assert.Equal(DesignStage.Series, h.Products.Stage(Usa, 3));
-        Assert.Equal(Fx6.FromRaw(22_000_000), h.Products.Rate(Usa, 3));
+        Assert.Equal(2, h.Products.CanonicalSlot(Usa, 2));   // generation 2 takes the next free slot
+        Assert.Equal(DesignStage.Series, h.Products.Stage(Usa, 2));
+        Assert.Equal(Fx6.FromRaw(22_000_000), h.Products.Rate(Usa, 2));
     }
 
     [Fact]
@@ -249,8 +251,8 @@ public class ProductsSystemTests
     {
         var h = new ProductsHarness();
         int[] alts = h.Products.Alternatives(Usa, G1Sup);
-        (int n, Fx6 fv) = h.Products.FleetValue(Usa, alts, 1, Fx6.Zero, Fx6.One, Fx6.One, Fx6.FromRaw(440_000), 0);
-        Assert.Equal(n, h.Products.FleetValue(Usa, alts, 1, Fx6.Zero, Fx6.One, Fx6.One, Fx6.FromRaw(440_000), 0).Count);
+        (int n, Fx6 fv) = h.Products.FleetValue(Usa, alts, Fx6.Zero, Fx6.One, Fx6.One, Fx6.FromRaw(440_000), 0);
+        Assert.Equal(n, h.Products.FleetValue(Usa, alts, Fx6.Zero, Fx6.One, Fx6.One, Fx6.FromRaw(440_000), 0).Count);
         Assert.Equal(Fx6.FromInt(n), fv);
         Assert.Equal(0, n % 10);
         Assert.True(n > 0);

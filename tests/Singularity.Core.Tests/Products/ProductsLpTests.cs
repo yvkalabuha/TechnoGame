@@ -13,7 +13,7 @@ namespace Singularity.Core.Tests.Products;
 /// </summary>
 public class ProductsLpTests
 {
-    private const int Usa = 0, G1Sup = 0, G1Tech = 1;
+    private const int Usa = 0, G1Sup = 0;
 
     internal static ProductsParams LpParams => new()
     {
@@ -69,8 +69,8 @@ public class ProductsLpTests
                     {
                         series++;
                         seriesMonths++;
-                        // Only the «технологичный» slot holds the canonical project (§6.1 [Предл.]).
-                        Assert.Equal(DesignVariant.Producible, ProductsLayout.VariantOf(d));
+                        // Only the canonical slot of its generation holds the project (§6.1, T-13).
+                        Assert.Equal(d, p.CanonicalSlot(a, p.PlatformGen(a, d)));
                     }
                 }
                 Assert.True(series <= 1, $"month {t}: {series} canonical lines at once");
@@ -91,12 +91,12 @@ public class ProductsLpTests
         };
         h.RunThroughMonth(2);
         ProductsSystem p = h.Products;
-        Assert.Equal(Fx6.FromInt(10), p.Rate(0, G1Tech));        // ρ·budget = 100·0.1 = 10 < alloy cap
-        Assert.Equal(Fx6.FromInt(2_900) / h.Layout.AlloyKg[0], p.Rate(1, G1Tech)); // alloy-limited: 2900 kg / alloy_kg[G1]
-        Assert.True(p.Rate(1, G1Tech) < Fx6.FromInt(20));
-        Assert.Equal(Fx6.FromInt(30), p.Rate(2, G1Tech));
-        // A33: the diagnostic price is ((Σ n_p·base_cost_p)·unit_cost_mult)·proc_scale[g]; nothing is spent.
-        Assert.Equal(DesignRules.BaseCostSum(h.Layout, p.PrcSet(0, G1Tech)) * h.Layout.ProcScale[0], p.UnitCost(0, G1Tech));
+        Assert.Equal(Fx6.FromInt(10), p.Rate(0, p.CanonicalSlot(0, 1)));        // ρ·budget = 100·0.1 = 10 < alloy cap
+        Assert.Equal(Fx6.FromInt(2_900) / Fx6.FromInt(290), p.Rate(1, p.CanonicalSlot(1, 1))); // alloy-limited: 2900 kg / alloy_kg[hot_nicr_forged]
+        Assert.True(p.Rate(1, p.CanonicalSlot(1, 1)) < Fx6.FromInt(20));
+        Assert.Equal(Fx6.FromInt(30), p.Rate(2, p.CanonicalSlot(2, 1)));
+        // §6.1: the price print is the R-PS2m process part + materials_floor + h_floor hours (yield 1: = unit_cost_floor); nothing is spent.
+        Assert.Equal(p.UnitCostFloor(0, p.CanonicalSlot(0, 1)), p.UnitCost(0, p.CanonicalSlot(0, 1)));
         Assert.Equal(Fx6.Zero, p.Spent(0));
     }
 
@@ -111,13 +111,13 @@ public class ProductsLpTests
             Yield = (a, p) => Fx6.One,
         };
         h.RunThroughMonth(2);
-        Assert.Equal(DesignStage.Series, h.Products.Stage(1, G1Tech));
-        Assert.Equal(DesignStage.None, h.Products.Stage(2, G1Tech));
-        int blocked = h.Products.PrcSet(1, G1Tech)[0];
+        Assert.Equal(DesignStage.Series, h.Products.Stage(1, h.Products.CanonicalSlot(1, 1)));
+        Assert.Equal(-1, h.Products.CanonicalSlot(2, 1));
+        int blocked = h.Products.PrcSet(1, h.Products.CanonicalSlot(1, 1))[0];
         h.Yield = (a, p) => a == 1 && p == blocked ? Fx6.Zero : Fx6.One;
         h.RunThroughMonth(3);
-        Assert.Equal(DesignStage.Series, h.Products.Stage(1, G1Tech));
-        Assert.Equal(Fx6.Zero, h.Products.Rate(1, G1Tech));
+        Assert.Equal(DesignStage.Series, h.Products.Stage(1, h.Products.CanonicalSlot(1, 1)));
+        Assert.Equal(Fx6.Zero, h.Products.Rate(1, h.Products.CanonicalSlot(1, 1)));
         Assert.DoesNotContain(h.Reports, r => r.Site == 1);
         Assert.Contains(h.Reports, r => r.Site == 0);
         Assert.DoesNotContain(h.Reports, r => r.Site == 2);

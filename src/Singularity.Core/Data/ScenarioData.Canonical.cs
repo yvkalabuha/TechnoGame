@@ -24,6 +24,7 @@ public sealed partial class ScenarioData
         w.Int(MasteredSinceMonth);
         w.Int(ProcXHalfLives);
         w.Fixed(AlloyRefKg);
+        w.Int(MaxDesigns);
 
         w.Int(ProvField.Length);
         for (int p = 0; p < ProvField.Length; p++)

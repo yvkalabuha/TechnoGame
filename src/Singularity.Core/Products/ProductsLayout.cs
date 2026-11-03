@@ -33,10 +33,10 @@ public enum DesignStage
 /// <summary>
 /// Immutable shape of the product layer for one product class (spec §1.4, §3.3; contract §4.4, §4.6). Everything
 /// is resolved from data once: slots and alternatives with their <c>prc_set</c> as process numbers and
-/// <c>requires_nodes</c> as node numbers, process costs, generations. A design slot is a stable id from data:
-/// <c>design_id = (gen − 1)·2 + variant</c>, one per (generation, variant) and actor; its production line has the
-/// same index. Requester ids (contract §4.6, one id space): skilled requests of line l for cluster c are
-/// <c>l·C + c</c> (spec §3.5 A26), then the bureaus, then one defect-fix team per design.
+/// <c>requires_nodes</c> as node numbers, process costs, airframe classes, generations. A design is a slot index
+/// <c>i &lt; max_designs</c> per actor (contract §3.1, G4-8): the lowest free slot, never reused; <c>design_id = i</c> and
+/// its production line has the same index. Requester ids (contract §4.6, one id space): skilled requests of line l for
+/// cluster c are <c>l·C + c</c> (spec §3.5 A26), then the bureaus, then one defect-fix team per design.
 /// </summary>
 public sealed class ProductsLayout
 {
@@ -56,6 +56,15 @@ public sealed class ProductsLayout
     public required ImmutableArray<string> AltId { get; init; }
     public required ImmutableArray<int> AltRank { get; init; }
     public required ImmutableArray<Fx6> AltPerf { get; init; }
+
+    /// <summary>Engine alternative generation <c>eng_gen</c> (0 outside the engine slot), airframe class, alloy per unit (0 outside the hot slot).</summary>
+    public required ImmutableArray<int> AltEngGen { get; init; }
+    public required ImmutableArray<int> AltAfClass { get; init; }
+    public required ImmutableArray<Fx6> AltAlloyKg { get; init; }
+
+    /// <summary>The airframe slot (AF block of R-PS2m) and the alloy-consuming slot (hot section).</summary>
+    public required int AirframeSlot { get; init; }
+    public required int AlloySlot { get; init; }
 
     /// <summary>Process numbers of alternative a (ascending): <c>AltPrc[AltPrcStart[a]..AltPrcStart[a+1]]</c>.</summary>
     public required ImmutableArray<int> AltPrcStart { get; init; }
@@ -80,17 +89,31 @@ public sealed class ProductsLayout
     public required ImmutableArray<int> ProcTier { get; init; }
     public required ImmutableArray<int> ProcCluster { get; init; }
 
+    /// <summary>Process <c>k</c> of <see cref="ProcNumber"/> belongs to the AF block (airframe PRCs), else to PU.</summary>
+    public required ImmutableArray<bool> ProcInAirframe { get; init; }
+
     public int Generations => GenApp.Length;
 
-    /// <summary>Per generation g at index g − 1: APP node number and the design inputs.</summary>
+    /// <summary>Per generation g at index g − 1: APP node number, display crew, platform threshold (contract §4.4a).</summary>
     public required ImmutableArray<int> GenApp { get; init; }
+    public required ImmutableArray<int> CrewReq { get; init; }
+    public required ImmutableArray<int> PlatformMinRank { get; init; }
+
+    /// <summary>Fields by airframe class <c>af_class</c> k at index k − 1 (contract §4.4a, product_inputs.md §14.4).</summary>
     public required ImmutableArray<Fx6> HFirst { get; init; }
     public required ImmutableArray<Fx6> HFloor { get; init; }
     public required ImmutableArray<Fx6> MaterialsFloor { get; init; }
-    public required ImmutableArray<Fx6> AlloyKg { get; init; }
-    public required ImmutableArray<int> CrewReq { get; init; }
-    public required ImmutableArray<Fx6> ProcScale { get; init; }
     public required ImmutableArray<Fx6> DesignScale { get; init; }
+    public required ImmutableArray<Fx6> ProcScaleAf { get; init; }
+
+    /// <summary><c>proc_scale_pu[r]</c> at index r − 1 (R-PS2m).</summary>
+    public required ImmutableArray<Fx6> ProcScalePu { get; init; }
+
+    /// <summary><c>c_ref</c> (data): <c>D_ref = d0·c_ref</c> (contract §4.4b).</summary>
+    public required int CRef { get; init; }
+
+    /// <summary>Design slots per actor (<c>max_designs</c>, contract §3.1).</summary>
+    public required int MaxDesigns { get; init; }
 
     public required Fx6 HPm { get; init; }
     public required Fx6 WageKh { get; init; }
@@ -118,13 +141,7 @@ public sealed class ProductsLayout
     /// <summary>"The actor knows every node of generations ≤ <paramref name="gen"/>" — the condition of the reference table (product_class.md §2) and of A18.</summary>
     public Func<int, bool> KnownUpTo(int gen) => n => n >= 0 && n < NodeGen.Length && NodeGen[n] >= 0 && NodeGen[n] <= gen;
 
-    public int Designs => 2 * Generations;
-
-    public static int DesignId(int gen, DesignVariant variant) => (gen - 1) * 2 + (int)variant;
-
-    public static int GenOf(int design) => design / 2 + 1;
-
-    public static DesignVariant VariantOf(int design) => (DesignVariant)(design % 2);
+    public int Designs => MaxDesigns;
 
     public int SkilledRequester(int line, int cluster) => line * ClusterCount + cluster;
 
@@ -180,13 +197,14 @@ public sealed class ProductsLayout
     /// so requester ids and cluster indices agree with it; site owners too.
     /// </summary>
     public static ProductsLayout FromData(NodeTable nodes, ProductClassTable classes, string classId, IndustryLayout industry,
-        int bureaus, int startYear, int years)
+        int bureaus, int startYear, int years, int maxDesigns)
     {
         int c = classes.IndexOf(classId);
         if (c < 0)
             throw new ArgumentException($"Product class '{classId}' is not loaded.", nameof(classId));
         ArgumentOutOfRangeException.ThrowIfLessThan(bureaus, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(years, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxDesigns, 1);
 
         int firstSlot = classes.SlotStart[c], slotCount = classes.SlotStart[c + 1] - firstSlot;
         int baseSlot = -1;
@@ -194,6 +212,10 @@ public sealed class ProductsLayout
         var altId = new List<string>();
         var altRank = new List<int>();
         var altPerf = new List<Fx6>();
+        var altEngGen = new List<int>();
+        var altAfClass = new List<int>();
+        var altAlloy = new List<Fx6>();
+        int airframeSlot = -1, alloySlot = -1;
         var altPrcStart = new List<int> { 0 };
         var altPrc = new List<int>();
         var altTier = new List<int>();
@@ -205,11 +227,18 @@ public sealed class ProductsLayout
             int gs = firstSlot + s;
             if (classes.SlotIsBase[gs])
                 baseSlot = s;
+            if (classes.SlotIsAirframe[gs])
+                airframeSlot = s;
+            if (classes.AltAlloyKg[classes.AltStart[gs]] > Fx6.Zero)
+                alloySlot = s;
             for (int a = classes.AltStart[gs]; a < classes.AltStart[gs + 1]; a++)
             {
                 altId.Add(classes.AltId[a]);
                 altRank.Add(classes.AltRank[a]);
                 altPerf.Add(classes.AltPerfMult[a]);
+                altEngGen.Add(classes.AltEngGen[a]);
+                altAfClass.Add(classes.AltAfClass[a]);
+                altAlloy.Add(classes.AltAlloyKg[a]);
                 int tier = 0;
                 var numbers = new List<int>();
                 foreach (int row in classes.PrcSet(a))
@@ -253,7 +282,11 @@ public sealed class ProductsLayout
             nodeGen[nodes.Number[r]] = nodes.Gen[r];
 
         int g0 = classes.GenStart[c], g1 = classes.GenStart[c + 1];
-        Fx6[] Gen(ImmutableArray<Fx6> col) => [.. Enumerable.Range(g0, g1 - g0).Select(i => col[i])];
+        int a0 = classes.AfStart[c], a1 = classes.AfStart[c + 1], u0 = classes.PuStart[c], u1 = classes.PuStart[c + 1];
+        Fx6[] Af(ImmutableArray<Fx6> col) => [.. Enumerable.Range(a0, a1 - a0).Select(i => col[i])];
+        var afPrc = new List<int>();
+        for (int a = altStart[airframeSlot]; a < altStart[airframeSlot + 1]; a++)
+            afPrc.AddRange(altPrc.Skip(altPrcStart[a]).Take(altPrcStart[a + 1] - altPrcStart[a]));
         return new ProductsLayout
         {
             ClassId = classId, SlotCount = slotCount, BaseSlot = baseSlot,
@@ -264,11 +297,17 @@ public sealed class ProductsLayout
             ProcNumber = [.. procs.Select(p => p.Number)], ProcN = [.. procs.Select(p => p.N)],
             ProcLabour = [.. procs.Select(p => p.Labour)], ProcBaseCost = [.. procs.Select(p => p.Base)],
             ProcTier = [.. procs.Select(p => p.Tier)], ProcCluster = [.. procs.Select(p => p.Cluster)],
+            AltEngGen = [.. altEngGen], AltAfClass = [.. altAfClass], AltAlloyKg = [.. altAlloy],
+            AirframeSlot = airframeSlot, AlloySlot = alloySlot,
+            ProcInAirframe = [.. procs.Select(p => afPrc.Contains(p.Number))],
             GenApp = [.. Enumerable.Range(g0, g1 - g0).Select(i => nodes.Number[classes.GenApp[i]])],
-            HFirst = [.. Gen(classes.GenHFirst)], HFloor = [.. Gen(classes.GenHFloor)],
-            MaterialsFloor = [.. Gen(classes.GenMaterialsFloor)], AlloyKg = [.. Gen(classes.GenAlloyKg)],
             CrewReq = [.. Enumerable.Range(g0, g1 - g0).Select(i => classes.GenCrewReq[i])],
-            ProcScale = [.. Gen(classes.GenProcScale)], DesignScale = [.. Gen(classes.GenDesignScale)],
+            PlatformMinRank = [.. Enumerable.Range(g0, g1 - g0).Select(i => classes.GenPlatformMinRank[i])],
+            HFirst = [.. Af(classes.AfHFirst)], HFloor = [.. Af(classes.AfHFloor)],
+            MaterialsFloor = [.. Af(classes.AfMaterialsFloor)], DesignScale = [.. Af(classes.AfDesignScale)],
+            ProcScaleAf = [.. Af(classes.AfProcScale)],
+            ProcScalePu = [.. Enumerable.Range(u0, u1 - u0).Select(i => classes.PuProcScale[i])],
+            CRef = classes.CRef[c], MaxDesigns = maxDesigns,
             HPm = classes.HPm[c], WageKh = classes.WageKh[c],
             Maintainability = classes.Maintainability[c], RRef = classes.RRef[c],
             ClusterCount = industry.Clusters.Length, SkilledCategory = industry.SkilledCategory,

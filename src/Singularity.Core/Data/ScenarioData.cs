@@ -32,6 +32,9 @@ public sealed partial class ScenarioData
     /// <summary><c>A_ref</c>, kg of alloy per month per budget index unit (R-AC, product_inputs.md §6).</summary>
     public required Fx6 AlloyRefKg { get; init; }
 
+    /// <summary><c>max_designs</c>: design slots per actor (contract §3.1, G4-8).</summary>
+    public required int MaxDesigns { get; init; }
+
     // Provenance rows, sorted by field name.
     public required ImmutableArray<string> ProvField { get; init; }
     public required ImmutableArray<string> ProvRule { get; init; }

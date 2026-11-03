@@ -40,15 +40,19 @@ internal sealed class TestMods : IDisposable
     }
 
     /// <summary>
-    /// A product_class file that drops generation G4 of jet_fighter (keeps the core G1–G3 rows), so a test mod can delete
-    /// the otherwise referenced node s8.app.jet_fighter_g4.
+    /// A product_class file that drops generation G4 of jet_fighter (keeps the core G1–G3 rows, without the G4 engine and the Mach 2
+    /// airframe, whose <c>eng_gen</c> and class would exceed G_max = 3), so a test mod can delete the otherwise referenced node
+    /// s8.app.jet_fighter_g4.
     /// </summary>
     public static (string Name, string Text) DropG4Class()
     {
-        string[] rows = [.. File.ReadAllLines(Path.Combine(CoreDir, "product_classes.yaml"))
-            .Where(l => l.TrimStart().StartsWith("- {gen: ", StringComparison.Ordinal) && !l.Contains("gen: 4", StringComparison.Ordinal))];
+        string[] lines = File.ReadAllLines(Path.Combine(CoreDir, "product_classes.yaml"));
+        int from = Array.FindIndex(lines, l => l == "    slots:"), to = Array.FindIndex(lines, l => l.StartsWith("    # ---- Product-layer inputs", StringComparison.Ordinal));
+        string[] slots = [.. lines[from..to].Where(l => !l.Contains("{id: eng_g4,", StringComparison.Ordinal) && !l.Contains("{id: af_mach2,", StringComparison.Ordinal)
+            && !l.TrimStart().StartsWith('#'))];
+        string[] rows = [.. lines.Where(l => l.TrimStart().StartsWith("- {gen: ", StringComparison.Ordinal) && !l.Contains("gen: 4", StringComparison.Ordinal))];
         Assert.Equal(3, rows.Length);
-        return ("classes.yaml", "kind: product_class\npatch:\n  - id: jet_fighter\n    generations:\n" + string.Join("\n", rows) + "\n");
+        return ("classes.yaml", "kind: product_class\npatch:\n  - id: jet_fighter\n" + string.Join("\n", slots) + "\n    generations:\n" + string.Join("\n", rows) + "\n");
     }
 
     /// <summary>Replaces exactly one occurrence, so a test cannot silently edit nothing.</summary>

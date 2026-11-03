@@ -7,8 +7,9 @@ using static Singularity.Core.Tests.Products.ProductTestData;
 namespace Singularity.Core.Tests.Products;
 
 /// <summary>
-/// D-tests of the product layer against the independent reference lab/reference/jet_slice/out/products.json
-/// (products_ref.py, spec v0.10 §3.3, §3.5 A28–A34, §6.1): every raw value compared exactly. The reference's
+/// D-tests of the formulas that did not change in v2.4 against the independent reference
+/// lab/reference/jet_slice/out/products.json (products_ref.py, spec §3.3, §3.5 A28–A34): every raw value compared exactly. The v24
+/// section (composition, R-PS2m, gate, accidents, retrofit, FV) is in <see cref="ProductsV24ReferenceTests"/>. The reference's
 /// <c>generation_cap</c> cases (A32 with every node known) are not checked: A32 was cancelled by the owner (#81).
 /// </summary>
 public class ProductsFormulaTests
@@ -19,12 +20,6 @@ public class ProductsFormulaTests
     private static JsonElement Ref => Doc.Value.RootElement;
     private static readonly ProductsParams P = new();
     private static Fx6 R(JsonElement e) => Fx6.FromRaw(e.GetInt64());
-
-    public static TheoryData<int, string> Designs => new()
-    {
-        { 1, "superior" }, { 1, "producible" }, { 2, "superior" }, { 2, "producible" },
-        { 3, "superior" }, { 3, "producible" }, { 4, "superior" }, { 4, "producible" },
-    };
 
     [Fact]
     public void Params_MatchTheReference()
@@ -45,43 +40,6 @@ public class ProductsFormulaTests
         Assert.Equal(p.GetProperty("y_prod").GetInt64(), P.YProd.Raw);
         Assert.Equal(p.GetProperty("B0").GetInt32(), P.B0);
         Assert.Equal(p.GetProperty("h_pm").GetInt64(), Probe.HPm.Raw);
-    }
-
-    [Theory]
-    [MemberData(nameof(Designs))]
-    public void Design_KnowingGenerationsUpToG_MatchesReference(int gen, string variant)
-    {
-        JsonElement g = Ref.GetProperty("designs_know_all_up_to_g").GetProperty($"G{gen}");
-        JsonElement e = g.GetProperty(variant);
-        Span<int> alts = stackalloc int[Probe.SlotCount];
-        bool lightened = variant == "superior"
-            ? DesignRules.Superior(Probe, gen, Probe.KnownUpTo(gen), alts)
-            : DesignRules.Producible(Probe, gen, Probe.KnownUpTo(gen), _ => Fx6.One, P.YProd, alts);
-        Assert.True(variant == "superior" ? lightened : lightened == (g.GetProperty("producible_kind").GetString() != "single"));
-        Assert.Equal(e.GetProperty("alts").EnumerateArray().Select(x => x.GetString()!), AltIds(Probe, alts));
-
-        int[] prc = DesignRules.PrcSet(Probe, alts);
-        Assert.Equal(e.GetProperty("prc_set").EnumerateArray().Select(x => x.GetInt32()), prc);
-        int cx = DesignRules.Complexity(Probe, prc);
-        Assert.Equal(e.GetProperty("complexity").GetInt32(), cx);
-        Assert.Equal(e.GetProperty("perf").GetInt64(), DesignRules.Perf(Probe, alts).Raw);
-        Fx6 bs = DesignRules.BaseCostSum(Probe, prc);
-        Assert.Equal(e.GetProperty("base_cost_sum").GetInt64(), bs.Raw);
-        Fx6 part = ProductsMath.ProcessPart(bs, Fx6.One, Probe.ProcScale[gen - 1]);
-        Assert.Equal(e.GetProperty("process_part").GetInt64(), part.Raw);
-
-        var card = new CostCard(Probe.HFirst[gen - 1], Probe.HFloor[gen - 1], Probe.WageKh, Probe.MaterialsFloor[gen - 1], part, P.LearningQ10);
-        foreach (JsonProperty u in e.GetProperty("unit_cost_by_E").EnumerateObject())
-            Assert.Equal(u.Value.GetInt64(), ProductsMath.UnitCost(card, Fx6.FromInt(int.Parse(u.Name))).Raw);
-        foreach (JsonProperty h in e.GetProperty("assembly_hours_by_E").EnumerateObject())
-            Assert.Equal(h.Value.GetInt64(), ProductsMath.AssemblyHours(Fx6.FromInt(int.Parse(h.Name)), card.HFirst, card.HFloor, P.LearningQ10).Raw);
-        Fx6 floor = ProductsMath.UnitCostFloor(card.MaterialsFloor, card.HFloor, card.WageKh, bs, Probe.ProcScale[gen - 1]);
-        Assert.Equal(e.GetProperty("unit_cost_floor").GetInt64(), floor.Raw);
-        Assert.Equal(e.GetProperty("upkeep").GetInt64(), ProductsMath.Upkeep(P.UpkeepShare, floor, cx, P.UpkeepQ10, Probe.Maintainability).Raw);
-        Assert.Equal(e.GetProperty("W_exp0").GetInt64(), ProductsMath.DesignWork(P.W0, cx, Probe.DesignScale[gen - 1], Fx6.Zero, P.EB).Raw);
-        Assert.Equal(e.GetProperty("W_exp_g_minus_1").GetInt64(),
-            ProductsMath.DesignWork(P.W0, cx, Probe.DesignScale[gen - 1], Fx6.FromInt(gen - 1), P.EB).Raw);
-        Assert.Equal(e.GetProperty("D0_novelty1_exp0").GetInt64(), ProductsMath.InitialDefects(P.D0Factor, Fx6.One, cx, Fx6.Zero, P.EB).Raw);
     }
 
     [Theory]
@@ -106,20 +64,13 @@ public class ProductsFormulaTests
         var low = new Dictionary<int, long> { [40] = 300_000, [39] = 200_000, [45] = 900_000, [49] = 900_000, [50] = 100_000, [48] = 400_000 };
         Fx6 Low(int p) => low.TryGetValue(p, out long v) ? Fx6.FromRaw(v) : Fx6.One;
         Span<int> alts = stackalloc int[Probe.SlotCount];
-        Assert.True(DesignRules.Producible(Probe, 2, Probe.KnownUpTo(2), Low, P.YProd, alts));
+        Assert.True(DesignRules.Producible(Probe, 2, Probe.KnownUpTo(2), Low, P.YProd, null, alts));
         Assert.Equal(cap.GetProperty("G2_producible_fallback").GetProperty("alts").EnumerateArray().Select(x => x.GetString()!), AltIds(Probe, alts));
         // L_P: superalloy melt (40) not admitted → the hot section falls to the NiCr melt.
-        Assert.True(DesignRules.Canonical(Probe, 2, Probe.KnownUpTo(2), p => p == 40 ? Fx6.Zero : Fx6.One, alts));
+        Func<int, Fx6> yield40 = p => p == 40 ? Fx6.Zero : Fx6.One;
+        Assert.True(DesignRules.Producible(Probe, 2, Probe.KnownUpTo(2), yield40, P.YProd, null, alts,
+            alt => Probe.PrcOf(alt).ToArray().All(p => yield40(p) > Fx6.Zero)));
         Assert.Equal(cap.GetProperty("G2_canonical_40_not_admitted").EnumerateArray().Select(x => x.GetString()!), AltIds(Probe, alts));
-    }
-
-    [Fact]
-    public void LpPrice_HasProcScale_A33()
-    {
-        Span<int> alts = stackalloc int[Probe.SlotCount];
-        Assert.True(DesignRules.Superior(Probe, 2, Probe.KnownUpTo(2), alts));
-        Fx6 bs = DesignRules.BaseCostSum(Probe, DesignRules.PrcSet(Probe, alts));
-        Assert.Equal(Ref.GetProperty("lp_price_G2_ucm_1.25").GetInt64(), ProductsMath.ProcessPart(bs, Fx6.FromRaw(1_250_000), Probe.ProcScale[1]).Raw);
     }
 
     [Fact]
@@ -149,18 +100,6 @@ public class ProductsFormulaTests
             hours += P.TestRate + units * Fx6.FromInt(20);
             Assert.Equal(expected.GetInt64(), ProductsMath.DetectedTotal(hours, d0, P.LambdaD, P.BetaQ10).Raw);
         }
-    }
-
-    [Fact]
-    public void Readiness_MatchesReference()
-    {
-        JsonElement r = Ref.GetProperty("readiness");
-        Fx6 d0 = R(Ref.GetProperty("detection").GetProperty("D0"));
-        Fx6 half = Fx6.FromRaw(d0.Raw / 2);
-        Assert.Equal(r.GetProperty("new_design_D_eq_D0").GetInt64(), ProductsMath.Readiness(Fx6.One, Fx6.One, d0, d0, P.PsiD).Raw);
-        Assert.Equal(r.GetProperty("half_open").GetInt64(), ProductsMath.Readiness(Fx6.One, Fx6.FromRaw(900_000), half, d0, P.PsiD).Raw);
-        Assert.Equal(r.GetProperty("unpaid_0.8_no_defects").GetInt64(), ProductsMath.Readiness(Fx6.FromRaw(800_000), Fx6.One, Fx6.Zero, d0, P.PsiD).Raw);
-        Assert.Equal(r.GetProperty("start_fleet_D0_0").GetInt64(), ProductsMath.Readiness(Fx6.One, Fx6.One, Fx6.Zero, Fx6.Zero, P.PsiD).Raw);
     }
 
     [Theory]

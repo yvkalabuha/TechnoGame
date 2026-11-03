@@ -5,8 +5,8 @@ namespace Singularity.Core.Products;
 
 /// <summary>
 /// Start state of the product layer by actor row: design slots (stage, alternatives), cohort counts, bureau experience.
-/// Flat arrays: <c>Stage[a·D + d]</c>, <c>Alts[(a·D + d)·S + s]</c>, <c>Cohort[(a·D + d)·Y + y]</c>, <c>BureauExp[a·B + b]</c>.
-/// Everything else (defects, hours, <c>line_E</c>, work) starts at 0.
+/// Flat arrays (D = <c>max_designs</c>): <c>Stage[a·D + d]</c>, <c>PlatformGen[a·D + d]</c>, <c>Alts[(a·D + d)·S + s]</c>,
+/// <c>Cohort[(a·D + d)·Y + y]</c>, <c>BureauExp[a·B + b]</c>. Everything else (defects, hours, <c>line_E</c>, work) starts at 0.
 /// </summary>
 public sealed class ProductsStart
 {
@@ -15,6 +15,7 @@ public sealed class ProductsStart
         Layout = layout;
         Actors = actors;
         Stage = new DesignStage[actors * layout.Designs];
+        PlatformGen = new int[Stage.Length];
         Alts = new int[Stage.Length * layout.SlotCount];
         Array.Fill(Alts, -1);
         Cohort = new Fx6[Stage.Length * layout.Years];
@@ -24,16 +25,17 @@ public sealed class ProductsStart
     public ProductsLayout Layout { get; }
     public int Actors { get; }
     public DesignStage[] Stage { get; }
+    public int[] PlatformGen { get; }
     public int[] Alts { get; }
     public Fx6[] Cohort { get; }
     public Fx6[] BureauExp { get; }
 
     /// <summary>
-    /// Start fleets of the scenario (spec §1.1, R-FL): each fleet row of this class becomes the design slot (gen, variant)
-    /// in stage В (line closed, units in service) with the «превосходящий» alternatives the actor knows at t0 among nodes of
-    /// generations ≤ gen, and its
-    /// count goes into the cohort of <c>cohort_year</c>. [Предл.] Start designs are mature: no defects (<c>D0</c> = 0),
-    /// bureau experience 0. A «технологичный» start fleet needs t0 yields and is rejected.
+    /// Start fleets of the scenario (spec §1.1, R-FL): each fleet row of this class becomes the next free design slot (scenario
+    /// order, A32) in stage В (line closed, units in service) with the «превосходящий» alternatives the actor knows at t0 among
+    /// nodes of generations ≤ gen, <c>g_p</c> = gen, and its count goes into the cohort of <c>cohort_year</c>. [Предл.] Start
+    /// designs are mature: no defects (<c>D0</c> = 0), bureau experience 0, the series gate counts as open. A «технологичный»
+    /// start fleet needs t0 yields and is rejected.
     /// </summary>
     public static ProductsStart FromScenario(ScenarioData scenario, NodeTable nodes, ProductClassTable classes, ProductsLayout layout)
     {
@@ -65,8 +67,16 @@ public sealed class ProductsStart
                 int y = scenario.FleetCohortYear[f] - layout.StartYear;
                 if (y < 0 || y >= layout.Years)
                     throw new ArgumentException($"Start fleet of {scenario.ActorId[a]}: cohort year outside the layout years.", nameof(scenario));
-                int d = a * layout.Designs + ProductsLayout.DesignId(gen, DesignVariant.Superior);
+                // Rows of one generation share the design (their cohorts differ by year).
+                int slot = 0;
+                while (slot < layout.Designs && start.Stage[a * layout.Designs + slot] != DesignStage.None
+                    && start.PlatformGen[a * layout.Designs + slot] != gen)
+                    slot++;
+                if (slot == layout.Designs)
+                    throw new ArgumentException($"Start fleets of {scenario.ActorId[a]} exceed max_designs ({layout.Designs}).", nameof(scenario));
+                int d = a * layout.Designs + slot;
                 start.Stage[d] = DesignStage.InService;
+                start.PlatformGen[d] = gen;
                 alts.CopyTo(start.Alts.AsSpan(d * layout.SlotCount, layout.SlotCount));
                 start.Cohort[d * layout.Years + y] += Fx6.FromInt(scenario.FleetCount[f]);
             }

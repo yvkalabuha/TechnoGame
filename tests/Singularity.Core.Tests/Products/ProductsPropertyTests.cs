@@ -17,7 +17,7 @@ public class ProductsPropertyTests
     private static Fx6 Rnd(Random r, long minRaw, long maxRaw) => F(r.NextInt64(minRaw, maxRaw + 1));
 
     /// <summary>Every («превосходящий», «технологичный» at yields 1) design of every generation with all nodes up to it known.</summary>
-    private static IEnumerable<(int Gen, int[] Prc)> DataDesigns()
+    private static IEnumerable<(int Gen, int[] Prc, int Af, int Pu)> DataDesigns()
     {
         ProductsLayout l = Probe;
         var alts = new int[l.SlotCount];
@@ -26,16 +26,27 @@ public class ProductsPropertyTests
             for (int k = g; k <= l.Generations; k++)
             {
                 if (DesignRules.Superior(l, g, l.KnownUpTo(k), alts))
-                    yield return (g, DesignRules.PrcSet(l, alts));
-                if (DesignRules.Producible(l, g, l.KnownUpTo(k), _ => Fx6.One, F(500_000), alts))
-                    yield return (g, DesignRules.PrcSet(l, alts));
+                    yield return (g, DesignRules.PrcSet(l, alts), DesignRules.AfClass(l, alts), DesignRules.PuRank(l, alts));
+                if (DesignRules.Producible(l, g, l.KnownUpTo(k), _ => Fx6.One, F(500_000), null, alts))
+                    yield return (g, DesignRules.PrcSet(l, alts), DesignRules.AfClass(l, alts), DesignRules.PuRank(l, alts));
             }
         }
     }
 
-    private static CostCard CardOf(int g, int[] prc, Fx6 mult) =>
-        new(Probe.HFirst[g - 1], Probe.HFloor[g - 1], Probe.WageKh, Probe.MaterialsFloor[g - 1],
-            ProductsMath.ProcessPart(DesignRules.BaseCostSum(Probe, prc), mult, Probe.ProcScale[g - 1]), new ProductsParams().LearningQ10);
+    private static Fx6 Part(int[] prc, int af, int pu, Fx6 mult)
+    {
+        int[] puPrc = DesignRules.Block(Probe, prc, airframe: false), afPrc = DesignRules.Block(Probe, prc, airframe: true);
+        return ProductsMath.ProcessPart(DesignRules.BaseCostSum(Probe, puPrc), mult, Probe.ProcScalePu[pu - 1],
+            DesignRules.BaseCostSum(Probe, afPrc), mult, Probe.ProcScaleAf[af - 1]);
+    }
+
+    private static CostCard CardOf(int af, int pu, int[] prc, Fx6 mult) =>
+        new(Probe.HFirst[af - 1], Probe.HFloor[af - 1], Probe.WageKh, Probe.MaterialsFloor[af - 1], Part(prc, af, pu, mult), new ProductsParams().LearningQ10);
+
+    private static Fx6 FloorOf(int af, int pu, int[] prc) =>
+        ProductsMath.UnitCostFloor(Probe.MaterialsFloor[af - 1], Probe.HFloor[af - 1], Probe.WageKh,
+            DesignRules.BaseCostSum(Probe, DesignRules.Block(Probe, prc, airframe: false)), Probe.ProcScalePu[pu - 1],
+            DesignRules.BaseCostSum(Probe, DesignRules.Block(Probe, prc, airframe: true)), Probe.ProcScaleAf[af - 1]);
 
     [Fact]
     public void DataDesigns_CoverEveryGeneration()
@@ -48,11 +59,11 @@ public class ProductsPropertyTests
     public void UnitCost_NonIncreasingInLineExperience_NeverBelowFloor_DataDesigns()
     {
         var rnd = new Random(44);
-        foreach ((int g, int[] prc) in DataDesigns())
+        foreach ((int g, int[] prc, int af, int pu) in DataDesigns())
         {
             foreach (Fx6 mult in new[] { Fx6.One, F(1_250_000), Rnd(rnd, 1_000_000, 20_000_000) })
             {
-                CostCard card = CardOf(g, prc, mult);
+                CostCard card = CardOf(af, pu, prc, mult);
                 Fx6 floor = card.MaterialsFloor + ProductsMath.AssemblyCost(card.HFloor, card.WageKh) + card.ProcessPart;
                 Fx6 prev = ProductsMath.UnitCost(card, Fx6.Zero);
                 long e = 0;
@@ -66,10 +77,9 @@ public class ProductsPropertyTests
                 }
             }
             // unit_cost_floor of the design (yield 1, E → ∞) equals the card floor at unit_cost_mult = 1.
-            CostCard one = CardOf(g, prc, Fx6.One);
+            CostCard one = CardOf(af, pu, prc, Fx6.One);
             Assert.Equal(one.MaterialsFloor + ProductsMath.AssemblyCost(one.HFloor, one.WageKh) + one.ProcessPart,
-                ProductsMath.UnitCostFloor(Probe.MaterialsFloor[g - 1], Probe.HFloor[g - 1], Probe.WageKh,
-                    DesignRules.BaseCostSum(Probe, prc), Probe.ProcScale[g - 1]));
+                FloorOf(af, pu, prc));
         }
     }
 
@@ -93,10 +103,9 @@ public class ProductsPropertyTests
     public void Upkeep_Positive_ForEveryDataDesign_AndNonDecreasingInComplexity()
     {
         var p = new ProductsParams();
-        foreach ((int g, int[] prc) in DataDesigns())
+        foreach ((int g, int[] prc, int af, int pu) in DataDesigns())
         {
-            Fx6 floor = ProductsMath.UnitCostFloor(Probe.MaterialsFloor[g - 1], Probe.HFloor[g - 1], Probe.WageKh,
-                DesignRules.BaseCostSum(Probe, prc), Probe.ProcScale[g - 1]);
+            Fx6 floor = FloorOf(af, pu, prc);
             int c = DesignRules.Complexity(Probe, prc);
             Fx6 upkeep = ProductsMath.Upkeep(p.UpkeepShare, floor, c, p.UpkeepQ10, Probe.Maintainability);
             Assert.True(upkeep > Fx6.Zero, $"G{g} complexity {c}: upkeep {upkeep}");
@@ -132,7 +141,7 @@ public class ProductsPropertyTests
             Fx6 paid = Rnd(rnd, 0, 1_500_000); // a paid ratio above 1 is capped
             Fx6 q = Rnd(rnd, 0, 1_000_000);
             Fx6 psi = Rnd(rnd, 0, 1_000_000);
-            Fx6 d0 = Rnd(rnd, 1, 500_000_000);
+            Fx6 d0 = Rnd(rnd, 1, 500_000_000); // D_ref
             Fx6 dA = Rnd(rnd, 0, d0.Raw), dB = Rnd(rnd, dA.Raw, d0.Raw);
             Fx6 rA = ProductsMath.Readiness(paid, q, dA, d0, psi), rB = ProductsMath.Readiness(paid, q, dB, d0, psi);
             Assert.InRange(rA.Raw, 0, Fx6.Scale);
@@ -141,8 +150,8 @@ public class ProductsPropertyTests
             // No unfixed defects: the defect factor is 1.
             Fx6 capped = paid < Fx6.One ? paid : Fx6.One;
             Assert.Equal(capped * q, ProductsMath.Readiness(paid, q, Fx6.Zero, d0, psi));
-            // D0 = 0 (start designs): no defect factor at all.
-            Assert.Equal(capped * q, ProductsMath.Readiness(paid, q, dB, Fx6.Zero, psi));
+            // D_ref scales the defect factor (contract §4.4b): a larger D_ref never lowers readiness.
+            Assert.True(ProductsMath.Readiness(paid, q, dB, d0 + Rnd(rnd, 0, 500_000_000), psi) >= rB);
             // Monotone in paid ratio too.
             Assert.True(ProductsMath.Readiness(paid + Rnd(rnd, 0, 500_000), q, dA, d0, psi) >= rA);
         }
@@ -199,11 +208,11 @@ public class ProductsPropertyTests
     {
         var rnd = new Random(51);
         var p = new ProductsParams();
-        (int g, int[] prc)[] designs = [.. DataDesigns()];
+        (int g, int[] prc, int af, int pu)[] designs = [.. DataDesigns()];
         for (int i = 0; i < 300; i++)
         {
-            (int g, int[] prc) = designs[rnd.Next(designs.Length)];
-            CostCard card = CardOf(g, prc, Rnd(rnd, 1_000_000, 3_000_000));
+            (int g, int[] prc, int af, int pu) = designs[rnd.Next(designs.Length)];
+            CostCard card = CardOf(af, pu, prc, Rnd(rnd, 1_000_000, 3_000_000));
             Fx6 e = Rnd(rnd, 0, 500_000_000);
             Fx6 upkeep = Rnd(rnd, 1, 100);
             Fx6 b1 = Rnd(rnd, 0, 2_000_000), b2 = b1 + Rnd(rnd, 0, 1_000_000);
@@ -214,7 +223,7 @@ public class ProductsPropertyTests
             Assert.InRange(n1, 0, 2_000);
             Assert.True(n2 >= n1, $"case {i}: n fell with budget");
             Assert.True(n3 <= n1, $"case {i}: n rose with upkeep");
-            Assert.Equal(Fx6.Zero, ProductsMath.FleetValue(0, Fx6.One, Fx6.One));
+            Assert.Equal(Fx6.Zero, ProductsMath.FleetValue(0, Fx6.One, Fx6.One, 512));
         }
     }
 

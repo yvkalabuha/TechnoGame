@@ -199,7 +199,7 @@ public class ProductsInvariantTests
                             Assert.Equal(Fx6.Zero, rate); // I3: not admitted ⇒ no output
                         }
                     }
-                    Fx6 want = h.Rate(actor, d, t);
+                    Fx6 want = h.Rate(actor, d, t) ?? Fx6.Zero;
                     Assert.True(rate <= want, $"{ad}: rate {rate} above the asked {want}");
 
                     // Cohorts: no negatives; change = output into the cohort of this calendar year, or a write-off at service life.
@@ -249,13 +249,13 @@ public class ProductsInvariantTests
                     {
                         int d = p.BureauDesign(q.Site, id);
                         Assert.True(d >= 0 && p.Stage(q.Site, d) == DesignStage.Project, $"month {t}: bureau {id} requests without a project");
-                        Assert.Equal(p.BureauReq(ProductsLayout.GenOf(d)), q.N);
+                        Assert.Equal(p.BureauReq(DesignRules.AfClass(_l, p.Alternatives(q.Site, d))), q.N);
                     }
                     else
                     {
                         int d = id - _l.Bureaus;
                         FixRequests++;
-                        Assert.True(q.N <= p.BureauReq(ProductsLayout.GenOf(d)), $"month {t}: fix team {q.N} over bureau_req");
+                        Assert.True(q.N <= p.BureauReq(DesignRules.AfClass(_l, p.Alternatives(q.Site, d))), $"month {t}: fix team {q.N} over bureau_req");
                         Assert.True(p.DefectsOpen(q.Site, d) > Fx6.Zero, $"month {t}: fix team for design {d} without open defects");
                     }
                 }

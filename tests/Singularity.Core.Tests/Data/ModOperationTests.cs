@@ -29,17 +29,24 @@ public class ModOperationTests : IDisposable
     [Fact]
     public void Override_ReplacesWholeObject()
     {
-        const string text = "kind: product_class\noverride:\n  - id: jet_fighter\n    axis: perf\n    lighten_order: []\n" +
-                            "    slots:\n      - id: engine\n        base: true\n        alternatives:\n" +
-                            "          - {id: eng_g1, rank: 1, perf_mult: 1.0, prc_set: [s8.prc.jet_engine_assembly_test], requires_nodes: [s8.eng.turbojet_g1]}\n" +
-                            "    h_pm: 175\n    wage_kh: 0.000125\n    maintainability: 1.0\n    r_ref: 25\n" +
+        const string text = "kind: product_class\noverride:\n  - id: jet_fighter\n    axis: perf\n    lighten_order: [hot_section, airframe]\n" +
+                            "    slots:\n      - id: engine\n        block: pu\n        base: true\n        alternatives:\n" +
+                            "          - {id: eng_g1, rank: 1, eng_gen: 1, perf_mult: 1.0, prc_set: [s8.prc.jet_engine_assembly_test], requires_nodes: [s8.eng.turbojet_g1]}\n" +
+                            "      - id: hot_section\n        block: pu\n        base: false\n        alternatives:\n" +
+                            "          - {id: hot_nicr_forged, rank: 1, alloy_kg: 290, perf_mult: 1.0, prc_set: [s5.prc.nicr_alloy_melt], requires_nodes: []}\n" +
+                            "      - id: airframe\n        block: af\n        base: false\n        alternatives:\n" +
+                            "          - {id: af_straight, rank: 1, af_class: 1, perf_mult: 1.0, prc_set: [s8.prc.stressed_skin_assembly], requires_nodes: []}\n" +
+                            "    h_pm: 175\n    wage_kh: 0.000125\n    maintainability: 1.0\n    r_ref: 25\n    c_ref: 10\n" +
                             "    processes:\n      - {prc: s8.prc.jet_engine_assembly_test, n_p: 1, labour_hours: 1350, base_cost: 0.000168}\n" +
-                            "    generations:\n      - {gen: 1, app: s8.app.jet_fighter_g1, h_first: 4, h_floor: 1, materials_floor: 0, alloy_kg: 1, " +
-                            "crew_req: 1, proc_scale: 1, design_scale: 1}\n";
+                            "      - {prc: s5.prc.nicr_alloy_melt, n_p: 1, labour_hours: 225, base_cost: 0.000028}\n" +
+                            "      - {prc: s8.prc.stressed_skin_assembly, n_p: 1, labour_hours: 3700, base_cost: 0.000462}\n" +
+                            "    pu_ranks:\n      - {rank: 1, proc_scale_pu: 1}\n" +
+                            "    af_classes:\n      - {af_class: 1, h_first: 4, h_floor: 1, materials_floor: 0, design_scale: 1, proc_scale_af: 1}\n" +
+                            "    generations:\n      - {gen: 1, app: s8.app.jet_fighter_g1, crew_req: 1, platform_min_rank: 1}\n";
         string a = _mods.Mod("a", DependsOnCore, ("classes.yaml", text));
         GameData data = ModLoader.Load(TestMods.CoreDir, a);
-        Assert.Equal(["engine"], data.ProductClasses.SlotId.ToArray());
-        Assert.Single(data.ProductClasses.AltId);
+        Assert.Equal(["engine", "hot_section", "airframe"], data.ProductClasses.SlotId.ToArray());
+        Assert.Equal(3, data.ProductClasses.AltId.Length);
         Assert.Single(data.ProductClasses.GenApp);
     }
 

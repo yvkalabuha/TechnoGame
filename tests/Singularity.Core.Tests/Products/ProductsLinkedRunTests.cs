@@ -82,7 +82,7 @@ public class ProductsLinkedRunTests
             var probe = MakeLayout(out _);
             ILayout = IndustryLayout.FromData(CoreData.Nodes, Scenario, Categories, probe.Requesters);
             IndustryStart iStart = IndustryStart.FromScenario(Scenario, CoreData.Nodes, ILayout, ip);
-            PLayout = ProductsLayout.FromData(CoreData.Nodes, CoreData.ProductClasses, "jet_fighter", ILayout, Bureaus, Scenario.StartYear, Years);
+            PLayout = ProductsLayout.FromData(CoreData.Nodes, CoreData.ProductClasses, "jet_fighter", ILayout, Bureaus, Scenario.StartYear, Years, Scenario.MaxDesigns);
             ProductsStart pStart = ProductsStart.FromScenario(Scenario, CoreData.Nodes, CoreData.ProductClasses, PLayout);
 
             Table = new Table(Scenario.ActorCount);
@@ -90,7 +90,7 @@ public class ProductsLinkedRunTests
             int chunks = TickRunner.ChunkCountFor(Table.RowCount, chunkSize);
             var rng = new CounterRng(7);
             Knowledge = new KnowledgeSystem(Table, Graph, kStart, kp, new KInputs(this, rng), rng, chunks);
-            Industry = new IndustrySystem(Table, ILayout, iStart, ip, new IInputs(this), chunks);
+            Industry = new IndustrySystem(Table, ILayout, iStart, ip, new IInputs(this), chunks, new V23CultureRule());
             Products = new ProductsSystem(Table, PLayout, pStart, new ProductsParams(), new PInputs(this),
                 Industry.CreateMailbox(chunks, Cadence.Monthly));
             Runner = new TickRunner(Table, 7, [Knowledge, Industry, Products], chunkSize, threads, Calendar);
@@ -183,34 +183,15 @@ public class ProductsLinkedRunTests
 
         public Fx6 ProcurementBudget(int actorRow, long month) => Scenario.BudgetIndex[actorRow] * Fx6.FromRaw(440_000);
 
-        // Stand-in AI: the newest known APP without a design; even actors superior, odd producible.
-        public DesignOrder? Order(int actorRow, long month)
-        {
-            for (int g = run.PLayout.Generations; g >= 1; g--)
-            {
-                if (!run.Knows(actorRow, run.PLayout.GenApp[g - 1]))
-                    continue;
-                bool any = run.Products.Stage(actorRow, ProductsLayout.DesignId(g, DesignVariant.Superior)) != DesignStage.None
-                    || run.Products.Stage(actorRow, ProductsLayout.DesignId(g, DesignVariant.Producible)) != DesignStage.None;
-                return any ? null : new DesignOrder(g, actorRow % 2 == 0 ? DesignVariant.Superior : DesignVariant.Producible);
-            }
-            return null;
-        }
+        public IReadOnlyList<DesignCommand> DesignCommands(int actorRow, long month) =>
+            StandInCommands(run.PLayout, run.Products, actorRow, n => run.Knows(actorRow, n), p => AdmittedYield(actorRow, p, month));
 
-        public bool LaunchSeries(int actorRow, int design, long month) =>
-            run.Products.Stage(actorRow, design) == DesignStage.Prototype || (month == 0 && design == 0);
+        public SeriesStart? StartSeries(int actorRow, int design, long month) =>
+            StandInLaunch(run.Products, actorRow, design, month) ? new SeriesStart(Fx6.FromInt(30), false) : null;
 
-        public bool CloseLine(int actorRow, int design, long month)
-        {
-            for (int d = design + 1; d < run.PLayout.Designs; d++)
-            {
-                if (ProductsLayout.GenOf(d) > ProductsLayout.GenOf(design) && run.Products.Stage(actorRow, d) == DesignStage.Series)
-                    return true;
-            }
-            return false;
-        }
+        public bool CloseLine(int actorRow, int design, long month) => StandInClose(run.PLayout, run.Products, actorRow, design);
 
-        public Fx6 LineRate(int actorRow, int design, long month) => Fx6.FromInt(30);
+        public Fx6? LineRate(int actorRow, int design, long month) => null;
 
         public long AppKnownSince(int actorRow, int gen, long month) => -1;
     }

@@ -14,11 +14,15 @@ public sealed partial class ProductClassTable
         var slotId = new List<string>();
         var slotClass = new List<int>();
         var slotIsBase = new List<bool>();
+        var slotIsAf = new List<bool>();
         var altStart = new List<int> { 0 };
         var altId = new List<string>();
         var altSlot = new List<int>();
         var altRank = new List<int>();
         var altPerf = new List<Fx6>();
+        var altEngGen = new List<int>();
+        var altAfClass = new List<int>();
+        var altAlloy = new List<Fx6>();
         var prcStart = new List<int> { 0 };
         var prc = new List<int>();
         var altRequires = new List<List<int[]>>();
@@ -31,15 +35,19 @@ public sealed partial class ProductClassTable
         var procN = new List<Fx6>();
         var procLabour = new List<Fx6>();
         var procBase = new List<Fx6>();
+        var cRef = new List<int>();
+        var puStart = new List<int> { 0 };
+        var puScale = new List<Fx6>();
+        var afStart = new List<int> { 0 };
+        var afHFirst = new List<Fx6>();
+        var afHFloor = new List<Fx6>();
+        var afMaterials = new List<Fx6>();
+        var afDesignScale = new List<Fx6>();
+        var afProcScale = new List<Fx6>();
         var genStart = new List<int> { 0 };
         var genApp = new List<int>();
-        var genHFirst = new List<Fx6>();
-        var genHFloor = new List<Fx6>();
-        var genMaterials = new List<Fx6>();
-        var genAlloy = new List<Fx6>();
         var genCrew = new List<int>();
-        var genProcScale = new List<Fx6>();
-        var genDesignScale = new List<Fx6>();
+        var genPlatform = new List<int>();
 
         int ResolveNode(YNode at, string id) =>
             nodes.IndexOf(id) is var row and >= 0 ? row : throw DataLoadException.At(at, $"reference to unknown node '{id}'");
@@ -56,7 +64,7 @@ public sealed partial class ProductClassTable
             int classRow = classIds.Count;
             classIds.Add(id);
             int firstSlot = slotId.Count;
-            int baseSlots = 0;
+            int baseSlots = 0, afSlots = 0;
 
             foreach (YNode slotNode in m.Seq("slots").Items)
             {
@@ -66,12 +74,20 @@ public sealed partial class ProductClassTable
                     throw DataLoadException.At(slotNode, $"duplicate slot '{sid}' in '{id}'");
                 bool isBase = s.Bool("base");
                 baseSlots += isBase ? 1 : 0;
+                string block = s.Str("block");
+                if (block is not ("pu" or "af"))
+                    throw DataLoadException.At(slotNode, $"slot '{sid}': block must be 'pu' or 'af'");
+                bool isAf = block == "af";
+                if (isBase && isAf)
+                    throw DataLoadException.At(slotNode, "the base (engine) slot belongs to the PU block");
+                afSlots += isAf ? 1 : 0;
                 int slotRow = slotId.Count;
                 slotId.Add(sid);
                 slotClass.Add(classRow);
                 slotIsBase.Add(isBase);
+                slotIsAf.Add(isAf);
 
-                var alts = new List<(int Rank, string Id, Fx6 Perf, int[] Prc, List<int[]> Req, YNode At)>();
+                var alts = new List<Alt>();
                 foreach (YNode altNode in s.Seq("alternatives").Items)
                     alts.Add(ReadAlternative(altNode, nodes, ResolveNode));
                 s.End();
@@ -88,6 +104,9 @@ public sealed partial class ProductClassTable
                     altSlot.Add(slotRow);
                     altRank.Add(alts[i].Rank);
                     altPerf.Add(alts[i].Perf);
+                    altEngGen.Add(alts[i].EngGen);
+                    altAfClass.Add(alts[i].AfClass);
+                    altAlloy.Add(alts[i].AlloyKg);
                     prc.AddRange(alts[i].Prc);
                     prcStart.Add(prc.Count);
                     altRequires.Add(alts[i].Req);
@@ -99,6 +118,10 @@ public sealed partial class ProductClassTable
                 throw DataLoadException.At(map, $"product class '{id}' has no slots");
             if (baseSlots != 1)
                 throw DataLoadException.At(map, $"product class '{id}' needs exactly one base slot, found {baseSlots}");
+            if (afSlots != 1)
+                throw DataLoadException.At(map, $"product class '{id}' needs exactly one airframe (block af) slot, found {afSlots}");
+            CheckAlloySlot(map, id, firstSlot, slotId.Count, altStart, altAlloy);
+            CheckBlocksDisjoint(map, id, firstSlot, slotId.Count, altStart, slotIsAf, prcStart, prc);
 
             // F-PC2: lighten_order lists every non-base slot exactly once.
             YSeq order = m.Seq("lighten_order");
@@ -125,9 +148,18 @@ public sealed partial class ProductClassTable
             ReadProcesses(m.Seq("processes"), nodes, ResolveNode, [.. prc.Skip(prcStart[altStart[firstSlot]]).Distinct().Order()],
                 procNode, procN, procLabour, procBase);
             procStart.Add(procNode.Count);
-            ReadGenerations(m.Seq("generations"), nodes, ResolveNode, genApp, genHFirst, genHFloor, genMaterials, genAlloy, genCrew,
-                genProcScale, genDesignScale);
+            int afCount = ReadAfClasses(m.Seq("af_classes"), afHFirst, afHFloor, afMaterials, afDesignScale, afProcScale);
+            afStart.Add(afHFirst.Count);
+            ReadPuRanks(m.Seq("pu_ranks"), puScale);
+            puStart.Add(puScale.Count);
+            cRef.Add(m.Int("c_ref"));
+            if (cRef[^1] < 1)
+                throw DataLoadException.At(m.Required("c_ref"), "c_ref must be at least 1");
+            int firstGen = genApp.Count;
+            ReadGenerations(m.Seq("generations"), nodes, ResolveNode, genApp, genCrew, genPlatform);
             genStart.Add(genApp.Count);
+            CheckClassRefs(map, id, firstSlot, slotId.Count, altStart, slotIsAf, slotIsBase, altEngGen, altAfClass, altRank,
+                afCount, puScale.Count - puStart[^2], genApp.Count - firstGen);
             m.End();
         }
 
@@ -135,15 +167,17 @@ public sealed partial class ProductClassTable
         {
             ClassId = [.. classIds], SlotStart = [.. slotStart],
             LightenStart = [.. lightenStart], LightenOrder = [.. lightenOrder],
-            SlotId = [.. slotId], SlotClass = [.. slotClass], SlotIsBase = [.. slotIsBase], AltStart = [.. altStart],
+            SlotId = [.. slotId], SlotClass = [.. slotClass], SlotIsBase = [.. slotIsBase], SlotIsAirframe = [.. slotIsAf], AltStart = [.. altStart],
             AltId = [.. altId], AltSlot = [.. altSlot], AltRank = [.. altRank], AltPerfMult = [.. altPerf],
+            AltEngGen = [.. altEngGen], AltAfClass = [.. altAfClass], AltAlloyKg = [.. altAlloy],
             PrcStart = [.. prcStart], Prc = [.. prc], AltRequires = RequirementLists.Build(altRequires),
             HPm = [.. hpm], WageKh = [.. wage], Maintainability = [.. maintainability],
             RRef = [.. rRef], ProcStart = [.. procStart], ProcNode = [.. procNode], ProcN = [.. procN],
-            ProcLabour = [.. procLabour], ProcBaseCost = [.. procBase], GenStart = [.. genStart], GenApp = [.. genApp],
-            GenHFirst = [.. genHFirst], GenHFloor = [.. genHFloor], GenMaterialsFloor = [.. genMaterials],
-            GenAlloyKg = [.. genAlloy], GenCrewReq = [.. genCrew],
-            GenProcScale = [.. genProcScale], GenDesignScale = [.. genDesignScale],
+            ProcLabour = [.. procLabour], ProcBaseCost = [.. procBase],
+            CRef = [.. cRef], PuStart = [.. puStart], PuProcScale = [.. puScale],
+            AfStart = [.. afStart], AfHFirst = [.. afHFirst], AfHFloor = [.. afHFloor], AfMaterialsFloor = [.. afMaterials],
+            AfDesignScale = [.. afDesignScale], AfProcScale = [.. afProcScale],
+            GenStart = [.. genStart], GenApp = [.. genApp], GenCrewReq = [.. genCrew], GenPlatformMinRank = [.. genPlatform],
         };
     }
 
@@ -187,7 +221,7 @@ public sealed partial class ProductClassTable
 
     // Generations 1..G in order, each with an APP node of that generation.
     private static void ReadGenerations(YSeq seq, NodeTable nodes, Func<YNode, string, int> resolve, List<int> app,
-        List<Fx6> hFirst, List<Fx6> hFloor, List<Fx6> materials, List<Fx6> alloy, List<int> crew, List<Fx6> procScale, List<Fx6> designScale)
+        List<int> crew, List<int> platformMinRank)
     {
         int expected = 1;
         foreach (YNode item in seq.Items)
@@ -200,31 +234,128 @@ public sealed partial class ProductClassTable
             int row = resolve(at, Scalars.Str(at));
             if (nodes.Type[row] != NodeType.APP || nodes.Gen[row] != gen)
                 throw DataLoadException.At(at, $"'{nodes.Id[row]}' is not an APP node of generation {gen}");
-            Fx6 first = Positive(g, "h_first"), floor = Positive(g, "h_floor");
-            if (floor > first)
-                throw DataLoadException.At(item, "h_floor must not exceed h_first");
-            Fx6 mat = g.Fixed("materials_floor");
-            if (mat < Fx6.Zero)
-                throw DataLoadException.At(item, "materials_floor must not be negative");
             int crewReq = g.Int("crew_req");
             if (crewReq < 1)
                 throw DataLoadException.At(item, "crew_req must be at least 1");
+            int minRank = g.Int("platform_min_rank");
+            if (minRank < 1)
+                throw DataLoadException.At(item, "platform_min_rank must be at least 1");
             app.Add(row);
-            hFirst.Add(first);
-            hFloor.Add(floor);
-            materials.Add(mat);
-            alloy.Add(Positive(g, "alloy_kg"));
             crew.Add(crewReq);
-            procScale.Add(Positive(g, "proc_scale"));
-            designScale.Add(Positive(g, "design_scale"));
+            platformMinRank.Add(minRank);
             g.End();
         }
         if (expected == 1)
             throw DataLoadException.At(seq, "a product class needs at least one generation");
     }
 
-    private static (int Rank, string Id, Fx6 Perf, int[] Prc, List<int[]> Req, YNode At) ReadAlternative(
-        YNode node, NodeTable nodes, Func<YNode, string, int> resolve)
+    // Airframe classes 1..K in order (contract §4.4a, product_inputs.md §14.4).
+    private static int ReadAfClasses(YSeq seq, List<Fx6> hFirst, List<Fx6> hFloor, List<Fx6> materials, List<Fx6> designScale,
+        List<Fx6> procScale)
+    {
+        int expected = 1;
+        foreach (YNode item in seq.Items)
+        {
+            var a = new MapReader(item);
+            int k = a.Int("af_class");
+            if (k != expected++)
+                throw DataLoadException.At(item, $"af_classes must be listed as 1, 2, ... in order; found {k}");
+            Fx6 first = Positive(a, "h_first"), floor = Positive(a, "h_floor");
+            if (floor > first)
+                throw DataLoadException.At(item, "h_floor must not exceed h_first");
+            Fx6 mat = a.Fixed("materials_floor");
+            if (mat < Fx6.Zero)
+                throw DataLoadException.At(item, "materials_floor must not be negative");
+            hFirst.Add(first);
+            hFloor.Add(floor);
+            materials.Add(mat);
+            designScale.Add(Positive(a, "design_scale"));
+            procScale.Add(Positive(a, "proc_scale_af"));
+            a.End();
+        }
+        return expected - 1;
+    }
+
+    private static void ReadPuRanks(YSeq seq, List<Fx6> scale)
+    {
+        int expected = 1;
+        foreach (YNode item in seq.Items)
+        {
+            var r = new MapReader(item);
+            int rank = r.Int("rank");
+            if (rank != expected++)
+                throw DataLoadException.At(item, $"pu_ranks must be listed as 1, 2, ... in order; found {rank}");
+            scale.Add(Positive(r, "proc_scale_pu"));
+            r.End();
+        }
+    }
+
+    // Exactly one slot carries alloy_kg on every alternative (R-AK2, A23); the other slots carry none.
+    private static void CheckAlloySlot(YMap at, string classId, int firstSlot, int endSlot, List<int> altStart, List<Fx6> alloy)
+    {
+        int slots = 0;
+        for (int s = firstSlot; s < endSlot; s++)
+        {
+            int with = 0, n = altStart[s + 1] - altStart[s];
+            for (int a = altStart[s]; a < altStart[s + 1]; a++)
+                with += alloy[a] > Fx6.Zero ? 1 : 0;
+            if (with != 0 && with != n)
+                throw DataLoadException.At(at, $"class '{classId}': alloy_kg must be on all or none alternatives of a slot");
+            slots += with != 0 ? 1 : 0;
+        }
+        if (slots != 1)
+            throw DataLoadException.At(at, $"class '{classId}' needs exactly one alloy slot (alloy_kg on every alternative), found {slots}");
+    }
+
+    // R-PS2m (contract §4.4a): the PRCs of the PU block and of the AF block do not overlap.
+    private static void CheckBlocksDisjoint(YMap at, string classId, int firstSlot, int endSlot, List<int> altStart,
+        List<bool> slotIsAf, List<int> prcStart, List<int> prc)
+    {
+        var pu = new List<int>();
+        var af = new List<int>();
+        for (int s = firstSlot; s < endSlot; s++)
+        {
+            for (int a = altStart[s]; a < altStart[s + 1]; a++)
+            {
+                for (int i = prcStart[a]; i < prcStart[a + 1]; i++)
+                    (slotIsAf[s] ? af : pu).Add(prc[i]);
+            }
+        }
+        foreach (int row in af)
+        {
+            if (pu.Contains(row))
+                throw DataLoadException.At(at, $"class '{classId}': a PRC is in both the PU and the AF block (R-PS2m needs disjoint blocks)");
+        }
+    }
+
+    // eng_gen in 1..G_max, af_class in 1..K, pu_ranks cover the PU ranks (contract §4.4a validator).
+    private static void CheckClassRefs(YMap at, string classId, int firstSlot, int endSlot, List<int> altStart, List<bool> slotIsAf,
+        List<bool> slotIsBase, List<int> engGen, List<int> afClass, List<int> rank, int afClasses, int puRanks, int generations)
+    {
+        int maxRank = 1;
+        for (int s = firstSlot; s < endSlot; s++)
+        {
+            for (int a = altStart[s]; a < altStart[s + 1]; a++)
+            {
+                if (slotIsBase[s] && (engGen[a] < 1 || engGen[a] > generations))
+                    throw DataLoadException.At(at, $"class '{classId}': eng_gen of an engine alternative must be in 1..{generations} (G_max)");
+                if (!slotIsBase[s] && engGen[a] != 0)
+                    throw DataLoadException.At(at, $"class '{classId}': eng_gen is only allowed in the engine (base) slot");
+                if (slotIsAf[s] && (afClass[a] < 1 || afClass[a] > afClasses))
+                    throw DataLoadException.At(at, $"class '{classId}': af_class of an airframe alternative must be in 1..{afClasses}");
+                if (!slotIsAf[s] && afClass[a] != 0)
+                    throw DataLoadException.At(at, $"class '{classId}': af_class is only allowed in the airframe slot");
+                if (!slotIsAf[s])
+                    maxRank = Math.Max(maxRank, rank[a]);
+            }
+        }
+        if (puRanks < maxRank)
+            throw DataLoadException.At(at, $"class '{classId}': pu_ranks must cover ranks 1..{maxRank} of the PU slots");
+    }
+
+    private readonly record struct Alt(int Rank, string Id, Fx6 Perf, int EngGen, int AfClass, Fx6 AlloyKg, int[] Prc, List<int[]> Req, YNode At);
+
+    private static Alt ReadAlternative(YNode node, NodeTable nodes, Func<YNode, string, int> resolve)
     {
         var a = new MapReader(node);
         string id = a.Str("id");
@@ -236,6 +367,11 @@ public sealed partial class ProductClassTable
         Fx6 perf = a.Fixed("perf_mult");
         if (perf <= Fx6.Zero)
             throw DataLoadException.At(node, "perf_mult must be positive");
+        // Presence is checked against the slot roles after the class is read (CheckClassRefs): a wrong slot is then reported
+        // by its own message, not by a missing field.
+        int engGen = a.Optional("eng_gen") is null ? 0 : a.Int("eng_gen");
+        int afClass = a.Optional("af_class") is null ? 0 : a.Int("af_class");
+        Fx6 alloy = a.Optional("alloy_kg") is null ? Fx6.Zero : Positive(a, "alloy_kg");
 
         var prcRows = new List<int>();
         foreach (YNode item in a.Seq("prc_set").Items)
@@ -250,6 +386,6 @@ public sealed partial class ProductClassTable
         prcRows.Sort();
         List<int[]> req = RequirementLists.ReadGroups(a.Seq("requires_nodes"), resolve);
         a.End();
-        return (rank, id, perf, [.. prcRows], req, node);
+        return new Alt(rank, id, perf, engGen, afClass, alloy, [.. prcRows], req, node);
     }
 }

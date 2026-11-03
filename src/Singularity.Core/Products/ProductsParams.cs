@@ -26,7 +26,35 @@ public sealed record ProductsParams
     /// <summary><c>q10_β</c>: β = 0.5.</summary>
     public int BetaQ10 { get; init; } = 512;
 
+    /// <summary><c>ψ_D</c>: share of readiness lost by a fleet with <c>D_ref</c> open defects (contract §4.4b, A35); 0.5, started value (#121).</summary>
     public Fx6 PsiD { get; init; } = F(500_000);
+
+    /// <summary><c>k_gate</c> of <c>gate_open</c> (contract §4.4b); 0.7, started value (#121).</summary>
+    public Fx6 KGate { get; init; } = F(700_000);
+
+    /// <summary><c>t_test_min</c>, months of tests before the series gate can open; 6, started value (#121).</summary>
+    public int TTestMin { get; init; } = 6;
+
+    /// <summary><c>a_acc</c>, accidents per flight hour per unit of <c>X/D_ref</c> (contract §4.4c); 10⁻³ 1/h, started value (#121).</summary>
+    public Fx6 AAcc { get; init; } = F(1_000);
+
+    /// <summary><c>ρ_retro</c>, share of <c>unit_cost_floor</c> a retrofit costs (contract §4.4c); 0.5, started value (#121).</summary>
+    public Fx6 RhoRetro { get; init; } = F(500_000);
+
+    /// <summary><c>τ_der</c>: share of the parent's <c>line_E</c> a derived design inherits at launch (П-9); 1 [Предп.: same airframe].</summary>
+    public Fx6 TauDer { get; init; } = Fx6.One;
+
+    /// <summary><c>q10_γ</c> of <c>PowFrac(perf_rel, q10_γ)</c> in <c>FV</c> (contract §9.1, #91): γ = 0.5.</summary>
+    public int GammaQ10 { get; init; } = 512;
+
+    /// <summary><c>H_build = T_field</c>, months to deliver the fleet in <c>FV</c> (contract §9.1); 24 (З).</summary>
+    public int HBuild { get; init; } = 24;
+
+    /// <summary>
+    /// <c>r_plan</c> of a project in stage П is <c>r_ref/PlanProjectDivisor</c> (in stage О: <c>r_ref</c>), the planned output of
+    /// <c>v_exp</c> (spec §3.5 A37); 4 [Предп.] «З».
+    /// </summary>
+    public int PlanProjectDivisor { get; init; } = 4;
 
     /// <summary>Engineer hours to fix one detected defect.</summary>
     public Fx6 FixHours { get; init; } = Fx6.FromInt(2000);
@@ -92,6 +120,9 @@ public sealed record ProductsParams
             throw new ArgumentException("δ_E, δ_B and ψ_D must be in [0; 1].");
         if (LearningQ10 <= 0 || BetaQ10 <= 0 || BetaQ10 >= DetMath.FracOne || UpkeepQ10 < 0)
             throw new ArgumentException("q10_b > 0, 0 < q10_β < 1024 (β < 1), q10_αu ≥ 0.");
+        if (KGate < Fx6.Zero || TTestMin < 0 || AAcc < Fx6.Zero || RhoRetro < Fx6.Zero || TauDer < Fx6.Zero || TauDer > Fx6.One
+            || GammaQ10 <= 0 || GammaQ10 > DetMath.FracOne || HBuild < 1 || PlanProjectDivisor < 1)
+            throw new ArgumentException("k_gate, a_acc, ρ_retro ≥ 0; t_test_min ≥ 0; τ_der in [0; 1]; 0 < q10_γ ≤ 1024; H_build, r_plan divisor ≥ 1.");
         if (B0 < 1 || KappaQ10 < 0 || KappaQ10 > DetMath.FracOne)
             throw new ArgumentException("B0 ≥ 1 and κ in [0; 1] (q10 0…1024).");
         if (LpTDesign.Length != LpRho.Length)

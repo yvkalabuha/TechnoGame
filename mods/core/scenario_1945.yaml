@@ -15,6 +15,8 @@ define:
     # (USA 92 300, GBR 22 059, SUN 21 136, FRA 6 461, SWE 2 215); alloy_ref_kg = alloy_kg[G1]·N_ref, N_ref = mature
     # G1 USA buys per month at t0. No direct source for melt capacity 1945-60. Dynamics follow the budget.
     alloy_ref_kg: 92300
+    # Design slots per actor (contract §3.1, G4-8): 4 generations × 2 presets + one derived design per platform [assumption].
+    max_designs: 12
     # Source or estimation rule of every actor field (spec §1.1 "rule before number").
     # estimated: true = estimated for every actor; per-actor estimates are listed in actor.estimated.
     provenance:

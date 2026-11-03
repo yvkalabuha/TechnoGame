@@ -56,21 +56,51 @@ public class ProductDataTests : IDisposable
     }
 
     [Theory]
-    [InlineData(1, 58, 9320, 2330, 217, 290, 942_188, 1_000_000)]
-    [InlineData(2, 59, 14760, 3690, 329, 670, 858_987, 1_110_000)]
-    [InlineData(3, 60, 41960, 10490, 919, 2120, 1_021_118, 1_820_000)]
-    [InlineData(4, 61, 125920, 31480, 2098, 2980, 2_597_030, 3_120_000)]
-    public void Generations_MatchR3(int gen, int app, int hFirst, int hFloor, long materialsRaw, int alloyKg, long procScaleRaw, long designScaleRaw)
+    [InlineData(1, 58, 1, 1)]
+    [InlineData(2, 59, 1, 2)]
+    [InlineData(3, 60, 1, 3)]
+    [InlineData(4, 61, 1, 5)]
+    public void Generations_HaveAppCrewAndPlatformThreshold(int gen, int app, int crew, int platformMinRank)
     {
         int i = gen - 1;
         Assert.Equal(app, Probe.GenApp[i]);
+        Assert.Equal(crew, Probe.CrewReq[i]);
+        Assert.Equal(platformMinRank, Probe.PlatformMinRank[i]);
+    }
+
+    [Theory]
+    [InlineData(1, 9320, 2330, 217, 1_000_000, 1_253_259)]
+    [InlineData(2, 14760, 3690, 329, 1_110_000, 1_086_777)]
+    [InlineData(3, 41960, 10490, 919, 1_820_000, 1_098_982)]
+    [InlineData(4, 125920, 31480, 2098, 3_120_000, 3_754_003)]
+    public void AirframeClasses_MatchProductInputs14(int afClass, int hFirst, int hFloor, long materialsRaw, long designScaleRaw, long procScaleAfRaw)
+    {
+        int i = afClass - 1;
         Assert.Equal(Fx6.FromInt(hFirst), Probe.HFirst[i]);
         Assert.Equal(Fx6.FromInt(hFloor), Probe.HFloor[i]);
         Assert.Equal(materialsRaw, Probe.MaterialsFloor[i].Raw);
-        Assert.Equal(Fx6.FromInt(alloyKg), Probe.AlloyKg[i]);
-        Assert.Equal(procScaleRaw, Probe.ProcScale[i].Raw);
         Assert.Equal(designScaleRaw, Probe.DesignScale[i].Raw);
-        Assert.Equal(1, Probe.CrewReq[i]);
+        Assert.Equal(procScaleAfRaw, Probe.ProcScaleAf[i].Raw);
+    }
+
+    [Fact]
+    public void PuScales_AreTheMonotoneEnvelope_R_PS2m()
+    {
+        Assert.Equal([515_528, 515_528, 827_491, 827_491], Probe.ProcScalePu.Select(x => x.Raw));
+        Assert.Equal(37, Probe.CRef);
+        Assert.Equal(12, Scenario.MaxDesigns);
+    }
+
+    [Fact]
+    public void AlternativeFields_EngGen_AfClass_AlloyKg()
+    {
+        Assert.Equal([1, 2, 3, 4], Enumerable.Range(0, 4).Select(i => Probe.AltEngGen[Alt(Probe, $"eng_g{i + 1}")]));
+        Assert.Equal([1, 2, 3, 3, 4],
+            new[] { "af_straight", "af_swept", "af_milled", "af_titanium", "af_mach2" }.Select(id => Probe.AltAfClass[Alt(Probe, id)]));
+        Assert.Equal([290, 670, 2120, 2980],
+            new[] { "hot_nicr_forged", "hot_sa2_forged", "hot_vim_cast", "hot_vim_ds_cooled" }.Select(id => (int)(Probe.AltAlloyKg[Alt(Probe, id)].Raw / Fx6.Scale)));
+        Assert.Equal(Probe.SlotOf(Alt(Probe, "hot_vim_cast")), Probe.AlloySlot);
+        Assert.Equal(Probe.SlotOf(Alt(Probe, "af_mach2")), Probe.AirframeSlot);
     }
 
     [Theory]
@@ -78,14 +108,16 @@ public class ProductDataTests : IDisposable
     [InlineData(2, 2174)]
     [InlineData(3, 6163)]
     [InlineData(4, 17836)]
-    public void UnitCostFloor_OfSuperiorDesigns_MatchesR3Check(int gen, long expectedRaw)
+    public void UnitCostFloor_OfSuperiorDesigns_MatchesProductInputs91(int gen, long expectedRaw)
     {
-        // product_inputs.md r3 §9.1: materials + h_floor·wage (A28) + proc_scale·Σ base_cost = 0.82 of the historical price.
+        // product_inputs.md r4 §14.6: R-PS2m reproduces the §9.1 references exactly.
         Span<int> alts = stackalloc int[Probe.SlotCount];
         Assert.True(DesignRules.Superior(Probe, gen, Probe.KnownUpTo(gen), alts));
         int[] prc = DesignRules.PrcSet(Probe, alts);
-        Fx6 floor = ProductsMath.UnitCostFloor(Probe.MaterialsFloor[gen - 1], Probe.HFloor[gen - 1], Probe.WageKh,
-            DesignRules.BaseCostSum(Probe, prc), Probe.ProcScale[gen - 1]);
+        int k = DesignRules.AfClass(Probe, alts), r = DesignRules.PuRank(Probe, alts);
+        Fx6 floor = ProductsMath.UnitCostFloor(Probe.MaterialsFloor[k - 1], Probe.HFloor[k - 1], Probe.WageKh,
+            DesignRules.BaseCostSum(Probe, DesignRules.Block(Probe, prc, airframe: false)), Probe.ProcScalePu[r - 1],
+            DesignRules.BaseCostSum(Probe, DesignRules.Block(Probe, prc, airframe: true)), Probe.ProcScaleAf[k - 1]);
         Assert.Equal(expectedRaw, floor.Raw);
     }
 
@@ -114,12 +146,45 @@ public class ProductDataTests : IDisposable
     [InlineData("{gen: 2, app: s8.app.jet_fighter_g2,", "{gen: 3, app: s8.app.jet_fighter_g2,", "generations must be listed as 1, 2, ...")]
     [InlineData("{gen: 2, app: s8.app.jet_fighter_g2,", "{gen: 2, app: s8.app.jet_fighter_g3,", "is not an APP node of generation 2")]
     [InlineData("h_first: 9320, h_floor: 2330,", "h_first: 2000, h_floor: 2330,", "h_floor must not exceed h_first")]
-    [InlineData("crew_req: 1, proc_scale: 0.942188", "crew_req: 1, proc_scale: 0", "proc_scale must be positive")]
+    [InlineData("proc_scale_af: 1.253259", "proc_scale_af: 0", "proc_scale_af must be positive")]
+    [InlineData("{af_class: 2,", "{af_class: 3,", "af_classes must be listed as 1, 2, ...")]
+    [InlineData("{rank: 2, proc_scale_pu: 0.515528}", "{rank: 3, proc_scale_pu: 0.515528}", "pu_ranks must be listed as 1, 2, ...")]
+    [InlineData("{id: eng_g1, rank: 1, eng_gen: 1,", "{id: eng_g1, rank: 1, eng_gen: 5,", "eng_gen of an engine alternative must be in 1..4 (G_max)")]
+    [InlineData("{id: eng_g1, rank: 1, eng_gen: 1,", "{id: eng_g1, rank: 1, eng_gen: 0,", "eng_gen of an engine alternative must be in 1..4 (G_max)")]
+    [InlineData("{id: af_swept, rank: 2, af_class: 2,", "{id: af_swept, rank: 2, af_class: 9,", "af_class of an airframe alternative must be in 1..4")]
+    [InlineData("{id: comp_axial, rank: 2,", "{id: comp_axial, rank: 2, eng_gen: 2,", "eng_gen is only allowed in the engine (base) slot")]
+    [InlineData("{id: ab_on, rank: 2,", "{id: ab_on, rank: 2, af_class: 1,", "af_class is only allowed in the airframe slot")]
+    [InlineData("{id: hot_sa2_forged, rank: 2, alloy_kg: 670,", "{id: hot_sa2_forged, rank: 2,", "alloy_kg must be on all or none alternatives of a slot")]
+    [InlineData("      - id: airframe\n        block: af\n", "      - id: airframe\n        block: pu\n", "needs exactly one airframe (block af) slot")]
+    [InlineData("      - id: engine\n        block: pu\n", "      - id: engine\n        block: af\n", "the base (engine) slot belongs to the PU block")]
+    [InlineData("      - id: engine\n        block: pu\n", "      - id: engine\n        block: xx\n", "block must be 'pu' or 'af'")]
+    [InlineData("    c_ref: 37\n", "    c_ref: 0\n", "c_ref must be at least 1")]
+    [InlineData("platform_min_rank: 5}", "platform_min_rank: 0}", "platform_min_rank must be at least 1")]
     public void BrokenProductInputs_Fail(string from, string to, string message)
     {
         string dir = _mods.CopyCore((name, text) => name == "product_classes.yaml" ? TestMods.ReplaceOnce(text, from, to) : text);
         var e = Assert.Throws<DataLoadException>(() => ModLoader.Load(dir));
         Assert.Contains(message, e.Message);
+    }
+
+    [Fact]
+    public void OverlappingBlocks_AreRejected()
+    {
+        // A PRC of the airframe also in the engine slot: R-PS2m needs disjoint PU and AF blocks.
+        string dir = _mods.CopyCore((name, text) => name == "product_classes.yaml"
+            ? TestMods.ReplaceOnce(text, "{id: ab_on, rank: 2, perf_mult: 1.15, prc_set: [s8.prc.afterburner_fabrication]",
+                "{id: ab_on, rank: 2, perf_mult: 1.15, prc_set: [s8.prc.afterburner_fabrication, s5.prc.light_alloy_rolling]")
+            : text);
+        var e = Assert.Throws<DataLoadException>(() => ModLoader.Load(dir));
+        Assert.Contains("both the PU and the AF block", e.Message);
+    }
+
+    [Fact]
+    public void MaxDesignsBelowOne_IsRejected()
+    {
+        string dir = _mods.CopyCore((name, text) => name == "scenario_1945.yaml" ? TestMods.ReplaceOnce(text, "max_designs: 12", "max_designs: 0") : text);
+        var e = Assert.Throws<DataLoadException>(() => ModLoader.Load(dir));
+        Assert.Contains("max_designs must be at least 1", e.Message);
     }
 
     [Fact]

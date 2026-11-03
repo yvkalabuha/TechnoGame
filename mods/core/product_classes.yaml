@@ -11,32 +11,38 @@ define:
     lighten_order: [hot_section, compressor, afterburner, airframe]
     slots:
       - id: engine
+        block: pu
         base: true
         alternatives:
-          - {id: eng_g1, rank: 1, perf_mult: 1.0, prc_set: [s8.prc.jet_engine_assembly_test, s5.prc.alloying_element_refining], requires_nodes: [s8.eng.turbojet_g1]}
-          - {id: eng_g2, rank: 2, perf_mult: 1.3, prc_set: [s8.prc.jet_engine_assembly_test, s5.prc.alloying_element_refining], requires_nodes: [s8.eng.turbojet_g2]}
-          - {id: eng_g3, rank: 3, perf_mult: 1.7, prc_set: [s8.prc.jet_engine_assembly_test, s5.prc.alloying_element_refining], requires_nodes: [s8.eng.turbojet_g3]}
-          - {id: eng_g4, rank: 4, perf_mult: 2.2, prc_set: [s8.prc.jet_engine_assembly_test, s5.prc.alloying_element_refining], requires_nodes: [s8.eng.turbofan_g4]}
+          - {id: eng_g1, rank: 1, eng_gen: 1, perf_mult: 1.0, prc_set: [s8.prc.jet_engine_assembly_test, s5.prc.alloying_element_refining], requires_nodes: [s8.eng.turbojet_g1]}
+          - {id: eng_g2, rank: 2, eng_gen: 2, perf_mult: 1.3, prc_set: [s8.prc.jet_engine_assembly_test, s5.prc.alloying_element_refining], requires_nodes: [s8.eng.turbojet_g2]}
+          - {id: eng_g3, rank: 3, eng_gen: 3, perf_mult: 1.7, prc_set: [s8.prc.jet_engine_assembly_test, s5.prc.alloying_element_refining], requires_nodes: [s8.eng.turbojet_g3]}
+          - {id: eng_g4, rank: 4, eng_gen: 4, perf_mult: 2.2, prc_set: [s8.prc.jet_engine_assembly_test, s5.prc.alloying_element_refining], requires_nodes: [s8.eng.turbofan_g4]}
       - id: hot_section
+        block: pu
         base: false
         alternatives:
-          - {id: hot_nicr_forged, rank: 1, perf_mult: 1.0, prc_set: [s5.prc.nicr_alloy_melt, s5.prc.high_purity_nickel_refining, s6.prc.precision_blade_forging], requires_nodes: [s5.cmp.heat_resistant_alloy, s8.cmp.turbine_blade_forged]}
-          - {id: hot_sa2_forged, rank: 2, perf_mult: 1.1, prc_set: [s5.prc.superalloy_melt_g2, s5.prc.high_purity_nickel_refining, s6.prc.precision_blade_forging], requires_nodes: [s5.cmp.heat_resistant_alloy, s8.cmp.turbine_blade_forged]}
-          - {id: hot_vim_cast, rank: 3, perf_mult: 1.25, prc_set: [s5.prc.vacuum_induction_melt, s5.prc.ceramic_shell_moulding, s6.prc.investment_cast_blades], requires_nodes: [s8.cmp.turbine_blade_cast]}
-          - {id: hot_vim_ds_cooled, rank: 4, perf_mult: 1.45, prc_set: [s5.prc.vacuum_induction_melt, s5.prc.ds_casting, s6.prc.cooled_blade_drilling], requires_nodes: [s8.cmp.turbine_blade_cooled]}
+          - {id: hot_nicr_forged, rank: 1, alloy_kg: 290, perf_mult: 1.0, prc_set: [s5.prc.nicr_alloy_melt, s5.prc.high_purity_nickel_refining, s6.prc.precision_blade_forging], requires_nodes: [s5.cmp.heat_resistant_alloy, s8.cmp.turbine_blade_forged]}
+          - {id: hot_sa2_forged, rank: 2, alloy_kg: 670, perf_mult: 1.1, prc_set: [s5.prc.superalloy_melt_g2, s5.prc.high_purity_nickel_refining, s6.prc.precision_blade_forging], requires_nodes: [s5.cmp.heat_resistant_alloy, s8.cmp.turbine_blade_forged]}
+          - {id: hot_vim_cast, rank: 3, alloy_kg: 2120, perf_mult: 1.25, prc_set: [s5.prc.vacuum_induction_melt, s5.prc.ceramic_shell_moulding, s6.prc.investment_cast_blades], requires_nodes: [s8.cmp.turbine_blade_cast]}
+          - {id: hot_vim_ds_cooled, rank: 4, alloy_kg: 2980, perf_mult: 1.45, prc_set: [s5.prc.vacuum_induction_melt, s5.prc.ds_casting, s6.prc.cooled_blade_drilling], requires_nodes: [s8.cmp.turbine_blade_cooled]}
       - id: compressor
+        block: pu
         base: false
         alternatives:
           - {id: comp_centrifugal, rank: 1, perf_mult: 1.0, prc_set: [s6.prc.centrifugal_impeller_machining], requires_nodes: []}
           - {id: comp_axial, rank: 2, perf_mult: 1.15, prc_set: [s6.prc.axial_compressor_machining], requires_nodes: [s8.cmp.axial_compressor_assembly]}
       - id: airframe
+        block: af
         base: false
         alternatives:
-          - {id: af_straight, rank: 1, perf_mult: 1.0, prc_set: [s5.prc.light_alloy_rolling, s8.prc.stressed_skin_assembly], requires_nodes: [s8.eng.straight_wing_jet_airframe]}
-          - {id: af_swept, rank: 2, perf_mult: 1.3, prc_set: [s5.prc.light_alloy_rolling, s8.prc.stressed_skin_assembly, s8.prc.swept_wing_fabrication], requires_nodes: [s8.eng.swept_wing_airframe]}
-          - {id: af_milled, rank: 3, perf_mult: 1.5, prc_set: [s5.prc.light_alloy_rolling, s8.prc.stressed_skin_assembly, s8.prc.swept_wing_fabrication, s8.prc.machined_integral_skins], requires_nodes: [{any_of: [s8.eng.area_ruled_airframe, s8.eng.delta_wing_airframe]}]}
-          - {id: af_titanium, rank: 4, perf_mult: 1.6, prc_set: [s5.prc.light_alloy_rolling, s8.prc.stressed_skin_assembly, s8.prc.swept_wing_fabrication, s8.prc.machined_integral_skins, s5.prc.titanium_reduction_forging], requires_nodes: [{any_of: [s8.eng.area_ruled_airframe, s8.eng.delta_wing_airframe]}, s5.cmp.titanium_alloy]}
+          - {id: af_straight, rank: 1, af_class: 1, perf_mult: 1.0, prc_set: [s5.prc.light_alloy_rolling, s8.prc.stressed_skin_assembly], requires_nodes: [s8.eng.straight_wing_jet_airframe]}
+          - {id: af_swept, rank: 2, af_class: 2, perf_mult: 1.3, prc_set: [s5.prc.light_alloy_rolling, s8.prc.stressed_skin_assembly, s8.prc.swept_wing_fabrication], requires_nodes: [s8.eng.swept_wing_airframe]}
+          - {id: af_milled, rank: 3, af_class: 3, perf_mult: 1.5, prc_set: [s5.prc.light_alloy_rolling, s8.prc.stressed_skin_assembly, s8.prc.swept_wing_fabrication, s8.prc.machined_integral_skins], requires_nodes: [{any_of: [s8.eng.area_ruled_airframe, s8.eng.delta_wing_airframe]}]}
+          - {id: af_titanium, rank: 4, af_class: 3, perf_mult: 1.6, prc_set: [s5.prc.light_alloy_rolling, s8.prc.stressed_skin_assembly, s8.prc.swept_wing_fabrication, s8.prc.machined_integral_skins, s5.prc.titanium_reduction_forging], requires_nodes: [{any_of: [s8.eng.area_ruled_airframe, s8.eng.delta_wing_airframe]}, s5.cmp.titanium_alloy]}
+          - {id: af_mach2, rank: 5, af_class: 4, perf_mult: 1.8, prc_set: [s5.prc.light_alloy_rolling, s8.prc.stressed_skin_assembly, s8.prc.swept_wing_fabrication, s8.prc.machined_integral_skins, s5.prc.titanium_reduction_forging], requires_nodes: [s8.eng.mach2_airframe_g4, s5.cmp.titanium_alloy]}
       - id: afterburner
+        block: pu
         base: false
         alternatives:
           - {id: ab_none, rank: 1, perf_mult: 1.0, prc_set: [], requires_nodes: []}
@@ -74,13 +80,27 @@ define:
       - {prc: s6.prc.centrifugal_impeller_machining, n_p: 1, labour_hours: 450, base_cost: 0.000056}
       - {prc: s6.prc.axial_compressor_machining, n_p: 1, labour_hours: 1200, base_cost: 0.00015}
       - {prc: s8.prc.afterburner_fabrication, n_p: 1, labour_hours: 900, base_cost: 0.000112}
-    # Per generation g (APP node of g). R-HF: h_floor = 0.25 × price target without GFE in hours, h_first =
-    # 4·h_floor. R-MF: materials_floor = GFE share × price in 1950 $ / M$. R-AK: alloy_kg = engine mass (fact) ×
-    # superalloy share × melt-loss factor 5. crew_req: display only (contract §4.6). R-PS proc_scale: multiplier of
-    # the process part of unit_cost; R-DS design_scale: W = W0·complexity·design_scale/(1 + bureau_exp/E_B) (#78).
-    # Bureau staff bureau_req[g] = floor(B0·design_scale^κ) is a calibration parameter, not mod data (spec §3.5 A34).
+    # c_ref: complexity of the reference superior G2 project (contract §4.4b: D_ref = d0·c_ref); data, not calibrated.
+    c_ref: 37
+    # R-PS2m (product_inputs.md r4 §14.3): process part = ((ΣPU·U_PU)·proc_scale_pu[r_PU]) + ((ΣAF·U_AF)·proc_scale_af[af_class]);
+    # r_PU = max rank over the PU slots (engine, hot_section, compressor, afterburner). Monotone envelope, exact references.
+    pu_ranks:
+      - {rank: 1, proc_scale_pu: 0.515528}
+      - {rank: 2, proc_scale_pu: 0.515528}
+      - {rank: 3, proc_scale_pu: 0.827491}
+      - {rank: 4, proc_scale_pu: 0.827491}
+    # Airframe-class fields (§14.4; contract §4.4a). R-HF: h_floor = 0.25 × price target without GFE in hours, h_first =
+    # 4·h_floor. R-MF: materials_floor = GFE share × price. R-DS design_scale: W = W0·complexity·design_scale/(1 + bureau_exp/E_B)
+    # (#78). Bureau staff bureau_req = floor(B0·design_scale^κ) is a calibration parameter, not mod data (spec §3.5 A34).
+    af_classes:
+      - {af_class: 1, h_first: 9320, h_floor: 2330, materials_floor: 0.000217, design_scale: 1.00, proc_scale_af: 1.253259}
+      - {af_class: 2, h_first: 14760, h_floor: 3690, materials_floor: 0.000329, design_scale: 1.11, proc_scale_af: 1.086777}
+      - {af_class: 3, h_first: 41960, h_floor: 10490, materials_floor: 0.000919, design_scale: 1.82, proc_scale_af: 1.098982}
+      - {af_class: 4, h_first: 125920, h_floor: 31480, materials_floor: 0.002098, design_scale: 3.12, proc_scale_af: 3.754003}
+    # Per generation g: APP node, crew_req (display only, contract §4.6), platform threshold (contract §4.4a):
+    # g_p(d) = max{g : APP_g known ∧ rank(airframe) >= platform_min_rank[g]}.
     generations:
-      - {gen: 1, app: s8.app.jet_fighter_g1, h_first: 9320, h_floor: 2330, materials_floor: 0.000217, alloy_kg: 290, crew_req: 1, proc_scale: 0.942188, design_scale: 1.00}
-      - {gen: 2, app: s8.app.jet_fighter_g2, h_first: 14760, h_floor: 3690, materials_floor: 0.000329, alloy_kg: 670, crew_req: 1, proc_scale: 0.858987, design_scale: 1.11}
-      - {gen: 3, app: s8.app.jet_fighter_g3, h_first: 41960, h_floor: 10490, materials_floor: 0.000919, alloy_kg: 2120, crew_req: 1, proc_scale: 1.021118, design_scale: 1.82}
-      - {gen: 4, app: s8.app.jet_fighter_g4, h_first: 125920, h_floor: 31480, materials_floor: 0.002098, alloy_kg: 2980, crew_req: 1, proc_scale: 2.597030, design_scale: 3.12}
+      - {gen: 1, app: s8.app.jet_fighter_g1, crew_req: 1, platform_min_rank: 1}
+      - {gen: 2, app: s8.app.jet_fighter_g2, crew_req: 1, platform_min_rank: 2}
+      - {gen: 3, app: s8.app.jet_fighter_g3, crew_req: 1, platform_min_rank: 3}
+      - {gen: 4, app: s8.app.jet_fighter_g4, crew_req: 1, platform_min_rank: 5}

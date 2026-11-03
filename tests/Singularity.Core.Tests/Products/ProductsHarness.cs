@@ -16,9 +16,9 @@ internal sealed class ProductsHarness
     /// <param name="actorPerm">Storage order of the actors: table row r holds scenario actor <c>actorPerm[r]</c>; scripts get the stable actor index.</param>
     /// <param name="years">Cohort years of the layout (default <see cref="ProductTestData.Years"/>).</param>
     public ProductsHarness(int threads = 1, int chunkSize = 1, ProductsMode mode = ProductsMode.Full, ProductsParams? parameters = null,
-        int[]? actorPerm = null, int years = Years)
+        int[]? actorPerm = null, int years = Years, int? maxDesigns = null)
     {
-        Layout = MakeLayout(out _, years);
+        Layout = MakeLayout(out _, years, maxDesigns ?? Scenario.MaxDesigns);
         ProductsStart baseStart = ProductsStart.FromScenario(Scenario, CoreData.Nodes, CoreData.ProductClasses, Layout);
         ActorOf = actorPerm ?? [.. Enumerable.Range(0, Scenario.ActorCount)];
         Start = actorPerm is null ? baseStart : Permute(baseStart, ActorOf);
@@ -65,7 +65,13 @@ internal sealed class ProductsHarness
     public Func<int, long, DesignOrder?> Order { get; set; } = (_, _) => null;
     public Func<int, int, long, bool> Launch { get; set; } = (_, _, _) => false;
     public Func<int, int, long, bool> Close { get; set; } = (_, _, _) => false;
-    public Func<int, int, long, Fx6> Rate { get; set; } = (_, _, _) => Fx6.Zero;
+    public Func<int, int, long, Fx6?> Rate { get; set; } = (_, _, _) => null;
+
+    /// <summary>Explicit commands of the script, applied after the one derived from <see cref="Order"/>.</summary>
+    public Func<int, long, IReadOnlyList<DesignCommand>> Commands { get; set; } = (_, _) => [];
+
+    /// <summary>Explicit <c>start_series</c> of the script; when it returns null, <see cref="Launch"/> and <see cref="Rate"/> decide.</summary>
+    public Func<int, int, long, SeriesStart?> Series { get; set; } = (_, _, _) => null;
     public Func<int, int, long> AppKnownSince { get; set; } = (_, _) => -1;
 
     public long Month => Calendar.MonthIndex(Runner.Tick);
@@ -90,7 +96,7 @@ internal sealed class ProductsHarness
         }
     }
 
-    public string Hash() => StateHash.ComputeHex(Table, 1, Runner.Tick);
+    public string Hash() => StateHash.ComputeHex(Table, ProductsSystem.LayoutVersion, Runner.Tick);
 
     private static ProductsStart Permute(ProductsStart b, int[] perm)
     {
@@ -101,6 +107,7 @@ internal sealed class ProductsHarness
         {
             int a = perm[r];
             Array.Copy(b.Stage, a * d, s.Stage, r * d, d);
+            Array.Copy(b.PlatformGen, a * d, s.PlatformGen, r * d, d);
             Array.Copy(b.Alts, a * d * l.SlotCount, s.Alts, r * d * l.SlotCount, d * l.SlotCount);
             Array.Copy(b.Cohort, a * d * l.Years, s.Cohort, r * d * l.Years, d * l.Years);
             Array.Copy(b.BureauExp, a * l.Bureaus, s.BureauExp, r * l.Bureaus, l.Bureaus);
@@ -146,13 +153,38 @@ internal sealed class ProductsHarness
 
         public Fx6 ProcurementBudget(int actorRow, long month) => h.Budget(A(actorRow), month);
 
-        public DesignOrder? Order(int actorRow, long month) => h.Order(A(actorRow), month);
+        // A scripted order becomes a compose_design for the newest APP the actor knows (the validator's g*), with the preset
+        // composition of the order's variant; the order's generation is only a trigger.
+        public IReadOnlyList<DesignCommand> DesignCommands(int actorRow, long month)
+        {
+            var list = new List<DesignCommand>();
+            if (h.Order(A(actorRow), month) is { } order)
+            {
+                Func<int, bool> knows = n => Knows(actorRow, n, month);
+                int target = 0;
+                for (int g = 1; g <= h.Layout.Generations; g++)
+                {
+                    if (knows(h.Layout.GenApp[g - 1]))
+                        target = g;
+                }
+                var alts = new int[h.Layout.SlotCount];
+                // F-PC3: a «producible» that equals «superior» is not a separate design; the order falls back to «superior».
+                if (target > 0 && ((order.Variant == DesignVariant.Producible
+                        && DesignRules.Producible(h.Layout, target, knows, p => AdmittedYield(actorRow, p, month), h.Params.YProd, null, alts))
+                        || DesignRules.Superior(h.Layout, target, knows, alts)))
+                    list.Add(new DesignCommand(DesignCommandKind.Compose, target, [.. alts]));
+            }
+            list.AddRange(h.Commands(A(actorRow), month));
+            return list;
+        }
 
-        public bool LaunchSeries(int actorRow, int design, long month) => h.Launch(A(actorRow), design, month);
+        public SeriesStart? StartSeries(int actorRow, int design, long month) =>
+            h.Series(A(actorRow), design, month) ?? (h.Launch(A(actorRow), design, month)
+                ? new SeriesStart(h.Rate(A(actorRow), design, month) ?? Fx6.Zero, false) : null);
 
         public bool CloseLine(int actorRow, int design, long month) => h.Close(A(actorRow), design, month);
 
-        public Fx6 LineRate(int actorRow, int design, long month) => h.Rate(A(actorRow), design, month);
+        public Fx6? LineRate(int actorRow, int design, long month) => h.Rate(A(actorRow), design, month);
 
         public long AppKnownSince(int actorRow, int gen, long month) => h.AppKnownSince(A(actorRow), gen);
     }
