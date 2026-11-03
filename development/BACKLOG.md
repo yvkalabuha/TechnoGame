@@ -52,17 +52,17 @@
 | [ADR-0001](../docs/decisions/ADR-0001-stack.md) | ACCEPTED | Стек: ядро на C# / .NET 10, визуализация на Godot позже |
 | [ADR-0002](../docs/decisions/ADR-0002-determinism-levels.md) | ACCEPTED | Уровни детерминизма |
 | [ADR-0003](../docs/decisions/ADR-0003-numeric-policy.md) | PROPOSED | Численная политика |
-| [ADR-0004](../docs/decisions/ADR-0004-rng.md) | PROPOSED | Генератор случайных чисел без состояния |
+| [ADR-0004](../docs/decisions/ADR-0004-rng.md) | ACCEPTED | Генератор случайных чисел без состояния |
 | [ADR-0005](../docs/decisions/ADR-0005-data-model.md) | PROPOSED | Модель данных ядра: таблицы struct-of-arrays |
-| [ADR-0006](../docs/decisions/ADR-0006-tick-model.md) | PROPOSED | Модель тика |
+| [ADR-0006](../docs/decisions/ADR-0006-tick-model.md) | ACCEPTED | Модель тика |
 | [ADR-0007](../docs/decisions/ADR-0007-collections.md) | PROPOSED | Запрет коллекций с нестабильным порядком обхода |
 | [ADR-0008](../docs/decisions/ADR-0008-simulation-lab.md) | PROPOSED | Simulation Lab: прогоны, хранение, анализ |
 | [ADR-0009](../docs/decisions/ADR-0009-data-licenses.md) | ACCEPTED | Политика лицензий внешних данных |
 | [ADR-0010](../docs/decisions/ADR-0010-data-format-modding.md) | ACCEPTED | Формат данных и моддинг v0 |
 | [ADR-0011](../docs/decisions/ADR-0011-map-representation.md) | PROPOSED | Представление карты |
 | [ADR-0012](../docs/decisions/ADR-0012-deterministic-math-functions.md) | ACCEPTED | Детерминированные степенные функции: PowFrac вместо Pow/Exp/Log |
-| [ADR-0013](../docs/decisions/ADR-0013-save-format-v0.md) | PROPOSED | Формат сохранения v0: бинарный снимок колонок SoA + заголовок |
-| [ADR-0014](../docs/decisions/ADR-0014-session-test-api.md) | PROPOSED | Session и Test API: единая сборка мира, команды, test mode |
+| [ADR-0013](../docs/decisions/ADR-0013-save-format-v0.md) | ACCEPTED | Формат сохранения v0: бинарный снимок колонок SoA + заголовок |
+| [ADR-0014](../docs/decisions/ADR-0014-session-test-api.md) | ACCEPTED | Session и Test API: единая сборка мира, команды, test mode |
 
 ## Research Reports
 

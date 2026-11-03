@@ -1,14 +1,14 @@
 ---
 id: ADR-0006
 title: "Модель тика"
-status: PROPOSED
+status: ACCEPTED
 date: 2026-11-02
 supersedes:
 superseded_by:
 related: [RR-0002, ADR-0004, ADR-0013, ADR-0014]
-approved_by:
-approved_at:
-approval_ref:
+approved_by: owner
+approved_at: 2026-11-03
+approval_ref: DECISIONS_LOG #66
 ---
 
 # ADR-0006 — Модель тика

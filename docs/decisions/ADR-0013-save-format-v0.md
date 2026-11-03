@@ -1,14 +1,14 @@
 ---
 id: ADR-0013
 title: "Формат сохранения v0: бинарный снимок колонок SoA + заголовок"
-status: PROPOSED
+status: ACCEPTED
 date: 2026-11-03
 supersedes:
 superseded_by:
 related: [ADR-0002, ADR-0004, ADR-0005, ADR-0006, ADR-0010, ADR-0014]  # + docs/architecture/TESTING_ARCHITECTURE_PROPOSAL.md §7; LAYER_CONTRACT §4.0
-approved_by:
-approved_at:
-approval_ref:
+approved_by: owner
+approved_at: 2026-11-03
+approval_ref: DECISIONS_LOG #66
 ---
 
 # ADR-0013 — Формат сохранения v0: бинарный снимок колонок SoA + заголовок

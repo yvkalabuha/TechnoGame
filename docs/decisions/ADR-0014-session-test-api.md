@@ -1,14 +1,14 @@
 ---
 id: ADR-0014
 title: "Session и Test API: единая сборка мира, команды, test mode"
-status: PROPOSED
+status: ACCEPTED
 date: 2026-11-03
 supersedes:
 superseded_by:
 related: [ADR-0001, ADR-0002, ADR-0004, ADR-0006, ADR-0008, ADR-0010, ADR-0013]  # + docs/architecture/TESTING_ARCHITECTURE_PROPOSAL.md §5, §8–§10; docs/architecture/spikes/godot-compat.md (TASK-0016)
-approved_by:
-approved_at:
-approval_ref:
+approved_by: owner
+approved_at: 2026-11-03
+approval_ref: DECISIONS_LOG #66
 ---
 
 # ADR-0014 — Session и Test API: единая сборка мира, команды, test mode
