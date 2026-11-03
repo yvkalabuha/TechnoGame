@@ -1,0 +1,21 @@
+idx,id,labour_p,basis,estimated
+38,s5.prc.light_alloy_rolling,600,product_inputs.md §4 r3,true
+39,s5.prc.nicr_alloy_melt,225,product_inputs.md §4 r3,true
+40,s5.prc.superalloy_melt_g2,600,product_inputs.md §4 r3,true
+41,s5.prc.vacuum_induction_melt,1800,product_inputs.md §4 r3,true
+42,s5.prc.titanium_reduction_forging,6750,product_inputs.md §4 r3,true
+43,s5.prc.ds_casting,3750,product_inputs.md §4 r3,true
+44,s5.prc.alloying_element_refining,150,product_inputs.md §4 r3,true
+45,s5.prc.high_purity_nickel_refining,225,product_inputs.md §4 r3,true
+46,s5.prc.ceramic_shell_moulding,1200,product_inputs.md §4 r3,true
+47,s6.prc.precision_gear_bearing,300,new: not in any fighter prc_set; set between alloying_element_refining 150 and centrifugal_impeller_machining 450 (G0 tier 3 machining of a gear/bearing kit),true
+48,s6.prc.centrifugal_impeller_machining,450,product_inputs.md §4 r3,true
+49,s6.prc.precision_blade_forging,750,product_inputs.md §4 r3,true
+50,s6.prc.axial_compressor_machining,1200,product_inputs.md §4 r3,true
+51,s6.prc.investment_cast_blades,2250,product_inputs.md §4 r3,true
+52,s6.prc.cooled_blade_drilling,5250,product_inputs.md §4 r3,true
+53,s8.prc.stressed_skin_assembly,3700,product_inputs.md §4 r3,true
+54,s8.prc.jet_engine_assembly_test,1350,product_inputs.md §4 r3,true
+55,s8.prc.swept_wing_fabrication,3450,product_inputs.md §4 r3,true
+56,s8.prc.machined_integral_skins,7500,product_inputs.md §4 r3,true
+57,s8.prc.afterburner_fabrication,900,product_inputs.md §4 r3,true
