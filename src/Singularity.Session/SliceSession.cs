@@ -59,7 +59,7 @@ public sealed class SliceSession
             return form;
         if (_pending.Exists(p => p.Key == logged.Key))
             return CommandVerdict.Refuse(CommandRefusal.DuplicateKey, $"command {logged.Key} was already submitted");
-        if (_lastLocal.TryGetValue((source, sourceId), out int last) && localN <= last)
+        if (LastLocal(source, sourceId) is int last && localN <= last)
             return CommandVerdict.Refuse(CommandRefusal.LocalNotMonotonic, $"local_n {localN} is not above {last} at {source}/{sourceId}");
         if (command is ComposeDesign or DeriveDesign
             && _pending.Count(p => p.Command.Actor == command.Actor && p.Command is ComposeDesign or DeriveDesign) >= CommandLimits.DesignSlots)
@@ -67,9 +67,14 @@ public sealed class SliceSession
 
         int at = _pending.FindIndex(p => p.Key > logged.Key);
         _pending.Insert(at < 0 ? _pending.Count : at, logged);
-        _lastLocal[(source, sourceId)] = localN;
+        RememberLocal(source, sourceId, localN);
         return CommandVerdict.Ok;
     }
+
+    // The index is only looked up, never enumerated, and kept in methods of their own (the determinism rule is conservative).
+    private int? LastLocal(SourceClass source, int sourceId) => _lastLocal.TryGetValue((source, sourceId), out int last) ? last : null;
+
+    private void RememberLocal(SourceClass source, int sourceId, int localN) => _lastLocal[(source, sourceId)] = localN;
 
     /// <summary>Runs <paramref name="ticks"/> ticks.</summary>
     public void Step(long ticks)

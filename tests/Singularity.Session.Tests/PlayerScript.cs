@@ -44,8 +44,10 @@ internal sealed class PlayerScript(SliceSession session)
             }
             for (int d = 0; d < l.Designs; d++)
             {
-                if (w.Products.Stage(a, d) == DesignStage.Prototype && w.Products.GateOpen(a, d, month))
-                    Send(a, new StartSeries(a, d, Fx6.FromInt(30), false));
+                // The player may force an early launch (A36); without the tooling rule (T6b) the capability decays, so waiting for the gate
+                // would leave the product lines no month with output at all.
+                if (w.Products.Stage(a, d) == DesignStage.Prototype)
+                    Send(a, new StartSeries(a, d, Fx6.FromInt(30), !w.Products.GateOpen(a, d, month)));
                 if (w.Products.Stage(a, d) == DesignStage.Series)
                 {
                     for (int e = 0; e < l.Designs; e++)
