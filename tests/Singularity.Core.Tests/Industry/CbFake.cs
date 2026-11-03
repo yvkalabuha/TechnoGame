@@ -11,6 +11,7 @@ internal sealed class CbFake : ICultureSnapshot
     public readonly Fx6[] Hs, Ms, Vs, Es, Vexp;
     public readonly bool[] Known, PlannedF, Lic, Lead;
     public readonly Fx6[] HcapByDim = [D(5), D(5), D(5)];
+    public bool Qp;
     public Fx6 ActValue = Fx6.One, WValue = Fx6.One;
 
     public CbFake(IndustryLayout layout, IndustryParams? p = null)
@@ -61,7 +62,7 @@ internal sealed class CbFake : ICultureSnapshot
 
     public Fx6 W(int site, int cluster, long month) => WValue;
 
-    public bool QualityProgramme(int site, long month) => false;
+    public bool QualityProgramme(int site, long month) => Qp;
 
     public Fx6 V(int site, int processRow) => Vs[site * _n + processRow];
 

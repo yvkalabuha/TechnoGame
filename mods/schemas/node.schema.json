@@ -33,6 +33,7 @@
             "quality_control": { "$ref": "common.schema.json#/$defs/nonNegFixed" }
           }
         },
+        "labour_p": { "description": "Hours per process execution (PRC only; LAYER_CONTRACT §4.1).", "type": "number", "exclusiveMinimum": 0 },
         "requires": { "$ref": "common.schema.json#/$defs/requirement" },
         "hazard": { "enum": ["none", "hz", "key"] },
         "informs": {
@@ -67,8 +68,8 @@
       "required": ["id", "number", "type", "gen", "discipline", "cluster", "requires", "hazard", "anchor"],
       "unevaluatedProperties": false,
       "if": { "properties": { "type": { "const": "PRC" } } },
-      "then": { "required": ["tier", "capability_req"] },
-      "else": { "not": { "anyOf": [{ "required": ["tier"] }, { "required": ["capability_req"] }] } }
+      "then": { "required": ["tier", "capability_req", "labour_p"] },
+      "else": { "not": { "anyOf": [{ "required": ["tier"] }, { "required": ["capability_req"] }, { "required": ["labour_p"] }] } }
     },
     "nodePatch": {
       "description": "Partial node: listed top-level fields replace the existing ones.",

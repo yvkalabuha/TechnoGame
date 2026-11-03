@@ -42,6 +42,9 @@ public sealed class CbCultureRule : ICultureRule
         int c = l.ClusterIndex[processRow];
         if (!LeadsAny(s, site, processRow, month))
         {
+            // Contract v2.4 r2 §4.1a F10: no gap at d* means nothing limits this process.
+            if (Max0(l.Req[processRow][d] + GapOffset - s.H(site, c, d)) == Fx6.Zero)
+                return new CultureLimiter(LimiterKind.None, number);
             int lead = Lead(s, site, c, d, month);
             if (lead >= 0)
                 return Limiter(s, site, lead, month); // leads a cell, so the recursion ends there

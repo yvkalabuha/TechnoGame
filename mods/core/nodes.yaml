@@ -556,6 +556,7 @@ define:
       quality_control: 2.5
     requires: [s5.cmp.aluminium_alloy_sheet]
     hazard: none
+    labour_p: 600
     anchor:
       year: 1909
       event: "дюралюминий в производстве"
@@ -573,6 +574,7 @@ define:
       quality_control: 3.5
     requires: [s5.cmp.heat_resistant_alloy]
     hazard: none
+    labour_p: 225
     anchor:
       year: 1941
       event: "Nimonic 80 в производстве"
@@ -590,6 +592,7 @@ define:
       quality_control: 4
     requires: [s5.prc.nicr_alloy_melt, s5.prn.gamma_prime_alloy_design]
     hazard: key
+    labour_p: 600
     anchor:
       year: 1951
       event: "середина окна G2"
@@ -607,6 +610,7 @@ define:
       quality_control: 4.5
     requires: [s5.prc.superalloy_melt_g2]
     hazard: key
+    labour_p: 1800
     anchor:
       year: 1952
       event: "промышленная VIM суперсплавов (начало 1950-х)"
@@ -625,6 +629,7 @@ define:
       quality_control: 4
     requires: [s5.cmp.titanium_alloy]
     hazard: none
+    labour_p: 6750
     anchor:
       year: 1948
       event: "DuPont: первая продажа губчатого титана (09.1948)"
@@ -643,6 +648,7 @@ define:
       quality_control: 5
     requires: [s5.prc.vacuum_induction_melt, s5.fnd.solidification_science]
     hazard: none
+    labour_p: 3750
     anchor:
       year: 1969
       event: "DS-лопатки: патент P&W 1966; первое применение J58"
@@ -660,6 +666,7 @@ define:
       quality_control: 3
     requires: []
     hazard: none
+    labour_p: 150
     anchor:
       year: 1945
       before: true
@@ -678,6 +685,7 @@ define:
       quality_control: 3.5
     requires: [s5.prc.alloying_element_refining]
     hazard: none
+    labour_p: 225
     anchor:
       year: 1945
       event: "окно G1"
@@ -696,6 +704,7 @@ define:
       quality_control: 3.5
     requires: [s5.prc.high_purity_nickel_refining]
     hazard: none
+    labour_p: 1200
     anchor:
       year: 1960
       event: "середина окна G3"
@@ -713,6 +722,7 @@ define:
       quality_control: 3
     requires: []
     hazard: none
+    labour_p: 300
     anchor:
       year: 1945
       before: true
@@ -731,6 +741,7 @@ define:
       quality_control: 3.5
     requires: [s6.prc.precision_gear_bearing]
     hazard: none
+    labour_p: 450
     anchor:
       year: 1945
       event: "окно G1"
@@ -749,6 +760,7 @@ define:
       quality_control: 4
     requires: [s8.cmp.turbine_blade_forged]
     hazard: key
+    labour_p: 750
     anchor:
       year: 1941
       event: "кованые лопатки из Nimonic 80"
@@ -766,6 +778,7 @@ define:
       quality_control: 4
     requires: [s8.cmp.axial_compressor_assembly]
     hazard: none
+    labour_p: 1200
     anchor:
       year: 1951
       event: "середина окна G2"
@@ -784,6 +797,7 @@ define:
       quality_control: 5
     requires: [s8.cmp.turbine_blade_cast, s5.prc.ceramic_shell_moulding]
     hazard: key
+    labour_p: 2250
     anchor:
       year: 1960
       event: "середина окна G3"
@@ -801,6 +815,7 @@ define:
       quality_control: 5
     requires: [s8.cmp.turbine_blade_cooled]
     hazard: key
+    labour_p: 5250
     anchor:
       year: 1970
       event: "середина окна G4"
@@ -818,6 +833,7 @@ define:
       quality_control: 3
     requires: [s5.cmp.aluminium_alloy_sheet]
     hazard: none
+    labour_p: 3700
     anchor:
       year: 1945
       before: true
@@ -836,6 +852,7 @@ define:
       quality_control: 4
     requires: [s8.eng.turbojet_g1]
     hazard: none
+    labour_p: 1350
     anchor:
       year: 1944
       event: "серийные ТРД для Meteor"
@@ -853,6 +870,7 @@ define:
       quality_control: 3.5
     requires: [s8.eng.swept_wing_airframe]
     hazard: none
+    labour_p: 3450
     anchor:
       year: 1947
       event: "F-86 (первый полёт)"
@@ -870,6 +888,7 @@ define:
       quality_control: 4
     requires: [{any_of: [s8.eng.area_ruled_airframe, s8.eng.delta_wing_airframe]}]
     hazard: none
+    labour_p: 7500
     anchor:
       year: 1960
       event: "середина окна G3"
@@ -888,6 +907,7 @@ define:
       quality_control: 3.5
     requires: [s8.cmp.afterburner_unit]
     hazard: none
+    labour_p: 900
     anchor:
       year: 1951
       event: "середина окна G2"

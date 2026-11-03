@@ -22,7 +22,7 @@ internal sealed class JetIndustryRun
     public static readonly Cluster[] Clusters = [Cluster.MET, Cluster.CHEM];
 
     public JetIndustryRun(int threads = 1, int chunkSize = 1, int[]? actorNumbers = null, int[]? processOrder = null,
-        IndustryMode mode = IndustryMode.Full, ImmutableArray<CapabilityCurve> curves = default, IIndustryInputs? inputs = null)
+        IndustryMode mode = IndustryMode.Full, ImmutableArray<CapabilityCurve> curves = default, IIndustryInputs? inputs = null, bool cb = false)
     {
         actorNumbers ??= [0];
         JsonElement tp = JetReference.Trajectory.GetProperty("params");
@@ -63,7 +63,8 @@ internal sealed class JetIndustryRun
             foreach (JsonProperty x in tp.GetProperty("X0").EnumerateObject())
                 IStart.X[s * Layout.ProcessCount + Layout.RowOf(int.Parse(x.Name, CultureInfo.InvariantCulture))] = JetReference.Dec(x.Value.GetString()!);
         }
-        Industry = new IndustrySystem(Table, Layout, IStart, Params, inputs ?? new ReferenceIndustryInputs(this), chunks, new V23CultureRule(), mode, curves);
+        Industry = new IndustrySystem(Table, Layout, IStart, Params, inputs ?? (cb ? new CbInputs(new ReferenceIndustryInputs(this)) : new ReferenceIndustryInputs(this)), chunks,
+            cb ? new CbCultureRule() : new V23CultureRule(), mode, curves);
         Lines = new ReferenceLines(this, Industry.CreateMailbox(chunks, Cadence.Monthly));
         Runner = new TickRunner(Table, seed, [Knowledge, Industry, Lines], chunkSize, threads, Calendar);
     }
@@ -105,7 +106,7 @@ internal sealed class JetIndustryRun
             specs.Add(new IndustryProcessSpec(int.Parse(n.Name, CultureInfo.InvariantCulture),
                 Enum.Parse<Cluster>(v.GetProperty("cluster").GetString()!),
                 Array.IndexOf(JetReference.Disciplines, v.GetProperty("disc").GetString()), v.GetProperty("tier").GetInt32(),
-                new Dims3(req[0], req[1], req[2])));
+                new Dims3(req[0], req[1], req[2]), P(v, "labour")));
         }
         specs.Sort((a, b) => a.Number.CompareTo(b.Number));
         return order is null ? [.. specs] : [.. order.Select(i => specs[i])];
@@ -143,6 +144,8 @@ internal sealed class JetIndustryRun
     /// </summary>
     internal sealed class ReferenceIndustryInputs(JetIndustryRun run) : IIndustryInputs
     {
+        public int RunNumber(int processRow) => run.Layout.Number[processRow];
+
         private readonly JsonElement _tp = JetReference.Trajectory.GetProperty("params");
 
         public bool KnowsProcess(int siteRow, int processRow, long month) =>
@@ -169,6 +172,46 @@ internal sealed class JetIndustryRun
         public Fx6 AlloyDeficit(int siteRow, long month) => Fx6.Zero;
 
         public long KnownSince(int siteRow, int processRow, long month) => -1;
+    }
+
+    /// <summary>
+    /// Inputs of the C-B fixture (jet_ref.py, trajectory_cb): <c>D_a</c> of the month from the reference row, PRC 4 is
+    /// <c>planned</c> once known, <c>v_exp</c> = target rate · labour of a known process.
+    /// </summary>
+    private sealed class CbInputs(ReferenceIndustryInputs b) : IIndustryInputs
+    {
+        public bool KnowsProcess(int siteRow, int processRow, long month) => b.KnowsProcess(siteRow, processRow, month);
+
+        public Fx6 W(int siteRow, int cluster, long month) => b.W(siteRow, cluster, month);
+
+        public Fx6 Hcap(int siteRow, Dimension dim, long month) => b.Hcap(siteRow, dim, month);
+
+        public bool QualityProgramme(int siteRow, long month) => false;
+
+        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month) => b.ToolingInvest(siteRow, cluster, dim, month);
+
+        public Fx6 LicenceShare(int siteRow, int processRow, long month) => Fx6.Zero;
+
+        public long WorkforceAvailable(int siteRow, int category, long month) => b.WorkforceAvailable(siteRow, category, month);
+
+        public Fx6 AlloyCap(int siteRow, long month) => Fx6.Zero;
+
+        public Fx6 AlloyDeficit(int siteRow, long month) => Fx6.Zero;
+
+        public long KnownSince(int siteRow, int processRow, long month) => -1;
+
+        public Fx6 EffortBudget(int actorRow, long month) => JetReference.Raw(JetReference.RowCb(month).GetProperty("effort").GetProperty("D_a"));
+
+        public bool Planned(int siteRow, int processRow, long month) =>
+            b.KnowsProcess(siteRow, processRow, month) && b.RunNumber(processRow) == 4;
+
+        public Fx6 PlannedVolume(int siteRow, int processRow, long month)
+        {
+            if (!b.KnowsProcess(siteRow, processRow, month))
+                return Fx6.Zero;
+            JsonElement n = Node(b.RunNumber(processRow));
+            return P(n, "rate") * P(n, "labour");
+        }
     }
 
     /// <summary>

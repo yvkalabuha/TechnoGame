@@ -19,6 +19,13 @@ internal static class JetReference
     private static readonly Lazy<JsonDocument> FormulasDoc = new(() => Load("formulas.json"));
     private static readonly Lazy<JsonDocument> TrajectoryDoc = new(() => Load("trajectory.json"));
 
+    private static readonly Lazy<JsonDocument> TrajectoryCbDoc = new(() => Load("trajectory_cb.json"));
+
+    /// <summary>Same fixture with the culture rule C-B (knowledge, rates and budgets are identical to <see cref="Trajectory"/>).</summary>
+    public static JsonElement TrajectoryCb => TrajectoryCbDoc.Value.RootElement;
+
+    public static JsonElement RowCb(long month) => TrajectoryCb.GetProperty("rows")[(int)month];
+
     public static JsonElement Formulas => FormulasDoc.Value.RootElement;
     public static JsonElement Trajectory => TrajectoryDoc.Value.RootElement;
 
