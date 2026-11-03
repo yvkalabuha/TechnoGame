@@ -1,0 +1,138 @@
+{
+  "task_id": "PILOT-A1-product-class-inventory",
+  "version": 1,
+  "category": "A",
+  "type": "A1",
+  "title": "Inventory of ProductClassTable (types, methods, dependencies)",
+  "instructions": "List every type (class, struct, record, interface, enum) declared in the two C# files of the context package. For each type give: name, kind, the file path exactly as in the '=== FILE' header, the names of its methods (only methods with an access modifier and a return type: no constructors, operators or properties), and depends_on: names of other project types or members it uses (as written in the code). Partial classes: report the type once per file in which it is declared, with the methods of that file.",
+  "context_files": [
+    {
+      "path": "src/Singularity.Core/Data/ProductClassTable.cs",
+      "sha256": "31cc8a15c0d56a054f99429972251684e34ed5d7b206aea668784d7f84e79af8"
+    },
+    {
+      "path": "src/Singularity.Core/Data/ProductClassTable.Build.cs",
+      "sha256": "a0f26d7fda8eb47cbc5fd37e5536d15105d66ab68515c11c71c8e017d56c9496"
+    }
+  ],
+  "allowed_paths": [],
+  "forbidden_paths": [
+    "**"
+  ],
+  "output_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "status",
+      "types",
+      "assumptions",
+      "open_questions"
+    ],
+    "properties": {
+      "status": {
+        "enum": [
+          "done",
+          "partial",
+          "cannot"
+        ]
+      },
+      "assumptions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "open_questions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "types": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "kind",
+            "file",
+            "methods",
+            "depends_on"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "class",
+                "struct",
+                "record",
+                "record struct",
+                "interface",
+                "enum"
+              ]
+            },
+            "file": {
+              "type": "string"
+            },
+            "methods": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "depends_on": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "acceptance": [
+    {
+      "check": "types_exist",
+      "hard": true
+    },
+    {
+      "check": "types_complete",
+      "hard": true
+    },
+    {
+      "check": "methods_exist",
+      "hard": true
+    },
+    {
+      "check": "methods_recall",
+      "hard": false,
+      "threshold": 0.9
+    },
+    {
+      "check": "deps_exist",
+      "hard": false,
+      "threshold": 0.9
+    }
+  ],
+  "verification": {
+    "source_files": [
+      "src/Singularity.Core/Data/ProductClassTable.cs",
+      "src/Singularity.Core/Data/ProductClassTable.Build.cs"
+    ]
+  },
+  "max_rounds": 2,
+  "max_candidates": 1,
+  "budget": {
+    "max_total_tokens": 60000,
+    "max_minutes": 90,
+    "max_output_tokens": 3000,
+    "max_context_tokens": 12000,
+    "claude_reference_tokens": 15000
+  },
+  "requires_review": false,
+  "escalation": "Pilot compares the inventory with the source by hand"
+}

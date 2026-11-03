@@ -1,0 +1,111 @@
+{
+  "task_id": "PILOT-A2-jet-nodes-clean",
+  "version": 1,
+  "category": "A",
+  "type": "A2",
+  "title": "Integrity check of the jet-slice node table (clean, false-finding test)",
+  "instructions": "Check nodes.csv. Column 'requires': ';' separates required groups (AND), '|' separates alternatives inside a group (any one). Column 'known_at_start': ';'-separated actor codes or ALL; empty = unknown to everyone. Report every finding of these kinds: duplicate_id (node_id = repeated id, ref = ''); duplicate_idx (node_id = repeated idx, ref = ''); dangling_requires (node_id requires ref, which is not an id in the table); cycle (node_id is on a requires cycle, ref = ''); generation_order (node_id requires ref with a higher generation number, G0 < G1 < ...); start_closure (an actor knows node_id at start but knows none of the alternatives of a required group; node_id = '<id>@<ACTOR>', ref = the group joined with '|'; ALL means every actor code used in the table). Every finding needs a short explanation. If the table is clean, return an empty list. Do not report anything else: findings that are not real are counted as errors.",
+  "context_files": [
+    {
+      "path": "docs/research/data/jet-slice/nodes.csv",
+      "sha256": "05805bcd99c57b398a4b6a1879b63a6e9c06865611f03ae45318dfc9e705ce7e"
+    }
+  ],
+  "allowed_paths": [],
+  "forbidden_paths": [
+    "**"
+  ],
+  "output_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "status",
+      "findings",
+      "assumptions",
+      "open_questions"
+    ],
+    "properties": {
+      "status": {
+        "enum": [
+          "done",
+          "partial",
+          "cannot"
+        ]
+      },
+      "assumptions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "open_questions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "findings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "check",
+            "node_id",
+            "ref",
+            "explanation"
+          ],
+          "properties": {
+            "check": {
+              "enum": [
+                "duplicate_id",
+                "duplicate_idx",
+                "dangling_requires",
+                "cycle",
+                "generation_order",
+                "start_closure"
+              ]
+            },
+            "node_id": {
+              "type": "string"
+            },
+            "ref": {
+              "type": "string"
+            },
+            "explanation": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "acceptance": [
+    {
+      "check": "no_false_findings",
+      "hard": true
+    },
+    {
+      "check": "all_found",
+      "hard": true
+    },
+    {
+      "check": "explanations",
+      "hard": false
+    }
+  ],
+  "verification": {
+    "data_file": "docs/research/data/jet-slice/nodes.csv"
+  },
+  "max_rounds": 2,
+  "max_candidates": 1,
+  "budget": {
+    "max_total_tokens": 60000,
+    "max_minutes": 90,
+    "max_output_tokens": 3000,
+    "max_context_tokens": 12000,
+    "claude_reference_tokens": 12000
+  },
+  "requires_review": false,
+  "escalation": "Pilot runs the reference script and reads the worker's explanations"
+}

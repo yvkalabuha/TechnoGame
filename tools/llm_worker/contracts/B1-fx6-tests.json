@@ -1,0 +1,177 @@
+{
+  "task_id": "PILOT-B1-fx6-tests",
+  "version": 1,
+  "category": "B",
+  "type": "B1",
+  "title": "xUnit tests for Singularity.Kernel.Fx6",
+  "instructions": "Write xUnit tests (xunit 2.9.3; 'using Xunit' is global) for the struct Fx6 in src/Singularity.Kernel/Fx6.cs. Return exactly one file: path 'tests/Singularity.Kernel.Tests/Llm/Fx6LlmTests.cs', namespace 'Singularity.Kernel.Tests.Llm', class 'Fx6LlmTests'. Cover: FromDouble flooring (also negative values) and rejection of NaN/infinity; + and - (also overflow -> OverflowException); * and / with floor rounding for negative results; division by zero; comparison operators at equal and adjacent raw values; ToString format. Compute every expected value from the documented rules, using exact raw integers. Warnings are errors (nullable enabled). Do not change other files.",
+  "context_files": [
+    {
+      "path": "src/Singularity.Kernel/Fx6.cs",
+      "sha256": "95f599b5888d0faf3ee52dc9cea7d1dca27b01733656b618908584c53aa82f94"
+    },
+    {
+      "path": "tests/Directory.Build.props",
+      "sha256": "d0ea000580e3ae2ff4e43e7afdb2797fe4ce672485c42336ebbf2160f796e65b"
+    },
+    {
+      "path": "tests/Singularity.Kernel.Tests/Singularity.Kernel.Tests.csproj",
+      "sha256": "34389fb962e36d841c1adb52c8a611e357a67ace31a7b76576d8f45c6f5f2be5"
+    }
+  ],
+  "allowed_paths": [
+    "tests/Singularity.Kernel.Tests/Llm/*.cs"
+  ],
+  "forbidden_paths": [
+    "src/**"
+  ],
+  "output_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "status",
+      "files",
+      "assumptions",
+      "open_questions"
+    ],
+    "properties": {
+      "status": {
+        "enum": [
+          "done",
+          "partial",
+          "cannot"
+        ]
+      },
+      "assumptions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "open_questions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "files": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 2,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "content"
+          ],
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "acceptance": [
+    {
+      "check": "paths_allowed",
+      "hard": true
+    },
+    {
+      "check": "build",
+      "hard": true
+    },
+    {
+      "check": "tests_pass",
+      "hard": true
+    },
+    {
+      "check": "test_count",
+      "hard": false,
+      "threshold": 10
+    },
+    {
+      "check": "mutation_score",
+      "hard": true,
+      "threshold": 0.8
+    }
+  ],
+  "verification": {
+    "restore_cmd": [
+      "dotnet",
+      "restore",
+      "tests/Singularity.Kernel.Tests",
+      "--nologo"
+    ],
+    "build_cmd": [
+      "dotnet",
+      "build",
+      "tests/Singularity.Kernel.Tests",
+      "--no-restore",
+      "--nologo"
+    ],
+    "test_cmd": [
+      "dotnet",
+      "test",
+      "tests/Singularity.Kernel.Tests",
+      "--no-restore",
+      "--nologo",
+      "--filter",
+      "FullyQualifiedName~Singularity.Kernel.Tests.Llm"
+    ],
+    "command_timeout_s": 900,
+    "mutants": [
+      {
+        "file": "src/Singularity.Kernel/Fx6.cs",
+        "find": "checked(a.Raw + b.Raw)",
+        "replace": "checked(a.Raw - b.Raw)"
+      },
+      {
+        "file": "src/Singularity.Kernel/Fx6.cs",
+        "find": "checked(a.Raw - b.Raw)",
+        "replace": "checked(a.Raw + b.Raw)"
+      },
+      {
+        "file": "src/Singularity.Kernel/Fx6.cs",
+        "find": "q -= 1;",
+        "replace": "q += 1;"
+      },
+      {
+        "file": "src/Singularity.Kernel/Fx6.cs",
+        "find": "(r < 0) != (d < 0)",
+        "replace": "(r < 0) == (d < 0)"
+      },
+      {
+        "file": "src/Singularity.Kernel/Fx6.cs",
+        "find": "Math.Floor(value * Scale)",
+        "replace": "Math.Ceiling(value * Scale)"
+      },
+      {
+        "file": "src/Singularity.Kernel/Fx6.cs",
+        "find": "a.Raw < b.Raw;",
+        "replace": "a.Raw <= b.Raw;"
+      },
+      {
+        "file": "src/Singularity.Kernel/Fx6.cs",
+        "find": "!double.IsFinite(value)",
+        "replace": "double.IsNaN(value)"
+      }
+    ]
+  },
+  "max_rounds": 2,
+  "max_candidates": 2,
+  "budget": {
+    "max_total_tokens": 120000,
+    "max_minutes": 240,
+    "max_output_tokens": 6000,
+    "max_context_tokens": 8000,
+    "claude_reference_tokens": 25000
+  },
+  "requires_review": true,
+  "escalation": "Pilot reviews the test file in the llm branch; reviewer before any merge"
+}

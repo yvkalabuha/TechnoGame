@@ -1,0 +1,63 @@
+idx,id,type,gen,discipline,cluster,tier,req_prec,req_pur,req_qc,requires,hazard,known_at_start,anchor_year,anchor_event,anchor_src,anchor_estimated
+1,s7.fnd.brayton_cycle,FND,G0,prop,AERO,,,,,,none,ALL,<1945,G0: до старта,RULE-G0,true
+2,s8.fnd.boundary_layer,FND,G0,aero,AERO,,,,,,none,ALL,1904,Прандтль: пограничный слой,S32,false
+3,s8.fnd.compressible_flow,FND,G0,aero,AERO,,,,,s8.fnd.boundary_layer,none,ALL,<1945,G0: до старта,RULE-G0,true
+4,s5.fnd.precipitation_hardening,FND,G0,metal,MET,,,,,,none,ALL,1906,Вильм: старение Al-Cu (дюралюминий),S31,false
+5,s8.fnd.transonic_aerodynamics,FND,G2,aero,AERO,,,,,s8.fnd.compressible_flow,hz,,1947,Bell X-1: M 1.06 14.10.1947,S28,false
+6,s5.fnd.high_temperature_creep,FND,G2,metal,MET,,,,,s5.fnd.precipitation_hardening,hz,,1948,Набарро: диффузионная ползучесть,S34,false
+7,s7.fnd.turbine_heat_transfer,FND,G3,prop,AERO,,,,,s7.fnd.brayton_cycle;s8.fnd.boundary_layer,hz,,1960,середина окна G3,RULE-MID,true
+8,s5.fnd.solidification_science,FND,G3,metal,MET,,,,,s5.fnd.high_temperature_creep,hz,,1953,Раттер–Чалмерс: концентрационное переохлаждение,S35,false
+9,s8.prn.gas_turbine,PRN,G0,prop,AERO,,,,,s7.fnd.brayton_cycle,none,ALL,1937,стендовые ТРД Уиттла и фон Охайна,RR-0008§12,false
+10,s8.prn.swept_wing,PRN,G1,aero,AERO,,,,,s8.fnd.compressible_flow,none,USA;GBR;SUN,1935,Буземан (Volta); Джонс NACA TN 1033 — 1945,S13,false
+11,s8.prn.afterburning,PRN,G1,prop,AERO,,,,,s8.prn.gas_turbine,none,USA;GBR,1944,первый форсаж США (NACA AERL для GE I-A),S19,false
+12,s5.prn.gamma_prime_alloy_design,PRN,G2,metal,MET,,,,,s5.fnd.high_temperature_creep,hz,,1951,середина окна G2,RULE-MID,true
+13,s8.prn.area_rule,PRN,G2,aero,AERO,,,,,s8.fnd.transonic_aerodynamic,hz,,1952,Уиткомб: правило площадей,S14,false
+14,s8.prn.multi_spool_compression,PRN,G2,prop,AERO,,,,,s8.prn.gas_turbine;s8.prn.bypass_engine,hz,,1950,J57: первый запуск двухвального ТРД (01.1950),S16,false
+15,s8.prn.bypass_engine,PRN,G3,prop,AERO,,,,,s8.prn.multi_spool_compression,hz,,1952,Conway RCo.2: первый запуск (07.1952),S18,false
+16,s8.prn.film_cooling,PRN,G3,prop,AERO,,,,,s7.fnd.turbine_heat_transfer,hz,,1960,середина окна G3,RULE-MID,true
+17,s8.eng.turbojet_g1,ENG,G1,prop,AERO,,,,,s8.prn.gas_turbine,key,USA;GBR;SUN;FRA,1944,Meteor в строю (07.1944),S7,false
+18,s8.eng.straight_wing_jet_airframe,ENG,G1,aero,AERO,,,,,s8.fnd.boundary_layer;s7.fnd.turbine_heat_transfer,none,USA;GBR;SUN,1944,Meteor в строю (07.1944),S7,false
+19,s8.eng.turbojet_g2,ENG,G2,prop,AERO,,,,,s8.eng.turbojet_g1,key,GBR;FRA,1944,Nene: первый запуск 27.10.1944,S4,false
+20,s8.eng.swept_wing_airframe,ENG,G2,aero,AERO,,,,,s8.prn.swept_wing;s8.eng.straight_wing_jet_airframe,none,,1947,F-86: первый полёт 01.10.1947,S27,false
+21,s8.eng.afterburner,ENG,G2,prop,AERO,,,,,s8.prn.afterburning;s8.eng.turbojet_g1,none,,1951,середина окна G2,RULE-MID,true
+22,s8.eng.all_moving_tail,ENG,G2,aero,AERO,,,,,s8.fnd.transonic_aerodynamics,none,,1947,X-1: цельноповоротный стабилизатор,S28,false
+23,s8.eng.turbojet_g3,ENG,G3,prop,AERO,,,,,s8.eng.turbojet_g2;s8.prn.multi_spool_compression,key,,1950,J57 (двухвальный 10 000 lbf),S16,false
+24,s8.eng.area_ruled_airframe,ENG,G3,aero,AERO,,,,,s8.prn.area_rule;s8.eng.swept_wing_airframe,none,,1954,YF-102A: первый полёт 20.12.1954,S15,false
+25,s8.eng.delta_wing_airframe,ENG,G3,aero,AERO,,,,,s8.eng.swept_wing_airframe;s8.fnd.transonic_aerodynamics,none,,1954,YF-102A (дельта),S15,false
+26,s8.eng.variable_geometry_inlet,ENG,G3,aero,AERO,,,,,s8.fnd.compressible_flow;s8.eng.turbojet_g3,none,,1960,середина окна G3,RULE-MID,true
+27,s8.eng.air_cooled_turbine_blade,ENG,G4,prop,AERO,,,,,s8.prn.film_cooling;s7.fnd.turbine_heat_transfer,key,,1970,середина окна G4 (Conway — первый с охлаждаемыми лопатками; дата не найдена),RULE-MID,true
+28,s8.eng.turbofan_g4,ENG,G4,prop,AERO,,,,,s8.eng.turbojet_g3;s8.prn.bypass_engine,key,,1964,TF30 (форсажный ТРДД): первый полёт,S25,false
+29,s8.eng.mach2_airframe_g4,ENG,G4,aero,AERO,,,,,s8.eng.area_ruled_airframe|s8.eng.delta_wing_airframe;s8.eng.variable_geometry_inlet,none,,1972,F-15: первый полёт 27.07.1972,S26,false
+30,s5.cmp.heat_resistant_alloy,CMP,G1,metal,MET,,,,,s5.fnd.precipitation_hardening,key,USA;GBR,1941,Nimonic 80,S3,false
+31,s5.cmp.aluminium_alloy_sheet,CMP,G0,metal,MET,,,,,,none,ALL,1909,дюралюминий: лицензия Dürener Metallwerke,S31,false
+32,s5.cmp.titanium_alloy,CMP,G3,metal,MET,,,,,s5.fnd.high_temperature_creep,none,,1954,Ti-6Al-4V,S20,false
+33,s8.cmp.turbine_blade_forged,CMP,G1,prop,AERO,,,,,s5.cmp.heat_resistant_alloy,none,USA;GBR,1941,Nimonic 80 — стандарт роторных лопаток британских ГТД,S3,false
+34,s8.cmp.turbine_blade_cast,CMP,G3,prop,AERO,,,,,s5.prn.gamma_prime_alloy_design;s5.cmp.heat_resistant_alloy,none,,1960,середина окна G3,RULE-MID,true
+35,s8.cmp.turbine_blade_cooled,CMP,G4,prop,AERO,,,,,s8.eng.air_cooled_turbine_blade;s8.cmp.turbine_blade_cast,none,,1970,середина окна G4,RULE-MID,true
+36,s8.cmp.axial_compressor_assembly,CMP,G2,prop,AERO,,,,,s8.eng.turbojet_g2,none,,1951,середина окна G2,RULE-MID,true
+36,s8.cmp.afterburner_unit,CMP,G2,prop,AERO,,,,,s8.eng.afterburner,none,,1951,середина окна G2,RULE-MID,true
+38,s5.prc.light_alloy_rolling,PRC,G0,metal,MET,3,3,3,2.5,s5.cmp.aluminium_alloy_sheet,none,ALL,1909,дюралюминий в производстве,S31,false
+39,s5.prc.nicr_alloy_melt,PRC,G1,metal,MET,4,,4,3.5,s5.cmp.heat_resistant_alloy,none,USA;GBR,1941,Nimonic 80 в производстве,S3,false
+40,s5.prc.superalloy_melt_g2,PRC,G2,metal,MET,4,,4.5,4,s5.prc.nicr_alloy_melt;s5.prn.gamma_prime_alloy_design,key,,1951,середина окна G2,RULE-MID,true
+41,s5.prc.vacuum_induction_melt,PRC,G3,metal,MET,5,,5,4.5,s5.prc.superalloy_melt_g2,key,,1952,промышленная VIM суперсплавов (начало 1950-х),S23,false
+42,s5.prc.titanium_reduction_forging,PRC,G3,metal,MET,5,4,5,4,s5.cmp.titanium_alloy,none,,1948,DuPont: первая продажа губчатого титана (09.1948),S37,false
+43,s5.prc.ds_casting,PRC,G4,metal,MET,5,5,5,5,s5.prc.vacuum_induction_melt;s5.fnd.solidification_science,none,,1969,DS-лопатки: патент P&W 1966; первое применение J58,S22,false
+44,s5.prc.alloying_element_refining,PRC,G0,chem,CHEM,3,,3.5,3,,none,ALL,<1945,G0: до старта,RULE-G0,true
+45,s5.prc.high_purity_nickel_refining,PRC,G1,chem,CHEM,4,,4.5,3.5,s5.prc.alloying_element_refining,none,USA;GBR,1945,окно G1,RULE-MID,true
+46,s5.prc.ceramic_shell_moulding,PRC,G3,chem,CHEM,4,4,4,3.5,s5.prc.high_purity_nickel_refining,none,,1960,середина окна G3,RULE-MID,true
+47,s6.prc.precision_gear_bearing,PRC,G0,mech,MECH,3,3.5,,3,,none,ALL,<1945,G0: до старта,RULE-G0,true
+48,s6.prc.centrifugal_impeller_machining,PRC,G1,mech,MECH,4,4,,3.5,s6.prc.precision_gear_bearing,none,USA;GBR,1945,окно G1,RULE-MID,true
+49,s6.prc.precision_blade_forging,PRC,G1,mech,MECH,4,4.5,3,4,s8.cmp.turbine_blade_forged,key,USA;GBR,1941,кованые лопатки из Nimonic 80,S3,false
+50,s6.prc.axial_compressor_machining,PRC,G2,mech,MECH,4,4.5,,4,s8.cmp.axial_compressor_assembly,none,,1951,середина окна G2,RULE-MID,true
+51,s6.prc.investment_cast_blades,PRC,G3,mech,MECH,5,5,4.5,5,s8.cmp.turbine_blade_cast;s5.prc.ceramic_shell_moulding,key,,1960,середина окна G3,RULE-MID,true
+52,s6.prc.cooled_blade_drilling,PRC,G4,mech,MECH,5,5.5,,5,s8.cmp.turbine_blade_cooled,key,,1970,середина окна G4,RULE-MID,true
+53,s8.prc.stressed_skin_assembly,PRC,G0,aero,AERO,3,3,,3,s5.cmp.aluminium_alloy_sheet,none,ALL,<1945,G0: до старта,RULE-G0,true
+54,s8.prc.jet_engine_assembly_test,PRC,G1,prop,AERO,4,3.5,,4,s8.eng.turbojet_g1,none,USA;GBR;SUN,1944,серийные ТРД для Meteor,S7,false
+55,s8.prc.swept_wing_fabrication,PRC,G2,aero,AERO,4,4,,3.5,s8.eng.swept_wing_airframe,none,,1947,F-86 (первый полёт),S27,false
+56,s8.prc.machined_integral_skins,PRC,G3,aero,AERO,4,4.5,,4,s8.eng.area_ruled_airframe|s8.eng.delta_wing_airframe,none,,1960,середина окна G3,RULE-MID,true
+57,s8.prc.afterburner_fabrication,PRC,G2,prop,AERO,4,4,4,3.5,s8.cmp.afterburner_unit,none,,1951,середина окна G2,RULE-MID,true
+58,s8.app.jet_fighter_g1,APP,G1,aero,AERO,,,,,s8.eng.turbojet_g1;s8.eng.straight_wing_jet_airframe;s5.cmp.heat_resistant_alloy,none,USA;GBR,1944,Meteor в строю (07.1944),S7,false
+59,s8.app.jet_fighter_g2,APP,G2,aero,AERO,,,,,s8.eng.turbojet_g2;s8.eng.swept_wing_airframe,none,,1947,F-86 (первый полёт 01.10.1947),S27,false
+60,s8.app.jet_fighter_g3,APP,G3,aero,AERO,,,,,s8.eng.turbojet_g3;s8.eng.area_ruled_airframe|s8.eng.delta_wing_airframe;s8.eng.afterburner,none,,1953,F-100: первый полёт 25.05.1953,S27,false
+61,s8.app.jet_fighter_g4,APP,G4,aero,AERO,,,,,s8.eng.turbofan_g4;s8.eng.mach2_airframe_g4,none,,1972,F-15: первый полёт 27.07.1972,S26,false
+62,s8.eng.all_moving_tail,ENG,G2,aero,AERO,,,,,s8.fnd.transonic_aerodynamics,none,,1947,X-1: цельноповоротный стабилизатор,S28,false

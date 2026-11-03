@@ -11,8 +11,8 @@
 <!-- registry:active:start -->
 - TASK-0009 [REVIEW] Kernel: контрольный тест отсутствия FMA-сжатия на всех платформах CI (developer)
 - TASK-0018 [REVIEW] Core.Products для среза: КБ, варианты, line_E, дефекты, когорты, upkeep, FV, заглушка L_P (T5) (developer)
+- TASK-0019 [REVIEW] Пилот внешней LLM (Qwen): tools/llm_worker (developer)
 - TASK-0017 [APPROVED] Смоук калибровочных якорей C1–C3 на слоях знания и способности (T4s) (simulation-engineer)
-- TASK-0019 [APPROVED] Пилот внешней LLM (Qwen): tools/llm_worker (developer)
 <!-- registry:active:end -->
 
 ## Блокеры

@@ -1,7 +1,7 @@
 ---
 id: TASK-0019
 title: "Пилот внешней LLM (Qwen): tools/llm_worker"
-status: APPROVED
+status: REVIEW
 level: light
 milestone: MS-M0
 agent: developer
@@ -54,3 +54,11 @@ Python-инструмент `tools/llm_worker/` по `docs/ai-agents/EXTERNAL_LL
 - [ ] Тесты (test-engineer) — проходят, покрытие достаточно
 
 ## Результат
+
+### Исправления по ревью (developer, 2026-11-03)
+- HIGH: `sandbox.py` — все команды B1 через `bwrap` (`--ro-bind / /`, `--dev`, `--proc`, `--tmpfs /tmp`, запись только worktree и кэш NuGet, `tmpfs` над `~/.ssh` и `~/.config/local-llm`, файл ключа закрыт `/dev/null`, `--unshare-net` кроме `restore`, `--die-with-parent`, чистое окружение). Нет `bwrap` или не проходит self-test → `VerifierConfigError` → FAILED; запуска без песочницы нет. В контракт B1 добавлен `restore_cmd`, `build_cmd` с `--no-restore`.
+- HIGH: `worktree.verify()` перед reset/clean/commit: `--show-toplevel` == каталог worktree, ветка == ожидаемая `llm/...`; иначе `GitError`. `WORKTREES_DIR` перенесён в `$XDG_CACHE_HOME|~/.cache/llm_worker/worktrees`. Переменные `GIT_*` не наследуются.
+- MED: finalize внутри try; любая ошибка (включая `GitError`) → FAILED, `unverified`; задача никогда не остаётся RUNNING. Коммит в worktree с `--no-verify` и `core.hooksPath=/dev/null`.
+- MED: HTTP 401/403 → `AuthError`: задача обратно в QUEUED, весь прогон останавливается.
+- LOW: повторная проверка `write_allowed` по реальному пути после resolve (symlink); расширен `CONTEXT_EXCLUDE`; стоп «rolled back and quality did not improve»; в отчёте текст модели/компилятора в code span с пометкой «недоверенный»; пути мутантов проверяются `paths.normalize` в `validate_contract`.
+- Проверка: `python3 -m unittest discover tools/llm_worker/tests` — 55 тестов OK (новые в `tests/test_safety.py`: поддельный `dotnet` в bwrap не пишет вне worktree и в «репозиторий», не читает ключ, не видит ключ в env, без сети; worktree без `.git` → `GitError`, main не тронут; symlink; finalize/непредвиденная ошибка → FAILED; 401 останавливает прогон). Реальный прогон B1 в песочнице на скретч-клоне: restore с сетью, build/test/7 мутантов без сети — 64 с, все жёсткие проверки пройдены, мутанты убиты; вариант с ошибкой компиляции → `build` FAIL с `error CS0103`.
