@@ -13,7 +13,7 @@ public class T6bAiCapabilityTests(ITestOutputHelper output)
     [Fact]
     public void Run384Months_ScriptedPlayer_ProductionDoesNotCollapse_PerActorPrint()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 3 });
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 3, ProductAi = false });
         var player = new PlayerScript(s);
         SliceWorld w = s.World;
         int actors = w.Scenario.ActorCount;

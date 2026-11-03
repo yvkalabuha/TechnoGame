@@ -188,7 +188,7 @@ public class CommandTests
     [Fact]
     public void Replay_OfTheLog_GivesTheSameHash_Tick_AndDate()
     {
-        var config = new SliceRunConfig { Seed = 11 };
+        var config = new SliceRunConfig { Seed = 11, ProductAi = false };
         SliceSession original = SliceSession.Create(SliceTestData.Data, config);
         var player = new PlayerScript(original);
         for (long m = 0; m < 48; m++)

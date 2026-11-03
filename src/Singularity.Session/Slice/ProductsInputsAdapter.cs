@@ -1,5 +1,6 @@
 using Singularity.Core.Commands;
 using Singularity.Core.Industry;
+using Singularity.Core.Policy;
 using Singularity.Core.Products;
 using Singularity.Kernel;
 
@@ -29,6 +30,7 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
     public IReadOnlyList<DesignCommand> DesignCommands(int actorRow, long month)
     {
         var list = new List<DesignCommand>();
+        // Key order: the external sources (player, harness) first, then the AI (SourceClass.Ai is last).
         foreach ((CommandKind kind, int target, var alts) in world.Commands.DesignCommands(actorRow, month))
         {
             DesignCommandKind k = kind switch
@@ -39,13 +41,17 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
             };
             list.Add(new DesignCommand(k, target, kind == CommandKind.CancelDesign ? [] : alts));
         }
+        list.AddRange(world.Policy.AiDesignCommands(actorRow, month));
         return list;
     }
 
+    // An external command wins; the AI's start never carries force (spec A36).
     public SeriesStart? StartSeries(int actorRow, int design, long month) =>
-        world.Commands.Series(actorRow, design, month) is { } s ? new SeriesStart(s.Rate, s.Force) : null;
+        world.Commands.Series(actorRow, design, month) is { } s ? new SeriesStart(s.Rate, s.Force)
+            : world.Policy.AiStart(actorRow, design, month) is { } r ? new SeriesStart(r, false) : null;
 
-    public bool CloseLine(int actorRow, int design, long month) => world.Commands.CloseLine(actorRow, design, month);
+    public bool CloseLine(int actorRow, int design, long month) =>
+        world.Commands.CloseLine(actorRow, design, month) || world.Policy.AiClose(actorRow, design, month);
 
     // Spec A39, A41 (F15): T_a of this month's plan on the line the policy chose as the training series, else 0.
     public Fx6 TrainingBudget(int actorRow, int design, long month) =>
@@ -53,8 +59,18 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
             ? world.IndustryInputs.Plan(actorRow, month, world.Industry.RestActor(actorRow, month)).TrainingBudget
             : Fx6.Zero;
 
-    // The AI's line rate r_AI is a T6c decision; an external start_series sets the rate of the line.
-    public Fx6? LineRate(int actorRow, int design, long month) => null;
+    // Spec A41: a line the AI launched runs at r_AI = ⌊B_proc(t)/unit_cost_floor⌋, recomputed from the budget of the month; the training series adds
+    // the capability item (B_proc + B_cap). A line started by a command keeps the rate of that command.
+    public Fx6? LineRate(int actorRow, int design, long month)
+    {
+        if (!world.Policy.AiLine(actorRow, design))
+            return null;
+        BudgetShares shares = world.SharesOf(actorRow);
+        Fx6 budget = shares.Procurement * world.Policy.Budget(actorRow);
+        if (world.Policy.TrainingTarget(actorRow) == design)
+            budget += shares.Capability * world.Policy.Budget(actorRow);
+        return PolicyRules.LineRate(budget, world.Products.UnitCostFloor(actorRow, design));
+    }
 
     // Only the L_P control reads it (spec §6.1).
     public long AppKnownSince(int actorRow, int gen, long month) => -1;

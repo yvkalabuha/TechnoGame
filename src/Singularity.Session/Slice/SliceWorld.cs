@@ -23,7 +23,7 @@ namespace Singularity.Session;
 internal sealed class SliceWorld
 {
     /// <summary>Version of the column schema (ADR-0013 п. 2); raised with every change of the table layout (pinned by a fingerprint test).</summary>
-    public const int SchemaVersion = 3;
+    public const int SchemaVersion = 4;
 
     // Layout constants of the slice (spec §1.4, §3.3, §2): engineer and skilled pools, bureaus, cohort years 1945…1977.
     public const int WorkforceCategories = 2;
@@ -52,7 +52,16 @@ internal sealed class SliceWorld
         KnowledgeParameters = kp;
         IndustryParameters = ip;
         ProductsParameters = pp;
-        PolicyParameters = new PolicyParams();
+        PolicyParams policy = new() { YProd = pp.YProd, TField = pp.HBuild };
+        ScenarioData baseScenario = data.Scenario(config.ScenarioId);
+        // fv_budget: 24 median procurement budgets of the great powers at t0 (spec §5.5); the actors that exist among USA, GBR, SUN.
+        var great = new List<Fx6>();
+        foreach (string id in (string[])["USA", "GBR", "SUN"])
+        {
+            if (baseScenario.ActorIndex(id) is int i and >= 0)
+                great.Add(baseScenario.BudgetIndex[i]);
+        }
+        PolicyParameters = policy with { FvBudget = policy.FvBudgetOf(great.Count > 0 ? [.. great] : [.. baseScenario.BudgetIndex]) };
 
         Graph = KnowledgeGraph.FromData(data.Nodes, scenario.Disciplines, kp);
         KnowledgeStart kStart = KnowledgeStart.FromScenario(scenario, Graph);
@@ -79,8 +88,12 @@ internal sealed class SliceWorld
 
         StartVectors(scenario, out var actorNumber, out var budget0, out var growth, out var forced);
         BudgetAtStart = budget0;
+        // The liveness of the give-up rule (spec A40, L-C1…L-C3) is a property of the manifest, not of a seed: checked on the scenario before START_PERT.
+        PolicyLiveness.Validate(pp, PolicyParameters, ProductsLayout, baseScenario.BudgetIndex.AsSpan(), baseScenario.GrowthPa.AsSpan());
         Policy = new PolicySystem(Table, PolicyParameters, actorNumber, budget0, growth, Streams.Ai, new PolicyInputsAdapter(this),
-            Industry.CreateMailbox(chunks, Cadence.Monthly), QualityRequester, forced);
+            Industry.CreateMailbox(chunks, Cadence.Monthly), QualityRequester, forced,
+            products: config.ProductAi ? new PolicyProductsAdapter(this) : null, designs: ProductsLayout.Designs,
+            generations: ProductsLayout.Generations, derive: config.Derive);
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs);
         Limits = new CommandLimits(scenario.ActorCount, ProductsLayout.SlotCount, ProductsLayout.Designs,
             [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)]);
@@ -200,6 +213,7 @@ internal sealed class SliceWorld
         Table.AddInt("run.fix").Load([.. Enumerable.Repeat((Config.FixK ? 1 : 0) | (Config.FixE ? 2 : 0) | (Config.FixA ? 4 : 0), rows)]);
         Table.AddInt("run.start").Load([.. Enumerable.Repeat((int)Config.Start, rows)]);
         Table.AddInt("run.cell").Load([.. Enumerable.Repeat(Config.ProfileCell ?? -1, rows)]);
+        Table.AddInt("run.ai").Load([.. Enumerable.Repeat((Config.ProductAi ? 1 : 0) | (Config.Derive ? 2 : 0), rows)]);
         Table.AddInt("run.channels").Load([.. Enumerable.Repeat((int)Config.Channels, rows)]);
         Table.AddLong("run.scenario").Load(Fill(rows, BinaryPrimitives.ReadInt64LittleEndian(Convert.FromHexString(Scenario.Hash.AsSpan(0, 16)))));
     }

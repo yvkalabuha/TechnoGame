@@ -67,6 +67,53 @@ public sealed record PolicyParams
     /// <summary>The quality <c>q</c> below which a series counts for the P2 trigger (spec A41).</summary>
     public Fx6 QpQuality { get; init; } = F(700_000);
 
+    /// <summary><c>T_ab</c>: months in stage О without a series, or in С without output, after which the AI gives a project up (spec A40); 60, «З», not calibrated.</summary>
+    public int TAb { get; init; } = 60;
+
+    /// <summary>
+    /// <c>k_P</c> by profile (index = <see cref="PolicyProfile"/>): the series starts when <c>gate_open ∧ D_hidden ≤ k_P·D_ref</c> (spec §4, A35):
+    /// P1 0,40, P2 0,70 (= <c>k_gate</c>), P3 0,55.
+    /// </summary>
+    public ImmutableArray<Fx6> LaunchShare { get; init; } = [F(400_000), F(700_000), F(550_000)];
+
+    /// <summary><c>y_prod</c> of the preset <c>producible</c> (spec §1.4): the value of <c>ProductsParams.YProd</c>, set by the assembly.</summary>
+    public Fx6 YProd { get; init; } = F(500_000);
+
+    /// <summary><c>n_service_min</c> (spec §5.1): the fleet the alloy supply must be able to deliver in <see cref="TField"/> months (preset <c>producible</c>); 50.</summary>
+    public int NServiceMin { get; init; } = 50;
+
+    /// <summary><c>T_field</c> = <c>H_build</c>, months (COMPONENT_SELECTION §6); 24, set by the assembly from <c>ProductsParams.HBuild</c>.</summary>
+    public int TField { get; init; } = 24;
+
+    /// <summary>
+    /// <c>fv_budget</c> (spec §5.5): the budget of the hypothetical fleet in <c>FV</c> of the preset <c>adaptive</c>; the assembly sets it to
+    /// 24 median monthly procurement budgets of the great powers at t0 (<see cref="FvBudgetOf"/>). Must be positive when the product AI runs.
+    /// </summary>
+    public Fx6 FvBudget { get; init; }
+
+    /// <summary>Deficit of an alloy disruption (spec §4: 0,5); read by the manifest check L-C1 (the event rule is T6d).</summary>
+    public Fx6 DisruptionDeficit { get; init; } = F(500_000);
+
+    /// <summary>Longest alloy disruption, months (spec §4: 6…18); read by the manifest check L-C1.</summary>
+    public int DisruptionMaxMonths { get; init; } = 18;
+
+    /// <summary>
+    /// <c>fv_budget</c> = 24 · the median of the great powers' start budgets · the median procurement share of the three profiles
+    /// ([Предп.]: the spec says «24 медианных месячных бюджета закупок великих держав на t0»; the profile of an actor is random, so the
+    /// median share of the profiles stands for it).
+    /// </summary>
+    public Fx6 FvBudgetOf(ReadOnlySpan<Fx6> greatPowerBudgets)
+    {
+        if (greatPowerBudgets.IsEmpty)
+            throw new ArgumentException("At least one great power is needed.", nameof(greatPowerBudgets));
+        Fx6[] sorted = greatPowerBudgets.ToArray();
+        Array.Sort(sorted, (x, y) => x.CompareTo(y));
+        Fx6 median = sorted[sorted.Length / 2];
+        Fx6[] shares = [.. SharesByProfile.Select(s => s.Procurement)];
+        Array.Sort(shares, (x, y) => x.CompareTo(y));
+        return Fx6.FromInt(24) * shares[shares.Length / 2] * median;
+    }
+
     public BudgetShares Shares(PolicyProfile profile) => SharesByProfile[(int)profile];
 
     /// <summary>Shares of the profile, with the programme terms of P2 while a quality programme runs.</summary>
@@ -82,6 +129,9 @@ public sealed record PolicyParams
             throw new ArgumentException("E_ref and the skilled-per-engineer ratio must not be negative.");
         if (QpMonths < 1 || QpTriggerMonths < 1 || QpEngineerShare < Fx6.Zero || MKeep < Fx6.Zero || !MassProgrammeShares.IsValid)
             throw new ArgumentException("Quality programme parameters are out of range.");
+        if (TAb < 1 || NServiceMin < 1 || TField < 1 || DisruptionMaxMonths < 1 || YProd < Fx6.Zero || FvBudget < Fx6.Zero
+            || DisruptionDeficit < Fx6.Zero || DisruptionDeficit > Fx6.One || LaunchShare.Length != 3 || LaunchShare.Any(k => k < Fx6.Zero || k > Fx6.One))
+            throw new ArgumentException("Product-AI parameters are out of range (T_ab, k_P, y_prod, n_service_min, T_field, disruption).");
         if (SharesByProfile.Length != 3)
             throw new ArgumentException("One share set per profile (P1, P2, P3) is required.");
         for (int i = 0; i < SharesByProfile.Length; i++)
@@ -109,6 +159,9 @@ public static class PolicyRules
         };
         return boosted ? Fx6.FromInt(2) : Fx6.One;
     }
+
+    /// <summary><c>r_AI = ⌊B_proc/unit_cost_floor⌋</c> units a month (spec A41): <paramref name="budget"/> is the procurement item (plus the training money for the training series).</summary>
+    public static Fx6 LineRate(Fx6 budget, Fx6 unitCostFloor) => budget / unitCostFloor;
 
     /// <summary>
     /// Profiles of the great powers under a factorial cell (spec §6.6): cell = <c>9u + 3g + s</c>, u, g, s ∈ {0, 1, 2} the profiles

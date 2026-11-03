@@ -18,12 +18,13 @@ public sealed class PolicyInvariantException(long month, int actor, string messa
 /// being computed) and the shares <c>pol.share.*</c>. Decisions are written to Next in the compute of month t and are in force from t+1
 /// (ADR-0006); the decisions of month 0 are made by <see cref="Initialize"/> before tick 0 and act already in tick 0 (A8), so the
 /// annual step does not repeat at t = 0.
-/// Scope of this build (T6b): profile, budget, shares, the quality programme (state, <c>reserve_workforce</c>, the P2 trigger) and the
-/// training-series target of P1. Requirements, launch, line rate, licences, disruptions and the why_not-driven triggers (P1/P3 programme,
-/// P3 training) are later tasks (T6c, T6d); nothing here imitates them. The system draws no RNG after
+/// Scope of this build (T6c): profile, budget, shares, the quality programme (state, <c>reserve_workforce</c>, the P2 trigger), the
+/// training-series target of P1 and, when product inputs are given, the product AI (<c>PolicySystem.Products.cs</c>: Requirement, presets,
+/// launch, one line, A40). Licences, disruptions and the why_not-driven triggers (P1/P3 programme, P3 training) are T6d; nothing here
+/// imitates them. The system draws no RNG after
 /// <see cref="Initialize"/>: <c>j</c> is a pure function of its key (spec §9.1) and <c>prio</c> a pure function of the profile.
 /// </summary>
-public sealed class PolicySystem : ITickSystem
+public sealed partial class PolicySystem : ITickSystem
 {
     public const int DefaultSystemId = 400;
 
@@ -51,7 +52,8 @@ public sealed class PolicySystem : ITickSystem
     /// <param name="forcedProfile">Profile by row, or −1 to draw it from the stream (factorial cells, §6.6); default all drawn.</param>
     public PolicySystem(Table table, PolicyParams parameters, ImmutableArray<int> actorNumber, ImmutableArray<Fx6> budget0,
         ImmutableArray<Fx6> growthPerYear, CounterRng ai, IPolicyInputs inputs, IndustryMailbox mailbox, int qpRequesterId,
-        ImmutableArray<int> forcedProfile = default, int systemId = DefaultSystemId)
+        ImmutableArray<int> forcedProfile = default, int systemId = DefaultSystemId, IPolicyProducts? products = null, int designs = 0,
+        int generations = 0, bool derive = false)
     {
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(mailbox);
@@ -79,6 +81,7 @@ public sealed class PolicySystem : ITickSystem
         _qpRequester = qpRequesterId;
         _qpEngineers = [.. budget0.Select(b => (parameters.QpEngineerShare.Raw * parameters.EngineerBase(b)) / Fx6.Scale)];
         SystemId = systemId;
+        AddProductColumns(table, products, designs, generations, derive, parameters);
         _profile = table.AddInt("pol.profile");
         _round = table.AddInt("pol.round");
         _budget = table.AddLong("pol.budget");
@@ -166,6 +169,7 @@ public sealed class PolicySystem : ITickSystem
         _train.Load(train);
         for (int k = 0; k < shares.Length; k++)
             _share[k].Load(shares[k]);
+        InitializeProducts();
     }
 
     public void Compute(in TickContext context, int chunk, int rowStart, int rowEnd)
@@ -211,6 +215,7 @@ public sealed class PolicySystem : ITickSystem
                     train = d;
             }
             _train.Next[row] = train;
+            ComputeProducts(row, t, annual);
 
             // Shares of the doctrine (spec §4); under a programme P2 trades 0,05 of procurement for the QP item.
             BudgetShares s = _p.Shares(profile, next);

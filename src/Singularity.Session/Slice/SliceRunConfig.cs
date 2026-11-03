@@ -86,6 +86,15 @@ public sealed record SliceRunConfig
 
     public SliceChannels Channels { get; init; }
 
+    /// <summary>
+    /// The AI makes the product decisions (Requirement, launch, line rate, give-up, spec A40/A41). On in main. Off for a scripted player that
+    /// drives the product layer alone (tests of the player's line switch, spec A41 «Переключение линии у прокси игрока»).
+    /// </summary>
+    public bool ProductAi { get; init; } = true;
+
+    /// <summary>Arm <c>DERIV</c> (spec §6.8): once a year the AI also derives a design from its newest root project. Diagnostic; off in main.</summary>
+    public bool Derive { get; init; }
+
     /// <summary>Execution only (L2): threads and rows per chunk. They never change the result.</summary>
     public int Threads { get; init; } = 1;
 

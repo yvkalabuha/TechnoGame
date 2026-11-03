@@ -20,14 +20,16 @@ public class LinkedRunTests
     /// Re-recorded in T6c (d9e11cf5… before), reason contract v2.4 r4 (#128): three new product columns per design (schema v3), v_exp =
     /// max(proc_v, V_C) + V_PO with stage С planned (lines with output below r_ref now weigh r_ref in the allocation), and the
     /// player's line switch by the A41 rule (yield ≥ y_prod instead of Rate > 0).
+    /// Re-recorded again in T6c (72768ab7… before), reason: schema v4 — the product-AI columns pol.dsn/start/close/line/rep and run.ai (the run is
+    /// driven by the scripted player with ProductAi = false, so the trajectory is the same, only the layout of the state differs).
     /// </summary>
-    private const string Golden60 = "72768ab78f72f7b35744eec23321a03b93b6ead76d9c07df672cea24f58f9d78";
+    private const string Golden60 = "3d5d21befeeb01d07f80d375fe488796cd0a9e80b667476918c8060046c4c61a";
 
     private sealed class Run
     {
         public Run(ulong seed, int threads, int chunkSize)
         {
-            Session = SliceSession.Create(SliceTestData.Data, new SliceRunConfig { Seed = seed, Threads = threads, ChunkSize = chunkSize });
+            Session = SliceSession.Create(SliceTestData.Data, new SliceRunConfig { Seed = seed, Threads = threads, ChunkSize = chunkSize, ProductAi = false });
             Player = new PlayerScript(Session);
         }
 
