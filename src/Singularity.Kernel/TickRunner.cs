@@ -5,11 +5,12 @@ namespace Singularity.Kernel;
 /// <summary>What a system sees during one phase of a tick.</summary>
 public readonly struct TickContext
 {
-    public TickContext(Table table, CounterRng rng, long tick)
+    public TickContext(Table table, CounterRng rng, long tick, TickCalendar? calendar = null)
     {
         Table = table;
         Rng = rng;
         Tick = tick;
+        Calendar = calendar;
     }
 
     public Table Table { get; }
@@ -20,6 +21,9 @@ public readonly struct TickContext
     /// Post runs after the swap and sees t+1, the same value as <see cref="TickRunner.Tick"/>.
     /// </summary>
     public long Tick { get; }
+
+    /// <summary>Calendar of the run (null when the runner has none: then every system is daily).</summary>
+    public TickCalendar? Calendar { get; }
 }
 
 /// <summary>
@@ -45,10 +49,20 @@ public interface ITickSystem
 
     /// <summary>Sequential phase after the swap: invariants and metrics on the new <c>Current</c>.</summary>
     void Post(in TickContext context);
+
+    /// <summary>
+    /// How often the system runs. On a tick where it is not due, its Compute, Merge and Post are skipped
+    /// and its columns keep their values. Anything other than <see cref="Kernel.Cadence.Daily"/> needs a
+    /// runner with a <see cref="TickCalendar"/> whose start is aligned with the cadence (ADR-0004).
+    /// </summary>
+    Cadence Cadence => Cadence.Daily;
 }
 
 /// <summary>
 /// Runs ticks: compute (parallel over chunks) → merge (systems in list order) → swap → post.
+/// With a <see cref="TickCalendar"/>, only systems whose <see cref="ITickSystem.Cadence"/> is due run;
+/// a tick with no due system only advances the clock (no copy, no swap; ADR-0006 "Пустой тик").
+/// Commands are not handled here: the command queue belongs to Session (ADR-0014).
 /// Chunk boundaries depend only on <c>chunkSize</c>, never on thread count, so per-chunk
 /// results and their merge order are identical for 1 or N threads.
 /// An exception thrown by <see cref="ITickSystem.Compute"/> always surfaces as
@@ -65,13 +79,35 @@ public sealed class TickRunner
     private readonly ParallelOptions _parallel;
     private readonly TickComputeException?[] _failures;
 
-    public TickRunner(Table table, ulong seed, IReadOnlyList<ITickSystem> systems, int chunkSize, int maxThreads)
+    private readonly TickCalendar? _calendar;
+    private readonly bool[] _due;
+
+    // Next due tick per system and their minimum: an empty day costs one comparison (ADR-0006 budget).
+    private readonly long[] _nextDue;
+    private long _minNextDue;
+
+    public TickRunner(Table table, ulong seed, IReadOnlyList<ITickSystem> systems, int chunkSize, int maxThreads,
+        TickCalendar? calendar = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(chunkSize, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(maxThreads, 1);
         _table = table;
         _rng = new CounterRng(seed);
         _systems = systems.ToArray();
+        _calendar = calendar;
+        _due = new bool[_systems.Length];
+        _nextDue = new long[_systems.Length];
+        foreach (ITickSystem system in _systems)
+        {
+            if (calendar is null && system.Cadence != Cadence.Daily)
+                throw new ArgumentException($"System {system.SystemId} has cadence {system.Cadence} but the runner has no calendar.", nameof(systems));
+            // ADR-0004: firing index 0 must be the first full period, so tick 0 must be a firing tick.
+            if (calendar is not null && !calendar.IsDue(system.Cadence, 0))
+                throw new ArgumentException(
+                    $"Calendar start {calendar.Start} is not aligned with cadence {system.Cadence} of system {system.SystemId} (ADR-0004).",
+                    nameof(calendar));
+        }
+        _minNextDue = 0;
         _chunkSize = chunkSize;
         _parallel = new ParallelOptions { MaxDegreeOfParallelism = maxThreads };
         ChunkCount = ChunkCountFor(table.RowCount, chunkSize);
@@ -94,13 +130,27 @@ public sealed class TickRunner
 
     public int ChunkCount { get; }
 
+    public TickCalendar? Calendar => _calendar;
+
     public void RunTick()
     {
-        var context = new TickContext(_table, _rng, Tick);
+        if (Tick < _minNextDue)
+        {
+            // Nothing runs today: the state is unchanged, only the clock moves (spec v0.5 §2).
+            Tick++;
+            return;
+        }
+
+        var context = new TickContext(_table, _rng, Tick, _calendar);
+        for (int s = 0; s < _systems.Length; s++)
+            _due[s] = _nextDue[s] == Tick;
+
         _table.CopyCurrentToNext();
 
         for (int s = 0; s < _systems.Length; s++)
         {
+            if (!_due[s])
+                continue;
             ITickSystem system = _systems[s];
             if (_parallel.MaxDegreeOfParallelism == 1)
             {
@@ -133,14 +183,34 @@ public sealed class TickRunner
         }
 
         for (int s = 0; s < _systems.Length; s++)
-            _systems[s].Merge(context, ChunkCount);
+        {
+            if (_due[s])
+                _systems[s].Merge(context, ChunkCount);
+        }
 
         _table.Swap();
         Tick++;
+        UpdateNextDue();
 
-        var postContext = new TickContext(_table, _rng, Tick);
+        var postContext = new TickContext(_table, _rng, Tick, _calendar);
         for (int s = 0; s < _systems.Length; s++)
-            _systems[s].Post(postContext);
+        {
+            if (_due[s])
+                _systems[s].Post(postContext);
+        }
+    }
+
+    // After a tick at which systems ran: their next due tick is the first due tick from the new Tick on.
+    private void UpdateNextDue()
+    {
+        long min = long.MaxValue;
+        for (int s = 0; s < _systems.Length; s++)
+        {
+            if (_due[s])
+                _nextDue[s] = _calendar is null ? Tick : _calendar.NextDue(_systems[s].Cadence, Tick);
+            min = Math.Min(min, _nextDue[s]);
+        }
+        _minNextDue = min;
     }
 
     private void ComputeChunk(ITickSystem system, in TickContext context, int chunk)
