@@ -121,10 +121,11 @@ public class KnowledgeReferenceTrajectoryTests
         Assert.True(sawKnownElsewhereEffect);
     }
 
-    internal static void AssertMonth(JetReference.Run run, int actorRow, JsonElement row, long t)
+    internal static void AssertMonth(JetReference.Run run, int actorRow, JsonElement row, long t) =>
+        AssertMonth(run.Graph, run.System, actorRow, row, t);
+
+    internal static void AssertMonth(KnowledgeGraph g, KnowledgeSystem s, int actorRow, JsonElement row, long t)
     {
-        KnowledgeGraph g = run.Graph;
-        KnowledgeSystem s = run.System;
         JsonElement after = row.GetProperty("state_after");
 
         {

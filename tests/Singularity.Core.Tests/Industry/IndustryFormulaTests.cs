@@ -1,0 +1,266 @@
+using System.Collections.Immutable;
+using System.Text.Json;
+using Singularity.Core.Data;
+using Singularity.Core.Industry;
+using Singularity.Core.Tests.Knowledge;
+using Singularity.Kernel;
+
+namespace Singularity.Core.Tests.Industry;
+
+/// <summary>Capability cases of lab/reference/jet_slice/out/formulas.json, exact (reference D1; contract §4.1, §4.2, §4.6).</summary>
+public class IndustryFormulaTests
+{
+    private static JsonElement F => JetReference.Formulas;
+
+    private static readonly string[] DimNames = ["precision", "purity", "quality_control"];
+
+    private static Fx6 R(JsonElement e, string name) => JetReference.Raw(e.GetProperty(name));
+
+    [Fact]
+    public void CultureH_MatchesReference()
+    {
+        int cases = 0;
+        foreach (JsonElement c in F.GetProperty("culture_H").EnumerateArray())
+        {
+            JsonElement i = c.GetProperty("input"), o = c.GetProperty("output");
+            var p = new IndustryParams
+            {
+                Alpha = R(i, "alpha"), KQp = R(i, "k_qp"), ActNorm = R(i, "act_norm"), KCatch = R(i, "k_catch"),
+                Sigma = R(i, "sigma"), RhoMax = R(i, "rho_max"), DeltaH = R(i, "delta_H"), PhiFloor = R(i, "phi_floor"),
+            };
+            CultureProcess[] procs = [.. i.GetProperty("procs").EnumerateArray()
+                .Select(x => new CultureProcess(x.GetProperty("prc_id").GetInt32(), R(x, "v"), R(x, "r_d"), x.GetProperty("world_lead").GetBoolean()))
+                .OrderBy(x => x.ProcessNumber)];
+            CultureSpill[] spill = [.. i.GetProperty("spill_in").EnumerateArray().Select(x => new CultureSpill(R(x, "R"), R(x, "H_other")))];
+            var cell = new CultureCell(R(i, "H"), R(i, "Hcap"), R(i, "act"), R(i, "w"),
+                i.GetProperty("qp_active").GetBoolean() && i.GetProperty("d_is_qc").GetBoolean());
+            CultureStep s = IndustryMath.Culture(cell, procs, spill, p);
+            string n = c.GetProperty("name").GetString()!;
+            Assert.True(o.GetProperty("V_c").GetInt64() == s.VC.Raw, n);
+            Assert.Equal(o.GetProperty("drive").GetInt64(), s.Drive.Raw);
+            Assert.Equal(o.GetProperty("catch").GetInt64(), s.Catch.Raw);
+            Assert.Equal(o.GetProperty("maint").GetInt64(), s.Maint.Raw);
+            Assert.Equal(o.GetProperty("spill").GetInt64(), s.Spill.Raw);
+            Assert.Equal(o.GetProperty("H_floor").GetInt64(), s.HFloor.Raw);
+            Assert.Equal(o.GetProperty("sat").GetInt64(), s.Sat.Raw);
+            Assert.Equal(o.GetProperty("alpha_eff").GetInt64(), s.AlphaEff.Raw);
+            Assert.Equal(o.GetProperty("dH_plus").GetInt64(), s.DHPlus.Raw);
+            Assert.Equal(o.GetProperty("dH_plus_capped").GetInt64(), s.DHPlusCapped.Raw);
+            Assert.Equal(o.GetProperty("dH_minus").GetInt64(), s.DHMinus.Raw);
+            Assert.Equal(o.GetProperty("H_new").GetInt64(), s.HNew.Raw);
+            // s_p is not kept in the result: it is the separate division v_p / V_c (contract §4.0 p. 3).
+            foreach (JsonElement sp in o.GetProperty("s_p").EnumerateArray())
+            {
+                CultureProcess proc = procs.Single(x => x.ProcessNumber == sp.GetProperty("prc_id").GetInt32());
+                Assert.Equal(sp.GetProperty("s").GetInt64(), (proc.V / s.VC).Raw);
+            }
+            cases++;
+        }
+        Assert.Equal(11, cases);
+    }
+
+    [Fact]
+    public void ProductionProfile_MatchesReference()
+    {
+        int cases = 0;
+        foreach (JsonElement c in F.GetProperty("production_profile").EnumerateArray())
+        {
+            JsonElement i = c.GetProperty("input"), o = c.GetProperty("output");
+            Fx6 eps = R(i, "eps");
+            var items = new List<ProfileItem>();
+            foreach (JsonElement p in i.GetProperty("procs").EnumerateArray())
+            {
+                JsonElement lic = p.GetProperty("l_lic");
+                ProcessYield y = IndustryMath.Yield(Dims(p.GetProperty("req")), Dims(p.GetProperty("H")), Dims(p.GetProperty("M")),
+                    R(p, "X"), R(p, "Xh"), lic.ValueKind == JsonValueKind.Null ? Fx6.Zero : JetReference.Raw(lic), R(p, "lam0"));
+                items.Add(new ProfileItem(p.GetProperty("prc_id").GetInt32(), y, p.GetProperty("known").GetBoolean(), R(p, "n_p"), R(p, "base_cost")));
+            }
+            foreach (JsonElement row in o.GetProperty("per_process").EnumerateArray())
+            {
+                ProcessYield y = items.Single(x => x.ProcessNumber == row.GetProperty("prc_id").GetInt32()).Yield;
+                Assert.Equal(row.GetProperty("Xh_eff").GetInt64(), y.XHalfEff.Raw);
+                Assert.Equal(row.GetProperty("ramp").GetInt64(), y.Ramp.Raw);
+                Assert.Equal(row.GetProperty("yield").GetInt64(), y.Yield.Raw);
+                Assert.Equal(row.GetProperty("q_p").GetInt64(), y.QP.Raw);
+                Assert.Equal(row.GetProperty("yc").GetInt64(), (y.Yield > eps ? y.Yield : eps).Raw);
+                var dims = row.GetProperty("dims").EnumerateArray().ToList();
+                Assert.Equal(dims.Count, System.Numerics.BitOperations.PopCount((uint)y.ActiveMask));
+                foreach (JsonElement d in dims)
+                {
+                    int k = Array.IndexOf(DimNames, d.GetProperty("dim").GetString());
+                    Assert.True(y.IsActive(k));
+                    Assert.Equal(d.GetProperty("c_d").GetInt64(), y.C[k].Raw);
+                    Assert.Equal(d.GetProperty("g").GetInt64(), y.G[k].Raw);
+                    Assert.Equal(d.GetProperty("src").GetString(), y.Source(k).ToString());
+                }
+            }
+            ProductionProfile pr = IndustryMath.Profile(items.ToArray(), eps);
+            Assert.Equal(o.GetProperty("admitted").GetBoolean(), pr.Admitted);
+            Assert.Equal(o.GetProperty("unit_cost_mult").GetInt64(), pr.UnitCostMult.Raw);
+            Assert.Equal(o.GetProperty("q").GetInt64(), pr.Q.Raw);
+            JsonElement bn = o.GetProperty("bottleneck");
+            Assert.Equal(bn.GetProperty("prc").GetInt32(), pr.BottleneckProcess);
+            JsonElement dim = bn.GetProperty("dim");
+            if (dim.ValueKind == JsonValueKind.Null)
+            {
+                Assert.Null(pr.BottleneckDim);
+                Assert.Equal(BottleneckSource.Ramp, pr.BottleneckSource);
+            }
+            else
+            {
+                Assert.Equal((Dimension)Array.IndexOf(DimNames, dim.GetString()), pr.BottleneckDim);
+                Assert.Equal(bn.GetProperty("src").GetString(), pr.BottleneckSource.ToString());
+            }
+            cases++;
+        }
+        Assert.Equal(8, cases);
+    }
+
+    [Fact]
+    public void WorkforceSplit_MatchesReference()
+    {
+        int cases = 0;
+        foreach (JsonElement c in F.GetProperty("workforce_split").EnumerateArray())
+        {
+            // [site, cat, requester_id, n]; one (site, cat) per case, sorted by requester_id as the merge does.
+            var reqs = c.GetProperty("requests").EnumerateArray()
+                .Select(r => (Id: r[2].GetInt32(), N: r[3].GetInt64())).OrderBy(r => r.Id).ToArray();
+            var granted = new long[reqs.Length];
+            IndustryMath.SplitWorkforce(c.GetProperty("avail").GetInt64(), reqs.Select(r => r.N).ToArray(), granted);
+            var expected = c.GetProperty("output").EnumerateArray()
+                .Select(o => (o.GetProperty("requester_id").GetInt32(), o.GetProperty("n").GetInt64(), o.GetProperty("granted").GetInt64())).ToList();
+            Assert.Equal(expected, reqs.Select((r, k) => (r.Id, r.N, granted[k])).ToList());
+            cases++;
+        }
+        Assert.Equal(3, cases);
+    }
+
+    [Fact]
+    public void ToolingM_MatchesReference()
+    {
+        // Spec §3.5 A11, A21, A22: cost_M from c_M, M_cap = 1 + max(3, mech_tier).
+        int cases = 0;
+        foreach (JsonElement c in F.GetProperty("tooling_M").EnumerateArray())
+        {
+            JsonElement i = c.GetProperty("input"), o = c.GetProperty("output");
+            var p = new IndustryParams { CM = R(i, "c_M"), DeltaM = R(i, "delta_M") };
+            JsonElement mt = i.GetProperty("mech_tier");
+            ToolingStep t = IndustryMath.Tooling(R(i, "M"), R(i, "invest"), mt.ValueKind == JsonValueKind.Null ? 0 : mt.GetInt32(), p);
+            Assert.Equal(o.GetProperty("k").GetInt32(), t.K);
+            Assert.Equal(o.GetProperty("cost_M").GetInt64(), t.CostM.Raw);
+            Assert.Equal(o.GetProperty("M_cap").GetInt64(), t.MCap.Raw);
+            Assert.Equal(o.GetProperty("M_dec").GetInt64(), t.MDec.Raw);
+            Assert.Equal(o.GetProperty("gain").GetInt64(), t.Gain.Raw);
+            Assert.True(o.GetProperty("M_new").GetInt64() == t.MNew.Raw, c.GetProperty("name").GetString());
+            cases++;
+        }
+        Assert.Equal(9, cases);
+    }
+
+    [Fact]
+    public void Alloy_MatchesReference()
+    {
+        int cases = 0;
+        foreach (JsonElement c in F.GetProperty("alloy").EnumerateArray())
+        {
+            JsonElement i = c.GetProperty("input"), o = c.GetProperty("output");
+            AlloyMelt[] melts = [.. i.GetProperty("melts").EnumerateArray()
+                .Select(m => new AlloyMelt(m.GetProperty("prc").GetInt32(), m.GetProperty("known").GetBoolean(), R(m, "yield")))];
+            AlloyAvailability a = IndustryMath.AlloySupply(R(i, "alloy_cap"), R(i, "deficit"), melts);
+            JsonElement grade = o.GetProperty("grade");
+            Assert.Equal(grade.ValueKind == JsonValueKind.Null ? -1 : grade.GetInt32(), a.GradeNumber);
+            Assert.Equal(o.GetProperty("supply").GetInt64(), a.Supply.Raw);
+            Assert.Equal(R(i, "deficit") > Fx6.Zero, a.Deficit);
+            Assert.Equal(o.GetProperty("line_capacity").GetInt64(), IndustryMath.LineCapacity(a.Supply, R(i, "alloy_kg")).Raw);
+            cases++;
+        }
+        Assert.Equal(5, cases);
+    }
+
+    [Fact]
+    public void LcProfile_MatchesReference()
+    {
+        // Spec §3.5 A24: curves per tier, τ = t − t_known, unknown → yield 0 and U at τ = 0, weighted set cost.
+        int cases = 0;
+        foreach (JsonElement c in F.GetProperty("lc_profile").EnumerateArray())
+        {
+            JsonElement i = c.GetProperty("input"), o = c.GetProperty("output");
+            var items = new List<ProfileItem>();
+            foreach (JsonElement it in i.GetProperty("items").EnumerateArray())
+            {
+                string tier = it.GetProperty("tier").GetInt32().ToString(System.Globalization.CultureInfo.InvariantCulture);
+                CapabilityCurve curve = Curve(i.GetProperty("U").GetProperty(tier), i.GetProperty("Y").GetProperty(tier));
+                JsonElement tk = it.GetProperty("t_known");
+                bool known = tk.ValueKind != JsonValueKind.Null;
+                long tau = known ? it.GetProperty("month").GetInt64() - tk.GetInt64() : 0;
+                Fx6 u = curve.UnitCostAt(tau), y = known ? curve.YieldAt(tau) : Fx6.Zero;
+                JsonElement row = o.GetProperty("procs").EnumerateArray().Single(r => r.GetProperty("prc").GetInt32() == it.GetProperty("prc").GetInt32());
+                Assert.Equal(row.GetProperty("tau").GetInt64(), tau);
+                Assert.Equal(row.GetProperty("U").GetInt64(), u.Raw);
+                Assert.Equal(row.GetProperty("yield").GetInt64(), y.Raw);
+                items.Add(new ProfileItem(it.GetProperty("prc").GetInt32(), ProcessYield.Control(y), known, R(it, "n"), R(it, "base_cost"), u));
+            }
+            ProductionProfile p = IndustryMath.Profile(items.ToArray(), new IndustryParams().Eps, control: true);
+            Assert.Equal(o.GetProperty("admitted").GetBoolean(), p.Admitted);
+            Assert.Equal(o.GetProperty("unit_cost_mult").GetInt64(), p.UnitCostMult.Raw);
+            Assert.Equal(o.GetProperty("q").GetInt64(), p.Q.Raw);
+            Assert.Equal(BottleneckSource.Control, p.BottleneckSource);
+            cases++;
+        }
+        Assert.Equal(3, cases);
+    }
+
+    [Fact]
+    public void CapabilityTier_MatchesReference()
+    {
+        int cases = 0;
+        foreach (JsonElement c in F.GetProperty("capability_tier").EnumerateArray())
+        {
+            JsonElement i = c.GetProperty("input"), o = c.GetProperty("output");
+            int mask = 0;
+            foreach (JsonElement p in i.GetProperty("procs").EnumerateArray())
+                mask |= IndustryMath.KeyDims(Dims(p.GetProperty("req")), p.GetProperty("tier").GetInt32());
+            int expectedMask = 0;
+            foreach (JsonElement d in o.GetProperty("dims").EnumerateArray())
+                expectedMask |= 1 << Array.IndexOf(DimNames, d.GetString());
+            Assert.Equal(expectedMask, mask);
+            Fx6? tier = IndustryMath.CapabilityTier(Dims(i.GetProperty("H")), Dims(i.GetProperty("M")), mask);
+            JsonElement et = o.GetProperty("tier");
+            Assert.Equal(et.ValueKind == JsonValueKind.Null ? null : et.GetInt64(), tier?.Raw);
+            cases++;
+        }
+        Assert.Equal(2, cases);
+    }
+
+    [Fact]
+    public void Act_MatchesReference()
+    {
+        int cases = 0;
+        foreach (JsonElement c in F.GetProperty("act").EnumerateArray())
+        {
+            long n = 0, g = 0;
+            foreach (JsonElement r in c.GetProperty("requests").EnumerateArray())
+            {
+                n += r[1].GetInt64();
+                g += r[2].GetInt64();
+            }
+            Assert.Equal(c.GetProperty("act").GetInt64(), IndustryMath.Act(n, g).Raw);
+            cases++;
+        }
+        Assert.Equal(3, cases);
+    }
+
+    private static CapabilityCurve Curve(JsonElement u, JsonElement y)
+    {
+        var tau = u.EnumerateArray().Select(k => k[0].GetInt32()).ToImmutableArray();
+        Assert.Equal(tau.ToArray(), y.EnumerateArray().Select(k => k[0].GetInt32()).ToArray());
+        return new CapabilityCurve(tau, [.. y.EnumerateArray().Select(k => JetReference.Raw(k[1]))],
+            [.. u.EnumerateArray().Select(k => JetReference.Raw(k[1]))]);
+    }
+
+    private static Dims3 Dims(JsonElement e)
+    {
+        Fx6 D(string name) => e.TryGetProperty(name, out JsonElement v) && v.ValueKind != JsonValueKind.Null ? JetReference.Raw(v) : Fx6.Zero;
+        return new Dims3(D("precision"), D("purity"), D("quality_control"));
+    }
+}

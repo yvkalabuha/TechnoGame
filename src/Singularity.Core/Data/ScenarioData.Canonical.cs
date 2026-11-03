@@ -47,8 +47,8 @@ public sealed partial class ScenarioData
             w.Fixed(GrowthPa[a]);
             for (int i = 0; i < Clusters.Length * 3; i++)
                 w.Fixed(CultureH[a * Clusters.Length * 3 + i]);
-            for (int i = 0; i < Clusters.Length; i++)
-                w.Fixed(ToolingM[a * Clusters.Length + i]);
+            for (int i = 0; i < Clusters.Length * 3; i++)
+                w.Fixed(ToolingM[a * Clusters.Length * 3 + i]);
             w.Fixed(Hcap[a]);
             w.Fixed(W[a]);
             w.Int(KnownStart[a + 1] - KnownStart[a]);

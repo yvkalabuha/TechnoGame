@@ -66,10 +66,19 @@
       "enum": ["gdp_1945", "gdppc_1945", "budget_index", "growth_pa", "culture_h", "tooling_m", "hcap", "w",
                "known", "k_d", "k_ind", "mastered", "fleet", "trophy_engineers"]
     },
-    "byCluster": {
+    "byClusterDims": {
       "type": "object",
       "propertyNames": { "$ref": "common.schema.json#/$defs/cluster" },
-      "additionalProperties": { "$ref": "common.schema.json#/$defs/nonNegFixed" }
+      "additionalProperties": {
+        "type": "object",
+        "required": ["precision", "purity", "quality_control"],
+        "additionalProperties": false,
+        "properties": {
+          "precision": { "$ref": "common.schema.json#/$defs/nonNegFixed" },
+          "purity": { "$ref": "common.schema.json#/$defs/nonNegFixed" },
+          "quality_control": { "$ref": "common.schema.json#/$defs/nonNegFixed" }
+        }
+      }
     },
     "actor": {
       "type": "object",
@@ -84,21 +93,8 @@
         "gdppc_1945": { "description": "International $ 2011 per person (Maddison 2023).", "type": "number", "exclusiveMinimum": 0 },
         "budget_index": { "type": "number", "exclusiveMinimum": 0 },
         "growth_pa": { "description": "Annual growth as a fraction (0.0299 = 2.99%).", "type": "number" },
-        "culture_h": {
-          "type": "object",
-          "propertyNames": { "$ref": "common.schema.json#/$defs/cluster" },
-          "additionalProperties": {
-            "type": "object",
-            "required": ["precision", "purity", "quality_control"],
-            "additionalProperties": false,
-            "properties": {
-              "precision": { "$ref": "common.schema.json#/$defs/nonNegFixed" },
-              "purity": { "$ref": "common.schema.json#/$defs/nonNegFixed" },
-              "quality_control": { "$ref": "common.schema.json#/$defs/nonNegFixed" }
-            }
-          }
-        },
-        "tooling_m": { "$ref": "#/$defs/byCluster" },
+        "culture_h": { "$ref": "#/$defs/byClusterDims" },
+        "tooling_m": { "$ref": "#/$defs/byClusterDims" },
         "hcap": { "$ref": "common.schema.json#/$defs/nonNegFixed" },
         "w": { "$ref": "common.schema.json#/$defs/nonNegFixed" },
         "known": { "$ref": "common.schema.json#/$defs/nodeIdList" },

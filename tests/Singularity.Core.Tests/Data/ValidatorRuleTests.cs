@@ -108,8 +108,10 @@ public class ValidatorRuleTests : IDisposable
     [InlineData("      - id: USA\n", "      - id: US\n", "must be three upper-case letters")]
     [InlineData("      - id: GBR\n", "      - id: USA\n", "duplicate actor ID 'USA'")]
     [InlineData("trophy_engineers: 86\n", "trophy_engineers: -1\n", "trophy_engineers must not be negative")]
-    [InlineData("          AERO: {precision: 4.00, purity: 3.80, quality_control: 3.70}\n        tooling_m: {MET: 4.20",
-                "        tooling_m: {MET: 4.20", "culture_h is missing cluster AERO")]
+    [InlineData("          AERO: {precision: 4.00, purity: 3.80, quality_control: 3.70}\n        tooling_m:\n          MET: {precision: 4.20",
+                "        tooling_m:\n          MET: {precision: 4.20", "culture_h is missing cluster AERO")]
+    [InlineData("          AERO: {precision: 4.20, purity: 4.00, quality_control: 3.90}\n        hcap: 5.50",
+                "        hcap: 5.50", "tooling_m is missing cluster AERO")]
     [InlineData("k_d: {aero: 0.30, prop: 0.30, metal: 0.25, chem: 0.10, mech: 0.15}", "k_d: {aero: 0.30, prop: 0.30, metal: 0.25, chem: 0.10}", "is missing mech")]
     [InlineData("k_d: {aero: 0.30, prop: 0.30, metal: 0.25, chem: 0.10, mech: 0.15}", "k_d: {aero: 0.30, prop: 0.30, metal: 0.25, chem: -0.10, mech: 0.15}", "chem must not be negative")]
     [InlineData(UsaKnownEnd, "s8.app.jet_fighter_g1, s8.app.jet_fighter_g1]\n        k_d: {aero: 0.30, prop: 0.30", "lists 's8.app.jet_fighter_g1' twice")]

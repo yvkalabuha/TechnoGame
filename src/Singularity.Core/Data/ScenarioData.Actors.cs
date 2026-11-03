@@ -35,8 +35,8 @@ public sealed partial class ScenarioData
             GdpPerCapita.Add(Positive(m, "gdppc_1945"));
             Budget.Add(Positive(m, "budget_index"));
             Growth.Add(m.Fixed("growth_pa"));
-            ReadCulture(m.Required("culture_h"));
-            ReadKeyed(m.Required("tooling_m"), clusters, DataNames.Clusters, ToolingM, "tooling_m");
+            ReadByDims(m.Required("culture_h"), CultureH, "culture_h");
+            ReadByDims(m.Required("tooling_m"), ToolingM, "tooling_m"); // per cell (spec §3.5 A20)
             Hcap.Add(NonNegative(m, "hcap"));
             W.Add(NonNegative(m, "w"));
             ReadKeyed(m.Required("k_d"), disciplines, DataNames.Disciplines, KD, "k_d");
@@ -65,15 +65,15 @@ public sealed partial class ScenarioData
             m.End();
         }
 
-        private void ReadCulture(YNode node)
+        private void ReadByDims(YNode node, List<Fx6> target, string what)
         {
             var map = new MapReader(node);
             foreach (Cluster c in clusters)
             {
                 string name = DataNames.NameOf(DataNames.Clusters, c);
-                var dims = new MapReader(map.Optional(name) ?? throw DataLoadException.At(node, $"culture_h is missing cluster {name}"));
+                var dims = new MapReader(map.Optional(name) ?? throw DataLoadException.At(node, $"{what} is missing cluster {name}"));
                 foreach ((string dimName, Dimension _) in DataNames.Dimensions)
-                    CultureH.Add(NonNegative(dims, dimName));
+                    target.Add(NonNegative(dims, dimName));
                 dims.End();
             }
             map.End();
