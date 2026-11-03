@@ -27,9 +27,9 @@
 | [TASK-0011](../development/tasks/TASK-0011-jet-slice-data.md) | DONE | Данные среза «реактивная авиация»: 61 узел, класс изделия, сценарий 1945, валидатор | MS-M0 |
 | [TASK-0012](../development/tasks/TASK-0012-jet-slice-reference.md) | DONE | Эталон для сверки среза: три формулы и ручная траектория (Python stdlib) | MS-M0 |
 | [TASK-0013](../development/tasks/TASK-0013-jet-slice-data-format.md) | DONE | Формат данных среза: схемы, YAML мода core, загрузчик и валидатор (ADR-0010) | MS-M0 |
-| [TASK-0014](../development/tasks/TASK-0014-core-knowledge-slice.md) | APPROVED | Core.Knowledge для среза: фронтир, c_eff, hazard, K_d, K_ind, расписания абляций | MS-M0 |
+| [TASK-0014](../development/tasks/TASK-0014-core-knowledge-slice.md) | REVIEW | Core.Knowledge для среза: фронтир, c_eff, hazard, K_d, K_ind, расписания абляций | MS-M0 |
 | [TASK-0015](../development/tasks/TASK-0015-core-industry-slice.md) | APPROVED | Core.Industry для среза: culture_H, tooling_M, production_profile, сплав, reserve_workforce | MS-M0 |
-| [TASK-0016](../development/tasks/TASK-0016-godot-compat-spike.md) | APPROVED | Спайк Godot: Core внутри Godot .NET, сборка в CI, исключение тестового кода из release | MS-M0 |
+| [TASK-0016](../development/tasks/TASK-0016-godot-compat-spike.md) | DONE | Спайк Godot: Core внутри Godot .NET, сборка в CI, исключение тестового кода из release | MS-M0 |
 
 ## Гипотезы
 
@@ -52,17 +52,17 @@
 | [ADR-0001](../docs/decisions/ADR-0001-stack.md) | ACCEPTED | Стек: ядро на C# / .NET 10, визуализация на Godot позже |
 | [ADR-0002](../docs/decisions/ADR-0002-determinism-levels.md) | ACCEPTED | Уровни детерминизма |
 | [ADR-0003](../docs/decisions/ADR-0003-numeric-policy.md) | PROPOSED | Численная политика |
-| [ADR-0004](../docs/decisions/ADR-0004-rng.md) | PROPOSED | Генератор случайных чисел без состояния |
+| [ADR-0004](../docs/decisions/ADR-0004-rng.md) | ACCEPTED | Генератор случайных чисел без состояния |
 | [ADR-0005](../docs/decisions/ADR-0005-data-model.md) | PROPOSED | Модель данных ядра: таблицы struct-of-arrays |
-| [ADR-0006](../docs/decisions/ADR-0006-tick-model.md) | PROPOSED | Модель тика |
+| [ADR-0006](../docs/decisions/ADR-0006-tick-model.md) | ACCEPTED | Модель тика |
 | [ADR-0007](../docs/decisions/ADR-0007-collections.md) | PROPOSED | Запрет коллекций с нестабильным порядком обхода |
 | [ADR-0008](../docs/decisions/ADR-0008-simulation-lab.md) | PROPOSED | Simulation Lab: прогоны, хранение, анализ |
 | [ADR-0009](../docs/decisions/ADR-0009-data-licenses.md) | ACCEPTED | Политика лицензий внешних данных |
 | [ADR-0010](../docs/decisions/ADR-0010-data-format-modding.md) | ACCEPTED | Формат данных и моддинг v0 |
 | [ADR-0011](../docs/decisions/ADR-0011-map-representation.md) | PROPOSED | Представление карты |
 | [ADR-0012](../docs/decisions/ADR-0012-deterministic-math-functions.md) | ACCEPTED | Детерминированные степенные функции: PowFrac вместо Pow/Exp/Log |
-| [ADR-0013](../docs/decisions/ADR-0013-save-format-v0.md) | PROPOSED | Формат сохранения v0: бинарный снимок колонок SoA + заголовок |
-| [ADR-0014](../docs/decisions/ADR-0014-session-test-api.md) | PROPOSED | Session и Test API: единая сборка мира, команды, test mode |
+| [ADR-0013](../docs/decisions/ADR-0013-save-format-v0.md) | ACCEPTED | Формат сохранения v0: бинарный снимок колонок SoA + заголовок |
+| [ADR-0014](../docs/decisions/ADR-0014-session-test-api.md) | ACCEPTED | Session и Test API: единая сборка мира, команды, test mode |
 
 ## Research Reports
 

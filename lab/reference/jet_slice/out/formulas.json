@@ -1061,6 +1061,116 @@
    "y_half": 500000
   }
  ],
+ "k_ind": [
+  {
+   "input": {
+    "K_d": 500000,
+    "K_ind": 50000,
+    "V_d": 0,
+    "V_ref": 1000000000,
+    "delta_ind": 3000,
+    "eta": 10000,
+    "theta_ind": 250000
+   },
+   "name": "idle_decay",
+   "output": {
+    "K_ind_new": 49850,
+    "branch": "decay",
+    "cap": null,
+    "frac": null
+   }
+  },
+  {
+   "input": {
+    "K_d": 500000,
+    "K_ind": 20000,
+    "V_d": 1000000000,
+    "V_ref": 1000000000,
+    "delta_ind": 3000,
+    "eta": 10000,
+    "theta_ind": 250000
+   },
+   "name": "grow",
+   "output": {
+    "K_ind_new": 24200,
+    "branch": "grow",
+    "cap": 125000,
+    "frac": 5000
+   }
+  },
+  {
+   "input": {
+    "K_d": 500000,
+    "K_ind": 200000,
+    "V_d": 1000000000,
+    "V_ref": 1000000000,
+    "delta_ind": 3000,
+    "eta": 10000,
+    "theta_ind": 250000
+   },
+   "name": "saturated_room_zero",
+   "output": {
+    "K_ind_new": 200000,
+    "branch": "grow",
+    "cap": 125000,
+    "frac": 5000
+   }
+  },
+  {
+   "input": {
+    "K_d": 0,
+    "K_ind": 0,
+    "V_d": 500000000,
+    "V_ref": 1000000000,
+    "delta_ind": 3000,
+    "eta": 10000,
+    "theta_ind": 250000
+   },
+   "name": "kd_zero",
+   "output": {
+    "K_ind_new": 0,
+    "branch": "no_cap",
+    "cap": 0,
+    "frac": null
+   }
+  },
+  {
+   "input": {
+    "K_d": 3,
+    "K_ind": 0,
+    "V_d": 500000000,
+    "V_ref": 1000000000,
+    "delta_ind": 3000,
+    "eta": 10000,
+    "theta_ind": 250000
+   },
+   "name": "cap_floors_to_zero",
+   "output": {
+    "K_ind_new": 0,
+    "branch": "no_cap",
+    "cap": 0,
+    "frac": null
+   }
+  },
+  {
+   "input": {
+    "K_d": 4,
+    "K_ind": 0,
+    "V_d": 500000000,
+    "V_ref": 1000000000,
+    "delta_ind": 3000,
+    "eta": 10000,
+    "theta_ind": 250000
+   },
+   "name": "cap_one_raw",
+   "output": {
+    "K_ind_new": 3333,
+    "branch": "grow",
+    "cap": 1,
+    "frac": 3333
+   }
+  }
+ ],
  "knowledge": [
   {
    "alloc": 140000,

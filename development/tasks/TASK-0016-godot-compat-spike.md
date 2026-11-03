@@ -1,7 +1,7 @@
 ---
 id: TASK-0016
 title: "Спайк Godot: Core внутри Godot .NET, сборка в CI, исключение тестового кода из release"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: developer
