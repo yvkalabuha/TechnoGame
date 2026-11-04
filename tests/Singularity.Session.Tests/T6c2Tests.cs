@@ -176,17 +176,53 @@ public class T6c2Tests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void W1_APPTarget_UnchangedWithoutAnyOfGroups_AndTheListIsPure()
+    public void W1_APPTarget_UnchangedFromTheCodeBeforeW1_OnTheD1Scenario()
     {
         SliceSession s = New();
-        int usa = Actor(s, "USA");
-        var a = s.WhyNot(usa, WhyNotTarget.Requirement(2));
-        var b = s.WhyNot(usa, WhyNotTarget.Requirement(2));
-        Assert.Equal(a.Select(l => (l.SubjectId, l.Cause, l.Have, l.Need)), b.Select(l => (l.SubjectId, l.Cause, l.Have, l.Need)));
-        Link first = a[0];
-        Assert.Equal(WhyNotCause.MissingNode, first.Cause);
-        // The nearest frontier node of the whole closure of the APP: the one with the least money left.
-        Assert.True(s.World.Knowledge.InFrontier(usa, s.World.Graph.RowOf(first.SubjectId)));
+        // SubjectId of the first link, taken from the code of 2b1873b^ (before W1): without any_of groups in the APP closure W1 changes nothing.
+        (string Actor, int Gen, int Node)[] pinned =
+        [
+            ("USA", 2, 19), ("USA", 3, 5), ("USA", 4, 5), ("GBR", 2, 20), ("GBR", 3, 5), ("GBR", 4, 5), ("SUN", 2, 19), ("SUN", 3, 11), ("SUN", 4, 5),
+            ("FRA", 2, 10), ("FRA", 3, 11), ("FRA", 4, 10), ("SWE", 2, 17), ("SWE", 3, 17), ("SWE", 4, 17),
+        ];
+        foreach ((string actor, int gen, int node) in pinned)
+        {
+            var links = s.WhyNot(Actor(s, actor), WhyNotTarget.Requirement(gen));
+            Assert.Equal(WhyNotCause.MissingNode, links[0].Cause);
+            Assert.Equal(node, links[0].SubjectId);
+            Assert.Equal(Render(links), Render(s.WhyNot(Actor(s, actor), WhyNotTarget.Requirement(gen))));   // pure
+        }
+    }
+
+    private static string Render(IEnumerable<Link> links) => string.Join("\n", links.Select(l => $"{l.Layer}|{l.Cause}|{l.SubjectId}|{l.Have}|{l.Need}"));
+
+    [Fact]
+    public void L_C3a_SliceWorldAssembly_RejectsAScenarioWhoseStartFleetUpkeepIsTooHigh()
+    {
+        // 1,3 million units in the 1945 cohorts of a 100-unit fleet make the upkeep of the start fleet exceed the procurement item at t0.
+        string dir = Path.Combine(Path.GetTempPath(), "t6c2-lc3a-" + Guid.NewGuid().ToString("N"));
+        CopyDir(Path.Combine(SliceTestData.RepoRoot, "mods", "core"), dir);
+        try
+        {
+            string file = Path.Combine(dir, "scenario_1945.yaml");
+            File.WriteAllText(file, File.ReadAllText(file).Replace("count: 100, cohort_year: 1945", "count: 100000, cohort_year: 1945"));
+            var data = Singularity.Core.Data.ModLoader.Load(dir);
+            var ex = Assert.Throws<LivenessException>(() => SliceSession.Create(data, new SliceRunConfig { Seed = 1 }));
+            Assert.Equal("L-C3a", ex.Code);
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
+    private static void CopyDir(string from, string to)
+    {
+        Directory.CreateDirectory(to);
+        foreach (string f in Directory.GetFiles(from))
+            File.Copy(f, Path.Combine(to, Path.GetFileName(f)));
+        foreach (string d in Directory.GetDirectories(from))
+            CopyDir(d, Path.Combine(to, Path.GetFileName(d)));
     }
 
     // ---- the information print of the acceptance (not a check of values)

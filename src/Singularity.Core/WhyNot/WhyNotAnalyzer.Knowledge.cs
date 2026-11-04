@@ -33,119 +33,60 @@ public sealed partial class WhyNotAnalyzer
             if (DesignRules.Available(_pl, a, n => Knows(actor, n)))
                 engine = a;
         }
-        var memo = new bool[_kg.Count][];
+        NodeClosure closure = Closure(actor);
         for (int pass = 0; pass < 2; pass++)
         {
             int best = -1;
             Fx6 bestCost = Fx6.Zero;
-            bool[]? bestClosure = null;
+            bool[]? bestSet = null;
             for (int a = _pl.AltStart[slot]; a < _pl.AltStart[slot + 1]; a++)
             {
                 if (!Counts(slot, a, gen) || pass == 0 && slot != _pl.BaseSlot && engine >= 0 && !DesignRules.EngineAllows(_pl, a, engine))
                     continue;
-                bool[] closure = ClosureOfAlt(actor, a, memo);
-                Fx6 cost = ClosureCost(actor, closure);
-                if (best < 0 || cost < bestCost || cost == bestCost && _pl.AltRank[a] > _pl.AltRank[best])
+                bool[] set = ClosureOfAlt(actor, closure, a);
+                Fx6 cost = closure.Cost(set);
+                if (best < 0 || NodeClosure.BetterAlternative(cost, _pl.AltRank[a], _pl.AltId[a], bestCost, _pl.AltRank[best], _pl.AltId[best]))
                 {
                     best = a;
                     bestCost = cost;
-                    bestClosure = closure;
+                    bestSet = set;
                 }
             }
             if (best >= 0)
             {
-                AddNearestInClosure(links, actor, bestClosure!, WhyNotCause.AltUnavailable, month);
+                AddNearestInClosure(links, actor, closure, bestSet!, WhyNotCause.AltUnavailable, month);
                 return;
             }
         }
     }
 
-    private void AddAltMissing(List<Link> links, int actor, int alt, long month) =>
-        AddNearestInClosure(links, actor, ClosureOfAlt(actor, alt, new bool[_kg.Count][]), WhyNotCause.AltUnavailable, month);
-
-    // cl(alt): the closures of the chosen member of every requires_nodes group without a known member, and of every unknown process.
-    private bool[] ClosureOfAlt(int actor, int alt, bool[][] memo)
+    private void AddAltMissing(List<Link> links, int actor, int alt, long month)
     {
-        var set = new bool[_kg.Count];
+        NodeClosure closure = Closure(actor);
+        AddNearestInClosure(links, actor, closure, ClosureOfAlt(actor, closure, alt), WhyNotCause.AltUnavailable, month);
+    }
+
+    // The closure machinery of spec §5.6 over the actor's snapshot (rows of the knowledge graph).
+    private NodeClosure Closure(int actor) => new(_kg.Count, r => _k.IsKnown(actor, r),
+        r =>
+        {
+            var groups = new int[_kg.Requires.GroupStart[r + 1] - _kg.Requires.GroupStart[r]][];
+            for (int g = 0; g < groups.Length; g++)
+                groups[g] = [.. _kg.Requires.GroupMembers(_kg.Requires.GroupStart[r] + g).ToArray()];
+            return groups;
+        }, r => Left(actor, r), r => _kg.Number[r]);
+
+    private bool[] ClosureOfAlt(int actor, NodeClosure closure, int alt)
+    {
+        var groups = new List<int[]>();
         for (int g = _pl.AltGroupStart[alt]; g < _pl.AltGroupStart[alt + 1]; g++)
         {
             var rows = new List<int>();
-            bool any = false;
             for (int m = _pl.GroupMemberStart[g]; m < _pl.GroupMemberStart[g + 1]; m++)
-            {
-                any |= Knows(actor, _pl.GroupMembers[m]);
                 rows.Add(_kg.RowOf(_pl.GroupMembers[m]));
-            }
-            if (!any)
-                Union(set, ClosureOfNode(actor, ChooseMember(actor, rows, memo), memo));
+            groups.Add([.. rows]);
         }
-        foreach (int p in _pl.PrcOf(alt))
-        {
-            if (!Knows(actor, p))
-                Union(set, ClosureOfNode(actor, _kg.RowOf(p), memo));
-        }
-        return set;
-    }
-
-    // cl(n): empty for a known node, else n and the closure of the chosen member of every requires-group without a known member.
-    private bool[] ClosureOfNode(int actor, int row, bool[][] memo)
-    {
-        if (memo[row] is { } done)
-            return done;
-        var set = new bool[_kg.Count];
-        if (!_k.IsKnown(actor, row))
-        {
-            set[row] = true;
-            for (int g = _kg.Requires.GroupStart[row]; g < _kg.Requires.GroupStart[row + 1]; g++)
-            {
-                var rows = new List<int>();
-                bool any = false;
-                foreach (int m in _kg.Requires.GroupMembers(g))
-                {
-                    any |= _k.IsKnown(actor, m);
-                    rows.Add(m);
-                }
-                if (!any)
-                    Union(set, ClosureOfNode(actor, ChooseMember(actor, rows, memo), memo));
-            }
-        }
-        memo[row] = set;
-        return set;
-    }
-
-    // The member of a group with the least closure cost; ties by node number.
-    private int ChooseMember(int actor, List<int> rows, bool[][] memo)
-    {
-        int best = -1;
-        Fx6 bestCost = Fx6.Zero;
-        foreach (int m in rows)
-        {
-            Fx6 cost = ClosureCost(actor, ClosureOfNode(actor, m, memo));
-            if (best < 0 || cost < bestCost || cost == bestCost && _kg.Number[m] < _kg.Number[best])
-            {
-                best = m;
-                bestCost = cost;
-            }
-        }
-        return best;
-    }
-
-    private static void Union(bool[] into, bool[] other)
-    {
-        for (int i = 0; i < into.Length; i++)
-            into[i] |= other[i];
-    }
-
-    // cost(S) = Σ left(n): money left to learn each node of the set once.
-    private Fx6 ClosureCost(int actor, bool[] closure)
-    {
-        Fx6 sum = Fx6.Zero;
-        for (int r = 0; r < closure.Length; r++)
-        {
-            if (closure[r])
-                sum += Left(actor, r);
-        }
-        return sum;
+        return closure.OfRequirements([.. groups], _pl.PrcOf(alt).ToArray().Select(p => _kg.RowOf(p)));
     }
 
     private Fx6 Left(int actor, int row) => Max(Fx6.Zero, NeedOf(row) - _k.Prog(actor, row)) * _k.CEff(actor, row);
@@ -155,21 +96,9 @@ public sealed partial class WhyNotAnalyzer
     /// frontier, the one with the least money left, <c>(need − prog)·c_eff</c>; ties by node number. A hazard node counts up to
     /// <c>θ_start</c> (where its discovery chance begins) and has no <c>eta</c> beyond it: the discovery is a draw.
     /// </summary>
-    private void AddNearestInClosure(List<Link> links, int actor, bool[] closure, WhyNotCause cause, long month)
+    private void AddNearestInClosure(List<Link> links, int actor, NodeClosure closure, bool[] set, WhyNotCause cause, long month)
     {
-        int best = -1;
-        Fx6 bestCost = Fx6.Zero;
-        for (int r = 0; r < closure.Length; r++)
-        {
-            if (!closure[r] || !_k.InFrontier(actor, r))
-                continue;
-            Fx6 cost = Left(actor, r);
-            if (best < 0 || cost < bestCost || cost == bestCost && _kg.Number[r] < _kg.Number[best])
-            {
-                best = r;
-                bestCost = cost;
-            }
-        }
+        int best = closure.Nearest(set, r => _k.InFrontier(actor, r));
         if (best < 0)
             return;
 
@@ -179,8 +108,11 @@ public sealed partial class WhyNotAnalyzer
     }
 
     // APP target: the closure of the node itself.
-    private void AddNearestMissing(List<Link> links, int actor, int row, WhyNotCause cause, long month) =>
-        AddNearestInClosure(links, actor, ClosureOfNode(actor, row, new bool[_kg.Count][]), cause, month);
+    private void AddNearestMissing(List<Link> links, int actor, int row, WhyNotCause cause, long month)
+    {
+        NodeClosure closure = Closure(actor);
+        AddNearestInClosure(links, actor, closure, closure.OfNode(row), cause, month);
+    }
 
     private Fx6 NeedOf(int row) => _kg.IsHazard[row] ? _kp.ThetaStart : Fx6.One;
 }

@@ -75,7 +75,10 @@ public class EngineStepDownTests : IDisposable
         Span<int> prod = stackalloc int[L.SlotCount];
         Assert.True(DesignRules.Superior(L, gen, L.KnownUpTo(gen), sup));
         Assert.Equal(gen, L.AltRank[sup[L.BaseSlot]]);
-        if (DesignRules.Producible(L, gen, L.KnownUpTo(gen), _ => Fx6.One, P.YProd, null, prod))
+        // G1: producible equals superior (F-PC3) and is not a second project; G2…G4 at full yield differ from superior in the lightened slot.
+        bool built = DesignRules.Producible(L, gen, L.KnownUpTo(gen), _ => Fx6.One, P.YProd, null, prod);
+        Assert.Equal(gen > 1, built);
+        if (built)
             Assert.Equal(gen, L.AltRank[prod[L.BaseSlot]]);
     }
 
@@ -106,15 +109,33 @@ public class EngineStepDownTests : IDisposable
     }
 
     [Fact]
-    public void StartLine_IsHeldByTheNewestStartProject_AndLineEIsTheFleet()
+    public void StartLine_IsHeldByTheNewestStartProject_LineEIsItsFleet_OthersAreInStageВ_AndTheScenarioLoads()
     {
-        // A scenario with a G1 and a G2 fleet of one actor is outside the D1 data; the rule is checked on the start object itself.
-        ProductsStart start = ProductsStart.FromScenario(Scenario, CoreData.Nodes, CoreData.ProductClasses, L);
-        Assert.Equal(DesignStage.Series, start.Stage[0]);
-        Assert.Equal(Fx6.FromInt(100), start.LineE[0]);
-        int lines = 0;
-        for (int i = 0; i < start.Stage.Length; i++)
-            lines += start.Stage[i] == DesignStage.Series ? 1 : 0;
-        Assert.Equal(2, lines);   // USA and GBR
+        // GBR knows every node of generations ≤ 2 and has a G1 fleet (100) and a G2 fleet (10): the G2 project holds the line.
+        string known = string.Join(", ", Enumerable.Range(0, CoreData.Nodes.Count).Where(i => CoreData.Nodes.Gen[i] <= 2).Select(i => CoreData.Nodes.Id[i]));
+        string dir = _mods.CopyCore((name, text) =>
+        {
+            if (name != "scenario_1945.yaml")
+                return text;
+            int gbr = text.IndexOf("id: GBR", StringComparison.Ordinal);
+            int k = text.IndexOf("known: [", gbr, StringComparison.Ordinal);
+            int kEnd = text.IndexOf(']', k);
+            text = text[..(k + 8)] + known + text[kEnd..];
+            return TestMods.ReplaceOnce(text, "fleet:\n          - {product_class: jet_fighter, gen: 1, variant: superior, count: 100, cohort_year: 1945}\n        trophy_engineers: 100\n        estimated: []\n      - id: SUN",
+                "fleet:\n          - {product_class: jet_fighter, gen: 1, variant: superior, count: 100, cohort_year: 1945}\n          - {product_class: jet_fighter, gen: 2, variant: superior, count: 10, cohort_year: 1945}\n        trophy_engineers: 100\n        estimated: []\n      - id: SUN");
+        });
+        GameData data = ModLoader.Load(dir);
+        ScenarioData scenario = data.Scenario("jet_slice_1945");
+        IndustryLayout industry = IndustryLayout.FromData(data.Nodes, scenario, Categories, 64);
+        ProductsLayout l = ProductsLayout.FromData(data.Nodes, data.ProductClasses, "jet_fighter", industry, Bureaus, 1945, Years, scenario.MaxDesigns);
+        ProductsStart start = ProductsStart.FromScenario(scenario, data.Nodes, data.ProductClasses, l);
+        int gbrRow = scenario.ActorIndex("GBR");
+        int d1 = gbrRow * l.Designs, d2 = gbrRow * l.Designs + 1;
+        Assert.Equal(1, start.PlatformGen[d1]);
+        Assert.Equal(2, start.PlatformGen[d2]);
+        Assert.Equal(DesignStage.InService, start.Stage[d1]);
+        Assert.Equal(DesignStage.Series, start.Stage[d2]);
+        Assert.Equal(Fx6.Zero, start.LineE[d1]);
+        Assert.Equal(Fx6.FromInt(10), start.LineE[d2]);
     }
 }

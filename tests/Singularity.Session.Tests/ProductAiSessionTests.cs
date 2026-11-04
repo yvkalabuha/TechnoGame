@@ -150,6 +150,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
             Assert.Equal(0, o.StartsNotAdmitted);                        // F17: every AI start has admitted = true in the decision snapshot
             total.OFirings += o.OFirings;
             total.OProcesses += o.OProcesses;
+            total.ODefects += o.ODefects;
             total.CFirings += o.CFirings;
             for (int a = 0; a < 5; a++)
             {

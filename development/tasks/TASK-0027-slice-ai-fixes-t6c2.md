@@ -41,6 +41,9 @@ created: 2026-11-04
 - [ ] Тесты (test-engineer) — проходят, покрытие достаточно
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
+### Ревью reviewer (2026-11-04)
+Вердикт: changes-requested по тестам W1. Логика E1, F17, #140, W1 по спеке v0.15; детерминизм и границы сборок — без замечаний; dotnet test зелёный (Kernel 284 +1, Arch 80, Core 876, Session 147). Отклонения 2–5 и изменение PlayerScript приняты (2 и 4 — в спеку).
+
 ## Результат
 **Сделано (developer, 2026-11-04; спека v0.15 §11 «T6c2»).**
 - **E1 (#137).** `ProductsStart.FromScenario`: проект с наибольшим `g_p` у актора — стадия С (`line_E` = парк, `built_any`, `idle_c` = 0, `stage_o_month` = −1), прочие стартовые — В; `ProductsSystem` загружает `line_E`, отказывает при двух стартовых линиях у актора. Темп с тика 0: `PolicySystem` принимает `startLines` и в `Initialize` помечает их линиями `r_AI` (для ИИ и для прогона игрока с `ProductAi = false`); колонок не добавлено, `SchemaVersion` 4. L-C3a: `PolicyLiveness.ValidateStartUpkeep` (код `L-C3a`), вызывается при сборке `SliceWorld`.
@@ -70,3 +73,12 @@ SWE    0    0    0    0    0    0    0    0   нулей: 20 во всех ок�
 K3: USA и GBR выпускают в окне 0–47 в 20/20 seeds. Доля содержания в закупках `u` (‰, месяцы акторов с парком), p50 / p90 / max: Quality (P1) 660 / 790 / 839; Mass (P2) 626 / 772 / 845; Adaptive (P3) 571 / 763 / 839 (насыщение парка заметно у всех профилей, не только P2 — вход для #141).
 Срабатывания A40: ветка О — «допуск процессов» 41, «дефекты» 0 (L-O0 выполнен); по акторам (процессы/дефекты): USA 24/0, GBR 0/0, SUN 11/0, FRA 6/0, SWE 0/0. Ветка С (`close_line`, idle_c ≥ 60): 0 у всех (L-C0 выполнен). Старты ИИ с `admitted` = false: 0.
 SUN: первый серийный G1 (выпуск > 0): p10 132 / p50 156 / p90 180 мес., без серии 0/20 (K-SUN < 36 мес. не выполняется — темп знания, C1/T12).
+
+### Исправления по ревью (developer, 2026-11-04)
+1. Логика замыканий W1 вынесена в `WhyNot/NodeClosure.cs` (чистый класс над абстрактным графом); синтетические тесты `Core.Tests/WhyNot/NodeClosureTests`: (2) A=X(10) против B=Y(1)→Z(20) → X (старое правило дало бы Y), (3) ничьи: ранг, затем `alt_id` (ordinal), затем номер узла, (4) группа `|`, (6) ромб — общий предок один раз.
+2. `W1_APPTarget_UnchangedFromTheCodeBeforeW1_OnTheD1Scenario`: 15 пар (актор, G2…G4) со значениями `SubjectId`, снятыми с кода 2b1873b^ (USA G2 = 19, GBR G2 = 20, SUN G2 = 19, FRA G2 = 10, SWE = 17 и т. д.).
+3. Ничья альтернатив — по `alt_id` через `string.CompareOrdinal` (`NodeClosure.BetterAlternative`).
+4. `total.ODefects += o.ODefects` добавлено.
+5. `StartLine_IsHeldByTheNewestStartProject…`: сценарий через TestMods, у GBR парки G1 (100) и G2 (10): линия у G2 (`line_E` = 10), G1 в В (`line_E` = 0). «Ничья → меньший слот» недостижима: строки одного `gen` образуют один проект.
+6. `TheReferenceCompositions…`: явное `Assert.Equal(gen > 1, built)` вместо условного `if`.
+7. `L_C3a_SliceWorldAssembly_RejectsAScenarioWhoseStartFleetUpkeepIsTooHigh`: сборка `SliceSession` отклоняет сценарий с парком 100 000 (`LivenessException` `L-C3a`).
