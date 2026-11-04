@@ -10,7 +10,6 @@
 ## Активные задачи
 <!-- registry:active:start -->
 - TASK-0019 [REVIEW] Пилот внешней LLM (Qwen): tools/llm_worker (developer)
-- TASK-0032 [REVIEW] V5 по умолчанию, колонка tool_unmet и причина why_not, переключатель POOL_ORDER (developer)
 - TASK-0017 [APPROVED] Смоук калибровочных якорей C1–C3 на слоях знания и способности (T4s) (simulation-engineer)
 <!-- registry:active:end -->
 
