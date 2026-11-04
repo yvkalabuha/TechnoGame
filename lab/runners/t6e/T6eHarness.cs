@@ -131,7 +131,7 @@ public class T6eHarness(ITestOutputHelper output)
         ProductsSystem pr = w.Products;
         IndustryParams ip = w.IndustryParameters;
         var vinf = new ToolingTargetSpec { Variant = ToolingTarget.VInf };
-        var v4Spec = target with { Variant = ToolingTarget.V4 };
+        var v4Spec = target with { Variant = ToolingTarget.V4, PoolOrder = PoolOrder.Can };   // EXP-0006: SEV is valid only for V5; participation does not depend on the order
         // exp-pool-order: the four pass-2 rules on the same snapshot (read only) — exhaustion N > P (rule-independent), Г1, PROP remainder
         PoolOrder[] orders = [PoolOrder.Can, PoolOrder.Rev, PoolOrder.Prop, PoolOrder.Sev];
         bool poolObs = target.Variant == ToolingTarget.V5;
