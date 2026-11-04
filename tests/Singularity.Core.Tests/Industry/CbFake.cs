@@ -78,6 +78,11 @@ internal sealed class CbFake : ICultureSnapshot
 
     public Fx6 PlannedVolume(int site, int processRow, long month) => Vexp[site * _n + processRow];
 
+    /// <summary><c>mult_P</c> by process row; 1 where unset.</summary>
+    public Func<int, Fx6>? Mult;
+
+    public Fx6 EffortMultiplier(int actor, int processRow, long month) => Mult?.Invoke(processRow) ?? Fx6.One;
+
     /// <summary>Layout of one actor with the given sites; processes (number, cluster, tier, req precision/purity/qc, labour).</summary>
     public static IndustryLayout MakeLayout(int[] siteOwner, params (int Number, Cluster Cluster, Dims3 Req)[] procs)
     {

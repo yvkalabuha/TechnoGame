@@ -168,6 +168,29 @@ public sealed record PolicyParams
     /// <summary>Longest alloy disruption, months (spec §4: 6…18); read by the manifest check L-C1.</summary>
     public int DisruptionMaxMonths { get; init; } = 18;
 
+    /// <summary>Shortest alloy disruption, months (spec §4, A43.6).</summary>
+    public int DisruptionMinMonths { get; init; } = 6;
+
+    /// <summary><c>p_dis</c>: monthly hazard of an alloy disruption at exposure 1 (spec A43.6: a literal, 8 333 raw = 1/120).</summary>
+    public Fx6 DisruptionHazard { get; init; } = F(8_333);
+
+    /// <summary><c>p_offer</c>: yearly probability that a seller offers a licence to a buyer whose engine is older (spec A43.2: a literal, 0,2).</summary>
+    public Fx6 LicenceOfferChance { get; init; } = F(200_000);
+
+    /// <summary><c>lic_share</c>: the price of a licence as a share of the subject's fleet cost (spec A43.3, §8.1: 0,3).</summary>
+    public Fx6 LicenceShare { get; init; } = F(300_000);
+
+    /// <summary><c>l_lic</c>: the share an active licence gives to a process of its mask (spec §1.4, A43.1: 0,5).</summary>
+    public Fx6 LicenceProcessShare { get; init; } = F(500_000);
+
+    /// <summary>
+    /// <c>LIC_OFF</c> (contract §8.6 п. 6): no licence offers and no <c>EVT_LIC</c> draws; the rest of T6d (disruptions, why_not triggers) stays.
+    /// </summary>
+    public bool LicOff { get; init; }
+
+    /// <summary><c>T6D_OFF</c> (contract §8.6 п. 6): no licences, no disruptions, no why_not triggers (A43.7) and no <c>mult_P</c>: the world of the build before T6d.</summary>
+    public bool T6dOff { get; init; }
+
     /// <summary>
     /// <c>fv_budget</c> = 24 · the median of the great powers' start budgets · the median procurement share of the three profiles
     /// ([Предп.]: the spec says «24 медианных месячных бюджета закупок великих держав на t0»; the profile of an actor is random, so the
@@ -201,6 +224,8 @@ public sealed record PolicyParams
         if (QpMonths < 1 || QpTriggerMonths < 1 || QpEngineerShare < Fx6.Zero || MKeep < Fx6.Zero || !MassProgrammeShares.IsValid)
             throw new ArgumentException("Quality programme parameters are out of range.");
         if (TAb < 1 || NServiceMin < 1 || TField < 1 || DisruptionMaxMonths < 1 || YProd < Fx6.Zero || FvBudget < Fx6.Zero
+            || DisruptionMinMonths < 1 || DisruptionMinMonths > DisruptionMaxMonths || DisruptionHazard < Fx6.Zero || DisruptionHazard > Fx6.One
+            || LicenceOfferChance < Fx6.Zero || LicenceOfferChance > Fx6.One || LicenceShare < Fx6.Zero || LicenceProcessShare < Fx6.Zero || LicenceProcessShare > Fx6.One
             || DisruptionDeficit < Fx6.Zero || DisruptionDeficit > Fx6.One || LaunchShare.Length != 3 || LaunchShare.Any(k => k < Fx6.Zero || k > Fx6.One))
             throw new ArgumentException("Product-AI parameters are out of range (T_ab, k_P, y_prod, n_service_min, T_field, disruption).");
         if (FleetUHi.Length != 3 || FleetUHi.Any(u => u <= FleetUGap || u > Fx6.One) || FleetUGap < Fx6.Zero || FleetAProt < 0)

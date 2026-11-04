@@ -20,9 +20,9 @@ public sealed class PolicyInvariantException(long month, int actor, string messa
 /// annual step does not repeat at t = 0.
 /// Scope of this build (T6c): profile, budget, shares, the quality programme (state, <c>reserve_workforce</c>, the P2 trigger), the
 /// training-series target of P1 and, when product inputs are given, the product AI (<c>PolicySystem.Products.cs</c>: Requirement, presets,
-/// launch, one line, A40). Licences, disruptions and the why_not-driven triggers (P1/P3 programme, P3 training) are T6d; nothing here
-/// imitates them. The system draws no RNG after
-/// <see cref="Initialize"/>: <c>j</c> is a pure function of its key (spec §9.1) and <c>prio</c> a pure function of the profile.
+/// launch, one line, A40). Licences, alloy disruptions and the why_not-driven triggers (P1/P3 programme, P3 training) are T6d
+/// (<c>PolicySystem.Events.cs</c>). The only draws after <see cref="Initialize"/> are those of <c>EVT_LIC</c> and <c>EVT_DIS</c>: <c>j</c> is a pure function of its key
+/// (spec §9.1) and <c>prio</c> a pure function of the profile.
 /// </summary>
 public sealed partial class PolicySystem : ITickSystem
 {
@@ -51,11 +51,15 @@ public sealed partial class PolicySystem : ITickSystem
     /// <param name="mailbox">Mailbox of the capability layer (<c>reserve_workforce</c> of the quality programme).</param>
     /// <param name="qpRequesterId">Requester id of the programme, above every bureau id (spec A41).</param>
     /// <param name="forcedProfile">Profile by row, or −1 to draw it from the stream (factorial cells, §6.6); default all drawn.</param>
+    /// <param name="events">Stream <c>E</c> of the events (<c>EVT_LIC</c>, <c>EVT_DIS</c>; its seed already reflects <c>FIX_E</c>); without it the policy has no disruptions and no licences.</param>
+    /// <param name="eventInputs">Reads of the licence and why_not rules (spec A43); without them the policy has no licences and no why_not triggers.</param>
+    /// <param name="disruptionExposure"><c>exposure_a</c> by row (spec §8.1), default 1.</param>
     /// <param name="startLines">(row, design) of the start lines of the scenario (E1): their rate is <c>r_AI</c> from tick 0.</param>
     public PolicySystem(Table table, PolicyParams parameters, ImmutableArray<int> actorNumber, ImmutableArray<Fx6> budget0,
         ImmutableArray<Fx6> growthPerYear, CounterRng ai, IPolicyInputs inputs, IndustryMailbox mailbox, int qpRequesterId,
         ImmutableArray<int> forcedProfile = default, int systemId = DefaultSystemId, IPolicyProducts? products = null, int designs = 0,
-        int generations = 0, bool derive = false, ImmutableArray<(int Row, int Design)> startLines = default)
+        int generations = 0, bool derive = false, ImmutableArray<(int Row, int Design)> startLines = default,
+        CounterRng? events = null, IPolicyEvents? eventInputs = null, ImmutableArray<Fx6> disruptionExposure = default)
     {
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(mailbox);
@@ -97,6 +101,7 @@ public sealed partial class PolicySystem : ITickSystem
             table.AddLong("pol.share.research"), table.AddLong("pol.share.capability"), table.AddLong("pol.share.effort"),
             table.AddLong("pol.share.procurement"), table.AddLong("pol.share.quality"),
         ];
+        AddEventColumns(table, events, eventInputs, disruptionExposure, actorNumber.Length);
     }
 
     public int SystemId { get; }
@@ -183,6 +188,7 @@ public sealed partial class PolicySystem : ITickSystem
             }
             _line[d].Load(line);
         }
+        InitializeEvents(n);
         InitializeProducts();
     }
 
@@ -192,6 +198,8 @@ public sealed partial class PolicySystem : ITickSystem
         bool annual = t > 0 && t % 12 == 0;
         for (int row = rowStart; row < rowEnd; row++)
         {
+            ComputeDisruption(row, t);
+            var why = new WhyList(this, row, t);
             // budget(t+1) from budget(t): the budget column always holds the month being computed.
             _budget.Next[row] = BudgetMath.Next(Fx6.FromRaw(_budget.Current[row]), _growth[row]).Raw;
             var profile = (PolicyProfile)_profile.Current[row];
@@ -215,6 +223,13 @@ public sealed partial class PolicySystem : ITickSystem
                 start = (int)t + 1;
                 count = 0;
             }
+            // P1 and P3 read the why_not list at the annual step (spec A43.7); P2 has the counter above.
+            if (annual && !active && !next && ProgrammeTrigger(profile, why))
+            {
+                next = true;
+                start = (int)t + 1;
+                count = 0;
+            }
             _qpActive.Next[row] = next ? 1 : 0;
             _qpStart.Next[row] = start;
             _qpCount.Next[row] = count;
@@ -228,10 +243,12 @@ public sealed partial class PolicySystem : ITickSystem
                 if (d >= 0 && _inputs.Bottleneck(row, d, t) is { Source: BottleneckSource.H, OutLim: true })
                     train = d;
             }
+            else if (profile == PolicyProfile.Adaptive)
+                train = TrainingTargetP3(row, t);
             _train.Next[row] = train;
             // Shares of the doctrine (spec §4); under a programme P2 trades 0,05 of procurement for the QP item.
             BudgetShares s = _p.Shares(profile, next);
-            ComputeProducts(row, t, annual, s, Fx6.FromRaw(_budget.Next[row]));
+            ComputeProducts(row, t, annual, s, Fx6.FromRaw(_budget.Next[row]), why);
             _share[0].Next[row] = s.Research.Raw;
             _share[1].Next[row] = s.Capability.Raw;
             _share[2].Next[row] = s.Effort.Raw;

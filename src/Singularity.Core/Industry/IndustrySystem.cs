@@ -275,6 +275,8 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
 
     Fx6 ICultureSnapshot.PlannedVolume(int site, int processRow, long month) => _inputs.PlannedVolume(site, processRow, month);
 
+    Fx6 ICultureSnapshot.EffortMultiplier(int actor, int processRow, long month) => _inputs.EffortMultiplier(actor, processRow, month);
+
     public long Requested(int site, int category, int requester) => _wfN[category * _l.Requesters + requester].Current[site];
 
     /// <summary><c>granted</c> of the request made in the last month step (contract §4.6: visible at t+1).</summary>

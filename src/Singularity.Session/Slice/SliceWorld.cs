@@ -18,12 +18,12 @@ namespace Singularity.Session;
 /// actor, spec §3.5 A27), the monthly systems in the fixed order Knowledge → Industry → Products → Policy (the order is part of the
 /// column schema), the input adapters, the RNG streams, the channel switches and the initialisation phase (A8). Nothing here
 /// computes domain formulas: the adapters call the public pure functions of Core. Internal: a world is reached through
-/// <see cref="SliceSession"/>. The Events system (T6d) takes its place between Products and Policy when it exists.
+/// <see cref="SliceSession"/>. The events of T6d (licences, alloy disruption) live in the Policy system (spec A43): they are decided there and act from the next month.
 /// </summary>
 internal sealed class SliceWorld
 {
     /// <summary>Version of the column schema (ADR-0013 п. 2); raised with every change of the table layout (pinned by a fingerprint test).</summary>
-    public const int SchemaVersion = 6;
+    public const int SchemaVersion = 7;
 
     // Layout constants of the slice (spec §1.4, §3.3, §2): engineer and skilled pools, bureaus, cohort years 1945…1977.
     public const int WorkforceCategories = 2;
@@ -58,6 +58,7 @@ internal sealed class SliceWorld
             YProd = pp.YProd, TField = pp.HBuild, NServiceMin = pp.NServiceMin, FleetArm = config.FleetArm, FleetLineCond = config.FleetLineCond,
             LineClose = config.LineClose,
             ToolingTarget = config.ToolingTarget,
+            LicOff = config.LicOff, T6dOff = config.T6dOff,
         };
         config.ToolingTarget.Validate();
         ScenarioData baseScenario = data.Scenario(config.ScenarioId);
@@ -89,7 +90,7 @@ internal sealed class SliceWorld
         Calendar = new TickCalendar(new CivilDate(scenario.StartYear, scenario.StartMonth, 1));
         int chunks = TickRunner.ChunkCountFor(Table.RowCount, config.ChunkSize);
 
-        Knowledge = new KnowledgeSystem(Table, Graph, kStart, kp, new KnowledgeInputsAdapter(this), Streams.Know, chunks);
+        Knowledge = new KnowledgeSystem(Table, Graph, kStart, kp, new KnowledgeInputsAdapter(this), Streams.Know, chunks, licenceTransfersKnowledge: config.LicKnows);
         ICultureRule rule = config.Channels.HasFlag(SliceChannels.CultureR0) ? new V23CultureRule() : new CbCultureRule();
         IndustryInputs = new IndustryInputsAdapter(this);
         Industry = new IndustrySystem(Table, IndustryLayout, iStart, ip, IndustryInputs, chunks, rule);
@@ -115,7 +116,8 @@ internal sealed class SliceWorld
         Policy = new PolicySystem(Table, PolicyParameters, actorNumber, budget0, growth, Streams.Ai, new PolicyInputsAdapter(this),
             Industry.CreateMailbox(chunks, Cadence.Monthly), QualityRequester, forced,
             products: config.ProductAi ? new PolicyProductsAdapter(this) : null, designs: ProductsLayout.Designs,
-            generations: ProductsLayout.Generations, derive: config.Derive, startLines: StartLines(pStart));
+            generations: ProductsLayout.Generations, derive: config.Derive, startLines: StartLines(pStart),
+            events: Streams.Events, eventInputs: new PolicyEventsAdapter(this), disruptionExposure: Exposure(scenario));
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs);
         Limits = new CommandLimits(scenario.ActorCount, ProductsLayout.SlotCount, ProductsLayout.Designs,
             [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)]);
@@ -126,6 +128,15 @@ internal sealed class SliceWorld
 
         Policy.Initialize();
         Runner = new TickRunner(Table, config.Seed, [Knowledge, Industry, Products, Policy], config.ChunkSize, config.Threads, Calendar);
+    }
+
+    // exposure_a of the alloy disruption (spec §8.1, «З»): 0,5 for USA and SUN (own melt), 1 for GBR, FRA and SWE; an actor outside the five gets 1.
+    private static ImmutableArray<Fx6> Exposure(ScenarioData s)
+    {
+        var e = new Fx6[s.ActorCount];
+        for (int a = 0; a < e.Length; a++)
+            e[a] = s.ActorIndex("USA") == a || s.ActorIndex("SUN") == a ? Fx6.FromRaw(500_000) : Fx6.One;
+        return [.. e];
     }
 
     // E1: the designs that start in stage С (one per actor at most).
@@ -182,7 +193,23 @@ internal sealed class SliceWorld
     /// <c>LicenceFlow(a, t)</c>: buyer pays, seller receives the licence price (spec A41). Licences are the events of T6d, which does not exist
     /// yet, so no money moves and the flow is 0; the sum is kept so that <see cref="ProcurementBudget"/> is base + licence as the contract has it.
     /// </summary>
-    public Fx6 LicenceFlow(int actor) => Fx6.Zero;
+    public Fx6 LicenceFlow(int actor) => Policy.LicenceFlow(actor);
+
+    /// <summary><c>g_a</c> (spec A43.2): the highest engine generation among the actor's designs in С or В; 0 without one.</summary>
+    public int EngineGen(int actor)
+    {
+        int g = 0;
+        for (int d = 0; d < ProductsLayout.Designs; d++)
+        {
+            if (Products.Stage(actor, d) is not (DesignStage.Series or DesignStage.InService))
+                continue;
+            g = Math.Max(g, ProductsLayout.AltEngGen[Products.Alternatives(actor, d)[ProductsLayout.BaseSlot]]);
+        }
+        return g;
+    }
+
+    /// <summary><c>LicenceActive(b)</c> (contract §5): <c>lic_gen &gt; 0</c> and the buyer has no series of an engine generation above the licence.</summary>
+    public bool LicenceActive(int actor) => Policy.LicenceGen(actor) > 0 && EngineGen(actor) <= Policy.LicenceGen(actor);
 
     /// <summary>
     /// The channel switches (spec §6.2): each one sets exactly one parameter to its "off" value; the culture rule is chosen separately
@@ -274,6 +301,8 @@ internal sealed class SliceWorld
             Table.AddInt("run.skip_s2").Load([.. Enumerable.Repeat(1, rows)]);
         Table.AddInt("run.cell").Load([.. Enumerable.Repeat(Config.ProfileCell ?? -1, rows)]);
         Table.AddInt("run.ai").Load([.. Enumerable.Repeat((Config.ProductAi ? 1 : 0) | (Config.Derive ? 2 : 0), rows)]);
+        // T6D_OFF / LIC_OFF / lic_knows are part of the state, so a switch cannot give the hash of main.
+        Table.AddInt("run.t6d").Load([.. Enumerable.Repeat((Config.LicOff ? 1 : 0) | (Config.T6dOff ? 2 : 0) | (Config.LicKnows ? 4 : 0), rows)]);
         Table.AddInt("run.channels").Load([.. Enumerable.Repeat((int)Config.Channels, rows)]);
         // Bit 12 = LINE_CLOSE YPROD (F17b) of a run with the product AI; it is clear for ADMIT and for a player-script run, so their hashes are those of the build before F17b.
         int lineCloseBit = Config.ProductAi && Config.LineClose == LineCloseRule.YProd ? 1 << 12 : 0;

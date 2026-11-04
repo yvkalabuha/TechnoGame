@@ -24,7 +24,7 @@ public interface IKnowledgeInputs
     Fx6 DisciplineVolume(int actorRow, int discipline, long month);
 
     /// <summary>
-    /// ENG node rows of the engines whose licences the actor bought in month t−1; used only by the
+    /// Node rows (the seller's engine ENG node and the PRC nodes of the licence mask) of the licence the actor bought in month t−1; used only by the
     /// <c>lic_knows</c> diagnostic (§6.7), applied in the merge of month t.
     /// </summary>
     ReadOnlySpan<int> LicensedEngines(int actorRow, long month);

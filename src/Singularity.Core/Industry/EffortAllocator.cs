@@ -119,7 +119,7 @@ public static class EffortAllocator
         return new EffortAllocation(result, left + excess, passes);
     }
 
-    // w_p = (v_exp / (r_ref·labour_p))·gap_H (R2-10); v_exp summed and gap_H maximised over the actor's sites.
+    // w_p = (((v_exp / (r_ref·labour_p))·gap_H)·mult_P) (R2-10, A37); v_exp summed and gap_H maximised over the actor's sites.
     private static Fx6 Weight(ICultureSnapshot s, int actor, int r, long month)
     {
         IndustryLayout l = s.Layout;
@@ -140,7 +140,8 @@ public static class EffortAllocator
             }
         }
         Fx6 den = s.Params.RRef * l.Labour[r];
-        return den == Fx6.Zero ? Fx6.Zero : vExp / den * gapH;
+        // mult_P (spec A37): the doctrine factor comes last.
+        return den == Fx6.Zero ? Fx6.Zero : vExp / den * gapH * s.EffortMultiplier(actor, r, month);
     }
 
     // share_s = (E·v_s)/Σv (floor); the floor remainder goes to the site with the largest v (tie: lower site id);

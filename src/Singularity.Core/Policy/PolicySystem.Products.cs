@@ -121,6 +121,7 @@ public sealed partial class PolicySystem
         public readonly bool[] Repeat = new bool[generations];
         public readonly List<FleetCommand> Fleet = [];
         public Fx6 IncomeExpected;
+        public PolicyDesign[] Designs = [];
     }
 
     private void InitializeProducts()
@@ -136,11 +137,12 @@ public sealed partial class PolicySystem
         }
     }
 
-    private void ComputeProducts(int row, long t, bool annual, BudgetShares sharesNext, Fx6 budgetNext)
+    private void ComputeProducts(int row, long t, bool annual, BudgetShares sharesNext, Fx6 budgetNext, WhyList why)
     {
         if (_prod is null)
             return;
         Decisions dec = Decide(row, t, annual, monthly: true, sharesNext, budgetNext);
+        ComputeLicence(row, t, dec.Designs, dec, sharesNext, budgetNext, why);
         Commit(row, dec, Stamp(t + 1), (c, v) => c.Next[row] = v, (c, v) => c.Next[row] = v);
     }
 
@@ -180,6 +182,7 @@ public sealed partial class PolicySystem
         var designs = new PolicyDesign[_designs];
         for (int d = 0; d < _designs; d++)
             designs[d] = prod.Design(row, d, t);
+        dec.Designs = designs;
         ProductsLayout l = prod.Layout;
 
         if (annual)

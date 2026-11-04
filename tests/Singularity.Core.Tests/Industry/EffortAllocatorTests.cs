@@ -60,6 +60,25 @@ public class EffortAllocatorTests
     }
 
     [Fact]
+    public void MultP_DoublesTheWeightOfItsProcess_LastFactor_AndOneChangesNothing()
+    {
+        CbFake s = ThreeProcesses();
+        foreach (int r in s.Layout.Order)
+            s.SetH(0, s.Layout.ClusterIndex[r], 1, Fx6.Zero);   // the same gap in the three cells (a gap makes a weight), a budget below the sum of E_useful
+        Fx6 budget = Rule.EUseful(s, 0, s.Layout.Order[0], 0) / Fx6.FromInt(2);
+        EffortAllocation plain = EffortAllocator.Allocate(Rule, s, 0, 0, budget, NoFocus);
+        s.Mult = _ => Fx6.One;
+        Assert.Equal(plain.E, EffortAllocator.Allocate(Rule, s, 0, 0, budget, NoFocus).E);
+        int first = s.Layout.Order[0];
+        s.Mult = r => r == first ? Fx6.FromInt(2) : Fx6.One;
+        EffortAllocation boosted = EffortAllocator.Allocate(Rule, s, 0, 0, budget, NoFocus);
+        Assert.Equal(budget, Sum(boosted) + boosted.Rest);
+        Assert.True(boosted.E[first] > plain.E[first]);
+        foreach (int r in s.Layout.Order.Skip(1))
+            Assert.True(boosted.E[r] <= plain.E[r]);
+    }
+
+    [Fact]
     public void BudgetAboveAllEUseful_TheRemainderGoesToTooling()
     {
         CbFake s = ThreeProcesses();

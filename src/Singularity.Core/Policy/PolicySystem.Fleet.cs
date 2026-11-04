@@ -103,14 +103,13 @@ public sealed partial class PolicySystem
     }
 
     /// <summary>
-    /// A42.4 for the month t compute. The book is the snapshot (state after t−1) projected to the step 2 of t+1: step 0 of t, the year reset of t,
-    /// the AI's own commands decided in t−1 (they run in t), step 0 of t+1, the year reset of t+1 (contract r6 §4.4f (а)–(в)).
+    /// The book of the snapshot projected to the step 2 of t+1 (see <see cref="DecideFleet"/>), the procurement base of t+1 and the line <c>L</c> of t+1
+    /// (−1 without one); null without a fleet layer. Shared by the fleet rule and by the money check of a licence (A43.3 (б)).
     /// </summary>
-    private FleetDecision DecideFleet(int row, long t, PolicyDesign[] designs, Decisions dec, BudgetShares sharesNext, Fx6 budgetNext)
+    private (FleetBook Book, Fx6 BaseNext, int Line)? ProjectBook(int row, long t, PolicyDesign[] designs, Decisions dec, BudgetShares sharesNext, Fx6 budgetNext)
     {
-        var result = new FleetDecision();
-        if (_pp.FleetArm is FleetArm.NoRetire or FleetArm.PurchaseCap || _prod!.Fleet(row, t) is not { } book)
-            return result;
+        if (_prod!.Fleet(row, t) is not { } book)
+            return null;
         int gFront = _prod.GFront(t);
         book.AgeOut(t);
         // B_base of the year reset comes from the AI's own shares (Shares(row)), not from a player's set_budget_shares override: for an actor
@@ -159,6 +158,20 @@ public sealed partial class PolicySystem
             if (series[d])
                 line = line < 0 || _pp.LineClose == LineCloseRule.Admit ? d : Candidate(designs, line, d);
         }
+        return (book, baseNext, line);
+    }
+
+    /// <summary>
+    /// A42.4 for the month t compute. The book is the snapshot (state after t−1) projected to the step 2 of t+1: step 0 of t, the year reset of t,
+    /// the AI's own commands decided in t−1 (they run in t), step 0 of t+1, the year reset of t+1 (contract r6 §4.4f (а)–(в)).
+    /// </summary>
+    private FleetDecision DecideFleet(int row, long t, PolicyDesign[] designs, Decisions dec, BudgetShares sharesNext, Fx6 budgetNext)
+    {
+        var result = new FleetDecision();
+        if (_pp.FleetArm is FleetArm.NoRetire or FleetArm.PurchaseCap || ProjectBook(row, t, designs, dec, sharesNext, budgetNext) is not { } projection)
+            return result;
+        (FleetBook book, Fx6 baseNext, int line) = projection;
+        int gFront = _prod!.GFront(t);
         if (line < 0)
             return result;
 

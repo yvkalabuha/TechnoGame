@@ -80,20 +80,20 @@ public class F17bTests(ITestOutputHelper output)
     // re-recorded there only for the new column tool_unmet («tool_unmet column», F33): by the old columns the trajectory is unchanged (ToolingUnmetTests).
     private static readonly string[] AdmitGolden =
     [
-        "92daa0419d6922f998e0458e58d0a53d86a5b334e679c668d265527a782cb573",
-        "f6b133ff8193d5bdb8b8a1d95653b74c3943e7387066d0ed5998ea84fdfc8edf",
-        "9cc8e665c72ee98a25c38533fddb11b4be9656c76e9381bdaf11e39deaf26ff4",
-        "88e1bdcc57dedc27e09f959c0cc12d92fee69a7fcda0ee45d1f6cc8286250445",
-        "51ea610b5c2d8b1a88d75645ce35a9f52554e932fae1ed303f110910f63eca23",
+        "b30d7a8ddf3697737e3ee785f7b00d69cd54c5ba557d6b2cf8eca7defce72e04",
+        "ec385fd66e97deda97353af24f71ff984f667432b28ef663ca6c29fc3f43cff5",
+        "aecbf8f284e141f6c0b426ad5fe4a3695ae9cfdc639340008b1e2349994b9da4",
+        "f41191cae8da4dd055551ed7dd81e370438e1c5363a128dc44755c6ffb5db8f1",
+        "18ad1074dfdc891c09db057e1d7995f6a4353cb1a799bf13c11ce3dfd990b78b",
     ];
 
-    // Recorded in F17b (TASK-0030); re-recorded in TASK-0032: part 1 (A39 «V5 default», #163: the default tooling target is V5), part 2 («tool_unmet column», F33).
+    // Recorded in F17b (TASK-0030); re-recorded in TASK-0033, reason: T6d (columns of the licence and the disruption, run.t6d, the events themselves; both arms); in TASK-0032: part 1 (A39 «V5 default», #163: the default tooling target is V5), part 2 («tool_unmet column», F33).
     private static readonly string[] YProdGolden = [
-        "5bf4c94e6faf72bb28a2c0dd8e4cf374312c5e5c76106e6e41bf0022e719d8fa",
-        "a65bf874852f4cd36dcc18954f5ac23d3e6e28d8968937d63c3f1123271a673f",
-        "5ff5c7fb8c20c1127eb4b17b6c021f13a75840cd4fbcce3fb5bba403d14ef6e9",
-        "b7f5e87c02c98187d4033766d701ed1846973b66e1c27d7b0412f7019acf17b3",
-        "635821a245b3bab9963a30c37bb726455f5a6c0c85e678b3f66d7785866fd455",
+        "278520429eceb02ddb95b4e1400f4f76a7fb55d31c8ef7d82854e303a6a9fea5",
+        "d248f47ac9d2b6765d9ef0d029c966004cbd06ec2e167f5d73d621f14b7b6b1c",
+        "a34abd77bc5a099cf3150c5a25c4874c4e110ba8b658de54b8a470cfbe69628e",
+        "8629079f5538dc53ecdced4c6937cbf2831d44780ce1e15ee0cfc00c46a6cd80",
+        "cb4670163712b96f48af8fc7ea7a62e128cf9f5470a8db8d7b380ac0dfdf5f60",
     ];
 
     private static string HashOf(ulong seed, LineCloseRule rule)

@@ -9,14 +9,21 @@ namespace Singularity.Session;
 /// <summary>
 /// Inputs of <c>why_not</c>: pure functions of the snapshot, no RNG. The procurement and training budgets are the product layer's own inputs,
 /// the tooling rate is the growth of <c>tooling_M</c> under the tooling plan of the month (A39). One input has no rule behind it yet and says
-/// so with a constant, like the capability adapter: no licence is ever offered (events, T6d).
+/// by the policy's <c>offer_mask</c> (events, T6d).
 /// </summary>
 internal sealed class WhyNotInputsAdapter(SliceWorld world) : IWhyNotInputs
 {
     // B_in (contract r6 §4.4f): the procurement item plus the sale revenue the snapshot already promises for the month (the AI's inc_exp, exact by FL7).
     public Fx6 ProcurementBudget(int actorRow, long month) => world.ProcurementBudget(actorRow) + world.Policy.ExpectedSaleIncome(actorRow);
 
-    public bool LicenceOffered(int siteRow, int processNumber, long month) => false;
+    // Contract §5: a bit of offer_mask of the year, the process known. The mask is rewritten at the yearly step of month 12k and shows the offers of
+    // the year that follows it; in month 12k itself it is still last year's, so it is not offered (no mask exists before the first step).
+    public bool LicenceOffered(int siteRow, int processNumber, long month)
+    {
+        int actor = world.IndustryLayout.SiteOwner[siteRow];
+        int row = world.Graph.RowOf(processNumber);
+        return month % 12 != 0 && LicenceRules.Has(world.Policy.OfferMask(actor), processNumber) && row >= 0 && world.Knowledge.IsKnown(actor, row);
+    }
 
     public Fx6 TrainingBudget(int actorRow, int design, long month) => world.ProductsInputs.TrainingBudget(actorRow, design, month);
 

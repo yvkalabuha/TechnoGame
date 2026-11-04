@@ -4,9 +4,9 @@ namespace Singularity.Core.Policy;
 
 /// <summary>
 /// What limits the bottleneck process of a design: the source of the profile bottleneck, <c>limiter(site, p_b)</c> and whether the process
-/// has output (<c>proc_v[site, p_b] &gt; 0</c>; spec A41, v0.13 <c>out_lim</c>).
+/// has output (<c>proc_v[site, p_b] &gt; 0</c>; spec A41, v0.13 <c>out_lim</c>). <see cref="Process"/> is <c>p_b</c> (node number), −1 if unknown.
 /// </summary>
-public readonly record struct BottleneckLimit(BottleneckSource Source, LimiterKind Limiter, bool HasOutput)
+public readonly record struct BottleneckLimit(BottleneckSource Source, LimiterKind Limiter, bool HasOutput, int Process = -1)
 {
     /// <summary>
     /// <c>out_lim(site, p)</c> (spec A41-T, v0.13): the limit of the process is its output — <c>limiter ∈ {VOLUME, LAB_CEILING}</c>, or

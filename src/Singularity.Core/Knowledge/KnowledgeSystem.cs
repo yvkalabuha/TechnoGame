@@ -334,7 +334,7 @@ public sealed class KnowledgeSystem : ITickSystem
         }
     }
 
-    // lic_knows (§6.7, v0.6): the licensed ENG node and its whole requires-closure unknown to the buyer (any
+    // lic_knows (§6.7, v0.6, v0.13): the licensed ENG node and PRC nodes and their whole requires-closure unknown to the buyer (any
     // type; an OR-group without a known member brings its lowest-numbered member and that member's closure).
     // Grants follow this actor's discoveries in the list, so a node both discovered and licensed counts as a
     // discovery; grants never enter opened_d or amount_d.
@@ -343,8 +343,8 @@ public sealed class KnowledgeSystem : ITickSystem
         Array.Clear(_granted, a * _n, _n);
         foreach (int r in _inputs.LicensedEngines(a, t))
         {
-            if (_g.Type[r] != NodeType.ENG)
-                throw new ArgumentException($"Licence for node {_g.Number[r]}: only ENG engine nodes are licensed.");
+            if (_g.Type[r] is not (NodeType.ENG or NodeType.PRC))
+                throw new ArgumentException($"Licence for node {_g.Number[r]}: only the engine (ENG) and the processes (PRC) of the seller's project are licensed.");
             Grant(a, r, opened);
         }
     }

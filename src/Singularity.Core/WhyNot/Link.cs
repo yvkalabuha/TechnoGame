@@ -102,6 +102,8 @@ public enum Lever
 /// <param name="Cluster">UI only (r8): the cluster of a <see cref="WhyNotCause.ToolingPoolExhausted"/> link; −1 otherwise.</param>
 /// <param name="Order">UI only (r8): the place of the cluster in the pass-2 queue (<c>POOL_ORDER</c>), 0 = no permanent queue; −1 outside <see cref="WhyNotCause.ToolingPoolExhausted"/>.</param>
 /// <param name="Unmet">UI only (r8): <c>tool_unmet</c> of the cell of a <see cref="WhyNotCause.ToolingPoolExhausted"/> link, or of the limiting cell of a <c>CultureH</c> link with <c>limiter = TOOLING</c>; 0 otherwise.</param>
+/// <param name="Blocking">F25 (contract §6 r7): the link of a process with <c>yield_p = 0</c> in dimension d where <c>g_d = 0</c>; such links come first within the layer.</param>
+/// <param name="Companion">F25: the <c>M</c> link added after the <c>H</c> link of the same cell when both are below <c>r_d − 1</c> and <c>M &lt; H</c>; placed right behind its <c>H</c> link, not by the keys.</param>
 /// <param name="VariantSlot">Slot to replace for <see cref="Lever.SimplifiedVariant"/> (contract §6 «читается как заменить в слоте s»), −1 without it.</param>
 public readonly record struct Link(
     WhyNotLayer Layer,
@@ -119,10 +121,12 @@ public readonly record struct Link(
     int Slot = -1,
     int Cluster = -1,
     int Order = -1,
-    Fx6 Unmet = default)
+    Fx6 Unmet = default,
+    bool Blocking = false,
+    bool Companion = false)
 {
     /// <summary>
-    /// The contract order (§6): layer, then <c>yield_if_fixed</c> descending, then <c>eta_months</c> ascending (null last), then
+    /// The contract order (§6, r7 F25): layer, blocking links first, then <c>yield_if_fixed</c> descending, then <c>eta_months</c> ascending (null last), then
     /// <c>subject_id</c>; the remaining fields only make the order total, so it does not depend on how the list was built.
     /// </summary>
     // r8: ToolingPoolExhausted has the rank of ToolingM, so the list order is that of a build without the new cause.
@@ -131,6 +135,9 @@ public readonly record struct Link(
     public static int Compare(Link a, Link b)
     {
         int c = a.Layer.CompareTo(b.Layer);
+        if (c != 0)
+            return c;
+        c = b.Blocking.CompareTo(a.Blocking);
         if (c != 0)
             return c;
         c = b.YieldIfFixed.CompareTo(a.YieldIfFixed);

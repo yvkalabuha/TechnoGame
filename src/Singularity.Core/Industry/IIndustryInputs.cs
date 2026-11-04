@@ -55,6 +55,9 @@ public interface IIndustryInputs
     /// <summary><c>v_exp(p)</c> at the site: planned output of the lines and of the projects in stages П/О (contract §4.1b); ≥ 0.</summary>
     Fx6 PlannedVolume(int siteRow, int processRow, long month);
 
+    /// <summary><c>mult_P</c> (spec A37): the weight factor of the doctrine for the process of the actor; 1 where the input has no doctrine.</summary>
+    Fx6 EffortMultiplier(int actorRow, int processRow, long month) => Fx6.One;
+
     /// <summary><c>planned(site, p)</c>: p is in the <c>prc_set</c> of a project of the owner in stage П or О (contract §4.1a).</summary>
     bool Planned(int siteRow, int processRow, long month);
 

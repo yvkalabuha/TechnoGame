@@ -121,6 +121,18 @@ public sealed record SliceRunConfig
     /// <summary><c>LINE_CLOSE</c> (spec A41 F17b, #160): <c>YPROD</c> in main; <c>ADMIT</c> is the rule before F17b (regression, diagnostics).</summary>
     public LineCloseRule LineClose { get; init; } = LineCloseRule.YProd;
 
+    /// <summary><c>LIC_OFF</c> (spec §6.11, contract §8.6 п. 6): no licence offers and no <c>EVT_LIC</c> draws; disruptions and the why_not triggers stay.</summary>
+    public bool LicOff { get; init; }
+
+    /// <summary>
+    /// <c>T6D_OFF</c> (spec §6.11, contract §8.6 п. 6): no licences, no disruptions, no why_not triggers and no <c>mult_P</c> — the world of the build before T6d
+    /// except for the new columns.
+    /// </summary>
+    public bool T6dOff { get; init; }
+
+    /// <summary><c>lic_knows</c> (spec §6.7, #47): a bought licence also makes known the seller's engine and the PRC of its mask with their closure. Diagnostic; off in main.</summary>
+    public bool LicKnows { get; init; }
+
     /// <summary>Sensitivity arm of the sale terms (spec §6.10).</summary>
     public SaleArm SaleArm { get; init; } = SaleArm.None;
 

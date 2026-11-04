@@ -83,6 +83,7 @@ internal sealed class FleetRunStats
         TechKey[] keyAtCandidate = new TechKey[n];
         var sumIncome = new long[n];
         SaleIncomeTotal = new long[n];
+        var saleOnly = new long[n];   // the revenue of the sales alone: ext_total also holds the licence flows since T6d
         var mrPrev = new int[w.IndustryLayout.SiteCount, w.IndustryLayout.ProcessCount];
         for (int site = 0; site < mrPrev.GetLength(0); site++)
         {
@@ -108,9 +109,11 @@ internal sealed class FleetRunStats
             {
                 if (p.SaleIncome(a) != expectedIncome[a])
                     Violations.Add($"FL7 actor {a} month {m}: sale_income {p.SaleIncome(a)} != inc_exp {expectedIncome[a]}");
-                sumIncome[a] += p.SaleIncome(a).Raw;
+                // T6d: ext_total also holds the licence flow of the month (contract §3.1 r6/r7); the flows net out over the actors (L-M1).
+                sumIncome[a] += p.SaleIncome(a).Raw + w.Policy.LicenceFlow(a).Raw;
+                saleOnly[a] += p.SaleIncome(a).Raw;
                 if (p.ExternalTotal(a).Raw != sumIncome[a])
-                    Violations.Add($"FL6 actor {a} month {m}: ext_total {p.ExternalTotal(a)} != Σ sale_income");
+                    Violations.Add($"FL6 actor {a} month {m}: ext_total {p.ExternalTotal(a)} != Σ (sale_income + LicenceFlow)");
                 CheckExecuted(a, m, previous[a], gens);
             }
 
@@ -248,7 +251,7 @@ internal sealed class FleetRunStats
         SilentByBind = [.. Enumerable.Range(0, n).Select(a => pol.FleetSilentByBindMonths(a))];
         for (int a = 0; a < n; a++)
         {
-            SaleIncomeTotal[a] = p.ExternalTotal(a).Raw;
+            SaleIncomeTotal[a] = saleOnly[a];
             long rejected = 0;
             foreach (CommandRejection r in Enum.GetValues<CommandRejection>().Where(r => (int)r >= (int)CommandRejection.BadRetireSlot))
                 rejected += p.RejectionCount(a, r);

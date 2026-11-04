@@ -73,7 +73,15 @@ public sealed partial class WhyNotAnalyzer
                 ExplainRequirement(links, actor, target.Id, month);
                 break;
         }
+        // F25: the M link that accompanies a blocking H link of the same cell is not ordered by the keys but placed right behind its host.
+        var companions = links.Where(l => l.Companion).ToList();
+        links.RemoveAll(l => l.Companion);
         links.Sort(Link.Compare);
+        foreach (Link m in companions)
+        {
+            int host = links.FindIndex(l => l.Blocking && l.Process == m.Process && l.Dim == m.Dim);
+            links.Insert(host + 1, m);
+        }
         // Several slots or alternatives can point at the same missing node: one link per (layer, cause, subject).
         for (int i = links.Count - 1; i > 0; i--)
         {

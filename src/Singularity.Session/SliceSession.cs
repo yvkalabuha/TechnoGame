@@ -130,6 +130,9 @@ public sealed class SliceSession
         long tick = Tick;
         bool applied = ApplyPending(tick);
         bool monthly = _world.Calendar.IsDue(Cadence.Monthly, tick);
+        // The licences bought in the last compute begin now, after the player's commands saw the shares of the month (contract §5, spec A43.5).
+        if (monthly)
+            _world.Policy.ApplyDeals(_world.Calendar.MonthIndex(tick), _world.ProcurementBase);
         _world.Runner.RunTick();
         if (monthly || applied)
         {

@@ -1,5 +1,7 @@
+using Singularity.Core.Data;
 using Singularity.Core.Knowledge;
 using Singularity.Core.Policy;
+using Singularity.Core.Products;
 using Singularity.Kernel;
 
 namespace Singularity.Session;
@@ -21,6 +23,34 @@ internal sealed class KnowledgeInputsAdapter(SliceWorld world) : IKnowledgeInput
 
     public Fx6 DisciplineVolume(int actorRow, int discipline, long month) => world.Industry.DisciplineVolume(actorRow, discipline);
 
-    // No licence can be bought in this build (licences are T6d), so the lic_knows diagnostic has nothing to apply.
-    public ReadOnlySpan<int> LicensedEngines(int actorRow, long month) => ReadOnlySpan<int>.Empty;
+    // lic_knows (spec §6.7): the merge of month t grants what the licence bought in compute t−1 names (it began to act in t): the ENG node of the seller's
+    // engine of the licensed generation and the PRC nodes of the mask. Without the diagnostic the knowledge system never asks.
+    public ReadOnlySpan<int> LicensedEngines(int actorRow, long month)
+    {
+        if (world.Policy.LicenceStart(actorRow) != month || world.Policy.LicenceGen(actorRow) <= 0)
+            return ReadOnlySpan<int>.Empty;
+        ProductsLayout l = world.ProductsLayout;
+        var rows = new List<int>();
+        for (int a = l.AltStart[l.BaseSlot]; a < l.AltStart[l.BaseSlot + 1]; a++)
+        {
+            if (l.AltEngGen[a] != world.Policy.LicenceGen(actorRow))
+                continue;
+            for (int g = l.AltGroupStart[a]; g < l.AltGroupStart[a + 1]; g++)
+            {
+                for (int m = l.GroupMemberStart[g]; m < l.GroupMemberStart[g + 1]; m++)
+                {
+                    int row = world.Graph.RowOf(l.GroupMembers[m]);
+                    if (row >= 0 && world.Graph.Type[row] == NodeType.ENG)
+                        rows.Add(row);
+                }
+            }
+        }
+        ulong mask = world.Policy.LicenceMask(actorRow);
+        for (int n = 1; n <= 63; n++)
+        {
+            if (LicenceRules.Has(mask, n) && world.Graph.RowOf(n) is >= 0 and int row)
+                rows.Add(row);
+        }
+        return rows.ToArray();
+    }
 }

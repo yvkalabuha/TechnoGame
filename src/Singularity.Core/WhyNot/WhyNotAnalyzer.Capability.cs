@@ -64,113 +64,129 @@ public sealed partial class WhyNotAnalyzer
                 }
             }
 
-            Fx6 fixedYield, have, need;
-            int? eta;
-            WhyNotCause cause;
-            int subject = prc[i];
-            LimiterKind? limiterKind = null;
-            ImmutableArray<Lever> levers;
-            int linkCluster = -1, order = -1;
-            Fx6 unmet = Fx6.Zero;
-            if (dim is { } dm)
+            // F25 (contract §6 r7): a link of a process blocked in dimension d (g_d = 0) goes first; with H ≤ r_d − 1 its cause is the culture even if M < H
+            // (tooling above H gives no admission), and the M link of the same cell follows it.
+            bool blocking = false, hBlock = false;
+            int variants = 1;
+            if (dim is { } d0)
             {
-                int d = (int)dm;
-                Fx6 h = _i.CultureH(site, cluster, dm), m = _i.ToolingM(site, cluster, dm), req = _il.Req[row][d];
-                bool fromM = y.Source(d) == CapabilitySource.M;
-                need = req;
-                Fx6 c2;
-                if (fromM)
+                Fx6 h0 = _i.CultureH(site, cluster, d0), req0 = _il.Req[row][(int)d0];
+                blocking = y.G[(int)d0] == Fx6.Zero;
+                hBlock = blocking && h0 - req0 <= -Fx6.One;
+                if (hBlock && _i.ToolingM(site, cluster, d0) < h0)
+                    variants = 2;
+            }
+            for (int variant = 0; variant < variants; variant++)
+            {
+                Fx6 fixedYield, have, need;
+                int? eta;
+                WhyNotCause cause;
+                int subject = prc[i];
+                LimiterKind? limiterKind = null;
+                ImmutableArray<Lever> levers;
+                int linkCluster = -1, order = -1;
+                Fx6 unmet = Fx6.Zero;
+                if (dim is { } dm)
                 {
-                    have = m;
-                    Fx6 m2 = Max(m, need);
-                    c2 = m2 < h ? m2 : h;
-                }
-                else
-                {
-                    have = h;
-                    Fx6 h2 = Max(h, need);
-                    c2 = m < h2 ? m : h2;
-                }
-                Fx6 acc = Fx6.One;
-                for (int d2 = 0; d2 < Dims3.Count; d2++)
-                {
-                    if (y.IsActive(d2))
-                        acc *= d2 == d ? IndustryMath.G(c2 - req) : y.G[d2];
-                }
-                fixedYield = acc * y.Ramp;
-
-                if (fromM)
-                {
-                    // r8 (F33): the plan of the last month left the cell short only because the pool ran out. The key and the levers are those of ToolingM.
-                    unmet = _i.ToolingUnmet(site, cluster, dm);
-                    cause = unmet > Fx6.Zero ? WhyNotCause.ToolingPoolExhausted : WhyNotCause.ToolingM;
-                    if (cause == WhyNotCause.ToolingPoolExhausted)
+                    int d = (int)dm;
+                    Fx6 h = _i.CultureH(site, cluster, dm), m = _i.ToolingM(site, cluster, dm), req = _il.Req[row][d];
+                    bool fromM = variant == 1 || !hBlock && y.Source(d) == CapabilitySource.M;
+                    need = req;
+                    Fx6 c2;
+                    if (fromM)
                     {
-                        linkCluster = cluster;
-                        order = _in.PoolQueuePlace(cluster);
+                        have = m;
+                        Fx6 m2 = Max(m, need);
+                        c2 = m2 < h ? m2 : h;
                     }
                     else
                     {
-                        unmet = Fx6.Zero;
+                        have = h;
+                        Fx6 h2 = Max(h, need);
+                        c2 = m < h2 ? m : h2;
                     }
-                    eta = Eta(have, need, _in.ToolingRate(site, cluster, dm, month));
-                    levers = Offer(Wanted([Lever.InvestToolingM], dm, slot));
+                    Fx6 acc = Fx6.One;
+                    for (int d2 = 0; d2 < Dims3.Count; d2++)
+                    {
+                        if (y.IsActive(d2))
+                            acc *= d2 == d ? IndustryMath.G(c2 - req) : y.G[d2];
+                    }
+                    fixedYield = acc * y.Ramp;
+
+                    if (fromM)
+                    {
+                        // r8 (F33): the plan of the last month left the cell short only because the pool ran out. The key and the levers are those of ToolingM.
+                        unmet = _i.ToolingUnmet(site, cluster, dm);
+                        cause = unmet > Fx6.Zero ? WhyNotCause.ToolingPoolExhausted : WhyNotCause.ToolingM;
+                        if (cause == WhyNotCause.ToolingPoolExhausted)
+                        {
+                            linkCluster = cluster;
+                            order = _in.PoolQueuePlace(cluster);
+                        }
+                        else
+                        {
+                            unmet = Fx6.Zero;
+                        }
+                        eta = Eta(have, need, _in.ToolingRate(site, cluster, dm, month));
+                        levers = Offer(Wanted([Lever.InvestToolingM], dm, slot));
+                    }
+                    else
+                    {
+                        cause = WhyNotCause.CultureH;
+                        CultureLimiter lim = _i.Limiter(site, row, month);
+                        limiterKind = lim.Value;
+                        if (lim.SubjectProcess >= 0)
+                            subject = lim.SubjectProcess;
+                        Fx6 e = _i.ProcE(site, row);
+                        Fx6 rate = lim.Value switch
+                        {
+                            LimiterKind.LabCeiling or LimiterKind.Saturation => Fx6.Zero,
+                            LimiterKind.Effort when e <= Fx6.Zero => Fx6.Zero,
+                            LimiterKind.Tooling => _in.ToolingRate(site, cluster, dm, month),
+                            _ => _i.DHForecast(site, row, dm, e, _i.ProcV(site, row), month),
+                        };
+                        eta = Eta(have, need, rate);
+                        // r8: the cause stays CultureH; a TOOLING limit only carries the cell's shortfall for the UI (the link's own cell, as the rate above).
+                        if (lim.Value == LimiterKind.Tooling)
+                            unmet = _i.ToolingUnmet(site, cluster, dm);
+                        Lever[] byLimiter = lim.Value switch
+                        {
+                            LimiterKind.Effort => [Lever.ProcessDevelopment],
+                            LimiterKind.Volume => _in.LicenceOffered(site, prc[i], month) ? [Lever.TrainingSeries, Lever.Licence] : [Lever.TrainingSeries],
+                            LimiterKind.LabCeiling => [Lever.TrainingSeries],
+                            LimiterKind.Tooling => [Lever.InvestToolingM],
+                            _ => [],
+                        };
+                        levers = Offer(Wanted(byLimiter, dm, slot));
+                    }
                 }
                 else
                 {
-                    cause = WhyNotCause.CultureH;
-                    CultureLimiter lim = _i.Limiter(site, row, month);
-                    limiterKind = lim.Value;
-                    if (lim.SubjectProcess >= 0)
-                        subject = lim.SubjectProcess;
-                    Fx6 e = _i.ProcE(site, row);
-                    Fx6 rate = lim.Value switch
+                    // Only ramp limits: X must reach the point where ramp = 0.7 (the yield threshold), X = X½_eff·(0.7 − λ0)/(1 − 0.7).
+                    have = _i.ProcX(site, row);
+                    need = y.XHalfEff * (LowYield - _ip.Lambda0) / (Fx6.One - LowYield);
+                    Fx6 acc = Fx6.One;
+                    for (int d2 = 0; d2 < Dims3.Count; d2++)
                     {
-                        LimiterKind.LabCeiling or LimiterKind.Saturation => Fx6.Zero,
-                        LimiterKind.Effort when e <= Fx6.Zero => Fx6.Zero,
-                        LimiterKind.Tooling => _in.ToolingRate(site, cluster, dm, month),
-                        _ => _i.DHForecast(site, row, dm, e, _i.ProcV(site, row), month),
-                    };
-                    eta = Eta(have, need, rate);
-                    // r8: the cause stays CultureH; a TOOLING limit only carries the cell's shortfall for the UI (the link's own cell, as the rate above).
-                    if (lim.Value == LimiterKind.Tooling)
-                        unmet = _i.ToolingUnmet(site, cluster, dm);
-                    Lever[] byLimiter = lim.Value switch
-                    {
-                        LimiterKind.Effort => [Lever.ProcessDevelopment],
-                        LimiterKind.Volume => _in.LicenceOffered(site, prc[i], month) ? [Lever.TrainingSeries, Lever.Licence] : [Lever.TrainingSeries],
-                        LimiterKind.LabCeiling => [Lever.TrainingSeries],
-                        LimiterKind.Tooling => [Lever.InvestToolingM],
-                        _ => [],
-                    };
-                    levers = Offer(Wanted(byLimiter, dm, slot));
+                        if (y.IsActive(d2))
+                            acc *= y.G[d2];
+                    }
+                    fixedYield = acc * IndustryMath.Ramp(Max(have, need), y.XHalfEff, _ip.Lambda0);
+                    cause = WhyNotCause.Ramp;
+                    int k = _pl.ProcIndex(prc[i]);
+                    eta = Eta(have, need, k < 0 ? Fx6.Zero : unitsPerMonth * _pl.ProcN[k]);
+                    levers = Offer(Wanted(_in.LicenceOffered(site, prc[i], month) ? [Lever.Licence] : [], null, slot));
                 }
-            }
-            else
-            {
-                // Only ramp limits: X must reach the point where ramp = 0.7 (the yield threshold), X = X½_eff·(0.7 − λ0)/(1 − 0.7).
-                have = _i.ProcX(site, row);
-                need = y.XHalfEff * (LowYield - _ip.Lambda0) / (Fx6.One - LowYield);
-                Fx6 acc = Fx6.One;
-                for (int d2 = 0; d2 < Dims3.Count; d2++)
-                {
-                    if (y.IsActive(d2))
-                        acc *= y.G[d2];
-                }
-                fixedYield = acc * IndustryMath.Ramp(Max(have, need), y.XHalfEff, _ip.Lambda0);
-                cause = WhyNotCause.Ramp;
-                int k = _pl.ProcIndex(prc[i]);
-                eta = Eta(have, need, k < 0 ? Fx6.Zero : unitsPerMonth * _pl.ProcN[k]);
-                levers = Offer(Wanted(_in.LicenceOffered(site, prc[i], month) ? [Lever.Licence] : [], null, slot));
-            }
 
-            Fx6 lowest = fixedYield;
-            for (int j = 0; j < prc.Length; j++)
-            {
-                if (j != i && ys[j].Yield < lowest)
-                    lowest = ys[j].Yield;
+                Fx6 lowest = fixedYield;
+                for (int j = 0; j < prc.Length; j++)
+                {
+                    if (j != i && ys[j].Yield < lowest)
+                        lowest = ys[j].Yield;
+                }
+                links.Add(new Link(WhyNotLayer.Capability, cause, subject, have, need, levers, lowest, eta, prc[i], dim, limiterKind, slot, Cluster: linkCluster, Order: order, Unmet: unmet,
+                        Blocking: blocking, Companion: variant == 1));
             }
-            links.Add(new Link(WhyNotLayer.Capability, cause, subject, have, need, levers, lowest, eta, prc[i], dim, limiterKind, slot, Cluster: linkCluster, Order: order, Unmet: unmet));
         }
     }
 

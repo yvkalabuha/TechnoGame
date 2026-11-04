@@ -13,8 +13,7 @@ namespace Singularity.Session;
 /// (<see cref="BudgetMath.FollowBudget"/>).
 ///
 /// <c>ToolingInvest</c> is the cell of the actor's tooling plan (A39, A30); <c>QualityProgramme</c> is the programme of the policy with its
-/// engineers granted (A41). Two inputs have no rule behind them yet and say so with a constant: <c>LicenceShare</c> and <c>AlloyDeficit</c>
-/// (events, T6d): until that task lands there is no licence and no disruption.
+/// engineers granted (A41). <c>LicenceShare</c> and <c>AlloyDeficit</c> are the state of the events of T6d in the policy columns (spec A43); <c>EffortMultiplier</c> is <c>mult_P</c> (A37).
 /// </summary>
 internal sealed class IndustryInputsAdapter(SliceWorld world) : IIndustryInputs
 {
@@ -74,7 +73,37 @@ internal sealed class IndustryInputsAdapter(SliceWorld world) : IIndustryInputs
     public bool Planned(int siteRow, int processRow, long month) =>
         world.Products.Planned(world.IndustryLayout.SiteOwner[siteRow], world.IndustryLayout.Number[processRow]);
 
-    public Fx6 LicenceShare(int siteRow, int processRow, long month) => Fx6.Zero;
+    // Spec A43.1, contract §5: l_lic while the owner's licence is active, the process is in its mask and known to the owner in the snapshot; else 0.
+    public Fx6 LicenceShare(int siteRow, int processRow, long month)
+    {
+        int actor = world.IndustryLayout.SiteOwner[siteRow];
+        int number = world.IndustryLayout.Number[processRow];
+        return world.Policy.LicenceGen(actor) > 0 && LicenceRules.Has(world.Policy.LicenceMask(actor), number) && world.LicenceActive(actor)
+            && KnowsProcess(siteRow, processRow, month) ? world.PolicyParameters.LicenceProcessShare : Fx6.Zero;
+    }
+
+    // mult_P (spec A37, DEBT-0019): P1 doubles the weight of the processes of the project of its last Requirement (the newest platform generation among
+    // its live projects), P2 those of the line N (the newest platform generation among its series; with one line, that line), P3 does not. T6D_OFF has none.
+    public Fx6 EffortMultiplier(int actorRow, int processRow, long month)
+    {
+        if (world.PolicyParameters.T6dOff)
+            return Fx6.One;
+        PolicyProfile profile = world.Policy.Profile(actorRow);
+        if (profile == PolicyProfile.Adaptive)
+            return Fx6.One;
+        int best = -1;
+        for (int d = 0; d < world.ProductsLayout.Designs; d++)
+        {
+            DesignStage stage = world.Products.Stage(actorRow, d);
+            bool counts = profile == PolicyProfile.Mass
+                ? stage == DesignStage.Series
+                : stage is DesignStage.Project or DesignStage.Prototype or DesignStage.Series or DesignStage.InService;
+            // A tie of the platform generation goes to the larger design id (the later in the loop).
+            if (counts && (best < 0 || world.Products.PlatformGen(actorRow, d) >= world.Products.PlatformGen(actorRow, best)))
+                best = d;
+        }
+        return best >= 0 && Array.IndexOf(world.Products.PrcSet(actorRow, best), world.IndustryLayout.Number[processRow]) >= 0 ? Fx6.FromInt(2) : Fx6.One;
+    }
 
     // Spec §1.1: engineer_base = ⌊E_ref·budget_index⌋, skilled = 10·engineer_base, the base follows the budget; trophy engineers are a constant addition.
     public long WorkforceAvailable(int siteRow, int category, long month)
@@ -95,7 +124,7 @@ internal sealed class IndustryInputsAdapter(SliceWorld world) : IIndustryInputs
         return Fx6.FromInt(BudgetMath.FollowBudget(world.Scenario.AlloyCapAtStart(actor).Raw / Fx6.Scale, world.Policy.Budget(actor), b0));
     }
 
-    public Fx6 AlloyDeficit(int siteRow, long month) => Fx6.Zero;
+    public Fx6 AlloyDeficit(int siteRow, long month) => world.Policy.AlloyDeficit(world.IndustryLayout.SiteOwner[siteRow], month);
 
     // Only the L_C control reads it (spec §6.1); this world runs the full capability model.
     public long KnownSince(int siteRow, int processRow, long month) => -1;
