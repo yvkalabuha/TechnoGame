@@ -1,7 +1,7 @@
 ---
 id: TASK-0030
 title: "F17b: передача линии по рабочему выходу годных (удержание r_keep)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -41,4 +41,8 @@ created: 2026-11-04
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
-<!-- Заполняет исполнитель: что сделано, файлы, коммит. -->
+**Сделано (developer, 6a3b291; перенесено Orchestrator).** `LINE_CLOSE` {YPROD по умолчанию, ADMIT}. `y_min(d,t)` = min `AdmittedYield` по `prc_set` (неизвестный PRC = 0). Запуск ниже `y_prod` закрывает только кандидата N; на/выше — всё (#125). Месячное правило 2 закрывает W при двух линиях и `y_min(N) ≥ y_prod`. W работает на `min(r_AI, r_keep)`, `r_keep` = 6,25. Цель учебной серии и L в A42.4 — N. Больше двух линий — `PolicyInvariantException`. Golden не изменились (новых колонок нет). Тесты: Arch 80, Kernel 284 (+1), Core 938, Session 187 (+1).
+**Печать seeds 1…20 (YPROD, p50, окна 48 мес.).** USA 9406 4945 3249 3008 6392 1811 1309 403; GBR 2086 1076 646 593 1534 1649 1218 870; SUN 0 0 0 663 1153 1282 1383 1810; FRA, SWE 0. Сосуществование двух линий (Σ месяцев): USA 3102, GBR 1001, SUN 546. Закрытия по `y_prod`: USA 15 (+12 в пакете запуска). A40 С: 0; О: 31 (недопуск), дефекты 0.
+**Отклонения.** (1) `mult_P` P2 (A37) в коде нет — переключать нечего (DEBT-0019). (2) Нет отдельного юнит-теста A42.4 с L = N. (3) `NoRetire` и `TrainingBudget` идут с ADMIT (тесты старого правила). (4) Удержание действует только при `ProductAi` (иначе менялся Golden60). (5) Печать — в тестах, не в Lab. (6) Тесты «одна линия» → «≤ 2». (7) `LINE_CLOSE` не в манифесте Lab — для T6e2.
+**OPEN.** GBR и SUN сосуществуют до конца без закрытия W (срок не ограничен, §13) — смотреть в EXP T6e2.
+

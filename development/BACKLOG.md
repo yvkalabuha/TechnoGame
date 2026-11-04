@@ -43,7 +43,7 @@
 | [TASK-0027](../development/tasks/TASK-0027-slice-ai-fixes-t6c2.md) | DONE | T6c2: стартовые линии (E1), запуск при допуске (F17), выбор двигателя (#140), why_not W1 | MS-M0 |
 | [TASK-0028](../development/tasks/TASK-0028-slice-fleet-retire-sell.md) | DONE | T-fleet: списание и продажа парка (A42, контракт r6) | MS-M0 |
 | [TASK-0029](../development/tasks/TASK-0029-slice-start-rhms-d2.md) | DONE | D2: правило старта R-H-MS′, валидатор S-2, переключатель цели оснастки TOOLING_TARGET | MS-M0 |
-| [TASK-0030](../development/tasks/TASK-0030-slice-line-handover-f17b.md) | APPROVED | F17b: передача линии по рабочему выходу годных (удержание r_keep) | MS-M0 |
+| [TASK-0030](../development/tasks/TASK-0030-slice-line-handover-f17b.md) | REVIEW | F17b: передача линии по рабочему выходу годных (удержание r_keep) | MS-M0 |
 
 ## Гипотезы
 
