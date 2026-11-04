@@ -20,6 +20,7 @@ public sealed class ProductsStart
         Array.Fill(Alts, -1);
         Cohort = new Fx6[Stage.Length * layout.Years];
         BureauExp = new Fx6[actors * layout.Bureaus];
+        LineE = new Fx6[Stage.Length];
     }
 
     public ProductsLayout Layout { get; }
@@ -30,12 +31,16 @@ public sealed class ProductsStart
     public Fx6[] Cohort { get; }
     public Fx6[] BureauExp { get; }
 
+    /// <summary><c>line_E(t0)</c> by design slot: the units the start line has built (E1: the fleet it produced), 0 for a design without a line.</summary>
+    public Fx6[] LineE { get; }
+
     /// <summary>
-    /// Start fleets of the scenario (spec §1.1, R-FL): each fleet row of this class becomes the next free design slot (scenario
-    /// order, A32) in stage В (line closed, units in service) with the "superior" alternatives the actor knows at t0 among
-    /// nodes of generations ≤ gen, <c>g_p</c> = gen, and its count goes into the cohort of <c>cohort_year</c>. [Предл.] Start
-    /// designs are mature: no defects (<c>D0</c> = 0), bureau experience 0, the series gate counts as open. A "producible"
-    /// start fleet needs t0 yields and is rejected.
+    /// Start fleets of the scenario (spec §1.1, R-FL; §3.5 A32 v0.15, E1): each fleet row of this class becomes the next free design slot
+    /// (scenario order) with the "superior" alternatives the actor knows at t0 among nodes of generations ≤ gen, <c>g_p</c> = gen, and its
+    /// count goes into the cohort of <c>cohort_year</c>. The project with the largest <c>g_p</c> of the actor (ties: the lower slot) holds
+    /// the actor's one line: stage С, <c>line_E</c> = its fleet (the line built it); any other start project is in stage В. [Предл.] Start
+    /// designs are mature: no defects (<c>D0</c> = 0), bureau experience 0, the series gate counts as open. A "producible" start fleet needs
+    /// t0 yields and is rejected.
     /// </summary>
     public static ProductsStart FromScenario(ScenarioData scenario, NodeTable nodes, ProductClassTable classes, ProductsLayout layout)
     {
@@ -79,6 +84,20 @@ public sealed class ProductsStart
                 start.PlatformGen[d] = gen;
                 alts.CopyTo(start.Alts.AsSpan(d * layout.SlotCount, layout.SlotCount));
                 start.Cohort[d * layout.Years + y] += Fx6.FromInt(scenario.FleetCount[f]);
+            }
+            // E1 (#137): one line per actor, held by the newest start project.
+            int line = -1;
+            for (int slot = 0; slot < layout.Designs; slot++)
+            {
+                int d = a * layout.Designs + slot;
+                if (start.Stage[d] != DesignStage.None && (line < 0 || start.PlatformGen[d] > start.PlatformGen[line]))
+                    line = d;
+            }
+            if (line >= 0)
+            {
+                start.Stage[line] = DesignStage.Series;
+                for (int y = 0; y < layout.Years; y++)
+                    start.LineE[line] += start.Cohort[line * layout.Years + y];
             }
         }
         return start;

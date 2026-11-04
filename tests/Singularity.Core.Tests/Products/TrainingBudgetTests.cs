@@ -11,7 +11,7 @@ public class TrainingBudgetTests
 
     private static ProductsHarness Run(Func<int, int, long, Fx6> training, long budgetRaw = 50_000)
     {
-        var h = new ProductsHarness
+        var h = new ProductsHarness(startLine: false)
         {
             Launch = (a, d, _) => a == Usa && d == G1Sup,
             Rate = (_, _, _) => Fx6.FromInt(50),

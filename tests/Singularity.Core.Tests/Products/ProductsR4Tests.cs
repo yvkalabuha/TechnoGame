@@ -14,7 +14,7 @@ public class ProductsR4Tests
     private const int Gbr = 1;
 
     // GBR knows G2: a superior G2 project in slot 1 (slot 0 is the start fleet).
-    private static ProductsHarness Gb(Func<int, long, IReadOnlyList<DesignCommand>> commands) => new()
+    private static ProductsHarness Gb(Func<int, long, IReadOnlyList<DesignCommand>> commands) => new(startLine: false)
     {
         Knows = (a, n) => a == Gbr && Probe.KnownUpTo(2)(n),
         Commands = commands,

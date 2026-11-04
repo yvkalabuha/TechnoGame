@@ -76,6 +76,15 @@ public sealed class ProductsSystem : ITickSystem
         }
         parameters.Validate();
         ValidatePsi(layout, parameters);
+        // E1 (spec A32): one start line per actor.
+        for (int a = 0; a < start.Actors; a++)
+        {
+            int lines = 0;
+            for (int d = 0; d < layout.Designs; d++)
+                lines += start.Stage[a * layout.Designs + d] == DesignStage.Series ? 1 : 0;
+            if (lines > 1)
+                throw new ArgumentException($"Actor row {a} has {lines} start lines; the scenario may start one (spec A32, E1).", nameof(start));
+        }
         if (mode == ProductsMode.CanonicalLp && parameters.LpTDesign.Length != layout.Generations)
             throw new ArgumentException("L_P needs T_design and ρ for every generation.", nameof(parameters));
         _l = layout;
@@ -185,9 +194,9 @@ public sealed class ProductsSystem : ITickSystem
             for (int a = 0; a < rows; a++)
                 ints[a] = start.Stage[a * _d + d] == DesignStage.None ? 0 : 1;
             _gateOpened[d].Load(ints);
-            // built_any: the start fleets (stage В) were built; a line never started has not (contract §3.1, r4).
+            // built_any: the start fleets (the line of stage С, the closed ones of stage В) were built; a line never started has not (contract §3.1, r4).
             for (int a = 0; a < rows; a++)
-                ints[a] = start.Stage[a * _d + d] == DesignStage.InService ? 1 : 0;
+                ints[a] = start.Stage[a * _d + d] is DesignStage.InService or DesignStage.Series ? 1 : 0;
             _built[d].Load(ints);
             Array.Fill(ints, -1);
             _bureauOf[d].Load(ints);
@@ -205,6 +214,9 @@ public sealed class ProductsSystem : ITickSystem
                     longs[a] = start.Cohort[(a * _d + d) * _y + y].Raw;
                 _cohort[d * _y + y].Load(longs);
             }
+            for (int a = 0; a < rows; a++)
+                longs[a] = start.LineE[a * _d + d].Raw;
+            _lineE[d].Load(longs);
         }
         for (int b = 0; b < _b; b++)
         {

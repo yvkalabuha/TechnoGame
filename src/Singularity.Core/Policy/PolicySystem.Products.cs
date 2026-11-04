@@ -96,6 +96,17 @@ public sealed partial class PolicySystem
     /// <summary>Times a <c>Requirement</c> for the generation was repeated after a project of it was given up (spec A40); at most 1.</summary>
     public int Repeats(int actor, int generation) => _rep[generation - 1].Current[actor];
 
+    /// <summary>
+    /// Class of a stage-О give-up (spec A40 v0.15) for the print: <see cref="GiveUpClass.Processes"/> if in month <paramref name="month"/> the gate and the
+    /// doctrine condition hold and only <c>admitted</c> is false, else <see cref="GiveUpClass.Defects"/>. A pure function of the snapshot.
+    /// </summary>
+    public GiveUpClass ClassifyGiveUp(int actorRow, int design, long month)
+    {
+        PolicyDesign x = _prod!.Design(actorRow, design, month);
+        Fx6 limit = _pp.LaunchShare[(int)Profile(actorRow)] * _prod.DRef;
+        return x.GateOpen && x.Hidden <= limit && !_prod.Admitted(actorRow, design, month) ? GiveUpClass.Processes : GiveUpClass.Defects;
+    }
+
     // ---- decisions
 
     private sealed class Decisions(int generations)
@@ -239,7 +250,8 @@ public sealed partial class PolicySystem
             gaveUpNow[x.PlatformGen] = true;
         }
 
-        // Launch (A35, A41): the first project in О by id whose gate is open and whose hidden defects are within k_P·D_ref; one line per actor.
+        // Launch (A35, A41): the first project in О by id whose gate is open, whose hidden defects are within k_P·D_ref and (F17, #138) whose
+        // processes are admitted at the site; one line per actor. A project that waits keeps the working line: nothing is closed without a launch.
         bool startPending = false;
         for (int d = 0; d < _designs; d++)
             startPending |= _startStamp[d].Current[row] == Stamp(t);
@@ -251,7 +263,8 @@ public sealed partial class PolicySystem
                 PolicyDesign x = designs[d];
                 // A project cancelled this month or whose cancel is still pending does not launch.
                 if (x.Stage != DesignStage.Prototype || !x.GateOpen || x.Hidden > limit || cancelNow[d]
-                    || Pending(_dsnStamp, row, t, k => _dsnKind[k].Current[row] == 3 && _dsnTarget[k].Current[row] == d))
+                    || Pending(_dsnStamp, row, t, k => _dsnKind[k].Current[row] == 3 && _dsnTarget[k].Current[row] == d)
+                    || !prod.Admitted(row, d, t))
                     continue;
                 Fx6 procurement = Shares(row).Procurement * Budget(row);
                 dec.Starts.Add((d, PolicyRules.LineRate(procurement, x.UnitCostFloor)));

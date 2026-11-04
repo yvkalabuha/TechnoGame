@@ -21,6 +21,8 @@ public class ProductAiSessionTests(ITestOutputHelper output)
         public int OFirings, CFirings;
         public readonly int[] OByActor, CByActor, CultureByActor, OtherByActor;
         public int Forced, MultiLine, BadClose, CancelledDesigns, SeenSeries;
+        /// <summary>Stage-О give-ups by class (A40 v0.15) and launches of the AI whose processes were not admitted in the decision snapshot (F17: 0).</summary>
+        public int ODefects, OProcesses, StartsNotAdmitted;
         public readonly List<string> Notes = new();
 
         public Observed(int actors)
@@ -44,6 +46,8 @@ public class ProductAiSessionTests(ITestOutputHelper output)
         var culture = new List<bool>[n, designs];
         var idleBefore = new int[n, designs];
         var stageBefore = new DesignStage[n, designs];
+        var admittedBefore = new bool[n, designs];
+        var classBefore = new GiveUpClass[n, designs];
         for (long t = 0; t < months; t++)
         {
             beforeStep?.Invoke(s, t);
@@ -53,6 +57,11 @@ public class ProductAiSessionTests(ITestOutputHelper output)
                 {
                     idleBefore[a, d] = w.Products.IdleMonths(a, d);
                     stageBefore[a, d] = w.Products.Stage(a, d);
+                    if (stageBefore[a, d] == DesignStage.Prototype)
+                    {
+                        admittedBefore[a, d] = new PolicyProductsAdapter(w).Admitted(a, d, t);
+                        classBefore[a, d] = w.Policy.ClassifyGiveUp(a, d, t);
+                    }
                     if (stageBefore[a, d] != DesignStage.Series)
                         continue;
                     culture[a, d] ??= new List<bool>();
@@ -77,6 +86,8 @@ public class ProductAiSessionTests(ITestOutputHelper output)
                     anyStart |= w.Policy.AiStart(a, d, t + 1) is not null;
                     if (w.Policy.AiStart(a, d, t + 1) is not null && w.Products.SeriesForced(a, d))
                         o.Forced++;
+                    if (w.Policy.AiStart(a, d, t + 1) is not null && !admittedBefore[a, d])
+                        o.StartsNotAdmitted++;
                 }
                 foreach (DesignCommand c in w.Policy.AiDesignCommands(a, t + 1))
                 {
@@ -84,6 +95,10 @@ public class ProductAiSessionTests(ITestOutputHelper output)
                         continue;
                     o.OFirings++;
                     o.OByActor[a]++;
+                    if (classBefore[a, c.Target] == GiveUpClass.Processes)
+                        o.OProcesses++;
+                    else
+                        o.ODefects++;
                     // (6): the AI cancels only a project in О for T_ab months or more.
                     if (stageBefore[a, c.Target] != DesignStage.Prototype || t - w.Products.StageOMonth(a, c.Target) < TAb)
                         o.BadClose++;
@@ -131,8 +146,10 @@ public class ProductAiSessionTests(ITestOutputHelper output)
             Assert.Equal(0, o.Forced);                                   // the AI never forces a series
             Assert.Equal(0, o.MultiLine);                                // one line per actor (#125)
             Assert.Equal(0, o.BadClose);                                 // invariants (6) and (11)
-            Assert.Equal(0, o.OFirings);                                 // at the numbers of §8.1 no project in О is given up (P0, A40)
+            Assert.Equal(0, o.ODefects);                                 // L-O0 (P0, A40 v0.15): no give-up of the class «defects» in main
+            Assert.Equal(0, o.StartsNotAdmitted);                        // F17: every AI start has admitted = true in the decision snapshot
             total.OFirings += o.OFirings;
+            total.OProcesses += o.OProcesses;
             total.CFirings += o.CFirings;
             for (int a = 0; a < 5; a++)
             {
@@ -147,7 +164,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
         output.WriteLine($"{"actor",-6}{"branch О",10}{"branch С",10}{"cause: culture",16}{"cause: other",14}");
         for (int a = 0; a < 5; a++)
             output.WriteLine($"{ids[a],-6}{total.OByActor[a],10}{total.CByActor[a],10}{total.CultureByActor[a],16}{total.OtherByActor[a],14}");
-        output.WriteLine($"total  {total.OFirings,9} {total.CFirings,9}");
+        output.WriteLine($"total  {total.OFirings,9} {total.CFirings,9}; branch О by class: processes {total.OProcesses}, defects {total.ODefects}");
         foreach (string note in total.Notes)
             output.WriteLine(note);
         // L-C0 (P0): a firing of branch С whose cause is not the culture is a defect of the implementation or of the estimate L-C3.
@@ -336,5 +353,6 @@ public class ProductAiSessionTests(ITestOutputHelper output)
 
     // Seed 7, the AI on, 150 months (through month 149). First recorded in T6c; re-recorded in D1 (c5867d91… before), reason: D1 — the start-data
     // package of spec v0.14 (new start knowledge and culture cells, the hot_steel_g0 substitute and the engine descent of the presets).
-    private const string Golden150 = "e778e8cc1820cdbe8b460c4aee08dffa1611cbc52d6b934a022b0efb7445bc7b";
+    // Re-recorded in T6c2 (e778e8cc… before), reason: T6c2 — E1 start line from tick 0, F17 launch at admitted, #140 engine choice, W1.
+    private const string Golden150 = "513238aa3dc124c13669cec76fae5ed530e60381bfacb1989c32caba52cb9c07";
 }

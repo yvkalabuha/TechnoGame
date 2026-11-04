@@ -168,7 +168,7 @@ public sealed partial class WhyNotAnalyzer
         int app = _pl.GenApp[gen - 1];
         if (!Knows(actor, app))
         {
-            AddNearestMissing(links, actor, [_kg.RowOf(app)], WhyNotCause.MissingNode, month);
+            AddNearestMissing(links, actor, _kg.RowOf(app), WhyNotCause.MissingNode, month);
             return;
         }
         EngineGenLimitLinks(links, actor);

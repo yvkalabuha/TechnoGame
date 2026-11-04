@@ -30,6 +30,12 @@ internal sealed class PolicyProductsAdapter(SliceWorld world) : IPolicyProducts
         return row >= 0 && world.Knowledge.IsKnown(actorRow, row);
     }
 
+    public bool Admitted(int actorRow, int design, long month)
+    {
+        int[] prc = world.Products.PrcSet(actorRow, design);
+        return world.Industry.Profile(actorRow, DesignRules.Items(world.ProductsLayout, prc), month).Admitted;
+    }
+
     public Fx6 AdmittedYield(int actorRow, int processNumber, long month) => world.ProductsInputs.AdmittedYield(actorRow, processNumber, month);
 
     public Fx6 AlloySupply(int actorRow, long month) => world.Industry.Alloy(actorRow, month).Supply;

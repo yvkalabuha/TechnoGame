@@ -90,10 +90,21 @@ internal sealed class SliceWorld
         BudgetAtStart = budget0;
         // The liveness of the give-up rule (spec A40, L-C1…L-C3) is a property of the manifest, not of a seed: checked on the scenario before START_PERT.
         PolicyLiveness.Validate(pp, PolicyParameters, ProductsLayout, baseScenario.BudgetIndex.AsSpan(), baseScenario.GrowthPa.AsSpan());
+        // L-C3a (spec A40, E1): the upkeep of the start fleet is below the procurement item at t0.
+        var startUpkeep = new Fx6[scenario.ActorCount];
+        for (int a = 0; a < startUpkeep.Length; a++)
+        {
+            for (int d = 0; d < ProductsLayout.Designs; d++)
+            {
+                if (Products.Stage(a, d) is DesignStage.Series or DesignStage.InService)
+                    startUpkeep[a] += Products.Upkeep(a, d) * Products.InService(a, d);
+            }
+        }
+        PolicyLiveness.ValidateStartUpkeep(PolicyParameters, startUpkeep, budget0.AsSpan());
         Policy = new PolicySystem(Table, PolicyParameters, actorNumber, budget0, growth, Streams.Ai, new PolicyInputsAdapter(this),
             Industry.CreateMailbox(chunks, Cadence.Monthly), QualityRequester, forced,
             products: config.ProductAi ? new PolicyProductsAdapter(this) : null, designs: ProductsLayout.Designs,
-            generations: ProductsLayout.Generations, derive: config.Derive);
+            generations: ProductsLayout.Generations, derive: config.Derive, startLines: StartLines(pStart));
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs);
         Limits = new CommandLimits(scenario.ActorCount, ProductsLayout.SlotCount, ProductsLayout.Designs,
             [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)]);
@@ -104,6 +115,21 @@ internal sealed class SliceWorld
 
         Policy.Initialize();
         Runner = new TickRunner(Table, config.Seed, [Knowledge, Industry, Products, Policy], config.ChunkSize, config.Threads, Calendar);
+    }
+
+    // E1: the designs that start in stage С (one per actor at most).
+    private static ImmutableArray<(int Row, int Design)> StartLines(ProductsStart start)
+    {
+        var lines = new List<(int, int)>();
+        for (int a = 0; a < start.Actors; a++)
+        {
+            for (int d = 0; d < start.Layout.Designs; d++)
+            {
+                if (start.Stage[a * start.Layout.Designs + d] == DesignStage.Series)
+                    lines.Add((a, d));
+            }
+        }
+        return [.. lines];
     }
 
     public SliceRunConfig Config { get; }

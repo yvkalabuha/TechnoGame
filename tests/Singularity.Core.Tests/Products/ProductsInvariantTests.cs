@@ -60,7 +60,8 @@ public class ProductsInvariantTests
     internal static ProductsHarness Make(string script, int threads, int chunkSize, int[]? perm, ProductsMode mode = ProductsMode.Full,
         ProductsParams? parameters = null)
     {
-        var h = new ProductsHarness(threads, chunkSize, mode, parameters, perm);
+        // The default run is the pre-E1 one: its start fleets are in stage В and are written off.
+        var h = new ProductsHarness(threads, chunkSize, mode, parameters, perm, startLine: script == "default" ? false : null);
         switch (script)
         {
             case "busy":

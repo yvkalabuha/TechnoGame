@@ -32,6 +32,7 @@ public sealed partial class PolicySystem : ITickSystem
     private readonly ImmutableArray<int> _actorNumber;
     private readonly ImmutableArray<Fx6> _budget0, _growth;
     private readonly ImmutableArray<int> _forcedProfile;
+    private readonly ImmutableArray<(int Row, int Design)> _startLines;
     private readonly CounterRng _ai;
     private readonly IPolicyInputs _inputs;
     private readonly IndustryMailbox _mailbox;
@@ -50,10 +51,11 @@ public sealed partial class PolicySystem : ITickSystem
     /// <param name="mailbox">Mailbox of the capability layer (<c>reserve_workforce</c> of the quality programme).</param>
     /// <param name="qpRequesterId">Requester id of the programme, above every bureau id (spec A41).</param>
     /// <param name="forcedProfile">Profile by row, or −1 to draw it from the stream (factorial cells, §6.6); default all drawn.</param>
+    /// <param name="startLines">(row, design) of the start lines of the scenario (E1): their rate is <c>r_AI</c> from tick 0.</param>
     public PolicySystem(Table table, PolicyParams parameters, ImmutableArray<int> actorNumber, ImmutableArray<Fx6> budget0,
         ImmutableArray<Fx6> growthPerYear, CounterRng ai, IPolicyInputs inputs, IndustryMailbox mailbox, int qpRequesterId,
         ImmutableArray<int> forcedProfile = default, int systemId = DefaultSystemId, IPolicyProducts? products = null, int designs = 0,
-        int generations = 0, bool derive = false)
+        int generations = 0, bool derive = false, ImmutableArray<(int Row, int Design)> startLines = default)
     {
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(mailbox);
@@ -75,6 +77,7 @@ public sealed partial class PolicySystem : ITickSystem
         _budget0 = budget0;
         _growth = growthPerYear;
         _forcedProfile = forcedProfile;
+        _startLines = startLines.IsDefault ? [] : startLines;
         _ai = ai;
         _inputs = inputs;
         _mailbox = mailbox;
@@ -169,6 +172,17 @@ public sealed partial class PolicySystem : ITickSystem
         _train.Load(train);
         for (int k = 0; k < shares.Length; k++)
             _share[k].Load(shares[k]);
+        // E1 (spec A32, #137): the start line of a scenario runs at r_AI from tick 0, for an AI actor and for a player's actor alike.
+        for (int d = 0; d < _line.Length; d++)
+        {
+            var line = new int[n];
+            foreach ((int r, int design) in _startLines)
+            {
+                if (design == d)
+                    line[r] = 1;
+            }
+            _line[d].Load(line);
+        }
         InitializeProducts();
     }
 

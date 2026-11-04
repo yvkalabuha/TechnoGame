@@ -312,7 +312,8 @@ public class ProductsDeterminismAuditTests
 
         public bool CloseLine(int actorRow, int design, long month) => StandInClose(run.PLayout, run.Products, actorRow, design);
 
-        public Fx6? LineRate(int actorRow, int design, long month) => null;
+        // The start line (E1) runs at the same 30 a month as a launched series.
+        public Fx6? LineRate(int actorRow, int design, long month) => Fx6.FromInt(30);
         public Fx6 TrainingBudget(int actorRow, int design, long month) => Fx6.Zero;
 
         public long AppKnownSince(int actorRow, int gen, long month) => -1;

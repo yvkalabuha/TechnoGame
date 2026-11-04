@@ -24,6 +24,7 @@ public class ProductAiTests
         public Func<int, Fx6> Yield = _ => Fx6.One;
         public Fx6 Supply = Fx6.FromInt(1_000_000);
         public Func<int[], Fx6> Value = _ => Fx6.One;
+        public Func<int, bool> AdmittedOf = _ => true;
 
         public ProductsLayout Layout => Probe;
         public Fx6 DRef => Fx6.FromInt(740);
@@ -32,6 +33,7 @@ public class ProductAiTests
         PolicyDesign IPolicyProducts.Design(int actorRow, int design, long month) => Design[design];
         public int[] Alternatives(int actorRow, int design) => Alts[design] ?? [.. Enumerable.Repeat(0, Probe.SlotCount)];
         public bool Knows(int actorRow, int nodeNumber, long month) => Probe.KnownUpTo(KnownGen)(nodeNumber);
+        public bool Admitted(int actorRow, int design, long month) => AdmittedOf(design);
         public Fx6 AdmittedYield(int actorRow, int processNumber, long month) => Knows(0, processNumber, month) ? Yield(processNumber) : Fx6.Zero;
         public Fx6 AlloySupply(int actorRow, long month) => Supply;
         public int FreeBureaus(int actorRow) => Free;
@@ -234,6 +236,110 @@ public class ProductAiTests
         rig.Month(0);
         Assert.Equal(PolicyRules.LineRate(b, Fx6.FromInt(1000)), rig.Policy.AiStart(0, 1, 1));
         Assert.Equal(Fx6.FromRaw(400_000) / Fx6.FromInt(1000), PolicyRules.LineRate(Fx6.FromRaw(400_000), Fx6.FromInt(1000)));
+    }
+
+    // ---- F17 (#138): the launch waits for admitted; E1: the start line
+
+    [Fact]
+    public void F17_AProjectInOWaitsForAdmittedProcesses_TheWorkingLineStaysOpen_AndLaunchesTogetherWithTheCloseWhenAdmitted()
+    {
+        var rig = new Rig(PolicyProfile.Mass, s =>
+        {
+            s.Design[0] = Series(1, 0, true);
+            s.Design[1] = Prototype(5, 2, Fx6.FromInt(100), gate: true);
+            s.AdmittedOf = d => d != 1;
+        });
+        for (long t = 0; t < 5; t++)
+        {
+            rig.Month(t);
+            Assert.Null(rig.Policy.AiStart(0, 1, t + 1));
+            Assert.False(rig.Policy.AiClose(0, 0, t + 1));
+        }
+        rig.S.AdmittedOf = _ => true;
+        rig.Month(5);
+        Assert.NotNull(rig.Policy.AiStart(0, 1, 6));
+        Assert.True(rig.Policy.AiClose(0, 0, 6));                        // one bundle: start of the new line, close of the previous one
+    }
+
+    [Fact]
+    public void F17_TheWaitIsLimitedOnlyByA40_CancelAtExactlyTAb_AndTheClassIsReported()
+    {
+        var rig = new Rig(PolicyProfile.Quality, s =>
+        {
+            s.KnownGen = 2;
+            s.Design[0] = Series(1, 0, true);
+            s.Design[1] = Prototype(10, 2, Fx6.FromInt(100), gate: true);
+            s.AdmittedOf = _ => false;
+        });
+        for (long t = 11; t < 70; t++)
+        {
+            rig.Month(t);
+            Assert.DoesNotContain(rig.Commands(t + 1), c => c.Kind == DesignCommandKind.Cancel);
+        }
+        Assert.Equal(GiveUpClass.Processes, rig.Policy.ClassifyGiveUp(0, 1, 70));
+        rig.Month(70);                                                   // t − stage_o_month = 60
+        Assert.Single(rig.Commands(71), c => c.Kind == DesignCommandKind.Cancel);
+        // Stuck defects instead of processes: the other class.
+        var defects = new Rig(PolicyProfile.Quality, s =>
+        {
+            s.Design[0] = Series(1, 0, true);
+            s.Design[1] = Prototype(10, 2, Fx6.FromInt(700), gate: true);
+        });
+        Assert.Equal(GiveUpClass.Defects, defects.Policy.ClassifyGiveUp(0, 1, 70));
+        // A gate that is closed is a defects case even when the processes are not admitted.
+        var closed = new Rig(PolicyProfile.Quality, s =>
+        {
+            s.Design[1] = Prototype(10, 2, Fx6.FromInt(100), gate: false);
+            s.AdmittedOf = _ => false;
+        });
+        Assert.Equal(GiveUpClass.Defects, closed.Policy.ClassifyGiveUp(0, 1, 70));
+    }
+
+    [Fact]
+    public void F17_SeveralWaitingProjects_EachLaunchesByItsOwnCondition_InDesignIdOrder_OneLineByTheBundle()
+    {
+        var rig = new Rig(PolicyProfile.Mass, s =>
+        {
+            s.Design[0] = Series(1, 0, true);
+            s.Design[1] = Prototype(5, 2, Fx6.FromInt(100), gate: true);
+            s.Design[2] = Prototype(5, 2, Fx6.FromInt(100), gate: true);
+            s.AdmittedOf = d => d == 2;
+        });
+        rig.Month(0);
+        Assert.Null(rig.Policy.AiStart(0, 1, 1));
+        Assert.NotNull(rig.Policy.AiStart(0, 2, 1));
+        Assert.True(rig.Policy.AiClose(0, 0, 1));
+    }
+
+    [Fact]
+    public void E1_NoRequirementForG1_WhileTheStartLineLives_AndG2StartClosesTheStartLine()
+    {
+        var rig = new Rig(PolicyProfile.Quality, s =>
+        {
+            s.KnownGen = 1;
+            s.Design[0] = Series(1, 0, true);
+        });
+        rig.Month(12);
+        Assert.DoesNotContain(rig.Commands(13), c => c.Kind == DesignCommandKind.Compose);
+        // G2 becomes known and its project is launched: the start line (built_any) is closed, not withdrawn by the policy.
+        rig.S.KnownGen = 2;
+        rig.Month(24);
+        Assert.Contains(rig.Commands(25), c => c.Kind == DesignCommandKind.Compose && c.Target == 2);
+        rig.S.Design[1] = Prototype(5, 2, Fx6.FromInt(100), gate: true);
+        rig.Month(25);
+        Assert.NotNull(rig.Policy.AiStart(0, 1, 26));
+        Assert.True(rig.Policy.AiClose(0, 0, 26));
+    }
+
+    [Fact]
+    public void E1_BranchC_ClosesTheStartLine_AfterTAbMonthsWithoutOutput()
+    {
+        var rig = new Rig(PolicyProfile.Mass, s => s.Design[0] = Series(1, 60, true));
+        rig.Month(0);
+        Assert.True(rig.Policy.AiClose(0, 0, 1));
+        var young = new Rig(PolicyProfile.Mass, s => s.Design[0] = Series(1, 59, true));
+        young.Month(0);
+        Assert.False(young.Policy.AiClose(0, 0, 1));
     }
 
     // ---- presets

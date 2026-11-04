@@ -131,10 +131,10 @@ public static class DesignRules
     /// <summary>
     /// «producible» (COMPONENT_SELECTION §6, spec §1.4, A32): in every slot the highest-rank available alternative whose
     /// bottleneck process yields ≥ <paramref name="yProd"/> on the own site (an empty <c>prc_set</c> passes) and, in the alloy slot,
-    /// that is <c>alloy_free</c> or satisfies <paramref name="alloyOk"/> (null: always); none — the lightest available one (the airframe not below the
+    /// that is <c>alloy_free</c> or satisfies <paramref name="alloyOk"/> (null: always); none — the lightest available one (in the engine slot, #140: the newest one; the airframe not below the
     /// platform threshold of <paramref name="targetGen"/>). A substitute takes part in the main rule; the lightest-one fallback and the
-    /// lightening below skip it when the slot has a non-substitute alternative (spec v0.14 §1.4). The engine is chosen by the same rule and,
-    /// if some other slot then has no alternative (<c>max_eng_gen</c>), the next lower engine is tried. If the <c>prc_set</c> then equals the
+    /// lightening below skip it when the slot has a non-substitute alternative (spec v0.14 §1.4). The engine is chosen by the same rule (none passes: the newest) and,
+    /// if some other slot then has no alternative (<c>max_eng_gen</c>), the next lower engine is tried (spec v0.15 §1.4, #140). If the <c>prc_set</c> then equals the
     /// superior one, the non-base slot with the highest tier (ties by lighten order, F-PC2) that has a lower admissible alternative takes the next
     /// lower one; if none can, the preset equals «superior» (F-PC3) and the result is false. With <paramref name="admitted"/> only alternatives
     /// it accepts are candidates and a slot without one makes the result false; there is no «superior» twin to differ from
@@ -151,18 +151,20 @@ public static class DesignRules
         bool Passes(int s, int a) => BottleneckYield(l, a, yieldOf) >= yProd
             && (s != l.AlloySlot || l.AltAlloyFree[a] || (alloyOk?.Invoke(a) ?? true));
 
-        // The engine by the slot rule, then the lower ones while the other slots cannot be filled.
-        int preferred = -1, lowestEngine = -1;
+        // The engine by the slot rule (#140: when none passes y_prod the newest one, not the lightest), then the lower ones only while
+        // the other slots cannot be filled (availability only: yield, alloy_ok and FV take no part in the step down).
+        int preferred = -1, newestEngine = -1;
         for (int a = l.AltStart[l.BaseSlot + 1] - 1; a >= l.AltStart[l.BaseSlot]; a--)
         {
             if (!Candidate(l.BaseSlot, a, a))
                 continue;
-            lowestEngine = a;
+            if (newestEngine < 0)
+                newestEngine = a;
             if (preferred < 0 && Passes(l.BaseSlot, a))
                 preferred = a;
         }
         if (preferred < 0)
-            preferred = lowestEngine;
+            preferred = newestEngine;
         bool built = false;
         for (int e = preferred; e >= l.AltStart[l.BaseSlot] && !built; e--)
         {

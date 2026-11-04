@@ -17,10 +17,13 @@ internal sealed class ProductsHarness
     /// <param name="years">Cohort years of the layout (default <see cref="ProductTestData.Years"/>).</param>
     public ProductsHarness(int threads = 1, int chunkSize = 1, ProductsMode mode = ProductsMode.Full, ProductsParams? parameters = null,
         int[]? actorPerm = null, int years = Years, int? maxDesigns = null, Action<Table>? corruptInMerge = null,
-        Func<ProductsHarness, Table, ITickSystem[]>? extraSystems = null)
+        Func<ProductsHarness, Table, ITickSystem[]>? extraSystems = null, bool? startLine = null)
     {
         Layout = MakeLayout(out _, years, maxDesigns ?? Scenario.MaxDesigns);
         ProductsStart baseStart = ProductsStart.FromScenario(Scenario, CoreData.Nodes, CoreData.ProductClasses, Layout);
+        // startLine = false: the pre-E1 state (start fleets in stage В, no line), for tests of the stage-В rules; the L_P control has no start line.
+        if (!(startLine ?? mode != ProductsMode.CanonicalLp))
+            baseStart = WithoutStartLines(baseStart);
         ActorOf = actorPerm ?? [.. Enumerable.Range(0, Scenario.ActorCount)];
         Start = actorPerm is null ? baseStart : Permute(baseStart, ActorOf);
         Table = new Table(Scenario.ActorCount);
@@ -101,6 +104,19 @@ internal sealed class ProductsHarness
 
     public string Hash() => StateHash.ComputeHex(Table, ProductsSystem.LayoutVersion, Runner.Tick);
 
+    private static ProductsStart WithoutStartLines(ProductsStart b)
+    {
+        for (int i = 0; i < b.Stage.Length; i++)
+        {
+            if (b.Stage[i] == DesignStage.Series)
+            {
+                b.Stage[i] = DesignStage.InService;
+                b.LineE[i] = Fx6.Zero;
+            }
+        }
+        return b;
+    }
+
     private static ProductsStart Permute(ProductsStart b, int[] perm)
     {
         ProductsLayout l = b.Layout;
@@ -113,6 +129,7 @@ internal sealed class ProductsHarness
             Array.Copy(b.PlatformGen, a * d, s.PlatformGen, r * d, d);
             Array.Copy(b.Alts, a * d * l.SlotCount, s.Alts, r * d * l.SlotCount, d * l.SlotCount);
             Array.Copy(b.Cohort, a * d * l.Years, s.Cohort, r * d * l.Years, d * l.Years);
+            Array.Copy(b.LineE, a * d, s.LineE, r * d, d);
             Array.Copy(b.BureauExp, a * l.Bureaus, s.BureauExp, r * l.Bureaus, l.Bureaus);
         }
         return s;

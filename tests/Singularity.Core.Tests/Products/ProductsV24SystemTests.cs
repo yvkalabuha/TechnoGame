@@ -15,7 +15,7 @@ public class ProductsV24SystemTests
     private const int Usa = 0, Gbr = 1, Fra = 3;
     private static readonly ProductsParams P = new();
 
-    private static ProductsHarness Gb(int gen, Func<int, long, IReadOnlyList<DesignCommand>> commands, int? maxDesigns = null) => new(maxDesigns: maxDesigns)
+    private static ProductsHarness Gb(int gen, Func<int, long, IReadOnlyList<DesignCommand>> commands, int? maxDesigns = null) => new(maxDesigns: maxDesigns, startLine: false)
     {
         Knows = (a, n) => a == Gbr && Probe.KnownUpTo(gen)(n),
         Commands = commands,
@@ -30,7 +30,7 @@ public class ProductsV24SystemTests
     public void DesignsTakeTheLowestFreeSlot_AndCapacityRejects_T2()
     {
         // max_designs = 1: GBR's start fleet holds the only slot, so every compose is DESIGN_CAPACITY; FRA has a free slot.
-        var h = new ProductsHarness(maxDesigns: 1)
+        var h = new ProductsHarness(startLine: false, maxDesigns: 1)
         {
             Knows = (a, n) => (a == Gbr || a == Fra) && Probe.KnownUpTo(2)(n),
             Commands = (a, t) => a is Gbr or Fra && t == 0 ? [SuperiorG2(Probe)] : [],
@@ -354,7 +354,7 @@ public class ProductsV24SystemTests
     public void UnitCost_UsesProfileMultipliersPerBlock_T6()
     {
         // The airframe PRCs (38, 53, 55) yield 0.5 → U_AF = 2 (control profile); the power-unit PRCs yield 1.
-        var h = new ProductsHarness
+        var h = new ProductsHarness(startLine: false)
         {
             Launch = (a, d, _) => a == Usa && d == 0,
             Rate = (_, _, _) => Fx6.FromInt(5),

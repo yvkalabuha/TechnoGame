@@ -19,7 +19,7 @@ public class ProductsSystemTests
     [Fact]
     public void StartFleets_AreG1SuperiorInService()
     {
-        var h = new ProductsHarness();
+        var h = new ProductsHarness(startLine: false);
         foreach (int a in new[] { Usa, Gbr })
         {
             Assert.Equal(DesignStage.InService, h.Products.Stage(a, G1Sup));
@@ -34,7 +34,7 @@ public class ProductsSystemTests
     [Fact]
     public void Series_FirstMonth_PaysUpkeepFirstThenBuys()
     {
-        var h = new ProductsHarness
+        var h = new ProductsHarness(startLine: false)
         {
             Launch = (a, d, _) => a == Usa && d == G1Sup,
             Rate = (_, _, _) => Fx6.FromInt(50),
@@ -69,7 +69,7 @@ public class ProductsSystemTests
     [Fact]
     public void Series_IsLimitedByMoneyLeftAfterUpkeep()
     {
-        var h = new ProductsHarness
+        var h = new ProductsHarness(startLine: false)
         {
             Launch = (a, d, _) => a == Usa && d == G1Sup,
             Rate = (_, _, _) => Fx6.FromInt(50),
@@ -211,7 +211,7 @@ public class ProductsSystemTests
     {
         // A32: cohort 1945 ages from July 1945 = month −2: written off at month 178 (1960-07); the design is then «снят».
         // «снят» is final in the full model.
-        var h = new ProductsHarness();
+        var h = new ProductsHarness(startLine: false);
         h.RunThroughMonth(177);
         Assert.Equal(Fx6.FromInt(100), h.Products.InService(Usa, G1Sup));
         h.RunThroughMonth(178);

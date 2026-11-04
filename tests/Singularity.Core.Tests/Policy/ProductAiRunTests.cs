@@ -30,10 +30,22 @@ public class ProductAiRunTests
 
         public int[] Alternatives(int a, int d) => h.Products.Alternatives(a, d);
         public bool Knows(int a, int n, long month) => h.Inputs.Knows(a, n, month);
+        public bool Admitted(int a, int d, long month) => h.Inputs.Profile(a, DesignRules.Items(h.Layout, h.Products.PrcSet(a, d)), month).Admitted;
         public Fx6 AdmittedYield(int a, int p, long month) => h.Inputs.AdmittedYield(a, p, month);
         public Fx6 AlloySupply(int a, long month) => h.Inputs.AlloySupply(a, month);
         public int FreeBureaus(int a) => h.Products.FreeBureaus(a);
         public Fx6 CandidateValue(int a, ReadOnlySpan<int> alts, Fx6 budget, long month) => h.Products.CandidateValue(a, alts, budget, month).Value;
+    }
+
+    private static System.Collections.Immutable.ImmutableArray<(int Row, int Design)> StartLines(ProductsStart start)
+    {
+        var lines = new List<(int, int)>();
+        for (int i = 0; i < start.Stage.Length; i++)
+        {
+            if (start.Stage[i] == DesignStage.Series)
+                lines.Add((i / start.Layout.Designs, i % start.Layout.Designs));
+        }
+        return [.. lines];
     }
 
     private sealed class NoInputs : IPolicyInputs
@@ -43,7 +55,7 @@ public class ProductAiRunTests
         public bool SeriesBelowQuality(int actorRow, Fx6 threshold, long month) => false;
     }
 
-    private static (ProductsHarness H, PolicySystem Policy) Stand(ProductsParams parameters)
+    private static (ProductsHarness H, PolicySystem Policy) Stand(ProductsParams parameters, Func<int, int, bool>? knows = null, int knownGen = 2)
     {
         PolicySystem? policy = null;
         var h = new ProductsHarness(parameters: parameters, extraSystems: (hh, table) =>
@@ -52,11 +64,11 @@ public class ProductAiRunTests
             policy = new PolicySystem(table, new PolicyParams() with { FvBudget = Fx6.FromInt(10) }, [.. Enumerable.Range(0, n)],
                 [.. Enumerable.Repeat(Fx6.One, n)], [.. Enumerable.Repeat(Fx6.Zero, n)], new CounterRng(1), new NoInputs(), new IndustryMailbox(TickRunner.ChunkCountFor(n, 1)), 99,
                 [.. Enumerable.Repeat((int)PolicyProfile.Quality, n)], products: new RealProducts(hh), designs: hh.Layout.Designs,
-                generations: hh.Layout.Generations);
+                generations: hh.Layout.Generations, startLines: StartLines(hh.Start));
             return [policy];
         })
         {
-            Knows = (a, nn) => a == Gbr && Probe.KnownUpTo(2)(nn),
+            Knows = knows ?? ((a, nn) => a == Gbr && Probe.KnownUpTo(knownGen)(nn)),
         };
         PolicySystem p = policy!;
         h.Commands = (a, t) => p.AiDesignCommands(a, t);
@@ -131,5 +143,105 @@ public class ProductAiRunTests
         Assert.Equal(DesignStage.Prototype, again.Products.Stage(Gbr, 1));
         again.RunThroughMonth(o + month + 1);
         Assert.Equal(DesignStage.Series, again.Products.Stage(Gbr, 1));
+    }
+
+    // ---- E1 on the real layer
+
+    [Fact]
+    public void E1_StartLine_ProducesFromTickZero_AtTheAiRate()
+    {
+        (ProductsHarness h, PolicySystem policy) = Stand(new ProductsParams(), knownGen: 1);
+        h.RunThroughMonth(0);
+        Assert.Equal(DesignStage.Series, h.Products.Stage(Gbr, 0));
+        Assert.True(policy.AiLine(Gbr, 0));
+        Assert.True(h.Products.Rate(Gbr, 0) > Fx6.Zero);
+        Assert.Equal(0, h.Products.IdleMonths(Gbr, 0));
+    }
+
+    [Fact]
+    public void E1_BranchC_NoProcurementMoneyFor60Months_ClosesTheStartLineToStageВ_NotWithdrawn()
+    {
+        (ProductsHarness h, PolicySystem policy) = Stand(new ProductsParams(), knownGen: 1);
+        h.Budget = (_, _) => Fx6.Zero;
+        long t = 0;
+        for (; t < 60; t++)
+        {
+            h.RunThroughMonth(t);
+            Assert.Equal(DesignStage.Series, h.Products.Stage(Gbr, 0));
+        }
+        Assert.Equal(60, h.Products.IdleMonths(Gbr, 0));
+        h.RunThroughMonth(t++);                                           // decided on the snapshot with idle_c = 60
+        h.RunThroughMonth(t);
+        Assert.Equal(DesignStage.InService, h.Products.Stage(Gbr, 0));
+        Assert.False(h.Products.Cancelled(Gbr, 0));
+        Assert.True(h.Products.BuiltAny(Gbr, 0));
+    }
+
+    // ---- F17 on the real layer
+
+    [Fact]
+    public void F17_AnUnknownProcessOfTheSet_IsNotAdmitted_AndAdmissionFollowsYield()
+    {
+        (ProductsHarness h, PolicySystem policy) = Stand(new ProductsParams(), knownGen: 1);
+        var real = new RealProducts(h);
+        Assert.True(real.Admitted(Gbr, 0, 0));
+        h.Yield = (_, p) => p == 49 ? Fx6.Zero : Fx6.One;
+        Assert.False(real.Admitted(Gbr, 0, 0));
+        h.Yield = (_, _) => Fx6.One;
+        h.Knows = (a, n) => a == Gbr && Probe.KnownUpTo(1)(n) && n != 49;
+        Assert.False(real.Admitted(Gbr, 0, 0));
+    }
+
+    [Fact]
+    public void F17_LaunchMonth_IsTheLaterOfTheDoctrineMonthAndTheMonthOfAdmission_AndTheOldLineWorksMeanwhile()
+    {
+        (ProductsHarness h, PolicySystem policy) = Stand(new ProductsParams());
+        ProductsSystem p = h.Products;
+        long t = 0;
+        while (p.Stage(Gbr, 1) != DesignStage.Prototype)
+            h.RunThroughMonth(t++);
+        int o = p.StageOMonth(Gbr, 1);
+        int doctrine = PolicyLiveness.LaunchMonth(h.Params, p.InitialDefects(Gbr, 1), p.DRef, new PolicyParams().LaunchShare[(int)PolicyProfile.Quality]);
+        // From the entry into О a process of the set is not admitted, long past the doctrine's month.
+        h.Yield = (_, q) => q == 40 ? Fx6.Zero : Fx6.One;
+        long until = o + doctrine + 8;
+        for (; t <= until; t++)
+        {
+            h.RunThroughMonth(t);
+            Assert.Equal(DesignStage.Prototype, p.Stage(Gbr, 1));
+            Assert.Equal(DesignStage.Series, p.Stage(Gbr, 0));              // the working line is not closed
+        }
+        Assert.True(p.Rate(Gbr, 0) > Fx6.Zero);
+        h.Yield = (_, _) => Fx6.One;
+        h.RunThroughMonth(t++);                                             // the first month whose snapshot is admitted: the decision
+        Assert.Equal(DesignStage.Prototype, p.Stage(Gbr, 1));
+        h.RunThroughMonth(t++);
+        Assert.Equal(DesignStage.Series, p.Stage(Gbr, 1));
+        Assert.Equal(DesignStage.InService, p.Stage(Gbr, 0));               // the previous line closed in the same bundle, built_any ⇒ В
+        Assert.False(p.Cancelled(Gbr, 0));
+    }
+
+    [Fact]
+    public void F17_AWaitLongerThanTAb_IsCancelledAtExactlyTheSixtiethMonthOfO_AsTheProcessClass()
+    {
+        (ProductsHarness h, PolicySystem policy) = Stand(new ProductsParams());
+        ProductsSystem p = h.Products;
+        long t = 0;
+        while (p.Stage(Gbr, 1) != DesignStage.Prototype)
+            h.RunThroughMonth(t++);
+        int o = p.StageOMonth(Gbr, 1);
+        h.Yield = (_, q) => q == 40 ? Fx6.Zero : Fx6.One;
+        for (; t < o + 60; t++)
+        {
+            h.RunThroughMonth(t);
+            Assert.Equal(DesignStage.Prototype, p.Stage(Gbr, 1));
+        }
+        Assert.Equal(GiveUpClass.Processes, policy.ClassifyGiveUp(Gbr, 1, t));
+        h.RunThroughMonth(t++);                                             // t − stage_o_month = 60: the decision
+        Assert.Equal(DesignStage.Prototype, p.Stage(Gbr, 1));
+        h.RunThroughMonth(t);
+        Assert.Equal(DesignStage.Withdrawn, p.Stage(Gbr, 1));
+        Assert.True(p.Cancelled(Gbr, 1));
+        Assert.Equal(DesignStage.Series, p.Stage(Gbr, 0));                  // the working line stayed
     }
 }

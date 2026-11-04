@@ -40,8 +40,14 @@ internal sealed class PlayerScript(SliceSession session)
                     g = i;
             }
             bool has = false;
+            // The scenario's start line (E1, stage С, never in О) is not a project the player ordered: the script still orders its own project for
+            // the newest APP, so that the project, launch and line-switch paths stay covered.
             for (int d = 0; d < l.Designs; d++)
-                has |= w.Products.Stage(a, d) is DesignStage.Project or DesignStage.Prototype or DesignStage.Series && w.Products.PlatformGen(a, d) == g;
+            {
+                DesignStage st = w.Products.Stage(a, d);
+                bool own = st == DesignStage.Project || st is DesignStage.Prototype or DesignStage.Series && w.Products.StageOMonth(a, d) >= 0;
+                has |= own && w.Products.PlatformGen(a, d) == g;
+            }
             if (g > 0 && !has)
             {
                 var alts = new int[l.SlotCount];

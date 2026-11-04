@@ -24,8 +24,10 @@ public class LinkedRunTests
     /// driven by the scripted player with ProductAi = false, so the trajectory is the same, only the layout of the state differs).
     /// Re-recorded in D1 (3d5d21be… before), reason: D1 — start-data package of spec v0.14 (SUN knows 58 and has AERO qc 3.50, FRA knows 54, USA/GBR culture
     /// cells, node 58 without 30, the hot_steel_g0 substitute in the hot-section slot and its preset rules).
+    /// Re-recorded in T6c2 (7f7a499c… before), reason: T6c2 — E1: the start fleets of USA/GBR are a line in stage С producing from tick 0 (a scenario rule, so the
+    /// scripted player's run changes too); the script orders its own project beside the start line.
     /// </summary>
-    private const string Golden60 = "7f7a499c12a50ce9d8050660dcdb3827050ff31012aab9e79b930c733d0f9c10";
+    private const string Golden60 = "30a75d4f2a62197394f68fa5784634e880256421a4b96df35ae7a7ab7ac0808c";
 
     private sealed class Run
     {

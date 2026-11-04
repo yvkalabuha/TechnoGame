@@ -29,6 +29,12 @@ public interface IPolicyProducts
 
     bool Knows(int actorRow, int nodeNumber, long month);
 
+    /// <summary>
+    /// <c>admitted(home(a), prc_set(d), t)</c> (contract §4.2, spec A41 F17): every process of the design's <c>prc_set</c> is known to the actor and
+    /// has <c>yield &gt; 0</c> at its site in month t.
+    /// </summary>
+    bool Admitted(int actorRow, int design, long month);
+
     /// <summary><c>yield_p</c> of the actor's site in month t, 0 when the process is unknown (spec §1.4).</summary>
     Fx6 AdmittedYield(int actorRow, int processNumber, long month);
 

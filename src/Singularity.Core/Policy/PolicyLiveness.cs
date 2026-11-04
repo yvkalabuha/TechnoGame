@@ -98,4 +98,25 @@ public static class PolicyLiveness
                 throw new LivenessException("L-C3", $"actor {a}: growth over T_ab months ({factor}) does not cover the fall {before}→{after} of the procurement item.");
         }
     }
+
+    /// <summary>
+    /// L-C3a (spec A40, v0.15, E1): the premise of L-C3 for the start line, <c>need(0) &lt; B_proc(0)</c> for every actor and profile, where
+    /// <c>need(0) = Σ upkeep·count</c> of the start fleet and <c>B_proc(0) = share_P·budget_a(t0)</c>. Throws <see cref="LivenessException"/> <c>L-C3a</c>.
+    /// </summary>
+    /// <param name="startUpkeep"><c>need(0)</c> by actor (0 for an actor without a start fleet).</param>
+    /// <param name="budgetAtStart"><c>budget_a(t0)</c> by actor.</param>
+    public static void ValidateStartUpkeep(PolicyParams policy, ReadOnlySpan<Fx6> startUpkeep, ReadOnlySpan<Fx6> budgetAtStart)
+    {
+        Fx6 share = policy.MassProgrammeShares.Procurement;
+        foreach (BudgetShares s in policy.SharesByProfile)
+        {
+            if (s.Procurement < share)
+                share = s.Procurement;
+        }
+        for (int a = 0; a < startUpkeep.Length; a++)
+        {
+            if (startUpkeep[a] >= share * budgetAtStart[a])
+                throw new LivenessException("L-C3a", $"actor {a}: the upkeep of the start fleet ({startUpkeep[a]}) is not below the procurement item at t0 ({share * budgetAtStart[a]}).");
+        }
+    }
 }
