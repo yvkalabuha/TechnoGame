@@ -51,9 +51,11 @@ internal sealed class IndustryInputsAdapter(SliceWorld world) : IIndustryInputs
     public ToolingPlanResult Plan(int actor, long month, Fx6 restActor)
     {
         ToolingTargetSpec target = world.PolicyParameters.ToolingTarget;
-        Fx6 bCap = world.SharesOf(actor).Capability * world.Policy.Budget(actor);
-        if (target.KCap != Fx6.One)
-            bCap = target.KCap * bCap;
+        Fx6 share = world.SharesOf(actor).Capability, budget = world.Policy.Budget(actor);
+        // k_cap ≠ 1 only in the Lab stress set: one floor over the whole product (spec), so the hash of a default run is untouched.
+        Fx6 bCap = target.KCap == Fx6.One
+            ? share * budget
+            : Fx6.FromRaw((long)((Int128)target.KCap.Raw * share.Raw * budget.Raw / ((Int128)Fx6.Scale * Fx6.Scale)));
         return ToolingPlan.Compute(world.Industry, this, world.PolicyParameters.MKeep, actor, month, restActor, bCap, target);
     }
 

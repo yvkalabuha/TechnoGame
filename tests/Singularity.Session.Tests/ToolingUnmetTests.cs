@@ -63,19 +63,19 @@ public class ToolingUnmetTests
     }
 
     [Fact]
-    public void Column_IsZeroEverywhereWithoutAPlan_AndPass2ofVInfAddsNothing()
+    public void Column_UnderVInf_IsZeroOutsideMech_PassOneOnlyTouchesMech()
     {
         SliceSession s = Run(new SliceRunConfig { Seed = 41, ToolingTarget = ToolingTargetSpec.Parse("VINF") }, 120);
-        // VINF notional money is not a pool shortfall; pass 1 may still fall short, so the column is only checked for sign and for the stand with no plan.
+        // VINF pass 2 is notional money, not a pool shortfall; only pass 1 (A30, MECH cells) can fall short.
         foreach (Column c in s.World.Table.Columns.Where(c => c.Name.StartsWith("ind.unmet.", StringComparison.Ordinal)))
-            Assert.All(((LongColumn)c).Current.ToArray(), v => Assert.True(v >= 0));
+            Assert.All(((LongColumn)c).Current.ToArray(), v => Assert.True(v >= 0 && (v == 0 || c.Name.Contains(".MECH.", StringComparison.Ordinal))));
     }
 
     [Fact]
     public void WhyNot_PoolExhaustedLinks_CarryTheFieldsOfToolingM_AndTheSortOrderIsThatOfToolingM()
     {
         SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 41, Threads = 4 });
-        int exhausted = 0, toolingM = 0;
+        int exhausted = 0;
         for (long t = 0; t < 240; t++)
         {
             s.StepThroughMonth(t);
@@ -102,14 +102,12 @@ public class ToolingUnmetTests
                     }
                     else if (l.Cause == WhyNotCause.ToolingM)
                     {
-                        toolingM++;
                         Assert.True(l.Unmet == Fx6.Zero && l.Cluster == -1 && l.Order == -1);
                     }
                 }
             }
         }
         Assert.True(exhausted > 0, "no link TOOLING_POOL_EXHAUSTED in 240 months of seed 41");
-        Assert.True(toolingM >= 0);
     }
 
     [Fact]
@@ -120,7 +118,7 @@ public class ToolingUnmetTests
         SliceSession whole = SliceTestData.Create(cfg);
         Fx6 b = whole.World.SharesOf(0).Capability * whole.World.Policy.Budget(0);
         Assert.Equal(b, whole.World.IndustryInputs.Plan(0, 0, Fx6.Zero).CapBudget);
-        Assert.Equal(Fx6.FromRaw(500_000) * b, half.World.IndustryInputs.Plan(0, 0, Fx6.Zero).CapBudget);
+        Assert.Equal(Fx6.FromRaw((long)((Int128)500_000 * whole.World.SharesOf(0).Capability.Raw * whole.World.Policy.Budget(0).Raw / 1_000_000_000_000)), half.World.IndustryInputs.Plan(0, 0, Fx6.Zero).CapBudget);
         Assert.NotEqual(Run(cfg, 24).LastHash, Run(cfg with { ToolingTarget = new ToolingTargetSpec { KCap = Fx6.FromRaw(500_000) } }, 24).LastHash);
         string can = Run(cfg, 24).LastHash;
         Assert.Equal(can, Run(cfg with { ToolingTarget = new ToolingTargetSpec { PoolOrder = PoolOrder.Can } }, 24).LastHash);

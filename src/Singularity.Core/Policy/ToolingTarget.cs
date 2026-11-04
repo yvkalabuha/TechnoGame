@@ -116,7 +116,7 @@ public sealed record ToolingTargetSpec
         if (KCap <= Fx6.Zero || KCap > Fx6.One)
             throw new ArgumentException($"k_cap {KCap} is not in (0; 1].");
         if (PoolOrder == PoolOrder.Sev && Variant != ToolingTarget.V5 && Variant != ToolingTarget.VInf)
-            throw new ArgumentException("POOL_ORDER SEV is defined for TOOLING_TARGET V5 only (severity of the participating bottleneck).");
+            throw new ArgumentException("POOL_ORDER SEV is defined for TOOLING_TARGET V5 (VINF: no effect), not for the others (severity of the participating bottleneck).");
         switch (Variant)
         {
             case ToolingTarget.V0 or ToolingTarget.V2 or ToolingTarget.VInf:
