@@ -1,7 +1,7 @@
 ---
 id: TASK-0028
 title: "T-fleet: списание и продажа парка (A42, контракт r6)"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -25,10 +25,10 @@ created: 2026-11-04
 По спеке `docs/simulation/slice-jet-aviation.md` v0.17: A42 (все пункты), §6.10, §11 строка «T-fleet» с приёмкой; контракт `docs/architecture/LAYER_CONTRACT.md` v2.4 r6 (§3.1, §4.0, §4.4d шаги 0, 2a–2g, 7, 8; §4.4e; §4.4f; §5; §6; §8; §9.1). Переключатель `FLEET_LINE_COND` (main = GEN, KAPPA и NONE — абляции); абляции NO_RETIRE, NO_SALE, PURCHASE_CAP. Не входит: T6d, F25 (why_not, следующая ревизия контракта).
 
 ## Критерии приёмки
-- [ ] Всё из §11 «T-fleet» (в т.ч. 5 и 5a: в NO_RETIRE сверяются колонки T6c2).
-- [ ] Инварианты FL1–FL7 и журнала ИИ (контракт §4.4f); `spent ≤ B_in`.
-- [ ] Общие пункты T6 (тесты, ADR-0003, нет RNG в Industry/Products, L1/L2); golden с причиной «T-fleet».
-- [ ] В «Результат» — печать на seeds 1…20 по §6.10 (E-gen, R2″, продажи gen ≥ 2, «парк на keep», Δ) как информация.
+- [x] Всё из §11 «T-fleet» (в т.ч. 5 и 5a: в NO_RETIRE сверяются колонки T6c2).
+- [x] Инварианты FL1–FL7 и журнала ИИ (контракт §4.4f); `spent ≤ B_in`.
+- [x] Общие пункты T6 (тесты, ADR-0003, нет RNG в Industry/Products, L1/L2); golden с причиной «T-fleet».
+- [x] В «Результат» — печать на seeds 1…20 по §6.10 (E-gen, R2″, продажи gen ≥ 2, «парк на keep», Δ) как информация.
 
 ## Тесты
 По §11 T-fleet.
@@ -37,9 +37,17 @@ created: 2026-11-04
 Спека v0.17; контракт v2.4 r6; `docs/game-design/FLEET_RETIREMENT.md` v0.2; DECISIONS_LOG #139, #141–#148.
 
 ## REVIEW
-- [ ] Code review (reviewer) — находки high закрыты
-- [ ] Тесты (test-engineer) — проходят, покрытие достаточно
-- [ ] Детерминизм L1/L2 — если затронуты src/
+- [x] Code review (reviewer) — approve с условиями; low закрыты (c1f817f); medium — контракт r7
+- [x] Тесты — проходят; E-gen, продажи, keep, Δ в main не проверяемы до исправления `fielded` (диагностика), механика — фикстурами
+- [x] Детерминизм L1/L2 — golden с причиной T-fleet
+
+### Ревью reviewer (2026-11-04, вставлено Orchestrator)
+Вердикт: approve с условиями; блокирующих ошибок в коде нет; dotnet test зелёный (Kernel 284 +1, Arch 80, Core 903, Session 172). Валидатор, слоты, когорты и пыль, квота Int128, год политики, `B_in` и `spent ≤ B_in`, порядок шагов 2c–2f, `line_bind`, `MergeMastered`, единая реализация `GFront`/`Fielded`/`DefK`/`KeyOf`, NO_RETIRE побитно — без замечаний.
+- medium: ИИ решает продажу по `G_front(t)`, слой проверяет по `G_front(t−1)` при исполнении — ошибка контракта §4.4f (между снимком и шагом 2d проходит весь месяц t); в контракт r7.
+- medium: отклонения 1–2 (проекция ИИ) — код верен, причина та же; в r7.
+- low: `AiLineRate` без ⌊…⌋ и защиты от нуля; магическое число в тестах; отклонение 11 — комментарий.
+- Отклонения 3, 5–8, 10 приемлемы; 9 — ошибка спеки §11 п.4 (simulation-engineer).
+- Находка `fielded ≡ ∅` — данные/спека, не код (диагностика у simulation-engineer).
 
 ## Результат
 **Сделано (developer, 2026-11-04; спека v0.17 A42, §6.10, §11 «T-fleet»; контракт v2.4 r6).**
@@ -84,3 +92,9 @@ Quality  627/799/854 | 660/790/839   Mass 626/772/845 | 626/772/845   Adaptive 4
 **Находка (высокая → simulation-engineer / владелец).** `fielded` пусто у всех акторов во все месяцы: у USA/GBR процессы 45, 49, 54 стартового проекта (`high_purity_nickel_refining`, `precision_blade_forging`, `jet_engine_assembly_test`) входят в `mastered` сценария, но их стартовый `yield` 0,10–0,40 (< 0,7), поэтому `mastered_run` обнуляется в первом месяце и не восстанавливается за 384 мес. (USA окна 6–7: yield 0,29 / 0,31 / 0,60). Следствие: `G_front ≡ 0` → продажа (`NOT_SURPLUS`) и защита `keep` в main инертны; E-gen, продажи, «парк на keep», Δ по ключу не проверяемы на этих данных. Механика проверена фикстурами. Числа и правило не подстраивались (#143).
 
 (Перенесено Orchestrator из черновика developer: хук запрещает developer писать в development/tasks.)
+
+### Исправления по ревью (developer, c1f817f)
+1. `AiLineRate` при PURCHASE_CAP: ⌊(U_LO·B_base − need)/upkeep_L⌋; при upkeep_L ≤ 0 потолка нет.
+2. Тесты: `>= (int)CommandRejection.BadRetireSlot` вместо магического числа.
+3. Тест `FrontRunnerLostBetweenDecisionAndExecution_TheLayerRefusesTheSale_NotSurplus` фиксирует текущее поведение (отказ NOT_SURPLUS); решение — контракт r7.
+4. Комментарий к отклонению 11 в `DecideFleet`.
