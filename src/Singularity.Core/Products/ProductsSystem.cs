@@ -312,6 +312,12 @@ public sealed partial class ProductsSystem : ITickSystem
 
     public DesignStage Stage(int actor, int design) => (DesignStage)_stage[design].Current[actor];
 
+    /// <summary>
+    /// Whether the design is a line (stage С) in the compute being run, after the closes and starts of step 2. Valid only inside the compute of
+    /// the actor's own row (the adapter of <c>IProductsInputs.LineRate</c> calls it from step 7); elsewhere use <see cref="Stage"/>.
+    /// </summary>
+    public bool IsLineNow(int actor, int design) => (DesignStage)_stage[design].Next[actor] == DesignStage.Series;
+
     /// <summary>Alternatives of a design (layout-global indices), −1 for an empty slot.</summary>
     public int[] Alternatives(int actor, int design)
     {

@@ -243,6 +243,9 @@ public class T6c2Tests(ITestOutputHelper output)
         var sunFirst = new List<long>();
         int sunNever = 0;
         int startsNotAdmitted = 0;
+        var twoLines = new long[5];                                   // F17b: months of two-line coexistence per actor, summed over seeds
+        var closeYProd = new int[5];                                  // F17b rule 2: the working line closed with no launch in the month
+        var closeBundle = new int[5];                                 // closed in the launch bundle (replace or y_min ≥ y_prod)
         for (int a = 0; a < 5; a++)
         {
             for (int k = 0; k < months / window; k++)
@@ -297,7 +300,22 @@ public class T6c2Tests(ITestOutputHelper output)
                             startsNotAdmitted++;
                         if (w.Policy.AiClose(a, d, t + 1) && stage[a, d] == DesignStage.Series && idle[a, d] >= 60)
                             cByActor[a]++;
+                        else if (w.Policy.AiClose(a, d, t + 1) && stage[a, d] == DesignStage.Series)
+                        {
+                            bool launch = false;
+                            for (int e = 0; e < designs; e++)
+                                launch |= w.Policy.AiStart(a, e, t + 1) is not null;
+                            if (launch)
+                                closeBundle[a]++;
+                            else
+                                closeYProd[a]++;
+                        }
                     }
+                    int seriesNow = 0;
+                    for (int d = 0; d < designs; d++)
+                        seriesNow += w.Products.Stage(a, d) == DesignStage.Series ? 1 : 0;
+                    if (seriesNow == 2)
+                        twoLines[a]++;
                     foreach (DesignCommand c in w.Policy.AiDesignCommands(a, t + 1))
                     {
                         if (c.Kind != DesignCommandKind.Cancel)
@@ -344,6 +362,9 @@ public class T6c2Tests(ITestOutputHelper output)
         output.WriteLine($"A40 branch О by class: processes {oClass[(int)GiveUpClass.Processes]}, defects {oClass[(int)GiveUpClass.Defects]}; per actor "
             + string.Join(", ", Enumerable.Range(0, 5).Select(a => $"{ids[a]} {oByActor[a, 1]}/{oByActor[a, 0]}")) + " (processes/defects)");
         output.WriteLine("A40 branch С (close_line at idle_c ≥ 60) per actor: " + string.Join(", ", Enumerable.Range(0, 5).Select(a => $"{ids[a]} {cByActor[a]}")));
+        output.WriteLine("F17b months of two-line coexistence (sum over seeds 1…20): " + string.Join(", ", Enumerable.Range(0, 5).Select(a => $"{ids[a]} {twoLines[a]}")));
+        output.WriteLine("F17b closes by y_prod (no launch in the month): " + string.Join(", ", Enumerable.Range(0, 5).Select(a => $"{ids[a]} {closeYProd[a]}"))
+            + "; in the launch bundle: " + string.Join(", ", Enumerable.Range(0, 5).Select(a => $"{ids[a]} {closeBundle[a]}")));
         var sorted = sunFirst.Order().ToList();
         output.WriteLine($"SUN first serial G1 (month with output > 0): p10 {Pct(sorted, 10)}, p50 {Pct(sorted, 50)}, p90 {Pct(sorted, 90)}, never {sunNever}/{seeds}");
         Assert.Equal(0, startsNotAdmitted);

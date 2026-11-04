@@ -118,6 +118,9 @@ public sealed record SliceRunConfig
     /// <summary><c>FLEET_LINE_COND</c> (spec A42.4, #147): <c>GEN</c> in main.</summary>
     public FleetLineCond FleetLineCond { get; init; } = FleetLineCond.Gen;
 
+    /// <summary><c>LINE_CLOSE</c> (spec A41 F17b, #160): <c>YPROD</c> in main; <c>ADMIT</c> is the rule before F17b (regression, diagnostics).</summary>
+    public LineCloseRule LineClose { get; init; } = LineCloseRule.YProd;
+
     /// <summary>Sensitivity arm of the sale terms (spec §6.10).</summary>
     public SaleArm SaleArm { get; init; } = SaleArm.None;
 

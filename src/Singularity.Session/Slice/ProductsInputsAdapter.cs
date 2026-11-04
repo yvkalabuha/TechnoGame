@@ -102,8 +102,30 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
             if (world.Products.Stage(actorRow, d) is DesignStage.Series or DesignStage.InService)
                 need += Fx6.FromInt(world.Products.InService(actorRow, d).Raw / Fx6.Scale) * world.Products.Upkeep(actorRow, d);
         }
-        return world.Policy.AiLineRate(actorRow, budget, shares.Procurement * world.Policy.Budget(actorRow),
+        Fx6 rate = world.Policy.AiLineRate(actorRow, budget, shares.Procurement * world.Policy.Budget(actorRow),
             world.Products.UnitCostFloor(actorRow, design), need, world.Products.Upkeep(actorRow, design));
+        // Spec A41 F17b: with two lines the working one (smaller g_p, a tie to the smaller id) runs at min(r_AI, r_keep), the rest of the money goes to the candidate.
+        return IsWorkingOfPair(actorRow, design) && world.IndustryParameters.RKeep < rate ? world.IndustryParameters.RKeep : rate;
+    }
+
+    private bool IsWorkingOfPair(int actorRow, int design)
+    {
+        if (world.Policy.LineClose != LineCloseRule.YProd || !world.Config.ProductAi)
+            return false;
+        int other = -1;
+        for (int d = 0; d < world.ProductsLayout.Designs; d++)
+        {
+            if (!world.Products.IsLineNow(actorRow, d))
+                continue;
+            if (d != design && other >= 0)
+                return false;   // three lines: not a pair (the policy invariant rejects it)
+            if (d != design)
+                other = d;
+        }
+        if (other < 0)
+            return false;
+        int gThis = world.Products.PlatformGen(actorRow, design), gOther = world.Products.PlatformGen(actorRow, other);
+        return gThis != gOther ? gThis < gOther : design < other;
     }
 
     // Only the L_P control reads it (spec §6.1).

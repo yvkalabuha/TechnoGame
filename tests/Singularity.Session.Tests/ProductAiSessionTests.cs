@@ -20,7 +20,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
         public readonly int Actors;
         public int OFirings, CFirings;
         public readonly int[] OByActor, CByActor, CultureByActor, OtherByActor;
-        public int Forced, MultiLine, BadClose, CancelledDesigns, SeenSeries;
+        public int Forced, MultiLine, BadClose, CancelledDesigns, SeenSeries, TwoLines;
         /// <summary>Stage-О give-ups by class (A40 v0.15) and launches of the AI whose processes were not admitted in the decision snapshot (F17: 0).</summary>
         public int ODefects, OProcesses, StartsNotAdmitted;
         public readonly List<string> Notes = new();
@@ -109,7 +109,9 @@ public class ProductAiSessionTests(ITestOutputHelper output)
                         continue;
                     // (11): a close is either a part of the launch bundle (some start in the same month) or idle_c ≥ T_ab by the snapshot.
                     bool idle = stageBefore[a, d] == DesignStage.Series && idleBefore[a, d] >= TAb;
-                    if (!anyStart && !idle)
+                    // F17b: a close of the working line by y_prod needs a second line in С in the snapshot.
+                    bool handover = stageBefore[a, d] == DesignStage.Series && Enumerable.Range(0, designs).Any(e => e != d && stageBefore[a, e] == DesignStage.Series);
+                    if (!anyStart && !idle && !handover)
                         o.BadClose++;
                     if (!idle)
                         continue;
@@ -127,7 +129,8 @@ public class ProductAiSessionTests(ITestOutputHelper output)
                     lines += w.Products.Stage(a, d) == DesignStage.Series ? 1 : 0;
                     o.CancelledDesigns += w.Products.Cancelled(a, d) ? 1 : 0;
                 }
-                o.MultiLine += lines > 1 ? 1 : 0;
+                o.MultiLine += lines > 2 ? 1 : 0;      // F17b: at most two lines (working and candidate)
+                o.TwoLines += lines == 2 ? 1 : 0;
                 o.SeenSeries += lines;
             }
         }
@@ -144,7 +147,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
             Observed o = Observe(new SliceRunConfig { Seed = seed, Threads = 4, ChunkSize = 2 }, 384);
             ids = [.. SliceTestData.Create(new SliceRunConfig { Seed = seed }).World.Scenario.ActorId];
             Assert.Equal(0, o.Forced);                                   // the AI never forces a series
-            Assert.Equal(0, o.MultiLine);                                // one line per actor (#125)
+            Assert.Equal(0, o.MultiLine);                                // F17b: at most two lines per actor
             Assert.Equal(0, o.BadClose);                                 // invariants (6) and (11)
             Assert.Equal(0, o.ODefects);                                 // L-O0 (P0, A40 v0.15): no give-up of the class «defects» in main
             Assert.Equal(0, o.StartsNotAdmitted);                        // F17: every AI start has admitted = true in the decision snapshot

@@ -89,7 +89,7 @@ public class ProductAiContractPropertyTests(ITestOutputHelper output)
                         built[a, d] = b;
                         canc[a, d] = c;
                     }
-                    Assert.True(lines <= 1, $"seed {seed} month {t} actor {a}: {lines} serial lines (one line per actor, #125)");
+                    Assert.True(lines <= 2, $"seed {seed} month {t} actor {a}: {lines} serial lines (F17b allows the working line and the candidate)");
                 }
             }
             // the AI sends nothing through the journal: no player/harness command, hence no start_series(force)

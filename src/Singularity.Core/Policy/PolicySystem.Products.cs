@@ -89,6 +89,9 @@ public sealed partial class PolicySystem
     public Fx6? AiStart(int actor, int design, long month) =>
         _startStamp[design].Current[actor] == Stamp(month) ? Fx6.FromRaw(_startRate[design].Current[actor]) : null;
 
+    /// <summary><c>LINE_CLOSE</c> of the run (spec A41 F17b).</summary>
+    public LineCloseRule LineClose => _pp.LineClose;
+
     public bool AiClose(int actor, int design, long month) => _closeStamp[design].Current[actor] == Stamp(month);
 
     /// <summary>The line of the design was launched by the AI and takes its rate from <c>r_AI</c> (spec A41); a line started by a command keeps that rate.</summary>
@@ -253,6 +256,18 @@ public sealed partial class PolicySystem
             gaveUpNow[x.PlatformGen] = true;
         }
 
+        // F17b: an AI actor holds at most two lines (the working one and the candidate); a derive arm moves lines by the layer (contract §4.4a).
+        var lines = new List<int>();
+        for (int d = 0; d < _designs; d++)
+        {
+            if (designs[d].Stage == DesignStage.Series && _closeStamp[d].Current[row] != Stamp(t))
+                lines.Add(d);
+        }
+        bool yprod = _pp.LineClose == LineCloseRule.YProd;
+        if (yprod && !_derive && lines.Count > 2)
+            throw new PolicyInvariantException(t, row, $"{lines.Count} lines of one AI actor (F17b allows two)");
+        int candidate = lines.Count == 2 ? Candidate(designs, lines[0], lines[1]) : -1;
+
         // Launch (A35, A41): the first project in О by id whose gate is open, whose hidden defects are within k_P·D_ref and (F17, #138) whose
         // processes are admitted at the site; one line per actor. A project that waits keeps the working line: nothing is closed without a launch.
         bool startPending = false;
@@ -271,19 +286,51 @@ public sealed partial class PolicySystem
                     continue;
                 Fx6 procurement = Shares(row).Procurement * Budget(row);
                 dec.Starts.Add((d, PolicyRules.LineRate(procurement, x.UnitCostFloor)));
+                // F17b (A41): below y_prod only the candidate is replaced and the working line stays; at y_prod (or with ADMIT) every other line closes.
+                bool all = !yprod || YMin(row, d, t) >= _pp.YProd;
                 for (int e = 0; e < _designs; e++)
                 {
                     // The parent of a derived design is not closed: the layer moves its line (contract §4.4a).
-                    if (designs[e].Stage == DesignStage.Series && e != x.Parent && !dec.Closes.Contains(e) && _closeStamp[e].Current[row] != Stamp(t))
+                    if (designs[e].Stage == DesignStage.Series && e != x.Parent && !dec.Closes.Contains(e) && _closeStamp[e].Current[row] != Stamp(t)
+                        && (all || e == candidate))
                         dec.Closes.Add(e);
                 }
                 break;
             }
         }
+        // F17b rule 2: two lines and the candidate reaches y_prod (snapshot t) -> the working line closes. One close per project and month.
+        if (yprod && candidate >= 0 && dec.Starts.Count == 0 && !dec.Closes.Contains(candidate))
+        {
+            int working = lines[0] == candidate ? lines[1] : lines[0];
+            if (designs[candidate].Parent != working && !dec.Closes.Contains(working) && YMin(row, candidate, t) >= _pp.YProd)
+                dec.Closes.Add(working);
+        }
         FleetDecision fleet = DecideFleet(row, t, designs, dec, sharesNext, budgetNext);
         dec.Fleet.AddRange(fleet.Commands);
         dec.IncomeExpected = fleet.IncomeExpected;
         return dec;
+    }
+
+    /// <summary>
+    /// The candidate of a pair of lines (spec A41 F17b): the one with the larger platform generation, a tie to the larger design id.
+    /// </summary>
+    internal static int Candidate(PolicyDesign[] designs, int a, int b) =>
+        designs[a].PlatformGen != designs[b].PlatformGen ? (designs[a].PlatformGen > designs[b].PlatformGen ? a : b) : Math.Max(a, b);
+
+    // y_min(d, t): the least yield of the design's prc_set at the home site in the snapshot; an unknown process gives 0 (spec A41 F17b).
+    private Fx6 YMin(int row, int design, long t)
+    {
+        int[] prc = DesignRules.PrcSet(_prod!.Layout, _prod.Alternatives(row, design));
+        if (prc.Length == 0)
+            return Fx6.Zero;
+        Fx6 min = _prod.AdmittedYield(row, prc[0], t);
+        for (int i = 1; i < prc.Length; i++)
+        {
+            Fx6 y = _prod.AdmittedYield(row, prc[i], t);
+            if (y < min)
+                min = y;
+        }
+        return min;
     }
 
     // One withdrawal per (actor, g_p) for both branches (spec A40): none this month, no design of the generation already given up, no repeat made.

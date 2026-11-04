@@ -41,6 +41,27 @@ public enum FleetLineCond
     None = 2,
 }
 
+/// <summary><c>LINE_CLOSE</c> (spec A41 F17b, #160): when the AI closes its working line after launching a new series.</summary>
+public enum LineCloseRule
+{
+    /// <summary>Main: the working line closes when the new series reaches <c>y_prod</c>; until then it runs at <c>min(r_AI, r_keep)</c>.</summary>
+    YProd = 0,
+    /// <summary>Regression and diagnostics: the launch closes every other line at once (spec v0.15–v0.19), no hold.</summary>
+    Admit = 1,
+}
+
+/// <summary>Parsing of the <c>LINE_CLOSE</c> manifest switch.</summary>
+public static class LineCloseRules
+{
+    /// <summary>Parses <c>YPROD</c> or <c>ADMIT</c>; any other value is a manifest error.</summary>
+    public static LineCloseRule Parse(string value) => value switch
+    {
+        "YPROD" => LineCloseRule.YProd,
+        "ADMIT" => LineCloseRule.Admit,
+        _ => throw new ArgumentException($"Unknown LINE_CLOSE value '{value}' (expected YPROD or ADMIT).", nameof(value)),
+    };
+}
+
 /// <summary>Budget split of an actor: research, capability, process development (D), procurement, quality programme (spec §3.4).</summary>
 public readonly record struct BudgetShares(Fx6 Research, Fx6 Capability, Fx6 Effort, Fx6 Procurement, Fx6 Quality)
 {
@@ -122,6 +143,9 @@ public sealed record PolicyParams
     /// <c>FLEET_LINE_COND</c> (spec A42.4 п. 4, #147): the condition on the line for a candidate; <see cref="FleetLineCond.Gen"/> in main, the others diagnostic.
     /// </summary>
     public FleetLineCond FleetLineCond { get; init; } = FleetLineCond.Gen;
+
+    /// <summary><c>LINE_CLOSE</c> (spec A41 F17b, #160): <see cref="LineCloseRule.YProd"/> in main.</summary>
+    public LineCloseRule LineClose { get; init; } = LineCloseRule.YProd;
 
     /// <summary><c>TOOLING_TARGET</c> (spec §11 T6e v0.19, #156): pass 2 of the tooling plan; V0 until the owner chooses.</summary>
     public ToolingTargetSpec ToolingTarget { get; init; } = new();

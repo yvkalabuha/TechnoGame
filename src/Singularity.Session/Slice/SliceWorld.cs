@@ -56,6 +56,7 @@ internal sealed class SliceWorld
         PolicyParams policy = new()
         {
             YProd = pp.YProd, TField = pp.HBuild, NServiceMin = pp.NServiceMin, FleetArm = config.FleetArm, FleetLineCond = config.FleetLineCond,
+            LineClose = config.LineClose,
             ToolingTarget = config.ToolingTarget,
         };
         config.ToolingTarget.Validate();

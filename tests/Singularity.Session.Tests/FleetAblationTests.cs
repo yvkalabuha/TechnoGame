@@ -21,7 +21,7 @@ public class FleetAblationTests
         string[] baseline = File.ReadAllLines(Path.Combine(dir, "t6c2-baseline.txt"));
         foreach (ulong seed in new ulong[] { 7, 3 })
         {
-            SliceSession s = SliceSession.Create(OffData, new SliceRunConfig { Seed = seed, FleetArm = FleetArm.NoRetire, SkipStartValidation = true });
+            SliceSession s = SliceSession.Create(OffData, new SliceRunConfig { Seed = seed, FleetArm = FleetArm.NoRetire, SkipStartValidation = true, LineClose = LineCloseRule.Admit });
             foreach (long month in new long[] { 59, 149, 383 })
             {
                 s.StepThroughMonth(month);

@@ -155,8 +155,9 @@ public sealed partial class PolicySystem
             bool closing = designs[d].Stage == DesignStage.Series && !series[d];
             if (series[d] || closing)
                 book.Stage[d] = DesignStage.Series;
+            // F17b (A42.4 п. 1): with two lines L is the candidate N (the larger g_p); with ADMIT, as before, the last by id.
             if (series[d])
-                line = d;
+                line = line < 0 || _pp.LineClose == LineCloseRule.Admit ? d : Candidate(designs, line, d);
         }
         if (line < 0)
             return result;

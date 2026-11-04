@@ -149,7 +149,8 @@ public class T6bAiCapabilityTests(ITestOutputHelper output)
     public void TrainingBudget_IsZeroWithoutATarget_AndEqualsTheUnspentCapBudgetForTheTarget()
     {
         // USA is P1 in this cell: the only doctrine with a training target before the why_not triggers (T6d).
-        var s = SliceTestData.Create(new SliceRunConfig { Seed = 4, ProfileCell = 0 });
+        // LINE_CLOSE = ADMIT: the scripted player starts its own series beside the AI's lines, which F17b's two-line invariant (a rule of the pure AI) does not cover.
+        var s = SliceTestData.Create(new SliceRunConfig { Seed = 4, ProfileCell = 0, LineClose = LineCloseRule.Admit });
         var player = new PlayerScript(s);
         SliceWorld w = s.World;
         var adapter = new ProductsInputsAdapter(w);

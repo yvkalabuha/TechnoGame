@@ -342,6 +342,133 @@ public class ProductAiTests
         Assert.False(young.Policy.AiClose(0, 0, 1));
     }
 
+    // ---- F17b (#160, A41): the working line closes when the candidate reaches y_prod
+
+    private const long YProdRaw = 500_000;
+
+    private static Rig HandoverRig(long yieldRaw, Action<Snapshot> setup, PolicyParams? parameters = null) =>
+        new(PolicyProfile.Mass, s => { s.Yield = _ => Fx6.FromRaw(yieldRaw); setup(s); }, parameters: parameters);
+
+    [Fact]
+    public void F17b_LaunchBelowYProd_KeepsTheWorkingLine_AtYProdClosesItInTheSameBundle_BoundaryIsRaw()
+    {
+        void Setup(Snapshot s)
+        {
+            s.Design[0] = Series(1, 0, true);
+            s.Design[1] = Prototype(5, 2, Fx6.FromInt(100), gate: true);
+        }
+        var below = HandoverRig(YProdRaw - 1, Setup);
+        below.Month(0);
+        Assert.NotNull(below.Policy.AiStart(0, 1, 1));
+        Assert.False(below.Policy.AiClose(0, 0, 1));
+        var at = HandoverRig(YProdRaw, Setup);
+        at.Month(0);
+        Assert.NotNull(at.Policy.AiStart(0, 1, 1));
+        Assert.True(at.Policy.AiClose(0, 0, 1));
+        var unknown = HandoverRig(Fx6.One.Raw, s => { Setup(s); s.KnownGen = 0; });   // an unknown process gives y_min = 0
+        unknown.Month(0);
+        Assert.False(unknown.Policy.AiClose(0, 0, 1));
+    }
+
+    [Fact]
+    public void F17b_AdmitSwitch_ClosesEveryLineAtTheLaunch_EvenBelowYProd()
+    {
+        var rig = HandoverRig(1, s =>
+        {
+            s.Design[0] = Series(1, 0, true);
+            s.Design[1] = Prototype(5, 2, Fx6.FromInt(100), gate: true);
+        }, new PolicyParams { LineClose = LineCloseRule.Admit });
+        rig.Month(0);
+        Assert.NotNull(rig.Policy.AiStart(0, 1, 1));
+        Assert.True(rig.Policy.AiClose(0, 0, 1));
+    }
+
+    [Fact]
+    public void F17b_ReplacingTheCandidate_ClosesOnlyTheCandidateBelowYProd_BothAtYProd()
+    {
+        void Setup(Snapshot s)
+        {
+            s.Design[0] = Series(1, 0, true);                                   // working
+            s.Design[1] = Series(2, 0, false);                                  // candidate
+            s.Design[2] = Prototype(5, 3, Fx6.FromInt(100), gate: true);
+        }
+        var low = HandoverRig(YProdRaw - 1, Setup);
+        low.Month(0);
+        Assert.True(low.Policy.AiClose(0, 1, 1));
+        Assert.False(low.Policy.AiClose(0, 0, 1));
+        var high = HandoverRig(YProdRaw, Setup);
+        high.Month(0);
+        Assert.True(high.Policy.AiClose(0, 1, 1));
+        Assert.True(high.Policy.AiClose(0, 0, 1));
+    }
+
+    [Fact]
+    public void F17b_TwoLines_WorkingLineClosesMonthlyOnceTheCandidateHasYProd_NotBefore()
+    {
+        void Setup(Snapshot s)
+        {
+            s.Design[0] = Series(1, 0, true);
+            s.Design[1] = Series(2, 0, true);
+        }
+        var low = HandoverRig(YProdRaw - 1, Setup);
+        low.Month(0);
+        Assert.False(low.Policy.AiClose(0, 0, 1));
+        Assert.False(low.Policy.AiClose(0, 1, 1));
+        var high = HandoverRig(YProdRaw, Setup);
+        high.Month(0);
+        Assert.True(high.Policy.AiClose(0, 0, 1));
+        Assert.False(high.Policy.AiClose(0, 1, 1));
+        high.Month(1);                                                          // the close is still pending in the snapshot: no second command
+        Assert.False(high.Policy.AiClose(0, 0, 2));
+    }
+
+    [Fact]
+    public void F17b_BranchC_ClosesTheIdleCandidate_OnceAndKeepsTheWorkingLine_AndOneCommandWhenBothRulesCloseTheWorkingLine()
+    {
+        var idle = HandoverRig(YProdRaw - 1, s =>
+        {
+            s.Design[0] = Series(1, 0, true);
+            s.Design[1] = Series(2, 60, false);
+        });
+        idle.Month(0);
+        Assert.True(idle.Policy.AiClose(0, 1, 1));
+        Assert.False(idle.Policy.AiClose(0, 0, 1));
+        var both = HandoverRig(YProdRaw, s =>
+        {
+            s.Design[0] = Series(1, 60, true);                                  // A40 branch С on the working line, and the y_prod rule
+            s.Design[1] = Series(2, 0, true);
+        });
+        both.Month(0);
+        Assert.True(both.Policy.AiClose(0, 0, 1));
+        Assert.False(both.Policy.AiClose(0, 1, 1));
+    }
+
+    [Fact]
+    public void F17b_ThePairIsDefinedByPlatformGeneration_NotByDesignId()
+    {
+        var rig = HandoverRig(YProdRaw, s =>
+        {
+            s.Design[0] = Series(2, 0, true);                                   // the newer generation sits at the lower id: it is the candidate
+            s.Design[1] = Series(1, 0, true);
+        });
+        rig.Month(0);
+        Assert.True(rig.Policy.AiClose(0, 1, 1));
+        Assert.False(rig.Policy.AiClose(0, 0, 1));
+    }
+
+    [Fact]
+    public void F17b_ThreeLinesOfOneAiActor_ViolateTheInvariant()
+    {
+        var rig = HandoverRig(YProdRaw, s =>
+        {
+            s.Design[0] = Series(1, 0, true);
+            s.Design[1] = Series(2, 0, true);
+            s.Design[2] = Series(3, 0, true);
+        });
+        Exception ex = Assert.ThrowsAny<Exception>(() => rig.Month(0));
+        Assert.Contains("lines of one AI actor", ex.ToString());
+    }
+
     // ---- presets
 
     [Fact]

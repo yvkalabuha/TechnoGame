@@ -10,12 +10,18 @@ internal sealed class PolicyInputsAdapter(SliceWorld world) : IPolicyInputs
 {
     public int NewestSeriesDesign(int actorRow, long month)
     {
+        // F17b (A41): with two lines the training series is the candidate (the larger g_p); with ADMIT or without the product AI (a scripted player) the newest by id, as before.
+        int best = -1;
         for (int d = world.ProductsLayout.Designs - 1; d >= 0; d--)
         {
-            if (world.Products.Stage(actorRow, d) == DesignStage.Series)
+            if (world.Products.Stage(actorRow, d) != DesignStage.Series)
+                continue;
+            if (world.Policy.LineClose == LineCloseRule.Admit || !world.Config.ProductAi)
                 return d;
+            if (best < 0 || world.Products.PlatformGen(actorRow, d) > world.Products.PlatformGen(actorRow, best))
+                best = d;
         }
-        return -1;
+        return best;
     }
 
     public BottleneckLimit? Bottleneck(int actorRow, int design, long month)
