@@ -227,6 +227,18 @@ public class T6c2Tests(ITestOutputHelper output)
 
     // ---- the information print of the acceptance (not a check of values)
 
+    private static Fx6 YMin(SliceWorld w, int a, int d, long t)
+    {
+        Fx6 min = Fx6.One;
+        foreach (int p in w.Products.PrcSet(a, d))
+        {
+            Fx6 y = w.ProductsInputs.AdmittedYield(a, p, t);
+            if (y < min)
+                min = y;
+        }
+        return min;
+    }
+
     private static string Pct(List<long> sorted, int pct) => sorted.Count == 0 ? "-" : sorted[Math.Min(sorted.Count - 1, sorted.Count * pct / 100)].ToString();
 
     [Fact]
@@ -245,6 +257,7 @@ public class T6c2Tests(ITestOutputHelper output)
         int startsNotAdmitted = 0;
         var twoLines = new long[5];                                   // F17b: months of two-line coexistence per actor, summed over seeds
         var closeYProd = new int[5];                                  // F17b rule 2: the working line closed with no launch in the month
+        var closeRule2InLaunchMonth = new int[5];                     // F17b: W closed by rule 2 (before the launch) in a month with a launch below y_prod
         var closeBundle = new int[5];                                 // closed in the launch bundle (replace or y_min ≥ y_prod)
         for (int a = 0; a < 5; a++)
         {
@@ -270,6 +283,7 @@ public class T6c2Tests(ITestOutputHelper output)
             var admitted = new bool[n, designs];
             var idle = new int[n, designs];
             var stage = new DesignStage[n, designs];
+            var ymin = new Fx6[n, designs];
             for (long t = 0; t < months; t++)
             {
                 for (int a = 0; a < n; a++)
@@ -278,6 +292,7 @@ public class T6c2Tests(ITestOutputHelper output)
                     {
                         stage[a, d] = w.Products.Stage(a, d);
                         idle[a, d] = w.Products.IdleMonths(a, d);
+                        ymin[a, d] = YMin(w, a, d, t);
                         if (stage[a, d] == DesignStage.Prototype)
                         {
                             cls[a, d] = w.Policy.ClassifyGiveUp(a, d, t);
@@ -306,7 +321,20 @@ public class T6c2Tests(ITestOutputHelper output)
                             for (int e = 0; e < designs; e++)
                                 launch |= w.Policy.AiStart(a, e, t + 1) is not null;
                             if (launch)
+                            {
                                 closeBundle[a]++;
+                                // rule 2 first: another line has y_prod in the snapshot and a launched design is below it
+                                bool otherWorks = false, launchLow = false;
+                                for (int e = 0; e < designs; e++)
+                                {
+                                    if (e != d && stage[a, e] == DesignStage.Series)
+                                        otherWorks |= ymin[a, e] >= w.ProductsParameters.YProd;
+                                    if (w.Policy.AiStart(a, e, t + 1) is not null)
+                                        launchLow |= ymin[a, e] < w.ProductsParameters.YProd;
+                                }
+                                if (otherWorks && launchLow)
+                                    closeRule2InLaunchMonth[a]++;
+                            }
                             else
                                 closeYProd[a]++;
                         }
@@ -365,6 +393,7 @@ public class T6c2Tests(ITestOutputHelper output)
         output.WriteLine("F17b months of two-line coexistence (sum over seeds 1…20): " + string.Join(", ", Enumerable.Range(0, 5).Select(a => $"{ids[a]} {twoLines[a]}")));
         output.WriteLine("F17b closes by y_prod (no launch in the month): " + string.Join(", ", Enumerable.Range(0, 5).Select(a => $"{ids[a]} {closeYProd[a]}"))
             + "; in the launch bundle: " + string.Join(", ", Enumerable.Range(0, 5).Select(a => $"{ids[a]} {closeBundle[a]}")));
+        output.WriteLine("F17b rule 2 close in a launch month (launch below y_prod, the other line at y_prod): " + string.Join(", ", Enumerable.Range(0, 5).Select(a => $"{ids[a]} {closeRule2InLaunchMonth[a]}")));
         var sorted = sunFirst.Order().ToList();
         output.WriteLine($"SUN first serial G1 (month with output > 0): p10 {Pct(sorted, 10)}, p50 {Pct(sorted, 50)}, p90 {Pct(sorted, 90)}, never {sunNever}/{seeds}");
         Assert.Equal(0, startsNotAdmitted);

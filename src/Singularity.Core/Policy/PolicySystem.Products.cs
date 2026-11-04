@@ -257,6 +257,9 @@ public sealed partial class PolicySystem
         }
 
         // F17b: an AI actor holds at most two lines (the working one and the candidate); a derive arm moves lines by the layer (contract §4.4a).
+        // «Lines» are the snapshot's С stages minus closes still pending. A start pending from the previous month is not counted: it blocks any
+        // new launch (startPending) and lands together with its own closes, so the count never exceeds two when it becomes a line. (The fleet
+        // rule A42.4 projects pending starts too, because it looks at the book of t+1.)
         var lines = new List<int>();
         for (int d = 0; d < _designs; d++)
         {
@@ -268,6 +271,19 @@ public sealed partial class PolicySystem
             throw new PolicyInvariantException(t, row, $"{lines.Count} lines of one AI actor (F17b allows two)");
         int candidate = lines.Count == 2 ? Candidate(designs, lines[0], lines[1]) : -1;
 
+        // F17b rule 2 comes BEFORE the launch (owner decision on review of TASK-0030): two lines and the candidate has y_prod in the snapshot ->
+        // the working line closes and the candidate is the working one; a launch of the same month below y_prod then becomes the new candidate
+        // (still at most two lines). One close per project and month.
+        if (yprod && candidate >= 0 && !dec.Closes.Contains(candidate))
+        {
+            int working = lines[0] == candidate ? lines[1] : lines[0];
+            if (designs[candidate].Parent != working && YMin(row, candidate, t) >= _pp.YProd)
+            {
+                if (!dec.Closes.Contains(working))
+                    dec.Closes.Add(working);
+                candidate = -1;
+            }
+        }
         // Launch (A35, A41): the first project in О by id whose gate is open, whose hidden defects are within k_P·D_ref and (F17, #138) whose
         // processes are admitted at the site; one line per actor. A project that waits keeps the working line: nothing is closed without a launch.
         bool startPending = false;
@@ -297,13 +313,6 @@ public sealed partial class PolicySystem
                 }
                 break;
             }
-        }
-        // F17b rule 2: two lines and the candidate reaches y_prod (snapshot t) -> the working line closes. One close per project and month.
-        if (yprod && candidate >= 0 && dec.Starts.Count == 0 && !dec.Closes.Contains(candidate))
-        {
-            int working = lines[0] == candidate ? lines[1] : lines[0];
-            if (designs[candidate].Parent != working && !dec.Closes.Contains(working) && YMin(row, candidate, t) >= _pp.YProd)
-                dec.Closes.Add(working);
         }
         FleetDecision fleet = DecideFleet(row, t, designs, dec, sharesNext, budgetNext);
         dec.Fleet.AddRange(fleet.Commands);

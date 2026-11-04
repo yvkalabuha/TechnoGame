@@ -48,6 +48,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
         var stageBefore = new DesignStage[n, designs];
         var admittedBefore = new bool[n, designs];
         var classBefore = new GiveUpClass[n, designs];
+        var yMinBefore = new Fx6[n, designs];
         for (long t = 0; t < months; t++)
         {
             beforeStep?.Invoke(s, t);
@@ -73,6 +74,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
                             min = y;
                     }
                     bool noSmelt = new[] { 39, 40, 41 }.All(p => w.ProductsInputs.AdmittedYield(a, p, t) == Fx6.Zero);
+                    yMinBefore[a, d] = min;
                     culture[a, d].Add(min == Fx6.Zero || w.Industry.Alloy(a, t).Supply == Fx6.Zero && noSmelt);
                 }
             }
@@ -109,8 +111,9 @@ public class ProductAiSessionTests(ITestOutputHelper output)
                         continue;
                     // (11): a close is either a part of the launch bundle (some start in the same month) or idle_c ≥ T_ab by the snapshot.
                     bool idle = stageBefore[a, d] == DesignStage.Series && idleBefore[a, d] >= TAb;
-                    // F17b: a close of the working line by y_prod needs a second line in С in the snapshot.
-                    bool handover = stageBefore[a, d] == DesignStage.Series && Enumerable.Range(0, designs).Any(e => e != d && stageBefore[a, e] == DesignStage.Series);
+                    // F17b: a close of the working line by y_prod needs a second line in С whose y_min reached y_prod in the snapshot.
+                    bool handover = stageBefore[a, d] == DesignStage.Series
+                        && Enumerable.Range(0, designs).Any(e => e != d && stageBefore[a, e] == DesignStage.Series && yMinBefore[a, e] >= w.ProductsParameters.YProd);
                     if (!anyStart && !idle && !handover)
                         o.BadClose++;
                     if (!idle)
@@ -360,5 +363,6 @@ public class ProductAiSessionTests(ITestOutputHelper output)
     // Re-recorded in T6c2 (e778e8cc… before), reason: T6c2 — E1 start line from tick 0, F17 launch at admitted, #140 engine choice, W1.
     // Re-recorded in T-fleet (513238aa… before), reason: T-fleet — contract r6: new columns and the fleet rule A42.4 (retirement by generation), schema v5.
     // D2 (#155, #159): start rule R-H-MS'; the data of the scenario changed, the model did not.
-    private const string Golden150 = "951bcf96f371d409cdf03df7687e19d0dc690b47190ed137f26e7a7ee1f9b29d";
+    // Re-recorded in F17b (951bcf96… before), reason: F17b — LINE_CLOSE YPROD bit 12 of run.fleet in the hash of an AI run (ADMIT keeps the old hash, see F17bTests).
+    private const string Golden150 = "e08147333e51850dcb6104348f674a7a82f649fce396f820ceee5e725b559589";
 }

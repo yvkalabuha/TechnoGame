@@ -469,6 +469,37 @@ public class ProductAiTests
         Assert.Contains("lines of one AI actor", ex.ToString());
     }
 
+    [Fact]
+    public void F17b_Rule2RunsBeforeTheLaunch_WorkingLineClosesAndTheLaunchBelowYProdBecomesTheCandidate()
+    {
+        int centrifugal = Probe.PrcOf(Alt(Probe, "comp_centrifugal"))[0], axial = Probe.PrcOf(Alt(Probe, "comp_axial"))[0];
+        int[] Slots(string comp) => [.. Enumerable.Repeat(Alt(Probe, comp), Probe.SlotCount)];
+        var rig = new Rig(PolicyProfile.Mass, s =>
+        {
+            s.KnownGen = 4;
+            s.Yield = p => p == axial ? Fx6.FromRaw(YProdRaw - 1) : Fx6.One;     // N and W (centrifugal) work, the launch X (axial) is below y_prod
+            s.Design[0] = Series(1, 0, true);
+            s.Design[1] = Series(2, 0, true);
+            s.Design[2] = Prototype(5, 3, Fx6.FromInt(100), gate: true);
+            s.Alts[0] = s.Alts[1] = Slots("comp_centrifugal");
+            s.Alts[2] = Slots("comp_axial");
+        });
+        rig.Month(0);
+        Assert.True(rig.Policy.AiClose(0, 0, 1));                       // W closes: N has y_prod
+        Assert.False(rig.Policy.AiClose(0, 1, 1));                      // N is the working line now, X below y_prod does not replace it
+        Assert.NotNull(rig.Policy.AiStart(0, 2, 1));                    // two lines after the month: N and X
+        Assert.NotEqual(centrifugal, axial);
+    }
+
+    [Fact]
+    public void F17b_Candidate_IsTheLargerPlatformGeneration_ThenTheLargerDesignId()
+    {
+        PolicyDesign[] d = [Series(2, 0, true), Series(1, 0, true), Series(2, 0, true)];
+        Assert.Equal(0, PolicySystem.Candidate(d, 0, 1));
+        Assert.Equal(0, PolicySystem.Candidate(d, 1, 0));
+        Assert.Equal(2, PolicySystem.Candidate(d, 0, 2));
+    }
+
     // ---- presets
 
     [Fact]
