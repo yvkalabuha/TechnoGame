@@ -73,13 +73,16 @@ public sealed partial class WhyNotAnalyzer
                 ExplainRequirement(links, actor, target.Id, month);
                 break;
         }
-        // F25: the M link that accompanies a blocking H link of the same cell is not ordered by the keys but placed right behind its host.
+        // F25: the M link that accompanies a blocking H link of the same cell is not ordered by the keys but placed right behind its host. Two processes of
+        // one cluster can both be blocked in the same dimension: each host then gets its own companion, placed directly behind that host (by Process).
         var companions = links.Where(l => l.Companion).ToList();
         links.RemoveAll(l => l.Companion);
         links.Sort(Link.Compare);
         foreach (Link m in companions)
         {
             int host = links.FindIndex(l => l.Blocking && l.Process == m.Process && l.Dim == m.Dim);
+            if (host < 0)
+                throw new InvalidOperationException($"F25: the M link of process {m.Process} has no blocking H link to follow.");
             links.Insert(host + 1, m);
         }
         // Several slots or alternatives can point at the same missing node: one link per (layer, cause, subject).

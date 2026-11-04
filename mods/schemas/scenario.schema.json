@@ -123,6 +123,7 @@
           }
         },
         "trophy_engineers": { "description": "People added to the engineer pool at t0 (R-ENG).", "type": "integer", "minimum": 0 },
+        "exposure": { "description": "Share of the base alloy-disruption hazard that hits the actor (spec 8.1, A43.6); default 1.", "type": "number", "minimum": 0, "maximum": 1 },
         "estimated": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/actorField" } }
       }
     }

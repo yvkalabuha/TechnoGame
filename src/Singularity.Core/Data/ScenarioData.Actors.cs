@@ -12,6 +12,7 @@ public sealed partial class ScenarioData
         public readonly List<ActorClass> Classes = new();
         public readonly List<Fx6> Gdp = new(), GdpPerCapita = new(), Budget = new(), Growth = new();
         public readonly List<Fx6> CultureH = new(), ToolingM = new(), Hcap = new(), W = new(), KD = new(), KInd = new();
+        public readonly List<Fx6> Exposure = new();
         public readonly List<int> GdpYear = new(), Trophy = new();
         public readonly List<int> KnownStart = new() { 0 }, Known = new(), MasteredStart = new() { 0 }, Mastered = new();
         public readonly List<int> FleetStart = new() { 0 }, FleetClass = new(), FleetGen = new(), FleetCount = new(), FleetCohort = new();
@@ -61,6 +62,10 @@ public sealed partial class ScenarioData
             if (trophy < 0)
                 throw DataLoadException.At(node, "trophy_engineers must not be negative");
             Trophy.Add(trophy);
+            Fx6 exposure = m.Optional("exposure") is { } e ? Scalars.Fixed(e) : Fx6.One;
+            if (exposure < Fx6.Zero || exposure > Fx6.One)
+                throw DataLoadException.At(node, "exposure must be in [0; 1]");
+            Exposure.Add(exposure);
             ReadEstimated(m.Seq("estimated"));
             m.End();
         }

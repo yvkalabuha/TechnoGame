@@ -58,6 +58,9 @@ public sealed partial class ScenarioData
     public required ImmutableArray<Fx6> KInd { get; init; }
     public required ImmutableArray<int> TrophyEngineers { get; init; }
 
+    /// <summary><c>exposure_a</c> in [0; 1]: the share of the base alloy-disruption hazard that hits the actor (spec §8.1, A43.6); 1 when the data give none.</summary>
+    public required ImmutableArray<Fx6> Exposure { get; init; }
+
     /// <summary>Known node rows of actor a: <c>Known[KnownStart[a]..KnownStart[a+1]]</c>, ascending.</summary>
     public required ImmutableArray<int> KnownStart { get; init; }
     public required ImmutableArray<int> Known { get; init; }

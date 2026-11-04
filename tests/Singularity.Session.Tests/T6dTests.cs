@@ -181,19 +181,19 @@ public class T6dTests
 
     // ---- item 9: T6D_OFF is the T-fleet build, by projection
 
-    // Hashes of the columns that existed before T6d, taken from the build of the commit before T6d (seed, month: all columns), for T6D_OFF.
+    // Hashes of the columns that existed before T6d, taken from the build of the commit before T6d (seed, month: all columns but run.scenario, whose hash changed with «exposure to data»), for T6D_OFF.
     private static readonly (ulong Seed, int Month, string Hash)[] Before =
     [
-        (1, 60, "700eff1cad875790be7c68d85ad3b83fcaa65475ad4923b627873841fd4a18a0"), (1, 180, "47fb7a39ba433f3c12d378cca80a5f10afe00f8ea1599d57d521d07b7aceb35e"),
-        (1, 383, "58c133b4039da48f0d9c8041a3bbefa17e51acb5aa0de4eab9e012197ac12b8c"), (2, 60, "ce180c01071e8869f59d19682c9db22212664b0e9a531583a40fff752de82a4d"),
-        (2, 180, "bc9fcca8d96aa41515659adfc90c3bb64d902a73b939495f8cfb3b8c7d1ebb71"), (2, 383, "3cd988a8be96953c4eadf38be38cfc88fde815329c67409c6344d5e4e4325769"),
-        (3, 60, "897aca2063c954927248898140525164eed9bc9c17067a3490709e36aecf0ce8"), (3, 180, "74a76ef7a21350265a558d4ec2c2400d3a6cfe9aecc7f946985c8c81a7e6ddde"),
-        (3, 383, "953bb22adaa9be30a87d72db4a43ddf580303cd681605dd437931294e77f2db3"), (7, 60, "2241efb9a5db73119a2088f1010353457d2721be0c1e42c1ec7339f8ca432c6d"),
-        (7, 180, "d1296e7b68289090317e07dfa1f7cbe3dd5c9bb100c37d9f9baad9145bac2cd1"), (7, 383, "5d7da33caad96100121d24bc576161b75bba14a726dde8be9c7bc0fd290e92f5"),
+        (1, 60, "be964af948aed41348a6004b86c64ea104d3a3ce5d0562823808f2c1ed8aa11a"), (1, 180, "b49639d12921926fab37631d89bc6b31f58ac2bf2bc9811fb94ba15b7ac0fe3a"),
+        (1, 383, "a03b03b02339e161eb88e01988eb9e32169dd3e01f6bc09c6f4deca74f1a17b6"), (2, 60, "f53a02f029dd7d721dcd663b5acc860f104d0d2881036b62565eeafaa3c8228f"),
+        (2, 180, "610b83fd128e1baae1027cf58ccc6557535769e7ba9bfa1f1b1deb4d8d5a97ca"), (2, 383, "5ac5b6c79b414832b915114289f8900457648f754a429c4217fdd70bf6e693b1"),
+        (3, 60, "acd5fd4e72c1f4c7ab7a61388e7a384a09f37fc5e1aa7dedf895bd2069a89afc"), (3, 180, "7df22c6244787f09d164b7ef36630f2467b2fbeaebd5b42fd2c29ad87f472381"),
+        (3, 383, "141983719dfc33a8e10880198b3d2435010e2b9b291fd3fa71af4fc1f4fd93c1"), (7, 60, "08ab6657c0ae3d335a92ce7fc44e6a6b9cba39e92a64309cc64bbaa674800067"),
+        (7, 180, "e1230d2233091de0368f3c4de84952ee30ed2d41ebe891dc8af4493395de224a"), (7, 383, "360e3c81f3865beb523d3cf9cf20028b27c725da89575335456a664c3d7cfdb3"),
     ];
 
     private static bool Existed(string name) =>
-        !name.StartsWith("pol.lic.", StringComparison.Ordinal) && !name.StartsWith("pol.dis.", StringComparison.Ordinal) && name != "run.t6d";
+        !name.StartsWith("pol.lic.", StringComparison.Ordinal) && !name.StartsWith("pol.dis.", StringComparison.Ordinal) && name != "run.t6d" && name != "run.scenario";   // run.scenario: the scenario hash changed with «exposure to data» (TASK-0033)
 
     [Fact]
     public void T6dOff_GivesTheTrajectoryOfTheBuildBeforeT6d_ByProjectionOnTheOldColumns()

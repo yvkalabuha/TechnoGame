@@ -40,6 +40,7 @@ override:
     actors:
       - id: USA
         class: great
+        exposure: 0.5   # spec 8.1 «З» (A43.6): exposure_a of the alloy disruption
         gdp_1945: 2314.67
         gdp_year: 1945
         gdppc_1945: 16478
@@ -68,6 +69,7 @@ override:
         estimated: []
       - id: GBR
         class: great
+        exposure: 1.0   # spec 8.1 «З» (A43.6): exposure_a of the alloy disruption
         gdp_1945: 553.15
         gdp_year: 1945
         gdppc_1945: 11247
@@ -96,6 +98,7 @@ override:
         estimated: []
       - id: SUN
         class: great
+        exposure: 0.5   # spec 8.1 «З» (A43.6): exposure_a of the alloy disruption
         # No Maddison GDP for 1941-1945: 1946 is used (R-GDP, estimated).
         gdp_1945: 530.22
         gdp_year: 1946
@@ -128,6 +131,7 @@ override:
         estimated: [gdp_1945, gdppc_1945, growth_pa, known]
       - id: FRA
         class: middle
+        exposure: 1.0   # spec 8.1 «З» (A43.6): exposure_a of the alloy disruption
         gdp_1945: 162.81
         gdp_year: 1945
         gdppc_1945: 4101
@@ -155,6 +159,7 @@ override:
         estimated: []
       - id: SWE
         class: small
+        exposure: 1.0   # spec 8.1 «З» (A43.6): exposure_a of the alloy disruption
         gdp_1945: 54.41
         gdp_year: 1945
         gdppc_1945: 8201

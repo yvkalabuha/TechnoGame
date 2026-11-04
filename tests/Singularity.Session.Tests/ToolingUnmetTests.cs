@@ -13,13 +13,14 @@ public class ToolingUnmetTests
 {
     // Hash of the columns that existed before F33 (everything but ind.unmet.*), recorded on the build of part 1 (A39 V5 default), AI on, threads 4:
     // (seed, months, hash). The new column must not change the trajectory by a single bit.
+    // Re-recorded for «exposure to data» (TASK-0033): the same projection of the build before T6d, now without run.scenario (the scenario hash changed).
     private static readonly (ulong Seed, int Months, string Hash)[] BeforeF33 =
     [
-        (41, 384, "40e6db1291df78bf96ace451abb5b8449875bff3e78af29d610e82581a31adfe"),
-        (1, 150, "facf62d7f49acd7d37cd9e1e9c021700d0f9c562136f3fdc242e4c9d291af992"),
-        (2, 150, "e56a695e8c882d3f48a0a723c57411761efc3b6619a657280db877715c07b23e"),
-        (7, 150, "b6569c4004848c5d0393dc572a70d9132cc2e9d6f2176891f3e54a53985361d0"),
-        (61, 150, "a936c680d2cb6c6b2ea3e1502729166c50542ca8b238c70dd2585b40cf454b58"),
+        (41, 384, "6898f292b699eb16d27f8844fc921857dbeba624a3f3bd74a39db6b466a98a4a"),
+        (1, 150, "cdc044537b299c2bc4904bf920a565dc999110a8ab7716874dfc8eb0e292ff89"),
+        (2, 150, "163ebc8bad8c4ceb9b4cc579671ab25de33b73be652d253a8b9ddccd9ea590f9"),
+        (7, 150, "aa18234a9138e11dd7c5b40a7286b0d9bdd0a6352b98c4c16a9ad2a0a322bae3"),
+        (61, 150, "7cdf420caa77f36318ecfb908b4e7e796001249beeb6eabecb8e193ea523eeb2"),
     ];
 
     private static SliceSession Run(SliceRunConfig c, int months)
@@ -38,7 +39,7 @@ public class ToolingUnmetTests
             // T6d: the columns before F33 of the build before T6d are those of T6D_OFF (the new T6d columns and run.t6d are left out).
             SliceSession s = Run(new SliceRunConfig { Seed = seed, Threads = 4, T6dOff = true }, months);
             Assert.True(hash == ColumnProjection.Hash(s, n => !n.StartsWith("ind.unmet.", StringComparison.Ordinal) && !n.StartsWith("pol.lic.", StringComparison.Ordinal)
-                    && !n.StartsWith("pol.dis.", StringComparison.Ordinal) && n != "run.t6d"),
+                    && !n.StartsWith("pol.dis.", StringComparison.Ordinal) && n != "run.t6d" && n != "run.scenario"),
                 $"seed {seed}, {months} months: an old column differs (the new column must not touch the decisions)");
         }
     }

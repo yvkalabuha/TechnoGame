@@ -66,7 +66,7 @@ public sealed partial class ScenarioData
             BudgetIndex = [.. actors.Budget], GrowthPa = [.. actors.Growth],
             CultureH = [.. actors.CultureH], ToolingM = [.. actors.ToolingM],
             Hcap = [.. actors.Hcap], W = [.. actors.W], KD = [.. actors.KD], KInd = [.. actors.KInd],
-            TrophyEngineers = [.. actors.Trophy],
+            TrophyEngineers = [.. actors.Trophy], Exposure = [.. actors.Exposure],
             KnownStart = [.. actors.KnownStart], Known = [.. actors.Known],
             MasteredStart = [.. actors.MasteredStart], Mastered = [.. actors.Mastered],
             FleetStart = [.. actors.FleetStart], FleetClass = [.. actors.FleetClass], FleetGen = [.. actors.FleetGen],

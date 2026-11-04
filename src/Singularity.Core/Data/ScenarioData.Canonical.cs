@@ -72,6 +72,7 @@ public sealed partial class ScenarioData
                 w.Int(FleetCohortYear[f]);
             }
             w.Int(TrophyEngineers[a]);
+            w.Fixed(Exposure[a]);
             w.Int(EstimatedStart[a + 1] - EstimatedStart[a]);
             for (int e = EstimatedStart[a]; e < EstimatedStart[a + 1]; e++)
                 w.Str(Estimated[e]);

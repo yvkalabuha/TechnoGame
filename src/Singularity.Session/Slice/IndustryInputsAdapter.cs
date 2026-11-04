@@ -78,7 +78,7 @@ internal sealed class IndustryInputsAdapter(SliceWorld world) : IIndustryInputs
     {
         int actor = world.IndustryLayout.SiteOwner[siteRow];
         int number = world.IndustryLayout.Number[processRow];
-        return world.Policy.LicenceGen(actor) > 0 && LicenceRules.Has(world.Policy.LicenceMask(actor), number) && world.LicenceActive(actor)
+        return LicenceRules.Has(world.Policy.LicenceMask(actor), number) && world.LicenceActive(actor)
             && KnowsProcess(siteRow, processRow, month) ? world.PolicyParameters.LicenceProcessShare : Fx6.Zero;
     }
 

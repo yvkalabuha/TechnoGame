@@ -204,7 +204,7 @@ public sealed partial class ScenarioData
             ActorId = ActorId, ActorClass = ActorClass,
             Gdp = [.. f.Gdp], GdpYear = [.. f.GdpYear], GdpPerCapita = [.. f.GdpPerCapita], BudgetIndex = [.. f.Budget], GrowthPa = [.. f.Growth],
             CultureH = [.. f.CultureH], ToolingM = [.. f.ToolingM], Hcap = [.. f.Hcap], W = [.. f.W], KD = [.. f.KD], KInd = [.. f.KInd],
-            TrophyEngineers = [.. f.Trophy],
+            TrophyEngineers = [.. f.Trophy], Exposure = Exposure,
             KnownStart = knownStart, Known = known, MasteredStart = masteredStart, Mastered = mastered,
             FleetStart = fleetStart, FleetClass = fleetClass, FleetGen = fleetGen, FleetVariant = fleetVariant, FleetCount = fleetCount,
             FleetCohortYear = fleetCohort,

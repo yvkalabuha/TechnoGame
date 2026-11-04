@@ -26,7 +26,7 @@ public class FleetAblationTests
             {
                 s.StepThroughMonth(month);
                 string expected = baseline.Single(l => l.StartsWith($"{seed} {month} ", StringComparison.Ordinal))[($"{seed} {month} ").Length..];
-                Assert.True(expected == ColumnProjection.Hash(s, oldNames.Contains), $"seed {seed}, month {month}: an old column differs");
+                Assert.True(expected == ColumnProjection.Hash(s, n => n != "run.scenario" && oldNames.Contains(n)), $"seed {seed}, month {month}: an old column differs");
             }
         }
     }

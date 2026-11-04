@@ -7,10 +7,11 @@ public class DataHashTests : IDisposable
 {
     // scenario_hash of jet_slice_1945 (spec §1.1). Re-recorded for D1 (start-data package, spec v0.14) and for D2 (R-H-MS′ start rule, spec v0.19, #155, #159). Changing the scenario must be deliberate:
     // update this value together with the data and record it in the experiment manifest.
-    private const string ScenarioHash1945 = "71160e6570889603c96ccc2e8fbce28008345b4f0e7841d07b24f0cc6fd9330d";
+    private const string ScenarioHash1945 = "2ccb4adbe59a0795fc98c82413b6be188c067e90072eaed18d23d2b1d300878f";
 
+    // Re-recorded for «exposure to data» (TASK-0033): the actor field exposure (spec 8.1) is part of the scenario.
     // DataHash of mod core alone: nodes, product classes and scenarios. Same rule as above.
-    private const string CoreDataHash = "7cc1120c511fb4f4e20725c2ffe152ae20b07529944454004a8b77d6d54ff253";
+    private const string CoreDataHash = "6eba0cea3e6af277446c6017cf5765ed4f0813d047304c4c14dff9ccfc585bce";
 
     private readonly TestMods _mods = new();
 

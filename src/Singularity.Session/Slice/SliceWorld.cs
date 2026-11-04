@@ -117,7 +117,7 @@ internal sealed class SliceWorld
             Industry.CreateMailbox(chunks, Cadence.Monthly), QualityRequester, forced,
             products: config.ProductAi ? new PolicyProductsAdapter(this) : null, designs: ProductsLayout.Designs,
             generations: ProductsLayout.Generations, derive: config.Derive, startLines: StartLines(pStart),
-            events: Streams.Events, eventInputs: new PolicyEventsAdapter(this), disruptionExposure: Exposure(scenario));
+            events: Streams.Events, eventInputs: new PolicyEventsAdapter(this), disruptionExposure: scenario.Exposure);
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs);
         Limits = new CommandLimits(scenario.ActorCount, ProductsLayout.SlotCount, ProductsLayout.Designs,
             [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)]);
@@ -128,15 +128,6 @@ internal sealed class SliceWorld
 
         Policy.Initialize();
         Runner = new TickRunner(Table, config.Seed, [Knowledge, Industry, Products, Policy], config.ChunkSize, config.Threads, Calendar);
-    }
-
-    // exposure_a of the alloy disruption (spec §8.1, «З»): 0,5 for USA and SUN (own melt), 1 for GBR, FRA and SWE; an actor outside the five gets 1.
-    private static ImmutableArray<Fx6> Exposure(ScenarioData s)
-    {
-        var e = new Fx6[s.ActorCount];
-        for (int a = 0; a < e.Length; a++)
-            e[a] = s.ActorIndex("USA") == a || s.ActorIndex("SUN") == a ? Fx6.FromRaw(500_000) : Fx6.One;
-        return [.. e];
     }
 
     // E1: the designs that start in stage С (one per actor at most).
