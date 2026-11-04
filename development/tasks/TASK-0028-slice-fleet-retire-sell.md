@@ -42,9 +42,6 @@ created: 2026-11-04
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
-(Черновик раздела «Результат» TASK-0028 для Orchestrator: developer не пишет в development/tasks. Файл не коммитить, после переноса удалить.)
-
-## Результат
 **Сделано (developer, 2026-11-04; спека v0.17 A42, §6.10, §11 «T-fleet»; контракт v2.4 r6).**
 - **Industry.** Колонка `ind.mr.{p}` (`mastered_run`, 0…6): пишется в merge сразу после `report_output`, старт `min(6, −since_month)` для `mastered` сценария; `IndustryParams.MasteredYield` 0,7, `VMin` 937,5 ч (5% от `V_ref` = 18 750 ч, `ProductsLayout.ReferenceVRef`).
 - **Products.** `retire_cohort`/`sell_cohort` (валидатор с порядком кодов, слоты, старшие первыми, пыль, `loss_acc`), год политики (2a), `sale_income`, `B_in = ProcurementBudget + sale_income` (шаг 4), `ext_total` (2g), `line_bind` (шаг 7), колонки `retired/sold/quotaBase/soldY/lineBind`, `saleIncome/saleCap/saleY/extTotal`, 9 новых кодов отказа. Порядок шага 2: `close_line` → `sell` → `retire` → `start_series`. Чистые функции: `FleetRules` (цена, `Quote`, `SaleMax`, `Take`, `SweepDust`), `FleetBook` (одна реализация для слоя и проекции ИИ), `Fielded`, `FieldedGen`, `KeyOf` (`K = (G,T,N,P)`), `GFront`, `DefK`, `Keep`, `Quote`, `RetireForecast`/`SellForecast`, `WordOf(u)`. `LayoutVersion` 4.
