@@ -1,7 +1,7 @@
 ---
 id: TASK-0033
 title: "T6d: лицензии, перебой сплава, правила ИИ по why_not, множитель наладки mult_P"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -42,4 +42,7 @@ created: 2026-11-04
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
-<!-- Заполняет исполнитель: что сделано, файлы, коммит. -->
+**Сделано (developer, 1380151, 3ef89a2; перенесено Orchestrator).** A43.1–A43.8: лицензия (предложение с t=0, `EVT_LIC`; цена 20 730 raw; оплата через `licence_flow`; срок A43.4; `LicenceShare/Offered/Active`), перебой сплава (`EVT_DIS`, `dis_start/end`, `AlloyDeficit`), триггеры ИИ по `why_not` (QP P1 топ-3, P3 первое звено; лицензия P3; учебная серия P3), `mult_P` (A37, DEBT-0019), erratum F25, переключатели `LIC_OFF`, `T6D_OFF`, `LicKnows`, `BAD_LICENCE{SELF,EMPTY,GEN,MONEY}`. RNG только `EVT_LIC/EVT_DIS`. Схема v7. Golden («T6d»): Schema, Golden60, Golden150, F17b ×5. Тесты: Arch 80, Kernel 284, Core 997, Session 215 (+2 штатных пропуска).
+**Печать §6.11 (seeds 1…20, main / LIC_OFF).** E-LIC-0: 0 нарушений. Перебой p50: GBR 3, SWE 3, FRA 2, USA 1,5, SUN 2. E-LIC-FRA: первая лицензия P2 мес. 25, P3 13; P1 не покупает; серия FRA в main и LIC_OFF не различается (0/20). E-SUN: серия в main не позже LIC_OFF 20/20. E-SWE: серии нет 20/20. **E-FRA не совпало:** серия FRA в 9/20 seeds (мес. 339–379; до 180 — 0/20), одинаково в main и LIC_OFF — не от лицензии, а от F17b/V5/F25; якорь #150 не выполнен. QP после t0: 28; учебные серии P3 — 7/20 seeds.
+**Отклонения.** (1) Сделки `take_licence` ИИ — `Policy.ApplyDeals` в начале t+1 (до шага месяца), очередь `pol.lic.q.*` сверх контракта; команды игрока `take_licence` нет. (2) `T6D_OFF` отключает и `mult_P`. (3) `exposure`: USA, SUN 0,5, остальные 1 — константа в `SliceWorld`. (4) `LicenceOffered` в мес. 12k — маска прошлого года. (5) `mult_P`: P1 — PRC новейшего живого проекта, P2 — линии N, P3 ×1. (6) `lic_knows`: ENG и PRC узлы. (7) F27 не реализован (A43.5). (8) Перебой действует и без продуктового ИИ. (9) Пересчёт `ToolingPlan`/`why_not` ежемесячно (DEBT-0021).
+

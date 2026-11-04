@@ -10,8 +10,8 @@
 ## Активные задачи
 <!-- registry:active:start -->
 - TASK-0019 [REVIEW] Пилот внешней LLM (Qwen): tools/llm_worker (developer)
+- TASK-0033 [REVIEW] T6d: лицензии, перебой сплава, правила ИИ по why_not, множитель наладки mult_P (developer)
 - TASK-0017 [APPROVED] Смоук калибровочных якорей C1–C3 на слоях знания и способности (T4s) (simulation-engineer)
-- TASK-0033 [APPROVED] T6d: лицензии, перебой сплава, правила ИИ по why_not, множитель наладки mult_P (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
