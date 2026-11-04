@@ -10,8 +10,8 @@
 ## Активные задачи
 <!-- registry:active:start -->
 - TASK-0019 [REVIEW] Пилот внешней LLM (Qwen): tools/llm_worker (developer)
+- TASK-0028 [REVIEW] T-fleet: списание и продажа парка (A42, контракт r6) (developer)
 - TASK-0017 [APPROVED] Смоук калибровочных якорей C1–C3 на слоях знания и способности (T4s) (simulation-engineer)
-- TASK-0028 [APPROVED] T-fleet: списание и продажа парка (A42, контракт r6) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
