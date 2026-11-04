@@ -296,11 +296,12 @@ public class ToolingTargetTests
     [InlineData("V3", ToolingTarget.V3)]
     [InlineData("V3b", ToolingTarget.V3b)]
     [InlineData("V4", ToolingTarget.V4)]
+    [InlineData("V5", ToolingTarget.V5)]
     [InlineData("VINF", ToolingTarget.VInf)]
     public void Manifest_ParsesKnownValues(string text, ToolingTarget expected) => Assert.Equal(expected, ToolingTargetSpec.Parse(text).Variant);
 
     [Theory]
-    [InlineData("V5")]
+    [InlineData("V6")]
     [InlineData("v0")]
     [InlineData("")]
     public void Manifest_UnknownValueIsAnError(string text) => Assert.Throws<ArgumentException>(() => ToolingTargetSpec.Parse(text));
@@ -312,7 +313,78 @@ public class ToolingTargetTests
         Assert.Throws<ArgumentException>(() => (ToolingTargetSpec.Parse("V3") with { HHi = Fx6.Zero }).Validate());
         Assert.Throws<ArgumentException>(() => (ToolingTargetSpec.Parse("V3b") with { HHiControl = Fx6.Zero }).Validate());
         Assert.Throws<ArgumentException>(() => (ToolingTargetSpec.Parse("V4") with { MLead = Fx6.Zero }).Validate());
+        Assert.Throws<ArgumentException>(() => (ToolingTargetSpec.Parse("V5") with { MLead = Fx6.Zero }).Validate());
         Assert.Throws<ArgumentException>(() => (new ToolingTargetSpec { Variant = (ToolingTarget)99 }).Validate());
         Assert.Throws<ArgumentException>(() => RigWith(2_800_000).Plan(0, Big, Big, 0, new ToolingTargetSpec { Variant = (ToolingTarget)99 }));
+    }
+
+    // ---- V5 (spec §11 T6e v0.21, #162): MET purity is the bottleneck (M 1.5, H 2.9, r 3); dimension 0 (r 3) is the cell under test.
+
+    private static ToolingPlanTests.Rig V5Rig(long m0, long h0, Dims3? req = null) => new(
+        (s, c, d) => c == 0 && d == 1 ? F(1_500_000) : c == 0 && d == 0 ? F(m0) : F(3_400_000), 1,
+        (s, c, d) => c == 0 && d == 1 ? F(2_900_000) : c == 0 && d == 0 ? F(h0) : Fx6.FromInt(4), null, req);
+
+    [Theory]
+    [InlineData(2_400_000, 3_500_000, true)]   // (a) M < H, M < r
+    [InlineData(2_800_000, 2_800_000, true)]   // (b) M = H < r
+    [InlineData(3_200_000, 3_500_000, false)]  // (c) r <= M < H
+    [InlineData(2_900_000, 2_800_000, false)]  // (g) M > H
+    public void V5_ParticipatesWhereToolingHinders_V4OnlyAtTheBottleneck(long m0, long h0, bool v5)
+    {
+        ToolingPlanResult p5 = V5Rig(m0, h0).Plan(0, Big, Big, 0, Spec(ToolingTarget.V5));
+        ToolingPlanResult p4 = V5Rig(m0, h0).Plan(0, Big, Big, 0, Spec(ToolingTarget.V4));
+        Assert.Equal(v5, p5.Participates(0, 0, Dimension.Purity - 1));
+        Assert.False(p4.Participates(0, 0, Dimension.Purity - 1));   // not the bottleneck: V4 skips it
+        Assert.True(p4.Participates(0, 0, Dimension.Purity) && p5.Participates(0, 0, Dimension.Purity));
+        Fx6 goal = p5.Goal(0, 0, Dimension.Purity - 1);
+        Assert.Equal(v5 ? F(Math.Min(h0 + 200_000, 4_000_000)) : Fx6.Zero, goal);
+        // V4 ⊆ V5 ⊆ VINF on every cell.
+        ToolingPlanResult inf = V5Rig(m0, h0).Plan(0, Big, Big, 0, Spec(ToolingTarget.VInf));
+        for (int s = 0; s < 3; s++)
+        {
+            for (int c = 0; c < 2; c++)
+            {
+                for (int d = 0; d < 3; d++)
+                {
+                    var dim = (Dimension)d;
+                    Assert.True(!p4.Participates(s, c, dim) || p5.Participates(s, c, dim));
+                    Assert.True(!p5.Participates(s, c, dim) || inf.Participates(s, c, dim));
+                    Assert.True(p5.Goal(s, c, dim) <= Fx6.FromInt(4));
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public void V5_NoParticipation_WhenVExpIsZero_TheProcessIsUnknown_OrRdIsZero()
+    {
+        var none = V5Rig(2_400_000, 3_500_000);
+        none.Inputs.NoPlanned = true;
+        Assert.False(none.Plan(0, Big, Big, 0, Spec(ToolingTarget.V5)).Participates(0, 0, Dimension.Purity - 1));
+        var unknown = V5Rig(2_400_000, 3_500_000);
+        unknown.Inputs.Unknown = true;
+        Assert.False(unknown.Plan(0, Big, Big, 0, Spec(ToolingTarget.V5)).Participates(0, 0, Dimension.Purity - 1));
+        var zero = V5Rig(2_400_000, 3_500_000, new Dims3(Fx6.Zero, Fx6.FromInt(3), F(2_500_000)));
+        Assert.False(zero.Plan(0, Big, Big, 0, Spec(ToolingTarget.V5)).Participates(0, 0, Dimension.Purity - 1));
+    }
+
+    [Fact]
+    public void V5_WaterfallInCanonicalOrder_PoolRunsOut_LaterCellsGetNothing()
+    {
+        // Purity (d1) is the first cell with need in order after dimension 0; dimension 0 comes first and takes the whole small pool.
+        var rig = V5Rig(2_400_000, 3_500_000);
+        Fx6 pool = F(1_000);
+        ToolingPlanResult plan = rig.Plan(0, pool, Fx6.Zero, 0, Spec(ToolingTarget.V5));
+        Assert.Equal(pool, plan.Total);
+        Assert.Equal(pool, plan.Invest(0, 0, Dimension.Purity - 1));
+        Assert.Equal(Fx6.Zero, plan.Invest(0, 0, Dimension.Purity));
+        Assert.Equal(Fx6.Zero, plan.Invest(1, 0, Dimension.Purity - 1));
+        ToolingPlanResult same = V5Rig(2_400_000, 3_500_000).Plan(0, pool, Fx6.Zero, 0, Spec(ToolingTarget.V5));
+        Assert.Equal(plan.Total, same.Total);
+        Fx6 rest = F(500), cap = F(700);
+        ToolingPlanResult two = V5Rig(2_400_000, 3_500_000).Plan(0, rest, cap, 0, Spec(ToolingTarget.V5));
+        Assert.True(two.Total <= rest + cap);
+        Assert.True(two.TakenRest <= rest);
+        Assert.Equal(rest + cap, two.Total + two.RestReturned + two.TrainingBudget);
     }
 }

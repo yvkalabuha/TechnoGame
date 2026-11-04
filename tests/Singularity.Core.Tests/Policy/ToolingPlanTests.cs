@@ -28,7 +28,8 @@ public partial class ToolingPlanTests
         public bool NoPlanned;
         public bool Planned(int siteRow, int processRow, long month) => !NoPlanned && processRow == 0;
         public Fx6 PlannedVolume(int siteRow, int processRow, long month) => !NoPlanned && processRow == 0 ? Fx6.FromInt(10) : Fx6.Zero;
-        public bool KnowsProcess(int siteRow, int processRow, long month) => true;
+        public bool Unknown;
+        public bool KnowsProcess(int siteRow, int processRow, long month) => !Unknown;
         public Fx6 W(int siteRow, int cluster, long month) => Fx6.One;
         public Fx6 Hcap(int siteRow, Dimension dim, long month) => Fx6.FromInt(5);
         public bool QualityProgramme(int siteRow, long month) => false;
@@ -54,11 +55,11 @@ public partial class ToolingPlanTests
 
     internal sealed class Rig
     {
-        public Rig(Func<int, int, int, Fx6>? m = null, int threads = 1, Func<int, int, int, Fx6>? h = null, ICultureRule? rule = null)
+        public Rig(Func<int, int, int, Fx6>? m = null, int threads = 1, Func<int, int, int, Fx6>? h = null, ICultureRule? rule = null, Dims3? metReq = null)
         {
             Layout = IndustryLayout.Create([Cluster.MET, Cluster.MECH],
                 [
-                    new IndustryProcessSpec(Met, Cluster.MET, 0, 3, new Dims3(Fx6.FromInt(3), Fx6.FromInt(3), F(2_500_000))),
+                    new IndustryProcessSpec(Met, Cluster.MET, 0, 3, metReq ?? new Dims3(Fx6.FromInt(3), Fx6.FromInt(3), F(2_500_000))),
                     new IndustryProcessSpec(Mech, Cluster.MECH, 0, 3, new Dims3(Fx6.FromInt(3), Fx6.FromInt(3), F(2_500_000))),
                 ],
                 siteOwner: [0, 0, 1], workforceCategories: 2, skilledCategory: 1, requesters: 2);

@@ -246,6 +246,17 @@ public static class ToolingPlan
             if (vExp <= Fx6.Zero)
                 continue;
             ProcessYield y = yields[r];
+            // V5 (v0.21): any dimension the process uses where the tooling hinders; the bottleneck is not checked.
+            if (t.Variant == ToolingTarget.V5)
+            {
+                if (l.Req[r][dim] > Fx6.Zero && m <= h && m < l.Req[r][dim])
+                {
+                    if (!any || h + t.MLead > goal)
+                        goal = h + t.MLead;
+                    any = true;
+                }
+                continue;
+            }
             Fx6 minG = Fx6.One;
             int bottleneck = -1;
             for (int d = 0; d < Dims3.Count; d++)

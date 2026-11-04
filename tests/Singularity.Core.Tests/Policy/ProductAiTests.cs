@@ -656,16 +656,88 @@ public class ProductAiTests
     [Fact]
     public void CancelAndStart_OfOneProject_ExcludeEachOther()
     {
-        // Stuck for T_ab months but the gate is open and the hidden defects are within k_P (a stale snapshot): the cancel wins, no launch of the same project.
+        // Stuck for T_ab months with the launch condition true: the guard (v0.21) launches it, no cancel. Admission false: cancel, no launch.
         var rig = new Rig(PolicyProfile.Mass, s => s.Design[0] = Live(DesignStage.InService, 1));
         rig.S.Design[1] = Prototype(0, 2, Fx6.FromInt(100), gate: true);
-        rig.Month(60);                                                // t − s = 60 and a launch condition both hold
-        Assert.Null(rig.Policy.AiStart(0, 1, 61));
-        Assert.Contains(rig.Commands(61), c => c.Kind == DesignCommandKind.Cancel && c.Target == 1);
+        rig.Month(60);
+        Assert.NotNull(rig.Policy.AiStart(0, 1, 61));
+        Assert.DoesNotContain(rig.Commands(61), c => c.Kind == DesignCommandKind.Cancel);
+        var waiting = new Rig(PolicyProfile.Mass, s => { s.Design[0] = Live(DesignStage.InService, 1); s.AdmittedOf = _ => false; });
+        waiting.S.Design[1] = Prototype(0, 2, Fx6.FromInt(100), gate: true);
+        waiting.Month(60);
+        Assert.Null(waiting.Policy.AiStart(0, 1, 61));
+        Assert.Contains(waiting.Commands(61), c => c.Kind == DesignCommandKind.Cancel && c.Target == 1);
         // A launch pending from last month: the project is not cancelled.
         var other = new Rig(PolicyProfile.Mass, s => s.Design[0] = Live(DesignStage.InService, 1));
         other.S.Design[1] = Prototype(0, 2, Fx6.FromInt(100), gate: true);
         other.Month(0);
         Assert.NotNull(other.Policy.AiStart(0, 1, 1));
+    }
+
+    // ---- A40 guard (spec v0.21, #162): no cancel_design while L(d, t) = gate_open ∧ D_hidden ≤ k_P·D_ref ∧ admitted holds in the snapshot.
+
+    [Fact]
+    public void A40Guard_LaunchConditionTrueAtTAb_StartsInsteadOfCancelling()
+    {
+        var rig = new Rig(PolicyProfile.Quality, s => { s.Design[0] = Series(1, 0, true); s.Design[1] = Prototype(10, 2, Fx6.FromInt(100), gate: true); });
+        rig.Month(70);
+        Assert.NotNull(rig.Policy.AiStart(0, 1, 71));
+        Assert.DoesNotContain(rig.Commands(71), c => c.Kind == DesignCommandKind.Cancel);
+    }
+
+    [Fact]
+    public void A40Guard_ConditionFalse_CancelsWithTheOldClasses()
+    {
+        var notAdmitted = new Rig(PolicyProfile.Quality, s => { s.Design[1] = Prototype(10, 2, Fx6.FromInt(100), gate: true); s.AdmittedOf = _ => false; });
+        notAdmitted.Month(70);
+        Assert.Single(notAdmitted.Commands(71), c => c.Kind == DesignCommandKind.Cancel);
+        Assert.Equal(GiveUpClass.Processes, notAdmitted.Policy.ClassifyGiveUp(0, 1, 70));
+        var closed = new Rig(PolicyProfile.Quality, s => s.Design[1] = Prototype(10, 2, Fx6.FromInt(100), gate: false));
+        closed.Month(70);
+        Assert.Single(closed.Commands(71), c => c.Kind == DesignCommandKind.Cancel);
+        Assert.Equal(GiveUpClass.Defects, closed.Policy.ClassifyGiveUp(0, 1, 70));
+    }
+
+    [Fact]
+    public void A40Guard_AnotherProjectLaunchesThisMonth_NoCancel_ThenLaunchOrCancelByLInTheNextMonth()
+    {
+        // Two projects past T_ab with L true: the lower id launches, the other is not cancelled; next month L decides.
+        var rig = new Rig(PolicyProfile.Quality, s =>
+        {
+            s.Design[0] = Prototype(10, 2, Fx6.FromInt(100), gate: true);
+            s.Design[1] = Prototype(10, 3, Fx6.FromInt(100), gate: true);
+        });
+        rig.Month(70);
+        Assert.NotNull(rig.Policy.AiStart(0, 0, 71));
+        Assert.Null(rig.Policy.AiStart(0, 1, 71));
+        Assert.DoesNotContain(rig.Commands(71), c => c.Kind == DesignCommandKind.Cancel);
+        // The start of d0 is pending in t+1; d1 neither launches nor is cancelled there. L stays true at 72: still no cancel.
+        rig.Month(71);
+        Assert.DoesNotContain(rig.Commands(72), c => c.Kind == DesignCommandKind.Cancel);
+    }
+
+    [Fact]
+    public void A40Guard_InEveryMonth_ACancelOfBranchOHasLFalse()
+    {
+        // Sweep of the three parts of L over months around T_ab: a cancel is issued only when L is false.
+        for (int mask = 0; mask < 8; mask++)
+        {
+            bool gate = (mask & 1) != 0, dOk = (mask & 2) != 0, adm = (mask & 4) != 0;
+            var rig = new Rig(PolicyProfile.Quality, s =>
+            {
+                s.Design[0] = Series(1, 0, true);
+                s.Design[1] = Prototype(10, 2, dOk ? Fx6.FromInt(100) : Fx6.FromInt(700), gate);
+                s.AdmittedOf = _ => adm;
+            });
+            for (long t = 60; t < 75; t++)
+            {
+                rig.Month(t);
+                if (rig.Commands(t + 1).Any(c => c.Kind == DesignCommandKind.Cancel))
+                {
+                    Assert.False(gate && dOk && adm, $"mask {mask} month {t}: cancel with L true");
+                    break;
+                }
+            }
+        }
     }
 }

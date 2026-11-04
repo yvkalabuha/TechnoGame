@@ -28,6 +28,12 @@ public enum ToolingTarget
     /// <c>v_exp &gt; 0</c> and <c>r_d &gt; 0</c>; the money (<c>need∞</c>) is notional and is not taken from the pool.
     /// </summary>
     VInf = 6,
+
+    /// <summary>
+    /// Every dimension a known process with <c>v_exp &gt; 0</c> uses (<c>r_d &gt; 0</c>), where the tooling hinders: <c>M ≤ H ∧ M &lt; r_d</c> (snapshot, raw);
+    /// target <c>min(H + m_lead, M_cap)</c>. The bottleneck is not required (spec §11 T6e v0.21, #162).
+    /// </summary>
+    V5 = 7,
 }
 
 /// <summary>
@@ -47,13 +53,13 @@ public sealed record ToolingTargetSpec
     /// <summary><c>h_hi</c> of V3: 0,063.</summary>
     public Fx6 HHi { get; init; } = Fx6.FromRaw(63_000);
 
-    /// <summary><c>m_lead</c> of V4: 0,20.</summary>
+    /// <summary><c>m_lead</c> of V4 and V5: 0,20.</summary>
     public Fx6 MLead { get; init; } = Fx6.FromRaw(200_000);
 
     /// <summary><c>h_hi</c> of the control V3b: 0,20.</summary>
     public Fx6 HHiControl { get; init; } = Fx6.FromRaw(200_000);
 
-    /// <summary>The variant of a manifest value "V0"…"V4"; anything else is a manifest error.</summary>
+    /// <summary>The variant of a manifest value "V0"…"V5"; anything else is a manifest error.</summary>
     public static ToolingTargetSpec Parse(string value) => value switch
     {
         "V0" => new ToolingTargetSpec { Variant = ToolingTarget.V0 },
@@ -62,8 +68,9 @@ public sealed record ToolingTargetSpec
         "V3" => new ToolingTargetSpec { Variant = ToolingTarget.V3 },
         "V3b" => new ToolingTargetSpec { Variant = ToolingTarget.V3b },
         "V4" => new ToolingTargetSpec { Variant = ToolingTarget.V4 },
+        "V5" => new ToolingTargetSpec { Variant = ToolingTarget.V5 },
         "VINF" => new ToolingTargetSpec { Variant = ToolingTarget.VInf },
-        _ => throw new ArgumentException($"TOOLING_TARGET '{value}' is not one of V0, V1, V2, V3, V3b, V4, VINF.", nameof(value)),
+        _ => throw new ArgumentException($"TOOLING_TARGET '{value}' is not one of V0, V1, V2, V3, V3b, V4, V5, VINF.", nameof(value)),
     };
 
     /// <summary>Manifest check: a known variant and a positive number for every number the variant uses.</summary>
@@ -76,9 +83,9 @@ public sealed record ToolingTargetSpec
             case ToolingTarget.V1 when RhoMax > Fx6.Zero:
             case ToolingTarget.V3 when HLo > Fx6.Zero && HHi > Fx6.Zero:
             case ToolingTarget.V3b when HLo > Fx6.Zero && HHiControl > Fx6.Zero:
-            case ToolingTarget.V4 when MLead > Fx6.Zero:
+            case ToolingTarget.V4 or ToolingTarget.V5 when MLead > Fx6.Zero:
                 return;
-            case ToolingTarget.V1 or ToolingTarget.V3 or ToolingTarget.V3b or ToolingTarget.V4:
+            case ToolingTarget.V1 or ToolingTarget.V3 or ToolingTarget.V3b or ToolingTarget.V4 or ToolingTarget.V5:
                 throw new ArgumentException($"TOOLING_TARGET {Variant}: a number of the variant is missing or not positive.");
             default:
                 throw new ArgumentException($"TOOLING_TARGET {(int)Variant} is not a known variant.");

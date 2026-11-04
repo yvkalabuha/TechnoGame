@@ -233,10 +233,14 @@ public sealed partial class PolicySystem
         // A40: one give-up per generation and month; only while the Requirement for the generation has not been repeated.
         var gaveUpNow = new bool[l.Generations + 1];
         var cancelNow = new bool[_designs];
+        Fx6 launchLimit = _pp.LaunchShare[(int)profile] * prod.DRef;
         for (int d = 0; d < _designs; d++)
         {
             PolicyDesign x = designs[d];
             if (x.Stage != DesignStage.Prototype || x.StageOMonth < 0 || t - x.StageOMonth < _pp.TAb || !GiveUpAllowed(row, x.PlatformGen, gaveUpNow, designs))
+                continue;
+            // v0.21 guard: a project that satisfies the launch condition L(d, t) of the snapshot is not given up (it launches by A41).
+            if (x.GateOpen && x.Hidden <= launchLimit && prod.Admitted(row, d, t))
                 continue;
             // A launch decided last month is still pending in the snapshot: a launching project is not given up.
             if (_startStamp[d].Current[row] == Stamp(t))
@@ -291,12 +295,11 @@ public sealed partial class PolicySystem
             startPending |= _startStamp[d].Current[row] == Stamp(t);
         if (!startPending)
         {
-            Fx6 limit = _pp.LaunchShare[(int)profile] * prod.DRef;
             for (int d = 0; d < _designs; d++)
             {
                 PolicyDesign x = designs[d];
                 // A project cancelled this month or whose cancel is still pending does not launch.
-                if (x.Stage != DesignStage.Prototype || !x.GateOpen || x.Hidden > limit || cancelNow[d]
+                if (x.Stage != DesignStage.Prototype || !x.GateOpen || x.Hidden > launchLimit || cancelNow[d]
                     || Pending(_dsnStamp, row, t, k => _dsnKind[k].Current[row] == 3 && _dsnTarget[k].Current[row] == d)
                     || !prod.Admitted(row, d, t))
                     continue;
