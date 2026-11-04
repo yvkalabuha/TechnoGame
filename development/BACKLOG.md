@@ -58,7 +58,7 @@
 |---|---|---|---|
 | [EXP-0001](../development/experiments/EXP-0001-pilot-science-industry.md) | DONE | Пилот: траектории государств с разным сочетанием науки, инженерии и производства | HYP-0001 |
 | [EXP-0002](../development/experiments/EXP-0002-hyp0002-main.md) | PLANNED | EXP-0002: основной эксперимент HYP-0002 (срез «реактивная авиация») | HYP-0002 |
-| [EXP-0003](../development/experiments/EXP-0003-t6e-tooling-target.md) | PLANNED | Цель оснастки A39: варианты V0–V4 против эталона VINF (T6e) | HYP-0002 |
+| [EXP-0003](../development/experiments/EXP-0003-t6e-tooling-target.md) | DONE | Цель оснастки A39: варианты V0–V4 против эталона VINF (T6e) | HYP-0002 |
 
 ## ADR
 
