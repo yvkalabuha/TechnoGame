@@ -1,0 +1,224 @@
+{
+  "experiment": "EXP-0005",
+  "description": "T6e3: participation of pass 2 of the A39 tooling plan — V5 (all hindering dimensions) vs V4 and VINF; spec slice-jet-aviation.md v0.21 §11 'EXP T6e3'; pre-registration docs/simulation/exp-t6e3-tooling-target.md r0; criteria and selection rule — docs/simulation/exp-t6e2-tooling-target.md r1 unchanged",
+  "build": {
+    "core_commit_min": "9d0643f",
+    "data": "mods/core (D1 + R-H-MS, TASK-0029)",
+    "ai": "A41 with F17b (LINE_CLOSE = YPROD) + A42 (A43 not in main); A40 branch O launch guard v0.21 (TASK-0031)",
+    "validator_s2": true
+  },
+  "months": 384,
+  "threads": 4,
+  "chunk_size": 1,
+  "arms": {
+    "V0": {
+      "variant": "V0"
+    },
+    "V4": {
+      "variant": "V4",
+      "m_lead": 0.2
+    },
+    "V5": {
+      "variant": "V5",
+      "m_lead": 0.2
+    },
+    "VINF": {
+      "variant": "VINF"
+    }
+  },
+  "configs": {
+    "main": {
+      "profile_cell": null,
+      "line_close": "YPROD",
+      "seeds": [
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60
+      ]
+    },
+    "allP1": {
+      "profile_cell": 0,
+      "line_close": "YPROD",
+      "seeds": [
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50
+      ]
+    },
+    "allP2": {
+      "profile_cell": 13,
+      "line_close": "YPROD",
+      "seeds": [
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50
+      ]
+    },
+    "allP3": {
+      "profile_cell": 26,
+      "line_close": "YPROD",
+      "seeds": [
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50
+      ]
+    }
+  },
+  "determinism": {
+    "golden_tests": [
+      "LinkedRunTests",
+      "ProductAiSessionTests",
+      "F17bTests"
+    ],
+    "golden_seeds_V0_main": [
+      41,
+      42,
+      43,
+      44,
+      45
+    ],
+    "threads_check": [
+      {
+        "arm": "V0",
+        "config": "main",
+        "seed": 41,
+        "threads": [
+          1,
+          4
+        ]
+      },
+      {
+        "arm": "V5",
+        "config": "main",
+        "seed": 41,
+        "threads": [
+          1,
+          4
+        ]
+      }
+    ],
+    "preconditions": {
+      "ledger_1zh": {
+        "arm": "V5",
+        "config": "main",
+        "seeds": [
+          41,
+          42,
+          43,
+          44,
+          45
+        ]
+      },
+      "regression_4d": {
+        "manifest": "lab/manifests/EXP-0004-t6e2.json",
+        "arm": "V3",
+        "config": "main",
+        "seed": 23,
+        "actor": "USA",
+        "month": 321
+      }
+    }
+  },
+  "analysis": {
+    "script": "lab/analysis/t6e3.py",
+    "rho_max_pool": 0.021,
+    "k1_min_ratio_to_vinf": 0.75,
+    "k2_max_ratio_to_vinf": 1.0,
+    "k4_band": [
+      0.67,
+      1.5
+    ],
+    "k4_min_judged_seeds": 10,
+    "k5_min_ratio": 0.75,
+    "window_months": 48,
+    "selection_tie_rel": 0.05,
+    "simplicity_S": {
+      "V4": 2,
+      "V5": 2
+    },
+    "new_literals": {
+      "V4": 1,
+      "V5": 1
+    },
+    "goal_offsets": {
+      "V0": 0.0,
+      "V4": 0.2,
+      "V5": 0.2
+    },
+    "v013_print": {
+      "m1a_min": 0.9,
+      "invest_increment_max_share_cap": 0.02
+    },
+    "bootstrap_reps": 2000,
+    "bootstrap_seed": 20261160,
+    "t_ab": 60,
+    "y_prod": 0.5,
+    "c2_star_prc": {
+      "4": [
+        40,
+        49
+      ],
+      "5": [
+        41,
+        51,
+        52
+      ]
+    },
+    "c2_corridor_months": [
+      24,
+      96
+    ],
+    "c1_corridors_dln_per_doubling": {
+      "development_1_3": [
+        0.0,
+        0.5108
+      ],
+      "mature_yield_ge_0_9": [
+        0.1625,
+        0.3567
+      ]
+    },
+    "candidates": [
+      "V4",
+      "V5"
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# EXP-0003 (T6e) / EXP-0004 (T6e2) runner: archive copy of the commit, harness dropped into the Session test assembly, Release build,
+# EXP-0003 (T6e) / EXP-0004 (T6e2) / EXP-0005 (T6e3) runner: archive copy of the commit, harness dropped into the Session test assembly, Release build,
 # golden checks, then the runs of the manifest in N parallel shards. Output: lab/results/<name>/ (never committed).
 # Usage: lab/runners/t6e/run_t6e.sh [commit] [shards]
 #   env T6E_NAME (default t6e) — results dir; T6E_MANIFEST_FILE (default lab/manifests/EXP-0003-t6e.json);

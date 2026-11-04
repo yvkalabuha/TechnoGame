@@ -1,4 +1,4 @@
-// EXP-0003 (T6e) and EXP-0004 (T6e2) runner. Lab observer of the jet slice: reads the world after each month, never writes it.
+// EXP-0003 (T6e), EXP-0004 (T6e2) and EXP-0005 (T6e3) runner. Lab observer of the jet slice: reads the world after each month, never writes it.
 // Built and run by lab/runners/t6e/run_t6e.sh inside an archive copy of the repo (lab/results/t6e/repo), dropped into
 // tests/Singularity.Session.Tests: that assembly is the only one with read access to SliceWorld (Session has no read views yet,
 // ADR-0014 п. 5; see EXP-0003 «Отклонения»). Nothing here is part of the product or of the committed test suite.
@@ -22,6 +22,10 @@ public class T6eHarness(ITestOutputHelper output)
             .CreateDelegate<Func<ICultureSnapshot, int, int, long, int>>();
 
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
+
+    // EXP-0005: read-only access to the AI's snapshot reader and its give-up gate, to print the A40 branch О guard (v0.21) firings.
+    private static readonly FieldInfo ProdField = typeof(PolicySystem).GetField("_prod", BindingFlags.NonPublic | BindingFlags.Instance)!;
+    private static readonly MethodInfo GiveUpAllowedM = typeof(PolicySystem).GetMethod("GiveUpAllowed", BindingFlags.NonPublic | BindingFlags.Instance)!;
 
     private sealed record Job(string Arm, string Config, int? Cell, ulong Seed, int Threads, LineCloseRule LineClose);
 
@@ -117,12 +121,20 @@ public class T6eHarness(ITestOutputHelper output)
         ProductsSystem pr = w.Products;
         IndustryParams ip = w.IndustryParameters;
         var vinf = new ToolingTargetSpec { Variant = ToolingTarget.VInf };
+        var v4Spec = target with { Variant = ToolingTarget.V4 };
+        Fx6 bigPool = Fx6.FromInt(1_000_000_000);
+        var ledger = new StringBuilder("t,actor,n4,n5,ninf,v4not5,v5notinf,v5notinf_mdec_ge_mcap,goal_over_mcap\n");
+        long ledV45 = 0, ledV5I = 0, ledV5Imdec = 0, ledGoal = 0, ledN4 = 0, ledN5 = 0, ledNI = 0;
+        var guard = new StringBuilder("t,actor,design,gen,stage_o\n");
+        long guardFirings = 0;
+        var polProd = (IPolicyProducts)ProdField.GetValue(w.Policy)!;
+        PolicyParams pp = w.PolicyParameters;
         Fx6 rhoPool = Fx6.FromRaw(21_000);
         int nA = w.Scenario.ActorCount, nC = L.Clusters.Length, nP = L.ProcessCount, designs = w.ProductsLayout.Designs;
         string[] ids = [.. Enumerable.Range(0, nA).Select(a => w.Scenario.ActorId[a])];
         int r49 = L.RowOf(49);
 
-        var cells = new StringBuilder("t,actor,c,d,H,M,Mcap,pool,p2,notional,part,goal,gotE,lab\n");
+        var cells = new StringBuilder("t,actor,c,d,H,M,Mcap,pool,p2,notional,part,goal,gotE,lab,short,s,f5\n");
         var acts = new StringBuilder("t,actor,profile,rest,bcap,total,restRet,ta,notionalTotal,p2total,output,G,Gfront\n");
         var lines = new StringBuilder("t,actor,design,gen,rate,unitcost,minyield\n");
         var diag = new StringBuilder("t,actor,yield,vexp,lim,limsubj,MminusH_prec,MminusH_pur,MminusH_qc,H_prec,H_pur,H_qc,M_prec,M_pur,M_qc,E\n");
@@ -164,15 +176,30 @@ public class T6eHarness(ITestOutputHelper output)
                 for (int d = 0; d < 3; d++)
                     h0[(s * nC + c) * 3 + d] = ind.CultureH(s, c, (Dimension)d).Raw;
 
+        long curT = 0;
+        Fx6 MCapOf(int site)
+        {
+            int tier = 0;
+            foreach (int r in L.Order)
+            {
+                if (inputs.KnowsProcess(site, r, curT) && ind.Yield(site, r, curT).Yield > Fx6.Zero && L.Clusters[L.ClusterIndex[r]] == Cluster.MECH && L.Tier[r] > tier)
+                    tier = L.Tier[r];
+            }
+            return Fx6.FromInt(1 + (tier > 3 ? tier : 3));
+        }
+
         for (long t = 0; t < months; t++)
         {
+            curT = t;
             // ---- snapshot of month t (what the compute of month t reads)
             var plans = new ToolingPlanResult[nA];
             var refs = new ToolingPlanResult[nA];
+            var unl = new ToolingPlanResult?[nA];   // EXP-0005 P-pool: same arm with an unlimited pool (room still binds)
+            var v4 = new ToolingPlanResult?[nA];    // EXP-0005 (1ж): V4 on the same snapshot, V5 arm only
             var restUsed = new Fx6[nA];
             var mBefore = new Fx6[L.SiteCount * nC * 3];
             var mCapS = new Fx6[L.SiteCount];
-            var pre = new List<(int a, int s, int c, int d, Fx6 h, Fx6 m, bool pool, int lab)>();
+            var pre = new List<(int a, int s, int c, int d, Fx6 h, Fx6 m, bool pool, int lab, bool f5)>();
             var dstar = new int[L.SiteCount, nP];
             for (int a = 0; a < nA; a++)
             {
@@ -181,6 +208,69 @@ public class T6eHarness(ITestOutputHelper output)
                 Fx6 bCap = w.SharesOf(a).Capability * w.Policy.Budget(a);
                 plans[a] = ToolingPlan.Compute(ind, inputs, w.PolicyParameters.MKeep, a, t, rest, bCap, target);
                 refs[a] = ToolingPlan.Compute(ind, inputs, w.PolicyParameters.MKeep, a, t, rest, bCap, vinf);
+                if (target.Variant != ToolingTarget.VInf)
+                    unl[a] = ToolingPlan.Compute(ind, inputs, w.PolicyParameters.MKeep, a, t, bigPool, bigPool, target);
+                if (target.Variant == ToolingTarget.V5)
+                    v4[a] = ToolingPlan.Compute(ind, inputs, w.PolicyParameters.MKeep, a, t, rest, bCap, v4Spec);
+            }
+            if (target.Variant == ToolingTarget.V5)
+            {
+                // (1ж): participation V4 ⊆ V5 ⊆ VINF on every cell of every site, and goal ≤ M_cap (ledger Participates of the same snapshot)
+                for (int a = 0; a < nA; a++)
+                {
+                    long n4 = 0, n5 = 0, ni = 0, x45 = 0, x5i = 0, x5im = 0, xg = 0;
+                    for (int s = 0; s < L.SiteCount; s++)
+                    {
+                        if (L.SiteOwner[s] != a)
+                            continue;
+                        Fx6 cap = MCapOf(s);
+                        for (int c = 0; c < nC; c++)
+                        {
+                            for (int d = 0; d < 3; d++)
+                            {
+                                bool p4 = v4[a]!.Participates(s, c, (Dimension)d), p5 = plans[a].Participates(s, c, (Dimension)d), pi = refs[a].Participates(s, c, (Dimension)d);
+                                n4 += p4 ? 1 : 0;
+                                n5 += p5 ? 1 : 0;
+                                ni += pi ? 1 : 0;
+                                x45 += p4 && !p5 ? 1 : 0;
+                                if (p5 && !pi)
+                                {
+                                    x5i++;
+                                    Fx6 m = ind.ToolingM(s, c, (Dimension)d);
+                                    x5im += m - ip.DeltaM * m >= cap ? 1 : 0;
+                                }
+                                xg += p5 && plans[a].Goal(s, c, (Dimension)d) > cap ? 1 : 0;
+                            }
+                        }
+                    }
+                    ledger.Append(Inv, $"{t},{ids[a]},{n4},{n5},{ni},{x45},{x5i},{x5im},{xg}\n");
+                    ledN4 += n4; ledN5 += n5; ledNI += ni; ledV45 += x45; ledV5I += x5i; ledV5Imdec += x5im; ledGoal += xg;
+                }
+            }
+            // P-A40: months where branch О would give up a project without the v0.21 guard while L(d, t) holds (emulation of the snapshot loop)
+            for (int a = 0; a < nA; a++)
+            {
+                var designsA = new PolicyDesign[designs];
+                for (int d = 0; d < designs; d++)
+                    designsA[d] = polProd.Design(a, d, t);
+                var gaveUpNow = new bool[w.ProductsLayout.Generations + 1];
+                Fx6 launchLimit = pp.LaunchShare[(int)w.Policy.Profile(a)] * polProd.DRef;
+                IReadOnlyList<DesignCommand> pendingCmds = w.Policy.AiDesignCommands(a, t);
+                for (int d = 0; d < designs; d++)
+                {
+                    PolicyDesign x = designsA[d];
+                    if (x.Stage != DesignStage.Prototype || x.StageOMonth < 0 || t - x.StageOMonth < pp.TAb
+                        || !(bool)GiveUpAllowedM.Invoke(w.Policy, [a, x.PlatformGen, gaveUpNow, designsA])!)
+                        continue;
+                    if (w.Policy.AiStart(a, d, t) is not null || pendingCmds.Any(k => k.Kind == DesignCommandKind.Cancel && k.Target == d))
+                        continue;
+                    if (x.GateOpen && x.Hidden <= launchLimit && polProd.Admitted(a, d, t))
+                    {
+                        guard.Append(Inv, $"{t},{ids[a]},{d},{x.PlatformGen},{x.StageOMonth}\n");
+                        guardFirings++;
+                    }
+                    gaveUpNow[x.PlatformGen] = true;
+                }
             }
             for (int s = 0; s < L.SiteCount; s++)
             {
@@ -202,11 +292,13 @@ public class T6eHarness(ITestOutputHelper output)
                         mBefore[(s * nC + c) * 3 + d] = m;
                         bool pool = false, anyProc = false;
                         bool limT = false, limE = false;
+                        bool f5 = false;   // EXP-0005: V5 participation formula (spec v0.21 §11), evaluated independently of ToolingPlan
                         for (int r = 0; r < nP; r++)
                         {
                             if (L.ClusterIndex[r] != c || L.Req[r][d] <= Fx6.Zero || !inputs.KnowsProcess(s, r, t))
                                 continue;
                             anyProc = true;
+                            f5 |= inputs.PlannedVolume(s, r, t) > Fx6.Zero && m <= h && m < L.Req[r][d];
                             bool eligible = ind.ProcV(s, r) > Fx6.Zero || inputs.Planned(s, r, t);
                             if (!eligible || !(L.Req[r][d] - h > Fx6.Zero))
                                 continue;
@@ -221,7 +313,7 @@ public class T6eHarness(ITestOutputHelper output)
                         }
                         if (!anyProc)
                             continue;
-                        pre.Add((a, s, c, d, h, m, pool, limT ? 2 : limE ? 1 : 0));
+                        pre.Add((a, s, c, d, h, m, pool, limT ? 2 : limE ? 1 : 0, f5));
                     }
                 }
             }
@@ -340,7 +432,9 @@ public class T6eHarness(ITestOutputHelper output)
                         gotE = true;
                 }
                 cells.Append(Inv, $"{t},{ids[x.a]},{L.Clusters[x.c]},{x.d},{x.h.Raw},{x.m.Raw},{mCapS[x.s].Raw},{(x.pool ? 1 : 0)},{p2.Raw},{pl.Notional(x.s, x.c, (Dimension)x.d).Raw},");
-                cells.Append(Inv, $"{(pl.Participates(x.s, x.c, (Dimension)x.d) ? 1 : 0)},{pl.Goal(x.s, x.c, (Dimension)x.d).Raw},{(gotE ? 1 : 0)},{x.lab}\n");
+                bool part = pl.Participates(x.s, x.c, (Dimension)x.d);
+                long shortRaw = part && unl[x.a] is { } u ? (u.Invest(x.s, x.c, (Dimension)x.d) - pl.Invest(x.s, x.c, (Dimension)x.d)).Raw : 0;
+                cells.Append(Inv, $"{(part ? 1 : 0)},{pl.Goal(x.s, x.c, (Dimension)x.d).Raw},{(gotE ? 1 : 0)},{x.lab},{shortRaw},{x.s},{(x.f5 ? 1 : 0)}\n");
             }
             for (int s = 0; s < L.SiteCount; s++)
             {
@@ -405,12 +499,17 @@ public class T6eHarness(ITestOutputHelper output)
         File.WriteAllText(Path.Combine(dir, "lines2.csv"), lines2.ToString());
         File.WriteAllText(Path.Combine(dir, "events.csv"), events.ToString());
         File.WriteAllText(Path.Combine(dir, "req.csv"), reqTab.ToString());
+        File.WriteAllText(Path.Combine(dir, "guard.csv"), guard.ToString());
+        if (target.Variant == ToolingTarget.V5)
+            File.WriteAllText(Path.Combine(dir, "ledger.csv"), ledger.ToString());
         string json = JsonSerializer.Serialize(new
         {
             arm = job.Arm, config = job.Config, cell = job.Cell, seed = job.Seed, threads = job.Threads, months,
             line_close = job.LineClose.ToString(), max_lines = maxLines, data_hash = SliceTestData.Data.DataHash,
             scenario_hashes = SliceTestData.Data.Scenarios.Select(x => $"{x.Id}={x.Hash}").ToArray(),
             hash = session.LastHash, tick = session.Tick,
+            guard_firings = guardFirings,
+            ledger = target.Variant == ToolingTarget.V5 ? new { n4 = ledN4, n5 = ledN5, ninf = ledNI, v4_not_v5 = ledV45, v5_not_vinf = ledV5I, v5_not_vinf_mdec_ge_mcap = ledV5Imdec, goal_over_mcap = ledGoal } : null,
             mismatch_gain = mismatchGain, mismatch_rest = mismatchRest, mismatch_mcap = mismatchCap,
             profiles = Enumerable.Range(0, nA).Select(a => $"{ids[a]}={w.Policy.Profile(a)}").ToArray(),
         });
