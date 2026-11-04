@@ -1,4 +1,4 @@
-// EXP-0003 (T6e) runner. Lab observer of the jet slice: reads the world after each month, never writes it.
+// EXP-0003 (T6e) and EXP-0004 (T6e2) runner. Lab observer of the jet slice: reads the world after each month, never writes it.
 // Built and run by lab/runners/t6e/run_t6e.sh inside an archive copy of the repo (lab/results/t6e/repo), dropped into
 // tests/Singularity.Session.Tests: that assembly is the only one with read access to SliceWorld (Session has no read views yet,
 // ADR-0014 п. 5; see EXP-0003 «Отклонения»). Nothing here is part of the product or of the committed test suite.
@@ -23,7 +23,9 @@ public class T6eHarness(ITestOutputHelper output)
 
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
-    private sealed record Job(string Arm, string Config, int? Cell, ulong Seed, int Threads);
+    private sealed record Job(string Arm, string Config, int? Cell, ulong Seed, int Threads, LineCloseRule LineClose);
+
+    private const int TAb = 60;   // A40 T_ab (frozen); branch С = close of a line in С with idle_c >= T_ab
 
     [Fact]
     public void Run()
@@ -47,14 +49,20 @@ public class T6eHarness(ITestOutputHelper output)
         {
             string[] p = only.Split(':');
             JsonElement cfg = root.GetProperty("configs").GetProperty(p[1]);
-            jobs.Add(new Job(p[0], p[1], CellOf(cfg), ulong.Parse(p[2], Inv), int.Parse(p[3], Inv)));
+            jobs.Add(new Job(p[0], p[1], CellOf(cfg), ulong.Parse(p[2], Inv), int.Parse(p[3], Inv), LineCloseOf(cfg)));
         }
         else
         {
             foreach (JsonProperty c in root.GetProperty("configs").EnumerateObject())
+            {
+                // EXP-0004: a config may restrict the arms (ADMIT diagnostic: V0 and VINF only)
+                string[] cfgArms = c.Value.TryGetProperty("arms", out JsonElement ca)
+                    ? [.. ca.EnumerateArray().Select(x => x.GetString()!)]
+                    : [.. arms.Keys];
                 foreach (JsonElement s in c.Value.GetProperty("seeds").EnumerateArray())
-                    foreach (string arm in arms.Keys.Order(StringComparer.Ordinal))
-                        jobs.Add(new Job(arm, c.Name, CellOf(c.Value), s.GetUInt64(), threads));
+                    foreach (string arm in cfgArms.Order(StringComparer.Ordinal))
+                        jobs.Add(new Job(arm, c.Name, CellOf(c.Value), s.GetUInt64(), threads, LineCloseOf(c.Value)));
+            }
         }
         for (int j = 0; j < jobs.Count; j++)
         {
@@ -72,6 +80,9 @@ public class T6eHarness(ITestOutputHelper output)
 
     private static int? CellOf(JsonElement cfg) =>
         cfg.GetProperty("profile_cell").ValueKind == JsonValueKind.Null ? null : cfg.GetProperty("profile_cell").GetInt32();
+
+    private static LineCloseRule LineCloseOf(JsonElement cfg) =>
+        cfg.TryGetProperty("line_close", out JsonElement lc) ? LineCloseRules.Parse(lc.GetString()!) : LineCloseRule.YProd;
 
     private static Fx6 Num(JsonElement e, string name) => Fx6.FromRaw((long)Math.Round(e.GetProperty(name).GetDouble() * Fx6.Scale));
 
@@ -93,7 +104,10 @@ public class T6eHarness(ITestOutputHelper output)
 
     private static void RunOne(Job job, ToolingTargetSpec target, int months, string dir)
     {
-        var config = new SliceRunConfig { Seed = job.Seed, ProfileCell = job.Cell, ToolingTarget = target, Threads = job.Threads };
+        var config = new SliceRunConfig
+        {
+            Seed = job.Seed, ProfileCell = job.Cell, ToolingTarget = target, Threads = job.Threads, LineClose = job.LineClose,
+        };
         SliceSession session = SliceSession.Create(SliceTestData.Data, config);
         SliceWorld w = session.World;
         IndustrySystem ind = w.Industry;
@@ -113,6 +127,22 @@ public class T6eHarness(ITestOutputHelper output)
         var lines = new StringBuilder("t,actor,design,gen,rate,unitcost,minyield\n");
         var diag = new StringBuilder("t,actor,yield,vexp,lim,limsubj,MminusH_prec,MminusH_pur,MminusH_qc,H_prec,H_pur,H_qc,M_prec,M_pur,M_qc,E\n");
         long mismatchGain = 0, mismatchRest = 0, mismatchCap = 0;
+        // EXP-0004 outputs: home-site capability, eligibility (for E* and D), F17b line print, A40 give-ups
+        var homeCap = new StringBuilder("t,actor,c,d,H,M\n");
+        var elig = new StringBuilder("t,actor,p\n");
+        var lines2 = new StringBuilder("t,actor,design,gp,ymin,argp,g0,g1,g2,ramp,cultural,idle,rate,unitcost,close,start,stage_after,training\n");
+        var events = new StringBuilder("t,actor,design,kind,cls\n");
+        int maxLines = 0;
+        var relevant = new bool[nC, 3];
+        var reqTab = new StringBuilder("p,c,tier,r0,r1,r2\n");
+        for (int r = 0; r < nP; r++)
+        {
+            reqTab.Append(Inv, $"{L.Number[r]},{L.Clusters[L.ClusterIndex[r]]},{L.Tier[r]},{L.Req[r][0].Raw},{L.Req[r][1].Raw},{L.Req[r][2].Raw}\n");
+            for (int d = 0; d < 3; d++)
+                relevant[L.ClusterIndex[r], d] |= L.Req[r][d] > Fx6.Zero;
+        }
+        var lnBefore = new List<(int a, int d, string pre, int idle)>();
+        var protoClass = new Dictionary<(int, int), GiveUpClass>();
         var diagPendingE = new List<(int a, int s, string line)>();
 
         var firstMastered = new int[nA, nP];
@@ -195,6 +225,56 @@ public class T6eHarness(ITestOutputHelper output)
                     }
                 }
             }
+            // EXP-0004: home-site H, M (relevant cells) and eligible processes (known ∧ (proc_v > 0 ∨ planned), r_d > 0 some d), snapshot t
+            for (int a = 0; a < nA; a++)
+            {
+                int s = L.HomeSite(a);
+                for (int c = 0; c < nC; c++)
+                    for (int d = 0; d < 3; d++)
+                        if (relevant[c, d])
+                            homeCap.Append(Inv, $"{t},{ids[a]},{L.Clusters[c]},{d},{ind.CultureH(s, c, (Dimension)d).Raw},{ind.ToolingM(s, c, (Dimension)d).Raw}\n");
+                for (int r = 0; r < nP; r++)
+                {
+                    if (!(L.Req[r][0] > Fx6.Zero || L.Req[r][1] > Fx6.Zero || L.Req[r][2] > Fx6.Zero) || !inputs.KnowsProcess(s, r, t))
+                        continue;
+                    if (ind.ProcV(s, r) > Fx6.Zero || inputs.Planned(s, r, t))
+                        elig.Append(Inv, $"{t},{ids[a]},{L.Number[r]}\n");
+                }
+                // F17b print: every line in С by the snapshot, y_min split into Π g_d and ramp at the arg-min process
+                int nLines = 0;
+                for (int d = 0; d < designs; d++)
+                {
+                    DesignStage st = pr.Stage(a, d);
+                    if (st == DesignStage.Prototype)
+                        protoClass[(a, d)] = w.Policy.ClassifyGiveUp(a, d, t);
+                    if (st != DesignStage.Series)
+                        continue;
+                    nLines++;
+                    Fx6 min = Fx6.One;
+                    int argp = -1;
+                    foreach (int q in pr.PrcSet(a, d))
+                    {
+                        Fx6 y = w.ProductsInputs.AdmittedYield(a, q, t);
+                        if (argp < 0 || y < min)
+                        {
+                            min = y;
+                            argp = q;
+                        }
+                    }
+                    if (argp < 0)
+                        min = Fx6.Zero;
+                    string parts = ",,,,";
+                    if (argp >= 0 && L.RowOf(argp) >= 0 && inputs.KnowsProcess(s, L.RowOf(argp), t))
+                    {
+                        ProcessYield py = ind.Yield(s, L.RowOf(argp), t);
+                        parts = string.Join(",", Enumerable.Range(0, 3).Select(k => py.IsActive(k) ? py.G[k].Raw.ToString(Inv) : "")) + "," + py.Ramp.Raw.ToString(Inv);
+                    }
+                    bool noSmelt = new[] { 39, 40, 41 }.All(p => w.ProductsInputs.AdmittedYield(a, p, t) == Fx6.Zero);
+                    bool cultural = min == Fx6.Zero || (ind.Alloy(s, t).Supply == Fx6.Zero && noSmelt);
+                    lnBefore.Add((a, d, $"{t},{ids[a]},{d},{pr.PlatformGen(a, d)},{min.Raw},{argp},{parts},{(cultural ? 1 : 0)},{pr.IdleMonths(a, d)}", pr.IdleMonths(a, d)));
+                }
+                maxLines = Math.Max(maxLines, nLines);
+            }
             // diagnostic of 49 at the home site of every actor that knows it
             for (int a = 0; a < nA; a++)
             {
@@ -220,6 +300,28 @@ public class T6eHarness(ITestOutputHelper output)
             foreach ((int a, int s, string line) in diagPendingE)
                 diag.Append(line).Append(Inv, $",{ind.ProcE(s, r49).Raw}\n");
             diagPendingE.Clear();
+            var seen = new HashSet<(int, int)>();
+            foreach (var (a, d, head, _) in lnBefore)
+            {
+                seen.Add((a, d));
+                lines2.Append(head).Append(Inv, $",{pr.Rate(a, d).Raw},{pr.UnitCost(a, d).Raw},{(w.Policy.AiClose(a, d, t + 1) ? 1 : 0)},{(w.Policy.AiStart(a, d, t + 1) is null ? 0 : 1)},{(int)pr.Stage(a, d)},{pr.TrainingSpent(a).Raw}\n");
+            }
+            for (int a = 0; a < nA; a++)
+            {
+                for (int d = 0; d < designs; d++)
+                {
+                    // a start of month t on a design that was not a line in the snapshot (it shows up as a line from t+1)
+                    if (!seen.Contains((a, d)) && w.Policy.AiStart(a, d, t + 1) is not null)
+                        lines2.Append(Inv, $"{t},{ids[a]},{d},{pr.PlatformGen(a, d)},,,,,,,,,{pr.Rate(a, d).Raw},{pr.UnitCost(a, d).Raw},0,1,{(int)pr.Stage(a, d)},{pr.TrainingSpent(a).Raw}\n");
+                }
+                foreach (DesignCommand c in w.Policy.AiDesignCommands(a, t + 1))
+                {
+                    if (c.Kind == DesignCommandKind.Cancel)
+                        events.Append(Inv, $"{t},{ids[a]},{c.Target},O,{(protoClass.TryGetValue((a, c.Target), out GiveUpClass gc) ? gc.ToString() : "?")}\n");
+                }
+            }
+            lnBefore.Clear();
+            protoClass.Clear();
             foreach (var x in pre)
             {
                 int i = (x.s * nC + x.c) * 3 + x.d;
@@ -298,9 +400,16 @@ public class T6eHarness(ITestOutputHelper output)
         File.WriteAllText(Path.Combine(dir, "diag49.csv"), diag.ToString());
         File.WriteAllText(Path.Combine(dir, "procs.csv"), procs.ToString());
         File.WriteAllText(Path.Combine(dir, "hend.csv"), hend.ToString());
+        File.WriteAllText(Path.Combine(dir, "home.csv"), homeCap.ToString());
+        File.WriteAllText(Path.Combine(dir, "elig.csv"), elig.ToString());
+        File.WriteAllText(Path.Combine(dir, "lines2.csv"), lines2.ToString());
+        File.WriteAllText(Path.Combine(dir, "events.csv"), events.ToString());
+        File.WriteAllText(Path.Combine(dir, "req.csv"), reqTab.ToString());
         string json = JsonSerializer.Serialize(new
         {
             arm = job.Arm, config = job.Config, cell = job.Cell, seed = job.Seed, threads = job.Threads, months,
+            line_close = job.LineClose.ToString(), max_lines = maxLines, data_hash = SliceTestData.Data.DataHash,
+            scenario_hashes = SliceTestData.Data.Scenarios.Select(x => $"{x.Id}={x.Hash}").ToArray(),
             hash = session.LastHash, tick = session.Tick,
             mismatch_gain = mismatchGain, mismatch_rest = mismatchRest, mismatch_mcap = mismatchCap,
             profiles = Enumerable.Range(0, nA).Select(a => $"{ids[a]}={w.Policy.Profile(a)}").ToArray(),

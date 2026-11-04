@@ -1,0 +1,54 @@
+{
+  "experiment": "EXP-0004",
+  "description": "T6e2: target of pass 2 of the A39 tooling plan on the F17b build; spec slice-jet-aviation.md v0.20 r1 §11 'EXP T6e2'; pre-registration docs/simulation/exp-t6e2-tooling-target.md r1",
+  "build": {
+    "core_commit_min": "eea5ecf",
+    "data": "mods/core (D1 + R-H-MS, TASK-0029)",
+    "ai": "A41 with F17b (LINE_CLOSE = YPROD in main) + A42 (T6d/A43 not in main)",
+    "validator_s2": true
+  },
+  "months": 384,
+  "threads": 4,
+  "chunk_size": 1,
+  "arms": {
+    "V0":   {"variant": "V0"},
+    "V1":   {"variant": "V1", "rho_max": 0.021},
+    "V3":   {"variant": "V3", "h_lo": 0.021, "h_hi": 0.063},
+    "V4":   {"variant": "V4", "m_lead": 0.20},
+    "VINF": {"variant": "VINF"}
+  },
+  "configs": {
+    "main":  {"profile_cell": null, "line_close": "YPROD", "seeds": [21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]},
+    "allP1": {"profile_cell": 0,  "line_close": "YPROD", "seeds": [21,22,23,24,25,26,27,28,29,30]},
+    "allP2": {"profile_cell": 13, "line_close": "YPROD", "seeds": [21,22,23,24,25,26,27,28,29,30]},
+    "allP3": {"profile_cell": 26, "line_close": "YPROD", "seeds": [21,22,23,24,25,26,27,28,29,30]},
+    "admit": {"profile_cell": null, "line_close": "ADMIT", "arms": ["V0", "VINF"], "seeds": [21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]}
+  },
+  "determinism": {
+    "golden_tests": ["LinkedRunTests", "ProductAiSessionTests", "F17bTests"],
+    "golden_seeds_V0_main": [21,22,23,24,25],
+    "threads_check": [{"arm": "V0", "config": "main", "seed": 21, "threads": [1, 4]}, {"arm": "V3", "config": "main", "seed": 21, "threads": [1, 4]}]
+  },
+  "analysis": {
+    "script": "lab/analysis/t6e2.py",
+    "rho_max_pool": 0.021,
+    "k1_min_ratio_to_vinf": 0.75,
+    "k2_max_ratio_to_vinf": 1.0,
+    "k4_band": [0.67, 1.5],
+    "k4_min_judged_seeds": 10,
+    "k5_min_ratio": 0.75,
+    "window_months": 48,
+    "selection_tie_rel": 0.05,
+    "simplicity_S": {"V1": 0, "V3": 2, "V4": 2},
+    "new_literals": {"V1": 0, "V3": 1, "V4": 1},
+    "goal_offsets": {"V0": 0.0, "V1": 0.021, "V3": 0.063, "V4": 0.20},
+    "v013_print": {"m1a_min": 0.9, "invest_increment_max_share_cap": 0.02},
+    "bootstrap_reps": 2000,
+    "bootstrap_seed": 20261160,
+    "t_ab": 60,
+    "y_prod": 0.5,
+    "c2_star_prc": {"4": [40, 49], "5": [41, 51, 52]},
+    "c2_corridor_months": [24, 96],
+    "c1_corridors_dln_per_doubling": {"development_1_3": [0.0, 0.5108], "mature_yield_ge_0_9": [0.1625, 0.3567]}
+  }
+}
