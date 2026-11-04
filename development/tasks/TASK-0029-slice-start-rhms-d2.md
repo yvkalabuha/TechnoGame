@@ -1,7 +1,7 @@
 ---
 id: TASK-0029
 title: "D2: правило старта R-H-MS′, валидатор S-2, переключатель цели оснастки TOOLING_TARGET"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -25,9 +25,9 @@ created: 2026-11-04
 По спеке `docs/simulation/slice-jet-aviation.md` v0.19: §1.1 R-H-MS′ (таблица 16 ячеек, столбец R-H-MS′ по #159, `M = max(M, H + 0,2)`), валидатор S-2 (ошибка загрузки, если `mastered` сценария даёт yield(t0) < 0,7), переключатель манифеста `TOOLING_TARGET` ∈ {V0…V4} (по умолчанию V0) с числами из §11/`docs/simulation/exp-t6e-tooling-target.md`, набор данных `RHMS_OFF` для печати «до/после» (F32), §11 строка «D2» с приёмкой. Данные мода — по `docs/research/data/jet-slice/scenario_1945.md` §2.1 с поправкой R-H-MS′.
 
 ## Критерии приёмки
-- [ ] Всё из §11 «D2».
-- [ ] Общие пункты T6 (тесты, ADR-0003, нет RNG в Industry/Products, L1/L2); golden с причиной «D2».
-- [ ] В Результат (через ответ Orchestrator — хук запрещает developer писать в development/tasks): печать на seeds 1…20 при V0: первый `fielded`, `G_front` по окнам, yield 49/54 по окнам.
+- [x] Всё из §11 «D2».
+- [x] Общие пункты T6 (тесты, ADR-0003, нет RNG в Industry/Products, L1/L2); golden с причиной «D2».
+- [x] В Результат (через ответ Orchestrator — хук запрещает developer писать в development/tasks): печать на seeds 1…20 при V0: первый `fielded`, `G_front` по окнам, yield 49/54 по окнам.
 
 ## Тесты
 По §11 D2.
@@ -36,9 +36,12 @@ created: 2026-11-04
 Спека v0.19; `docs/simulation/fielded-empty-diagnosis.md`; `docs/simulation/exp-t6e-tooling-target.md`; DECISIONS_LOG #155, #156, #159.
 
 ## REVIEW
-- [ ] Code review (reviewer) — находки high закрыты
-- [ ] Тесты (test-engineer) — проходят, покрытие достаточно
-- [ ] Детерминизм L1/L2 — если затронуты src/
+- [x] Code review (reviewer) — approve; medium/low закрыты (b203293)
+- [x] Тесты — проходят; покрытие оценено reviewer
+- [x] Детерминизм L1/L2 — threads 1 = 4 для всех плеч; golden с причиной D2
+
+### Ревью reviewer (2026-11-04, вставлено Orchestrator)
+Вердикт: approve, high нет. 16 ячеек = столбец R-H-MS′; S-2 через `IndustryMath.Yield`, громкая ошибка; V0 побитно прежний; V1–V4, V3b, VINF по спеке; числа в хеше только при не-V0; детерминизм в порядке. medium: нет per-cell леджера прохода 2 (M1(г)); слабые тесты V2. low: VINF на тривиальных пулах; временные каталоги; печать как всегда-проходящий `[Fact]`. Отклонения 1–5 приняты (1 — erratum спеки о месте S-2; 4 — манифест/хеш Lab в EXP T6e). Падение yield USA 49/54 в поздних окнах с diff не связано.
 
 ## Результат
 **Сделано (developer, 8791c53; перенесено Orchestrator).** Данные: 16 ячеек R-H-MS′ в `mods/core/scenario_1945.yaml` (USA 5, GBR 5, SUN 4, FRA 2). Валидатор S-2 `Core/Industry/StartYieldValidator.cs` (через `IndustryMath.Yield`, `DataLoadException` со списком; вызывается при сборке `SliceWorld` до START_PERT). `TOOLING_TARGET` (`Policy/ToolingTarget.cs`): V0, V1, V2, V3, V3b, V4, VInf; числа ρ_max 0,021, h_lo 0,021, h_hi 0,063, h_hi(V3b) 0,20, m_lead 0,20; по умолчанию V0 (побитно прежнее поведение); числа в хеше прогона (`run.tooling.*` только при не-V0). VINF — по спеке v0.19 r1 (`NotionalTotal` = `invest_notional`; исключение инварианта названо в тесте). `RHMS_OFF` — мод `mods/rhms_off` + `SkipStartValidation`.
@@ -47,3 +50,9 @@ Golden («D2»): Golden60 c377f34e…, Golden150 951bcf96…, scenario_hash 7116
 **Печать seeds 1…20, V0, 384 мес. (D2 / RHMS_OFF).** Первый fielded: USA и GBR мес. 0 у 20/20; SUN, FRA, SWE никогда; RHMS_OFF — ни у кого. Max `G_front` по окнам 1,1,1,2,2,2,2,2; G ≥ 2 хотя бы раз в 9/20 seeds. Yield (медиана): 49/USA 0,89 → 0,94, в w7 0,75 (seed 2: 0,92 → 0,02); 49/GBR 0,83 → 0,91; 54/USA 0,90 → 0,97, w7 0,89; 54/GBR 0,84 → 0,93. RHMS_OFF: 49/USA 0,14 → 0,35; 49/GBR 0,09 → 0,40; 54/USA 0,49–0,59; 54/GBR 0,25 → 0,53.
 **Находка (medium).** У USA в части seeds yield 49/54 деградирует в поздних окнах при V0 — вход для EXP T6e.
 
+### Исправления по ревью (developer, b203293)
+1. `ToolingPlanResult.Participates/Goal` по ячейке (Goal после `M_cap`; VINF — `M_cap`), тест.
+2. V2: фикстура с известным `dH_forecast` (4 случая), `Goal ≤ H + ρ_max`, «не участвует» при `M_dec ≥ H'`.
+3. VINF: проход 1 и 2 делят пул (3 размера), всё кроме `NotionalTotal` совпадает с V0.
+4. Временные каталоги удаляются; печать — `[PrintFact]` (Skip без переменной).
+Тесты: Arch 80, Kernel 284, Core 931, Session 184 + 1 пропуск.
