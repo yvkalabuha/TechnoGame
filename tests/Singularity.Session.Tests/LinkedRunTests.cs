@@ -28,7 +28,8 @@ public class LinkedRunTests
     /// scripted player's run changes too); the script orders its own project beside the start line.
     /// </summary>
     // Re-recorded in T-fleet (30a75d4f… before), reason: T-fleet — contract r6: new columns (fleet commands, sale money, quota, line_bind, mastered_run, run.fleet), schema v5.
-    private const string Golden60 = "d25c32c2bdce0f0ff08991a3dec30559c247972e11b8680e5ce11f1f278966e8";
+    // D2 (#155, #159): start rule R-H-MS'; the data of the scenario changed, the model did not.
+    private const string Golden60 = "c377f34eb4a44045559800ec364d24a8cb66a18f5fc4455a185b7b7fe18a1b36";
 
     private sealed class Run
     {

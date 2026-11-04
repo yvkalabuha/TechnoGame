@@ -9,13 +9,13 @@ namespace Singularity.Core.Tests.Policy;
 /// Spec §3.5 A39 and A30 on a fixture of the "2 site" kind (A27): actor 0 owns sites 0 and 1, actor 1 owns site 2; clusters MET and MECH with one
 /// process each (5 in MET, 6 in MECH). Only the MET process has a planned volume, so MET.purity is the bottleneck cell of M.
 /// </summary>
-public class ToolingPlanTests
+public partial class ToolingPlanTests
 {
     private const int Met = 5, Mech = 6;
     private static readonly Fx6 MKeep = Fx6.FromRaw(750_000);
     private static Fx6 F(long raw) => Fx6.FromRaw(raw);
 
-    private sealed class Inputs : IIndustryInputs
+    internal sealed class Inputs : IIndustryInputs
     {
         public Fx6 Rest = Fx6.Zero, Cap = Fx6.Zero, Budget = Fx6.Zero;
         public IndustrySystem? System;
@@ -52,9 +52,9 @@ public class ToolingPlanTests
         public long KnownSince(int siteRow, int processRow, long month) => -1;
     }
 
-    private sealed class Rig
+    internal sealed class Rig
     {
-        public Rig(Func<int, int, int, Fx6>? m = null, int threads = 1)
+        public Rig(Func<int, int, int, Fx6>? m = null, int threads = 1, Func<int, int, int, Fx6>? h = null, ICultureRule? rule = null)
         {
             Layout = IndustryLayout.Create([Cluster.MET, Cluster.MECH],
                 [
@@ -69,7 +69,7 @@ public class ToolingPlanTests
                 {
                     for (int d = 0; d < 3; d++)
                     {
-                        start.H[start.Cell(s, c, d)] = Fx6.FromInt(4);
+                        start.H[start.Cell(s, c, d)] = h?.Invoke(s, c, d) ?? Fx6.FromInt(4);
                         // Default M: purity of MET is short (bottleneck), the rest is comfortable.
                         start.M[start.Cell(s, c, d)] = m?.Invoke(s, c, d) ?? (c == 0 && d == 1 ? F(2_800_000) : F(3_400_000));
                     }
@@ -79,7 +79,7 @@ public class ToolingPlanTests
             }
             Table = new Table(3);
             Calendar = new TickCalendar(new CivilDate(1945, 9, 1));
-            System = new IndustrySystem(Table, Layout, start, new IndustryParams(), Inputs, TickRunner.ChunkCountFor(3, 1), new V23CultureRule());
+            System = new IndustrySystem(Table, Layout, start, new IndustryParams(), Inputs, TickRunner.ChunkCountFor(3, 1), rule ?? new V23CultureRule());
             Inputs.System = System;
             Runner = new TickRunner(Table, 7, [System], 1, threads, Calendar);
         }
@@ -91,8 +91,8 @@ public class ToolingPlanTests
         public IndustrySystem System { get; }
         public TickRunner Runner { get; }
 
-        public ToolingPlanResult Plan(int actor, Fx6 rest, Fx6 cap, long month = 0) =>
-            ToolingPlan.Compute(System, Inputs, MKeep, actor, month, rest, cap);
+        public ToolingPlanResult Plan(int actor, Fx6 rest, Fx6 cap, long month = 0, ToolingTargetSpec? target = null) =>
+            ToolingPlan.Compute(System, Inputs, MKeep, actor, month, rest, cap, target);
 
         public void RunThroughMonth(long month)
         {

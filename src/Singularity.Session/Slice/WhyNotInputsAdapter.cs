@@ -23,7 +23,7 @@ internal sealed class WhyNotInputsAdapter(SliceWorld world) : IWhyNotInputs
     public Fx6 ToolingRate(int siteRow, int cluster, Dimension dim, long month)
     {
         int actor = world.IndustryLayout.SiteOwner[siteRow];
-        Fx6 invest = world.IndustryInputs.Plan(actor, month, world.Industry.RestActor(actor, month)).Invest(siteRow, cluster, dim);
+        Fx6 invest = world.IndustryInputs.Plan(actor, month, world.Industry.RestActor(actor, month)).Applied(siteRow, cluster, dim);
         Fx6 m = world.Industry.ToolingM(siteRow, cluster, dim);
         IndustryParams p = world.IndustryParameters;
         Fx6 net = invest / p.CostM(IndustryMath.CostTier(m)) - p.DeltaM * m;

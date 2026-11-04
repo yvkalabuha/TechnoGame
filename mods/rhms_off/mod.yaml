@@ -1,0 +1,7 @@
+# RHMS_OFF: the D1 scenario without the start rule R-H-MS' (spec v0.19 F32). Print only; violates S-2 by design.
+id: rhms_off
+version: "0.1.0"
+name: "Scenario D1 without R-H-MS (print only)"
+dependencies:
+  - {id: core, min: "0.1.0"}
+files: [scenario_rhms_off.yaml]

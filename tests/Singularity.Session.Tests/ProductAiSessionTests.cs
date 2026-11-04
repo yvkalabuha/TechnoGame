@@ -356,5 +356,6 @@ public class ProductAiSessionTests(ITestOutputHelper output)
     // package of spec v0.14 (new start knowledge and culture cells, the hot_steel_g0 substitute and the engine descent of the presets).
     // Re-recorded in T6c2 (e778e8cc… before), reason: T6c2 — E1 start line from tick 0, F17 launch at admitted, #140 engine choice, W1.
     // Re-recorded in T-fleet (513238aa… before), reason: T-fleet — contract r6: new columns and the fleet rule A42.4 (retirement by generation), schema v5.
-    private const string Golden150 = "e7547e322170279148377eefb056e4680f153461385d252c02ee9808d1e7310d";
+    // D2 (#155, #159): start rule R-H-MS'; the data of the scenario changed, the model did not.
+    private const string Golden150 = "951bcf96f371d409cdf03df7687e19d0dc690b47190ed137f26e7a7ee1f9b29d";
 }

@@ -121,6 +121,15 @@ public sealed record SliceRunConfig
     /// <summary>Sensitivity arm of the sale terms (spec §6.10).</summary>
     public SaleArm SaleArm { get; init; } = SaleArm.None;
 
+    /// <summary><c>TOOLING_TARGET</c> (spec §11 T6e v0.19, #156): pass 2 of the tooling plan. V0 by default until the owner chooses.</summary>
+    public ToolingTargetSpec ToolingTarget { get; init; } = new();
+
+    /// <summary>
+    /// Skips validator S-2 (spec §1.1, <c>yield(t0) ≥ 0,7</c> of every mastered process). Only for the <c>RHMS_OFF</c> data set (mod <c>rhms_off</c>),
+    /// which violates S-2 by design and is used for the before/after print (F32); never in a calibration or an experiment.
+    /// </summary>
+    public bool SkipStartValidation { get; init; }
+
     /// <summary>Execution only (L2): threads and rows per chunk. They never change the result.</summary>
     public int Threads { get; init; } = 1;
 

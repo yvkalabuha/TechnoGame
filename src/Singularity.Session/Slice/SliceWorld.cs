@@ -56,7 +56,9 @@ internal sealed class SliceWorld
         PolicyParams policy = new()
         {
             YProd = pp.YProd, TField = pp.HBuild, NServiceMin = pp.NServiceMin, FleetArm = config.FleetArm, FleetLineCond = config.FleetLineCond,
+            ToolingTarget = config.ToolingTarget,
         };
+        config.ToolingTarget.Validate();
         ScenarioData baseScenario = data.Scenario(config.ScenarioId);
         // fv_budget: 24 median procurement budgets of the great powers at t0 (spec §5.5); the actors that exist among USA, GBR, SUN.
         var great = new List<Fx6>();
@@ -76,6 +78,9 @@ internal sealed class SliceWorld
         QualityRequester = requesters;
         IndustryLayout = IndustryLayout.FromData(data.Nodes, scenario, WorkforceCategories, requesters + 1);
         IndustryStart iStart = IndustryStart.FromScenario(scenario, data.Nodes, IndustryLayout, ip);
+        // S-2 (spec §1.1): a process the base scenario calls mastered must have yield(t0) >= 0.7; checked before START_PERT, which scales culture by design.
+        if (!config.SkipStartValidation)
+            StartYieldValidator.Validate(baseScenario, data.Nodes, IndustryLayout, ip);
         ProductsLayout = ProductsLayout.FromData(data.Nodes, data.ProductClasses, ProductClass, IndustryLayout, Bureaus, scenario.StartYear, Years, scenario.MaxDesigns);
         ProductsStart pStart = ProductsStart.FromScenario(scenario, data.Nodes, data.ProductClasses, ProductsLayout);
 
@@ -263,10 +268,24 @@ internal sealed class SliceWorld
         Table.AddLong("run.seed.start").Load(Fill(rows, Config.Start == StartVariant.Perturbed ? unchecked((long)Streams.Start.Seed) : 0));
         Table.AddInt("run.fix").Load([.. Enumerable.Repeat((Config.FixK ? 1 : 0) | (Config.FixE ? 2 : 0) | (Config.FixA ? 4 : 0), rows)]);
         Table.AddInt("run.start").Load([.. Enumerable.Repeat((int)Config.Start, rows)]);
+        // Only a run on the RHMS_OFF data set carries this column, so every other hash is that of a build without the switch.
+        if (Config.SkipStartValidation)
+            Table.AddInt("run.skip_s2").Load([.. Enumerable.Repeat(1, rows)]);
         Table.AddInt("run.cell").Load([.. Enumerable.Repeat(Config.ProfileCell ?? -1, rows)]);
         Table.AddInt("run.ai").Load([.. Enumerable.Repeat((Config.ProductAi ? 1 : 0) | (Config.Derive ? 2 : 0), rows)]);
         Table.AddInt("run.channels").Load([.. Enumerable.Repeat((int)Config.Channels, rows)]);
         Table.AddInt("run.fleet").Load([.. Enumerable.Repeat((int)Config.FleetArm | ((int)Config.FleetLineCond << 4) | ((int)Config.SaleArm << 8), rows)]);
+        // TOOLING_TARGET and its numbers are part of the hash; V0 adds nothing, so the default trajectory and hash are those of a build without the switch.
+        ToolingTargetSpec tt = Config.ToolingTarget;
+        if (tt.Variant != ToolingTarget.V0)
+        {
+            Table.AddInt("run.tooling").Load([.. Enumerable.Repeat((int)tt.Variant, rows)]);
+            Table.AddLong("run.tooling.rho_max").Load(Fill(rows, tt.RhoMax.Raw));
+            Table.AddLong("run.tooling.h_lo").Load(Fill(rows, tt.HLo.Raw));
+            Table.AddLong("run.tooling.h_hi").Load(Fill(rows, tt.HHi.Raw));
+            Table.AddLong("run.tooling.m_lead").Load(Fill(rows, tt.MLead.Raw));
+            Table.AddLong("run.tooling.h_hi_b").Load(Fill(rows, tt.HHiControl.Raw));
+        }
         Table.AddLong("run.scenario").Load(Fill(rows, BinaryPrimitives.ReadInt64LittleEndian(Convert.FromHexString(Scenario.Hash.AsSpan(0, 16)))));
     }
 }

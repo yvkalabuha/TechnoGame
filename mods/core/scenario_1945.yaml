@@ -9,6 +9,9 @@ define:
     clusters: [MET, CHEM, MECH, AERO]
     disciplines: [aero, prop, metal, chem, mech]
     tech_lead: USA
+    # D2 (#155, #159): start rule R-H-MS' - for a process in "mastered" culture_H := max(H, r_d - 0.05/n) in every dimension d with r_d > 0
+    # (n = number of its dimensions with a gap; 0.05 when n = 1), then tooling_M := max(M, H + 0.2) in the cells raised (16 cells: USA 5,
+    # GBR 5, SUN 4, FRA 2; SWE 0). Validator S-2: yield(t0) >= 0.7 for every mastered process. Spec slice-jet-aviation.md v0.19 §1.1.
     # R-MS: known tier-3/4 PRC listed in "mastered" are mastered since t0-6; proc_X(t0) = 3·X½(tier).
     mastered_history: {since_month: -6, proc_x_half_lives: 3}
     # R-AC, R-AREF (product_inputs.md r3 §6, estimated): alloy_cap_a(t0) = floor(alloy_ref_kg·budget_index_a) kg/month
@@ -44,15 +47,15 @@ define:
         growth_pa: 0.0299
         # D1 (#133, owner decision): CHEM purity 3.80 -> 4.00 as a scenario estimate (not by R-H-STD-t0: node 45 has no series at t0).
         culture_h:
-          MET: {precision: 4.00, purity: 3.80, quality_control: 3.70}
-          CHEM: {precision: 4.00, purity: 4.00, quality_control: 3.70}
-          MECH: {precision: 4.00, purity: 3.80, quality_control: 3.70}
-          AERO: {precision: 4.00, purity: 3.80, quality_control: 3.70}
+          MET: {precision: 4.00, purity: 3.95, quality_control: 3.70}
+          CHEM: {precision: 4.00, purity: 4.45, quality_control: 3.70}
+          MECH: {precision: 4.475, purity: 3.80, quality_control: 3.975}
+          AERO: {precision: 4.00, purity: 3.80, quality_control: 3.95}
         tooling_m:
-          MET: {precision: 4.20, purity: 4.00, quality_control: 3.90}
-          CHEM: {precision: 4.20, purity: 4.20, quality_control: 3.90}
-          MECH: {precision: 4.20, purity: 4.00, quality_control: 3.90}
-          AERO: {precision: 4.20, purity: 4.00, quality_control: 3.90}
+          MET: {precision: 4.20, purity: 4.15, quality_control: 3.90}
+          CHEM: {precision: 4.20, purity: 4.65, quality_control: 3.90}
+          MECH: {precision: 4.675, purity: 4.00, quality_control: 4.175}
+          AERO: {precision: 4.20, purity: 4.00, quality_control: 4.15}
         hcap: 5.50
         w: 1.0
         known: [s7.fnd.brayton_cycle, s8.fnd.boundary_layer, s8.fnd.compressible_flow, s5.fnd.precipitation_hardening, s8.prn.gas_turbine, s8.prn.swept_wing, s8.prn.afterburning, s8.eng.turbojet_g1, s8.eng.straight_wing_jet_airframe, s5.cmp.heat_resistant_alloy, s5.cmp.aluminium_alloy_sheet, s8.cmp.turbine_blade_forged, s5.prc.light_alloy_rolling, s5.prc.nicr_alloy_melt, s5.prc.alloying_element_refining, s5.prc.high_purity_nickel_refining, s6.prc.precision_gear_bearing, s6.prc.centrifugal_impeller_machining, s6.prc.precision_blade_forging, s8.prc.stressed_skin_assembly, s8.prc.jet_engine_assembly_test, s8.app.jet_fighter_g1]
@@ -72,15 +75,15 @@ define:
         growth_pa: 0.0220
         # D1: MECH precision by R-H-STD-t0 (#130: node 49 in series at t0, Meteor 1944, r_precision 4.5 - 0.5); CHEM purity by owner decision #133.
         culture_h:
-          MET: {precision: 3.82, purity: 3.62, quality_control: 3.52}
-          CHEM: {precision: 3.82, purity: 4.00, quality_control: 3.52}
-          MECH: {precision: 4.00, purity: 3.62, quality_control: 3.52}
-          AERO: {precision: 3.82, purity: 3.62, quality_control: 3.52}
+          MET: {precision: 3.82, purity: 3.95, quality_control: 3.52}
+          CHEM: {precision: 3.82, purity: 4.45, quality_control: 3.52}
+          MECH: {precision: 4.475, purity: 3.62, quality_control: 3.975}
+          AERO: {precision: 3.82, purity: 3.62, quality_control: 3.95}
         tooling_m:
-          MET: {precision: 4.02, purity: 3.82, quality_control: 3.72}
-          CHEM: {precision: 4.02, purity: 4.20, quality_control: 3.72}
-          MECH: {precision: 4.20, purity: 3.82, quality_control: 3.72}
-          AERO: {precision: 4.02, purity: 3.82, quality_control: 3.72}
+          MET: {precision: 4.02, purity: 4.15, quality_control: 3.72}
+          CHEM: {precision: 4.02, purity: 4.65, quality_control: 3.72}
+          MECH: {precision: 4.675, purity: 3.82, quality_control: 4.175}
+          AERO: {precision: 4.02, purity: 3.82, quality_control: 4.15}
         hcap: 5.32
         w: 1.0
         known: [s7.fnd.brayton_cycle, s8.fnd.boundary_layer, s8.fnd.compressible_flow, s5.fnd.precipitation_hardening, s8.prn.gas_turbine, s8.prn.swept_wing, s8.prn.afterburning, s8.eng.turbojet_g1, s8.eng.straight_wing_jet_airframe, s8.eng.turbojet_g2, s5.cmp.heat_resistant_alloy, s5.cmp.aluminium_alloy_sheet, s8.cmp.turbine_blade_forged, s5.prc.light_alloy_rolling, s5.prc.nicr_alloy_melt, s5.prc.alloying_element_refining, s5.prc.high_purity_nickel_refining, s6.prc.precision_gear_bearing, s6.prc.centrifugal_impeller_machining, s6.prc.precision_blade_forging, s8.prc.stressed_skin_assembly, s8.prc.jet_engine_assembly_test, s8.app.jet_fighter_g1]
@@ -101,14 +104,14 @@ define:
         growth_pa: 0.0548
         culture_h:
           MET: {precision: 3.20, purity: 3.00, quality_control: 2.90}
-          CHEM: {precision: 3.20, purity: 3.00, quality_control: 2.90}
-          MECH: {precision: 3.20, purity: 3.00, quality_control: 2.90}
+          CHEM: {precision: 3.20, purity: 3.475, quality_control: 2.975}
+          MECH: {precision: 3.475, purity: 3.00, quality_control: 2.975}
           AERO: {precision: 3.20, purity: 3.00, quality_control: 3.50}
         # R-M per cell (spec §3.5 A20): M = H + 0.2; +0.2 more in MECH and AERO (dismantled aircraft plants, F-SC2).
         tooling_m:
           MET: {precision: 3.40, purity: 3.20, quality_control: 3.10}
-          CHEM: {precision: 3.40, purity: 3.20, quality_control: 3.10}
-          MECH: {precision: 3.60, purity: 3.40, quality_control: 3.30}
+          CHEM: {precision: 3.40, purity: 3.675, quality_control: 3.175}
+          MECH: {precision: 3.675, purity: 3.40, quality_control: 3.30}
           AERO: {precision: 3.60, purity: 3.40, quality_control: 3.90}
         hcap: 4.70
         w: 1.0
@@ -132,13 +135,13 @@ define:
         growth_pa: 0.0662
         culture_h:
           MET: {precision: 3.34, purity: 3.14, quality_control: 3.04}
-          CHEM: {precision: 3.34, purity: 3.14, quality_control: 3.04}
-          MECH: {precision: 3.34, purity: 3.14, quality_control: 3.04}
+          CHEM: {precision: 3.34, purity: 3.45, quality_control: 3.04}
+          MECH: {precision: 3.45, purity: 3.14, quality_control: 3.04}
           AERO: {precision: 3.34, purity: 3.14, quality_control: 3.04}
         tooling_m:
           MET: {precision: 3.54, purity: 3.34, quality_control: 3.24}
-          CHEM: {precision: 3.54, purity: 3.34, quality_control: 3.24}
-          MECH: {precision: 3.54, purity: 3.34, quality_control: 3.24}
+          CHEM: {precision: 3.54, purity: 3.65, quality_control: 3.24}
+          MECH: {precision: 3.65, purity: 3.34, quality_control: 3.24}
           AERO: {precision: 3.54, purity: 3.34, quality_control: 3.24}
         hcap: 4.84
         w: 1.0

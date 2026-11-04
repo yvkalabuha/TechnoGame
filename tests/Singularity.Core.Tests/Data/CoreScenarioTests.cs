@@ -38,13 +38,18 @@ public class CoreScenarioTests
         foreach (Cluster c in S.Clusters)
         {
             // D1 cell edits (spec §1.1 table, items 1-4) on top of the uniform R-DIM table.
-            Assert.Equal(D1Cell(id, c, Dimension.Precision, Fx(prec)), S.CultureOf(a, c, Dimension.Precision));
-            Assert.Equal(D1Cell(id, c, Dimension.Purity, Fx(pur)), S.CultureOf(a, c, Dimension.Purity));
-            Assert.Equal(D1Cell(id, c, Dimension.QualityControl, Fx(qc)), S.CultureOf(a, c, Dimension.QualityControl));
+            Assert.Equal(D2Cell(id, c, Dimension.Precision, D1Cell(id, c, Dimension.Precision, Fx(prec))), S.CultureOf(a, c, Dimension.Precision));
+            Assert.Equal(D2Cell(id, c, Dimension.Purity, D1Cell(id, c, Dimension.Purity, Fx(pur))), S.CultureOf(a, c, Dimension.Purity));
+            Assert.Equal(D2Cell(id, c, Dimension.QualityControl, D1Cell(id, c, Dimension.QualityControl, Fx(qc))), S.CultureOf(a, c, Dimension.QualityControl));
             // R-M per cell (spec §3.5 A20): tooling = H + 0.2, SUN +0.2 more in MECH and AERO (dismantled plants).
             Fx6 extra = id == "SUN" && c is Cluster.MECH or Cluster.AERO ? Fx("0.2") : Fx6.Zero;
+            // D2 (R-H-MS′, spec §1.1): M = max(M, H + 0.2) in the cells whose H was raised; the others keep H_D1 + 0.2 (+ extra).
             foreach (Dimension d in Enum.GetValues<Dimension>())
-                Assert.Equal(S.CultureOf(a, c, d) + Fx("0.2") + extra, S.ToolingOf(a, c, d));
+            {
+                Fx6 hD1 = D1Cell(id, c, d, d switch { Dimension.Precision => Fx(prec), Dimension.Purity => Fx(pur), _ => Fx(qc) });
+                Fx6 m1 = hD1 + Fx("0.2") + extra, m2 = S.CultureOf(a, c, d) + Fx("0.2");
+                Assert.Equal(m2 > m1 ? m2 : m1, S.ToolingOf(a, c, d));
+            }
         }
         Assert.Equal(Fx(hcap), S.Hcap[a]);
         Assert.Equal(Fx(prec) + Fx("1.5"), S.Hcap[a]);   // R-HC
@@ -60,6 +65,20 @@ public class CoreScenarioTests
         ("USA" or "GBR", Cluster.CHEM, Dimension.Purity) => Fx("4.00"),
         ("SUN", Cluster.AERO, Dimension.QualityControl) => Fx("3.50"),
         _ => uniform,
+    };
+
+    // D2 (#155, #159): culture raised to r_d − 0.05/n for the processes mastered by the scenario (16 cells; spec §1.1, column R-H-MS′).
+    private static Fx6 D2Cell(string actor, Cluster c, Dimension d, Fx6 d1) => (actor, c, d) switch
+    {
+        ("USA" or "GBR", Cluster.MET, Dimension.Purity) => Fx("3.95"),
+        ("USA" or "GBR", Cluster.CHEM, Dimension.Purity) => Fx("4.45"),
+        ("USA" or "GBR", Cluster.MECH, Dimension.Precision) => Fx("4.475"),
+        ("USA" or "GBR", Cluster.MECH, Dimension.QualityControl) => Fx("3.975"),
+        ("USA" or "GBR", Cluster.AERO, Dimension.QualityControl) => Fx("3.95"),
+        ("SUN", Cluster.CHEM, Dimension.Purity) or ("SUN", Cluster.MECH, Dimension.Precision) => Fx("3.475"),
+        ("SUN", Cluster.CHEM, Dimension.QualityControl) or ("SUN", Cluster.MECH, Dimension.QualityControl) => Fx("2.975"),
+        ("FRA", Cluster.CHEM, Dimension.Purity) or ("FRA", Cluster.MECH, Dimension.Precision) => Fx("3.45"),
+        _ => d1,
     };
 
     [Fact]

@@ -38,12 +38,12 @@ internal sealed class IndustryInputsAdapter(SliceWorld world) : IIndustryInputs
 
     // Spec A39: one plan per actor and month, every call of the month recomputes the same plan; the cell of this site is returned.
     public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor) =>
-        Plan(world.IndustryLayout.SiteOwner[siteRow], month, restActor).Invest(siteRow, cluster, dim);
+        Plan(world.IndustryLayout.SiteOwner[siteRow], month, restActor).Applied(siteRow, cluster, dim);
 
     /// <summary><c>ToolingPlan(a, t, rest_a)</c> with <c>B_cap = share_cap·budget_a(t)</c> of the shares in force.</summary>
     public ToolingPlanResult Plan(int actor, long month, Fx6 restActor) =>
         ToolingPlan.Compute(world.Industry, this, world.PolicyParameters.MKeep, actor, month, restActor,
-            world.SharesOf(actor).Capability * world.Policy.Budget(actor));
+            world.SharesOf(actor).Capability * world.Policy.Budget(actor), world.PolicyParameters.ToolingTarget);
 
     public Fx6 EffortBudget(int actorRow, long month) => world.SharesOf(actorRow).Effort * world.Policy.Budget(actorRow);
 

@@ -123,6 +123,9 @@ public sealed record PolicyParams
     /// </summary>
     public FleetLineCond FleetLineCond { get; init; } = FleetLineCond.Gen;
 
+    /// <summary><c>TOOLING_TARGET</c> (spec §11 T6e v0.19, #156): pass 2 of the tooling plan; V0 until the owner chooses.</summary>
+    public ToolingTargetSpec ToolingTarget { get; init; } = new();
+
     /// <summary><c>U_HI(P)</c> by profile (index = <see cref="PolicyProfile"/>; P1 / P2 / P3): the upkeep share of the procurement base from which the fleet rule acts (spec A42.8 «З»).</summary>
     public ImmutableArray<Fx6> FleetUHi { get; init; } = [F(250_000), F(800_000), F(500_000)];
 

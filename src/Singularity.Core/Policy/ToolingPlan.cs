@@ -10,12 +10,13 @@ namespace Singularity.Core.Policy;
 /// </summary>
 public sealed class ToolingPlanResult
 {
-    private readonly Fx6[] _invest;
+    private readonly Fx6[] _invest, _notional;
     private readonly int _clusters;
 
-    internal ToolingPlanResult(Fx6[] invest, int clusters, Fx6 rest, Fx6 bCap, Fx6 total)
+    internal ToolingPlanResult(Fx6[] invest, Fx6[] notional, int clusters, Fx6 rest, Fx6 bCap, Fx6 total)
     {
         _invest = invest;
+        _notional = notional;
         _clusters = clusters;
         Rest = rest;
         CapBudget = bCap;
@@ -45,6 +46,15 @@ public sealed class ToolingPlanResult
     /// <summary><c>T_a = B_cap − taken_cap</c>: the money of the training series, or an unspent residue.</summary>
     public Fx6 TrainingBudget => CapBudget - TakenCap;
 
+    /// <summary><c>Σ need∞</c> of the reference arm VINF (ledger column <c>invest_notional</c>); 0 in every other arm. Not part of <see cref="Total"/>.</summary>
+    public Fx6 NotionalTotal { get; internal init; }
+
+    /// <summary>Notional money of the cell (VINF only), not taken from the pool.</summary>
+    public Fx6 Notional(int site, int cluster, Dimension dim) => _notional[(site * _clusters + cluster) * Dims3.Count + (int)dim];
+
+    /// <summary>What <c>tooling_M</c> receives (spec §3.2): the pool money <see cref="Invest"/> plus the notional money of VINF.</summary>
+    public Fx6 Applied(int site, int cluster, Dimension dim) => Invest(site, cluster, dim) + Notional(site, cluster, dim);
+
     public Fx6 Invest(int site, int cluster, Dimension dim) => _invest[(site * _clusters + cluster) * Dims3.Count + (int)dim];
 }
 
@@ -57,8 +67,11 @@ public sealed class ToolingPlanResult
 /// </summary>
 public static class ToolingPlan
 {
-    public static ToolingPlanResult Compute(IndustrySystem industry, IIndustryInputs inputs, Fx6 mKeep, int actor, long month, Fx6 rest, Fx6 bCap)
+    public static ToolingPlanResult Compute(IndustrySystem industry, IIndustryInputs inputs, Fx6 mKeep, int actor, long month, Fx6 rest, Fx6 bCap,
+        ToolingTargetSpec? target = null)
     {
+        target ??= new ToolingTargetSpec();
+        target.Validate();
         if (rest < Fx6.Zero || bCap < Fx6.Zero)
             throw new ArgumentOutOfRangeException(nameof(rest), "rest_a and B_cap must not be negative.");
         IndustryLayout l = industry.Layout;
@@ -66,6 +79,7 @@ public static class ToolingPlan
         int clusters = l.Clusters.Length, n = l.ProcessCount;
         int mech = l.Clusters.IndexOf(Cluster.MECH);
         var invest = new Fx6[l.SiteCount * clusters * Dims3.Count];
+        var notional = new Fx6[invest.Length];
         var room = new Fx6[invest.Length];
         var mDec = new Fx6[invest.Length];
         var cost = new Fx6[invest.Length];
@@ -143,31 +157,78 @@ public static class ToolingPlan
             }
         }
 
-        // Pass 2: the bottleneck cells of M of the processes the actor knows and plans to run.
+        Fx6 notionalTotal = Fx6.Zero;
+        if (target.Variant == ToolingTarget.VInf)
+        {
+            // Reference arm: pass 2 is replaced; M reaches M_cap wherever a known process with v_exp > 0 and r_d > 0 uses the cell. The money is
+            // notional: the pool, taken_rest, taken_cap and T_a stay as with a zero pass 2.
+            foreach (int s in sites)
+            {
+                for (int c = 0; c < clusters; c++)
+                {
+                    for (int d = 0; d < Dims3.Count; d++)
+                    {
+                        int i = (s * clusters + c) * Dims3.Count + d;
+                        if (!(mDec[i] < mCap[s]) || !UsedCell(l, inputs, s, c, d, month))
+                            continue;
+                        Fx6 need = (mCap[s] - mDec[i]) * cost[i] - invest[i];
+                        if (need <= Fx6.Zero)
+                            continue;
+                        notional[i] = need;
+                        notionalTotal += need;
+                    }
+                }
+            }
+            return new ToolingPlanResult(invest, notional, clusters, rest, bCap, total) { NotionalTotal = notionalTotal };
+        }
+
+        // Pass 2 (TOOLING_TARGET, spec §11 T6e v0.19): the bottleneck cells of the processes the actor knows and plans to run.
         foreach (int s in sites)
         {
             for (int c = 0; c < clusters; c++)
             {
                 for (int d = 0; d < Dims3.Count; d++)
                 {
-                    if (!IsMBottleneck(l, inputs, yields[s], s, c, d, month))
-                        continue;
                     int i = (s * clusters + c) * Dims3.Count + d;
                     Fx6 h = industry.CultureH(s, c, (Dimension)d);
-                    Fx6 target = h < mCap[s] ? h : mCap[s];
-                    Give(i, (target - mDec[i]) * cost[i] - invest[i]);
+                    Fx6 m = industry.ToolingM(s, c, (Dimension)d);
+                    if (!CellTarget(target, industry, l, inputs, yields[s], s, c, d, month, h, m, mDec[i], out Fx6 goal))
+                        continue;
+                    if (goal > mCap[s])
+                        goal = mCap[s];
+                    Give(i, (goal - mDec[i]) * cost[i] - invest[i]);
                 }
             }
         }
-        return new ToolingPlanResult(invest, clusters, rest, bCap, total);
+        return new ToolingPlanResult(invest, notional, clusters, rest, bCap, total);
     }
 
-    // A5, A6: the bottleneck dimension of a process is its first dimension of minimal g below 1; its source is M when M < H strictly.
-    private static bool IsMBottleneck(IndustryLayout l, IIndustryInputs inputs, ProcessYield[] yields, int site, int cluster, int dim, long month)
+    // VINF: a known process of the cluster with v_exp > 0 and r_d > 0 (the bottleneck and the source are not checked).
+    private static bool UsedCell(IndustryLayout l, IIndustryInputs inputs, int site, int cluster, int dim, long month)
     {
         for (int r = 0; r < l.ProcessCount; r++)
         {
-            if (l.ClusterIndex[r] != cluster || !inputs.KnowsProcess(site, r, month) || inputs.PlannedVolume(site, r, month) <= Fx6.Zero)
+            if (l.ClusterIndex[r] == cluster && l.Req[r][dim] > Fx6.Zero && inputs.KnowsProcess(site, r, month)
+                && inputs.PlannedVolume(site, r, month) > Fx6.Zero)
+                return true;
+        }
+        return false;
+    }
+
+    // The cell takes part and has a target when a process of the cluster that the actor knows and plans to run (v_exp > 0) has this dimension as its
+    // bottleneck (A5, A6: first dimension of minimal g below 1). V0 and V1 also need the source M (M < H strictly); V2…V4 take M or H as the source
+    // and add their own condition on M. With several processes the target is the maximum over them (V2: the maximum H').
+    private static bool CellTarget(ToolingTargetSpec t, IndustrySystem industry, IndustryLayout l, IIndustryInputs inputs, ProcessYield[] yields,
+        int site, int cluster, int dim, long month, Fx6 h, Fx6 m, Fx6 mDec, out Fx6 goal)
+    {
+        goal = Fx6.Zero;
+        bool any = false;
+        for (int r = 0; r < l.ProcessCount; r++)
+        {
+            if (l.ClusterIndex[r] != cluster || !inputs.KnowsProcess(site, r, month))
+                continue;
+            Fx6 vExp = inputs.PlannedVolume(site, r, month);
+            if (vExp <= Fx6.Zero)
                 continue;
             ProcessYield y = yields[r];
             Fx6 minG = Fx6.One;
@@ -180,9 +241,41 @@ public static class ToolingPlan
                     bottleneck = d;
                 }
             }
-            if (bottleneck == dim && y.Source(dim) == CapabilitySource.M)
-                return true;
+            if (bottleneck != dim)
+                continue;
+            Fx6 candidate;
+            bool fromM = y.Source(dim) == CapabilitySource.M;
+            switch (t.Variant)
+            {
+                case ToolingTarget.V0 when fromM:
+                    candidate = h;
+                    break;
+                case ToolingTarget.V1 when fromM:
+                    candidate = h + t.RhoMax;
+                    break;
+                case ToolingTarget.V2:
+                    // dH_forecast is read only under this arm (F18).
+                    Fx6 forecast = h + industry.DHForecast(site, r, (Dimension)dim, industry.EUseful(site, r, month), vExp, month);
+                    if (!(mDec < forecast))
+                        continue;
+                    candidate = forecast;
+                    break;
+                case ToolingTarget.V3 when mDec < h + t.HLo:
+                    candidate = h + t.HHi;
+                    break;
+                case ToolingTarget.V3b when mDec < h + t.HLo:
+                    candidate = h + t.HHiControl;
+                    break;
+                case ToolingTarget.V4 when m <= h:
+                    candidate = h + t.MLead;
+                    break;
+                default:
+                    continue;
+            }
+            if (!any || candidate > goal)
+                goal = candidate;
+            any = true;
         }
-        return false;
+        return any;
     }
 }
