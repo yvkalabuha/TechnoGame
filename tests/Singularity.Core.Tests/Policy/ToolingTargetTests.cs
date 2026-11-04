@@ -189,6 +189,70 @@ public class ToolingTargetTests
         Assert.Equal(inf.Invest(0, 1, Dimension.Purity), inf.Total);
     }
 
+    [Fact]
+    public void VInf_WhenPassOneAndPassTwoCompeteForThePool_PoolFiguresEqualV0WithAnEmptyPassTwo()
+    {
+        // MECH.purity of site 0 needs money for admission (pass 1). MET.purity has M > H, so V0 pass 2 is empty, while VINF pass 2 has notional need there.
+        ToolingPlanTests.Rig NewRig() => new((s, c, d) => c == 1 && d == 1 && s == 0 ? F(2_100_000) : F(3_400_000), 1,
+            (s, c, d) => c == 0 && d == 1 ? F(2_900_000) : Fx6.FromInt(4));
+        Fx6 need1 = NewRig().Plan(0, Big, Big, 0, Spec(ToolingTarget.V0)).Invest(0, 1, Dimension.Purity);
+        Assert.True(need1 > Fx6.Zero);
+        foreach (Fx6 rest in new[] { F(need1.Raw / 2), need1, need1 + F(10_000) })
+        {
+            Fx6 cap = F(5_000);
+            ToolingPlanResult v0 = NewRig().Plan(0, rest, cap, 0, Spec(ToolingTarget.V0));
+            ToolingPlanResult inf = NewRig().Plan(0, rest, cap, 0, Spec(ToolingTarget.VInf));
+            Assert.Equal(Fx6.Zero, v0.NotionalTotal);
+            Assert.True(inf.NotionalTotal > Fx6.Zero);
+            Assert.Equal(v0.Total, inf.Total);
+            Assert.Equal(v0.TakenRest, inf.TakenRest);
+            Assert.Equal(v0.TakenCap, inf.TakenCap);
+            Assert.Equal(v0.RestReturned, inf.RestReturned);
+            Assert.Equal(v0.TrainingBudget, inf.TrainingBudget);
+            Assert.Equal(v0.Invest(0, 1, Dimension.Purity), inf.Invest(0, 1, Dimension.Purity));
+        }
+    }
+
+    // Culture rule with a known dH_forecast (everything else is the rule of v2.3).
+    private sealed class FixedForecastRule(Fx6 forecast) : ICultureRule
+    {
+        private readonly V23CultureRule _inner = new();
+        public string Name => _inner.Name;
+        public CultureStep Step(ICultureSnapshot s, int site, int cluster, int dim, long month) => _inner.Step(s, site, cluster, dim, month);
+        public Fx6 EUseful(ICultureSnapshot s, int site, int processRow, long month) => _inner.EUseful(s, site, processRow, month);
+        public CultureLimiter Limiter(ICultureSnapshot s, int site, int processRow, long month) => _inner.Limiter(s, site, processRow, month);
+        public Fx6 DHForecast(ICultureSnapshot s, int site, int processRow, int dim, Fx6 e, Fx6 v, long month) => forecast;
+    }
+
+    [Theory]
+    [InlineData(2_800_000, 15_000, true)]   // M < H: M_dec 2.786 < H' = 2.915
+    [InlineData(2_930_000, 21_000, true)]   // M_dec 2.9154 < H' = 2.921 (H' = H + rho_max, the largest forecast)
+    [InlineData(2_930_000, 15_000, false)]  // M_dec 2.9154 >= H' = 2.915
+    [InlineData(2_930_000, 0, false)]       // no growth forecast: H' = H
+    public void V2_UsesHPrime_AndSkipsACellWithMDecAtOrAboveIt(long m, long forecast, bool participates)
+    {
+        ToolingPlanResult plan = RigWith(m, new FixedForecastRule(F(forecast))).Plan(0, Big, Big, 0, Spec(ToolingTarget.V2));
+        Assert.Equal(participates, plan.Participates(0, 0, Dimension.Purity));
+        Assert.True(plan.Goal(0, 0, Dimension.Purity) <= H + new IndustryParams().RhoMax);
+        Assert.Equal(participates ? Need(m, H + F(forecast)) : Fx6.Zero, plan.Invest(0, 0, Dimension.Purity));
+        Assert.Equal(participates ? H + F(forecast) : Fx6.Zero, plan.Goal(0, 0, Dimension.Purity));
+    }
+
+    [Fact]
+    public void GoalAndParticipates_AreReportedPerCell_CappedByMCap()
+    {
+        ToolingPlanResult v4 = RigWith(2_800_000).Plan(0, Big, Big, 0, Spec(ToolingTarget.V4));
+        Assert.True(v4.Participates(0, 0, Dimension.Purity));
+        Assert.Equal(H + F(200_000), v4.Goal(0, 0, Dimension.Purity));
+        Assert.False(v4.Participates(0, 1, Dimension.Purity));
+        Assert.False(v4.Participates(2, 0, Dimension.Purity));
+        Assert.Equal(Fx6.Zero, v4.Goal(0, 1, Dimension.Purity));
+        // VINF: the goal is M_cap = 4 wherever the cell is used.
+        ToolingPlanResult inf = RigWith(2_800_000).Plan(0, Big, Big, 0, Spec(ToolingTarget.VInf));
+        Assert.True(inf.Participates(0, 0, Dimension.Purity));
+        Assert.Equal(Fx6.FromInt(4), inf.Goal(0, 0, Dimension.Purity));
+    }
+
     private sealed class CountingRule(ICultureRule inner) : ICultureRule
     {
         public int Forecasts;

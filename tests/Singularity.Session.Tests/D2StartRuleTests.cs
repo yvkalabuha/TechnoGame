@@ -98,9 +98,23 @@ public class D2StartRuleTests(ITestOutputHelper output)
         s.StepThroughMonth(0);
     }
 
-    private static string Edit(string[] pairs)
+    // Loads a copy of mods/core whose scenario text is edited by (old, new) pairs; the temp directory is deleted after the load.
+    private static GameData LoadEdited(string[] pairs)
     {
-        string dir = Path.Combine(Path.GetTempPath(), "singularity-d2-tests", Guid.NewGuid().ToString("N"), "core");
+        string root = Path.Combine(Path.GetTempPath(), "singularity-d2-tests", Guid.NewGuid().ToString("N"));
+        try
+        {
+            return ModLoader.Load(WriteEdited(root, pairs));
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    private static string WriteEdited(string root, string[] pairs)
+    {
+        string dir = Path.Combine(root, "core");
         Directory.CreateDirectory(dir);
         foreach (string file in Directory.GetFiles(Path.Combine(SliceTestData.RepoRoot, "mods", "core")))
         {
@@ -122,7 +136,7 @@ public class D2StartRuleTests(ITestOutputHelper output)
     public void S2_LiteralRhms155Fixture_GivesExactlyFourErrors_AtYield0672()
     {
         // The literal #155 (r_d − 0.05 for every dimension) of 49 (USA, GBR) and 44, 47 (SUN).
-        string dir = Edit(
+        GameData data = LoadEdited(
         [
             "MECH: {precision: 4.475, purity: 3.80, quality_control: 3.975}", "MECH: {precision: 4.45, purity: 3.80, quality_control: 3.95}",
             "MECH: {precision: 4.675, purity: 4.00, quality_control: 4.175}", "MECH: {precision: 4.65, purity: 4.00, quality_control: 4.15}",
@@ -133,7 +147,6 @@ public class D2StartRuleTests(ITestOutputHelper output)
             "CHEM: {precision: 3.40, purity: 3.675, quality_control: 3.175}", "CHEM: {precision: 3.40, purity: 3.65, quality_control: 3.15}",
             "MECH: {precision: 3.675, purity: 3.40, quality_control: 3.30}", "MECH: {precision: 3.65, purity: 3.40, quality_control: 3.30}",
         ]);
-        GameData data = ModLoader.Load(dir);
         List<MasteredYieldViolation> bad = Check(data);
         Assert.Equal(["USA/49", "GBR/49", "SUN/44", "SUN/47"], bad.Select(v => $"{v.Actor}/{v.ProcessNumber}").ToArray());
         foreach (MasteredYieldViolation v in bad)
@@ -151,8 +164,7 @@ public class D2StartRuleTests(ITestOutputHelper output)
     [Fact]
     public void S2_MasteredProcessWithHThreeTenthsBelowTheRequirement_IsALoadError()
     {
-        string dir = Edit(["MET: {precision: 4.00, purity: 3.95, quality_control: 3.70}", "MET: {precision: 4.00, purity: 3.70, quality_control: 3.70}"]);
-        GameData data = ModLoader.Load(dir);
+        GameData data = LoadEdited(["MET: {precision: 4.00, purity: 3.95, quality_control: 3.70}", "MET: {precision: 4.00, purity: 3.70, quality_control: 3.70}"]);
         MasteredYieldViolation v = Assert.Single(Check(data));
         Assert.Equal(("USA", 39), (v.Actor, v.ProcessNumber));
         Assert.Equal(Dimension.Purity, v.WeakestDimension);
@@ -251,11 +263,9 @@ public class D2StartRuleTests(ITestOutputHelper output)
 
     // ---- print (F32 and the acceptance print of TASK-0029); runs only with SINGULARITY_D2_PRINT=1
 
-    [Fact]
+    [PrintFact]
     public void Print_Seeds1To20_AtV0_WithAndWithoutRhms()
     {
-        if (Environment.GetEnvironmentVariable("SINGULARITY_D2_PRINT") != "1")
-            return;
         string path = Environment.GetEnvironmentVariable("SINGULARITY_D2_PRINT_FILE") ?? Path.Combine(Path.GetTempPath(), "d2-print.txt");
         var lines = new List<string>();
         foreach ((string name, GameData data, bool skip) in new[] { ("D2", SliceTestData.Data, false), ("RHMS_OFF", OffData, true) })
@@ -299,5 +309,15 @@ public class D2StartRuleTests(ITestOutputHelper output)
         }
         File.WriteAllLines(path, lines);
         output.WriteLine(string.Join("\n", lines));
+    }
+}
+
+/// <summary>A fact that is skipped unless <c>SINGULARITY_D2_PRINT=1</c> (a long print, not a check).</summary>
+internal sealed class PrintFactAttribute : FactAttribute
+{
+    public PrintFactAttribute()
+    {
+        if (Environment.GetEnvironmentVariable("SINGULARITY_D2_PRINT") != "1")
+            Skip = "set SINGULARITY_D2_PRINT=1 to run the D2 print";
     }
 }

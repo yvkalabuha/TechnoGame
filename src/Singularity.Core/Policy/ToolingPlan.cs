@@ -10,13 +10,16 @@ namespace Singularity.Core.Policy;
 /// </summary>
 public sealed class ToolingPlanResult
 {
-    private readonly Fx6[] _invest, _notional;
+    private readonly Fx6[] _invest, _notional, _goal;
+    private readonly bool[] _participates;
     private readonly int _clusters;
 
-    internal ToolingPlanResult(Fx6[] invest, Fx6[] notional, int clusters, Fx6 rest, Fx6 bCap, Fx6 total)
+    internal ToolingPlanResult(Fx6[] invest, Fx6[] notional, Fx6[] goal, bool[] participates, int clusters, Fx6 rest, Fx6 bCap, Fx6 total)
     {
         _invest = invest;
         _notional = notional;
+        _goal = goal;
+        _participates = participates;
         _clusters = clusters;
         Rest = rest;
         CapBudget = bCap;
@@ -55,6 +58,12 @@ public sealed class ToolingPlanResult
     /// <summary>What <c>tooling_M</c> receives (spec §3.2): the pool money <see cref="Invest"/> plus the notional money of VINF.</summary>
     public Fx6 Applied(int site, int cluster, Dimension dim) => Invest(site, cluster, dim) + Notional(site, cluster, dim);
 
+    /// <summary>Pass 2 took the cell into account under the arm's participation rule (ledger of M1(г)); false for cells of other actors.</summary>
+    public bool Participates(int site, int cluster, Dimension dim) => _participates[(site * _clusters + cluster) * Dims3.Count + (int)dim];
+
+    /// <summary>The pass-2 target of a participating cell, already capped by <c>M_cap</c> (VINF: <c>M_cap</c>); 0 otherwise.</summary>
+    public Fx6 Goal(int site, int cluster, Dimension dim) => _goal[(site * _clusters + cluster) * Dims3.Count + (int)dim];
+
     public Fx6 Invest(int site, int cluster, Dimension dim) => _invest[(site * _clusters + cluster) * Dims3.Count + (int)dim];
 }
 
@@ -80,6 +89,8 @@ public static class ToolingPlan
         int mech = l.Clusters.IndexOf(Cluster.MECH);
         var invest = new Fx6[l.SiteCount * clusters * Dims3.Count];
         var notional = new Fx6[invest.Length];
+        var goals = new Fx6[invest.Length];
+        var takes = new bool[invest.Length];
         var room = new Fx6[invest.Length];
         var mDec = new Fx6[invest.Length];
         var cost = new Fx6[invest.Length];
@@ -171,6 +182,8 @@ public static class ToolingPlan
                         int i = (s * clusters + c) * Dims3.Count + d;
                         if (!(mDec[i] < mCap[s]) || !UsedCell(l, inputs, s, c, d, month))
                             continue;
+                        takes[i] = true;
+                        goals[i] = mCap[s];
                         Fx6 need = (mCap[s] - mDec[i]) * cost[i] - invest[i];
                         if (need <= Fx6.Zero)
                             continue;
@@ -179,7 +192,7 @@ public static class ToolingPlan
                     }
                 }
             }
-            return new ToolingPlanResult(invest, notional, clusters, rest, bCap, total) { NotionalTotal = notionalTotal };
+            return new ToolingPlanResult(invest, notional, goals, takes, clusters, rest, bCap, total) { NotionalTotal = notionalTotal };
         }
 
         // Pass 2 (TOOLING_TARGET, spec §11 T6e v0.19): the bottleneck cells of the processes the actor knows and plans to run.
@@ -196,11 +209,13 @@ public static class ToolingPlan
                         continue;
                     if (goal > mCap[s])
                         goal = mCap[s];
+                    takes[i] = true;
+                    goals[i] = goal;
                     Give(i, (goal - mDec[i]) * cost[i] - invest[i]);
                 }
             }
         }
-        return new ToolingPlanResult(invest, notional, clusters, rest, bCap, total);
+        return new ToolingPlanResult(invest, notional, goals, takes, clusters, rest, bCap, total);
     }
 
     // VINF: a known process of the cluster with v_exp > 0 and r_d > 0 (the bottleneck and the source are not checked).
