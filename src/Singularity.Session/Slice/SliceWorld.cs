@@ -23,7 +23,7 @@ namespace Singularity.Session;
 internal sealed class SliceWorld
 {
     /// <summary>Version of the column schema (ADR-0013 п. 2); raised with every change of the table layout (pinned by a fingerprint test).</summary>
-    public const int SchemaVersion = 5;
+    public const int SchemaVersion = 6;
 
     // Layout constants of the slice (spec §1.4, §3.3, §2): engineer and skilled pools, bureaus, cohort years 1945…1977.
     public const int WorkforceCategories = 2;
@@ -289,6 +289,11 @@ internal sealed class SliceWorld
             Table.AddLong("run.tooling.m_lead").Load(Fill(rows, tt.MLead.Raw));
             Table.AddLong("run.tooling.h_hi_b").Load(Fill(rows, tt.HHiControl.Raw));
         }
+        // POOL_ORDER and k_cap (Lab only) are part of the hash when they are not the defaults CAN and 1, so a default run carries neither column.
+        if (tt.PoolOrder != PoolOrder.Can)
+            Table.AddInt("run.tooling.pool").Load([.. Enumerable.Repeat((int)tt.PoolOrder, rows)]);
+        if (tt.KCap != Fx6.One)
+            Table.AddLong("run.tooling.k_cap").Load(Fill(rows, tt.KCap.Raw));
         Table.AddLong("run.scenario").Load(Fill(rows, BinaryPrimitives.ReadInt64LittleEndian(Convert.FromHexString(Scenario.Hash.AsSpan(0, 16)))));
     }
 }

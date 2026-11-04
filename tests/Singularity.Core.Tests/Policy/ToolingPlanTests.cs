@@ -26,8 +26,9 @@ public partial class ToolingPlanTests
         public Fx6 EffortBudget(int actorRow, long month) => Budget;
         public int EffortFocus(int actorRow, int k, long month) => -1;
         public bool NoPlanned;
-        public bool Planned(int siteRow, int processRow, long month) => !NoPlanned && processRow == 0;
-        public Fx6 PlannedVolume(int siteRow, int processRow, long month) => !NoPlanned && processRow == 0 ? Fx6.FromInt(10) : Fx6.Zero;
+        public bool PlanAll;   // every process is planned (default: the MET process only)
+        public bool Planned(int siteRow, int processRow, long month) => !NoPlanned && (processRow == 0 || PlanAll);
+        public Fx6 PlannedVolume(int siteRow, int processRow, long month) => !NoPlanned && (processRow == 0 || PlanAll) ? Fx6.FromInt(10) : Fx6.Zero;
         public bool Unknown;
         public bool KnowsProcess(int siteRow, int processRow, long month) => !Unknown;
         public Fx6 W(int siteRow, int cluster, long month) => Fx6.One;

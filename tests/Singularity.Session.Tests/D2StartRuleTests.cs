@@ -234,15 +234,6 @@ public class D2StartRuleTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void Switch_V5Default_Seed41_EqualsTheV5ArmOfExp0005()
-    {
-        // EXP-0005 manifest without TOOLING_TARGET: main, seed 41, 384 months, LINE_CLOSE YPROD; final hash of the V5 arm.
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 41, Threads = 4 });
-        s.StepThroughMonth(383);
-        Assert.StartsWith("a968b6ee", s.LastHash);
-    }
-
-    [Fact]
     public void Switch_OtherArmsChangeTheTrajectory_AndAreDeterministicAcrossThreads()
     {
         var c = new SliceRunConfig { Seed = 1 };

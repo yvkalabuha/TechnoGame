@@ -364,5 +364,5 @@ public class ProductAiSessionTests(ITestOutputHelper output)
     // Re-recorded in T-fleet (513238aa… before), reason: T-fleet — contract r6: new columns and the fleet rule A42.4 (retirement by generation), schema v5.
     // D2 (#155, #159): start rule R-H-MS'; the data of the scenario changed, the model did not.
     // Re-recorded in F17b (951bcf96… before), reason: F17b — LINE_CLOSE YPROD bit 12 of run.fleet in the hash of an AI run (ADMIT keeps the old hash, see F17bTests).
-    private const string Golden150 = "beb445d6bfa751284ccb71c754bb126121a62033bfcc9e5920b7375f12d15537";
+    private const string Golden150 = "409293e452044a62233cf227950d46ee46f4073e83acfdcce81e8d02e9d43f61";
 }

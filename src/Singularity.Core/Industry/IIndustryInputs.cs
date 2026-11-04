@@ -34,6 +34,16 @@ public interface IIndustryInputs
     Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor);
 
     /// <summary>
+    /// <see cref="ToolingInvest(int, int, Dimension, long, Fx6)"/> and, from the same plan, <c>tool_unmet</c> of the cell (contract r8 §3.1): what the
+    /// cell was short only because the pool ran out; ≥ 0. A rule without a pool says 0.
+    /// </summary>
+    Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor, out Fx6 unmet)
+    {
+        unmet = Fx6.Zero;
+        return ToolingInvest(siteRow, cluster, dim, month, restActor);
+    }
+
+    /// <summary>
     /// <c>D_a(t) = share_D[a]·budget_a(t)</c>: the process-development item of the actor, reserved by the budget/AI
     /// system (contract §4.0, G4-5); ≥ 0.
     /// </summary>

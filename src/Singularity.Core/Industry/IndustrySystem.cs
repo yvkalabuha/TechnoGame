@@ -22,7 +22,7 @@ public sealed class IndustryInvariantException(long month, int site, string mess
 /// <c>act</c> from the skilled grants of month t−1, <c>tooling_M</c> with the investment in force under the
 /// MECH cap. Merge applies <c>report_output</c> by (site, prc) → <c>proc_X</c>, <c>proc_v</c>, and
 /// <c>reserve_workforce</c> by (site, cat, requester_id) → <c>granted</c>, visible at t+1. No RNG anywhere in
-/// the layer (#28). Own columns per site row: <c>ind.H.c.d</c>, <c>ind.M.c.d</c> per cluster and dimension,
+/// the layer (#28). Own columns per site row: <c>ind.H.c.d</c>, <c>ind.M.c.d</c> per cluster and dimension, <c>ind.unmet.c.d</c> (r8, <c>tool_unmet</c>),
 /// then per process number <c>ind.X.N</c>, <c>ind.v.N</c>, <c>ind.y.N</c>, <c>ind.E.N</c> (<c>proc_E</c>, v2.4), then <c>ind.wf.n.k.R</c>,
 /// <c>ind.wf.granted.k.R</c> per category k and requester R.
 /// </summary>
@@ -42,7 +42,7 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
     private readonly ImmutableArray<CapabilityCurve> _curves;
     private readonly int _c, _n, _sites;
 
-    private readonly LongColumn[] _h, _m;
+    private readonly LongColumn[] _h, _m, _unmet;
     private readonly LongColumn[] _x, _v, _y, _e;
     private readonly IntColumn[] _mr;
     private readonly ICultureRule _rule;
@@ -108,6 +108,12 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
         {
             for (int d = 0; d < Dims3.Count; d++)
                 _m[c * Dims3.Count + d] = table.AddLong($"ind.M.{layout.Clusters[c]}.{DimNames[d]}");
+        }
+        _unmet = new LongColumn[_c * Dims3.Count];
+        for (int c = 0; c < _c; c++)
+        {
+            for (int d = 0; d < Dims3.Count; d++)
+                _unmet[c * Dims3.Count + d] = table.AddLong($"ind.unmet.{layout.Clusters[c]}.{DimNames[d]}");
         }
         _x = new LongColumn[_n];
         _v = new LongColumn[_n];
@@ -192,6 +198,9 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
     public Fx6 CultureH(int site, int cluster, Dimension dim) => Fx6.FromRaw(_h[cluster * Dims3.Count + (int)dim].Current[site]);
 
     public Fx6 ToolingM(int site, int cluster, Dimension dim) => Fx6.FromRaw(_m[cluster * Dims3.Count + (int)dim].Current[site]);
+
+    /// <summary><c>tool_unmet</c> (contract r8 §3.1): the shortfall of the cell in the tooling plan of the last month caused by the pool alone; a service column, no decision of the model reads it.</summary>
+    public Fx6 ToolingUnmet(int site, int cluster, Dimension dim) => Fx6.FromRaw(_unmet[cluster * Dims3.Count + (int)dim].Current[site]);
 
     public Fx6 ProcX(int site, int processRow) => Fx6.FromRaw(_x[processRow].Current[site]);
 
@@ -504,12 +513,15 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
 
     private void StepTooling(int s, int c, int d, long t, int mechTier, Fx6 restActor)
     {
-        Fx6 invest = _inputs.ToolingInvest(s, c, (Dimension)d, t, restActor);
+        Fx6 invest = _inputs.ToolingInvest(s, c, (Dimension)d, t, restActor, out Fx6 unmet);
+        if (unmet < Fx6.Zero)
+            throw new IndustryInvariantException(t, s, $"negative tool_unmet {unmet}");
         if (invest < Fx6.Zero)
             throw new IndustryInvariantException(t, s, $"negative tooling investment {invest}");
         ToolingStep step = IndustryMath.Tooling(Cell(_m, s, c, d), invest, mechTier, _p);
         _toolingTrace[(s * _c + c) * Dims3.Count + d] = step;
         _m[c * Dims3.Count + d].Next[s] = step.MNew.Raw;
+        _unmet[c * Dims3.Count + d].Next[s] = unmet.Raw;
     }
 
     private Fx6 ControlUnitCost(int site, int processRow, long month)

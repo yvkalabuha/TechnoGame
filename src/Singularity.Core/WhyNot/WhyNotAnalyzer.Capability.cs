@@ -70,6 +70,8 @@ public sealed partial class WhyNotAnalyzer
             int subject = prc[i];
             LimiterKind? limiterKind = null;
             ImmutableArray<Lever> levers;
+            int linkCluster = -1, order = -1;
+            Fx6 unmet = Fx6.Zero;
             if (dim is { } dm)
             {
                 int d = (int)dm;
@@ -99,7 +101,18 @@ public sealed partial class WhyNotAnalyzer
 
                 if (fromM)
                 {
-                    cause = WhyNotCause.ToolingM;
+                    // r8 (F33): the plan of the last month left the cell short only because the pool ran out. The key and the levers are those of ToolingM.
+                    unmet = _i.ToolingUnmet(site, cluster, dm);
+                    cause = unmet > Fx6.Zero ? WhyNotCause.ToolingPoolExhausted : WhyNotCause.ToolingM;
+                    if (cause == WhyNotCause.ToolingPoolExhausted)
+                    {
+                        linkCluster = cluster;
+                        order = _in.PoolQueuePlace(cluster);
+                    }
+                    else
+                    {
+                        unmet = Fx6.Zero;
+                    }
                     eta = Eta(have, need, _in.ToolingRate(site, cluster, dm, month));
                     levers = Offer(Wanted([Lever.InvestToolingM], dm, slot));
                 }
@@ -119,6 +132,9 @@ public sealed partial class WhyNotAnalyzer
                         _ => _i.DHForecast(site, row, dm, e, _i.ProcV(site, row), month),
                     };
                     eta = Eta(have, need, rate);
+                    // r8: the cause stays CultureH; a TOOLING limit only carries the cell's shortfall for the UI (the link's own cell, as the rate above).
+                    if (lim.Value == LimiterKind.Tooling)
+                        unmet = _i.ToolingUnmet(site, cluster, dm);
                     Lever[] byLimiter = lim.Value switch
                     {
                         LimiterKind.Effort => [Lever.ProcessDevelopment],
@@ -154,7 +170,7 @@ public sealed partial class WhyNotAnalyzer
                 if (j != i && ys[j].Yield < lowest)
                     lowest = ys[j].Yield;
             }
-            links.Add(new Link(WhyNotLayer.Capability, cause, subject, have, need, levers, lowest, eta, prc[i], dim, limiterKind, slot));
+            links.Add(new Link(WhyNotLayer.Capability, cause, subject, have, need, levers, lowest, eta, prc[i], dim, limiterKind, slot, Cluster: linkCluster, Order: order, Unmet: unmet));
         }
     }
 

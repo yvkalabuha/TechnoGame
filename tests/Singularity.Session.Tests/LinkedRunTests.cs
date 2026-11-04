@@ -29,7 +29,7 @@ public class LinkedRunTests
     /// </summary>
     // Re-recorded in T-fleet (30a75d4f… before), reason: T-fleet — contract r6: new columns (fleet commands, sale money, quota, line_bind, mastered_run, run.fleet), schema v5.
     // D2 (#155, #159): start rule R-H-MS'; the data of the scenario changed, the model did not.
-    private const string Golden60 = "b71072593a573f892bb2b54725b829b0f08ace4de67a0d082804479fdf51f157";
+    private const string Golden60 = "ec3ce1961f5a07c9ad6f683a092ee3fa09b8ec3d021284f29f55bf0ef1e633c4";
 
     private sealed class Run
     {

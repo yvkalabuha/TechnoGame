@@ -40,10 +40,22 @@ internal sealed class IndustryInputsAdapter(SliceWorld world) : IIndustryInputs
     public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor) =>
         Plan(world.IndustryLayout.SiteOwner[siteRow], month, restActor).Applied(siteRow, cluster, dim);
 
-    /// <summary><c>ToolingPlan(a, t, rest_a)</c> with <c>B_cap = share_cap·budget_a(t)</c> of the shares in force.</summary>
-    public ToolingPlanResult Plan(int actor, long month, Fx6 restActor) =>
-        ToolingPlan.Compute(world.Industry, this, world.PolicyParameters.MKeep, actor, month, restActor,
-            world.SharesOf(actor).Capability * world.Policy.Budget(actor), world.PolicyParameters.ToolingTarget);
+    public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor, out Fx6 unmet)
+    {
+        ToolingPlanResult plan = Plan(world.IndustryLayout.SiteOwner[siteRow], month, restActor);
+        unmet = plan.Unmet(siteRow, cluster, dim);
+        return plan.Applied(siteRow, cluster, dim);
+    }
+
+    /// <summary><c>ToolingPlan(a, t, rest_a)</c> with <c>B_cap = ⌊k_cap·share_cap·budget_a(t)⌋</c> of the shares in force (<c>k_cap</c> = 1 outside the Lab stress set).</summary>
+    public ToolingPlanResult Plan(int actor, long month, Fx6 restActor)
+    {
+        ToolingTargetSpec target = world.PolicyParameters.ToolingTarget;
+        Fx6 bCap = world.SharesOf(actor).Capability * world.Policy.Budget(actor);
+        if (target.KCap != Fx6.One)
+            bCap = target.KCap * bCap;
+        return ToolingPlan.Compute(world.Industry, this, world.PolicyParameters.MKeep, actor, month, restActor, bCap, target);
+    }
 
     public Fx6 EffortBudget(int actorRow, long month) => world.SharesOf(actorRow).Effort * world.Policy.Budget(actorRow);
 

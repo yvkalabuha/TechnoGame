@@ -1,5 +1,6 @@
 using Singularity.Core.Data;
 using Singularity.Core.Industry;
+using Singularity.Core.Policy;
 using Singularity.Core.WhyNot;
 using Singularity.Kernel;
 
@@ -18,6 +19,18 @@ internal sealed class WhyNotInputsAdapter(SliceWorld world) : IWhyNotInputs
     public bool LicenceOffered(int siteRow, int processNumber, long month) => false;
 
     public Fx6 TrainingBudget(int actorRow, int design, long month) => world.ProductsInputs.TrainingBudget(actorRow, design, month);
+
+    // Place of the cluster in the pass-2 queue (contract r8 §6): CAN in layout order (MET 1 … AERO 4), REV reversed, PROP and SEV have no permanent queue.
+    public int PoolQueuePlace(int cluster)
+    {
+        int n = world.IndustryLayout.Clusters.Length;
+        return world.PolicyParameters.ToolingTarget.PoolOrder switch
+        {
+            PoolOrder.Can => cluster + 1,
+            PoolOrder.Rev => n - cluster,
+            _ => 0,
+        };
+    }
 
     // Net growth of M in a month at the planned investment: gain − wear (spec A11, A39), never negative.
     public Fx6 ToolingRate(int siteRow, int cluster, Dimension dim, long month)

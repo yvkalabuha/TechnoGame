@@ -29,6 +29,12 @@ public enum WhyNotCause
     /// <summary>CAPABILITY, bottleneck source <c>M</c> (<c>c_d = M &lt; H</c>): tooling.</summary>
     ToolingM,
 
+    /// <summary>
+    /// CAPABILITY (contract r8, F33): the link would be <see cref="ToolingM"/> and the tooling plan of the last month left the cell short because the pool
+    /// ran out (<c>tool_unmet &gt; 0</c>). Sorts as <see cref="ToolingM"/>; no rule of the AI tells them apart.
+    /// </summary>
+    ToolingPoolExhausted,
+
     /// <summary>CAPABILITY: all <c>g_d = 1</c>, only <c>ramp</c> (<c>proc_X ≪ X½</c>) limits the process.</summary>
     Ramp,
 
@@ -93,6 +99,9 @@ public enum Lever
 /// <param name="EtaMonths"><c>ceil((need − have)/rate)</c> at the current speed; null when the rate is not positive («само не дойдёт»).</param>
 /// <param name="Process">The narrow process of a CAPABILITY link, −1 otherwise.</param>
 /// <param name="Slot">Product slot of an <see cref="WhyNotCause.EngineGenLimit"/> link, −1 otherwise.</param>
+/// <param name="Cluster">UI only (r8): the cluster of a <see cref="WhyNotCause.ToolingPoolExhausted"/> link; −1 otherwise.</param>
+/// <param name="Order">UI only (r8): the place of the cluster in the pass-2 queue (<c>POOL_ORDER</c>), 0 = no permanent queue; −1 outside <see cref="WhyNotCause.ToolingPoolExhausted"/>.</param>
+/// <param name="Unmet">UI only (r8): <c>tool_unmet</c> of the cell of a <see cref="WhyNotCause.ToolingPoolExhausted"/> link, or of the limiting cell of a <c>CultureH</c> link with <c>limiter = TOOLING</c>; 0 otherwise.</param>
 /// <param name="VariantSlot">Slot to replace for <see cref="Lever.SimplifiedVariant"/> (contract §6 «читается как заменить в слоте s»), −1 without it.</param>
 public readonly record struct Link(
     WhyNotLayer Layer,
@@ -107,12 +116,18 @@ public readonly record struct Link(
     Dimension? Dim = null,
     LimiterKind? Limiter = null,
     int VariantSlot = -1,
-    int Slot = -1)
+    int Slot = -1,
+    int Cluster = -1,
+    int Order = -1,
+    Fx6 Unmet = default)
 {
     /// <summary>
     /// The contract order (§6): layer, then <c>yield_if_fixed</c> descending, then <c>eta_months</c> ascending (null last), then
     /// <c>subject_id</c>; the remaining fields only make the order total, so it does not depend on how the list was built.
     /// </summary>
+    // r8: ToolingPoolExhausted has the rank of ToolingM, so the list order is that of a build without the new cause.
+    private static WhyNotCause SortRank(WhyNotCause cause) => cause == WhyNotCause.ToolingPoolExhausted ? WhyNotCause.ToolingM : cause;
+
     public static int Compare(Link a, Link b)
     {
         int c = a.Layer.CompareTo(b.Layer);
@@ -127,7 +142,7 @@ public readonly record struct Link(
         c = a.SubjectId.CompareTo(b.SubjectId);
         if (c != 0)
             return c;
-        c = a.Cause.CompareTo(b.Cause);
+        c = SortRank(a.Cause).CompareTo(SortRank(b.Cause));
         if (c != 0)
             return c;
         c = a.Process.CompareTo(b.Process);
@@ -191,4 +206,7 @@ public interface IWhyNotInputs
 
     /// <summary><c>tooling_M</c> growth per month of the cell at the planned investment, ≥ 0 (the speed of <c>eta</c> of an M-source link).</summary>
     Fx6 ToolingRate(int siteRow, int cluster, Dimension dim, long month);
+
+    /// <summary>The place of the cluster in the pass-2 queue of the build (<c>POOL_ORDER</c>): CAN 1…n in layout order, REV reversed, 0 for a rule without a permanent queue.</summary>
+    int PoolQueuePlace(int cluster);
 }

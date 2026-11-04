@@ -38,7 +38,7 @@ public static class LeverValidator
         Lever.ResearchPriority => l.Layer == WhyNotLayer.Knowledge || l.Cause == WhyNotCause.EngineGenLimit,
         Lever.TrainingSeries => l.Layer == WhyNotLayer.Capability && l.Cause == WhyNotCause.CultureH
             && l.Limiter is LimiterKind.Volume or LimiterKind.LabCeiling,
-        Lever.InvestToolingM => l.Layer == WhyNotLayer.Capability && (l.Cause == WhyNotCause.ToolingM || l.Limiter == LimiterKind.Tooling),
+        Lever.InvestToolingM => l.Layer == WhyNotLayer.Capability && (l.Cause is WhyNotCause.ToolingM or WhyNotCause.ToolingPoolExhausted || l.Limiter == LimiterKind.Tooling),
         Lever.Licence => l.Layer == WhyNotLayer.Capability && (l.Cause == WhyNotCause.Ramp || l.Limiter == LimiterKind.Volume),
         Lever.QualityProgramme => l.Layer == WhyNotLayer.Capability && l.Dim == Dimension.QualityControl,
         Lever.SimplifiedVariant => l.Layer is WhyNotLayer.Capability or WhyNotLayer.Economy && l.VariantSlot >= 0,

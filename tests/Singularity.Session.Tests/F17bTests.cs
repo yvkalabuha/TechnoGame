@@ -76,22 +76,25 @@ public class F17bTests(ITestOutputHelper output)
         }
     }
 
-    // Hashes after month 149 of seeds 1…5 (AI on, threads 2). ADMIT must equal the build before F17b (commit 29cd914) bit for bit.
+    // Hashes after month 149 of seeds 1…5 (AI on, threads 2). Until TASK-0032 part 2 ADMIT (with V0) equalled the build before F17b (commit 29cd914) bit for bit;
+    // re-recorded there only for the new column tool_unmet («tool_unmet column», F33): by the old columns the trajectory is unchanged (ToolingUnmetTests).
     private static readonly string[] AdmitGolden =
     [
-        "36e2ad3c1493450211fffc143763917d77aa01124d0efe8a14682b39753506ab", "0ecbd91a2bd49f5ddf092c48d57f2df1774fef4305c17c5bba2c59c8fc506126",
-        "09bc067da498ee9431683d3a7a80307dfbc6688a121b0d178a9fb78701e66e8e", "f163ac11c38c4a4c59bb86a2275d325cacc42c84c838cf0219fbb6f0eb30876d",
-        "57156685f00c6116b420e700a4f01772e30c223f2afe80915693598c52c2f15c",
+        "92daa0419d6922f998e0458e58d0a53d86a5b334e679c668d265527a782cb573",
+        "f6b133ff8193d5bdb8b8a1d95653b74c3943e7387066d0ed5998ea84fdfc8edf",
+        "9cc8e665c72ee98a25c38533fddb11b4be9656c76e9381bdaf11e39deaf26ff4",
+        "88e1bdcc57dedc27e09f959c0cc12d92fee69a7fcda0ee45d1f6cc8286250445",
+        "51ea610b5c2d8b1a88d75645ce35a9f52554e932fae1ed303f110910f63eca23",
     ];
 
-    // Recorded in F17b (TASK-0030); re-recorded in TASK-0032 (A39 «V5 default», #163): the default tooling target is V5, so the trajectory changed.
+    // Recorded in F17b (TASK-0030); re-recorded in TASK-0032: part 1 (A39 «V5 default», #163: the default tooling target is V5), part 2 («tool_unmet column», F33).
     private static readonly string[] YProdGolden = [
-        "460132403865108cf27e56832f71712e18f66da46478e3f2bb9b9d1a73590454",
-        "9d9ae0ba4a968e5fd63f8dd5c0703ade374c59b9f6ef4e691488f4a4d9f1e2bd",
-        "85dd086304f4c35e284ca911ca2465b62ca46f11f952e81eb5a04a5c03abcad1",
-        "924c77346e9e0853616de2fe6d7bed4779b26bb2e7e54482aca5c2be87e84ffd",
-        "be64976d287982dce44ce3bb110082d4409dbde5fe1c2280e743547dc1cae5c6",
-];
+        "5bf4c94e6faf72bb28a2c0dd8e4cf374312c5e5c76106e6e41bf0022e719d8fa",
+        "a65bf874852f4cd36dcc18954f5ac23d3e6e28d8968937d63c3f1123271a673f",
+        "5ff5c7fb8c20c1127eb4b17b6c021f13a75840cd4fbcce3fb5bba403d14ef6e9",
+        "b7f5e87c02c98187d4033766d701ed1846973b66e1c27d7b0412f7019acf17b3",
+        "635821a245b3bab9963a30c37bb726455f5a6c0c85e678b3f66d7785866fd455",
+    ];
 
     private static string HashOf(ulong seed, LineCloseRule rule)
     {
@@ -110,7 +113,7 @@ public class F17bTests(ITestOutputHelper output)
         {
             ulong seed = (ulong)i + 1;
             string admit = HashOf(seed, LineCloseRule.Admit);
-            Assert.True(AdmitGolden[i] == admit, $"seed {seed}: ADMIT hash {admit} differs from the pre-F17b build");
+            Assert.True(AdmitGolden[i] == admit, $"seed {seed}: ADMIT hash {admit} differs from the golden (ADMIT, V0)");
             string yprod = HashOf(seed, LineCloseRule.YProd);
             Assert.True(YProdGolden[i] == yprod, $"seed {seed}: YPROD golden changed: {yprod}; update only with a reason written in the commit message");
             Assert.NotEqual(admit, yprod);   // LINE_CLOSE is part of the run hash (bit 12 of run.fleet)

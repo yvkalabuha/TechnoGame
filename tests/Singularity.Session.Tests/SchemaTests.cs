@@ -5,9 +5,9 @@ namespace Singularity.Session.Tests;
 /// <summary>ADR-0013 п. 2: the column layout is a schema; a change without a version bump fails here.</summary>
 public class SchemaTests
 {
-    // Pair (version, fingerprint). Change both together, in one commit, with the reason. v2 (T6b): pol.qp.*, pol.train, prd.tbSpent, one more requester (QP_REQ). v3 (T6c, contract r4 #128): prd.d*.cancelled / idleC / builtAny, one more rejection counter (BAD_CANCEL), cancel_design shares the cmd.dsn slots. v4 (T6c product AI): pol.dsn.*, pol.start.*, pol.close.*, pol.line.*, pol.rep.g*, run.ai. v5 (T-fleet, contract r6): prd.d*.retired / sold / quotaBase / soldY / lineBind, prd.saleIncome / saleCap / saleY / extTotal, nine more rejection counters (BAD_RETIRE, BAD_SELL), ind.mr.* (mastered_run), cmd.flt.*, pol.flt.*, run.fleet.
-    private const int PinnedVersion = 5;
-    private const string PinnedFingerprint = "39a36a45b2a0b878c17039d70262b7a00d20ec06c03b85980939031f54a9e107";
+    // Pair (version, fingerprint). Change both together, in one commit, with the reason. v2 (T6b): pol.qp.*, pol.train, prd.tbSpent, one more requester (QP_REQ). v3 (T6c, contract r4 #128): prd.d*.cancelled / idleC / builtAny, one more rejection counter (BAD_CANCEL), cancel_design shares the cmd.dsn slots. v4 (T6c product AI): pol.dsn.*, pol.start.*, pol.close.*, pol.line.*, pol.rep.g*, run.ai. v5 (T-fleet, contract r6): prd.d*.retired / sold / quotaBase / soldY / lineBind, prd.saleIncome / saleCap / saleY / extTotal, nine more rejection counters (BAD_RETIRE, BAD_SELL), ind.mr.* (mastered_run), cmd.flt.*, pol.flt.*, run.fleet. v6 (F33, contract r8, TASK-0032): ind.unmet.c.d (tool_unmet).
+    private const int PinnedVersion = 6;
+    private const string PinnedFingerprint = "a2c0d69eade18d71fe1db00e7543f4da49adf3e1f9df5df0a1192c35dbe87696";
 
     [Fact]
     public void ColumnLayout_MatchesThePinnedSchemaVersion()
