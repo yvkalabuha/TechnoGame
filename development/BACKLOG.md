@@ -44,7 +44,7 @@
 | [TASK-0028](../development/tasks/TASK-0028-slice-fleet-retire-sell.md) | DONE | T-fleet: списание и продажа парка (A42, контракт r6) | MS-M0 |
 | [TASK-0029](../development/tasks/TASK-0029-slice-start-rhms-d2.md) | DONE | D2: правило старта R-H-MS′, валидатор S-2, переключатель цели оснастки TOOLING_TARGET | MS-M0 |
 | [TASK-0030](../development/tasks/TASK-0030-slice-line-handover-f17b.md) | DONE | F17b: передача линии по рабочему выходу годных (удержание r_keep) | MS-M0 |
-| [TASK-0031](../development/tasks/TASK-0031-slice-v5-a40-order.md) | REVIEW | V5 и порядок A40: вариант цели оснастки V5, охрана снятия при условии запуска | MS-M0 |
+| [TASK-0031](../development/tasks/TASK-0031-slice-v5-a40-order.md) | DONE | V5 и порядок A40: вариант цели оснастки V5, охрана снятия при условии запуска | MS-M0 |
 
 ## Гипотезы
 
@@ -62,6 +62,7 @@
 | [EXP-0002](../development/experiments/EXP-0002-hyp0002-main.md) | PLANNED | EXP-0002: основной эксперимент HYP-0002 (срез «реактивная авиация») | HYP-0002 |
 | [EXP-0003](../development/experiments/EXP-0003-t6e-tooling-target.md) | DONE | Цель оснастки A39: варианты V0–V4 против эталона VINF (T6e) | HYP-0002 |
 | [EXP-0004](../development/experiments/EXP-0004-t6e2-tooling-target.md) | DONE | Цель оснастки A39, повтор после F17b: V0, V1, V3, V4 против VINF (T6e2) | HYP-0002 |
+| [EXP-0005](../development/experiments/EXP-0005-t6e3-tooling-target.md) | PLANNED | Цель оснастки A39, третий прогон: V0, V4, V5 против VINF (T6e3) | HYP-0002 |
 
 ## ADR
 

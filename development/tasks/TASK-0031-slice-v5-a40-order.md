@@ -1,7 +1,7 @@
 ---
 id: TASK-0031
 title: "V5 и порядок A40: вариант цели оснастки V5, охрана снятия при условии запуска"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -25,8 +25,8 @@ created: 2026-11-04
 По спеке `docs/simulation/slice-jet-aviation.md` v0.21: §11 «T6e» таблица и блок «V5 — условие участия», A40 ветка О (охрана: `cancel_design` не выдаётся при выполненном условии запуска по снимку t), §11 строка «V5 + A40 order» с приёмкой (5 пунктов). Ответ с Результатом — Orchestrator (хук запрещает developer писать в development/tasks).
 
 ## Критерии приёмки
-- [ ] Все 5 пунктов §11 «V5 + A40 order».
-- [ ] Общие пункты T6; golden-хеши меняются только в месяцах срабатывания охраны — перечислить.
+- [x] Все 5 пунктов §11 «V5 + A40 order».
+- [x] Общие пункты T6; golden-хеши меняются только в месяцах срабатывания охраны — перечислить.
 
 ## Тесты
 По §11.
@@ -35,9 +35,12 @@ created: 2026-11-04
 Спека v0.21; `docs/simulation/exp-t6e3-tooling-target.md`; EXP-0004; DECISIONS_LOG #162.
 
 ## REVIEW
-- [ ] Code review (reviewer) — находки high закрыты
-- [ ] Тесты (test-engineer) — проходят, покрытие достаточно
-- [ ] Детерминизм L1/L2 — если затронуты src/
+- [x] Code review (reviewer) — approve
+- [x] Тесты — проходят; п.1(ж), п.4(д) — предусловия EXP T6e3
+- [x] Детерминизм L1/L2 — golden не изменились
+
+### Ревью reviewer (2026-11-04, вставлено Orchestrator)
+Вердикт: approve, блокирующих нет; затронутые тесты 44/44 и 33/33. Условие V5 и цель по спеке; V4 ⊆ V5 по построению; остальные варианты побитно; охрана A40 — чистая функция снимка с общим `launchLimit`; переписанный тест законен. low: V5 ⊆ VINF не строго (VINF требует `M_dec < M_cap`) — проверить в леджере п.1(ж); тест п.4(г) не проверяет исходы t+1; инвариант п.5 только на фикстуре. Предусловия запуска EXP T6e3: п.1(ж) (включение по леджеру `Participates`, seeds 41…45) и п.4(д) (регрессия EXP-0004 A1: V3 s23 мес. 321).
 
 ## Результат
 **Сделано (developer, 9d0643f; перенесено Orchestrator).** V5 (`ToolingTarget.V5 = 7`): участие каждого измерения d известного процесса с `v_exp > 0` при `r_d > 0 ∧ M ≤ H ∧ M < r_d` (снимок, raw); цель `min(H + m_lead, M_cap)`; проход 1, пул, порядок ячеек без изменений; V0–V4, V3b, VINF побитно прежние. Охрана A40 О: `cancel_design` не выдаётся при `gate_open ∧ D_hidden ≤ k_P·D_ref ∧ admitted(d,t)` по снимку; нового состояния нет. Тесты: V5 разбор и участие, V4 ⊆ V5 ⊆ VINF, водопад пула; охрана — фикстуры и перебор 8 комбинаций; `CancelAndStart_…` переписан (причина V5/A40). Golden не изменились — охрана не срабатывает ни в одном месяце golden/L1/L2. Тесты (Orchestrator прогнал после сдачи): Arch 80, Kernel 284 (+1), Core 951, Session 189 (+1).
