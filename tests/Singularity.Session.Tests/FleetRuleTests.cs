@@ -279,7 +279,7 @@ public class FleetRuleTests
         f.Master(2);
         f.Session.StepThroughMonth(102);
         Assert.Equal(promised, f.Products.SaleIncome(Usa));
-        Assert.Equal(0, Enum.GetValues<CommandRejection>().Where(r => (int)r >= 9).Sum(r => f.Products.RejectionCount(Usa, r)));
+        Assert.Equal(0, Enum.GetValues<CommandRejection>().Where(r => (int)r >= (int)CommandRejection.BadRetireSlot).Sum(r => f.Products.RejectionCount(Usa, r)));
         Assert.Equal(Fx6.FromInt(12), f.Products.Sold(Usa, 0));
     }
 
@@ -345,9 +345,30 @@ public class FleetRuleTests
         Assert.Equal(Fx6.FromRaw(100_000), lo);   // U_HI(P1) 0,25 − 0,15
         Fx6 need = Fx6.FromRaw(40_000), up = Fx6.FromRaw(29), basis = Fx6.FromInt(1);
         Fx6 room = lo * basis - need;
-        Assert.Equal(room / up, p2.AiLineRate(Usa, Fx6.FromInt(1_000_000), basis, Fx6.FromRaw(1), need, up));       // the cap binds
+        Assert.Equal(Fx6.FromInt(room.Raw / up.Raw), p2.AiLineRate(Usa, Fx6.FromInt(1_000_000), basis, Fx6.FromRaw(1), need, up));   // the cap binds, whole units
+        Assert.Equal(Fx6.FromInt(1_000_000), p2.AiLineRate(Usa, Fx6.FromInt(1_000_000), basis, Fx6.One, need, Fx6.Zero));   // no upkeep, no cap
         Assert.Equal(Fx6.Zero, p2.AiLineRate(Usa, Fx6.FromInt(1_000_000), basis, Fx6.FromRaw(1), Fx6.FromRaw(200_000), up));   // no room at all
         Assert.Equal(Fx6.FromInt(2), p2.AiLineRate(Usa, Fx6.FromInt(2), basis, Fx6.FromInt(1), Fx6.Zero, Fx6.FromRaw(1)));   // the rate itself is lower than the room
+    }
+
+    [Fact]
+    public void FrontRunnerLostBetweenDecisionAndExecution_TheLayerRefusesTheSale_NotSurplus()
+    {
+        // Current behaviour, fixed here (contract r7 will settle it): the AI decides the sale on G_front of the snapshot it reads, the layer checks
+        // G_front of the snapshot of the executing step. The merge of the deciding month recomputes mastered_run from the natural yields of USA
+        // (below 0,7), so the front runner is no longer fielded at execution and the sale is refused. No manual Master() between the months.
+        Fixture f = Start();
+        f.Design(0, DesignStage.InService, 1, 1, HeavyPark(f));
+        f.Int("prd.d0.quotaBase", 120);
+        f.Design(2, DesignStage.Series, 2, 2, 60);
+        f.Master(2);
+        IReadOnlyList<FleetCommand> cmds = f.Run(101);
+        Assert.Contains(cmds, c => c.Kind == FleetCommandKind.Sell);
+        Assert.True(f.World.Policy.ExpectedSaleIncome(Usa) > Fx6.Zero);
+        f.Session.StepThroughMonth(102);
+        Assert.True(f.Products.RejectionCount(Usa, CommandRejection.BadSellNotSurplus) >= 1);
+        Assert.Equal(Fx6.Zero, f.Products.SaleIncome(Usa));
+        Assert.Equal(Fx6.Zero, f.Products.Sold(Usa, 0));
     }
 
     [Fact]
@@ -391,7 +412,7 @@ public class FleetRuleTests
         long alive = (long)((units * 2) / 1);   // the 1947 and 1948 cohorts only
         Assert.True(cmds.Sum(c => c.N) <= alive, $"commands {cmds.Sum(c => c.N)} above the {alive} units alive at month 190");
         s.StepThroughMonth(190);
-        Assert.Equal(0, Enum.GetValues<CommandRejection>().Where(r => (int)r >= 9).Sum(r => f.Products.RejectionCount(Usa, r)));
+        Assert.Equal(0, Enum.GetValues<CommandRejection>().Where(r => (int)r >= (int)CommandRejection.BadRetireSlot).Sum(r => f.Products.RejectionCount(Usa, r)));
     }
 
     [Fact]
@@ -421,7 +442,7 @@ public class FleetRuleTests
         f.Master(2);   // the merge of 191 recomputed mastered_run from the natural yields; keep the front runner fielded for the step
         s.StepThroughMonth(192);
         Assert.Equal(promised, f.Products.SaleIncome(Usa));
-        Assert.Equal(0, Enum.GetValues<CommandRejection>().Where(r => (int)r >= 9).Sum(r => f.Products.RejectionCount(Usa, r)));
+        Assert.Equal(0, Enum.GetValues<CommandRejection>().Where(r => (int)r >= (int)CommandRejection.BadRetireSlot).Sum(r => f.Products.RejectionCount(Usa, r)));
         Assert.Equal(sell.N, f.Products.SoldInYear(Usa, 0));
         Assert.True(f.Products.SaleInYear(Usa) <= f.Products.SaleCap(Usa));
     }

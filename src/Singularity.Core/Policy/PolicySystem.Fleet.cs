@@ -87,7 +87,10 @@ public sealed partial class PolicySystem
         if (_pp.FleetArm != FleetArm.PurchaseCap)
             return rate;
         Fx6 room = FleetULo(actor) * baseProcurement - need;
-        Fx6 cap = room > Fx6.Zero ? room / upkeepOfLine : Fx6.Zero;
+        if (upkeepOfLine <= Fx6.Zero)
+            return rate;   // a line without upkeep leaves no room to cap
+        // ⌊room/upkeep_L⌋ in whole units (spec §6.10).
+        Fx6 cap = room > Fx6.Zero ? Fx6.FromInt(room.Raw / upkeepOfLine.Raw) : Fx6.Zero;
         return rate < cap ? rate : cap;
     }
 
@@ -110,6 +113,8 @@ public sealed partial class PolicySystem
             return result;
         int gFront = _prod.GFront(t);
         book.AgeOut(t);
+        // B_base of the year reset comes from the AI's own shares (Shares(row)), not from a player's set_budget_shares override: for an actor
+        // driven by the player with the AI on, the ceiling may differ from the one the layer sets (deviation 11 of TASK-0028).
         if (t % 12 == 0)
             book.ResetYear(Shares(row).Procurement * Budget(row));
         book.NewMonth();
