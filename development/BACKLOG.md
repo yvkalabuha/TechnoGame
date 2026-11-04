@@ -40,7 +40,7 @@
 | [TASK-0024](../development/tasks/TASK-0024-slice-why-not.md) | DONE | T7: why_not по контракту §6 и 4 сценария «первый слой» | MS-M0 |
 | [TASK-0025](../development/tasks/TASK-0025-slice-ai-products.md) | DONE | T6c: ИИ изделия — Requirement, пресеты, запуск, снятие (A40), поправка контракта r4 | MS-M0 |
 | [TASK-0026](../development/tasks/TASK-0026-slice-start-data-d1.md) | DONE | D1: пакет стартовых данных (заменитель ранга 0, правки старта SUN/FRA/USA/GBR, узел 58) | MS-M0 |
-| [TASK-0027](../development/tasks/TASK-0027-slice-ai-fixes-t6c2.md) | REVIEW | T6c2: стартовые линии (E1), запуск при допуске (F17), выбор двигателя (#140), why_not W1 | MS-M0 |
+| [TASK-0027](../development/tasks/TASK-0027-slice-ai-fixes-t6c2.md) | DONE | T6c2: стартовые линии (E1), запуск при допуске (F17), выбор двигателя (#140), why_not W1 | MS-M0 |
 
 ## Гипотезы
 

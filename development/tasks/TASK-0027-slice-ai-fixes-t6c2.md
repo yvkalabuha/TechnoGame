@@ -1,7 +1,7 @@
 ---
 id: TASK-0027
 title: "T6c2: стартовые линии (E1), запуск при допуске (F17), выбор двигателя (#140), why_not W1"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -26,9 +26,9 @@ created: 2026-11-04
 Не входит: списание и продажа парка (#141, #142), T6d.
 
 ## Критерии приёмки
-- [ ] Всё из §11 «T6c2».
-- [ ] Общие пункты T6 (тесты, ADR-0003, нет RNG в Industry/Products, L1/L2); golden перезаписаны с причиной «T6c2».
-- [ ] В «Результат» — информационная печать 384 мес. ИИ на seeds 1…20: выпуск по окнам 48 мес. по акторам, доля содержания в закупках `u` по профилям, срабатывания A40 по классам — вход для объявления чисел списания (#141).
+- [x] Всё из §11 «T6c2».
+- [x] Общие пункты T6 (тесты, ADR-0003, нет RNG в Industry/Products, L1/L2); golden перезаписаны с причиной «T6c2».
+- [x] В «Результат» — информационная печать 384 мес. ИИ на seeds 1…20: выпуск по окнам 48 мес. по акторам, доля содержания в закупках `u` по профилям, срабатывания A40 по классам — вход для объявления чисел списания (#141).
 
 ## Тесты
 По §11 T6c2.
@@ -37,9 +37,9 @@ created: 2026-11-04
 Спека v0.15; `docs/simulation/d1-output-diagnosis.md`; контракт v2.4 r4; DECISIONS_LOG #137, #138, #140, #144.
 
 ## REVIEW
-- [ ] Code review (reviewer) — находки high закрыты
-- [ ] Тесты (test-engineer) — проходят, покрытие достаточно
-- [ ] Детерминизм L1/L2 — если затронуты src/
+- [x] Code review (reviewer) — замечания по тестам W1 закрыты (f6455b6)
+- [x] Тесты — проходят (Arch 80, Kernel 284, Core 881, Session 148); покрытие оценено reviewer
+- [x] Детерминизм L1/L2 — golden перезаписаны с причиной T6c2
 
 ### Ревью reviewer (2026-11-04)
 Вердикт: changes-requested по тестам W1. Логика E1, F17, #140, W1 по спеке v0.15; детерминизм и границы сборок — без замечаний; dotnet test зелёный (Kernel 284 +1, Arch 80, Core 876, Session 147). Отклонения 2–5 и изменение PlayerScript приняты (2 и 4 — в спеку).
