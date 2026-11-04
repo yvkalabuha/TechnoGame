@@ -11,6 +11,7 @@
 <!-- registry:active:start -->
 - TASK-0019 [REVIEW] Пилот внешней LLM (Qwen): tools/llm_worker (developer)
 - TASK-0017 [APPROVED] Смоук калибровочных якорей C1–C3 на слоях знания и способности (T4s) (simulation-engineer)
+- TASK-0031 [APPROVED] V5 и порядок A40: вариант цели оснастки V5, охрана снятия при условии запуска (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
