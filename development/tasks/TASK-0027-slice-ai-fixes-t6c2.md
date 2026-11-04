@@ -1,7 +1,7 @@
 ---
 id: TASK-0027
 title: "T6c2: стартовые линии (E1), запуск при допуске (F17), выбор двигателя (#140), why_not W1"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
