@@ -396,7 +396,7 @@ public class FleetRuleTests
     public void Projection_ACohortThatReachesItsServiceLifeNextMonthIsNotCounted()
     {
         // Month 189 decides for 190: the 1946 cohort (midyear 10) is 180 months old then and is written off by step 0 before the commands.
-        var s = SliceTestData.Create(new SliceRunConfig { Seed = 7, ProfileCell = 0 });
+        var s = SliceTestData.Create(new SliceRunConfig { Seed = 7, ProfileCell = 0, ToolingTarget = ToolingTargetSpec.Parse("V0") });
         s.StepThroughMonth(188);
         var f = new Fixture { Session = s };
         for (int d = 0; d < s.World.ProductsLayout.Designs; d++)

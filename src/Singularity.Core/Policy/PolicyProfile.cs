@@ -147,7 +147,7 @@ public sealed record PolicyParams
     /// <summary><c>LINE_CLOSE</c> (spec A41 F17b, #160): <see cref="LineCloseRule.YProd"/> in main.</summary>
     public LineCloseRule LineClose { get; init; } = LineCloseRule.YProd;
 
-    /// <summary><c>TOOLING_TARGET</c> (spec §11 T6e v0.19, #156): pass 2 of the tooling plan; V0 until the owner chooses.</summary>
+    /// <summary><c>TOOLING_TARGET</c> (spec §11 T6e v0.19, #156): pass 2 of the tooling plan; V5 by default (#163).</summary>
     public ToolingTargetSpec ToolingTarget { get; init; } = new();
 
     /// <summary><c>U_HI(P)</c> by profile (index = <see cref="PolicyProfile"/>; P1 / P2 / P3): the upkeep share of the procurement base from which the fleet rule acts (spec A42.8 «З»).</summary>

@@ -124,7 +124,7 @@ public sealed record SliceRunConfig
     /// <summary>Sensitivity arm of the sale terms (spec §6.10).</summary>
     public SaleArm SaleArm { get; init; } = SaleArm.None;
 
-    /// <summary><c>TOOLING_TARGET</c> (spec §11 T6e v0.19, #156): pass 2 of the tooling plan. V0 by default until the owner chooses.</summary>
+    /// <summary><c>TOOLING_TARGET</c> (spec §11 T6e v0.19, #156): pass 2 of the tooling plan. V5 by default (#163); V0 is the ablation arm.</summary>
     public ToolingTargetSpec ToolingTarget { get; init; } = new();
 
     /// <summary>

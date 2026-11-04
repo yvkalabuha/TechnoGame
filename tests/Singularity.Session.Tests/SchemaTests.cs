@@ -1,3 +1,5 @@
+using Singularity.Core.Policy;
+
 namespace Singularity.Session.Tests;
 
 /// <summary>ADR-0013 п. 2: the column layout is a schema; a change without a version bump fails here.</summary>
@@ -10,7 +12,7 @@ public class SchemaTests
     [Fact]
     public void ColumnLayout_MatchesThePinnedSchemaVersion()
     {
-        SliceWorld w = SliceTestData.Create().World;
+        SliceWorld w = SliceTestData.Create(new SliceRunConfig { ToolingTarget = ToolingTargetSpec.Parse("V0") }).World;   // V0 adds no run.tooling columns
         Assert.True(PinnedFingerprint == w.SchemaFingerprint(),
             $"column layout changed (fingerprint {w.SchemaFingerprint()}): raise SliceWorld.SchemaVersion (now {SliceWorld.SchemaVersion}) and re-pin");
         Assert.Equal(PinnedVersion, SliceWorld.SchemaVersion);

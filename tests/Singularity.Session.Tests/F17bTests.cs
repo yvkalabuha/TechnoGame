@@ -84,18 +84,20 @@ public class F17bTests(ITestOutputHelper output)
         "57156685f00c6116b420e700a4f01772e30c223f2afe80915693598c52c2f15c",
     ];
 
-    // Re-recorded in F17b (TASK-0030): the new line-close rule and bit 12 of run.fleet; reason «F17b». No earlier value: a YPROD AI run did not exist.
+    // Recorded in F17b (TASK-0030); re-recorded in TASK-0032 (A39 «V5 default», #163): the default tooling target is V5, so the trajectory changed.
     private static readonly string[] YProdGolden = [
-        "57ccc729a2fd0ceeeea27f7b21b28f54e2dde6b48a88f5d5f46c12d5f5f56c9e",
-        "5fb596a7dd2daa3f25e62084d7cc3d9d872e98dd8afbb21196407611e37ba664",
-        "6f5c6dd20fa702debb71fce38c8ae31232d6850a0c816c5c88ae6ab25611e780",
-        "760904a95491c97881e531712f4b04258d2bc532f1807899967dc4f3526780bd",
-        "fc43d690e47bf4a5fd246ac397c8f945861e15b91578129bc8b4771a6136ec40",
-    ];
+        "460132403865108cf27e56832f71712e18f66da46478e3f2bb9b9d1a73590454",
+        "9d9ae0ba4a968e5fd63f8dd5c0703ade374c59b9f6ef4e691488f4a4d9f1e2bd",
+        "85dd086304f4c35e284ca911ca2465b62ca46f11f952e81eb5a04a5c03abcad1",
+        "924c77346e9e0853616de2fe6d7bed4779b26bb2e7e54482aca5c2be87e84ffd",
+        "be64976d287982dce44ce3bb110082d4409dbde5fe1c2280e743547dc1cae5c6",
+];
 
     private static string HashOf(ulong seed, LineCloseRule rule)
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2, LineClose = rule });
+        // ADMIT is the pre-F17b build, whose tooling pass 2 was V0; YPROD runs under the default V5 (A39 «V5 default», #163).
+        ToolingTargetSpec target = rule == LineCloseRule.Admit ? ToolingTargetSpec.Parse("V0") : new ToolingTargetSpec();
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2, LineClose = rule, ToolingTarget = target });
         for (long t = 0; t < 150; t++)
             s.StepThroughMonth(t);
         return s.LastHash;

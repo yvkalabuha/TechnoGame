@@ -280,13 +280,14 @@ public class ToolingTargetTests
     }
 
     [Fact]
-    public void DefaultPlan_IsV0()
+    public void DefaultPlan_IsV5()
     {
         var rig = RigWith(2_800_000);
         ToolingPlanResult none = rig.Plan(0, Big, Big);
-        ToolingPlanResult v0 = rig.Plan(0, Big, Big, 0, Spec(ToolingTarget.V0));
-        Assert.Equal(v0.Total, none.Total);
-        Assert.Equal(v0.Invest(0, 0, Dimension.Purity), none.Invest(0, 0, Dimension.Purity));
+        ToolingPlanResult v5 = rig.Plan(0, Big, Big, 0, Spec(ToolingTarget.V5));
+        Assert.Equal(ToolingTarget.V5, new ToolingTargetSpec().Variant);
+        Assert.Equal(v5.Total, none.Total);
+        Assert.Equal(v5.Invest(0, 0, Dimension.Purity), none.Invest(0, 0, Dimension.Purity));
     }
 
     [Theory]

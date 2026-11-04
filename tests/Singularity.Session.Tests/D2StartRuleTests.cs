@@ -225,11 +225,21 @@ public class D2StartRuleTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void Switch_DefaultIsV0_ExplicitV0GivesTheSameTrajectory()
+    public void Switch_DefaultIsV5_ExplicitV5GivesTheSameTrajectory_V0IsTheAblationArm()
     {
-        Assert.Equal(ToolingTarget.V0, new SliceRunConfig().ToolingTarget.Variant);
+        Assert.Equal(ToolingTarget.V5, new SliceRunConfig().ToolingTarget.Variant);
         var c = new SliceRunConfig { Seed = 1 };
-        Assert.Equal(HashAfter(c, 36), HashAfter(c with { ToolingTarget = ToolingTargetSpec.Parse("V0") }, 36));
+        Assert.Equal(HashAfter(c, 36), HashAfter(c with { ToolingTarget = ToolingTargetSpec.Parse("V5") }, 36));
+        Assert.NotEqual(HashAfter(c, 36), HashAfter(c with { ToolingTarget = ToolingTargetSpec.Parse("V0") }, 36));
+    }
+
+    [Fact]
+    public void Switch_V5Default_Seed41_EqualsTheV5ArmOfExp0005()
+    {
+        // EXP-0005 manifest without TOOLING_TARGET: main, seed 41, 384 months, LINE_CLOSE YPROD; final hash of the V5 arm.
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 41, Threads = 4 });
+        s.StepThroughMonth(383);
+        Assert.StartsWith("a968b6ee", s.LastHash);
     }
 
     [Fact]

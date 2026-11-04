@@ -2,7 +2,7 @@ using Singularity.Kernel;
 
 namespace Singularity.Core.Policy;
 
-/// <summary>The target of pass 2 of the tooling plan (spec §11 T6e v0.19, #156). <see cref="V0"/> is the default until the owner chooses.</summary>
+/// <summary>The target of pass 2 of the tooling plan (spec §11 T6e v0.19, #156). <see cref="V5"/> is the default (#163); V0 is the ablation arm.</summary>
 public enum ToolingTarget
 {
     /// <summary>Source <c>M</c> (<c>M &lt; H</c>); target <c>min(H, M_cap)</c>.</summary>
@@ -42,7 +42,7 @@ public enum ToolingTarget
 /// </summary>
 public sealed record ToolingTargetSpec
 {
-    public ToolingTarget Variant { get; init; } = ToolingTarget.V0;
+    public ToolingTarget Variant { get; init; } = ToolingTarget.V5;
 
     /// <summary><c>ρ_max</c> of V1: 0,021.</summary>
     public Fx6 RhoMax { get; init; } = Fx6.FromRaw(21_000);

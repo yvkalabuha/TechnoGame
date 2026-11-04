@@ -278,7 +278,7 @@ internal sealed class SliceWorld
         // Bit 12 = LINE_CLOSE YPROD (F17b) of a run with the product AI; it is clear for ADMIT and for a player-script run, so their hashes are those of the build before F17b.
         int lineCloseBit = Config.ProductAi && Config.LineClose == LineCloseRule.YProd ? 1 << 12 : 0;
         Table.AddInt("run.fleet").Load([.. Enumerable.Repeat((int)Config.FleetArm | ((int)Config.FleetLineCond << 4) | ((int)Config.SaleArm << 8) | lineCloseBit, rows)]);
-        // TOOLING_TARGET and its numbers are part of the hash; V0 adds nothing, so the default trajectory and hash are those of a build without the switch.
+        // TOOLING_TARGET and its numbers are part of the hash; V0 (the ablation arm) adds nothing, so its trajectory and hash are those of a build before V5 became the default.
         ToolingTargetSpec tt = Config.ToolingTarget;
         if (tt.Variant != ToolingTarget.V0)
         {
