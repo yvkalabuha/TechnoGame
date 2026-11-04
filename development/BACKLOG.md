@@ -64,6 +64,7 @@
 | [EXP-0003](../development/experiments/EXP-0003-t6e-tooling-target.md) | DONE | Цель оснастки A39: варианты V0–V4 против эталона VINF (T6e) | HYP-0002 |
 | [EXP-0004](../development/experiments/EXP-0004-t6e2-tooling-target.md) | DONE | Цель оснастки A39, повтор после F17b: V0, V1, V3, V4 против VINF (T6e2) | HYP-0002 |
 | [EXP-0005](../development/experiments/EXP-0005-t6e3-tooling-target.md) | DONE | Цель оснастки A39, третий прогон: V0, V4, V5 против VINF (T6e3) | HYP-0002 |
+| [EXP-0006](../development/experiments/EXP-0006-pool-order.md) | PLANNED | Порядок распределения пула оснастки под V5: CAN, REV, PROP, SEV (малый пул) | HYP-0002 |
 
 ## ADR
 

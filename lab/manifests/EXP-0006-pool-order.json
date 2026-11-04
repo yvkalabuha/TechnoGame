@@ -1,0 +1,230 @@
+{
+  "experiment": "EXP-NNNN-pool-order",
+  "description": "Pool allocation of pass 2 of the A39 tooling plan under V5 (CAN, REV, PROP, SEV) vs V0 and VINF; spec slice-jet-aviation.md v0.22 §11 'EXP pool order'; pre-registration docs/simulation/exp-pool-order.md r1 (#163, RISK-0018)",
+  "build": {
+    "core_commit_min": "a32022c",
+    "note": "plus the developer follow-up (single floor of B_cap); the main run waits for the Orchestrator",
+    "data": "mods/core (D1 + R-H-MS)",
+    "ai": "A41 F17b (LINE_CLOSE = YPROD) + A42; A40 guard v0.21",
+    "validator_s2": true
+  },
+  "months": 384,
+  "threads": 4,
+  "chunk_size": 1,
+  "arms": {
+    "V0": {
+      "variant": "V0"
+    },
+    "VINF": {
+      "variant": "VINF"
+    },
+    "CAN": {
+      "variant": "V5",
+      "m_lead": 0.2,
+      "pool_order": "CAN"
+    },
+    "REV": {
+      "variant": "V5",
+      "m_lead": 0.2,
+      "pool_order": "REV"
+    },
+    "PROP": {
+      "variant": "V5",
+      "m_lead": 0.2,
+      "pool_order": "PROP"
+    },
+    "SEV": {
+      "variant": "V5",
+      "m_lead": 0.2,
+      "pool_order": "SEV"
+    }
+  },
+  "configs": {
+    "main": {
+      "profile_cell": null,
+      "line_close": "YPROD",
+      "seeds": [
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80
+      ]
+    },
+    "allP1": {
+      "profile_cell": 0,
+      "line_close": "YPROD",
+      "seeds": [
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70
+      ]
+    },
+    "allP2": {
+      "profile_cell": 13,
+      "line_close": "YPROD",
+      "seeds": [
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70
+      ]
+    },
+    "allP3": {
+      "profile_cell": 26,
+      "line_close": "YPROD",
+      "seeds": [
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70
+      ]
+    },
+    "stress": {
+      "profile_cell": null,
+      "line_close": "YPROD",
+      "k_cap": 0.5,
+      "seeds": [
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80
+      ]
+    }
+  },
+  "determinism": {
+    "golden_tests": [
+      "LinkedRunTests",
+      "ProductAiSessionTests",
+      "F17bTests"
+    ],
+    "golden_seeds_CAN_main": [
+      61,
+      62,
+      63,
+      64,
+      65
+    ],
+    "threads_check": [
+      {
+        "arm": "CAN",
+        "config": "main",
+        "seed": 61,
+        "threads": [
+          1,
+          4
+        ]
+      },
+      {
+        "arm": "PROP",
+        "config": "stress",
+        "seed": 61,
+        "threads": [
+          1,
+          4
+        ]
+      }
+    ],
+    "preconditions": {
+      "G1_plan_equal_when_not_exhausted": "pool.csv g1_mismatch = 0 in every V5 run",
+      "core_trace": "mismatch_gain = mismatch_rest = mismatch_mcap = 0"
+    }
+  },
+  "analysis": {
+    "script": "lab/analysis/pool_order.py",
+    "bootstrap_reps": 2000,
+    "bootstrap_seed": 20261163,
+    "judged": [
+      "USA",
+      "GBR"
+    ],
+    "veto": "FRA",
+    "print_only": [
+      "SUN",
+      "SWE"
+    ],
+    "k1_min_ratio_to_vinf": 0.75,
+    "k2_max_ratio_to_vinf": 1.0,
+    "k4_band": [
+      0.67,
+      1.5
+    ],
+    "k4_min_judged_seeds": 10,
+    "k5_min_ratio": 0.75,
+    "window_months": 48,
+    "g2_min_exhaustion_share": 0.2,
+    "g3_min_gap_share_of_D_CAN": 0.05,
+    "p2_q_main_min_point": -0.1,
+    "p2_D_ratio_max": 1.01,
+    "p3_q_stress_min": 0.25,
+    "p4_balance_band": [
+      0.67,
+      1.5
+    ],
+    "fra_veto_D_ratio_max": 1.05,
+    "selection_tie_abs_q": 0.05,
+    "simplicity_S": {
+      "SEV": 1,
+      "PROP": 2
+    },
+    "candidates": [
+      "PROP",
+      "SEV"
+    ],
+    "control_not_selectable": [
+      "REV"
+    ],
+    "t_ab": 60,
+    "y_prod": 0.5
+  }
+}

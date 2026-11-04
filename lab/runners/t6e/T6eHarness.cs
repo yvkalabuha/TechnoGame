@@ -27,7 +27,7 @@ public class T6eHarness(ITestOutputHelper output)
     private static readonly FieldInfo ProdField = typeof(PolicySystem).GetField("_prod", BindingFlags.NonPublic | BindingFlags.Instance)!;
     private static readonly MethodInfo GiveUpAllowedM = typeof(PolicySystem).GetMethod("GiveUpAllowed", BindingFlags.NonPublic | BindingFlags.Instance)!;
 
-    private sealed record Job(string Arm, string Config, int? Cell, ulong Seed, int Threads, LineCloseRule LineClose);
+    private sealed record Job(string Arm, string Config, int? Cell, ulong Seed, int Threads, LineCloseRule LineClose, Fx6 KCap);
 
     private const int TAb = 60;   // A40 T_ab (frozen); branch С = close of a line in С with idle_c >= T_ab
 
@@ -53,7 +53,7 @@ public class T6eHarness(ITestOutputHelper output)
         {
             string[] p = only.Split(':');
             JsonElement cfg = root.GetProperty("configs").GetProperty(p[1]);
-            jobs.Add(new Job(p[0], p[1], CellOf(cfg), ulong.Parse(p[2], Inv), int.Parse(p[3], Inv), LineCloseOf(cfg)));
+            jobs.Add(new Job(p[0], p[1], CellOf(cfg), ulong.Parse(p[2], Inv), int.Parse(p[3], Inv), LineCloseOf(cfg), KCapOf(cfg)));
         }
         else
         {
@@ -65,7 +65,7 @@ public class T6eHarness(ITestOutputHelper output)
                     : [.. arms.Keys];
                 foreach (JsonElement s in c.Value.GetProperty("seeds").EnumerateArray())
                     foreach (string arm in cfgArms.Order(StringComparer.Ordinal))
-                        jobs.Add(new Job(arm, c.Name, CellOf(c.Value), s.GetUInt64(), threads, LineCloseOf(c.Value)));
+                        jobs.Add(new Job(arm, c.Name, CellOf(c.Value), s.GetUInt64(), threads, LineCloseOf(c.Value), KCapOf(c.Value)));
             }
         }
         for (int j = 0; j < jobs.Count; j++)
@@ -77,7 +77,9 @@ public class T6eHarness(ITestOutputHelper output)
             if (File.Exists(Path.Combine(dir, "run.json")))
                 continue;
             Directory.CreateDirectory(dir);
-            RunOne(job, arms[job.Arm], months, dir);
+            ToolingTargetSpec spec = arms[job.Arm] with { KCap = job.KCap };
+            spec.Validate();
+            RunOne(job, spec, months, dir);
             output.WriteLine($"done {job}");
         }
     }
@@ -87,6 +89,13 @@ public class T6eHarness(ITestOutputHelper output)
 
     private static LineCloseRule LineCloseOf(JsonElement cfg) =>
         cfg.TryGetProperty("line_close", out JsonElement lc) ? LineCloseRules.Parse(lc.GetString()!) : LineCloseRule.YProd;
+
+    // exp-pool-order: the stress set is a config with k_cap (B_cap = ⌊k_cap·share_cap·budget⌋); 1 when absent.
+    private static Fx6 KCapOf(JsonElement cfg) => cfg.TryGetProperty("k_cap", out _) ? Num(cfg, "k_cap") : Fx6.One;
+
+    // B_cap as the Core adapter computes it: one floor over k_cap·share·budget (raw, non-negative); with k_cap = 1 equal to share·budget.
+    private static Fx6 BCapOf(Fx6 kCap, Fx6 share, Fx6 budget) =>
+        Fx6.FromRaw((long)((Int128)kCap.Raw * share.Raw * budget.Raw / ((Int128)Fx6.Scale * Fx6.Scale)));
 
     private static Fx6 Num(JsonElement e, string name) => Fx6.FromRaw((long)Math.Round(e.GetProperty(name).GetDouble() * Fx6.Scale));
 
@@ -101,6 +110,7 @@ public class T6eHarness(ITestOutputHelper output)
             HHi = e.TryGetProperty("h_hi", out _) ? Num(e, "h_hi") : d.HHi,
             MLead = e.TryGetProperty("m_lead", out _) ? Num(e, "m_lead") : d.MLead,
             HHiControl = e.TryGetProperty("h_hi_control", out _) ? Num(e, "h_hi_control") : d.HHiControl,
+            PoolOrder = e.TryGetProperty("pool_order", out JsonElement po) ? ToolingTargetSpec.ParsePoolOrder(po.GetString()!) : d.PoolOrder,
         };
         spec.Validate();
         return spec;
@@ -122,6 +132,11 @@ public class T6eHarness(ITestOutputHelper output)
         IndustryParams ip = w.IndustryParameters;
         var vinf = new ToolingTargetSpec { Variant = ToolingTarget.VInf };
         var v4Spec = target with { Variant = ToolingTarget.V4 };
+        // exp-pool-order: the four pass-2 rules on the same snapshot (read only) — exhaustion N > P (rule-independent), Г1, PROP remainder
+        PoolOrder[] orders = [PoolOrder.Can, PoolOrder.Rev, PoolOrder.Prop, PoolOrder.Sev];
+        bool poolObs = target.Variant == ToolingTarget.V5;
+        var poolCsv = new StringBuilder($"t,actor,exh,pool,total,{string.Join(',', L.Clusters.Select(c => $"u_{c}"))},g1_mismatch,prop_rem\n");
+        long g1Mismatch = 0, exhMonths = 0, propRemMax = 0;
         Fx6 bigPool = Fx6.FromInt(1_000_000_000);
         var ledger = new StringBuilder("t,actor,n4,n5,ninf,v4not5,v5notinf,v5notinf_mdec_ge_mcap,goal_over_mcap\n");
         long ledV45 = 0, ledV5I = 0, ledV5Imdec = 0, ledGoal = 0, ledN4 = 0, ledN5 = 0, ledNI = 0;
@@ -205,13 +220,51 @@ public class T6eHarness(ITestOutputHelper output)
             {
                 Fx6 rest = ind.RestActor(a, t);
                 restUsed[a] = rest;
-                Fx6 bCap = w.SharesOf(a).Capability * w.Policy.Budget(a);
+                Fx6 bCap = BCapOf(target.KCap, w.SharesOf(a).Capability, w.Policy.Budget(a));
                 plans[a] = ToolingPlan.Compute(ind, inputs, w.PolicyParameters.MKeep, a, t, rest, bCap, target);
                 refs[a] = ToolingPlan.Compute(ind, inputs, w.PolicyParameters.MKeep, a, t, rest, bCap, vinf);
                 if (target.Variant != ToolingTarget.VInf)
                     unl[a] = ToolingPlan.Compute(ind, inputs, w.PolicyParameters.MKeep, a, t, bigPool, bigPool, target);
                 if (target.Variant == ToolingTarget.V5)
                     v4[a] = ToolingPlan.Compute(ind, inputs, w.PolicyParameters.MKeep, a, t, rest, bCap, v4Spec);
+                if (poolObs)
+                {
+                    var obs = new ToolingPlanResult[orders.Length];
+                    for (int k = 0; k < orders.Length; k++)
+                        obs[k] = ToolingPlan.Compute(ind, inputs, w.PolicyParameters.MKeep, a, t, rest, bCap, target with { PoolOrder = orders[k] });
+                    // N > P before allocation ⇔ the canonical waterfall leaves some need unmet (pass 1 or 2); the same for every rule.
+                    bool exh = false;
+                    var u = new long[nC];
+                    long mis = 0;
+                    for (int s = 0; s < L.SiteCount; s++)
+                    {
+                        if (L.SiteOwner[s] != a)
+                            continue;
+                        for (int c = 0; c < nC; c++)
+                            for (int d = 0; d < 3; d++)
+                            {
+                                exh |= obs[0].Unmet(s, c, (Dimension)d) > Fx6.Zero;
+                                u[c] += plans[a].Unmet(s, c, (Dimension)d).Raw;
+                            }
+                    }
+                    if (!exh)
+                    {
+                        for (int s = 0; s < L.SiteCount; s++)
+                        {
+                            if (L.SiteOwner[s] != a)
+                                continue;
+                            for (int c = 0; c < nC; c++)
+                                for (int d = 0; d < 3; d++)
+                                    for (int k = 1; k < orders.Length; k++)
+                                        mis += obs[k].Invest(s, c, (Dimension)d) != obs[0].Invest(s, c, (Dimension)d) ? 1 : 0;
+                        }
+                    }
+                    long propRem = exh ? (rest + bCap - obs[2].Total).Raw : 0;
+                    g1Mismatch += mis;
+                    exhMonths += exh ? 1 : 0;
+                    propRemMax = Math.Max(propRemMax, propRem);
+                    poolCsv.Append(Inv, $"{t},{ids[a]},{(exh ? 1 : 0)},{(rest + bCap).Raw},{plans[a].Total.Raw},{string.Join(',', u)},{mis},{propRem}\n");
+                }
             }
             if (target.Variant == ToolingTarget.V5)
             {
@@ -502,6 +555,8 @@ public class T6eHarness(ITestOutputHelper output)
         File.WriteAllText(Path.Combine(dir, "guard.csv"), guard.ToString());
         if (target.Variant == ToolingTarget.V5)
             File.WriteAllText(Path.Combine(dir, "ledger.csv"), ledger.ToString());
+        if (poolObs)
+            File.WriteAllText(Path.Combine(dir, "pool.csv"), poolCsv.ToString());
         string json = JsonSerializer.Serialize(new
         {
             arm = job.Arm, config = job.Config, cell = job.Cell, seed = job.Seed, threads = job.Threads, months,
@@ -509,6 +564,8 @@ public class T6eHarness(ITestOutputHelper output)
             scenario_hashes = SliceTestData.Data.Scenarios.Select(x => $"{x.Id}={x.Hash}").ToArray(),
             hash = session.LastHash, tick = session.Tick,
             guard_firings = guardFirings,
+            pool_order = target.PoolOrder.ToString(), k_cap = target.KCap.Raw,
+            pool_obs = poolObs ? new { exh_actor_months = exhMonths, g1_mismatch = g1Mismatch, prop_remainder_max_raw = propRemMax } : null,
             ledger = target.Variant == ToolingTarget.V5 ? new { n4 = ledN4, n5 = ledN5, ninf = ledNI, v4_not_v5 = ledV45, v5_not_vinf = ledV5I, v5_not_vinf_mdec_ge_mcap = ledV5Imdec, goal_over_mcap = ledGoal } : null,
             mismatch_gain = mismatchGain, mismatch_rest = mismatchRest, mismatch_mcap = mismatchCap,
             profiles = Enumerable.Range(0, nA).Select(a => $"{ids[a]}={w.Policy.Profile(a)}").ToArray(),
