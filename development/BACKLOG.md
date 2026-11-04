@@ -44,7 +44,7 @@
 | [TASK-0028](../development/tasks/TASK-0028-slice-fleet-retire-sell.md) | DONE | T-fleet: списание и продажа парка (A42, контракт r6) | MS-M0 |
 | [TASK-0029](../development/tasks/TASK-0029-slice-start-rhms-d2.md) | DONE | D2: правило старта R-H-MS′, валидатор S-2, переключатель цели оснастки TOOLING_TARGET | MS-M0 |
 | [TASK-0030](../development/tasks/TASK-0030-slice-line-handover-f17b.md) | DONE | F17b: передача линии по рабочему выходу годных (удержание r_keep) | MS-M0 |
-| [TASK-0031](../development/tasks/TASK-0031-slice-v5-a40-order.md) | APPROVED | V5 и порядок A40: вариант цели оснастки V5, охрана снятия при условии запуска | MS-M0 |
+| [TASK-0031](../development/tasks/TASK-0031-slice-v5-a40-order.md) | REVIEW | V5 и порядок A40: вариант цели оснастки V5, охрана снятия при условии запуска | MS-M0 |
 
 ## Гипотезы
 

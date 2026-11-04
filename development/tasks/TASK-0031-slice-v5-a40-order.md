@@ -1,7 +1,7 @@
 ---
 id: TASK-0031
 title: "V5 и порядок A40: вариант цели оснастки V5, охрана снятия при условии запуска"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -40,4 +40,6 @@ created: 2026-11-04
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
-<!-- Заполняет исполнитель: что сделано, файлы, коммит. -->
+**Сделано (developer, 9d0643f; перенесено Orchestrator).** V5 (`ToolingTarget.V5 = 7`): участие каждого измерения d известного процесса с `v_exp > 0` при `r_d > 0 ∧ M ≤ H ∧ M < r_d` (снимок, raw); цель `min(H + m_lead, M_cap)`; проход 1, пул, порядок ячеек без изменений; V0–V4, V3b, VINF побитно прежние. Охрана A40 О: `cancel_design` не выдаётся при `gate_open ∧ D_hidden ≤ k_P·D_ref ∧ admitted(d,t)` по снимку; нового состояния нет. Тесты: V5 разбор и участие, V4 ⊆ V5 ⊆ VINF, водопад пула; охрана — фикстуры и перебор 8 комбинаций; `CancelAndStart_…` переписан (причина V5/A40). Golden не изменились — охрана не срабатывает ни в одном месяце golden/L1/L2. Тесты (Orchestrator прогнал после сдачи): Arch 80, Kernel 284 (+1), Core 951, Session 189 (+1).
+**Отклонения.** п.1(ж) помесячный леджер V5 на seeds 41…45 и п.4(д) регрессия EXP-0004 A1 (V3 s23 мес. 321) — не сделаны, перенесены в подготовку EXP T6e3; п.5 инвариант «снятие О ⇒ L ложно» — перебором, без `PolicyInvariantException`.
+
