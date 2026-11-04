@@ -42,6 +42,7 @@
 | [TASK-0026](../development/tasks/TASK-0026-slice-start-data-d1.md) | DONE | D1: пакет стартовых данных (заменитель ранга 0, правки старта SUN/FRA/USA/GBR, узел 58) | MS-M0 |
 | [TASK-0027](../development/tasks/TASK-0027-slice-ai-fixes-t6c2.md) | DONE | T6c2: стартовые линии (E1), запуск при допуске (F17), выбор двигателя (#140), why_not W1 | MS-M0 |
 | [TASK-0028](../development/tasks/TASK-0028-slice-fleet-retire-sell.md) | DONE | T-fleet: списание и продажа парка (A42, контракт r6) | MS-M0 |
+| [TASK-0029](../development/tasks/TASK-0029-slice-start-rhms-d2.md) | APPROVED | D2: правило старта R-H-MS′, валидатор S-2, переключатель цели оснастки TOOLING_TARGET | MS-M0 |
 
 ## Гипотезы
 

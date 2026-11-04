@@ -11,6 +11,7 @@
 <!-- registry:active:start -->
 - TASK-0019 [REVIEW] Пилот внешней LLM (Qwen): tools/llm_worker (developer)
 - TASK-0017 [APPROVED] Смоук калибровочных якорей C1–C3 на слоях знания и способности (T4s) (simulation-engineer)
+- TASK-0029 [APPROVED] D2: правило старта R-H-MS′, валидатор S-2, переключатель цели оснастки TOOLING_TARGET (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
