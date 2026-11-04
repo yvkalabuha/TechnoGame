@@ -52,6 +52,8 @@ public enum CommandKind
     StartSeries = 4,
     CloseLine = 5,
     CancelDesign = 6,
+    RetireCohort = 7,
+    SellCohort = 8,
 }
 
 /// <summary>
@@ -112,6 +114,24 @@ public sealed record CloseLine(int Actor, int Design) : SliceCommand(Actor)
 public sealed record CancelDesign(int Actor, int Design) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.CancelDesign;
+}
+
+/// <summary>
+/// <c>retire_cohort(design, n)</c> (contract r6 §4.4f, #141): <c>n</c> units of a project in С or В leave the fleet without money, the oldest first.
+/// The player and the AI send the same command (the AI's are <c>pol.*</c> columns). Checks that need the state are the layer's (<c>BAD_RETIRE</c>).
+/// </summary>
+public sealed record RetireCohort(int Actor, int Design, int N) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.RetireCohort;
+}
+
+/// <summary>
+/// <c>sell_cohort(design, n)</c> (contract r6 §4.4f, #142): <c>n</c> units of a project in В go to buyers outside the slice for money, the oldest first.
+/// Checks that need the state are the layer's (<c>BAD_SELL</c>).
+/// </summary>
+public sealed record SellCohort(int Actor, int Design, int N) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.SellCohort;
 }
 
 /// <summary>An accepted command with its key: one line of <c>commands.log</c>.</summary>

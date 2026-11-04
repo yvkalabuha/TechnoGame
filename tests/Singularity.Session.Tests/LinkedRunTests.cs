@@ -27,7 +27,8 @@ public class LinkedRunTests
     /// Re-recorded in T6c2 (7f7a499c… before), reason: T6c2 — E1: the start fleets of USA/GBR are a line in stage С producing from tick 0 (a scenario rule, so the
     /// scripted player's run changes too); the script orders its own project beside the start line.
     /// </summary>
-    private const string Golden60 = "30a75d4f2a62197394f68fa5784634e880256421a4b96df35ae7a7ab7ac0808c";
+    // Re-recorded in T-fleet (30a75d4f… before), reason: T-fleet — contract r6: new columns (fleet commands, sale money, quota, line_bind, mastered_run, run.fleet), schema v5.
+    private const string Golden60 = "d25c32c2bdce0f0ff08991a3dec30559c247972e11b8680e5ce11f1f278966e8";
 
     private sealed class Run
     {

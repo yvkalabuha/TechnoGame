@@ -42,6 +42,10 @@ internal sealed class PolicyProductsAdapter(SliceWorld world) : IPolicyProducts
 
     public int FreeBureaus(int actorRow) => world.Products.FreeBureaus(actorRow);
 
+    public FleetBook? Fleet(int actorRow, long month) => world.Products.SnapshotBook(actorRow, month);
+
+    public int GFront(long month) => world.Products.GFront(month - 1);
+
     public Fx6 CandidateValue(int actorRow, ReadOnlySpan<int> alts, Fx6 budget, long month) =>
         world.Products.CandidateValue(actorRow, alts, budget, month).Value;
 }

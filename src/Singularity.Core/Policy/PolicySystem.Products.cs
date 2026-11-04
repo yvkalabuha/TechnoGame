@@ -61,6 +61,7 @@ public sealed partial class PolicySystem
         _rep = new IntColumn[generations];
         for (int g = 0; g < generations; g++)
             _rep[g] = table.AddInt($"pol.rep.g{g + 1}");
+        AddFleetColumns(table, products is null && designs == 0 ? 0 : designs, generations);
     }
 
     // ---- reads for the adapter (what is in force at the month step being computed)
@@ -115,6 +116,8 @@ public sealed partial class PolicySystem
         public readonly List<(int Design, Fx6 Rate)> Starts = [];
         public readonly List<int> Closes = [];
         public readonly bool[] Repeat = new bool[generations];
+        public readonly List<FleetCommand> Fleet = [];
+        public Fx6 IncomeExpected;
     }
 
     private void InitializeProducts()
@@ -124,17 +127,17 @@ public sealed partial class PolicySystem
         // A8: the annual Requirement (and the derive of the arm) of month 0 are made before tick 0 and act in it.
         for (int row = 0; row < _actorNumber.Length; row++)
         {
-            Decisions dec = Decide(row, 0, annual: true, monthly: false);
+            Decisions dec = Decide(row, 0, annual: true, monthly: false, default, default);
             int row0 = row;
             Commit(row, dec, Stamp(0), (c, v) => SetCurrent(c, row0, v), (c, v) => SetCurrent(c, row0, v));
         }
     }
 
-    private void ComputeProducts(int row, long t, bool annual)
+    private void ComputeProducts(int row, long t, bool annual, BudgetShares sharesNext, Fx6 budgetNext)
     {
         if (_prod is null)
             return;
-        Decisions dec = Decide(row, t, annual, monthly: true);
+        Decisions dec = Decide(row, t, annual, monthly: true, sharesNext, budgetNext);
         Commit(row, dec, Stamp(t + 1), (c, v) => c.Next[row] = v, (c, v) => c.Next[row] = v);
     }
 
@@ -166,7 +169,7 @@ public sealed partial class PolicySystem
 
     private static bool Live(DesignStage s) => s is DesignStage.Project or DesignStage.Prototype or DesignStage.Series or DesignStage.InService;
 
-    private Decisions Decide(int row, long t, bool annual, bool monthly)
+    private Decisions Decide(int row, long t, bool annual, bool monthly, BudgetShares sharesNext, Fx6 budgetNext)
     {
         IPolicyProducts prod = _prod!;
         var profile = (PolicyProfile)_profile.Current[row];
@@ -277,6 +280,9 @@ public sealed partial class PolicySystem
                 break;
             }
         }
+        FleetDecision fleet = DecideFleet(row, t, designs, dec, sharesNext, budgetNext);
+        dec.Fleet.AddRange(fleet.Commands);
+        dec.IncomeExpected = fleet.IncomeExpected;
         return dec;
     }
 
@@ -327,6 +333,16 @@ public sealed partial class PolicySystem
         }
         foreach (int d in dec.Closes)
             setInt(_closeStamp[d], stamp);
+        if (dec.Fleet.Count > _fltStamp.Length)
+            throw new PolicyInvariantException(stamp, row, $"{dec.Fleet.Count} fleet commands for {_fltStamp.Length} slots");
+        for (int k = 0; k < dec.Fleet.Count; k++)
+        {
+            setInt(_fltStamp[k], stamp);
+            setInt(_fltKind[k], (int)dec.Fleet[k].Kind);
+            setInt(_fltDesign[k], dec.Fleet[k].Design);
+            setInt(_fltN[k], checked((int)dec.Fleet[k].N));
+        }
+        setLong(_incExp, dec.IncomeExpected.Raw);
         for (int g = 0; g < dec.Repeat.Length; g++)
         {
             if (dec.Repeat[g])

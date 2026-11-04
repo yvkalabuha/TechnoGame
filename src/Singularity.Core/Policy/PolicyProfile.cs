@@ -17,6 +17,30 @@ public enum PolicyProfile
     Adaptive = 2,
 }
 
+/// <summary>Ablation arms of the fleet rule (spec §6.10); a manifest switch, the mod data are untouched.</summary>
+public enum FleetArm
+{
+    /// <summary>Main: the AI retires and sells by A42.4.</summary>
+    Main = 0,
+    /// <summary><c>NO_RETIRE</c>: the AI has no <c>retire_cohort</c> and <c>sell_cohort</c> (the behaviour of T6c2).</summary>
+    NoRetire = 1,
+    /// <summary><c>NO_SALE</c>: only <c>retire_cohort</c> (<c>s ≡ 0</c>).</summary>
+    NoSale = 2,
+    /// <summary><c>PURCHASE_CAP</c>: no commands; the line rate is capped so that the upkeep stays at <c>U_LO</c>, the rest of the money is lost (#118).</summary>
+    PurchaseCap = 3,
+}
+
+/// <summary><c>FLEET_LINE_COND</c> (spec A42.4 п. 4): the condition on the line that makes a project a candidate.</summary>
+public enum FleetLineCond
+{
+    /// <summary><c>gen(L) &gt; gen(d)</c> strictly (#147).</summary>
+    Gen = 0,
+    /// <summary>Spec v0.16: <c>perf_L·upkeep_d &gt; perf_d·upkeep_L</c> strictly. Diagnostic.</summary>
+    Kappa = 1,
+    /// <summary>No condition on the line. Diagnostic.</summary>
+    None = 2,
+}
+
 /// <summary>Budget split of an actor: research, capability, process development (D), procurement, quality programme (spec §3.4).</summary>
 public readonly record struct BudgetShares(Fx6 Research, Fx6 Capability, Fx6 Effort, Fx6 Procurement, Fx6 Quality)
 {
@@ -91,6 +115,26 @@ public sealed record PolicyParams
     /// </summary>
     public Fx6 FvBudget { get; init; }
 
+    /// <summary>Arm of the fleet rule A42.4 (spec §6.10): <see cref="FleetArm.Main"/> retires and sells; the others are ablations.</summary>
+    public FleetArm FleetArm { get; init; } = FleetArm.Main;
+
+    /// <summary>
+    /// <c>FLEET_LINE_COND</c> (spec A42.4 п. 4, #147): the condition on the line for a candidate; <see cref="FleetLineCond.Gen"/> in main, the others diagnostic.
+    /// </summary>
+    public FleetLineCond FleetLineCond { get; init; } = FleetLineCond.Gen;
+
+    /// <summary><c>U_HI(P)</c> by profile (index = <see cref="PolicyProfile"/>; P1 / P2 / P3): the upkeep share of the procurement base from which the fleet rule acts (spec A42.8 «З»).</summary>
+    public ImmutableArray<Fx6> FleetUHi { get; init; } = [F(250_000), F(800_000), F(500_000)];
+
+    /// <summary><c>U_HI − U_LO</c>: the rule frees upkeep down to <c>U_LO = U_HI − 0,15</c> (spec A42.8).</summary>
+    public Fx6 FleetUGap { get; init; } = F(150_000);
+
+    /// <summary><c>A_PROT</c>: cohorts younger than this many months are never taken by the rule (spec A42.8); 60.</summary>
+    public int FleetAProt { get; init; } = 60;
+
+    /// <summary><c>U_LO(P) = U_HI(P) − gap</c>.</summary>
+    public Fx6 FleetULo(PolicyProfile profile) => FleetUHi[(int)profile] - FleetUGap;
+
     /// <summary>Deficit of an alloy disruption (spec §4: 0,5); read by the manifest check L-C1 (the event rule is T6d).</summary>
     public Fx6 DisruptionDeficit { get; init; } = F(500_000);
 
@@ -132,6 +176,8 @@ public sealed record PolicyParams
         if (TAb < 1 || NServiceMin < 1 || TField < 1 || DisruptionMaxMonths < 1 || YProd < Fx6.Zero || FvBudget < Fx6.Zero
             || DisruptionDeficit < Fx6.Zero || DisruptionDeficit > Fx6.One || LaunchShare.Length != 3 || LaunchShare.Any(k => k < Fx6.Zero || k > Fx6.One))
             throw new ArgumentException("Product-AI parameters are out of range (T_ab, k_P, y_prod, n_service_min, T_field, disruption).");
+        if (FleetUHi.Length != 3 || FleetUHi.Any(u => u <= FleetUGap || u > Fx6.One) || FleetUGap < Fx6.Zero || FleetAProt < 0)
+            throw new ArgumentException("Fleet rule: three U_HI in (gap; 1], gap and A_PROT non-negative (spec A42.8).");
         if (SharesByProfile.Length != 3)
             throw new ArgumentException("One share set per profile (P1, P2, P3) is required.");
         for (int i = 0; i < SharesByProfile.Length; i++)

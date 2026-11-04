@@ -229,10 +229,9 @@ public sealed partial class PolicySystem : ITickSystem
                     train = d;
             }
             _train.Next[row] = train;
-            ComputeProducts(row, t, annual);
-
             // Shares of the doctrine (spec §4); under a programme P2 trades 0,05 of procurement for the QP item.
             BudgetShares s = _p.Shares(profile, next);
+            ComputeProducts(row, t, annual, s, Fx6.FromRaw(_budget.Next[row]));
             _share[0].Next[row] = s.Research.Raw;
             _share[1].Next[row] = s.Capability.Raw;
             _share[2].Next[row] = s.Effort.Raw;

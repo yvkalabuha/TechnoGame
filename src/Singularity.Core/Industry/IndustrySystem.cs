@@ -44,6 +44,7 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
 
     private readonly LongColumn[] _h, _m;
     private readonly LongColumn[] _x, _v, _y, _e;
+    private readonly IntColumn[] _mr;
     private readonly ICultureRule _rule;
     private readonly Fx6[] _lastRest;
     private readonly LongColumn[] _wfN, _wfGranted;
@@ -112,6 +113,7 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
         _v = new LongColumn[_n];
         _y = new LongColumn[_n];
         _e = new LongColumn[_n];
+        _mr = new IntColumn[_n];
         foreach (int r in layout.Order)
         {
             int number = layout.Number[r];
@@ -119,6 +121,7 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
             _v[r] = table.AddLong($"ind.v.{number}");
             _y[r] = table.AddLong($"ind.y.{number}");
             _e[r] = table.AddLong($"ind.E.{number}");
+            _mr[r] = table.AddInt($"ind.mr.{number}");
         }
         int wf = layout.WorkforceCategories * layout.Requesters;
         _wfN = new LongColumn[wf];
@@ -150,6 +153,14 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
             for (int s = 0; s < _sites; s++)
                 raw[s] = start.X[s * _n + r].Raw;
             _x[r].Load(raw);
+        }
+
+        var run = new int[_sites];
+        for (int r = 0; r < _n; r++)
+        {
+            for (int s = 0; s < _sites; s++)
+                run[s] = start.MasteredRun[s * _n + r];
+            _mr[r].Load(run);
         }
 
         _yieldTrace = new ProcessYield[_sites * _n];
@@ -189,6 +200,9 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
 
     /// <summary><c>proc_yield</c>: the yield output ran at in the last month step (0 for an unknown process).</summary>
     public Fx6 ProcYield(int site, int processRow) => Fx6.FromRaw(_y[processRow].Current[site]);
+
+    /// <summary><c>mastered_run</c>: months in a row (0…6, saturating) with <c>proc_yield ≥ 0,7</c> and <c>proc_v ≥ v_min</c> at the site (contract r6 §3.1, §9.1).</summary>
+    public int MasteredRun(int site, int processRow) => _mr[processRow].Current[site];
 
     /// <summary><c>proc_E</c>: money for process development the allocation gave the process in the last month step (contract §4.1b).</summary>
     public Fx6 ProcE(int site, int processRow) => Fx6.FromRaw(_e[processRow].Current[site]);
@@ -432,6 +446,7 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
         foreach (IndustryMailbox box in _mailboxes)
             box.Drain(_reports, _requests);
         MergeReports(t);
+        MergeMastered();
         MergeWorkforce(t);
     }
 
@@ -546,6 +561,20 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
                     _x[r].Next[s] = IndustryMath.Forget(ProcX(s, r), _p.DeltaX).Raw;
                     _v[r].Next[s] = 0;
                 }
+            }
+        }
+    }
+
+    // mastered_run (contract r6 §4.0, §9.1): right after report_output, by (site, prc). proc_yield of month t is the compute column, proc_v the
+    // one just written; the counter saturates at 6 and drops to 0 in a month that misses either condition.
+    private void MergeMastered()
+    {
+        for (int s = 0; s < _sites; s++)
+        {
+            foreach (int r in _l.Order)
+            {
+                bool ok = _y[r].Next[s] >= _p.MasteredYield.Raw && _v[r].Next[s] >= _p.VMin.Raw;
+                _mr[r].Next[s] = ok ? Math.Min(IndustryParams.MasteredMonths, _mr[r].Current[s] + 1) : 0;
             }
         }
     }

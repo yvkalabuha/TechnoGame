@@ -152,6 +152,9 @@ public class WhyNotTests
         Assert.Equal(WhyNotCause.NotAffordable, first.Cause);
         Assert.True(first.Have < first.Need);
         Assert.Empty(LeverValidator.Check(links, LeverRegistry.Slice));
+        // T-fleet (contract r6 §6): the old fleet's upkeep is part of the cause, so the fleet commands are the levers of the ECONOMY link.
+        Assert.Contains(Lever.RetireCohort, first.Levers);
+        Assert.Contains(Lever.SellCohort, first.Levers);
     }
 
     // ---- links

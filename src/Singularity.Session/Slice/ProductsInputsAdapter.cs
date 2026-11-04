@@ -27,6 +27,32 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
 
     public Fx6 ProcurementBudget(int actorRow, long month) => world.ProcurementBudget(actorRow);
 
+    public Fx6 ProcurementBase(int actorRow, long month) => world.ProcurementBase(actorRow);
+
+    // mastered(a, p): mastered_run ≥ 6 at some site of the actor (contract r6 §9.1; in the slice a site is an actor).
+    public bool Mastered(int actorRow, int processNumber, long month)
+    {
+        int row = world.IndustryLayout.RowOf(processNumber);
+        if (row < 0)
+            return false;
+        for (int s = 0; s < world.IndustryLayout.SiteCount; s++)
+        {
+            if (world.IndustryLayout.SiteOwner[s] == actorRow && world.Industry.MasteredRun(s, row) >= IndustryParams.MasteredMonths)
+                return true;
+        }
+        return false;
+    }
+
+    // External commands first, then the AI's (key order: SourceClass.Ai is last).
+    public IReadOnlyList<FleetCommand> FleetCommands(int actorRow, long month)
+    {
+        var list = new List<FleetCommand>();
+        foreach ((CommandKind kind, int design, int n) in world.Commands.FleetCommands(actorRow, month))
+            list.Add(new FleetCommand(kind == CommandKind.SellCohort ? FleetCommandKind.Sell : FleetCommandKind.Retire, design, n));
+        list.AddRange(world.Policy.AiFleetCommands(actorRow, month));
+        return list;
+    }
+
     public IReadOnlyList<DesignCommand> DesignCommands(int actorRow, long month)
     {
         var list = new List<DesignCommand>();
@@ -69,7 +95,15 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
         Fx6 budget = shares.Procurement * world.Policy.Budget(actorRow);
         if (world.Policy.TrainingTarget(actorRow) == design)
             budget += shares.Capability * world.Policy.Budget(actorRow);
-        return PolicyRules.LineRate(budget, world.Products.UnitCostFloor(actorRow, design));
+        // Spec A42.5: the expected sale revenue of the month joins the base; PURCHASE_CAP keeps the upkeep at U_LO.
+        Fx6 need = Fx6.Zero;
+        for (int d = 0; d < world.ProductsLayout.Designs; d++)
+        {
+            if (world.Products.Stage(actorRow, d) is DesignStage.Series or DesignStage.InService)
+                need += Fx6.FromInt(world.Products.InService(actorRow, d).Raw / Fx6.Scale) * world.Products.Upkeep(actorRow, d);
+        }
+        return world.Policy.AiLineRate(actorRow, budget, shares.Procurement * world.Policy.Budget(actorRow),
+            world.Products.UnitCostFloor(actorRow, design), need, world.Products.Upkeep(actorRow, design));
     }
 
     // Only the L_P control reads it (spec §6.1).

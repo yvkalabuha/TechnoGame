@@ -304,6 +304,12 @@ public class ProductsDeterminismAuditTests
 
         public Fx6 ProcurementBudget(int actorRow, long month) => Scenario.BudgetIndex[actorRow] * Fx6.FromRaw(440_000);
 
+        public Fx6 ProcurementBase(int actorRow, long month) => ProcurementBudget(actorRow, month);
+
+        public bool Mastered(int actorRow, int processNumber, long month) => false;
+
+        public IReadOnlyList<FleetCommand> FleetCommands(int actorRow, long month) => [];
+
         public IReadOnlyList<DesignCommand> DesignCommands(int actorRow, long month) =>
             StandInCommands(run.PLayout, run.Products, actorRow, n => run.Knows(actorRow, n), p => AdmittedYield(actorRow, p, month));
 

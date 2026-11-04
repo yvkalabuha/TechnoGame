@@ -23,7 +23,7 @@ namespace Singularity.Session;
 internal sealed class SliceWorld
 {
     /// <summary>Version of the column schema (ADR-0013 п. 2); raised with every change of the table layout (pinned by a fingerprint test).</summary>
-    public const int SchemaVersion = 4;
+    public const int SchemaVersion = 5;
 
     // Layout constants of the slice (spec §1.4, §3.3, §2): engineer and skilled pools, bureaus, cohort years 1945…1977.
     public const int WorkforceCategories = 2;
@@ -52,7 +52,11 @@ internal sealed class SliceWorld
         KnowledgeParameters = kp;
         IndustryParameters = ip;
         ProductsParameters = pp;
-        PolicyParams policy = new() { YProd = pp.YProd, TField = pp.HBuild };
+        pp = ApplySaleArm(config.SaleArm, pp);
+        PolicyParams policy = new()
+        {
+            YProd = pp.YProd, TField = pp.HBuild, NServiceMin = pp.NServiceMin, FleetArm = config.FleetArm, FleetLineCond = config.FleetLineCond,
+        };
         ScenarioData baseScenario = data.Scenario(config.ScenarioId);
         // fv_budget: 24 median procurement budgets of the great powers at t0 (spec §5.5); the actors that exist among USA, GBR, SUN.
         var great = new List<Fx6>();
@@ -84,7 +88,8 @@ internal sealed class SliceWorld
         IndustryInputs = new IndustryInputsAdapter(this);
         Industry = new IndustrySystem(Table, IndustryLayout, iStart, ip, IndustryInputs, chunks, rule);
         ProductsInputs = new ProductsInputsAdapter(this);
-        Products = new ProductsSystem(Table, ProductsLayout, pStart, pp, ProductsInputs, Industry.CreateMailbox(chunks, Cadence.Monthly));
+        Products = new ProductsSystem(Table, ProductsLayout, pStart, pp, ProductsInputs, Industry.CreateMailbox(chunks, Cadence.Monthly),
+            startMonth: scenario.StartMonth);
 
         StartVectors(scenario, out var actorNumber, out var budget0, out var growth, out var forced);
         BudgetAtStart = budget0;
@@ -162,7 +167,16 @@ internal sealed class SliceWorld
     public BudgetShares SharesOf(int actor) => Commands.SharesOverride(actor) ?? Policy.Shares(actor);
 
     /// <summary>Procurement budget of the month in force: <c>share_P·budget_a</c> (spec §3.3, §3.4); one definition for the product layer and <c>why_not</c>.</summary>
-    public Fx6 ProcurementBudget(int actor) => SharesOf(actor).Procurement * Policy.Budget(actor);
+    public Fx6 ProcurementBudget(int actor) => ProcurementBase(actor) + LicenceFlow(actor);
+
+    /// <summary><c>ProcurementBase(a, t) = share_P·budget_a(t)</c>: the procurement item without licence flows and sale revenue (contract r6 §5).</summary>
+    public Fx6 ProcurementBase(int actor) => SharesOf(actor).Procurement * Policy.Budget(actor);
+
+    /// <summary>
+    /// <c>LicenceFlow(a, t)</c>: buyer pays, seller receives the licence price (spec A41). Licences are the events of T6d, which does not exist
+    /// yet, so no money moves and the flow is 0; the sum is kept so that <see cref="ProcurementBudget"/> is base + licence as the contract has it.
+    /// </summary>
+    public Fx6 LicenceFlow(int actor) => Fx6.Zero;
 
     /// <summary>
     /// The channel switches (spec §6.2): each one sets exactly one parameter to its "off" value; the culture rule is chosen separately
@@ -192,6 +206,17 @@ internal sealed class SliceWorld
             i = i with { KQp = Fx6.Zero };
         return (k, i, p);
     }
+
+    /// <summary>The sale terms of an arm (spec A42.8): exactly one number changes.</summary>
+    public static ProductsParams ApplySaleArm(SaleArm arm, ProductsParams p) => arm switch
+    {
+        SaleArm.SigmaLo => p with { SaleSigma = Fx6.FromRaw(150_000) },
+        SaleArm.PhiFlat => p with { SalePhi = [Fx6.One, Fx6.One, Fx6.One] },
+        SaleArm.QuotaLo => p with { SaleQuota = Fx6.FromRaw(50_000) },
+        SaleArm.QuotaHi => p with { SaleQuota = Fx6.FromRaw(200_000) },
+        SaleArm.ChiOff => p with { SaleChiOff = true },
+        _ => p,
+    };
 
     /// <summary>Hash of the column schema: names and types in table order. A layout change without a <see cref="SchemaVersion"/> bump fails a test.</summary>
     public string SchemaFingerprint()
@@ -241,6 +266,7 @@ internal sealed class SliceWorld
         Table.AddInt("run.cell").Load([.. Enumerable.Repeat(Config.ProfileCell ?? -1, rows)]);
         Table.AddInt("run.ai").Load([.. Enumerable.Repeat((Config.ProductAi ? 1 : 0) | (Config.Derive ? 2 : 0), rows)]);
         Table.AddInt("run.channels").Load([.. Enumerable.Repeat((int)Config.Channels, rows)]);
+        Table.AddInt("run.fleet").Load([.. Enumerable.Repeat((int)Config.FleetArm | ((int)Config.FleetLineCond << 4) | ((int)Config.SaleArm << 8), rows)]);
         Table.AddLong("run.scenario").Load(Fill(rows, BinaryPrimitives.ReadInt64LittleEndian(Convert.FromHexString(Scenario.Hash.AsSpan(0, 16)))));
     }
 }

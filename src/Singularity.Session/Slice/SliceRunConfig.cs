@@ -1,3 +1,4 @@
+using Singularity.Core.Policy;
 using Singularity.Kernel;
 
 namespace Singularity.Session;
@@ -40,6 +41,22 @@ public enum SliceChannels
 
     /// <summary>C-B → R0: the culture rule of contract v2.3 (<see cref="Singularity.Core.Industry.V23CultureRule"/>).</summary>
     CultureR0 = 1 << 10,
+}
+
+/// <summary>Sensitivity arms of the sale terms (spec §6.10, A42.8): each changes exactly one number of the sale.</summary>
+public enum SaleArm
+{
+    None = 0,
+    /// <summary><c>SALE_SIGMA_LO</c>: <c>σ0</c> = 0,15.</summary>
+    SigmaLo = 1,
+    /// <summary><c>SALE_PHI_FLAT</c>: <c>φ_gen</c> = 1 / 1 / 1.</summary>
+    PhiFlat = 2,
+    /// <summary><c>SALE_QUOTA_LO</c>: <c>ς</c> = 0,05.</summary>
+    QuotaLo = 3,
+    /// <summary><c>SALE_QUOTA_HI</c>: <c>ς</c> = 0,20.</summary>
+    QuotaHi = 4,
+    /// <summary><c>SALE_CHI_OFF</c>: no revenue ceiling.</summary>
+    ChiOff = 5,
 }
 
 /// <summary>Start variant of the scenario (spec §6.5).</summary>
@@ -94,6 +111,15 @@ public sealed record SliceRunConfig
 
     /// <summary>Arm <c>DERIV</c> (spec §6.8): once a year the AI also derives a design from its newest root project. Diagnostic; off in main.</summary>
     public bool Derive { get; init; }
+
+    /// <summary>Arm of the fleet rule (spec §6.10): main, or <c>NO_RETIRE</c>, <c>NO_SALE</c>, <c>PURCHASE_CAP</c>.</summary>
+    public FleetArm FleetArm { get; init; } = FleetArm.Main;
+
+    /// <summary><c>FLEET_LINE_COND</c> (spec A42.4, #147): <c>GEN</c> in main.</summary>
+    public FleetLineCond FleetLineCond { get; init; } = FleetLineCond.Gen;
+
+    /// <summary>Sensitivity arm of the sale terms (spec §6.10).</summary>
+    public SaleArm SaleArm { get; init; } = SaleArm.None;
 
     /// <summary>Execution only (L2): threads and rows per chunk. They never change the result.</summary>
     public int Threads { get; init; } = 1;

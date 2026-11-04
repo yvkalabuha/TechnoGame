@@ -63,7 +63,39 @@ public enum CommandRejection
 
     /// <summary><c>BAD_CANCEL</c>: <c>cancel_design</c> of a design that is not an own project in П or О (contract §4.4e).</summary>
     BadCancel = 8,
+
+    // Fleet commands (contract r6 §4.4f): the code names the command and the first check it failed, in the order of the validator.
+    /// <summary><c>BAD_RETIRE{SLOT}</c>: a second <c>retire_cohort</c> of the project in the month.</summary>
+    BadRetireSlot = 9,
+    /// <summary><c>BAD_RETIRE{STAGE}</c>: not an own project in С or В.</summary>
+    BadRetireStage = 10,
+    /// <summary><c>BAD_RETIRE{COUNT}</c>: <c>n</c> outside <c>1 … ⌊Σcount⌋</c>.</summary>
+    BadRetireCount = 11,
+    /// <summary><c>BAD_SELL{SLOT}</c>: a second <c>sell_cohort</c> of the project in the month.</summary>
+    BadSellSlot = 12,
+    /// <summary><c>BAD_SELL{STAGE}</c>: not an own project in В.</summary>
+    BadSellStage = 13,
+    /// <summary><c>BAD_SELL{COUNT}</c>: <c>n</c> outside <c>1 … ⌊Σcount⌋</c>.</summary>
+    BadSellCount = 14,
+    /// <summary><c>BAD_SELL{NOT_SURPLUS}</c>: <c>gap = G_front − gen(d) &lt; 1</c>.</summary>
+    BadSellNotSurplus = 15,
+    /// <summary><c>BAD_SELL{QUOTA}</c>: over the project's quota of the policy year.</summary>
+    BadSellQuota = 16,
+    /// <summary><c>BAD_SELL{REVENUE_CAP}</c>: over the actor's revenue ceiling of the policy year.</summary>
+    BadSellRevenueCap = 17,
 }
+
+/// <summary>Kind of a fleet command (contract r6 §4.4f). Names leave room for <c>mothball_cohort</c> of the second wave.</summary>
+public enum FleetCommandKind
+{
+    /// <summary><c>sell_cohort(design_id, n)</c>: a stage В project, to buyers outside the slice, for money.</summary>
+    Sell = 0,
+    /// <summary><c>retire_cohort(design_id, n)</c>: units leave the fleet without money.</summary>
+    Retire = 1,
+}
+
+/// <summary><c>retire_cohort</c> / <c>sell_cohort</c> in force at month t, in command order (contract r6 §4.4f; ADR-0006, ADR-0014).</summary>
+public readonly record struct FleetCommand(FleetCommandKind Kind, int Design, long N);
 
 /// <summary>
 /// What the product layer reads from other layers and from commands in the compute of month t. Contract (as
@@ -96,6 +128,20 @@ public interface IProductsInputs
 
     /// <summary>Procurement budget of month t: <c>share_P(profile)·budget_a(t)</c> (spec §3.3, §3.4); ≥ 0.</summary>
     Fx6 ProcurementBudget(int actorRow, long month);
+
+    /// <summary>
+    /// <c>ProcurementBase(a, t) = share_P·budget_a(t)</c>: the procurement item without licence flows and sale revenue (contract r6 §5); ≥ 0.
+    /// <see cref="ProcurementBudget"/> minus this is the <c>LicenceFlow</c>.
+    /// </summary>
+    Fx6 ProcurementBase(int actorRow, long month);
+
+    /// <summary>
+    /// <c>mastered(a, p)</c>: <c>mastered_run ≥ 6</c> at some site of the actor (contract r6 §9.1), a pure function of the capability snapshot.
+    /// </summary>
+    bool Mastered(int actorRow, int processNumber, long month);
+
+    /// <summary><c>retire_cohort</c> and <c>sell_cohort</c> in force at month t: the external ones first, then the AI's (contract r6 §4.4f).</summary>
+    IReadOnlyList<FleetCommand> FleetCommands(int actorRow, long month);
 
     /// <summary>
     /// <c>compose_design</c> and <c>derive</c> commands applied at the start of month t, in command order (contract §4.4a). The

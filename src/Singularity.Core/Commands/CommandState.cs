@@ -22,6 +22,7 @@ public sealed class CommandState
     private readonly IntColumn[][] _dAlt;
     private readonly IntColumn[] _sStamp, _sForce, _cStamp;
     private readonly LongColumn[] _sRate;
+    private readonly IntColumn[] _fKind, _fDesign, _fN, _fStamp;
 
     /// <param name="altSlots">Alternatives per design command: the slot count of the product class.</param>
     /// <param name="designs"><c>max_designs</c>.</param>
@@ -45,6 +46,17 @@ public sealed class CommandState
             _dAlt[k] = new IntColumn[altSlots];
             for (int s = 0; s < altSlots; s++)
                 _dAlt[k][s] = table.AddInt($"cmd.dsn.{k}.alt.{s}");
+        }
+        _fKind = new IntColumn[CommandLimits.FleetSlots];
+        _fDesign = new IntColumn[CommandLimits.FleetSlots];
+        _fN = new IntColumn[CommandLimits.FleetSlots];
+        _fStamp = new IntColumn[CommandLimits.FleetSlots];
+        for (int k = 0; k < CommandLimits.FleetSlots; k++)
+        {
+            _fKind[k] = table.AddInt($"cmd.flt.{k}.kind");
+            _fDesign[k] = table.AddInt($"cmd.flt.{k}.design");
+            _fN[k] = table.AddInt($"cmd.flt.{k}.n");
+            _fStamp[k] = table.AddInt($"cmd.flt.{k}.stamp");
         }
         _sStamp = new IntColumn[designs];
         _sForce = new IntColumn[designs];
@@ -83,6 +95,18 @@ public sealed class CommandState
                 alts[s] = _dAlt[k][s].Current[actor];
             CommandKind kind = _dKind[k].Current[actor] switch { 1 => CommandKind.ComposeDesign, 2 => CommandKind.DeriveDesign, _ => CommandKind.CancelDesign };
             list.Add((kind, _dTarget[k].Current[actor], [.. alts]));
+        }
+        return list;
+    }
+
+    /// <summary>The <c>sell_cohort</c>/<c>retire_cohort</c> commands the month step <paramref name="month"/> consumes, in command order.</summary>
+    public IReadOnlyList<(CommandKind Kind, int Design, int N)> FleetCommands(int actor, long month)
+    {
+        var list = new List<(CommandKind, int, int)>();
+        for (int k = 0; k < CommandLimits.FleetSlots; k++)
+        {
+            if (_fStamp[k].Current[actor] == Stamp(month))
+                list.Add((_fKind[k].Current[actor] == 1 ? CommandKind.SellCohort : CommandKind.RetireCohort, _fDesign[k].Current[actor], _fN[k].Current[actor]));
         }
         return list;
     }
@@ -129,6 +153,17 @@ public sealed class CommandState
                 for (int i = 0; i < _altSlots; i++)
                     Set(_dAlt[slot][i], a, alts.IsEmpty ? -1 : alts[i]);
                 Set(_dStamp[slot], a, stamp);
+                break;
+            case RetireCohort or SellCohort:
+                int slotNo = 0;
+                while (slotNo < CommandLimits.FleetSlots && _fStamp[slotNo].Current[a] == stamp)
+                    slotNo++;
+                if (slotNo == CommandLimits.FleetSlots)
+                    return CommandVerdict.Refuse(CommandRefusal.SlotOverflow, $"actor {a} already has {CommandLimits.FleetSlots} fleet commands for month {consumedAtMonth}");
+                Set(_fKind[slotNo], a, command is SellCohort ? 1 : 2);
+                Set(_fDesign[slotNo], a, command is SellCohort sc ? sc.Design : ((RetireCohort)command).Design);
+                Set(_fN[slotNo], a, command is SellCohort sn ? sn.N : ((RetireCohort)command).N);
+                Set(_fStamp[slotNo], a, stamp);
                 break;
             case StartSeries s:
                 Set(_sStamp[s.Design], a, stamp);

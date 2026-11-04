@@ -111,9 +111,33 @@ public sealed record ProductsParams
     /// <summary>L_P: <c>ρ[g]</c>, monthly units per unit of procurement budget, index g − 1 (control tables, §6.1).</summary>
     public ImmutableArray<Fx6> LpRho { get; init; } = [];
 
+    /// <summary><c>n_service_min</c> (contract §9.1): units in service from which a project is «на вооружении» (<c>fielded</c>); 50. Also the <c>keep</c> of a project in <c>Def(K)</c>.</summary>
+    public int NServiceMin { get; init; } = 50;
+
+    /// <summary><c>σ0</c> (spec A42.8 «З»): the price of a new unit sold outside the slice is at most this share of <c>unit_cost_floor</c>; at most 0,5.</summary>
+    public Fx6 SaleSigma { get; init; } = F(500_000);
+
+    /// <summary><c>φ_gen</c> for <c>gap</c> = 1 / 2 / ≥ 3 (spec A42.8 «З»): 1,0 / 0,6 / 0,3.</summary>
+    public ImmutableArray<Fx6> SalePhi { get; init; } = [Fx6.One, F(600_000), F(300_000)];
+
+    /// <summary><c>ς</c>: share of the fleet at the start of the policy year a project may sell in that year (spec A42.8 «З»); 0,10.</summary>
+    public Fx6 SaleQuota { get; init; } = F(100_000);
+
+    /// <summary><c>χ</c>: share of the year's procurement budget the sale revenue of a policy year may reach (spec A42.8 «З»); 0,10.</summary>
+    public Fx6 SaleChi { get; init; } = F(100_000);
+
+    /// <summary>Arm <c>SALE_CHI_OFF</c> (spec §6.10): no revenue ceiling.</summary>
+    public bool SaleChiOff { get; init; }
+
+    /// <summary><c>φ_gen(gap)</c> (spec A42.2): <paramref name="gap"/> ≥ 1.</summary>
+    public Fx6 PhiGen(int gap) => SalePhi[Math.Min(gap, SalePhi.Length) - 1];
+
     /// <summary>Throws if a value would break a formula.</summary>
     public void Validate()
     {
+        if (NServiceMin < 1 || SaleSigma < Fx6.Zero || SaleSigma > F(500_000) || SaleQuota < Fx6.Zero || SaleQuota > Fx6.One
+            || SaleChi < Fx6.Zero || SaleChi > Fx6.One || SalePhi.Length != 3 || SalePhi.Any(x => x < Fx6.Zero || x > Fx6.One))
+            throw new ArgumentException("n_service_min ≥ 1; σ0 in [0; 0,5]; ς and χ in [0; 1]; three φ_gen in [0; 1] (spec A42.8).");
         if (EB <= Fx6.Zero || FixHours <= Fx6.Zero || ServiceLife < 1 || FvStep < 1 || FvMaxUnits < FvStep)
             throw new ArgumentException("E_B, fix_hours, service_life and the fleet_value step must be positive.");
         if (DeltaE < Fx6.Zero || DeltaE > Fx6.One || DeltaB < Fx6.Zero || DeltaB > Fx6.One || PsiD < Fx6.Zero || PsiD > Fx6.One)

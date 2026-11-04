@@ -17,13 +17,14 @@ internal sealed class ProductsHarness
     /// <param name="years">Cohort years of the layout (default <see cref="ProductTestData.Years"/>).</param>
     public ProductsHarness(int threads = 1, int chunkSize = 1, ProductsMode mode = ProductsMode.Full, ProductsParams? parameters = null,
         int[]? actorPerm = null, int years = Years, int? maxDesigns = null, Action<Table>? corruptInMerge = null,
-        Func<ProductsHarness, Table, ITickSystem[]>? extraSystems = null, bool? startLine = null)
+        Func<ProductsHarness, Table, ITickSystem[]>? extraSystems = null, bool? startLine = null, Action<ProductsStart>? tweakStart = null)
     {
         Layout = MakeLayout(out _, years, maxDesigns ?? Scenario.MaxDesigns);
         ProductsStart baseStart = ProductsStart.FromScenario(Scenario, CoreData.Nodes, CoreData.ProductClasses, Layout);
         // startLine = false: the pre-E1 state (start fleets in stage В, no line), for tests of the stage-В rules; the L_P control has no start line.
         if (!(startLine ?? mode != ProductsMode.CanonicalLp))
             baseStart = WithoutStartLines(baseStart);
+        tweakStart?.Invoke(baseStart);
         ActorOf = actorPerm ?? [.. Enumerable.Range(0, Scenario.ActorCount)];
         Start = actorPerm is null ? baseStart : Permute(baseStart, ActorOf);
         Table = new Table(Scenario.ActorCount);
@@ -58,6 +59,12 @@ internal sealed class ProductsHarness
     public long[,,] Grants { get; private set; }
 
     public Fx6 GrantShare { get; set; } = Fx6.One;
+
+    /// <summary>Scripted <c>mastered(a, p)</c> (stable actor, process number); default: nothing is mastered.</summary>
+    public Func<int, int, bool>? IsMastered { get; set; }
+
+    /// <summary>Scripted fleet commands of an actor in a month.</summary>
+    public Func<int, long, IReadOnlyList<FleetCommand>>? FleetScript { get; set; }
 
     public List<OutputReport> Reports { get; } = new();
     public List<WorkforceRequest> Requests { get; } = new();
@@ -182,6 +189,12 @@ internal sealed class ProductsHarness
         public long Granted(int siteRow, int category, int requesterId, long month) => h.Grants[siteRow, category, requesterId];
 
         public Fx6 ProcurementBudget(int actorRow, long month) => h.Budget(A(actorRow), month);
+
+        public Fx6 ProcurementBase(int actorRow, long month) => h.Budget(A(actorRow), month);
+
+        public bool Mastered(int actorRow, int processNumber, long month) => h.IsMastered?.Invoke(A(actorRow), processNumber) ?? false;
+
+        public IReadOnlyList<FleetCommand> FleetCommands(int actorRow, long month) => h.FleetScript?.Invoke(A(actorRow), month) ?? [];
 
         // A scripted order becomes a compose_design for the newest APP the actor knows (the validator's g*), with the preset
         // composition of the order's variant; the order's generation is only a trigger.

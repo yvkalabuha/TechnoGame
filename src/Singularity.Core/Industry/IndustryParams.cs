@@ -77,6 +77,18 @@ public sealed record IndustryParams
     /// <summary><c>yield ≥ 0.7</c> of another actor makes <c>world_lead</c> (contract §4.1).</summary>
     public Fx6 WorldLeadYield { get; init; } = F(700_000);
 
+    /// <summary>Months in a row a process must hold <c>yield ≥ <see cref="MasteredYield"/></c> and <c>proc_v ≥ v_min</c> to count as mastered (contract r6 §9.1).</summary>
+    public const int MasteredMonths = 6;
+
+    /// <summary><c>yield_p ≥ 0,7</c> of the mastered condition (contract r6 §9.1).</summary>
+    public Fx6 MasteredYield { get; init; } = F(700_000);
+
+    /// <summary>
+    /// <c>v_min</c>: labour hours a month of the process below which it does not count as mastered (contract r6 §9.1, spec §8.1 «З»): 5% of the
+    /// output of a mature line, <c>V_ref</c> = 18 750 h (<c>ProductsLayout.ReferenceVRef</c>, the lower median of the G2 project).
+    /// </summary>
+    public Fx6 VMin { get; init; } = F(937_500_000);
+
     /// <summary><c>yield ≥ 0.3</c> admits <c>v_p</c> into <c>discipline_volume</c> (contract §4.3).</summary>
     public Fx6 DisciplineYield { get; init; } = F(300_000);
 

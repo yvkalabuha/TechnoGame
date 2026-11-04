@@ -45,6 +45,7 @@ public static class LeverValidator
         Lever.ReassignWorkforce => l.Layer == WhyNotLayer.Product && l.Cause == WhyNotCause.Engineers,
         Lever.ProcessDevelopment => l.Layer == WhyNotLayer.Capability && l.Limiter == LimiterKind.Effort,
         Lever.ForceSeries => l.Layer == WhyNotLayer.Product && l.Cause == WhyNotCause.SeriesGate,
+        Lever.RetireCohort or Lever.SellCohort => l.Layer == WhyNotLayer.Economy,
         _ => false,
     };
 

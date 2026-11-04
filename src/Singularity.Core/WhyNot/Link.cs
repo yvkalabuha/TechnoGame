@@ -75,6 +75,12 @@ public enum Lever
     ReassignWorkforce,
     ProcessDevelopment,
     ForceSeries,
+
+    /// <summary><c>retire_cohort</c> (contract r6 §6, ECONOMY): the upkeep of old machines eats the procurement item.</summary>
+    RetireCohort,
+
+    /// <summary><c>sell_cohort</c> (contract r6 §6, ECONOMY): old machines of stage В go outside the slice for money.</summary>
+    SellCohort,
 }
 
 /// <summary>

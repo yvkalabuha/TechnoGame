@@ -36,6 +36,9 @@ public sealed record CommandLimits(int ActorCount, int SlotCount, int Designs, I
 {
     /// <summary><c>compose</c>/<c>derive</c>/<c>cancel</c> commands one actor can have in force in one month (SLICE_COMPOSITION §7.3, [Предп.] О-5).</summary>
     public const int DesignSlots = 4;
+
+    /// <summary><c>retire_cohort</c>/<c>sell_cohort</c> commands one actor can have in force in one month (a project takes at most one of each type; contract r6 §4.4f).</summary>
+    public const int FleetSlots = 8;
 }
 
 /// <summary>
@@ -96,6 +99,14 @@ public static class CommandValidator
             case CancelDesign x:
                 return x.Design < 0 || x.Design >= limits.Designs
                     ? CommandVerdict.Refuse(CommandRefusal.BadDesign, $"design {x.Design} is out of range")
+                    : CommandVerdict.Ok;
+            case RetireCohort r:
+                return r.Design < 0 || r.Design >= limits.Designs
+                    ? CommandVerdict.Refuse(CommandRefusal.BadDesign, $"design {r.Design} is out of range")
+                    : CommandVerdict.Ok;
+            case SellCohort v:
+                return v.Design < 0 || v.Design >= limits.Designs
+                    ? CommandVerdict.Refuse(CommandRefusal.BadDesign, $"design {v.Design} is out of range")
                     : CommandVerdict.Ok;
             case CloseLine l:
                 return l.Design < 0 || l.Design >= limits.Designs

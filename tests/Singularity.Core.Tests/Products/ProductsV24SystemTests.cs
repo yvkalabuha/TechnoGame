@@ -467,7 +467,7 @@ public class ProductsV24SystemTests
     }
 
     [Fact]
-    public void LayoutVersion_IsTheThirdColumnLayout_T15() => Assert.Equal(3, ProductsSystem.LayoutVersion);
+    public void LayoutVersion_IsTheFourthColumnLayout_TFleet() => Assert.Equal(4, ProductsSystem.LayoutVersion);
 
     // ---- parent of a live derivative (M1)
 

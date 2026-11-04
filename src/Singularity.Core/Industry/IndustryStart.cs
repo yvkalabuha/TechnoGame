@@ -16,12 +16,16 @@ public sealed class IndustryStart
         H = new Fx6[layout.SiteCount * layout.Clusters.Length * Dims3.Count];
         M = new Fx6[H.Length];
         X = new Fx6[layout.SiteCount * layout.ProcessCount];
+        MasteredRun = new int[X.Length];
     }
 
     public IndustryLayout Layout { get; }
     public Fx6[] H { get; }
     public Fx6[] M { get; }
     public Fx6[] X { get; }
+
+    /// <summary><c>mastered_run[site·P + p]</c> at t0: <c>min(6, −since_month)</c> for the mastered processes of the scenario, else 0 (contract r6 §9.1).</summary>
+    public int[] MasteredRun { get; }
 
     public int Cell(int site, int cluster, int dim) => (site * Layout.Clusters.Length + cluster) * Dims3.Count + dim;
 
@@ -50,6 +54,7 @@ public sealed class IndustryStart
                 if (r < 0)
                     throw new ArgumentException($"Mastered node {nodes.Id[nodeRow]} is not a process of the layout.", nameof(layout));
                 start.X[s * layout.ProcessCount + r] = Fx6.FromInt(scenario.ProcXHalfLives) * p.XHalf(layout.Tier[r]);
+                start.MasteredRun[s * layout.ProcessCount + r] = Math.Min(Math.Max(-scenario.MasteredSinceMonth, 0), IndustryParams.MasteredMonths);
             }
         }
         return start;

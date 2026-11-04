@@ -45,4 +45,13 @@ public interface IPolicyProducts
 
     /// <summary><c>FV</c> of a hypothetical project with these alternatives at <paramref name="budget"/> (spec §5.5; the preset <c>adaptive</c>).</summary>
     Fx6 CandidateValue(int actorRow, ReadOnlySpan<int> alts, Fx6 budget, long month);
+
+    /// <summary>
+    /// The actor's fleet as the snapshot holds it (spec A42.4; <c>ProductsSystem.SnapshotBook</c>), a fresh copy the caller projects and changes.
+    /// Null for a build without a fleet layer: the fleet rule is then silent.
+    /// </summary>
+    FleetBook? Fleet(int actorRow, long month) => null;
+
+    /// <summary><c>G_front</c> of the snapshot (contract §9.1, #146).</summary>
+    int GFront(long month) => 0;
 }

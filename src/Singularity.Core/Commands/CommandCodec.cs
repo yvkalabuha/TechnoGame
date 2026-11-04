@@ -55,6 +55,12 @@ public static class CommandCodec
             case CancelDesign x:
                 sb.Append(",\"design\":").Append(I(x.Design));
                 break;
+            case RetireCohort r:
+                sb.Append(",\"design\":").Append(I(r.Design)).Append(",\"n\":").Append(I(r.N));
+                break;
+            case SellCohort v:
+                sb.Append(",\"design\":").Append(I(v.Design)).Append(",\"n\":").Append(I(v.N));
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(logged), c.GetType(), "Unknown command type.");
         }
@@ -86,6 +92,8 @@ public static class CommandCodec
             "start_series" => new StartSeries(actor, r.GetProperty("design").GetInt32(), ReadRaw(r.GetProperty("rate")), r.GetProperty("force").GetBoolean()),
             "close_line" => new CloseLine(actor, r.GetProperty("design").GetInt32()),
             "cancel_design" => new CancelDesign(actor, r.GetProperty("design").GetInt32()),
+            "retire_cohort" => new RetireCohort(actor, r.GetProperty("design").GetInt32(), r.GetProperty("n").GetInt32()),
+            "sell_cohort" => new SellCohort(actor, r.GetProperty("design").GetInt32(), r.GetProperty("n").GetInt32()),
             _ => throw new FormatException($"Unknown command kind '{kind}'."),
         };
         return new LoggedCommand(key, command);
@@ -111,6 +119,8 @@ public static class CommandCodec
         CommandKind.StartSeries => "start_series",
         CommandKind.CloseLine => "close_line",
         CommandKind.CancelDesign => "cancel_design",
+        CommandKind.RetireCohort => "retire_cohort",
+        CommandKind.SellCohort => "sell_cohort",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
 

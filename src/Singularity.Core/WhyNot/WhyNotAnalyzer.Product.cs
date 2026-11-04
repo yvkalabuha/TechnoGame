@@ -58,7 +58,7 @@ public sealed partial class WhyNotAnalyzer
             if (cost > budget)
             {
                 int slot = VariantSlot(actor, alts, gen, -1);
-                links.Add(new Link(WhyNotLayer.Economy, WhyNotCause.NotAffordable, design, budget, cost, Offer(slot >= 0 ? [Lever.SimplifiedVariant] : []), yield, null, VariantSlot: slot));
+                links.Add(new Link(WhyNotLayer.Economy, WhyNotCause.NotAffordable, design, budget, cost, Offer(slot >= 0 ? [Lever.SimplifiedVariant, Lever.RetireCohort, Lever.SellCohort] : [Lever.RetireCohort, Lever.SellCohort]), yield, null, VariantSlot: slot));
             }
         }
     }

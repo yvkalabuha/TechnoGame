@@ -34,16 +34,16 @@ public sealed class ProductsInvariantException(long month, int actor, string mes
 /// posts <c>report_output</c> and <c>reserve_workforce</c> into the capability mailbox (applied in the capability merge of
 /// month t; <c>granted</c> visible at t+1). No RNG anywhere in the layer (#28).
 /// </summary>
-public sealed class ProductsSystem : ITickSystem
+public sealed partial class ProductsSystem : ITickSystem
 {
     public const int DefaultSystemId = 300;
 
     /// <summary>
     /// Column layout version of the system (T-15, #117): 1 = TASK-0018 (slot (g, variant)), 2 = contract v2.4 (slots by
-    /// capacity, gate, accident and retrofit columns), 3 = contract v2.4 r4 (<c>cancelled</c>, <c>idle_c</c>, <c>built_any</c>, #128).
+    /// capacity, gate, accident and retrofit columns), 3 = contract v2.4 r4 (<c>cancelled</c>, <c>idle_c</c>, <c>built_any</c>, #128), 4 = contract r6 (fleet commands: <c>retired</c>, <c>sold</c>, quota, <c>line_bind</c>, sale money, #141–#148).
     /// Part of the state-hash schema version of a model that hosts the system.
     /// </summary>
-    public const int LayoutVersion = 3;
+    public const int LayoutVersion = 4;
 
     private static readonly int RejectionKinds = Enum.GetValues<CommandRejection>().Length;
 
@@ -59,13 +59,16 @@ public sealed class ProductsSystem : ITickSystem
     private readonly int[] _bureauReq;
 
     private readonly IntColumn[] _stage, _bureauOf, _alt, _bureauDesign, _gp, _parent, _stageO, _gateOpened, _forced, _lpSlot;
-    private readonly IntColumn[] _cancelled, _idleC, _built;
+    private readonly IntColumn[] _cancelled, _idleC, _built, _quotaBase, _soldY, _lineBind;
     private readonly LongColumn[] _work, _d0, _hidden, _open, _found, _hours, _lineE, _rate, _cost, _exp, _cohort;
-    private readonly LongColumn[] _rateCmd, _dGate, _lossAcc, _retro, _lost, _inService0, _rejected;
-    private readonly LongColumn _need, _paid, _spent, _tbSpent;
+    private readonly LongColumn[] _rateCmd, _dGate, _lossAcc, _retro, _lost, _inService0, _rejected, _retired, _sold;
+    private readonly LongColumn _need, _paid, _spent, _tbSpent, _saleIncome, _saleCap, _saleY, _extTotal;
+
+    // Midyear month index of each cohort year (spec A32): age of cohort Y at month t is t − _m0[Y].
+    private readonly int[] _m0;
 
     public ProductsSystem(Table table, ProductsLayout layout, ProductsStart start, ProductsParams parameters,
-        IProductsInputs inputs, IndustryMailbox mailbox, ProductsMode mode = ProductsMode.Full, int systemId = DefaultSystemId)
+        IProductsInputs inputs, IndustryMailbox mailbox, ProductsMode mode = ProductsMode.Full, int systemId = DefaultSystemId, int startMonth = 9)
     {
         if (table.RowCount != layout.SiteCount || start.Actors != layout.SiteCount || start.Layout != layout)
             throw new ArgumentException("Table, start state and layout must have one row per site.", nameof(table));
@@ -98,6 +101,10 @@ public sealed class ProductsSystem : ITickSystem
         _b = layout.Bureaus;
         SystemId = systemId;
         _dRef = ProductsMath.DRef(parameters.D0Factor, layout.CRef);
+        StartMonth = startMonth;
+        _m0 = new int[layout.Years];
+        for (int y = 0; y < _m0.Length; y++)
+            _m0[y] = y * 12 + (7 - startMonth);
         _bureauReq = new int[layout.DesignScale.Length];
         for (int k = 0; k < _bureauReq.Length; k++)
             _bureauReq[k] = parameters.BureauReq(layout.DesignScale[k]);
@@ -112,6 +119,11 @@ public sealed class ProductsSystem : ITickSystem
         _cancelled = new IntColumn[_d];
         _idleC = new IntColumn[_d];
         _built = new IntColumn[_d];
+        _quotaBase = new IntColumn[_d];
+        _soldY = new IntColumn[_d];
+        _lineBind = new IntColumn[_d];
+        _retired = new LongColumn[_d];
+        _sold = new LongColumn[_d];
         _alt = new IntColumn[_d * _s];
         _work = new LongColumn[_d];
         _d0 = new LongColumn[_d];
@@ -142,6 +154,11 @@ public sealed class ProductsSystem : ITickSystem
             _cancelled[d] = table.AddInt($"{n}.cancelled");
             _idleC[d] = table.AddInt($"{n}.idleC");
             _built[d] = table.AddInt($"{n}.builtAny");
+            _quotaBase[d] = table.AddInt($"{n}.quotaBase");
+            _soldY[d] = table.AddInt($"{n}.soldY");
+            _lineBind[d] = table.AddInt($"{n}.lineBind");
+            _retired[d] = table.AddLong($"{n}.retired");
+            _sold[d] = table.AddLong($"{n}.sold");
             for (int s = 0; s < _s; s++)
                 _alt[d * _s + s] = table.AddInt($"{n}.alt.{s}");
             _work[d] = table.AddLong($"{n}.work");
@@ -179,6 +196,10 @@ public sealed class ProductsSystem : ITickSystem
         _paid = table.AddLong("prd.paidRatio");
         _spent = table.AddLong("prd.spent");
         _tbSpent = table.AddLong("prd.tbSpent");
+        _saleIncome = table.AddLong("prd.saleIncome");
+        _saleCap = table.AddLong("prd.saleCap");
+        _saleY = table.AddLong("prd.saleY");
+        _extTotal = table.AddLong("prd.extTotal");
 
         int rows = layout.SiteCount;
         var ints = new int[rows];
@@ -238,6 +259,15 @@ public sealed class ProductsSystem : ITickSystem
     public Cadence Cadence => Cadence.Monthly;
 
     public ProductsLayout Layout => _l;
+
+    /// <summary>Calendar month (1…12) of the scenario start; cohorts age from July of their year (spec A32).</summary>
+    public int StartMonth { get; }
+
+    /// <summary>Parameters of the layer.</summary>
+    public ProductsParams Parameters => _p;
+
+    /// <summary>Month index of the midyear of cohort year index <paramref name="yearIndex"/> (age = t − this, spec A32).</summary>
+    public int CohortMidyear(int yearIndex) => _m0[yearIndex];
 
     /// <summary><c>D_ref = d0·c_ref</c> (contract §4.4b).</summary>
     public Fx6 DRef => _dRef;
@@ -586,6 +616,7 @@ public sealed class ProductsSystem : ITickSystem
         long month = context.Calendar!.MonthIndex(context.Tick - 1);
         for (int a = 0; a < _l.SiteCount; a++)
         {
+            CheckSaleMoney(month, a);
             for (int d = 0; d < _d; d++)
             {
                 long d0 = _d0[d].Current[a], hidden = _hidden[d].Current[a], found = _found[d].Current[a], open = _open[d].Current[a];
@@ -608,8 +639,21 @@ public sealed class ProductsSystem : ITickSystem
                 }
                 if (_mode == ProductsMode.Full)
                     CheckLineFlags(month, a, d, stage);
+                // Contract r6 §4.4f, FL2, FL4, FL5.
+                if (_retired[d].Current[a] < 0 || _sold[d].Current[a] < 0)
+                    throw new ProductsInvariantException(month, a, $"negative retired or sold of design {d}");
+                if (stage == DesignStage.InService && InService(a, d) == Fx6.Zero)
+                    throw new ProductsInvariantException(month, a, $"design {d} is in service without a fleet (FL4)");
+                if (_soldY[d].Current[a] > FleetRules.QuotaCap(_p.SaleQuota, _quotaBase[d].Current[a]))
+                    throw new ProductsInvariantException(month, a, $"design {d} sold {_soldY[d].Current[a]} above its yearly quota (FL5)");
             }
         }
+    }
+
+    private void CheckSaleMoney(long month, int a)
+    {
+        if (!_p.SaleChiOff && _saleY.Current[a] > _saleCap.Current[a])
+            throw new ProductsInvariantException(month, a, "sale revenue of the year is above the ceiling (FL5)");
     }
 
     // Contract §4.4e r4, invariants (8)–(10): stage В ⇒ built_any; cancelled ⇒ «снят», no line, no output, built_any = false; idle_c ≥ 0 and
@@ -633,14 +677,22 @@ public sealed class ProductsSystem : ITickSystem
         Func<int, bool> knows = n => _inputs.Knows(a, n, t);
         OpenGates(a, t);
         AdvanceBureaus(a, t);
+        BeginFleetMonth(a, t);
         ApplyDesignCommands(a, t, knows);
         BureausRequestOrIdle(chunk, a);
-        ApplySeriesCommands(a, t);
+        CloseLines(a, t);
+        ApplyFleetCommands(a, t);
+        StartSeriesCommands(a, t);
+        Fx6 procurement = _inputs.ProcurementBudget(a, t);
+        if (procurement < Fx6.Zero)
+            throw new ProductsInvariantException(t, a, $"negative procurement budget {procurement}");
+        // Step 2g: every external inflow of procurement money is counted once (contract r6 §4.4d).
+        Fx6 saleIncome = Fx6.FromRaw(_saleIncome.Next[a]);
+        _extTotal.Next[a] = (Fx6.FromRaw(_extTotal.Next[a]) + (procurement - _inputs.ProcurementBase(a, t)) + saleIncome).Raw;
         Accidents(a);
 
-        Fx6 budget = _inputs.ProcurementBudget(a, t);
-        if (budget < Fx6.Zero)
-            throw new ProductsInvariantException(t, a, $"negative procurement budget {budget}");
+        // Step 4: B_in is the one input of procurement money, the sale revenue of this month included.
+        Fx6 budget = procurement + saleIncome;
         Fx6 need = Fx6.Zero;
         for (int d = 0; d < _d; d++)
         {
@@ -656,7 +708,7 @@ public sealed class ProductsSystem : ITickSystem
         Fx6 tbSpent = Fx6.Zero;
         Purchases(chunk, a, t, y, ref left, ref spent, ref tbSpent);
         if (spent > budget)
-            throw new ProductsInvariantException(t, a, $"spent {spent} of {budget} (spec §3.4)");
+            throw new ProductsInvariantException(t, a, $"spent {spent} of B_in {budget} (spec §3.4, contract r6 §4.4f)");
         _need.Next[a] = need.Raw;
         _paid.Next[a] = ProductsMath.PaidRatio(paid, need).Raw;
         _spent.Next[a] = spent.Raw;
@@ -977,19 +1029,26 @@ public sealed class ProductsSystem : ITickSystem
         }
     }
 
-    // Commands in force (contract §4.4c): start_series from О or В, close a line in С (line_E → 0, contract §3).
-    private void ApplySeriesCommands(int a, long t)
+    // Step 2c (contract §4.4d): close_line of a line in С by the live stage, before the fleet commands and the starts.
+    private void CloseLines(int a, long t)
     {
         for (int d = 0; d < _d; d++)
         {
-            // start_series is validated against the snapshot stage (contract §4.4d step 2); a line closes from the live stage.
+            if ((DesignStage)_stage[d].Next[a] == DesignStage.Series && _inputs.CloseLine(a, d, t))
+                CloseSeries(a, d);
+        }
+    }
+
+    // Step 2f (contract §4.4c): start_series from О or В, validated against the snapshot stage; a line closes (line_E → 0, contract §3) in CloseLines.
+    private void StartSeriesCommands(int a, long t)
+    {
+        for (int d = 0; d < _d; d++)
+        {
             var snapshot = (DesignStage)_stage[d].Current[a];
             // A project cancelled earlier in this step (Next stage «снят») cannot start a series.
             if (snapshot is (DesignStage.Prototype or DesignStage.InService) && (DesignStage)_stage[d].Next[a] == snapshot
                 && _inputs.StartSeries(a, d, t) is { } cmd)
                 StartSeries(a, d, snapshot, cmd);
-            else if ((DesignStage)_stage[d].Next[a] == DesignStage.Series && _inputs.CloseLine(a, d, t))
-                CloseSeries(a, d);
         }
     }
 
@@ -1069,6 +1128,9 @@ public sealed class ProductsSystem : ITickSystem
             Set(_lost, d, a, Fx6.FromInt(n));
             for (long i = 0; i < n; i++)
                 StrikeOff(a, d);
+            // Contract r6 §4.4d step 3: no fleet, no phantom accidents.
+            if (Units(a, d) == Fx6.Zero)
+                Set(_lossAcc, d, a, Fx6.Zero);
         }
     }
 
@@ -1153,6 +1215,7 @@ public sealed class ProductsSystem : ITickSystem
         {
             Fx6 e = Get(_lineE, d, a);
             Fx6 r = Fx6.Zero;
+            LineBind bind = LineBind.None;
             if ((DesignStage)_stage[d].Next[a] == DesignStage.Series)
             {
                 int[] alts = AltsNext(a, d);
@@ -1170,7 +1233,10 @@ public sealed class ProductsSystem : ITickSystem
                     if (tb < Fx6.Zero)
                         throw new ProductsInvariantException(t, a, $"negative training budget {tb} for design {d}");
                     // alloy_free: r = min(rate, (left + tb)/unit_cost) with no alloy term; alloy_left stays (spec v0.14 §1.4 item 1).
-                    r = free ? Min(want, (left + tb) / cost) : Min(Min(want, alloyLeft / alloyKg), (left + tb) / cost);
+                    Fx6 moneyLimit = (left + tb) / cost;
+                    r = free ? Min(want, moneyLimit) : Min(Min(want, alloyLeft / alloyKg), moneyLimit);
+                    // Contract r6 §4.4d step 7: what bound the output; ties go to RATE, then ALLOY (money counts only when strictly the least).
+                    bind = r == want ? LineBind.Rate : !free && r == alloyLeft / alloyKg ? LineBind.Alloy : LineBind.Money;
                     if (!free)
                         alloyLeft -= r * alloyKg;
                     Fx6 pay = r * cost;
@@ -1186,6 +1252,7 @@ public sealed class ProductsSystem : ITickSystem
                 _idleC[d].Next[a] = r > Fx6.Zero ? 0 : _idleC[d].Next[a] + 1;
             }
             Set(_rate, d, a, r);
+            _lineBind[d].Next[a] = (int)bind;
             Set(_lineE, d, a, e - _p.DeltaE * e + r);
         }
         if (alloyLeft < Fx6.Zero)

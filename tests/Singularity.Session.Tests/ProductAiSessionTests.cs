@@ -355,5 +355,6 @@ public class ProductAiSessionTests(ITestOutputHelper output)
     // Seed 7, the AI on, 150 months (through month 149). First recorded in T6c; re-recorded in D1 (c5867d91… before), reason: D1 — the start-data
     // package of spec v0.14 (new start knowledge and culture cells, the hot_steel_g0 substitute and the engine descent of the presets).
     // Re-recorded in T6c2 (e778e8cc… before), reason: T6c2 — E1 start line from tick 0, F17 launch at admitted, #140 engine choice, W1.
-    private const string Golden150 = "513238aa3dc124c13669cec76fae5ed530e60381bfacb1989c32caba52cb9c07";
+    // Re-recorded in T-fleet (513238aa… before), reason: T-fleet — contract r6: new columns and the fleet rule A42.4 (retirement by generation), schema v5.
+    private const string Golden150 = "e7547e322170279148377eefb056e4680f153461385d252c02ee9808d1e7310d";
 }
