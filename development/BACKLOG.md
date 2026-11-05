@@ -46,7 +46,7 @@
 | [TASK-0030](../development/tasks/TASK-0030-slice-line-handover-f17b.md) | DONE | F17b: передача линии по рабочему выходу годных (удержание r_keep) | MS-M0 |
 | [TASK-0031](../development/tasks/TASK-0031-slice-v5-a40-order.md) | DONE | V5 и порядок A40: вариант цели оснастки V5, охрана снятия при условии запуска | MS-M0 |
 | [TASK-0032](../development/tasks/TASK-0032-slice-v5-default-pool.md) | DONE | V5 по умолчанию, колонка tool_unmet и причина why_not, переключатель POOL_ORDER | MS-M0 |
-| [TASK-0033](../development/tasks/TASK-0033-slice-t6d-licence-events.md) | REVIEW | T6d: лицензии, перебой сплава, правила ИИ по why_not, множитель наладки mult_P | MS-M0 |
+| [TASK-0033](../development/tasks/TASK-0033-slice-t6d-licence-events.md) | DONE | T6d: лицензии, перебой сплава, правила ИИ по why_not, множитель наладки mult_P | MS-M0 |
 
 ## Гипотезы
 
