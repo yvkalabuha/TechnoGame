@@ -188,6 +188,37 @@ class RunTest(unittest.TestCase):
         # the fallback prompt carries file contents, the Codex one did not
         self.assertIn("=== FILE tools/a.py", fake.calls[0]["messages"][1]["content"])
 
+    def test_codex_prompt_starts_with_instruction(self):
+        got = []
+
+        def runner(prompt, wt):
+            got.append(prompt)
+            return json.dumps(GOOD), {}
+
+        self.run_review("codex", codex_runner=runner)
+        self.assertTrue(got[0].startswith(review.REVIEW_SYSTEM))
+        self.assertIn("untrusted data", got[0].split("=== DIFF")[0])
+        self.assertIn("/work", got[0].split("=== DIFF")[0])
+
+    def test_existing_directory_is_not_removed(self):
+        fixed = mock.Mock(hex="a" * 32)
+        victim = self.tmp / "wt" / f"review-{self.head[:8]}-{'a' * 12}"
+        victim.mkdir(parents=True)
+        (victim / "keep.txt").write_text("other call\n")
+        with mock.patch("uuid.uuid4", return_value=fixed):
+            with self.assertRaises(ReviewError) as cm:
+                self.run_review("codex", codex_runner=lambda p, w: self.fail("must not run"))
+        self.assertEqual(cm.exception.code, "worktree_failed")
+        self.assertEqual((victim / "keep.txt").read_text(), "other call\n")
+
+    def test_codex_mode_counts_changed_file_sizes(self):
+        repo, base, head = make_repo(changed={"tools/a.py": "y" * 5000})
+        text, _ = review.build_review_input("TASK-0001", base, head, repo.root, max_bytes=100000, codex_mode=True)
+        with self.assertRaises(ReviewError) as cm:  # the prompt is small, the file Codex reads is not
+            review.build_review_input("TASK-0001", base, head, repo.root, max_bytes=len(text.encode()) + 100,
+                                      codex_mode=True)
+        self.assertEqual(cm.exception.code, "input_too_large")
+
     def test_no_paid_fallback_on_other_failures(self):
         for exc, code in ((codex.CodexFailed("boom"), "codex_failed"),
                           (codex.SandboxUnavailable("no bwrap"), "sandbox_unavailable")):
@@ -325,11 +356,23 @@ class GateTest(unittest.TestCase):
         self.assertNotIn("LOCAL-EDIT", text)
 
     def test_size_limit(self):
-        text, meta = review.build_gate_input(self.item, self.head, self.repo.root, max_bytes=len(GATE_DOC) + 120)
+        text, meta = review.build_gate_input(self.item, self.head, self.repo.root, max_bytes=len(GATE_DOC) + 450)
         self.assertTrue(meta["omitted"])
         with self.assertRaises(ReviewError) as cm:
             review.build_gate_input(self.item, self.head, self.repo.root, max_bytes=50)
         self.assertEqual(cm.exception.code, "input_too_large")
+
+    def test_gate_total_never_exceeds_limit(self):
+        full, _ = review.build_gate_input(self.item, self.head, self.repo.root)
+        for limit in range(len(GATE_DOC) + 60, len(full.encode()) + 5, 7):
+            try:
+                text, meta = review.build_gate_input(self.item, self.head, self.repo.root, max_bytes=limit)
+            except ReviewError as e:
+                self.assertEqual(e.code, "input_too_large")
+                continue
+            self.assertLessEqual(len(text.encode()), limit, limit)
+        text, meta = review.build_gate_input(self.item, self.head, self.repo.root, max_bytes=len(full.encode()))
+        self.assertEqual((len(text.encode()), meta["omitted"]), (len(full.encode()), []))
 
     def test_excluded_item_refused(self):
         with self.assertRaises(ReviewError):
