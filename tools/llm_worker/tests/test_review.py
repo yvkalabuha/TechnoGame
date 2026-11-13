@@ -391,6 +391,16 @@ class GateTest(unittest.TestCase):
         text, meta = review.build_gate_input(self.item, self.head, self.repo.root, max_bytes=len(full.encode()))
         self.assertEqual((len(text.encode()), meta["omitted"]), (len(full.encode()), []))
 
+    def test_relative_links_resolve_from_document_dir(self):
+        doc = "---\nid: ADR-8\n---\nSee ../decisions/ADR-0002-determinism-levels.md, ./sibling.md, ../../tools/a.py, " \
+              "../../../etc/x.md and ../../lab/results/r.txt.\n"
+        repo, _, head = make_repo(changed={"docs/decisions/ADR-8-doc.md": doc, "docs/decisions/sibling.md": "SIBLING\n",
+                                           "lab/results/r.txt": "RESULT-DATA\n"})
+        text, meta = review.build_gate_input("docs/decisions/ADR-8-doc.md", head, repo.root)
+        self.assertEqual(sorted(meta["files"]), ["docs/decisions/ADR-0002-determinism-levels.md",
+                                                 "docs/decisions/sibling.md", "tools/a.py"])
+        self.assertNotIn("RESULT-DATA", text)
+
     def test_excluded_item_refused(self):
         with self.assertRaises(ReviewError):
             review.build_gate_input("lab/results/r.txt", self.head, self.repo.root)

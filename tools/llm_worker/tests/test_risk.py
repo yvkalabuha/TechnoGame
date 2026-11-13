@@ -327,6 +327,13 @@ class IssueFrontmatterAndModesTest(unittest.TestCase):
             self.assertTrue(risk.approval_changed(fm(bad), fm(bad)), bad)  # even unchanged: not understood
         self.assertFalse(risk.approval_changed(fm("tags: *x"), fm("tags: *x")))
 
+    def test_hash_inside_quotes_is_not_a_comment(self):
+        def fm(v):
+            return f"---\nid: T\nstatus: {v}\n---\nbody\n"
+        self.assertTrue(risk.approval_changed(fm('"review # pending"'), fm('"review # approved"')))
+        self.assertTrue(risk.approval_changed(fm("PROPOSED # a"), fm("PROPOSED # b")))  # comment change: safe side
+        self.assertFalse(risk.approval_changed(fm('"x # y"'), fm('"x # y"')))
+
     def test_symlink_in_range_is_r2(self):
         repo = TempRepo({"docs/a.md": "x\n"})
         try:

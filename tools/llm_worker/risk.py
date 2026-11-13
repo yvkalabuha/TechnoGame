@@ -119,7 +119,7 @@ def _frontmatter(text):
         cur = m.group(1) if m.group(1) in APPROVAL_FIELDS else None
         if cur:
             _no_alias(m.group(2))
-            out[cur] = re.sub(r"\s+#.*$", "", m.group(2))
+            out[cur] = m.group(2)  # raw: a "#" may sit inside quotes, so comments are not cut off
     if not closed:
         raise FrontmatterError("frontmatter is not closed")
     return {k: v.rstrip() for k, v in out.items()}

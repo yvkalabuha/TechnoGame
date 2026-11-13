@@ -5,6 +5,7 @@ leaves the machine. Model answers are untrusted data: parsed by schema, then by 
 
 import hashlib
 import json
+import posixpath
 import uuid
 import re
 import subprocess
@@ -312,7 +313,13 @@ def build_gate_input(item, head="HEAD", root=config.REPO_ROOT, max_bytes=MAX_INP
     for rid in _related_ids(doc):
         wanted += [n for n in tree if (n.rsplit("/", 1)[-1].startswith(rid + "-") or n.endswith(f"/{rid}.md"))
                    and n.endswith(".md")]
-    wanted += [m for m in PATH_RE.findall(doc) if m in tree]
+    tree_set = set(tree)
+    for m in PATH_RE.findall(doc):
+        for cand in (m, posixpath.join(posixpath.dirname(rel), m)):  # repo-relative, then relative to the document
+            norm = paths.normalize(posixpath.normpath(cand))  # None: escapes the repository
+            if norm in tree_set:
+                wanted.append(norm)
+                break
     parts = [_fence(f"DOCUMENT {rel}", doc)]
     used, omitted, seen = [], [], {rel}
     if len(parts[0].encode()) > max_bytes:
