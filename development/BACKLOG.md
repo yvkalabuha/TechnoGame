@@ -51,7 +51,7 @@
 | [TASK-0035](../development/tasks/TASK-0035-llm-worker-deepseek-money.md) | IN_PROGRESS | llm_worker: провайдер DeepSeek и учёт трат (ADR-0015 1a) | MS-M0 |
 | [TASK-0036](../development/tasks/TASK-0036-llm-worker-sandbox-gitleaks.md) | APPROVED | llm_worker: песочница, gitleaks, контекст из git (ADR-0015 1b) | MS-M0 |
 | [TASK-0037](../development/tasks/TASK-0037-llm-worker-risk-ci.md) | APPROVED | llm_worker: классификатор риска и CI (ADR-0015 1c) | MS-M0 |
-| [TASK-0038](../development/tasks/TASK-0038-spec-calib-c3c4.md) | IN_PROGRESS | Спека среза §8.2: совместный этап калибровки C3+C4 (#177) | MS-M0 |
+| [TASK-0038](../development/tasks/TASK-0038-spec-calib-c3c4.md) | DONE | Спека среза §8.2: совместный этап калибровки C3+C4 (#177) | MS-M0 |
 
 ## Гипотезы
 
