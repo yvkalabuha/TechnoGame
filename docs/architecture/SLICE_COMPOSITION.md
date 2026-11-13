@@ -4,6 +4,7 @@
 > r1 (2026-11-03): под контракт v2.4 r3 — команда `cancel_design` (F14, #123) и вход `TrainingBudget` (F15, #125): §3, §4, §5, §7.2, §7.3.
 > r2 (2026-11-03): устаревшее по замечанию reviewer — правило оснастки называется `ToolingPlan` (не `ToolingRule`); `PlannedVolume` включает `proc_v` (§2, §4); под контракт v2.4 r4 (#128) — `v_exp` с `max` и `home(a)`, `planned` со стадией С (§4).
 > r3 (2026-11-13, TASK-0046 п. 1): §12 — проект поверхности read views Session и переключателей серий для Lab (T10). Статус §12 — **[Предл.]**, утверждает Orchestrator.
+> r4 (2026-11-13, TASK-0047): §13 — размещение пяти наблюдаемых величин формата v0.4 §4.15 (`t_known`, `left`, причина закрытия линии, варианты `Requirement`, отказы лицензии по деньгам) и `TestApiVersion = 2`. Закрывает пробелы §12.5 (частично: `t_known`) и §12.6. Статус §13 — **[Предл.]**, утверждает Orchestrator.
 > Источники: ADR-0002/0004/0006/0013/0014; `docs/architecture/LAYER_CONTRACT.md` §4.0, §5; спека среза `docs/simulation/slice-jet-aviation.md` §2, §3.4, §3.5 A8/A15/A30/A36/A37, §4, §6.3, §6.8, §9.1, §11; код `src/` на коммите 4d75ae0.
 
 ## Краткий вывод
@@ -16,6 +17,7 @@
 - **Хеш и сохранение:** ADR-0013 не меняется. Конфигурация прогона (`FIX_*`, абляции, ячейки профилей, плечи) и отпечаток параметров — колонки `run.*`: они входят в хеш и в снимок без новых полей заголовка. Очередь ожидающих внешних команд — секция кодека журнала (толкование ADR-0013 п. 1 + п. 5, §8; подтверждает Orchestrator).
 - **Новый ADR не нужен**, если владелец согласен, что секция очереди в файле сохранения — исполнение п. 5 ADR-0013, а не изменение формата (§11, П-1).
 - r3: **read views для Lab (§12)** — один неизменяемый `SliceView` на непустой тик: состояние после post и входы месячного шага в том виде, в каком их видел compute. `TestApiVersion = 1`. Переключатели серий: `L_K`, `L_K0`, `L_C0`, сетка P5, `EFFORT_SHARE`. `L_C` и `L_P` без правки Core невыполнимы (нет состояния `t_known`). `COMP_V010` не делается (спека §6.8 v0.12).
+- r4: **наблюдения шага (§13)** — `left`, причина закрытия, варианты `Requirement`, отказы по деньгам — не колонки, а след последнего шага (scratch, как `KnowledgeSystem.LastDiscoveries`): не хешируются, не сохраняются, симуляция их не читает (IL-тест). `t_known` — колонки `know.since.N` только в режимах `L_C`/`L_P`, где его читает симуляция. Golden-хеши и отпечаток схемы main не меняются.
 
 ## 1. Исходное состояние [Факт: код 4d75ae0]
 - Сборки `Singularity.Session` нет. Связанные миры собираются вручную в тестах: `tests/.../Products/ProductsLinkedRunTests.cs` (правило V23, ИИ-заглушка, 384 мес.) и `ProductsCbLinkedRunTests.cs` (C-B, golden-хеш 60 мес.; там `Planned/PlannedVolume` подключены к `ProductsSystem`). В собранной игре этих связей нет: в `IIndustryInputs` по умолчанию `EffortBudget = 0`, `EffortFocus = −1`, `PlannedVolume = 0`, `Planned = false`, `ToolingInvest(rest)` игнорирует `rest`.
@@ -353,3 +355,124 @@ public enum EffortShareArm { X1 = 0, X0 = 1, X05 = 2, X2 = 3, X4 = 4 }
 - **Р-12-2.** `EFFORT_SHARE ×4` может не пройти `PolicyLiveness` (L-C1…L-C3: доля закупок падает до 0,52 от прежней у P2). Тогда сборка громко падает. Решать simulation-engineer/Orchestrator, правило не ослаблять.
 - **Р-12-3.** Объём поверхности: `TestApiVersion` будет расти с каждой новой печатью. Защита: правило ADR-0014 п. 6 — новые поля только под колонку формата.
 - **Р-12-4.** Узкие места §12.6 (`left`, `close_rule`, варианты `Requirement`) — правки Core. TASK-0046 их не делает (условие «если нужна правка Core — остановиться»). Без них T10 пишет таблицы без этих колонок только после правки формата v0.4. Заглушки (пустые или нулевые колонки) запрещены.
+
+## 13. Наблюдаемые величины среза (r4, TASK-0047) [Предл.]
+Источник требований — формат `docs/simulation/slice-csv-format.md` v0.4 §4.15 (цитаты спеки v0.24 там). [Факт: код HEAD 094224e] `StateHash` хеширует **все** колонки `Table` по порядку регистрации (`Kernel/StateHash.cs`); исключить колонку из хеша нельзя. Значит, «не хешировать» = «не колонка».
+
+### 13.1 Общее правило: наблюдение шага — след, а не состояние
+- **Наблюдение** — величина, которую считает compute (или merge) месяца t и которую **никакой** compute/merge потом не читает. Такая величина хранится как **след последнего шага** (scratch вне `Table`), по образцу, который уже есть: `KnowledgeSystem.LastDiscoveries`, `LastSpent`, `IndustrySystem.LastTooling` («Diagnostics only»).
+- Требования к следу (проверка — ревью и тесты §13.8):
+  1. пишется только в compute/merge своей системы; строка актора `a` — только чанком, которому строка принадлежит (как колонки `Next`), поэтому merge не нужен, и значение не зависит от числа потоков;
+  2. **полностью перезаписывается в каждом шаге** для каждой строки (очистка строки в начале её compute). Значит, след шага t — функция снимка t−1 и входов шага t; он не переносит информацию между тиками и не нарушает ADR-0013 п. 4;
+  3. не хешируется и не сохраняется. После загрузки (T8) следа нет до первого месячного шага — это нормально, потому что view отдаёт его только для тика с месячным шагом (§13.7);
+  4. симуляция его не читает. Члены-аксессоры помечаются атрибутом `Singularity.Core.ObservationAttribute` (как `SingleLayerStandAttribute`); архитектурный тест (`IlScanner`) запрещает вызов помеченных членов из кода `Singularity.Core`, кроме самого класса-владельца.
+- **Состояние** — величина, которую читает симуляция в следующем тике. Только она идёт в колонку (и, значит, в хеш). Из пяти величин TASK-0047 это только `t_known` в режимах `L_C`/`L_P`.
+- Рассмотренная альтернатива — колонки для всех величин. Отклонена: меняет golden-хеши и отпечаток схемы main ради печати; сохранение растёт; накопительный счётчик в колонке ничего не даёт Lab, который и так читает каждый месяц. Альтернатива «вывести в Lab по снимку» отклонена для `left` и причины закрытия: это повтор правил шага 7 A38 и F17b вне Core (то, что запрещает §2 и ADR-0014 п. 3), а при нескольких условиях в одном месяце — неоднозначно (формат §4.15).
+
+### 13.2 `t_known` (спека §6.1 «Момент открытия»)
+- **Решение: колонки `know.since.N` (long, по узлам в порядке `graph.Order`) только при `trackKnownSince = true`; Session включает флаг ровно при `Layer ∈ {Lc, Lp}`.** Колонки регистрируются после `know.K_ind.*`.
+- Значения: `−1` — неизвестен (совпадает с контрактом `IIndustryInputs.KnownSince`/`IProductsInputs.AppKnownSince`); `t ≥ 0` — индекс месяца, в merge которого узел стал известен любым путём (открытие, расписание `L_K`, `lic_knows`); узлы стартового знания — значение `startKnownSince`, обязательный параметр конструктора при включённом флаге (§13.9, О-13-1).
+- **Кто пишет:** `KnowledgeSystem.Merge` месяца t — в той же ветке, где `_known[r].Next[a] = 1` (`_since[r].Next[a] = t`, `t = MonthOf(context)`). Merge последовательный; запись — один раз на (a, r) (проверка `Next != 0` уже есть), значение — `t` при любом порядке чанков. Детерминизм L1/L2 сохраняется без новых правил порядка.
+- **Чтение:** `KnowledgeSystem.KnownSince(actorRow, nodeRow)` по `Current` — `InvalidOperationException`, если флаг выключен (громкая ошибка вместо тихого −1). Адаптеры: `IndustryInputsAdapter.KnownSince` → узел процесса владельца site; `ProductsInputsAdapter.AppKnownSince` → `GenApp[g]`. Сборка: `IndustryMode.CurveLc` или `ProductsMode.CanonicalLp` без флага — исключение в `SliceWorld`.
+- **Хеш:** в `L_C`/`L_P` колонки хешируются — это состояние, его читает compute t+1 (кривая `Y_k(t − t_known)`). Обоснование хеширования: без него сохранение `L_C` продолжилось бы с другим `yield`. В main колонок нет: хеш и отпечаток схемы main не меняются. `run.layer` = 4 (`Lc`), 5 (`Lp`).
+- **«Всегда» против «только в `L_C`/`L_P`» и правило §12.4 «по умолчанию = main»:**
+  | | Всегда | Только `L_C`/`L_P` (выбрано) |
+  |---|---|---|
+  | golden main 60/384 | пересоздаются (61 узел × 5 акторов новых колонок) | не меняются |
+  | правило §12.4 | нарушает: состояние main растёт ради режима не по умолчанию | выполняет: колонки появляются только при значении не по умолчанию, как `run.tooling` |
+  | польза для main | нет: в main `t_known` никто не читает; Lab получает его из смены `NodeView.Known` между снимками (формат §9), стартовые узлы — «освоено на старте», исключаются (спека C2) | — |
+  | цена | сохранение и хеш больше; `Merge` пишет всегда | два пути сборки; защита — исключения выше и тест «в `Lc` с флагом хеш отличается, в main колонок нет» |
+  Вывод: «всегда» имело бы смысл, только если `t_known` нужен самой симуляции main. Сейчас не нужен. Если позже понадобится (например, игроку), это новая задача с причиной пересоздания golden.
+- **View:** `NodeView.KnownSince : long?` — значение колонки, `null` при выключенном флаге. Lab в main берёт `t_known` из смены `Known`, в `L_C`/`L_P` — из поля (тест: совпадают в месяцы открытий).
+- **Не входит:** таблицы `Y_k`, `U_k`, `T_design`, `ρ` (T12) и вопрос `ProductAi` в `L_P` (§12.5) — без них серии `layer/L_C`, `layer/L_P` по-прежнему прогоняются только на синтетических таблицах тестов.
+
+### 13.3 `left` и `left_share` (A40 «Печать причины», «v0.20: две линии»; A41 F17b «Печать»)
+- **Решение: след шага 7 A38 в `ProductsSystem`.** В `Purchases` для строки `a`:
+  - `LeftStart(a)` — `left` в начале шага 7 (после содержания и доводки);
+  - по каждой линии `d` в стадии С, в момент, когда шаг 7 до неё дошёл (по возрастанию `design_id`): `LeftIn(a, d)` — общие деньги до её закупки (до проверки `Admitted`), `FromLeft(a, d)` — взято из общих, `Training(a, d)` — `TrainingBudget(a, d, t)` входа, `FromTraining(a, d)` — взято из него (`pay − fromLeft`).
+  - Проекты не в С и режим `L_P` (`StepCanonical`) — след пустой (`HasMoneyTrace = false` для строки).
+- **Хеш:** нет (§13.1). Существующие `prd.spent`, `prd.tbSpent` остаются как есть.
+- **Определения для формата v0.5 (simulation-engineer):** `left` строки `a40_c_months` = `LeftIn(N)` — деньги, которые видела линия; при обычном порядке `design_id(W) < design_id(N)` это и есть «`left` после `W`» (спека A41 F17b п.3). `COEXIST_MONEY` = в каждом из `T_ab` месяцев выпуск `N` = 0, `LeftIn(N) = 0` и `Training(N) = 0`. `left_share` = `FromLeft(N) / LeftStart` (при `LeftStart = 0` — пусто). [Предп.] Случай `design_id(W) > design_id(N)` (спека F17b п.2, «X с `g_p(X) < g_p(W)`») редкий; Lab помечает его, а не пересчитывает.
+- **View:** `SliceView.Step.Actors[a].Money` (§13.7).
+
+### 13.4 Причина закрытия линии (`close_rule`)
+- **Решение: след решения в `PolicySystem`** — `LastCloseReason(row, design) : LineCloseReason`, пишется в `Decide` в момент `dec.Closes.Add(d)`; одна причина на проект в месяц (первая добавленная: `!dec.Closes.Contains` уже обеспечивает один `close_line`, спека A40 «Двойная команда»). Очистка строки — в начале `ComputeProducts`.
+  ```csharp
+  public enum LineCloseReason { None = 0, A40C = 1, YProd = 2, LaunchAll = 3, LaunchCandidate = 4 }
+  ```
+  `A40C` — ветка С A40; `YProd` — F17b п.2; `LaunchAll` — F17b п.1 при `y_min(X) ≥ y_prod` или `LINE_CLOSE = ADMIT`; `LaunchCandidate` — F17b п.1 ниже `y_prod`, заменён кандидат. Разделение по роли (`A40C_N`/`A40C_W`) и «горизонт» — в Lab (роль — по стадиям, формат §4.12). [Предл.] формат v0.5 отображает `LaunchAll` и `LaunchCandidate` в `REPLACE (п.1)`; Core отдаёт более точный код, чтобы не терять различие.
+- **Хеш:** нет. Альтернатива «код вместо стамп-значения в `pol.close.{d}.stamp`» отклонена: меняет хешируемые значения main.
+- **Детерминизм:** `Decide` — compute строки; след индексируется строкой.
+- **View:** `PolicyDecisionView.Closes : ImmutableArray<CloseView>` вместо `ImmutableArray<int>` (`CloseView(int Design, LineCloseReason Reason)`); причина берётся из следа только в тике с месячным шагом, иначе — `None` (§13.7).
+
+### 13.5 Варианты `Requirement` (§5.5, §7 S1)
+- **Решение: чистая функция снимка, хранения нет.**
+  ```csharp
+  public readonly record struct PresetVariants(int Gen, int Count,              // 0 — superior не собирается; 1 — только superior (или producible = superior, F-PC3); 2
+      ImmutableArray<int> Superior, ImmutableArray<int> Producible,             // Producible пуст при Count < 2
+      Fx6 FvSuperior, Fx6? FvProducible);                                       // CandidateValue(..., p.FvBudget, month)
+  public static PresetVariants ProductPresets.Variants(IPolicyProducts products, PolicyParams p, int actor, int gen, long month);
+  public PresetVariants PolicySystem.RequirementVariants(int row, long month);  // gen = g* (NewestGeneration); Count = 0 при g* = 0
+  ```
+  `Compose` переписывается через общий закрытый шаг построения кандидатов (тот же, что у `Variants`) — логика выбора профиля одна, дубля нет. `Variants` считает `FV` обоих кандидатов при любом профиле (у `Compose` `Quality`/`Mass` их не считают); это чистые вызовы, на состояние не влияют.
+- **Хеш:** нет и не может измениться, если рефакторинг `Compose` эквивалентен; защита — тест §13.8 и неизменный golden.
+- **Где Session вызывает:** при сборке `Inputs` месячного шага с `Month mod 12 = 0` (включая 0: снимок перед шагом 0 — состояние после `Initialize`, `Initialize` пишет только `pol.*`, а `Variants` их не читает [Предп.; проверка — тест]). Поле `ActorInputsView.Requirement : RequirementView?` — `null` вне годовых месяцев и в `ViewMode = Calibration` (там `FV` запрещён, §12.1). Lab печатает строку `requirements` только при compose-команде ИИ того же шага (`Decisions.DesignCommands`, `Target = Gen`).
+
+### 13.6 Отказы ИИ от лицензии по деньгам (§6.11 «Печать», A43.3 (б))
+- **Решение: след решения в `PolicySystem.ComputeLicence`** — по (покупатель `row`, продавец `s`): отказ, когда профиль хочет предложение (`accept` до проверки денег), а `room < price`. Хранится `price`, `gen` и `room` (raw) в массиве `[row·n + s]`; −1 — нет отказа. Очистка строки — в начале её compute. Аксессор `LastMoneyRefusals(row)` → список по возрастанию `s` (порядок перебора продавцов в коде).
+- **Хеш:** нет. Накопительный счётчик в колонке отклонён: меняет хеш main; Lab суммирует по месяцам сам и получает строку события на отказ (формат: `LIC_REFUSE_MONEY` с продавцом, поколением, ценой). `BadLicenceCount(Money)` (отказы внешних команд) не меняется — это другая величина.
+- **View:** `SliceView.Step.Actors[a].LicenceMoneyRefusals` (§13.7).
+
+### 13.7 Поверхность Session, `TestApiVersion = 2`
+Изменения против §12.2 (остальное без изменений):
+```csharp
+public const int TestApiVersion = 2;                 // эталон tests/Singularity.Session.Tests/Api/session-surface.v2.txt
+
+public sealed record SliceView(long Tick, CivilDate Date, string StateHash, long Month,
+    ImmutableArray<ActorView> Actors, MonthInputsView? Inputs,
+    MonthStepView? Step);                            // НОВОЕ: не null ровно когда не null Inputs (тик с месячным шагом)
+
+public sealed record NodeView(int Number, bool Known, bool ByLicence, ProcessView? Process,
+    long? KnownSince);                               // НОВОЕ: know.since.N; null без trackKnownSince (§13.2)
+
+public sealed record PolicyDecisionView(ImmutableArray<DesignCommandView> DesignCommands, ImmutableArray<StartView> Starts,
+    ImmutableArray<CloseView> Closes,                // ИЗМЕНЕНО: было ImmutableArray<int>
+    ImmutableArray<FleetCommand> Fleet, ImmutableArray<int> Repeats);
+public readonly record struct CloseView(int Design, LineCloseReason Reason);   // Reason = None в снимке без месячного шага
+
+public sealed record ActorInputsView(int Actor, Fx6 Budget, BudgetShares Shares, Fx6 ProcurementBudget,
+    ToolingLedgerView Tooling, CapabilityView Capability, ImmutableArray<DesignInputsView> Designs,
+    RequirementView? Requirement);                   // НОВОЕ: §13.5
+public sealed record RequirementView(int Gen, int Count, ImmutableArray<int> Superior, ImmutableArray<int> Producible,
+    Fx6 FvSuperior, Fx6? FvProducible);
+
+// НОВОЕ: результаты месячного шага Month (след, §13.1); собираются после RunTick того же тика
+public sealed record MonthStepView(long Month, ImmutableArray<ActorStepView> Actors);
+public sealed record ActorStepView(int Actor,
+    MoneyStepView? Money,                            // null в L_P (§13.3)
+    ImmutableArray<LicenceRefusalView> LicenceMoneyRefusals);
+public sealed record MoneyStepView(Fx6 LeftStart, ImmutableArray<LineMoneyView> Lines);   // линии стадии С по возрастанию design
+public readonly record struct LineMoneyView(int Design, Fx6 LeftIn, Fx6 FromLeft, Fx6 Training, Fx6 FromTraining);
+public readonly record struct LicenceRefusalView(int Seller, int Gen, Fx6 Price, Fx6 Room);
+```
+- `Step` собирается после `Runner.RunTick()` и до публикации, только если в тике был месячный шаг; в пустом и командном тике — `null` (след прошлого шага не переиздаётся). Начальный снимок (`Create`) — `null`.
+- `ViewMode = Calibration`: `Requirement = null`; `Step` собирается (запрета спеки §8.2 п. 2 на деньги и причины нет; калибровочные таблицы их не пишут).
+- Новый эталон поверхности v2 и ревью systems-architect (§12.3). Lab меняет чтение `Closes` (тип) — правка T10/T11.
+
+### 13.8 Проверки (developer, test-engineer)
+- golden main 60/384 мес. и отпечаток схемы main **не меняются** (главный критерий: всё, кроме `t_known` в `L_C`/`L_P`, — не состояние).
+- L2: на 1/4/8 потоках `Step` и `KnownSince` всех снимков совпадают (каноническая запись view, как хеш).
+- Архитектура: члены с `[Observation]` не вызываются из `Singularity.Core` вне класса-владельца (`IlScanner`); `KnowledgeSystem.KnownSince` без флага бросает; `CurveLc`/`CanonicalLp` без флага — ошибка сборки.
+- `t_known`: в `Lc` с флагом — `KnownSince` = месяц смены `Known` для открытых узлов, `startKnownSince` для стартовых; лицензионные узлы — месяц merge гранта; хеш `Lc` ≠ хеш main.
+- `left`: инварианты `Σ FromLeft ≤ LeftStart`, `LeftIn(d) = LeftStart − Σ_{d' < d, С} FromLeft(d')`, `FromLeft + FromTraining = Rate·UnitCost` линии (в коде это одно `pay = r·cost`, равенство точное), `Σ FromTraining = prd.tbSpent`.
+- Причина: фикстуры на каждую из четырёх веток (`A40C`, `YProd`, `LaunchAll`, `LaunchCandidate`, плюс ADMIT); каждая закрытая `CloseView` в тике с шагом имеет `Reason ≠ None`.
+- Варианты: для каждого профиля и каждого годового месяца связанного прогона выбор профиля по `Variants` (`Quality` → superior; `Mass` → producible при `Count = 2`; `Adaptive` → больший `FV`, ничья → superior) равен составу compose-команды ИИ того же шага.
+- Отказы: фикстура с `room < price` у `Mass` — один `LicenceRefusalView`, `BadLicenceCount(Money)` не меняется; у `Quality` отказов по деньгам нет.
+
+### 13.9 Риски и открытые вопросы
+- **О-13-1 (simulation-engineer, блокирует только `L_C`/`L_P`).** `t_known` узлов стартового знания спека не определяет. Сейчас адаптер даёт −1, и в `L_C` стартовые процессы USA/GBR получили бы `yield = Y_k(·)` «неизвестного» = 0 (`IndustrySystem.Yield`: `since < 0 ? 0`) — линии t0 встали бы. Варианты: `startKnownSince = −τ_max` (зрелый хвост кривой), `0`, или значение из данных сценария. Архитектура принимает любое как параметр сборки; выбор — erratum спеки §6.1.
+- **Р-13-1.** След читается в Session после `RunTick`; если кто-то начнёт собирать `Step` в начале следующего тика или после загрузки — получит пустой/чужой след. Защита: `Step` только в той же ветке, что `Inputs`; тест «после командного тика `Step = null`».
+- **Р-13-2.** Рефакторинг `Compose` через общий шаг может изменить порядок вызовов `CandidateValue` — функция чистая, но любое расхождение выбора сразу видно по golden. Защита: golden + тест эквивалентности §13.8.
+- **Р-13-3.** Смена типа `PolicyDecisionView.Closes` ломает Lab-код T10 этапа 1, если он уже читает `Closes`. Альтернатива без поломки — отдельное поле `CloseReasons`; выбрана замена, потому что поверхность ещё не заморожена потребителем (T10 этап 1 — draft).
+- **Р-13-4.** `left` при `design_id(W) > design_id(N)`: «после `W`» спеки и «до `N`» следа расходятся. Lab помечает такие месяцы; спека — уточнение, если случай встретится в печати.
+- Нового ADR не нужно: след шага — уже применяемый в Core приём («Diagnostics only»), здесь он только формализован (§13.1) и закреплён IL-тестом. [Предп.] Orchestrator подтверждает, что это толкование ADR-0013 п. 4 и ADR-0014 п. 5, а не их изменение.
