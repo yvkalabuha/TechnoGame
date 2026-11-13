@@ -86,7 +86,7 @@
 | [ADR-0012](../docs/decisions/ADR-0012-deterministic-math-functions.md) | ACCEPTED | Детерминированные степенные функции: PowFrac вместо Pow/Exp/Log |
 | [ADR-0013](../docs/decisions/ADR-0013-save-format-v0.md) | ACCEPTED | Формат сохранения v0: бинарный снимок колонок SoA + заголовок |
 | [ADR-0014](../docs/decisions/ADR-0014-session-test-api.md) | ACCEPTED | Session и Test API: единая сборка мира, команды, test mode |
-| [ADR-0015](../docs/decisions/ADR-0015-external-executors-providers.md) | PROPOSED | Внешние исполнители и провайдеры (DeepSeek, Codex, Qwen) |
+| [ADR-0015](../docs/decisions/ADR-0015-external-executors-providers.md) | PROPOSED | Внешние исполнители и ревьюеры (DeepSeek, Codex) |
 
 ## Research Reports
 
