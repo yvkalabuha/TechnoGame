@@ -57,8 +57,9 @@
 | [TASK-0041](../development/tasks/TASK-0041-risk19-yield-channel-share.md) | DONE | RISK-0019: разбор доли канала выхода в падении цены на удвоение (стенд T8) | MS-M0 |
 | [TASK-0042](../development/tasks/TASK-0042-contract-c1-two-setups.md) | DONE | Контракт §8.2 и спека среза v0.24: коридор зрелой фазы по труду, две постановки C1 (#184, #185) | MS-M0 |
 | [TASK-0043](../development/tasks/TASK-0043-deepseek-trial-run.md) | DONE | Пробный прогон DeepSeek на 4 шагах R0–R1 (ADR-0015, #182) | MS-M0 |
-| [TASK-0044](../development/tasks/TASK-0044-slice-lab-models-t10.md) | APPROVED | T10: Lab-модели JetSlice и JetSliceCalib, CSV v0.24, манифесты, печати A39/A40 | MS-M0 |
+| [TASK-0044](../development/tasks/TASK-0044-slice-lab-models-t10.md) | BLOCKED | T10: Lab-модели JetSlice и JetSliceCalib, CSV v0.24, манифесты, печати A39/A40 | MS-M0 |
 | [TASK-0045](../development/tasks/TASK-0045-llm-worker-debt-26-27.md) | APPROVED | llm_worker: DEBT-0026 и DEBT-0027 (fallback при сбое песочницы, related в gate, метрики, verifier unittest) | MS-M0 |
+| [TASK-0046](../development/tasks/TASK-0046-session-read-views-series.md) | APPROVED | Session: read views среза и переключатели серий для Lab (разблокировка T10) | MS-M0 |
 
 ## Гипотезы
 

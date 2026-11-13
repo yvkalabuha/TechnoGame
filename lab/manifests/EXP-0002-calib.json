@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "experiment": "EXP-0002-calib",
+  "description": "DRAFT (TASK-0044, T10): calibration build of the jet slice, spec slice-jet-aviation.md v0.24 §8.2. Model JetSliceCalib is NOT registered yet (needs Session read views, slice-csv-format.md v0.3 §9); grids and journal are filled by T12 before the first evaluation.",
+  "model": "JetSliceCalib",
+  "ticks": 11688,
+  "chunk_size": 1,
+  "threads": 1,
+  "seeds": {"start": 10001, "count": 100},
+  "params": {"LINE_CLOSE": "YPROD", "TOOLING_TARGET": "V5", "POOL_ORDER": "CAN"},
+  "series": [{"name": "calib"}],
+  "meta": {
+    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.24",
+    "csv_format": "docs/simulation/slice-csv-format.md v0.3",
+    "scenario_hash": null,
+    "stages": ["C1", "C3+C4", "C2"],
+    "budget_points": {"C1": 40, "C3+C4": 60, "C2": 30},
+    "grids": null,
+    "loss": "spec §8.2 p.3: d_k = max(0, lo - s, s - hi)/(hi - lo); L = sum d_k^2; C1a, C1b, C1d, C1e; C3; C4,G2..G4; C2",
+    "forbidden": {"files": ["summary.csv", "actor_year.csv", "whynot.csv", "requirements.csv"],
+                  "substrings": ["lead", "chg", "fv", "why", "key_", "volume"],
+                  "params_not_passed": ["fv_budget", "TOOLING_M_LEAD"]},
+    "journal": []
+  }
+}

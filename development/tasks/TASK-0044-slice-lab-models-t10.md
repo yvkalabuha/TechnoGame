@@ -1,7 +1,7 @@
 ---
 id: TASK-0044
 title: "T10: Lab-модели JetSlice и JetSliceCalib, CSV v0.24, манифесты, печати A39/A40"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: BLOCKED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: simulation-engineer
@@ -58,3 +58,41 @@ created: 2026-11-13
 - [ ] Тесты (test-engineer)
 
 ## Результат
+### simulation-engineer, 2026-11-13 — этап 1 сделан, этап 2 остановлен (нужна правка Session)
+**Этап 1.** `docs/simulation/slice-csv-format.md` переведён на v0.3 под спеку v0.24. В нём: серии и параметры манифеста (`ParamSet` → `SliceRunConfig`, §3). Новые таблицы `JetSlice`:
+- `a40.csv` — ветки О и С с классом: `PROCESSES`/`DEFECTS` и `CULTURE`/`COEXIST_MONEY`/`OTHER`; `cancel_design` = строки `branch = O`;
+- `a40_c_months.csv`;
+- `tooling_ledger.csv` — леджер A39 и `tool_unmet` по кластерам;
+- `lines.csv` (F17b), `fleet_cmd.csv`, `licences.csv`.
+
+`whynot.csv` получила колонки `cluster`/`order`/`unmet`. Запрещённый список `JetSliceCalib` дополнен: параметр `TOOLING_M_LEAD` содержит подстроку `lead`, поэтому в калибровочный манифест его не передают. Стенд C1 в двух постановках — `c1_stand.csv` (§6). Сверка с `exp0002.py` (§10): конфликтов колонок нет; новые таблицы и серии добавит T11.
+
+**Этап 2 — остановлен.** [Факт: код] Lab не может прочитать мир:
+- `SliceWorld` и адаптеры — `internal`, `InternalsVisibleTo` есть только у `Session.Tests`;
+- `SliceSession` публично отдаёт только хеш, тик, дату, `why_not` и `CurrentRequirement`.
+
+ADR-0014 п.5 и `SLICE_COMPOSITION.md` (строка 38) требуют read views и прямо говорят сделать их «вместе с первым потребителем (T10)». Это правка `src/Singularity.Session`, которую эта задача запрещает. Нужный набор описан в формате, §9: `ActorView`, `NodeView`, `DesignView`, `PolicyDecisionView`, `ToolingLedgerView`, `CapabilityView`. Это обёртки над уже публичными методами Core, новой логики в них нет. Модели не зарегистрированы, код Lab и тесты не писались: без чтения мира они были бы заглушками.
+
+**Манифесты (черновики, не заморожены):**
+- `lab/manifests/EXP-0002.json` — 53 точки, 12 880 прогонов, `hash` проходит;
+- `lab/manifests/EXP-0002-calib.json` — seeds 10001…10100.
+
+Модели в них ещё не зарегистрированы, поэтому команда `run` сейчас падает с «Unknown model».
+
+**Печать A40, seeds 1…20** (информационно, как TASK-0026). Прогон через `lab/runners/t6e/run_t6e.sh` (T6eHarness, архив HEAD 58d23a4, плечо V5, main, 384 мес.; golden pass), разбор — `lab/analysis/t10_a40_print.py`.
+
+| Актор | С: seeds с ≥ 1 срабатыванием | О `PROCESSES`, всего (на seed) | О `DEFECTS` | Ожидание A40 (б) v0.16: С; О |
+|---|---|---|---|---|
+| USA | 0 | 5 (0,25) — **ниже полосы** | 0 | ≤ 0,16; 0,5–2,0 |
+| GBR | 0 | 0 | 0 | ≤ 0,16; ≤ 0,15 |
+| SUN | 0 | 4 (0,20) — на нижней границе | 0 | ≤ 0,16; 0,2–1,0 |
+| FRA | 0 | 0 — **ниже полосы** | 0 | ≤ 0,16; 0,05–0,6 |
+| SWE | 0 | 0 | 0 | ≤ 0,16; ≤ 0,15 |
+
+- `n_O` = 0,45 на seed при ожидании 2,0 (полоса 1,0–3,0) — ниже полосы.
+- `n_C` = 0 при ожидании ≤ 0,2.
+- L-O0 (`DEFECTS` = 0) и L-C0 (срабатываний С нет) выполнены. Наибольший `idle_c` линии — 1 мес.
+- Все 9 срабатываний О приходятся на мес. 323–381: проекты G3 USA (P1 ×4, P3 ×1) и G1/G2 SUN (P1, P3).
+- Охрана v0.21 не сработала ни разу.
+
+Как читать: полосы v0.16 объявлены для сборки T6c2 (`LINE_CLOSE = ADMIT`, без T6d, F17b и V5). Спека (A40 v0.20) требует объявить их заново до первого прогона main. Поэтому расхождение — материал для переобъявления, а не дефект. [Предп.] Ветка О стала реже, потому что V5 (A39) и F17b быстрее доводят процессы до допуска. FRA не доходит до проекта в стадии О ни в одном seed.
