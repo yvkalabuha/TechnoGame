@@ -1,3 +1,4 @@
+using Singularity.Core.Knowledge;
 using Singularity.Core.Policy;
 using Singularity.Kernel;
 
@@ -57,6 +58,47 @@ public enum SaleArm
     QuotaHi = 4,
     /// <summary><c>SALE_CHI_OFF</c>: no revenue ceiling.</summary>
     ChiOff = 5,
+}
+
+/// <summary>Layer controls of the series <c>layer/*</c> (spec §6.1, SLICE_COMPOSITION §12.4). <c>L_C</c> and <c>L_P</c> need <c>t_known</c> in Core and are not here yet.</summary>
+public enum LayerControl
+{
+    /// <summary>The full model (main).</summary>
+    Full = 0,
+
+    /// <summary><c>L_K</c>: the schedule of <c>known</c> from the moments of the full model; needs <see cref="SliceRunConfig.LkTables"/>.</summary>
+    Lk = 1,
+
+    /// <summary><c>L_K0</c> (print): fixed lag after the middle of the generation window.</summary>
+    Lk0 = 2,
+
+    /// <summary><c>L_C0</c> (print): <c>yield = 1</c>, <c>unit_cost_mult = 1</c>, <c>q = 1</c>.</summary>
+    Lc0 = 3,
+}
+
+/// <summary>Step of an axis of the P5 grid (spec §7): ×1, ×0,5, ×2 of the frozen value.</summary>
+public enum GridStep
+{
+    Mid = 0,
+    Lo = 1,
+    Hi = 2,
+}
+
+/// <summary>A point of the P5 grid; the default is <c>mid_mid_mid</c> = main.</summary>
+public readonly record struct GridCell(GridStep KCatch, GridStep KDiff, GridStep HMax)
+{
+    /// <summary><c>9·kc + 3·kd + hm</c>; 0 = main.</summary>
+    public int Code => 9 * (int)KCatch + 3 * (int)KDiff + (int)HMax;
+}
+
+/// <summary><c>EFFORT_SHARE</c> (spec §6.8): <c>share_D′ = x·share_D</c>; the other shares are scaled to keep the sum 1.</summary>
+public enum EffortShareArm
+{
+    X1 = 0,
+    X0 = 1,
+    X05 = 2,
+    X2 = 3,
+    X4 = 4,
 }
 
 /// <summary>Start variant of the scenario (spec §6.5).</summary>
@@ -144,6 +186,21 @@ public sealed record SliceRunConfig
     /// which violates S-2 by design and is used for the before/after print (F32); never in a calibration or an experiment.
     /// </summary>
     public bool SkipStartValidation { get; init; }
+
+    /// <summary>Layer control (spec §6.1); <see cref="LayerControl.Full"/> in main.</summary>
+    public LayerControl Layer { get; init; }
+
+    /// <summary>Moments of the full model for <c>L_K</c>: required exactly with <see cref="LayerControl.Lk"/>.</summary>
+    public LkTables? LkTables { get; init; }
+
+    /// <summary>Point of the P5 grid (spec §7); <c>mid_mid_mid</c> = main.</summary>
+    public GridCell Grid { get; init; }
+
+    /// <summary>Arm <c>EFFORT_SHARE</c> (spec §6.8); <see cref="EffortShareArm.X1"/> = main.</summary>
+    public EffortShareArm EffortShare { get; init; }
+
+    /// <summary>Execution only (like <see cref="Threads"/>): what the read views hold. Not state, not hashed.</summary>
+    public SliceViewMode ViewMode { get; init; }
 
     /// <summary>Execution only (L2): threads and rows per chunk. They never change the result.</summary>
     public int Threads { get; init; } = 1;

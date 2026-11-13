@@ -33,6 +33,8 @@ internal sealed class SliceWorld
 
     public SliceWorld(GameData data, SliceRunConfig config)
     {
+        if ((config.Layer == LayerControl.Lk) != (config.LkTables is not null))
+            throw new ArgumentException("LkTables are needed exactly with Layer = Lk.", nameof(config));
         Config = config;
         Data = data;
         Streams = SliceStreams.Create(config);
@@ -49,6 +51,7 @@ internal sealed class SliceWorld
         IndustryParams ip = new();
         ProductsParams pp = new();
         (kp, ip, pp) = ApplyChannels(config.Channels, kp, ip, pp);
+        (kp, ip) = ApplyGrid(config.Grid, kp, ip);
         KnowledgeParameters = kp;
         IndustryParameters = ip;
         ProductsParameters = pp;
@@ -69,7 +72,8 @@ internal sealed class SliceWorld
             if (baseScenario.ActorIndex(id) is int i and >= 0)
                 great.Add(baseScenario.BudgetIndex[i]);
         }
-        PolicyParameters = policy with { FvBudget = policy.FvBudgetOf(great.Count > 0 ? [.. great] : [.. baseScenario.BudgetIndex]) };
+        // fv_budget is a constant of the world fixed by the main shares: the EFFORT_SHARE arm changes the shares only.
+        PolicyParameters = ApplyEffortShare(config.EffortShare, policy with { FvBudget = policy.FvBudgetOf(great.Count > 0 ? [.. great] : [.. baseScenario.BudgetIndex]) });
 
         Graph = KnowledgeGraph.FromData(data.Nodes, scenario.Disciplines, kp);
         KnowledgeStart kStart = KnowledgeStart.FromScenario(scenario, Graph);
@@ -90,10 +94,11 @@ internal sealed class SliceWorld
         Calendar = new TickCalendar(new CivilDate(scenario.StartYear, scenario.StartMonth, 1));
         int chunks = TickRunner.ChunkCountFor(Table.RowCount, config.ChunkSize);
 
-        Knowledge = new KnowledgeSystem(Table, Graph, kStart, kp, new KnowledgeInputsAdapter(this), Streams.Know, chunks, licenceTransfersKnowledge: config.LicKnows);
+        Knowledge = NewKnowledge(kStart, kp, chunks);
         ICultureRule rule = config.Channels.HasFlag(SliceChannels.CultureR0) ? new V23CultureRule() : new CbCultureRule();
         IndustryInputs = new IndustryInputsAdapter(this);
-        Industry = new IndustrySystem(Table, IndustryLayout, iStart, ip, IndustryInputs, chunks, rule);
+        Industry = new IndustrySystem(Table, IndustryLayout, iStart, ip, IndustryInputs, chunks, rule,
+            config.Layer == LayerControl.Lc0 ? IndustryMode.ConstLc0 : IndustryMode.Full);
         ProductsInputs = new ProductsInputsAdapter(this);
         Products = new ProductsSystem(Table, ProductsLayout, pStart, pp, ProductsInputs, Industry.CreateMailbox(chunks, Cadence.Monthly),
             startMonth: scenario.StartMonth);
@@ -128,6 +133,26 @@ internal sealed class SliceWorld
 
         Policy.Initialize();
         Runner = new TickRunner(Table, config.Seed, [Knowledge, Industry, Products, Policy], config.ChunkSize, config.Threads, Calendar);
+    }
+
+    // L_K and L_K0 replace the knowledge model by a schedule; the other layers read `known` as before.
+    private KnowledgeSystem NewKnowledge(KnowledgeStart kStart, KnowledgeParams kp, int chunks)
+    {
+        var inputs = new KnowledgeInputsAdapter(this);
+        switch (Config.Layer)
+        {
+            case LayerControl.Lk:
+                return new KnowledgeSystem(Table, Graph, kStart, kp, inputs, Streams.Know, chunks, KnowledgeMode.ScheduleLk,
+                    KnowledgeSchedule.BuildLk(Graph, kStart, Config.LkTables!, Streams.Know), Config.LicKnows);
+            case LayerControl.Lk0:
+                // The window middles of KnowledgeSchedule.Lk0WindowMid are counted from 1945-09: another start needs its own, which the scenario does not carry yet.
+                if (Scenario.StartYear != 1945 || Scenario.StartMonth != 9)
+                    throw new InvalidOperationException($"L_K0 is defined for a start in 1945-09, the scenario starts in {Scenario.StartYear}-{Scenario.StartMonth:00}.");
+                return new KnowledgeSystem(Table, Graph, kStart, kp, inputs, Streams.Know, chunks, KnowledgeMode.ScheduleLk0,
+                    KnowledgeSchedule.BuildLk0(Graph, kStart), Config.LicKnows);
+            default:
+                return new KnowledgeSystem(Table, Graph, kStart, kp, inputs, Streams.Know, chunks, licenceTransfersKnowledge: Config.LicKnows);
+        }
     }
 
     // E1: the designs that start in stage С (one per actor at most).
@@ -231,6 +256,50 @@ internal sealed class SliceWorld
         return (k, i, p);
     }
 
+    /// <summary>The P5 grid (spec §7): <c>k_diff</c> and <c>h_max</c> of knowledge, <c>k_catch</c> of capability; ×0,5 truncates the raw value, ×2 is checked.</summary>
+    public static (KnowledgeParams K, IndustryParams I) ApplyGrid(GridCell cell, KnowledgeParams k, IndustryParams i)
+    {
+        static Fx6 Step(GridStep step, Fx6 v) => step switch
+        {
+            GridStep.Lo => Fx6.FromRaw(v.Raw / 2),
+            GridStep.Hi => Fx6.FromRaw(checked(v.Raw * 2)),
+            _ => v,
+        };
+        k = k with { KDiff = Step(cell.KDiff, k.KDiff), HMax = Step(cell.HMax, k.HMax) };
+        // c_eff = c_money·(1 − k_diff·known_elsewhere)/…: at k_diff ≥ 1 a node known elsewhere costs nothing and the progress rate divides by zero (Core).
+        // The grid point ×2 on the frozen 0,5 lands exactly there, so it is refused here with the reason instead of failing in the first tick.
+        if (k.KDiff >= Fx6.One)
+            throw new InvalidOperationException($"P5 grid: k_diff = {k.KDiff} makes c_eff of a node known elsewhere zero (division by zero in the knowledge step); the point needs a decision on the axis.");
+        return (k, i with { KCatch = Step(cell.KCatch, i.KCatch) });
+    }
+
+    /// <summary>
+    /// <c>EFFORT_SHARE</c> (spec §6.8): <c>share_D′ = x·share_D</c>, the other shares scaled by <c>(1 − share_D′)/(1 − share_D)</c> (floor, <see cref="Int128"/>),
+    /// the rounding residue goes to procurement. [Предл.] The spec gives no rounding rule. Applied to the profiles and to the quality programme of P2;
+    /// the arm X1 returns <paramref name="p"/> itself. A set of shares that is not valid is an error of the arm, not repaired.
+    /// </summary>
+    public static PolicyParams ApplyEffortShare(EffortShareArm arm, PolicyParams p)
+    {
+        if (arm == EffortShareArm.X1)
+            return p;
+        static BudgetShares Scale(EffortShareArm arm, BudgetShares s)
+        {
+            long d = s.Effort.Raw;
+            long d2 = arm switch
+            {
+                EffortShareArm.X0 => 0,
+                EffortShareArm.X05 => d / 2,
+                EffortShareArm.X2 => checked(d * 2),
+                _ => checked(d * 4),
+            };
+            Fx6 Part(Fx6 x) => Fx6.FromRaw((long)((Int128)x.Raw * (Fx6.Scale - d2) / (Fx6.Scale - d)));
+            Fx6 research = Part(s.Research), cap = Part(s.Capability), quality = Part(s.Quality);
+            var scaled = new BudgetShares(research, cap, Fx6.FromRaw(d2), Fx6.FromRaw(Fx6.Scale - d2 - research.Raw - cap.Raw - quality.Raw), quality);
+            return scaled.IsValid ? scaled : throw new InvalidOperationException($"EFFORT_SHARE {arm}: the shares {scaled} are not valid.");
+        }
+        return p with { SharesByProfile = [.. p.SharesByProfile.Select(s => Scale(arm, s))], MassProgrammeShares = Scale(arm, p.MassProgrammeShares) };
+    }
+
     /// <summary>The sale terms of an arm (spec A42.8): exactly one number changes.</summary>
     public static ProductsParams ApplySaleArm(SaleArm arm, ProductsParams p) => arm switch
     {
@@ -314,6 +383,36 @@ internal sealed class SliceWorld
             Table.AddInt("run.tooling.pool").Load([.. Enumerable.Repeat((int)tt.PoolOrder, rows)]);
         if (tt.KCap != Fx6.One)
             Table.AddLong("run.tooling.k_cap").Load(Fill(rows, tt.KCap.Raw));
+        // Layer, grid and effort-share are part of the hash when they are not main, so a default run carries none of these columns.
+        if (Config.Layer != LayerControl.Full)
+            Table.AddInt("run.layer").Load([.. Enumerable.Repeat((int)Config.Layer, rows)]);
+        if (Config.LkTables is { } tables)
+            Table.AddLong("run.layer.tables").Load(Fill(rows, TablesDigest(tables)));
+        if (Config.Grid.Code != 0)
+            Table.AddInt("run.grid").Load([.. Enumerable.Repeat(Config.Grid.Code, rows)]);
+        if (Config.EffortShare != EffortShareArm.X1)
+            Table.AddInt("run.effort_share").Load([.. Enumerable.Repeat((int)Config.EffortShare, rows)]);
         Table.AddLong("run.scenario").Load(Fill(rows, BinaryPrimitives.ReadInt64LittleEndian(Convert.FromHexString(Scenario.Hash.AsSpan(0, 16)))));
+    }
+
+    // First 8 bytes of SHA-256 over PCens.Raw, Mean, HalfWidth, Delta (little-endian, in this order).
+    private static long TablesDigest(LkTables t)
+    {
+        var bytes = new byte[t.PCens.Length * 8 + (t.Mean.Length + t.HalfWidth.Length + t.Delta.Length) * 4];
+        int pos = 0;
+        foreach (Fx6 v in t.PCens)
+        {
+            BinaryPrimitives.WriteInt64LittleEndian(bytes.AsSpan(pos), v.Raw);
+            pos += 8;
+        }
+        foreach (int[] array in new[] { t.Mean, t.HalfWidth, t.Delta })
+        {
+            foreach (int v in array)
+            {
+                BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(pos), v);
+                pos += 4;
+            }
+        }
+        return BinaryPrimitives.ReadInt64LittleEndian(SHA256.HashData(bytes));
     }
 }

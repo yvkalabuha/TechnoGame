@@ -46,3 +46,11 @@ created: 2026-11-13
 - [ ] Тесты (test-engineer)
 
 ## Результат
+developer, 2026-11-13 (записал Orchestrator).
+- Session: views §12 (`Views/SliceViews.cs`, `Views/ViewBuilder.cs`), публикация после post непустого тика, `TestApiVersion = 1` + эталон `tests/Singularity.Session.Tests/Api/session-surface.v1.txt` (обновление: `SINGULARITY_UPDATE_API=1 dotnet test --filter ApiSurface`), `ViewMode.Calibration` (`WhyNot`/`CurrentRequirement` бросают; `Key`/`FleetValue` = null).
+- Переключатели `SliceRunConfig`: `Layer` (`Lk`+таблицы, `Lk0`, `Lc0`), `Grid` (P5), `EffortShare` (×0/0,5/1/2/4; пол `Int128`, остаток округления в закупки — правило SA [Предл.], спека v0.24 r1 §6.8). Колонки `run.*` только при не-default. Core, Kernel, golden, `SchemaVersion = 7` не менялись.
+- Тесты +48 (ViewTests, SeriesSwitchTests, ApiSurfaceTests). Полный `dotnet test`: Arch 80, Kernel 314, Core 1006, Session 290; 0 падений.
+- Предположения: (1) `ucm` = `1/max(yield, eps)` (Profile одного процесса с единичными весами; с весами раскладки отличие до ~4%); (2) `BadLicence.Money = 4` есть, view отдаёт `Refusals [Self, Empty, Gen, Money]`.
+- Р-12-2 снят: все 5 плеч `EffortShare` проходят `PolicyLiveness`/`ValidateStartUpkeep`; при ×4 мин. доля закупок 0,266.
+- [high] 9 из 27 ячеек сетки P5 (`k_diff ×2` = 1,0) не исполнимы: `c_eff = 0`, деление на ноль в `KnowledgeSystem.Compute`; `ApplyGrid` отказывает с причиной. Нужно решение по оси.
+- low: конструкторы view публичные (позиционные records); `DesignInputsView.GiveUp` = null без продуктового ИИ; тест `Lk0` с другой датой старта не написан (нет сценария); сьют Session ≈ 4 мин 49 с.
