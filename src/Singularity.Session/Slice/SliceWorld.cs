@@ -33,6 +33,8 @@ internal sealed class SliceWorld
 
     public SliceWorld(GameData data, SliceRunConfig config)
     {
+        if (config.Layer is not (LayerControl.Full or LayerControl.Lk or LayerControl.Lk0 or LayerControl.Lc0))
+            throw new InvalidOperationException($"Layer control {(int)config.Layer} is not supported (L_C with t_known and L_P need Core support that does not exist yet).");
         if ((config.Layer == LayerControl.Lk) != (config.LkTables is not null))
             throw new ArgumentException("LkTables are needed exactly with Layer = Lk.", nameof(config));
         // The tables are copied: a caller changing its arrays later must not change a running world.

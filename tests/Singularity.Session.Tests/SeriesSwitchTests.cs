@@ -238,6 +238,26 @@ public class SeriesSwitchTests
             (k.KDiff, k.HMax, i.KCatch));
     }
 
+    [Theory]
+    [InlineData(99)]
+    [InlineData(-1)]
+    [InlineData(4)]
+    public void Layer_UnsupportedValue_IsRefusedAtAssembly(int value)
+    {
+        Assert.False(Enum.IsDefined((LayerControl)value));
+        Assert.Throws<InvalidOperationException>(() => SliceTestData.Create(Base() with { Layer = (LayerControl)value }));
+    }
+
+    [Fact]
+    public void Layer_EveryDefinedValue_IsSupported()
+    {
+        foreach (LayerControl l in Enum.GetValues<LayerControl>())
+        {
+            SliceRunConfig c = Base() with { Layer = l, LkTables = l == LayerControl.Lk ? new LkTables(5) : null };
+            Assert.NotNull(SliceTestData.Create(c));
+        }
+    }
+
     [Fact]
     public void Grid_KDiffAxis_IsExact_AndAll27CellsAssembleAndLive()
     {
