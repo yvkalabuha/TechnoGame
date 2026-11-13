@@ -1,5 +1,6 @@
 import json
 import unittest
+from unittest import mock
 
 from helpers import TempRepo
 
@@ -325,7 +326,7 @@ class IssueFrontmatterAndModesTest(unittest.TestCase):
             return f"---\nid: T\n{body}\n---\nbody\n"
         for bad in ("approved_by: *owner", "approved_by: &a owner", "approved_by:\n  - *x", "status: >\n  &a PROPOSED"):
             self.assertTrue(risk.approval_changed(fm(bad), fm(bad)), bad)  # even unchanged: not understood
-        self.assertFalse(risk.approval_changed(fm("tags: *x"), fm("tags: *x")))
+        self.assertTrue(risk.approval_changed(fm("tags: *x"), fm("tags: *x")))  # undefined alias: YAML error, fail closed
 
     def test_hash_inside_quotes_is_not_a_comment(self):
         def fm(v):
@@ -333,6 +334,22 @@ class IssueFrontmatterAndModesTest(unittest.TestCase):
         self.assertTrue(risk.approval_changed(fm('"review # pending"'), fm('"review # approved"')))
         self.assertTrue(risk.approval_changed(fm("PROPOSED # a"), fm("PROPOSED # b")))  # comment change: safe side
         self.assertFalse(risk.approval_changed(fm('"x # y"'), fm('"x # y"')))
+
+    def test_yaml_parser_sees_aliases_merge_keys_and_tags(self):
+        def fm(body):
+            return f"---\nid: T\n{body}\n---\nbody\n"
+        old = fm("base: &b owner\nstatus: PROPOSED")
+        # alias inside a flow collection: the parsed value changes although the raw status line does not
+        a = fm("x: &b owner\napproved_by: [*b]\nstatus: PROPOSED")
+        b = fm("x: &b orchestrator\napproved_by: [*b]\nstatus: PROPOSED")
+        self.assertTrue(risk.approval_changed(a, b))
+        self.assertTrue(risk.approval_changed(fm("m: &m {status: A}\n<<: *m"), fm("m: &m {status: B}\n<<: *m")))
+        self.assertTrue(risk.approval_changed(fm("status: !!python/object:os.system x"), fm("status: x")))
+        self.assertTrue(risk.approval_changed(fm("status: !custom A"), fm("status: !custom A")))  # unknown tag
+        self.assertTrue(risk.approval_changed(old, "---\n- a\n---\n"))  # not a mapping
+        self.assertFalse(risk.approval_changed(fm("status: PROPOSED\ntags: [a]"), fm("status: PROPOSED\ntags: [b]")))
+        with mock.patch.dict("sys.modules", {"yaml": None}):  # no PyYAML: fail closed
+            self.assertTrue(risk.approval_changed(fm("status: A"), fm("status: A")))
 
     def test_symlink_in_range_is_r2(self):
         repo = TempRepo({"docs/a.md": "x\n"})

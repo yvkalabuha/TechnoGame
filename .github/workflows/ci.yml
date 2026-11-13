@@ -68,6 +68,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: PyYAML for the risk classifier (approval fields)
+        run: python -m pip install --quiet pyyaml==6.0.2
       # Risk class runs before any branch code; -P keeps the branch checkout (cwd) off sys.path (TASK-0039 review)
       - name: Risk class of llm/* branches (classifier and paths from main; no merge above R1)
         if: startsWith(github.head_ref, 'llm/') || startsWith(github.ref_name, 'llm/')

@@ -225,9 +225,10 @@ def run_review(task_id, base, head, provider_name="codex", root=config.REPO_ROOT
         except codex.CodexLimit:
             codex.log_attempt(task_id, meta["head"], "codex_limit", directory=attempts_dir)
             fallback = "codex_limit"
-        except codex.CodexFailed as e:  # no paid fallback: ADR-0015 §4 moves to DeepSeek on codex_limit only
+        except codex.CodexFailed as e:  # ADR-0015 §2: DeepSeek is the fallback on codex_limit and on a failure
             codex.log_attempt(task_id, meta["head"], "codex_failed", directory=attempts_dir)
-            raise ReviewError("codex_failed", str(e)) from None
+            fallback = "codex_failed"
+            log(f"codex failed: {e}")
         if fallback:
             used = "deepseek"
             log(f"codex unavailable ({fallback}): using deepseek")
@@ -289,7 +290,7 @@ def _run_codex(text, head, root, runner, task_id, attempts_dir):
 
 # ---- gate -----------------------------------------------------------------------------------------------
 
-PATH_RE = re.compile(r"(?<![\w/.-])((?:[\w.-]+/)+[\w.-]+\.(?:md|cs|py|json|csv|toml|yml|yaml|sh|csproj))")
+PATH_RE = re.compile(r"(?<![\w/.-])((?:[\w.-]+/)*[\w.-]+\.(?:md|cs|py|json|csv|toml|yml|yaml|sh|csproj))(?![\w/])")
 
 
 def _related_ids(text):
@@ -315,7 +316,7 @@ def build_gate_input(item, head="HEAD", root=config.REPO_ROOT, max_bytes=MAX_INP
                    and n.endswith(".md")]
     tree_set = set(tree)
     for m in PATH_RE.findall(doc):
-        for cand in (m, posixpath.join(posixpath.dirname(rel), m)):  # repo-relative, then relative to the document
+        for cand in (m, posixpath.join(posixpath.dirname(rel), m)):  # repo-relative, then document-relative
             norm = paths.normalize(posixpath.normpath(cand))  # None: escapes the repository
             if norm in tree_set:
                 wanted.append(norm)

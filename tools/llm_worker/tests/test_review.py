@@ -219,9 +219,18 @@ class RunTest(unittest.TestCase):
                                       codex_mode=True)
         self.assertEqual(cm.exception.code, "input_too_large")
 
+    def test_codex_failed_falls_back_to_deepseek(self):
+        def runner(prompt, wt):
+            raise codex.CodexFailed("boom")
+
+        fake = FakeProvider([GOOD])
+        _, line, rec = self.run_review("codex", codex_runner=runner, make_provider=lambda: fake)
+        self.assertEqual((rec["provider"], rec["fallback"]), ("deepseek", "codex_failed"))
+        att = [json.loads(x) for x in (self.tmp / "attempts" / codex.ATTEMPTS).read_text().splitlines()]
+        self.assertEqual(att[0]["outcome"], "codex_failed")
+
     def test_no_paid_fallback_on_other_failures(self):
-        for exc, code in ((codex.CodexFailed("boom"), "codex_failed"),
-                          (codex.SandboxUnavailable("no bwrap"), "sandbox_unavailable")):
+        for exc, code in ((codex.SandboxUnavailable("no bwrap"), "sandbox_unavailable"),):
             fake = FakeProvider([GOOD])
 
             def runner(prompt, wt, exc=exc):
@@ -392,13 +401,13 @@ class GateTest(unittest.TestCase):
         self.assertEqual((len(text.encode()), meta["omitted"]), (len(full.encode()), []))
 
     def test_relative_links_resolve_from_document_dir(self):
-        doc = "---\nid: ADR-8\n---\nSee ../decisions/ADR-0002-determinism-levels.md, ./sibling.md, ../../tools/a.py, " \
+        doc = "---\nid: ADR-8\n---\nSee sibling2.md, ../decisions/ADR-0002-determinism-levels.md, ./sibling.md, ../../tools/a.py, " \
               "../../../etc/x.md and ../../lab/results/r.txt.\n"
-        repo, _, head = make_repo(changed={"docs/decisions/ADR-8-doc.md": doc, "docs/decisions/sibling.md": "SIBLING\n",
+        repo, _, head = make_repo(changed={"docs/decisions/ADR-8-doc.md": doc, "docs/decisions/sibling.md": "SIBLING\n", "docs/decisions/sibling2.md": "S2\n",
                                            "lab/results/r.txt": "RESULT-DATA\n"})
         text, meta = review.build_gate_input("docs/decisions/ADR-8-doc.md", head, repo.root)
         self.assertEqual(sorted(meta["files"]), ["docs/decisions/ADR-0002-determinism-levels.md",
-                                                 "docs/decisions/sibling.md", "tools/a.py"])
+                                                 "docs/decisions/sibling.md", "docs/decisions/sibling2.md", "tools/a.py"])
         self.assertNotIn("RESULT-DATA", text)
 
     def test_excluded_item_refused(self):

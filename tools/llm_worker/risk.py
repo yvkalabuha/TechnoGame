@@ -125,10 +125,48 @@ def _frontmatter(text):
     return {k: v.rstrip() for k, v in out.items()}
 
 
-def approval_changed(old_text, new_text):
-    """True if an approval field changed; an unparseable frontmatter counts as changed (fail closed)."""
+MAX_FRONTMATTER = 65536  # bytes handed to the YAML parser (alias bombs)
+
+
+def _yaml_fields(text):
+    """Approval fields as the YAML parser sees them (aliases, merge keys resolved). FrontmatterError when the
+    parser is missing, the block cannot be parsed, is not a mapping, or uses a non-standard tag."""
+    if text is None:
+        return {}
+    text = text.lstrip("﻿")
+    if not text.startswith("---"):
+        return {}
+    block = []
+    for line in text.splitlines()[1:]:
+        if line.strip() == "---":
+            break
+        block.append(line)
+    else:
+        raise FrontmatterError("frontmatter is not closed")
+    body = "\n".join(block)
+    if len(body.encode()) > MAX_FRONTMATTER:
+        raise FrontmatterError("frontmatter too large")
     try:
-        return _frontmatter(old_text) != _frontmatter(new_text)
+        import yaml
+    except ImportError:
+        raise FrontmatterError("PyYAML is not installed") from None
+    try:
+        data = yaml.safe_load(body)
+    except Exception as e:  # noqa: BLE001 - any parser failure fails closed
+        raise FrontmatterError(f"yaml: {type(e).__name__}") from None
+    if data is None:
+        return {}
+    if not isinstance(data, dict):
+        raise FrontmatterError("frontmatter is not a mapping")
+    return {k: data[k] for k in APPROVAL_FIELDS if k in data}
+
+
+def approval_changed(old_text, new_text):
+    """True if an approval field changed by the raw text or by the parsed YAML value; any parse problem
+    counts as changed (fail closed)."""
+    try:
+        return (_frontmatter(old_text) != _frontmatter(new_text)
+                or _yaml_fields(old_text) != _yaml_fields(new_text))
     except FrontmatterError:
         return True
 
