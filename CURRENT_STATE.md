@@ -11,8 +11,8 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0042 [APPROVED] Контракт §8.2 и спека среза v0.24: коридор зрелой фазы по труду, две постановки C1 (#184, #185) (systems-architect)
-- TASK-0043 [APPROVED] Пробный прогон DeepSeek на 4 шагах R0–R1 (ADR-0015, #182) (developer)
+- TASK-0044 [APPROVED] T10: Lab-модели JetSlice и JetSliceCalib, CSV v0.24, манифесты, печати A39/A40 (simulation-engineer)
+- TASK-0045 [APPROVED] llm_worker: DEBT-0026 и DEBT-0027 (fallback при сбое песочницы, related в gate, метрики, verifier unittest) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры

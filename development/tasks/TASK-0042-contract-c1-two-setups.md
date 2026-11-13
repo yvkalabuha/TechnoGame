@@ -1,7 +1,7 @@
 ---
 id: TASK-0042
 title: "Контракт §8.2 и спека среза v0.24: коридор зрелой фазы по труду, две постановки C1 (#184, #185)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M0
 agent: systems-architect
@@ -32,17 +32,17 @@ created: 2026-11-13
 4. После ревью — **test-engineer**: второй вариант стенда в `ProductsChannelBudgetTests` (зрелая постановка), коридоры по-прежнему не ассертятся (T12), обновить `t8-p0-coverage.md`.
 
 ## Критерии приёмки
-- [ ] Контракт: новая ревизия, история изменений, ссылки на #184, #185.
-- [ ] Спека v0.24 согласована с контрактом.
-- [ ] Ревью critic и advocate проведено, разногласия записаны.
-- [ ] Стенд T8 печатает обе постановки; `dotnet test` зелёный.
+- [x] Контракт: новая ревизия, история изменений, ссылки на #184, #185.
+- [x] Спека v0.24 согласована с контрактом.
+- [x] Ревью critic и advocate проведено, разногласия записаны.
+- [x] Стенд T8 печатает обе постановки; `dotnet test` зелёный.
 
 ## Связанные документы
 RISK-0019; TASK-0040; TASK-0041; `risk19-yield-channel.md`.
 
 ## REVIEW
 - [x] critic, advocate (2026-11-13) — critic: 1 high, 3 medium, 4 low; advocate: 1 high, 3 moderate; вопросы владельцу → #187, #188; остальное принято
-- [ ] Code review (reviewer) — для п. 4
+- [x] Code review (reviewer, 2026-11-13) — п. 4: changes_requested (2 medium, 3 low), исправлено; Core 1006/1006
 
 ## Разногласия
 | # | Тема | Позиции | Итог |
@@ -53,3 +53,11 @@ RISK-0019; TASK-0040; TASK-0041; `risk19-yield-channel.md`.
 | 4 | Калибровать `h_floor` / снять коридор / принять промах | advocate: все проигрывают #186 | Отклонено (согласие сторон) |
 
 ## Результат
+
+### п. 4 (test-engineer, 2026-11-13)
+Стенд `Core.Tests/Products/ProductsChannelBudgetTests.cs` расширен (src/ не менялся):
+- Абляция «без канала сборки» — `line_E` заморожен на старте (не `b = 0`); общая функция `Cost(x0Mult, xAdd, e)`.
+- «Зрелая» (`X0 = 6·X½`, `g = 1`, `line_E` 1→512, окно ≤ 400; печать до начала 4096; арм `X0 = 3·X½`): ассерт C1c (формула `1−((1+2E)/(1+E))^−b` через `ProductsMath`, среднее по окну 18,01% ∈ 15–30%), аддитивность ±15%, «оба выключены ⇒ 0». C1d, C1e, полное `assembly_hours` — печать.
+- «Освоение» (`X0 = 0`, 25→200, фильтр `yield ≥ 0,25`) — только с `g ≡ 1`: печать C1a, C1b. Остаётся для T10/T12 (нужен Session): `culture_H` и `tooling_M` GBR-1945, правило ИИ наладки по умолчанию, варианты `E ≡ 0` / `g ≡ 1`.
+- Печать (X0 = 6·X½): C1e 3,58%, C1d 1,7% (окно ≤ 400), до ~9600 шт.: падение 3,07%, доля выхода 7,6%; (X0 = 3·X½): 3,56%, 5,1%; до 9600: 3,30%, 16,2%. «Освоение» g ≡ 1: C1a 8,29%, C1b 75,5%.
+- `t8-p0-coverage.md` обновлён. Review (reviewer) — не проводился.
