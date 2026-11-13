@@ -113,8 +113,13 @@
     "test_cmd": [
       "python3",
       "-B",
-      "-c",
-      "import sys,unittest;r=unittest.TextTestRunner(verbosity=0).run(unittest.defaultTestLoader.discover('lab/analysis',pattern='test_risk19_yield_channel.py'));f=len(r.failures)+len(r.errors);print('Passed: %d'%(r.testsRun-f));print('Failed: %d'%f);sys.exit(not r.wasSuccessful())"
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "lab/analysis",
+      "-p",
+      "test_risk19_yield_channel.py"
     ],
     "command_timeout_s": 120,
     "mutants": [

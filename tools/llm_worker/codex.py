@@ -20,6 +20,7 @@ from .worktree import git
 
 ENV_KEEP = ("PATH", "USER", "LOGNAME", "LANG", "LC_ALL", "TERM")
 LIMIT_RE = re.compile(r"usage limit|rate.?limit|quota|limit (?:reached|exceeded)|too many requests|\b429\b", re.I)
+BWRAP_RE = re.compile(r"^bwrap:", re.M)  # bwrap's own diagnostics: no namespace, mount refused, bad argument
 ERROR_EVENTS = ("error", "turn.failed")
 ATTEMPTS = "codex_attempts.jsonl"
 
@@ -163,7 +164,8 @@ def error_text(stdout):
 
 
 def run_codex(prompt, worktree, schema_file, timeout=1800, home=None, bwrap=None, environ=os.environ):
-    """(answer text, usage). CodexLimit on a subscription limit, CodexFailed on any other failure."""
+    """(answer text, usage). CodexLimit on a subscription limit, SandboxUnavailable when bwrap cannot run,
+    CodexFailed on any other failure."""
     exe = find_codex()
     env = {k: environ[k] for k in ENV_KEEP if k in environ}
     env["HOME"] = str(home or Path.home())
@@ -180,6 +182,8 @@ def run_codex(prompt, worktree, schema_file, timeout=1800, home=None, bwrap=None
     if p.returncode != 0 or not text:
         if LIMIT_RE.search(error_text(p.stdout) + p.stderr):
             raise CodexLimit("codex_limit: subscription limit reached")
+        if not text and BWRAP_RE.search(p.stderr):  # the sandbox itself failed: a paid fallback would not help
+            raise SandboxUnavailable(f"bwrap failed: {p.stderr.strip()[-300:]}")
         # stderr tail only: it carries no prompt text, and the answer is never echoed into the message.
         raise CodexFailed(f"codex exited {p.returncode}: {p.stderr.strip()[-400:]}")
     return text, usage

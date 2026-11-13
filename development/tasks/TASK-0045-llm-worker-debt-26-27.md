@@ -37,3 +37,10 @@ created: 2026-11-13
 - [ ] Второе ревью (codex)
 
 ## Результат
+developer, 2026-11-13 (записал Orchestrator; файл задачи вне зоны developer).
+- (1) `codex.py`: пустой ответ + stderr `bwrap:` → `SandboxUnavailable`, без платного fallback; лимит подписки распознаётся раньше.
+- (2) `review.py` `_related_ids`: PyYAML, инлайн/блочный список/скаляр; ошибка → `skipped` (`related: <причина>`).
+- (3) `report.py`: раздел «Метрики (ADR-0015 §7)» из `runs/review-*.json` и ledger; сбежавшие high — по `fixes: TASK-…`; `config.TASKS_DIR`.
+- (4) `verifiers/b1_tests.py` `parse_test_output`: unittest, dotnet, русская локаль; L1 на прямом `unittest discover`.
+- Тесты: `tests/test_debt_0026_0027.py`; `test_verifiers.py` — `max_candidates=2` задаётся в тесте (контракт B1 после TASK-0043 = 1). Всего 261 OK.
+- Ограничения [Факт]: записи ревью без времени и подтверждения находок (порядок по mtime, находки «не подтверждены»).

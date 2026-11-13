@@ -306,8 +306,34 @@ PATH_RE = re.compile(r"(?<![\w/.-])((?:[\w.-]+/)*[\w.-]+\.[A-Za-z0-9]{1,8})(?![\
 
 
 def _related_ids(text):
-    m = re.search(r"^related:\s*\[(.*?)\]", text.split("\n---", 2)[0], re.M)
-    return [x.strip().strip("\"'") for x in m.group(1).split(",") if x.strip()] if m else []
+    """(ids, problem): `related` of the frontmatter as PyYAML reads it (inline or block list, or a scalar).
+    `problem` is a short reason when the field could not be understood; the ids found are still returned."""
+    if not text.startswith("---"):
+        return [], None
+    block = []
+    for line in text.splitlines()[1:]:
+        if line.strip() == "---":
+            break
+        block.append(line)
+    else:
+        return [], "frontmatter is not closed"
+    body = "\n".join(block)
+    if len(body.encode()) > risk.MAX_FRONTMATTER:
+        return [], "frontmatter too large"
+    try:
+        import yaml
+        data = yaml.safe_load(body)
+    except ImportError:
+        return [], "PyYAML is not installed"
+    except Exception as e:  # noqa: BLE001 - any parser failure only skips the field
+        return [], f"yaml: {type(e).__name__}"
+    if not isinstance(data, dict) or "related" not in data or data["related"] is None:
+        return [], None
+    value = data["related"]
+    items = value if isinstance(value, list) else str(value).split(",")
+    ids = [str(x).strip() for x in items if isinstance(x, (str, int)) and str(x).strip()]
+    bad = len(items) != len(ids)
+    return ids, "related has items that are not ids" if bad else None
 
 
 def build_gate_input(item, head="HEAD", root=config.REPO_ROOT, max_bytes=MAX_INPUT_BYTES):
@@ -322,8 +348,11 @@ def build_gate_input(item, head="HEAD", root=config.REPO_ROOT, max_bytes=MAX_INP
     if doc is None:
         raise ReviewError("bad_input", f"{rel} is not a text file in git {head[:8]}")
     tree = _tree(root, head)
-    wanted = []
-    for rid in _related_ids(doc):
+    wanted, skipped = [], []
+    rids, problem = _related_ids(doc)
+    if problem:
+        skipped.append(f"related: {problem}")
+    for rid in rids:
         wanted += [n for n in tree if (n.rsplit("/", 1)[-1].startswith(rid + "-") or n.endswith(f"/{rid}.md"))
                    and n.endswith(".md")]
     tree_set = set(tree)
@@ -334,7 +363,7 @@ def build_gate_input(item, head="HEAD", root=config.REPO_ROOT, max_bytes=MAX_INP
                 wanted.append(norm)
                 break
     parts = [_fence(f"DOCUMENT {_q(rel)}", doc)]
-    used, omitted, skipped, seen = [], [], [], {rel}
+    used, omitted, seen = [], [], {rel}
     if len(parts[0].encode()) > max_bytes:
         raise ReviewError("input_too_large", f"{rel}: {len(parts[0].encode())} bytes > {max_bytes}")
     blocks = {}

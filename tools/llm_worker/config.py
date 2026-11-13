@@ -64,6 +64,7 @@ PROVIDER_RETRY_PAUSE_S = 30
 # Runtime directories (git-ignored).
 QUEUE_DIR = PACKAGE_DIR / "queue"
 RUNS_DIR = PACKAGE_DIR / "runs"
+TASKS_DIR = REPO_ROOT / "development" / "tasks"
 REPORTS_DIR = PACKAGE_DIR / "reports"
 # Outside the repository: a broken worktree must never resolve to the main tree by walking up.
 WORKTREES_DIR = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "llm_worker" / "worktrees"

@@ -9,8 +9,36 @@ from .. import paths, worktree
 from ..sandbox import Sandbox
 from .common import VerifierConfigError, make_report, ratio
 
-_PASSED_RE = re.compile(r"Passed:\s+(\d+)")
-_FAILED_RE = re.compile(r"Failed:\s+(\d+)")
+# dotnet test summary, English and Russian locale ("не пройдено 1, пройдено 2"); "не пройдено" contains "пройдено"
+_PASSED_RE = re.compile(r"(?<!не )(?:Passed|пройдено):?\s+(\d+)", re.I)
+_FAILED_RE = re.compile(r"(?:Failed|не пройдено):?\s+(\d+)", re.I)
+_UNITTEST_RAN_RE = re.compile(r"^Ran (\d+) tests? in ", re.M)
+_UNITTEST_FAILED_RE = re.compile(r"^FAILED \((.*?)\)\s*$", re.M)
+_UNITTEST_OK_RE = re.compile(r"^OK(?: \((.*?)\))?\s*$", re.M)
+_COUNT_RE = re.compile(r"(\w+)=(\d+)")
+
+
+def parse_test_output(out):
+    """(passed, failed) from `dotnet test` (any locale) or `python -m unittest`; (0, 0) if neither is recognised."""
+    ran = _UNITTEST_RAN_RE.findall(out)
+    if not ran:
+        return _dotnet(out)
+    total = int(ran[-1])
+    bad = _UNITTEST_FAILED_RE.findall(out)
+    if bad:
+        c = {k: int(v) for k, v in _COUNT_RE.findall(bad[-1])}
+        failed = c.get("failures", 0) + c.get("errors", 0)
+        return max(total - failed - c.get("skipped", 0), 0), failed
+    ok = _UNITTEST_OK_RE.findall(out)
+    if not ok:  # no verdict line: not a finished run
+        return 0, 0
+    c = {k: int(v) for k, v in _COUNT_RE.findall(ok[-1])}
+    return max(total - c.get("skipped", 0), 0), 0
+
+
+def _dotnet(out):
+    p, f = _PASSED_RE.findall(out), _FAILED_RE.findall(out)
+    return (int(p[-1]) if p else 0), (int(f[-1]) if f else 0)
 
 
 def resolve_cmd(cmd):
@@ -118,8 +146,7 @@ class B1Verifier:
             return make_report(m, acceptance)
 
         rc, out = self.run(self.test_cmd, self.root, self.timeout)
-        passed = int(_PASSED_RE.findall(out)[-1]) if _PASSED_RE.findall(out) else 0
-        failed = int(_FAILED_RE.findall(out)[-1]) if _FAILED_RE.findall(out) else 0
+        passed, failed = parse_test_output(out)
         ok = rc == 0 and passed > 0
         m["tests_pass"] = (1.0 if ok else 0.0,
                            f"{passed} passed" if ok else

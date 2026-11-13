@@ -150,7 +150,7 @@ class B1Test(unittest.TestCase):
         self.assert_main_untouched()
 
     def test_two_candidates_best_wins_and_scope_violation_rejected(self):
-        c = b1_contract()
+        c = b1_contract(max_candidates=2)  # the committed B1 contract has 1 (paid provider, ADR-0015 §6)
         c["context_files"] = [{"path": "src/K/M.cs", "sha256": sha(self.repo.root / "src/K/M.cs")}]
         q = TaskQueue(self.repo.tmp / "queue")
         q.submit(c, repo_root=self.repo.root)

@@ -129,7 +129,12 @@ def main(argv=None):
         print(f"report: {report.write(a.queue, a.runs, a.reports, ledger=ledger, cap=cap)}")
         return 0 if done else 3
     if a.cmd == "report":
-        print(report.write(a.queue, a.runs, a.reports, a.date))
+        try:  # read-only: the report only shows spending, a missing or broken ledger is not an error here
+            ledger = Ledger()
+            cap = load_prices()["cap"] if ledger.summary() is not None else None
+        except SpendRefused:
+            ledger = cap = None
+        print(report.write(a.queue, a.runs, a.reports, a.date, ledger=ledger, cap=cap))
         return 0
     return 2
 
