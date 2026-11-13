@@ -167,7 +167,7 @@ def approval_changed(old_text, new_text):
     try:
         return (_frontmatter(old_text) != _frontmatter(new_text)
                 or _yaml_fields(old_text) != _yaml_fields(new_text))
-    except FrontmatterError:
+    except Exception:  # noqa: BLE001 - e.g. RecursionError comparing recursive aliases: fail closed
         return True
 
 

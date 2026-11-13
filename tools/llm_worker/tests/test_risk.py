@@ -351,6 +351,11 @@ class IssueFrontmatterAndModesTest(unittest.TestCase):
         with mock.patch.dict("sys.modules", {"yaml": None}):  # no PyYAML: fail closed
             self.assertTrue(risk.approval_changed(fm("status: A"), fm("status: A")))
 
+    def test_recursive_alias_is_r3_not_a_crash(self):
+        rec = "---\nid: T\nstatus: &a [*a]\n---\nbody\n"
+        self.assertTrue(risk.approval_changed(rec, rec))
+        self.assertTrue(risk.approval_changed(rec, rec.replace("id: T", "id: U")))
+
     def test_symlink_in_range_is_r2(self):
         repo = TempRepo({"docs/a.md": "x\n"})
         try:
