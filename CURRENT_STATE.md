@@ -10,7 +10,10 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-_нет активных задач_
+- TASK-0035 [IN_PROGRESS] llm_worker: провайдер DeepSeek и учёт трат (ADR-0015 1a) (developer)
+- TASK-0038 [IN_PROGRESS] Спека среза §8.2: совместный этап калибровки C3+C4 (#177) (simulation-engineer)
+- TASK-0036 [APPROVED] llm_worker: песочница, gitleaks, контекст из git (ADR-0015 1b) (developer)
+- TASK-0037 [APPROVED] llm_worker: классификатор риска и CI (ADR-0015 1c) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры

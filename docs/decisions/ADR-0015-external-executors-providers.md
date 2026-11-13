@@ -1,14 +1,14 @@
 ---
 id: ADR-0015
 title: "Внешние исполнители и ревьюеры (DeepSeek, Codex)"
-status: PROPOSED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
+status: ACCEPTED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
 date: 2026-11-13
 supersedes:              # ADR-NNNN, если заменяет
 superseded_by:           # заполняется при замене
 related: [ADR-0002, ADR-0013, ADR-0014]
-approved_by:             # owner — обязательно для ACCEPTED
-approved_at:
-approval_ref:
+approved_by: owner
+approved_at: 2026-11-13
+approval_ref: "DECISIONS_LOG #176"
 ---
 
 # ADR-0015 — Внешние исполнители и ревьюеры (DeepSeek, Codex)
@@ -273,4 +273,4 @@ CI: job `llm-worker` (§10).
 ## Открытые вопросы
 1. Порог `max_usd_task = 0.50` [Предп.] пересмотреть после первых 5 задач DeepSeek.
 2. Проверить: Codex `read-only` внутри bwrap (вложенные namespaces, сеть для команд), `json_object` и текущие цены DeepSeek.
-3. Кто ставит gitleaks в окружение — владелец или задача 1b?
+3. gitleaks ставит задача 1b (#176).
