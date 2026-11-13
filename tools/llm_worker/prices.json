@@ -1,7 +1,7 @@
 {
   "_source": "https://api-docs.deepseek.com/quick_start/pricing, checked 2026-11-13",
   "_note": "USD per 1M tokens, worst case: PEAK rate, cache MISS for input. Real bills are lower. Owner/Orchestrator edit only (R3).",
-  "paid_providers_ready": false,
+  "paid_providers_ready": true,
   "max_usd_total": "5.00",
   "max_usd_task": "0.50",
   "models": {

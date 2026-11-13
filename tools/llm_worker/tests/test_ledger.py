@@ -184,9 +184,10 @@ class LedgerTest(LedgerBase):
             Guard(self.ledger, prices(), MODEL).before_attempt(b"x", 1)
         self.assertEqual(cm.exception.code, "no_task")
 
-    def test_real_prices_file_is_valid_and_not_ready(self):
+    def test_real_prices_file_is_valid(self):
+        # The readiness flag is the Orchestrator's switch (ADR-0015 §9); only its type is checked here.
         p = load_prices()
-        self.assertFalse(p["ready"])
+        self.assertIsInstance(p["ready"], bool)
         self.assertEqual(p["cap"], Decimal("5.00"))
         for prof in config.PROFILES.values():
             if prof.paid:
