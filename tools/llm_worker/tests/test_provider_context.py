@@ -135,6 +135,7 @@ class ContextTest(unittest.TestCase):
             build_package(c, self.repo.root, self.lessons)
         c = a2_contract(repo=self.repo)
         (self.repo.root / "data/nodes.csv").write_text("changed\n")
+        self.repo.git("commit", "-qam", "change")  # context is read from git objects, so commit the change
         with self.assertRaises(ContextError):
             build_package(c, self.repo.root, self.lessons)
 

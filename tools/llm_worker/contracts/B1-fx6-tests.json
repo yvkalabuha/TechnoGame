@@ -1,6 +1,6 @@
 {
   "task_id": "PILOT-B1-fx6-tests",
-  "version": 1,
+  "version": 2,
   "category": "B",
   "type": "B1",
   "title": "xUnit tests for Singularity.Kernel.Fx6",
@@ -173,5 +173,6 @@
     "claude_reference_tokens": 25000
   },
   "requires_review": true,
-  "escalation": "Pilot reviews the test file in the llm branch; reviewer before any merge"
+  "escalation": "Pilot reviews the test file in the llm branch; reviewer before any merge",
+  "risk": "R1"
 }

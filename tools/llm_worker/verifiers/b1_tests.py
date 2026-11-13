@@ -48,11 +48,16 @@ def error_lines(output, root, limit=20):
     return "\n".join(out) or output.strip()[-1500:]
 
 
+def _exists(root, rel):
+    norm = paths.normalize(rel)
+    return norm is not None and os.path.lexists(root / norm)  # a dangling symlink counts as existing
+
+
 def write_files(root, files, allowed, forbidden):
     """Writes only allowed paths inside root. Returns (written, violations)."""
     violations, plan = [], []
     for f in files:
-        ok, norm = paths.write_allowed(f["path"], allowed, forbidden)
+        ok, norm = paths.write_allowed(f["path"], allowed, forbidden, exists=_exists(root, f["path"]))
         if not ok:
             violations.append(norm)
             continue
@@ -62,7 +67,7 @@ def write_files(root, files, allowed, forbidden):
             continue
         # A committed symlink could point an allowed name at a forbidden file: check the real target.
         real = target.relative_to(root.resolve()).as_posix()
-        ok, why = paths.write_allowed(real, allowed, forbidden)
+        ok, why = paths.write_allowed(real, allowed, forbidden, exists=target.exists())
         if not ok:
             violations.append(f"{norm} resolves to {why}")
             continue

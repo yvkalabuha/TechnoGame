@@ -4,11 +4,13 @@ import fcntl
 import json
 import time
 
-from . import config, worktree
+from . import config, risk, worktree
 from .context import build_package
 from .loop import PASSED, REJECTED, CandidateLoop
 from .ledger import SpendRefused
-from .provider import AuthError, InsufficientFunds, ProviderUnavailable
+from .gitleaks import SecretDetected
+from .provider import AuthError, InsufficientFunds, KeyFileError, ProviderUnavailable
+from .sandbox import SandboxUnavailable
 from .taskqueue import ACCEPTED, FAILED, QUEUED, RUNNING, TaskQueue, write_json_atomic
 from .taskqueue import ESCALATED as S_ESCALATED, REJECTED as S_REJECTED
 from .verifiers.a1_inventory import A1Verifier
@@ -50,9 +52,9 @@ def process_task(queue, task_id, provider, env):
     """Runs one QUEUED task to a final state; it is never left RUNNING.
     ProviderUnavailable and AuthError propagate after requeueing."""
     queue.transition(task_id, RUNNING, "picked by worker")
-    guard = getattr(provider, "guard", None)
-    if guard is not None:
-        guard.task = task_id
+    guards = [g for g in (getattr(p, "guard", None) for p in _chain(provider)) if g is not None]
+    for g in guards:
+        g.task = task_id
     try:
         return _run_task(queue, task_id, provider, env)
     except ProviderUnavailable as e:
@@ -71,13 +73,27 @@ def process_task(queue, task_id, provider, env):
     except AuthError as e:
         queue.transition(task_id, QUEUED, f"authentication failed, run stopped: {e}")
         raise
+    except SecretDetected as e:  # message holds rule and line only, never the value
+        queue.transition(task_id, FAILED, str(e), unverified=True)
+        return FAILED
+    except KeyFileError as e:
+        queue.transition(task_id, QUEUED, f"key_error, run stopped: {e}")
+        raise
+    except SandboxUnavailable as e:  # includes GitleaksUnavailable
+        queue.transition(task_id, QUEUED, f"sandbox_unavailable, run stopped: {e}")
+        raise
     except Exception as e:  # noqa: BLE001 - any other error is a technical failure of this task
         if queue.state(task_id)["state"] == RUNNING:
             queue.transition(task_id, FAILED, f"{type(e).__name__}: {e}", unverified=True)
         return FAILED
     finally:
-        if guard is not None:
-            guard.task = None
+        for g in guards:
+            g.task = None
+
+
+def _chain(provider):
+    """The provider plus its fallbacks in order (flash -> pro); a plain provider has none."""
+    return [provider, *getattr(provider, "fallbacks", ())]
 
 
 def _count_outage(env, task_id):
@@ -99,7 +115,8 @@ def _run_task(queue, task_id, provider, env):
     candidates = 1 if getattr(provider, "paid", False) else contract["max_candidates"]  # paid: one (ADR-0015 §6)
     for k in range(1, candidates + 1):
         verifier = env.make_verifier(contract, k)
-        loop = CandidateLoop(contract, k, provider, verifier, task_dir / f"c{k}", context_text, env.clock)
+        loop = CandidateLoop(contract, k, provider, verifier, task_dir / f"c{k}", context_text, env.clock,
+                             fallbacks=getattr(provider, "fallbacks", ()))
         st = loop.run()
         results.append((st, loop, verifier))
 
@@ -110,6 +127,7 @@ def _run_task(queue, task_id, provider, env):
         "candidates": [{"candidate": r[0]["candidate"], "outcome": r[0]["outcome"], "stop": r[0]["stop"]}
                        for r in results],
         "changed_files": changed,
+        "risk": risk.combine(contract["risk"], risk.classify_paths(changed)),
     }
     write_json_atomic(task_dir / "result.json", {**summary, "artifact": loop.best_artifact()})
     if st["outcome"] == PASSED:
@@ -150,6 +168,12 @@ def _run_locked(queue_dir, provider, env, max_outages, outage_wait_s, sleep, log
             log(f"{task_id}: {state}")
         except AuthError as e:
             log(f"{task_id}: authentication failed, stopping the run: {e}")
+            return False
+        except KeyFileError as e:
+            log(f"{task_id}: key_error, stopping the run: {e}")
+            return False
+        except SandboxUnavailable as e:
+            log(f"{task_id}: sandbox_unavailable, stopping the run: {e}")
             return False
         except InsufficientFunds as e:
             log(f"{task_id}: insufficient funds (HTTP 402), stopping the run: {e}")

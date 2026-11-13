@@ -4,13 +4,14 @@ import ipaddress
 import json
 import os
 import socket
+import stat
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 
-from . import config
+from . import config, gitleaks
 
 
 class ProviderUnavailable(RuntimeError):
@@ -27,6 +28,10 @@ class AuthError(RuntimeError):
 
 class InsufficientFunds(RuntimeError):
     """HTTP 402: no balance. The whole run stops and the task is requeued; nothing is retried."""
+
+
+class KeyFileError(RuntimeError):
+    """key_error: the key file is missing, empty, not 0600, not ours or a symlink. The message has no key."""
 
 
 class NotJson(ProviderError):
@@ -89,6 +94,22 @@ def _example(schema, depth=0):
     return _EXAMPLE.get(t)
 
 
+def load_strict_key(path):
+    """Key of a paid provider: only from `path`, mode exactly 0600, owned by this user, not a symlink."""
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    except OSError as e:
+        raise KeyFileError(f"key_error: cannot open key file {path} ({e.strerror})") from None
+    with os.fdopen(fd, encoding="utf-8", errors="replace") as f:
+        st = os.fstat(f.fileno())
+        if not stat.S_ISREG(st.st_mode) or stat.S_IMODE(st.st_mode) != 0o600 or st.st_uid != os.getuid():
+            raise KeyFileError(f"key_error: {path} must be a regular file, mode 0600, owned by this user")
+        key = f.read().strip()
+    if not key:
+        raise KeyFileError(f"key_error: key file {path} is empty")
+    return key
+
+
 def load_api_key(environ=os.environ, env_name=config.API_KEY_ENV, file_env=config.API_KEY_FILE_ENV,
                  default_file=config.DEFAULT_API_KEY_FILE):
     """The key from `env_name`, else from the file named by `file_env` (default `default_file`).
@@ -118,8 +139,12 @@ class OpenAICompatProvider:
                              "(a public host is a paid service: use a paid profile with the ledger)")
         self.model = model or self.profile.model
         p = self.profile
-        self._api_key = api_key if api_key is not None else load_api_key(
-            os.environ, p.key_env, p.key_file_env, p.key_file)
+        if api_key is not None:
+            self._api_key = api_key
+        elif p.strict_key:
+            self._api_key = load_strict_key(p.key_file)
+        else:
+            self._api_key = load_api_key(os.environ, p.key_env, p.key_file_env, p.key_file)
         self.guard = guard  # ledger guard: required for a paid profile
         self.timeout_s = timeout_s
         self.retries = retries
@@ -160,6 +185,11 @@ class OpenAICompatProvider:
         """`on_raw(bytes)` gets the raw response body before it is parsed, so a paid answer is never lost."""
         if self.paid and self.guard is None:
             raise RuntimeError("paid provider without a spend guard")
+        if self.paid:
+            # Everything that leaves the machine, retry prompts with check output included (ADR-0015 §8).
+            # Raw contents, one line per newline: JSON escaping would blur the rules, and one long line would let
+            # a single `gitleaks:allow` hide everything.
+            gitleaks.scan_text("\n".join(str(m.get("content", "")) for m in messages))
         data = json.dumps(self.body(messages, schema, schema_name, max_tokens, seed)).encode()
         headers = {"Content-Type": "application/json"}
         if self._api_key:

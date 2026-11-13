@@ -1,5 +1,6 @@
 """Static configuration. Runtime overrides come from CLI flags or environment variables."""
 
+import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -12,6 +13,8 @@ DEFAULT_MODEL = os.environ.get("LLM_WORKER_MODEL", "qwen3.6-35b-a3b")
 API_KEY_ENV = "LLM_WORKER_API_KEY"
 API_KEY_FILE_ENV = "LLM_WORKER_API_KEY_FILE"
 DEFAULT_API_KEY_FILE = "/home/user/.config/local-llm/key"
+# DeepSeek key (ADR-0015 §8): a 0600 file outside the repository, read from nowhere else.
+DEEPSEEK_KEY_FILE = str(Path.home() / ".config" / "singularity" / "deepseek-api-key")
 
 
 
@@ -29,6 +32,7 @@ class Profile:
     key_env: str = API_KEY_ENV
     key_file_env: str = API_KEY_FILE_ENV
     key_file: str = DEFAULT_API_KEY_FILE
+    strict_key: bool = False  # key only from key_file, which must be 0600 and ours; no environment variable
 
 
 # DeepSeek names, URL, JSON mode and thinking switch checked on api-docs.deepseek.com
@@ -39,12 +43,10 @@ PROFILES = {
                         {"chat_template_kwargs": {"enable_thinking": False}}),
     "deepseek-flash": Profile("deepseek-flash", "https://api.deepseek.com/chat/completions", "deepseek-flash",
                               "json_object", {"thinking": {"type": "disabled"}}, send_seed=False, paid=True,
-                              key_env="DEEPSEEK_API_KEY", key_file_env="DEEPSEEK_API_KEY_FILE",
-                              key_file="/home/user/.config/deepseek/key"),
+                              key_file=DEEPSEEK_KEY_FILE, strict_key=True),
     "deepseek-v4-pro": Profile("deepseek-v4-pro", "https://api.deepseek.com/chat/completions", "deepseek-v4-pro",
                             "json_object", {"thinking": {"type": "disabled"}}, send_seed=False, paid=True,
-                            key_env="DEEPSEEK_API_KEY", key_file_env="DEEPSEEK_API_KEY_FILE",
-                            key_file="/home/user/.config/deepseek/key"),
+                            key_file=DEEPSEEK_KEY_FILE, strict_key=True),
 }
 
 # Spend accounting (ADR-0015 §6). The ledger lives outside the repository.
@@ -81,6 +83,9 @@ CONTEXT_EXCLUDE = [
     ".ssh/**",
     "lab/results/**",
     ".git/**",
+    "**/.git/**",
+    ".mcp.json*",
+    "**/.mcp.json*",
     ".claude/settings.local.json",
     "tools/llm_worker/queue/**",
     "tools/llm_worker/runs/**",
@@ -95,17 +100,14 @@ CONTEXT_EXCLUDE = [
     "**/credentials*",
 ]
 
-# Never written by the tool, whatever the contract says (decision #110: no edits to the game core).
-WRITE_FORBIDDEN = [
-    "src/Singularity.Core/**",
-    ".git/**",
-    ".github/**",
-    ".githooks/**",
-    ".claude/**",
-    "CLAUDE.md",
-    "**/*.csproj",
-    "**/Directory.Build.props",
-]
+# Never written by the tool, whatever the contract says (decision #110): R2 + R3 of risk_paths.json.
+RISK_PATHS_FILE = PACKAGE_DIR / "risk_paths.json"
+_RISK = json.loads(RISK_PATHS_FILE.read_text(encoding="utf-8"))
+WRITE_FORBIDDEN = _RISK["R2"] + _RISK["R3"]
+# Decision #179: creating a new file here is allowed even under an R2 glob; overwriting an existing one is not.
+WRITE_NEW_ALLOWED = _RISK["R1_if_added"]
+WRITE_NEW_EXCEPT = _RISK["R1_if_added_except"]
+WRITE_NEVER = _RISK["R3"]
 
 # Rough token estimate for budget checks; Qwen tokenizer is not available offline.
 CHARS_PER_TOKEN = 3.5

@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'llm/**']
   pull_request:
 
 permissions:
@@ -59,3 +59,28 @@ jobs:
       - name: Analysis tests
         run: python -m unittest discover -s lab/analysis -p "test_*.py"
 
+  llm-worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # bwrap, dotnet-in-sandbox and gitleaks tests skip themselves when the tools are unavailable
+      - name: llm_worker unit tests
+        run: python -m unittest discover -s tools/llm_worker/tests
+      - name: Risk class of llm/* branches (classifier and paths from main; no merge above R1)
+        if: startsWith(github.head_ref, 'llm/') || startsWith(github.ref_name, 'llm/')
+        run: |
+          git fetch origin main
+          K="$RUNNER_TEMP/rk/llm_worker"
+          mkdir -p "$K"
+          touch "$K/__init__.py"
+          for f in risk.py paths.py risk_paths.json; do
+            git show "origin/main:tools/llm_worker/$f" > "$K/$f"
+          done
+          PYTHONPATH="$RUNNER_TEMP/rk" python -m llm_worker.risk classify \
+            --range "origin/main...${{ github.event.pull_request.head.sha || github.sha }}" \
+            --paths-file "$K/risk_paths.json" --max R1

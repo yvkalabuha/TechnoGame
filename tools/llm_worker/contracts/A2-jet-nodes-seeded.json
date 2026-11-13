@@ -1,6 +1,6 @@
 {
   "task_id": "PILOT-A2-jet-nodes-seeded",
-  "version": 1,
+  "version": 2,
   "category": "A",
   "type": "A2",
   "title": "Integrity check of the jet-slice node table (seeded errors)",
@@ -107,5 +107,6 @@
     "claude_reference_tokens": 12000
   },
   "requires_review": false,
-  "escalation": "Pilot runs the reference script and reads the worker's explanations"
+  "escalation": "Pilot runs the reference script and reads the worker's explanations",
+  "risk": "R0"
 }

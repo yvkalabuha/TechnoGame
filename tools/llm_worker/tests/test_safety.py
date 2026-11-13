@@ -30,10 +30,14 @@ SANDBOX_TMP = "/var/tmp"
 PROBE = """#!/bin/sh
 # Pretends to be dotnet; each line reports whether an attack worked.
 echo "pwned" > "$OUTSIDE/probe" 2>/dev/null && echo "WROTE_OUTSIDE" || echo "outside: denied"
-echo "pwned" > "$REPO/probe" 2>/dev/null && echo "WROTE_REPO" || echo "repo: denied"
-cat "$KEYDIR/key" 2>/dev/null | grep -q SECRET && echo "READ_KEY" || echo "key: hidden"
-cat "$KEYFILE" 2>/dev/null | grep -q SECRET && echo "READ_KEYFILE" || echo "keyfile: hidden"
+cat "$REPO/.mcp.json" 2>/dev/null | grep -q SECRET && echo "READ_MCP" || echo "mcp: hidden"
+cat "$REPO/lab/results/r.csv" 2>/dev/null | grep -q SECRET && echo "READ_RESULTS" || echo "results: hidden"
+cat "$HOME/.git-credentials" 2>/dev/null | grep -q SECRET && echo "READ_CRED" || echo "cred: hidden"
+cat "$HOME/.ssh/id" 2>/dev/null | grep -q SECRET && echo "READ_SSH" || echo "ssh: hidden"
+[ -e /var/www ] && echo "VAR_WWW_VISIBLE" || echo "var/www: absent"
 [ -n "$LLM_WORKER_API_KEY" ] && echo "KEY_IN_ENV" || echo "env: clean"
+touch "$HOME/.nuget/packages/probe" 2>/dev/null && echo "NUGET_WRITABLE" || echo "nuget: read-only"
+ls "$HOME/.nuget/packages" | grep -q cached && echo "nuget: readable" || echo "NUGET_UNREADABLE"
 echo "built" > "$PWD/inside.txt" && echo "inside: ok"
 echo "net_ifaces=$(tail -n +3 /proc/net/dev | wc -l)"
 """
@@ -44,62 +48,129 @@ class SandboxTest(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory(dir=SANDBOX_TMP)
         base = Path(self._tmp.name)
-        self.wt, self.outside, self.repo, self.keydir = (base / n for n in ("wt", "outside", "repo", "keydir"))
-        for d in (self.wt, self.outside, self.repo, self.keydir):
-            d.mkdir()
-        (self.keydir / "key").write_text("SECRET\n")
-        self.keyfile = base / "lone.key"
-        self.keyfile.write_text("SECRET\n")
-        self.fake = base / "dotnet"
+        self.wt, self.outside, self.repo, self.home, self.tools = (
+            base / n for n in ("wt", "outside", "repo", "home", "tools"))
+        for d in (self.wt, self.outside, self.repo / "lab/results", self.home / ".ssh",
+                  self.home / ".nuget/packages", self.tools):
+            d.mkdir(parents=True)
+        (self.repo / ".mcp.json").write_text("SECRET\n")
+        (self.repo / "lab/results/r.csv").write_text("SECRET\n")
+        (self.home / ".git-credentials").write_text("SECRET\n")
+        (self.home / ".ssh/id").write_text("SECRET\n")
+        (self.home / ".nuget/packages/cached").write_text("pkg\n")
+        self.fake = self.tools / "dotnet"
         self.fake.write_text(PROBE)
         self.fake.chmod(self.fake.stat().st_mode | stat.S_IEXEC)
-        self.environ = dict(os.environ, LLM_WORKER_API_KEY="SECRET", OUTSIDE=str(self.outside), REPO=str(self.repo),
-                            KEYDIR=str(self.keydir), KEYFILE=str(self.keyfile))
+        self.environ = dict(os.environ, LLM_WORKER_API_KEY="SECRET", HOME=str(self.home))
 
     def tearDown(self):
         self._tmp.cleanup()
 
     def box(self):
-        box = sandbox.Sandbox(self.wt, writable=[], hidden=[self.keydir, self.keyfile], environ=self.environ)
-        # The probe needs its paths; the key variable must still be dropped.
-        box.env.update({k: self.environ[k] for k in ("OUTSIDE", "REPO", "KEYDIR", "KEYFILE")})
+        box = sandbox.Sandbox(self.wt, home=self.home, extra_ro=[self.tools], environ=self.environ)
+        box.env.update(OUTSIDE=str(self.outside), REPO=str(self.repo))  # probe inputs only
         return box
 
     def test_fake_dotnet_cannot_escape(self):
         rc, out = self.box().run([str(self.fake)], timeout=60)
         self.assertEqual(rc, 0, out)
-        for bad in ("WROTE_OUTSIDE", "WROTE_REPO", "READ_KEY", "READ_KEYFILE", "KEY_IN_ENV"):
+        for bad in ("WROTE_OUTSIDE", "READ_MCP", "READ_RESULTS", "READ_CRED", "READ_SSH", "VAR_WWW_VISIBLE",
+                    "KEY_IN_ENV", "NUGET_WRITABLE", "NUGET_UNREADABLE"):
             self.assertNotIn(bad, out)
         self.assertIn("inside: ok", out)
+        self.assertIn("nuget: read-only", out)
         self.assertIn("net_ifaces=1", out)  # loopback only
         self.assertFalse((self.outside / "probe").exists())
-        self.assertFalse((self.repo / "probe").exists())
+        self.assertFalse((self.home / ".nuget/packages/probe").exists())
         self.assertEqual((self.wt / "inside.txt").read_text(), "built\n")
 
-    def test_restore_step_keeps_network_but_not_filesystem(self):
+    def test_restore_step_has_network_and_writable_packages_only(self):
         rc, out = self.box().run([str(self.fake)], timeout=60, network=True)
         self.assertEqual(rc, 0, out)
-        for bad in ("WROTE_OUTSIDE", "WROTE_REPO", "READ_KEY", "KEY_IN_ENV"):
+        for bad in ("WROTE_OUTSIDE", "READ_MCP", "READ_RESULTS", "READ_CRED", "READ_SSH", "VAR_WWW_VISIBLE",
+                    "KEY_IN_ENV"):
             self.assertNotIn(bad, out)
+        self.assertIn("NUGET_WRITABLE", out)
         self.assertNotIn("net_ifaces=1\n", out)  # host interfaces visible
+
+    @unittest.skipUnless(shutil.which("dotnet") or (Path.home() / ".dotnet/dotnet").is_file(), "no dotnet")
+    def test_real_dotnet_info_runs_in_sandbox(self):
+        box = sandbox.Sandbox(self.wt)  # the real home: ~/.dotnet is mounted read-only
+        rc, out = box.run(verifiers_resolve(["dotnet", "--info"]), timeout=120)
+        self.assertEqual(rc, 0, out)
+        self.assertIn(".NET SDK", out)
+
+
+TINY_CSPROJ = """<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework><IsPackable>false</IsPackable></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+</Project>
+"""
+TINY_TEST = "public class T { [Xunit.Fact] public void Ok() { Xunit.Assert.Equal(2, 1 + 1); } }\n"
+
+
+def _have_tiny_packages():
+    pk = Path.home() / ".nuget/packages"
+    return all((pk / n / v).is_dir() for n, v in (("xunit", "2.9.3"), ("microsoft.net.test.sdk", "17.14.1"),
+                                                  ("xunit.runner.visualstudio", "3.1.4")))
+
+
+@unittest.skipUnless(sandbox.find_bwrap() and os.path.isdir(SANDBOX_TMP) and _have_tiny_packages()
+                     and (shutil.which("dotnet") or (Path.home() / ".dotnet/dotnet").is_file()),
+                     "bwrap, /var/tmp, dotnet or cached xunit packages not available")
+class SandboxDotnetIntegrationTest(unittest.TestCase):
+    """Real restore, build and test of a tiny project inside the sandbox, with the production step flags."""
+
+    def test_restore_build_test_run_in_sandbox(self):
+        with tempfile.TemporaryDirectory(dir=SANDBOX_TMP) as d:
+            wt = Path(d) / "wt"
+            wt.mkdir()
+            (wt / "Tiny.csproj").write_text(TINY_CSPROJ)
+            (wt / "T.cs").write_text(TINY_TEST)
+            box = sandbox.Sandbox(wt)
+            box.self_test()
+            for cmd, net in ((["dotnet", "restore"], True), (["dotnet", "build", "--no-restore"], False),
+                             (["dotnet", "test", "--no-build"], False)):
+                rc, out = box.run(verifiers_resolve(cmd), timeout=300, network=net)
+                self.assertEqual(rc, 0, f"{cmd}: {out[-1500:]}")
+            self.assertIn("Passed:", out)
+
+
+def verifiers_resolve(cmd):
+    from tools.llm_worker.verifiers.b1_tests import resolve_cmd
+    return resolve_cmd(cmd)
 
 
 class SandboxArgvTest(unittest.TestCase):
-    def test_defaults_hide_secrets_and_drop_key_env(self):
+    def test_mount_order_and_env(self):
         with tempfile.TemporaryDirectory() as d:
             home = Path(d)
-            for sub in (".ssh", ".config/local-llm", ".nuget/packages"):
+            for sub in (".dotnet/sdk", ".dotnet/corefx", ".nuget/packages", "tools"):
                 (home / sub).mkdir(parents=True)
-            box = sandbox.Sandbox(home / ".nuget", bwrap="/bin/false", writable=sandbox.default_writable(home),
-                                  hidden=sandbox.default_hidden(home, environ={}),
+            box = sandbox.Sandbox(home / "wt", home=home, bwrap="/bin/false", extra_ro=[home / "tools"],
                                   environ={"PATH": "/bin", "LLM_WORKER_API_KEY": "SECRET", "GIT_DIR": "/x"})
             a = box.argv(["dotnet", "build"])
-            text = " ".join(a)
-            self.assertIn(f"--tmpfs {home / '.ssh'}", text)
-            self.assertIn(f"--tmpfs {home / '.config/local-llm'}", text)
+            pk = str(home / ".nuget/packages")
+            self.assertNotIn(["--ro-bind", "/", "/"], [a[i:i + 3] for i in range(len(a) - 2)])  # no root bind
+            order = [a.index(x) for x in (str(home), str(home / ".dotnet"), pk, str(box.workdir))]
+            self.assertEqual(a[order[0] - 1], "--tmpfs")
+            self.assertEqual(order, sorted(order))  # tmpfs $HOME, then dotnet, packages, worktree
+            self.assertEqual(a[a.index(pk) - 1], "--ro-bind")
+            restore = box.argv(["dotnet", "restore"], network=True)
+            self.assertEqual(restore[restore.index(pk) - 1], "--bind")
+            dn = str(home / ".dotnet")
+            self.assertEqual(a[a.index(dn) - 1], "--tmpfs")
+            self.assertEqual(a[a.index(dn + "/sdk") - 1], "--ro-bind")  # entries read-only
+            self.assertEqual(a[a.index(dn + "/corefx") - 1], "--tmpfs")  # the one writable spot, in memory
+            self.assertLess(a.index(str(home)), a.index(str(home / "tools")))  # extra_ro not hidden by $HOME
+            self.assertNotIn(str(home / "wt/.git"), a)
             self.assertIn("--unshare-net", a)
-            self.assertNotIn("--unshare-net", box.argv(["dotnet", "restore"], network=True))
-            self.assertLess(a.index("--ro-bind"), a.index("--bind"))  # writable binds come after read-only root
+            self.assertNotIn("--unshare-net", restore)
+            self.assertNotIn("/var/www", " ".join(a))
             self.assertNotIn("LLM_WORKER_API_KEY", box.env)
             self.assertNotIn("GIT_DIR", box.env)
 
@@ -116,9 +187,11 @@ class SandboxMissingTest(unittest.TestCase):
                       lessons_dir=repo.tmp / "lessons")  # no fake runner: the real sandbox is required
             provider = FakeProvider([])
             with mock.patch.object(sandbox, "find_bwrap", return_value=None):
-                self.assertEqual(process_task(q, "T-b1", provider, env), "FAILED")
+                with self.assertRaises(sandbox.SandboxUnavailable):  # the run stops, the task is requeued
+                    process_task(q, "T-b1", provider, env)
             st = q.state("T-b1")
-            self.assertTrue(st["unverified"])
+            self.assertEqual(st["state"], "QUEUED")
+            self.assertIn("sandbox_unavailable", st["history"][-1]["reason"])
             self.assertIn("bwrap", st["history"][-1]["reason"])
             self.assertEqual(provider.calls, [])  # nothing ran
         finally:

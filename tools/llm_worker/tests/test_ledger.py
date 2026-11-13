@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 import urllib.error
 from decimal import Decimal
 from pathlib import Path
@@ -32,6 +33,17 @@ def prices(ready=True, cap="1.00", task_cap="1.00"):
 
 def entries(ledger):
     return [json.loads(line) for line in ledger.path.read_text().splitlines()]
+
+
+_scan = mock.patch("tools.llm_worker.gitleaks.scan_text")  # these tests are about spend; scanning is tested elsewhere
+
+
+def setUpModule():
+    _scan.start()
+
+
+def tearDownModule():
+    _scan.stop()
 
 
 class LedgerBase(unittest.TestCase):

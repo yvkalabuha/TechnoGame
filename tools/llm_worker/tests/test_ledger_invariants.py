@@ -5,6 +5,7 @@ import json
 import random
 import socket
 import unittest
+from unittest import mock
 import urllib.error
 from decimal import Decimal
 
@@ -25,6 +26,17 @@ NOJSON = None  # marker: HTTP 200 with a body that is not JSON
 
 def http(code):
     return urllib.error.HTTPError("u", code, "x", {}, None)
+
+
+_scan = mock.patch("tools.llm_worker.gitleaks.scan_text")  # these tests are about spend; scanning is tested elsewhere
+
+
+def setUpModule():
+    _scan.start()
+
+
+def tearDownModule():
+    _scan.stop()
 
 
 class Crash(BaseException):

@@ -3,11 +3,12 @@
 import hashlib
 import json
 
-from . import paths
+from . import paths, risk
 from .config import REPO_ROOT
 from .jsonschema_lite import validate
 
-CONTRACT_VERSION = 1
+CONTRACT_VERSION = 2
+EXTERNAL_MAX_RISK = "R1"  # ADR-0015 section 10: above R1 there is no merge
 
 # Check names each verifier produces ("schema" is implicit and always hard).
 CHECKS_BY_TYPE = {
@@ -25,7 +26,7 @@ CONTRACT_SCHEMA = {
     "required": [
         "task_id", "version", "category", "type", "title", "instructions", "context_files",
         "allowed_paths", "forbidden_paths", "output_schema", "acceptance", "verification",
-        "max_rounds", "max_candidates", "budget", "requires_review", "escalation",
+        "max_rounds", "max_candidates", "budget", "requires_review", "escalation", "risk",
     ],
     "properties": {
         # Used in file and branch names: no slashes, no spaces.
@@ -82,6 +83,8 @@ CONTRACT_SCHEMA = {
                 "claude_reference_tokens": {"type": "integer", "minimum": 0},
             },
         },
+        # Declared risk class; the effective class is the higher of this and the one computed from paths.
+        "risk": {"enum": ["R0", "R1", "R2", "R3"]},
         "requires_review": {"type": "boolean"},
         "escalation": {"type": "string", "minLength": 1},
     },
@@ -151,6 +154,14 @@ def validate_contract(contract, repo_root=REPO_ROOT):
         errors.append("category C is Claude/owner only (§3)")
     elif CATEGORY_OF_TYPE[ctype] != contract["category"]:
         errors.append(f"type {ctype} belongs to category {CATEGORY_OF_TYPE[ctype]}")
+    if risk.CLASSES.index(contract["risk"]) > risk.CLASSES.index(EXTERNAL_MAX_RISK):
+        errors.append(f"risk {contract['risk']} is above {EXTERNAL_MAX_RISK}: not for external executors (ADR-0015 §1)")
+    declared = contract["risk"]
+    for g in contract["allowed_paths"]:
+        got = risk.classify_glob(g)
+        if risk.CLASSES.index(got) > risk.CLASSES.index(declared):
+            errors.append(f"allowed_paths {g!r} may reach {got}, above declared risk {declared} "
+                          "(or hits the write deny list)")
     if contract["max_candidates"] > 1 and ctype != "B1":
         errors.append("2 candidates only for B1 (§4)")
     if contract["category"] == "A" and contract["allowed_paths"]:

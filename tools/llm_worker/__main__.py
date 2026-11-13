@@ -8,7 +8,7 @@ from pathlib import Path
 from . import config, report
 from .contract import ContractError, fill_hashes, validate_contract
 from .ledger import Guard, Ledger, SpendRefused, load_prices
-from .provider import OpenAICompatProvider
+from .provider import KeyFileError, OpenAICompatProvider
 from .runner import Env, run_queue
 from .taskqueue import TaskQueue
 
@@ -102,7 +102,14 @@ def main(argv=None):
                 print(f"refused: {e}")
                 return 4
             guard = Guard(ledger, prices, a.model or profile.model)
-        provider = OpenAICompatProvider(url=a.url, model=a.model, profile=profile, guard=guard)
+        try:
+            provider = OpenAICompatProvider(url=a.url, model=a.model, profile=profile, guard=guard)
+            if profile.name == "deepseek-flash" and not a.model:  # chain flash -> pro (#175 d)
+                pro = config.PROFILES["deepseek-v4-pro"]
+                provider.fallbacks = [OpenAICompatProvider(profile=pro, guard=Guard(ledger, prices, pro.model))]
+        except KeyFileError as e:
+            print(f"refused: {e}")
+            return 4
         done = run_queue(a.queue, provider, Env(runs_dir=a.runs), a.max_outages, a.outage_wait,
                          log=lambda m: print(m, flush=True))
         cap = prices["cap"] if prices else None

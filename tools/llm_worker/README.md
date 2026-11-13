@@ -32,7 +32,9 @@ cat tools/llm_worker/reports/$(date +%F).md
 | `runner.py` | задача целиком; для B1 — 2 независимых кандидата (`seed` 1 и 2), выбирается лучший |
 | `verifiers/` | A1 — сверка имён с исходником (regex, не Roslyn); A2 — сравнение с `reference/nodes_check.py`; B1 — `dotnet build`, `dotnet test`, мутанты |
 | `worktree.py` | B1 пишет только в `~/.cache/llm_worker/worktrees/<task_id>-c<k>` (или `$XDG_CACHE_HOME/...`, вне репозитория) на ветке `llm/<task_id>` (кандидат 2: `llm/<task_id>-c2`); перед reset/clean/commit проверяется, что каталог — корень этого worktree и ветка `llm/...`, иначе FAILED; коммит с `--no-verify`; `main` не меняется |
-| `sandbox.py` | каждая команда B1 (`dotnet restore/build/test`, мутанты) идёт через `bwrap`: весь диск только для чтения, запись — только worktree и кэш NuGet; `~/.ssh`, `~/.config/local-llm` и файл ключа скрыты; окружение очищено от ключей; сеть только у `restore`, `build`/`test` без сети. Нет `bwrap` → задача FAILED, без песочницы не запускается |
+| `sandbox.py` | каждая команда B1 идёт через `bwrap`: корень не монтируется целиком; системные каталоги и `~/.dotnet` только чтение, `$HOME` — пустой tmpfs, `/var/www` отсутствует, `~/.nuget/packages` только чтение (запись лишь на шаге `restore`), запись — только worktree; окружение очищено от ключей; сеть только у `restore`. Нет `bwrap` → задача FAILED |
+| `gitleaks.py` | gitleaks по всему входу платного провайдера (включая `error_lines` повторного prompt); находка → `SecretDetected`, нет бинаря → `GitleaksUnavailable`. Ключ DeepSeek — только файл `~/.config/singularity/deepseek-api-key` (0600), иначе `KeyFileError` |
+| цепочка моделей | `deepseek-flash` → `deepseek-v4-pro` → эскалация к Pilot. `max_rounds` считается **на модель**, не на задачу (контракт ≤ 2 повторов у каждой). Бюджет контракта (`budget`) и `max_usd_task`/`max_usd_total` из ledger общие для всей цепочки |
 | `report.py` | `reports/<date>.md`: принято / отклонено / провалено / эскалировано / не проверено — раздельно |
 
 Состояния: ACCEPTED — все жёсткие проверки пройдены (ревью Claude отмечено, если `requires_review`);

@@ -10,8 +10,7 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0036 [APPROVED] llm_worker: песочница, gitleaks, контекст из git (ADR-0015 1b) (developer)
-- TASK-0037 [APPROVED] llm_worker: классификатор риска и CI (ADR-0015 1c) (developer)
+_нет активных задач_
 <!-- registry:active:end -->
 
 ## Блокеры

@@ -1,0 +1,57 @@
+{
+  "_note": "Single source of risk classes (ADR-0015 section 1). R3 file: external executors must never edit it. Highest matching class wins; an unmatched path is R2. Globs are matched case-insensitively. WRITE_FORBIDDEN = R2 + R3. R1_if_added: new files (diff status A) there are R1 instead of R2 (decision #179); modifying or deleting them stays R2. R1_if_added_except stays R2 even when new.",
+  "R0": [
+    "docs/**",
+    "tests/**"
+  ],
+  "R1": [
+    "tools/**",
+    "src/Singularity.Lab/**",
+    "mods/**",
+    "lab/**"
+  ],
+  "R2": [
+    "src/Singularity.Kernel/**",
+    "src/Singularity.Core/**",
+    "src/Singularity.Session/**",
+    "tests/Singularity.Kernel.Tests/**",
+    "tests/Singularity.Core.Tests/**",
+    "tests/Singularity.Session.Tests/**",
+    "tests/Singularity.Architecture.Tests/**",
+    "**/*golden*",
+    "**/*.csproj",
+    "**/*.props",
+    "**/*.targets",
+    "**/Directory.Packages.props",
+    "**/nuget.config",
+    "**/global.json",
+    "**/*.runsettings",
+    "*.sln",
+    "tools/llm_worker/**",
+    "docs/architecture/**"
+  ],
+  "R3": [
+    "docs/decisions/**",
+    "docs/vision/**",
+    "development/**",
+    "CURRENT_STATE.md",
+    "tools/development/**",
+    ".claude/**",
+    "CLAUDE.md",
+    "AGENTS.md",
+    ".githooks/**",
+    ".github/**",
+    ".mcp.json",
+    ".gitignore",
+    ".git/**",
+    "lab/results/**",
+    "tools/llm_worker/risk_paths.json",
+    "tools/llm_worker/prices.json"
+  ],
+  "R1_if_added": [
+    "tests/*/Llm/**/*.cs"
+  ],
+  "R1_if_added_except": [
+    "**/*golden*"
+  ]
+}

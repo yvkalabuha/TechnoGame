@@ -1,6 +1,6 @@
 {
-  "task_id": "PILOT-A1-product-class-inventory",
-  "version": 1,
+  "task_id": "PILOT-A1-product-class-inventory-2",
+  "version": 2,
   "category": "A",
   "type": "A1",
   "title": "Inventory of ProductClassTable (types, methods, dependencies)",
@@ -8,11 +8,11 @@
   "context_files": [
     {
       "path": "src/Singularity.Core/Data/ProductClassTable.cs",
-      "sha256": "31cc8a15c0d56a054f99429972251684e34ed5d7b206aea668784d7f84e79af8"
+      "sha256": "342834b391427f6423fd2d8f55cd8fc609ef048fe3b645c8829d89efb23eeb56"
     },
     {
       "path": "src/Singularity.Core/Data/ProductClassTable.Build.cs",
-      "sha256": "a0f26d7fda8eb47cbc5fd37e5536d15105d66ab68515c11c71c8e017d56c9496"
+      "sha256": "32979c6f829d48ac8adf4521af17140163ca43dab9bdd8530338cf97bb058ac9"
     }
   ],
   "allowed_paths": [],
@@ -134,5 +134,6 @@
     "claude_reference_tokens": 15000
   },
   "requires_review": false,
-  "escalation": "Pilot compares the inventory with the source by hand"
+  "escalation": "Pilot compares the inventory with the source by hand",
+  "risk": "R0"
 }

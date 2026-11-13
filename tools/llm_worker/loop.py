@@ -48,10 +48,10 @@ def regressed(report, best_report):
 
 
 class CandidateLoop:
-    def __init__(self, contract, candidate, provider, verifier, run_dir, context_text, clock):
+    def __init__(self, contract, candidate, provider, verifier, run_dir, context_text, clock, fallbacks=()):
         self.c = contract
         self.k = candidate
-        self.provider = provider
+        self.chain = [provider, *fallbacks]  # flash -> pro (decision #175 d); after the last: escalation
         self.verifier = verifier
         self.dir = run_dir
         self.context = context_text
@@ -63,6 +63,11 @@ class CandidateLoop:
         }
         self.st.setdefault("failures", {})  # "step|model" -> model failures (paid providers stop at a limit)
         self.st.setdefault("provider", getattr(provider, "name", "unknown"))
+        self.st.setdefault("model_idx", 0)  # position in the chain; only moves forward, survives restarts
+
+    @property
+    def provider(self):
+        return self.chain[self.st["model_idx"]]
 
     # --- persistence ---------------------------------------------------------------------
     def _save(self):
@@ -167,6 +172,7 @@ class CandidateLoop:
                             {"role": "assistant", "content": rnd["explain_raw"]},
                             {"role": "user", "content": "Now return the complete corrected result "
                              "(schema 'result'). Change only what is needed to fix the failed checks."}]
+                    rnd["model"] = getattr(self.provider, "model", "unknown")
                     rnd["raw"] = self._ask(n, "attempt", msgs, self.c["output_schema"], "result")
                     self._save()
             except BudgetExceeded as e:
@@ -211,24 +217,34 @@ class CandidateLoop:
         else:
             rnd.update(decision="no_gain", reason=f"quality {report['quality']} <= best {best_q}")
 
-        model = getattr(self.provider, "model", "unknown")
+        model = rnd.get("model") or getattr(self.provider, "model", "unknown")
         key = f"attempt|{model}"
-        self.st["failures"][key] = self.st["failures"].get(key, 0) + 1
-        over = getattr(self.provider, "paid", False) and self.st["failures"][key] >= config.MODEL_FAILURE_LIMIT
+        count = self.st["failures"][key] = self.st["failures"].get(key, 0) + 1
+        paid = getattr(self.provider, "paid", False)
 
+        # Why this model is done. Quality stops need a previous attempt of the same model.
         prev = self.st["rounds"][n - 1] if n > 0 else None
-        if prev is not None and prev["report"]["signature"] == report["signature"]:
-            self._stop("same failure twice", ESCALATED)
-        elif rnd["decision"] == "no_gain":
-            self._stop("quality did not improve", ESCALATED)
-        elif rnd["decision"] == "rollback" and report["quality"] <= best_q:
-            self._stop("rolled back and quality did not improve", ESCALATED)
-        elif over:
-            self._stop(f"{self.st['failures'][key]} failures of {model} at step attempt", ESCALATED)
-        elif n >= self.c["max_rounds"]:
-            self._stop(f"retries exhausted ({self.c['max_rounds']})", ESCALATED)
-        else:
+        reason = None
+        if prev is not None and prev.get("model", model) == model and prev["report"]["signature"] == report["signature"]:
+            reason = "same failure twice"
+        elif count > 1 and rnd["decision"] == "no_gain":
+            reason = "quality did not improve"
+        elif count > 1 and rnd["decision"] == "rollback" and report["quality"] <= best_q:
+            reason = "rolled back and quality did not improve"
+        elif paid and count >= config.MODEL_FAILURE_LIMIT:
+            reason = f"{count} failures of {model} at step attempt"
+        elif count > self.c["max_rounds"]:
+            reason = f"retries exhausted ({self.c['max_rounds']})"
+
+        if reason is None:
             self._save()
+        elif self.st["model_idx"] + 1 < len(self.chain):
+            self.st["model_idx"] += 1
+            nxt = getattr(self.provider, "model", "unknown")
+            rnd["switch"] = f"{model} -> {nxt}: {reason}"
+            self._save()
+        else:
+            self._stop(reason, ESCALATED)
 
     def _stop(self, reason, outcome):
         self.st["stop"] = reason

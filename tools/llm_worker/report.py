@@ -3,6 +3,7 @@
 import json
 from datetime import date
 
+from .contract import ContractError
 from .worktree import branch_name
 from .taskqueue import ACCEPTED, CREATED, ESCALATED, FAILED, QUEUED, REJECTED, RUNNING, TaskQueue
 
@@ -46,7 +47,12 @@ def build(queue_dir, runs_dir, today=None, ledger=None, cap=None):
     totals = {"prompt": 0, "completion": 0, "provider_s": 0.0, "claude_ref": 0}
     for task_id in queue.task_ids():
         state = queue.state(task_id)
-        contract = queue.contract(task_id)
+        try:
+            contract = queue.contract(task_id)
+        except ContractError as e:  # old or modified contract: the task is listed, not trusted
+            groups["UNVERIFIED"].append(f"### {task_id}\n- Контракт не принят ({untrusted(e, 300)}); "
+                                        "результат не проверен.")
+            continue
         cands = _candidates(runs_dir, task_id)
         for st in cands:
             providers.add(st.get("provider", "llamacpp"))
