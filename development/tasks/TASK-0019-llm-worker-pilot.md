@@ -1,7 +1,7 @@
 ---
 id: TASK-0019
 title: "Пилот внешней LLM (Qwen): tools/llm_worker"
-status: REVIEW
+status: DONE
 level: light
 milestone: MS-M0
 agent: developer
@@ -50,8 +50,8 @@ Python-инструмент `tools/llm_worker/` по `docs/ai-agents/EXTERNAL_LL
 `docs/ai-agents/EXTERNAL_LLM_STRATEGY.md`; DECISIONS_LOG #109, #110.
 
 ## REVIEW
-- [ ] Code review (reviewer) — находки high закрыты
-- [ ] Тесты (test-engineer) — проходят, покрытие достаточно
+- [x] Code review (reviewer, 2026-11-13) — accept, high нет; medium по песочнице → DEBT-0023; доработки под DeepSeek → DEBT-0022
+- [x] Тесты (test-engineer, 2026-11-13) — критерии покрыты; 62 теста: 1 FAIL (`test_pilot_contracts_are_valid`, дрейф контракта A1 → DEBT-0024), 1 expectedFailure (двойная оплата → DEBT-0022); добавлен `tests/test_cost_invariants.py`. Сервер Qwen отключается (#174 e); инструмент остаётся под DeepSeek (ADR-0015).
 
 ## Результат
 

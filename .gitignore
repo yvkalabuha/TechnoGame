@@ -31,3 +31,4 @@ lab/results/
 .env.*
 *.pem
 *.key
+.mcp.json

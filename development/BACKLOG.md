@@ -30,9 +30,9 @@
 | [TASK-0014](../development/tasks/TASK-0014-core-knowledge-slice.md) | DONE | Core.Knowledge для среза: фронтир, c_eff, hazard, K_d, K_ind, расписания абляций | MS-M0 |
 | [TASK-0015](../development/tasks/TASK-0015-core-industry-slice.md) | DONE | Core.Industry для среза: culture_H, tooling_M, production_profile, сплав, reserve_workforce | MS-M0 |
 | [TASK-0016](../development/tasks/TASK-0016-godot-compat-spike.md) | DONE | Спайк Godot: Core внутри Godot .NET, сборка в CI, исключение тестового кода из release | MS-M0 |
-| [TASK-0017](../development/tasks/TASK-0017-slice-smoke-anchors.md) | APPROVED | Смоук калибровочных якорей C1–C3 на слоях знания и способности (T4s) | MS-M0 |
+| [TASK-0017](../development/tasks/TASK-0017-slice-smoke-anchors.md) | DONE | Смоук калибровочных якорей C1–C3 на слоях знания и способности (T4s) | MS-M0 |
 | [TASK-0018](../development/tasks/TASK-0018-core-products-slice.md) | DONE | Core.Products для среза: КБ, варианты, line_E, дефекты, когорты, upkeep, FV, заглушка L_P (T5) | MS-M0 |
-| [TASK-0019](../development/tasks/TASK-0019-llm-worker-pilot.md) | REVIEW | Пилот внешней LLM (Qwen): tools/llm_worker | MS-M0 |
+| [TASK-0019](../development/tasks/TASK-0019-llm-worker-pilot.md) | DONE | Пилот внешней LLM (Qwen): tools/llm_worker | MS-M0 |
 | [TASK-0020](../development/tasks/TASK-0020-industry-kernel-v24.md) | DONE | Industry и Kernel под контракт v2.4: правило культуры C-B, наладка производства | MS-M0 |
 | [TASK-0021](../development/tasks/TASK-0021-products-v24-rework.md) | DONE | Доработка Core.Products (TASK-0018) под контракт v2.4 | MS-M0 |
 | [TASK-0022](../development/tasks/TASK-0022-slice-policy-session.md) | DONE | T6a: система политики ИИ и сборка мира среза (Session) | MS-M0 |
@@ -47,6 +47,7 @@
 | [TASK-0031](../development/tasks/TASK-0031-slice-v5-a40-order.md) | DONE | V5 и порядок A40: вариант цели оснастки V5, охрана снятия при условии запуска | MS-M0 |
 | [TASK-0032](../development/tasks/TASK-0032-slice-v5-default-pool.md) | DONE | V5 по умолчанию, колонка tool_unmet и причина why_not, переключатель POOL_ORDER | MS-M0 |
 | [TASK-0033](../development/tasks/TASK-0033-slice-t6d-licence-events.md) | DONE | T6d: лицензии, перебой сплава, правила ИИ по why_not, множитель наладки mult_P | MS-M0 |
+| [TASK-0034](../development/tasks/TASK-0034-c3-accelerated-knowledge.md) | DONE | C3 при ускоренном темпе знания (вход для калибровки T12) | MS-M0 |
 
 ## Гипотезы
 
@@ -85,6 +86,7 @@
 | [ADR-0012](../docs/decisions/ADR-0012-deterministic-math-functions.md) | ACCEPTED | Детерминированные степенные функции: PowFrac вместо Pow/Exp/Log |
 | [ADR-0013](../docs/decisions/ADR-0013-save-format-v0.md) | ACCEPTED | Формат сохранения v0: бинарный снимок колонок SoA + заголовок |
 | [ADR-0014](../docs/decisions/ADR-0014-session-test-api.md) | ACCEPTED | Session и Test API: единая сборка мира, команды, test mode |
+| [ADR-0015](../docs/decisions/ADR-0015-external-executors-providers.md) | PROPOSED | Внешние исполнители и провайдеры (DeepSeek, Codex, Qwen) |
 
 ## Research Reports
 
