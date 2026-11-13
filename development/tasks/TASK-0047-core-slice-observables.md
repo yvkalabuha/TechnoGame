@@ -34,6 +34,7 @@ created: 2026-11-13
 Размещение — `docs/architecture/SLICE_COMPOSITION.md` r4 §13 (#189); формат — `slice-csv-format.md` v0.5.
 
 7. Тест поверхности v2 учитывает nullable-аннотации ссылочных типов (`NullabilityInfoContext`); новый эталон `session-surface.v2.txt`, v1 остаётся (SA, ревью TASK-0046).
+8. Codex (TASK-0046, medium): неопределённые значения `GridStep` в `SliceWorld.ApplyGrid` → явный отказ, как для `Layer`.
 
 ## Правила
 - Наблюдение не меняет динамику. Golden-хеши меняются, только если новое поле входит в хешируемое состояние. Изменение хеша — только с явной причиной и согласием Orchestrator.

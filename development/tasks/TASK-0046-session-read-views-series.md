@@ -1,7 +1,7 @@
 ---
 id: TASK-0046
 title: "Session: read views среза и переключатели серий для Lab (разблокировка T10)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: developer
@@ -39,15 +39,15 @@ created: 2026-11-13
 - **Объём:** серии `L_C`/`L_P` в эту задачу не входят. Им нужен `t_known` в Core, а Core здесь менять запрещено; они переданы в TASK-0047 (APPROVED, п. 1 и 6). Session отказывает на `Layer` вне {Full, Lk, Lk0, Lc0} — это ожидаемое поведение до TASK-0047.
 
 ## Критерии приёмки
-- [ ] Проект поверхности утверждён Orchestrator, systems-architect проверил реализацию.
-- [ ] Views и переключатели реализованы; golden-хеши без изменений; `dotnet test` зелёный.
-- [ ] L1/L2 не нарушены.
+- [x] Проект поверхности утверждён Orchestrator, systems-architect проверил реализацию.
+- [x] Views и переключатели реализованы; golden-хеши без изменений; `dotnet test` зелёный.
+- [x] L1/L2 не нарушены.
 
 ## REVIEW
-- [ ] systems-architect (поверхность)
-- [ ] Code review (reviewer)
-- [ ] Второе ревью (codex) — R2, до чистого accept (#181)
-- [ ] Тесты (test-engineer)
+- [x] systems-architect (поверхность, 2026-11-13) — соответствует §12; 3 отклонения приняты; r5
+- [x] Code review (reviewer, 2026-11-13) — accept; 1 medium + 4 low исправлены
+- [x] Второе ревью (codex, head f5e4552c, только код задачи) — accept: 1 medium (неопределённые `GridStep` → Mid) → TASK-0047; report sha256 bfdd915cd881c33a7ece7b53917a7e478397b6665cf660aaa7970f30cc5e5ec2. Раунды: 2712299 (2 high: P5 → #190, L_C/L_P — вне объёма), aa16dc8, 78e5232 (medium Layer — исправлено)
+- [x] Тесты — полный `dotnet test` (Orchestrator): 0 падений; +50 тестов developer
 
 ## Результат
 developer, 2026-11-13 (записал Orchestrator).
