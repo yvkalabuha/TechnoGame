@@ -236,7 +236,9 @@ public sealed class ViewWalk
         See("tooling unmet", tl.UnmetByCluster.Any(u => u > Fx6.Zero));
         See("tooling training budget", tl.TrainingBudget > Fx6.Zero);
         See("deal month", w.Policy.LicenceStart(a) == t);
-        Check("inputs", iv.ProcurementBudget == iv.Shares.Procurement * iv.Budget + w.Policy.LicenceFlow(a) || w.Policy.LicenceStart(a) <= t, $"month {t} actor {a}: procurement budget");
+        // The view carries share_P·budget of the step plus the licence flow of the deals; strict equality, no disjunction.
+        Check("inputs", iv.ProcurementBudget == iv.Shares.Procurement * iv.Budget + w.Policy.LicenceFlow(a), $"month {t} actor {a}: procurement budget = base + licence flow");
+        See("licence month", w.Policy.LicenceStart(a) == t);
 
         Check("capability", iv.Capability == new CapabilityView(before.AlloySupply[a], before.Deficit[a]), $"month {t} actor {a}: capability");
         See("alloy deficit", iv.Capability.AlloyDeficit > Fx6.Zero);
@@ -452,12 +454,25 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
                 bool init = p.SetMethod is null || p.SetMethod.ReturnParameter.GetRequiredCustomModifiers().Contains(typeof(IsExternalInit));
                 if (!init)
                     offenders.Add($"{t.Name}.{p.Name} has a setter");
-                if (p.PropertyType.IsArray || p.PropertyType.IsGenericType && p.PropertyType.GetGenericTypeDefinition() == typeof(List<>))
-                    offenders.Add($"{t.Name}.{p.Name} is a mutable collection");
+                if (!IsImmutableShape(p.PropertyType, viewTypes))
+                    offenders.Add($"{t.Name}.{p.Name}: {p.PropertyType} is not on the immutable whitelist");
             }
             offenders.AddRange(t.GetFields(BindingFlags.Public | BindingFlags.Instance).Select(f => $"{t.Name}.{f.Name} is a public field"));
         }
         Assert.Empty(offenders);
+    }
+
+    // Whitelist: primitives, Fx6, enums, view types, FleetCommand (readonly record struct of an enum and numbers), ImmutableArray of the same.
+    private static bool IsImmutableShape(Type t, Type[] viewTypes)
+    {
+        if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(ImmutableArray<>))
+            return IsImmutableShape(t.GetGenericArguments()[0], viewTypes);
+        if (Nullable.GetUnderlyingType(t) is { } inner)
+            return IsImmutableShape(inner, viewTypes);
+        if (t == typeof(FleetCommand))
+            return typeof(FleetCommand).GetProperties().All(p => p.SetMethod is null || p.SetMethod.ReturnParameter.GetRequiredCustomModifiers().Contains(typeof(IsExternalInit)))
+                && typeof(FleetCommand).IsValueType;
+        return t.IsPrimitive || t == typeof(string) || t == typeof(Fx6) || t.IsEnum || viewTypes.Contains(t) || t == typeof(BudgetShares) || t == typeof(CivilDate) || t == typeof(TechKey);
     }
 
     [Fact]

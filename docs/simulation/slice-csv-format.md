@@ -1,8 +1,11 @@
 # Формат CSV и манифестов EXP-0002 (срез «реактивная авиация»; `lab/analysis/exp0002.py`)
 
-> Статус: черновик **v0.5** (simulation-engineer, 2026-11-13, TASK-0047) под спецификацию `slice-jet-aviation.md` **v0.24 r2** (дальше «спец. §N») и поверхность read views `docs/architecture/SLICE_COMPOSITION.md` §12–§13 (r4, дальше «SC §12.N», «SC §13.N»; `TestApiVersion = 2`). v0.4, v0.3 и v0.2 — в истории git.
+> Статус: черновик **v0.5 r1** (simulation-engineer, 2026-11-13, TASK-0047; r1 — ось `k_diff` ключа `GRID`, решение #190) под спецификацию `slice-jet-aviation.md` **v0.25** (дальше «спец. §N») и поверхность read views `docs/architecture/SLICE_COMPOSITION.md` §12–§13 (r4, дальше «SC §12.N», «SC §13.N»; `TestApiVersion = 2`). v0.4, v0.3 и v0.2 — в истории git.
 > Соглашения унаследованы от `exp0001-csv-format.md` и Lab (ADR-0008, `src/Singularity.Lab/RunExecutor.cs`, `MatrixRunner.cs`).
 > C#-моделей `JetSlice` и `JetSliceCalib` ещё нет: этап 2 T10 ждёт read views (SC §12, TASK-0046) и следы шага (SC §13, TASK-0047). Формат проверен только синтетическими данными (`exp0002.py --selftest`) и сверкой с печатью T6eHarness.
+
+## Изменения v0.5 r1 (решение #190, спец. v0.25 §7 P5)
+- Ключ `GRID`, серия `grid/*`: ступень оси `k_diff` — множитель к доле цены `r = 1 − k_diff`, а не к `k_diff`: `LO` → `k_diff` 0,75, `MID` → 0,5, `HI` → 0 (при `k_diff*` = 0,5). Оси `k_catch`, `h_max` — по-прежнему множитель к самому значению. [Предл.] Отчёт P5 (`exp0002.py`) подписывает точку сетки обоими числами: `k_diff` и `r`. Колонки и прочие ключи не менялись; код `run.grid` (SC §12.4) тот же.
 
 ## Изменения v0.5 (против v0.4)
 Основание — SC §13 (r4, решение #189): наблюдаемые величины среза как след последнего шага (`SliceView.Step`, `CloseView.Reason`, `ActorInputsView.Requirement`) и `NodeView.KnownSince`. Правило v0.4 сохраняется: колонка пишется, только если её значение даёт поверхность Session. Из §4.15 v0.4 перенесены ровно колонки, которые даёт SC §13; §4.15 пуст.
@@ -67,7 +70,7 @@
 | `old/L_K0`, `old/L_C0` | старые контроли, печать (`LAYER = LK0` / `LC0`) | 1…400 |
 | `channel/alpha0`, `ramp1`, `b0`, `eta0`, `kcatch0`, `sigma0`, `kdiff0`, `E0`, `ktr0`, `kqp0`, `R0` | каналы §6.2 (`CHANNELS`) | 1…200 |
 | `source/FIX_K`, `FIX_E`, `FIX_A`; `FIX_ALL` | источники §6.3 | 1…400 |
-| `grid/<kc>_<kd>_<hm>` ∈ {`lo`,`mid`,`hi`} | сетка P5 (×{0,5; 1; 2} к замороженному `k_catch`, `k_diff`, `h_max`; ключ `GRID`) | 1…100 |
+| `grid/<kc>_<kd>_<hm>` ∈ {`lo`,`mid`,`hi`} | сетка P5 (×{0,5; 1; 2} к замороженному `k_catch`, `h_max` и к доле цены `r = 1 − k_diff`, т.е. `k_diff` ∈ {0,75; 0,5; 0}, v0.5 r1; ключ `GRID`) | 1…100 |
 | `start/PERT`, `start/SYM` | старт §6.5 | 1…400 |
 | `prof/<USA>_<GBR>_<SUN>` | факторный план §6.6 (`PROFILE_CELL` = `9u + 3g + s`) | 1…40 |
 | `lic/knows` | §6.7 | 1…400 |
@@ -104,7 +107,7 @@
 | `POOL_ORDER` | `CAN`/`REV`/`PROP`/`SEV` | `ToolingTarget.PoolOrder` | `CAN` |
 | `LAYER` | `FULL`/`LK`/`LK0`/`LC0` | `Layer` (`LayerControl`) | `FULL` |
 | `CONTROL_TABLES` | строка: путь к файлу таблиц контролей §6.1 (относительно манифеста) | `LkTables` | нет; обязателен ровно при `LAYER = LK` (иначе — ошибка загрузки) |
-| `GRID` | `<kc>_<kd>_<hm>`, каждое из `LO`/`MID`/`HI` | `Grid` (`GridCell`: `KCatch`, `KDiff`, `HMax`) | `MID_MID_MID` |
+| `GRID` | `<kc>_<kd>_<hm>`, каждое из `LO`/`MID`/`HI`; `LO`/`HI` = ×0,5/×2 к значению, для `kd` — к `r = 1 − k_diff` (`LO` → `k_diff` 0,75, `HI` → 0; #190) | `Grid` (`GridCell`: `KCatch`, `KDiff`, `HMax`) | `MID_MID_MID` |
 | `EFFORT_SHARE` | `X1`/`X0`/`X05`/`X2`/`X4` | `EffortShare` (`EffortShareArm`) | `X1` |
 | `detail` | `full`/`lite` | — (только Lab) | `full` |
 `SkipStartValidation` из манифеста не задаётся (только печать F32). `ViewMode` — опция исполнения, не ключ: `JetSlice` = `Full`, `JetSliceCalib` = `Calibration` (SC §12.1). `fv_budget` — значение спец. §5.5 (24 медианных месячных бюджета закупок великих на t0, `SliceLayoutView.FvBudget`); ключа нет: другое значение меняет вход пресета `adaptive`, т. е. мир, и требует `run.*` (SC §12.6).
@@ -252,7 +255,7 @@
 Статистики (анализ, спец. §8.2 п.1): C1a = `1 − exp(−Σ dlog_cost/n)` по `DEV/FULL`, C1b = `Σ dlog_yield / Σ (dlog_yield + dlog_asm)` по `DEV`; C1d, C1e — то же по `MATURE`; пустой набор удвоений → `d` = 1. Падение `asm_over_floor_drop` в `MATURE` — проверка P0 (15–30%, #187), в потери не идёт. «Зрелая» уже покрыта тестом `ProductsChannelBudgetTests` (TASK-0042 п.4); «освоение» требует `culture_H`/`tooling_M` GBR t0 и правила наладки — из данных сценария и чистых функций Core, без Session [Предп.; проверить на T12].
 
 ## 7. Что считает анализ (дополнения v0.3; определения v0.2 §6 — в силе)
-- Определения v0.2 (засчитанная смена, tenure, `small_lead`, P1–P5, исход, D1, D2, таблицы контролей) не меняются; спец. v0.24 §7 их не меняла.
+- Определения v0.2 (засчитанная смена, tenure, `small_lead`, P1–P5, исход, D1, D2, таблицы контролей) не меняются; спец. v0.24 §7 их не меняла; v0.25 (#190) поменяла только ось `k_diff` сетки P5.
 - **A40 (печать, P0):** по сериям — число `cancel_design` (`branch = O`), по (актор, класс) — среднее на seed, доля seeds с ≥ 1 срабатыванием С; L-O0 и L-C0 — флаги P0 в отчёте; сверка с ожиданиями A40 (б) (объявляются заново до первого прогона main, спец. A40 v0.20).
 - **A39:** доли `pool_exh` по актору; инварианты леджера §4.11 — нарушение = дефект (P0).
 - **F17b:** из `lines.csv` — сосуществования по (актор, seed), длительность p50/p90/max (цензура 384); причина конца по `close_rule` {`YPROD`, `REPLACE`, `A40C_N`, `A40C_W`} или `HORIZON` (§4.12); распределение `left_share` строк `role = N`; число месяцев `w_after_n = 1`; класс `COEXIST_MONEY` из `a40.csv`.

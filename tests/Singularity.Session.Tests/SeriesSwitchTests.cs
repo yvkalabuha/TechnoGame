@@ -186,17 +186,11 @@ public class SeriesSwitchTests
             Assert.Equal(i.KCatch.Raw * factor / divisor, ic.KCatch.Raw);
             Assert.Equal(k.KDiff, kc.KDiff);
             Assert.Equal(k.HMax, kc.HMax);
-            if (step == GridStep.Hi)
-            {
-                Assert.Throws<InvalidOperationException>(() => SliceWorld.ApplyGrid(new GridCell(GridStep.Mid, step, GridStep.Mid), k, i));
-            }
-            else
-            {
-                (kc, ic) = SliceWorld.ApplyGrid(new GridCell(GridStep.Mid, step, GridStep.Mid), k, i);
-                Assert.Equal(k.KDiff.Raw * factor / divisor, kc.KDiff.Raw);
-                Assert.Equal(k with { KDiff = kc.KDiff }, kc);
-                Assert.Equal(i, ic);
-            }
+            // k_diff axis (#190): the price share r = 1 - k_diff is scaled; frozen r* = 0,5 gives k_diff 0,75 / 0,5 / 0 exactly.
+            (kc, ic) = SliceWorld.ApplyGrid(new GridCell(GridStep.Mid, GridStep.Mid, GridStep.Mid) with { KDiff = step }, k, i);
+            Assert.Equal(step == GridStep.Hi ? 0 : 750_000, kc.KDiff.Raw);
+            Assert.Equal(k with { KDiff = kc.KDiff }, kc);
+            Assert.Equal(i, ic);
             (kc, ic) = SliceWorld.ApplyGrid(new GridCell(GridStep.Mid, GridStep.Mid, step), k, i);
             Assert.Equal(k.HMax.Raw * factor / divisor, kc.HMax.Raw);
             Assert.Equal(k with { HMax = kc.HMax }, kc);
@@ -244,15 +238,21 @@ public class SeriesSwitchTests
             (k.KDiff, k.HMax, i.KCatch));
     }
 
-    // k_diff × 2 = 1: c_eff of a node known elsewhere is 0 and Core divides by zero in tick 0. Refused at assembly with the reason (a decision on the axis is open).
-    [Theory]
-    [InlineData(GridStep.Mid)]
-    [InlineData(GridStep.Lo)]
-    [InlineData(GridStep.Hi)]
-    public void Grid_KDiffHi_IsRefusedWithTheReason_TheOtherCellsAssemble(GridStep kc)
+    [Fact]
+    public void Grid_KDiffAxis_IsExact_AndAll27CellsAssembleAndLive()
     {
-        Assert.Throws<InvalidOperationException>(() => SliceTestData.Create(Base() with { Grid = new GridCell(kc, GridStep.Hi, GridStep.Mid) }));
-        Assert.NotNull(SliceTestData.Create(Base() with { Grid = new GridCell(kc, GridStep.Lo, GridStep.Hi) }));
+        var kd = new List<long>();
+        foreach (GridStep step in Enum.GetValues<GridStep>())
+            kd.Add(SliceWorld.ApplyGrid(new GridCell(GridStep.Mid, step, GridStep.Mid), new KnowledgeParams(), new Singularity.Core.Industry.IndustryParams()).K.KDiff.Raw);
+        Assert.Equal(new long[] { 500_000, 750_000, 0 }, kd.ToArray());
+        foreach (GridStep c in Enum.GetValues<GridStep>())
+        {
+            foreach (GridStep d in Enum.GetValues<GridStep>())
+            {
+                foreach (GridStep h in Enum.GetValues<GridStep>())
+                    Assert.NotNull(Run(Base() with { Grid = new GridCell(c, d, h) }, 6).LastHash);
+            }
+        }
     }
 
     [Fact]

@@ -33,6 +33,8 @@ created: 2026-11-13
 6. (Erratum спеки v0.24 r2 §6.1, О-13-1) `startKnownSince = −384` для узлов стартового знания в режимах `L_C`/`L_P`. Проверки `since < 0` в `IndustrySystem.Yield`, `ControlUnitCost`, `ProductsSystem.StepCanonical` → «неизвестен» ровно при −1. В `L_P` — `max(t_known, 0)` для канонического проекта. Main не затрагивается (−384 там не бывает), golden не меняется.
 Размещение — `docs/architecture/SLICE_COMPOSITION.md` r4 §13 (#189); формат — `slice-csv-format.md` v0.5.
 
+7. Тест поверхности v2 учитывает nullable-аннотации ссылочных типов (`NullabilityInfoContext`); новый эталон `session-surface.v2.txt`, v1 остаётся (SA, ревью TASK-0046).
+
 ## Правила
 - Наблюдение не меняет динамику. Golden-хеши меняются, только если новое поле входит в хешируемое состояние. Изменение хеша — только с явной причиной и согласием Orchestrator.
 - systems-architect заранее проверяет, куда и как ложится каждая величина.

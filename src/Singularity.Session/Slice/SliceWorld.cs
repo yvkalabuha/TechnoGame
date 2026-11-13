@@ -35,7 +35,8 @@ internal sealed class SliceWorld
     {
         if ((config.Layer == LayerControl.Lk) != (config.LkTables is not null))
             throw new ArgumentException("LkTables are needed exactly with Layer = Lk.", nameof(config));
-        Config = config;
+        // The tables are copied: a caller changing its arrays later must not change a running world.
+        Config = config.LkTables is { } src ? config with { LkTables = CopyTables(src) } : config;
         Data = data;
         Streams = SliceStreams.Create(config);
         ScenarioData scenario = data.Scenario(config.ScenarioId);
@@ -256,7 +257,10 @@ internal sealed class SliceWorld
         return (k, i, p);
     }
 
-    /// <summary>The P5 grid (spec §7): <c>k_diff</c> and <c>h_max</c> of knowledge, <c>k_catch</c> of capability; ×0,5 truncates the raw value, ×2 is checked.</summary>
+    /// <summary>
+    /// The P5 grid (spec §7, #190): <c>h_max</c> and <c>k_catch</c> are scaled by ×0,5 (truncating the raw value) / ×2 (checked);
+    /// the <c>k_diff</c> axis scales the price share <c>r = 1 − k_diff</c>, so <c>k_diff</c> stays below 1 (c_eff of a node known elsewhere is never zero).
+    /// </summary>
     public static (KnowledgeParams K, IndustryParams I) ApplyGrid(GridCell cell, KnowledgeParams k, IndustryParams i)
     {
         static Fx6 Step(GridStep step, Fx6 v) => step switch
@@ -265,11 +269,8 @@ internal sealed class SliceWorld
             GridStep.Hi => Fx6.FromRaw(checked(v.Raw * 2)),
             _ => v,
         };
-        k = k with { KDiff = Step(cell.KDiff, k.KDiff), HMax = Step(cell.HMax, k.HMax) };
-        // c_eff = c_money·(1 − k_diff·known_elsewhere)/…: at k_diff ≥ 1 a node known elsewhere costs nothing and the progress rate divides by zero (Core).
-        // The grid point ×2 on the frozen 0,5 lands exactly there, so it is refused here with the reason instead of failing in the first tick.
-        if (k.KDiff >= Fx6.One)
-            throw new InvalidOperationException($"P5 grid: k_diff = {k.KDiff} makes c_eff of a node known elsewhere zero (division by zero in the knowledge step); the point needs a decision on the axis.");
+        Fx6 kDiff = Fx6.One - Step(cell.KDiff, Fx6.One - k.KDiff);
+        k = k with { KDiff = kDiff, HMax = Step(cell.HMax, k.HMax) };
         return (k, i with { KCatch = Step(cell.KCatch, i.KCatch) });
     }
 
@@ -393,6 +394,16 @@ internal sealed class SliceWorld
         if (Config.EffortShare != EffortShareArm.X1)
             Table.AddInt("run.effort_share").Load([.. Enumerable.Repeat((int)Config.EffortShare, rows)]);
         Table.AddLong("run.scenario").Load(Fill(rows, BinaryPrimitives.ReadInt64LittleEndian(Convert.FromHexString(Scenario.Hash.AsSpan(0, 16)))));
+    }
+
+    private static LkTables CopyTables(LkTables t)
+    {
+        var copy = new LkTables(t.ActorCount);
+        t.PCens.CopyTo(copy.PCens, 0);
+        t.Mean.CopyTo(copy.Mean, 0);
+        t.HalfWidth.CopyTo(copy.HalfWidth, 0);
+        t.Delta.CopyTo(copy.Delta, 0);
+        return copy;
     }
 
     // First 8 bytes of SHA-256 over PCens.Raw, Mean, HalfWidth, Delta (little-endian, in this order).

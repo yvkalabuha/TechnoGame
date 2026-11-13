@@ -27,7 +27,7 @@ created: 2026-11-13
    - views: `ActorView`, `NodeView`, `DesignView`, `PolicyDecisionView`, `ToolingLedgerView`, `CapabilityView` и строки печати A40, F17b, флота и лицензий;
    - неизменяемые снимки после post непустого тика;
    - повышение `test_api_version`;
-   - переключатели серий в `SliceRunConfig`: абляции `L_K`, `L_C`, `L_P` (§6.1), сетка P5, `EFFORT_SHARE`, `COMP_V010` — только те, что заданы спекой v0.24.
+   - переключатели серий в `SliceRunConfig`: абляции `L_K`, `L_K0`, `L_C0` (§6.1), сетка P5 (ось `k_diff` по `r = 1 − k_diff`, #190), `EFFORT_SHARE`. **Вне задачи (решение Orchestrator по проекту SA §12):** `L_C`/`L_P` — нужен `t_known` в Core → TASK-0047; `COMP_V010` — спека §6.8 его пропускает.
 2. **developer** — реализация в `src/Singularity.Session`:
    - тест на каждый view;
    - тест версии поверхности;
