@@ -60,6 +60,7 @@
 | [TASK-0044](../development/tasks/TASK-0044-slice-lab-models-t10.md) | BLOCKED | T10: Lab-модели JetSlice и JetSliceCalib, CSV v0.24, манифесты, печати A39/A40 | MS-M0 |
 | [TASK-0045](../development/tasks/TASK-0045-llm-worker-debt-26-27.md) | DONE | llm_worker: DEBT-0026 и DEBT-0027 (fallback при сбое песочницы, related в gate, метрики, verifier unittest) | MS-M0 |
 | [TASK-0046](../development/tasks/TASK-0046-session-read-views-series.md) | APPROVED | Session: read views среза и переключатели серий для Lab (разблокировка T10) | MS-M0 |
+| [TASK-0047](../development/tasks/TASK-0047-core-slice-observables.md) | APPROVED | Core: наблюдаемые величины для печатей среза (t_known, left, причина закрытия линии, варианты Requirement, отказы лицензии по деньгам) | MS-M0 |
 
 ## Гипотезы
 

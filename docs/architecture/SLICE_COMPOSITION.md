@@ -3,6 +3,7 @@
 > Автор: systems-architect, 2026-11-03. Статус: **[Предл.]**, вход для T6 (ИИ и события) и закрытия DEBT-0016. Не ADR: всё ниже — локальные технические решения внутри ADR-0004, 0006, 0013, 0014 (ACCEPTED). Места, где нужно решение владельца, собраны в §11.
 > r1 (2026-11-03): под контракт v2.4 r3 — команда `cancel_design` (F14, #123) и вход `TrainingBudget` (F15, #125): §3, §4, §5, §7.2, §7.3.
 > r2 (2026-11-03): устаревшее по замечанию reviewer — правило оснастки называется `ToolingPlan` (не `ToolingRule`); `PlannedVolume` включает `proc_v` (§2, §4); под контракт v2.4 r4 (#128) — `v_exp` с `max` и `home(a)`, `planned` со стадией С (§4).
+> r3 (2026-11-13, TASK-0046 п. 1): §12 — проект поверхности read views Session и переключателей серий для Lab (T10). Статус §12 — **[Предл.]**, утверждает Orchestrator.
 > Источники: ADR-0002/0004/0006/0013/0014; `docs/architecture/LAYER_CONTRACT.md` §4.0, §5; спека среза `docs/simulation/slice-jet-aviation.md` §2, §3.4, §3.5 A8/A15/A30/A36/A37, §4, §6.3, §6.8, §9.1, §11; код `src/` на коммите 4d75ae0.
 
 ## Краткий вывод
@@ -14,6 +15,7 @@
 - **Валидация в два шага:** форма команды и право источника (повтор фокуса, `force` только от внешнего источника, сумма долей = 1) проверяются при `Submit`; проверки по состоянию (известен ли процесс, допуск серии, свободный слот) — при применении. Отказы по состоянию остаются счётчиками в таблице (уже есть) и строкой в логе прогона.
 - **Хеш и сохранение:** ADR-0013 не меняется. Конфигурация прогона (`FIX_*`, абляции, ячейки профилей, плечи) и отпечаток параметров — колонки `run.*`: они входят в хеш и в снимок без новых полей заголовка. Очередь ожидающих внешних команд — секция кодека журнала (толкование ADR-0013 п. 1 + п. 5, §8; подтверждает Orchestrator).
 - **Новый ADR не нужен**, если владелец согласен, что секция очереди в файле сохранения — исполнение п. 5 ADR-0013, а не изменение формата (§11, П-1).
+- r3: **read views для Lab (§12)** — один неизменяемый `SliceView` на непустой тик: состояние после post и входы месячного шага в том виде, в каком их видел compute. `TestApiVersion = 1`. Переключатели серий: `L_K`, `L_K0`, `L_C0`, сетка P5, `EFFORT_SHARE`. `L_C` и `L_P` без правки Core невыполнимы (нет состояния `t_known`). `COMP_V010` не делается (спека §6.8 v0.12).
 
 ## 1. Исходное состояние [Факт: код 4d75ae0]
 - Сборки `Singularity.Session` нет. Связанные миры собираются вручную в тестах: `tests/.../Products/ProductsLinkedRunTests.cs` (правило V23, ИИ-заглушка, 384 мес.) и `ProductsCbLinkedRunTests.cs` (C-B, golden-хеш 60 мес.; там `Planned/PlannedVolume` подключены к `ProductsSystem`). В собранной игре этих связей нет: в `IIndustryInputs` по умолчанию `EffortBudget = 0`, `EffortFocus = −1`, `PlannedVolume = 0`, `Planned = false`, `ToolingInvest(rest)` игнорирует `rest`.
@@ -183,3 +185,171 @@
 | счётчики отказов вместо журнала команд | §7.5 `commands.log` внешних команд; счётчики остаются как метрика |
 | нет пресета `adaptive` | §2 `Core.Policy` (T6) |
 | `force` проверяется только источником | §7.4 + структурный запрет у ИИ (§4, §7.5) |
+
+## 12. Read views и переключатели серий для Lab (r3, TASK-0046) [Предл.]
+Потребитель — модели Lab `JetSlice` и `JetSliceCalib` (T10, формат `docs/simulation/slice-csv-format.md` v0.3). Основание — ADR-0014 п. 5–6. [Факт: код `src/Singularity.Session`, `src/Singularity.Core` на HEAD 854ad45] Почти всё нужное уже есть в публичных методах Core. Views только собирают это в неизменяемый снимок. Формул и новых систем в них нет. Пробелы перечислены в §12.6.
+
+### 12.1 Модель снимка
+- **Одна публикация на непустой тик.** После post непустого тика (ADR-0006: выполнен месячный шаг или применены команды) `SliceSession` собирает `SliceView` и публикует его одной записью ссылки (`Volatile.Write`). После пустого тика ссылка не меняется. Начальный снимок публикуется в `Create` (`Month = −1`, `Inputs = null`): из него берутся значения «−1, на старте».
+- **Две части снимка.**
+  1. **Состояние после post** — колонки `Current`. Это снимок, который прочитает compute месяца `Month + 1`. Чистые функции Core на этой части вызываются с `month = Month + 1`.
+  2. **`Inputs` — входы месячного шага `Month` в том виде, в каком их видел его compute.** Session собирает их в начале месячного тика: после `Policy.ApplyDeals` и после применения команд, до `Runner.RunTick()`. Публикуются вместе с post того же тика. Брать их из предыдущего снимка нельзя: `ApplyDeals` меняет состояние в начале тика, поэтому план оснастки и класс `ClassifyGiveUp` в месяц покупки лицензии разошлись бы с тем, что видел compute.
+- **Связь со строками CSV.** Строка «месяца t» (формат §0) — снимок с `Month = t`. Поля «снимок t» (формат §4.9–4.12) — `View.Inputs` того же снимка. Решения ИИ месяца t (действуют с t+1) — `ActorView.Decisions` того же снимка.
+- **Неизменяемость.** Все типы — `sealed record` / `readonly record struct`. Коллекции — только `ImmutableArray<T>`. Ссылок на системы, `Table` или колонки нет. Изменяемые массивы Core (`int[]` в `DesignCommand`, `ProductsSystem.Alternatives`, `PrcSet`) копируются. Конструкторы `internal`.
+- **Режим чтения** — опция исполнения `SliceRunConfig.ViewMode` (как `Threads`). В `run.*` не пишется и хеш не меняет. При `Calibration` Session не вызывает `KeyOf`, `MaxFleetValue` и `WhyNot`: `ActorView.Key` и `FleetValue` = `null`, а `SliceSession.WhyNot`/`CurrentRequirement` бросают `InvalidOperationException`. Так запрет спеки §8.2 п. 2 (формат §5 «не вызывает вообще») выполняется структурно, а не только по заголовку CSV.
+- **Цена.** 5 акторов × (12 проектов + 61 узел) + один `ToolingPlan.Compute` на актора в месяц. Адаптер и так пересчитывает этот план при каждом вызове (A39). `KeyOf` считается каждый месяц (лента `lead`, формат §4.1). `MaxFleetValue` — только в снимках с `Month mod 12 = 0` (формат §4.2), в остальных `null`.
+
+### 12.2 Поверхность (точные сигнатуры)
+Пространство имён `Singularity.Session`. Типы Core (`Fx6`, `CivilDate`, `PolicyProfile`, `BudgetShares`, `TechKey`, `DesignStage`, `GiveUpClass`, `FleetCommand`, `LineBind`) переиспользуются: они уже публичны и неизменяемы.
+```csharp
+public sealed partial class SliceSession
+{
+    public const int TestApiVersion = 1;            // ADR-0014 п. 6; до TASK-0046 версии не было (= 0)
+    public SliceLayoutView Layout { get; }           // один раз в Create
+    public SliceView View { get; }                   // последняя публикация; не null после Create
+}
+
+public enum SliceViewMode { Full = 0, Calibration = 1 }
+
+public sealed record SliceLayoutView(
+    ImmutableArray<string> ActorIds,                 // строка актора = индекс (порядок сценария)
+    ImmutableArray<int> NodeNumbers,                 // строка графа знания → номер узла
+    ImmutableArray<int> NodeGen,
+    ImmutableArray<int> ProcessNumbers,              // строка IndustryLayout → номер PRC
+    ImmutableArray<int> ProcessTier,
+    ImmutableArray<string> Clusters,                 // порядок раскладки
+    ImmutableArray<int> GenApp,                      // APP-узел поколения 1…G
+    int Designs, int Bureaus, int Generations, int TAb, Fx6 MasteredYield, Fx6 FvBudget);
+
+public sealed record SliceView(
+    long Tick, CivilDate Date, string StateHash,
+    long Month,                                      // последний выполненный месячный шаг; −1 до первого
+    ImmutableArray<ActorView> Actors,                // post-состояние
+    MonthInputsView? Inputs);                        // null, если в этом тике месячного шага не было
+
+public sealed record ActorView(
+    int Actor, PolicyProfile Profile,
+    ImmutableArray<Fx6> KD,                          // KnowledgeSystem.KD по дисциплинам
+    int FieldedGen,                                  // ProductsSystem.FieldedGen(a, Month+1)
+    TechKey? Key,                                    // KeyOf(a, Month+1); null в Calibration
+    Fx6? FleetValue,                                 // MaxFleetValue(a, Fx6.One, FvBudget, Month+1); только Month mod 12 = 0 и Full
+    ImmutableArray<BureauView> Bureaus,
+    QualityView Quality, LicenceView Licence, DisruptionView Disruption,
+    ImmutableArray<NodeView> Nodes,                  // по строкам графа
+    ImmutableArray<DesignView> Designs,              // по слотам 0…Designs−1
+    PolicyDecisionView Decisions);
+
+public sealed record NodeView(int Number, bool Known, bool ByLicence, ProcessView? Process);  // ByLicence: в LastLicenceGrants этого шага
+public readonly record struct ProcessView(
+    Fx6 Yield, Fx6 V, bool Admitted, Fx6 UnitCostMult, bool Mastered, Fx6 LicenceShare);    // home-site (A27: site = актор)
+
+public sealed record DesignView(
+    int Design, DesignStage Stage, int PlatformGen, int Gen, int Parent, int StageOMonth,
+    bool BuiltAny, bool Cancelled, Fx6 Rate, Fx6 UnitCost, Fx6 UnitCostFloor,
+    Fx6 InService, Fx6 Readiness, Fx6 Perf, LineBind Bind, bool AiLine,
+    ImmutableArray<int> PrcSet);
+public readonly record struct BureauView(int Bureau, int Design, long Granted, long Required);
+public readonly record struct QualityView(bool Active, int Start, int TriggerCount, int TrainingTarget);
+public sealed record LicenceView(int Gen, int Seller, int Start, ulong Mask, ulong OfferMask, Fx6 Flow,
+    ImmutableArray<long> Refusals);                  // BadLicenceCount по BadLicence (без None)
+public readonly record struct DisruptionView(int Start, int End);
+
+public sealed record PolicyDecisionView(             // решения compute Month, действуют с Month+1
+    ImmutableArray<DesignCommandView> DesignCommands,// AiDesignCommands(a, Month+1)
+    ImmutableArray<StartView> Starts,                // AiStart(a, d, Month+1) ≠ null
+    ImmutableArray<int> Closes,                      // AiClose(a, d, Month+1)
+    ImmutableArray<FleetCommand> Fleet,              // AiFleetCommands(a, Month+1)
+    ImmutableArray<int> Repeats);                    // Repeats(a, g), g = 1…G
+public sealed record DesignCommandView(DesignCommandKind Kind, int Target, ImmutableArray<int> Alts);
+public readonly record struct StartView(int Design, Fx6 Rate);
+
+public sealed record MonthInputsView(long Month, int GFront, ImmutableArray<ActorInputsView> Actors);
+public sealed record ActorInputsView(
+    int Actor, Fx6 Budget, BudgetShares Shares, Fx6 ProcurementBudget,   // Policy.Budget, SharesOf, ProcurementBudget — месяц Month
+    ToolingLedgerView Tooling, CapabilityView Capability,
+    ImmutableArray<DesignInputsView> Designs);
+public sealed record ToolingLedgerView(
+    Fx6 Rest, Fx6 CapBudget, Fx6 Total, Fx6 TakenRest, Fx6 TakenCap, Fx6 RestReturned, Fx6 TrainingBudget,
+    int Participating,                               // число ячеек с Participates
+    ImmutableArray<Fx6> UnmetByCluster);             // Σ Unmet по site актора и измерениям, порядок Layout.Clusters
+public readonly record struct CapabilityView(Fx6 AlloySupply, Fx6 AlloyDeficit);
+public readonly record struct DesignInputsView(
+    int Design, DesignStage Stage, int IdleMonths, bool GateOpen, Fx6 Hidden, bool Admitted,
+    Fx6 YMin, int ArgP,                              // min AdmittedYield по PrcSet; ArgP — номер PRC, −1 без набора
+    GiveUpClass? GiveUp);                            // ClassifyGiveUp(a, d, Month) только в стадии О
+```
+Источники полей — только вызовы, которые уже делают адаптеры и `T6eHarness`:
+- `ToolingLedgerView` — `IndustryInputsAdapter.Plan(a, Month, Industry.RestActor(a, Month))`. Это тот же вызов, что в `ToolingInvest`, поэтому значения совпадают с планом compute.
+- `YMin`/`ArgP` — `ProductsInputsAdapter.AdmittedYield`; при равенстве берётся первый в порядке `PrcSet`, как в печати T6e2.
+- `CapabilityView` — `Industry.Alloy(a, Month).Supply`, `Policy.AlloyDeficit(a, Month)`.
+- `BureauView` — `Industry.Granted(a, EngineerCategory, ProductsLayout.BureauRequester(b))` и `BureauReq(af_class)` проекта бюро.
+- `ProcessView.UnitCostMult` — `Industry.Profile(a, [один PrcSetItem], Month+1).UnitCostMult`. [Предп.] Для набора из одного процесса это и есть `ucm` процесса. developer проверяет тестом против `IndustryMath`; если не так — пробел §12.6.
+- Отражения и `InternalsVisibleTo` для Lab не нужны. `IPolicyProducts` и `GiveUpAllowed` (приватные, читались в T6eHarness) в поверхность не входят: печать охраны v0.21 формат v0.3 не требует.
+
+### 12.3 `test_api_version` и тест поверхности
+- `SliceSession.TestApiVersion = 1` (публичная константа).
+- Тест в `Singularity.Session.Tests` строит канонический текст поверхности. Через отражение берутся все публичные типы сборки `Singularity.Session` и их публичные члены (имя, сигнатура, тип) в порядке Ordinal. Текст сравнивается с эталоном `tests/Singularity.Session.Tests/Api/session-surface.v1.txt`. Расхождение без нового файла эталона с номером, равным `TestApiVersion`, валит CI (ADR-0014 «Проверка»).
+- Любое изменение views или `SliceRunConfig` после этого — повышение версии и новый эталон, ревью systems-architect.
+
+### 12.4 Переключатели серий в `SliceRunConfig`
+Правило для всех: **значение по умолчанию = поведение main**. Колонки `run.*` добавляются **только при значении не по умолчанию**, как у `run.tooling`. Поэтому `SchemaVersion`, отпечаток схемы и golden-хеши main не меняются.
+```csharp
+public LayerControl Layer { get; init; }             // Full
+public LkTables? LkTables { get; init; }             // обязателен ровно при Layer = Lk
+public GridCell Grid { get; init; }                  // default = (Mid, Mid, Mid) = main
+public EffortShareArm EffortShare { get; init; }     // X1
+public SliceViewMode ViewMode { get; init; }         // Full; опция исполнения (§12.1)
+
+public enum LayerControl { Full = 0, Lk = 1, Lk0 = 2, Lc0 = 3 }      // Lc, Lp — §12.5
+public enum GridStep { Mid = 0, Lo = 1, Hi = 2 }                      // ×1, ×0,5, ×2
+public readonly record struct GridCell(GridStep KCatch, GridStep KDiff, GridStep HMax);
+public enum EffortShareArm { X1 = 0, X0 = 1, X05 = 2, X2 = 3, X4 = 4 }
+```
+| Переключатель | Семантика (спека v0.24) | Сборка в `SliceWorld` (только вызовы Core) | `run.*` |
+|---|---|---|---|
+| `Layer = Lk` | §6.1 `L_K`: стохастическое расписание `known` с моментами полной модели; `K_d`, `K_ind`, `prog` не обновляются | `KnowledgeSchedule.BuildLk(Graph, kStart, LkTables, Streams.Know)` → `new KnowledgeSystem(..., KnowledgeMode.ScheduleLk, schedule)` | `run.layer` = 1; `run.layer.tables` = первые 8 байт SHA-256 канонической записи `LkTables` (`PCens.Raw`, `Mean`, `HalfWidth`, `Delta`, little-endian, по порядку) |
+| `Layer = Lk0` | §6.1 старый контроль `L_K0` (печать, seeds 1…400): лаги 0/0/24/36/48 от середины окна | `KnowledgeSchedule.BuildLk0(Graph, kStart)` → `KnowledgeMode.ScheduleLk0`. Старт сценария 1945-09 совпадает с `Lk0WindowMid`; при другой дате старта сборка бросает исключение (середины окон — данные сценария, их пока нет) | `run.layer` = 2 |
+| `Layer = Lc0` | §6.1 `L_C0` (печать): `yield = 1`, `unit_cost_mult = 1`, `q = 1` | `new IndustrySystem(..., IndustryMode.ConstLc0)` | `run.layer` = 3 |
+| `Grid` | §7 P5, §8.2 п. 4а: оси `k_catch`, `k_diff`, `h_max` × {0,5; 1; 2} к замороженному значению; 27 точек; `mid_mid_mid` = main | после `ApplyChannels`: `IndustryParams.KCatch`, `KnowledgeParams.KDiff`, `KnowledgeParams.HMax`. `Lo` = `raw / 2` (усечение), `Hi` = `checked(raw * 2)`. На текущих значениях (25 000; 500 000; 80 000) деление точное | `run.grid` = `9·kc + 3·kd + hm` (значения `GridStep`) |
+| `EffortShare` | §6.8 `EFFORT_SHARE`: `share_D′ = x·share_D`, x ∈ {0; 0,5; 2; 4}; прочие доли × `(1 − share_D′)/(1 − share_D)`, сумма = 1 | статический `SliceWorld.ApplyEffortShare(arm, PolicyParams)` рядом с `ApplySaleArm` (построение параметров, не формула мира): ко всем `SharesByProfile` и `MassProgrammeShares`. `D′` — точные raw-операции. `R′`, `cap′`, `QP′` = `⌊raw·(1−D′)/(1−D)⌋` (`Int128`). Остаток округления → `Procurement′ = 1 − D′ − R′ − cap′ − QP′`. Результат проверяется `IsValid`. [Предл.] Правило округления спека не задаёт | `run.effort_share` = значение enum |
+| `COMP_V010` | §6.8 v0.12: «по умолчанию пропускается». [Факт: путей v0.10 в Core нет] | **не делается**; серия `arm/COMP_V010` из формата убирается (v0.4) | — |
+
+Проверки (developer, тестами):
+- каждый переключатель в значении по умолчанию даёт golden-хеш main 60/384 мес. и прежний отпечаток схемы;
+- не по умолчанию хеш отличается, и `run.*` его фиксирует;
+- `Lk` без `LkTables` и `LkTables` без `Lk` — ошибка сборки;
+- `Lk`, `Lk0`: I5 на всём прогоне, узлы стартового знания не трогаются; таблицы в тесте синтетические (настоящие придут из T12);
+- `EffortShare`: сумма долей = 1 точно у всех профилей и у программы качества; ×1 возвращает тот же объект параметров;
+- все 4 плеча проходят `PolicyLiveness.Validate` на сценарии (Р-12-2).
+
+### 12.5 Что не исполнимо без правки Core
+- **`L_C`** (`IndustryMode.CurveLc`) и **`L_P`** (`ProductsMode.CanonicalLp`). Обоим нужен `t_known` — месяц merge, в котором узел стал известен (`IIndustryInputs.KnownSince`, `IProductsInputs.AppKnownSince`). [Факт: код] В Core этого состояния нет: `know.known.N` хранит только 0/1, адаптеры возвращают −1. Вести `t_known` в Session — это состояние вне таблиц или колонки без системы-владельца (ADR-0013 п. 4, §3). Поэтому нужна задача Core.
+  - [Предл.] Решение: `KnowledgeSystem` с опцией `trackKnownSince` пишет колонки `know.since.N` только в этих режимах, так что хеш main не меняется. Отдельно определить `t_known` узлов, известных на старте (в CSV это −1, а в адаптерах −1 = «неизвестен»).
+  - Таблицы `Y_k`, `U_k`, `T_design`, `ρ` дадут только T12.
+  - Для `L_P` ещё открыто: выключается ли продуктовый ИИ (`ProductAi = false`) и правила парка — game-designer/simulation-engineer.
+- **Абляции §6.1 по существу** (не по коду) ждут таблиц контролей из калибровочной сборки (§8.2 п. 8). До T12 серии `layer/*` прогоняются только на синтетических таблицах тестов.
+
+### 12.6 Формат v0.3: что даёт поверхность, а чего нет
+| Таблица (формат) | Из views без новых систем | Пробел (чего в Core нет) → предложение |
+|---|---|---|
+| `summary` | профили; `lead`/`lead_all`/`lead_field` из `Key` каждого месяца; `hash_final`, `hash_years` из `StateHash` | — |
+| `actor_year` | `Key`, `FleetValue`, `Budget` (Inputs), `KD`, `eng_short_months` по `BureauView`; `fv_fleet` в Lab = Σ `ProductsMath.FleetValue(InService, Readiness, Perf/1, γ)` по проектам | `volume` в формате не определён — уточнить в v0.4 (simulation-engineer) |
+| `whynot` | `SliceSession.WhyNot` / `CurrentRequirement` (есть) | — |
+| `node_times`, `prc_year`, `prc_month` | `Known` (смена между снимками = `t_known`), `ByLicence`, `ProcessView` | `ucm` — [Предп.] §12.2 |
+| `gen_times` | `t_req` из `DesignCommands` (compose, `Target = g`), `BuiltAny`, `FieldedGen`, `UnitCost`; `cost_u100` — Lab по накопленному выпуску | — |
+| `requirements` | `req`, `actor`, `gen`, `t`, выбранный состав | `n_variants`, `fv_tech`, `fv_super`, `chosen`: варианты пресетов живут только внутри `ProductPresets.Compose`. Повторить их в Session — дублировать логику ИИ. → Core: чистая `ProductPresets.Variants(...)` (≈ 20 строк) или убрать колонки в v0.4 |
+| `events` | `DIS` (`Disruption`), `LIC_OFFER` (`OfferMask`), `LIC_BUY`/`LIC_END` (`Licence`), `LIC_REFUSE_MONEY` (`Refusals`, [Предп.]: есть ли в `BadLicence` денежная причина — проверить), `TRAINING`, `QP_START` (профиль) | `QP_START.other` «причина звена QC» не хранится → в v0.4 только профиль |
+| `a40` | О: `DesignCommands` (Cancel) + `GiveUp` из Inputs; С: `Closes` при `Inputs.Designs.IdleMonths ≥ TAb`; `t_stage_o`, `rep_before`, `preset` = f(профиль) | класс С `COEXIST_MONEY` требует `left` (ниже) |
+| `a40_c_months` | `YMin`, `ArgP`, `AlloySupply`, `AlloyDeficit`, `t_a` = `Tooling.TrainingBudget` | **`left`** (деньги закупок после содержания и `W`) — локальная величина шага 4.4d в `ProductsSystem`, публично не отдаётся → Core: колонка/метод снимка, либо класс С без `COEXIST_MONEY` |
+| `tooling_ledger` | все колонки, кроме разбиения по проходам | `invest_p1`/`invest_p2`: `ToolingPlanResult` даёт только сумму → v0.4: одна колонка `invest` (инварианты §4.11 используют только сумму) |
+| `lines` | `y_min`, `argp`, `idle`, `rate`, `unit_cost`, `start`, `close` | `close_rule` (YPROD/REPLACE/A40C/F17B): ИИ хранит только факт закрытия → Core: код причины в `pol.close` или колонка вне формата. `left_share` — нет `left`. `role` W/N/SOLE — Lab выводит из стадий и `PlatformGen` [Предп.: проверить по A41 F17b] |
+| `fleet_cmd` | `Fleet`, `Gen`, `Bind`, `Inputs.GFront` | `price` у `SELL`: `Quote` — функция снимка t, а команда видна только после шага → цена = прирост `SaleInYear` в t+1 [Предп.] или убрать |
+| `licences` | `Licence`, `Flow`, профиль | — |
+| `calib_*`, `actor_month` | всё (`Calibration` без `Key`/`FV`/`why_not`) | — |
+| параметры §3 | `FIX_*`, `START`, `PROFILE_CELL`, `CHANNELS`, `DERIV`, `FORCE` (`ForceProxy`), `FLEET_*`, `SALE_ARM`, `LINE_CLOSE`, `LIC_*`, `T6D_OFF`, `TOOLING_*`, `POOL_ORDER` уже есть; новые — `LAYER`, `CONTROL_TABLES`, `GRID`, `EFFORT_SHARE` | `fv_budget` не по умолчанию: `FvBudget` — вход пресета `adaptive`, т. е. параметр мира (нужен `run.*`), а не печати → пока только значение по умолчанию |
+
+### 12.7 Риски
+- **Р-12-1.** Неверная фаза `Inputs`: если собирать их после `RunTick` или до `ApplyDeals`, план и класс О в месяц сделки разойдутся с compute. Защита: тест — `Inputs.Tooling` равен `IndustrySystem.LastTooling`/`LastRest` того же шага на прогоне с лицензиями.
+- **Р-12-2.** `EFFORT_SHARE ×4` может не пройти `PolicyLiveness` (L-C1…L-C3: доля закупок падает до 0,52 от прежней у P2). Тогда сборка громко падает. Решать simulation-engineer/Orchestrator, правило не ослаблять.
+- **Р-12-3.** Объём поверхности: `TestApiVersion` будет расти с каждой новой печатью. Защита: правило ADR-0014 п. 6 — новые поля только под колонку формата.
+- **Р-12-4.** Узкие места §12.6 (`left`, `close_rule`, варианты `Requirement`) — правки Core. TASK-0046 их не делает (условие «если нужна правка Core — остановиться»). Без них T10 пишет таблицы без этих колонок только после правки формата v0.4. Заглушки (пустые или нулевые колонки) запрещены.
