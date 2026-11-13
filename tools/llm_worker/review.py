@@ -92,7 +92,7 @@ def build_review_input(task_id, base, head, root=config.REPO_ROOT, max_bytes=MAX
     shown = [n for n in names if paths.normalize(n) and not context.excluded(paths.normalize(n))]
     withheld = [n for n in names if n not in shown]
     diff = _git(root, "--literal-pathspecs", "diff", "--no-renames", f"{base}...{head}", "--", *shown).decode("utf-8", "replace") if shown else ""
-    parts = [f"TASK {task_id} ({task_path})\n{goal}", _fence("DIFF", diff)]
+    parts = [_fence(f"TASK {task_id} ({task_path})", goal), _fence("DIFF", diff)]
     if withheld:
         parts.append("Changed files withheld from this review (sensitive paths): " + ", ".join(withheld))
     extra = 0  # bytes Codex reads from /work: they count against the limit like DeepSeek's file blocks
@@ -269,8 +269,13 @@ def _run_codex(text, head, root, runner, task_id, attempts_dir):
         before = codex.tree_digest(wt)
         try:
             answer, usage = runner(text, wt)
-        except codex.SandboxUnavailable as e:
-            raise ReviewError("sandbox_unavailable", str(e)) from None
+        except BaseException as e:
+            if codex.tree_digest(wt) != before:  # a changed worktree outranks the original error
+                codex.log_attempt(task_id, head, "guard_violation", directory=attempts_dir)
+                raise ReviewError("guard_violation", "the review worktree changed during the run") from None
+            if isinstance(e, codex.SandboxUnavailable):
+                raise ReviewError("sandbox_unavailable", str(e)) from None
+            raise
         if codex.tree_digest(wt) != before:
             codex.log_attempt(task_id, head, "guard_violation", directory=attempts_dir)
             raise ReviewError("guard_violation", "the review worktree changed during the run")

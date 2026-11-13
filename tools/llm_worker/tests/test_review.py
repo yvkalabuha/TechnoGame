@@ -232,6 +232,23 @@ class RunTest(unittest.TestCase):
             self.assertEqual(cm.exception.code, code)
             self.assertEqual(fake.calls, [])
 
+    def test_guard_violation_outranks_runner_exception(self):
+        for exc in (codex.CodexLimit("limit"), codex.CodexFailed("boom"), codex.SandboxUnavailable("x")):
+            fake = FakeProvider([GOOD])
+
+            def runner(prompt, wt, exc=exc):
+                (Path(wt) / "tools" / "a.py").write_text("tampered\n")
+                raise exc
+
+            with self.assertRaises(ReviewError) as cm:
+                self.run_review("codex", codex_runner=runner, make_provider=lambda: fake)
+            self.assertEqual(cm.exception.code, "guard_violation")
+            self.assertEqual(fake.calls, [])  # no fallback after a violation, even for codex_limit
+
+    def test_task_goal_is_fenced(self):
+        text, _ = review.build_review_input("TASK-0001", self.base, self.head, self.repo.root)
+        self.assertRegex(text, r"(?s)\A=== TASK TASK-0001 .*?===\n.*?Make X work.*?=== END TASK TASK-0001 ")
+
     def test_no_paid_fallback_on_guard_violation(self):
         fake = FakeProvider([GOOD])
 
