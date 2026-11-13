@@ -1,0 +1,180 @@
+{
+  "task_id": "PILOT-L1-risk19-yield-tests",
+  "version": 2,
+  "category": "B",
+  "type": "B1",
+  "title": "unittest tests for lab/analysis/risk19_yield_channel.py",
+  "instructions": "Write stdlib unittest tests for lab/analysis/risk19_yield_channel.py. Return exactly one file: path 'lab/analysis/test_risk19_yield_channel.py'. Import the module as 'import risk19_yield_channel' (the runner puts lab/analysis on sys.path). Reproduce the key numbers of the report docs/simulation/risk19-yield-channel.md section 2 by calling the module functions (channels, cost, cost_x0, mature_min, ramp): (1) scenario A mature point: mature_min(1) == 16384; at N=16384 the price fall per doubling is 1 - exp(-full) ~ 2.2% and the yield share yc/(yc+ac) ~ 68%; at N=32768 fall ~ 1.3% and yield share ~ 64%. (2) scenario G (cost_x0, same channel decomposition as row_x0): k=6, N=1 yield share ~ 0% and fall ~ 4.0%; k=6, N=400 yield share ~ 17%, fall ~ 2.0%; k=6, N=1000 yield share ~ 29%; k=3, N=400 yield share ~ 34%. Also test ramp bounds (ramp(0, xh) == LAMBDA0, ramp grows with x, stays below 1), and that unit cost decreases with n. Compare floats with assertAlmostEqual and a tolerance matching the report's rounding (half a unit of the last printed digit: 0.005 for shares, 0.0005 for falls), never exact equality. Use only the standard library; no file I/O, no network, no randomness. Do not change other files.",
+  "context_files": [
+    {
+      "path": "lab/analysis/risk19_yield_channel.py",
+      "sha256": "ff9d8394fe5a8e69376fa3eb5a633e8c2907f676e03577c95ed97348047f4d55"
+    },
+    {
+      "path": "docs/simulation/risk19-yield-channel.md",
+      "sha256": "81506c23701858b92f73d6fca307ae9322d40152d21121583e23ee05141d3938"
+    }
+  ],
+  "allowed_paths": [
+    "lab/analysis/test_risk19_yield_channel.py"
+  ],
+  "forbidden_paths": [
+    "src/**"
+  ],
+  "output_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "status",
+      "files",
+      "assumptions",
+      "open_questions"
+    ],
+    "properties": {
+      "status": {
+        "enum": [
+          "done",
+          "partial",
+          "cannot"
+        ]
+      },
+      "assumptions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "open_questions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "files": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 2,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "content"
+          ],
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "acceptance": [
+    {
+      "check": "paths_allowed",
+      "hard": true
+    },
+    {
+      "check": "build",
+      "hard": true
+    },
+    {
+      "check": "tests_pass",
+      "hard": true
+    },
+    {
+      "check": "test_count",
+      "hard": false,
+      "threshold": 8
+    },
+    {
+      "check": "mutation_score",
+      "hard": true,
+      "threshold": 0.8
+    }
+  ],
+  "verification": {
+    "restore_cmd": [
+      "python3",
+      "-B",
+      "-c",
+      "pass"
+    ],
+    "build_cmd": [
+      "python3",
+      "-B",
+      "-c",
+      "import ast,sys;ast.parse(open(\"lab/analysis/test_risk19_yield_channel.py\").read())"
+    ],
+    "test_cmd": [
+      "python3",
+      "-B",
+      "-c",
+      "import sys,unittest;r=unittest.TextTestRunner(verbosity=0).run(unittest.defaultTestLoader.discover('lab/analysis',pattern='test_risk19_yield_channel.py'));f=len(r.failures)+len(r.errors);print('Passed: %d'%(r.testsRun-f));print('Failed: %d'%f);sys.exit(not r.wasSuccessful())"
+    ],
+    "command_timeout_s": 120,
+    "mutants": [
+      {
+        "file": "lab/analysis/risk19_yield_channel.py",
+        "find": "return LAMBDA0 + (1 - LAMBDA0) * x / (x + xh)",
+        "replace": "return LAMBDA0 + (1 - LAMBDA0) * x / (x + 2 * xh)"
+      },
+      {
+        "file": "lab/analysis/risk19_yield_channel.py",
+        "find": "bb = b if ac else 0.0",
+        "replace": "bb = b"
+      },
+      {
+        "file": "lab/analysis/risk19_yield_channel.py",
+        "find": "x = n if yc else 0.0",
+        "replace": "x = n"
+      },
+      {
+        "file": "lab/analysis/risk19_yield_channel.py",
+        "find": "hours = hfl + (H_FIRST - hfl) * (1 + n) ** (-bb)",
+        "replace": "hours = hfl + (H_FIRST - hfl) * (2 + n) ** (-bb)"
+      },
+      {
+        "file": "lab/analysis/risk19_yield_channel.py",
+        "find": "SCALE_PU, SCALE_AF = 0.827491, 3.754003",
+        "replace": "SCALE_PU, SCALE_AF = 0.727491, 3.754003"
+      },
+      {
+        "file": "lab/analysis/risk19_yield_channel.py",
+        "find": "cost(2 * n, y, a, **kw))",
+        "replace": "cost(3 * n, y, a, **kw))"
+      },
+      {
+        "file": "lab/analysis/risk19_yield_channel.py",
+        "find": "while min(ramp(n, xs * XH[t]) for t, _ in PU + AF) < 0.9:",
+        "replace": "while min(ramp(n, xs * XH[t]) for t, _ in PU + AF) < 0.5:"
+      },
+      {
+        "file": "lab/analysis/risk19_yield_channel.py",
+        "find": "ramp(k * XH[t] + x_add, XH[t])",
+        "replace": "ramp(k * XH[t] + 2 * x_add, XH[t])"
+      },
+      {
+        "file": "lab/analysis/risk19_yield_channel.py",
+        "find": "xa = n if yc else 0.0",
+        "replace": "xa = n"
+      }
+    ]
+  },
+  "max_rounds": 2,
+  "max_candidates": 1,
+  "budget": {
+    "max_total_tokens": 120000,
+    "max_minutes": 240,
+    "max_output_tokens": 6000,
+    "max_context_tokens": 8000,
+    "claude_reference_tokens": 25000
+  },
+  "requires_review": true,
+  "escalation": "Pilot reviews the test file in the llm branch; reviewer before any merge",
+  "risk": "R1"
+}

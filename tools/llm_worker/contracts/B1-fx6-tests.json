@@ -1,5 +1,5 @@
 {
-  "task_id": "PILOT-B1-fx6-tests",
+  "task_id": "PILOT-B1-fx6-tests-ds",
   "version": 2,
   "category": "B",
   "type": "B1",
@@ -164,7 +164,7 @@
     ]
   },
   "max_rounds": 2,
-  "max_candidates": 2,
+  "max_candidates": 1,
   "budget": {
     "max_total_tokens": 120000,
     "max_minutes": 240,
