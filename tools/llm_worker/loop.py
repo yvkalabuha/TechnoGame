@@ -2,8 +2,11 @@
 provider outage or a restart resumes from the last finished step (runs/<task>/c<k>/loop.json)."""
 
 import json
+import os
 
+from . import config
 from .jsonschema_lite import validate
+from .provider import ProviderError, parse_response
 from .taskqueue import write_json_atomic
 from .verifiers.common import schema_failure_report
 
@@ -58,6 +61,8 @@ class CandidateLoop:
             "candidate": candidate, "rounds": [], "best": None, "stop": None, "outcome": None,
             "tokens": {"prompt": 0, "completion": 0}, "provider_s": 0.0, "verify_s": 0.0,
         }
+        self.st.setdefault("failures", {})  # "step|model" -> model failures (paid providers stop at a limit)
+        self.st.setdefault("provider", getattr(provider, "name", "unknown"))
 
     # --- persistence ---------------------------------------------------------------------
     def _save(self):
@@ -100,18 +105,43 @@ class CandidateLoop:
         if minutes >= b["max_minutes"]:
             raise BudgetExceeded(f"time budget used: {minutes:.1f} min")
 
+    def _write_raw(self, n, name, raw):
+        d = self.dir / f"round_{n}"
+        d.mkdir(parents=True, exist_ok=True)
+        tmp = d / f"{name}_raw.bin.tmp"
+        tmp.write_bytes(raw)
+        os.replace(tmp, d / f"{name}_raw.bin")
+
+    def _saved_answer(self, n, name):
+        """A response that was already paid for: the saved parsed one, else the saved raw body. None if neither."""
+        d = self.dir / f"round_{n}"
+        if (d / f"{name}_response.json").is_file():
+            r = json.loads((d / f"{name}_response.json").read_text())
+            return r["content"], r["usage"], r["timings"], r["elapsed_s"]
+        if (d / f"{name}_raw.bin").is_file():
+            try:
+                comp = parse_response((d / f"{name}_raw.bin").read_bytes())
+            except ProviderError:
+                return None  # a non-JSON body from a failed attempt: nothing usable
+            return comp.content, comp.usage, comp.timings, comp.elapsed_s
+        return None
+
     def _ask(self, n, name, messages, schema, schema_name):
-        self._check_budget()
-        self._save_round_file(n, f"{name}_request.json", {"messages": messages, "schema_name": schema_name})
-        comp = self.provider.complete(messages, schema, schema_name, self.c["budget"]["max_output_tokens"],
-                                      seed=self.k)
-        self.st["tokens"]["prompt"] += int(comp.usage.get("prompt_tokens", 0))
-        self.st["tokens"]["completion"] += int(comp.usage.get("completion_tokens", 0))
-        self.st["provider_s"] += comp.elapsed_s
-        self._save_round_file(n, f"{name}_response.json",
-                              {"content": comp.content, "usage": comp.usage, "timings": comp.timings,
-                               "elapsed_s": comp.elapsed_s})
-        return comp.content
+        saved = self._saved_answer(n, name)
+        if saved is None:
+            self._check_budget()
+            self._save_round_file(n, f"{name}_request.json", {"messages": messages, "schema_name": schema_name})
+            comp = self.provider.complete(messages, schema, schema_name, self.c["budget"]["max_output_tokens"],
+                                          seed=self.k, on_raw=lambda raw: self._write_raw(n, name, raw))
+            saved = comp.content, comp.usage, comp.timings, comp.elapsed_s
+            self._save_round_file(n, f"{name}_response.json",
+                                  {"content": comp.content, "usage": comp.usage, "timings": comp.timings,
+                                   "elapsed_s": comp.elapsed_s})
+        content, usage, _, elapsed = saved
+        self.st["tokens"]["prompt"] += int(usage.get("prompt_tokens", 0))
+        self.st["tokens"]["completion"] += int(usage.get("completion_tokens", 0))
+        self.st["provider_s"] += elapsed
+        return content
 
     # --- main --------------------------------------------------------------------------------
     def run(self):
@@ -181,6 +211,11 @@ class CandidateLoop:
         else:
             rnd.update(decision="no_gain", reason=f"quality {report['quality']} <= best {best_q}")
 
+        model = getattr(self.provider, "model", "unknown")
+        key = f"attempt|{model}"
+        self.st["failures"][key] = self.st["failures"].get(key, 0) + 1
+        over = getattr(self.provider, "paid", False) and self.st["failures"][key] >= config.MODEL_FAILURE_LIMIT
+
         prev = self.st["rounds"][n - 1] if n > 0 else None
         if prev is not None and prev["report"]["signature"] == report["signature"]:
             self._stop("same failure twice", ESCALATED)
@@ -188,6 +223,8 @@ class CandidateLoop:
             self._stop("quality did not improve", ESCALATED)
         elif rnd["decision"] == "rollback" and report["quality"] <= best_q:
             self._stop("rolled back and quality did not improve", ESCALATED)
+        elif over:
+            self._stop(f"{self.st['failures'][key]} failures of {model} at step attempt", ESCALATED)
         elif n >= self.c["max_rounds"]:
             self._stop(f"retries exhausted ({self.c['max_rounds']})", ESCALATED)
         else:

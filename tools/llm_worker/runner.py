@@ -1,11 +1,14 @@
 """Processes queued tasks: context package, candidates, verdict, transitions with reasons."""
 
+import fcntl
+import json
 import time
 
 from . import config, worktree
 from .context import build_package
 from .loop import PASSED, REJECTED, CandidateLoop
-from .provider import AuthError, ProviderUnavailable
+from .ledger import SpendRefused
+from .provider import AuthError, InsufficientFunds, ProviderUnavailable
 from .taskqueue import ACCEPTED, FAILED, QUEUED, RUNNING, TaskQueue, write_json_atomic
 from .taskqueue import ESCALATED as S_ESCALATED, REJECTED as S_REJECTED
 from .verifiers.a1_inventory import A1Verifier
@@ -47,10 +50,23 @@ def process_task(queue, task_id, provider, env):
     """Runs one QUEUED task to a final state; it is never left RUNNING.
     ProviderUnavailable and AuthError propagate after requeueing."""
     queue.transition(task_id, RUNNING, "picked by worker")
+    guard = getattr(provider, "guard", None)
+    if guard is not None:
+        guard.task = task_id
     try:
         return _run_task(queue, task_id, provider, env)
     except ProviderUnavailable as e:
+        if getattr(provider, "paid", False) and _count_outage(env, task_id) >= config.MAX_INFRA_FAILURES:
+            reason = f"infrastructure failures reached {config.MAX_INFRA_FAILURES}: {e}"
+            queue.transition(task_id, S_ESCALATED, f"{reason}; to Pilot")
+            return S_ESCALATED
         queue.transition(task_id, QUEUED, f"provider unavailable, will resume: {e}")
+        raise
+    except InsufficientFunds as e:
+        queue.transition(task_id, QUEUED, f"insufficient funds (402), run stopped: {e}")
+        raise
+    except SpendRefused as e:
+        queue.transition(task_id, QUEUED, f"spend refused, run stopped: {e}")
         raise
     except AuthError as e:
         queue.transition(task_id, QUEUED, f"authentication failed, run stopped: {e}")
@@ -59,6 +75,18 @@ def process_task(queue, task_id, provider, env):
         if queue.state(task_id)["state"] == RUNNING:
             queue.transition(task_id, FAILED, f"{type(e).__name__}: {e}", unverified=True)
         return FAILED
+    finally:
+        if guard is not None:
+            guard.task = None
+
+
+def _count_outage(env, task_id):
+    """Outages per task survive restarts; infrastructure faults are not model failures."""
+    path = env.runs_dir / task_id / "infra.json"
+    n = (json.loads(path.read_text())["outages"] if path.is_file() else 0) + 1
+    path.parent.mkdir(parents=True, exist_ok=True)
+    write_json_atomic(path, {"outages": n})
+    return n
 
 
 def _run_task(queue, task_id, provider, env):
@@ -68,7 +96,8 @@ def _run_task(queue, task_id, provider, env):
     task_dir.mkdir(parents=True, exist_ok=True)
     write_json_atomic(task_dir / "context_manifest.json", manifest)
     results = []
-    for k in range(1, contract["max_candidates"] + 1):
+    candidates = 1 if getattr(provider, "paid", False) else contract["max_candidates"]  # paid: one (ADR-0015 §6)
+    for k in range(1, candidates + 1):
         verifier = env.make_verifier(contract, k)
         loop = CandidateLoop(contract, k, provider, verifier, task_dir / f"c{k}", context_text, env.clock)
         st = loop.run()
@@ -96,6 +125,17 @@ def _run_task(queue, task_id, provider, env):
 
 def run_queue(queue_dir, provider, env, max_outages=12, outage_wait_s=300, sleep=time.sleep, log=print):
     """Processes all QUEUED tasks. On repeated outage stops; queued tasks stay for the next run."""
+    queue_dir.mkdir(parents=True, exist_ok=True)
+    with open(queue_dir / ".run.lock", "w") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            log("another run holds the queue lock: one run at a time (the spend bound assumes it)")
+            return False
+        return _run_locked(queue_dir, provider, env, max_outages, outage_wait_s, sleep, log)
+
+
+def _run_locked(queue_dir, provider, env, max_outages, outage_wait_s, sleep, log):
     queue = TaskQueue(queue_dir)
     queue.recover()
     outages = 0
@@ -110,6 +150,12 @@ def run_queue(queue_dir, provider, env, max_outages=12, outage_wait_s=300, sleep
             log(f"{task_id}: {state}")
         except AuthError as e:
             log(f"{task_id}: authentication failed, stopping the run: {e}")
+            return False
+        except InsufficientFunds as e:
+            log(f"{task_id}: insufficient funds (HTTP 402), stopping the run: {e}")
+            return False
+        except SpendRefused as e:
+            log(f"{task_id}: spend refused ({e.code}), stopping the run: {e}")
             return False
         except ProviderUnavailable as e:
             outages += 1

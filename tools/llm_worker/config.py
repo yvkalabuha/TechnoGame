@@ -1,6 +1,7 @@
 """Static configuration. Runtime overrides come from CLI flags or environment variables."""
 
 import os
+from dataclasses import dataclass, field
 from pathlib import Path
 
 PACKAGE_DIR = Path(__file__).resolve().parent
@@ -11,6 +12,47 @@ DEFAULT_MODEL = os.environ.get("LLM_WORKER_MODEL", "qwen3.6-35b-a3b")
 API_KEY_ENV = "LLM_WORKER_API_KEY"
 API_KEY_FILE_ENV = "LLM_WORKER_API_KEY_FILE"
 DEFAULT_API_KEY_FILE = "/home/user/.config/local-llm/key"
+
+
+
+@dataclass(frozen=True)
+class Profile:
+    """Request shape of one provider. json_mode: 'json_schema' (llama.cpp grammar, schema in the request)
+    or 'json_object' (schema only in the prompt; the answer is validated locally)."""
+    name: str
+    url: str
+    model: str
+    json_mode: str
+    extra_body: dict = field(default_factory=dict)
+    send_seed: bool = True
+    paid: bool = False
+    key_env: str = API_KEY_ENV
+    key_file_env: str = API_KEY_FILE_ENV
+    key_file: str = DEFAULT_API_KEY_FILE
+
+
+# DeepSeek names, URL, JSON mode and thinking switch checked on api-docs.deepseek.com
+# (quick_start/pricing, guides/json_mode, guides/thinking_mode) on 2026-11-13.
+# Thinking is on by default there, so it is disabled explicitly. `seed` is not documented: not sent.
+PROFILES = {
+    "llamacpp": Profile("llamacpp", DEFAULT_URL, DEFAULT_MODEL, "json_schema",
+                        {"chat_template_kwargs": {"enable_thinking": False}}),
+    "deepseek-flash": Profile("deepseek-flash", "https://api.deepseek.com/chat/completions", "deepseek-flash",
+                              "json_object", {"thinking": {"type": "disabled"}}, send_seed=False, paid=True,
+                              key_env="DEEPSEEK_API_KEY", key_file_env="DEEPSEEK_API_KEY_FILE",
+                              key_file="/home/user/.config/deepseek/key"),
+    "deepseek-v4-pro": Profile("deepseek-v4-pro", "https://api.deepseek.com/chat/completions", "deepseek-v4-pro",
+                            "json_object", {"thinking": {"type": "disabled"}}, send_seed=False, paid=True,
+                            key_env="DEEPSEEK_API_KEY", key_file_env="DEEPSEEK_API_KEY_FILE",
+                            key_file="/home/user/.config/deepseek/key"),
+}
+
+# Spend accounting (ADR-0015 §6). The ledger lives outside the repository.
+LEDGER_DIR = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share") / "singularity-llm"
+PRICES_FILE = PACKAGE_DIR / "prices.json"
+# Paid provider limits (ADR-0015 §6, decision #175 d).
+MODEL_FAILURE_LIMIT = 2   # model failures per (step, model) pair
+MAX_INFRA_FAILURES = 3    # outages per task before it is escalated
 
 # Output is 7-9 tok/s: a long answer takes many minutes. The server itself cuts at 7200 s.
 REQUEST_TIMEOUT_S = 3600

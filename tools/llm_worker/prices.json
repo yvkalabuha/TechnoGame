@@ -1,0 +1,11 @@
+{
+  "_source": "https://api-docs.deepseek.com/quick_start/pricing, checked 2026-11-13",
+  "_note": "USD per 1M tokens, worst case: PEAK rate, cache MISS for input. Real bills are lower. Owner/Orchestrator edit only (R3).",
+  "paid_providers_ready": false,
+  "max_usd_total": "5.00",
+  "max_usd_task": "0.50",
+  "models": {
+    "deepseek-flash": {"input_per_mtok": "0.30", "output_per_mtok": "1.20"},
+    "deepseek-v4-pro": {"input_per_mtok": "1.32", "output_per_mtok": "3.96"}
+  }
+}

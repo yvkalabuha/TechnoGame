@@ -40,7 +40,7 @@ class FakeOpener:
 
 def provider(script, **kw):
     opener = FakeOpener(script)
-    p = OpenAICompatProvider(url="http://fake/v1/chat/completions", api_key="SECRET-KEY", opener=opener,
+    p = OpenAICompatProvider(url="http://127.0.0.1:1/v1/chat/completions", api_key="SECRET-KEY", opener=opener,
                              sleep=lambda s: None, retries=2, **kw)
     return p, opener
 

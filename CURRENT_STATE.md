@@ -10,7 +10,6 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0035 [IN_PROGRESS] llm_worker: провайдер DeepSeek и учёт трат (ADR-0015 1a) (developer)
 - TASK-0036 [APPROVED] llm_worker: песочница, gitleaks, контекст из git (ADR-0015 1b) (developer)
 - TASK-0037 [APPROVED] llm_worker: классификатор риска и CI (ADR-0015 1c) (developer)
 <!-- registry:active:end -->

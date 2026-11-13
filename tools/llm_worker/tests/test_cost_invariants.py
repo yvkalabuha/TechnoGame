@@ -1,6 +1,5 @@
 """Invariants a paid provider needs: no lost task, no double charge, bounded attempts.
-Tests marked expectedFailure document a known gap in production code (they flip to
-'unexpected success' once the gap is fixed: remove the decorator then)."""
+Spend-ledger tests are in test_ledger.py."""
 
 import json
 import tempfile
@@ -74,10 +73,8 @@ class CostTest(CostBase):
         self.assertTrue(st["stop"].startswith("budget"))
         self.assertEqual(len(st["rounds"]), 2)  # round 0 ran (provider_s=1.0 >= 0.6 s), round 1 not_run
 
-    @unittest.expectedFailure
     def test_crash_after_response_before_save_does_not_recharge(self):
-        """GAP (high): the paid response is lost if the process dies between provider.complete()
-        and the save of rnd['raw']; the resumed run asks (and pays) again."""
+        """The paid response is saved before rnd['raw']; a resumed run reads it instead of asking again."""
         p = FakeProvider([art("good"), art("good")])
         lp = self.loop(p)
         orig = lp._save

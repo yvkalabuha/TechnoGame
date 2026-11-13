@@ -48,7 +48,7 @@
 | [TASK-0032](../development/tasks/TASK-0032-slice-v5-default-pool.md) | DONE | V5 по умолчанию, колонка tool_unmet и причина why_not, переключатель POOL_ORDER | MS-M0 |
 | [TASK-0033](../development/tasks/TASK-0033-slice-t6d-licence-events.md) | DONE | T6d: лицензии, перебой сплава, правила ИИ по why_not, множитель наладки mult_P | MS-M0 |
 | [TASK-0034](../development/tasks/TASK-0034-c3-accelerated-knowledge.md) | DONE | C3 при ускоренном темпе знания (вход для калибровки T12) | MS-M0 |
-| [TASK-0035](../development/tasks/TASK-0035-llm-worker-deepseek-money.md) | IN_PROGRESS | llm_worker: провайдер DeepSeek и учёт трат (ADR-0015 1a) | MS-M0 |
+| [TASK-0035](../development/tasks/TASK-0035-llm-worker-deepseek-money.md) | DONE | llm_worker: провайдер DeepSeek и учёт трат (ADR-0015 1a) | MS-M0 |
 | [TASK-0036](../development/tasks/TASK-0036-llm-worker-sandbox-gitleaks.md) | APPROVED | llm_worker: песочница, gitleaks, контекст из git (ADR-0015 1b) | MS-M0 |
 | [TASK-0037](../development/tasks/TASK-0037-llm-worker-risk-ci.md) | APPROVED | llm_worker: классификатор риска и CI (ADR-0015 1c) | MS-M0 |
 | [TASK-0038](../development/tasks/TASK-0038-spec-calib-c3c4.md) | DONE | Спека среза §8.2: совместный этап калибровки C3+C4 (#177) | MS-M0 |

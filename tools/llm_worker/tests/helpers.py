@@ -20,7 +20,7 @@ class FakeProvider:
         self.script = list(script)
         self.calls = []
 
-    def complete(self, messages, schema, schema_name, max_tokens, seed=None):
+    def complete(self, messages, schema, schema_name, max_tokens, seed=None, on_raw=None):
         self.calls.append({"messages": copy.deepcopy(messages), "schema_name": schema_name, "seed": seed})
         if not self.script:
             raise AssertionError("fake provider: script exhausted")
