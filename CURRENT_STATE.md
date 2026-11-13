@@ -12,7 +12,6 @@
 ## Активные задачи
 <!-- registry:active:start -->
 - TASK-0044 [BLOCKED] T10: Lab-модели JetSlice и JetSliceCalib, CSV v0.24, манифесты, печати A39/A40 (simulation-engineer)
-- TASK-0045 [APPROVED] llm_worker: DEBT-0026 и DEBT-0027 (fallback при сбое песочницы, related в gate, метрики, verifier unittest) (developer)
 - TASK-0046 [APPROVED] Session: read views среза и переключатели серий для Lab (разблокировка T10) (developer)
 <!-- registry:active:end -->
 

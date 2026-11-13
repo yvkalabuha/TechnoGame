@@ -1,7 +1,7 @@
 ---
 id: TASK-0045
 title: "llm_worker: DEBT-0026 и DEBT-0027 (fallback при сбое песочницы, related в gate, метрики, verifier unittest)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: developer
@@ -28,13 +28,13 @@ created: 2026-11-13
 4. DEBT-0027 (2): верификатор тестов понимает вывод `unittest` (`Ran N tests`, `OK`/`FAILED (failures=…, errors=…)`) и `dotnet test`, включая русскую локаль (`Пройден!`, `не пройдено N, пройдено M`). Контракт L1 переходит с обхода на прямой `python3 -m unittest`.
 
 ## Критерии приёмки
-- [ ] Тесты на каждый пункт; все тесты `llm_worker` зелёные.
-- [ ] `python3 -m tools.llm_worker report` показывает раздел «Метрики» на данных TASK-0043.
-- [ ] Второе ревью Codex — до чистого accept (#181).
+- [x] Тесты на каждый пункт; все тесты `llm_worker` зелёные.
+- [x] `python3 -m tools.llm_worker report` показывает раздел «Метрики» на данных TASK-0043.
+- [x] Второе ревью Codex — до чистого accept (#181).
 
 ## REVIEW
-- [ ] Code review (reviewer)
-- [ ] Второе ревью (codex)
+- [x] Code review (reviewer, 2026-11-13) — accept, только low → DEBT-0028
+- [x] Второе ревью (codex, head 854ad457) — accept: 2 medium; report sha256 15f370cac8a9c89bb1b2816306202f99ca420526868f9d4ba702de85546e234f; medium → DEBT-0028
 
 ## Результат
 developer, 2026-11-13 (записал Orchestrator; файл задачи вне зоны developer).
