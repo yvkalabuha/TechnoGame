@@ -305,6 +305,28 @@ class IssueFrontmatterAndModesTest(unittest.TestCase):
         self.assertTrue(risk.approval_changed(self.A, "---\nid: T\nstatus PROPOSED\n---\n"))  # no colon
         self.assertTrue(risk.approval_changed(self.A, "---\nid: T\nstatus: PROPOSED\nbody\n"))  # not closed
 
+    def test_continuation_lines_are_part_of_the_value(self):
+        def fm(body):
+            return f"---\nid: T\n{body}\ntitle: x\n---\nbody\n"
+        cases = [("approved_by: >-\n  owner", "approved_by: >-\n  orchestrator"),  # block scalar
+                 ("approved_by:\n  - owner", "approved_by:\n  - orchestrator"),  # indented list
+                 ("approved_by:\n- owner", "approved_by:\n- orchestrator"),  # list at column 0
+                 ('approved_by: "own\n  er"', 'approved_by: "own\n  or"'),  # multi-line quote
+                 ("status: |\n  a\n  b", "status: |\n  a\n  c")]  # change only in the continuation
+        for old, new in cases:
+            self.assertTrue(risk.approval_changed(fm(old), fm(new)), old)
+            self.assertFalse(risk.approval_changed(fm(old), fm(old)), old)
+        # a continuation of an untracked field is not an approval change
+        self.assertFalse(risk.approval_changed(fm("tags:\n  - a"), fm("tags:\n  - b")))
+        self.assertTrue(risk.approval_changed(fm("approved_by: >-\n  owner"), fm("approved_by: owner")))
+
+    def test_anchor_or_alias_in_approval_field_fails_closed(self):
+        def fm(body):
+            return f"---\nid: T\n{body}\n---\nbody\n"
+        for bad in ("approved_by: *owner", "approved_by: &a owner", "approved_by:\n  - *x", "status: >\n  &a PROPOSED"):
+            self.assertTrue(risk.approval_changed(fm(bad), fm(bad)), bad)  # even unchanged: not understood
+        self.assertFalse(risk.approval_changed(fm("tags: *x"), fm("tags: *x")))
+
     def test_symlink_in_range_is_r2(self):
         repo = TempRepo({"docs/a.md": "x\n"})
         try:

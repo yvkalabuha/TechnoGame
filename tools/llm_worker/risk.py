@@ -86,6 +86,14 @@ class FrontmatterError(ValueError):
     pass
 
 
+def _no_alias(value):
+    """YAML anchors and aliases could make a value mean something else: not understood, so fail closed."""
+    v = value.strip()
+    v = v[1:].lstrip() if v.startswith("-") else v
+    if v.startswith(("*", "&")):
+        raise FrontmatterError("anchor or alias in an approval field")
+
+
 def _frontmatter(text):
     """Approval fields of a frontmatter block. Raises FrontmatterError if the block cannot be parsed."""
     if text is None:
@@ -93,21 +101,28 @@ def _frontmatter(text):
     text = text.lstrip("﻿")
     if not text.startswith("---"):
         return {}
-    out, closed = {}, False
+    out, closed, cur = {}, False, None
     for line in text.splitlines()[1:]:
         if line.strip() == "---":
             closed = True
             break
-        if not line.strip() or line.lstrip().startswith(("#", "-")) or line[0] in " \t":
-            continue  # blank, comment, list item or continuation
+        if cur is not None and (not line.strip() or line[0] in " \t" or line.startswith("-")
+                                or line.lstrip().startswith("#")):
+            _no_alias(line)
+            out[cur] += "\n" + line.rstrip()  # block scalar, list item or multi-line quote: part of the value
+            continue
+        if not line.strip() or line.lstrip().startswith("#") or line[0] in " \t" or line.startswith("-"):
+            continue  # belongs to a field we do not track
         m = _FM_LINE.match(line)
         if not m:
             raise FrontmatterError(f"cannot parse line {line[:40]!r}")
-        if m.group(1) in APPROVAL_FIELDS:
-            out[m.group(1)] = re.sub(r"\s+#.*$", "", m.group(2))
+        cur = m.group(1) if m.group(1) in APPROVAL_FIELDS else None
+        if cur:
+            _no_alias(m.group(2))
+            out[cur] = re.sub(r"\s+#.*$", "", m.group(2))
     if not closed:
         raise FrontmatterError("frontmatter is not closed")
-    return out
+    return {k: v.rstrip() for k, v in out.items()}
 
 
 def approval_changed(old_text, new_text):

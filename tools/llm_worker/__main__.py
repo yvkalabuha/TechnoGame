@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import config, report
+from . import config, report, review as review_mod
 from .contract import ContractError, fill_hashes, validate_contract
 from .ledger import Guard, Ledger, SpendRefused, load_prices
 from .provider import KeyFileError, OpenAICompatProvider
@@ -39,6 +39,17 @@ def main(argv=None):
     p.add_argument("reservation_id", nargs="?")
     p.add_argument("usd", nargs="?")
     p.add_argument("--source", default="", help="reconcile: where the amount comes from (billing page, date)")
+    p = sub.add_parser("review", help="second review of base...head (Codex in bwrap, DeepSeek as fallback)")
+    p.add_argument("--task", required=True)
+    p.add_argument("--base", required=True)
+    p.add_argument("--head", required=True)
+    p.add_argument("--provider", choices=["codex", "deepseek"], default="codex")
+    p = sub.add_parser("gate", help="DeepSeek as the third voice of a gate")
+    p.add_argument("--item", required=True, help="repository-relative path of the document")
+    p.add_argument("--stance", choices=["third"], required=True)
+    p.add_argument("--head", default="HEAD")
+    p.add_argument("--profile", choices=["deepseek-flash", "deepseek-v4-pro"], default=review_mod.DEFAULT_PROFILE)
+    p.add_argument("--dry-run", action="store_true", help="build and scan the input, print its size, send nothing")
     sub.add_parser("status", help="list tasks and states")
     p = sub.add_parser("report", help="write reports/<date>.md")
     p.add_argument("--date")
@@ -87,6 +98,8 @@ def main(argv=None):
             print(f"refused: {e}")
             return 4
         return 0
+    if a.cmd in ("review", "gate"):
+        return _review_gate(a)
     if a.cmd == "run":
         profile = config.PROFILES[a.profile]
         guard = ledger = prices = None
@@ -119,6 +132,35 @@ def main(argv=None):
         print(report.write(a.queue, a.runs, a.reports, a.date))
         return 0
     return 2
+
+
+def _review_gate(a):
+    try:
+        if a.cmd == "review":
+            path, line, rec = review_mod.run_review(a.task, a.base, a.head, a.provider, runs_dir=a.runs,
+                                                    log=lambda m: print(m, flush=True))
+            res = rec["result"]
+            print(f"record: {path}")
+            for f in res["findings"]:
+                print(f"  [{f['severity']}] {f['path']}:{f['line']} {f['claim']}")
+            print(line)
+        else:
+            path, rec = review_mod.run_gate(a.item, a.head, a.stance, runs_dir=a.runs, profile_name=a.profile,
+                                            dry_run=a.dry_run)
+            if a.dry_run:
+                print(f"dry-run: {rec['input_bytes']} bytes, files {len(rec['files'])}, omitted {len(rec['omitted'])}")
+                return 0
+            res = rec["result"]
+            print(f"record: {path}\nsha256 {rec['sha256']}\nSTATUS {res['STATUS']}: {review_mod.count_line(res['FINDINGS'])}")
+            for f in res["FINDINGS"]:
+                print(f"  [{f['severity']}] {f['item']}: {f['reason']}")
+        return 0
+    except (SpendRefused, KeyFileError) as e:
+        print(f"refused: {e}")
+        return 4
+    except review_mod.ReviewError as e:
+        print(f"error: {e}")
+        return 5
 
 
 if __name__ == "__main__":

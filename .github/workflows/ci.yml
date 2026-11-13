@@ -68,9 +68,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      # bwrap, dotnet-in-sandbox and gitleaks tests skip themselves when the tools are unavailable
-      - name: llm_worker unit tests
-        run: python -m unittest discover -s tools/llm_worker/tests
+      # Risk class runs before any branch code; -P keeps the branch checkout (cwd) off sys.path (TASK-0039 review)
       - name: Risk class of llm/* branches (classifier and paths from main; no merge above R1)
         if: startsWith(github.head_ref, 'llm/') || startsWith(github.ref_name, 'llm/')
         run: |
@@ -81,6 +79,9 @@ jobs:
           for f in risk.py paths.py risk_paths.json; do
             git show "origin/main:tools/llm_worker/$f" > "$K/$f"
           done
-          PYTHONPATH="$RUNNER_TEMP/rk" python -m llm_worker.risk classify \
+          PYTHONPATH="$RUNNER_TEMP/rk" python -P -m llm_worker.risk classify \
             --range "origin/main...${{ github.event.pull_request.head.sha || github.sha }}" \
             --paths-file "$K/risk_paths.json" --max R1
+      # bwrap, dotnet-in-sandbox and gitleaks tests skip themselves when the tools are unavailable
+      - name: llm_worker unit tests
+        run: python -m unittest discover -s tools/llm_worker/tests

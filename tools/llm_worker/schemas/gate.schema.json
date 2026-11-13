@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["STATUS", "SUMMARY", "FINDINGS", "OPEN"],
+  "properties": {
+    "STATUS": {"type": "string", "enum": ["approve", "changes_requested", "reject"]},
+    "SUMMARY": {"type": "string", "minLength": 1, "maxLength": 4000},
+    "FINDINGS": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["severity", "item", "reason", "proposal"],
+        "properties": {
+          "severity": {"type": "string", "enum": ["high", "medium", "low"]},
+          "item": {"type": "string", "minLength": 1, "maxLength": 500},
+          "reason": {"type": "string", "minLength": 1, "maxLength": 4000},
+          "proposal": {"type": "string", "maxLength": 4000}
+        }
+      }
+    },
+    "OPEN": {"type": "array", "maxItems": 30, "items": {"type": "string", "maxLength": 1000}}
+  }
+}
