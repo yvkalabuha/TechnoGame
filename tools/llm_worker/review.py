@@ -78,8 +78,14 @@ def task_goal(root, head, task_id):
     return names[0], _section(text, ("Цель", "Критерии приёмки")) or text
 
 
+def _q(name):
+    """A repository name for the prompt: plain when harmless, JSON-escaped otherwise (newlines, quotes)."""
+    return name if re.fullmatch(r"[\w./@+-]+", name) else json.dumps(name, ensure_ascii=False)
+
+
 def _fence(label, body):
-    return f"=== {label} ===\n{body}\n=== END {label} ==="
+    """Data block. The closing line carries a hash of the body, so text inside cannot forge its own end marker."""
+    return f"=== {label} ===\n{body}\n=== END {label} sha256:{hashlib.sha256(body.encode()).hexdigest()[:12]} ==="
 
 
 def build_review_input(task_id, base, head, root=config.REPO_ROOT, max_bytes=MAX_INPUT_BYTES, codex_mode=False):
@@ -93,22 +99,27 @@ def build_review_input(task_id, base, head, root=config.REPO_ROOT, max_bytes=MAX
     shown = [n for n in names if paths.normalize(n) and not context.excluded(paths.normalize(n))]
     withheld = [n for n in names if n not in shown]
     diff = _git(root, "--literal-pathspecs", "diff", "--no-renames", f"{base}...{head}", "--", *shown).decode("utf-8", "replace") if shown else ""
-    parts = [_fence(f"TASK {task_id} ({task_path})", goal), _fence("DIFF", diff)]
+    parts = [_fence(f"TASK {task_id} ({_q(task_path)})", goal), _fence("DIFF", diff)]
     if withheld:
-        parts.append("Changed files withheld from this review (sensitive paths): " + ", ".join(withheld))
+        parts.append(_fence("WITHHELD FILES (sensitive paths)", "\n".join(_q(n) for n in withheld)))
     extra = 0  # bytes Codex reads from /work: they count against the limit like DeepSeek's file blocks
     if codex_mode:
-        parts.append("Changed files (read them in /work):\n" + "\n".join(f"- {n}" for n in shown))
+        parts.append(_fence("CHANGED FILES (read them in /work)", "\n".join(f"- {_q(n)}" for n in shown)))
         for n in shown:
             try:
                 extra += len(context.read_blob(root, head, n))
             except context.ContextError:
                 pass  # deleted or not a regular file
     else:
+        unshown = []
         for n in shown:
             text = _blob_text(root, head, n)  # None: deleted, binary or not a regular file
-            if text is not None:
-                parts.append(_fence(f"FILE {n}", text))
+            if text is None:
+                unshown.append(n)
+            else:
+                parts.append(_fence(f"FILE {_q(n)}", text))
+        if unshown:
+            parts.append(_fence("NOT SHOWN (deleted, binary or not a regular file)", "\n".join(_q(n) for n in unshown)))
     overall, _ = risk.classify_range(f"{base}...{head}", root)
     r2 = overall in ("R2", "R3")
     if r2:
@@ -116,7 +127,7 @@ def build_review_input(task_id, base, head, root=config.REPO_ROOT, max_bytes=MAX
             text = _blob_text(root, head, rel)
             if text is None:
                 raise ReviewError("bad_input", f"required rule file missing in git: {rel}")
-            parts.append(_fence(f"RULES {rel}", text))
+            parts.append(_fence(f"RULES {_q(rel)}", text))
     text = "\n\n".join(parts)
     if len(text.encode()) + extra > max_bytes:
         raise ReviewError("input_too_large", f"{len(text.encode()) + extra} bytes > {max_bytes}")
@@ -290,7 +301,8 @@ def _run_codex(text, head, root, runner, task_id, attempts_dir):
 
 # ---- gate -----------------------------------------------------------------------------------------------
 
-PATH_RE = re.compile(r"(?<![\w/.-])((?:[\w.-]+/)*[\w.-]+\.(?:md|cs|py|json|csv|toml|yml|yaml|sh|csproj))(?![\w/])")
+# Any path-like token with an extension; it is used only if it names a file in the git tree of `head`.
+PATH_RE = re.compile(r"(?<![\w/.-])((?:[\w.-]+/)*[\w.-]+\.[A-Za-z0-9]{1,8})(?![\w/])")
 
 
 def _related_ids(text):
@@ -321,14 +333,14 @@ def build_gate_input(item, head="HEAD", root=config.REPO_ROOT, max_bytes=MAX_INP
             if norm in tree_set:
                 wanted.append(norm)
                 break
-    parts = [_fence(f"DOCUMENT {rel}", doc)]
-    used, omitted, seen = [], [], {rel}
+    parts = [_fence(f"DOCUMENT {_q(rel)}", doc)]
+    used, omitted, skipped, seen = [], [], [], {rel}
     if len(parts[0].encode()) > max_bytes:
         raise ReviewError("input_too_large", f"{rel}: {len(parts[0].encode())} bytes > {max_bytes}")
     blocks = {}
 
     def render():
-        note = ["Linked files omitted (size limit): " + ", ".join(omitted)] if omitted else []
+        note = [_fence("OMITTED LINKED FILES (size limit)", "\n".join(_q(n) for n in omitted))] if omitted else []
         return "\n\n".join(parts + [blocks[n] for n in used] + note)
 
     for n in wanted:
@@ -338,8 +350,9 @@ def build_gate_input(item, head="HEAD", root=config.REPO_ROOT, max_bytes=MAX_INP
         norm = paths.normalize(n)
         text = None if norm is None or context.excluded(norm) else _blob_text(root, head, n)
         if text is None:
+            skipped.append(n)  # excluded, binary or not a regular file: recorded, not sent
             continue
-        blocks[n] = _fence(f"FILE {n}", text)
+        blocks[n] = _fence(f"FILE {_q(n)}", text)
         used.append(n)
         if len(render().encode()) > max_bytes:
             used.pop()
@@ -349,7 +362,8 @@ def build_gate_input(item, head="HEAD", root=config.REPO_ROOT, max_bytes=MAX_INP
     text = render()
     if len(text.encode()) > max_bytes:
         raise ReviewError("input_too_large", f"{len(text.encode())} bytes > {max_bytes}")
-    return text, {"head": head, "item": rel, "files": used, "omitted": omitted}
+    return text, {"head": head, "item": rel, "files": used, "omitted": omitted,
+                  "skipped": skipped}
 
 
 def run_gate(item, head="HEAD", stance="third", root=config.REPO_ROOT, runs_dir=config.RUNS_DIR, make_provider=None,
@@ -359,7 +373,7 @@ def run_gate(item, head="HEAD", stance="third", root=config.REPO_ROOT, runs_dir=
     _scan(text)
     key = "gate:" + "-".join(Path(meta["item"]).stem.split("-")[:2])
     record = {"kind": "gate", "stance": stance, "item": meta["item"], "head": meta["head"], "files": meta["files"],
-              "omitted": meta["omitted"], "input_bytes": len(text.encode())}
+              "omitted": meta["omitted"], "skipped": meta["skipped"], "input_bytes": len(text.encode())}
     if dry_run:
         return None, record
     make_provider = make_provider or (lambda: paid_provider(profile_name, key))

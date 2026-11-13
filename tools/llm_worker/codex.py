@@ -82,17 +82,26 @@ def tree_digest(path):
     return h.hexdigest()
 
 
-def node_prefix(codex_exe, home=None):
-    """The Node install that holds `codex` (…/bin/codex -> its parent); None for a system install under /usr.
-    It is bound read-only, so it must be a real install: not $HOME or its ancestor, and with lib/node_modules."""
+def codex_mounts(codex_exe, home=None):
+    """(real path of the codex entry point, read-only paths to mount, directory of `node`).
+    Only the codex package directory and the `node` binary are mounted, not the whole Node install.
+    Paths under /usr are already visible, so they are not mounted again. SandboxUnavailable when the layout is
+    not a package directory with package.json, `node` is missing, or a mount would cover $HOME."""
     home = Path(home or Path.home()).resolve()
-    prefix = Path(codex_exe).parent.parent
-    if str(prefix) in ("/usr", "/usr/local"):
-        return None
-    real = prefix.resolve()
-    if real == home or real in home.parents or not (prefix / "lib" / "node_modules").is_dir():
-        raise SandboxUnavailable(f"codex is not in a Node install (prefix {prefix}): refusing to mount it")
-    return prefix
+    real = Path(codex_exe).resolve()
+    pkg = real.parent.parent
+    node = Path(codex_exe).parent / "node"
+    node = node if node.is_file() else Path(shutil.which("node") or "")
+    if not (pkg / "package.json").is_file() or not node.is_file():
+        raise SandboxUnavailable(f"codex package or node not found (package {pkg}, node {node})")
+    mounts = []
+    for p in (pkg, node):
+        p = p.resolve() if p == pkg else p
+        if p == home or p in home.parents:
+            raise SandboxUnavailable(f"refusing to mount {p}: it covers $HOME")
+        if not str(p).startswith("/usr/"):
+            mounts.append(p)
+    return real, mounts, node.parent
 
 
 def bwrap_argv(worktree, schema_file, codex_exe, home=None, bwrap=None, codex_home=None):
@@ -109,9 +118,8 @@ def bwrap_argv(worktree, schema_file, codex_exe, home=None, bwrap=None, codex_ho
     for p in SYSTEM_RO:
         a += ["--ro-bind-try", p, p]
     a += ["--tmpfs", str(home)]
-    prefix = node_prefix(codex_exe, home)
-    if prefix:
-        a += ["--ro-bind", str(prefix), str(prefix)]
+    for p in codex_mounts(codex_exe, home)[1]:
+        a += ["--ro-bind", str(p), str(p)]
     if codex_home.is_dir():
         a += ["--bind", str(codex_home), str(codex_home)]
     a += ["--ro-bind", str(worktree), "/work", "--ro-bind", str(schema_file), "/schema.json", "--chdir", "/work"]
@@ -159,8 +167,9 @@ def run_codex(prompt, worktree, schema_file, timeout=1800, home=None, bwrap=None
     exe = find_codex()
     env = {k: environ[k] for k in ENV_KEEP if k in environ}
     env["HOME"] = str(home or Path.home())
-    env["PATH"] = f"{Path(exe).parent}:{env.get('PATH', '/usr/bin:/bin')}"
-    argv = bwrap_argv(worktree, schema_file, exe, home=home, bwrap=bwrap) + command(exe)
+    real, _, node_dir = codex_mounts(exe, home)
+    env["PATH"] = f"{node_dir}:{env.get('PATH', '/usr/bin:/bin')}"
+    argv = bwrap_argv(worktree, schema_file, exe, home=home, bwrap=bwrap) + command(str(real))
     try:
         p = subprocess.run(argv, input=prompt, capture_output=True, text=True, timeout=timeout, env=env)
     except subprocess.TimeoutExpired:
