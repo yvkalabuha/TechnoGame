@@ -1,0 +1,33 @@
+# T8: сверка покрытия P0 среза (TASK-0040)
+
+Источник: `docs/simulation/slice-jet-aviation.md` v0.23 §6.4, §9, §11 (T8), §3.5 (A30, A39, A40); контракт слоёв §8; RR-0006 §4.14.
+Пути тестов — от `tests/`. «НОВЫЙ» — добавлен в T8. Все числа порогов контракта §8.2 — [Предп.], калибровка T12.
+
+| Пункт P0 / T8 | Тест (файл : имя) | Статус |
+|---|---|---|
+| Разреженность, контракт §8 п.1 | `Singularity.Session.Tests/SparsityTests.cs` : 14 случаев (K_d, K_ind, `culture_H`, `tooling_M`, `proc_X`, `line_E`, `defects_hidden`; 1 месяц, seeds 7 и 11): белый список выходов по таблице §3 + положительная проверка «разрешённый выход своего слоя изменился»; неизвестный тип колонки — исключение | НОВЫЙ (был ПРОБЕЛ); выборочно: 1–3 ячейки на запас, горизонт 1 месяц |
+| Бюджет падения цены на удвоение §8.2 п.2 (4 прогона, симметричное разложение) | `Core.Tests/Products/ProductsChannelBudgetTests.cs`: стенд G2 (реальные `prc_set`, `n_p`, карточка и шкалы R-PS2m из данных), GBR-подобный site (`g=1`), постоянный темп; цена идёт через `IndustryMath.Yield` → `Profile` (`unit_cost_mult`) → `ProductsMath.ProcessPart/UnitCost`; 4 арма: полный / `X` заморожен на t0 / `b=0` / оба. Проверяется: «оба выключены ⇒ падение 0», монотонность, канал выхода строго > 0, сборки ≥ 0, сумма каналов = полный эффект ±15%; печать долей на удвоение (обучение и зрелая линия) | НОВЫЙ. Стенд на функциях Core без RNG; культура в стенде не растёт (в C-B — от денег, §8.2 v2.4), канал выхода = `proc_X`/ramp. Коридоры §8.2 не ассертятся (калибровка T12): в печати зрелая линия даёт долю канала выхода ≈ 65%, т.е. вне целевого коридора ≤ 20% — вход для T12; полный стенд на собранной системе — T12 |
+| Фикстура «2 site» §8.4 / A27 | `Core.Tests/Industry/IndustryTwoSiteTests.cs` (6 тестов: `world_lead`, merge, `workforce`, `H_floor`, bit-identity); деление `E` по site — `EffortAllocatorTests.SiteSplit_*`; дележ `rest` по site — `Policy/ToolingPlanTests.TwoSites_RestIsSharedNotSpentOncePerSite_Debt0015` | есть |
+| Инварианты RR-0006 §4.14 (деньги `ΣE+rest=D`, `H≥0`, рост ограничен, `0≤yield≤1`, `ΣLicenceFlow=0`) | `Industry/IndustryEffortSystemTests.EachMonth_ProcE_Plus_Rest_EqualsTheBudgetOfTheActor`, `IndustryPropertyTests` (G, Yield, Culture, Forget), `Session/LinkedRunTests.Run_EffortIsConservedPerActorEveryMonth_AndInvariantsHold`, `T6dTests.Runs_KeepTheMoney…` (L-M1, L-M2) | есть |
+| Нет RNG в `Core.Industry`/`Core.Products` | `Architecture.Tests/CapabilityNoRngTests.CapabilityLayer_UsesNoRng`, `ProductLayer_UsesNoRng` | есть |
+| Архитектурный тест ADR-0003 R1–R3 | `Architecture.Tests/CoreArchitectureTests.Core_FollowsDeterminismRules`, `Core_OutsideR4Exceptions_HasNoDouble`, `DeterminismRulesTests` | есть |
+| 4 сценария `why_not` (по слою) | `Session.Tests/WhyNotTests.Scenario_KnowledgeFirst/CapabilityFirst/ProductFirst/EconomyFirst_*` | есть |
+| Инварианты наладки §4.1b, деление §4.1a | `EffortAllocatorTests`, `CbEffortPropertyTests`, `CbCultureRuleTests.RuleInvariants_HoldOnRandomSnapshots` | есть |
+| `limiter`: каждое значение; `yield<0,7` ⇒ `limiter≠NONE` (P7) | `CbCultureRuleTests.Limiter_EveryValueOccurs_…`; `WhyNotTests.Limiter_IsNeverNone_WhenYieldIsBelowThreshold_AtHSource` | есть |
+| `lead` всегда `eligible`; существует при `limiter₀=EFFORT` | `CbEffortPropertyTests.Lead_Random_IsEligibleEffortCandidate_AndUniquePerCell`, `CbCultureRuleTests.Lead_*` | есть |
+| Инварианты изделия A38; `series_forced=false ⇒ X≡0`; нет `force` у ИИ | `ProductsInvariantTests`, `ProductsGateInvariantPropertyTests`, `ProductsV24SystemTests.Post_*`, `ProductAiSessionTests.Seeds1To20_…` (`Forced == 0`) | есть |
+| Инварианты A39 (T8): `Σinvest≤rest_a+B_cap`, `taken_rest≤rest_a`, `invest≤room`, `M≥M_cap ⇒ 0`, план одинаков во всех вызовах месяца | `Policy/ToolingPlanTests.RestFirst_ThenCapBudget_AndBalanceHolds`, `Balance_SumTaken…`, `CellCeiling_NoInvestmentAtOrAboveTheCap_AndNeverMoreThanRoom`, `SameInvestmentInEveryCallOfTheMonth_…_Threads1And4`; Session: `ToolingUnmetTests`, `PolicyAndConfigTests` | есть |
+| A39: «2 site» (регрессия DEBT-0015) | `ToolingPlanTests.TwoSites_RestIsSharedNotSpentOncePerSite_Debt0015` | есть |
+| A39: в `L_C`/`L_C0` план не вызывается | `IndustryEffortSystemTests.ControlModes_DoNotSpendOnProcessDevelopment` (`RestSeen` пуст), `IndustrySystemTests.Lc0_YieldAndCostOne_CultureAndToolingFrozen` | есть (слой промышленности; режима L_C в `SliceRunConfig` нет) |
+| A30: поддержка `M_cap` (первым проходом; ничья по tier) | `ToolingPlanTests.PassOne_A30_ServesTheMechProcess…`, `A30_KeepsTheMechProcessAdmitted_For120Months…`, `A30_TieOnTier_…`; `ToolingUnmetTests.A30_Keeps…` | есть |
+| A30: «MECH `v>0` при любой серии двигателя» (`prc_set` всех альтернатив горячей части и компрессора содержит MECH) | `Core.Tests/Products/MechInEveryEngineAlternativeTests.cs` | НОВЫЙ (был ПРОБЕЛ); проверка на данных, динамика `v>0` в прогоне — не проверена (см. риски) |
+| A40: нет `cancel_design` в main; `close_line` = связка запуска или `idle_c≥T_ab` | `ProductAiSessionTests.Seeds1To20_384Months_TheAiHoldsItsInvariants…` (`BadClose`, `ODefects`), `ProductAiTests` | есть |
+| A40 «живость ветки С»: манифест L-C1…L-C3a | `ProductAiTests` (L-C*, `t_launch_max`), `T6c2Tests.E1_L_C3a_…`, `L_C3a_SliceWorldAssembly_…` | есть |
+| v0.13 V1–V5 (§4.4e), (8)–(12) | `ProductsR4Tests` (Inv1…Inv10, V3V4), `ProductAiSessionTests.ASeriesWithoutOutput_…_V5` | есть |
+| Парк FL1–FL8, `NO_RETIRE`/`NO_SALE` | `FleetRuleTests`, `FleetRunTests`, `FleetAblationTests`, `FleetCommandTests` | есть |
+| Лицензия/перебой L-M1, L-M2, L-S1, L-D1, E-LIC-0, `T6D_OFF` | `T6dTests`, `Core/Policy/LicenceEventsTests` | есть |
+| Сверка T9: три формулы (`culture_H`, `production_profile`, hazard) | `IndustryFormulaTests.CultureH_/ProductionProfile_MatchesReference`, `KnowledgeFormulaTests.Hazard_MatchesReference` (`JetReference.cs`) | есть |
+| Сверка T9: эталонная траектория; `trajectory_cb.json`; `v24` | `IndustryReferenceTrajectoryTests`, `KnowledgeReferenceTrajectoryTests`, `CbReferenceEqualityTests.TrajectoryCb_MatchesReference_EveryMonth`, `ProductsV24ReferenceTests` | есть |
+| §9.1 ключи потоков RNG | `Session.Tests/StreamKeyTests` (7 потоков) | есть |
+| L1 (два прогона — одинаковый хеш; golden) | `LinkedRunTests.L1_TwoRuns_SameHash_AndMatchesGolden`, `L1_384Months_…`, `IndustrySliceDeterminismTests.L1_*`, `KnowledgeAuditTests.D7_*`, `ProductAiSessionTests.WithTheAiOn_*` | есть |
+| L2 threads 1/4/8, seeds 1…20 | `LinkedRunTests.L2_Seeds1To20_Threads1_4_8_SameHashEveryMonth` (48 мес. в CI), `ProductAiSessionTests.WithTheAiOn_L2Seeds1To20_Threads1And8…`, `IndustryReferenceTrajectoryTests.L2_ThreeSites_…1_4_8`, `PoolOrderTests` | есть; полная команда — в задаче «Результат» |

@@ -52,6 +52,9 @@
 | [TASK-0036](../development/tasks/TASK-0036-llm-worker-sandbox-gitleaks.md) | DONE | llm_worker: песочница, gitleaks, контекст из git (ADR-0015 1b) | MS-M0 |
 | [TASK-0037](../development/tasks/TASK-0037-llm-worker-risk-ci.md) | DONE | llm_worker: классификатор риска и CI (ADR-0015 1c) | MS-M0 |
 | [TASK-0038](../development/tasks/TASK-0038-spec-calib-c3c4.md) | DONE | Спека среза §8.2: совместный этап калибровки C3+C4 (#177) | MS-M0 |
+| [TASK-0039](../development/tasks/TASK-0039-llm-worker-review-gate.md) | DONE | llm_worker: второе ревью (Codex под bwrap, DeepSeek) и DeepSeek в воротах (ADR-0015 задача 2) | MS-M0 |
+| [TASK-0040](../development/tasks/TASK-0040-slice-p0-tests-t8.md) | DONE | T8: тесты P0 среза — разреженность, коридоры, инварианты, сверка с эталоном T9, L1/L2 | MS-M0 |
+| [TASK-0041](../development/tasks/TASK-0041-risk19-yield-channel-share.md) | DONE | RISK-0019: разбор доли канала выхода в падении цены на удвоение (стенд T8) | MS-M0 |
 
 ## Гипотезы
 

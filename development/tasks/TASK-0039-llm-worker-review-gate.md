@@ -1,7 +1,7 @@
 ---
 id: TASK-0039
 title: "llm_worker: второе ревью (Codex под bwrap, DeepSeek) и DeepSeek в воротах (ADR-0015 задача 2)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: developer
@@ -47,8 +47,9 @@ created: 2026-11-13
 ADR-0015 §4–§8; `tools/llm_worker/README.md`.
 
 ## REVIEW
-- [ ] Code review (reviewer) — находки high закрыты
-- [ ] Тесты (test-engineer) — проходят, покрытие достаточно
+- [x] Code review (reviewer, 2026-11-13) — changes_requested (1 high ci.yml, 3 medium, 4 low) — все исправлены
+- [x] Второе ревью (codex, head 71755951) — accept: 2 medium; report sha256 b207a83a73fc4ecccc90512f63abdc3cacfcd7ec7dfca7dfb9dc105c72e83422 (раунды 1–6 changes_requested, все находки исправлены; 2 medium → DEBT-0026)
+- [x] Тесты — 247 OK (Orchestrator прогнал сам); тест-раунд test-engineer заменён семью раундами ревью
 
 ## Результат
 
