@@ -31,7 +31,83 @@ public static class SliceChecks
         ("slice: L2 — threads 1 vs 4, same CSV and golden_hash", () => L2(tmp)),
         ("slice: matrix 2 points x 2 seeds x threads 1,2 — every run has every table", () => Matrix(tmp)),
         ("slice: data_hash and data_files cover the mod files the slice loads", () => DataProvenance(tmp)),
+        ("slice: data cache — a changed mod file is loaded again; stale data_files fail the run", () => DataCache(tmp)),
+        ("slice: a40.force — the FORCE arm marks the forced series, the AI never", () => A40Force(tmp)),
     ];
+
+    // Codex r3 (TASK-0044): SliceData cached by directory only gave old data next to a new data_hash after a mod file changed in the process.
+    private static string? DataCache(string tmp)
+    {
+        string repo = Path.Combine(tmp, "slice-cache-repo");
+        string mods = Path.Combine(repo, "mods", "core");
+        Directory.CreateDirectory(mods);
+        File.WriteAllText(Path.Combine(repo, "Singularity.sln"), "");
+        string source = Path.GetDirectoryName(Path.GetDirectoryName(SliceData.Files(AppContext.BaseDirectory)[0]))!;
+        foreach (string f in Directory.GetFiles(Path.Combine(source, "core")))
+            File.Copy(f, Path.Combine(mods, Path.GetFileName(f)), overwrite: true);
+        string path = Path.Combine(repo, "lab", "m.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, Manifest("JetSlice", Ticks60));
+        Manifest m = Lab.Manifest.Load(path);
+
+        Provenance before = Provenance.Collect(m);           // fills the cache
+        string d1 = SliceData.Load(m.BaseDirectory).DataHash;
+        string nodes = Path.Combine(mods, "nodes.yaml");
+        string text = File.ReadAllText(nodes);
+        int at = text.IndexOf("weight: 0.6}", StringComparison.Ordinal);
+        if (at < 0)
+            return "nodes.yaml has no 'weight: 0.6}' to change";
+        File.WriteAllText(nodes, text[..at] + "weight: 0.5}" + text[(at + "weight: 0.6}".Length)..]);
+        string fresh = Singularity.Core.Data.ModLoader.Load(mods).DataHash;
+        string d2 = SliceData.Load(m.BaseDirectory).DataHash;
+        if (fresh == d1)
+            return "the edit of nodes.yaml did not change GameData.DataHash";
+        if (d2 != fresh)
+            return $"SliceData.Load gave the cached data {d2} after nodes.yaml changed (fresh {fresh})";
+
+        // A run whose recorded data_files predate the change fails instead of pairing new data with the old data_hash.
+        RunOutcome stale = RunExecutor.Execute(new RunRequest(m, 0, 3, 1, Path.Combine(repo, "stale"), "r"), before, TextWriter.Null);
+        if (stale.Ok || stale.Error?.Contains("changed after data_hash was recorded", StringComparison.Ordinal) != true)
+            return $"a run with stale data_files was not refused: {stale.Error}";
+
+        Provenance now = Provenance.Collect(m);
+        string outDir = Path.Combine(repo, "out");
+        RunOutcome r = RunExecutor.Execute(new RunRequest(m, 0, 3, 1, outDir, "r"), now, TextWriter.Null);
+        if (!r.Ok)
+            return $"run failed: {r.Error}";
+        using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(outDir, RunExecutor.RunJsonFile)));
+        JsonElement root = doc.RootElement;
+        if (root.GetProperty("data_hash").GetString() != now.DataHash || now.DataHash == before.DataHash)
+            return "run.json data_hash is not the hash of the changed files";
+        string? model = root.GetProperty("model_info").GetProperty("data_hash").GetString();
+        return model == fresh ? null : $"model_info.data_hash {model}, want the changed data {fresh}";
+    }
+
+    // Codex r3 (TASK-0044): a40.force was always 0, though the FORCE arms launch series with force (format §4.9).
+    private static string? A40Force(string tmp)
+    {
+        var (f, df) = Run(tmp, Manifest("JetSlice", 11688, pars: """{"FORCE": "X1"}"""), 1, 1, "force-x1");
+        if (!f.Ok)
+            return f.Error;
+        var rows = A40Rows(df);
+        int forcedC = rows.Count(r => r["branch"] == "C" && r["force"] == "1");
+        if (forcedC == 0)
+            return "FORCE=X1 seed 1: no A40C row with force = 1";
+        if (rows.Any(r => r["force"] == "1" && (r["branch"] != "C" || long.Parse(r["t_launch"], System.Globalization.CultureInfo.InvariantCulture) <= 0)))
+            return "force = 1 on a row that is not a series launched in the run";
+        var (o, dOff) = Run(tmp, Manifest("JetSlice", 11688), 1, 1, "force-off");
+        if (!o.Ok)
+            return o.Error;
+        var off = A40Rows(dOff);
+        return off.Count > 0 && off.All(r => r["force"] == "0") ? null : $"FORCE=OFF seed 1: {off.Count} a40 rows, an AI row with force = 1 or none";
+    }
+
+    private static List<Dictionary<string, string>> A40Rows(string dir)
+    {
+        string[] lines = File.ReadAllLines(Path.Combine(dir, "a40.csv"));
+        string[] head = lines[0].Split(',');
+        return [.. lines.Skip(1).Select(l => head.Zip(l.Split(',')).ToDictionary(p => p.First, p => p.Second, StringComparer.Ordinal))];
+    }
 
     private static string? DataProvenance(string tmp)
     {

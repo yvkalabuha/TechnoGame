@@ -1,5 +1,6 @@
-using System.Collections.Concurrent;
 using System.Globalization;
+using System.Security.Cryptography;
+using Singularity.Core.Commands;
 using Singularity.Core.Data;
 using Singularity.Kernel;
 using Singularity.Session;
@@ -28,7 +29,7 @@ public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactor
         if (SliceSession.TestApiVersion != SurfaceVersion)
             throw new InvalidOperationException($"The Session surface is v{SliceSession.TestApiVersion}, the slice models read v{SurfaceVersion}: update them first.");
         SliceParameters p = SliceParameters.Parse(setup.Parameters, setup.Seed, setup.Threads, setup.ChunkSize, calibration);
-        GameData data = SliceData.Load(setup.ManifestDirectory);
+        GameData data = SliceData.Load(setup.ManifestDirectory, setup.RecordedDataFiles ?? []);
         return new JetSliceModel(data, p, setup.Ticks, calibration);
     }
 
@@ -36,34 +37,98 @@ public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactor
     public IReadOnlyList<string> DataFiles(string manifestDirectory) => SliceData.Files(manifestDirectory);
 }
 
-/// <summary>The mod data of the slice, loaded once per process (a run is a process in a matrix).</summary>
+/// <summary>
+/// The mod data of the slice. A load is cached per <c>mods/core</c> directory together with the SHA-256 of every file it read; the cache is used
+/// only while those files still have the same bytes, so a changed mod file is loaded again and the data never lags behind the files that
+/// <see cref="Provenance.HashData"/> hashes into data_hash (review Codex r3, TASK-0044).
+/// </summary>
 public static class SliceData
 {
-    private static readonly ConcurrentDictionary<string, GameData> Cache = new(StringComparer.Ordinal);
+    private sealed record Entry(GameData Data, string[] Files, string[] Sha256);
+
+    private static readonly Dictionary<string, Entry> Cache = new(StringComparer.Ordinal);
+    private static readonly Lock Gate = new();
 
     /// <summary><c>mods/core</c> of the repository that holds the manifest, or else of the Lab binary.</summary>
-    public static GameData Load(string manifestDirectory)
-    {
-        string dir = FindMods(manifestDirectory) ?? FindMods(AppContext.BaseDirectory)
-            ?? throw new InvalidOperationException($"mods/core not found above {manifestDirectory} or {AppContext.BaseDirectory}.");
-        return Cache.GetOrAdd(dir, d => ModLoader.Load(d));
-    }
+    public static GameData Load(string manifestDirectory) => Get(manifestDirectory).Data;
 
     /// <summary>
     /// Absolute paths of the files behind <see cref="Load"/>, taken from the loaded mods themselves (<c>mod.yaml</c> and the files it lists,
     /// as <see cref="ModLoader"/> reads them), so the run's data_hash covers exactly the data the slice uses.
     /// </summary>
-    public static IReadOnlyList<string> Files(string manifestDirectory)
+    public static IReadOnlyList<string> Files(string manifestDirectory) => Get(manifestDirectory).Files;
+
+    /// <summary>
+    /// The data for a run whose provenance recorded <paramref name="recorded"/> (paths relative to the manifest directory, as in run.json
+    /// <c>data_files</c>): every file the data was loaded from must be recorded with the SHA-256 of the bytes loaded, else the run fails — the
+    /// data and data_hash can then not disagree, even if a file changed between the hashing and the load. An empty list records no claim
+    /// (selftest provenance) and is not checked.
+    /// </summary>
+    public static GameData Load(string manifestDirectory, IReadOnlyList<DataFileHash> recorded)
     {
-        var files = new List<string>();
-        foreach (ModManifest mod in Load(manifestDirectory).Mods)
+        Entry e = Get(manifestDirectory);
+        if (recorded.Count == 0)
+            return e.Data;
+        for (int i = 0; i < e.Files.Length; i++)
         {
-            files.Add(Path.GetFullPath(Path.Combine(mod.Directory, ModManifest.FileName)));
-            foreach (string f in mod.Files)
-                files.Add(Path.GetFullPath(Path.Combine(mod.Directory, f)));
+            string rel = Path.GetRelativePath(manifestDirectory, e.Files[i]).Replace('\\', '/');
+            DataFileHash? r = recorded.FirstOrDefault(x => x.Path == rel);
+            if (r is null)
+                throw new InvalidOperationException($"The mod file {rel} the slice loaded is not in the run's data_files.");
+            if (r.Sha256 != e.Sha256[i])
+                throw new InvalidOperationException($"The mod file {rel} changed after data_hash was recorded (recorded {r.Sha256}, loaded {e.Sha256[i]}).");
         }
-        return files;
+        return e.Data;
     }
+
+    private static Entry Get(string manifestDirectory)
+    {
+        string dir = FindMods(manifestDirectory) ?? FindMods(AppContext.BaseDirectory)
+            ?? throw new InvalidOperationException($"mods/core not found above {manifestDirectory} or {AppContext.BaseDirectory}.");
+        lock (Gate)
+        {
+            if (Cache.TryGetValue(dir, out Entry? cached) && Unchanged(cached))
+                return cached;
+            // Load, hash, load and hash again: equal data and equal hashes ⇒ the bytes hashed are the bytes loaded (else try again).
+            for (int attempt = 0; attempt < 3; attempt++)
+            {
+                GameData data = ModLoader.Load(dir);
+                string[] files = [.. FilesOf(data)];
+                string[] sha = [.. files.Select(Sha256)];
+                GameData again = ModLoader.Load(dir);
+                if (again.DataHash == data.DataHash && FilesOf(again).SequenceEqual(files, StringComparer.Ordinal)
+                    && files.Select(Sha256).SequenceEqual(sha, StringComparer.Ordinal))
+                {
+                    var e = new Entry(data, files, sha);
+                    Cache[dir] = e;
+                    return e;
+                }
+            }
+            throw new InvalidOperationException($"The mod files in {dir} keep changing while they are loaded.");
+        }
+    }
+
+    private static bool Unchanged(Entry e)
+    {
+        for (int i = 0; i < e.Files.Length; i++)
+        {
+            if (!File.Exists(e.Files[i]) || Sha256(e.Files[i]) != e.Sha256[i])
+                return false;
+        }
+        return true;
+    }
+
+    private static IEnumerable<string> FilesOf(GameData data)
+    {
+        foreach (ModManifest mod in data.Mods)
+        {
+            yield return Path.GetFullPath(Path.Combine(mod.Directory, ModManifest.FileName));
+            foreach (string f in mod.Files)
+                yield return Path.GetFullPath(Path.Combine(mod.Directory, f));
+        }
+    }
+
+    private static string Sha256(string path) => Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(path)));
 
     private static string? FindMods(string start)
     {
@@ -113,7 +178,13 @@ public sealed class JetSliceModel : ISessionModel
             observer.BeforeStep(t);
             s.Step(1);
             observer.Month(snapshot, s.View, t);
-            force?.Issue(t);
+            if (force is not null)
+            {
+                int before = force.Sent;
+                force.Issue(t);
+                if (force.Sent != before)
+                    ForcedStarts(s, observer, t);
+            }
         }
         s.StepTo(_ticks);
         observer.End(s.LastHash);
@@ -128,5 +199,15 @@ public sealed class JetSliceModel : ISessionModel
             info.Add(new("force_sent", force.Sent.ToString(CultureInfo.InvariantCulture)));
         info.AddRange(observer.Counters());
         return new SessionRunResult(s.LastHash, s.Tick, info);
+    }
+
+    // The forced starts the FORCE proxy has sent, read from the session's command log (the proxy keeps its set to itself): a40.force (format §4.9).
+    private static void ForcedStarts(SliceSession s, SliceObserver observer, long month)
+    {
+        foreach (LoggedCommand c in CommandCodec.DecodeLog(s.CommandLog))
+        {
+            if (c.Command is StartSeries { Force: true } start)
+                observer.ForcedStart(start.Actor, start.Design, month);
+        }
     }
 }

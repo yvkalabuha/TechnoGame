@@ -46,7 +46,7 @@ public static class RunExecutor
             if (factory.Session is { } session)
             {
                 // The session owns the runner and the state (ADR-0014): the Lab steps it and reads its views.
-                ISessionModel model = session.Create(new SessionModelSetup(parameters, req.Seed, req.Threads, m.ChunkSize, m.Ticks, m.BaseDirectory));
+                ISessionModel model = session.Create(new SessionModelSetup(parameters, req.Seed, req.Threads, m.ChunkSize, m.Ticks, m.BaseDirectory, provenance.DataFiles));
                 var sink = new FileMetricSink(req.OutDir, req.RunId, model.MetricTables, sinks);
                 SessionRunResult r = model.Run(sink);
                 golden = r.GoldenHash;

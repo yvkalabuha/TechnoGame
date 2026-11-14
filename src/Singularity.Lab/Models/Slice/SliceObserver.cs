@@ -51,6 +51,7 @@ internal sealed class SliceObserver
     private int[,] _firstSeries = null!;        // design of the first series of a generation, −2 = a series at the start, −1 = none yet
     private long[,] _cum = null!;               // cumulative output of that series, raw
     private long?[,] _tLaunch = null!;          // [a, d] first month in С (post), −1 at the start
+    private long?[,] _forcedSent = null!;       // [a, d] month after whose step the harness sent start_series with force (FORCE arms)
     // summary
     private readonly StringBuilder _lead = new(), _leadAll = new(), _leadField = new();
     private readonly List<string> _hashYears = new();
@@ -209,6 +210,7 @@ internal sealed class SliceObserver
         _firstSeries = new int[_nA, _nG];
         _cum = new long[_nA, _nG];
         _tLaunch = new long?[_nA, _nD];
+        _forcedSent = new long?[_nA, _nD];
         var prc = new List<int>();
         for (int r = 0; r < nN; r++)
         {
@@ -564,7 +566,7 @@ internal sealed class SliceObserver
                 && m.Actors[a].Bind[d] == LineBind.Money);
             string cls = culture ? "CULTURE" : money ? "COEXIST_MONEY" : "OTHER";
             Row("a40", I(t), _ids[a], I(d), I(dv.PlatformGen), I(Prof(profile)), Preset(profile), "C", cls, I(dv.StageOMonth),
-                O(_tLaunch[a, d]), "0", I(di.IdleMonths), B(RepBefore(sv, dv.PlatformGen)));
+                O(_tLaunch[a, d]), B(LaunchedWithForce(a, d)), I(di.IdleMonths), B(RepBefore(sv, dv.PlatformGen)));
             foreach (MonthRecord m in months)
             {
                 ActorMonth x = m.Actors[a];
@@ -573,6 +575,13 @@ internal sealed class SliceObserver
             }
         }
     }
+
+    /// <summary>
+    /// <c>a40.force</c> (format §4.9): the series was launched by the harness's forced start. The command sent after the step of month f applies at
+    /// the next tick boundary, so an accepted one puts the design in С in the post of month f + 1; a refused one (e.g. the line moved to a derived
+    /// design) leaves it in О, and a later start of the AI is never forced (P0) — then <c>t_launch ≠ f + 1</c> and the flag is 0.
+    /// </summary>
+    private bool LaunchedWithForce(int a, int d) => _forcedSent[a, d] is long f && _tLaunch[a, d] == f + 1;
 
     private static bool RepBefore(ActorView sv, int gp) => gp >= 1 && gp <= sv.Decisions.Repeats.Length && sv.Decisions.Repeats[gp - 1] > 0;
 
@@ -943,6 +952,9 @@ internal sealed class SliceObserver
                 Row("gen_times", _ids[a], I(g), O(_tReq[a, g - 1]), O(_tFirstUnit[a, g - 1]), O(_tFielded[a, g - 1]), O(_costU100[a, g - 1]));
         }
     }
+
+    /// <summary>The harness sent <c>start_series</c> with <c>force</c> for (actor row, design) after the step of month <paramref name="month"/>.</summary>
+    public void ForcedStart(int actor, int design, long month) => _forcedSent[actor, design] ??= month;
 
     public IEnumerable<KeyValuePair<string, string>> Counters() =>
     [

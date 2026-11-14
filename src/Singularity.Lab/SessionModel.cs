@@ -2,7 +2,9 @@ namespace Singularity.Lab;
 
 /// <summary>What a Session model gets for one run: the point's parameters and the execution options of the run.</summary>
 /// <param name="ManifestDirectory">Directory of the manifest; relative paths of parameters and the mod data are found from it.</param>
-public sealed record SessionModelSetup(ParamSet Parameters, ulong Seed, int Threads, int ChunkSize, long Ticks, string ManifestDirectory);
+/// <param name="RecordedDataFiles">The run's data_files (provenance): a model checks the files it loads against them, so its data and data_hash agree.</param>
+public sealed record SessionModelSetup(ParamSet Parameters, ulong Seed, int Threads, int ChunkSize, long Ticks, string ManifestDirectory,
+    IReadOnlyList<DataFileHash>? RecordedDataFiles = null);
 
 /// <summary>
 /// A model that runs a whole world through <c>Singularity.Session</c> (ADR-0014): the session owns the tick runner and the state, the Lab only

@@ -311,6 +311,7 @@ DONE-эксперимент записывает `core_commit`, `data_hash`, `ma
 | `events TRAINING` | строка на месяц t, когда `Quality.TrainingTarget` снимка ≥ 0 и `Inputs.Tooling.TrainingBudget > 0`; `other` = проект, `value` = `T_a` |
 | `events LIC_END`, `licences.t_end` | замена лицензии новой сделкой (`t_end` = t) или **истечение A43.4, выведенное по `LicenceShare`**: у PRC маски была доля `l_lic`, а в post t ни у одного её нет → `t_end` = t + 1 (счётчик `lic_end_lapses_inferred`). Лицензия, ни разу не давшая доли (PRC маски не известны), истечение не печатает — §11 п. 7 |
 | `a40.t_launch` | первый post t со `Stage = Series`; `−1` — серия на старте |
+| `a40.force` | 1, если прокси FORCE отправил `start_series` с `force` для (актор, проект) после шага месяца f (по `SliceSession.CommandLog`; у прокси набор закрыт) и `t_launch = f + 1` (команда принята: проект в С с post f + 1). Отклонённая команда и поздний запуск ИИ — 0 (ИИ не форсирует, P0). [Предп.: эквивалентно `ProductsSystem.SeriesForced`, во view его нет; ревью Codex r3 TASK-0044] |
 | `a40.rep_before` | `Decisions.Repeats[g_p − 1] > 0` снимка t |
 | `fleet_cmd.gen_line`, `line_bind` | линия `L` — новейшая линия в С по снимку (наибольший `g_p`, ничья — больший `design`): её `Gen` по снимку и `Bind` post t; `count` = `N · 10⁶` (целые единицы как Fx6) |
 | `actor_year.fv_fleet` | Σ по проектам с `InService > 0` `ProductsMath.FleetValue(⌊InService⌋, Readiness, Perf, γ)`, `γ` = `ProductsParams.GammaQ10` по умолчанию (каналы среза его не меняют) |

@@ -96,3 +96,14 @@ ADR-0014 п.5 и `SLICE_COMPOSITION.md` (строка 38) требуют read vi
 - Охрана v0.21 не сработала ни разу.
 
 Как читать: полосы v0.16 объявлены для сборки T6c2 (`LINE_CLOSE = ADMIT`, без T6d, F17b и V5). Спека (A40 v0.20) требует объявить их заново до первого прогона main. Поэтому расхождение — материал для переобъявления, а не дефект. [Предп.] Ветка О стала реже, потому что V5 (A39) и F17b быстрее доводят процессы до допуска. FRA не доходит до проекта в стадии О ни в одном seed.
+
+### simulation-engineer, 2026-11-14 — ревью Codex r3 (base 2d3bee9, head 2459bdc): обе находки приняты
+1. **`a40.force` всегда 0 (medium) — принято.** [Факт: код] `ForceProxy` шлёт `StartSeries(..., Force: true)`, Core ставит `series_forced`, а `SliceObserver` печатал `"0"`. Флага нет во view (`DesignView`), Session не трогаем. Исправление: `JetSliceModel` после `force.Issue(t)` (если `Sent` вырос) читает `SliceSession.CommandLog` и сообщает наблюдателю `ForcedStart(actor, design, t)`; `force = 1`, если `t_launch = f + 1` (команда принята). Отказ и поздний запуск ИИ дают 0. Правило — в формате §9 (`a40.force`). [Факт: прогон] FORCE=X1, seeds 1–3, 384 мес. — по одной строке `C 1 CULTURE`; FORCE=OFF seed 1 — только `force = 0`.
+2. **Кэш `SliceData` по каталогу (medium) — принято.** [Факт: код] `SliceChecks.DataProvenance` заполнял кэш, менял `nodes.yaml`, и прогон брал старые данные при новом `data_hash`. Исправление:
+   - кэш хранит SHA-256 каждого прочитанного файла и используется, только пока байты те же; иначе загрузка заново;
+   - загрузка проверяется повторной загрузкой: `DataHash` и хеши файлов совпадают;
+   - `SessionModelSetup.RecordedDataFiles` (`RunExecutor` передаёт `provenance.DataFiles`): `SliceData.Load` сверяет SHA-256 загруженных файлов с записанными; при расхождении прогон `failed`. Пустой список (selftest) не проверяется.
+- Тесты (`SliceChecks` + `SliceModelTests`):
+  - `Changed_mod_file_is_reloaded_and_stale_data_files_fail_the_run` — правка веса в `nodes.yaml` меняет `GameData.DataHash` через `Load`; прогон со старым provenance — `failed`; со свежим — `run.json.data_hash` и `model_info.data_hash` новые.
+  - `A40_force_marks_FORCE_series_and_never_the_AI` — FORCE=X1 seed 1 даёт строку С с `force = 1`; при OFF все `force = 0`.
+- `dotnet test Singularity.sln` зелёный: Architecture 93, Kernel 315 (+1 skip), Core 1029, Lab 11, Session 308 (+2 skip). Golden не менялись (`Lab_path_gives_Session_golden_seed1_month149` проходит). [Факт: прогон шёл на рабочем дереве с незакоммиченными правками TASK-0049 в Core и тестах.]
