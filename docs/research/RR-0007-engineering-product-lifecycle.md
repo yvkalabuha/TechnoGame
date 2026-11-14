@@ -1,7 +1,7 @@
 ---
 id: RR-0007
 title: "Инженерия и жизненный цикл изделий"
-status: DRAFT            # DRAFT | FINAL | SUPERSEDED
+status: FINAL            # DRAFT | FINAL | SUPERSEDED
 date: 2026-11-02
 author: game-designer
 related: [RR-0003, HYP-0001]

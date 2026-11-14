@@ -1,7 +1,7 @@
 ---
 id: RR-0009
 title: "Эволюция компонентов: анализ брифа владельца против контракта слоёв"
-status: DRAFT            # DRAFT | FINAL | SUPERSEDED
+status: FINAL            # DRAFT | FINAL | SUPERSEDED
 date: 2026-11-03
 author: game-designer
 related: [RR-0006, RR-0007, RR-0008, HYP-0002, HYP-0003]

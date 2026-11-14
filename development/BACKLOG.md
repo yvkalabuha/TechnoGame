@@ -112,11 +112,11 @@
 | [RR-0002](../docs/research/RR-0002-simulation-core.md) | FINAL | Ядро симуляции, многопоточность, детерминизм, Simulation Lab |
 | [RR-0003](../docs/research/RR-0003-map-techgraph-data-modding.md) | FINAL | Карта, граф технологий, данные, моддинг |
 | [RR-0004](../docs/research/RR-0004-claude-code-mechanisms.md) | FINAL | Механизмы Claude Code |
-| [RR-0005](../docs/research/RR-0005-start-date-historical-model.md) | DRAFT | Стартовая дата и историческая модель |
+| [RR-0005](../docs/research/RR-0005-start-date-historical-model.md) | FINAL | Стартовая дата и историческая модель |
 | [RR-0006](../docs/research/RR-0006-economy-industrial-capability.md) | DRAFT | Экономика и промышленный потенциал: способность производить ≠ знание технологии |
-| [RR-0007](../docs/research/RR-0007-engineering-product-lifecycle.md) | DRAFT | Инженерия и жизненный цикл изделий |
-| [RR-0008](../docs/research/RR-0008-technology-space-architecture.md) | DRAFT | Архитектура технологического пространства |
-| [RR-0009](../docs/research/RR-0009-component-evolution-analysis.md) | DRAFT | Эволюция компонентов: анализ брифа владельца против контракта слоёв |
+| [RR-0007](../docs/research/RR-0007-engineering-product-lifecycle.md) | FINAL | Инженерия и жизненный цикл изделий |
+| [RR-0008](../docs/research/RR-0008-technology-space-architecture.md) | FINAL | Архитектура технологического пространства |
+| [RR-0009](../docs/research/RR-0009-component-evolution-analysis.md) | FINAL | Эволюция компонентов: анализ брифа владельца против контракта слоёв |
 | [RR-0010](../docs/research/RR-0010-supply-chains-clusters.md) | DRAFT | Цепочки поставок и промышленные кластеры: анализ пробелов и варианты модели |
 | [RR-0011](../docs/research/RR-0011-cross-system-interaction-map.md) | DRAFT | Карта сквозных взаимосвязей подсистем |
 | [RR-0012](../docs/research/RR-0012-personalities-institutions-national-projects.md) | DRAFT | Личности, институты, национальные проекты |
