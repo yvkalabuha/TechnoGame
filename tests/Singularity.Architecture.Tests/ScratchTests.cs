@@ -72,6 +72,9 @@ public class ScratchTests
             if (d.Namespace?.StartsWith("System", StringComparison.Ordinal) == true)
                 return false;
         }
+        // A struct can change itself through `this = ...` in a method, so only a readonly struct is a value.
+        if (t.IsValueType && !IsReadOnlyStruct(t))
+            return false;
         seen ??= [];
         if (!seen.Add(t))
             return true;
@@ -80,17 +83,23 @@ public class ScratchTests
         return t.GetFields(IlScanner.AllDeclared).Where(f => !f.IsStatic && !f.IsLiteral).All(f => f.IsInitOnly && IsSafeType(f.FieldType, seen));
     }
 
+    // The runtime Nullable<T> and ImmutableArray<T> are readonly structs, but the runtime assemblies do not carry the attribute.
+    private static bool IsReadOnlyStruct(Type t) =>
+        t.GetCustomAttributesData().Any(a => a.AttributeType.Name == "IsReadOnlyAttribute")
+        || t.IsGenericType && t.GetGenericTypeDefinition() is var d && (d == typeof(Nullable<>) || d == typeof(System.Collections.Immutable.ImmutableArray<>));
+
     /// <summary>Methods of <paramref name="type"/> and its nested types (closures included).</summary>
     private static IEnumerable<MethodBase> MethodsWithNested(Type type) =>
         new[] { type }.Concat(type.GetNestedTypes(IlScanner.AllDeclared))
             .SelectMany(t => t.GetMethods(IlScanner.AllDeclared).Cast<MethodBase>().Concat(t.GetConstructors(IlScanner.AllDeclared)));
 
-    // An address of a scalar field is a write path (Interlocked.Increment(ref _n)). Struct fields are not counted: a safe struct has only
-    // readonly fields, so an address of it cannot change it, and an unsafe one is reported by IsSafeType.
-    private static bool IsAddressOfScalar(OpCode op, FieldInfo f) => (op == OpCodes.Ldflda || op == OpCodes.Ldsflda) && (f.FieldType.IsPrimitive || f.FieldType.IsEnum);
+    // An address of a scalar or of a non-readonly struct field is a write path (Interlocked.Increment(ref _n), a method that assigns `this`).
+    // The address of a readonly struct cannot change it.
+    private static bool IsAddressOfMutable(OpCode op, FieldInfo f) =>
+        (op == OpCodes.Ldflda || op == OpCodes.Ldsflda) && (f.FieldType.IsPrimitive || f.FieldType.IsEnum || f.FieldType.IsValueType && !IsReadOnlyStruct(f.FieldType));
 
     private static IEnumerable<MethodBase> Writers(Type type, FieldInfo f) =>
-        MethodsWithNested(type).Where(m => IlScanner.Read(m).Any(i => i.Operand is FieldInfo x && (i.OpCode == OpCodes.Stfld || i.OpCode == OpCodes.Stsfld || IsAddressOfScalar(i.OpCode, x))
+        MethodsWithNested(type).Where(m => IlScanner.Read(m).Any(i => i.Operand is FieldInfo x && (i.OpCode == OpCodes.Stfld || i.OpCode == OpCodes.Stsfld || IsAddressOfMutable(i.OpCode, x))
             && x.MetadataToken == f.MetadataToken && x.Module == f.Module));
 
     /// <summary>Fields of <paramref name="types"/> that break the rules of the scratch contract.</summary>
@@ -154,6 +163,10 @@ public class ScratchTests
     }
 
     [Fact]
+    public void TheSystems_HaveNoBaseClass_SoDeclaredOnlyScansSeeEveryField() =>
+        Assert.All(Systems(Core).Where(t => t.IsClass), t => Assert.Equal(typeof(object), t.BaseType));
+
+    [Fact]
     public void Scratch_IsPrivate_NotATable_AndEveryMutableBufferIsMarked()
     {
         List<string> found = FieldViolations(Systems(Core));
@@ -182,6 +195,8 @@ public class ScratchTests
         Assert.Contains(found, f => f.StartsWith("MutantSystem.Buffer") && f.Contains("private"));
         Assert.Contains(found, f => f.StartsWith("MutantSystem._counter") && f.Contains("written in MutantSystem.Compute")); // a mutable scalar
         Assert.Contains(found, f => f.StartsWith("MutantSystem._viaRef") && f.Contains("written in")); // a write through a field address
+        Assert.Contains(found, f => f.StartsWith("MutantSystem._self") && f.Contains("[Scratch]")); // a struct that is not readonly
+        Assert.Contains(found, f => f.StartsWith("MutantSystem._self") && f.Contains("written in")); // its address is taken to call Bump
         Assert.Contains(found, f => f.StartsWith("MutantSystem._blob") && f.Contains("[Scratch]")); // a mutable custom object
         Assert.Contains(found, f => f.Contains("Total") && f.Contains("written in")); // an auto-property backing field
     }
@@ -197,15 +212,26 @@ internal sealed class MutantSystem : ITickSystem
     [Scratch] private readonly int[] _hidden = new int[2];
     private int _counter;
     private int _viaRef;
+    private SelfAssigning _self;
     private readonly Blob _blob = new();
     public int Total { get; set; }
 
     public int SystemId => 0;
     public long[] Peek() => Buffer;
     public int[] Own() => _hidden;
-    public void Compute(in TickContext context, int chunk, int rowStart, int rowEnd) { _counter++; Total += _blob.N; Interlocked.Increment(ref _viaRef); }
+    public void Compute(in TickContext context, int chunk, int rowStart, int rowEnd) { _counter++; Total += _blob.N; Interlocked.Increment(ref _viaRef); _self.Bump(); }
     public void Merge(in TickContext context, int chunkCount) { }
     public void Post(in TickContext context) { }
+}
+
+// Every field is readonly, yet a call through the field address changes the field.
+internal struct SelfAssigning
+{
+    private readonly int _n;
+
+    public void Bump() => this = new SelfAssigning(_n + 1);
+
+    private SelfAssigning(int n) => _n = n;
 }
 
 internal sealed class Blob { public int N = 1; }

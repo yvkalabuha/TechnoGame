@@ -83,6 +83,20 @@ public class CapabilityNoRngTests
         public long Step() => b.Virtual() + b.Abstract();
     }
 
+    [Fact]
+    public void TheTransitiveCheck_SeesARngInAStructImplementingAnInterface() =>
+        Assert.Contains(TransitiveRngUses([typeof(StructLayer)]), u => u.Contains("DrawingStruct"));
+
+    internal readonly struct DrawingStruct(CounterRng rng) : IMutantInputs
+    {
+        public long Roll() => (long)rng.NextUnit(0, 0, 0, 2);
+    }
+
+    internal sealed class StructLayer(IMutantInputs inputs)
+    {
+        public long Step() => inputs.Roll();
+    }
+
     internal interface IMutantInputs
     {
         long Roll();
@@ -161,7 +175,7 @@ public class CapabilityNoRngTests
         if (callee is MethodInfo { IsVirtual: true, DeclaringType.IsInterface: false } virt && IsOwn(virt))
         {
             MethodInfo root = virt.GetBaseDefinition();
-            foreach (Type type in Own.SelectMany(a => a.GetTypes()).Where(t => t.IsClass && t != virt.DeclaringType && virt.DeclaringType!.IsAssignableFrom(t)))
+            foreach (Type type in Own.SelectMany(a => a.GetTypes()).Where(t => !t.IsInterface && t != virt.DeclaringType && virt.DeclaringType!.IsAssignableFrom(t)))
             {
                 foreach (MethodInfo o in type.GetMethods(IlScanner.AllDeclared).Where(m => m.IsVirtual && m.Name == virt.Name))
                 {
@@ -172,7 +186,7 @@ public class CapabilityNoRngTests
         }
         if (callee.DeclaringType is not { IsInterface: true } iface)
             yield break;
-        foreach (Type type in Own.SelectMany(a => a.GetTypes()).Where(t => t is { IsClass: true, IsAbstract: false } && iface.IsAssignableFrom(t)))
+        foreach (Type type in Own.SelectMany(a => a.GetTypes()).Where(t => t is { IsInterface: false, IsAbstract: false } && iface.IsAssignableFrom(t)))
         {
             InterfaceMapping map = type.GetInterfaceMap(iface);
             for (int k = 0; k < map.InterfaceMethods.Length; k++)
