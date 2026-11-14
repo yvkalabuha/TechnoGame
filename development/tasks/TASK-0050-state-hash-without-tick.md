@@ -1,7 +1,7 @@
 ---
 id: TASK-0050
 title: "DEBT-0009: хеш состояния только по таблицам, tick отдельно (ADR-0006/0013)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer
@@ -27,14 +27,14 @@ created: 2026-11-14
 - Обновить места, где хеш документирован (спеки, EXP-записи — только ссылкой «хеши до TASK-0050»).
 
 ## Критерии приёмки
-- [ ] Хеш не зависит от tick (тест: одинаковые таблицы при разном tick → один хеш).
-- [ ] Все golden пересчитаны с L1/L2; полный `dotnet test` зелёный.
-- [ ] Второе ревью Codex — до чистого accept (#181).
+- [x] Хеш не зависит от tick (тест: одинаковые таблицы при разном tick → один хеш).
+- [x] Все golden пересчитаны с L1/L2; полный `dotnet test` зелёный.
+- [x] Второе ревью Codex — до чистого accept (#181).
 
 ## REVIEW
-- [ ] Code review (reviewer)
-- [ ] Второе ревью (codex)
-- [ ] Детерминизм L1/L2 (test-engineer)
+- [x] Code review (reviewer) — accept 2026-11-14; low → DEBT-0033
+- [x] Второе ревью (codex) — accept (раунд 2, head d147f6c); medium → DEBT-0033
+- [x] Детерминизм L1/L2 (test-engineer) — PASS: 88 прогонов ×2, потоки 1/4/8
 
 ## Результат
 

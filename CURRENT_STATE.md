@@ -11,8 +11,7 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0050 [APPROVED] DEBT-0009: хеш состояния только по таблицам, tick отдельно (ADR-0006/0013) (developer)
-- TASK-0051 [APPROVED] Ключ RNG знания actor·2^16 + node (#197), вместе с TASK-0050 (developer)
+- TASK-0052 [APPROVED] llm_worker: режим размышления DeepSeek для gate и review (developer)
 <!-- registry:active:end -->
 
 ## Блокеры

@@ -1,7 +1,7 @@
 ---
 id: TASK-0051
 title: "Ключ RNG знания actor·2^16 + node (#197), вместе с TASK-0050"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: developer
@@ -30,13 +30,13 @@ created: 2026-11-14
 - Тест: граф с узлом номер 64 и 1000 загружается; выборки двух акторов с одинаковым номером узла различаются; ключи не пересекаются для actor < 32768.
 
 ## Критерии приёмки
-- [ ] Новый ключ, тесты выше; полный `dotnet test` зелёный; golden пересчитаны один раз вместе с TASK-0050.
-- [ ] Второе ревью Codex — accept (#181).
+- [x] Новый ключ, тесты выше; полный `dotnet test` зелёный; golden пересчитаны один раз вместе с TASK-0050.
+- [x] Второе ревью Codex — accept (#181).
 
 ## REVIEW
-- [ ] Code review (reviewer)
-- [ ] Второе ревью (codex)
-- [ ] Детерминизм L1/L2 (test-engineer)
+- [x] Code review (reviewer) — accept 2026-11-14; low → DEBT-0033
+- [x] Второе ревью (codex) — accept (раунд 2, head d147f6c); medium → DEBT-0033
+- [x] Детерминизм L1/L2 (test-engineer) — PASS: 88 прогонов ×2, потоки 1/4/8
 
 ## Результат
 
