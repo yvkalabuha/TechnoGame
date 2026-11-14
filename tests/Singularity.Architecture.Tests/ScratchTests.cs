@@ -131,7 +131,10 @@ public class ScratchTests
         return found;
     }
 
-    /// <summary>Non-private members that load a scratch field of their own class and give a value back: reading the buffer through them is reading the buffer.</summary>
+    /// <summary>
+    /// Non-private methods that give back a value computed from a scratch field of their own class: they load it themselves or call a
+    /// method of the class that does (a fixed point over the helpers, so a private helper does not hide the read).
+    /// </summary>
     private static List<MemberInfo> Exposers(IEnumerable<Type> types)
     {
         var result = new List<MemberInfo>();
@@ -140,13 +143,23 @@ public class ScratchTests
             List<FieldInfo> own = ScratchFields([type]);
             if (own.Count == 0)
                 continue;
-            foreach (MethodInfo m in type.GetMethods(IlScanner.AllDeclared))
+            var reading = new List<MethodInfo>();
+            MethodInfo[] methods = [.. type.GetMethods(IlScanner.AllDeclared).Where(m => m.ReturnType != typeof(void))];
+            bool grew = true;
+            while (grew)
             {
-                if (m.IsPrivate || m.ReturnType == typeof(void))
-                    continue;
-                if (IlScanner.Read(m).Any(i => i.Operand is FieldInfo f && own.Any(o => o.MetadataToken == f.MetadataToken && o.Module == f.Module)))
-                    result.Add(m);
+                grew = false;
+                foreach (MethodInfo m in methods.Where(m => !reading.Contains(m)))
+                {
+                    if (IlScanner.Read(m).Any(i => i.Operand is FieldInfo f && own.Any(o => o.MetadataToken == f.MetadataToken && o.Module == f.Module)
+                        || i.Operand is MethodInfo c && reading.Contains(c)))
+                    {
+                        reading.Add(m);
+                        grew = true;
+                    }
+                }
             }
+            result.AddRange(reading.Where(m => !m.IsPrivate));
         }
         return result;
     }
@@ -184,6 +197,7 @@ public class ScratchTests
         Assert.Contains(found, f => f.Contains("ViaAccessor") && f.Contains("Peek"));
         Assert.Contains(found, f => f.Contains("Buffer") && !f.Contains("Direct")); // the lambda
         Assert.Contains(found, f => f.Contains("Fine")); // Own() hands out a scratch buffer too
+        Assert.Contains(found, f => f.Contains("Helped") && f.Contains("ViaHelper")); // a private helper reads the buffer
     }
 
     [Fact]
@@ -219,6 +233,8 @@ internal sealed class MutantSystem : ITickSystem
     public int SystemId => 0;
     public long[] Peek() => Buffer;
     public int[] Own() => _hidden;
+    public int[] ViaHelper() => Help();
+    private int[] Help() => _hidden;
     public void Compute(in TickContext context, int chunk, int rowStart, int rowEnd) { _counter++; Total += _blob.N; Interlocked.Increment(ref _viaRef); _self.Bump(); }
     public void Merge(in TickContext context, int chunkCount) { }
     public void Post(in TickContext context) { }
@@ -242,5 +258,6 @@ internal sealed class Intruder(MutantSystem s)
     public long ViaAccessor() => s.Peek()[0];
     public Func<long> ViaLambda() => () => s.Buffer[1];
     public int Fine() => s.Own().Length;
+    public int Helped() => s.ViaHelper().Length;
 }
 

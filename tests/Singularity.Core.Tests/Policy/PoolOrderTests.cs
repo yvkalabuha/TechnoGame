@@ -175,4 +175,28 @@ public class PoolOrderTests
         Assert.Equal(PoolOrder.Can, new ToolingTargetSpec().PoolOrder);
         Assert.Equal(Fx6.One, new ToolingTargetSpec().KCap);
     }
+
+    private static long Allocated(ToolingPlanTests.Rig rig, PoolOrder order)
+    {
+        ToolingTargetSpec spec = Spec(order);
+        for (int k = 0; k < 3; k++)
+            rig.Plan(0, Fx6.FromInt(5), Fx6.Zero, 0, spec); // warm-up: JIT, the cached static comparison delegates
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        rig.Plan(0, Fx6.FromInt(5), Fx6.Zero, 0, spec);
+        return GC.GetAllocatedBytesForCurrentThread() - before;
+    }
+
+    /// <summary>
+    /// DEBT-0021: the plan builds its result arrays (so the delta is not 0), but the ordering of REV and SEV sorts in place with static comparisons:
+    /// it allocates no more than CAN (a LINQ <c>OrderBy</c> would add the buffer, keys and enumerators). 256 bytes of slack cover runtime noise.
+    /// </summary>
+    [Theory]
+    [InlineData(PoolOrder.Rev)]
+    [InlineData(PoolOrder.Sev)]
+    public void TheSortedOrders_AllocateNoMoreThanTheCanonicalOne(PoolOrder order)
+    {
+        ToolingPlanTests.Rig rig = NewRig();
+        long can = Allocated(rig, PoolOrder.Can);
+        Assert.InRange(Allocated(rig, order), 0, can + 256);
+    }
 }
