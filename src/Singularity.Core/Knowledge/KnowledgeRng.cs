@@ -17,6 +17,9 @@ public static class KnowledgeRng
 
     public const int MaxNodeNumber = (1 << NodeKeyBits) - 1;
 
+    /// <summary>Largest actor number: <c>actor·2^16 + node</c> must fit int32 (checked at construction, not mid-run).</summary>
+    public const int MaxActorNumber = 32767;
+
     public static int Entity(int actorNumber, int nodeNumber)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(actorNumber);

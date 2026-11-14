@@ -51,6 +51,14 @@ public class StreamKeyTests
     }
 
     [Fact]
+    public void KnowledgeStart_RejectsActorNumberAbove32767_AtConstruction()
+    {
+        Assert.NotNull(new KnowledgeStart([32767], 1, 1));
+        var e = Assert.Throws<ArgumentException>(() => new KnowledgeStart([0, 32768], 1, 1));
+        Assert.Contains("32767", e.Message);
+    }
+
+    [Fact]
     public void EvtDis_UsesSystem3_Tick_Actor_N0Onset_N1Duration()
     {
         Assert.Equal(Rng.NextU64(50, 3, 2, 0), EventRng.DisruptionOnset(Rng, 50, 2));

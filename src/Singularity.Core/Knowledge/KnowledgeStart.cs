@@ -21,6 +21,8 @@ public sealed class KnowledgeStart
         for (int i = 0; i < actorNumber.Length; i++)
         {
             ArgumentOutOfRangeException.ThrowIfNegative(actorNumber[i]);
+            if (actorNumber[i] > KnowledgeRng.MaxActorNumber)
+                throw new ArgumentException($"Actor number {actorNumber[i]} exceeds {KnowledgeRng.MaxActorNumber} (RNG key actor·2^16 + node must fit int32).", nameof(actorNumber));
             if (actorNumber.IndexOf(actorNumber[i]) != i)
                 throw new ArgumentException($"Actor number {actorNumber[i]} is used twice.", nameof(actorNumber));
         }
