@@ -5,6 +5,7 @@ import fcntl
 import hashlib
 import json
 import os
+import shutil
 import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -147,9 +148,15 @@ class Ledger:
                 return self._refused(len(lines), "ledger.head matches no prefix of the file: edited or truncated")
             if want_pair == (len(lines), head):
                 return {"status": "ok", "records": len(lines), "added": 0, "detail": "head already matches"}
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+            baks = []
+            for src in (self.path, self.head):  # copies first: a bad repair can be undone by hand
+                bak = src.with_name(f"{src.name}.bak-{stamp}")
+                shutil.copy2(src, bak)
+                baks.append(str(bak))
             self._write_head(len(lines), head)
             return {"status": "repaired", "records": len(lines), "added": len(lines) - want_pair[0],
-                    "detail": "head recomputed"}
+                    "detail": "head recomputed; backups: " + ", ".join(baks)}
 
     @staticmethod
     def _refused(records, detail):

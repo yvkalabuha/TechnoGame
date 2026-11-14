@@ -41,6 +41,10 @@ class LedgerRepairTest(unittest.TestCase):
         self.assertEqual(cm.exception.code, "ledger_corrupt")
         res = self.led.repair()
         self.assertEqual((res["status"], res["records"], res["added"]), ("repaired", 2, 1))
+        baks = sorted(x.name for x in self.dir.glob("*.bak-*"))
+        self.assertEqual(len(baks), 2)
+        self.assertTrue(all(res["detail"].count(str(self.dir / n)) == 1 for n in baks))
+        self.assertEqual(next(self.dir.glob("ledger.jsonl.bak-*")).read_bytes(), self.led.path.read_bytes())  # ledger copy
         self.assertEqual(self.led.summary()["total"], Decimal(2))  # the crashed reservation is counted
         self.assertEqual(self.led.repair()["status"], "ok")
 
@@ -198,6 +202,14 @@ class MetricsFieldsTest(unittest.TestCase):
         self.assertIn("подтверждено (high 1, medium 0, low 0)", line)
         self.assertIn("отклонено (high 0, medium 0, low 1)", line)
         self.assertIn("не отмечено (high 0, medium 1, low 0)", line)
+
+    def test_same_created_at_orders_by_round(self):
+        t = "2026-01-01T00:00:00+00:00"
+        self.put("review-TASK-0001-aaaaaaaa-codex.json", {**rec("TASK-0001", "accept", []), "round": 2, "created_at": t}, 0)
+        self.put("review-TASK-0001-bbbbbbbb-codex.json",
+                 {**rec("TASK-0001", "changes_requested", []), "round": 1, "created_at": t}, 100)
+        self.assertEqual([r["round"] for r in report._review_rounds(self.runs)["TASK-0001"]], [1, 2])
+        self.assertIn("до accept: 2", self.line())
 
     def test_nonstandard_findings_are_skipped_not_fatal(self):
         for i, findings in enumerate(("text", None, [1], [{"severity": "huge"}], {"a": 1})):
