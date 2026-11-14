@@ -1,7 +1,7 @@
 ---
 id: TASK-0049
 title: "Долги Core/Kernel: DEBT-0004, 0006, 0011, 0012, 0013, 0017, 0021"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer
@@ -35,12 +35,12 @@ created: 2026-11-14
 - `src/Singularity.Lab/Models/Slice/*` в это время правит simulation-engineer (TASK-0044) — не трогать.
 
 ## Критерии приёмки
-- [ ] Тест на каждый пункт; полный `dotnet test` зелёный; golden без изменений.
-- [ ] Второе ревью Codex — до чистого accept (#181).
+- [x] Тест на каждый пункт; полный `dotnet test` зелёный; golden без изменений.
+- [x] Второе ревью Codex — accept (раунды 5–6; остаток medium → DEBT-0031).
 
 ## REVIEW
-- [ ] Code review (reviewer)
-- [ ] Второе ревью (codex)
+- [x] Code review (reviewer) — accept 2026-11-14; находки → DEBT-0031
+- [x] Второе ревью (codex) — accept
 
 ## Результат
 
