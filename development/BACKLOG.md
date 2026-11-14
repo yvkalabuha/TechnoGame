@@ -122,4 +122,4 @@
 | [RR-0011](../docs/research/RR-0011-cross-system-interaction-map.md) | FINAL | Карта сквозных взаимосвязей подсистем |
 | [RR-0012](../docs/research/RR-0012-personalities-institutions-national-projects.md) | FINAL | Личности, институты, национальные проекты |
 | [RR-0013](../docs/research/RR-0013-space-and-nuclear-race.md) | DRAFT | Космическая и ядерная гонка |
-| [RR-0014](../docs/research/RR-0014-resources-trade-export-control.md) | DRAFT | Ресурсы, торговля, экспортный контроль |
+| [RR-0014](../docs/research/RR-0014-resources-trade-export-control.md) | FINAL | Ресурсы, торговля, экспортный контроль |

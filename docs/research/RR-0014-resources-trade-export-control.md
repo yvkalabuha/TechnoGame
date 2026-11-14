@@ -1,7 +1,7 @@
 ---
 id: RR-0014
 title: "Ресурсы, торговля, экспортный контроль"
-status: DRAFT            # DRAFT | FINAL | SUPERSEDED
+status: FINAL            # DRAFT | FINAL | SUPERSEDED
 date: 2026-11-14
 author: economy-analyst
 related: [RR-0006, RR-0010, RR-0008, RR-0012, RR-0013, RR-0011, HYP-0002, ADR-0009, ADR-0002]
