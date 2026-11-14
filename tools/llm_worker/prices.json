@@ -4,6 +4,7 @@
   "paid_providers_ready": true,
   "max_usd_total": "5.00",
   "max_usd_task": "0.50",
+  "max_usd_task_gate": "1.00",
   "models": {
     "deepseek-flash": {"input_per_mtok": "0.30", "output_per_mtok": "1.20"},
     "deepseek-v4-pro": {"input_per_mtok": "1.32", "output_per_mtok": "3.96"}

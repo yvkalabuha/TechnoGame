@@ -39,6 +39,8 @@ def load_prices(path=config.PRICES_FILE):
             raw = json.load(f)
         return {"ready": raw["paid_providers_ready"] is True,
                 "cap": Decimal(raw["max_usd_total"]), "task_cap": Decimal(raw["max_usd_task"]),
+                # #226: gate tasks (ledger key "gate:<ID>") have their own cap
+                "gate_task_cap": Decimal(raw.get("max_usd_task_gate", raw["max_usd_task"])),
                 "models": {m: {k: Decimal(v[k]) for k in ("input_per_mtok", "output_per_mtok")}
                            for m, v in raw["models"].items()}}
     except (OSError, ValueError, KeyError, TypeError, ArithmeticError) as e:
@@ -247,7 +249,8 @@ class Guard:
             raise SpendRefused("no_task")
         in_tokens = (len(request_bytes) + 1) // 2  # 1 token per 2 bytes: stricter than any tokenizer
         worst = _usd((in_tokens * price["input_per_mtok"] + max_tokens * price["output_per_mtok"]) / MILLION)
-        return self.ledger.reserve(self.task, self.model, worst, p["cap"], p["task_cap"])
+        task_cap = p["gate_task_cap"] if self.task.startswith("gate:") else p["task_cap"]
+        return self.ledger.reserve(self.task, self.model, worst, p["cap"], task_cap)
 
     def settle(self, rid, usage):
         """Actual cost from `usage` (all input at the cache-miss price). No usage: the reservation stays."""
