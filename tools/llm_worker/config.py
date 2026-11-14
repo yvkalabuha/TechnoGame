@@ -36,8 +36,10 @@ class Profile:
 
 
 # DeepSeek names, URL, JSON mode and thinking switch checked on api-docs.deepseek.com
-# (quick_start/pricing, guides/json_mode, guides/thinking_mode) on 2026-11-13.
-# Thinking is on by default there, so it is disabled explicitly. `seed` is not documented: not sent.
+# (quick_start/pricing, guides/json_mode, guides/thinking_mode) on 2026-11-13 and 2026-11-14.
+# Thinking is on by default there, so the profile disables it explicitly; the provider switches it on per call
+# (`thinking: enabled` + `reasoning_effort`; `temperature` has no effect then and is not sent).
+# `seed` is not documented: not sent.
 PROFILES = {
     "llamacpp": Profile("llamacpp", DEFAULT_URL, DEFAULT_MODEL, "json_schema",
                         {"chat_template_kwargs": {"enable_thinking": False}}),
@@ -55,6 +57,14 @@ PRICES_FILE = PACKAGE_DIR / "prices.json"
 # Paid provider limits (ADR-0015 §6, decision #175 d).
 MODEL_FAILURE_LIMIT = 2   # model failures per (step, model) pair
 MAX_INFRA_FAILURES = 3    # outages per task before it is escalated
+
+# gate/review with DeepSeek thinking (TASK-0052). Measured 2026-11-14: `max_tokens` COVERS the reasoning (flash,
+# effort high, RR-0013 gate: 32768 tokens all spent on reasoning, empty answer, finish_reason length), so it
+# must leave room for reasoning and the answer; maximum output is 384K. Ledger worst case per attempt is
+# input_bytes/2 tokens plus max_tokens: for pro 65536 * 3.96 / 1M = $0.26 plus input, see README.
+THINKING_MAX_TOKENS = 65536
+DEFAULT_REASONING_EFFORT = "high"
+REASONING_EFFORTS = ("low", "high", "max")
 
 # Output is 7-9 tok/s: a long answer takes many minutes. The server itself cuts at 7200 s.
 REQUEST_TIMEOUT_S = 3600

@@ -66,6 +66,13 @@ python3 -m tools.llm_worker gate --item <путь> --stance third [--profile dee
 - Codex (`codex.py`): `codex exec --sandbox read-only` в bwrap; `/work` — чистый detached worktree на `head` (только чтение, без `bin/obj` и файлов из `CONTEXT_EXCLUDE`), `~/.codex` (запись) и каталог установки Node (только чтение); `$HOME` — tmpfs, `/var/www` нет, сеть общая. Изменение worktree — `guard_violation`. Попытки и токены — `codex_attempts.jsonl` рядом с ledger. `codex_limit` (лимит подписки, по событиям `error`/`turn.failed` и stderr) и сбой Codex (`codex_failed`) — переход к DeepSeek (`deepseek-v4-pro`, через ledger, ADR-0015 §2); `secret_detected`, `guard_violation`, `sandbox_unavailable`, `worktree_failed` — ошибка без платного вызова. Каталог установки Node должен иметь `lib/node_modules` и не быть `$HOME` или его предком.
 - `gate`: документ + файлы из `related` и ссылок на пути в тексте (из объектов git, не больше 1 MB; не поместившиеся перечислены как omitted), один запрос; схемы `schemas/{review,gate}.schema.json`; правило «accept/approve с high» — `schema_invalid`. Ключ ledger: `gate:<ID>`.
 
+### Режим размышления DeepSeek (TASK-0052)
+- `gate`, `review` (ветка DeepSeek) по умолчанию шлют `thinking: enabled` + `reasoning_effort: high`, без `temperature`; флаги `--thinking on|off`, `--effort low|high|max`. `run` — по умолчанию `--thinking off`, те же флаги.
+- `max_tokens` покрывает и рассуждение (замер: flash/high на RR-0013 при 32768 съел весь лимит, `content` пуст, `finish_reason=length`). Поэтому с thinking `max_tokens = config.THINKING_MAX_TOKENS` (65536), без thinking — 8000 (review) и 6000 (gate).
+- Резерв ledger — худший случай: `input_bytes/2` токенов входа + `max_tokens` выхода. Для pro на большом документе (~570 KB) это ≈ $0,38 + $0,26 = $0,64 > `max_usd_task` $0,50: ledger откажет (`task_cap_exceeded`), лимит не урезается. Для flash ≈ $0,17: проходит.
+- `reasoning_content` в разбор JSON не идёт; в запись run пишутся `thinking`: `reasoning_chars`, `reasoning_tokens`, `finish_reason`, `attempts`, `effort`, `max_tokens`.
+- Пустой/пробельный `content` при `finish_reason=stop` — сбой модели: один повтор, затем `schema_invalid`. При `length` повтора нет.
+
 ## После прогона (Pilot)
 - B1: `git log -p -1 llm/<task_id>` — результат на ветке `llm/...`, не в `main`.
   В `main` — только через reviewer, `zone_check` и коммит Pilot.

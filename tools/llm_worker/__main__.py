@@ -13,6 +13,12 @@ from .runner import Env, run_queue
 from .taskqueue import TaskQueue
 
 
+def _thinking_flags(p, default):
+    p.add_argument("--thinking", choices=["on", "off"], default=default, help="DeepSeek thinking mode")
+    p.add_argument("--effort", choices=config.REASONING_EFFORTS, default=config.DEFAULT_REASONING_EFFORT,
+                   help="reasoning_effort when thinking is on")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="python3 -m tools.llm_worker")
     ap.add_argument("--queue", type=Path, default=config.QUEUE_DIR)
@@ -31,6 +37,7 @@ def main(argv=None):
                    help="provider profile; deepseek-* is paid and needs the ledger and paid_providers_ready")
     p.add_argument("--url", default=None)
     p.add_argument("--model", default=None)
+    _thinking_flags(p, default="off")
     p.add_argument("--max-outages", type=int, default=12)
     p.add_argument("--outage-wait", type=int, default=300, help="seconds between outage retries")
     p = sub.add_parser("ledger", help="spend ledger: init creates it, show prints totals, "
@@ -45,6 +52,7 @@ def main(argv=None):
     p.add_argument("--base", required=True)
     p.add_argument("--head", required=True)
     p.add_argument("--provider", choices=["codex", "deepseek"], default="codex")
+    _thinking_flags(p, default="on")
     p = sub.add_parser("review-confirm", help="mark one finding of a review record as confirmed or rejected")
     p.add_argument("record", type=Path)
     p.add_argument("--finding", type=int, required=True, help="1-based number as printed by `review`")
@@ -57,6 +65,7 @@ def main(argv=None):
     p.add_argument("--head", default="HEAD")
     p.add_argument("--profile", choices=["deepseek-flash", "deepseek-v4-pro"], default=review_mod.DEFAULT_PROFILE)
     p.add_argument("--dry-run", action="store_true", help="build and scan the input, print its size, send nothing")
+    _thinking_flags(p, default="on")
     sub.add_parser("status", help="list tasks and states")
     p = sub.add_parser("report", help="write reports/<date>.md")
     p.add_argument("--date")
@@ -135,10 +144,12 @@ def main(argv=None):
                 return 4
             guard = Guard(ledger, prices, a.model or profile.model)
         try:
-            provider = OpenAICompatProvider(url=a.url, model=a.model, profile=profile, guard=guard)
+            provider = OpenAICompatProvider(url=a.url, model=a.model, profile=profile, guard=guard,
+                                        thinking=a.thinking == "on", effort=a.effort)
             if profile.name == "deepseek-flash" and not a.model:  # chain flash -> pro (#175 d)
                 pro = config.PROFILES["deepseek-v4-pro"]
-                provider.fallbacks = [OpenAICompatProvider(profile=pro, guard=Guard(ledger, prices, pro.model))]
+                provider.fallbacks = [OpenAICompatProvider(profile=pro, guard=Guard(ledger, prices, pro.model),
+                                                                thinking=a.thinking == "on", effort=a.effort)]
         except KeyFileError as e:
             print(f"refused: {e}")
             return 4
@@ -162,7 +173,8 @@ def _review_gate(a):
     try:
         if a.cmd == "review":
             path, line, rec = review_mod.run_review(a.task, a.base, a.head, a.provider, runs_dir=a.runs,
-                                                    log=lambda m: print(m, flush=True))
+                                                    log=lambda m: print(m, flush=True),
+                                                    thinking=a.thinking == "on", effort=a.effort)
             res = rec["result"]
             print(f"record: {path}")
             for i, f in enumerate(res["findings"], 1):
@@ -170,11 +182,13 @@ def _review_gate(a):
             print(line)
         else:
             path, rec = review_mod.run_gate(a.item, a.head, a.stance, runs_dir=a.runs, profile_name=a.profile,
-                                            dry_run=a.dry_run)
+                                            dry_run=a.dry_run, thinking=a.thinking == "on", effort=a.effort)
             if a.dry_run:
-                print(f"dry-run: {rec['input_bytes']} bytes, files {len(rec['files'])}, omitted {len(rec['omitted'])}")
+                print(f"dry-run: {rec['input_bytes']} bytes, files {len(rec['files'])}, omitted {len(rec['omitted'])}, thinking {rec['thinking']}")
                 return 0
             res = rec["result"]
+            t = rec["thinking"]
+            print(f"reasoning_tokens {t['reasoning_tokens']}, reasoning_chars {t['reasoning_chars']}, attempts {t['attempts']}")
             print(f"record: {path}\nsha256 {rec['sha256']}\nSTATUS {res['STATUS']}: {review_mod.count_line(res['FINDINGS'])}")
             for f in res["FINDINGS"]:
                 print(f"  [{f['severity']}] {f['item']}: {f['reason']}")

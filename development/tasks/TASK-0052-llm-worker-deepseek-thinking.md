@@ -46,3 +46,13 @@ DeepSeek в роли третьего голоса gate и запасного в
 - [ ] Второе ревью (codex)
 
 ## Результат
+**Сделано (developer, 2026-11-14), не закоммичено.**
+- `config.py`: `THINKING_MAX_TOKENS=65536`, `DEFAULT_REASONING_EFFORT`, `REASONING_EFFORTS`; комментарий про thinking.
+- `provider.py`: параметры `thinking`/`effort`; при thinking тело `thinking: enabled` + `reasoning_effort`, без `temperature`; `Completion` получил `finish_reason`, `reasoning_chars`, `reasoning_tokens`; `reasoning_content` в разбор не идёт.
+- `review.py`: `max_tokens_for`; повтор при пустом `content` и `finish_reason=stop` (один), иначе `schema_invalid`; в запись `thinking{...}`; `--dry-run` показывает thinking и max_tokens.
+- `__main__.py`: `--thinking on|off`, `--effort` у `gate`, `review` (по умолчанию on) и `run` (по умолчанию off).
+- README (раздел «Режим размышления»), тесты `tests/test_thinking_0052.py` (12 новых). `unittest discover`: 289+ тестов, зелёно.
+
+**Замер реального вызова (flash, thinking high, RR-0013):** при max_tokens=32768 весь лимит ушёл на рассуждение (reasoning_tokens=32768, `finish_reason=length`, content пуст) -> `schema_invalid`, стоимость $0,0808 (ledger `gate:RR-0013`). Вывод: `max_tokens` покрывает рассуждение; значение поднято до 65536. Повторный реальный вызов не делался (разрешён был один) — критерий «gate проходит и сохраняет reasoning_tokens» ждёт одного повторного вызова. reasoning_tokens сохраняется в `runs/gate-RR-0013-*-invalid.json`.
+
+**Лимит $0,50/задача:** худший случай резерва для pro на документе ~570 KB ≈ $0,64 (вход bytes/2 токенов + 65536 выхода) — ledger откажет `task_cap_exceeded`; для flash ≈ $0,17. Лимит не урезан, решение владельца: поднять `max_usd_task` для gate или уменьшить вход. Ledger total 0,595 из 5,00; 1 unsettled (старый).

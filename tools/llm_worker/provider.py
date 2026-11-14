@@ -44,6 +44,9 @@ class Completion:
     usage: dict = field(default_factory=dict)
     timings: dict = field(default_factory=dict)
     elapsed_s: float = 0.0
+    finish_reason: str = ""
+    reasoning_chars: int = 0  # length of `reasoning_content`; the text itself is dropped, never parsed
+    reasoning_tokens: int | None = None
 
 
 def parse_response(raw, elapsed_s=0.0):
@@ -56,8 +59,16 @@ def parse_response(raw, elapsed_s=0.0):
         content = payload["choices"][0]["message"]["content"] or ""
     except (KeyError, IndexError, TypeError):
         raise ProviderError("malformed response: no choices[0].message.content") from None
-    return Completion(content=content, usage=payload.get("usage") or {}, timings=payload.get("timings") or {},
-                      elapsed_s=elapsed_s)
+    usage = payload.get("usage") or {}
+    msg = payload["choices"][0]["message"]
+    reasoning = msg.get("reasoning_content") if isinstance(msg, dict) else None
+    details = usage.get("completion_tokens_details") if isinstance(usage, dict) else None
+    rt = details.get("reasoning_tokens") if isinstance(details, dict) else None
+    finish = payload["choices"][0].get("finish_reason")
+    return Completion(content=content, usage=usage, timings=payload.get("timings") or {},
+                      elapsed_s=elapsed_s, finish_reason=finish if isinstance(finish, str) else "",
+                      reasoning_chars=len(reasoning) if isinstance(reasoning, str) else 0,
+                      reasoning_tokens=rt if type(rt) is int else None)
 
 
 def _usage_of(raw):
@@ -129,6 +140,7 @@ class OpenAICompatProvider:
     def __init__(self, url=None, model=None, api_key=None, profile=None, guard=None,
                  timeout_s=config.REQUEST_TIMEOUT_S, retries=config.PROVIDER_RETRIES,
                  retry_pause_s=config.PROVIDER_RETRY_PAUSE_S, enable_thinking=False,
+                 thinking=False, effort=config.DEFAULT_REASONING_EFFORT,
                  opener=urllib.request.urlopen, sleep=time.sleep):
         self.profile = profile or config.PROFILES["llamacpp"]
         self.name = self.profile.name
@@ -149,7 +161,11 @@ class OpenAICompatProvider:
         self.timeout_s = timeout_s
         self.retries = retries
         self.retry_pause_s = retry_pause_s
-        self.enable_thinking = enable_thinking
+        self.enable_thinking = enable_thinking  # llama.cpp template switch
+        if effort not in config.REASONING_EFFORTS:
+            raise ValueError(f"bad reasoning effort {effort!r}")
+        self.thinking = thinking  # DeepSeek thinking mode
+        self.effort = effort
         self._opener = opener
         self._sleep = sleep
 
@@ -162,6 +178,10 @@ class OpenAICompatProvider:
         if "chat_template_kwargs" in extra:
             extra["chat_template_kwargs"]["enable_thinking"] = self.enable_thinking
         body = {"model": self.model, "messages": messages, "max_tokens": max_tokens, "temperature": 0.2, **extra}
+        if "thinking" in extra and self.thinking:
+            body["thinking"] = {"type": "enabled"}
+            body["reasoning_effort"] = self.effort
+            del body["temperature"]
         if p.send_seed:
             body["seed"] = 0 if seed is None else seed
         if p.json_mode == "json_schema":
