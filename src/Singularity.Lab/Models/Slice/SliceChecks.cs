@@ -25,6 +25,7 @@ public static class SliceChecks
         ("slice: JetSliceCalib tables have no forbidden file or column (spec §8.2 п. 2)", CalibrationHeader),
         ("slice: JetSliceCalib run writes only its 8 tables; forbidden parameters rejected", () => CalibrationRun(tmp)),
         ("slice: parameters — unknown key, bad value, LAYER=LK rejected", Parameters),
+        ("slice: licence lapse — a new purchase resets the tracking (no false LIC_END)", LapseAfterPurchase),
         ("slice: Lab path gives the Session golden (seed 1, month 149)", () => Golden(tmp)),
         ("slice: L1 — two runs, same CSV and golden_hash", () => L1(tmp)),
         ("slice: L2 — threads 1 vs 4, same CSV and golden_hash", () => L2(tmp)),
@@ -86,6 +87,25 @@ public static class SliceChecks
             catch (ParamException) { }
         }
         return null;
+    }
+
+    private static string? LapseAfterPurchase()
+    {
+        var l = new LapseTracker(2);
+        bool ok = !l.Lapsed(0, shareNow: true)          // licence 1 gives its share
+            && Bought(l, 0)                              // replaced by licence 2, whose mask PRC are not known yet
+            && !l.Lapsed(0, shareNow: false)             // no share: not a lapse of licence 2
+            && !l.Lapsed(0, shareNow: true)
+            && l.Lapsed(0, shareNow: false)              // licence 2 had its share and lost it: lapse, once
+            && !l.Lapsed(0, shareNow: false)
+            && !l.Lapsed(1, shareNow: false);            // another actor is independent
+        return ok ? null : "lapse tracking";
+
+        static bool Bought(LapseTracker t, int actor)
+        {
+            t.Bought(actor);
+            return true;
+        }
     }
 
     private static string? Golden(string tmp)

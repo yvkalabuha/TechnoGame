@@ -67,6 +67,7 @@ internal sealed class SliceObserver
     // licences
     private readonly List<LicenceRow> _licences = new();
     private readonly LicenceRow?[] _openLicence;
+    private readonly LapseTracker _lapse;
     private int _req;
     // counters for run.json (format §4.9, §4.7)
     private long _closeIdleOtherReason, _lapsesInferred, _wAfterNMonths, _closesWithoutLine, _linesWithoutMoney;
@@ -147,8 +148,7 @@ internal sealed class SliceObserver
         _qcRank = new int?[_nA];
         _qcRankMonth = new long[_nA];
         _openLicence = new LicenceRow?[_nA];
-        _effective = new bool[_nA];
-        _budget = new Fx6[_nA];
+        _lapse = new LapseTracker(_nA);
     }
 
     private bool Has(string table) => _table.ContainsKey(table);
@@ -321,7 +321,8 @@ internal sealed class SliceObserver
                     _qcRank[a] = i + 1;
                 if (!_full)
                     continue;
-                bool toolingPool = l.Cause == WhyNotCause.ToolingPoolExhausted;
+                // Cells 0…9, then closed_t (index 10, filled in End), then cluster / order / unmet of a TOOLING_POOL_EXHAUSTED link (§4.3).
+                bool pool = l.Cause == WhyNotCause.ToolingPoolExhausted;
                 _why.Add(new WhyRow
                 {
                     T = t, Actor = a, Target = target, Layer = l.Layer, Subject = Subject(l),
@@ -329,12 +330,10 @@ internal sealed class SliceObserver
                     [
                         I(t), _ids[a], $"{Snake(target.Kind.ToString())}:{I(target.Id)}", I(i + 1), Snake(l.Layer.ToString()), Snake(l.Cause.ToString()),
                         Subject(l), O(l.EtaMonths), string.Join(";", l.Levers.Select(x => Snake(x.ToString()))),
-                        B(LeverValidator.Check([l], LeverRegistry.Slice).Count == 0),
+                        B(LeverValidator.Check([l], LeverRegistry.Slice).Count == 0), "",
+                        pool && l.Cluster >= 0 ? _l.Clusters[l.Cluster] : "", pool ? I(l.Order) : "", pool ? F(l.Unmet) : "0",
                     ],
-                    // cluster / order / unmet of a TOOLING_POOL_EXHAUSTED link (§4.3), empty / 0 for the others
                 });
-                _why[^1].Cells = [.. _why[^1].Cells, "",
-                    toolingPool && l.Cluster >= 0 ? _l.Clusters[l.Cluster] : "", toolingPool ? I(l.Order) : "", toolingPool ? F(l.Unmet) : "0"];
             }
         }
     }
@@ -557,6 +556,8 @@ internal sealed class SliceObserver
                 throw new SliceFormatException($"Month {t} actor {_ids[a]}: A40C close of design {d} with idle {di.IdleMonths} < T_ab {_tab} (§4.9).");
             DesignView dv = sv.Designs[d];
             MonthRecord[] months = [.. _ring.Where(m => m.T > t - _tab && m.T <= t)];
+            if (months.Length != _tab)
+                throw new SliceFormatException($"Month {t} actor {_ids[a]}: A40C close of design {d} with {months.Length} recorded months, the class needs T_ab = {_tab} (§4.9).");
             bool culture = months.All(m => m.Actors[a].YMin[d] == Fx6.Zero || m.Actors[a].Alloy == Fx6.Zero && m.Actors[a].MeltsZero);
             // COEXIST_MONEY (format v0.5 r3 §4.16 (б), SC §13.3 r6): in every month the line is N of a pair, made nothing, and step 7 bound it by money.
             bool money = months.All(m => m.Actors[a].TwoLines && m.Actors[a].Roles[d] == Role.N && m.Actors[a].Rate[d] == Fx6.Zero
@@ -779,12 +780,10 @@ internal sealed class SliceObserver
             var row = new LicenceRow { T = t, Start = now.Start, Seller = now.Seller, Buyer = a, Gen = now.Gen, Profile = v.Actors[a].Profile, Price = price[a]!.Value };
             _licences.Add(row);
             _openLicence[a] = row;
+            _lapse.Bought(a);
             Row("events", I(t), "LIC_BUY", _ids[a], _ids[now.Seller], F(row.Price));
         }
     }
-
-    // Lapsed: no PRC of the mask has the licence share any more, though one had it in an earlier month (tracked by _effective).
-    private readonly bool[] _effective;
 
     private bool Lapsed(ActorView av, LicenceView l)
     {
@@ -794,15 +793,7 @@ internal sealed class SliceObserver
             if (n.Process is ProcessView p && p.LicenceShare > Fx6.Zero && (l.Mask >> (n.Number - 1) & 1UL) != 0)
                 share = true;
         }
-        if (share)
-        {
-            _effective[av.Actor] = true;
-            return false;
-        }
-        bool lapsed = _effective[av.Actor];
-        if (lapsed)
-            _effective[av.Actor] = false;
-        return lapsed;
+        return _lapse.Lapsed(av.Actor, share);
     }
 
     // ---------------------------------------------------------------- requirements
@@ -857,7 +848,7 @@ internal sealed class SliceObserver
                 Head = [I(t), _ids[a], I(key.G), I(key.T), I(key.N), F(key.P), F(fv), F(fleet)],
                 Tail = [.. _kdIndex.Select(k => F(av.KD[k]))],
             });
-            _budget[a] = ai.Budget;
+            _years[^1].Budget = ai.Budget;
         }
         foreach (YearRow y in _years)
         {
@@ -871,13 +862,9 @@ internal sealed class SliceObserver
             if (av.Bureaus.Any(b => b.Design >= 0 && b.Required > 0 && b.Granted * 10 < b.Required * 9))
                 y.EngShort++;
             y.Months++;
-            if (y.T == t)
-                y.Budget = _budget[a];
         }
         FlushYears(final: false);
     }
-
-    private readonly Fx6[] _budget;
 
     private void FlushYears(bool final)
     {
@@ -965,4 +952,28 @@ internal sealed class SliceObserver
         new("closes_of_designs_not_lines", I(_closesWithoutLine)),
         new("lines_without_step7_money", I(_linesWithoutMoney)),
     ];
+}
+
+/// <summary>
+/// The lapse of a licence (A43.4) read from <c>LicenceShare</c> (format §9.1): a licence that gave its share in an earlier month and gives none now
+/// has lapsed. A new purchase starts the tracking afresh, so the share of the replaced licence never ends the new one.
+/// </summary>
+internal sealed class LapseTracker(int actors)
+{
+    private readonly bool[] _effective = new bool[actors];
+
+    public void Bought(int actor) => _effective[actor] = false;
+
+    /// <summary>True once, in the first month without a share after a month with one.</summary>
+    public bool Lapsed(int actor, bool shareNow)
+    {
+        if (shareNow)
+        {
+            _effective[actor] = true;
+            return false;
+        }
+        bool lapsed = _effective[actor];
+        _effective[actor] = false;
+        return lapsed;
+    }
 }

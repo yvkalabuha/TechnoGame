@@ -8,6 +8,7 @@
 - **`COEXIST_MONEY`** (§4.16 (б)) — по предложению SC §13.3 r6: в каждом из `T_ab` месяцев у актора две линии, d — `N`, выпуск `rate(d) = 0` и `DesignView.Bind = Money` (шаг 7 ограничил линию деньгами). Прежнее условие `LeftIn = 0 ∧ Training = 0` не отличало «нет денег» от «нет допуска» (у недопущенной линии `Bind = None`).
 - **Линии месяца** (§4.12, §4.16): в С по снимку t, кроме линий, которые ИИ закрыл в compute t−1. Линия снимка без строки в `Money.Lines` (её закрыла команда до шага 7: прокси `FORCE`, `derive`, переносящий родителя) **не** валит прогон: роль сохраняется (её видел ИИ), `left` и `left_share` пусты, счётчик `lines_without_step7_money` — в `run.json` (`model_info`). [Факт: малая матрица T10] Без этого `arm/FORCE_*` и `arm/DERIV` падали; в main таких линий 0. Если исключать такие линии из пары, `YPROD` в `arm/DERIV` попадает на `SOLE` (seed 1, GBR, мес. 337) — роль должна быть та, что видел ИИ.
 - **Определения Lab** (§4.4, §4.5, §4.7, §4.9, §4.13, §5; [Предп.], не из спец. дословно) — §9.1. `run.json` модели содержит объект `model_info` (§9.1).
+- `a40.preset` — пресет профиля актора (у проекта во view пресета нет, §4.9); `LIC_END` по истечению: новая покупка сбрасывает учёт доли (иначе ложный `LIC_END` замещённой лицензии); срабатывание С без `T_ab` записанных месяцев — прогон `failed`.
 - `exp0002.py` пока падает на `requirements.csv` v0.5 (`REQ_COLS` — T11, §10); калибровочный разбор (`--calib`) читает каталог `EXP-0002-calib` без ошибок.
 
 ## Изменения v0.5 r1 (решение #190, спец. v0.25 §7 P5)
@@ -176,7 +177,7 @@
 |---|---|---|
 | `t`, `actor`, `design`, `g_p` | int, str, int, int | ключ |
 | `profile` | int 1…3 | профиль актора |
-| `preset` | str | `SUPERIOR`/`PRODUCIBLE`/`ADAPTIVE` проекта |
+| `preset` | str | `SUPERIOR`/`PRODUCIBLE`/`ADAPTIVE` — пресет профиля актора (v0.5 r3): у проекта во view пресета нет (`DesignView`); профиль постоянен в прогоне, поэтому для проектов compose ИИ это и есть пресет проекта; у стартовых проектов и `derive` — пресет профиля, не пресет проекта |
 | `branch` | `O`/`C` | ветка |
 | `cls` | str | О: `PROCESSES` (`gate_open`, условие доктрины выполнены, `admitted` = false), иначе `DEFECTS` (`ClassifyGiveUp`, `DesignInputsView.GiveUp`); С: `CULTURE` / `COEXIST_MONEY` / `OTHER` (v0.5, ниже) |
 | `t_stage_o` | int | месяц входа в О |
@@ -270,7 +271,7 @@
 - **Лицензии, парк** — печати §6.10–6.11 из `licences.csv`, `fleet_cmd.csv`, `events.csv`.
 
 ## 8. Манифесты
-**`lab/manifests/EXP-0002.json`** (схема Lab 1; `model: "JetSlice"`, `ticks: 11688`, `threads: 1`, серии §2) и **`EXP-0002-det.json`** (`threads: [1, 4, 8]`, серия `det`). Поле `meta` (хешируется в `manifest_hash`): `slice_spec` (v0.24 r2), `csv_format` (v0.5), `hypothesis`, `decision_rule`, `scenario_hash`, `control_tables_hash`, `calibration_manifest`, `analysis` (`script`, `script_sha256`, `config` с `p0_passed`), `rng` (спец. §9.1, `0x5EED`), `after_review`, `seed_offset`, `freeze` — как v0.2. Шаблон не замораживается: заморозку делает T12 (спец. §8.2 п.8).
+**`lab/manifests/EXP-0002.json`** (схема Lab 1; `model: "JetSlice"`, `ticks: 11688`, `threads: 1`, серии §2) и **`EXP-0002-det.json`** (`threads: [1, 4, 8]`, серия `det`). Поле `meta` (хешируется в `manifest_hash`): `slice_spec` (v0.25), `csv_format` (v0.5 r3), `hypothesis`, `decision_rule`, `scenario_hash`, `control_tables_hash`, `calibration_manifest`, `analysis` (`script`, `script_sha256`, `config` с `p0_passed`), `rng` (спец. §9.1, `0x5EED`), `after_review`, `seed_offset`, `freeze` — как v0.2. Шаблон не замораживается: заморозку делает T12 (спец. §8.2 п.8).
 **`lab/manifests/EXP-0002-t10-smoke.json`** — малая матрица T10 (каждый ключ §3 один раз, seeds 1–2, threads 1/4), проверка пути Lab, не эксперимент.
 **`lab/manifests/EXP-0002-calib.json`** (`model: "JetSliceCalib"`, серия `calib`, seeds 10001…10100): в `meta` — `scenario_hash`, сетки «К» по этапам **C1 → (C3+C4) → C2** (v0.23, #177) с порядком обхода и бюджетом (≤ 40 / 60 / 30), функция потерь (C1a, C1b, C1d, C1e; C3; C4,G2…G4; C2), журнал точек со значениями `d_k` (коммитится).
 DONE-эксперимент записывает `core_commit`, `data_hash`, `manifest_hash`, seeds, threads, `golden_hash` main (sha256 строк «`seed golden_hash`\n» по возрастанию seed), `outcome`.
