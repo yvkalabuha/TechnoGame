@@ -14,8 +14,8 @@ namespace Singularity.Session;
 /// </summary>
 public sealed partial class SliceSession
 {
-    /// <summary>Version of the public surface of the session (ADR-0014 п. 6): raised with every change of the views or of <see cref="SliceRunConfig"/>; the surface test pins it. 0 was the surface before the read views.</summary>
-    public const int TestApiVersion = 1;
+    /// <summary>Version of the public surface of the session (ADR-0014 п. 6): raised with every change of the views or of <see cref="SliceRunConfig"/>; the surface test pins it. 0 was the surface before the read views; 2 adds the step traces, <c>t_known</c> and the Requirement variants (SLICE_COMPOSITION §13.7).</summary>
+    public const int TestApiVersion = 2;
 
     private SliceView _view = null!;
     private long _month = -1;
@@ -33,7 +33,7 @@ public sealed partial class SliceSession
         LastHash = StateHash.ComputeHex(world.Table, SliceWorld.SchemaVersion, world.Runner.Tick);
         HashComputations = 1;
         Layout = ViewBuilder.Layout(world);
-        _view = ViewBuilder.Snapshot(world, Tick, LastHash, _month, null);
+        _view = ViewBuilder.Snapshot(world, Tick, LastHash, _month, null, null);
     }
 
     /// <summary>The fixed shape of the world the rows of the views refer to.</summary>
@@ -41,7 +41,7 @@ public sealed partial class SliceSession
 
     /// <summary>
     /// The state after the last non-empty tick as an immutable snapshot (SLICE_COMPOSITION §12.1): replaced as one reference after the hash is taken,
-    /// unchanged by an empty tick. Never null; the initial one has <see cref="SliceView.Month"/> −1 and no inputs.
+    /// unchanged by an empty tick. Never null; the initial one has <see cref="SliceView.Month"/> −1, no inputs and no step.
     /// </summary>
     public SliceView View => Volatile.Read(ref _view);
 
@@ -177,7 +177,9 @@ public sealed partial class SliceSession
         {
             LastHash = StateHash.ComputeHex(_world.Table, SliceWorld.SchemaVersion, Tick);
             HashComputations++;
-            Volatile.Write(ref _view, ViewBuilder.Snapshot(_world, Tick, LastHash, _month, inputs));
+            // The traces belong to the step that just ran; only a tick with a monthly step reads them (inputs is set exactly then).
+            MonthStepView? step = inputs is null ? null : ViewBuilder.Step(_world, _month);
+            Volatile.Write(ref _view, ViewBuilder.Snapshot(_world, Tick, LastHash, _month, inputs, step));
         }
     }
 

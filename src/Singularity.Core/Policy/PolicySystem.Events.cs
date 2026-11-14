@@ -187,6 +187,8 @@ public sealed partial class PolicySystem
             {
                 room ??= baseNext - ProjectedNeed(row, t, designs, dec, sharesNext, budgetNext);
                 accept = room.Value >= price;
+                if (!accept)
+                    _moneyRefusals[row].Add(new MoneyRefusal(s, gSeller, price, room.Value));
             }
             if (accept)
             {

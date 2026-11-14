@@ -60,7 +60,7 @@ public enum SaleArm
     ChiOff = 5,
 }
 
-/// <summary>Layer controls of the series <c>layer/*</c> (spec §6.1, SLICE_COMPOSITION §12.4). <c>L_C</c> and <c>L_P</c> need <c>t_known</c> in Core and are not here yet.</summary>
+/// <summary>Layer controls of the series <c>layer/*</c> (spec §6.1, SLICE_COMPOSITION §12.4, §13.2). <c>L_C</c> and <c>L_P</c> read <c>t_known</c> from the columns <c>know.since.N</c>.</summary>
 public enum LayerControl
 {
     /// <summary>The full model (main).</summary>
@@ -74,6 +74,16 @@ public enum LayerControl
 
     /// <summary><c>L_C0</c> (print): <c>yield = 1</c>, <c>unit_cost_mult = 1</c>, <c>q = 1</c>.</summary>
     Lc0 = 3,
+
+    /// <summary>
+    /// <c>L_C</c>: one median curve per tier after <c>t_known</c>. Refused until the control tables (T12) can be given: <see cref="SliceRunConfig"/> carries none yet.
+    /// </summary>
+    Lc = 4,
+
+    /// <summary>
+    /// <c>L_P</c>: the canonical project of the newest due generation. Refused until the control tables (T12) can be given.
+    /// </summary>
+    Lp = 5,
 }
 
 /// <summary>Step of an axis of the P5 grid (spec §7): ×1, ×0,5, ×2 of the frozen value.</summary>

@@ -740,4 +740,147 @@ public class ProductAiTests
             }
         }
     }
+
+    // ---- step traces and variants (TASK-0047, SLICE_COMPOSITION §13.4, §13.5)
+
+    private static LineCloseReason[] Reasons(Rig rig) => [.. Enumerable.Range(0, Designs).Select(d => rig.Policy.LastCloseReason(0, d))];
+
+    private static void AssertEveryCloseHasAReason(Rig rig, long consumedAt)
+    {
+        for (int d = 0; d < Designs; d++)
+            Assert.Equal(rig.Policy.AiClose(0, d, consumedAt), rig.Policy.LastCloseReason(0, d) != LineCloseReason.None);
+    }
+
+    [Fact]
+    public void CloseReason_A40BranchC_ForAnIdleSeries()
+    {
+        var rig = new Rig(PolicyProfile.Mass, s => s.Design[0] = Live(DesignStage.InService, 1));
+        rig.S.Design[1] = Series(2, idle: 59, built: true);
+        rig.Month(20);
+        Assert.Equal(LineCloseReason.None, rig.Policy.LastCloseReason(0, 1));
+        rig.S.Design[1] = Series(2, idle: 60, built: true);
+        rig.Month(21);
+        Assert.Equal(LineCloseReason.A40C, rig.Policy.LastCloseReason(0, 1));
+        AssertEveryCloseHasAReason(rig, 22);
+        rig.Month(22);                                                  // the trace is of the last step only: the pending close is not repeated
+        Assert.All(Reasons(rig), r => Assert.Equal(LineCloseReason.None, r));
+    }
+
+    [Fact]
+    public void CloseReason_F17bRule2_TheWorkingLineClosesOnceTheCandidateHasYProd()
+    {
+        var rig = HandoverRig(YProdRaw, s =>
+        {
+            s.Design[0] = Series(1, 0, true);
+            s.Design[1] = Series(2, 0, true);
+        });
+        rig.Month(0);
+        Assert.Equal(LineCloseReason.YProd, rig.Policy.LastCloseReason(0, 0));
+        Assert.Equal(LineCloseReason.None, rig.Policy.LastCloseReason(0, 1));
+        AssertEveryCloseHasAReason(rig, 1);
+    }
+
+    [Fact]
+    public void CloseReason_F17bRule1_AtYProdEveryLineCloses_BelowItOnlyTheCandidateIsReplaced_AdmitClosesEveryLine()
+    {
+        void Setup(Snapshot s)
+        {
+            s.Design[0] = Series(1, 0, true);
+            s.Design[1] = Series(2, 0, false);
+            s.Design[2] = Prototype(5, 3, Fx6.FromInt(100), gate: true);
+        }
+        var low = HandoverRig(YProdRaw - 1, Setup);
+        low.Month(0);
+        Assert.Equal(LineCloseReason.LaunchCandidate, low.Policy.LastCloseReason(0, 1));
+        Assert.Equal(LineCloseReason.None, low.Policy.LastCloseReason(0, 0));
+        AssertEveryCloseHasAReason(low, 1);
+        var high = HandoverRig(YProdRaw, Setup);
+        high.Month(0);
+        Assert.Equal(LineCloseReason.YProd, high.Policy.LastCloseReason(0, 0));          // rule 2 runs first and closes the working line
+        Assert.Equal(LineCloseReason.LaunchAll, high.Policy.LastCloseReason(0, 1));
+        AssertEveryCloseHasAReason(high, 1);
+        var admit = HandoverRig(1, Setup, new PolicyParams { LineClose = LineCloseRule.Admit });
+        admit.Month(0);
+        Assert.Equal(LineCloseReason.LaunchAll, admit.Policy.LastCloseReason(0, 0));
+        Assert.Equal(LineCloseReason.LaunchAll, admit.Policy.LastCloseReason(0, 1));
+        AssertEveryCloseHasAReason(admit, 1);
+    }
+
+    [Fact]
+    public void CloseReason_WhenTwoRulesCloseOneLine_TheFirstReasonStaysAndThereIsOneClose()
+    {
+        var both = HandoverRig(YProdRaw, s =>
+        {
+            s.Design[0] = Series(1, 60, true);
+            s.Design[1] = Series(2, 0, true);
+        });
+        both.Month(0);
+        Assert.Equal(LineCloseReason.A40C, both.Policy.LastCloseReason(0, 0));
+        Assert.Equal(LineCloseReason.None, both.Policy.LastCloseReason(0, 1));
+    }
+
+    private static void VariantsSetup(Snapshot s)
+    {
+        // A weak process makes «producible» differ from «superior» (a yield below y_prod on a high-tier hot section).
+        s.KnownGen = 3;
+        s.Yield = p => p == 41 || p == 43 || p == 52 ? Fx6.FromRaw(100_000) : Fx6.One;
+        s.Design[0] = Live(DesignStage.InService, 1);
+        s.Design[1] = Live(DesignStage.InService, 2);
+    }
+
+    [Fact]
+    public void Variants_ListBothCandidatesWithTheirFV_ForEveryProfile_AndTheProfilesChoiceEqualsTheComposeCommand()
+    {
+        var probe = new Rig(PolicyProfile.Quality, VariantsSetup);
+        int[] sup = probe.Commands(0).Single().Alts.ToArray();
+        int[] prod = new Rig(PolicyProfile.Mass, VariantsSetup).Commands(0).Single().Alts.ToArray();
+        Assert.NotEqual(sup, prod);
+        Func<int[], Fx6>?[] values =
+        [
+            null,
+            a => a.SequenceEqual(prod) ? Fx6.FromInt(2) : Fx6.One,
+            a => a.SequenceEqual(sup) ? Fx6.FromInt(2) : Fx6.One,
+        ];
+        foreach (Func<int[], Fx6>? value in values)
+        {
+            foreach (PolicyProfile profile in Enum.GetValues<PolicyProfile>())
+            {
+                var rig = new Rig(profile, s => { VariantsSetup(s); if (value is not null) s.Value = value; });
+                PresetVariants v = rig.Policy.RequirementVariants(0, 0);
+                Assert.Equal(3, v.Gen);
+                Assert.Equal(2, v.Count);
+                Assert.Equal(sup, v.Superior.ToArray());
+                Assert.Equal(prod, v.Producible.ToArray());
+                Assert.Equal(value?.Invoke(sup) ?? Fx6.One, v.FvSuperior);
+                Assert.Equal(value?.Invoke(prod) ?? Fx6.One, v.FvProducible);
+                int[] chosen = profile switch
+                {
+                    PolicyProfile.Quality => sup,
+                    PolicyProfile.Mass => prod,
+                    _ => v.FvProducible > v.FvSuperior ? prod : sup,
+                };
+                Assert.Equal(chosen, rig.Commands(0).Single().Alts.ToArray());
+            }
+        }
+    }
+
+    [Fact]
+    public void Variants_CountIsOneWhenProducibleEqualsSuperior_AndZeroWithoutAnApp_AndFvIsPureOfTheSnapshot()
+    {
+        foreach (PolicyProfile profile in Enum.GetValues<PolicyProfile>())
+        {
+            var same = new Rig(profile, s => s.KnownGen = 1);
+            PresetVariants v = same.Policy.RequirementVariants(0, 0);
+            Assert.Equal(1, v.Count);
+            Assert.Empty(v.Producible);
+            Assert.Null(v.FvProducible);
+            Assert.Equal(same.Commands(0).Single().Alts.ToArray(), v.Superior.ToArray());
+            PresetVariants again = same.Policy.RequirementVariants(0, 0);   // a read changes nothing
+            Assert.Equal((v.Gen, v.Count, v.FvSuperior), (again.Gen, again.Count, again.FvSuperior));
+            Assert.Equal(v.Superior.ToArray(), again.Superior.ToArray());
+            var none = new Rig(profile, s => s.KnownGen = 0);
+            Assert.Equal(0, none.Policy.RequirementVariants(0, 0).Count);
+            Assert.Equal(0, none.Policy.RequirementVariants(0, 0).Gen);
+        }
+    }
 }

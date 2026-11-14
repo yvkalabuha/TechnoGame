@@ -23,15 +23,16 @@ internal static class ViewBuilder
         w.IndustryParameters.MasteredYield, w.PolicyParameters.FvBudget);
 
     /// <summary>The post state of <paramref name="month"/> (−1 before the first step); read for the compute of <c>month + 1</c>.</summary>
-    public static SliceView Snapshot(SliceWorld w, long tick, string hash, long month, MonthInputsView? inputs)
+    public static SliceView Snapshot(SliceWorld w, long tick, string hash, long month, MonthInputsView? inputs, MonthStepView? step)
     {
         var actors = ImmutableArray.CreateBuilder<ActorView>(w.Scenario.ActorCount);
         for (int a = 0; a < w.Scenario.ActorCount; a++)
-            actors.Add(Actor(w, a, month));
-        return new SliceView(tick, w.Calendar.DateOf(tick), hash, month, actors.MoveToImmutable(), inputs);
+            actors.Add(Actor(w, a, month, step is not null));
+        return new SliceView(tick, w.Calendar.DateOf(tick), hash, month, actors.MoveToImmutable(), inputs, step);
     }
 
-    private static ActorView Actor(SliceWorld w, int a, long month)
+    // `stepped`: the tick ran a monthly step, so the step traces are of month `month`; otherwise they belong to an earlier step and are not read (§13.7).
+    private static ActorView Actor(SliceWorld w, int a, long month, bool stepped)
     {
         long next = month + 1;
         bool full = w.Config.ViewMode == SliceViewMode.Full;
@@ -59,7 +60,7 @@ internal static class ViewBuilder
             new QualityView(w.Policy.QualityProgrammeActive(a), w.Policy.QualityProgrammeStart(a), w.Policy.QualityTriggerCount(a), w.Policy.TrainingTarget(a)),
             new LicenceView(w.Policy.LicenceGen(a), w.Policy.LicenceSeller(a), w.Policy.LicenceStart(a), w.Policy.LicenceMask(a), w.Policy.OfferMask(a),
                 w.Policy.LicenceFlow(a), refusals.MoveToImmutable()),
-            new DisruptionView(disStart, disEnd), Nodes(w, a, next), designs.MoveToImmutable(), Decisions(w, a, next));
+            new DisruptionView(disStart, disEnd), Nodes(w, a, next), designs.MoveToImmutable(), Decisions(w, a, next, stepped));
     }
 
     private static ImmutableArray<NodeView> Nodes(SliceWorld w, int a, long next)
@@ -72,7 +73,8 @@ internal static class ViewBuilder
             foreach ((int actor, int node) in w.Knowledge.LastLicenceGrants)
                 byLicence |= actor == a && node == number;
             int p = w.IndustryLayout.RowOf(number);
-            nodes.Add(new NodeView(number, w.Knowledge.IsKnown(a, r), byLicence, p < 0 ? null : Process(w, a, p, number, next)));
+            nodes.Add(new NodeView(number, w.Knowledge.IsKnown(a, r), byLicence, p < 0 ? null : Process(w, a, p, number, next),
+                w.Knowledge.TracksKnownSince ? w.Knowledge.KnownSince(a, r) : null));
         }
         return nodes.MoveToImmutable();
     }
@@ -97,20 +99,20 @@ internal static class ViewBuilder
             [.. p.PrcSet(a, d)]);
     }
 
-    private static PolicyDecisionView Decisions(SliceWorld w, int a, long next)
+    private static PolicyDecisionView Decisions(SliceWorld w, int a, long next, bool stepped)
     {
         PolicySystem pol = w.Policy;
         var commands = ImmutableArray.CreateBuilder<DesignCommandView>();
         foreach (DesignCommand c in pol.AiDesignCommands(a, next))
             commands.Add(new DesignCommandView(c.Kind, c.Target, [.. c.Alts]));
         var starts = ImmutableArray.CreateBuilder<StartView>();
-        var closes = ImmutableArray.CreateBuilder<int>();
+        var closes = ImmutableArray.CreateBuilder<CloseView>();
         for (int d = 0; d < w.ProductsLayout.Designs; d++)
         {
             if (pol.AiStart(a, d, next) is Fx6 rate)
                 starts.Add(new StartView(d, rate));
             if (pol.AiClose(a, d, next))
-                closes.Add(d);
+                closes.Add(new CloseView(d, stepped ? pol.LastCloseReason(a, d) : LineCloseReason.None));
         }
         var repeats = ImmutableArray.CreateBuilder<int>(w.ProductsLayout.Generations);
         for (int g = 1; g <= w.ProductsLayout.Generations; g++)
@@ -141,10 +143,40 @@ internal static class ViewBuilder
             for (int d = 0; d < w.ProductsLayout.Designs; d++)
                 designs.Add(DesignInputs(w, a, d, month));
             actors.Add(new ActorInputsView(a, w.Policy.Budget(a), w.SharesOf(a), w.ProcurementBudget(a), tooling,
-                new CapabilityView(w.Industry.Alloy(a, month).Supply, w.Policy.AlloyDeficit(a, month)), designs.MoveToImmutable()));
+                new CapabilityView(w.Industry.Alloy(a, month).Supply, w.Policy.AlloyDeficit(a, month)), designs.MoveToImmutable(), Requirement(w, a, month)));
         }
         // The adapter of the policy asks GFront(t − 1); the fielded set does not depend on the month, but the call is the same.
         return new MonthInputsView(month, w.Products.GFront(month - 1), actors.MoveToImmutable());
+    }
+
+    // The variants of the yearly Requirement; FV is not read in the calibration mode (spec §8.2 п. 2). Initialize writes only pol.* columns,
+    // which Variants does not read, so month 0 is the same as after it.
+    private static RequirementView? Requirement(SliceWorld w, int a, long month)
+    {
+        if (!w.Config.ProductAi || w.Config.ViewMode == SliceViewMode.Calibration || month % 12 != 0)
+            return null;
+        PresetVariants v = w.Policy.RequirementVariants(a, month);
+        return new RequirementView(v.Gen, v.Count, v.Superior, v.Producible, v.FvSuperior, v.FvProducible);
+    }
+
+    /// <summary>The results of the monthly step <paramref name="month"/>, read from the step traces right after the tick that ran it.</summary>
+    public static MonthStepView Step(SliceWorld w, long month)
+    {
+        var actors = ImmutableArray.CreateBuilder<ActorStepView>(w.Scenario.ActorCount);
+        for (int a = 0; a < w.Scenario.ActorCount; a++)
+        {
+            MoneyStepView? money = null;
+            if (w.Products.LastLeftStart(a) is Fx6 leftStart)
+            {
+                var lines = ImmutableArray.CreateBuilder<LineMoneyView>();
+                foreach (LineMoneyStep l in w.Products.LastLineMoney(a))
+                    lines.Add(new LineMoneyView(l.Design, l.LeftIn, l.FromLeft, l.Training, l.FromTraining));
+                money = new MoneyStepView(leftStart, lines.ToImmutable());
+            }
+            actors.Add(new ActorStepView(a, money,
+                [.. w.Policy.LastMoneyRefusals(a).Select(r => new LicenceRefusalView(r.Seller, r.Gen, r.Price, r.Room))]));
+        }
+        return new MonthStepView(month, actors.MoveToImmutable());
     }
 
     private static DesignInputsView DesignInputs(SliceWorld w, int a, int d, long month)

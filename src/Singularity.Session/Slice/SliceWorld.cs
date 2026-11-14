@@ -33,8 +33,10 @@ internal sealed class SliceWorld
 
     public SliceWorld(GameData data, SliceRunConfig config)
     {
-        if (config.Layer is not (LayerControl.Full or LayerControl.Lk or LayerControl.Lk0 or LayerControl.Lc0))
-            throw new InvalidOperationException($"Layer control {(int)config.Layer} is not supported (L_C with t_known and L_P need Core support that does not exist yet).");
+        if (config.Layer is LayerControl.Lc or LayerControl.Lp)
+            throw new InvalidOperationException($"Layer control {config.Layer} needs the control tables (curves Y_k, U_k; T_design, rho) of T12, and SliceRunConfig does not carry them yet.");
+        if (!Enum.IsDefined(config.Layer))
+            throw new InvalidOperationException($"Layer control {(int)config.Layer} is not defined.");
         if ((config.Layer == LayerControl.Lk) != (config.LkTables is not null))
             throw new ArgumentException("LkTables are needed exactly with Layer = Lk.", nameof(config));
         // The tables are copied: a caller changing its arrays later must not change a running world.
@@ -154,7 +156,9 @@ internal sealed class SliceWorld
                 return new KnowledgeSystem(Table, Graph, kStart, kp, inputs, Streams.Know, chunks, KnowledgeMode.ScheduleLk0,
                     KnowledgeSchedule.BuildLk0(Graph, kStart), Config.LicKnows);
             default:
-                return new KnowledgeSystem(Table, Graph, kStart, kp, inputs, Streams.Know, chunks, licenceTransfersKnowledge: Config.LicKnows);
+                // L_C and L_P read t_known (SLICE_COMPOSITION §13.2); in every other mode the columns are absent and the hash is that of main.
+                return new KnowledgeSystem(Table, Graph, kStart, kp, inputs, Streams.Know, chunks, licenceTransfersKnowledge: Config.LicKnows,
+                    trackKnownSince: Config.Layer is LayerControl.Lc or LayerControl.Lp);
         }
     }
 
@@ -271,6 +275,11 @@ internal sealed class SliceWorld
             GridStep.Hi => Fx6.FromRaw(checked(v.Raw * 2)),
             _ => v,
         };
+        foreach (GridStep step in (GridStep[])[cell.KCatch, cell.KDiff, cell.HMax])
+        {
+            if (!Enum.IsDefined(step))
+                throw new ArgumentOutOfRangeException(nameof(cell), (int)step, "The grid step is not defined.");
+        }
         Fx6 kDiff = Fx6.One - Step(cell.KDiff, Fx6.One - k.KDiff);
         k = k with { KDiff = kDiff, HMax = Step(cell.HMax, k.HMax) };
         return (k, i with { KCatch = Step(cell.KCatch, i.KCatch) });

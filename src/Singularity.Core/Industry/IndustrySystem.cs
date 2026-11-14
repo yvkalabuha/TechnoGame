@@ -317,7 +317,7 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
                 return ProcessYield.Control(Fx6.One);
             case IndustryMode.CurveLc:
                 long since = _inputs.KnownSince(site, processRow, month);
-                return ProcessYield.Control(since < 0 ? Fx6.Zero : _curves[_l.Tier[processRow] - 3].YieldAt(month - since));
+                return ProcessYield.Control(since == KnownSinceMarks.Unknown ? Fx6.Zero : _curves[_l.Tier[processRow] - 3].YieldAt(month - since));
         }
         int c = _l.ClusterIndex[processRow];
         return IndustryMath.Yield(_l.Req[processRow], Cells(_h, site, c), Cells(_m, site, c), ProcX(site, processRow),
@@ -531,7 +531,7 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
         long since = _inputs.KnownSince(site, processRow, month);
         CapabilityCurve curve = _curves[_l.Tier[processRow] - 3];
         // An unknown process has no t_known; its price is the curve at τ = 0 (spec §3.5 A24).
-        return curve.UnitCostAt(since < 0 ? 0 : month - since);
+        return curve.UnitCostAt(since == KnownSinceMarks.Unknown ? 0 : month - since);
     }
 
     // ---- merge parts

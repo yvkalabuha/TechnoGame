@@ -52,3 +52,15 @@ created: 2026-11-13
 - [ ] Тесты (test-engineer)
 
 ## Результат
+developer, 2026-11-14 (записал Orchestrator).
+- (1) `t_known`: `KnowledgeSystem(trackKnownSince, startKnownSince = −384)`, колонки `know.since.N` только при флаге (Lc/Lp), `Merge` пишет месяц; адаптеры Session читают колонку; `NodeView.KnownSince : long?`.
+- (2) `left`: след шага 7 в `ProductsSystem` (`LastLeftStart`, `LastLineMoney`), views `MonthStepView`/`ActorStepView`/`MoneyStepView`/`LineMoneyView`. `Training` = 0 у недопущенной линии (поведение не меняется).
+- (3) `LineCloseReason {None, A40C, YProd, LaunchAll, LaunchCandidate}`, `PolicySystem.LastCloseReason`; `Closes : ImmutableArray<CloseView>`.
+- (4) `ProductPresets.Variants`, `PolicySystem.RequirementVariants`; общий шаг `TryProducible` для `Compose`/`Variants`; `ActorInputsView.Requirement` — годовые месяцы, ProductAi, не Calibration.
+- (5) `PolicySystem.LastMoneyRefusals`, `LicenceRefusalView`.
+- (6) `KnownSinceMarks.Unknown = −1`, `StartKnown = −384`; проверки `== −1`; `StepCanonical` — `max(since, 0)`; `Layer.Lc/Lp` отклоняются до таблиц контролей T12.
+- (7) `TestApiVersion = 2`, `session-surface.v2.txt` с nullable (`NullabilityInfoContext`), v1 сохранён.
+- (8) `GridStep` вне enum → `ArgumentOutOfRangeException`.
+- `[Observation]` на 4 аксессорах; IL-тест `ObservationTests`.
+- `dotnet test`: Architecture 83, Kernel 314 (1 skip), Core 1026, Session 307 (2 skip); 0 падений; golden и `SchemaVersion` main без изменений.
+- Открыто: Session-часть `t_known` проверяема только после таблиц Lc/Lp (T12); формат v0.5 — уточнить `Training` для недопущенной линии (COEXIST_MONEY); переименовать `Layer_EveryDefinedValue_IsSupported`.

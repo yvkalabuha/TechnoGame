@@ -35,7 +35,9 @@ public sealed class KnowledgeInvariantException(long month, int actorNumber, str
 /// <c>w_n</c>, <c>alloc</c>, <c>c_eff</c>, progress, hazard (stream KNOW keyed by the month index),
 /// <c>K_ind</c>. Merge applies discoveries (and licence knowledge in <c>lic_knows</c>) by
 /// (actor, node) and <c>K_d</c>. Own columns: <c>know.known.N</c>, <c>know.prog.N</c> per node number N
-/// (ascending), then <c>know.K_d.d</c>, <c>know.K_ind.d</c> per discipline.
+/// (ascending), then <c>know.K_d.d</c>, <c>know.K_ind.d</c> per discipline. With <c>trackKnownSince</c> (the controls L_C and L_P, which
+/// read <c>t_known</c>) also <c>know.since.N</c> per node: −1 unknown, else the month of the merge that made the node known, or
+/// <c>startKnownSince</c> for the start knowledge (SLICE_COMPOSITION §13.2). Without the flag the table has no such columns.
 /// </summary>
 public sealed class KnowledgeSystem : ITickSystem
 {
@@ -54,6 +56,7 @@ public sealed class KnowledgeSystem : ITickSystem
     private readonly IntColumn[] _known;
     private readonly LongColumn[] _prog;
     private readonly LongColumn[] _kd, _kind;
+    private readonly LongColumn[]? _since;
 
     // Scratch, rewritten every step; row a only by the chunk that owns it.
     private readonly long[] _wraw, _amount;
@@ -66,8 +69,12 @@ public sealed class KnowledgeSystem : ITickSystem
 
     public KnowledgeSystem(Table table, KnowledgeGraph graph, KnowledgeStart start, KnowledgeParams parameters,
         IKnowledgeInputs inputs, CounterRng know, int chunkCount, KnowledgeMode mode = KnowledgeMode.Full,
-        ImmutableArray<long>? schedule = null, bool licenceTransfersKnowledge = false, int systemId = DefaultSystemId)
+        ImmutableArray<long>? schedule = null, bool licenceTransfersKnowledge = false, int systemId = DefaultSystemId,
+        bool trackKnownSince = false, long startKnownSince = KnownSinceMarks.StartKnown)
     {
+        // The start value must lie below every month of the horizon (tau of the start section starts at the horizon, spec §6.1 v0.24 r2); −1 is the mark «unknown».
+        if (trackKnownSince && startKnownSince > KnownSinceMarks.StartKnown)
+            throw new ArgumentOutOfRangeException(nameof(startKnownSince), startKnownSince, $"startKnownSince must be at most {KnownSinceMarks.StartKnown}.");
         if (table.RowCount != start.ActorCount)
             throw new ArgumentException($"Table has {table.RowCount} rows, the start has {start.ActorCount} actors.", nameof(table));
         if (start.NodeCount != graph.Count || start.DisciplineCount != graph.DisciplineNames.Length)
@@ -102,6 +109,13 @@ public sealed class KnowledgeSystem : ITickSystem
             _kind[d] = table.AddLong($"know.K_ind.{graph.DisciplineNames[d]}");
         }
 
+        if (trackKnownSince)
+        {
+            _since = new LongColumn[_n];
+            foreach (int r in graph.Order)
+                _since[r] = table.AddLong($"know.since.{graph.Number[r]}");
+        }
+
         var col = new int[_actors];
         var raw = new long[_actors];
         for (int r = 0; r < _n; r++)
@@ -109,6 +123,12 @@ public sealed class KnowledgeSystem : ITickSystem
             for (int a = 0; a < _actors; a++)
                 col[a] = start.IsKnown(a, r) ? 1 : 0;
             _known[r].Load(col);
+            if (_since is not null)
+            {
+                for (int a = 0; a < _actors; a++)
+                    raw[a] = col[a] != 0 ? startKnownSince : KnownSinceMarks.Unknown;
+                _since[r].Load(raw);
+            }
         }
         for (int d = 0; d < _d; d++)
         {
@@ -138,6 +158,16 @@ public sealed class KnowledgeSystem : ITickSystem
     // ---- reads of the current state (Table columns)
 
     public bool IsKnown(int actorRow, int nodeRow) => _known[nodeRow].Current[actorRow] != 0;
+
+    /// <summary>Whether the table carries <c>know.since.N</c>.</summary>
+    public bool TracksKnownSince => _since is not null;
+
+    /// <summary>
+    /// <c>t_known</c> of the node for the actor in the snapshot: −1 if unknown, the month of the merge that made it known, or <c>startKnownSince</c>.
+    /// Throws without <c>trackKnownSince</c>: a silent −1 would make a control read «unknown» everywhere.
+    /// </summary>
+    public long KnownSince(int actorRow, int nodeRow) =>
+        (_since ?? throw new InvalidOperationException("The knowledge system does not track t_known (trackKnownSince = false)."))[nodeRow].Current[actorRow];
 
     public Fx6 Prog(int actorRow, int nodeRow) => Fx6.FromRaw(_prog[nodeRow].Current[actorRow]);
 
@@ -224,6 +254,8 @@ public sealed class KnowledgeSystem : ITickSystem
                 if (_known[r].Next[a] != 0)
                     continue;
                 _known[r].Next[a] = 1;
+                if (_since is not null)
+                    _since[r].Next[a] = MonthOf(context);
                 (discovery ? _lastDiscoveries : _lastGrants).Add((_start.ActorNumber[a], _g.Number[r]));
                 if (discovery && _g.Discipline[r] >= 0)
                     _openedCount[a * _d + _g.Discipline[r]]++;

@@ -401,6 +401,28 @@ public class IndustrySystemTests
     }
 
     [Fact]
+    public void Lc_UnknownIsExactlyMinusOne_AnyOtherNegativeTSinceIsAKnownStart()
+    {
+        // Two sections of the curve (spec §6.1 v0.24 r2): tau 0…383 for the nodes opened in the horizon, 384…767 for the start knowledge.
+        var t4 = new CapabilityCurve([0, 383, 384, 767], [F(100_000), F(900_000), F(500_000), F(800_000)], [D(5), D(2), D(4), D(3)]);
+        System.Collections.Immutable.ImmutableArray<CapabilityCurve> curves = [new CapabilityCurve([0], [Fx6.One], [Fx6.One]), t4, new CapabilityCurve([0], [Fx6.One], [Fx6.One])];
+        PrcSetItem[] one = [new PrcSetItem(39, Fx6.One, Fx6.One)];
+        void Check(long knownSince, Fx6 yield, Fx6 cost)
+        {
+            var rig = new Rig(IndustryMode.CurveLc, curves);
+            rig.In.KnownAt = knownSince;
+            rig.RunThroughMonth(6);
+            Assert.Equal(yield, rig.System.ProcYield(0, rig.Row(39)));
+            Assert.Equal(cost, rig.System.Profile(0, one, 6).UnitCostMult);
+        }
+        Check(KnownSinceMarks.StartKnown, t4.YieldAt(6 + 384), t4.UnitCostAt(6 + 384));   // the start section, nonzero
+        Assert.True(t4.YieldAt(6 + 384) > Fx6.Zero);
+        Check(-5, t4.YieldAt(6 + 5), t4.UnitCostAt(6 + 5));                              // «any negative» is not «unknown»
+        Check(KnownSinceMarks.Unknown, Fx6.Zero, t4.UnitCostAt(0));                      // unknown: yield 0, the price at tau = 0 (A24)
+        Check(0, t4.YieldAt(6), t4.UnitCostAt(6));
+    }
+
+    [Fact]
     public void Lc_WithoutCurves_Throws()
     {
         Assert.Throws<ArgumentException>(() => new Rig(IndustryMode.CurveLc));

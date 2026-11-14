@@ -299,6 +299,36 @@ public class LicenceEventsTests
         Assert.Equal(0, poor.Policy.LicenceGen(2));
     }
 
+    [Fact]
+    public void MoneyRefusal_IsTracedForTheWantedOfferTheBuyerCannotPay_AndNotCountedAsABadLicence()
+    {
+        ulong seed = SeedWhere(true, false);
+        var refuse = new Rig(PolicyProfile.Mass, seed, fleetUpkeep: 50_000 - 15_000 + 1);
+        refuse.Month(0);
+        MoneyRefusal r = Assert.Single(refuse.Policy.LastMoneyRefusals(2));
+        Assert.Equal((0, 1), (r.Seller, r.Gen));
+        Assert.Equal(Price, r.Price);
+        Assert.Equal(Price - Fx6.One, r.Room);
+        Assert.Equal(0, refuse.Policy.BadLicenceCount(2, BadLicence.Money));
+        Assert.Empty(refuse.Policy.LastMoneyRefusals(0));
+        refuse.Month(1);                                                 // the trace is of the last step: month 1 draws no offer
+        Assert.Empty(refuse.Policy.LastMoneyRefusals(2));
+        var ok = new Rig(PolicyProfile.Mass, seed, fleetUpkeep: 50_000 - 15_000);
+        ok.Month(0);
+        Assert.Empty(ok.Policy.LastMoneyRefusals(2));
+    }
+
+    [Fact]
+    public void MoneyRefusal_QualityNeverWantsOne_AndEveryPoorMassOfferIsListedBySellerRow()
+    {
+        var quality = new Rig(PolicyProfile.Quality, SeedWhere(true, true), fleetUpkeep: 50_000);   // the room is 0 < price, but P1 never asks for a licence
+        quality.Month(0);
+        Assert.Empty(quality.Policy.LastMoneyRefusals(2));
+        var poorMass = new Rig(PolicyProfile.Mass, SeedWhere(true, true), fleetUpkeep: 50_000);
+        poorMass.Month(0);
+        Assert.Equal([0, 1], poorMass.Policy.LastMoneyRefusals(2).Select(x => x.Seller).ToArray());   // ascending seller row
+    }
+
     [Theory]
     [InlineData(61, true)]
     [InlineData(60, false)]

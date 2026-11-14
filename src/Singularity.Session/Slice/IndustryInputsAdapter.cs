@@ -126,6 +126,7 @@ internal sealed class IndustryInputsAdapter(SliceWorld world) : IIndustryInputs
 
     public Fx6 AlloyDeficit(int siteRow, long month) => world.Policy.AlloyDeficit(world.IndustryLayout.SiteOwner[siteRow], month);
 
-    // Only the L_C control reads it (spec §6.1); this world runs the full capability model.
-    public long KnownSince(int siteRow, int processRow, long month) => -1;
+    // Only the L_C control reads it (spec §6.1): t_known of the process node for the owner of the site (a site is an actor, A27).
+    public long KnownSince(int siteRow, int processRow, long month) =>
+        world.Knowledge.KnownSince(world.IndustryLayout.SiteOwner[siteRow], world.Graph.RowOf(world.IndustryLayout.Number[processRow]));
 }

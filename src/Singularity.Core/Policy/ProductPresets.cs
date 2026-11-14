@@ -1,7 +1,11 @@
+using System.Collections.Immutable;
 using Singularity.Core.Products;
 using Singularity.Kernel;
 
 namespace Singularity.Core.Policy;
+
+/// <summary>Variants of a <c>Requirement</c> (observation of the print, SLICE_COMPOSITION §13.5); <c>Producible</c> and <c>FvProducible</c> are empty only when <c>Count &lt; 2</c>.</summary>
+public readonly record struct PresetVariants(int Gen, int Count, ImmutableArray<int> Superior, ImmutableArray<int> Producible, Fx6 FvSuperior, Fx6? FvProducible);
 
 /// <summary>
 /// The compositions of the AI (spec §1.4, COMPONENT_SELECTION §6): <c>superior</c> (P1), <c>producible</c> (P2) and <c>adaptive</c> (P3, the
@@ -17,17 +21,12 @@ public static class ProductPresets
     /// </summary>
     public static bool Compose(PolicyProfile profile, IPolicyProducts products, PolicyParams p, int actor, int gen, long month, Span<int> alts)
     {
-        ProductsLayout l = products.Layout;
-        bool Knows(int n) => products.Knows(actor, n, month);
-        if (!DesignRules.Superior(l, gen, Knows, alts))
+        if (!DesignRules.Superior(products.Layout, gen, n => products.Knows(actor, n, month), alts))
             return false;
         if (profile == PolicyProfile.Quality)
             return true;
-        Fx6 need = Fx6.FromInt(p.NServiceMin) / Fx6.FromInt(p.TField);
-        Fx6 supply = products.AlloySupply(actor, month);
-        Span<int> producible = stackalloc int[l.SlotCount];
-        if (!DesignRules.Producible(l, gen, Knows, q => products.AdmittedYield(actor, q, month), p.YProd,
-                hot => l.AltAlloyFree[hot] || supply / l.AltAlloyKg[hot] >= need, producible))
+        Span<int> producible = stackalloc int[products.Layout.SlotCount];
+        if (!TryProducible(products, p, actor, gen, month, producible))
             return true;
         if (profile == PolicyProfile.Mass)
         {
@@ -39,6 +38,37 @@ public static class ProductPresets
         if (other > superior)
             producible.CopyTo(alts);
         return true;
+    }
+
+    /// <summary>
+    /// The <c>producible</c> candidate (P2's preset): false if there is none or it would equal <c>superior</c> (F-PC3). The one step that
+    /// <see cref="Compose"/> and <see cref="Variants"/> share, so the choice of a profile and its print cannot drift apart.
+    /// </summary>
+    private static bool TryProducible(IPolicyProducts products, PolicyParams p, int actor, int gen, long month, Span<int> producible)
+    {
+        ProductsLayout l = products.Layout;
+        Fx6 need = Fx6.FromInt(p.NServiceMin) / Fx6.FromInt(p.TField);
+        Fx6 supply = products.AlloySupply(actor, month);
+        return DesignRules.Producible(l, gen, n => products.Knows(actor, n, month), q => products.AdmittedYield(actor, q, month), p.YProd,
+            hot => l.AltAlloyFree[hot] || supply / l.AltAlloyKg[hot] >= need, producible);
+    }
+
+    /// <summary>
+    /// The variants of the <c>Requirement</c> for the generation <paramref name="gen"/> (spec §5.5, §7 S1) with <c>FV</c> of both, whatever the
+    /// profile: a pure function of the snapshot. <c>Count</c> is 0 if even <c>superior</c> cannot be built, 1 for <c>superior</c> alone
+    /// (F-PC3: a <c>producible</c> equal to it is not a second variant), 2 for both.
+    /// </summary>
+    public static PresetVariants Variants(IPolicyProducts products, PolicyParams p, int actor, int gen, long month)
+    {
+        int slots = products.Layout.SlotCount;
+        var superior = new int[slots];
+        if (!DesignRules.Superior(products.Layout, gen, n => products.Knows(actor, n, month), superior))
+            return new PresetVariants(gen, 0, [], [], Fx6.Zero, null);
+        Fx6 fvSuperior = products.CandidateValue(actor, superior, p.FvBudget, month);
+        var producible = new int[slots];
+        if (!TryProducible(products, p, actor, gen, month, producible))
+            return new PresetVariants(gen, 1, [.. superior], [], fvSuperior, null);
+        return new PresetVariants(gen, 2, [.. superior], [.. producible], fvSuperior, products.CandidateValue(actor, producible, p.FvBudget, month));
     }
 
     /// <summary>

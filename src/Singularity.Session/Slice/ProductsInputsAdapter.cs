@@ -128,8 +128,9 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
         return gThis != gOther ? gThis < gOther : design < other;
     }
 
-    // Only the L_P control reads it (spec §6.1).
-    public long AppKnownSince(int actorRow, int gen, long month) => -1;
+    // Only the L_P control reads it (spec §6.1): t_known of the APP node of the generation.
+    public long AppKnownSince(int actorRow, int gen, long month) =>
+        world.Knowledge.KnownSince(actorRow, world.Graph.RowOf(world.ProductsLayout.GenApp[gen - 1]));
 
     private bool KnowsNode(int actorRow, int nodeNumber)
     {

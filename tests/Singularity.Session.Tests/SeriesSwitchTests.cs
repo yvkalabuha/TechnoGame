@@ -241,17 +241,39 @@ public class SeriesSwitchTests
     [Theory]
     [InlineData(99)]
     [InlineData(-1)]
-    [InlineData(4)]
+    [InlineData(6)]
     public void Layer_UnsupportedValue_IsRefusedAtAssembly(int value)
     {
         Assert.False(Enum.IsDefined((LayerControl)value));
         Assert.Throws<InvalidOperationException>(() => SliceTestData.Create(Base() with { Layer = (LayerControl)value }));
     }
 
+    [Theory]
+    [InlineData(LayerControl.Lc)]
+    [InlineData(LayerControl.Lp)]
+    public void Layer_LcAndLp_AreRefusedUntilTheControlTablesCanBeGiven(LayerControl layer)
+    {
+        var e = Assert.Throws<InvalidOperationException>(() => SliceTestData.Create(Base() with { Layer = layer }));
+        Assert.Contains("control tables", e.Message);
+        Assert.Equal(4, (int)LayerControl.Lc);
+        Assert.Equal(5, (int)LayerControl.Lp);
+    }
+
+    [Theory]
+    [InlineData(3, 0, 0)]
+    [InlineData(0, -1, 0)]
+    [InlineData(0, 0, 99)]
+    public void Grid_UndefinedStep_IsRefusedAtAssembly(int kCatch, int kDiff, int hMax)
+    {
+        var cell = new GridCell((GridStep)kCatch, (GridStep)kDiff, (GridStep)hMax);
+        Assert.Throws<ArgumentOutOfRangeException>(() => SliceWorld.ApplyGrid(cell, new KnowledgeParams(), new Singularity.Core.Industry.IndustryParams()));
+        Assert.Throws<ArgumentOutOfRangeException>(() => SliceTestData.Create(Base() with { Grid = cell }));
+    }
+
     [Fact]
     public void Layer_EveryDefinedValue_IsSupported()
     {
-        foreach (LayerControl l in Enum.GetValues<LayerControl>())
+        foreach (LayerControl l in Enum.GetValues<LayerControl>().Where(l => l is not (LayerControl.Lc or LayerControl.Lp)))
         {
             SliceRunConfig c = Base() with { Layer = l, LkTables = l == LayerControl.Lk ? new LkTables(5) : null };
             Assert.NotNull(SliceTestData.Create(c));

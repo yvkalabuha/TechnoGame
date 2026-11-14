@@ -101,6 +101,30 @@ public class ProductsLpTests
     }
 
     [Fact]
+    public void Lp_StartKnownApp_StartsAtTDesignFromMonthZero_NotBefore_AndUnknownIsExactlyMinusOne()
+    {
+        // t_known of an APP known at the start is −384 (spec §6.1 v0.24 r2): the design term counts from month 0, max(t_known, 0) + T_design[1] = 2.
+        ProductsHarness Run(long since, long month)
+        {
+            var h = new ProductsHarness(mode: ProductsMode.CanonicalLp, parameters: LpParams)
+            {
+                Knows = (_, n) => Probe.KnownUpTo(1)(n),
+                AppKnownSince = (a, g) => g == 1 && a == 0 ? since : -1,
+            };
+            h.RunThroughMonth(month);
+            return h;
+        }
+        foreach (long since in new long[] { KnownSinceMarks.StartKnown, 0 })
+        {
+            Assert.Equal(-1, Run(since, 1).Products.CanonicalSlot(0, 1));
+            Assert.Equal(DesignStage.Series, Run(since, 2).Products.Stage(0, Run(since, 2).Products.CanonicalSlot(0, 1)));
+        }
+        Assert.Equal(-1, Run(3, 4).Products.CanonicalSlot(0, 1));                  // opened in month 3: starts at 3 + 2
+        Assert.True(Run(3, 5).Products.CanonicalSlot(0, 1) >= 0);
+        Assert.Equal(-1, Run(KnownSinceMarks.Unknown, 20).Products.CanonicalSlot(0, 1));
+    }
+
+    [Fact]
     public void Lp_NotAdmitted_NoOutputNoReports_AndUnknownAppNoProject()
     {
         var h = new ProductsHarness(mode: ProductsMode.CanonicalLp, parameters: LpParams)

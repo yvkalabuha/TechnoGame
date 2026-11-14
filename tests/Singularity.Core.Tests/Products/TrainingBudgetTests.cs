@@ -61,6 +61,67 @@ public class TrainingBudgetTests
         Assert.Equal(Fx6.Zero, h.Products.TrainingSpent(Usa));
     }
 
+    // ---- the trace of step 7 (TASK-0047, SLICE_COMPOSITION §13.3)
+
+    [Fact]
+    public void MoneyTrace_ShowsTheCommonMoneyAndTheTrainingMoneyOfTheLine_AndAddsUpToTheColumns()
+    {
+        ProductsHarness h = Run((a, d, _) => a == Usa && d == G1Sup ? Fx6.FromRaw(20_000) : Fx6.Zero);
+        ProductsSystem p = h.Products;
+        Assert.Equal(Fx6.FromRaw(47_100), p.LastLeftStart(Usa));                      // 50 000 less the upkeep 2 900
+        LineMoneyStep line = Assert.Single(p.LastLineMoney(Usa));
+        long pay = p.Rate(Usa, G1Sup).Raw * 2256 / Fx6.Scale;
+        Assert.Equal(new LineMoneyStep(G1Sup, Fx6.FromRaw(47_100), Fx6.FromRaw(47_100), Fx6.FromRaw(20_000), Fx6.FromRaw(pay - 47_100)), line);
+        Assert.Equal(p.TrainingSpent(Usa), line.FromTraining);
+        Assert.Equal(p.Rate(Usa, G1Sup) * p.UnitCost(Usa, G1Sup), line.FromLeft + line.FromTraining);
+    }
+
+    [Fact]
+    public void MoneyTrace_WithoutTraining_FromLeftIsThePayment_AndTheLeftoverStaysForTheNextLine()
+    {
+        ProductsHarness h = Run((_, _, _) => Fx6.Zero, budgetRaw: 440_000);
+        LineMoneyStep line = Assert.Single(h.Products.LastLineMoney(Usa));
+        Assert.Equal(line.LeftIn, h.Products.LastLeftStart(Usa));
+        Assert.Equal(Fx6.Zero, line.Training);
+        Assert.Equal(Fx6.Zero, line.FromTraining);
+        Assert.Equal(h.Products.Rate(Usa, G1Sup) * h.Products.UnitCost(Usa, G1Sup), line.FromLeft);
+        Assert.Equal(h.Products.Spent(Usa) - h.Products.UpkeepNeeded(Usa), line.FromLeft);
+    }
+
+    [Fact]
+    public void MoneyTrace_ALineThatIsNotAdmitted_ReadsNoTrainingMoney_AndTakesNothing()
+    {
+        var h = new ProductsHarness(startLine: false)
+        {
+            Launch = (a, d, _) => a == Usa && d == G1Sup,
+            Rate = (_, _, _) => Fx6.FromInt(50),
+            Budget = (_, _) => Fx6.FromRaw(50_000),
+            Training = (_, _, _) => Fx6.FromRaw(20_000),
+        };
+        h.RunThroughMonth(0);
+        h.Yield = (_, _) => Fx6.Zero;
+        h.RunThroughMonth(1);
+        LineMoneyStep line = Assert.Single(h.Products.LastLineMoney(Usa), l => l.Design == G1Sup);
+        Assert.Equal((Fx6.Zero, Fx6.Zero, Fx6.Zero), (line.FromLeft, line.Training, line.FromTraining));
+        Assert.Equal(h.Products.LastLeftStart(Usa), line.LeftIn);
+    }
+
+    [Fact]
+    public void MoneyTrace_IsRewrittenEveryStep_AndAbsentInLp()
+    {
+        ProductsHarness h = Run((_, _, _) => Fx6.Zero);
+        Assert.NotEmpty(h.Products.LastLineMoney(Usa));
+        h.RunThroughMonth(1);
+        Assert.NotNull(h.Products.LastLeftStart(Usa));   // written again by this step
+        var lp = new ProductsHarness(mode: ProductsMode.CanonicalLp, parameters: ProductsLpTests.LpParams) { Knows = (_, n) => Probe.KnownUpTo(1)(n), AppKnownSince = (_, g) => g == 1 ? 0 : -1 };
+        lp.RunThroughMonth(5);
+        for (int a = 0; a < lp.Table.RowCount; a++)
+        {
+            Assert.Null(lp.Products.LastLeftStart(a));
+            Assert.Empty(lp.Products.LastLineMoney(a));
+        }
+    }
+
     [Fact]
     public void NegativeTrainingBudget_Throws()
     {

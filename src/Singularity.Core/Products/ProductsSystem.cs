@@ -4,6 +4,12 @@ using Singularity.Kernel;
 
 namespace Singularity.Core.Products;
 
+/// <summary>
+/// Step 7 money of one line (observation, SLICE_COMPOSITION §13.3): <c>LeftIn</c> the common money before the line's purchase, <c>FromLeft</c> taken from it,
+/// <c>Training</c> the line's training budget, <c>FromTraining</c> taken from that (<c>pay − FromLeft</c>).
+/// </summary>
+public readonly record struct LineMoneyStep(int Design, Fx6 LeftIn, Fx6 FromLeft, Fx6 Training, Fx6 FromTraining);
+
 /// <summary>Full product model or the product-off control (spec §6.1).</summary>
 public enum ProductsMode
 {
@@ -67,6 +73,11 @@ public sealed partial class ProductsSystem : ITickSystem
     // Midyear month index of each cohort year (spec A32): age of cohort Y at month t is t − _m0[Y].
     private readonly int[] _m0;
 
+    // Step 7 trace (SLICE_COMPOSITION §13.3): scratch, rewritten for row a at the start of its compute; not state, not hashed.
+    private readonly bool[] _moneyTraced;
+    private readonly long[] _traceLeftStart;
+    private readonly LineMoneyStep?[] _traceLines;
+
     public ProductsSystem(Table table, ProductsLayout layout, ProductsStart start, ProductsParams parameters,
         IProductsInputs inputs, IndustryMailbox mailbox, ProductsMode mode = ProductsMode.Full, int systemId = DefaultSystemId, int startMonth = 9)
     {
@@ -105,6 +116,9 @@ public sealed partial class ProductsSystem : ITickSystem
         _m0 = new int[layout.Years];
         for (int y = 0; y < _m0.Length; y++)
             _m0[y] = y * 12 + (7 - startMonth);
+        _moneyTraced = new bool[layout.SiteCount];
+        _traceLeftStart = new long[layout.SiteCount];
+        _traceLines = new LineMoneyStep?[layout.SiteCount * layout.Designs];
         _bureauReq = new int[layout.DesignScale.Length];
         for (int k = 0; k < _bureauReq.Length; k++)
             _bureauReq[k] = parameters.BureauReq(layout.DesignScale[k]);
@@ -428,6 +442,29 @@ public sealed partial class ProductsSystem : ITickSystem
     /// <summary><c>Σ_d tb_spent</c> of the last month step: money of the training series spent in step 7 (not part of <see cref="Spent"/>; contract §4.4d, F15).</summary>
     public Fx6 TrainingSpent(int actor) => Fx6.FromRaw(_tbSpent.Current[actor]);
 
+    /// <summary>
+    /// Observation: the common money <c>left</c> at the start of step 7 of the last monthly step (after upkeep and fixes); null for a row
+    /// whose step has no step 7 (L_P) or has not run.
+    /// </summary>
+    [Observation]
+    public Fx6? LastLeftStart(int actor) => _moneyTraced[actor] ? Fx6.FromRaw(_traceLeftStart[actor]) : null;
+
+    /// <summary>
+    /// Observation: step 7 of the last monthly step by line, ascending design id, for the lines in stage С that step 7 reached. The training
+    /// money is read only for an admitted line, so it is 0 for a line that is not.
+    /// </summary>
+    [Observation]
+    public IReadOnlyList<LineMoneyStep> LastLineMoney(int actor)
+    {
+        var lines = new List<LineMoneyStep>();
+        for (int d = 0; d < _d; d++)
+        {
+            if (_traceLines[actor * _d + d] is { } line)
+                lines.Add(line);
+        }
+        return lines;
+    }
+
     /// <summary>Commands of the actor rejected for <paramref name="reason"/> so far (the journal of rejections, contract §3.1).</summary>
     public long RejectionCount(int actor, CommandRejection reason) => _rejected[(int)reason].Current[actor];
 
@@ -603,6 +640,7 @@ public sealed partial class ProductsSystem : ITickSystem
             throw new InvalidOperationException($"Month {t} (year {year}) is outside the cohort years of the layout.");
         for (int a = rowStart; a < rowEnd; a++)
         {
+            ClearMoneyTrace(a);
             Retire(a, t, calendar);
             if (_mode == ProductsMode.CanonicalLp)
                 StepCanonical(chunk, a, t, year - _l.StartYear);
@@ -728,7 +766,8 @@ public sealed partial class ProductsSystem : ITickSystem
         for (int g = 1; g <= _l.Generations; g++)
         {
             long since = _inputs.AppKnownSince(a, g, t);
-            if (since >= 0 && t >= since + _p.LpTDesign[g - 1])
+            // A node known at the start has a negative t_known; the design term counts from month 0 at the earliest (spec §6.1 v0.24 r2).
+            if (since != KnownSinceMarks.Unknown && t >= Math.Max(since, 0) + _p.LpTDesign[g - 1])
                 cur = g;
         }
         if (cur > 0)
@@ -1217,9 +1256,12 @@ public sealed partial class ProductsSystem : ITickSystem
     private void Purchases(int chunk, int a, long t, int y, ref Fx6 left, ref Fx6 spent, ref Fx6 tbSpentSum)
     {
         Fx6 alloyLeft = _inputs.AlloySupply(a, t);
+        _moneyTraced[a] = true;
+        _traceLeftStart[a] = left.Raw;
         for (int d = 0; d < _d; d++)
         {
             Fx6 e = Get(_lineE, d, a);
+            Fx6 leftIn = left, training = Fx6.Zero, paidFromLeft = Fx6.Zero, fromTraining = Fx6.Zero;
             Fx6 r = Fx6.Zero;
             LineBind bind = LineBind.None;
             if ((DesignStage)_stage[d].Next[a] == DesignStage.Series)
@@ -1250,7 +1292,11 @@ public sealed partial class ProductsSystem : ITickSystem
                     left -= fromLeft;
                     spent += fromLeft;
                     tbSpentSum += pay - fromLeft;
+                    training = tb;
+                    paidFromLeft = fromLeft;
+                    fromTraining = pay - fromLeft;
                 }
+                _traceLines[a * _d + d] = new LineMoneyStep(d, leftIn, paidFromLeft, training, fromTraining);
                 Set(_cost, d, a, cost);
                 if (r > Fx6.Zero)
                     Produce(chunk, a, d, y, r, prc);
@@ -1263,6 +1309,13 @@ public sealed partial class ProductsSystem : ITickSystem
         }
         if (alloyLeft < Fx6.Zero)
             throw new ProductsInvariantException(t, a, "alloy overdrawn (spec §3.4)");
+    }
+
+    private void ClearMoneyTrace(int a)
+    {
+        _moneyTraced[a] = false;
+        _traceLeftStart[a] = 0;
+        Array.Clear(_traceLines, a * _d, _d);
     }
 
     // report_output per process (units = r·n_p, labour_hours = units·labour_p, spec §3.2) and one skilled request per

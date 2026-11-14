@@ -29,12 +29,14 @@ public sealed record SliceLayoutView(
 /// <summary>
 /// The state after the last non-empty tick. <see cref="Actors"/> is the post state of month <see cref="Month"/> (what the compute of
 /// <c>Month + 1</c> reads); <see cref="Inputs"/> are the inputs the compute of <see cref="Month"/> saw, null if this tick ran no monthly step.
+/// <see cref="Step"/> holds the results of that step (step traces, SLICE_COMPOSITION §13.1); it is null exactly when <see cref="Inputs"/> is.
 /// </summary>
 public sealed record SliceView(
     long Tick, CivilDate Date, string StateHash,
     long Month,
     ImmutableArray<ActorView> Actors,
-    MonthInputsView? Inputs);
+    MonthInputsView? Inputs,
+    MonthStepView? Step);
 
 public sealed record ActorView(
     int Actor, PolicyProfile Profile,
@@ -48,8 +50,11 @@ public sealed record ActorView(
     ImmutableArray<DesignView> Designs,
     PolicyDecisionView Decisions);
 
-/// <summary>A node of the knowledge graph; <see cref="Process"/> is set for the nodes that are capability processes (PRC).</summary>
-public sealed record NodeView(int Number, bool Known, bool ByLicence, ProcessView? Process);
+/// <summary>
+/// A node of the knowledge graph; <see cref="Process"/> is set for the nodes that are capability processes (PRC). <see cref="KnownSince"/> is
+/// <c>know.since.N</c> (−1 unknown), present only in L_C and L_P, null elsewhere.
+/// </summary>
+public sealed record NodeView(int Number, bool Known, bool ByLicence, ProcessView? Process, long? KnownSince);
 
 /// <summary>A process at the actor's home site (A27: a site is an actor), month <c>Month + 1</c> of the snapshot.</summary>
 public readonly record struct ProcessView(Fx6 Yield, Fx6 V, bool Admitted, Fx6 UnitCostMult, bool Mastered, Fx6 LicenceShare);
@@ -72,12 +77,15 @@ public readonly record struct DisruptionView(int Start, int End);
 public sealed record PolicyDecisionView(
     ImmutableArray<DesignCommandView> DesignCommands,
     ImmutableArray<StartView> Starts,
-    ImmutableArray<int> Closes,
+    ImmutableArray<CloseView> Closes,
     ImmutableArray<FleetCommand> Fleet,
     ImmutableArray<int> Repeats);
 
 public sealed record DesignCommandView(DesignCommandKind Kind, int Target, ImmutableArray<int> Alts);
 public readonly record struct StartView(int Design, Fx6 Rate);
+
+/// <summary>A closed line and the rule that closed it; <see cref="Reason"/> is <c>None</c> in a snapshot without a monthly step (the trace is of that step only).</summary>
+public readonly record struct CloseView(int Design, LineCloseReason Reason);
 
 /// <summary>Inputs of the monthly step <see cref="Month"/> as its compute saw them (after the deals and the commands of the tick, before the step).</summary>
 public sealed record MonthInputsView(long Month, int GFront, ImmutableArray<ActorInputsView> Actors);
@@ -85,7 +93,25 @@ public sealed record MonthInputsView(long Month, int GFront, ImmutableArray<Acto
 public sealed record ActorInputsView(
     int Actor, Fx6 Budget, BudgetShares Shares, Fx6 ProcurementBudget,
     ToolingLedgerView Tooling, CapabilityView Capability,
-    ImmutableArray<DesignInputsView> Designs);
+    ImmutableArray<DesignInputsView> Designs,
+    RequirementView? Requirement);
+
+/// <summary>The variants of the yearly Requirement of the AI (spec §5.5, §7 S1): null unless the month is a yearly one (month mod 12 = 0), and in <see cref="SliceViewMode.Calibration"/>.</summary>
+public sealed record RequirementView(int Gen, int Count, ImmutableArray<int> Superior, ImmutableArray<int> Producible, Fx6 FvSuperior, Fx6? FvProducible);
+
+/// <summary>Results of the monthly step <see cref="Month"/> (step traces, SLICE_COMPOSITION §13.1): read after the tick, never from an earlier step.</summary>
+public sealed record MonthStepView(long Month, ImmutableArray<ActorStepView> Actors);
+
+/// <summary><see cref="Money"/> is null in L_P (no step 7).</summary>
+public sealed record ActorStepView(int Actor, MoneyStepView? Money, ImmutableArray<LicenceRefusalView> LicenceMoneyRefusals);
+
+public sealed record MoneyStepView(Fx6 LeftStart, ImmutableArray<LineMoneyView> Lines);
+
+/// <summary>Step 7 money of a line in stage С, by ascending design (<see cref="LineMoneyStep"/>).</summary>
+public readonly record struct LineMoneyView(int Design, Fx6 LeftIn, Fx6 FromLeft, Fx6 Training, Fx6 FromTraining);
+
+/// <summary>A licence offer the AI wanted and could not pay (<see cref="MoneyRefusal"/>).</summary>
+public readonly record struct LicenceRefusalView(int Seller, int Gen, Fx6 Price, Fx6 Room);
 
 public sealed record ToolingLedgerView(
     Fx6 Rest, Fx6 CapBudget, Fx6 Total, Fx6 TakenRest, Fx6 TakenCap, Fx6 RestReturned, Fx6 TrainingBudget,

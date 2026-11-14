@@ -207,7 +207,7 @@ public sealed class ViewWalk
         ImmutableArray<StartView> starts = [.. Enumerable.Range(0, w.ProductsLayout.Designs).Where(d => w.Policy.AiStart(a, d, next) is not null)
             .Select(d => new StartView(d, w.Policy.AiStart(a, d, next)!.Value))];
         Check("decisions", dec.Starts.SequenceEqual(starts), $"month {t} actor {a}: starts");
-        Check("decisions", dec.Closes.SequenceEqual(Enumerable.Range(0, w.ProductsLayout.Designs).Where(d => w.Policy.AiClose(a, d, next))), $"month {t} actor {a}: closes");
+        Check("decisions", dec.Closes.Select(c => c.Design).SequenceEqual(Enumerable.Range(0, w.ProductsLayout.Designs).Where(d => w.Policy.AiClose(a, d, next))), $"month {t} actor {a}: closes");
         Check("decisions", dec.Fleet.SequenceEqual(w.Policy.AiFleetCommands(a, next)), $"month {t} actor {a}: fleet");
         Check("decisions", dec.Repeats.Length == w.ProductsLayout.Generations && Enumerable.Range(1, dec.Repeats.Length).All(g => dec.Repeats[g - 1] == w.Policy.Repeats(a, g)),
             $"month {t} actor {a}: repeats");
@@ -509,13 +509,16 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
             // Everything else of the view is the same as in Full mode.
             for (int a = 0; a < full.View.Actors.Length; a++)
                 Assert.True(ViewSupport.Dump(full.View.Actors[a] with { Key = null, FleetValue = null }) == ViewSupport.Dump(calib.View.Actors[a]), $"month {t} actor {a}");
-            Assert.True(ViewSupport.Dump(full.View.Inputs) == ViewSupport.Dump(calib.View.Inputs));
+            Assert.True(ViewSupport.Dump(WithoutRequirement(full.View.Inputs!)) == ViewSupport.Dump(calib.View.Inputs));
+            Assert.All(calib.View.Inputs!.Actors, a => Assert.Null(a.Requirement));   // FV is not read in the calibration mode
         }
         Assert.Contains(full.View.Actors, a => a.FleetValue is not null);
         Assert.Throws<InvalidOperationException>(() => calib.WhyNot(0, WhyNotTarget.Requirement(2)));
         Assert.Throws<InvalidOperationException>(() => calib.CurrentRequirement(0));
         Assert.NotEmpty(full.WhyNot(0, WhyNotTarget.Requirement(2)));   // Full mode still answers
     }
+
+    private static MonthInputsView WithoutRequirement(MonthInputsView v) => v with { Actors = [.. v.Actors.Select(a => a with { Requirement = null })] };
 
     [Fact]
     public void DesignInputsView_GiveUp_IsNullWithoutTheProductAi()

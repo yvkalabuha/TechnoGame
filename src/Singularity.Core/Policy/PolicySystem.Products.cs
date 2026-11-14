@@ -3,6 +3,19 @@ using Singularity.Kernel;
 
 namespace Singularity.Core.Policy;
 
+/// <summary>Which rule closed a line (observation, SLICE_COMPOSITION §13.4): A40 branch С, F17b rule 2, F17b rule 1 closing every line, F17b rule 1 replacing the candidate.</summary>
+public enum LineCloseReason
+{
+    None = 0,
+    A40C = 1,
+    YProd = 2,
+    LaunchAll = 3,
+    LaunchCandidate = 4,
+}
+
+/// <summary>A licence offer the AI wanted and could not pay (A43.3 (б)): the seller's row, its generation, the price and the room (<c>room &lt; price</c>).</summary>
+public readonly record struct MoneyRefusal(int Seller, int Gen, Fx6 Price, Fx6 Room);
+
 /// <summary>
 /// The product AI of the policy (spec §3.5 A40, A41, §4, §6.8; contract §4.4e): <c>Requirement</c> with the preset of the profile, the
 /// launch of a series by the doctrine with the closing of the previous line (one line per actor, #125), the line rate, and the give-up rule
@@ -23,9 +36,15 @@ public sealed partial class PolicySystem
     private IntColumn[][] _dsnAlt = [];
     private LongColumn[] _startRate = [];
 
+    // Traces of the last compute (SLICE_COMPOSITION §13.4, §13.6): scratch outside the table, a row is rewritten by its own compute; not state, not hashed.
+    private LineCloseReason[] _closeReason = [];
+    private List<MoneyRefusal>[] _moneyRefusals = [];
+
     private void AddProductColumns(Table table, IPolicyProducts? products, int designs, int generations, bool derive, PolicyParams parameters)
     {
         _prod = products;
+        _closeReason = new LineCloseReason[table.RowCount * designs];
+        _moneyRefusals = [.. Enumerable.Range(0, table.RowCount).Select(_ => new List<MoneyRefusal>())];
         _designs = designs;
         _gens = generations;
         _derive = derive;
@@ -118,6 +137,7 @@ public sealed partial class PolicySystem
         public readonly List<DesignCommand> Design = [];
         public readonly List<(int Design, Fx6 Rate)> Starts = [];
         public readonly List<int> Closes = [];
+        public readonly List<LineCloseReason> CloseReasons = [];   // parallel to Closes
         public readonly bool[] Repeat = new bool[generations];
         public readonly List<FleetCommand> Fleet = [];
         public Fx6 IncomeExpected;
@@ -141,10 +161,32 @@ public sealed partial class PolicySystem
     {
         if (_prod is null)
             return;
+        Array.Clear(_closeReason, row * _designs, _designs);
+        _moneyRefusals[row].Clear();
         Decisions dec = Decide(row, t, annual, monthly: true, sharesNext, budgetNext);
+        for (int i = 0; i < dec.Closes.Count; i++)
+            _closeReason[row * _designs + dec.Closes[i]] = dec.CloseReasons[i];
         ComputeLicence(row, t, dec.Designs, dec, sharesNext, budgetNext, why);
         Commit(row, dec, Stamp(t + 1), (c, v) => c.Next[row] = v, (c, v) => c.Next[row] = v);
     }
+
+    /// <summary>Adds a close of the design with its reason (callers check <c>Contains</c>: one close per design and month, the first reason stays).</summary>
+    private static void AddClose(Decisions dec, int design, LineCloseReason reason)
+    {
+        dec.Closes.Add(design);
+        dec.CloseReasons.Add(reason);
+    }
+
+    /// <summary>
+    /// Observation: why the AI closed the line <paramref name="design"/> in the last monthly compute of the actor (the first reason of the month),
+    /// or <see cref="LineCloseReason.None"/>.
+    /// </summary>
+    [Observation]
+    public LineCloseReason LastCloseReason(int actorRow, int design) => _closeReason[actorRow * _designs + design];
+
+    /// <summary>Observation: licence offers the actor wanted in the last monthly compute but could not pay, by ascending seller row.</summary>
+    [Observation]
+    public IReadOnlyList<MoneyRefusal> LastMoneyRefusals(int actorRow) => _moneyRefusals[actorRow].ToArray();
 
     private static void SetCurrent(IntColumn column, int row, int value)
     {
@@ -158,6 +200,16 @@ public sealed partial class PolicySystem
         long[] copy = column.Current.ToArray();
         copy[row] = value;
         column.Load(copy);
+    }
+
+    /// <summary>
+    /// The variants of the annual <c>Requirement</c> the AI would face at <paramref name="month"/>: the generation is the newest the actor knows
+    /// (<c>Count</c> 0 without one). A pure read of the snapshot.
+    /// </summary>
+    public PresetVariants RequirementVariants(int actorRow, long month)
+    {
+        int g = NewestGeneration(actorRow, month);
+        return g == 0 ? new PresetVariants(0, 0, [], [], Fx6.Zero, null) : ProductPresets.Variants(_prod!, _pp, actorRow, g, month);
     }
 
     private int NewestGeneration(int row, long t)
@@ -259,7 +311,7 @@ public sealed partial class PolicySystem
             PolicyDesign x = designs[d];
             if (x.Stage != DesignStage.Series || x.IdleMonths < _pp.TAb || !GiveUpAllowed(row, x.PlatformGen, gaveUpNow, designs) || _closeStamp[d].Current[row] == Stamp(t))
                 continue;
-            dec.Closes.Add(d);
+            AddClose(dec, d, LineCloseReason.A40C);
             gaveUpNow[x.PlatformGen] = true;
         }
 
@@ -287,7 +339,7 @@ public sealed partial class PolicySystem
             if (designs[candidate].Parent != working && YMin(row, candidate, t) >= _pp.YProd)
             {
                 if (!dec.Closes.Contains(working))
-                    dec.Closes.Add(working);
+                    AddClose(dec, working, LineCloseReason.YProd);
                 candidate = -1;
             }
         }
@@ -315,7 +367,7 @@ public sealed partial class PolicySystem
                     // The parent of a derived design is not closed: the layer moves its line (contract §4.4a).
                     if (designs[e].Stage == DesignStage.Series && e != x.Parent && !dec.Closes.Contains(e) && _closeStamp[e].Current[row] != Stamp(t)
                         && (all || e == candidate))
-                        dec.Closes.Add(e);
+                        AddClose(dec, e, all ? LineCloseReason.LaunchAll : LineCloseReason.LaunchCandidate);
                 }
                 break;
             }
