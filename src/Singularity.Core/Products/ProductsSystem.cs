@@ -451,7 +451,7 @@ public sealed partial class ProductsSystem : ITickSystem
 
     /// <summary>
     /// Observation: step 7 of the last monthly step by line, ascending design id, for the lines in stage С that step 7 reached. The training
-    /// money is read only for an admitted line, so it is 0 for a line that is not.
+    /// money is the line's input, also for a line that is not admitted (then nothing is taken from it).
     /// </summary>
     [Observation]
     public IReadOnlyList<LineMoneyStep> LastLineMoney(int actor)
@@ -1272,12 +1272,14 @@ public sealed partial class ProductsSystem : ITickSystem
                 Fx6 want = _inputs.LineRate(a, d, t) ?? Get(_rateCmd, d, a);
                 if (want < Fx6.Zero)
                     throw new ProductsInvariantException(t, a, $"negative line rate {want} for design {d}");
+                // r3 (F15): the common money first, then the training money of this line only; tb = 0 gives the former formula.
+                // Read for every line of С (a pure read of the snapshot) so the trace shows the input even when the line is not admitted.
+                Fx6 tb = _inputs.TrainingBudget(a, d, t);
+                training = tb;
                 if (_inputs.Profile(a, DesignRules.Items(_l, prc), t).Admitted)
                 {
                     Fx6 alloyKg = _l.AltAlloyKg[alts[_l.AlloySlot]];
                     bool free = DesignRules.AlloyFree(_l, alts);
-                    // r3 (F15): the common money first, then the training money of this line only; tb = 0 gives the former formula.
-                    Fx6 tb = _inputs.TrainingBudget(a, d, t);
                     if (tb < Fx6.Zero)
                         throw new ProductsInvariantException(t, a, $"negative training budget {tb} for design {d}");
                     // alloy_free: r = min(rate, (left + tb)/unit_cost) with no alloy term; alloy_left stays (spec v0.14 §1.4 item 1).
@@ -1292,7 +1294,6 @@ public sealed partial class ProductsSystem : ITickSystem
                     left -= fromLeft;
                     spent += fromLeft;
                     tbSpentSum += pay - fromLeft;
-                    training = tb;
                     paidFromLeft = fromLeft;
                     fromTraining = pay - fromLeft;
                 }

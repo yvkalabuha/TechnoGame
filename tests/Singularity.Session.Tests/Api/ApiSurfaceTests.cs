@@ -97,6 +97,7 @@ public class ApiSurfaceTests
     private static string Parameters(MethodBase m, NullabilityInfoContext ctx) =>
         string.Join(", ", m.GetParameters().Select(p => $"{TypeText(p.ParameterType, ctx.Create(p))} {p.Name}"));
 
+    // Limit: only the top-level annotation is written; nullability inside generic arguments (ImmutableArray<T?>) is not part of the text.
     // The annotation of a reference type is part of the surface; Nullable<T> of a value type already shows in the type name.
     private static string TypeText(Type type, NullabilityInfo info) =>
         !type.IsValueType && info.ReadState == NullabilityState.Nullable || !type.IsValueType && info.WriteState == NullabilityState.Nullable ? type + "?" : type.ToString();

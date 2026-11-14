@@ -175,6 +175,7 @@ public class ObservablesTests
     {
         foreach (ObservablesWalk walk in All)
             Assert.True(walk.Failures.GetValueOrDefault("refusal") is null, string.Join("; ", walk.Failures.GetValueOrDefault("refusal") ?? []));
+        Assert.Contains(All, w => w.Seen.GetValueOrDefault("refusal") > 0);
     }
 
     [Fact]
@@ -201,13 +202,17 @@ public class ObservablesTests
     public void Step_AndRequirement_InCalibrationMode_StepIsThereAndRequirementIsNot()
     {
         SliceSession calib = SliceTestData.Create(new SliceRunConfig { Seed = 3, ViewMode = SliceViewMode.Calibration });
-        calib.StepThroughMonth(0);
-        Assert.NotNull(calib.View.Step);
-        Assert.All(calib.View.Inputs!.Actors, a => Assert.Null(a.Requirement));
         SliceSession full = SliceTestData.Create(new SliceRunConfig { Seed = 3 });
-        full.StepThroughMonth(0);
-        Assert.All(full.View.Inputs!.Actors, a => Assert.NotNull(a.Requirement));
-        Assert.Equal(full.LastHash, calib.LastHash);     // the mode changes no state
+        for (long t = 0; t < 25; t++)
+        {
+            calib.StepThroughMonth(t);
+            full.StepThroughMonth(t);
+            Assert.NotNull(calib.View.Step);
+            Assert.All(calib.View.Inputs!.Actors, a => Assert.Null(a.Requirement));
+            if (t % 12 == 0)
+                Assert.All(full.View.Inputs!.Actors, a => Assert.NotNull(a.Requirement));
+            Assert.Equal(full.LastHash, calib.LastHash);     // the mode changes no state
+        }
     }
 
     [Fact]

@@ -271,7 +271,7 @@ public class SeriesSwitchTests
     }
 
     [Fact]
-    public void Layer_EveryDefinedValue_IsSupported()
+    public void Layer_EveryValueExceptLcAndLp_IsSupported()
     {
         foreach (LayerControl l in Enum.GetValues<LayerControl>().Where(l => l is not (LayerControl.Lc or LayerControl.Lp)))
         {

@@ -89,7 +89,7 @@ public class TrainingBudgetTests
     }
 
     [Fact]
-    public void MoneyTrace_ALineThatIsNotAdmitted_ReadsNoTrainingMoney_AndTakesNothing()
+    public void MoneyTrace_ALineThatIsNotAdmitted_ShowsItsTrainingInput_AndTakesNothing()
     {
         var h = new ProductsHarness(startLine: false)
         {
@@ -102,7 +102,7 @@ public class TrainingBudgetTests
         h.Yield = (_, _) => Fx6.Zero;
         h.RunThroughMonth(1);
         LineMoneyStep line = Assert.Single(h.Products.LastLineMoney(Usa), l => l.Design == G1Sup);
-        Assert.Equal((Fx6.Zero, Fx6.Zero, Fx6.Zero), (line.FromLeft, line.Training, line.FromTraining));
+        Assert.Equal((Fx6.Zero, Fx6.FromRaw(20_000), Fx6.Zero), (line.FromLeft, line.Training, line.FromTraining));
         Assert.Equal(h.Products.LastLeftStart(Usa), line.LeftIn);
     }
 

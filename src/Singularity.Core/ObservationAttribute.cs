@@ -5,5 +5,5 @@ namespace Singularity.Core;
 /// A trace is scratch outside the table: rewritten in every step, never hashed or saved. The architecture test forbids any call of a marked
 /// member from <c>Singularity.Core</c> code outside its own class, so observing cannot change the dynamics.
 /// </summary>
-[AttributeUsage(AttributeTargets.Method | AttributeTargets.Property, Inherited = false)]
+[AttributeUsage(AttributeTargets.Method, Inherited = false)]
 public sealed class ObservationAttribute : Attribute;
