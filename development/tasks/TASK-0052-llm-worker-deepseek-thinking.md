@@ -37,9 +37,9 @@ DeepSeek в роли третьего голоса gate и запасного в
 5. Обновить комментарий в config, README (раздел gate/review) и тесты (`tools/llm_worker/tests`): тело запроса с thinking, отсутствие `temperature` при thinking, разбор ответа с `reasoning_content`, пробельный content.
 
 ## Критерии приёмки
-- [ ] `python3 -m unittest discover tools/llm_worker/tests` зелёный.
-- [ ] `gate --dry-run` показывает thinking и max_tokens; один реальный `gate` по RR-0013 с flash проходит и сохраняет `reasoning_tokens`.
-- [ ] Ledger не превышает лимиты; траты записаны.
+- [x] `python3 -m unittest discover tools/llm_worker/tests` зелёный.
+- [x] `gate --dry-run` показывает thinking и max_tokens; один реальный `gate` по RR-0013 с flash проходит и сохраняет `reasoning_tokens`.
+- [x] Ledger не превышает лимиты; траты записаны.
 
 ## REVIEW
 - [ ] Code review (reviewer)
@@ -56,3 +56,5 @@ DeepSeek в роли третьего голоса gate и запасного в
 **Замер реального вызова (flash, thinking high, RR-0013):** при max_tokens=32768 весь лимит ушёл на рассуждение (reasoning_tokens=32768, `finish_reason=length`, content пуст) -> `schema_invalid`, стоимость $0,0808 (ledger `gate:RR-0013`). Вывод: `max_tokens` покрывает рассуждение; значение поднято до 65536. Повторный реальный вызов не делался (разрешён был один) — критерий «gate проходит и сохраняет reasoning_tokens» ждёт одного повторного вызова. reasoning_tokens сохраняется в `runs/gate-RR-0013-*-invalid.json`.
 
 **Лимит $0,50/задача:** худший случай резерва для pro на документе ~570 KB ≈ $0,64 (вход bytes/2 токенов + 65536 выхода) — ledger откажет `task_cap_exceeded`; для flash ≈ $0,17. Лимит не урезан, решение владельца: поднять `max_usd_task` для gate или уменьшить вход. Ledger total 0,595 из 5,00; 1 unsettled (старый).
+
+**Orchestrator, 2026-11-14 — приёмка.** После подъёма до 65536 реальные gate с thinking (flash, high) прошли по RR-0013 (`gate-RR-0013-…-276f2ea2-third.json`: `reasoning_tokens` 26178, `finish_reason=stop`, 11 находок) и по 9 отчётам RR-0005…0014 (#225; например RR-0014: `reasoning_tokens` 47082, `stop`). `reasoning_tokens` сохраняется в записи. Ledger: $1,62 из $5. Лимит gate-задачи $1 (#226) внесён в `prices.json`/`ledger.py` (fc98df4); README обновлён.

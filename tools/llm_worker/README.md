@@ -69,7 +69,7 @@ python3 -m tools.llm_worker gate --item <путь> --stance third [--profile dee
 ### Режим размышления DeepSeek (TASK-0052)
 - `gate`, `review` (ветка DeepSeek) по умолчанию шлют `thinking: enabled` + `reasoning_effort: high`, без `temperature`; флаги `--thinking on|off`, `--effort low|high|max`. `run` — по умолчанию `--thinking off`, те же флаги.
 - `max_tokens` покрывает и рассуждение (замер: flash/high на RR-0013 при 32768 съел весь лимит, `content` пуст, `finish_reason=length`). Поэтому с thinking `max_tokens = config.THINKING_MAX_TOKENS` (65536), без thinking — 8000 (review) и 6000 (gate).
-- Резерв ledger — худший случай: `input_bytes/2` токенов входа + `max_tokens` выхода. Для pro на большом документе (~570 KB) это ≈ $0,38 + $0,26 = $0,64 > `max_usd_task` $0,50: ledger откажет (`task_cap_exceeded`), лимит не урезается. Для flash ≈ $0,17: проходит.
+- Резерв ledger — худший случай: `input_bytes/2` токенов входа + `max_tokens` выхода. Для pro на большом документе (~570 KB) это ≈ $0,38 + $0,26 = $0,64. Для gate-задач (ключ `gate:<ID>`) действует `max_usd_task_gate` = $1,00 (#226), поэтому pro проходит; для остальных задач — `max_usd_task` $0,50. Для flash ≈ $0,17.
 - `reasoning_content` в разбор JSON не идёт; в запись run пишутся `thinking`: `reasoning_chars`, `reasoning_tokens`, `finish_reason`, `attempts`, `effort`, `max_tokens`.
 - Пустой/пробельный `content` при `finish_reason=stop` — сбой модели: один повтор, затем `schema_invalid`. При `length` повтора нет.
 
