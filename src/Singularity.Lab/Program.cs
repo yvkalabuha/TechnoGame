@@ -139,7 +139,7 @@ public static class Program
 
     private static int Models()
     {
-        foreach (ILabModelFactory f in ModelRegistry.All)
+        foreach (RegisteredModel f in ModelRegistry.All)
             Console.WriteLine($"{f.Id}{(f.IsTestModel ? " [TEST]" : "")}: {f.Description}");
         return 0;
     }

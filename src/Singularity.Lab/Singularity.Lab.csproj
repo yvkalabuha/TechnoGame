@@ -10,6 +10,8 @@
     <ProjectReference Include="..\Singularity.Kernel\Singularity.Kernel.csproj" />
     <!-- Model interface (Singularity.Core.Simulation) and models; Core never references Lab. -->
     <ProjectReference Include="..\Singularity.Core\Singularity.Core.csproj" />
+    <!-- Session models (JetSlice, JetSliceCalib; TASK-0044): the slice world is reached only through SliceSession and its read views (ADR-0014). -->
+    <ProjectReference Include="..\Singularity.Session\Singularity.Session.csproj" />
   </ItemGroup>
 
   <ItemGroup>

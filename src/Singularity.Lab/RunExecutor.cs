@@ -28,7 +28,7 @@ public static class RunExecutor
         if (req.Point < 0 || req.Point >= m.Points.Count)
             throw new ManifestException($"Point {req.Point} is out of range [0, {m.Points.Count}).");
         MatrixPoint point = m.Points[req.Point];
-        ILabModelFactory factory = ModelRegistry.Find(m.Model);
+        RegisteredModel factory = ModelRegistry.Find(m.Model);
         if (factory.IsTestModel)
             log.WriteLine($"WARNING: '{factory.Id}' is a TEST MODEL; results carry no scientific meaning.");
 
@@ -39,20 +39,34 @@ public static class RunExecutor
         string? golden = null;
         string? error = null;
         long finalTick = 0;
+        IReadOnlyList<KeyValuePair<string, string>> info = [];
         var sinks = new List<StreamWriter>();
         try
         {
-            ILabModel model = factory.Create(new ModelSetup(parameters, req.Seed, m.ChunkSize, m.Ticks));
-            var sink = new FileMetricSink(req.OutDir, req.RunId, model.MetricTables, sinks);
-            var runner = new TickRunner(model.Table, req.Seed, model.Systems, m.ChunkSize, req.Threads);
-            model.Observe(runner.Tick, sink);
-            for (long t = 0; t < m.Ticks; t++)
+            if (factory.Session is { } session)
             {
-                runner.RunTick();
-                model.Observe(runner.Tick, sink);
+                // The session owns the runner and the state (ADR-0014): the Lab steps it and reads its views.
+                ISessionModel model = session.Create(new SessionModelSetup(parameters, req.Seed, req.Threads, m.ChunkSize, m.Ticks, m.BaseDirectory));
+                var sink = new FileMetricSink(req.OutDir, req.RunId, model.MetricTables, sinks);
+                SessionRunResult r = model.Run(sink);
+                golden = r.GoldenHash;
+                finalTick = r.FinalTick;
+                info = r.Info;
             }
-            finalTick = runner.Tick;
-            golden = StateHash.ComputeHex(model.Table, model.SchemaVersion, runner.Tick);
+            else
+            {
+                ILabModel model = factory.Table!.Create(new ModelSetup(parameters, req.Seed, m.ChunkSize, m.Ticks));
+                var sink = new FileMetricSink(req.OutDir, req.RunId, model.MetricTables, sinks);
+                var runner = new TickRunner(model.Table, req.Seed, model.Systems, m.ChunkSize, req.Threads);
+                model.Observe(runner.Tick, sink);
+                for (long t = 0; t < m.Ticks; t++)
+                {
+                    runner.RunTick();
+                    model.Observe(runner.Tick, sink);
+                }
+                finalTick = runner.Tick;
+                golden = StateHash.ComputeHex(model.Table, model.SchemaVersion, runner.Tick);
+            }
         }
         catch (Exception e)
         {
@@ -68,7 +82,7 @@ public static class RunExecutor
         clock.Stop();
 
         WriteRunsCsv(Path.Combine(req.OutDir, RunsFile), [(req.RunId, point, req.Seed, req.Threads, golden, error is null)]);
-        WriteRunJson(req, factory, point, parameters, provenance, golden, error, finalTick, startedUtc, clock.ElapsedMilliseconds);
+        WriteRunJson(req, factory, point, parameters, provenance, golden, error, finalTick, info, startedUtc, clock.ElapsedMilliseconds);
         return new RunOutcome(error is null, golden, error, clock.ElapsedMilliseconds);
     }
 
@@ -110,8 +124,8 @@ public static class RunExecutor
         }
     }
 
-    private static void WriteRunJson(RunRequest req, ILabModelFactory factory, MatrixPoint point, ParamSet parameters,
-        Provenance prov, string? golden, string? error, long finalTick, DateTime startedUtc, long elapsedMs)
+    private static void WriteRunJson(RunRequest req, RegisteredModel factory, MatrixPoint point, ParamSet parameters,
+        Provenance prov, string? golden, string? error, long finalTick, IReadOnlyList<KeyValuePair<string, string>> info, DateTime startedUtc, long elapsedMs)
     {
         Manifest m = req.Manifest;
         using var stream = File.Create(Path.Combine(req.OutDir, RunJsonFile));
@@ -156,6 +170,11 @@ public static class RunExecutor
         foreach (string k in parameters.Unread())
             w.WriteStringValue(k);
         w.WriteEndArray();
+        // Extra fields of a Session model (data_hash of the mod data, scenario_hash, test_api_version, counters of the format checks).
+        w.WriteStartObject("model_info");
+        foreach (var kv in info)
+            w.WriteString(kv.Key, kv.Value);
+        w.WriteEndObject();
         w.WriteString("started_utc", startedUtc.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture));
         w.WriteNumber("elapsed_ms", elapsedMs);
         w.WriteString("runtime", System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription);

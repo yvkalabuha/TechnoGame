@@ -36,6 +36,7 @@ public static class SelfTest
             ("run: failure recorded in run.json", () => FailurePath(tmp)),
             ("provenance: data_hash tracks file content", () => DataHash(tmp)),
         };
+        checks.AddRange(Models.Slice.SliceChecks.All(tmp));
 
         int failed = 0;
         foreach (var (name, body) in checks)
@@ -170,8 +171,8 @@ public static class SelfTest
 
     private static string? ToyFunnelRegistered()
     {
-        ILabModelFactory f = ModelRegistry.Find("toy-funnel");
-        return Expect(!f.IsTestModel && f.GetType().Assembly.GetName().Name == "Singularity.Core", "toy-funnel not from Core");
+        RegisteredModel f = ModelRegistry.Find("toy-funnel");
+        return Expect(!f.IsTestModel && f.Table?.GetType().Assembly.GetName().Name == "Singularity.Core", "toy-funnel not from Core");
     }
 
     private static string? Fx6Format()

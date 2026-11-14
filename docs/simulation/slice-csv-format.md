@@ -1,8 +1,14 @@
 # Формат CSV и манифестов EXP-0002 (срез «реактивная авиация»; `lab/analysis/exp0002.py`)
 
-> Статус: черновик **v0.5 r1** (simulation-engineer, 2026-11-13, TASK-0047; r1 — ось `k_diff` ключа `GRID`, решение #190) под спецификацию `slice-jet-aviation.md` **v0.25** (дальше «спец. §N») и поверхность read views `docs/architecture/SLICE_COMPOSITION.md` §12–§13 (r4, дальше «SC §12.N», «SC §13.N»; `TestApiVersion = 2`). v0.4, v0.3 и v0.2 — в истории git.
+> Статус: черновик **v0.5 r3** (simulation-engineer, 2026-11-14, TASK-0044 этап 2; r1 — ось `k_diff` ключа `GRID`, решение #190; r2 — пара compose месяца 0, TASK-0047; r3 — `COEXIST_MONEY` по `Bind`, линии без строки следа денег, определения Lab) под спецификацию `slice-jet-aviation.md` **v0.25** (дальше «спец. §N») и поверхность read views `docs/architecture/SLICE_COMPOSITION.md` §12–§13 (r4, дальше «SC §12.N», «SC §13.N»; `TestApiVersion = 2`). v0.4, v0.3 и v0.2 — в истории git.
 > Соглашения унаследованы от `exp0001-csv-format.md` и Lab (ADR-0008, `src/Singularity.Lab/RunExecutor.cs`, `MatrixRunner.cs`).
-> C#-моделей `JetSlice` и `JetSliceCalib` ещё нет: этап 2 T10 ждёт read views (SC §12, TASK-0046) и следы шага (SC §13, TASK-0047). Формат проверен только синтетическими данными (`exp0002.py --selftest`) и сверкой с печатью T6eHarness.
+> Модели `JetSlice` и `JetSliceCalib` — `src/Singularity.Lab/Models/Slice/` (T10 этап 2): читают только `SliceSession` и его views по имени свойств. Проверки — `Singularity.Lab selftest` (`SliceChecks`), малая матрица `lab/manifests/EXP-0002-t10-smoke.json`, серия `det` (`EXP-0002-det.json`).
+
+## Изменения v0.5 r3 (TASK-0044 этап 2)
+- **`COEXIST_MONEY`** (§4.16 (б)) — по предложению SC §13.3 r6: в каждом из `T_ab` месяцев у актора две линии, d — `N`, выпуск `rate(d) = 0` и `DesignView.Bind = Money` (шаг 7 ограничил линию деньгами). Прежнее условие `LeftIn = 0 ∧ Training = 0` не отличало «нет денег» от «нет допуска» (у недопущенной линии `Bind = None`).
+- **Линии месяца** (§4.12, §4.16): в С по снимку t, кроме линий, которые ИИ закрыл в compute t−1. Линия снимка без строки в `Money.Lines` (её закрыла команда до шага 7: прокси `FORCE`, `derive`, переносящий родителя) **не** валит прогон: роль сохраняется (её видел ИИ), `left` и `left_share` пусты, счётчик `lines_without_step7_money` — в `run.json` (`model_info`). [Факт: малая матрица T10] Без этого `arm/FORCE_*` и `arm/DERIV` падали; в main таких линий 0. Если исключать такие линии из пары, `YPROD` в `arm/DERIV` попадает на `SOLE` (seed 1, GBR, мес. 337) — роль должна быть та, что видел ИИ.
+- **Определения Lab** (§4.4, §4.5, §4.7, §4.9, §4.13, §5; [Предп.], не из спец. дословно) — §9.1. `run.json` модели содержит объект `model_info` (§9.1).
+- `exp0002.py` пока падает на `requirements.csv` v0.5 (`REQ_COLS` — T11, §10); калибровочный разбор (`--calib`) читает каталог `EXP-0002-calib` без ошибок.
 
 ## Изменения v0.5 r1 (решение #190, спец. v0.25 §7 P5)
 - Ключ `GRID`, серия `grid/*`: ступень оси `k_diff` — множитель к доле цены `r = 1 − k_diff`, а не к `k_diff`: `LO` → `k_diff` 0,75, `MID` → 0,5, `HI` → 0 (при `k_diff*` = 0,5). Оси `k_catch`, `h_max` — по-прежнему множитель к самому значению. [Предл.] Отчёт P5 (`exp0002.py`) подписывает точку сетки обоими числами: `k_diff` и `r`. Колонки и прочие ключи не менялись; код `run.grid` (SC §12.4) тот же.
@@ -195,7 +201,7 @@
 Инварианты T8 (анализ проверяет): `invest ≤ rest + b_cap`, `taken_rest ≤ rest`, `t_a ≥ 0`.
 
 ### 4.12 `lines.csv` — линии ИИ, печать A41 F17b (full; помесячно, строка на линию в С по снимку t)
-`t`, `actor`, `design`, `g_p`, `role` (`W`/`N`/`SOLE`), `y_min` (Fx6), `argp`, `rate` (Fx6, выпуск месяца), `unit_cost` (Fx6), `idle`, `close` (0/1, `close_line` с t+1), `start` (0/1), **`close_rule`**, **`close_core`** (str / пусто при `close = 0`; ниже), **`left_share`** (Fx6 / пусто; §4.16 (в)), **`w_after_n`** (0/1, оговорка (г)). `role` Lab выводит по стадиям: [Факт: спец. A41 F17b «Пара линий» — «Состояния нет: пара определяется по стадиям»] при двух линиях `N` — с большим `g_p` (ничья → больший `design`), `W` — другая; одна линия — `SOLE`. Роль берётся по снимку t — тому же, по которому ИИ решал закрытие.
+`t`, `actor`, `design`, `g_p`, `role` (`W`/`N`/`SOLE`), `y_min` (Fx6), `argp`, `rate` (Fx6, выпуск месяца), `unit_cost` (Fx6), `idle`, `close` (0/1, `close_line` с t+1), `start` (0/1), **`close_rule`**, **`close_core`** (str / пусто при `close = 0`; ниже), **`left_share`** (Fx6 / пусто; §4.16 (в)), **`w_after_n`** (0/1, оговорка (г)). `role` Lab выводит по стадиям: [Факт: спец. A41 F17b «Пара линий» — «Состояния нет: пара определяется по стадиям»] при двух линиях `N` — с большим `g_p` (ничья → больший `design`), `W` — другая; одна линия — `SOLE`. Роль берётся по снимку t — тому же, по которому ИИ решал закрытие. Линии месяца t (v0.5 r3) — проекты в С по снимку t без закрытых ИИ в compute t−1 (`Decisions.Closes` снимка); больше двух — прогон `failed`. `start` = 1, если в `Decisions.Starts` месяца t есть этот `design`; проверка «в месяце `LAUNCH_*` есть `start`» — по `Starts` актора (запускаемый `X` ещё не в С и строки не имеет).
 
 **Причина закрытия (v0.5).** `close_core` — `CloseView.Reason` закрытия этой линии в `Decisions.Closes` месяца t (SC §13.4), в UPPER_SNAKE: `A40C`, `YPROD`, `LAUNCH_ALL`, `LAUNCH_CANDIDATE`. `close_rule` — код печати спец. A41 F17b «Печать» по `close_core` и `role`:
 | `LineCloseReason` (Core) | Ветка правила | `role` закрытой линии | `close_rule` |
@@ -221,9 +227,9 @@
 В v0.5 пусто: все колонки §4.15 v0.4 (`left`, `COEXIST_MONEY`/`OTHER`, `left_share`, `close_rule`, `n_variants`/`fv_producible`/`fv_superior`, `LIC_REFUSE_MONEY`) даёт SC §13 и перенесены в §4.6, §4.7, §4.9, §4.10, §4.12. Правило v0.4 остаётся: колонки без источника в Session в CSV нет (не пустая и не 0).
 
 ### 4.16 Деньги шага 7 A38: `left`, `COEXIST_MONEY`, `left_share` (v0.5; SC §13.3)
-Источник — `SliceView.Step.Actors[a].Money` месяца t (`MoneyStepView`: `LeftStart`; по каждой линии стадии С по возрастанию `design` — `LeftIn`, `FromLeft`, `Training`, `FromTraining`). Это след шага 7 A38 месяца t: деньги, на которые куплен выпуск `rate` того же месяца. `Money = null` (`L_P`) — колонки ниже пусты, `COEXIST_MONEY` не присваивается. Линия в С по снимку t без строки в `Money.Lines` — прогон `failed`.
+Источник — `SliceView.Step.Actors[a].Money` месяца t (`MoneyStepView`: `LeftStart`; по каждой линии стадии С по возрастанию `design` — `LeftIn`, `FromLeft`, `Training`, `FromTraining`). Это след шага 7 A38 месяца t: деньги, на которые куплен выпуск `rate` того же месяца. `Money = null` (`L_P`) — колонки ниже пусты. Линия месяца (§4.12) без строки в `Money.Lines` — `left`, `left_share` пусты, счётчик `lines_without_step7_money` (v0.5 r3; было «прогон `failed`»).
 - **(а) `left`** (строка `a40_c_months` месяца t для линии d) = `LeftIn(d)` — общие деньги закупок, которые увидела линия d до своей закупки (до проверки `Admitted`).
-- **(б) `COEXIST_MONEY`** — для срабатывания С линии d: в **каждом** из `T_ab` месяцев строк `a40_c_months` одновременно: у актора две линии и d — `N` (`role` по снимку месяца, §4.12); выпуск `rate(d) = 0`; `LeftIn(d) = 0`; `Training(d) = 0` (нет `T_a`, вход `TrainingBudget`). Это «`N` с выпуском 0 в каждом из `T_ab` месяцев при `left` после `W` = 0 и без `T_a`» спец. A40 «v0.20: две линии» при обычном порядке (г). Проверяется после `CULTURE` (§4.9). Модель Lab решает класс по view, а не по CSV: `Training(d)` в CSV не пишется.
+- **(б) `COEXIST_MONEY`** (v0.5 r3, SC §13.3 r6) — для срабатывания С линии d: в **каждом** из `T_ab` месяцев строк `a40_c_months` одновременно: у актора две линии и d — `N` (`role` по снимку месяца, §4.12); выпуск `rate(d) = 0` (`DesignView.Rate` post t); `DesignView.Bind(d) = Money` (post t: шаг 7 месяца t ограничил выпуск деньгами, договор r6 §4.4d). Это «`N` с выпуском 0 … при `left` после `W` = 0» спец. A40 «v0.20: две линии»: `Bind = Money` значит, что денег (`left + T_a`) меньше, чем на одну единицу по темпу и сплаву; недопущенная линия имеет `Bind = None` и сюда не попадает. Проверяется после `CULTURE` (§4.9). ~~v0.5: `LeftIn(d) = 0` и `Training(d) = 0`~~ — заменено в r3 (не отличало «нет денег» от «нет допуска»).
 - **(в) `left_share`** (строка `lines` линии d месяца t) = `FromLeft(d) / LeftStart` — доля общих денег начала шага 7, взятая линией d; raw `Fx6`: `⌊FromLeft·10⁶ / LeftStart⌋` в целых (`checked`), без `double`. Пусто при `LeftStart = 0` и при `Money = null`. Пишется для любой `role`; «доля `left`, взятая `N`» спец. A41 F17b «Печать» — строки `role = N`. Сумма по линиям актора месяца ≤ 10⁶ (инвариант SC §13.8 `Σ FromLeft ≤ LeftStart` с округлением вниз) — проверка анализа.
 - **(г) Оговорка про `design_id`.** Шаг 7 тратит деньги по возрастанию `design_id`. «`left` после `W`» спец. равно `LeftIn(N)` только при `design_id(W) < design_id(N)` — обычный случай [Факт: спец. A41 F17b п.3 — «lowest free slot, never reused»]. При `design_id(W) > design_id(N)` (спец. F17b п.2: запуск `X` с `g_p(X) < g_p(W)`) `N` покупает раньше `W`, и `LeftIn(N)` — деньги **до** `W`, не после: условие (б) строже, чем в спец., а `left_share(N)` не учитывает трату `W`. Lab такие месяцы **не пересчитывает** — помечает `w_after_n = 1` (в `lines` у обеих линий пары, в `a40_c_months`) и печатает их число отдельно [Предп.: случай редкий; SC §13.9 Р-13-4]. Если в main такие месяцы есть у срабатываний С — вопрос к спец. (уточнение «после `W`»), а не правка формата.
 
@@ -265,6 +271,7 @@
 
 ## 8. Манифесты
 **`lab/manifests/EXP-0002.json`** (схема Lab 1; `model: "JetSlice"`, `ticks: 11688`, `threads: 1`, серии §2) и **`EXP-0002-det.json`** (`threads: [1, 4, 8]`, серия `det`). Поле `meta` (хешируется в `manifest_hash`): `slice_spec` (v0.24 r2), `csv_format` (v0.5), `hypothesis`, `decision_rule`, `scenario_hash`, `control_tables_hash`, `calibration_manifest`, `analysis` (`script`, `script_sha256`, `config` с `p0_passed`), `rng` (спец. §9.1, `0x5EED`), `after_review`, `seed_offset`, `freeze` — как v0.2. Шаблон не замораживается: заморозку делает T12 (спец. §8.2 п.8).
+**`lab/manifests/EXP-0002-t10-smoke.json`** — малая матрица T10 (каждый ключ §3 один раз, seeds 1–2, threads 1/4), проверка пути Lab, не эксперимент.
 **`lab/manifests/EXP-0002-calib.json`** (`model: "JetSliceCalib"`, серия `calib`, seeds 10001…10100): в `meta` — `scenario_hash`, сетки «К» по этапам **C1 → (C3+C4) → C2** (v0.23, #177) с порядком обхода и бюджетом (≤ 40 / 60 / 30), функция потерь (C1a, C1b, C1d, C1e; C3; C4,G2…G4; C2), журнал точек со значениями `d_k` (коммитится).
 DONE-эксперимент записывает `core_commit`, `data_hash`, `manifest_hash`, seeds, threads, `golden_hash` main (sha256 строк «`seed golden_hash`\n» по возрастанию seed), `outcome`.
 
@@ -286,6 +293,30 @@ DONE-эксперимент записывает `core_commit`, `data_hash`, `ma
 | `calib_*`, `actor_month` | те же поля в `ViewMode = Calibration` (без `Key`, `FleetValue`, `WhyNot`) |
 `layer/L_C`, `layer/L_P` — после таблиц T12 (§2).
 
+### 9.1 Определения Lab (v0.5 r3) [Предп.]
+Где спец. и §4–§5 не задают величину дословно, модели Lab считают так (код: `SliceObserver`). Это выводы из views без новых формул мира.
+| Колонка | Определение |
+|---|---|
+| `node_times.t_known` | первый месяц t, когда `NodeView.Known` в post t; `−1` — известен в начальном view; при `KnownSince ≠ null` оно обязано равняться t (иначе `failed`) |
+| `t_first`, `t_07`, `t_mastered` | первый post t с `Yield > 0 ∧ V > 0`; `Yield ≥ 700000`; `Mastered` (`ProcessView`); `−1` — уже в начальном view |
+| `lic` | `ByLicence` хотя бы в одном view |
+| `gen_times.t_req` | первая compose-команда ИИ с `Target = g` (`Decisions` начального view → 0, view t → t); `−1` — у актора на старте есть проект с `PlatformGen = g` |
+| `t_first_unit` | первый post t с проектом `Gen = g` и `InService > 0`; `t_fielded` — первый post t с `FieldedGen ≥ g` (`FieldedGen` — наибольшее поколение в `fielded`) |
+| `cost_u100` | первая серия поколения `Gen = g` (первый проект, вошедший в С после старта): `UnitCost` в месяце, когда Σ `Rate` с начала серии ≥ 100 ед.; пусто, если серия поколения была на старте (выпуск до t0 неизвестен) |
+| `whynot.target` | `REQUIREMENT:<g*>` (`WhyNotTarget`); `subject` — `<process>:<DIMENSION>` у звена CAPABILITY с процессом, иначе `SubjectId`; `lever` — все рычаги звена через `;`; `lever_valid` — `LeverValidator.Check` по `LeverRegistry.Slice` пуст |
+| `events DIS` | `t` = `Disruption.Start` нового перебоя, `value` = `End − Start + 1` (границы включительно) |
+| `events QP_START` | `t` = `Quality.Start` (месяц, с которого действует программа; решение — годовой compute t−1); ранг QC — первое звено CAPABILITY `CultureH` с `Dim = QualityControl` в `why_not(actor, CurrentRequirement)` снимка того же годового месяца |
+| `events TRAINING` | строка на месяц t, когда `Quality.TrainingTarget` снимка ≥ 0 и `Inputs.Tooling.TrainingBudget > 0`; `other` = проект, `value` = `T_a` |
+| `events LIC_END`, `licences.t_end` | замена лицензии новой сделкой (`t_end` = t) или **истечение A43.4, выведенное по `LicenceShare`**: у PRC маски была доля `l_lic`, а в post t ни у одного её нет → `t_end` = t + 1 (счётчик `lic_end_lapses_inferred`). Лицензия, ни разу не давшая доли (PRC маски не известны), истечение не печатает — §11 п. 7 |
+| `a40.t_launch` | первый post t со `Stage = Series`; `−1` — серия на старте |
+| `a40.rep_before` | `Decisions.Repeats[g_p − 1] > 0` снимка t |
+| `fleet_cmd.gen_line`, `line_bind` | линия `L` — новейшая линия в С по снимку (наибольший `g_p`, ничья — больший `design`): её `Gen` по снимку и `Bind` post t; `count` = `N · 10⁶` (целые единицы как Fx6) |
+| `actor_year.fv_fleet` | Σ по проектам с `InService > 0` `ProductsMath.FleetValue(⌊InService⌋, Readiness, Perf, γ)`, `γ` = `ProductsParams.GammaQ10` по умолчанию (каналы среза его не меняют) |
+| `actor_month.out_g*` | `⌊Σ Rate⌋` проектов `Gen = g` (post t); `active_g*` — есть проект `Gen = g` в С (post t) |
+| `tooling_ledger.t_a` | `ToolingLedgerView.TrainingBudget`; на seeds 1…20 main совпадает с `b_cap − taken_cap` во всех 115 200 строках |
+
+`run.json` модели — объект `model_info`: `test_api_version`, `data_hash` (`GameData.DataHash`), `scenario_hash`, `months`, `force_sent` (при `FORCE`), счётчики `a40_close_idle_ge_tab_other_reason` (§4.9), `lic_end_lapses_inferred`, `w_after_n_actor_months`, `closes_of_designs_not_lines`, `lines_without_step7_money`.
+
 ## 10. Сверка с `exp0002.py` (этап 1 T10; доработка — T11)
 - Совпадает: `runs.csv`, `summary.csv`, `actor_year.csv` (лишняя `fv_fleet`), `whynot.csv` (лишние `cluster`, `order`, `unmet`), `node_times`, `gen_times`, `events` (новые `kind` анализ не трактует), `prc_year` (лишняя `licence_share`), калибровочные таблицы, списки запрета (`DEFAULTS.calib`).
 - **Расходится с v0.4 (правит T11):** `REQ_COLS` и S1 читают `requirements.csv` (`n_variants`, `fv_tech`, `fv_super`, `chosen`) — в v0.4 файла нет, S1 = «нет данных» до v0.5 (имена — `fv_producible`, `fv_superior`); `volume_lead` по `actor_year.volume` — смысл по §4.2 (годовая сумма); леджер — `invest` вместо `invest_p1/p2`; класс С `NOT_CULTURE`; серии `arm/COMP_V010` нет.
@@ -293,9 +324,10 @@ DONE-эксперимент записывает `core_commit`, `data_hash`, `ma
 - T11 добавляет чтение `a40.csv`, `a40_c_months.csv`, `tooling_ledger.csv`, `lines.csv`, `fleet_cmd.csv`, `licences.csv` и печати §7; серии §2; C1 по `c1_stand.csv` (§6); версии в docstring (спец. v0.24 r2, формат v0.5).
 
 ## 11. Открытые вопросы
-1. Реализация SC §13 (TASK-0047, developer): до неё модели T10 колонок v0.5 не пишут; формат проверяется только `--selftest`.
+1. ~~Реализация SC §13 (TASK-0047)~~ — сделана; модели T10 пишут все колонки v0.5 (TASK-0044 этап 2).
 2. `t_known` стартового знания определён (спец. §6.1 v0.24 r2: −384); правка Core «неизвестен — ровно −1» и `max(t_known, 0)` в `L_P` — в той же задаче Core. `layer/L_C`, `layer/L_P` ждут таблиц T12.
 3. Формат файла `CONTROL_TABLES` и таблицы контролей §6.1 — T12; до них `layer/L_K` только на синтетических таблицах.
 4. CSV стендов C3, C5 и функция потерь — T12. Проверка «расписание `L_K` воспроизводит `m` ±3 мес. и `s` ±20%» (спец. §6.1) — T12.
 5. [Предп.] Выводы в Lab (ранг QC у `QP_START`, цена `LIC_BUY` из `Flow`) проверяются тестами T10 (§4.7); если тест покажет расхождение — колонка уходит в §4.15.
-6. [Предп.] `w_after_n = 1` в main — редкость (оговорка (г)); если такие месяцы попадут в срабатывания С или в сосуществования заметно, нужно уточнение спец. A40/F17b «`left` после `W`».
+6. [Предп.] `w_after_n = 1` в main — редкость (оговорка (г)); если такие месяцы попадут в срабатывания С или в сосуществования заметно, нужно уточнение спец. A40/F17b «`left` после `W`». [Факт: T10 малая матрица] seeds 1…20 main — 0 месяцев; `arm/DERIV` seed 1–2 — 344 актор-месяца.
+7. **`LIC_END` по истечению A43.4** выводится по `LicenceShare` (§9.1): истечение лицензии, PRC маски которой покупатель не знает, не видно. [Предл.] Session v3: поле `LicenceView.Active` (`LicenceActive(b)` снимка) — тогда `LIC_END` = смена `Active` без вывода; решает systems-architect (правка Session, вне T10).
