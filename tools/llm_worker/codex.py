@@ -180,10 +180,10 @@ def run_codex(prompt, worktree, schema_file, timeout=1800, home=None, bwrap=None
         raise SandboxUnavailable(f"bwrap failed to start: {e}") from None
     text, usage = parse_events(p.stdout)
     if p.returncode != 0 or not text:
-        if LIMIT_RE.search(error_text(p.stdout) + p.stderr):
-            raise CodexLimit("codex_limit: subscription limit reached")
         if not text and BWRAP_RE.search(p.stderr):  # the sandbox itself failed: a paid fallback would not help
             raise SandboxUnavailable(f"bwrap failed: {p.stderr.strip()[-300:]}")
+        if LIMIT_RE.search(error_text(p.stdout) + p.stderr):
+            raise CodexLimit("codex_limit: subscription limit reached")
         # stderr tail only: it carries no prompt text, and the answer is never echoed into the message.
         raise CodexFailed(f"codex exited {p.returncode}: {p.stderr.strip()[-400:]}")
     return text, usage

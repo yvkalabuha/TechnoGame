@@ -7,6 +7,7 @@ import hashlib
 import json
 import posixpath
 import uuid
+from datetime import datetime, timezone
 import re
 import subprocess
 from pathlib import Path
@@ -184,13 +185,66 @@ def review_line(provider, head, verdict, findings, digest):
     return f"- [x] Второе ревью ({provider}, head {head[:8]}) — {verdict}: {count_line(findings)}; report sha256 {digest}"
 
 
-def write_run(runs_dir, name, record):
-    """Writes the record JSON and returns (path, sha256 of the file bytes)."""
+def write_run(runs_dir, name, record, unique=False):
+    """Writes the record JSON and returns (path, sha256 of the file bytes). `unique`: an existing file is never
+    replaced, the name gets `-n2`, `-n3`... (before a trailing `-invalid`)."""
     runs_dir.mkdir(parents=True, exist_ok=True)
     data = (json.dumps(record, indent=2, sort_keys=True, ensure_ascii=False) + "\n").encode()
-    path = runs_dir / name
-    path.write_bytes(data)
-    return path, hashlib.sha256(data).hexdigest()
+    if not unique:
+        path = runs_dir / name
+        path.write_bytes(data)
+        return path, hashlib.sha256(data).hexdigest()
+    base, tag = name[:-5], ""
+    if base.endswith("-invalid"):
+        base, tag = base[:-8], "-invalid"
+    k = 1
+    while True:
+        path = runs_dir / (name if k == 1 else f"{base}-n{k}{tag}.json")
+        try:
+            with open(path, "xb") as f:
+                f.write(data)
+            return path, hashlib.sha256(data).hexdigest()
+        except FileExistsError:
+            k += 1
+
+
+def next_round(runs_dir, task_id):
+    """1 + the number of earlier valid-name review records of the task (any head, any provider)."""
+    return 1 + sum(1 for f in runs_dir.glob(f"review-{task_id}-*.json") if not f.name.endswith(("-invalid.json", CONFIRM_SUFFIX)))
+
+
+CONFIRM_SUFFIX = ".confirm.json"
+
+
+def confirm_path(record_path):
+    return Path(str(record_path) + CONFIRM_SUFFIX)
+
+
+def mark_finding(record_path, number, confirmed):
+    """Mark in the sidecar `<record>.confirm.json` (the record itself, and its sha256, never change):
+    `confirmed[str(N)]` (N is 1-based) becomes true or false. Returns the number of findings. ReviewError('bad_input') on an unreadable record or a bad number."""
+    path = Path(record_path)
+    try:
+        rec = json.loads(path.read_text(encoding="utf-8"))
+        findings = rec["result"]["findings"]
+        if rec["kind"] != "review" or not isinstance(findings, list):
+            raise ValueError("not a review record")
+    except (OSError, ValueError, KeyError, TypeError) as e:
+        raise ReviewError("bad_input", f"{path}: not a review record ({type(e).__name__})") from None
+    if not 1 <= number <= len(findings):
+        raise ReviewError("bad_input", f"finding {number}: the record has {len(findings)}")
+    side = confirm_path(path)
+    try:
+        marks = json.loads(side.read_text(encoding="utf-8"))["confirmed"] if side.exists() else {}
+        if not isinstance(marks, dict):
+            raise ValueError("confirmed")
+    except (OSError, ValueError, KeyError, TypeError):
+        raise ReviewError("bad_input", f"{side}: unreadable sidecar") from None
+    marks[str(number)] = bool(confirmed)
+    tmp = side.with_name(side.name + ".tmp")
+    tmp.write_bytes((json.dumps({"confirmed": marks}, indent=2, sort_keys=True) + "\n").encode())
+    tmp.replace(side)
+    return len(findings)
 
 
 def paid_provider(profile_name, task_key, **kw):
@@ -247,15 +301,17 @@ def run_review(task_id, base, head, provider_name="codex", root=config.REPO_ROOT
         text, meta = build_review_input(task_id, base, head, root, max_bytes)
         _scan(text)
         answer, usage = _deepseek_call(make_provider(), REVIEW_SYSTEM, text, REVIEW_SCHEMA, "review", 8000)
-    record = {"kind": "review", "task": task_id, "provider": used, "fallback": fallback, "base": meta["base"],
+    record = {"kind": "review", "task": task_id, "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+              "round": next_round(runs_dir, task_id), "provider": used, "fallback": fallback, "base": meta["base"],
               "head": meta["head"], "risk": meta["risk"], "usage": usage, "files": meta["files"]}
     try:
         data = parse_answer(answer, REVIEW_SCHEMA, "review")
     except ReviewError as e:
-        write_run(runs_dir, f"review-{task_id}-{meta['head'][:8]}-{used}-invalid.json", {**record, "error": str(e), "raw": answer})
+        write_run(runs_dir, f"review-{task_id}-{meta['head'][:8]}-{used}-invalid.json", {**record, "error": str(e), "raw": answer},
+                  unique=True)
         raise
     record["result"] = data
-    path, digest = write_run(runs_dir, f"review-{task_id}-{meta['head'][:8]}-{used}.json", record)
+    path, digest = write_run(runs_dir, f"review-{task_id}-{meta['head'][:8]}-{used}.json", record, unique=True)
     return path, review_line(used, meta["head"], data["verdict"], data["findings"], digest), record
 
 
@@ -287,6 +343,7 @@ def _run_codex(text, head, root, runner, task_id, attempts_dir):
                 codex.log_attempt(task_id, head, "guard_violation", directory=attempts_dir)
                 raise ReviewError("guard_violation", "the review worktree changed during the run") from None
             if isinstance(e, codex.SandboxUnavailable):
+                codex.log_attempt(task_id, head, "sandbox_unavailable", directory=attempts_dir)
                 raise ReviewError("sandbox_unavailable", str(e)) from None
             raise
         if codex.tree_digest(wt) != before:
@@ -330,8 +387,8 @@ def _related_ids(text):
     if not isinstance(data, dict) or "related" not in data or data["related"] is None:
         return [], None
     value = data["related"]
-    items = value if isinstance(value, list) else str(value).split(",")
-    ids = [str(x).strip() for x in items if isinstance(x, (str, int)) and str(x).strip()]
+    items = value if isinstance(value, list) else value.split(",") if isinstance(value, str) else [value]
+    ids = [str(x).strip() for x in items if (isinstance(x, str) or type(x) is int) and str(x).strip()]  # bool is no id
     bad = len(items) != len(ids)
     return ids, "related has items that are not ids" if bad else None
 

@@ -2,6 +2,7 @@
 
 import json
 import re
+from pathlib import Path
 from datetime import date
 
 from . import config
@@ -112,20 +113,46 @@ FIXES_RE = re.compile(r"^fixes:[ \t]*(.*(?:\n[ \t]+-.*)*)", re.M)
 TASK_REF_RE = re.compile(r"TASK-\d{4}")
 
 
+def _valid_review(rec):
+    """Review record with a usable verdict and findings (a list of dicts with a known severity)."""
+    res = rec["result"]
+    return (isinstance(res["verdict"], str) and isinstance(res["findings"], list)
+            and all(isinstance(x, dict) and x.get("severity") in SEVERITY for x in res["findings"]))
+
+
 def _review_rounds(runs_dir):
-    """{task: [review records, oldest first]} from runs/review-*.json. The record has no timestamp: file
-    modification time orders the rounds. Unreadable files are skipped."""
+    """{task: [review records, oldest first]} from runs/review-*.json. Order: `created_at` (records without it,
+    older format, come first by file modification time). Unreadable or malformed records are skipped."""
     files = sorted(runs_dir.glob("review-*.json"), key=lambda p: (p.stat().st_mtime_ns, p.name))
     out = {}
     for f in files:
-        if f.name.endswith("-invalid.json"):
+        if f.name.endswith(("-invalid.json", ".confirm.json")):
             continue
         try:
             rec = json.loads(f.read_text(encoding="utf-8"))
-            rec["result"]["verdict"], rec["result"]["findings"], rec["task"]
+            rec["task"]
+            try:  # marks live in the sidecar so the record's sha256 stays valid
+                side = json.loads(Path(str(f) + ".confirm.json").read_text(encoding="utf-8"))["confirmed"]
+                rec["confirmed"] = side if isinstance(side, dict) else {}
+            except (OSError, ValueError, KeyError, TypeError):
+                rec["confirmed"] = {}
+            if not _valid_review(rec):
+                continue
         except (ValueError, KeyError, TypeError, OSError):
             continue
         out.setdefault(str(rec["task"]), []).append(rec)
+    for recs in out.values():
+        recs.sort(key=lambda r: str(r["created_at"]) if isinstance(r.get("created_at"), str) else "")  # stable
+    return out
+
+
+def _marks(rec):
+    """(confirmed, rejected, unmarked) finding counts per severity from `confirmed` {"N": bool}."""
+    marks = rec.get("confirmed") if isinstance(rec.get("confirmed"), dict) else {}
+    out = {k: [0, 0, 0] for k in SEVERITY}
+    for i, x in enumerate(rec["result"]["findings"], 1):
+        m = marks.get(str(i))
+        out[x["severity"]][0 if m is True else 1 if m is False else 2] += 1
     return out
 
 
@@ -145,7 +172,7 @@ def _top(findings):
 
 
 def _metrics_section(runs_dir, ledger, tasks_dir):
-    """ADR-0015 §7. Review records carry no confirmation flag, so findings are counted as reported."""
+    """ADR-0015 §7. Rounds come from `round`, confirmations from `confirmed` (set by `review-confirm`)."""
     out = ["", "## Метрики (ADR-0015 §7)"]
     rounds = _review_rounds(runs_dir)
     usd = (ledger.summary() or {}).get("by_task", {}) if ledger is not None else None
@@ -153,14 +180,18 @@ def _metrics_section(runs_dir, ledger, tasks_dir):
         out.append("- Записей второго ревью (`runs/review-*.json`) нет.")
     for task, recs in sorted(rounds.items()):
         accepted = next((i for i, r in enumerate(recs) if r["result"]["verdict"] == "accept"), None)
-        found = {k: sum(x["severity"] == k for r in recs for x in r["result"]["findings"]) for k in SEVERITY}
+        rnd = recs[accepted].get("round") if accepted is not None else None
+        rnd = rnd if type(rnd) is int and rnd > 0 else (accepted + 1 if accepted is not None else None)
+        marks = [_marks(r) for r in recs]
+        tot = {i: {k: sum(m[k][i] for m in marks) for k in SEVERITY} for i in range(3)}
+        fmt = lambda i: ", ".join(f"{k} {tot[i][k]}" for k in SEVERITY)  # noqa: E731
         line = (f"- {untrusted(task)}: записей ревью {len(recs)}, "
-                f"раундов до accept: {accepted + 1 if accepted is not None else 'accept не получен'}; "
+                f"раундов до accept: {rnd if rnd is not None else 'accept не получен'}; "
                 f"вердикт 1-го раунда {recs[0]['result']['verdict']}; "
                 f"высшая тяжесть в принятом раунде "
                 f"{_top(recs[accepted]['result']['findings']) if accepted is not None else '—'}; "
-                f"находок второго ревьюера (как заявлены, не подтверждены автоматически): "
-                f"high {found['high']}, medium {found['medium']}, low {found['low']}")
+                f"находки второго ревьюера: подтверждено ({fmt(0)}); отклонено ({fmt(1)}); "
+                f"не отмечено ({fmt(2)})")
         if usd is not None:
             line += f"; ${usd.get(task, 0):.4f}"
         out.append(line)

@@ -87,6 +87,20 @@ class Ledger:
     def _chain(head, line):
         return hashlib.sha256(head.encode() + line).hexdigest()
 
+    @staticmethod
+    def _apply(out, line):
+        """Parses one ledger line into `out`; ValueError/KeyError/TypeError/ArithmeticError when it is not valid."""
+        r = json.loads(line)
+        usd = Decimal(r["usd"])
+        if not usd.is_finite() or usd < 0:
+            raise ValueError("amount")
+        if r["t"] == "reserve":
+            out[r["id"]] = {"task": r["task"], "model": r["model"], "usd": usd, "settled": False}
+        elif r["t"] == "settle":
+            out[r["id"]].update(usd=usd, settled=True)
+        else:
+            raise ValueError(r["t"])
+
     def _entries(self):
         """id -> {task, model, usd, settled}. The file must match the recorded count and hash chain, so a
         truncated, edited or garbled ledger refuses everything instead of reading as 'spent less'."""
@@ -98,21 +112,48 @@ class Ledger:
                 for line in f:
                     count += 1
                     head = self._chain(head, line)
-                    r = json.loads(line)
-                    usd = Decimal(r["usd"])
-                    if not usd.is_finite() or usd < 0:
-                        raise ValueError("amount")
-                    if r["t"] == "reserve":
-                        out[r["id"]] = {"task": r["task"], "model": r["model"], "usd": usd, "settled": False}
-                    elif r["t"] == "settle":
-                        out[r["id"]].update(usd=usd, settled=True)
-                    else:
-                        raise ValueError(r["t"])
+                    self._apply(out, line)
             if (count, head) != (want["count"], want["head"]):
                 raise ValueError("count or hash chain mismatch")
         except (OSError, ValueError, KeyError, TypeError, ArithmeticError):
             raise SpendRefused("ledger_corrupt", str(self.path)) from None
         return out
+
+    def repair(self):
+        """Owner tool (explicit command only): recomputes `ledger.head` after a crash between the line write and
+        the head write. Under flock. It repairs only when the old head equals the chain at some prefix of the file
+        and every later line is a complete valid record; anything else is reported and nothing is changed
+        (a damaged tail is never deleted). Returns {"status": "ok"|"repaired"|"refused", "records", "added",
+        "detail"}."""
+        with self._locked():
+            try:
+                want = json.loads(self.head.read_text(encoding="utf-8"))
+                want_pair = (want["count"], want["head"])
+            except (OSError, ValueError, KeyError, TypeError):
+                return self._refused(0, "ledger.head is unreadable: cannot tell which records were verified")
+            lines = self.path.read_bytes().splitlines(keepends=True)
+            head, out, matched = "", {}, (0, "") == want_pair
+            for i, line in enumerate(lines, 1):
+                try:
+                    if not line.endswith(b"\n"):
+                        raise ValueError("no newline")
+                    self._apply(out, line)
+                except (ValueError, KeyError, TypeError, ArithmeticError):
+                    return self._refused(i - 1, f"line {i} is not a complete valid record (tail left in place)")
+                head = self._chain(head, line)
+                if (i, head) == want_pair:
+                    matched = True
+            if not matched:
+                return self._refused(len(lines), "ledger.head matches no prefix of the file: edited or truncated")
+            if want_pair == (len(lines), head):
+                return {"status": "ok", "records": len(lines), "added": 0, "detail": "head already matches"}
+            self._write_head(len(lines), head)
+            return {"status": "repaired", "records": len(lines), "added": len(lines) - want_pair[0],
+                    "detail": "head recomputed"}
+
+    @staticmethod
+    def _refused(records, detail):
+        return {"status": "refused", "records": records, "added": 0, "detail": detail}
 
     def _append(self, record):
         record["ts"] = datetime.now(timezone.utc).isoformat(timespec="seconds")

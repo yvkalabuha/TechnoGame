@@ -1,4 +1,4 @@
-"""CLI: python3 -m tools.llm_worker {fill-hashes,submit,run,status,report} ..."""
+"""CLI: python3 -m tools.llm_worker {fill-hashes,submit,run,status,report,ledger,review,review-confirm,gate} ..."""
 
 import argparse
 import json
@@ -34,8 +34,9 @@ def main(argv=None):
     p.add_argument("--max-outages", type=int, default=12)
     p.add_argument("--outage-wait", type=int, default=300, help="seconds between outage retries")
     p = sub.add_parser("ledger", help="spend ledger: init creates it, show prints totals, "
-                                       "reconcile settles one reservation by the provider's bill")
-    p.add_argument("action", choices=["init", "show", "reconcile"])
+                                       "reconcile settles one reservation by the provider's bill, "
+                                       "repair recomputes ledger.head after a crash (owner only)")
+    p.add_argument("action", choices=["init", "show", "reconcile", "repair"])
     p.add_argument("reservation_id", nargs="?")
     p.add_argument("usd", nargs="?")
     p.add_argument("--source", default="", help="reconcile: where the amount comes from (billing page, date)")
@@ -44,6 +45,12 @@ def main(argv=None):
     p.add_argument("--base", required=True)
     p.add_argument("--head", required=True)
     p.add_argument("--provider", choices=["codex", "deepseek"], default="codex")
+    p = sub.add_parser("review-confirm", help="mark one finding of a review record as confirmed or rejected")
+    p.add_argument("record", type=Path)
+    p.add_argument("--finding", type=int, required=True, help="1-based number as printed by `review`")
+    g = p.add_mutually_exclusive_group(required=True)
+    g.add_argument("--confirmed", action="store_true")
+    g.add_argument("--rejected", action="store_true")
     p = sub.add_parser("gate", help="DeepSeek as the third voice of a gate")
     p.add_argument("--item", required=True, help="repository-relative path of the document")
     p.add_argument("--stance", choices=["third"], required=True)
@@ -87,6 +94,10 @@ def main(argv=None):
         try:
             if a.action == "init":
                 print(f"ledger: {ledger.dir}" if ledger.init() else f"warning: ledger already exists, nothing done: {ledger.dir}")
+            elif a.action == "repair":
+                res = ledger.repair()
+                print(f"ledger repair: {res['status']}: records {res['records']}, added {res['added']}: {res['detail']}")
+                return 0 if res["status"] != "refused" else 4
             elif a.action == "reconcile":
                 if not (a.reservation_id and a.usd):
                     ap.error("ledger reconcile needs <reservation_id> <usd> --source <ref>")
@@ -97,6 +108,14 @@ def main(argv=None):
         except SpendRefused as e:
             print(f"refused: {e}")
             return 4
+        return 0
+    if a.cmd == "review-confirm":
+        try:
+            n = review_mod.mark_finding(a.record, a.finding, a.confirmed)
+        except review_mod.ReviewError as e:
+            print(f"error: {e}")
+            return 5
+        print(f"finding {a.finding}/{n}: {'confirmed' if a.confirmed else 'rejected'}")
         return 0
     if a.cmd in ("review", "gate"):
         return _review_gate(a)
@@ -146,8 +165,8 @@ def _review_gate(a):
                                                     log=lambda m: print(m, flush=True))
             res = rec["result"]
             print(f"record: {path}")
-            for f in res["findings"]:
-                print(f"  [{f['severity']}] {f['path']}:{f['line']} {f['claim']}")
+            for i, f in enumerate(res["findings"], 1):
+                print(f"  #{i} [{f['severity']}] {f['path']}:{f['line']} {f['claim']}")
             print(line)
         else:
             path, rec = review_mod.run_gate(a.item, a.head, a.stance, runs_dir=a.runs, profile_name=a.profile,
