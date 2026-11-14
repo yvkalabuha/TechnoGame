@@ -30,7 +30,7 @@ public static class SliceChecks
         ("slice: parameters — unknown key, bad value, LAYER=LK rejected", Parameters),
         ("slice: Lab path gives the Session golden (seed 1, month 149)", () => Golden(tmp)),
         ("slice: L1 — two runs, same CSV and golden_hash", () => L1(tmp)),
-        ("slice: L2 — threads 1 vs 4, same CSV and golden_hash", () => L2(tmp)),
+        ("slice: L2 — threads 1 vs 4, full horizon, same CSV and golden_hash", () => L2(tmp)),
         ("slice: matrix 2 points x 2 seeds x threads 1,2 — every run has every table", () => Matrix(tmp)),
         ("slice: data_hash and data_files cover the mod files the slice loads", () => DataProvenance(tmp)),
         ("slice: data cache — a changed mod file is loaded again; stale data_files fail the run", () => DataCache(tmp)),
@@ -38,7 +38,61 @@ public static class SliceChecks
         ("slice: COEXIST_MONEY needs left = 0 and no training money in every month, not Bind = Money alone", CoexistMoneyClass),
         ("slice: LIC_END — a lapse of LicenceView.Active gives a t_end and an event", () => LicenceEnd(tmp)),
         ("slice: eng_short_months counts months at one bureau, not at any bureau", EngShortOneBureau),
+        ("slice: licence track — replace, lapse, resume without a purchase (DEBT-0032)", LicenceTrack),
+        ("slice: switches — FORCE, START PERT/SYM, CHANNELS, GRID, FLEET_ARM, SALE_ARM change the run (DEBT-0032)", () => Switches(tmp)),
     ];
+
+    // DEBT-0032: a licence that lapsed (Active 1 -> 0) and is Active again without a purchase was no longer tracked; now it resumes (LIC_RESUME).
+    private static string? LicenceTrack()
+    {
+        var cases = new (bool Open, bool Lapsed, bool Bought, bool Active, SliceObserver.LicenceStep Want)[]
+        {
+            (true, false, false, true, SliceObserver.LicenceStep.None),
+            (true, false, false, false, SliceObserver.LicenceStep.End),
+            (true, false, true, true, SliceObserver.LicenceStep.Replace),
+            (true, false, true, false, SliceObserver.LicenceStep.Replace),
+            (false, true, false, true, SliceObserver.LicenceStep.Resume),
+            (false, true, false, false, SliceObserver.LicenceStep.None),
+            (false, true, true, true, SliceObserver.LicenceStep.None),     // a new purchase opens a new row, not a resume
+            (false, false, false, true, SliceObserver.LicenceStep.None),
+            (false, false, true, true, SliceObserver.LicenceStep.None),
+        };
+        foreach (var c in cases)
+        {
+            SliceObserver.LicenceStep got = SliceObserver.Track(c.Open, c.Lapsed, c.Bought, c.Active);
+            if (got != c.Want)
+                return $"open={c.Open} lapsed={c.Lapsed} bought={c.Bought} active={c.Active}: {got}, want {c.Want}";
+        }
+        return null;
+    }
+
+    // DEBT-0032: every switch of the format §3 that is not idle by construction changes the run of seed 1 (full horizon). LIC_KNOWS, LAYER and
+    // the tooling keys are covered elsewhere (T6d, T8 tests); EFFORT_SHARE X1 and LINE_CLOSE YPROD are the defaults.
+    private static string? Switches(string tmp)
+    {
+        var (main, _) = Run(tmp, Manifest("JetSlice", 11688, pars: """{"detail": "lite"}"""), 1, 1, "sw-main");
+        if (!main.Ok)
+            return main.Error;
+        string[] switches =
+        [
+            """{"FORCE": "X1"}""", """{"FORCE": "Q"}""", """{"START": "PERT"}""", """{"START": "SYM"}""", """{"CHANNELS": ["KCATCH"]}""",
+            """{"CHANNELS": ["E0", "KTR"]}""", """{"GRID": "LO_MID_MID"}""", """{"GRID": "MID_HI_MID"}""", """{"GRID": "MID_MID_HI"}""",
+            """{"FLEET_ARM": "NO_RETIRE"}""", """{"FLEET_ARM": "NO_SALE"}""", """{"FLEET_ARM": "PURCHASE_CAP"}""", """{"SALE_ARM": "SIGMA_LO"}""",
+            """{"SALE_ARM": "QUOTA_LO"}""",
+        ];
+        var same = new List<string>();
+        int k = 0;
+        foreach (string sw in switches)
+        {
+            string pars = sw.Replace("{", "{\"detail\": \"lite\", ", StringComparison.Ordinal);
+            var (r, _) = Run(tmp, Manifest("JetSlice", 11688, pars: pars), 1, 1, "sw-" + k++);
+            if (!r.Ok)
+                return $"{sw}: {r.Error}";
+            if (r.GoldenHash == main.GoldenHash)
+                same.Add(sw);
+        }
+        return same.Count == 0 ? null : "golden equals main (switch idle on seed 1): " + string.Join(" ", same);
+    }
 
     // Codex r4 (TASK-0044): Bind = Money also holds with positive money short of one unit or with training money; the spec class needs neither.
     private static string? CoexistMoneyClass()
@@ -299,8 +353,9 @@ public static class SliceChecks
 
     private static string? L2(string tmp)
     {
-        var (a, da) = Run(tmp, Manifest("JetSlice", Ticks150), 5, 1, "l2-1");
-        var (b, db) = Run(tmp, Manifest("JetSlice", Ticks150), 5, 4, "l2-4");
+        // Full horizon (DEBT-0032; was 150 months): the det series of EXP-0002 repeats it on 20 seeds at threads 1/4/8.
+        var (a, da) = Run(tmp, Manifest("JetSlice", 11688), 5, 1, "l2-1");
+        var (b, db) = Run(tmp, Manifest("JetSlice", 11688), 5, 4, "l2-4");
         if (!a.Ok || !b.Ok || a.GoldenHash != b.GoldenHash)
             return $"{a.GoldenHash} vs {b.GoldenHash} ({a.Error}{b.Error})";
         return SameCsv(da, db, "-t1,", "-t4,");

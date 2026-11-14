@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""EXP-0002 analysis: HYP-0002 pre-registered decision rule (slice-jet-aviation.md v0.6, section 7).
+"""EXP-0002 analysis: HYP-0002 pre-registered decision rule (slice-jet-aviation.md v0.25 r1, section 7).
+
+Input: slice-csv-format.md v0.5 r7 (JetSlice, JetSliceCalib, c1_stand.csv). T11 (TASK-0053): criteria P1-P5, S1-S3,
+diagnostics (5.8, 5.9, 6.3, 6.5-6.7), control tables 6.1 (--calib), P0 prints of format section 7 (A40, A39, F17b,
+licences, fleet) and C1 (--c1).
 
 Python stdlib only. Deterministic: every bootstrap / permutation stream has its own
 random.Random seeded from (config seed, statistic label), so results do not depend on the
@@ -24,7 +28,7 @@ import statistics
 import sys
 import tempfile
 
-# Pre-registered thresholds (slice spec v0.6 section 7, #45, #48). Frozen by the manifest
+# Pre-registered thresholds (slice spec section 7: v0.6 values, unchanged to v0.25 r1; #45, #48). Frozen by the manifest
 # (meta.analysis.config); changing them after the freeze needs a new EXP.
 DEFAULTS = {
     "seed": 20261103,
@@ -71,6 +75,14 @@ DEFAULTS = {
                  "kd_year_t": 120, "cost_gen": 2},
     "lic": {"engine_nodes": [19, 23]},
     "extremes": {"n": 5},
+    # v0.5 prints (format §7; spec §6.10-6.11, A39-A42); P0 flags, not criteria
+    "a40": {"main_series": ["main"], "lo0_class": "DEFECTS", "lc0_class": "OTHER", "coexist_class": "COEXIST_MONEY"},
+    "f17b": {"end_rules": ["YPROD", "REPLACE", "A40C_N", "A40C_W"], "horizon": "HORIZON"},
+    "fleet": {"egen_min_gen_line": 3, "egen_share_min": 0.2, "egen_21_max": 0.8},
+    "c1": {"dev_cost_max": 0.40, "dev_yield_lo": 0.50, "dev_yield_hi": 0.80, "mature_yield_max": 0.20,
+           "mature_cost_max": 0.30, "wright_lo": 0.15, "wright_hi": 0.30},
+    # P5 point labels (spec §7 P5, #190): k_diff and the price share r = 1 - k_diff of each level
+    "p5_kdiff": {"lo": 0.75, "mid": 0.5, "hi": 0.0},
     "fv_years_t": [120, 240, 348],
     "calib": {"app_nodes": {"1": 58, "2": 59, "3": 60, "4": 61}, "cens_never_share": 0.5,
               "c2_tier4": [40, 49], "c2_tier5": [41, 51, 52], "c2_years": [2, 8],
@@ -112,6 +124,18 @@ CALIB_SUMMARY_COLS = ["run", "prof_USA", "prof_GBR", "prof_SUN", "prof_FRA", "pr
 PRC_MONTH_COLS = ["run", "t", "actor", "node", "known", "admitted", "yield", "ucm", "v"]
 ACTOR_MONTH_COLS = ["run", "t", "actor", "budget", "proc_budget", "out_g1", "out_g2", "out_g3", "out_g4",
                     "active_g1", "active_g2", "active_g3", "active_g4"]
+# v0.5 r6 tables (slice-csv-format.md §4.9-4.14, §6; T11)
+A40_COLS = ["run", "t", "actor", "design", "g_p", "profile", "preset", "branch", "cls", "t_stage_o", "t_launch", "force",
+            "idle", "rep_before"]
+A40_C_COLS = ["run", "t_fire", "actor", "design", "t", "min_yield", "argp", "alloy_supply", "deficit", "t_a", "left",
+              "w_after_n", "training"]
+LEDGER_COLS = ["run", "t", "actor", "rest", "b_cap", "invest", "taken_rest", "taken_cap", "rest_unspent", "t_a",
+               "rest_returned", "n_part", "tool_unmet_MET", "tool_unmet_CHEM", "tool_unmet_MECH", "tool_unmet_AERO", "pool_exh"]
+LINES_COLS = ["run", "t", "actor", "design", "g_p", "role", "y_min", "argp", "rate", "unit_cost", "idle", "close", "start",
+              "close_rule", "close_core", "left_share", "w_after_n"]
+FLEET_COLS = ["run", "t", "actor", "kind", "design", "gen_d", "gen_line", "count", "g_front", "line_bind"]
+LICENCES_COLS = ["run", "t", "seller", "buyer", "gen", "profile", "price", "t_end"]
+C1_COLS = ["setup", "arm", "k", "n_from", "n_to", "dlog_cost", "dlog_yield", "dlog_asm", "asm_drop", "asm_over_floor_drop"]
 
 
 class InputError(Exception):
@@ -410,6 +434,13 @@ class Data:
         self.reqs = collections.defaultdict(list)
         self.events = collections.defaultdict(list)
         self.prc_year = collections.defaultdict(dict)     # rid -> (t, actor, node) -> row
+        # v0.5 r6 tables (T11); present only if the file exists in the directory
+        self.a40 = collections.defaultdict(list)          # rid -> rows
+        self.a40c = collections.defaultdict(lambda: collections.defaultdict(list))  # rid -> (t_fire, actor, design) -> months
+        self.ledger = {}                                  # rid -> {"months": Counter(actor), "exh": Counter(actor), "bad": [..]}
+        self.lines = collections.defaultdict(list)        # rid -> rows
+        self.fleet = collections.defaultdict(list)        # rid -> rows
+        self.licences = collections.defaultdict(list)     # rid -> rows
         self.present = set()
 
 
@@ -487,6 +518,7 @@ def load(dirs, cfg):
                     store[rid][(int(r["t"]), r["actor"], int(r["node"]))] = {
                         "known": int(r["known"]), "admitted": int(r["admitted"]), "yield": int(r["yield"]),
                         "ucm": int(r["ucm"])}
+        load_v05(D, d, pre)
     # derived per-run leadership
     for rid, rec in D.runs.items():
         if rec["status"] != "ok":
@@ -501,6 +533,94 @@ def load(dirs, cfg):
         if rec["status"] == "ok" and "lead" in rec and rec["series"] != cfg["series"]["det"]:
             D.series[rec["series"]].setdefault(rec["seed"], rid)
     return D
+
+
+def _stream(path, required):
+    """Rows of an optional CSV as dicts, streamed; None if the file is missing."""
+    if not os.path.exists(path):
+        return None
+    f = open(path, newline="", encoding="utf-8")
+    reader = csv.DictReader(f)
+    miss = [c for c in required if c not in (reader.fieldnames or [])]
+    if miss:
+        f.close()
+        raise InputError("%s: missing columns %s" % (os.path.basename(path), miss))
+
+    def gen():
+        with f:
+            for r in reader:
+                yield r
+    return gen()
+
+
+def load_v05(D, d, pre):
+    """a40, a40_c_months, tooling_ledger, lines, fleet_cmd, licences (format v0.5 r6 §4.9-4.14)."""
+    def rid_of(fname, r):
+        rid = pre + r["run"]
+        if rid not in D.runs:
+            raise InputError("%s: unknown run %s" % (fname, r["run"]))
+        return rid
+
+    rows = _stream(os.path.join(d, "a40.csv"), A40_COLS)
+    if rows is not None:
+        D.present.add("a40")
+        for r in rows:
+            D.a40[rid_of("a40.csv", r)].append({
+                "t": int(r["t"]), "actor": r["actor"], "design": int(r["design"]), "g_p": int(r["g_p"]),
+                "profile": int(r["profile"]), "branch": r["branch"], "cls": r["cls"], "t_launch": _oi(r["t_launch"]),
+                "force": int(r["force"])})
+    rows = _stream(os.path.join(d, "a40_c_months.csv"), A40_C_COLS)
+    if rows is not None:
+        D.present.add("a40c")
+        for r in rows:
+            D.a40c[rid_of("a40_c_months.csv", r)][(int(r["t_fire"]), r["actor"], int(r["design"]))].append({
+                "t": int(r["t"]), "min_yield": int(r["min_yield"]), "left": _oi(r["left"]),
+                "training": _oi(r["training"]), "w_after_n": int(r["w_after_n"])})
+    rows = _stream(os.path.join(d, "tooling_ledger.csv"), LEDGER_COLS)
+    if rows is not None:
+        D.present.add("ledger")
+        for r in rows:
+            rid = rid_of("tooling_ledger.csv", r)
+            g = D.ledger.get(rid)
+            if g is None:
+                g = D.ledger[rid] = {"months": collections.Counter(), "exh": collections.Counter(), "bad": 0,
+                                     "bad_ex": []}
+            a = r["actor"]
+            g["months"][a] += 1
+            g["exh"][a] += int(r["pool_exh"])
+            rest, cap, inv = int(r["rest"]), int(r["b_cap"]), int(r["invest"])
+            viol = []
+            if inv > rest + cap:
+                viol.append("invest > rest + b_cap")
+            if int(r["taken_rest"]) > rest:
+                viol.append("taken_rest > rest")
+            if int(r["t_a"]) < 0:
+                viol.append("t_a < 0")
+            if viol:
+                g["bad"] += 1
+                if len(g["bad_ex"]) < 3:
+                    g["bad_ex"].append("t=%s %s: %s" % (r["t"], a, ", ".join(viol)))
+    rows = _stream(os.path.join(d, "lines.csv"), LINES_COLS)
+    if rows is not None:
+        D.present.add("lines")
+        for r in rows:
+            D.lines[rid_of("lines.csv", r)].append((
+                int(r["t"]), r["actor"], int(r["design"]), int(r["g_p"]), r["role"], int(r["close"]), r["close_rule"],
+                _oi(r["left_share"]), int(r["w_after_n"])))
+    rows = _stream(os.path.join(d, "fleet_cmd.csv"), FLEET_COLS)
+    if rows is not None:
+        D.present.add("fleet")
+        for r in rows:
+            D.fleet[rid_of("fleet_cmd.csv", r)].append({
+                "t": int(r["t"]), "actor": r["actor"], "kind": r["kind"], "gen_d": int(r["gen_d"]),
+                "gen_line": int(r["gen_line"]), "g_front": int(r["g_front"]), "bind": r["line_bind"]})
+    rows = _stream(os.path.join(d, "licences.csv"), LICENCES_COLS)
+    if rows is not None:
+        D.present.add("licences")
+        for r in rows:
+            D.licences[rid_of("licences.csv", r)].append({
+                "t": int(r["t"]), "seller": r["seller"], "buyer": r["buyer"], "gen": int(r["gen"]),
+                "profile": int(r["profile"]), "price": int(r["price"]), "t_end": _oi(r["t_end"])})
 
 
 def derive(rec, cfg):
@@ -1082,7 +1202,7 @@ def mastering_p50(D, cfg, rids, actor):
     for rid in rids:
         for nd in (int(k) for k in cfg["s2"]["star_prc_gen"]):
             x = D.node_times.get(rid, {}).get((actor, nd))
-            if x and x["t_first"] is not None and x["t_first"] >= 0:
+            if x and x["t_first"] is not None and x["t_first"] >= 0 and not (x["t_07"] is not None and x["t_07"] < 0):
                 end = x["t_07"] if x["t_07"] is not None else cfg["n_months"]
                 xs.append(end - x["t_first"])
     return quantile(xs, 0.5)
@@ -1248,6 +1368,331 @@ def extremes(D, cfg, main_ids):
     return {"most_changes": [tape(r) for r in by_ch], "largest_gap": [tape(r) for r in by_gap]}
 
 
+# ---------------------------------------------------------------- v0.5 prints: A40, A39, F17b, licences, fleet (format §7; P0, not criteria)
+
+def runs_by_series(D, cfg, include_calib=True):
+    """series -> rids (one per seed: the lowest thread count), all ok runs except det."""
+    out = collections.defaultdict(dict)
+    for rid in sorted(D.runs, key=lambda r: (D.runs[r]["threads"], r)):
+        rec = D.runs[rid]
+        if rec["status"] != "ok" or rec["series"] == cfg["series"]["det"]:
+            continue
+        if not include_calib and rec["series"] == cfg["series"]["calib"]:
+            continue
+        out[rec["series"]].setdefault(rec["seed"], rid)
+    return {s: [m[k] for k in sorted(m)] for s, m in sorted(out.items())}
+
+
+def coexist_ok(months):
+    """COEXIST_MONEY (format §4.16 (б)) needs left = 0 and training = 0 in every month; the Lab also checks the pair,
+    rate and Bind, which a40_c_months does not carry. A violation here is a P0 defect of the class."""
+    return bool(months) and all(m["left"] == 0 and m["training"] == 0 for m in months)
+
+
+def a40_prints(D, cfg):
+    """Format §7 'A40': cancel_design by series, classes by actor, share of seeds with a C fire; L-O0, L-C0 (P0)."""
+    if "a40" not in D.present:
+        return None
+    c = cfg["a40"]
+    out = {"series": {}, "checks": {}}
+    tab = set()
+    bad_coexist, wn_fires, months_mismatch = [], 0, []
+    lo0 = lc0 = coexist_main = 0
+    for s, rids in runs_by_series(D, cfg).items():
+        n = len(rids)
+        cancel = 0
+        by_cls = collections.Counter()
+        seeds_c = 0
+        for rid in rids:
+            rows = D.a40.get(rid, [])
+            cancel += sum(1 for r in rows if r["branch"] == "O")
+            seeds_c += any(r["branch"] == "C" for r in rows)
+            for r in rows:
+                by_cls[(r["actor"], r["branch"], r["cls"])] += 1
+                if r["branch"] != "C" or "a40c" not in D.present:
+                    continue
+                months = D.a40c.get(rid, {}).get((r["t"], r["actor"], r["design"]), [])
+                tab.add(len(months))
+                if r["cls"] == c["coexist_class"] and not coexist_ok(months):
+                    bad_coexist.append("%s t=%d %s d=%d" % (rid, r["t"], r["actor"], r["design"]))
+                if any(m["w_after_n"] for m in months):
+                    wn_fires += 1
+                if s in c["main_series"]:
+                    coexist_main += r["cls"] == c["coexist_class"]
+            if s in c["main_series"]:
+                lo0 += sum(1 for r in rows if r["branch"] == "O" and r["cls"] == c["lo0_class"])
+                lc0 += sum(1 for r in rows if r["branch"] == "C" and r["cls"] == c["lc0_class"])
+        out["series"][s] = {"seeds": n, "cancel_design": cancel, "cancel_per_seed": cancel / n if n else None,
+                            "seeds_with_c": share(seeds_c, n, cfg),
+                            "per_seed": {"%s:%s:%s" % k: v / n for k, v in sorted(by_cls.items())}}
+    if len(tab) > 1:
+        months_mismatch = sorted(tab)
+    have_main = any(s in runs_by_series(D, cfg) for s in c["main_series"])
+    out["checks"] = {
+        "L_O0": {"defects_main": lo0, "ok": (lo0 == 0) if have_main else None},
+        "L_C0": {"other_main": lc0, "ok": (lc0 == 0) if have_main else None},
+        "coexist_money_main": coexist_main,
+        "coexist_class_violations": bad_coexist[:10], "coexist_class_violations_n": len(bad_coexist),
+        "c_fires_with_w_after_n": wn_fires,
+        "t_ab_months_per_fire": sorted(tab), "t_ab_mismatch": months_mismatch}
+    return out
+
+
+def ledger_prints(D, cfg):
+    """Format §7 'A39': pool_exh share by actor per series; ledger invariants §4.11 (violation = P0 defect)."""
+    if "ledger" not in D.present:
+        return None
+    out = {"series": {}, "violations": 0, "examples": []}
+    for s, rids in runs_by_series(D, cfg).items():
+        m, e = collections.Counter(), collections.Counter()
+        for rid in rids:
+            g = D.ledger.get(rid)
+            if g is None:
+                continue
+            m.update(g["months"])
+            e.update(g["exh"])
+            out["violations"] += g["bad"]
+            for x in g["bad_ex"]:
+                if len(out["examples"]) < 5:
+                    out["examples"].append("%s %s" % (rid, x))
+        if m:
+            out["series"][s] = {a: (e[a] / m[a] if m[a] else None) for a in cfg["actors"] if a in m}
+    out["ok"] = out["violations"] == 0
+    return out
+
+
+def coexistences(rows, last):
+    """Coexistences (W, N) of one run from lines.csv rows (format §4.12): per actor, maximal runs of consecutive months
+    with the same pair of designs. End cause: close_rule of a line of the pair closed in the last month; HORIZON if the
+    pair is still there in month `last` (censored)."""
+    by = collections.defaultdict(lambda: collections.defaultdict(list))
+    for (t, a, d, gp, role, close, rule, ls, wn) in rows:
+        by[a][t].append((d, gp, role, close, rule))
+    out = []
+    for a, months in sorted(by.items()):
+        cur = None          # (pair, start, prev_t, closes of the previous month)
+        for t in sorted(months):
+            ls = months[t]
+            pair = None
+            if len(ls) == 2 and {x[2] for x in ls} == {"W", "N"}:
+                pair = tuple(sorted(x[0] for x in ls))
+            if cur is not None and (pair != cur[0] or t != cur[2] + 1):
+                out.append({"actor": a, "start": cur[1], "months": cur[2] - cur[1] + 1, "end": cur[3] or "NONE"})
+                cur = None
+            if pair is not None:
+                rule = next((x[4] for x in ls if x[3] == 1 and x[4]), None)
+                cur = (pair, t if cur is None else cur[1], t, rule)
+        if cur is not None:
+            end = "HORIZON" if cur[2] >= last else (cur[3] or "NONE")
+            out.append({"actor": a, "start": cur[1], "months": cur[2] - cur[1] + 1, "end": end})
+    return out
+
+
+def launches_not_newer(rows):
+    """Launches X with g_p(X) <= g_p(W) (spec A41 F17b 'Печать'): a design that first appears in lines after month 0
+    while the actor had a line of g_p >= g_p(X) in the previous month."""
+    seen = set()
+    prev = collections.defaultdict(list)
+    by_t = collections.defaultdict(list)
+    for r in rows:
+        by_t[r[0]].append(r)
+    n = 0
+    for t in sorted(by_t):
+        cur = collections.defaultdict(list)
+        for (_, a, d, gp, *_rest) in by_t[t]:
+            cur[a].append((d, gp))
+            if (a, d) not in seen:
+                seen.add((a, d))
+                if t > 0 and any(g2 >= gp for d2, g2 in prev.get(a, []) if d2 != d):
+                    n += 1
+        prev = cur
+    return n
+
+
+def f17b_prints(D, cfg):
+    """Format §7 'F17b' from lines.csv: coexistences, durations (censored at 384), end causes, left_share of N,
+    months with w_after_n = 1; invariant sum(left_share) per actor-month <= 10^6 (P0)."""
+    if "lines" not in D.present:
+        return None
+    last = cfg["n_months"] - 1
+    out = {"series": {}, "left_share_violations": 0}
+    for s, rids in runs_by_series(D, cfg).items():
+        co, lsn, wn = [], [], set()
+        launches = 0
+        rows_any = False
+        for rid in rids:
+            rows = D.lines.get(rid, [])
+            if not rows:
+                continue
+            rows_any = True
+            co += coexistences(rows, last)
+            launches += launches_not_newer(rows)
+            sums = collections.Counter()
+            for (t, a, d, gp, role, close, rule, ls, w) in rows:
+                if role == "N" and ls is not None:
+                    lsn.append(ls / FX)
+                if w:
+                    wn.add((rid, t, a))
+                if ls is not None:
+                    sums[(t, a)] += ls
+            out["left_share_violations"] += sum(1 for v in sums.values() if v > FX)
+        if not rows_any:
+            continue
+        dur = [c["months"] for c in co]
+        ends = collections.Counter(c["end"] for c in co)
+        out["series"][s] = {"seeds": len(rids), "coexistences": len(co),
+                            "per_seed_actor": dict(sorted(collections.Counter(c["actor"] for c in co).items())),
+                            "months": dict(pq(dur, (0.5, 0.9)), max=max(dur) if dur else None,
+                                           censored=ends.get("HORIZON", 0)),
+                            "end": dict(sorted(ends.items())), "left_share_N": pq(lsn, (0.1, 0.5, 0.9)),
+                            "w_after_n_actor_months": len(wn), "launches_gp_le_W": launches}
+    out["ok"] = out["left_share_violations"] == 0
+    return out
+
+
+def licence_prints(D, cfg):
+    """Spec §6.11 'Печать' from licences.csv and events.csv: licences by pair, term, refusals for money, resumes;
+    licences.csv must match LIC_BUY events (format §4.14)."""
+    if "licences" not in D.present:
+        return None
+    out = {"series": {}, "mismatch_runs": []}
+    for s, rids in runs_by_series(D, cfg).items():
+        pairs = collections.Counter()
+        terms, open_, prices = [], 0, []
+        first_fra = collections.defaultdict(list)
+        refuse, resume = collections.Counter(), 0
+        for rid in rids:
+            lic = D.licences.get(rid, [])
+            ev = D.events.get(rid, [])
+            buys = sorted((e["t"], e["actor"], e["other"]) for e in ev if e["kind"] == "LIC_BUY")
+            if "events" in D.present and buys != sorted((x["t"], x["buyer"], x["seller"]) for x in lic):
+                out["mismatch_runs"].append(rid)
+            for x in lic:
+                pairs["%s>%s G%d" % (x["seller"], x["buyer"], x["gen"])] += 1
+                prices.append(x["price"] / FX)
+                if x["t_end"] is None:
+                    open_ += 1
+                else:
+                    terms.append(x["t_end"] - x["t"])
+            fr = [x for x in lic if x["buyer"] == cfg["middle_actor"]]
+            if fr:
+                f0 = min(fr, key=lambda x: x["t"])
+                first_fra["P%d" % f0["profile"]].append(f0["t"])
+            for e in ev:
+                if e["kind"] == "LIC_REFUSE_MONEY":
+                    refuse[e["actor"]] += 1
+                resume += e["kind"] == "LIC_RESUME"
+        n = len(rids)
+        if not pairs and not refuse:
+            out["series"][s] = {"seeds": n, "licences": 0}
+            continue
+        out["series"][s] = {"seeds": n, "licences": sum(pairs.values()),
+                            "per_seed": sum(pairs.values()) / n if n else None,
+                            "pairs": dict(pairs.most_common(8)), "term": dict(pq(terms, (0.5, 0.9)), open=open_),
+                            "price_p50": quantile(prices, 0.5),
+                            "fra_first_t_p50": {p: quantile(v, 0.5) for p, v in sorted(first_fra.items())},
+                            "refuse_money": dict(sorted(refuse.items())), "resumes": resume}
+    out["ok"] = not out["mismatch_runs"]
+    return out
+
+
+def fleet_prints(D, cfg):
+    """Spec §6.10 from fleet_cmd.csv: E-gen distribution by (gen_line, gen_d), R-gen (gen_line <= gen_d: P0),
+    commands at line_bind = ALLOY, #146 sales of laggards (gap = g_front - G >= 1, gen_d >= G; G = gen_line)."""
+    if "fleet" not in D.present:
+        return None
+    f = cfg["fleet"]
+    out = {"series": {}, "r_gen_violations": 0}
+    for s, rids in runs_by_series(D, cfg).items():
+        cmds = [(rid, x) for rid in rids for x in D.fleet.get(rid, [])]
+        if not cmds:
+            continue
+        n = len(cmds)
+        pairs = collections.Counter("(%d,%d)" % (x["gen_line"], x["gen_d"]) for _, x in cmds)
+        rgen = sum(1 for _, x in cmds if x["gen_line"] <= x["gen_d"])
+        out["r_gen_violations"] += rgen
+        lag = [(rid, x) for rid, x in cmds
+               if x["kind"] == "SELL" and x["g_front"] - x["gen_line"] >= 1 and x["gen_d"] >= x["gen_line"]]
+        seeds_cmd = collections.defaultdict(set)
+        for rid, x in cmds:
+            seeds_cmd[x["actor"]].add(rid)
+        egen = sum(1 for _, x in cmds if x["gen_line"] >= f["egen_min_gen_line"]) / n
+        e21 = pairs.get("(2,1)", 0) / n
+        out["series"][s] = {
+            "seeds": len(rids), "commands": n, "kinds": dict(sorted(collections.Counter(x["kind"] for _, x in cmds).items())),
+            "pairs_share": {k: v / n for k, v in sorted(pairs.items())},
+            "egen_gen_line_ge3": egen, "egen_21": e21,
+            "egen_expect": egen >= f["egen_share_min"] and e21 < f["egen_21_max"],
+            "alloy_share": sum(1 for _, x in cmds if x["bind"] == "ALLOY") / n, "r_gen": rgen,
+            "seeds_with_cmd": {a: len(v) / len(rids) for a, v in sorted(seeds_cmd.items())},
+            "sold_gen_ge2_seeds": len({rid for rid, x in cmds if x["kind"] == "SELL" and x["gen_d"] >= 2}) / len(rids),
+            "laggard_sales": {"n": len(lag), "actors": dict(sorted(collections.Counter(x["actor"] for _, x in lag).items())),
+                              "t": pq([x["t"] for _, x in lag], (0.1, 0.5, 0.9))}}
+    out["ok"] = out["r_gen_violations"] == 0
+    return out
+
+
+def series_identity(D, cfg):
+    """Series whose golden_hash equals main on every common seed (idle switch); smoke check of DEBT-0032."""
+    by = runs_by_series(D, cfg)
+    main = {D.runs[r]["seed"]: D.runs[r]["golden"] for r in by.get(cfg["series"]["main"], [])}
+    if not main:
+        return None
+    same, differ = [], []
+    for s, rids in by.items():
+        if s == cfg["series"]["main"]:
+            continue
+        common = [r for r in rids if D.runs[r]["seed"] in main]
+        if not common:
+            continue
+        if all(D.runs[r]["golden"] == main[D.runs[r]["seed"]] for r in common):
+            same.append(s)
+        else:
+            differ.append(s)
+    return {"same_as_main": same, "differ": len(differ)}
+
+
+def c1_stand(path, cfg):
+    """C1 by c1_stand.csv (format §6; spec §8.2 п.1, #184-#188). dlog_* are per-doubling drops in log (positive =
+    cheaper) [Предп.: sign fixed when T12 writes the stand]. Statistics over the FULL arm; empty set -> d = 1."""
+    rows = _read_csv(path, C1_COLS)
+    c = cfg["c1"]
+    sel = collections.defaultdict(list)
+    for r in rows:
+        sel[(r["setup"], r["arm"])].append(r)
+
+    def stats(setup):
+        rs = sel.get((setup, "FULL"), [])
+        if not rs:
+            return {"n": 0, "cost_drop": None, "yield_share": None}
+        dc = [float(r["dlog_cost"]) for r in rs]
+        dy = [float(r["dlog_yield"]) for r in rs]
+        da = [float(r["dlog_asm"]) for r in rs]
+        den = sum(dy) + sum(da)
+        return {"n": len(rs), "cost_drop": 1.0 - math.exp(-sum(dc) / len(rs)),
+                "yield_share": (sum(dy) / den) if den else None,
+                "per_doubling_cost_drop": [1.0 - math.exp(-x) for x in dc]}
+    dev, mat = stats("DEV"), stats("MATURE")
+    out = {"DEV": dev, "MATURE": mat}
+    out["C1a"] = {"value": dev["cost_drop"], "ok": dev["cost_drop"] is not None and dev["cost_drop"] <= c["dev_cost_max"]}
+    out["C1b"] = {"value": dev["yield_share"], "ok": dev["yield_share"] is not None
+                  and c["dev_yield_lo"] <= dev["yield_share"] <= c["dev_yield_hi"]}
+    out["C1d"] = {"value": mat["yield_share"], "ok": mat["yield_share"] is not None
+                  and mat["yield_share"] <= c["mature_yield_max"]}
+    e = mat["cost_drop"]
+    out["C1e"] = {"value": e, "ok": e is not None and e <= c["mature_cost_max"],
+                  "d": 1.0 if e is None else max(0.0, e - c["mature_cost_max"]) / c["mature_cost_max"]}
+    w = [float(r["asm_over_floor_drop"]) for r in sel.get(("MATURE", "FULL"), [])]
+    out["wright_P0"] = {"per_doubling": w, "ok": bool(w) and all(c["wright_lo"] <= x <= c["wright_hi"] for x in w)}
+    out["arms"] = sorted("%s/%s:%d" % (k[0], k[1], len(v)) for k, v in sel.items())
+    return out
+
+
+def p0_prints(D, cfg):
+    return {"a40": a40_prints(D, cfg), "ledger": ledger_prints(D, cfg), "f17b": f17b_prints(D, cfg),
+            "licences": licence_prints(D, cfg), "fleet": fleet_prints(D, cfg)}
+
+
 # ---------------------------------------------------------------- top level
 
 def analyze(D, cfg):
@@ -1256,8 +1701,12 @@ def analyze(D, cfg):
     main_ids = [main_map[s] for s in sorted(main_map)]
     main_runs = [D.runs[r] for r in main_ids]
     res = {"problems": {"failed_runs": len(D.failed)}}
+    res["p0"] = p0_prints(D, cfg)
+    res["series_identity"] = series_identity(D, cfg)
+    res["series_seeds"] = {s: len(r) for s, r in runs_by_series(D, cfg).items()}
     if not main_runs:
         res["decision"] = {"verdicts": {}, "outcome": "incomplete", "final": "incomplete (no main)"}
+        res["determinism"] = determinism(D, cfg)
         return res
     res["P1"] = crit_p1(main_runs, cfg)
     res["P2"] = crit_p2(main_runs, cfg)
@@ -1310,7 +1759,7 @@ def fs(s):
 
 
 def render(res, cfg, hashes):
-    L = ["# EXP-0002 — анализ HYP-0002 (правило решения §7, slice-jet-aviation.md v0.6)", ""]
+    L = ["# EXP-0002 — анализ HYP-0002 (правило решения §7, slice-jet-aviation.md v0.25 r1; формат v0.5 r7)", ""]
     L.append("- config_sha256: `%s`" % sha256_text(canonical_json(cfg)))
     with open(os.path.abspath(__file__), "rb") as f:
         L.append("- script_sha256: `%s`" % hashlib.sha256(f.read()).hexdigest())
@@ -1322,7 +1771,11 @@ def render(res, cfg, hashes):
         L.append("main: seeds %d, golden_hash (sha256 «seed golden\\n» по возрастанию seed) `%s`; упавших прогонов %d."
                  % (res["main"]["seeds"], res["main"]["golden_hash"], res["problems"]["failed_runs"]))
     if "P1" not in res:
-        return "\n".join(L) + "\n"
+        if res.get("determinism"):
+            d = res["determinism"]
+            L += ["", "## Детерминизм L2", "", "seeds %d, threads %s: %s" % (
+                d["seeds"], d["threads"], "OK" if d["ok"] else "НЕСОВПАДЕНИЕ на seeds %s" % d["mismatch_seeds"])]
+        return "\n".join(L + render_p0(res, cfg)) + "\n"
     L += ["", "| критерий | значение | итог |", "|---|---|---|"]
     L.append("| P1 `chg` | %s | %s |" % (fs(res["P1"]["chg"]), res["P1"]["verdict"]))
     L.append("| P2 `small_lead` (sanity) | %s | %s |" % (fs(res["P2"]["small_lead"]), res["P2"]["verdict"]))
@@ -1360,9 +1813,12 @@ def render(res, cfg, hashes):
     L.append("")
     L.append("«Или» по двум статистикам: ложный проход у порога ≤ 0,05 (принято, §6.1).")
     if p5["verdict"] != "missing":
-        L += ["", "## P5 сетка (`k_catch` × `k_diff` × `h_max`)", "", "| точка | chg |", "|---|---|"]
+        L += ["", "## P5 сетка (`k_catch` × `k_diff` × `h_max`; ось `k_diff` через `r = 1 − k_diff`, #190)", "",
+              "| точка | `k_diff` | `r` | chg |", "|---|---|---|---|"]
+        kd = cfg["p5_kdiff"]
         for k, v in p5["points"].items():
-            L.append("| %s | %s |" % (k, fs(v)))
+            lvl = k.split("_")[1]
+            L.append("| %s | %s | %s | %s |" % (k, fmt(kd[lvl], 2), fmt(1.0 - kd[lvl], 2), fs(v)))
         flagged = [p for p in p5["pairs"] if p["knife"]]
         L += ["", "Пары с флагом: %s" % (", ".join("%s↔%s Δ=%s CI %s" % (p["a"], p["b"], fmt(p["delta"]), fci(p["ci"]))
                                                     for p in flagged) or "нет")]
@@ -1386,7 +1842,7 @@ def render(res, cfg, hashes):
           "- новый лидер: %s" % ", ".join("%s %s" % (k, fmt(v)) for k, v in ld["new_leader_share"].items()),
           "- поле ключа, решившее смену: %s" % (", ".join("%s:%d" % kv for kv in ld["change_field"].items()) or "—"),
           "- лидер на тике 359: %s" % ", ".join("%s %s" % (k, fs(v)) for k, v in ld["lead359"].items()),
-          "- `volume_lead` (печать): %s" % ", ".join("%s %s" % (k, fmt(v)) for k, v in ld["volume_lead_share"].items())]
+          "- `volume_lead` (печать; годовая сумма строки t = 348, формат §4.2): %s" % ", ".join("%s %s" % (k, fmt(v)) for k, v in ld["volume_lead_share"].items())]
     for k, v in ld["fv_ratios"].items():
         L.append("- FV %s: p5/p50/p95 %s/%s/%s (n=%d, нулевой знаменатель %d)" % (
             k, fmt(v["p5"]), fmt(v["p50"]), fmt(v["p95"]), v["n"], v["zero_den"]))
@@ -1490,10 +1946,119 @@ def render(res, cfg, hashes):
             if e["whynot_first"]:
                 L.append("  - why_not (первое звено): " + " | ".join(e["whynot_first"][:12]) +
                          (" …" if len(e["whynot_first"]) > 12 else ""))
-    return "\n".join(L) + "\n"
+    return "\n".join(L + render_p0(res, cfg)) + "\n"
+
+
+def flag(ok):
+    return "—" if ok is None else ("OK" if ok else "**НАРУШЕНИЕ (P0)**")
+
+
+def render_p0(res, cfg):
+    """Format §7 prints of v0.5 tables; P0 flags and prints, not criteria (they do not change the outcome)."""
+    L = []
+    ss = res.get("series_seeds") or {}
+    if ss:
+        L += ["", "## Серии во входе", "", ", ".join("%s: %d" % kv for kv in ss.items())]
+    si = res.get("series_identity")
+    if si:
+        L.append("")
+        L.append("Серии с golden = main на всех общих seeds (холостой переключатель): %s; отличаются: %d." % (
+            ", ".join(si["same_as_main"]) or "нет", si["differ"]))
+    p0 = res.get("p0") or {}
+    a = p0.get("a40")
+    if a:
+        ch = a["checks"]
+        L += ["", "## A40 (печать, P0; формат §4.9–4.10, §7)", "",
+              "- L-O0 (`DEFECTS` в main = 0): %d → %s" % (ch["L_O0"]["defects_main"], flag(ch["L_O0"]["ok"])),
+              "- L-C0 (`OTHER` в main = 0): %d → %s" % (ch["L_C0"]["other_main"], flag(ch["L_C0"]["ok"])),
+              "- `COEXIST_MONEY` в main (вне L-C0, ожидание [Предп.] 0): %d" % ch["coexist_money_main"],
+              "- класс `COEXIST_MONEY` без `left = 0` и `training = 0` во всех месяцах: %d → %s%s" % (
+                  ch["coexist_class_violations_n"], flag(ch["coexist_class_violations_n"] == 0),
+                  (" (" + "; ".join(ch["coexist_class_violations"]) + ")") if ch["coexist_class_violations"] else ""),
+              "- срабатываний С с `w_after_n = 1` хотя бы в одном месяце (оговорка (г)): %d" % ch["c_fires_with_w_after_n"],
+              "- месяцев `a40_c_months` на срабатывание: %s%s" % (ch["t_ab_months_per_fire"] or "—",
+                                                                   " — **разное число (P0)**" if ch["t_ab_mismatch"] else ""),
+              "", "| серия | seeds | `cancel_design` | на seed | seeds с С | на seed по (актор:ветка:класс) |", "|---|---|---|---|---|---|"]
+        for s, v in a["series"].items():
+            L.append("| %s | %d | %d | %s | %s | %s |" % (s, v["seeds"], v["cancel_design"], fmt(v["cancel_per_seed"], 2),
+                                                        fs(v["seeds_with_c"]), ", ".join("%s %s" % (k, fmt(x, 2)) for k, x in v["per_seed"].items()) or "—"))
+    g = p0.get("ledger")
+    if g:
+        L += ["", "## A39 леджер (P0; формат §4.11)", "",
+              "- инварианты (`invest ≤ rest + b_cap`, `taken_rest ≤ rest`, `t_a ≥ 0`): нарушений %d → %s%s" % (
+                  g["violations"], flag(g["ok"]), (" (" + "; ".join(g["examples"]) + ")") if g["examples"] else ""),
+              "", "| серия | доля месяцев `pool_exh` по актору |", "|---|---|"]
+        for s, v in g["series"].items():
+            L.append("| %s | %s |" % (s, ", ".join("%s %s" % (k, fmt(x, 3)) for k, x in v.items())))
+    f = p0.get("f17b")
+    if f:
+        L += ["", "## F17b: сосуществования линий (печать; формат §4.12, §7)", "",
+              "- Σ `left_share` по линиям актор-месяца ≤ 10⁶: нарушений %d → %s" % (f["left_share_violations"], flag(f["ok"])),
+              "", "| серия | seeds | сосуществований | мес. p50/p90/max (цензура 384) | конец | `left_share` N p10/p50/p90 | `w_after_n` актор-мес. | запуски `g_p(X) ≤ g_p(W)` |",
+              "|---|---|---|---|---|---|---|---|"]
+        for s, v in f["series"].items():
+            m = v["months"]
+            L.append("| %s | %d | %d | %s/%s/%s (%d) | %s | %s/%s/%s | %d | %d |" % (
+                s, v["seeds"], v["coexistences"], fmt(m["p50"], 1), fmt(m["p90"], 1), fmt(m["max"]), m["censored"],
+                ", ".join("%s %d" % kv for kv in v["end"].items()) or "—", fmt(v["left_share_N"]["p10"], 3),
+                fmt(v["left_share_N"]["p50"], 3), fmt(v["left_share_N"]["p90"], 3), v["w_after_n_actor_months"], v["launches_gp_le_W"]))
+    li = p0.get("licences")
+    if li:
+        L += ["", "## Лицензии (печать §6.11; `licences.csv`, `events.csv`)", "",
+              "- `licences.csv` = `LIC_BUY` по каждому прогону: %s%s" % (
+                  flag(li["ok"]), (" (прогоны: %s)" % ", ".join(li["mismatch_runs"][:5])) if li["mismatch_runs"] else ""),
+              "", "| серия | seeds | лицензий | на seed | пары (топ) | срок p50/p90 (открыты) | цена p50 | FRA 1-я лицензия p50 по профилю | отказы по деньгам | возобновления |",
+              "|---|---|---|---|---|---|---|---|---|---|"]
+        for s, v in li["series"].items():
+            if not v["licences"] and "refuse_money" not in v:
+                L.append("| %s | %d | 0 | | | | | | | |" % (s, v["seeds"]))
+                continue
+            L.append("| %s | %d | %d | %s | %s | %s/%s (%d) | %s | %s | %s | %d |" % (
+                s, v["seeds"], v["licences"], fmt(v["per_seed"], 2), ", ".join("%s %d" % kv for kv in v["pairs"].items()),
+                fmt(v["term"]["p50"], 1), fmt(v["term"]["p90"], 1), v["term"]["open"], fmt(v["price_p50"], 3),
+                ", ".join("%s %s" % (k, fmt(x, 1)) for k, x in v["fra_first_t_p50"].items()) or "—",
+                ", ".join("%s %d" % kv for kv in v["refuse_money"].items()) or "—", v["resumes"]))
+    fl = p0.get("fleet")
+    if fl:
+        L += ["", "## Парк: команды A42.4 (печать §6.10; `fleet_cmd.csv`)", "",
+              "- R-gen (`gen_line ≤ gen_d` = 0): %d → %s" % (fl["r_gen_violations"], flag(fl["ok"])),
+              "- #146: продажа «отстающим» — `SELL` при `g_front − G ≥ 1` и `gen_d ≥ G`, `G` = `gen_line` [Предп.]",
+              "", "| серия | seeds | команд | виды | E-gen: `gen_line ≥ 3` / (2,1) / ожидание | при `ALLOY` | seeds с проданным G≥2 | «отстающие» n, акторы, t p50 |",
+              "|---|---|---|---|---|---|---|---|"]
+        for s, v in fl["series"].items():
+            lg = v["laggard_sales"]
+            L.append("| %s | %d | %d | %s | %s / %s / %s | %s | %s | %d, %s, %s |" % (
+                s, v["seeds"], v["commands"], ", ".join("%s %d" % kv for kv in v["kinds"].items()),
+                fmt(v["egen_gen_line_ge3"], 3), fmt(v["egen_21"], 3), fmt(v["egen_expect"]), fmt(v["alloy_share"], 3),
+                fmt(v["sold_gen_ge2_seeds"], 3), lg["n"], ", ".join("%s %d" % kv for kv in lg["actors"].items()) or "—",
+                fmt(lg["t"]["p50"], 1)))
+    return L
 
 
 # ---------------------------------------------------------------- calibration build (control tables, C2, C4)
+
+def render_control_tables(t, cfg):
+    """Readable print of the control tables of spec §6.1 (the JSON is the artefact; this is for review)."""
+    L = ["", "## Таблицы контролей §6.1", "", "### `L_K`: (актор, поколение) — `p_cens`, `m`, `s`, `⌊√3·s⌉`, n, известно на старте", "",
+         "| актор:G | p_cens | m | s | half | n | старт |", "|---|---|---|---|---|---|---|"]
+    for k, v in t["lk"].items():
+        L.append("| %s | %s | %s | %s | %s | %d | %d |" % (k, fmt(None if v["p_cens_fx"] is None else v["p_cens_fx"] / FX, 3),
+                                                         fmt(v["m"], 1), fmt(v["s"], 1), fmt(v["half"]), v["n"], v["start_known"]))
+    never = sum(1 for v in t["delta"].values() if v["never"])
+    ds = [v["delta"] for v in t["delta"].values() if v["delta"] is not None]
+    L += ["", "`δ[a, n]`: узлов %d, «никогда» %d, δ p10/p50/p90 %s/%s/%s." % (
+        len(t["delta"]), never, fmt(quantile(ds, 0.1)), fmt(quantile(ds, 0.5)), fmt(quantile(ds, 0.9)))]
+    taus = (0, 12, 24, 60, 120, 240, 384, 444, 624)
+    L += ["", "### `L_C`: `Y_k(τ)`, `U_k(τ)` (Fx6 → доли) при τ = %s (τ ≥ 384 — стартовое знание, участок Б)" % ", ".join(map(str, taus)),
+          "", "| tier | Y | U |", "|---|---|---|"]
+    for k in sorted(t["Y"]):
+        L.append("| %s | %s | %s |" % (k, " / ".join(fmt(t["Y"][k][x] / FX, 3) for x in taus if x < len(t["Y"][k])),
+                                       " / ".join(fmt(t["U"][k][x] / FX, 3) for x in taus if x < len(t["U"][k]))))
+    L += ["", "### `L_P`: `T_design[g]` (мес.), `ρ[g]` (Fx6 raw)", "",
+          "- T_design: %s" % ", ".join("G%s %s" % (g, fmt(v)) for g, v in sorted(t["T_design"].items())),
+          "- ρ: %s" % ", ".join("G%s %s" % (g, fmt(v)) for g, v in sorted(t["rho"].items())), ""]
+    return "\n".join(L) + "\n"
+
 
 def calib_header_check(d, cfg):
     c = cfg["calib"]
@@ -1532,18 +2097,21 @@ def calib_tables(d, cfg):
             gt[r["run"]][(r["actor"], int(r["gen"]))] = (_oi(r["t_req"]), _oi(r["t_first_unit"]))
     rids = sorted(runs, key=lambda x: int(runs[x]["seed"]))
     nm = cfg["n_months"]
+    sk = -nm      # t_known of start knowledge (spec §6.1 v0.24 r2 erratum): CSV -1 -> -384 in every table
+
+    def tko(v):
+        return None if v is None else (sk if v < 0 else v)
     out = {"seeds": len(rids), "lk": {}, "delta": {}, "Y": {}, "U": {}, "T_design": {}, "rho": {}}
     for a in cfg["actors"]:
         for g_s, app in c["app_nodes"].items():
             g = int(g_s)
             vals, cens, start = [], 0, 0
             for rid in rids:
-                tk = nt[rid].get((a, app), (None,))[0]
+                tk = tko(nt[rid].get((a, app), (None,))[0])
                 if tk is None:
                     cens += 1
-                elif tk < 0:
-                    start += 1
                 else:
+                    start += tk == sk
                     vals.append(tk)
             n = len(rids)
             m = sum(vals) / len(vals) if vals else None
@@ -1558,16 +2126,17 @@ def calib_tables(d, cfg):
                     continue
                 diffs, ncens = [], 0
                 for rid in rids:
-                    tk = nt[rid].get((a, nd), (None,))[0]
-                    ta = nt[rid].get((a, app), (None,))[0]
+                    tk = tko(nt[rid].get((a, nd), (None,))[0])
+                    ta = tko(nt[rid].get((a, app), (None,))[0])
                     if tk is None:
                         ncens += 1
-                    elif tk >= 0 and ta is not None and ta >= 0:
+                    elif ta is not None:
                         diffs.append(tk - ta)
                 never = ncens > c["cens_never_share"] * len(rids)
                 out["delta"]["%s:%d" % (a, nd)] = {"never": never, "delta": None if never else median_low(diffs),
                                                     "n": len(diffs)}
-    # Y_k, U_k from prc_month
+    # Y_k, U_k from prc_month on every integer tau 0..2*384-1: part A (known in the horizon) tau = t - t_known,
+    # part B (start knowledge) tau = t + 384 (spec §6.1 v0.24 r2)
     curves = collections.defaultdict(lambda: collections.defaultdict(lambda: ([], [])))
     path = os.path.join(d, "prc_month.csv")
     with open(path, newline="", encoding="utf-8") as f:
@@ -1579,24 +2148,49 @@ def calib_tables(d, cfg):
             if r["run"] not in runs:
                 continue
             nd = int(r["node"])
-            tk = nt[r["run"]].get((r["actor"], nd), (None,))[0]
-            if tk is None or tk < 0:
+            tk = tko(nt[r["run"]].get((r["actor"], nd), (None,))[0])
+            if tk is None:
                 continue
             tau = int(r["t"]) - tk
-            if tau < 0:
+            if tau < 0 or int(r["known"]) == 0:
                 continue
             k = NODES[nd][2]
             ys, us = curves[k][tau]
             ys.append(int(r["yield"]))
             us.append(int(r["ucm"]))
+    tsk = {}
     for k, byt in sorted(curves.items()):
-        ylist, ulist, ly, lu = [], [], 0, FX
-        for tau in range(nm):
-            if tau in byt:
-                ly, lu = median_low(byt[tau][0]), median_low(byt[tau][1])
-            ylist.append(ly)
-            ulist.append(lu)
-        out["Y"][str(k)], out["U"][str(k)] = ylist, ulist
+        parts = {}
+        for lo in (0, nm):
+            taus = [x for x in range(lo, lo + nm) if x in byt]
+            if not taus:
+                parts[lo] = None
+                continue
+            ys, us = [], []
+            ly, lu = median_low(byt[taus[0]][0]), median_low(byt[taus[0]][1])   # before the first observation: its value [Предп.]
+            for tau in range(lo, lo + nm):
+                if tau in byt:
+                    ly, lu = median_low(byt[tau][0]), median_low(byt[tau][1])
+                ys.append(ly)
+                us.append(lu)
+            parts[lo] = (ys, us)
+        a_, b_ = parts[0], parts[nm]
+        if a_ is None:
+            a_ = ([b_[0][0]] * nm, [b_[1][0]] * nm)
+        if b_ is None:
+            b_ = ([a_[0][0]] * nm, [a_[1][0]] * nm)   # spec: a part without observations takes the first value of the other
+        out["Y"][str(k)], out["U"][str(k)] = a_[0] + b_[0], a_[1] + b_[1]
+        tsk[str(k)] = {"obs_A": sum(len(byt[x][0]) for x in byt if x < nm), "obs_B": sum(len(byt[x][0]) for x in byt if x >= nm),
+                       "taus_A": sum(1 for x in byt if x < nm), "taus_B": sum(1 for x in byt if x >= nm),
+                       "Y384": out["Y"][str(k)][nm], "B_all_positive": parts[nm] is not None and min(parts[nm][0]) > 0}
+    # T-SK (spec §6.1 v0.24 r2): every tier with a start PRC at USA or GBR has Y_k > 0 on all of part B and Y_k(384) >= 0.7
+    start_tiers = set()
+    for rid in rids:
+        for (a, nd), x in nt[rid].items():
+            if a in ("USA", "GBR") and NODES.get(nd, ("",))[0] == "PRC" and x[0] is not None and x[0] < 0:
+                start_tiers.add(str(NODES[nd][2]))
+    tsk_bad = [k for k in sorted(start_tiers) if k not in tsk or not tsk[k]["B_all_positive"] or tsk[k]["Y384"] < 700000]
+    tsk_check = {"tiers": tsk, "start_tiers": sorted(start_tiers), "failed_tiers": tsk_bad, "ok": not tsk_bad}
     for g in range(1, 5):
         xs = [tf - tr for rid in rids for a in cfg["actors"]
               for (tr, tf) in [gt[rid].get((a, g), (None, None))] if tr is not None and tf is not None and tr >= 0]
@@ -1610,21 +2204,29 @@ def calib_tables(d, cfg):
         out["rho"][str(g)] = median_low(xs)
     # C2, C4
     def mast(nodes):
+        # spec §8.2 C2: censored (t_first, no t_07 by 383) = +inf, lower median; pairs mastered at the start excluded
         xs, cens = [], 0
         for rid in rids:
             for a in cfg["actors"]:
                 for nd in nodes:
                     x = nt[rid].get((a, nd))
-                    if not x or x[1] is None or x[1] < 0:
+                    if not x or x[1] is None or x[1] < 0 or (x[2] is not None and x[2] < 0):
                         continue
                     if x[2] is None:
                         cens += 1
-                    xs.append(((x[2] if x[2] is not None else nm) - x[1]) / 12.0)
-        return {"p50_years": quantile(xs, 0.5), "n": len(xs), "right_censored": cens}
+                        xs.append(math.inf)
+                    else:
+                        xs.append((x[2] - x[1]) / 12.0)
+        p50 = median_low(xs)
+        share_c = cens / len(xs) if xs else None
+        return {"p50_years": p50, "n": len(xs), "right_censored": cens, "censored_share": share_c,
+                "d_is_1": not xs or share_c > 0.5}
     c2 = {"tier4": mast(c["c2_tier4"]), "tier5": mast(c["c2_tier5"])}
     t4, t5 = c2["tier4"]["p50_years"], c2["tier5"]["p50_years"]
     c2["tier4_in_corridor"] = t4 is not None and c["c2_years"][0] <= t4 <= c["c2_years"][1]
-    c2["tier5_longer"] = t4 is not None and t5 is not None and t5 > t4
+    # "tier-5 longer" with an empty or fully censored tier-5 pool is not met (spec §8.2 C2)
+    full5 = c2["tier5"]["n"] == 0 or c2["tier5"]["right_censored"] == c2["tier5"]["n"]
+    c2["tier5_longer"] = (not full5) and t4 is not None and t5 is not None and t5 > t4
     c4 = {}
     for g_s, (y0, y1) in c["c4_windows"].items():
         hit = 0
@@ -1635,8 +2237,17 @@ def calib_tables(d, cfg):
                 hit += 1
         c4[g_s] = {"share": hit / len(rids) if rids else None, "ok": bool(rids) and hit / len(rids) >= c["c4_min_share"]}
     tables = {k: out[k] for k in ("lk", "delta", "Y", "U", "T_design", "rho")}
+    # P0 of the calibration build (format §5): A40 L-O0/L-C0 and the A39 ledger invariants on calibration seeds
+    D = Data()
+    for rid, r in runs.items():
+        D.runs[rid] = {"run": rid, "series": "calib-P0", "seed": int(r["seed"]), "threads": int(r["threads"]),
+                       "status": "ok", "golden": r["golden_hash"]}
+    load_v05(D, d, "")
+    c0 = copy.deepcopy(cfg)
+    c0["a40"]["main_series"] = ["calib-P0"]     # L-O0 / L-C0 on calibration seeds (format §5: P0, not leadership)
+    p0 = {"a40": a40_prints(D, c0), "ledger": ledger_prints(D, c0)}
     return {"control_tables": tables, "control_tables_hash": sha256_text(canonical_json(jsonable(tables))),
-            "seeds": out["seeds"], "C2": c2, "C4": c4}
+            "seeds": out["seeds"], "C2": c2, "C4": c4, "p0": p0, "T_SK": tsk_check}
 
 
 # ---------------------------------------------------------------- self-test (synthetic data with known truth)
@@ -1969,6 +2580,7 @@ def main(argv=None):
     ap.add_argument("--out")
     ap.add_argument("--json")
     ap.add_argument("--calib")
+    ap.add_argument("--c1", help="c1_stand.csv (format §6): C1a, C1b, C1d, C1e and the Wright P0 check")
     ap.add_argument("--dump-config", action="store_true")
     ap.add_argument("--selftest", action="store_true")
     ap.add_argument("--quick", action="store_true", help="selftest with 400 resamples")
@@ -1993,12 +2605,27 @@ def main(argv=None):
             sys.stderr.write("error: config: %s\n" % e)
             return 2
     try:
-        if a.calib:
+        if a.c1:
+            r = c1_stand(a.c1, cfg)
+            text = json.dumps(jsonable(r), indent=1, sort_keys=True) + "\n"
+            md = "# C1 по `c1_stand.csv` (спец. §8.2 п.1; формат §6)\n\n" + "".join(
+                "- %s: %s → %s\n" % (k, fmt(r[k]["value"]), "в коридоре" if r[k]["ok"] else "вне коридора")
+                for k in ("C1a", "C1b", "C1d", "C1e")) + "- d_C1e: %s\n- Wright P0 (`asm_over_floor_drop` MATURE 15–30%%): %s %s\n- плечи: %s\n" % (
+                fmt(r["C1e"]["d"]), "OK" if r["wright_P0"]["ok"] else "НАРУШЕНИЕ", [round(x, 4) for x in r["wright_P0"]["per_doubling"]],
+                ", ".join(r["arms"]))
+        elif a.calib:
             r = calib_tables(a.calib, cfg)
             text = json.dumps(jsonable(r), indent=1, sort_keys=True) + "\n"
             md = ("# Калибровочная сборка: таблицы контролей §6.1, C2, C4\n\n- control_tables_hash: `%s`\n- seeds: %d\n"
                   "- C2: %s\n- C4: %s\n" % (r["control_tables_hash"], r["seeds"], json.dumps(jsonable(r["C2"]), sort_keys=True),
                                            json.dumps(jsonable(r["C4"]), sort_keys=True)))
+            md += render_control_tables(r["control_tables"], cfg)
+            ts = r["T_SK"]
+            md += "\n## Проверка T-SK (§6.1 v0.24 r2)\n\n- tier со стартовым PRC у USA/GBR: %s; провал: %s → %s\n" % (
+                ", ".join(ts["start_tiers"]) or "—", ", ".join(ts["failed_tiers"]) or "нет", "OK" if ts["ok"] else "ОШИБКА ТАБЛИЦ")
+            md += "".join("- tier %s: наблюдений А %d (τ %d), Б %d (τ %d); Y(384) %s\n" % (
+                k, v["obs_A"], v["taus_A"], v["obs_B"], v["taus_B"], fmt(v["Y384"] / FX, 3)) for k, v in sorted(ts["tiers"].items()))
+            md += "\n".join(render_p0({"p0": r["p0"]}, cfg)) + "\n"
         else:
             if not a.dirs:
                 ap.error("input dir(s) required")

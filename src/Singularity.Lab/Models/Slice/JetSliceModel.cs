@@ -170,6 +170,7 @@ public sealed class JetSliceModel : ISessionModel
             months++;
         ForceProxy? force = _p.ForceDivisor > 0 ? new ForceProxy(s, _p.ForceDivisor) : null;
         observer.Start(s.View);
+        int logSeen = 0;
         for (long t = 0; t < months; t++)
         {
             // The state the compute of month t reads (after any command tick of the FORCE proxy), then the monthly tick.
@@ -183,7 +184,7 @@ public sealed class JetSliceModel : ISessionModel
                 int before = force.Sent;
                 force.Issue(t);
                 if (force.Sent != before)
-                    ForcedStarts(s, observer, t);
+                    logSeen = ForcedStarts(s, observer, t, logSeen);
             }
         }
         s.StepTo(_ticks);
@@ -202,12 +203,18 @@ public sealed class JetSliceModel : ISessionModel
     }
 
     // The forced starts the FORCE proxy has sent, read from the session's command log (the proxy keeps its set to itself): a40.force (format §4.9).
-    private static void ForcedStarts(SliceSession s, SliceObserver observer, long month)
+    // Only the entries after the last call are handled (DEBT-0032); the log holds only external commands (the proxy's), at most one start per slot,
+    // so its text stays small. Called only in months when the proxy sent something.
+    private static int ForcedStarts(SliceSession s, SliceObserver observer, long month, int seen)
     {
+        int n = 0;
         foreach (LoggedCommand c in CommandCodec.DecodeLog(s.CommandLog))
         {
+            if (n++ < seen)
+                continue;
             if (c.Command is StartSeries { Force: true } start)
                 observer.ForcedStart(start.Actor, start.Design, month);
         }
+        return n;
     }
 }

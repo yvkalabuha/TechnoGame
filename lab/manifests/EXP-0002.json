@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "experiment": "EXP-0002",
-  "description": "TEMPLATE (TASK-0044, T10), not frozen: HYP-0002 main run of the jet slice, spec slice-jet-aviation.md v0.25 §7; model JetSlice, CSV slice-csv-format.md v0.5 r6. Absent until T12: layer/L_K (CONTROL_TABLES format), layer/L_C and layer/L_P (control tables; Session refuses Lc/Lp), COMP_V010 (no v0.10 paths in Core). T12 freezes.",
+  "description": "TEMPLATE (TASK-0044, T10), not frozen: HYP-0002 main run of the jet slice, spec slice-jet-aviation.md v0.25 §7; model JetSlice, CSV slice-csv-format.md v0.5 r7. Absent until T12: layer/L_K (CONTROL_TABLES format), layer/L_C and layer/L_P (control tables; Session refuses Lc/Lp), COMP_V010 (no v0.10 paths in Core). T12 freezes.",
   "model": "JetSlice",
   "ticks": 11688,
   "chunk_size": 1,
@@ -97,7 +97,7 @@
   ],
   "meta": {
     "slice_spec": "docs/simulation/slice-jet-aviation.md v0.25",
-    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r6",
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r7",
     "hypothesis": "HYP-0002",
     "decision_rule": "spec §7, #45, #48",
     "scenario_hash": null,

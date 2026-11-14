@@ -68,9 +68,10 @@ internal sealed class SliceObserver
     // licences
     private readonly List<LicenceRow> _licences = new();
     private readonly LicenceRow?[] _openLicence;
+    private readonly LicenceRow?[] _lapsedLicence;   // the last licence that lapsed by Active 1 -> 0 and was not replaced (DEBT-0032)
     private int _req;
     // counters for run.json (format §4.9, §4.7)
-    private long _closeIdleOtherReason, _wAfterNMonths, _closesWithoutLine, _linesWithoutMoney;
+    private long _closeIdleOtherReason, _wAfterNMonths, _closesWithoutLine, _linesWithoutMoney, _licResumes;
 
     private sealed class YearRow
     {
@@ -148,6 +149,7 @@ internal sealed class SliceObserver
         _qcRank = new int?[_nA];
         _qcRankMonth = new long[_nA];
         _openLicence = new LicenceRow?[_nA];
+        _lapsedLicence = new LicenceRow?[_nA];
     }
 
     private bool Has(string table) => _table.ContainsKey(table);
@@ -507,6 +509,9 @@ internal sealed class SliceObserver
         {
             if (d.Stage == DesignStage.Series && _tLaunch[a, d.Design] is null)
                 _tLaunch[a, d.Design] = t;
+            // _tLaunch and _forcedSent are per slot: Core never reuses a slot (ProductsLayout, contract §3.1), so a launched slot never returns to П/О.
+            if (_tLaunch[a, d.Design] is not null && d.Stage is DesignStage.None or DesignStage.Project or DesignStage.Prototype)
+                throw new SliceFormatException($"Month {t} actor {_ids[a]}: design slot {d.Design} was in С and is now {d.Stage}: a reused slot breaks t_launch and force (§4.9).");
             if (d.Gen < 1 || d.Gen > _nG)
                 continue;
             int gi = d.Gen - 1;
@@ -783,22 +788,57 @@ internal sealed class SliceObserver
         for (int a = 0; a < _nA; a++)
         {
             LicenceView now = v.Actors[a].Licence;
-            // A lapse (A43.4) is the 1 -> 0 change of LicenceView.Active (format §11 п. 7); it is seen in the post of month t, so the licence ends at t + 1.
-            if (_openLicence[a] is LicenceRow open && (buyers.Contains(a) || !now.Active))
+            bool bought = buyers.Contains(a);
+            switch (Track(_openLicence[a] is not null, _lapsedLicence[a] is not null, bought, now.Active))
             {
-                long end = buyers.Contains(a) ? t : t + 1;
-                open.End = end;
-                _openLicence[a] = null;
-                Row("events", I(end), "LIC_END", _ids[a], _ids[open.Seller], I(end - open.Start));
+                case LicenceStep.End:
+                case LicenceStep.Replace:
+                {
+                    // A lapse (A43.4) is the 1 -> 0 change of LicenceView.Active (format §11 п. 7); it is seen in the post of month t, so the licence ends at t + 1.
+                    LicenceRow open = _openLicence[a]!;
+                    long end = bought ? t : t + 1;
+                    open.End = end;
+                    _openLicence[a] = null;
+                    _lapsedLicence[a] = bought ? null : open;
+                    Row("events", I(end), "LIC_END", _ids[a], _ids[open.Seller], I(end - open.Start));
+                    break;
+                }
+                case LicenceStep.Resume:
+                {
+                    // Active 0 -> 1 without a purchase (format v0.5 r7 §4.7): EngineGen fell back to the licence generation (a retired engine series),
+                    // so the lapsed licence acts again from t + 1. The licences.csv row is reopened: t_end is the end of its last active period.
+                    LicenceRow l = _lapsedLicence[a]!;
+                    if (now.Seller != l.Seller || now.Gen != l.Gen || now.Start != l.Start)
+                        throw new SliceFormatException($"Month {t} actor {_ids[a]}: the licence became active again without a purchase but is not the lapsed one (§4.7).");
+                    l.End = null;
+                    _openLicence[a] = l;
+                    _lapsedLicence[a] = null;
+                    _licResumes++;
+                    Row("events", I(t + 1), "LIC_RESUME", _ids[a], _ids[l.Seller], I(t + 1 - l.Start));
+                    break;
+                }
             }
-            if (!buyers.Contains(a))
+            if (!bought)
                 continue;
+            _lapsedLicence[a] = null;
             var row = new LicenceRow { T = t, Start = now.Start, Seller = now.Seller, Buyer = a, Gen = now.Gen, Profile = v.Actors[a].Profile, Price = price[a]!.Value };
             _licences.Add(row);
             _openLicence[a] = row;
             Row("events", I(t), "LIC_BUY", _ids[a], _ids[now.Seller], F(row.Price));
         }
     }
+
+    internal enum LicenceStep { None, End, Replace, Resume }
+
+    /// <summary>
+    /// The licence transition of one actor in one month (format §4.7, §4.14, §11 п. 7): an open licence ends by a new purchase (<c>Replace</c>) or by
+    /// the 1 -> 0 change of <c>Active</c> (<c>End</c>); a lapsed one (not replaced) that is <c>Active</c> again without a purchase resumes (DEBT-0032).
+    /// </summary>
+    internal static LicenceStep Track(bool open, bool lapsed, bool bought, bool active) =>
+        open && bought ? LicenceStep.Replace
+        : open && !active ? LicenceStep.End
+        : !open && lapsed && !bought && active ? LicenceStep.Resume
+        : LicenceStep.None;
 
     // ---------------------------------------------------------------- requirements
 
@@ -973,5 +1013,6 @@ internal sealed class SliceObserver
         new("w_after_n_actor_months", I(_wAfterNMonths)),
         new("closes_of_designs_not_lines", I(_closesWithoutLine)),
         new("lines_without_step7_money", I(_linesWithoutMoney)),
+        new("lic_resumes", I(_licResumes)),
     ];
 }
