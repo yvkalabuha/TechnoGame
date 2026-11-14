@@ -9,19 +9,22 @@ namespace Singularity.Architecture.Tests;
 /// <c>ProductsLayout.SkilledRequester(line, cluster)</c> may name the skilled category. Instead of tracing data flow, the production code
 /// has one factory per category (<c>ProductsLayout.SkilledRequest</c>, <c>EngineerRequest</c>) and this test closes every other way to get a request:
 /// no Core method but the factories calls the <see cref="WorkforceRequest"/> constructor, an init setter (what a <c>with</c> expression compiles to)
-/// or <c>initobj</c> (<c>default</c>, <c>new()</c>); the factories are called only from the listed methods.
+/// or <c>initobj</c> (<c>default</c>, <c>new()</c>); the factories are called only from the listed methods. <c>ReserveSkilled</c> takes the line and one hours value per cluster, so a caller names no cluster or requester id.
 /// <c>WorkforceRequestFactoryTests</c> (Core.Tests) pins what the factories build.
 /// </summary>
 public class WorkforceRequestSourceTests
 {
     private static readonly Type[] Core = [.. typeof(IndustrySystem).Assembly.GetTypes()];
 
-    private static readonly string[] Factories = [nameof(ProductsLayout.SkilledRequest), nameof(ProductsLayout.EngineerRequest)];
+    // SkilledRequest is private: only ReserveSkilled builds skilled requests, from the cluster index and SkilledRequester.
+    private static readonly string[] Factories = ["SkilledRequest", nameof(ProductsLayout.EngineerRequest), nameof(ProductsLayout.ReserveSkilled)];
+    private static readonly string[] Builders = ["SkilledRequest", nameof(ProductsLayout.EngineerRequest)];
 
     // Owner type and method (a closure's «<Method>b__» counts as Method) that may call each factory.
     private static readonly string[] CallSites =
     [
-        "SkilledRequest:ProductsSystem.Produce",
+        "SkilledRequest:ProductsLayout.ReserveSkilled",
+        "ReserveSkilled:ProductsSystem.Produce",
         "EngineerRequest:ProductsSystem.BureausRequestOrIdle",
         "EngineerRequest:ProductsSystem.DetectDefects",
         "EngineerRequest:PolicySystem.Compute",
@@ -36,7 +39,7 @@ public class WorkforceRequestSourceTests
 
     private static List<MethodBase> Creators(IEnumerable<Type> types) => [.. types.SelectMany(Methods).Where(Makes)];
 
-    private static bool IsFactory(MethodBase m) => m.DeclaringType == typeof(ProductsLayout) && Factories.Contains(m.Name);
+    private static bool IsFactory(MethodBase m) => m.DeclaringType == typeof(ProductsLayout) && Builders.Contains(m.Name);
 
     private static string Site(string factory, MethodBase m)
     {
@@ -60,7 +63,7 @@ public class WorkforceRequestSourceTests
     {
         // Guards against a vacuous scan: both factories are seen, and the callers go through them.
         List<MethodBase> creators = Creators(Core);
-        Assert.Equal([.. Factories.Order(StringComparer.Ordinal)], [.. creators.Select(m => m.Name).Order(StringComparer.Ordinal)]);
+        Assert.Equal([.. Builders.Order(StringComparer.Ordinal)], [.. creators.Select(m => m.Name).Order(StringComparer.Ordinal)]);
         Assert.Empty(Violations(Core));
     }
 
@@ -71,7 +74,7 @@ public class WorkforceRequestSourceTests
 
     private sealed class FactoryCaller(ProductsLayout l)
     {
-        public WorkforceRequest Skilled() => l.SkilledRequest(0, 99, 99, 1);
+        public void Skilled(IndustryMailbox box) => l.ReserveSkilled(box, 0, 0, 99, new long[3]);
 
         public WorkforceRequest Engineer() => ProductsLayout.EngineerRequest(0, 3, 1);
     }

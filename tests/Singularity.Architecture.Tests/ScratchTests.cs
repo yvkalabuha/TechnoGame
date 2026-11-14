@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Reflection.Emit;
 using Singularity.Core;
 using Singularity.Core.Simulation;
 using Singularity.Kernel;
@@ -84,8 +85,12 @@ public class ScratchTests
         new[] { type }.Concat(type.GetNestedTypes(IlScanner.AllDeclared))
             .SelectMany(t => t.GetMethods(IlScanner.AllDeclared).Cast<MethodBase>().Concat(t.GetConstructors(IlScanner.AllDeclared)));
 
+    // An address of a scalar field is a write path (Interlocked.Increment(ref _n)). Struct fields are not counted: a safe struct has only
+    // readonly fields, so an address of it cannot change it, and an unsafe one is reported by IsSafeType.
+    private static bool IsAddressOfScalar(OpCode op, FieldInfo f) => (op == OpCodes.Ldflda || op == OpCodes.Ldsflda) && (f.FieldType.IsPrimitive || f.FieldType.IsEnum);
+
     private static IEnumerable<MethodBase> Writers(Type type, FieldInfo f) =>
-        MethodsWithNested(type).Where(m => IlScanner.Read(m).Any(i => i.Operand is FieldInfo x && (i.OpCode == System.Reflection.Emit.OpCodes.Stfld || i.OpCode == System.Reflection.Emit.OpCodes.Stsfld)
+        MethodsWithNested(type).Where(m => IlScanner.Read(m).Any(i => i.Operand is FieldInfo x && (i.OpCode == OpCodes.Stfld || i.OpCode == OpCodes.Stsfld || IsAddressOfScalar(i.OpCode, x))
             && x.MetadataToken == f.MetadataToken && x.Module == f.Module));
 
     /// <summary>Fields of <paramref name="types"/> that break the rules of the scratch contract.</summary>
@@ -176,6 +181,7 @@ public class ScratchTests
         Assert.Contains(found, f => f.StartsWith("MutantSystem.Hashed") && f.Contains("hashed"));
         Assert.Contains(found, f => f.StartsWith("MutantSystem.Buffer") && f.Contains("private"));
         Assert.Contains(found, f => f.StartsWith("MutantSystem._counter") && f.Contains("written in MutantSystem.Compute")); // a mutable scalar
+        Assert.Contains(found, f => f.StartsWith("MutantSystem._viaRef") && f.Contains("written in")); // a write through a field address
         Assert.Contains(found, f => f.StartsWith("MutantSystem._blob") && f.Contains("[Scratch]")); // a mutable custom object
         Assert.Contains(found, f => f.Contains("Total") && f.Contains("written in")); // an auto-property backing field
     }
@@ -190,13 +196,14 @@ internal sealed class MutantSystem : ITickSystem
     [Scratch] internal readonly LongColumn[] Hashed = [];
     [Scratch] private readonly int[] _hidden = new int[2];
     private int _counter;
+    private int _viaRef;
     private readonly Blob _blob = new();
     public int Total { get; set; }
 
     public int SystemId => 0;
     public long[] Peek() => Buffer;
     public int[] Own() => _hidden;
-    public void Compute(in TickContext context, int chunk, int rowStart, int rowEnd) { _counter++; Total += _blob.N; }
+    public void Compute(in TickContext context, int chunk, int rowStart, int rowEnd) { _counter++; Total += _blob.N; Interlocked.Increment(ref _viaRef); }
     public void Merge(in TickContext context, int chunkCount) { }
     public void Post(in TickContext context) { }
 }

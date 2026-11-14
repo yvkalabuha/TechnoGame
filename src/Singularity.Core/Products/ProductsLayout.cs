@@ -154,9 +154,24 @@ public sealed class ProductsLayout
 
     /// <summary>
     /// The only way to ask for the skilled category (spec §3.5 A26: the grants are read by <c>requester_id mod C</c>, so the id must be
-    /// <see cref="SkilledRequester"/>). The architecture test allows no other creator of a request than this and <see cref="EngineerRequest"/>.
+    /// <see cref="SkilledRequester"/>). One request per cluster with n = ⌈Σ v_p / h_pm⌉: the cluster comes from the index of
+    /// <paramref name="clusterHours"/> and the id from <see cref="SkilledRequester"/>, so a caller has no free cluster or id to get wrong.
     /// </summary>
-    public WorkforceRequest SkilledRequest(int site, int line, int cluster, long n) => new(site, SkilledCategory, SkilledRequester(line, cluster), n);
+    public void ReserveSkilled(IndustryMailbox box, int chunk, int site, int line, ReadOnlySpan<long> clusterHours)
+    {
+        if (clusterHours.Length != ClusterCount)
+            throw new ArgumentException($"One hours value per cluster ({ClusterCount}) is required.", nameof(clusterHours));
+        ArgumentOutOfRangeException.ThrowIfNegative(line);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(line, Designs);
+        for (int c = 0; c < ClusterCount; c++)
+        {
+            long n = ProductsMath.People(Fx6.FromRaw(clusterHours[c]), HPm);
+            if (n > 0)
+                box.ReserveWorkforce(chunk, SkilledRequest(site, line, c, n));
+        }
+    }
+
+    private WorkforceRequest SkilledRequest(int site, int line, int cluster, long n) => new(site, SkilledCategory, SkilledRequester(line, cluster), n);
 
     /// <summary>A request for engineers (bureaus, fixes, the quality programme): any requester id, the category is fixed.</summary>
     public static WorkforceRequest EngineerRequest(int site, int requesterId, long n) => new(site, EngineerCategory, requesterId, n);

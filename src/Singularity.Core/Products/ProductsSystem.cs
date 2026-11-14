@@ -1335,12 +1335,7 @@ public sealed partial class ProductsSystem : ITickSystem
             _mailbox.ReportOutput(chunk, new OutputReport(a, p, units, hours));
             clusterHours[_l.ProcCluster[k]] += hours.Raw;
         }
-        for (int c = 0; c < _l.ClusterCount; c++)
-        {
-            long n = ProductsMath.People(Fx6.FromRaw(clusterHours[c]), _l.HPm);
-            if (n > 0)
-                _mailbox.ReserveWorkforce(chunk, _l.SkilledRequest(a, d, c, n));
-        }
+        _l.ReserveSkilled(_mailbox, chunk, a, d, clusterHours);
         LongColumn col = _cohort[d * _y + y];
         col.Next[a] = (Fx6.FromRaw(col.Next[a]) + r).Raw;
         _built[d].Next[a] = 1;
