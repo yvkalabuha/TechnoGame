@@ -118,3 +118,7 @@
 | [RR-0008](../docs/research/RR-0008-technology-space-architecture.md) | DRAFT | Архитектура технологического пространства |
 | [RR-0009](../docs/research/RR-0009-component-evolution-analysis.md) | DRAFT | Эволюция компонентов: анализ брифа владельца против контракта слоёв |
 | [RR-0010](../docs/research/RR-0010-supply-chains-clusters.md) | DRAFT | Цепочки поставок и промышленные кластеры: анализ пробелов и варианты модели |
+| [RR-0011](../docs/research/RR-0011-cross-system-interaction-map.md) | DRAFT | Карта сквозных взаимосвязей подсистем |
+| [RR-0012](../docs/research/RR-0012-personalities-institutions-national-projects.md) | DRAFT | Личности, институты, национальные проекты |
+| [RR-0013](../docs/research/RR-0013-space-and-nuclear-race.md) | DRAFT | Космическая и ядерная гонка |
+| [RR-0014](../docs/research/RR-0014-resources-trade-export-control.md) | DRAFT | Ресурсы, торговля, экспортный контроль |
