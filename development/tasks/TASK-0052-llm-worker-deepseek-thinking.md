@@ -1,7 +1,7 @@
 ---
 id: TASK-0052
 title: "llm_worker: режим размышления DeepSeek для gate и review"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: developer
@@ -42,8 +42,8 @@ DeepSeek в роли третьего голоса gate и запасного в
 - [x] Ledger не превышает лимиты; траты записаны.
 
 ## REVIEW
-- [ ] Code review (reviewer)
-- [ ] Второе ревью (codex)
+- [x] Code review (reviewer) — accept 2026-11-14; low → DEBT-0035
+- [x] Второе ревью (codex) — accept (раунд 2); medium → DEBT-0035
 
 ## Результат
 **Сделано (developer, 2026-11-14), не закоммичено.**

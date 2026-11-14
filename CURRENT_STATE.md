@@ -11,7 +11,6 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0052 [APPROVED] llm_worker: режим размышления DeepSeek для gate и review (developer)
 - TASK-0054 [APPROVED] Подготовка T12: ожидания A40, таблицы контролей L_C/L_P, стенд C1 на полной системе (simulation-engineer)
 <!-- registry:active:end -->
 
