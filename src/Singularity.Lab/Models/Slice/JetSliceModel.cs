@@ -16,7 +16,7 @@ namespace Singularity.Lab.Models.Slice;
 public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactory
 {
     /// <summary>The version of the Session surface this model was written against (SLICE_COMPOSITION §13.7).</summary>
-    public const int SurfaceVersion = 2;
+    public const int SurfaceVersion = 3;
 
     public string Id => calibration ? "JetSliceCalib" : "JetSlice";
 

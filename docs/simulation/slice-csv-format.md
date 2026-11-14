@@ -1,13 +1,16 @@
 # Формат CSV и манифестов EXP-0002 (срез «реактивная авиация»; `lab/analysis/exp0002.py`)
 
-> Статус: черновик **v0.5 r4** (simulation-engineer, 2026-11-14, TASK-0044 этап 2; r4 — ревью Codex r4: `COEXIST_MONEY` по букве спец., `a40_c_months.training`, `lic_end_unobservable`; r1 — ось `k_diff` ключа `GRID`, решение #190; r2 — пара compose месяца 0, TASK-0047; r3 — `COEXIST_MONEY` по `Bind`, линии без строки следа денег, определения Lab) под спецификацию `slice-jet-aviation.md` **v0.25** (дальше «спец. §N») и поверхность read views `docs/architecture/SLICE_COMPOSITION.md` §12–§13 (r4, дальше «SC §12.N», «SC §13.N»; `TestApiVersion = 2`). v0.4, v0.3 и v0.2 — в истории git.
+> Статус: черновик **v0.5 r4** (simulation-engineer, 2026-11-14, TASK-0044 этап 2; r4 — ревью Codex r4: `COEXIST_MONEY` по букве спец., `a40_c_months.training`, `lic_end_unobservable`; r1 — ось `k_diff` ключа `GRID`, решение #190; r2 — пара compose месяца 0, TASK-0047; r3 — `COEXIST_MONEY` по `Bind`, линии без строки следа денег, определения Lab) под спецификацию `slice-jet-aviation.md` **v0.25** (дальше «спец. §N») и поверхность read views `docs/architecture/SLICE_COMPOSITION.md` §12–§13 (r4, дальше «SC §12.N», «SC §13.N»; `TestApiVersion = 3`; r5 — `LIC_END` по `LicenceView.Active`). v0.4, v0.3 и v0.2 — в истории git.
 > Соглашения унаследованы от `exp0001-csv-format.md` и Lab (ADR-0008, `src/Singularity.Lab/RunExecutor.cs`, `MatrixRunner.cs`).
 > Модели `JetSlice` и `JetSliceCalib` — `src/Singularity.Lab/Models/Slice/` (T10 этап 2): читают только `SliceSession` и его views по имени свойств. Проверки — `Singularity.Lab selftest` (`SliceChecks`), малая матрица `lab/manifests/EXP-0002-t10-smoke.json`, серия `det` (`EXP-0002-det.json`).
 
 ## Изменения v0.5 r4 (ревью Codex r4, TASK-0044)
 - **`COEXIST_MONEY`** (§4.16 (б)) — в каждом месяце `left = 0`, `training = 0` и `Bind = Money` (буква спец. A40 и признак допуска); одно `Bind = Money` r3 пускало `left > 0` и `T_a > 0`.
 - `a40_c_months` + колонка `training` (§4.10).
-- `model_info.lic_end_unobservable` (§9.1). Ненаблюдаемое истечение лицензии оставлено открытым вопросом §11 п. 7: нужно `LicenceView.Active` в Session.
+- `model_info.lic_end_unobservable` (§9.1) — снят в r5 (см. ниже).
+
+## Изменения v0.5 r5 (TASK-0044)
+- Session `test_api_version` = 3: `LicenceView.Active` = `SliceWorld.LicenceActive(a)` (read view, не состояние; golden и хеши не меняются). `LIC_END` = переход `Active` 1 → 0 (§11 п. 7); счётчики `lic_end_lapses_inferred` и `lic_end_unobservable` удалены, `LapseTracker` удалён; пустой `t_end` снова значит «активна до горизонта».
 
 ## Изменения v0.5 r3 (TASK-0044 этап 2)
 - **`COEXIST_MONEY`** (§4.16 (б)) — по предложению SC §13.3 r6: в каждом из `T_ab` месяцев у актора две линии, d — `N`, выпуск `rate(d) = 0` и `DesignView.Bind = Money` (шаг 7 ограничил линию деньгами). Прежнее условие `LeftIn = 0 ∧ Training = 0` не отличало «нет денег» от «нет допуска» (у недопущенной линии `Bind = None`).
@@ -29,7 +32,7 @@
 - `events`: + `LIC_REFUSE_MONEY` (`LicenceRefusalView`, SC §13.6).
 - `node_times.t_known`: в `L_C`/`L_P` — из `NodeView.KnownSince`; стартовый узел пишется `−1` (как в main), хотя в Core это `startKnownSince = −384` (спец. §6.1 v0.24 r2 «`t_known` стартового знания»).
 - §2: `layer/L_C`, `layer/L_P` больше не ждут `t_known` (SC §13.2), но ждут таблиц `Y_k`, `U_k`, `T_design`, `ρ` (T12) и ключей `LAYER = LC/LP` — ключи появятся вместе с ними.
-- §9: источники по SC §13.7, `test_api_version` = 2 (тип `PolicyDecisionView.Closes` изменён).
+- §9: источники по SC §13.7, `test_api_version` = 3 (v2: тип `PolicyDecisionView.Closes` изменён; v3: `LicenceView.Active`).
 
 ## Изменения v0.4 (против v0.3; история)
 Основание — разбор пробелов SC §12.6 (решения Orchestrator по TASK-0044 этап 1). Правило: каждая колонка v0.4 исполнима из SC §12 без правки Core; колонка, которую требует текст спец. v0.24, но которой в Core нет, вынесена в §4.15 «Отложено до правки Core» и в CSV **не пишется** (пустые и нулевые колонки-заглушки запрещены).
@@ -283,7 +286,7 @@
 DONE-эксперимент записывает `core_commit`, `data_hash`, `manifest_hash`, seeds, threads, `golden_hash` main (sha256 строк «`seed golden_hash`\n» по возрастанию seed), `outcome`.
 
 ## 9. Источники колонок (read views SC §12.2)
-[Предл.] Lab читает только `SliceSession.Layout`, `View` (после каждого месячного шага), `WhyNot`, `CurrentRequirement` (ADR-0014 п. 5–6; `test_api_version` = 2, SC §13.7). Строка «месяца t» — `View` с `Month = t`; «снимок t» — `View.Inputs` того же снимка; решения ИИ месяца t — `ActorView.Decisions` (SC §12.1); след шага t — `View.Step` того же `View` (не `null` ровно в тике с месячным шагом; в другом тике его не читать, SC §13.9 Р-13-1).
+[Предл.] Lab читает только `SliceSession.Layout`, `View` (после каждого месячного шага), `WhyNot`, `CurrentRequirement` (ADR-0014 п. 5–6; `test_api_version` = 3, SC §13.7). Строка «месяца t» — `View` с `Month = t`; «снимок t» — `View.Inputs` того же снимка; решения ИИ месяца t — `ActorView.Decisions` (SC §12.1); след шага t — `View.Step` того же `View` (не `null` ровно в тике с месячным шагом; в другом тике его не читать, SC §13.9 Р-13-1).
 | Таблица | Источник |
 |---|---|
 | `summary` | `Profile`; `lead*` — `ActorView.Key` каждого месяца; `hash_*` — `StateHash` |
@@ -314,7 +317,7 @@ DONE-эксперимент записывает `core_commit`, `data_hash`, `ma
 | `events DIS` | `t` = `Disruption.Start` нового перебоя, `value` = `End − Start + 1` (границы включительно) |
 | `events QP_START` | `t` = `Quality.Start` (месяц, с которого действует программа; решение — годовой compute t−1); ранг QC — первое звено CAPABILITY `CultureH` с `Dim = QualityControl` в `why_not(actor, CurrentRequirement)` снимка того же годового месяца |
 | `events TRAINING` | строка на месяц t, когда `Quality.TrainingTarget` снимка ≥ 0 и `Inputs.Tooling.TrainingBudget > 0`; `other` = проект, `value` = `T_a` |
-| `events LIC_END`, `licences.t_end` | замена лицензии новой сделкой (`t_end` = t) или **истечение A43.4, выведенное по `LicenceShare`**: у PRC маски была доля `l_lic`, а в post t ни у одного её нет → `t_end` = t + 1 (счётчик `lic_end_lapses_inferred`). Лицензия, ни разу не давшая доли (PRC маски не известны), истечение не печатает — §11 п. 7 |
+| `events LIC_END`, `licences.t_end` | замена лицензии новой сделкой (`t_end` = t) или **истечение A43.4** — переход `LicenceView.Active` 1 → 0 в post t → `t_end` = t + 1 (§11 п. 7) |
 | `a40.t_launch` | первый post t со `Stage = Series`; `−1` — серия на старте |
 | `a40.force` | 1, если прокси FORCE отправил `start_series` с `force` для (актор, проект) после шага месяца f (по `SliceSession.CommandLog`; у прокси набор закрыт) и `t_launch = f + 1` (команда принята: проект в С с post f + 1). Отклонённая команда и поздний запуск ИИ — 0 (ИИ не форсирует, P0). [Предп.: эквивалентно `ProductsSystem.SeriesForced`, во view его нет; ревью Codex r3 TASK-0044] |
 | `a40.rep_before` | `Decisions.Repeats[g_p − 1] > 0` снимка t |
@@ -323,7 +326,7 @@ DONE-эксперимент записывает `core_commit`, `data_hash`, `ma
 | `actor_month.out_g*` | `⌊Σ Rate⌋` проектов `Gen = g` (post t); `active_g*` — есть проект `Gen = g` в С (post t) |
 | `tooling_ledger.t_a` | `ToolingLedgerView.TrainingBudget`; на seeds 1…20 main совпадает с `b_cap − taken_cap` во всех 115 200 строках |
 
-`run.json` модели — объект `model_info`: `test_api_version`, `data_hash` (`GameData.DataHash`), `scenario_hash`, `months`, `force_sent` (при `FORCE`), счётчики `a40_close_idle_ge_tab_other_reason` (§4.9), `lic_end_lapses_inferred`, `w_after_n_actor_months`, `closes_of_designs_not_lines`, `lines_without_step7_money`, `lic_end_unobservable` (v0.5 r4: лицензии, не давшие доли ни разу, — их `t_end` пуст или равен месяцу замены, §11 п. 7).
+`run.json` модели — объект `model_info`: `test_api_version`, `data_hash` (`GameData.DataHash`), `scenario_hash`, `months`, `force_sent` (при `FORCE`), счётчики `a40_close_idle_ge_tab_other_reason` (§4.9), `w_after_n_actor_months`, `closes_of_designs_not_lines`, `lines_without_step7_money`.
 
 ## 10. Сверка с `exp0002.py` (этап 1 T10; доработка — T11)
 - Совпадает: `runs.csv`, `summary.csv`, `actor_year.csv` (лишняя `fv_fleet`), `whynot.csv` (лишние `cluster`, `order`, `unmet`), `node_times`, `gen_times`, `events` (новые `kind` анализ не трактует), `prc_year` (лишняя `licence_share`), калибровочные таблицы, списки запрета (`DEFAULTS.calib`).
@@ -338,9 +341,4 @@ DONE-эксперимент записывает `core_commit`, `data_hash`, `ma
 4. CSV стендов C3, C5 и функция потерь — T12. Проверка «расписание `L_K` воспроизводит `m` ±3 мес. и `s` ±20%» (спец. §6.1) — T12.
 5. [Предп.] Выводы в Lab (ранг QC у `QP_START`, цена `LIC_BUY` из `Flow`) проверяются тестами T10 (§4.7); если тест покажет расхождение — колонка уходит в §4.15.
 6. [Предп.] `w_after_n = 1` в main — редкость (оговорка (г)); если такие месяцы попадут в срабатывания С или в сосуществования заметно, нужно уточнение спец. A40/F17b «`left` после `W`». [Факт: T10 малая матрица] seeds 1…20 main — 0 месяцев; `arm/DERIV` seed 1–2 — 344 актор-месяца.
-7. **`LIC_END` по истечению A43.4** выводится по `LicenceShare` (§9.1). Истечение лицензии, PRC маски которой покупатель не знает, не видно. **v0.5 r4 (ревью Codex r4 TASK-0044, подтверждено):** без правки Session истечение не вычислить. `LicenceActive(b) = lic_gen > 0 ∧ g_b ≤ lic_gen`, где `g_b` — наибольший `AltEngGen` базового слота проектов в С/В. Альтернатив проекта во view нет. По `DesignView.Gen = min(g_p, eng + 1)` поколение двигателя видно только снизу (`eng ≥ Gen − 1`). Восстанавливать альтернативы по командам ИИ значит повторить логику Core в Lab (запрещено, ADR-0014 п. 5–6).
-   До правки Session:
-   - пустой `t_end` значит «не наблюдается», а не «активна до горизонта»;
-   - `model_info.lic_end_unobservable` считает лицензии без единой доли: открытые на конце (их `t_end` пуст) и заменённые (их `t_end` = месяц замены — только верхняя граница);
-   - анализ T11 печатает `t_end` таких лицензий как цензурированный.
-   [Предл.] Session v3 (`test_api_version` 3): поле `LicenceView.Active` = `SliceWorld.LicenceActive(a)` снимка. Тогда `LIC_END` = переход `Active` 1 → 0 без вывода, а `lic_end_lapses_inferred` и `lic_end_unobservable` уходят. Это правка Session: решает systems-architect, делает developer (вне T10).
+7. **`LIC_END` по истечению A43.4** — переход `LicenceView.Active` 1 → 0 (Session v3, `Active` = `SliceWorld.LicenceActive(a)` = `lic_gen > 0 ∧ g_b ≤ lic_gen`); без вывода по `LicenceShare`. Закрыто в r5 (решение Orchestrator, ADR-0014 п. 5: read view вместе с первым потребителем T10). Замена лицензии новой покупкой — `t_end` = t.

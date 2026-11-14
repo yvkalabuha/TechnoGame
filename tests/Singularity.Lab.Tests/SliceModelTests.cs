@@ -11,7 +11,7 @@ public sealed class SliceModelTests : IDisposable
     private static readonly string[] Prefixes =
     [
         "slice: JetSliceCalib tables", "slice: JetSliceCalib run", "slice: parameters", "slice: Lab path gives",
-        "slice: L1", "slice: L2", "slice: matrix", "slice: licence lapse", "slice: data_hash", "slice: data cache", "slice: a40.force", "slice: COEXIST_MONEY", "slice: lic_end_unobservable",
+        "slice: L1", "slice: L2", "slice: matrix", "slice: data_hash", "slice: data cache", "slice: a40.force", "slice: COEXIST_MONEY", "slice: LIC_END",
     ];
 
     private readonly string _tmp = Path.Combine(Path.GetTempPath(), "sing-lab-tests-" + Guid.NewGuid().ToString("N"));
@@ -37,10 +37,9 @@ public sealed class SliceModelTests : IDisposable
     [Fact] public void L1_two_runs_384_months_same_csv_and_hash() => Check(Prefixes[4]);
     [Fact] public void L2_threads_1_vs_4_same_csv_and_hash() => Check(Prefixes[5]);
     [Fact] public void Matrix_2x2x2_every_run_has_all_14_tables() => Check(Prefixes[6]);
-    [Fact] public void Licence_lapse_tracking_is_reset_by_a_new_purchase() => Check(Prefixes[7]);
-    [Fact] public void Data_hash_and_data_files_cover_the_loaded_mod_files() => Check(Prefixes[8]);
-    [Fact] public void Changed_mod_file_is_reloaded_and_stale_data_files_fail_the_run() => Check(Prefixes[9]);
-    [Fact] public void A40_force_marks_FORCE_series_and_never_the_AI() => Check(Prefixes[10]);
-    [Fact] public void Coexist_money_needs_zero_left_and_no_training_in_every_month() => Check(Prefixes[11]);
-    [Fact] public void Licence_that_never_gave_a_share_is_counted_unobservable() => Check(Prefixes[12]);
+    [Fact] public void Data_hash_and_data_files_cover_the_loaded_mod_files() => Check(Prefixes[7]);
+    [Fact] public void Changed_mod_file_is_reloaded_and_stale_data_files_fail_the_run() => Check(Prefixes[8]);
+    [Fact] public void A40_force_marks_FORCE_series_and_never_the_AI() => Check(Prefixes[9]);
+    [Fact] public void Coexist_money_needs_zero_left_and_no_training_in_every_month() => Check(Prefixes[10]);
+    [Fact] public void Licence_lapse_is_the_Active_change_and_gives_t_end_and_LIC_END() => Check(Prefixes[11]);
 }

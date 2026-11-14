@@ -59,7 +59,7 @@ internal static class ViewBuilder
             bureaus.MoveToImmutable(),
             new QualityView(w.Policy.QualityProgrammeActive(a), w.Policy.QualityProgrammeStart(a), w.Policy.QualityTriggerCount(a), w.Policy.TrainingTarget(a)),
             new LicenceView(w.Policy.LicenceGen(a), w.Policy.LicenceSeller(a), w.Policy.LicenceStart(a), w.Policy.LicenceMask(a), w.Policy.OfferMask(a),
-                w.Policy.LicenceFlow(a), refusals.MoveToImmutable()),
+                w.Policy.LicenceFlow(a), refusals.MoveToImmutable(), w.LicenceActive(a)),
             new DisruptionView(disStart, disEnd), Nodes(w, a, next), designs.MoveToImmutable(), Decisions(w, a, next, stepped));
     }
 

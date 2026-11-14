@@ -68,10 +68,9 @@ internal sealed class SliceObserver
     // licences
     private readonly List<LicenceRow> _licences = new();
     private readonly LicenceRow?[] _openLicence;
-    private readonly LapseTracker _lapse;
     private int _req;
     // counters for run.json (format §4.9, §4.7)
-    private long _closeIdleOtherReason, _lapsesInferred, _licEndUnobservable, _wAfterNMonths, _closesWithoutLine, _linesWithoutMoney;
+    private long _closeIdleOtherReason, _wAfterNMonths, _closesWithoutLine, _linesWithoutMoney;
 
     private sealed class YearRow
     {
@@ -149,7 +148,6 @@ internal sealed class SliceObserver
         _qcRank = new int?[_nA];
         _qcRankMonth = new long[_nA];
         _openLicence = new LicenceRow?[_nA];
-        _lapse = new LapseTracker(_nA);
     }
 
     private bool Has(string table) => _table.ContainsKey(table);
@@ -785,16 +783,12 @@ internal sealed class SliceObserver
         for (int a = 0; a < _nA; a++)
         {
             LicenceView now = v.Actors[a].Licence;
-            // A lapse (A43.4) leaves the columns: it is read from LicenceShare, which is l_lic exactly while the licence is active (and the PRC known).
-            if (_openLicence[a] is LicenceRow open && (buyers.Contains(a) || Lapsed(v.Actors[a], now)))
+            // A lapse (A43.4) is the 1 -> 0 change of LicenceView.Active (format §11 п. 7); it is seen in the post of month t, so the licence ends at t + 1.
+            if (_openLicence[a] is LicenceRow open && (buyers.Contains(a) || !now.Active))
             {
                 long end = buyers.Contains(a) ? t : t + 1;
                 open.End = end;
                 _openLicence[a] = null;
-                if (!buyers.Contains(a))
-                    _lapsesInferred++;
-                else if (_lapse.NeverShared(a))
-                    _licEndUnobservable++;     // replaced: t_end is the new purchase, an earlier expiry was not visible
                 Row("events", I(end), "LIC_END", _ids[a], _ids[open.Seller], I(end - open.Start));
             }
             if (!buyers.Contains(a))
@@ -802,20 +796,8 @@ internal sealed class SliceObserver
             var row = new LicenceRow { T = t, Start = now.Start, Seller = now.Seller, Buyer = a, Gen = now.Gen, Profile = v.Actors[a].Profile, Price = price[a]!.Value };
             _licences.Add(row);
             _openLicence[a] = row;
-            _lapse.Bought(a);
             Row("events", I(t), "LIC_BUY", _ids[a], _ids[now.Seller], F(row.Price));
         }
-    }
-
-    private bool Lapsed(ActorView av, LicenceView l)
-    {
-        bool share = false;
-        foreach (NodeView n in av.Nodes)
-        {
-            if (n.Process is ProcessView p && p.LicenceShare > Fx6.Zero && (l.Mask >> (n.Number - 1) & 1UL) != 0)
-                share = true;
-        }
-        return _lapse.Lapsed(av.Actor, share);
     }
 
     // ---------------------------------------------------------------- requirements
@@ -972,47 +954,8 @@ internal sealed class SliceObserver
     public IEnumerable<KeyValuePair<string, string>> Counters() =>
     [
         new("a40_close_idle_ge_tab_other_reason", I(_closeIdleOtherReason)),
-        new("lic_end_lapses_inferred", I(_lapsesInferred)),
         new("w_after_n_actor_months", I(_wAfterNMonths)),
         new("closes_of_designs_not_lines", I(_closesWithoutLine)),
         new("lines_without_step7_money", I(_linesWithoutMoney)),
-        // Licences whose expiry LicenceShare could not show: replaced ones (counted then) and those still open at the end.
-        new("lic_end_unobservable", I(_licEndUnobservable + _openLicence.Count(l => l is not null && _lapse.NeverShared(l.Buyer)))),
     ];
-}
-
-/// <summary>
-/// The lapse of a licence (A43.4) read from <c>LicenceShare</c> (format §9.1): a licence that gave its share in an earlier month and gives none now
-/// has lapsed. A new purchase starts the tracking afresh, so the share of the replaced licence never ends the new one.
-/// </summary>
-internal sealed class LapseTracker(int actors)
-{
-    private readonly bool[] _effective = new bool[actors];
-    private readonly bool[] _seen = new bool[actors];
-
-    public void Bought(int actor)
-    {
-        _effective[actor] = false;
-        _seen[actor] = false;
-    }
-
-    /// <summary>
-    /// The current licence of <paramref name="actor"/> never gave a share: no PRC of its mask was known to the buyer, so its expiry (A43.4) cannot be
-    /// read from <c>LicenceShare</c> and an empty <c>t_end</c> means «unknown», not «active» (format §11 п. 7, review Codex r4).
-    /// </summary>
-    public bool NeverShared(int actor) => !_seen[actor];
-
-    /// <summary>True once, in the first month without a share after a month with one.</summary>
-    public bool Lapsed(int actor, bool shareNow)
-    {
-        if (shareNow)
-        {
-            _effective[actor] = true;
-            _seen[actor] = true;
-            return false;
-        }
-        bool lapsed = _effective[actor];
-        _effective[actor] = false;
-        return lapsed;
-    }
 }

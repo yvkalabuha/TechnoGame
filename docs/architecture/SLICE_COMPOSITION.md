@@ -255,7 +255,8 @@ public sealed record DesignView(
 public readonly record struct BureauView(int Bureau, int Design, long Granted, long Required);
 public readonly record struct QualityView(bool Active, int Start, int TriggerCount, int TrainingTarget);
 public sealed record LicenceView(int Gen, int Seller, int Start, ulong Mask, ulong OfferMask, Fx6 Flow,
-    ImmutableArray<long> Refusals);                  // BadLicenceCount по BadLicence (без None)
+    ImmutableArray<long> Refusals,                   // BadLicenceCount по BadLicence (без None)
+    bool Active);                                    // v3: SliceWorld.LicenceActive(a) снимка (read view)
 public readonly record struct DisruptionView(int Start, int End);
 
 public sealed record PolicyDecisionView(             // решения compute Month, действуют с Month+1
@@ -463,6 +464,8 @@ public readonly record struct LicenceRefusalView(int Seller, int Gen, Fx6 Price,
 - Новый эталон поверхности v2 и ревью systems-architect (§12.3). Lab меняет чтение `Closes` (тип) — правка T10/T11.
 - (r5) **Nullable-аннотации в тексте поверхности v2.** [Факт: `session-surface.v1.txt`] Текст v1 строится по типам отражения и теряет аннотации ссылочных типов: `SliceView.Inputs` записан как `MonthInputsView` без `?`. Значит, правка `X?` → `X` проходит без смены версии. В v2 тест поверхности (TASK-0047) пишет nullability каждого параметра, свойства и возвращаемого значения через `System.Reflection.NullabilityInfoContext` (например, `MonthInputsView?`). Значимые `Nullable<T>` остаются как есть. Эталон v1 не меняется.
 - (r5) **Lab читает views по имени свойств**, а не позиционным `Deconstruct` и не позиционными шаблонами. Новые позиционные параметры (`Step`, `KnownSince`, `Requirement`) меняют `Deconstruct`, а при чтении по имени Lab при смене версии затрагивают только реально изменённые поля (здесь — `Closes`). Это правило кода T10/T11; проверка — ревью reviewer.
+
+- (r6) **`TestApiVersion = 3`**: `LicenceView.Active` (`LicenceActive(a)`) — для `LIC_END` без вывода по `LicenceShare` (slice-csv-format §11 п. 7). Эталон `session-surface.v3.txt`; состояние, хеши и golden не меняются.
 
 ### 13.8 Проверки (developer, test-engineer)
 - golden main 60/384 мес. и отпечаток схемы main **не меняются** (главный критерий: всё, кроме `t_known` в `L_C`/`L_P`, — не состояние).

@@ -27,7 +27,6 @@ public static class SliceChecks
         ("slice: JetSliceCalib tables have no forbidden file or column (spec §8.2 п. 2)", CalibrationHeader),
         ("slice: JetSliceCalib run writes only its 8 tables; forbidden parameters rejected", () => CalibrationRun(tmp)),
         ("slice: parameters — unknown key, bad value, LAYER=LK rejected", Parameters),
-        ("slice: licence lapse — a new purchase resets the tracking (no false LIC_END)", LapseAfterPurchase),
         ("slice: Lab path gives the Session golden (seed 1, month 149)", () => Golden(tmp)),
         ("slice: L1 — two runs, same CSV and golden_hash", () => L1(tmp)),
         ("slice: L2 — threads 1 vs 4, same CSV and golden_hash", () => L2(tmp)),
@@ -36,7 +35,7 @@ public static class SliceChecks
         ("slice: data cache — a changed mod file is loaded again; stale data_files fail the run", () => DataCache(tmp)),
         ("slice: a40.force — the FORCE arm marks the forced series, the AI never", () => A40Force(tmp)),
         ("slice: COEXIST_MONEY needs left = 0 and no training money in every month, not Bind = Money alone", CoexistMoneyClass),
-        ("slice: lic_end_unobservable — a licence that never gave a share has no visible expiry", LicenceNeverShared),
+        ("slice: LIC_END — a lapse of LicenceView.Active gives a t_end and an event", () => LicenceEnd(tmp)),
     ];
 
     // Codex r4 (TASK-0044): Bind = Money also holds with positive money short of one unit or with training money; the spec class needs neither.
@@ -65,17 +64,27 @@ public static class SliceChecks
         return SliceObserver.CoexistMoney([], 0) ? "COEXIST_MONEY of no months" : null;
     }
 
-    private static string? LicenceNeverShared()
+    // LIC_END is the 1 -> 0 change of LicenceView.Active (format §11 п. 7): every licence row with a t_end has its event, and a lapse exists in the run.
+    private static string? LicenceEnd(string tmp)
     {
-        var l = new LapseTracker(1);
-        l.Bought(0);
-        if (!l.NeverShared(0))
-            return "a new licence counted as shared";
-        l.Lapsed(0, shareNow: true);
-        if (l.NeverShared(0))
-            return "a licence that gave a share counted as never shared";
-        l.Bought(0);
-        return l.NeverShared(0) ? null : "a new purchase did not reset the tracking";
+        var (r, dir) = Run(tmp, Manifest("JetSlice", 11688), 1, 1, "lic-end");
+        if (!r.Ok)
+            return r.Error;
+        var licences = Rows(dir, "licences.csv");
+        var ends = Rows(dir, "events.csv").Where(e => e["kind"] == "LIC_END").ToList();
+        var ended = licences.Where(l => l["t_end"].Length > 0).ToList();
+        if (ended.Count == 0)
+            return "seed 1: no licence has a t_end";
+        if (ended.Count != ends.Count)
+            return $"{ended.Count} licences with t_end, {ends.Count} LIC_END events";
+        return ended.All(l => ends.Any(e => e["t"] == l["t_end"] && e["actor"] == l["buyer"])) ? null : "a t_end without a LIC_END of the buyer in that month";
+    }
+
+    private static List<Dictionary<string, string>> Rows(string dir, string file)
+    {
+        string[] lines = File.ReadAllLines(Path.Combine(dir, file));
+        string[] head = lines[0].Split(',');
+        return [.. lines.Skip(1).Select(l => head.Zip(l.Split(',')).ToDictionary(p => p.First, p => p.Second, StringComparer.Ordinal))];
     }
 
     // Codex r3 (TASK-0044): SliceData cached by directory only gave old data next to a new data_hash after a mod file changed in the process.
@@ -249,25 +258,6 @@ public static class SliceChecks
             catch (ParamException) { }
         }
         return null;
-    }
-
-    private static string? LapseAfterPurchase()
-    {
-        var l = new LapseTracker(2);
-        bool ok = !l.Lapsed(0, shareNow: true)          // licence 1 gives its share
-            && Bought(l, 0)                              // replaced by licence 2, whose mask PRC are not known yet
-            && !l.Lapsed(0, shareNow: false)             // no share: not a lapse of licence 2
-            && !l.Lapsed(0, shareNow: true)
-            && l.Lapsed(0, shareNow: false)              // licence 2 had its share and lost it: lapse, once
-            && !l.Lapsed(0, shareNow: false)
-            && !l.Lapsed(1, shareNow: false);            // another actor is independent
-        return ok ? null : "lapse tracking";
-
-        static bool Bought(LapseTracker t, int actor)
-        {
-            t.Bought(actor);
-            return true;
-        }
     }
 
     private static string? Golden(string tmp)

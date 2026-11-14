@@ -110,7 +110,7 @@ public sealed class ViewWalk
 
         LicenceView l = av.Licence;
         Check("licence", l.Gen == w.Policy.LicenceGen(a) && l.Seller == w.Policy.LicenceSeller(a) && l.Start == w.Policy.LicenceStart(a)
-            && l.Mask == w.Policy.LicenceMask(a) && l.OfferMask == w.Policy.OfferMask(a) && l.Flow == w.Policy.LicenceFlow(a), $"month {t} actor {a}: licence");
+            && l.Mask == w.Policy.LicenceMask(a) && l.OfferMask == w.Policy.OfferMask(a) && l.Flow == w.Policy.LicenceFlow(a) && l.Active == w.LicenceActive(a), $"month {t} actor {a}: licence");
         Check("licence", l.Refusals.Length == 4 && l.Refusals[0] == w.Policy.BadLicenceCount(a, BadLicence.Self) && l.Refusals[1] == w.Policy.BadLicenceCount(a, BadLicence.Empty)
             && l.Refusals[2] == w.Policy.BadLicenceCount(a, BadLicence.Gen) && l.Refusals[3] == w.Policy.BadLicenceCount(a, BadLicence.Money), $"month {t} actor {a}: refusals");
         See("licence held", l.Gen > 0);

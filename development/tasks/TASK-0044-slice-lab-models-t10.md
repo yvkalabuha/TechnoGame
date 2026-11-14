@@ -124,3 +124,9 @@ ADR-0014 п.5 и `SLICE_COMPOSITION.md` (строка 38) требуют read vi
    - Тест: `Licence_that_never_gave_a_share_is_counted_unobservable`.
    - [Предл.] Session v3: `LicenceView.Active` = `LicenceActive(a)` снимка, `test_api_version` 3. Решает systems-architect, делает developer.
 - `dotnet test Singularity.sln` зелёный: Architecture 93, Kernel 315 (+1 skip), Core 1029, Lab 13, Session 308 (+2 skip). Golden не изменились. [Факт: рабочее дерево с незакоммиченными правками TASK-0049 в Core и тестах]
+
+### Session v3: `LicenceView.Active` (решение Orchestrator, light, ADR-0014 п. 5)
+- Session: `LicenceView.Active = SliceWorld.LicenceActive(a)` (`SliceViews.cs`, `ViewBuilder.cs`), `TestApiVersion = 3`, эталон `session-surface.v3.txt`; тест версии и `ViewTests` (поле сверяется с миром).
+- Lab: `LIC_END` = лицензия открыта, покупки нет, `Active = false` (t_end = t+1); замена — t_end = t. Удалены `LapseTracker`, счётчики `lic_end_lapses_inferred`, `lic_end_unobservable`. Проверка `LicenceEnd` (seed 1, 11688 тиков: у каждой лицензии с `t_end` есть событие `LIC_END` покупателя в этот месяц, лапс есть) заменила `LicenceNeverShared` и `LapseAfterPurchase`; тест `Licence_lapse_is_the_Active_change_and_gives_t_end_and_LIC_END`.
+- Документы: `slice-csv-format.md` (r5, §11 п. 7, строки лицензий, `model_info`), `SLICE_COMPOSITION.md` §12.2/§13.
+- Состояние, хеши и golden не затронуты.
