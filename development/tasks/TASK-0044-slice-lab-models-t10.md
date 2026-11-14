@@ -1,7 +1,7 @@
 ---
 id: TASK-0044
 title: "T10: Lab-модели JetSlice и JetSliceCalib, CSV v0.24, манифесты, печати A39/A40"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: simulation-engineer
@@ -46,17 +46,17 @@ created: 2026-11-13
 **Печать** на seeds 1…20 (как TASK-0026, информационно): ветки О и С по акторам и классам — для сверки с ожиданиями A40.
 
 ## Критерии приёмки
-- [ ] `slice-csv-format.md` v0.3 согласован со спекой v0.24.
-- [ ] Обе модели зарегистрированы; `dotnet run --project src/Singularity.Lab -- matrix --manifest <manifest> --out DIR` (CLI по `docs/simulation/lab-cli.md`) выполняет малую матрицу.
-- [ ] Тесты: заголовок калибровочной сборки, L1, L2, полнота таблиц; `dotnet test` всего решения зелёный.
-- [ ] Печать A40 на seeds 1…20 и её сверка с ожиданиями — в «Результат».
-- [ ] `src/Singularity.{Kernel,Core,Session}` не меняются; если нужно изменить — остановиться и описать.
+- [x] `slice-csv-format.md` v0.3 согласован со спекой v0.24.
+- [x] Обе модели зарегистрированы; `dotnet run --project src/Singularity.Lab -- matrix --manifest <manifest> --out DIR` (CLI по `docs/simulation/lab-cli.md`) выполняет малую матрицу.
+- [x] Тесты: заголовок калибровочной сборки, L1, L2, полнота таблиц; `dotnet test` всего решения зелёный.
+- [x] Печать A40 на seeds 1…20 и её сверка с ожиданиями — в «Результат».
+- [x] `src/Singularity.{Kernel,Core,Session}` не меняются; если нужно изменить — остановиться и описать.
   - Исключение (Orchestrator, light, 2026-11-14, в рамках ADR-0014 п.5 «read views вместе с первым потребителем T10»): разрешено добавить в Session только read view `LicenceView.Active` и поднять `test_api_version` до 3. Состояние, хеши и golden не меняются. Kernel и Core по-прежнему не меняются.
 
 ## REVIEW
-- [ ] Code review (reviewer)
-- [ ] Второе ревью (codex) — до чистого accept (#181)
-- [ ] Тесты (test-engineer)
+- [x] Code review (reviewer) — accept 2026-11-14; low → DEBT-0032
+- [x] Второе ревью (codex) — accept (раунд 7, head c261d7f); остаток → DEBT-0032
+- [x] Тесты (test-engineer) — L1/L2 на 88 прогонах smoke-матрицы, 14 таблиц; пробелы → DEBT-0032
 
 ## Результат
 ### simulation-engineer, 2026-11-13 — этап 1 сделан, этап 2 остановлен (нужна правка Session)
