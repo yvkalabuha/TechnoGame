@@ -1,7 +1,7 @@
 ---
 id: TASK-0044
 title: "T10: Lab-модели JetSlice и JetSliceCalib, CSV v0.24, манифесты, печати A39/A40"
-status: BLOCKED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: simulation-engineer

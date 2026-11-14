@@ -1,7 +1,7 @@
 ---
 id: TASK-0047
 title: "Core: наблюдаемые величины для печатей среза (t_known, left, причина закрытия линии, варианты Requirement, отказы лицензии по деньгам)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: developer
@@ -41,15 +41,15 @@ created: 2026-11-13
 - systems-architect заранее проверяет, куда и как ложится каждая величина.
 
 ## Критерии приёмки
-- [ ] Все 5 пунктов реализованы, у каждого есть тест.
-- [ ] `dotnet test` зелёный, L1/L2 сохранены.
-- [ ] Формат v0.4 §4.15 переведён в основные таблицы (simulation-engineer).
+- [x] Все 5 пунктов реализованы, у каждого есть тест.
+- [x] `dotnet test` зелёный, L1/L2 сохранены.
+- [x] Формат v0.4 §4.15 переведён в основные таблицы (simulation-engineer).
 
 ## REVIEW
-- [ ] systems-architect
-- [ ] Code review (reviewer)
-- [ ] Второе ревью (codex) — до чистого accept
-- [ ] Тесты (test-engineer)
+- [x] systems-architect (2026-11-14) — соответствует §13; отклонения приняты; r6
+- [x] Code review (reviewer, 2026-11-14) — accept; 3 minor + nit исправлены
+- [x] Второе ревью (codex, head ee83683a) — accept: 1 medium → DEBT-0029; report sha256 bcaa1c850e2a79d593efc702d549711de20f40cd6f60e84e191e0ebd9ebb1ad9. Раунды: 4ade4ab (high Training — исправлено), ddda145 (high compose месяца 0 — правило пары в формате §4.6)
+- [x] Тесты — полный `dotnet test` (Orchestrator, ee83683): Arch 83, Kernel 314, Core 1026, Session 308; 0 падений
 
 ## Результат
 developer, 2026-11-14 (записал Orchestrator).

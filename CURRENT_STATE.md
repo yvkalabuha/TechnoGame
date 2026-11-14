@@ -11,8 +11,7 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0044 [BLOCKED] T10: Lab-модели JetSlice и JetSliceCalib, CSV v0.24, манифесты, печати A39/A40 (simulation-engineer)
-- TASK-0047 [APPROVED] Core: наблюдаемые величины для печатей среза (t_known, left, причина закрытия линии, варианты Requirement, отказы лицензии по деньгам) (developer)
+- TASK-0044 [APPROVED] T10: Lab-модели JetSlice и JetSliceCalib, CSV v0.24, манифесты, печати A39/A40 (simulation-engineer)
 <!-- registry:active:end -->
 
 ## Блокеры
