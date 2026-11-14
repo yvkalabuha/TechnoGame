@@ -18,6 +18,9 @@ public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactor
     /// <summary>The version of the Session surface this model was written against (SLICE_COMPOSITION §13.7).</summary>
     public const int SurfaceVersion = 3;
 
+    /// <summary>Horizon H of the slice, months (spec §2): the control tables have curve knots τ 0…2·H−1.</summary>
+    public const int SliceHorizonMonths = 384;
+
     public string Id => calibration ? "JetSliceCalib" : "JetSlice";
 
     public string Description => calibration
@@ -30,7 +33,14 @@ public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactor
             throw new InvalidOperationException($"The Session surface is v{SliceSession.TestApiVersion}, the slice models read v{SurfaceVersion}: update them first.");
         SliceParameters p = SliceParameters.Parse(setup.Parameters, setup.Seed, setup.Threads, setup.ChunkSize, calibration);
         GameData data = SliceData.Load(setup.ManifestDirectory, setup.RecordedDataFiles ?? []);
-        return new JetSliceModel(data, p, setup.Ticks, calibration);
+        ControlTables? tables = null;
+        if (p.ControlTablesPath is string rel)
+        {
+            // Relative to the manifest (format §3); its SHA-256 is control_tables_hash in run.json model_info.
+            tables = ControlTables.Load(Path.GetFullPath(Path.Combine(setup.ManifestDirectory, rel)), data.Scenario(p.Config.ScenarioId), data.Nodes, SliceHorizonMonths);
+            p = p with { Config = p.Config with { LkTables = tables.Lk } };
+        }
+        return new JetSliceModel(data, p, setup.Ticks, calibration, tables?.Sha256);
     }
 
     /// <summary>The files <see cref="SliceData.Load"/> reads for this manifest: they go into the standard data_hash of the run.</summary>
@@ -148,9 +158,11 @@ public sealed class JetSliceModel : ISessionModel
     private readonly SliceParameters _p;
     private readonly long _ticks;
     private readonly bool _calibration;
+    private readonly string? _tablesHash;
 
-    internal JetSliceModel(GameData data, SliceParameters p, long ticks, bool calibration)
+    internal JetSliceModel(GameData data, SliceParameters p, long ticks, bool calibration, string? tablesHash = null)
     {
+        _tablesHash = tablesHash;
         _data = data;
         _p = p;
         _ticks = ticks;
@@ -196,6 +208,8 @@ public sealed class JetSliceModel : ISessionModel
             new("scenario_hash", _data.Scenario(_p.Config.ScenarioId).Hash),
             new("months", months.ToString(CultureInfo.InvariantCulture)),
         };
+        if (_tablesHash is not null)
+            info.Add(new("control_tables_hash", _tablesHash));
         if (force is not null)
             info.Add(new("force_sent", force.Sent.ToString(CultureInfo.InvariantCulture)));
         info.AddRange(observer.Counters());

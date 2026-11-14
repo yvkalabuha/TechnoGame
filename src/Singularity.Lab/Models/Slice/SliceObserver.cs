@@ -72,6 +72,8 @@ internal sealed class SliceObserver
     private int _req;
     // counters for run.json (format §4.9, §4.7)
     private long _closeIdleOtherReason, _wAfterNMonths, _closesWithoutLine, _linesWithoutMoney, _licResumes;
+    // Design capacity (contract-proposals T3, TASK-0054): AI compose/derive commands, those that gave no new design, and the slots used.
+    private long _designCommands, _designUnrealized, _designUnrealizedFull, _designSlotsMax, _designSlotsFullMonths;
 
     private sealed class YearRow
     {
@@ -357,6 +359,8 @@ internal sealed class SliceObserver
         while (_ring.Count > _tab)
             _ring.Dequeue();
 
+        for (int a = 0; a < _nA; a++)
+            Capacity(snap.Actors[a], v.Actors[a]);
         for (int a = 0; a < _nA; a++)
         {
             ActorView sv = snap.Actors[a], av = v.Actors[a];
@@ -1007,8 +1011,47 @@ internal sealed class SliceObserver
     /// <summary>The harness sent <c>start_series</c> with <c>force</c> for (actor row, design) after the step of month <paramref name="month"/>.</summary>
     public void ForcedStart(int actor, int design, long month) => _forcedSent[actor, design] ??= month;
 
+    /// <summary>
+    /// Design capacity (contract-proposals T3): the compose/derive commands the AI decided in month t−1 (they are consumed by the compute of t)
+    /// against the designs that are new in the post state of t (stage None → not None). A command without a new design was rejected by the
+    /// layer for some code of <c>CommandRejection</c> (the code itself is not in the views); <c>DESIGN_CAPACITY</c> is the first check of the
+    /// layer's <c>Create</c> and can only happen when every slot is used, so <c>design_slots_max</c> &lt; Designs proves it never happened.
+    /// </summary>
+    private void Capacity(ActorView sv, ActorView av)
+    {
+        long cmds = 0, created = 0, used = 0;
+        foreach (DesignCommandView c in sv.Decisions.DesignCommands)
+        {
+            if (c.Kind is DesignCommandKind.Compose or DesignCommandKind.Derive)
+                cmds++;
+        }
+        for (int d = 0; d < _nD; d++)
+        {
+            if (sv.Designs[d].Stage == DesignStage.None && av.Designs[d].Stage != DesignStage.None)
+                created++;
+            if (av.Designs[d].Stage != DesignStage.None)
+                used++;
+        }
+        bool fullBefore = sv.Designs.All(x => x.Stage != DesignStage.None);
+        _designCommands += cmds;
+        long unrealized = Math.Max(0, cmds - created);
+        _designUnrealized += unrealized;
+        if (fullBefore)
+        {
+            _designUnrealizedFull += unrealized;
+            _designSlotsFullMonths++;
+        }
+        _designSlotsMax = Math.Max(_designSlotsMax, used);
+    }
+
     public IEnumerable<KeyValuePair<string, string>> Counters() =>
     [
+        new("design_commands", I(_designCommands)),
+        new("design_commands_without_design", I(_designUnrealized)),
+        new("design_commands_without_design_all_slots_used", I(_designUnrealizedFull)),
+        new("design_slots_max", I(_designSlotsMax)),
+        new("design_slots_capacity", I(_nD)),
+        new("design_all_slots_used_actor_months", I(_designSlotsFullMonths)),
         new("a40_close_idle_ge_tab_other_reason", I(_closeIdleOtherReason)),
         new("w_after_n_actor_months", I(_wAfterNMonths)),
         new("closes_of_designs_not_lines", I(_closesWithoutLine)),

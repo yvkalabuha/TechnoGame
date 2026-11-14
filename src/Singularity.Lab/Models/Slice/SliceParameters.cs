@@ -9,7 +9,7 @@ namespace Singularity.Lab.Models.Slice;
 /// Manifest parameters of the slice models → <see cref="SliceRunConfig"/> (slice-csv-format.md §3). An unknown key or value is a parameter error;
 /// every key that has a default is optional, and the default is the behaviour of main.
 /// </summary>
-public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bool Full)
+public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bool Full, string? ControlTablesPath = null)
 {
     /// <summary>Keys of §3 (ordinal order). <c>detail</c> is a key of <c>JetSlice</c> only.</summary>
     public static readonly string[] Keys =
@@ -33,8 +33,14 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
             if (calibration && CalibrationForbidden.Any(s => kv.Key.Contains(s, StringComparison.OrdinalIgnoreCase)))
                 throw new ParamException($"Parameter '{kv.Key}' may not be passed to the calibration build (spec §8.2 п. 2: forbidden substring).");
         }
-        if (p.Contains("CONTROL_TABLES") || p.Contains("LAYER") && p.GetString("LAYER") == "LK")
-            throw new ParamException("LAYER = LK needs CONTROL_TABLES, whose file format is set by T12 together with the tables (slice-csv-format.md §3, §11 п. 3).");
+        // CONTROL_TABLES (format §3.1, TASK-0054) goes exactly with LAYER = LK. L_C and L_P read the same file, but the Session takes no L_C/L_P
+        // tables yet (SliceRunConfig v3 has only LkTables): LC/LP are refused here with the reason instead of failing inside the world.
+        string layer = p.GetString("LAYER", "FULL");
+        if (layer is "LC" or "LP")
+            throw new ParamException($"LAYER = {layer}: the Session (SliceRunConfig, test API v{SliceSession.TestApiVersion}) carries no L_C/L_P control tables yet; the CONTROL_TABLES file has them (format §3.1).");
+        if ((layer == "LK") != p.Contains("CONTROL_TABLES"))
+            throw new ParamException("CONTROL_TABLES is given exactly with LAYER = LK (slice-csv-format.md §3).");
+        string? tables = p.Contains("CONTROL_TABLES") ? p.GetString("CONTROL_TABLES") : null;
 
         var defaults = new ToolingTargetSpec();
         ToolingTargetSpec tooling = Enum(p, "TOOLING_TARGET", "V5", ToolingTargetSpec.Parse) with
@@ -109,6 +115,7 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
             Layer = Enum(p, "LAYER", "FULL", v => v switch
             {
                 "FULL" => LayerControl.Full,
+                "LK" => LayerControl.Lk,
                 "LK0" => LayerControl.Lk0,
                 "LC0" => LayerControl.Lc0,
                 _ => throw Bad("LAYER", v),
@@ -137,7 +144,7 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
             "lite" => false,
             _ => throw Bad("detail", v),
         });
-        return new SliceParameters(config, force, full);
+        return new SliceParameters(config, force, full, tables);
     }
 
     private static SliceChannels Channels(ParamSet p)

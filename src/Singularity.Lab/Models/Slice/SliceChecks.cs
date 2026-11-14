@@ -1,3 +1,5 @@
+using Singularity.Core.Data;
+using Singularity.Core.Knowledge;
 using Singularity.Core.Products;
 using Singularity.Kernel;
 using Singularity.Session;
@@ -27,7 +29,7 @@ public static class SliceChecks
     [
         ("slice: JetSliceCalib tables have no forbidden file or column (spec §8.2 п. 2)", CalibrationHeader),
         ("slice: JetSliceCalib run writes only its 8 tables; forbidden parameters rejected", () => CalibrationRun(tmp)),
-        ("slice: parameters — unknown key, bad value, LAYER=LK rejected", Parameters),
+        ("slice: parameters — unknown key, bad value, LK without CONTROL_TABLES, LC/LP rejected", Parameters),
         ("slice: Lab path gives the Session golden (seed 1, month 149)", () => Golden(tmp)),
         ("slice: L1 — two runs, same CSV and golden_hash", () => L1(tmp)),
         ("slice: L2 — threads 1 vs 4, full horizon, same CSV and golden_hash", () => L2(tmp)),
@@ -39,6 +41,8 @@ public static class SliceChecks
         ("slice: LIC_END — a lapse of LicenceView.Active gives a t_end and an event", () => LicenceEnd(tmp)),
         ("slice: eng_short_months counts months at one bureau, not at any bureau", EngShortOneBureau),
         ("slice: licence track — replace, lapse, resume without a purchase (DEBT-0032)", LicenceTrack),
+        ("slice: control tables — CONTROL_TABLES file → LkTables, hash in model_info, bad files rejected (TASK-0054)", () => ControlTablesFile(tmp)),
+        ("slice: design capacity — AI design commands, commands without a design and slots used are counted (TASK-0054)", () => DesignCapacity(tmp)),
         ("slice: switches — FORCE, START PERT/SYM, CHANNELS, GRID, FLEET_ARM, SALE_ARM change the run (DEBT-0032)", () => Switches(tmp)),
     ];
 
@@ -323,7 +327,8 @@ public static class SliceChecks
 
     private static string? Parameters()
     {
-        foreach (string bad in new[] { """{"FOO": 1}""", """{"START": "X"}""", """{"LAYER": "LK"}""", """{"GRID": "LO_MID"}""", """{"CHANNELS": ["B", "B"]}""" })
+        foreach (string bad in new[] { """{"FOO": 1}""", """{"START": "X"}""", """{"LAYER": "LK"}""", """{"GRID": "LO_MID"}""", """{"CHANNELS": ["B", "B"]}""",
+                     """{"CONTROL_TABLES": "t.json"}""", """{"LAYER": "LC", "CONTROL_TABLES": "t.json"}""", """{"LAYER": "LP", "CONTROL_TABLES": "t.json"}""" })
         {
             Manifest m = Lab.Manifest.Parse(Manifest("JetSlice", Ticks60, pars: bad), "/x/m.json");
             try
@@ -334,6 +339,94 @@ public static class SliceChecks
             catch (ParamException) { }
         }
         return null;
+    }
+
+    /// <summary>A synthetic CONTROL_TABLES file of the core scenario (format §3.1): canonical JSON, integers only.</summary>
+    internal static string SyntheticControlTables(GameData data, Func<int, long?>? delta = null, string[]? actors = null)
+    {
+        ScenarioData sc = data.Scenario(SliceRunConfig.DefaultScenario);
+        int h = JetSliceModelFactory.SliceHorizonMonths;
+        var apps = new HashSet<int>(ControlTables.AppNodes(data.Nodes));
+        var sb = new System.Text.StringBuilder();
+        sb.Append("{\"format\":\"").Append(ControlTables.Format).Append("\",\"horizon\":").Append(h).Append(",\"max_node\":").Append(data.Nodes.Number.Max());
+        string[] ids = actors ?? [.. sc.ActorId];
+        sb.Append(",\"actors\":[").Append(string.Join(",", ids.Select(a => $"\"{a}\""))).Append(']');
+        sb.Append(",\"lk\":{").Append(string.Join(",", ids.Select(a => $"\"{a}\":{{" + string.Join(",", Enumerable.Range(1, 4).Select(g => $"\"{g}\":{{\"p_cens\":0,\"mean\":{60 * g},\"half\":6}}")) + "}"))).Append('}');
+        var nodes = Enumerable.Range(0, data.Nodes.Count).Where(r => data.Nodes.Gen[r] is >= 1 and <= 4).Select(r => data.Nodes.Number[r]).ToList();
+        string D(int n) => apps.Contains(n) ? "0" : (delta?.Invoke(n) is long v ? v.ToString(System.Globalization.CultureInfo.InvariantCulture) : "null");
+        sb.Append(",\"delta\":{").Append(string.Join(",", ids.Select(a => $"\"{a}\":{{" + string.Join(",", nodes.Select(n => $"\"{n}\":{D(n)}")) + "}"))).Append('}');
+        string Curve(long v) => "[" + string.Join(",", Enumerable.Repeat(v, 2 * h)) + "]";
+        sb.Append(",\"lc\":{\"Y\":{").Append(string.Join(",", ControlTables.Tiers.Select(t => $"\"{t}\":{Curve(500_000)}"))).Append("},\"U\":{")
+            .Append(string.Join(",", ControlTables.Tiers.Select(t => $"\"{t}\":{Curve(1_500_000)}"))).Append("}}");
+        sb.Append(",\"lp\":{\"T_design\":{\"1\":24,\"2\":36,\"3\":40,\"4\":60},\"rho\":{\"1\":100000,\"2\":40000,\"3\":20000,\"4\":1000}}}");
+        return CanonicalJson.Canonicalize(sb.ToString());
+    }
+
+    // CONTROL_TABLES (TASK-0054): the file is read into LkTables, the run is an L_K run, run.json carries the SHA-256 of the file; a file that is
+    // not canonical, has other actors, or a non-zero δ of an APP node is a parameter error.
+    private static string? ControlTablesFile(string tmp)
+    {
+        GameData data = SliceData.Load(tmp);
+        ScenarioData sc = data.Scenario(SliceRunConfig.DefaultScenario);
+        string good = SyntheticControlTables(data, n => n % 7 == 0 ? null : n % 5);
+        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(good);
+        ControlTables t = ControlTables.Parse(bytes, sc, data.Nodes, JetSliceModelFactory.SliceHorizonMonths);
+        string sha = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes));
+        if (t.Sha256 != sha || t.Lk.Mean[4 + 1] != 120 || t.Lc.Length != 3 || t.TDesign[3] != 60)
+            return "parsed tables differ from the file";
+        int app = ControlTables.AppNodes(data.Nodes).First();
+        int never = Enumerable.Range(0, data.Nodes.Count).Select(r => data.Nodes.Number[r]).First(n => n % 7 == 0 && n != app
+            && data.Nodes.Gen[data.Nodes.Number.IndexOf(n)] is >= 1 and <= 4 && !ControlTables.AppNodes(data.Nodes).Contains(n));
+        if (t.Lk.Delta[t.Lk.DeltaIndex(0, never)] != LkTables.Never || t.Lk.Delta[t.Lk.DeltaIndex(0, app)] != 0)
+            return "delta null/APP not read as Never/0";
+        foreach ((string bad, string why) in new[]
+        {
+            (good + "\n", "trailing newline"),
+            (SyntheticControlTables(data, actors: ["GBR", "USA", "SUN", "FRA", "SWE"]), "actor order"),
+            (good.Replace("\"format\":\"control_tables/1\"", "\"format\":\"control_tables/0\"", StringComparison.Ordinal), "format"),
+        })
+        {
+            try
+            {
+                ControlTables.Parse(System.Text.Encoding.UTF8.GetBytes(bad), sc, data.Nodes, JetSliceModelFactory.SliceHorizonMonths);
+                return $"accepted a file with a wrong {why}";
+            }
+            catch (ParamException) { }
+        }
+        string badApp = good.Replace($"\"{app}\":0", $"\"{app}\":3", StringComparison.Ordinal);
+        try
+        {
+            ControlTables.Parse(System.Text.Encoding.UTF8.GetBytes(badApp), sc, data.Nodes, JetSliceModelFactory.SliceHorizonMonths);
+            return "accepted a non-zero delta of an APP node";
+        }
+        catch (ParamException) { }
+
+        File.WriteAllBytes(Path.Combine(tmp, "tables.json"), bytes);
+        var (r, dir) = Run(tmp, Manifest("JetSlice", Ticks60, pars: """{"LAYER": "LK", "CONTROL_TABLES": "tables.json", "detail": "lite"}"""), 1, 1, "lk-file");
+        if (!r.Ok)
+            return r.Error;
+        using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, RunExecutor.RunJsonFile)));
+        string? got = doc.RootElement.GetProperty("model_info").TryGetProperty("control_tables_hash", out JsonElement h) ? h.GetString() : null;
+        if (got != sha)
+            return $"model_info.control_tables_hash {got}, want {sha}";
+        var (main, _) = Run(tmp, Manifest("JetSlice", Ticks60, pars: """{"detail": "lite"}"""), 1, 1, "lk-main");
+        return main.Ok && main.GoldenHash != r.GoldenHash ? null : "the L_K run has the golden of main";
+    }
+
+    // contract-proposals T3 (TASK-0054): model_info carries the design-capacity counters; on the full horizon of seed 1 the AI never fills
+    // every slot, so no command can have met DESIGN_CAPACITY.
+    private static string? DesignCapacity(string tmp)
+    {
+        var (r, dir) = Run(tmp, Manifest("JetSlice", 11688, pars: """{"detail": "lite"}"""), 1, 1, "capacity");
+        if (!r.Ok)
+            return r.Error;
+        using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, RunExecutor.RunJsonFile)));
+        JsonElement info = doc.RootElement.GetProperty("model_info");
+        long Get(string k) => long.Parse(info.GetProperty(k).GetString()!, System.Globalization.CultureInfo.InvariantCulture);
+        long cmds = Get("design_commands"), slots = Get("design_slots_max"), cap = Get("design_slots_capacity");
+        if (cmds <= 0 || slots <= 0 || cap != 12)
+            return $"design_commands {cmds}, design_slots_max {slots}, capacity {cap}";
+        return slots < cap && Get("design_commands_without_design_all_slots_used") == 0 ? null : $"slots {slots} of {cap}";
     }
 
     private static string? Golden(string tmp)

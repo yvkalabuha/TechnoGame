@@ -6,6 +6,7 @@ checks is one test here. The v0.5 r7 prints (A40, A39, F17b, licences, fleet, C1
 """
 import copy
 import csv
+import json
 import math
 import os
 import sys
@@ -184,11 +185,15 @@ class C1Stand(unittest.TestCase):
             rows = []
             # DEV/FULL: 3 doublings, dlog_cost 0.2 each -> drop 1 - e^-0.2 = 0.181; yield 0.12, asm 0.08 -> 0.6
             for k in range(3):
-                rows.append(["DEV", "FULL", k, 1, 2, 0.2, 0.12, 0.08, 0.1, 0.2])
-            # MATURE/FULL: 2 doublings, cost 0.03, yield 0.003, asm 0.027 -> 0.1; Wright 0.2 and 0.35 (P0 fails)
-            rows.append(["MATURE", "FULL", 0, 400, 800, 0.03, 0.003, 0.027, 0.15, 0.2])
-            rows.append(["MATURE", "FULL", 1, 800, 1600, 0.03, 0.003, 0.027, 0.15, 0.35])
-            rows.append(["DEV", "NO_YIELD", 0, 1, 2, 0.05, 0.0, 0.05, 0.1, 0.2])
+                rows.append(["DEV", "FULL", k, 1, 2, 0.5, 1, 0.2, 0.12, 0.08, 0.1, 0.2])
+            # a doubling below the serial admission (in_stat = 0) does not count
+            rows.append(["DEV", "FULL", 3, 1, 2, 0.1, 0, 0.9, 0.9, 0.0, 0.1, 0.2])
+            # MATURE/FULL: 2 doublings, cost 0.03, yield 0.003, asm 0.027 -> 0.1; Wright 0.2 and 0.45: window mean
+            # 1 - sqrt(0.8 * 0.55) = 0.337 > 0.30 (P0 fails on the mean)
+            rows.append(["MATURE", "FULL", 0, 200, 400, 0.9, 1, 0.03, 0.003, 0.027, 0.15, 0.2])
+            rows.append(["MATURE", "FULL", 1, 400, 800, 0.9, 1, 0.03, 0.003, 0.027, 0.15, 0.45])
+            rows.append(["MATURE", "FULL", 2, 800, 1600, 0.9, 0, 0.5, 0.0, 0.5, 0.15, 0.9])
+            rows.append(["DEV", "NO_YIELD", 0, 1, 2, 0.5, 1, 0.05, "", "", 0.1, 0.2])
             p = os.path.join(d, "c1_stand.csv")
             write(d, "c1_stand.csv", X.C1_COLS, rows)
             r = X.c1_stand(p, CFG)
@@ -199,11 +204,27 @@ class C1Stand(unittest.TestCase):
         self.assertAlmostEqual(r["C1d"]["value"], 0.1)
         self.assertAlmostEqual(r["C1e"]["value"], 1 - math.exp(-0.03))
         self.assertEqual(r["C1e"]["d"], 0.0)
+        self.assertAlmostEqual(r["wright_P0"]["window_mean"], 1 - math.sqrt(0.8 * 0.55))
         self.assertFalse(r["wright_P0"]["ok"])
+        self.assertEqual(r["loss_C1"], 0.0)
+
+    def test_c1_wright_on_window_mean_and_dev_below_admission_is_d1(self):
+        # Wright P0 (#187): the first doubling 12.2% is below 15% by construction; the corridor holds for the mean only.
+        # DEV with min yield < 0.25 at every doubling: the set is empty, d_C1a = d_C1b = 1 (spec §8.2 п.1).
+        with tempfile.TemporaryDirectory() as d:
+            rows = [["DEV", "FULL", k, 25, 50, 0.0, 0, 0.05, 0.04, 0.01, 0.1, 0.2] for k in range(3)]
+            rows += [["MATURE", "FULL", k, 1, 2, 0.9, 1, 0.04, 0.0, 0.04, 0.1, x] for k, x in enumerate([0.122, 0.17, 0.2])]
+            write(d, "c1_stand.csv", X.C1_COLS, rows)
+            r = X.c1_stand(os.path.join(d, "c1_stand.csv"), CFG)
+        self.assertTrue(r["wright_P0"]["ok"])
+        self.assertEqual(r["DEV"]["n"], 0)
+        self.assertEqual(r["C1a"]["d"], 1.0)
+        self.assertEqual(r["C1b"]["d"], 1.0)
+        self.assertGreaterEqual(r["loss_C1"], 2.0)
 
     def test_c1_empty_setup_is_d1(self):
         with tempfile.TemporaryDirectory() as d:
-            write(d, "c1_stand.csv", X.C1_COLS, [["DEV", "FULL", 0, 1, 2, 0.2, 0.12, 0.08, 0.1, 0.2]])
+            write(d, "c1_stand.csv", X.C1_COLS, [["DEV", "FULL", 0, 1, 2, 0.5, 1, 0.2, 0.12, 0.08, 0.1, 0.2]])
             r = X.c1_stand(os.path.join(d, "c1_stand.csv"), CFG)
         self.assertIsNone(r["C1e"]["value"])
         self.assertEqual(r["C1e"]["d"], 1.0)
@@ -336,6 +357,49 @@ class P5Labels(unittest.TestCase):
         kd = CFG["p5_kdiff"]
         self.assertEqual((kd["lo"], kd["mid"], kd["hi"]), (0.75, 0.5, 0.0))
         self.assertEqual([1 - kd[x] for x in ("lo", "mid", "hi")], [0.25, 0.5, 1.0])
+
+
+class ControlTablesFile(unittest.TestCase):
+    """Format §3.1 (TASK-0054): the CONTROL_TABLES file is canonical integer JSON; APP delta 0, never -> null."""
+
+    def tables(self):
+        nm = CFG["n_months"]
+        t = {"lk": {}, "delta": {}, "Y": {}, "U": {}, "T_design": {}, "rho": {}}
+        for a in CFG["actors"]:
+            for g in range(1, 5):
+                t["lk"]["%s:%d" % (a, g)] = ({"p_cens_fx": X.FX, "m_int": None, "half": None} if g == 4 else
+                                             {"p_cens_fx": 10000, "m_int": 50 * g, "half": 7})
+            for nd, (typ, ng, _) in X.NODES.items():
+                if 1 <= ng <= 4:
+                    t["delta"]["%s:%d" % (a, nd)] = {"never": nd % 2 == 0, "delta": 3, "n": 5}
+        for k in ("3", "4", "5"):
+            t["Y"][k], t["U"][k] = [500000] * 2 * nm, [1000000] * 2 * nm
+        for g in ("1", "2", "3", "4"):
+            t["T_design"][g], t["rho"][g] = 24, 1000
+        return t
+
+    def test_file_is_canonical_and_integer(self):
+        text = X.control_tables_file(self.tables(), CFG)
+        doc = json.loads(text)
+        self.assertEqual(text, X.canonical_json(doc))
+        self.assertFalse(text.endswith("\n"))
+        self.assertEqual(doc["format"], "control_tables/1")
+        self.assertEqual(doc["actors"], CFG["actors"])
+        self.assertEqual(doc["lk"]["USA"]["4"], {"p_cens": X.FX, "mean": 0, "half": 0})
+        self.assertEqual(doc["lk"]["GBR"]["2"], {"p_cens": 10000, "mean": 100, "half": 7})
+        for g, app in CFG["calib"]["app_nodes"].items():
+            self.assertEqual(doc["delta"]["SUN"][str(app)], 0)
+        odd = [nd for nd, (_, ng, _) in X.NODES.items() if 1 <= ng <= 4 and nd % 2 and nd not in (58, 59, 60, 61)][0]
+        even = [nd for nd, (_, ng, _) in X.NODES.items() if 1 <= ng <= 4 and nd % 2 == 0 and nd not in (58, 59, 60, 61)][0]
+        self.assertEqual(doc["delta"]["FRA"][str(odd)], 3)
+        self.assertIsNone(doc["delta"]["FRA"][str(even)])
+        self.assertEqual(len(doc["lc"]["Y"]["5"]), 2 * CFG["n_months"])
+
+    def test_incomplete_tables_raise(self):
+        t = self.tables()
+        del t["Y"]["5"]
+        with self.assertRaises(X.InputError):
+            X.control_tables_file(t, CFG)
 
 
 if __name__ == "__main__":

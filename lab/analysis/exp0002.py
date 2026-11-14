@@ -135,7 +135,7 @@ LINES_COLS = ["run", "t", "actor", "design", "g_p", "role", "y_min", "argp", "ra
               "close_rule", "close_core", "left_share", "w_after_n"]
 FLEET_COLS = ["run", "t", "actor", "kind", "design", "gen_d", "gen_line", "count", "g_front", "line_bind"]
 LICENCES_COLS = ["run", "t", "seller", "buyer", "gen", "profile", "price", "t_end"]
-C1_COLS = ["setup", "arm", "k", "n_from", "n_to", "dlog_cost", "dlog_yield", "dlog_asm", "asm_drop", "asm_over_floor_drop"]
+C1_COLS = ["setup", "arm", "k", "n_from", "n_to", "min_yield", "in_stat", "dlog_cost", "dlog_yield", "dlog_asm", "asm_drop", "asm_over_floor_drop"]
 
 
 class InputError(Exception):
@@ -1653,37 +1653,56 @@ def series_identity(D, cfg):
 
 
 def c1_stand(path, cfg):
-    """C1 by c1_stand.csv (format §6; spec §8.2 п.1, #184-#188). dlog_* are per-doubling drops in log (positive =
-    cheaper) [Предп.: sign fixed when T12 writes the stand]. Statistics over the FULL arm; empty set -> d = 1."""
+    """C1 by c1_stand.csv (format §6 r8; spec §8.2 п.1, #184-#188). dlog_* = log c(n) - log c(2n): positive = the unit
+    cost falls (sign fixed by TASK-0054). Statistics over the FULL arm, only rows with in_stat = 1 (DEV: min process
+    yield >= 0.25 at the start of the doubling; MATURE: line_E start <= 400); empty set -> d = 1. The Wright P0 check
+    (#187) is on the window mean in log of asm_over_floor_drop (contract §8 п.2 r9: the corridor holds for the mean,
+    not for each doubling); other setups/arms are printed."""
     rows = _read_csv(path, C1_COLS)
     c = cfg["c1"]
     sel = collections.defaultdict(list)
     for r in rows:
         sel[(r["setup"], r["arm"])].append(r)
 
-    def stats(setup):
-        rs = sel.get((setup, "FULL"), [])
+    def mean_drop(xs):
+        return 1.0 - math.exp(sum(math.log(1.0 - x) for x in xs) / len(xs)) if xs else None
+
+    def stats(setup, arm="FULL", only_stat=True):
+        rs = [r for r in sel.get((setup, arm), []) if (r["in_stat"] == "1" or not only_stat)]
         if not rs:
-            return {"n": 0, "cost_drop": None, "yield_share": None}
+            return {"n": 0, "cost_drop": None, "yield_share": None, "additivity": None}
         dc = [float(r["dlog_cost"]) for r in rs]
         dy = [float(r["dlog_yield"]) for r in rs]
         da = [float(r["dlog_asm"]) for r in rs]
         den = sum(dy) + sum(da)
         return {"n": len(rs), "cost_drop": 1.0 - math.exp(-sum(dc) / len(rs)),
                 "yield_share": (sum(dy) / den) if den else None,
+                "additivity": den / sum(dc) if sum(dc) else None,
+                "min_yield": [float(r["min_yield"]) for r in rs],
                 "per_doubling_cost_drop": [1.0 - math.exp(-x) for x in dc]}
     dev, mat = stats("DEV"), stats("MATURE")
     out = {"DEV": dev, "MATURE": mat}
-    out["C1a"] = {"value": dev["cost_drop"], "ok": dev["cost_drop"] is not None and dev["cost_drop"] <= c["dev_cost_max"]}
+
+    def d_corr(v, lo, hi):
+        return 1.0 if v is None else max(0.0, lo - v, v - hi) / (hi - lo)
+    out["C1a"] = {"value": dev["cost_drop"], "ok": dev["cost_drop"] is not None and dev["cost_drop"] <= c["dev_cost_max"],
+                  "d": d_corr(dev["cost_drop"], 0.0, c["dev_cost_max"])}
     out["C1b"] = {"value": dev["yield_share"], "ok": dev["yield_share"] is not None
-                  and c["dev_yield_lo"] <= dev["yield_share"] <= c["dev_yield_hi"]}
+                  and c["dev_yield_lo"] <= dev["yield_share"] <= c["dev_yield_hi"],
+                  "d": d_corr(dev["yield_share"], c["dev_yield_lo"], c["dev_yield_hi"])}
     out["C1d"] = {"value": mat["yield_share"], "ok": mat["yield_share"] is not None
-                  and mat["yield_share"] <= c["mature_yield_max"]}
+                  and mat["yield_share"] <= c["mature_yield_max"],
+                  "d": d_corr(mat["yield_share"], 0.0, c["mature_yield_max"])}
     e = mat["cost_drop"]
     out["C1e"] = {"value": e, "ok": e is not None and e <= c["mature_cost_max"],
                   "d": 1.0 if e is None else max(0.0, e - c["mature_cost_max"]) / c["mature_cost_max"]}
-    w = [float(r["asm_over_floor_drop"]) for r in sel.get(("MATURE", "FULL"), [])]
-    out["wright_P0"] = {"per_doubling": w, "ok": bool(w) and all(c["wright_lo"] <= x <= c["wright_hi"] for x in w)}
+    w = [float(r["asm_over_floor_drop"]) for r in sel.get(("MATURE", "FULL"), []) if r["in_stat"] == "1"]
+    wm = mean_drop(w)
+    out["wright_P0"] = {"per_doubling": w, "window_mean": wm,
+                        "ok": wm is not None and c["wright_lo"] <= wm <= c["wright_hi"]}
+    out["loss_C1"] = sum(out[k]["d"] ** 2 for k in ("C1a", "C1b", "C1d", "C1e"))
+    out["prints"] = {"%s/%s" % k: stats(k[0], k[1], only_stat=(k[0] != "MATURE_3X"))
+                     for k in sorted(sel) if k[1] not in ("NO_YIELD", "NO_ASM", "NONE")}
     out["arms"] = sorted("%s/%s:%d" % (k[0], k[1], len(v)) for k, v in sel.items())
     return out
 
@@ -2276,6 +2295,10 @@ def calib_tables(d, cfg):
         c4[g_s] = {"share": sh, "ok": sh is not None and sh >= lo,
                    "d": 1.0 if sh is None else max(0.0, lo - sh, sh - 1.0) / (1.0 - lo)}   # §8.2 п.3, corridor [0.5; 1]
     tables = {k: out[k] for k in ("lk", "delta", "Y", "U", "T_design", "rho")}
+    try:
+        tables_file, tables_error = control_tables_file(tables, cfg), None
+    except InputError as e:     # an incomplete table (e.g. a tier without a curve) has no CONTROL_TABLES file and no hash
+        tables_file, tables_error = None, str(e)
     # P0 of the calibration build (format §5): A40 L-O0/L-C0 and the A39 ledger invariants on calibration seeds
     D = Data()
     for rid, r in runs.items():
@@ -2285,8 +2308,52 @@ def calib_tables(d, cfg):
     c0 = copy.deepcopy(cfg)
     c0["a40"]["main_series"] = ["calib-P0"]     # L-O0 / L-C0 on calibration seeds (format §5: P0, not leadership)
     p0 = {"a40": a40_prints(D, c0), "ledger": ledger_prints(D, c0)}
-    return {"control_tables": tables, "control_tables_hash": sha256_text(canonical_json(jsonable(tables))),
+    return {"control_tables": tables, "control_tables_file": tables_file, "control_tables_hash": None if tables_file is None else sha256_text(tables_file),
+            "control_tables_error": tables_error,
             "seeds": out["seeds"], "C2": c2, "C4": c4, "p0": p0, "T_SK": tsk_check, "T_design_obs": tds}
+
+
+CONTROL_TABLES_FORMAT = "control_tables/1"
+
+
+def control_tables_file(tables, cfg):
+    """The CONTROL_TABLES file (format §3.1, TASK-0054): integers only, canonical JSON (sorted keys, no whitespace, no
+    trailing newline), so sha256(file bytes) = control_tables_hash in Python and in the Lab. lk: p_cens (Fx6 raw), mean
+    (m rounded half up), half (round(sqrt3*s)); an all-censored (actor, g) has mean = half = 0 and p_cens = 1. delta per
+    actor and node of G1-G4: months or null ("never", or no seed with both times); the APP node of g is 0. lc: Y_k, U_k
+    raw on tau 0..2H-1 for tiers 3-5. lp: T_design (months), rho (raw)."""
+    nm = cfg["n_months"]
+    apps = {int(v): int(g) for g, v in cfg["calib"]["app_nodes"].items()}
+    lk, delta = {}, {}
+    for a in cfg["actors"]:
+        lk[a], delta[a] = {}, {}
+        for g in range(1, 5):
+            e = tables["lk"]["%s:%d" % (a, g)]
+            allc = e["m_int"] is None
+            lk[a][str(g)] = {"p_cens": FX if allc else e["p_cens_fx"], "mean": 0 if allc else e["m_int"],
+                             "half": 0 if allc else e["half"]}
+        for nd, (typ, ng, _) in sorted(NODES.items()):
+            if not 1 <= ng <= 4:
+                continue
+            if nd in apps:
+                delta[a][str(nd)] = 0
+                continue
+            x = tables["delta"].get("%s:%d" % (a, nd))
+            delta[a][str(nd)] = None if (x is None or x["never"] or x["delta"] is None) else int(x["delta"])
+    for k in ("3", "4", "5"):
+        for c in ("Y", "U"):
+            if k not in tables[c] or len(tables[c][k]) != 2 * nm:
+                raise InputError("control tables: curve %s_%s missing or not %d knots" % (c, k, 2 * nm))
+    for g in ("1", "2", "3", "4"):
+        if tables["T_design"].get(g) is None or tables["rho"].get(g) is None:
+            raise InputError("control tables: T_design/rho of G%s not observed" % g)
+    doc = {"format": CONTROL_TABLES_FORMAT, "horizon": nm, "actors": list(cfg["actors"]), "max_node": max(NODES),
+           "lk": lk, "delta": delta,
+           "lc": {"Y": {k: [int(v) for v in tables["Y"][k]] for k in ("3", "4", "5")},
+                  "U": {k: [int(v) for v in tables["U"][k]] for k in ("3", "4", "5")}},
+           "lp": {"T_design": {g: int(tables["T_design"][g]) for g in ("1", "2", "3", "4")},
+                  "rho": {g: int(tables["rho"][g]) for g in ("1", "2", "3", "4")}}}
+    return canonical_json(doc)
 
 
 # ---------------------------------------------------------------- self-test (synthetic data with known truth)
@@ -2619,6 +2686,7 @@ def main(argv=None):
     ap.add_argument("--out")
     ap.add_argument("--json")
     ap.add_argument("--calib")
+    ap.add_argument("--tables-out", help="with --calib: write the CONTROL_TABLES file (format §3.1, control_tables/1)")
     ap.add_argument("--c1", help="c1_stand.csv (format §6): C1a, C1b, C1d, C1e and the Wright P0 check")
     ap.add_argument("--dump-config", action="store_true")
     ap.add_argument("--selftest", action="store_true")
@@ -2654,6 +2722,12 @@ def main(argv=None):
                 ", ".join(r["arms"]))
         elif a.calib:
             r = calib_tables(a.calib, cfg)
+            if a.tables_out:
+                if r["control_tables_file"] is None:
+                    raise InputError("no CONTROL_TABLES file: %s" % r["control_tables_error"])
+                with open(a.tables_out, "w", encoding="ascii", newline="") as f:
+                    f.write(r["control_tables_file"])
+            r = {k: v for k, v in r.items() if k != "control_tables_file"}
             text = json.dumps(jsonable(r), indent=1, sort_keys=True) + "\n"
             md = ("# Калибровочная сборка: таблицы контролей §6.1, C2, C4\n\n- control_tables_hash: `%s`\n- seeds: %d\n"
                   "- C2: %s\n- C4: %s\n" % (r["control_tables_hash"], r["seeds"], json.dumps(jsonable(r["C2"]), sort_keys=True),

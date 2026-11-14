@@ -13,6 +13,7 @@ public static class Program
           models                                     list registered models
           selftest                                   built-in self-checks (until tests/ has Lab tests)
           smoke-t4s --out <dir> [--mods <dir>] [--seeds N] [--only c1|c2|c3]  anchor smoke C1(yield)/C2/C3 (TASK-0017)
+          c1-stand --out <dir> [--mods <dir>]       C1 stand, two setups -> c1_stand.csv (TASK-0054, format §6)
           culture-rules --out <dir> [--mods <dir>] [--only check|gate|holdout|...]  culture_H rule selection (culture-rule-selection.md)
 
         Exit codes: 0 ok, 1 run/matrix failure or self-check failure, 2 usage or manifest error.
@@ -38,6 +39,7 @@ public static class Program
                 "selftest" => SelfTest.Run(Console.Out),
                 "smoke-t4s" => SmokeT4s(opts),
                 "culture-rules" => CultureRules(opts),
+                "c1-stand" => C1Stand(opts),
                 _ => throw new UsageException($"Unknown command '{args[0]}'."),
             };
         }
@@ -126,6 +128,14 @@ public static class Program
             throw new UsageException("--only must be c1, c2 or c3.");
         o.CheckAllUsed();
         return Smoke.SmokeT4s.Run(mods, outDir, seeds, only, Console.Out);
+    }
+
+    private static int C1Stand(Options o)
+    {
+        string outDir = Path.GetFullPath(o.Required("out"));
+        string mods = o.Optional("mods") ?? Path.Combine("mods", "core");
+        o.CheckAllUsed();
+        return Smoke.C1Stand.Run(mods, outDir, Console.Out);
     }
 
     private static int CultureRules(Options o)
