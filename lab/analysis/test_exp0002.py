@@ -222,7 +222,7 @@ class CalibStartKnowledge(unittest.TestCase):
                 for a in CFG["actors"]:
                     nt.append([rid, a, 58, -1, "", "", "", 0])           # APP G1 known at start
                     nt.append([rid, a, 17, 10 * s, "", "", "", 0])       # ENG G1 known at 10*s
-                    nt.append([rid, a, 49, -1, 0, -1, "", 0])            # tier-4 PRC known and mastered at start (USA/GBR...)
+                    nt.append([rid, a, 49, -1, 0, -1, -1, 0])            # tier-4 PRC known and mastered at start: out of C2
                     nt.append([rid, a, 40, 5, 12, "" if s <= 2 else 60, "", 0])   # tier-4: 2 censored, 2 of 4 years
                     nt.append([rid, a, 41, 5, 12, "", "", 0])            # tier-5: all censored
                     for t in range(3):
@@ -252,8 +252,55 @@ class CalibStartKnowledge(unittest.TestCase):
         self.assertEqual(c2["tier4"]["right_censored"], 10)
         self.assertEqual(c2["tier4"]["p50_years"], 4.0)    # lower median of 10 x 4.0 and 10 x inf
         self.assertFalse(c2["tier4"]["d_is_1"])
-        self.assertTrue(c2["tier5"]["d_is_1"])
+        self.assertFalse(c2["tier5"]["d_is_1"])    # fully censored, but every pair has t_first: d = 1 is not by censoring
+        self.assertEqual(c2["tier5"]["no_t_first_share"], 0.0)
         self.assertFalse(c2["tier5_longer"])       # fully censored tier 5: not met
+
+
+class CalibCodexR1(unittest.TestCase):
+    """Codex round 1 (TASK-0053): tau = 0 kept whatever `known` says; C2 keeps pairs in use but not mastered at the
+    start; d = 1 by the share of pairs WITHOUT t_first."""
+
+    def run_calib(self, nt_rows, pm_rows):
+        with tempfile.TemporaryDirectory() as d:
+            runs = [["c%d" % s, "calib", 10000 + s, 1, "ok", "h"] for s in range(1, 5)]
+            write(d, "runs.csv", X.RUNS_COLS, runs)
+            write(d, "calib_summary.csv", X.CALIB_SUMMARY_COLS, [[r[0], 1, 1, 1, 1, 1] for r in runs])
+            write(d, "node_times.csv", X.NODE_TIMES_COLS, nt_rows)
+            write(d, "gen_times.csv", X.GEN_TIMES_COLS, [])
+            write(d, "prc_month.csv", X.PRC_MONTH_COLS, pm_rows)
+            write(d, "actor_month.csv", X.ACTOR_MONTH_COLS, [])
+            return X.calib_tables(d, CFG)
+
+    def test_tau0_row_with_known_0_is_kept(self):
+        nt = [["c%d" % s, "USA", 40, 10, "", "", "", 0] for s in range(1, 5)]
+        pm = [["c%d" % s, 10, "USA", 40, 0, 0, 123000, 5 * FX, 0] for s in range(1, 5)]   # month of discovery, known = 0
+        pm += [["c%d" % s, 11, "USA", 40, 1, 1, 456000, 2 * FX, 0] for s in range(1, 5)]
+        r = self.run_calib(nt, pm)
+        self.assertEqual(r["control_tables"]["Y"]["4"][0], 123000)
+        self.assertEqual(r["control_tables"]["U"]["4"][0], 5 * FX)
+        self.assertEqual(r["control_tables"]["Y"]["4"][1], 456000)
+
+    def test_c2_counts_pairs_in_use_but_not_mastered_at_start(self):
+        # t_first = -1 (in use at the start), t_mastered empty: 47 - (-1) = 48 months = 4 years; mastered ones excluded
+        nt = [["c%d" % s, "USA", 40, -1, -1, 47, "", 0] for s in range(1, 5)]
+        nt += [["c%d" % s, "GBR", 40, -1, -1, -1, -1, 0] for s in range(1, 5)]
+        r = self.run_calib(nt, [])
+        t4 = r["C2"]["tier4"]
+        self.assertEqual((t4["pool"], t4["n"], t4["p50_years"]), (4, 4, 4.0))
+        self.assertTrue(r["C2"]["tier4_in_corridor"])
+
+    def test_c2_d1_by_share_without_t_first(self):
+        # 3 of 4 pairs without t_first, the 4th observed: d = 1 although nothing is censored
+        nt = [["c%d" % s, "USA", 40, 10, "" if s <= 3 else 12, "" if s <= 3 else 60, "", 0] for s in range(1, 5)]
+        t4 = self.run_calib(nt, [])["C2"]["tier4"]
+        self.assertEqual((t4["no_t_first"], t4["right_censored"]), (3, 0))
+        self.assertTrue(t4["d_is_1"])
+        # 4 of 4 censored with t_first: no d = 1 from this rule
+        nt = [["c%d" % s, "USA", 40, 10, 12, "", "", 0] for s in range(1, 5)]
+        t4 = self.run_calib(nt, [])["C2"]["tier4"]
+        self.assertEqual((t4["no_t_first_share"], t4["censored_share"]), (0.0, 1.0))
+        self.assertFalse(t4["d_is_1"])
 
 
 class P5Labels(unittest.TestCase):

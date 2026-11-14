@@ -2090,7 +2090,8 @@ def calib_tables(d, cfg):
     nt = collections.defaultdict(dict)
     for r in _read_csv(os.path.join(d, "node_times.csv"), NODE_TIMES_COLS):
         if r["run"] in runs:
-            nt[r["run"]][(r["actor"], int(r["node"]))] = (_oi(r["t_known"]), _oi(r["t_first"]), _oi(r["t_07"]))
+            nt[r["run"]][(r["actor"], int(r["node"]))] = (_oi(r["t_known"]), _oi(r["t_first"]), _oi(r["t_07"]),
+                                                          _oi(r["t_mastered"]))
     gt = collections.defaultdict(dict)
     for r in _read_csv(os.path.join(d, "gen_times.csv"), GEN_TIMES_COLS):
         if r["run"] in runs:
@@ -2152,7 +2153,9 @@ def calib_tables(d, cfg):
             if tk is None:
                 continue
             tau = int(r["t"]) - tk
-            if tau < 0 or int(r["known"]) == 0:
+            # no filter on `known`: tau = 0 is the month of discovery, its yield/ucm are computed for the not-yet-known
+            # process (spec A24 v0.7: "в compute месяца t_known процесс ещё не в снимке; yield и 1/yc считаются")
+            if tau < 0:
                 continue
             k = NODES[nd][2]
             ys, us = curves[k][tau]
@@ -2204,23 +2207,31 @@ def calib_tables(d, cfg):
         out["rho"][str(g)] = median_low(xs)
     # C2, C4
     def mast(nodes):
-        # spec §8.2 C2: censored (t_first, no t_07 by 383) = +inf, lower median; pairs mastered at the start excluded
-        xs, cens = [], 0
+        # spec §8.2 C2: pool = (actor, star PRC) pairs over calibration seeds, pairs MASTERED at the start (t_mastered = -1)
+        # excluded; a pair with t_first (also -1: in use at the start) enters with t_07 - t_first, or +inf if no t_07 by
+        # 383 (lower median); pairs without t_first stay out of the p50, and if they are > 50% of the pool, d = 1.
+        xs, cens, no_first, pool = [], 0, 0, 0
         for rid in rids:
             for a in cfg["actors"]:
                 for nd in nodes:
                     x = nt[rid].get((a, nd))
-                    if not x or x[1] is None or x[1] < 0 or (x[2] is not None and x[2] < 0):
+                    if x is None:
                         continue
-                    if x[2] is None:
+                    if x[3] is not None and x[3] < 0:
+                        continue
+                    pool += 1
+                    if x[1] is None:
+                        no_first += 1
+                    elif x[2] is None:
                         cens += 1
                         xs.append(math.inf)
                     else:
-                        xs.append((x[2] - x[1]) / 12.0)
-        p50 = median_low(xs)
-        share_c = cens / len(xs) if xs else None
-        return {"p50_years": p50, "n": len(xs), "right_censored": cens, "censored_share": share_c,
-                "d_is_1": not xs or share_c > 0.5}
+                        xs.append(max(0, x[2] - x[1]) / 12.0)   # t_07 = -1 with t_first = 0 (V = 0 at the start): 0
+        no_first_share = no_first / pool if pool else None
+        return {"p50_years": median_low(xs), "n": len(xs), "pool": pool, "no_t_first": no_first,
+                "no_t_first_share": no_first_share, "right_censored": cens,
+                "censored_share": cens / len(xs) if xs else None,
+                "d_is_1": not pool or no_first_share > 0.5}
     c2 = {"tier4": mast(c["c2_tier4"]), "tier5": mast(c["c2_tier5"])}
     t4, t5 = c2["tier4"]["p50_years"], c2["tier5"]["p50_years"]
     c2["tier4_in_corridor"] = t4 is not None and c["c2_years"][0] <= t4 <= c["c2_years"][1]
