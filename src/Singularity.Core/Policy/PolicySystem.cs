@@ -211,7 +211,7 @@ public sealed partial class PolicySystem : ITickSystem
             // P2 trigger counts consecutive months with a series below the quality bar and starts a programme at the annual step
             // (P1/P3 triggers read why_not: T6d). A programme started in month t acts from t+1.
             if (active)
-                _mailbox.ReserveWorkforce(chunk, new WorkforceRequest(row, Products.ProductsLayout.EngineerCategory, _qpRequester, _qpEngineers[row]));
+                _mailbox.ReserveWorkforce(chunk, Products.ProductsLayout.EngineerRequest(row, _qpRequester, _qpEngineers[row]));
             if (profile == PolicyProfile.Mass)
                 count = _inputs.SeriesBelowQuality(row, _p.QpQuality, t) ? count + 1 : 0;
             bool next = active;

@@ -152,6 +152,15 @@ public sealed class ProductsLayout
 
     public int SkilledRequester(int line, int cluster) => line * ClusterCount + cluster;
 
+    /// <summary>
+    /// The only way to ask for the skilled category (spec §3.5 A26: the grants are read by <c>requester_id mod C</c>, so the id must be
+    /// <see cref="SkilledRequester"/>). The architecture test allows no other creator of a request than this and <see cref="EngineerRequest"/>.
+    /// </summary>
+    public WorkforceRequest SkilledRequest(int site, int line, int cluster, long n) => new(site, SkilledCategory, SkilledRequester(line, cluster), n);
+
+    /// <summary>A request for engineers (bureaus, fixes, the quality programme): any requester id, the category is fixed.</summary>
+    public static WorkforceRequest EngineerRequest(int site, int requesterId, long n) => new(site, EngineerCategory, requesterId, n);
+
     public int BureauRequester(int bureau) => Designs * ClusterCount + bureau;
 
     public int FixRequester(int design) => Designs * ClusterCount + Bureaus + design;

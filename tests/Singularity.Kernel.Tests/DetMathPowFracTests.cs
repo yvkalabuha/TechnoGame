@@ -1,3 +1,4 @@
+using System.Globalization;
 using Singularity.Kernel;
 
 namespace Singularity.Kernel.Tests;
@@ -24,6 +25,28 @@ public class DetMathPowFracTests
         { 1.0000001, 1, 0x3FF000000006B5FCL },
         { 98765.4321, 3333, 0x43500BA7E480EB9DL },
     };
+
+    [Fact]
+    public void OverflowMessage_IsTheSameInEveryCulture()
+    {
+        string Message() => Assert.Throws<OverflowException>(() => DetMath.PowFrac(1.5, 1024 * 2000)).Message;
+        CultureInfo saved = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+            string invariant = Message();
+            Assert.Contains("1.5^(", invariant);
+            foreach (string name in new[] { "ru-RU", "de-DE", "fr-FR" })
+            {
+                CultureInfo.CurrentCulture = new CultureInfo(name);
+                Assert.Equal(invariant, Message());
+            }
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = saved;
+        }
+    }
 
     [Theory]
     [MemberData(nameof(Golden))]

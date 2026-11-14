@@ -12,8 +12,8 @@ namespace Singularity.Architecture.Tests;
 /// the namespace (nested and compiler-generated types included) holds, takes, returns or stores in a local a
 /// <see cref="CounterRng"/>, touches any of its members, or reads <see cref="TickContext.Rng"/>.
 /// Transitive (DEBT-0012): the same rules hold for every method reachable from the layer through calls into Singularity assemblies,
-/// including the implementations of an interface the layer calls (<c>IIndustryInputs</c>, <c>IProductsInputs</c>, ...). A virtual call
-/// on a class is followed to the declared method only, not to its overrides.
+/// including the implementations of an interface the layer calls (<c>IIndustryInputs</c>, <c>IProductsInputs</c>, ...) and the overrides
+/// of a virtual or abstract method of our own classes it calls (not those of <c>object</c> or other framework roots: every record would match).
 /// </summary>
 public class CapabilityNoRngTests
 {
@@ -54,6 +54,33 @@ public class CapabilityNoRngTests
     {
         Assert.NotEmpty(TransitiveRngUses([typeof(MutantLayer)]));
         Assert.Contains(TransitiveRngUses([typeof(MutantLayer)]), u => u.Contains("DrawingInputs"));
+    }
+
+    [Fact]
+    public void TheTransitiveCheck_SeesARngInAnOverrideOfAVirtualAndOfAnAbstractMethod()
+    {
+        List<string> found = TransitiveRngUses([typeof(OverrideLayer)]);
+        Assert.Contains(found, u => u.Contains("DrawingOverride.Virtual"));
+        Assert.Contains(found, u => u.Contains("DrawingOverride.Abstract"));
+    }
+
+    internal abstract class MutantBase
+    {
+        public virtual long Virtual() => 0;
+
+        public abstract long Abstract();
+    }
+
+    internal sealed class DrawingOverride(CounterRng rng) : MutantBase
+    {
+        public override long Virtual() => (long)rng.NextUnit(0, 0, 0, 0);
+
+        public override long Abstract() => (long)rng.NextUnit(0, 0, 0, 1);
+    }
+
+    internal sealed class OverrideLayer(MutantBase b)
+    {
+        public long Step() => b.Virtual() + b.Abstract();
     }
 
     internal interface IMutantInputs
@@ -127,10 +154,22 @@ public class CapabilityNoRngTests
 
     private static bool SameMethod(MethodBase a, MethodBase b) => a.MetadataToken == b.MetadataToken && a.Module == b.Module;
 
-    /// <summary>The bodies a call can reach: the method itself, and for an interface method every implementation in our assemblies.</summary>
+    /// <summary>The bodies a call can reach: the method itself, for an interface method every implementation in our assemblies, for a virtual method every override.</summary>
     private static IEnumerable<MethodBase> Targets(MethodBase callee)
     {
         yield return callee;
+        if (callee is MethodInfo { IsVirtual: true, DeclaringType.IsInterface: false } virt && IsOwn(virt))
+        {
+            MethodInfo root = virt.GetBaseDefinition();
+            foreach (Type type in Own.SelectMany(a => a.GetTypes()).Where(t => t.IsClass && t != virt.DeclaringType && virt.DeclaringType!.IsAssignableFrom(t)))
+            {
+                foreach (MethodInfo o in type.GetMethods(IlScanner.AllDeclared).Where(m => m.IsVirtual && m.Name == virt.Name))
+                {
+                    if (SameMethod(o.GetBaseDefinition(), root))
+                        yield return o;
+                }
+            }
+        }
         if (callee.DeclaringType is not { IsInterface: true } iface)
             yield break;
         foreach (Type type in Own.SelectMany(a => a.GetTypes()).Where(t => t is { IsClass: true, IsAbstract: false } && iface.IsAssignableFrom(t)))

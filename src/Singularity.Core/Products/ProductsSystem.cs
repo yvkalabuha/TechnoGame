@@ -1066,7 +1066,7 @@ public sealed partial class ProductsSystem : ITickSystem
             int d = _bureauDesign[b].Next[a];
             if (d >= 0)
             {
-                _mailbox.ReserveWorkforce(chunk, new WorkforceRequest(a, ProductsLayout.EngineerCategory, _l.BureauRequester(b),
+                _mailbox.ReserveWorkforce(chunk, ProductsLayout.EngineerRequest(a, _l.BureauRequester(b),
                     _bureauReq[_l.AltAfClass[_alt[d * _s + _l.AirframeSlot].Next[a]] - 1]));
             }
             else if (_bureauDesign[b].Current[a] < 0)
@@ -1247,7 +1247,7 @@ public sealed partial class ProductsSystem : ITickSystem
             long team = ProductsMath.People(open * _p.FixHours, _l.HPm);
             long cap = _bureauReq[DesignRules.AfClass(_l, AltsNext(a, d)) - 1];
             if (team > 0)
-                _mailbox.ReserveWorkforce(chunk, new WorkforceRequest(a, ProductsLayout.EngineerCategory, _l.FixRequester(d), team < cap ? team : cap));
+                _mailbox.ReserveWorkforce(chunk, ProductsLayout.EngineerRequest(a, _l.FixRequester(d), team < cap ? team : cap));
         }
     }
 
@@ -1339,7 +1339,7 @@ public sealed partial class ProductsSystem : ITickSystem
         {
             long n = ProductsMath.People(Fx6.FromRaw(clusterHours[c]), _l.HPm);
             if (n > 0)
-                _mailbox.ReserveWorkforce(chunk, new WorkforceRequest(a, _l.SkilledCategory, _l.SkilledRequester(d, c), n));
+                _mailbox.ReserveWorkforce(chunk, _l.SkilledRequest(a, d, c, n));
         }
         LongColumn col = _cohort[d * _y + y];
         col.Next[a] = (Fx6.FromRaw(col.Next[a]) + r).Raw;
