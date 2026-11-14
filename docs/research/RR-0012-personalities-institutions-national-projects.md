@@ -1,7 +1,7 @@
 ---
 id: RR-0012
 title: "Личности, институты, национальные проекты"
-status: DRAFT            # DRAFT | FINAL | SUPERSEDED
+status: FINAL            # DRAFT | FINAL | SUPERSEDED
 date: 2026-11-14
 author: civilization-systems-designer
 related: [RR-0005, RR-0007, RR-0008, RR-0010, RR-0011, RR-0013, RR-0014]

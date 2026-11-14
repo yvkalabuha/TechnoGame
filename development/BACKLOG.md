@@ -64,6 +64,7 @@
 | [TASK-0048](../development/tasks/TASK-0048-llm-worker-debt-25-28.md) | DONE | llm_worker: DEBT-0025 (ledger repair) и DEBT-0028 (записи ревью) | MS-M0 |
 | [TASK-0049](../development/tasks/TASK-0049-core-kernel-debts-batch.md) | DONE | Долги Core/Kernel: DEBT-0004, 0006, 0011, 0012, 0013, 0017, 0021 | MS-M0 |
 | [TASK-0050](../development/tasks/TASK-0050-state-hash-without-tick.md) | APPROVED | DEBT-0009: хеш состояния только по таблицам, tick отдельно (ADR-0006/0013) | MS-M0 |
+| [TASK-0051](../development/tasks/TASK-0051-knowledge-rng-key-widen.md) | APPROVED | Ключ RNG знания actor·2^16 + node (#197), вместе с TASK-0050 | MS-M0 |
 
 ## Гипотезы
 
@@ -118,7 +119,7 @@
 | [RR-0008](../docs/research/RR-0008-technology-space-architecture.md) | FINAL | Архитектура технологического пространства |
 | [RR-0009](../docs/research/RR-0009-component-evolution-analysis.md) | FINAL | Эволюция компонентов: анализ брифа владельца против контракта слоёв |
 | [RR-0010](../docs/research/RR-0010-supply-chains-clusters.md) | FINAL | Цепочки поставок и промышленные кластеры: анализ пробелов и варианты модели |
-| [RR-0011](../docs/research/RR-0011-cross-system-interaction-map.md) | DRAFT | Карта сквозных взаимосвязей подсистем |
-| [RR-0012](../docs/research/RR-0012-personalities-institutions-national-projects.md) | DRAFT | Личности, институты, национальные проекты |
+| [RR-0011](../docs/research/RR-0011-cross-system-interaction-map.md) | FINAL | Карта сквозных взаимосвязей подсистем |
+| [RR-0012](../docs/research/RR-0012-personalities-institutions-national-projects.md) | FINAL | Личности, институты, национальные проекты |
 | [RR-0013](../docs/research/RR-0013-space-and-nuclear-race.md) | DRAFT | Космическая и ядерная гонка |
 | [RR-0014](../docs/research/RR-0014-resources-trade-export-control.md) | DRAFT | Ресурсы, торговля, экспортный контроль |

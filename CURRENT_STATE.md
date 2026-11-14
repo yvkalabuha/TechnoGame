@@ -13,6 +13,7 @@
 <!-- registry:active:start -->
 - TASK-0044 [APPROVED] T10: Lab-модели JetSlice и JetSliceCalib, CSV v0.24, манифесты, печати A39/A40 (simulation-engineer)
 - TASK-0050 [APPROVED] DEBT-0009: хеш состояния только по таблицам, tick отдельно (ADR-0006/0013) (developer)
+- TASK-0051 [APPROVED] Ключ RNG знания actor·2^16 + node (#197), вместе с TASK-0050 (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
