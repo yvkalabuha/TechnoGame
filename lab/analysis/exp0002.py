@@ -2194,10 +2194,26 @@ def calib_tables(d, cfg):
                 start_tiers.add(str(NODES[nd][2]))
     tsk_bad = [k for k in sorted(start_tiers) if k not in tsk or not tsk[k]["B_all_positive"] or tsk[k]["Y384"] < 700000]
     tsk_check = {"tiers": tsk, "start_tiers": sorted(start_tiers), "failed_tiers": tsk_bad, "ok": not tsk_bad}
+    # T_design[g] (spec §6.1 L_P): median over calibration seeds and all actors of Requirement -> first unit in service.
+    # t_req = -1 (a project of generation g at the start, format §9.1) is measured from month 0 (the earliest Requirement).
+    # A start project already in service at the start (t_first_unit = -1) has no observable design time: it is counted
+    # in `T_design_start_in_service` and left out (0 - 0 or -1 - 0 would be a fleet, not a design, time).
+    tds = {}
     for g in range(1, 5):
-        xs = [tf - tr for rid in rids for a in cfg["actors"]
-              for (tr, tf) in [gt[rid].get((a, g), (None, None))] if tr is not None and tf is not None and tr >= 0]
+        xs, from0, in_service = [], 0, 0
+        for rid in rids:
+            for a in cfg["actors"]:
+                tr, tf = gt[rid].get((a, g), (None, None))
+                if tr is None or tf is None:
+                    continue
+                if tf < 0:
+                    in_service += 1
+                    continue
+                if tr < 0:
+                    from0 += 1
+                xs.append(tf - max(tr, 0))
         out["T_design"][str(g)] = median_low(xs)
+        tds[str(g)] = {"n": len(xs), "start_from_month0": from0, "start_in_service": in_service}
     am = _read_csv(os.path.join(d, "actor_month.csv"), ACTOR_MONTH_COLS)
     for g in range(1, 5):
         xs = []
@@ -2258,7 +2274,7 @@ def calib_tables(d, cfg):
     c0["a40"]["main_series"] = ["calib-P0"]     # L-O0 / L-C0 on calibration seeds (format §5: P0, not leadership)
     p0 = {"a40": a40_prints(D, c0), "ledger": ledger_prints(D, c0)}
     return {"control_tables": tables, "control_tables_hash": sha256_text(canonical_json(jsonable(tables))),
-            "seeds": out["seeds"], "C2": c2, "C4": c4, "p0": p0, "T_SK": tsk_check}
+            "seeds": out["seeds"], "C2": c2, "C4": c4, "p0": p0, "T_SK": tsk_check, "T_design_obs": tds}
 
 
 # ---------------------------------------------------------------- self-test (synthetic data with known truth)
@@ -2631,6 +2647,8 @@ def main(argv=None):
                   "- C2: %s\n- C4: %s\n" % (r["control_tables_hash"], r["seeds"], json.dumps(jsonable(r["C2"]), sort_keys=True),
                                            json.dumps(jsonable(r["C4"]), sort_keys=True)))
             md += render_control_tables(r["control_tables"], cfg)
+            md += "- T_design, наблюдений: %s\n" % ", ".join("G%s n=%d (старт от мес. 0: %d; в строю на старте, вне медианы: %d)" % (
+                g, v["n"], v["start_from_month0"], v["start_in_service"]) for g, v in sorted(r["T_design_obs"].items()))
             ts = r["T_SK"]
             md += "\n## Проверка T-SK (§6.1 v0.24 r2)\n\n- tier со стартовым PRC у USA/GBR: %s; провал: %s → %s\n" % (
                 ", ".join(ts["start_tiers"]) or "—", ", ".join(ts["failed_tiers"]) or "нет", "OK" if ts["ok"] else "ОШИБКА ТАБЛИЦ")

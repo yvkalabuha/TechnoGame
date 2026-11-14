@@ -290,6 +290,25 @@ class CalibCodexR1(unittest.TestCase):
         self.assertEqual((t4["pool"], t4["n"], t4["p50_years"]), (4, 4, 4.0))
         self.assertTrue(r["C2"]["tier4_in_corridor"])
 
+    def test_t_design_mixes_start_and_new_projects(self):
+        # USA: start project of G2 not yet in service (t_req -1, first unit 30) -> 30 from month 0;
+        # GBR: new project, Requirement 12 -> first unit 52 -> 40; SUN: start G2 already in service (-1) -> out
+        with tempfile.TemporaryDirectory() as d:
+            runs = [["c%d" % s, "calib", 10000 + s, 1, "ok", "h"] for s in range(1, 3)]
+            write(d, "runs.csv", X.RUNS_COLS, runs)
+            write(d, "calib_summary.csv", X.CALIB_SUMMARY_COLS, [[r[0], 1, 1, 1, 1, 1] for r in runs])
+            write(d, "node_times.csv", X.NODE_TIMES_COLS, [])
+            gt = []
+            for r in runs:
+                gt += [[r[0], "USA", 2, -1, 30, "", ""], [r[0], "GBR", 2, 12, 52, "", ""], [r[0], "SUN", 2, -1, -1, -1, ""]]
+            write(d, "gen_times.csv", X.GEN_TIMES_COLS, gt)
+            write(d, "prc_month.csv", X.PRC_MONTH_COLS, [])
+            write(d, "actor_month.csv", X.ACTOR_MONTH_COLS, [])
+            r = X.calib_tables(d, CFG)
+        self.assertEqual(r["control_tables"]["T_design"]["2"], 30)     # median_low of 30, 30, 40, 40
+        self.assertEqual(r["T_design_obs"]["2"], {"n": 4, "start_from_month0": 2, "start_in_service": 2})
+        self.assertIsNone(r["control_tables"]["T_design"]["3"])
+
     def test_c2_d1_by_share_without_t_first(self):
         # 3 of 4 pairs without t_first, the 4th observed: d = 1 although nothing is censored
         nt = [["c%d" % s, "USA", 40, 10, "" if s <= 3 else 12, "" if s <= 3 else 60, "", 0] for s in range(1, 5)]
