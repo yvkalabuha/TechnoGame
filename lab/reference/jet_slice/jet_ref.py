@@ -750,7 +750,7 @@ def formula_cases(seed):
         if tick is None:   # explicitly given NextU64 values, independent of the RNG port
             u = 0 if name.endswith("hit") else M64
         else:
-            u = next_u64(seed, tick, SYS_KNOW, 0 * 64 + node, 0)
+            u = next_u64(seed, tick, SYS_KNOW, 0 * 65536 + node, 0)
         out["hazard"].append({"name": name, "key": {"seed": seed, "tick": tick, "system": SYS_KNOW,
                                                     "entity": node, "n": 0},
                               "prog": fx(prog), "theta_start": th, "h_max": hm, "y_half": yh,
@@ -1137,7 +1137,7 @@ def run_trajectory(seed, rule="R0"):
     def j_for_year(year):
         res = {}
         for n in sorted(NODES):
-            u = next_u64(seed, 12 * year, SYS_PRIO_J, a * 64 + n, 0)
+            u = next_u64(seed, 12 * year, SYS_PRIO_J, a * 65536 + n, 0)
             res[n] = {"u": u, "j": draw_j(u)}
         return res
 
@@ -1199,9 +1199,9 @@ def run_trajectory(seed, rule="R0"):
             krow = {"node": n, "w": w_n, "alloc": alloc, "Kmix": Kmix, "c_eff": ce, "dprog": dprog}
             if nd["hazard"]:
                 p_new = min(p_new, T["prog_cap"])
-                u = next_u64(seed, t, SYS_KNOW, a * 64 + n, 0)
+                u = next_u64(seed, t, SYS_KNOW, a * 65536 + n, 0)
                 hz = hazard(p_new, T["theta_start"], T["h_max"], T["y_half"], u)
-                krow["hazard"] = {"key": [seed, t, SYS_KNOW, a * 64 + n, 0], "h": hz["h"],
+                krow["hazard"] = {"key": [seed, t, SYS_KNOW, a * 65536 + n, 0], "h": hz["h"],
                                   "u": u if hz["active"] else None,
                                   "threshold": hz["check"]["threshold"] if hz["active"] else None,
                                   "opened": hz["opened"]}

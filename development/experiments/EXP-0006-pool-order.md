@@ -53,6 +53,7 @@ created: 2026-11-04
 - Threads 1 = 4: `CAN` main s61 `16caff8d…`, `PROP` stress s61 `9b0cdbf2…`; файлы `cells/pool/actors/lines2/home/elig/events/ledger/procs` побитно равны.
 - Наибольший остаток `PROP` `P − Σx`: 7 raw (ожидание < `|Π|` — выполнено).
 - `golden_hash` (`CAN` main, 384 мес.): s61 `16caff8d1a75f36afb4409aa70f4222b1be33ea066387f14fd94bd4d7f984373`, s62 `69e27ad5422afe751a2d3ab46607886d6bfc08aceb2da6beec47c97424c84fbe`, s63 `fc1b4b2f84d40e007bff4f6458e5957bd55f27fb294392f10056a44f3f3e0c54`, s64 `a3d4b1e2813e0a7ac77e048203be479d5e979fdc13c697b3280f04a0945b7c69`, s65 `6898821aae24042c61a682b12454f4ae4a315dc7488c299c0a4075de6bf85077`.
+- [Факт] Хеши до TASK-0050/0051 (2026-11-14). `golden_hash` и golden-тесты (`LinkedRunTests`, `ProductAiSessionTests`, `F17bTests`) этой записи посчитаны старым кодом: tick в заголовке `StateHash` и ключ RNG знания `actor·64 + node`. С TASK-0050 (хеш без tick) и TASK-0051 (ключ `actor·65536 + node`, #197) хеши другие, а выборки hazard и `j` у акторов ≥ 1 — другие потоки; перепрогон текущим кодом цифры этой записи не воспроизведёт (воспроизводится по `core_commit` записи). Запись не переписывается.
 - Команды: `T6E_NAME=pool_order T6E_MANIFEST_FILE=lab/manifests/EXP-0006-pool-order.json T6E_GOLDEN_FILTER="|FullyQualifiedName~F17bTests" lab/runners/t6e/run_t6e.sh HEAD 16` (дозапуск — `SKIP_GOLDEN=1`), затем `python3 lab/analysis/pool_order.py`. Отчёт `lab/results/pool_order/report.txt` (не коммитится).
 
 ### Предусловия [Факт, расчёт]

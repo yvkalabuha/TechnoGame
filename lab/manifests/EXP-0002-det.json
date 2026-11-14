@@ -11,7 +11,7 @@
   "series": [{"name": "det"}],
   "meta": {
     "slice_spec": "docs/simulation/slice-jet-aviation.md v0.25",
-    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r3",
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r6",
     "hypothesis": "HYP-0002",
     "main_manifest": "lab/manifests/EXP-0002.json",
     "freeze": null

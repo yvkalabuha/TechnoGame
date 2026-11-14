@@ -32,5 +32,5 @@
     {"name": "old/L_C0", "params": {"LAYER": "LC0"}},
     {"name": "grid/lo_hi_hi", "params": {"GRID": "LO_HI_HI"}}
   ],
-  "meta": {"task": "TASK-0044", "csv_format": "docs/simulation/slice-csv-format.md v0.5 r3", "slice_spec": "docs/simulation/slice-jet-aviation.md v0.25"}
+  "meta": {"task": "TASK-0044", "csv_format": "docs/simulation/slice-csv-format.md v0.5 r6", "slice_spec": "docs/simulation/slice-jet-aviation.md v0.25"}
 }

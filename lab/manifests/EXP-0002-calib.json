@@ -11,7 +11,7 @@
   "series": [{"name": "calib"}],
   "meta": {
     "slice_spec": "docs/simulation/slice-jet-aviation.md v0.25",
-    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r3",
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r6",
     "scenario_hash": null,
     "stages": ["C1", "C3+C4", "C2"],
     "budget_points": {"C1": 40, "C3+C4": 60, "C2": 30},
