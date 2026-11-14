@@ -43,3 +43,12 @@ created: 2026-11-14
 - [ ] Второе ревью (codex)
 
 ## Результат
+
+Сделано (golden и поведение не менялись):
+- 0004: `DetMath.CheckFinite` форматирует через `InvariantCulture`.
+- 0006: `ToyFunnelInvariantTests` — по `RowCount`; спека ToyFunnel §5 поясняет, почему проверка стоит в Merge.
+- 0011: `[Scratch]` (поля), `ScratchTests` + общий `OwnerOnlyScan` (его же использует `ObservationTests`). Правила: поле private, не Table/Column, не читается вне своего класса (в т.ч. через не-private член, отдающий буфер); любой изменяемый буфер системы — `[Scratch]` либо в явном списке предвычисленных. Помечены буферы Knowledge/Industry/Products/Policy.
+- 0012: `CapabilityNoRngTests` транзитивен (вызовы + реализации интерфейсов в Core/Session); `WorkforceRequestSourceTests` — источник skilled-запросов.
+- 0013: `EffortMultiplier` и `ToolingInvest(..., out unmet)` — abstract; Lab (`LineStand`) и тестовые реализации — явно.
+- 0017: `StrictYaml.Parse` нормализует CRLF; тест `CrlfMod_LoadsToTheSameHashes`.
+- 0021: выбран вариант «индексная сортировка»: LINQ в `ToolingPlan` заменён сортировкой span с детерминированным tie-break (`Position`), без аллокаций. Кэш плана не делался: Plan зовут и в compute (параллельно), и после merge — кэш потребовал бы инвалидации.

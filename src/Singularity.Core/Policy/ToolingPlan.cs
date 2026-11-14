@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Singularity.Core.Data;
 using Singularity.Core.Industry;
 using Singularity.Kernel;
@@ -225,7 +226,7 @@ public static class ToolingPlan
                         goal = mCap[s];
                     takes[i] = true;
                     goals[i] = goal;
-                    cells.Add(new Pass2Cell(i, c, goal, severity));
+                    cells.Add(new Pass2Cell(i, s, c, goal, severity, cells.Count));
                 }
             }
         }
@@ -238,12 +239,15 @@ public static class ToolingPlan
                 break;
             case PoolOrder.Rev:
                 // Clusters in reverse layout order; sites and dimensions as in the canonical order (the sort is stable).
-                foreach (Pass2Cell cell in cells.OrderBy(x => x.Index / Dims3.Count / clusters).ThenByDescending(x => x.Cluster))
+                CollectionsMarshal.AsSpan(cells).Sort(static (a, b) =>
+                    a.Site != b.Site ? a.Site.CompareTo(b.Site) : a.Cluster != b.Cluster ? b.Cluster.CompareTo(a.Cluster) : a.Position.CompareTo(b.Position));
+                foreach (Pass2Cell cell in cells)
                     Give(cell.Index, (cell.Goal - mDec[cell.Index]) * cost[cell.Index] - invest[cell.Index]);
                 break;
             case PoolOrder.Sev:
                 // Severity descending; a tie goes to the canonical order (the sort is stable over the canonical list).
-                foreach (Pass2Cell cell in cells.OrderByDescending(x => x.Severity))
+                CollectionsMarshal.AsSpan(cells).Sort(static (a, b) => a.Severity != b.Severity ? b.Severity.CompareTo(a.Severity) : a.Position.CompareTo(b.Position));
+                foreach (Pass2Cell cell in cells)
                     Give(cell.Index, (cell.Goal - mDec[cell.Index]) * cost[cell.Index] - invest[cell.Index]);
                 break;
             case PoolOrder.Prop:
@@ -272,7 +276,8 @@ public static class ToolingPlan
         return new ToolingPlanResult(invest, notional, goals, unmet, takes, clusters, rest, bCap, total);
     }
 
-    private readonly record struct Pass2Cell(int Index, int Cluster, Fx6 Goal, Fx6 Severity);
+    // Position = index in the canonical list: the tie-break that makes the in-place span sort behave as a stable one (DEBT-0021).
+    private readonly record struct Pass2Cell(int Index, int Site, int Cluster, Fx6 Goal, Fx6 Severity, int Position);
 
     // VINF: a known process of the cluster with v_exp > 0 and r_d > 0 (the bottleneck and the source are not checked).
     private static bool UsedCell(IndustryLayout l, IIndustryInputs inputs, int site, int cluster, int dim, long month)

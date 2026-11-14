@@ -74,8 +74,11 @@ public sealed partial class ProductsSystem : ITickSystem
     private readonly int[] _m0;
 
     // Step 7 trace (SLICE_COMPOSITION §13.3): scratch, rewritten for row a at the start of its compute; not state, not hashed.
+    [Scratch]
     private readonly bool[] _moneyTraced;
+    [Scratch]
     private readonly long[] _traceLeftStart;
+    [Scratch]
     private readonly LineMoneyStep?[] _traceLines;
 
     public ProductsSystem(Table table, ProductsLayout layout, ProductsStart start, ProductsParams parameters,

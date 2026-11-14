@@ -20,14 +20,14 @@ public class ToyFunnelInvariantTests
     {
         for (ulong seed = 1; seed <= 200; seed++)
         {
-            var previous = new long[6][];
-            ToyRun.Result r = ToyRun.Run(ToyRun.MainSeries(model, nu), seed, afterTick: (m, tick) => CheckTick(m, tick, previous));
-            CheckMilestones(r);
+            long[]?[]? previous = null;
+            ToyRun.Result r = ToyRun.Run(ToyRun.MainSeries(model, nu), seed, afterTick: (m, tick) => CheckTick(m, tick, previous ??= new long[]?[m.Table.RowCount]));
+            CheckMilestones(r, r.Model.Table.RowCount);
             CheckYearly(r);
         }
     }
 
-    private static void CheckTick(ToyFunnelModel m, long tick, long[][] previous)
+    private static void CheckTick(ToyFunnelModel m, long tick, long[]?[] previous)
     {
         Table table = m.Table;
         for (int i = 0; i < table.RowCount; i++)
@@ -38,7 +38,7 @@ public class ToyFunnelInvariantTests
                 table.GetLong("P").Current[i], table.GetLong("R").Current[i], table.GetLong("E").Current[i],
                 table.GetInt("B").Current[i],
             ];
-            for (int s = 0; s < 6; s++)
+            for (int s = 0; s < now.Length - 1; s++) // the six stocks; B is the last column
                 Assert.InRange(now[s], 0, (1L << 53) - 1);
             if (previous[i] is { } before)
             {
@@ -58,11 +58,11 @@ public class ToyFunnelInvariantTests
         }
     }
 
-    private static void CheckMilestones(ToyRun.Result r)
+    private static void CheckMilestones(ToyRun.Result r, int countries)
     {
         // Rows: country-major, j = 0..23; columns m_K, m_A, m_T are monotone in j and never skip a step.
         List<string[]> rows = r.Metrics.Tables[ToyFunnelModel.MilestonesTable];
-        Assert.Equal(6 * 24, rows.Count);
+        Assert.Equal(countries * 24, rows.Count);
         for (int k = 0; k < rows.Count; k++)
         {
             if (k % 24 == 0)

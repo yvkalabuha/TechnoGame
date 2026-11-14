@@ -52,6 +52,17 @@ public class DataHashTests : IDisposable
     }
 
     [Fact]
+    public void CrlfMod_LoadsToTheSameHashes()
+    {
+        // DEBT-0017: a mod saved with Windows line endings (yaml and mod.yaml) is the same mod.
+        GameData original = ModLoader.Load(TestMods.CoreDir);
+        string copy = _mods.CopyCore((_, text) => text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace("\n", "\r\n", StringComparison.Ordinal));
+        GameData crlf = ModLoader.Load(copy);
+        Assert.Equal(original.DataHash, crlf.DataHash);
+        Assert.Equal(original.Scenarios[0].Hash, crlf.Scenarios[0].Hash);
+    }
+
+    [Fact]
     public void ActorOrder_ChangesScenarioHash()
     {
         // Spec §3.5 A7: actor order fixes RNG keys, so it is part of the scenario identity.

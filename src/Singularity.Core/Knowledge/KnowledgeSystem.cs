@@ -59,12 +59,19 @@ public sealed class KnowledgeSystem : ITickSystem
     private readonly LongColumn[]? _since;
 
     // Scratch, rewritten every step; row a only by the chunk that owns it.
+    [Scratch]
     private readonly long[] _wraw, _amount;
+    [Scratch]
     private readonly bool[] _granted;
+    [Scratch]
     private readonly KnowledgeNodeStep[] _trace;
+    [Scratch]
     private readonly long[] _spent;
+    [Scratch]
     private readonly List<(int Actor, int Row, bool Discovery)>[] _opened;
+    [Scratch]
     private readonly int[] _openedCount;
+    [Scratch]
     private readonly List<(int ActorNumber, int NodeNumber)> _lastDiscoveries = new(), _lastGrants = new();
 
     public KnowledgeSystem(Table table, KnowledgeGraph graph, KnowledgeStart start, KnowledgeParams parameters,

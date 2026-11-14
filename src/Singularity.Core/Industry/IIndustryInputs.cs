@@ -35,13 +35,9 @@ public interface IIndustryInputs
 
     /// <summary>
     /// <see cref="ToolingInvest(int, int, Dimension, long, Fx6)"/> and, from the same plan, <c>tool_unmet</c> of the cell (contract r8 §3.1): what the
-    /// cell was short only because the pool ran out; ≥ 0. A rule without a pool says 0.
+    /// cell was short only because the pool ran out; ≥ 0. A rule without a pool says 0 explicitly.
     /// </summary>
-    Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor, out Fx6 unmet)
-    {
-        unmet = Fx6.Zero;
-        return ToolingInvest(siteRow, cluster, dim, month, restActor);
-    }
+    Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor, out Fx6 unmet);
 
     /// <summary>
     /// <c>D_a(t) = share_D[a]·budget_a(t)</c>: the process-development item of the actor, reserved by the budget/AI
@@ -55,8 +51,8 @@ public interface IIndustryInputs
     /// <summary><c>v_exp(p)</c> at the site: planned output of the lines and of the projects in stages П/О (contract §4.1b); ≥ 0.</summary>
     Fx6 PlannedVolume(int siteRow, int processRow, long month);
 
-    /// <summary><c>mult_P</c> (spec A37): the weight factor of the doctrine for the process of the actor; 1 where the input has no doctrine.</summary>
-    Fx6 EffortMultiplier(int actorRow, int processRow, long month) => Fx6.One;
+    /// <summary><c>mult_P</c> (spec A37): the weight factor of the doctrine for the process of the actor; an input without a doctrine says 1 explicitly.</summary>
+    Fx6 EffortMultiplier(int actorRow, int processRow, long month);
 
     /// <summary><c>planned(site, p)</c>: p is in the <c>prc_set</c> of a project of the owner in stage П or О (contract §4.1a).</summary>
     bool Planned(int siteRow, int processRow, long month);

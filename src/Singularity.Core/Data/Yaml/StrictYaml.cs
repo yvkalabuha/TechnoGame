@@ -25,7 +25,8 @@ public static class StrictYaml
 
     public static YNode Parse(string text, string file)
     {
-        var parser = new Parser(new StringReader(text));
+        // A mod written on Windows may use CRLF; scalars (block text) must not depend on the line ending (DEBT-0017).
+        var parser = new Parser(new StringReader(text.Replace("\r\n", "\n", StringComparison.Ordinal)));
         try
         {
             Next<StreamStart>(parser, file);

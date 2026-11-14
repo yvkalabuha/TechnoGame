@@ -46,15 +46,22 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
     private readonly LongColumn[] _x, _v, _y, _e;
     private readonly IntColumn[] _mr;
     private readonly ICultureRule _rule;
+    [Scratch]
     private readonly Fx6[] _lastRest;
     private readonly LongColumn[] _wfN, _wfGranted;
 
     // Scratch, rewritten every step; site s only by the chunk that owns it.
+    [Scratch]
     private readonly ProcessYield[] _yieldTrace;
+    [Scratch]
     private readonly CultureStep[] _cultureTrace;
+    [Scratch]
     private readonly ToolingStep[] _toolingTrace;
+    [Scratch]
     private readonly List<IndustryMailbox> _mailboxes = new();
+    [Scratch]
     private readonly List<OutputReport> _reports = new(), _lastReports = new();
+    [Scratch]
     private readonly List<WorkforceRequest> _requests = new();
 
     public IndustrySystem(Table table, IndustryLayout layout, IndustryStart start, IndustryParams parameters,

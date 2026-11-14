@@ -130,7 +130,7 @@ public static class DetMath
     private static void CheckFinite(double value, double x, int exponent, int denominator)
     {
         if (!double.IsFinite(value))
-            throw new OverflowException($"{x}^({exponent}/{denominator}) is out of the double range.");
+            throw new OverflowException(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{x}^({exponent}/{denominator}) is out of the double range."));
     }
 
     private static double PowInt(double x, int n)

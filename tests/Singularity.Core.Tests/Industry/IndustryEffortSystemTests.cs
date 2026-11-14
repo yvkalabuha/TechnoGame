@@ -30,6 +30,14 @@ public class IndustryEffortSystemTests
 
         public bool QualityProgramme(int siteRow, long month) => false;
 
+        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor, out Fx6 unmet)
+        {
+            unmet = Fx6.Zero;
+            return ToolingInvest(siteRow, cluster, dim, month, restActor);
+        }
+
+        public Fx6 EffortMultiplier(int actorRow, int processRow, long month) => Fx6.One;
+
         public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor)
         {
             lock (RestSeen)

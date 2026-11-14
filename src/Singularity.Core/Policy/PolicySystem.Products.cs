@@ -37,7 +37,9 @@ public sealed partial class PolicySystem
     private LongColumn[] _startRate = [];
 
     // Traces of the last compute (SLICE_COMPOSITION §13.4, §13.6): scratch outside the table, a row is rewritten by its own compute; not state, not hashed.
+    [Scratch]
     private LineCloseReason[] _closeReason = [];
+    [Scratch]
     private List<MoneyRefusal>[] _moneyRefusals = [];
 
     private void AddProductColumns(Table table, IPolicyProducts? products, int designs, int generations, bool derive, PolicyParams parameters)

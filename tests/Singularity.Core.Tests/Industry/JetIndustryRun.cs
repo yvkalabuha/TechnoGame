@@ -164,6 +164,14 @@ internal sealed class JetIndustryRun
 
         public bool QualityProgramme(int siteRow, long month) => false;
 
+        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor, out Fx6 unmet)
+        {
+            unmet = Fx6.Zero;
+            return ToolingInvest(siteRow, cluster, dim, month, restActor);
+        }
+
+        public Fx6 EffortMultiplier(int actorRow, int processRow, long month) => Fx6.One;
+
         public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor)
         {
             Fx6 m0 = run.IStart.M[run.IStart.Cell(siteRow, cluster, (int)dim)];
@@ -196,6 +204,11 @@ internal sealed class JetIndustryRun
         public Fx6 Hcap(int siteRow, Dimension dim, long month) => b.Hcap(siteRow, dim, month);
 
         public bool QualityProgramme(int siteRow, long month) => false;
+
+        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor, out Fx6 unmet) =>
+            b.ToolingInvest(siteRow, cluster, dim, month, restActor, out unmet);
+
+        public Fx6 EffortMultiplier(int actorRow, int processRow, long month) => b.EffortMultiplier(actorRow, processRow, month);
 
         public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor) => b.ToolingInvest(siteRow, cluster, dim, month, restActor);
 

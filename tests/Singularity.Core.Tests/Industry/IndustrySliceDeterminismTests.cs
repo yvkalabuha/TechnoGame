@@ -261,6 +261,14 @@ public class IndustrySliceDeterminismTests
 
         public bool QualityProgramme(int siteRow, long month) => run.ActorNumber(siteRow) % 3 == 0;
 
+        public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor, out Fx6 unmet)
+        {
+            unmet = Fx6.Zero;
+            return ToolingInvest(siteRow, cluster, dim, month, restActor);
+        }
+
+        public Fx6 EffortMultiplier(int actorRow, int processRow, long month) => Fx6.One;
+
         public Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor) =>
             Fx6.FromRaw(2_000 * (1 + (run.ActorNumber(siteRow) + cluster + (int)dim) % 4));
 

@@ -19,31 +19,8 @@ public class ObservationTests
         assembly.GetTypes().SelectMany(t => t.GetMethods(IlScanner.AllDeclared))
             .Where(m => m.GetCustomAttribute<ObservationAttribute>() is not null);
 
-    private static Type Outermost(Type t)
-    {
-        while (t.DeclaringType is { } outer)
-            t = outer;
-        return t;
-    }
-
-    /// <summary>The methods of <paramref name="types"/> that call a marked member from outside the member's own class.</summary>
-    private static List<string> Offenders(IEnumerable<Type> types, ICollection<MethodBase> marked)
-    {
-        var found = new List<string>();
-        foreach (Type type in types)
-        {
-            foreach (MethodBase caller in type.GetMethods(IlScanner.AllDeclared).Cast<MethodBase>().Concat(type.GetConstructors(IlScanner.AllDeclared)))
-            {
-                foreach (IlScanner.Instruction i in IlScanner.Read(caller))
-                {
-                    if (i.Operand is MethodBase callee && marked.Any(m => m.MetadataToken == callee.MetadataToken && m.Module == callee.Module)
-                        && Outermost(callee.DeclaringType!) != Outermost(type))
-                        found.Add($"{type.FullName}.{caller.Name} calls {callee.DeclaringType!.Name}.{callee.Name}");
-                }
-            }
-        }
-        return found;
-    }
+    private static List<string> Offenders(IEnumerable<Type> types, ICollection<MethodBase> marked) =>
+        OwnerOnlyScan.Offenders(types, [.. marked]);
 
     [Fact]
     public void TheTracesOfTheStepsAreMarked()
