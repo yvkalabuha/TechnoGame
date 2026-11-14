@@ -1,6 +1,6 @@
 # Формат CSV и манифестов EXP-0002 (срез «реактивная авиация»; `lab/analysis/exp0002.py`)
 
-> Статус: черновик **v0.5 r4** (simulation-engineer, 2026-11-14, TASK-0044 этап 2; r4 — ревью Codex r4: `COEXIST_MONEY` по букве спец., `a40_c_months.training`, `lic_end_unobservable`; r1 — ось `k_diff` ключа `GRID`, решение #190; r2 — пара compose месяца 0, TASK-0047; r3 — `COEXIST_MONEY` по `Bind`, линии без строки следа денег, определения Lab) под спецификацию `slice-jet-aviation.md` **v0.25** (дальше «спец. §N») и поверхность read views `docs/architecture/SLICE_COMPOSITION.md` §12–§13 (r4, дальше «SC §12.N», «SC §13.N»; `TestApiVersion = 3`; r5 — `LIC_END` по `LicenceView.Active`). v0.4, v0.3 и v0.2 — в истории git.
+> Статус: черновик **v0.5 r5** (simulation-engineer, 2026-11-14, TASK-0044 этап 2; r5 — `eng_short_months` по одному КБ (ревью Codex r5); r4 — ревью Codex r4: `COEXIST_MONEY` по букве спец., `a40_c_months.training`, `lic_end_unobservable`; r1 — ось `k_diff` ключа `GRID`, решение #190; r2 — пара compose месяца 0, TASK-0047; r3 — `COEXIST_MONEY` по `Bind`, линии без строки следа денег, определения Lab) под спецификацию `slice-jet-aviation.md` **v0.25** (дальше «спец. §N») и поверхность read views `docs/architecture/SLICE_COMPOSITION.md` §12–§13 (r4, дальше «SC §12.N», «SC §13.N»; `TestApiVersion = 3`; r5 — `LIC_END` по `LicenceView.Active`). v0.4, v0.3 и v0.2 — в истории git.
 > Соглашения унаследованы от `exp0001-csv-format.md` и Lab (ADR-0008, `src/Singularity.Lab/RunExecutor.cs`, `MatrixRunner.cs`).
 > Модели `JetSlice` и `JetSliceCalib` — `src/Singularity.Lab/Models/Slice/` (T10 этап 2): читают только `SliceSession` и его views по имени свойств. Проверки — `Singularity.Lab selftest` (`SliceChecks`), малая матрица `lab/manifests/EXP-0002-t10-smoke.json`, серия `det` (`EXP-0002-det.json`).
 
@@ -144,7 +144,7 @@
 Смены, `chg`, tenure, `small_lead` считает анализ (спец. §5.2–5.3).
 
 ### 4.2 `actor_year.csv` — `t mod 12 = 0` (всегда)
-`t`, `actor`, `key_G`, `key_T`, `key_N` (int), `key_P` (Fx6), `fv` (Fx6, спец. §5.5), `fv_fleet` (Fx6, §6.10 печать «Σ по когортам»), `volume` (Fx6, печать `volume_lead`, определение ниже), `budget` (Fx6), `eng_short_months` (int 0…12, P4 (b)), `kd_aero`, `kd_prop`, `kd_metal`, `kd_chem`, `kd_mech` (Fx6).
+`t`, `actor`, `key_G`, `key_T`, `key_N` (int), `key_P` (Fx6), `fv` (Fx6, спец. §5.5), `fv_fleet` (Fx6, §6.10 печать «Σ по когортам»), `volume` (Fx6, печать `volume_lead`, определение ниже), `budget` (Fx6), `eng_short_months` (int 0…12, P4 (b): **наибольшее по КБ актора** число месяцев года с `granted/n < 0,9` у этого КБ (`Required > 0`, у КБ есть проект); v0.5 r5 — было «месяцы, когда не хватало хотя бы одному КБ»: 3 + 3 мес. у двух КБ давали 6, а спец. §7 #77 требует ≥ 6 мес. у одного КБ), `kd_aero`, `kd_prop`, `kd_metal`, `kd_chem`, `kd_mech` (Fx6).
 
 **`volume` (v0.4) [Предл.].** Контракт §9.1: «`volume_lead` = Σ выпуска по tier ≥ 4 при `yield ≥ 0.7`» (спец. §5.3 — только печать). Выпуск по tier — величина процесса, поэтому:
 `volume(a, t) = Σ_{m = t … min(t+11, 383)} Σ_{p: ProcessTier(p) ≥ 4, Yield_m(a, p) ≥ 700000} V_m(a, p)` — сумма raw `Fx6` (`checked`), где `Yield_m`, `V_m` — `ProcessView` (home-site, A27) снимка `Month = m` (post), `ProcessTier` — `SliceLayoutView`. Строка t покрывает год, который начинается в t (последняя — 11 мес. до 383), а не мгновенное значение: строка `t = 348` — ровно последний год окна 0…359, по которому `exp0002.py` считает `volume_lead`. Lab накапливает сумму и пишет строку после месяца `t + 11`. Порог — сравнение raw, равенство проходит. Единица — исполнения процессов (не машины): контракт говорит о tier, а tier есть только у процесса.
@@ -290,7 +290,7 @@ DONE-эксперимент записывает `core_commit`, `data_hash`, `ma
 | Таблица | Источник |
 |---|---|
 | `summary` | `Profile`; `lead*` — `ActorView.Key` каждого месяца; `hash_*` — `StateHash` |
-| `actor_year` | `Key`, `FleetValue` (только `Month mod 12 = 0`), `Inputs.Budget`, `KD`, `eng_short_months` — `BureauView` (`Granted < Required`); `fv_fleet` — Lab, `ProductsMath.FleetValue` по `DesignView`; `volume` — `ProcessView` + `ProcessTier` (§4.2) |
+| `actor_year` | `Key`, `FleetValue` (только `Month mod 12 = 0`), `Inputs.Budget`, `KD`, `eng_short_months` — `BureauView` (`10·Granted < 9·Required`, счёт по `Bureau`, в колонке — максимум по КБ); `fv_fleet` — Lab, `ProductsMath.FleetValue` по `DesignView`; `volume` — `ProcessView` + `ProcessTier` (§4.2) |
 | `whynot` | `WhyNot`, `CurrentRequirement` |
 | `node_times`, `prc_year`, `prc_month` | `NodeView.Known` (смена между снимками = `t_known`; в `L_C`/`L_P` — `NodeView.KnownSince`, §4.4), `ByLicence`, `ProcessView`; `ucm` — `UnitCostMult` [Предп. SC §12.2, проверка developer] |
 | `gen_times` | `t_req` — `DesignCommands` (compose, `Target = g`); `BuiltAny`, `FieldedGen`, `UnitCost`; `cost_u100` — Lab по накопленному выпуску |

@@ -131,3 +131,11 @@ ADR-0014 п.5 и `SLICE_COMPOSITION.md` (строка 38) требуют read vi
 - Lab: `LIC_END` = лицензия открыта, покупки нет, `Active = false` (t_end = t+1); замена — t_end = t. Удалены `LapseTracker`, счётчики `lic_end_lapses_inferred`, `lic_end_unobservable`. Проверка `LicenceEnd` (seed 1, 11688 тиков: у каждой лицензии с `t_end` есть событие `LIC_END` покупателя в этот месяц, лапс есть) заменила `LicenceNeverShared` и `LapseAfterPurchase`; тест `Licence_lapse_is_the_Active_change_and_gives_t_end_and_LIC_END`.
 - Документы: `slice-csv-format.md` (r5, §11 п. 7, строки лицензий, `model_info`), `SLICE_COMPOSITION.md` §12.2/§13.
 - Состояние, хеши и golden не затронуты.
+
+### simulation-engineer, 2026-11-14 — ревью Codex r5 (`eng_short_months`)
+**Принято (medium).** [Факт: спец. §7 #77 — «ни у одного КБ нет `granted/n < 0,9` ≥ 6 мес. за год»; код — один счётчик на актора, `av.Bureaus.Any(...)`] Месяцы считались, если не хватало хотя бы одному КБ. Поэтому 3 + 3 мес. у двух КБ проходили порог P4 (b) ≥ 6.
+- Исправление: `YearRow.EngShort` — счёт по `BureauView.Bureau` (`SliceObserver.CountShort`). Колонка `eng_short_months` = максимум по КБ (`MaxShort`).
+- Имя колонки и порог `>= short_months_min` в `lab/analysis/exp0002.py` верны при новом смысле, скрипт не менялся.
+- Формат v0.5 r5: §4.2, §9.
+- Тест: `Eng_short_months_counts_one_bureau_not_any` (3 + 3 у двух КБ → 3; 6 у одного → 6; КБ без проекта или без потребности не считается).
+- `dotnet test Singularity.sln` зелёный: Architecture 97, Kernel 315 (+1 skip), Core 1032, Lab 13, Session 308 (+2 skip). Golden не изменились.

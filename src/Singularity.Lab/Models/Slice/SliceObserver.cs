@@ -79,7 +79,7 @@ internal sealed class SliceObserver
         public string[] Head = [];
         public string[] Tail = [];
         public long Volume;
-        public int EngShort;
+        public int[] EngShort = [];   // shortage months of the year by bureau (P4 (b) counts one bureau)
         public int Months;
         public Fx6 Budget;
     }
@@ -853,6 +853,7 @@ internal sealed class SliceObserver
                 Tail = [.. _kdIndex.Select(k => F(av.KD[k]))],
             });
             _years[^1].Budget = ai.Budget;
+            _years[^1].EngShort = new int[_l.Bureaus];
         }
         foreach (YearRow y in _years)
         {
@@ -863,12 +864,27 @@ internal sealed class SliceObserver
                 if (n.Process is ProcessView p && _l.ProcessTier[_l.ProcessNumbers.IndexOf(n.Number)] >= 4 && p.Yield.Raw >= Yield07)
                     y.Volume = checked(y.Volume + p.V.Raw);
             }
-            if (av.Bureaus.Any(b => b.Design >= 0 && b.Required > 0 && b.Granted * 10 < b.Required * 9))
-                y.EngShort++;
+            CountShort(y.EngShort, av.Bureaus);
             y.Months++;
         }
         FlushYears(final: false);
     }
+
+    /// <summary>
+    /// One month of P4 (b) (spec §5.6, §7 #77: «`granted/n &lt; 0,9` у КБ ≥ 6 мес. за год»): each bureau with a project and <c>granted/n &lt; 0.9</c>
+    /// adds a month to its own count. One count per actor (r4 and before) let 3 + 3 months at two bureaus pass as 6 (review Codex r5).
+    /// </summary>
+    internal static void CountShort(int[] byBureau, IEnumerable<BureauView> bureaus)
+    {
+        foreach (BureauView b in bureaus)
+        {
+            if (b.Design >= 0 && b.Required > 0 && b.Granted * 10 < b.Required * 9)
+                byBureau[b.Bureau]++;
+        }
+    }
+
+    /// <summary><c>eng_short_months</c>: the most shortage months of the year at one bureau.</summary>
+    internal static int MaxShort(int[] byBureau) => byBureau.Length == 0 ? 0 : byBureau.Max();
 
     private void FlushYears(bool final)
     {
@@ -877,7 +893,7 @@ internal sealed class SliceObserver
             YearRow y = _years[i];
             if (y.Months < 12 && !final)
                 continue;
-            Row("actor_year", [.. y.Head, F(Fx6.FromRaw(y.Volume)), F(y.Budget), I(y.EngShort), .. y.Tail]);
+            Row("actor_year", [.. y.Head, F(Fx6.FromRaw(y.Volume)), F(y.Budget), I(MaxShort(y.EngShort)), .. y.Tail]);
             _years.RemoveAt(i--);
         }
     }

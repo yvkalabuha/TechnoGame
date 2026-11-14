@@ -11,7 +11,7 @@ public sealed class SliceModelTests : IDisposable
     private static readonly string[] Prefixes =
     [
         "slice: JetSliceCalib tables", "slice: JetSliceCalib run", "slice: parameters", "slice: Lab path gives",
-        "slice: L1", "slice: L2", "slice: matrix", "slice: data_hash", "slice: data cache", "slice: a40.force", "slice: COEXIST_MONEY", "slice: LIC_END",
+        "slice: L1", "slice: L2", "slice: matrix", "slice: data_hash", "slice: data cache", "slice: a40.force", "slice: COEXIST_MONEY", "slice: LIC_END", "slice: eng_short_months",
     ];
 
     private readonly string _tmp = Path.Combine(Path.GetTempPath(), "sing-lab-tests-" + Guid.NewGuid().ToString("N"));
@@ -42,4 +42,5 @@ public sealed class SliceModelTests : IDisposable
     [Fact] public void A40_force_marks_FORCE_series_and_never_the_AI() => Check(Prefixes[9]);
     [Fact] public void Coexist_money_needs_zero_left_and_no_training_in_every_month() => Check(Prefixes[10]);
     [Fact] public void Licence_lapse_is_the_Active_change_and_gives_t_end_and_LIC_END() => Check(Prefixes[11]);
+    [Fact] public void Eng_short_months_counts_one_bureau_not_any() => Check(Prefixes[12]);
 }

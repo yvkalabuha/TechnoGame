@@ -1,5 +1,6 @@
 using Singularity.Core.Products;
 using Singularity.Kernel;
+using Singularity.Session;
 using System.Text.Json;
 
 namespace Singularity.Lab.Models.Slice;
@@ -36,6 +37,7 @@ public static class SliceChecks
         ("slice: a40.force — the FORCE arm marks the forced series, the AI never", () => A40Force(tmp)),
         ("slice: COEXIST_MONEY needs left = 0 and no training money in every month, not Bind = Money alone", CoexistMoneyClass),
         ("slice: LIC_END — a lapse of LicenceView.Active gives a t_end and an event", () => LicenceEnd(tmp)),
+        ("slice: eng_short_months counts months at one bureau, not at any bureau", EngShortOneBureau),
     ];
 
     // Codex r4 (TASK-0044): Bind = Money also holds with positive money short of one unit or with training money; the spec class needs neither.
@@ -65,6 +67,26 @@ public static class SliceChecks
     }
 
     // LIC_END is the 1 -> 0 change of LicenceView.Active (format §11 п. 7): every licence row with a t_end has its event, and a lapse exists in the run.
+    // Codex r5 (TASK-0044): P4 (b) needs ≥ 6 shortage months at one bureau; 3 + 3 at two bureaus is not a case.
+    private static string? EngShortOneBureau()
+    {
+        static BureauView Short(int b) => new(b, 0, 80, 100);       // granted/n = 0.8 < 0.9
+        static BureauView Ok(int b) => new(b, 0, 95, 100);
+        var split = new int[2];
+        for (int m = 0; m < 6; m++)
+            SliceObserver.CountShort(split, m < 3 ? [Short(0), Ok(1)] : [Ok(0), Short(1)]);
+        if (SliceObserver.MaxShort(split) != 3)
+            return $"3 + 3 months at two bureaus gave {SliceObserver.MaxShort(split)}, want 3";
+        var one = new int[2];
+        for (int m = 0; m < 6; m++)
+            SliceObserver.CountShort(one, [Short(0), new BureauView(1, -1, 0, 100)]);
+        if (SliceObserver.MaxShort(one) != 6)
+            return $"6 months at one bureau gave {SliceObserver.MaxShort(one)}, want 6";
+        var idle = new int[1];
+        SliceObserver.CountShort(idle, [new BureauView(0, -1, 0, 100), new BureauView(0, 0, 0, 0)]);
+        return SliceObserver.MaxShort(idle) == 0 ? null : "a bureau without a project or need counted";
+    }
+
     private static string? LicenceEnd(string tmp)
     {
         var (r, dir) = Run(tmp, Manifest("JetSlice", 11688), 1, 1, "lic-end");
