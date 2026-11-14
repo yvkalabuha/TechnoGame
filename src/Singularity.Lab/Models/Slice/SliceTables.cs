@@ -28,7 +28,7 @@ public static class SliceTables
         ["t", "actor", "design", "g_p", "profile", "preset", "branch", "cls", "t_stage_o", "t_launch", "force", "idle", "rep_before"]);
 
     public static readonly MetricTableSpec A40CMonths = new("a40_c_months",
-        ["t_fire", "actor", "design", "t", "min_yield", "argp", "alloy_supply", "deficit", "t_a", "left", "w_after_n"]);
+        ["t_fire", "actor", "design", "t", "min_yield", "argp", "alloy_supply", "deficit", "t_a", "left", "w_after_n", "training"]);
 
     public static readonly MetricTableSpec ToolingLedger = new("tooling_ledger",
         ["t", "actor", "rest", "b_cap", "invest", "taken_rest", "taken_cap", "rest_unspent", "t_a", "rest_returned", "n_part",

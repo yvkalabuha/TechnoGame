@@ -1,3 +1,5 @@
+using Singularity.Core.Products;
+using Singularity.Kernel;
 using System.Text.Json;
 
 namespace Singularity.Lab.Models.Slice;
@@ -33,7 +35,48 @@ public static class SliceChecks
         ("slice: data_hash and data_files cover the mod files the slice loads", () => DataProvenance(tmp)),
         ("slice: data cache — a changed mod file is loaded again; stale data_files fail the run", () => DataCache(tmp)),
         ("slice: a40.force — the FORCE arm marks the forced series, the AI never", () => A40Force(tmp)),
+        ("slice: COEXIST_MONEY needs left = 0 and no training money in every month, not Bind = Money alone", CoexistMoneyClass),
+        ("slice: lic_end_unobservable — a licence that never gave a share has no visible expiry", LicenceNeverShared),
     ];
+
+    // Codex r4 (TASK-0044): Bind = Money also holds with positive money short of one unit or with training money; the spec class needs neither.
+    private static string? CoexistMoneyClass()
+    {
+        Fx6 zero = Fx6.Zero, some = Fx6.FromInt(5);
+        SliceObserver.ActorMonth M(Fx6? left, Fx6? training, LineBind bind, SliceObserver.Role role = SliceObserver.Role.N, bool two = true) =>
+            new(Fx6.One, false, Fx6.Zero, false, two, false, false, [role], [Fx6.One], [-1], [left], [training], [zero], [bind]);
+        var ok = M(zero, zero, LineBind.Money);
+        var cases = new (string Name, SliceObserver.ActorMonth Bad, bool Want)[]
+        {
+            ("spec case", ok, true),
+            ("left > 0", M(some, zero, LineBind.Money), false),
+            ("training > 0", M(zero, some, LineBind.Money), false),
+            ("no step-7 money row", M(null, null, LineBind.Money), false),
+            ("not admitted (Bind None)", M(zero, zero, LineBind.None), false),
+            ("role W", M(zero, zero, LineBind.Money, SliceObserver.Role.W), false),
+            ("one line", M(zero, zero, LineBind.Money, two: false), false),
+        };
+        foreach (var (name, bad, want) in cases)
+        {
+            // The bad month is the last of three: the class needs the condition in every month.
+            if (SliceObserver.CoexistMoney([ok, ok, bad], 0) != want)
+                return $"COEXIST_MONEY {(want ? "rejected" : "accepted")} the case '{name}'";
+        }
+        return SliceObserver.CoexistMoney([], 0) ? "COEXIST_MONEY of no months" : null;
+    }
+
+    private static string? LicenceNeverShared()
+    {
+        var l = new LapseTracker(1);
+        l.Bought(0);
+        if (!l.NeverShared(0))
+            return "a new licence counted as shared";
+        l.Lapsed(0, shareNow: true);
+        if (l.NeverShared(0))
+            return "a licence that gave a share counted as never shared";
+        l.Bought(0);
+        return l.NeverShared(0) ? null : "a new purchase did not reset the tracking";
+    }
 
     // Codex r3 (TASK-0044): SliceData cached by directory only gave old data next to a new data_hash after a mod file changed in the process.
     private static string? DataCache(string tmp)

@@ -107,3 +107,20 @@ ADR-0014 п.5 и `SLICE_COMPOSITION.md` (строка 38) требуют read vi
   - `Changed_mod_file_is_reloaded_and_stale_data_files_fail_the_run` — правка веса в `nodes.yaml` меняет `GameData.DataHash` через `Load`; прогон со старым provenance — `failed`; со свежим — `run.json.data_hash` и `model_info.data_hash` новые.
   - `A40_force_marks_FORCE_series_and_never_the_AI` — FORCE=X1 seed 1 даёт строку С с `force = 1`; при OFF все `force = 0`.
 - `dotnet test Singularity.sln` зелёный: Architecture 93, Kernel 315 (+1 skip), Core 1029, Lab 11, Session 308 (+2 skip). Golden не менялись (`Lab_path_gives_Session_golden_seed1_month149` проходит). [Факт: прогон шёл на рабочем дереве с незакоммиченными правками TASK-0049 в Core и тестах.]
+
+### simulation-engineer, 2026-11-14 — ревью Codex r4 (head 829867c)
+1. **`COEXIST_MONEY` только по `Bind = Money` (high) — принято.** [Факт: спец. A40 «v0.20: две линии» — «`N` с выпуском 0 … при `left` после `W` = 0 и без `T_a`»] `Bind = Money` выполняется и при `left > 0`, которого не хватает на единицу, и при `T_a > 0` у линии. Такие срабатывания уходили из L-C0.
+   - Исправление: `SliceObserver.CoexistMoney` требует в каждом месяце `TwoLines`, `N`, `rate = 0`, `LeftIn = 0`, `Training(d) = 0` (`LineMoneyView`, `T_a` у линии) и `Bind = Money`.
+   - `Bind = Money` оставлено, чтобы недопущенная линия шла в `OTHER`. Это строже буквы спец.: L-C0 только строже.
+   - `T_a` взят у линии, а не из плана актора: план может иметь `T_a > 0`, который ушёл на другую линию или не потрачен (спец. A41: учебные деньги — только линии цели).
+   - В `a40_c_months` добавлена колонка `training`, чтобы анализ проверял класс.
+   - Формат v0.5 r4: §4.10, §4.16 (б).
+   - Тест: `Coexist_money_needs_zero_left_and_no_training_in_every_month`. Плохой месяц — последний из трёх; проверены `left > 0`, `training > 0`, нет строки шага 7, `Bind = None`, роль `W`, одна линия.
+2. **Истечение лицензии не видно без доли (medium) — находка верна, полное исправление требует правки Session (остановлено).** [Факт: код] `LicenceActive(b) = lic_gen > 0 ∧ g_b ≤ lic_gen`, `g_b` — `AltEngGen` базового слота проектов в С/В (`SliceWorld.EngineGen`).
+   - Альтернатив проекта во view нет. `DesignView.Gen = min(g_p, eng + 1)` даёт только нижнюю границу `eng`.
+   - Восстанавливать альтернативы по командам ИИ значит повторить логику Core в Lab (ADR-0014 п. 5–6).
+   - Сделано в Lab: счётчик `model_info.lic_end_unobservable` — лицензии без единой доли: открытые на конце и заменённые, у которых `t_end` — только верхняя граница. Пустой `t_end` в формате теперь значит «не наблюдается».
+   - Формат §9.1, §11 п. 7 (обновлён).
+   - Тест: `Licence_that_never_gave_a_share_is_counted_unobservable`.
+   - [Предл.] Session v3: `LicenceView.Active` = `LicenceActive(a)` снимка, `test_api_version` 3. Решает systems-architect, делает developer.
+- `dotnet test Singularity.sln` зелёный: Architecture 93, Kernel 315 (+1 skip), Core 1029, Lab 13, Session 308 (+2 skip). Golden не изменились. [Факт: рабочее дерево с незакоммиченными правками TASK-0049 в Core и тестах]

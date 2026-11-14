@@ -28,7 +28,7 @@ internal sealed class SliceObserver
     private const long Yield07 = 700_000;
     private const long Units100 = 100 * Fx6.Scale;
 
-    private enum Role { None, W, N, Sole }
+    internal enum Role { None, W, N, Sole }
 
     private readonly SliceSession _s;
     private readonly IMetricSink _sink;
@@ -71,7 +71,7 @@ internal sealed class SliceObserver
     private readonly LapseTracker _lapse;
     private int _req;
     // counters for run.json (format §4.9, §4.7)
-    private long _closeIdleOtherReason, _lapsesInferred, _wAfterNMonths, _closesWithoutLine, _linesWithoutMoney;
+    private long _closeIdleOtherReason, _lapsesInferred, _licEndUnobservable, _wAfterNMonths, _closesWithoutLine, _linesWithoutMoney;
 
     private sealed class YearRow
     {
@@ -107,8 +107,8 @@ internal sealed class SliceObserver
 
     private sealed record MonthRecord(long T, ActorMonth[] Actors);
 
-    private sealed record ActorMonth(Fx6 Alloy, bool Deficit, Fx6 Ta, bool MoneyNull, bool TwoLines, bool WAfterN, bool MeltsZero,
-        Role[] Roles, Fx6[] YMin, int[] ArgP, Fx6?[] LeftIn, Fx6[] Rate, LineBind[] Bind);
+    internal sealed record ActorMonth(Fx6 Alloy, bool Deficit, Fx6 Ta, bool MoneyNull, bool TwoLines, bool WAfterN, bool MeltsZero,
+        Role[] Roles, Fx6[] YMin, int[] ArgP, Fx6?[] LeftIn, Fx6?[] Training, Fx6[] Rate, LineBind[] Bind);
 
     public SliceObserver(SliceSession s, GameData data, string scenarioId, IMetricSink sink, IReadOnlyList<MetricTableSpec> tables, bool calibration, bool full)
     {
@@ -394,6 +394,7 @@ internal sealed class SliceObserver
         var yMin = new Fx6[_nD];
         var argP = new int[_nD];
         var left = new Fx6?[_nD];
+        var training = new Fx6?[_nD];
         var rate = new Fx6[_nD];
         var bind = new LineBind[_nD];
         for (int d = 0; d < _nD; d++)
@@ -410,7 +411,10 @@ internal sealed class SliceObserver
                 foreach (LineMoneyView l in money.Lines)
                 {
                     if (l.Design == d)
+                    {
                         left[d] = l.LeftIn;
+                        training[d] = l.Training;
+                    }
                 }
             }
         }
@@ -420,7 +424,7 @@ internal sealed class SliceObserver
         if (wAfterN)
             _wAfterNMonths++;
         return new ActorMonth(ai.Capability.AlloySupply, ai.Capability.AlloyDeficit > Fx6.Zero, ai.Tooling.TrainingBudget, st.Money is null,
-            two, wAfterN, meltsZero, roles, yMin, argP, left, rate, bind);
+            two, wAfterN, meltsZero, roles, yMin, argP, left, training, rate, bind);
     }
 
     // The lines of month t (format v0.5 r3 §4.12): in С by the snapshot the AI decided on (spec A41 F17b «Пара линий»: no state, the pair is read
@@ -561,20 +565,27 @@ internal sealed class SliceObserver
             if (months.Length != _tab)
                 throw new SliceFormatException($"Month {t} actor {_ids[a]}: A40C close of design {d} with {months.Length} recorded months, the class needs T_ab = {_tab} (§4.9).");
             bool culture = months.All(m => m.Actors[a].YMin[d] == Fx6.Zero || m.Actors[a].Alloy == Fx6.Zero && m.Actors[a].MeltsZero);
-            // COEXIST_MONEY (format v0.5 r3 §4.16 (б), SC §13.3 r6): in every month the line is N of a pair, made nothing, and step 7 bound it by money.
-            bool money = months.All(m => m.Actors[a].TwoLines && m.Actors[a].Roles[d] == Role.N && m.Actors[a].Rate[d] == Fx6.Zero
-                && m.Actors[a].Bind[d] == LineBind.Money);
-            string cls = culture ? "CULTURE" : money ? "COEXIST_MONEY" : "OTHER";
+            string cls = culture ? "CULTURE" : CoexistMoney([.. months.Select(m => m.Actors[a])], d) ? "COEXIST_MONEY" : "OTHER";
             Row("a40", I(t), _ids[a], I(d), I(dv.PlatformGen), I(Prof(profile)), Preset(profile), "C", cls, I(dv.StageOMonth),
                 O(_tLaunch[a, d]), B(LaunchedWithForce(a, d)), I(di.IdleMonths), B(RepBefore(sv, dv.PlatformGen)));
             foreach (MonthRecord m in months)
             {
                 ActorMonth x = m.Actors[a];
                 Row("a40_c_months", I(t), _ids[a], I(d), I(m.T), F(x.YMin[d]), x.ArgP[d] >= 0 ? I(x.ArgP[d]) : "", F(x.Alloy), B(x.Deficit), F(x.Ta),
-                    x.LeftIn[d] is Fx6 l ? F(l) : "", B(x.WAfterN));
+                    x.LeftIn[d] is Fx6 l ? F(l) : "", B(x.WAfterN), x.Training[d] is Fx6 tr ? F(tr) : "");
             }
         }
     }
+
+    /// <summary>
+    /// Class С <c>COEXIST_MONEY</c> (format v0.5 r4 §4.16 (б); spec A40 «v0.20: две линии»: «`N` с выпуском 0 в каждом из `T_ab` месяцев при
+    /// `left` после `W` = 0 и без `T_a`»): in every month the line is N of a pair, made nothing, saw no shared money (<c>LeftIn = 0</c>), got no
+    /// training money (<c>LineMoneyView.Training = 0</c>: <c>T_a</c> goes only to the training target line), and step 7 bound it by money (<c>Bind = Money</c>: an unadmitted line has <c>None</c> and is OTHER).
+    /// <c>Bind = Money</c> alone (r3) also held with positive money short of one unit or with <c>T_a &gt; 0</c> on the line (review Codex r4).
+    /// </summary>
+    internal static bool CoexistMoney(IReadOnlyList<ActorMonth> months, int d) =>
+        months.Count > 0 && months.All(x => x.TwoLines && x.Roles[d] == Role.N && x.Rate[d] == Fx6.Zero && x.LeftIn[d] is Fx6 left && left == Fx6.Zero
+            && x.Training[d] is Fx6 training && training == Fx6.Zero && x.Bind[d] == LineBind.Money);
 
     /// <summary>
     /// <c>a40.force</c> (format §4.9): the series was launched by the harness's forced start. The command sent after the step of month f applies at
@@ -782,6 +793,8 @@ internal sealed class SliceObserver
                 _openLicence[a] = null;
                 if (!buyers.Contains(a))
                     _lapsesInferred++;
+                else if (_lapse.NeverShared(a))
+                    _licEndUnobservable++;     // replaced: t_end is the new purchase, an earlier expiry was not visible
                 Row("events", I(end), "LIC_END", _ids[a], _ids[open.Seller], I(end - open.Start));
             }
             if (!buyers.Contains(a))
@@ -963,6 +976,8 @@ internal sealed class SliceObserver
         new("w_after_n_actor_months", I(_wAfterNMonths)),
         new("closes_of_designs_not_lines", I(_closesWithoutLine)),
         new("lines_without_step7_money", I(_linesWithoutMoney)),
+        // Licences whose expiry LicenceShare could not show: replaced ones (counted then) and those still open at the end.
+        new("lic_end_unobservable", I(_licEndUnobservable + _openLicence.Count(l => l is not null && _lapse.NeverShared(l.Buyer)))),
     ];
 }
 
@@ -973,8 +988,19 @@ internal sealed class SliceObserver
 internal sealed class LapseTracker(int actors)
 {
     private readonly bool[] _effective = new bool[actors];
+    private readonly bool[] _seen = new bool[actors];
 
-    public void Bought(int actor) => _effective[actor] = false;
+    public void Bought(int actor)
+    {
+        _effective[actor] = false;
+        _seen[actor] = false;
+    }
+
+    /// <summary>
+    /// The current licence of <paramref name="actor"/> never gave a share: no PRC of its mask was known to the buyer, so its expiry (A43.4) cannot be
+    /// read from <c>LicenceShare</c> and an empty <c>t_end</c> means «unknown», not «active» (format §11 п. 7, review Codex r4).
+    /// </summary>
+    public bool NeverShared(int actor) => !_seen[actor];
 
     /// <summary>True once, in the first month without a share after a month with one.</summary>
     public bool Lapsed(int actor, bool shareNow)
@@ -982,6 +1008,7 @@ internal sealed class LapseTracker(int actors)
         if (shareNow)
         {
             _effective[actor] = true;
+            _seen[actor] = true;
             return false;
         }
         bool lapsed = _effective[actor];
