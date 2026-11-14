@@ -12,6 +12,9 @@
 ## Активные задачи
 <!-- registry:active:start -->
 - TASK-0044 [APPROVED] T10: Lab-модели JetSlice и JetSliceCalib, CSV v0.24, манифесты, печати A39/A40 (simulation-engineer)
+- TASK-0048 [APPROVED] llm_worker: DEBT-0025 (ledger repair) и DEBT-0028 (записи ревью) (developer)
+- TASK-0049 [APPROVED] Долги Core/Kernel: DEBT-0004, 0006, 0011, 0012, 0013, 0017, 0021 (developer)
+- TASK-0050 [APPROVED] DEBT-0009: хеш состояния только по таблицам, tick отдельно (ADR-0006/0013) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры

@@ -61,6 +61,9 @@
 | [TASK-0045](../development/tasks/TASK-0045-llm-worker-debt-26-27.md) | DONE | llm_worker: DEBT-0026 и DEBT-0027 (fallback при сбое песочницы, related в gate, метрики, verifier unittest) | MS-M0 |
 | [TASK-0046](../development/tasks/TASK-0046-session-read-views-series.md) | DONE | Session: read views среза и переключатели серий для Lab (разблокировка T10) | MS-M0 |
 | [TASK-0047](../development/tasks/TASK-0047-core-slice-observables.md) | DONE | Core: наблюдаемые величины для печатей среза (t_known, left, причина закрытия линии, варианты Requirement, отказы лицензии по деньгам) | MS-M0 |
+| [TASK-0048](../development/tasks/TASK-0048-llm-worker-debt-25-28.md) | APPROVED | llm_worker: DEBT-0025 (ledger repair) и DEBT-0028 (записи ревью) | MS-M0 |
+| [TASK-0049](../development/tasks/TASK-0049-core-kernel-debts-batch.md) | APPROVED | Долги Core/Kernel: DEBT-0004, 0006, 0011, 0012, 0013, 0017, 0021 | MS-M0 |
+| [TASK-0050](../development/tasks/TASK-0050-state-hash-without-tick.md) | APPROVED | DEBT-0009: хеш состояния только по таблицам, tick отдельно (ADR-0006/0013) | MS-M0 |
 
 ## Гипотезы
 

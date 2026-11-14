@@ -48,6 +48,12 @@ jobs:
         run: dotnet test Singularity.sln -c Release --no-build
       - name: Lab self-test
         run: dotnet src/Singularity.Lab/bin/Release/net10.0/Singularity.Lab.dll selftest
+      # ADR-0006: empty day < 1 ms (DEBT-0010); Linux only, other runners are too noisy for a timing bound.
+      - name: Empty-tick benchmark
+        if: runner.os == 'Linux'
+        env:
+          SINGULARITY_BENCH: "1"
+        run: dotnet test tests/Singularity.Kernel.Tests/Singularity.Kernel.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~EmptyTickBudget"
 
   analysis:
     runs-on: ubuntu-latest
