@@ -13,7 +13,7 @@ namespace Singularity.Lab.Models.Slice;
 public static class SliceChecks
 {
     // Seed 1, months 0…149, default config: the golden of the Session (SeriesSwitchTests.MainSeed1Month149, F17b YProdGolden[0]).
-    private const string Golden150 = "4d219de4c3fd3c2dbc948662d9fea67cdb634b3f4f49eb74605840d1d20d328e";
+    private const string Golden150 = "9171e388fb488c671d4fda694d4e6eba8b27faf5dd8329dca350c5bc39a4a151";
     private const long Ticks150 = 4564;   // 1945-09-01 → 1958-03-01: the tick of month 150, so month 149 is the last one run
     private const long Ticks60 = 1826;    // 1945-09-01 → 1950-09-01
 

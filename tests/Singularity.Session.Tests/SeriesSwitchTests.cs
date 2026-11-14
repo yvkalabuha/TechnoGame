@@ -8,7 +8,7 @@ namespace Singularity.Session.Tests;
 public class SeriesSwitchTests
 {
     // Hash of seed 1 after month 149 under the default config (F17b YProdGolden[0], recorded before the switches existed).
-    private const string MainSeed1Month149 = "4d219de4c3fd3c2dbc948662d9fea67cdb634b3f4f49eb74605840d1d20d328e";
+    private const string MainSeed1Month149 = "9171e388fb488c671d4fda694d4e6eba8b27faf5dd8329dca350c5bc39a4a151";
 
     private static SliceRunConfig Base(ulong seed = 1) => new() { Seed = seed, Threads = 2 };
 
@@ -16,7 +16,7 @@ public class SeriesSwitchTests
     private static LkTables Tables(int clockShift = 0)
     {
         SliceWorld w = SliceTestData.Create().World;
-        var t = new LkTables(w.Scenario.ActorCount);
+        var t = new LkTables(w.Scenario.ActorCount, w.Graph.Number.Max());
         for (int a = 0; a < t.ActorCount; a++)
         {
             for (int g = 1; g <= 4; g++)
@@ -25,7 +25,7 @@ public class SeriesSwitchTests
                 t.HalfWidth[a * 4 + g - 1] = 6;
             }
             foreach (int number in w.Graph.Number)
-                t.Delta[a * 64 + number] = 0;
+                t.Delta[t.DeltaIndex(a, number)] = 0;
         }
         return t;
     }
@@ -275,7 +275,7 @@ public class SeriesSwitchTests
     {
         foreach (LayerControl l in Enum.GetValues<LayerControl>().Where(l => l is not (LayerControl.Lc or LayerControl.Lp)))
         {
-            SliceRunConfig c = Base() with { Layer = l, LkTables = l == LayerControl.Lk ? new LkTables(5) : null };
+            SliceRunConfig c = Base() with { Layer = l, LkTables = l == LayerControl.Lk ? new LkTables(5, SliceTestData.Create().World.Graph.Number.Max()) : null };
             Assert.NotNull(SliceTestData.Create(c));
         }
     }

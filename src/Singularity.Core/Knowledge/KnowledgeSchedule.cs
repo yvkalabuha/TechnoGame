@@ -13,18 +13,26 @@ public sealed class LkTables
     /// <summary><see cref="Delta"/> value for "never" (node censored in more than 50% of seeds).</summary>
     public const int Never = int.MinValue;
 
-    public LkTables(int actorCount)
+    public LkTables(int actorCount, int maxNodeNumber)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(actorCount, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxNodeNumber, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(maxNodeNumber, KnowledgeRng.MaxNodeNumber);
         ActorCount = actorCount;
+        MaxNodeNumber = maxNodeNumber;
         PCens = new Fx6[actorCount * 4];
         Mean = new int[actorCount * 4];
         HalfWidth = new int[actorCount * 4];
-        Delta = new int[actorCount * 64];
+        Delta = new int[actorCount * (maxNodeNumber + 1)];
         Array.Fill(Delta, Never);
     }
 
     public int ActorCount { get; }
+
+    /// <summary>Largest node number of the graph the tables are built for; <see cref="Delta"/> has <c>MaxNodeNumber + 1</c> slots per actor.</summary>
+    public int MaxNodeNumber { get; }
+
+    public int DeltaIndex(int actor, int node) => actor * (MaxNodeNumber + 1) + node;
 
     /// <summary>[actor·4 + g − 1]: share of seeds where APP of generation g is unknown by month 383.</summary>
     public Fx6[] PCens { get; }
@@ -35,7 +43,7 @@ public sealed class LkTables
     /// <summary>[actor·4 + g − 1]: <c>⌊√3·s⌉</c>, months (computed in analysis, §9.2).</summary>
     public int[] HalfWidth { get; }
 
-    /// <summary>[actor·64 + node]: median <c>t_known(n) − t_known(APP_g)</c>, months, or <see cref="Never"/>.</summary>
+    /// <summary>[<see cref="DeltaIndex"/>: actor·(MaxNodeNumber + 1) + node]: median <c>t_known(n) − t_known(APP_g)</c>, months, or <see cref="Never"/>.</summary>
     public int[] Delta { get; }
 }
 
@@ -67,6 +75,9 @@ public static class KnowledgeSchedule
     public static ImmutableArray<long> BuildLk(KnowledgeGraph graph, KnowledgeStart start, LkTables tables, CounterRng know)
     {
         int n = graph.Count;
+        for (int r = 0; r < n; r++)
+            if (graph.Number[r] > tables.MaxNodeNumber)
+                throw new ArgumentException($"Node number {graph.Number[r]} exceeds the L_K tables range 1..{tables.MaxNodeNumber}.", nameof(tables));
         var due = new long[start.ActorCount * n];
         var clock = new long[5];
         for (int a = 0; a < start.ActorCount; a++)
@@ -91,7 +102,7 @@ public static class KnowledgeSchedule
                 int gen = graph.Gen[r];
                 if (gen < 1 || gen > 4)
                     throw new ArgumentException($"Node {graph.Number[r]} (G{gen}) is unknown at the start but L_K has clocks only for G1–G4.", nameof(graph));
-                int delta = tables.Delta[actor * 64 + graph.Number[r]];
+                int delta = tables.Delta[tables.DeltaIndex(actor, graph.Number[r])];
                 due[a * n + r] = clock[gen] == Never || delta == LkTables.Never ? Never : clock[gen] + delta;
             }
             ApplyRequirements(graph, due.AsSpan(a * n, n));

@@ -492,7 +492,7 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
             Assert.Equal(a.LastHash, c.LastHash);
             Assert.True(ViewSupport.Dump(a.View) == ViewSupport.Dump(b.View), $"month {t}: the view differs between thread counts");
         }
-        Assert.Equal("4d219de4c3fd3c2dbc948662d9fea67cdb634b3f4f49eb74605840d1d20d328e", a.LastHash);
+        Assert.Equal("9171e388fb488c671d4fda694d4e6eba8b27faf5dd8329dca350c5bc39a4a151", a.LastHash);
     }
 
     [Fact]

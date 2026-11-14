@@ -104,7 +104,7 @@ public class TickRunnerL2StressTests
         for (int i = 0; i < Ticks; i++)
         {
             runner.RunTick();
-            hashes.Add(StateHash.ComputeHex(table, 7, runner.Tick));
+            hashes.Add(StateHash.ComputeHex(table, 7));
         }
         return hashes;
     }

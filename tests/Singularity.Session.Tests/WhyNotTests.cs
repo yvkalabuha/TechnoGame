@@ -370,11 +370,11 @@ public class WhyNotTests
     {
         SliceSession s = New();
         s.StepThroughMonth(13);
-        string hash = StateHash.ComputeHex(s.World.Table, SliceWorld.SchemaVersion, s.Tick);
+        string hash = StateHash.ComputeHex(s.World.Table, SliceWorld.SchemaVersion);
         string first = Render(s.WhyNot(Usa, WhyNotTarget.Requirement(1)));
         string second = Render(s.WhyNot(Usa, WhyNotTarget.Requirement(1)));
         Assert.Equal(first, second);
-        Assert.Equal(hash, StateHash.ComputeHex(s.World.Table, SliceWorld.SchemaVersion, s.Tick));
+        Assert.Equal(hash, StateHash.ComputeHex(s.World.Table, SliceWorld.SchemaVersion));
         Assert.Equal(hash, s.LastHash);
     }
 

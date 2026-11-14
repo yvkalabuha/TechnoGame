@@ -30,7 +30,7 @@ public sealed partial class SliceSession
     private SliceSession(SliceWorld world)
     {
         _world = world;
-        LastHash = StateHash.ComputeHex(world.Table, SliceWorld.SchemaVersion, world.Runner.Tick);
+        LastHash = StateHash.ComputeHex(world.Table, SliceWorld.SchemaVersion);
         HashComputations = 1;
         Layout = ViewBuilder.Layout(world);
         _view = ViewBuilder.Snapshot(world, Tick, LastHash, _month, null, null);
@@ -175,7 +175,7 @@ public sealed partial class SliceSession
         _world.Runner.RunTick();
         if (monthly || applied)
         {
-            LastHash = StateHash.ComputeHex(_world.Table, SliceWorld.SchemaVersion, Tick);
+            LastHash = StateHash.ComputeHex(_world.Table, SliceWorld.SchemaVersion);
             HashComputations++;
             // The traces belong to the step that just ran; only a tick with a monthly step reads them (inputs is set exactly then).
             MonthStepView? step = inputs is null ? null : ViewBuilder.Step(_world, _month);

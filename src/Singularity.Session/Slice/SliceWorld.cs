@@ -409,7 +409,7 @@ internal sealed class SliceWorld
 
     private static LkTables CopyTables(LkTables t)
     {
-        var copy = new LkTables(t.ActorCount);
+        var copy = new LkTables(t.ActorCount, t.MaxNodeNumber);
         t.PCens.CopyTo(copy.PCens, 0);
         t.Mean.CopyTo(copy.Mean, 0);
         t.HalfWidth.CopyTo(copy.HalfWidth, 0);

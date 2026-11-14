@@ -96,7 +96,7 @@ public sealed class KnowledgeGraph
         {
             numbers[r] = nodes[r].Number;
             if (numbers[r] < 1 || numbers[r] > KnowledgeRng.MaxNodeNumber)
-                throw new ArgumentException($"Node number {numbers[r]} is outside 1..{KnowledgeRng.MaxNodeNumber} (RNG key actor·64 + node).", nameof(nodes));
+                throw new ArgumentException($"Node number {numbers[r]} is outside 1..{KnowledgeRng.MaxNodeNumber} (RNG key actor·2^16 + node).", nameof(nodes));
             if (nodes[r].Discipline < -1 || nodes[r].Discipline >= disciplineNames.Count || (nodes[r].Discipline < 0) != (nodes[r].Type == NodeType.APP))
                 throw new ArgumentException($"Node {numbers[r]}: bad discipline index {nodes[r].Discipline}.", nameof(nodes));
             if (nodes[r].CostN <= Fx6.Zero)

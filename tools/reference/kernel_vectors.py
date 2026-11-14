@@ -38,9 +38,9 @@ RNG_KEYS = [
 ]
 
 
-def state_hash(schema_version, tick, n_rows, columns):
+def state_hash(schema_version, n_rows, columns):
     """columns: list of ('q' | 'i', values) in registration order."""
-    data = struct.pack('<iqi', schema_version, tick, n_rows)
+    data = struct.pack('<ii', schema_version, n_rows)
     for fmt, values in columns:
         data += b''.join(struct.pack('<' + fmt, v) for v in values)
     return hashlib.sha256(data).hexdigest()
@@ -81,11 +81,11 @@ if __name__ == '__main__':
     for key in RNG_KEYS:
         v = counter_rng(*key)
         print(key, '0x%016XUL' % v, repr((v >> 11) * 2.0 ** -53))
-    print('fixed table:', state_hash(1, 1910, 4, [
+    print('fixed table:', state_hash(1, 4, [
         ('q', [0, 1, -1, 9223372036854775807]),
         ('i', [0, 1, -1, -2147483648]),
     ]))
-    print('empty table:', state_hash(1, 0, 0, []))
+    print('empty table:', state_hash(1, 0, []))
     for x, q in POW_FRAC_CASES:
         v = pow_frac(x, q)
         print('PowFrac(%r, %d) = %r bits 0x%016XL' % (x, q, v, double_bits(v) & M64))

@@ -5,8 +5,8 @@ namespace Singularity.Kernel.Tests;
 public class StateHashTests
 {
     // Reference hashes, cross-checked by tools/reference/kernel_vectors.py.
-    private const string FixedTableHash = "cb10cdbf139ed51f9d5653b9dae64bfb831046d9637b8f0a4348fb3a52e62d6f";
-    private const string EmptyTableHash = "4cbbd8ca5215b8d161aec181a74b694f4e24b001d5b081dc0030ed797a8973e0";
+    private const string FixedTableHash = "1a3cba714ac0f01aacdf4116c845ef1c6a0ad14c602e554252ac6ca6d02f9367";
+    private const string EmptyTableHash = "7c9fa136d4413fa6173637e883b6998d32e1d675f88cddff9dcbcf331820f4b8";
 
     private static Table FixedTable()
     {
@@ -19,25 +19,38 @@ public class StateHashTests
     [Fact]
     public void FixedTable_MatchesReference()
     {
-        Assert.Equal(FixedTableHash, StateHash.ComputeHex(FixedTable(), schemaVersion: 1, tick: 1910));
+        Assert.Equal(FixedTableHash, StateHash.ComputeHex(FixedTable(), schemaVersion: 1));
     }
 
     [Fact]
     public void EmptyTable_HashesHeaderOnly()
     {
-        Assert.Equal(EmptyTableHash, StateHash.ComputeHex(new Table(0), schemaVersion: 1, tick: 0));
+        Assert.Equal(EmptyTableHash, StateHash.ComputeHex(new Table(0), schemaVersion: 1));
     }
 
     [Fact]
-    public void HeaderFieldsAndValues_AllAffectTheHash()
+    public void SchemaVersionAndValues_AffectTheHash()
     {
-        string baseline = StateHash.ComputeHex(FixedTable(), 1, 1910);
-        Assert.NotEqual(baseline, StateHash.ComputeHex(FixedTable(), 2, 1910));
-        Assert.NotEqual(baseline, StateHash.ComputeHex(FixedTable(), 1, 1911));
+        string baseline = StateHash.ComputeHex(FixedTable(), 1);
+        Assert.NotEqual(baseline, StateHash.ComputeHex(FixedTable(), 2));
 
         var changed = FixedTable();
         changed.GetInt("level").Load([0, 1, -1, int.MaxValue]);
-        Assert.NotEqual(baseline, StateHash.ComputeHex(changed, 1, 1910));
+        Assert.NotEqual(baseline, StateHash.ComputeHex(changed, 1));
+    }
+
+    [Fact]
+    public void Hash_DoesNotDependOnTick()
+    {
+        // The tick is not an argument at all (ADR-0006/0013); a runner that advances with an unchanged table keeps the hash.
+        var table = new Table(2);
+        table.AddLong("x").Load([5, 6]);
+        var runner = new TickRunner(table, 1, [], 2, 1);
+        string before = StateHash.ComputeHex(table, 1);
+        runner.RunTick();
+        runner.RunTick();
+        Assert.Equal(2, runner.Tick);
+        Assert.Equal(before, StateHash.ComputeHex(table, 1));
     }
 
     [Fact]
@@ -46,7 +59,7 @@ public class StateHashTests
         var table = FixedTable();
         table.CopyCurrentToNext();
         table.GetLong("stock").Next[0] = 999;
-        Assert.Equal(FixedTableHash, StateHash.ComputeHex(table, 1, 1910));
+        Assert.Equal(FixedTableHash, StateHash.ComputeHex(table, 1));
     }
 
     [Fact]
@@ -62,13 +75,12 @@ public class StateHashTests
 
         var bytes = new List<byte>();
         bytes.AddRange(BitConverter.GetBytes(3));
-        bytes.AddRange(BitConverter.GetBytes(5L));
         bytes.AddRange(BitConverter.GetBytes(rows));
         foreach (long v in values)
             bytes.AddRange(BitConverter.GetBytes(v));
         Assert.True(BitConverter.IsLittleEndian, "Expected bytes are built with the host byte order.");
 
         string expected = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes.ToArray()));
-        Assert.Equal(expected, StateHash.ComputeHex(table, 3, 5));
+        Assert.Equal(expected, StateHash.ComputeHex(table, 3));
     }
 }

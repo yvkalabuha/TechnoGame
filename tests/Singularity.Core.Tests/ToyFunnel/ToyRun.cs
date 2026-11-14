@@ -96,7 +96,7 @@ internal static class ToyRun
 
     public sealed record Result(ToyFunnelModel Model, Sink Metrics, List<string> TickHashes, long FinalTick)
     {
-        public string GoldenHash => StateHash.ComputeHex(Model.Table, Model.SchemaVersion, FinalTick);
+        public string GoldenHash => StateHash.ComputeHex(Model.Table, Model.SchemaVersion);
     }
 
     public static Result Run(ParamSet p, ulong seed, int threads = 1, int chunkSize = 64, long ticks = Ticks,
@@ -112,7 +112,7 @@ internal static class ToyRun
             runner.RunTick();
             model.Observe(runner.Tick, sink);
             if (hashEveryTick)
-                hashes.Add(StateHash.ComputeHex(model.Table, model.SchemaVersion, runner.Tick));
+                hashes.Add(StateHash.ComputeHex(model.Table, model.SchemaVersion));
             afterTick?.Invoke(model, runner.Tick);
         }
         return new Result(model, sink, hashes, runner.Tick);

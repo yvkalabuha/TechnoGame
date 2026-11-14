@@ -12,15 +12,17 @@ public static class KnowledgeRng
     public const int SystemKnow = 1;
     public const int SystemPrioJ = 2;
 
-    /// <summary>Node numbers fit into <c>actor·64 + node</c> (§9.1); node 0 is reserved for L_K.</summary>
-    public const int MaxNodeNumber = 63;
+    /// <summary>Entity key is <c>actor·2^16 + node</c> (§9.1, #197); node 0 is reserved for L_K.</summary>
+    public const int NodeKeyBits = 16;
+
+    public const int MaxNodeNumber = (1 << NodeKeyBits) - 1;
 
     public static int Entity(int actorNumber, int nodeNumber)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(actorNumber);
         ArgumentOutOfRangeException.ThrowIfNegative(nodeNumber);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(nodeNumber, MaxNodeNumber);
-        return checked(actorNumber * 64 + nodeNumber);
+        return checked(actorNumber * (1 << NodeKeyBits) + nodeNumber);
     }
 
     /// <summary><c>U_know</c> of a hazard node in month t.</summary>
@@ -38,7 +40,7 @@ public static class KnowledgeRng
         return Fx6.FromRaw(CounterRng.UniformInt(u, 500_000, 1_500_000));
     }
 
-    /// <summary>L_K "generation clock" draw of generation g (1…4): <c>n = 1 + g</c> at month 0, entity <c>actor·64</c>.</summary>
+    /// <summary>L_K "generation clock" draw of generation g (1…4): <c>n = 1 + g</c> at month 0, entity <c>actor·2^16</c>.</summary>
     public static ulong ScheduleClock(CounterRng rng, int actorNumber, int gen) =>
         rng.NextU64(0, SystemKnow, Entity(actorNumber, 0), 1 + gen);
 

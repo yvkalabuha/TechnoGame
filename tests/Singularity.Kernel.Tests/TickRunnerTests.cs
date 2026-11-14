@@ -20,7 +20,7 @@ public class TickRunnerTests
         for (int i = 0; i < Ticks; i++)
         {
             runner.RunTick();
-            hashes.Add(StateHash.ComputeHex(table, SchemaVersion, runner.Tick));
+            hashes.Add(StateHash.ComputeHex(table, SchemaVersion));
         }
         return hashes;
     }

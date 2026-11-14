@@ -125,7 +125,7 @@ public class KnownSinceTests
         string[] sinceNames = [.. names.Where(n => n.StartsWith("know.since.", StringComparison.Ordinal))];
         Assert.Equal(tracked.Graph.Count, sinceNames.Length);
         Assert.Equal(names.Take(plain.Table.Columns.Count()).ToArray(), plain.Table.Columns.Select(c => c.Name).ToArray());   // appended after the existing columns
-        Assert.NotEqual(StateHash.ComputeHex(plain.Table, 1, 0), StateHash.ComputeHex(tracked.Table, 1, 0));
+        Assert.NotEqual(StateHash.ComputeHex(plain.Table, 1), StateHash.ComputeHex(tracked.Table, 1));
         foreach (Column c in plain.Table.Columns)
         {
             Column other = tracked.Table.Columns.Single(x => x.Name == c.Name);
@@ -159,7 +159,7 @@ public class KnownSinceTests
         {
             Rig rig = SliceRig(track: true, threads, chunk);
             rig.Through(30);
-            return StateHash.ComputeHex(rig.Table, 1, 0);
+            return StateHash.ComputeHex(rig.Table, 1);
         }
         string h = Run(1, 1);
         Assert.Equal(h, Run(1, 1));

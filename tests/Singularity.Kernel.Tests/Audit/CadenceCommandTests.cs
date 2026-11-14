@@ -65,7 +65,7 @@ public class CadenceCommandTests
         var runner = new TickRunner(table, 9, systems, chunkSize, threads, cal);
         for (int i = 0; i < 1000; i++)
             runner.RunTick();
-        return StateHash.ComputeHex(table, 9, 0);
+        return StateHash.ComputeHex(table, 9);
     }
 
     /// <summary>

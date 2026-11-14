@@ -38,10 +38,10 @@ public class ColumnBufferTests
         x.Load([1, -2, 3, long.MinValue, long.MaxValue]);
         y.Load([int.MinValue, 0, 1, 2, int.MaxValue]);
         var runner = new TickRunner(table, 1, [], chunkSize: 2, maxThreads: 4);
-        string before = StateHash.ComputeHex(table, 1, 0);
+        string before = StateHash.ComputeHex(table, 1);
         for (int i = 0; i < 7; i++)
             runner.RunTick();
-        Assert.Equal(before, StateHash.ComputeHex(table, 1, 0));
+        Assert.Equal(before, StateHash.ComputeHex(table, 1));
     }
 
     [Fact]

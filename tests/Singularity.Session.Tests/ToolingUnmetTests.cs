@@ -16,11 +16,11 @@ public class ToolingUnmetTests
     // Re-recorded for «exposure to data» (TASK-0033): the same projection of the build before T6d, now without run.scenario (the scenario hash changed).
     private static readonly (ulong Seed, int Months, string Hash)[] BeforeF33 =
     [
-        (41, 384, "6898f292b699eb16d27f8844fc921857dbeba624a3f3bd74a39db6b466a98a4a"),
-        (1, 150, "cdc044537b299c2bc4904bf920a565dc999110a8ab7716874dfc8eb0e292ff89"),
-        (2, 150, "163ebc8bad8c4ceb9b4cc579671ab25de33b73be652d253a8b9ddccd9ea590f9"),
-        (7, 150, "aa18234a9138e11dd7c5b40a7286b0d9bdd0a6352b98c4c16a9ad2a0a322bae3"),
-        (61, 150, "7cdf420caa77f36318ecfb908b4e7e796001249beeb6eabecb8e193ea523eeb2"),
+        (41, 384, "77920ed2bab4c2122a8a9442aa17c04d2e56eadc4248110f9e316ce0bedaf5a0"),
+        (1, 150, "e7755bde41ccaf1d56d344b9db5da832ce9f038ad693eaddf048bc7cc0fc7980"),
+        (2, 150, "3581fd959e4065c68c7fa639dc3a603390f9e1bc8b18e98fa4e6229038470ffa"),
+        (7, 150, "95d0e6814766ad77b44b7f4b64c622ef1317c7ac4cdfd34d611e0f1959316348"),
+        (61, 150, "14ada7c8800d87e2a3d6a07c3c14e1d413b253d5d6cbc4e75454659b691d85c3"),
     ];
 
     private static SliceSession Run(SliceRunConfig c, int months)

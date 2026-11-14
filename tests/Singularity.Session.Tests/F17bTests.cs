@@ -76,24 +76,25 @@ public class F17bTests(ITestOutputHelper output)
         }
     }
 
+    // TASK-0050 + TASK-0051: all hashes below re-recorded once (hash without tick; RNG key actor·2^16 + node).
     // Hashes after month 149 of seeds 1…5 (AI on, threads 2). Until TASK-0032 part 2 ADMIT (with V0) equalled the build before F17b (commit 29cd914) bit for bit;
     // re-recorded there only for the new column tool_unmet («tool_unmet column», F33): by the old columns the trajectory is unchanged (ToolingUnmetTests).
     private static readonly string[] AdmitGolden =
     [
-        "c53ddf6139925f8c217a1b096ec110956646eb4386b05969d924155f0e2ccef3",
-        "ca11dc65f563319dacae2fab45ab340162018a3259bcaf32131abba41426bb45",
-        "00ed9b260232e22e6cc9e1a71bcc6d2ff210f48b3632163f3f0e6be574b11eef",
-        "92211a7d070a4dbac26ef0f2f54306ca5641a4b5f1d46171c9b16f32cfe0c2b4",
-        "d822ea303d4e60d318fed87617140eec5e6773e0bcf26fa4d917aae5d2a6fad0",
+        "5182522187ea58ccb5e0ef2e7656b485565710e5112fb71ccc560058c66ac80a",
+        "80503279220d3557668e1d14344446434512f61162c8c74e30b5c4dca3a5ad79",
+        "821840913e093333a7357fc92ed732eaac493108aa98ff7d96af7033026b2448",
+        "e07008cd104c053bf5b4fedfdcf466249ac89f7efe848fc7cf7a1e7e3efa05f3",
+        "d79add416b9be263ce95c76cb3d9592af60a00146c1efbc74923ceadc2870db5",
     ];
 
     // Recorded in F17b (TASK-0030); re-recorded in TASK-0033, reason: T6d (columns of the licence and the disruption, run.t6d, the events themselves; both arms), then «exposure to data» (the scenario hash is in the run columns); in TASK-0032: part 1 (A39 «V5 default», #163: the default tooling target is V5), part 2 («tool_unmet column», F33).
     private static readonly string[] YProdGolden = [
-        "4d219de4c3fd3c2dbc948662d9fea67cdb634b3f4f49eb74605840d1d20d328e",
-        "a2e7ad8b0bae2cad8c88e998b34c01cc5c68c97149bc720927e71b598ac17479",
-        "bba04e616c0d146df3134ecead5b1f10bf819ffde1810e3713386830a15ed587",
-        "20894aaadd6542631cfd6cd74a8a7bf3e2f5f65c12dc7a905f4ee9bd025d705d",
-        "d7235a638207ec9533d3576d2c09b9b9d0a7fecad99885951df3ae020ca4c792",
+        "9171e388fb488c671d4fda694d4e6eba8b27faf5dd8329dca350c5bc39a4a151",
+        "53becbd4a6ec207cab1a3428242d717c367b5d9b9d2f1787364afecbf27b586a",
+        "bbb6ac79200966629b2218b05c71e125ef0246408f002c3fafe9b000b4b7a508",
+        "8989f391426b621b78505f6b9e7fa1c9d88379c06b1896cead528d9b9e93f6ee",
+        "ca39e8ffefd9502d200d4b03712c33b72e02bd2bae3c4cee21520be8b9363986",
     ];
 
     private static string HashOf(ulong seed, LineCloseRule rule)

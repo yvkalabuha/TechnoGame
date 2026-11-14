@@ -153,16 +153,30 @@ public sealed class ToyFunnelModel : ILabModel
 
     /// <summary>
     /// SHA-256 in the prototype's runs.csv layout: schema 1, tick, n, then K, A, T, P, R, E, N, B
-    /// (spec §5). Equals <c>StateHash(Table, 1, tick)</c> for A and B; for C it leaves out the K history.
+    /// (spec §5). Differs from <c>StateHash</c> (TASK-0050: no tick there); for C it also leaves out the K history.
     /// </summary>
     public string PrototypeStateHash(long tick)
     {
-        var view = new Table(_n);
-        LongColumn[] stocks = [_k, _a, _t, _p, _r, _e, _nRes];
-        for (int s = 0; s < stocks.Length; s++)
-            view.AddLong(stocks[s].Name).Load(stocks[s].Current);
-        view.AddInt(_b.Name).Load(_b.Current);
-        return StateHash.ComputeHex(view, SchemaFunnel, tick);
+        // The prototype hashes the tick; StateHash does not (ADR-0006/0013), so the layout is written here.
+        using var hash = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
+        Span<byte> header = stackalloc byte[16];
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(header, SchemaFunnel);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(header[4..], tick);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(header[12..], _n);
+        hash.AppendData(header);
+        Span<byte> cell = stackalloc byte[8];
+        foreach (LongColumn column in new[] { _k, _a, _t, _p, _r, _e, _nRes })
+            foreach (long v in column.Current)
+            {
+                System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(cell, v);
+                hash.AppendData(cell);
+            }
+        foreach (int v in _b.Current)
+        {
+            System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(cell, v);
+            hash.AppendData(cell[..4]);
+        }
+        return Convert.ToHexStringLower(hash.GetHashAndReset());
     }
 
     /// <summary>

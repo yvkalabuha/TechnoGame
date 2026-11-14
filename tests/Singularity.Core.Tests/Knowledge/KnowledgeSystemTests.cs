@@ -92,7 +92,7 @@ public class KnowledgeSystemTests
 
     private static LkTables Tables()
     {
-        var t = new LkTables(1);
+        var t = new LkTables(1, 63);
         t.Mean[0] = 10;
         t.HalfWidth[0] = 4;
         foreach ((int node, int delta) in new[] { (1, 2), (2, 5), (4, 0), (5, 1) })
@@ -166,10 +166,21 @@ public class KnowledgeSystemTests
         Assert.Equal(7, e.ActorNumber);
     }
 
+    [Theory]
+    [InlineData(64)]
+    [InlineData(1000)]
+    [InlineData(65535)]
+    public void Graph_WithNodeNumbersAbove63_Loads(int number)
+    {
+        var g = KnowledgeGraph.Create([new KnowledgeNodeSpec(number, NodeType.FND, 1, 0, false, Fx6.One, [])], ["prop"]);
+        Assert.Equal(number, g.Number[0]);
+    }
+
     [Fact]
     public void Construction_RejectsBadGraphs()
     {
-        Assert.Throws<ArgumentException>(() => KnowledgeGraph.Create([new KnowledgeNodeSpec(64, NodeType.FND, 1, 0, false, Fx6.One, [])], ["prop"]));
+        Assert.Throws<ArgumentException>(() => KnowledgeGraph.Create([new KnowledgeNodeSpec(65536, NodeType.FND, 1, 0, false, Fx6.One, [])], ["prop"]));
+        Assert.Throws<ArgumentException>(() => KnowledgeGraph.Create([new KnowledgeNodeSpec(0, NodeType.FND, 1, 0, false, Fx6.One, [])], ["prop"]));
         Assert.Throws<ArgumentException>(() => KnowledgeGraph.Create([new KnowledgeNodeSpec(1, NodeType.APP, 1, 0, false, Fx6.One, [])], ["prop"]));
         Assert.Throws<ArgumentException>(() => KnowledgeGraph.Create(
             [new KnowledgeNodeSpec(1, NodeType.FND, 1, 0, false, Fx6.One, []), new KnowledgeNodeSpec(1, NodeType.FND, 1, 0, false, Fx6.One, [])], ["prop"]));
@@ -220,7 +231,7 @@ public class KnowledgeSystemTests
                 opened += sys.IsKnown(a, r) && !s.IsKnown(a, r) ? 1 : 0;
         }
         Assert.True(opened > 0); // the run does something
-        return StateHash.ComputeHex(table, 1, 0);
+        return StateHash.ComputeHex(table, 1);
     }
 
     // ---- helpers

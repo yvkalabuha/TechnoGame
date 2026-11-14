@@ -131,7 +131,7 @@ public class IndustryTwoSiteTests
                 Runner.RunTick();
         }
 
-        public string Hash => StateHash.ComputeHex(Table, 1, Runner.Tick);
+        public string Hash => StateHash.ComputeHex(Table, 1);
     }
 
     [Fact]

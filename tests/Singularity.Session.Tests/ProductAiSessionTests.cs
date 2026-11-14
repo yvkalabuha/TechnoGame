@@ -365,5 +365,5 @@ public class ProductAiSessionTests(ITestOutputHelper output)
     // D2 (#155, #159): start rule R-H-MS'; the data of the scenario changed, the model did not.
     // Re-recorded in F17b (951bcf96… before), reason: F17b — LINE_CLOSE YPROD bit 12 of run.fleet in the hash of an AI run (ADMIT keeps the old hash, see F17bTests).
     // Re-recorded in T6d (409293e4… before), reason: T6d — licences, alloy disruption and the why_not triggers of the AI, new policy columns, schema v7; then «exposure to data» (1d6a59a9… before; the scenario hash is in the run columns).
-    private const string Golden150 = "ccdd6dd8823b350ce6ad20428a6ff02d6db190b6d6d009f24f032450c6958d32";
+    private const string Golden150 = "e99b1c3eb242b7ac607d0f50145ab3bad006f864c20eadd750b35a487b3358f0";
 }

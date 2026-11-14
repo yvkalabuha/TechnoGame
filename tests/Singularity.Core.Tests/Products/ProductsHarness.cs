@@ -109,7 +109,7 @@ internal sealed class ProductsHarness
         }
     }
 
-    public string Hash() => StateHash.ComputeHex(Table, ProductsSystem.LayoutVersion, Runner.Tick);
+    public string Hash() => StateHash.ComputeHex(Table, ProductsSystem.LayoutVersion);
 
     private static ProductsStart WithoutStartLines(ProductsStart b)
     {

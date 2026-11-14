@@ -38,7 +38,7 @@ public class KnowledgeReferenceTrajectoryTests
         {
             a.RunThroughMonth(t);
             b.RunThroughMonth(t);
-            Assert.Equal(StateHash.ComputeHex(a.Table, 1, 0), StateHash.ComputeHex(b.Table, 1, 0));
+            Assert.Equal(StateHash.ComputeHex(a.Table, 1), StateHash.ComputeHex(b.Table, 1));
             for (int r = 0; r < a.Graph.Count; r++)
                 Assert.Equal(a.System.LastStep(0, r), b.System.LastStep(0, r));
         }
@@ -50,12 +50,12 @@ public class KnowledgeReferenceTrajectoryTests
         // 706 of the 730 days run no system: the table must be identical before and after them.
         var run = new JetReference.Run();
         int idle = 0;
-        string before = StateHash.ComputeHex(run.Table, 1, 0);
+        string before = StateHash.ComputeHex(run.Table, 1);
         for (long d = 0; d < run.Calendar.TickOfMonth(JetReference.RowCount); d++)
         {
             bool due = run.Calendar.IsDue(Cadence.Monthly, d);
             run.Runner.RunTick();
-            string after = StateHash.ComputeHex(run.Table, 1, 0); // tick fixed: the table alone is compared
+            string after = StateHash.ComputeHex(run.Table, 1); // tick fixed: the table alone is compared
             if (!due)
             {
                 Assert.Equal(before, after);

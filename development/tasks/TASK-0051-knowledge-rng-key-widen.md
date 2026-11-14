@@ -39,3 +39,5 @@ created: 2026-11-14
 - [ ] Детерминизм L1/L2 (test-engineer)
 
 ## Результат
+
+Общий пересчёт с TASK-0050: полная таблица «старый → новый хеш» — в «Результат» TASK-0050 (причина: ключ RNG (#197) + хеш без tick). Изменения TASK-0051: KnowledgeRng (actor·65536+node, MaxNodeNumber=65535), LkTables(actorCount, maxNodeNumber)/DeltaIndex, BuildLk и KnowledgeGraph по новой константе; тесты в StreamKeyTests и KnowledgeSystemTests.

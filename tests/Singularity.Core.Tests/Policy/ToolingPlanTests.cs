@@ -249,7 +249,7 @@ public partial class ToolingPlanTests
                 }
                 Assert.True(sum <= rest + rig.Inputs.Cap, $"month {t}: Σ {sum} above the pool");
             }
-            hashes[run] = StateHash.ComputeHex(rig.Table, 1, rig.Runner.Tick);
+            hashes[run] = StateHash.ComputeHex(rig.Table, 1);
         }
         Assert.Equal(hashes[0], hashes[1]);
     }

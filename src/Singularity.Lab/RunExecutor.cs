@@ -65,7 +65,7 @@ public static class RunExecutor
                     model.Observe(runner.Tick, sink);
                 }
                 finalTick = runner.Tick;
-                golden = StateHash.ComputeHex(model.Table, model.SchemaVersion, runner.Tick);
+                golden = StateHash.ComputeHex(model.Table, model.SchemaVersion);
             }
         }
         catch (Exception e)

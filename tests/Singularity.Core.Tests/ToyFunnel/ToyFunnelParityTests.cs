@@ -43,8 +43,7 @@ public class ToyFunnelParityTests
         ToyRun.Result r = ToyRun.Run(p, seed, threads: 4, chunkSize: 5);
 
         Assert.Equal(stateHash, r.Model.PrototypeStateHash(r.FinalTick));
-        if (r.Model.Config.Variant != ToyFunnelVariant.C)
-            Assert.Equal(stateHash, r.GoldenHash); // the Table layout is the prototype's for A and B
+        // r.GoldenHash is StateHash without the tick (TASK-0050), so it is no longer the prototype's layout.
         (string y, string m, string ms) = ToyRun.Digests(r, countries);
         Assert.Equal(yearly, y);
         Assert.Equal(mults, m);

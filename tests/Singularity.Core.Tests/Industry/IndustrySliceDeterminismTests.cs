@@ -30,7 +30,7 @@ public class IndustrySliceDeterminismTests
             foreach (LinkedRun r in runs)
             {
                 r.RunThroughMonth(t);
-                string h = StateHash.ComputeHex(r.Table, 1, r.Runner.Tick);
+                string h = StateHash.ComputeHex(r.Table, 1);
                 first ??= h;
                 Assert.True(first == h, $"month {t}: hash differs");
             }
@@ -50,7 +50,7 @@ public class IndustrySliceDeterminismTests
         {
             a.RunThroughMonth(t);
             b.RunThroughMonth(t);
-            Assert.Equal(StateHash.ComputeHex(a.Table, 1, a.Runner.Tick), StateHash.ComputeHex(b.Table, 1, b.Runner.Tick));
+            Assert.Equal(StateHash.ComputeHex(a.Table, 1), StateHash.ComputeHex(b.Table, 1));
         }
     }
 
