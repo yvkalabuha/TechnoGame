@@ -29,7 +29,8 @@ public sealed record SliceLayoutView(
 /// <summary>
 /// The state after the last non-empty tick. <see cref="Actors"/> is the post state of month <see cref="Month"/> (what the compute of
 /// <c>Month + 1</c> reads); <see cref="Inputs"/> are the inputs the compute of <see cref="Month"/> saw, null if this tick ran no monthly step.
-/// <see cref="Step"/> holds the results of that step (step traces, SLICE_COMPOSITION §13.1); it is null exactly when <see cref="Inputs"/> is.
+/// The decisions of month 0 are made by <c>Initialize</c> before tick 0, so the initial view (<c>Month</c> −1) carries them in <c>Decisions</c>; pair them with the
+/// <c>Requirement</c> of the <c>Inputs</c> of the month-0 view. <see cref="Step"/> holds the results of that step (step traces, SLICE_COMPOSITION §13.1); it is null exactly when <see cref="Inputs"/> is.
 /// </summary>
 public sealed record SliceView(
     long Tick, CivilDate Date, string StateHash,

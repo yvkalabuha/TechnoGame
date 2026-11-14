@@ -171,6 +171,41 @@ public class ObservablesTests
     }
 
     [Fact]
+    public void Month0Compose_IsInTheInitialViewsDecisions_AndPairsWithTheRequirementOfTheMonth0Inputs()
+    {
+        // Initialize decides month 0 before tick 0; the initial view (month −1) shows those commands (they act from month 0), the month-0 view
+        // shows the Requirement the step saw. Later yearly months are paired inside one view (Decisions of month t and Requirement of t).
+        foreach (int cell in Enumerable.Range(0, 27))
+        {
+            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 5, ProfileCell = cell });
+            SliceView initial = s.View;
+            Assert.Equal(-1, initial.Month);
+            s.StepThroughMonth(0);
+            int paired = 0;
+            for (int a = 0; a < s.View.Actors.Length; a++)
+            {
+                DesignCommandView? compose = initial.Actors[a].Decisions.DesignCommands.FirstOrDefault(c => c.Kind == DesignCommandKind.Compose);
+                if (compose is not { } command)
+                    continue;
+                RequirementView r = s.View.Inputs!.Actors[a].Requirement!;
+                ImmutableArray<int> chosen = initial.Actors[a].Profile switch
+                {
+                    PolicyProfile.Quality => r.Superior,
+                    PolicyProfile.Mass => r.Count == 2 ? r.Producible : r.Superior,
+                    _ => r.Count == 2 && r.FvProducible > r.FvSuperior ? r.Producible : r.Superior,
+                };
+                Assert.Equal(r.Gen, command.Target);
+                Assert.True(command.Alts.SequenceEqual(chosen), $"cell {cell} actor {a}");
+                paired++;
+            }
+            for (int a = 0; a < initial.Actors.Length; a++)
+                Assert.Equal(s.World.Policy.AiDesignCommands(a, 0).Count, initial.Actors[a].Decisions.DesignCommands.Length);   // the initial view shows the commands of month 0
+        }
+        // The core data gives no compose at month 0 (every actor with an APP has a live G1 project, E1), so the pairing itself is proved on a snapshot fixture
+        // in ProductAiTests.Variants_ListBothCandidatesWithTheirFV_*: RequirementVariants(0, 0) against the compose command Initialize made for month 0.
+    }
+
+    [Fact]
     public void MoneyRefusals_AreWellFormed()
     {
         foreach (ObservablesWalk walk in All)

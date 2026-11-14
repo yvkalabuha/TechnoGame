@@ -146,6 +146,7 @@
 `actor`, `gen` (1…4), `t_req`, `t_first_unit`, `t_fielded` (int / −1 / пусто), `cost_u100` (Fx6 / пусто).
 
 ### 4.6 `requirements.csv` (full; v0.5)
+- (v0.5 r2, TASK-0047) **Месяц 0:** compose месяца 0 выдаёт `Initialize` до тика 0; он виден в начальном view (`Create`, `Month = −1`) как `Actors[a].Decisions`, а `Requirement` месяца 0 — в `Inputs` view после шага месяца 0. Пара для t = 0: `initial.Decisions` × `view0.Inputs.Requirement`; для t > 0 — оба из одного view. На данных ядра compose месяца 0 не возникает (у всех акторов с APP живёт G1, E1).
 Строка на compose-команду ИИ годового месяца: `t mod 12 = 0`, в `Decisions.DesignCommands` того же шага есть compose с `Target = Gen` и `ActorInputsView.Requirement` не `null` (SC §13.5). Иначе строки нет.
 `req` (порядковый номер строки в прогоне, 0…), `actor`, `gen` (`RequirementView.Gen` = `g*`), `t`, `n_variants` (`Count`: 0 — superior не собирается; 1 — только superior или producible = superior, F-PC3; 2), `fv_superior` (Fx6 / пусто при `Count = 0`), `fv_producible` (Fx6 / пусто при `Count < 2`).
 - `FV` — `CandidateValue(..., FvBudget, month)` обоих кандидатов при любом профиле (SC §13.5): S1 сравнивает пресеты, а не выбор ИИ. `chosen` не возвращается.
