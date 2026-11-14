@@ -2193,7 +2193,11 @@ def calib_tables(d, cfg):
             if a in ("USA", "GBR") and NODES.get(nd, ("",))[0] == "PRC" and x[0] is not None and x[0] < 0:
                 start_tiers.add(str(NODES[nd][2]))
     tsk_bad = [k for k in sorted(start_tiers) if k not in tsk or not tsk[k]["B_all_positive"] or tsk[k]["Y384"] < 700000]
-    tsk_check = {"tiers": tsk, "start_tiers": sorted(start_tiers), "failed_tiers": tsk_bad, "ok": not tsk_bad}
+    # every PRC tier of the node table has observations in at least one part (otherwise there is no curve)
+    all_tiers = sorted({str(k) for (typ, _, k) in NODES.values() if typ == "PRC"})
+    no_obs = [k for k in all_tiers if k not in tsk or tsk[k]["obs_A"] + tsk[k]["obs_B"] == 0]
+    tsk_check = {"tiers": tsk, "start_tiers": sorted(start_tiers), "failed_tiers": tsk_bad, "all_tiers": all_tiers,
+                 "tiers_without_obs": no_obs, "ok": not tsk_bad and not no_obs}
     # T_design[g] (spec §6.1 L_P): median over calibration seeds and all actors of Requirement -> first unit in service.
     # t_req = -1 (a project of generation g at the start, format §9.1) is measured from month 0 (the earliest Requirement).
     # A start project already in service at the start (t_first_unit = -1) has no observable design time: it is counted
@@ -2250,10 +2254,15 @@ def calib_tables(d, cfg):
                 "d_is_1": not pool or no_first_share > 0.5}
     c2 = {"tier4": mast(c["c2_tier4"]), "tier5": mast(c["c2_tier5"])}
     t4, t5 = c2["tier4"]["p50_years"], c2["tier5"]["p50_years"]
-    c2["tier4_in_corridor"] = t4 is not None and c["c2_years"][0] <= t4 <= c["c2_years"][1]
+    c2["tier4_in_corridor"] = (not c2["tier4"]["d_is_1"]) and t4 is not None and c["c2_years"][0] <= t4 <= c["c2_years"][1]
     # "tier-5 longer" with an empty or fully censored tier-5 pool is not met (spec §8.2 C2)
     full5 = c2["tier5"]["n"] == 0 or c2["tier5"]["right_censored"] == c2["tier5"]["n"]
     c2["tier5_longer"] = (not full5) and t4 is not None and t5 is not None and t5 > t4
+    # §8.2 п.3: d_k = max(0, lo - s, s - hi) / (hi - lo); > 50% of the pool without t_first -> d = 1; p50 = +inf gives
+    # d = inf (the formula, not capped: the spec does not cap it); the order tier-5 > tier-4 is binary (0 / 1)
+    lo4, hi4 = c["c2_years"]
+    c2["d_tier4"] = 1.0 if (c2["tier4"]["d_is_1"] or t4 is None) else max(0.0, lo4 - t4, t4 - hi4) / (hi4 - lo4)
+    c2["d_order"] = 0.0 if (c2["tier5_longer"] and not c2["tier5"]["d_is_1"]) else 1.0
     c4 = {}
     for g_s, (y0, y1) in c["c4_windows"].items():
         hit = 0
@@ -2262,7 +2271,10 @@ def calib_tables(d, cfg):
                   if (a, int(g_s)) in gt[rid] and gt[rid][(a, int(g_s))][1] is not None]
             if ts and y0 <= year_of(cfg, min(ts)) <= y1:
                 hit += 1
-        c4[g_s] = {"share": hit / len(rids) if rids else None, "ok": bool(rids) and hit / len(rids) >= c["c4_min_share"]}
+        sh = hit / len(rids) if rids else None
+        lo = c["c4_min_share"]
+        c4[g_s] = {"share": sh, "ok": sh is not None and sh >= lo,
+                   "d": 1.0 if sh is None else max(0.0, lo - sh, sh - 1.0) / (1.0 - lo)}   # §8.2 п.3, corridor [0.5; 1]
     tables = {k: out[k] for k in ("lk", "delta", "Y", "U", "T_design", "rho")}
     # P0 of the calibration build (format §5): A40 L-O0/L-C0 and the A39 ledger invariants on calibration seeds
     D = Data()
@@ -2650,10 +2662,15 @@ def main(argv=None):
             md += "- T_design, наблюдений: %s\n" % ", ".join("G%s n=%d (старт от мес. 0: %d; в строю на старте, вне медианы: %d)" % (
                 g, v["n"], v["start_from_month0"], v["start_in_service"]) for g, v in sorted(r["T_design_obs"].items()))
             ts = r["T_SK"]
-            md += "\n## Проверка T-SK (§6.1 v0.24 r2)\n\n- tier со стартовым PRC у USA/GBR: %s; провал: %s → %s\n" % (
-                ", ".join(ts["start_tiers"]) or "—", ", ".join(ts["failed_tiers"]) or "нет", "OK" if ts["ok"] else "ОШИБКА ТАБЛИЦ")
+            md += "\n## Проверка T-SK (§6.1 v0.24 r2)\n\n- tier со стартовым PRC у USA/GBR: %s; провал: %s; tier без наблюдений: %s → %s\n" % (
+                ", ".join(ts["start_tiers"]) or "—", ", ".join(ts["failed_tiers"]) or "нет", ", ".join(ts["tiers_without_obs"]) or "нет",
+                "OK" if ts["ok"] else "ОШИБКА ТАБЛИЦ")
             md += "".join("- tier %s: наблюдений А %d (τ %d), Б %d (τ %d); Y(384) %s\n" % (
                 k, v["obs_A"], v["taus_A"], v["obs_B"], v["taus_B"], fmt(v["Y384"] / FX, 3)) for k, v in sorted(ts["tiers"].items()))
+            c2r = r["C2"]
+            md += "\n## Расстояния §8.2 п.3\n\n- d_C2 (tier-4 p50 в [%s; %s] лет) = %s; d_C2,порядок (tier-5 > tier-4) = %s\n- %s\n" % (
+                cfg["calib"]["c2_years"][0], cfg["calib"]["c2_years"][1], fmt(c2r["d_tier4"]), fmt(c2r["d_order"]),
+                "; ".join("d_C4,G%s = %s (доля %s)" % (g, fmt(v["d"]), fmt(v["share"], 2)) for g, v in sorted(r["C4"].items())))
             md += "\n".join(render_p0({"p0": r["p0"]}, cfg)) + "\n"
         else:
             if not a.dirs:

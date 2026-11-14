@@ -66,7 +66,7 @@
 | [TASK-0050](../development/tasks/TASK-0050-state-hash-without-tick.md) | DONE | DEBT-0009: хеш состояния только по таблицам, tick отдельно (ADR-0006/0013) | MS-M0 |
 | [TASK-0051](../development/tasks/TASK-0051-knowledge-rng-key-widen.md) | DONE | Ключ RNG знания actor·2^16 + node (#197), вместе с TASK-0050 | MS-M0 |
 | [TASK-0052](../development/tasks/TASK-0052-llm-worker-deepseek-thinking.md) | APPROVED | llm_worker: режим размышления DeepSeek для gate и review | MS-M0 |
-| [TASK-0053](../development/tasks/TASK-0053-slice-analysis-t11.md) | APPROVED | T11: анализ exp0002.py — критерии §7, диагностики, таблицы контролей | MS-M0 |
+| [TASK-0053](../development/tasks/TASK-0053-slice-analysis-t11.md) | DONE | T11: анализ exp0002.py — критерии §7, диагностики, таблицы контролей | MS-M0 |
 
 ## Гипотезы
 

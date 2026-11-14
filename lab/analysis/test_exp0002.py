@@ -246,7 +246,10 @@ class CalibStartKnowledge(unittest.TestCase):
         self.assertEqual(y[N + 2], 800002)
         self.assertEqual(y[0], 0)                  # part A: PRC 40 known at 5, yield 0 at tau 0
         self.assertEqual(y[2], 2000)
-        self.assertTrue(r["T_SK"]["ok"])
+        self.assertEqual(r["T_SK"]["failed_tiers"], [])
+        self.assertEqual(r["T_SK"]["tiers_without_obs"], ["3", "5"])    # no prc_month rows for tiers 3 and 5
+        self.assertFalse(r["T_SK"]["ok"])
+        self.assertEqual(r["C4"]["2"]["d"], 1.0)                        # share 0 in [0.5; 1]: d = 0.5 / 0.5
         c2 = r["C2"]
         self.assertEqual(c2["tier4"]["n"], 20)     # node 49 mastered at the start is excluded
         self.assertEqual(c2["tier4"]["right_censored"], 10)
@@ -312,9 +315,15 @@ class CalibCodexR1(unittest.TestCase):
     def test_c2_d1_by_share_without_t_first(self):
         # 3 of 4 pairs without t_first, the 4th observed: d = 1 although nothing is censored
         nt = [["c%d" % s, "USA", 40, 10, "" if s <= 3 else 12, "" if s <= 3 else 60, "", 0] for s in range(1, 5)]
-        t4 = self.run_calib(nt, [])["C2"]["tier4"]
+        r = self.run_calib(nt, [])
+        t4 = r["C2"]["tier4"]
         self.assertEqual((t4["no_t_first"], t4["right_censored"]), (3, 0))
         self.assertTrue(t4["d_is_1"])
+        self.assertEqual(t4["p50_years"], 4.0)                     # the one observed pair sits inside [2; 8] ...
+        self.assertFalse(r["C2"]["tier4_in_corridor"])            # ... but d = 1 rules: not in the corridor
+        self.assertEqual(r["C2"]["d_tier4"], 1.0)
+        self.assertEqual(r["C2"]["d_order"], 1.0)
+        self.assertTrue(r["T_SK"]["ok"] is False and "4" in r["T_SK"]["tiers_without_obs"])   # no prc_month rows at all
         # 4 of 4 censored with t_first: no d = 1 from this rule
         nt = [["c%d" % s, "USA", 40, 10, 12, "", "", 0] for s in range(1, 5)]
         t4 = self.run_calib(nt, [])["C2"]["tier4"]
