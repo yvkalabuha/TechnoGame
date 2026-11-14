@@ -51,6 +51,7 @@ created: 2026-11-13
 - [ ] Тесты: заголовок калибровочной сборки, L1, L2, полнота таблиц; `dotnet test` всего решения зелёный.
 - [ ] Печать A40 на seeds 1…20 и её сверка с ожиданиями — в «Результат».
 - [ ] `src/Singularity.{Kernel,Core,Session}` не меняются; если нужно изменить — остановиться и описать.
+  - Исключение (Orchestrator, light, 2026-11-14, в рамках ADR-0014 п.5 «read views вместе с первым потребителем T10»): разрешено добавить в Session только read view `LicenceView.Active` и поднять `test_api_version` до 3. Состояние, хеши и golden не меняются. Kernel и Core по-прежнему не меняются.
 
 ## REVIEW
 - [ ] Code review (reviewer)
