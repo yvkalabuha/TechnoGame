@@ -30,7 +30,50 @@ public static class SliceChecks
         ("slice: L1 — two runs, same CSV and golden_hash", () => L1(tmp)),
         ("slice: L2 — threads 1 vs 4, same CSV and golden_hash", () => L2(tmp)),
         ("slice: matrix 2 points x 2 seeds x threads 1,2 — every run has every table", () => Matrix(tmp)),
+        ("slice: data_hash and data_files cover the mod files the slice loads", () => DataProvenance(tmp)),
     ];
+
+    private static string? DataProvenance(string tmp)
+    {
+        // A repository of its own: Singularity.sln + a copy of mods/core, the manifest beside them.
+        string repo = Path.Combine(tmp, "slice-data-repo");
+        string mods = Path.Combine(repo, "mods", "core");
+        Directory.CreateDirectory(mods);
+        File.WriteAllText(Path.Combine(repo, "Singularity.sln"), "");
+        string source = Path.GetDirectoryName(Path.GetDirectoryName(SliceData.Files(AppContext.BaseDirectory)[0]))!;
+        foreach (string f in Directory.GetFiles(Path.Combine(source, "core")))
+            File.Copy(f, Path.Combine(mods, Path.GetFileName(f)), overwrite: true);
+        string path = Path.Combine(repo, "lab", "m.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, Manifest("JetSlice", Ticks60));
+        Manifest m = Lab.Manifest.Load(path);
+
+        IReadOnlyList<string> loaded = SliceData.Files(m.BaseDirectory);
+        string[] want = [.. loaded.Select(f => Path.GetRelativePath(m.BaseDirectory, f).Replace('\\', '/')).Order(StringComparer.Ordinal)];
+        (string h1, var files) = Provenance.HashData(m);
+        if (!files.Select(f => f.Path).SequenceEqual(want))
+            return $"data_files {string.Join(",", files.Select(f => f.Path))} != loaded {string.Join(",", want)}";
+        foreach (string name in new[] { "mod.yaml", "nodes.yaml", "product_classes.yaml", "scenario_1945.yaml" })
+        {
+            if (!want.Contains("../mods/core/" + name, StringComparer.Ordinal))
+                return $"../mods/core/{name} is not in data_files";
+        }
+        File.AppendAllText(Path.Combine(mods, "nodes.yaml"), "\n# provenance check\n");
+        (string h2, _) = Provenance.HashData(m);
+        if (h1 == h2)
+            return "data_hash did not change with nodes.yaml";
+
+        // The run.json of a real run carries the same data_hash and data_files.
+        string outDir = Path.Combine(repo, "out");
+        RunOutcome r = RunExecutor.Execute(new RunRequest(m, 0, 3, 1, outDir, "r"), Provenance.Collect(m), TextWriter.Null);
+        if (!r.Ok)
+            return $"run failed: {r.Error}";
+        using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(outDir, RunExecutor.RunJsonFile)));
+        if (doc.RootElement.GetProperty("data_hash").GetString() != h2)
+            return "run.json data_hash differs from the hash of the loaded files";
+        int n = doc.RootElement.GetProperty("data_files").GetArrayLength();
+        return n == want.Length ? null : $"run.json data_files has {n} entries, want {want.Length}";
+    }
 
     private static string? CalibrationHeader()
     {

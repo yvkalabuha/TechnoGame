@@ -104,7 +104,8 @@ WHYNOT_COLS = ["run", "t", "actor", "target", "rank", "layer", "cause", "subject
                "lever_valid", "closed_t"]
 NODE_TIMES_COLS = ["run", "actor", "node", "t_known", "t_first", "t_07", "t_mastered", "lic"]
 GEN_TIMES_COLS = ["run", "actor", "gen", "t_req", "t_first_unit", "t_fielded", "cost_u100"]
-REQ_COLS = ["run", "req", "actor", "gen", "t", "n_variants", "fv_tech", "fv_super", "chosen"]
+# v0.5 (slice-csv-format.md §4.6): fv_producible (former fv_tech) and fv_superior (former fv_super), Fx6 or empty; no chosen.
+REQ_COLS = ["run", "req", "actor", "gen", "t", "n_variants", "fv_superior", "fv_producible"]
 EVENTS_COLS = ["run", "t", "kind", "actor", "other", "value"]
 PRC_YEAR_COLS = ["run", "t", "actor", "node", "known", "admitted", "yield", "ucm"]
 CALIB_SUMMARY_COLS = ["run", "prof_USA", "prof_GBR", "prof_SUN", "prof_FRA", "prof_SWE"]
@@ -477,8 +478,8 @@ def load(dirs, cfg):
                         "t_fielded": _oi(r["t_fielded"]), "cost_u100": _oi(r["cost_u100"])}
                 elif attr == "reqs":
                     store[rid].append({"actor": r["actor"], "gen": int(r["gen"]), "t": int(r["t"]),
-                                       "n_variants": int(r["n_variants"]), "fv_tech": int(r["fv_tech"]),
-                                       "fv_super": int(r["fv_super"]), "chosen": r["chosen"]})
+                                       "n_variants": int(r["n_variants"]), "fv_tech": _oi(r["fv_producible"]),
+                                       "fv_super": _oi(r["fv_superior"])})
                 elif attr == "events":
                     store[rid].append({"t": int(r["t"]), "kind": r["kind"], "actor": r["actor"],
                                        "other": r["other"], "value": _oi(r["value"])})
@@ -793,7 +794,7 @@ def secondary(D, cfg, main_ids):
         by_gen = collections.defaultdict(lambda: [0, 0])
         for rid in main_ids:
             for q in D.reqs.get(rid, []):
-                if q["n_variants"] < 2:
+                if q["n_variants"] < 2 or q["fv_tech"] is None or q["fv_super"] is None:
                     continue
                 n += 1
                 w = q["fv_tech"] > q["fv_super"]
@@ -1804,8 +1805,8 @@ def make_dataset(d, cfg, chg=0.35, layer_effect=(0.20, 0.20, 0.20), tvd_only=Non
             for nd in (int(x) for x in cfg["s2"]["star_prc_gen"]):
                 S.rows["node_times"].append([rid, a, nd, 10 * ai, 10 * ai + 5, 10 * ai + 29, 10 * ai + 35, 0])
             S.rows["gen_times"].append([rid, a, 2, 24, 60, 70, 3 * FX])
-        S.rows["requirements"].append([rid, "q1", "USA", 2, 24, 2, FX * (2 if s % 2 else 1), FX * 3 // 2, "TECH"])
-        S.rows["requirements"].append([rid, "q0", "USA", 1, 0, 1, FX, FX, "SUPER"])
+        S.rows["requirements"].append([rid, 1, "USA", 2, 24, 2, FX * 3 // 2, FX * (2 if s % 2 else 1)])
+        S.rows["requirements"].append([rid, 0, "USA", 1, 0, 1, FX, ""])
     S.write(d)
     return {"cells_truth": cells_truth if extras else None}
 

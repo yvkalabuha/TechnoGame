@@ -61,14 +61,29 @@ public sealed record Provenance(string CoreCommit, bool? Dirty, string DataHash,
     }
 
     /// <summary>
-    /// data_hash = SHA-256 over, for each file in ordinal path order: UTF-8 path, 0x00, SHA-256(content).
+    /// The files hashed into data_hash: the manifest's <c>data</c> plus the data files a Session model loads
+    /// (<see cref="ISessionModelFactory.DataFiles"/>), as paths relative to the manifest directory, without duplicates, in ordinal order.
+    /// </summary>
+    public static List<string> DataPaths(Manifest manifest)
+    {
+        var set = new SortedSet<string>(manifest.DataFiles, StringComparer.Ordinal);
+        if (ModelRegistry.Find(manifest.Model).Session is { } session)
+        {
+            foreach (string full in session.DataFiles(manifest.BaseDirectory))
+                set.Add(Path.GetRelativePath(manifest.BaseDirectory, full).Replace('\\', '/'));
+        }
+        return [.. set];
+    }
+
+    /// <summary>
+    /// data_hash = SHA-256 over, for each file of <see cref="DataPaths"/> in ordinal path order: UTF-8 path, 0x00, SHA-256(content).
     /// No data files → SHA-256 of the empty input.
     /// </summary>
     public static (string Hash, List<DataFileHash> Files) HashData(Manifest manifest)
     {
         var files = new List<DataFileHash>();
         using var all = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        foreach (string rel in manifest.DataFiles)
+        foreach (string rel in DataPaths(manifest))
         {
             string full = Path.Combine(manifest.BaseDirectory, rel);
             if (!File.Exists(full))

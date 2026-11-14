@@ -15,6 +15,12 @@ public interface ISessionModelFactory
     string Description { get; }
 
     ISessionModel Create(SessionModelSetup setup);
+
+    /// <summary>
+    /// Absolute paths of the data files the model loads for a manifest in <paramref name="manifestDirectory"/>. The Lab hashes them into the
+    /// standard <c>data_hash</c> / <c>data_files</c> of run.json and matrix.json next to the manifest's own <c>data</c>.
+    /// </summary>
+    IReadOnlyList<string> DataFiles(string manifestDirectory) => [];
 }
 
 /// <summary>One run of a Session model.</summary>

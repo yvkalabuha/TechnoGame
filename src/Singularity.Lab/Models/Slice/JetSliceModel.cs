@@ -31,6 +31,9 @@ public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactor
         GameData data = SliceData.Load(setup.ManifestDirectory);
         return new JetSliceModel(data, p, setup.Ticks, calibration);
     }
+
+    /// <summary>The files <see cref="SliceData.Load"/> reads for this manifest: they go into the standard data_hash of the run.</summary>
+    public IReadOnlyList<string> DataFiles(string manifestDirectory) => SliceData.Files(manifestDirectory);
 }
 
 /// <summary>The mod data of the slice, loaded once per process (a run is a process in a matrix).</summary>
@@ -44,6 +47,22 @@ public static class SliceData
         string dir = FindMods(manifestDirectory) ?? FindMods(AppContext.BaseDirectory)
             ?? throw new InvalidOperationException($"mods/core not found above {manifestDirectory} or {AppContext.BaseDirectory}.");
         return Cache.GetOrAdd(dir, d => ModLoader.Load(d));
+    }
+
+    /// <summary>
+    /// Absolute paths of the files behind <see cref="Load"/>, taken from the loaded mods themselves (<c>mod.yaml</c> and the files it lists,
+    /// as <see cref="ModLoader"/> reads them), so the run's data_hash covers exactly the data the slice uses.
+    /// </summary>
+    public static IReadOnlyList<string> Files(string manifestDirectory)
+    {
+        var files = new List<string>();
+        foreach (ModManifest mod in Load(manifestDirectory).Mods)
+        {
+            files.Add(Path.GetFullPath(Path.Combine(mod.Directory, ModManifest.FileName)));
+            foreach (string f in mod.Files)
+                files.Add(Path.GetFullPath(Path.Combine(mod.Directory, f)));
+        }
+        return files;
     }
 
     private static string? FindMods(string start)
