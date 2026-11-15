@@ -11,7 +11,7 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0055 [APPROVED] Session v4: параметры калибровки «К» и таблицы L_C/L_P в SliceRunConfig (блокер T12) (developer)
+_нет активных задач_
 <!-- registry:active:end -->
 
 ## Блокеры

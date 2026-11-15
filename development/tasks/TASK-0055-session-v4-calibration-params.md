@@ -1,7 +1,7 @@
 ---
 id: TASK-0055
 title: "Session v4: параметры калибровки «К» и таблицы L_C/L_P в SliceRunConfig (блокер T12)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: developer
@@ -35,14 +35,14 @@ created: 2026-11-15
 - Правила кода — `.claude/rules/csharp-core.md`; детерминизм — ADR-0002.
 
 ## Критерии приёмки
-- [ ] Все точки черновика `lab/manifests/EXP-0002-calib.json` исполнимы (малый прогон по одной точке каждого этапа).
-- [ ] Полный `dotnet test` зелёный, golden без изменений; L1/L2.
-- [ ] Второе ревью Codex — accept.
+- [x] Все точки черновика `lab/manifests/EXP-0002-calib.json` исполнимы (малый прогон по одной точке каждого этапа).
+- [x] Полный `dotnet test` зелёный, golden без изменений; L1/L2.
+- [x] Второе ревью Codex — accept.
 
 ## REVIEW
-- [ ] Code review (reviewer)
-- [ ] Второе ревью (codex)
-- [ ] Детерминизм (test-engineer)
+- [x] Code review (reviewer) — accept 2026-11-15; low → DEBT-0036
+- [x] Второе ревью (codex) — accept (раунд 3 и фикс L_C 91cb4a6)
+- [x] Детерминизм (test-engineer) — PASS по этапам c1/c3c4/c2 и LP; LC — после фикса 91cb4a6: полный горизонт и L1/L2 тестами Session
 
 ## Результат
 **Сделано (TASK-0055, developer; не закоммичено).** `TestApiVersion` = 4, поверхность закреплена `tests/Singularity.Session.Tests/Api/session-surface.v4.txt`; `JetSliceModelFactory.SurfaceVersion` = 4. Core не менялся: режимы `IndustryMode.CurveLc`, `ProductsMode.CanonicalLp`, `LpTDesign/LpRho` уже были; все «К» — поля записей параметров Core.
@@ -134,3 +134,5 @@ created: 2026-11-15
 - **Файлы:** `src/Singularity.Core/Industry/IndustryMath.cs`, `src/Singularity.Core/WhyNot/WhyNotAnalyzer.Capability.cs`, `tests/Singularity.Session.Tests/CalibrationParamsTests.cs`.
 - **Проверка:** полный `dotnet test`: Architecture/Kernel/Core/Lab зелёные; golden main не менялись (тесты golden в Core/Session проходят).
 - **Правка по ревью Codex:** `ProcessYield.IsControl` — явный флаг (ставит только `Control()`), не вывод из `XHalfEff`; `IndustryMath.XHalfEff` не опускается ниже 1 raw (знаменатель `Ramp` > 0 у реального процесса). Тесты в `WhyNotTests.cs`: `LowControlYield_GivesNoCapabilityLink_OrdinaryLowYieldKeepsIt`, `XHalfEff_NeverReachesZero_ForARealProcess`. Полный `dotnet test` зелёный, golden main без изменений.
+
+**Orchestrator, 2026-11-15:** полный `dotnet test` на итоговом дереве — Architecture 97, Kernel 316 (+1), Core 1035, Lab 20, Session 332 (+2). Семантика L_C (нет звена способности в why_not) подтверждена владельцем спеки (v0.28 §6.1).
