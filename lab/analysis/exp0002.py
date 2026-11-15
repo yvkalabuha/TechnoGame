@@ -87,6 +87,7 @@ DEFAULTS = {
     "calib": {"app_nodes": {"1": 58, "2": 59, "3": 60, "4": 61}, "cens_never_share": 0.5,
               "c2_tier4": [40, 49], "c2_tier5": [41, 51, 52], "c2_years": [2, 8],
               "c4_windows": {"2": [1947, 1952], "3": [1954, 1961], "4": [1967, 1975]}, "c4_min_share": 0.5,
+              "tsk_y_min": 250000,
               "forbidden_files": ["summary.csv", "actor_year.csv", "whynot.csv", "requirements.csv"],
               "forbidden_substrings": ["lead", "chg", "fv", "why", "key_", "volume"]},
 }
@@ -2176,6 +2177,10 @@ def calib_tables(d, cfg):
             # process (spec A24 v0.7: "в compute месяца t_known процесс ещё не в снимке; yield и 1/yc считаются")
             if tau < 0:
                 continue
+            # #232 (spec §6.1 v0.27): part B (start knowledge, tau >= H) is the median over pairs WITH output (v > 0) only;
+            # idle start processes (SUN/FRA/SWE tier 3) would switch the median to a decaying population
+            if tau >= nm and int(r["v"]) <= 0:
+                continue
             k = NODES[nd][2]
             ys, us = curves[k][tau]
             ys.append(int(r["yield"]))
@@ -2204,14 +2209,17 @@ def calib_tables(d, cfg):
         out["Y"][str(k)], out["U"][str(k)] = a_[0] + b_[0], a_[1] + b_[1]
         tsk[str(k)] = {"obs_A": sum(len(byt[x][0]) for x in byt if x < nm), "obs_B": sum(len(byt[x][0]) for x in byt if x >= nm),
                        "taus_A": sum(1 for x in byt if x < nm), "taus_B": sum(1 for x in byt if x >= nm),
-                       "Y384": out["Y"][str(k)][nm], "B_all_positive": parts[nm] is not None and min(parts[nm][0]) > 0}
-    # T-SK (spec §6.1 v0.24 r2): every tier with a start PRC at USA or GBR has Y_k > 0 on all of part B and Y_k(384) >= 0.7
+                       "Y384": out["Y"][str(k)][nm],
+                       "B_min": None if parts[nm] is None else min(parts[nm][0]),
+                       "B_all_admitted": parts[nm] is not None and min(parts[nm][0]) >= cfg["calib"]["tsk_y_min"]}
+    # T-SK (spec §6.1 v0.24 r2; #232 v0.27): every tier with a start PRC at USA or GBR has Y_k >= 0.25 (serial admission)
+    # on all of part B and Y_k(384) >= 0.7
     start_tiers = set()
     for rid in rids:
         for (a, nd), x in nt[rid].items():
             if a in ("USA", "GBR") and NODES.get(nd, ("",))[0] == "PRC" and x[0] is not None and x[0] < 0:
                 start_tiers.add(str(NODES[nd][2]))
-    tsk_bad = [k for k in sorted(start_tiers) if k not in tsk or not tsk[k]["B_all_positive"] or tsk[k]["Y384"] < 700000]
+    tsk_bad = [k for k in sorted(start_tiers) if k not in tsk or not tsk[k]["B_all_admitted"] or tsk[k]["Y384"] < 700000]
     # every PRC tier of the node table has observations in at least one part (otherwise there is no curve)
     all_tiers = sorted({str(k) for (typ, _, k) in NODES.values() if typ == "PRC"})
     no_obs = [k for k in all_tiers if k not in tsk or tsk[k]["obs_A"] + tsk[k]["obs_B"] == 0]

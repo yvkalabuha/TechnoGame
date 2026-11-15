@@ -10,7 +10,7 @@
   "params": {"LINE_CLOSE": "YPROD", "TOOLING_TARGET": "V5", "POOL_ORDER": "CAN"},
   "series": [{"name": "calib"}],
   "meta": {
-    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.26",
+    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.27",
     "csv_format": "docs/simulation/slice-csv-format.md v0.5 r8",
     "scenario_hash": "2ccb4adbe59a0795fc98c82413b6be188c067e90072eaed18d23d2b1d300878f",
     "status": "draft: grids, order, loss and stopping rule declared before any evaluation (spec §8.2 p.4); stage C1 and C2 grids are [Predl.] (the spec names only the C3+C4 parameters) and need the Orchestrator's approval",
@@ -31,7 +31,7 @@
     },
     "grids": {
       "C1": {
-        "status": "[Predl.] TASK-0054; spec §8.1 'K' parameters that move the C1 stand: x_scale (X_half of tiers 3/4/5 x the factor, ratio 1:4:12.5 fixed) and alpha (culture growth, DEV only). NOTE: with the GBR t0 culture the DEV setup is degenerate (4 of 12 processes of the G2 superior prc_set at yield 0, d_C1a = d_C1b = 1 by construction; spec §8.2 p.9, §13) - decide before the first evaluation.",
+        "status": "[Predl.] TASK-0054; spec §8.1 'K' parameters that move the C1 stand: x_scale (X_half of tiers 3/4/5 x the factor, ratio 1:4:12.5 fixed) and alpha (culture growth, DEV only). DEV starts from an admitted prc_set (#231, spec v0.27 §8.2 p.1); min yield per doubling sits at the 0.25 filter, so print min_yield per doubling in the journal.",
         "axes": {"x_scale": [1.0, 0.75, 1.5, 0.5, 2.0], "alpha": [0.05, 0.08, 0.02, 0.11, 0.15]},
         "order": "x_scale outer, alpha inner, each in the listed order (the §8.1 / IndustryParams value first, then the nearer neighbours)",
         "points": 25
@@ -58,7 +58,8 @@
       }
     },
     "base_point_prints": {
-      "c1_stand": "lab/results/t12prep-c1 (TASK-0054): C1a/C1b none (d = 1), C1d 0.0169, C1e 0.0358, Wright mean 0.1801, loss_C1 = 2",
+      "c1_stand": "lab/results/t12prep-c1-v2 (#231): C1a 0.1062, C1b 0.7959, C1d 0.0169, C1e 0.0358, Wright mean 0.1801, loss_C1 = 0 (doublings 1 and 3 in the set)",
+      "control_tables_base": "t11-calib with #232: control_tables_hash 0e71b77afe4827ea64047fef128a67bd7cf63ef06df6e9b2b9620c6aa4743077 (pre-calibration, not frozen)",
       "calib_base": "lab/results/t12prep-calib = t11-calib golden_set_hash 75c46cb3...: C2 d = 1, C4 G2/G3 d = 1, G4 0.73",
       "design_capacity": "t12prep-calib: design_slots_max 5 of 12, commands without a design 0"
     },

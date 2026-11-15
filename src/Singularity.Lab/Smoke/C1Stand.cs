@@ -15,10 +15,11 @@ namespace Singularity.Lab.Smoke;
 /// constant pace <c>r_ref</c>; the unit cost goes through the functions of the run (<see cref="IndustryMath.Yield"/> →
 /// <see cref="IndustryMath.Profile"/> → <see cref="ProductsMath.ProcessPart"/> → <see cref="ProductsMath.UnitCost"/>).
 /// <list type="bullet">
-/// <item>«освоение» (<c>DEV</c>): <c>X0 = 0</c>, <c>X = line_E = N</c>; <c>culture_H</c> and <c>tooling_M</c> of the GBR site of the 1945 scenario,
+/// <item>«освоение» (<c>DEV</c>): <c>X0 = 0</c>, <c>X = line_E = N</c>; <c>culture_H</c> and <c>tooling_M</c> of the GBR site of the 1945 scenario raised
+/// to an admitted prc_set (#231, <see cref="DevSite"/> <c>AdmitStart</c>; arm <c>FULL_T0</c> keeps the t0 cells as a print),
 /// moved month by month by the real capability system (C-B culture rule, §4.1b allocation of the item <c>D = share_D·budget</c> with an
 /// empty focus, tooling plan A39 V5 with <c>B_cap = share_cap·budget</c>); month of a point <c>t = N/r_ref</c>. Arms: profile P3 (default),
-/// P1, P2; <c>E ≡ 0</c>; <c>g ≡ 1</c>.</item>
+/// P1, P2; <c>E ≡ 0</c>; <c>g ≡ 1</c>; GBR t0 cells.</item>
 /// <item>«зрелая» (<c>MATURE</c>): <c>X0 = 6·X½</c>, <c>g = 1</c>, <c>X = X0 + line_E</c>, doublings of <c>line_E</c> 1 → … → 4096 (statistic: starts ≤ 400);
 /// <c>MATURE_3X</c>: <c>X0 = 3·X½</c> (print).</item>
 /// </list>
@@ -47,13 +48,14 @@ internal static class C1Stand
 
         // ---- DEV
         var devArms = new List<(string Arm, Func<long, Fx6[]> Yields)>();
-        foreach ((string arm, PolicyProfile profile, bool e0) in new[]
+        // #231: the setup starts from a culture at which the whole prc_set is admitted (yield >= y_admit); FULL_T0 is the GBR t0 culture (print).
+        foreach ((string arm, PolicyProfile profile, bool e0, bool admit) in new[]
         {
-            ("FULL", PolicyProfile.Adaptive, false), ("FULL_P1", PolicyProfile.Quality, false), ("FULL_P2", PolicyProfile.Mass, false),
-            ("FULL_E0", PolicyProfile.Adaptive, true),
+            ("FULL", PolicyProfile.Adaptive, false, true), ("FULL_P1", PolicyProfile.Quality, false, true), ("FULL_P2", PolicyProfile.Mass, false, true),
+            ("FULL_E0", PolicyProfile.Adaptive, true, true), ("FULL_T0", PolicyProfile.Adaptive, false, false),
         })
         {
-            var site = new DevSite(data, sc, line, profile, e0);
+            var site = new DevSite(data, sc, line, profile, e0, admit);
             Fx6[][] byMonth = site.Run(DevDoublings);
             devArms.Add((arm, n => byMonth[(int)(n / line.RRefUnits)]));
             log.WriteLine($"DEV {arm}: {site.Describe()}");
@@ -237,7 +239,7 @@ internal static class C1Stand
         private readonly Fx6 _w, _hcap;
         private readonly int[] _setRows;
 
-        public DevSite(GameData data, ScenarioData sc, ReferenceLine line, PolicyProfile profile, bool effortZero)
+        public DevSite(GameData data, ScenarioData sc, ReferenceLine line, PolicyProfile profile, bool effortZero, bool admittedStart)
         {
             _line = line;
             _e0 = effortZero;
@@ -274,6 +276,8 @@ internal static class C1Stand
             }
             for (int r = 0; r < _l.ProcessCount; r++)
                 own.X[r] = _inSet[r] ? Fx6.Zero : start.X[gbr * full.ProcessCount + r];   // «освоение»: X0 = 0 on the prc_set
+            if (admittedStart)
+                Gap = AdmitStart(own);
             _w = sc.W[gbr];
             _hcap = sc.Hcap[gbr];
             _budget = new Fx6[64];
@@ -288,11 +292,67 @@ internal static class C1Stand
             _runner = new TickRunner(table, 1, [_ind, lines], 1, 1, _cal);
         }
 
+        /// <summary>
+        /// #231 (spec §8.2 п.1 v0.27): the start culture of «освоение». Every cell (cluster, dimension) that an active dimension of a prc_set process
+        /// uses is raised to <c>max(own, r_d − gap)</c> in <c>culture_H</c> and <c>tooling_M</c> alike (the R-H-MS pairing of H and M), with one gap for
+        /// all cells: the largest gap on the 0,01 grid at which the lowest yield of the prc_set at the start point (<c>X = 0</c>, month 0) is ≥ <c>y_admit</c>.
+        /// Cells already above stay. Returns the gap; +∞ (no raise) if the GBR t0 cells already admit the set.
+        /// </summary>
+        private double AdmitStart(IndustryStart own)
+        {
+            Fx6[] h0 = [.. own.H], m0 = [.. own.M];
+            bool Admits()
+            {
+                for (int i = 0; i < _setRows.Length; i++)
+                {
+                    int c = _l.ClusterIndex[_setRows[i]];
+                    var h = new Dims3(own.H[own.Cell(0, c, 0)], own.H[own.Cell(0, c, 1)], own.H[own.Cell(0, c, 2)]);
+                    var m = new Dims3(own.M[own.Cell(0, c, 0)], own.M[own.Cell(0, c, 1)], own.M[own.Cell(0, c, 2)]);
+                    if (_line.YieldAt(_line.PrcSet[i], h, m, Fx6.Zero) < YAdmit)
+                        return false;
+                }
+                return true;
+            }
+            if (Admits())
+                return double.PositiveInfinity;
+            for (long gap = 300; gap >= 0; gap--)   // 3,00 … 0,00 in steps of 0,01
+            {
+                h0.CopyTo(own.H, 0);
+                m0.CopyTo(own.M, 0);
+                foreach (int r in _setRows)
+                {
+                    int c = _l.ClusterIndex[r];
+                    for (int d = 0; d < 3; d++)
+                    {
+                        Fx6 req = _l.Req[r][d];
+                        if (req <= Fx6.Zero)
+                            continue;
+                        Fx6 floor = req - Fx6.FromRaw(gap * 10_000);
+                        int cell = own.Cell(0, c, d);
+                        if (own.H[cell] < floor)
+                            own.H[cell] = floor;
+                        if (own.M[cell] < floor)
+                            own.M[cell] = floor;
+                    }
+                }
+                if (Admits())
+                    return gap / 100.0;
+            }
+            throw new InvalidOperationException("No culture admits the prc_set even at H = M = r_d.");
+        }
+
+        /// <summary><c>y_admit</c> (#231) = the serial admission 0,25 of the C1 filter (spec §8.2 п.1, <c>anchors_review.md</c> §4) [Предп.].</summary>
+        public static readonly Fx6 YAdmit = Fx6.FromRaw(250_000);
+
+        /// <summary>The gap of <see cref="AdmitStart"/> (+∞: GBR t0 already admits; NaN: the GBR t0 arm).</summary>
+        public double Gap { get; } = double.NaN;
+
         /// <summary>Yields of the prc_set at the point of each month <c>t = 0…8·…</c>: the cells of the snapshot that the compute of month t reads, <c>X = t·r_ref</c>.</summary>
         public Fx6[][] Run(int doublings)
         {
             int months = 1 << doublings;   // N = r_ref·t up to 2^doublings·r_ref
             var result = new Fx6[months + 1][];
+            Snapshot0 = Snapshot(Fx6.Zero);
             for (long t = 0; t <= months; t++)
             {
                 result[t] = Snapshot(Fx6.FromInt(t * _line.RRefUnits));
@@ -301,6 +361,8 @@ internal static class C1Stand
             }
             return result;
         }
+
+        private Fx6[] Snapshot0 { get; set; } = [];
 
         private Fx6[] Snapshot(Fx6 x)
         {
@@ -320,6 +382,8 @@ internal static class C1Stand
         public string Describe()
         {
             var parts = new List<string>();
+            parts.Add($"start gap {Gap}");
+            parts.Add("yield(t=0, X=0) " + string.Join(' ', _setRows.Select((r, i) => $"{_l.Number[r]}={Snapshot0[i]}")));
             parts.Add("yield(t=8, own X) " + string.Join(' ', _setRows.Select(r => $"{_l.Number[r]}={_ind.Yield(0, r, 8).Yield}")));
             foreach (int c in _setRows.Select(r => _l.ClusterIndex[r]).Distinct().Order())
                 parts.Add($"{_l.Clusters[c]} H={Cells(c, false)} M={Cells(c, true)}");

@@ -281,6 +281,42 @@ class CalibStartKnowledge(unittest.TestCase):
         self.assertFalse(c2["tier5_longer"])       # fully censored tier 5: not met
 
 
+class CalibSegmentB232(unittest.TestCase):
+    """#232 (spec §6.1 v0.27): part B of Y_k only over pairs with v > 0; T-SK needs Y_k >= 0.25 on part B."""
+
+    def run_calib(self, idle_yield, used_yield):
+        with tempfile.TemporaryDirectory() as d:
+            runs = [["c%d" % s, "calib", 10000 + s, 1, "ok", "h"] for s in range(1, 3)]
+            nt, pm = [], []
+            for r in runs:
+                for a in CFG["actors"]:
+                    nt.append([r[0], a, 49, -1, -1, -1, -1, 0])               # tier-4 PRC known at the start
+                    used = a in ("USA", "GBR")
+                    for t in range(2):
+                        # three idle actors (v = 0) with a decaying yield, two working ones (v > 0)
+                        pm.append([r[0], t, a, 49, 1, 1, used_yield if used else idle_yield, FX, FX if used else 0])
+            write(d, "runs.csv", X.RUNS_COLS, runs)
+            write(d, "calib_summary.csv", X.CALIB_SUMMARY_COLS, [[r[0], 1, 1, 1, 1, 1] for r in runs])
+            write(d, "node_times.csv", X.NODE_TIMES_COLS, nt)
+            write(d, "gen_times.csv", X.GEN_TIMES_COLS, [])
+            write(d, "prc_month.csv", X.PRC_MONTH_COLS, pm)
+            write(d, "actor_month.csv", X.ACTOR_MONTH_COLS, [])
+            return X.calib_tables(d, CFG)
+
+    def test_idle_pairs_do_not_enter_part_b(self):
+        r = self.run_calib(idle_yield=3000, used_yield=950000)
+        y = r["control_tables"]["Y"]["4"]
+        self.assertEqual(y[N], 950000)          # without the filter: the lower median of 6 idle and 4 used = 3000
+        self.assertEqual(y[N + 1], 950000)
+        self.assertNotIn("4", r["T_SK"]["failed_tiers"])
+
+    def test_tsk_fails_below_serial_admission(self):
+        r = self.run_calib(idle_yield=0, used_yield=200000)    # working pairs at 0.2 < 0.25: positive, still a failure
+        self.assertEqual(r["control_tables"]["Y"]["4"][N], 200000)
+        self.assertIn("4", r["T_SK"]["failed_tiers"])
+        self.assertEqual(r["T_SK"]["tiers"]["4"]["B_min"], 200000)
+
+
 class CalibCodexR1(unittest.TestCase):
     """Codex round 1 (TASK-0053): tau = 0 kept whatever `known` says; C2 keeps pairs in use but not mastered at the
     start; d = 1 by the share of pairs WITHOUT t_first."""
