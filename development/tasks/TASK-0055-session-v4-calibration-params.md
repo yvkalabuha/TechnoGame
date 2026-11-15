@@ -126,3 +126,10 @@ created: 2026-11-15
     - `jsonable` округляет обычные значения, 1e-9 сохраняет, 0 оставляет нулём.
   - `SliceChecks` «slice: C3 distance — a tiny positive d_C3…»: медиана CV 0,5 + 1e-9, 0,3 − 1e-12 и 0,50000002 даёт `d` > 0 и точный текст; внутри коридора и на его границах `d` = 0.
   - Результаты: Lab selftest 37/37, Lab.Tests 19/19, Architecture 97/97, Python unittest OK, `--selftest` 40/40. Строка `[Fact]` для новой проверки в tests/Singularity.Lab.Tests — вне зоны (developer).
+
+### Исправление: падение L_C на полном горизонте (деление на 0, тик 3287)
+- **Причина** [Факт: стек на сессии, seed 10001/10002, константные кривые]: `PolicySystem.ProgrammeTrigger` → `WhyNot` → `WhyNotAnalyzer.CapabilityLinks` (`WhyNotAnalyzer.Capability.cs:167`, `need = y.XHalfEff * …/(1 − 0,7)`) → `IndustryMath.Ramp` (`IndustryMath.cs:88`), делитель `x + XHalfEff` = 0. В `L_C` `yield` — контрольный (`ProcessYield.Control`: нет измерений, `XHalfEff` = 0, `Ramp` = 0); при `yield < 0,7` анализатор шёл в ветку «только рампа» и звал `Ramp(0, 0, λ0)`. Основной слой не затронут: там `XHalfEff` > 0 всегда. Гипотезы про культуру/оснастку/`Yield` неизвестного процесса не подтвердились.
+- **Правка:** `ProcessYield.IsControl` (`XHalfEff == 0`); `CapabilityLinks` пропускает контрольный `yield` (нет ни измерения, ни рампы — нечего назвать причиной). Изменение семантики L_C: в `L_C` при `yield < 0,7` WHY_NOT не выдаёт звена CAPABILITY. Контракт §6 для `L_C` это не определял — [Предл.] подтвердить (Orchestrator/systems-architect).
+- **Тесты:** `Lc_RunsTheFullHorizon_WithAYieldBelowTheThreshold` (seed 10001/10002, 384 мес.), `Lc_PastTheCrashTick_IsL1L2` (130 мес., seed 10002, потоки 1/4, повтор) в `CalibrationParamsTests.cs`.
+- **Файлы:** `src/Singularity.Core/Industry/IndustryMath.cs`, `src/Singularity.Core/WhyNot/WhyNotAnalyzer.Capability.cs`, `tests/Singularity.Session.Tests/CalibrationParamsTests.cs`.
+- **Проверка:** полный `dotnet test`: Architecture/Kernel/Core/Lab зелёные; golden main не менялись (тесты golden в Core/Session проходят).

@@ -47,7 +47,8 @@ public sealed partial class WhyNotAnalyzer
         for (int i = 0; i < prc.Length; i++)
         {
             ProcessYield y = ys[i];
-            if (!Knows(actor, prc[i]) || y.Yield >= LowYield)
+            // A control yield (L_C) has no dimension or ramp behind it, so there is no capability link to name (and no X½_eff to divide by).
+            if (!Knows(actor, prc[i]) || y.Yield >= LowYield || y.IsControl)
                 continue;
             int row = _il.RowOf(prc[i]);
             int cluster = _il.ClusterIndex[row];

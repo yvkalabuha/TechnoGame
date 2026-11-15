@@ -29,6 +29,9 @@ public readonly record struct ProcessYield(int ActiveMask, Dims3 C, Dims3 G, int
 
     public CapabilitySource Source(int dim) => (MSourceMask & (1 << dim)) != 0 ? CapabilitySource.M : CapabilitySource.H;
 
+    /// <summary>True for a yield set by a control (<see cref="Control"/>): a real yield always has X½_eff &gt; 0, so there is no culture, tooling or ramp to blame.</summary>
+    public bool IsControl => XHalfEff == Fx6.Zero;
+
     /// <summary>A yield set directly by a control (L_C, L_C0): no dimensions, no ramp.</summary>
     public static ProcessYield Control(Fx6 yield) => new(0, default, default, 0, Fx6.Zero, Fx6.Zero, yield, Fx6.One);
 }

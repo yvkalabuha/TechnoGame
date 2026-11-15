@@ -144,6 +144,25 @@ public class CalibrationParamsTests
         Assert.Contains(a.World.Table.Columns, col => col.Name == "run.layer");
     }
 
+    // Regression (TASK-0055): a control yield below 0.7 made WhyNot divide by X½_eff = 0 at tick 3287 (PolicySystem programme trigger).
+    [Theory]
+    [InlineData(10001UL)]
+    [InlineData(10002UL)]
+    public void Lc_RunsTheFullHorizon_WithAYieldBelowTheThreshold(ulong seed)
+    {
+        SliceSession s = ViewSupport.Run(Base(seed, 1) with { Layer = LayerControl.Lc, CapabilityTables = Tables() }, 384);
+        Assert.True(s.Tick >= 11658);   // StepThroughMonth(383) ends at the month start; no crash through the horizon
+    }
+
+    [Fact]
+    public void Lc_PastTheCrashTick_IsL1L2()
+    {
+        SliceRunConfig c = Base(10002, 1) with { Layer = LayerControl.Lc, CapabilityTables = Tables() };
+        SliceSession a = ViewSupport.Run(c, 130), b = ViewSupport.Run(c with { Threads = 4, ChunkSize = 3 }, 130), again = ViewSupport.Run(c, 130);
+        Assert.Equal(a.LastHash, b.LastHash);
+        Assert.Equal(a.LastHash, again.LastHash);
+    }
+
     [Fact]
     public void TheCurvesAndTheDesignTimes_AreInTheHash()
     {
