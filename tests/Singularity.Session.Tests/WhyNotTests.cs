@@ -113,6 +113,31 @@ public class WhyNotTests
         Assert.DoesNotContain(links, l => l.Layer == WhyNotLayer.Knowledge);
     }
 
+    // A control yield below 0.7 has no dimension or ramp behind it: no CAPABILITY link (and no 0/0 in Ramp); an ordinary low yield keeps its link.
+    [Fact]
+    public void LowControlYield_GivesNoCapabilityLink_OrdinaryLowYieldKeepsIt()
+    {
+        static CapabilityCurve Flat() => new([0, 767], [Fx6.FromRaw(500_000), Fx6.FromRaw(500_000)], [Fx6.FromRaw(1_500_000), Fx6.FromRaw(1_500_000)]);
+        var tables = new CapabilityControlTables([Flat(), Flat(), Flat()], [24, 36, 40, 60],
+            [Fx6.FromRaw(100_000), Fx6.FromRaw(40_000), Fx6.FromRaw(20_000), Fx6.FromRaw(1_000)]);
+        SliceSession lc = New(new SliceRunConfig { Layer = LayerControl.Lc, CapabilityTables = tables });
+        KnowEverything(lc, Usa);
+        Assert.DoesNotContain(lc.WhyNot(Usa, WhyNotTarget.Requirement(2)), l => l.Layer == WhyNotLayer.Capability);
+
+        SliceSession main = New();
+        KnowEverything(main, Usa);
+        Assert.Contains(main.WhyNot(Usa, WhyNotTarget.Requirement(2)), l => l.Layer == WhyNotLayer.Capability);
+    }
+
+    [Fact]
+    public void XHalfEff_NeverReachesZero_ForARealProcess()
+    {
+        Fx6 eff = IndustryMath.XHalfEff(Fx6.FromRaw(1), Fx6.FromRaw(900_000));
+        Assert.True(eff > Fx6.Zero);
+        Assert.False(IndustryMath.Yield(default, default, default, Fx6.Zero, Fx6.FromRaw(1), Fx6.FromRaw(900_000), Fx6.Zero).IsControl);
+        Assert.True(ProcessYield.Control(Fx6.One).IsControl);
+    }
+
     [Fact]
     public void Scenario_ProductFirst_NoProjectWhenCapabilityStands()
     {

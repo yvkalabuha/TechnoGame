@@ -23,17 +23,14 @@ public enum BottleneckSource
 /// <c>yield_p</c> with its parts (contract §4.2). Only dimensions with <c>r_d &gt; 0</c> are active; for an
 /// inactive dimension <c>C</c>, <c>G</c> are 0 and meaningless. <c>QP</c> = <c>q_p</c> (A4).
 /// </summary>
-public readonly record struct ProcessYield(int ActiveMask, Dims3 C, Dims3 G, int MSourceMask, Fx6 XHalfEff, Fx6 Ramp, Fx6 Yield, Fx6 QP)
+public readonly record struct ProcessYield(int ActiveMask, Dims3 C, Dims3 G, int MSourceMask, Fx6 XHalfEff, Fx6 Ramp, Fx6 Yield, Fx6 QP, bool IsControl = false)
 {
     public bool IsActive(int dim) => (ActiveMask & (1 << dim)) != 0;
 
     public CapabilitySource Source(int dim) => (MSourceMask & (1 << dim)) != 0 ? CapabilitySource.M : CapabilitySource.H;
 
-    /// <summary>True for a yield set by a control (<see cref="Control"/>): a real yield always has X½_eff &gt; 0, so there is no culture, tooling or ramp to blame.</summary>
-    public bool IsControl => XHalfEff == Fx6.Zero;
-
     /// <summary>A yield set directly by a control (L_C, L_C0): no dimensions, no ramp.</summary>
-    public static ProcessYield Control(Fx6 yield) => new(0, default, default, 0, Fx6.Zero, Fx6.Zero, yield, Fx6.One);
+    public static ProcessYield Control(Fx6 yield) => new(0, default, default, 0, Fx6.Zero, Fx6.Zero, yield, Fx6.One, IsControl: true);
 }
 
 /// <summary>One <c>tooling_M</c> cell step with its parts (spec §3.5 A11, A22).</summary>
@@ -95,7 +92,9 @@ public static class IndustryMath
     {
         if (lLic < Fx6.Zero || lLic >= Fx6.One)
             throw new ArgumentOutOfRangeException(nameof(lLic), lLic, "l_lic must be in [0; 1).");
-        return xHalf * (Fx6.One - lLic);
+        // Never below one raw unit: a real process must keep a positive denominator in Ramp (X = 0 gives 0/0 otherwise).
+        Fx6 eff = xHalf * (Fx6.One - lLic);
+        return eff > Fx6.Zero ? eff : Fx6.FromRaw(1);
     }
 
     /// <summary>

@@ -133,3 +133,4 @@ created: 2026-11-15
 - **Тесты:** `Lc_RunsTheFullHorizon_WithAYieldBelowTheThreshold` (seed 10001/10002, 384 мес.), `Lc_PastTheCrashTick_IsL1L2` (130 мес., seed 10002, потоки 1/4, повтор) в `CalibrationParamsTests.cs`.
 - **Файлы:** `src/Singularity.Core/Industry/IndustryMath.cs`, `src/Singularity.Core/WhyNot/WhyNotAnalyzer.Capability.cs`, `tests/Singularity.Session.Tests/CalibrationParamsTests.cs`.
 - **Проверка:** полный `dotnet test`: Architecture/Kernel/Core/Lab зелёные; golden main не менялись (тесты golden в Core/Session проходят).
+- **Правка по ревью Codex:** `ProcessYield.IsControl` — явный флаг (ставит только `Control()`), не вывод из `XHalfEff`; `IndustryMath.XHalfEff` не опускается ниже 1 raw (знаменатель `Ramp` > 0 у реального процесса). Тесты в `WhyNotTests.cs`: `LowControlYield_GivesNoCapabilityLink_OrdinaryLowYieldKeepsIt`, `XHalfEff_NeverReachesZero_ForARealProcess`. Полный `dotnet test` зелёный, golden main без изменений.
