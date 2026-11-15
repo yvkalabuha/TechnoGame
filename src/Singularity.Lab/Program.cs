@@ -13,7 +13,7 @@ public static class Program
           models                                     list registered models
           selftest                                   built-in self-checks (until tests/ has Lab tests)
           smoke-t4s --out <dir> [--mods <dir>] [--seeds N] [--only c1|c2|c3]  anchor smoke C1(yield)/C2/C3 (TASK-0017)
-          c1-stand --out <dir> [--mods <dir>] [--manifest <json> [--point P]] [--culture-variant CB|VEXP|VEXPC|LAB]  C1 stand -> c1_stand.csv per point (TASK-0054/0055, format §6)
+          c1-stand --out <dir> [--mods <dir>] [--manifest <json> [--point P]] [--culture-variant CB|VEXP|VEXPC|VEXPOC|LAB]  C1 stand -> c1_stand.csv per point (TASK-0054/0055, format §6)
           c3-stand --out <dir> --manifest <json> [--point P] [--seeds N] [--mods <dir>]  C3 stand of calibration points -> c3_summary.csv
           culture-rules --out <dir> [--mods <dir>] [--only check|gate|holdout|...]  culture_H rule selection (culture-rule-selection.md)
 

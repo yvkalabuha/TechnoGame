@@ -69,6 +69,7 @@ internal sealed class SliceWorld
         {
             YProd = pp.YProd, TField = pp.HBuild, NServiceMin = pp.NServiceMin, FleetArm = config.FleetArm, FleetLineCond = config.FleetLineCond,
             LineClose = config.LineClose,
+            PilotChoice = config.PilotChoice,
             ToolingTarget = config.ToolingTarget,
             LicOff = config.LicOff, T6dOff = config.T6dOff,
         };
@@ -469,6 +470,9 @@ internal sealed class SliceWorld
             Table.AddLong("run.layer.tables").Load(Fill(rows, TablesDigest(tables)));
         // «К» parameters and the L_C/L_P tables: a column only for a value that is not the default (§8.1), so main keeps its hash.
         RegisterCalibrationColumns(rows);
+        // Experimental HYP-0004 switch: a column only when on, so every default hash is that of main.
+        if (Config.PilotChoice != PilotChoice.Off)
+            Table.AddInt("run.pilot").Load([.. Enumerable.Repeat((int)Config.PilotChoice, rows)]);
         if (Config.Grid.Code != 0)
             Table.AddInt("run.grid").Load([.. Enumerable.Repeat(Config.Grid.Code, rows)]);
         if (Config.EffortShare != EffortShareArm.X1)

@@ -181,6 +181,9 @@ public sealed record SliceRunConfig
     /// <summary><c>LINE_CLOSE</c> (spec A41 F17b, #160): <c>YPROD</c> in main; <c>ADMIT</c> is the rule before F17b (regression, diagnostics).</summary>
     public LineCloseRule LineClose { get; init; } = LineCloseRule.YProd;
 
+    /// <summary><c>PILOT_CHOICE</c> (HYP-0004 sketch round 2, experimental): the AI P2/P3 pilot choice of <c>superior</c>; <see cref="PilotChoice.Off"/> in main.</summary>
+    public PilotChoice PilotChoice { get; init; } = PilotChoice.Off;
+
     /// <summary><c>LIC_OFF</c> (spec §6.11, contract §8.6 п. 6): no licence offers and no <c>EVT_LIC</c> draws; disruptions and the why_not triggers stay.</summary>
     public bool LicOff { get; init; }
 

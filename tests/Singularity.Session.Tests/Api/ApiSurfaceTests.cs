@@ -28,10 +28,10 @@ public class ApiSurfaceTests
     }
 
     [Fact]
-    public void TestApiVersion_IsFour_AllPinnedFilesExist_AndTheCurrentOneCarriesIt()
+    public void TestApiVersion_IsFive_AllPinnedFilesExist_AndTheCurrentOneCarriesIt()
     {
-        Assert.Equal(4, SliceSession.TestApiVersion);
-        Assert.True(File.Exists(FilePath(1)) && File.Exists(FilePath(2)) && File.Exists(FilePath(3)));   // v1 stays as the record of the surface before TASK-0047
+        Assert.Equal(5, SliceSession.TestApiVersion);
+        Assert.True(File.Exists(FilePath(1)) && File.Exists(FilePath(2)) && File.Exists(FilePath(3)) && File.Exists(FilePath(4)));   // v1 stays as the record of the surface before TASK-0047
         Assert.StartsWith("# TestApiVersion = 1\n", File.ReadAllText(FilePath(1)).ReplaceLineEndings("\n"));
         Assert.StartsWith($"# TestApiVersion = {SliceSession.TestApiVersion}\n", File.ReadAllText(FilePath(SliceSession.TestApiVersion)).ReplaceLineEndings("\n"));
     }

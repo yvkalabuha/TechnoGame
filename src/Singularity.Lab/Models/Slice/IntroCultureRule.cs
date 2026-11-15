@@ -25,6 +25,9 @@ public enum IntroVariant
     /// <summary>I-C: <c>ṽ_grow = (1 + k_tr·lic)·max(v, V_C)</c> on home(a) — the nominal of the series line only.</summary>
     VExpC,
 
+    /// <summary>I-OC: like I-C, but the nominal also counts the own designs in stage О (<c>V_C + V_O</c>, §7.3); stage П does not.</summary>
+    VExpOc,
+
     /// <summary>I-B: for a planned process the laboratory ceiling is <c>r_d</c> (no ΔL).</summary>
     Lab,
 }
@@ -48,9 +51,10 @@ public sealed class IntroCultureRule(IntroVariant variant, Func<int, int, long, 
         var ind = (IndustrySystem)world.GetType().GetProperty("Industry")!.GetValue(world)!;
         var prod = (ProductsSystem)world.GetType().GetProperty("Products")!.GetValue(world)!;
         IndustryLayout il = ind.Layout;
-        Func<int, int, long, Fx6>? vc = variant != IntroVariant.VExpC ? null : (site, row, month) =>
+        Func<int, int, long, Fx6>? vc = variant is not (IntroVariant.VExpC or IntroVariant.VExpOc) ? null : (site, row, month) =>
         {
-            // V_C(a, p) of contract §4.1a r4 on home(a): Σ over own designs in stage С of (r_ref·n_p)·labour_p, ascending design id.
+            // V_C(a, p) of contract §4.1a r4 on home(a): Σ over own designs in stage С of (r_ref·n_p)·labour_p, ascending design id;
+            // I-OC adds V_O: the same plan for designs in stage О (sketch §7.3).
             int actor = il.SiteOwner[site];
             if (il.HomeSite(actor) != site)
                 return Fx6.Zero;
@@ -61,7 +65,9 @@ public sealed class IntroCultureRule(IntroVariant variant, Func<int, int, long, 
             Fx6 sum = Fx6.Zero;
             for (int d = 0; d < pl.Designs; d++)
             {
-                if (prod.Stage(actor, d) == DesignStage.Series && prod.PrcSet(actor, d).AsSpan().IndexOf(il.Number[row]) >= 0)
+                DesignStage stage = prod.Stage(actor, d);
+                bool counts = stage == DesignStage.Series || (variant == IntroVariant.VExpOc && stage == DesignStage.Prototype);
+                if (counts && prod.PrcSet(actor, d).AsSpan().IndexOf(il.Number[row]) >= 0)
                     sum += pl.RRef * pl.ProcN[k] * pl.ProcLabour[k];
             }
             return sum;
@@ -76,8 +82,9 @@ public sealed class IntroCultureRule(IntroVariant variant, Func<int, int, long, 
         "CB" => IntroVariant.Cb,
         "VEXP" => IntroVariant.VExp,
         "VEXPC" => IntroVariant.VExpC,
+        "VEXPOC" => IntroVariant.VExpOc,
         "LAB" => IntroVariant.Lab,
-        _ => throw new ArgumentException($"CULTURE_VARIANT '{v}' is not CB, VEXP, VEXPC or LAB."),
+        _ => throw new ArgumentException($"CULTURE_VARIANT '{v}' is not CB, VEXP, VEXPC, VEXPOC or LAB."),
     };
 
     // ---- variant hooks
@@ -88,7 +95,7 @@ public sealed class IntroCultureRule(IntroVariant variant, Func<int, int, long, 
         Fx6 x = variant switch
         {
             IntroVariant.VExp => s.PlannedVolume(site, r, month),
-            IntroVariant.VExpC => seriesNominal!(site, r, month),
+            IntroVariant.VExpC or IntroVariant.VExpOc => seriesNominal!(site, r, month),
             _ => Fx6.Zero,
         };
         return x > v ? x : v;

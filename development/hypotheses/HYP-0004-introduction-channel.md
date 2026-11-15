@@ -48,3 +48,13 @@ E1 (без `t_first` ≤ 0,5), E2 (цензура `t_07` < 0,5), E3 (`yield` p50
 
 ## Итоговое решение
 (после gate и решения владельца; предложения — эскиз §6)
+
+## Код вариантов (developer)
+Оба варианта экспериментальные, по умолчанию выключены. С флагами off все golden main и существующие golden не менялись (`dotnet test`: Architecture 97, Kernel 316, Core 1035, Lab 20, Session 337 — зелёные).
+- **I-OC** (`CULTURE_VARIANT` = `VEXPOC`): только Lab, хук `IntroCultureRule` (Core не менялся). `V_C` + `V_O`: к стадии С добавлена стадия О (`DesignStage.Prototype`), та же формула `r_ref·n_p·labour_p`; П не входит. Колонки `run.*` нет (как у других `CULTURE_VARIANT`).
+- **В2 «пилотный выбор»** (`PILOT_CHOICE` = `OFF` | `ON` | `ON_ADMITTED`): Core `ProductPresets.Compose` (P2 Mass и P3 adaptive; P1 не затронут), `PolicyParams.PilotChoice`, `SliceRunConfig.PilotChoice`, колонка `run.pilot` только при on. Правило: если выбранный пресет (producible) не повышает `g` и `superior` повышает, берётся `superior`.
+  - **`g` композиции** = максимальное `gen` узла среди процессов её `prc_set`; текущее `g` актора = то же по его живым проектам (П/О/С/в строю, не снятым). Чтения «g = gen(d)» и «g = ранг альтернативы» проверены и отвергнуты: на seeds 1–5, 384 мес. они не меняли ни одной композиции (двигатель одинаков у superior и producible).
+  - `ON_ADMITTED` добавляет условие «у всех процессов `prc_set` `superior` `yield` > 0» (буквальное прочтение §7). Для не освоенных процессов это условие почти всегда ложно, поэтому `ON` (без него) — вероятный рабочий вариант; выбор за simulation-engineer.
+- `SliceSession.TestApiVersion` 4 → 5 (новое публичное свойство `SliceRunConfig.PilotChoice`), `session-surface.v5.txt`, `JetSliceModel.SurfaceVersion` 5.
+- Тесты: `tests/Singularity.Session.Tests/PilotChoiceTests.cs` (off = без колонки; on меняет колонку и реальные композиции ИИ на seeds 1–5; L1/L2 для `ON` и `ON_ADMITTED`, потоки 1 и 4); `SliceChecks` «switches» — `PILOT_CHOICE` ON/ON_ADMITTED и `VEXPOC` меняют прогон seed 1.
+- Не сделано: `SliceObserver` (печать выбранного варианта по профилю, строки ~867) не знает о пилотном выборе и при on покажет по профилю, а не по факту.

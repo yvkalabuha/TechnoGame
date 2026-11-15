@@ -46,7 +46,7 @@ public static class SliceChecks
         ("slice: C3 distance — a tiny positive d_C3 is reported positive at full precision (TASK-0055 Codex)", C3DistanceExact),
         ("slice: design capacity — AI design commands, commands without a design and slots used are counted (TASK-0054)", () => DesignCapacity(tmp)),
         ("slice: calibration points — one point of each stage C1, C3+C4, C2 and the L_C/L_P layers run; K keys change the run (TASK-0055)", () => CalibrationPoints(tmp)),
-        ("slice: switches — FORCE, START PERT/SYM, CHANNELS, GRID, FLEET_ARM, SALE_ARM change the run (DEBT-0032)", () => Switches(tmp)),
+        ("slice: switches — FORCE, START PERT/SYM, CHANNELS, GRID, FLEET_ARM, SALE_ARM, PILOT_CHOICE, CULTURE_VARIANT VEXPOC change the run (DEBT-0032, HYP-0004)", () => Switches(tmp)),
     ];
 
     // DEBT-0032: a licence that lapsed (Active 1 -> 0) and is Active again without a purchase was no longer tracked; now it resumes (LIC_RESUME).
@@ -85,7 +85,7 @@ public static class SliceChecks
             """{"FORCE": "X1"}""", """{"FORCE": "Q"}""", """{"START": "PERT"}""", """{"START": "SYM"}""", """{"CHANNELS": ["KCATCH"]}""",
             """{"CHANNELS": ["E0", "KTR"]}""", """{"GRID": "LO_MID_MID"}""", """{"GRID": "MID_HI_MID"}""", """{"GRID": "MID_MID_HI"}""",
             """{"FLEET_ARM": "NO_RETIRE"}""", """{"FLEET_ARM": "NO_SALE"}""", """{"FLEET_ARM": "PURCHASE_CAP"}""", """{"SALE_ARM": "SIGMA_LO"}""",
-            """{"SALE_ARM": "QUOTA_LO"}""",
+            """{"SALE_ARM": "QUOTA_LO"}""", """{"PILOT_CHOICE": "ON"}""", """{"PILOT_CHOICE": "ON_ADMITTED"}""", """{"CULTURE_VARIANT": "VEXPOC"}""",
         ];
         var same = new List<string>();
         int k = 0;

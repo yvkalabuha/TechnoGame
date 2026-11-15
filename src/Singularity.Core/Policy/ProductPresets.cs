@@ -25,19 +25,62 @@ public static class ProductPresets
             return false;
         if (profile == PolicyProfile.Quality)
             return true;
+        Span<int> superiorAlts = stackalloc int[products.Layout.SlotCount];
+        alts.CopyTo(superiorAlts);
         Span<int> producible = stackalloc int[products.Layout.SlotCount];
         if (!TryProducible(products, p, actor, gen, month, producible))
             return true;
         if (profile == PolicyProfile.Mass)
         {
             producible.CopyTo(alts);
-            return true;
         }
-        Fx6 superior = products.CandidateValue(actor, alts, p.FvBudget, month);
-        Fx6 other = products.CandidateValue(actor, producible, p.FvBudget, month);
-        if (other > superior)
-            producible.CopyTo(alts);
+        else
+        {
+            Fx6 superior = products.CandidateValue(actor, alts, p.FvBudget, month);
+            Fx6 other = products.CandidateValue(actor, producible, p.FvBudget, month);
+            if (other > superior)
+                producible.CopyTo(alts);
+        }
+        // The pilot choice is a decision of the preset taken: if it is «producible» and does not grow the fleet's generation, go back to «superior».
+        if (p.PilotChoice != PilotChoice.Off && PilotKeepsSuperior(products, p, actor, month, alts, superiorAlts))
+            superiorAlts.CopyTo(alts);
         return true;
+    }
+
+    /// <summary>
+    /// Pilot choice (sketch §7.3 В2, no new numbers). The generation <c>g</c> of a composition is the highest node generation among the processes of its
+    /// <c>prc_set</c>; the actor's current <c>g</c> is that of its live designs. True when the chosen (producible) composition does not exceed the current
+    /// <c>g</c> and the superior one does. (<c>gen(d)</c> and slot ranks do not separate the two: the engine is the same in both.)
+    /// With <see cref="PilotChoice.OnAdmitted"/> every process of the superior <c>prc_set</c> must also have <c>yield &gt; 0</c>.
+    /// </summary>
+    private static bool PilotKeepsSuperior(IPolicyProducts products, PolicyParams p, int actor, long month, ReadOnlySpan<int> chosen, ReadOnlySpan<int> superior)
+    {
+        ProductsLayout l = products.Layout;
+        int current = 0;
+        for (int d = 0; d < l.Designs; d++)
+        {
+            if (products.Design(actor, d, month) is { Cancelled: false, Stage: DesignStage.Project or DesignStage.Prototype or DesignStage.Series or DesignStage.InService })
+                current = Math.Max(current, ProcessGen(l, products.Alternatives(actor, d)));
+        }
+        if (ProcessGen(l, chosen) > current || ProcessGen(l, superior) <= current)
+            return false;
+        if (p.PilotChoice == PilotChoice.OnAdmitted)
+        {
+            foreach (int prc in DesignRules.PrcSet(l, superior))
+            {
+                if (products.AdmittedYield(actor, prc, month) <= Fx6.Zero)
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    private static int ProcessGen(ProductsLayout l, ReadOnlySpan<int> alts)
+    {
+        int g = 0;
+        foreach (int prc in DesignRules.PrcSet(l, alts))
+            g = Math.Max(g, l.NodeGen[prc]);
+        return g;
     }
 
     /// <summary>
