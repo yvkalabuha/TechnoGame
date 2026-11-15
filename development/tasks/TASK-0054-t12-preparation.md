@@ -1,7 +1,7 @@
 ---
 id: TASK-0054
 title: "Подготовка T12: ожидания A40, таблицы контролей L_C/L_P, стенд C1 на полной системе"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: simulation-engineer
@@ -35,16 +35,16 @@ created: 2026-11-14
 - Результаты — в `lab/results/` (не коммитятся).
 
 ## Критерии приёмки
-- [ ] Полосы A40 объявлены в спеке до прогона main.
-- [ ] Формат `CONTROL_TABLES` описан, Lab читает его, хеш в provenance, тест.
-- [ ] `c1_stand.csv` выводится, `exp0002.py --c1` его читает.
-- [ ] Отказы компоновки печатаются; smoke/calib — с числами.
-- [ ] Вывод по yield tier 3.
-- [ ] Черновик манифеста T12; полный `dotnet test` и тесты анализа зелёные, golden без изменений.
+- [x] Полосы A40 объявлены в спеке до прогона main.
+- [x] Формат `CONTROL_TABLES` описан, Lab читает его, хеш в provenance, тест.
+- [x] `c1_stand.csv` выводится, `exp0002.py --c1` его читает.
+- [x] Отказы компоновки печатаются; smoke/calib — с числами.
+- [x] Вывод по yield tier 3.
+- [x] Черновик манифеста T12; полный `dotnet test` и тесты анализа зелёные, golden без изменений.
 
 ## REVIEW
-- [ ] Code review (reviewer)
-- [ ] Второе ревью (codex)
+- [x] Code review (reviewer) — accept 2026-11-15
+- [x] Второе ревью (codex) — findings отклонены с доказательством (вход без спеки), см. запись Orchestrator
 
 ## Результат
 ## Результат
@@ -72,3 +72,5 @@ created: 2026-11-14
 - **#232, `exp0002.py --calib`.** Участок Б `Y_k`/`U_k` — только строки с `v > 0`; T-SK — `Y_k ≥ 0,25` на участке Б (`calib.tsk_y_min`, печать `B_min`). [Факт: `t11-calib`] `Y_3` участка Б: 0,837 (τ 384) → 0,938 (t 24) → 0,963 (t 60) → 0,972 (t 120) → 0,972 (t 180) → 0,984 (t 300) → 0,987 (t 383), минимум 0,837. `Y_4`: 0,748 → 0,978. T-SK пройдена. Новый `control_tables_hash` (до калибровки, не заморожен) = `0e71b77afe4827ea64047fef128a67bd7cf63ef06df6e9b2b9620c6aa4743077` (файл `lab/results/t12prep/control_tables-v2.json`). Прежний был `2fea2817…`.
 - **Документы:** спека v0.27 — строка изменений, Краткий вывод, §6.1 (участок Б, T-SK), §8.2 п.1 и п.9, §13 (два пункта закрыты); формат §6 (`FULL_T0`); черновик манифеста EXP-0002-calib (v0.27, новые печати базовой точки).
 - **Тесты:** Python `CalibSegmentB232` (2 случая: простаивающие пары не входят в участок Б; T-SK проваливается при `Y` 0,2 > 0). Python `test_exp0002` 21/21, `--selftest` 40/40. Основное дерево не собирается из-за правок TASK-0055 (Session `TestApiVersion` = 4 против `SurfaceVersion` 3 в `JetSliceModel`). Поэтому стенд собран и прогнан на архиве HEAD 5db7189 + `C1Stand.cs` в `lab/results/` (каталог удалён). Architecture.Tests на этом архиве: 97/97. Полный `dotnet test` — после TASK-0055.
+
+**Orchestrator, 2026-11-15 — ревью.** Codex (head dce9b7d3): 3 high + 1 medium отклонены с доказательством. Спека `slice-jet-aviation.md` (615 КБ) не вошла во вход ревью из-за лимита 1 МБ, поэтому Codex не видел её правок: полосы A40 объявлены в спеке v0.26 (§3.5 A40, коммит dd9c92a), стартовая постановка C1 и кривые L_C — в v0.27 по решениям #231/#232 (строки 8, 137, 858–871). Полный `dotnet test` на HEAD f2c7a58 зелёный (reviewer: Kernel 316, Architecture 97, Core 1035, Lab 20, Session 327). Claude reviewer — accept (TASK-0054/0055), замечания low → DEBT-0036.

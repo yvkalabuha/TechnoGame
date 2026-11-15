@@ -11,7 +11,7 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0054 [APPROVED] Подготовка T12: ожидания A40, таблицы контролей L_C/L_P, стенд C1 на полной системе (simulation-engineer)
+- TASK-0055 [APPROVED] Session v4: параметры калибровки «К» и таблицы L_C/L_P в SliceRunConfig (блокер T12) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
