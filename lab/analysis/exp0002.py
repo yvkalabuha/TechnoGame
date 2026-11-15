@@ -86,6 +86,9 @@ DEFAULTS = {
     "fv_years_t": [120, 240, 348],
     "calib": {"app_nodes": {"1": 58, "2": 59, "3": 60, "4": 61}, "cens_never_share": 0.5,
               "c2_tier4": [40, 49], "c2_tier5": [41, 51, 52], "c2_years": [2, 8],
+              # spec v0.30 §8.2 p.1 C2 (#238 V1): pool = pairs with t_known <= 383 - L_intro (T12: Requirement -> first
+              # unit 36-37 months + up to 12 months to the yearly Requirement)
+              "c2_l_intro": 48,
               "c4_windows": {"2": [1947, 1952], "3": [1954, 1961], "4": [1967, 1975]}, "c4_min_share": 0.5,
               "tsk_y_min": 250000,
               "forbidden_files": ["summary.csv", "actor_year.csv", "whynot.csv", "requirements.csv"],
@@ -2279,9 +2282,12 @@ def calib_tables(d, cfg, point=None):
     # C2, C4
     def mast(nodes):
         # spec §8.2 C2: pool = (actor, star PRC) pairs over calibration seeds, pairs MASTERED at the start (t_mastered = -1)
-        # excluded; a pair with t_first (also -1: in use at the start) enters with t_07 - t_first, or +inf if no t_07 by
-        # 383 (lower median); pairs without t_first stay out of the p50, and if they are > 50% of the pool, d = 1.
-        xs, cens, no_first, pool = [], 0, 0, 0
+        # excluded; v0.30 (#238 V1): only pairs with t_known <= last - L_intro (start knowledge, t_known = -1, counts as
+        # known); never-known and late-known pairs stay out of the pool and are printed as shares of all non-mastered
+        # pairs. A pair in the pool with t_first (also -1: in use at the start) enters with t_07 - t_first, or +inf if no
+        # t_07 by 383 (lower median); pairs without t_first stay out of the p50, and if they are > 50% of the pool, d = 1.
+        last_known = cfg["n_months"] - 1 - c["c2_l_intro"]
+        xs, cens, no_first, pool, unknown, late = [], 0, 0, 0, 0, 0
         for rid in rids:
             for a in cfg["actors"]:
                 for nd in nodes:
@@ -2289,6 +2295,12 @@ def calib_tables(d, cfg, point=None):
                     if x is None:
                         continue
                     if x[3] is not None and x[3] < 0:
+                        continue
+                    if x[0] is None:
+                        unknown += 1
+                        continue
+                    if x[0] > last_known:
+                        late += 1
                         continue
                     pool += 1
                     if x[1] is None:
@@ -2299,9 +2311,12 @@ def calib_tables(d, cfg, point=None):
                     else:
                         xs.append(max(0, x[2] - x[1]) / 12.0)   # t_07 = -1 with t_first = 0 (V = 0 at the start): 0
         no_first_share = no_first / pool if pool else None
+        full = pool + unknown + late
         return {"p50_years": median_low(xs), "n": len(xs), "pool": pool, "no_t_first": no_first,
                 "no_t_first_share": no_first_share, "right_censored": cens,
                 "censored_share": cens / len(xs) if xs else None,
+                "last_t_known": last_known, "not_mastered_pairs": full, "never_known": unknown, "late_known": late,
+                "never_known_share": unknown / full if full else None, "late_known_share": late / full if full else None,
                 "d_is_1": not pool or no_first_share > 0.5}
     c2 = {"tier4": mast(c["c2_tier4"]), "tier5": mast(c["c2_tier5"])}
     t4, t5 = c2["tier4"]["p50_years"], c2["tier5"]["p50_years"]
@@ -2778,6 +2793,11 @@ def main(argv=None):
             md += "\n## Расстояния §8.2 п.3\n\n- d_C2 (tier-4 p50 в [%s; %s] лет) = %s; d_C2,порядок (tier-5 > tier-4) = %s\n- %s\n" % (
                 cfg["calib"]["c2_years"][0], cfg["calib"]["c2_years"][1], fmt_d(c2r["d_tier4"]), fmt_d(c2r["d_order"]),
                 "; ".join("d_C4,G%s = %s (доля %s)" % (g, fmt_d(v["d"]), fmt(v["share"], 2)) for g, v in sorted(r["C4"].items())))
+            md += "".join("- пул C2 %s (§8.2 п.1 v0.30, `t_known` ≤ %d): %d пар из %d не освоенных на старте; не известен — %s, "
+                          "известен поздно — %s; без `t_first` — %s; цензура `t_07` — %s\n" % (
+                tier, v["last_t_known"], v["pool"], v["not_mastered_pairs"], fmt(v["never_known_share"], 3),
+                fmt(v["late_known_share"], 3), fmt(v["no_t_first_share"], 3), fmt(v["censored_share"], 3))
+                for tier, v in (("tier 4", c2r["tier4"]), ("tier 5", c2r["tier5"])))
             md += "\n".join(render_p0({"p0": r["p0"]}, cfg)) + "\n"
         else:
             if not a.dirs:

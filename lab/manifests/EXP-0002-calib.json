@@ -15,7 +15,10 @@
     "TOOLING_TARGET": "V5",
     "POOL_ORDER": "CAN",
     "ALPHA": 0.05,
-    "X_SCALE": 1.0
+    "X_SCALE": 1.0,
+    "K_DIV": 1.0,
+    "H_MAX": 0.08,
+    "THETA_START": 0.6
   },
   "series": [
     {
@@ -23,7 +26,7 @@
     }
   ],
   "meta": {
-    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.27",
+    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.30",
     "csv_format": "docs/simulation/slice-csv-format.md v0.5 r9",
     "scenario_hash": "2ccb4adbe59a0795fc98c82413b6be188c067e90072eaed18d23d2b1d300878f",
     "status": "draft: every declared point of stages C3+C4 (phase A) and C2 is a series point here and runs with 'matrix'/'run --point'; C1 points are in EXP-0002-c1.json (c1-stand). Grids, order, loss and stopping rule declared before any evaluation (spec §8.2 p.4); C1/C2 grids are [Predl.] and need the Orchestrator's approval.",
@@ -59,7 +62,7 @@
       },
       "C2": {
         "statistics": [
-          "p50 t_first -> t_07 of tier-4 star PRC in [2; 8] years (censored = +inf, lower median; > 50% of the pool without t_first -> d = 1)",
+          "p50 t_first -> t_07 of tier-4 star PRC in [2; 8] years (censored = +inf, lower median; > 50% of the pool without t_first -> d = 1); v0.30 (#238 V1): pool only pairs with t_known <= 383 - 48, never-known and late-known shares printed",
           "tier-5 longer than tier-4 (binary; empty or fully censored tier-5 -> d = 1)"
         ]
       },
@@ -188,6 +191,12 @@
         "task": "TASK-0056",
         "event": "freeze C1: ALPHA = 0.05, X_SCALE = 1.0 (EXP-0002-c1 p00, loss_C1 = 0, stop rule §8.2 p.4)",
         "manifest_hash_before": "680676e813527ecd5eeb3a65c45d4b1c7ec1e5c016c947cca9fe0abc18926f0c"
+      },
+      {
+        "date": "2026-11-15",
+        "task": "TASK-0057",
+        "event": "freeze C3 (decision #239; spec v0.30 §8.2 p.4, stage C3 of v0.29 #236: L_stage = d_C3^2, stop at the first point with L_stage = 0 in the phase-A walk order): EXP-0002-c3c4 p00, K_DIV = 1.0, H_MAX = 0.08, THETA_START = 0.6; KAPPA_Q10 is NOT written: p00 was evaluated without the key (kappa = 512 by default, centre §8.1), and an explicit key adds the marker column run.k.kappa_q10 to the state, which changes golden_hash without changing the dynamics (checked: TASK-0057, seeds 10001-10002, identical node_times/prc_month/gen_times); d_C3 = 0 (median CV 0.3555). Caveat: C3 does not identify k (d_C3 = 0 in 29 of 45 phase-A points), the walk order sets it",
+        "manifest_hash_before": "6623e1dd7b0ebe69e459b777c1950c099f9179c1b94431f2e0c46fbefa5dea40"
       }
     ],
     "stage_protocol": "Stages run C1 -> C3+C4 -> C2, each from its own manifest. A stage's chosen K values are frozen into the top-level 'params' of the LATER stage manifests and of this one (for the control-tables run), each a revision with a new manifest_hash recorded in its 'journal'; a stage manifest sweeps only its own keys, so no frozen key is ever both a parameter and a sweep axis. Phase B of C3+C4: EXP-0002-c3c4.json meta.phase_B. Per point: 'matrix --manifest M --point P --out DIR' (the point's 100 seeds), then 'exp0002.py --calib DIR --point P'.",

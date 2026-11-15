@@ -15,7 +15,10 @@
     "TOOLING_TARGET": "V5",
     "POOL_ORDER": "CAN",
     "ALPHA": 0.05,
-    "X_SCALE": 1.0
+    "X_SCALE": 1.0,
+    "K_DIV": 1.0,
+    "H_MAX": 0.08,
+    "THETA_START": 0.6
   },
   "series": [
     {
@@ -59,13 +62,13 @@
     }
   ],
   "meta": {
-    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.27",
+    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.30",
     "stage": "C2",
     "budget_points": 30,
     "loss": "L_stage = d_C2^2 + d_C2,order^2 (spec §8.2 p.3); after C2 the total L over all anchors incl. C5",
     "frozen_from": [
       "C1: ALPHA, X_SCALE",
-      "C3+C4: K_DIV, THETA_START, H_MAX, KAPPA_Q10"
+      "C3 (v0.29 #236, #239): K_DIV, THETA_START, H_MAX (KAPPA_Q10 default 512, not written; phase B dropped)"
     ],
     "protocol": "Frozen values of the EARLIER stages go into the top-level 'params' of this manifest (a revision with a new manifest_hash, recorded in 'journal'); the series sweep only this stage's own keys, so the manifest stays valid after every freeze. Spec v0.27 §8.2 p.4; lab-cli.md 'Точки калибровки T12'.",
     "journal": [
@@ -74,7 +77,14 @@
         "task": "TASK-0056",
         "event": "freeze C1: ALPHA = 0.05, X_SCALE = 1.0 (EXP-0002-c1 p00, loss_C1 = 0, stop rule §8.2 p.4)",
         "manifest_hash_before": "a37d9a02bf15f5cb4c7081afcf0db5a4befcc50f428b064d75bec460c26f18e8"
+      },
+      {
+        "date": "2026-11-15",
+        "task": "TASK-0057",
+        "event": "freeze C3 (decision #239; spec v0.30 §8.2 p.4, stage C3 of v0.29 #236: L_stage = d_C3^2, stop at the first point with L_stage = 0 in the phase-A walk order): EXP-0002-c3c4 p00, K_DIV = 1.0, H_MAX = 0.08, THETA_START = 0.6; KAPPA_Q10 is NOT written: p00 was evaluated without the key (kappa = 512 by default, centre §8.1), and an explicit key adds the marker column run.k.kappa_q10 to the state, which changes golden_hash without changing the dynamics (checked: TASK-0057, seeds 10001-10002, identical node_times/prc_month/gen_times); d_C3 = 0 (median CV 0.3555). Caveat: C3 does not identify k (d_C3 = 0 in 29 of 45 phase-A points), the walk order sets it; C2 pool amended by #238 V1 (analysis only, no run)",
+        "manifest_hash_before": "178ec9f2129e5113f932c9548511d1a28e8d22a8bea629f097ca88e193424517"
       }
-    ]
+    ],
+    "pool": "spec v0.30 §8.2 p.1 C2 (#238 V1): pool = (actor, star PRC) pairs not mastered at the start with t_known <= 383 - L_intro, L_intro = 48 (exp0002.py calib.c2_l_intro); never-known and late-known shares printed per tier"
   }
 }

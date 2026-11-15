@@ -465,9 +465,14 @@ public static class SliceChecks
         {
             string path = Path.Combine(repo, "lab", "manifests", name + ".json");
             Manifest full = Lab.Manifest.Load(path);
-            using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(path));
-            string pars = doc.RootElement.GetProperty("params").GetRawText().TrimEnd().TrimEnd('}') + ", " + keys + "}";
-            string text = File.ReadAllText(path).Replace(doc.RootElement.GetProperty("params").GetRawText(), pars, StringComparison.Ordinal);
+            // TASK-0057: the committed manifests already carry earlier freezes (C1 since TASK-0056, C3 since #239), so a key
+            // already in params gets the test value instead of a second copy (a duplicate key is a manifest error).
+            var root = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+            var extra = System.Text.Json.Nodes.JsonNode.Parse("{" + keys + "}")!.AsObject();
+            var pobj = root["params"]!.AsObject();
+            foreach (var kv in extra.ToList())
+                pobj[kv.Key] = kv.Value!.DeepClone();
+            string text = root.ToJsonString();
             Manifest m;
             try
             {

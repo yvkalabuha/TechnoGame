@@ -13,7 +13,7 @@ public static class Program
           models                                     list registered models
           selftest                                   built-in self-checks (until tests/ has Lab tests)
           smoke-t4s --out <dir> [--mods <dir>] [--seeds N] [--only c1|c2|c3]  anchor smoke C1(yield)/C2/C3 (TASK-0017)
-          c1-stand --out <dir> [--mods <dir>] [--manifest <json> [--point P]]  C1 stand -> c1_stand.csv per point (TASK-0054/0055, format §6)
+          c1-stand --out <dir> [--mods <dir>] [--manifest <json> [--point P]] [--culture-variant CB|VEXP|VEXPC|LAB]  C1 stand -> c1_stand.csv per point (TASK-0054/0055, format §6)
           c3-stand --out <dir> --manifest <json> [--point P] [--seeds N] [--mods <dir>]  C3 stand of calibration points -> c3_summary.csv
           culture-rules --out <dir> [--mods <dir>] [--only check|gate|holdout|...]  culture_H rule selection (culture-rule-selection.md)
 
@@ -143,7 +143,9 @@ public static class Program
         string mods = o.Optional("mods") ?? Path.Combine("mods", "core");
         string? manifest = o.Optional("manifest");
         int? point = o.Int("point", 0, int.MaxValue);
+        string? variant = o.Optional("culture-variant");   // HYP-0004 sketch only; absent = C-B of Core
         o.CheckAllUsed();
+        Smoke.C1Stand.Variant = variant is null ? Singularity.Lab.Models.Slice.IntroVariant.None : Singularity.Lab.Models.Slice.IntroCultureRule.Parse(variant);
         if (manifest is null)
             return point is null ? Smoke.C1Stand.Run(mods, outDir, Console.Out) : throw new UsageException("--point needs --manifest.");
         foreach (Smoke.StandPoint p in Smoke.StandPoint.FromManifest(manifest, point))

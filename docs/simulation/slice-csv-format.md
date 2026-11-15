@@ -147,6 +147,7 @@
 | `KAPPA_Q10` | целое 0…1024 (`κ`·1024) | `KappaQ10` (этап C3+C4, фаза Б) | 512 |
 | `ALPHA`, `X_SCALE` | число ≥ 0 / > 0 | `Alpha`; `XHalfByTier` = X½ tier 3/4/5 × `X_SCALE` (отношение 1 : 4 : 12,5) (этап C1) | 0,05; 1 |
 | `DELTA_H`, `C_M` | число в [0; 1] / > 0 | `DeltaH`, `CM` (этап C2) | 0,003; 0,1 |
+| `CULTURE_VARIANT` | `CB`/`VEXP`/`VEXPC`/`LAB` (TASK-0057, только эскиз HYP-0004) | нет поля конфигурации: Lab подставляет `IntroCultureRule` в `IndustrySystem` после `SliceSession.Create` (`introduction-channel-sketch.md` §2) | нет (C-B Core, golden = main) |
 | `CONTROL_TABLES` | строка: путь к файлу таблиц контролей §6.1 (относительно манифеста; формат §3.1) | `LkTables` (`LK`) или `CapabilityTables` (`LC`, `LP`) | нет; обязателен ровно при `LAYER = LK`, `LC` или `LP` (r10; иначе — ошибка параметра) |
 | `GRID` | `<kc>_<kd>_<hm>`, каждое из `LO`/`MID`/`HI`; `LO`/`HI` = ×0,5/×2 к значению, для `kd` — к `r = 1 − k_diff` (`LO` → `k_diff` 0,75, `HI` → 0; #190) | `Grid` (`GridCell`: `KCatch`, `KDiff`, `HMax`) | `MID_MID_MID` |
 | `EFFORT_SHARE` | `X1`/`X0`/`X05`/`X2`/`X4` | `EffortShare` (`EffortShareArm`) | `X1` |

@@ -1545,6 +1545,12 @@
             "first_year_diag": "G2: n=100/100 y p10=1953 p50=1956 p90=1958 min=1952 max=1960 | G3: n=100/100 y p10=1957 p50=1961 p90=1963 min=1956 max=1971 | G4: n=84/100 y p10=1960 p50=1964 p90=1967 min=1958 max=1970"
           }
         ]
+      },
+      {
+        "date": "2026-11-15",
+        "task": "TASK-0057",
+        "event": "stage choice revised by the pre-registration amendment #236 (spec v0.29: stage C3 instead of C3+C4, C4 print only, phase B dropped) and frozen by decision #239: under L_stage = d_C3^2 the phase-A walk stops at p00 (K_DIV 1.0, H_MAX 0.08, THETA_START 0.6, KAPPA_Q10 512 by default (key absent); d_C3 = 0, median CV 0.3555) - no new evaluation; the earlier choice p23 (rule of v0.23) is superseded. Caveat: C3 does not identify k (d_C3 = 0 in 29 of 45 phase-A points). Frozen K_DIV, H_MAX, THETA_START written into EXP-0002-c2.json and EXP-0002-calib.json 'params'.",
+        "manifest_hash_before": "706f7ebe1cac17fd3e4ff34b991b72dfae33bbf29db9b7706c1b08f17d333589"
       }
     ]
   }

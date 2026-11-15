@@ -441,6 +441,47 @@ class CalibCodexR1(unittest.TestCase):
         self.assertFalse(t4["d_is_1"])
 
 
+class CalibC2Pool238(unittest.TestCase):
+    """#238 V1 (spec v0.30 §8.2 p.1 C2): the pool takes only pairs with t_known <= 383 - 48 = 335; never-known and
+    late-known pairs are out of the pool (and out of the d = 1 share) and are printed as shares."""
+
+    def run_calib(self, nt_rows):
+        with tempfile.TemporaryDirectory() as d:
+            runs = [["c%d" % s, "calib", 10000 + s, 1, "ok", "h"] for s in range(1, 5)]
+            write(d, "runs.csv", X.RUNS_COLS, runs)
+            write(d, "calib_summary.csv", X.CALIB_SUMMARY_COLS, [[r[0], 1, 1, 1, 1, 1] for r in runs])
+            write(d, "node_times.csv", X.NODE_TIMES_COLS, nt_rows)
+            for name, cols in (("gen_times", X.GEN_TIMES_COLS), ("prc_month", X.PRC_MONTH_COLS),
+                               ("actor_month", X.ACTOR_MONTH_COLS)):
+                write(d, name + ".csv", cols, [])
+            return X.calib_tables(d, CFG)
+
+    def test_pool_boundary_and_shares(self):
+        nt = []
+        for s in range(1, 5):
+            rid = "c%d" % s
+            nt.append([rid, "USA", 40, 335, 340, 380, "", 0])   # last month inside the pool: 40 months = 3.33 years
+            nt.append([rid, "GBR", 40, 336, "", "", "", 0])     # one month too late: out
+            nt.append([rid, "SUN", 40, "", "", "", "", 0])      # never known: out
+            nt.append([rid, "FRA", 40, -1, "", "", "", 0])      # start knowledge, never in series: in the pool, no t_first
+            nt.append([rid, "SWE", 40, -1, -1, -1, -1, 0])      # mastered at the start: excluded from everything
+        t4 = self.run_calib(nt)["C2"]["tier4"]
+        self.assertEqual(t4["last_t_known"], 335)
+        self.assertEqual((t4["not_mastered_pairs"], t4["pool"], t4["never_known"], t4["late_known"]), (16, 8, 4, 4))
+        self.assertEqual((t4["never_known_share"], t4["late_known_share"]), (0.25, 0.25))
+        self.assertEqual((t4["no_t_first"], t4["no_t_first_share"], t4["n"]), (4, 0.5, 4))
+        self.assertFalse(t4["d_is_1"])                            # 0.5 is not > 0.5 (before #238: 12 of 16 -> d = 1)
+        self.assertAlmostEqual(t4["p50_years"], 40 / 12.0)
+
+    def test_empty_pool_is_d1(self):
+        nt = [["c%d" % s, "USA", 40, 350, 360, "", "", 0] for s in range(1, 5)]
+        r = self.run_calib(nt)
+        t4 = r["C2"]["tier4"]
+        self.assertEqual((t4["pool"], t4["late_known"], t4["late_known_share"]), (0, 4, 1.0))
+        self.assertTrue(t4["d_is_1"])
+        self.assertEqual(r["C2"]["d_tier4"], 1.0)
+
+
 class P5Labels(unittest.TestCase):
     def test_kdiff_axis_labels(self):
         kd = CFG["p5_kdiff"]

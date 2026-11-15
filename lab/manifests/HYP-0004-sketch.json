@@ -1,0 +1,125 @@
+{
+  "schema": 1,
+  "experiment": "HYP-0004-sketch",
+  "description": "HYP-0004 sketch (docs/simulation/introduction-channel-sketch.md, pre-registered §1-§4): culture-rule variants of the introduction channel on the calibration build at the frozen C1 + C3 (p00) point. Decision seeds 30001-30100 ('test/*'); calibration seeds 10001-10100 ('cal/*') are a C2/C4 print only. 'core' = C-B of Core (no CULTURE_VARIANT), 'CB' = the Lab copy of C-B (must equal core). Lab sketch tool, not a model change.",
+  "model": "JetSliceCalib",
+  "ticks": 11688,
+  "chunk_size": 1,
+  "threads": 1,
+  "seeds": {
+    "start": 30001,
+    "count": 100
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "ALPHA": 0.05,
+    "X_SCALE": 1.0,
+    "K_DIV": 1.0,
+    "H_MAX": 0.08,
+    "THETA_START": 0.6
+  },
+  "series": [
+    {
+      "name": "test/core",
+      "seeds": {
+        "start": 30001,
+        "count": 100
+      }
+    },
+    {
+      "name": "test/CB",
+      "seeds": {
+        "start": 30001,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "CB"
+      }
+    },
+    {
+      "name": "test/VEXP",
+      "seeds": {
+        "start": 30001,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "VEXP"
+      }
+    },
+    {
+      "name": "test/VEXPC",
+      "seeds": {
+        "start": 30001,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "VEXPC"
+      }
+    },
+    {
+      "name": "test/LAB",
+      "seeds": {
+        "start": 30001,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "LAB"
+      }
+    },
+    {
+      "name": "cal/core",
+      "seeds": {
+        "start": 10001,
+        "count": 100
+      }
+    },
+    {
+      "name": "cal/CB",
+      "seeds": {
+        "start": 10001,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "CB"
+      }
+    },
+    {
+      "name": "cal/VEXP",
+      "seeds": {
+        "start": 10001,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "VEXP"
+      }
+    },
+    {
+      "name": "cal/VEXPC",
+      "seeds": {
+        "start": 10001,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "VEXPC"
+      }
+    },
+    {
+      "name": "cal/LAB",
+      "seeds": {
+        "start": 10001,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "LAB"
+      }
+    }
+  ],
+  "meta": {
+    "hypothesis": "HYP-0004",
+    "decision": "#238 V3",
+    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.30",
+    "params_from": "lab/manifests/EXP-0002-c2.json (C1 + C3 frozen, #239)"
+  }
+}
