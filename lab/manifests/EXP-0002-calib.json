@@ -13,7 +13,9 @@
   "params": {
     "LINE_CLOSE": "YPROD",
     "TOOLING_TARGET": "V5",
-    "POOL_ORDER": "CAN"
+    "POOL_ORDER": "CAN",
+    "ALPHA": 0.05,
+    "X_SCALE": 1.0
   },
   "series": [
     {
@@ -180,7 +182,14 @@
       ]
     },
     "control_tables": "after the freeze: exp0002.py --calib DIR --tables-out lab/manifests/control_tables-EXP-0002.json; control_tables_hash = sha256 of the file (format §3.1); A40 bands re-derived from the same run (spec A40 v0.26)",
-    "journal": [],
+    "journal": [
+      {
+        "date": "2026-11-15",
+        "task": "TASK-0056",
+        "event": "freeze C1: ALPHA = 0.05, X_SCALE = 1.0 (EXP-0002-c1 p00, loss_C1 = 0, stop rule §8.2 p.4)",
+        "manifest_hash_before": "680676e813527ecd5eeb3a65c45d4b1c7ec1e5c016c947cca9fe0abc18926f0c"
+      }
+    ],
     "stage_protocol": "Stages run C1 -> C3+C4 -> C2, each from its own manifest. A stage's chosen K values are frozen into the top-level 'params' of the LATER stage manifests and of this one (for the control-tables run), each a revision with a new manifest_hash recorded in its 'journal'; a stage manifest sweeps only its own keys, so no frozen key is ever both a parameter and a sweep axis. Phase B of C3+C4: EXP-0002-c3c4.json meta.phase_B. Per point: 'matrix --manifest M --point P --out DIR' (the point's 100 seeds), then 'exp0002.py --calib DIR --point P'.",
     "stage_manifests": {
       "C1": "lab/manifests/EXP-0002-c1.json",

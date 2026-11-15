@@ -13,7 +13,9 @@
   "params": {
     "LINE_CLOSE": "YPROD",
     "TOOLING_TARGET": "V5",
-    "POOL_ORDER": "CAN"
+    "POOL_ORDER": "CAN",
+    "ALPHA": 0.05,
+    "X_SCALE": 1.0
   },
   "series": [
     {
@@ -66,6 +68,13 @@
       "C3+C4: K_DIV, THETA_START, H_MAX, KAPPA_Q10"
     ],
     "protocol": "Frozen values of the EARLIER stages go into the top-level 'params' of this manifest (a revision with a new manifest_hash, recorded in 'journal'); the series sweep only this stage's own keys, so the manifest stays valid after every freeze. Spec v0.27 §8.2 p.4; lab-cli.md 'Точки калибровки T12'.",
-    "journal": []
+    "journal": [
+      {
+        "date": "2026-11-15",
+        "task": "TASK-0056",
+        "event": "freeze C1: ALPHA = 0.05, X_SCALE = 1.0 (EXP-0002-c1 p00, loss_C1 = 0, stop rule §8.2 p.4)",
+        "manifest_hash_before": "a37d9a02bf15f5cb4c7081afcf0db5a4befcc50f428b064d75bec460c26f18e8"
+      }
+    ]
   }
 }

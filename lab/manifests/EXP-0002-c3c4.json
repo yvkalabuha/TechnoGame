@@ -13,7 +13,9 @@
   "params": {
     "LINE_CLOSE": "YPROD",
     "TOOLING_TARGET": "V5",
-    "POOL_ORDER": "CAN"
+    "POOL_ORDER": "CAN",
+    "ALPHA": 0.05,
+    "X_SCALE": 1.0
   },
   "series": [
     {
@@ -105,6 +107,54 @@
           0.9
         ]
       }
+    },
+    {
+      "name": "C3C4-B/rank=1",
+      "params": {
+        "K_DIV": 2.0,
+        "H_MAX": 0.12,
+        "THETA_START": 0.9
+      },
+      "sweep": {
+        "KAPPA_Q10": [
+          0,
+          256,
+          768,
+          1024
+        ]
+      }
+    },
+    {
+      "name": "C3C4-B/rank=2",
+      "params": {
+        "K_DIV": 2.0,
+        "H_MAX": 0.08,
+        "THETA_START": 0.9
+      },
+      "sweep": {
+        "KAPPA_Q10": [
+          0,
+          256,
+          768,
+          1024
+        ]
+      }
+    },
+    {
+      "name": "C3C4-B/rank=3",
+      "params": {
+        "K_DIV": 2.0,
+        "H_MAX": 0.08,
+        "THETA_START": 0.6
+      },
+      "sweep": {
+        "KAPPA_Q10": [
+          0,
+          256,
+          768,
+          1024
+        ]
+      }
     }
   ],
   "meta": {
@@ -117,6 +167,1385 @@
     ],
     "protocol": "Frozen values of the EARLIER stages go into the top-level 'params' of this manifest (a revision with a new manifest_hash, recorded in 'journal'); the series sweep only this stage's own keys, so the manifest stays valid after every freeze. Spec v0.27 §8.2 p.4; lab-cli.md 'Точки калибровки T12'.",
     "phase_B": "if no phase-A point has L_stage = 0: series 'C3C4-B/rank=r' (r = 1..3, the best phase-A points by L_stage, tie: walk order) with params {K_DIV, H_MAX, THETA_START} of that point and sweep {KAPPA_Q10: [0, 256, 768, 1024]}, appended before any phase-B evaluation",
-    "journal": []
+    "journal": [
+      {
+        "date": "2026-11-15",
+        "task": "TASK-0056",
+        "event": "freeze C1: ALPHA = 0.05, X_SCALE = 1.0 (EXP-0002-c1 p00, loss_C1 = 0, stop rule §8.2 p.4)",
+        "manifest_hash_before": "4289e0cf4efe53ca381cf26dd3cccc8378b009f76bf8b19dea365b525d68481b"
+      },
+      {
+        "date": "2026-11-15",
+        "task": "TASK-0056",
+        "event": "phase A evaluated (45 points, lab/results/t12/c3c4); no point with L_stage = 0; best by L_stage (tie: walk order): p23 (L 0.7304), p20 (L 0.8024), p18 (L 0.883524); phase B appended by meta.phase_B before any phase-B evaluation",
+        "manifest_hash_evaluated": "b28444b30256b1bfc053d1c01dc5531eece6895e0b73aff2ff7e8bcf4fb6af3f",
+        "points": [
+          {
+            "point": 0,
+            "K_DIV": 1.0,
+            "H_MAX": 0.08,
+            "THETA_START": 0.6,
+            "KAPPA_Q10": 512,
+            "L_stage": 2.0,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.3555,
+            "C3_min": 0.2535,
+            "C3_max": 0.5743,
+            "C4_share": [
+              0.0,
+              0.0,
+              0.73
+            ],
+            "d_C4": [
+              1.0,
+              1.0,
+              0.0
+            ],
+            "golden_set_hash": "6026eb1ad265bc64443c318bccaebd6c1b5ea27b5678908e77b4215c64ac9a60",
+            "first_year_diag": "G2: n=100/100 y p10=1956 p50=1961 p90=1964 min=1955 max=1967 | G3: n=99/100 y p10=1964 p50=1967 p90=1971 min=1963 max=1973 | G4: n=80/100 y p10=1968 p50=1973 p90=1975 min=1967 max=1977"
+          },
+          {
+            "point": 1,
+            "K_DIV": 1.0,
+            "H_MAX": 0.08,
+            "THETA_START": 0.3,
+            "KAPPA_Q10": 512,
+            "L_stage": 2.0,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.478,
+            "C3_min": 0.3538,
+            "C3_max": 0.673,
+            "C4_share": [
+              0.0,
+              0.0,
+              0.69
+            ],
+            "d_C4": [
+              1.0,
+              1.0,
+              0.0
+            ],
+            "golden_set_hash": "2507a34601209bc7175293804288fa28f52de11300c6fafb859ae2aac8160d34",
+            "first_year_diag": "G2: n=100/100 y p10=1957 p50=1961 p90=1964 min=1955 max=1966 | G3: n=98/100 y p10=1963 p50=1966 p90=1970 min=1962 max=1971 | G4: n=72/100 y p10=1967 p50=1972 p90=1974 min=1964 max=1976"
+          },
+          {
+            "point": 2,
+            "K_DIV": 1.0,
+            "H_MAX": 0.08,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 512,
+            "L_stage": 2.0,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.3112,
+            "C3_min": 0.2059,
+            "C3_max": 0.562,
+            "C4_share": [
+              0.0,
+              0.0,
+              0.58
+            ],
+            "d_C4": [
+              1.0,
+              1.0,
+              0.0
+            ],
+            "golden_set_hash": "f1c9ef6635bb0ffe96c198a568c59179b38ab6b1c87d2e2f7ee64b612bf53f91",
+            "first_year_diag": "G2: n=100/100 y p10=1956 p50=1961 p90=1964 min=1955 max=1969 | G3: n=99/100 y p10=1965 p50=1968 p90=1972 min=1963 max=1975 | G4: n=75/100 y p10=1969 p50=1973 p90=1976 min=1966 max=1977"
+          },
+          {
+            "point": 3,
+            "K_DIV": 1.0,
+            "H_MAX": 0.12,
+            "THETA_START": 0.6,
+            "KAPPA_Q10": 512,
+            "L_stage": 2.0,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.3486,
+            "C3_min": 0.2216,
+            "C3_max": 0.5495,
+            "C4_share": [
+              0.0,
+              0.0,
+              0.71
+            ],
+            "d_C4": [
+              1.0,
+              1.0,
+              0.0
+            ],
+            "golden_set_hash": "18745fb697e94966b3e09ddfed49acbca6e3e60d95c231012ccdcc995b460ecf",
+            "first_year_diag": "G2: n=100/100 y p10=1957 p50=1960 p90=1964 min=1955 max=1965 | G3: n=99/100 y p10=1964 p50=1966 p90=1970 min=1963 max=1971 | G4: n=72/100 y p10=1968 p50=1973 p90=1974 min=1966 max=1975"
+          },
+          {
+            "point": 4,
+            "K_DIV": 1.0,
+            "H_MAX": 0.12,
+            "THETA_START": 0.3,
+            "KAPPA_Q10": 512,
+            "L_stage": 2.0,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.4602,
+            "C3_min": 0.3012,
+            "C3_max": 0.6002,
+            "C4_share": [
+              0.0,
+              0.0,
+              0.57
+            ],
+            "d_C4": [
+              1.0,
+              1.0,
+              0.0
+            ],
+            "golden_set_hash": "7cd82e7a823844023e499a1bc7d46ab481fb9c8a124be3e43abc866c705b052f",
+            "first_year_diag": "G2: n=100/100 y p10=1957 p50=1961 p90=1964 min=1956 max=1965 | G3: n=97/100 y p10=1963 p50=1965 p90=1969 min=1962 max=1977 | G4: n=67/100 y p10=1966 p50=1972 p90=1973 min=1964 max=1977"
+          },
+          {
+            "point": 5,
+            "K_DIV": 1.0,
+            "H_MAX": 0.12,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 512,
+            "L_stage": 2.00893,
+            "d_C3": 0.0945,
+            "C3_median_cv": 0.2811,
+            "C3_min": 0.1602,
+            "C3_max": 0.48,
+            "C4_share": [
+              0.0,
+              0.0,
+              0.68
+            ],
+            "d_C4": [
+              1.0,
+              1.0,
+              0.0
+            ],
+            "golden_set_hash": "6c131d214c2f57c14aad0b470710377ea1f9adc883b861b0948ad5604d8e9940",
+            "first_year_diag": "G2: n=100/100 y p10=1957 p50=1961 p90=1964 min=1955 max=1965 | G3: n=100/100 y p10=1965 p50=1967 p90=1972 min=1963 max=1973 | G4: n=79/100 y p10=1969 p50=1974 p90=1976 min=1966 max=1976"
+          },
+          {
+            "point": 6,
+            "K_DIV": 1.0,
+            "H_MAX": 0.16,
+            "THETA_START": 0.6,
+            "KAPPA_Q10": 512,
+            "L_stage": 2.0,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.3089,
+            "C3_min": 0.1718,
+            "C3_max": 0.4939,
+            "C4_share": [
+              0.0,
+              0.0,
+              0.65
+            ],
+            "d_C4": [
+              1.0,
+              1.0,
+              0.0
+            ],
+            "golden_set_hash": "9c771ea7e2c157f2d0787f2a5c40feb4ccf71a9f547379739753310f7babd4e6",
+            "first_year_diag": "G2: n=100/100 y p10=1957 p50=1960 p90=1964 min=1956 max=1965 | G3: n=100/100 y p10=1964 p50=1966 p90=1970 min=1963 max=1971 | G4: n=67/100 y p10=1968 p50=1973 p90=1974 min=1965 max=1975"
+          },
+          {
+            "point": 7,
+            "K_DIV": 1.0,
+            "H_MAX": 0.16,
+            "THETA_START": 0.3,
+            "KAPPA_Q10": 512,
+            "L_stage": 2.0,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.409,
+            "C3_min": 0.2593,
+            "C3_max": 0.521,
+            "C4_share": [
+              0.0,
+              0.0,
+              0.54
+            ],
+            "d_C4": [
+              1.0,
+              1.0,
+              0.0
+            ],
+            "golden_set_hash": "c9611c0f2d5fa3891feef20505eb8282352e532703a52fa5da96f4c31907b9e6",
+            "first_year_diag": "G2: n=100/100 y p10=1958 p50=1961 p90=1964 min=1956 max=1965 | G3: n=97/100 y p10=1963 p50=1965 p90=1968 min=1962 max=1977 | G4: n=64/100 y p10=1966 p50=1972 p90=1973 min=1964 max=1977"
+          },
+          {
+            "point": 8,
+            "K_DIV": 1.0,
+            "H_MAX": 0.16,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 512,
+            "L_stage": 2.066564,
+            "d_C3": 0.258,
+            "C3_median_cv": 0.2484,
+            "C3_min": 0.1382,
+            "C3_max": 0.3757,
+            "C4_share": [
+              0.0,
+              0.0,
+              0.71
+            ],
+            "d_C4": [
+              1.0,
+              1.0,
+              0.0
+            ],
+            "golden_set_hash": "f089aa0f0b2a4fd79b634932b9ff8271f4350885b917e768524dfc3ab1cf2b1e",
+            "first_year_diag": "G2: n=100/100 y p10=1957 p50=1960 p90=1963 min=1955 max=1965 | G3: n=100/100 y p10=1965 p50=1967 p90=1971 min=1963 max=1971 | G4: n=72/100 y p10=1969 p50=1974 p90=1975 min=1967 max=1976"
+          },
+          {
+            "point": 9,
+            "K_DIV": 1.5,
+            "H_MAX": 0.08,
+            "THETA_START": 0.6,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.2916,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.4557,
+            "C3_min": 0.3145,
+            "C3_max": 0.6661,
+            "C4_share": [
+              0.0,
+              0.23,
+              0.58
+            ],
+            "d_C4": [
+              1.0,
+              0.54,
+              0.0
+            ],
+            "golden_set_hash": "cfa92397ae087199b41321a2541976ddcf311949695292a10ef395aeac195d75",
+            "first_year_diag": "G2: n=100/100 y p10=1954 p50=1958 p90=1960 min=1953 max=1961 | G3: n=99/100 y p10=1960 p50=1964 p90=1967 min=1959 max=1975 | G4: n=87/100 y p10=1964 p50=1968 p90=1971 min=1962 max=1976"
+          },
+          {
+            "point": 10,
+            "K_DIV": 1.5,
+            "H_MAX": 0.08,
+            "THETA_START": 0.3,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.213289,
+            "d_C3": 0.333,
+            "C3_median_cv": 0.5666,
+            "C3_min": 0.3996,
+            "C3_max": 0.746,
+            "C4_share": [
+              0.0,
+              0.34,
+              0.55
+            ],
+            "d_C4": [
+              1.0,
+              0.32,
+              0.0
+            ],
+            "golden_set_hash": "8454b8cf49f02dedd1d714b110e30066db50abb7ef06618a4351e0f8d10a6d3b",
+            "first_year_diag": "G2: n=100/100 y p10=1954 p50=1957 p90=1960 min=1954 max=1963 | G3: n=100/100 y p10=1960 p50=1963 p90=1966 min=1958 max=1974 | G4: n=81/100 y p10=1964 p50=1968 p90=1970 min=1961 max=1976"
+          },
+          {
+            "point": 11,
+            "K_DIV": 1.5,
+            "H_MAX": 0.08,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.6724,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.3768,
+            "C3_min": 0.2502,
+            "C3_max": 0.6052,
+            "C4_share": [
+              0.0,
+              0.09,
+              0.63
+            ],
+            "d_C4": [
+              1.0,
+              0.82,
+              0.0
+            ],
+            "golden_set_hash": "813a591f362363508971661deea57fca772666cf1614bed6b59ed7310fc6c259",
+            "first_year_diag": "G2: n=100/100 y p10=1954 p50=1958 p90=1960 min=1953 max=1968 | G3: n=99/100 y p10=1962 p50=1965 p90=1968 min=1959 max=1976 | G4: n=83/100 y p10=1965 p50=1969 p90=1972 min=1965 max=1976"
+          },
+          {
+            "point": 12,
+            "K_DIV": 1.5,
+            "H_MAX": 0.12,
+            "THETA_START": 0.6,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.1296,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.4272,
+            "C3_min": 0.2538,
+            "C3_max": 0.6001,
+            "C4_share": [
+              0.0,
+              0.32,
+              0.51
+            ],
+            "d_C4": [
+              1.0,
+              0.36,
+              0.0
+            ],
+            "golden_set_hash": "f2c0beb5d546fc7720ab0117e37d09bcd20fbba81a795e7b67bd0371cffcfaaf",
+            "first_year_diag": "G2: n=100/100 y p10=1954 p50=1957 p90=1960 min=1953 max=1961 | G3: n=100/100 y p10=1960 p50=1963 p90=1966 min=1958 max=1973 | G4: n=80/100 y p10=1964 p50=1968 p90=1970 min=1961 max=1971"
+          },
+          {
+            "point": 13,
+            "K_DIV": 1.5,
+            "H_MAX": 0.12,
+            "THETA_START": 0.3,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.060409,
+            "d_C3": 0.147,
+            "C3_median_cv": 0.5294,
+            "C3_min": 0.3033,
+            "C3_max": 0.6856,
+            "C4_share": [
+              0.0,
+              0.41,
+              0.46
+            ],
+            "d_C4": [
+              1.0,
+              0.18,
+              0.08
+            ],
+            "golden_set_hash": "c0f21a754716ba7aade53b2136d99e843b76ff5d5e94aab9c4920d9140ac142d",
+            "first_year_diag": "G2: n=100/100 y p10=1955 p50=1957 p90=1960 min=1954 max=1962 | G3: n=100/100 y p10=1960 p50=1963 p90=1965 min=1958 max=1974 | G4: n=73/100 y p10=1963 p50=1968 p90=1969 min=1962 max=1976"
+          },
+          {
+            "point": 14,
+            "K_DIV": 1.5,
+            "H_MAX": 0.12,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.3364,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.3465,
+            "C3_min": 0.2,
+            "C3_max": 0.5428,
+            "C4_share": [
+              0.0,
+              0.21,
+              0.59
+            ],
+            "d_C4": [
+              1.0,
+              0.58,
+              0.0
+            ],
+            "golden_set_hash": "6e0f10d46cf55cb70fed7606ba880aaf6d3d29d46753b8ca79be8f19763e20bb",
+            "first_year_diag": "G2: n=100/100 y p10=1954 p50=1957 p90=1960 min=1953 max=1961 | G3: n=100/100 y p10=1960 p50=1964 p90=1967 min=1959 max=1968 | G4: n=87/100 y p10=1965 p50=1969 p90=1971 min=1963 max=1972"
+          },
+          {
+            "point": 15,
+            "K_DIV": 1.5,
+            "H_MAX": 0.16,
+            "THETA_START": 0.6,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.0612,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.3656,
+            "C3_min": 0.2104,
+            "C3_max": 0.5442,
+            "C4_share": [
+              0.0,
+              0.38,
+              0.47
+            ],
+            "d_C4": [
+              1.0,
+              0.24,
+              0.06
+            ],
+            "golden_set_hash": "3376d4d5852cecde7ae1993481ec1c8908b51058001e5c4fba2dd3dba400bce2",
+            "first_year_diag": "G2: n=100/100 y p10=1954 p50=1957 p90=1960 min=1953 max=1961 | G3: n=100/100 y p10=1960 p50=1963 p90=1966 min=1960 max=1975 | G4: n=75/100 y p10=1964 p50=1968 p90=1969 min=1961 max=1971"
+          },
+          {
+            "point": 16,
+            "K_DIV": 1.5,
+            "H_MAX": 0.16,
+            "THETA_START": 0.3,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.0512,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.4302,
+            "C3_min": 0.3048,
+            "C3_max": 0.5827,
+            "C4_share": [
+              0.0,
+              0.42,
+              0.42
+            ],
+            "d_C4": [
+              1.0,
+              0.16,
+              0.16
+            ],
+            "golden_set_hash": "cbf159e1b57aa21f3ab2fd3b8ad9f7fb5d326fdd3f871f15c44afda683fe3feb",
+            "first_year_diag": "G2: n=100/100 y p10=1955 p50=1957 p90=1960 min=1954 max=1962 | G3: n=100/100 y p10=1960 p50=1962 p90=1964 min=1958 max=1972 | G4: n=64/100 y p10=1963 p50=1967 p90=1968 min=1961 max=1976"
+          },
+          {
+            "point": 17,
+            "K_DIV": 1.5,
+            "H_MAX": 0.16,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.2704,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.308,
+            "C3_min": 0.1673,
+            "C3_max": 0.4543,
+            "C4_share": [
+              0.0,
+              0.24,
+              0.53
+            ],
+            "d_C4": [
+              1.0,
+              0.52,
+              0.0
+            ],
+            "golden_set_hash": "d8428d7798162d6559d00e0a8a992d948bcb4d6c9c78ac11a081dc62f6ee4bb5",
+            "first_year_diag": "G2: n=100/100 y p10=1954 p50=1957 p90=1960 min=1953 max=1961 | G3: n=100/100 y p10=1960 p50=1963 p90=1966 min=1960 max=1976 | G4: n=80/100 y p10=1965 p50=1969 p90=1970 min=1964 max=1971"
+          },
+          {
+            "point": 18,
+            "K_DIV": 2.0,
+            "H_MAX": 0.08,
+            "THETA_START": 0.6,
+            "KAPPA_Q10": 512,
+            "L_stage": 0.883524,
+            "d_C3": 0.082,
+            "C3_median_cv": 0.5164,
+            "C3_min": 0.3308,
+            "C3_max": 0.7262,
+            "C4_share": [
+              0.06,
+              0.5,
+              0.34
+            ],
+            "d_C4": [
+              0.88,
+              0.0,
+              0.32
+            ],
+            "golden_set_hash": "c48e801d7a40527db63a2aa731a9454b8dcdb0b9bee2ff92f2309ae4a8dc960d",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1956 p90=1958 min=1952 max=1960 | G3: n=100/100 y p10=1959 p50=1961 p90=1964 min=1957 max=1972 | G4: n=84/100 y p10=1962 p50=1966 p90=1968 min=1961 max=1973"
+          },
+          {
+            "point": 19,
+            "K_DIV": 2.0,
+            "H_MAX": 0.08,
+            "THETA_START": 0.3,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.434832,
+            "d_C3": 0.4635,
+            "C3_median_cv": 0.5927,
+            "C3_min": 0.4449,
+            "C3_max": 0.7947,
+            "C4_share": [
+              0.03,
+              0.69,
+              0.21
+            ],
+            "d_C4": [
+              0.94,
+              0.0,
+              0.58
+            ],
+            "golden_set_hash": "7c6326f0537416474af07a9929c904709d0795d6b3e74138ac89b621a797eef0",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1956 p90=1958 min=1952 max=1960 | G3: n=100/100 y p10=1958 p50=1961 p90=1963 min=1957 max=1970 | G4: n=84/100 y p10=1962 p50=1965 p90=1968 min=1960 max=1976"
+          },
+          {
+            "point": 20,
+            "K_DIV": 2.0,
+            "H_MAX": 0.08,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 512,
+            "L_stage": 0.8024,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.4386,
+            "C3_min": 0.2874,
+            "C3_max": 0.6849,
+            "C4_share": [
+              0.07,
+              0.39,
+              0.44
+            ],
+            "d_C4": [
+              0.86,
+              0.22,
+              0.12
+            ],
+            "golden_set_hash": "890d6e3fa8799da571781f421d1d3d444aefe2e489de783197ca8eff6523db18",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1956 p90=1958 min=1952 max=1960 | G3: n=100/100 y p10=1959 p50=1962 p90=1966 min=1957 max=1972 | G4: n=90/100 y p10=1963 p50=1966 p90=1970 min=1960 max=1976"
+          },
+          {
+            "point": 21,
+            "K_DIV": 2.0,
+            "H_MAX": 0.12,
+            "THETA_START": 0.6,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.2196,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.424,
+            "C3_min": 0.275,
+            "C3_max": 0.6713,
+            "C4_share": [
+              0.05,
+              0.58,
+              0.18
+            ],
+            "d_C4": [
+              0.9,
+              0.0,
+              0.64
+            ],
+            "golden_set_hash": "e03b4df9afd9c3dcde42338fd797b29b1293dc7168b62d754f10e28e4c628fa6",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1956 p90=1958 min=1952 max=1958 | G3: n=100/100 y p10=1958 p50=1961 p90=1963 min=1957 max=1970 | G4: n=84/100 y p10=1962 p50=1966 p90=1967 min=1960 max=1976"
+          },
+          {
+            "point": 22,
+            "K_DIV": 2.0,
+            "H_MAX": 0.12,
+            "THETA_START": 0.3,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.80542,
+            "d_C3": 0.1955,
+            "C3_median_cv": 0.5391,
+            "C3_min": 0.3706,
+            "C3_max": 0.6756,
+            "C4_share": [
+              0.03,
+              0.82,
+              0.03
+            ],
+            "d_C4": [
+              0.94,
+              0.0,
+              0.94
+            ],
+            "golden_set_hash": "81354fd32906ac9adcb2bb5dcca0202a223d976903766c7611b45596f7f1f130",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1956 p90=1958 min=1952 max=1959 | G3: n=100/100 y p10=1958 p50=1960 p90=1962 min=1957 max=1970 | G4: n=81/100 y p10=1962 p50=1965 p90=1967 min=1960 max=1977"
+          },
+          {
+            "point": 23,
+            "K_DIV": 2.0,
+            "H_MAX": 0.12,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 512,
+            "L_stage": 0.7304,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.3917,
+            "C3_min": 0.2237,
+            "C3_max": 0.6019,
+            "C4_share": [
+              0.09,
+              0.49,
+              0.38
+            ],
+            "d_C4": [
+              0.82,
+              0.02,
+              0.24
+            ],
+            "golden_set_hash": "7f20c4f4064576b9ebc443584f42203635d6b9ecac6e2b070903d2a10e111f4a",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1956 p90=1958 min=1952 max=1959 | G3: n=100/100 y p10=1959 p50=1962 p90=1964 min=1957 max=1977 | G4: n=90/100 y p10=1962 p50=1966 p90=1968 min=1960 max=1977"
+          },
+          {
+            "point": 24,
+            "K_DIV": 2.0,
+            "H_MAX": 0.16,
+            "THETA_START": 0.6,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.424,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.3849,
+            "C3_min": 0.2405,
+            "C3_max": 0.5629,
+            "C4_share": [
+              0.04,
+              0.68,
+              0.12
+            ],
+            "d_C4": [
+              0.92,
+              0.0,
+              0.76
+            ],
+            "golden_set_hash": "a7347d512dd3e339887ef213d429fdab91ba2891de68d100e077c438a94051c9",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1955 p90=1958 min=1952 max=1958 | G3: n=100/100 y p10=1958 p50=1960 p90=1963 min=1957 max=1964 | G4: n=77/100 y p10=1962 p50=1965 p90=1967 min=1960 max=1967"
+          },
+          {
+            "point": 25,
+            "K_DIV": 2.0,
+            "H_MAX": 0.16,
+            "THETA_START": 0.3,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.768,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.4976,
+            "C3_min": 0.3345,
+            "C3_max": 0.6287,
+            "C4_share": [
+              0.02,
+              0.9,
+              0.04
+            ],
+            "d_C4": [
+              0.96,
+              0.0,
+              0.92
+            ],
+            "golden_set_hash": "9c1ac93f2baccff5b14b08e1bcc714d898744217aaced54b36c219f1982c3c00",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1955 p90=1958 min=1952 max=1967 | G3: n=100/100 y p10=1958 p50=1960 p90=1961 min=1957 max=1974 | G4: n=74/100 y p10=1963 p50=1965 p90=1976 min=1960 max=1977"
+          },
+          {
+            "point": 26,
+            "K_DIV": 2.0,
+            "H_MAX": 0.16,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 512,
+            "L_stage": 0.9896,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.3351,
+            "C3_min": 0.1759,
+            "C3_max": 0.5398,
+            "C4_share": [
+              0.07,
+              0.58,
+              0.25
+            ],
+            "d_C4": [
+              0.86,
+              0.0,
+              0.5
+            ],
+            "golden_set_hash": "79cbbe4b1748ca0a0f4221ae55f292ee7484dfff1a553c6b095bc7e2c35b5a90",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1956 p90=1958 min=1952 max=1959 | G3: n=100/100 y p10=1959 p50=1961 p90=1964 min=1957 max=1965 | G4: n=84/100 y p10=1962 p50=1966 p90=1968 min=1960 max=1976"
+          },
+          {
+            "point": 27,
+            "K_DIV": 2.5,
+            "H_MAX": 0.08,
+            "THETA_START": 0.6,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.271296,
+            "d_C3": 0.336,
+            "C3_median_cv": 0.5672,
+            "C3_min": 0.3895,
+            "C3_max": 0.7875,
+            "C4_share": [
+              0.1,
+              0.77,
+              0.14
+            ],
+            "d_C4": [
+              0.8,
+              0.0,
+              0.72
+            ],
+            "golden_set_hash": "0986d6c4af611abc0e4748407dedf30987983eeaeadfac9596df72caa954f2bb",
+            "first_year_diag": "G2: n=100/100 y p10=1952 p50=1955 p90=1957 min=1951 max=1959 | G3: n=100/100 y p10=1957 p50=1960 p90=1963 min=1956 max=1974 | G4: n=91/100 y p10=1961 p50=1964 p90=1967 min=1960 max=1977"
+          },
+          {
+            "point": 28,
+            "K_DIV": 2.5,
+            "H_MAX": 0.08,
+            "THETA_START": 0.3,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.600736,
+            "d_C3": 0.644,
+            "C3_median_cv": 0.6288,
+            "C3_min": 0.4292,
+            "C3_max": 0.8325,
+            "C4_share": [
+              0.11,
+              0.86,
+              0.12
+            ],
+            "d_C4": [
+              0.78,
+              0.0,
+              0.76
+            ],
+            "golden_set_hash": "66a3a1e0a74355dc6d9f702311b99c9ff42612bc71d9cbbcdab6ac1176ac04aa",
+            "first_year_diag": "G2: n=100/100 y p10=1952 p50=1955 p90=1957 min=1951 max=1958 | G3: n=99/100 y p10=1957 p50=1959 p90=1962 min=1956 max=1967 | G4: n=90/100 y p10=1960 p50=1964 p90=1972 min=1958 max=1976"
+          },
+          {
+            "point": 29,
+            "K_DIV": 2.5,
+            "H_MAX": 0.08,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 512,
+            "L_stage": 0.964,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.4812,
+            "C3_min": 0.2916,
+            "C3_max": 0.7235,
+            "C4_share": [
+              0.09,
+              0.6,
+              0.23
+            ],
+            "d_C4": [
+              0.82,
+              0.0,
+              0.54
+            ],
+            "golden_set_hash": "f92cf596662a1e633cb82f836ba3516ac17cf48c3b60d434a2f4a1adbb13b72a",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1955 p90=1957 min=1951 max=1959 | G3: n=100/100 y p10=1958 p50=1961 p90=1964 min=1957 max=1974 | G4: n=90/100 y p10=1962 p50=1965 p90=1969 min=1960 max=1977"
+          },
+          {
+            "point": 30,
+            "K_DIV": 2.5,
+            "H_MAX": 0.12,
+            "THETA_START": 0.6,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.556,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.4706,
+            "C3_min": 0.2976,
+            "C3_max": 0.6528,
+            "C4_share": [
+              0.09,
+              0.89,
+              0.03
+            ],
+            "d_C4": [
+              0.82,
+              0.0,
+              0.94
+            ],
+            "golden_set_hash": "311094991fea75eb68371dc4e500cfb843f47b4241eb6c00b735076c458a5067",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1955 p90=1956 min=1951 max=1957 | G3: n=99/100 y p10=1957 p50=1959 p90=1961 min=1956 max=1968 | G4: n=87/100 y p10=1961 p50=1964 p90=1971 min=1958 max=1976"
+          },
+          {
+            "point": 31,
+            "K_DIV": 2.5,
+            "H_MAX": 0.12,
+            "THETA_START": 0.3,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.280201,
+            "d_C3": 0.349,
+            "C3_median_cv": 0.5698,
+            "C3_min": 0.3924,
+            "C3_max": 0.7419,
+            "C4_share": [
+              0.14,
+              0.94,
+              0.1
+            ],
+            "d_C4": [
+              0.72,
+              0.0,
+              0.8
+            ],
+            "golden_set_hash": "80428ee482b9d4c7e011df640ccc24018b98c6181b1128fb4340f4011a6bb9aa",
+            "first_year_diag": "G2: n=100/100 y p10=1952 p50=1955 p90=1957 min=1951 max=1958 | G3: n=100/100 y p10=1957 p50=1959 p90=1961 min=1956 max=1970 | G4: n=80/100 y p10=1960 p50=1963 p90=1974 min=1958 max=1976"
+          },
+          {
+            "point": 32,
+            "K_DIV": 2.5,
+            "H_MAX": 0.12,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.5236,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.4106,
+            "C3_min": 0.2286,
+            "C3_max": 0.6468,
+            "C4_share": [
+              0.1,
+              0.75,
+              0.03
+            ],
+            "d_C4": [
+              0.8,
+              0.0,
+              0.94
+            ],
+            "golden_set_hash": "f3e78892b24cbfba7c1931d124b222138b4670d499f72610b1c527a81d7f5646",
+            "first_year_diag": "G2: n=100/100 y p10=1952 p50=1955 p90=1956 min=1951 max=1957 | G3: n=100/100 y p10=1957 p50=1960 p90=1962 min=1956 max=1974 | G4: n=85/100 y p10=1961 p50=1964 p90=1966 min=1959 max=1977"
+          },
+          {
+            "point": 33,
+            "K_DIV": 2.5,
+            "H_MAX": 0.16,
+            "THETA_START": 0.6,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.3284,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.4158,
+            "C3_min": 0.2467,
+            "C3_max": 0.5827,
+            "C4_share": [
+              0.14,
+              0.95,
+              0.05
+            ],
+            "d_C4": [
+              0.72,
+              0.0,
+              0.9
+            ],
+            "golden_set_hash": "eef17b1e4ae7ba2305bafbc80c3d2b895bc79b1c2880667f3c8f66844d08f4eb",
+            "first_year_diag": "G2: n=100/100 y p10=1952 p50=1954 p90=1956 min=1951 max=1957 | G3: n=100/100 y p10=1957 p50=1959 p90=1961 min=1956 max=1969 | G4: n=87/100 y p10=1961 p50=1964 p90=1975 min=1958 max=1977"
+          },
+          {
+            "point": 34,
+            "K_DIV": 2.5,
+            "H_MAX": 0.16,
+            "THETA_START": 0.3,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.14255,
+            "d_C3": 0.1255,
+            "C3_median_cv": 0.5251,
+            "C3_min": 0.3791,
+            "C3_max": 0.6544,
+            "C4_share": [
+              0.11,
+              0.95,
+              0.14
+            ],
+            "d_C4": [
+              0.78,
+              0.0,
+              0.72
+            ],
+            "golden_set_hash": "f647296b44b7f9e172fd8524b6e58cb1d1d6173779f62b1e6068c3d8e3e26515",
+            "first_year_diag": "G2: n=100/100 y p10=1952 p50=1955 p90=1956 min=1952 max=1957 | G3: n=99/100 y p10=1956 p50=1959 p90=1960 min=1956 max=1971 | G4: n=79/100 y p10=1959 p50=1963 p90=1974 min=1958 max=1975"
+          },
+          {
+            "point": 35,
+            "K_DIV": 2.5,
+            "H_MAX": 0.16,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.4612,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.3677,
+            "C3_min": 0.2,
+            "C3_max": 0.5424,
+            "C4_share": [
+              0.12,
+              0.82,
+              0.03
+            ],
+            "d_C4": [
+              0.76,
+              0.0,
+              0.94
+            ],
+            "golden_set_hash": "c8461cd590a694c4e4d1dedbe350db3bc1eecbb6e32d97e25c05436cfee2a495",
+            "first_year_diag": "G2: n=100/100 y p10=1952 p50=1954 p90=1956 min=1951 max=1957 | G3: n=100/100 y p10=1957 p50=1959 p90=1962 min=1956 max=1970 | G4: n=86/100 y p10=1961 p50=1964 p90=1966 min=1959 max=1977"
+          },
+          {
+            "point": 36,
+            "K_DIV": 3.0,
+            "H_MAX": 0.08,
+            "THETA_START": 0.6,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.198496,
+            "d_C3": 0.464,
+            "C3_median_cv": 0.5928,
+            "C3_min": 0.3642,
+            "C3_max": 0.812,
+            "C4_share": [
+              0.17,
+              0.91,
+              0.13
+            ],
+            "d_C4": [
+              0.66,
+              0.0,
+              0.74
+            ],
+            "golden_set_hash": "f25a71145129d4e566897285fe0685f59cf6f141d386cd6cb992ff4c512affe9",
+            "first_year_diag": "G2: n=100/100 y p10=1952 p50=1954 p90=1956 min=1951 max=1958 | G3: n=100/100 y p10=1957 p50=1959 p90=1961 min=1955 max=1968 | G4: n=93/100 y p10=1961 p50=1964 p90=1971 min=1959 max=1976"
+          },
+          {
+            "point": 37,
+            "K_DIV": 3.0,
+            "H_MAX": 0.08,
+            "THETA_START": 0.3,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.667249,
+            "d_C3": 0.743,
+            "C3_median_cv": 0.6486,
+            "C3_min": 0.4623,
+            "C3_max": 0.8467,
+            "C4_share": [
+              0.18,
+              0.92,
+              0.08
+            ],
+            "d_C4": [
+              0.64,
+              0.0,
+              0.84
+            ],
+            "golden_set_hash": "b8a2b7b6013a04b8ed86439f0cdae0a5bddf5ff371d82e07edf536502fe1d96a",
+            "first_year_diag": "G2: n=100/100 y p10=1952 p50=1954 p90=1955 min=1951 max=1957 | G3: n=100/100 y p10=1956 p50=1958 p90=1961 min=1955 max=1968 | G4: n=88/100 y p10=1959 p50=1963 p90=1966 min=1958 max=1974"
+          },
+          {
+            "point": 38,
+            "K_DIV": 3.0,
+            "H_MAX": 0.08,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.01483,
+            "d_C3": 0.0695,
+            "C3_median_cv": 0.5139,
+            "C3_min": 0.3446,
+            "C3_max": 0.7649,
+            "C4_share": [
+              0.16,
+              0.83,
+              0.13
+            ],
+            "d_C4": [
+              0.68,
+              0.0,
+              0.74
+            ],
+            "golden_set_hash": "24b2565b4c80a76b778e84c4132383ccdaee6dfcc4f9316c87c2226c8e1e5f71",
+            "first_year_diag": "G2: n=100/100 y p10=1952 p50=1954 p90=1956 min=1951 max=1959 | G3: n=100/100 y p10=1957 p50=1959 p90=1963 min=1956 max=1973 | G4: n=96/100 y p10=1960 p50=1964 p90=1968 min=1959 max=1976"
+          },
+          {
+            "point": 39,
+            "K_DIV": 3.0,
+            "H_MAX": 0.12,
+            "THETA_START": 0.6,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.0324,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.462,
+            "C3_min": 0.3302,
+            "C3_max": 0.6966,
+            "C4_share": [
+              0.2,
+              0.96,
+              0.09
+            ],
+            "d_C4": [
+              0.6,
+              0.0,
+              0.82
+            ],
+            "golden_set_hash": "cd1ab4e14d4aa67b05994906e076f403d9927a82ebacb5ce9fed6770bab225f7",
+            "first_year_diag": "G2: n=100/100 y p10=1952 p50=1954 p90=1955 min=1951 max=1957 | G3: n=100/100 y p10=1956 p50=1958 p90=1960 min=1956 max=1969 | G4: n=86/100 y p10=1959 p50=1963 p90=1966 min=1958 max=1974"
+          },
+          {
+            "point": 40,
+            "K_DIV": 3.0,
+            "H_MAX": 0.12,
+            "THETA_START": 0.3,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.11055,
+            "d_C3": 0.4505,
+            "C3_median_cv": 0.5901,
+            "C3_min": 0.4134,
+            "C3_max": 0.7821,
+            "C4_share": [
+              0.2,
+              0.96,
+              0.13
+            ],
+            "d_C4": [
+              0.6,
+              0.0,
+              0.74
+            ],
+            "golden_set_hash": "b6fab0b6f3ae9a79495764350ed370427e6f684542cc46bdf89f6fd82c29c5dd",
+            "first_year_diag": "G2: n=100/100 y p10=1952 p50=1954 p90=1955 min=1951 max=1957 | G3: n=99/100 y p10=1956 p50=1958 p90=1959 min=1955 max=1967 | G4: n=88/100 y p10=1959 p50=1962 p90=1969 min=1957 max=1972"
+          },
+          {
+            "point": 41,
+            "K_DIV": 3.0,
+            "H_MAX": 0.12,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.1624,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.4265,
+            "C3_min": 0.269,
+            "C3_max": 0.6331,
+            "C4_share": [
+              0.15,
+              0.94,
+              0.09
+            ],
+            "d_C4": [
+              0.7,
+              0.0,
+              0.82
+            ],
+            "golden_set_hash": "55ebb2d6a10161f036efae37a9f153ccac26d544bca059eb71ddd62eb675d022",
+            "first_year_diag": "G2: n=100/100 y p10=1952 p50=1954 p90=1955 min=1951 max=1957 | G3: n=100/100 y p10=1956 p50=1959 p90=1961 min=1955 max=1968 | G4: n=89/100 y p10=1960 p50=1963 p90=1973 min=1959 max=1976"
+          },
+          {
+            "point": 42,
+            "K_DIV": 3.0,
+            "H_MAX": 0.16,
+            "THETA_START": 0.6,
+            "KAPPA_Q10": 512,
+            "L_stage": 0.9,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.4631,
+            "C3_min": 0.2797,
+            "C3_max": 0.6232,
+            "C4_share": [
+              0.23,
+              0.97,
+              0.11
+            ],
+            "d_C4": [
+              0.54,
+              0.0,
+              0.78
+            ],
+            "golden_set_hash": "c12bd2011186ef0f746b1e571b511e5f000c9d20a882fe88cd689f869c595021",
+            "first_year_diag": "G2: n=100/100 y p10=1952 p50=1954 p90=1955 min=1951 max=1957 | G3: n=100/100 y p10=1956 p50=1958 p90=1960 min=1955 max=1968 | G4: n=85/100 y p10=1959 p50=1963 p90=1972 min=1958 max=1974"
+          },
+          {
+            "point": 43,
+            "K_DIV": 3.0,
+            "H_MAX": 0.16,
+            "THETA_START": 0.3,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.049382,
+            "d_C3": 0.4135,
+            "C3_median_cv": 0.5827,
+            "C3_min": 0.4062,
+            "C3_max": 0.6849,
+            "C4_share": [
+              0.2,
+              0.91,
+              0.14
+            ],
+            "d_C4": [
+              0.6,
+              0.0,
+              0.72
+            ],
+            "golden_set_hash": "7393fa3f1060f5af4b2b8c9418f56f2f0d4542d5d11d82afc1f38a617c25f465",
+            "first_year_diag": "G2: n=100/100 y p10=1952 p50=1954 p90=1955 min=1951 max=1957 | G3: n=100/100 y p10=1956 p50=1958 p90=1960 min=1955 max=1968 | G4: n=86/100 y p10=1958 p50=1962 p90=1971 min=1957 max=1973"
+          },
+          {
+            "point": 44,
+            "K_DIV": 3.0,
+            "H_MAX": 0.16,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 512,
+            "L_stage": 1.082,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.3825,
+            "C3_min": 0.2246,
+            "C3_max": 0.5636,
+            "C4_share": [
+              0.18,
+              0.97,
+              0.09
+            ],
+            "d_C4": [
+              0.64,
+              0.0,
+              0.82
+            ],
+            "golden_set_hash": "1431761a9c093eb22cab501f7752e67d809597d979fb16d96ce693ae837ce879",
+            "first_year_diag": "G2: n=100/100 y p10=1952 p50=1954 p90=1955 min=1951 max=1956 | G3: n=100/100 y p10=1956 p50=1958 p90=1960 min=1955 max=1969 | G4: n=93/100 y p10=1960 p50=1963 p90=1965 min=1958 max=1975"
+          }
+        ]
+      },
+      {
+        "date": "2026-11-15",
+        "task": "TASK-0056",
+        "event": "phase B evaluated (12 points); stage total 57 of 60. Stage choice by the rule (min L_stage over A and B, tie: first, A before B): p23 K_DIV 2.0, H_MAX 0.12, THETA_START 0.9, KAPPA_Q10 512, L_stage 0.7304 > 0. NOT FROZEN: L > 0 and THETA_START = 0.9 is the upper edge of its axis; d_C4,G2 >= 0.54 at all 57 points (structural, spec §8.2 p.4a(5), p.7). Stopped before C2 per the Orchestrator's instruction; question to the Orchestrator/owner (TASK-0056, docs/simulation/t12-calibration-report.md).",
+        "manifest_hash_evaluated": "223e6f6925cf2027a6c132a9781772fe70ca86d0068024f6c8abcf6876cbf589",
+        "points": [
+          {
+            "point": 45,
+            "rank": 1,
+            "K_DIV": 2.0,
+            "H_MAX": 0.12,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 0,
+            "L_stage": 0.802,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.3917,
+            "C4_share": [
+              0.09,
+              0.32,
+              0.79
+            ],
+            "d_C4": [
+              0.82,
+              0.36,
+              0.0
+            ],
+            "golden_set_hash": "0738c00067d4edd1b817b0bd5affc4ccd0e1f4989de368ca0a42c985845ae14f",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1956 p90=1958 min=1952 max=1959 | G3: n=99/100 y p10=1959 p50=1963 p90=1965 min=1958 max=1967 | G4: n=88/100 y p10=1967 p50=1970 p90=1972 min=1964 max=1977"
+          },
+          {
+            "point": 46,
+            "rank": 1,
+            "K_DIV": 2.0,
+            "H_MAX": 0.12,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 256,
+            "L_stage": 0.7508,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.3917,
+            "C4_share": [
+              0.09,
+              0.36,
+              0.61
+            ],
+            "d_C4": [
+              0.82,
+              0.28,
+              0.0
+            ],
+            "golden_set_hash": "826b2465ebcd59287117718ffab66a5734914592b75b84712ef8d817d1074dfb",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1956 p90=1958 min=1952 max=1959 | G3: n=100/100 y p10=1959 p50=1962 p90=1964 min=1957 max=1977 | G4: n=88/100 y p10=1964 p50=1968 p90=1970 min=1963 max=1976"
+          },
+          {
+            "point": 47,
+            "rank": 1,
+            "K_DIV": 2.0,
+            "H_MAX": 0.12,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 768,
+            "L_stage": 0.986,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.3917,
+            "C4_share": [
+              0.09,
+              0.56,
+              0.22
+            ],
+            "d_C4": [
+              0.82,
+              0.0,
+              0.56
+            ],
+            "golden_set_hash": "17a06e700110d9ab9b7e8721cd58dd826c25c2f71be3e3b4d52b965240ba95f4",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1956 p90=1958 min=1952 max=1959 | G3: n=100/100 y p10=1958 p50=1961 p90=1963 min=1956 max=1976 | G4: n=90/100 y p10=1961 p50=1965 p90=1967 min=1959 max=1976"
+          },
+          {
+            "point": 48,
+            "rank": 1,
+            "K_DIV": 2.0,
+            "H_MAX": 0.12,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 1024,
+            "L_stage": 1.3124,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.3917,
+            "C4_share": [
+              0.09,
+              0.57,
+              0.1
+            ],
+            "d_C4": [
+              0.82,
+              0.0,
+              0.8
+            ],
+            "golden_set_hash": "4f21ad79bb80a0777a914759b4bd731f44af6db8b05a1c52a39699f45875c1d8",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1956 p90=1958 min=1952 max=1959 | G3: n=100/100 y p10=1958 p50=1960 p90=1963 min=1956 max=1976 | G4: n=90/100 y p10=1960 p50=1965 p90=1967 min=1959 max=1975"
+          },
+          {
+            "point": 49,
+            "rank": 2,
+            "K_DIV": 2.0,
+            "H_MAX": 0.08,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 0,
+            "L_stage": 0.97,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.4386,
+            "C4_share": [
+              0.07,
+              0.26,
+              0.78
+            ],
+            "d_C4": [
+              0.86,
+              0.48,
+              0.0
+            ],
+            "golden_set_hash": "456dccb2bb1bb3f3d62709fe78d928c12c96072c91e044eb692bdab5121e3927",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1956 p90=1958 min=1952 max=1961 | G3: n=100/100 y p10=1960 p50=1963 p90=1967 min=1958 max=1975 | G4: n=88/100 y p10=1967 p50=1971 p90=1973 min=1964 max=1976"
+          },
+          {
+            "point": 50,
+            "rank": 2,
+            "K_DIV": 2.0,
+            "H_MAX": 0.08,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 256,
+            "L_stage": 0.916,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.4386,
+            "C4_share": [
+              0.07,
+              0.29,
+              0.66
+            ],
+            "d_C4": [
+              0.86,
+              0.42,
+              0.0
+            ],
+            "golden_set_hash": "706568f037ef2cf619e6a41b095ea40bfe72fd23d22de1d97e16e18dbcd14565",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1956 p90=1958 min=1952 max=1960 | G3: n=100/100 y p10=1959 p50=1963 p90=1966 min=1957 max=1973 | G4: n=90/100 y p10=1964 p50=1968 p90=1971 min=1962 max=1977"
+          },
+          {
+            "point": 51,
+            "rank": 2,
+            "K_DIV": 2.0,
+            "H_MAX": 0.08,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 768,
+            "L_stage": 0.9332,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.4386,
+            "C4_share": [
+              0.07,
+              0.5,
+              0.28
+            ],
+            "d_C4": [
+              0.86,
+              0.0,
+              0.44
+            ],
+            "golden_set_hash": "2e197cb796f7697ef9fd47b0ec7c3317831ef8bee09f46dc8c0fc0f15014af07",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1956 p90=1958 min=1952 max=1960 | G3: n=100/100 y p10=1958 p50=1961 p90=1965 min=1956 max=1971 | G4: n=90/100 y p10=1962 p50=1965 p90=1969 min=1959 max=1975"
+          },
+          {
+            "point": 52,
+            "rank": 2,
+            "K_DIV": 2.0,
+            "H_MAX": 0.08,
+            "THETA_START": 0.9,
+            "KAPPA_Q10": 1024,
+            "L_stage": 1.0532,
+            "d_C3": 0.0,
+            "C3_median_cv": 0.4386,
+            "C4_share": [
+              0.07,
+              0.55,
+              0.22
+            ],
+            "d_C4": [
+              0.86,
+              0.0,
+              0.56
+            ],
+            "golden_set_hash": "2fca322f83b32e3b56f32c0f86462d29bf6576702b5a21a278b9d813dc5f609a",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1956 p90=1958 min=1952 max=1960 | G3: n=100/100 y p10=1958 p50=1961 p90=1965 min=1956 max=1970 | G4: n=90/100 y p10=1960 p50=1965 p90=1968 min=1959 max=1974"
+          },
+          {
+            "point": 53,
+            "rank": 3,
+            "K_DIV": 2.0,
+            "H_MAX": 0.08,
+            "THETA_START": 0.6,
+            "KAPPA_Q10": 0,
+            "L_stage": 0.941124,
+            "d_C3": 0.082,
+            "C3_median_cv": 0.5164,
+            "C4_share": [
+              0.06,
+              0.3,
+              0.73
+            ],
+            "d_C4": [
+              0.88,
+              0.4,
+              0.0
+            ],
+            "golden_set_hash": "d871dbee88b44df5d9c647fb70a51768bd3538f4bcead1d8f6a04f935b4a43f6",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1956 p90=1958 min=1952 max=1961 | G3: n=100/100 y p10=1960 p50=1963 p90=1966 min=1958 max=1973 | G4: n=82/100 y p10=1967 p50=1970 p90=1972 min=1964 max=1976"
+          },
+          {
+            "point": 54,
+            "rank": 3,
+            "K_DIV": 2.0,
+            "H_MAX": 0.08,
+            "THETA_START": 0.6,
+            "KAPPA_Q10": 256,
+            "L_stage": 0.848724,
+            "d_C3": 0.082,
+            "C3_median_cv": 0.5164,
+            "C4_share": [
+              0.06,
+              0.37,
+              0.57
+            ],
+            "d_C4": [
+              0.88,
+              0.26,
+              0.0
+            ],
+            "golden_set_hash": "d10a78089b4d9952f4b8565f5b7a001451069cff75c3d6ee107babe0445fc8f5",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1956 p90=1958 min=1952 max=1960 | G3: n=100/100 y p10=1959 p50=1962 p90=1965 min=1957 max=1972 | G4: n=84/100 y p10=1964 p50=1968 p90=1970 min=1962 max=1975"
+          },
+          {
+            "point": 55,
+            "rank": 3,
+            "K_DIV": 2.0,
+            "H_MAX": 0.08,
+            "THETA_START": 0.6,
+            "KAPPA_Q10": 768,
+            "L_stage": 1.094724,
+            "d_C3": 0.082,
+            "C3_median_cv": 0.5164,
+            "C4_share": [
+              0.06,
+              0.55,
+              0.22
+            ],
+            "d_C4": [
+              0.88,
+              0.0,
+              0.56
+            ],
+            "golden_set_hash": "234ace1404e11512a1878aefca24ef3f996c99461f7eebecbc88eaf4b7b758af",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1956 p90=1958 min=1952 max=1960 | G3: n=100/100 y p10=1958 p50=1961 p90=1963 min=1956 max=1971 | G4: n=84/100 y p10=1961 p50=1965 p90=1967 min=1960 max=1972"
+          },
+          {
+            "point": 56,
+            "rank": 3,
+            "K_DIV": 2.0,
+            "H_MAX": 0.08,
+            "THETA_START": 0.6,
+            "KAPPA_Q10": 1024,
+            "L_stage": 1.389524,
+            "d_C3": 0.082,
+            "C3_median_cv": 0.5164,
+            "C4_share": [
+              0.06,
+              0.58,
+              0.11
+            ],
+            "d_C4": [
+              0.88,
+              0.0,
+              0.78
+            ],
+            "golden_set_hash": "d4be2b5114eeca40ff2eef6b4dc23accdc6165306ac07f507411a45b40be62ca",
+            "first_year_diag": "G2: n=100/100 y p10=1953 p50=1956 p90=1958 min=1952 max=1960 | G3: n=100/100 y p10=1957 p50=1961 p90=1963 min=1956 max=1971 | G4: n=84/100 y p10=1960 p50=1964 p90=1967 min=1958 max=1970"
+          }
+        ]
+      }
+    ]
   }
 }

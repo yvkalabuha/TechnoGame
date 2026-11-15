@@ -98,6 +98,510 @@
     "points": 25,
     "loss": "L_C1 = d_C1a^2 + d_C1b^2 + d_C1d^2 + d_C1e^2 (exp0002.py --c1, loss_C1); stop at the first point with L = 0, else the minimum (tie: first)",
     "status": "[Predl.] grid x_scale x alpha (TASK-0054), needs the Orchestrator's approval",
-    "journal": []
+    "journal": [
+      {
+        "date": "2026-11-15",
+        "task": "TASK-0056",
+        "event": "stage C1 evaluated (c1-stand, lab/results/t12/c1); stop at p00 (L_C1 = 0); frozen ALPHA = 0.05, X_SCALE = 1.0",
+        "manifest_hash_evaluated": "8544290a05337867a895dd2210e26ab9d255b1109f9e63631b27069bbd52766e",
+        "points": [
+          {
+            "point": 0,
+            "X_SCALE": 1.0,
+            "ALPHA": 0.05,
+            "loss_C1": 0.0,
+            "d_C1a": 0.0,
+            "d_C1b": 0.0,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.10615,
+            "C1b": 0.795943,
+            "C1d": 0.016923,
+            "C1e": 0.035835,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.252658,
+              0.270457
+            ],
+            "role": "chosen (first point with L = 0, stop)"
+          },
+          {
+            "point": 1,
+            "X_SCALE": 1.0,
+            "ALPHA": 0.08,
+            "loss_C1": 0.0,
+            "d_C1a": 0.0,
+            "d_C1b": 0.0,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.106445,
+            "C1b": 0.796046,
+            "C1d": 0.016923,
+            "C1e": 0.035835,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.252658,
+              0.271638
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 2,
+            "X_SCALE": 1.0,
+            "ALPHA": 0.02,
+            "loss_C1": 0.0,
+            "d_C1a": 0.0,
+            "d_C1b": 0.0,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.105864,
+            "C1b": 0.795851,
+            "C1d": 0.016923,
+            "C1e": 0.035835,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.252658,
+              0.269276
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 3,
+            "X_SCALE": 1.0,
+            "ALPHA": 0.11,
+            "loss_C1": 0.0,
+            "d_C1a": 0.0,
+            "d_C1b": 0.0,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.106742,
+            "C1b": 0.796158,
+            "C1d": 0.016923,
+            "C1e": 0.035835,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.252658,
+              0.272819
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 4,
+            "X_SCALE": 1.0,
+            "ALPHA": 0.15,
+            "loss_C1": 0.0,
+            "d_C1a": 0.0,
+            "d_C1b": 0.0,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.107142,
+            "C1b": 0.796311,
+            "C1d": 0.016923,
+            "C1e": 0.035835,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.252658,
+              0.274392
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 5,
+            "X_SCALE": 0.75,
+            "ALPHA": 0.05,
+            "loss_C1": 2.8e-05,
+            "d_C1a": 0.0,
+            "d_C1b": 0.005316,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.114925,
+            "C1b": 0.801595,
+            "C1d": 0.021017,
+            "C1e": 0.036013,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.254535,
+              0.277505
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 6,
+            "X_SCALE": 0.75,
+            "ALPHA": 0.08,
+            "loss_C1": 3.1e-05,
+            "d_C1a": 0.0,
+            "d_C1b": 0.005586,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.115242,
+            "C1b": 0.801676,
+            "C1d": 0.021017,
+            "C1e": 0.036013,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.254535,
+              0.278717
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 7,
+            "X_SCALE": 0.75,
+            "ALPHA": 0.02,
+            "loss_C1": 2.5e-05,
+            "d_C1a": 0.0,
+            "d_C1b": 0.005043,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.114607,
+            "C1b": 0.801513,
+            "C1d": 0.021017,
+            "C1e": 0.036013,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.254535,
+              0.276293
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 8,
+            "X_SCALE": 0.75,
+            "ALPHA": 0.11,
+            "loss_C1": 3.3e-05,
+            "d_C1a": 0.0,
+            "d_C1b": 0.005747,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.11552,
+            "C1b": 0.801724,
+            "C1d": 0.021017,
+            "C1e": 0.036013,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.254535,
+              0.279929
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 9,
+            "X_SCALE": 0.75,
+            "ALPHA": 0.15,
+            "loss_C1": 3.6e-05,
+            "d_C1a": 0.0,
+            "d_C1b": 0.00604,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.115907,
+            "C1b": 0.801812,
+            "C1d": 0.021017,
+            "C1e": 0.036013,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.254535,
+              0.281543
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 10,
+            "X_SCALE": 1.5,
+            "ALPHA": 0.05,
+            "loss_C1": 0.0,
+            "d_C1a": 0.0,
+            "d_C1b": 0.0,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.094003,
+            "C1b": 0.784954,
+            "C1d": 0.012183,
+            "C1e": 0.035633,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.250769,
+              0.263225
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 11,
+            "X_SCALE": 1.5,
+            "ALPHA": 0.08,
+            "loss_C1": 0.0,
+            "d_C1a": 0.0,
+            "d_C1b": 0.0,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.094256,
+            "C1b": 0.785083,
+            "C1d": 0.012183,
+            "C1e": 0.035633,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.250769,
+              0.264374
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 12,
+            "X_SCALE": 1.5,
+            "ALPHA": 0.02,
+            "loss_C1": 0.0,
+            "d_C1a": 0.0,
+            "d_C1b": 0.0,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.093681,
+            "C1b": 0.784734,
+            "C1d": 0.012183,
+            "C1e": 0.035633,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.250769,
+              0.262075
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 13,
+            "X_SCALE": 1.5,
+            "ALPHA": 0.11,
+            "loss_C1": 0.0,
+            "d_C1a": 0.0,
+            "d_C1b": 0.0,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.094541,
+            "C1b": 0.785255,
+            "C1d": 0.012183,
+            "C1e": 0.035633,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.250769,
+              0.265524
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 14,
+            "X_SCALE": 1.5,
+            "ALPHA": 0.15,
+            "loss_C1": 0.0,
+            "d_C1a": 0.0,
+            "d_C1b": 0.0,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.094878,
+            "C1b": 0.785426,
+            "C1d": 0.012183,
+            "C1e": 0.035633,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.250769,
+              0.267055
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 15,
+            "X_SCALE": 0.5,
+            "ALPHA": 0.05,
+            "loss_C1": 0.000448,
+            "d_C1a": 0.0,
+            "d_C1b": 0.021176,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.126623,
+            "C1b": 0.806353,
+            "C1d": 0.028511,
+            "C1e": 0.036342,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.258251,
+              0.291079
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 16,
+            "X_SCALE": 0.5,
+            "ALPHA": 0.08,
+            "loss_C1": 0.000448,
+            "d_C1a": 0.0,
+            "d_C1b": 0.021177,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.12688,
+            "C1b": 0.806353,
+            "C1d": 0.028511,
+            "C1e": 0.036342,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.258251,
+              0.29235
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 17,
+            "X_SCALE": 0.5,
+            "ALPHA": 0.02,
+            "loss_C1": 0.000438,
+            "d_C1a": 0.0,
+            "d_C1b": 0.020935,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.126254,
+            "C1b": 0.80628,
+            "C1d": 0.028511,
+            "C1e": 0.036342,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.258251,
+              0.289808
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 18,
+            "X_SCALE": 0.5,
+            "ALPHA": 0.11,
+            "loss_C1": 0.000452,
+            "d_C1a": 0.0,
+            "d_C1b": 0.021265,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.127179,
+            "C1b": 0.806379,
+            "C1d": 0.028511,
+            "C1e": 0.036342,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.258251,
+              0.293622
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 19,
+            "X_SCALE": 0.5,
+            "ALPHA": 0.15,
+            "loss_C1": 0.000466,
+            "d_C1a": 0.0,
+            "d_C1b": 0.021592,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.127657,
+            "C1b": 0.806477,
+            "C1d": 0.028511,
+            "C1e": 0.036342,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.258251,
+              0.295314
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 20,
+            "X_SCALE": 2.0,
+            "ALPHA": 0.05,
+            "loss_C1": 0.021456,
+            "d_C1a": 0.0,
+            "d_C1b": 0.146477,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.139908,
+            "C1b": 0.843943,
+            "C1d": 0.009243,
+            "C1e": 0.035508,
+            "dev_doublings_in_stat": 1,
+            "dev_min_yield": [
+              0.259539
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 21,
+            "X_SCALE": 2.0,
+            "ALPHA": 0.08,
+            "loss_C1": 0.02142,
+            "d_C1a": 0.0,
+            "d_C1b": 0.146357,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.140363,
+            "C1b": 0.843907,
+            "C1d": 0.009243,
+            "C1e": 0.035508,
+            "dev_doublings_in_stat": 1,
+            "dev_min_yield": [
+              0.260671
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 22,
+            "X_SCALE": 2.0,
+            "ALPHA": 0.02,
+            "loss_C1": 0.021471,
+            "d_C1a": 0.0,
+            "d_C1b": 0.146528,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.139413,
+            "C1b": 0.843958,
+            "C1d": 0.009243,
+            "C1e": 0.035508,
+            "dev_doublings_in_stat": 1,
+            "dev_min_yield": [
+              0.258405
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 23,
+            "X_SCALE": 2.0,
+            "ALPHA": 0.11,
+            "loss_C1": 0.021434,
+            "d_C1a": 0.0,
+            "d_C1b": 0.146404,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.140915,
+            "C1b": 0.843921,
+            "C1d": 0.009243,
+            "C1e": 0.035508,
+            "dev_doublings_in_stat": 1,
+            "dev_min_yield": [
+              0.261805
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          },
+          {
+            "point": 24,
+            "X_SCALE": 2.0,
+            "ALPHA": 0.15,
+            "loss_C1": 0.021354,
+            "d_C1a": 0.0,
+            "d_C1b": 0.146131,
+            "d_C1d": 0.0,
+            "d_C1e": 0.0,
+            "C1a": 0.141431,
+            "C1b": 0.843839,
+            "C1d": 0.009243,
+            "C1e": 0.035508,
+            "dev_doublings_in_stat": 1,
+            "dev_min_yield": [
+              0.263315
+            ],
+            "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
+          }
+        ]
+      }
+    ]
   }
 }
