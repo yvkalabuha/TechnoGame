@@ -19,6 +19,16 @@ hash   --manifest M [--canonical]
 ```
 Коды выхода: 0 — успех; 1 — прогон/матрица/selftest провалены или непредвиденная ошибка (I/O, баг; сообщение и стек в stderr); 2 — ошибка аргументов, манифеста или отсутствующий входной файл. `--timeout` — предел одного дочернего прогона (по умолчанию 3600 с); по истечении процесс убивается, статус `timeout`. С `--force` каталог прогона очищается перед запуском. Выходные каталоги — в `lab/results/` (в `.gitignore`).
 
+### Точки калибровки T12 (TASK-0055) [Предл.]
+```
+c1-stand --out DIR [--mods <dir>] [--manifest M [--point P]]          # этап C1: DIR/pNN/c1_stand.csv по каждой точке
+c3-stand --out DIR --manifest M [--point P] [--seeds N] [--mods <dir>] # статистика C3 точки этапа C3+C4: DIR/pNN/c3_summary.csv
+```
+- Параметры точки разбираются тем же `SliceParameters.Parse`, что и в `JetSliceCalib` (ключи «К» — `slice-csv-format.md` §3); стенды берут только свои: C1 — `ALPHA`, `X_SCALE`, `DELTA_H`, `C_M`; C3 — `K_DIV`, `THETA_START`, `H_MAX`. Без `--manifest` `c1-stand` считает значения §8.1.
+- **Этап C1** — `lab/manifests/EXP-0002-c1.json` (25 точек, стенд детерминирован, `seeds` — формальность схемы): `c1-stand --manifest lab/manifests/EXP-0002-c1.json --out lab/results/c1` (все точки по порядку файла) или `--point P`; затем для каждой `exp0002.py --c1 lab/results/c1/pNN/c1_stand.csv --json …` (`loss_C1`). Остановка — по правилу спец. §8.2 п.4 (первая точка с `L` = 0 в порядке файла).
+- **Этап C3+C4 и C2** — `lab/manifests/EXP-0002-calib.json`: каждая серия — точки сетки (`matrix --manifest` исполняет все; одна точка — `run --manifest … --point P --seed S`). Точка C3+C4: прогоны точки (100 калибровочных seeds) → `exp0002.py --calib` по каталогу точки (C4) + `c3-stand --manifest … --point P` (C3, seeds точки). Точка C2: `exp0002.py --calib` (C2).
+- Между этапами замороженные значения переносятся в общий `params` манифестов (ревизия с новым `manifest_hash` в `meta.journal`); фаза Б `κ` добавляется сериями после фазы А (`meta.stage_protocol`).
+
 ## Манифест (schema 1)
 | Ключ | Обяз. | Смысл |
 |---|---|---|

@@ -1,60 +1,285 @@
 {
   "schema": 1,
   "experiment": "EXP-0002-calib",
-  "description": "DRAFT (TASK-0054, T12 preparation; was TASK-0044 T10): calibration build of the jet slice, spec slice-jet-aviation.md v0.26 §8.2; model JetSliceCalib (Session ViewMode.Calibration: no TechKey, FV or why_not). Not frozen and not runnable as a calibration: the Session takes no K parameters and no L_C/L_P tables yet (spec §8.2 p.9). The runnable part is the base point (§8.1 values) on seeds 10001-10100.",
+  "description": "DRAFT (TASK-0054/0055): calibration build of the jet slice, spec slice-jet-aviation.md v0.27 §8.2; model JetSliceCalib. Series = runnable points: 'base' (§8.1 values), stage C3+C4 phase A (45 points, walk order = file order: k outer, H_MAX, THETA_START 0.6/0.3/0.9), stage C2 (9 points). Stage C1 points: EXP-0002-c1.json via 'c1-stand --manifest'. C3 statistic of a C3+C4 point: 'c3-stand --manifest this --point P'. Phase B (kappa) series are appended by the rule after phase A. Not frozen.",
   "model": "JetSliceCalib",
   "ticks": 11688,
   "chunk_size": 1,
   "threads": 1,
-  "seeds": {"start": 10001, "count": 100},
-  "params": {"LINE_CLOSE": "YPROD", "TOOLING_TARGET": "V5", "POOL_ORDER": "CAN"},
-  "series": [{"name": "calib"}],
+  "seeds": {
+    "start": 10001,
+    "count": 100
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN"
+  },
+  "series": [
+    {
+      "name": "base"
+    },
+    {
+      "name": "C3C4-A/k=1.0",
+      "params": {
+        "K_DIV": 1.0
+      },
+      "sweep": {
+        "H_MAX": [
+          0.08,
+          0.12,
+          0.16
+        ],
+        "THETA_START": [
+          0.6,
+          0.3,
+          0.9
+        ]
+      }
+    },
+    {
+      "name": "C3C4-A/k=1.5",
+      "params": {
+        "K_DIV": 1.5
+      },
+      "sweep": {
+        "H_MAX": [
+          0.08,
+          0.12,
+          0.16
+        ],
+        "THETA_START": [
+          0.6,
+          0.3,
+          0.9
+        ]
+      }
+    },
+    {
+      "name": "C3C4-A/k=2.0",
+      "params": {
+        "K_DIV": 2.0
+      },
+      "sweep": {
+        "H_MAX": [
+          0.08,
+          0.12,
+          0.16
+        ],
+        "THETA_START": [
+          0.6,
+          0.3,
+          0.9
+        ]
+      }
+    },
+    {
+      "name": "C3C4-A/k=2.5",
+      "params": {
+        "K_DIV": 2.5
+      },
+      "sweep": {
+        "H_MAX": [
+          0.08,
+          0.12,
+          0.16
+        ],
+        "THETA_START": [
+          0.6,
+          0.3,
+          0.9
+        ]
+      }
+    },
+    {
+      "name": "C3C4-A/k=3.0",
+      "params": {
+        "K_DIV": 3.0
+      },
+      "sweep": {
+        "H_MAX": [
+          0.08,
+          0.12,
+          0.16
+        ],
+        "THETA_START": [
+          0.6,
+          0.3,
+          0.9
+        ]
+      }
+    },
+    {
+      "name": "C2/c_M=0.1",
+      "params": {
+        "C_M": 0.1
+      },
+      "sweep": {
+        "DELTA_H": [
+          0.003,
+          0.0017,
+          0.0043
+        ]
+      }
+    },
+    {
+      "name": "C2/c_M=0.05",
+      "params": {
+        "C_M": 0.05
+      },
+      "sweep": {
+        "DELTA_H": [
+          0.003,
+          0.0017,
+          0.0043
+        ]
+      }
+    },
+    {
+      "name": "C2/c_M=0.2",
+      "params": {
+        "C_M": 0.2
+      },
+      "sweep": {
+        "DELTA_H": [
+          0.003,
+          0.0017,
+          0.0043
+        ]
+      }
+    }
+  ],
   "meta": {
     "slice_spec": "docs/simulation/slice-jet-aviation.md v0.27",
-    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r8",
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r9",
     "scenario_hash": "2ccb4adbe59a0795fc98c82413b6be188c067e90072eaed18d23d2b1d300878f",
-    "status": "draft: grids, order, loss and stopping rule declared before any evaluation (spec §8.2 p.4); stage C1 and C2 grids are [Predl.] (the spec names only the C3+C4 parameters) and need the Orchestrator's approval",
-    "stages": ["C1", "C3+C4", "C2"],
-    "budget_points": {"C1": 40, "C3+C4": 60, "C2": 30, "total": 130},
+    "status": "draft: every declared point of stages C3+C4 (phase A) and C2 is a series point here and runs with 'matrix'/'run --point'; C1 points are in EXP-0002-c1.json (c1-stand). Grids, order, loss and stopping rule declared before any evaluation (spec §8.2 p.4); C1/C2 grids are [Predl.] and need the Orchestrator's approval.",
+    "stages": [
+      "C1",
+      "C3+C4",
+      "C2"
+    ],
+    "budget_points": {
+      "C1": 40,
+      "C3+C4": 60,
+      "C2": 30,
+      "total": 130
+    },
     "stopping_rule": "spec §8.2 p.4: points of a stage in the written order; stop at the first point with L_stage = 0; else the minimum L_stage (tie: the first in order); the stage's parameters are frozen and the next stage does not touch them; after C2 the total L over all anchors incl. C5. Budget exhausted with L > 0: no EXP, journal to the Orchestrator (p.7).",
     "loss": {
       "distance": "d_k = max(0, lo_k - s_k, s_k - hi_k) / (hi_k - lo_k); binary conditions d = 0 or 1; L = sum d_k^2, all weights 1 (spec §8.2 p.3)",
-      "C1": {"statistics": ["C1a DEV unit_cost fall <= 0.40", "C1b DEV yield share [0.50; 0.80]", "C1d MATURE yield share <= 0.20", "C1e MATURE unit_cost fall <= 0.30 (one-sided, d = max(0, s - 0.30)/0.30)"],
-             "empty_set": "d = 1 (DEV: no doubling with min yield >= 0.25)",
-             "stand": "Singularity.Lab c1-stand -> c1_stand.csv (format §6 r8); exp0002.py --c1 (loss_C1)",
-             "p0_not_loss": "Wright: window mean of asm_over_floor_drop in [0.15; 0.30] (#187)"},
-      "C3+C4": {"L_stage": "d_C3^2 + d_C4,G2^2 + d_C4,G3^2 + d_C4,G4^2",
-                "C3": "median over the 11 star nodes of the CV of discovery months on the C3 stand (one actor, S = S_ref, c_n / k of the point), corridor [0.3; 0.5], 100 calibration seeds",
-                "C4": "share of calibration seeds with the first G2/G3/G4 in service in 1947-52 / 1954-61 / 1967-75, corridor [0.5; 1]"},
-      "C2": {"statistics": ["p50 t_first -> t_07 of tier-4 star PRC in [2; 8] years (censored = +inf, lower median; > 50% of the pool without t_first -> d = 1)", "tier-5 longer than tier-4 (binary; empty or fully censored tier-5 -> d = 1)"]},
+      "C1": {
+        "statistics": [
+          "C1a DEV unit_cost fall <= 0.40",
+          "C1b DEV yield share [0.50; 0.80]",
+          "C1d MATURE yield share <= 0.20",
+          "C1e MATURE unit_cost fall <= 0.30 (one-sided, d = max(0, s - 0.30)/0.30)"
+        ],
+        "empty_set": "d = 1 (DEV: no doubling with min yield >= 0.25)",
+        "stand": "Singularity.Lab c1-stand -> c1_stand.csv (format §6 r8); exp0002.py --c1 (loss_C1)",
+        "p0_not_loss": "Wright: window mean of asm_over_floor_drop in [0.15; 0.30] (#187)"
+      },
+      "C3+C4": {
+        "L_stage": "d_C3^2 + d_C4,G2^2 + d_C4,G3^2 + d_C4,G4^2",
+        "C3": "median over the 11 star nodes of the CV of discovery months on the C3 stand (one actor, S = S_ref, c_n / k of the point), corridor [0.3; 0.5], 100 calibration seeds",
+        "C4": "share of calibration seeds with the first G2/G3/G4 in service in 1947-52 / 1954-61 / 1967-75, corridor [0.5; 1]"
+      },
+      "C2": {
+        "statistics": [
+          "p50 t_first -> t_07 of tier-4 star PRC in [2; 8] years (censored = +inf, lower median; > 50% of the pool without t_first -> d = 1)",
+          "tier-5 longer than tier-4 (binary; empty or fully censored tier-5 -> d = 1)"
+        ]
+      },
       "C5": "test #30 after C2 (binary)"
     },
     "grids": {
       "C1": {
         "status": "[Predl.] TASK-0054; spec §8.1 'K' parameters that move the C1 stand: x_scale (X_half of tiers 3/4/5 x the factor, ratio 1:4:12.5 fixed) and alpha (culture growth, DEV only). DEV starts from an admitted prc_set (#231, spec v0.27 §8.2 p.1); min yield per doubling sits at the 0.25 filter, so print min_yield per doubling in the journal.",
-        "axes": {"x_scale": [1.0, 0.75, 1.5, 0.5, 2.0], "alpha": [0.05, 0.08, 0.02, 0.11, 0.15]},
+        "axes": {
+          "x_scale": [
+            1.0,
+            0.75,
+            1.5,
+            0.5,
+            2.0
+          ],
+          "alpha": [
+            0.05,
+            0.08,
+            0.02,
+            0.11,
+            0.15
+          ]
+        },
         "order": "x_scale outer, alpha inner, each in the listed order (the §8.1 / IndustryParams value first, then the nearer neighbours)",
-        "points": 25
+        "points": 25,
+        "runnable": "EXP-0002-c1.json: series 'C1/x_scale=v' with sweep ALPHA (25 points, walk order = file order)"
       },
       "C3+C4": {
         "status": "spec §8.2 p.4, v0.23 (#177)",
-        "phase_A": {"kappa": 0.5,
-                    "axes": {"k": [1.0, 1.5, 2.0, 2.5, 3.0], "h_max": [0.08, 0.12, 0.16], "theta_start": [0.6, 0.3, 0.9]},
-                    "order": "k ascending (outer), h_max ascending, theta_start 0.6, 0.3, 0.9", "points": 45},
-        "phase_B": {"when": "only if no phase-A point has L_stage = 0",
-                    "kappa": [0.0, 0.25, 0.75, 1.0],
-                    "at": "the 3 best phase-A points by L_stage (tie: walk order)",
-                    "order": "those points by rank, kappa ascending within", "points_max": 12},
-        "fixed": {"y_half": 0.5, "prog_cap": 3},
+        "phase_A": {
+          "kappa": 0.5,
+          "axes": {
+            "k": [
+              1.0,
+              1.5,
+              2.0,
+              2.5,
+              3.0
+            ],
+            "h_max": [
+              0.08,
+              0.12,
+              0.16
+            ],
+            "theta_start": [
+              0.6,
+              0.3,
+              0.9
+            ]
+          },
+          "order": "k ascending (outer), h_max ascending, theta_start 0.6, 0.3, 0.9",
+          "points": 45,
+          "runnable": "series 'C3C4-A/k=*' (points 1..45)"
+        },
+        "phase_B": {
+          "when": "only if no phase-A point has L_stage = 0",
+          "kappa": [
+            0.0,
+            0.25,
+            0.75,
+            1.0
+          ],
+          "at": "the 3 best phase-A points by L_stage (tie: walk order)",
+          "order": "those points by rank, kappa ascending within",
+          "points_max": 12,
+          "runnable": "appended by stage_protocol after phase A"
+        },
+        "fixed": {
+          "y_half": 0.5,
+          "prog_cap": 3
+        },
         "choice": "minimum L_stage over phases A and B (tie: the first in order, A before B)",
         "literals": "k = 1.5 and 2.5 are exact in Fx6 (1500000, 2500000 raw); kappa in Q10: 0, 256, 512, 768, 1024",
         "edge": "a minimum at k = 3 with d_C4 > 0 is not a reason to widen the grid inside the stage (p.7)"
       },
       "C2": {
         "status": "[Predl.] TASK-0054; spec §8.1 'K' left for C2 after C1 and C3+C4: c_M (§8.1: 'K (C2)') and delta_H. delta_E has no anchor (C1 stand: X = line_E = N without forgetting; no other statistic reads it) - propose 'Z' at 0.025, like LR (v0.24).",
-        "axes": {"c_M": [0.1, 0.05, 0.2], "delta_H": [0.003, 0.0017, 0.0043]},
+        "axes": {
+          "c_M": [
+            0.1,
+            0.05,
+            0.2
+          ],
+          "delta_H": [
+            0.003,
+            0.0017,
+            0.0043
+          ]
+        },
         "order": "c_M outer, delta_H inner, in the listed order (centre first)",
-        "points": 9
+        "points": 9,
+        "runnable": "series 'C2/c_M=*' (points 46..54)"
       }
     },
     "base_point_prints": {
@@ -63,10 +288,28 @@
       "calib_base": "lab/results/t12prep-calib = t11-calib golden_set_hash 75c46cb3...: C2 d = 1, C4 G2/G3 d = 1, G4 0.73",
       "design_capacity": "t12prep-calib: design_slots_max 5 of 12, commands without a design 0"
     },
-    "forbidden": {"files": ["summary.csv", "actor_year.csv", "whynot.csv", "requirements.csv"],
-                  "substrings": ["lead", "chg", "fv", "why", "key_", "volume"],
-                  "params_not_passed": ["fv_budget", "TOOLING_M_LEAD"]},
+    "forbidden": {
+      "files": [
+        "summary.csv",
+        "actor_year.csv",
+        "whynot.csv",
+        "requirements.csv"
+      ],
+      "substrings": [
+        "lead",
+        "chg",
+        "fv",
+        "why",
+        "key_",
+        "volume"
+      ],
+      "params_not_passed": [
+        "fv_budget",
+        "TOOLING_M_LEAD"
+      ]
+    },
     "control_tables": "after the freeze: exp0002.py --calib DIR --tables-out lab/manifests/control_tables-EXP-0002.json; control_tables_hash = sha256 of the file (format §3.1); A40 bands re-derived from the same run (spec A40 v0.26)",
-    "journal": []
+    "journal": [],
+    "stage_protocol": "Stages run in the order C1 -> C3+C4 -> C2. A stage's chosen K values are frozen into the top-level 'params' of this manifest (and of EXP-0002-c1.json) before the next stage runs; the change is a manifest revision recorded in 'journal' with the new manifest_hash. Until then the keys of later/earlier stages keep their §8.1 values (series 'base'). Phase B of C3+C4: if no phase-A point has L_stage = 0, series 'C3C4-B/rank=r' with params of the r-th best phase-A point and sweep {KAPPA_Q10: [0, 256, 768, 1024]} are appended for r = 1..3 (rule p.4), before any phase-B evaluation. A C3+C4 point = 'run'/'matrix' of its point (C4: exp0002.py --calib on its runs) + 'c3-stand --point P' (C3, the point's seeds); C2 = exp0002.py --calib on the point's runs."
   }
 }

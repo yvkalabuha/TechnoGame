@@ -59,3 +59,30 @@ created: 2026-11-15
 
 **Не сделано / вне зоны:** документы (slice-csv-format §3, §3.1: «LC/LP отклоняются», ключи «К»; манифест `EXP-0002-calib.json` — сетки точек как `params`) — правка simulation-engineer/Orchestrator. Строки закрытия DEBT-0034 — Orchestrator.
 - Codex r1 (medium): тест «К» сравнивал `LastHash`, куда входят колонки `run.*`; теперь сравнивается дайджест таблиц без `run.*` (`SimulationDigest`), для 8 параметров и Lc/Lp — траектория действительно меняется.
+### simulation-engineer, 2026-11-15 — находки Codex (high ×2) в зоне simulation-engineer, TASK-0055
+**(1) `c1-stand` без параметров «К» — исправлено.**
+- `c1-stand --out DIR [--manifest M [--point P]]`. Параметры точки разбираются тем же `SliceParameters.Parse` (calibration = true), что и в `JetSliceCalib` (`Smoke/StandPoint.cs`).
+- Значения «К» из `SliceRunConfig` кладутся в `IndustryParams` стенда: `ALPHA`, `X_SCALE` (→ `XHalfByTier`), `DELTA_H`, `C_M`. Так же делает `SliceWorld.ApplyCalibration`, но тот internal — его повтор в 10 строк, Session не трогал.
+- `C1Stand.ReferenceLine` и `DevSite` берут эти `IndustryParams` (раньше было `new()`).
+- Новая команда `c3-stand --manifest M [--point P] [--seeds N]`: статистика C3 точки этапа C3+C4 — `K_DIV`, `THETA_START`, `H_MAX` на seeds точки, медиана CV по 11 ★ и `d_C3` (`SmokeT4s.RunC3Point`, стенд `C3Stand` без изменений).
+
+**(2) Сетки → исполняемые точки.**
+- `lab/manifests/EXP-0002-calib.json` — 55 точек, `manifest_hash` `b11e9a66…`:
+  - `base` — значения §8.1;
+  - C3+C4 фаза А: 5 серий `C3C4-A/k=*` с `sweep {H_MAX, THETA_START}`, точки 1…45. Порядок файла = объявленный порядок обхода: k внешний, `H_MAX`, `THETA_START` 0,6/0,3/0,9;
+  - C2: 3 серии `C2/c_M=*` с `sweep DELTA_H`, точки 46…54.
+- Фазу Б (`κ`) и перенос замороженных значений между этапами заранее не перечислить. Правило записано в `meta.stage_protocol`: серии добавляются по правилу §8.2 п.4 до оценки, это ревизия манифеста с записью в `journal`.
+- `lab/manifests/EXP-0002-c1.json` — этап C1, 25 точек (`X_SCALE` внешний × `ALPHA`), `manifest_hash` `8544290a…`. Запускается через `c1-stand --manifest`, затем `exp0002.py --c1` на каждую точку — `lab-cli.md`, раздел «Точки калибровки T12».
+
+**Проверка: по одной точке на этап, из самих манифестов** (`lab/results/t12prep-0055`):
+- C1, точка 0 (§8.1): `c1_stand.csv` побайтно равен стенду v0.27; `L_C1` = 0.
+- C1, точка 7 (`X_SCALE` 0,75, `ALPHA` 0,02): C1a 11,5%, C1b 80,15% (`d` 0,005), C1d 2,1%, C1e 3,6%. Параметры доходят до стенда.
+- C3+C4, точка 10 (k = 1,5): `run --point 10 --seed 10001` — ok (golden `333d7b99…`); `c3-stand --point 10 --seeds 10` — медиана CV 0,371, `d_C3` = 0.
+- C3+C4, точка 1 (= §8.1): медиана CV 0,447, `d_C3` = 0. Траектория побайтно равна точке `base` (`node_times`, `gen_times`, `a40`), а golden другой (`ac21242a…` против `1027cc75…`): заданный ключ пишет `run.*`.
+- C2, точка 46: `run --point 46 --seed 10001` — ok.
+
+**Документы:**
+- `slice-csv-format.md` r9: §3 — `LAYER` с `LC`/`LP`, ключи «К» с областями и значениями по умолчанию; §3.1 — снято «Session не принимает».
+- `lab-cli.md`: раздел «Точки калибровки T12».
+
+**Тесты:** Lab selftest 35/35, Architecture.Tests 97/97 (стенды помечены `SingleLayerStand`), Lab.Tests 18/18. Session.Tests не запускал: их правит developer. Python не менялся. zone_check: вне зоны только `CURRENT_STATE.md` (правка Orchestrator).

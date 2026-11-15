@@ -90,6 +90,43 @@ internal static class SmokeT4s
     }
 
     /// <summary>
+    /// The C3 statistic of one calibration point (spec §8.2 п.1 C3, п.4 «Совместный этап»; TASK-0055): the stand above with <c>S = S_ref</c> and the
+    /// knowledge parameters of the point (c_n / k, θ_start, h_max), on the given seeds (the calibration seeds of the manifest). Writes
+    /// <c>c3_summary.csv</c> (one row per ★ node) and returns the median CV over the 11 ★ nodes (lower median, as the C2 p50) and its distance
+    /// <c>d_C3</c> to the corridor [0,3; 0,5]. A censored node time (no discovery in 1200 months) is left out of its CV and counted.
+    /// </summary>
+    internal static (double MedianCv, double D) RunC3Point(GameData data, KnowledgeParams kp, IReadOnlyList<ulong> seeds, string outDir, TextWriter log)
+    {
+        ScenarioData sc = data.Scenario("jet_slice_1945");
+        const long SRef = 100_000;
+        KnowledgeGraph g = KnowledgeGraph.FromData(data.Nodes, sc.Disciplines, kp);
+        Directory.CreateDirectory(outDir);
+        using var sum = new StreamWriter(Path.Combine(outDir, "c3_summary.csv"));
+        sum.WriteLine("node,type,gen,n,censored,mean_months,cv,p50");
+        var cvs = new List<double>();
+        foreach (int node in KeyNodes)
+        {
+            var times = new List<double>();
+            int censored = 0;
+            foreach (ulong seed in seeds)
+            {
+                (long t, _) = new C3Stand(g, sc, kp, node, Fx6.FromRaw(SRef), seed).Run(C3Horizon);
+                if (t < 0) censored++;
+                else times.Add(t);
+            }
+            Stats st = Stats.Of(times);
+            int row = g.RowOf(node);
+            sum.WriteLine(string.Join(',', node, g.Type[row], g.Gen[row], times.Count, censored, D(st.Mean), D(st.Cv), D(st.P50)));
+            cvs.Add(double.IsNaN(st.Cv) ? double.PositiveInfinity : st.Cv);
+        }
+        double[] sorted = [.. cvs.Order()];
+        double median = sorted[(sorted.Length - 1) / 2];
+        double d = Math.Max(0, Math.Max(0.3 - median, median - 0.5)) / 0.2;
+        log.WriteLine($"C3 median CV over {KeyNodes.Length} star nodes = {D(median)} (min {D(sorted[0])}, max {D(sorted[^1])}); d_C3 = {D(d)}; seeds {seeds.Count}");
+        return (median, d);
+    }
+
+    /// <summary>
     /// One actor (GBR's number 1 for RNG keys, GBR's K_d), constant R&amp;D money <c>S</c> per month, all of it on one ★
     /// node: the node's requires-closure is known, every other frontier node has prio 0, <c>j ≡ 1</c> (no PRIO_J
     /// spread: the only noise left is the hazard draw), no industry (<c>V_d = 0</c>), no rival (<c>known_elsewhere = 0</c>).

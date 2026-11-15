@@ -1,0 +1,103 @@
+{
+  "schema": 1,
+  "experiment": "EXP-0002-c1",
+  "description": "DRAFT (TASK-0055): stage C1 of the T12 calibration (spec v0.27 §8.2 p.1, #231). Points for 'Singularity.Lab c1-stand --manifest this [--point P] --out DIR' (deterministic stand, no seeds: 'seeds' is a formality of the manifest schema); each point -> DIR/pNN/c1_stand.csv, then 'exp0002.py --c1 DIR/pNN/c1_stand.csv'. Walk order = file order: X_SCALE outer, ALPHA inner. Not frozen.",
+  "model": "JetSliceCalib",
+  "ticks": 1,
+  "chunk_size": 1,
+  "threads": 1,
+  "seeds": [
+    0
+  ],
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN"
+  },
+  "series": [
+    {
+      "name": "C1/x_scale=1.0",
+      "params": {
+        "X_SCALE": 1.0
+      },
+      "sweep": {
+        "ALPHA": [
+          0.05,
+          0.08,
+          0.02,
+          0.11,
+          0.15
+        ]
+      }
+    },
+    {
+      "name": "C1/x_scale=0.75",
+      "params": {
+        "X_SCALE": 0.75
+      },
+      "sweep": {
+        "ALPHA": [
+          0.05,
+          0.08,
+          0.02,
+          0.11,
+          0.15
+        ]
+      }
+    },
+    {
+      "name": "C1/x_scale=1.5",
+      "params": {
+        "X_SCALE": 1.5
+      },
+      "sweep": {
+        "ALPHA": [
+          0.05,
+          0.08,
+          0.02,
+          0.11,
+          0.15
+        ]
+      }
+    },
+    {
+      "name": "C1/x_scale=0.5",
+      "params": {
+        "X_SCALE": 0.5
+      },
+      "sweep": {
+        "ALPHA": [
+          0.05,
+          0.08,
+          0.02,
+          0.11,
+          0.15
+        ]
+      }
+    },
+    {
+      "name": "C1/x_scale=2.0",
+      "params": {
+        "X_SCALE": 2.0
+      },
+      "sweep": {
+        "ALPHA": [
+          0.05,
+          0.08,
+          0.02,
+          0.11,
+          0.15
+        ]
+      }
+    }
+  ],
+  "meta": {
+    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.27",
+    "stage": "C1",
+    "budget_points": 40,
+    "points": 25,
+    "loss": "L_C1 = d_C1a^2 + d_C1b^2 + d_C1d^2 + d_C1e^2 (exp0002.py --c1, loss_C1); stop at the first point with L = 0, else the minimum (tie: first)",
+    "status": "[Predl.] grid x_scale x alpha (TASK-0054), needs the Orchestrator's approval",
+    "journal": []
+  }
+}

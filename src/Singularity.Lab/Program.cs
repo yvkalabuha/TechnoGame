@@ -13,7 +13,8 @@ public static class Program
           models                                     list registered models
           selftest                                   built-in self-checks (until tests/ has Lab tests)
           smoke-t4s --out <dir> [--mods <dir>] [--seeds N] [--only c1|c2|c3]  anchor smoke C1(yield)/C2/C3 (TASK-0017)
-          c1-stand --out <dir> [--mods <dir>]       C1 stand, two setups -> c1_stand.csv (TASK-0054, format §6)
+          c1-stand --out <dir> [--mods <dir>] [--manifest <json> [--point P]]  C1 stand -> c1_stand.csv per point (TASK-0054/0055, format §6)
+          c3-stand --out <dir> --manifest <json> [--point P] [--seeds N] [--mods <dir>]  C3 stand of calibration points -> c3_summary.csv
           culture-rules --out <dir> [--mods <dir>] [--only check|gate|holdout|...]  culture_H rule selection (culture-rule-selection.md)
 
         Exit codes: 0 ok, 1 run/matrix failure or self-check failure, 2 usage or manifest error.
@@ -40,6 +41,7 @@ public static class Program
                 "smoke-t4s" => SmokeT4s(opts),
                 "culture-rules" => CultureRules(opts),
                 "c1-stand" => C1Stand(opts),
+                "c3-stand" => C3Stand(opts),
                 _ => throw new UsageException($"Unknown command '{args[0]}'."),
             };
         }
@@ -130,12 +132,43 @@ public static class Program
         return Smoke.SmokeT4s.Run(mods, outDir, seeds, only, Console.Out);
     }
 
+    // Without --manifest: the §8.1 values. With it: every point of the manifest (or --point P), each into <out>/p{P}/ (lab-cli.md, T12 stage C1).
     private static int C1Stand(Options o)
     {
         string outDir = Path.GetFullPath(o.Required("out"));
         string mods = o.Optional("mods") ?? Path.Combine("mods", "core");
+        string? manifest = o.Optional("manifest");
+        int? point = o.Int("point", 0, int.MaxValue);
         o.CheckAllUsed();
-        return Smoke.C1Stand.Run(mods, outDir, Console.Out);
+        if (manifest is null)
+            return point is null ? Smoke.C1Stand.Run(mods, outDir, Console.Out) : throw new UsageException("--point needs --manifest.");
+        foreach (Smoke.StandPoint p in Smoke.StandPoint.FromManifest(manifest, point))
+        {
+            Console.WriteLine(p.Label);
+            int rc = Smoke.C1Stand.Run(mods, Path.Combine(outDir, $"p{p.Index:00}"), Console.Out, p.Industry(new Core.Industry.IndustryParams()));
+            if (rc != 0)
+                return rc;
+        }
+        return 0;
+    }
+
+    // C3 stand of a calibration point (stage C3+C4): the point's K_DIV, THETA_START, H_MAX on the point's seeds (or the first --seeds N of them).
+    private static int C3Stand(Options o)
+    {
+        string outDir = Path.GetFullPath(o.Required("out"));
+        string mods = o.Optional("mods") ?? Path.Combine("mods", "core");
+        string manifest = o.Required("manifest");
+        int? point = o.Int("point", 0, int.MaxValue);
+        int? seeds = o.Int("seeds", 2, 100_000);
+        o.CheckAllUsed();
+        Core.Data.GameData data = Core.Data.ModLoader.Load(mods);
+        foreach (Smoke.StandPoint p in Smoke.StandPoint.FromManifest(manifest, point))
+        {
+            Console.WriteLine(p.Label);
+            IReadOnlyList<ulong> s = seeds is int n ? [.. p.Seeds.Take(n)] : p.Seeds;
+            Smoke.SmokeT4s.RunC3Point(data, p.Knowledge(new Core.Knowledge.KnowledgeParams()), s, Path.Combine(outDir, $"p{p.Index:00}"), Console.Out);
+        }
+        return 0;
     }
 
     private static int CultureRules(Options o)

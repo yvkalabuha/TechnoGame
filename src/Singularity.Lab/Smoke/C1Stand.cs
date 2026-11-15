@@ -36,12 +36,15 @@ internal static class C1Stand
     private const long MatureLastStart = 4096;
     private static readonly Fx6 DevAdmission = Fx6.FromRaw(250_000);
 
-    public static int Run(string modDir, string outDir, TextWriter log)
+    public static int Run(string modDir, string outDir, TextWriter log) => Run(modDir, outDir, log, new IndustryParams());
+
+    /// <summary>One stand run with the capability parameters <paramref name="ip"/> (a calibration point of stage C1: ALPHA, X_SCALE, …; <see cref="StandPoint"/>).</summary>
+    public static int Run(string modDir, string outDir, TextWriter log, IndustryParams ip)
     {
         GameData data = ModLoader.Load(modDir);
         ScenarioData sc = data.Scenario("jet_slice_1945");
         Directory.CreateDirectory(outDir);
-        var line = new ReferenceLine(data, sc);
+        var line = new ReferenceLine(data, sc, ip);
         using var csv = new StreamWriter(Path.Combine(outDir, File));
         csv.WriteLine(Header);
         log.WriteLine($"c1-stand scenario_hash={sc.Hash} data_hash={data.DataHash} G2 superior prc_set={string.Join(' ', line.PrcSet)} af_class={line.AfClass} r_ref={line.RRef}");
@@ -55,7 +58,7 @@ internal static class C1Stand
             ("FULL_E0", PolicyProfile.Adaptive, true, true), ("FULL_T0", PolicyProfile.Adaptive, false, false),
         })
         {
-            var site = new DevSite(data, sc, line, profile, e0, admit);
+            var site = new DevSite(data, sc, line, profile, e0, admit, ip);
             Fx6[][] byMonth = site.Run(DevDoublings);
             devArms.Add((arm, n => byMonth[(int)(n / line.RRefUnits)]));
             log.WriteLine($"DEV {arm}: {site.Describe()}");
@@ -129,13 +132,14 @@ internal static class C1Stand
     {
         private readonly ProductsLayout _l;
         private readonly IndustryLayout _il;
-        private readonly IndustryParams _p = new();
+        private readonly IndustryParams _p;
         private readonly int[] _alts;
         private readonly int[] _pu, _af;
         private readonly int _q;
 
-        public ReferenceLine(GameData data, ScenarioData sc)
+        public ReferenceLine(GameData data, ScenarioData sc, IndustryParams ip)
         {
+            _p = ip;
             _il = IndustryLayout.FromData(data.Nodes, sc, 2, 64);
             _l = ProductsLayout.FromData(data.Nodes, data.ProductClasses, "jet_fighter", _il, 2, sc.StartYear, 33, sc.MaxDesigns);
             _alts = new int[_l.SlotCount];
@@ -226,7 +230,7 @@ internal static class C1Stand
     {
         private readonly ReferenceLine _line;
         private readonly IndustryLayout _l;
-        private readonly IndustryParams _p = new();
+        private readonly IndustryParams _p;
         private readonly bool[] _known;
         private readonly bool[] _inSet;
         private readonly IndustrySystem _ind;
@@ -239,8 +243,9 @@ internal static class C1Stand
         private readonly Fx6 _w, _hcap;
         private readonly int[] _setRows;
 
-        public DevSite(GameData data, ScenarioData sc, ReferenceLine line, PolicyProfile profile, bool effortZero, bool admittedStart)
+        public DevSite(GameData data, ScenarioData sc, ReferenceLine line, PolicyProfile profile, bool effortZero, bool admittedStart, IndustryParams ip)
         {
+            _p = ip;
             _line = line;
             _e0 = effortZero;
             _shares = _pp.SharesByProfile[(int)profile];
