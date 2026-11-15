@@ -1,0 +1,150 @@
+{
+  "schema": 1,
+  "experiment": "HYP-0004-sketch-r2",
+  "description": "HYP-0004 sketch round 2 (docs/simulation/introduction-channel-sketch.md §7.4, pre-registered before the runs): CB / I-C / I-OC / I-OC + pilot choice (ON_ADMITTED = pre-registered, ON = declared before the runs) on the calibration build at the frozen C1 + C3 (p00) point. Decision seeds 30101-30200 ('test/*'); calibration seeds 10001-10100 ('cal/*') are a print only. 'core' = C-B of Core (no variant keys).",
+  "model": "JetSliceCalib",
+  "ticks": 11688,
+  "chunk_size": 1,
+  "threads": 1,
+  "seeds": {
+    "start": 30101,
+    "count": 100
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "ALPHA": 0.05,
+    "X_SCALE": 1.0,
+    "K_DIV": 1.0,
+    "H_MAX": 0.08,
+    "THETA_START": 0.6
+  },
+  "series": [
+    {
+      "name": "test/CB",
+      "seeds": {
+        "start": 30101,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "CB"
+      }
+    },
+    {
+      "name": "test/core",
+      "seeds": {
+        "start": 30101,
+        "count": 100
+      }
+    },
+    {
+      "name": "test/VEXPC",
+      "seeds": {
+        "start": 30101,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "VEXPC"
+      }
+    },
+    {
+      "name": "test/VEXPOC",
+      "seeds": {
+        "start": 30101,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "VEXPOC"
+      }
+    },
+    {
+      "name": "test/VEXPOC+ON_ADMITTED",
+      "seeds": {
+        "start": 30101,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "VEXPOC",
+        "PILOT_CHOICE": "ON_ADMITTED"
+      }
+    },
+    {
+      "name": "test/VEXPOC+ON",
+      "seeds": {
+        "start": 30101,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "VEXPOC",
+        "PILOT_CHOICE": "ON"
+      }
+    },
+    {
+      "name": "cal/CB",
+      "seeds": {
+        "start": 10001,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "CB"
+      }
+    },
+    {
+      "name": "cal/core",
+      "seeds": {
+        "start": 10001,
+        "count": 100
+      }
+    },
+    {
+      "name": "cal/VEXPC",
+      "seeds": {
+        "start": 10001,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "VEXPC"
+      }
+    },
+    {
+      "name": "cal/VEXPOC",
+      "seeds": {
+        "start": 10001,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "VEXPOC"
+      }
+    },
+    {
+      "name": "cal/VEXPOC+ON_ADMITTED",
+      "seeds": {
+        "start": 10001,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "VEXPOC",
+        "PILOT_CHOICE": "ON_ADMITTED"
+      }
+    },
+    {
+      "name": "cal/VEXPOC+ON",
+      "seeds": {
+        "start": 10001,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "VEXPOC",
+        "PILOT_CHOICE": "ON"
+      }
+    }
+  ],
+  "meta": {
+    "hypothesis": "HYP-0004",
+    "decision": "#238 V3",
+    "round": 2,
+    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.30",
+    "params_from": "lab/manifests/EXP-0002-c2.json (C1 + C3 frozen, #239)"
+  }
+}

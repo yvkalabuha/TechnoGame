@@ -31,6 +31,7 @@ internal sealed class SliceObserver
     internal enum Role { None, W, N, Sole }
 
     private readonly SliceSession _s;
+    private readonly bool _pilot;
     private readonly IMetricSink _sink;
     private readonly bool _calib, _full;
     private readonly Dictionary<string, int> _table = new(StringComparer.Ordinal);
@@ -112,8 +113,10 @@ internal sealed class SliceObserver
     internal sealed record ActorMonth(Fx6 Alloy, bool Deficit, Fx6 Ta, bool MoneyNull, bool TwoLines, bool WAfterN, bool MeltsZero,
         Role[] Roles, Fx6[] YMin, int[] ArgP, Fx6?[] LeftIn, Fx6?[] Training, Fx6[] Rate, LineBind[] Bind);
 
-    public SliceObserver(SliceSession s, GameData data, string scenarioId, IMetricSink sink, IReadOnlyList<MetricTableSpec> tables, bool calibration, bool full)
+    public SliceObserver(SliceSession s, GameData data, string scenarioId, IMetricSink sink, IReadOnlyList<MetricTableSpec> tables, bool calibration, bool full,
+        bool pilotChoice = false)
     {
+        _pilot = pilotChoice;
         _s = s;
         _sink = sink;
         _calib = calibration;
@@ -868,6 +871,11 @@ internal sealed class SliceObserver
                     PolicyProfile.Mass => r.Count == 2 ? r.Producible : r.Superior,
                     _ => r.Count == 2 && r.FvProducible is Fx6 fp && fp > r.FvSuperior ? r.Producible : r.Superior,
                 };
+                // HYP-0004 pilot choice (PILOT_CHOICE on): P2/P3 may take superior instead of the profile's variant (Core ProductPresets.Compose);
+                // the check then accepts either, and the table records what was actually composed (column of the variant is unchanged).
+                bool pilotTook = _pilot && av.Profile is PolicyProfile.Mass or PolicyProfile.Adaptive && c.Alts.SequenceEqual(r.Superior);
+                if (pilotTook)
+                    chosen = r.Superior;
                 if (!c.Alts.SequenceEqual(chosen))
                     throw new SliceFormatException($"Month {t} actor {_ids[a]} ({av.Profile}): the compose command is not the profile's choice among the variants (§4.6).");
                 Row("requirements", I(_req++), _ids[a], I(r.Gen), I(t), I(r.Count), F(r.FvSuperior), r.Count == 2 && r.FvProducible is Fx6 f ? F(f) : "");

@@ -181,7 +181,8 @@ public sealed class JetSliceModel : ISessionModel
     {
         SliceSession s = SliceSession.Create(_data, _p.Config);
         IntroCultureRule.Install(s, _p.CultureVariant);
-        var observer = new SliceObserver(s, _data, _p.Config.ScenarioId, sink, MetricTables, _calibration, _p.Full);
+        var observer = new SliceObserver(s, _data, _p.Config.ScenarioId, sink, MetricTables, _calibration, _p.Full,
+            _p.Config.PilotChoice != Singularity.Core.Policy.PilotChoice.Off);
         var calendar = new TickCalendar(s.Date);
         long months = 0;
         while (calendar.TickOfMonth(months) < _ticks)
