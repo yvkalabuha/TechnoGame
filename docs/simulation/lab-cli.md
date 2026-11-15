@@ -14,7 +14,7 @@
 ```
 dotnet src/Singularity.Lab/bin/Release/net10.0/Singularity.Lab.dll <command> ...
 run    --manifest M --seed N --threads T --out DIR [--point P] [--force] [--quiet]
-matrix --manifest M --out DIR [--jobs J] [--timeout SECONDS] [--force]
+matrix --manifest M --out DIR [--jobs J] [--timeout SECONDS] [--force] [--point P] [--seeds N]
 hash   --manifest M [--canonical]
 ```
 Коды выхода: 0 — успех; 1 — прогон/матрица/selftest провалены или непредвиденная ошибка (I/O, баг; сообщение и стек в stderr); 2 — ошибка аргументов, манифеста или отсутствующий входной файл. `--timeout` — предел одного дочернего прогона (по умолчанию 3600 с); по истечении процесс убивается, статус `timeout`. С `--force` каталог прогона очищается перед запуском. Выходные каталоги — в `lab/results/` (в `.gitignore`).
@@ -26,8 +26,8 @@ c3-stand --out DIR --manifest M [--point P] [--seeds N] [--mods <dir>] # ста�
 ```
 - Параметры точки разбираются тем же `SliceParameters.Parse`, что и в `JetSliceCalib` (ключи «К» — `slice-csv-format.md` §3); стенды берут только свои: C1 — `ALPHA`, `X_SCALE`, `DELTA_H`, `C_M`; C3 — `K_DIV`, `THETA_START`, `H_MAX`. Без `--manifest` `c1-stand` считает значения §8.1.
 - **Этап C1** — `lab/manifests/EXP-0002-c1.json` (25 точек, стенд детерминирован, `seeds` — формальность схемы): `c1-stand --manifest lab/manifests/EXP-0002-c1.json --out lab/results/c1` (все точки по порядку файла) или `--point P`; затем для каждой `exp0002.py --c1 lab/results/c1/pNN/c1_stand.csv --json …` (`loss_C1`). Остановка — по правилу спец. §8.2 п.4 (первая точка с `L` = 0 в порядке файла).
-- **Этап C3+C4 и C2** — `lab/manifests/EXP-0002-calib.json`: каждая серия — точки сетки (`matrix --manifest` исполняет все; одна точка — `run --manifest … --point P --seed S`). Точка C3+C4: прогоны точки (100 калибровочных seeds) → `exp0002.py --calib` по каталогу точки (C4) + `c3-stand --manifest … --point P` (C3, seeds точки). Точка C2: `exp0002.py --calib` (C2).
-- Между этапами замороженные значения переносятся в общий `params` манифестов (ревизия с новым `manifest_hash` в `meta.journal`); фаза Б `κ` добавляется сериями после фазы А (`meta.stage_protocol`).
+- **Этапы C3+C4 и C2** — свои манифесты `lab/manifests/EXP-0002-c3c4.json` (фаза А, точки 0…44) и `EXP-0002-c2.json` (точки 0…8); `EXP-0002-calib.json` — базовая точка §8.1 и объявление калибровки (`meta`). Одна точка на её 100 калибровочных seeds: `matrix --manifest lab/manifests/EXP-0002-c2.json --point P --out lab/results/c2-pP` (`--point`/`--seeds N` — выбор точки и первых N seeds; индексы и run id — как у полного манифеста, `matrix.json.selection`), затем `exp0002.py --calib lab/results/c2-pP --point P` (C2; для C3+C4 — C4) и для C3+C4 ещё `c3-stand --manifest lab/manifests/EXP-0002-c3c4.json --point P --out …` (C3). `--calib --point P` берёт только прогоны точки P (`runs.csv` `point`), поэтому годится и общий каталог `matrix` без `--point`.
+- **Заморозка между этапами:** выбранные значения этапа пишутся в общий `params` **более поздних** манифестов этапов (C1 → `c3c4`, `c2`; C3+C4 → `c2`) и `EXP-0002-calib.json` (прогон таблиц контролей §8.2 п.8), ревизия с новым `manifest_hash` в `meta.journal`. Манифест этапа перебирает (`sweep`/`params` серий) только свои ключи, поэтому замороженный ключ никогда не становится одновременно параметром и осью (`Manifest.ReadPoints` это запрещает). Фаза Б `κ` — серии `C3C4-B/rank=r` в `EXP-0002-c3c4.json` по `meta.phase_B`.
 
 ## Манифест (schema 1)
 | Ключ | Обяз. | Смысл |

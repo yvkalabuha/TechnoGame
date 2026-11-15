@@ -8,7 +8,7 @@ public static class Program
         Singularity.Lab — Simulation Lab CLI (TASK-0005)
 
           run    --manifest <json> --seed N --threads T --out <dir> [--point P] [--force] [--quiet]
-          matrix --manifest <json> --out <dir> [--jobs J] [--timeout SECONDS] [--force]
+          matrix --manifest <json> --out <dir> [--jobs J] [--timeout SECONDS] [--force] [--point P] [--seeds N]
           hash   --manifest <json> [--canonical]     print manifest_hash (and canonical form)
           models                                     list registered models
           selftest                                   built-in self-checks (until tests/ has Lab tests)
@@ -103,6 +103,10 @@ public static class Program
         string outDir = Path.GetFullPath(o.Required("out"));
         int jobs = o.Int("jobs", 1, 1024) ?? Environment.ProcessorCount;
         int timeout = o.Int("timeout", 1, int.MaxValue) ?? MatrixRunner.DefaultRunTimeoutSeconds;
+        int? point = o.Int("point", 0, int.MaxValue);
+        int? firstSeeds = o.Int("seeds", 1, int.MaxValue);
+        if (point is not null || firstSeeds is not null)
+            m = m.Select(point, firstSeeds);
         bool force = o.Flag("force");
         o.CheckAllUsed();
         if (Directory.Exists(outDir) && Directory.EnumerateFileSystemEntries(outDir).Any() && !force)

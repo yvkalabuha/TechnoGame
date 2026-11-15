@@ -7,7 +7,7 @@
 ## Изменения v0.5 r9 (TASK-0055, Session v4)
 - §3: `LAYER` принимает `LC`, `LP` (с `CONTROL_TABLES`: кривые `Y_k`/`U_k` и `T_design`/`ρ` того же файла идут в `SliceRunConfig.CapabilityTables`); ключи «К» калибровки T12 — `K_DIV`, `THETA_START`, `H_MAX`, `KAPPA_Q10`, `ALPHA`, `X_SCALE`, `DELTA_H`, `C_M`.
 - §3.1: снято «Session их не принимает».
-- Точки этапов калибровки — серии манифестов `EXP-0002-calib.json` (C3+C4 фаза А, C2) и `EXP-0002-c1.json` (C1); стенды C1/C3 по точке — `c1-stand`/`c3-stand --manifest` (`lab-cli.md`).
+- Точки этапов калибровки — манифесты этапов `EXP-0002-c1.json` (C1, `c1-stand`), `EXP-0002-c3c4.json`, `EXP-0002-c2.json` (каждый остаётся корректным после заморозки предыдущих этапов); `EXP-0002-calib.json` — базовая точка и объявление; одна точка — `matrix --point P`, разбор — `exp0002.py --calib DIR --point P`; стенды C1/C3 по точке — `c1-stand`/`c3-stand --manifest` (`lab-cli.md`).
 
 ## Изменения v0.5 r8 (TASK-0054, подготовка T12)
 - **`CONTROL_TABLES`** (§3, §3.1): формат файла `control_tables/1` задан; Lab читает его ровно при `LAYER = LK` и передаёт `LkTables`; `LAYER = LC`/`LP` отклоняются с причиной (Session v3 не несёт таблиц `L_C`/`L_P`); хеш файла — `model_info.control_tables_hash`.

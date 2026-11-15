@@ -554,15 +554,22 @@ def _stream(path, required):
     return gen()
 
 
-def load_v05(D, d, pre):
-    """a40, a40_c_months, tooling_ledger, lines, fleet_cmd, licences (format v0.5 r6 §4.9-4.14)."""
+def load_v05(D, d, pre, only_known=False):
+    """a40, a40_c_months, tooling_ledger, lines, fleet_cmd, licences (format v0.5 r6 §4.9-4.14). only_known: rows of runs not
+    in D.runs are skipped instead of being an error (--calib --point: the other points of the matrix directory)."""
+    def _stream_k(path, cols):
+        rows = _stream(path, cols)
+        if rows is None or not only_known:
+            return rows
+        return (r for r in rows if pre + r["run"] in D.runs)
+
     def rid_of(fname, r):
         rid = pre + r["run"]
         if rid not in D.runs:
             raise InputError("%s: unknown run %s" % (fname, r["run"]))
         return rid
 
-    rows = _stream(os.path.join(d, "a40.csv"), A40_COLS)
+    rows = _stream_k(os.path.join(d, "a40.csv"), A40_COLS)
     if rows is not None:
         D.present.add("a40")
         for r in rows:
@@ -570,14 +577,14 @@ def load_v05(D, d, pre):
                 "t": int(r["t"]), "actor": r["actor"], "design": int(r["design"]), "g_p": int(r["g_p"]),
                 "profile": int(r["profile"]), "branch": r["branch"], "cls": r["cls"], "t_launch": _oi(r["t_launch"]),
                 "force": int(r["force"])})
-    rows = _stream(os.path.join(d, "a40_c_months.csv"), A40_C_COLS)
+    rows = _stream_k(os.path.join(d, "a40_c_months.csv"), A40_C_COLS)
     if rows is not None:
         D.present.add("a40c")
         for r in rows:
             D.a40c[rid_of("a40_c_months.csv", r)][(int(r["t_fire"]), r["actor"], int(r["design"]))].append({
                 "t": int(r["t"]), "min_yield": int(r["min_yield"]), "left": _oi(r["left"]),
                 "training": _oi(r["training"]), "w_after_n": int(r["w_after_n"])})
-    rows = _stream(os.path.join(d, "tooling_ledger.csv"), LEDGER_COLS)
+    rows = _stream_k(os.path.join(d, "tooling_ledger.csv"), LEDGER_COLS)
     if rows is not None:
         D.present.add("ledger")
         for r in rows:
@@ -601,21 +608,21 @@ def load_v05(D, d, pre):
                 g["bad"] += 1
                 if len(g["bad_ex"]) < 3:
                     g["bad_ex"].append("t=%s %s: %s" % (r["t"], a, ", ".join(viol)))
-    rows = _stream(os.path.join(d, "lines.csv"), LINES_COLS)
+    rows = _stream_k(os.path.join(d, "lines.csv"), LINES_COLS)
     if rows is not None:
         D.present.add("lines")
         for r in rows:
             D.lines[rid_of("lines.csv", r)].append((
                 int(r["t"]), r["actor"], int(r["design"]), int(r["g_p"]), r["role"], int(r["close"]), r["close_rule"],
                 _oi(r["left_share"]), int(r["w_after_n"])))
-    rows = _stream(os.path.join(d, "fleet_cmd.csv"), FLEET_COLS)
+    rows = _stream_k(os.path.join(d, "fleet_cmd.csv"), FLEET_COLS)
     if rows is not None:
         D.present.add("fleet")
         for r in rows:
             D.fleet[rid_of("fleet_cmd.csv", r)].append({
                 "t": int(r["t"]), "actor": r["actor"], "kind": r["kind"], "gen_d": int(r["gen_d"]),
                 "gen_line": int(r["gen_line"]), "g_front": int(r["g_front"]), "bind": r["line_bind"]})
-    rows = _stream(os.path.join(d, "licences.csv"), LICENCES_COLS)
+    rows = _stream_k(os.path.join(d, "licences.csv"), LICENCES_COLS)
     if rows is not None:
         D.present.add("licences")
         for r in rows:
@@ -2101,12 +2108,19 @@ def median_low(xs):
     return statistics.median_low(xs) if xs else None
 
 
-def calib_tables(d, cfg):
+def calib_tables(d, cfg, point=None):
+    """point: only the runs of that matrix point (runs.csv column `point`; T12: one calibration point of a stage manifest,
+    TASK-0055 Codex r2); None = every run of the directory."""
     bad = calib_header_check(d, cfg)
     if bad:
         raise InputError("calibration build exposes leadership output: %s" % bad)
     c = cfg["calib"]
-    runs = {r["run"]: r for r in _read_csv(os.path.join(d, "runs.csv"), RUNS_COLS) if r["status"] == "ok"}
+    rows = _read_csv(os.path.join(d, "runs.csv"), RUNS_COLS + ([] if point is None else ["point"]))
+    if point is not None:
+        rows = [r for r in rows if r["point"] == str(point)]
+        if not rows:
+            raise InputError("runs.csv: no run of point %s" % point)
+    runs = {r["run"]: r for r in rows if r["status"] == "ok"}
     nt = collections.defaultdict(dict)
     for r in _read_csv(os.path.join(d, "node_times.csv"), NODE_TIMES_COLS):
         if r["run"] in runs:
@@ -2312,7 +2326,7 @@ def calib_tables(d, cfg):
     for rid, r in runs.items():
         D.runs[rid] = {"run": rid, "series": "calib-P0", "seed": int(r["seed"]), "threads": int(r["threads"]),
                        "status": "ok", "golden": r["golden_hash"]}
-    load_v05(D, d, "")
+    load_v05(D, d, "", only_known=point is not None)
     c0 = copy.deepcopy(cfg)
     c0["a40"]["main_series"] = ["calib-P0"]     # L-O0 / L-C0 on calibration seeds (format §5: P0, not leadership)
     p0 = {"a40": a40_prints(D, c0), "ledger": ledger_prints(D, c0)}
@@ -2694,6 +2708,7 @@ def main(argv=None):
     ap.add_argument("--out")
     ap.add_argument("--json")
     ap.add_argument("--calib")
+    ap.add_argument("--point", type=int, help="with --calib: only the runs of this matrix point (runs.csv `point`)")
     ap.add_argument("--tables-out", help="with --calib: write the CONTROL_TABLES file (format §3.1, control_tables/1)")
     ap.add_argument("--c1", help="c1_stand.csv (format §6): C1a, C1b, C1d, C1e and the Wright P0 check")
     ap.add_argument("--dump-config", action="store_true")
@@ -2729,7 +2744,7 @@ def main(argv=None):
                 fmt(r["C1e"]["d"]), "OK" if r["wright_P0"]["ok"] else "НАРУШЕНИЕ", [round(x, 4) for x in r["wright_P0"]["per_doubling"]],
                 ", ".join(r["arms"]))
         elif a.calib:
-            r = calib_tables(a.calib, cfg)
+            r = calib_tables(a.calib, cfg, a.point)
             if a.tables_out:
                 if r["control_tables_file"] is None:
                     raise InputError("no CONTROL_TABLES file: %s" % r["control_tables_error"])

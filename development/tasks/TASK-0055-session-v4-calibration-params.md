@@ -86,3 +86,26 @@ created: 2026-11-15
 - `lab-cli.md`: раздел «Точки калибровки T12».
 
 **Тесты:** Lab selftest 35/35, Architecture.Tests 97/97 (стенды помечены `SingleLayerStand`), Lab.Tests 18/18. Session.Tests не запускал: их правит developer. Python не менялся. zone_check: вне зоны только `CURRENT_STATE.md` (правка Orchestrator).
+### simulation-engineer, 2026-11-15 — Codex r2 (high ×2), TASK-0055
+
+**(1) Протокол заморозки — этапы разведены по своим манифестам** (из двух вариантов этот проще).
+- `EXP-0002-c3c4.json`: фаза А, точки 0…44 (`manifest_hash` `4289e0cf…`). Фаза Б описана в `meta.phase_B`: серии `C3C4-B/rank=r` со `sweep KAPPA_Q10`.
+- `EXP-0002-c2.json`: точки 0…8 (`a37d9a02…`).
+- `EXP-0002-c1.json`: без изменений (`8544290a…`).
+- `EXP-0002-calib.json`: только базовая точка §8.1 и объявление калибровки в `meta` (`680676e8…`); в `meta.stage_manifests` и `meta.stage_protocol` — ссылки на манифесты этапов и правило заморозки.
+- Правило: выбранные значения этапа пишутся в общий `params` только более поздних манифестов (C1 → c3c4, c2; C3+C4 → c2) и `EXP-0002-calib.json` (прогон таблиц §8.2 п.8). Каждый манифест перебирает только свои ключи, поэтому замороженный ключ не может стать одновременно параметром и осью (`Manifest.ReadPoints`).
+- [Факт] Копии с «замороженными» ключами разбираются:
+  - c2 + ALPHA, X_SCALE, K_DIV, THETA_START, H_MAX, KAPPA_Q10 — 9 точек, прогон точки 4 seed 10001 ok;
+  - c3c4 + ALPHA, X_SCALE + серия фазы Б — 49 точек.
+- Проверка `SliceChecks` «slice: stage manifests stay valid after freezing…» замораживает ключи в настоящих манифестах этапов и разбирает их заново.
+
+**(2) Каталог одной точки на 100 seeds и разбор одной точки.**
+- Lab: `matrix --manifest M --point P [--seeds N]` (`Manifest.Select`). Индекс точки, `manifest_hash` и run id остаются как у полного манифеста; выбор записывается в `matrix.json.selection`.
+- `exp0002.py --calib DIR --point P` берёт только прогоны точки P (колонка `point` в `runs.csv`); строки других точек в `a40`/леджере пропускаются, а не считаются ошибкой. Значит, годится и общий каталог `matrix`. Несуществующая точка → ошибка ввода.
+- Документировано: `lab-cli.md`, раздел «Точки калибровки T12»; формат r9.
+- [Факт: `lab/results/t12prep-0055r2`]
+  - `matrix --manifest EXP-0002-c2.json --point 3 --seeds 4` → 4 прогона, `selection` «point=3 seeds=4»; `--calib --point 3` → seeds 4, `d_C2` 1, `d_order` 1, C4 G4 0,75.
+  - Общий каталог (`--seeds 3`, 27 прогонов): `--point 3` и `--point 0` дают по 3 seeds и разные `control_tables_hash` (`d2791124…` / `3bba2592…`).
+  - golden точки 3 в обоих каталогах совпадают.
+
+**Тесты:** Python `CalibPoint`: фильтр точки, чужие строки, ошибка для несуществующей точки. Новая проверка `SliceChecks` нашла дефект `matrix --point`: ширина run id зависела от числа отобранных точек (`p3` вместо `p03` у 45 точек). Исправлено — `Manifest.FullPointCount`, `RunExecutor.MakeRunId` берёт ширину по полному манифесту; `matrix --manifest EXP-0002-c3c4.json --point 3 --seeds 2` → `p03-s10001-t1`, `p03-s10002-t1`, `--calib --point 3` ok. Lab selftest 36/36, Lab.Tests 18/18, Architecture 97/97, Python `test_exp0002` + `--selftest` 40/40 — зелёные. [Fact]-строка новой проверки в `tests/Singularity.Lab.Tests` — вне зоны (developer).

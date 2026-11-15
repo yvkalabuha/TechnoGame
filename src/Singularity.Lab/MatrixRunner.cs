@@ -245,6 +245,8 @@ public static class MatrixRunner
         foreach (int t in m.Threads) w.WriteNumberValue(t);
         w.WriteEndArray();
         w.WriteNumber("points", m.Points.Count);
+        if (m.Selection is string sel)
+            w.WriteString("selection", sel);
         w.WriteNumber("runs", jobs.Count);
         w.WriteNumber("runs_ok", results.Count(r => r.Status == "ok"));
         if (goldenSet is null) w.WriteNull("golden_set_hash"); else w.WriteString("golden_set_hash", goldenSet);

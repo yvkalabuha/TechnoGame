@@ -1,0 +1,122 @@
+{
+  "schema": 1,
+  "experiment": "EXP-0002-c3c4",
+  "description": "DRAFT (TASK-0055): stage C3+C4 of the T12 calibration (spec v0.27 §8.2 p.4, #177); model JetSliceCalib. Phase A = 45 points (series 'C3C4-A/k=*', walk order = file order: K_DIV outer, H_MAX, THETA_START 0.6/0.3/0.9). Phase B (KAPPA_Q10) series are appended by the rule after phase A. A point: 'matrix --manifest this --point P' (its 100 calibration seeds) -> 'exp0002.py --calib DIR --point P' (C4) + 'c3-stand --manifest this --point P' (C3). Not frozen.",
+  "model": "JetSliceCalib",
+  "ticks": 11688,
+  "chunk_size": 1,
+  "threads": 1,
+  "seeds": {
+    "start": 10001,
+    "count": 100
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN"
+  },
+  "series": [
+    {
+      "name": "C3C4-A/k=1.0",
+      "params": {
+        "K_DIV": 1.0
+      },
+      "sweep": {
+        "H_MAX": [
+          0.08,
+          0.12,
+          0.16
+        ],
+        "THETA_START": [
+          0.6,
+          0.3,
+          0.9
+        ]
+      }
+    },
+    {
+      "name": "C3C4-A/k=1.5",
+      "params": {
+        "K_DIV": 1.5
+      },
+      "sweep": {
+        "H_MAX": [
+          0.08,
+          0.12,
+          0.16
+        ],
+        "THETA_START": [
+          0.6,
+          0.3,
+          0.9
+        ]
+      }
+    },
+    {
+      "name": "C3C4-A/k=2.0",
+      "params": {
+        "K_DIV": 2.0
+      },
+      "sweep": {
+        "H_MAX": [
+          0.08,
+          0.12,
+          0.16
+        ],
+        "THETA_START": [
+          0.6,
+          0.3,
+          0.9
+        ]
+      }
+    },
+    {
+      "name": "C3C4-A/k=2.5",
+      "params": {
+        "K_DIV": 2.5
+      },
+      "sweep": {
+        "H_MAX": [
+          0.08,
+          0.12,
+          0.16
+        ],
+        "THETA_START": [
+          0.6,
+          0.3,
+          0.9
+        ]
+      }
+    },
+    {
+      "name": "C3C4-A/k=3.0",
+      "params": {
+        "K_DIV": 3.0
+      },
+      "sweep": {
+        "H_MAX": [
+          0.08,
+          0.12,
+          0.16
+        ],
+        "THETA_START": [
+          0.6,
+          0.3,
+          0.9
+        ]
+      }
+    }
+  ],
+  "meta": {
+    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.27",
+    "stage": "C3+C4",
+    "budget_points": 60,
+    "loss": "L_stage = d_C3^2 + d_C4,G2^2 + d_C4,G3^2 + d_C4,G4^2 (spec §8.2 p.3-4)",
+    "frozen_from": [
+      "C1: ALPHA, X_SCALE"
+    ],
+    "protocol": "Frozen values of the EARLIER stages go into the top-level 'params' of this manifest (a revision with a new manifest_hash, recorded in 'journal'); the series sweep only this stage's own keys, so the manifest stays valid after every freeze. Spec v0.27 §8.2 p.4; lab-cli.md 'Точки калибровки T12'.",
+    "phase_B": "if no phase-A point has L_stage = 0: series 'C3C4-B/rank=r' (r = 1..3, the best phase-A points by L_stage, tie: walk order) with params {K_DIV, H_MAX, THETA_START} of that point and sweep {KAPPA_Q10: [0, 256, 768, 1024]}, appended before any phase-B evaluation",
+    "journal": []
+  }
+}

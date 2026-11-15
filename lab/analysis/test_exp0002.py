@@ -317,6 +317,35 @@ class CalibSegmentB232(unittest.TestCase):
         self.assertEqual(r["T_SK"]["tiers"]["4"]["B_min"], 200000)
 
 
+class CalibPoint(unittest.TestCase):
+    """--calib --point P (TASK-0055 Codex r2): only the runs of matrix point P, other points' rows are skipped, not errors."""
+
+    def test_point_filter(self):
+        with tempfile.TemporaryDirectory() as d:
+            runs, nt, a40 = [], [], []
+            for pt, yv in ((0, 100000), (1, 900000)):
+                for s in range(1, 3):
+                    rid = "p%d-s%d-t1" % (pt, s)
+                    runs.append([rid, "calib", 10000 + s, 1, "ok", "h", pt])
+                    nt.append([rid, "USA", 40, 5, "", "", "", 0])
+                    a40.append([rid, 300, "USA", 1, 4, 1, "SUPERIOR", "O", "PROCESSES", 240, "", 0, 0, 0])
+            write(d, "runs.csv", X.RUNS_COLS + ["point"], runs)
+            write(d, "calib_summary.csv", X.CALIB_SUMMARY_COLS, [[r[0], 1, 1, 1, 1, 1] for r in runs])
+            write(d, "node_times.csv", X.NODE_TIMES_COLS, nt)
+            write(d, "gen_times.csv", X.GEN_TIMES_COLS, [])
+            write(d, "prc_month.csv", X.PRC_MONTH_COLS,
+                  [[r[0], 6, "USA", 40, 1, 1, 100000 if r[6] == 0 else 900000, X.FX, 0] for r in runs])
+            write(d, "actor_month.csv", X.ACTOR_MONTH_COLS, [])
+            write(d, "a40.csv", X.A40_COLS, a40)
+            r0 = X.calib_tables(d, CFG, point=0)
+            r1 = X.calib_tables(d, CFG, point=1)
+            with self.assertRaises(X.InputError):
+                X.calib_tables(d, CFG, point=7)
+        self.assertEqual((r0["seeds"], r1["seeds"]), (2, 2))
+        self.assertEqual(r0["control_tables"]["Y"]["4"][1], 100000)
+        self.assertEqual(r1["control_tables"]["Y"]["4"][1], 900000)
+
+
 class CalibCodexR1(unittest.TestCase):
     """Codex round 1 (TASK-0053): tau = 0 kept whatever `known` says; C2 keeps pairs in use but not mastered at the
     start; d = 1 by the share of pairs WITHOUT t_first."""

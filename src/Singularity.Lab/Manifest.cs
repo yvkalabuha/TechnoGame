@@ -41,6 +41,33 @@ public sealed class Manifest
 
     public int RunCount => Points.Sum(p => p.Seeds.Count) * Threads.Count;
 
+    /// <summary>
+    /// The same manifest (hash, source, everything) restricted to one point and/or the first <paramref name="firstSeeds"/> seeds of each point:
+    /// <c>matrix --point P [--seeds N]</c> (T12, one calibration point; TASK-0055). Point indices are kept, so run ids and the child
+    /// <c>run --point</c> are those of the full manifest; matrix.json records the selection.
+    /// </summary>
+    public Manifest Select(int? point, int? firstSeeds)
+    {
+        List<MatrixPoint> points = [.. Points.Where(p => point is null || p.Index == point)];
+        if (points.Count == 0)
+            throw new ManifestException($"The manifest has no point {point} ({Points.Count} points).");
+        if (firstSeeds is int n)
+            points = [.. points.Select(p => p with { Seeds = [.. p.Seeds.Take(n)] })];
+        return new Manifest
+        {
+            SourcePath = SourcePath, BaseDirectory = BaseDirectory, CanonicalText = CanonicalText, Hash = Hash, Experiment = Experiment,
+            Model = Model, Ticks = Ticks, ChunkSize = ChunkSize, Seeds = Seeds, Threads = Threads, DataFiles = DataFiles, Points = points,
+            FullPointCount = FullPointCount ?? Points.Count,
+            Selection = $"point={point?.ToString(CultureInfo.InvariantCulture) ?? "all"} seeds={firstSeeds?.ToString(CultureInfo.InvariantCulture) ?? "all"}",
+        };
+    }
+
+    /// <summary>Points of the whole manifest when this one is a <see cref="Select"/>-ion (run ids keep their width); null for a whole manifest.</summary>
+    public int? FullPointCount { get; init; }
+
+    /// <summary>Null for a whole manifest; else what <see cref="Select"/> kept (written to matrix.json).</summary>
+    public string? Selection { get; init; }
+
     public static Manifest Load(string path)
     {
         string full = Path.GetFullPath(path);

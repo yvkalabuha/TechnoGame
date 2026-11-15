@@ -42,6 +42,7 @@ public static class SliceChecks
         ("slice: eng_short_months counts months at one bureau, not at any bureau", EngShortOneBureau),
         ("slice: licence track — replace, lapse, resume without a purchase (DEBT-0032)", LicenceTrack),
         ("slice: control tables — CONTROL_TABLES file → LkTables, hash in model_info, bad files rejected (TASK-0054)", () => ControlTablesFile(tmp)),
+        ("slice: stage manifests stay valid after freezing; matrix --point/--seeds select one point (TASK-0055)", () => StageManifests(tmp)),
         ("slice: design capacity — AI design commands, commands without a design and slots used are counted (TASK-0054)", () => DesignCapacity(tmp)),
         ("slice: calibration points — one point of each stage C1, C3+C4, C2 and the L_C/L_P layers run; K keys change the run (TASK-0055)", () => CalibrationPoints(tmp)),
         ("slice: switches — FORCE, START PERT/SYM, CHANNELS, GRID, FLEET_ARM, SALE_ARM change the run (DEBT-0032)", () => Switches(tmp)),
@@ -415,7 +416,7 @@ public static class SliceChecks
         return main.Ok && main.GoldenHash != r.GoldenHash ? null : "the L_K run has the golden of main";
     }
 
-    // TASK-0055: one point of each calibration stage (EXP-0002-calib.json) and the L_C/L_P layers of the same CONTROL_TABLES file are executable;
+    // TASK-0055: one point of each calibration stage (stage manifests EXP-0002-c1/c3c4/c2.json) and the L_C/L_P layers of the same CONTROL_TABLES file are executable;
     // each K key of the point moves the golden, the L_C/L_P run differs from main and from the other layer.
     private static string? CalibrationPoints(string tmp)
     {
@@ -438,6 +439,49 @@ public static class SliceChecks
                 return $"{name}: {r.Error}";
             if (!seen.Add(r.GoldenHash ?? ""))
                 return $"{name}: the golden equals that of main or of another point";
+        }
+        return null;
+    }
+
+    // TASK-0055 Codex r2: the stage manifests stay valid after a freeze — the frozen keys of the earlier stages written into the top-level params
+    // never meet a sweep axis of the stage — and Select keeps one point with the full manifest's index, hash and run ids (matrix --point P --seeds N).
+    private static string? StageManifests(string tmp)
+    {
+        string? repo = null;
+        for (var d = new DirectoryInfo(AppContext.BaseDirectory); d is not null && repo is null; d = d.Parent)
+        {
+            if (File.Exists(Path.Combine(d.FullName, "Singularity.sln")))
+                repo = d.FullName;
+        }
+        if (repo is null)
+            return "repository root not found";
+        var frozen = new Dictionary<string, string>
+        {
+            ["EXP-0002-c3c4"] = "\"ALPHA\": 0.08, \"X_SCALE\": 1.5",
+            ["EXP-0002-c2"] = "\"ALPHA\": 0.08, \"X_SCALE\": 1.5, \"K_DIV\": 2, \"THETA_START\": 0.3, \"H_MAX\": 0.12, \"KAPPA_Q10\": 768",
+        };
+        foreach ((string name, string keys) in frozen.OrderBy(x => x.Key, StringComparer.Ordinal))
+        {
+            string path = Path.Combine(repo, "lab", "manifests", name + ".json");
+            Manifest full = Lab.Manifest.Load(path);
+            using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(path));
+            string pars = doc.RootElement.GetProperty("params").GetRawText().TrimEnd().TrimEnd('}') + ", " + keys + "}";
+            string text = File.ReadAllText(path).Replace(doc.RootElement.GetProperty("params").GetRawText(), pars, StringComparison.Ordinal);
+            Manifest m;
+            try
+            {
+                m = Lab.Manifest.Parse(text, Path.Combine(tmp, name + "-frozen.json"));
+            }
+            catch (ManifestException e)
+            {
+                return $"{name} after freezing: {e.Message}";
+            }
+            if (m.Points.Count != full.Points.Count || m.Hash == full.Hash)
+                return $"{name}: frozen manifest has {m.Points.Count} points (want {full.Points.Count}) or the same hash";
+            Manifest one = full.Select(3, 2);
+            if (one.Points.Count != 1 || one.Points[0].Index != 3 || one.Points[0].Seeds.Count != 2 || one.Hash != full.Hash
+                || RunExecutor.MakeRunId(one, 3, one.Points[0].Seeds[0], 1) != RunExecutor.MakeRunId(full, 3, one.Points[0].Seeds[0], 1))
+                return $"{name}: Select(3, 2) does not keep one point with the index, hash and run id of the full manifest";
         }
         return null;
     }

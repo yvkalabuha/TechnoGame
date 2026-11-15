@@ -18,7 +18,8 @@ public static class RunExecutor
 
     public static string MakeRunId(Manifest m, int point, ulong seed, int threads)
     {
-        int width = Math.Max(1, (m.Points.Count - 1).ToString(CultureInfo.InvariantCulture).Length);
+        // The width of the full manifest's point count, also for a Select-ed one (matrix --point): run ids never depend on the selection.
+        int width = Math.Max(1, ((m.FullPointCount ?? m.Points.Count) - 1).ToString(CultureInfo.InvariantCulture).Length);
         return $"p{point.ToString(CultureInfo.InvariantCulture).PadLeft(width, '0')}-s{seed.ToString(CultureInfo.InvariantCulture)}-t{threads.ToString(CultureInfo.InvariantCulture)}";
     }
 
