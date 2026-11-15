@@ -251,10 +251,10 @@ public class SeriesSwitchTests
     [Theory]
     [InlineData(LayerControl.Lc)]
     [InlineData(LayerControl.Lp)]
-    public void Layer_LcAndLp_AreRefusedUntilTheControlTablesCanBeGiven(LayerControl layer)
+    public void Layer_LcAndLp_AreRefusedWithoutTheirTables(LayerControl layer)
     {
-        var e = Assert.Throws<InvalidOperationException>(() => SliceTestData.Create(Base() with { Layer = layer }));
-        Assert.Contains("control tables", e.Message);
+        var e = Assert.Throws<ArgumentException>(() => SliceTestData.Create(Base() with { Layer = layer }));
+        Assert.Contains("CapabilityTables", e.Message);
         Assert.Equal(4, (int)LayerControl.Lc);
         Assert.Equal(5, (int)LayerControl.Lp);
     }

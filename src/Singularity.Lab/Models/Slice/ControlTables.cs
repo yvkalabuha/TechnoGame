@@ -14,7 +14,7 @@ namespace Singularity.Lab.Models.Slice;
 /// layer controls of spec §6.1, written by <c>exp0002.py --calib … --tables-out</c> from the calibration build. Only integers (Fx6 raw values
 /// and months), canonical JSON (sorted keys, no whitespace), so <see cref="Sha256"/> of the bytes is <c>control_tables_hash</c> in Python and
 /// here alike. <see cref="Lk"/> goes to the Session (<c>LAYER = LK</c>); <see cref="Lc"/> and the <c>L_P</c> tables are read and checked, but the
-/// Session cannot take them yet (SliceRunConfig carries no L_C/L_P tables: <c>LAYER = LC/LP</c> is refused until it does).
+/// Session takes them with <c>LAYER = LC/LP</c> (<c>CapabilityControlTables</c>, test API v4).
 /// </summary>
 public sealed class ControlTables
 {

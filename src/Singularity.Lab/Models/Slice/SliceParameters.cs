@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Collections.Immutable;
+using Singularity.Core.Industry;
 using Singularity.Core.Policy;
 using Singularity.Kernel;
 using Singularity.Session;
@@ -14,9 +16,9 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
     /// <summary>Keys of §3 (ordinal order). <c>detail</c> is a key of <c>JetSlice</c> only.</summary>
     public static readonly string[] Keys =
     [
-        "CHANNELS", "CONTROL_TABLES", "DERIV", "EFFORT_SHARE", "FIX_A", "FIX_E", "FIX_K", "FLEET_ARM", "FLEET_LINE_COND", "FORCE", "GRID",
-        "LAYER", "LIC_KNOWS", "LIC_OFF", "LINE_CLOSE", "POOL_ORDER", "PROFILE_CELL", "SALE_ARM", "START", "T6D_OFF",
-        "TOOLING_H_HI", "TOOLING_H_HI_CONTROL", "TOOLING_H_LO", "TOOLING_M_LEAD", "TOOLING_RHO_MAX", "TOOLING_TARGET", "detail",
+        "ALPHA", "C_M", "CHANNELS", "CONTROL_TABLES", "DELTA_H", "DERIV", "EFFORT_SHARE", "FIX_A", "FIX_E", "FIX_K", "FLEET_ARM", "FLEET_LINE_COND", "FORCE", "GRID", "H_MAX",
+        "K_DIV", "KAPPA_Q10", "LAYER", "LIC_KNOWS", "LIC_OFF", "LINE_CLOSE", "POOL_ORDER", "PROFILE_CELL", "SALE_ARM", "START", "T6D_OFF",
+        "TOOLING_H_HI", "TOOLING_H_HI_CONTROL", "TOOLING_H_LO", "TOOLING_M_LEAD", "TOOLING_RHO_MAX", "TOOLING_TARGET", "THETA_START", "X_SCALE", "detail",
     ];
 
     /// <summary>Substrings no column (and no parameter of runs.csv) of the calibration build may contain (spec §8.2 п. 2, format §5).</summary>
@@ -33,13 +35,11 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
             if (calibration && CalibrationForbidden.Any(s => kv.Key.Contains(s, StringComparison.OrdinalIgnoreCase)))
                 throw new ParamException($"Parameter '{kv.Key}' may not be passed to the calibration build (spec §8.2 п. 2: forbidden substring).");
         }
-        // CONTROL_TABLES (format §3.1, TASK-0054) goes exactly with LAYER = LK. L_C and L_P read the same file, but the Session takes no L_C/L_P
-        // tables yet (SliceRunConfig v3 has only LkTables): LC/LP are refused here with the reason instead of failing inside the world.
+        // CONTROL_TABLES (format §3.1, TASK-0054/0055) goes exactly with LAYER = LK, LC or LP: LK takes the schedule tables, LC and LP the
+        // curves and T_design/rho of the same file (the model factory passes them to the Session).
         string layer = p.GetString("LAYER", "FULL");
-        if (layer is "LC" or "LP")
-            throw new ParamException($"LAYER = {layer}: the Session (SliceRunConfig, test API v{SliceSession.TestApiVersion}) carries no L_C/L_P control tables yet; the CONTROL_TABLES file has them (format §3.1).");
-        if ((layer == "LK") != p.Contains("CONTROL_TABLES"))
-            throw new ParamException("CONTROL_TABLES is given exactly with LAYER = LK (slice-csv-format.md §3).");
+        if ((layer is "LK" or "LC" or "LP") != p.Contains("CONTROL_TABLES"))
+            throw new ParamException("CONTROL_TABLES is given exactly with LAYER = LK, LC or LP (slice-csv-format.md §3).");
         string? tables = p.Contains("CONTROL_TABLES") ? p.GetString("CONTROL_TABLES") : null;
 
         var defaults = new ToolingTargetSpec();
@@ -118,8 +118,18 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
                 "LK" => LayerControl.Lk,
                 "LK0" => LayerControl.Lk0,
                 "LC0" => LayerControl.Lc0,
+                "LC" => LayerControl.Lc,
+                "LP" => LayerControl.Lp,
                 _ => throw Bad("LAYER", v),
             }),
+            CostDivisor = Fx6.FromRaw(p.GetFx6Raw("K_DIV", Fx6.One.Raw)),
+            ThetaStart = Optional(p, "THETA_START"),
+            HMax = Optional(p, "H_MAX"),
+            KappaQ10 = p.Contains("KAPPA_Q10") ? checked((int)p.GetLong("KAPPA_Q10")) : null,
+            Alpha = Optional(p, "ALPHA"),
+            XHalfByTier = XHalf(p),
+            DeltaH = Optional(p, "DELTA_H"),
+            CM = Optional(p, "C_M"),
             Grid = Enum(p, "GRID", "MID_MID_MID", Grid),
             EffortShare = Enum(p, "EFFORT_SHARE", "X1", v => v switch
             {
@@ -145,6 +155,19 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
             _ => throw Bad("detail", v),
         });
         return new SliceParameters(config, force, full, tables);
+    }
+
+    private static Fx6? Optional(ParamSet p, string key) => p.Contains(key) ? Fx6.FromRaw(p.GetFx6Raw(key)) : null;
+
+    // X_SCALE (calibration stage C1): X½ of tiers 3, 4, 5 times the factor, their ratio 1 : 4 : 12,5 kept; floor on the raw value.
+    private static ImmutableArray<Fx6> XHalf(ParamSet p)
+    {
+        if (!p.Contains("X_SCALE"))
+            return default;
+        Fx6 scale = Fx6.FromRaw(p.GetFx6Raw("X_SCALE"));
+        if (scale <= Fx6.Zero)
+            throw new ParamException("X_SCALE must be positive.");
+        return [.. new IndustryParams().XHalfByTier.Select(x => x * scale)];
     }
 
     private static SliceChannels Channels(ParamSet p)

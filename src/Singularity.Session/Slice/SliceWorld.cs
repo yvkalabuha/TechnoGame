@@ -33,12 +33,14 @@ internal sealed class SliceWorld
 
     public SliceWorld(GameData data, SliceRunConfig config)
     {
-        if (config.Layer is LayerControl.Lc or LayerControl.Lp)
-            throw new InvalidOperationException($"Layer control {config.Layer} needs the control tables (curves Y_k, U_k; T_design, rho) of T12, and SliceRunConfig does not carry them yet.");
         if (!Enum.IsDefined(config.Layer))
             throw new InvalidOperationException($"Layer control {(int)config.Layer} is not defined.");
         if ((config.Layer == LayerControl.Lk) != (config.LkTables is not null))
             throw new ArgumentException("LkTables are needed exactly with Layer = Lk.", nameof(config));
+        if ((config.Layer is LayerControl.Lc or LayerControl.Lp) != (config.CapabilityTables is not null))
+            throw new ArgumentException("CapabilityTables are needed exactly with Layer = Lc or Lp.", nameof(config));
+        if (config.CapabilityTables is { } cap)
+            ValidateCapabilityTables(cap);
         // The tables are copied: a caller changing its arrays later must not change a running world.
         Config = config.LkTables is { } src ? config with { LkTables = CopyTables(src) } : config;
         Data = data;
@@ -55,6 +57,8 @@ internal sealed class SliceWorld
         KnowledgeParams kp = new();
         IndustryParams ip = new();
         ProductsParams pp = new();
+        // «К» first: a channel ablation (α = 0) and the grid (h_max × 0,5 / 2) act on the calibrated value.
+        (kp, ip, pp) = ApplyCalibration(config, kp, ip, pp);
         (kp, ip, pp) = ApplyChannels(config.Channels, kp, ip, pp);
         (kp, ip) = ApplyGrid(config.Grid, kp, ip);
         KnowledgeParameters = kp;
@@ -103,10 +107,11 @@ internal sealed class SliceWorld
         ICultureRule rule = config.Channels.HasFlag(SliceChannels.CultureR0) ? new V23CultureRule() : new CbCultureRule();
         IndustryInputs = new IndustryInputsAdapter(this);
         Industry = new IndustrySystem(Table, IndustryLayout, iStart, ip, IndustryInputs, chunks, rule,
-            config.Layer == LayerControl.Lc0 ? IndustryMode.ConstLc0 : IndustryMode.Full);
+            config.Layer switch { LayerControl.Lc0 => IndustryMode.ConstLc0, LayerControl.Lc => IndustryMode.CurveLc, _ => IndustryMode.Full },
+            config.CapabilityTables is { } tables && config.Layer == LayerControl.Lc ? tables.Curves : default);
         ProductsInputs = new ProductsInputsAdapter(this);
         Products = new ProductsSystem(Table, ProductsLayout, pStart, pp, ProductsInputs, Industry.CreateMailbox(chunks, Cadence.Monthly),
-            startMonth: scenario.StartMonth);
+            config.Layer == LayerControl.Lp ? ProductsMode.CanonicalLp : ProductsMode.Full, startMonth: scenario.StartMonth);
 
         StartVectors(scenario, out var actorNumber, out var budget0, out var growth, out var forced);
         BudgetAtStart = budget0;
@@ -233,6 +238,68 @@ internal sealed class SliceWorld
 
     /// <summary><c>LicenceActive(b)</c> (contract §5): <c>lic_gen &gt; 0</c> and the buyer has no series of an engine generation above the licence.</summary>
     public bool LicenceActive(int actor) => Policy.LicenceGen(actor) > 0 && EngineGen(actor) <= Policy.LicenceGen(actor);
+
+    /// <summary>
+    /// The parameters of class «К» of <paramref name="c"/> (spec §8.2) and the L_P tables go into the parameter records; an unset one keeps the
+    /// value of §8.1, so the default config returns the records unchanged.
+    /// </summary>
+    public static (KnowledgeParams K, IndustryParams I, ProductsParams P) ApplyCalibration(SliceRunConfig c, KnowledgeParams k, IndustryParams i, ProductsParams p)
+    {
+        if (c.CostDivisor <= Fx6.Zero)
+            throw new ArgumentException("The c_n divisor k must be positive.", nameof(c));
+        if (c.CostDivisor != Fx6.One)
+            k = k with { CostByType = [.. k.CostByType.Select(x => x / c.CostDivisor)] };
+        if (c.ThetaStart is { } theta)
+        {
+            if (theta < Fx6.Zero || theta > Fx6.One)
+                throw new ArgumentException("θ_start must be in [0; 1].", nameof(c));
+            k = k with { ThetaStart = theta };
+        }
+        if (c.HMax is { } hMax)
+        {
+            if (hMax < Fx6.Zero || hMax > Fx6.One)
+                throw new ArgumentException("h_max must be in [0; 1].", nameof(c));
+            k = k with { HMax = hMax };
+        }
+        if (c.KappaQ10 is { } kappa)
+        {
+            if (kappa is < 0 or > 1024)
+                throw new ArgumentException("κ (q10) must be in 0…1024.", nameof(c));
+            p = p with { KappaQ10 = kappa };
+        }
+        if (c.Alpha is { } alpha)
+        {
+            if (alpha < Fx6.Zero)
+                throw new ArgumentException("α must not be negative.", nameof(c));
+            i = i with { Alpha = alpha };
+        }
+        if (!c.XHalfByTier.IsDefault)
+        {
+            if (c.XHalfByTier.Length != i.XHalfByTier.Length)
+                throw new ArgumentException($"X½ needs {i.XHalfByTier.Length} values (tiers 3, 4, 5).", nameof(c));
+            i = i with { XHalfByTier = c.XHalfByTier };
+        }
+        if (c.DeltaH is { } deltaH)
+        {
+            if (deltaH < Fx6.Zero || deltaH > Fx6.One)
+                throw new ArgumentException("δ_H must be in [0; 1].", nameof(c));
+            i = i with { DeltaH = deltaH };
+        }
+        if (c.CM is { } cm)
+            i = i with { CM = cm };
+        if (c.Layer == LayerControl.Lp && c.CapabilityTables is { } tables)
+            p = p with { LpTDesign = tables.TDesign, LpRho = tables.Rho };
+        return (k, i, p);
+    }
+
+    private static void ValidateCapabilityTables(CapabilityControlTables t)
+    {
+        // Curves are validated by their constructor (strict knots, yield in [0; 1], positive cost); here the shape of the set.
+        if (t.Curves.IsDefault || t.Curves.Length != 3 || t.Curves.Any(c => c is null))
+            throw new ArgumentException("CapabilityTables need one curve for each of the tiers 3, 4, 5.", nameof(t));
+        if (t.TDesign.IsDefault || t.Rho.IsDefault || t.TDesign.Length != t.Rho.Length || t.TDesign.Any(x => x < 0) || t.Rho.Any(x => x < Fx6.Zero))
+            throw new ArgumentException("CapabilityTables need T_design ≥ 0 and ρ ≥ 0 for each generation.", nameof(t));
+    }
 
     /// <summary>
     /// The channel switches (spec §6.2): each one sets exactly one parameter to its "off" value; the culture rule is chosen separately
@@ -400,11 +467,68 @@ internal sealed class SliceWorld
             Table.AddInt("run.layer").Load([.. Enumerable.Repeat((int)Config.Layer, rows)]);
         if (Config.LkTables is { } tables)
             Table.AddLong("run.layer.tables").Load(Fill(rows, TablesDigest(tables)));
+        // «К» parameters and the L_C/L_P tables: a column only for a value that is not the default (§8.1), so main keeps its hash.
+        RegisterCalibrationColumns(rows);
         if (Config.Grid.Code != 0)
             Table.AddInt("run.grid").Load([.. Enumerable.Repeat(Config.Grid.Code, rows)]);
         if (Config.EffortShare != EffortShareArm.X1)
             Table.AddInt("run.effort_share").Load([.. Enumerable.Repeat((int)Config.EffortShare, rows)]);
         Table.AddLong("run.scenario").Load(Fill(rows, BinaryPrimitives.ReadInt64LittleEndian(Convert.FromHexString(Scenario.Hash.AsSpan(0, 16)))));
+    }
+
+    private void RegisterCalibrationColumns(int rows)
+    {
+        SliceRunConfig c = Config;
+        void Add(string name, long v) => Table.AddLong(name).Load([.. Enumerable.Repeat(v, rows)]);
+        if (c.CostDivisor != Fx6.One)
+            Add("run.k.c_n_div", c.CostDivisor.Raw);
+        if (c.ThetaStart is { } theta)
+            Add("run.k.theta_start", theta.Raw);
+        if (c.HMax is { } hMax)
+            Add("run.k.h_max", hMax.Raw);
+        if (c.KappaQ10 is { } kappa)
+            Add("run.k.kappa_q10", kappa);
+        if (c.Alpha is { } alpha)
+            Add("run.k.alpha", alpha.Raw);
+        if (!c.XHalfByTier.IsDefault)
+        {
+            for (int t = 0; t < c.XHalfByTier.Length; t++)
+                Add($"run.k.x_half.{t + 3}", c.XHalfByTier[t].Raw);
+        }
+        if (c.DeltaH is { } deltaH)
+            Add("run.k.delta_h", deltaH.Raw);
+        if (c.CM is { } cm)
+            Add("run.k.c_m", cm.Raw);
+        if (c.CapabilityTables is { } tables)
+            Add("run.layer.capability", CapabilityDigest(tables));
+    }
+
+    // First 8 bytes of SHA-256 over the curves (tau, yield, unit cost per knot, per tier), then T_design and rho (little-endian).
+    private static long CapabilityDigest(CapabilityControlTables t)
+    {
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        var buf = new byte[8];
+        void Put(long v)
+        {
+            BinaryPrimitives.WriteInt64LittleEndian(buf, v);
+            hash.AppendData(buf);
+        }
+        foreach (CapabilityCurve curve in t.Curves)
+        {
+            Put(curve.Tau.Length);
+            for (int i = 0; i < curve.Tau.Length; i++)
+            {
+                Put(curve.Tau[i]);
+                Put(curve.Yield[i].Raw);
+                Put(curve.UnitCost[i].Raw);
+            }
+        }
+        Put(t.TDesign.Length);
+        foreach (int d in t.TDesign)
+            Put(d);
+        foreach (Fx6 r in t.Rho)
+            Put(r.Raw);
+        return BinaryPrimitives.ReadInt64LittleEndian(hash.GetHashAndReset());
     }
 
     private static LkTables CopyTables(LkTables t)

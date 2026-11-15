@@ -29,7 +29,7 @@ public static class SliceChecks
     [
         ("slice: JetSliceCalib tables have no forbidden file or column (spec §8.2 п. 2)", CalibrationHeader),
         ("slice: JetSliceCalib run writes only its 8 tables; forbidden parameters rejected", () => CalibrationRun(tmp)),
-        ("slice: parameters — unknown key, bad value, LK without CONTROL_TABLES, LC/LP rejected", Parameters),
+        ("slice: parameters — unknown key, bad value, LK/LC/LP without CONTROL_TABLES, tables without those layers rejected", Parameters),
         ("slice: Lab path gives the Session golden (seed 1, month 149)", () => Golden(tmp)),
         ("slice: L1 — two runs, same CSV and golden_hash", () => L1(tmp)),
         ("slice: L2 — threads 1 vs 4, full horizon, same CSV and golden_hash", () => L2(tmp)),
@@ -43,6 +43,7 @@ public static class SliceChecks
         ("slice: licence track — replace, lapse, resume without a purchase (DEBT-0032)", LicenceTrack),
         ("slice: control tables — CONTROL_TABLES file → LkTables, hash in model_info, bad files rejected (TASK-0054)", () => ControlTablesFile(tmp)),
         ("slice: design capacity — AI design commands, commands without a design and slots used are counted (TASK-0054)", () => DesignCapacity(tmp)),
+        ("slice: calibration points — one point of each stage C1, C3+C4, C2 and the L_C/L_P layers run; K keys change the run (TASK-0055)", () => CalibrationPoints(tmp)),
         ("slice: switches — FORCE, START PERT/SYM, CHANNELS, GRID, FLEET_ARM, SALE_ARM change the run (DEBT-0032)", () => Switches(tmp)),
     ];
 
@@ -328,7 +329,8 @@ public static class SliceChecks
     private static string? Parameters()
     {
         foreach (string bad in new[] { """{"FOO": 1}""", """{"START": "X"}""", """{"LAYER": "LK"}""", """{"GRID": "LO_MID"}""", """{"CHANNELS": ["B", "B"]}""",
-                     """{"CONTROL_TABLES": "t.json"}""", """{"LAYER": "LC", "CONTROL_TABLES": "t.json"}""", """{"LAYER": "LP", "CONTROL_TABLES": "t.json"}""" })
+                     """{"CONTROL_TABLES": "t.json"}""", """{"LAYER": "LC"}""", """{"LAYER": "LP"}""", """{"LAYER": "LC0", "CONTROL_TABLES": "t.json"}""",
+                     """{"X_SCALE": 0}""", """{"K_DIV": "x"}""" })
         {
             Manifest m = Lab.Manifest.Parse(Manifest("JetSlice", Ticks60, pars: bad), "/x/m.json");
             try
@@ -411,6 +413,33 @@ public static class SliceChecks
             return $"model_info.control_tables_hash {got}, want {sha}";
         var (main, _) = Run(tmp, Manifest("JetSlice", Ticks60, pars: """{"detail": "lite"}"""), 1, 1, "lk-main");
         return main.Ok && main.GoldenHash != r.GoldenHash ? null : "the L_K run has the golden of main";
+    }
+
+    // TASK-0055: one point of each calibration stage (EXP-0002-calib.json) and the L_C/L_P layers of the same CONTROL_TABLES file are executable;
+    // each K key of the point moves the golden, the L_C/L_P run differs from main and from the other layer.
+    private static string? CalibrationPoints(string tmp)
+    {
+        GameData data = SliceData.Load(tmp);
+        File.WriteAllText(Path.Combine(tmp, "tables.json"), SyntheticControlTables(data, n => n % 7 == 0 ? null : n % 5));
+        string main = Run(tmp, Manifest("JetSliceCalib", Ticks60), 1, 1, "cal-main").Outcome.GoldenHash ?? "";
+        var seen = new HashSet<string> { main };
+        foreach ((string name, string pars) in new[]
+        {
+            ("C1", """{"X_SCALE": 0.75, "ALPHA": 0.08}"""),
+            ("C3+C4", """{"K_DIV": 1.5, "H_MAX": 0.12, "THETA_START": 0.3, "KAPPA_Q10": 512}"""),
+            ("C3+C4 phase B", """{"K_DIV": 2.5, "H_MAX": 0.08, "THETA_START": 0.9, "KAPPA_Q10": 768}"""),
+            ("C2", """{"C_M": 0.05, "DELTA_H": 0.0017}"""),
+            ("L_C", """{"LAYER": "LC", "CONTROL_TABLES": "tables.json"}"""),
+            ("L_P", """{"LAYER": "LP", "CONTROL_TABLES": "tables.json"}"""),
+        })
+        {
+            var (r, _) = Run(tmp, Manifest("JetSliceCalib", Ticks60, pars: pars), 1, 1, "cal-" + name.Replace('+', '_').Replace(' ', '_'));
+            if (!r.Ok)
+                return $"{name}: {r.Error}";
+            if (!seen.Add(r.GoldenHash ?? ""))
+                return $"{name}: the golden equals that of main or of another point";
+        }
+        return null;
     }
 
     // contract-proposals T3 (TASK-0054): model_info carries the design-capacity counters; on the full horizon of seed 1 the AI never fills

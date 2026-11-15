@@ -16,7 +16,7 @@ namespace Singularity.Lab.Models.Slice;
 public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactory
 {
     /// <summary>The version of the Session surface this model was written against (SLICE_COMPOSITION §13.7).</summary>
-    public const int SurfaceVersion = 3;
+    public const int SurfaceVersion = 4;
 
     /// <summary>Horizon H of the slice, months (spec §2): the control tables have curve knots τ 0…2·H−1.</summary>
     public const int SliceHorizonMonths = 384;
@@ -38,7 +38,12 @@ public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactor
         {
             // Relative to the manifest (format §3); its SHA-256 is control_tables_hash in run.json model_info.
             tables = ControlTables.Load(Path.GetFullPath(Path.Combine(setup.ManifestDirectory, rel)), data.Scenario(p.Config.ScenarioId), data.Nodes, SliceHorizonMonths);
-            p = p with { Config = p.Config with { LkTables = tables.Lk } };
+            p = p with
+            {
+                Config = p.Config.Layer == LayerControl.Lk
+                    ? p.Config with { LkTables = tables.Lk }
+                    : p.Config with { CapabilityTables = new CapabilityControlTables(tables.Lc, tables.TDesign, tables.Rho) },
+            };
         }
         return new JetSliceModel(data, p, setup.Ticks, calibration, tables?.Sha256);
     }

@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using Singularity.Core.Industry;
 using Singularity.Core.Knowledge;
 using Singularity.Core.Policy;
 using Singularity.Kernel;
@@ -76,15 +78,21 @@ public enum LayerControl
     Lc0 = 3,
 
     /// <summary>
-    /// <c>L_C</c>: one median curve per tier after <c>t_known</c>. Refused until the control tables (T12) can be given: <see cref="SliceRunConfig"/> carries none yet.
+    /// <c>L_C</c>: one median curve per tier after <c>t_known</c>; needs <see cref="SliceRunConfig.CapabilityTables"/>.
     /// </summary>
     Lc = 4,
 
     /// <summary>
-    /// <c>L_P</c>: the canonical project of the newest due generation. Refused until the control tables (T12) can be given.
+    /// <c>L_P</c>: the canonical project of the newest due generation; needs <see cref="SliceRunConfig.CapabilityTables"/>.
     /// </summary>
     Lp = 5,
 }
+
+/// <summary>
+/// Tables of the controls <c>L_C</c> and <c>L_P</c> (spec §6.1, format <c>control_tables/1</c> §3.1): the curves <c>Y_k</c>, <c>U_k</c> of tiers 3, 4, 5,
+/// and <c>T_design[g]</c>, <c>ρ[g]</c> (index g − 1). Both layers read the same set, so one set is given with either.
+/// </summary>
+public sealed record CapabilityControlTables(ImmutableArray<CapabilityCurve> Curves, ImmutableArray<int> TDesign, ImmutableArray<Fx6> Rho);
 
 /// <summary>Step of an axis of the P5 grid (spec §7): ×1, ×0,5, ×2 of the frozen value.</summary>
 public enum GridStep
@@ -202,6 +210,36 @@ public sealed record SliceRunConfig
 
     /// <summary>Moments of the full model for <c>L_K</c>: required exactly with <see cref="LayerControl.Lk"/>.</summary>
     public LkTables? LkTables { get; init; }
+
+    /// <summary>Tables of <see cref="LayerControl.Lc"/> and <see cref="LayerControl.Lp"/>: required exactly with them.</summary>
+    public CapabilityControlTables? CapabilityTables { get; init; }
+
+    // Parameters of class «К» (spec §8.1, §8.2): the calibration moves them. Null / One / default array = the value of §8.1 (Core defaults),
+    // and then no run.k.* column is written, so the hash is that of main.
+
+    /// <summary>Common divisor <c>k</c> of <c>c_n</c> (#177): <c>c_n(type, g) = c_n§8.1(type, g) / k</c>, applied to the base by type; must be positive.</summary>
+    public Fx6 CostDivisor { get; init; } = Fx6.One;
+
+    /// <summary><c>θ_start</c> (knowledge); null = §8.1.</summary>
+    public Fx6? ThetaStart { get; init; }
+
+    /// <summary><c>h_max</c> (knowledge); null = §8.1. The grid axis <see cref="GridCell.HMax"/> scales this value.</summary>
+    public Fx6? HMax { get; init; }
+
+    /// <summary><c>κ</c> as q10 (0…1024) of the bureau requirement; null = §8.1 (512).</summary>
+    public int? KappaQ10 { get; init; }
+
+    /// <summary><c>α</c> (culture growth); null = §8.1. The channel <see cref="SliceChannels.Alpha"/> still zeroes it.</summary>
+    public Fx6? Alpha { get; init; }
+
+    /// <summary><c>X½</c> of tiers 3, 4, 5; default (unset) array = §8.1.</summary>
+    public ImmutableArray<Fx6> XHalfByTier { get; init; }
+
+    /// <summary><c>δ_H</c> (culture forgetting); null = §8.1.</summary>
+    public Fx6? DeltaH { get; init; }
+
+    /// <summary><c>c_M</c> (tooling); null = §8.1.</summary>
+    public Fx6? CM { get; init; }
 
     /// <summary>Point of the P5 grid (spec §7); <c>mid_mid_mid</c> = main.</summary>
     public GridCell Grid { get; init; }

@@ -12,6 +12,7 @@ public sealed class SliceModelTests : IDisposable
     [
         "slice: JetSliceCalib tables", "slice: JetSliceCalib run", "slice: parameters", "slice: Lab path gives",
         "slice: L1", "slice: L2", "slice: matrix", "slice: data_hash", "slice: data cache", "slice: a40.force", "slice: COEXIST_MONEY", "slice: LIC_END", "slice: eng_short_months",
+        "slice: licence track", "slice: control tables", "slice: design capacity", "slice: calibration points", "slice: switches",
     ];
 
     private readonly string _tmp = Path.Combine(Path.GetTempPath(), "sing-lab-tests-" + Guid.NewGuid().ToString("N"));
@@ -43,4 +44,9 @@ public sealed class SliceModelTests : IDisposable
     [Fact] public void Coexist_money_needs_zero_left_and_no_training_in_every_month() => Check(Prefixes[10]);
     [Fact] public void Licence_lapse_is_the_Active_change_and_gives_t_end_and_LIC_END() => Check(Prefixes[11]);
     [Fact] public void Eng_short_months_counts_one_bureau_not_any() => Check(Prefixes[12]);
+    [Fact] public void Licence_track_replaces_lapses_and_resumes_without_a_purchase() => Check(Prefixes[13]);
+    [Fact] public void Control_tables_file_is_read_hashed_and_bad_files_are_rejected() => Check(Prefixes[14]);
+    [Fact] public void Design_capacity_counters_are_in_model_info() => Check(Prefixes[15]);
+    [Fact] public void Calibration_points_of_every_stage_and_the_LC_LP_layers_run() => Check(Prefixes[16]);
+    [Fact] public void Switches_change_the_run_of_seed_1() => Check(Prefixes[17]);
 }
