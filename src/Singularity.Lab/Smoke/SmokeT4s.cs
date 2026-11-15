@@ -121,10 +121,23 @@ internal static class SmokeT4s
         }
         double[] sorted = [.. cvs.Order()];
         double median = sorted[(sorted.Length - 1) / 2];
-        double d = Math.Max(0, Math.Max(0.3 - median, median - 0.5)) / 0.2;
-        log.WriteLine($"C3 median CV over {KeyNodes.Length} star nodes = {D(median)} (min {D(sorted[0])}, max {D(sorted[^1])}); d_C3 = {D(d)}; seeds {seeds.Count}");
+        double d = C3Distance(median);
+        // The statistic and its distance at full precision ("R" round-trips the double): the stopping rule (spec §8.2 п.4, L = 0) must never see a
+        // positive distance printed as 0 (Codex, TASK-0055). The 4-digit D() is for the eye only.
+        using (var pt = new StreamWriter(Path.Combine(outDir, "c3_point.csv")))
+        {
+            pt.WriteLine("median_cv,min_cv,max_cv,d_C3,seeds");
+            pt.WriteLine(string.Join(',', Exact(median), Exact(sorted[0]), Exact(sorted[^1]), Exact(d), seeds.Count));
+        }
+        log.WriteLine($"C3 median CV over {KeyNodes.Length} star nodes = {Exact(median)} (min {D(sorted[0])}, max {D(sorted[^1])}); d_C3 = {Exact(d)}; seeds {seeds.Count}");
         return (median, d);
     }
+
+    /// <summary><c>d_C3</c> of spec §8.2 п.3: the distance of the median CV to the corridor [0,3; 0,5] over its width, unrounded.</summary>
+    internal static double C3Distance(double medianCv) => Math.Max(0, Math.Max(0.3 - medianCv, medianCv - 0.5)) / 0.2;
+
+    /// <summary>Round-trip text of a double for statistics and distances (never rounds a positive value to 0).</summary>
+    internal static string Exact(double x) => double.IsPositiveInfinity(x) ? "inf" : x.ToString("R", Inv);
 
     /// <summary>
     /// One actor (GBR's number 1 for RNG keys, GBR's K_d), constant R&amp;D money <c>S</c> per month, all of it on one ★

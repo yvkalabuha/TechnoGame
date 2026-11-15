@@ -43,6 +43,7 @@ public static class SliceChecks
         ("slice: licence track — replace, lapse, resume without a purchase (DEBT-0032)", LicenceTrack),
         ("slice: control tables — CONTROL_TABLES file → LkTables, hash in model_info, bad files rejected (TASK-0054)", () => ControlTablesFile(tmp)),
         ("slice: stage manifests stay valid after freezing; matrix --point/--seeds select one point (TASK-0055)", () => StageManifests(tmp)),
+        ("slice: C3 distance — a tiny positive d_C3 is reported positive at full precision (TASK-0055 Codex)", C3DistanceExact),
         ("slice: design capacity — AI design commands, commands without a design and slots used are counted (TASK-0054)", () => DesignCapacity(tmp)),
         ("slice: calibration points — one point of each stage C1, C3+C4, C2 and the L_C/L_P layers run; K keys change the run (TASK-0055)", () => CalibrationPoints(tmp)),
         ("slice: switches — FORCE, START PERT/SYM, CHANNELS, GRID, FLEET_ARM, SALE_ARM change the run (DEBT-0032)", () => Switches(tmp)),
@@ -484,6 +485,19 @@ public static class SliceChecks
                 return $"{name}: Select(3, 2) does not keep one point with the index, hash and run id of the full manifest";
         }
         return null;
+    }
+
+    // TASK-0055 Codex: d_C3 of a median CV just outside the corridor is tiny but positive; the reported text must parse back to the same value.
+    private static string? C3DistanceExact()
+    {
+        foreach (double cv in new[] { 0.5 + 1e-9, 0.3 - 1e-12, 0.50000002 })
+        {
+            double d = Smoke.SmokeT4s.C3Distance(cv);
+            string text = Smoke.SmokeT4s.Exact(d);
+            if (d <= 0 || double.Parse(text, System.Globalization.CultureInfo.InvariantCulture) != d || double.Parse(text, System.Globalization.CultureInfo.InvariantCulture) <= 0)
+                return $"cv {cv}: d {d} reported as '{text}'";
+        }
+        return Smoke.SmokeT4s.C3Distance(0.4) == 0 && Smoke.SmokeT4s.C3Distance(0.3) == 0 && Smoke.SmokeT4s.C3Distance(0.5) == 0 ? null : "inside the corridor d > 0";
     }
 
     // contract-proposals T3 (TASK-0054): model_info carries the design-capacity counters; on the full horizon of seed 1 the AI never fills

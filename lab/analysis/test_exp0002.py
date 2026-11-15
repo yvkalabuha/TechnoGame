@@ -346,6 +346,30 @@ class CalibPoint(unittest.TestCase):
         self.assertEqual(r1["control_tables"]["Y"]["4"][1], 900000)
 
 
+class TinyDistance(unittest.TestCase):
+    """TASK-0055 Codex: a tiny positive distance stays positive in the computation, the JSON and the report (stop at L = 0)."""
+
+    def test_c1e_just_above_corridor(self):
+        with tempfile.TemporaryDirectory() as d:
+            e = -math.log(1 - 0.30) + 1e-9          # unit_cost fall just above 30%
+            rows = [["DEV", "FULL", 1, 25, 50, 0.5, 1, 0.2, 0.12, 0.08, 0.1, 0.2],
+                    ["MATURE", "FULL", 1, 1, 2, 0.9, 1, e, 0.0, e, 0.1, 0.18]]
+            write(d, "c1_stand.csv", X.C1_COLS, rows)
+            r = X.c1_stand(os.path.join(d, "c1_stand.csv"), CFG)
+        self.assertGreater(r["C1e"]["d"], 0.0)
+        self.assertLess(r["C1e"]["d"], 1e-6)
+        self.assertGreater(r["loss_C1"], 0.0)
+        j = json.loads(json.dumps(X.jsonable(r)))
+        self.assertGreater(j["C1e"]["d"], 0.0)            # round(x, 6) would give 0.0
+        self.assertGreater(j["loss_C1"], 0.0)
+        self.assertNotEqual(X.fmt_d(r["C1e"]["d"]), X.fmt(0.0))
+
+    def test_jsonable_keeps_ordinary_rounding(self):
+        self.assertEqual(X.jsonable(0.1234567891), 0.123457)
+        self.assertEqual(X.jsonable(1e-9), 1e-9)
+        self.assertEqual(X.jsonable(0.0), 0.0)
+
+
 class CalibCodexR1(unittest.TestCase):
     """Codex round 1 (TASK-0053): tau = 0 kept whatever `known` says; C2 keeps pairs in use but not mastered at the
     start; d = 1 by the share of pairs WITHOUT t_first."""

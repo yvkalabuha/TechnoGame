@@ -1765,6 +1765,13 @@ def analyze(D, cfg):
     return res
 
 
+def fmt_d(x):
+    """A distance or loss for the report: 4 decimals, but a positive value below 0.00005 is printed in full (never as 0)."""
+    if isinstance(x, float) and 0 < abs(x) < 5e-5:
+        return repr(x)
+    return fmt(x)
+
+
 def jsonable(x):
     if isinstance(x, dict):
         return {str(k): jsonable(v) for k, v in x.items()}
@@ -1773,7 +1780,10 @@ def jsonable(x):
     if isinstance(x, float):
         if math.isinf(x) or math.isnan(x):
             return str(x)
-        return round(x, 6)
+        # 6 decimals for reading, but a non-zero value is never rounded to 0: distances d_k and losses L (spec §8.2 п.3-4)
+        # decide the stop at L = 0, and a tiny positive d must stay positive in the JSON (TASK-0055 Codex)
+        r = round(x, 6)
+        return x if (r == 0 and x != 0) else r
     return x
 
 
@@ -2741,7 +2751,7 @@ def main(argv=None):
             md = "# C1 по `c1_stand.csv` (спец. §8.2 п.1; формат §6)\n\n" + "".join(
                 "- %s: %s → %s\n" % (k, fmt(r[k]["value"]), "в коридоре" if r[k]["ok"] else "вне коридора")
                 for k in ("C1a", "C1b", "C1d", "C1e")) + "- d_C1e: %s\n- Wright P0 (`asm_over_floor_drop` MATURE 15–30%%): %s %s\n- плечи: %s\n" % (
-                fmt(r["C1e"]["d"]), "OK" if r["wright_P0"]["ok"] else "НАРУШЕНИЕ", [round(x, 4) for x in r["wright_P0"]["per_doubling"]],
+                fmt_d(r["C1e"]["d"]), "OK" if r["wright_P0"]["ok"] else "НАРУШЕНИЕ", [round(x, 4) for x in r["wright_P0"]["per_doubling"]],
                 ", ".join(r["arms"]))
         elif a.calib:
             r = calib_tables(a.calib, cfg, a.point)
@@ -2766,8 +2776,8 @@ def main(argv=None):
                 k, v["obs_A"], v["taus_A"], v["obs_B"], v["taus_B"], fmt(v["Y384"] / FX, 3)) for k, v in sorted(ts["tiers"].items()))
             c2r = r["C2"]
             md += "\n## Расстояния §8.2 п.3\n\n- d_C2 (tier-4 p50 в [%s; %s] лет) = %s; d_C2,порядок (tier-5 > tier-4) = %s\n- %s\n" % (
-                cfg["calib"]["c2_years"][0], cfg["calib"]["c2_years"][1], fmt(c2r["d_tier4"]), fmt(c2r["d_order"]),
-                "; ".join("d_C4,G%s = %s (доля %s)" % (g, fmt(v["d"]), fmt(v["share"], 2)) for g, v in sorted(r["C4"].items())))
+                cfg["calib"]["c2_years"][0], cfg["calib"]["c2_years"][1], fmt_d(c2r["d_tier4"]), fmt_d(c2r["d_order"]),
+                "; ".join("d_C4,G%s = %s (доля %s)" % (g, fmt_d(v["d"]), fmt(v["share"], 2)) for g, v in sorted(r["C4"].items())))
             md += "\n".join(render_p0({"p0": r["p0"]}, cfg)) + "\n"
         else:
             if not a.dirs:

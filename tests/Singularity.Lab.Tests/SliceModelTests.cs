@@ -12,7 +12,7 @@ public sealed class SliceModelTests : IDisposable
     [
         "slice: JetSliceCalib tables", "slice: JetSliceCalib run", "slice: parameters", "slice: Lab path gives",
         "slice: L1", "slice: L2", "slice: matrix", "slice: data_hash", "slice: data cache", "slice: a40.force", "slice: COEXIST_MONEY", "slice: LIC_END", "slice: eng_short_months",
-        "slice: licence track", "slice: control tables", "slice: design capacity", "slice: calibration points", "slice: switches", "slice: stage manifests",
+        "slice: licence track", "slice: control tables", "slice: design capacity", "slice: calibration points", "slice: switches", "slice: stage manifests", "slice: C3 distance",
     ];
 
     private readonly string _tmp = Path.Combine(Path.GetTempPath(), "sing-lab-tests-" + Guid.NewGuid().ToString("N"));
@@ -50,4 +50,5 @@ public sealed class SliceModelTests : IDisposable
     [Fact] public void Calibration_points_of_every_stage_and_the_LC_LP_layers_run() => Check(Prefixes[16]);
     [Fact] public void Switches_change_the_run_of_seed_1() => Check(Prefixes[17]);
     [Fact] public void Stage_manifests_stay_valid_after_freezing_and_one_point_runs() => Check(Prefixes[18]);
+    [Fact] public void C3_distance_is_never_rounded_to_zero() => Check(Prefixes[19]);
 }
