@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Security.Cryptography;
 using Singularity.Core.Industry;
 using Singularity.Kernel;
 
@@ -34,6 +35,33 @@ public class CalibrationParamsTests
         _ => throw new ArgumentOutOfRangeException(nameof(name)),
     };
 
+    // Digest of the simulated state only: the run.* columns (the configuration) are left out, so a difference is a difference of the trajectory.
+    private static string SimulationDigest(SliceSession s)
+    {
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        foreach (Column c in s.World.Table.Columns)
+        {
+            if (!c.Name.StartsWith("run.", StringComparison.Ordinal))
+            {
+                hash.AppendData(System.Text.Encoding.UTF8.GetBytes(c.Name));
+                switch (c)
+                {
+                    case LongColumn l:
+                        foreach (long v in l.Current)
+                            hash.AppendData(BitConverter.GetBytes(v));
+                        break;
+                    case IntColumn i:
+                        foreach (int v in i.Current)
+                            hash.AppendData(BitConverter.GetBytes(v));
+                        break;
+                    default:
+                        throw new InvalidOperationException($"Column {c.Name}: unknown type.");
+                }
+            }
+        }
+        return Convert.ToHexStringLower(hash.GetHashAndReset());
+    }
+
     [Fact]
     public void Defaults_GiveTheHashOfMain_AndNoRunKColumn()
     {
@@ -49,7 +77,8 @@ public class CalibrationParamsTests
     public void EachKParameter_ChangesTheTrajectory_AndIsInTheRunColumns(string name)
     {
         SliceSession s = ViewSupport.Run(With(name), 150);
-        Assert.NotEqual(MainSeed1Month149, s.LastHash);
+        // The run.* columns alone change LastHash, so the trajectory is compared without them.
+        Assert.NotEqual(SimulationDigest(ViewSupport.Run(Base(), 150)), SimulationDigest(s));
         Assert.Contains(s.World.Table.Columns, c => c.Name.StartsWith("run.k.", StringComparison.Ordinal));
     }
 
@@ -110,7 +139,7 @@ public class CalibrationParamsTests
             Assert.Equal(a.LastHash, b.LastHash);          // L2
             Assert.Equal(a.LastHash, again.LastHash);      // L1
         }
-        Assert.NotEqual(ViewSupport.Run(Base(1, 1), 60).LastHash, a.LastHash);
+        Assert.NotEqual(SimulationDigest(ViewSupport.Run(Base(1, 1), 60)), SimulationDigest(a));
         Assert.Contains(a.World.Table.Columns, col => col.Name == "run.layer.capability");
         Assert.Contains(a.World.Table.Columns, col => col.Name == "run.layer");
     }
