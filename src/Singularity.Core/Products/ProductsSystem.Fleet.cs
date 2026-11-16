@@ -110,12 +110,44 @@ public sealed partial class ProductsSystem
     /// </summary>
     public bool FieldedMastered(int actor, int design, long month)
     {
-        if (Stage(actor, design) == DesignStage.None)
-            return false;
         Span<Fx6> counts = stackalloc Fx6[_y];
+        CurrentCounts(actor, design, counts);
+        return FieldedMasteredOf(actor, design, month, counts);
+    }
+
+    /// <summary><c>n_Q(d, t) = ⌊Σ_{y: q(d,y)} count(d, y)⌋</c>: whole units of the cohorts built while the design's processes were mastered (§9.1 r13a).</summary>
+    public long UnitsBuiltMastered(int actor, int design)
+    {
+        Span<Fx6> counts = stackalloc Fx6[_y];
+        CurrentCounts(actor, design, counts);
+        return UnitsBuiltMasteredOf(actor, design, counts);
+    }
+
+    /// <summary>
+    /// <c>d ∈ fielded_L(a, t)</c> (contract §9.1 r13a, #247): a project with a stage that is <c>fielded</c> or has <c>n_Q ≥ n_service_min</c>. The one definition of the
+    /// fleet in service for the metric, <c>Def(K)</c>, <c>G_front</c>, the sale validator, <c>why_not</c>, the AI and <c>ActorView.Key</c>.
+    /// </summary>
+    public bool FieldedL(int actor, int design, long month)
+    {
+        Span<Fx6> counts = stackalloc Fx6[_y];
+        CurrentCounts(actor, design, counts);
+        return FieldedLOf(actor, design, month, counts);
+    }
+
+    private void CurrentCounts(int actor, int design, Span<Fx6> counts)
+    {
         for (int y = 0; y < _y; y++)
             counts[y] = Fx6.FromRaw(_cohort[design * _y + y].Current[actor]);
-        if (FleetRules.Whole(counts) < _p.NServiceMin)
+    }
+
+    // The rule of fielded_L on given cohort counts: the snapshot's counts for the metric and the decisions, the post-Take counts for the fleet forecast.
+    private bool FieldedLOf(int actor, int design, long month, ReadOnlySpan<Fx6> counts) =>
+        Stage(actor, design) != DesignStage.None
+        && (FieldedMasteredOf(actor, design, month, counts) || UnitsBuiltMasteredOf(actor, design, counts) >= _p.NServiceMin);
+
+    private bool FieldedMasteredOf(int actor, int design, long month, ReadOnlySpan<Fx6> counts)
+    {
+        if (Stage(actor, design) == DesignStage.None || FleetRules.Whole(counts) < _p.NServiceMin)
             return false;
         foreach (int p in PrcSet(actor, design))
         {
@@ -125,21 +157,13 @@ public sealed partial class ProductsSystem
         return true;
     }
 
-    /// <summary><c>n_Q(d, t) = ⌊Σ_{y: q(d,y)} count(d, y)⌋</c>: whole units of the cohorts built while the design's processes were mastered (§9.1 r13a).</summary>
-    public long UnitsBuiltMastered(int actor, int design)
+    private long UnitsBuiltMasteredOf(int actor, int design, ReadOnlySpan<Fx6> counts)
     {
-        Span<Fx6> counts = stackalloc Fx6[_y];
+        Span<Fx6> qualified = stackalloc Fx6[_y];
         for (int y = 0; y < _y; y++)
-            counts[y] = CohortMastered(actor, design, y) ? Fx6.FromRaw(_cohort[design * _y + y].Current[actor]) : Fx6.Zero;
-        return FleetRules.Whole(counts);
+            qualified[y] = CohortMastered(actor, design, y) ? counts[y] : Fx6.Zero;
+        return FleetRules.Whole(qualified);
     }
-
-    /// <summary>
-    /// <c>d ∈ fielded_L(a, t)</c> (contract §9.1 r13a, #247): a project with a stage that is <c>fielded</c> or has <c>n_Q ≥ n_service_min</c>. The one definition of the
-    /// fleet in service for the metric, <c>Def(K)</c>, <c>G_front</c>, the sale validator, <c>why_not</c>, the AI and <c>ActorView.Key</c>.
-    /// </summary>
-    public bool FieldedL(int actor, int design, long month) =>
-        Stage(actor, design) != DesignStage.None && (FieldedMastered(actor, design, month) || UnitsBuiltMastered(actor, design) >= _p.NServiceMin);
 
     /// <summary><c>G(a, t)</c>: the largest <c>gen(d)</c> over <c>fielded_L</c>, 0 without any.</summary>
     public int FieldedGen(int actor, long month)
@@ -250,6 +274,8 @@ public sealed partial class ProductsSystem
         int line = -1;
         for (int d = 0; d < _d; d++)
         {
+            if (Stage(actor, d) == DesignStage.None)
+                continue;   // an empty slot has no alternatives to price
             need += InService(actor, d) * Upkeep(actor, d);
             if (Stage(actor, d) == DesignStage.Series)
                 line = d;
@@ -267,7 +293,8 @@ public sealed partial class ProductsSystem
         FleetRules.Take(work, Fx6.FromInt(n), taken);
         FleetRules.SweepDust(work);
         long left = FleetRules.Whole(work);
-        bool stillFielded = wasFielded && left >= _p.NServiceMin;
+        // The same rule as FieldedL on the counts left after Take (oldest first): units of cohorts without q do not keep the design in the fleet.
+        bool stillFielded = wasFielded && FieldedLOf(actor, design, snapshot, work);
         int oldest = 0;
         for (int y = 0; y < _y; y++)
         {

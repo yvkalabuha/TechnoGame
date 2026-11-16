@@ -108,4 +108,37 @@ public class TechLeadMetricTests(Xunit.Abstractions.ITestOutputHelper output)
         }
         Assert.True(withQ > 0, "no scenario cohort of a mastered design: the test is vacuous");
     }
+
+    // Codex finding: the fleet forecast uses the rule of FieldedL on the counts after Take (oldest first), not the total left.
+    [Fact]
+    public void RetireForecast_FieldedAfter_CountsOnlyUnitsOfCohortsWithQ()
+    {
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 1 });
+        SliceWorld w = s.World;
+        s.StepThroughMonth(100);                                            // the empty design slots get alternatives, as in FleetRuleTests
+        const int usa = 0;
+        void SetLong(string name, long value)
+        {
+            Singularity.Kernel.LongColumn c = w.Table.GetLong(name);
+            long[] all = c.Current.ToArray();
+            all[usa] = value;
+            c.Load(all);
+        }
+        for (int y = 0; y < w.ProductsLayout.Years; y++)
+            SetLong($"prd.d0.cohort.{w.ProductsLayout.StartYear + y}", y == 0 || y == 5 ? Fx6.FromInt(50).Raw : 0);   // 50 old units (q) and 50 newer ones (no q)
+        SetLong("prd.d0.q", 1);
+        foreach (Singularity.Kernel.Column col in w.Table.Columns.Where(c => c.Name.StartsWith("ind.mr.", StringComparison.Ordinal)).ToList())
+        {
+            Singularity.Kernel.IntColumn ic = w.Table.GetInt(col.Name);
+            int[] all = ic.Current.ToArray();
+            all[usa] = 0;                                                   // nothing is mastered now
+            ic.Load(all);
+        }
+        Assert.False(w.Products.FieldedMastered(usa, 0, 101));
+        Assert.True(w.Products.FieldedL(usa, 0, 101));                        // n_Q = 50
+        FleetForecast oldest = w.Products.RetireForecast(usa, 0, 50, 101);    // Take removes the oldest 50: the qualifying ones
+        Assert.True(oldest.FieldedBefore);
+        Assert.False(oldest.FieldedAfter);                                  // 50 units are left, but none of them has q
+        Assert.False(w.Products.RetireForecast(usa, 0, 1, 101).FieldedAfter); // 49 qualifying units left
+    }
 }
