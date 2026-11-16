@@ -27,7 +27,7 @@ while (!File.Exists(Path.Combine(repo, "Singularity.sln")))
     repo = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(repo)) ?? throw new InvalidOperationException("repository root not found");
 GameDataHolder.Data = SliceData.Load(Path.Combine(repo, "lab", "manifests"));
 int[] watch = [40, 49];
-var results = new (List<string> Des, List<string> Yld, List<string> Cmp)[n];
+var results = new (List<string> Des, List<string> Yld, List<string> Cmp, List<string> Cls, List<string> Lns)[n];
 Parallel.For(0, n, new ParallelOptions { MaxDegreeOfParallelism = 16 }, k =>
 {
     ulong seed = seed0 + (ulong)k;
@@ -42,6 +42,8 @@ Parallel.For(0, n, new ParallelOptions { MaxDegreeOfParallelism = 16 }, k =>
     var des = new List<string>();
     var yld = new List<string>();
     var cmp = new List<string>();
+    var cls = new List<string>();
+    var lns = new List<string>();
     // design slot lifecycle: a slot is a new design when it reappears in stage Project after a later stage or after a gap
     var open = new Dictionary<(int, int), long[]>();
     var info = new Dictionary<(int, int), string>();
@@ -98,12 +100,61 @@ Parallel.For(0, n, new ParallelOptions { MaxDegreeOfParallelism = 16 }, k =>
                 yld.Add($"{seed},{t},{av.Actor},{num},{y.Yield},{y.Ramp},{g},{ind.ProcX(av.Actor, r)},{ind.ProcV(av.Actor, r)},{y.XHalfEff},{ls},{av.Quality.TrainingTarget},{y.ActiveMask},{y.MSourceMask},{y.C[0]},{y.C[1]},{y.C[2]},{ind.Layout.Req[r][0]},{ind.Layout.Req[r][1]},{ind.Layout.Req[r][2]},{y.G[0]},{y.G[1]},{y.G[2]}");
             }
         }
+        // TASK-0059: E money by stage of the process (О only = in a design in stage О and in no own series line) and the series lines
+        // with the least yield of their prc_set and unit cost. Read-only; one row per actor and month, one per series line.
+        foreach (var av in v.Actors)
+        {
+            var inO = new HashSet<int>();
+            var inC = new HashSet<int>();
+            foreach (var d in av.Designs)
+            {
+                if (d.Cancelled)
+                    continue;
+                if (d.Stage == DesignStage.Prototype)
+                    inO.UnionWith(d.PrcSet);
+                else if (d.Stage == DesignStage.Series)
+                    inC.UnionWith(d.PrcSet);
+            }
+            Fx6 eAll = Fx6.Zero, eO = Fx6.Zero, eC = Fx6.Zero;
+            for (int r = 0; r < ind.Layout.ProcessCount; r++)
+            {
+                Fx6 e = ind.ProcE(av.Actor, r);
+                int num = ind.Layout.Number[r];
+                eAll += e;
+                if (inC.Contains(num))
+                    eC += e;
+                else if (inO.Contains(num))
+                    eO += e;
+            }
+            lns.Add($"{seed},{t},{av.Actor},E,{eAll},{eO},{eC},,,,");
+            foreach (var d in av.Designs.Where(x => x.Stage == DesignStage.Series).OrderBy(x => x.Design))
+            {
+                Fx6 ymin = Fx6.One;
+                foreach (int num in d.PrcSet)
+                {
+                    Fx6 y = ind.Yield(av.Actor, ind.Layout.RowOf(num), t).Yield;
+                    if (y < ymin)
+                        ymin = y;
+                }
+                lns.Add($"{seed},{t},{av.Actor},L,{d.Design},{d.Gen},{open[(av.Actor, d.Design)][2]},{d.Rate},{d.UnitCost},{ymin},{(int)d.Bind}");
+            }
+        }
         foreach (var key in seen.Where(x => !now.Contains(x) && open.ContainsKey(x)).OrderBy(x => x).ToList())
             Close(key);
         seen = now;
         s.Step(1);
         // Compose commands of the yearly Requirement (the observer's check, SliceObserver.Requirements): profile's variant vs the actual one.
         SliceView after = s.View;
+        foreach (var av3 in after.Actors)
+        {
+            foreach (CloseView c in av3.Decisions.Closes)
+                cls.Add($"{seed},{t},{av3.Actor},{c.Design},{(int)c.Reason}");
+            foreach (DesignCommandView c in av3.Decisions.DesignCommands)
+            {
+                if (c.Kind == DesignCommandKind.Derive)
+                    cls.Add($"{seed},{t},{av3.Actor},{c.Target},-1");
+            }
+        }
         if (t % 12 == 0 && after.Inputs is MonthInputsView mi)
         {
             foreach (var av2 in after.Actors)
@@ -128,7 +179,7 @@ Parallel.For(0, n, new ParallelOptions { MaxDegreeOfParallelism = 16 }, k =>
     }
     foreach (var key in open.Keys.OrderBy(x => x).ToList())
         Close(key);
-    results[k] = (des, yld, cmp);
+    results[k] = (des, yld, cmp, cls, lns);
 });
 using (var w = new StreamWriter(prefix + "_designs.csv"))
 {
@@ -142,6 +193,23 @@ using (var w = new StreamWriter(prefix + "_compose.csv"))
     w.WriteLine("seed,t,actor,profile,gen,count,pilot_fired,alts");
     foreach (var r in results)
         foreach (string line in r.Cmp)
+            w.WriteLine(line);
+}
+using (var w = new StreamWriter(prefix + "_closes.csv"))
+{
+    // reason: LineCloseReason (1 A40C, 2 YProd, 3 LaunchAll, 4 LaunchCandidate); -1 = a Derive command (target = parent design)
+    w.WriteLine("seed,t,actor,design,reason");
+    foreach (var r in results)
+        foreach (string line in r.Cls)
+            w.WriteLine(line);
+}
+using (var w = new StreamWriter(prefix + "_lines.csv"))
+{
+    // kind E: a = E of all processes, b = E of processes only in stage О designs, c = E of processes of series lines;
+    // kind L: a = design, b = gen, c = t_series of the design, d = rate, e = unit_cost, f = least yield of its prc_set, g = bind
+    w.WriteLine("seed,t,actor,kind,a,b,c,d,e,f,g");
+    foreach (var r in results)
+        foreach (string line in r.Lns)
             w.WriteLine(line);
 }
 using (var w = new StreamWriter(prefix + "_yield.csv"))

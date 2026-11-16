@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0059-rank-only",
+  "description": "TASK-0059 print (introduction-channel-sketch.md \u00a711): arm 'RANK only' (C-B of Core + PILOT_CHOICE=RANK) on the round-3 decision seeds 30201-30300, plus Core C-B for reference. Diagnosis only, not a decision run.",
+  "model": "JetSliceCalib",
+  "ticks": 11688,
+  "chunk_size": 1,
+  "threads": 1,
+  "seeds": {
+    "start": 30201,
+    "count": 100
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "ALPHA": 0.05,
+    "X_SCALE": 1.0,
+    "K_DIV": 1.0,
+    "H_MAX": 0.08,
+    "THETA_START": 0.6
+  },
+  "series": [
+    {
+      "name": "test/core",
+      "seeds": {
+        "start": 30201,
+        "count": 100
+      }
+    },
+    {
+      "name": "test/RANK",
+      "seeds": {
+        "start": 30201,
+        "count": 100
+      },
+      "params": {
+        "PILOT_CHOICE": "RANK"
+      }
+    }
+  ],
+  "meta": {
+    "hypothesis": "HYP-0004",
+    "decision": "#238 V3; round 3 approved by the owner (via the Orchestrator)",
+    "round": 3,
+    "core_commit": "a17de78",
+    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.30",
+    "params_from": "lab/manifests/EXP-0002-c2.json (C1 + C3 frozen, #239)"
+  }
+}
