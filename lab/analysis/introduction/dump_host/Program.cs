@@ -1,3 +1,4 @@
+// HISTORICAL: requires build <= 84d833d (IntroCultureRule and CULTURE_VARIANT were removed in 840dc6b; lab/manifests/README.md).
 // HYP-0004 E1/E2 diagnostic host (introduction-channel-sketch.md §7). Runs the slice session in the calibration view mode (the world of
 // JetSliceCalib) with the Lab sketch rule CULTURE_VARIANT, and writes (1) the design lifecycle with its prc_set per actor (Session views
 // only) and (2) the yield parts of the tier-4 star PRC 40/49 every month (read-only reflection into the internal world, as the sketch hook).
