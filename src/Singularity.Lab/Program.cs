@@ -17,6 +17,7 @@ public static class Program
           c3-stand --out <dir> --manifest <json> [--point P] [--seeds N] [--mods <dir>]  C3 stand of calibration points -> c3_summary.csv
           culture-rules --out <dir> [--mods <dir>] [--only check|gate|holdout|...]  culture_H rule selection (culture-rule-selection.md)
           c5-stand --out <dir> [--mods <dir>] [--manifest <json> [--point P]] [--horizon H] [--threshold Y]  C5 stand (#248); H < 383 or Y != 0.7 = smoke
+          lk-draws --out <dir> --manifest <json> [--point P] [--seeds N]  L_K schedule draws (never, clock, own, req) -> lk_draws.csv
           calib-print --out <dir> --manifest <json> [--point P] [--seeds N] [--jobs J]  #247 G by fielded_L vs r6, designs (JetSliceCalib)
 
         Exit codes: 0 ok, 1 run/matrix failure or self-check failure, 2 usage or manifest error.
@@ -46,6 +47,7 @@ public static class Program
                 "c3-stand" => C3Stand(opts),
                 "calib-print" => CalibPrint(opts),
                 "c5-stand" => C5Stand(opts),
+                "lk-draws" => LkDraws(opts),
                 _ => throw new UsageException($"Unknown command '{args[0]}'."),
             };
         }
@@ -180,6 +182,17 @@ public static class Program
                 return rc;
         }
         return 0;
+    }
+
+    // L_K schedule draws of a LAYER = LK point (spec v0.34 §6.1, #251): the check of the control reads them with the L_K run.
+    private static int LkDraws(Options o)
+    {
+        string outDir = Path.GetFullPath(o.Required("out"));
+        string manifest = o.Required("manifest");
+        int? point = o.Int("point", 0, int.MaxValue);
+        int? seeds = o.Int("seeds", 1, 100_000);
+        o.CheckAllUsed();
+        return Smoke.LkDraws.Run(manifest, point, seeds, outDir, Console.Out);
     }
 
     // C3 stand of a calibration point (stage C3+C4): the point's K_DIV, THETA_START, H_MAX on the point's seeds (or the first --seeds N of them).

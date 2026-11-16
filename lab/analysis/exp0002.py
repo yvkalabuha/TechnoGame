@@ -2690,6 +2690,7 @@ def selftest(quick=False):
             f.write(",".join(CALIB_SUMMARY_COLS + ["tech_lead"]) + "\n")
         check("calib header check rejects tech_lead column", calib_header_check(d, cfg) == ["calib_summary.csv:tech_lead"])
     check("calib control tables", calib_selftest(cfg) is True)
+    check("L_K check v0.34 (#251): pass, n_K = 0 fails, exact self-check voids", lk_check_selftest(cfg) is True)
     return results, detail
 
 
@@ -2735,6 +2736,159 @@ def calib_selftest(cfg):
         return ok
 
 
+# ---------------------------------------------------------------- L_K check (spec v0.34 §6.1, #249, #251)
+
+LK_DRAWS_COLS = ["seed", "actor", "gen", "app", "never", "clock", "own", "req"]
+
+
+def _lk_app_times(d, cfg, point=None):
+    """(seed, actor, g) -> t_known of APP_g (None = unknown by the last month; -1 in CSV = known at the start), and the seeds."""
+    rows = _read_csv(os.path.join(d, "runs.csv"), RUNS_COLS + ([] if point is None else ["point"]))
+    if point is not None:
+        rows = [r for r in rows if r["point"] == str(point)]
+    runs = {r["run"]: int(r["seed"]) for r in rows if r["status"] == "ok"}
+    if not runs:
+        raise InputError("%s: no ok run%s" % (d, "" if point is None else " of point %s" % point))
+    app = {int(v): int(g) for g, v in cfg["calib"]["app_nodes"].items()}
+    out = {}
+    for r in _read_csv(os.path.join(d, "node_times.csv"), NODE_TIMES_COLS):
+        if r["run"] in runs and int(r["node"]) in app:
+            out[(runs[r["run"]], r["actor"], app[int(r["node"])])] = _oi(r["t_known"])
+    return out, sorted(runs.values())
+
+
+def _sd(xs):
+    return statistics.stdev(xs) if len(xs) > 1 else None
+
+
+def lk_check(calib_dir, lk_dir, draws_path, cfg, point=None, lk_point=None):
+    """Check of the L_K control (spec v0.34 §6.1, #251). Pass: per (actor, g) with APP unknown at the start and n_table > 0, the
+    t_known of APP_g in the L_K run (after requires, <= last month) against the table moments of the full model: n_K > 0;
+    |m_K - m| <= max(3, 3 s / sqrt(n_K)); |s_K - s| <= max(0.2 s, 2 SE_s) (SE_s: bootstrap of the full-model sample, B = boot_reps,
+    stream rng_for(cfg, 'lk_se_s|a:g')), s print only if n_table < 20 or n_K < 20. Code self-checks: exact (t_known of the run =
+    max(req, 0) if req <= last, from the Lab draws) — a mismatch voids the check; before requires (S = {max(own, 0) <= last}) — moments
+    printed with the same tolerances as a warning flag (S keeps the horizon truncation of the form)."""
+    last = cfg["n_months"] - 1
+    full, full_seeds = _lk_app_times(calib_dir, cfg, point)
+    lk, lk_seeds = _lk_app_times(lk_dir, cfg, lk_point)
+    draws = {}
+    for r in _read_csv(draws_path, LK_DRAWS_COLS):
+        draws[(int(r["seed"]), r["actor"], int(r["gen"]))] = (r["never"] == "1", _oi(r["own"]), _oi(r["req"]))
+    exact_bad, exact_n = [], 0
+    for (seed, a, g), (_nv, _own, req) in sorted(draws.items()):
+        if seed not in lk_seeds:
+            continue
+        exact_n += 1
+        want = None if req is None or req > last else max(req, 0)
+        got = lk.get((seed, a, g))
+        if got != want:
+            exact_bad.append((seed, a, g, got, want))
+    missing = [k for k in sorted(lk) if k[0] in lk_seeds and lk[k] != -1 and lk[k] is not None and k not in draws]
+    pairs, all_ok = {}, True
+    for a in cfg["actors"]:
+        for g in sorted(int(x) for x in cfg["calib"]["app_nodes"]):
+            fv = [full.get((s, a, g)) for s in full_seeds]
+            if any(v == -1 for v in fv):
+                continue   # APP known at the start: s = 0, m = -384, not checked
+            vals = [v for v in fv if v is not None]
+            key = "%s:%d" % (a, g)
+            n_t = len(vals)
+            e = {"n_table": n_t, "p_cens_table": r_(1 - n_t / len(full_seeds), 4)}
+            dr = [draws[(s, a, g)] for s in lk_seeds if (s, a, g) in draws]
+            not_never = [x for x in dr if x[1] is not None]
+            e["own_gt_last_share"] = r_(sum(1 for x in not_never if x[1] > last) / len(dr), 4) if dr else None
+            both = [(x[1], x[2]) for x in not_never if x[2] is not None and x[1] <= last and x[2] <= last]
+            e["delta_req_mean"] = r_(sum(q - o for o, q in both) / len(both), 3) if both else None
+            e["req_gt_own_share"] = r_(sum(1 for x in not_never if x[2] is None or x[2] > x[1]) / len(not_never), 4) if not_never else None
+            e["req_pushed_out_share"] = r_(sum(1 for x in not_never if x[1] <= last and (x[2] is None or x[2] > last))
+                                           / len(not_never), 4) if not_never else None
+            kv = [lk.get((s, a, g)) for s in lk_seeds]
+            kv = [v for v in kv if v is not None and v >= 0]
+            e["n_K"] = len(kv)
+            if n_t == 0:
+                e.update(verdict="not checked (p_cens = 1)", ok=None)
+                pairs[key] = e
+                continue
+            m, sd = sum(vals) / n_t, _sd(vals)
+            e.update(m=r_(m, 3), s=None if sd is None else r_(sd, 3))
+            sv = [max(x[1], 0) for x in not_never if max(x[1], 0) <= last]
+
+            def moments(xs, label):
+                n = len(xs)
+                if n == 0:
+                    return {"n": 0, "ok_m": False, "ok_s": None}
+                mm, ss = sum(xs) / n, _sd(xs)
+                tol_m = max(3.0, 3.0 * (sd or 0.0) / math.sqrt(n))
+                out = {"n": n, "m": r_(mm, 3), "s": None if ss is None else r_(ss, 3), "tol_m": r_(tol_m, 3), "ok_m": abs(mm - m) <= tol_m}
+                if n_t < 20 or n < 20 or sd is None or sd == 0 or ss is None:
+                    out.update(ok_s=None, s_rule="print (n < 20)")
+                else:
+                    rng = rng_for(cfg, "lk_se_s|" + key)
+                    boots = [statistics.stdev(rng.choices(vals, k=n_t)) for _ in range(cfg["boot_reps"])]
+                    se = statistics.stdev(boots)
+                    tol_s = max(0.2 * sd, 2 * se)
+                    out.update(se_s=r_(se, 3), tol_s=r_(tol_s, 3), ok_s=abs(ss - sd) <= tol_s)
+                return out
+            e["K"] = moments(kv, "K")
+            e["S_selfcheck"] = moments(sv, "S")
+            ok = e["n_K"] > 0 and e["K"]["ok_m"] and e["K"]["ok_s"] is not False
+            e["ok"] = ok
+            e["verdict"] = "pass" if ok else ("fail: no known APP in the L_K run (n_table > 0)" if e["n_K"] == 0 else "fail: moments")
+            all_ok &= ok
+            pairs[key] = e
+    selfcheck_ok = not exact_bad and not missing and exact_n > 0
+    return {"seeds_full": len(full_seeds), "seeds_lk": len(lk_seeds), "exact_selfcheck": {"rows": exact_n, "mismatches": len(exact_bad),
+            "first": exact_bad[:10], "lk_known_without_draw": missing[:10], "ok": selfcheck_ok},
+            "pairs": pairs, "pass": bool(selfcheck_ok and all_ok),
+            "verdict": "void (code self-check failed)" if not selfcheck_ok else ("pass" if all_ok else "fail")}
+
+
+def r_(x, nd):
+    return None if x is None else round(x, nd)
+
+
+def lk_check_selftest(cfg):
+    """Synthetic: USA:2 passes (requires shift +1 on half the seeds); GBR:4 has full-model values but no known APP in L_K (req > 383) and
+    fails; a corrupted t_known voids the check."""
+    with tempfile.TemporaryDirectory() as d:
+        cdir, kdir = os.path.join(d, "calib"), os.path.join(d, "lk")
+        os.makedirs(cdir)
+        os.makedirs(kdir)
+        app = {int(g): v for g, v in cfg["calib"]["app_nodes"].items()}
+
+        def write(path, head, rows):
+            with open(path, "w", newline="") as f:
+                w = csv.writer(f, lineterminator="\n")
+                w.writerow(head)
+                w.writerows(rows)
+        runs, ntc, ntk, dr = [], [], [], []
+        for s in range(1, 101):
+            seed = 10000 + s
+            rid = "r%d" % s
+            runs.append([rid, "calib", seed, 1, "ok", "h"])
+            v = 100 + (s % 21) - 5
+            ntc.append([rid, "USA", app[2], v, "", "", "", 0])
+            ntc.append([rid, "GBR", app[4], 375 + (s % 5) if s <= 10 else "", "", "", "", 0])
+            req = v + (s % 2)
+            ntk.append([rid, "USA", app[2], req, "", "", "", 0])
+            ntk.append([rid, "GBR", app[4], "", "", "", "", 0])
+            dr.append([seed, "USA", 2, app[2], 0, v, v, req])
+            dr.append([seed, "GBR", 4, app[4], 0, 377, 377, 390])
+        write(os.path.join(cdir, "runs.csv"), RUNS_COLS, runs)
+        write(os.path.join(kdir, "runs.csv"), RUNS_COLS, runs)
+        write(os.path.join(cdir, "node_times.csv"), NODE_TIMES_COLS, ntc)
+        write(os.path.join(kdir, "node_times.csv"), NODE_TIMES_COLS, ntk)
+        write(os.path.join(d, "draws.csv"), LK_DRAWS_COLS, dr)
+        r = lk_check(cdir, kdir, os.path.join(d, "draws.csv"), cfg)
+        ok = r["exact_selfcheck"]["ok"] and r["pairs"]["USA:2"]["ok"] and r["pairs"]["GBR:4"]["ok"] is False
+        ok &= r["pairs"]["GBR:4"]["n_K"] == 0 and r["pairs"]["GBR:4"]["req_pushed_out_share"] == 1.0 and r["verdict"] == "fail"
+        ok &= r["pairs"]["USA:2"]["K"]["ok_s"] is True and abs(r["pairs"]["USA:2"]["delta_req_mean"] - 0.5) < 1e-9
+        ntk[0][3] = 999
+        write(os.path.join(kdir, "node_times.csv"), NODE_TIMES_COLS, ntk)
+        r2 = lk_check(cdir, kdir, os.path.join(d, "draws.csv"), cfg)
+        return bool(ok and r2["verdict"].startswith("void"))
+
+
 # ---------------------------------------------------------------- CLI
 
 def main(argv=None):
@@ -2747,6 +2901,8 @@ def main(argv=None):
     ap.add_argument("--point", type=int, help="with --calib: only the runs of this matrix point (runs.csv `point`)")
     ap.add_argument("--tables-out", help="with --calib: write the CONTROL_TABLES file (format §3.1, control_tables/1)")
     ap.add_argument("--c1", help="c1_stand.csv (format §6): C1a, C1b, C1d, C1e and the Wright P0 check")
+    ap.add_argument("--lk-check", nargs=3, metavar=("CALIB_DIR", "LK_DIR", "LK_DRAWS_CSV"),
+                    help="L_K check of spec v0.34 §6.1 (#251): calibration run, L_K run, Lab lk-draws (with --point: point of the calib run)")
     ap.add_argument("--dump-config", action="store_true")
     ap.add_argument("--selftest", action="store_true")
     ap.add_argument("--quick", action="store_true", help="selftest with 400 resamples")
@@ -2771,7 +2927,16 @@ def main(argv=None):
             sys.stderr.write("error: config: %s\n" % e)
             return 2
     try:
-        if a.c1:
+        if a.lk_check:
+            r = lk_check(a.lk_check[0], a.lk_check[1], a.lk_check[2], cfg, a.point)
+            text = json.dumps(jsonable(r), indent=1, sort_keys=True) + "\n"
+            md = "# Проверка `L_K` (спец. v0.34 §6.1, #251)\n\n- итог: %s\n- самопроверка (точная): %s\n" % (
+                r["verdict"], json.dumps(jsonable(r["exact_selfcheck"]), sort_keys=True)) + "".join(
+                "- %s: %s; n_table %s, p_cens %s, own > 383 %s, n_K %s, Δ_req %s, унесено за 383 %s; K %s; S %s\n" % (
+                    k, v["verdict"], v["n_table"], v["p_cens_table"], v["own_gt_last_share"], v["n_K"], v["delta_req_mean"],
+                    v["req_pushed_out_share"], json.dumps(jsonable(v.get("K")), sort_keys=True), json.dumps(jsonable(v.get("S_selfcheck")), sort_keys=True))
+                for k, v in sorted(r["pairs"].items()))
+        elif a.c1:
             r = c1_stand(a.c1, cfg)
             text = json.dumps(jsonable(r), indent=1, sort_keys=True) + "\n"
             md = "# C1 по `c1_stand.csv` (спец. §8.2 п.1; формат §6)\n\n" + "".join(

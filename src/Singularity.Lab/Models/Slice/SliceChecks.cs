@@ -48,6 +48,8 @@ public static class SliceChecks
         ("slice: calibration points — one point of each stage C1, C3+C4, C2 and the L_C/L_P layers run; K keys change the run (TASK-0055)", () => CalibrationPoints(tmp)),
         ("slice: switches — FORCE, START PERT/SYM, CHANNELS, GRID, FLEET_ARM, SALE_ARM, change the run (DEBT-0032, HYP-0004)", () => Switches(tmp)),
         ("slice: calib-print — 1 seed, 60 months: hash = golden_hash, G_r6 ≤ G_L, first entry equal; FORCE/CONTROL_TABLES rejected (review M1, M2, M5)", () => CalibPrintSmoke(tmp)),
+        ("slice: lk-draws — t_known of an L_K run = max(req, 0) of the exported draws, req ≥ own (spec v0.34 §6.1 self-check, #251)", () => LkDrawsExact(tmp)),
+        ("slice: c5-stand — the output months of the C5 site equal the C1 DevSite FULL_T0 (same culture rule C-B + I-OC, 8 months)", C5DevSiteEquivalence),
         ("slice: c5-stand — smoke (horizon 6, threshold 0,25): idle and restart run, two runs give the same bytes, no statistic row (#248)", () => C5Smoke(tmp)),
     ];
 
@@ -99,15 +101,84 @@ public static class SliceChecks
         return null;
     }
 
+    // #251: the draws exported by lk-draws are those of the run — the self-check of the corrected L_K check, here on synthetic tables, 150 months.
+    private static string? LkDrawsExact(string tmp)
+    {
+        GameData data = SliceData.Load(tmp);
+        File.WriteAllText(Path.Combine(tmp, "lkd-tables.json"), SyntheticControlTables(data, n => n % 7 == 0 ? null : n % 5));
+        string json = Manifest("JetSliceCalib", Ticks150, seeds: "[3]", pars: """{"LAYER": "LK", "CONTROL_TABLES": "lkd-tables.json"}""");
+        string path = Path.Combine(tmp, "lkd-m.json");
+        File.WriteAllText(path, json);
+        var (r, dir) = Run(tmp, json, 3, 1, "lkd-run");
+        if (!r.Ok)
+            return r.Error;
+        string outDir = Path.Combine(tmp, "lkd-out");
+        Smoke.LkDraws.Run(path, null, null, outDir, TextWriter.Null);
+        var known = new Dictionary<(string, string), string>();
+        string[] nt = File.ReadAllLines(Path.Combine(dir, "node_times.csv"));
+        string[] h = nt[0].Split(',');
+        int ia = Array.IndexOf(h, "actor"), ino = Array.IndexOf(h, "node"), itk = Array.IndexOf(h, "t_known");
+        foreach (string line in nt.Skip(1))
+        {
+            string[] c = line.Split(',');
+            known[(c[ia], c[ino])] = c[itk];
+        }
+        string[] draws = File.ReadAllLines(Path.Combine(outDir, Smoke.LkDraws.File));
+        if (draws[0] != Smoke.LkDraws.Header || draws.Length < 2)
+            return "lk_draws.csv header or no rows";
+        int seen = 0;
+        foreach (string line in draws.Skip(1))
+        {
+            string[] c = line.Split(',');   // seed,actor,gen,app,never,clock,own,req
+            string want = c[7].Length > 0 && long.Parse(c[7], System.Globalization.CultureInfo.InvariantCulture) <= 149
+                ? Math.Max(0, long.Parse(c[7], System.Globalization.CultureInfo.InvariantCulture)).ToString(System.Globalization.CultureInfo.InvariantCulture) : "";
+            string got = known.TryGetValue((c[1], c[3]), out string? v) ? v : "";
+            if (got != want)
+                return $"{c[1]}:{c[3]} t_known {got}, draws give {want} ({line})";
+            if (c[6].Length > 0 && c[7].Length > 0 && long.Parse(c[7], System.Globalization.CultureInfo.InvariantCulture) < long.Parse(c[6], System.Globalization.CultureInfo.InvariantCulture))
+                return $"req < own in {line}";
+            seen += want.Length > 0 ? 1 : 0;
+        }
+        return seen > 0 ? null : "no APP became known in the run: the check compared nothing";
+    }
+
+    // Gate v0.33 (critic): the C5 site runs the build's culture rule like the C1 site; on the shared path (P3, t0, producing) the states are equal.
+    private static string? C5DevSiteEquivalence()
+    {
+        string mods = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(SliceData.Files(AppContext.BaseDirectory)[0]))!, "core");
+        GameData data = Singularity.Core.Data.ModLoader.Load(mods);
+        ScenarioData sc = data.Scenario("jet_slice_1945");
+        var ip = new Core.Industry.IndustryParams();
+        var line = new Smoke.C1Stand.ReferenceLine(data, sc, ip);
+        var dev = new Smoke.C1Stand.DevSite(data, sc, line, Core.Policy.PolicyProfile.Adaptive, false, false, ip);
+        dev.Run(3);   // months 0…7
+        var c5 = new Smoke.C5Stand.Site(data, sc, line, Core.Policy.PolicyProfile.Adaptive, false, ip, Smoke.C5Stand.Horizon);
+        c5.Produce(8);
+        Fx6[] a = dev.StateVector(), b = c5.StateVector();
+        if (a.Length != b.Length)
+            return $"state lengths {a.Length} vs {b.Length}";
+        for (int i = 0; i < a.Length; i++)
+        {
+            if (a[i] != b[i])
+                return $"state {i}: DevSite {a[i]} vs C5 {b[i]}";
+        }
+        return null;
+    }
+
     // #248: the C5 stand is deterministic; a smoke run (not the statistic: horizon 6, threshold 0,25) passes through the idle and restart of arm ADMIT.
     private static string? C5Smoke(string tmp)
     {
         string mods = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(SliceData.Files(AppContext.BaseDirectory)[0]))!, "core");
         var thr = Fx6.FromRaw(250_000);
         string a = Path.Combine(tmp, "c5-a"), b = Path.Combine(tmp, "c5-b");
-        Smoke.C5Stand.Run(mods, a, TextWriter.Null, new Core.Industry.IndustryParams(), 6, thr);
+        var logA = new StringWriter();
+        if (Smoke.C5Stand.Run(mods, a, logA, new Core.Industry.IndustryParams(), 6, thr) != 0)
+            return "smoke exit code";
+        string text = logA.ToString();
+        if (text.Contains("NaN", StringComparison.Ordinal) || text.Contains("Infinity", StringComparison.Ordinal) || text.Contains('∞'))
+            return "NaN or Infinity in the log";
         Smoke.C5Stand.Run(mods, b, TextWriter.Null, new Core.Industry.IndustryParams(), 6, thr);
-        foreach (string f in new[] { "c5_stand.csv", "c5_trace.csv", "c5_process.csv", "c5_cells.csv" })
+        foreach (string f in new[] { "c5_stand.csv", "c5_trace.csv", "c5_process.csv", "c5_cells.csv", "c5_meta.csv" })
         {
             if (!File.ReadAllBytes(Path.Combine(a, f)).SequenceEqual(File.ReadAllBytes(Path.Combine(b, f))))
                 return $"{f} differs between two runs";
@@ -120,7 +191,15 @@ public static class SliceChecks
         string? admit = rows.FirstOrDefault(r => r.StartsWith("ADMIT,", StringComparison.Ordinal));
         string[] c = admit?.Split(',') ?? [];
         int restart = Array.IndexOf(Smoke.C5Stand.StandHeader.Split(','), "restart_month");
-        return c.Length > restart && c[restart] == "120" ? null : $"ADMIT row {admit}: no restart at month 120";
+        if (c.Length <= restart || c[restart] != "120")
+            return $"ADMIT row {admit}: no restart at month 120";
+        // #252: censored newcomers (T0 arms at horizon 6) and the newcomer admitted at t0 (ADMIT, n_new = 0) are both «undefined», without d.
+        int io = Array.IndexOf(Smoke.C5Stand.StandHeader.Split(','), "outcome");
+        if (rows.Skip(1).Any(r => r.Split(',')[io] != Smoke.C5Stand.Undefined || r.Split(',')[io + 1] != ""))
+            return "smoke outcomes are not all undefined without d";
+        return Smoke.C5Stand.OutcomeOf(10, 9) == Smoke.C5Stand.Pass && Smoke.C5Stand.OutcomeOf(10, 10) == Smoke.C5Stand.Fail
+            && Smoke.C5Stand.OutcomeOf(10, null) == Smoke.C5Stand.Fail && Smoke.C5Stand.OutcomeOf(0, 0) == Smoke.C5Stand.Undefined
+            && Smoke.C5Stand.OutcomeOf(null, null) == Smoke.C5Stand.Undefined ? null : "OutcomeOf codes";
     }
 
     // DEBT-0032: a licence that lapsed (Active 1 -> 0) and is Active again without a purchase was no longer tracked; now it resumes (LIC_RESUME).

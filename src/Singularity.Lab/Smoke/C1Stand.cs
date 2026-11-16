@@ -369,6 +369,25 @@ internal static class C1Stand
 
         private Fx6[] Snapshot0 { get; set; } = [];
 
+        /// <summary>All <c>culture_H</c>, <c>tooling_M</c> cells and <c>proc_X</c> of the prc_set (C5 stand equivalence check, spec v0.34 C5).</summary>
+        internal Fx6[] StateVector() => State(_ind, _l, _setRows);
+
+        internal static Fx6[] State(IndustrySystem ind, IndustryLayout l, int[] setRows)
+        {
+            var v = new List<Fx6>();
+            for (int c = 0; c < l.Clusters.Length; c++)
+            {
+                foreach (Dimension d in new[] { Dimension.Precision, Dimension.Purity, Dimension.QualityControl })
+                {
+                    v.Add(ind.CultureH(0, c, d));
+                    v.Add(ind.ToolingM(0, c, d));
+                }
+            }
+            foreach (int r in setRows)
+                v.Add(ind.ProcX(0, r));
+            return [.. v];
+        }
+
         private Fx6[] Snapshot(Fx6 x)
         {
             var y = new Fx6[_line.PrcSet.Length];

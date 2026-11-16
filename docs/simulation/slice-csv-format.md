@@ -4,6 +4,9 @@
 > Соглашения унаследованы от `exp0001-csv-format.md` и Lab (ADR-0008, `src/Singularity.Lab/RunExecutor.cs`, `MatrixRunner.cs`).
 > Модели `JetSlice` и `JetSliceCalib` — `src/Singularity.Lab/Models/Slice/` (T10 этап 2): читают только `SliceSession` и его views по имени свойств. Проверки — `Singularity.Lab selftest` (`SliceChecks`), малая матрица `lab/manifests/EXP-0002-t10-smoke.json`, серия `det` (`EXP-0002-det.json`).
 
+## Изменения v0.5 r13 (TASK-0056, решения #251, #252)
+- §6.1: `c5_stand.csv` — колонка `outcome`, `d_c5` пусто при `undefined`; `c5_meta.csv`; флаги ячеек; `lk_draws.csv` (`lk-draws`) и `exp0002.py --lk-check`. Таблицы прогонов и golden не менялись.
+
 ## Изменения v0.5 r12 (TASK-0056, решения #248, #250)
 - §6.1: стенд C5 `c5-stand` и его файлы. `calib-print` (lab-cli.md): отказ при `FORCE`/`CONTROL_TABLES` (точка не была бы миром matrix), колонки `first_*_g{g}` — по числу поколений раскладки. Колонки таблиц прогонов, golden — без изменений.
 
@@ -320,12 +323,14 @@
 | `asm_drop`, `asm_over_floor_drop` | падение полного `assembly_hours` и `assembly_hours − h_floor` |
 v0.27 спеки (#231): `DEV` стартует с допущенного `prc_set` (`gap` в логе стенда); плечо `FULL_T0` — культура GBR t0 (печать). r8: стенд — `Singularity.Lab c1-stand --out DIR` (`src/Singularity.Lab/Smoke/C1Stand.cs`, `SingleLayerStand`); плечи `DEV`: `FULL` (профиль P3), `FULL_P1`, `FULL_P2`, `FULL_E0`, `FULL_G1`, `NO_YIELD`/`NO_ASM`/`NONE` (от `FULL`); `MATURE`: `FULL` + три абляции; `MATURE_3X`: `FULL`. Колонки разложения у абляций пусты. Анализ берёт только `FULL` с `in_stat = 1`; проверка Wright — среднее по окну в log (контракт §8 п.2 r9), не каждое удвоение. Статистики (анализ, спец. §8.2 п.1): C1a = `1 − exp(−Σ dlog_cost/n)` по `DEV/FULL`, C1b = `Σ dlog_yield / Σ (dlog_yield + dlog_asm)` по `DEV`; C1d, C1e — то же по `MATURE`; пустой набор удвоений → `d` = 1. Падение `asm_over_floor_drop` в `MATURE` — проверка P0 (15–30%, #187), в потери не идёт. «Зрелая» уже покрыта тестом `ProductsChannelBudgetTests` (TASK-0042 п.4); «освоение» требует `culture_H`/`tooling_M` GBR t0 и правила наладки — из данных сценария и чистых функций Core, без Session [Предп.; проверить на T12].
 
-### 6.1 Стенд C5 (`c5-stand`; r12, спец. v0.33 §8.2 п.1 C5, #248) [Предл.]
+### 6.1 Стенд C5 (`c5-stand`; r12–r13, спец. v0.34 §8.2 п.1 C5, #248, #252) [Предл.]
 `Singularity.Lab c5-stand --out DIR [--manifest M [--point P]] [--horizon H] [--threshold Y]` (`src/Singularity.Lab/Smoke/C5Stand.cs`, `SingleLayerStand`), детерминирован. Плечи: `MAIN` (P3, старт t0, простой 120) — статистика; `P1`, `P2`, `IDLE60`, `IDLE240`, `ADMIT` (старт #231) — печать. `H` < 383 или `Y` ≠ 0,7 — смоук: `in_stat` = 0 во всех строках.
-- **`c5_stand.csv`** — строка на плечо: `arm`, `in_stat` (1 только у `MAIN` при 383 и 0,7), `profile`, `start` (`T0`/`ADMIT`), `idle`, `horizon`, `threshold`, `n_new`, `cens_new`, `n_vet`, `cens_vet` (пусто, если ветерана нет), `restart_month` (`R`), `y_restart` (наименьший `yield` набора в `R`), `ratio` (`n_vet/n_new`, пусто при `n_new` = 0), `d_c5` (0 — только оба подъёма без цензуры и `n_vet < n_new`).
+- **`c5_stand.csv`** — строка на плечо: `arm`, `in_stat` (1 только у `MAIN` при 383 и 0,7), `profile`, `start` (`T0`/`ADMIT`), `idle`, `horizon`, `threshold`, `n_new`, `cens_new`, `n_vet`, `cens_vet` (пусто, если ветерана нет), `restart_month` (`R`), `y_restart` (наименьший `yield` набора в `R`), `ratio` (`n_vet/n_new`, пусто при `n_new` = 0), `outcome` (r13: `pass` / `fail` / `undefined` — новичок цензурирован или `n_new` = 0, #252), `d_c5` (0 при `pass`, 1 при `fail`, пусто при `undefined`).
+- **`c5_meta.csv`** (r13) — `key,value`: `params` (сырые `Fx6` `ALPHA`, `XHALF`, `DELTA_H`, `C_M`), `params_sha256`, `scenario_hash`, `data_hash`, `horizon`, `threshold`, `prc_set`, `r_ref`. Остановка стенда — `c5_stop.txt`, код выхода 1.
 - **`c5_trace.csv`** — `arm`, `phase` (`ASCENT`/`IDLE`/`RESTART`), `t`, `tau`, `min_yield`, `argmin` (номер процесса) — помесячно, до конца каждого подъёма.
 - **`c5_process.csv`** — `yield` каждого процесса набора в месяцах 0, `n_new`, `R`, `R + n_vet` (пусто, если месяца нет).
-- **`c5_cells.csv`** — по ячейкам (кластер, измерение) с `r_d` > 0 у процесса набора: `H`, `M` в месяцах 0, `n_new`, `R` и доля прироста, сохранённая простоем, `(x(R) − x(0)) / (x(n_new) − x(0))` (пусто без прироста).
+- **`c5_cells.csv`** — по ячейкам (кластер, измерение) с `r_d` > 0 у процесса набора: `H`, `M` в месяцах 0, `n_new`, `R`, доля прироста, сохранённая простоем, `(x(R) − x(0)) / (x(n_new) − x(0))` (пусто без прироста) и флаги `h_r_ge_0`, `m_r_ge_0` (r13: `x(R) ≥ x(0)`).
+- **`lk_draws.csv`** (r13, `lk-draws`, спец. v0.34 §6.1) — `seed,actor,gen,app,never,clock,own,req`: розыгрыши расписания `L_K` по (seed, актор, g) с APP, неизвестным на старте; пусто — «никогда». Разбор — `exp0002.py --lk-check CALIB_DIR LK_DIR lk_draws.csv`.
 
 ## 7. Что считает анализ (дополнения v0.3; определения v0.2 §6 — в силе)
 - Определения v0.2 (засчитанная смена, tenure, `small_lead`, P1–P5, исход, D1, D2, таблицы контролей) не меняются; спец. v0.24 §7 их не меняла; v0.25 (#190) поменяла только ось `k_diff` сетки P5.

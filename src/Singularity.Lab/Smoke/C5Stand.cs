@@ -8,14 +8,14 @@ using Singularity.Kernel;
 namespace Singularity.Lab.Smoke;
 
 /// <summary>
-/// C5 stand (test #30, «veteran against newcomer»; spec slice-jet-aviation.md v0.33 §8.2 п.1 C5, decision #248). One GBR site of the 1945
+/// C5 stand (test #30, «veteran against newcomer»; spec slice-jet-aviation.md v0.34 §8.2 п.1 C5, decisions #248, #252). One GBR site of the 1945
 /// scenario with the real capability system, the reference line of the C1 stand (G2 «superior» prc_set, pace <c>r_ref</c>; rules of the
 /// C1 «освоение» site: series line with <c>Planned</c> and <c>GrowthNominal = V_C</c>, effort <c>D = share_D·budget</c>, tooling A39 V5 with
 /// <c>B_cap = share_cap·budget</c>). The newcomer starts from the GBR t0 cells, <c>X = 0</c> on the prc_set. An ascent from month <c>t_s</c>
 /// lasts <c>n = min τ ∈ [0; horizon]</c> with the lowest prc_set yield read by the compute of month <c>t_s + τ</c> ≥ 0,7; none — censored.
 /// The veteran is the same run: after the first ascent (<c>n_new</c>) the line is idle for <c>I</c> months (no output, not planned, no
 /// growth nominal, <c>D = 0</c>, <c>B_cap = 0</c>), then restarts at <c>R = n_new + I</c> with the budget path from τ = 0; <c>n_vet</c> is the
-/// ascent from R. <c>d_C5 = 0</c> only if neither ascent is censored and <c>n_vet &lt; n_new</c>. Only arm MAIN (P3, t0, I = 120,
+/// ascent from R. Outcome (#252): undefined if the newcomer is censored or admitted at t0 (<c>n_new = 0</c>); else pass only if <c>n_vet &lt; n_new</c> without censoring. Only arm MAIN (P3, t0, I = 120,
 /// horizon 383) is the statistic; the others are prints. Deterministic: the capability layer reads no RNG.
 /// </summary>
 internal static class C5Stand
@@ -24,7 +24,10 @@ internal static class C5Stand
     public const int Horizon = 383;
     public const int MainIdle = 120;
     public static readonly Fx6 Threshold = Fx6.FromRaw(700_000);
-    public const string StandHeader = "arm,in_stat,profile,start,idle,horizon,threshold,n_new,cens_new,n_vet,cens_vet,restart_month,y_restart,ratio,d_c5";
+    public const string StandHeader = "arm,in_stat,profile,start,idle,horizon,threshold,n_new,cens_new,n_vet,cens_vet,restart_month,y_restart,ratio,outcome,d_c5";
+
+    /// <summary>Outcome codes of <c>c5_stand.csv</c> (spec v0.34 §8.2 п.1 C5, #252): <c>pass</c> (d = 0), <c>fail</c> (d = 1), <c>undefined</c> (no d; L without C5).</summary>
+    public const string Pass = "pass", Fail = "fail", Undefined = "undefined";
 
     private sealed record Arm(string Name, PolicyProfile Profile, bool Admit, int Idle);
 
@@ -39,8 +42,17 @@ internal static class C5Stand
     ];
 
     /// <summary>
+    /// #252: the newcomer censored (no n_new) or admitted at t0 (n_new = 0, nothing to be shorter than) — undefined; otherwise pass only if the
+    /// veteran's ascent is not censored and strictly shorter.
+    /// </summary>
+    public static string OutcomeOf(long? nNew, long? nVet) =>
+        nNew is not long nn || nn == 0 ? Undefined : nVet is long nv && nv < nn ? Pass : Fail;
+
+    /// <summary>
     /// One stand run with the capability parameters <paramref name="ip"/>. <paramref name="horizon"/> &lt; 383 is a smoke run (column
-    /// <c>horizon</c>; <c>in_stat</c> = 0 everywhere), and so is a <paramref name="threshold"/> other than 0,7: the statistic is defined only at 383 and 0,7. Returns 0; <c>d_c5</c> is in the CSV.
+    /// <c>horizon</c>; <c>in_stat</c> = 0 everywhere), and so is a <paramref name="threshold"/> other than 0,7: the statistic is defined only at
+    /// 383 and 0,7. The point is identified by the values of its capability parameters (<c>c5_meta.csv</c>, <c>params_sha256</c>), not by its
+    /// index in a manifest. Returns 0, or 1 on a stand stop (journal <c>c5_stop.txt</c>, spec §8.2 п.7).
     /// </summary>
     public static int Run(string modDir, string outDir, TextWriter log, IndustryParams ip, int horizon = Horizon, Fx6? threshold = null)
     {
@@ -53,7 +65,14 @@ internal static class C5Stand
         ScenarioData sc = data.Scenario("jet_slice_1945");
         var line = new C1Stand.ReferenceLine(data, sc, ip);
         Directory.CreateDirectory(outDir);
-        log.WriteLine($"c5-stand scenario_hash={sc.Hash} data_hash={data.DataHash} G2 superior prc_set={string.Join(' ', line.PrcSet)} r_ref={line.RRef} horizon={horizon} threshold={thr}");
+        string pars = ParamsText(ip);
+        string parsSha = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(pars)));
+        File.WriteAllText(Path.Combine(outDir, "c5_meta.csv"), "key,value\n" + string.Join("", new[]
+        {
+            ("params", pars), ("params_sha256", parsSha), ("scenario_hash", sc.Hash), ("data_hash", data.DataHash),
+            ("horizon", I(horizon)), ("threshold", thr.ToString()), ("prc_set", string.Join(' ', line.PrcSet)), ("r_ref", line.RRef.ToString()),
+        }.Select(kv => $"{kv.Item1},{kv.Item2}\n")));
+        log.WriteLine($"c5-stand scenario_hash={sc.Hash} data_hash={data.DataHash} params_sha256={parsSha} ({pars}) G2 superior prc_set={string.Join(' ', line.PrcSet)} r_ref={line.RRef} horizon={horizon} threshold={thr}");
         using var stand = new StreamWriter(Path.Combine(outDir, "c5_stand.csv"));
         using var trace = new StreamWriter(Path.Combine(outDir, "c5_trace.csv"));
         using var proc = new StreamWriter(Path.Combine(outDir, "c5_process.csv"));
@@ -61,30 +80,51 @@ internal static class C5Stand
         stand.WriteLine(StandHeader);
         trace.WriteLine("arm,phase,t,tau,min_yield,argmin");
         proc.WriteLine("arm,process,y_0,y_n_new,y_restart,y_vet");
-        cells.WriteLine("arm,cluster,dim,h_0,h_n_new,h_restart,h_kept,m_0,m_n_new,m_restart,m_kept");
+        cells.WriteLine("arm,cluster,dim,h_0,h_n_new,h_restart,h_kept,h_r_ge_0,m_0,m_n_new,m_restart,m_kept,m_r_ge_0");
         foreach (Arm arm in Arms)
         {
-            var site = new Site(data, sc, line, arm.Profile, arm.Admit, ip, horizon);
-            Outcome o = site.Run(arm.Idle, horizon, thr, (phase, t, tau, y, argmin) =>
-                trace.WriteLine(string.Join(',', arm.Name, phase, I(t), I(tau), R(y), I(argmin))));
+            Site site;
+            Outcome o;
+            try
+            {
+                site = new Site(data, sc, line, arm.Profile, arm.Admit, ip, horizon);
+                o = site.Run(arm.Idle, horizon, thr, (phase, t, tau, y, argmin) =>
+                    trace.WriteLine(string.Join(',', arm.Name, phase, I(t), I(tau), R(y), I(argmin))));
+            }
+            catch (InvalidOperationException e)
+            {
+                // A stand stop (no admitted culture for ADMIT, no G2 «superior»): no value of d — journal and a nonzero exit (spec §8.2 п.7).
+                string msg = $"STOP arm {arm.Name}: {e.Message}";
+                File.WriteAllText(Path.Combine(outDir, "c5_stop.txt"), msg + "\n");
+                log.WriteLine(msg);
+                return 1;
+            }
             bool inStat = arm.Name == "MAIN" && horizon == Horizon && thr == Threshold;
-            int d = o.NNew is long nn && o.NVet is long nv && nv < nn ? 0 : 1;
+            string outcome = OutcomeOf(o.NNew, o.NVet);
+            string d = outcome == Pass ? "0" : outcome == Fail ? "1" : "";
             stand.WriteLine(string.Join(',', arm.Name, inStat ? "1" : "0", arm.Profile, arm.Admit ? "ADMIT" : "T0", I(arm.Idle), I(horizon), thr.ToString(),
                 O(o.NNew), o.NNew is null ? "1" : "0", O(o.NVet), o.NNew is not null && o.NVet is null ? "1" : (o.NNew is null ? "" : "0"),
                 O(o.Restart), o.YRestart is double yr ? R(yr) : "",
-                o.NNew is long a && o.NVet is long b && a > 0 ? R((double)b / a) : "", I(d)));
+                o.NNew is long a && o.NVet is long b && a > 0 ? R((double)b / a) : "", outcome, d));
             for (int i = 0; i < line.PrcSet.Length; i++)
             {
                 proc.WriteLine(string.Join(',', arm.Name, I(line.PrcSet[i]), Y(o.Y0, i), Y(o.YNew, i), Y(o.YRestart0, i), Y(o.YVet, i)));
             }
             foreach (CellRow c in o.Cells)
             {
-                cells.WriteLine(string.Join(',', arm.Name, c.Cluster, c.Dim, V(c.H, 0), V(c.H, 1), V(c.H, 2), Kept(c.H), V(c.M, 0), V(c.M, 1), V(c.M, 2), Kept(c.M)));
+                cells.WriteLine(string.Join(',', arm.Name, c.Cluster, c.Dim, V(c.H, 0), V(c.H, 1), V(c.H, 2), Kept(c.H), Ge(c.H), V(c.M, 0), V(c.M, 1), V(c.M, 2), Kept(c.M), Ge(c.M)));
             }
-            log.WriteLine($"{arm.Name}: start gap {site.Gap}; n_new {O(o.NNew)}; restart {O(o.Restart)}; n_vet {O(o.NVet)}; d {d}{(inStat ? " (statistic)" : " (print)")}");
+            log.WriteLine($"{arm.Name}: start {site.GapText}; n_new {O(o.NNew)}; restart {O(o.Restart)}; n_vet {O(o.NVet)}; {outcome}{(inStat ? " (statistic)" : " (print)")}");
         }
         return 0;
     }
+
+    // The capability parameters a calibration point can set (StandPoint.Industry): raw Fx6, fixed order.
+    internal static string ParamsText(IndustryParams ip) =>
+        $"ALPHA={ip.Alpha.Raw};XHALF={string.Join(' ', ip.XHalfByTier.Select(x => x.Raw))};DELTA_H={ip.DeltaH.Raw};C_M={ip.CM.Raw}";
+
+    // Interpretation flag (#252 critic): the newcomer starts from the scenario culture, so x(R) ≥ x(0) says whether the veteran keeps more than t0.
+    private static string Ge(double?[] x) => x[2] is double xr && x[0] is double x0 ? (xr >= x0 ? "1" : "0") : "";
 
     private static string Y(Fx6[]? y, int i) => y is null ? "" : R(y[i].ToDouble());
 
@@ -163,6 +203,7 @@ internal static class C5Stand
             }
             for (int r = 0; r < _l.ProcessCount; r++)
                 own.X[r] = _inSet[r] ? Fx6.Zero : start.X[gbr * full.ProcessCount + r];   // newcomer: X0 = 0 on the prc_set
+            _admitted = admittedStart;
             if (admittedStart)
                 Gap = AdmitStart(own);
             _w = sc.W[gbr];
@@ -179,8 +220,13 @@ internal static class C5Stand
             _runner = new TickRunner(table, 1, [_ind, lines], 1, 1, _cal);
         }
 
-        /// <summary>Gap of the #231 start (arm ADMIT); NaN for the t0 start, +∞ if t0 already admits.</summary>
-        public double Gap { get; } = double.NaN;
+        /// <summary>Gap of the #231 start (arm ADMIT); null for the t0 start or when t0 already admits (see <see cref="GapText"/>).</summary>
+        public double? Gap { get; }
+
+        private readonly bool _admitted;
+
+        /// <summary>Start text for logs, without NaN or Infinity.</summary>
+        public string GapText => !_admitted ? "t0" : Gap is double g ? $"admitted, gap {g.ToString("0.00", CultureInfo.InvariantCulture)}" : "admitted, t0 already admits";
 
         public Outcome Run(int idle, int horizon, Fx6 threshold, Action<string, long, long, double, int> trace)
         {
@@ -205,7 +251,7 @@ internal static class C5Stand
                 _idle = false;
                 restart = t;
                 yRestart = Yields(t);
-                yR = yRestart.Min().ToDouble();
+                yR = MinFx(t).ToDouble();
                 snaps.Add(CellSnapshot());
                 nVet = Ascent("RESTART", ref t, horizon, threshold, trace);
                 if (nVet is not null)
@@ -231,7 +277,28 @@ internal static class C5Stand
             return null;
         }
 
-        private Fx6 MinFx(long t) => Yields(t).Min();
+        /// <summary>Months 0…<paramref name="months"/> − 1 by the output-month rules (equivalence check with <see cref="C1Stand.DevSite"/>).</summary>
+        internal void Produce(int months)
+        {
+            _phaseStart = 0;
+            for (long t = 0; t < months; t++)
+                RunMonth(t);
+        }
+
+        /// <summary>All <c>culture_H</c>, <c>tooling_M</c> cells and <c>proc_X</c> of the prc_set, in a fixed order.</summary>
+        internal Fx6[] StateVector() => C1Stand.DevSite.State(_ind, _l, _setRows);
+
+        private Fx6 MinFx(long t)
+        {
+            Fx6[] y = Yields(t);
+            Fx6 min = y[0];
+            for (int i = 1; i < y.Length; i++)
+            {
+                if (y[i] < min)
+                    min = y[i];
+            }
+            return min;
+        }
 
         private Fx6[] Yields(long t) => [.. _setRows.Select(r => _ind.Yield(0, r, t).Yield)];
 
@@ -249,7 +316,8 @@ internal static class C5Stand
 
         // Cells (cluster, dimension) used by an active dimension of a prc_set process (r_d > 0).
         private IEnumerable<(int Cluster, int Dim)> ActiveCells() =>
-            _setRows.SelectMany(r => Enumerable.Range(0, 3).Where(d => _l.Req[r][d] > Fx6.Zero).Select(d => (_l.ClusterIndex[r], d))).Distinct().Order();
+            _setRows.SelectMany(r => Enumerable.Range(0, 3).Where(d => _l.Req[r][d] > Fx6.Zero).Select(d => (Cluster: _l.ClusterIndex[r], Dim: d)))
+                .Distinct().OrderBy(c => c.Cluster, Comparer<int>.Default).ThenBy(c => c.Dim, Comparer<int>.Default);
 
         private (Fx6[] H, Fx6[] M) CellSnapshot()
         {
@@ -278,7 +346,7 @@ internal static class C5Stand
         }
 
         // #231 start (arm ADMIT only): the same rule as C1Stand.DevSite.AdmitStart.
-        private double AdmitStart(IndustryStart own)
+        private double? AdmitStart(IndustryStart own)
         {
             Fx6[] h0 = [.. own.H], m0 = [.. own.M];
             bool Admits()
@@ -294,7 +362,7 @@ internal static class C5Stand
                 return true;
             }
             if (Admits())
-                return double.PositiveInfinity;
+                return null;
             for (long gap = 300; gap >= 0; gap--)
             {
                 h0.CopyTo(own.H, 0);
@@ -344,7 +412,10 @@ internal static class C5Stand
         }
 
         private ToolingPlanResult Plan(long month, Fx6 rest) =>
-            ToolingPlan.Compute(_ind, this, _pp.MKeep, 0, month, rest, _idle ? Fx6.Zero : _shares.Capability * Budget(month), new ToolingTargetSpec());
+            ToolingPlan.Compute(_ind, this, _pp.MKeep, 0, month, rest, _idle ? Fx6.Zero : _shares.Capability * Budget(month), Target);
+
+        // The main target of pass 2 (A39 V5, #163), written out: the stand must not follow a change of the record's default silently.
+        private static readonly ToolingTargetSpec Target = new() { Variant = ToolingTarget.V5 };
 
         public Fx6 EffortBudget(int actorRow, long month) => _idle ? Fx6.Zero : _shares.Effort * Budget(month);
 
@@ -352,8 +423,10 @@ internal static class C5Stand
 
         public Fx6 PlannedVolume(int siteRow, int processRow, long month)
         {
+            if (_idle && _inSet[processRow])
+                return Fx6.Zero;   // idle: v_exp = 0 (spec v0.34 C5); proc_v of the snapshot is 0 from the second idle month (no report)
             Fx6 v = _ind.ProcV(siteRow, processRow);
-            if (_idle || !_inSet[processRow])
+            if (!_inSet[processRow])
                 return v;
             Fx6 plan = LinePlan(processRow);
             return v > plan ? v : plan;
