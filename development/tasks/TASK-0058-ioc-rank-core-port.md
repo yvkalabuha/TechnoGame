@@ -40,3 +40,11 @@ created: 2026-11-16
 - [ ] Тесты (test-engineer) — инварианты, L1/L2
 
 ## Результат
+- [Факт] Шаги 1–4 — коммит `84d833d` (developer, 2026-11-16), текст — `lab/results/c2/TASK-0058-result.md`. За выключателями `INTRO_CHANNEL`, `A41_FORM=SLOT|WHOLE`, `PILOT_PROFILES=P2P3|P3`; golden main не менялись. Session test API v6.
+- [Факт] Эквивалентность с хуком HYP-0004 (seeds 30201–30300, threads 1 и 4): I-OC отдельно — 20/20; WHOLE — 100/100; SLOT — 14/100 (предположение контракта §4.4a «на срезе совпадает» неверно). Форма A41 — решение владельца после печати #244.
+- [Факт] `dotnet test`: Arch 97, Kernel 316, Core 1046, Lab 20, Session 345 — зелёные (проверено Orchestrator).
+- [Факт] Reviewer (2026-11-16): approve, 0 high. Закрыть на шаге 5:
+  - (medium) колонка `run.intro` (IntroChannel, PilotForm, PilotProfiles) в `RegisterRunColumns` — ADR-0013 п.4;
+  - (medium) `SliceObserver` R5: SLOT — отличие только в слотах F, WHOLE/старый RANK — `alts == Superior`; F — публичная чистая функция Core;
+  - (low) убрать rank-ветку `PilotKeepsSuperior` (дубль `ApplyPilotSlots(Whole)`); валидация Form/Profiles без Intro+Rank; R3 — случай Withdrawn с `cancelled=false`; V7 — проверить наличие prc в двух слотах; тавтология в `IntroChannel_IsOffByDefault…`; документ API v6 и `FilePath(5)`.
+- Второе ревью (Codex) — после шага 5.
