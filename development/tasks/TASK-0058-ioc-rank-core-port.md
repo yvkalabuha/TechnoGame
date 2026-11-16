@@ -1,7 +1,7 @@
 ---
 id: TASK-0058
 title: "Порт I-OC и RANK (A41 в общем виде) в Core; golden, CONTROL_TABLES"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: developer
@@ -30,14 +30,14 @@ created: 2026-11-16
 6. Без явных ключей-меток в `params` манифестов (урок `KAPPA_Q10`).
 
 ## Критерии приёмки
-- [ ] Эквивалентность порта и хука на 100 seeds; L1/L2.
-- [ ] Тесты V5′/V6, `V_O` один раз, A40 `PROCESSES` срабатывает.
-- [ ] Golden пересчитаны один раз; `dotnet test` зелёный.
+- [x] Эквивалентность порта и хука на 100 seeds (WHOLE 100/100 на `84d833d`; SLOT — отступление по #245); L1/L2.
+- [x] Тесты V5′/V6, `V_O` один раз, A40 `PROCESSES` срабатывает.
+- [x] Golden пересчитаны один раз; `dotnet test` зелёный.
 
 ## REVIEW
-- [ ] Code review (reviewer) — находки high закрыты
-- [ ] Второе ревью (codex)
-- [ ] Тесты (test-engineer) — инварианты, L1/L2
+- [x] Code review (reviewer) — находки high закрыты
+- [x] Второе ревью (codex)
+- [x] Тесты (test-engineer) — инварианты, L1/L2
 
 ## Результат
 - [Факт] Шаги 1–4 — коммит `84d833d` (developer, 2026-11-16), текст — `lab/results/c2/TASK-0058-result.md`. За выключателями `INTRO_CHANNEL`, `A41_FORM=SLOT|WHOLE`, `PILOT_PROFILES=P2P3|P3`; golden main не менялись. Session test API v6.
@@ -53,3 +53,16 @@ created: 2026-11-16
   - `fielded_L`: колонка `q[design, y]` (состояние, `StateHash`, `schema_version` +1), одна реализация для метрики и решений (`DefK`, `G_front`, валидатор продажи, `why_not`, ИИ, `ActorView.Key`); тесты §9.1/§12 T-17;
   - правки reviewer (`run.intro`, `SliceObserver` R5 через публичную функцию F, валидация, тесты R3/V7, документ API);
   - golden пересчитать один раз; L1/L2.
+- [Факт] Шаг 5 — коммит `840dc6b` (по умолчанию I-OC + A41 SLOT P2+P3; `prd.d{d}.q`; одна `FieldedL`; схема 8, API v7; golden пересчитаны один раз; L2 на 120 прогонах без расхождений). Правка прогноза по Codex — `b0c4122`. Текст — `lab/results/c2/TASK-0058-result.md` («Шаг 5», «Шаг 5, правки ревью»).
+- [Факт] Reviewer шага 5: CHANGES (1 blocker — свойство `idle_c` пустое; 2 major — тавтология `A41OptionsTests`, слишком широкий пропуск в `ViewTests`). Закрыто: FORCE-прокси, сравнение составов, пропуск только клеток лицензионной сделки со счётчиком (дефекта вида нет).
+- [Факт] Test-engineer: добавил `TechLeadStateTests` (q в `StateHash`; `ActorView.Key` = TechKey, seeds 1…5).
+- [Факт] Codex (раунды 436a568a, b0c41222): принята находка про прогноз парка (`b0c4122`); две отклонены (см. «Разногласия»).
+- [Факт] `dotnet test` (Orchestrator, после `b0c4122`): Arch 98, Kernel 316 (+1 пропуск), Core 1053, Lab 20, Session 345 (+2 пропуска) — зелёные.
+- Перенесено в цепочку калибровки (simulation-engineer): регенерация CONTROL_TABLES и `L_C`/T-SK (п. 5 описания); инвариант `fielded ⊆ fielded_L` на 100 seeds калибровочной сборки; печать #247; повтор стенда C1 (`C1Stand` теперь считает `Planned` + `GrowthNominal`).
+- Отклонение от контракта r13a: `save_format_version` +1 и `ResumeFromSave` не сделаны — кода сохранения нет. Записано в TECH_DEBT (DEBT-0037).
+
+## Разногласия
+| # | тема | позиции | итог |
+|---|---|---|---|
+| 1 | Эквивалентность SLOT с хуком на 100 seeds (Codex, high, оба раунда) | Codex: критерий не показан для выбранной формы SLOT. Orchestrator: эквивалентность порта показана на WHOLE 100/100 до удаления хука; SLOT отличается по построению, отступление принято владельцем (#245) | отклонено |
+| 2 | Момент чтения освоения для `q` (Codex, high) | Codex: `Mastered` читает состояние после тика t−1, а не во время выпуска. Контракт §9.1: `mastered(a, p, τ)` — «по состоянию после тика τ» | отклонено: код следует контракту |
