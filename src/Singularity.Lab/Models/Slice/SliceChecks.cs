@@ -47,7 +47,81 @@ public static class SliceChecks
         ("slice: design capacity — AI design commands, commands without a design and slots used are counted (TASK-0054)", () => DesignCapacity(tmp)),
         ("slice: calibration points — one point of each stage C1, C3+C4, C2 and the L_C/L_P layers run; K keys change the run (TASK-0055)", () => CalibrationPoints(tmp)),
         ("slice: switches — FORCE, START PERT/SYM, CHANNELS, GRID, FLEET_ARM, SALE_ARM, change the run (DEBT-0032, HYP-0004)", () => Switches(tmp)),
+        ("slice: calib-print — 1 seed, 60 months: hash = golden_hash, G_r6 ≤ G_L, first entry equal; FORCE/CONTROL_TABLES rejected (review M1, M2, M5)", () => CalibPrintSmoke(tmp)),
+        ("slice: c5-stand — smoke (horizon 6, threshold 0,25): idle and restart run, two runs give the same bytes, no statistic row (#248)", () => C5Smoke(tmp)),
     ];
+
+    // Review M5 of 321d8c9: the print runs the matrix world (final hash = golden_hash) and its invariants hold on a short run.
+    private static string? CalibPrintSmoke(string tmp)
+    {
+        string dir = Path.Combine(tmp, "calib-print");
+        Directory.CreateDirectory(dir);
+        string path = Path.Combine(dir, "m.json");
+        string json = Manifest("JetSliceCalib", Ticks60, seeds: "[10001]");
+        File.WriteAllText(path, json);
+        var (r, _) = Run(tmp, json, 10001, 1, "calib-print-golden");
+        if (!r.Ok)
+            return r.Error;
+        string outDir = Path.Combine(dir, "out");
+        if (Smoke.CalibPrint.Run(path, null, null, outDir, 1, TextWriter.Null) != 0)
+            return "calib-print exit code";
+        string[] runs = File.ReadAllLines(Path.Combine(outDir, "fielded_runs.csv"));
+        if (runs.Length != 2 || runs[1].Split(',')[2] != r.GoldenHash)
+            return $"hash {(runs.Length > 1 ? runs[1] : "-")} vs golden {r.GoldenHash}";
+        string[] lines = File.ReadAllLines(Path.Combine(outDir, "fielded_actor.csv"));
+        string[] head = lines[0].Split(',');
+        int[] fl = [.. Enumerable.Range(0, head.Length).Where(i => head[i].StartsWith("first_l_g", StringComparison.Ordinal))];
+        int[] fr = [.. Enumerable.Range(0, head.Length).Where(i => head[i].StartsWith("first_r6_g", StringComparison.Ordinal))];
+        if (fl.Length == 0 || fl.Length != fr.Length)
+            return $"generation columns {lines[0]}";
+        int lt = Array.IndexOf(head, "months_r6_gt_l");
+        foreach (string line in lines.Skip(1))
+        {
+            string[] c = line.Split(',');
+            if (c[lt] != "0")
+                return $"G_r6 > G_L in {line}";
+            for (int g = 0; g < fl.Length; g++)
+            {
+                if (c[fl[g]] != c[fr[g]])
+                    return $"first entry differs in {line}";
+            }
+        }
+        foreach (string bad in new[] { """{"FORCE": "X1"}""", """{"LAYER": "LK", "CONTROL_TABLES": "t.json"}""" })
+        {
+            File.WriteAllText(path, Manifest("JetSliceCalib", Ticks60, seeds: "[10001]", pars: bad));
+            try
+            {
+                Smoke.CalibPrint.Run(path, null, null, Path.Combine(dir, "bad"), 1, TextWriter.Null);
+                return $"accepted {bad}";
+            }
+            catch (UsageException) { }   // any other exception fails the check with its message
+        }
+        return null;
+    }
+
+    // #248: the C5 stand is deterministic; a smoke run (not the statistic: horizon 6, threshold 0,25) passes through the idle and restart of arm ADMIT.
+    private static string? C5Smoke(string tmp)
+    {
+        string mods = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(SliceData.Files(AppContext.BaseDirectory)[0]))!, "core");
+        var thr = Fx6.FromRaw(250_000);
+        string a = Path.Combine(tmp, "c5-a"), b = Path.Combine(tmp, "c5-b");
+        Smoke.C5Stand.Run(mods, a, TextWriter.Null, new Core.Industry.IndustryParams(), 6, thr);
+        Smoke.C5Stand.Run(mods, b, TextWriter.Null, new Core.Industry.IndustryParams(), 6, thr);
+        foreach (string f in new[] { "c5_stand.csv", "c5_trace.csv", "c5_process.csv", "c5_cells.csv" })
+        {
+            if (!File.ReadAllBytes(Path.Combine(a, f)).SequenceEqual(File.ReadAllBytes(Path.Combine(b, f))))
+                return $"{f} differs between two runs";
+        }
+        string[] rows = File.ReadAllLines(Path.Combine(a, "c5_stand.csv"));
+        if (rows[0] != Smoke.C5Stand.StandHeader)
+            return "header";
+        if (rows.Skip(1).Any(r => r.Split(',')[1] != "0"))
+            return "a smoke run wrote a statistic row (in_stat = 1)";
+        string? admit = rows.FirstOrDefault(r => r.StartsWith("ADMIT,", StringComparison.Ordinal));
+        string[] c = admit?.Split(',') ?? [];
+        int restart = Array.IndexOf(Smoke.C5Stand.StandHeader.Split(','), "restart_month");
+        return c.Length > restart && c[restart] == "120" ? null : $"ADMIT row {admit}: no restart at month 120";
+    }
 
     // DEBT-0032: a licence that lapsed (Active 1 -> 0) and is Active again without a purchase was no longer tracked; now it resumes (LIC_RESUME).
     private static string? LicenceTrack()

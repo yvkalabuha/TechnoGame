@@ -21,8 +21,9 @@ import sketch as SK  # noqa: E402
 from e2decomp import km  # noqa: E402
 from e1e2 import hot  # noqa: E402
 
-LAST = 383
-T_FIRST_MAX = 263          # #241 mastery sub-pool
+LAST = None                # last month of the horizon: set in main() from fielded_actor.csv `months` (review M2), not assumed 383
+T_FIRST_MAX = None         # #241 mastery sub-pool: LAST − 120 (263 at the 384-month horizon), set in main()
+T07_WINDOW = 120
 MODE_SPLIT = 78            # print only (sketch §11.2: gap 56-100 months between the modes)
 GREAT = ("USA", "GBR", "SUN")
 
@@ -154,6 +155,25 @@ def tier5_print(nt, rids, t4_median):
             "longer_than_tier4": "нет (пул пуст или весь цензурирован)" if full else longer}
 
 
+def generations(act):
+    """Generation numbers from the fielded_actor.csv header (first_l_g{g}), as written by calib-print from the layout."""
+    if not act:
+        return []
+    gl = sorted(int(k[len("first_l_g"):]) for k in act[0] if k.startswith("first_l_g"))
+    gr = sorted(int(k[len("first_r6_g"):]) for k in act[0] if k.startswith("first_r6_g"))
+    if not gl or gl != gr:
+        raise SystemExit("fielded_actor.csv: first_l_g* and first_r6_g* columns differ or are missing")
+    return gl
+
+
+def horizon_last(pdir):
+    """LAST = months − 1 of the print runs (one value for all rows)."""
+    ms = {int(r["months"]) for r in rows(os.path.join(pdir, "fielded_actor.csv"))}
+    if len(ms) != 1:
+        raise SystemExit("fielded_actor.csv: runs have different horizons %s" % sorted(ms))
+    return ms.pop() - 1
+
+
 def fielded_block(pdir, runs, gt):
     hashes = {int(r["seed"]): r["hash_final"] for r in rows(os.path.join(pdir, "fielded_runs.csv"))}
     gold = {int(r["seed"]): r["golden_hash"] for r in runs.values() if r["status"] == "ok"}
@@ -164,7 +184,7 @@ def fielded_block(pdir, runs, gt):
     lt_ = sum(int(r["months_r6_gt_l"]) for r in act)
     first_bad, gen_times_bad, first_checked = [], [], 0
     for r in act:
-        for g in range(1, 5):
+        for g in generations(act):
             fl, fr = oi(r["first_l_g%d" % g]), oi(r["first_r6_g%d" % g])
             first_checked += 1
             if fl != fr:
@@ -219,6 +239,10 @@ def main(argv=None):
     ap.add_argument("print_dir")
     ap.add_argument("--json")
     a = ap.parse_args(argv)
+    global LAST, T_FIRST_MAX
+    LAST = horizon_last(a.print_dir)
+    T_FIRST_MAX = LAST - T07_WINDOW
+    SK.LAST = LAST   # the #238 pool rule of the sketch module reads its own LAST (383 − L_intro): keep one horizon
     runs, nt, _ym, _a40 = SK.load(a.calib)
     ok = {rid: r for rid, r in runs.items() if r["status"] == "ok"}
     rids = sorted(ok, key=lambda x: int(ok[x]["seed"]))

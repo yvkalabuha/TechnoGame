@@ -26,28 +26,43 @@ internal static class CalibPrint
         if (m.Model != "JetSliceCalib")
             throw new UsageException($"calib-print reads the calibration build; the manifest model is {m.Model}.");
         GameData data = SliceData.Load(m.BaseDirectory);
+        // n_service_min of the r6 rebuild (review M4): SliceWorld builds ProductsParams with the default and no manifest key, calibration
+        // arm, channel or sale arm sets NServiceMin (SliceWorld.ApplyCalibration/ApplyChannels/ApplySaleArm write other fields only), so the
+        // world's value is the default. A Session key for it would have to come here too; the selftest check «calib-print» guards the
+        // consequence (first entry by both rules equal, G_r6 ≤ G_L), which a different value would break.
         int nServiceMin = new ProductsParams().NServiceMin;
-        var work = new List<(MatrixPoint P, ulong Seed)>();
+        var work = new List<(MatrixPoint P, ulong Seed, SliceRunConfig Config)>();
         foreach (MatrixPoint p in m.Points)
         {
             if (point is int i && p.Index != i)
                 continue;
             foreach (ulong s in seedCount is int n ? p.Seeds.Take(n) : p.Seeds)
-                work.Add((p, s));
+            {
+                SliceParameters sp = SliceParameters.Parse(p.CreateParamSet(), s, 1, m.ChunkSize, calibration: true);
+                // Review M1: the model adds a ForceProxy (FORCE) and loads the control tables (CONTROL_TABLES); this print builds the
+                // session from the config alone, so such a point would run another world than the matrix and its hash would not be golden.
+                if (sp.ForceDivisor != 0 || sp.ControlTablesPath is not null)
+                    throw new UsageException($"calib-print does not support FORCE or CONTROL_TABLES (point {p.Index}): the print would not run the matrix world.");
+                work.Add((p, s, sp.Config));
+            }
         }
         if (work.Count == 0)
             throw new UsageException($"No point {point} in {manifestPath}.");
         var results = new Result[work.Count];
         Parallel.For(0, work.Count, new ParallelOptions { MaxDegreeOfParallelism = jobs }, k =>
         {
-            (MatrixPoint p, ulong seed) = work[k];
-            SliceParameters sp = SliceParameters.Parse(p.CreateParamSet(), seed, 1, m.ChunkSize, calibration: true);
-            results[k] = One(data, sp.Config, m.Ticks, nServiceMin, p.Index, seed);
+            (MatrixPoint p, ulong seed, SliceRunConfig config) = work[k];
+            results[k] = One(data, config, m.Ticks, nServiceMin, p.Index, seed);
         });
+        // Review M2: generation columns from the layout of the runs, not a fixed g1..g4.
+        int nG = results[0].Generations;
+        if (results.Any(r => r.Generations != nG))
+            throw new InvalidOperationException("Runs of one manifest have different generation counts.");
         Directory.CreateDirectory(outDir);
         using (var w = new StreamWriter(Path.Combine(outDir, "fielded_actor.csv")))
         {
-            w.WriteLine("point,seed,actor,months,months_l_gt_r6,months_r6_gt_l,first_l_g1,first_l_g2,first_l_g3,first_l_g4,first_r6_g1,first_r6_g2,first_r6_g3,first_r6_g4");
+            IEnumerable<string> gens(string prefix) => Enumerable.Range(1, nG).Select(g => $"{prefix}{g}");
+            w.WriteLine(string.Join(",", ["point", "seed", "actor", "months", "months_l_gt_r6", "months_r6_gt_l", .. gens("first_l_g"), .. gens("first_r6_g")]));
             foreach (Result r in results)
             {
                 foreach (ActorRow a in r.Actors)
@@ -88,7 +103,7 @@ internal static class CalibPrint
 
     private sealed record Spell(string Actor, long Start, long? End, int GL, int GR6);
 
-    private sealed record Result(int Point, ulong Seed, string Hash, List<ActorRow> Actors, List<Spell> Spells, List<string> Designs);
+    private sealed record Result(int Point, ulong Seed, string Hash, int Generations, List<ActorRow> Actors, List<Spell> Spells, List<string> Designs);
 
     private static Result One(GameData data, SliceRunConfig config, long ticks, int nServiceMin, int point, ulong seed)
     {
@@ -179,7 +194,7 @@ internal static class CalibPrint
                     O(stageFirst[a, d, 4]), O(stageFirst[a, d, 5]), cancelled[a, d] ? "1" : "0"));
             }
         }
-        return new Result(point, seed, s.LastHash, rows, spells, designs);
+        return new Result(point, seed, s.LastHash, nG, rows, spells, designs);
     }
 
     // G of the r6 rule (contract §9.1 r6) on the views of one snapshot; the view's FieldedGen and Mastered are both taken at the month after it.

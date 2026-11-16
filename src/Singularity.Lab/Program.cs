@@ -16,6 +16,7 @@ public static class Program
           c1-stand --out <dir> [--mods <dir>] [--manifest <json> [--point P]]  C1 stand -> c1_stand.csv per point (TASK-0054/0055, format §6)
           c3-stand --out <dir> --manifest <json> [--point P] [--seeds N] [--mods <dir>]  C3 stand of calibration points -> c3_summary.csv
           culture-rules --out <dir> [--mods <dir>] [--only check|gate|holdout|...]  culture_H rule selection (culture-rule-selection.md)
+          c5-stand --out <dir> [--mods <dir>] [--manifest <json> [--point P]] [--horizon H] [--threshold Y]  C5 stand (#248); H < 383 or Y != 0.7 = smoke
           calib-print --out <dir> --manifest <json> [--point P] [--seeds N] [--jobs J]  #247 G by fielded_L vs r6, designs (JetSliceCalib)
 
         Exit codes: 0 ok, 1 run/matrix failure or self-check failure, 2 usage or manifest error.
@@ -44,6 +45,7 @@ public static class Program
                 "c1-stand" => C1Stand(opts),
                 "c3-stand" => C3Stand(opts),
                 "calib-print" => CalibPrint(opts),
+                "c5-stand" => C5Stand(opts),
                 _ => throw new UsageException($"Unknown command '{args[0]}'."),
             };
         }
@@ -152,6 +154,28 @@ public static class Program
         {
             Console.WriteLine(p.Label);
             int rc = Smoke.C1Stand.Run(mods, Path.Combine(outDir, $"p{p.Index:00}"), Console.Out, p.Industry(new Core.Industry.IndustryParams()));
+            if (rc != 0)
+                return rc;
+        }
+        return 0;
+    }
+
+    // C5 stand (spec v0.33 §8.2 п.1 C5, #248): deterministic, one evaluation at the frozen point; --horizon < 383 is a smoke run (no statistic).
+    private static int C5Stand(Options o)
+    {
+        string outDir = Path.GetFullPath(o.Required("out"));
+        string mods = o.Optional("mods") ?? Path.Combine("mods", "core");
+        string? manifest = o.Optional("manifest");
+        int? point = o.Int("point", 0, int.MaxValue);
+        int horizon = o.Int("horizon", 1, Smoke.C5Stand.Horizon) ?? Smoke.C5Stand.Horizon;
+        Kernel.Fx6? threshold = o.Optional("threshold") is string th ? Kernel.Fx6.FromRaw(ParamSet.ParseFx6Raw(th, "threshold")) : null;
+        o.CheckAllUsed();
+        if (manifest is null)
+            return point is null ? Smoke.C5Stand.Run(mods, outDir, Console.Out, new Core.Industry.IndustryParams(), horizon, threshold) : throw new UsageException("--point needs --manifest.");
+        foreach (Smoke.StandPoint p in Smoke.StandPoint.FromManifest(manifest, point))
+        {
+            Console.WriteLine(p.Label);
+            int rc = Smoke.C5Stand.Run(mods, Path.Combine(outDir, $"p{p.Index:00}"), Console.Out, p.Industry(new Core.Industry.IndustryParams()), horizon, threshold);
             if (rc != 0)
                 return rc;
         }
