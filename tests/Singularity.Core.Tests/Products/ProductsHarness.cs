@@ -17,7 +17,8 @@ internal sealed class ProductsHarness
     /// <param name="years">Cohort years of the layout (default <see cref="ProductTestData.Years"/>).</param>
     public ProductsHarness(int threads = 1, int chunkSize = 1, ProductsMode mode = ProductsMode.Full, ProductsParams? parameters = null,
         int[]? actorPerm = null, int years = Years, int? maxDesigns = null, Action<Table>? corruptInMerge = null,
-        Func<ProductsHarness, Table, ITickSystem[]>? extraSystems = null, bool? startLine = null, Action<ProductsStart>? tweakStart = null)
+        Func<ProductsHarness, Table, ITickSystem[]>? extraSystems = null, bool? startLine = null, Action<ProductsStart>? tweakStart = null,
+        Func<int, int, bool>? isMastered = null)
     {
         Layout = MakeLayout(out _, years, maxDesigns ?? Scenario.MaxDesigns);
         ProductsStart baseStart = ProductsStart.FromScenario(Scenario, CoreData.Nodes, CoreData.ProductClasses, Layout);
@@ -31,6 +32,7 @@ internal sealed class ProductsHarness
         Calendar = new TickCalendar(new CivilDate(Scenario.StartYear, Scenario.StartMonth, 1));
         int chunks = TickRunner.ChunkCountFor(Table.RowCount, chunkSize);
         Mailbox = new IndustryMailbox(chunks);
+        IsMastered = isMastered;   // before the system exists: q(d, y) at t0 reads mastered at construction (contract r13a)
         Inputs = new ScriptedInputs(this);
         Params = parameters ?? new ProductsParams();
         Products = new ProductsSystem(Table, Layout, Start, Params, Inputs, Mailbox, mode);

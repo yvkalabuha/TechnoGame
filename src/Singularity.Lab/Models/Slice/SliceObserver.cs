@@ -31,7 +31,8 @@ internal sealed class SliceObserver
     internal enum Role { None, W, N, Sole }
 
     private readonly SliceSession _s;
-    private readonly bool _pilot;
+    private readonly PilotForm _form;
+    private readonly PilotProfileSet _pilotProfiles;
     private readonly IMetricSink _sink;
     private readonly bool _calib, _full;
     private readonly Dictionary<string, int> _table = new(StringComparer.Ordinal);
@@ -114,9 +115,10 @@ internal sealed class SliceObserver
         Role[] Roles, Fx6[] YMin, int[] ArgP, Fx6?[] LeftIn, Fx6?[] Training, Fx6[] Rate, LineBind[] Bind);
 
     public SliceObserver(SliceSession s, GameData data, string scenarioId, IMetricSink sink, IReadOnlyList<MetricTableSpec> tables, bool calibration, bool full,
-        bool pilotChoice = false)
+        PilotForm form = PilotForm.Slot, PilotProfileSet profiles = PilotProfileSet.P2P3)
     {
-        _pilot = pilotChoice;
+        _form = form;
+        _pilotProfiles = profiles;
         _s = s;
         _sink = sink;
         _calib = calibration;
@@ -871,15 +873,12 @@ internal sealed class SliceObserver
                     PolicyProfile.Mass => r.Count == 2 ? r.Producible : r.Superior,
                     _ => r.Count == 2 && r.FvProducible is Fx6 fp && fp > r.FvSuperior ? r.Producible : r.Superior,
                 };
-                // HYP-0004 pilot choice (PILOT_CHOICE on): P2/P3 may take superior instead of the profile's variant (Core ProductPresets.Compose);
-                // the check then accepts either, and the table records what was actually composed (column of the variant is unchanged).
-                // A41 per slot (contract §4.4a r12): every slot is the profile's alternative or that of superior (the exact firing slots F are checked in Core, R2).
-                bool pilotTook = _pilot && av.Profile is PolicyProfile.Mass or PolicyProfile.Adaptive && c.Alts.Length == chosen.Length
-                    && c.Alts.Select((alt, s) => alt == chosen[s] || alt == r.Superior[s]).All(ok => ok);
-                if (pilotTook)
-                    chosen = c.Alts;
+                // A41 (contract §4.4a r12): the exact expectation from the firing slots F that Core computed for this pair (R5). P1 and, with P3-only, P2 keep the profile's choice.
+                bool pilotApplies = av.Profile == PolicyProfile.Adaptive || av.Profile == PolicyProfile.Mass && _pilotProfiles == PilotProfileSet.P2P3;
+                if (pilotApplies && r.Count == 2 && chosen.SequenceEqual(r.Producible) && !r.PilotSlots.IsEmpty)
+                    chosen = _form == PilotForm.Whole ? r.Superior : [.. chosen.Select((alt, s) => r.PilotSlots.Contains(s) ? r.Superior[s] : alt)];
                 if (!c.Alts.SequenceEqual(chosen))
-                    throw new SliceFormatException($"Month {t} actor {_ids[a]} ({av.Profile}): the compose command is not the profile's choice among the variants (§4.6).");
+                    throw new SliceFormatException($"Month {t} actor {_ids[a]} ({av.Profile}): the compose command is not the profile's choice among the variants (§4.6, A41).");
                 Row("requirements", I(_req++), _ids[a], I(r.Gen), I(t), I(r.Count), F(r.FvSuperior), r.Count == 2 && r.FvProducible is Fx6 f ? F(f) : "");
             }
         }

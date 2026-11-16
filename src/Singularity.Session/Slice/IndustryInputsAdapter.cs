@@ -70,11 +70,9 @@ internal sealed class IndustryInputsAdapter(SliceWorld world) : IIndustryInputs
             world.IndustryLayout.HomeSite(actor) == siteRow);
     }
 
-    // Contract §4.1a r12 (I-OC): same path and phase as PlannedVolume; 0 while the channel is off (SliceRunConfig.IntroChannel).
+    // Contract §4.1a r12 (I-OC): same path and phase as PlannedVolume.
     public Fx6 GrowthNominal(int siteRow, int processRow, long month)
     {
-        if (!world.Config.IntroChannel)
-            return Fx6.Zero;
         int actor = world.IndustryLayout.SiteOwner[siteRow];
         return world.Products.GrowthNominal(actor, world.IndustryLayout.Number[processRow], world.IndustryLayout.HomeSite(actor) == siteRow);
     }

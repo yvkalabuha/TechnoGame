@@ -187,7 +187,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
         {
             Observed o = Observe(new SliceRunConfig
             {
-                Seed = seed, Threads = 2, IntroChannel = true, EffortShare = EffortShareArm.X0, Channels = SliceChannels.Sigma | SliceChannels.KCatch,
+                Seed = seed, Threads = 2, EffortShare = EffortShareArm.X0, Channels = SliceChannels.Sigma | SliceChannels.KCatch,
             }, 384);
             output.WriteLine($"seed {seed}: branch О {o.OFirings} (processes {o.OProcesses}, defects {o.ODefects})");
             Assert.Equal(0, o.BadClose);                                  // (6) still holds: only О for T_ab months or more
@@ -205,7 +205,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
         {
             var config = new SliceRunConfig
             {
-                Seed = seed, Threads = 2, IntroChannel = true, Channels = SliceChannels.Alpha | SliceChannels.Sigma | SliceChannels.KCatch,
+                Seed = seed, Threads = 2, Channels = SliceChannels.Alpha | SliceChannels.Sigma | SliceChannels.KCatch,
             };
             SliceSession s = SliceTestData.Create(config);
             Fx6 money = Fx6.Zero;
@@ -226,39 +226,6 @@ public class ProductAiSessionTests(ITestOutputHelper output)
         Assert.True(fired > 0, "branch О PROCESSES never fired while the culture could not grow within T_ab");
     }
 
-    [Fact]
-    public void ASeriesWithoutOutput_NeverTakesMoreThanTheStandMoneyOfAProcessWithoutOutput_V5()
-    {
-        foreach (ulong seed in new ulong[] { 1, 2, 3 })
-        {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed });
-            SliceWorld w = s.World;
-            Fx6 cap = DetMath.MulCeil(w.IndustryParameters.Ell, w.IndustryParameters.EFull);
-            int checkedLines = 0;
-            for (long t = 0; t < 300; t++)
-            {
-                s.StepThroughMonth(t);
-                for (int a = 0; a < w.Scenario.ActorCount; a++)
-                {
-                    for (int d = 0; d < w.ProductsLayout.Designs; d++)
-                    {
-                        if (w.Products.Stage(a, d) != DesignStage.Series || w.Products.Rate(a, d) > Fx6.Zero)
-                            continue;
-                        foreach (int p in w.Products.PrcSet(a, d))
-                        {
-                            int row = w.IndustryLayout.RowOf(p);
-                            if (w.Industry.ProcV(a, row) > Fx6.Zero)
-                                continue;
-                            checkedLines++;
-                            Assert.True(w.Industry.ProcE(a, row) <= cap, $"seed {seed}, month {t}, actor {a}, process {p}: E_p {w.Industry.ProcE(a, row)} above ℓ·E_full");
-                        }
-                    }
-                }
-            }
-            output.WriteLine($"seed {seed}: {checkedLines} (month, process) pairs of a series without output checked");
-        }
-    }
-
     // (V5′, contract §4.1a r12) without an own prototype or series line on home and without output, the money of a process stays within the laboratory share.
     // The snapshot of month t is the state after t−1, so v_p and V_OC are read before the step.
     [Fact]
@@ -267,7 +234,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
         int bounded = 0, above = 0;
         foreach (ulong seed in new ulong[] { 1, 2, 3 })
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, IntroChannel = true });
+            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed });
             SliceWorld w = s.World;
             var il = w.IndustryLayout;
             Fx6 cap = DetMath.MulCeil(w.IndustryParameters.Ell, w.IndustryParameters.EFull);
@@ -456,5 +423,6 @@ public class ProductAiSessionTests(ITestOutputHelper output)
     // D2 (#155, #159): start rule R-H-MS'; the data of the scenario changed, the model did not.
     // Re-recorded in F17b (951bcf96… before), reason: F17b — LINE_CLOSE YPROD bit 12 of run.fleet in the hash of an AI run (ADMIT keeps the old hash, see F17bTests).
     // Re-recorded in T6d (409293e4… before), reason: T6d — licences, alloy disruption and the why_not triggers of the AI, new policy columns, schema v7; then «exposure to data» (1d6a59a9… before; the scenario hash is in the run columns).
-    private const string Golden150 = "e99b1c3eb242b7ac607d0f50145ab3bad006f864c20eadd750b35a487b3358f0";
+    // Re-recorded in TASK-0058 step 5 (e99b1c3e… before), reason: I-OC + A41 SLOT as the build, fielded_L and the column prd.d*.q (#242–#247), schema v8.
+    private const string Golden150 = "ee2dabdb0d66c22052f874e5c5643c72a42c292070379042814b629a3f660452";
 }

@@ -11,14 +11,13 @@ namespace Singularity.Lab.Models.Slice;
 /// Manifest parameters of the slice models → <see cref="SliceRunConfig"/> (slice-csv-format.md §3). An unknown key or value is a parameter error;
 /// every key that has a default is optional, and the default is the behaviour of main.
 /// </summary>
-public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bool Full, string? ControlTablesPath = null,
-    IntroVariant CultureVariant = IntroVariant.None)
+public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bool Full, string? ControlTablesPath = null)
 {
     /// <summary>Keys of §3 (ordinal order). <c>detail</c> is a key of <c>JetSlice</c> only.</summary>
     public static readonly string[] Keys =
     [
-        "A41_FORM", "ALPHA", "C_M", "CHANNELS", "CONTROL_TABLES", "CULTURE_VARIANT", "DELTA_H", "DERIV", "EFFORT_SHARE", "FIX_A", "FIX_E", "FIX_K", "FLEET_ARM", "FLEET_LINE_COND", "FORCE", "GRID", "H_MAX", "INTRO_CHANNEL",
-        "K_DIV", "KAPPA_Q10", "LAYER", "LIC_KNOWS", "LIC_OFF", "LINE_CLOSE", "POOL_ORDER", "PILOT_CHOICE", "PILOT_PROFILES", "PROFILE_CELL", "SALE_ARM", "START", "T6D_OFF",
+        "A41_FORM", "ALPHA", "C_M", "CHANNELS", "CONTROL_TABLES", "DELTA_H", "DERIV", "EFFORT_SHARE", "FIX_A", "FIX_E", "FIX_K", "FLEET_ARM", "FLEET_LINE_COND", "FORCE", "GRID", "H_MAX",
+        "K_DIV", "KAPPA_Q10", "LAYER", "LIC_KNOWS", "LIC_OFF", "LINE_CLOSE", "POOL_ORDER", "PILOT_PROFILES", "PROFILE_CELL", "SALE_ARM", "START", "T6D_OFF",
         "TOOLING_H_HI", "TOOLING_H_HI_CONTROL", "TOOLING_H_LO", "TOOLING_M_LEAD", "TOOLING_RHO_MAX", "TOOLING_TARGET", "THETA_START", "X_SCALE", "detail",
     ];
 
@@ -109,15 +108,6 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
                 _ => throw Bad("SALE_ARM", v),
             }),
             LineClose = Enum(p, "LINE_CLOSE", "YPROD", LineCloseRules.Parse),
-            PilotChoice = Enum(p, "PILOT_CHOICE", "OFF", v => v switch
-            {
-                "OFF" => PilotChoice.Off,
-                "ON" => PilotChoice.On,
-                "ON_ADMITTED" => PilotChoice.OnAdmitted,
-                "RANK" => PilotChoice.Rank,
-                _ => throw Bad("PILOT_CHOICE", v),
-            }),
-            IntroChannel = p.GetBool("INTRO_CHANNEL", false),
             PilotForm = Enum(p, "A41_FORM", "SLOT", v => v switch
             {
                 "SLOT" => PilotForm.Slot,
@@ -176,9 +166,7 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
             "lite" => false,
             _ => throw Bad("detail", v),
         });
-        // HYP-0004 sketch only (docs/simulation/introduction-channel-sketch.md): absent = C-B of Core, the behaviour of main.
-        IntroVariant cv = p.Contains("CULTURE_VARIANT") ? Enum(p, "CULTURE_VARIANT", "CB", IntroCultureRule.Parse) : IntroVariant.None;
-        return new SliceParameters(config, force, full, tables, cv);
+        return new SliceParameters(config, force, full, tables);
     }
 
     private static Fx6? Optional(ParamSet p, string key) => p.Contains(key) ? Fx6.FromRaw(p.GetFx6Raw(key)) : null;

@@ -310,14 +310,14 @@ public class FleetCommandTests
         var h = World(WithGbrG2(49));
         h.RunThroughMonth(0);
         ProductsSystem p = h.Products;
-        Assert.True(p.Fielded(Gbr, 0, 0));
-        Assert.False(p.Fielded(Gbr, 1, 0));            // 49 units: not enough
+        Assert.True(p.FieldedMastered(Gbr, 0, 0));
+        Assert.False(p.FieldedMastered(Gbr, 1, 0));            // 49 units: not enough
         var more = World(WithGbrG2(50));
         more.RunThroughMonth(0);
-        Assert.True(more.Products.Fielded(Gbr, 1, 0));
+        Assert.True(more.Products.FieldedMastered(Gbr, 1, 0));
         var unmastered = new ProductsHarness(startLine: false, tweakStart: WithGbrG2(60)) { IsMastered = (_, p2) => p2 != 49 };
         unmastered.RunThroughMonth(0);
-        Assert.False(unmastered.Products.Fielded(Gbr, 0, 0));   // one process of the set missing
+        Assert.False(unmastered.Products.FieldedMastered(Gbr, 0, 0));   // one process of the set missing
         Assert.Equal(0, unmastered.Products.FieldedGen(Gbr, 0));
         Assert.Equal(0, unmastered.Products.GFront(0));
     }

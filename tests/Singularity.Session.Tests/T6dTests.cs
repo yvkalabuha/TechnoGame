@@ -181,15 +181,16 @@ public class T6dTests
 
     // ---- item 9: T6D_OFF is the T-fleet build, by projection
 
+    // Re-recorded in TASK-0058 step 5, reason: I-OC + A41 SLOT as the build, fielded_L and prd.d*.q (#242–#247): these are now hashes of the new build's old columns under T6D_OFF, no longer equal to the build before T6d.
     // Hashes of the columns that existed before T6d, taken from the build of the commit before T6d (seed, month: all columns but run.scenario, whose hash changed with «exposure to data»), for T6D_OFF.
     private static readonly (ulong Seed, int Month, string Hash)[] Before =
     [
-        (1, 60, "9dba9bd804113b16b56a0e799c88544d742cacd843e836ff2a9969633632f6f0"), (1, 180, "252f662a5c5af1e15e0e23e77330bed86e786272aa9a3112874cfdd732e97653"),
-        (1, 383, "f3acebd02cf048c19f16fdbd85df0ddde46c073b3d17af0b3c4a583b4aaabcc1"), (2, 60, "59d7a8278bee7c76853af0ea86c25a8818f3e352ab326ce6f7e6e7ba5737acb1"),
-        (2, 180, "b6d9b295210df5b4900f33b8c7681e5af5d7c16a46eeb5923e7cb133eb8ee413"), (2, 383, "dc180a0b161f965145cd17897a113b09fa7a162cfa877bd91a1bb4431c28bb88"),
-        (3, 60, "4eeef32ed7491d595c090b281f46cb4c6a1eefb828b2d5f1ce83d93a6283d2ca"), (3, 180, "26df03dbd3b5b7247053f14e53f8b7d0bc5e2f712c6c766a360dfcfe1782ab95"),
-        (3, 383, "84adbe52ec14e5617957f638bad0300fbeaecefe9f41be8b2dace15ef80daed3"), (7, 60, "4ad56b2006514023d7286531bbc7df2251cc136ddd5a06b095c09afd7f49ad73"),
-        (7, 180, "af2f6158e9c86131ca1eb4f7593d44ed3cc1d581024ce2437980d4276eeabd1b"), (7, 383, "786ab86ceebdc501d221378ff0919deadd4fbb864cdc9afb3c9cf1ab600d8ecb"),
+        (1, 60, "fea45cb3aa39eef44c9e96fdb00bc18b6fd4e2c898b1f385b90e8e94282ae940"), (1, 180, "9161a5df6618fe6605da17e2afc6d298f0311103cb55619e60097d88f01db03d"),
+        (1, 383, "8a11dfe6664809bf8418cf5affa52cc47e76a1e82c0d44b96b7f9a40891857da"), (2, 60, "d1f6b6a3d3834dd428840fdfceb2b80f98b91e5232c5d3f99796fc55ee4a8dcd"),
+        (2, 180, "0c2e72d58b73f1c5012aaee5e2358af5561ccfda84419514649951e932598aa8"), (2, 383, "facde3433d9d12b26e3d73a906690ec96aeaa5c59c9bc9212aff51324f4c1586"),
+        (3, 60, "a190c568b98b8ed2979031f20f8ef0115eb836dc84c59168848b7ce73e8cee86"), (3, 180, "9ef0d73b273eeb2b1275af5344db49ac1453e0b4f3ca6067ebdf8558728bd8cb"),
+        (3, 383, "89b88dcef20fe65dbf7b8ca924d973de17929aaf805bd70b4b5a5ea7dbd728fa"), (7, 60, "1a2b0677ad31df81f664bc624fc3c3a76e0f23935ddfe1ad5d068d549595d3ee"),
+        (7, 180, "63f8516782d3ba1b55d190dff4ae82baf3a065042e3b3be924317c3baa62454b"), (7, 383, "0aa8c7eb749e8877f8be8c292f1fcb58fa64d345027d8c785be690470c7d78c5"),
     ];
 
     private static bool Existed(string name) =>

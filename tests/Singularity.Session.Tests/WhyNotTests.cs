@@ -232,9 +232,27 @@ public class WhyNotTests
         SliceSession s = New();
         StrongCapability(s, Usa);
         PutDesign(s, Usa, 1, DesignStage.Withdrawn, Fx6.FromInt(500), Fx6.FromInt(500));
+        foreach (Column col in s.World.Table.Columns.Where(c => c.Name.StartsWith("prd.d0.cohort.", StringComparison.Ordinal)).ToList())
+            SetLong(s, col.Name, Usa, 0);                                   // a withdrawn project has no units (§9.1: «снят» ⇒ Σ count = 0)
         Assert.Empty(s.WhyNot(Usa, WhyNotTarget.Design(0)));
         Link first = Assert.Single(s.WhyNot(Usa, WhyNotTarget.Requirement(1)));
         Assert.Equal(WhyNotCause.NoDesign, first.Cause);
+    }
+
+    // Contract §9.1 r13a (#247): «requirement met» is fielded_L. A fleet built while its processes were mastered stands in the requirement after the mastery is lost.
+    [Fact]
+    public void Requirement_IsMetByTheFleetOfFieldedL_EvenWhenItsProcessesAreNoLongerMastered()
+    {
+        SliceSession s = New();
+        foreach (Column col in s.World.Table.Columns.Where(c => c.Name.StartsWith("ind.mr.", StringComparison.Ordinal)).ToList())
+            SetInt(s, col.Name, Usa, 0);                                    // nothing is mastered any more
+        Assert.False(s.World.Products.FieldedMastered(Usa, 0, 0));
+        Assert.True(s.World.Products.FieldedL(Usa, 0, 0));                  // the scenario fleet has q
+        Assert.Null(s.CurrentRequirement(Usa));                             // the requirement is met: no target, hence no reason
+        Assert.Empty(s.WhyNot(Usa, WhyNotTarget.Requirement(1)));
+        SetLong(s, "prd.d0.q", Usa, 0);                                     // the same fleet without q: not in the requirement
+        Assert.False(s.World.Products.FieldedL(Usa, 0, 0));
+        Assert.Equal(WhyNotTarget.Requirement(1), s.CurrentRequirement(Usa));
     }
 
     [Fact]

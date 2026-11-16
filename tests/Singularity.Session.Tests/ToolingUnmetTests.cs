@@ -12,15 +12,16 @@ namespace Singularity.Session.Tests;
 public class ToolingUnmetTests
 {
     // Hash of the columns that existed before F33 (everything but ind.unmet.*), recorded on the build of part 1 (A39 V5 default), AI on, threads 4:
+    // Re-recorded in TASK-0058 step 5, reason: I-OC + A41 SLOT as the build, fielded_L and prd.d*.q (#242–#247); the projection no longer equals the build before F33.
     // (seed, months, hash). The new column must not change the trajectory by a single bit.
     // Re-recorded for «exposure to data» (TASK-0033): the same projection of the build before T6d, now without run.scenario (the scenario hash changed).
     private static readonly (ulong Seed, int Months, string Hash)[] BeforeF33 =
     [
-        (41, 384, "77920ed2bab4c2122a8a9442aa17c04d2e56eadc4248110f9e316ce0bedaf5a0"),
-        (1, 150, "e7755bde41ccaf1d56d344b9db5da832ce9f038ad693eaddf048bc7cc0fc7980"),
-        (2, 150, "3581fd959e4065c68c7fa639dc3a603390f9e1bc8b18e98fa4e6229038470ffa"),
-        (7, 150, "95d0e6814766ad77b44b7f4b64c622ef1317c7ac4cdfd34d611e0f1959316348"),
-        (61, 150, "14ada7c8800d87e2a3d6a07c3c14e1d413b253d5d6cbc4e75454659b691d85c3"),
+        (41, 384, "5e428375c768ce3d7f07762f5f97c0fae6f17d13166ae23b4d383540e2abaa40"),
+        (1, 150, "a34a13b197e2fcdc3e378932940aabed76bca814ece5d9b3a193a1923d68ed9d"),
+        (2, 150, "fbacbcc76f171cd8cfe6dd33d9ad983490b9c9574702ecb4309e327ccf311cb6"),
+        (7, 150, "c60c3d23433d92a40735e5f0c16cef6d389521fed25579257c091ef75e852647"),
+        (61, 150, "1ca6f7b565fa19a0e5376c8bca49ca7b740c152e86ddcf675dd5a401a9be74f2"),
     ];
 
     private static SliceSession Run(SliceRunConfig c, int months)

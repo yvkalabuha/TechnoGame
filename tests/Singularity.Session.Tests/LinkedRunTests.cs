@@ -30,7 +30,8 @@ public class LinkedRunTests
     // Re-recorded in T-fleet (30a75d4f… before), reason: T-fleet — contract r6: new columns (fleet commands, sale money, quota, line_bind, mastered_run, run.fleet), schema v5.
     // D2 (#155, #159): start rule R-H-MS'; the data of the scenario changed, the model did not.
     // Re-recorded in T6d (ec3ce196… before), reason: T6d — policy columns of the licence and the disruption, run.t6d, schema v7, then «exposure to data» (dd12a4b5… before; the scenario hash is in the run columns); the alloy disruption acts on the scripted player's run too.
-    private const string Golden60 = "6aefe3100767953ac98fe764bbe746ca3e38918a54ce6773af9885d6d5137bed";
+    // Re-recorded in TASK-0058 step 5 (6aefe310… before), reason: I-OC + A41 SLOT as the build, fielded_L and the column prd.d*.q (#242–#247), schema v8.
+    private const string Golden60 = "3e3f0b2ce069f4cc1dd87a7e94db92c9cde02e52c22c07f1f229b2d13e1dd5f5";
 
     private sealed class Run
     {

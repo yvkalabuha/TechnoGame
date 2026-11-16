@@ -13,14 +13,20 @@ public class ProductAiContractPropertyTests(ITestOutputHelper output)
     private static readonly ulong[] Seeds = [1, 2, 3, 5, 8, 13, 21, 34];
     private const int Months = 384;
 
+    // Main on every seed, plus the A40 stress arm (no effort money) on three: with I-OC the main runs hold no series without output, and the properties below need some (TASK-0058).
+    private static IEnumerable<(ulong Seed, EffortShareArm Arm)> Runs() =>
+        Seeds.Select(sd => (sd, EffortShareArm.X1)).Concat(new ulong[] { 1, 2, 3 }.Select(sd => (sd, EffortShareArm.X0)));
+
     [Fact]
     public void AiRuns_JournalHasNoCommands_NoForce_And_LineColumnsKeepTheirContractRelations()
     {
         int seriesMonths = 0, cancelled = 0, withdrawnServed = 0, inService = 0, idleSeen = 0, noOutputSeen = 0;
-        foreach (ulong seed in Seeds)
+        foreach ((ulong seed, EffortShareArm arm) in Runs())
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 4, ChunkSize = 2 });
+            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 4, ChunkSize = 2, EffortShare = arm });
             SliceWorld w = s.World;
+            // A series without output no longer stands in a main run (I-OC); the stress arm gets it from the FORCE proxy (a series started before admission).
+            var force = arm == EffortShareArm.X0 ? new ForceProxy(s, 1) : null;
             int n = w.Scenario.ActorCount, designs = w.ProductsLayout.Designs;
             var stage = new DesignStage[n, designs];
             var idle = new int[n, designs];
@@ -29,6 +35,7 @@ public class ProductAiContractPropertyTests(ITestOutputHelper output)
             for (long t = 0; t < Months; t++)
             {
                 s.StepThroughMonth(t);
+                force?.Issue(t);
                 for (int a = 0; a < n; a++)
                 {
                     int lines = 0;
@@ -39,7 +46,7 @@ public class ProductAiContractPropertyTests(ITestOutputHelper output)
                         bool b = w.Products.BuiltAny(a, d), c = w.Products.Cancelled(a, d);
                         int ic = w.Products.IdleMonths(a, d);
                         Fx6 rate = w.Products.Rate(a, d);
-                        Assert.False(w.Products.SeriesForced(a, d), $"{at}: AI forced a series");
+                        Assert.True(force is not null || !w.Products.SeriesForced(a, d), $"{at}: AI forced a series");
                         // monotone flags: built_any and cancelled never fall; a stage never goes back
                         Assert.True(!built[a, d] || b, $"{at}: built_any fell");
                         Assert.True(!canc[a, d] || c, $"{at}: cancelled fell");
@@ -93,8 +100,11 @@ public class ProductAiContractPropertyTests(ITestOutputHelper output)
                 }
             }
             // the AI sends nothing through the journal: no player/harness command, hence no start_series(force)
-            Assert.DoesNotContain("force", s.CommandLog);
-            Assert.Empty(Singularity.Core.Commands.CommandCodec.DecodeLog(s.CommandLog));
+            if (force is null)
+            {
+                Assert.DoesNotContain("force", s.CommandLog);
+                Assert.Empty(Singularity.Core.Commands.CommandCodec.DecodeLog(s.CommandLog));
+            }
         }
         output.WriteLine($"series actor-design-months {seriesMonths}, zero-output months {noOutputSeen}, max idle_c {idleSeen}, withdrawn cancelled {cancelled}, withdrawn served {withdrawnServed}, В design-months {inService}");
         Assert.True(seriesMonths > 0);
@@ -136,10 +146,12 @@ public class ProductAiContractPropertyTests(ITestOutputHelper output)
     public void AiRuns_ExpectedVolume_V1toV3_OnTheSnapshotOfEveryMonth()
     {
         int plannedNoOutput = 0, firstOutput = 0, firstOutputFlat = 0;
-        foreach (ulong seed in Seeds)
+        foreach ((ulong seed, EffortShareArm arm) in Runs())
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2, ChunkSize = 3 });
+            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2, ChunkSize = 3, EffortShare = arm });
             SliceWorld w = s.World;
+            // A series without output no longer stands in a main run (I-OC); the stress arm gets it from the FORCE proxy (a series started before admission).
+            var force = arm == EffortShareArm.X0 ? new ForceProxy(s, 1) : null;
             var il = w.IndustryLayout;
             int n = w.Scenario.ActorCount, designs = w.ProductsLayout.Designs;
             var firstBefore = new bool[n, designs];
@@ -160,6 +172,7 @@ public class ProductAiContractPropertyTests(ITestOutputHelper output)
                     }
                 }
                 s.StepThroughMonth(t);
+                force?.Issue(t);
                 for (int a = 0; a < n; a++)
                 {
                     int home = il.HomeSite(a);
@@ -217,7 +230,7 @@ public class ProductAiContractPropertyTests(ITestOutputHelper output)
         int positive = 0;
         foreach (ulong seed in Seeds.Take(3))
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2, ChunkSize = 3, IntroChannel = true });
+            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2, ChunkSize = 3 });
             SliceWorld w = s.World;
             var il = w.IndustryLayout;
             for (long t = 0; t < Months; t++)

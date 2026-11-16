@@ -105,23 +105,23 @@ public sealed partial class WhyNotAnalyzer
     /// The yearly target of spec §5.6: the requirement of the newest APP the actor knows and has not fielded (no unit of a project of that
     /// generation in service); null if there is none.
     /// </summary>
-    public WhyNotTarget? CurrentRequirement(int actor)
+    public WhyNotTarget? CurrentRequirement(int actor, long month)
     {
         for (int g = _pl.Generations; g >= 1; g--)
         {
             if (!Knows(actor, _pl.GenApp[g - 1]))
                 continue;
-            return IsFielded(actor, g) ? null : WhyNotTarget.Requirement(g);
+            return IsFielded(actor, g, month) ? null : WhyNotTarget.Requirement(g);
         }
         return null;
     }
 
-    /// <summary>The requirement of generation g is met: a project of that platform generation has units in service.</summary>
-    private bool IsFielded(int actor, int gen)
+    /// <summary>The requirement of generation g is met: a project of that platform generation is in <c>fielded_L</c> (contract §9.1 r13a, #247: the one definition).</summary>
+    private bool IsFielded(int actor, int gen, long month)
     {
         for (int d = 0; d < _pl.Designs; d++)
         {
-            if (_p.PlatformGen(actor, d) == gen && _p.Stage(actor, d) is DesignStage.Series or DesignStage.InService && _p.InService(actor, d) > Fx6.Zero)
+            if (_p.PlatformGen(actor, d) == gen && _p.FieldedL(actor, d, month))
                 return true;
         }
         return false;
@@ -174,7 +174,7 @@ public sealed partial class WhyNotAnalyzer
     private void ExplainRequirement(List<Link> links, int actor, int gen, long month)
     {
         // A requirement already in service has nothing in its way (the same condition as CurrentRequirement).
-        if (IsFielded(actor, gen))
+        if (IsFielded(actor, gen, month))
             return;
         int app = _pl.GenApp[gen - 1];
         if (!Knows(actor, app))

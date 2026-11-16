@@ -156,7 +156,8 @@ internal static class ViewBuilder
         if (!w.Config.ProductAi || w.Config.ViewMode == SliceViewMode.Calibration || month % 12 != 0)
             return null;
         PresetVariants v = w.Policy.RequirementVariants(a, month);
-        return new RequirementView(v.Gen, v.Count, v.Superior, v.Producible, v.FvSuperior, v.FvProducible);
+        return new RequirementView(v.Gen, v.Count, v.Superior, v.Producible, v.FvSuperior, v.FvProducible,
+            v.PilotSlots.IsDefault ? [] : v.PilotSlots);
     }
 
     /// <summary>The results of the monthly step <paramref name="month"/>, read from the step traces right after the tick that ran it.</summary>

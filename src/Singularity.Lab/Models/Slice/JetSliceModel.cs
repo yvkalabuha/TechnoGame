@@ -16,7 +16,7 @@ namespace Singularity.Lab.Models.Slice;
 public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactory
 {
     /// <summary>The version of the Session surface this model was written against (SLICE_COMPOSITION §13.7).</summary>
-    public const int SurfaceVersion = 6;
+    public const int SurfaceVersion = 7;
 
     /// <summary>Horizon H of the slice, months (spec §2): the control tables have curve knots τ 0…2·H−1.</summary>
     public const int SliceHorizonMonths = 384;
@@ -180,9 +180,8 @@ public sealed class JetSliceModel : ISessionModel
     public SessionRunResult Run(IMetricSink sink)
     {
         SliceSession s = SliceSession.Create(_data, _p.Config);
-        IntroCultureRule.Install(s, _p.CultureVariant);
         var observer = new SliceObserver(s, _data, _p.Config.ScenarioId, sink, MetricTables, _calibration, _p.Full,
-            _p.Config.PilotChoice != Singularity.Core.Policy.PilotChoice.Off);
+            _p.Config.PilotForm, _p.Config.PilotProfiles);
         var calendar = new TickCalendar(s.Date);
         long months = 0;
         while (calendar.TickOfMonth(months) < _ticks)

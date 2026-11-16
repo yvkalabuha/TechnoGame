@@ -80,22 +80,6 @@ public enum PilotProfileSet
     P3 = 1,
 }
 
-/// <summary>
-/// <c>PILOT_CHOICE</c> (HYP-0004 sketch round 2, introduction-channel-sketch.md §7.3 В2): experimental, off in main. When on, P2/P3 take the
-/// <c>superior</c> composition instead of <c>producible</c> if the generation of the actor's fleet would not grow without it.
-/// </summary>
-public enum PilotChoice
-{
-    /// <summary>Main: the preset of the profile as before.</summary>
-    Off = 0,
-    /// <summary>The pilot rule; every process of <c>superior</c> is known by construction (it is available).</summary>
-    On = 1,
-    /// <summary>The pilot rule and, in addition, every process of the <c>superior</c> <c>prc_set</c> has <c>yield &gt; 0</c> at the actor's site.</summary>
-    OnAdmitted = 2,
-    /// <summary>Round 3: take <c>superior</c> when its hot-section (alloy slot) alternative has a higher rank than the producible one and the producible one does not exceed the best live hot-section rank of the actor.</summary>
-    Rank = 3,
-}
-
 /// <summary>Budget split of an actor: research, capability, process development (D), procurement, quality programme (spec §3.4).</summary>
 public readonly record struct BudgetShares(Fx6 Research, Fx6 Capability, Fx6 Effort, Fx6 Procurement, Fx6 Quality)
 {
@@ -181,19 +165,10 @@ public sealed record PolicyParams
     /// <summary><c>LINE_CLOSE</c> (spec A41 F17b, #160): <see cref="LineCloseRule.YProd"/> in main.</summary>
     public LineCloseRule LineClose { get; init; } = LineCloseRule.YProd;
 
-    /// <summary><c>PILOT_CHOICE</c> (HYP-0004 sketch, experimental): <see cref="Policy.PilotChoice.Off"/> in main.</summary>
-    public PilotChoice PilotChoice { get; init; } = PilotChoice.Off;
-
-    /// <summary>
-    /// A41 in the general form (contract §4.4a r12, TASK-0058): with <see cref="PilotChoice.Rank"/> the composition is taken per slot and only where
-    /// <c>superior</c> brings a new process. Off = the whole <c>superior</c> as in the HYP-0004 hook. Part of the I-OC switch of the session.
-    /// </summary>
-    public bool PilotPerSlot { get; init; }
-
-    /// <summary>Form of A41 when it fires (<c>A41_FORM</c>); acts with <see cref="PilotPerSlot"/>.</summary>
+    /// <summary>Form of A41 when it fires (<c>A41_FORM</c>); SLOT in main (#245).</summary>
     public PilotForm PilotForm { get; init; } = PilotForm.Slot;
 
-    /// <summary>The profiles A41 applies to (<c>PILOT_PROFILES</c>, #244); acts with <see cref="PilotPerSlot"/>. P1 is never changed.</summary>
+    /// <summary>The profiles A41 applies to (<c>PILOT_PROFILES</c>, #244); P1 is never changed.</summary>
     public PilotProfileSet PilotProfiles { get; init; } = PilotProfileSet.P2P3;
 
     /// <summary><c>TOOLING_TARGET</c> (spec §11 T6e v0.19, #156): pass 2 of the tooling plan; V5 by default (#163).</summary>

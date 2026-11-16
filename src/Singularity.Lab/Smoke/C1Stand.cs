@@ -38,12 +38,6 @@ internal static class C1Stand
 
     public static int Run(string modDir, string outDir, TextWriter log) => Run(modDir, outDir, log, new IndustryParams());
 
-    /// <summary>
-    /// HYP-0004 sketch only (docs/simulation/introduction-channel-sketch.md, guard G-C1): the culture rule variant of the stand; None = C-B of Core.
-    /// With a variant the stand line counts as a series (stage С) for <c>planned</c> and <c>V_C = r_ref·n·labour</c> of its prc_set.
-    /// </summary>
-    public static Models.Slice.IntroVariant Variant { get; set; } = Models.Slice.IntroVariant.None;
-
     /// <summary>One stand run with the capability parameters <paramref name="ip"/> (a calibration point of stage C1: ALPHA, X_SCALE, …; <see cref="StandPoint"/>).</summary>
     public static int Run(string modDir, string outDir, TextWriter log, IndustryParams ip)
     {
@@ -298,9 +292,7 @@ internal static class C1Stand
 
             var table = new Table(1);
             _cal = new TickCalendar(new CivilDate(sc.StartYear, sc.StartMonth, 1));
-            ICultureRule rule = Variant == Models.Slice.IntroVariant.None ? new CbCultureRule()
-                : new Models.Slice.IntroCultureRule(Variant, (site, row, month) => _inSet[row] ? Plan(row) : Fx6.Zero);
-            _ind = new IndustrySystem(table, _l, own, _p, this, 1, rule);
+            _ind = new IndustrySystem(table, _l, own, _p, this, 1, new CbCultureRule());
             var lines = new Lines(this, _ind.CreateMailbox(1, Cadence.Monthly));
             _runner = new TickRunner(table, 1, [_ind, lines], 1, 1, _cal);
         }
@@ -456,7 +448,10 @@ internal static class C1Stand
 
         public Fx6 EffortMultiplier(int actorRow, int processRow, long month) => Fx6.One;
 
-        public bool Planned(int siteRow, int processRow, long month) => Variant != Models.Slice.IntroVariant.None && _inSet[processRow];
+        // The stand line counts as a series (stage С): planned, and V_C = r_ref·n·labour of its prc_set is the growth nominal (G-C1 checks the V_C branch only, contract §4.1a r12).
+        public bool Planned(int siteRow, int processRow, long month) => _inSet[processRow];
+
+        public Fx6 GrowthNominal(int siteRow, int processRow, long month) => _inSet[processRow] ? Plan(processRow) : Fx6.Zero;
 
         public Fx6 LicenceShare(int siteRow, int processRow, long month) => Fx6.Zero;
 

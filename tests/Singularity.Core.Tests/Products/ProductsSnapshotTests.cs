@@ -44,6 +44,10 @@ public class ProductsSnapshotTests
         Assert.Equal(DesignStage.Project, p.Stage(Gbr, 1));
         int[] prcs = p.PrcSet(Gbr, 1);
         Assert.NotEmpty(prcs);
+        // Gate review: the data of the slice has no process in two slots, so the «one plan per process» case is not constructible from it; prc_set is a set by
+        // construction (DesignRules.PrcSet). If a slot pair ever shares a process this equality fails, and the fixture must then hold that case.
+        int[] alts = p.Alternatives(Gbr, 1);
+        Assert.Equal(prcs.Length, alts.Sum(a => h.Layout.PrcOf(a).Length));
         foreach (int prc in prcs)
             Assert.Equal(Fx6.Zero, p.GrowthNominal(Gbr, prc, true));              // П: a paper project gives nothing
         long t = RunTo(h, 1, DesignStage.Prototype);

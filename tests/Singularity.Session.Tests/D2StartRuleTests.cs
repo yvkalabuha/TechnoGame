@@ -204,7 +204,7 @@ public class D2StartRuleTests(ITestOutputHelper output)
                 int fielded = 0;
                 for (int d = 0; d < w.ProductsLayout.Designs; d++)
                 {
-                    if (!w.Products.Fielded(a, d, 1))
+                    if (!w.Products.FieldedL(a, d, 1))
                         continue;
                     fielded++;
                     foreach (int n in w.Products.PrcSet(a, d))

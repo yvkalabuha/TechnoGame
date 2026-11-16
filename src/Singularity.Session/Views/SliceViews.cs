@@ -98,7 +98,8 @@ public sealed record ActorInputsView(
     RequirementView? Requirement);
 
 /// <summary>The variants of the yearly Requirement of the AI (spec §5.5, §7 S1): null unless the month is a yearly one (month mod 12 = 0), and in <see cref="SliceViewMode.Calibration"/>.</summary>
-public sealed record RequirementView(int Gen, int Count, ImmutableArray<int> Superior, ImmutableArray<int> Producible, Fx6 FvSuperior, Fx6? FvProducible);
+public sealed record RequirementView(int Gen, int Count, ImmutableArray<int> Superior, ImmutableArray<int> Producible, Fx6 FvSuperior, Fx6? FvProducible,
+    ImmutableArray<int> PilotSlots);
 
 /// <summary>Results of the monthly step <see cref="Month"/> (step traces, SLICE_COMPOSITION §13.1): read after the tick, never from an earlier step.</summary>
 public sealed record MonthStepView(long Month, ImmutableArray<ActorStepView> Actors);

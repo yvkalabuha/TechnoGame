@@ -130,6 +130,12 @@ public sealed class ObservablesWalk
             PolicyProfile.Mass => r.Count == 2 ? r.Producible : r.Superior,
             _ => r.Count == 2 && r.FvProducible > r.FvSuperior ? r.Producible : r.Superior,
         };
+        // A41 SLOT for P2 and P3 (contract §4.4a r13): Core's firing slots F say which slots take superior's alternative.
+        if (av.Profile != PolicyProfile.Quality && r.Count == 2 && chosen.SequenceEqual(r.Producible) && !r.PilotSlots.IsEmpty)
+        {
+            chosen = [.. chosen.Select((alt, slot) => r.PilotSlots.Contains(slot) ? r.Superior[slot] : alt)];
+            See("a41 fired", true);
+        }
         Check("requirement", command.Alts.SequenceEqual(chosen), $"month {t} actor {a} ({av.Profile}): the compose command is not the profile's choice among the variants");
         See("compose " + av.Profile, true);
     }
@@ -168,6 +174,7 @@ public class ObservablesTests
             Assert.True(walk.Failures.GetValueOrDefault("requirement") is null, string.Join("; ", walk.Failures.GetValueOrDefault("requirement") ?? []));
         foreach (string profile in new[] { "Quality", "Mass", "Adaptive" })
             Assert.Contains(All, w => w.Seen.GetValueOrDefault("compose " + profile) > 0);
+        Assert.Contains(All, w => w.Seen.GetValueOrDefault("a41 fired") > 0);
     }
 
     [Fact]

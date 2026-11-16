@@ -23,7 +23,7 @@ namespace Singularity.Session;
 internal sealed class SliceWorld
 {
     /// <summary>Version of the column schema (ADR-0013 п. 2); raised with every change of the table layout (pinned by a fingerprint test).</summary>
-    public const int SchemaVersion = 7;
+    public const int SchemaVersion = 8;
 
     // Layout constants of the slice (spec §1.4, §3.3, §2): engineer and skilled pools, bureaus, cohort years 1945…1977.
     public const int WorkforceCategories = 2;
@@ -69,14 +69,14 @@ internal sealed class SliceWorld
         {
             YProd = pp.YProd, TField = pp.HBuild, NServiceMin = pp.NServiceMin, FleetArm = config.FleetArm, FleetLineCond = config.FleetLineCond,
             LineClose = config.LineClose,
-            PilotChoice = config.PilotChoice,
-            PilotPerSlot = config.IntroChannel,
             PilotProfiles = config.PilotProfiles,
             PilotForm = config.PilotForm,
             ToolingTarget = config.ToolingTarget,
             LicOff = config.LicOff, T6dOff = config.T6dOff,
         };
         config.ToolingTarget.Validate();
+        if (!Enum.IsDefined(config.PilotForm) || !Enum.IsDefined(config.PilotProfiles))
+            throw new ArgumentException($"A41 options out of range: form {config.PilotForm}, profiles {config.PilotProfiles}.", nameof(config));
         ScenarioData baseScenario = data.Scenario(config.ScenarioId);
         // fv_budget: 24 median procurement budgets of the great powers at t0 (spec §5.5); the actors that exist among USA, GBR, SUN.
         var great = new List<Fx6>();
@@ -473,9 +473,9 @@ internal sealed class SliceWorld
             Table.AddLong("run.layer.tables").Load(Fill(rows, TablesDigest(tables)));
         // «К» parameters and the L_C/L_P tables: a column only for a value that is not the default (§8.1), so main keeps its hash.
         RegisterCalibrationColumns(rows);
-        // Experimental HYP-0004 switch: a column only when on, so every default hash is that of main.
-        if (Config.PilotChoice != PilotChoice.Off)
-            Table.AddInt("run.pilot").Load([.. Enumerable.Repeat((int)Config.PilotChoice, rows)]);
+        // A41 options (#244): a column only for a value that is not the default (SLOT, P2+P3), so main carries none (ADR-0013 п. 4).
+        if (Config.PilotForm != PilotForm.Slot || Config.PilotProfiles != PilotProfileSet.P2P3)
+            Table.AddInt("run.a41").Load([.. Enumerable.Repeat((int)Config.PilotForm * 2 + (int)Config.PilotProfiles, rows)]);
         if (Config.Grid.Code != 0)
             Table.AddInt("run.grid").Load([.. Enumerable.Repeat(Config.Grid.Code, rows)]);
         if (Config.EffortShare != EffortShareArm.X1)

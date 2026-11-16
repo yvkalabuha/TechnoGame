@@ -43,7 +43,7 @@ internal sealed class PolicyEventsAdapter(SliceWorld world) : IPolicyEvents
             int row = world.Graph.RowOf(l.GenApp[g - 1]);
             any |= row >= 0 && world.Knowledge.IsKnown(actorRow, row);
         }
-        WhyNotTarget? target = any ? world.WhyNot.CurrentRequirement(actorRow) : WhyNotTarget.Requirement(1);
+        WhyNotTarget? target = any ? world.WhyNot.CurrentRequirement(actorRow, month) : WhyNotTarget.Requirement(1);
         return target is { } t ? world.WhyNot.WhyNot(actorRow, t, month) : [];
     }
 

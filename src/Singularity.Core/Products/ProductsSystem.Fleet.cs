@@ -105,10 +105,10 @@ public sealed partial class ProductsSystem
     public bool Mastered(int actor, int processNumber, long month) => _inputs.Mastered(actor, processNumber, month);
 
     /// <summary>
-    /// <c>fielded(a, t)</c> for a design: at least <c>n_service_min</c> whole units in service and every process of its <c>prc_set</c>
-    /// mastered (contract §9.1). A design without a project is not fielded.
+    /// <c>fielded(a, t)</c> of contract §9.1 r6 for a design: at least <c>n_service_min</c> whole units in service and every process of its <c>prc_set</c>
+    /// mastered now. Only a summand of <see cref="FieldedL"/> and the anchor of its tests; decisions and the metric read <see cref="FieldedL"/>.
     /// </summary>
-    public bool Fielded(int actor, int design, long month)
+    public bool FieldedMastered(int actor, int design, long month)
     {
         if (Stage(actor, design) == DesignStage.None)
             return false;
@@ -125,13 +125,29 @@ public sealed partial class ProductsSystem
         return true;
     }
 
-    /// <summary><c>G(a, t)</c>: the largest <c>gen(d)</c> over the fielded designs, 0 without any.</summary>
+    /// <summary><c>n_Q(d, t) = ⌊Σ_{y: q(d,y)} count(d, y)⌋</c>: whole units of the cohorts built while the design's processes were mastered (§9.1 r13a).</summary>
+    public long UnitsBuiltMastered(int actor, int design)
+    {
+        Span<Fx6> counts = stackalloc Fx6[_y];
+        for (int y = 0; y < _y; y++)
+            counts[y] = CohortMastered(actor, design, y) ? Fx6.FromRaw(_cohort[design * _y + y].Current[actor]) : Fx6.Zero;
+        return FleetRules.Whole(counts);
+    }
+
+    /// <summary>
+    /// <c>d ∈ fielded_L(a, t)</c> (contract §9.1 r13a, #247): a project with a stage that is <c>fielded</c> or has <c>n_Q ≥ n_service_min</c>. The one definition of the
+    /// fleet in service for the metric, <c>Def(K)</c>, <c>G_front</c>, the sale validator, <c>why_not</c>, the AI and <c>ActorView.Key</c>.
+    /// </summary>
+    public bool FieldedL(int actor, int design, long month) =>
+        Stage(actor, design) != DesignStage.None && (FieldedMastered(actor, design, month) || UnitsBuiltMastered(actor, design) >= _p.NServiceMin);
+
+    /// <summary><c>G(a, t)</c>: the largest <c>gen(d)</c> over <c>fielded_L</c>, 0 without any.</summary>
     public int FieldedGen(int actor, long month)
     {
         int g = 0;
         for (int d = 0; d < _d; d++)
         {
-            if (Fielded(actor, d, month))
+            if (FieldedL(actor, d, month))
                 g = Math.Max(g, Gen(actor, d));
         }
         return g;
@@ -144,7 +160,7 @@ public sealed partial class ProductsSystem
         Fx6 perf = Fx6.Zero;
         for (int d = 0; d < _d; d++)
         {
-            if (!Fielded(actor, d, month))
+            if (!FieldedL(actor, d, month))
                 continue;
             g = Math.Max(g, Gen(actor, d));
             perf = Max(perf, Perf(actor, d));
@@ -188,7 +204,7 @@ public sealed partial class ProductsSystem
         var fielded = new bool[_d];
         for (int d = 0; d < _d; d++)
         {
-            fielded[d] = Fielded(actor, d, month);
+            fielded[d] = FieldedL(actor, d, month);
             if (!fielded[d])
                 continue;
             g = Math.Max(g, Gen(actor, d));
@@ -243,7 +259,7 @@ public sealed partial class ProductsSystem
         Fx6 delta = Fx6.FromInt(n) * upkeep;
         Fx6 u1 = basis > Fx6.Zero ? (need - delta) / basis : Fx6.Zero;
         LineBind bind = line >= 0 ? Bind(actor, line) : LineBind.None;
-        bool wasFielded = Fielded(actor, design, snapshot);
+        bool wasFielded = FieldedL(actor, design, snapshot);
         bool inDef = DefK(actor, snapshot)[design];
         Span<Fx6> work = stackalloc Fx6[_y];
         counts.CopyTo(work);

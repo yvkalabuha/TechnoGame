@@ -67,6 +67,7 @@ public sealed partial class ProductsSystem : ITickSystem
     private readonly IntColumn[] _stage, _bureauOf, _alt, _bureauDesign, _gp, _parent, _stageO, _gateOpened, _forced, _lpSlot;
     private readonly IntColumn[] _cancelled, _idleC, _built, _quotaBase, _soldY, _lineBind;
     private readonly LongColumn[] _work, _d0, _hidden, _open, _found, _hours, _lineE, _rate, _cost, _exp, _cohort;
+    private readonly LongColumn[] _qMask;   // q[design, y] as a bit per cohort year (contract r13a §3.1, §9.1)
     private readonly LongColumn[] _rateCmd, _dGate, _lossAcc, _retro, _lost, _inService0, _rejected, _retired, _sold;
     private readonly LongColumn _need, _paid, _spent, _tbSpent, _saleIncome, _saleCap, _saleY, _extTotal;
 
@@ -158,6 +159,9 @@ public sealed partial class ProductsSystem : ITickSystem
         _lost = new LongColumn[_d];
         _inService0 = new LongColumn[_d];
         _cohort = new LongColumn[_d * _y];
+        _qMask = new LongColumn[_d];
+        if (_y > 62)
+            throw new ArgumentException("q[design, y] is one bit per cohort year: at most 62 years.", nameof(layout));
         for (int d = 0; d < _d; d++)
         {
             string n = $"prd.d{d}";
@@ -193,6 +197,7 @@ public sealed partial class ProductsSystem : ITickSystem
             _retro[d] = table.AddLong($"{n}.retroPool");
             _lost[d] = table.AddLong($"{n}.lost");
             _inService0[d] = table.AddLong($"{n}.inService0");
+            _qMask[d] = table.AddLong($"{n}.q");
             for (int y = 0; y < _y; y++)
                 _cohort[d * _y + y] = table.AddLong($"{n}.cohort.{layout.StartYear + y}");
         }
@@ -269,6 +274,54 @@ public sealed partial class ProductsSystem : ITickSystem
             _lpSlot[g].Load(ints);
         Array.Fill(longs, Fx6.Scale);
         _paid.Load(longs);
+        LoadInitialQ(rows);
+    }
+
+    // t0 (contract r13a §9.1): the scenario cohorts were built while all processes of the prc_set were mastered at t0.
+    private void LoadInitialQ(int rows)
+    {
+        var q = new long[rows];
+        for (int d = 0; d < _d; d++)
+        {
+            for (int a = 0; a < rows; a++)
+            {
+                q[a] = 0;
+                if (Stage(a, d) == DesignStage.None || !PrcSet(a, d).All(p => _inputs.Mastered(a, p, 0)))
+                    continue;
+                for (int y = 0; y < _y; y++)
+                {
+                    if (_cohort[d * _y + y].Current[a] > 0)
+                        q[a] |= 1L << y;
+                }
+            }
+            _qMask[d].Load(q);
+        }
+    }
+
+    /// <summary>
+    /// <c>q(d, y)</c> of the cohort of year index <paramref name="yearIndex"/>: it was built while every process of the <c>prc_set</c> was mastered in the
+    /// last month of its output (contract r13a §9.1). State; written by <see cref="Compute"/> from the snapshot.
+    /// </summary>
+    public bool CohortMastered(int actor, int design, int yearIndex) => (_qMask[design].Current[actor] >> yearIndex & 1) != 0;
+
+    // Month t writes q(d, year(t−1)) for every line with rate(t−1) > 0 from the snapshot of t−1 (mastered_run is visible from t+1, §4.0).
+    private void WriteQ(int a, long t, TickCalendar calendar, long tick)
+    {
+        if (t == 0)
+            return;
+        int yi = calendar.DateOf(tick - 1).Year - _l.StartYear;
+        if (yi < 0 || yi >= _y)
+            return;
+        for (int d = 0; d < _d; d++)
+        {
+            if (_rate[d].Current[a] <= 0)
+                continue;
+            bool all = true;
+            foreach (int p in PrcSet(a, d))
+                all &= _inputs.Mastered(a, p, t - 1);
+            long mask = _qMask[d].Next[a];
+            _qMask[d].Next[a] = all ? mask | 1L << yi : mask & ~(1L << yi);
+        }
     }
 
     public int SystemId { get; }
@@ -663,6 +716,7 @@ public sealed partial class ProductsSystem : ITickSystem
         for (int a = rowStart; a < rowEnd; a++)
         {
             ClearMoneyTrace(a);
+            WriteQ(a, t, calendar, context.Tick);
             Retire(a, t, calendar);
             if (_mode == ProductsMode.CanonicalLp)
                 StepCanonical(chunk, a, t, year - _l.StartYear);

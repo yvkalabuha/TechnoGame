@@ -5,7 +5,8 @@ using Singularity.Kernel;
 namespace Singularity.Core.Policy;
 
 /// <summary>Variants of a <c>Requirement</c> (observation of the print, SLICE_COMPOSITION §13.5); <c>Producible</c> and <c>FvProducible</c> are empty only when <c>Count &lt; 2</c>.</summary>
-public readonly record struct PresetVariants(int Gen, int Count, ImmutableArray<int> Superior, ImmutableArray<int> Producible, Fx6 FvSuperior, Fx6? FvProducible);
+public readonly record struct PresetVariants(int Gen, int Count, ImmutableArray<int> Superior, ImmutableArray<int> Producible, Fx6 FvSuperior, Fx6? FvProducible,
+    ImmutableArray<int> PilotSlots = default);
 
 /// <summary>
 /// The compositions of the AI (spec §1.4, COMPONENT_SELECTION §6): <c>superior</c> (P1), <c>producible</c> (P2) and <c>adaptive</c> (P3, the
@@ -44,31 +45,42 @@ public static class ProductPresets
             else
                 tookProducible = false;
         }
-        // The pilot choice is a decision of the preset taken: if it is «producible» and does not grow the fleet's generation, go back to «superior».
-        if (p.PilotChoice == PilotChoice.Rank && p.PilotPerSlot)
+        // A41 (contract §4.4a r12/r13): a decision of the preset taken. P1 returned above; with P3-only P2 is not touched either (#244).
+        if (tookProducible && (p.PilotProfiles == PilotProfileSet.P2P3 || profile == PolicyProfile.Adaptive))
         {
-            // A41 never touches P1 (it returned above); with P3-only it does not touch P2 either (owner decision #244).
-            if (tookProducible && (p.PilotProfiles == PilotProfileSet.P2P3 || profile == PolicyProfile.Adaptive))
-                ApplyPilotSlots(products, p.PilotForm, actor, month, superiorAlts, producible, alts);
-        }
-        else if (p.PilotChoice != PilotChoice.Off && PilotKeepsSuperior(products, p, actor, month, alts, superiorAlts))
-        {
-            superiorAlts.CopyTo(alts);
+            Span<bool> fires = stackalloc bool[products.Layout.SlotCount];
+            if (PilotSlots(products, actor, month, superiorAlts, producible, fires))
+            {
+                if (p.PilotForm == PilotForm.Whole)
+                {
+                    superiorAlts.CopyTo(alts);
+                }
+                else
+                {
+                    for (int s = 0; s < fires.Length; s++)
+                    {
+                        if (fires[s])
+                            alts[s] = superiorAlts[s];
+                    }
+                }
+            }
         }
         return true;
     }
 
     /// <summary>
-    /// A41 in the general form (contract §4.4a r12): <c>result[s] = sup[s]</c> for the firing slots <c>F</c>, else the chosen one. <c>S_new</c>: <c>sup</c>
-    /// has a higher rank than <c>prod</c> in the slot and brings a process <c>prod</c> does not have; <c>F</c>: slots of <c>S_new</c> in which <c>prod</c>
-    /// does not exceed the best rank of the actor's live projects (<c>cur</c>). M0 implements <c>S_impl = {hot_section}</c> only. Pure function of the snapshot.
+    /// The firing slots <c>F</c> of A41 (contract §4.4a r12): <c>S_new</c> — <c>sup</c> has a higher rank than <c>prod</c> in the slot and brings a process
+    /// <c>prod</c> does not have; <c>F</c> — the slots of <c>S_new</c> in which <c>prod</c> does not exceed <c>cur</c>, the best rank of the actor's live
+    /// projects (stages П, О, С, В, not «снят»). M0 implements <c>S_impl = {hot_section}</c> only. A pure function of the snapshot; the one
+    /// implementation for <see cref="Compose"/> and for the check of the AI's commands (<c>SliceObserver</c>). False when <c>F</c> is empty.
     /// </summary>
-    private static void ApplyPilotSlots(IPolicyProducts products, PilotForm form, int actor, long month, ReadOnlySpan<int> sup, ReadOnlySpan<int> prod, Span<int> alts)
+    public static bool PilotSlots(IPolicyProducts products, int actor, long month, ReadOnlySpan<int> sup, ReadOnlySpan<int> prod, Span<bool> fires)
     {
         ProductsLayout l = products.Layout;
+        fires.Clear();
         int s = l.AlloySlot;
         if (l.AltRank[sup[s]] <= l.AltRank[prod[s]] || !BringsNewProcess(l, sup[s], prod[s]))
-            return;
+            return false;
         int cur = 0;
         for (int d = 0; d < l.Designs; d++)
         {
@@ -78,12 +90,8 @@ public static class ProductPresets
                 cur = Math.Max(cur, own >= 0 ? l.AltRank[own] : 0);
             }
         }
-        if (l.AltRank[prod[s]] > cur)
-            return;
-        if (form == PilotForm.Whole)
-            sup.CopyTo(alts);
-        else
-            alts[s] = sup[s];
+        fires[s] = l.AltRank[prod[s]] <= cur;
+        return fires[s];
     }
 
     /// <summary>True when alternative <paramref name="sup"/> has a process that <paramref name="prod"/> has not (<c>prc(sup) \ prc(prod) ≠ ∅</c>).</summary>
@@ -96,49 +104,6 @@ public static class ProductPresets
                 return true;
         }
         return false;
-    }
-
-    /// <summary>
-    /// Pilot choice (sketch §7.3 В2, no new numbers). The generation <c>g</c> of a composition is the highest node generation among the processes of its
-    /// <c>prc_set</c>; the actor's current <c>g</c> is that of its live designs. True when the chosen (producible) composition does not exceed the current
-    /// <c>g</c> and the superior one does. (<c>gen(d)</c> and slot ranks do not separate the two: the engine is the same in both.)
-    /// With <see cref="PilotChoice.OnAdmitted"/> every process of the superior <c>prc_set</c> must also have <c>yield &gt; 0</c>.
-    /// </summary>
-    private static bool PilotKeepsSuperior(IPolicyProducts products, PolicyParams p, int actor, long month, ReadOnlySpan<int> chosen, ReadOnlySpan<int> superior)
-    {
-        ProductsLayout l = products.Layout;
-        bool rank = p.PilotChoice == PilotChoice.Rank;
-        int current = 0;
-        for (int d = 0; d < l.Designs; d++)
-        {
-            if (products.Design(actor, d, month) is { Cancelled: false, Stage: DesignStage.Project or DesignStage.Prototype or DesignStage.Series or DesignStage.InService })
-            {
-                int[] own = products.Alternatives(actor, d);
-                current = Math.Max(current, rank ? (own[l.AlloySlot] >= 0 ? l.AltRank[own[l.AlloySlot]] : 0) : ProcessGen(l, own));
-            }
-        }
-        // RANK: the hot-section rank (the alloy slot) replaces g; the superior one must be strictly higher than the producible one.
-        if (rank)
-            return l.AltRank[chosen[l.AlloySlot]] <= current && l.AltRank[superior[l.AlloySlot]] > l.AltRank[chosen[l.AlloySlot]];
-        if (ProcessGen(l, chosen) > current || ProcessGen(l, superior) <= current)
-            return false;
-        if (p.PilotChoice == PilotChoice.OnAdmitted)
-        {
-            foreach (int prc in DesignRules.PrcSet(l, superior))
-            {
-                if (products.AdmittedYield(actor, prc, month) <= Fx6.Zero)
-                    return false;
-            }
-        }
-        return true;
-    }
-
-    private static int ProcessGen(ProductsLayout l, ReadOnlySpan<int> alts)
-    {
-        int g = 0;
-        foreach (int prc in DesignRules.PrcSet(l, alts))
-            g = Math.Max(g, l.NodeGen[prc]);
-        return g;
     }
 
     /// <summary>
@@ -169,7 +134,11 @@ public static class ProductPresets
         var producible = new int[slots];
         if (!TryProducible(products, p, actor, gen, month, producible))
             return new PresetVariants(gen, 1, [.. superior], [], fvSuperior, null);
-        return new PresetVariants(gen, 2, [.. superior], [.. producible], fvSuperior, products.CandidateValue(actor, producible, p.FvBudget, month));
+        // PilotSlots: the firing slots F of A41 for this pair (the check of the AI's commands reads them; empty when F is empty or there is no pair).
+        var fires = new bool[slots];
+        ImmutableArray<int> firing = PilotSlots(products, actor, month, superior, producible, fires)
+            ? [.. Enumerable.Range(0, slots).Where(s => fires[s])] : [];
+        return new PresetVariants(gen, 2, [.. superior], [.. producible], fvSuperior, products.CandidateValue(actor, producible, p.FvBudget, month), firing);
     }
 
     /// <summary>

@@ -15,7 +15,7 @@ namespace Singularity.Lab.Models.Slice;
 public static class SliceChecks
 {
     // Seed 1, months 0…149, default config: the golden of the Session (SeriesSwitchTests.MainSeed1Month149, F17b YProdGolden[0]).
-    private const string Golden150 = "9171e388fb488c671d4fda694d4e6eba8b27faf5dd8329dca350c5bc39a4a151";
+    private const string Golden150 = "b3266453fb2ca5070f1fff85059d31ec4ce83fdad32973bf430cb601b04d3759";
     private const long Ticks150 = 4564;   // 1945-09-01 → 1958-03-01: the tick of month 150, so month 149 is the last one run
     private const long Ticks60 = 1826;    // 1945-09-01 → 1950-09-01
 
@@ -46,7 +46,7 @@ public static class SliceChecks
         ("slice: C3 distance — a tiny positive d_C3 is reported positive at full precision (TASK-0055 Codex)", C3DistanceExact),
         ("slice: design capacity — AI design commands, commands without a design and slots used are counted (TASK-0054)", () => DesignCapacity(tmp)),
         ("slice: calibration points — one point of each stage C1, C3+C4, C2 and the L_C/L_P layers run; K keys change the run (TASK-0055)", () => CalibrationPoints(tmp)),
-        ("slice: switches — FORCE, START PERT/SYM, CHANNELS, GRID, FLEET_ARM, SALE_ARM, PILOT_CHOICE, CULTURE_VARIANT VEXPOC, INTRO_CHANNEL change the run (DEBT-0032, HYP-0004)", () => Switches(tmp)),
+        ("slice: switches — FORCE, START PERT/SYM, CHANNELS, GRID, FLEET_ARM, SALE_ARM, change the run (DEBT-0032, HYP-0004)", () => Switches(tmp)),
     ];
 
     // DEBT-0032: a licence that lapsed (Active 1 -> 0) and is Active again without a purchase was no longer tracked; now it resumes (LIC_RESUME).
@@ -80,13 +80,13 @@ public static class SliceChecks
         var (main, _) = Run(tmp, Manifest("JetSlice", 11688, pars: """{"detail": "lite"}"""), 1, 1, "sw-main");
         if (!main.Ok)
             return main.Error;
+        // A41_FORM and PILOT_PROFILES are not listed: a non-default value adds the run.a41 column, so the golden would differ whatever the AI does; their effect on the compositions is A41OptionsTests.
         string[] switches =
         [
             """{"FORCE": "X1"}""", """{"FORCE": "Q"}""", """{"START": "PERT"}""", """{"START": "SYM"}""", """{"CHANNELS": ["KCATCH"]}""",
             """{"CHANNELS": ["E0", "KTR"]}""", """{"GRID": "LO_MID_MID"}""", """{"GRID": "MID_HI_MID"}""", """{"GRID": "MID_MID_HI"}""",
             """{"FLEET_ARM": "NO_RETIRE"}""", """{"FLEET_ARM": "NO_SALE"}""", """{"FLEET_ARM": "PURCHASE_CAP"}""", """{"SALE_ARM": "SIGMA_LO"}""",
-            """{"SALE_ARM": "QUOTA_LO"}""", """{"PILOT_CHOICE": "ON"}""", """{"PILOT_CHOICE": "ON_ADMITTED"}""", """{"PILOT_CHOICE": "RANK"}""", """{"CULTURE_VARIANT": "VEXPOC"}""",
-            """{"INTRO_CHANNEL": true}""",
+            """{"SALE_ARM": "QUOTA_LO"}"""
         ];
         var same = new List<string>();
         int k = 0;
@@ -222,20 +222,25 @@ public static class SliceChecks
     // Codex r3 (TASK-0044): a40.force was always 0, though the FORCE arms launch series with force (format §4.9).
     private static string? A40Force(string tmp)
     {
-        var (f, df) = Run(tmp, Manifest("JetSlice", 11688, pars: """{"FORCE": "X1"}"""), 1, 1, "force-x1");
-        if (!f.Ok)
-            return f.Error;
-        var rows = A40Rows(df);
-        int forcedC = rows.Count(r => r["branch"] == "C" && r["force"] == "1");
-        if (forcedC == 0)
-            return "FORCE=X1 seed 1: no A40C row with force = 1";
-        if (rows.Any(r => r["force"] == "1" && (r["branch"] != "C" || long.Parse(r["t_launch"], System.Globalization.CultureInfo.InvariantCulture) <= 0)))
-            return "force = 1 on a row that is not a series launched in the run";
-        var (o, dOff) = Run(tmp, Manifest("JetSlice", 11688), 1, 1, "force-off");
-        if (!o.Ok)
-            return o.Error;
-        var off = A40Rows(dOff);
-        return off.Count > 0 && off.All(r => r["force"] == "0") ? null : $"FORCE=OFF seed 1: {off.Count} a40 rows, an AI row with force = 1 or none";
+        // With I-OC (TASK-0058) main gives no project or series up (the a40 table is empty), so the check runs on the A40 stress arm: no effort money, no spill or catch-up.
+        const string stress = "\"EFFORT_SHARE\": \"X0\", \"CHANNELS\": [\"SIGMA\", \"KCATCH\"]";
+        for (ulong seed = 1; seed <= 8; seed++)
+        {
+            var (f, df) = Run(tmp, Manifest("JetSlice", 11688, pars: "{\"FORCE\": \"X1\", " + stress + "}"), seed, 1, "force-x1-" + seed);
+            if (!f.Ok)
+                return f.Error;
+            var rows = A40Rows(df);
+            if (!rows.Any(r => r["branch"] == "C" && r["force"] == "1"))
+                continue;
+            if (rows.Any(r => r["force"] == "1" && (r["branch"] != "C" || long.Parse(r["t_launch"], System.Globalization.CultureInfo.InvariantCulture) <= 0)))
+                return "force = 1 on a row that is not a series launched in the run";
+            var (o, dOff) = Run(tmp, Manifest("JetSlice", 11688, pars: "{" + stress + "}"), seed, 1, "force-off-" + seed);
+            if (!o.Ok)
+                return o.Error;
+            var off = A40Rows(dOff);
+            return off.Count > 0 && off.All(r => r["force"] == "0") ? null : $"FORCE=OFF seed {seed}: an AI row with force = 1 or no a40 row";
+        }
+        return "FORCE=X1 seeds 1-8: no A40C row with force = 1";
     }
 
     private static List<Dictionary<string, string>> A40Rows(string dir)

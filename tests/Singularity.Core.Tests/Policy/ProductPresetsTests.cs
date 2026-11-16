@@ -26,8 +26,12 @@ public class ProductPresetsTests
         public Fx6 CandidateValue(int actorRow, ReadOnlySpan<int> alts, Fx6 budget, long month) => value(alts.ToArray());
     }
 
-    private static PolicyParams Params(PilotChoice pilot, bool perSlot, PilotProfileSet set = PilotProfileSet.P2P3) =>
-        new() { PilotChoice = pilot, PilotPerSlot = perSlot, PilotProfiles = set, FvBudget = Fx6.FromInt(1) };
+    private static PolicyParams Params(PilotProfileSet set = PilotProfileSet.P2P3, PilotForm form = PilotForm.Slot) =>
+        new() { PilotProfiles = set, PilotForm = form, FvBudget = Fx6.FromInt(1) };
+
+    // The profile's choice before A41: P1 superior, P2 producible, P3 the larger FV (a tie goes to superior).
+    private static int[] ProfileChoice(PolicyProfile profile, PresetVariants v) =>
+        profile == PolicyProfile.Quality || v.Count != 2 || profile == PolicyProfile.Adaptive && !(v.FvProducible > v.FvSuperior) ? [.. v.Superior] : [.. v.Producible];
 
     private static int[] Compose(PolicyProfile profile, PolicyParams p, Snap s, int gen)
     {
@@ -50,7 +54,7 @@ public class ProductPresetsTests
     // The contract oracle from the variants (pure functions of the snapshot), independent of ProductPresets.Compose.
     private static int[] Oracle(PolicyProfile profile, Snap s, int gen, IReadOnlyList<(DesignStage Stage, bool Cancelled, int[] Alts)> designs)
     {
-        PresetVariants v = ProductPresets.Variants(s, Params(PilotChoice.Off, false), 0, gen, 0);
+        PresetVariants v = ProductPresets.Variants(s, Params(), 0, gen, 0);
         int[] sup = [.. v.Superior];
         if (profile == PolicyProfile.Quality || v.Count != 2)
             return sup;
@@ -76,9 +80,12 @@ public class ProductPresetsTests
     public void Pilot_QualityProfileIsNeverChanged()
     {
         var s = new Snap(3, _ => Fx6.FromRaw(100_000), [Live(1)], Hash2);
-        int[] off = Compose(PolicyProfile.Quality, Params(PilotChoice.Off, false), s, 3);
+        int[] superior = [.. ProductPresets.Variants(s, Params(), 0, 3, 0).Superior];
         foreach (PilotProfileSet set in new[] { PilotProfileSet.P2P3, PilotProfileSet.P3 })
-            Assert.Equal(off, Compose(PolicyProfile.Quality, Params(PilotChoice.Rank, true, set), s, 3));
+        {
+            foreach (PilotForm form in new[] { PilotForm.Slot, PilotForm.Whole })
+                Assert.Equal(superior, Compose(PolicyProfile.Quality, Params(set, form), s, 3));
+        }
     }
 
     private static Fx6 Hash2(int[] alts) => Hash(alts);
@@ -100,19 +107,19 @@ public class ProductPresetsTests
             var s = new Snap(known, p => p % 3 == 0 ? lowYield : Fx6.One, designs, a => Hash(a) * Fx6.FromInt(1) + Fx6.FromRaw(salt * a.Sum()));
             foreach (PolicyProfile profile in new[] { PolicyProfile.Mass, PolicyProfile.Adaptive })
             {
-                PresetVariants v = ProductPresets.Variants(s, Params(PilotChoice.Off, false), 0, gen, 0);
+                PresetVariants v = ProductPresets.Variants(s, Params(), 0, gen, 0);
                 counts[v.Count]++;
                 if (v.Count == 0)
                     continue;
                 int[] expected = Oracle(profile, s, gen, designs);
-                int[] actual = Compose(profile, Params(PilotChoice.Rank, true), s, gen);
+                int[] actual = Compose(profile, Params(), s, gen);
                 Assert.Equal(expected, actual);                                      // R2: slot by slot
                 if (v.Count == 1)
                 {
                     noProd++;
                     Assert.True(v.Superior.SequenceEqual(actual));
                 }                                                        // no prod or prod = sup: the result is chosen = sup
-                int[] baseline = Compose(profile, Params(PilotChoice.Off, false), s, gen);
+                int[] baseline = ProfileChoice(profile, v);
                 if (!actual.SequenceEqual(baseline))
                     fired++;
                 else
@@ -137,10 +144,12 @@ public class ProductPresetsTests
             Func<int[], Fx6> value = a => Hash(a) + Fx6.FromRaw(salt);
             var without = new Snap(known, p => p % 3 == 0 ? Fx6.Zero : Fx6.One, [], value);
             var withGhost = new Snap(known, p => p % 3 == 0 ? Fx6.Zero : Fx6.One, [Live(3, DesignStage.Withdrawn, cancelled: true)], value);
+            var withServed = new Snap(known, p => p % 3 == 0 ? Fx6.Zero : Fx6.One, [Live(3, DesignStage.Withdrawn, cancelled: false)], value);   // withdrawn after service: not a live project
             var withLive = new Snap(known, p => p % 3 == 0 ? Fx6.Zero : Fx6.One, [Live(3, DesignStage.Project)], value);
-            PolicyParams on = Params(PilotChoice.Rank, true);
+            PolicyParams on = Params();
             int[] a = Compose(PolicyProfile.Mass, on, without, known);
             Assert.Equal(a, Compose(PolicyProfile.Mass, on, withGhost, known));
+            Assert.Equal(a, Compose(PolicyProfile.Mass, on, withServed, known));
             // a live project of the highest rank does count: the result is the contract's
             Assert.Equal(Oracle(PolicyProfile.Mass, withLive, known, [Live(3, DesignStage.Project)]), Compose(PolicyProfile.Mass, on, withLive, known));
             differs += a.SequenceEqual(Compose(PolicyProfile.Mass, on, withLive, known)) ? 0 : 1;
@@ -162,8 +171,8 @@ public class ProductPresetsTests
             int salt = rnd.Next(1, 50);
             var designs = new List<(DesignStage, bool, int[])> { Live(rnd.Next(1, 4)) };
             var s = new Snap(known, p => p % 3 == 0 ? Fx6.Zero : Fx6.One, designs, a => Hash(a) + Fx6.FromRaw(salt));
-            PolicyParams p23 = Params(PilotChoice.Rank, true), p3 = Params(PilotChoice.Rank, true, PilotProfileSet.P3);
-            Assert.Equal(Compose(PolicyProfile.Mass, Params(PilotChoice.Off, false), s, known), Compose(PolicyProfile.Mass, p3, s, known));
+            PolicyParams p23 = Params(), p3 = Params(PilotProfileSet.P3);
+            Assert.Equal(ProfileChoice(PolicyProfile.Mass, ProductPresets.Variants(s, p23, 0, known, 0)), Compose(PolicyProfile.Mass, p3, s, known));
             Assert.Equal(Compose(PolicyProfile.Adaptive, p23, s, known), Compose(PolicyProfile.Adaptive, p3, s, known));
             Assert.Equal(Compose(PolicyProfile.Quality, p23, s, known), Compose(PolicyProfile.Quality, p3, s, known));
             changedP3 += Compose(PolicyProfile.Mass, p23, s, known).SequenceEqual(Compose(PolicyProfile.Mass, p3, s, known)) ? 0 : 1;
@@ -181,10 +190,10 @@ public class ProductPresetsTests
         {
             int known = rnd.Next(2, 5);
             var s = new Snap(known, p => p % 3 == 0 ? Fx6.Zero : Fx6.One, [Live(rnd.Next(1, 4))], a => Hash(a));
-            PresetVariants v = ProductPresets.Variants(s, Params(PilotChoice.Off, false), 0, known, 0);
+            PresetVariants v = ProductPresets.Variants(s, Params(), 0, known, 0);
             if (v.Count != 2)
                 continue;
-            PolicyParams slot = Params(PilotChoice.Rank, true) with { PilotForm = PilotForm.Slot }, whole = slot with { PilotForm = PilotForm.Whole };
+            PolicyParams slot = Params(), whole = Params(form: PilotForm.Whole);
             int[] a41Slot = Compose(PolicyProfile.Mass, slot, s, known), a41Whole = Compose(PolicyProfile.Mass, whole, s, known);
             bool outside = Enumerable.Range(0, L.SlotCount).Any(k => k != L.AlloySlot && v.Superior[k] != v.Producible[k]);
             if (a41Whole.SequenceEqual(v.Superior))                    // A41 fired in the WHOLE form
