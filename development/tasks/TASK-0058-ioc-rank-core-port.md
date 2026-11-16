@@ -48,3 +48,8 @@ created: 2026-11-16
   - (medium) `SliceObserver` R5: SLOT — отличие только в слотах F, WHOLE/старый RANK — `alts == Superior`; F — публичная чистая функция Core;
   - (low) убрать rank-ветку `PilotKeepsSuperior` (дубль `ApplyPilotSlots(Whole)`); валидация Form/Profiles без Intro+Rank; R3 — случай Withdrawn с `cancelled=false`; V7 — проверить наличие prc в двух слотах; тавтология в `IntroChannel_IsOffByDefault…`; документ API v6 и `FilePath(5)`.
 - Второе ревью (Codex) — после шага 5.
+- [Решение] Шаг 5 (по #245, #247; контракт r13a):
+  - по умолчанию `INTRO_CHANNEL` + A41 SLOT для P2+P3; хук Lab `IntroCultureRule`, `CULTURE_VARIANT`, rank-ветка `PilotKeepsSuperior`, старый тест V5 — удалить (переключатели `A41_FORM`/`PILOT_PROFILES` остаются в Lab);
+  - `fielded_L`: колонка `q[design, y]` (состояние, `StateHash`, `schema_version` +1), одна реализация для метрики и решений (`DefK`, `G_front`, валидатор продажи, `why_not`, ИИ, `ActorView.Key`); тесты §9.1/§12 T-17;
+  - правки reviewer (`run.intro`, `SliceObserver` R5 через публичную функцию F, валидация, тесты R3/V7, документ API);
+  - golden пересчитать один раз; L1/L2.
