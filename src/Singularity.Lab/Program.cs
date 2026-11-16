@@ -16,6 +16,7 @@ public static class Program
           c1-stand --out <dir> [--mods <dir>] [--manifest <json> [--point P]]  C1 stand -> c1_stand.csv per point (TASK-0054/0055, format §6)
           c3-stand --out <dir> --manifest <json> [--point P] [--seeds N] [--mods <dir>]  C3 stand of calibration points -> c3_summary.csv
           culture-rules --out <dir> [--mods <dir>] [--only check|gate|holdout|...]  culture_H rule selection (culture-rule-selection.md)
+          calib-print --out <dir> --manifest <json> [--point P] [--seeds N] [--jobs J]  #247 G by fielded_L vs r6, designs (JetSliceCalib)
 
         Exit codes: 0 ok, 1 run/matrix failure or self-check failure, 2 usage or manifest error.
         Outputs belong in lab/results/ (git-ignored). Format: docs/simulation/lab-cli.md
@@ -42,6 +43,7 @@ public static class Program
                 "culture-rules" => CultureRules(opts),
                 "c1-stand" => C1Stand(opts),
                 "c3-stand" => C3Stand(opts),
+                "calib-print" => CalibPrint(opts),
                 _ => throw new UsageException($"Unknown command '{args[0]}'."),
             };
         }
@@ -173,6 +175,18 @@ public static class Program
             Smoke.SmokeT4s.RunC3Point(data, p.Knowledge(new Core.Knowledge.KnowledgeParams()), s, Path.Combine(outDir, $"p{p.Index:00}"), Console.Out);
         }
         return 0;
+    }
+
+    // Prints of the calibration build (TASK-0056): #247 / RISK-0022 G by fielded_L against G by the r6 rule per actor-month; the design dump of the C2 pool classes.
+    private static int CalibPrint(Options o)
+    {
+        string outDir = Path.GetFullPath(o.Required("out"));
+        string manifest = o.Required("manifest");
+        int? point = o.Int("point", 0, int.MaxValue);
+        int? seeds = o.Int("seeds", 1, 100_000);
+        int jobs = o.Int("jobs", 1, 1024) ?? Environment.ProcessorCount;
+        o.CheckAllUsed();
+        return Smoke.CalibPrint.Run(manifest, point, seeds, outDir, jobs, Console.Out);
     }
 
     private static int CultureRules(Options o)

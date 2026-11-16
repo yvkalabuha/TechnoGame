@@ -1551,6 +1551,26 @@
         "task": "TASK-0057",
         "event": "stage choice revised by the pre-registration amendment #236 (spec v0.29: stage C3 instead of C3+C4, C4 print only, phase B dropped) and frozen by decision #239: under L_stage = d_C3^2 the phase-A walk stops at p00 (K_DIV 1.0, H_MAX 0.08, THETA_START 0.6, KAPPA_Q10 512 by default (key absent); d_C3 = 0, median CV 0.3555) - no new evaluation; the earlier choice p23 (rule of v0.23) is superseded. Caveat: C3 does not identify k (d_C3 = 0 in 29 of 45 phase-A points). Frozen K_DIV, H_MAX, THETA_START written into EXP-0002-c2.json and EXP-0002-calib.json 'params'.",
         "manifest_hash_before": "706f7ebe1cac17fd3e4ff34b991b72dfae33bbf29db9b7706c1b08f17d333589"
+      },
+      {
+        "date": "2026-11-16",
+        "task": "TASK-0056",
+        "event": "print of the frozen p00 (C3, #239) on the new build: src = b0c4122 (TASK-0058 step 5, I-OC + A41 SLOT P2+P3, fielded_L), seeds 10001-10100, results lab/results/t12b (not committed): c3-stand --point 0 gives a c3_summary.csv byte-equal to T12 p00; d_C3 = 0. C4 print (#236) of the calibration build: G2 0.00, G3 0.00, G4 0.85. No new choice",
+        "manifest_hash_evaluated": "60cd0fd535345eab5188228af33f9ff0dfe35742cba1ec8424861363a4f2586a",
+        "points": [
+          {
+            "point": 0,
+            "C3_median_cv": 0.3555,
+            "C3_min": 0.2535,
+            "C3_max": 0.5743,
+            "d_C3": 0.0,
+            "C4_share": {
+              "G2": 0.0,
+              "G3": 0.0,
+              "G4": 0.85
+            }
+          }
+        ]
       }
     ]
   }

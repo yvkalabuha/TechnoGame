@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "experiment": "EXP-0002-c2",
-  "description": "DRAFT (TASK-0055): stage C2 of the T12 calibration (spec v0.27 §8.2 p.1 C2, p.4); model JetSliceCalib. 9 points (series 'C2/c_M=*', walk order = file order: C_M outer, DELTA_H). A point: 'matrix --manifest this --point P' -> 'exp0002.py --calib DIR --point P' (C2). Not frozen.",
+  "description": "Stage C2 of the T12 calibration (spec v0.32 §8.2 p.1 C2 with #238 V1 and #241, p.4); model JetSliceCalib. 9 points, walk order = the declared order (c_M outer 0.1, 0.05, 0.2; delta_H inner 0.003, 0.0017, 0.0043). A key equal to the build default is not written (lesson KAPPA_Q10), so the series are split: point 0 (c_M 0.1, delta_H 0.003) has no K key and its world is the main calibration build. A point: 'matrix --manifest this --point P' -> 'exp0002.py --calib DIR --point P' (C2). Not frozen.",
   "model": "JetSliceCalib",
   "ticks": 11688,
   "chunk_size": 1,
@@ -13,25 +13,25 @@
   "params": {
     "LINE_CLOSE": "YPROD",
     "TOOLING_TARGET": "V5",
-    "POOL_ORDER": "CAN",
-    "ALPHA": 0.05,
-    "X_SCALE": 1.0,
-    "K_DIV": 1.0,
-    "H_MAX": 0.08,
-    "THETA_START": 0.6
+    "POOL_ORDER": "CAN"
   },
   "series": [
     {
+      "name": "C2/c_M=0.1,delta_H=0.003"
+    },
+    {
       "name": "C2/c_M=0.1",
-      "params": {
-        "C_M": 0.1
-      },
       "sweep": {
         "DELTA_H": [
-          0.003,
           0.0017,
           0.0043
         ]
+      }
+    },
+    {
+      "name": "C2/c_M=0.05,delta_H=0.003",
+      "params": {
+        "C_M": 0.05
       }
     },
     {
@@ -41,10 +41,15 @@
       },
       "sweep": {
         "DELTA_H": [
-          0.003,
           0.0017,
           0.0043
         ]
+      }
+    },
+    {
+      "name": "C2/c_M=0.2,delta_H=0.003",
+      "params": {
+        "C_M": 0.2
       }
     },
     {
@@ -54,7 +59,6 @@
       },
       "sweep": {
         "DELTA_H": [
-          0.003,
           0.0017,
           0.0043
         ]
@@ -62,10 +66,10 @@
     }
   ],
   "meta": {
-    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.30",
+    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.32",
     "stage": "C2",
     "budget_points": 30,
-    "loss": "L_stage = d_C2^2 + d_C2,order^2 (spec §8.2 p.3); after C2 the total L over all anchors incl. C5",
+    "loss": "L_stage = d_C2^2: d_C2 = 1 if > 50% of the #238 pool has no t_first or the #241 sub-pool is empty, else the §8.2 p.3 distance of the lower median (years) to [2; 8]; tier-5 > tier-4 is a print only (v0.31 #241). After C2 the total L over all anchors incl. C5",
     "frozen_from": [
       "C1: ALPHA, X_SCALE",
       "C3 (v0.29 #236, #239): K_DIV, THETA_START, H_MAX (KAPPA_Q10 default 512, not written; phase B dropped)"
@@ -83,8 +87,52 @@
         "task": "TASK-0057",
         "event": "freeze C3 (decision #239; spec v0.30 §8.2 p.4, stage C3 of v0.29 #236: L_stage = d_C3^2, stop at the first point with L_stage = 0 in the phase-A walk order): EXP-0002-c3c4 p00, K_DIV = 1.0, H_MAX = 0.08, THETA_START = 0.6; KAPPA_Q10 is NOT written: p00 was evaluated without the key (kappa = 512 by default, centre §8.1), and an explicit key adds the marker column run.k.kappa_q10 to the state, which changes golden_hash without changing the dynamics (checked: TASK-0057, seeds 10001-10002, identical node_times/prc_month/gen_times); d_C3 = 0 (median CV 0.3555). Caveat: C3 does not identify k (d_C3 = 0 in 29 of 45 phase-A points), the walk order sets it; C2 pool amended by #238 V1 (analysis only, no run)",
         "manifest_hash_before": "178ec9f2129e5113f932c9548511d1a28e8d22a8bea629f097ca88e193424517"
+      },
+      {
+        "date": "2026-11-16",
+        "task": "TASK-0056",
+        "event": "new build (TASK-0058 step 5, commits 840dc6b + b0c4122: I-OC + A41 SLOT P2+P3 by default, state column prd.d{d}.q, fielded_L in the metric and the decisions; SliceWorld schema 8; golden changed once, #245/#247). Label keys removed from 'params' (lesson KAPPA_Q10, TASK-0058 item 6): the frozen values ALPHA 0.05, X_SCALE 1.0 (C1) and K_DIV 1.0, H_MAX 0.08, THETA_START 0.6 (C3, #239) are exactly the defaults of the build (slice-csv-format §3), and an explicit «К» key writes a marker column run.k.* into the state, which changes golden_hash without changing the dynamics [checked TASK-0056 2026-11-16, seeds 10001-10002: node_times, gen_times, prc_month, a40, actor_month byte-equal with and without the keys; LINE_CLOSE/TOOLING_TARGET/POOL_ORDER at their defaults leave golden_hash unchanged and stay]. The freeze is unchanged; only its record moves from 'params' to this journal. Protocol amendment: a frozen value equal to the build default is recorded here, not written as a key. Series split so that no point writes a K key equal to its default; the grid and its walk order are unchanged (meta.order).",
+        "manifest_hash_before": "616fed1bfc388667e544f9d34c81afd11c2be4bb997d20e492dd74f9803e4d7b"
+      },
+      {
+        "date": "2026-11-16",
+        "task": "TASK-0056",
+        "event": "stage C2 evaluated on the new build: src = b0c4122 (TASK-0058 step 5, I-OC + A41 SLOT P2+P3, fielded_L), seeds 10001-10100, results lab/results/t12b (not committed): point 0 (c_M 0.1, delta_H 0.003, no K key) has L_C2 = 0 -> stop at p00 (spec §8.2 p.4); 1 of 9 points, budget 1 of 30. Not frozen (gate and owner). golden_set_hash 0fe2bbe5... = the calibration build EXP-0002-calib",
+        "manifest_hash_evaluated": "99b0a7b1a26b7a24408ed60b0e2c577d345e9eacfff98f04a99133c5c7bc94f6",
+        "points": [
+          {
+            "point": 0,
+            "C_M": 0.1,
+            "DELTA_H": 0.003,
+            "L_stage": 0.0,
+            "d_C2": 0.0,
+            "pool": 368,
+            "no_t_first_share": 0.429348,
+            "subpool_t_first_le_263": 73,
+            "lower_median_years": 4.833333,
+            "censored_share": 0.178082,
+            "km_median_months": 58,
+            "mode_fast": {
+              "n": 43,
+              "range": [
+                46,
+                60
+              ]
+            },
+            "mode_slow": {
+              "n": 17,
+              "range": [
+                83,
+                134
+              ]
+            },
+            "tier5_longer_print": false,
+            "role": "chosen (first point with L_stage = 0, stop)"
+          }
+        ]
       }
     ],
-    "pool": "spec v0.30 §8.2 p.1 C2 (#238 V1): pool = (actor, star PRC) pairs not mastered at the start with t_known <= 383 - L_intro, L_intro = 48 (exp0002.py calib.c2_l_intro); never-known and late-known shares printed per tier"
+    "pool": "spec v0.32 §8.2 p.1 C2: pool (#238 V1) = (actor, tier-4 star PRC) pairs not mastered at the start with t_known <= 335; share without t_first on this pool; mastery sub-pool (#241) = pool pairs with t_first <= 263 (t_first = -1 counts): lower median of t_07 - t_first (+inf if no t_07 by 383) and censored share",
+    "order": "points 0..8 = (c_M, delta_H): (0.1, 0.003), (0.1, 0.0017), (0.1, 0.0043), (0.05, 0.003), (0.05, 0.0017), (0.05, 0.0043), (0.2, 0.003), (0.2, 0.0017), (0.2, 0.0043) — the order declared in EXP-0002-calib meta.grids.C2; stop at the first point with L_stage = 0 (§8.2 p.4)"
   }
 }

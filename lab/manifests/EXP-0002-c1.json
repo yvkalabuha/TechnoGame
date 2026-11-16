@@ -601,6 +601,28 @@
             "role": "diagnostic: computed by the same deterministic c1-stand call, after the stop; not used for the choice"
           }
         ]
+      },
+      {
+        "date": "2026-11-16",
+        "task": "TASK-0056",
+        "event": "C1 stand re-run on the new build: src = b0c4122 (TASK-0058 step 5, I-OC + A41 SLOT P2+P3, fielded_L), seeds 10001-10100, results lab/results/t12b (not committed) (C1Stand counts the stand line through Planned + GrowthNominal = V_C); the frozen p00 still has loss_C1 = 0, no refreeze",
+        "manifest_hash_evaluated": "da3856e879eac6df59963a008766d9a5579120cb3b6c79578c9566d1a39b1439",
+        "points": [
+          {
+            "point": 0,
+            "loss_C1": 0.0,
+            "C1a": 0.10326,
+            "C1b": 0.792381,
+            "C1d": 0.016923,
+            "C1e": 0.035835,
+            "dev_doublings_in_stat": 2,
+            "dev_min_yield": [
+              0.25223,
+              0.258271
+            ],
+            "wright_window_mean": 0.180145
+          }
+        ]
       }
     ]
   }
