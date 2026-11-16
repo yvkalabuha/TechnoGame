@@ -278,7 +278,8 @@ class CalibStartKnowledge(unittest.TestCase):
         self.assertFalse(c2["tier4"]["d_is_1"])
         self.assertFalse(c2["tier5"]["d_is_1"])    # fully censored, but every pair has t_first: d = 1 is not by censoring
         self.assertEqual(c2["tier5"]["no_t_first_share"], 0.0)
-        self.assertFalse(c2["tier5_longer"])       # fully censored tier 5: not met
+        self.assertFalse(c2["tier5_longer_print"])     # fully censored tier 5: printed as not met (print only, #241)
+        self.assertNotIn("d_order", c2)                # v0.31 (#241): no criterion for tier 5 > tier 4
 
 
 class CalibSegmentB232(unittest.TestCase):
@@ -432,7 +433,7 @@ class CalibCodexR1(unittest.TestCase):
         self.assertEqual(t4["p50_years"], 4.0)                     # the one observed pair sits inside [2; 8] ...
         self.assertFalse(r["C2"]["tier4_in_corridor"])            # ... but d = 1 rules: not in the corridor
         self.assertEqual(r["C2"]["d_tier4"], 1.0)
-        self.assertEqual(r["C2"]["d_order"], 1.0)
+        self.assertNotIn("d_order", r["C2"])                      # v0.31 (#241): tier 5 > tier 4 is a print only
         self.assertTrue(r["T_SK"]["ok"] is False and "4" in r["T_SK"]["tiers_without_obs"])   # no prc_month rows at all
         # 4 of 4 censored with t_first: no d = 1 from this rule
         nt = [["c%d" % s, "USA", 40, 10, 12, "", "", 0] for s in range(1, 5)]
@@ -460,18 +461,20 @@ class CalibC2Pool238(unittest.TestCase):
         nt = []
         for s in range(1, 5):
             rid = "c%d" % s
-            nt.append([rid, "USA", 40, 335, 340, 380, "", 0])   # last month inside the pool: 40 months = 3.33 years
+            nt.append([rid, "USA", 40, 335, 340, "", "", 0])    # last month inside the pool; t_first 340 > 263 (#241)
+            nt.append([rid, "USA", 49, 200, 220, 268, "", 0])   # tier-4 PRC 49: pool and sub-pool, 48 months = 4 years
             nt.append([rid, "GBR", 40, 336, "", "", "", 0])     # one month too late: out
             nt.append([rid, "SUN", 40, "", "", "", "", 0])      # never known: out
             nt.append([rid, "FRA", 40, -1, "", "", "", 0])      # start knowledge, never in series: in the pool, no t_first
             nt.append([rid, "SWE", 40, -1, -1, -1, -1, 0])      # mastered at the start: excluded from everything
         t4 = self.run_calib(nt)["C2"]["tier4"]
         self.assertEqual(t4["last_t_known"], 335)
-        self.assertEqual((t4["not_mastered_pairs"], t4["pool"], t4["never_known"], t4["late_known"]), (16, 8, 4, 4))
-        self.assertEqual((t4["never_known_share"], t4["late_known_share"]), (0.25, 0.25))
-        self.assertEqual((t4["no_t_first"], t4["no_t_first_share"], t4["n"]), (4, 0.5, 4))
-        self.assertFalse(t4["d_is_1"])                            # 0.5 is not > 0.5 (before #238: 12 of 16 -> d = 1)
-        self.assertAlmostEqual(t4["p50_years"], 40 / 12.0)
+        self.assertEqual((t4["not_mastered_pairs"], t4["pool"], t4["never_known"], t4["late_known"]), (20, 12, 4, 4))
+        self.assertEqual((t4["never_known_share"], t4["late_known_share"]), (0.2, 0.2))
+        self.assertEqual((t4["no_t_first"], t4["late_t_first"], t4["n"]), (4, 4, 4))
+        self.assertAlmostEqual(t4["no_t_first_share"], 1 / 3)    # #238 pool: the t_first filter does not change it
+        self.assertFalse(t4["d_is_1"])
+        self.assertAlmostEqual(t4["p50_years"], 4.0)
 
     def test_empty_pool_is_d1(self):
         nt = [["c%d" % s, "USA", 40, 350, 360, "", "", 0] for s in range(1, 5)]
@@ -480,6 +483,72 @@ class CalibC2Pool238(unittest.TestCase):
         self.assertEqual((t4["pool"], t4["late_known"], t4["late_known_share"]), (0, 4, 1.0))
         self.assertTrue(t4["d_is_1"])
         self.assertEqual(r["C2"]["d_tier4"], 1.0)
+
+
+class CalibC2Pool241(unittest.TestCase):
+    """#241 (spec v0.31 §8.2 p.1 C2): the share without t_first stays on the #238 pool; only the mastery statistic
+    (t_07 - t_first, censoring) uses the sub-pool t_first <= 383 - 120 = 263; empty sub-pool -> d = 1;
+    tier 5 > tier 4 is a print only."""
+
+    run_calib = CalibC2Pool238.run_calib
+
+    def test_parameter_is_horizon_minus_120(self):
+        self.assertEqual(CFG["calib"]["c2_t_first_max"], CFG["n_months"] - 1 - 120)
+        self.assertEqual(CFG["calib"]["c2_t_first_max"], 263)
+
+    def test_boundary_263_264(self):
+        nt = []
+        for s in range(1, 5):
+            rid = "c%d" % s
+            nt.append([rid, "USA", 40, 100, 263, 263 + 36, "", 0])   # t_first 263: in the sub-pool, 3 years
+            nt.append([rid, "GBR", 40, 100, 264, 264 + 12, "", 0])   # t_first 264: out of the p50 (would give 1 year)
+            nt.append([rid, "FRA", 40, -1, -1, 47, "", 0])           # in use at the start (t_first -1): in, 4 years
+            nt.append([rid, "SUN", 40, 100, "", "", "", 0])          # no t_first: stays in the pool share
+        r = self.run_calib(nt)
+        t4 = r["C2"]["tier4"]
+        self.assertEqual(t4["t_first_max"], 263)
+        self.assertEqual((t4["pool"], t4["no_t_first"], t4["late_t_first"], t4["n"]), (16, 4, 4, 8))
+        self.assertEqual(t4["no_t_first_share"], 0.25)
+        self.assertEqual(t4["late_t_first_share"], 0.25)
+        self.assertAlmostEqual(t4["p50_years"], 3.0)         # lower median of 4 x 3 and 4 x 4 (1-year pairs are out)
+        self.assertFalse(t4["d_is_1"])
+        self.assertEqual(r["C2"]["d_tier4"], 0.0)
+
+    def test_no_t_first_share_is_not_selected_on_outcome(self):
+        # 3 of 4 pool pairs never start: d = 1 by the #238 share even though the sub-pool pair is in the corridor
+        nt = [["c%d" % s, "USA", 40, 100, "" if s <= 3 else 120, "" if s <= 3 else 168, "", 0] for s in range(1, 5)]
+        t4 = self.run_calib(nt)["C2"]["tier4"]
+        self.assertEqual((t4["pool"], t4["no_t_first_share"], t4["n"]), (4, 0.75, 1))
+        self.assertTrue(t4["d_is_1"])
+
+    def test_empty_sub_pool_is_d1(self):
+        nt = []
+        for s in range(1, 5):
+            nt.append(["c%d" % s, "USA", 40, 100, 264, 300, "", 0])   # every started pair starts after 263
+            nt.append(["c%d" % s, "GBR", 40, 100, "", "", "", 0])     # half the pool never starts (0.5: not > 0.5)
+        r = self.run_calib(nt)
+        t4 = r["C2"]["tier4"]
+        self.assertEqual((t4["pool"], t4["n"], t4["no_t_first_share"], t4["late_t_first_share"]), (8, 0, 0.5, 0.5))
+        self.assertTrue(t4["d_is_1"])
+        self.assertIsNone(t4["p50_years"])
+        self.assertFalse(r["C2"]["tier4_in_corridor"])
+        self.assertEqual(r["C2"]["d_tier4"], 1.0)
+
+    def test_tier5_is_printed_not_judged(self):
+        nt = []
+        for s in range(1, 5):
+            rid = "c%d" % s
+            nt.append([rid, "USA", 40, 10, 12, 60, "", 0])     # tier 4: 4 years, inside [2; 8]
+            nt.append([rid, "USA", 41, 10, 12, 36, "", 0])     # tier 5: 2 years, SHORTER than tier 4
+        c2 = self.run_calib(nt)["C2"]
+        self.assertFalse(c2["tier5_longer_print"])
+        self.assertEqual(c2["d_tier4"], 0.0)                # the order does not enter d
+        self.assertNotIn("d_order", c2)
+        self.assertAlmostEqual(c2["tier5"]["p50_years"], 2.0)
+        nt = [r[:5] + [120] + r[6:] if r[2] == 41 else r for r in nt]   # tier 5: 9 years, longer
+        c2 = self.run_calib(nt)["C2"]
+        self.assertTrue(c2["tier5_longer_print"])
+        self.assertEqual(c2["d_tier4"], 0.0)
 
 
 class P5Labels(unittest.TestCase):
