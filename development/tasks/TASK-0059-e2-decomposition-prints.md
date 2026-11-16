@@ -1,7 +1,7 @@
 ---
 id: TASK-0059
 title: "Разбор E2 HYP-0004 и печати gate I-OC+RANK"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: simulation-engineer

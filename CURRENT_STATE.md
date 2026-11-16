@@ -14,7 +14,6 @@
 - TASK-0056 [APPROVED] T12: калибровка C1 → (C3+C4) → C2, заморозка манифеста EXP-0002 (simulation-engineer)
 - TASK-0057 [APPROVED] C2: почему tier-4 процессы известны, но не идут в серию (no_t_first 0,75–0,94) (simulation-engineer)
 - TASK-0058 [APPROVED] Порт I-OC и RANK (A41 в общем виде) в Core; golden, CONTROL_TABLES (developer)
-- TASK-0059 [APPROVED] Разбор E2 HYP-0004 и печати gate I-OC+RANK (simulation-engineer)
 - TASK-0060 [APPROVED] Контракт §4.1/§4.1a: I-OC (V5′/V6) и A41; полосы A40 (systems-architect)
 <!-- registry:active:end -->
 
