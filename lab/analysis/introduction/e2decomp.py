@@ -287,7 +287,8 @@ def profile_block(mdir, series, pool, t7, compose_file):
         ks = [k for k in pool if prof[(k[0], k[1])] == p]
         n = len(ks)
         g = {}
-        for gen in (3, 4):
+        # gen = gen_times.gen (the data generation, the same number as 'поколение N' in introduction-channel-sketch.md §11.4, §12)
+        for gen in (2, 3, 4):
             xs = fld[(p, gen)]
             done = [x for x in xs if x >= 0]
             g["gen%d_fielded_share" % gen] = r3(len(done) / len(xs)) if xs else None
