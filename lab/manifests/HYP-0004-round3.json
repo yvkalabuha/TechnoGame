@@ -1,0 +1,109 @@
+{
+  "schema": 1,
+  "experiment": "HYP-0004-round3",
+  "description": "HYP-0004 sketch round 3 (docs/simulation/introduction-channel-sketch.md §9, pre-registered before the runs): CB / I-OC / I-OC + PILOT_CHOICE=RANK on the calibration build at the frozen C1 + C3 (p00) point. Decision seeds 30201-30300 ('test/*'); calibration seeds 10001-10100 ('cal/*') are a print only. 'core' = C-B of Core, 'CB' = the Lab copy (G-golden).",
+  "model": "JetSliceCalib",
+  "ticks": 11688,
+  "chunk_size": 1,
+  "threads": 1,
+  "seeds": {
+    "start": 30201,
+    "count": 100
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "ALPHA": 0.05,
+    "X_SCALE": 1.0,
+    "K_DIV": 1.0,
+    "H_MAX": 0.08,
+    "THETA_START": 0.6
+  },
+  "series": [
+    {
+      "name": "test/core",
+      "seeds": {
+        "start": 30201,
+        "count": 100
+      }
+    },
+    {
+      "name": "test/CB",
+      "seeds": {
+        "start": 30201,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "CB"
+      }
+    },
+    {
+      "name": "test/VEXPOC",
+      "seeds": {
+        "start": 30201,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "VEXPOC"
+      }
+    },
+    {
+      "name": "test/VEXPOC+RANK",
+      "seeds": {
+        "start": 30201,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "VEXPOC",
+        "PILOT_CHOICE": "RANK"
+      }
+    },
+    {
+      "name": "cal/core",
+      "seeds": {
+        "start": 10001,
+        "count": 100
+      }
+    },
+    {
+      "name": "cal/CB",
+      "seeds": {
+        "start": 10001,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "CB"
+      }
+    },
+    {
+      "name": "cal/VEXPOC",
+      "seeds": {
+        "start": 10001,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "VEXPOC"
+      }
+    },
+    {
+      "name": "cal/VEXPOC+RANK",
+      "seeds": {
+        "start": 10001,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "VEXPOC",
+        "PILOT_CHOICE": "RANK"
+      }
+    }
+  ],
+  "meta": {
+    "hypothesis": "HYP-0004",
+    "decision": "#238 V3; round 3 approved by the owner (via the Orchestrator)",
+    "round": 3,
+    "core_commit": "a17de78",
+    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.30",
+    "params_from": "lab/manifests/EXP-0002-c2.json (C1 + C3 frozen, #239)"
+  }
+}

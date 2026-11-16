@@ -6,6 +6,7 @@
 using System.Globalization;
 using System.Reflection;
 using Singularity.Core.Industry;
+using Singularity.Core.Policy;
 using Singularity.Core.Products;
 using Singularity.Core.Simulation;
 using Singularity.Kernel;
@@ -26,11 +27,13 @@ while (!File.Exists(Path.Combine(repo, "Singularity.sln")))
     repo = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(repo)) ?? throw new InvalidOperationException("repository root not found");
 GameDataHolder.Data = SliceData.Load(Path.Combine(repo, "lab", "manifests"));
 int[] watch = [40, 49];
-var results = new (List<string> Des, List<string> Yld)[n];
+var results = new (List<string> Des, List<string> Yld, List<string> Cmp)[n];
 Parallel.For(0, n, new ParallelOptions { MaxDegreeOfParallelism = 16 }, k =>
 {
     ulong seed = seed0 + (ulong)k;
-    SliceParameters p = SliceParameters.Parse(new ParamSet(kv), seed, 1, 1, true);
+    // Full view mode: the yearly Requirement variants are only in Full views (ViewBuilder.Requirement); the world is the same (view mode changes no
+    // system). Use only on non-calibration seeds (spec §8.2 p.6: FV of the variants is read to reproduce the profile choice).
+    SliceParameters p = SliceParameters.Parse(new ParamSet(kv), seed, 1, 1, false);
     SliceSession s = SliceSession.Create(GameDataHolder.Data!, p.Config);
     IntroCultureRule.Install(s, p.CultureVariant);
     object world = typeof(SliceSession).GetProperty("World", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(s)!;
@@ -38,6 +41,7 @@ Parallel.For(0, n, new ParallelOptions { MaxDegreeOfParallelism = 16 }, k =>
     var cal = new TickCalendar(s.Date);
     var des = new List<string>();
     var yld = new List<string>();
+    var cmp = new List<string>();
     // design slot lifecycle: a slot is a new design when it reappears in stage Project after a later stage or after a gap
     var open = new Dictionary<(int, int), long[]>();
     var info = new Dictionary<(int, int), string>();
@@ -98,16 +102,46 @@ Parallel.For(0, n, new ParallelOptions { MaxDegreeOfParallelism = 16 }, k =>
             Close(key);
         seen = now;
         s.Step(1);
+        // Compose commands of the yearly Requirement (the observer's check, SliceObserver.Requirements): profile's variant vs the actual one.
+        SliceView after = s.View;
+        if (t % 12 == 0 && after.Inputs is MonthInputsView mi)
+        {
+            foreach (var av2 in after.Actors)
+            {
+                if (mi.Actors[av2.Actor].Requirement is not RequirementView rq)
+                    continue;
+                foreach (DesignCommandView c in av2.Decisions.DesignCommands)
+                {
+                    if (c.Kind != DesignCommandKind.Compose)
+                        continue;
+                    var profileChoice = av2.Profile switch
+                    {
+                        PolicyProfile.Quality => rq.Superior,
+                        PolicyProfile.Mass => rq.Count == 2 ? rq.Producible : rq.Superior,
+                        _ => rq.Count == 2 && rq.FvProducible is Fx6 fp && fp > rq.FvSuperior ? rq.Producible : rq.Superior,
+                    };
+                    bool fired = !c.Alts.SequenceEqual(profileChoice) && c.Alts.SequenceEqual(rq.Superior);
+                    cmp.Add($"{seed},{t},{av2.Actor},{(int)av2.Profile + 1},{rq.Gen},{rq.Count},{(fired ? 1 : 0)},{string.Join(' ', c.Alts)}");
+                }
+            }
+        }
     }
     foreach (var key in open.Keys.OrderBy(x => x).ToList())
         Close(key);
-    results[k] = (des, yld);
+    results[k] = (des, yld, cmp);
 });
 using (var w = new StreamWriter(prefix + "_designs.csv"))
 {
     w.WriteLine("seed,actor,design,gen,prc,t_created,t_proto,t_series,t_inservice,t_cancel");
     foreach (var r in results)
         foreach (string line in r.Des)
+            w.WriteLine(line);
+}
+using (var w = new StreamWriter(prefix + "_compose.csv"))
+{
+    w.WriteLine("seed,t,actor,profile,gen,count,pilot_fired,alts");
+    foreach (var r in results)
+        foreach (string line in r.Cmp)
             w.WriteLine(line);
 }
 using (var w = new StreamWriter(prefix + "_yield.csv"))
