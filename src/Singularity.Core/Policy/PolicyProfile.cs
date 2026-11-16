@@ -74,6 +74,8 @@ public enum PilotChoice
     On = 1,
     /// <summary>The pilot rule and, in addition, every process of the <c>superior</c> <c>prc_set</c> has <c>yield &gt; 0</c> at the actor's site.</summary>
     OnAdmitted = 2,
+    /// <summary>Round 3: take <c>superior</c> when its hot-section (alloy slot) alternative has a higher rank than the producible one and the producible one does not exceed the best live hot-section rank of the actor.</summary>
+    Rank = 3,
 }
 
 /// <summary>Budget split of an actor: research, capability, process development (D), procurement, quality programme (spec §3.4).</summary>

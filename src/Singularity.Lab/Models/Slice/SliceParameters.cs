@@ -114,6 +114,7 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
                 "OFF" => PilotChoice.Off,
                 "ON" => PilotChoice.On,
                 "ON_ADMITTED" => PilotChoice.OnAdmitted,
+                "RANK" => PilotChoice.Rank,
                 _ => throw Bad("PILOT_CHOICE", v),
             }),
             LicOff = p.GetBool("LIC_OFF", false),

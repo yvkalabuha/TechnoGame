@@ -85,7 +85,7 @@ public static class SliceChecks
             """{"FORCE": "X1"}""", """{"FORCE": "Q"}""", """{"START": "PERT"}""", """{"START": "SYM"}""", """{"CHANNELS": ["KCATCH"]}""",
             """{"CHANNELS": ["E0", "KTR"]}""", """{"GRID": "LO_MID_MID"}""", """{"GRID": "MID_HI_MID"}""", """{"GRID": "MID_MID_HI"}""",
             """{"FLEET_ARM": "NO_RETIRE"}""", """{"FLEET_ARM": "NO_SALE"}""", """{"FLEET_ARM": "PURCHASE_CAP"}""", """{"SALE_ARM": "SIGMA_LO"}""",
-            """{"SALE_ARM": "QUOTA_LO"}""", """{"PILOT_CHOICE": "ON"}""", """{"PILOT_CHOICE": "ON_ADMITTED"}""", """{"CULTURE_VARIANT": "VEXPOC"}""",
+            """{"SALE_ARM": "QUOTA_LO"}""", """{"PILOT_CHOICE": "ON"}""", """{"PILOT_CHOICE": "ON_ADMITTED"}""", """{"PILOT_CHOICE": "RANK"}""", """{"CULTURE_VARIANT": "VEXPOC"}""",
         ];
         var same = new List<string>();
         int k = 0;

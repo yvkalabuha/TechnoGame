@@ -56,12 +56,19 @@ public static class ProductPresets
     private static bool PilotKeepsSuperior(IPolicyProducts products, PolicyParams p, int actor, long month, ReadOnlySpan<int> chosen, ReadOnlySpan<int> superior)
     {
         ProductsLayout l = products.Layout;
+        bool rank = p.PilotChoice == PilotChoice.Rank;
         int current = 0;
         for (int d = 0; d < l.Designs; d++)
         {
             if (products.Design(actor, d, month) is { Cancelled: false, Stage: DesignStage.Project or DesignStage.Prototype or DesignStage.Series or DesignStage.InService })
-                current = Math.Max(current, ProcessGen(l, products.Alternatives(actor, d)));
+            {
+                int[] own = products.Alternatives(actor, d);
+                current = Math.Max(current, rank ? (own[l.AlloySlot] >= 0 ? l.AltRank[own[l.AlloySlot]] : 0) : ProcessGen(l, own));
+            }
         }
+        // RANK: the hot-section rank (the alloy slot) replaces g; the superior one must be strictly higher than the producible one.
+        if (rank)
+            return l.AltRank[chosen[l.AlloySlot]] <= current && l.AltRank[superior[l.AlloySlot]] > l.AltRank[chosen[l.AlloySlot]];
         if (ProcessGen(l, chosen) > current || ProcessGen(l, superior) <= current)
             return false;
         if (p.PilotChoice == PilotChoice.OnAdmitted)

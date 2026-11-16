@@ -3,7 +3,7 @@ using Singularity.Core.Policy;
 namespace Singularity.Session.Tests;
 
 /// <summary>HYP-0004 sketch round 2: the experimental PILOT_CHOICE switch of the AI (off in main; the goldens of main are pinned by the other tests).</summary>
-public class PilotChoiceTests
+public class PilotChoiceTests(Xunit.Abstractions.ITestOutputHelper output)
 {
     private static readonly ulong[] Seeds = [1, 2, 3, 4, 5];
 
@@ -60,9 +60,40 @@ public class PilotChoiceTests
         Assert.True(differing > 0, "the pilot choice never changed a composition in 5 seeds");
     }
 
+    [Fact]
+    public void Rank_ChangesHotSectionCompositions_OnSeeds1To5()
+    {
+        int changed = 0, total = 0;
+        foreach (ulong seed in Seeds)
+        {
+            var hot = new List<string>[2];
+            for (int i = 0; i < 2; i++)
+            {
+                SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2, PilotChoice = i == 0 ? PilotChoice.Off : PilotChoice.Rank });
+                for (long t = 0; t < 384; t++)
+                    s.StepThroughMonth(t);
+                SliceWorld w = s.World;
+                hot[i] = [];
+                for (int a = 0; a < w.Scenario.ActorCount; a++)
+                {
+                    for (int d = 0; d < w.ProductsLayout.Designs; d++)
+                    {
+                        if (w.Products.Stage(a, d) != Singularity.Core.Products.DesignStage.None)
+                            hot[i].Add($"{a}/{d}:{w.Products.Alternatives(a, d)[w.ProductsLayout.AlloySlot]}:{string.Join(',', w.Products.PrcSet(a, d).Where(n => n is 40 or 49))}");
+                    }
+                }
+            }
+            total += hot[1].Count;
+            changed += hot[1].Except(hot[0]).Count();
+        }
+        output.WriteLine($"RANK: {changed} of {total} designs differ from OFF (hot slot / PRC 40,49) over seeds 1-5");
+        Assert.True(changed > 0, "RANK never changed a hot-section composition");
+    }
+
     [Theory]
     [InlineData(PilotChoice.On)]
     [InlineData(PilotChoice.OnAdmitted)]
+    [InlineData(PilotChoice.Rank)]
     public void L1_L2_SameSeedSameHash_AcrossRunsAndThreads(PilotChoice pilot)
     {
         string a = HashOf(3, pilot, 1, 384);
