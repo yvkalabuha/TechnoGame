@@ -210,6 +210,37 @@ public class ProductAiContractPropertyTests(ITestOutputHelper output)
         Assert.True(plannedNoOutput > 0, "no series without output was observed: V1 is vacuous");
     }
 
+    // (V8, contract §4.1a r12) the growth nominal never exceeds the weight of money: max(proc_v, V_OC) <= v_exp on every site, V_OC = 0 off home.
+    [Fact]
+    public void GrowthNominal_NeverExceedsVExp()
+    {
+        int positive = 0;
+        foreach (ulong seed in Seeds.Take(3))
+        {
+            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2, ChunkSize = 3, IntroChannel = true });
+            SliceWorld w = s.World;
+            var il = w.IndustryLayout;
+            for (long t = 0; t < Months; t++)
+            {
+                s.StepThroughMonth(t);
+                for (int site = 0; site < il.SiteCount; site++)
+                {
+                    for (int row = 0; row < il.ProcessCount; row++)
+                    {
+                        Fx6 voc = w.IndustryInputs.GrowthNominal(site, row, t), vexp = w.IndustryInputs.PlannedVolume(site, row, t), procV = w.Industry.ProcV(site, row);
+                        string at = $"seed {seed} month {t} site {site} row {row}";
+                        Assert.True(voc <= vexp && procV <= vexp, $"{at}: V_OC {voc} proc_v {procV} v_exp {vexp}");
+                        if (il.HomeSite(il.SiteOwner[site]) != site)
+                            Assert.Equal(Fx6.Zero, voc);
+                        positive += voc > Fx6.Zero ? 1 : 0;
+                    }
+                }
+            }
+        }
+        output.WriteLine($"{positive} (month, site, process) cells with V_OC > 0");
+        Assert.True(positive > 0, "V_OC was never positive: V8 is vacuous");
+    }
+
     [Fact]
     public void WithTheAiOn_L1_TwoRunsOfOneSeed_AndL2_Threads1_4_8_SameHashEveryMonth_OnSeveralSeeds()
     {

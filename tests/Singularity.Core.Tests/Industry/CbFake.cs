@@ -8,7 +8,7 @@ namespace Singularity.Core.Tests.Industry;
 internal sealed class CbFake : ICultureSnapshot
 {
     private readonly int _c, _n;
-    public readonly Fx6[] Hs, Ms, Vs, Es, Vexp;
+    public readonly Fx6[] Hs, Ms, Vs, Es, Vexp, Vgrow;
     public readonly bool[] Known, PlannedF, Lic, Lead;
     public readonly Fx6[] HcapByDim = [D(5), D(5), D(5)];
     public bool Qp;
@@ -26,6 +26,7 @@ internal sealed class CbFake : ICultureSnapshot
         Vs = new Fx6[sites * _n];
         Es = new Fx6[Vs.Length];
         Vexp = new Fx6[Vs.Length];
+        Vgrow = new Fx6[Vs.Length];
         Known = new bool[Vs.Length];
         PlannedF = new bool[Vs.Length];
         Lic = new bool[Vs.Length];
@@ -75,6 +76,8 @@ internal sealed class CbFake : ICultureSnapshot
     public bool Knows(int site, int processRow, long month) => Known[site * _n + processRow];
 
     public bool Planned(int site, int processRow, long month) => PlannedF[site * _n + processRow];
+
+    public Fx6 GrowthNominal(int site, int processRow, long month) => Vgrow[site * _n + processRow];
 
     public Fx6 PlannedVolume(int site, int processRow, long month) => Vexp[site * _n + processRow];
 

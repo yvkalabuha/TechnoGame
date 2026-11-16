@@ -62,6 +62,24 @@ public static class LineCloseRules
     };
 }
 
+/// <summary>Form of A41 when it fires (decision #244 print): per slot as the contract says, or the whole <c>superior</c> as the HYP-0004 hook did.</summary>
+public enum PilotForm
+{
+    /// <summary>Contract §4.4a r12: <c>sup[s]</c> only in the firing slots.</summary>
+    Slot = 0,
+    /// <summary>The whole <c>superior</c> composition (the measured hook behaviour).</summary>
+    Whole = 1,
+}
+
+/// <summary>The profiles the pilot rule A41 applies to (decision #244); P1 (<see cref="PolicyProfile.Quality"/>) is outside both sets.</summary>
+public enum PilotProfileSet
+{
+    /// <summary>P2 (mass) and P3 (adaptive).</summary>
+    P2P3 = 0,
+    /// <summary>P3 only.</summary>
+    P3 = 1,
+}
+
 /// <summary>
 /// <c>PILOT_CHOICE</c> (HYP-0004 sketch round 2, introduction-channel-sketch.md §7.3 В2): experimental, off in main. When on, P2/P3 take the
 /// <c>superior</c> composition instead of <c>producible</c> if the generation of the actor's fleet would not grow without it.
@@ -165,6 +183,18 @@ public sealed record PolicyParams
 
     /// <summary><c>PILOT_CHOICE</c> (HYP-0004 sketch, experimental): <see cref="Policy.PilotChoice.Off"/> in main.</summary>
     public PilotChoice PilotChoice { get; init; } = PilotChoice.Off;
+
+    /// <summary>
+    /// A41 in the general form (contract §4.4a r12, TASK-0058): with <see cref="PilotChoice.Rank"/> the composition is taken per slot and only where
+    /// <c>superior</c> brings a new process. Off = the whole <c>superior</c> as in the HYP-0004 hook. Part of the I-OC switch of the session.
+    /// </summary>
+    public bool PilotPerSlot { get; init; }
+
+    /// <summary>Form of A41 when it fires (<c>A41_FORM</c>); acts with <see cref="PilotPerSlot"/>.</summary>
+    public PilotForm PilotForm { get; init; } = PilotForm.Slot;
+
+    /// <summary>The profiles A41 applies to (<c>PILOT_PROFILES</c>, #244); acts with <see cref="PilotPerSlot"/>. P1 is never changed.</summary>
+    public PilotProfileSet PilotProfiles { get; init; } = PilotProfileSet.P2P3;
 
     /// <summary><c>TOOLING_TARGET</c> (spec §11 T6e v0.19, #156): pass 2 of the tooling plan; V5 by default (#163).</summary>
     public ToolingTargetSpec ToolingTarget { get; init; } = new();

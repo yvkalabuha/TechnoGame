@@ -67,6 +67,9 @@ public interface ICultureSnapshot
     /// <summary><c>v_exp(p)</c> at the site (contract §4.1b).</summary>
     Fx6 PlannedVolume(int site, int processRow, long month);
 
+    /// <summary><c>V_OC(site, p)</c> (contract §4.1a r12): growth reads <c>max(v, V_OC)</c>, maintenance reads <c>v</c>; 0 where the I-OC channel is off.</summary>
+    Fx6 GrowthNominal(int site, int processRow, long month) => Fx6.Zero;
+
     /// <summary><c>mult_P</c> of the actor's profile for the process (spec A37, DEBT-0019): 2 for the processes the doctrine favours, else 1; the last factor of the weight.</summary>
     Fx6 EffortMultiplier(int actor, int processRow, long month) => Fx6.One;
 }

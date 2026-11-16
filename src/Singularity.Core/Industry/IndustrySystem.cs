@@ -280,6 +280,8 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
 
     bool ICultureSnapshot.Planned(int site, int processRow, long month) => _inputs.Planned(site, processRow, month);
 
+    Fx6 ICultureSnapshot.GrowthNominal(int site, int processRow, long month) => _inputs.GrowthNominal(site, processRow, month);
+
     Fx6 ICultureSnapshot.PlannedVolume(int site, int processRow, long month) => _inputs.PlannedVolume(site, processRow, month);
 
     Fx6 ICultureSnapshot.EffortMultiplier(int actor, int processRow, long month) => _inputs.EffortMultiplier(actor, processRow, month);

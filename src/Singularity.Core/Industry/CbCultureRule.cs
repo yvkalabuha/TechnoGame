@@ -56,7 +56,7 @@ public sealed class CbCultureRule : ICultureRule
         if (first is not null)
             return new CultureLimiter(first.Value, number);
         Fx6 kStar = KStar(s, site, processRow, d, month);
-        bool volume = s.V(site, processRow) > Fx6.Zero && s.E(site, processRow) >= EUseful(s, site, processRow, month) && kStar < Fx6.One;
+        bool volume = GrowthV(s, site, processRow, s.V(site, processRow), month) > Fx6.Zero && s.E(site, processRow) >= EUseful(s, site, processRow, month) && kStar < Fx6.One;
         return new CultureLimiter(volume ? LimiterKind.Volume : LimiterKind.Effort, number);
     }
 
@@ -83,7 +83,8 @@ public sealed class CbCultureRule : ICultureRule
             if (v <= Fx6.Zero && e <= Fx6.Zero)
                 continue; // P(c,d): output or money
             Fx6 vt = TildeV(s, site, r, v, month);
-            CbParts parts = Parts(s, site, r, d, vt, e);
+            // Growth reads max(v, V_OC) (I-OC, §4.1); maintenance below reads the real ṽ.
+            CbParts parts = Parts(s, site, r, d, TildeV(s, site, r, GrowthV(s, site, r, v, month), month), e);
             if (parts.T > drive)
                 drive = parts.T;
             if (parts.T > catchUp && s.WorldLead(site, r))
@@ -114,6 +115,13 @@ public sealed class CbCultureRule : ICultureRule
     private static Fx6 TildeV(ICultureSnapshot s, int site, int r, Fx6 v, long month) =>
         (Fx6.One + s.Params.KTr * (s.Licensed(site, r, month) ? Fx6.One : Fx6.Zero)) * v;
 
+    /// <summary>Output that growth reads: <c>max(v_p, V_OC)</c> (contract §4.1, r12); equals <paramref name="v"/> where <c>V_OC = 0</c>.</summary>
+    private static Fx6 GrowthV(ICultureSnapshot s, int site, int r, Fx6 v, long month)
+    {
+        Fx6 nominal = s.GrowthNominal(site, r, month);
+        return nominal > v ? nominal : v;
+    }
+
     /// <summary><c>c_p</c>, gaps, <c>t_p</c> and <c>t̂_p</c> of process r in dimension d for the given <c>ṽ</c> and <c>E</c>.</summary>
     private static CbParts Parts(ICultureSnapshot s, int site, int r, int d, Fx6 vTilde, Fx6 e)
     {
@@ -140,7 +148,7 @@ public sealed class CbCultureRule : ICultureRule
         s.Knows(site, r, month) && (s.V(site, r) > Fx6.Zero || s.Planned(site, r, month));
 
     private static CbParts FullEffort(ICultureSnapshot s, int site, int r, int d, long month) =>
-        Parts(s, site, r, d, TildeV(s, site, r, s.V(site, r), month), Fx6.Zero);
+        Parts(s, site, r, d, TildeV(s, site, r, GrowthV(s, site, r, s.V(site, r), month), month), Fx6.Zero);
 
     /// <summary>Steps 1–4 of <c>limiter</c> for dimension d; null when none fires.</summary>
     private static LimiterKind? FirstFour(ICultureSnapshot s, int site, int r, int d, long month)
@@ -155,7 +163,7 @@ public sealed class CbCultureRule : ICultureRule
             return LimiterKind.Tooling;
         if (s.Hcap(site, d, month) <= rd)
             return LimiterKind.Saturation;
-        if (s.V(site, r) == Fx6.Zero && (p.Ell == Fx6.Zero || h >= rd - p.DeltaL))
+        if (GrowthV(s, site, r, s.V(site, r), month) == Fx6.Zero && (p.Ell == Fx6.Zero || h >= rd - p.DeltaL))
             return LimiterKind.LabCeiling;
         return null;
     }

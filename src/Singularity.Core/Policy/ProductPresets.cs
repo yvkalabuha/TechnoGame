@@ -30,6 +30,7 @@ public static class ProductPresets
         Span<int> producible = stackalloc int[products.Layout.SlotCount];
         if (!TryProducible(products, p, actor, gen, month, producible))
             return true;
+        bool tookProducible = true;
         if (profile == PolicyProfile.Mass)
         {
             producible.CopyTo(alts);
@@ -40,11 +41,61 @@ public static class ProductPresets
             Fx6 other = products.CandidateValue(actor, producible, p.FvBudget, month);
             if (other > superior)
                 producible.CopyTo(alts);
+            else
+                tookProducible = false;
         }
         // The pilot choice is a decision of the preset taken: if it is «producible» and does not grow the fleet's generation, go back to «superior».
-        if (p.PilotChoice != PilotChoice.Off && PilotKeepsSuperior(products, p, actor, month, alts, superiorAlts))
+        if (p.PilotChoice == PilotChoice.Rank && p.PilotPerSlot)
+        {
+            // A41 never touches P1 (it returned above); with P3-only it does not touch P2 either (owner decision #244).
+            if (tookProducible && (p.PilotProfiles == PilotProfileSet.P2P3 || profile == PolicyProfile.Adaptive))
+                ApplyPilotSlots(products, p.PilotForm, actor, month, superiorAlts, producible, alts);
+        }
+        else if (p.PilotChoice != PilotChoice.Off && PilotKeepsSuperior(products, p, actor, month, alts, superiorAlts))
+        {
             superiorAlts.CopyTo(alts);
+        }
         return true;
+    }
+
+    /// <summary>
+    /// A41 in the general form (contract §4.4a r12): <c>result[s] = sup[s]</c> for the firing slots <c>F</c>, else the chosen one. <c>S_new</c>: <c>sup</c>
+    /// has a higher rank than <c>prod</c> in the slot and brings a process <c>prod</c> does not have; <c>F</c>: slots of <c>S_new</c> in which <c>prod</c>
+    /// does not exceed the best rank of the actor's live projects (<c>cur</c>). M0 implements <c>S_impl = {hot_section}</c> only. Pure function of the snapshot.
+    /// </summary>
+    private static void ApplyPilotSlots(IPolicyProducts products, PilotForm form, int actor, long month, ReadOnlySpan<int> sup, ReadOnlySpan<int> prod, Span<int> alts)
+    {
+        ProductsLayout l = products.Layout;
+        int s = l.AlloySlot;
+        if (l.AltRank[sup[s]] <= l.AltRank[prod[s]] || !BringsNewProcess(l, sup[s], prod[s]))
+            return;
+        int cur = 0;
+        for (int d = 0; d < l.Designs; d++)
+        {
+            if (products.Design(actor, d, month) is { Cancelled: false, Stage: DesignStage.Project or DesignStage.Prototype or DesignStage.Series or DesignStage.InService })
+            {
+                int own = products.Alternatives(actor, d)[s];
+                cur = Math.Max(cur, own >= 0 ? l.AltRank[own] : 0);
+            }
+        }
+        if (l.AltRank[prod[s]] > cur)
+            return;
+        if (form == PilotForm.Whole)
+            sup.CopyTo(alts);
+        else
+            alts[s] = sup[s];
+    }
+
+    /// <summary>True when alternative <paramref name="sup"/> has a process that <paramref name="prod"/> has not (<c>prc(sup) \ prc(prod) ≠ ∅</c>).</summary>
+    public static bool BringsNewProcess(ProductsLayout l, int sup, int prod)
+    {
+        ReadOnlySpan<int> other = l.PrcOf(prod);
+        foreach (int prc in l.PrcOf(sup))
+        {
+            if (other.IndexOf(prc) < 0)
+                return true;
+        }
+        return false;
     }
 
     /// <summary>

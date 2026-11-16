@@ -178,6 +178,54 @@ public class ProductAiSessionTests(ITestOutputHelper output)
         Assert.Equal(0, total.OtherByActor.Sum());
     }
 
+    // (13, contract §4.4e r12) the reserve branch О PROCESSES is reachable. σ = 0 and k_catch = 0 (no world_lead channel) so that neither spill nor catch admit a process without money.
+    [Fact]
+    public void A40ProcessesBranch_FiresWithoutEffortMoney()
+    {
+        int fired = 0;
+        foreach (ulong seed in new ulong[] { 1, 2, 3, 4, 5 })
+        {
+            Observed o = Observe(new SliceRunConfig
+            {
+                Seed = seed, Threads = 2, IntroChannel = true, EffortShare = EffortShareArm.X0, Channels = SliceChannels.Sigma | SliceChannels.KCatch,
+            }, 384);
+            output.WriteLine($"seed {seed}: branch О {o.OFirings} (processes {o.OProcesses}, defects {o.ODefects})");
+            Assert.Equal(0, o.BadClose);                                  // (6) still holds: only О for T_ab months or more
+            fired += o.OProcesses;
+        }
+        Assert.True(fired > 0, "branch О PROCESSES never fired with share_D = 0, σ = 0 and no catch-up");
+    }
+
+    // (13, second fixture) money is there but the culture does not grow within T_ab (α = 0, σ = 0, k_catch = 0): the process stays unadmitted and the branch fires.
+    [Fact]
+    public void A40ProcessesBranch_FiresWhenTabExpiresBeforeAdmission()
+    {
+        int fired = 0;
+        foreach (ulong seed in new ulong[] { 1, 2, 3 })
+        {
+            var config = new SliceRunConfig
+            {
+                Seed = seed, Threads = 2, IntroChannel = true, Channels = SliceChannels.Alpha | SliceChannels.Sigma | SliceChannels.KCatch,
+            };
+            SliceSession s = SliceTestData.Create(config);
+            Fx6 money = Fx6.Zero;
+            for (long t = 0; t < 120; t++)
+            {
+                s.StepThroughMonth(t);
+                for (int site = 0; site < s.World.IndustryLayout.SiteCount; site++)
+                {
+                    for (int row = 0; row < s.World.IndustryLayout.ProcessCount; row++)
+                        money += s.World.Industry.ProcE(site, row);
+                }
+            }
+            Assert.True(money > Fx6.Zero, "no process-development money was distributed: the fixture does not test «T_ab expires with money»");
+            Observed o = Observe(config, 384);
+            output.WriteLine($"seed {seed}: branch О {o.OFirings} (processes {o.OProcesses})");
+            fired += o.OProcesses;
+        }
+        Assert.True(fired > 0, "branch О PROCESSES never fired while the culture could not grow within T_ab");
+    }
+
     [Fact]
     public void ASeriesWithoutOutput_NeverTakesMoreThanTheStandMoneyOfAProcessWithoutOutput_V5()
     {
@@ -209,6 +257,49 @@ public class ProductAiSessionTests(ITestOutputHelper output)
             }
             output.WriteLine($"seed {seed}: {checkedLines} (month, process) pairs of a series without output checked");
         }
+    }
+
+    // (V5′, contract §4.1a r12) without an own prototype or series line on home and without output, the money of a process stays within the laboratory share.
+    // The snapshot of month t is the state after t−1, so v_p and V_OC are read before the step.
+    [Fact]
+    public void WithoutOwnPrototypeOrSeries_NoOutputProcessTakesAtMostTheStandMoney_V5Prime()
+    {
+        int bounded = 0, above = 0;
+        foreach (ulong seed in new ulong[] { 1, 2, 3 })
+        {
+            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, IntroChannel = true });
+            SliceWorld w = s.World;
+            var il = w.IndustryLayout;
+            Fx6 cap = DetMath.MulCeil(w.IndustryParameters.Ell, w.IndustryParameters.EFull);
+            var free = new bool[il.SiteCount, il.ProcessCount];
+            for (long t = 0; t < 300; t++)
+            {
+                for (int site = 0; site < il.SiteCount; site++)
+                {
+                    for (int row = 0; row < il.ProcessCount; row++)
+                        free[site, row] = w.Industry.ProcV(site, row) == Fx6.Zero && w.IndustryInputs.GrowthNominal(site, row, t) == Fx6.Zero;
+                }
+                s.StepThroughMonth(t);
+                for (int site = 0; site < il.SiteCount; site++)
+                {
+                    for (int row = 0; row < il.ProcessCount; row++)
+                    {
+                        Fx6 e = w.Industry.ProcE(site, row);
+                        if (free[site, row])
+                        {
+                            bounded++;
+                            Assert.True(e <= cap, $"seed {seed}, month {t}, site {site}, process row {row}: E_p {e} above ℓ·E_full without V_OC and output");
+                        }
+                        else if (w.Industry.ProcV(site, row) == Fx6.Zero && e > cap)
+                        {
+                            above++;
+                        }
+                    }
+                }
+            }
+        }
+        output.WriteLine($"{bounded} (month, site, process) cells bounded; {above} cells without output above the laboratory share (own О/С line)");
+        Assert.True(above > 0, "no own О/С line ever took more than the laboratory share: the I-OC channel is dead or the test vacuous");
     }
 
     [Fact]

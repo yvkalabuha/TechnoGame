@@ -184,6 +184,18 @@ public sealed record SliceRunConfig
     /// <summary><c>PILOT_CHOICE</c> (HYP-0004 sketch round 2, experimental): the AI P2/P3 pilot choice of <c>superior</c>; <see cref="PilotChoice.Off"/> in main.</summary>
     public PilotChoice PilotChoice { get; init; } = PilotChoice.Off;
 
+    /// <summary>
+    /// <c>INTRO_CHANNEL</c> (contract r12, #242, #243; TASK-0058): the I-OC channel (growth from <c>max(v, V_OC)</c>, §4.1) and A41 in the general form
+    /// (per slot, new-process condition, §4.4a). Off until the golden is recomputed; then it becomes the build's behaviour and the switch goes.
+    /// </summary>
+    public bool IntroChannel { get; init; }
+
+    /// <summary><c>A41_FORM</c> (#244 print): SLOT = per slot (contract), WHOLE = the whole <c>superior</c> as the HYP-0004 hook; acts with <see cref="IntroChannel"/>.</summary>
+    public PilotForm PilotForm { get; init; } = PilotForm.Slot;
+
+    /// <summary><c>PILOT_PROFILES</c> (#244): the profiles A41 applies to when <see cref="IntroChannel"/> is on; P1 is never changed.</summary>
+    public PilotProfileSet PilotProfiles { get; init; } = PilotProfileSet.P2P3;
+
     /// <summary><c>LIC_OFF</c> (spec §6.11, contract §8.6 п. 6): no licence offers and no <c>EVT_LIC</c> draws; disruptions and the why_not triggers stay.</summary>
     public bool LicOff { get; init; }
 

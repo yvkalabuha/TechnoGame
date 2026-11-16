@@ -100,4 +100,34 @@ public class PilotChoiceTests(Xunit.Abstractions.ITestOutputHelper output)
         Assert.Equal(a, HashOf(3, pilot, 1, 384));
         Assert.Equal(a, HashOf(3, pilot, 4, 384));
     }
+
+    private static string PortHash(ulong seed, PilotProfileSet set, int threads, int months, bool intro = true, PilotChoice pilot = PilotChoice.Rank)
+    {
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = threads, PilotChoice = pilot, IntroChannel = intro, PilotProfiles = set });
+        for (long t = 0; t < months; t++)
+            s.StepThroughMonth(t);
+        return s.LastHash;
+    }
+
+    // TASK-0058: the port is off by default (the golden of main is untouched), and with it on L1/L2 hold; the profile set (#244) is a real switch.
+    [Fact]
+    public void IntroChannel_IsOffByDefault_AndChangesTheRun_WhenOn()
+    {
+        Assert.False(new SliceRunConfig().IntroChannel);
+        Assert.Equal(PilotProfileSet.P2P3, new SliceRunConfig().PilotProfiles);
+        Assert.Equal(HashOf(1, PilotChoice.Off, 1, 120), PortHash(1, PilotProfileSet.P2P3, 1, 120, intro: false, pilot: PilotChoice.Off));
+        Assert.NotEqual(HashOf(1, PilotChoice.Off, 1, 384), PortHash(1, PilotProfileSet.P2P3, 1, 384, pilot: PilotChoice.Off));
+    }
+
+    [Fact]
+    public void IntroChannel_L1_L2_AndTheProfileSetChangesTheRun()
+    {
+        string a = PortHash(3, PilotProfileSet.P2P3, 1, 384);
+        Assert.Equal(a, PortHash(3, PilotProfileSet.P2P3, 1, 384));
+        Assert.Equal(a, PortHash(3, PilotProfileSet.P2P3, 4, 384));
+        int differ = 0;
+        foreach (ulong seed in Seeds)
+            differ += PortHash(seed, PilotProfileSet.P2P3, 2, 384) != PortHash(seed, PilotProfileSet.P3, 2, 384) ? 1 : 0;
+        Assert.True(differ > 0, "P3-only never differed from P2+P3 in 5 seeds");
+    }
 }

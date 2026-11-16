@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0058-equivalence",
+  "description": "TASK-0058: Core port (INTRO_CHANNEL + PILOT_CHOICE=RANK) against the Lab hook (CULTURE_VARIANT=VEXPOC + PILOT_CHOICE=RANK) on seeds 30201-30300; port at threads 4 for L2.",
+  "model": "JetSliceCalib",
+  "ticks": 11688,
+  "chunk_size": 1,
+  "threads": [
+    1,
+    4
+  ],
+  "seeds": {
+    "start": 30201,
+    "count": 100
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "ALPHA": 0.05,
+    "X_SCALE": 1.0,
+    "K_DIV": 1.0,
+    "H_MAX": 0.08,
+    "THETA_START": 0.6
+  },
+  "series": [
+    {
+      "name": "hook",
+      "seeds": {
+        "start": 30201,
+        "count": 100
+      },
+      "params": {
+        "CULTURE_VARIANT": "VEXPOC",
+        "PILOT_CHOICE": "RANK"
+      }
+    },
+    {
+      "name": "port",
+      "seeds": {
+        "start": 30201,
+        "count": 100
+      },
+      "params": {
+        "INTRO_CHANNEL": true,
+        "PILOT_CHOICE": "RANK"
+      }
+    },
+    {
+      "name": "port-whole",
+      "seeds": {
+        "start": 30201,
+        "count": 100
+      },
+      "params": {
+        "INTRO_CHANNEL": true,
+        "PILOT_CHOICE": "RANK",
+        "A41_FORM": "WHOLE"
+      }
+    }
+  ],
+  "meta": {
+    "task": "TASK-0058"
+  }
+}

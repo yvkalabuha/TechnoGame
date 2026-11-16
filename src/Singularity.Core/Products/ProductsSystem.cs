@@ -632,6 +632,25 @@ public sealed partial class ProductsSystem : ITickSystem
         return Max(procV, vC) + vPo;
     }
 
+    /// <summary>
+    /// <c>V_OC(site, p) = V_C + V_O</c> on <c>home(a)</c>, 0 elsewhere (contract §4.1a r12, I-OC): the nominal of the actor's own lines in stages О and С,
+    /// <c>plan(d, p) = (r_ref·n_p)·labour_p</c>, each design once (<c>prc_set</c> is a set, one stage per design); П, В and «снят» weigh 0.
+    /// Read from the same snapshot, in the same phase, as <see cref="ExpectedVolume"/> and <see cref="Planned"/>.
+    /// </summary>
+    public Fx6 GrowthNominal(int actor, int processNumber, bool isHome)
+    {
+        int k = _l.ProcIndex(processNumber);
+        if (!isHome || k < 0)
+            return Fx6.Zero;
+        Fx6 sum = Fx6.Zero;
+        for (int d = 0; d < _d; d++)
+        {
+            if (Stage(actor, d) is (DesignStage.Prototype or DesignStage.Series) && PrcSet(actor, d).AsSpan().IndexOf(processNumber) >= 0)
+                sum += _l.RRef * _l.ProcN[k] * _l.ProcLabour[k];
+        }
+        return sum;
+    }
+
     // ---- tick phases
 
     public void Compute(in TickContext context, int chunk, int rowStart, int rowEnd)

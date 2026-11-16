@@ -873,9 +873,11 @@ internal sealed class SliceObserver
                 };
                 // HYP-0004 pilot choice (PILOT_CHOICE on): P2/P3 may take superior instead of the profile's variant (Core ProductPresets.Compose);
                 // the check then accepts either, and the table records what was actually composed (column of the variant is unchanged).
-                bool pilotTook = _pilot && av.Profile is PolicyProfile.Mass or PolicyProfile.Adaptive && c.Alts.SequenceEqual(r.Superior);
+                // A41 per slot (contract §4.4a r12): every slot is the profile's alternative or that of superior (the exact firing slots F are checked in Core, R2).
+                bool pilotTook = _pilot && av.Profile is PolicyProfile.Mass or PolicyProfile.Adaptive && c.Alts.Length == chosen.Length
+                    && c.Alts.Select((alt, s) => alt == chosen[s] || alt == r.Superior[s]).All(ok => ok);
                 if (pilotTook)
-                    chosen = r.Superior;
+                    chosen = c.Alts;
                 if (!c.Alts.SequenceEqual(chosen))
                     throw new SliceFormatException($"Month {t} actor {_ids[a]} ({av.Profile}): the compose command is not the profile's choice among the variants (§4.6).");
                 Row("requirements", I(_req++), _ids[a], I(r.Gen), I(t), I(r.Count), F(r.FvSuperior), r.Count == 2 && r.FvProducible is Fx6 f ? F(f) : "");

@@ -51,6 +51,9 @@ public interface IIndustryInputs
     /// <summary><c>v_exp(p)</c> at the site: planned output of the lines and of the projects in stages П/О (contract §4.1b); ≥ 0.</summary>
     Fx6 PlannedVolume(int siteRow, int processRow, long month);
 
+    /// <summary><c>growth_nominal(site, p)</c> = <c>V_OC</c> (contract §4.1a r12, I-OC): the nominal of the owner's own lines in О and С on <c>home</c>; 0 where the channel is off.</summary>
+    Fx6 GrowthNominal(int siteRow, int processRow, long month) => Fx6.Zero;
+
     /// <summary><c>mult_P</c> (spec A37): the weight factor of the doctrine for the process of the actor; an input without a doctrine says 1 explicitly.</summary>
     Fx6 EffortMultiplier(int actorRow, int processRow, long month);
 

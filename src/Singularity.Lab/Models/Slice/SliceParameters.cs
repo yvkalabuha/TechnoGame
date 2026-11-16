@@ -17,8 +17,8 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
     /// <summary>Keys of §3 (ordinal order). <c>detail</c> is a key of <c>JetSlice</c> only.</summary>
     public static readonly string[] Keys =
     [
-        "ALPHA", "C_M", "CHANNELS", "CONTROL_TABLES", "CULTURE_VARIANT", "DELTA_H", "DERIV", "EFFORT_SHARE", "FIX_A", "FIX_E", "FIX_K", "FLEET_ARM", "FLEET_LINE_COND", "FORCE", "GRID", "H_MAX",
-        "K_DIV", "KAPPA_Q10", "LAYER", "LIC_KNOWS", "LIC_OFF", "LINE_CLOSE", "POOL_ORDER", "PILOT_CHOICE", "PROFILE_CELL", "SALE_ARM", "START", "T6D_OFF",
+        "A41_FORM", "ALPHA", "C_M", "CHANNELS", "CONTROL_TABLES", "CULTURE_VARIANT", "DELTA_H", "DERIV", "EFFORT_SHARE", "FIX_A", "FIX_E", "FIX_K", "FLEET_ARM", "FLEET_LINE_COND", "FORCE", "GRID", "H_MAX", "INTRO_CHANNEL",
+        "K_DIV", "KAPPA_Q10", "LAYER", "LIC_KNOWS", "LIC_OFF", "LINE_CLOSE", "POOL_ORDER", "PILOT_CHOICE", "PILOT_PROFILES", "PROFILE_CELL", "SALE_ARM", "START", "T6D_OFF",
         "TOOLING_H_HI", "TOOLING_H_HI_CONTROL", "TOOLING_H_LO", "TOOLING_M_LEAD", "TOOLING_RHO_MAX", "TOOLING_TARGET", "THETA_START", "X_SCALE", "detail",
     ];
 
@@ -116,6 +116,19 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
                 "ON_ADMITTED" => PilotChoice.OnAdmitted,
                 "RANK" => PilotChoice.Rank,
                 _ => throw Bad("PILOT_CHOICE", v),
+            }),
+            IntroChannel = p.GetBool("INTRO_CHANNEL", false),
+            PilotForm = Enum(p, "A41_FORM", "SLOT", v => v switch
+            {
+                "SLOT" => PilotForm.Slot,
+                "WHOLE" => PilotForm.Whole,
+                _ => throw Bad("A41_FORM", v),
+            }),
+            PilotProfiles = Enum(p, "PILOT_PROFILES", "P2P3", v => v switch
+            {
+                "P2P3" => PilotProfileSet.P2P3,
+                "P3" => PilotProfileSet.P3,
+                _ => throw Bad("PILOT_PROFILES", v),
             }),
             LicOff = p.GetBool("LIC_OFF", false),
             T6dOff = p.GetBool("T6D_OFF", false),

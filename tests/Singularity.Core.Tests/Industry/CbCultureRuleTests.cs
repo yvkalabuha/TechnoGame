@@ -94,6 +94,67 @@ public class CbCultureRuleTests
         Assert.Equal(Fx6.Zero, Rule.Step(s, 0, 0, Prec, 0).Drive);
     }
 
+    // (V5′, contract §4.1a r12) own prototype or series line: growth from the nominal even with v = 0; otherwise the laboratory share only.
+    [Fact]
+    public void NoOutput_OwnPrototypeOrSeriesLine_GrowsFromNominal()
+    {
+        IndustryLayout l = CbFake.MakeLayout([0, 0], (10, Cluster.MET, Req(4_000_000, 3_500_000, 0)));
+        var s = new CbFake(l);
+        int p = s.P(10);
+        s.PlannedF[p] = true;
+        s.Es[p] = s.Params.EFull * D(10);
+        Fx6 lab = DetMath.MulCeil(s.Params.Ell, s.Params.EFull);
+        Assert.Equal(p, CbCultureRule.Lead(s, 0, 0, Prec, 0));
+        Assert.True(Rule.EUseful(s, 0, p, 0) <= lab, "V_OC = 0: the laboratory share");
+        Fx6 labDrive = Rule.Step(s, 0, 0, Prec, 0).Drive;
+        s.Vgrow[p] = s.Params.RCap * l.Labour[p];                      // a line in О or С at the cap (home = site 0)
+        Assert.True(Rule.EUseful(s, 0, p, 0) > lab);
+        Assert.True(Rule.Step(s, 0, 0, Prec, 0).Drive > labDrive);
+        Assert.Equal(LimiterKind.Effort, CbCultureRule.Limiter0(s, 0, p, Prec, 0));
+        // the second site (V_OC = 0 there) keeps the old bound
+        s.Es[1 * l.ProcessCount + p] = s.Params.EFull * D(10);
+        s.PlannedF[1 * l.ProcessCount + p] = true;
+        Assert.True(Rule.EUseful(s, 1, p, 0) <= lab);
+    }
+
+    [Fact]
+    public void NoOutput_NominalWithoutEffort_GivesNoGrowth_AndLicenceDoublesTheNominal()
+    {
+        IndustryLayout l = CbFake.MakeLayout([0], (10, Cluster.MET, Req(4_000_000, 3_500_000, 0)));
+        var s = new CbFake(l);
+        int p = s.P(10);
+        s.Vgrow[p] = s.Params.RCap * l.Labour[p] / D(2);
+        Assert.Equal(Fx6.Zero, Rule.Step(s, 0, 0, Prec, 0).DHPlus);   // V_OC alone does not create a process in P(c,d) (E = 0, v = 0)
+        s.Es[p] = s.Params.EFull;
+        Fx6 plain = Rule.Step(s, 0, 0, Prec, 0).Drive;
+        s.Lic[p] = true;
+        Fx6 licensed = Rule.Step(s, 0, 0, Prec, 0).Drive;
+        Assert.True(licensed > plain);                                  // gate critic 6: the licence multiplies max(v, V_OC)
+    }
+
+    // (V6) the nominal is not in maintenance and experience: two snapshots differing only in V_OC.
+    [Fact]
+    public void GrowthNominal_DoesNotEnterMaintenanceOrExperience()
+    {
+        IndustryLayout l = CbFake.MakeLayout([0], (10, Cluster.MET, Req(4_000_000, 3_500_000, 0)));
+        foreach (long v in new long[] { 0, 3_000_000, 9_000_000 })
+        {
+            var a = new CbFake(l);
+            var b = new CbFake(l);
+            int p = a.P(10);
+            a.Vs[p] = b.Vs[p] = F(v);
+            a.Es[p] = b.Es[p] = a.Params.EFull;
+            a.SetH(0, 0, Prec, D(3));
+            b.SetH(0, 0, Prec, D(3));
+            b.Vgrow[p] = b.Params.RCap * l.Labour[p];
+            CultureStep sa = Rule.Step(a, 0, 0, Prec, 0), sb = Rule.Step(b, 0, 0, Prec, 0);
+            Assert.Equal(sa.Maint, sb.Maint);
+            Assert.Equal(sa.DHMinus, sb.DHMinus);
+            Assert.Equal(sa.HFloor, sb.HFloor);
+            Assert.True(sb.DHPlus >= sa.DHPlus);
+        }
+    }
+
     [Fact]
     public void NoOutput_WithEllZero_NoGrowthFromMoney()
     {
@@ -121,6 +182,21 @@ public class CbCultureRuleTests
                 prev = g;
             }
         }
+        // V_OC: growth does not fall as the nominal rises (the max with v keeps it monotone too)
+        s.Es[p] = s.Params.EFull;
+        foreach (long v in new long[] { 0, 2_000_000 })
+        {
+            Fx6 prev = Fx6.Zero;
+            s.Vs[p] = F(v);
+            for (long nominal = 0; nominal <= 12_000_000; nominal += 250_000)
+            {
+                s.Vgrow[p] = F(nominal);
+                Fx6 g = Rule.Step(s, 0, 0, Prec, 0).DHPlus;
+                Assert.True(g >= prev, $"v={v} nominal={nominal}");
+                prev = g;
+            }
+        }
+        s.Vgrow[p] = Fx6.Zero;
         for (long e = 0; e <= s.Params.EFull.Raw; e += 229)
         {
             Fx6 prev = Fx6.Zero;

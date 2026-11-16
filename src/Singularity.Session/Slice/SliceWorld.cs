@@ -70,6 +70,9 @@ internal sealed class SliceWorld
             YProd = pp.YProd, TField = pp.HBuild, NServiceMin = pp.NServiceMin, FleetArm = config.FleetArm, FleetLineCond = config.FleetLineCond,
             LineClose = config.LineClose,
             PilotChoice = config.PilotChoice,
+            PilotPerSlot = config.IntroChannel,
+            PilotProfiles = config.PilotProfiles,
+            PilotForm = config.PilotForm,
             ToolingTarget = config.ToolingTarget,
             LicOff = config.LicOff, T6dOff = config.T6dOff,
         };
