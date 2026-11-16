@@ -20,7 +20,8 @@ string prefix = args[2];
 for (int i = 3; i < args.Length; i++)
 {
     string[] parts = args[i].Split('=');
-    kv.Add(new(parts[0], new ParamValue(char.IsDigit(parts[1][0]) ? ParamKind.Number : ParamKind.String, parts[1])));
+    ParamKind kind = parts[1] is "true" or "false" ? ParamKind.Bool : char.IsDigit(parts[1][0]) ? ParamKind.Number : ParamKind.String;
+    kv.Add(new(parts[0], new ParamValue(kind, parts[1])));
 }
 string repo = AppContext.BaseDirectory;
 while (!File.Exists(Path.Combine(repo, "Singularity.sln")))

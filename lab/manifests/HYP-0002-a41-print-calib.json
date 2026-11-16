@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "experiment": "HYP-0002-a41-print-calib",
+  "description": "Owner decision #244: print (not a round with criteria, no pass/fail) for the A41 variants before I-OC + A41 becomes the default; C2 prints (#241), E1/E3 (sketch §3), A40 PROCESSES, K3; same dynamics as the JetSlice manifest. Variant 0 = C-B (all switches off); 1 = I-OC without A41; 2-5 = I-OC + A41 (PILOT_CHOICE=RANK with INTRO_CHANNEL) x A41_FORM WHOLE|SLOT x PILOT_PROFILES P2P3|P3. Calibration seeds 10001-10100.",
+  "model": "JetSliceCalib",
+  "ticks": 11688,
+  "chunk_size": 1,
+  "threads": 1,
+  "seeds": {
+    "start": 10001,
+    "count": 100
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "ALPHA": 0.05,
+    "X_SCALE": 1.0,
+    "K_DIV": 1.0,
+    "H_MAX": 0.08,
+    "THETA_START": 0.6
+  },
+  "series": [
+    {
+      "name": "v0/CB"
+    },
+    {
+      "name": "v1/IOC",
+      "params": {
+        "INTRO_CHANNEL": true
+      }
+    },
+    {
+      "name": "v2/WHOLE_P2P3",
+      "params": {
+        "INTRO_CHANNEL": true,
+        "PILOT_CHOICE": "RANK",
+        "A41_FORM": "WHOLE",
+        "PILOT_PROFILES": "P2P3"
+      }
+    },
+    {
+      "name": "v3/SLOT_P2P3",
+      "params": {
+        "INTRO_CHANNEL": true,
+        "PILOT_CHOICE": "RANK",
+        "A41_FORM": "SLOT",
+        "PILOT_PROFILES": "P2P3"
+      }
+    },
+    {
+      "name": "v4/WHOLE_P3",
+      "params": {
+        "INTRO_CHANNEL": true,
+        "PILOT_CHOICE": "RANK",
+        "A41_FORM": "WHOLE",
+        "PILOT_PROFILES": "P3"
+      }
+    },
+    {
+      "name": "v5/SLOT_P3",
+      "params": {
+        "INTRO_CHANNEL": true,
+        "PILOT_CHOICE": "RANK",
+        "A41_FORM": "SLOT",
+        "PILOT_PROFILES": "P3"
+      }
+    }
+  ],
+  "meta": {
+    "decision": "#244",
+    "core_commit": "84d833d",
+    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.31",
+    "params_from": "lab/manifests/EXP-0002-calib.json params (C1 + C3 frozen, #239); no KAPPA_Q10 / C_M / DELTA_H keys (label-column lesson, §5 of introduction-channel-sketch.md)",
+    "report": "docs/simulation/introduction-channel-sketch.md §12",
+    "note": "print only; reading tech_lead on calibration seeds is ordered by #244 (owner)",
+    "companion": "lab/manifests/HYP-0002-a41-print.json"
+  }
+}
