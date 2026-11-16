@@ -73,7 +73,7 @@
 | [TASK-0057](../development/tasks/TASK-0057-c2-no-first-diagnosis.md) | APPROVED | C2: почему tier-4 процессы известны, но не идут в серию (no_t_first 0,75–0,94) | MS-M0 |
 | [TASK-0058](../development/tasks/TASK-0058-ioc-rank-core-port.md) | DONE | Порт I-OC и RANK (A41 в общем виде) в Core; golden, CONTROL_TABLES | MS-M0 |
 | [TASK-0059](../development/tasks/TASK-0059-e2-decomposition-prints.md) | DONE | Разбор E2 HYP-0004 и печати gate I-OC+RANK | MS-M0 |
-| [TASK-0060](../development/tasks/TASK-0060-contract-ioc-a41.md) | APPROVED | Контракт §4.1/§4.1a: I-OC (V5′/V6) и A41; полосы A40 | MS-M0 |
+| [TASK-0060](../development/tasks/TASK-0060-contract-ioc-a41.md) | DONE | Контракт §4.1/§4.1a: I-OC (V5′/V6) и A41; полосы A40 | MS-M0 |
 
 ## Гипотезы
 

@@ -1,7 +1,7 @@
 ---
 id: TASK-0060
 title: "Контракт §4.1/§4.1a: I-OC (V5′/V6) и A41; полосы A40"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M0
 agent: systems-architect
@@ -29,12 +29,12 @@ created: 2026-11-16
 Источник: `docs/simulation/introduction-channel-sketch.md` §6, §7.3, §9–§10, «Разногласия»; код варианта: `src/Singularity.Lab/.../IntroCultureRule.cs`, `src/Singularity.Core/Policy/ProductPresets.cs`.
 
 ## Критерии приёмки
-- [ ] Контракт r12: формулы I-OC, V5′/V6, A41 общий вид, ограничение M0, A40 резервная ветка.
-- [ ] Каждый инвариант проверяем тестом (указать, каким).
-- [ ] Gate (critic + DeepSeek) по ревизии контракта.
+- [x] Контракт r12: формулы I-OC, V5′/V6, A41 общий вид, ограничение M0, A40 резервная ветка.
+- [x] Каждый инвариант проверяем тестом (указать, каким).
+- [x] Gate (critic + DeepSeek) по ревизии контракта.
 
 ## REVIEW
-- [ ] Gate (critic, DeepSeek)
+- [x] Gate (critic, DeepSeek)
 
 ## Результат
 - [Факт] Контракт r12 внесён (systems-architect, 2026-11-16):
