@@ -47,7 +47,7 @@ public static class SliceChecks
         ("slice: design capacity — AI design commands, commands without a design and slots used are counted (TASK-0054)", () => DesignCapacity(tmp)),
         ("slice: calibration points — one point of each stage C1, C3+C4, C2 and the L_C/L_P layers run; K keys change the run (TASK-0055)", () => CalibrationPoints(tmp)),
         ("slice: switches — FORCE, START PERT/SYM, CHANNELS, GRID, FLEET_ARM, SALE_ARM, change the run (DEBT-0032, HYP-0004)", () => Switches(tmp)),
-        ("slice: calib-print — 1 seed, 60 months: hash = golden_hash, G_r6 ≤ G_L, first entry equal; FORCE/CONTROL_TABLES rejected (review M1, M2, M5)", () => CalibPrintSmoke(tmp)),
+        ("slice: calib-print — 1 seed, 60 months, JetSliceCalib and JetSlice: hash = golden_hash, G_r6 ≤ G_L, first entry equal; FORCE/CONTROL_TABLES rejected (review M1, M2, M5)", () => CalibPrintSmoke(tmp)),
         ("slice: lk-draws — t_known of an L_K run = max(req, 0) of the exported draws, req ≥ own (spec v0.34 §6.1 self-check, #251)", () => LkDrawsExact(tmp)),
         ("slice: c5-stand — the output months of the C5 site equal the C1 DevSite FULL_T0 (same culture rule C-B + I-OC, 8 months)", C5DevSiteEquivalence),
         ("slice: c5-stand — smoke (horizon 6, threshold 0,25): idle and restart run, two runs give the same bytes, no statistic row (#248)", () => C5Smoke(tmp)),
@@ -88,6 +88,18 @@ public static class SliceChecks
                     return $"first entry differs in {line}";
             }
         }
+        // D3 (spec v0.34 §5.9, #250): the print also reads JetSlice (main); its final hash is the JetSlice golden of the same seed.
+        string jsJson = Manifest("JetSlice", Ticks60, seeds: "[10001]", pars: """{"detail": "lite"}""");
+        File.WriteAllText(path, jsJson);
+        var (rj, _) = Run(tmp, jsJson, 10001, 1, "calib-print-js-golden");
+        if (!rj.Ok)
+            return rj.Error;
+        string jsOut = Path.Combine(dir, "out-js");
+        if (Smoke.CalibPrint.Run(path, null, null, jsOut, 1, TextWriter.Null) != 0)
+            return "calib-print JetSlice exit code";
+        string[] jsRuns = File.ReadAllLines(Path.Combine(jsOut, "fielded_runs.csv"));
+        if (jsRuns.Length != 2 || jsRuns[1].Split(',')[2] != rj.GoldenHash)
+            return $"JetSlice hash {(jsRuns.Length > 1 ? jsRuns[1] : "-")} vs golden {rj.GoldenHash}";
         foreach (string bad in new[] { """{"FORCE": "X1"}""", """{"LAYER": "LK", "CONTROL_TABLES": "t.json"}""" })
         {
             File.WriteAllText(path, Manifest("JetSliceCalib", Ticks60, seeds: "[10001]", pars: bad));

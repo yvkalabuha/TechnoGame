@@ -23,8 +23,10 @@ internal static class CalibPrint
     public static int Run(string manifestPath, int? point, int? seedCount, string outDir, int jobs, TextWriter log)
     {
         Manifest m = Manifest.Load(manifestPath);
-        if (m.Model != "JetSliceCalib")
-            throw new UsageException($"calib-print reads the calibration build; the manifest model is {m.Model}.");
+        // Spec v0.34 §5.9 D3 (#250): the same print on main (JetSlice) for EXP-0002; both models run the same world from SliceRunConfig.
+        if (m.Model is not ("JetSliceCalib" or "JetSlice"))
+            throw new UsageException($"calib-print reads JetSliceCalib or JetSlice; the manifest model is {m.Model}.");
+        bool calibration = m.Model == "JetSliceCalib";
         GameData data = SliceData.Load(m.BaseDirectory);
         // n_service_min of the r6 rebuild (review M4): SliceWorld builds ProductsParams with the default and no manifest key, calibration
         // arm, channel or sale arm sets NServiceMin (SliceWorld.ApplyCalibration/ApplyChannels/ApplySaleArm write other fields only), so the
@@ -38,7 +40,7 @@ internal static class CalibPrint
                 continue;
             foreach (ulong s in seedCount is int n ? p.Seeds.Take(n) : p.Seeds)
             {
-                SliceParameters sp = SliceParameters.Parse(p.CreateParamSet(), s, 1, m.ChunkSize, calibration: true);
+                SliceParameters sp = SliceParameters.Parse(p.CreateParamSet(), s, 1, m.ChunkSize, calibration);
                 // Review M1: the model adds a ForceProxy (FORCE) and loads the control tables (CONTROL_TABLES); this print builds the
                 // session from the config alone, so such a point would run another world than the matrix and its hash would not be golden.
                 if (sp.ForceDivisor != 0 || sp.ControlTablesPath is not null)

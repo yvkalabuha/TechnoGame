@@ -1,112 +1,979 @@
 {
   "schema": 1,
   "experiment": "EXP-0002",
-  "description": "TEMPLATE (TASK-0044, T10), not frozen: HYP-0002 main run of the jet slice, spec slice-jet-aviation.md v0.25 §7; model JetSlice, CSV slice-csv-format.md v0.5 r7. Absent until T12: layer/L_K (CONTROL_TABLES format), layer/L_C and layer/L_P (control tables; Session refuses Lc/Lp), COMP_V010 (no v0.10 paths in Core). T12 freezes.",
+  "description": "TEMPLATE filled by T12 (TASK-0056), NOT FROZEN: HYP-0002 main run of the jet slice, spec slice-jet-aviation.md v0.34 r1 §7; model JetSlice, CSV slice-csv-format.md v0.5 r13. Layer controls layer/L_K, layer/L_C, layer/L_P read CONTROL_TABLES 4e10abb5. Freeze (meta.freeze) only after the freeze gate and the owner. COMP_V010 is not executable (no v0.10 paths in Core).",
   "model": "JetSlice",
   "ticks": 11688,
   "chunk_size": 1,
   "threads": 1,
-  "seeds": {"start": 1, "count": 1000},
-  "params": {"LINE_CLOSE": "YPROD", "TOOLING_TARGET": "V5", "POOL_ORDER": "CAN", "detail": "lite"},
+  "seeds": {
+    "start": 1,
+    "count": 1000
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "lite"
+  },
   "series": [
-    {"name": "main", "params": {"detail": "full"}},
-    {"name": "channel/alpha0", "params": {"detail": "full", "CHANNELS": ["ALPHA"]}, "seeds": {"start": 1, "count": 200}},
-    {"name": "channel/ramp1", "params": {"detail": "full", "CHANNELS": ["RAMP"]}, "seeds": {"start": 1, "count": 200}},
-    {"name": "channel/b0", "params": {"detail": "full", "CHANNELS": ["B"]}, "seeds": {"start": 1, "count": 200}},
-    {"name": "channel/eta0", "params": {"detail": "full", "CHANNELS": ["ETA"]}, "seeds": {"start": 1, "count": 200}},
-    {"name": "channel/kcatch0", "params": {"detail": "full", "CHANNELS": ["KCATCH"]}, "seeds": {"start": 1, "count": 200}},
-    {"name": "channel/sigma0", "params": {"detail": "full", "CHANNELS": ["SIGMA"]}, "seeds": {"start": 1, "count": 200}},
-    {"name": "channel/kdiff0", "params": {"detail": "full", "CHANNELS": ["KDIFF"]}, "seeds": {"start": 1, "count": 200}},
-    {"name": "channel/E0", "params": {"detail": "full", "CHANNELS": ["E0"]}, "seeds": {"start": 1, "count": 200}},
-    {"name": "channel/ktr0", "params": {"detail": "full", "CHANNELS": ["KTR"]}, "seeds": {"start": 1, "count": 200}},
-    {"name": "channel/kqp0", "params": {"detail": "full", "CHANNELS": ["KQP"]}, "seeds": {"start": 1, "count": 200}},
-    {"name": "channel/R0", "params": {"detail": "full", "CHANNELS": ["R0"]}, "seeds": {"start": 1, "count": 200}},
-    {"name": "source/FIX_K", "params": {"FIX_K": true}, "seeds": {"start": 1, "count": 400}},
-    {"name": "source/FIX_E", "params": {"FIX_E": true}, "seeds": {"start": 1, "count": 400}},
-    {"name": "source/FIX_A", "params": {"FIX_A": true}, "seeds": {"start": 1, "count": 400}},
-    {"name": "start/PERT", "params": {"START": "PERT"}, "seeds": {"start": 1, "count": 400}},
-    {"name": "start/SYM", "params": {"START": "SYM"}, "seeds": {"start": 1, "count": 400}},
-    {"name": "prof/P1_P1_P1", "params": {"PROFILE_CELL": 0}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P1_P1_P2", "params": {"PROFILE_CELL": 1}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P1_P1_P3", "params": {"PROFILE_CELL": 2}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P1_P2_P1", "params": {"PROFILE_CELL": 3}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P1_P2_P2", "params": {"PROFILE_CELL": 4}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P1_P2_P3", "params": {"PROFILE_CELL": 5}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P1_P3_P1", "params": {"PROFILE_CELL": 6}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P1_P3_P2", "params": {"PROFILE_CELL": 7}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P1_P3_P3", "params": {"PROFILE_CELL": 8}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P2_P1_P1", "params": {"PROFILE_CELL": 9}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P2_P1_P2", "params": {"PROFILE_CELL": 10}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P2_P1_P3", "params": {"PROFILE_CELL": 11}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P2_P2_P1", "params": {"PROFILE_CELL": 12}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P2_P2_P2", "params": {"PROFILE_CELL": 13}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P2_P2_P3", "params": {"PROFILE_CELL": 14}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P2_P3_P1", "params": {"PROFILE_CELL": 15}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P2_P3_P2", "params": {"PROFILE_CELL": 16}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P2_P3_P3", "params": {"PROFILE_CELL": 17}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P3_P1_P1", "params": {"PROFILE_CELL": 18}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P3_P1_P2", "params": {"PROFILE_CELL": 19}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P3_P1_P3", "params": {"PROFILE_CELL": 20}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P3_P2_P1", "params": {"PROFILE_CELL": 21}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P3_P2_P2", "params": {"PROFILE_CELL": 22}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P3_P2_P3", "params": {"PROFILE_CELL": 23}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P3_P3_P1", "params": {"PROFILE_CELL": 24}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P3_P3_P2", "params": {"PROFILE_CELL": 25}, "seeds": {"start": 1, "count": 40}},
-    {"name": "prof/P3_P3_P3", "params": {"PROFILE_CELL": 26}, "seeds": {"start": 1, "count": 40}},
-    {"name": "lic/knows", "params": {"detail": "full", "LIC_KNOWS": true}, "seeds": {"start": 1, "count": 400}},
-    {"name": "lic/LIC_OFF", "params": {"detail": "full", "LIC_OFF": true}},
-    {"name": "lic/T6D_OFF", "params": {"detail": "full", "T6D_OFF": true}},
-    {"name": "arm/FORCE_x1", "params": {"FORCE": "X1"}, "seeds": {"start": 1, "count": 400}},
-    {"name": "arm/FORCE_q", "params": {"FORCE": "Q"}, "seeds": {"start": 1, "count": 400}},
-    {"name": "arm/DERIV", "params": {"DERIV": true}, "seeds": {"start": 1, "count": 400}},
-    {"name": "old/L_K0", "params": {"LAYER": "LK0"}, "seeds": {"start": 1, "count": 400}},
-    {"name": "old/L_C0", "params": {"LAYER": "LC0"}, "seeds": {"start": 1, "count": 400}},
-    {"name": "grid/lo_lo_lo", "params": {"GRID": "LO_LO_LO"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/lo_lo_mid", "params": {"GRID": "LO_LO_MID"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/lo_lo_hi", "params": {"GRID": "LO_LO_HI"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/lo_mid_lo", "params": {"GRID": "LO_MID_LO"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/lo_mid_mid", "params": {"GRID": "LO_MID_MID"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/lo_mid_hi", "params": {"GRID": "LO_MID_HI"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/lo_hi_lo", "params": {"GRID": "LO_HI_LO"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/lo_hi_mid", "params": {"GRID": "LO_HI_MID"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/lo_hi_hi", "params": {"GRID": "LO_HI_HI"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/mid_lo_lo", "params": {"GRID": "MID_LO_LO"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/mid_lo_mid", "params": {"GRID": "MID_LO_MID"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/mid_lo_hi", "params": {"GRID": "MID_LO_HI"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/mid_mid_lo", "params": {"GRID": "MID_MID_LO"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/mid_mid_hi", "params": {"GRID": "MID_MID_HI"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/mid_hi_lo", "params": {"GRID": "MID_HI_LO"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/mid_hi_mid", "params": {"GRID": "MID_HI_MID"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/mid_hi_hi", "params": {"GRID": "MID_HI_HI"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/hi_lo_lo", "params": {"GRID": "HI_LO_LO"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/hi_lo_mid", "params": {"GRID": "HI_LO_MID"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/hi_lo_hi", "params": {"GRID": "HI_LO_HI"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/hi_mid_lo", "params": {"GRID": "HI_MID_LO"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/hi_mid_mid", "params": {"GRID": "HI_MID_MID"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/hi_mid_hi", "params": {"GRID": "HI_MID_HI"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/hi_hi_lo", "params": {"GRID": "HI_HI_LO"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/hi_hi_mid", "params": {"GRID": "HI_HI_MID"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "grid/hi_hi_hi", "params": {"GRID": "HI_HI_HI"}, "seeds": {"start": 1, "count": 100}},
-    {"name": "arm/EFFORT_SHARE_x0", "params": {"EFFORT_SHARE": "X0"}, "seeds": {"start": 1, "count": 200}},
-    {"name": "arm/EFFORT_SHARE_x05", "params": {"EFFORT_SHARE": "X05"}, "seeds": {"start": 1, "count": 200}},
-    {"name": "arm/EFFORT_SHARE_x2", "params": {"EFFORT_SHARE": "X2"}, "seeds": {"start": 1, "count": 200}},
-    {"name": "arm/EFFORT_SHARE_x4", "params": {"EFFORT_SHARE": "X4"}, "seeds": {"start": 1, "count": 200}},
-    {"name": "fleet/NO_RETIRE", "params": {"FLEET_ARM": "NO_RETIRE"}},
-    {"name": "fleet/NO_SALE", "params": {"FLEET_ARM": "NO_SALE"}},
-    {"name": "fleet/PURCHASE_CAP", "params": {"FLEET_ARM": "PURCHASE_CAP"}}
+    {
+      "name": "main",
+      "params": {
+        "detail": "full"
+      }
+    },
+    {
+      "name": "layer/L_K",
+      "params": {
+        "detail": "full",
+        "LAYER": "LK",
+        "CONTROL_TABLES": "control_tables-EXP-0002.json"
+      }
+    },
+    {
+      "name": "layer/L_C",
+      "params": {
+        "detail": "full",
+        "LAYER": "LC",
+        "CONTROL_TABLES": "control_tables-EXP-0002.json"
+      }
+    },
+    {
+      "name": "layer/L_P",
+      "params": {
+        "detail": "full",
+        "LAYER": "LP",
+        "CONTROL_TABLES": "control_tables-EXP-0002.json"
+      }
+    },
+    {
+      "name": "channel/alpha0",
+      "params": {
+        "detail": "full",
+        "CHANNELS": [
+          "ALPHA"
+        ]
+      },
+      "seeds": {
+        "start": 1,
+        "count": 200
+      }
+    },
+    {
+      "name": "channel/ramp1",
+      "params": {
+        "detail": "full",
+        "CHANNELS": [
+          "RAMP"
+        ]
+      },
+      "seeds": {
+        "start": 1,
+        "count": 200
+      }
+    },
+    {
+      "name": "channel/b0",
+      "params": {
+        "detail": "full",
+        "CHANNELS": [
+          "B"
+        ]
+      },
+      "seeds": {
+        "start": 1,
+        "count": 200
+      }
+    },
+    {
+      "name": "channel/eta0",
+      "params": {
+        "detail": "full",
+        "CHANNELS": [
+          "ETA"
+        ]
+      },
+      "seeds": {
+        "start": 1,
+        "count": 200
+      }
+    },
+    {
+      "name": "channel/kcatch0",
+      "params": {
+        "detail": "full",
+        "CHANNELS": [
+          "KCATCH"
+        ]
+      },
+      "seeds": {
+        "start": 1,
+        "count": 200
+      }
+    },
+    {
+      "name": "channel/sigma0",
+      "params": {
+        "detail": "full",
+        "CHANNELS": [
+          "SIGMA"
+        ]
+      },
+      "seeds": {
+        "start": 1,
+        "count": 200
+      }
+    },
+    {
+      "name": "channel/kdiff0",
+      "params": {
+        "detail": "full",
+        "CHANNELS": [
+          "KDIFF"
+        ]
+      },
+      "seeds": {
+        "start": 1,
+        "count": 200
+      }
+    },
+    {
+      "name": "channel/E0",
+      "params": {
+        "detail": "full",
+        "CHANNELS": [
+          "E0"
+        ]
+      },
+      "seeds": {
+        "start": 1,
+        "count": 200
+      }
+    },
+    {
+      "name": "channel/ktr0",
+      "params": {
+        "detail": "full",
+        "CHANNELS": [
+          "KTR"
+        ]
+      },
+      "seeds": {
+        "start": 1,
+        "count": 200
+      }
+    },
+    {
+      "name": "channel/kqp0",
+      "params": {
+        "detail": "full",
+        "CHANNELS": [
+          "KQP"
+        ]
+      },
+      "seeds": {
+        "start": 1,
+        "count": 200
+      }
+    },
+    {
+      "name": "channel/R0",
+      "params": {
+        "detail": "full",
+        "CHANNELS": [
+          "R0"
+        ]
+      },
+      "seeds": {
+        "start": 1,
+        "count": 200
+      }
+    },
+    {
+      "name": "source/FIX_K",
+      "params": {
+        "FIX_K": true
+      },
+      "seeds": {
+        "start": 1,
+        "count": 400
+      }
+    },
+    {
+      "name": "source/FIX_E",
+      "params": {
+        "FIX_E": true
+      },
+      "seeds": {
+        "start": 1,
+        "count": 400
+      }
+    },
+    {
+      "name": "source/FIX_A",
+      "params": {
+        "FIX_A": true
+      },
+      "seeds": {
+        "start": 1,
+        "count": 400
+      }
+    },
+    {
+      "name": "start/PERT",
+      "params": {
+        "START": "PERT"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 400
+      }
+    },
+    {
+      "name": "start/SYM",
+      "params": {
+        "START": "SYM"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 400
+      }
+    },
+    {
+      "name": "prof/P1_P1_P1",
+      "params": {
+        "PROFILE_CELL": 0
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P1_P1_P2",
+      "params": {
+        "PROFILE_CELL": 1
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P1_P1_P3",
+      "params": {
+        "PROFILE_CELL": 2
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P1_P2_P1",
+      "params": {
+        "PROFILE_CELL": 3
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P1_P2_P2",
+      "params": {
+        "PROFILE_CELL": 4
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P1_P2_P3",
+      "params": {
+        "PROFILE_CELL": 5
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P1_P3_P1",
+      "params": {
+        "PROFILE_CELL": 6
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P1_P3_P2",
+      "params": {
+        "PROFILE_CELL": 7
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P1_P3_P3",
+      "params": {
+        "PROFILE_CELL": 8
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P2_P1_P1",
+      "params": {
+        "PROFILE_CELL": 9
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P2_P1_P2",
+      "params": {
+        "PROFILE_CELL": 10
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P2_P1_P3",
+      "params": {
+        "PROFILE_CELL": 11
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P2_P2_P1",
+      "params": {
+        "PROFILE_CELL": 12
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P2_P2_P2",
+      "params": {
+        "PROFILE_CELL": 13
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P2_P2_P3",
+      "params": {
+        "PROFILE_CELL": 14
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P2_P3_P1",
+      "params": {
+        "PROFILE_CELL": 15
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P2_P3_P2",
+      "params": {
+        "PROFILE_CELL": 16
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P2_P3_P3",
+      "params": {
+        "PROFILE_CELL": 17
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P3_P1_P1",
+      "params": {
+        "PROFILE_CELL": 18
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P3_P1_P2",
+      "params": {
+        "PROFILE_CELL": 19
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P3_P1_P3",
+      "params": {
+        "PROFILE_CELL": 20
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P3_P2_P1",
+      "params": {
+        "PROFILE_CELL": 21
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P3_P2_P2",
+      "params": {
+        "PROFILE_CELL": 22
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P3_P2_P3",
+      "params": {
+        "PROFILE_CELL": 23
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P3_P3_P1",
+      "params": {
+        "PROFILE_CELL": 24
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P3_P3_P2",
+      "params": {
+        "PROFILE_CELL": 25
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "prof/P3_P3_P3",
+      "params": {
+        "PROFILE_CELL": 26
+      },
+      "seeds": {
+        "start": 1,
+        "count": 40
+      }
+    },
+    {
+      "name": "lic/knows",
+      "params": {
+        "detail": "full",
+        "LIC_KNOWS": true
+      },
+      "seeds": {
+        "start": 1,
+        "count": 400
+      }
+    },
+    {
+      "name": "lic/LIC_OFF",
+      "params": {
+        "detail": "full",
+        "LIC_OFF": true
+      }
+    },
+    {
+      "name": "lic/T6D_OFF",
+      "params": {
+        "detail": "full",
+        "T6D_OFF": true
+      }
+    },
+    {
+      "name": "arm/FORCE_x1",
+      "params": {
+        "FORCE": "X1"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 400
+      }
+    },
+    {
+      "name": "arm/FORCE_q",
+      "params": {
+        "FORCE": "Q"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 400
+      }
+    },
+    {
+      "name": "arm/DERIV",
+      "params": {
+        "DERIV": true
+      },
+      "seeds": {
+        "start": 1,
+        "count": 400
+      }
+    },
+    {
+      "name": "old/L_K0",
+      "params": {
+        "LAYER": "LK0"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 400
+      }
+    },
+    {
+      "name": "old/L_C0",
+      "params": {
+        "LAYER": "LC0"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 400
+      }
+    },
+    {
+      "name": "grid/lo_lo_lo",
+      "params": {
+        "GRID": "LO_LO_LO"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/lo_lo_mid",
+      "params": {
+        "GRID": "LO_LO_MID"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/lo_lo_hi",
+      "params": {
+        "GRID": "LO_LO_HI"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/lo_mid_lo",
+      "params": {
+        "GRID": "LO_MID_LO"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/lo_mid_mid",
+      "params": {
+        "GRID": "LO_MID_MID"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/lo_mid_hi",
+      "params": {
+        "GRID": "LO_MID_HI"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/lo_hi_lo",
+      "params": {
+        "GRID": "LO_HI_LO"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/lo_hi_mid",
+      "params": {
+        "GRID": "LO_HI_MID"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/lo_hi_hi",
+      "params": {
+        "GRID": "LO_HI_HI"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/mid_lo_lo",
+      "params": {
+        "GRID": "MID_LO_LO"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/mid_lo_mid",
+      "params": {
+        "GRID": "MID_LO_MID"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/mid_lo_hi",
+      "params": {
+        "GRID": "MID_LO_HI"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/mid_mid_lo",
+      "params": {
+        "GRID": "MID_MID_LO"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/mid_mid_hi",
+      "params": {
+        "GRID": "MID_MID_HI"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/mid_hi_lo",
+      "params": {
+        "GRID": "MID_HI_LO"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/mid_hi_mid",
+      "params": {
+        "GRID": "MID_HI_MID"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/mid_hi_hi",
+      "params": {
+        "GRID": "MID_HI_HI"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/hi_lo_lo",
+      "params": {
+        "GRID": "HI_LO_LO"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/hi_lo_mid",
+      "params": {
+        "GRID": "HI_LO_MID"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/hi_lo_hi",
+      "params": {
+        "GRID": "HI_LO_HI"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/hi_mid_lo",
+      "params": {
+        "GRID": "HI_MID_LO"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/hi_mid_mid",
+      "params": {
+        "GRID": "HI_MID_MID"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/hi_mid_hi",
+      "params": {
+        "GRID": "HI_MID_HI"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/hi_hi_lo",
+      "params": {
+        "GRID": "HI_HI_LO"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/hi_hi_mid",
+      "params": {
+        "GRID": "HI_HI_MID"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "grid/hi_hi_hi",
+      "params": {
+        "GRID": "HI_HI_HI"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 100
+      }
+    },
+    {
+      "name": "arm/EFFORT_SHARE_x0",
+      "params": {
+        "EFFORT_SHARE": "X0"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 200
+      }
+    },
+    {
+      "name": "arm/EFFORT_SHARE_x05",
+      "params": {
+        "EFFORT_SHARE": "X05"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 200
+      }
+    },
+    {
+      "name": "arm/EFFORT_SHARE_x2",
+      "params": {
+        "EFFORT_SHARE": "X2"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 200
+      }
+    },
+    {
+      "name": "arm/EFFORT_SHARE_x4",
+      "params": {
+        "EFFORT_SHARE": "X4"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 200
+      }
+    },
+    {
+      "name": "fleet/NO_RETIRE",
+      "params": {
+        "FLEET_ARM": "NO_RETIRE"
+      }
+    },
+    {
+      "name": "fleet/NO_SALE",
+      "params": {
+        "FLEET_ARM": "NO_SALE"
+      }
+    },
+    {
+      "name": "fleet/PURCHASE_CAP",
+      "params": {
+        "FLEET_ARM": "PURCHASE_CAP"
+      }
+    }
   ],
   "meta": {
-    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.25",
-    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r7",
+    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.34 r1 (definitions pinned in bdfaaf6; r1 = #253)",
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r13",
     "hypothesis": "HYP-0002",
     "decision_rule": "spec §7, #45, #48",
-    "scenario_hash": null,
-    "control_tables_hash": null,
-    "calibration_manifest": {"path": "lab/manifests/EXP-0002-calib.json", "manifest_hash": null},
-    "analysis": {"script": "lab/analysis/exp0002.py", "script_sha256": null, "config": null},
+    "scenario_hash": "2ccb4adbe59a0795fc98c82413b6be188c067e90072eaed18d23d2b1d300878f",
+    "control_tables_hash": "4e10abb518ff291bb3490ec8dbaed2d32b553c308240ace605266a5999aaf506",
+    "calibration_manifest": {
+      "path": "lab/manifests/EXP-0002-calib.json",
+      "manifest_hash": "6346e282cf5c989627ef8b588ec7ef2523ed642c4559332ed724c94f6d0fbb9f",
+      "golden_set_hash": "0fe2bbe58c02f14d4a1869d17fccbee98c44177add15c1b497ff15ca6f3e66ae",
+      "seeds": "10001-10100",
+      "stage_manifests": {
+        "c1": "46ba32f833457f86bfcf94a1bb236776cf232e29fa48762e2a6a6976d4ea6c07",
+        "c3c4": "1e5460ffc611cec53566633ef658317c3795566a984c92bad67717c421e21930",
+        "c2": "784e53c7936a1926f10f6b3effe8e6472a7da194173a62e6c2c4ab3e8db65c88",
+        "lk_check": "750611cded93660e2b38e94469bbd3510ddceb770ea3d7dae419e170a8f7bf64"
+      }
+    },
+    "analysis": {
+      "script": "lab/analysis/exp0002.py",
+      "script_sha256": "65f59bd14416aa5bca25844efa37c3476173427c1966eddff77f7aea875e685d",
+      "config": null,
+      "prints": [
+        "lab/analysis/t12_c2_print.py",
+        "Singularity.Lab calib-print (D3)"
+      ]
+    },
     "rng": "spec §9.1; FIX_* seed 0x5EED",
     "after_review": false,
     "seed_offset": 0,
-    "freeze": null
+    "freeze": null,
+    "calibration_result": {
+      "point": "p00 of every stage = build defaults (no K keys); C1 ALPHA 0.05, X_SCALE 1.0; C3 K_DIV 1, H_MAX 0.08, THETA_START 0.6, kappa 0.5; C2 C_M 0.1, DELTA_H 0.003",
+      "L": 0,
+      "terms": {
+        "C1a": 0,
+        "C1b": 0,
+        "C1d": 0,
+        "C1e": 0,
+        "C3": 0,
+        "C2": 0,
+        "C5": "undefined (#252): L without C5"
+      },
+      "C4": "print (#236): G2 0.00, G3 0.00, G4 0.85",
+      "c5": {
+        "outcome": "undefined",
+        "params_sha256": "8b25d5d966ac403b5efef2385f1740d35c1bbe337e4b89105a75fbad51fca081",
+        "definition_sha256_C5_DEF": "a5f12f139b6d2bbdc23e6eaea10d3a5ff4f36d48c28169a8244f097f602b89ff",
+        "spec_commit": "bdfaaf6"
+      },
+      "lk_check": {
+        "result": "pass except GBR:4 (#253)",
+        "exact_selfcheck": "1700/1700",
+        "definition_sha256_LK_CHECK": "e679251b1b6edb398844a4aa2a367dee6296fe67317c51ef1a92f7bdbfdb28c0",
+        "spec_commit": "bdfaaf6"
+      },
+      "report": "docs/simulation/t12-calibration-report.md §7, §7.10, §7.11"
+    },
+    "deviations": [
+      "#245: A41 SLOT for P2+P3 in the calibration build; HYP-0004 round 3 measured WHOLE (SLOT equals WHOLE in 14-20 of 100 seeds); mechanism conclusions carried over by print #244, not by round criteria (report §7.7 p.1)",
+      "RISK-0021: chg/tech_lead were printed on seeds 10001-10100 (print #244) before stage C2; EXP-0002 runs on seeds 1-1000 only (§7.7 p.2)",
+      "Freeze recorded without K keys: frozen C1/C3/C2 values equal the build defaults; keys are not written (journal in meta.frozen of the stage manifests) (§7.7 p.3)",
+      "calib-print is a Lab print (views only); review of 321d8c9 applied (M1-M5) (§7.7 p.4)",
+      "#253: L_K control is stricter than the model for GBR G4: APP_4 of GBR is known in 10 of 100 calibration seeds of the full model and never under L_K (node 29 has delta = never, cens_never_share 0.5); pair outside the control, rule and tables unchanged",
+      "#252: C5 (test #30) undefined: the newcomer from the t0 culture reaches min yield 0.4505 by month 383; test #30 neither confirmed nor refuted; L without C5",
+      "L_K control keeps two moments only and is biased by double truncation at the horizon (spec §6.1 v0.34)"
+    ],
+    "diagnostics": {
+      "D3": "spec §5.9 D3 (#250, RISK-0022): Singularity.Lab calib-print --manifest lab/manifests/EXP-0002.json --point <main> on seeds 1-1000 after the run; calibration reference 0.012 of actor-months (USA 0.041), spells p50 23, max 50"
+    }
   }
 }
