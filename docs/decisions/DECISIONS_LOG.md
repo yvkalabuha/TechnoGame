@@ -352,3 +352,7 @@ Existing community Godot MCP projects are researched first, in parallel now | в
 - A new agent `sound-director` owns audio direction, the sound map, adaptive music, licences and the review of sounds. Its agent file is created at session end; until then ui-art-director covers the role.
 - Music: temporary CC0/CC BY with checked licences for the prototype; a human composer for the final soundtrack, closer to release.
 - UI sounds are synthesised by code (our own licence, one style); ambient sounds come from CC0/CC BY libraries. | владелец (AskUserQuestion 2026-11-17) |
+| 297 | 2026-11-17 | ADR-0018 localization, owner choices after the gate:
+1. Format: Project Fluent (.ftl) only, inside mods (`mods/<mod>/locale/<lang>/*.ftl`), handled by a C# Fluent library (Linguini.Bundle, Apache/MIT, to be verified). This gives Russian case, gender and plurals. YAML and .po are dropped; translators work through Fluent-aware tools (Pontoon/Weblate, to be verified).
+2. Machine (AI) translation needs no special marker; the stale-translation check (source changed → translation outdated) stays.
+3. The Russian anchor-event texts move out of Core data into localization. DataHash changes once; frozen EXP records are not edited. The old→new hash pair is recorded, and unchanged dynamics are proven by the unchanged EXP-0002-det golden. | владелец (AskUserQuestion 2026-11-17) |
