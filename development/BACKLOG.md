@@ -127,6 +127,7 @@
 | [ADR-0015](../docs/decisions/ADR-0015-external-executors-providers.md) | ACCEPTED | Внешние исполнители и ревьюеры (DeepSeek, Codex) |
 | [ADR-0016](../docs/decisions/ADR-0016-tick-budget.md) | ACCEPTED | Бюджет тика |
 | [ADR-0017](../docs/decisions/ADR-0017-statehash-schedule-and-table-copy-in-daily-mode.md) | PROPOSED | StateHash schedule and table copy in daily mode |
+| [ADR-0018](../docs/decisions/ADR-0018-localization-keys-locale-files-in-mods-en-and-ru.md) | PROPOSED | Localization: keys, locale files in mods, EN and RU |
 
 ## Research Reports
 
