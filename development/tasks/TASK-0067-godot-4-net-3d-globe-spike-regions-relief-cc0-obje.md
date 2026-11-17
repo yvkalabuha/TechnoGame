@@ -1,7 +1,7 @@
 ---
 id: TASK-0067
 title: "Godot 4 .NET 3D globe spike: regions, relief, CC0 objects, FPS and memory"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer
