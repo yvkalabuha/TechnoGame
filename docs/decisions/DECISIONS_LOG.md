@@ -378,3 +378,15 @@ Agents: research-scientist gathers the facts with sources (branch kind, the real
 
 If S1 fails, the ADR returns to the gate. The Unicode License V3 (CLDR-derived plural rules inside Linguini) is allowed for code, with its notice in LICENSES.md and the credits | владелец (AskUserQuestion 2026-11-17) |
 | 301 | 2026-11-17 | Client v0.3 (TASK-0070) is accepted as the visual reference for the next step (ui-art-director second review: blockers resolved). Code review: approve with comments. The remaining items (SignalField `.Actor` mapping — medium; the lows; visual leftovers: API names, the acknowledged-signal state, a contrast fix and others) go to the next client task together with the audio prototype (#298) | Orchestrator (light) |
+| 302 | 2026-11-17 | Client design feedback (owner).
+- The language switch moves into the settings menu.
+- A main menu at start: New game, Save/Load, Settings, Exit.
+- Settings:
+  - Video: resolution, quality, upscaling (owner asked for DLSS; Godot ships FSR, DLSS needs a plugin — to be checked);
+  - Sound;
+  - General.
+- Time controls as icons: pause, slower, faster.
+- The UI is too monotone: more colour is needed. ui-art-director revises the palette while keeping colour semantics (deviation and orders stay readable); the owner sees the variants before implementation.
+- Buttons and panel edges slightly rounded.
+
+This revises UI_DESIGN_SYSTEM where it conflicts (no fills, square edges, minimal colour) | владелец (сообщение 2026-11-17) |
