@@ -277,3 +277,31 @@
 | 271 | 2026-11-17 | ADR-0016, budget statistic. Month p95 ≤ 500 ms and month median ≤ 400 ms, with the binding measurement at threads 8. The t4 measurement and a run under synthetic client background load are recorded as reference points ("weaker machine") | владелец (AskUserQuestion 2026-11-17) |
 | 272 | 2026-11-17 | MS-M0 tick benchmark criterion: any valid outcome (PASS, WARN or FAIL) closes it. Valid means: determinism holds across threads, and noise is within the pre-registered threshold. INCONCLUSIVE and INVALID block closure. WARN and FAIL create optimisation tasks or a gate in the next milestone | владелец (AskUserQuestion 2026-11-17) |
 | 273 | 2026-11-17 | EXP-0002 post-hoc analysis: run the calib-print r6 print on seeds 10001–10100, the #244 seeds. This separates the seed noise from the remainder of 0.065. Outside pre-registration; no effect on the outcome | владелец (AskUserQuestion 2026-11-17) |
+| 274 | 2026-11-17 | Owner's idea for war logic (input to RR-0016, geopolitics; not yet a mechanic).
+
+**International support:**
+- An aggressor loses support in the world.
+- Inside its own bloc it loses support too, but only slightly, nominally.
+- Support rises through breakthroughs: the first satellite, the first man in space, the first nuclear reactor and similar.
+
+**Allies:**
+- Not every ally enters the war, on either side; this needs criteria.
+- Military aid without entering the war is possible.
+
+**Theatres and law:**
+- Combat happens on sea, land and air, and possibly in space.
+- Space warfare is allowed unless a treaty limiting space weapons is signed.
+- International treaties as a mechanic.
+- The UN as a separate mechanic, with a Security Council.
+
+**Combat:**
+- Combat and advance are automatic.
+- Air superiority and air support.
+- Airborne landings are possible only with air superiority.
+- Sea landings are possible only with naval superiority.
+- Land advance depends on division speed, which depends on equipment, and on resistance.
+- Cutting logistics and encirclements.
+- Prisoners.
+
+The M0 slice does not change | владелец (сообщение 2026-11-17) |
+| 275 | 2026-11-17 | War ending: a peace treaty is possible without absolute victory (the Korean model: armistice and frozen front). Input to RR-0016 | владелец (сообщение 2026-11-17) |
