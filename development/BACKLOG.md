@@ -76,6 +76,10 @@
 | [TASK-0060](../development/tasks/TASK-0060-contract-ioc-a41.md) | DONE | Контракт §4.1/§4.1a: I-OC (V5′/V6) и A41; полосы A40 | MS-M0 |
 | [TASK-0061](../development/tasks/TASK-0061-debts-before-exp0002-freeze.md) | DONE | Долги перед заморозкой EXP-0002: DEBT-0030, 0034, 0035, 0036 | MS-M0 |
 | [TASK-0062](../development/tasks/TASK-0062-llm-worker-gate-file-markers-trigger-gitleaks-gene.md) | DONE | llm_worker gate: file markers trigger gitleaks generic-api-key | MS-M0 |
+| [TASK-0063](../development/tasks/TASK-0063-session-dailytickprobe-flag-for-direct-daily-mode-.md) | APPROVED | Session DailyTickProbe flag for direct daily-mode benchmark (ADR-0016 T1a) | MS-M0 |
+| [TASK-0064](../development/tasks/TASK-0064-lab-bench-harness-adr-0016-t1.md) | APPROVED | lab bench harness (ADR-0016 T1) | MS-M0 |
+| [TASK-0065](../development/tasks/TASK-0065-synthetic-full-scale-world-overlay-and-benchmark-p.md) | APPROVED | Synthetic full-scale world overlay and benchmark pre-registration (ADR-0016 T2) | MS-M0 |
+| [TASK-0066](../development/tasks/TASK-0066-tick-benchmark-run-and-outcome-adr-0016-t3.md) | APPROVED | Tick benchmark run and outcome (ADR-0016 T3) | MS-M0 |
 
 ## Гипотезы
 
@@ -96,6 +100,7 @@
 | [EXP-0004](../development/experiments/EXP-0004-t6e2-tooling-target.md) | DONE | Цель оснастки A39, повтор после F17b: V0, V1, V3, V4 против VINF (T6e2) | HYP-0002 |
 | [EXP-0005](../development/experiments/EXP-0005-t6e3-tooling-target.md) | DONE | Цель оснастки A39, третий прогон: V0, V4, V5 против VINF (T6e3) | HYP-0002 |
 | [EXP-0006](../development/experiments/EXP-0006-pool-order.md) | DONE | Порядок распределения пула оснастки под V5: CAN, REV, PROP, SEV (малый пул) | HYP-0002 |
+| [EXP-0007](../development/experiments/EXP-0007-tick-benchmark-m0.md) | PLANNED | EXP-0007: tick benchmark M0 (ADR-0016) | ADR-0016 |
 
 ## ADR
 
@@ -116,7 +121,7 @@
 | [ADR-0013](../docs/decisions/ADR-0013-save-format-v0.md) | ACCEPTED | Формат сохранения v0: бинарный снимок колонок SoA + заголовок |
 | [ADR-0014](../docs/decisions/ADR-0014-session-test-api.md) | ACCEPTED | Session и Test API: единая сборка мира, команды, test mode |
 | [ADR-0015](../docs/decisions/ADR-0015-external-executors-providers.md) | ACCEPTED | Внешние исполнители и ревьюеры (DeepSeek, Codex) |
-| [ADR-0016](../docs/decisions/ADR-0016-tick-budget.md) | PROPOSED | Бюджет тика |
+| [ADR-0016](../docs/decisions/ADR-0016-tick-budget.md) | ACCEPTED | Бюджет тика |
 
 ## Research Reports
 

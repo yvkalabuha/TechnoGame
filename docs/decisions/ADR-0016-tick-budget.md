@@ -1,14 +1,14 @@
 ---
 id: ADR-0016
 title: "Бюджет тика"
-status: PROPOSED
+status: ACCEPTED
 date: 2026-11-17
 supersedes:
 superseded_by:
 related: [ADR-0001, ADR-0002, ADR-0006, ADR-0008, ADR-0010, ADR-0013, ADR-0014, RR-0001, RR-0008, RR-0010]
-approved_by:
-approved_at:
-approval_ref:
+approved_by: owner
+approved_at: 2026-11-17
+approval_ref: DECISIONS_LOG #276
 ---
 
 # ADR-0016 — Бюджет тика

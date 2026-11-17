@@ -11,7 +11,10 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-_нет активных задач_
+- TASK-0063 [APPROVED] Session DailyTickProbe flag for direct daily-mode benchmark (ADR-0016 T1a) (developer)
+- TASK-0064 [APPROVED] lab bench harness (ADR-0016 T1) (developer)
+- TASK-0065 [APPROVED] Synthetic full-scale world overlay and benchmark pre-registration (ADR-0016 T2) (simulation-engineer)
+- TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
 <!-- registry:active:end -->
 
 ## Блокеры

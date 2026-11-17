@@ -305,3 +305,13 @@
 
 The M0 slice does not change | владелец (сообщение 2026-11-17) |
 | 275 | 2026-11-17 | War ending: a peace treaty is possible without absolute victory (the Korean model: armistice and frozen front). Input to RR-0016 | владелец (сообщение 2026-11-17) |
+| 276 | 2026-11-17 | ADR-0016 «Бюджет тика» is ACCEPTED as is (revision 5). It includes the architect's numbers, preliminary until E1:
+- the split: slice 100 / Kernel+Session 50 / reserve 350 ms;
+- allocations ≤ 1 MB/month and 0 gen2 collections over 120 months;
+- the optimisation round ≤ 3 sessions;
+- the Lab threshold: 10 min at ≤ 24 countries;
+- CI: +25%, and ≤ 256 KB/month of allocations.
+
+PASS means "budget not refuted at M0 scale" | владелец (AskUserQuestion 2026-11-17) |
+| 277 | 2026-11-17 | Start the RR-0016 draft (geopolitics, conflicts, war endings) now, in parallel with the benchmark. Inputs are #274–#275. The final gate comes together with wave 3 (RR-0015) | владелец (AskUserQuestion 2026-11-17) |
+| 278 | 2026-11-17 | Player control in war: strategy, not divisions. The player sets war aims, front and theatre priorities (land, sea, air), production and reserve allocation, key operations (landing, offensive or defence) and peace negotiations. Divisions and combat are automatic (indirect control) | владелец (AskUserQuestion 2026-11-17) |
