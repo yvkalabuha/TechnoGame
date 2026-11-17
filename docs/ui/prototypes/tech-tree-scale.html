@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Дерево технологий — планисфера A при ~2000 узлов (синтетика)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Jura:wght@400;500&family=PT+Mono&display=swap" rel="stylesheet">
+<style>
+/* Same style block as tech-tree.html. OpenGost Type B (OFL-1.1) from a local install if present, otherwise Jura (OFL). */
+@font-face{font-family:"DraftFont"; src:local("OpenGost Type B TT"), local("OpenGost Type B TT Regular"), local("OpenGost Type B"), local("OpenGostTypeB-Regular"), local("OpenGostTypeBTT-Regular");}
+:root{
+  --page-bg:#E4E2DC; --page-ink:#1E1F21; --page-muted:#5A5B5C; --page-line:#C3BFB4;
+  --paper:#F2EFE6; --sheet:#FAF8F2; --hover:#E8E4D8; --ink:#1D1E20; --ink-2:#55575A; --ink-3:#6E6C66; --rule:#BCB6A8; --normal:#86837C;
+  --alarm:#C42A1C; --warn:#E89A1A; --warn-text:#8A5300; --command:#2347A8;
+  --seq2:#C2CDD3; --seq4:#6E8391; --t4:#E3D0E3;
+  --draft:"DraftFont","Jura",sans-serif; --text:"Golos Text",system-ui,sans-serif; --mono:"PT Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--page-bg); color:var(--page-ink); font-family:var(--text); font-size:16px; line-height:1.5}
+.wrap{max-width:1920px; margin:0 auto; padding:0 24px 48px}
+h1{font-family:var(--draft); font-weight:400; font-size:36px; line-height:1.15; margin:28px 0 8px}
+h2{font-family:var(--draft); font-weight:400; font-size:26px; margin:0 0 6px}
+p{max-width:110ch; margin:0 0 10px}
+.muted{color:var(--page-muted)}
+section{border-top:1px solid var(--page-line); padding:24px 0 12px; margin-top:24px}
+figure{margin:12px 0}
+figure svg{display:block; width:100%; height:auto; border:1px solid var(--page-line)}
+figcaption{font-size:14px; color:var(--page-muted); margin-top:6px; max-width:140ch}
+.warnbox{border:1px solid var(--page-line); padding:8px 12px; margin:10px 0; max-width:130ch; font-size:14px}
+svg text{font-family:var(--text)}
+.fd{font-family:var(--draft)} .ft{font-family:var(--text)} .fm{font-family:var(--mono)} .fw5{font-weight:500}
+.x-ink{fill:var(--ink)} .x-2{fill:var(--ink-2)} .x-3{fill:var(--ink-3)} .x-cm{fill:var(--command)} .x-wt{fill:var(--warn-text)}
+.halo{paint-order:stroke; stroke:#FAF8F2; stroke-width:3; stroke-linejoin:round}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Планисфера A при ~2000 узлов — три масштаба и два фильтра</h1>
+<p class="muted">Ответ на вопрос владельца (#286): как круг показывает несколько тысяч узлов. Он не показывает их все сразу: на каждом масштабе рисуется не больше нескольких сотен объектов, а остальное свёрнуто в клетки, связки или скрыто фильтром. Ось та же, что в <code>tech-tree.html</code>: радиус — слой, клин — дисциплина, по часовой — новее.</p>
+<div class="warnbox"><b>Граф синтетический.</b> Узлы, рёбра, состояния, цель и «в работе» сгенерированы на этой странице детерминированным ГПСЧ (seed 286): 6 слоёв × 8 дисциплин × 6 поколений, у каждого узла 2–5 зависимостей <code>requires</code>. Это не контент игры и не выдача симуляции; он нужен только чтобы проверить читаемость и число объектов. Названия дисциплин и коды узлов условные. Эскизы не проверены в браузере: возможны наложения подписей. Шрифты — как в <code>tech-tree.html</code>.</div>
+<p id="gstat" class="muted"></p>
+
+<section>
+<h2>1. Весь круг: клетки «дисциплина × слой», без подписей узлов</h2>
+<p><b>Игрок видит:</b> 48 клеток. В каждой — число узлов и полоска долей «известно / фронтир / недоступно». Связки между клетками показывают, куда идут зависимости; толщина — число рёбер. Сверху ультрамарином — маршрут к цели. Подписей отдельных узлов нет.<br><b>Игрок делает:</b> оценивает, где знание плотное, а где пустое, и куда ведёт маршрут цели; наводит на клетку (сводка) и входит в клин двойным щелчком или колесом.</p>
+<figure><svg id="fig1" viewBox="0 0 1920 1080" role="img" aria-label="Уровень 1: весь круг, клетки"></svg>
+<figcaption>Связки между клетками стянуты к центру (идея hierarchical edge bundling, Holten 2006): так сотни рёбер читаются как десятки линий. Рисуются только самые толстые связки; порог — в панели справа.</figcaption></figure>
+</section>
+
+<section>
+<h2>2. Один клин: узлы, подписан только фронтир, рёбра по каналам</h2>
+<p><b>Игрок видит:</b> клин одной дисциплины (здесь — дисциплина, где лежит цель) увеличен в ~2,3 раза: отдельные узлы по кольцам и поколениям G0–G5. Подписаны только узлы фронтира и цели, остальные — при наведении. Рёбра внутри клина не по одному, а по каналам между кольцами: к шине идёт короткий отвод от узла, по шине — дуга, толщина дуги — число рёбер. Связи с другими клиньями сведены в список справа.<br><b>Игрок делает:</b> выбирает фронтир-узел, смотрит, какие шины в него входят, и ставит НИОКР.</p>
+<figure><svg id="fig2" viewBox="0 0 1920 1080" role="img" aria-label="Уровень 2: клин"></svg>
+<figcaption>Заливка и форма узла — как в <code>tech-tree.html</code>. Ультрамарин — маршрут к цели. Направление зависимости — «к новому»: по часовой и наружу.</figcaption></figure>
+</section>
+
+<section>
+<h2>3. Окрестность выбранного узла: полные подписи, все рёбра</h2>
+<p><b>Игрок видит:</b> «линзу» вокруг выбранного фронтир-узла: два шага назад по <code>requires</code> и два шага вперёд (кто от него зависит). Подписаны все узлы, нарисованы все рёбра между ними. Справа — мини-круг: где эти узлы лежат на планисфере (пространственная память не теряется).<br><b>Игрок делает:</b> читает «почему не» и «что откроется», переходит по узлам, открывает вклейку с подробностями.</p>
+<figure><svg id="fig3" viewBox="0 0 1920 1080" role="img" aria-label="Уровень 3: окрестность узла"></svg>
+<figcaption>Линза развёрнута в колонки: это честное отступление от полярной геометрии, потому что соседи по <code>requires</code> лежат в разных клиньях. Мини-круг — связь линзы с кругом. [Предл.] В Godot линза — отдельный слой поверх круга, а не новая страница.</figcaption></figure>
+</section>
+
+<section>
+<h2>4. Фильтры «Цель» и «Фронтир» на полном масштабе</h2>
+<p><b>Игрок видит:</b> тот же круг из 2000 узлов, но фильтр оставляет только узлы, нужные для вопроса: слева — маршрут к цели, справа — фронтир «в работе». Это десятки узлов, поэтому их можно рисовать по одному и подписывать.<br><b>Игрок делает:</b> переключает фильтр клавишей или в шапке; фильтры отвечают на «что мешает цели» и «на что тратить НИОКР».</p>
+<figure><svg id="fig4" viewBox="0 0 1920 1080" role="img" aria-label="Фильтры Цель и Фронтир"></svg>
+<figcaption>Остальные узлы не исчезают из данных, а скрыты; клетки остаются контуром, чтобы не терять положение. Число «доступных, но не в работе» вынесено в счётчик, а не в подписи.</figcaption></figure>
+</section>
+
+<section>
+<h2>Бюджет объектов на экране</h2>
+<p id="budget"></p>
+</section>
+</div>
+
+<script>
+(function(){
+/* ---------- seeded PRNG (mulberry32), seed fixed: the graph is identical on every load ---------- */
+function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+var R=rng(286);
+var DN=['Аэродинамика','Двигатели','Металлы','Химия','Механика','Электроника','Вычисления','Материалы'];
+var DS=['Аэро','Двигат.','Металлы','Химия','Механ.','Электр.','Вычисл.','Матер.'];
+var DC=['AER','PRP','MET','CHM','MCH','ELC','CMP','MAT'];
+var LN=['Основы','Принципы','Инженерия','Компоненты','Процессы','Изделия'];
+var LS=['Основы','Принц.','Инжен.','Компон.','Процессы','Изделия'];
+
+/* ---------- synthetic graph ---------- */
+var ND=[],byDG=[],E=[],d,g,L,i;
+for(d=0;d<8;d++){byDG[d]=[];for(g=0;g<6;g++)byDG[d][g]=[];}
+for(d=0;d<8;d++)for(L=0;L<6;L++)for(g=0;g<6;g++){
+  var cnt=5+Math.floor(R()*5);
+  for(i=0;i<cnt;i++){var nn={id:ND.length,d:d,L:L,g:g,i:i,u:R(),v:R(),h:R(),key:g*6+L,req:[],dep:[],st:'U',p:0};ND.push(nn);byDG[d][g].push(nn);}
+}
+var order=ND.slice().sort(function(a,b){return a.key-b.key||a.id-b.id;});
+order.forEach(function(n){
+  if(n.key===0)return;
+  var k=2+(R()<0.6?1:0)+(R()<0.3?1:0)+(R()<0.1?1:0);
+  for(var t=0;t<k;t++){
+    for(var tr=0;tr<30;tr++){
+      var d2=R()<0.72?n.d:Math.floor(R()*8), g2=R()<0.55?n.g:Math.max(0,n.g-1);
+      var pool=byDG[d2][g2], m=pool[Math.floor(R()*pool.length)];
+      if(m.key>=n.key||n.req.indexOf(m.id)>=0)continue;
+      n.req.push(m.id);m.dep.push(n.id);E.push([m.id,n.id]);break;
+    }
+  }
+});
+var PK=[0.97,0.85,0.6,0.3,0.08,0.01];
+order.forEach(function(n){
+  var allK=n.req.every(function(r){return ND[r].st==='K';});
+  if(allK&&R()<PK[n.g])n.st='K';
+});
+var FR=[];
+ND.forEach(function(n){
+  if(n.st==='K')return;
+  if(n.req.every(function(r){return ND[r].st==='K';})){n.st='F';n.p=0.05+0.9*R();FR.push(n);}
+});
+var cK=0,cF=0,cU=0;ND.forEach(function(n){if(n.st==='K')cK++;else if(n.st==='F')cF++;else cU++;});
+
+/* ---------- goal and route: missing ancestors of the goal ---------- */
+function missing(n,cap){
+  var seen={},stack=[n.id],c=0;seen[n.id]=1;
+  while(stack.length){
+    var x=ND[stack.pop()];c++;if(c>cap)return null;
+    for(var j=0;j<x.req.length;j++){var r=ND[x.req[j]];if(r.st!=='K'&&!seen[r.id]){seen[r.id]=1;stack.push(r.id);}}
+  }
+  return seen;
+}
+var goal=null,best=1e9,route={};
+ND.forEach(function(n){
+  if(n.st==='K'||n.L<4)return;
+  var s=missing(n,220);if(!s)return;
+  var c=Object.keys(s).length;
+  var sc=Math.abs(c-30)+(n.L===5?0:15)+((c<12||c>60)?100:0);
+  if(sc<best){best=sc;goal=n;route=s;}
+});
+var routeList=Object.keys(route).map(function(k){return ND[k];});
+var routeF=routeList.filter(function(n){return n.st==='F';});
+/* funded frontier ("in work"): 40 by hash, plus frontier on the route */
+var fund={};
+FR.slice().sort(function(a,b){return a.h-b.h;}).slice(0,40).forEach(function(n){fund[n.id]=1;});
+routeF.forEach(function(n){fund[n.id]=1;});
+var fundList=FR.filter(function(n){return fund[n.id];});
+
+/* ---------- geometry ---------- */
+var W=45,GAP=1.2,R0=110,RW=60,ROUT=R0+6*RW;
+function A0(d){return -90+d*W;}
+function nA(n){return A0(n.d)+GAP+(n.g+0.1+0.8*n.u)*(W-2*GAP)/6;}
+function nR(n){return R0+n.L*RW+7+n.v*(RW-14);}
+function qA(d,g){return A0(d)+GAP+(g+0.5)*(W-2*GAP)/6;}
+function P(V,a,r){var t=(a+V.rot)*Math.PI/180;return [V.ox+V.s*r*Math.cos(t),V.oy+V.s*r*Math.sin(t)];}
+function NP(V,n){return P(V,nA(n),nR(n));}
+function f(x){return Math.round(x*10)/10;}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function code(n){return DC[n.d]+'-'+n.g+'.'+(n.i<10?'0':'')+n.i;}
+function ann(V,a1,a2,r1,r2){
+  var p1=P(V,a1,r2),p2=P(V,a2,r2),p3=P(V,a2,r1),p4=P(V,a1,r1);
+  return 'M'+f(p1[0])+' '+f(p1[1])+'A'+f(r2*V.s)+' '+f(r2*V.s)+' 0 0 1 '+f(p2[0])+' '+f(p2[1])+'L'+f(p3[0])+' '+f(p3[1])+'A'+f(r1*V.s)+' '+f(r1*V.s)+' 0 0 0 '+f(p4[0])+' '+f(p4[1])+'Z';
+}
+function arcP(V,a1,a2,r){
+  var p=P(V,a1,r),q=P(V,a2,r);
+  return 'M'+f(p[0])+' '+f(p[1])+'A'+f(r*V.s)+' '+f(r*V.s)+' 0 0 '+(a2>a1?1:0)+' '+f(q[0])+' '+f(q[1]);
+}
+function T(x,y,s,c,sz,an){return '<text x="'+f(x)+'" y="'+f(y)+'" class="'+c+'" font-size="'+(sz||14)+'"'+(an?' text-anchor="'+an+'"':'')+'>'+esc(s)+'</text>';}
+function line(x1,y1,x2,y2,st,sw,extra){return '<line x1="'+f(x1)+'" y1="'+f(y1)+'" x2="'+f(x2)+'" y2="'+f(y2)+'" stroke="'+st+'" stroke-width="'+sw+'"'+(extra||'')+'/>';}
+function starP(x,y,r){var s='',k;for(k=0;k<10;k++){var rr=k%2?r*0.45:r,t=(k*36-90)*Math.PI/180;s+=(k?'L':'M')+f(x+rr*Math.cos(t))+' '+f(y+rr*Math.sin(t));}return s+'Z';}
+function gl(x,y,n,r,rt){
+  var fill,stroke,sw;
+  if(rt){stroke='#2347A8';sw=2;fill=n.st==='F'?'#2347A8':'#FAF8F2';}
+  else if(n.st==='K'){fill='#1D1E20';stroke='#1D1E20';sw=1;}
+  else if(n.st==='F'){fill='#fff';stroke='#1D1E20';sw=2;}
+  else{fill='#FAF8F2';stroke='#86837C';sw=1;}
+  var at=' fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'"';
+  if(n.L===5){var q=r*1.35;return '<path d="M'+f(x)+' '+f(y-q)+'L'+f(x+q)+' '+f(y)+'L'+f(x)+' '+f(y+q)+'L'+f(x-q)+' '+f(y)+'Z"'+at+'/>';}
+  if(n.L===4)return '<rect x="'+f(x-r)+'" y="'+f(y-r)+'" width="'+f(2*r)+'" height="'+f(2*r)+'"'+at+'/>';
+  return '<circle cx="'+f(x)+'" cy="'+f(y)+'" r="'+f(r)+'"'+at+'/>';
+}
+function goalMark(x,y,r){return '<path d="'+starP(x,y,r)+'" fill="#2347A8" stroke="#FAF8F2" stroke-width="1.5"/>';}
+function placer(){
+  var boxes=[];
+  return function(x,y,w){
+    var c=[[8,4],[-8-w,4],[8,-8],[-8-w,-8],[8,16],[-8-w,16],[-w/2,-10],[-w/2,20]];
+    for(var a=0;a<c.length;a++){
+      var bx=x+c[a][0],by=y+c[a][1]-12,ok=true;
+      for(var j=0;j<boxes.length;j++){var b=boxes[j];if(bx<b[0]+b[2]&&bx+w>b[0]&&by<b[1]+15&&by+15>b[1]){ok=false;break;}}
+      if(ok){boxes.push([bx,by,w,15]);return [x+c[a][0],y+c[a][1]];}
+    }
+    return null;
+  };
+}
+function angDiff(a,b){var d=Math.abs(a-b)%360;return d>180?360-d:d;}
+function legend(x,y){
+  var s='',n1={L:0,st:'K'},n2={L:0,st:'F'},n3={L:0,st:'U'};
+  s+=gl(x+8,y,n1,6)+T(x+22,y+5,'известно','ft x-ink',14);
+  s+=gl(x+130,y,n2,6)+T(x+144,y+5,'фронтир','ft x-ink',14);
+  s+=gl(x+240,y,n3,6)+T(x+254,y+5,'недоступно','ft x-ink',14);
+  s+=gl(x+8,y+28,{L:0,st:'U'},6,true)+T(x+22,y+33,'маршрут к цели','ft x-ink',14);
+  s+=goalMark(x+150,y+28,9)+T(x+164,y+33,'цель','ft x-ink',14);
+  s+=gl(x+8,y+56,{L:2,st:'U'},6)+T(x+22,y+61,'знание','ft x-ink',14);
+  s+=gl(x+110,y+56,{L:4,st:'U'},5.5)+T(x+124,y+61,'процесс','ft x-ink',14);
+  s+=gl(x+220,y+56,{L:5,st:'U'},5)+T(x+234,y+61,'изделие','ft x-ink',14);
+  return s;
+}
+function panel(x,y,title,lines){
+  var s=T(x,y,title,'fd x-ink',22);
+  lines.forEach(function(l,k){
+    var c=l.charAt(0)==='!'?'ft x-ink fw5':'ft x-2';
+    s+=T(x,y+32+k*23,l.charAt(0)==='!'?l.slice(1):l,c,15);
+  });
+  return s;
+}
+/* ring/wedge base drawing */
+function cells(V,o){
+  var s='',d,L;
+  for(d=0;d<8;d++)for(L=0;L<6;L++){
+    s+='<path d="'+ann(V,A0(d)+GAP,A0(d)+W-GAP,R0+L*RW,R0+(L+1)*RW)+'" fill="'+(o.faint?'none':'#FAF8F2')+'" stroke="#BCB6A8" stroke-width="'+(o.faint?0.8:1)+'"/>';
+  }
+  var c=P(V,0,0);
+  s+='<circle cx="'+f(c[0])+'" cy="'+f(c[1])+'" r="'+f((R0+4*RW-2)*V.s)+'" fill="none" stroke="#55575A" stroke-width="0.8"/>';
+  s+='<circle cx="'+f(c[0])+'" cy="'+f(c[1])+'" r="'+f((R0+4*RW+2)*V.s)+'" fill="none" stroke="#55575A" stroke-width="0.8"/>';
+  s+='<circle cx="'+f(c[0])+'" cy="'+f(c[1])+'" r="'+f((R0-8)*V.s)+'" fill="#F2EFE6" stroke="#BCB6A8"/>';
+  if(!o.small)s+=T(c[0],c[1]+4,'синтетика','ft x-3',13,'middle');
+  if(o.rim){
+    for(d=0;d<8;d++){
+      var m=A0(d)+W/2,p=P(V,m,ROUT+(o.rim==='code'?14:16)),co=Math.cos(m*Math.PI/180);
+      s+=T(p[0],p[1]+5,o.rim==='code'?DC[d]:DN[d],o.rim==='code'?'fm x-2':'ft x-ink fw5',o.rim==='code'?13:15,co>0.3?'start':(co<-0.3?'end':'middle'));
+    }
+  }
+  return s;
+}
+function cellOf(n){return n.d*6+n.L;}
+
+/* ============ FIGURE 1: whole circle, aggregated cells ============ */
+(function(){
+  var V={ox:640,oy:540,s:1,rot:0};
+  var cs=[],ci;
+  for(ci=0;ci<48;ci++)cs.push({k:0,f:0,u:0,r:0});
+  ND.forEach(function(n){var c=cs[cellOf(n)];if(n.st==='K')c.k++;else if(n.st==='F')c.f++;else c.u++;if(route[n.id])c.r++;});
+  function anc(c){var d=Math.floor(c/6),L=c%6;return {a:A0(d)+W/2,r:R0+L*RW+RW/2};}
+  function curve(c1,c2,w,col,op){
+    var a=anc(c1),b=anc(c2),p=P(V,a.a,a.r),q=P(V,b.a,b.r);
+    var o=P(V,0,0),mx=(p[0]+q[0])/2,my=(p[1]+q[1])/2;
+    var k=1-0.8*Math.min(1,angDiff(a.a,b.a)/90);
+    var cx=o[0]+(mx-o[0])*k,cy=o[1]+(my-o[1])*k;
+    return '<path d="M'+f(p[0])+' '+f(p[1])+'Q'+f(cx)+' '+f(cy)+' '+f(q[0])+' '+f(q[1])+'" fill="none" stroke="'+col+'" stroke-opacity="'+op+'" stroke-width="'+f(w)+'" stroke-linecap="round"/>';
+  }
+  var pairs={},rpairs={};
+  E.forEach(function(e){
+    var a=ND[e[0]],b=ND[e[1]],c1=cellOf(a),c2=cellOf(b);
+    if(c1===c2)return;
+    var kk=Math.min(c1,c2)+'_'+Math.max(c1,c2);
+    pairs[kk]=(pairs[kk]||0)+1;
+    if(route[a.id]&&route[b.id])rpairs[kk]=(rpairs[kk]||0)+1;
+  });
+  var pl=Object.keys(pairs).map(function(k){return [k,pairs[k]];}).sort(function(a,b){return b[1]-a[1];});
+  var shown=pl.slice(0,160),thr=shown.length?shown[shown.length-1][1]:0;
+  var s=cells(V,{rim:'full'});
+  shown.slice().reverse().forEach(function(p){var c=p[0].split('_');s+=curve(+c[0],+c[1],0.6+0.5*Math.sqrt(p[1]),'#55575A',0.28);});
+  var rl=Object.keys(rpairs);
+  rl.forEach(function(k){var c=k.split('_');s+=curve(+c[0],+c[1],1.8+0.9*Math.sqrt(rpairs[k]),'#2347A8',0.85);});
+  /* cell bars and counts */
+  for(ci=0;ci<48;ci++){
+    var d0=Math.floor(ci/6),L0=ci%6,c=cs[ci],tot=c.k+c.f+c.u;if(!tot)continue;
+    var a1=A0(d0)+GAP+1,a2=A0(d0)+W-GAP-1,sp=a2-a1,r1=R0+L0*RW+3,r2=r1+7,x=a1;
+    [['k',c.k,'#1D1E20','#1D1E20'],['f',c.f,'#fff','#1D1E20'],['u',c.u,'#C2CDD3','#C2CDD3']].forEach(function(q){
+      if(!q[1])return;var w=sp*q[1]/tot;
+      s+='<path d="'+ann(V,x,x+w,r1,r2)+'" fill="'+q[2]+'" stroke="'+q[3]+'" stroke-width="0.8"/>';x+=w;
+    });
+    var an=anc(ci),pp=P(V,an.a,an.r+4);
+    s+='<text x="'+f(pp[0])+'" y="'+f(pp[1])+'" text-anchor="middle" class="fm x-ink halo" font-size="15">'+tot+'</text>';
+    if(c.r){var p2=P(V,an.a,an.r-8);s+='<text x="'+f(p2[0])+'" y="'+f(p2[1])+'" text-anchor="middle" class="ft x-cm halo fw5" font-size="12">путь '+c.r+'</text>';}
+    if(c.r)s+='<path d="'+ann(V,A0(d0)+GAP,A0(d0)+W-GAP,R0+L0*RW,R0+(L0+1)*RW)+'" fill="none" stroke="#2347A8" stroke-width="2"/>';
+  }
+  var gp=NP(V,goal);s+=goalMark(gp[0],gp[1],10);
+  var px=1240,ys=60;
+  s+=panel(px,ys,'Что нарисовано на этом масштабе',[
+    '!48 клеток (8 дисциплин × 6 слоёв), узлов по одному — 0',
+    'Подписей узлов: 0. Подписи — только у дисциплин по ободу.',
+    'Связей между клетками: '+pl.length+' пар; рисуем '+shown.length+' самых толстых',
+    '(порог — от '+thr+' рёбер на пару); остальные — при наведении.',
+    'Рёбер всего: '+E.length+'; внутри клеток: '+(E.length-pl.reduce(function(a,p){return a+p[1];},0)),
+    'Маршрут к цели: '+routeList.length+' недостающих узлов в '+rl.length+' связках',
+    '(ультрамарин, поверх серых), цель — звезда в своей клетке.'
+  ]);
+  s+=T(px,330,'Как читать клетку','fd x-ink',22);
+  /* sample cell key */
+  s+='<rect x="'+px+'" y="352" width="200" height="56" fill="#FAF8F2" stroke="#BCB6A8"/>';
+  s+='<rect x="'+(px+4)+'" y="356" width="90" height="7" fill="#1D1E20"/><rect x="'+(px+94)+'" y="356" width="30" height="7" fill="#fff" stroke="#1D1E20" stroke-width="0.8"/><rect x="'+(px+124)+'" y="356" width="72" height="7" fill="#C2CDD3"/>';
+  s+=T(px+100,390,'47','fm x-ink',15,'middle');
+  s+=T(px+215,372,'полоска: доли известно / фронтир /','ft x-2',14);
+  s+=T(px+215,392,'недоступно; число — узлов в клетке','ft x-2',14);
+  s+=T(px,440,'Кольца от центра: основы → принципы → инженерия → компоненты → процессы → изделия.','ft x-2',14);
+  s+=T(px,462,'Двойная окружность между компонентами и процессами — рубеж «знание ≠ производство».','ft x-2',14);
+  s+=T(px,484,'Клин — дисциплина; внутри клетки узлы лежат по поколениям: по часовой — новее.','ft x-2',14);
+  s+=legend(px,540);
+  s+=T(px,650,'Состояние: известно '+cK+', фронтир '+cF+', недоступно '+cU+' (всего '+ND.length+').','ft x-ink',15);
+  document.getElementById('fig1').innerHTML=s;
+  window.__b1={cells:48,curves:shown.length+rl.length};
+})();
+
+/* ============ FIGURE 2: one wedge ============ */
+(function(){
+  var wd=goal.d;
+  var V={ox:590,oy:1207,s:2.3,rot:-90-(A0(wd)+W/2)};
+  var s='',L,g;
+  for(L=0;L<6;L++)for(g=0;g<6;g++){
+    var a1=A0(wd)+GAP+g*(W-2*GAP)/6,a2=a1+(W-2*GAP)/6;
+    s+='<path d="'+ann(V,a1,a2,R0+L*RW,R0+(L+1)*RW)+'" fill="'+(L===4||L===5?'#F2EFE6':'#FAF8F2')+'" stroke="#BCB6A8" stroke-width="0.7"/>';
+  }
+  var c=P(V,0,0);
+  s+='<path d="'+arcP(V,A0(wd)+GAP,A0(wd)+W-GAP,R0+4*RW-2)+'" fill="none" stroke="#55575A" stroke-width="1"/><path d="'+arcP(V,A0(wd)+GAP,A0(wd)+W-GAP,R0+4*RW+2)+'" fill="none" stroke="#55575A" stroke-width="1"/>';
+  for(L=0;L<6;L++){var pl=P(V,A0(wd)+GAP,R0+L*RW+RW/2);s+=T(pl[0]-12,pl[1]+4,LN[L],'ft x-2',14,'end');}
+  for(g=0;g<6;g++){var pg=P(V,qA(wd,g),ROUT+10);s+=T(pg[0],pg[1]-2,'G'+g,'fm x-2',14,'middle');}
+  var nmP=P(V,A0(wd)+W/2,ROUT+46);s+=T(nmP[0],nmP[1],DN[wd],'fd x-ink',24,'middle');
+  function chan(a,b){return a.L===b.L?R0+(a.L+1)*RW-3:R0+Math.max(a.L,b.L)*RW-3;}
+  var conn={},arcs={},nin=0,cross={},ncross=0,rseg='';
+  E.forEach(function(e){
+    var a=ND[e[0]],b=ND[e[1]];
+    if(a.d===wd&&b.d===wd){
+      nin++;
+      var cr=chan(a,b),qa=qA(wd,a.g),qb=qA(wd,b.g);
+      conn[a.id+'_'+cr]=[a,cr,qa];conn[b.id+'_'+cr]=[b,cr,qb];
+      if(qa!==qb){var k=cr+'_'+qa+'_'+qb;if(!arcs[k])arcs[k]=[cr,qa,qb,0];arcs[k][3]++;}
+      if(route[a.id]&&route[b.id]){
+        var pa=NP(V,a),pb=NP(V,b),ga=P(V,qa,cr),gb=P(V,qb,cr);
+        rseg+='<path d="M'+f(pa[0])+' '+f(pa[1])+'L'+f(ga[0])+' '+f(ga[1])+(qa!==qb?'A'+f(cr*V.s)+' '+f(cr*V.s)+' 0 0 '+(qb>qa?1:0)+' '+f(gb[0])+' '+f(gb[1]):'')+'L'+f(pb[0])+' '+f(pb[1])+'" fill="none" stroke="#2347A8" stroke-width="2.2" stroke-linejoin="round"/>';
+      }
+    }else if(a.d===wd||b.d===wd){
+      ncross++;var o=a.d===wd?b.d:a.d,dir=a.d===wd?'out':'in';
+      cross[o]=cross[o]||{out:0,in:0};cross[o][dir]++;
+    }
+  });
+  Object.keys(conn).forEach(function(k){var q=conn[k],pn=NP(V,q[0]),pb=P(V,q[2],q[1]);s+=line(pn[0],pn[1],pb[0],pb[1],'#55575A',0.6,' stroke-opacity="0.35"');});
+  var na=0;
+  Object.keys(arcs).forEach(function(k){var q=arcs[k];na++;s+='<path d="'+arcP(V,q[1],q[2],q[0])+'" fill="none" stroke="#55575A" stroke-opacity="0.5" stroke-width="'+f(0.8+0.9*Math.sqrt(q[3]))+'" stroke-linecap="round"/>';});
+  s+=rseg;
+  var wn=ND.filter(function(n){return n.d===wd;});
+  wn.forEach(function(n){if(route[n.id])return;var p=NP(V,n);s+=gl(p[0],p[1],n,n.st==='F'?5:3.4,false);});
+  wn.forEach(function(n){if(!route[n.id])return;var p=NP(V,n);s+=gl(p[0],p[1],n,5.5,true);});
+  var gp=NP(V,goal);s+=goalMark(gp[0],gp[1],11);
+  /* labels: frontier + goal */
+  var lab=wn.filter(function(n){return n.st==='F'||n===goal;}).sort(function(a,b){return (route[b.id]?1:0)-(route[a.id]?1:0)||b.p-a.p;});
+  var pc=placer(),lp=0,ls=0;
+  lab.forEach(function(n){
+    var p=NP(V,n),txt=code(n)+(n.st==='F'?' '+Math.round(n.p*100)+'%':' цель'),w=txt.length*7.6+4,q=pc(p[0],p[1],w);
+    if(!q){ls++;return;}lp++;
+    s+='<text x="'+f(q[0])+'" y="'+f(q[1])+'" class="fm halo '+(route[n.id]?'x-cm':'x-ink')+'" font-size="13">'+esc(txt)+'</text>';
+  });
+  var cl=Object.keys(cross).map(function(k){return [k,cross[k].out+cross[k].in,cross[k]];}).sort(function(a,b){return b[1]-a[1];});
+  var rows=[
+    '!Клин «'+DN[wd]+'»: '+wn.length+' из '+ND.length+' узлов',
+    'Узлы по одному: '+wn.length+'; подписано '+lp+' (фронтир и цель), ещё '+ls+' — при наведении.',
+    'Рёбер внутри клина: '+nin+' → шин-дуг: '+na+', отводов от узлов: '+Object.keys(conn).length+'.',
+    'Рёбер в другие клинья и обратно: '+ncross+' (в круге — тонкие хорды,',
+    'здесь сведены в список):'
+  ];
+  cl.slice(0,6).forEach(function(q){rows.push('   '+DN[q[0]]+': '+q[2].in+' входит, '+q[2].out+' выходит');});
+  s+=panel(1240,60,'Что нарисовано на этом масштабе',rows);
+  s+=T(1240,400,'Как читать шину','fd x-ink',22);
+  s+=T(1240,432,'От узла — короткий отвод к каналу между кольцами (серые тонкие);','ft x-2',14);
+  s+=T(1240,454,'по каналу — дуга между поколениями; толщина дуги — число рёбер.','ft x-2',14);
+  s+=T(1240,476,'Маршрут к цели — ультрамарином, поверх, отдельным путём.','ft x-2',14);
+  s+=legend(1240,540);
+  document.getElementById('fig2').innerHTML=s;
+  window.__b2={nodes:wn.length,conn:Object.keys(conn).length,arcs:na,labels:lp,inEdges:nin};
+})();
+
+/* ============ FIGURE 3: neighbourhood of the selected node ============ */
+(function(){
+  var sel=routeF.slice().sort(function(a,b){return a.key-b.key;})[0]||goal;
+  var colN=[[],[],[sel],[],[]],seen={};seen[sel.id]=1;
+  function sortC(a,b){return (route[b.id]?1:0)-(route[a.id]?1:0)||(a.d*100+a.key)-(b.d*100+b.key);}
+  function uniq(list,out){list.forEach(function(id){if(!seen[id]){seen[id]=1;out.push(ND[id]);}});}
+  uniq(sel.req,colN[1]);uniq(sel.dep,colN[3]);
+  var r2=[],d2=[];colN[1].forEach(function(n){uniq(n.req,r2);});colN[3].forEach(function(n){uniq(n.dep,d2);});
+  colN[0]=r2;colN[4]=d2;
+  var cut=[0,0,0,0,0],CAP=9;
+  colN.forEach(function(col,ci){col.sort(sortC);if(col.length>CAP){cut[ci]=col.length-CAP;col.length=CAP;}});
+  var xs=[170,460,750,1040,1330],pos={},s='',all=[];
+  colN.forEach(function(col,ci){
+    var m=col.length,gap=Math.min(96,820/Math.max(m,1));
+    col.forEach(function(n,k){pos[n.id]=[xs[ci],540+(k-(m-1)/2)*gap,ci];all.push(n);});
+  });
+  var ne=0;
+  all.forEach(function(n){
+    n.req.forEach(function(r){
+      if(!pos[r])return;ne++;
+      var p=pos[r],q=pos[n.id],rt=route[r]&&route[n.id];
+      var dd=p[2]<q[2]?'M'+f(p[0])+' '+f(p[1])+'C'+f(p[0]+110)+' '+f(p[1])+' '+f(q[0]-110)+' '+f(q[1])+' '+f(q[0])+' '+f(q[1]):'M'+f(p[0])+' '+f(p[1])+'C'+f(p[0]-90)+' '+f(p[1])+' '+f(q[0]-90)+' '+f(q[1])+' '+f(q[0])+' '+f(q[1]);
+      s+='<path d="'+dd+'" fill="none" stroke="'+(rt?'#2347A8':'#55575A')+'" stroke-width="'+(rt?2.2:1)+'" stroke-opacity="'+(rt?0.95:0.65)+'"/>';
+    });
+  });
+  var heads=['2 шага назад','1 шаг назад (requires)','выбранный','1 шаг вперёд (зависят)','2 шага вперёд'];
+  heads.forEach(function(h,ci){s+=T(xs[ci],56,h,'ft x-3',14,'middle');if(cut[ci])s+=T(xs[ci],1048,'+ ещё '+cut[ci]+' (свёрнуто)','ft x-3',13,'middle');});
+  all.forEach(function(n){
+    var p=pos[n.id],isSel=n===sel;
+    s+=gl(p[0],p[1],n,isSel?9:7,!!route[n.id]);
+    if(n===goal)s+=goalMark(p[0]+16,p[1]-12,8);
+    if(isSel){var h=22;[[-1,-1],[1,-1],[1,1],[-1,1]].forEach(function(c){s+='<path d="M'+f(p[0]+c[0]*h)+' '+f(p[1]+c[1]*(h-9))+'L'+f(p[0]+c[0]*h)+' '+f(p[1]+c[1]*h)+'L'+f(p[0]+c[0]*(h-9))+' '+f(p[1]+c[1]*h)+'" fill="none" stroke="#1D1E20" stroke-width="2"/>';});}
+    s+='<text x="'+f(p[0])+'" y="'+f(p[1]+(isSel?36:27))+'" text-anchor="middle" class="fm halo x-ink" font-size="14">'+code(n)+'</text>';
+    s+='<text x="'+f(p[0])+'" y="'+f(p[1]+(isSel?52:42))+'" text-anchor="middle" class="ft halo x-2" font-size="12">'+DS[n.d]+' · '+LS[n.L]+' · G'+n.g+(n.st==='F'?' · '+Math.round(n.p*100)+'%':'')+'</text>';
+  });
+  /* minimap */
+  var M={ox:1665,oy:300,s:0.42,rot:0};
+  s+='<g>'+cells(M,{faint:true,small:true})+'</g>';
+  ND.forEach(function(n){var p=NP(M,n);if(pos[n.id])return;s+='<circle cx="'+f(p[0])+'" cy="'+f(p[1])+'" r="0.9" fill="'+(n.st==='K'?'#55575A':'#9A9890')+'"/>';});
+  all.forEach(function(n){var p=NP(M,n);s+='<circle cx="'+f(p[0])+'" cy="'+f(p[1])+'" r="'+(n===sel?5:2.8)+'" fill="'+(n===sel?'#2347A8':'#1D1E20')+'" stroke="#FAF8F2" stroke-width="1"/>';});
+  s+=T(1665,530,'мини-круг: где лежит линза','ft x-3',13,'middle');
+  s+=panel(1470,570,'Что нарисовано на этом масштабе',[
+    '!Узлов: '+all.length+' из '+ND.length+', подписаны все',
+    'Рёбер: '+ne+', нарисованы все (между показанными узлами)',
+    'Выбран: '+code(sel)+' ('+DN[sel.d]+', '+LN[sel.L]+', G'+sel.g+')',
+    'Колонки — шаги по requires; порядок внутри колонки —',
+    'сначала маршрут, затем по клину и поколению.',
+    'Свёрнуто колонками: '+cut.reduce(function(a,b){return a+b;},0)+' узлов.'
+  ]);
+  s+=legend(1470,800);
+  document.getElementById('fig3').innerHTML=s;
+  window.__b3={nodes:all.length,edges:ne};
+})();
+
+/* ============ FIGURE 4: filters Goal and Frontier ============ */
+(function(){
+  var s='';
+  function pane(cx,title,list,withEdges,labelCap,note){
+    var V={ox:cx,oy:560,s:0.88,rot:0},o='';
+    o+=cells(V,{faint:true,rim:'code',small:true});
+    var sh={};list.forEach(function(n){sh[n.id]=1;});
+    var ne=0;
+    if(withEdges){
+      E.forEach(function(e){
+        var a=ND[e[0]],b=ND[e[1]];if(!sh[a.id]||!sh[b.id])return;ne++;
+        var p=NP(V,a),q=NP(V,b),c=P(V,0,0),k=1-0.7*Math.min(1,angDiff(nA(a),nA(b))/90);
+        o+='<path d="M'+f(p[0])+' '+f(p[1])+'Q'+f(c[0]+((p[0]+q[0])/2-c[0])*k)+' '+f(c[1]+((p[1]+q[1])/2-c[1])*k)+' '+f(q[0])+' '+f(q[1])+'" fill="none" stroke="#2347A8" stroke-width="1.6" stroke-opacity="0.8"/>';
+      });
+    }
+    list.forEach(function(n){var p=NP(V,n);o+=gl(p[0],p[1],n,n.st==='F'?5.5:4.5,!!route[n.id]);});
+    var gp=NP(V,goal);if(sh[goal.id])o+=goalMark(gp[0],gp[1],11);
+    var pc=placer(),lp=0;
+    list.filter(function(n){return n.st==='F'||n===goal;}).sort(function(a,b){return (route[b.id]?1:0)-(route[a.id]?1:0)||b.p-a.p;}).slice(0,labelCap).forEach(function(n){
+      var p=NP(V,n),txt=code(n)+(n===goal?' цель':''),q=pc(p[0],p[1],txt.length*7+4);
+      if(!q)return;lp++;
+      o+='<text x="'+f(q[0])+'" y="'+f(q[1])+'" class="fm halo '+(route[n.id]?'x-cm':'x-ink')+'" font-size="12">'+txt+'</text>';
+    });
+    o+=T(cx,46,title,'fd x-ink',24,'middle');
+    o+=T(cx,1022,list.length+' узлов из '+ND.length+(withEdges?', рёбер '+ne:', рёбер не рисуем')+', подписей '+lp,'ft x-ink fw5',15,'middle');
+    o+=T(cx,1046,note,'ft x-2',14,'middle');
+    return o;
+  }
+  s+=pane(480,'Фильтр «Цель»',routeList,true,14,'недостающие узлы маршрута к цели; известное — свёрнуто');
+  s+=pane(1440,'Фильтр «Фронтир»',fundList,false,14,'узлы «в работе»; ещё '+(FR.length-fundList.length)+' доступных — в счётчике клетки');
+  s+=line(960,70,960,1000,'#C3BFB4',1,' stroke-dasharray="4 3"');
+  document.getElementById('fig4').innerHTML=s;
+  window.__b4={route:routeList.length,fund:fundList.length};
+})();
+
+/* ---------- text summaries ---------- */
+document.getElementById('gstat').textContent='Синтетический граф (seed 286): '+ND.length+' узлов, '+E.length+' рёбер requires; известно '+cK+', фронтир '+cF+', недоступно '+cU+'. Цель — '+code(goal)+' ('+DN[goal.d]+', '+LN[goal.L]+', G'+goal.g+'); недостающих узлов на маршруте '+routeList.length+', из них фронтир '+routeF.length+'.';
+document.getElementById('budget').textContent=
+ 'Объектов на кадр [Предп., по этому графу]. Масштаб 1: 48 клеток, полос состояния до 144, до '+window.__b1.curves+' кривых, подписи только на ободе — около '+(48+144+window.__b1.curves)+' примитивов. '+
+ 'Масштаб 2 (клин): '+window.__b2.nodes+' узлов, '+window.__b2.conn+' отводов, '+window.__b2.arcs+' шин-дуг, '+window.__b2.labels+' подписей. '+
+ 'Масштаб 3: '+window.__b3.nodes+' узлов и '+window.__b3.edges+' рёбер с полными подписями. '+
+ 'Фильтры: «Цель» — '+window.__b4.route+' узлов, «Фронтир» — '+window.__b4.fund+'. Ни на одном масштабе не рисуется весь граф по одному ('+ND.length+' узлов, '+E.length+' рёбер): это и есть ответ на масштаб. Реальную стоимость в Godot (_Draw против MultiMesh) нужно мерить прототипом P3 — здесь число объектов, не кадры.';
+})();
+</script>
+</body>
+</html>
