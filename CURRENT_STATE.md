@@ -11,7 +11,7 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-_нет активных задач_
+- TASK-0062 [APPROVED] llm_worker gate: file markers trigger gitleaks generic-api-key (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
