@@ -348,3 +348,7 @@ The spike does not connect to the simulation (that is M2) | владелец (As
 Existing community Godot MCP projects are researched first, in parallel now | владелец (AskUserQuestion 2026-11-17) |
 | 294 | 2026-11-17 | Client fonts approved (SIL OFL 1.1), embedded in the client with OFL texts and LICENSES.md entries: Golos Text (interface), PT Mono (numbers and codes), Jura (drafting headings, buttons, segments), Literata (map labels). The interface minimum size is 14 px. OpenGost Type B is not taken now | владелец (сообщение 2026-11-17) |
 | 295 | 2026-11-17 | Multilingual support confirmed (repeats #83): base languages English and Russian, all UI and data strings via keys. Client v0.3 (TASK-0070) adds TranslationServer EN/RU with a live switch (RU default). ADR-0018 defines the key scheme and the locale files in mods | владелец (сообщение 2026-11-17) |
+| 296 | 2026-11-17 | Sound and music:
+- A new agent `sound-director` owns audio direction, the sound map, adaptive music, licences and the review of sounds. Its agent file is created at session end; until then ui-art-director covers the role.
+- Music: temporary CC0/CC BY with checked licences for the prototype; a human composer for the final soundtrack, closer to release.
+- UI sounds are synthesised by code (our own licence, one style); ambient sounds come from CC0/CC BY libraries. | владелец (AskUserQuestion 2026-11-17) |
