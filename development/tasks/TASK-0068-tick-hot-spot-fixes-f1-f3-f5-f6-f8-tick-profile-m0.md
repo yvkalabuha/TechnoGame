@@ -48,3 +48,4 @@ F4 (parallel ViewBuilder.Inputs) and F7 (reuse the view on days without a monthl
 Аллокации: (6, 2000) 254 → 4,8 МБ/мес; (200, 500) 1063 → 311 МБ/мес; (200, 2000) 7,4 ГБ → 1,05 ГБ/мес. Числа «до» на этой машине для (6, 2000) ниже профиля (2,4 с против 6,7–8 с: профиль снимался под трассой).
 
 Проверка: `dotnet test` — Architecture 98/98, Kernel 322 (1 пропущен), Core 1060/1060, Lab.Tests 20/20, Session 353 (2 пропущено), 0 ошибок; Lab `selftest` 48/48.
+- [x] Второе ревью (codex, head c87e41ed on a review branch: 96536b8 + redacted TASK-0062 + the TASK-0068 diff) — accept: 3 medium (all in DEBT-0040); report sha256 9dfff47ba927b42f608023a47dbe99391f619b16c1b57b00d17602a296c2a61c
