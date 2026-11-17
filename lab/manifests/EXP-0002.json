@@ -963,31 +963,39 @@
     "control_tables_hash": "4e10abb518ff291bb3490ec8dbaed2d32b553c308240ace605266a5999aaf506",
     "calibration_manifest": {
       "path": "lab/manifests/EXP-0002-calib.json",
-      "manifest_hash": "6346e282cf5c989627ef8b588ec7ef2523ed642c4559332ed724c94f6d0fbb9f",
+      "manifest_hash": "6c0d338c08c09ccdcfed9d72c063376eff56ee31fc66f2e6a1783e04ffa93095",
       "golden_set_hash": "0fe2bbe58c02f14d4a1869d17fccbee98c44177add15c1b497ff15ca6f3e66ae",
       "seeds": "10001-10100",
       "stage_manifests": {
-        "c1": "46ba32f833457f86bfcf94a1bb236776cf232e29fa48762e2a6a6976d4ea6c07",
+        "c1": "1e92c43ce52a44e1f06e6ff2e0e2c12d8de79123e08b5045755d653ca4096f28",
         "c3c4": "1e5460ffc611cec53566633ef658317c3795566a984c92bad67717c421e21930",
         "c2": "784e53c7936a1926f10f6b3effe8e6472a7da194173a62e6c2c4ab3e8db65c88",
-        "lk_check": "750611cded93660e2b38e94469bbd3510ddceb770ea3d7dae419e170a8f7bf64"
-      }
+        "lk_check": "cb7f986ea7fd4a5c0dba2190bcee1fa866207a6858e3b463999d921c398b7db8"
+      },
+      "manifest_hash_evaluated": "a9f05b4c9bf4f2c8268327319583c0aa20d65cf365e527225c93605f6fee5d42 (runs of §7; later hashes differ only by meta.journal)"
     },
     "analysis": {
       "script": "lab/analysis/exp0002.py",
-      "script_sha256": "65f59bd14416aa5bca25844efa37c3476173427c1966eddff77f7aea875e685d",
+      "script_sha256": "8ab37a7badbb5e6350deb64b6f810746c24c283a242e8d3af0400d87c053fae8",
       "config": null,
       "prints": [
         "lab/analysis/t12_c2_print.py",
         "Singularity.Lab calib-print (D3)"
-      ]
+      ],
+      "p0_passed": true,
+      "diagnostics_hashed": [
+        "arms (§6.8 arm/*, §6.10 fleet/* sale/* with #143 split and channels, §6.11 LIC_OFF/T6D_OFF and E-FRA/E-SWE/E-LIC-FRA/E-SUN)",
+        "LK_without_GBR_G4 (#253)",
+        "D4_C2_main (C2 pools #238/#241, KM, modes on main)"
+      ],
+      "p0_source": "spec §6.4, 2026-11-17, code = 1c6d84e + the Lab changes of this commit (Core/Session/Kernel = b0c4122): dotnet test - Kernel 316 passed / 1 skipped, Core 1053, Session 345 / 2 skipped (print-only tests), Lab.Tests 20, Architecture 98 (ADR-0003 R1-R3, no RNG in Core.Industry/Products); Lab selftest 41/41 (L1/L2, golden, schemas); exp0002.py --selftest 42/42; C1 P0 Wright window mean 0.180 in [0.15; 0.30]; L_K exact self-check 1700/1700"
     },
     "rng": "spec §9.1; FIX_* seed 0x5EED",
     "after_review": false,
     "seed_offset": 0,
     "freeze": null,
     "calibration_result": {
-      "point": "p00 of every stage = build defaults (no K keys); C1 ALPHA 0.05, X_SCALE 1.0; C3 K_DIV 1, H_MAX 0.08, THETA_START 0.6, kappa 0.5; C2 C_M 0.1, DELTA_H 0.003",
+      "point": "p00 of every stage = build defaults (no K keys): C1 ALPHA 0.05, X_SCALE 1.0; C3 K_DIV 1, H_MAX 0.08, THETA_START 0.6, kappa 0.5 (y_half 0.5, prog_cap 3); C2 C_M 0.1, DELTA_H 0.003. Not calibrated (spec §8.1 values, no anchor): phi_floor 0.6 (test #30 parameter; C5 undefined), delta_E 0.025 ('Z', like LR)",
       "L": 0,
       "terms": {
         "C1a": 0,
@@ -1011,7 +1019,10 @@
         "definition_sha256_LK_CHECK": "e679251b1b6edb398844a4aa2a367dee6296fe67317c51ef1a92f7bdbfdb28c0",
         "spec_commit": "bdfaaf6"
       },
-      "report": "docs/simulation/t12-calibration-report.md §7, §7.10, §7.11"
+      "report": "docs/simulation/t12-calibration-report.md §7, §7.10, §7.11",
+      "C2_boot": "D4 print: bootstrap over calibration seeds of the tier-4 lower median, B 2000: CI95 [4.67; 6.92] years, 0.018 of replicates outside [2; 8]",
+      "control_tables_lc_check": "lc.Y.k in [0; 0.987] (raw <= 987177); values > 1e6 such as 1124660 are lc.U.3 (unit_cost_mult >= 1), not yield: no defect (gate item 9)",
+      "A40_bands": "spec §3.5 v0.34 r1: branch C share of seeds <= 0.062, branch O per seed <= 0.053 for all actors (basis: the build, I-OC #243)"
     },
     "deviations": [
       "#245: A41 SLOT for P2+P3 in the calibration build; HYP-0004 round 3 measured WHOLE (SLOT equals WHOLE in 14-20 of 100 seeds); mechanism conclusions carried over by print #244, not by round criteria (report §7.7 p.1)",
@@ -1021,10 +1032,41 @@
       "#253: L_K control is stricter than the model for GBR G4: APP_4 of GBR is known in 10 of 100 calibration seeds of the full model and never under L_K (node 29 has delta = never, cens_never_share 0.5); pair outside the control, rule and tables unchanged",
       "#252: C5 (test #30) undefined: the newcomer from the t0 culture reaches min yield 0.4505 by month 383; test #30 neither confirmed nor refuted; L without C5",
       "L_K control keeps two moments only and is biased by double truncation at the horizon (spec §6.1 v0.34)",
-      "tool/* (V0, POOL_*) are excluded from EXP-0002 (Orchestrator decision): they belong to the separate experiment 'EXP pool order' (docs/simulation/exp-pool-order.md, EXP-0006), not to HYP-0002; sale/* arms of spec §6.10 (A42.8) are included on seeds 1-200, detail lite"
+      "tool/* (V0, POOL_*) are excluded from EXP-0002 (Orchestrator decision): they belong to the separate experiment 'EXP pool order' (docs/simulation/exp-pool-order.md, EXP-0006), not to HYP-0002; sale/* arms of spec §6.10 (A42.8) are included on seeds 1-200, detail lite",
+      "Build variant chosen after looking at chg on calibration seeds (gate item 10): A41 SLOT P2+P3 (#245) was chosen after print #244 showed chg/tech_lead on seeds 10001-10100, against spec §8.2 p.6; P1 is not blind with respect to the build variant. #244 numbers (old fielded metric, before #247; introduction-channel-sketch.md §12.1): chg without A41 (I-OC only) 0.08 (CI 0.04-0.15), A41 SLOT P2+P3 0.37 (0.28-0.47), A41 SLOT P3 only 0.26 (0.18-0.35); WHOLE P2+P3 0.13, WHOLE P3 0.10; C-B baseline 0.06. The rise under SLOT was traced to the fielded metric (#246/#247), the choice was argued by mechanism (RISK-0021)",
+      "L_K tolerances (m +-max(3, 3 s/sqrt n), s +-max(20%, 2 SE_s)) were set (#251) after the first L_K check had been seen (report §7.1: 6 of 11 pairs failed at m +-3)",
+      "ALPHA is not identified by C1 (loss_C1 = 0 over a range; 0.05 comes from the traversal order); C3 does not identify k (d_C3 = 0 in 29 of 45 phase-A points), k = 1 comes from the traversal order (k ascending); the knowledge pace is not checked by this calibration (#239)",
+      "C4 (print, #236): first G2 in 1947-52 in 0.00 of seeds, G3 in 1954-61 in 0.00, G4 in 1967-75 in 0.85: G2/G3 windows are a structural limitation of the slice (one common k; repeat with the first graph step)",
+      "C2 fragility: two modes of mastery time (fast 43 pairs 46-60 months, slow 17 pairs 83-134 months, none 61-82); if 8 fast pairs miss t_07 the median becomes 104 months (8.7 y, d > 0); D4 bootstrap CI95 [4.67; 6.92] years",
+      "C5 print arm ADMIT (start #231): newcomer n_new 169, veteran after 120 idle months censored (min yield <= 0.458 in 383 months) - a print 'fail', not part of L; H(R) >= H(0) and M(R) >= M(0) false in all 10 cells",
+      "#253 biases Delta of layer/L_K towards 'the layer is needed' (L_K never opens GBR APP_4, the full model does in ~10% of seeds): analysis prints Delta and TVD of L_K without seeds where GBR fields G4 in main (exp0002.py LK_without_GBR_G4)",
+      "Prints outside the hashed script (not computable from the EXP CSV tables): E-LIC-0 (culture_H of FRA bit-equal in main and LIC_OFF before the first compose - a P0 test), §6.10 counters (freed upkeep, sale_income, ext_total, extra purchases, delta line_E), R2'' u medians, R3'', 'keep' share, FV_fleet by year, disruption counts, LicenceShare by PRC; §6.8 programme/licence spending prints for L_C"
     ],
     "diagnostics": {
       "D3": "spec §5.9 D3 (#250, RISK-0022): Singularity.Lab calib-print --manifest lab/manifests/EXP-0002.json --point <main> on seeds 1-1000 after the run; calibration reference 0.012 of actor-months (USA 0.041), spells p50 23, max 50"
-    }
+    },
+    "build": {
+      "core_commit": "b0c4122 (src/Singularity.Core, Session, Kernel and mods/core unchanged from b0c4122 to 1c6d84e; git diff empty)",
+      "lab_commit": "the commit of this manifest (Lab: c5-stand, lk-draws, calib-print JetSlice, exp0002.py prints)",
+      "dotnet_sdk": "10.0.403",
+      "dotnet_runtime": ".NET 10.0.14",
+      "data_hash": "efcd0984e9d8a6a8e7bf06cba7a5e89b82747e1cfacdf67b7d7d8b2f889efa9f",
+      "data_hash_note": "efcd0984 = Lab provenance data_hash (run.json, matrix.json: SHA-256 over the mod files the slice loads, data_files) - the value for the EXP record; 6eba0cea3e6af277446c6017cf5765ed4f0813d047304c4c14dff9ccfc585bce = GameData.DataHash of ModLoader (run.json model_info.data_hash, c1/c5 stand logs) - another hash of the same mod data; both stable since b0c4122. Report §7 quotes the first, §7.10 the second.",
+      "recomputed_on_final_code": "C1 (c1-stand p00), C3 (c3-stand p00) and the calibration build (C2, CONTROL_TABLES) re-run on the code of 1c6d84e/bdfaaf6 (Core identical to b0c4122): loss_C1 0, d_C3 0, d_C2 0, golden_set_hash 0fe2bbe5, control_tables_hash 4e10abb5 reproduced (report §7.11)",
+      "detail_golden": "detail lite and full give the same golden_hash (seeds 10001, 10002, full horizon; = calibration-build golden): grid/P5 centre taken from main is valid with either detail"
+    },
+    "det_manifest": {
+      "path": "lab/manifests/EXP-0002-det.json",
+      "manifest_hash": "286d5379336840b42f09c32a8057facda01a83542e2059feb2a32499068f1d78"
+    },
+    "run_count_reconciliation": "spec §7 total 19 640 = main 1000 + layers 3000 + old 800 + channels 2200 + sources 1200 + grid 2700 + start 800 + profiles 1080 + lic_knows 400 + det 60 + EFFORT_SHARE 800 + FORCE 800 + DERIV 400 + COMP_V010 400 + fleet 3000 + sale 1000. This manifest: 21 080 = 19 640 - det 60 (separate manifest EXP-0002-det.json) - COMP_V010 400 (not executable, no v0.10 paths) - grid/mid_mid_mid 100 (= main) + lic/LIC_OFF 1000 + lic/T6D_OFF 1000 (§6.11, v0.18)",
+    "inputs_sha256": {
+      "docs/simulation/slice-jet-aviation.md": "85574961be75cf7577a7c6498aa8fac57999eb9a4ebd62c0708c8000d18452e6",
+      "docs/simulation/slice-csv-format.md": "30a849011d90e284fa80b762642cb83e2baee5ae35bf158be107c76f4a8c474e",
+      "lab/analysis/t12_c2_print.py": "58842299ddcff3f0003c1a9e7c5cd62acbf7bd2cd9a529cfa36f3c37b1340e42",
+      "src/Singularity.Lab/Smoke/CalibPrint.cs": "8f8d1420e7c91e71cb757d8cab2152053d7d741910dc1758eb1ee3e9ae43f20d",
+      "lab/manifests/control_tables-EXP-0002.json": "4e10abb518ff291bb3490ec8dbaed2d32b553c308240ace605266a5999aaf506"
+    },
+    "technical_pilot": "gate T12 item 20, 2026-11-17: all 93 points of this manifest on seeds 50001-50002 (outside 1-1000 and 10001+), full 384-month horizon, threads 1/4/8: 558/558 ok, exit 0, thread_mismatch 0 (golden equal at 1/4/8), every table with its v0.5 r13 header, summary rows = runs (558); run time median 7.9 s (t1) / 8.8 s (t4) / 8.7 s (t8), max 11.8 s; matrix wall 363 s at 16 jobs (estimate for 21 080 runs ~3.6 h at 16 jobs); exp0002.py on the pilot output exit 0 without stderr. No criterion, chg or tech_lead read; outputs deleted."
   }
 }

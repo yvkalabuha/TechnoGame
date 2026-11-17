@@ -205,6 +205,23 @@
         "task": "TASK-0056",
         "event": "calibration-build run on the new build: src = b0c4122 (TASK-0058 step 5, I-OC + A41 SLOT P2+P3, fielded_L), seeds 10001-10100, results lab/results/t12b (not committed) (= C2 p00 world, golden_set_hash 0fe2bbe5...): CONTROL_TABLES regenerated -> lab/manifests/control_tables-EXP-0002.json, control_tables_hash 4e10abb518ff291bb3490ec8dbaed2d32b553c308240ace605266a5999aaf506 (candidate until C2 is frozen); T-SK passed (Y_3 part B min 0.837, Y_4 0.748); L_K check (spec §6.1, m +-3, s +-20%) failed in 6 of 11 (actor, gen) pairs; A40 0 firings",
         "manifest_hash_evaluated": "a9f05b4c9bf4f2c8268327319583c0aa20d65cf365e527225c93605f6fee5d42"
+      },
+      {
+        "date": "2026-11-17",
+        "task": "TASK-0056",
+        "event": "Protocol actually run vs the design declared in this meta (gate T12 item 7; history above is not rewritten). Declared here: spec v0.32, stages C1 -> (C3+C4) -> C2, L_stage(C3+C4) = d_C3^2 + sum d_C4^2 with phase B over kappa, budget C1 40 / C3+C4 60 / C2 30 (130), total L incl. C5 binary. Run: (1) #236 (spec v0.29): C4 is a print, stage C3 alone with L_stage = d_C3^2 on phase A (45 points), no phase B, budget C1 40 / C3 45 / C2 30 (115); (2) #239: C3 frozen at p00 by the traversal rule (k 1, h_max 0.08, theta_start 0.6, kappa 0.5); (3) #238 V1 / #241 (spec v0.30/v0.31): C2 pool t_known <= 335, mastery statistic on the sub-pool t_first <= 263, tier-5 > tier-4 a print; C2 stopped at its first point p00 (c_M 0.1, delta_H 0.003 = build values; 1 of 9 points); (4) #248/#252 (spec v0.33/v0.34): C5 = c5-stand, outcome undefined -> total L without C5; (5) #249/#251 (spec v0.34): L_K check on t_known after requires with m +-max(3, 3 s/sqrt n), s +-max(20%, 2 SE_s); #253 (v0.34 r1): pair GBR:4 outside the control. Result: L = 0 (C1 0, C3 0, C2 0; C5 undefined; C4 print G2 0.00 / G3 0.00 / G4 0.85). Current spec: slice-jet-aviation.md v0.34 r1; report t12-calibration-report.md §7.10-§7.12.",
+        "spec_current": "docs/simulation/slice-jet-aviation.md v0.34 r1",
+        "decisions": [
+          "#236",
+          "#239",
+          "#238",
+          "#241",
+          "#248",
+          "#249",
+          "#251",
+          "#252",
+          "#253"
+        ]
       }
     ],
     "stage_protocol": "Stages run C1 -> C3+C4 -> C2, each from its own manifest. A stage's chosen K values are frozen into the top-level 'params' of the LATER stage manifests and of this one (for the control-tables run), each a revision with a new manifest_hash recorded in its 'journal'; a stage manifest sweeps only its own keys, so no frozen key is ever both a parameter and a sweep axis. Phase B of C3+C4: EXP-0002-c3c4.json meta.phase_B. Per point: 'matrix --manifest M --point P --out DIR' (the point's 100 seeds), then 'exp0002.py --calib DIR --point P'.",

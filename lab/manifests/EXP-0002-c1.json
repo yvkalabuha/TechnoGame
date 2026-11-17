@@ -97,7 +97,7 @@
     "budget_points": 40,
     "points": 25,
     "loss": "L_C1 = d_C1a^2 + d_C1b^2 + d_C1d^2 + d_C1e^2 (exp0002.py --c1, loss_C1); stop at the first point with L = 0, else the minimum (tie: first)",
-    "status": "[Predl.] grid x_scale x alpha (TASK-0054), needs the Orchestrator's approval",
+    "status": "closed: stage C1 evaluated and frozen at p00 (ALPHA 0.05, X_SCALE 1.0 = build values; loss_C1 = 0), re-checked on the new build (journal); see EXP-0002-calib.json meta.frozen and t12-calibration-report.md §2, §7.2",
     "journal": [
       {
         "date": "2026-11-15",
@@ -624,6 +624,7 @@
           }
         ]
       }
-    ]
+    ],
+    "status_history": "[Predl.] grid x_scale x alpha (TASK-0054), needs the Orchestrator's approval"
   }
 }

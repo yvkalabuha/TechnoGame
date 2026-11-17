@@ -1,17 +1,33 @@
 {
   "schema": 1,
   "experiment": "EXP-0002-det",
-  "description": "Series det of EXP-0002 (slice-csv-format.md v0.5 §2, §8): main at threads 1, 4, 8; the matrix checks the golden hash of every seed across the thread counts (L2). Not frozen: T12 freezes it with EXP-0002.",
+  "description": "Series det of EXP-0002 (slice-csv-format.md v0.5 r13 §2, §8): main at threads 1, 4, 8; the matrix checks the golden hash of every seed across the thread counts (L2). Not frozen: frozen together with EXP-0002.",
   "model": "JetSlice",
   "ticks": 11688,
   "chunk_size": 1,
-  "threads": [1, 4, 8],
-  "seeds": {"start": 1, "count": 20},
-  "params": {"LINE_CLOSE": "YPROD", "TOOLING_TARGET": "V5", "POOL_ORDER": "CAN", "detail": "full"},
-  "series": [{"name": "det"}],
+  "threads": [
+    1,
+    4,
+    8
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 20
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full"
+  },
+  "series": [
+    {
+      "name": "det"
+    }
+  ],
   "meta": {
-    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.25",
-    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r7",
+    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.34 r1",
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r13",
     "hypothesis": "HYP-0002",
     "main_manifest": "lab/manifests/EXP-0002.json",
     "freeze": null

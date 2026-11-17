@@ -1766,10 +1766,116 @@ def analyze(D, cfg):
     res["lic_knows"] = lic_diag(D, cfg)
     res["determinism"] = determinism(D, cfg)
     res["extremes"] = extremes(D, cfg, main_ids)
+    res["arms"] = arm_prints(D, cfg)
+    res["LK_without_GBR_G4"] = lk_without_gbr_g4(D, cfg)
+    res["D4_C2_main"] = c2_main_print(D, cfg, main_ids)
     res["main"] = {"seeds": len(main_runs),
                    "golden_hash": sha256_text("".join("%d %s\n" % (D.runs[r]["seed"], D.runs[r]["golden"])
                                                       for r in main_ids))}
     return res
+
+
+# ---------------------------------------------------------------- §6.8, §6.10, §6.11 series and L_K prints (gate T12 items 16, 19)
+
+def _first_unit(D, rid, actor, gen=1):
+    x = D.gen_times.get(rid, {}).get((actor, gen))
+    return None if x is None else x["t_first_unit"]
+
+
+def _first_field(rec):
+    """Field (G, T, N, P) of the first counted change of a run, or None."""
+    ch = rec.get("changes") or []
+    return rec["lead_field"][ch[0][0]] if ch else None
+
+
+def fleet_decomposition(D, cfg):
+    """Spec §6.10 (#143): Δ = chg(main) − chg(NO_RETIRE) with paired CI and its split by the key field of the first counted change
+    (Σ_c Δ_c = Δ); channels main − NO_SALE, NO_SALE − NO_RETIRE, PURCHASE_CAP − NO_RETIRE; rule #143 (|Δ| or any |Δ_c| ≥ 0.15:
+    owner question; [0.10; 0.15): borderline)."""
+    m, nr, ns, pc = cfg["series"]["main"], "fleet/NO_RETIRE", "fleet/NO_SALE", "fleet/PURCHASE_CAP"
+    if nr not in D.series:
+        return None
+    sd, ra, rb = paired(D, m, nr)
+    out = {"delta": paired_delta([r["chg"] for r in ra], [r["chg"] for r in rb], cfg, "FLEET|delta"), "components": {}}
+    for c in "GTNP":
+        xa = [r["chg"] * (1 if _first_field(r) == c else 0) for r in ra]
+        xb = [r["chg"] * (1 if _first_field(r) == c else 0) for r in rb]
+        out["components"][c] = paired_delta(xa, xb, cfg, "FLEET|delta|" + c)
+    ch = {}
+    for name, (a, b) in (("sale", (m, ns)), ("retire", (ns, nr)), ("cap_vs_noretire", (pc, nr))):
+        if a in D.series and b in D.series:
+            _, x, y = paired(D, a, b)
+            ch[name] = paired_delta([r["chg"] for r in x], [r["chg"] for r in y], cfg, "FLEET|ch|" + name)
+    out["channels"] = ch
+    big = [abs(out["delta"]["delta"])] + [abs(v["delta"]) for v in out["components"].values() if v]
+    mx = max(big)
+    out["rule_143"] = "owner question" if mx >= 0.15 else ("borderline" if mx >= 0.10 else "below 0.10")
+    return out
+
+
+def licence_expectations(D, cfg):
+    """Spec §6.11 expectations (prints, not criteria): E-FRA, E-SWE, E-LIC-FRA, E-SUN from gen_times (first G1 unit) and LIC_BUY events."""
+    m = cfg["series"]["main"]
+    if m not in D.series or "gen_times" not in D.present:
+        return None
+    last = cfg["n_months"] - 1
+    mids = [D.series[m][s] for s in sorted(D.series[m])]
+    n = len(mids)
+
+    def share(xs):
+        return sum(xs) / len(xs) if xs else None
+    fra = [_first_unit(D, r, cfg["middle_actor"]) for r in mids]
+    swe = [_first_unit(D, r, cfg["small_actor"]) for r in mids]
+    out = {"seeds": n,
+           "E_FRA": {"series_by_383": share([1 if t is not None and 0 <= t <= last else 0 for t in fra]),
+                     "series_by_180": share([1 if t is not None and 0 <= t < 180 else 0 for t in fra]),
+                     "first_t_min": min([t for t in fra if t is not None and t >= 0], default=None)},
+           "E_SWE": {"no_series_share": share([1 if t is None else 0 for t in swe])}}
+    first_lic = collections.defaultdict(list)
+    for r in mids:
+        buys = [e["t"] for e in D.events.get(r, []) if e["kind"] == "LIC_BUY" and e["actor"] == cfg["middle_actor"]]
+        if buys:
+            first_lic["P%d" % D.runs[r]["prof"][cfg["middle_actor"]]].append(min(buys))
+    out["E_LIC_FRA"] = {"first_licence_t_p50": {k: quantile(v, 0.5) for k, v in sorted(first_lic.items())}}
+    off = "lic/LIC_OFF"
+    if off in D.series:
+        sd, ra, rb = paired(D, m, off)
+        inf = float("inf")
+
+        def ft(rec, a):
+            t = _first_unit(D, rec["run"], a)
+            return inf if t is None else t
+        out["E_LIC_FRA"]["first_series_differs_share"] = share([1 if ft(x, cfg["middle_actor"]) != ft(y, cfg["middle_actor"]) else 0
+                                                                for x, y in zip(ra, rb)])
+        out["E_SUN"] = {"main_not_later_share": share([1 if ft(x, "SUN") <= ft(y, "SUN") else 0 for x, y in zip(ra, rb)]),
+                        "seeds": len(sd)}
+    return out
+
+
+def arm_prints(D, cfg):
+    """Prints of the §6.8 arms (arm/*), §6.10 (fleet/*, sale/*) and §6.11 (lic/LIC_OFF, lic/T6D_OFF): Δchg, TVD and the leader at 359
+    against main on paired seeds; #143 decomposition; §6.11 expectations. Not criteria of §7."""
+    out = {}
+    for key, pre in (("arm", "arm/"), ("fleet", "fleet/"), ("sale", "sale/")):
+        out[key] = compare_series(D, cfg, pre, key.upper()) or None
+    lic = {k: v for k, v in (compare_series(D, cfg, "lic/", "LICARM") or {}).items() if k in ("LIC_OFF", "T6D_OFF")}
+    out["lic"] = lic or None
+    out["fleet_143"] = fleet_decomposition(D, cfg)
+    out["licence_expectations"] = licence_expectations(D, cfg)
+    return out
+
+
+def lk_without_gbr_g4(D, cfg):
+    """#253 print (gate T12 item 16): Δ and TVD of layer/L_K on the paired seeds where GBR has no G4 in service in main
+    (gen_times t_fielded of GBR G4 empty): there L_K's 'APP_4 of GBR never' cannot remove an event of the full model."""
+    m, lk = cfg["series"]["main"], cfg["series"]["layer_prefix"] + "L_K"
+    if lk not in D.series or "gen_times" not in D.present:
+        return None
+    keep = {s for s, rid in D.series[m].items()
+            if D.gen_times.get(rid, {}).get(("GBR", 4), {}).get("t_fielded") is None}
+    lt = layer_test(D, cfg, m, lk, "LK_noGBR4", keep)
+    full = layer_test(D, cfg, m, lk, "LK_all")
+    return {"seeds_kept": len(keep), "without_gbr_g4": lt, "all": full}
 
 
 def fmt_d(x):
@@ -2125,6 +2231,114 @@ def median_low(xs):
     return statistics.median_low(xs) if xs else None
 
 
+def c2_mast(nt, rids, cfg, nodes, durations=None):
+    """C2 pool statistics (spec §8.2 C2, #238, #241); nt[rid][(actor, node)] = (t_known, t_first, t_07, t_mastered).
+    durations: optional list receiving (months to t_07 or None if censored, t_first) per sub-pool pair (KM, modes, D4)."""
+    c = cfg["calib"]
+    # spec §8.2 C2: pool = (actor, star PRC) pairs over calibration seeds, pairs MASTERED at the start (t_mastered = -1)
+    # excluded; v0.30 (#238 V1): only pairs with t_known <= last - L_intro (start knowledge, t_known = -1, counts as
+    # known); never-known and late-known pairs are printed as shares of all non-mastered pairs. The share of pool
+    # pairs without t_first is judged on this pool (> 50% -> d = 1), unchanged by #241.
+    # v0.31 (#241): the mastery statistic uses only the sub-pool of pool pairs with t_first <= c2_t_first_max (263;
+    # t_first = -1, in use at the start, counts): t_07 - t_first, or +inf if no t_07 by 383 (lower median). Pool
+    # pairs with t_first > 263 are out of the p50 (counted, printed). Empty pool or empty sub-pool -> d = 1.
+    last_known = cfg["n_months"] - 1 - c["c2_l_intro"]
+    t_first_max = c["c2_t_first_max"]
+    xs, cens, no_first, pool, unknown, late, late_first = [], 0, 0, 0, 0, 0, 0
+    for rid in rids:
+        for a in cfg["actors"]:
+            for nd in nodes:
+                x = nt[rid].get((a, nd))
+                if x is None:
+                    continue
+                if x[3] is not None and x[3] < 0:
+                    continue
+                if x[0] is None:
+                    unknown += 1
+                    continue
+                if x[0] > last_known:
+                    late += 1
+                    continue
+                pool += 1
+                if x[1] is None:
+                    no_first += 1
+                elif x[1] > t_first_max:
+                    late_first += 1
+                elif x[2] is None:
+                    cens += 1
+                    xs.append(math.inf)
+                    if durations is not None:
+                        durations.append((None, x[1]))
+                else:
+                    xs.append(max(0, x[2] - x[1]) / 12.0)
+                    if durations is not None:
+                        durations.append((max(0, x[2] - x[1]), x[1]))   # t_07 = -1 with t_first = 0 (V = 0 at the start): 0
+    no_first_share = no_first / pool if pool else None
+    full = pool + unknown + late
+    return {"p50_years": median_low(xs), "n": len(xs), "pool": pool, "no_t_first": no_first,
+            "no_t_first_share": no_first_share, "right_censored": cens,
+            "censored_share": cens / len(xs) if xs else None,
+            "last_t_known": last_known, "not_mastered_pairs": full, "never_known": unknown, "late_known": late,
+            "never_known_share": unknown / full if full else None, "late_known_share": late / full if full else None,
+            "t_first_max": t_first_max, "late_t_first": late_first,
+            "late_t_first_share": late_first / pool if pool else None,
+            "d_is_1": not pool or no_first_share > 0.5 or not xs}
+
+
+def c2_boot(nt, rids, cfg, label="C2|boot"):
+    """D4 (gate T12 item 18): bootstrap over seeds of the tier-4 lower median (years) of the #241 sub-pool; B = boot_reps,
+    stream rng_for(cfg, label). Print only: a CI outside [2; 8] is a caveat, not a rerun."""
+    rng = rng_for(cfg, label)
+    meds = []
+    for _ in range(cfg["boot_reps"]):
+        sample = [rids[rng.randrange(len(rids))] for _ in rids]
+        nt2 = {}
+        ids = []
+        for k, rid in enumerate(sample):
+            nt2[k] = nt[rid]
+            ids.append(k)
+        m = c2_mast(nt2, ids, cfg, cfg["calib"]["c2_tier4"])["p50_years"]
+        meds.append(math.inf if m is None else m)
+    meds.sort()
+    lo, hi = meds[int(0.025 * len(meds))], meds[min(len(meds) - 1, int(0.975 * len(meds)))]
+    return {"B": len(meds), "ci95_years": [lo, hi], "share_outside_2_8": sum(1 for m in meds if not 2 <= m <= 8) / len(meds)}
+
+
+def c2_km_modes(durs, last, split=78):
+    """Kaplan-Meier median (months; censored at last - t_first) and the two modes (finished, split at 78 months) of the sub-pool."""
+    ev = sorted(((d if d is not None else last - max(tf, 0)), d is not None) for d, tf in durs)
+    n, s, med = len(ev), 1.0, None
+    i = 0
+    while i < n:
+        t = ev[i][0]
+        at_risk = n - i
+        deaths = sum(1 for x in ev[i:] if x[0] == t and x[1])
+        tied = sum(1 for x in ev[i:] if x[0] == t)
+        if deaths:
+            s *= 1 - deaths / at_risk
+            if med is None and s <= 0.5:
+                med = t
+        i += tied
+    fin = [d for d, _ in durs if d is not None]
+    fast, slow = [d for d in fin if d <= split], [d for d in fin if d > split]
+    return {"km_median_months": med, "fast": {"n": len(fast), "range": [min(fast), max(fast)] if fast else None},
+            "slow": {"n": len(slow), "range": [min(slow), max(slow)] if slow else None}, "censored": sum(1 for d, _ in durs if d is None)}
+
+
+def c2_main_print(D, cfg, main_ids):
+    """D4 (gate T12 item 18): the C2 statistics (#238 pool, #241 sub-pool, KM, modes) on main seeds; print, not a criterion."""
+    if "node_times" not in D.present or not main_ids:
+        return None
+    nt = {rid: {k: (v["t_known"], v["t_first"], v["t_07"], v["t_mastered"]) for k, v in D.node_times.get(rid, {}).items()}
+          for rid in main_ids}
+    durs = []
+    st = c2_mast(nt, main_ids, cfg, cfg["calib"]["c2_tier4"], durs)
+    st["km_modes"] = c2_km_modes(durs, cfg["n_months"] - 1)
+    p = st["p50_years"]
+    st["caveat_outside_2_8"] = p is None or not (cfg["calib"]["c2_years"][0] <= p <= cfg["calib"]["c2_years"][1])
+    return st
+
+
 def calib_tables(d, cfg, point=None):
     """point: only the runs of that matrix point (runs.csv column `point`; T12: one calibration point of a stage manifest,
     TASK-0055 Codex r2); None = every run of the directory."""
@@ -2284,52 +2498,8 @@ def calib_tables(d, cfg, point=None):
                 xs.append((int(r["out_g%d" % g]) * FX * FX) // int(r["proc_budget"]))
         out["rho"][str(g)] = median_low(xs)
     # C2, C4
-    def mast(nodes):
-        # spec §8.2 C2: pool = (actor, star PRC) pairs over calibration seeds, pairs MASTERED at the start (t_mastered = -1)
-        # excluded; v0.30 (#238 V1): only pairs with t_known <= last - L_intro (start knowledge, t_known = -1, counts as
-        # known); never-known and late-known pairs are printed as shares of all non-mastered pairs. The share of pool
-        # pairs without t_first is judged on this pool (> 50% -> d = 1), unchanged by #241.
-        # v0.31 (#241): the mastery statistic uses only the sub-pool of pool pairs with t_first <= c2_t_first_max (263;
-        # t_first = -1, in use at the start, counts): t_07 - t_first, or +inf if no t_07 by 383 (lower median). Pool
-        # pairs with t_first > 263 are out of the p50 (counted, printed). Empty pool or empty sub-pool -> d = 1.
-        last_known = cfg["n_months"] - 1 - c["c2_l_intro"]
-        t_first_max = c["c2_t_first_max"]
-        xs, cens, no_first, pool, unknown, late, late_first = [], 0, 0, 0, 0, 0, 0
-        for rid in rids:
-            for a in cfg["actors"]:
-                for nd in nodes:
-                    x = nt[rid].get((a, nd))
-                    if x is None:
-                        continue
-                    if x[3] is not None and x[3] < 0:
-                        continue
-                    if x[0] is None:
-                        unknown += 1
-                        continue
-                    if x[0] > last_known:
-                        late += 1
-                        continue
-                    pool += 1
-                    if x[1] is None:
-                        no_first += 1
-                    elif x[1] > t_first_max:
-                        late_first += 1
-                    elif x[2] is None:
-                        cens += 1
-                        xs.append(math.inf)
-                    else:
-                        xs.append(max(0, x[2] - x[1]) / 12.0)   # t_07 = -1 with t_first = 0 (V = 0 at the start): 0
-        no_first_share = no_first / pool if pool else None
-        full = pool + unknown + late
-        return {"p50_years": median_low(xs), "n": len(xs), "pool": pool, "no_t_first": no_first,
-                "no_t_first_share": no_first_share, "right_censored": cens,
-                "censored_share": cens / len(xs) if xs else None,
-                "last_t_known": last_known, "not_mastered_pairs": full, "never_known": unknown, "late_known": late,
-                "never_known_share": unknown / full if full else None, "late_known_share": late / full if full else None,
-                "t_first_max": t_first_max, "late_t_first": late_first,
-                "late_t_first_share": late_first / pool if pool else None,
-                "d_is_1": not pool or no_first_share > 0.5 or not xs}
-    c2 = {"tier4": mast(c["c2_tier4"]), "tier5": mast(c["c2_tier5"])}
+    c2 = {"tier4": c2_mast(nt, rids, cfg, c["c2_tier4"]), "tier5": c2_mast(nt, rids, cfg, c["c2_tier5"])}
+    c2["tier4_boot"] = c2_boot(nt, rids, cfg)
     t4, t5 = c2["tier4"]["p50_years"], c2["tier5"]["p50_years"]
     c2["tier4_in_corridor"] = (not c2["tier4"]["d_is_1"]) and t4 is not None and c["c2_years"][0] <= t4 <= c["c2_years"][1]
     # v0.31 (#241): "tier-5 longer" is a print only, not a criterion (no d, not in the loss); an empty or fully censored
@@ -2691,7 +2861,64 @@ def selftest(quick=False):
         check("calib header check rejects tech_lead column", calib_header_check(d, cfg) == ["calib_summary.csv:tech_lead"])
     check("calib control tables", calib_selftest(cfg) is True)
     check("L_K check v0.34 (#251): pass, n_K = 0 fails, exact self-check voids", lk_check_selftest(cfg) is True)
+    check("§6.8/§6.10/§6.11 prints, #143 split, L_K without GBR G4, D4 C2 on main (gate T12)", arms_selftest(cfg) is True)
     return results, detail
+
+
+def arms_selftest(cfg):
+    """Fixtures for arm_prints, fleet_decomposition, licence_expectations, lk_without_gbr_g4, c2_main_print (gate T12 items 16, 18, 19)."""
+    D = Data()
+    D.present.update({"gen_times", "events", "node_times"})
+    n = cfg["n_months"]
+
+    def run(series, seed, chg, field="G", fra_t=None, sun_t=None, gbr4=None, lic=None):
+        rid = "%s#%d" % (series, seed)
+        tr = [0] * n if not chg else [0] * 100 + [1] * (n - 100)
+        lf = "".join(field if t == 100 and chg else "=" for t in range(n))
+        rec = {"run": rid, "series": series, "seed": seed, "threads": 1, "status": "ok", "golden": "h",
+               "prof": {"USA": 1, "GBR": 1, "SUN": 1, "FRA": 2 if seed % 2 else 3, "SWE": 1},
+               "lead": tr, "lead_all": tr, "lead_field": lf}
+        derive(rec, cfg)
+        D.runs[rid] = rec
+        D.series[series][seed] = rid
+        D.gen_times[rid][("FRA", 1)] = {"t_req": 0, "t_first_unit": fra_t, "t_fielded": fra_t, "cost_u100": None}
+        D.gen_times[rid][("SUN", 1)] = {"t_req": 0, "t_first_unit": sun_t, "t_fielded": sun_t, "cost_u100": None}
+        D.gen_times[rid][("GBR", 4)] = {"t_req": 0, "t_first_unit": gbr4, "t_fielded": gbr4, "cost_u100": None}
+        if lic is not None:
+            D.events[rid].append({"t": lic, "kind": "LIC_BUY", "actor": "FRA", "other": "USA", "value": None})
+        return rid
+    mids = []
+    for sd in range(1, 101):
+        c = 1 if sd <= 40 else 0
+        mids.append(run("main", sd, c, field="G" if sd <= 20 else "N", fra_t=(310 if sd <= 5 else None), sun_t=50,
+                        gbr4=(300 if sd <= 10 else None), lic=(20 if sd % 2 else 30)))
+        run("fleet/NO_RETIRE", sd, 1 if sd <= 20 else 0, field="N")     # main − NO_RETIRE: Δ = 0.2, all in field G
+        run("fleet/NO_SALE", sd, 1 if sd <= 30 else 0)
+        run("fleet/PURCHASE_CAP", sd, 1 if sd <= 25 else 0)
+        run("sale/SIGMA_LO", sd, c)
+        run("arm/FORCE_x1", sd, c)
+        run("lic/LIC_OFF", sd, c, fra_t=(310 if sd <= 4 else None), sun_t=(60 if sd <= 90 else 40))
+        run("lic/T6D_OFF", sd, c)
+        run("layer/L_K", sd, 0 if sd <= 10 else c)                    # L_K removes the changes of the 10 GBR-G4 seeds only
+        for nd in cfg["calib"]["c2_tier4"]:
+            D.node_times[mids[-1]][("USA", nd)] = {"t_known": 10, "t_first": 20, "t_07": (20 + (50 if sd % 3 else 100)) if sd % 10 else None,
+                                                    "t_mastered": None, "lic": 0}
+    a = arm_prints(D, cfg)
+    f = a["fleet_143"]
+    ok = abs(f["delta"]["delta"] - 0.2) < 1e-12 and abs(f["components"]["G"]["delta"] - 0.2) < 1e-12 and f["components"]["N"]["delta"] == 0
+    ok &= abs(sum(v["delta"] for v in f["components"].values()) - f["delta"]["delta"]) < 1e-12 and f["rule_143"] == "owner question"
+    ok &= abs(f["channels"]["sale"]["delta"] - 0.1) < 1e-12 and abs(f["channels"]["retire"]["delta"] - 0.1) < 1e-12
+    ok &= a["sale"]["SIGMA_LO"]["delta"]["delta"] == 0 and a["arm"]["FORCE_x1"]["delta"]["delta"] == 0
+    ok &= set(a["lic"]) == {"LIC_OFF", "T6D_OFF"}
+    le = a["licence_expectations"]
+    ok &= abs(le["E_FRA"]["series_by_383"] - 0.05) < 1e-12 and le["E_FRA"]["series_by_180"] == 0
+    ok &= abs(le["E_LIC_FRA"]["first_series_differs_share"] - 0.01) < 1e-12 and abs(le["E_SUN"]["main_not_later_share"] - 0.9) < 1e-12
+    ok &= le["E_LIC_FRA"]["first_licence_t_p50"] == {"P2": 20, "P3": 30} and le["E_SWE"]["no_series_share"] == 1.0
+    lk = lk_without_gbr_g4(D, cfg)
+    ok &= lk["seeds_kept"] == 90 and lk["without_gbr_g4"]["delta"]["delta"] == 0 and abs(lk["all"]["delta"]["delta"] - 0.1) < 1e-12
+    c2 = c2_main_print(D, cfg, mids)
+    ok &= c2["n"] == 100 * len(cfg["calib"]["c2_tier4"]) and c2["km_modes"]["censored"] == 10 * len(cfg["calib"]["c2_tier4"]) and c2["km_modes"]["fast"]["n"] == 60 * len(cfg["calib"]["c2_tier4"]) and not c2["caveat_outside_2_8"]
+    return bool(ok)
 
 
 def calib_selftest(cfg):
@@ -2979,6 +3206,10 @@ def main(argv=None):
                 fmt(v["no_t_first_share"], 3), v["t_first_max"], v["late_t_first"], fmt(v["late_t_first_share"], 3),
                 v["n"], fmt(v["p50_years"], 2), fmt(v["censored_share"], 3))
                 for tier, v in (("tier 4", c2r["tier4"]), ("tier 5", c2r["tier5"])))
+            bt = c2r.get("tier4_boot")
+            if bt:
+                md += "- D4 (печать): bootstrap по seeds нижней медианы C2 tier 4, B = %d: CI95 %s лет, доля повторов вне [2; 8] — %s\n" % (
+                    bt["B"], [round(x, 2) for x in bt["ci95_years"]], fmt(bt["share_outside_2_8"], 3))
             md += "\n".join(render_p0({"p0": r["p0"]}, cfg)) + "\n"
         else:
             if not a.dirs:
