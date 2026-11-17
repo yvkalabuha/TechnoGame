@@ -339,3 +339,10 @@ The spike does not connect to the simulation (that is M2) | владелец (As
 | 290 | 2026-11-17 | The daily table copy (~1.9 ms × 30 ≈ 56 ms/month at full scale) is optimised in the same ADR (copy only changed columns, or double-buffering without a full copy). The Kernel share of 50 ms stays | владелец (AskUserQuestion 2026-11-17) |
 | 291 | 2026-11-17 | Refines #289 for play. Mandatory SHA-256 points in play: the start (tick 0), save, load and the end of replay. The monthly and command hash points are under an execution-only flag: on in tests and Lab, off in play. Determinism checks in tests stay as strict as before. ADR-0017 implements this; for the table copy it adopts per-column copy-on-write instead of declared `Writes` (Orchestrator, technical choice inside #290, from advocate and critic) | владелец (AskUserQuestion 2026-11-17) + Orchestrator |
 | 292 | 2026-11-17 | Client prototype continues ahead of M2 (owner): fill the Godot prototype with controls per the design documents (UI_ART_DIRECTION, UI_DESIGN_SYSTEM, GLOBE_DIRECTION, TECH_TREE_SCREEN; tech tree A main + B second, #286). Build mock-ups, and wherever the Session API already exists, wire real functionality at once (SliceSession: View, Step, Submit commands, WhyNot). Mock data is visibly marked as mock | владелец (сообщение 2026-11-17) |
+| 293 | 2026-11-17 | Agent-driven client testing, done after client v0.2 (TASK-0069):
+1. A debug bridge inside the client (localhost only, dev builds only): scene tree as JSON, click a control by name, input, screenshot, performance monitors (FPS, memory, draw calls), simulation step.
+2. A thin MCP server over the bridge, so agents drive the UI as tools.
+3. GdUnit4 (C#) for automated UI tests in CI.
+4. A `ui-tester` agent, with the agent file created at session end; until then test-engineer covers it.
+
+Existing community Godot MCP projects are researched first, in parallel now | владелец (AskUserQuestion 2026-11-17) |
