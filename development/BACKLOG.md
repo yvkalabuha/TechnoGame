@@ -124,6 +124,7 @@
 | [ADR-0014](../docs/decisions/ADR-0014-session-test-api.md) | ACCEPTED | Session и Test API: единая сборка мира, команды, test mode |
 | [ADR-0015](../docs/decisions/ADR-0015-external-executors-providers.md) | ACCEPTED | Внешние исполнители и ревьюеры (DeepSeek, Codex) |
 | [ADR-0016](../docs/decisions/ADR-0016-tick-budget.md) | ACCEPTED | Бюджет тика |
+| [ADR-0017](../docs/decisions/ADR-0017-statehash-schedule-and-table-copy-in-daily-mode.md) | PROPOSED | StateHash schedule and table copy in daily mode |
 
 ## Research Reports
 
