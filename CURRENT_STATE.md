@@ -14,7 +14,6 @@
 - TASK-0064 [APPROVED] lab bench harness (ADR-0016 T1) (developer)
 - TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
 - TASK-0071 [APPROVED] Client v0.4: audio prototype and v0.3 review remainder (developer)
-- TASK-0072 [APPROVED] ADR-0018 spike S1: Linguini.Bundle on .NET 10, Russian case/gender, plurals (developer)
 <!-- registry:active:end -->
 
 ## Блокеры

@@ -390,3 +390,10 @@ If S1 fails, the ADR returns to the gate. The Unicode License V3 (CLDR-derived p
 - Buttons and panel edges slightly rounded.
 
 This revises UI_DESIGN_SYSTEM where it conflicts (no fills, square edges, minimal colour) | владелец (сообщение 2026-11-17) |
+| 303 | 2026-11-17 | Client palette: variant C «Акварель» (rich) from design-v2 (#302). Before the client switches to it, a validator must confirm that alerts stay noticeable (ΔE and greyscale) next to the tints; this is the known risk of variant C: warn next to tints 1 and 5 | владелец (AskUserQuestion 2026-11-17) |
+| 304 | 2026-11-17 | ADR-0018 spike S1 (TASK-0072) passed all checks (20 PASS): Linguini.Bundle 0.11.0 on net10, Russian case and gender, plurals including «1,0» → other, message references, FrozenBundle reads on 16 threads, culture-independent NUMBER/DATE. The #300 condition is met. Implementation erratum, recorded here (ADR-0018 is immutable), details in docs/architecture/notes/fluent-spike-s1.md:
+- NUMBER returns a FluentNumber subclass (no FormatterFunc), and the facade wraps bare numbers. The §3.3 FormatterFunc route does not select plurals.
+- percent and useGrouping:false results cannot be plural selectors.
+- We add the Unicode V3 notice to LICENSES.md ourselves (the packages carry none).
+- Linguini needs ICU cultures; check ICU in the Godot .NET export.
+- Term lookup ids have no leading '-'. | Orchestrator (technical, inside ADR-0018) |
