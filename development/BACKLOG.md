@@ -81,7 +81,7 @@
 | ID | Статус | Название |
 |---|---|---|
 | [HYP-0001](../development/hypotheses/HYP-0001-science-vs-industry.md) | REJECTED | Научное лидерство не даёт автоматического промышленного превосходства |
-| [HYP-0002](../development/hypotheses/HYP-0002-jet-aviation-slice-layers.md) | EXPERIMENTAL | Совместная гипотеза среза «реактивная авиация»: три слоя дают персистентное, но не предрешённое лидерство |
+| [HYP-0002](../development/hypotheses/HYP-0002-jet-aviation-slice-layers.md) | REJECTED | Совместная гипотеза среза «реактивная авиация»: три слоя дают персистентное, но не предрешённое лидерство |
 | [HYP-0003](../development/hypotheses/HYP-0003-war-capture-transfer.md) | IDEA | Захват после победной войны: территория, заводы с повреждениями и часть знаний побеждённого |
 | [HYP-0004](../development/hypotheses/HYP-0004-introduction-channel.md) | IDEA | Канал внедрения: новый процесс выбирается из низкого выхода без серийного выпуска |
 
@@ -90,7 +90,7 @@
 | ID | Статус | Название | hypothesis |
 |---|---|---|---|
 | [EXP-0001](../development/experiments/EXP-0001-pilot-science-industry.md) | DONE | Пилот: траектории государств с разным сочетанием науки, инженерии и производства | HYP-0001 |
-| [EXP-0002](../development/experiments/EXP-0002-hyp0002-main.md) | PLANNED | EXP-0002: основной эксперимент HYP-0002 (срез «реактивная авиация») | HYP-0002 |
+| [EXP-0002](../development/experiments/EXP-0002-hyp0002-main.md) | DONE | EXP-0002: основной эксперимент HYP-0002 (срез «реактивная авиация») | HYP-0002 |
 | [EXP-0003](../development/experiments/EXP-0003-t6e-tooling-target.md) | DONE | Цель оснастки A39: варианты V0–V4 против эталона VINF (T6e) | HYP-0002 |
 | [EXP-0004](../development/experiments/EXP-0004-t6e2-tooling-target.md) | DONE | Цель оснастки A39, повтор после F17b: V0, V1, V3, V4 против VINF (T6e2) | HYP-0002 |
 | [EXP-0005](../development/experiments/EXP-0005-t6e3-tooling-target.md) | DONE | Цель оснастки A39, третий прогон: V0, V4, V5 против VINF (T6e3) | HYP-0002 |
