@@ -328,3 +328,10 @@ PASS means "budget not refuted at M0 scale" | владелец (AskUserQuestion 
 The spike does not connect to the simulation (that is M2) | владелец (AskUserQuestion 2026-11-17) |
 | 286 | 2026-11-17 | Tech tree screen (TECH_TREE_SCREEN v0.1): sketch A «Планисфера» is the main view; sketch B «Ведомость цели» is the second view («когда?» switch). The owner asked how A shows several thousand nodes, so a scaling sketch at ~2000 nodes is required before the screen spec is final | владелец (сообщение 2026-11-17) |
 | 287 | 2026-11-17 | Follow-up on the TASK-0063/0065 review (reviewer, approve with comments). DEBT-0039: wrap the Lab selftest checks `synth:` and `slice: calib-print` in xunit (tests/Singularity.Lab.Tests), and fix the Low items: the DailyTickProbe test name and view checks, the generator mastered closure, `Scale` floor and the doc seed. The EXP-0007 pre-registration fixes (П1 wording, command timing on the monthly tick) are done before the freeze | Orchestrator (light) |
+| 288 | 2026-11-17 | The globe visual direction (GLOBE_DIRECTION v0.1) is approved as a concept. Owner answers to the designer's questions:
+1. A flat world map stays as a second view (globe/map switch).
+2. Rotation: camera plus a day/night cycle (moving terminator).
+3. Surface: A «Глобус-лист» + B relief tracing + C «Ночь и синька» space mode.
+4. Models: Blender scripts (bpy) plus CC0 adaptation.
+5. Orbits use compressed height, labelled "not to scale".
+6. CC BY assets are allowed, with an authors' registry that feeds the credits (ADR-0009). | владелец (сообщение и AskUserQuestion 2026-11-17) |
