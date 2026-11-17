@@ -88,9 +88,11 @@
 
 | RR | Направление | Агенты |
 |---|---|---|
-| RR-0015 | Политические системы (1) | civilization-systems-designer |
-| RR-0016 | Геополитика, конфликты, завершение войн (2) | geopolitics-analyst (новый) |
-| RR-0017 | Разведка (3) | geopolitics-analyst |
+| RR-0015 | Разведка (3) — начат раньше волны по #259 | civilization-systems-designer (geopolitics-analyst ещё нет) |
+| RR-0016 | Политические системы (1) | civilization-systems-designer |
+| RR-0017 | Геополитика, конфликты, завершение войн (2) | geopolitics-analyst (новый) |
+
+> Нумерация (Orchestrator, 2026-11-17): разведка начата раньше волны по решению #259 и получила следующий свободный номер RR-0015; политические системы — RR-0016, геополитика — RR-0017.
 | RR-0018 | Военная симуляция (8) | game-designer + simulation-engineer |
 | RR-0019 | Логистика, связь, география (11) | systems-architect + game-designer |
 
