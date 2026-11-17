@@ -1,0 +1,157 @@
+keys,en,ru
+actor.USA,United States,США
+actor.GBR,United Kingdom,Великобритания
+actor.SUN,USSR,СССР
+actor.FRA,France,Франция
+actor.SWE,Sweden,Швеция
+country.United States of America,United States,США
+country.United Kingdom,United Kingdom,Великобритания
+country.Russia,Russia,Россия
+country.France,France,Франция
+country.Sweden,Sweden,Швеция
+country.Canada,Canada,Канада
+country.Mexico,Mexico,Мексика
+country.Brazil,Brazil,Бразилия
+country.Argentina,Argentina,Аргентина
+country.China,China,Китай
+country.India,India,Индия
+country.Australia,Australia,Австралия
+country.Kazakhstan,Kazakhstan,Казахстан
+country.Algeria,Algeria,Алжир
+country.Dem. Rep. Congo,DR Congo,ДР Конго
+country.Greenland,Greenland,Гренландия
+country.Saudi Arabia,Saudi Arabia,Саудовская Аравия
+country.Indonesia,Indonesia,Индонезия
+country.Sudan,Sudan,Судан
+country.Libya,Libya,Ливия
+country.Iran,Iran,Иран
+country.Mongolia,Mongolia,Монголия
+country.Peru,Peru,Перу
+country.Chad,Chad,Чад
+country.Niger,Niger,Нигер
+country.Angola,Angola,Ангола
+country.Mali,Mali,Мали
+country.South Africa,South Africa,ЮАР
+country.Colombia,Colombia,Колумбия
+country.Ethiopia,Ethiopia,Эфиопия
+country.Bolivia,Bolivia,Боливия
+country.Mauritania,Mauritania,Мавритания
+country.Egypt,Egypt,Египет
+country.Tanzania,Tanzania,Танзания
+country.Nigeria,Nigeria,Нигерия
+country.Venezuela,Venezuela,Венесуэла
+country.Pakistan,Pakistan,Пакистан
+country.Turkey,Turkey,Турция
+country.Chile,Chile,Чили
+country.Germany,Germany,Германия
+country.Spain,Spain,Испания
+country.Italy,Italy,Италия
+country.Poland,Poland,Польша
+country.Ukraine,Ukraine,Украина
+country.Japan,Japan,Япония
+country.Norway,Norway,Норвегия
+country.Finland,Finland,Финляндия
+country.Afghanistan,Afghanistan,Афганистан
+country.Somalia,Somalia,Сомали
+country.Kenya,Kenya,Кения
+country.Madagascar,Madagascar,Мадагаскар
+country.Mozambique,Mozambique,Мозамбик
+country.Zambia,Zambia,Замбия
+country.Namibia,Namibia,Намибия
+country.Myanmar,Myanmar,Мьянма
+country.Thailand,Thailand,Таиланд
+country.Iraq,Iraq,Ирак
+country.Uzbekistan,Uzbekistan,Узбекистан
+country.Turkmenistan,Turkmenistan,Туркмения
+country.Morocco,Morocco,Марокко
+country.Cuba,Cuba,Куба
+country.New Zealand,New Zealand,Новая Зеландия
+country.Papua New Guinea,Papua New Guinea,Папуа — Новая Гвинея
+country.Vietnam,Vietnam,Вьетнам
+country.Philippines,Philippines,Филиппины
+country.Paraguay,Paraguay,Парагвай
+country.Ecuador,Ecuador,Эквадор
+country.Uruguay,Uruguay,Уругвай
+country.Cameroon,Cameroon,Камерун
+country.Ghana,Ghana,Гана
+country.Yemen,Yemen,Йемен
+country.Oman,Oman,Оман
+country.Syria,Syria,Сирия
+country.Romania,Romania,Румыния
+country.Belarus,Belarus,Беларусь
+country.Iceland,Iceland,Исландия
+country.Botswana,Botswana,Ботсвана
+country.Zimbabwe,Zimbabwe,Зимбабве
+country.South Korea,South Korea,Южная Корея
+country.North Korea,North Korea,Северная Корея
+country.Malaysia,Malaysia,Малайзия
+country.Bangladesh,Bangladesh,Бангладеш
+country.Nepal,Nepal,Непал
+country.Cambodia,Cambodia,Камбоджа
+country.Laos,Laos,Лаос
+country.Guyana,Guyana,Гайана
+country.Gabon,Gabon,Габон
+country.Congo,Congo,Конго
+country.Central African Rep.,Central African Rep.,ЦАР
+country.Uganda,Uganda,Уганда
+node.fnd.brayton_cycle,Brayton cycle,Цикл Брайтона
+node.fnd.boundary_layer,Boundary layer,Пограничный слой
+node.fnd.compressible_flow,Compressible flow,Сжимаемое течение
+node.fnd.precipitation_hardening,Precipitation hardening,Дисперсионное твердение
+node.fnd.transonic_aerodynamics,Transonic aerodynamics,Трансзвуковая аэродинамика
+node.fnd.high_temperature_creep,High-temperature creep,Высокотемпературная ползучесть
+node.fnd.turbine_heat_transfer,Turbine heat transfer,Теплообмен в турбине
+node.fnd.solidification_science,Solidification science,Наука о затвердевании
+node.prn.gas_turbine,Gas turbine,Газовая турбина
+node.prn.swept_wing,Swept wing,Стреловидное крыло
+node.prn.afterburning,Afterburning,Форсаж
+node.prn.gamma_prime_alloy_design,Gamma-prime alloy design,Сплавы γ′-упрочнения
+node.prn.area_rule,Area rule,Правило площадей
+node.prn.multi_spool_compression,Multi-spool compression,Многовальное сжатие
+node.prn.bypass_engine,Bypass engine,Двухконтурный двигатель
+node.prn.film_cooling,Film cooling,Плёночное охлаждение
+node.eng.turbojet_g1,"Turbojet, gen 1","ТРД, поколение 1"
+node.eng.straight_wing_jet_airframe,Straight-wing airframe,Планер с прямым крылом
+node.eng.turbojet_g2,"Turbojet, gen 2","ТРД, поколение 2"
+node.eng.swept_wing_airframe,Swept-wing airframe,Планер со стреловидным крылом
+node.eng.afterburner,Afterburner,Форсажная камера
+node.eng.all_moving_tail,All-moving tail,Цельноповоротное оперение
+node.eng.turbojet_g3,"Turbojet, gen 3","ТРД, поколение 3"
+node.eng.area_ruled_airframe,Area-ruled airframe,Планер по правилу площадей
+node.eng.delta_wing_airframe,Delta-wing airframe,Планер с треугольным крылом
+node.eng.variable_geometry_inlet,Variable-geometry inlet,Воздухозаборник с изменяемой геометрией
+node.eng.air_cooled_turbine_blade,Air-cooled turbine blade,Охлаждаемая лопатка турбины
+node.eng.turbofan_g4,"Turbofan, gen 4","ТРДД, поколение 4"
+node.eng.mach2_airframe_g4,"Mach-2 airframe, gen 4","Планер для М2, поколение 4"
+node.cmp.heat_resistant_alloy,Heat-resistant alloy,Жаропрочный сплав
+node.cmp.aluminium_alloy_sheet,Aluminium alloy sheet,Лист из алюминиевого сплава
+node.cmp.titanium_alloy,Titanium alloy,Титановый сплав
+node.cmp.turbine_blade_forged,Forged turbine blade,Кованая лопатка турбины
+node.cmp.turbine_blade_cast,Cast turbine blade,Литая лопатка турбины
+node.cmp.turbine_blade_cooled,Cooled blade (component),Охлаждаемая лопатка (компонент)
+node.cmp.axial_compressor_assembly,Axial compressor assembly,Осевой компрессор
+node.cmp.afterburner_unit,Afterburner unit,Форсажный блок
+node.prc.light_alloy_rolling,Light alloy rolling,Прокатка лёгких сплавов
+node.prc.nicr_alloy_melt,NiCr alloy melting,Выплавка NiCr-сплава
+node.prc.superalloy_melt_g2,Superalloy melting,Выплавка суперсплава
+node.prc.vacuum_induction_melt,Vacuum induction melting,Вакуумная индукционная плавка
+node.prc.titanium_reduction_forging,Titanium reduction and forging,Восстановление и ковка титана
+node.prc.ds_casting,Directional solidification casting,Направленная кристаллизация
+node.prc.alloying_element_refining,Alloying element refining,Очистка легирующих элементов
+node.prc.high_purity_nickel_refining,High-purity nickel refining,Рафинирование никеля
+node.prc.ceramic_shell_moulding,Ceramic shell moulding,Керамические формы
+node.prc.precision_gear_bearing,Precision gears and bearings,Прецизионные шестерни и подшипники
+node.prc.centrifugal_impeller_machining,Centrifugal impeller machining,Обработка центробежного колеса
+node.prc.precision_blade_forging,Precision blade forging,Точная ковка лопаток
+node.prc.axial_compressor_machining,Axial compressor machining,Обработка осевого компрессора
+node.prc.investment_cast_blades,Investment-cast blades,Литьё лопаток по выплавляемым моделям
+node.prc.cooled_blade_drilling,Cooled blade drilling,Перфорация охлаждаемых лопаток
+node.prc.stressed_skin_assembly,Stressed-skin assembly,Сборка работающей обшивки
+node.prc.jet_engine_assembly_test,Jet engine assembly and test,Сборка и испытание ТРД
+node.prc.swept_wing_fabrication,Swept wing fabrication,Изготовление стреловидного крыла
+node.prc.machined_integral_skins,Machined integral skins,Монолитные обработанные панели
+node.prc.afterburner_fabrication,Afterburner fabrication,Изготовление форсажной камеры
+node.app.jet_fighter_g1,"Jet fighter, gen 1","Реактивный истребитель, поколение 1"
+node.app.jet_fighter_g2,"Jet fighter, gen 2","Реактивный истребитель, поколение 2"
+node.app.jet_fighter_g3,"Jet fighter, gen 3","Реактивный истребитель, поколение 3"
+node.app.jet_fighter_g4,"Jet fighter, gen 4","Реактивный истребитель, поколение 4"

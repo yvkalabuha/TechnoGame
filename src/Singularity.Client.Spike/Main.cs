@@ -12,7 +12,8 @@ namespace Singularity.Client.Spike;
 public sealed partial class Main : Node3D
 {
     static readonly Color PaperColor = new("F2EFE6");
-    static readonly string[] TintHex = { "EBCDB7", "C8D7E8", "D5E0BC", "E3D0E3", "EFE0AE", "BEDCD1", "E0CAC2", "CDCDE6" };
+    // Warm land tints only: none is close to the blue-grey sea (review item 5).
+    static readonly string[] TintHex = { "EBCDB7", "D5E0BC", "E3D0E3", "EFE0AE", "E0CAC2", "D4C79F", "DDB9A0", "C9D4A8" };
 
     GlobeData _data = new();
     ShaderMaterial _globeMat;
@@ -38,10 +39,12 @@ public sealed partial class Main : Node3D
     SignalField _signal;
     ActorPanel _actorPanel;
     TechTree _tree;
-    Label _loading;
+    Label _loading, _help;
+    Button _helpBtn;
+    bool _debug;
     int[] _actorCountry;                 // actor index -> country id (0 = none)
-    bool _shots; int _shotStep; double _shotT; string _shotDir = "../../docs/ui/prototypes/client-v02";
-    string _shotLog = ""; int _shotCand = -1;
+    bool _shots; int _shotStep; double _shotT; string _shotDir = "../../docs/ui/prototypes/client-v03";
+    string _shotLog = ""; int _shotCand = -1; long _shotTick;
 
     // bench
     bool _shotDone; bool _bench; int _phase = -1; double _phaseT; readonly List<double> _frames = new();
@@ -61,6 +64,12 @@ public sealed partial class Main : Node3D
         var outIdx = Array.IndexOf(args, "--out");
         if (outIdx >= 0 && outIdx + 1 < args.Length) _outDir = args[outIdx + 1];
 
+        Fonts.Load();
+        Loc.Load();
+        var langIdx = Array.IndexOf(args, "--lang");
+        if (langIdx >= 0 && langIdx + 1 < args.Length) Loc.SetLang(args[langIdx + 1]);
+        _debug = args.Contains("--debug");
+
         var env = new Godot.Environment { BackgroundMode = Godot.Environment.BGMode.Color, BackgroundColor = PaperColor };
         AddChild(new WorldEnvironment { Environment = env });
 
@@ -75,7 +84,7 @@ public sealed partial class Main : Node3D
         AddChild(_cam);
         UpdateCamera();
 
-        var top = _data.Countries.OrderByDescending(c => c.BoxArea).Take(30).ToList();
+        var top = _data.Countries.Where(c => Names.Country(c.Name) != null).OrderByDescending(c => c.BoxArea).Take(30).ToList();
         foreach (var c in top) _data.ComputeLabelPoint(c);
         Mark("label_points_ms");
 
@@ -83,12 +92,11 @@ public sealed partial class Main : Node3D
         AddChild(layer);
         _overlay = new Overlay();
         layer.AddChild(_overlay);
-        _overlay.Setup(_cam, top);
-        _overlay.AddTag(31, 49, "■ Узкое место (макет)");
-        _overlay.AddTag(-55, -10, "▲ Дефицит (макет)");
-        _overlay.AddTag(120, 30, "■ Срыв стройки (макет)");
-        _hud = new Label { Position = new Vector2(12, 0) };
-        _hud.AnchorTop = 1; _hud.AnchorBottom = 1; _hud.OffsetTop = -80; _hud.AddThemeFontSizeOverride("font_size", 12); _hud.OffsetBottom = -4;
+        _overlay.Setup(_cam);
+        foreach (var c in top) _overlay.AddLabel(c, false);
+        _hud = new Label { Position = new Vector2(12, 0), Visible = _debug };
+        _hud.AddThemeFontOverride("font", Fonts.Mono);
+        _hud.AnchorTop = 1; _hud.AnchorBottom = 1; _hud.OffsetTop = -120; _hud.AddThemeFontSizeOverride("font_size", 14); _hud.OffsetBottom = -46;
         _hud.AddThemeColorOverride("font_color", new Color("1D1E20"));
         _hud.AddThemeColorOverride("font_outline_color", PaperColor);
         _hud.AddThemeConstantOverride("outline_size", 4);
@@ -105,12 +113,14 @@ public sealed partial class Main : Node3D
         else BuildClient(layer);
     }
 
-    // ---------- v0.2 client ----------
+    public override void _ExitTree() => _host?.Dispose();
+
+    // ---------- client ----------
     void BuildClient(CanvasLayer layer)
     {
         _host = new SimHost();
         _host.Start();
-        _loading = Ui.Lbl("Загрузка сценария…", 18);
+        _loading = Ui.Lbl("ui.loading", 18);
         _loading.Position = new Vector2(20, 60);
         layer.AddChild(_loading);
         _tintsReady = false;
@@ -130,7 +140,7 @@ public sealed partial class Main : Node3D
                 var c = _data.Countries.First(x => x.Name == cn);
                 _actorCountry[i] = c.Id; lut[c.Id] = 255;
                 _data.ComputeLabelPoint(c);
-                _overlay.AddTag(c.LabelPoint.X, c.LabelPoint.Y, ids[i], false);
+                _overlay.AddLabel(c, true);
             }
         _globeMat.SetShaderParameter("slice_lut", ImageTexture.CreateFromImage(Image.CreateFromData(256, 1, false, Image.Format.R8, lut)));
         _globeMat.SetShaderParameter("dim_others", 0.6f);
@@ -140,11 +150,13 @@ public sealed partial class Main : Node3D
         _signal = new SignalField(_host, ids);
         _signal.SetAnchorsPreset(Control.LayoutPreset.TopWide);
         _signal.PowerChosen += i => ChoosePower(i, false);
+        _signal.Debug = _debug;
         layer.AddChild(_signal);
 
-        _actorPanel = new ActorPanel(_host) { Visible = false };
-        _actorPanel.AnchorLeft = 1; _actorPanel.AnchorRight = 1; _actorPanel.AnchorBottom = 1;
-        _actorPanel.OffsetLeft = -560; _actorPanel.OffsetRight = -10; _actorPanel.OffsetTop = 52; _actorPanel.OffsetBottom = -10;
+        // Inset sized by its content: anchored top-right, no bottom anchor.
+        _actorPanel = new ActorPanel(_host) { Visible = false, Debug = _debug };
+        _actorPanel.AnchorLeft = 1; _actorPanel.AnchorRight = 1;
+        _actorPanel.OffsetLeft = -540; _actorPanel.OffsetRight = -10; _actorPanel.OffsetTop = 56;
         _actorPanel.Closed += () => _actorPanel.Visible = false;
         _actorPanel.OpenTree += () => OpenTree(0);
         layer.AddChild(_actorPanel);
@@ -154,9 +166,23 @@ public sealed partial class Main : Node3D
         _tree.OffsetTop = 44;
         _tree.Closed += () => _tree.Visible = false;
         layer.AddChild(_tree);
+        BuildHelp(layer);
         _loading.Visible = false;
         _tintsReady = true;
         _host.WhyActor = 0;
+    }
+
+    void BuildHelp(CanvasLayer layer)
+    {
+        _help = Ui.Lbl("help.text", 14, Ui.Ink2);
+        _help.AddThemeStyleboxOverride("normal", Ui.Box(Ui.Sheet, Ui.Ink, 1, 10));
+        _help.Position = new Vector2(12, 0); _help.AnchorTop = 1; _help.AnchorBottom = 1; _help.OffsetTop = -150; _help.OffsetBottom = -50; _help.OffsetLeft = 12;
+        _help.Visible = false;
+        layer.AddChild(_help);
+        _helpBtn = Ui.Btn("?", () => _help.Visible = !_help.Visible);
+        _helpBtn.TooltipText = "tip.help";
+        _helpBtn.AnchorTop = 1; _helpBtn.AnchorBottom = 1; _helpBtn.OffsetTop = -42; _helpBtn.OffsetBottom = -10; _helpBtn.OffsetLeft = 12; _helpBtn.OffsetRight = 48;
+        layer.AddChild(_helpBtn);
     }
 
     void OpenTree(int mode) { _tree.ShowFor(_signal.Actor, mode); }
@@ -366,6 +392,12 @@ public sealed partial class Main : Node3D
             else if (sk.Keycode == Key.T) { if (_tree.Visible) _tree.Visible = false; else OpenTree(0); }
             else _signal.SetSpeed((int)(sk.Keycode - Key.Key1) + 1);
         }
+        else if (e is InputEventKey f3 && f3.Pressed && f3.Keycode == Key.F3)
+        {
+            _debug = !_debug; _hud.Visible = _debug;
+            if (_signal != null) { _signal.Debug = _debug; _actorPanel.Debug = _debug; }
+        }
+        else if (e is InputEventKey f1 && f1.Pressed && f1.Keycode == Key.F1 && _help != null) _help.Visible = !_help.Visible;
         else if (e is InputEventKey key && key.Pressed && key.Keycode == Key.H)
         {
             _hatchScreenSpace = !_hatchScreenSpace;
@@ -396,18 +428,21 @@ public sealed partial class Main : Node3D
         _t += delta;
         if (_host != null && !_tintsReady)
         {
-            if (_host.Fatal != null) { _loading.Text = "Ошибка симуляции: " + _host.Fatal; GD.PrintErr(_host.Fatal); }
+            if (_host.Fatal != null) { _loading.Text = Loc.T("ui.simerror") + _host.Fatal; GD.PrintErr(_host.Fatal); }
             else if (_host.Ready) FinishClient();
-            else _loading.Text = _host.Status;
+            else _loading.Text = Loc.T(_host.Status);
         }
+        if (_helpBtn != null) { _helpBtn.Visible = !_tree.Visible; if (_tree.Visible) _help.Visible = false; }
         if (_shots && _tintsReady) ShotStep(delta);
         if (_bench) BenchStep(delta);
         UpdateCamera();
         AnimateObjects();
-        string sel = _selected == 0 ? "-" : _data.Countries[_selected - 1].Name;
-        _hud.Text = $"FPS {Engine.GetFramesPerSecond()}  draw calls {(long)Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame)}  " +
-                    $"labels {_overlay.VisibleLabels}  docked tags {_overlay.DockedTags}\n" +
-                    $"Region: {sel}\nЗаводик, самолёт, метки: макет (из спайка)\nЛКМ-тяга = вращать, колесо = масштаб, клик по державе среза = панель; Пробел пауза, 1/2/3 темп, T дерево знаний";
+        if (_debug)
+        {
+            string sel = _selected == 0 ? "-" : _data.Countries[_selected - 1].Name;
+            _hud.Text = $"FPS {Engine.GetFramesPerSecond()}  draw calls {(long)Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame)}  labels {_overlay.VisibleLabels}\n" +
+                        $"region: {sel}  (factory, aircraft: spike mock)";
+        }
     }
 
     void AnimateObjects()
@@ -437,38 +472,58 @@ public sealed partial class Main : Node3D
             img.SavePng(Path.Combine(dir, name));
         }
         var s = _host.Snap;
+        var vp = GetViewport().GetVisibleRect().Size;
         switch (_shotStep)
         {
             case 0:
                 _signal.SetSpeed(3); ChoosePower(0); _shotStep = 1; _shotT = 0; break;
             case 1 when _shotT >= 3:
+                // Pause, move 10 points from procurement to R (as the sliders would) and send: the command must stay pending.
                 _shotLog += $"before: date {s.Date} tick {s.Tick} shares_in_force {Fmt(s.SharesInForce[0])} tick_ms {s.LastTickMs:F2}\n";
-                // Move 10 points from procurement to R: 0.35/0.12/0.08/0.40/0.05 -> 0.45/0.12/0.08/0.30/0.05 (values of profile P1 may differ; the sum is 1).
-                var b = s.SharesInForce[0] ?? new Singularity.Core.Policy.PolicyParams().Shares(s.View.Actors[0].Profile);
-                var f = Singularity.Kernel.Fx6.FromRaw(100_000);
-                _host.Submit(new Singularity.Core.Commands.SetBudgetShares(0, new Singularity.Core.Policy.BudgetShares(b.Research + f, b.Capability, b.Effort, b.Procurement - f, b.Quality)), "доли бюджета (тест)");
-                _shotLog += $"submitted: R {(b.Research + f).ToDouble():F2}, procurement {(b.Procurement - f).ToDouble():F2}\n";
+                _signal.SetSpeed(0);
+                _shotTick = s.Tick;
+                _actorPanel.ShotEdit(0, 45);
                 _shotStep = 2; _shotT = 0; break;
-            case 2 when _shotT >= 3:
-                _shotLog += $"after: date {s.Date} tick {s.Tick} shares_in_force {Fmt(s.SharesInForce[0])} verdict '{s.LastVerdict}' outcome '{s.LastOutcome}' tick_ms {s.LastTickMs:F2}\n";
-                Shot("globe_panel.png"); Shot("signal_field.png", new Rect2I(0, 0, (int)GetViewport().GetVisibleRect().Size.X, 48));
-                _shotStep = 3; _shotT = 0; break;
-            case 3:
+            case 2 when _shotT >= 1.2:
+                _shotLog += $"paused: tick {s.Tick} (was {_shotTick}), pending {s.Pending}, last {s.Last.Status}\n";
+                Shot("globe_panel_pending.png");
+                _signal.SetSpeed(3); _shotStep = 3; _shotT = 0; break;
+            case 3 when _shotT >= 3:
+                _shotLog += $"after: date {s.Date} tick {s.Tick} shares_in_force {Fmt(s.SharesInForce[0])} last {s.Last.Status} pending {s.Pending} tick_ms {s.LastTickMs:F2}\n";
+                Shot("globe_panel.png"); Shot("signal_field.png", new Rect2I(0, 0, (int)vp.X, 52));
+                // A refused command (shares do not sum to 1) lights the ОТКАЗ place.
+                _host.Submit(new Singularity.Core.Commands.SetBudgetShares(0, new Singularity.Core.Policy.BudgetShares(
+                    Singularity.Kernel.Fx6.FromRaw(1_000_000), Singularity.Kernel.Fx6.FromRaw(500_000), default, default, default)), "cmd.budget");
+                _shotStep = 4; _shotT = 0; break;
+            case 4 when _shotT >= 1.0:
+                _shotLog += $"refusal: last {s.Last.Status} rejected_flag {s.LastRejected} reason {s.Last.Reason}\n";
+                Shot("signal_active_new.png", new Rect2I(0, 0, (int)vp.X, 52)); Shot("globe_panel_refused.png");
+                _signal.AckAll(); _shotStep = 5; _shotT = 0; break;
+            case 5 when _shotT >= 0.4:
+                Shot("signal_active_acked.png", new Rect2I(0, 0, (int)vp.X, 52)); _shotStep = 6; _shotT = 0; break;
+            case 6:
                 // Pick the first power that has a yearly requirement (a goal for the tree).
                 if (_shotT > 0.4)
                 {
                     bool has = s.WhyActor == _shotCand && s.Target != null;
                     if (_shotCand >= 0) _shotLog += $"why_not actor {_host.Layout.ActorIds[_shotCand]}: target {(s.Target is { } tt ? tt.Kind + " " + tt.Id : "none")}, links {s.Links.Count}\n";
-                    if (has || _shotCand >= _host.Layout.ActorIds.Length - 1) { ChoosePower(Math.Max(_shotCand, 0)); OpenTree(0); _shotStep = 4; _shotT = 0; }
+                    if (has || _shotCand >= _host.Layout.ActorIds.Length - 1) { ChoosePower(Math.Max(_shotCand, 0)); OpenTree(0); _shotStep = 7; _shotT = 0; }
                     else { _shotCand++; _host.WhyActor = _shotCand; _shotT = 0; }
                 }
                 break;
-            case 4 when _shotT >= 1.5: Shot("tech_tree_a.png"); _tree.SetMode(1); _shotStep = 5; _shotT = 0; break;
-            case 5 when _shotT >= 1.5:
+            case 7 when _shotT >= 1.5: Shot("tech_tree_a.png"); _tree.SetMode(1); _shotStep = 8; _shotT = 0; break;
+            case 8 when _shotT >= 1.0:
                 Shot("tech_tree_b.png");
+                _signal.SetLang("en"); _shotStep = 9; _shotT = 0; break;
+            case 9 when _shotT >= 1.0:
+                Shot("tech_tree_b_en.png"); _tree.SetMode(0); _shotStep = 10; _shotT = 0; break;
+            case 10 when _shotT >= 0.8:
+                Shot("tech_tree_a_en.png"); _tree.Visible = false; _shotStep = 11; _shotT = 0; break;
+            case 11 when _shotT >= 0.8:
+                Shot("globe_panel_en.png"); Shot("signal_field_en.png", new Rect2I(0, 0, (int)vp.X, 52));
                 _shotLog += $"final: date {s.Date} tick {s.Tick}\n";
                 Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog); GD.Print(_shotLog);
-                GetTree().Quit(); _shotStep = 6; break;
+                GetTree().Quit(); _shotStep = 12; break;
         }
     }
 

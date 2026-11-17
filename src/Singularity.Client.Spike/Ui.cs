@@ -3,12 +3,17 @@ using Godot;
 
 namespace Singularity.Client.Spike;
 
-/// <summary>Design-system tokens (UI_DESIGN_SYSTEM): paper register, square corners, ink lines, no shadows or glow. Fonts: engine default (OpenGost not bundled in the prototype).</summary>
+public enum FontKind { Text, Mono, Draft, Map }
+
+/// <summary>Design-system tokens (UI_DESIGN_SYSTEM): paper register, square corners, ink lines, no shadows or glow. Minimum size 14 px.</summary>
 public static class Ui
 {
+    public const int MinSize = 14;
     public static readonly Color Paper = new("F2EFE6"), Sheet = new("FAF8F2"), Hover = new("E8E4D8"), Ink = new("1D1E20"),
         Ink2 = new("55575A"), Ink3 = new("6E6C66"), Rule = new("BCB6A8"), Normal = new("86837C"),
-        Alarm = new("C42A1C"), Warn = new("E89A1A"), WarnText = new("8A5300"), Command = new("2347A8"), Seq2 = new("C2CDD3");
+        Alarm = new("C42A1C"), Warn = new("E89A1A"), Command = new("2347A8"), Seq2 = new("C2CDD3");
+
+    public static Font FontOf(FontKind k) => k switch { FontKind.Mono => Fonts.Mono, FontKind.Draft => Fonts.Draft, FontKind.Map => Fonts.Map, _ => Fonts.Text };
 
     public static StyleBoxFlat Box(Color bg, Color? border = null, int bw = 1, float margin = 6)
     {
@@ -17,15 +22,28 @@ public static class Ui
         return s;
     }
 
-    public static Label Lbl(string text, int size = 14, Color? color = null)
+    /// <summary>Text may be a localization key: Godot translates it and re-translates it when the locale changes.</summary>
+    public static Label Lbl(string text, int size = 14, Color? color = null, FontKind kind = FontKind.Text)
     {
         var l = new Label { Text = text, MouseFilter = Control.MouseFilterEnum.Ignore };
-        l.AddThemeFontSizeOverride("font_size", size);
+        l.AddThemeFontOverride("font", FontOf(kind));
+        l.AddThemeFontSizeOverride("font_size", Math.Max(size, MinSize));
         l.AddThemeColorOverride("font_color", color ?? Ink);
         return l;
     }
 
-    public static Label Wrap(string text, int size = 13, Color? color = null)
+    public static Label Num(string text, int size = 14, Color? color = null, int width = 0)
+    {
+        var l = Lbl(text, size, color, FontKind.Mono);
+        l.HorizontalAlignment = HorizontalAlignment.Right;
+        if (width > 0) l.CustomMinimumSize = new Vector2(width, 0);
+        return l;
+    }
+
+    /// <summary>Block heading: drafting face, caps by the key text, ink-3.</summary>
+    public static Label Head(string key) => Lbl(key, 14, Ink3, FontKind.Draft);
+
+    public static Label Wrap(string text, int size = 14, Color? color = null)
     {
         var l = Lbl(text, size, color);
         l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
@@ -34,61 +52,109 @@ public static class Ui
         return l;
     }
 
-    /// <summary>Mock marker: every control or figure without a Session API carries it.</summary>
-    public static Label Mock(string what = "макет")
+    /// <summary>Row with a small square marker (colour only here: the rule is «colour = deviation») and ink text.</summary>
+    public static HBoxContainer MarkedRow(Color marker, Control text)
     {
-        var l = Lbl(what, 11, WarnText);
-        l.AddThemeStyleboxOverride("normal", Box(new Color(Warn, 0.18f), WarnText, 1, 3));
+        var r = new HBoxContainer();
+        r.AddThemeConstantOverride("separation", 6);
+        var m = new ColorRect { Color = marker, CustomMinimumSize = new Vector2(9, 9), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
+        r.AddChild(m); r.AddChild(text);
+        return r;
+    }
+
+    /// <summary>Mock marker: neutral plate (ink-3), never a warning colour. Every control or figure without a Session API carries it.</summary>
+    public static Label Mock(string key = "ui.mock")
+    {
+        var l = Lbl(key, 14, Ink3);
+        var sb = Box(Paper, Ink3, 1, 4);
+        l.AddThemeStyleboxOverride("normal", sb);
         return l;
     }
 
-    public static Button Btn(string text, Action onPress, int size = 14, bool toggled = false)
+    public static Button Btn(string text, Action onPress, int size = 14, bool command = false)
     {
         var b = new Button { Text = text, FocusMode = Control.FocusModeEnum.None, ToggleMode = false };
-        b.AddThemeFontSizeOverride("font_size", size);
-        Style(b, toggled);
+        b.AddThemeFontOverride("font", Fonts.Text);
+        b.AddThemeFontSizeOverride("font_size", Math.Max(size, MinSize));
+        StyleButton(b, command);
         b.Pressed += onPress;
         return b;
     }
 
-    public static void Style(Button b, bool on)
+    /// <summary>Plain button: sheet with an ink frame. Command button (an order is ready): ultramarine plate, white text.</summary>
+    public static void StyleButton(Button b, bool command)
     {
-        var normal = Box(on ? Ink : Sheet, Ink, 1, 8);
-        var hover = Box(on ? Ink : Hover, Ink, 1, 8);
-        b.AddThemeStyleboxOverride("normal", normal);
-        b.AddThemeStyleboxOverride("hover", hover);
-        b.AddThemeStyleboxOverride("pressed", Box(Ink, Ink, 1, 8));
-        b.AddThemeStyleboxOverride("disabled", Box(Paper, Rule, 1, 8));
+        b.AddThemeStyleboxOverride("normal", command ? Box(Command, Ink, 1, 10) : Box(Sheet, Ink, 1, 10));
+        b.AddThemeStyleboxOverride("hover", command ? Box(Command.Lightened(0.1f), Ink, 1, 10) : Box(Hover, Ink, 1, 10));
+        b.AddThemeStyleboxOverride("pressed", Box(Ink, Ink, 1, 10));
+        b.AddThemeStyleboxOverride("disabled", Box(Paper, Rule, 1, 10));
         foreach (var n in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color" })
-            b.AddThemeColorOverride(n, on ? Paper : Ink);
+            b.AddThemeColorOverride(n, command ? Colors.White : Ink);
+        b.AddThemeColorOverride("font_pressed_color", Paper);
         b.AddThemeColorOverride("font_disabled_color", Ink3);
     }
+
+    public static ColorRect VRule() => new() { Color = Ink, CustomMinimumSize = new Vector2(2, 26), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
 }
 
-/// <summary>DraftSegment: a row of mutually exclusive cells, the selected one inked.</summary>
+/// <summary>DraftSegment: mutually exclusive cells of one width (the widest label in the current language), no fill:
+/// the selected cell has an ink frame and a thick bottom tick, the others a thin rule frame. Items are keys or literals.</summary>
 public sealed partial class Segment : HBoxContainer
 {
     readonly Button[] _cells;
+    readonly string[] _items;
+    readonly int _size;
+    readonly bool _translate;
     public event Action<int> Changed;
     public int Selected { get; private set; }
 
-    public Segment(string[] items, int selected, int size = 14)
+    public Segment(string[] items, int selected, int size = 14, bool translate = true)
     {
+        _items = items; _size = Math.Max(size, Ui.MinSize); _translate = translate;
         AddThemeConstantOverride("separation", -1);
         _cells = new Button[items.Length];
         for (int i = 0; i < items.Length; i++)
         {
             int k = i;
-            _cells[i] = Ui.Btn(items[i], () => Select(k, true), size);
+            _cells[i] = new Button { Text = items[i], FocusMode = FocusModeEnum.None, ClipText = false };
+            _cells[i].AddThemeFontOverride("font", Fonts.Text);
+            _cells[i].AddThemeFontSizeOverride("font_size", _size);
+            _cells[i].Pressed += () => Select(k, true);
             AddChild(_cells[i]);
         }
         Select(selected, false);
+        Loc.Changed += Fit;
+        TreeExiting += () => Loc.Changed -= Fit;
+        Fit();
+    }
+
+    /// <summary>Same width for every cell so that columns of segments line up and no label is clipped in either language.</summary>
+    void Fit()
+    {
+        float w = 0;
+        foreach (var it in _items) w = Math.Max(w, Fonts.Text.GetStringSize(_translate ? Loc.T(it) : it, HorizontalAlignment.Left, -1, _size).X);
+        foreach (var c in _cells) c.CustomMinimumSize = new Vector2(MathF.Ceiling(w) + 18, 0);
     }
 
     public void Select(int i, bool notify)
     {
         Selected = i;
-        for (int k = 0; k < _cells.Length; k++) Ui.Style(_cells[k], k == i);
+        for (int k = 0; k < _cells.Length; k++) Style(_cells[k], k == i);
         if (notify) Changed?.Invoke(i);
+    }
+
+    static void Style(Button b, bool on)
+    {
+        StyleBoxFlat Mk(Color bg, bool sel)
+        {
+            var s = Ui.Box(bg, sel ? Ui.Ink : Ui.Rule, sel ? 2 : 1, 8);
+            if (sel) s.BorderWidthBottom = 5;
+            return s;
+        }
+        b.AddThemeStyleboxOverride("normal", Mk(Ui.Sheet, on));
+        b.AddThemeStyleboxOverride("hover", Mk(Ui.Hover, on));
+        b.AddThemeStyleboxOverride("pressed", Mk(Ui.Hover, true));
+        foreach (var n in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color" })
+            b.AddThemeColorOverride(n, on ? Ui.Ink : Ui.Ink2);
     }
 }

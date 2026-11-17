@@ -14,12 +14,21 @@ using Singularity.Session;
 
 namespace Singularity.Client.Spike;
 
-/// <summary>What the UI thread reads: one immutable reference, replaced by the simulation thread (ADR-0014 п. 4).</summary>
+public enum CmdStatus { None, Pending, Applied, Rejected, Error }
+
+/// <summary>Result of the last command, language-neutral (the UI formats it): <paramref name="Reason"/> and <paramref name="Message"/> are Session text, shown under F3 only.</summary>
+public sealed record CmdResult(CmdStatus Status, string LabelKey, int LabelArg, string Reason, string Message);
+
+/// <summary>What the UI thread reads: one immutable reference, replaced by the simulation thread (ADR-0014 п. 4).
+/// <paramref name="Pending"/> = accepted commands that no tick has applied yet (always so while paused); <paramref name="CmdSeq"/> counts handled commands.</summary>
 public sealed record HostSnapshot(
     long Tick, CivilDate Date, SliceView View, int Speed,
-    string LastVerdict, string LastOutcome, long Seq,
+    CmdResult Last, int Pending, long CmdSeq, string LastOutcome, long Seq,
     ImmutableArray<BudgetShares?> SharesInForce,
-    int WhyActor, WhyNotTarget? Target, IReadOnlyList<Link> Links, string WhyError, double LastTickMs);
+    int WhyActor, WhyNotTarget? Target, IReadOnlyList<Link> Links, string WhyError, double LastTickMs)
+{
+    public bool LastRejected => Last.Status == CmdStatus.Rejected;
+}
 
 /// <summary>
 /// Runs SliceSession on a background thread. The UI thread never touches the session: it reads <see cref="Snap"/>, and sends
@@ -36,13 +45,15 @@ public sealed class SimHost : IDisposable
     int _speed;
     int _whyActor;
     volatile HostSnapshot _snap;
-    volatile string _status = "Загрузка сценария…";
+    volatile string _status = "status.loading";
     volatile string _fatal;
 
     // Simulation-thread state
     SliceSession _session;
     int _localN;
-    string _lastVerdict = "", _lastOutcome = "";
+    CmdResult _last = new(CmdStatus.None, "", 0, "", "");
+    string _lastOutcome = "";
+    int _pending; long _cmdSeq;
     long _seq;
     SliceView _lastWhyView;
     int _lastWhyActor = -1;
@@ -63,16 +74,16 @@ public sealed class SimHost : IDisposable
     public int Speed { get => Volatile.Read(ref _speed); set => Volatile.Write(ref _speed, value); }
     public int WhyActor { get => Volatile.Read(ref _whyActor); set { Volatile.Write(ref _whyActor, value); } }
 
-    /// <summary>Queues a command of the player (source class Player, id 0). Result shows in <see cref="HostSnapshot.LastVerdict"/>.</summary>
-    public void Submit(SliceCommand command, string label)
+    /// <summary>Queues a command of the player (source class Player, id 0). While paused it stays pending and applies at the first tick after unpause.</summary>
+    public void Submit(SliceCommand command, string labelKey, int labelArg = 0)
     {
         _jobs.Enqueue(() =>
         {
             CommandVerdict v = _session.Submit(SourceClass.Player, 0, ++_localN, command);
-            _lastVerdict = v.Accepted ? $"{label}: принято, применится на ближайшем тике" : $"{label}: отказ — {v.Reason}: {v.Message}";
-            // While paused, one tick applies the command so that the next View shows it (the journal holds it either way).
-            if (v.Accepted && Speed == 0) Advance(1);
-            else Publish();
+            _cmdSeq++;
+            if (v.Accepted) { _pending++; _last = new CmdResult(CmdStatus.Pending, labelKey, labelArg, "", ""); }
+            else _last = new CmdResult(CmdStatus.Rejected, labelKey, labelArg, v.Reason.ToString(), v.Message);
+            Publish();
         });
     }
 
@@ -92,7 +103,7 @@ public sealed class SimHost : IDisposable
         {
             string root = Environment.GetEnvironmentVariable("SINGULARITY_ROOT") ?? RepoRoot();
             Data = ModLoader.Load(Path.Combine(root, "mods", "core"));
-            _status = "Создание сессии…";
+            _status = "status.session";
             _session = SliceSession.Create(Data, new SliceRunConfig { Seed = 7 });
             Layout = _session.Layout;
             var arr = ImmutableArray.CreateBuilder<BudgetShares?>(Layout.ActorIds.Length);
@@ -103,7 +114,16 @@ public sealed class SimHost : IDisposable
             double owed = 0, last = sw.Elapsed.TotalSeconds;
             while (!_stop)
             {
-                while (_jobs.TryDequeue(out var job)) job();
+                while (_jobs.TryDequeue(out var job))
+                {
+                    try { job(); }
+                    catch (Exception e)
+                    {
+                        // A failed job does not stop the simulation: it shows as the last command result.
+                        _cmdSeq++; _last = new CmdResult(CmdStatus.Error, "cmd.job", 0, e.GetType().Name, e.Message);
+                        Publish();
+                    }
+                }
                 double now = sw.Elapsed.TotalSeconds, dt = Math.Min(now - last, 0.25);
                 last = now;
                 int sp = Speed;
@@ -130,7 +150,12 @@ public sealed class SimHost : IDisposable
         for (long i = 0; i < ticks && !_stop; i++)
         {
             _session.Step(1);
-            if (_session.View != _lastWhyView) Publish();
+            if (_pending > 0)
+            {
+                _pending = 0;
+                if (_last.Status == CmdStatus.Pending) _last = _last with { Status = CmdStatus.Applied };
+            }
+            if (!ReferenceEquals(_session.View, _lastWhyView)) Publish();
         }
         _lastTickMs = ticks > 0 ? sw.Elapsed.TotalMilliseconds / ticks : 0;
         Publish();
@@ -158,8 +183,9 @@ public sealed class SimHost : IDisposable
             _lastWhyView = v; _lastWhyActor = wa;
         }
         _lastOutcome = _session.Outcomes.Count > 0 ? _session.Outcomes[^1] : "";
-        _snap = new HostSnapshot(_session.Tick, _session.Date, v, Speed, _lastVerdict, _lastOutcome, ++_seq, _shares, wa, _target, _links, _whyErr, _lastTickMs);
+        _snap = new HostSnapshot(_session.Tick, _session.Date, v, Speed, _last, _pending, _cmdSeq, _lastOutcome, ++_seq, _shares, wa, _target, _links, _whyErr, _lastTickMs);
     }
 
-    public void Dispose() { _stop = true; _thread.Join(2000); }
+    /// <summary>Stops the simulation thread; called from the node's _ExitTree.</summary>
+    public void Dispose() { _stop = true; if (_thread.IsAlive) _thread.Join(2000); }
 }

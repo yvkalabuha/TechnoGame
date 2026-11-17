@@ -1,0 +1,8 @@
+before: date 1945-11-28 tick 88 shares_in_force 0.28/0.15/0.10/0.42/0.05 tick_ms 0.00
+paused: tick 88 (was 88), pending 1, last Pending
+after: date 1946-02-24 tick 176 shares_in_force 0.45/0.11/0.07/0.34/0.03 last Applied pending 0 tick_ms 0.00
+refusal: last Rejected rejected_flag True reason BadShares
+why_not actor USA: target none, links 0
+why_not actor GBR: target none, links 0
+why_not actor SUN: target Requirement 1, links 2
+final: date 1946-10-26 tick 420

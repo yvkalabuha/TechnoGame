@@ -1,6 +1,6 @@
 # Singularity.Client.Spike
 
-Godot 4 .NET client prototype: spike (TASK-0067) continued as v0.2 (TASK-0069): signal field, actor inset, tech tree A/B, wired to `Singularity.Session` (background thread, ADR-0014 п. 4). Not production code, not in `Singularity.sln`
+Godot 4 .NET client prototype: spike (TASK-0067) continued as v0.2 (TASK-0069) and v0.3 (TASK-0070): signal field, actor inset, tech tree A/B, wired to `Singularity.Session` (background thread, ADR-0014 п. 4). Not production code, not in `Singularity.sln`
 (its own `Directory.Build.props` stops `src/Directory.Build.props`). Report: `docs/ui/prototypes/globe-spike-report.md`.
 
 ## Setup
@@ -25,7 +25,17 @@ Regenerate the data: download
 `https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson`,
 keep per feature `NAME`, `ISO_A3_EH`, geometry rounded to 3 decimals.
 
+## Runtime requirements
+Godot 4.7.2 mono is a .NET 8 host; the game assembly and Core/Kernel/Session are net10.0, so the **.NET 10 runtime must be installed next to Godot** (the host rolls forward, see below). `run-globe-spike.sh` puts `$HOME/.dotnet` on PATH, imports assets and builds first.
+
+## v0.3 (TASK-0070)
+- Fonts (OFL, `assets/fonts/`): Golos Text (interface), PT Mono (numbers), Jura (headings), Literata (map labels); minimum size 14 px (`Ui.MinSize`).
+- Localization (decision #83): `locale/ui.csv` (interface) and `locale/data.csv` (node, country, actor names) with columns `keys,en,ru`, loaded at startup into Godot `Translation` objects (`Loc.cs`); language switch RU/EN in the signal field, RU by default. `Names.cs` is the only reader of `data.csv`.
+- Keys: Space pause, 1/2/3 tempo, T tech tree, F3 debug (FPS, tick time, Session text), F1 help. `--lang en|ru`, `--debug`.
+- A command sent on pause stays pending (`HostSnapshot.Pending`) and applies at the first tick after unpause.
+- Known stubs: ComposeDesign/StartSeries, research priorities, node progress shares, ETA intervals, G1-G4 clock arcs, signals GOAL/GAP/WAR have no Session API (shown with the neutral «mock» marker); the layer names are in the legend, not on the radial axis.
+
 ## v0.2 (TASK-0069)
 - net10.0: the Godot 4.7.2 host runs on .NET 8 by default but its `GodotPlugins.runtimeconfig.json` has `rollForward: LatestMajor`, so with the .NET 10 runtime installed the net10.0 game assembly and Core/Kernel/Session (ProjectReference) load as is. `dotnet build` of the csproj needs the .NET 10 SDK on PATH (`run-globe-spike.sh` does it).
-- `./run-globe-spike.sh --shots` plays a scripted session and writes screenshots and `run-log.txt` to `docs/ui/prototypes/client-v02/`.
+- `./run-globe-spike.sh --shots` plays a scripted session and writes screenshots (RU, then EN) and `run-log.txt` to `docs/ui/prototypes/client-v03/`.
 - Keys: Space pause, 1/2/3 tempo, T tech tree. Everything marked «макет» has no Session API.

@@ -19,7 +19,7 @@ uniform float hatch_period = 6.0;
 uniform float hatch_width = 1.5;
 uniform bool hatch_in_screen_space = true;
 uniform bool show_hatch = true;
-uniform sampler2D slice_lut : filter_nearest, repeat_disable; // 256x1, R = 1 for the countries of the slice
+uniform sampler2D slice_lut : filter_nearest, repeat_disable, hint_default_black; // 256x1, R = 1 for the countries of the slice
 uniform float dim_others = 0.0;  // 0..1: pulls the tints of countries outside the slice towards paper
 uniform vec3 paper = vec3(0.949, 0.937, 0.902);
 
@@ -33,6 +33,7 @@ vec3 tint_of(int id) {
 	int t = int(texelFetch(tint_lut, ivec2(id, 0), 0).r * 255.0 + 0.5);
 	return tints[t];
 }
+bool is_slice(int i) { return i != 0 && texelFetch(slice_lut, ivec2(i, 0), 0).r > 0.5; }
 vec3 line_of(vec3 t) { return t * 0.42; } // stand-in for tint.N.line (L* 40-45)
 
 void fragment() {
@@ -40,7 +41,7 @@ void fragment() {
 	int id = id_at(uv);
 	vec3 col = (id == 0) ? sea_color : tint_of(id);
 	if (id != 0 && texelFetch(slice_lut, ivec2(id, 0), 0).r < 0.5) col = mix(col, paper, dim_others);
-	if (id == selected_id && id != 0) col = mix(col, ink, 0.14);
+	if (id == selected_id && id != 0) col = mix(col, ink, 0.08);
 
 	if (show_hatch && id == hatch_id && id != 0) {
 		vec2 q = hatch_in_screen_space ? FRAGCOORD.xy : uv * SZ * 0.5;
@@ -72,6 +73,9 @@ void fragment() {
 	bool is_coast = coast > cnt * 0.5;
 	vec3 bc = is_coast ? coast_color : border_color;
 	if (id == selected_id || n0 == selected_id) { if (selected_id != 0) { bc = ink; a = min(1.0, a * 1.6); } }
+	// slice countries: a stronger ink contour so that they read against the sea and the other tints
+	bool sl = (n0 != id && (is_slice(n0) || is_slice(id))) || (n1 != id && (is_slice(n1) || is_slice(id))) || (n2 != id && (is_slice(n2) || is_slice(id))) || (n3 != id && (is_slice(n3) || is_slice(id)));
+	if (sl) { bc = ink; a = min(1.0, a * 2.4); }
 	col = mix(col, bc, a);
 	ALBEDO = col;
 }

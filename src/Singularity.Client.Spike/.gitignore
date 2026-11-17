@@ -2,3 +2,4 @@
 .mono/
 *.import
 bench-out/
+*.translation

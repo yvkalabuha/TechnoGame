@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Immutable;
+using System.Collections.Generic;
 using System.Linq;
 using Godot;
 using Singularity.Core.Commands;
@@ -11,92 +11,115 @@ using Singularity.Session;
 
 namespace Singularity.Client.Spike;
 
-/// <summary>Actor inset: real data of ActorView. Budget sliders send SetBudgetShares; design rows send CancelDesign / CloseLine; why_not from Session.</summary>
+/// <summary>Actor inset (a pasted sheet sized by its content): real ActorView data. Budget sliders send SetBudgetShares; design rows send
+/// CancelDesign / CloseLine; why_not from Session. A command sent on pause stays «pending» with the slider values kept.</summary>
 public sealed partial class ActorPanel : PanelContainer
 {
-    static readonly string[] ShareNames = { "НИОКР (R)", "Мощности (cap)", "Освоение (D)", "Закупки", "Качество (QP)" };
+    const int PanelWidth = 520;
 
     readonly SimHost _host;
     readonly VBoxContainer _root = new();
-    readonly Label _title = Ui.Lbl("", 18);
-    readonly Label _sub = Ui.Wrap("", 12, Ui.Ink2);
-    readonly Label _budget = Ui.Wrap("", 13);
+    readonly ScrollContainer _scroll = new() { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+    readonly Label _title = Ui.Lbl("", 20, null, FontKind.Draft);
+    readonly Label _sub = Ui.Wrap("", 14, Ui.Ink2);
+    readonly Label _budget = Ui.Wrap("", 14);
     readonly HSlider[] _sl = new HSlider[5];
     readonly Label[] _slVal = new Label[5], _slForce = new Label[5];
-    readonly Label _sum = Ui.Lbl("", 13), _verdict = Ui.Wrap("", 12, Ui.Command);
+    readonly Label _sum = Ui.Lbl("", 14, Ui.Ink2, FontKind.Mono);
+    readonly Label _result = Ui.Wrap("", 14, Ui.Ink2);
+    readonly Control _resultMark = new ColorRect { Color = Ui.Alarm, CustomMinimumSize = new Vector2(9, 9), SizeFlagsVertical = SizeFlags.ShrinkCenter, Visible = false };
     readonly Button _apply;
     readonly VBoxContainer _designs = new(), _licence = new(), _why = new();
     readonly int[] _pct = new int[5];
-    bool _edited; int _actor = -1; long _seq = -1; SliceView _lastView; string _lastVerdict;
+    int[] _sentPct;
+    bool _edited, _awaiting; long _sentSeq;
+    int _actor = -1; bool _dirty = true; SliceView _lastView; CmdResult _lastCmd; HostSnapshot _lastSnap;
+    string _sigDesigns = "", _sigLicence = "", _sigWhy = "";
     public event Action OpenTree;
     public event Action Closed;
 
     public int Actor => _actor;
+    public bool Debug { get; set; }
 
     public ActorPanel(SimHost host)
     {
         _host = host;
-        CustomMinimumSize = new Vector2(400, 0);
+        CustomMinimumSize = new Vector2(PanelWidth, 0);
         AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 2, 12));
-        var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
-        AddChild(scroll);
+        AddChild(_scroll);
         _root.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         _root.AddThemeConstantOverride("separation", 6);
-        scroll.AddChild(_root);
+        _scroll.AddChild(_root);
 
         var head = new HBoxContainer();
         var tb = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         tb.AddChild(_title); tb.AddChild(_sub);
         head.AddChild(tb);
-        head.AddChild(Ui.Btn("Дерево знаний", () => OpenTree?.Invoke(), 13));
-        head.AddChild(Ui.Btn("×", () => Closed?.Invoke(), 14));
+        head.AddChild(Ui.Btn("ui.tree", () => OpenTree?.Invoke()));
+        head.AddChild(Ui.Btn("×", () => Closed?.Invoke()));
         _root.AddChild(head);
 
-        Section("БЮДЖЕТ — доли (SetBudgetShares)");
+        Section("panel.budget");
         _root.AddChild(_budget);
+        var hd = new HBoxContainer();
+        hd.AddChild(new Control { CustomMinimumSize = new Vector2(138, 0) });
+        hd.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
+        hd.AddChild(Ui.Num("col.share", 14, Ui.Ink3, 52));
+        hd.AddChild(Ui.Num("col.inforce", 14, Ui.Ink3, 84));
+        _root.AddChild(hd);
         for (int i = 0; i < 5; i++)
         {
             int k = i;
             var r = new HBoxContainer();
-            var n = Ui.Lbl(ShareNames[i], 13); n.CustomMinimumSize = new Vector2(120, 0);
-            _sl[i] = new HSlider { MinValue = 0, MaxValue = 100, Step = 1, SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(120, 22) };
+            var n = Ui.Lbl("share." + i, 14); n.CustomMinimumSize = new Vector2(138, 0);
+            _sl[i] = new HSlider { MinValue = 0, MaxValue = 100, Step = 1, SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(100, 22) };
             StyleSlider(_sl[i]);
             _sl[i].ValueChanged += v => OnSlider(k, (int)v);
-            _slVal[i] = Ui.Lbl("", 13); _slVal[i].CustomMinimumSize = new Vector2(44, 0);
-            _slForce[i] = Ui.Lbl("", 11, Ui.Ink3); _slForce[i].CustomMinimumSize = new Vector2(84, 0);
+            _slVal[i] = Ui.Num("", 14, null, 52);
+            _slForce[i] = Ui.Num("", 14, Ui.Ink3, 84);
             r.AddChild(n); r.AddChild(_sl[i]); r.AddChild(_slVal[i]); r.AddChild(_slForce[i]);
             _root.AddChild(r);
         }
         var ar = new HBoxContainer();
-        _apply = Ui.Btn("Отдать приказ", Apply, 14);
+        ar.AddThemeConstantOverride("separation", 10);
+        _apply = Ui.Btn("ui.apply", Apply);
         ar.AddChild(_apply); ar.AddChild(_sum);
         _root.AddChild(ar);
-        _root.AddChild(_verdict);
+        var rr = new HBoxContainer(); rr.AddThemeConstantOverride("separation", 6);
+        rr.AddChild(_resultMark); rr.AddChild(_result);
+        _root.AddChild(rr);
 
-        Section("ИЗДЕЛИЯ И ЛИНИИ (DesignView)");
+        Section("panel.designs");
         _root.AddChild(_designs);
-        Section("ЛИЦЕНЗИЯ (LicenceView)");
+        Section("panel.licence");
         _root.AddChild(_licence);
-        Section("ПОЧЕМУ НЕ (WhyNot)");
+        Section("panel.why");
         _root.AddChild(_why);
+        Loc.Changed += Invalidate;
+        TreeExiting += () => Loc.Changed -= Invalidate;
     }
+
+    void Invalidate() { _dirty = true; _sigDesigns = _sigLicence = _sigWhy = ""; }
 
     static void StyleSlider(HSlider s)
     {
         var track = Ui.Box(Ui.Rule, null, 0, 0); track.ContentMarginTop = 2; track.ContentMarginBottom = 2;
         s.AddThemeStyleboxOverride("slider", track);
         s.AddThemeStyleboxOverride("grabber_area", Ui.Box(Ui.Ink, null, 0, 0));
-        s.AddThemeStyleboxOverride("grabber_area_highlight", Ui.Box(Ui.Command, null, 0, 0));
+        s.AddThemeStyleboxOverride("grabber_area_highlight", Ui.Box(Ui.Ink, null, 0, 0));
         s.FocusMode = FocusModeEnum.None;
     }
 
-    void Section(string text)
+    void Section(string key)
     {
         _root.AddChild(new HSeparator());
-        _root.AddChild(Ui.Lbl(text, 11, Ui.Ink3));
+        _root.AddChild(Ui.Head(key));
     }
 
-    public void ShowActor(int actor) { _actor = actor; _edited = false; _seq = -1; Visible = true; }
+    public void ShowActor(int actor) { _actor = actor; _edited = false; _awaiting = false; _sentPct = null; _dirty = true; Invalidate(); Visible = true; }
+
+    /// <summary>Screenshot run: the same path as a user dragging slider <paramref name="i"/> and pressing the order button.</summary>
+    public void ShotEdit(int i, int v) { OnSlider(i, v); Apply(); }
 
     void OnSlider(int i, int v)
     {
@@ -116,11 +139,17 @@ public sealed partial class ActorPanel : PanelContainer
         Sync();
     }
 
+    bool Pending => _awaiting || (_lastSnap != null && _lastSnap.Pending > 0 && _sentPct != null);
+
     void Sync()
     {
         for (int k = 0; k < 5; k++) { _sl[k].SetValueNoSignal(_pct[k]); _slVal[k].Text = _pct[k] + "%"; }
-        _sum.Text = "  сумма " + _pct.Sum() + "%";
-        _apply.Disabled = _pct.Sum() != 100 || !_edited;
+        _sum.Text = Loc.T("ui.sum", _pct.Sum());
+        bool changed = _sentPct == null || !_pct.SequenceEqual(_sentPct);
+        bool ready = _pct.Sum() == 100 && _edited && changed && !Pending;
+        _apply.Disabled = !ready;
+        _apply.Text = Pending ? "ui.pending" : "ui.apply";
+        Ui.StyleButton(_apply, ready);
     }
 
     static Fx6 Pct(int p) => Fx6.FromRaw(p * 10_000L);
@@ -128,38 +157,64 @@ public sealed partial class ActorPanel : PanelContainer
     void Apply()
     {
         var sh = new BudgetShares(Pct(_pct[0]), Pct(_pct[1]), Pct(_pct[2]), Pct(_pct[3]), Pct(_pct[4]));
-        _host.Submit(new SetBudgetShares(_actor, sh), "доли бюджета");
-        _edited = false;
-        _seq = -1;
+        _host.Submit(new SetBudgetShares(_actor, sh), "cmd.budget");
+        _sentPct = (int[])_pct.Clone();
+        _awaiting = true; _sentSeq = _lastSnap?.CmdSeq ?? 0;
+        Sync();
     }
 
     public override void _Process(double delta)
     {
+        // Height follows the content (an inset, not a full-height column), capped by the window.
+        _scroll.CustomMinimumSize = new Vector2(0, Math.Min(_root.GetCombinedMinimumSize().Y, GetViewportRect().Size.Y - 90));
         var s = _host.Snap;
         if (s == null || _actor < 0 || !Visible) return;
         if (s.WhyActor != _actor) return;
-        if (_seq == 0 && ReferenceEquals(s.View, _lastView) && s.LastVerdict == _lastVerdict) return;
-        _seq = 0; _lastView = s.View; _lastVerdict = s.LastVerdict;
+        _lastSnap = s;
+        bool changed = _dirty || !ReferenceEquals(s.View, _lastView) || !ReferenceEquals(s.Last, _lastCmd);
+        if (_awaiting && s.CmdSeq > _sentSeq)
+        {
+            _awaiting = false;
+            if (s.LastRejected || s.Last.Status == CmdStatus.Error) { _edited = false; _sentPct = null; }   // refused: back to the values in force
+            changed = true;
+        }
+        if (!changed) return;
+        _dirty = false; _lastView = s.View; _lastCmd = s.Last;
         var a = s.View.Actors[_actor];
         string id = _host.Layout.ActorIds[_actor];
-        _title.Text = $"{id} — {(Names.RuOfActor.TryGetValue(id, out var ru) ? ru : id)}";
-        _sub.Text = $"профиль «{Names.Profile[(int)a.Profile]}» · поколение в строю G{a.FieldedGen} · месяц {s.View.Month}";
+        _title.Text = Names.Actor(id);
+        _title.TooltipText = id;
+        _sub.Text = Loc.T("panel.sub", Loc.T("profile." + (int)a.Profile), a.FieldedGen, s.View.Month);
         var inA = s.View.Inputs?.Actors.FirstOrDefault(x => x.Actor == _actor);
-        _budget.Text = inA != null ? $"Бюджет месяца: {inA.Budget.ToDouble():F1} (ед. сценария), закупки {inA.ProcurementBudget.ToDouble():F1}" : "Бюджет месяца: ещё не считался";
+        _budget.Text = inA != null ? Loc.T("panel.budget.text", inA.Budget.ToDouble().ToString("F1"), inA.ProcurementBudget.ToDouble().ToString("F1")) : Loc.T("panel.budget.none");
         BudgetShares? inForce = s.SharesInForce[_actor];
         BudgetShares show = inForce ?? new PolicyParams().Shares(a.Profile);
-        if (!_edited)
-        {
-            _pct[0] = Pc(show.Research); _pct[1] = Pc(show.Capability); _pct[2] = Pc(show.Effort); _pct[3] = Pc(show.Procurement); _pct[4] = Pc(show.Quality);
-            _pct[3] += 100 - _pct.Sum();
-            Sync();
-        }
-        Fx6[] f = inForce is { } b ? new[] { b.Research, b.Capability, b.Effort, b.Procurement, b.Quality } : null;
-        for (int k = 0; k < 5; k++) _slForce[k].Text = f != null ? $"в силе {Pc(f[k])}%" : "по профилю";
-        _verdict.Text = (s.LastVerdict + (s.LastOutcome != "" ? "\nСессия: " + s.LastOutcome : "")).Trim();
+        int[] forcePct = { Pc(show.Research), Pc(show.Capability), Pc(show.Effort), Pc(show.Procurement), Pc(show.Quality) };
+        forcePct[3] += 100 - forcePct.Sum();
+        // The edit stays (also while the command is pending) until the values in force catch up with it.
+        if (_edited && _sentPct != null && !_awaiting && inForce != null && _sentPct.SequenceEqual(forcePct) && _pct.SequenceEqual(forcePct)) { _edited = false; _sentPct = null; }
+        if (!_edited) { Array.Copy(forcePct, _pct, 5); }
+        for (int k = 0; k < 5; k++) _slForce[k].Text = inForce != null ? forcePct[k] + "%" : "—";
+        Sync();
+        FillResult(s);
         FillDesigns(a);
         FillLicence(a);
         FillWhy(s);
+    }
+
+    void FillResult(HostSnapshot s)
+    {
+        var r = s.Last;
+        _resultMark.Visible = r.Status is CmdStatus.Rejected or CmdStatus.Error;
+        if (r.Status == CmdStatus.None) { _result.Text = ""; return; }
+        string what = Loc.T(r.LabelKey, r.LabelArg);
+        string why = r.Status switch
+        {
+            CmdStatus.Rejected => Loc.TOr("refusal." + r.Reason, r.Reason),
+            CmdStatus.Error => r.Reason,
+            _ => "",
+        };
+        _result.Text = Loc.T("cmd." + r.Status, what, why) + (Debug && r.Message != "" ? "\n" + r.Message : "") + (Debug && s.LastOutcome != "" ? "\n" + s.LastOutcome : "");
     }
 
     static int Pc(Fx6 x) => (int)((x.Raw + 5_000) / 10_000);
@@ -168,52 +223,74 @@ public sealed partial class ActorPanel : PanelContainer
 
     void FillDesigns(ActorView a)
     {
-        Clear(_designs);
-        bool any = false;
+        var rows = new List<(string text, string action, int design)>();
         foreach (var d in a.Designs)
         {
             if (d.Stage == DesignStage.None) continue;
-            any = true;
+            string line = Loc.T("design.line", d.Design, d.Gen, Loc.T("stage." + (int)d.Stage), d.UnitCost.ToDouble().ToString("F2"), d.Readiness.ToDouble().ToString("F2"), d.InService.ToDouble().ToString("F0"))
+                + (d.Stage is DesignStage.Series ? Loc.T("design.series", d.Rate.ToDouble().ToString("F2"), d.Bind) : "");
+            rows.Add((line, d.Stage == DesignStage.Series ? "close" : d.Stage is DesignStage.Project or DesignStage.Prototype ? "cancel" : "", d.Design));
+        }
+        string sig = Loc.Lang + "|" + string.Join("\n", rows.Select(r => r.text + r.action));
+        if (sig == _sigDesigns) return;
+        _sigDesigns = sig;
+        Clear(_designs);
+        foreach (var (text, action, design) in rows)
+        {
             var r = new HBoxContainer();
-            string line = $"#{d.Design} G{d.Gen} · {Names.Stage[(int)d.Stage]}" + (d.Stage is DesignStage.Series ? $" · темп {d.Rate.ToDouble():F2} · лимит {d.Bind}" : "")
-                + $" · себест. {d.UnitCost.ToDouble():F2} · готовность {d.Readiness.ToDouble():F2} · в строю {d.InService.ToDouble():F0}";
-            var l = Ui.Wrap(line, 12);
-            r.AddChild(l);
-            int design = d.Design;
-            if (d.Stage == DesignStage.Series) r.AddChild(Ui.Btn("Закрыть линию", () => _host.Submit(new CloseLine(_actor, design), $"закрыть линию #{design}"), 12));
-            else if (d.Stage is DesignStage.Project or DesignStage.Prototype) r.AddChild(Ui.Btn("Снять", () => _host.Submit(new CancelDesign(_actor, design), $"снять проект #{design}"), 12));
+            r.AddChild(Ui.Wrap(text));
+            if (action == "close") r.AddChild(Ui.Btn("ui.closeline", () => _host.Submit(new CloseLine(_actor, design), "cmd.close", design)));
+            else if (action == "cancel") r.AddChild(Ui.Btn("ui.cancel", () => _host.Submit(new CancelDesign(_actor, design), "cmd.cancel", design)));
             _designs.AddChild(r);
         }
-        if (!any) _designs.AddChild(Ui.Wrap("Проектов нет. Создание (ComposeDesign) — нужен API списка альтернатив слотов: не подключено.", 12, Ui.Ink2));
-        else { var m = Ui.Wrap("Запуск серии (StartSeries) и создание (ComposeDesign): нужны темп/альтернативы — не подключено.", 11, Ui.Ink3); _designs.AddChild(m); }
+        var note = new HBoxContainer(); note.AddThemeConstantOverride("separation", 8);
+        note.AddChild(Ui.Mock()); note.AddChild(Ui.Wrap(rows.Count == 0 ? "design.none" : "design.nocreate", 14, Ui.Ink3));
+        _designs.AddChild(note);
     }
 
     void FillLicence(ActorView a)
     {
-        Clear(_licence);
         var L = a.Licence;
         string seller = L.Seller >= 0 && L.Seller < _host.Layout.ActorIds.Length ? _host.Layout.ActorIds[L.Seller] : "—";
         long refus = L.Refusals.IsDefault ? 0 : L.Refusals.Sum();
-        _licence.AddChild(Ui.Wrap(L.Active ? $"Лицензия активна: поколение G{L.Gen}, продавец {seller}, с месяца {L.Start}, поток {L.Flow.ToDouble():F2}" : "Лицензии нет (не действует)", 12));
-        if (refus > 0)
-            _licence.AddChild(Ui.Wrap($"Отказов BAD_LICENCE: {refus} (свой {L.Refusals[0]}, пусто {L.Refusals[1]}, поколение {L.Refusals[2]}, деньги {L.Refusals[3]})", 12, Ui.Ink2));
+        string t1 = L.Active ? Loc.T("licence.active", L.Gen, seller, L.Start, L.Flow.ToDouble().ToString("F2")) : Loc.T("licence.none");
+        string t2 = refus > 0 ? Loc.T("licence.refusals", refus, L.Refusals[0], L.Refusals[1], L.Refusals[2], L.Refusals[3]) : "";
+        string sig = Loc.Lang + t1 + t2;
+        if (sig == _sigLicence) return;
+        _sigLicence = sig;
+        Clear(_licence);
+        _licence.AddChild(Ui.Wrap(t1));
+        if (t2 != "") _licence.AddChild(Ui.Wrap(t2, 14, Ui.Ink2));
     }
 
     void FillWhy(HostSnapshot s)
     {
-        Clear(_why);
-        if (s.WhyError != "") { _why.AddChild(Ui.Wrap(s.WhyError, 12, Ui.Alarm)); return; }
-        if (s.Target is not { } t) { _why.AddChild(Ui.Wrap("Цели нет: нового известного изделия, не принятого на вооружение, нет.", 12, Ui.Ink2)); return; }
-        _why.AddChild(Ui.Wrap($"Цель: {t.Kind} {t.Id} (годовое требование). Звеньев: {s.Links.Count}", 12, Ui.Ink2));
-        int n = 0;
-        foreach (var l in s.Links)
+        var lines = new List<(string text, bool root)>();
+        if (s.WhyError != "") lines.Add((Debug ? s.WhyError : Loc.T("why.error"), true));
+        else if (s.Target is not { } t) lines.Add((Loc.T("why.none"), false));
+        else
         {
-            if (n++ >= 7) { _why.AddChild(Ui.Wrap($"… ещё {s.Links.Count - 7}", 12, Ui.Ink3)); break; }
-            string subj = l.Layer == WhyNotLayer.Knowledge ? Names.Node(_host.Data, l.SubjectId) : "#" + l.SubjectId;
-            string eta = l.EtaMonths is int m ? $" · срок {m} мес" : "";
-            string lev = l.Levers.IsDefaultOrEmpty ? "" : " · рычаги: " + string.Join(", ", l.Levers);
-            var lab = Ui.Wrap($"{(n == 1 ? "■ " : "▫ ")}{l.Layer}/{l.Cause} {subj} · {l.Have.ToDouble():F2}/{l.Need.ToDouble():F2}{eta}{lev}", 12, n == 1 ? Ui.Alarm : Ui.Ink);
-            _why.AddChild(lab);
+            string goal = t.Kind == WhyNotTargetKind.Requirement ? Loc.T("why.goal", t.Id) : Loc.T("why.goalkind", t.Kind.ToString(), t.Id);
+            lines.Add((goal + Loc.T("why.links", s.Links.Count), false));
+            int n = 0;
+            foreach (var l in s.Links)
+            {
+                if (n++ >= 7) { lines.Add((Loc.T("why.more", s.Links.Count - 7), false)); break; }
+                string subj = l.Layer == WhyNotLayer.Knowledge ? Names.Node(_host.Data, l.SubjectId) : "№" + l.SubjectId;
+                string eta = l.EtaMonths is int m ? Loc.T("why.eta", m) : "";
+                string lev = l.Levers.IsDefaultOrEmpty ? "" : Loc.T("why.levers", string.Join(", ", l.Levers.Select(x => Loc.TOr("cause." + x, x.ToString()))));
+                lines.Add(($"{Loc.TOr("layer." + l.Layer, l.Layer.ToString())} · {Loc.TOr("cause." + l.Cause, l.Cause.ToString())}: {subj} · {l.Have.ToDouble():F2}/{l.Need.ToDouble():F2}{eta}{lev}", n == 1));
+            }
+        }
+        string sig = Loc.Lang + "|" + string.Join("\n", lines.Select(x => x.text));
+        if (sig == _sigWhy) return;
+        _sigWhy = sig;
+        Clear(_why);
+        for (int i = 0; i < lines.Count; i++)
+        {
+            bool first = lines[i].root;
+            var lab = Ui.Wrap(lines[i].text, 14, i == 0 && !first ? Ui.Ink2 : Ui.Ink);
+            _why.AddChild(first ? Ui.MarkedRow(Ui.Alarm, lab) : lab);
         }
     }
 }

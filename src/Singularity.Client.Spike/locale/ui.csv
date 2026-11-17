@@ -1,0 +1,155 @@
+keys,en,ru
+ui.mock,mock,макет
+ui.loading,Loading scenario…,Загрузка сценария…
+status.loading,Loading scenario…,Загрузка сценария…
+status.session,Creating session…,Создание сессии…
+ui.simerror,Simulation error: ,Ошибка симуляции: 
+ui.tree,Knowledge tree,Дерево знаний
+ui.apply,Give order,Отдать приказ
+ui.pending,Pending a tick…,Ожидает тика…
+ui.sum,sum {0}%,сумма {0}%
+ui.closeline,Close line,Закрыть линию
+ui.cancel,Cancel,Снять
+speed.pause,‖ pause,‖ пауза
+speed.day,day/s,день/с
+speed.week,week/s,неделя/с
+speed.month,month/s,месяц/с
+tip.date,Session date,Дата в сессии
+tip.tempo,"Time tempo: pause, day, week, month per second (Space, 1, 2, 3)","Темп времени: пауза, день, неделя, месяц в секунду (Пробел, 1, 2, 3)"
+tip.power,The power you play,"Держава, за которую вы играете"
+tip.lang,Interface language,Язык интерфейса
+tip.sig.real,Signal from Session data. Click to acknowledge.,"Сигнал из данных Session. Нажмите, чтобы квитировать."
+tip.sig.mock,Mock: Session has no such signal,Макет: сигнала в Session нет
+tip.help,Keys (F1),Клавиши (F1)
+sig.alloy,ALLOY,СПЛАВ
+sig.licence,LICENCE,ЛИЦЕНЗИЯ
+sig.refusal,REFUSAL,ОТКАЗ
+sig.goal,GOAL,ЦЕЛЬ
+sig.gap,GAP,РАЗРЫВ
+sig.war,WAR,ВОЙНА
+sig.fail,FAULT,СБОЙ
+help.text,"LMB drag: rotate, wheel: zoom, click a slice country: panel.\nSpace: pause, 1/2/3: tempo, T: knowledge tree, F3: debug, F1: this help.","ЛКМ-тяга — вращать, колесо — масштаб, клик по державе среза — панель.\nПробел — пауза, 1/2/3 — темп, T — дерево знаний, F3 — отладка, F1 — эта подсказка."
+panel.budget,BUDGET,БЮДЖЕТ
+panel.budget.text,"Monthly budget: {0} (scenario units), procurement {1}","Бюджет месяца: {0} (ед. сценария), закупки {1}"
+panel.budget.none,Monthly budget: not computed yet,Бюджет месяца: ещё не считался
+col.share,share,доля
+col.inforce,in force,в силе
+share.0,R&D,НИОКР
+share.1,Capacity,Мощности
+share.2,Mastery,Освоение
+share.3,Procurement,Закупки
+share.4,Quality,Качество
+panel.sub,profile “{0}” · fielded generation G{1} · month {2},профиль «{0}» · поколение в строю G{1} · месяц {2}
+profile.0,quality,качество
+profile.1,mass,массовость
+profile.2,adaptive,адаптивный
+stage.0,—,—
+stage.1,project,проект
+stage.2,prototype,опытный
+stage.3,series,серия
+stage.4,in service,в эксплуатации
+stage.5,retired,снят
+panel.designs,PRODUCTS AND LINES,ИЗДЕЛИЯ И ЛИНИИ
+panel.licence,LICENCE,ЛИЦЕНЗИЯ
+panel.why,WHY NOT,ПОЧЕМУ НЕ
+design.line,#{0} G{1} · {2} · unit cost {3} · readiness {4} · in service {5},№{0} G{1} · {2} · себест. {3} · готовность {4} · в строю {5}
+design.series, · rate {0} · bound by {1}, · темп {0} · лимит {1}
+design.none,No designs. Creating designs is not wired in the client yet.,Проектов нет. Создание изделий в клиенте пока не подключено.
+design.nocreate,Starting a series and creating designs are not wired in the client yet.,Запуск серии и создание изделий в клиенте пока не подключены.
+licence.active,"Licence active: generation G{0}, seller {1}, since month {2}, flow {3}","Лицензия активна: поколение G{0}, продавец {1}, с месяца {2}, поток {3}"
+licence.none,No licence,Лицензии нет
+licence.refusals,"Licence refusals: {0} (own {1}, empty {2}, generation {3}, money {4})","Отказов по лицензии: {0} (свой {1}, пусто {2}, поколение {3}, деньги {4})"
+why.error,Could not build the “why not” chain.,Не удалось построить цепочку «почему не».
+why.none,No goal: there is no new known product that is not yet fielded.,"Цели нет: нового известного изделия, не принятого на вооружение, нет."
+why.goal,"Goal: yearly requirement, generation {0}.","Цель: годовое требование, поколение {0}."
+why.goalkind,Goal: {0} {1}.,Цель: {0} {1}.
+why.links, Links: {0}, Звеньев: {0}
+why.more,… {0} more,… ещё {0}
+why.eta, · ETA {0} mo., · срок {0} мес.
+why.levers, · levers: {0}, · рычаги: {0}
+layer.Knowledge,Knowledge,Знание
+layer.Capability,Capability,Мощности
+layer.Product,Product,Изделие
+layer.Economy,Economy,Экономика
+cause.MissingNode,missing node,нет узла
+cause.AltUnavailable,no alternative available,нет доступной альтернативы
+cause.CultureH,culture below requirement,культура ниже требуемой
+cause.ToolingM,tooling,оснастка
+cause.Engineers,engineers,инженеры
+cause.SkilledWorkforce,skilled workforce,квалифицированные кадры
+cause.AlloyDeficit,alloy deficit,дефицит сплава
+cause.NotAffordable,not affordable,не по карману
+cause.Licence,licence,лицензия
+cause.NoDesign,no design,нет проекта
+cmd.budget,budget shares,доли бюджета
+cmd.close,close line #{0},закрыть линию №{0}
+cmd.cancel,cancel design #{0},снять проект №{0}
+cmd.focus,mastery focus,фокус освоения
+cmd.job,command,команда
+cmd.Pending,{0}: pending. Applies at the first tick after unpause.,{0}: ожидает. Применится на первом тике после снятия паузы.
+cmd.Applied,"{0}: accepted, applied at a tick.","{0}: принято, применено на тике."
+cmd.Rejected,{0}: refused — {1},{0}: отказ — {1}
+cmd.Error,{0}: error — {1},{0}: ошибка — {1}
+refusal.BadShares,shares do not sum to 100%,доли не дают 100%
+refusal.FocusTooMany,too many processes in focus,слишком много процессов в фокусе
+refusal.FocusNotKnown,process not known,процесс не известен
+tree.path,Map ▸ Knowledge,Карта ▸ Знание
+tree.a,A · Planisphere,A · Планисфера
+tree.b,B · Goal statement,B · Ведомость цели
+tree.close,Close ×,Закрыть ×
+tree.stamp,KNOWLEDGE TREE,ДЕРЕВО ЗНАНИЙ
+tree.sheet,sheet {0},лист {0}
+level.0,pause,пауза
+level.1,normal,норма
+level.2,higher,выше
+level.3,focus,фокус
+disc.0,Aerodynamics,Аэродинамика
+disc.1,Propulsion,Силовые установки
+disc.2,Metals,Металлы
+disc.3,Chemistry,Химия
+disc.4,Mechanics,Механика
+ntype.0,knowledge,знание
+ntype.1,principle,принцип
+ntype.2,engineering,инженерия
+ntype.3,component,компонент
+ntype.4,process,процесс
+ntype.5,product,изделие
+state.known,known,известно
+state.unknown,unknown,неизвестно
+state.licence,by licence,по лицензии
+state.frontier,frontier,фронтир
+state.unavail,unavailable,недоступно
+legend.a1,○ knowledge   □ process   ◇ product   outline: known · dashed: frontier (label №) · dot: unavailable,○ знание   □ процесс   ◇ изделие   контур — известно · пунктир — фронтир (подпись №) · точка — недоступно
+legend.a2,blue: route from the “why not” root ■ to the goal · double circle: the “knowledge ≠ production” line,синий — маршрут от корня «почему не» ■ к цели · двойная окружность — граница «знание ≠ производство»
+legend.a3,rings from the centre: 1 knowledge · 2 principle · 3 engineering · 4 component · 5 process · 6 product; wedge: discipline,кольца изнутри: 1 знание · 2 принцип · 3 инженерия · 4 компонент · 5 процесс · 6 изделие; клин — дисциплина
+legend.b,■ known   □ frontier   · unavailable   (G0–G4: generations)   ┃ blue: the longest chain,■ известно   □ фронтир   · недоступно   (G0–G4 — поколения)   ┃ синий — самая длинная цепочка
+stmt.title,GOAL STATEMENT,ВЕДОМОСТЬ ЦЕЛИ
+stmt.goal,goal: {0} (product {1}),цель: {0} (изделие {1})
+stmt.nogoal,no goal (no known product without a series),цели нет (нет известного изделия без серии)
+stmt.scale,"Dependency steps, not time: Session has no ETA intervals.","Ступени зависимости, не время: интервалов сроков в Session нет."
+stmt.now,now,сейчас
+stmt.g.goal,GOAL,ЦЕЛЬ
+stmt.g.front,FRONTIER ON THE ROUTE,ФРОНТИР НА ПУТИ
+stmt.g.wait,WAITING,ЖДУТ
+stmt.g.off,FRONTIER OFF THE ROUTE,ФРОНТИР ВНЕ ПУТИ
+stmt.chain,The thick blue link is the longest chain from the “why not” root.,Толстая синяя связь — самая длинная цепочка от корня «почему не».
+stmt.overview,OVERVIEW OF {0} NODES: discipline × generation,ОБЗОР {0} УЗЛОВ: дисциплина × поколение
+inset.title,{0} · knowledge,{0} · знание
+inset.why,WHY NOT,ПОЧЕМУ НЕ
+inset.goal,Goal: {0} · dependency steps from the root: {1},Цель: {0} · ступеней зависимости от корня: {1}
+inset.eta," · ETA {0} mo. (a number, not an interval)"," · срок {0} мес. (число, не интервал)"
+inset.hint,The first link is the cheapest; the goal date is set by the longest chain (view B).,Первое звено — ближайшее по цене; дату цели задаёт самая длинная цепочка (вид B).
+inset.node,NODE,УЗЕЛ
+inset.anchor,Anchor: {0}{1} · {2},Якорь: {0}{1} · {2}
+inset.before, (before), (до)
+inset.requires,Requires: {0},Требует: {0}
+inset.process,Process: yield {0} · mastered {1} · admitted {2},Процесс: выход {0} · освоен {1} · допуск {2}
+inset.focus,MASTERY FOCUS (up to 3 known processes),ФОКУС ОСВОЕНИЯ (до 3 известных процессов)
+inset.focus.add,Add to focus,В фокус освоения
+inset.focus.remove,Remove from focus,Убрать из фокуса
+inset.focus.empty,Draft is empty. Select a known process (□).,Черновик пуст. Выберите известный процесс (□).
+inset.focus.send,Give order: focus,Отдать приказ: фокус
+inset.prio,R&D PRIORITIES OVER THE FRONTIER,ПРИОРИТЕТЫ НИОКР ПО ФРОНТИРУ
+inset.prio.note,Priorities are wired to nothing (Session has no research_priority lever); P10–P90 ETAs and progress shares are mock too.,Приоритеты ни к чему не подключены (рычага research_priority в Session нет); сроки P10–P90 и доли прогресса — тоже макет.
+yes,yes,да
+no,no,нет

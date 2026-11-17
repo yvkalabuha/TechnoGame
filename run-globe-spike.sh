@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Launch the Godot 3D globe spike (TASK-0067).
-# Usage: ./run-globe-spike.sh          interactive client prototype v0.2 (TASK-0069; real Session on a background thread)
-#        ./run-globe-spike.sh --shots  automatic run + screenshots into docs/ui/prototypes/client-v02/
+# Usage: ./run-globe-spike.sh          interactive client prototype v0.3 (TASK-0069/0070; real Session on a background thread)
+#        ./run-globe-spike.sh --shots  automatic run + screenshots into docs/ui/prototypes/client-v03/ (RU and EN)
 #        ./run-globe-spike.sh --bench  automatic benchmark + screenshots into bench-out/
 set -euo pipefail
 
@@ -20,11 +20,8 @@ export PATH="$HOME/.dotnet:$PATH"
 
 cd "$PROJECT"
 
-# First run: import assets (creates .godot/, git-ignored).
-if [[ ! -d .godot ]]; then
-  echo "First run: importing assets..."
-  "$GODOT" --headless --path . --import
-fi
+# Import assets (models, fonts); cheap when nothing changed. .godot/ is git-ignored.
+"$GODOT" --headless --path . --import >/dev/null 2>&1
 
 echo "Building C# scripts..."
 "$GODOT" --headless --path . --build-solutions --quit
@@ -35,6 +32,6 @@ elif [[ "${1:-}" == "--bench" ]]; then
   "$GODOT" --path . -- --bench --out bench-out
   echo "Benchmark output: $PROJECT/bench-out"
 else
-  echo "Controls: LMB drag = rotate, wheel = zoom, click a slice country = actor panel, Space pause, 1/2/3 tempo, T tech tree"
+  echo "Controls: LMB drag = rotate, wheel = zoom, click a slice country = actor panel, Space pause, 1/2/3 tempo, T tech tree, F3 debug, F1 help; --lang en|ru"
   "$GODOT" --path .
 fi
