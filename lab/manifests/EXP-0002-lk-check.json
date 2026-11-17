@@ -25,7 +25,7 @@
  "meta": {
   "spec": "slice-jet-aviation.md v0.34 r1: §6.1 LK-CHECK block pinned in bdfaaf6 (sha256 e679251b1b6edb398844a4aa2a367dee6296fe67317c51ef1a92f7bdbfdb28c0) + amendment #253",
   "control_tables_hash": "4e10abb518ff291bb3490ec8dbaed2d32b553c308240ace605266a5999aaf506",
-  "result": "2026-11-16 (report §7.10): exact self-check 1700/1700; 10 of 11 checked pairs pass; GBR:4 fails (n_table 10, n_K 0; delta of node 29 = never). #253 (2026-11-17): GBR:4 outside the control, rule and tables unchanged -> passed with the exception GBR:4",
+  "result": "2026-11-16 (report §7.10): exact self-check 1700/1700; 10 of 11 checked pairs pass; GBR:4 fails (n_table 10, n_K 0; delta of node 29 = never). #253 (2026-11-17): GBR:4 outside the control, rule and tables unchanged -> passed with the exception GBR:4; 2026-11-17 re-run on HEAD 792aaa2 (TASK-0061: run.layer.tables label digest includes ActorCount and MaxNodeNumber): golden_set_hash 1e43247a... -> 86285c770deebf01ce33a3803f024f1dd6fed23439bb071a161cf013e38e4349; node_times/gen_times/prc_month/actor_month, lk_draws.csv and lk_check.json identical",
   "decisions": [
    "#249",
    "#251",

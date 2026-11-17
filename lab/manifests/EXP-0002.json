@@ -970,7 +970,7 @@
         "c1": "1e92c43ce52a44e1f06e6ff2e0e2c12d8de79123e08b5045755d653ca4096f28",
         "c3c4": "1e5460ffc611cec53566633ef658317c3795566a984c92bad67717c421e21930",
         "c2": "784e53c7936a1926f10f6b3effe8e6472a7da194173a62e6c2c4ab3e8db65c88",
-        "lk_check": "cb7f986ea7fd4a5c0dba2190bcee1fa866207a6858e3b463999d921c398b7db8"
+        "lk_check": "10999c3d45ffe937b8431d91903f0a3217491e42545fb8452edb280432df299e"
       },
       "manifest_hash_evaluated": "a9f05b4c9bf4f2c8268327319583c0aa20d65cf365e527225c93605f6fee5d42 (runs of §7; later hashes differ only by meta.journal)"
     },
@@ -988,7 +988,7 @@
         "LK_without_GBR_G4 (#253)",
         "D4_C2_main (C2 pools #238/#241, KM, modes on main)"
       ],
-      "p0_source": "spec §6.4, 2026-11-17, code = 1c6d84e + the Lab changes of this commit (Core/Session/Kernel = b0c4122): dotnet test - Kernel 316 passed / 1 skipped, Core 1053, Session 345 / 2 skipped (print-only tests), Lab.Tests 20, Architecture 98 (ADR-0003 R1-R3, no RNG in Core.Industry/Products); Lab selftest 41/41 (L1/L2, golden, schemas); exp0002.py --selftest 42/42; C1 P0 Wright window mean 0.180 in [0.15; 0.30]; L_K exact self-check 1700/1700"
+      "p0_source": "spec §6.4, 2026-11-17, HEAD 792aaa2 (code 8f7b3de): dotnet test - Architecture 98, Kernel 316 passed / 1 skipped, Core 1058, Lab.Tests 20, Session 345 / 2 skipped (print-only tests); Lab selftest 41/41 (L1/L2, golden, schemas); exp0002.py --selftest 42/42; C1 P0 Wright window mean 0.180 in [0.15; 0.30]; L_K exact self-check 1700/1700 (re-run on 792aaa2)"
     },
     "rng": "spec §9.1; FIX_* seed 0x5EED",
     "after_review": false,
@@ -1046,13 +1046,13 @@
       "D3": "spec §5.9 D3 (#250, RISK-0022): Singularity.Lab calib-print --manifest lab/manifests/EXP-0002.json --point <main> on seeds 1-1000 after the run; calibration reference 0.012 of actor-months (USA 0.041), spells p50 23, max 50"
     },
     "build": {
-      "core_commit": "b0c4122 (src/Singularity.Core, Session, Kernel and mods/core unchanged from b0c4122 to 1c6d84e; git diff empty)",
-      "lab_commit": "the commit of this manifest (Lab: c5-stand, lk-draws, calib-print JetSlice, exp0002.py prints)",
+      "core_commit": "792aaa2 (HEAD after TASK-0061; code commit 8f7b3de): Core, Session, Kernel, Lab and mods/core at this commit. TASK-0061 changed SliceWorld.TablesDigest (feeds only the run.layer.tables label of L_K runs) and JetSliceModel.ForcedStarts; dynamics unchanged",
+      "lab_commit": "792aaa2 plus the commit of this manifest record",
       "dotnet_sdk": "10.0.403",
       "dotnet_runtime": ".NET 10.0.14",
       "data_hash": "efcd0984e9d8a6a8e7bf06cba7a5e89b82747e1cfacdf67b7d7d8b2f889efa9f",
       "data_hash_note": "efcd0984 = Lab provenance data_hash (run.json, matrix.json: SHA-256 over the mod files the slice loads, data_files) - the value for the EXP record; 6eba0cea3e6af277446c6017cf5765ed4f0813d047304c4c14dff9ccfc585bce = GameData.DataHash of ModLoader (run.json model_info.data_hash, c1/c5 stand logs) - another hash of the same mod data; both stable since b0c4122. Report §7 quotes the first, §7.10 the second.",
-      "recomputed_on_final_code": "C1 (c1-stand p00), C3 (c3-stand p00) and the calibration build (C2, CONTROL_TABLES) re-run on the code of 1c6d84e/bdfaaf6 (Core identical to b0c4122): loss_C1 0, d_C3 0, d_C2 0, golden_set_hash 0fe2bbe5, control_tables_hash 4e10abb5 reproduced (report §7.11)",
+      "recomputed_on_final_code": "2026-11-17 on HEAD 792aaa2: calibration build EXP-0002-calib seeds 10001-10100 golden_set_hash 0fe2bbe58c02f14d4a1869d17fccbee98c44177add15c1b497ff15ca6f3e66ae (unchanged); L_K check EXP-0002-lk-check golden_set_hash 86285c770deebf01ce33a3803f024f1dd6fed23439bb071a161cf013e38e4349 (was 1e43247a: only the run.layer.tables state label changed), node_times/gen_times/prc_month/actor_month, lk_draws and lk_check.json identical; C1/C3 stands do not read the changed code (results §7.11 stand)",
       "detail_golden": "detail lite and full give the same golden_hash (seeds 10001, 10002, full horizon; = calibration-build golden): grid/P5 centre taken from main is valid with either detail"
     },
     "det_manifest": {
