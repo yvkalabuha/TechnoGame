@@ -1,7 +1,7 @@
 ---
 id: TASK-0065
 title: "Synthetic full-scale world overlay and benchmark pre-registration (ADR-0016 T2)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: simulation-engineer

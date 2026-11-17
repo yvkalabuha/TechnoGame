@@ -256,6 +256,12 @@ public sealed record SliceRunConfig
     /// <summary>Execution only (like <see cref="Threads"/>): what the read views hold. Not state, not hashed.</summary>
     public SliceViewMode ViewMode { get; init; }
 
+    /// <summary>
+    /// Execution only (ADR-0016 T1a): adds an empty daily system, so every day copies the tables and every day takes a hash and a view snapshot.
+    /// Not state, not hashed, no columns; the outcome of the run is that of the flag off. Off in main.
+    /// </summary>
+    public bool DailyTickProbe { get; init; }
+
     /// <summary>Execution only (L2): threads and rows per chunk. They never change the result.</summary>
     public int Threads { get; init; } = 1;
 

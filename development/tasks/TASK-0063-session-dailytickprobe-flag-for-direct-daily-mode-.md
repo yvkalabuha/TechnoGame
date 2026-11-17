@@ -1,7 +1,7 @@
 ---
 id: TASK-0063
 title: "Session DailyTickProbe flag for direct daily-mode benchmark (ADR-0016 T1a)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer

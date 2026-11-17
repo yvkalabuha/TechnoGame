@@ -37,6 +37,7 @@ public static class SelfTest
             ("provenance: data_hash tracks file content", () => DataHash(tmp)),
         };
         checks.AddRange(Models.Slice.SliceChecks.All(tmp));
+        checks.AddRange(Bench.SynthChecks.All(tmp));
 
         int failed = 0;
         foreach (var (name, body) in checks)

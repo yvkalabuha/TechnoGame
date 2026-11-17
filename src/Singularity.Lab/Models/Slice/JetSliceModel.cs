@@ -16,7 +16,7 @@ namespace Singularity.Lab.Models.Slice;
 public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactory
 {
     /// <summary>The version of the Session surface this model was written against (SLICE_COMPOSITION §13.7).</summary>
-    public const int SurfaceVersion = 7;
+    public const int SurfaceVersion = 8;
 
     /// <summary>Horizon H of the slice, months (spec §2): the control tables have curve knots τ 0…2·H−1.</summary>
     public const int SliceHorizonMonths = 384;
@@ -145,7 +145,7 @@ public static class SliceData
 
     private static string Sha256(string path) => Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(path)));
 
-    private static string? FindMods(string start)
+    internal static string? FindMods(string start)
     {
         for (var d = new DirectoryInfo(Path.GetFullPath(start)); d is not null; d = d.Parent)
         {

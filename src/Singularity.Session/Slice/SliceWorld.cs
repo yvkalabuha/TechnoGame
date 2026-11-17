@@ -146,7 +146,8 @@ internal sealed class SliceWorld
             new LeverRegistry(Enum.GetValues<Lever>().Where(l => l != Lever.ProcessDevelopment || !config.Channels.HasFlag(SliceChannels.EffortZero))));
 
         Policy.Initialize();
-        Runner = new TickRunner(Table, config.Seed, [Knowledge, Industry, Products, Policy], config.ChunkSize, config.Threads, Calendar);
+        Runner = new TickRunner(Table, config.Seed,
+            config.DailyTickProbe ? [Knowledge, Industry, Products, Policy, new DailyProbeSystem()] : [Knowledge, Industry, Products, Policy], config.ChunkSize, config.Threads, Calendar);
     }
 
     // L_K and L_K0 replace the knowledge model by a schedule; the other layers read `known` as before.

@@ -11,9 +11,7 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0063 [APPROVED] Session DailyTickProbe flag for direct daily-mode benchmark (ADR-0016 T1a) (developer)
 - TASK-0064 [APPROVED] lab bench harness (ADR-0016 T1) (developer)
-- TASK-0065 [APPROVED] Synthetic full-scale world overlay and benchmark pre-registration (ADR-0016 T2) (simulation-engineer)
 - TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
 - TASK-0067 [APPROVED] Godot 4 .NET 3D globe spike: regions, relief, CC0 objects, FPS and memory (developer)
 <!-- registry:active:end -->
