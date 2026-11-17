@@ -40,6 +40,16 @@ public interface IIndustryInputs
     Fx6 ToolingInvest(int siteRow, int cluster, Dimension dim, long month, Fx6 restActor, out Fx6 unmet);
 
     /// <summary>
+    /// <see cref="ToolingInvest(int, int, Dimension, long, Fx6, out Fx6)"/> of every cell of the site at once, cell index <c>cluster·3 + dim</c>
+    /// (spans of length clusters·3). The plan of the actor is the same for all cells, so an implementation may build it once.
+    /// </summary>
+    void ToolingInvestSite(int siteRow, long month, Fx6 restActor, Span<Fx6> invest, Span<Fx6> unmet)
+    {
+        for (int i = 0; i < invest.Length; i++)
+            invest[i] = ToolingInvest(siteRow, i / Dims3.Count, (Dimension)(i % Dims3.Count), month, restActor, out unmet[i]);
+    }
+
+    /// <summary>
     /// <c>D_a(t) = share_D[a]·budget_a(t)</c>: the process-development item of the actor, reserved by the budget/AI
     /// system (contract §4.0, G4-5); ≥ 0.
     /// </summary>

@@ -13,7 +13,6 @@
 <!-- registry:active:start -->
 - TASK-0064 [APPROVED] lab bench harness (ADR-0016 T1) (developer)
 - TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
-- TASK-0068 [APPROVED] Tick hot-spot fixes F1-F3, F5, F6, F8 (tick profile M0) (developer)
 - TASK-0069 [APPROVED] Client prototype v0.2: design controls, Session wiring, tech tree A/B (developer)
 <!-- registry:active:end -->
 

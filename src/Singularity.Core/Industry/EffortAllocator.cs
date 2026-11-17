@@ -46,15 +46,11 @@ public static class EffortAllocator
         // E_useful per site and per actor (sum over the actor's sites).
         var eu = new Fx6[sites * n];
         var euActor = new Fx6[n];
-        for (int site = 0; site < sites; site++)
+        foreach (int site in l.SitesOf(actor))
         {
-            if (l.SiteOwner[site] != actor)
-                continue;
+            rule.EUsefulAll(s, site, month, eu.AsSpan(site * n, n));
             foreach (int r in l.Order)
-            {
-                eu[site * n + r] = rule.EUseful(s, site, r, month);
                 euActor[r] += eu[site * n + r];
-            }
         }
 
         var e = new Fx6[n];
@@ -125,10 +121,8 @@ public static class EffortAllocator
         IndustryLayout l = s.Layout;
         int c = l.ClusterIndex[r];
         Fx6 vExp = Fx6.Zero, gapH = Fx6.Zero;
-        for (int site = 0; site < l.SiteCount; site++)
+        foreach (int site in l.SitesOf(actor))
         {
-            if (l.SiteOwner[site] != actor)
-                continue;
             vExp += s.PlannedVolume(site, r, month);
             for (int d = 0; d < Dims3.Count; d++)
             {
@@ -151,10 +145,8 @@ public static class EffortAllocator
         int n = l.ProcessCount;
         Fx6 sumV = Fx6.Zero;
         int first = -1, top = -1;
-        for (int site = 0; site < l.SiteCount; site++)
+        foreach (int site in l.SitesOf(actor))
         {
-            if (l.SiteOwner[site] != actor)
-                continue;
             Fx6 v = s.V(site, r);
             sumV += v;
             if (first < 0)
@@ -172,20 +164,16 @@ public static class EffortAllocator
         else
         {
             Fx6 given = Fx6.Zero;
-            for (int site = 0; site < l.SiteCount; site++)
+            foreach (int site in l.SitesOf(actor))
             {
-                if (l.SiteOwner[site] != actor)
-                    continue;
                 share[site] = total * s.V(site, r) / sumV;
                 given += share[site];
             }
             share[top] += total - given;
         }
         Fx6 excess = Fx6.Zero;
-        for (int site = 0; site < l.SiteCount; site++)
+        foreach (int site in l.SitesOf(actor))
         {
-            if (l.SiteOwner[site] != actor)
-                continue;
             Fx6 cap = eu[site * n + r];
             Fx6 give = share[site] < cap ? share[site] : cap;
             result[site * n + r] = give;

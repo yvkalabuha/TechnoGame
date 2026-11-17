@@ -107,10 +107,8 @@ public static class ToolingPlan
         var sites = new List<int>();
         var yields = new ProcessYield[l.SiteCount][];
         var pStar = new int[l.SiteCount];
-        for (int s = 0; s < l.SiteCount; s++)
+        foreach (int s in l.SitesOf(actor))
         {
-            if (l.SiteOwner[s] != actor)
-                continue;
             sites.Add(s);
             yields[s] = new ProcessYield[n];
             int tier = 0;

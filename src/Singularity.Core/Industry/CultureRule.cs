@@ -89,6 +89,13 @@ public interface ICultureRule
     /// <summary><c>E_useful(site, p)</c>: money per month that the rule can still use for p (0 if none).</summary>
     Fx6 EUseful(ICultureSnapshot s, int site, int processRow, long month);
 
+    /// <summary><see cref="EUseful"/> of every process of the site, by process row (length = process count); a rule may share work between the processes.</summary>
+    void EUsefulAll(ICultureSnapshot s, int site, long month, Span<Fx6> eu)
+    {
+        foreach (int r in s.Layout.Order)
+            eu[r] = EUseful(s, site, r, month);
+    }
+
     CultureLimiter Limiter(ICultureSnapshot s, int site, int processRow, long month);
 
     /// <summary><c>dH_forecast(site, p, d, E, v)</c> = <c>min(ΔH⁺, ρ_max)</c> of the cell with E and v substituted for p. UI and why_not only.</summary>

@@ -22,6 +22,8 @@ public class ScratchTests
         "ProductsSystem._bureauReq",
         "ProductsSystem._m0",
         "IndustrySystem.DimNames",
+        // Memo of prc_set per (actor, design), a pure function of Current: filled in the constructor and in Post (single-threaded), never on read, never hashed or saved (TASK-0068 F2).
+        "ProductsSystem._prcMemo",
         // Configuration objects with constant arrays (cost tables, the start state): read by the system, never written.
         "KnowledgeSystem._p",
         "KnowledgeSystem._start",

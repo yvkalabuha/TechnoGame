@@ -46,6 +46,17 @@ internal sealed class IndustryInputsAdapter(SliceWorld world) : IIndustryInputs
         return plan.Applied(siteRow, cluster, dim);
     }
 
+    // One plan per site and month; the cells of the site are read from it.
+    public void ToolingInvestSite(int siteRow, long month, Fx6 restActor, Span<Fx6> invest, Span<Fx6> unmet)
+    {
+        ToolingPlanResult plan = Plan(world.IndustryLayout.SiteOwner[siteRow], month, restActor);
+        for (int i = 0; i < invest.Length; i++)
+        {
+            invest[i] = plan.Applied(siteRow, i / Dims3.Count, (Dimension)(i % Dims3.Count));
+            unmet[i] = plan.Unmet(siteRow, i / Dims3.Count, (Dimension)(i % Dims3.Count));
+        }
+    }
+
     /// <summary><c>ToolingPlan(a, t, rest_a)</c> with <c>B_cap = ⌊k_cap·share_cap·budget_a(t)⌋</c> of the shares in force (<c>k_cap</c> = 1 outside the Lab stress set).</summary>
     public ToolingPlanResult Plan(int actor, long month, Fx6 restActor)
     {

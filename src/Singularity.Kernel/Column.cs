@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
 namespace Singularity.Kernel;
@@ -61,6 +62,16 @@ public abstract class Column<T> : Column where T : unmanaged
     private protected abstract void WriteLittleEndian(Span<byte> destination, T value);
 
     internal override void AppendCurrentTo(IncrementalHash hash)
+    {
+        // Little-endian host: the memory is already the hashed byte layout, one call (the same bytes as the element-wise path).
+        if (BitConverter.IsLittleEndian)
+            hash.AppendData(MemoryMarshal.AsBytes(_current.AsSpan()));
+        else
+            AppendCurrentElementwise(hash);
+    }
+
+    /// <summary>The portable path: element-wise little-endian. Kept for big-endian hosts and as the reference of the fast path.</summary>
+    internal void AppendCurrentElementwise(IncrementalHash hash)
     {
         Span<byte> buffer = stackalloc byte[HashBufferBytes];
         int perBatch = HashBufferBytes / ElementSize;

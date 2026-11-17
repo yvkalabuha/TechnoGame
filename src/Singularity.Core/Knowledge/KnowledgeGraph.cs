@@ -35,16 +35,11 @@ public sealed class KnowledgeGraph
     public required ImmutableArray<string> DisciplineNames { get; init; }
     public required ImmutableArray<int> Order { get; init; }
 
+    // Dense table node number → row (−1 = none); immutable, built in Create.
+    private ImmutableArray<int> RowTable { get; init; } = [];
+
     /// <summary>Row of a node number, or −1.</summary>
-    public int RowOf(int number)
-    {
-        for (int r = 0; r < Number.Length; r++)
-        {
-            if (Number[r] == number)
-                return r;
-        }
-        return -1;
-    }
+    public int RowOf(int number) => (uint)number < (uint)RowTable.Length ? RowTable[number] : -1;
 
     /// <summary>
     /// Slice graph from loaded data: disciplines in scenario order, hazard = ★ or hz (§1.3),
@@ -144,8 +139,14 @@ public sealed class KnowledgeGraph
             informedStart.Add(informedFrom.Count);
         }
 
+        int[] rowTable = new int[sorted.Length == 0 ? 0 : sorted[^1] + 1];
+        Array.Fill(rowTable, -1);
+        for (int r = 0; r < n; r++)
+            rowTable[numbers[r]] = r;
+
         return new KnowledgeGraph
         {
+            RowTable = [.. rowTable],
             Number = [.. numbers],
             Type = [.. nodes.Select(s => s.Type)],
             Gen = [.. nodes.Select(s => s.Gen)],

@@ -45,3 +45,9 @@
 - The `synth:` and `slice: calib-print` checks run only in Lab `selftest`, not in `dotnet test`; wrap them in xunit with unique prefixes (test-engineer).
 - DailyTickProbeTests: the test name promises the same view, but only StateHash is compared at the month boundary. Also check `View.Tick` every day.
 - SynthWorld: check the cross-edge `requires` closure for `mastered` as well; `Scale` should floor via Fx6; the seed in the doc comment is wrong (85621515). | Open |
+| DEBT-0040 | TASK-0068 review (reviewer, low).
+- `ProductsSystem.PrcSet` returns a shared `int[]`, protected from mutation only by a comment; return `ImmutableArray<int>` or `ReadOnlySpan<int>`.
+- `IndustryLayout.Create` does not range-check process numbers; throw outside 1..`MaxNodeNumber`.
+- Document `SitesOf(-1)`.
+- The ScratchTests category comment for `_prcMemo` should say "derived cache".
+- The F2 test does not prove that the memo is hit. | Open |

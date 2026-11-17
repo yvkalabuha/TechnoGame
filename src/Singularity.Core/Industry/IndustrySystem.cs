@@ -425,6 +425,7 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
     public void Compute(in TickContext context, int chunk, int rowStart, int rowEnd)
     {
         long t = MonthOf(context);
+        Span<Fx6> invest = stackalloc Fx6[_c * Dims3.Count], unmet = stackalloc Fx6[_c * Dims3.Count];
         for (int s = rowStart; s < rowEnd; s++)
         {
             int mechTier = 0;
@@ -447,12 +448,14 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
                 continue;
             }
             Fx6 rest = AllocateEffort(s, t);
+            // One tooling plan per site and month (it reads only the snapshot), not one per cell.
+            _inputs.ToolingInvestSite(s, t, rest, invest, unmet);
             for (int c = 0; c < _c; c++)
             {
                 for (int d = 0; d < Dims3.Count; d++)
                 {
                     StepCulture(s, c, d, t);
-                    StepTooling(s, c, d, t, mechTier, rest);
+                    StepTooling(s, c, d, t, mechTier, invest[c * Dims3.Count + d], unmet[c * Dims3.Count + d]);
                 }
             }
         }
@@ -522,9 +525,8 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
         _h[c * Dims3.Count + d].Next[s] = step.HNew.Raw;
     }
 
-    private void StepTooling(int s, int c, int d, long t, int mechTier, Fx6 restActor)
+    private void StepTooling(int s, int c, int d, long t, int mechTier, Fx6 invest, Fx6 unmet)
     {
-        Fx6 invest = _inputs.ToolingInvest(s, c, (Dimension)d, t, restActor, out Fx6 unmet);
         if (unmet < Fx6.Zero)
             throw new IndustryInvariantException(t, s, $"negative tool_unmet {unmet}");
         if (invest < Fx6.Zero)

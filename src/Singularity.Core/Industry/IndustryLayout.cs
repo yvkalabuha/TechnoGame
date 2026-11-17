@@ -59,16 +59,19 @@ public sealed class IndustryLayout
     /// <summary>Process rows of the alloy melts, worst to best grade; empty when the layout has no alloy chain.</summary>
     public required ImmutableArray<int> AlloyGrades { get; init; }
 
+    // Dense table process number → row (−1 = none); immutable, built in Create.
+    private ImmutableArray<int> RowTable { get; init; } = [];
+
+    // CSR index of the sites of each actor, ascending site id: SiteList[SiteStart[a]..SiteStart[a + 1]].
+    private ImmutableArray<int> SiteStart { get; init; } = [0];
+    private ImmutableArray<int> SiteList { get; init; } = [];
+
     /// <summary>Row of a process number, or −1.</summary>
-    public int RowOf(int number)
-    {
-        for (int r = 0; r < Number.Length; r++)
-        {
-            if (Number[r] == number)
-                return r;
-        }
-        return -1;
-    }
+    public int RowOf(int number) => (uint)number < (uint)RowTable.Length ? RowTable[number] : -1;
+
+    /// <summary>Sites owned by the actor in ascending site id; empty for an actor without a site.</summary>
+    public ReadOnlySpan<int> SitesOf(int actor) =>
+        (uint)actor < (uint)(SiteStart.Length - 1) ? SiteList.AsSpan().Slice(SiteStart[actor], SiteStart[actor + 1] - SiteStart[actor]) : [];
 
     public static IndustryLayout Create(IReadOnlyList<Cluster> clusters, IReadOnlyList<IndustryProcessSpec> processes,
         IReadOnlyList<int> siteOwner, int workforceCategories, int skilledCategory, int requesters, IReadOnlyList<int>? alloyGrades = null)
@@ -118,8 +121,39 @@ public sealed class IndustryLayout
             if (grades[i] < 0)
                 throw new ArgumentException($"Alloy grade {alloyGrades![i]} is not a process of the layout.", nameof(alloyGrades));
         }
+        int maxNumber = 0;
+        foreach (IndustryProcessSpec p in processes)
+            maxNumber = Math.Max(maxNumber, p.Number);
+        int[] rowTable = new int[(processes.Count == 0 ? 0 : maxNumber) + 1];
+        Array.Fill(rowTable, -1);
+        for (int r = 0; r < processes.Count; r++)
+        {
+            if (processes[r].Number >= 0)
+                rowTable[processes[r].Number] = r;
+        }
+        int actors = 0;
+        foreach (int owner in siteOwner)
+            actors = Math.Max(actors, owner + 1);
+        int[] siteStart = new int[actors + 1];
+        foreach (int owner in siteOwner)
+        {
+            if (owner >= 0)
+                siteStart[owner + 1]++;
+        }
+        for (int a = 0; a < actors; a++)
+            siteStart[a + 1] += siteStart[a];
+        int[] siteList = new int[siteStart[actors]];
+        int[] fill = (int[])siteStart.Clone();
+        for (int site = 0; site < siteOwner.Count; site++)
+        {
+            if (siteOwner[site] >= 0)
+                siteList[fill[siteOwner[site]]++] = site;
+        }
         return new IndustryLayout
         {
+            RowTable = [.. rowTable],
+            SiteStart = [.. siteStart],
+            SiteList = [.. siteList],
             Clusters = [.. clusters],
             Number = [.. processes.Select(p => p.Number)],
             ClusterIndex = [.. cluster],

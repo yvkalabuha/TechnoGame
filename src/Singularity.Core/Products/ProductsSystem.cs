@@ -73,6 +73,7 @@ public sealed partial class ProductsSystem : ITickSystem
 
     // Midyear month index of each cohort year (spec A32): age of cohort Y at month t is t − _m0[Y].
     private readonly int[] _m0;
+    private readonly PrcMemo?[] _prcMemo;
 
     // Step 7 trace (SLICE_COMPOSITION §13.3): scratch, rewritten for row a at the start of its compute; not state, not hashed.
     [Scratch]
@@ -120,6 +121,7 @@ public sealed partial class ProductsSystem : ITickSystem
         _m0 = new int[layout.Years];
         for (int y = 0; y < _m0.Length; y++)
             _m0[y] = y * 12 + (7 - startMonth);
+        _prcMemo = new PrcMemo?[layout.SiteCount * layout.Designs];
         _moneyTraced = new bool[layout.SiteCount];
         _traceLeftStart = new long[layout.SiteCount];
         _traceLines = new LineMoneyStep?[layout.SiteCount * layout.Designs];
@@ -296,6 +298,7 @@ public sealed partial class ProductsSystem : ITickSystem
             }
             _qMask[d].Load(q);
         }
+        RebuildPrcMemo();
     }
 
     /// <summary>
@@ -398,8 +401,47 @@ public sealed partial class ProductsSystem : ITickSystem
     }
 
     /// <summary><c>prc_set</c> of a design (ascending process numbers); empty without a design.</summary>
-    public int[] PrcSet(int actor, int design) =>
-        Stage(actor, design) == DesignStage.None ? [] : DesignRules.PrcSet(_l, Alternatives(actor, design));
+    public int[] PrcSet(int actor, int design)
+    {
+        if (Stage(actor, design) == DesignStage.None)
+            return [];
+        // Memo of DesignRules.PrcSet, built only in the constructor and in Post (single-threaded), never on read, so parallel readers do not race.
+        // Keyed by the alternatives in Current: a stale entry is never returned, it is recomputed without being stored. Not state: not hashed or saved.
+        // Callers must not mutate the returned array.
+        PrcMemo? memo = _prcMemo[actor * _d + design];
+        if (memo is not null)
+        {
+            bool same = true;
+            for (int s = 0; s < _s && same; s++)
+                same = memo.Alts[s] == _alt[design * _s + s].Current[actor];
+            if (same)
+                return memo.Prc;
+        }
+        return DesignRules.PrcSet(_l, Alternatives(actor, design));
+    }
+
+    // Refreshes the memo of every (actor, design) from Current; keeps the entry when the alternatives did not change.
+    private void RebuildPrcMemo()
+    {
+        for (int a = 0; a < _l.SiteCount; a++)
+        {
+            for (int d = 0; d < _d; d++)
+            {
+                ref PrcMemo? slot = ref _prcMemo[a * _d + d];
+                int[] alts = Alternatives(a, d);
+                if (Stage(a, d) == DesignStage.None || alts.Any(x => x < 0 || x >= _l.AltPrcStart.Length - 1))
+                {
+                    slot = null; // no design or a slot not filled: PrcSet answers without the memo, as before
+                    continue;
+                }
+                if (slot is not null && slot.Alts.AsSpan().SequenceEqual(alts))
+                    continue;
+                slot = new PrcMemo(alts, DesignRules.PrcSet(_l, alts));
+            }
+        }
+    }
+
+    private sealed record PrcMemo(int[] Alts, int[] Prc);
 
     public Fx6 Perf(int actor, int design) => DesignRules.Perf(_l, Alternatives(actor, design));
 
@@ -733,6 +775,7 @@ public sealed partial class ProductsSystem : ITickSystem
 
     public void Post(in TickContext context)
     {
+        RebuildPrcMemo();
         long month = context.Calendar!.MonthIndex(context.Tick - 1);
         for (int a = 0; a < _l.SiteCount; a++)
         {

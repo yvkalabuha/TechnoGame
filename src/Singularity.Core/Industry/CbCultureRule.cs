@@ -21,16 +21,39 @@ public sealed class CbCultureRule : ICultureRule
     public CultureStep Step(ICultureSnapshot s, int site, int cluster, int dim, long month) =>
         CellStep(s, site, cluster, dim, month, -1, Fx6.Zero, Fx6.Zero);
 
-    public Fx6 EUseful(ICultureSnapshot s, int site, int processRow, long month)
+    public Fx6 EUseful(ICultureSnapshot s, int site, int processRow, long month) => EUsefulCore(s, site, processRow, month, default);
+
+    /// <summary>
+    /// <see cref="EUseful"/> of every process of the site in one pass: <c>lead(c, d)</c> is computed once per cell (O(P) per site), then
+    /// each process reads the table. Same values as the one-by-one call.
+    /// </summary>
+    public void EUsefulAll(ICultureSnapshot s, int site, long month, Span<Fx6> eu)
     {
-        int d = DStar(s, site, processRow, month);
+        IndustryLayout l = s.Layout;
+        Span<int> leads = stackalloc int[l.Clusters.Length * Dims3.Count];
+        for (int c = 0; c < l.Clusters.Length; c++)
+        {
+            for (int d = 0; d < Dims3.Count; d++)
+                leads[c * Dims3.Count + d] = Lead(s, site, c, d, month);
+        }
+        foreach (int r in l.Order)
+            eu[r] = EUsefulCore(s, site, r, month, leads);
+    }
+
+    // leads empty: lead(c, d) is computed on demand; else the table of EUsefulAll, index c·3 + d.
+    private static Fx6 EUsefulCore(ICultureSnapshot s, int site, int processRow, long month, ReadOnlySpan<int> leads)
+    {
+        int c = s.Layout.ClusterIndex[processRow];
+        int d = DStar(s, site, processRow, month, leads);
         if (d < 0)
             return Fx6.Zero;
-        int c = s.Layout.ClusterIndex[processRow];
-        if (Lead(s, site, c, d, month) != processRow || Limiter0(s, site, processRow, d, month) != LimiterKind.Effort)
+        if (LeadOf(s, site, c, d, month, leads) != processRow || Limiter0(s, site, processRow, d, month) != LimiterKind.Effort)
             return Fx6.Zero;
         return DetMath.MulCeil(KStar(s, site, processRow, d, month), s.Params.EFull);
     }
+
+    private static int LeadOf(ICultureSnapshot s, int site, int c, int d, long month, ReadOnlySpan<int> leads) =>
+        leads.IsEmpty ? Lead(s, site, c, d, month) : leads[c * Dims3.Count + d];
 
     public CultureLimiter Limiter(ICultureSnapshot s, int site, int processRow, long month)
     {
@@ -213,20 +236,22 @@ public sealed class CbCultureRule : ICultureRule
     /// <c>d*(p)</c>: the dimension with the largest <c>r_d − H</c> among the cells p leads, else among all
     /// its active dimensions; ties by canonical order; −1 when p has no active dimension.
     /// </summary>
-    internal static int DStar(ICultureSnapshot s, int site, int r, long month)
+    internal static int DStar(ICultureSnapshot s, int site, int r, long month) => DStar(s, site, r, month, default);
+
+    private static int DStar(ICultureSnapshot s, int site, int r, long month, ReadOnlySpan<int> leads)
     {
         int c = s.Layout.ClusterIndex[r];
-        int best = Pick(s, site, r, c, month, ledOnly: true);
-        return best >= 0 ? best : Pick(s, site, r, c, month, ledOnly: false);
+        int best = Pick(s, site, r, c, month, ledOnly: true, leads);
+        return best >= 0 ? best : Pick(s, site, r, c, month, ledOnly: false, leads);
     }
 
-    private static int Pick(ICultureSnapshot s, int site, int r, int c, long month, bool ledOnly)
+    private static int Pick(ICultureSnapshot s, int site, int r, int c, long month, bool ledOnly, ReadOnlySpan<int> leads)
     {
         int best = -1;
         Fx6 bestGap = Fx6.Zero;
         for (int d = 0; d < Dims3.Count; d++)
         {
-            if (s.Layout.Req[r][d] <= Fx6.Zero || (ledOnly && Lead(s, site, c, d, month) != r))
+            if (s.Layout.Req[r][d] <= Fx6.Zero || (ledOnly && LeadOf(s, site, c, d, month, leads) != r))
                 continue;
             Fx6 gap = s.Layout.Req[r][d] - s.H(site, c, d);
             if (best < 0 || gap > bestGap)
