@@ -36,3 +36,15 @@ A throwaway technical spike: show what a 3D-globe client costs on the owner's ma
 - The project opens and runs headless-buildable (`godot --headless --build-solutions` or the equivalent) on this machine.
 - A short report in `docs/ui/prototypes/globe-spike-report.md` with the numbers, screenshots (if a display is available; otherwise say so) and problems.
 - The main solution's full `dotnet test` is still green.
+
+## Результат
+**Сделано** (с учётом правки `docs/ui/GLOBE_DIRECTION.md` v0.1: без фото, поверхность A «Глобус-лист»).
+- Godot 4.7.2 mono установлен в `~/.local/opt/godot/` (sha256 архива `129f82db7bafd54ae14bb5bb284041c73860e8c7a009a3a026ca5e946cbff247`, sha512 совпал с официальным). Godot 4.7.2 работает на .NET 8 (в системе SDK 8.0.426 и 10.0.403), проект `Godot.NET.Sdk/4.7.2` + `net8.0`.
+- Проект `src/Singularity.Client.Spike/` вне `Singularity.sln`; собственный `Directory.Build.props` отключает `src/Directory.Build.props`. Сборка: `godot --headless --path . --build-solutions --quit` — успешно (перед этим один раз `--import`).
+- Глобус: фон `paper`, линия лимба, ID-текстура из Natural Earth 50m admin-0 (PD), заливка/границы в экранных пикселях/штриховка/сетка в шейдере, подписи и плашки тревог в 2D-слое, орбитальная камера, выбор региона кликом. 5 CC0-объектов (Kenney City Kit Industrial: завод, труба, башня, ангар; OpenGameArt Funky aircraft) + ВПП (процедурная) + 300 инстансов; стройка через параметр `progress`.
+- Замеры, скриншоты (дисплей :0 был доступен), проблемы: `docs/ui/prototypes/globe-spike-report.md`, данные `docs/ui/prototypes/globe-spike/`.
+- Файлы данных: небольшие (≈ 1,7 МБ JSON, 0,6 МБ моделей) закоммичены с `LICENSES.md`; `.godot/`, `*.import`, `bench-out/` в `.gitignore` проекта. Фото/Blue Marble не использовались.
+
+**Проверено:** `bench` на RTX 3050 Ti: 500–960 к/с без vsync, VRAM 195 МБ (процесс 341 МиБ), RSS ≈ 0,8 ГБ, запуск ≈ 2,5–3,3 с. Главный вывод: ID-текстура 4096×2048 на Z2+ ступенчатая, нужны векторные линии.
+
+**Отклонения / замечания:** kenney.nl отдаёт 403 на автозагрузку (обходить не стал), пакет взят с OpenGameArt (CC0). Самолёта и аэродрома в Kenney нет. Полный `dotnet test` решения см. в отчёте оркестратору.
