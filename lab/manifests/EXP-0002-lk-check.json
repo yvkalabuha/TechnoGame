@@ -1,0 +1,29 @@
+{
+ "schema": 1,
+ "experiment": "EXP-0002-lk-check",
+ "description": "Corrected L_K check (spec v0.34 §6.1, #251): LAYER LK with CONTROL_TABLES 4e10abb5 on the calibration seeds at the frozen p00 values (no K keys: build defaults)",
+ "model": "JetSliceCalib",
+ "ticks": 11688,
+ "chunk_size": 1,
+ "threads": 1,
+ "seeds": {
+  "start": 10001,
+  "count": 100
+ },
+ "params": {
+  "LINE_CLOSE": "YPROD",
+  "TOOLING_TARGET": "V5",
+  "POOL_ORDER": "CAN",
+  "LAYER": "LK",
+  "CONTROL_TABLES": "control_tables-EXP-0002.json"
+ },
+ "series": [
+  {
+   "name": "layer/L_K"
+  }
+ ],
+ "meta": {
+  "spec": "slice-jet-aviation.md v0.34 (bdfaaf6) §6.1 LK-CHECK",
+  "control_tables_hash": "4e10abb518ff291bb3490ec8dbaed2d32b553c308240ace605266a5999aaf506"
+ }
+}
