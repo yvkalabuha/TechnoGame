@@ -21,7 +21,7 @@ public sealed class SliceFormatException(string message) : Exception(message);
 /// </summary>
 internal sealed class SliceObserver
 {
-    private static readonly string[] Great = ["USA", "GBR", "SUN"];
+    internal static readonly string[] Great = ["USA", "GBR", "SUN"];
     private static readonly string[] ToolingClusters = ["MET", "CHEM", "MECH", "AERO"];
     private static readonly string[] KdNames = ["aero", "prop", "metal", "chem", "mech"];
     private static readonly int[] Melts = [39, 40, 41];
@@ -962,23 +962,30 @@ internal sealed class SliceObserver
         _leaderAll = Leader(keys, _nA, _leaderAll);
         _lead.Append((char)('0' + _leader));
         _leadAll.Append((char)('0' + _leaderAll));
-        // The field on which the leader is strictly ahead of the best other great power; '=' for a tie held by the incumbent.
+        _leadField.Append(LeadField(keys, Great.Length, _leader));
+    }
+
+    // The field on which the leader is strictly ahead of the best other of the first `count` actors; '=' for a tie held by the incumbent.
+    // Shared with calib-print (#268), which applies it to the keys of the r6 rule.
+    internal static char LeadField(TechKey[] keys, int count, int leader)
+    {
         TechKey best = default;
         bool any = false;
-        for (int a = 0; a < Great.Length; a++)
+        for (int a = 0; a < count; a++)
         {
-            if (a == _leader)
+            if (a == leader)
                 continue;
             if (!any || keys[a].CompareTo(best) > 0)
                 best = keys[a];
             any = true;
         }
-        TechKey l = keys[_leader];
-        _leadField.Append(l.G != best.G ? 'G' : l.T != best.T ? 'T' : l.N != best.N ? 'N' : l.P != best.P ? 'P' : '=');
+        TechKey l = keys[leader];
+        return l.G != best.G ? 'G' : l.T != best.T ? 'T' : l.N != best.N ? 'N' : l.P != best.P ? 'P' : '=';
     }
 
     // tech_lead (contract §9.1 v2.2): the greatest key; the incumbent keeps a tie; among new leaders tied for the top, the first actor.
-    private static int Leader(TechKey[] keys, int count, int incumbent)
+    // Shared with calib-print (#268).
+    internal static int Leader(TechKey[] keys, int count, int incumbent)
     {
         int best = 0;
         for (int a = 1; a < count; a++)

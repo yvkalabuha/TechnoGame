@@ -1,5 +1,6 @@
 using Singularity.Core.Data;
 using Singularity.Core.Knowledge;
+using Singularity.Core.Policy;
 using Singularity.Core.Products;
 using Singularity.Kernel;
 using Singularity.Session;
@@ -48,6 +49,8 @@ public static class SliceChecks
         ("slice: calibration points — one point of each stage C1, C3+C4, C2 and the L_C/L_P layers run; K keys change the run (TASK-0055)", () => CalibrationPoints(tmp)),
         ("slice: switches — FORCE, START PERT/SYM, CHANNELS, GRID, FLEET_ARM, SALE_ARM, change the run (DEBT-0032, HYP-0004)", () => Switches(tmp)),
         ("slice: calib-print — 1 seed, 60 months, JetSliceCalib and JetSlice: hash = golden_hash, G_r6 ≤ G_L, first entry equal; FORCE/CONTROL_TABLES rejected (review M1, M2, M5)", () => CalibPrintSmoke(tmp)),
+        ("slice: calib-print r6 key — synthetic views: G and P over the r6 fielded set, T and N over mastered processes; tie rule and lead field (#268)", CalibPrintR6Key),
+        ("slice: calib-print r6 leader — JetSlice 150 months: lead_l and field_l = summary lead and lead_field, lead_r6 = leader of the r6 keys, hash = golden (#268)", () => CalibPrintR6Leader(tmp)),
         ("slice: lk-draws — t_known of an L_K run = max(req, 0) of the exported draws, req ≥ own (spec v0.34 §6.1 self-check, #251)", () => LkDrawsExact(tmp)),
         ("slice: c5-stand — the output months of the C5 site equal the C1 DevSite FULL_T0 (same culture rule C-B + I-OC, 8 months)", C5DevSiteEquivalence),
         ("slice: c5-stand — smoke (horizon 6, threshold 0,25): idle and restart run, two runs give the same bytes, no statistic row (#248)", () => C5Smoke(tmp)),
@@ -111,6 +114,110 @@ public static class SliceChecks
             catch (UsageException) { }   // any other exception fails the check with its message
         }
         return null;
+    }
+
+    // #268: the r6 key of calib-print on hand-made views. Processes 101 (tier 1), 102 and 103 (tier 2) mastered, 104 (tier 3) not; n_service_min 3.
+    private static string? CalibPrintR6Key()
+    {
+        static ProcessView Pv(bool mastered) => new(Fx6.One, Fx6.Zero, true, Fx6.One, mastered, Fx6.Zero);
+        static DesignView Dv(int d, DesignStage stage, int gen, long inServiceRaw, long perf, params int[] prc) =>
+            new(d, stage, gen, gen, -1, -1, true, false, Fx6.Zero, Fx6.One, Fx6.One, Fx6.FromRaw(inServiceRaw), Fx6.One, Fx6.FromInt(perf),
+                LineBind.None, true, [.. prc]);
+        var layout = new SliceLayoutView(["USA"], [101, 102, 103, 104, 200], [1, 1, 1, 1, 1], [101, 102, 103, 104], [1, 2, 2, 3], [], [], 6, 0, 2, 0,
+            Fx6.One, Fx6.One);
+        var nodes = System.Collections.Immutable.ImmutableArray.Create(
+            new NodeView(101, true, false, Pv(true), null), new NodeView(102, true, false, Pv(true), null), new NodeView(103, true, false, Pv(true), null),
+            new NodeView(104, true, false, Pv(false), null), new NodeView(200, true, false, null, null));
+        var designs = System.Collections.Immutable.ImmutableArray.Create(
+            Dv(0, DesignStage.InService, 1, 5 * Fx6.Scale, 100, 101),          // fielded by r6
+            Dv(1, DesignStage.InService, 2, 10 * Fx6.Scale, 300, 101, 104),    // 104 not mastered now: out of r6 (the closed-line case)
+            Dv(2, DesignStage.InService, 1, 3 * Fx6.Scale - 1, 500, 101),      // ⌊2.999999⌋ = 2 < 3: out
+            Dv(3, DesignStage.InService, 1, 4 * Fx6.Scale, 200, 102),          // fielded by r6, the largest P of the set
+            Dv(4, DesignStage.None, 2, 9 * Fx6.Scale, 900, 101),               // no stage: out
+            Dv(5, DesignStage.Series, 1, 3 * Fx6.Scale, 150, 101, 102, 103));  // exactly n_service_min, all mastered: in
+        var av = new ActorView(0, PolicyProfile.Quality, [], 2, new TechKey(2, 2, 2, Fx6.FromInt(300)), null, [], default,
+            new LicenceView(0, -1, -1, 0, 0, Fx6.Zero, [], false), default, nodes, designs, new PolicyDecisionView([], [], [], [], []));
+        TechKey k = Smoke.CalibPrint.KeyR6(av, layout, 3);
+        if (k != new TechKey(1, 2, 2, Fx6.FromInt(200)))
+            return $"K_r6 {k}, expected (1, 2, 2, 200)";
+        // G and P are maxima over the set, not the fields of one design: a gen-2 design with a low perf next to a gen-1 design with a high perf.
+        var mixed = av with
+        {
+            Designs = System.Collections.Immutable.ImmutableArray.Create(
+                Dv(0, DesignStage.InService, 2, 5 * Fx6.Scale, 100, 101),
+                Dv(1, DesignStage.InService, 1, 5 * Fx6.Scale, 400, 102)),
+        };
+        k = Smoke.CalibPrint.KeyR6(mixed, layout, 3);
+        if (k != new TechKey(2, 2, 2, Fx6.FromInt(400)))
+            return $"K_r6 {k} with G and P from different designs, expected (2, 2, 2, 400)";
+        // Tie rule of the metric (contract §9.1 v2.2): the incumbent keeps a tie, a new leader is the first of the tied top, the field is where it leads.
+        TechKey a = new(1, 2, 2, Fx6.FromInt(200)), b = new(1, 2, 2, Fx6.FromInt(100)), z = new(0, 2, 2, Fx6.Zero);
+        TechKey[] keys = [a, a, z];
+        if (SliceObserver.Leader(keys, 3, 1) != 1 || SliceObserver.LeadField(keys, 3, 1) != '=')
+            return "a tie must be kept by the incumbent with field '='";
+        if (SliceObserver.Leader(keys, 3, 2) != 0 || SliceObserver.LeadField(keys, 3, 0) != '=')
+            return "a new leader among a tied top must be the first actor";
+        keys = [b, a, z];
+        if (SliceObserver.Leader(keys, 3, 0) != 1 || SliceObserver.LeadField(keys, 3, 1) != 'P')
+            return "a strict lead on P must change the leader with field 'P'";
+        keys = [b, a, new TechKey(2, 0, 0, Fx6.Zero)];
+        return SliceObserver.Leader(keys, 3, 1) == 2 && SliceObserver.LeadField(keys, 3, 2) == 'G' ? null : "G must dominate T, N and P";
+    }
+
+    // #268: on the full views the leader columns of calib-print equal the observer's summary (the L leader), and lead_r6 is the leader of the printed r6 keys.
+    private static string? CalibPrintR6Leader(string tmp)
+    {
+        string dir = Path.Combine(tmp, "calib-print-r6");
+        Directory.CreateDirectory(dir);
+        string path = Path.Combine(dir, "m.json");
+        string json = Manifest("JetSlice", Ticks150, seeds: "[3]", pars: """{"detail": "full"}""");
+        File.WriteAllText(path, json);
+        var (r, runDir) = Run(tmp, json, 3, 1, "calib-print-r6-golden");
+        if (!r.Ok)
+            return r.Error;
+        string outDir = Path.Combine(dir, "out");
+        if (Smoke.CalibPrint.Run(path, null, null, outDir, 1, TextWriter.Null) != 0)
+            return "calib-print exit code";
+        string[] runs = File.ReadAllLines(Path.Combine(outDir, "fielded_runs.csv"));
+        if (runs.Length != 2 || runs[1].Split(',')[2] != r.GoldenHash)
+            return $"hash {(runs.Length > 1 ? runs[1] : "-")} vs golden {r.GoldenHash}";
+        string[] sum = File.ReadAllLines(Path.Combine(runDir, "summary.csv"));
+        string[] sh = sum[0].Split(','), sc = sum[1].Split(',');
+        string lead = sc[Array.IndexOf(sh, "lead")], field = sc[Array.IndexOf(sh, "lead_field")];
+        string[] leads = File.ReadAllLines(Path.Combine(outDir, "fielded_lead.csv"));
+        if (leads[0] != Smoke.CalibPrint.LeadHeader || leads.Length != 2)
+            return $"fielded_lead.csv: {leads[0]}, {leads.Length} lines";
+        string[] lc = leads[1].Split(',');
+        if (lead.Length != 150 || lc[2] != lead || lc[4] != field)
+            return $"lead_l/field_l differ from summary (length {lead.Length})";
+        if (lc[3].Length != 150 || lc[5].Length != 150)
+            return "lead_r6/field_r6 length";
+        string[] keyLines = File.ReadAllLines(Path.Combine(outDir, "fielded_key.csv"));
+        if (keyLines[0] != Smoke.CalibPrint.KeyHeader)
+            return $"fielded_key.csv header {keyLines[0]}";
+        // Rebuild both leaders from the printed keys of the great powers (rows in month order, actors in layout order).
+        var byMonth = keyLines.Skip(1).Select(x => x.Split(',')).GroupBy(c => long.Parse(c[3], System.Globalization.CultureInfo.InvariantCulture)).ToList();
+        int nGreat = SliceObserver.Great.Length, l6 = 0, ll = 0;
+        var r6 = new System.Text.StringBuilder();
+        var rl = new System.Text.StringBuilder();
+        foreach (var g in byMonth)
+        {
+            string[][] rows = [.. g];
+            if (rows.Length < nGreat || Enumerable.Range(0, nGreat).Any(i => rows[i][2] != SliceObserver.Great[i]))
+                return $"month {g.Key}: actor rows";
+            static int P(string v) => int.Parse(v, System.Globalization.CultureInfo.InvariantCulture);
+            TechKey[] k6 = [.. rows.Select(c => new TechKey(P(c[8]), P(c[5]), P(c[6]), Fx6.FromRaw(long.Parse(c[9], System.Globalization.CultureInfo.InvariantCulture))))];
+            TechKey[] kl = [.. rows.Select(c => new TechKey(P(c[4]), P(c[5]), P(c[6]), Fx6.FromRaw(long.Parse(c[7], System.Globalization.CultureInfo.InvariantCulture))))];
+            if (rows.Any(c => P(c[8]) > P(c[4]) || long.Parse(c[9], System.Globalization.CultureInfo.InvariantCulture) > long.Parse(c[7], System.Globalization.CultureInfo.InvariantCulture)))
+                return $"month {g.Key}: K_r6 above K_L";
+            l6 = SliceObserver.Leader(k6, nGreat, l6);
+            ll = SliceObserver.Leader(kl, nGreat, ll);
+            r6.Append((char)('0' + l6));
+            rl.Append((char)('0' + ll));
+        }
+        if (rl.ToString() != lead)
+            return "leader of the printed K_L differs from summary lead";
+        return r6.ToString() == lc[3] ? null : "leader of the printed K_r6 differs from lead_r6";
     }
 
     // #251: the draws exported by lk-draws are those of the run — the self-check of the corrected L_K check, here on synthetic tables, 150 months.

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using Singularity.Core.Data;
 using Singularity.Core.Products;
 using Singularity.Kernel;
@@ -17,6 +18,10 @@ namespace Singularity.Lab.Smoke;
 /// Also <c>designs.csv</c>: every design slot that got a stage, with its generation, <c>prc_set</c> and the first months of its stages (K-classes of
 /// the C2 pool, «process abandoned»; the former Lab host dump_host, read views only).
 /// The run uses the point's parameters as the matrix does, so its final state hash is the run's golden_hash (checked by the analysis).
+/// #268 (outside the pre-registration of EXP-0002): with the full views (<c>JetSlice</c>, <see cref="ActorView.Key"/> set) also the monthly leader by
+/// the r6 key <c>K_r6 = (G_r6, T, N, P_r6)</c> — <c>G</c> and <c>P</c> over the r6 <c>fielded</c> set, <c>T</c> and <c>N</c> as in <c>KeyOf</c> — next to
+/// the leader by <see cref="ActorView.Key"/> (<c>fielded_L</c>), both with the tie rule of the observer (<see cref="SliceObserver.Leader"/>): files
+/// <c>fielded_lead.csv</c> and <c>fielded_key.csv</c>. Print only: no decision reads it, the world and its hash are the same.
 /// </summary>
 internal static class CalibPrint
 {
@@ -97,15 +102,37 @@ internal static class CalibPrint
             foreach (Result r in results)
                 w.WriteLine($"{I(r.Point)},{r.Seed.ToString(CultureInfo.InvariantCulture)},{r.Hash}");
         }
+        using (var w = new StreamWriter(Path.Combine(outDir, "fielded_lead.csv")))
+        {
+            // #268: one character per month 0…months−1; lead_* = index among the great powers, field_* = the field of the strict lead or '='.
+            // Empty without the full views (JetSliceCalib).
+            w.WriteLine(LeadHeader);
+            foreach (Result r in results)
+                w.WriteLine($"{I(r.Point)},{r.Seed.ToString(CultureInfo.InvariantCulture)},{r.LeadL},{r.LeadR6},{r.FieldL},{r.FieldR6}");
+        }
+        using (var w = new StreamWriter(Path.Combine(outDir, "fielded_key.csv")))
+        {
+            // #268: the key of every actor-month by both rules; T and N are one rule (checked equal), P as Fx6 raw. Rows only with the full views.
+            w.WriteLine(KeyHeader);
+            foreach (Result r in results)
+            {
+                foreach (string k in r.Keys)
+                    w.WriteLine($"{I(r.Point)},{r.Seed.ToString(CultureInfo.InvariantCulture)},{k}");
+            }
+        }
         log.WriteLine($"calib-print: {results.Length} runs, n_service_min {nServiceMin}");
         return 0;
     }
+
+    internal const string LeadHeader = "point,seed,lead_l,lead_r6,field_l,field_r6";
+    internal const string KeyHeader = "point,seed,actor,month,g_l,t,n,p_l,g_r6,p_r6";
 
     private sealed record ActorRow(string Actor, long Months, long LGtR6, long R6GtL, long?[] FirstL, long?[] FirstR6);
 
     private sealed record Spell(string Actor, long Start, long? End, int GL, int GR6);
 
-    private sealed record Result(int Point, ulong Seed, string Hash, int Generations, List<ActorRow> Actors, List<Spell> Spells, List<string> Designs);
+    private sealed record Result(int Point, ulong Seed, string Hash, int Generations, List<ActorRow> Actors, List<Spell> Spells, List<string> Designs,
+        string LeadL, string LeadR6, string FieldL, string FieldR6, List<string> Keys);
 
     private static Result One(GameData data, SliceRunConfig config, long ticks, int nServiceMin, int point, ulong seed)
     {
@@ -127,6 +154,15 @@ internal static class CalibPrint
         var prc = new string?[nA, nD];
         var gen = new int[nA, nD];
         var cancelled = new bool[nA, nD];
+        int nGreat = SliceObserver.Great.Length;
+        var leadL = new StringBuilder();
+        var leadR6 = new StringBuilder();
+        var fieldL = new StringBuilder();
+        var fieldR6 = new StringBuilder();
+        var keyRows = new List<string>();
+        int leaderL = 0, leaderR6 = 0;   // the observer's start (SliceObserver.Initialize)
+        var kl = new TechKey[nA];
+        var kr = new TechKey[nA];
         void Observe(SliceView v, long t)
         {
             for (int a = 0; a < nA; a++)
@@ -141,10 +177,32 @@ internal static class CalibPrint
                     cancelled[a, d.Design] = d.Cancelled;
                 }
             }
+            // With the full views the r6 key of this snapshot is computed once here and its G reused by the generation print below.
+            bool haveKeys = t >= 0 && v.Actors.All(x => x.Key is not null);
+            if (haveKeys)
+            {
+                for (int a = 0; a < nA; a++)
+                {
+                    ActorView av = v.Actors[a];
+                    TechKey kL = av.Key!.Value, kR = KeyR6(av, l, nServiceMin);
+                    // Checks of the rebuild against the Core key: T and N are one rule; fielded ⊆ fielded_L gives G_r6 ≤ G_L and P_r6 ≤ P_L.
+                    if (kR.T != kL.T || kR.N != kL.N || kR.G > kL.G || kR.P > kL.P || kL.G != av.FieldedGen)
+                        throw new InvalidOperationException($"seed {seed} month {t} actor {l.ActorIds[a]}: K_L {kL} vs K_r6 {kR}, FieldedGen {av.FieldedGen}.");
+                    kl[a] = kL;
+                    kr[a] = kR;
+                    keyRows.Add(string.Join(",", l.ActorIds[a], I(t), I(kL.G), I(kL.T), I(kL.N), I(kL.P.Raw), I(kR.G), I(kR.P.Raw)));
+                }
+                leaderL = SliceObserver.Leader(kl, nGreat, leaderL);
+                leaderR6 = SliceObserver.Leader(kr, nGreat, leaderR6);
+                leadL.Append((char)('0' + leaderL));
+                leadR6.Append((char)('0' + leaderR6));
+                fieldL.Append(SliceObserver.LeadField(kl, nGreat, leaderL));
+                fieldR6.Append(SliceObserver.LeadField(kr, nGreat, leaderR6));
+            }
             for (int a = 0; a < nA; a++)
             {
                 ActorView av = v.Actors[a];
-                int gl = av.FieldedGen, gr6 = GenR6(av, l, nServiceMin);
+                int gl = av.FieldedGen, gr6 = haveKeys ? kr[a].G : KeyR6(av, l, nServiceMin).G;
                 for (int g = 1; g <= nG; g++)
                 {
                     if (gl >= g) firstL[a, g - 1] ??= t;
@@ -196,27 +254,52 @@ internal static class CalibPrint
                     O(stageFirst[a, d, 4]), O(stageFirst[a, d, 5]), cancelled[a, d] ? "1" : "0"));
             }
         }
-        return new Result(point, seed, s.LastHash, nG, rows, spells, designs);
+        return new Result(point, seed, s.LastHash, nG, rows, spells, designs, leadL.ToString(), leadR6.ToString(), fieldL.ToString(), fieldR6.ToString(), keyRows);
     }
 
-    // G of the r6 rule (contract §9.1 r6) on the views of one snapshot; the view's FieldedGen and Mastered are both taken at the month after it.
-    private static int GenR6(ActorView av, SliceLayoutView l, int nServiceMin)
+    /// <summary>
+    /// <c>K_r6 = (G, T, N, P)</c> of contract §9.1 r6 on the views of one snapshot (#268): <c>G</c> and <c>P</c> over the designs with a stage,
+    /// ⌊in service⌋ ≥ <c>n_service_min</c> and every process of their <c>prc_set</c> mastered now; <c>T</c>, <c>N</c> — the highest tier among the
+    /// mastered processes and their count, as in <c>ProductsSystem.KeyOf</c>. The view's Mastered is taken at the month after the snapshot, as the Key.
+    /// </summary>
+    internal static TechKey KeyR6(ActorView av, SliceLayoutView l, int nServiceMin)
     {
+        bool Mastered(int number)
+        {
+            int r = l.NodeNumbers.IndexOf(number);
+            return r >= 0 && av.Nodes[r].Process is ProcessView pv && pv.Mastered;
+        }
         int g = 0;
+        Fx6 perf = Fx6.Zero;
         foreach (DesignView d in av.Designs)
         {
-            if (d.Stage == DesignStage.None || d.InService.Raw / Fx6.Scale < nServiceMin || d.Gen <= g)
+            if (d.Stage == DesignStage.None || d.InService.Raw / Fx6.Scale < nServiceMin)
                 continue;
             bool all = true;
             foreach (int p in d.PrcSet)
-            {
-                int r = l.NodeNumbers.IndexOf(p);
-                all &= r >= 0 && av.Nodes[r].Process is ProcessView pv && pv.Mastered;
-            }
-            if (all)
-                g = d.Gen;
+                all &= Mastered(p);
+            if (!all)
+                continue;
+            g = Math.Max(g, d.Gen);
+            if (d.Perf > perf)
+                perf = d.Perf;
         }
-        return g;
+        int tier = 0, count = 0;
+        for (int k = 0; k < l.ProcessNumbers.Length; k++)
+        {
+            if (!Mastered(l.ProcessNumbers[k]))
+                continue;
+            if (l.ProcessTier[k] > tier)
+            {
+                tier = l.ProcessTier[k];
+                count = 1;
+            }
+            else if (l.ProcessTier[k] == tier)
+            {
+                count++;
+            }
+        }
+        return new TechKey(g, tier, count, perf);
     }
 
     private static string I(long v) => v.ToString(CultureInfo.InvariantCulture);
