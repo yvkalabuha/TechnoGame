@@ -902,6 +902,56 @@
       "params": {
         "FLEET_ARM": "PURCHASE_CAP"
       }
+    },
+    {
+      "name": "sale/SIGMA_LO",
+      "params": {
+        "SALE_ARM": "SIGMA_LO"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 200
+      }
+    },
+    {
+      "name": "sale/PHI_FLAT",
+      "params": {
+        "SALE_ARM": "PHI_FLAT"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 200
+      }
+    },
+    {
+      "name": "sale/QUOTA_LO",
+      "params": {
+        "SALE_ARM": "QUOTA_LO"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 200
+      }
+    },
+    {
+      "name": "sale/QUOTA_HI",
+      "params": {
+        "SALE_ARM": "QUOTA_HI"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 200
+      }
+    },
+    {
+      "name": "sale/CHI_OFF",
+      "params": {
+        "SALE_ARM": "CHI_OFF"
+      },
+      "seeds": {
+        "start": 1,
+        "count": 200
+      }
     }
   ],
   "meta": {
@@ -970,7 +1020,8 @@
       "calib-print is a Lab print (views only); review of 321d8c9 applied (M1-M5) (§7.7 p.4)",
       "#253: L_K control is stricter than the model for GBR G4: APP_4 of GBR is known in 10 of 100 calibration seeds of the full model and never under L_K (node 29 has delta = never, cens_never_share 0.5); pair outside the control, rule and tables unchanged",
       "#252: C5 (test #30) undefined: the newcomer from the t0 culture reaches min yield 0.4505 by month 383; test #30 neither confirmed nor refuted; L without C5",
-      "L_K control keeps two moments only and is biased by double truncation at the horizon (spec §6.1 v0.34)"
+      "L_K control keeps two moments only and is biased by double truncation at the horizon (spec §6.1 v0.34)",
+      "tool/* (V0, POOL_*) are excluded from EXP-0002 (Orchestrator decision): they belong to the separate experiment 'EXP pool order' (docs/simulation/exp-pool-order.md, EXP-0006), not to HYP-0002; sale/* arms of spec §6.10 (A42.8) are included on seeds 1-200, detail lite"
     ],
     "diagnostics": {
       "D3": "spec §5.9 D3 (#250, RISK-0022): Singularity.Lab calib-print --manifest lab/manifests/EXP-0002.json --point <main> on seeds 1-1000 after the run; calibration reference 0.012 of actor-months (USA 0.041), spells p50 23, max 50"
