@@ -356,3 +356,9 @@ Existing community Godot MCP projects are researched first, in parallel now | в
 1. Format: Project Fluent (.ftl) only, inside mods (`mods/<mod>/locale/<lang>/*.ftl`), handled by a C# Fluent library (Linguini.Bundle, Apache/MIT, to be verified). This gives Russian case, gender and plurals. YAML and .po are dropped; translators work through Fluent-aware tools (Pontoon/Weblate, to be verified).
 2. Machine (AI) translation needs no special marker; the stale-translation check (source changed → translation outdated) stays.
 3. The Russian anchor-event texts move out of Core data into localization. DataHash changes once; frozen EXP records are not edited. The old→new hash pair is recorded, and unchanged dynamics are proven by the unchanged EXP-0002-det golden. | владелец (AskUserQuestion 2026-11-17) |
+| 298 | 2026-11-17 | Audio (AUDIO_DIRECTION v0.1):
+- Alert sounds can only be turned down, never off. A visual signal always duplicates them.
+- Music plays in sessions with pauses (3–6 min track, then a few minutes of ambient silence); war and breakthrough cut in at once.
+- Licences stay PD/CC0/CC BY only; no exception for Sonniss or Pixabay.
+- No announcer voice in v1.
+- The first audio prototype (15 synthesised UI sounds + 1–2 temporary CC0 tracks in the client) comes right after client v0.3. | владелец (AskUserQuestion 2026-11-17) |
