@@ -3,6 +3,7 @@
 **Статус:** v0.2 — направление A утверждено (#54)
 **Дата:** 2026-11-03 · **Автор:** ui-art-director · **Основание:** бриф `docs/ui/ROLE_BRIEF.md`, DECISIONS_LOG #35–#39
 **Смотреть вместе с:** `docs/ui/prototypes/directions-v2.html` (раунд 2, эскизы 1920×1080), `docs/ui/prototypes/directions.html` (раунд 1, история), `docs/ui/UI_REFERENCE_LIBRARY.md`.
+**Главный вид — 3D-глобус (#284):** см. `docs/ui/GLOBE_DIRECTION.md` (перенос направления A на глобус).
 
 > Пометки: **[Факт]** (с источником), **[Предп.]**, **[Предл.]**. Утверждённые решения владельца — только со ссылкой на DECISIONS_LOG. Реализации UI нет.
 
