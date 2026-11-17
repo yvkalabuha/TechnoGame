@@ -333,6 +333,13 @@ def _deepseek_call(provider, system, text, schema_path, name, max_tokens):
     return comp.content, _sum_usage(usages), info
 
 
+def _keep_first_raw(exc, runs_dir, name, record):
+    """A failed retry still leaves the raw body of the empty first attempt in an `-invalid` run record."""
+    raw = getattr(exc, "first_attempt_raw", None)
+    if raw is not None:
+        write_run(runs_dir, name, {**record, "error": f"{type(exc).__name__}: {exc}", "first_attempt_raw": raw}, unique=True)
+
+
 def run_review(task_id, base, head, provider_name="codex", root=config.REPO_ROOT, runs_dir=config.RUNS_DIR,
                make_provider=None, codex_runner=None, attempts_dir=config.LEDGER_DIR, log=print, max_bytes=MAX_INPUT_BYTES,
                thinking=True, effort=config.DEFAULT_REASONING_EFFORT):
@@ -359,8 +366,13 @@ def run_review(task_id, base, head, provider_name="codex", root=config.REPO_ROOT
     if used == "deepseek":
         text, meta = build_review_input(task_id, base, head, root, max_bytes)
         _scan(text)
-        answer, usage, think = _deepseek_call(make_provider(), REVIEW_SYSTEM, text, REVIEW_SCHEMA, "review",
-                                              max_tokens_for(thinking, 8000))
+        try:
+            answer, usage, think = _deepseek_call(make_provider(), REVIEW_SYSTEM, text, REVIEW_SCHEMA, "review",
+                                                  max_tokens_for(thinking, 8000))
+        except Exception as e:
+            _keep_first_raw(e, runs_dir, f"review-{task_id}-{meta['head'][:8]}-deepseek-invalid.json",
+                            {"kind": "review", "task": task_id, "head": meta["head"], "provider": "deepseek"})
+            raise
     record = {"kind": "review", "task": task_id, "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
               "round": 0, "provider": used, "fallback": fallback, "base": meta["base"],
               "head": meta["head"], "risk": meta["risk"], "usage": usage, "files": meta["files"]}
@@ -531,9 +543,13 @@ def run_gate(item, head="HEAD", stance="third", root=config.REPO_ROOT, runs_dir=
         record["thinking"] = {"enabled": thinking, "effort": effort if thinking else None, "max_tokens": max_tokens}
         return None, record
     make_provider = make_provider or (lambda: paid_provider(profile_name, key, thinking=thinking, effort=effort))
-    answer, usage, think = _deepseek_call(make_provider(), GATE_SYSTEM, text, GATE_SCHEMA, "gate", max_tokens)
-    record.update(provider=profile_name, usage=usage, thinking=think)
     stem = f"gate-{Path(meta['item']).stem}-{meta['head'][:8]}-{stance}"
+    try:
+        answer, usage, think = _deepseek_call(make_provider(), GATE_SYSTEM, text, GATE_SCHEMA, "gate", max_tokens)
+    except Exception as e:
+        _keep_first_raw(e, runs_dir, stem + "-invalid.json", {**record, "provider": profile_name})
+        raise
+    record.update(provider=profile_name, usage=usage, thinking=think)
     try:
         data = parse_answer(answer, GATE_SCHEMA, "gate")
     except ReviewError as e:

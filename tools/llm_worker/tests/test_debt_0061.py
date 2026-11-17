@@ -12,6 +12,7 @@ from unittest import mock
 from helpers import FakeProvider
 from test_ledger import MODEL, prices
 from test_loop import FakeVerifier, art, contract
+import test_review
 from test_review import GOOD, make_repo
 from test_thinking_0052 import GATE_OK, Seq
 
@@ -159,3 +160,27 @@ class GateCapTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class _Boom(RawSeq):
+    def complete(self, *a, **k):
+        if self.calls >= 1:
+            raise RuntimeError("network")
+        return super().complete(*a, **k)
+
+
+class ReviewFailedRetryTest(test_review.RunTest):
+    def test_run_review_keeps_first_raw(self):
+        with self.assertRaises(RuntimeError):
+            self.run_review("deepseek", make_provider=lambda: _Boom([comp("  ")]))
+        recs = [json.loads(p.read_text()) for p in (self.tmp / "runs").glob("review-*-invalid.json")]
+        self.assertEqual([r["first_attempt_raw"] for r in recs], ["RAW1"])
+
+
+class GateFailedRetryTest(test_review.GateTest):
+    def test_run_gate_keeps_first_raw(self):
+        with self.assertRaises(RuntimeError):
+            review.run_gate(self.item, self.head, "third", root=self.repo.root, runs_dir=self.tmp / "runs",
+                            make_provider=lambda: _Boom([comp("  ")]))
+        recs = [json.loads(p.read_text()) for p in (self.tmp / "runs").glob("gate-*-invalid.json")]
+        self.assertEqual([r["first_attempt_raw"] for r in recs], ["RAW1"])

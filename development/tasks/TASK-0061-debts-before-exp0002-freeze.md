@@ -62,3 +62,4 @@ created: 2026-11-17
 - **Codex, часть А:** `review._deepseek_call` при исключении повтора кладёт сырое тело первой попытки в `e.first_attempt_raw`; тест `test_raw_of_first_attempt_survives_a_failing_retry`.
 - Файлы: `src/Singularity.Session/Slice/SliceWorld.cs`, `src/Singularity.Lab/Models/Slice/JetSliceModel.cs`, `tools/llm_worker/review.py`, `tools/llm_worker/tests/test_debt_0061.py`.
 - Проверка: dotnet test — Architecture 98, Kernel 316 (+1 skip), Core 1058, Session 345 (+2 skip), Lab 20, ошибок 0; Lab selftest 41/41; Python 300 passed.
+- **Codex 5a3af73 п.1:** `run_review`/`run_gate` при исключении повтора пишут `*-invalid.json` с `first_attempt_raw` (`review._keep_first_raw`); тесты `ReviewFailedRetryTest`, `GateFailedRetryTest` (Python 335 OK, подклассы заново гоняют родительские тесты). п.2 (L_K golden_set_hash) — за Orchestrator.
