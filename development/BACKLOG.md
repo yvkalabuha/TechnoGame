@@ -84,6 +84,8 @@
 | [TASK-0068](../development/tasks/TASK-0068-tick-hot-spot-fixes-f1-f3-f5-f6-f8-tick-profile-m0.md) | DONE | Tick hot-spot fixes F1-F3, F5, F6, F8 (tick profile M0) | MS-M0 |
 | [TASK-0069](../development/tasks/TASK-0069-client-prototype-v0-2-design-controls-session-wiri.md) | DONE | Client prototype v0.2: design controls, Session wiring, tech tree A/B | MS-M0 |
 | [TASK-0070](../development/tasks/TASK-0070-client-prototype-v0-3-fonts-visual-review-fixes-pa.md) | DONE | Client prototype v0.3: fonts, visual review fixes, pause pending, robustness | MS-M0 |
+| [TASK-0071](../development/tasks/TASK-0071-client-v0-4-audio-prototype-and-v0-3-review-remain.md) | APPROVED | Client v0.4: audio prototype and v0.3 review remainder | MS-M0 |
+| [TASK-0072](../development/tasks/TASK-0072-adr-0018-spike-s1-linguini-bundle-on-net-10-russia.md) | APPROVED | ADR-0018 spike S1: Linguini.Bundle on .NET 10, Russian case/gender, plurals | MS-M0 |
 
 ## Гипотезы
 
