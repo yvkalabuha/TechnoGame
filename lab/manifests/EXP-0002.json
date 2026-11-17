@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "experiment": "EXP-0002",
-  "description": "TEMPLATE filled by T12 (TASK-0056), NOT FROZEN: HYP-0002 main run of the jet slice, spec slice-jet-aviation.md v0.34 r1 §7; model JetSlice, CSV slice-csv-format.md v0.5 r13. Layer controls layer/L_K, layer/L_C, layer/L_P read CONTROL_TABLES 4e10abb5. Freeze (meta.freeze) only after the freeze gate and the owner. COMP_V010 is not executable (no v0.10 paths in Core).",
+  "description": "TEMPLATE filled by T12 (TASK-0056), FROZEN (#258, 2026-11-17): HYP-0002 main run of the jet slice, spec slice-jet-aviation.md v0.34 r1 §7; model JetSlice, CSV slice-csv-format.md v0.5 r13. Layer controls layer/L_K, layer/L_C, layer/L_P read CONTROL_TABLES 4e10abb5. COMP_V010 is not executable (no v0.10 paths in Core).",
   "model": "JetSlice",
   "ticks": 11688,
   "chunk_size": 1,
@@ -993,7 +993,13 @@
     "rng": "spec §9.1; FIX_* seed 0x5EED",
     "after_review": false,
     "seed_offset": 0,
-    "freeze": null,
+    "freeze": {
+      "approved_by": "owner",
+      "approved_at": "2026-11-17",
+      "approval_ref": "#258",
+      "template_manifest_hash": "4d7ca0a7ac8f068fa4c4503b6d3da3c0a0ef6445faca8dcf38bdba0d934573ef",
+      "build_commit": "792aaa2 (code 8f7b3de)"
+    },
     "calibration_result": {
       "point": "p00 of every stage = build defaults (no K keys): C1 ALPHA 0.05, X_SCALE 1.0; C3 K_DIV 1, H_MAX 0.08, THETA_START 0.6, kappa 0.5 (y_half 0.5, prog_cap 3); C2 C_M 0.1, DELTA_H 0.003. Not calibrated (spec §8.1 values, no anchor): phi_floor 0.6 (test #30 parameter; C5 undefined), delta_E 0.025 ('Z', like LR)",
       "L": 0,
