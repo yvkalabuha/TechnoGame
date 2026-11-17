@@ -1,7 +1,7 @@
 ---
 id: TASK-0056
 title: "T12: калибровка C1 → (C3+C4) → C2, заморозка манифеста EXP-0002"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M0
 agent: simulation-engineer
@@ -35,14 +35,14 @@ created: 2026-11-15
 - Результаты прогонов — в `lab/results/` (не коммитятся); в репозиторий — манифесты, таблицы, отчёт.
 
 ## Критерии приёмки
-- [ ] Все три этапа выполнены по протоколу, значения заморожены, `manifest_hash` и `control_tables_hash` записаны.
-- [ ] Отчёт калибровки: потери по этапам, точки, остановка, печать 100 seeds, полосы A40.
-- [ ] Gate: critic + advocate + DeepSeek; разногласия записаны; заморозку утверждает владелец.
+- [x] Все три этапа выполнены по протоколу, значения заморожены, `manifest_hash` и `control_tables_hash` записаны.
+- [x] Отчёт калибровки: потери по этапам, точки, остановка, печать 100 seeds, полосы A40.
+- [x] Gate: critic + advocate + DeepSeek; разногласия записаны; заморозку утверждает владелец.
 
 ## REVIEW
-- [ ] Gate (critic, advocate, DeepSeek)
-- [ ] Code review (reviewer) — для кода DEBT-0036
-- [ ] Второе ревью (codex) — для кода DEBT-0036
+- [x] Gate (critic, advocate, DeepSeek)
+- [x] Code review (reviewer) — для кода DEBT-0036
+- [x] Второе ревью (codex) — для кода DEBT-0036
 
 ## Результат
 ## Результат

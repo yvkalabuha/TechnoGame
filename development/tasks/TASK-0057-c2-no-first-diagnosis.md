@@ -1,7 +1,7 @@
 ---
 id: TASK-0057
 title: "C2: почему tier-4 процессы известны, но не идут в серию (no_t_first 0,75–0,94)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: simulation-engineer
