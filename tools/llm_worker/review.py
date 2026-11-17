@@ -309,7 +309,13 @@ def _deepseek_call(provider, system, text, schema_path, name, max_tokens):
     while True:
         attempts += 1
         raw = []
-        comp = provider.complete(messages, schema, name, max_tokens, on_raw=raw.append)
+        try:
+            comp = provider.complete(messages, schema, name, max_tokens, on_raw=raw.append)
+        except Exception as e:
+            # A failed retry must not lose the raw body of the empty first attempt: it rides on the exception.
+            if raws and raws[0] is not None:
+                e.first_attempt_raw = raws[0].decode("utf-8", "replace")
+            raise
         usages.append(comp.usage)
         raws.append(raw[-1] if raw else None)
         rchars += comp.reasoning_chars

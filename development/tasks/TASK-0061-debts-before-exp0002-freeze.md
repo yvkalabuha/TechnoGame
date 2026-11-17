@@ -55,3 +55,10 @@ created: 2026-11-17
 - Файлы: `tools/llm_worker/{review,report,loop}.py`, `README.md`, `tests/test_debt_0061.py` (новый), `tests/test_thinking_0052.py` (ожидание суммы попыток: 10 вместо 5); `tests/Singularity.Core.Tests/{Knowledge/LkTablesTests.cs (новый),ToyFunnel/ToyFunnelParityTests.cs}`.
 - Проверка: Python 299 тестов OK; `dotnet test Singularity.Core.Tests` 1058 OK. src/ и golden не менялись.
 
+
+### Часть Б (developer)
+- **DEBT-0034, код:** `SliceWorld.TablesDigest` хеширует ActorCount и MaxNodeNumber (int32, перед PCens). Колонка `run.layer.tables` есть только в L_K-запусках с `LkTables`, поэтому хеши main, golden и `golden_set_hash` калибровки (не L_K) не меняются; golden-тесты Session зелёные. `JetSliceModel.ForcedStarts` делит лог по строкам и декодирует только строки после уже обработанных.
+- **DEBT-0036:** проверки диапазонов в `StandPoint.cs` (THETA_START, H_MAX, ALPHA, DELTA_H, X½, KAPPA_Q10, K_DIV) уже есть и совпадают с `SliceWorld.ApplyCalibration`; общий helper не добавлялся (поверхность Session не менялась, версия не повышалась). `slice-csv-format.md` §3/§3.1 уже содержит правки r10 (CONTROL_TABLES при LK/LC/LP, K_DIV = 1 без `run.*`) — править нечего.
+- **Codex, часть А:** `review._deepseek_call` при исключении повтора кладёт сырое тело первой попытки в `e.first_attempt_raw`; тест `test_raw_of_first_attempt_survives_a_failing_retry`.
+- Файлы: `src/Singularity.Session/Slice/SliceWorld.cs`, `src/Singularity.Lab/Models/Slice/JetSliceModel.cs`, `tools/llm_worker/review.py`, `tools/llm_worker/tests/test_debt_0061.py`.
+- Проверка: dotnet test — Architecture 98, Kernel 316 (+1 skip), Core 1058, Session 345 (+2 skip), Lab 20, ошибок 0; Lab selftest 41/41; Python 300 passed.

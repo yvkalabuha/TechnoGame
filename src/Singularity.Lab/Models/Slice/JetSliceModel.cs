@@ -223,16 +223,16 @@ public sealed class JetSliceModel : ISessionModel
     }
 
     // The forced starts the FORCE proxy has sent, read from the session's command log (the proxy keeps its set to itself): a40.force (format §4.9).
-    // Only the entries after the last call are handled (DEBT-0032); the log holds only external commands (the proxy's), at most one start per slot,
-    // so its text stays small. Called only in months when the proxy sent something.
+    // The log is append-only, one entry per line: the lines already handled are skipped without decoding (DEBT-0034). Called only in months
+    // when the proxy sent something.
     private static int ForcedStarts(SliceSession s, SliceObserver observer, long month, int seen)
     {
         int n = 0;
-        foreach (LoggedCommand c in CommandCodec.DecodeLog(s.CommandLog))
+        foreach (string line in s.CommandLog.Split('\n'))
         {
-            if (n++ < seen)
+            if (line.Length == 0 || n++ < seen)
                 continue;
-            if (c.Command is StartSeries { Force: true } start)
+            if (CommandCodec.Decode(line).Command is StartSeries { Force: true } start)
                 observer.ForcedStart(start.Actor, start.Design, month);
         }
         return n;

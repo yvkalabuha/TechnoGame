@@ -85,6 +85,17 @@ class RetryStatsTest(unittest.TestCase):
         self.assertEqual((info["reasoning_chars"], info["reasoning_tokens"], info["attempts"]), (14, 11, 2))
         self.assertEqual(info["first_attempt_raw"], "RAW1")
 
+    def test_raw_of_first_attempt_survives_a_failing_retry(self):
+        class Boom(RawSeq):
+            def complete(self, *a, **k):
+                if self.calls >= 1:
+                    raise RuntimeError("network")
+                return super().complete(*a, **k)
+
+        with self.assertRaises(RuntimeError) as cm:
+            review._deepseek_call(Boom([comp("  ")]), "S", "T", review.GATE_SCHEMA, "gate", 100)
+        self.assertEqual(cm.exception.first_attempt_raw, "RAW1")
+
     def test_single_attempt_has_no_raw(self):
         seq = RawSeq([comp(json.dumps(GATE_OK))])
         _, usage, info = review._deepseek_call(seq, "S", "T", review.GATE_SCHEMA, "gate", 100)

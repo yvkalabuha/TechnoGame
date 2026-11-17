@@ -548,11 +548,13 @@ internal sealed class SliceWorld
         return copy;
     }
 
-    // First 8 bytes of SHA-256 over PCens.Raw, Mean, HalfWidth, Delta (little-endian, in this order).
+    // First 8 bytes of SHA-256 over ActorCount, MaxNodeNumber (int32), PCens.Raw, Mean, HalfWidth, Delta (little-endian, in this order).
     private static long TablesDigest(LkTables t)
     {
-        var bytes = new byte[t.PCens.Length * 8 + (t.Mean.Length + t.HalfWidth.Length + t.Delta.Length) * 4];
-        int pos = 0;
+        var bytes = new byte[8 + t.PCens.Length * 8 + (t.Mean.Length + t.HalfWidth.Length + t.Delta.Length) * 4];
+        BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(0), t.ActorCount);
+        BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(4), t.MaxNodeNumber);
+        int pos = 8;
         foreach (Fx6 v in t.PCens)
         {
             BinaryPrimitives.WriteInt64LittleEndian(bytes.AsSpan(pos), v.Raw);
