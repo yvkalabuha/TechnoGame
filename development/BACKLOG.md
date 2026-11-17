@@ -135,3 +135,4 @@
 | [RR-0013](../docs/research/RR-0013-space-and-nuclear-race.md) | FINAL | Космическая и ядерная гонка |
 | [RR-0014](../docs/research/RR-0014-resources-trade-export-control.md) | FINAL | Ресурсы, торговля, экспортный контроль |
 | [RR-0017](../docs/research/RR-0017-intelligence.md) | DRAFT | Разведка, промышленный шпионаж, контрразведка и дезинформация |
+| [RR-0019](../docs/research/RR-0019-logistics-communications.md) | DRAFT | Логистика, связь и инфраструктура |
