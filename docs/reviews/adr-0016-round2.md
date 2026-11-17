@@ -38,3 +38,24 @@ Minor:
 - The cause chain is replaced by recorded diagnostics plus a redesign ADR (advocate). The language route depends only on the pre-registered Rust port test (critic M3). Critic M2, m3 and m6 are therefore moot. Disagreement recorded.
 - Critic M1 accepted: measure the daily mode directly if Session allows it, otherwise use `k_p95`, with the formula as a check.
 - Critic M4, m1, m2 and m5 accepted. Advocate: t1 is a mandatory recorded point.
+
+## DeepSeek (rev 4, after TASK-0062)
+Record: `tools/llm_worker/runs/gate-ADR-0016-tick-budget-4b40e840-third.json` (sha256 cc7ed444…). changes_requested: 2 high, 7 medium, 3 low.
+
+High:
+- **The language trigger differs from the RR-0001 §5 wording ("3×").** Resolution: #270 is the owner's decision and replaces that wording. The ADR must quote #270 and state that it supersedes RR-0001 §5; RR-0001 gets a pointer note.
+- **PASS on a known lower-bound slice would "prove" ADR-0001.** Resolution: PASS means "budget not refuted at M0 scale (lower bound)". It does not prove the full-game budget, and the budget is re-measured at E1.
+
+Medium:
+- The fallback T underestimates the overhead of the empty daily system.
+- The throttling criterion uses base frequency, which is weak: the i7 base is 2.3 GHz and max turbo 4.6 GHz. Also specify sampling and OS.
+- The split mixes S p95 with K_d median; use p95 throughout for the split and the 19P rule.
+- Rust port: no rule for a top-1 method over 200 lines.
+- Rust port comparison: warm-up, outlier rule and statistic are missing; validate the input dump.
+- INVALID «п. 5 violated» contradicts the throttling repeat rule.
+- The CI allocation threshold at N=24 is undefined.
+
+Low:
+- 1945–2100 is 1872 months, not 1860.
+- "5 processes" must say they run sequentially.
+- `related` lacks RR-0008 and RR-0010.
