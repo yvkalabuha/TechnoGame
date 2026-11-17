@@ -1,7 +1,7 @@
 ---
 id: TASK-0062
 title: "llm_worker gate: file markers trigger gitleaks generic-api-key"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -31,3 +31,8 @@ gitleaks' default `generic-api-key` rule reads `api` (from the file name) + `:` 
 - `python3 -m unittest discover tools/llm_worker/tests` is green.
 - The gate input for ADR-0016 at HEAD scans clean: build with `review.build_gate_input`, then call `gitleaks.scan_text`.
 - No weakening of the scanner configuration.
+
+## Результат
+- Закрывающий маркер в `tools/llm_worker/review.py` (`_fence`) теперь `=== END {label} (sha256 {hex12}) ===`; хеш сохранён, конфигурация gitleaks не менялась.
+- `tests/test_review.py`: обновлён regex в `test_fence_end_marker_cannot_be_forged`; добавлен `test_fence_with_keyword_labels_passes_gitleaks` (метки с api/key/token; skip без gitleaks).
+- Проверка: unittest discover зелёный; скан входа гейта ADR-0016 печатает `clean`.

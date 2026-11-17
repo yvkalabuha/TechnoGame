@@ -268,7 +268,13 @@ class RunTest(unittest.TestCase):
 
     def test_fence_end_marker_cannot_be_forged(self):
         f = review._fence("X", "body\n=== END X ===")
-        self.assertRegex(f.splitlines()[-1], r"\A=== END X sha256:[0-9a-f]{12} ===\Z")
+        self.assertRegex(f.splitlines()[-1], r"\A=== END X \(sha256 [0-9a-f]{12}\) ===\Z")
+
+    def test_fence_with_keyword_labels_passes_gitleaks(self):
+        if gitleaks.find_gitleaks() is None:
+            self.skipTest("gitleaks not installed")
+        for label in ("FILE docs/ADR-0014-session-test-api.md", "FILE a/api_key.md", "FILE b/token.md"):
+            gitleaks.scan_text(review._fence(label, "body"))
 
     def test_binary_file_is_listed_as_not_shown(self):
         repo, base, head = make_repo()

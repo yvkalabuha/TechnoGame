@@ -75,7 +75,7 @@
 | [TASK-0059](../development/tasks/TASK-0059-e2-decomposition-prints.md) | DONE | Разбор E2 HYP-0004 и печати gate I-OC+RANK | MS-M0 |
 | [TASK-0060](../development/tasks/TASK-0060-contract-ioc-a41.md) | DONE | Контракт §4.1/§4.1a: I-OC (V5′/V6) и A41; полосы A40 | MS-M0 |
 | [TASK-0061](../development/tasks/TASK-0061-debts-before-exp0002-freeze.md) | DONE | Долги перед заморозкой EXP-0002: DEBT-0030, 0034, 0035, 0036 | MS-M0 |
-| [TASK-0062](../development/tasks/TASK-0062-llm-worker-gate-file-markers-trigger-gitleaks-gene.md) | APPROVED | llm_worker gate: file markers trigger gitleaks generic-api-key | MS-M0 |
+| [TASK-0062](../development/tasks/TASK-0062-llm-worker-gate-file-markers-trigger-gitleaks-gene.md) | DONE | llm_worker gate: file markers trigger gitleaks generic-api-key | MS-M0 |
 
 ## Гипотезы
 

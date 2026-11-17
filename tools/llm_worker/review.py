@@ -88,7 +88,7 @@ def _q(name):
 
 def _fence(label, body):
     """Data block. The closing line carries a hash of the body, so text inside cannot forge its own end marker."""
-    return f"=== {label} ===\n{body}\n=== END {label} sha256:{hashlib.sha256(body.encode()).hexdigest()[:12]} ==="
+    return f"=== {label} ===\n{body}\n=== END {label} (sha256 {hashlib.sha256(body.encode()).hexdigest()[:12]}) ==="
 
 
 def build_review_input(task_id, base, head, root=config.REPO_ROOT, max_bytes=MAX_INPUT_BYTES, codex_mode=False):
