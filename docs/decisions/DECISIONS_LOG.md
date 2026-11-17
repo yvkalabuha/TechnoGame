@@ -320,3 +320,9 @@ PASS means "budget not refuted at M0 scale" | владелец (AskUserQuestion 
 | 281 | 2026-11-17 | RR-0016: the international organisation and its Security Council arise by condition: after a great war, like the League of Nations or the UN. Permanent members are the victors and the great powers. Membership can change through events (e.g. the China seat in 1971). The 1945 campaign starts with the historical setup | владелец (AskUserQuestion 2026-11-17) |
 | 282 | 2026-11-17 | War v1 scope: land, sea and air theatres with superiority and landings; ally entry and military aid; world support; peace outcomes including armistice. Space warfare, treaties and the UN come in a second wave | владелец (AskUserQuestion 2026-11-17) |
 | 283 | 2026-11-17 | Tick benchmark (EXP-0007): before the official measurement, profile and fix the obvious algorithmic hot spots. Trigger: the feasibility probe gave ~40 s per month at (200, 2000) against the 0.5 s budget; the suspected cause is a linear node-row search. The official ADR-0016 protocol runs after the fix, so no "before" baseline is recorded; the probe numbers stay in EXP-0007 as context only | владелец (AskUserQuestion 2026-11-17) |
+| 284 | 2026-11-17 | Visual form of the main view: a 3D globe (a rotating Earth; satellite orbits and rockets visible natively), not a flat map. The existing UI art direction (operational map: tints, ink, hatching) must be adapted to the globe by ui-art-director; the 2D interface sits on top | владелец (AskUserQuestion 2026-11-17) |
+| 285 | 2026-11-17 | Client spike now, in parallel, ahead of M2:
+- (1) ui-art-director writes the visual direction for the 3D globe, asset sources and licences (ADR-0009);
+- (2) a small Godot 4 .NET spike: globe with regions (Natural Earth, public domain), relief and a few CC0 3D objects; measure FPS and memory on the owner's machine.
+
+The spike does not connect to the simulation (that is M2) | владелец (AskUserQuestion 2026-11-17) |

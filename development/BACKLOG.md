@@ -80,6 +80,7 @@
 | [TASK-0064](../development/tasks/TASK-0064-lab-bench-harness-adr-0016-t1.md) | APPROVED | lab bench harness (ADR-0016 T1) | MS-M0 |
 | [TASK-0065](../development/tasks/TASK-0065-synthetic-full-scale-world-overlay-and-benchmark-p.md) | APPROVED | Synthetic full-scale world overlay and benchmark pre-registration (ADR-0016 T2) | MS-M0 |
 | [TASK-0066](../development/tasks/TASK-0066-tick-benchmark-run-and-outcome-adr-0016-t3.md) | APPROVED | Tick benchmark run and outcome (ADR-0016 T3) | MS-M0 |
+| [TASK-0067](../development/tasks/TASK-0067-godot-4-net-3d-globe-spike-regions-relief-cc0-obje.md) | APPROVED | Godot 4 .NET 3D globe spike: regions, relief, CC0 objects, FPS and memory | MS-M0 |
 
 ## Гипотезы
 

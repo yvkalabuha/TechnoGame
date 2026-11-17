@@ -27,3 +27,15 @@ Execution-only flag `DailyTickProbe` in `SliceRunConfig`: an empty daily system 
 
 ## Acceptance
 - Matches the ADR-0016 rules; the full `dotnet test` is green; zone_check is clean.
+
+## Результат
+**Сделано.** Флаг `SliceRunConfig.DailyTickProbe` (execution-only, по умолчанию выключен, не хешируется, колонок не добавляет). При флаге в runner добавляется пустая дневная система `DailyProbeSystem` (SystemId 900, последняя в списке; Compute/Merge/Post пустые), поэтому каждый день `RunTick` копирует таблицы и делает swap. `StepOne` при флаге делает хеш и снимок на каждом тике. Как требует note §2, исход среза не меняется: тот же итоговый StateHash.
+- `TestApiVersion` 7 -> 8 (правило ADR-0014 п. 6 для любого изменения `SliceRunConfig`); закреплён `Api/session-surface.v8.txt`; `ApiSurfaceTests` ждёт 8.
+- Тесты `DailyTickProbeTests` (4): флаг выключен по умолчанию, прогон по умолчанию = явный «выкл»; флаг вкл/выкл дают один StateHash и один View.StateHash (14 мес.); при флаге 90 хешей за 90 дней, без флага < 10; L1/L2 с флагом: потоки 1/4, ChunkSize 1/3 дают один хеш.
+- Golden-хеши: все существующие golden-тесты Session зелёные без правок.
+
+**Файлы:** `src/Singularity.Session/Slice/DailyProbeSystem.cs` (новый), `.../SliceRunConfig.cs`, `.../SliceWorld.cs`, `src/Singularity.Session/SliceSession.cs`, `tests/Singularity.Session.Tests/DailyTickProbeTests.cs`, `.../Api/session-surface.v8.txt`, `.../Api/ApiSurfaceTests.cs`.
+
+**Проверка:** `dotnet test`: Kernel 316 пройдено/1 пропущен; Core 1058/0; Session 349/2 пропущено, 0 упавших. Lab.Tests не запустились: Lab не собирается (см. ниже).
+
+**Блокер вне зоны:** `src/Singularity.Lab/Models/Slice/JetSliceModel.cs:19` держит `SurfaceVersion = 7` и сверяет с `TestApiVersion`; после bump до 8 компилятор даёт CS0162 (ошибка сборки Lab). Нужна правка в одну строку `SurfaceVersion = 8` (Lab запрещён по условию задачи; файл правит агент TASK-0065). Lab.Tests не прогонялись.

@@ -31,3 +31,9 @@ Write the pre-registration into EXP-0007 before any timed run: protocol, statist
 
 ## Acceptance
 - Matches the ADR-0016 rules; the full `dotnet test` is green; zone_check is clean.
+## Результат (2026-11-17, simulation-engineer)
+- Генератор: `src/Singularity.Lab/Bench/SynthWorld.cs` — `SynthWorldGenerator.Build(SynthWorldSpec, outDir)` пишет оверлей-мод `synth_bench` (ADR-0010) и загружает core + оверлей; `SynthWorldSpec.BenchmarkGrid()` — 24 точки (акторы 6/24/96/200 × узлы 180/500/2000 × Clones/CrossEdges). Core и Session не менялись. Точка входа для `lab bench` (TASK-0064): `Build(...)`, затем `SliceRunConfig { ScenarioId = SynthWorldGenerator.ScenarioId }`.
+- Проверки: `src/Singularity.Lab/Bench/SynthChecks.cs` — 5 проверок `synth:` в `selftest`: детерминизм генератора; клоны совпадают с источником; оверлей 5×61 воспроизводит прогон core; StateHash одинаков при threads 1/4/8/16 и ChunkSize 1/8/32; старт полного масштаба.
+- Пре-регистрация: `development/experiments/EXP-0007-tick-benchmark-m0.md`, раздел «Пре-регистрация» П1–П8.
+- По просьбе Orchestrator `JetSliceModelFactory.SurfaceVersion` изменён с 7 на 8 (TASK-0063). `SliceData.FindMods` стал `internal`.
+- [Факт, смоук] Точка (200, 2000) при t8 — около 40 с на месяц. Объём протокола требует решения до T3 (EXP-0007, «Ошибки и аномалии»).
