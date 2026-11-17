@@ -19,7 +19,7 @@ created: 2026-11-17
 
 ## Problem
 `python3 -m tools.llm_worker gate --item docs/decisions/ADR-0016-tick-budget.md` is refused with `secret_detected: generic-api-key@491`. The gate input contains the closing fence produced by `review._fence` (tools/llm_worker/review.py:91):
-`=== END FILE docs/decisions/ADR-0014-session-test-api.md sha256:13b4f89ec72d ===`.
+`=== END FILE docs/decisions/ADR-0014-session-test-api.md sha256:<12 hex chars> ===`.
 gitleaks' default `generic-api-key` rule reads `api` (from the file name) + `:` + a 12-hex-char value as a key assignment. This is a false positive from our own marker, not a secret in the repository. Suppression is deliberately impossible (`--ignore-gitleaks-allow`, empty ignore path, ADR-0015 §8), and that must stay so.
 
 ## Change
