@@ -467,7 +467,8 @@ def load(dirs, cfg):
             D.runs[rid] = rec
             if r["status"] != "ok":
                 D.failed.append(rid)
-        summ = _read_csv(os.path.join(d, "summary.csv"), SUMMARY_COLS, optional=True) or []
+        # #264 (memory only): the detail tables are streamed row by row instead of read whole into a list
+        summ = _stream(os.path.join(d, "summary.csv"), SUMMARY_COLS) or []
         for r in summ:
             rid = pre + r["run"]
             rec = D.runs.get(rid)
@@ -486,8 +487,10 @@ def load(dirs, cfg):
             ("node_times.csv", NODE_TIMES_COLS, "node_times"), ("gen_times.csv", GEN_TIMES_COLS, "gen_times"),
             ("requirements.csv", REQ_COLS, "reqs"), ("events.csv", EVENTS_COLS, "events"),
             ("prc_year.csv", PRC_YEAR_COLS, "prc_year")]
+        main_s = cfg["series"]["main"]
+        stars = {int(k) for k in cfg["s2"]["star_prc_gen"]}
         for fname, cols, attr in tables:
-            rows = _read_csv(os.path.join(d, fname), cols, optional=True)
+            rows = _stream(os.path.join(d, fname), cols)
             if rows is None:
                 continue
             D.present.add(attr)
@@ -496,6 +499,15 @@ def load(dirs, cfg):
                 rid = pre + r["run"]
                 if rid not in D.runs:
                     raise InputError("%s: unknown run %s" % (fname, r["run"]))
+                # #264 (memory only): whynot and prc_year are read only for main runs (P4, D1, D2, extremes, S2) and prc_year only
+                # for the star PRC of S2; rows nobody reads are not kept. Repeated strings are interned.
+                if attr in ("whynot", "prc_year") and D.runs[rid]["series"] != main_s:
+                    continue
+                if attr == "prc_year" and int(r["node"]) not in stars:
+                    continue
+                for c in ("actor", "target", "layer", "cause", "subject", "lever", "kind", "other"):
+                    if c in r:
+                        r[c] = sys.intern(r[c])
                 if attr == "actor_year":
                     store[rid][(int(r["t"]), r["actor"])] = {
                         "key": (int(r["key_G"]), int(r["key_T"]), int(r["key_N"]), int(r["key_P"])),
