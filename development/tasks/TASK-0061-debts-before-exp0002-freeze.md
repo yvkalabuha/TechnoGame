@@ -1,7 +1,7 @@
 ---
 id: TASK-0061
 title: "Долги перед заморозкой EXP-0002: DEBT-0030, 0034, 0035, 0036"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -30,9 +30,9 @@ created: 2026-11-17
   - DEBT-0036: проверки диапазонов `StandPoint` — через публичный helper Session или проверки в стенде; `slice-csv-format.md` §3/§3.1 (CONTROL_TABLES при LK/LC/LP; `K_DIV = 1` без `run.*`).
 
 ## Критерии приёмки
-- [ ] Пункты долгов закрыты или явно записаны остатком.
-- [ ] Golden и `golden_set_hash` калибровки (`0fe2bbe5…`) не меняются; если `TablesDigest` меняет хеш — остановиться и сообщить.
-- [ ] `dotnet test` и Python-тесты llm_worker зелёные.
+- [x] Пункты долгов закрыты или явно записаны остатком.
+- [x] Golden и `golden_set_hash` калибровки (`0fe2bbe5…`) не меняются; если `TablesDigest` меняет хеш — остановиться и сообщить.
+- [x] `dotnet test` и Python-тесты llm_worker зелёные.
 
 ## Тесты
 <!-- Какие тесты доказывают выполнение критериев. -->
@@ -40,9 +40,9 @@ created: 2026-11-17
 ## Связанные документы
 
 ## REVIEW
-- [ ] Code review (reviewer) — находки high закрыты
-- [ ] Тесты (test-engineer) — проходят, покрытие достаточно
-- [ ] Детерминизм L1/L2 — если затронуты src/
+- [x] Code review (reviewer) — находки high закрыты
+- [x] Тесты (test-engineer) — проходят, покрытие достаточно
+- [x] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
 <!-- Заполняет исполнитель: что сделано, файлы, коммит. -->
