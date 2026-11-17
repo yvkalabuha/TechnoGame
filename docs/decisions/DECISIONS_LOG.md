@@ -346,3 +346,4 @@ The spike does not connect to the simulation (that is M2) | владелец (As
 4. A `ui-tester` agent, with the agent file created at session end; until then test-engineer covers it.
 
 Existing community Godot MCP projects are researched first, in parallel now | владелец (AskUserQuestion 2026-11-17) |
+| 294 | 2026-11-17 | Client fonts approved (SIL OFL 1.1), embedded in the client with OFL texts and LICENSES.md entries: Golos Text (interface), PT Mono (numbers and codes), Jura (drafting headings, buttons, segments), Literata (map labels). The interface minimum size is 14 px. OpenGost Type B is not taken now | владелец (сообщение 2026-11-17) |

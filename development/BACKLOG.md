@@ -83,6 +83,7 @@
 | [TASK-0067](../development/tasks/TASK-0067-godot-4-net-3d-globe-spike-regions-relief-cc0-obje.md) | DONE | Godot 4 .NET 3D globe spike: regions, relief, CC0 objects, FPS and memory | MS-M0 |
 | [TASK-0068](../development/tasks/TASK-0068-tick-hot-spot-fixes-f1-f3-f5-f6-f8-tick-profile-m0.md) | DONE | Tick hot-spot fixes F1-F3, F5, F6, F8 (tick profile M0) | MS-M0 |
 | [TASK-0069](../development/tasks/TASK-0069-client-prototype-v0-2-design-controls-session-wiri.md) | DONE | Client prototype v0.2: design controls, Session wiring, tech tree A/B | MS-M0 |
+| [TASK-0070](../development/tasks/TASK-0070-client-prototype-v0-3-fonts-visual-review-fixes-pa.md) | APPROVED | Client prototype v0.3: fonts, visual review fixes, pause pending, robustness | MS-M0 |
 
 ## Гипотезы
 

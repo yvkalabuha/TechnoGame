@@ -13,6 +13,7 @@
 <!-- registry:active:start -->
 - TASK-0064 [APPROVED] lab bench harness (ADR-0016 T1) (developer)
 - TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
+- TASK-0070 [APPROVED] Client prototype v0.3: fonts, visual review fixes, pause pending, robustness (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
