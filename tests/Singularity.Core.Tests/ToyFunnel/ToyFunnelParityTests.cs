@@ -1,4 +1,7 @@
+using System.Buffers.Binary;
 using System.Globalization;
+using System.Security.Cryptography;
+using Singularity.Kernel;
 using Singularity.Core.Science.ToyFunnel;
 
 namespace Singularity.Core.Tests.ToyFunnel;
@@ -49,6 +52,42 @@ public class ToyFunnelParityTests
         Assert.Equal(mults, m);
         Assert.Equal(milestones, ms);
         Assert.Equal(41 * countries, r.Metrics.Tables[ToyFunnelModel.YearlyTable].Count);
+    }
+
+    [Theory]
+    [InlineData("A", 1)]
+    [InlineData("B", 3)]
+    [InlineData("C", 4)]
+    public void TableLayout_MatchesPrototype(string model, ulong seed)
+    {
+        // TASK-0061 (DEBT-0034): the prototype layout (header, K A T P R E N as int64, then B as int32) is rebuilt
+        // from the Table by column name, so a renamed, reordered or retyped column fails here.
+        ToyRun.Result r = ToyRun.Run(ToyRun.MainSeries(model, 0.25), seed);
+        string[] names = r.Model.Table.Columns.Select(c => c.Name).ToArray();
+        Assert.Equal(["K", "A", "T", "P", "R", "E", "N", "B"], names.Take(8));
+        Assert.Equal(model == "C" ? 8 + 120 : 8, names.Length);
+        Assert.IsType<LongColumn>(r.Model.Table.Columns[0]);
+        Assert.IsType<IntColumn>(r.Model.Table.Columns[7]);
+
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        Span<byte> header = stackalloc byte[16];
+        BinaryPrimitives.WriteInt32LittleEndian(header, 1);
+        BinaryPrimitives.WriteInt64LittleEndian(header[4..], r.FinalTick);
+        BinaryPrimitives.WriteInt32LittleEndian(header[12..], r.Model.Table.RowCount);
+        hash.AppendData(header);
+        Span<byte> cell = stackalloc byte[8];
+        foreach (string name in new[] { "K", "A", "T", "P", "R", "E", "N" })
+            foreach (long v in r.Model.Table.GetLong(name).Current)
+            {
+                BinaryPrimitives.WriteInt64LittleEndian(cell, v);
+                hash.AppendData(cell);
+            }
+        foreach (int v in r.Model.Table.GetInt("B").Current)
+        {
+            BinaryPrimitives.WriteInt32LittleEndian(cell, v);
+            hash.AppendData(cell[..4]);
+        }
+        Assert.Equal(Convert.ToHexStringLower(hash.GetHashAndReset()), r.Model.PrototypeStateHash(r.FinalTick));
     }
 
     [Fact]

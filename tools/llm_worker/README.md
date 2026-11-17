@@ -72,6 +72,8 @@ python3 -m tools.llm_worker gate --item <путь> --stance third [--profile dee
 - Резерв ledger — худший случай: `input_bytes/2` токенов входа + `max_tokens` выхода. Для pro на большом документе (~570 KB) это ≈ $0,38 + $0,26 = $0,64. Для gate-задач (ключ `gate:<ID>`) действует `max_usd_task_gate` = $1,00 (#226), поэтому pro проходит; для остальных задач — `max_usd_task` $0,50. Для flash ≈ $0,17.
 - `reasoning_content` в разбор JSON не идёт; в запись run пишутся `thinking`: `reasoning_chars`, `reasoning_tokens`, `finish_reason`, `attempts`, `effort`, `max_tokens`.
 - Пустой/пробельный `content` при `finish_reason=stop` — сбой модели: один повтор, затем `schema_invalid`. При `length` повтора нет.
+- При повторе `usage` и статистика рассуждения в записи — сумма всех попыток (как в ledger); сырое тело пустой первой попытки — `thinking.first_attempt_raw`. `run --thinking on` пишет `thinking` в `round_N/*_response.json`.
+- `review`: лимит задачи по ledger — `max_usd_task` $0,50 (ключ задачи `TASK-NNNN`); $1,00 действует только для `gate:<ID>`. Номер `round` выбирается под `flock` (`runs/.review-<task>.lock`); старые записи без `round`/`created_at` упорядочиваются по mtime.
 
 ## После прогона (Pilot)
 - B1: `git log -p -1 llm/<task_id>` — результат на ветке `llm/...`, не в `main`.

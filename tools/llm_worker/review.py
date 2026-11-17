@@ -3,6 +3,8 @@
 Input comes from git objects of `head` only (never the working tree) and is scanned by gitleaks before it
 leaves the machine. Model answers are untrusted data: parsed by schema, then by the accept+high rule."""
 
+import contextlib
+import fcntl
 import hashlib
 import json
 import posixpath
@@ -216,6 +218,19 @@ def next_round(runs_dir, task_id):
 CONFIRM_SUFFIX = ".confirm.json"
 
 
+@contextlib.contextmanager
+def round_lock(runs_dir, task_id):
+    """Exclusive flock while a round number is chosen and its record is written, so parallel reviews of one task
+    get different rounds. The lock file is `.review-<task>.lock` (not matched by `review-*.json`)."""
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    with open(runs_dir / f".review-{task_id}.lock", "a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+
+
 def confirm_path(record_path):
     return Path(str(record_path) + CONFIRM_SUFFIX)
 
@@ -272,23 +287,44 @@ def max_tokens_for(thinking, plain):
     return config.THINKING_MAX_TOKENS if thinking else plain
 
 
+def _sum_usage(parts):
+    """Sum of the integer usage fields over all attempts (what the ledger books); other fields are dropped."""
+    total = {}
+    for u in parts:
+        for k, v in u.items():
+            if type(v) is int:
+                total[k] = total.get(k, 0) + v
+            elif isinstance(v, dict):
+                total[k] = _sum_usage([total.get(k, {}), v])
+    return total
+
+
 def _deepseek_call(provider, system, text, schema_path, name, max_tokens):
     """(content, usage, thinking info). An empty answer with finish_reason `stop` is a model failure (DeepSeek
-    JSON mode may return only whitespace): one retry, then the empty content goes to the schema check."""
+    JSON mode may return only whitespace): one retry, then the empty content goes to the schema check.
+    usage and reasoning statistics cover all attempts; the raw body of an empty first attempt is kept."""
     schema = json.loads(Path(schema_path).read_text(encoding="utf-8"))
     messages = [{"role": "system", "content": system}, {"role": "user", "content": text}]
-    attempts = 0
+    attempts, usages, raws, rchars, rtokens = 0, [], [], 0, None
     while True:
         attempts += 1
-        comp = provider.complete(messages, schema, name, max_tokens)
+        raw = []
+        comp = provider.complete(messages, schema, name, max_tokens, on_raw=raw.append)
+        usages.append(comp.usage)
+        raws.append(raw[-1] if raw else None)
+        rchars += comp.reasoning_chars
+        if comp.reasoning_tokens is not None:
+            rtokens = (rtokens or 0) + comp.reasoning_tokens
         if comp.content.strip() or comp.finish_reason != "stop" or attempts == 2:
             break
-    info = {"enabled": bool(getattr(provider, "thinking", False)), "reasoning_chars": comp.reasoning_chars,
-            "reasoning_tokens": comp.reasoning_tokens, "finish_reason": comp.finish_reason, "attempts": attempts,
+    info = {"enabled": bool(getattr(provider, "thinking", False)), "reasoning_chars": rchars,
+            "reasoning_tokens": rtokens, "finish_reason": comp.finish_reason, "attempts": attempts,
             "max_tokens": max_tokens}
+    if attempts > 1 and raws[0] is not None:
+        info["first_attempt_raw"] = raws[0].decode("utf-8", "replace")
     if getattr(provider, "thinking", False):
         info["effort"] = provider.effort
-    return comp.content, comp.usage, info
+    return comp.content, _sum_usage(usages), info
 
 
 def run_review(task_id, base, head, provider_name="codex", root=config.REPO_ROOT, runs_dir=config.RUNS_DIR,
@@ -320,18 +356,21 @@ def run_review(task_id, base, head, provider_name="codex", root=config.REPO_ROOT
         answer, usage, think = _deepseek_call(make_provider(), REVIEW_SYSTEM, text, REVIEW_SCHEMA, "review",
                                               max_tokens_for(thinking, 8000))
     record = {"kind": "review", "task": task_id, "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-              "round": next_round(runs_dir, task_id), "provider": used, "fallback": fallback, "base": meta["base"],
+              "round": 0, "provider": used, "fallback": fallback, "base": meta["base"],
               "head": meta["head"], "risk": meta["risk"], "usage": usage, "files": meta["files"]}
     if think:
         record["thinking"] = think
     try:
         data = parse_answer(answer, REVIEW_SCHEMA, "review")
     except ReviewError as e:
+        record["round"] = next_round(runs_dir, task_id)
         write_run(runs_dir, f"review-{task_id}-{meta['head'][:8]}-{used}-invalid.json", {**record, "error": str(e), "raw": answer},
                   unique=True)
         raise
     record["result"] = data
-    path, digest = write_run(runs_dir, f"review-{task_id}-{meta['head'][:8]}-{used}.json", record, unique=True)
+    with round_lock(runs_dir, task_id):
+        record["round"] = next_round(runs_dir, task_id)
+        path, digest = write_run(runs_dir, f"review-{task_id}-{meta['head'][:8]}-{used}.json", record, unique=True)
     return path, review_line(used, meta["head"], data["verdict"], data["findings"], digest), record
 
 

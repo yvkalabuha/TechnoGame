@@ -139,9 +139,13 @@ class CandidateLoop:
             comp = self.provider.complete(messages, schema, schema_name, self.c["budget"]["max_output_tokens"],
                                           seed=self.k, on_raw=lambda raw: self._write_raw(n, name, raw))
             saved = comp.content, comp.usage, comp.timings, comp.elapsed_s
-            self._save_round_file(n, f"{name}_response.json",
-                                  {"content": comp.content, "usage": comp.usage, "timings": comp.timings,
-                                   "elapsed_s": comp.elapsed_s})
+            saved_rec = {"content": comp.content, "usage": comp.usage, "timings": comp.timings,
+                         "elapsed_s": comp.elapsed_s}
+            if getattr(self.provider, "thinking", False):  # reasoning statistics only; the text is never kept
+                saved_rec["thinking"] = {"reasoning_chars": comp.reasoning_chars,
+                                         "reasoning_tokens": comp.reasoning_tokens,
+                                         "finish_reason": comp.finish_reason}
+            self._save_round_file(n, f"{name}_response.json", saved_rec)
         content, usage, _, elapsed = saved
         self.st["tokens"]["prompt"] += int(usage.get("prompt_tokens", 0))
         self.st["tokens"]["completion"] += int(usage.get("completion_tokens", 0))

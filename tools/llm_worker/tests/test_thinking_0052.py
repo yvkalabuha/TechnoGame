@@ -88,7 +88,7 @@ class EmptyAnswerTest(unittest.TestCase):
     def test_whitespace_then_good_is_retried_once(self):
         seq = Seq([comp("  \n "), comp(json.dumps(GATE_OK))])
         content, _, info = self.call(seq)
-        self.assertEqual((seq.calls, info["attempts"], info["reasoning_tokens"]), (2, 2, 5))
+        self.assertEqual((seq.calls, info["attempts"], info["reasoning_tokens"]), (2, 2, 10))  # sum of both attempts
         self.assertEqual(review.parse_answer(content, review.GATE_SCHEMA, "gate")["STATUS"], "changes_requested")
 
     def test_second_empty_is_schema_invalid(self):

@@ -140,11 +140,11 @@ def _review_rounds(runs_dir):
                 continue
         except (ValueError, KeyError, TypeError, OSError):
             continue
-        out.setdefault(str(rec["task"]), []).append((f.name, rec))
-    def order(item):  # (round, created_at, file name); legacy records without fields come first
-        name, r = item
+        out.setdefault(str(rec["task"]), []).append(((f.stat().st_mtime_ns, f.name), rec))
+    def order(item):  # (round, created_at, mtime, file name); legacy records without fields come first
+        (mtime, name), r = item
         rnd = r.get("round")
-        return (rnd if type(rnd) is int else 0, r["created_at"] if isinstance(r.get("created_at"), str) else "", name)
+        return (rnd if type(rnd) is int else 0, r["created_at"] if isinstance(r.get("created_at"), str) else "", mtime, name)
 
     for task, items in out.items():
         out[task] = [r for _, r in sorted(items, key=order)]

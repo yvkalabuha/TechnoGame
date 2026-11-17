@@ -46,3 +46,12 @@ created: 2026-11-17
 
 ## Результат
 <!-- Заполняет исполнитель: что сделано, файлы, коммит. -->
+
+### Часть А (черновик, developer)
+- **DEBT-0030 закрыт:** `review.round_lock` (flock `runs/.review-<task>.lock`) охватывает выбор `round` и запись записи; старые записи без `round`/`created_at` в `report._review_rounds` упорядочиваются по mtime, затем по имени.
+- **DEBT-0035 закрыт:** `review._deepseek_call` суммирует usage и статистику рассуждения всех попыток; сырое тело пустой первой попытки — `thinking.first_attempt_raw`; `run --thinking on` пишет `thinking` в `round_N/*_response.json` (`loop.py`); тест лимита gate (#226); README обновлён (лимит review $0,50, flock, mtime, поля).
+- **DEBT-0034, тесты:** `ToyFunnelParityTests.TableLayout_MatchesPrototype` (A/B/C), `LkTablesTests` (отказ `BuildLk` при узле > max; L_K на 2 актора, узел 1000, разные δ). [Fact] «licence track» и «switches» в `SliceModelTests` уже были (строки 47, 51), пункт долга устарел.
+- **Остаётся (часть Б):** `SliceWorld.TablesDigest` (ActorCount/MaxNodeNumber), `JetSliceModel.ForcedStarts`; DEBT-0036.
+- Файлы: `tools/llm_worker/{review,report,loop}.py`, `README.md`, `tests/test_debt_0061.py` (новый), `tests/test_thinking_0052.py` (ожидание суммы попыток: 10 вместо 5); `tests/Singularity.Core.Tests/{Knowledge/LkTablesTests.cs (новый),ToyFunnel/ToyFunnelParityTests.cs}`.
+- Проверка: Python 299 тестов OK; `dotnet test Singularity.Core.Tests` 1058 OK. src/ и golden не менялись.
+
