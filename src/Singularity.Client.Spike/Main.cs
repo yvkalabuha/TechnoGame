@@ -33,6 +33,16 @@ public sealed partial class Main : Node3D
     readonly Dictionary<string, long> _startup = new();
     readonly Stopwatch _sw = Stopwatch.StartNew();
 
+    // v0.2: simulation, signal field, actor inset, tech tree
+    SimHost _host;
+    SignalField _signal;
+    ActorPanel _actorPanel;
+    TechTree _tree;
+    Label _loading;
+    int[] _actorCountry;                 // actor index -> country id (0 = none)
+    bool _shots; int _shotStep; double _shotT; string _shotDir = "../../docs/ui/prototypes/client-v02";
+    string _shotLog = ""; int _shotCand = -1;
+
     // bench
     bool _shotDone; bool _bench; int _phase = -1; double _phaseT; readonly List<double> _frames = new();
     readonly StringBuilder _json = new();
@@ -44,6 +54,9 @@ public sealed partial class Main : Node3D
         _startup["engine_to_ready_ms"] = (long)Time.GetTicksMsec();
         var args = OS.GetCmdlineUserArgs();
         _bench = args.Contains("--bench");
+        _shots = args.Contains("--shots");
+        var shotIdx = Array.IndexOf(args, "--shot-dir");
+        if (shotIdx >= 0 && shotIdx + 1 < args.Length) _shotDir = args[shotIdx + 1];
         if (_bench) DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
         var outIdx = Array.IndexOf(args, "--out");
         if (outIdx >= 0 && outIdx + 1 < args.Length) _outDir = args[outIdx + 1];
@@ -71,10 +84,11 @@ public sealed partial class Main : Node3D
         _overlay = new Overlay();
         layer.AddChild(_overlay);
         _overlay.Setup(_cam, top);
-        _overlay.AddTag(31, 49, "■ Узкое место");
-        _overlay.AddTag(-100, 40, "▲ Дефицит");
-        _overlay.AddTag(120, 30, "■ Срыв стройки");
-        _hud = new Label { Position = new Vector2(12, 10) };
+        _overlay.AddTag(31, 49, "■ Узкое место (макет)");
+        _overlay.AddTag(-55, -10, "▲ Дефицит (макет)");
+        _overlay.AddTag(120, 30, "■ Срыв стройки (макет)");
+        _hud = new Label { Position = new Vector2(12, 0) };
+        _hud.AnchorTop = 1; _hud.AnchorBottom = 1; _hud.OffsetTop = -80; _hud.AddThemeFontSizeOverride("font_size", 12); _hud.OffsetBottom = -4;
         _hud.AddThemeColorOverride("font_color", new Color("1D1E20"));
         _hud.AddThemeColorOverride("font_outline_color", PaperColor);
         _hud.AddThemeConstantOverride("outline_size", 4);
@@ -88,6 +102,77 @@ public sealed partial class Main : Node3D
         _selected = IdOf("Germany");
         ApplySelection();
         if (_bench) { Directory.CreateDirectory(_outDir); }
+        else BuildClient(layer);
+    }
+
+    // ---------- v0.2 client ----------
+    void BuildClient(CanvasLayer layer)
+    {
+        _host = new SimHost();
+        _host.Start();
+        _loading = Ui.Lbl("Загрузка сценария…", 18);
+        _loading.Position = new Vector2(20, 60);
+        layer.AddChild(_loading);
+        _tintsReady = false;
+    }
+
+    bool _tintsReady;
+
+    /// <summary>Called once the session exists: builds the UI that needs the actor list.</summary>
+    void FinishClient()
+    {
+        var ids = _host.Layout.ActorIds.ToArray();
+        _actorCountry = new int[ids.Length];
+        var lut = new byte[256];
+        for (int i = 0; i < ids.Length; i++)
+            if (Names.CountryOfActor.TryGetValue(ids[i], out var cn))
+            {
+                var c = _data.Countries.First(x => x.Name == cn);
+                _actorCountry[i] = c.Id; lut[c.Id] = 255;
+                _data.ComputeLabelPoint(c);
+                _overlay.AddTag(c.LabelPoint.X, c.LabelPoint.Y, ids[i], false);
+            }
+        _globeMat.SetShaderParameter("slice_lut", ImageTexture.CreateFromImage(Image.CreateFromData(256, 1, false, Image.Format.R8, lut)));
+        _globeMat.SetShaderParameter("dim_others", 0.6f);
+        _globeMat.SetShaderParameter("hatch_id", 0);   // the spike's demo hatching was a mock; the globe now shows the slice only
+
+        var layer = _hud.GetParent<CanvasLayer>();
+        _signal = new SignalField(_host, ids);
+        _signal.SetAnchorsPreset(Control.LayoutPreset.TopWide);
+        _signal.PowerChosen += i => ChoosePower(i, false);
+        layer.AddChild(_signal);
+
+        _actorPanel = new ActorPanel(_host) { Visible = false };
+        _actorPanel.AnchorLeft = 1; _actorPanel.AnchorRight = 1; _actorPanel.AnchorBottom = 1;
+        _actorPanel.OffsetLeft = -560; _actorPanel.OffsetRight = -10; _actorPanel.OffsetTop = 52; _actorPanel.OffsetBottom = -10;
+        _actorPanel.Closed += () => _actorPanel.Visible = false;
+        _actorPanel.OpenTree += () => OpenTree(0);
+        layer.AddChild(_actorPanel);
+
+        _tree = new TechTree(_host) { Visible = false };
+        _tree.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        _tree.OffsetTop = 44;
+        _tree.Closed += () => _tree.Visible = false;
+        layer.AddChild(_tree);
+        _loading.Visible = false;
+        _tintsReady = true;
+        _host.WhyActor = 0;
+    }
+
+    void OpenTree(int mode) { _tree.ShowFor(_signal.Actor, mode); }
+
+    void ChoosePower(int i, bool selectInSegment = true)
+    {
+        if (selectInSegment) _signal.SelectPower(i);
+        _host.WhyActor = i;
+        _actorPanel.ShowActor(i);
+        if (_tree.Visible) _tree.ShowFor(i, 0);
+        if (_actorCountry[i] != 0)
+        {
+            _selected = _actorCountry[i]; ApplySelection();
+            var ll = _data.Countries[_selected - 1].LabelPoint;
+            _yaw = ll.X; _pitch = Mathf.Clamp(ll.Y, -60, 60); _dist = 2.4f;
+        }
     }
 
     void Mark(string key)
@@ -258,7 +343,7 @@ public sealed partial class Main : Node3D
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (_bench) return;
+        if (_bench || (_tree != null && _tree.Visible && e is InputEventMouse)) return;
         if (e is InputEventMouseButton mb)
         {
             if (mb.ButtonIndex == MouseButton.Left)
@@ -275,6 +360,12 @@ public sealed partial class Main : Node3D
             float k = 0.12f * Math.Min(1f, (_dist - 1f) * 0.8f + 0.05f);
             _yaw -= mm.Relative.X * k; _pitch = Mathf.Clamp(_pitch + mm.Relative.Y * k, -80f, 80f);
         }
+        else if (e is InputEventKey sk && sk.Pressed && _tintsReady && sk.Keycode is Key.Space or Key.Key1 or Key.Key2 or Key.Key3 or Key.T)
+        {
+            if (sk.Keycode == Key.Space) _signal.SetSpeed(_host.Speed == 0 ? 1 : 0);
+            else if (sk.Keycode == Key.T) { if (_tree.Visible) _tree.Visible = false; else OpenTree(0); }
+            else _signal.SetSpeed((int)(sk.Keycode - Key.Key1) + 1);
+        }
         else if (e is InputEventKey key && key.Pressed && key.Keycode == Key.H)
         {
             _hatchScreenSpace = !_hatchScreenSpace;
@@ -289,7 +380,13 @@ public sealed partial class Main : Node3D
         if (disc < 0) { _selected = 0; ApplySelection(); return; }
         var hit = o + d * (-b - Mathf.Sqrt(disc));
         var ll = GlobeData.ToLonLat(hit);
-        _selected = _data.IdAt(ll.X, ll.Y);
+        int id = _data.IdAt(ll.X, ll.Y);
+        if (_tintsReady && id != 0)
+        {
+            int a = Array.IndexOf(_actorCountry, id);
+            if (a >= 0) { ChoosePower(a); return; }
+        }
+        _selected = id;
         ApplySelection();
     }
 
@@ -297,13 +394,20 @@ public sealed partial class Main : Node3D
     public override void _Process(double delta)
     {
         _t += delta;
+        if (_host != null && !_tintsReady)
+        {
+            if (_host.Fatal != null) { _loading.Text = "Ошибка симуляции: " + _host.Fatal; GD.PrintErr(_host.Fatal); }
+            else if (_host.Ready) FinishClient();
+            else _loading.Text = _host.Status;
+        }
+        if (_shots && _tintsReady) ShotStep(delta);
         if (_bench) BenchStep(delta);
         UpdateCamera();
         AnimateObjects();
         string sel = _selected == 0 ? "-" : _data.Countries[_selected - 1].Name;
         _hud.Text = $"FPS {Engine.GetFramesPerSecond()}  draw calls {(long)Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame)}  " +
                     $"labels {_overlay.VisibleLabels}  docked tags {_overlay.DockedTags}\n" +
-                    $"Region: {sel}\nFactory: {_factoryState}\nLMB drag = rotate, wheel = zoom, click = pick, H = hatch space ({(_hatchScreenSpace ? "screen" : "uv")})";
+                    $"Region: {sel}\nЗаводик, самолёт, метки: макет (из спайка)\nЛКМ-тяга = вращать, колесо = масштаб, клик по державе среза = панель; Пробел пауза, 1/2/3 темп, T дерево знаний";
     }
 
     void AnimateObjects()
@@ -319,6 +423,56 @@ public sealed partial class Main : Node3D
         _plane.Position = new Vector3(Mathf.Cos(_planeAngle), 0, Mathf.Sin(_planeAngle)) * 0.02f + new Vector3(0, 0.008f, 0);
         _plane.Rotation = new Vector3(0, -_planeAngle, 0);
     }
+
+    // ---------- screenshots (acceptance) ----------
+    void ShotStep(double dt)
+    {
+        _shotT += dt;
+        string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
+        void Shot(string name, Rect2I? r = null)
+        {
+            Directory.CreateDirectory(dir);
+            var img = GetViewport().GetTexture().GetImage();
+            if (r is Rect2I rr) img = img.GetRegion(rr);
+            img.SavePng(Path.Combine(dir, name));
+        }
+        var s = _host.Snap;
+        switch (_shotStep)
+        {
+            case 0:
+                _signal.SetSpeed(3); ChoosePower(0); _shotStep = 1; _shotT = 0; break;
+            case 1 when _shotT >= 3:
+                _shotLog += $"before: date {s.Date} tick {s.Tick} shares_in_force {Fmt(s.SharesInForce[0])} tick_ms {s.LastTickMs:F2}\n";
+                // Move 10 points from procurement to R: 0.35/0.12/0.08/0.40/0.05 -> 0.45/0.12/0.08/0.30/0.05 (values of profile P1 may differ; the sum is 1).
+                var b = s.SharesInForce[0] ?? new Singularity.Core.Policy.PolicyParams().Shares(s.View.Actors[0].Profile);
+                var f = Singularity.Kernel.Fx6.FromRaw(100_000);
+                _host.Submit(new Singularity.Core.Commands.SetBudgetShares(0, new Singularity.Core.Policy.BudgetShares(b.Research + f, b.Capability, b.Effort, b.Procurement - f, b.Quality)), "доли бюджета (тест)");
+                _shotLog += $"submitted: R {(b.Research + f).ToDouble():F2}, procurement {(b.Procurement - f).ToDouble():F2}\n";
+                _shotStep = 2; _shotT = 0; break;
+            case 2 when _shotT >= 3:
+                _shotLog += $"after: date {s.Date} tick {s.Tick} shares_in_force {Fmt(s.SharesInForce[0])} verdict '{s.LastVerdict}' outcome '{s.LastOutcome}' tick_ms {s.LastTickMs:F2}\n";
+                Shot("globe_panel.png"); Shot("signal_field.png", new Rect2I(0, 0, (int)GetViewport().GetVisibleRect().Size.X, 48));
+                _shotStep = 3; _shotT = 0; break;
+            case 3:
+                // Pick the first power that has a yearly requirement (a goal for the tree).
+                if (_shotT > 0.4)
+                {
+                    bool has = s.WhyActor == _shotCand && s.Target != null;
+                    if (_shotCand >= 0) _shotLog += $"why_not actor {_host.Layout.ActorIds[_shotCand]}: target {(s.Target is { } tt ? tt.Kind + " " + tt.Id : "none")}, links {s.Links.Count}\n";
+                    if (has || _shotCand >= _host.Layout.ActorIds.Length - 1) { ChoosePower(Math.Max(_shotCand, 0)); OpenTree(0); _shotStep = 4; _shotT = 0; }
+                    else { _shotCand++; _host.WhyActor = _shotCand; _shotT = 0; }
+                }
+                break;
+            case 4 when _shotT >= 1.5: Shot("tech_tree_a.png"); _tree.SetMode(1); _shotStep = 5; _shotT = 0; break;
+            case 5 when _shotT >= 1.5:
+                Shot("tech_tree_b.png");
+                _shotLog += $"final: date {s.Date} tick {s.Tick}\n";
+                Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog); GD.Print(_shotLog);
+                GetTree().Quit(); _shotStep = 6; break;
+        }
+    }
+
+    static string Fmt(Singularity.Core.Policy.BudgetShares? b) => b is { } x ? $"{x.Research.ToDouble():F2}/{x.Capability.ToDouble():F2}/{x.Effort.ToDouble():F2}/{x.Procurement.ToDouble():F2}/{x.Quality.ToDouble():F2}" : "none";
 
     // ---------- bench ----------
     // phases: warm-up, idle (whole disc), rotating, region view (hatching), zoomed in over the objects (+ shot mid-construction)

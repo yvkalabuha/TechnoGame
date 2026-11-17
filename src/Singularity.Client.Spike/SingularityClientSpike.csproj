@@ -1,7 +1,8 @@
 <Project Sdk="Godot.NET.Sdk/4.7.2">
   <PropertyGroup>
-    <!-- Godot 4.7.2 mono runs on .NET 8 (GodotPlugins.runtimeconfig.json: net8.0, rollForward LatestMajor). -->
-    <TargetFramework>net8.0</TargetFramework>
+    <!-- Godot 4.7.2 ships a net8.0 host whose runtimeconfig has rollForward=LatestMajor, so it loads this net10.0 assembly
+         (and the net10.0 Core/Kernel/Session) on the installed .NET 10 runtime. Needs the .NET 10 runtime next to Godot. -->
+    <TargetFramework>net10.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <RootNamespace>Singularity.Client.Spike</RootNamespace>
     <AssemblyName>SingularityClientSpike</AssemblyName>
@@ -9,4 +10,9 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Singularity.Session\Singularity.Session.csproj" />
+    <ProjectReference Include="..\Singularity.Core\Singularity.Core.csproj" />
+    <ProjectReference Include="..\Singularity.Kernel\Singularity.Kernel.csproj" />
+  </ItemGroup>
 </Project>

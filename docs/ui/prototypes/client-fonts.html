@@ -1,0 +1,151 @@
+<title>Шрифты клиента</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Jura:wght@400;500&family=PT+Mono&family=Literata:opsz,wght@7..72,400;7..72,500&display=swap">
+<style>
+/* Layout: one specimen block per proposed face, then the same client fragments twice — Godot default vs. the design-system fonts.
+   Single committed "paper" register from UI_DESIGN_SYSTEM v0.2 (no dark theme by choice). */
+:root{
+  --page:#E4E2DC; --sheet:#FAF8F2; --paper:#F2EFE6; --ink:#1D1E20; --ink2:#55575A; --ink3:#6E6C66; --rule:#BCB6A8;
+  --command:#2347A8; --alarm:#C42A1C; --warn:#E89A1A;
+  --f-text:"Golos Text",system-ui,sans-serif;
+  --f-mono:"PT Mono",ui-monospace,monospace;
+  --f-draft:"Jura","Golos Text",sans-serif;
+  --f-map:"Literata",Georgia,serif;
+  --f-default:"Noto Sans","DejaVu Sans",system-ui,sans-serif;
+  color-scheme:light;
+}
+body{background:var(--page); color:var(--ink); font-family:var(--f-text); font-size:16px; line-height:1.5}
+.wrap{max-width:1180px; margin:0 auto; padding-block:24px 48px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); display:grid; gap:28px}
+h1{font-family:var(--f-draft); font-weight:500; font-size:34px; line-height:1.15; margin:0; text-wrap:balance}
+h2{font-family:var(--f-draft); font-weight:500; font-size:22px; margin:0 0 4px}
+p{margin:0; max-width:72ch}
+.muted{color:var(--ink2)}
+.cap{font-size:13px; color:var(--ink2)}
+.lbl{font-family:var(--f-mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink3)}
+
+.faces{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px}
+.face{background:var(--sheet); border:1px solid var(--rule); padding:14px 16px; display:grid; gap:6px; min-width:0}
+.face .role{display:flex; justify-content:space-between; gap:8px}
+.face .sample{font-size:26px; line-height:1.2}
+.face .small{font-size:14px; color:var(--ink2)}
+
+.compare{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+@media (max-width:900px){.compare{grid-template-columns:1fr}}
+.col{min-width:0; display:grid; gap:8px; align-content:start}
+.col .hd{font-family:var(--f-mono); font-size:12px; background:var(--ink); color:var(--sheet); padding:4px 10px; display:flex; justify-content:space-between}
+
+/* Client fragments */
+.mock{background:var(--sheet); border:1px solid var(--rule); overflow-x:auto}
+.bar{display:flex; align-items:center; gap:12px; padding:6px 10px; border-bottom:1px solid var(--ink); white-space:nowrap; font-size:13px}
+.bar .date{font-size:20px}
+.seg{display:inline-flex; border:1px solid var(--ink)}
+.seg span{padding:2px 8px; border-left:1px solid var(--ink); position:relative}
+.seg span:first-child{border-left:0}
+.seg span.on::after{content:""; position:absolute; left:3px; right:3px; bottom:1px; height:2px; background:var(--ink)}
+.sig{border:1px solid var(--rule); padding:2px 6px; color:var(--ink3); font-size:12px}
+.sig.warn{background:var(--warn); border-color:var(--ink); color:var(--ink)}
+.panel{padding:12px 14px; display:grid; gap:10px}
+.panel .title{font-size:20px}
+.row{display:grid; grid-template-columns:150px 1fr 48px; gap:10px; align-items:center; font-size:14px}
+.track{height:4px; background:var(--rule); position:relative}
+.track i{position:absolute; left:0; top:0; bottom:0; background:var(--ink)}
+.num{text-align:right}
+.cmd{justify-self:start; background:var(--command); color:#fff; border:1px solid var(--ink); padding:3px 12px; font-size:14px}
+.why{font-size:14px}
+.why b{display:inline-block; width:9px; height:9px; background:var(--alarm); margin-right:6px}
+.nodes{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:4px 16px; font-size:13px}
+.nodes span{border-bottom:1px solid var(--rule); padding:2px 0}
+.map{padding:10px 14px; font-size:15px; display:flex; flex-wrap:wrap; gap:6px 22px; border-top:1px solid var(--rule)}
+
+/* Font sets */
+.def, .def *{font-family:var(--f-default)!important}
+.ds .draft{font-family:var(--f-draft)}
+.ds .mono, .ds .num, .ds .date{font-family:var(--f-mono); font-variant-numeric:tabular-nums}
+.ds .text{font-family:var(--f-text)}
+.ds .mapf{font-family:var(--f-map)}
+
+.note{background:var(--sheet); border:1px solid var(--rule); padding:12px 16px; font-size:14px; display:grid; gap:6px}
+.note li{margin:2px 0}
+</style>
+
+<div class="wrap">
+  <header style="display:grid; gap:8px">
+    <h1>Шрифты клиента Singularity</h1>
+    <p class="muted">Четыре шрифта по дизайн-системе (UI_DESIGN_SYSTEM v0.2) и те же фрагменты клиента v0.2 дважды: слева — как сейчас (шрифт Godot по умолчанию), справа — с предложенными шрифтами. Все шрифты под SIL OFL 1.1.</p>
+  </header>
+
+  <section style="display:grid; gap:10px">
+    <h2>Роли шрифтов</h2>
+    <div class="faces">
+      <div class="face"><div class="role"><span class="lbl">интерфейс</span><span class="lbl">Golos Text</span></div>
+        <div class="sample" style="font-family:var(--f-text)">Бюджет месяца</div>
+        <div class="small" style="font-family:var(--f-text)">Съешь же ещё этих мягких французских булок, да выпей чаю.</div></div>
+      <div class="face"><div class="role"><span class="lbl">числа, коды</span><span class="lbl">PT Mono</span></div>
+        <div class="sample" style="font-family:var(--f-mono)">1951-03-14 · 38%</div>
+        <div class="small" style="font-family:var(--f-mono)">0123456789 · Il1 O0 · № 17 · ± 5%</div></div>
+      <div class="face"><div class="role"><span class="lbl">чертёжные заголовки</span><span class="lbl">Jura</span></div>
+        <div class="sample" style="font-family:var(--f-draft)">ДЕРЕВО ЗНАНИЙ</div>
+        <div class="small" style="font-family:var(--f-draft)">Компоновка планера · Литера О · Масштаб 1 : 50</div></div>
+      <div class="face"><div class="role"><span class="lbl">подписи на карте</span><span class="lbl">Literata</span></div>
+        <div class="sample" style="font-family:var(--f-map)">Великобритания</div>
+        <div class="small" style="font-family:var(--f-map)">Северное море · Ла-Манш · Скандинавия</div></div>
+    </div>
+    <p class="cap">OpenGost Type B (шрифт по ГОСТ 2.304, с наклоном) — альтернатива Jura для чертёжных заголовков. Его нет на Google Fonts, поэтому здесь он не показан; сравнение OpenGost и Jura — в <code>docs/ui/prototypes/font-compare.html</code>.</p>
+  </section>
+
+  <section style="display:grid; gap:10px">
+    <h2>Фрагменты клиента v0.2</h2>
+    <div class="compare">
+      <div class="col def">
+        <div class="hd"><span>Сейчас</span><span>шрифт Godot</span></div>
+        <div class="mock" id="m1"></div>
+      </div>
+      <div class="col ds">
+        <div class="hd"><span>Предложение</span><span>Golos · PT Mono · Jura · Literata</span></div>
+        <div class="mock" id="m2"></div>
+      </div>
+    </div>
+    <p class="cap">Данные взяты со скриншота клиента v0.2 (США, февраль 1946). Названия узлов — русские черновые подписи из эскиза дерева, как предлагает визуальное ревью (исправление 1).</p>
+  </section>
+
+  <section class="note">
+    <h2>Что подключаем</h2>
+    <ul>
+      <li>Файлы TTF и текст OFL кладутся в клиент рядом со шрифтами, запись — в LICENSES.md.</li>
+      <li>Лицензия OFL позволяет встраивать шрифты в игру и продавать игру. Нельзя продавать сами шрифты отдельно и выпускать изменённые версии под зарезервированными именами.</li>
+      <li>Минимальный кегль интерфейса — 14 px (сейчас на скриншотах 10–11 px).</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+(function(){
+  var html =
+  '<div class="bar">' +
+    '<span class="lbl text">дата</span><span class="date">1946-02-25</span>' +
+    '<span class="seg draft"><span>пауза</span><span>1 день/с</span><span>неделя/с</span><span class="on">месяц/с</span></span>' +
+    '<span class="seg draft"><span class="on">США</span><span>Брит.</span><span>СССР</span><span>Фр.</span><span>Швеция</span></span>' +
+    '<span class="sig draft">СПЛАВ</span><span class="sig warn draft">▲ ЛИЦЕНЗИЯ</span><span class="sig draft">ОТКАЗ</span>' +
+  '</div>' +
+  '<div class="panel">' +
+    '<div class="title draft">США — бюджет месяца</div>' +
+    '<div class="cap text">Профиль «адаптивный» · поколение в строю G1 · месяц 5</div>' +
+    row('НИОКР', 38) + row('Мощности', 15) + row('Освоение', 10) + row('Закупки', 32) + row('Качество', 5) +
+    '<span class="cmd draft">Отдать приказ</span>' +
+    '<div class="why text"><b></b>Не изучено: обработка центробежных колёс (№ 50) · срок 190 мес</div>' +
+    '<div class="lbl text">фронтир знаний</div>' +
+    '<div class="nodes text">' +
+      '<span>Трансзвук <span class="mono">№ 5 · 78%</span></span>' +
+      '<span>Ползучесть <span class="mono">№ 6 · 25%</span></span>' +
+      '<span>Многовальность <span class="mono">№ 14 · 55%</span></span>' +
+      '<span>Форсаж двигателя <span class="mono">№ 21 · 62%</span></span>' +
+    '</div>' +
+  '</div>' +
+  '<div class="map mapf"><span>Канада</span><span>Соединённые Штаты</span><span>Мексика</span><span>Мексиканский залив</span></div>';
+  function row(name, v){
+    return '<div class="row"><span class="text">' + name + '</span><span class="track"><i style="width:' + v + '%"></i></span><span class="num">' + v + '%</span></div>';
+  }
+  document.getElementById('m1').innerHTML = html;
+  document.getElementById('m2').innerHTML = html;
+})();
+</script>

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Launch the Godot 3D globe spike (TASK-0067).
-# Usage: ./run-globe-spike.sh          interactive window
+# Usage: ./run-globe-spike.sh          interactive client prototype v0.2 (TASK-0069; real Session on a background thread)
+#        ./run-globe-spike.sh --shots  automatic run + screenshots into docs/ui/prototypes/client-v02/
 #        ./run-globe-spike.sh --bench  automatic benchmark + screenshots into bench-out/
 set -euo pipefail
 
@@ -28,10 +29,12 @@ fi
 echo "Building C# scripts..."
 "$GODOT" --headless --path . --build-solutions --quit
 
-if [[ "${1:-}" == "--bench" ]]; then
+if [[ "${1:-}" == "--shots" ]]; then
+  "$GODOT" --path . -- --shots
+elif [[ "${1:-}" == "--bench" ]]; then
   "$GODOT" --path . -- --bench --out bench-out
   echo "Benchmark output: $PROJECT/bench-out"
 else
-  echo "Controls: LMB drag = rotate, wheel = zoom, click = pick region, H = hatch space"
+  echo "Controls: LMB drag = rotate, wheel = zoom, click a slice country = actor panel, Space pause, 1/2/3 tempo, T tech tree"
   "$GODOT" --path .
 fi

@@ -1,7 +1,7 @@
 ---
 id: TASK-0069
 title: "Client prototype v0.2: design controls, Session wiring, tech tree A/B"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer
@@ -53,3 +53,27 @@ Continue the Godot globe spike (`src/Singularity.Client.Spike/`, TASK-0067) into
 - Screenshots of: globe with the panel, tech tree A, tech tree B, signal field.
 - The main solution's full `dotnet test` is green.
 - «Результат» lists real vs mock per control and the missing APIs.
+
+## Результат
+**Сделано.** Клиент `src/Singularity.Client.Spike/` (вне `Singularity.sln`, Core/Kernel/Session не тронуты) подключён к реальному `SliceSession`; запуск `./run-globe-spike.sh` (интерактив) или `--shots` (скриптовый прогон + снимки).
+
+**net8/net10.** [Факт] Хост Godot 4.7.2 запускается на .NET 8, но его `GodotPlugins.runtimeconfig.json` содержит `rollForward: LatestMajor`; при установленном рантайме .NET 10 хост загружает сборку игры `net10.0` и `ProjectReference` на Session/Core/Kernel без изменений. Решение: `TargetFramework` = `net10.0` в csproj (Godot.NET.Sdk 4.7.2 собирает его без ошибок). Требует .NET 10 рантайм рядом с Godot (на машине владельца он есть: SDK 10.0.403).
+
+**Потоки.** `SimHost` держит `SliceSession` в фоновом потоке (ADR-0014 п. 4): UI читает только неизменяемый `HostSnapshot` (View + дата + вердикты + why_not), команды и запросы идут через очередь. Тики = дни; темп 1 день/с, 7 дней/с, 30 дней/с (#269). Реальные тики: в прогоне 1945-11-27 → 1946-07-13 (315 тиков).
+
+**Реально / макет по контролам**
+- Сигнальное поле: дата, темп (пауза+3), выбор державы (6 по данным; в сценарии 5 актёров: USA, GBR, SUN, FRA, SWE) — реально. Места СПЛАВ (`AlloyDeficit`), ЛИЦЕНЗИЯ (`Refusals`), ОТКАЗ (вердикт Submit) — реально; ЦЕЛЬ, РАЗРЫВ, ВОЙНА — макет (◦).
+- Глобус: заливка/подсветка 5 держав среза, клик открывает панель — реально; остальные страны приглушены. Метки «Узкое место/Дефицит/Срыв стройки», заводик, самолёт из спайка — макет (подписаны).
+- Панель державы: 5 долей бюджета с ползунками → `Submit(SetBudgetShares)` и вердикт; в снимке-прогоне доли R 0,28→0,38, закупки 0,42→0,32 приняты, через ≤ 1 мес видны в `Inputs.Shares` (`run-log.txt`) — реально. Проекты/линии (`DesignView`), кнопки `CloseLine`/`CancelDesign`, лицензия, «Почему не» (`CurrentRequirement`+`WhyNot`) — реально. `ComposeDesign` и `StartSeries` НЕ подключены (нужны список альтернатив слотов и единицы темпа).
+- Дерево знаний: вид A (планисфера из 61 реального узла, состояния известно/фронтир/недоступно из `NodeView` + `requires`, маршрут, корень why_not) и вид B (ведомость) — состояния реальные; ступени зависимости — вычислены клиентом; цель = APP требования + замыкание звеньев KNOWLEDGE. Сроки, интервалы P10–P90, доли прогресса, «отставание от чужого знания» — нет данных (в UI помечено). Приоритеты НИОКР по фронтиру — макет (рычага нет). `SetEffortFocus` подключён реально, но он про фокус освоения ≤ 3 уже ИЗВЕСТНЫХ процессов, не про приоритет исследования фронтира.
+- Шрифты: встроенный шрифт Godot (OpenGost/Golos не подключены); локализация — черновые строки, ключей нет.
+
+**Недостающие API (предложения, не добавлялись)**
+1. Текущие доли бюджета и фокус в силе: в `ActorView` их нет, только `Inputs.Shares` ненулевых месяцев (клиент кэширует; на старте берёт доли профиля).
+2. Список альтернатив слотов/опций для `ComposeDesign`; единицы и допустимый диапазон `rate` для `StartSeries`.
+3. Прогресс узла (`prog`), `c_eff`, вес `w_n`; интервал срока (P10–P90) и срок недоступного узла; «самая долгая цепочка»; `known_elsewhere` по державам.
+4. Рычаг `research_priority` как команда.
+5. Потокобезопасный доступ к `WhyNot`/`Outcomes` (сейчас вызывается только из потока симуляции; клиент это соблюдает).
+6. Атрибуты узла для UI: ключи `data.node.<id>.name/.short`; сведения о «тоне» сигналов (категории сигнального поля).
+
+**Проверка.** `dotnet build` клиента — 0 ошибок; `./run-globe-spike.sh --shots` — прогон до конца, снимки в `docs/ui/prototypes/client-v02/` (globe_panel, signal_field, tech_tree_a, tech_tree_b, run-log.txt); полный `dotnet test` основного решения — зелёный (Architecture 98, Kernel 322, Core 1060, Lab 20, Session 353). Не проверено: ручное управление мышью (клики вручную не гонялись; скриптовый прогон идёт через те же `ChoosePower`/`Submit`), снимок B без цепочки (в данных SUN маршрут из одного узла).

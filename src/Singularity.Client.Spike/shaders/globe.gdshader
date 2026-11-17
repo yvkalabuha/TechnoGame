@@ -19,6 +19,9 @@ uniform float hatch_period = 6.0;
 uniform float hatch_width = 1.5;
 uniform bool hatch_in_screen_space = true;
 uniform bool show_hatch = true;
+uniform sampler2D slice_lut : filter_nearest, repeat_disable; // 256x1, R = 1 for the countries of the slice
+uniform float dim_others = 0.0;  // 0..1: pulls the tints of countries outside the slice towards paper
+uniform vec3 paper = vec3(0.949, 0.937, 0.902);
 
 const vec2 SZ = vec2(4096.0, 2048.0);
 
@@ -36,6 +39,7 @@ void fragment() {
 	vec2 uv = UV;
 	int id = id_at(uv);
 	vec3 col = (id == 0) ? sea_color : tint_of(id);
+	if (id != 0 && texelFetch(slice_lut, ivec2(id, 0), 0).r < 0.5) col = mix(col, paper, dim_others);
 	if (id == selected_id && id != 0) col = mix(col, ink, 0.14);
 
 	if (show_hatch && id == hatch_id && id != 0) {

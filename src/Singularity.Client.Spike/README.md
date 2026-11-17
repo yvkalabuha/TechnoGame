@@ -1,6 +1,6 @@
 # Singularity.Client.Spike
 
-Throwaway Godot 4 .NET spike (TASK-0067). Not production code, not wired to the simulation, not in `Singularity.sln`
+Godot 4 .NET client prototype: spike (TASK-0067) continued as v0.2 (TASK-0069): signal field, actor inset, tech tree A/B, wired to `Singularity.Session` (background thread, ADR-0014 п. 4). Not production code, not in `Singularity.sln`
 (its own `Directory.Build.props` stops `src/Directory.Build.props`). Report: `docs/ui/prototypes/globe-spike-report.md`.
 
 ## Setup
@@ -24,3 +24,8 @@ Committed because small: `assets/data/ne_50m_admin_0_countries_min.json` (derive
 Regenerate the data: download
 `https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson`,
 keep per feature `NAME`, `ISO_A3_EH`, geometry rounded to 3 decimals.
+
+## v0.2 (TASK-0069)
+- net10.0: the Godot 4.7.2 host runs on .NET 8 by default but its `GodotPlugins.runtimeconfig.json` has `rollForward: LatestMajor`, so with the .NET 10 runtime installed the net10.0 game assembly and Core/Kernel/Session (ProjectReference) load as is. `dotnet build` of the csproj needs the .NET 10 SDK on PATH (`run-globe-spike.sh` does it).
+- `./run-globe-spike.sh --shots` plays a scripted session and writes screenshots and `run-log.txt` to `docs/ui/prototypes/client-v02/`.
+- Keys: Space pause, 1/2/3 tempo, T tech tree. Everything marked «макет» has no Session API.

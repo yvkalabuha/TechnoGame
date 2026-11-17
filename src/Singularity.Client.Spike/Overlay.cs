@@ -38,12 +38,12 @@ public sealed partial class Overlay : Control
         }
     }
 
-    public void AddTag(float lon, float lat, string text)
+    public void AddTag(float lon, float lat, string text, bool alarm = true)
     {
         var l = new Label { Text = text, MouseFilter = MouseFilterEnum.Ignore };
         l.AddThemeFontSizeOverride("font_size", 13);
         l.AddThemeColorOverride("font_color", Colors.White);
-        var sb = new StyleBoxFlat { BgColor = Alarm, ContentMarginLeft = 6, ContentMarginRight = 6, ContentMarginTop = 2, ContentMarginBottom = 2 };
+        var sb = new StyleBoxFlat { BgColor = alarm ? Alarm : Ink, ContentMarginLeft = 6, ContentMarginRight = 6, ContentMarginTop = 2, ContentMarginBottom = 2 };
         sb.SetBorderWidthAll(1); sb.BorderColor = Ink;
         l.AddThemeStyleboxOverride("normal", sb);
         AddChild(l);

@@ -1,0 +1,7 @@
+before: date 1945-11-27 tick 87 shares_in_force 0.28/0.15/0.10/0.42/0.05 tick_ms 0.00
+submitted: R 0.38, procurement 0.32
+after: date 1946-02-25 tick 177 shares_in_force 0.38/0.15/0.10/0.32/0.05 verdict 'доли бюджета (тест): принято, применится на ближайшем тике' outcome 'CommandKey { ApplyTick = 87, Source = Player, SourceId = 0, LocalN = 1 }: accepted' tick_ms 0.01
+why_not actor USA: target none, links 0
+why_not actor GBR: target none, links 0
+why_not actor SUN: target Requirement 1, links 2
+final: date 1946-07-13 tick 315
