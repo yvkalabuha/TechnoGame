@@ -362,3 +362,19 @@ Existing community Godot MCP projects are researched first, in parallel now | в
 - Licences stay PD/CC0/CC BY only; no exception for Sonniss or Pixabay.
 - No announcer voice in v1.
 - The first audio prototype (15 synthesised UI sounds + 1–2 temporary CC0 tracks in the client) comes right after client v0.3. | владелец (AskUserQuestion 2026-11-17) |
+| 299 | 2026-11-17 | Alternative-history branches (owner idea). The tech graph has three branch kinds:
+- the historical mainstream;
+- dead ends: tried and abandoned for real reasons;
+- ahead-of-time branches: the right idea that lacked industry, money or will at the time.
+
+Events form condition-based chains (#256). Player hindsight is rewarded, but at a cost: the player can steer science toward ahead-of-time nodes but pays in missing capability, people and money (knowledge ≠ capability). Dead ends look like ordinary nodes; AI actors may fall into them.
+
+Agents: research-scientist gathers the facts with sources (branch kind, the real reason for failure or delay, what success would have needed). A new `counterfactual-analyst` agent, with its file created at session end, builds plausible alternative branches and checks them against physics, economics and the infrastructure of the era. Scheduled for PHASE F wave 3 | владелец (сообщение и AskUserQuestion 2026-11-17) |
+| 300 | 2026-11-17 | ADR-0018 localization (revision 2, Fluent via Linguini.Bundle) is ACCEPTED on condition of spike S1:
+- Linguini on .NET 10;
+- Russian case and gender through attributes;
+- "1,0" selects `other`;
+- message references see the caller's arguments.
+
+If S1 fails, the ADR returns to the gate. The Unicode License V3 (CLDR-derived plural rules inside Linguini) is allowed for code, with its notice in LICENSES.md and the credits | владелец (AskUserQuestion 2026-11-17) |
+| 301 | 2026-11-17 | Client v0.3 (TASK-0070) is accepted as the visual reference for the next step (ui-art-director second review: blockers resolved). Code review: approve with comments. The remaining items (SignalField `.Actor` mapping — medium; the lows; visual leftovers: API names, the acknowledged-signal state, a contrast fix and others) go to the next client task together with the audio prototype (#298) | Orchestrator (light) |

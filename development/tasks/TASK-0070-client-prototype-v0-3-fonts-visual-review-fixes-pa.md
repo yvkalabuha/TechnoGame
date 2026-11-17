@@ -1,7 +1,7 @@
 ---
 id: TASK-0070
 title: "Client prototype v0.3: fonts, visual review fixes, pause pending, robustness"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer
