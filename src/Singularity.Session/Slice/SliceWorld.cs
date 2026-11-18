@@ -163,6 +163,45 @@ internal sealed class SliceWorld
     /// </summary>
     internal bool DailyViewNeutral { get; }
 
+    /// <summary>Test switch (R2, TASK-0103): false = every snapshot builds the node blocks again instead of reusing those of an unchanged state.</summary>
+    internal bool ReuseNodeBlocks { get; set; } = true;
+
+    private NodeShape? _nodeShape;
+    private Column[]? _nodeColumns;
+
+    /// <summary>The node numbers and process slots shared by the node blocks of all actors; built on first use by the thread that builds snapshots.</summary>
+    internal NodeShape NodeShape => _nodeShape ??= BuildNodeShape();
+
+    /// <summary>The node blocks of the last snapshot with the state they were read from (R2); owned by the thread that builds snapshots.</summary>
+    internal NodeBlockCache NodeBlocks { get; } = new();
+
+    /// <summary>
+    /// The sum of the versions of every column the node blocks may read: all of them but the command columns <c>cmd.*</c>, which only hold what the
+    /// player asked for and are read by no view of nodes. Versions only grow, so an equal sum means no column changed (R2).
+    /// </summary>
+    internal long NodeStamp()
+    {
+        _nodeColumns ??= [.. Table.Columns.Where(c => !c.Name.StartsWith("cmd.", StringComparison.Ordinal))];
+        long sum = 0;
+        foreach (Column c in _nodeColumns)
+            sum += c.Version;
+        return sum;
+    }
+
+    private NodeShape BuildNodeShape()
+    {
+        int count = Graph.Count;
+        var processIndex = new int[count];
+        var layoutRow = new int[count];
+        int processes = 0;
+        for (int r = 0; r < count; r++)
+        {
+            layoutRow[r] = IndustryLayout.RowOf(Graph.Number[r]);
+            processIndex[r] = layoutRow[r] < 0 ? -1 : processes++;
+        }
+        return new NodeShape([.. Graph.Number], processIndex, layoutRow);
+    }
+
     /// <summary>Test switch (F4, TASK-0103): false = the inputs phase keeps no memo of the allocation and the tooling plan, so every reader recomputes. The state must not depend on it.</summary>
     internal bool MemoizeInputs { get; set; } = true;
 

@@ -28,6 +28,7 @@ internal static class ViewBuilder
     public static SliceView Snapshot(SliceWorld w, long tick, string? hash, long month, MonthInputsView? inputs, MonthStepView? step)
     {
         var actors = ImmutableArray.CreateBuilder<ActorView>(w.Scenario.ActorCount);
+        w.NodeBlocks.Begin(month + 1, w.NodeStamp(), w.Scenario.ActorCount, w.ReuseNodeBlocks);
         for (int a = 0; a < w.Scenario.ActorCount; a++)
             actors.Add(Actor(w, a, month, step is not null));
         return new SliceView(tick, w.Calendar.DateOf(tick), hash, month, actors.MoveToImmutable(), inputs, step);
@@ -79,26 +80,35 @@ internal static class ViewBuilder
             new DisruptionView(disStart, disEnd), Nodes(w, a, next), designs.MoveToImmutable(), Decisions(w, a, next, stepped));
     }
 
-    private static ImmutableArray<NodeView> Nodes(SliceWorld w, int a, long next)
+    // One compact block per actor (R1). On a tick that wrote none of the columns the blocks read, the block of the last snapshot of the same month is
+    // handed out again (R2): the command tick after a monthly step is such a tick.
+    private static NodeList Nodes(SliceWorld w, int a, long next)
     {
-        var nodes = ImmutableArray.CreateBuilder<NodeView>(w.Graph.Count);
+        NodeBlockCache cache = w.NodeBlocks;
+        if (cache.TryGet(a, out NodeList reused))
+            return reused;
+        NodeShape shape = w.NodeShape;
+        var block = new NodeBlock(shape, w.Knowledge.TracksKnownSince);
         // One pass over the grants per actor instead of one per node.
-        var granted = new bool[w.Graph.Count];
         foreach ((int actor, int node) in w.Knowledge.LastLicenceGrants)
         {
             int row = actor == a ? w.Graph.RowOf(node) : -1;
             if (row >= 0)
-                granted[row] = true;
+                block.ByLicence[row >> 6] |= 1UL << (row & 63);
         }
-        for (int r = 0; r < w.Graph.Count; r++)
+        for (int r = 0; r < shape.Numbers.Length; r++)
         {
-            int number = w.Graph.Number[r];
-            bool byLicence = granted[r];
-            int p = w.IndustryLayout.RowOf(number);
-            nodes.Add(new NodeView(number, w.Knowledge.IsKnown(a, r), byLicence, p < 0 ? null : Process(w, a, p, number, next),
-                w.Knowledge.TracksKnownSince ? w.Knowledge.KnownSince(a, r) : null));
+            if (w.Knowledge.IsKnown(a, r))
+                block.Known[r >> 6] |= 1UL << (r & 63);
+            if (block.KnownSince is { } since)
+                since[r] = w.Knowledge.KnownSince(a, r);
+            int p = shape.LayoutRow[r];
+            if (p >= 0)
+                block.Processes[shape.ProcessIndex[r]] = Process(w, a, p, shape.Numbers[r], next);
         }
-        return nodes.MoveToImmutable();
+        var list = new NodeList(block);
+        cache.Put(a, list);
+        return list;
     }
 
     private static ProcessView Process(SliceWorld w, int a, int row, int number, long next)

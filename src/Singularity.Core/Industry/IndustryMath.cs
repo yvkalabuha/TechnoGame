@@ -137,8 +137,11 @@ public static class IndustryMath
     {
         if (items.IsEmpty)
             throw new ArgumentException("A prc_set needs at least one process.", nameof(items));
-        ProfileItem[] sorted = items.ToArray();
-        Array.Sort(sorted, (a, b) => a.ProcessNumber.CompareTo(b.ProcessNumber));
+        // A set of up to four items stays on the stack: no garbage per call (a view builds one per process).
+        Span<ProfileItem> stack = stackalloc ProfileItem[4];
+        Span<ProfileItem> sorted = items.Length <= 4 ? stack[..items.Length] : new ProfileItem[items.Length];
+        items.CopyTo(sorted);
+        sorted.Sort(static (a, b) => a.ProcessNumber.CompareTo(b.ProcessNumber));
         bool admitted = true;
         Fx6 num = Fx6.Zero, den = Fx6.Zero, q = Fx6.One;
         int bn = 0;

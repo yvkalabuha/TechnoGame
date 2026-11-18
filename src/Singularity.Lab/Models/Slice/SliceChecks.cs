@@ -125,9 +125,11 @@ public static class SliceChecks
                 LineBind.None, true, [.. prc]);
         var layout = new SliceLayoutView(["USA"], [101, 102, 103, 104, 200], [1, 1, 1, 1, 1], [101, 102, 103, 104], [1, 2, 2, 3], [], [], 6, 0, 2, 0,
             Fx6.One, Fx6.One);
-        var nodes = System.Collections.Immutable.ImmutableArray.Create(
+        NodeList nodes = NodeList.Create(
+        [
             new NodeView(101, true, false, Pv(true), null), new NodeView(102, true, false, Pv(true), null), new NodeView(103, true, false, Pv(true), null),
-            new NodeView(104, true, false, Pv(false), null), new NodeView(200, true, false, null, null));
+            new NodeView(104, true, false, Pv(false), null), new NodeView(200, true, false, null, null),
+        ]);
         var designs = System.Collections.Immutable.ImmutableArray.Create(
             Dv(0, DesignStage.InService, 1, 5 * Fx6.Scale, 100, 101),          // fielded by r6
             Dv(1, DesignStage.InService, 2, 10 * Fx6.Scale, 300, 101, 104),    // 104 not mastered now: out of r6 (the closed-line case)

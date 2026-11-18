@@ -478,7 +478,7 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
         Assert.Empty(offenders);
     }
 
-    // Whitelist: primitives, Fx6, enums, view types, FleetCommand (readonly record struct of an enum and numbers), ImmutableArray of the same.
+    // Whitelist: primitives, Fx6, enums, view types, NodeList, FleetCommand (readonly record struct of an enum and numbers), ImmutableArray of the same.
     private static bool IsImmutableShape(Type t, Type[] viewTypes)
     {
         if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(ImmutableArray<>))
@@ -488,7 +488,7 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
         if (t == typeof(FleetCommand))
             return typeof(FleetCommand).GetProperties().All(p => p.SetMethod is null || p.SetMethod.ReturnParameter.GetRequiredCustomModifiers().Contains(typeof(IsExternalInit)))
                 && typeof(FleetCommand).IsValueType;
-        return t.IsPrimitive || t == typeof(string) || t == typeof(Fx6) || t.IsEnum || viewTypes.Contains(t) || t == typeof(BudgetShares) || t == typeof(CivilDate) || t == typeof(TechKey);
+        return t.IsPrimitive || t == typeof(string) || t == typeof(Fx6) || t.IsEnum || viewTypes.Contains(t) || t == typeof(BudgetShares) || t == typeof(CivilDate) || t == typeof(TechKey) || t == typeof(NodeList);   // NodeList: a readonly struct over arrays that are never written after the build
     }
 
     [Fact]

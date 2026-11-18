@@ -371,7 +371,9 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
     /// <summary><c>production_profile(site, prc_set)</c> of month <paramref name="month"/> from the snapshot (contract §4.2, §5).</summary>
     public ProductionProfile Profile(int site, ReadOnlySpan<PrcSetItem> prcSet, long month)
     {
-        var items = new ProfileItem[prcSet.Length];
+        // A prc_set is a few processes (a design has ≤ 4 alternatives): the common case stays on the stack, no garbage per view row.
+        Span<ProfileItem> stack = stackalloc ProfileItem[4];
+        Span<ProfileItem> items = prcSet.Length <= 4 ? stack[..prcSet.Length] : new ProfileItem[prcSet.Length];
         for (int i = 0; i < prcSet.Length; i++)
         {
             int r = _l.RowOf(prcSet[i].ProcessNumber);
