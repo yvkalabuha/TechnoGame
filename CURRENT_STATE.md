@@ -11,7 +11,6 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0076 [REVIEW] Localization fixes after Codex review of TASK-0074 (developer)
 - TASK-0064 [APPROVED] lab bench harness (ADR-0016 T1) (developer)
 - TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
 - TASK-0073 [APPROVED] Audio listening pack from AUDIO_DIRECTION r2 recordings (developer)

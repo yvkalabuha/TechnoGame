@@ -1,7 +1,7 @@
 ---
 id: TASK-0076
 title: "Localization fixes after Codex review of TASK-0074"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer
@@ -47,3 +47,4 @@ Fix the Codex second-review findings on TASK-0074 (record tools/llm_worker/runs/
 2. **MEDIUM** `LocaleCatalog.Load(..., warn)` теперь запускает L4 и L6: `Loc` строится только для проверки (`LocaleChecks.Plurals`, `Budgets`). Тест `RuntimeLoad_RunsPluralAndLengthChecks`.
 3. **MEDIUM** Предупреждающий `warn` обязателен, перегрузки `Load(GameData)` и необязательного `warn` нет. Тест `RuntimeLoad_HasNoSilentDefault`. Тесты без проверок используют `Load(ModLocaleSource.From(data))`.
 4. **MEDIUM** `$case` исключается из L3 только в термах (`CollectUsage(..., inTerm)`). Тест `L3_CaseVariableOfAMessage_IsNotExempt`.
+- [x] Второе ревью (codex, head 7db9f7c3) — accept: 2 medium (GENDER in selectors for L3; runtime L6 misses ru-only entries) → DEBT-0042; report sha256 3713346417565fd72c3e3bc70bac4d0dbb1da8bc130090cd84698dd3492c8565
