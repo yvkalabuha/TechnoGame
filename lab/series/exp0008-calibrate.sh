@@ -27,7 +27,7 @@ preflight_355 "$SMOKE"
 check_tree "$SMOKE"
 record_env
 build_lab
-H=$(manifest_hash "$MANIFEST"); [ -n "$H" ] || die "manifest hash failed for $MANIFEST" 2
+H=$(manifest_hash "$MANIFEST") || die "manifest hash failed for $MANIFEST" 2
 echo "calibration_manifest $(basename "$MANIFEST") $H" >> "$RUN_DIR/env.txt"
 say "calibration manifest_hash $H"
 say "expected: wait for quiet >= 60 s, f_ref 5 min, then 15 processes of point A (t8), ~2-3 min each; progress: tail -f $RUN_DIR/series/series.log"
@@ -38,7 +38,8 @@ CODE=$(cat "$RUN_DIR/driver_exit_code")
 [ "$CODE" = 0 ] || die "the driver did not finish the calibration (exit $CODE); send $RUN_DIR/console.log and series/series.log" "$CODE"
 
 stage "thresholds: exp0008.py --calibrate"
-python3 "$REPO/lab/analysis/exp0008.py" "$RUN_DIR/series" --calibrate --out "$RUN_DIR/calibrate.json" | tee -a "$RUN_DIR/console.log"
+python3 "$REPO/lab/analysis/exp0008.py" "$RUN_DIR/series" --calibrate --out "$RUN_DIR/calibrate.json" 2>&1 | tee -a "$RUN_DIR/console.log" \
+    || die "calibrate analysis failed (exp0008.py --calibrate); send $RUN_DIR/console.log" 1
 stage "done"
 cat <<MSG | tee -a "$RUN_DIR/console.log"
 

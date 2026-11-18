@@ -30,12 +30,15 @@ preflight_355 "$SMOKE"
 check_tree "$SMOKE"
 record_env
 build_lab
-H=$(manifest_hash "$MANIFEST"); [ -n "$H" ] || die "manifest hash failed for $MANIFEST" 2
+H=$(manifest_hash "$MANIFEST") || die "manifest hash failed for $MANIFEST" 2
 echo "manifest $(basename "$MANIFEST") $H" >> "$RUN_DIR/env.txt"
 if [ "$SMOKE" = 0 ]; then
     # Freeze guard (П0, ADR-0023 п. 1.10): the series runs only on the manifest whose hash the frozen pre-registration records.
-    FROZEN=$(sed -n 's/^manifest_hash:[[:space:]]*\([0-9a-f]\{64\}\).*/\1/p' "$EXP_MD" | head -1)
-    [ -n "$FROZEN" ] || die "EXP-0008 has no manifest_hash yet: calibrate and freeze first (Runbook step 2)" 2
+    # The value may be bare, "quoted" or 'quoted', with an optional trailing # comment.
+    RAW=$(sed -n 's/^manifest_hash:[[:space:]]*//p' "$EXP_MD" | head -1 | sed 's/[[:space:]]#.*$//; s/^#.*$//; s/[[:space:]]*$//; s/^"\(.*\)"$/\1/; s/^'"'"'\(.*\)'"'"'$/\1/')
+    [ -n "$RAW" ] || die "EXP-0008 has no manifest_hash yet: calibrate and freeze first (Runbook step 2)" 2
+    FROZEN=$(printf '%s' "$RAW" | grep -E '^[0-9a-f]{64}$' || true)
+    [ -n "$FROZEN" ] || die "EXP-0008 manifest_hash is not 64 lowercase hex: '$RAW'" 2
     [ "$FROZEN" = "$H" ] || die "manifest hash $H differs from the frozen manifest_hash $FROZEN in EXP-0008" 2
     say "manifest_hash $H = frozen EXP-0008 manifest_hash"
 fi
@@ -46,10 +49,10 @@ run_driver --manifest "$MANIFEST" --out "$RUN_DIR/series"
 CODE=$(cat "$RUN_DIR/driver_exit_code")
 
 stage "after the series: src/ and mods/ unchanged since core_commit (П0)"
-if git -C "$REPO" diff --quiet "$CORE_COMMIT" HEAD -- src mods; then
-    say "git diff $CORE_COMMIT..HEAD -- src mods: empty"; echo "src_mods_unchanged true" >> "$RUN_DIR/env.txt"
+if git -C "$REPO" diff --quiet "$CORE_COMMIT" HEAD -- src mods && [ -z "$(git -C "$REPO" status --porcelain -- src mods)" ]; then
+    say "git diff $CORE_COMMIT..HEAD -- src mods: empty, working tree of src/ mods/ clean"; echo "src_mods_unchanged true" >> "$RUN_DIR/env.txt"
 else
-    say "WARNING: src/ or mods/ changed since $CORE_COMMIT: the series is INVALID (b) «different builds»"; echo "src_mods_unchanged false" >> "$RUN_DIR/env.txt"
+    say "WARNING: src/ or mods/ changed since $CORE_COMMIT (commits or uncommitted edits): the series is INVALID (b) «different builds»"; echo "src_mods_unchanged false" >> "$RUN_DIR/env.txt"
 fi
 if [ -f "$RUN_DIR/series/series.json" ] && [ "$CODE" != 2 ] && [ "$CODE" != 3 ]; then
     stage "analysis: exp0008.py"

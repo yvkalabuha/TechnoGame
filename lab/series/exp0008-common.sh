@@ -43,8 +43,12 @@ build_lab() {
     [ -f "$LAB_DLL" ] || die "no $LAB_DLL after build" 1
 }
 
+# Prints the 64-hex manifest_hash of a bench manifest; fails (status 1) if the plan fails or prints no hash.
 manifest_hash() {
-    "$DOTNET" "$LAB_DLL" bench --mode plan --manifest "$1" | sed -n 's/^manifest_hash=\([0-9a-f]*\).*/\1/p'
+    local h
+    h=$("$DOTNET" "$LAB_DLL" bench --mode plan --manifest "$1" | sed -n 's/^manifest_hash=\([0-9a-f]\{64\}\).*/\1/p') || return 1
+    [ -n "$h" ] || return 1
+    echo "$h"
 }
 
 record_env() {

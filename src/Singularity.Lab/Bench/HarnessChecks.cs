@@ -313,7 +313,7 @@ public static class HarnessChecks
         BenchGate g = m8.Gate;
         // The calibrated keys (ADR-0023 п. 1.10, EXP-0008 П5.6): the [Предл.] numbers before calibration, or the p90 rule's grid after it
         // (н1а step 0.25 CPU, н1б step 0.05, н2 step 0.01); pre_series_foreign_cpus_max follows н1а. Everything else is fixed.
-        if (!Calibrated(g.ForeignCpusMax, 0.8, 0.25) || !Calibrated(g.ForeignOverShareMax, 0.10, 0.05) || !Calibrated(g.RunDelayMax, 0.05, 0.01)
+        if (!Calibrated(g.ForeignCpusMax, 0.8, 0.25, Environment.ProcessorCount) || !Calibrated(g.ForeignOverShareMax, 0.10, 0.05, 1.0) || !Calibrated(g.RunDelayMax, 0.05, 0.01, 1.0)
             || g.PreSeriesForeignCpusMax != g.ForeignCpusMax)
             return $"EXP-0008 calibrated gate keys off the П5.6 grid: н1а {g.ForeignCpusMax}, н1б {g.ForeignOverShareMax}, н2 {g.RunDelayMax}, pre-series {g.PreSeriesForeignCpusMax}";
         BenchGate d = new();
@@ -360,8 +360,11 @@ public static class HarnessChecks
         return null;
     }
 
-    private static bool Calibrated(double v, double proposal, double step)
+    // Bounds first: a share above 1 or more CPUs than the machine has is rejected even on the grid.
+    private static bool Calibrated(double v, double proposal, double step, double max)
     {
+        if (!(v > 0 && v <= max))
+            return false;
         if (v == proposal)
             return true;
         double k = Math.Round(v / step);
