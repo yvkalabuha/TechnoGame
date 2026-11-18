@@ -38,3 +38,52 @@ polities:
   - {id: ALLIED_VIENNA, name: "Allied administration of Vienna", kind: joint, government: false, members: [USA, GBR, SUN, FRA]}
   # Zone A of Trieste under the Allied Military Government (US and British), 1945-06-12 .. 1954-10-26 (RR-0020 C14).
   - {id: AMG_TRIESTE, name: "Allied Military Government of Trieste (zone A)", kind: joint, government: false, members: [USA, GBR]}
+  # World polities of 1945-10-01 (TASK-0095, owners-1945-world.md). Codes: NE ADM0_A3 where the entity coincides, otherwise a project code (ROC/PRC, not CHN).
+  - {id: AFG, name: "Afghanistan", ne_adm0: AFG}
+  - {id: ARG, name: "Argentina", ne_adm0: ARG}
+  - {id: AUS, name: "Australia", ne_adm0: AUS}
+  - {id: BOL, name: "Bolivia", ne_adm0: BOL}
+  - {id: BRA, name: "Brazil", ne_adm0: BRA}
+  - {id: BTN, name: "Bhutan", ne_adm0: BTN}
+  - {id: CAN, name: "Canada", ne_adm0: CAN}
+  - {id: CHL, name: "Chile", ne_adm0: CHL}
+  - {id: COL, name: "Colombia", ne_adm0: COL}
+  - {id: CRI, name: "Costa Rica", ne_adm0: CRI}
+  - {id: CUB, name: "Cuba", ne_adm0: CUB}
+  - {id: DOM, name: "Dominican Republic", ne_adm0: DOM}
+  - {id: ECU, name: "Ecuador", ne_adm0: ECU}
+  - {id: EGY, name: "Egypt", ne_adm0: EGY}
+  - {id: ETH, name: "Ethiopia", ne_adm0: ETH}
+  - {id: GTM, name: "Guatemala", ne_adm0: GTM}
+  - {id: HND, name: "Honduras", ne_adm0: HND}
+  - {id: HTI, name: "Haiti", ne_adm0: HTI}
+  - {id: IDN, name: "Republic of Indonesia (controller only)", ne_adm0: IDN}
+  - {id: IRN, name: "Iran", ne_adm0: IRN}
+  - {id: IRQ, name: "Iraq", ne_adm0: IRQ}
+  - {id: JPN, name: "Japan under occupation", ne_adm0: JPN}
+  - {id: KOR, name: "Korea under occupation", ne_adm0: KOR, government: false}
+  - {id: LBN, name: "Lebanon", ne_adm0: LBN}
+  - {id: LBR, name: "Liberia", ne_adm0: LBR}
+  - {id: MEX, name: "Mexico", ne_adm0: MEX}
+  - {id: MNG, name: "Mongolia", ne_adm0: MNG}
+  - {id: NHEB, name: "New Hebrides (Anglo-French condominium)", kind: joint, government: false, members: [GBR, FRA]}
+  - {id: NIC, name: "Nicaragua", ne_adm0: NIC}
+  - {id: NPL, name: "Nepal", ne_adm0: NPL}
+  - {id: NZL, name: "New Zealand", ne_adm0: NZL}
+  - {id: OMN, name: "Oman", ne_adm0: OMN}
+  - {id: PAN, name: "Panama", ne_adm0: PAN}
+  - {id: PER, name: "Peru", ne_adm0: PER}
+  - {id: PRY, name: "Paraguay", ne_adm0: PRY}
+  - {id: ROC, name: "Republic of China"}
+  - {id: SAU, name: "Saudi Arabia", ne_adm0: SAU}
+  - {id: SDN_AE, name: "Anglo-Egyptian Sudan (condominium)", kind: joint, government: false, members: [GBR, EGY]}
+  - {id: SLV, name: "El Salvador", ne_adm0: SLV}
+  - {id: SYR, name: "Syria", ne_adm0: SYR}
+  - {id: TANGIER, name: "Tangier International Zone", government: false}
+  - {id: THA, name: "Thailand", ne_adm0: THA}
+  - {id: TIB, name: "Tibet"}
+  - {id: TUR, name: "Turkey", ne_adm0: TUR}
+  - {id: URY, name: "Uruguay", ne_adm0: URY}
+  - {id: VEN, name: "Venezuela", ne_adm0: VEN}
+  - {id: YEM, name: "Kingdom of Yemen", ne_adm0: YEM}
+  - {id: ZAF, name: "South Africa", ne_adm0: ZAF}

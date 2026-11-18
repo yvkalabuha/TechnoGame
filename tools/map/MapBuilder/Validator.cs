@@ -5,6 +5,7 @@ namespace Singularity.MapBuilder;
 /// <summary>Validator of ADR-0011 §2.10 for the selected area. World-wide count ranges are reported, not enforced, when the area is partial.</summary>
 internal static class Validator
 {
+    private static readonly string[] Confidences = { "H", "M", "L" };
     private static readonly string[] Statuses = { "core", "colony", "protectorate", "mandate", "leased" };
     private static readonly Regex PolityId = new("^[A-Z][A-Z0-9_]*$", RegexOptions.Compiled);
 
@@ -136,9 +137,6 @@ internal static class Validator
         }
     }
 
-    /// <summary>A piece of the legacy Europe set (TASK-0075): its owners are mandatory.</summary>
-    private static bool Europe(BuildResult r, Piece p) => p.Src.Any(c => r.EuropeCodes.Contains(c));
-
     /// <summary>
     /// Event-line CI (ADR-0020 §2.9, §3.13, #350): every region lies wholly inside one set of an event or wholly outside all its sets,
     /// and two sets of one event never share a region.
@@ -191,6 +189,7 @@ internal static class Validator
         void Check(OwnerRow row, string what)
         {
             if (string.IsNullOrWhiteSpace(row.Source)) r.Errors.Add($"owners {what}: source is required");
+            if (!Confidences.Contains(row.Confidence)) r.Errors.Add($"owners {what}: confidence must be H, M or L, got '{row.Confidence}'");
             if (!polityIds.Contains(row.Owner)) r.Errors.Add($"owners {what}: unknown owner '{row.Owner}'");
             if (!polityIds.Contains(row.Controller)) r.Errors.Add($"owners {what}: unknown controller '{row.Controller}'");
             if (!Statuses.Contains(row.Status)) r.Errors.Add($"owners {what}: bad status '{row.Status}'");
@@ -209,22 +208,22 @@ internal static class Validator
             Check(e, "province " + e.Province);
         }
         var controllersByRegion = new SortedDictionary<string, SortedSet<string>>(StringComparer.Ordinal);
-        var pending = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var p in r.Pieces)
         {
             var region = p.Id[..p.Id.IndexOf('.')];
             OwnerRow? row = exc.GetValueOrDefault(p.Id) ?? def.GetValueOrDefault(region);
             if (row == null)
             {
-                // The world table of 1945 owners is a T4 task: until then a world region without a record is reported, not an error.
-                if (r.Spec.Area.World && !Europe(r, p)) pending.Add(region); else r.Errors.Add($"owners: province {p.Id} has no record");
+                r.Errors.Add($"owners: province {p.Id} has no record");
                 continue;
             }
             r.Owners[p.Id] = new Resolved { Owner = row.Owner, Controller = row.Controller, Status = row.Status };
             if (!controllersByRegion.TryGetValue(region, out var set)) controllersByRegion[region] = set = new SortedSet<string>(StringComparer.Ordinal);
             set.Add(row.Controller);
         }
-        if (pending.Count > 0) r.Warnings.Add($"owners: {pending.Count} world regions have no 1945 owner record yet (T4): {string.Join(", ", pending)}");
+        // Every region has a default record, also the regions made of territories only (T4).
+        foreach (var reg in regionSet.OrderBy(x => x, StringComparer.Ordinal))
+            if (!def.ContainsKey(reg)) r.Errors.Add($"owners: region {reg} has no default record");
         foreach (var (reg, set) in controllersByRegion)
             if (set.Count > 1) r.Warnings.Add($"region {reg} has several controllers: {string.Join(", ", set)} (E1 decision needed, ADR-0011 §3)");
 
@@ -232,7 +231,8 @@ internal static class Validator
         foreach (var pol in r.Polities.Where(p => p.Actor != null))
         {
             int n = def.Values.Count(d => d.Owner == pol.Id);
-            if (n > 15) r.Errors.Add($"actor {pol.Id}: {n} regions as default owner, max 15");
+            // Colonial empires count their colonies as owned regions, so the 5-15 target (#171) is a warning for the owner, like the other world ranges.
+            if (n > 15) r.Warnings.Add($"actor {pol.Id}: {n} regions as default owner, target max 15 (#171; question to the owner)");
             else r.Info.Add($"actor {pol.Id}: {n} regions in the area (5-15 over the whole world)");
         }
     }

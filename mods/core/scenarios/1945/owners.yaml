@@ -2,100 +2,383 @@
 # DRAFT written by the developer in TASK-0075 for the map pipeline. Every row must be verified by research-scientist (T4) and independently by critic (ADR-0011 §6).
 # Disputed points for the owner: de jure owner of the eastern German territories and of the Koenigsberg area (owner DEU, controller POL or SUN here).
 # TASK-0091 (#350): a region has one owner and one controller, so the zones, Berlin, Vienna, Venezia Giulia, Danzig and the eastern lands are regions of their own and there are no province exceptions.
-# Not modelled: the US, British and French sectors of Berlin and the five regions of Vienna (no geometry source for the lines); the world outside Europe (T4).
+# Not modelled: the US, British and French sectors of Berlin and the five regions of Vienna (no geometry source for the lines); the Europe table is a draft (confidence M).
 as_of: 1945-10-01
 defaults:
-  - {region: aland, owner: FIN, controller: FIN, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: albania, owner: ALB, controller: ALB, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: andorra, owner: AND, controller: AND, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: belarus, owner: SUN, controller: SUN, status: core, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
-  - {region: belgium, owner: BEL, controller: BEL, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: bosnia_and_herzegovina, owner: YUG, controller: YUG, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: bulgaria_plovdiv, owner: BGR, controller: BGR, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: bulgaria_stara_zagora, owner: BGR, controller: BGR, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: croatia, owner: YUG, controller: YUG, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: czech_republic, owner: CSK, controller: CSK, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: denmark, owner: DNK, controller: DNK, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: estonia, owner: SUN, controller: SUN, status: core, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
-  - {region: faroe_islands, owner: DNK, controller: DNK, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: finland_lapland, owner: FIN, controller: FIN, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: finland_northern_ostrobothnia, owner: FIN, controller: FIN, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: finland_southern_savonia, owner: FIN, controller: FIN, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: france_ain, owner: FRA, controller: FRA, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: france_gers, owner: FRA, controller: FRA, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: france_marne, owner: FRA, controller: FRA, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: gibraltar, owner: GBR, controller: GBR, status: colony, source: "British colony or dependency in 1945; draft, T4 to verify"}
-  - {region: greece_kentriki_makedonia, owner: GRC, controller: GRC, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: greece_peloponnisos, owner: GRC, controller: GRC, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: guernsey, owner: GBR, controller: GBR, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: hungary, owner: HUN, controller: HUN, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: iceland, owner: ISL, controller: ISL, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: ireland, owner: IRL, controller: IRL, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: isle_of_man, owner: GBR, controller: GBR, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: italy_firenze, owner: ITA, controller: ITA, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: italy_salerno, owner: ITA, controller: ITA, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: jersey, owner: GBR, controller: GBR, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: kosovo, owner: YUG, controller: YUG, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: latvia, owner: SUN, controller: SUN, status: core, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
-  - {region: liechtenstein, owner: LIE, controller: LIE, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: lithuania, owner: SUN, controller: SUN, status: core, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
-  - {region: luxembourg, owner: LUX, controller: LUX, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: macedonia, owner: YUG, controller: YUG, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: malta, owner: GBR, controller: GBR, status: colony, source: "British colony or dependency in 1945; draft, T4 to verify"}
-  - {region: moldova, owner: SUN, controller: SUN, status: core, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
-  - {region: monaco, owner: MCO, controller: MCO, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: montenegro, owner: YUG, controller: YUG, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: netherlands, owner: NLD, controller: NLD, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: norway_finnmark, owner: NOR, controller: NOR, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: norway_hedmark, owner: NOR, controller: NOR, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: norway_nordland, owner: NOR, controller: NOR, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: portugal, owner: PRT, controller: PRT, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: republic_of_serbia, owner: YUG, controller: YUG, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: romania_calarasi, owner: ROU, controller: ROU, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: romania_gorj, owner: ROU, controller: ROU, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: russia_arkhangelsk, owner: SUN, controller: SUN, status: core, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
-  - {region: russia_komi, owner: SUN, controller: SUN, status: core, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
-  - {region: russia_nizhegorod, owner: SUN, controller: SUN, status: core, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
-  - {region: russia_perm, owner: SUN, controller: SUN, status: core, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
-  - {region: russia_volgograd, owner: SUN, controller: SUN, status: core, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
-  - {region: russia_vologda, owner: SUN, controller: SUN, status: core, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
-  - {region: san_marino, owner: SMR, controller: SMR, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: slovakia, owner: CSK, controller: CSK, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: slovenia, owner: YUG, controller: YUG, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: spain_badajoz, owner: ESP, controller: ESP, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: spain_leon, owner: ESP, controller: ESP, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: spain_zaragoza, owner: ESP, controller: ESP, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: sweden_jamtland, owner: SWE, controller: SWE, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: sweden_norrbotten, owner: SWE, controller: SWE, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: sweden_vastra_gotaland, owner: SWE, controller: SWE, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: switzerland, owner: CHE, controller: CHE, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: ukraine_dnipropetrovsk, owner: SUN, controller: SUN, status: core, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
-  - {region: ukraine_odessa, owner: SUN, controller: SUN, status: core, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
-  - {region: ukraine_zhytomyr, owner: SUN, controller: SUN, status: core, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
-  - {region: united_kingdom_highland, owner: GBR, controller: GBR, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: united_kingdom_kent, owner: GBR, controller: GBR, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: vatican, owner: VAT, controller: VAT, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: poland_greater_poland, owner: POL, controller: POL, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: poland_masovian, owner: POL, controller: POL, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: poland_former_german, owner: DEU, controller: POL, status: core, source: "Potsdam Protocol 1945-08-02 section IX: Polish administration east of the Oder-Neisse line pending the peace settlement; draft, T4 to verify; owner is a disputed point for the owner"}
-  - {region: kaliningrad, owner: DEU, controller: SUN, status: core, source: "Potsdam Protocol 1945-08-02 section VI: Koenigsberg area under Soviet administration pending the peace settlement; draft, T4 to verify; owner is a disputed point for the owner"}
-  - {region: danzig, owner: DEU, controller: POL, status: core, source: "Potsdam Protocol 1945-08-02 section IX names the former Free City of Danzig among the areas under Polish administration; the owner of the Free City is an open question for the owner (DEBT-0043); draft, T4 to verify"}
-  - {region: germany_soviet_zone, owner: DEU, controller: SUN, status: core, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); draft, T4 to verify"}
-  - {region: germany_british_zone, owner: DEU, controller: GBR, status: core, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); draft, T4 to verify"}
-  - {region: germany_us_zone, owner: DEU, controller: USA, status: core, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); draft, T4 to verify"}
-  - {region: germany_french_zone, owner: DEU, controller: FRA, status: core, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); draft, T4 to verify"}
-  - {region: germany_us_enclave, owner: DEU, controller: USA, status: core, source: "US enclave of Bremen and Bremerhaven in the British zone (EAC agreement 1944-09-12 and US-UK agreement of 1945); draft, T4 to verify"}
-  - {region: saar, owner: DEU, controller: FRA, status: core, source: "French zone of occupation; the Saar protectorate starts 1947-12-17 (RR-0020 C02); draft, T4 to verify"}
-  - {region: berlin_west, owner: DEU, controller: ALLIED_BERLIN, status: core, source: "Berlin under the four-power Kommandatura until 1948-11-30 (RR-0020 C12); draft, T4 to verify"}
-  - {region: berlin_east, owner: DEU, controller: ALLIED_BERLIN, status: core, source: "Berlin under the four-power Kommandatura until 1948-11-30 (RR-0020 C12); draft, T4 to verify"}
-  - {region: austria_soviet_zone, owner: AUT, controller: SUN, status: core, source: "Agreement on zones of occupation in Austria 1945-07-09 (EAC); draft, T4 to verify"}
-  - {region: austria_us_zone, owner: AUT, controller: USA, status: core, source: "Agreement on zones of occupation in Austria 1945-07-09 (EAC); draft, T4 to verify"}
-  - {region: austria_british_zone, owner: AUT, controller: GBR, status: core, source: "Agreement on zones of occupation in Austria 1945-07-09 (EAC); draft, T4 to verify"}
-  - {region: austria_french_zone, owner: AUT, controller: FRA, status: core, source: "Agreement on zones of occupation in Austria 1945-07-09 (EAC); draft, T4 to verify"}
-  - {region: vienna, owner: AUT, controller: ALLIED_VIENNA, status: core, source: "Vienna under the four-power Allied Commission (sectors not cut: no geometry source); draft, T4 to verify"}
-  - {region: porkkala, owner: FIN, controller: SUN, status: leased, source: "Armistice with Finland 1944-09-19 art. 8 (Porkkala lease); draft, T4 to verify"}
-  - {region: dodecanese, owner: ITA, controller: GBR, status: colony, source: "Italian Dodecanese under British military administration since 1945-05; Treaty of Peace with Italy 1947 art. 14; draft, T4 to verify"}
-  - {region: venezia_giulia_ceded, owner: ITA, controller: YUG, status: core, source: "Italian de jure until the Treaty of Peace 1947-09-15; Yugoslav military administration east of the Morgan line (RR-0020 C16); draft, T4 to verify"}
-  - {region: trieste_zone_a, owner: ITA, controller: AMG_TRIESTE, status: core, source: "Zone A under Allied Military Government (US and British) from 1945-06-12; Italian de jure until 1947-09-15 (RR-0020 C14, C17); draft, T4 to verify"}
-  - {region: trieste_zone_b, owner: ITA, controller: YUG, status: core, source: "Zone B under Yugoslav military administration; Italian de jure until 1947-09-15 (RR-0020 C15, C17); draft, T4 to verify"}
+  - {region: aland, owner: FIN, controller: FIN, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: albania, owner: ALB, controller: ALB, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: andorra, owner: AND, controller: AND, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: belarus, owner: SUN, controller: SUN, status: core, confidence: M, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
+  - {region: belgium, owner: BEL, controller: BEL, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: bosnia_and_herzegovina, owner: YUG, controller: YUG, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: bulgaria_plovdiv, owner: BGR, controller: BGR, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: bulgaria_stara_zagora, owner: BGR, controller: BGR, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: croatia, owner: YUG, controller: YUG, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: czech_republic, owner: CSK, controller: CSK, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: denmark, owner: DNK, controller: DNK, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: estonia, owner: SUN, controller: SUN, status: core, confidence: M, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
+  - {region: faroe_islands, owner: DNK, controller: DNK, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: finland_lapland, owner: FIN, controller: FIN, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: finland_northern_ostrobothnia, owner: FIN, controller: FIN, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: finland_southern_savonia, owner: FIN, controller: FIN, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: france_ain, owner: FRA, controller: FRA, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: france_gers, owner: FRA, controller: FRA, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: france_marne, owner: FRA, controller: FRA, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: gibraltar, owner: GBR, controller: GBR, status: colony, confidence: M, source: "British colony or dependency in 1945; draft, T4 to verify"}
+  - {region: greece_kentriki_makedonia, owner: GRC, controller: GRC, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: greece_peloponnisos, owner: GRC, controller: GRC, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: guernsey, owner: GBR, controller: GBR, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: hungary, owner: HUN, controller: HUN, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: iceland, owner: ISL, controller: ISL, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: ireland, owner: IRL, controller: IRL, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: isle_of_man, owner: GBR, controller: GBR, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: italy_firenze, owner: ITA, controller: ITA, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: italy_salerno, owner: ITA, controller: ITA, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: jersey, owner: GBR, controller: GBR, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: kosovo, owner: YUG, controller: YUG, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: latvia, owner: SUN, controller: SUN, status: core, confidence: M, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
+  - {region: liechtenstein, owner: LIE, controller: LIE, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: lithuania, owner: SUN, controller: SUN, status: core, confidence: M, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
+  - {region: luxembourg, owner: LUX, controller: LUX, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: macedonia, owner: YUG, controller: YUG, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: malta, owner: GBR, controller: GBR, status: colony, confidence: M, source: "British colony or dependency in 1945; draft, T4 to verify"}
+  - {region: moldova, owner: SUN, controller: SUN, status: core, confidence: M, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
+  - {region: monaco, owner: MCO, controller: MCO, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: montenegro, owner: YUG, controller: YUG, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: netherlands, owner: NLD, controller: NLD, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: norway_finnmark, owner: NOR, controller: NOR, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: norway_hedmark, owner: NOR, controller: NOR, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: norway_nordland, owner: NOR, controller: NOR, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: portugal, owner: PRT, controller: PRT, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: republic_of_serbia, owner: YUG, controller: YUG, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: romania_calarasi, owner: ROU, controller: ROU, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: romania_gorj, owner: ROU, controller: ROU, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: russia_arkhangelsk, owner: SUN, controller: SUN, status: core, confidence: M, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
+  - {region: russia_komi, owner: SUN, controller: SUN, status: core, confidence: M, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
+  - {region: russia_nizhegorod, owner: SUN, controller: SUN, status: core, confidence: M, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
+  - {region: russia_perm, owner: SUN, controller: SUN, status: core, confidence: M, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
+  - {region: russia_volgograd, owner: SUN, controller: SUN, status: core, confidence: M, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
+  - {region: russia_vologda, owner: SUN, controller: SUN, status: core, confidence: M, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
+  - {region: san_marino, owner: SMR, controller: SMR, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: slovakia, owner: CSK, controller: CSK, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: slovenia, owner: YUG, controller: YUG, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: spain_badajoz, owner: ESP, controller: ESP, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: spain_leon, owner: ESP, controller: ESP, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: spain_zaragoza, owner: ESP, controller: ESP, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: sweden_jamtland, owner: SWE, controller: SWE, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: sweden_norrbotten, owner: SWE, controller: SWE, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: sweden_vastra_gotaland, owner: SWE, controller: SWE, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: switzerland, owner: CHE, controller: CHE, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: ukraine_dnipropetrovsk, owner: SUN, controller: SUN, status: core, confidence: M, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
+  - {region: ukraine_odessa, owner: SUN, controller: SUN, status: core, confidence: M, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
+  - {region: ukraine_zhytomyr, owner: SUN, controller: SUN, status: core, confidence: M, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
+  - {region: united_kingdom_highland, owner: GBR, controller: GBR, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: united_kingdom_kent, owner: GBR, controller: GBR, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: vatican, owner: VAT, controller: VAT, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: poland_greater_poland, owner: POL, controller: POL, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: poland_masovian, owner: POL, controller: POL, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: poland_former_german, owner: DEU, controller: POL, status: core, confidence: M, source: "Potsdam Protocol 1945-08-02 section IX: Polish administration east of the Oder-Neisse line pending the peace settlement; draft, T4 to verify; owner is a disputed point for the owner"}
+  - {region: kaliningrad, owner: DEU, controller: SUN, status: core, confidence: M, source: "Potsdam Protocol 1945-08-02 section VI: Koenigsberg area under Soviet administration pending the peace settlement; draft, T4 to verify; owner is a disputed point for the owner"}
+  - {region: danzig, owner: DEU, controller: POL, status: core, confidence: M, source: "Potsdam Protocol 1945-08-02 section IX names the former Free City of Danzig among the areas under Polish administration; the owner of the Free City is an open question for the owner (DEBT-0043); draft, T4 to verify"} # Q59
+  - {region: germany_soviet_zone, owner: DEU, controller: SUN, status: core, confidence: M, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); draft, T4 to verify"}
+  - {region: germany_british_zone, owner: DEU, controller: GBR, status: core, confidence: M, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); draft, T4 to verify"}
+  - {region: germany_us_zone, owner: DEU, controller: USA, status: core, confidence: M, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); draft, T4 to verify"}
+  - {region: germany_french_zone, owner: DEU, controller: FRA, status: core, confidence: M, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); draft, T4 to verify"}
+  - {region: germany_us_enclave, owner: DEU, controller: USA, status: core, confidence: M, source: "US enclave of Bremen and Bremerhaven in the British zone (EAC agreement 1944-09-12 and US-UK agreement of 1945); draft, T4 to verify"}
+  - {region: saar, owner: DEU, controller: FRA, status: core, confidence: M, source: "French zone of occupation; the Saar protectorate starts 1947-12-17 (RR-0020 C02); draft, T4 to verify"}
+  - {region: berlin_west, owner: DEU, controller: ALLIED_BERLIN, status: core, confidence: M, source: "Berlin under the four-power Kommandatura until 1948-11-30 (RR-0020 C12); draft, T4 to verify"}
+  - {region: berlin_east, owner: DEU, controller: ALLIED_BERLIN, status: core, confidence: M, source: "Berlin under the four-power Kommandatura until 1948-11-30 (RR-0020 C12); draft, T4 to verify"}
+  - {region: austria_soviet_zone, owner: AUT, controller: SUN, status: core, confidence: M, source: "Agreement on zones of occupation in Austria 1945-07-09 (EAC); draft, T4 to verify"}
+  - {region: austria_us_zone, owner: AUT, controller: USA, status: core, confidence: M, source: "Agreement on zones of occupation in Austria 1945-07-09 (EAC); draft, T4 to verify"}
+  - {region: austria_british_zone, owner: AUT, controller: GBR, status: core, confidence: M, source: "Agreement on zones of occupation in Austria 1945-07-09 (EAC); draft, T4 to verify"}
+  - {region: austria_french_zone, owner: AUT, controller: FRA, status: core, confidence: M, source: "Agreement on zones of occupation in Austria 1945-07-09 (EAC); draft, T4 to verify"}
+  - {region: vienna, owner: AUT, controller: ALLIED_VIENNA, status: core, confidence: M, source: "Vienna under the four-power Allied Commission (sectors not cut: no geometry source); draft, T4 to verify"}
+  - {region: porkkala, owner: FIN, controller: SUN, status: leased, confidence: M, source: "Armistice with Finland 1944-09-19 art. 8 (Porkkala lease); draft, T4 to verify"}
+  - {region: dodecanese, owner: ITA, controller: GBR, status: colony, confidence: M, source: "Italian Dodecanese under British military administration since 1945-05; Treaty of Peace with Italy 1947 art. 14; draft, T4 to verify"}
+  - {region: venezia_giulia_ceded, owner: ITA, controller: YUG, status: core, confidence: M, source: "Italian de jure until the Treaty of Peace 1947-09-15; Yugoslav military administration east of the Morgan line (RR-0020 C16); draft, T4 to verify"}
+  - {region: trieste_zone_a, owner: ITA, controller: AMG_TRIESTE, status: core, confidence: M, source: "Zone A under Allied Military Government (US and British) from 1945-06-12; Italian de jure until 1947-09-15 (RR-0020 C14, C17); draft, T4 to verify"}
+  - {region: trieste_zone_b, owner: ITA, controller: YUG, status: core, confidence: M, source: "Zone B under Yugoslav military administration; Italian de jure until 1947-09-15 (RR-0020 C15, C17); draft, T4 to verify"}
+# World regions (TASK-0095): imported from docs/research/owners-1945-world.md (T4 draft of research-scientist). Source keys K1-K12 are listed there.
+# Rule (#313): owner = metropole/protector for colonies, mandates and protectorates; occupation changes the controller only. Open owner questions: Q59 Danzig, Q61 protectorate test, Q63 Tibet, Q64 Taiwan.
+# Mixed regions (F1 of the research) are given by the dominant part; the split is a map decision for the owner.
+  - {region: afghanistan, owner: AFG, controller: AFG, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: akrotiri_sovereign_base_area, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: algeria_ouargla, owner: FRA, controller: FRA, status: core, confidence: H, source: "owners-1945-world.md: K2, K1"}
+  - {region: algeria_tamanghasset, owner: FRA, controller: FRA, status: core, confidence: H, source: "owners-1945-world.md: K2, K1"}
+  - {region: american_samoa, owner: USA, controller: USA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: angola_lunda_norte, owner: PRT, controller: PRT, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: angola_moxico, owner: PRT, controller: PRT, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: anguilla, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: antigua_and_barbuda, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: argentina_buenos_aires, owner: ARG, controller: ARG, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: argentina_salta, owner: ARG, controller: ARG, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: argentina_santa_cruz, owner: ARG, controller: ARG, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: armenia, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
+  - {region: aruba, owner: NLD, controller: NLD, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: ashmore_and_cartier_islands, owner: AUS, controller: AUS, status: colony, confidence: M, source: "owners-1945-world.md: K1"}
+  - {region: australia_queensland, owner: AUS, controller: AUS, status: core, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: australia_south_australia, owner: AUS, controller: AUS, status: core, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: australia_victoria, owner: AUS, controller: AUS, status: core, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: australia_western_australia, owner: AUS, controller: AUS, status: core, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: azerbaijan, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
+  - {region: bahrain, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K1"} # Q61
+  - {region: bangladesh, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1, K6 B04–B07"}
+  - {region: barbados, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: baykonur_cosmodrome, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
+  - {region: belize, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: benin, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: bermuda, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: bhutan, owner: BTN, controller: BTN, status: core, confidence: M, source: "owners-1945-world.md: K2"}
+  - {region: bolivia_el_beni, owner: BOL, controller: BOL, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: bolivia_santa_cruz, owner: BOL, controller: BOL, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: botswana, owner: GBR, controller: GBR, status: protectorate, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: bratislava_bridgehead, owner: HUN, controller: HUN, status: core, confidence: H, source: "owners-1945-world.md: K6 C33"}
+  - {region: brazil_amazonas, owner: BRA, controller: BRA, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: brazil_bahia, owner: BRA, controller: BRA, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: brazil_mato_grosso, owner: BRA, controller: BRA, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: brazil_minas_gerais, owner: BRA, controller: BRA, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: brazil_par, owner: BRA, controller: BRA, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: british_indian_ocean_territory, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: british_virgin_islands, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: brunei, owner: GBR, controller: GBR, status: protectorate, confidence: H, source: "owners-1945-world.md: K1"} # Q61
+  - {region: burkina_faso, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: burundi, owner: BEL, controller: BEL, status: mandate, confidence: H, source: "owners-1945-world.md: K1, K8"}
+  - {region: cambodia, owner: FRA, controller: JPN, status: protectorate, confidence: L, source: "owners-1945-world.md: K3, K2"} # Q61
+  - {region: cameroon, owner: FRA, controller: FRA, status: mandate, confidence: H, source: "owners-1945-world.md: K1, K8"}
+  - {region: cameroon_southern_british, owner: GBR, controller: GBR, status: mandate, confidence: H, source: "owners-1945-world.md: K1, K8"}
+  - {region: canada_british_columbia, owner: CAN, controller: CAN, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: canada_newfoundland, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1, K2"}
+  - {region: canada_northwest_territories, owner: CAN, controller: CAN, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: canada_nunavut, owner: CAN, controller: CAN, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: canada_ontario, owner: CAN, controller: CAN, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: canada_qu_bec, owner: CAN, controller: CAN, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: cape_verde, owner: PRT, controller: PRT, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: caribbean_netherlands, owner: NLD, controller: NLD, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: cayman_islands, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: central_african_republic, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: chad_batha, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: chad_borkou, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: chandernagore, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K6 B14"}
+  - {region: chile, owner: CHL, controller: CHL, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: china_guangxi, owner: ROC, controller: ROC, status: core, confidence: M, source: "owners-1945-world.md: K3, K2"}
+  - {region: china_heilongjiang, owner: ROC, controller: SUN, status: core, confidence: M, source: "owners-1945-world.md: K3, K4, K11"}
+  - {region: china_inner_mongol, owner: ROC, controller: ROC, status: core, confidence: L, source: "owners-1945-world.md: K2, K3"}
+  - {region: china_sichuan, owner: ROC, controller: ROC, status: core, confidence: H, source: "owners-1945-world.md: K2, K3"}
+  - {region: china_tibet, owner: ROC, controller: TIB, status: core, confidence: M, source: "owners-1945-world.md: K2, K11"} # Q63
+  - {region: china_xinjiang, owner: ROC, controller: ROC, status: core, confidence: M, source: "owners-1945-world.md: K2"}
+  - {region: clipperton_island, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: colombia_amazonas, owner: COL, controller: COL, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: colombia_antioquia, owner: COL, controller: COL, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: comoros, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: cook_islands, owner: NZL, controller: NZL, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: coral_sea_islands, owner: AUS, controller: AUS, status: colony, confidence: L, source: "owners-1945-world.md: K1"}
+  - {region: costa_rica, owner: CRI, controller: CRI, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: cuba, owner: CUB, controller: CUB, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: cura_ao, owner: NLD, controller: NLD, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: cyprus, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: democratic_republic_of_the_congo_bandundu, owner: BEL, controller: BEL, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: democratic_republic_of_the_congo_orientale, owner: BEL, controller: BEL, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: dhekelia_sovereign_base_area, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: djibouti, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: dominica, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: dominican_republic, owner: DOM, controller: DOM, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: east_timor, owner: PRT, controller: PRT, status: colony, confidence: M, source: "owners-1945-world.md: K9"}
+  - {region: ecuador, owner: ECU, controller: ECU, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: egypt_al_wadi_at_jadid, owner: EGY, controller: EGY, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: egypt_matruh, owner: EGY, controller: EGY, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: el_salvador, owner: SLV, controller: SLV, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: equatorial_guinea, owner: ESP, controller: ESP, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: eritrea, owner: ITA, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K1, K6"}
+  - {region: ethiopia_amhara, owner: ETH, controller: ETH, status: core, confidence: M, source: "owners-1945-world.md: K2"}
+  - {region: ethiopia_oromiya, owner: ETH, controller: ETH, status: core, confidence: M, source: "owners-1945-world.md: K2"}
+  - {region: falkland_islands, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: federated_states_of_micronesia, owner: JPN, controller: USA, status: mandate, confidence: M, source: "owners-1945-world.md: K3, K8"}
+  - {region: fiji, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: france, owner: FRA, controller: FRA, status: core, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: french_polynesia, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: french_southern_and_antarctic_lands, owner: FRA, controller: FRA, status: colony, confidence: M, source: "owners-1945-world.md: K1"}
+  - {region: gabon, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: gambia, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: georgia, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
+  - {region: german_enclaves_nl, owner: DEU, controller: GBR, status: core, confidence: M, source: "owners-1945-world.md: K4, K6"}
+  - {region: ghana, owner: GBR, controller: GBR, status: mandate, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: greenland_kommuneqarfik_sermersooq, owner: DNK, controller: DNK, status: colony, confidence: M, source: "owners-1945-world.md: K1, K2"}
+  - {region: greenland_nationalparken, owner: DNK, controller: DNK, status: colony, confidence: M, source: "owners-1945-world.md: K1, K2"}
+  - {region: grenada, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: guam, owner: USA, controller: USA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: guatemala, owner: GTM, controller: GTM, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: guinea, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: guinea_bissau, owner: PRT, controller: PRT, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: guyana, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: haiti, owner: HTI, controller: HTI, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: heard_island_and_mcdonald_islands, owner: GBR, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K1"}
+  - {region: honduras, owner: HND, controller: HND, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: hong_kong_s_a_r, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1, K3"}
+  - {region: ifni, owner: ESP, controller: ESP, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: india_goa_daman_diu, owner: PRT, controller: PRT, status: colony, confidence: H, source: "owners-1945-world.md: K2, K6 B17"}
+  - {region: india_maharashtra, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K6 B05"} # Q61
+  - {region: india_odisha, owner: GBR, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K6 B05"}
+  - {region: india_puducherry, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K6 B15"}
+  - {region: india_rajasthan, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K6 B05, B09"} # Q61
+  - {region: india_sikkim, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K6 B18"} # Q61
+  - {region: indian_ocean_territories, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: indonesia_kalimantan_timur, owner: NLD, controller: AUS, status: colony, confidence: M, source: "owners-1945-world.md: K3, K9"}
+  - {region: indonesia_riau, owner: NLD, controller: IDN, status: colony, confidence: L, source: "owners-1945-world.md: K3, K9"}
+  - {region: indonesia_west_new_guinea, owner: NLD, controller: NLD, status: colony, confidence: M, source: "owners-1945-world.md: K1, K9"}
+  - {region: iran_esfahan, owner: IRN, controller: IRN, status: core, confidence: M, source: "owners-1945-world.md: K2"}
+  - {region: iran_kerman, owner: IRN, controller: IRN, status: core, confidence: M, source: "owners-1945-world.md: K2"}
+  - {region: iraq, owner: IRQ, controller: IRQ, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: israel, owner: GBR, controller: GBR, status: mandate, confidence: H, source: "owners-1945-world.md: K1, K8"}
+  - {region: ivory_coast, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: jamaica, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: japan, owner: JPN, controller: USA, status: core, confidence: M, source: "owners-1945-world.md: K3, K4, K7 #313"}
+  - {region: japan_okinawa, owner: JPN, controller: USA, status: core, confidence: M, source: "owners-1945-world.md: K3"}
+  - {region: jordan, owner: GBR, controller: GBR, status: mandate, confidence: M, source: "owners-1945-world.md: K1, K8"}
+  - {region: kazakhstan_aqt_be, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
+  - {region: kazakhstan_mangghystau, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
+  - {region: kazakhstan_qaraghandy, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
+  - {region: kenya, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: kiribati, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: korea_north_38, owner: KOR, controller: SUN, status: core, confidence: M, source: "owners-1945-world.md: K3, K7 #313"}
+  - {region: korea_south_38, owner: KOR, controller: USA, status: core, confidence: M, source: "owners-1945-world.md: K3, K7 #313"}
+  - {region: kuwait, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K1"} # Q61
+  - {region: kyrgyzstan, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
+  - {region: laos, owner: FRA, controller: ROC, status: protectorate, confidence: L, source: "owners-1945-world.md: K3, K2"} # Q61
+  - {region: lebanon, owner: LBN, controller: LBN, status: core, confidence: M, source: "owners-1945-world.md: K2"}
+  - {region: lesotho, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: liberia, owner: LBR, controller: LBR, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: libya_al_kufrah, owner: ITA, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K1, K6"}
+  - {region: libya_ash_shati, owner: ITA, controller: FRA, status: colony, confidence: M, source: "owners-1945-world.md: K1, K6"}
+  - {region: macau_s_a_r, owner: PRT, controller: PRT, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: madagascar, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: malawi, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: malaysia, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1, K3"} # Q61
+  - {region: malaysia_borneo, owner: GBR, controller: AUS, status: colony, confidence: M, source: "owners-1945-world.md: K3, K9"}
+  - {region: maldives, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K1"} # Q61
+  - {region: mali_kayes, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: mali_timbuktu, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: marshall_islands, owner: JPN, controller: USA, status: mandate, confidence: M, source: "owners-1945-world.md: K3, K8"}
+  - {region: mauritania_hodh_ech_chargui, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: mauritania_tiris_zemmour, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: mauritius, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: mexico_chihuahua, owner: MEX, controller: MEX, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: mexico_oaxaca, owner: MEX, controller: MEX, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: mongolia_govi_altay, owner: ROC, controller: MNG, status: core, confidence: M, source: "owners-1945-world.md: K6 C34"}
+  - {region: mongolia_mn_govi, owner: ROC, controller: MNG, status: core, confidence: M, source: "owners-1945-world.md: K6 C34"}
+  - {region: montserrat, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: morocco, owner: FRA, controller: FRA, status: protectorate, confidence: M, source: "owners-1945-world.md: K1, K2"} # Q61
+  - {region: mozambique, owner: PRT, controller: PRT, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: myanmar, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1, K3"}
+  - {region: namibia, owner: ZAF, controller: ZAF, status: mandate, confidence: H, source: "owners-1945-world.md: K8"}
+  - {region: nauru, owner: AUS, controller: AUS, status: mandate, confidence: M, source: "owners-1945-world.md: K8, K9"}
+  - {region: nepal, owner: NPL, controller: NPL, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: new_caledonia, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: new_zealand, owner: NZL, controller: NZL, status: core, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: nicaragua, owner: NIC, controller: NIC, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: niger_agadez, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: niger_tahoua, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: nigeria_borno, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: nigeria_niger, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: niue, owner: NZL, controller: NZL, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: norfolk_island, owner: AUS, controller: AUS, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: northern_cyprus, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: northern_mariana_islands, owner: JPN, controller: USA, status: mandate, confidence: M, source: "owners-1945-world.md: K3, K8"}
+  - {region: norway, owner: NOR, controller: NOR, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: oman, owner: OMN, controller: OMN, status: core, confidence: M, source: "owners-1945-world.md: K2"}
+  - {region: pakistan, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K6 B04"}
+  - {region: palau, owner: JPN, controller: USA, status: mandate, confidence: M, source: "owners-1945-world.md: K3, K8"}
+  - {region: palestine_gaza, owner: GBR, controller: GBR, status: mandate, confidence: H, source: "owners-1945-world.md: K1, K8"}
+  - {region: palestine_west_bank, owner: GBR, controller: GBR, status: mandate, confidence: H, source: "owners-1945-world.md: K1, K8"}
+  - {region: panama, owner: PAN, controller: PAN, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: papua_new_guinea, owner: AUS, controller: AUS, status: mandate, confidence: H, source: "owners-1945-world.md: K1, K9"}
+  - {region: paraguay, owner: PRY, controller: PRY, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: peru_loreto, owner: PER, controller: PER, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: peru_madre_de_dios, owner: PER, controller: PER, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: philippines, owner: USA, controller: USA, status: colony, confidence: H, source: "owners-1945-world.md: K1, K6 B03"}
+  - {region: pitcairn_islands, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: port_arthur, owner: ROC, controller: SUN, status: leased, confidence: H, source: "owners-1945-world.md: K11, K6 B01–B02"}
+  - {region: portugal_azores, owner: PRT, controller: PRT, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: puerto_rico, owner: USA, controller: USA, status: core, confidence: H, source: "owners-1945-world.md: K1, K2"}
+  - {region: qatar, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K1"} # Q61
+  - {region: republic_of_the_congo, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: russia_irkutsk, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: russia_khabarovsk, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
+  - {region: russia_krasnoyarsk, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
+  - {region: russia_primorye, owner: SUN, controller: SUN, status: core, confidence: M, source: "owners-1945-world.md: K3, K4"}
+  - {region: russia_sakha_yakutia, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
+  - {region: russia_yamal_nenets, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
+  - {region: rwanda, owner: BEL, controller: BEL, status: mandate, confidence: H, source: "owners-1945-world.md: K1, K8"}
+  - {region: s_sudan, owner: SDN_AE, controller: SDN_AE, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: saint_barthelemy, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: saint_helena, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: saint_kitts_and_nevis, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: saint_lucia, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: saint_martin, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: saint_pierre_and_miquelon, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: saint_vincent_and_the_grenadines, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: samoa, owner: NZL, controller: NZL, status: mandate, confidence: H, source: "owners-1945-world.md: K1, K8"}
+  - {region: sao_tome_and_principe, owner: PRT, controller: PRT, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: saudi_arabia_al_madinah, owner: SAU, controller: SAU, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: saudi_arabia_ash_sharqiyah, owner: SAU, controller: SAU, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: sazan, owner: ITA, controller: ALB, status: colony, confidence: M, source: "owners-1945-world.md: K6"}
+  - {region: senegal, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: seychelles, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: siachen_glacier, owner: GBR, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K6 B09"} # Q61
+  - {region: sierra_leone, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: singapore, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1, K3"}
+  - {region: sint_maarten, owner: NLD, controller: NLD, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: solomon_islands, owner: GBR, controller: GBR, status: protectorate, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: somalia, owner: ITA, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K1, K6"}
+  - {region: somaliland, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: south_africa_free_state, owner: ZAF, controller: ZAF, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: south_africa_northern_cape, owner: ZAF, controller: ZAF, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: south_georgia_and_the_islands, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: spain, owner: ESP, controller: ESP, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: spratly_is, owner: FRA, controller: JPN, status: colony, confidence: L, source: "owners-1945-world.md: K3"}
+  - {region: sri_lanka, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1, K6 B13"}
+  - {region: sudan_north_kordufan, owner: SDN_AE, controller: SDN_AE, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: sudan_northern, owner: SDN_AE, controller: SDN_AE, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: suriname, owner: NLD, controller: NLD, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: swaziland, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: syria, owner: SYR, controller: SYR, status: core, confidence: M, source: "owners-1945-world.md: K2"}
+  - {region: taiwan, owner: JPN, controller: ROC, status: core, confidence: H, source: "owners-1945-world.md: K7 #313, #338, K6 C19"} # Q64
+  - {region: tajikistan, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
+  - {region: tangier, owner: TANGIER, controller: ESP, status: core, confidence: M, source: "owners-1945-world.md: K5"}
+  - {region: tanzania_zanzibar, owner: GBR, controller: GBR, status: protectorate, confidence: H, source: "owners-1945-world.md: K1"} # Q61
+  - {region: tenda_brig, owner: ITA, controller: ITA, status: colony, confidence: L, source: "owners-1945-world.md: K6 C18"}
+  - {region: thailand, owner: THA, controller: THA, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: the_bahamas, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: togo, owner: FRA, controller: FRA, status: mandate, confidence: H, source: "owners-1945-world.md: K1, K8"}
+  - {region: tonga, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K1"} # Q61
+  - {region: trinidad_and_tobago, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: tunisia, owner: FRA, controller: FRA, status: protectorate, confidence: H, source: "owners-1945-world.md: K1"} # Q61
+  - {region: turkey, owner: TUR, controller: TUR, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: turkmenistan, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
+  - {region: turks_and_caicos_islands, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: tuvalu, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: uganda, owner: GBR, controller: GBR, status: protectorate, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: united_arab_emirates, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K1"} # Q61
+  - {region: united_republic_of_tanzania_morogoro, owner: GBR, controller: GBR, status: mandate, confidence: H, source: "owners-1945-world.md: K1, K8"}
+  - {region: united_republic_of_tanzania_tabora, owner: GBR, controller: GBR, status: mandate, confidence: H, source: "owners-1945-world.md: K1, K8"}
+  - {region: united_states_minor_outlying_islands, owner: USA, controller: USA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: united_states_of_america_alaska, owner: USA, controller: USA, status: core, confidence: H, source: "owners-1945-world.md: K1, K2"}
+  - {region: united_states_of_america_hawaii, owner: USA, controller: USA, status: core, confidence: H, source: "owners-1945-world.md: K1, K2"}
+  - {region: united_states_of_america_michigan, owner: USA, controller: USA, status: core, confidence: H, source: "owners-1945-world.md: K1, K2"}
+  - {region: united_states_of_america_montana, owner: USA, controller: USA, status: core, confidence: H, source: "owners-1945-world.md: K1, K2"}
+  - {region: united_states_of_america_texas, owner: USA, controller: USA, status: core, confidence: H, source: "owners-1945-world.md: K1, K2"}
+  - {region: united_states_virgin_islands, owner: USA, controller: USA, status: core, confidence: H, source: "owners-1945-world.md: K1, K2"}
+  - {region: uruguay, owner: URY, controller: URY, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: us_naval_base_guantanamo_bay, owner: CUB, controller: USA, status: leased, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: uzbekistan, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
+  - {region: vanuatu, owner: NHEB, controller: NHEB, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: venezuela_apure, owner: VEN, controller: VEN, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: venezuela_bol_var, owner: VEN, controller: VEN, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: vietnam_central, owner: FRA, controller: ROC, status: protectorate, confidence: M, source: "owners-1945-world.md: K3, K2"} # Q61
+  - {region: vietnam_north, owner: FRA, controller: ROC, status: protectorate, confidence: M, source: "owners-1945-world.md: K3, K2"} # Q61
+  - {region: vietnam_south_16, owner: FRA, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K3, K2"}
+  - {region: wallis_and_futuna, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: western_sahara, owner: ESP, controller: ESP, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: yemen, owner: YEM, controller: YEM, status: core, confidence: L, source: "owners-1945-world.md: K1, K2"}
+  - {region: zambia, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  - {region: zimbabwe, owner: GBR, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K1"}
 exceptions: []
