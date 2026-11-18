@@ -6,6 +6,7 @@
     <Compile Include="../../src/Singularity.Client.Spike/NodeSchematics.cs" Link="NodeSchematics.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/Palette.cs" Link="Palette.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/LegendData.cs" Link="LegendData.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/GlyphGeometry.cs" Link="GlyphGeometry.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/SettingsLogic.cs" Link="SettingsLogic.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/ContrastValidator.cs" Link="ContrastValidator.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/PaperTexture.cs" Link="PaperTexture.cs" />
