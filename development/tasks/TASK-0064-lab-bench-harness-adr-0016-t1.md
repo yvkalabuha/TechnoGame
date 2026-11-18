@@ -1,7 +1,7 @@
 ---
 id: TASK-0064
 title: "lab bench harness (ADR-0016 T1)"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: simulation-engineer
@@ -52,3 +52,7 @@ ADR-0017 (ACCEPTED, #317) реализован в TASK-0078; его R1–R4 за
 - [Факт] R2: (а)/k_copy — полная копия + swap на клоне; (б) CoW колонок месячного шага; (в) Lab-only `WriteShareSystem`; (г) две сессии попарно; (д) один `Span.CopyTo`. R3 — System.IO.Hashing (только Lab).
 - Смоук (машина занята, loadavg ≈ 19, не замер): R1 p95 16,1 мс; R3 XxHash3 2,2 мс против SHA-256 15,4 мс; R2(б) CoW 1,0 мс против 1,9; R2(в) 100 % — CoW 6,1 мс против 4,7 (может не пройти порог); R2(г) t8 345/344 мс. Process (200, 2000, t8): M p50 523 мс, T p50 6358 мс — **дневной тик с зондом ≈ 200 мс и ≈ 120 МБ аллокаций**, причина [Предп.] ежедневный `ViewBuilder.Snapshot` (F7a не сделан) → TASK-0082 до TASK-0066.
 - Тесты статистики, манифеста и CLI — TASK-0083 (test-engineer). `dotnet test` зелёный, selftest 48/48.
+
+**Правки после ревью (2026-11-18, simulation-engineer; перенесено Orchestrator, коммит 4d90848)**
+1. `process --manifest` без `--fref` даёт код 2 (кроме smoke). 2. R2(б) берёт открытые колонки из `Table.Trace`, отражение убрано (тот же результат 1149/2204). 3. `FreqSampler` без аллокаций (`pread`, `Utf8Parser`), в JSON `sampler_alloc_bytes` (на смоуке 0). 4. Решение «Submit вне M_i/T_i» записано в lab-cli.md. 5. `IsOptimizedBuild` проверяет Lab, Kernel, Core, Session (`assemblies_optimized`). 6. Комментарий о дневном no-op исправлен. V3, агрегаты точки A и повтор при троттлинге — анализ T3 (TASK-0066). Тесты Lab 121/121, selftest 49/49.
+Открыто для test-engineer: тест на отказ без `--fref` (код 2) и `--fref` в r2-части `Cli_WarmupMeasureWithManifest_SetSmoke`.
