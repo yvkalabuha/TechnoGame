@@ -120,3 +120,12 @@ related: [RR-0006, RR-0014, MS-M1]
 - Bolt, van Zanden (2024), J. Economic Surveys: https://ideas.repec.org/a/bla/jecsur/v39y2025i2p631-671.html (2026-11-18, найдено поиском)
 - PWT 11.0: https://www.rug.nl/ggdc/productivity/pwt/ (2026-11-04)
 - Внутренние: `docs/research/economy-data-licences-1945.md`, `docs/research/sun-start-data.md`, `docs/game-design/economy/E1-model.md`, `development/milestones/MS-M1-economy-provinces-open-race.md`, `mods/core/map/regions.yaml`, DECISIONS_LOG #164, #168, #170–#173, #324, #329, #342, #349, #350.
+
+## Приложение О (Orchestrator, 2026-11-18): прямое чтение файла Maddison 2023
+[Факт: `mpd2023_web.xlsx`, лист «Full data», Dataverse DOI 10.34894/INZBF2, файл 421302, CC BY 4.0, скачан 2026-11-18] ВВП на душу (int. $ 2011) / население (тыс.):
+- SUN: 1940 3417/195970; **1941–1945 нет данных**; 1946 3049/173900; 1950 4529/179571.
+- RUS (территория РСФСР): 1940 2529; 1944 2392; **1945 2313**; 1946 2436 (население в ряду только с 1950: 101937). Ряд RUS — опора для оценки SUN 1945 [Предп.: SUN 1945 ≈ RUS 1945 × (SUN/RUS 1946 = 1,25) ≈ 2900; диапазон 2600–3300].
+- CHN: 1938 1003; **1939–1949 нет ВВП**; население есть по годам, 1945 — 532607; 1950 799/546815.
+- DEU: 1944 9698/69865; 1945 7195/67000; 1946 3534/64678 (провал 1945→1946 в 2 раза; примечаний к 1945 в листе Notes нет).
+- USA 1945 16478/140474; GBR 11247/49182; FRA 4101/39700; JPN 3678/76224 — совпадают с таблицей §3.
+Поправка к §3: население CHN 1945 по Maddison = 532,6 млн (а не 546,8 — это 1950).
