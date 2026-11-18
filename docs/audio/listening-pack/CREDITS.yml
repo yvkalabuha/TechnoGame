@@ -44,17 +44,6 @@
   modifications: trimmed, filtered, loudness-normalised
   attribution_required: false
 
-- name: "Dial phone #2"
-  author: "Joseph Sardin"
-  url: https://bigsoundbank.com/dial-phone-s0002.html
-  licence: CC0 1.0
-  licence_url: https://bigsoundbank.com/licenses.html
-  accessed: 2026-11-18
-  sha256_source: d48ebf968dc53978c3d7db57512b8f84a8e97e8e17ed59e902f579f2d61829b5
-  source_grade: "original WAV"
-  modifications: trimmed, filtered, loudness-normalised
-  attribution_required: false
-
 - name: "small clock in room"
   author: "Yuval"
   url: https://freesound.org/people/Yuval/sounds/211192/
@@ -87,17 +76,6 @@
   source_grade: "Freesound HQ preview (mp3)"
   modifications: trimmed, filtered, loudness-normalised
   attribution_required: false
-
-- name: "modem_sounds.wav"
-  author: "joedeshon"
-  url: https://freesound.org/people/joedeshon/sounds/80288/
-  licence: CC BY 4.0
-  licence_url: https://creativecommons.org/licenses/by/4.0/
-  accessed: 2026-11-18
-  sha256_source: 957ff28254156a815f237e2a02b565e14d1b34272144d7976504cf5cbd58599b
-  source_grade: "Freesound HQ preview (mp3)"
-  modifications: trimmed, filtered, loudness-normalised
-  attribution_required: true
 
 - name: "morse static.wav"
   author: "ERH"
@@ -209,28 +187,6 @@
   modifications: trimmed, filtered, loudness-normalised
   attribution_required: false
 
-- name: "Old Rotary Phone Ringing - Western Electric Bell 500 phone"
-  author: "mycompasstv"
-  url: https://freesound.org/people/mycompasstv/sounds/456433/
-  licence: CC0 1.0
-  licence_url: http://creativecommons.org/publicdomain/zero/1.0/
-  accessed: 2026-11-18
-  sha256_source: aaae21f68247e10660ae08cf4579f3109119b33a334315922c2b80bdf501e2f5
-  source_grade: "Freesound HQ preview (mp3)"
-  modifications: trimmed, filtered, loudness-normalised
-  attribution_required: false
-
-- name: "nadeldrucker4.wav"
-  author: "system_fm"
-  url: https://freesound.org/people/system_fm/sounds/256897/
-  licence: CC BY 3.0
-  licence_url: http://creativecommons.org/licenses/by/3.0/
-  accessed: 2026-11-18
-  sha256_source: d2c9d52336e14698cf3b202f824f1cda8bcbf27b81bf43d12403d343e6566ea3
-  source_grade: "Freesound HQ preview (mp3)"
-  modifications: trimmed, filtered, loudness-normalised
-  attribution_required: true
-
 - name: "A relay switch being activated."
   author: "bassmosphere"
   url: https://freesound.org/people/bassmosphere/sounds/384698/
@@ -241,17 +197,6 @@
   source_grade: "Freesound HQ preview (mp3)"
   modifications: trimmed, filtered, loudness-normalised
   attribution_required: false
-
-- name: "file0552 relay click.mp3"
-  author: "smokeyvw"
-  url: https://freesound.org/people/smokeyvw/sounds/85304/
-  licence: CC BY 4.0
-  licence_url: https://creativecommons.org/licenses/by/4.0/
-  accessed: 2026-11-18
-  sha256_source: eacbe08d9ca9dc3bf985c0c4a6da517260cfa64ab4fa07150c6af2add3a58167
-  source_grade: "Freesound HQ preview (mp3)"
-  modifications: trimmed, filtered, loudness-normalised
-  attribution_required: true
 
 - name: "traditional stamp.wav"
   author: "I.fekry"
@@ -308,28 +253,6 @@
   modifications: trimmed, filtered, loudness-normalised
   attribution_required: true
 
-- name: "034 Typing sequence.wav"
-  author: "FreqMan"
-  url: https://freesound.org/people/FreqMan/sounds/23169/
-  licence: CC BY 4.0
-  licence_url: https://creativecommons.org/licenses/by/4.0/
-  accessed: 2026-11-18
-  sha256_source: be7e9f0c95f691045b6d53f37b5eede89bf055bb8af157a8723c7b0aef05fc42
-  source_grade: "Freesound HQ preview (mp3)"
-  modifications: trimmed, filtered, loudness-normalised
-  attribution_required: true
-
-- name: "Cheap Electric Typewriter Chatter + Quiet Bell.wav"
-  author: "lonemonk"
-  url: https://freesound.org/people/lonemonk/sounds/47045/
-  licence: CC BY 4.0
-  licence_url: https://creativecommons.org/licenses/by/4.0/
-  accessed: 2026-11-18
-  sha256_source: 10efbad62f2fda2ede2540dbd2e8bcc1c71bf75a02dbfac0b1cc8769f31db4a7
-  source_grade: "Freesound HQ preview (mp3)"
-  modifications: trimmed, filtered, loudness-normalised
-  attribution_required: true
-
 - name: "Kirjoituskone, vanha, mekaaninen / An old manual typewriter, 1970s, typing, bell at the end of the line, typewriter carriage return by hand, manual paper roll (Triumph Matura 300)"
   author: "YleArkisto"
   url: https://freesound.org/people/YleArkisto/sounds/271525/
@@ -363,13 +286,3 @@
   modifications: trimmed, filtered, loudness-normalised
   attribution_required: false
 
-- name: "Factory whistle.wav"
-  author: "unreadpages"
-  url: https://freesound.org/people/unreadpages/sounds/494938/
-  licence: CC BY 4.0
-  licence_url: https://creativecommons.org/licenses/by/4.0/
-  accessed: 2026-11-18
-  sha256_source: 3184346812927a8f615c331c32aeac3413d11eddc6b5d304f61f241e2886b08b
-  source_grade: "Freesound HQ preview (mp3)"
-  modifications: trimmed, filtered, loudness-normalised
-  attribution_required: true
