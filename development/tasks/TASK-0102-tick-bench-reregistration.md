@@ -9,7 +9,7 @@ category: lab
 priority: high
 needs_owner: false       # true = ждёт решения владельца
 depends_on: [TASK-0103]
-related: [EXP-0007, TASK-0103]
+related: [EXP-0007, EXP-0008, TASK-0103]
 approved_by:             # owner | orchestrator (orchestrator — только level: light)
 approved_at:
 approval_ref:

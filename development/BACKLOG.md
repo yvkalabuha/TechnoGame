@@ -140,6 +140,7 @@
 | [EXP-0005](../development/experiments/EXP-0005-t6e3-tooling-target.md) | DONE | Цель оснастки A39, третий прогон: V0, V4, V5 против VINF (T6e3) | HYP-0002 |
 | [EXP-0006](../development/experiments/EXP-0006-pool-order.md) | DONE | Порядок распределения пула оснастки под V5: CAN, REV, PROP, SEV (малый пул) | HYP-0002 |
 | [EXP-0007](../development/experiments/EXP-0007-tick-benchmark-m0.md) | DONE | EXP-0007: tick benchmark M0 (ADR-0016) | ADR-0016 |
+| [EXP-0008](../development/experiments/EXP-0008-tick-benchmark-m0-rereg.md) | PLANNED | Tick benchmark M0, re-registered (frequency rule revision) | ADR-0016 |
 
 ## ADR
 
