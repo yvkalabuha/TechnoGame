@@ -1,7 +1,7 @@
 ---
 id: TASK-0090
 title: "ADR-0020 R2: multi-table Kernel API sketch and hash-bytes check"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: systems-architect
@@ -28,3 +28,4 @@ ADR-0020 «Research до ACCEPTED» R2: набросок API мира из не�
 - [ ] Набросок покрывает все пункты reviewer; оценка объёма по файлам; открытые вопросы перечислены.
 
 ## Результат
+Набросок API — `docs/architecture/notes/multi-table-api.md` (systems-architect, 2026-11-18; перенесено Orchestrator). `World` — упорядоченный список именованных `Table` (`Name`, `SchemaVersion`), `World.Version = Σ`; `BeginTick`/`Swap`/`EndTick` по всем таблицам, трасса пишет `table.column`. `ITickSystem.ChunkTable` (`null` — только merge/post); `TickContext.Table` → `World` + `ChunkTable`; число чанков на систему (`ChunkCountOf`). `ShortColumn`, `ColumnKind`, отпечаток схемы в Kernel (`WorldSchema`, исчерпывающий switch). План миграции в 6 шагов, прообраз golden-вектора хеша 3 таблиц (109 байт; дайджест закрепит developer первым тестом). Объём [Предп.]: Kernel 7 файлов, Core 6, Session 3, Lab 6, ~45 тестовых файлов механически; ~57 закреплённых хешей перевыпускаются — миграцию делать после EXP-0007. Все замечания reviewer закрыты (§6), открытое — §7.
