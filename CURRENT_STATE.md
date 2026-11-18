@@ -18,6 +18,7 @@
 <!-- registry:active:start -->
 - TASK-0103 [IN_PROGRESS] Tick allocations and GC: 1.1 GB per month, gen2 collections (EXP-0007 P8) (simulation-engineer)
 - TASK-0104 [IN_PROGRESS] Event sounds: final variants (#407), gain fixes, listening-pack pruning (developer)
+- TASK-0105 [IN_PROGRESS] ADR-0022 map validator: region limit 150-400, great-power core quota, single status per region (developer)
 - TASK-0099 [REVIEW] Project slots reuse with generation (ADR-0005 #388) (developer)
 <!-- registry:active:end -->
 
