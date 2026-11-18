@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Клиент v0.5b — меню, настройки, новая игра (палитра C)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=PT+Mono&family=Jura:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1D1E20; --ink2:#55575A; --ink3:#6E6C66;
+  --alarm:#C42A1C; --warn:#E89A1A; --cmd:#2347A8;
+  --paper:#F3EEDF; --sheet:#FBF8EF; --hover:#EBE5D2; --rule:#BDB59F;
+  --sea:#B8DCEA; --sea2:#9CCBE0; --land0:#EBE3C6; --grat:#A9C4CC;
+  --t1:#F7B98F; --t2:#9EC6F5; --t3:#B8E07C; --t4:#EFB0EC; --t5:#F8D56F; --t6:#8BE3C3; --t7:#EEA894; --t8:#A9AAF7;
+  --teal:#168A92; --violet:#7A4AA8; --olive:#4F8A1E; --plum:#A03E82; --sand:#8F7A2E; --slate:#4A7088;
+  --teal-w:#BFE6E5; --violet-w:#D8CCEE; --olive-w:#CFE6AA; --plum-w:#F0C9E0; --sand-w:#EAD9A3; --slate-w:#C3D8EA;
+  --teal-t:#1F5F63; --violet-t:#53407A; --olive-t:#4A6020; --plum-t:#75335F; --sand-t:#6B5B22; --slate-t:#3F5666;
+  --r1:2px; --r2:4px; --r3:6px;
+  --f-draft:'Jura',sans-serif; --f-text:'Golos Text',system-ui,sans-serif; --f-mono:'PT Mono',monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#E9E5D8;color:var(--ink);font:13px/1.45 var(--f-text)}
+.wrap{max-width:1400px;margin:0 auto;padding:24px 28px 80px}
+h1{font:500 26px var(--f-draft);margin:0 0 4px}
+h2{font:500 18px var(--f-draft);margin:36px 0 8px;padding-top:12px;border-top:2px solid var(--ink)}
+.note{color:var(--ink2);font-size:12px;max-width:900px}
+svg{display:block}
+.ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linejoin:miter;stroke-linecap:butt;flex:none}
+
+/* screen frame with night sky + globe */
+.screen{position:relative;height:620px;border-radius:var(--r3);overflow:hidden;border:1px solid var(--ink);
+  background:radial-gradient(1px 1px at 12% 20%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 33% 70%,#cfd8ee 50%,transparent 51%),
+  radial-gradient(1px 1px at 58% 15%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 81% 62%,#fff 50%,transparent 51%),
+  radial-gradient(1px 1px at 91% 12%,#cfd8ee 50%,transparent 51%),radial-gradient(1px 1px at 70% 88%,#fff 50%,transparent 51%),#0E1422}
+.globe{position:absolute;right:-60px;top:50%;width:560px;height:560px;margin-top:-280px;border-radius:50%;
+  background:radial-gradient(circle at 34% 30%,#d4ecf5 0,var(--sea2) 30%,#5d95b0 70%,#2c4b66 100%);
+  box-shadow:0 0 28px 2px rgba(150,200,240,.35)}
+.globe i{position:absolute;display:block;border-radius:40% 55% 45% 50%}
+.dim{position:absolute;inset:0;background:rgba(14,20,34,.35)}
+
+/* components */
+.sheet{background:var(--sheet);border:1px solid var(--rule);border-radius:var(--r3);position:absolute}
+.title{font:500 22px var(--f-draft);letter-spacing:.02em;margin:0}
+.stripe{display:flex;height:4px;margin:8px 0 4px}
+.stripe b{flex:1}
+.ver{font:400 11px var(--f-mono);color:var(--ink3)}
+.btn{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border:1px solid var(--ink);border-radius:var(--r2);background:transparent;color:var(--ink);font:500 14px var(--f-draft);cursor:pointer}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--ink);color:var(--sheet)}
+.btn.dis{border-color:var(--rule);color:var(--ink3);border-style:dashed;cursor:not-allowed;background:repeating-linear-gradient(45deg,transparent 0 5px,rgba(189,181,159,.45) 5px 6px)}
+.btn.focus{outline:2px solid var(--ink);outline-offset:2px}
+.menu{list-style:none;margin:10px 0 0;padding:0}
+.menu li{display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;border-radius:var(--r2);border:1px solid transparent;border-left:3px solid transparent;font:500 16px var(--f-draft);cursor:pointer}
+.menu li:hover{background:var(--hover)}
+.menu li.sel{background:var(--hover);border-color:var(--ink);border-left:3px solid var(--c)}
+.menu li .ic{color:var(--c)}
+.menu li small{margin-left:auto;font:400 11px var(--f-mono);color:var(--ink3)}
+.menu li.off{color:var(--ink3);cursor:not-allowed}
+.menu li.off .ic{color:var(--ink3)}
+.sub{font:400 12px var(--f-text);color:var(--ink2)}
+
+/* settings */
+.tabs{position:absolute;left:0;top:0;bottom:0;width:200px;border-right:1px solid var(--rule);padding:14px 10px}
+.tabs .menu li{height:36px;font-size:15px}
+.body{position:absolute;left:200px;right:0;top:0;bottom:48px;padding:16px 22px;overflow:hidden}
+.body h3{font:500 18px var(--f-draft);margin:0 0 12px;padding-bottom:6px;border-bottom:3px solid var(--c)}
+.foot{position:absolute;left:0;right:0;bottom:0;height:48px;border-top:1px solid var(--rule);display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:0 14px;background:var(--paper);border-radius:0 0 var(--r3) var(--r3)}
+.row{display:grid;grid-template-columns:200px 1fr;align-items:center;min-height:36px;border-bottom:1px solid var(--hover)}
+.row label{font:500 14px var(--f-draft)}
+.seg{display:inline-flex;border:1px solid var(--ink);border-radius:var(--r2);overflow:hidden}
+.seg span{padding:4px 12px;font:500 13px var(--f-draft);border-left:1px solid var(--rule)}
+.seg span:first-child{border-left:0}
+.seg span.on{background:var(--ink);color:var(--sheet)}
+.seg span.dis{color:var(--ink3);background:repeating-linear-gradient(45deg,transparent 0 5px,rgba(189,181,159,.45) 5px 6px)}
+.sel-box{display:inline-flex;align-items:center;justify-content:space-between;min-width:200px;height:28px;padding:0 10px;border:1px solid var(--ink);border-radius:var(--r2);font:400 13px var(--f-text)}
+.sel-box.dis{border-style:dashed;border-color:var(--rule);color:var(--ink3)}
+.slider{position:relative;width:240px;height:4px;background:var(--rule);border-radius:var(--r1)}
+.slider b{position:absolute;left:0;top:0;bottom:0;background:var(--c);border-radius:var(--r1)}
+.slider u{position:absolute;top:-6px;width:8px;height:16px;border:1px solid var(--ink);border-radius:var(--r1);background:var(--sheet);margin-left:-4px}
+.slider .floor{position:absolute;left:0;top:-2px;height:8px;background:repeating-linear-gradient(45deg,transparent 0 3px,var(--ink3) 3px 4px);border-right:1px solid var(--ink)}
+.val{font:400 12px var(--f-mono);margin-left:12px;color:var(--ink2)}
+.why{font:400 11px var(--f-text);color:var(--ink3);margin-left:10px}
+.plate{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;border:1px solid var(--ink);border-radius:3px;font:500 12px var(--f-text)}
+.plate.warn{background:var(--warn)}
+.sw{width:18px;height:12px;border:1px solid var(--ink);border-radius:var(--r1);display:inline-block}
+
+/* new game */
+.list{position:absolute;left:0;top:0;bottom:48px;width:340px;border-right:1px solid var(--rule);padding:14px}
+.search{height:28px;border:1px solid var(--ink);border-radius:var(--r2);padding:0 10px;display:flex;align-items:center;color:var(--ink3);margin-bottom:8px}
+.list .it{display:flex;align-items:center;gap:10px;height:34px;padding:0 8px;border-radius:var(--r2);border:1px solid transparent;border-left:3px solid transparent;font:500 14px var(--f-draft)}
+.list .it.sel{background:var(--hover);border-color:var(--ink);border-left:3px solid var(--olive)}
+.chip{width:16px;height:16px;border:1px solid var(--ink);border-radius:var(--r1)}
+.card{position:absolute;left:340px;right:0;top:0;bottom:48px;padding:16px 22px}
+.card h3{font:500 22px var(--f-draft);margin:0 0 2px}
+.stat{display:grid;grid-template-columns:180px 1fr;padding:5px 0;border-bottom:1px solid var(--hover);font-size:13px}
+.stat b{font:500 13px var(--f-mono)}
+.band{background:var(--olive-w);border-top:3px solid var(--olive);padding:8px 12px;border-radius:0 0 var(--r2) var(--r2);margin:12px 0 8px}
+.band span{font:500 13px var(--f-draft);color:var(--olive-t);letter-spacing:.04em}
+.time{display:inline-flex;align-items:center;gap:10px;background:var(--paper);padding:10px 14px;border-radius:var(--r3);border:1px solid var(--rule)}
+.grp{display:inline-flex;border:1px solid var(--ink);border-radius:var(--r2);overflow:hidden}
+.grp .b{height:28px;width:30px;display:flex;align-items:center;justify-content:center;border-left:1px solid var(--rule)}
+.grp .b:first-child{border-left:0}
+.grp .b.on{background:var(--ink);color:var(--sheet)}
+.tempo{display:inline-flex;align-items:flex-end;gap:2px;height:14px}
+.tempo i{width:4px;border:1px solid var(--ink);display:block}
+.tempo i.f{background:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;max-width:560px}
+.grid div{height:44px;border:1px solid var(--ink);border-radius:var(--r2);display:flex;align-items:flex-end;padding:3px 5px;font:400 10px var(--f-mono)}
+.lbl{font:500 12px var(--f-draft);color:var(--ink2);margin:14px 0 4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Клиент v0.5b: меню, настройки, новая игра</h1>
+<p class="note">Макет палитры C «Акварель» (#303). Форма по #302: кнопки r4, панели r6, без теней. Шрифт Jura стоит вместо OpenGost Type B (его нет на Google Fonts). Макет не доказывает контраст алертов: это делает валидатор из CLIENT_V05B_SPEC.md §7. Глобус условный.</p>
+
+<h2>1. Главное меню</h2>
+<div class="screen">
+  <div class="globe"><i style="left:80px;top:130px;width:170px;height:120px;background:var(--t2)"></i><i style="left:210px;top:300px;width:120px;height:140px;background:var(--t3)"></i><i style="left:300px;top:140px;width:150px;height:110px;background:var(--t5)"></i></div>
+  <div class="sheet" style="left:28px;top:28px;bottom:28px;width:330px;padding:22px 18px">
+    <p class="title">PROJECT SINGULARITY</p>
+    <div class="stripe"><b style="background:var(--sand)"></b><b style="background:var(--teal)"></b><b style="background:var(--violet)"></b><b style="background:var(--olive)"></b><b style="background:var(--plum)"></b></div>
+    <div class="ver">v0.5b · сценарий 1945</div>
+    <ul class="menu">
+      <li class="sel" style="--c:var(--teal)"><svg class="ic" viewBox="0 0 20 20"><path d="M6 4l9 6-9 6z"/></svg>Продолжить<small>США · 1945-09-02</small></li>
+      <li style="--c:var(--olive)"><svg class="ic" viewBox="0 0 20 20"><path d="M10 3v14M3 10h14"/></svg>Новая игра<small>N</small></li>
+      <li style="--c:var(--sand)"><svg class="ic" viewBox="0 0 20 20"><path d="M3 5h14v11H3zM3 9h14"/></svg>Загрузить<small>L</small></li>
+      <li class="off"><svg class="ic" viewBox="0 0 20 20"><path d="M4 4h10l2 2v10H4zM7 4v5h6V4"/></svg>Сохранить<small>нет игры</small></li>
+      <li style="--c:var(--slate)"><svg class="ic" viewBox="0 0 20 20"><path d="M3 6h14M3 10h14M3 14h14M7 4v4M13 8v4M9 12v4"/></svg>Настройки<small>S</small></li>
+      <li style="--c:var(--plum)"><svg class="ic" viewBox="0 0 20 20"><path d="M8 3H3v14h5M8 10h9M13 6l4 4-4 4"/></svg>Выход<small>Alt+F4</small></li>
+    </ul>
+  </div>
+</div>
+
+<h2>2. Новая игра (выбор державы)</h2>
+<div class="screen">
+  <div class="globe"></div><div class="dim"></div>
+  <div class="sheet" style="left:140px;top:36px;width:840px;height:548px">
+    <div class="list">
+      <div class="search">Поиск державы…</div>
+      <div class="it"><span class="chip" style="background:var(--t3)"></span>Великобритания</div>
+      <div class="it"><span class="chip" style="background:var(--t4)"></span>Китай</div>
+      <div class="it"><span class="chip" style="background:var(--t5)"></span>СССР</div>
+      <div class="it sel"><span class="chip" style="background:var(--t2)"></span>США</div>
+      <div class="it"><span class="chip" style="background:var(--t1)"></span>Франция</div>
+      <div class="sub" style="margin-top:10px">Список берётся из данных сценария. Названия здесь примерные.</div>
+    </div>
+    <div class="card">
+      <h3>США</h3><div class="sub">Сценарий 1945 · играете одной державой, остальные открываются по клику на глобусе только для чтения</div>
+      <div class="band"><span>СТАРТОВЫЕ ДАННЫЕ</span></div>
+      <div class="stat"><span>Число показателей</span><b>из модели</b></div>
+      <div class="stat"><span>Лицензии, изделия</span><b>из модели</b></div>
+      <div class="stat"><span>Сид</span><b>4821733 <span class="why">случайный · изменить</span></b></div>
+    </div>
+    <div class="foot"><button class="btn">Назад</button><button class="btn primary">Начать</button></div>
+  </div>
+</div>
+
+<h2>3. Настройки: Видео, Звук, Общие</h2>
+<div class="screen"><div class="globe"></div><div class="dim"></div>
+  <div class="sheet" style="left:120px;top:30px;width:880px;height:560px">
+    <div class="tabs"><ul class="menu">
+      <li class="sel" style="--c:var(--teal)"><svg class="ic" viewBox="0 0 20 20"><path d="M2 4h16v10H2zM7 17h6"/></svg>Видео</li>
+      <li style="--c:var(--violet)"><svg class="ic" viewBox="0 0 20 20"><path d="M3 8h3l4-4v12l-4-4H3zM13 7c1.5 1.5 1.5 4.500 0 6"/></svg>Звук</li>
+      <li style="--c:var(--sand)"><svg class="ic" viewBox="0 0 20 20"><path d="M3 5h14M3 10h14M3 15h14"/></svg>Общие</li>
+    </ul></div>
+    <div class="body" style="--c:var(--teal)"><h3>Видео</h3>
+      <div class="row"><label>Разрешение</label><span class="sel-box">1920 × 1080 ▾</span></div>
+      <div class="row"><label>Режим окна</label><span class="seg"><span>Окно</span><span class="on">Без рамки</span><span>Полный экран</span></span></div>
+      <div class="row"><label>Качество</label><span class="seg"><span>Низкое</span><span>Среднее</span><span class="on">Высокое</span><span>Своё</span></span></div>
+      <div class="row"><label>Апскейлинг</label><span><span class="sel-box">FSR 2.2 ▾</span><span class="why">DLSS: требуется плагин, не подтверждено</span></span></div>
+      <div class="row"><label>Режим апскейла</label><span class="seg"><span>Качество</span><span class="on">Баланс</span><span>Производительность</span></span></div>
+      <div class="row"><label>VSync</label><span class="seg"><span class="on">Вкл</span><span>Выкл</span></span></div>
+      <div class="row"><label>Лимит кадров</label><span class="sel-box">60 ▾</span></div>
+      <div class="row"><label>Масштаб UI</label><span style="display:flex;align-items:center"><span class="slider" style="--c:var(--teal)"><b style="width:25%"></b><u style="left:25%"></u></span><span class="val">112,5%</span></span></div>
+    </div>
+    <div class="foot"><button class="btn">Сбросить</button><button class="btn">Отмена</button><button class="btn primary">Применить</button></div>
+  </div>
+</div>
+
+<div class="screen" style="margin-top:14px"><div class="globe"></div><div class="dim"></div>
+  <div class="sheet" style="left:120px;top:30px;width:880px;height:560px">
+    <div class="tabs"><ul class="menu">
+      <li style="--c:var(--teal)"><svg class="ic" viewBox="0 0 20 20"><path d="M2 4h16v10H2zM7 17h6"/></svg>Видео</li>
+      <li class="sel" style="--c:var(--violet)"><svg class="ic" viewBox="0 0 20 20"><path d="M3 8h3l4-4v12l-4-4H3zM13 7c1.5 1.5 1.5 4.500 0 6"/></svg>Звук</li>
+      <li style="--c:var(--sand)"><svg class="ic" viewBox="0 0 20 20"><path d="M3 5h14M3 10h14M3 15h14"/></svg>Общие</li>
+    </ul></div>
+    <div class="body" style="--c:var(--violet)"><h3>Звук</h3>
+      <div class="row"><label>Общая (Master)</label><span style="display:flex;align-items:center"><span class="slider"><b style="width:80%"></b><u style="left:80%"></u></span><span class="val">80%</span></span></div>
+      <div class="row"><label>Музыка</label><span style="display:flex;align-items:center"><span class="slider"><b style="width:55%"></b><u style="left:55%"></u></span><span class="val">55%</span></span></div>
+      <div class="row"><label>Фон (Ambient)</label><span style="display:flex;align-items:center"><span class="slider"><b style="width:60%"></b><u style="left:60%"></u></span><span class="val">60%</span></span></div>
+      <div class="row"><label>Интерфейс (UI)</label><span style="display:flex;align-items:center"><span class="slider"><b style="width:70%"></b><u style="left:70%"></u></span><span class="val">70%</span></span></div>
+      <div class="row"><label>Эффекты (Sfx)</label><span style="display:flex;align-items:center"><span class="slider"><b style="width:70%"></b><u style="left:70%"></u></span><span class="val">70%</span></span></div>
+      <div class="row"><label>Сигналы (Alert)</label><span style="display:flex;align-items:center"><span class="slider"><span class="floor" style="width:20%"></span><b style="width:90%"></b><u style="left:90%"></u></span><span class="val">90%</span><span class="why">не ниже 20%</span><button class="btn" style="margin-left:10px;height:24px">Проверить</button></span></div>
+      <div class="row"><label>Звук в фоне</label><span class="seg"><span>Вкл</span><span class="on">Выкл</span></span></div>
+    </div>
+    <div class="foot"><button class="btn">Сбросить</button><button class="btn">Отмена</button><button class="btn primary">Применить</button></div>
+  </div>
+</div>
+
+<div class="screen" style="margin-top:14px"><div class="globe"></div><div class="dim"></div>
+  <div class="sheet" style="left:120px;top:30px;width:880px;height:560px">
+    <div class="tabs"><ul class="menu">
+      <li style="--c:var(--teal)"><svg class="ic" viewBox="0 0 20 20"><path d="M2 4h16v10H2zM7 17h6"/></svg>Видео</li>
+      <li style="--c:var(--violet)"><svg class="ic" viewBox="0 0 20 20"><path d="M3 8h3l4-4v12l-4-4H3zM13 7c1.5 1.5 1.5 4.500 0 6"/></svg>Звук</li>
+      <li class="sel" style="--c:var(--sand)"><svg class="ic" viewBox="0 0 20 20"><path d="M3 5h14M3 10h14M3 15h14"/></svg>Общие</li>
+    </ul></div>
+    <div class="body" style="--c:var(--sand)"><h3>Общие</h3>
+      <div class="row"><label>Язык</label><span class="seg"><span class="on">Русский</span><span>English</span></span><span></span></div>
+      <div class="row"><label>Дата и числа</label><span class="seg"><span class="on">По языку</span><span>ISO</span></span></div>
+      <div class="row"><label>Пауза при аварии</label><span class="seg"><span class="on">Вкл</span><span>Выкл</span></span></div>
+      <div class="row"><label>Задержка подсказки</label><span class="seg"><span>0,3 с</span><span class="on">0,6 с</span><span>1 с</span></span></div>
+      <div class="row"><label>Анимации</label><span class="seg"><span class="on">Вкл</span><span>Уменьшить</span></span></div>
+      <p class="sub" style="margin-top:14px">Язык применяется сразу, без перезапуска.</p>
+    </div>
+    <div class="foot"><button class="btn">Сбросить</button><button class="btn">Отмена</button><button class="btn primary">Применить</button></div>
+  </div>
+</div>
+
+<h2>4. Иконки времени и состояния кнопок</h2>
+<div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center">
+  <div class="time"><span style="font:400 14px var(--f-mono)">1945-09-02</span>
+    <span class="grp">
+      <span class="b"><svg class="ic" viewBox="0 0 20 20"><path d="M6 4h3v12H6zM11 4h3v12h-3z"/></svg></span>
+      <span class="b"><svg class="ic" viewBox="0 0 20 20"><path d="M10 4L3 10l7 6zM17 4l-7 6 7 6z"/></svg></span>
+      <span class="b"><svg class="ic" viewBox="0 0 20 20"><path d="M3 4l7 6-7 6zM10 4l7 6-7 6z"/></svg></span></span>
+    <span class="tempo"><i class="f" style="height:5px"></i><i class="f" style="height:9px"></i><i style="height:14px"></i></span><span style="font:500 12px var(--f-draft)">неделя/с</span></div>
+  <div class="time"><span style="font:400 14px var(--f-mono)">1945-09-02</span>
+    <span class="grp">
+      <span class="b on"><svg class="ic" viewBox="0 0 20 20"><path d="M6 4h3v12H6zM11 4h3v12h-3z"/></svg></span>
+      <span class="b"><svg class="ic" viewBox="0 0 20 20"><path d="M10 4L3 10l7 6zM17 4l-7 6 7 6z"/></svg></span>
+      <span class="b"><svg class="ic" viewBox="0 0 20 20"><path d="M3 4l7 6-7 6zM10 4l7 6-7 6z"/></svg></span></span>
+    <span class="tempo"><i style="height:5px"></i><i style="height:9px"></i><i style="height:14px"></i></span><span style="font:500 12px var(--f-draft)">пауза</span></div>
+  <button class="btn">Обычная</button><button class="btn" style="background:var(--hover)">Наведение</button><button class="btn focus">Фокус</button><button class="btn primary">Основная</button><button class="btn dis">Недоступна</button>
+</div>
+
+<h2>5. Палитра C и риск алертов</h2>
+<p class="note">Тинты слева направо 1–8, под ними плашка warn на тинтах 1 и 5 без ореола и с ореолом sheet. Это иллюстрация риска из спецификации §6.4, а не расчёт.</p>
+<div class="grid"><div style="background:var(--t1)">1</div><div style="background:var(--t2)">2</div><div style="background:var(--t3)">3</div><div style="background:var(--t4)">4</div><div style="background:var(--t5)">5</div><div style="background:var(--t6)">6</div><div style="background:var(--t7)">7</div><div style="background:var(--t8)">8</div></div>
+<div class="lbl">warn на тинтах без ореола и с ореолом sheet 2 px</div>
+<div style="display:flex;gap:8px">
+  <div style="background:var(--t1);padding:12px 18px;border-radius:var(--r2)"><span class="plate warn">▲ узкое место</span></div>
+  <div style="background:var(--t5);padding:12px 18px;border-radius:var(--r2)"><span class="plate warn">▲ узкое место</span></div>
+  <div style="background:var(--t1);padding:12px 18px;border-radius:var(--r2)"><span class="plate warn" style="box-shadow:0 0 0 2px var(--sheet)">▲ узкое место</span></div>
+  <div style="background:var(--t5);padding:12px 18px;border-radius:var(--r2)"><span class="plate warn" style="box-shadow:0 0 0 2px var(--sheet)">▲ узкое место</span></div>
+</div>
+<div class="lbl">Чернила дисциплин: линия, роспись</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap">
+  <span class="plate" style="background:var(--sand-w);border-color:var(--sand);color:var(--sand-t)">Механика</span>
+  <span class="plate" style="background:var(--teal-w);border-color:var(--teal);color:var(--teal-t)">Аэродинамика</span>
+  <span class="plate" style="background:var(--violet-w);border-color:var(--violet);color:var(--violet-t)">Электроника</span>
+  <span class="plate" style="background:var(--olive-w);border-color:var(--olive);color:var(--olive-t)">Химия</span>
+  <span class="plate" style="background:var(--plum-w);border-color:var(--plum);color:var(--plum-t)">Силовые</span>
+  <span class="plate" style="background:var(--slate-w);border-color:var(--slate);color:var(--slate-t)">Металлы</span>
+</div>
+</div>
+</body>
+</html>
