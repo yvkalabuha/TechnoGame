@@ -41,7 +41,13 @@ public sealed partial class Overlay : Control
             _labels.Add(s = new LabelState { C = c, Node = l });
         }
         s.Slice = slice;
-        if (slice) { s.Node.AddThemeStyleboxOverride("normal", Ui.Box(Colors.Transparent, Ink, 1, 4)); s.Node.RemoveThemeColorOverride("font_outline_color"); }
+        if (slice)
+        {
+            // No leftover outline (it smeared the glyphs) and a real bold instance of Literata instead of any synthetic weight.
+            s.Node.AddThemeStyleboxOverride("normal", Ui.Box(Colors.Transparent, Ink, 1, 4));
+            s.Node.RemoveThemeColorOverride("font_outline_color"); s.Node.RemoveThemeConstantOverride("outline_size");
+            s.Node.AddThemeFontOverride("font", Fonts.MapBold);
+        }
         else { s.Node.AddThemeColorOverride("font_outline_color", Paper); s.Node.AddThemeConstantOverride("outline_size", 4); }
         s.Node.Text = Names.Country(c.Name) ?? c.Name;
     }

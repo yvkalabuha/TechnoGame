@@ -27,6 +27,7 @@ public sealed partial class TechTree : Control
     readonly SimHost _host;
     readonly VBoxContainer _inset = new();
     readonly PanelContainer _insetBox = new();
+    readonly ScrollContainer _insetScroll;
     readonly Segment _viewSwitch;
     int _actor = -1, _mode;
     bool _modelDirty = true, _insetDirty = true;
@@ -59,9 +60,9 @@ public sealed partial class TechTree : Control
         AddChild(top);
 
         _insetBox.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 1, 12));
-        _insetBox.SetAnchorsPreset(LayoutPreset.RightWide);
-        _insetBox.AnchorLeft = 0.6f; _insetBox.OffsetLeft = 0; _insetBox.OffsetTop = 6; _insetBox.OffsetBottom = -74; _insetBox.OffsetRight = -6;
-        var sc = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        // Sized by its content (like the power panel): anchored top-right, no bottom anchor; the scroll appears only above the stamp.
+        _insetBox.AnchorLeft = 0.6f; _insetBox.AnchorRight = 1; _insetBox.OffsetLeft = 0; _insetBox.OffsetTop = 6; _insetBox.OffsetRight = -6;
+        var sc = _insetScroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         _inset.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         _inset.AddThemeConstantOverride("separation", 6);
         sc.AddChild(_inset); _insetBox.AddChild(sc);
@@ -82,6 +83,7 @@ public sealed partial class TechTree : Control
     // ---------------- model ----------------
     public override void _Process(double delta)
     {
+        _insetScroll.CustomMinimumSize = new Vector2(0, Math.Min(_inset.GetCombinedMinimumSize().Y, Size.Y - 100));
         var s = _host.Snap;
         if (s == null || _actor < 0 || !Visible) return;
         if (s.WhyActor != _actor) return;
@@ -272,6 +274,19 @@ public sealed partial class TechTree : Control
         return pts;
     }
 
+    // Wedge name outside the outer ring: left-aligned on the right side, right-aligned on the left, centred below; trimmed to the free width.
+    (Rect2 rect, string text) WedgeLabel(int w)
+    {
+        float mid = -90f + w * 72f + 36f, cs = Mathf.Cos(Mathf.DegToRad(mid)), sn = Mathf.Sin(Mathf.DegToRad(mid));
+        var q = Polar(6.65f, mid);
+        float avail = cs > 0.35f ? Area.End.X - q.X - 4 : cs < -0.35f ? q.X - Area.Position.X - 4 : 220;
+        string s = Fit(Loc.T("disc." + w), Math.Max(60, avail), 14, Fonts.DraftBold);
+        var sz = Fonts.DraftBold.GetStringSize(s, HorizontalAlignment.Left, -1, 14);
+        float x = cs > 0.35f ? q.X : cs < -0.35f ? q.X - sz.X : q.X - sz.X * 0.5f;
+        float y = sn > 0.35f ? q.Y + 6 : sn < -0.35f ? q.Y - sz.Y - 2 : q.Y - sz.Y * 0.5f;
+        return (new Rect2(x, y, sz), s);
+    }
+
     void DrawPlanisphere()
     {
         var c = Centre; float u = Unit;
@@ -285,8 +300,8 @@ public sealed partial class TechTree : Control
             float a = Mathf.DegToRad(-90f + w * 72f);
             var d = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
             DrawLine(c + d * u * 0.6f, c + d * (6.5f * u), Ui.Rule, 1f);
-            var q = Polar(6.95f, -90f + w * 72f + 36f);
-            Text(q + new Vector2(-80, 5), Loc.T("disc." + w), 14, Ui.Ink2, FontKind.Draft, HorizontalAlignment.Center, 160);
+            var (rc, s) = WedgeLabel(w);
+            Text(new Vector2(rc.Position.X, rc.End.Y - 4), s, 14, Ui.Ink2, FontKind.Draft);
         }
         DrawClock(c, u);
 
@@ -381,51 +396,79 @@ public sealed partial class TechTree : Control
         occupied.Add(new Rect2(c - new Vector2(Unit * 0.7f, Unit * 0.7f), new Vector2(Unit * 1.4f, Unit * 1.4f)));
         for (int w = 0; w < 5; w++)   // wedge names
         {
-            var q = Polar(6.95f, -90f + w * 72f + 36f);
-            var sz = Fonts.Draft.GetStringSize(Loc.T("disc." + w), HorizontalAlignment.Left, -1, 14);
-            occupied.Add(new Rect2(q - new Vector2(sz.X * 0.5f, sz.Y * 0.5f + 2), sz + new Vector2(0, 4)));
+            occupied.Add(WedgeLabel(w).rect.Grow(2));
         }
+        // The leader line and the route are obstacles too, so that no label sits on them.
+        var lp = CalloutPoints();
+        for (int k = 0; k + 1 < lp.Length; k++) AddSegment(occupied, lp[k], lp[k + 1], 5f);
+        for (int k = 0; k + 1 < _path.Count; k++) { var ch = Channel(_path[k], _path[k + 1]); for (int j = 0; j + 1 < ch.Count; j++) AddSegment(occupied, ch[j], ch[j + 1], 3f); }
         var order = new List<int>();
         void Add(int i) { if (i >= 0 && !order.Contains(i)) order.Add(i); }
         Add(_selected); Add(_goal); Add(_root);
         foreach (int i in Enumerable.Range(0, nodes.Count).Where(i => _route[i] && _state[i] != St.Unavailable).OrderBy(i => nodes.Number[i])) Add(i);
         foreach (int i in Enumerable.Range(0, nodes.Count).Where(i => _state[i] == St.Frontier).OrderBy(i => nodes.Number[i])) Add(i);
         var area = Area;
+        var placed = new Dictionary<int, (Rect2 pad, Rect2 rc, string text, FontKind kind, float h)>();
+        bool Place(int i, string text, FontKind kind)
+        {
+            var p = PosOf(i);
+            var sz = Ui.FontOf(kind).GetStringSize(text, HorizontalAlignment.Left, -1, 14);
+            // near places first, then farther ones (so that the goal and the selected node always find a free spot)
+            var cands = new[]
+            {
+                new Rect2(p + new Vector2(12, -sz.Y * 0.5f), sz), new Rect2(p + new Vector2(-12 - sz.X, -sz.Y * 0.5f), sz),
+                new Rect2(p + new Vector2(-sz.X * 0.5f, 12), sz), new Rect2(p + new Vector2(-sz.X * 0.5f, -12 - sz.Y), sz),
+                new Rect2(p + new Vector2(14, 14), sz), new Rect2(p + new Vector2(-14 - sz.X, 14), sz),
+                new Rect2(p + new Vector2(14, -14 - sz.Y), sz), new Rect2(p + new Vector2(-14 - sz.X, -14 - sz.Y), sz),
+            };
+            foreach (var rc in cands)
+            {
+                var pad = rc.Grow(2);
+                if (!area.Encloses(pad) || occupied.Any(o => o.Intersects(pad))) continue;
+                occupied.Add(pad);
+                placed[i] = (pad, rc, text, kind, sz.Y);
+                return true;
+            }
+            return false;
+        }
+        // Pass 1: the number tag of every frontier node (short, same in both languages); pass 2: names where there is room (a name replaces its own tag).
+        foreach (int i in order) if (_state[i] == St.Frontier) Place(i, "№" + nodes.Number[i], FontKind.Mono);
         foreach (int i in order)
         {
-            bool named = _route[i] || i == _selected || i == _goal || i == _root;
-            var p = PosOf(i);
-            var tries = named ? new[] { (Names.Node(nodes.Id[i]), FontKind.Text), ("№" + nodes.Number[i], FontKind.Mono) } : new[] { ("№" + nodes.Number[i], FontKind.Mono) };
-            bool done = false;
-            foreach (var (text, kind) in tries)
-            {
-                var sz = Ui.FontOf(kind).GetStringSize(text, HorizontalAlignment.Left, -1, 14);
-                var cands = new[]
-                {
-                    new Rect2(p + new Vector2(12, -sz.Y * 0.5f), sz), new Rect2(p + new Vector2(-12 - sz.X, -sz.Y * 0.5f), sz),
-                    new Rect2(p + new Vector2(-sz.X * 0.5f, 12), sz), new Rect2(p + new Vector2(-sz.X * 0.5f, -12 - sz.Y), sz),
-                };
-                foreach (var rc in cands)
-                {
-                    var pad = rc.Grow(2);
-                    if (!area.Encloses(pad) || occupied.Any(o => o.Intersects(pad))) continue;
-                    DrawRect(pad, new Color(Ui.Paper, 0.92f));
-                    Text(new Vector2(rc.Position.X, rc.Position.Y + sz.Y * 0.8f), text, 14, _route[i] ? Ui.Command : Ui.Ink2, kind);
-                    occupied.Add(pad); done = true; break;
-                }
-                if (done) break;
-            }
+            if (!(_route[i] || i == _selected || i == _goal || i == _root)) continue;
+            if (placed.TryGetValue(i, out var tag)) occupied.Remove(tag.pad);
+            if (Place(i, Names.Node(nodes.Id[i]), FontKind.Text)) continue;
+            if (tag.text != null) { occupied.Add(tag.pad); placed[i] = tag; }
+            else Place(i, "№" + nodes.Number[i], FontKind.Mono);
+        }
+        foreach (int i in order)
+        {
+            if (!placed.TryGetValue(i, out var pl)) continue;
+            DrawRect(pl.pad, new Color(Ui.Paper, 0.92f));
+            Text(new Vector2(pl.rc.Position.X, pl.rc.Position.Y + pl.h * 0.8f), pl.text, 14, _route[i] ? Ui.Command : Ui.Ink2, pl.kind);
         }
     }
 
+    static void AddSegment(List<Rect2> into, Vector2 a, Vector2 b, float pad)
+    {
+        int n = Math.Max(1, (int)(a.DistanceTo(b) / 8f));
+        for (int k = 0; k <= n; k++) { var q = a.Lerp(b, (float)k / n); into.Add(new Rect2(q - new Vector2(pad, pad), new Vector2(pad * 2, pad * 2))); }
+    }
+
     // Callout with a shelf (§7.3) from the selected node, else from the goal, to the inset.
-    void DrawCallout()
+    Vector2[] CalloutPoints()
     {
         int i = _selected >= 0 ? _selected : _goal;
-        if (i < 0) return;
+        if (i < 0) return Array.Empty<Vector2>();
         var p = PosOf(i);
         float y = Math.Max(Area.Position.Y + 8, p.Y - 30);
-        var pts = new[] { p + new Vector2(0, -NodeR - 2), new Vector2(p.X + 24, y), new Vector2(Area.End.X + 6, y) };
+        return new[] { p + new Vector2(0, -NodeR - 2), new Vector2(p.X + 24, y), new Vector2(Area.End.X + 6, y) };
+    }
+
+    void DrawCallout()
+    {
+        var pts = CalloutPoints();
+        if (pts.Length == 0) return;
         DrawPolyline(pts, Ui.Ink, 1.2f, true);
         DrawCircle(pts[2], 3f, Ui.Ink);
     }
@@ -448,7 +491,8 @@ public sealed partial class TechTree : Control
         string goal = _goal >= 0 ? Loc.T("stmt.goal", Names.Node(nodes.Id[_goal]), Loc.T(_state[_goal] == St.Known ? "state.known" : "state.unknown")) : Loc.T("stmt.nogoal");
         Text(new Vector2(x0 + 210, y + 16), Fit(goal, a.Size.X - 240, 14), 14, Ui.Ink);
         y += 28;
-        float nameW = 340, cellW = 56, rowH = 24;
+        float sy = Math.Clamp(a.Size.Y / 560f, 1f, 1.6f);   // rows breathe when the window is tall
+        float nameW = 340, cellW = 56, rowH = 24 * sy;
         float gx = x0 + nameW + 8;
         var rows = new List<(int row, string group)>();
         if (_goal >= 0) rows.Add((_goal, "stmt.g.goal"));
@@ -458,9 +502,9 @@ public sealed partial class TechTree : Control
         int goalD = rows.Where(r => r.row != _goal).Select(r => _depth[r.row]).DefaultIfEmpty(-1).Max() + 1;
         if (_goal >= 0) _depth[_goal] = goalD;
         int maxD = rows.Count == 0 ? 0 : rows.Max(r => _depth[r.row]);
-        Text(new Vector2(gx, y + 12), Loc.T("stmt.scale"), 14, Ui.Ink3);
-        y += 18;
-        for (int d = 0; d <= maxD; d++) Text(new Vector2(gx + d * cellW + 6, y + 12), d == 0 ? Loc.T("stmt.now") : "+" + d, 14, Ui.Ink3, FontKind.Mono);
+        Text(new Vector2(x0, y + 12), Fit(Loc.T("stmt.scale"), a.Size.X - 28, 14), 14, Ui.Ink2);
+        y += 22;
+        for (int d = 0; d <= maxD; d++) Text(new Vector2(gx + d * cellW + 6, y + 12), d == 0 ? Loc.T("stmt.now") : "+" + d, 14, Ui.Ink2, FontKind.Mono);
         y += 20;
         var yOf = new Dictionary<int, float>();
         string last = "";
@@ -475,16 +519,17 @@ public sealed partial class TechTree : Control
         }
         foreach (var (row, group) in rows)
         {
-            if (group != last) { y += 4; Text(new Vector2(x0, y + 14), Loc.T(group), 14, Ui.Ink3, FontKind.Draft); y += 20; last = group; }
+            if (group != last) { y += 4; Text(new Vector2(x0, y + 14), Loc.T(group), 14, Ui.Ink2, FontKind.Draft); y += 20; last = group; }
             yOf[row] = y;
             var rr = new Rect2(x0 - 4, y - 1, gx - x0 + (maxD + 1) * cellW + 8, rowH);
             _rowRects.Add((rr, row));
             if (row == _selected) DrawRect(rr, Ui.Hover);
             var col = _route[row] ? Ui.Command : Ui.Ink;
-            Text(new Vector2(x0, y + 17), Fit(Names.Node(nodes.Id[row]), nameW - 56, 14), 14, col);
-            Text(new Vector2(x0 + nameW - 50, y + 17), "№" + nodes.Number[row], 14, Ui.Ink3, FontKind.Mono, HorizontalAlignment.Right, 46);
+            float ty = y + rowH * 0.5f + 5;
+            Text(new Vector2(x0, ty), Fit(Names.Node(nodes.Id[row]), nameW - 56, 14), 14, col);
+            Text(new Vector2(x0 + nameW - 50, ty), "№" + nodes.Number[row], 14, Ui.Ink2, FontKind.Mono, HorizontalAlignment.Right, 46);
             float bx = gx + _depth[row] * cellW;
-            var rect = new Rect2(bx, y + 4, cellW - 12, rowH - 10);
+            var rect = new Rect2(bx, y + 4 * sy, cellW - 12, rowH - 10 * sy);
             if (_state[row] == St.Frontier) { DrawRect(rect, new Color(col, 0.18f)); DrawRect(rect, col, false, 1.4f); }
             else DrawDashedRect(rect, col);
             y += rowH;
@@ -495,7 +540,7 @@ public sealed partial class TechTree : Control
                 foreach (int m in rq.GroupMembers(g))
                     if (yOf.TryGetValue(m, out float my) && yOf.TryGetValue(row, out float ry))
                     {
-                        var p1 = new Vector2(gx + _depth[m] * cellW + cellW - 12, my + 11); var p2 = new Vector2(gx + _depth[row] * cellW, ry + 11);
+                        var p1 = new Vector2(gx + _depth[m] * cellW + cellW - 12, my + rowH * 0.5f); var p2 = new Vector2(gx + _depth[row] * cellW, ry + rowH * 0.5f);
                         bool main = chain.Contains(m) && chain.Contains(row);
                         DrawPolyline(new[] { p1, new Vector2(p2.X - 5, p1.Y), new Vector2(p2.X - 5, p2.Y), p2 }, main ? Ui.Command : Ui.Rule, main ? 3f : 1f, true);
                     }
@@ -503,29 +548,30 @@ public sealed partial class TechTree : Control
         Text(new Vector2(x0, y + 12), Loc.T("stmt.chain"), 14, Ui.Command);
         y += 30;
         // overview: discipline x generation cells, one square per node
-        Text(new Vector2(x0, y + 12), Loc.T("stmt.overview", nodes.Count), 14, Ui.Ink3, FontKind.Draft);
+        Text(new Vector2(x0, y + 12), Loc.T("stmt.overview", nodes.Count), 14, Ui.Ink2, FontKind.Draft);
         y += 34;
-        for (int g = 0; g <= 4; g++) Text(new Vector2(x0 + 200 + g * 108 + 4, y), "G" + g, 14, Ui.Ink3, FontKind.Mono);
+        for (int g = 0; g <= 4; g++) Text(new Vector2(x0 + 200 + g * 108 + 4, y), "G" + g, 14, Ui.Ink2, FontKind.Mono);
         y += 4;
         for (int d = 0; d < 5; d++)
         {
-            Text(new Vector2(x0, y + 17 + d * 24), Loc.T("disc." + d), 14, Ui.Ink2);
+            Text(new Vector2(x0, y + 17 * sy + d * 24 * sy), Loc.T("disc." + d), 14, Ui.Ink2);
             for (int g = 0; g <= 4; g++)
             {
                 float cx = x0 + 200 + g * 108;
-                DrawRect(new Rect2(cx, y + d * 24, 102, 22), Ui.Rule, false, 1f);
+                DrawRect(new Rect2(cx, y + d * 24 * sy, 102, 22 * sy), Ui.Rule, false, 1f);
                 int k = 0;
                 for (int i = 0; i < nodes.Count; i++)
                     if ((int)nodes.Discipline[i] == d && nodes.Gen[i] == g)
                     {
-                        var sq = new Rect2(cx + 4 + k * 12, y + d * 24 + 5, 9, 12);
+                        var sq = new Rect2(cx + 4 + k * 12, y + d * 24 * sy + 5 * sy, 9, 12);
                         if (_state[i] == St.Known) DrawRect(sq, Ui.Ink); else if (_state[i] == St.Frontier) DrawRect(sq, Ui.Ink, false, 1.4f); else DrawRect(new Rect2(sq.Position + new Vector2(3, 5), new Vector2(3, 3)), Ui.Ink3);
                         k++;
                     }
             }
         }
-        y += 5 * 24 + 8;
+        y += 5 * 24 * sy + 8;
         Text(new Vector2(x0, y + 12), Loc.T("legend.b"), 14, Ui.Ink2);
+        Text(new Vector2(x0, y + 34), Fit(Loc.T("legend.b2"), a.Size.X - 28, 14), 14, Ui.Ink2);
     }
 
     void DrawDashedRect(Rect2 r, Color c)
@@ -611,7 +657,7 @@ public sealed partial class TechTree : Control
             }
             _inset.AddChild(Ui.Wrap(Loc.T("inset.requires", req.Count == 0 ? "—" : string.Join("; ", req))));
             if (_nv[i].Process is { } pv)
-                _inset.AddChild(Ui.Wrap(Loc.T("inset.process", pv.Yield.ToDouble().ToString("F2"), Loc.T(pv.Mastered ? "yes" : "no"), Loc.T(pv.Admitted ? "yes" : "no")), 14, Ui.Ink2));
+                _inset.AddChild(Ui.Wrap(Loc.T("inset.process", Loc.N(pv.Yield.ToDouble()), Loc.T(pv.Mastered ? "yes" : "no"), Loc.T(pv.Admitted ? "yes" : "no")), 14, Ui.Ink2));
             if (nodes.Type[i] == NodeType.PRC && _state[i] == St.Known)
             {
                 int num = nodes.Number[i];

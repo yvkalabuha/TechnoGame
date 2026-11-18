@@ -39,11 +39,14 @@ public sealed partial class Main : Node3D
     SignalField _signal;
     ActorPanel _actorPanel;
     TechTree _tree;
+    AudioDirector _audio;
+    Control _audioPop;
+    bool _fatalLogged;
     Label _loading, _help;
     Button _helpBtn;
     bool _debug;
     int[] _actorCountry;                 // actor index -> country id (0 = none)
-    bool _shots; int _shotStep; double _shotT; string _shotDir = "../../docs/ui/prototypes/client-v03";
+    bool _shots; int _shotStep; double _shotT; string _shotDir = "../../docs/ui/prototypes/client-v04";
     string _shotLog = ""; int _shotCand = -1; long _shotTick;
 
     // bench
@@ -153,6 +156,16 @@ public sealed partial class Main : Node3D
         _signal.Debug = _debug;
         layer.AddChild(_signal);
 
+        _audio = new AudioDirector(_host);
+        AddChild(_audio);
+        _signal.SignalChanged += _audio.OnSignal;
+        _signal.AudioPressed += () => _audioPop.Visible = !_audioPop.Visible;
+        _audioPop = new PanelContainer { Visible = false };
+        ((PanelContainer)_audioPop).AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 2, 12));
+        _audioPop.AnchorLeft = 1; _audioPop.AnchorRight = 1; _audioPop.OffsetLeft = -380; _audioPop.OffsetRight = -10; _audioPop.OffsetTop = 52;
+        _audioPop.AddChild(_audio.BuildPopover());
+        layer.AddChild(_audioPop);
+
         // Inset sized by its content: anchored top-right, no bottom anchor.
         _actorPanel = new ActorPanel(_host) { Visible = false, Debug = _debug };
         _actorPanel.AnchorLeft = 1; _actorPanel.AnchorRight = 1;
@@ -185,7 +198,7 @@ public sealed partial class Main : Node3D
         layer.AddChild(_helpBtn);
     }
 
-    void OpenTree(int mode) { _tree.ShowFor(_signal.Actor, mode); }
+    void OpenTree(int mode) { _audio?.Tick(); _tree.ShowFor(_signal.Actor, mode); }
 
     void ChoosePower(int i, bool selectInSegment = true)
     {
@@ -193,6 +206,7 @@ public sealed partial class Main : Node3D
         _host.WhyActor = i;
         _actorPanel.ShowActor(i);
         if (_tree.Visible) _tree.ShowFor(i, 0);
+        _audio?.Tick();
         if (_actorCountry[i] != 0)
         {
             _selected = _actorCountry[i]; ApplySelection();
@@ -428,7 +442,11 @@ public sealed partial class Main : Node3D
         _t += delta;
         if (_host != null && !_tintsReady)
         {
-            if (_host.Fatal != null) { _loading.Text = Loc.T("ui.simerror") + _host.Fatal; GD.PrintErr(_host.Fatal); }
+            if (_host.Fatal != null)
+            {
+                _loading.Text = Loc.T("ui.simerror") + _host.Fatal;
+                if (!_fatalLogged) { _fatalLogged = true; GD.PrintErr(_host.Fatal); }   // once, not on every frame
+            }
             else if (_host.Ready) FinishClient();
             else _loading.Text = Loc.T(_host.Status);
         }
@@ -436,12 +454,13 @@ public sealed partial class Main : Node3D
         if (_shots && _tintsReady) ShotStep(delta);
         if (_bench) BenchStep(delta);
         UpdateCamera();
+        if (_audio != null) { _audio.Actor = _signal.Actor; _audio.CameraMoved(new Vector2(_yaw + _pitch * 1.7f, _dist)); }
         AnimateObjects();
         if (_debug)
         {
             string sel = _selected == 0 ? "-" : _data.Countries[_selected - 1].Name;
             _hud.Text = $"FPS {Engine.GetFramesPerSecond()}  draw calls {(long)Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame)}  labels {_overlay.VisibleLabels}\n" +
-                        $"region: {sel}  (factory, aircraft: spike mock)";
+                        $"region: {sel}  (factory, aircraft: spike mock)" + (_host?.Snap is { JobError: not "" } js ? "\njob error: " + js.JobError : "");
         }
     }
 
@@ -521,9 +540,39 @@ public sealed partial class Main : Node3D
                 Shot("tech_tree_a_en.png"); _tree.Visible = false; _shotStep = 11; _shotT = 0; break;
             case 11 when _shotT >= 0.8:
                 Shot("globe_panel_en.png"); Shot("signal_field_en.png", new Rect2I(0, 0, (int)vp.X, 52));
-                _shotLog += $"final: date {s.Date} tick {s.Tick}\n";
-                Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog); GD.Print(_shotLog);
-                GetTree().Quit(); _shotStep = 12; break;
+                _signal.SetLang("ru");
+                // A valid command lifts the ОТКАЗ place: it shows the cleared state («снят»).
+                _host.Submit(new Singularity.Core.Commands.SetBudgetShares(0, new Singularity.Core.Policy.BudgetShares(
+                    Singularity.Kernel.Fx6.FromRaw(200_000), Singularity.Kernel.Fx6.FromRaw(200_000), Singularity.Kernel.Fx6.FromRaw(200_000),
+                    Singularity.Kernel.Fx6.FromRaw(200_000), Singularity.Kernel.Fx6.FromRaw(200_000))), "cmd.budget");
+                _shotStep = 12; _shotT = 0; break;
+            case 12 when _shotT >= 1.0:
+                _shotLog += $"cleared: last {s.Last.Status} rejected_flag {s.LastRejected}\n";
+                Shot("signal_cleared.png", new Rect2I(0, 0, (int)vp.X, 52));
+                _host.SimulateFatal("screenshot hook: simulated simulation failure");
+                _shotStep = 13; _shotT = 0; break;
+            case 13 when _shotT >= 0.5:
+                Shot("signal_fail_new.png", new Rect2I(0, 0, (int)vp.X, 52));
+                _signal.AckAll(); _shotStep = 14; _shotT = 0; break;
+            case 14 when _shotT >= 0.4:
+                Shot("signal_fail_acked.png", new Rect2I(0, 0, (int)vp.X, 52));
+                _audioPop.Visible = true; _shotStep = 15; _shotT = 0; break;
+            case 15 when _shotT >= 0.5:
+                Shot("audio_popover.png"); _audioPop.Visible = false;
+                _signal.SetSpeed(1); _shotStep = 16; _shotT = 0; break;
+            case 16 when _shotT >= 0.5:
+                _audio.StartDemo(); _shotStep = 17; _shotT = 0; break;
+            case 17:
+                // The demo script runs in real time; its sound is recorded from the Master bus.
+                if (!_audio.StepDemo(dt) && _shotT >= AudioDirector.DemoSeconds + 0.5)
+                {
+                    int bytes = _audio.Active ? _audio.SaveDemo(Path.Combine(dir, "audio_demo.wav")) : 0;
+                    _shotLog += $"audio demo: {(bytes > 0 ? bytes + " bytes of PCM" : "not recorded (no audio device)")}\n";
+                    _shotLog += $"final: date {s.Date} tick {s.Tick}\n";
+                    Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog); GD.Print(_shotLog);
+                    GetTree().Quit(); _shotStep = 18;
+                }
+                break;
         }
     }
 

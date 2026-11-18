@@ -21,12 +21,12 @@ public sealed partial class ActorPanel : PanelContainer
     readonly VBoxContainer _root = new();
     readonly ScrollContainer _scroll = new() { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
     readonly Label _title = Ui.Lbl("", 20, null, FontKind.Draft);
-    readonly Label _sub = Ui.Wrap("", 14, Ui.Ink2);
-    readonly Label _budget = Ui.Wrap("", 14);
+    readonly Prose _sub = Ui.Wrap("", 14, Ui.Ink2);
+    readonly Prose _budget = Ui.Wrap("", 14);
     readonly HSlider[] _sl = new HSlider[5];
     readonly Label[] _slVal = new Label[5], _slForce = new Label[5];
     readonly Label _sum = Ui.Lbl("", 14, Ui.Ink2, FontKind.Mono);
-    readonly Label _result = Ui.Wrap("", 14, Ui.Ink2);
+    readonly Prose _result = Ui.Wrap("", 14, Ui.Ink2);
     readonly Control _resultMark = new ColorRect { Color = Ui.Alarm, CustomMinimumSize = new Vector2(9, 9), SizeFlagsVertical = SizeFlags.ShrinkCenter, Visible = false };
     readonly Button _apply;
     readonly VBoxContainer _designs = new(), _licence = new(), _why = new();
@@ -39,7 +39,9 @@ public sealed partial class ActorPanel : PanelContainer
     public event Action Closed;
 
     public int Actor => _actor;
-    public bool Debug { get; set; }
+    bool _debug;
+    /// <summary>F3 switches Session text on and off: the panel is rebuilt at once.</summary>
+    public bool Debug { get => _debug; set { if (_debug == value) return; _debug = value; Invalidate(); _dirty = true; } }
 
     public ActorPanel(SimHost host)
     {
@@ -64,8 +66,8 @@ public sealed partial class ActorPanel : PanelContainer
         var hd = new HBoxContainer();
         hd.AddChild(new Control { CustomMinimumSize = new Vector2(138, 0) });
         hd.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
-        hd.AddChild(Ui.Num("col.share", 14, Ui.Ink3, 52));
-        hd.AddChild(Ui.Num("col.inforce", 14, Ui.Ink3, 84));
+        hd.AddChild(Ui.Num("col.share", 14, Ui.Ink2, 52));
+        hd.AddChild(Ui.Num("col.inforce", 14, Ui.Ink2, 84));
         _root.AddChild(hd);
         for (int i = 0; i < 5; i++)
         {
@@ -76,7 +78,7 @@ public sealed partial class ActorPanel : PanelContainer
             StyleSlider(_sl[i]);
             _sl[i].ValueChanged += v => OnSlider(k, (int)v);
             _slVal[i] = Ui.Num("", 14, null, 52);
-            _slForce[i] = Ui.Num("", 14, Ui.Ink3, 84);
+            _slForce[i] = Ui.Num("", 14, Ui.Ink2, 84);
             r.AddChild(n); r.AddChild(_sl[i]); r.AddChild(_slVal[i]); r.AddChild(_slForce[i]);
             _root.AddChild(r);
         }
@@ -101,7 +103,7 @@ public sealed partial class ActorPanel : PanelContainer
 
     void Invalidate() { _dirty = true; _sigDesigns = _sigLicence = _sigWhy = ""; }
 
-    static void StyleSlider(HSlider s)
+    public static void StyleSlider(HSlider s)
     {
         var track = Ui.Box(Ui.Rule, null, 0, 0); track.ContentMarginTop = 2; track.ContentMarginBottom = 2;
         s.AddThemeStyleboxOverride("slider", track);
@@ -186,7 +188,7 @@ public sealed partial class ActorPanel : PanelContainer
         _title.TooltipText = id;
         _sub.Text = Loc.T("panel.sub", Loc.T("profile." + (int)a.Profile), a.FieldedGen, s.View.Month);
         var inA = s.View.Inputs?.Actors.FirstOrDefault(x => x.Actor == _actor);
-        _budget.Text = inA != null ? Loc.T("panel.budget.text", inA.Budget.ToDouble().ToString("F1"), inA.ProcurementBudget.ToDouble().ToString("F1")) : Loc.T("panel.budget.none");
+        _budget.Text = inA != null ? Loc.T("panel.budget.text", Loc.N(inA.Budget.ToDouble(), 1), Loc.N(inA.ProcurementBudget.ToDouble(), 1)) : Loc.T("panel.budget.none");
         BudgetShares? inForce = s.SharesInForce[_actor];
         BudgetShares show = inForce ?? new PolicyParams().Shares(a.Profile);
         int[] forcePct = { Pc(show.Research), Pc(show.Capability), Pc(show.Effort), Pc(show.Procurement), Pc(show.Quality) };
@@ -227,8 +229,8 @@ public sealed partial class ActorPanel : PanelContainer
         foreach (var d in a.Designs)
         {
             if (d.Stage == DesignStage.None) continue;
-            string line = Loc.T("design.line", d.Design, d.Gen, Loc.T("stage." + (int)d.Stage), d.UnitCost.ToDouble().ToString("F2"), d.Readiness.ToDouble().ToString("F2"), d.InService.ToDouble().ToString("F0"))
-                + (d.Stage is DesignStage.Series ? Loc.T("design.series", d.Rate.ToDouble().ToString("F2"), d.Bind) : "");
+            string line = Loc.T("design.line", d.Design, d.Gen, Loc.T("stage." + (int)d.Stage), Loc.N(d.UnitCost.ToDouble()), Loc.N(d.Readiness.ToDouble()), Loc.N(d.InService.ToDouble(), 0))
+                + (d.Stage is DesignStage.Series ? Loc.T("design.series", Loc.N(d.Rate.ToDouble()), Loc.T("bind." + d.Bind)) : "");
             rows.Add((line, d.Stage == DesignStage.Series ? "close" : d.Stage is DesignStage.Project or DesignStage.Prototype ? "cancel" : "", d.Design));
         }
         string sig = Loc.Lang + "|" + string.Join("\n", rows.Select(r => r.text + r.action));
@@ -253,7 +255,7 @@ public sealed partial class ActorPanel : PanelContainer
         var L = a.Licence;
         string seller = L.Seller >= 0 && L.Seller < _host.Layout.ActorIds.Length ? _host.Layout.ActorIds[L.Seller] : "—";
         long refus = L.Refusals.IsDefault ? 0 : L.Refusals.Sum();
-        string t1 = L.Active ? Loc.T("licence.active", L.Gen, seller, L.Start, L.Flow.ToDouble().ToString("F2")) : Loc.T("licence.none");
+        string t1 = L.Active ? Loc.T("licence.active", L.Gen, seller, L.Start, Loc.N(L.Flow.ToDouble())) : Loc.T("licence.none");
         string t2 = refus > 0 ? Loc.T("licence.refusals", refus, L.Refusals[0], L.Refusals[1], L.Refusals[2], L.Refusals[3]) : "";
         string sig = Loc.Lang + t1 + t2;
         if (sig == _sigLicence) return;
@@ -271,15 +273,15 @@ public sealed partial class ActorPanel : PanelContainer
         else
         {
             string goal = t.Kind == WhyNotTargetKind.Requirement ? Loc.T("why.goal", t.Id) : Loc.T("why.goalkind", t.Kind.ToString(), t.Id);
-            lines.Add((goal + Loc.T("why.links", s.Links.Count), false));
+            lines.Add((goal + (Debug ? Loc.T("why.links", s.Links.Count) : ""), false));
             int n = 0;
             foreach (var l in s.Links)
             {
                 if (n++ >= 7) { lines.Add((Loc.T("why.more", s.Links.Count - 7), false)); break; }
                 string subj = l.Layer == WhyNotLayer.Knowledge ? Names.Node(_host.Data, l.SubjectId) : "№" + l.SubjectId;
                 string eta = l.EtaMonths is int m ? Loc.T("why.eta", m) : "";
-                string lev = l.Levers.IsDefaultOrEmpty ? "" : Loc.T("why.levers", string.Join(", ", l.Levers.Select(x => Loc.TOr("cause." + x, x.ToString()))));
-                lines.Add(($"{Loc.TOr("layer." + l.Layer, l.Layer.ToString())} · {Loc.TOr("cause." + l.Cause, l.Cause.ToString())}: {subj} · {l.Have.ToDouble():F2}/{l.Need.ToDouble():F2}{eta}{lev}", n == 1));
+                string lev = l.Levers.IsDefaultOrEmpty ? "" : Loc.T("why.levers", string.Join(", ", l.Levers.Select(x => Loc.TOr("lever." + x, x.ToString()))));
+                lines.Add(($"{Loc.TOr("layer." + l.Layer, l.Layer.ToString())} · {Loc.TOr("cause." + l.Cause, l.Cause.ToString())}: {subj} · {Loc.N(l.Have.ToDouble())}/{Loc.N(l.Need.ToDouble())}{eta}{lev}", n == 1));
             }
         }
         string sig = Loc.Lang + "|" + string.Join("\n", lines.Select(x => x.text));

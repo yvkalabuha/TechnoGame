@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <!-- The client is outside the solution (ADR-0014); its Godot-free audio logic is compiled here as a source link. -->
+    <Compile Include="../../src/Singularity.Client.Spike/AudioLogic.cs" Link="AudioLogic.cs" />
+  </ItemGroup>
+</Project>

@@ -51,3 +51,11 @@
 - Document `SitesOf(-1)`.
 - The ScratchTests category comment for `_prcMemo` should say "derived cache".
 - The F2 test does not prove that the memo is hit. | Open |
+| DEBT-0041 | Client v0.4 review (reviewer, minor).
+- The audio licence test uses a hard-coded name list; it should walk assets/audio.
+- A P0 sound can evict another P0; allow a 4th voice for P0 instead.
+- The `sig.fail` reminder plays the attention sound, not the critical one.
+- An order accepted and applied between two frames plays no sound.
+- SignalField keeps stale alloy flags when the new actor has no inputs, and `View.Actors[_actor]` is indexed by position.
+- Move AudioLogic to a `Singularity.Client.Logic` library once 2–3 files are shared.
+- `--shots` rewrites a large audio demo: convert it to OGG. | Open |

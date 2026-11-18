@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Launch the Godot 3D globe spike (TASK-0067).
-# Usage: ./run-globe-spike.sh          interactive client prototype v0.3 (TASK-0069/0070; real Session on a background thread)
-#        ./run-globe-spike.sh --shots  automatic run + screenshots into docs/ui/prototypes/client-v03/ (RU and EN)
+# Usage: ./run-globe-spike.sh          interactive client prototype v0.4 (TASK-0069..0071; real Session on a background thread)
+#        ./run-globe-spike.sh --shots  automatic run + screenshots and an audio demo WAV into docs/ui/prototypes/client-v04/ (RU and EN)
 #        ./run-globe-spike.sh --bench  automatic benchmark + screenshots into bench-out/
 set -euo pipefail
 
@@ -20,8 +20,13 @@ export PATH="$HOME/.dotnet:$PATH"
 
 cd "$PROJECT"
 
-# Import assets (models, fonts); cheap when nothing changed. .godot/ is git-ignored.
-"$GODOT" --headless --path . --import >/dev/null 2>&1
+# Import assets (models, fonts, audio); cheap when nothing changed. .godot/ is git-ignored. Import errors are shown, not hidden.
+IMPORT_LOG="$(mktemp)"
+trap 'rm -f "$IMPORT_LOG"' EXIT
+if ! "$GODOT" --headless --path . --import >"$IMPORT_LOG" 2>&1 || grep -qE "^(ERROR|SCRIPT ERROR)" "$IMPORT_LOG"; then
+  echo "Asset import reported errors:" >&2
+  grep -E "ERROR" "$IMPORT_LOG" >&2 || tail -20 "$IMPORT_LOG" >&2
+fi
 
 echo "Building C# scripts..."
 "$GODOT" --headless --path . --build-solutions --quit

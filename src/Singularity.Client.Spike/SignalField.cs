@@ -1,14 +1,17 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using Godot;
 
 namespace Singularity.Client.Spike;
 
 /// <summary>Top bar (design system §7.5). Left: controls (date, tempo, power, language). Right, after a vertical rule: the six annunciator
-/// places and the simulation-failure place. Place states: calm, new (plate + double frame, until acknowledged by a click), acknowledged, cleared.</summary>
+/// places and the simulation-failure place. Place states: calm; new (plate + double frame, until a click acknowledges it); acknowledged (calm frame, only a filled ■);
+/// cleared (calm frame, hollow □ for a few seconds, then calm again).</summary>
 public sealed partial class SignalField : PanelContainer
 {
-    enum PState { Calm, New, Acked }
+    enum PState { Calm, New, Acked, Cleared }
+    const double ClearedSeconds = 8;
 
     /// <summary>Annunciator place; a mock place (no Session signal) is drawn with a dashed frame.</summary>
     sealed partial class PlacePanel : PanelContainer
@@ -25,8 +28,8 @@ public sealed partial class SignalField : PanelContainer
 
     sealed class Place
     {
-        public string Key; public bool Real; public Color Plate; public Label Node; public PlacePanel Box;
-        public PState State; public int Count; public bool Cond;
+        public string Key; public bool Real; public Color Plate; public Label Node; public PlacePanel Box; public Panel Marker;
+        public PState State; public int Count; public bool Cond; public double ClearedAt;
     }
 
     readonly SimHost _host;
@@ -39,13 +42,16 @@ public sealed partial class SignalField : PanelContainer
     double _alloyDeficit; bool _alloyKnown;
     long _seq = -1; long _rejects, _lastCmdSeq;
     public event Action<int> PowerChosen;
+    /// <summary>A place got a signal (true) or lost it (false); the key is the place key (sig.alloy, ...). Sounds follow this event.</summary>
+    public event Action<string, bool> SignalChanged;
+    public event Action AudioPressed;
 
     public int Actor => _actor;
     public bool Debug { set => _perf.Visible = value; }
     public void SelectPower(int i) { _actor = i; _power.Select(i, false); }
     public void SetSpeed(int s) { _speed.Select(s, false); _host.Speed = s; }
     /// <summary>Screenshot run: acknowledges every new signal as a click would.</summary>
-    public void AckAll() { foreach (var p in _places) if (p.State == PState.New) { p.State = PState.Acked; Paint(p); } }
+    public void AckAll() { foreach (var p in _places.Append(_fail)) if (p.State == PState.New) { p.State = PState.Acked; Paint(p); } }
     public void SetLang(string lang) => _lang.Select(Array.IndexOf(Loc.Languages, lang), true);
 
     public SignalField(SimHost host, string[] actors)
@@ -66,7 +72,7 @@ public sealed partial class SignalField : PanelContainer
         _speed.Changed += i => _host.Speed = i;
         row.AddChild(_speed);
 
-        _power = new Segment(actors, 0, 14, false);
+        _power = new Segment(actors.Select(a => "actor.short." + a).ToArray(), 0);
         _power.TooltipText = "tip.power";
         _power.Changed += i => { _actor = i; PowerChosen?.Invoke(i); };
         row.AddChild(_power);
@@ -84,8 +90,11 @@ public sealed partial class SignalField : PanelContainer
 
         row.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
         row.AddChild(_perf);
+        var snd = Ui.Btn("♪", () => AudioPressed?.Invoke());
+        snd.TooltipText = "tip.audio";
+        row.AddChild(snd);
         row.AddChild(Ui.VRule());
-        _lang = new Segment(new[] { "RU", "EN" }, 0, 14, false);
+        _lang = new Segment(new[] { "RU", "EN" }, Math.Max(0, Array.IndexOf(Loc.Languages, Loc.Lang)), 14, false);
         _lang.TooltipText = "tip.lang";
         _lang.Changed += i => Loc.SetLang(Loc.Languages[i]);
         row.AddChild(_lang);
@@ -98,7 +107,11 @@ public sealed partial class SignalField : PanelContainer
     {
         p.Box = new PlacePanel { Mock = !p.Real, MouseFilter = MouseFilterEnum.Stop };
         p.Node = Ui.Lbl(p.Key, 14, Ui.Ink3);
-        p.Box.AddChild(p.Node);
+        p.Marker = new Panel { CustomMinimumSize = new Vector2(9, 9), SizeFlagsVertical = SizeFlags.ShrinkCenter, MouseFilter = MouseFilterEnum.Ignore, Visible = false };
+        var inner = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        inner.AddThemeConstantOverride("separation", 5);
+        inner.AddChild(p.Marker); inner.AddChild(p.Node);
+        p.Box.AddChild(inner);
         p.Box.TooltipText = p.Real ? "tip.sig.real" : "tip.sig.mock";
         p.Box.GuiInput += e =>
         {
@@ -110,31 +123,61 @@ public sealed partial class SignalField : PanelContainer
 
     void Paint(Place p)
     {
-        // Calm: rule frame, ink-3 name. New: plate + double ink frame. Acknowledged: plate, single ink frame.
-        if (p.State == PState.Calm) { p.Box.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, p.Real ? Ui.Rule : Colors.Transparent, 1, 6)); p.Node.AddThemeColorOverride("font_color", Ui.Ink3); }
-        else
+        Color marker = p.Plate == Ui.Warn ? Ui.Warn : Ui.Alarm;
+        switch (p.State)
         {
-            var sb = Ui.Box(p.Plate, Ui.Ink, p.State == PState.New ? 3 : 1, 6);
-            p.Box.AddThemeStyleboxOverride("panel", sb);
-            p.Node.AddThemeColorOverride("font_color", p.Plate == Ui.Alarm ? Colors.White : Ui.Ink);
+            case PState.New:   // plate + double frame
+                p.Box.AddThemeStyleboxOverride("panel", Ui.Box(p.Plate, Ui.Ink, 3, 6));
+                p.Node.AddThemeColorOverride("font_color", p.Plate == Ui.Alarm ? Colors.White : Ui.Ink);
+                p.Marker.Visible = false;
+                break;
+            case PState.Acked:   // the same calm frame as at rest; the deviation is only the filled ■
+                p.Box.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, Ui.Rule, 1, 6));
+                p.Node.AddThemeColorOverride("font_color", Ui.Ink);
+                SetMarker(p, marker, true);
+                break;
+            case PState.Cleared:   // hollow □: the signal was lifted
+                p.Box.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, Ui.Rule, 1, 6));
+                p.Node.AddThemeColorOverride("font_color", Ui.Ink2);
+                SetMarker(p, Ui.Ink2, false);
+                break;
+            default:
+                p.Box.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, p.Real ? Ui.Rule : Colors.Transparent, 1, 6));
+                p.Node.AddThemeColorOverride("font_color", Ui.Ink3);
+                p.Marker.Visible = false;
+                break;
         }
-        p.Node.Text = p.Count > 0 && p.State != PState.Calm ? Loc.T(p.Key) + " " + p.Count : p.Key;
+        p.Node.Text = p.Count > 0 && p.State is PState.New or PState.Acked ? Loc.T(p.Key) + " " + p.Count : p.Key;
+        p.Box.TooltipText = p.State == PState.Cleared ? "tip.sig.cleared" : p.Real ? "tip.sig.real" : "tip.sig.mock";
         p.Box.QueueRedraw();
+    }
+
+    static void SetMarker(Place p, Color c, bool filled)
+    {
+        var sb = new StyleBoxFlat { BgColor = filled ? c : Colors.Transparent, BorderColor = c };
+        sb.SetBorderWidthAll(filled ? 0 : 2);
+        p.Marker.AddThemeStyleboxOverride("panel", sb);
+        p.Marker.Visible = true;
     }
 
     void Set(Place p, bool cond, int count = 0)
     {
-        if (cond && !p.Cond) p.State = PState.New;   // appears: unacknowledged
-        if (!cond) p.State = PState.Calm;            // cleared
+        bool was = p.Cond;
+        if (cond && !was) p.State = PState.New;                                  // appears: unacknowledged
+        else if (!cond && was) { p.State = PState.Cleared; p.ClearedAt = Time.GetTicksMsec() / 1000.0; }
         p.Cond = cond;
         p.Count = count;
         Paint(p);
+        if (cond != was && p.Real) SignalChanged?.Invoke(p.Key, cond);
     }
 
     void Refresh() { _seq = -1; foreach (var p in _places) Paint(p); Paint(_fail); }
 
     public override void _Process(double delta)
     {
+        double now = Time.GetTicksMsec() / 1000.0;
+        foreach (var p in _places.Append(_fail))
+            if (p.State == PState.Cleared && now - p.ClearedAt > ClearedSeconds) { p.State = PState.Calm; Paint(p); }
         if (_host.Fatal != null && !_fail.Cond)
         {
             _fail.Box.Visible = true; _fail.Box.TooltipText = _host.Fatal;
@@ -143,14 +186,13 @@ public sealed partial class SignalField : PanelContainer
         var s = _host.Snap;
         if (s == null) { _date.Text = _host.Fatal != null ? Loc.T("sig.fail") : Loc.T(_host.Status); return; }
         _date.Text = s.Date.ToString();
-        _perf.Text = $"tick {s.Tick} · {s.LastTickMs:F1} ms";
+        _perf.Text = $"tick {s.Tick} · {s.LastTickMs.ToString("F1", CultureInfo.InvariantCulture)} ms" + (s.JobError != "" ? " · " + s.JobError : "");
         if (s.Seq == _seq) return;
         _seq = s.Seq;
         if (s.CmdSeq != _lastCmdSeq) { _lastCmdSeq = s.CmdSeq; if (s.LastRejected) _rejects++; }
-        if (s.View.Inputs != null && _actor < s.View.Inputs.Actors.Length)
-        {
-            _alloyDeficit = s.View.Inputs.Actors[_actor].Capability.AlloyDeficit.ToDouble(); _alloyKnown = true;
-        }
+        // Inputs.Actors is indexed by its own Actor field, not by position.
+        var inp = s.View.Inputs?.Actors.FirstOrDefault(x => x.Actor == _actor);
+        if (inp != null) { _alloyDeficit = inp.Capability.AlloyDeficit.ToDouble(); _alloyKnown = true; }
         var a = s.View.Actors[_actor];
         long refusals = a.Licence.Refusals.IsDefault ? 0 : a.Licence.Refusals.Sum();
         Set(_places[0], _alloyKnown && _alloyDeficit > 0);

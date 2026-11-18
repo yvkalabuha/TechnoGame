@@ -28,7 +28,7 @@ public static class Loc
             var head = rows[0];
             for (int c = 1; c < head.Count; c++)
             {
-                var tr = TranslationServer.GetTranslationObject(head[c]) ?? new Translation { Locale = head[c] };
+                var tr = new Translation { Locale = head[c] };   // one object per file and language: no lookup of existing ones needed
                 for (int r = 1; r < rows.Count; r++)
                 {
                     if (rows[r].Count <= c || rows[r][0] == "") continue;
@@ -47,6 +47,13 @@ public static class Loc
         Lang = lang;
         TranslationServer.SetLocale(lang);
         Changed?.Invoke();
+    }
+
+    /// <summary>Number for display: fixed decimals, decimal comma in Russian (locale-dependent, never the process culture).</summary>
+    public static string N(double v, int decimals = 2)
+    {
+        string s = v.ToString("F" + decimals, CultureInfo.InvariantCulture);
+        return Lang == "ru" ? s.Replace('.', ',') : s;
     }
 
     public static bool Has(string key) => Known.Contains(key);

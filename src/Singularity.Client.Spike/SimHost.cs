@@ -25,7 +25,7 @@ public sealed record HostSnapshot(
     long Tick, CivilDate Date, SliceView View, int Speed,
     CmdResult Last, int Pending, long CmdSeq, string LastOutcome, long Seq,
     ImmutableArray<BudgetShares?> SharesInForce,
-    int WhyActor, WhyNotTarget? Target, IReadOnlyList<Link> Links, string WhyError, double LastTickMs)
+    int WhyActor, WhyNotTarget? Target, IReadOnlyList<Link> Links, string WhyError, double LastTickMs, string JobError = "")
 {
     public bool LastRejected => Last.Status == CmdStatus.Rejected;
 }
@@ -60,6 +60,7 @@ public sealed class SimHost : IDisposable
     WhyNotTarget? _target; IReadOnlyList<Link> _links = Array.Empty<Link>(); string _whyErr = "";
     ImmutableArray<BudgetShares?> _shares;
     double _lastTickMs;
+    string _jobError = "";
 
     public GameData Data { get; private set; }
     public HostSnapshot Snap => _snap;
@@ -79,13 +80,24 @@ public sealed class SimHost : IDisposable
     {
         _jobs.Enqueue(() =>
         {
-            CommandVerdict v = _session.Submit(SourceClass.Player, 0, ++_localN, command);
-            _cmdSeq++;
-            if (v.Accepted) { _pending++; _last = new CmdResult(CmdStatus.Pending, labelKey, labelArg, "", ""); }
-            else _last = new CmdResult(CmdStatus.Rejected, labelKey, labelArg, v.Reason.ToString(), v.Message);
+            _cmdSeq++;   // every command is handled exactly once, whatever its outcome
+            try
+            {
+                CommandVerdict v = _session.Submit(SourceClass.Player, 0, ++_localN, command);
+                if (v.Accepted) { _pending++; _last = new CmdResult(CmdStatus.Pending, labelKey, labelArg, "", ""); }
+                else _last = new CmdResult(CmdStatus.Rejected, labelKey, labelArg, v.Reason.ToString(), v.Message);
+            }
+            catch (Exception e)
+            {
+                // The failure belongs to this command; it does not disturb commands that are still pending.
+                _last = new CmdResult(CmdStatus.Error, labelKey, labelArg, e.GetType().Name, e.Message);
+            }
             Publish();
         });
     }
+
+    /// <summary>Screenshot hook: shows the simulation-failure state as if the simulation thread had thrown. The thread keeps running.</summary>
+    public void SimulateFatal(string text) => _fatal = text;
 
     /// <summary>Test hook: run <paramref name="ticks"/> ticks on the simulation thread regardless of tempo.</summary>
     public void StepTicks(long ticks) => _jobs.Enqueue(() => Advance(ticks));
@@ -119,8 +131,9 @@ public sealed class SimHost : IDisposable
                     try { job(); }
                     catch (Exception e)
                     {
-                        // A failed job does not stop the simulation: it shows as the last command result.
-                        _cmdSeq++; _last = new CmdResult(CmdStatus.Error, "cmd.job", 0, e.GetType().Name, e.Message);
+                        // A failed job that is not a command (a test hook) does not stop the simulation and is not a command result:
+                        // it is kept apart (JobError, shown under F3) so that it cannot hide or fake the state of the player's commands.
+                        _jobError = e.GetType().Name + ": " + e.Message;
                         Publish();
                     }
                 }
@@ -152,6 +165,8 @@ public sealed class SimHost : IDisposable
             _session.Step(1);
             if (_pending > 0)
             {
+                // A tick applies every accepted command: the last result becomes «applied» only if it is still the pending one
+                // (a later refusal or error stays what it is).
                 _pending = 0;
                 if (_last.Status == CmdStatus.Pending) _last = _last with { Status = CmdStatus.Applied };
             }
@@ -183,7 +198,7 @@ public sealed class SimHost : IDisposable
             _lastWhyView = v; _lastWhyActor = wa;
         }
         _lastOutcome = _session.Outcomes.Count > 0 ? _session.Outcomes[^1] : "";
-        _snap = new HostSnapshot(_session.Tick, _session.Date, v, Speed, _last, _pending, _cmdSeq, _lastOutcome, ++_seq, _shares, wa, _target, _links, _whyErr, _lastTickMs);
+        _snap = new HostSnapshot(_session.Tick, _session.Date, v, Speed, _last, _pending, _cmdSeq, _lastOutcome, ++_seq, _shares, wa, _target, _links, _whyErr, _lastTickMs, _jobError);
     }
 
     /// <summary>Stops the simulation thread; called from the node's _ExitTree.</summary>

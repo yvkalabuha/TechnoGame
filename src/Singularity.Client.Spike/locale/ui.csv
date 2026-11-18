@@ -14,12 +14,12 @@ speed.pause,‖ pause,‖ пауза
 speed.day,day/s,день/с
 speed.week,week/s,неделя/с
 speed.month,month/s,месяц/с
-tip.date,Session date,Дата в сессии
+tip.date,Date in the game,Дата в игре
 tip.tempo,"Time tempo: pause, day, week, month per second (Space, 1, 2, 3)","Темп времени: пауза, день, неделя, месяц в секунду (Пробел, 1, 2, 3)"
 tip.power,The power you play,"Держава, за которую вы играете"
 tip.lang,Interface language,Язык интерфейса
-tip.sig.real,Signal from Session data. Click to acknowledge.,"Сигнал из данных Session. Нажмите, чтобы квитировать."
-tip.sig.mock,Mock: Session has no such signal,Макет: сигнала в Session нет
+tip.sig.real,Signal from the simulation. Click to acknowledge.,"Сигнал из симуляции. Нажмите, чтобы квитировать."
+tip.sig.mock,Mock: the simulation has no such signal,Макет: такого сигнала в симуляции нет
 tip.help,Keys (F1),Клавиши (F1)
 sig.alloy,ALLOY,СПЛАВ
 sig.licence,LICENCE,ЛИЦЕНЗИЯ
@@ -39,7 +39,7 @@ share.1,Capacity,Мощности
 share.2,Mastery,Освоение
 share.3,Procurement,Закупки
 share.4,Quality,Качество
-panel.sub,profile “{0}” · fielded generation G{1} · month {2},профиль «{0}» · поколение в строю G{1} · месяц {2}
+panel.sub,profile “{0}” · fielded generation G{1} · month {2},профиль «{0}» · поколение в строю G{1} · месяц {2}
 profile.0,quality,качество
 profile.1,mass,массовость
 profile.2,adaptive,адаптивный
@@ -60,12 +60,12 @@ licence.active,"Licence active: generation G{0}, seller {1}, since month {2}, fl
 licence.none,No licence,Лицензии нет
 licence.refusals,"Licence refusals: {0} (own {1}, empty {2}, generation {3}, money {4})","Отказов по лицензии: {0} (свой {1}, пусто {2}, поколение {3}, деньги {4})"
 why.error,Could not build the “why not” chain.,Не удалось построить цепочку «почему не».
-why.none,No goal: there is no new known product that is not yet fielded.,"Цели нет: нового известного изделия, не принятого на вооружение, нет."
+why.none,No goal: every known product is already fielded.,Цели нет: все известные изделия уже приняты на вооружение.
 why.goal,"Goal: yearly requirement, generation {0}.","Цель: годовое требование, поколение {0}."
 why.goalkind,Goal: {0} {1}.,Цель: {0} {1}.
-why.links, Links: {0}, Звеньев: {0}
+why.links, links {0}, звеньев {0}
 why.more,… {0} more,… ещё {0}
-why.eta, · ETA {0} mo., · срок {0} мес.
+why.eta, · ETA {0} mo., · срок {0} мес.
 why.levers, · levers: {0}, · рычаги: {0}
 layer.Knowledge,Knowledge,Знание
 layer.Capability,Capability,Мощности
@@ -126,7 +126,7 @@ legend.b,■ known   □ frontier   · unavailable   (G0–G4: generations)   �
 stmt.title,GOAL STATEMENT,ВЕДОМОСТЬ ЦЕЛИ
 stmt.goal,goal: {0} (product {1}),цель: {0} (изделие {1})
 stmt.nogoal,no goal (no known product without a series),цели нет (нет известного изделия без серии)
-stmt.scale,"Dependency steps, not time: Session has no ETA intervals.","Ступени зависимости, не время: интервалов сроков в Session нет."
+stmt.scale,"Dependency steps, not time (no ETA intervals yet). now = can start at once; +n = after n steps.","Ступени зависимости, не время (интервалов сроков пока нет). «сейчас» — можно начинать, «+n» — после n ступеней."
 stmt.now,now,сейчас
 stmt.g.goal,GOAL,ЦЕЛЬ
 stmt.g.front,FRONTIER ON THE ROUTE,ФРОНТИР НА ПУТИ
@@ -137,7 +137,7 @@ stmt.overview,OVERVIEW OF {0} NODES: discipline × generation,ОБЗОР {0} У�
 inset.title,{0} · knowledge,{0} · знание
 inset.why,WHY NOT,ПОЧЕМУ НЕ
 inset.goal,Goal: {0} · dependency steps from the root: {1},Цель: {0} · ступеней зависимости от корня: {1}
-inset.eta," · ETA {0} mo. (a number, not an interval)"," · срок {0} мес. (число, не интервал)"
+inset.eta," · ETA {0} mo. (a number, not an interval)"," · срок {0} мес. (число, не интервал)"
 inset.hint,The first link is the cheapest; the goal date is set by the longest chain (view B).,Первое звено — ближайшее по цене; дату цели задаёт самая длинная цепочка (вид B).
 inset.node,NODE,УЗЕЛ
 inset.anchor,Anchor: {0}{1} · {2},Якорь: {0}{1} · {2}
@@ -150,6 +150,56 @@ inset.focus.remove,Remove from focus,Убрать из фокуса
 inset.focus.empty,Draft is empty. Select a known process (□).,Черновик пуст. Выберите известный процесс (□).
 inset.focus.send,Give order: focus,Отдать приказ: фокус
 inset.prio,R&D PRIORITIES OVER THE FRONTIER,ПРИОРИТЕТЫ НИОКР ПО ФРОНТИРУ
-inset.prio.note,Priorities are wired to nothing (Session has no research_priority lever); P10–P90 ETAs and progress shares are mock too.,Приоритеты ни к чему не подключены (рычага research_priority в Session нет); сроки P10–P90 и доли прогресса — тоже макет.
+inset.prio.note,Priorities are not wired yet (the simulation has no such lever); P10–P90 ETAs and progress shares are mock too.,Приоритеты пока ни к чему не подключены (в симуляции нет такого рычага); сроки P10–P90 и доли прогресса — тоже макет.
 yes,yes,да
 no,no,нет
+bind.None,no line,нет линии
+bind.Rate,rate,темп
+bind.Alloy,alloy,сплав
+bind.Money,money,деньги
+lever.ResearchPriority,research priority,приоритет НИОКР
+lever.TrainingSeries,training series,учебная серия
+lever.InvestToolingM,invest in tooling,вложиться в оснастку
+lever.Licence,buy a licence,купить лицензию
+lever.QualityProgramme,quality programme,программа качества
+lever.SimplifiedVariant,simplified variant,упрощённый вариант
+lever.ReassignWorkforce,reassign workforce,перебросить кадры
+lever.ProcessDevelopment,develop the process,развить процесс
+lever.ForceSeries,force a series,форсировать серию
+lever.RetireCohort,retire old machines,списать старые машины
+lever.SellCohort,sell old machines,продать старые машины
+cause.ToolingPoolExhausted,tooling pool exhausted,пул оснастки исчерпан
+cause.Ramp,ramp-up,наращивание темпа
+cause.SeriesGate,series gate,условие серии
+cause.DefectsHidden,hidden defects,скрытые дефекты
+cause.EngineGenLimit,engine generation limit,предел поколения двигателя
+refusal.UnknownActor,unknown power,неизвестная держава
+refusal.BadSource,bad command source,недопустимый источник команды
+refusal.FocusRepeat,process repeated in focus,процесс повторён в фокусе
+refusal.FocusUnknownProcess,unknown process,неизвестный процесс
+refusal.BadAlternatives,bad alternatives,недопустимые альтернативы
+refusal.BadDesign,bad design,недопустимое изделие
+refusal.BadRate,bad rate,недопустимый темп
+refusal.DuplicateKey,duplicate command,повтор команды
+refusal.LocalNotMonotonic,command out of order,команда не по порядку
+refusal.TooManyDesignCommands,too many design commands,слишком много команд по изделиям
+refusal.SlotOverflow,slot overflow,переполнение слота
+audio.title,SOUND,ЗВУК
+audio.music,Music,Музыка
+audio.ambient,Ambient,Фон
+audio.ui,Effects,Эффекты
+audio.alert,Alerts,Тревоги
+audio.alertnote,"Alerts can be turned down but not off.","Тревоги можно приглушить, но не выключить."
+audio.musicamount,Music,Музыки
+audio.few,few,мало
+audio.normal,normal,обычно
+audio.many,many,много
+audio.resetfatigue,Reset fatigue adaptation,Сбросить адаптацию к усталости
+tip.audio,Sound settings,Настройки звука
+legend.b2,bar: filled = can start now · dashed = waits for earlier steps · grey = off the route,столбик: залитый — можно начинать сейчас · пунктир — ждёт прошлых ступеней · серый — вне маршрута
+tip.sig.cleared,Signal lifted,Сигнал снят
+actor.short.USA,USA,США
+actor.short.GBR,GBR,ВБР
+actor.short.SUN,USSR,СССР
+actor.short.FRA,FRA,ФРА
+actor.short.SWE,SWE,ШВЕ

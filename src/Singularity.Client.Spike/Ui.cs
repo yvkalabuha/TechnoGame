@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 using Godot;
 
 namespace Singularity.Client.Spike;
@@ -13,7 +14,7 @@ public static class Ui
         Ink2 = new("55575A"), Ink3 = new("6E6C66"), Rule = new("BCB6A8"), Normal = new("86837C"),
         Alarm = new("C42A1C"), Warn = new("E89A1A"), Command = new("2347A8"), Seq2 = new("C2CDD3");
 
-    public static Font FontOf(FontKind k) => k switch { FontKind.Mono => Fonts.Mono, FontKind.Draft => Fonts.Draft, FontKind.Map => Fonts.Map, _ => Fonts.Text };
+    public static Font FontOf(FontKind k) => k switch { FontKind.Mono => Fonts.Mono, FontKind.Draft => Fonts.DraftBold, FontKind.Map => Fonts.Map, _ => Fonts.Text };
 
     public static StyleBoxFlat Box(Color bg, Color? border = null, int bw = 1, float margin = 6)
     {
@@ -40,17 +41,15 @@ public static class Ui
         return l;
     }
 
-    /// <summary>Block heading: drafting face, caps by the key text, ink-3.</summary>
-    public static Label Head(string key) => Lbl(key, 14, Ink3, FontKind.Draft);
-
-    public static Label Wrap(string text, int size = 14, Color? color = null)
+    /// <summary>Block heading: drafting face in a real semibold instance, caps by the key text, ink-2 (contrast on paper).</summary>
+    public static Label Head(string key)
     {
-        var l = Lbl(text, size, color);
-        l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        l.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        l.CustomMinimumSize = new Vector2(60, 0);
+        var l = Lbl(key, 14, Ink2, FontKind.Draft);
         return l;
     }
+
+    /// <summary>Wrapped text where every number is set in the mono face.</summary>
+    public static Prose Wrap(string text, int size = 14, Color? color = null) => new(text, Math.Max(size, MinSize), color ?? Ink);
 
     /// <summary>Row with a small square marker (colour only here: the rule is «colour = deviation») and ink text.</summary>
     public static HBoxContainer MarkedRow(Color marker, Control text)
@@ -156,5 +155,43 @@ public sealed partial class Segment : HBoxContainer
         b.AddThemeStyleboxOverride("pressed", Mk(Ui.Hover, true));
         foreach (var n in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color" })
             b.AddThemeColorOverride(n, on ? Ui.Ink : Ui.Ink2);
+    }
+}
+
+/// <summary>Running text: Golos Text with every number (also 12,5 and 40%) in PT Mono (design system: figures are mono, also inside prose).
+/// The text may be a localization key; it is translated here and again when the language changes.</summary>
+public sealed partial class Prose : RichTextLabel
+{
+    static readonly Regex Number = new(@"\d+(?:[.,]\d+)?%?", RegexOptions.Compiled);
+    string _raw = "";
+
+    public Prose(string text, int size, Color color)
+    {
+        BbcodeEnabled = true; FitContent = true; ScrollActive = false; AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        AutoTranslateMode = AutoTranslateModeEnum.Disabled;
+        MouseFilter = MouseFilterEnum.Ignore;
+        SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        CustomMinimumSize = new Vector2(60, 0);
+        AddThemeFontOverride("normal_font", Fonts.Text);
+        AddThemeFontOverride("mono_font", Fonts.Mono);
+        AddThemeFontSizeOverride("normal_font_size", size);
+        AddThemeFontSizeOverride("mono_font_size", size);
+        AddThemeColorOverride("default_color", color);
+        Text = text;
+        Loc.Changed += Refresh;
+        TreeExiting += () => Loc.Changed -= Refresh;
+    }
+
+    /// <summary>Sets the text (a key or a literal); numbers get the mono face.</summary>
+    public new string Text
+    {
+        get => _raw;
+        set { _raw = value ?? ""; Refresh(); }
+    }
+
+    void Refresh()
+    {
+        string s = Loc.Has(_raw) ? Loc.T(_raw) : _raw;
+        base.Text = Number.Replace(s.Replace("[", "[lb]"), m => "[code]" + m.Value + "[/code]");
     }
 }

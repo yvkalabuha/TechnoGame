@@ -7,14 +7,23 @@ namespace Singularity.Client.Spike;
 public static class Fonts
 {
     public static FontFile Text, Mono, Draft, Map;
+    /// <summary>Real weight instances of the variable fonts (wght axis), never synthetic emboldening.</summary>
+    public static Font DraftBold, MapBold;
 
     public static void Load()
     {
         Text = Make("GolosText"); Mono = Make("PTMono"); Draft = Make("Jura"); Map = Make("Literata");
+        DraftBold = Weight(Draft, 600); MapBold = Weight(Map, 700);
         var theme = ThemeDB.GetDefaultTheme();
         theme.DefaultFont = Text;
         theme.DefaultFontSize = 14;
     }
+
+    static Font Weight(Font f, int wght) => new FontVariation
+    {
+        BaseFont = f,
+        VariationOpentype = new Godot.Collections.Dictionary { [TextServerManager.GetPrimaryInterface().NameToTag("wght")] = wght },
+    };
 
     static FontFile Make(string name)
     {

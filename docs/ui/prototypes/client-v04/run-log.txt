@@ -1,0 +1,10 @@
+before: date 1945-11-26 tick 86 shares_in_force 0.28/0.15/0.10/0.42/0.05 tick_ms 0.00
+paused: tick 86 (was 86), pending 1, last Pending
+after: date 1946-02-22 tick 174 shares_in_force 0.45/0.11/0.07/0.34/0.03 last Applied pending 0 tick_ms 0.01
+refusal: last Rejected rejected_flag True reason BadShares
+why_not actor USA: target none, links 0
+why_not actor GBR: target none, links 0
+why_not actor SUN: target Requirement 1, links 2
+cleared: last Applied rejected_flag False
+audio demo: 3438592 bytes of PCM
+final: date 1947-01-26 tick 512
