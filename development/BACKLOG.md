@@ -117,7 +117,7 @@
 | [TASK-0100](../development/tasks/TASK-0100-event-sounds-pack.md) | IN_PROGRESS | Replace client event sounds with listening-pack r2 (#403) | MS-M1 |
 | [TASK-0101](../development/tasks/TASK-0101-ui-instrument-elements.md) | IN_PROGRESS | UI thematic instrument elements (flasks, pencil, ruler, caliper, soldering iron, protractor, gauges) | MS-M1 |
 | [TASK-0102](../development/tasks/TASK-0102-tick-bench-reregistration.md) | PROPOSED | Re-registered tick benchmark series (frequency rule revision, #405) | MS-M0 |
-| [TASK-0103](../development/tasks/TASK-0103-tick-allocations-gc.md) | APPROVED | Tick allocations and GC: 1.1 GB per month, gen2 collections (EXP-0007 P8) | MS-M0 |
+| [TASK-0103](../development/tasks/TASK-0103-tick-allocations-gc.md) | IN_PROGRESS | Tick allocations and GC: 1.1 GB per month, gen2 collections (EXP-0007 P8) | MS-M0 |
 
 ## Гипотезы
 

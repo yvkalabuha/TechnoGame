@@ -1,7 +1,7 @@
 ---
 id: TASK-0103
 title: "Tick allocations and GC: 1.1 GB per month, gen2 collections (EXP-0007 P8)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: simulation-engineer
