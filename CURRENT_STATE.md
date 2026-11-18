@@ -23,6 +23,8 @@
 - TASK-0077 [REVIEW] Client v0.5a: planisphere zoom and node icons, node card with schematic and effects, map click fix, starry sky (developer)
 - TASK-0064 [APPROVED] lab bench harness (ADR-0016 T1) (developer)
 - TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
+- TASK-0078 [APPROVED] ADR-0017 implementation: StateHash schedule, lazy LastHash, column CoW (developer)
+- TASK-0079 [APPROVED] F4-A: parallel ViewBuilder.Inputs per actor, TrainingBudget plan once per actor (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
