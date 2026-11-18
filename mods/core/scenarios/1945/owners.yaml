@@ -79,7 +79,7 @@ defaults:
   - {region: poland_masovian, owner: POL, controller: POL, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
   - {region: poland_former_german, owner: DEU, controller: POL, status: core, confidence: M, source: "Potsdam Protocol 1945-08-02 section IX: Polish administration east of the Oder-Neisse line pending the peace settlement; draft, T4 to verify; owner is a disputed point for the owner"}
   - {region: kaliningrad, owner: DEU, controller: SUN, status: core, confidence: M, source: "Potsdam Protocol 1945-08-02 section VI: Koenigsberg area under Soviet administration pending the peace settlement; draft, T4 to verify; owner is a disputed point for the owner"}
-  - {region: danzig, owner: DEU, controller: POL, status: core, confidence: M, source: "Potsdam Protocol 1945-08-02 section IX names the former Free City of Danzig among the areas under Polish administration; the owner of the Free City is an open question for the owner (DEBT-0043); draft, T4 to verify"} # Q59
+  - {region: danzig, owner: POL, controller: POL, status: core, confidence: M, source: "Potsdam Protocol 1945-08-02 section IX names the former Free City of Danzig among the areas under Polish administration; owner POL from t0 by decision #397 (Q59)"}
   - {region: germany_soviet_zone, owner: DEU, controller: SUN, status: core, confidence: M, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); draft, T4 to verify"}
   - {region: germany_british_zone, owner: DEU, controller: GBR, status: core, confidence: M, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); draft, T4 to verify"}
   - {region: germany_us_zone, owner: DEU, controller: USA, status: core, confidence: M, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); draft, T4 to verify"}
@@ -99,7 +99,7 @@ defaults:
   - {region: trieste_zone_a, owner: ITA, controller: AMG_TRIESTE, status: core, confidence: M, source: "Zone A under Allied Military Government (US and British) from 1945-06-12; Italian de jure until 1947-09-15 (RR-0020 C14, C17); draft, T4 to verify"}
   - {region: trieste_zone_b, owner: ITA, controller: YUG, status: core, confidence: M, source: "Zone B under Yugoslav military administration; Italian de jure until 1947-09-15 (RR-0020 C15, C17); draft, T4 to verify"}
 # World regions (TASK-0095): imported from docs/research/owners-1945-world.md (T4 draft of research-scientist). Source keys K1-K12 are listed there.
-# Rule (#313): owner = metropole/protector for colonies, mandates and protectorates; occupation changes the controller only. Open owner questions: Q59 Danzig, Q61 protectorate test, Q63 Tibet, Q64 Taiwan.
+# Rule (#313): owner = metropole/protector for colonies, mandates and protectorates; occupation changes the controller only. Owner decisions applied (TASK-0096): #397 Danzig owner POL; #399 protectorates owner = protecting power, independence by events; #400 Berlin is two regions (west, east); #401 Tibet owner and controller TIB until the 1950 event, Ogaden owner GBR, Spratly without owner (owner null, status unclaimed); #402 Taiwan as #313.
 # Mixed regions (F1 of the research) are given by the dominant part; the split is a map decision for the owner.
   - {region: afghanistan, owner: AFG, controller: AFG, status: core, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: akrotiri_sovereign_base_area, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
@@ -121,7 +121,7 @@ defaults:
   - {region: australia_victoria, owner: AUS, controller: AUS, status: core, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: australia_western_australia, owner: AUS, controller: AUS, status: core, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: azerbaijan, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
-  - {region: bahrain, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K1"} # Q61
+  - {region: bahrain, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K1"}
   - {region: bangladesh, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1, K6 B04–B07"}
   - {region: barbados, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: baykonur_cosmodrome, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
@@ -140,10 +140,10 @@ defaults:
   - {region: brazil_par, owner: BRA, controller: BRA, status: core, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: british_indian_ocean_territory, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: british_virgin_islands, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
-  - {region: brunei, owner: GBR, controller: GBR, status: protectorate, confidence: H, source: "owners-1945-world.md: K1"} # Q61
+  - {region: brunei, owner: GBR, controller: GBR, status: protectorate, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: burkina_faso, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: burundi, owner: BEL, controller: BEL, status: mandate, confidence: H, source: "owners-1945-world.md: K1, K8"}
-  - {region: cambodia, owner: FRA, controller: JPN, status: protectorate, confidence: L, source: "owners-1945-world.md: K3, K2"} # Q61
+  - {region: cambodia, owner: FRA, controller: JPN, status: protectorate, confidence: L, source: "owners-1945-world.md: K3, K2"}
   - {region: cameroon, owner: FRA, controller: FRA, status: mandate, confidence: H, source: "owners-1945-world.md: K1, K8"}
   - {region: cameroon_southern_british, owner: GBR, controller: GBR, status: mandate, confidence: H, source: "owners-1945-world.md: K1, K8"}
   - {region: canada_british_columbia, owner: CAN, controller: CAN, status: core, confidence: H, source: "owners-1945-world.md: K2"}
@@ -164,7 +164,7 @@ defaults:
   - {region: china_heilongjiang, owner: ROC, controller: SUN, status: core, confidence: M, source: "owners-1945-world.md: K3, K4, K11"}
   - {region: china_inner_mongol, owner: ROC, controller: ROC, status: core, confidence: L, source: "owners-1945-world.md: K2, K3"}
   - {region: china_sichuan, owner: ROC, controller: ROC, status: core, confidence: H, source: "owners-1945-world.md: K2, K3"}
-  - {region: china_tibet, owner: ROC, controller: TIB, status: core, confidence: M, source: "owners-1945-world.md: K2, K11"} # Q63
+  - {region: china_tibet, owner: TIB, controller: TIB, status: core, confidence: M, source: "owners-1945-world.md: K2, K11; #401 (de facto control; event tibet 1950-10-24)"}
   - {region: china_xinjiang, owner: ROC, controller: ROC, status: core, confidence: M, source: "owners-1945-world.md: K2"}
   - {region: clipperton_island, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: colombia_amazonas, owner: COL, controller: COL, status: core, confidence: H, source: "owners-1945-world.md: K2"}
@@ -190,6 +190,7 @@ defaults:
   - {region: equatorial_guinea, owner: ESP, controller: ESP, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: eritrea, owner: ITA, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K1, K6"}
   - {region: ethiopia_amhara, owner: ETH, controller: ETH, status: core, confidence: M, source: "owners-1945-world.md: K2"}
+  - {region: ethiopia_ogaden, owner: GBR, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K1; #401: Ogaden under British military administration (owner GBR by decision; Ethiopian de jure sovereignty ignored); status colony is the nearest of the allowed statuses (there is none for military administration)"}
   - {region: ethiopia_oromiya, owner: ETH, controller: ETH, status: core, confidence: M, source: "owners-1945-world.md: K2"}
   - {region: falkland_islands, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: federated_states_of_micronesia, owner: JPN, controller: USA, status: mandate, confidence: M, source: "owners-1945-world.md: K3, K8"}
@@ -216,11 +217,11 @@ defaults:
   - {region: hong_kong_s_a_r, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1, K3"}
   - {region: ifni, owner: ESP, controller: ESP, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: india_goa_daman_diu, owner: PRT, controller: PRT, status: colony, confidence: H, source: "owners-1945-world.md: K2, K6 B17"}
-  - {region: india_maharashtra, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K6 B05"} # Q61
+  - {region: india_maharashtra, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K6 B05"}
   - {region: india_odisha, owner: GBR, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K6 B05"}
   - {region: india_puducherry, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K6 B15"}
-  - {region: india_rajasthan, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K6 B05, B09"} # Q61
-  - {region: india_sikkim, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K6 B18"} # Q61
+  - {region: india_rajasthan, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K6 B05, B09"}
+  - {region: india_sikkim, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K6 B18"}
   - {region: indian_ocean_territories, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: indonesia_kalimantan_timur, owner: NLD, controller: AUS, status: colony, confidence: M, source: "owners-1945-world.md: K3, K9"}
   - {region: indonesia_riau, owner: NLD, controller: IDN, status: colony, confidence: L, source: "owners-1945-world.md: K3, K9"}
@@ -241,9 +242,9 @@ defaults:
   - {region: kiribati, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: korea_north_38, owner: KOR, controller: SUN, status: core, confidence: M, source: "owners-1945-world.md: K3, K7 #313"}
   - {region: korea_south_38, owner: KOR, controller: USA, status: core, confidence: M, source: "owners-1945-world.md: K3, K7 #313"}
-  - {region: kuwait, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K1"} # Q61
+  - {region: kuwait, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K1"}
   - {region: kyrgyzstan, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
-  - {region: laos, owner: FRA, controller: ROC, status: protectorate, confidence: L, source: "owners-1945-world.md: K3, K2"} # Q61
+  - {region: laos, owner: FRA, controller: ROC, status: protectorate, confidence: L, source: "owners-1945-world.md: K3, K2"}
   - {region: lebanon, owner: LBN, controller: LBN, status: core, confidence: M, source: "owners-1945-world.md: K2"}
   - {region: lesotho, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: liberia, owner: LBR, controller: LBR, status: core, confidence: H, source: "owners-1945-world.md: K2"}
@@ -252,9 +253,9 @@ defaults:
   - {region: macau_s_a_r, owner: PRT, controller: PRT, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: madagascar, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: malawi, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
-  - {region: malaysia, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1, K3"} # Q61
+  - {region: malaysia, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1, K3"}
   - {region: malaysia_borneo, owner: GBR, controller: AUS, status: colony, confidence: M, source: "owners-1945-world.md: K3, K9"}
-  - {region: maldives, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K1"} # Q61
+  - {region: maldives, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K1"}
   - {region: mali_kayes, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: mali_timbuktu, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: marshall_islands, owner: JPN, controller: USA, status: mandate, confidence: M, source: "owners-1945-world.md: K3, K8"}
@@ -266,7 +267,7 @@ defaults:
   - {region: mongolia_govi_altay, owner: ROC, controller: MNG, status: core, confidence: M, source: "owners-1945-world.md: K6 C34"}
   - {region: mongolia_mn_govi, owner: ROC, controller: MNG, status: core, confidence: M, source: "owners-1945-world.md: K6 C34"}
   - {region: montserrat, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
-  - {region: morocco, owner: FRA, controller: FRA, status: protectorate, confidence: M, source: "owners-1945-world.md: K1, K2"} # Q61
+  - {region: morocco, owner: FRA, controller: FRA, status: protectorate, confidence: M, source: "owners-1945-world.md: K1, K2"}
   - {region: mozambique, owner: PRT, controller: PRT, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: myanmar, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1, K3"}
   - {region: namibia, owner: ZAF, controller: ZAF, status: mandate, confidence: H, source: "owners-1945-world.md: K8"}
@@ -299,7 +300,7 @@ defaults:
   - {region: port_arthur, owner: ROC, controller: SUN, status: leased, confidence: H, source: "owners-1945-world.md: K11, K6 B01–B02"}
   - {region: portugal_azores, owner: PRT, controller: PRT, status: core, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: puerto_rico, owner: USA, controller: USA, status: core, confidence: H, source: "owners-1945-world.md: K1, K2"}
-  - {region: qatar, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K1"} # Q61
+  - {region: qatar, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K1"}
   - {region: republic_of_the_congo, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: russia_irkutsk, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: russia_khabarovsk, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
@@ -323,7 +324,7 @@ defaults:
   - {region: sazan, owner: ITA, controller: ALB, status: colony, confidence: M, source: "owners-1945-world.md: K6"}
   - {region: senegal, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: seychelles, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
-  - {region: siachen_glacier, owner: GBR, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K6 B09"} # Q61
+  - {region: siachen_glacier, owner: GBR, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K6 B09"}
   - {region: sierra_leone, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: singapore, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1, K3"}
   - {region: sint_maarten, owner: NLD, controller: NLD, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
@@ -334,30 +335,30 @@ defaults:
   - {region: south_africa_northern_cape, owner: ZAF, controller: ZAF, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: south_georgia_and_the_islands, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: spain, owner: ESP, controller: ESP, status: core, confidence: H, source: "owners-1945-world.md: K2"}
-  - {region: spratly_is, owner: FRA, controller: JPN, status: colony, confidence: L, source: "owners-1945-world.md: K3"}
+  - {region: spratly_is, owner: null, controller: JPN, status: unclaimed, confidence: L, source: "owners-1945-world.md: K3; #401: no owner (terra nullius), Japanese garrison until repatriation"}
   - {region: sri_lanka, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1, K6 B13"}
   - {region: sudan_north_kordufan, owner: SDN_AE, controller: SDN_AE, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: sudan_northern, owner: SDN_AE, controller: SDN_AE, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: suriname, owner: NLD, controller: NLD, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: swaziland, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: syria, owner: SYR, controller: SYR, status: core, confidence: M, source: "owners-1945-world.md: K2"}
-  - {region: taiwan, owner: JPN, controller: ROC, status: core, confidence: H, source: "owners-1945-world.md: K7 #313, #338, K6 C19"} # Q64
+  - {region: taiwan, owner: JPN, controller: ROC, status: core, confidence: H, source: "owners-1945-world.md: K7 #313, #338, K6 C19; #402 convention: owner stays JPN until the peace treaty (1952-04-28), controller is ROC from t0 (1945-10-25)"} # Taiwan convention (#402): owner and controller differ on purpose
   - {region: tajikistan, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
   - {region: tangier, owner: TANGIER, controller: ESP, status: core, confidence: M, source: "owners-1945-world.md: K5"}
-  - {region: tanzania_zanzibar, owner: GBR, controller: GBR, status: protectorate, confidence: H, source: "owners-1945-world.md: K1"} # Q61
+  - {region: tanzania_zanzibar, owner: GBR, controller: GBR, status: protectorate, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: tenda_brig, owner: ITA, controller: ITA, status: colony, confidence: L, source: "owners-1945-world.md: K6 C18"}
   - {region: thailand, owner: THA, controller: THA, status: core, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: the_bahamas, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: togo, owner: FRA, controller: FRA, status: mandate, confidence: H, source: "owners-1945-world.md: K1, K8"}
-  - {region: tonga, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K1"} # Q61
+  - {region: tonga, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K1"}
   - {region: trinidad_and_tobago, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
-  - {region: tunisia, owner: FRA, controller: FRA, status: protectorate, confidence: H, source: "owners-1945-world.md: K1"} # Q61
+  - {region: tunisia, owner: FRA, controller: FRA, status: protectorate, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: turkey, owner: TUR, controller: TUR, status: core, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: turkmenistan, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
   - {region: turks_and_caicos_islands, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: tuvalu, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: uganda, owner: GBR, controller: GBR, status: protectorate, confidence: H, source: "owners-1945-world.md: K1"}
-  - {region: united_arab_emirates, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K1"} # Q61
+  - {region: united_arab_emirates, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K1"}
   - {region: united_republic_of_tanzania_morogoro, owner: GBR, controller: GBR, status: mandate, confidence: H, source: "owners-1945-world.md: K1, K8"}
   - {region: united_republic_of_tanzania_tabora, owner: GBR, controller: GBR, status: mandate, confidence: H, source: "owners-1945-world.md: K1, K8"}
   - {region: united_states_minor_outlying_islands, owner: USA, controller: USA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
@@ -373,8 +374,8 @@ defaults:
   - {region: vanuatu, owner: NHEB, controller: NHEB, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: venezuela_apure, owner: VEN, controller: VEN, status: core, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: venezuela_bol_var, owner: VEN, controller: VEN, status: core, confidence: H, source: "owners-1945-world.md: K2"}
-  - {region: vietnam_central, owner: FRA, controller: ROC, status: protectorate, confidence: M, source: "owners-1945-world.md: K3, K2"} # Q61
-  - {region: vietnam_north, owner: FRA, controller: ROC, status: protectorate, confidence: M, source: "owners-1945-world.md: K3, K2"} # Q61
+  - {region: vietnam_central, owner: FRA, controller: ROC, status: protectorate, confidence: M, source: "owners-1945-world.md: K3, K2"}
+  - {region: vietnam_north, owner: FRA, controller: ROC, status: protectorate, confidence: M, source: "owners-1945-world.md: K3, K2"}
   - {region: vietnam_south_16, owner: FRA, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K3, K2"}
   - {region: wallis_and_futuna, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: western_sahara, owner: ESP, controller: ESP, status: colony, confidence: H, source: "owners-1945-world.md: K2"}

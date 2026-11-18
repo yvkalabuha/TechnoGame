@@ -80,8 +80,8 @@ rules:
   - subdivide: {within: [EGY-1550], parts: 5, base: egypt_al_wadi_at_jadid.al_wadi_at_jadid, method: voronoi}
   - subdivide: {within: [EGY-1556], parts: 2, base: egypt_al_wadi_at_jadid.al_bahr_al_ahmar, method: voronoi}
   - subdivide: {within: [ETH-3109], parts: 2, base: ethiopia_amhara.amhara, method: voronoi}
-  - subdivide: {within: [ETH-3131, ETH-3133, ETH-3136], parts: 4, base: ethiopia_oromiya.oromiya, method: voronoi}
-  - subdivide: {within: [ETH-3134, ETH-3135], parts: 4, base: ethiopia_oromiya.somali, method: voronoi}
+  - subdivide: {within: [ETH-3131, ETH-3133, ETH-3135, ETH-3136], parts: 4, base: ethiopia_oromiya.oromiya, method: voronoi}
+  - subdivide: {within: [ETH-3134], parts: 4, base: ethiopia_oromiya.somali, method: voronoi}
   - subdivide: {within: [GRL-2738, GRL-2743], parts: 6, base: greenland_nationalparken.qaasuitsup_kommunia, method: voronoi}
   - subdivide: {within: [GRL-2739], parts: 6, base: greenland_kommuneqarfik_sermersooq.kommuneqarfik_sermersooq, method: voronoi}
   - subdivide: {within: [GRL-2742], parts: 9, base: greenland_nationalparken.nationalparken, method: voronoi}

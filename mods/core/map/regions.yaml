@@ -109,6 +109,7 @@ regions:
   - {id: eritrea, capital_province: eritrea.gash_barka, isolated: false}
   - {id: estonia, capital_province: estonia.harju, isolated: false}
   - {id: ethiopia_amhara, capital_province: ethiopia_amhara.afar, isolated: false}
+  - {id: ethiopia_ogaden, capital_province: ethiopia_ogaden.somali_1, isolated: false}
   - {id: ethiopia_oromiya, capital_province: ethiopia_oromiya.southern_nations_nationalities_and_p, isolated: false}
   - {id: falkland_islands, capital_province: falkland_islands.falkland_islands, isolated: true}
   - {id: faroe_islands, capital_province: faroe_islands.eysturoyar, isolated: true}
