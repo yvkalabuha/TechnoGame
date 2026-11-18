@@ -56,3 +56,5 @@ F4-A из `docs/simulation/tick-profile-m0.md` §4: убрать повторн�
 **Проверка.** `lab selftest` (Release): 48/48, golden hash тот же. Тест: (24, 180, CrossEdges), 6 месяцев, команды в месяцах 1, 2, 4; threads 1/4/8/16 × ChunkSize 1/8/32 — одинаковые `StateHash` (HashAssert) и текст всего view по месяцам. `dotnet test Singularity.sln`: 0 падений (Audio 77, Arch 103, Kernel 330, Loc 131, Core 1060, Lab 21, Session 362).
 
 **Замер `ViewBuilder.Inputs`, (200, 2000, CrossEdges), месяц 1, Release, 16 ядер (справочно).** До (последовательно, путь threads=1 = прежний код): 240 и 238 мс. После (8 потоков): 51 и 42 мс (≈5×). Замер временным тестом, удалён.
+
+**Ревью (medium+low).** Ошибки актора пишутся в `Exception?[] errors[a]`, после цикла перебрасывается ошибка минимального актора через `ExceptionDispatchInfo` (как в TickRunner), тип не зависит от числа потоков; тест `tests/Singularity.Session.Tests/ViewInputsFailureTests.cs` (фантомные акторы, threads 1 и 8) использует internal-перегрузку `Inputs(w, month, maxThreads)`.
