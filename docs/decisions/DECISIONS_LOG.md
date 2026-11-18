@@ -420,3 +420,6 @@ Owner: prototype saves need no migrations until the first public build. An incom
 - Orchestrator reading of ADR-0018 §5: `-country-<ADM0_A3>` means `-country-<polity_id>`.
 
 The milestone plan and tick-benchmark-m0 must be updated: provinces move earlier than wave 3 (#308) | владелец (AskUserQuestion 2026-11-18) + Orchestrator |
+| 311 | 2026-11-18 | The main campaign starts on 1945-10-01; this revises the month in #130 (1945-09). By then the occupation zones are in place (Korea at the 38th parallel, Indochina at the 16th, the German and Austrian zones). The map owner and controller tables use `as_of` = 1945-10-01. The jet-aviation slice scenario (EXP-0002, frozen) is not changed; the date applies to the full campaign and its map | владелец (AskUserQuestion 2026-11-18) |
+| 312 | 2026-11-18 | Condominiums and joint administration (Anglo-Egyptian Sudan, New Hebrides, central Vienna, Tangier) are separate "joint" polities with a member list and a two-colour hatch. Events may dissolve them | владелец (AskUserQuestion 2026-11-18) |
+| 313 | 2026-11-18 | Disputed sovereignty in 1945: Germany and Korea are their own polities under occupation (owner without a government; controllers are the occupying powers). Taiwan: owner Japan until the transfer, controller ROC. FRG/GDR and the two Koreas may arise in play, or not | владелец (AskUserQuestion 2026-11-18) |
