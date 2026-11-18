@@ -179,7 +179,7 @@ public class CommandTests
             s.StepThroughMonth(1);
             hash ??= s.LastHash;
             log ??= s.CommandLog;
-            Assert.Equal(hash, s.LastHash);
+            HashAssert.Equal(hash, s.LastHash);
             Assert.Equal(log, s.CommandLog);
             Assert.Equal(cmds[1].Command is SetBudgetShares last ? last.Shares : default, s.World.SharesOf(0));   // the Harness key sorts after both players and applies last
         }
@@ -201,7 +201,7 @@ public class CommandTests
         Assert.True(player.Accepted > 0);
         string log = original.CommandLog;
         SliceSession replay = SliceSession.Replay(SliceTestData.Data, config, log, original.Tick);
-        Assert.Equal(original.LastHash, replay.LastHash);
+        HashAssert.Equal(original.LastHash, replay.LastHash);
         Assert.Equal(original.Tick, replay.Tick);
         Assert.Equal(original.Date, replay.Date);
         Assert.Equal(log, replay.CommandLog);
@@ -222,7 +222,7 @@ public class CommandTests
         Assert.Equal(n + 1, s.HashComputations);
         string h = s.LastHash;
         s.StepThroughMonth(1);                               // a monthly step
-        Assert.NotEqual(h, s.LastHash);
+        HashAssert.NotEqual(h, s.LastHash);
         Assert.True(s.HashComputations > n + 1);
     }
 
@@ -235,7 +235,7 @@ public class CommandTests
         Assert.True(a.Submit(SourceClass.Player, 0, 0, new SetEffortFocus(0, [47])).Accepted);
         a.Step(1);
         b.Step(1);
-        Assert.NotEqual(a.LastHash, b.LastHash);
+        HashAssert.NotEqual(a.LastHash, b.LastHash);
     }
 
     // ---- codec

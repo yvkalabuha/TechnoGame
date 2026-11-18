@@ -61,7 +61,7 @@ public class SparsityTests(ITestOutputHelper output)
     private HashSet<string> Changed(ulong seed, string column, int row, long delta, string? alsoShifted = null)
     {
         SliceSession a = Warm(seed), b = Warm(seed);
-        Assert.Equal(a.LastHash, b.LastHash);
+        HashAssert.Equal(a.LastHash, b.LastHash);
         Shift(b, column, row, delta);
         if (alsoShifted is not null)
             Shift(b, alsoShifted, row, delta);   // keeps the product invariant D0 = hidden + found + open

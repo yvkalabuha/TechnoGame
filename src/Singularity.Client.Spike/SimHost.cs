@@ -116,7 +116,7 @@ public sealed class SimHost : IDisposable
             string root = Environment.GetEnvironmentVariable("SINGULARITY_ROOT") ?? RepoRoot();
             Data = ModLoader.Load(Path.Combine(root, "mods", "core"));
             _status = "status.session";
-            _session = SliceSession.Create(Data, new SliceRunConfig { Seed = 7 });
+            _session = SliceSession.Create(Data, new SliceRunConfig { Seed = 7, HashCheckpoints = false });
             Layout = _session.Layout;
             var arr = ImmutableArray.CreateBuilder<BudgetShares?>(Layout.ActorIds.Length);
             for (int i = 0; i < Layout.ActorIds.Length; i++) arr.Add(null);

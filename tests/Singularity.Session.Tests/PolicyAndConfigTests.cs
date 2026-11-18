@@ -210,7 +210,7 @@ public class PolicyAndConfigTests
     [Fact]
     public void ProfileCell_EntersTheStateHash()
     {
-        Assert.NotEqual(Make(4, c => c with { ProfileCell = 0 }).LastHash, Make(4, c => c with { ProfileCell = 13 }).LastHash);
+        HashAssert.NotEqual(Make(4, c => c with { ProfileCell = 0 }).LastHash, Make(4, c => c with { ProfileCell = 13 }).LastHash);
     }
 
     // ---- channel switches (§6.2)

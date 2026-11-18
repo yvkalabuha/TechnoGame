@@ -23,7 +23,7 @@ internal static class ViewBuilder
         w.IndustryParameters.MasteredYield, w.PolicyParameters.FvBudget);
 
     /// <summary>The post state of <paramref name="month"/> (−1 before the first step); read for the compute of <c>month + 1</c>.</summary>
-    public static SliceView Snapshot(SliceWorld w, long tick, string hash, long month, MonthInputsView? inputs, MonthStepView? step)
+    public static SliceView Snapshot(SliceWorld w, long tick, string? hash, long month, MonthInputsView? inputs, MonthStepView? step)
     {
         var actors = ImmutableArray.CreateBuilder<ActorView>(w.Scenario.ActorCount);
         for (int a = 0; a < w.Scenario.ActorCount; a++)

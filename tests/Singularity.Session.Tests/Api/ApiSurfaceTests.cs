@@ -28,9 +28,9 @@ public class ApiSurfaceTests
     }
 
     [Fact]
-    public void TestApiVersion_IsEight_AllPinnedFilesExist_AndTheCurrentOneCarriesIt()
+    public void TestApiVersion_IsNine_AllPinnedFilesExist_AndTheCurrentOneCarriesIt()
     {
-        Assert.Equal(8, SliceSession.TestApiVersion);
+        Assert.Equal(9, SliceSession.TestApiVersion);
         Assert.All(Enumerable.Range(1, SliceSession.TestApiVersion), v => Assert.True(File.Exists(FilePath(v)), $"no pinned surface file for v{v}"));   // v1 stays as the record of the surface before TASK-0047
         Assert.StartsWith("# TestApiVersion = 1\n", File.ReadAllText(FilePath(1)).ReplaceLineEndings("\n"));
         Assert.StartsWith($"# TestApiVersion = {SliceSession.TestApiVersion}\n", File.ReadAllText(FilePath(SliceSession.TestApiVersion)).ReplaceLineEndings("\n"));
@@ -56,8 +56,7 @@ public class ApiSurfaceTests
         Assert.Contains("prop LkTables : Singularity.Core.Knowledge.LkTables? {", text);
         Assert.Contains("prop Actors : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.ActorView] {", text);   // a non-null struct stays as it was
         Assert.Contains("prop KnownSince : System.Nullable`1[System.Int64] {", text);                                          // a nullable value type keeps its own form
-        Assert.Contains("prop StateHash : System.String {", text);
-        Assert.DoesNotContain("prop StateHash : System.String? {", text);
+        Assert.Contains("prop StateHash : System.String? {", text);
         Assert.Contains("prop Requirement : Singularity.Session.RequirementView? {", text);
     }
 

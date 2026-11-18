@@ -73,7 +73,7 @@ public class LinkedRunTests
         {
             foreach (Run r in runs)
                 r.ThroughMonth(t);
-            Assert.All(runs, r => Assert.True(runs[0].Session.LastHash == r.Session.LastHash, $"month {t}: hash differs"));
+            Assert.All(runs, r => HashAssert.Equal(runs[0].Session.LastHash, r.Session.LastHash, $"month {t}: hash differs"));
         }
         Assert.True(runs[0].EffortSeen, "no process ever received effort money: the C-B path is not exercised");
         Assert.True(runs[0].PlannedSeen, "no project ever planned a process");
@@ -92,7 +92,7 @@ public class LinkedRunTests
             {
                 foreach (Run r in runs)
                     r.ThroughMonth(t);
-                Assert.All(runs, r => Assert.True(runs[0].Session.LastHash == r.Session.LastHash, $"seed {seed}, month {t}: hash differs"));
+                Assert.All(runs, r => HashAssert.Equal(runs[0].Session.LastHash, r.Session.LastHash, $"seed {seed}, month {t}: hash differs"));
             }
         }
     }
@@ -107,8 +107,8 @@ public class LinkedRunTests
             a.ThroughMonth(t);
             b.ThroughMonth(t);
         }
-        Assert.Equal(a.Session.LastHash, b.Session.LastHash);
-        Assert.True(Golden60 == a.Session.LastHash, $"golden hash changed: {a.Session.LastHash}; update only with a reason written in the commit message");
+        HashAssert.Equal(a.Session.LastHash, b.Session.LastHash);
+        HashAssert.Equal(Golden60, a.Session.LastHash, $"golden hash changed: {a.Session.LastHash}; update only with a reason written in the commit message");
     }
 
     [Fact]
@@ -121,7 +121,7 @@ public class LinkedRunTests
             a.ThroughMonth(t);
             b.ThroughMonth(t);
         }
-        Assert.Equal(a.Session.LastHash, b.Session.LastHash);
+        HashAssert.Equal(a.Session.LastHash, b.Session.LastHash);
         Assert.Equal(11_658, a.Session.Tick);                       // 1945-09-01 + 384 months: the month-383 step is on day 11 657
         Assert.Equal(new CivilDate(1977, 8, 2), a.Session.Date);
     }

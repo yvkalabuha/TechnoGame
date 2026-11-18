@@ -384,9 +384,9 @@ public class ProductAiSessionTests(ITestOutputHelper output)
         {
             foreach (SliceSession r in runs)
                 r.StepThroughMonth(t);
-            Assert.All(runs, r => Assert.True(runs[0].LastHash == r.LastHash, $"month {t}: hash differs"));
+            Assert.All(runs, r => HashAssert.Equal(runs[0].LastHash, r.LastHash, $"month {t}: hash differs"));
         }
-        Assert.True(Golden150 == runs[0].LastHash, $"golden hash of the AI run changed: {runs[0].LastHash}; update only with a reason written in the commit message");
+        HashAssert.Equal(Golden150, runs[0].LastHash, $"golden hash of the AI run changed: {runs[0].LastHash}; update only with a reason written in the commit message");
     }
 
     [Fact]
@@ -400,7 +400,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
             {
                 a.StepThroughMonth(t);
                 b.StepThroughMonth(t);
-                Assert.True(a.LastHash == b.LastHash, $"seed {seed}, month {t}: hash differs");
+                HashAssert.Equal(a.LastHash, b.LastHash, $"seed {seed}, month {t}: hash differs");
             }
         }
         SliceSession x = SliceTestData.Create(new SliceRunConfig { Seed = 3, Threads = 1 });
@@ -412,8 +412,8 @@ public class ProductAiSessionTests(ITestOutputHelper output)
             y.StepThroughMonth(t);
             z.StepThroughMonth(t);
         }
-        Assert.Equal(x.LastHash, z.LastHash);
-        Assert.Equal(x.LastHash, y.LastHash);
+        HashAssert.Equal(x.LastHash, z.LastHash);
+        HashAssert.Equal(x.LastHash, y.LastHash);
     }
 
     // Seed 7, the AI on, 150 months (through month 149). First recorded in T6c; re-recorded in D1 (c5867d91… before), reason: D1 — the start-data

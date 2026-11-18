@@ -55,8 +55,8 @@ public class A41OptionsTests
     public void Options_ChangeTheCompositionsTheAiChooses_AndL1L2Hold()
     {
         string a = Run(3, 1, 384).LastHash;
-        Assert.Equal(a, Run(3, 1, 384).LastHash);
-        Assert.Equal(a, Run(3, 4, 384).LastHash);
+        HashAssert.Equal(a, Run(3, 1, 384).LastHash);
+        HashAssert.Equal(a, Run(3, 4, 384).LastHash);
         int whole = 0, p3 = 0;
         foreach (ulong seed in Seeds)
         {

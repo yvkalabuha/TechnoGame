@@ -270,7 +270,7 @@ public class ProductAiContractPropertyTests(ITestOutputHelper output)
             {
                 foreach (SliceSession r in runs)
                     r.StepThroughMonth(t);
-                Assert.All(runs, r => Assert.True(runs[0].LastHash == r.LastHash, $"seed {seed} month {t}: hash differs"));
+                Assert.All(runs, r => HashAssert.Equal(runs[0].LastHash, r.LastHash, $"seed {seed} month {t}: hash differs"));
             }
         }
     }

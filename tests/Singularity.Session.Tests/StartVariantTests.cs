@@ -181,7 +181,8 @@ public class StartVariantTests
         SliceSession sym = SliceTestData.Create(new SliceRunConfig { Seed = 4, Start = StartVariant.Symmetric });
         foreach (SliceSession s in new[] { main, pert, sym })
             s.StepThroughMonth(24);
-        Assert.Equal(3, new[] { main.LastHash, pert.LastHash, sym.LastHash }.Distinct().Count());
+        string[] finals = [main.LastHash, pert.LastHash, sym.LastHash];
+        Assert.Equal(3, finals.Distinct().Count());
         Assert.Equal(pert.World.Scenario.BudgetIndex[0], pert.World.BudgetAtStart[0]);
         Assert.Equal(sym.World.Industry.ToolingM(0, 0, Dimension.Precision), sym.World.Industry.ToolingM(2, 0, Dimension.Precision));
     }

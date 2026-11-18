@@ -41,8 +41,8 @@ public class SeriesSwitchTests
             ViewMode = SliceViewMode.Calibration,
         };
         SliceSession s = Run(explicitDefaults, 150);
-        Assert.Equal(MainSeed1Month149, s.LastHash);
-        Assert.Equal(MainSeed1Month149, Run(Base() with { ViewMode = SliceViewMode.Full }, 150).LastHash);
+        HashAssert.Equal(MainSeed1Month149, s.LastHash);
+        HashAssert.Equal(MainSeed1Month149, Run(Base() with { ViewMode = SliceViewMode.Full }, 150).LastHash);
         Assert.DoesNotContain(s.World.Table.Columns, c => c.Name.StartsWith("run.layer", StringComparison.Ordinal) || c.Name is "run.grid" or "run.effort_share");
         Assert.Equal(SliceTestData.Create(Base()).World.SchemaFingerprint(), SliceTestData.Create(explicitDefaults).World.SchemaFingerprint());
         Assert.Equal(8, SliceWorld.SchemaVersion);
@@ -53,7 +53,7 @@ public class SeriesSwitchTests
     {
         SliceSession a = Run(Base(3), 384);
         SliceSession b = Run(Base(3) with { Layer = LayerControl.Full, Grid = default, EffortShare = EffortShareArm.X1, ViewMode = SliceViewMode.Calibration, Threads = 4 }, 384);
-        Assert.Equal(a.LastHash, b.LastHash);
+        HashAssert.Equal(a.LastHash, b.LastHash);
         Assert.Equal(11_658, a.Tick);
     }
 
@@ -102,7 +102,7 @@ public class SeriesSwitchTests
         Assert.True(opened > 0, "the schedule opened no node in 120 months");
         // The model of knowledge is off: K_d and progress are not updated.
         Assert.Equal(kd0, Enumerable.Range(0, w.Scenario.ActorCount).Select(a => w.Knowledge.KD(a, 0)));
-        Assert.NotEqual(main.LastHash, lk.LastHash);
+        HashAssert.NotEqual(main.LastHash, lk.LastHash);
         Assert.Contains(w.Table.Columns, c => c.Name == "run.layer");
         Assert.Contains(w.Table.Columns, c => c.Name == "run.layer.tables");
         Assert.NotEqual(ViewSupport.TrajectoryDigest(main), ViewSupport.TrajectoryDigest(lk));
@@ -115,8 +115,8 @@ public class SeriesSwitchTests
         Assert.Equal(H(Tables()), H(Tables(), 4));
         Assert.NotEqual(H(Tables()), H(Tables(clockShift: 1)));
         string fresh = SliceTestData.Create(Base() with { Layer = LayerControl.Lk, LkTables = Tables() }).LastHash;
-        Assert.Equal(fresh, SliceTestData.Create(Base() with { Layer = LayerControl.Lk, LkTables = Tables() }).LastHash);
-        Assert.NotEqual(fresh, SliceTestData.Create(Base() with { Layer = LayerControl.Lk, LkTables = Tables(1) }).LastHash);
+        HashAssert.Equal(fresh, SliceTestData.Create(Base() with { Layer = LayerControl.Lk, LkTables = Tables() }).LastHash);
+        HashAssert.NotEqual(fresh, SliceTestData.Create(Base() with { Layer = LayerControl.Lk, LkTables = Tables(1) }).LastHash);
     }
 
     [Fact]
@@ -163,9 +163,9 @@ public class SeriesSwitchTests
             }
         }
         Assert.Contains(main.View.Actors.SelectMany(a => a.Nodes).Where(n => n.Process is not null), n => n.Process!.Value.Yield != Fx6.One);
-        Assert.NotEqual(main.LastHash, lc0.LastHash);
+        HashAssert.NotEqual(main.LastHash, lc0.LastHash);
         Assert.NotEqual(ViewSupport.TrajectoryDigest(main), ViewSupport.TrajectoryDigest(lc0));
-        Assert.Equal(lc0.LastHash, Run(Base() with { Layer = LayerControl.Lc0, Threads = 4 }, 100).LastHash);
+        HashAssert.Equal(lc0.LastHash, Run(Base() with { Layer = LayerControl.Lc0, Threads = 4 }, 100).LastHash);
     }
 
     // ---- grid
@@ -228,7 +228,7 @@ public class SeriesSwitchTests
         SliceSession main = Run(Base(), 120);
         var cell = new GridCell(kc, kd, hm);
         SliceSession s = Run(Base() with { Grid = cell }, 120);
-        Assert.NotEqual(main.LastHash, s.LastHash);
+        HashAssert.NotEqual(main.LastHash, s.LastHash);
         Assert.NotEqual(ViewSupport.TrajectoryDigest(main), ViewSupport.TrajectoryDigest(s));
         Assert.Contains(s.World.Table.Columns, c => c.Name == "run.grid");
         // The parameters of the world are the stepped ones.
@@ -304,7 +304,7 @@ public class SeriesSwitchTests
         SliceSession a = SliceTestData.Create(Base() with { Grid = cell });
         var column = (IntColumn)a.World.Table.Columns.Single(c => c.Name == "run.grid");
         Assert.All(column.Current.ToArray(), v => Assert.Equal(9 * 2 + 3 * 1 + 2, v));
-        Assert.Equal(Run(Base() with { Grid = cell }, 60).LastHash, Run(Base() with { Grid = cell, Threads = 4, ChunkSize = 2 }, 60).LastHash);
+        HashAssert.Equal(Run(Base() with { Grid = cell }, 60).LastHash, Run(Base() with { Grid = cell, Threads = 4, ChunkSize = 2 }, 60).LastHash);
     }
 
     // ---- effort share
@@ -353,7 +353,7 @@ public class SeriesSwitchTests
     {
         SliceSession main = Run(Base(), 100);
         SliceSession s = Run(Base() with { EffortShare = arm }, 100);
-        Assert.NotEqual(main.LastHash, s.LastHash);
+        HashAssert.NotEqual(main.LastHash, s.LastHash);
         Assert.NotEqual(ViewSupport.TrajectoryDigest(main), ViewSupport.TrajectoryDigest(s));
         var column = (IntColumn)s.World.Table.Columns.Single(c => c.Name == "run.effort_share");
         Assert.All(column.Current.ToArray(), v => Assert.Equal((int)arm, v));
@@ -370,7 +370,7 @@ public class SeriesSwitchTests
         foreach (EffortShareArm arm in Enum.GetValues<EffortShareArm>())
         {
             string h = Run(Base() with { EffortShare = arm }, 60).LastHash;
-            Assert.Equal(h, Run(Base() with { EffortShare = arm, Threads = 4, ChunkSize = 2 }, 60).LastHash);
+            HashAssert.Equal(h, Run(Base() with { EffortShare = arm, Threads = 4, ChunkSize = 2 }, 60).LastHash);
             hashes.Add(h);
         }
         Assert.Equal(5, hashes.Distinct().Count());

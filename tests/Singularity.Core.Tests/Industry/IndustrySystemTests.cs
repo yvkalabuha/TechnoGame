@@ -172,7 +172,7 @@ public class IndustrySystemTests
         OutputReport[] expected = [new(0, 7, D(3), D(30)), new(0, 39, D(2), D(20)), new(2, 7, D(5), D(50))];
         Assert.Equal(expected, a.System.LastReports);
         Assert.Equal(expected, b.System.LastReports);
-        Assert.Equal(StateHash.ComputeHex(a.Table, 1), StateHash.ComputeHex(b.Table, 1));
+        HashAssert.Equal(StateHash.ComputeHex(a.Table, 1), StateHash.ComputeHex(b.Table, 1));
         Assert.Equal(D(50), a.System.ProcV(2, a.Row(7)));
     }
 

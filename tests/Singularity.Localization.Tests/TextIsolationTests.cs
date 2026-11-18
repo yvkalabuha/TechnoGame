@@ -44,8 +44,8 @@ public class TextIsolationTests : IDisposable
         Assert.Equal(withLocale.DataHash, without.DataHash);
         Assert.Equal(withLocale.DataHash, edited.DataHash);
         string baseline = StateHashAfterTicks(withLocale);
-        Assert.Equal(baseline, StateHashAfterTicks(without));
-        Assert.Equal(baseline, StateHashAfterTicks(edited));
+        HashAssert.Equal(baseline, StateHashAfterTicks(without));
+        HashAssert.Equal(baseline, StateHashAfterTicks(edited));
     }
 
     [Fact]

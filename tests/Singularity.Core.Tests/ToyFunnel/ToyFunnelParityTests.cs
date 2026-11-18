@@ -45,7 +45,7 @@ public class ToyFunnelParityTests
         var p = ToyRun.Params(model, nu, beta, gamma, R(cTau0), R(deltaTau), countries);
         ToyRun.Result r = ToyRun.Run(p, seed, threads: 4, chunkSize: 5);
 
-        Assert.Equal(stateHash, r.Model.PrototypeStateHash(r.FinalTick));
+        HashAssert.Equal(stateHash, r.Model.PrototypeStateHash(r.FinalTick));
         // r.GoldenHash is StateHash without the tick (TASK-0050), so it is no longer the prototype's layout.
         (string y, string m, string ms) = ToyRun.Digests(r, countries);
         Assert.Equal(yearly, y);
@@ -87,7 +87,7 @@ public class ToyFunnelParityTests
             BinaryPrimitives.WriteInt32LittleEndian(cell, v);
             hash.AppendData(cell[..4]);
         }
-        Assert.Equal(Convert.ToHexStringLower(hash.GetHashAndReset()), r.Model.PrototypeStateHash(r.FinalTick));
+        HashAssert.Equal(Convert.ToHexStringLower(hash.GetHashAndReset()), r.Model.PrototypeStateHash(r.FinalTick));
     }
 
     [Fact]

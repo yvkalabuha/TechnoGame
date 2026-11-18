@@ -38,7 +38,7 @@ public class KnowledgeReferenceTrajectoryTests
         {
             a.RunThroughMonth(t);
             b.RunThroughMonth(t);
-            Assert.Equal(StateHash.ComputeHex(a.Table, 1), StateHash.ComputeHex(b.Table, 1));
+            HashAssert.Equal(StateHash.ComputeHex(a.Table, 1), StateHash.ComputeHex(b.Table, 1));
             for (int r = 0; r < a.Graph.Count; r++)
                 Assert.Equal(a.System.LastStep(0, r), b.System.LastStep(0, r));
         }

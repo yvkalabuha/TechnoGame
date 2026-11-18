@@ -94,7 +94,7 @@ public class AssembledSliceProperties
                 // Verdicts depend only on (source, local_n): the multiset of outcomes is the same in any order.
                 Assert.Equal(refVerdicts.Order().ToList(), verdicts.Order().ToList());
                 Assert.Equal(reference.CommandLog, s.CommandLog);
-                Assert.Equal(reference.LastHash, s.LastHash);
+                HashAssert.Equal(reference.LastHash, s.LastHash);
             }
         }
     }
@@ -138,11 +138,11 @@ public class AssembledSliceProperties
         {
             var cfg = new SliceRunConfig { Seed = 21, Threads = threads, ChunkSize = chunk };
             SliceSession full = SliceSession.Replay(SliceTestData.Data, cfg, original.CommandLog, original.Tick);
-            Assert.Equal(original.LastHash, full.LastHash);
+            HashAssert.Equal(original.LastHash, full.LastHash);
             Assert.Equal(original.CommandLog, full.CommandLog);
             // "Save at mid": the log prefix replayed to the same tick gives the hash seen then.
             SliceSession prefix = SliceSession.Replay(SliceTestData.Data, cfg, midLog, mid);
-            Assert.Equal(midHash, prefix.LastHash);
+            HashAssert.Equal(midHash, prefix.LastHash);
         }
         // Replaying a replay is a fixed point.
         SliceSession again = SliceSession.Replay(SliceTestData.Data, new SliceRunConfig { Seed = 21 }, original.CommandLog, original.Tick);
@@ -155,7 +155,7 @@ public class AssembledSliceProperties
         SliceSession original = RunScript(Script(2), 1, new SliceRunConfig { Seed = 21 }, out _);
         original.Step(60);
         SliceSession other = SliceSession.Replay(SliceTestData.Data, new SliceRunConfig { Seed = 22 }, original.CommandLog, original.Tick);
-        Assert.NotEqual(original.LastHash, other.LastHash);
+        HashAssert.NotEqual(original.LastHash, other.LastHash);
     }
 
     [Fact]
@@ -168,7 +168,7 @@ public class AssembledSliceProperties
             SliceSession s = RunScript(script, 2, new SliceRunConfig { Seed = 13, Threads = threads, ChunkSize = threads }, out _);
             s.Step(120);
             hash ??= s.LastHash;
-            Assert.Equal(hash, s.LastHash);
+            HashAssert.Equal(hash, s.LastHash);
         }
     }
 

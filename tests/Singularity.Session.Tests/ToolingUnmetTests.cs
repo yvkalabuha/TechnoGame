@@ -63,7 +63,7 @@ public class ToolingUnmetTests
         }
         Assert.True(positive, "the pool never ran out in 150 months of seed 41: the column is never written");
         string withColumn = s.LastHash;
-        Assert.Equal(withColumn, Run(new SliceRunConfig { Seed = 41, Threads = 1 }, 150).LastHash);   // L1/L2 on the new column
+        HashAssert.Equal(withColumn, Run(new SliceRunConfig { Seed = 41, Threads = 1 }, 150).LastHash);   // L1/L2 on the new column
     }
 
     [Fact]
@@ -123,10 +123,10 @@ public class ToolingUnmetTests
         Fx6 b = whole.World.SharesOf(0).Capability * whole.World.Policy.Budget(0);
         Assert.Equal(b, whole.World.IndustryInputs.Plan(0, 0, Fx6.Zero).CapBudget);
         Assert.Equal(Fx6.FromRaw((long)((Int128)500_000 * whole.World.SharesOf(0).Capability.Raw * whole.World.Policy.Budget(0).Raw / 1_000_000_000_000)), half.World.IndustryInputs.Plan(0, 0, Fx6.Zero).CapBudget);
-        Assert.NotEqual(Run(cfg, 24).LastHash, Run(cfg with { ToolingTarget = new ToolingTargetSpec { KCap = Fx6.FromRaw(500_000) } }, 24).LastHash);
+        HashAssert.NotEqual(Run(cfg, 24).LastHash, Run(cfg with { ToolingTarget = new ToolingTargetSpec { KCap = Fx6.FromRaw(500_000) } }, 24).LastHash);
         string can = Run(cfg, 24).LastHash;
-        Assert.Equal(can, Run(cfg with { ToolingTarget = new ToolingTargetSpec { PoolOrder = PoolOrder.Can } }, 24).LastHash);
-        Assert.NotEqual(can, Run(cfg with { ToolingTarget = new ToolingTargetSpec { PoolOrder = PoolOrder.Prop } }, 24).LastHash);
+        HashAssert.Equal(can, Run(cfg with { ToolingTarget = new ToolingTargetSpec { PoolOrder = PoolOrder.Can } }, 24).LastHash);
+        HashAssert.NotEqual(can, Run(cfg with { ToolingTarget = new ToolingTargetSpec { PoolOrder = PoolOrder.Prop } }, 24).LastHash);
     }
 
     [Theory]
@@ -137,8 +137,8 @@ public class ToolingUnmetTests
     {
         var spec = new ToolingTargetSpec { PoolOrder = order };
         string h1 = Run(new SliceRunConfig { Seed = 61, Threads = 1, ToolingTarget = spec }, 60).LastHash;
-        Assert.Equal(h1, Run(new SliceRunConfig { Seed = 61, Threads = 4, ToolingTarget = spec }, 60).LastHash);
-        Assert.Equal(h1, Run(new SliceRunConfig { Seed = 61, Threads = 8, ToolingTarget = spec }, 60).LastHash);
+        HashAssert.Equal(h1, Run(new SliceRunConfig { Seed = 61, Threads = 4, ToolingTarget = spec }, 60).LastHash);
+        HashAssert.Equal(h1, Run(new SliceRunConfig { Seed = 61, Threads = 8, ToolingTarget = spec }, 60).LastHash);
     }
 
     [Theory]

@@ -69,7 +69,7 @@ public class IndustryReferenceTrajectoryTests
         {
             a.RunThroughMonth(t);
             b.RunThroughMonth(t);
-            Assert.Equal(StateHash.ComputeHex(a.Table, 1), StateHash.ComputeHex(b.Table, 1));
+            HashAssert.Equal(StateHash.ComputeHex(a.Table, 1), StateHash.ComputeHex(b.Table, 1));
         }
     }
 

@@ -230,7 +230,7 @@ public class T6dTests
             }
         }
         Assert.True(disrupted, "LIC_OFF must keep the alloy disruptions");
-        Assert.NotEqual(off.LastHash, lic.LastHash);
+        HashAssert.NotEqual(off.LastHash, lic.LastHash);
     }
 
     // ---- item 8: lic_knows

@@ -89,7 +89,7 @@ public class LicenceQueueDeterminismTests
 
         SliceSession restored = SliceTestData.Create(cfg);
         Run(restored, 0, (int)month + 1);
-        Assert.Equal(boundaryHash, restored.LastHash);
+        HashAssert.Equal(boundaryHash, restored.LastHash);
         WipeQueue(restored);
         Assert.False(Queued(restored));
         Restore(restored.World.Table, snap, skipQueue: false);

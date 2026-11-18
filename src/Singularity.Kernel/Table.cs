@@ -14,7 +14,43 @@ public sealed class Table
         RowCount = rowCount;
     }
 
+    private bool _inTick;
+    private long _version;
+
     public int RowCount { get; }
+
+    /// <summary>Grows with every change of any <c>Current</c>: a swap that exchanged a column or a <c>Column.Load</c> (ADR-0017 п. 6).</summary>
+    public long Version => _version;
+
+    /// <summary>True from the start of a tick to its swap; <c>Column.Next</c> works only then.</summary>
+    internal bool InTick => Volatile.Read(ref _inTick);
+
+    /// <summary>
+    /// Test switch: copy every column at the start of each non-empty tick (the pre-ADR-0017 behaviour) instead of copy-on-write.
+    /// The state and its hash must not depend on it.
+    /// </summary>
+    public bool FullCopyMode { get; set; }
+
+    internal void BumpVersion() => _version++;
+
+    internal void BeginTick()
+    {
+        // Flags left open by an aborted tick are dropped here as well.
+        for (int i = 0; i < _columns.Count; i++)
+            _columns[i].Close();
+        Volatile.Write(ref _inTick, true);
+        if (FullCopyMode)
+            CopyCurrentToNext();
+    }
+
+    internal void EndTick(bool completed)
+    {
+        Volatile.Write(ref _inTick, false);
+        if (completed)
+            return;
+        for (int i = 0; i < _columns.Count; i++)
+            _columns[i].Close();
+    }
 
     public IReadOnlyList<Column> Columns => _columns;
 
@@ -32,14 +68,19 @@ public sealed class Table
             _columns[i].CopyCurrentToNext();
     }
 
+    /// <summary>Swaps the open columns in registration order and closes them; untouched columns keep their Current.</summary>
     internal void Swap()
     {
+        bool any = false;
         for (int i = 0; i < _columns.Count; i++)
-            _columns[i].Swap();
+            any |= _columns[i].SwapIfOpen();
+        if (any)
+            _version++;
     }
 
     private T Add<T>(T column) where T : Column
     {
+        column.Attach(this);
         _columns.Add(column);
         return column;
     }
