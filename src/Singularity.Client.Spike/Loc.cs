@@ -16,8 +16,11 @@ namespace Singularity.Client.Spike;
 public static class Loc
 {
     public static readonly string[] Languages = { "ru", "en" };
-    static readonly HashSet<string> Known = new();   // lookup only, never enumerated for output
+    static readonly HashSet<string> Known = new();
+    static readonly Dictionary<string, string> Messages = new();   // "lang|key" -> text; lookup only, never enumerated
     public static string Lang { get; private set; } = "ru";
+    /// <summary>Settings «date and numbers: ISO»: a decimal point in every language.</summary>
+    public static bool IsoNumbers;
     public static event Action Changed;
 
     public static void Load()
@@ -33,6 +36,7 @@ public static class Loc
                 {
                     if (rows[r].Count <= c || rows[r][0] == "") continue;
                     tr.AddMessage(rows[r][0], rows[r][c].Replace("\\n", "\n"));
+                    Messages[head[c] + "|" + rows[r][0]] = rows[r][c];
                     Known.Add(rows[r][0]);
                 }
                 TranslationServer.AddTranslation(tr);
@@ -53,8 +57,11 @@ public static class Loc
     public static string N(double v, int decimals = 2)
     {
         string s = v.ToString("F" + decimals, CultureInfo.InvariantCulture);
-        return Lang == "ru" ? s.Replace('.', ',') : s;
+        return Lang == "ru" && !IsoNumbers ? s.Replace('.', ',') : s;
     }
+
+    /// <summary>Text of a key in a given language regardless of the current one (search by the RU and EN names).</summary>
+    public static string In(string lang, string key) => Messages.TryGetValue(lang + "|" + key, out var v) ? v : key;
 
     public static bool Has(string key) => Known.Contains(key);
 

@@ -35,7 +35,7 @@ public sealed partial class SignalField : PanelContainer
     readonly SimHost _host;
     readonly Label _date = Ui.Lbl("—", 18, null, FontKind.Mono);
     readonly Label _perf = Ui.Lbl("", 14, Ui.Ink3, FontKind.Mono);
-    readonly Segment _speed, _lang;
+    readonly TimeControl _speed;
     readonly Place[] _places;
     readonly Place _fail;
     readonly int _actor;   // signals and orders belong to the player's own power only
@@ -44,19 +44,21 @@ public sealed partial class SignalField : PanelContainer
     /// <summary>A place got a signal (true) or lost it (false); the key is the place key (sig.alloy, ...). Sounds follow this event.</summary>
     public event Action<string, bool> SignalChanged;
     public event Action AudioPressed;
+    public event Action MenuPressed;
 
     public int Actor => _actor;
     public bool Debug { set => _perf.Visible = value; }
-    public void SetSpeed(int s) { _speed.Select(s, false); _host.Speed = s; }
+    public void SetSpeed(int s) { _speed.Select(s, false); _host.Speed = _speed.Selected; }
+    public void StepSpeed(int d) => _speed.Step(d);
+    public void TogglePause() => _speed.TogglePause();
     /// <summary>Screenshot run: acknowledges every new signal as a click would.</summary>
     public void AckAll() { foreach (var p in _places.Append(_fail)) if (p.State == PState.New) { p.State = PState.Acked; Paint(p); } }
-    public void SetLang(string lang) => _lang.Select(Array.IndexOf(Loc.Languages, lang), true);
-
+    
     public SignalField(SimHost host, int player)
     {
         _host = host; _actor = player;
         CustomMinimumSize = new Vector2(0, 46);
-        AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, Ui.Ink, 1, 8));
+        AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, Ui.Ink, 1, 8, 0));
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 10);
         AddChild(row);
@@ -65,8 +67,7 @@ public sealed partial class SignalField : PanelContainer
         _date.TooltipText = "tip.date"; _date.MouseFilter = MouseFilterEnum.Pass;
         row.AddChild(_date);
 
-        _speed = new Segment(new[] { "speed.pause", "speed.day", "speed.week", "speed.month" }, 0);
-        _speed.TooltipText = "tip.tempo";
+        _speed = new TimeControl();
         _speed.Changed += i => _host.Speed = i;
         row.AddChild(_speed);
 
@@ -87,10 +88,9 @@ public sealed partial class SignalField : PanelContainer
         snd.TooltipText = "tip.audio";
         row.AddChild(snd);
         row.AddChild(Ui.VRule());
-        _lang = new Segment(new[] { "RU", "EN" }, Math.Max(0, Array.IndexOf(Loc.Languages, Loc.Lang)), 14, false);
-        _lang.TooltipText = "tip.lang";
-        _lang.Changed += i => Loc.SetLang(Loc.Languages[i]);
-        row.AddChild(_lang);
+        var menu = new MenuButton3Lines { TooltipText = "tip.menu" };
+        menu.Pressed += () => MenuPressed?.Invoke();
+        row.AddChild(menu);
         _perf.Visible = false;
         Loc.Changed += Refresh;
         TreeExiting += () => Loc.Changed -= Refresh;
@@ -120,27 +120,29 @@ public sealed partial class SignalField : PanelContainer
         switch (p.State)
         {
             case PState.New:   // plate + double frame
-                p.Box.AddThemeStyleboxOverride("panel", Ui.Box(p.Plate, Ui.Ink, 3, 6));
+                p.Box.AddThemeStyleboxOverride("panel", Ui.Box(p.Plate, Ui.Ink, 3, 6, Ui.R1));
                 p.Node.AddThemeColorOverride("font_color", p.Plate == Ui.Alarm ? Colors.White : Ui.Ink);
                 p.Marker.Visible = false;
                 break;
             case PState.Acked:   // the same calm frame as at rest; the deviation is only the filled ■
-                p.Box.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, Ui.Rule, 1, 6));
+                p.Box.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, Ui.Rule, 1, 6, Ui.R1));
                 p.Node.AddThemeColorOverride("font_color", Ui.Ink);
                 SetMarker(p, marker, true);
                 break;
             case PState.Cleared:   // hollow □: the signal was lifted
-                p.Box.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, Ui.Rule, 1, 6));
+                p.Box.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, Ui.Rule, 1, 6, Ui.R1));
                 p.Node.AddThemeColorOverride("font_color", Ui.Ink2);
                 SetMarker(p, Ui.Ink2, false);
                 break;
             default:
-                p.Box.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, p.Real ? Ui.Rule : Colors.Transparent, 1, 6));
+                p.Box.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, p.Real ? Ui.Rule : Colors.Transparent, 1, 6, Ui.R1));
                 p.Node.AddThemeColorOverride("font_color", Ui.Ink3);
                 p.Marker.Visible = false;
                 break;
         }
-        p.Node.Text = p.Count > 0 && p.State is PState.New or PState.Acked ? Loc.T(p.Key) + " " + p.Count : p.Key;
+        // A new alert carries its sign (▲ warn, ■ alarm), a second channel besides colour (#326).
+        string sign = p.State == PState.New ? (p.Plate == Ui.Warn ? "▲ " : "■ ") : "";
+        p.Node.Text = p.Count > 0 && p.State is PState.New or PState.Acked ? sign + Loc.T(p.Key) + " " + p.Count : p.State == PState.New ? sign + Loc.T(p.Key) : p.Key;
         p.Box.TooltipText = p.State == PState.Cleared ? "tip.sig.cleared" : p.Real ? "tip.sig.real" : "tip.sig.mock";
         p.Box.QueueRedraw();
     }
@@ -178,7 +180,7 @@ public sealed partial class SignalField : PanelContainer
         }
         var s = _host.Snap;
         if (s == null) { _date.Text = _host.Fatal != null ? Loc.T("sig.fail") : Loc.T(_host.Status); return; }
-        _date.Text = s.Date.ToString();
+        _date.Text = Settings.Date(s.Date);
         _perf.Text = $"tick {s.Tick} · {s.LastTickMs.ToString("F1", CultureInfo.InvariantCulture)} ms" + (s.JobError != "" ? " · " + s.JobError : "");
         if (s.Seq == _seq) return;
         _seq = s.Seq;
@@ -191,5 +193,23 @@ public sealed partial class SignalField : PanelContainer
         Set(_places[0], _alloyKnown && _alloyDeficit > 0);
         Set(_places[1], refusals > 0, (int)Math.Min(refusals, 99));
         Set(_places[2], _rejects > 0 && s.LastRejected, (int)Math.Min(_rejects, 99));
+    }
+}
+
+/// <summary>Menu button: three lines on a radius.2 plate (#302: the language switch left the signal field, the menu took its place).</summary>
+public sealed partial class MenuButton3Lines : Button
+{
+    public MenuButton3Lines()
+    {
+        CustomMinimumSize = new Vector2(34, 30); FocusMode = FocusModeEnum.None;
+        AddThemeStyleboxOverride("normal", Ui.Box(Ui.Sheet, Ui.Ink, 1, 0, Ui.R2));
+        AddThemeStyleboxOverride("hover", Ui.Box(Ui.Hover, Ui.Ink, 1, 0, Ui.R2));
+        AddThemeStyleboxOverride("pressed", Ui.Box(Ui.Hover, Ui.Ink, 2, 0, Ui.R2));
+    }
+
+    public override void _Draw()
+    {
+        var c = Size * 0.5f;
+        for (int i = -1; i <= 1; i++) DrawLine(c + new Vector2(-8, i * 5), c + new Vector2(8, i * 5), Ui.Ink, 1.5f);
     }
 }

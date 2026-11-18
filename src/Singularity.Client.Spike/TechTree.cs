@@ -555,7 +555,7 @@ public sealed partial class TechTree : Control
         foreach (int i in order) if (_state[i] == St.Frontier) Place(i, "№" + nodes.Number[i], FontKind.Mono);
         foreach (int i in order)
         {
-            if (!(_route[i] || i == _selected || i == _goal || i == _root || CurLod == Lod.Icons)) continue;
+            if (!(_route[i] || i == _selected || i == _goal || i == _root || CurLod == Lod.Icons || (CurLod == Lod.Nodes && _state[i] == St.Frontier))) continue;   // the «nodes» level names the frontier
             if (placed.TryGetValue(i, out var tag)) occupied.Remove(tag.pad);
             if (Place(i, Names.Node(nodes.Id[i]), FontKind.Text)) continue;
             if (tag.text != null) { occupied.Add(tag.pad); placed[i] = tag; }
@@ -595,13 +595,63 @@ public sealed partial class TechTree : Control
         _cv.DrawCircle(pts[2], 3f, Ui.Ink);
     }
 
+    // Legend (spec §8): a collapsed button at the lower left (key L), opened to a sheet with disciplines, glyph codes and line kinds.
+    bool _legendOpen;
+    public bool LegendOpen => _legendOpen;
+    public void ToggleLegend(bool open) { _legendOpen = open; Redraw(); }
+    Rect2 LegendButton => new(Area.Position.X + 10, Area.End.Y - 36, 128, 28);
+
     void DrawLegend()
     {
-        float ly = Area.End.Y - 62;
-        _cv.DrawRect(new Rect2(Area.Position.X + 6, ly - 16, Area.Size.X - 12, 78), new Color(Ui.Paper, 0.92f));
-        Text(new Vector2(14, ly), Loc.T("legend.a1"), 14, Ui.Ink2);
-        Text(new Vector2(14, ly + 20), Loc.T("legend.a2"), 14, Ui.Ink2);
-        Text(new Vector2(14, ly + 40), Loc.T("legend.a3"), 14, Ui.Ink2);
+        if (!_legendOpen)
+        {
+            var b = LegendButton;
+            _cv.DrawStyleBox(Ui.Box(Ui.Sheet, Ui.Ink, 1, 0, Ui.R2), b);
+            Text(b.Position + new Vector2(10, 19), "L", 14, Ui.Ink2, FontKind.Mono);
+            Text(b.Position + new Vector2(30, 19), Loc.T("legend.btn"), 14, Ui.Ink2);
+            return;
+        }
+        var discs = LegendData.Disciplines(Palette.C);
+        const float row = 22, w = 340;
+        float h = 8 + 3 * 30 + (discs.Length + LegendData.Types.Length + 4) * row + 90;
+        var r = new Rect2(Area.Position.X + 10, Area.End.Y - 8 - h, w, h);
+        _cv.DrawStyleBox(Ui.Box(Ui.Sheet, Ui.Ink, 1, 0, Ui.R3), r);
+        float x = r.Position.X + 14, y = r.Position.Y - 2;
+        void Head(string key) { y += 28; Text(new Vector2(x, y), Loc.T(key), 14, Ui.Ink2, FontKind.Draft); y += 2; }
+        Head("legend.disc");
+        foreach (var d in discs)
+        {
+            y += row;
+            var mk = new Vector2(x + 8, y - 5);
+            _cv.DrawCircle(mk, 8, new Color(d.WashHex)); _cv.DrawArc(mk, 8, 0, Mathf.Tau, 24, new Color(d.LineHex), 1.8f, true);
+            Text(new Vector2(x + 26, y), Loc.T(d.NameKey), 14, Ui.Ink2);
+        }
+        Head("legend.glyphs");
+        foreach (var t in LegendData.Types)
+        {
+            y += row;
+            var mk = new Vector2(x + 8, y - 5);
+            var line = Ui.Ink2;
+            switch (t.Shape)
+            {
+                case "square": _cv.DrawRect(new Rect2(mk - new Vector2(7, 7), new Vector2(14, 14)), line, false, 1.8f); break;
+                case "diamond": _cv.DrawPolyline(new[] { mk + new Vector2(0, -9), mk + new Vector2(9, 0), mk + new Vector2(0, 9), mk + new Vector2(-9, 0), mk + new Vector2(0, -9) }, line, 1.8f, true); break;
+                default: _cv.DrawArc(mk, 8, 0, Mathf.Tau, 24, line, 1.8f, true); break;
+            }
+            Text(new Vector2(x + 26, y), t.Code, 14, Ui.Ink, FontKind.Mono);
+            Text(new Vector2(x + 72, y), Loc.T(t.NameKey), 14, Ui.Ink2);
+        }
+        Head("legend.lines");
+        y += row; _cv.DrawLine(new Vector2(x, y - 5), new Vector2(x + 18, y - 5), Ui.Sheet, 6f); _cv.DrawLine(new Vector2(x, y - 5), new Vector2(x + 18, y - 5), Ui.Command, 3f);
+        Text(new Vector2(x + 26, y), Loc.T("legend.route"), 14, Ui.Ink2);
+        y += row; _cv.DrawRect(new Rect2(x + 4, y - 14, 10, 10), Ui.Alarm);
+        Text(new Vector2(x + 26, y), Loc.T("legend.root"), 14, Ui.Ink2);
+        y += row; for (int k = 0; k < 6; k++) _cv.DrawArc(new Vector2(x + 9, y - 5), 8, k * Mathf.Tau / 6, k * Mathf.Tau / 6 + Mathf.Tau / 6 * 0.55f, 5, Ui.Ink2, 1.8f, true);
+        Text(new Vector2(x + 26, y), Loc.T("legend.frontier"), 14, Ui.Ink2);
+        y += row; _cv.DrawArc(new Vector2(x + 9, y - 5), 5, 0, Mathf.Tau, 16, Ui.Ink, 1.5f, true); _cv.DrawArc(new Vector2(x + 9, y - 5), 9, 0, Mathf.Tau, 20, Ui.Ink, 1.5f, true);
+        Text(new Vector2(x + 26, y), Loc.T("legend.selected"), 14, Ui.Ink2);
+        y += 26; _cv.DrawMultilineString(Fonts.Text, new Vector2(x, y), Loc.T("legend.a3"), HorizontalAlignment.Left, w - 28, 14, 3, Ui.Ink3);
+        y += 58; Text(new Vector2(x, y), Loc.T("legend.close"), 14, Ui.Ink3);
     }
 
     // ---- B: statement of the goal ----
@@ -726,6 +776,7 @@ public sealed partial class TechTree : Control
     // Wheel zooms about the cursor, a drag pans, a click without a drag selects a node.
     public override void _GuiInput(InputEvent e)
     {
+        if (_mode == 0 && e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } lb && !_legendOpen && LegendButton.HasPoint(lb.Position)) { ToggleLegend(true); AcceptEvent(); return; }
         if (_mode == 0 && e is InputEventMouseButton { Pressed: true } w && Area.HasPoint(w.Position) && w.ButtonIndex is MouseButton.WheelUp or MouseButton.WheelDown)
         {
             _zoomTarget = PlanisphereMath.ClampZoom(_zoomTarget * (w.ButtonIndex == MouseButton.WheelUp ? 1.25f : 0.8f));
