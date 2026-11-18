@@ -80,6 +80,7 @@ public class F17bTests(ITestOutputHelper output)
     // Re-recorded in TASK-0058 step 5 (all hashes below), reason: I-OC + A41 SLOT as the build (#242, #243, #245), fielded_L and the column prd.d*.q (#247), schema v8: the trajectory changed by decision, so ADMIT/V0 no longer equals the build before F17b.
     // Hashes after month 149 of seeds 1…5 (AI on, threads 2). Until TASK-0032 part 2 ADMIT (with V0) equalled the build before F17b (commit 29cd914) bit for bit;
     // re-recorded there only for the new column tool_unmet («tool_unmet column», F33): by the old columns the trajectory is unchanged (ToolingUnmetTests).
+    // Re-recorded in TASK-0099 (ADR-0005 p. 3), reason: schema v9 (new columns prd.d*.generation, parentGen, prd.lp.g*.gen, StaleHandle counter); the run ends before the first slot reuse, the old columns are unchanged (SlotReuseL2Tests.NoSlotIsReused_BeforeTheMonthOfAnyRewrittenGolden, projection tests).
     private static readonly string[] AdmitGolden =
     [
         "a5d35b580fe5c8d4590f66504f93ce9f8b92899afda5ce925e7760a17b480b5c",
