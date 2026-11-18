@@ -21,20 +21,20 @@ Not used: NASA Blue Marble and any photo imagery (licence unverified, off-style 
 Kenney's own site refused plain automated download (403); the same Kenney pack was taken from OpenGameArt, where it is published as CC0.
 Models are rendered untextured: their embedded materials are replaced by `shaders/object.gdshader`.
 ## Event sounds attribution (`assets/audio/ui/*.ogg`, accessed 2026-11-18)
-Changes: cutting, filtering, loudness normalisation (pitch ±2 semitones for signal_clear, pause, unpause); the typewriter sounds (order_done, node_discovered, launch_space) are an automatically cut fragment.
+Changes: cutting, filtering, loudness normalisation (pitch ±2 semitones for signal_clear, pause, unpause); order_done is an automatically cut fragment of a typewriter recording. One variant per event for the whole game (owner decision #407).
 
 CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
 - "Bell Ding" by jakebagger, https://freesound.org/people/jakebagger/sounds/499787/ (signal_attention, signal_critical, signal_clear)
 - "electrical_switch_02.wav" by joedeshon, https://freesound.org/people/joedeshon/sounds/139062/ (tempo, pause, unpause)
 - "morse static.wav" by ERH, https://freesound.org/people/ERH/sounds/34418/ (war_declared)
-- Triumph Matura 300 typewriter by YleArkisto, https://freesound.org/people/YleArkisto/sounds/271525/ (order_done, node_discovered, launch_space)
+- Triumph Matura 300 typewriter by YleArkisto, https://freesound.org/people/YleArkisto/sounds/271525/ (order_done)
 
 CC0 (no credit required, named for completeness):
 - "traditional stamp.wav" by I.fekry, https://freesound.org/people/I.fekry/sounds/470710/ (order_ok)
-- "A relay switch being activated." by bassmosphere, https://freesound.org/people/bassmosphere/sounds/384698/ (order_reject, signal_critical)
+- "A relay switch being activated." by bassmosphere, https://freesound.org/people/bassmosphere/sounds/384698/ (order_reject, signal_critical, launch_space)
 - "Paper Shuffle and Stack.aif" by moose13088, https://freesound.org/people/moose13088/sounds/182889/ (queue_tick)
 - "Stromberg Carlson 1543.wav" by Hockinfinger, https://freesound.org/people/Hockinfinger/sounds/274436/ (signal_alert)
-- "Typewriter, bell #2" by Joseph Sardin (BigSoundBank), https://bigsoundbank.com/typewriter-bell-s2845.html (breakthrough)
+- "Typewriter, bell #2" by Joseph Sardin (BigSoundBank), https://bigsoundbank.com/typewriter-bell-s2845.html (node_discovered, breakthrough)
 - "Factory whistle, train whistle" by kentspublicdomain, https://freesound.org/people/kentspublicdomain/sounds/477827/ (line_commissioned, launch_space)
 - "Kill Switch (Large Breaker Switch) .WAV" by EchoCinematics, https://freesound.org/people/EchoCinematics/sounds/131599/ (war_declared, launch_nuclear)
 - "hum electric transformer in large room1.flac" by kyles, https://freesound.org/people/kyles/sounds/453444/ (launch_nuclear)

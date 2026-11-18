@@ -45,34 +45,10 @@
    "tp": -4.5
   },
   {
-   "file": "events/E01_b.ogg",
-   "len_s": 0.25,
-   "lufs": -28.2,
-   "tp": -4.6
-  },
-  {
-   "file": "events/E01_c.ogg",
-   "len_s": 0.25,
-   "lufs": -31.5,
-   "tp": -4.6
-  },
-  {
    "file": "events/E02_a.ogg",
    "len_s": 0.19,
    "lufs": -24.4,
    "tp": -4.2
-  },
-  {
-   "file": "events/E02_b.ogg",
-   "len_s": 0.4,
-   "lufs": -30.0,
-   "tp": -4.9
-  },
-  {
-   "file": "events/E02_c.ogg",
-   "len_s": 0.4,
-   "lufs": -20.5,
-   "tp": -5.0
   },
   {
    "file": "events/E03_a.ogg",
@@ -81,34 +57,10 @@
    "tp": -5.9
   },
   {
-   "file": "events/E03_b.ogg",
-   "len_s": 0.08,
-   "lufs": -30.6,
-   "tp": -7.0
-  },
-  {
-   "file": "events/E03_c.ogg",
-   "len_s": 0.08,
-   "lufs": -30.1,
-   "tp": -6.8
-  },
-  {
    "file": "events/E04_a.ogg",
    "len_s": 0.25,
    "lufs": -34.0,
    "tp": -5.3
-  },
-  {
-   "file": "events/E04_b.ogg",
-   "len_s": 0.25,
-   "lufs": -30.8,
-   "tp": -5.2
-  },
-  {
-   "file": "events/E04_c.ogg",
-   "len_s": 0.25,
-   "lufs": -24.0,
-   "tp": -5.8
   },
   {
    "file": "events/E05_a.ogg",
@@ -117,34 +69,10 @@
    "tp": -3.9
   },
   {
-   "file": "events/E05_b.ogg",
-   "len_s": 1.2,
-   "lufs": -20.0,
-   "tp": -12.4
-  },
-  {
-   "file": "events/E05_c.ogg",
-   "len_s": 1.2,
-   "lufs": -20.0,
-   "tp": -8.5
-  },
-  {
    "file": "events/E06_a.ogg",
    "len_s": 1.5,
    "lufs": -18.0,
    "tp": -6.4
-  },
-  {
-   "file": "events/E06_b.ogg",
-   "len_s": 1.5,
-   "lufs": -18.0,
-   "tp": -9.3
-  },
-  {
-   "file": "events/E06_c.ogg",
-   "len_s": 1.5,
-   "lufs": -19.8,
-   "tp": -4.6
   },
   {
    "file": "events/E07_a.ogg",
@@ -153,34 +81,10 @@
    "tp": -4.0
   },
   {
-   "file": "events/E07_b.ogg",
-   "len_s": 1.5,
-   "lufs": -18.0,
-   "tp": -5.6
-  },
-  {
    "file": "events/E08_a.ogg",
    "len_s": 1.2,
    "lufs": -24.1,
    "tp": -3.9
-  },
-  {
-   "file": "events/E08_b.ogg",
-   "len_s": 1.2,
-   "lufs": -23.0,
-   "tp": -15.4
-  },
-  {
-   "file": "events/E09_a.ogg",
-   "len_s": 1.2,
-   "lufs": -25.0,
-   "tp": -4.5
-  },
-  {
-   "file": "events/E09_b.ogg",
-   "len_s": 1.2,
-   "lufs": -27.5,
-   "tp": -4.9
   },
   {
    "file": "events/E09_c.ogg",
@@ -195,34 +99,10 @@
    "tp": -5.7
   },
   {
-   "file": "events/E10_b.ogg",
-   "len_s": 1.15,
-   "lufs": -20.0,
-   "tp": -6.3
-  },
-  {
-   "file": "events/E10_c.ogg",
-   "len_s": 1.2,
-   "lufs": -19.9,
-   "tp": -16.3
-  },
-  {
    "file": "events/E11_a.ogg",
    "len_s": 2.0,
    "lufs": -28.0,
    "tp": -18.7
-  },
-  {
-   "file": "events/E11_b.ogg",
-   "len_s": 2.0,
-   "lufs": -20.0,
-   "tp": -10.6
-  },
-  {
-   "file": "events/E11_c.ogg",
-   "len_s": 2.0,
-   "lufs": -28.1,
-   "tp": -18.0
   },
   {
    "file": "events/E12_a.ogg",
@@ -241,12 +121,6 @@
    "len_s": 1.5,
    "lufs": -23.7,
    "tp": -3.9
-  },
-  {
-   "file": "events/E13_b.ogg",
-   "len_s": 1.2,
-   "lufs": -20.4,
-   "tp": -3.7
   },
   {
    "file": "events/E14_a.ogg",
@@ -273,12 +147,6 @@
    "tp": -4.7
   },
   {
-   "file": "events/E16_a.ogg",
-   "len_s": 1.2,
-   "lufs": -20.2,
-   "tp": -4.5
-  },
-  {
    "file": "events/E16_b.ogg",
    "len_s": 1.09,
    "lufs": -21.1,
@@ -291,28 +159,10 @@
    "tp": -3.8
   },
   {
-   "file": "events/E17_b.ogg",
-   "len_s": 1.8,
-   "lufs": -18.1,
-   "tp": -4.7
-  },
-  {
    "file": "events/E18_a.ogg",
    "len_s": 0.25,
    "lufs": -24.6,
    "tp": -4.9
-  },
-  {
-   "file": "events/E18_b.ogg",
-   "len_s": 0.19,
-   "lufs": -25.8,
-   "tp": -4.8
-  },
-  {
-   "file": "events/E18_c.ogg",
-   "len_s": 0.25,
-   "lufs": -30.7,
-   "tp": -4.6
   },
   {
    "file": "events/E19_a.ogg",
@@ -327,22 +177,10 @@
    "tp": -4.7
   },
   {
-   "file": "events/E19_c.ogg",
-   "len_s": 0.25,
-   "lufs": -24.9,
-   "tp": -4.1
-  },
-  {
    "file": "events/E20_a.ogg",
    "len_s": 0.08,
    "lufs": -32.5,
    "tp": -12.2
-  },
-  {
-   "file": "events/E20_b.ogg",
-   "len_s": 0.08,
-   "lufs": -32.5,
-   "tp": -11.2
   },
   {
    "file": "bed/bed_kb_spec.ogg",
@@ -418,16 +256,6 @@
    "sha256": "5ed0777acad975565b283e6c88447f220ded8622a35b1c0c8836c8981103ca25",
    "title": "Typewriter, bell #2"
   },
-  "bsb_phone": {
-   "audio_url": "https://bigsoundbank.com/UPLOAD/bwf-en/0002.wav",
-   "author": "Joseph Sardin",
-   "grade": "original WAV",
-   "licence": "CC0 1.0",
-   "licence_url": "https://bigsoundbank.com/licenses.html",
-   "page": "https://bigsoundbank.com/dial-phone-s0002.html",
-   "sha256": "d48ebf968dc53978c3d7db57512b8f84a8e97e8e17ed59e902f579f2d61829b5",
-   "title": "Dial phone #2"
-  },
   "clock_yuval": {
    "audio_url": "https://cdn.freesound.org/previews/211/211192_770707-hq.mp3",
    "author": "Yuval",
@@ -457,16 +285,6 @@
    "page": "https://freesound.org/people/kyles/sounds/453444/",
    "sha256": "e9c1b09759b5b7b06f567560eae598fb178cf7d629af30cf834fab5b7931b7a6",
    "title": "hum electric transformer in large room1.flac"
-  },
-  "modem": {
-   "audio_url": "https://cdn.freesound.org/previews/80/80288_1218676-hq.mp3",
-   "author": "joedeshon",
-   "grade": "Freesound HQ preview (mp3)",
-   "licence": "CC BY 4.0",
-   "licence_url": "https://creativecommons.org/licenses/by/4.0/",
-   "page": "https://freesound.org/people/joedeshon/sounds/80288/",
-   "sha256": "957ff28254156a815f237e2a02b565e14d1b34272144d7976504cf5cbd58599b",
-   "title": "modem_sounds.wav"
   },
   "morse": {
    "audio_url": "https://cdn.freesound.org/previews/34/34418_215874-hq.mp3",
@@ -568,26 +386,6 @@
    "sha256": "31aa8fa453331cc6247643c2a100742ebb66b737a4c10cf52c5c4d7b30287309",
    "title": "Stromberg Carlson 1543.wav"
   },
-  "phone_wecompass": {
-   "audio_url": "https://cdn.freesound.org/previews/456/456433_3902754-hq.mp3",
-   "author": "mycompasstv",
-   "grade": "Freesound HQ preview (mp3)",
-   "licence": "CC0 1.0",
-   "licence_url": "http://creativecommons.org/publicdomain/zero/1.0/",
-   "page": "https://freesound.org/people/mycompasstv/sounds/456433/",
-   "sha256": "aaae21f68247e10660ae08cf4579f3109119b33a334315922c2b80bdf501e2f5",
-   "title": "Old Rotary Phone Ringing - Western Electric Bell 500 phone"
-  },
-  "printer": {
-   "audio_url": "https://cdn.freesound.org/previews/256/256897_2213827-hq.mp3",
-   "author": "system_fm",
-   "grade": "Freesound HQ preview (mp3)",
-   "licence": "CC BY 3.0",
-   "licence_url": "http://creativecommons.org/licenses/by/3.0/",
-   "page": "https://freesound.org/people/system_fm/sounds/256897/",
-   "sha256": "d2c9d52336e14698cf3b202f824f1cda8bcbf27b81bf43d12403d343e6566ea3",
-   "title": "nadeldrucker4.wav"
-  },
   "relay_bass": {
    "audio_url": "https://cdn.freesound.org/previews/384/384698_1067129-hq.mp3",
    "author": "bassmosphere",
@@ -598,16 +396,6 @@
    "sha256": "b9149d8ca70d77b4a1ee23fb04adb685563491a83a34127ee0b5e5be91f2b931",
    "title": "A relay switch being activated."
   },
-  "relay_smokey": {
-   "audio_url": "https://cdn.freesound.org/previews/85/85304_103206-hq.mp3",
-   "author": "smokeyvw",
-   "grade": "Freesound HQ preview (mp3)",
-   "licence": "CC BY 4.0",
-   "licence_url": "https://creativecommons.org/licenses/by/4.0/",
-   "page": "https://freesound.org/people/smokeyvw/sounds/85304/",
-   "sha256": "eacbe08d9ca9dc3bf985c0c4a6da517260cfa64ab4fa07150c6af2add3a58167",
-   "title": "file0552 relay click.mp3"
-  },
   "stamp_fekry": {
    "audio_url": "https://cdn.freesound.org/previews/470/470710_9906084-hq.mp3",
    "author": "I.fekry",
@@ -617,16 +405,6 @@
    "page": "https://freesound.org/people/I.fekry/sounds/470710/",
    "sha256": "7f7bc1028e2a04a2da78fc27ea038c5a078f986f621dad0d606eeb4938865e76",
    "title": "traditional stamp.wav"
-  },
-  "stamp_frank": {
-   "audio_url": "https://cdn.freesound.org/previews/160/160879_1481750-hq.mp3",
-   "author": "frank_the_noise",
-   "grade": "Freesound HQ preview (mp3)",
-   "licence": "CC0 1.0",
-   "licence_url": "http://creativecommons.org/publicdomain/zero/1.0/",
-   "page": "https://freesound.org/people/frank_the_noise/sounds/160879/",
-   "sha256": "7aea715a1b15b9c09ac00ea8ccdfe7d6f8dcd3cbe8cc895dfcee39f11507f16d",
-   "title": "stamp post office mail.wav"
   },
   "stamp_frigola": {
    "audio_url": "https://cdn.freesound.org/previews/233/233240_3537605-hq.mp3",
@@ -668,26 +446,6 @@
    "sha256": "1a12d21c9ee0d17471757e3185d46af91c66a6e15e9b95e5188d5929759c9361",
    "title": "teletype_medium_speed.wav"
   },
-  "type_olympia": {
-   "audio_url": "https://cdn.freesound.org/previews/23/23169_92661-hq.mp3",
-   "author": "FreqMan",
-   "grade": "Freesound HQ preview (mp3)",
-   "licence": "CC BY 4.0",
-   "licence_url": "https://creativecommons.org/licenses/by/4.0/",
-   "page": "https://freesound.org/people/FreqMan/sounds/23169/",
-   "sha256": "be7e9f0c95f691045b6d53f37b5eede89bf055bb8af157a8723c7b0aef05fc42",
-   "title": "034 Typing sequence.wav"
-  },
-  "type_smith": {
-   "audio_url": "https://cdn.freesound.org/previews/47/47045_230160-hq.mp3",
-   "author": "lonemonk",
-   "grade": "Freesound HQ preview (mp3)",
-   "licence": "CC BY 4.0",
-   "licence_url": "https://creativecommons.org/licenses/by/4.0/",
-   "page": "https://freesound.org/people/lonemonk/sounds/47045/",
-   "sha256": "10efbad62f2fda2ede2540dbd2e8bcc1c71bf75a02dbfac0b1cc8769f31db4a7",
-   "title": "Cheap Electric Typewriter Chatter + Quiet Bell.wav"
-  },
   "type_triumph": {
    "audio_url": "https://cdn.freesound.org/previews/271/271525_4415905-hq.mp3",
    "author": "YleArkisto",
@@ -717,16 +475,6 @@
    "page": "https://freesound.org/people/kentspublicdomain/sounds/477827/",
    "sha256": "3d1556eeab08287e461d24be766c7382b529a63d30d2a833af6bb527ebe04c5a",
    "title": "Factory whistle, train whistle"
-  },
-  "whistle_synth": {
-   "audio_url": "https://cdn.freesound.org/previews/494/494938_2688204-hq.mp3",
-   "author": "unreadpages",
-   "grade": "Freesound HQ preview (mp3)",
-   "licence": "CC BY 4.0",
-   "licence_url": "https://creativecommons.org/licenses/by/4.0/",
-   "page": "https://freesound.org/people/unreadpages/sounds/494938/",
-   "sha256": "3184346812927a8f615c331c32aeac3413d11eddc6b5d304f61f241e2886b08b",
-   "title": "Factory whistle.wav"
   }
  }
 }
