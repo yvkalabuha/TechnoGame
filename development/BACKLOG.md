@@ -114,7 +114,7 @@
 | [TASK-0097](../development/tasks/TASK-0097-client-screenshots-prune.md) | DONE | Client screenshots: keep 25 key frames in git | MS-M1 |
 | [TASK-0098](../development/tasks/TASK-0098-r4-double-to-lab.md) | REVIEW | Move remaining double code from Core.Simulation to Lab | MS-M1 |
 | [TASK-0099](../development/tasks/TASK-0099-project-slot-generation.md) | IN_PROGRESS | Project slots reuse with generation (ADR-0005 #388) | MS-M1 |
-| [TASK-0100](../development/tasks/TASK-0100-event-sounds-pack.md) | REVIEW | Replace client event sounds with listening-pack r2 (#403) | MS-M1 |
+| [TASK-0100](../development/tasks/TASK-0100-event-sounds-pack.md) | DONE | Replace client event sounds with listening-pack r2 (#403) | MS-M1 |
 | [TASK-0101](../development/tasks/TASK-0101-ui-instrument-elements.md) | DONE | UI thematic instrument elements (flasks, pencil, ruler, caliper, soldering iron, protractor, gauges) | MS-M1 |
 | [TASK-0102](../development/tasks/TASK-0102-tick-bench-reregistration.md) | PROPOSED | Re-registered tick benchmark series (frequency rule revision, #405) | MS-M0 |
 | [TASK-0103](../development/tasks/TASK-0103-tick-allocations-gc.md) | IN_PROGRESS | Tick allocations and GC: 1.1 GB per month, gen2 collections (EXP-0007 P8) | MS-M0 |
