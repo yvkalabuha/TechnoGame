@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Singularity.Core.Commands;
 using Singularity.Core.Data;
 using Singularity.Core.WhyNot;
@@ -19,6 +20,8 @@ public sealed partial class SliceSession
 
     private SliceView _view = null!;
     private long _month = -1;
+    // F7a: the actors of the current view with the close reasons cleared (what a fresh mid-month Snapshot gives); null = not built since the last snapshot.
+    private ImmutableArray<ActorView>? _actorsMid;
 
     // Lazy hash (ADR-0017 п. 6-7): valid while the table version is unchanged. Only the owner thread computes it.
     private readonly int _ownerThread = Environment.CurrentManagedThreadId;
@@ -211,9 +214,18 @@ public sealed partial class SliceSession
         string? hash = config.HashEveryTick && nonEmpty || config.HashCheckpoints && (monthly || applied) ? CurrentHash() : null;
         if (monthly || applied || config.DailyTickProbe)
         {
+            if (!monthly && !applied && _world.DailyViewNeutral)
+            {
+                // F7a: no step, no command and only view-neutral systems ran, so the actors are those of the last view, up to the close reasons.
+                SliceView prev = _view;
+                _actorsMid ??= ViewBuilder.WithoutCloseReasons(prev.Actors);
+                Volatile.Write(ref _view, prev with { Tick = Tick, Date = _world.Calendar.DateOf(Tick), StateHash = hash, Inputs = null, Step = null, Actors = _actorsMid.Value });
+                return;
+            }
             // The traces belong to the step that just ran; only a tick with a monthly step reads them (inputs is set exactly then).
             MonthStepView? step = inputs is null ? null : ViewBuilder.Step(_world, _month);
             Volatile.Write(ref _view, ViewBuilder.Snapshot(_world, Tick, hash, _month, inputs, step));
+            _actorsMid = null;
         }
     }
 

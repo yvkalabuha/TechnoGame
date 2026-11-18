@@ -146,9 +146,16 @@ internal sealed class SliceWorld
             new LeverRegistry(Enum.GetValues<Lever>().Where(l => l != Lever.ProcessDevelopment || !config.Channels.HasFlag(SliceChannels.EffortZero))));
 
         Policy.Initialize();
-        Runner = new TickRunner(Table, config.Seed,
-            config.DailyTickProbe ? [Knowledge, Industry, Products, Policy, new DailyProbeSystem()] : [Knowledge, Industry, Products, Policy], config.ChunkSize, config.Threads, Calendar);
+        ITickSystem[] systems = config.DailyTickProbe ? [Knowledge, Industry, Products, Policy, new DailyProbeSystem()] : [Knowledge, Industry, Products, Policy];
+        DailyViewNeutral = systems.All(x => x.Cadence != Cadence.Daily || x is DailyProbeSystem);
+        Runner = new TickRunner(Table, config.Seed, systems, config.ChunkSize, config.Threads, Calendar);
     }
+
+    /// <summary>
+    /// True when the only system that can run on a tick without a monthly step is view-neutral (writes nothing a view reads): an explicit list,
+    /// not a default, so a new daily system must be added here on purpose (F7a).
+    /// </summary>
+    internal bool DailyViewNeutral { get; }
 
     // L_K and L_K0 replace the knowledge model by a schedule; the other layers read `known` as before.
     private KnowledgeSystem NewKnowledge(KnowledgeStart kStart, KnowledgeParams kp, int chunks)
