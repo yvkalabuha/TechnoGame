@@ -20,6 +20,7 @@
 - TASK-0098 [APPROVED] Move remaining double code from Core.Simulation to Lab (developer)
 - TASK-0099 [APPROVED] Project slots reuse with generation (ADR-0005 #388) (developer)
 - TASK-0100 [APPROVED] Replace client event sounds with listening-pack r2 (#403) (developer)
+- TASK-0101 [APPROVED] UI thematic instrument elements (flasks, pencil, ruler, caliper, soldering iron, protractor, gauges) (ui-art-director)
 <!-- registry:active:end -->
 
 ## Блокеры

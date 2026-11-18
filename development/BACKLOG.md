@@ -115,6 +115,7 @@
 | [TASK-0098](../development/tasks/TASK-0098-r4-double-to-lab.md) | APPROVED | Move remaining double code from Core.Simulation to Lab | MS-M1 |
 | [TASK-0099](../development/tasks/TASK-0099-project-slot-generation.md) | APPROVED | Project slots reuse with generation (ADR-0005 #388) | MS-M1 |
 | [TASK-0100](../development/tasks/TASK-0100-event-sounds-pack.md) | APPROVED | Replace client event sounds with listening-pack r2 (#403) | MS-M1 |
+| [TASK-0101](../development/tasks/TASK-0101-ui-instrument-elements.md) | APPROVED | UI thematic instrument elements (flasks, pencil, ruler, caliper, soldering iron, protractor, gauges) | MS-M1 |
 
 ## Гипотезы
 
