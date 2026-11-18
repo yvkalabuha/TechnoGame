@@ -402,7 +402,46 @@ public sealed class BenchHarnessTests : IDisposable
         List<ForbiddenHit> h = SeriesGate.Forbidden([(50, "claude", 3.0), (40, "node", 2.0), (51, "node", 1.0), (99, "dotnet", 4.0)], G, excluded, "t");
         Assert.Equal([51], h.Select(x => x.Pid));
         Assert.True(h[0].Fatal);
-        Assert.Equal(h, SeriesDriver.ForbiddenIn([(51, "node", 1.0)], G, excluded, "t") is var x && x.Count == 1 ? h : []);
+        Assert.Equal(h, SeriesDriver.ForbiddenIn([(50, "claude", 3.0), (40, "node", 2.0), (51, "node", 1.0), (99, "dotnet", 4.0)], G, excluded, "t"));
+    }
+
+    [Fact]
+    public void ExcludedAmong_PidCommStart()
+    {
+        PidStat self = new(99, "dotnet", 0, 500, 40);
+        PidStat[] anc = [new(40, "bash", 0, 100, 50), new(50, "claude", 0, 0, 1)];
+        // self always excluded (same comm/start); reused pid with other comm or start is not.
+        Assert.Contains(99, SeriesDriver.ExcludedAmong(99, self, anc, [(99, "dotnet", 500)]));
+        Assert.Contains(99, SeriesDriver.ExcludedAmong(99, null, anc, [(99, "whatever", 1)]));
+        Assert.DoesNotContain(99, SeriesDriver.ExcludedAmong(99, self, anc, [(99, "node", 500)]));
+        Assert.DoesNotContain(99, SeriesDriver.ExcludedAmong(99, self, anc, [(99, "dotnet", 501)]));
+        // ancestor: pid+comm+start must agree; start null falls back to pid+comm; ancestor start 0 = unknown.
+        Assert.Contains(40, SeriesDriver.ExcludedAmong(99, self, anc, [(40, "bash", 100)]));
+        Assert.DoesNotContain(40, SeriesDriver.ExcludedAmong(99, self, anc, [(40, "bash", 101)]));
+        Assert.DoesNotContain(40, SeriesDriver.ExcludedAmong(99, self, anc, [(40, "make", 100)]));
+        Assert.Contains(40, SeriesDriver.ExcludedAmong(99, self, anc, [(40, "bash", null)]));
+        Assert.DoesNotContain(40, SeriesDriver.ExcludedAmong(99, self, anc, [(40, "make", null)]));
+        Assert.Contains(50, SeriesDriver.ExcludedAmong(99, self, anc, [(50, "claude", 12345)]));
+        Assert.Empty(SeriesDriver.ExcludedAmong(99, self, anc, [(7, "bash", 100)]));
+    }
+
+    [Fact]
+    public void PreSeries_SurvivesFatal355Stop()
+    {
+        var parts = new Dictionary<string, Action<Utf8JsonWriter>>();
+        Assert.Throws<InvalidOperationException>(() => SeriesDriver.RegisterThenCheck(parts, "pre_series",
+            j => { j.WriteStartObject("pre_series"); j.WriteNumber("seconds", 1); j.WriteEndObject(); },
+            () => throw new InvalidOperationException("#355")));
+        using var ms = new MemoryStream();
+        using (var j = new Utf8JsonWriter(ms))
+        {
+            j.WriteStartObject();
+            SeriesDriver.WriteParts(j, parts);
+            j.WriteEndObject();
+        }
+        using JsonDocument d = JsonDocument.Parse(ms.ToArray());
+        Assert.Equal(1, d.RootElement.GetProperty("pre_series").GetProperty("seconds").GetInt32());
+        Assert.Equal("pre_series", SeriesDriver.PartOrder[0]);
     }
 
     [Fact]
@@ -660,6 +699,7 @@ public sealed class BenchHarnessTests : IDisposable
         Assert.Equal(3000, w0.GetProperty("run_delay_ns").GetInt64());
         Assert.Equal("ide", w0.GetProperty("top_foreign")[0].GetProperty("comm").GetString());
         Assert.Equal(50, w0.GetProperty("top_foreign")[0].GetProperty("cpu_ticks").GetInt64());
+        Assert.Equal(3, w0.GetProperty("top_foreign")[0].GetProperty("start_time").GetInt64());
     }
 
     [Fact]
