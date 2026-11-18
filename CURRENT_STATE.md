@@ -22,6 +22,7 @@
 - TASK-0064 [REVIEW] lab bench harness (ADR-0016 T1) (simulation-engineer)
 - TASK-0081 [REVIEW] Client v0.5b: main menu, settings, new game, palette C with alert validator, time icons (developer)
 - TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
+- TASK-0085 [APPROVED] ADR-0007: extend the ban list (string.GetHashCode, Concurrent*, Channel) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры

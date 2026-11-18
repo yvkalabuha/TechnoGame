@@ -99,6 +99,7 @@
 | [TASK-0082](../development/tasks/TASK-0082-f7a-view-reuse.md) | DONE | F7a: reuse the view on probe-only days, cheaper daily snapshot | MS-M0 |
 | [TASK-0083](../development/tasks/TASK-0083-lab-bench-tests.md) | DONE | Tests for lab bench: statistics, manifest, plan, CLI | MS-M0 |
 | [TASK-0084](../development/tasks/TASK-0084-map-ci-debt0043.md) | DONE | Map tooling CI and boundary checks (DEBT-0043) | MS-M1 |
+| [TASK-0085](../development/tasks/TASK-0085-adr-0007-ban-list.md) | APPROVED | ADR-0007: extend the ban list (string.GetHashCode, Concurrent*, Channel) | MS-M1 |
 
 ## Гипотезы
 
