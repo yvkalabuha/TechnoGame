@@ -96,6 +96,12 @@ internal sealed class SliceWorld
         // One more id above every line, bureau and fix-team id: the quality programme, which the bureaus outrank in the rounding of grants (A41).
         QualityRequester = requesters;
         IndustryLayout = IndustryLayout.FromData(data.Nodes, scenario, WorkforceCategories, requesters + 1);
+        // A site is an actor (A27): row s of the actor tables is the site of actor s. Per-actor buffers and memos are indexed by this identity.
+        for (int s = 0; s < IndustryLayout.SiteCount; s++)
+        {
+            if (IndustryLayout.SiteOwner[s] != s)
+                throw new InvalidOperationException($"Site {s} belongs to actor {IndustryLayout.SiteOwner[s]}: the slice needs one site per actor (A27).");
+        }
         IndustryStart iStart = IndustryStart.FromScenario(scenario, data.Nodes, IndustryLayout, ip);
         // S-2 (spec §1.1): a process the base scenario calls mastered must have yield(t0) >= 0.7; checked before START_PERT, which scales culture by design.
         if (!config.SkipStartValidation)
@@ -156,6 +162,52 @@ internal sealed class SliceWorld
     /// not a default, so a new daily system must be added here on purpose (F7a).
     /// </summary>
     internal bool DailyViewNeutral { get; }
+
+    /// <summary>Test switch (R2, TASK-0103): false = every snapshot builds the node blocks again instead of reusing those of an unchanged state.</summary>
+    internal bool ReuseNodeBlocks { get; set; } = true;
+
+    private NodeShape? _nodeShape;
+    private Column[]? _nodeColumns;
+    private int _nodeColumnCount;
+
+    /// <summary>The node numbers and process slots shared by the node blocks of all actors; built on first use by the thread that builds snapshots.</summary>
+    internal NodeShape NodeShape => _nodeShape ??= BuildNodeShape();
+
+    /// <summary>The node blocks of the last snapshot with the state they were read from (R2); owned by the thread that builds snapshots.</summary>
+    internal NodeBlockCache NodeBlocks { get; } = new();
+
+    /// <summary>
+    /// The sum of the versions of every column the node blocks may read: all of them but the command columns <c>cmd.*</c>, which only hold what the
+    /// player asked for and are read by no view of nodes. Versions only grow, so an equal sum means no column changed (R2).
+    /// </summary>
+    internal long NodeStamp()
+    {
+        _nodeColumns ??= [.. Table.Columns.Where(c => !c.Name.StartsWith("cmd.", StringComparison.Ordinal))];
+        // The set is cached once: a column added later would be missing from the stamp.
+        if (_nodeColumnCount != Table.Columns.Count)
+            _nodeColumnCount = _nodeColumnCount == 0 ? Table.Columns.Count : throw new InvalidOperationException("The table gained columns after the first snapshot.");
+        long sum = 0;
+        foreach (Column c in _nodeColumns)
+            sum += c.Version;
+        return sum;
+    }
+
+    private NodeShape BuildNodeShape()
+    {
+        int count = Graph.Count;
+        var processIndex = new int[count];
+        var layoutRow = new int[count];
+        int processes = 0;
+        for (int r = 0; r < count; r++)
+        {
+            layoutRow[r] = IndustryLayout.RowOf(Graph.Number[r]);
+            processIndex[r] = layoutRow[r] < 0 ? -1 : processes++;
+        }
+        return new NodeShape([.. Graph.Number], processIndex, layoutRow);
+    }
+
+    /// <summary>Test switch (F4, TASK-0103): false = the inputs phase keeps no memo of the allocation and the tooling plan, so every reader recomputes. The state must not depend on it.</summary>
+    internal bool MemoizeInputs { get; set; } = true;
 
     // Allow-list: a Weekly or Daily system other than the probe may write what a view reads, so it must not pass as neutral.
     internal static bool IsDailyViewNeutral(IEnumerable<ITickSystem> systems) =>

@@ -262,7 +262,7 @@ public class EffortAllocatorTests
         Fx6 euTotal = Rule.EUseful(s, 0, p, 0) + Rule.EUseful(s, 1, p, 0);
         Fx6 budget = euTotal - F(3);
         EffortAllocation a = EffortAllocator.Allocate(Rule, s, 0, 0, budget, NoFocus);
-        Assert.Equal(Fx6.Zero, a.E[2 * n + p]);
+        Assert.Equal(2 * n, a.E.Length); // local layout: only the two sites of actor 0 are stored, the other actor's site gets nothing
         Assert.Equal(budget, Sum(a) + a.Rest);
         Assert.True(a.E[1 * n + p] > a.E[0 * n + p]);
         Assert.True(a.E[0 * n + p] <= Rule.EUseful(s, 0, p, 0));
@@ -282,6 +282,28 @@ public class EffortAllocatorTests
         EffortAllocation c = EffortAllocator.Allocate(Rule, s, 0, 0, euTotal, NoFocus);
         Assert.Equal(euTotal, Sum(c) + c.Rest);
         Assert.True(c.E[0 * n + p] <= Rule.EUseful(s, 0, p, 0));
+    }
+
+    [Fact]
+    public void Scratch_Reused_EqualsFreshBuffers_ForActorsWithDifferentSiteCounts()
+    {
+        // Actor 0 owns two sites, actor 1 one: a shared scratch must not leak values from the larger call into the smaller one.
+        CbFake s = ThreeProcesses([0, 0, 1]);
+        int n = s.Layout.ProcessCount;
+        var scratch = new EffortScratch();
+        foreach (int actor in new[] { 0, 1, 0, 1 })
+        {
+            foreach (Fx6 budget in new[] { F(7), F(900), s.Params.EFull * D(5) })
+            {
+                EffortAllocation fresh = EffortAllocator.Allocate(Rule, s, actor, 0, budget, NoFocus);
+                EffortAllocation reused = EffortAllocator.Allocate(Rule, s, actor, 0, budget, NoFocus, scratch);
+                int len = s.Layout.SitesOf(actor).Length * n;
+                Assert.Equal(len, fresh.E.Length);
+                Assert.Equal(fresh.E, reused.E.AsSpan(0, len).ToArray());
+                Assert.Equal(fresh.Rest, reused.Rest);
+                Assert.Equal(fresh.Passes, reused.Passes);
+            }
+        }
     }
 
     [Fact]

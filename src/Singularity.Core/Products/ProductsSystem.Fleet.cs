@@ -371,9 +371,13 @@ public sealed partial class ProductsSystem
     }
 
     // A book of the fleet of the actor: from the live state of the step (Next) or from the snapshot (Current, with the facts the AI reads).
-    private FleetBook NewBook(int a, bool next)
+    private FleetBook NewBook(int a, bool next, FleetBook? reuse = null)
     {
-        var book = new FleetBook(_p, _m0, _d);
+        // A book of another world (parameters, midyears, design count) is never refilled.
+        bool fits = reuse is not null && ReferenceEquals(reuse.Parameters, _p) && reuse.Designs == _d && reuse.MatchesMidyears(_m0);
+        FleetBook book = fits ? reuse! : new FleetBook(_p, _m0, _d);
+        if (fits)
+            book.Clear();
         for (int d = 0; d < _d; d++)
         {
             for (int y = 0; y < _y; y++)
@@ -404,10 +408,11 @@ public sealed partial class ProductsSystem
     /// <summary>
     /// The fleet of the actor as the snapshot holds it, for the AI (spec A42.4): cohorts, stages, <c>gen</c>, <c>perf</c>, upkeep, price floor,
     /// <c>line_bind</c>, the policy-year counters and <c>Def(K)</c>. The caller projects it to the month of execution.
+    /// <paramref name="reuse"/>: a book of this layout to refill (cleared first) instead of a new one; the caller owns it and must not keep the result across calls.
     /// </summary>
-    public FleetBook SnapshotBook(int actor, long month)
+    public FleetBook SnapshotBook(int actor, long month, FleetBook? reuse = null)
     {
-        FleetBook book = NewBook(actor, next: false);
+        FleetBook book = NewBook(actor, next: false, reuse);
         bool[] def = DefK(actor, month - 1);
         for (int d = 0; d < _d; d++)
             book.InDefK[d] = def[d];

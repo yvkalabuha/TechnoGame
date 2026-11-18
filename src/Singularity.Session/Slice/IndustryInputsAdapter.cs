@@ -17,6 +17,25 @@ namespace Singularity.Session;
 /// </summary>
 internal sealed class IndustryInputsAdapter(SliceWorld world) : IIndustryInputs
 {
+    // Memo of the tooling plan per actor (F4, TASK-0103): a pure function of the snapshot, keyed by (month, rest, Table.Version). Only Memoize writes
+    // a slot (the inputs phase: one thread per actor, never inside a tick); every other reader hits or recomputes into a fresh result.
+    private readonly PlanSlot[] _memo = CreateSlots(world.Table.RowCount);
+
+    private sealed class PlanSlot
+    {
+        public long Version = -1, Month;
+        public Fx6 Rest;
+        public readonly ToolingPlanResult Result = new();
+    }
+
+    private static PlanSlot[] CreateSlots(int count)
+    {
+        var slots = new PlanSlot[count];
+        for (int i = 0; i < count; i++)
+            slots[i] = new PlanSlot();
+        return slots;
+    }
+
     public bool KnowsProcess(int siteRow, int processRow, long month)
     {
         int row = world.Graph.RowOf(world.IndustryLayout.Number[processRow]);
@@ -60,13 +79,35 @@ internal sealed class IndustryInputsAdapter(SliceWorld world) : IIndustryInputs
     /// <summary><c>ToolingPlan(a, t, rest_a)</c> with <c>B_cap = ⌊k_cap·share_cap·budget_a(t)⌋</c> of the shares in force (<c>k_cap</c> = 1 outside the Lab stress set).</summary>
     public ToolingPlanResult Plan(int actor, long month, Fx6 restActor)
     {
+        if ((uint)actor < (uint)_memo.Length)
+        {
+            PlanSlot slot = _memo[actor];
+            if (slot.Version == world.Table.Version && slot.Month == month && slot.Rest == restActor)
+                return slot.Result;
+        }
+        return Compute(actor, month, restActor, null);
+    }
+
+    /// <summary>The plan of the actor, kept for the compute of <paramref name="month"/> on this snapshot; valid until the next call for the actor.</summary>
+    public ToolingPlanResult Memoize(int actor, long month, Fx6 restActor)
+    {
+        PlanSlot slot = _memo[actor];
+        ToolingPlanResult plan = Compute(actor, month, restActor, slot.Result);
+        slot.Month = month;
+        slot.Rest = restActor;
+        slot.Version = world.Table.Version;
+        return plan;
+    }
+
+    private ToolingPlanResult Compute(int actor, long month, Fx6 restActor, ToolingPlanResult? reuse)
+    {
         ToolingTargetSpec target = world.PolicyParameters.ToolingTarget;
         Fx6 share = world.SharesOf(actor).Capability, budget = world.Policy.Budget(actor);
         // k_cap ≠ 1 only in the Lab stress set: one floor over the whole product (spec), so the hash of a default run is untouched.
         Fx6 bCap = target.KCap == Fx6.One
             ? share * budget
             : Fx6.FromRaw((long)((Int128)target.KCap.Raw * share.Raw * budget.Raw / ((Int128)Fx6.Scale * Fx6.Scale)));
-        return ToolingPlan.Compute(world.Industry, this, world.PolicyParameters.MKeep, actor, month, restActor, bCap, target);
+        return ToolingPlan.Compute(world.Industry, this, world.PolicyParameters.MKeep, actor, month, restActor, bCap, target, reuse);
     }
 
     public Fx6 EffortBudget(int actorRow, long month) => world.SharesOf(actorRow).Effort * world.Policy.Budget(actorRow);

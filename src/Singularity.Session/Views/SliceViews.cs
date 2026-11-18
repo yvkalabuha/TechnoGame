@@ -47,7 +47,7 @@ public sealed record ActorView(
     Fx6? FleetValue,
     ImmutableArray<BureauView> Bureaus,
     QualityView Quality, LicenceView Licence, DisruptionView Disruption,
-    ImmutableArray<NodeView> Nodes,
+    NodeList Nodes,
     ImmutableArray<DesignView> Designs,
     PolicyDecisionView Decisions);
 
@@ -55,7 +55,7 @@ public sealed record ActorView(
 /// A node of the knowledge graph; <see cref="Process"/> is set for the nodes that are capability processes (PRC). <see cref="KnownSince"/> is
 /// <c>know.since.N</c> (−1 unknown), present only in L_C and L_P, null elsewhere.
 /// </summary>
-public sealed record NodeView(int Number, bool Known, bool ByLicence, ProcessView? Process, long? KnownSince);
+public readonly record struct NodeView(int Number, bool Known, bool ByLicence, ProcessView? Process, long? KnownSince);
 
 /// <summary>A process at the actor's home site (A27: a site is an actor), month <c>Month + 1</c> of the snapshot.</summary>
 public readonly record struct ProcessView(Fx6 Yield, Fx6 V, bool Admitted, Fx6 UnitCostMult, bool Mastered, Fx6 LicenceShare);

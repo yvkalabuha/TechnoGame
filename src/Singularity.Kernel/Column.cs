@@ -22,6 +22,16 @@ public abstract class Column
 
     public abstract int Length { get; }
 
+    private long _version;
+
+    /// <summary>
+    /// Grows by one whenever <c>Current</c> of this column is replaced: a swap that exchanged it or a <c>Load</c>. A column nobody wrote keeps its
+    /// value across ticks. Read between ticks only; it is not part of the state and never hashed. Lets a reader reuse what it derived from the column (TASK-0103 R2).
+    /// </summary>
+    public long Version => _version;
+
+    private protected void BumpVersion() => _version++;
+
     /// <summary>Drops the open flag without swapping (a tick aborted by an exception).</summary>
     internal abstract void Close();
 
@@ -100,6 +110,7 @@ public abstract class Column<T> : Column where T : unmanaged
         if (values.Length != _current.Length)
             throw new ArgumentException($"Column '{Name}' expects {_current.Length} values, got {values.Length}.", nameof(values));
         values.CopyTo(_current);
+        BumpVersion();
         Owner?.BumpVersion();
     }
 
@@ -121,6 +132,7 @@ public abstract class Column<T> : Column where T : unmanaged
         if (!_copied)
             return false;
         (_current, _next) = (_next, _current);
+        BumpVersion();
         _copied = false;
         Volatile.Write(ref _open, false);
         return true;

@@ -103,6 +103,22 @@ public class CopyOnWriteTests
     }
 
     [Fact]
+    public void ColumnVersion_GrowsOnSwapAndLoad_AndStaysForAColumnNobodyWrote()
+    {
+        Table table = Build(out TickRunner runner, 1, 8, fullCopy: false);
+        LongColumn hot = table.GetLong("hot"), cold = table.GetLong("cold");
+        long h0 = hot.Version, c0 = cold.Version;
+        runner.RunTick();
+        Assert.Equal(h0 + 1, hot.Version);          // written: swapped once
+        Assert.Equal(c0, cold.Version);             // never opened: Current kept
+        runner.RunTick();
+        Assert.Equal(h0 + 2, hot.Version);
+        Assert.Equal(c0, cold.Version);
+        cold.Load([.. Enumerable.Repeat(1L, 64)]);
+        Assert.Equal(c0 + 1, cold.Version);
+    }
+
+    [Fact]
     public void NextOutsideATick_Throws_AlsoAfterATickThatWasAbortedByAnException()
     {
         var table = new Table(4);

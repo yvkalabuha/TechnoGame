@@ -48,6 +48,20 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
     private readonly ICultureRule _rule;
     [Scratch]
     private readonly Fx6[] _lastRest;
+    private readonly Table _table;
+
+    // Memo of the effort allocation per actor (F4, TASK-0103): a pure function of the snapshot, so it is keyed by (actor, month, Table.Version).
+    // Written only by MemoizeActor, which the inputs phase calls once per actor from its own thread; compute and the other readers only read it
+    // and recompute on a miss, so no slot has two writers.
+    [Scratch]
+    private readonly AllocMemo[] _allocMemo;
+
+    private sealed class AllocMemo
+    {
+        public long Version = -1, Month;
+        public Fx6[] E = [];
+        public Fx6 Rest;
+    }
     private readonly LongColumn[] _wfN, _wfGranted;
 
     // Scratch, rewritten every step; site s only by the chunk that owns it.
@@ -98,6 +112,10 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
         _mode = mode;
         _rule = rule ?? throw new ArgumentNullException(nameof(rule));
         _lastRest = new Fx6[layout.SiteCount];
+        _table = table;
+        _allocMemo = new AllocMemo[layout.SiteCount];
+        for (int a = 0; a < _allocMemo.Length; a++)
+            _allocMemo[a] = new AllocMemo();
         _curves = curves;
         _c = layout.Clusters.Length;
         _n = layout.ProcessCount;
@@ -236,6 +254,23 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
     public Fx6 RestActor(int actorRow, long month) => Allocation(actorRow, month).Rest;
 
     /// <summary>
+    /// Computes the allocation of the actor once and keeps it for the compute of <paramref name="month"/> (same snapshot: <c>Table.Version</c> is part
+    /// of the key). Call from the inputs phase, at most one thread per actor, never inside a tick.
+    /// </summary>
+    public void MemoizeActor(int actorRow, long month)
+    {
+        AllocMemo m = _allocMemo[actorRow];
+        EffortAllocation alloc = Allocation(actorRow, month, memo: false);
+        int len = _l.SitesOf(actorRow).Length * _n;
+        if (m.E.Length != len)
+            m.E = new Fx6[len];
+        alloc.E.AsSpan(0, len).CopyTo(m.E);
+        m.Rest = alloc.Rest;
+        m.Month = month;
+        m.Version = _table.Version;
+    }
+
+    /// <summary>
     /// Diagnostics only: <c>rest_a</c> handed to <c>ToolingInvest</c> at the site in the last step. Checked against ADR-0013 п. 4 (T6a):
     /// compute writes it afresh for every site of a full-model step and nothing in compute, merge or post reads it, so it carries
     /// nothing into the next tick and is not state; it stays outside the table and is not hashed or saved.
@@ -336,7 +371,9 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
     /// <summary><c>production_profile(site, prc_set)</c> of month <paramref name="month"/> from the snapshot (contract §4.2, §5).</summary>
     public ProductionProfile Profile(int site, ReadOnlySpan<PrcSetItem> prcSet, long month)
     {
-        var items = new ProfileItem[prcSet.Length];
+        // A prc_set is a few processes (a design has ≤ 4 alternatives): the common case stays on the stack, no garbage per view row.
+        Span<ProfileItem> stack = stackalloc ProfileItem[4];
+        Span<ProfileItem> items = prcSet.Length <= 4 ? stack[..prcSet.Length] : new ProfileItem[prcSet.Length];
         for (int i = 0; i < prcSet.Length; i++)
         {
             int r = _l.RowOf(prcSet[i].ProcessNumber);
@@ -497,21 +534,29 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
     private Fx6 AllocateEffort(int s, long t)
     {
         EffortAllocation alloc = Allocation(_l.SiteOwner[s], t, s);
+        int k = _l.LocalSiteIndex(s);
         for (int r = 0; r < _n; r++)
-            _e[r].Next[s] = alloc.E[s * _n + r].Raw;
+            _e[r].Next[s] = alloc.E[k * _n + r].Raw;
         _lastRest[s] = alloc.Rest;
         return alloc.Rest;
     }
 
-    private EffortAllocation Allocation(int actor, long t, int site = -1)
+    // The result is valid until the next call on this thread (thread scratch) or the next MemoizeActor of the actor.
+    private EffortAllocation Allocation(int actor, long t, int site = -1, bool memo = true)
     {
+        if (memo && actor < _allocMemo.Length)
+        {
+            AllocMemo m = _allocMemo[actor];
+            if (m.Version == _table.Version && m.Month == t)
+                return new EffortAllocation(m.E, m.Rest, 0);
+        }
         Span<int> focus = stackalloc int[EffortFocusSlots];
         for (int k = 0; k < focus.Length; k++)
             focus[k] = _inputs.EffortFocus(actor, k, t);
         Fx6 budget = _inputs.EffortBudget(actor, t);
         if (budget < Fx6.Zero)
             throw new IndustryInvariantException(t, site, $"negative effort budget {budget}");
-        return EffortAllocator.Allocate(_rule, this, actor, t, budget, focus);
+        return EffortAllocator.Allocate(_rule, this, actor, t, budget, focus, EffortScratch.ForThread);
     }
 
     private void StepCulture(int s, int c, int d, long t)

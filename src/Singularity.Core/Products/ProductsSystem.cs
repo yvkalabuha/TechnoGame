@@ -407,9 +407,14 @@ public sealed partial class ProductsSystem : ITickSystem
     public int[] Alternatives(int actor, int design)
     {
         var alts = new int[_s];
+        AlternativesInto(actor, design, alts);
+        return alts;
+    }
+
+    private void AlternativesInto(int actor, int design, Span<int> alts)
+    {
         for (int s = 0; s < _s; s++)
             alts[s] = _alt[design * _s + s].Current[actor];
-        return alts;
     }
 
     /// <summary><c>prc_set</c> of a design (ascending process numbers); empty without a design.</summary>
@@ -463,7 +468,12 @@ public sealed partial class ProductsSystem : ITickSystem
     public int PlatformGen(int actor, int design) => _gp[design].Current[actor];
 
     /// <summary><c>gen(d) = min(g_p, eng_gen(engine) + 1)</c> (contract §4.4a, #70).</summary>
-    public int Gen(int actor, int design) => DesignRules.Gen(_l, PlatformGen(actor, design), Alternatives(actor, design));
+    public int Gen(int actor, int design)
+    {
+        Span<int> alts = stackalloc int[_s];
+        AlternativesInto(actor, design, alts);
+        return DesignRules.Gen(_l, PlatformGen(actor, design), alts);
+    }
 
     /// <summary><c>parent_design</c>, −1 for a design that is not derived.</summary>
     public int Parent(int actor, int design) => _parent[design].Current[actor];

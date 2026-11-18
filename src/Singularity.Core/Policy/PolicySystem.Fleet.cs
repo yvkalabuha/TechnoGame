@@ -118,7 +118,7 @@ public sealed partial class PolicySystem
             book.ResetYear(Shares(row).Procurement * Budget(row));
         book.NewMonth();
         IReadOnlyList<FleetCommand> pending = AiFleetCommands(row, t);
-        foreach (FleetCommandKind kind in (FleetCommandKind[])[FleetCommandKind.Sell, FleetCommandKind.Retire])
+        foreach (FleetCommandKind kind in (ReadOnlySpan<FleetCommandKind>)[FleetCommandKind.Sell, FleetCommandKind.Retire])
         {
             foreach (FleetCommand c in pending)
             {
@@ -133,7 +133,7 @@ public sealed partial class PolicySystem
         book.NewMonth();
 
         // The line L of t+1: the lines of the snapshot with the closes and starts decided in t−1 (they run in t) and in this compute.
-        var series = new bool[_designs];
+        Span<bool> series = stackalloc bool[_designs];
         for (int d = 0; d < _designs; d++)
             series[d] = designs[d].Stage == DesignStage.Series;
         for (int d = 0; d < _designs; d++)
