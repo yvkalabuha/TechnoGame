@@ -36,3 +36,5 @@ polities:
   # Four-power administration of the two cities (#312): the colours of the hatching follow the member order.
   - {id: ALLIED_BERLIN, name: "Allied administration of Berlin", kind: joint, government: false, members: [USA, GBR, SUN, FRA]}
   - {id: ALLIED_VIENNA, name: "Allied administration of Vienna", kind: joint, government: false, members: [USA, GBR, SUN, FRA]}
+  # Zone A of Trieste under the Allied Military Government (US and British), 1945-06-12 .. 1954-10-26 (RR-0020 C14).
+  - {id: AMG_TRIESTE, name: "Allied Military Government of Trieste (zone A)", kind: joint, government: false, members: [USA, GBR]}

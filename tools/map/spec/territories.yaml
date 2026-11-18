@@ -1,0 +1,12 @@
+# Small territories with ownership but no geometry (ADR-0020 §1.4): a row of the province table, attached to a region that carries only them.
+# The area is approximate, only to show that the territory is below the 5000 km2 band and cannot be a province; it is not part of any table.
+# The territory is inside the NE polygon of a neighbouring province; the geometry of the neighbour is not cut, because no acceptable source for its line exists.
+territories:
+  - {id: tenda_brig.tenda_brig, name: "Tenda and Brigue valleys (Italy to France)", approx_km2: 550, ref: "RR-0020 C18/B106: Treaty of Peace with Italy 1947-02-10 art. 2, in force 1947-09-15"}
+  - {id: sazan.sazan, name: "Sazan (Saseno) island (Italy to Albania)", approx_km2: 5, ref: "RR-0020 B105: Treaty of Peace with Italy 1947-02-10 art. 28, in force 1947-09-15"}
+  - {id: bratislava_bridgehead.bratislava_bridgehead, name: "Three villages south of Bratislava (Hungary to Czechoslovakia)", approx_km2: 65, ref: "RR-0020 C33: Treaty of Peace with Hungary 1947-02-10 art. 1, in force 1947-09-15"}
+  - {id: german_enclaves_nl.elten_selfkant, name: "Elten, Selfkant and other German enclaves (Germany to the Netherlands)", approx_km2: 69, ref: "RR-0020 B102/B103: annexed 1949-04-23, returned 1963-08-01"}
+  - {id: ifni.ifni, name: "Ifni (Spain to Morocco)", approx_km2: 1500, ref: "RR-0020 B54: Treaty of Fez 1969-01-04, transferred 1969-06-30"}
+  - {id: tangier.tangier, name: "Tangier International Zone", approx_km2: 380, ref: "RR-0020 B52: international zone until 1956-10-29"}
+  - {id: port_arthur.port_arthur, name: "Port Arthur naval base (Soviet lease)", approx_km2: 400, ref: "RR-0020 B02: Sino-Soviet treaty 1945-08-14, returned to China 1955-05"}
+  - {id: chandernagore.chandernagore, name: "Chandernagore (French India)", approx_km2: 10, ref: "RR-0020 B14: de facto transfer 1950-05-02"}

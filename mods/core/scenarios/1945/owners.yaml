@@ -1,13 +1,13 @@
 # Start ownership of Europe as of 1945-10-01 (ADR-0011 §2.12, #311-#313). Hand-maintained table: region defaults plus province exceptions.
 # DRAFT written by the developer in TASK-0075 for the map pipeline. Every row must be verified by research-scientist (T4) and independently by critic (ADR-0011 §6).
 # Disputed points for the owner: de jure owner of the eastern German territories and of the Koenigsberg area (owner DEU, controller POL or SUN here).
-# Not yet modelled: Venezia Giulia zones A/B, Istria, Rijeka, Zadar (Italian de jure, Allied or Yugoslav control), sectors of Berlin and Vienna, Danzig as a separate case.
+# TASK-0091 (#350): a region has one owner and one controller, so the zones, Berlin, Vienna, Venezia Giulia, Danzig and the eastern lands are regions of their own and there are no province exceptions.
+# Not modelled: the US, British and French sectors of Berlin and the five regions of Vienna (no geometry source for the lines); the world outside Europe (T4).
 as_of: 1945-10-01
 defaults:
   - {region: aland, owner: FIN, controller: FIN, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
   - {region: albania, owner: ALB, controller: ALB, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
   - {region: andorra, owner: AND, controller: AND, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: austria, owner: AUT, controller: GBR, status: core, source: "Agreement on zones of occupation in Austria 1945-07-09 (EAC); draft, T4 to verify"}
   - {region: belarus, owner: SUN, controller: SUN, status: core, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
   - {region: belgium, owner: BEL, controller: BEL, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
   - {region: bosnia_and_herzegovina, owner: YUG, controller: YUG, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
@@ -24,9 +24,6 @@ defaults:
   - {region: france_ain, owner: FRA, controller: FRA, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
   - {region: france_gers, owner: FRA, controller: FRA, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
   - {region: france_marne, owner: FRA, controller: FRA, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: germany_bayern, owner: DEU, controller: USA, status: core, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); zone lines: OHM polygons, see spec/20-cuts-europe.yaml; draft, T4 to verify"}
-  - {region: germany_brandenburg, owner: DEU, controller: SUN, status: core, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); zone lines: OHM polygons, see spec/20-cuts-europe.yaml; draft, T4 to verify"}
-  - {region: germany_niedersachsen, owner: DEU, controller: GBR, status: core, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); zone lines: OHM polygons, see spec/20-cuts-europe.yaml; draft, T4 to verify"}
   - {region: gibraltar, owner: GBR, controller: GBR, status: colony, source: "British colony or dependency in 1945; draft, T4 to verify"}
   - {region: greece_kentriki_makedonia, owner: GRC, controller: GRC, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
   - {region: greece_peloponnisos, owner: GRC, controller: GRC, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
@@ -52,8 +49,6 @@ defaults:
   - {region: norway_finnmark, owner: NOR, controller: NOR, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
   - {region: norway_hedmark, owner: NOR, controller: NOR, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
   - {region: norway_nordland, owner: NOR, controller: NOR, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: poland_greater_poland, owner: DEU, controller: POL, status: core, source: "Potsdam Protocol 1945-08-02 section IX: Polish administration east of the Oder-Neisse line pending the peace settlement; draft, T4 to verify; owner is a disputed point for the owner"}
-  - {region: poland_masovian, owner: POL, controller: POL, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
   - {region: portugal, owner: PRT, controller: PRT, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
   - {region: republic_of_serbia, owner: YUG, controller: YUG, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
   - {region: romania_calarasi, owner: ROU, controller: ROU, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
@@ -80,24 +75,27 @@ defaults:
   - {region: united_kingdom_highland, owner: GBR, controller: GBR, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
   - {region: united_kingdom_kent, owner: GBR, controller: GBR, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
   - {region: vatican, owner: VAT, controller: VAT, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-exceptions:
-  - {province: austria.niederosterreich, owner: AUT, controller: SUN, status: core, source: "Agreement on zones of occupation in Austria 1945-07-09 (EAC); draft, T4 to verify"}
-  - {province: austria.oberosterreich, owner: AUT, controller: USA, status: core, source: "Agreement on zones of occupation in Austria 1945-07-09 (EAC); draft, T4 to verify"}
-  - {province: austria.oberosterreich_soviet_zone, owner: AUT, controller: SUN, status: core, source: "Agreement on zones of occupation in Austria 1945-07-09 (EAC); draft, T4 to verify"}
-  - {province: austria.salzburg, owner: AUT, controller: USA, status: core, source: "Agreement on zones of occupation in Austria 1945-07-09 (EAC); draft, T4 to verify"}
-  - {province: austria.tirol, owner: AUT, controller: FRA, status: core, source: "Agreement on zones of occupation in Austria 1945-07-09 (EAC); draft, T4 to verify"}
-  - {province: austria.wien, owner: AUT, controller: ALLIED_VIENNA, status: core, source: "Vienna under the four-power Allied Commission (sectors not yet cut); draft, T4 to verify"}
-  - {province: finland_southern_savonia.uusimaa_porkkala_lease, owner: FIN, controller: SUN, status: leased, source: "Armistice with Finland 1944-09-19 art. 8 (Porkkala lease); draft, T4 to verify"}
-  - {province: germany_bayern.baden_wurttemberg_french_zone, owner: DEU, controller: FRA, status: core, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); zone lines: OHM polygons, see spec/20-cuts-europe.yaml; draft, T4 to verify"}
-  - {province: germany_bayern.bayern_french_zone, owner: DEU, controller: FRA, status: core, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); zone lines: OHM polygons, see spec/20-cuts-europe.yaml; draft, T4 to verify"}
-  - {province: germany_bayern.rheinland_pfalz, owner: DEU, controller: FRA, status: core, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); zone lines: OHM polygons, see spec/20-cuts-europe.yaml; draft, T4 to verify"}
-  - {province: germany_brandenburg.berlin, owner: DEU, controller: ALLIED_BERLIN, status: core, source: "Berlin under the four-power Kommandatura (sectors not yet cut); draft, T4 to verify"}
-  - {province: germany_niedersachsen.bremen, owner: DEU, controller: USA, status: core, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); zone lines: OHM polygons, see spec/20-cuts-europe.yaml; draft, T4 to verify"}
-  - {province: greece_peloponnisos.dodecanese, owner: ITA, controller: GBR, status: colony, source: "Italian Dodecanese under British military administration since 1945-05; Treaty of Peace with Italy 1947 art. 14; draft, T4 to verify"}
-  - {province: poland_greater_poland.greater_poland, owner: POL, controller: POL, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {province: poland_greater_poland.kuyavian_pomeranian, owner: POL, controller: POL, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {province: poland_greater_poland.pomeranian, owner: POL, controller: POL, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {province: poland_masovian.opole, owner: DEU, controller: POL, status: core, source: "Potsdam Protocol 1945-08-02 section IX: Polish administration east of the Oder-Neisse line pending the peace settlement; draft, T4 to verify; owner is a disputed point for the owner"}
-  - {province: poland_masovian.silesian_former_german, owner: DEU, controller: POL, status: core, source: "Potsdam Protocol 1945-08-02 section IX: Polish administration east of the Oder-Neisse line pending the peace settlement; draft, T4 to verify; owner is a disputed point for the owner"}
-  - {province: poland_masovian.warmian_masurian_former_german, owner: DEU, controller: POL, status: core, source: "Potsdam Protocol 1945-08-02 section IX: Polish administration east of the Oder-Neisse line pending the peace settlement; draft, T4 to verify; owner is a disputed point for the owner"}
-  - {province: russia_vologda.kaliningrad, owner: DEU, controller: SUN, status: core, source: "Potsdam Protocol 1945-08-02 section VI: Koenigsberg area under Soviet administration pending the peace settlement; draft, T4 to verify; owner is a disputed point for the owner"}
+  - {region: poland_greater_poland, owner: POL, controller: POL, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: poland_masovian, owner: POL, controller: POL, status: core, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: poland_former_german, owner: DEU, controller: POL, status: core, source: "Potsdam Protocol 1945-08-02 section IX: Polish administration east of the Oder-Neisse line pending the peace settlement; draft, T4 to verify; owner is a disputed point for the owner"}
+  - {region: kaliningrad, owner: DEU, controller: SUN, status: core, source: "Potsdam Protocol 1945-08-02 section VI: Koenigsberg area under Soviet administration pending the peace settlement; draft, T4 to verify; owner is a disputed point for the owner"}
+  - {region: danzig, owner: DEU, controller: POL, status: core, source: "Potsdam Protocol 1945-08-02 section IX names the former Free City of Danzig among the areas under Polish administration; the owner of the Free City is an open question for the owner (DEBT-0043); draft, T4 to verify"}
+  - {region: germany_soviet_zone, owner: DEU, controller: SUN, status: core, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); draft, T4 to verify"}
+  - {region: germany_british_zone, owner: DEU, controller: GBR, status: core, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); draft, T4 to verify"}
+  - {region: germany_us_zone, owner: DEU, controller: USA, status: core, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); draft, T4 to verify"}
+  - {region: germany_french_zone, owner: DEU, controller: FRA, status: core, source: "Berlin Declaration 1945-06-05 and Potsdam Protocol 1945-08-02 (zones of occupation); draft, T4 to verify"}
+  - {region: germany_us_enclave, owner: DEU, controller: USA, status: core, source: "US enclave of Bremen and Bremerhaven in the British zone (EAC agreement 1944-09-12 and US-UK agreement of 1945); draft, T4 to verify"}
+  - {region: saar, owner: DEU, controller: FRA, status: core, source: "French zone of occupation; the Saar protectorate starts 1947-12-17 (RR-0020 C02); draft, T4 to verify"}
+  - {region: berlin_west, owner: DEU, controller: ALLIED_BERLIN, status: core, source: "Berlin under the four-power Kommandatura until 1948-11-30 (RR-0020 C12); draft, T4 to verify"}
+  - {region: berlin_east, owner: DEU, controller: ALLIED_BERLIN, status: core, source: "Berlin under the four-power Kommandatura until 1948-11-30 (RR-0020 C12); draft, T4 to verify"}
+  - {region: austria_soviet_zone, owner: AUT, controller: SUN, status: core, source: "Agreement on zones of occupation in Austria 1945-07-09 (EAC); draft, T4 to verify"}
+  - {region: austria_us_zone, owner: AUT, controller: USA, status: core, source: "Agreement on zones of occupation in Austria 1945-07-09 (EAC); draft, T4 to verify"}
+  - {region: austria_british_zone, owner: AUT, controller: GBR, status: core, source: "Agreement on zones of occupation in Austria 1945-07-09 (EAC); draft, T4 to verify"}
+  - {region: austria_french_zone, owner: AUT, controller: FRA, status: core, source: "Agreement on zones of occupation in Austria 1945-07-09 (EAC); draft, T4 to verify"}
+  - {region: vienna, owner: AUT, controller: ALLIED_VIENNA, status: core, source: "Vienna under the four-power Allied Commission (sectors not cut: no geometry source); draft, T4 to verify"}
+  - {region: porkkala, owner: FIN, controller: SUN, status: leased, source: "Armistice with Finland 1944-09-19 art. 8 (Porkkala lease); draft, T4 to verify"}
+  - {region: dodecanese, owner: ITA, controller: GBR, status: colony, source: "Italian Dodecanese under British military administration since 1945-05; Treaty of Peace with Italy 1947 art. 14; draft, T4 to verify"}
+  - {region: venezia_giulia_ceded, owner: ITA, controller: YUG, status: core, source: "Italian de jure until the Treaty of Peace 1947-09-15; Yugoslav military administration east of the Morgan line (RR-0020 C16); draft, T4 to verify"}
+  - {region: trieste_zone_a, owner: ITA, controller: AMG_TRIESTE, status: core, source: "Zone A under Allied Military Government (US and British) from 1945-06-12; Italian de jure until 1947-09-15 (RR-0020 C14, C17); draft, T4 to verify"}
+  - {region: trieste_zone_b, owner: ITA, controller: YUG, status: core, source: "Zone B under Yugoslav military administration; Italian de jure until 1947-09-15 (RR-0020 C15, C17); draft, T4 to verify"}
+exceptions: []

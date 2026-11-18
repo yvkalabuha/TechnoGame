@@ -1,0 +1,38 @@
+# Units kept whole by the merge step: they are the sides of ownership-event lines (class A, ADR-0011 §2.7 exception (c), ADR-0020 §2.9).
+# Without the keep rule the greedy merge would join these small units to a neighbour that changed owner at another date.
+rules:
+  - keep:
+      codes: [DEU-1581]   # Saarland
+      class: A
+      ref: "RR-0020 C02/C02b: Saar constitution 1947-12-15, French economic union 1948-04-01, Saar Treaty 1956-10-27, joined the FRG 1957-01-01"
+      reason: Saar protectorate
+  - keep:
+      codes: [IND-3265, IND-2445]   # Goa; Dadra and Nagar Haveli and Daman and Diu (NE merges the territories of 2020)
+      class: A
+      ref: "RR-0020 B16/B17: Portuguese India taken by India 1954-08-02 (Dadra, Nagar Haveli) and 1961-12-19 (Goa, Daman, Diu)"
+      reason: Portuguese enclaves
+  - keep:
+      codes: [IND-3262]   # Puducherry
+      class: A
+      ref: "RR-0020 B15: French India, de facto transfer 1954-11-01"
+      reason: French enclaves
+  - keep:
+      codes: [MYS-4833]   # Labuan
+      class: A
+      ref: "RR-0020 B27: Sabah and Sarawak with Singapore joined Malaysia 1963-09-16 (Labuan belonged to North Borneo)"
+      reason: part of British Borneo
+  - keep:
+      codes: [JPN-3502]   # Okinawa
+      class: A
+      ref: "RR-0020 B111: Okinawa (Ryukyu) under US administration until 1972-05-15"
+      reason: US-administered prefecture
+  - keep:
+      codes: [TZA-3337, TZA-3380, TZA-3381, TZA-3383, TZA-3384]   # Zanzibar and Pemba
+      class: A
+      ref: "RR-0020 B81: Zanzibar independent 1963-12-10, union with Tanganyika 1964-04-26"
+      reason: Zanzibar
+  - keep:
+      codes: ["WEB+00?", "GAZ+00?"]   # West Bank, Gaza Strip
+      class: A
+      ref: "RR-0020 B41/B42: West Bank to Jordan 1950-04-24, Gaza under Egyptian administration from 1948-09-22"
+      reason: armistice-line territories

@@ -14,8 +14,10 @@ internal sealed class Piece
     public string Name = "";
     public double NameArea;
     public List<string> Cuts = new();
+    public List<string> Sides = new();   // "cut_id:hint" of every cut that made this piece (event-line CI)
     public bool ClassA;
     public string? Ref;
+    public string RegionHint = "";    // cut rule 'regions': the region this piece must form (#350)
     public string Hint = "";          // naming hint for bootstrap (cut piece suffix or subdivide index)
     public string? SubBase;           // subdivide: base id; id = base_k
     public int SubK;                  // 1-based, by (lat desc, lon asc) of seeds
@@ -40,9 +42,10 @@ internal static class Pipeline
             else if (rule.Cut != null) pieces = DoCut(pieces, rule.Cut, ohm, file);
             else if (rule.Subdivide != null) pieces = DoSubdivide(pieces, rule.Subdivide, file);
             else if (rule.Keep != null) DoKeep(pieces, rule.Keep, file);
+            else if (rule.Isolate != null) Select(pieces, rule.Isolate.Codes, $"{file} isolate");   // checked only; used by bootstrap
             else throw new InvalidDataException($"{file}: empty rule");
         }
-        Heal(pieces);
+        Heal(pieces, spec.Area.KnownGaps);
         return pieces;
     }
 
@@ -51,8 +54,9 @@ internal static class Pipeline
     /// The modified pieces and their neighbours are re-noded together: all their boundaries are noded at once (snap rounding to the grid)
     /// and polygonised, and each face goes back to the piece that contained it.
     /// </summary>
-    internal static void Heal(List<Piece> pieces)
+    internal static void Heal(List<Piece> pieces, List<List<double>>? knownGaps = null)
     {
+        var lost = new List<string>();
         var tree = new NetTopologySuite.Index.Strtree.STRtree<int>();
         for (int i = 0; i < pieces.Count; i++) tree.Insert(pieces[i].Shape.EnvelopeInternal, i);
         tree.Build();
@@ -84,11 +88,15 @@ internal static class Pipeline
                 break;
             }
             // A face owned by no group piece is either an enclave held by another piece (a hole in the group) or a pre-existing NE gap; a large one means the noding went wrong.
-            if (!owned && !pieces.Any(q => NetTopologySuite.Algorithm.Locate.SimplePointInAreaLocator.Locate(pt, q.Shape) != Location.Exterior) && Sph.PolygonArea(f) > 5e6) throw new InvalidDataException($"Heal dropped a face of {Sph.PolygonArea(f) / 1e6:F1} km2 near {pt.Y:F3},{pt.X:F3}");
+            // A gap listed in area.yaml (known_gaps: [lat, lon] inside it) is a hole of the NE data itself, for instance an undetermined border in an ice field.
+            if (!owned && !pieces.Any(q => NetTopologySuite.Algorithm.Locate.SimplePointInAreaLocator.Locate(pt, q.Shape) != Location.Exterior) && Sph.PolygonArea(f) > 5e6
+                && !(knownGaps?.Any(g => g.Count == 2 && f.Contains(Sph.Gf.CreatePoint(new Coordinate(g[1], g[0])))) ?? false))
+                lost.Add($"{Sph.PolygonArea(f) / 1e6:F1} km2 near {pt.Y:F3},{pt.X:F3}");
         }
+        if (lost.Count > 0) throw new InvalidDataException($"Heal dropped a face of {string.Join("; ", lost)} (a gap of the data: list it in area.yaml known_gaps, or the noding went wrong)");
         foreach (var i in group)
         {
-            if (!faces.TryGetValue(i, out var l)) throw new InvalidDataException($"Heal: no face found for a piece of {string.Join(",", pieces[i].Src)}");
+            if (!faces.TryGetValue(i, out var l)) throw new InvalidDataException($"Heal: no face found for a piece of {string.Join(",", pieces[i].Src)} (cuts {string.Join(",", pieces[i].Cuts)}, {Sph.AreaM2(pieces[i].Shape) / 1e6:F1} km2, {pieces[i].Shape.NumGeometries} parts, valid {pieces[i].Shape.IsValid})");
             pieces[i].Shape = Sph.FromPolygons(l);
         }
         // Faces that belong to no piece were dropped: the total area must not change beyond rounding.
@@ -121,7 +129,7 @@ internal static class Pipeline
             Shape = NetTopologySuite.Coverage.CoverageUnion.Union(group.Select(p => p.Shape).ToArray()),
             Adm0 = big.Adm0, Admin = big.Admin, Name = big.Name, NameArea = group.Sum(p => p.NameArea),
         };
-        foreach (var p in group) { merged.Src.UnionWith(p.Src); merged.Cuts.AddRange(p.Cuts); }
+        foreach (var p in group) { merged.Src.UnionWith(p.Src); merged.Cuts.AddRange(p.Cuts); merged.Sides.AddRange(p.Sides); }
         merged.Shape = Sph.Overlay(merged.Shape, merged.Shape, SpatialFunction.Union);
         var res = new List<Piece>(pieces.Count);
         var set = idx.ToHashSet();
@@ -149,7 +157,13 @@ internal static class Pipeline
     {
         if (c.Parallel is double phi) return Rect(-181, -91, 181, phi);
         if (c.Meridian is double lam) return Rect(-181, -91, lam, 91);
-        if (c.Ohm != null) return ohm(c.Ohm).Area;
+        if (c.Ohm != null)
+        {
+            var area = ohm(c.Ohm).Area;
+            // A snapshot without outer ways (for instance a 'chronology' relation that only lists other relations) would cut nothing, silently.
+            if (Sph.AreaM2(area) <= 0) throw new InvalidDataException($"{file} cut {c.Id}: OHM snapshot {c.Ohm} has no area");
+            return area;
+        }
         throw new InvalidDataException($"{file} cut {c.Id}: one of parallel, meridian, ohm is required ('line' files are not used yet)");
     }
 
@@ -159,7 +173,14 @@ internal static class Pipeline
             throw new InvalidDataException($"{file} cut {c.Id}: id, source, as_of and precision A/B/C are required");
         if (c.Precision == "A" && string.IsNullOrWhiteSpace(c.Ref))
             throw new InvalidDataException($"{file} cut {c.Id}: class A needs a ref");
-        var idx = Select(pieces, c.Within, $"{file} cut {c.Id}");
+        var idx = c.Within.Count > 0 ? Select(pieces, c.Within, $"{file} cut {c.Id}") : new List<int>();
+        if (c.WithinAdm0.Count > 0)
+        {
+            var extra = Enumerable.Range(0, pieces.Count).Where(i => c.WithinAdm0.Contains(pieces[i].Adm0)).ToList();
+            if (extra.Count == 0) throw new InvalidDataException($"{file} cut {c.Id}: no piece in {string.Join(", ", c.WithinAdm0)}");
+            idx = idx.Union(extra).OrderBy(i => i).ToList();
+        }
+        if (idx.Count == 0) throw new InvalidDataException($"{file} cut {c.Id}: within or within_adm0 is required");
         var cutter = Cutter(c, ohm, file);
         // a_pieces must name existing hints: a typo would silently leave the cut without class A.
         var hints = c.Pieces.Count > 0 ? c.Pieces : new List<string> { "a", "b" };
@@ -173,13 +194,24 @@ internal static class Pipeline
             var p = pieces[i];
             var a = Sph.Overlay(p.Shape, cutter, SpatialFunction.Intersection);
             var b = Sph.Overlay(p.Shape, cutter, SpatialFunction.Difference);
-            (a, b) = AbsorbSlivers(a, b, c.MinPieceKm2);
-            if (a.IsEmpty || b.IsEmpty) { res.Add(p); continue; }
+            (a, b) = AbsorbSlivers(a, b, c.MinPieceKm2, p.Shape);
+            if (a.IsEmpty || b.IsEmpty)
+            {
+                // The piece lies wholly on one side: it keeps its geometry but is still a member of that side of the line (event-line CI, region hint).
+                int side = a.IsEmpty ? 1 : 0;
+                var hint = c.Pieces.Count > side ? c.Pieces[side] : (side == 0 ? "a" : "b");
+                p.Sides.Add($"{c.Id}:{hint}");
+                if (c.Regions.Count > side && c.Regions[side] != "" && !(c.KeepRegions && p.RegionHint != "")) p.RegionHint = c.Regions[side];
+                res.Add(p);
+                continue;
+            }
             for (int k = 0; k < 2; k++)
             {
                 var q = Clone(p, k == 0 ? a : b);
                 q.Cuts.Add(c.Id);
                 q.Hint = c.Pieces.Count > k ? c.Pieces[k] : (k == 0 ? "a" : "b");
+                if (c.Regions.Count > k && c.Regions[k] != "" && !(c.KeepRegions && q.RegionHint != "")) q.RegionHint = c.Regions[k];
+                q.Sides.Add($"{c.Id}:{q.Hint}");
                 // Class A marks only the piece(s) the cut was made for (a_pieces; both when absent).
                 if (c.Precision == "A" && (c.APieces.Count == 0 || c.APieces.Contains(q.Hint))) { q.ClassA = true; q.Ref = c.Ref; }
                 res.Add(q);
@@ -191,15 +223,18 @@ internal static class Pipeline
     private static Piece Clone(Piece p, Geometry g) => new()
     {
         Shape = g, Src = new SortedSet<string>(p.Src, StringComparer.Ordinal), Adm0 = p.Adm0, Admin = p.Admin, Name = p.Name, NameArea = p.NameArea,
-        Cuts = new List<string>(p.Cuts), Sparse = p.Sparse, SubBase = p.SubBase, SubK = p.SubK,
+        Cuts = new List<string>(p.Cuts), Sides = new List<string>(p.Sides), RegionHint = p.RegionHint, Sparse = p.Sparse, SubBase = p.SubBase, SubK = p.SubK,
     };
 
     /// <summary>Polygons smaller than the threshold move to the other side so that a cut never leaves slivers.</summary>
-    private static (Geometry, Geometry) AbsorbSlivers(Geometry a, Geometry b, double minKm2)
+    private static (Geometry, Geometry) AbsorbSlivers(Geometry a, Geometry b, double minKm2, Geometry whole)
     {
         var pa = Sph.Polygons(a).ToList();
         var pb = Sph.Polygons(b).ToList();
         bool Small(Polygon p) => Sph.PolygonArea(p) / 1e6 < minKm2;
+        // A side made only of small polygons is the noise of a line that does not cross the piece: the piece stays whole on the other side.
+        if (pa.All(Small)) return (Sph.Gf.CreatePolygon(), whole);
+        if (pb.All(Small)) return (whole, Sph.Gf.CreatePolygon());
         var moveA = pa.Where(Small).ToList();
         var moveB = pb.Where(Small).ToList();
         if (moveA.Count == 0 && moveB.Count == 0) return (a, b);

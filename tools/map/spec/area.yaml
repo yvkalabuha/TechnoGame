@@ -7,3 +7,10 @@ drop: [ESP-5815, ESP-5835]   # Ceuta and Melilla (Africa)
 min_area_km2: 5000
 max_area_km2: 150000
 sparse_max_km2: 500000
+# World build (TASK-0091): every admin-1 object except these countries is an atom. The fields above select the Europe set of TASK-0075 (its merges, ids and regions stay as they are).
+world: true
+world_drop_adm0: [ATA]
+world_region_unit_km2: 400000
+# Holes of the NE admin-1 data that no province covers (a face holding one of these points is not an error of the noding).
+known_gaps:
+  - [-49.519, -73.315]   # Southern Patagonian Ice Field, Chile (about 1400 km2 between the Aysen and Magallanes polygons)

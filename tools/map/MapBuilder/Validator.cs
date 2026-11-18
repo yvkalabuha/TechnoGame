@@ -13,6 +13,17 @@ internal static class Validator
         var area = r.Spec.Area;
         var ids = r.Pieces.Select(p => p.Id).ToList();
         var idSet = new HashSet<string>(ids, StringComparer.Ordinal);
+        // Territories without geometry (ADR-0020 §1.4) are rows of the province table: they join regions but have no polygon.
+        var territoryIds = r.Spec.Territories.Select(t => t.Id).ToList();
+        foreach (var t in territoryIds)
+        {
+            if (!Ids.ValidProvinceId(t)) r.Errors.Add($"territory '{t}': bad id format");
+            if (idSet.Contains(t)) r.Errors.Add($"territory '{t}': duplicates a province id");
+        }
+        if (territoryIds.Distinct(StringComparer.Ordinal).Count() != territoryIds.Count) r.Errors.Add("territories: duplicate ids");
+        foreach (var t in r.Spec.Territories)
+            if (string.IsNullOrWhiteSpace(t.Ref)) r.Errors.Add($"territory {t.Id}: ref is required");
+        var allRows = ids.Concat(territoryIds).ToList();
         var index = new Dictionary<string, int>(StringComparer.Ordinal);
         for (int i = 0; i < ids.Count; i++) index[ids[i]] = i;
 
@@ -20,17 +31,17 @@ internal static class Validator
         var regionIds = r.Spec.Regions.Select(x => x.Id).ToList();
         if (regionIds.Distinct(StringComparer.Ordinal).Count() != regionIds.Count) r.Errors.Add("regions: duplicate ids");
         var regionSet = regionIds.ToHashSet(StringComparer.Ordinal);
-        foreach (var p in r.Pieces)
+        foreach (var id in allRows)
         {
-            var reg = p.Id[..p.Id.IndexOf('.')];
-            if (!regionSet.Contains(reg)) r.Errors.Add($"province {p.Id}: region '{reg}' is not declared");
+            var reg = id[..id.IndexOf('.')];
+            if (!regionSet.Contains(reg)) r.Errors.Add($"province or territory {id}: region '{reg}' is not declared");
         }
         foreach (var reg in r.Spec.Regions)
         {
             if (!Ids.ValidRegionId(reg.Id)) r.Errors.Add($"region '{reg.Id}': bad format");
-            if (!idSet.Contains(reg.Capital) || !reg.Capital.StartsWith(reg.Id + ".", StringComparison.Ordinal))
-                r.Errors.Add($"region {reg.Id}: capital '{reg.Capital}' is not one of its provinces");
-            if (!ids.Any(i => i.StartsWith(reg.Id + ".", StringComparison.Ordinal))) r.Errors.Add($"region {reg.Id}: no provinces");
+            if (!allRows.Contains(reg.Capital) || !reg.Capital.StartsWith(reg.Id + ".", StringComparison.Ordinal))
+                r.Errors.Add($"region {reg.Id}: capital '{reg.Capital}' is not one of its provinces or territories");
+            if (!allRows.Any(i => i.StartsWith(reg.Id + ".", StringComparison.Ordinal))) r.Errors.Add($"region {reg.Id}: no provinces");
         }
 
         // Area bands and exceptions by rule (a) whole map unit, (b) island, (c) class-A cut piece.
@@ -66,8 +77,10 @@ internal static class Validator
         }
         var sizes = Enumerable.Range(0, parent.Length).GroupBy(Find).ToDictionary(g => g.Key, g => g.Count());
         int main = sizes.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key).First().Key;
+        var geometric = ids.Select(i => i[..i.IndexOf('.')]).ToHashSet(StringComparer.Ordinal);
         foreach (var reg in r.Spec.Regions)
         {
+            if (!geometric.Contains(reg.Id)) continue;   // territory-only region: no polygon, no land graph
             bool outside = regionIndex.TryGetValue(reg.Id, out var ri) && Find(ri) != main;
             if (outside && !reg.Isolated) r.Errors.Add($"region {reg.Id}: not connected to the main component and not marked isolated");
             if (!outside && reg.Isolated) r.Warnings.Add($"region {reg.Id}: marked isolated but connected");
@@ -110,9 +123,63 @@ internal static class Validator
                 r.Errors.Add($"lock {s.Id}: licence '{s.License}' differs from the snapshot licences '{string.Join("+", snap.Licenses)}'");
         }
 
-        // World-wide ranges are informational for a partial area.
-        r.Info.Add($"provinces: {r.Pieces.Count} (world target 2000-5000, not enforced for a partial area)");
-        r.Info.Add($"regions: {r.Spec.Regions.Count} (world target 150-250, not enforced for a partial area)");
+        CheckEvents(r, territoryIds);
+
+        // World ranges (ADR-0011 §1: provinces 2000-5000, regions 150-250). Outside the range is a warning for the owner, not an error (ADR-0020 §15).
+        int provinceRows = r.Pieces.Count + territoryIds.Count;
+        r.Info.Add($"provinces: {r.Pieces.Count} with geometry + {territoryIds.Count} territories = {provinceRows} rows (world target 2000-5000)");
+        r.Info.Add($"regions: {r.Spec.Regions.Count} (world target 150-250)");
+        if (area.World)
+        {
+            if (r.Spec.Regions.Count > 250) r.Warnings.Add($"regions: {r.Spec.Regions.Count} exceed the ADR-0011 limit of 250 (question to the owner via an ADR to ADR-0011)");
+            if (provinceRows is < 2000 or > 5000) r.Warnings.Add($"provinces: {provinceRows} rows are outside the ADR-0011 range 2000-5000");
+        }
+    }
+
+    /// <summary>A piece of the legacy Europe set (TASK-0075): its owners are mandatory.</summary>
+    private static bool Europe(BuildResult r, Piece p) => p.Src.Any(c => r.EuropeCodes.Contains(c));
+
+    /// <summary>
+    /// Event-line CI (ADR-0020 §2.9, §3.13, #350): every region lies wholly inside one set of an event or wholly outside all its sets,
+    /// and two sets of one event never share a region.
+    /// </summary>
+    internal static void CheckEvents(BuildResult r, List<string> territoryIds)
+    {
+        bool Pat(string pat, string id) => pat.EndsWith('*') ? id.StartsWith(pat[..^1], StringComparison.Ordinal) : id == pat;
+        bool Matches(EventSet s, string id, Piece? p)
+        {
+            if (s.ExceptIds.Any(x => Pat(x, id))) return false;
+            if (p != null && (s.Adm0.Contains(p.Adm0) || s.Cuts.Any(c => p.Sides.Contains(c)))) return true;
+            return s.Ids.Any(x => Pat(x, id));
+        }
+        var rows = r.Pieces.Select(p => (Id: p.Id, P: (Piece?)p)).Concat(territoryIds.Select(t => (Id: t, P: (Piece?)null))).ToList();
+        int drawn = 0;
+        foreach (var ev in r.Spec.Events.OrderBy(e => e.Id, StringComparer.Ordinal))
+        {
+            if (ev.NotDrawn != null) { r.Info.Add($"event line not drawn: {ev.Id} ({ev.Rr}, {ev.Date}): {ev.NotDrawn}"); continue; }
+            if (ev.Sets.Count == 0 || ev.Rr == "" || ev.Date == "") { r.Errors.Add($"event {ev.Id}: sets, rr and date are required"); continue; }
+            var setOf = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (int si = 0; si < ev.Sets.Count; si++)
+            {
+                int n = 0;
+                foreach (var (id, p) in rows)
+                    if (Matches(ev.Sets[si], id, p))
+                    {
+                        if (setOf.TryGetValue(id, out var other) && other != si) r.Errors.Add($"event {ev.Id}: {id} is in two sets");
+                        setOf[id] = si; n++;
+                    }
+                if (n == 0) r.Errors.Add($"event {ev.Id}: set '{ev.Sets[si].Name}' matches nothing");
+            }
+            foreach (var g in rows.GroupBy(x => x.Id[..x.Id.IndexOf('.')]).OrderBy(g => g.Key, StringComparer.Ordinal))
+            {
+                var cls = g.Select(x => setOf.GetValueOrDefault(x.Id, -1)).Distinct().OrderBy(x => x).ToList();
+                if (cls.Count > 1)
+                    r.Errors.Add($"event line {ev.Id} ({ev.Rr}, {ev.Date}): region {g.Key} crosses the line: " +
+                        string.Join("; ", cls.Select(c => (c < 0 ? "outside" : ev.Sets[c].Name) + " = " + string.Join(",", g.Where(x => setOf.GetValueOrDefault(x.Id, -1) == c).Select(x => x.Id).Take(4)))));
+            }
+            drawn++;
+        }
+        r.Info.Add($"event lines checked against region borders: {drawn}");
     }
 
     private static void ValidateOwners(BuildResult r, OwnerFile owners, HashSet<string> idSet, HashSet<string> regionSet, HashSet<string> polityIds)
@@ -141,15 +208,22 @@ internal static class Validator
             Check(e, "province " + e.Province);
         }
         var controllersByRegion = new SortedDictionary<string, SortedSet<string>>(StringComparer.Ordinal);
+        var pending = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var p in r.Pieces)
         {
             var region = p.Id[..p.Id.IndexOf('.')];
             OwnerRow? row = exc.GetValueOrDefault(p.Id) ?? def.GetValueOrDefault(region);
-            if (row == null) { r.Errors.Add($"owners: province {p.Id} has no record"); continue; }
+            if (row == null)
+            {
+                // The world table of 1945 owners is a T4 task: until then a world region without a record is reported, not an error.
+                if (r.Spec.Area.World && !Europe(r, p)) pending.Add(region); else r.Errors.Add($"owners: province {p.Id} has no record");
+                continue;
+            }
             r.Owners[p.Id] = new Resolved { Owner = row.Owner, Controller = row.Controller, Status = row.Status };
             if (!controllersByRegion.TryGetValue(region, out var set)) controllersByRegion[region] = set = new SortedSet<string>(StringComparer.Ordinal);
             set.Add(row.Controller);
         }
+        if (pending.Count > 0) r.Warnings.Add($"owners: {pending.Count} world regions have no 1945 owner record yet (T4): {string.Join(", ", pending)}");
         foreach (var (reg, set) in controllersByRegion)
             if (set.Count > 1) r.Warnings.Add($"region {reg} has several controllers: {string.Join(", ", set)} (E1 decision needed, ADR-0011 §3)");
 

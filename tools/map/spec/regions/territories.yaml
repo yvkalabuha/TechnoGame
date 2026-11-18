@@ -1,0 +1,10 @@
+# Regions that consist of territories without geometry only (spec/territories.yaml, ADR-0020 §1.4). They have no polygon, so they are not on the land graph.
+regions:
+  - {id: tenda_brig, capital: tenda_brig.tenda_brig, isolated: false}
+  - {id: sazan, capital: sazan.sazan, isolated: true}
+  - {id: bratislava_bridgehead, capital: bratislava_bridgehead.bratislava_bridgehead, isolated: false}
+  - {id: german_enclaves_nl, capital: german_enclaves_nl.elten_selfkant, isolated: false}
+  - {id: ifni, capital: ifni.ifni, isolated: false}
+  - {id: tangier, capital: tangier.tangier, isolated: false}
+  - {id: port_arthur, capital: port_arthur.port_arthur, isolated: false}
+  - {id: chandernagore, capital: chandernagore.chandernagore, isolated: false}

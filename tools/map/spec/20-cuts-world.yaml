@@ -1,0 +1,39 @@
+# Class A cuts outside Europe as of 1945-10-01 (ADR-0011 §6). The parallels are defined by treaty or order, so they need no geometry source.
+# The first piece is south of the parallel, the second north.
+rules:
+  # Korea: Soviet zone north, US zone south of the 38th parallel (General Order No. 1, 1945-09-02); ROK 1948-08-15 and PRK 1948-09-09 (RR-0020 C21/C22).
+  - cut:
+      id: korea_38th_parallel
+      within_adm0: [KOR, PRK]
+      parallel: 38.0
+      pieces: [south, north]
+      regions: [korea_south_38, korea_north_38]
+      source: "parallel parameter 38.0N"
+      as_of: "1945-10-01"
+      precision: A
+      ref: "Japanese General Order No. 1, 1945-09-02 (surrender zones in Korea); US-Soviet agreement of 1945-08 on the 38th parallel; RR-0020 C21, C22"
+      min_piece_km2: 40
+  # Indochina: the 16th parallel splits the surrender zones (Chinese north, British south; General Order No. 1, 1945-09-02, ADR-0020 §14);
+  # the 17th parallel splits Vietnam (Geneva, RR-0020 B32).
+  - cut:
+      id: indochina_16th_parallel
+      within_adm0: [VNM]
+      parallel: 16.0
+      pieces: [south, north]
+      regions: [vietnam_south_16, vietnam_central]
+      source: "parallel parameter 16.0N"
+      as_of: "1945-10-01"
+      precision: A
+      ref: "Japanese General Order No. 1, 1945-09-02 (Indochina: Chinese north, British south of 16N); ADR-0020 section 14"
+      min_piece_km2: 40
+  - cut:
+      id: vietnam_17th_parallel
+      within_adm0: [VNM]
+      parallel: 17.0
+      pieces: [south, north]
+      regions: ["", vietnam_north]
+      source: "parallel parameter 17.0N"
+      as_of: "1945-10-01"
+      precision: A
+      ref: "Geneva Agreements on the Cessation of Hostilities in Viet-Nam, 1954-07-20, art. 1 (provisional demarcation line at 17N); RR-0020 B32"
+      min_piece_km2: 40

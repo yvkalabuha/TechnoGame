@@ -3,7 +3,6 @@ regions:
   - {id: aland, capital: aland.jomala, isolated: true}
   - {id: albania, capital: albania.shkoder, isolated: false}
   - {id: andorra, capital: andorra.sant_julia_de_loria, isolated: false}
-  - {id: austria, capital: austria.steiermark, isolated: false}
   - {id: belarus, capital: belarus.gomel, isolated: false}
   - {id: belgium, capital: belgium.hainaut, isolated: false}
   - {id: bosnia_and_herzegovina, capital: bosnia_and_herzegovina.west_bosnia, isolated: false}
@@ -20,9 +19,6 @@ regions:
   - {id: france_ain, capital: france_ain.ain, isolated: false}
   - {id: france_gers, capital: france_gers.gers, isolated: false}
   - {id: france_marne, capital: france_marne.marne, isolated: false}
-  - {id: germany_bayern, capital: germany_bayern.bayern, isolated: false}
-  - {id: germany_brandenburg, capital: germany_brandenburg.brandenburg, isolated: false}
-  - {id: germany_niedersachsen, capital: germany_niedersachsen.niedersachsen, isolated: false}
   - {id: gibraltar, capital: gibraltar.gibraltar, isolated: false}
   - {id: greece_kentriki_makedonia, capital: greece_kentriki_makedonia.kentriki_makedonia, isolated: false}
   - {id: greece_peloponnisos, capital: greece_peloponnisos.peloponnisos, isolated: false}

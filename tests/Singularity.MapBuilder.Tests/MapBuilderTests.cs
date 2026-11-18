@@ -438,4 +438,172 @@ public class MapBuilderTests
         Assert.Equal(IdsFor(0.4), IdsFor(0.6));
         Assert.Equal(new[] { "r.north", "r.south" }, IdsFor(0.5));
     }
+
+    // ---- TASK-0091: world build, event lines, territories ----
+
+    private static CutRule ParallelCut(double parallel, string[] regions, double minKm2 = 1) => new()
+    {
+        Id = "t", Within = new() { "A-1" }, Parallel = parallel, Pieces = new() { "south", "north" }, Regions = regions.ToList(),
+        Source = "param", AsOf = "1945-10-01", Precision = "A", Ref = "test", MinPieceKm2 = minKm2,
+    };
+
+    private static Piece Unit(string code, string adm0, Geometry shape)
+    {
+        var p = new Piece { Shape = shape, Adm0 = adm0, Name = code };
+        p.Src.Add(code);
+        return p;
+    }
+
+    [Fact]
+    public void Cut_pieces_carry_their_side_and_region_hint()
+    {
+        var spec = new SpecSet();
+        spec.Rules.Add(("20-test.yaml", new Rule { Cut = ParallelCut(0.4, new[] { "r_south", "r_north" }) }));
+        var res = Pipeline.Apply(new List<Piece> { Unit("A-1", "AAA", Rect(0, 0, 1, 1)) }, spec, _ => throw new InvalidOperationException());
+        Assert.Equal(new[] { "t:south", "t:north" }, res.Select(p => Assert.Single(p.Sides)));
+        Assert.Equal(new[] { "r_south", "r_north" }, res.Select(p => p.RegionHint));
+    }
+
+    [Fact]
+    public void A_piece_wholly_on_one_side_keeps_its_shape_and_is_tagged()
+    {
+        var spec = new SpecSet();
+        spec.Rules.Add(("20-test.yaml", new Rule { Cut = ParallelCut(5, new[] { "r_south", "r_north" }) }));
+        var whole = Rect(0, 0, 1, 1);
+        var res = Pipeline.Apply(new List<Piece> { Unit("A-1", "AAA", whole) }, spec, _ => throw new InvalidOperationException());
+        var p = Assert.Single(res);
+        Assert.Equal(new[] { "t:south" }, p.Sides);
+        Assert.Equal("r_south", p.RegionHint);
+        Assert.Empty(p.Cuts);   // no new geometry: the piece is still a plain unit
+        Assert.True(whole.EqualsExact(p.Shape));
+    }
+
+    [Fact]
+    public void A_cut_that_leaves_only_slivers_on_one_side_does_not_split_the_piece()
+    {
+        var spec = new SpecSet();
+        spec.Rules.Add(("20-test.yaml", new Rule { Cut = ParallelCut(0.0001, new[] { "r_south", "r_north" }, 40) }));
+        var whole = Rect(0, 0, 1, 1);
+        var res = Pipeline.Apply(new List<Piece> { Unit("A-1", "AAA", whole) }, spec, _ => throw new InvalidOperationException());
+        var p = Assert.Single(res);
+        Assert.Equal(new[] { "t:north" }, p.Sides);
+        Assert.True(whole.EqualsExact(p.Shape));
+    }
+
+    [Fact]
+    public void Cut_within_adm0_reaches_every_piece_of_the_country()
+    {
+        var spec = new SpecSet();
+        var cut = ParallelCut(0.5, new[] { "s", "n" });
+        cut.Within = new();
+        cut.WithinAdm0 = new() { "AAA" };
+        spec.Rules.Add(("20-test.yaml", new Rule { Cut = cut }));
+        var res = Pipeline.Apply(new List<Piece> { Unit("A-1", "AAA", Rect(0, 0, 1, 1)), Unit("A-2", "AAA", Rect(1, 0, 2, 1)), Unit("B-1", "BBB", Rect(2, 0, 3, 1)) }, spec, _ => throw new InvalidOperationException());
+        Assert.Equal(5, res.Count);
+        Assert.Empty(res.Single(p => p.Src.Contains("B-1")).Sides);
+        Assert.Throws<InvalidDataException>(() => Pipeline.Apply(new List<Piece> { Unit("B-1", "BBB", Rect(2, 0, 3, 1)) }, spec, _ => throw new InvalidOperationException()));
+    }
+
+    private static BuildResult EventWorld(params (string Id, string Adm0, string[] Sides)[] provinces)
+    {
+        var r = new BuildResult();
+        foreach (var (id, adm0, sides) in provinces)
+            r.Pieces.Add(new Piece { Id = id, Adm0 = adm0, Sides = sides.ToList() });
+        return r;
+    }
+
+    [Fact]
+    public void Event_check_accepts_regions_that_follow_the_line_and_rejects_a_crossing_region()
+    {
+        var r = EventWorld(("north.a", "KOR", new[] { "korea:north" }), ("north.b", "KOR", new[] { "korea:north" }), ("south.a", "KOR", new[] { "korea:south" }), ("other.a", "JPN", new string[0]));
+        r.Spec.Events.Add(new EventEntry
+        {
+            Id = "korea", Date = "1948-09-09", Rr = "C22",
+            Sets = new() { new EventSet { Name = "north", Cuts = new() { "korea:north" } } },
+        });
+        Validator.CheckEvents(r, new List<string>());
+        Assert.Empty(r.Errors);
+
+        // A province of the south in the northern region: the region crosses the line.
+        r.Pieces[2].Id = "north.c";
+        Validator.CheckEvents(r, new List<string>());
+        var e = Assert.Single(r.Errors);
+        Assert.Contains("region north crosses the line", e);
+    }
+
+    [Fact]
+    public void Event_check_separates_two_sets_of_one_event_and_covers_territories()
+    {
+        var r = EventWorld(("zone_a.x", "ITA", new[] { "tr:a" }), ("zone_b.x", "HRV", new[] { "tr:b" }), ("italy.rest", "ITA", new string[0]));
+        r.Spec.Events.Add(new EventEntry
+        {
+            Id = "tr", Date = "1954-10-26", Rr = "C14",
+            Sets = new()
+            {
+                new EventSet { Name = "a", Cuts = new() { "tr:a" } },
+                new EventSet { Name = "b", Cuts = new() { "tr:b" } },
+                new EventSet { Name = "t", Ids = new() { "tiny.*" } },
+            },
+        });
+        Validator.CheckEvents(r, new List<string> { "tiny.one" });
+        Assert.Empty(r.Errors);
+
+        // The territory joins the region of zone A: two sets in one region.
+        Validator.CheckEvents(r, new List<string> { "tiny.one", "zone_a.t" });
+        Assert.Contains(r.Errors, e => e.Contains("region zone_a crosses the line"));
+    }
+
+    [Fact]
+    public void Event_check_reports_empty_sets_exceptions_and_undrawn_lines()
+    {
+        var r = EventWorld(("a.x", "AAA", new string[0]), ("a.y", "AAA", new string[0]), ("b.x", "BBB", new string[0]));
+        r.Spec.Events.Add(new EventEntry { Id = "empty", Date = "1950-01-01", Rr = "B1", Sets = new() { new EventSet { Name = "nothing", Ids = new() { "zzz.*" } } } });
+        r.Spec.Events.Add(new EventEntry { Id = "undrawn", Date = "1950-01-01", Rr = "B2", NotDrawn = "no source" });
+        r.Spec.Events.Add(new EventEntry { Id = "except", Date = "1950-01-01", Rr = "B3", Sets = new() { new EventSet { Name = "aaa", Adm0 = new() { "AAA" }, ExceptIds = new() { "a.y" } } } });
+        Validator.CheckEvents(r, new List<string>());
+        Assert.Contains(r.Errors, e => e.Contains("event empty") && e.Contains("matches nothing"));
+        Assert.Contains(r.Errors, e => e.Contains("event line except") && e.Contains("region a crosses the line"));
+        Assert.Contains(r.Info, i => i.Contains("not drawn: undrawn"));
+        Assert.Equal(2, r.Errors.Count);
+    }
+
+    [Fact]
+    public void Committed_spec_events_territories_and_cuts_are_well_formed()
+    {
+        var spec = SpecSet.Load(Path.Combine(RepoRoot(), "tools", "map", "spec"));
+        Assert.NotEmpty(spec.Events);
+        Assert.Equal(spec.Events.Count, spec.Events.Select(e => e.Id).Distinct().Count());
+        Assert.All(spec.Events, e =>
+        {
+            Assert.Matches("^[a-z][a-z0-9_]*$", e.Id);
+            Assert.False(string.IsNullOrWhiteSpace(e.Rr));
+            Assert.Matches(@"^\d{4}-\d{2}-\d{2}$", e.Date);
+            Assert.True((e.NotDrawn != null) != (e.Sets.Count > 0), e.Id + ": either sets or not_drawn");
+        });
+        Assert.All(spec.Territories, t => { Assert.True(Ids.ValidProvinceId(t.Id)); Assert.False(string.IsNullOrWhiteSpace(t.Ref)); });
+        foreach (var (file, rule) in spec.Rules.Where(r => r.Rule.Cut != null))
+        {
+            var c = rule.Cut!;
+            Assert.True(c.Regions.Count <= Math.Max(2, c.Pieces.Count), $"{file} {c.Id}");
+            Assert.All(c.Regions.Where(x => x != ""), x => Assert.True(Ids.ValidRegionId(x), $"{file} {c.Id} region {x}"));
+        }
+        Assert.All(spec.Rules.Where(r => r.Rule.Isolate != null), r => { Assert.True(Ids.ValidRegionId(r.Rule.Isolate!.Region)); Assert.NotEmpty(r.Rule.Isolate.Codes); Assert.False(string.IsNullOrWhiteSpace(r.Rule.Isolate.Ref)); });
+        // Every cut that names a region for one side names a source and a date.
+        Assert.All(spec.Rules.Where(r => r.Rule.Cut is { Regions.Count: > 0 }), r => { Assert.NotEqual("", r.Rule.Cut!.AsOf); Assert.NotEqual("", r.Rule.Cut.Source); });
+    }
+
+    [Fact]
+    public void Committed_world_tables_hold_regions_territories_and_counts()
+    {
+        var map = Path.Combine(RepoRoot(), "mods", "core", "map");
+        var provinces = File.ReadAllLines(Path.Combine(map, "provinces.yaml")).Where(l => l.StartsWith("  - {id: ")).Select(l => l[9..l.IndexOf(',')]).ToList();
+        var territories = File.ReadAllLines(Path.Combine(map, "territories.yaml")).Where(l => l.StartsWith("  - {id: ")).Select(l => l[9..l.IndexOf(',')]).ToList();
+        Assert.Equal(territories.OrderBy(x => x, StringComparer.Ordinal).ToList(), territories);
+        Assert.Empty(territories.Intersect(provinces));
+        var regions = File.ReadAllLines(Path.Combine(map, "regions.yaml")).Where(l => l.StartsWith("  - {id: ")).Select(l => l[9..l.IndexOf(',')]).ToList();
+        var used = provinces.Concat(territories).Select(i => i[..i.IndexOf('.')]).ToHashSet();
+        Assert.Equal(regions.OrderBy(x => x, StringComparer.Ordinal).ToList(), regions);
+        Assert.Equal(regions.ToHashSet(), used);   // no empty region, no province of an undeclared region
+        Assert.True(provinces.Count > 1500, "the world build has more than the Europe set");
+    }
 }

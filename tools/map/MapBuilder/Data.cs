@@ -17,6 +17,7 @@ internal sealed class Atom
     public double CLon, CLat;
     public Geometry Shape = Sph.Gf.CreatePolygon();
     public double AreaM2;
+    public bool Europe = true;   // inside the legacy Europe selection (TASK-0075); false for atoms added by the world build
 }
 
 /// <summary>A polygonal cutter from an OHM snapshot plus the licence tag found on it.</summary>
@@ -59,16 +60,16 @@ internal static class Data
             adm0Seen?.Add(a3);
             string code = pr.GetProperty("adm1_code").GetString()!;
             double lon = pr.GetProperty("longitude").GetDouble(), lat = pr.GetProperty("latitude").GetDouble();
+            bool europe = true;
             if (area != null)
             {
-                if (!area.Adm0.Contains(a3)) continue;
-                if (lon < area.Lon[0] || lon > area.Lon[1] || lat < area.Lat[0] || lat > area.Lat[1]) continue;
-                if (area.Drop.Contains(code)) continue;
+                europe = area.Adm0.Contains(a3) && lon >= area.Lon[0] && lon <= area.Lon[1] && lat >= area.Lat[0] && lat <= area.Lat[1] && !area.Drop.Contains(code);
+                if (!europe && !(area.World && !area.WorldDropAdm0.Contains(a3))) continue;
             }
             var geo = GeometryPrecisionReducer.Reduce(ReadGeometry(f.GetProperty("geometry")), Sph.Pm);
             res.Add(new Atom
             {
-                Code = code, Adm0 = a3, Admin = pr.GetProperty("admin").GetString() ?? a3, CLon = lon, CLat = lat, Shape = geo, AreaM2 = Sph.AreaM2(geo),
+                Code = code, Adm0 = a3, Admin = pr.GetProperty("admin").GetString() ?? a3, CLon = lon, CLat = lat, Shape = geo, AreaM2 = Sph.AreaM2(geo), Europe = europe,
                 Name = pr.GetProperty("name").GetString() ?? code,
             });
         }
