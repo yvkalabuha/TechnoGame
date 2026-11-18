@@ -98,6 +98,7 @@ tree.a,A · Planisphere,A · Планисфера
 tree.b,B · Goal statement,B · Ведомость цели
 tree.close,Close ×,Закрыть ×
 panel.foreign,◆ FOREIGN POWER · read only,◆ ЧУЖАЯ ДЕРЖАВА · только просмотр
+panel.shares.profile,Shares of the AI doctrine profile (not this country's data).,Доли доктрины ИИ-профиля (не данные этой державы).
 tree.reset,Reset view,Сбросить вид
 card.noschem,schematic: placeholder,схема: заглушка
 card.affects,AFFECTS,ЧТО ЗАТРАГИВАЕТ
@@ -164,6 +165,8 @@ inset.eta," · ETA {0} mo. (a number, not an interval)"," · срок {0} ме
 inset.hint,The first link is the cheapest; the goal date is set by the longest chain (view B).,Первое звено — ближайшее по цене; дату цели задаёт самая длинная цепочка (вид B).
 inset.node,NODE,УЗЕЛ
 inset.anchor,Anchor: {0}{1} · {2},Якорь: {0}{1} · {2}
+inset.anchor.year,Anchor: {0}{1},Якорь: {0}{1}
+card.requires,REQUIRES,ЗАВИСИТ ОТ
 inset.before, (before), (до)
 inset.requires,Requires: {0},Требует: {0}
 inset.process,Process: yield {0} · mastered {1} · admitted {2},Процесс: выход {0} · освоен {1} · допуск {2}

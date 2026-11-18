@@ -19,7 +19,11 @@ public static class Ui
     public static readonly Color[] DiscLine = { new("168A92"), new("A03E82"), new("4A7088"), new("4F8A1E"), new("8F7A2E") };
     public static readonly Color[] DiscWash = { new("BFE6E5"), new("F0C9E0"), new("C3D8EA"), new("CFE6AA"), new("EAD9A3") };
     public static readonly Color[] DiscText = { new("1F5F63"), new("75335F"), new("3F5666"), new("4A6020"), new("6B5B22") };
-    public static readonly Color VioletLine = new("7A4AA8"), VioletWash = new("D8CCEE"), VioletText = new("53407A");
+    // Node-card blocks (UI_DESIGN_SYSTEM §17): their own muted tokens, none shared with a discipline ink. Neutral steel, terracotta, taupe, paper.
+    public static readonly Color AffLine = new("6B6F78"), AffWash = new("E4E5E6"), AffText = new("3F4249"),
+        RaiseLine = new("B5562F"), RaiseWash = new("F0DCCF"), RaiseText = new("7A3A1E"),
+        OpenLine = new("8A6F5E"), OpenWash = new("E9DFD7"), OpenText = new("5A4538"),
+        ReqLine = new("86837C"), ReqWash = new("EDEAE0"), ReqText = new("55575A");
 
     public static Font FontOf(FontKind k) => k switch { FontKind.Mono => Fonts.Mono, FontKind.Draft => Fonts.DraftBold, FontKind.Map => Fonts.Map, _ => Fonts.Text };
 

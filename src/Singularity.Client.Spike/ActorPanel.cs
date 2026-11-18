@@ -44,6 +44,9 @@ public sealed partial class ActorPanel : PanelContainer
     bool Foreign => _actor != Player;
     readonly Label _foreign = Ui.Lbl("panel.foreign", 14, Ui.Warn.Darkened(0.45f), FontKind.Draft);
     readonly List<Control> _orderControls = new();
+    // Shares of a foreign power come from its AI doctrine profile (PolicyParams), not from per-country data: the panel says so.
+    readonly Label _sharesNote = Ui.Lbl("panel.shares.profile", 14, Ui.Ink3);
+    Control _designsHead;
     bool _debug;
     /// <summary>F3 switches Session text on and off: the panel is rebuilt at once.</summary>
     public bool Debug { get => _debug; set { if (_debug == value) return; _debug = value; Invalidate(); _dirty = true; } }
@@ -69,6 +72,7 @@ public sealed partial class ActorPanel : PanelContainer
 
         Section("panel.budget");
         _root.AddChild(_budget);
+        _sharesNote.Visible = false; _root.AddChild(_sharesNote);
         var hd = new HBoxContainer();
         hd.AddChild(new Control { CustomMinimumSize = new Vector2(138, 0) });
         hd.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
@@ -97,7 +101,7 @@ public sealed partial class ActorPanel : PanelContainer
         rr.AddChild(_resultMark); rr.AddChild(_result);
         _root.AddChild(rr); _orderControls.Add(rr);
 
-        Section("panel.designs");
+        _designsHead = Section("panel.designs");
         _root.AddChild(_designs);
         Section("panel.licence");
         _root.AddChild(_licence);
@@ -118,10 +122,13 @@ public sealed partial class ActorPanel : PanelContainer
         s.FocusMode = FocusModeEnum.None;
     }
 
-    void Section(string key)
+    Control Section(string key)
     {
-        _root.AddChild(new HSeparator());
-        _root.AddChild(Ui.Head(key));
+        var v = new VBoxContainer();
+        v.AddChild(new HSeparator());
+        v.AddChild(Ui.Head(key));
+        _root.AddChild(v);
+        return v;
     }
 
     public void ShowActor(int actor) { _actor = actor; _edited = false; _awaiting = false; _sentPct = null; _dirty = true; Invalidate(); Visible = true; }
@@ -164,6 +171,7 @@ public sealed partial class ActorPanel : PanelContainer
 
     void Apply()
     {
+        if (Foreign) return;
         var sh = new BudgetShares(Pct(_pct[0]), Pct(_pct[1]), Pct(_pct[2]), Pct(_pct[3]), Pct(_pct[4]));
         _host.Submit(new SetBudgetShares(_actor, sh), "cmd.budget");
         _sentPct = (int[])_pct.Clone();
@@ -193,7 +201,8 @@ public sealed partial class ActorPanel : PanelContainer
         _title.Text = Names.Actor(id);
         _foreign.Visible = Foreign;
         foreach (var c in _orderControls) c.Visible = !Foreign;
-        foreach (var sl in _sl) sl.Editable = !Foreign;
+        foreach (var sl in _sl) { sl.Editable = !Foreign; sl.MouseFilter = Foreign ? MouseFilterEnum.Ignore : MouseFilterEnum.Stop; sl.Modulate = new Color(1, 1, 1, Foreign ? 0.45f : 1f); }
+        _sharesNote.Visible = Foreign;
         _title.TooltipText = id;
         _sub.Text = Loc.T("panel.sub", Loc.T("profile." + (int)a.Profile), a.FieldedGen, s.View.Month);
         var inA = s.View.Inputs?.Actors.FirstOrDefault(x => x.Actor == _actor);
@@ -246,6 +255,8 @@ public sealed partial class ActorPanel : PanelContainer
         if (sig == _sigDesigns) return;
         _sigDesigns = sig;
         Clear(_designs);
+        bool hide = Foreign && rows.Count == 0;   // a foreign power without lines: no empty heading
+        _designsHead.Visible = _designs.Visible = !hide;
         foreach (var (text, action, design) in rows)
         {
             var r = new HBoxContainer();
