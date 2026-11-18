@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Threading.Channels;
 
 namespace Singularity.Architecture.Tests;
 
@@ -63,6 +64,13 @@ internal static class DeterminismRules
         typeof(ImmutableDictionary<,>), typeof(ImmutableHashSet<>),
         typeof(ImmutableDictionary<,>.Builder), typeof(ImmutableHashSet<>.Builder),
         typeof(IImmutableDictionary<,>), typeof(IImmutableSet<>),
+    ];
+
+    // ADR-0007 rev 2: thread-scheduled containers; any use (not only enumeration) is banned.
+    private static readonly Type[] BannedConcurrent =
+    [
+        typeof(ConcurrentQueue<>), typeof(ConcurrentStack<>), typeof(ConcurrentBag<>),
+        typeof(Channel), typeof(Channel<>), typeof(ChannelReader<>), typeof(ChannelWriter<>),
     ];
 
     private static readonly Type[] UnorderedNonGeneric =
@@ -147,8 +155,15 @@ internal static class DeterminismRules
         // touches an unordered collection must not enumerate anything indirectly.
         bool touchesUnordered = TouchesUnordered(method);
 
+        Type? previous = null; // static type of the value the previous instruction pushed
         foreach (IlScanner.Instruction instruction in IlScanner.Read(method))
         {
+            // C# emits Object.GetHashCode for a string receiver, so look at what was just loaded.
+            if (instruction.Operand is MethodBase { Name: "GetHashCode", DeclaringType: { } hashOwner } &&
+                (hashOwner == typeof(string) || (hashOwner == typeof(object) && previous == typeof(string))))
+                violations.Add($"{site}: string.GetHashCode is process-dependent");
+            previous = PushedType(method, instruction);
+
             if (Array.IndexOf(FloatOpCodes, instruction.OpCode) >= 0)
                 violations.Add($"{site}: single-precision opcode {instruction.OpCode.Name}");
             if (forbidDouble && Array.IndexOf(DoubleOpCodes, instruction.OpCode) >= 0)
@@ -169,6 +184,40 @@ internal static class DeterminismRules
                     break;
             }
         }
+    }
+
+    // Best-effort static type of the value an instruction pushes (enough for `s.GetHashCode()`).
+    private static Type? PushedType(MethodBase method, IlScanner.Instruction i)
+    {
+        string? name = i.OpCode.Name;
+        if (name is null)
+            return null;
+        if (name == "ldstr")
+            return typeof(string);
+        if (i.Operand is MethodInfo called && name is "call" or "callvirt")
+            return called.ReturnType;
+        if (i.Operand is FieldInfo field && name.StartsWith("ldfld", StringComparison.Ordinal))
+            return field.FieldType;
+        ParameterInfo[] parameters = method.GetParameters();
+        IList<LocalVariableInfo> locals = method.GetMethodBody()?.LocalVariables ?? [];
+        int? index = name switch
+        {
+            "ldarg.0" or "ldloc.0" => 0,
+            "ldarg.1" or "ldloc.1" => 1,
+            "ldarg.2" or "ldloc.2" => 2,
+            "ldarg.3" or "ldloc.3" => 3,
+            _ => i.Operand is byte b ? b : i.Operand is short sh ? sh : i.Operand is int n ? n : null,
+        };
+        if (index is null)
+            return null;
+        if (name.StartsWith("ldloc", StringComparison.Ordinal) && !name.StartsWith("ldloca", StringComparison.Ordinal))
+            return index < locals.Count ? locals[index.Value].LocalType : null;
+        if (name.StartsWith("ldarg", StringComparison.Ordinal) && !name.StartsWith("ldarga", StringComparison.Ordinal))
+        {
+            int shift = method.IsStatic ? 0 : 1;
+            return index - shift is >= 0 and var k && k < parameters.Length ? parameters[k].ParameterType : null;
+        }
+        return null;
     }
 
     private static void CheckCallee(MethodBase callee, string site, List<string> violations, bool forbidDouble)
@@ -283,6 +332,9 @@ internal static class DeterminismRules
 
     private static bool ContainsForbiddenType(Type type, bool forbidDouble)
     {
+        Type definition = type.IsGenericType ? type.GetGenericTypeDefinition() : type;
+        if (Array.IndexOf(BannedConcurrent, definition) >= 0)
+            return true;
         if (type.HasElementType)
             return ContainsForbiddenType(type.GetElementType()!, forbidDouble);
         if (type == typeof(float) || type == typeof(Half) || type == typeof(Random) || type == typeof(MathF))

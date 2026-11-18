@@ -60,6 +60,12 @@ public class DeterminismRulesTests
     [InlineData(typeof(UsesGenericCbrt), "generic math IRootFunctions")]
     [InlineData(typeof(UsesGenericFma), "generic math IFloatingPointIeee754")]
     [InlineData(typeof(UsesCultureParse), "System.Double.Parse")]
+    // TASK-0085 (ADR-0007 rev 2).
+    [InlineData(typeof(UsesStringHashCode), "string.GetHashCode")]
+    [InlineData(typeof(UsesConcurrentQueue), "forbidden type")]
+    [InlineData(typeof(UsesConcurrentStack), "forbidden type")]
+    [InlineData(typeof(UsesConcurrentBag), "forbidden type")]
+    [InlineData(typeof(UsesChannel), "forbidden type")]
     public void Violation_IsDetected(Type sample, string expected)
     {
         // Lambdas compile into nested types, so scan those too.
@@ -517,4 +523,29 @@ internal static class GenericHelper
 internal sealed class CallsGenericWithDouble
 {
     public static long Run(long x) => GenericHelper.Run<double>(x);
+}
+
+internal sealed class UsesStringHashCode
+{
+    public int Run(string s) => s.GetHashCode();
+}
+
+internal sealed class UsesConcurrentQueue
+{
+    public int Run() => new System.Collections.Concurrent.ConcurrentQueue<int>().Count;
+}
+
+internal sealed class UsesConcurrentStack
+{
+    public int Run() => new System.Collections.Concurrent.ConcurrentStack<int>().Count;
+}
+
+internal sealed class UsesConcurrentBag
+{
+    public int Run() => new System.Collections.Concurrent.ConcurrentBag<int>().Count;
+}
+
+internal sealed class UsesChannel
+{
+    public object Run() => System.Threading.Channels.Channel.CreateUnbounded<int>();
 }
