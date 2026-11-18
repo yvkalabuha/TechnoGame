@@ -98,7 +98,7 @@
 | [TASK-0081](../development/tasks/TASK-0081-client-v0-5b.md) | REVIEW | Client v0.5b: main menu, settings, new game, palette C with alert validator, time icons | MS-M0 |
 | [TASK-0082](../development/tasks/TASK-0082-f7a-view-reuse.md) | DONE | F7a: reuse the view on probe-only days, cheaper daily snapshot | MS-M0 |
 | [TASK-0083](../development/tasks/TASK-0083-lab-bench-tests.md) | DONE | Tests for lab bench: statistics, manifest, plan, CLI | MS-M0 |
-| [TASK-0084](../development/tasks/TASK-0084-map-ci-debt0043.md) | APPROVED | Map tooling CI and boundary checks (DEBT-0043) | MS-M1 |
+| [TASK-0084](../development/tasks/TASK-0084-map-ci-debt0043.md) | DONE | Map tooling CI and boundary checks (DEBT-0043) | MS-M1 |
 
 ## Гипотезы
 

@@ -55,6 +55,37 @@ jobs:
           SINGULARITY_BENCH: "1"
         run: dotnet test tests/Singularity.Kernel.Tests/Singularity.Kernel.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~EmptyTickBudget"
 
+  # Map builder (TASK-0075, DEBT-0043): package graph without LGPL, unit tests,
+  # and byte-identical rebuild when the pinned sources are available.
+  map-tooling:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Package graph (no LGPL modules)
+        run: bash tools/map/check_packages.sh
+      - name: MapBuilder tests
+        run: dotnet test tests/Singularity.MapBuilder.Tests -c Release
+      - name: Cache pinned map sources
+        id: map-cache
+        uses: actions/cache@v4
+        with:
+          path: tools/map/.cache
+          key: map-sources-${{ hashFiles('tools/map/sources.lock.yaml') }}
+      - name: Fetch pinned map sources
+        id: map-fetch
+        if: steps.map-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        run: dotnet run -c Release --project tools/map/MapBuilder -- fetch
+      - name: Determinism (two builds byte-identical, equal to committed tables)
+        if: steps.map-cache.outputs.cache-hit == 'true' || steps.map-fetch.outcome == 'success'
+        run: bash tools/map/check_determinism.sh
+      - name: Determinism skipped
+        if: steps.map-cache.outputs.cache-hit != 'true' && steps.map-fetch.outcome != 'success'
+        run: echo "::warning::map sources unavailable; check_determinism.sh skipped"
+
   analysis:
     runs-on: ubuntu-latest
     steps:

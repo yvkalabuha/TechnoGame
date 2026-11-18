@@ -22,7 +22,6 @@
 - TASK-0064 [REVIEW] lab bench harness (ADR-0016 T1) (simulation-engineer)
 - TASK-0081 [REVIEW] Client v0.5b: main menu, settings, new game, palette C with alert validator, time icons (developer)
 - TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
-- TASK-0084 [APPROVED] Map tooling CI and boundary checks (DEBT-0043) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры

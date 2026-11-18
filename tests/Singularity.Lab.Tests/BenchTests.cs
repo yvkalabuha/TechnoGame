@@ -248,7 +248,7 @@ public sealed class BenchTests : IDisposable
             CopyBench.R2a(j, clone, 0, 2);   // full copy + swap on the clone only
             j.WriteEndObject();
         }
-        Assert.Equal(h, StateHash.ComputeHex(src, 1));
+        HashAssert.Equal(h, StateHash.ComputeHex(src, 1));
     }
 
     [Fact]
@@ -263,7 +263,7 @@ public sealed class BenchTests : IDisposable
             CopyBench.R2c(j, clone, [0, 50, 100], 2, 8, 0, 2);
             j.WriteEndObject();
         }
-        Assert.Equal(h, StateHash.ComputeHex(clone, 1));
+        HashAssert.Equal(h, StateHash.ComputeHex(clone, 1));
         using JsonDocument d = JsonDocument.Parse(ms.ToArray());
         JsonElement r = d.RootElement.GetProperty("c_synthetic_daily_system");
         Assert.True(r.GetProperty("state_unchanged").GetBoolean());
