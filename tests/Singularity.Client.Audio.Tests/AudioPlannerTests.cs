@@ -66,10 +66,9 @@ public class AudioPlannerTests
         {
             var pl = p.Request("order_ok", i * 3.0);
             Assert.NotNull(pl);
-            Assert.Equal(0, pl!.Variant);
-            Assert.InRange(pl.Pitch, 0.97, 1.03);
+            Assert.InRange(pl!.Pitch, 0.97, 1.03);
             Assert.InRange(pl.GainDb, -1.5, 1.5);
-            pitches.Add(pl.Pitch);
+            pitches.Add(pl!.Pitch);
         }
         Assert.True(pitches.Count > 50);
         Assert.Equal(1.0, new AudioPlanner().Request("order_reject", 0)!.Pitch);

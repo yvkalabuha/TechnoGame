@@ -22,12 +22,24 @@ public class AudioAssetsTests
         Assert.Equal("vorbis", System.Text.Encoding.ASCII.GetString(b, 29, 6));
         int ch = b[39], rate = BitConverter.ToInt32(b, 40);
         int last = b.AsSpan().LastIndexOf("OggS"u8);
+        Assert.Equal(0, b[last + 4]);                        // stream structure version
+        Assert.True((b[last + 5] & 4) != 0, "last page must carry the end-of-stream flag");
         long granule = BitConverter.ToInt64(b, last + 6);
         return (rate, ch, granule / (double)rate);
     }
 
     public static IEnumerable<object[]> Files() =>
-        AudioCatalog.All.SelectMany(c => Enumerable.Range(0, c.Variants).Select(v => new object[] { c.Id, c.File(v) }));
+        AudioCatalog.All.Select(c => new object[] { c.Id, c.File });
+
+    [Fact]
+    public void Ui_folder_holds_exactly_the_files_the_catalogue_references_and_none_is_a_stub()
+    {
+        string dir = Path.Combine(Assets(), "ui");
+        var onDisk = Directory.GetFiles(dir).Where(f => !f.EndsWith(".import")).Select(Path.GetFileName).OrderBy(x => x, StringComparer.Ordinal).ToArray();
+        var wanted = AudioCatalog.All.Select(c => c.File + ".ogg").Distinct().OrderBy(x => x, StringComparer.Ordinal).ToArray();
+        Assert.Equal(wanted, onDisk);
+        foreach (var f in onDisk) Assert.True(new FileInfo(Path.Combine(dir, f!)).Length > 2048, f);
+    }
 
     [Theory]
     [MemberData(nameof(Files))]

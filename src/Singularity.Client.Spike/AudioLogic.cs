@@ -15,12 +15,12 @@ public enum Prio { P0 = 0, P1 = 1, P2 = 2, P3 = 3 }
 /// A sound of the map. <paramref name="Class"/> is the aggregation class; <paramref name="Seconds"/> is the playback length (checked against the .ogg in tests).
 /// <paramref name="Jitter"/>: pitch ±3% and gain ±1.5 dB per play (one file per cue). <paramref name="Source"/>: shared file name; <paramref name="Repeats"/>: clicks of one file.
 /// </summary>
-public sealed record Cue(string Id, Prio Prio, string Class, double Seconds, int Variants = 1, double MinGap = 0, double GainDb = 0,
+public sealed record Cue(string Id, Prio Prio, string Class, double Seconds, double MinGap = 0, double GainDb = 0,
     bool Jitter = false, string? Source = null, int Repeats = 1)
 {
     public const double RepeatGap = 0.06;
     public string Bus => Prio <= Prio.P1 ? "Alert" : "UI";
-    public string File(int variant) => Variants == 1 ? Source ?? Id : $"{Id}_{variant}";
+    public string File => Source ?? Id;
 }
 
 public static class AudioCatalog
@@ -53,12 +53,12 @@ public static class AudioCatalog
 }
 
 /// <summary>One sound to start. <paramref name="Evicted"/> are voices to stop first. <paramref name="Collective"/> = several events folded into one, a step higher.</summary>
-public sealed record Play(int Voice, Cue Cue, int Variant, double GainDb, double Pitch, bool Collective, IReadOnlyList<int> Evicted)
+public sealed record Play(int Voice, Cue Cue, double GainDb, double Pitch, bool Collective, IReadOnlyList<int> Evicted)
 {
-    public string File => Cue.File(Variant);
+    public string File => Cue.File;
 }
 
-/// <summary>Fatigue rules for 4–10 hour sessions: aggregation window, voice budget, variants, ducking, slow adaptation.</summary>
+/// <summary>Fatigue rules for 4–10 hour sessions: aggregation window, voice budget, pitch jitter, ducking, slow adaptation.</summary>
 public sealed class AudioPlanner
 {
     public const double Window = 0.4, TempoWindow = 0.15, CollectiveSpan = 2.0, DuckDbValue = -6.0, DuckTail = 0.4, ReminderDb = -6.0;
@@ -71,7 +71,6 @@ public sealed class AudioPlanner
     readonly Dictionary<string, double> _lastPlayed = new();      // by class or cue id: lookups only
     readonly Dictionary<string, double> _lastCollective = new();
     readonly Dictionary<string, List<double>> _history = new();
-    readonly Dictionary<string, int> _lastVariant = new();
     readonly Dictionary<string, double> _lastCue = new();
     ulong _rng;
     int _nextVoice;
@@ -131,15 +130,6 @@ public sealed class AudioPlanner
             else return null;
         }
 
-        int variant = 0;
-        if (cue.Variants > 1)
-        {
-            _lastVariant.TryGetValue(cue.Id, out var last);
-            variant = Next(cue.Variants - 1);
-            if (_lastVariant.ContainsKey(cue.Id) && variant >= last) variant++;
-            _lastVariant[cue.Id] = variant;
-        }
-
         _lastPlayed[key] = now; _lastCue[cue.Id] = now;
         if (collective) _lastCollective[key] = now;
         int id = ++_nextVoice;
@@ -148,7 +138,7 @@ public sealed class AudioPlanner
         double gain = cue.GainDb + extraGainDb + AdaptDb(cue.Prio) + (collective ? 2.0 : 0);
         double pitch = collective ? 1.122462 : 1.0;
         if (cue.Jitter) { pitch *= 1 + (Next(1001) / 1000.0 * 0.06 - 0.03); gain += Next(1001) / 1000.0 * 3.0 - 1.5; }
-        return new Play(id, cue, variant, gain, pitch, collective, evicted);
+        return new Play(id, cue, gain, pitch, collective, evicted);
     }
 }
 
