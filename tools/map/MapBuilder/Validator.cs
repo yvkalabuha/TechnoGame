@@ -105,7 +105,7 @@ internal static class Validator
         if (polityIds.Count != r.Polities.Count) r.Errors.Add("polities: duplicate ids");
 
         if (owners == null) r.Errors.Add("owners.yaml is missing");
-        else ValidateOwners(r, owners, idSet, regionSet, polityIds);
+        else ValidateOwners(r, owners, idSet, regionSet, polityIds, r.Spec.GreatPowers);
 
         // Cuts: source, as_of, precision, ref; OHM licences.
         foreach (var (file, rule) in r.Spec.Rules.Where(x => x.Rule.Cut != null))
@@ -126,15 +126,22 @@ internal static class Validator
 
         CheckEvents(r, territoryIds);
 
-        // World ranges (ADR-0011 §1: provinces 2000-5000, regions 150-250). Outside the range is a warning for the owner, not an error (ADR-0020 §15).
+        // World ranges (ADR-0011 §1: provinces 2000-5000, regions 150-400, ADR-0022). Outside the range is a warning for the owner, not an error (ADR-0020 §15).
         int provinceRows = r.Pieces.Count + territoryIds.Count;
         r.Info.Add($"provinces: {r.Pieces.Count} with geometry + {territoryIds.Count} territories = {provinceRows} rows (world target 2000-5000)");
-        r.Info.Add($"regions: {r.Spec.Regions.Count} (world target 150-250)");
+        r.Info.Add($"regions: {r.Spec.Regions.Count} (world target 150-400, ADR-0022)");
         if (area.World)
         {
-            if (r.Spec.Regions.Count > 250) r.Warnings.Add($"regions: {r.Spec.Regions.Count} exceed the ADR-0011 limit of 250 (question to the owner via an ADR to ADR-0011)");
+            CheckRegionCount(r, r.Spec.Regions.Count);
             if (provinceRows is < 2000 or > 5000) r.Warnings.Add($"provinces: {provinceRows} rows are outside the ADR-0011 range 2000-5000");
         }
+    }
+
+    /// <summary>ADR-0022: world region count 150-400; 400 is a provisional warning threshold, not a build error.</summary>
+    internal static void CheckRegionCount(BuildResult r, int n)
+    {
+        if (n > 400) r.Warnings.Add($"regions: {n} exceed the ADR-0022 provisional limit of 400 (report to the owner)");
+        if (n < 150) r.Warnings.Add($"regions: {n} are below the ADR-0022 minimum of 150");
     }
 
     /// <summary>
@@ -181,7 +188,7 @@ internal static class Validator
         r.Info.Add($"event lines checked against region borders: {drawn}");
     }
 
-    internal static void ValidateOwners(BuildResult r, OwnerFile owners, HashSet<string> idSet, HashSet<string> regionSet, HashSet<string> polityIds)
+    internal static void ValidateOwners(BuildResult r, OwnerFile owners, HashSet<string> idSet, HashSet<string> regionSet, HashSet<string> polityIds, GreatPowerFile? greatPowers = null)
     {
         if (owners.AsOf != "1945-10-01") r.Errors.Add($"owners: as_of must be 1945-10-01, got '{owners.AsOf}'");
         var def = new Dictionary<string, OwnerRow>(StringComparer.Ordinal);
@@ -208,7 +215,7 @@ internal static class Validator
         }
         foreach (var e in owners.Exceptions)
         {
-            if (e.Province == null || !idSet.Contains(e.Province)) { r.Errors.Add($"owners exception: unknown province '{e.Province}'"); continue; }
+            if (e.Province == null || !(idSet.Contains(e.Province) || r.Spec.Territories.Any(t => t.Id == e.Province))) { r.Errors.Add($"owners exception: unknown province '{e.Province}'"); continue; }
             if (!exc.TryAdd(e.Province, e)) r.Errors.Add($"owners exception: province {e.Province} twice");
             Check(e, "province " + e.Province);
         }
@@ -232,13 +239,51 @@ internal static class Validator
         foreach (var (reg, set) in controllersByRegion)
             if (set.Count > 1) r.Warnings.Add($"region {reg} has several controllers: {string.Join(", ", set)} (E1 decision needed, ADR-0011 §3)");
 
-        // Regions of an actor: upper bound 15 (#171); the lower bound 5 needs the whole world.
-        foreach (var pol in r.Polities.Where(p => p.Actor != null))
+        // One status per region (ADR-0022 §2.8): the quota counts regions, so all provinces of a region must agree.
+        var statusOf = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        // Rows of a region: provinces with geometry and territories (ADR-0022 §2.8); a territory resolves like a province.
+        var rowsByRegion = new Dictionary<string, List<(string Id, string Status)>>(StringComparer.Ordinal);
+        foreach (var id in r.Pieces.Select(p => p.Id).Concat(r.Spec.Territories.Select(t => t.Id)))
         {
-            int n = def.Values.Count(d => d.Owner == pol.Id);
-            // Colonial empires count their colonies as owned regions, so the 5-15 target (#171) is a warning for the owner, like the other world ranges.
-            if (n > 15) r.Warnings.Add($"actor {pol.Id}: {n} regions as default owner, target max 15 (#171; question to the owner)");
-            else r.Info.Add($"actor {pol.Id}: {n} regions in the area (5-15 over the whole world)");
+            var reg = id[..id.IndexOf('.')];
+            string? st = r.Owners.TryGetValue(id, out var res) ? res.Status : (exc.GetValueOrDefault(id) ?? def.GetValueOrDefault(reg))?.Status;
+            if (st == null) continue;
+            if (!rowsByRegion.TryGetValue(reg, out var list)) rowsByRegion[reg] = list = new();
+            list.Add((id, st));
+        }
+        foreach (var reg in regionSet.OrderBy(x => x, StringComparer.Ordinal))
+        {
+            var provs = rowsByRegion.GetValueOrDefault(reg) ?? new();
+            var statuses = provs.Select(x => x.Status).Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList();
+            if (statuses.Count > 1)
+                r.Errors.Add($"owners: region {reg} has several statuses: " + string.Join("; ", statuses.Select(st => st + " = " + string.Join(",", provs.Where(x => x.Status == st).Select(x => x.Id)))));
+            if (statuses.Count > 0) statusOf[reg] = statuses[0];
+            else if (def.TryGetValue(reg, out var d0)) statusOf[reg] = d0.Status;
+        }
+
+        // Great-power quota (ADR-0022 §2, #171): only the listed actors, only regions with status core, t0 validator only.
+        if (greatPowers == null) return;
+        var exceptions = new Dictionary<string, GreatPowerException>(StringComparer.Ordinal);
+        foreach (var e in greatPowers.Exceptions)
+        {
+            if (string.IsNullOrWhiteSpace(e.Reason)) r.Errors.Add($"great_powers: exception {e.Id} needs a reason");
+            if (!greatPowers.Ids.Contains(e.Id)) r.Errors.Add($"great_powers: exception id '{e.Id}' is not in ids");
+            if (e.MaxCore <= 15) r.Errors.Add($"great_powers: exception {e.Id} needs max_core above 15, got {e.MaxCore}");
+            if (!exceptions.TryAdd(e.Id, e)) r.Errors.Add($"great_powers: duplicate exception '{e.Id}'");
+        }
+        foreach (var dup in greatPowers.Ids.GroupBy(x => x, StringComparer.Ordinal).Where(g => g.Count() > 1))
+            r.Errors.Add($"great_powers: duplicate id '{dup.Key}'");
+        foreach (var id in greatPowers.Ids.Distinct(StringComparer.Ordinal))
+        {
+            if (!polityIds.Contains(id)) { r.Errors.Add($"great_powers: unknown id '{id}'"); continue; }
+            var regs = def.Values.Where(d => d.Owner == id && d.Region != null).Select(d => d.Region!).ToList();
+            int Count(string st) => regs.Count(x => statusOf.GetValueOrDefault(x) == st);
+            int core = Count("core");
+            r.Info.Add($"actor {id}: core {core}, colony {Count("colony")}, protectorate {Count("protectorate")}, mandate {Count("mandate")}, leased {Count("leased")}");
+            if (!r.Spec.Area.World) continue;
+            int max = exceptions.TryGetValue(id, out var ex) ? ex.MaxCore : 15;
+            if (core > max) r.Warnings.Add($"actor {id}: {core} core regions exceed the #171 maximum of {max}" + (max != 15 ? " (named exception)" : "") + " (question to the owner)");
+            if (core < 5) r.Warnings.Add($"actor {id}: {core} core regions are below the #171 minimum of 5");
         }
     }
 }

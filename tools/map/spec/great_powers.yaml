@@ -1,0 +1,6 @@
+# Great powers for the quota check of ADR-0022 (5-15 regions with status core, #171). A build check, not game data; not part of scenario_hash.
+scenario: 1945
+source: "UN Charter art. 23, permanent members of the Security Council (signed 1945-06-26, in force 1945-10-24), https://www.un.org/en/about-us/un-charter/chapter-5, accessed 2026-11-18"
+ids: [USA, SUN, GBR, FRA, ROC]
+exceptions:
+  - {id: SUN, max_core: 35, reason: "Owner decision #406 (ADR-0022 §3 variant A): 15 union republics are NE countries and sides of event lines (#350: Baltics, Moldova), so the map is not cut for the quota"}

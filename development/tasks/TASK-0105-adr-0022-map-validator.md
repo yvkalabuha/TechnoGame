@@ -31,3 +31,10 @@ Implement ADR-0022 amendment p.6 (ACCEPTED, #410) in `tools/map/MapBuilder/Valid
 ## Acceptance criteria
 - [ ] Tests per ADR-0022 "Проверка": 400 regions without a warning, 401 with one; 150 without, 149 with; a power with 16 core warns; 4 core warns "< 5"; 10 core + 80 colony gives no warning plus the exact Info line; a non-listed actor with 20 core gives no quota warning; an unknown id is an error; a region with two statuses is an error; SUN 31 gives no warning, 36 warns.
 - [ ] The 1945 map build gives exactly the quota warnings of ADR-0022 table p.2.7; MapBuilder tests and `check_determinism.sh` pass.
+
+## Результат
+- Сделано: `Validator.cs` по ADR-0022 п. 6: диапазон регионов 150-400 (`CheckRegionCount`, предупреждения), квота только для `great_powers` по `status: core` (> 15 и < 5, исключение SUN ≤ 35), Info по статусам, ошибка нескольких `status` в регионе, ошибка неизвестного id. Новый файл `tools/map/spec/great_powers.yaml` (список 1945, исключение SUN с причиной #406); `SpecSet` читает его и не считает правилом.
+- Файлы: `tools/map/MapBuilder/{Validator,Scenario,Spec}.cs`, `tools/map/spec/great_powers.yaml`, `tests/Singularity.MapBuilder.Tests/MapBuilderTests.cs` (8 новых тестов).
+- Проверка: `dotnet test` 64/64, `check_packages.sh` OK, `check_determinism.sh` OK. Сборка 1945: 374 региона, предупреждений о лимите и квоте нет: по текущему `owners.yaml` core USA 7, SUN 31, GBR 5, FRA 6, ROC 7 (в норме). Предупреждения GBR/FRA < 5 появятся после правок `status` (T4, ADR-0022 п. 2.6); до них критерий «ровно п. 2.7» не достижим.
+- Критерий 2 («ровно предупреждения п. 2.7») достижим только после правок `status` (T4, ADR-0022 п. 2.6): сейчас квотных предупреждений нет. В данных ROC core 7, в ADR «сейчас» 6 — проверить в T4.
+- Доработка по ревью: ошибки в `great_powers.yaml` (исключение вне `ids`, дубликат, нет/≤15 `max_core`, дубль id), единый `status` покрывает территории, группировка по регионам один раз, тест для не-мирового режима (67 тестов).
