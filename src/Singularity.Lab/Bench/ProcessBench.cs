@@ -14,13 +14,18 @@ public sealed record RunSwitches(bool HashCheckpoints, bool HashEveryTick, bool 
 public sealed class RunTiming
 {
     public required bool Daily { get; init; }
-    /// <summary>Host time of every month (warm-up included), ms: the sum of the tick times of the month (commands are submitted between ticks, untimed).</summary>
+    /// <summary>
+    /// Host time of every month (warm-up included), ms: the sum of the tick times of the month. Commands are submitted between ticks,
+    /// outside the timed span (decision: docs/simulation/lab-cli.md «Submit вне M_i/T_i»).
+    /// </summary>
     public required double[] MonthMs { get; init; }
     /// <summary>Days of every month (ticks between two monthly steps).</summary>
     public required int[] MonthDays { get; init; }
     /// <summary>Every tick of the measured window, ms.</summary>
     public required List<double> WindowTickMs { get; init; }
     public required long AllocatedBytes { get; init; }
+    /// <summary>Part of <see cref="AllocatedBytes"/> made by the <see cref="FreqSampler"/> thread in the window (0 without a sampler).</summary>
+    public required long SamplerAllocatedBytes { get; init; }
     public required int Gen0 { get; init; }
     public required int Gen1 { get; init; }
     public required int Gen2 { get; init; }
@@ -58,9 +63,11 @@ public static class ProcessBench
     /// <summary>
     /// Runs <paramref name="warmup"/> + <paramref name="measure"/> months. At the start of every month each actor gets one
     /// <c>SetBudgetShares</c> with its current shares (П2, the same in both modes); with <see cref="RunSwitches.DailyNoop"/> the daily run
-    /// also gets, on every other day, actor 0's shares of the month again (R4 б).
+    /// also gets, before every tick of the month except its first one, actor 0's shares from the start of the month again (R4 б: a
+    /// no-op command on every day).
     /// </summary>
-    public static RunTiming Run(SynthWorld w, ulong seed, int threads, int chunk, bool daily, RunSwitches sw, int warmup, int measure)
+    public static RunTiming Run(SynthWorld w, ulong seed, int threads, int chunk, bool daily, RunSwitches sw, int warmup, int measure,
+        FreqSampler? sampler = null)
     {
         SliceSession s = SliceSession.Create(w.Data, Config(w, seed, threads, chunk, daily, sw));
         s.World.Table.FullCopyMode = sw.FullCopy;
@@ -71,7 +78,7 @@ public static class ProcessBench
         int actors = s.World.Table.RowCount;
         int local = 0;
         long commands = 0;
-        long alloc0 = 0, hash0 = 0;
+        long alloc0 = 0, hash0 = 0, samplerAlloc0 = 0;
         int g0 = 0, g1 = 0, g2 = 0;
         TimeSpan pause0 = TimeSpan.Zero;
         long win0 = 0;
@@ -80,6 +87,7 @@ public static class ProcessBench
             if (m == warmup)
             {
                 alloc0 = GC.GetTotalAllocatedBytes(true);
+                samplerAlloc0 = sampler?.AllocatedBytes ?? 0;
                 g0 = GC.CollectionCount(0);
                 g1 = GC.CollectionCount(1);
                 g2 = GC.CollectionCount(2);
@@ -121,6 +129,7 @@ public static class ProcessBench
             MonthDays = days,
             WindowTickMs = ticks,
             AllocatedBytes = GC.GetTotalAllocatedBytes(true) - alloc0,
+            SamplerAllocatedBytes = (sampler?.AllocatedBytes ?? 0) - samplerAlloc0,
             Gen0 = GC.CollectionCount(0) - g0,
             Gen1 = GC.CollectionCount(1) - g1,
             Gen2 = GC.CollectionCount(2) - g2,
@@ -184,9 +193,9 @@ public static class ProcessBench
 
         using var freq = new FreqSampler();
         using BackgroundLoad? bg = p.Background > 0 ? new BackgroundLoad(p.Background) : null;
-        RunTiming first = Run(w, p.Seed, p.Threads, rp.ChunkSize, p.DailyFirst, sw, rp.Warmup, rp.Measure);
+        RunTiming first = Run(w, p.Seed, p.Threads, rp.ChunkSize, p.DailyFirst, sw, rp.Warmup, rp.Measure, freq);
         log.WriteLine($"{(first.Daily ? "daily" : "monthly")} run: p50 {BenchStats.Median(first.MonthMs[rp.Warmup..]):F1} ms/month");
-        RunTiming second = Run(w, p.Seed, p.Threads, rp.ChunkSize, !p.DailyFirst, sw, rp.Warmup, rp.Measure);
+        RunTiming second = Run(w, p.Seed, p.Threads, rp.ChunkSize, !p.DailyFirst, sw, rp.Warmup, rp.Measure, freq);
         log.WriteLine($"{(second.Daily ? "daily" : "monthly")} run: p50 {BenchStats.Median(second.MonthMs[rp.Warmup..]):F1} ms/month");
         WriteProcessJson(outFile, p, rp, w, buildMs, pre, first, second, freq);
         RunTiming monthly = first.Daily ? second : first, dailyRun = first.Daily ? first : second;
@@ -244,6 +253,8 @@ public static class ProcessBench
         j.WriteNumber("window_months", window.Length);
         j.WriteNumber("window_wall_ms", r.WindowWallMs);
         j.WriteNumber("allocated_bytes", r.AllocatedBytes);
+        // allocated_bytes counts every thread; the frequency sampler's share is given so the analysis can subtract it.
+        j.WriteNumber("sampler_alloc_bytes", r.SamplerAllocatedBytes);
         j.WriteNumber("allocated_bytes_per_month", (double)r.AllocatedBytes / window.Length);
         j.WriteBoolean("alloc_le_1mb_per_month", r.AllocatedBytes / (double)window.Length <= 1 << 20);
         j.WriteNumber("gc_gen0", r.Gen0);
@@ -303,6 +314,7 @@ public static class ProcessBench
     {
         j.WriteStartObject("frequency");
         j.WriteString("source", f.Source);
+        j.WriteNumber("sampler_alloc_bytes_total", f.AllocatedBytes);
         double? med = f.MedianIn(windows);
         if (med is double m) j.WriteNumber("median_mhz_in_windows", m); else j.WriteNull("median_mhz_in_windows");
         if (fRef is double r)

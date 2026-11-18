@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.IO.Hashing;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using Singularity.Kernel;
@@ -136,30 +135,38 @@ public static class CopyBench
 
     // ---- R2 (б): CoW of the columns a real monthly step opens, against a full copy, on the clone ----
 
-    private static readonly FieldInfo LongCurrent = CurrentField(typeof(Column<long>));
-    private static readonly FieldInfo IntCurrent = CurrentField(typeof(Column<int>));
-
-    private static FieldInfo CurrentField(Type t) =>
-        t.GetField("_current", BindingFlags.Instance | BindingFlags.NonPublic)
-        ?? throw new InvalidOperationException($"{t.Name}._current not found: the R2 (б) probe needs the Kernel column layout.");
-
-    private static object CurrentArray(Column c) => (c is LongColumn ? LongCurrent : IntCurrent).GetValue(c)!;
-
-    /// <summary>Indexes of the columns whose Current buffer was swapped by one monthly tick of the session (= opened by the step).</summary>
+    /// <summary>
+    /// Indexes of the columns one monthly tick of the session opens (copy-on-write), read from the public Kernel
+    /// <see cref="ColumnWriteTrace"/> switched on for that one tick only. The trace slows <c>Next</c> but changes no state.
+    /// </summary>
     public static int[] OpenedByMonthlyStep(SliceSession s, int month)
     {
         s.StepTo(s.World.Calendar.TickOfMonth(month));
         Table t = s.World.Table;
-        var before = new object[t.Columns.Count];
-        for (int i = 0; i < before.Length; i++)
-            before[i] = CurrentArray(t.Columns[i]);
-        s.Step(1);
-        var opened = new List<int>();
-        for (int i = 0; i < before.Length; i++)
+        var trace = new ColumnWriteTrace();
+        t.Trace = trace;
+        try
         {
-            if (!ReferenceEquals(before[i], CurrentArray(t.Columns[i])))
+            s.Step(1);
+        }
+        finally
+        {
+            t.Trace = null;
+        }
+        var names = new List<string>();
+        foreach ((_, string column) in trace.Pairs)
+        {
+            if (!names.Contains(column))
+                names.Add(column);
+        }
+        var opened = new List<int>();
+        for (int i = 0; i < t.Columns.Count; i++)
+        {
+            if (names.Contains(t.Columns[i].Name))
                 opened.Add(i);
         }
+        if (opened.Count != names.Count)
+            throw new InvalidOperationException("R2 (б): a traced column name is not unique or not in the table.");
         return [.. opened];
     }
 

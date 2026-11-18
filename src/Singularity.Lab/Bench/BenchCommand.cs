@@ -105,11 +105,16 @@ internal static class BenchCommand
                 throw new UsageException($"--process must be below {plan.Count}.");
             p = plan[k];
             RunSwitches sw = Switches(o, m.HashCheckpoints);
+            bool smoke = (warmup is int w && w != m.WarmupMonths) || (measure is int n && n != m.MeasureMonths) || sw.HashCheckpoints != m.HashCheckpoints;
+            // П5: a manifest (official) run without f_ref could not be checked for throttling afterwards; refuse instead of writing
+            // "throttled": null. Smoke runs are never part of the analysis, so they may go without it.
+            if (fref is null && !smoke)
+                throw new UsageException("--fref MHZ is required with --manifest (EXP-0007 П5); measure it with --mode fref.");
             rp = new BenchRunParams
             {
                 Mode = "process", RepoDir = RepoDir(), ManifestPath = m.Path, ManifestHash = m.Hash, ChunkSize = m.ChunkSize,
                 Warmup = warmup ?? m.WarmupMonths, Measure = measure ?? m.MeasureMonths, PrecheckMonths = precheck, Switches = sw, FRefMhz = fref,
-                Smoke = (warmup is int w && w != m.WarmupMonths) || (measure is int n && n != m.MeasureMonths) || sw.HashCheckpoints != m.HashCheckpoints,
+                Smoke = smoke,
             };
         }
         else

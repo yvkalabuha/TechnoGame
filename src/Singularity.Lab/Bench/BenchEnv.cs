@@ -1,9 +1,10 @@
+using System.Buffers.Text;
 using System.Diagnostics;
-using System.Globalization;
 using System.Reflection;
 using System.Runtime;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using Microsoft.Win32.SafeHandles;
 
 namespace Singularity.Lab.Bench;
 
@@ -13,9 +14,24 @@ namespace Singularity.Lab.Bench;
 /// </summary>
 public static class BenchEnv
 {
-    public static bool IsOptimizedBuild()
+    /// <summary>
+    /// True when Lab and the timed assemblies (Kernel, Core, Session) are all JIT-optimized: a Release Lab on a Debug Core would time
+    /// unoptimized simulation code.
+    /// </summary>
+    public static bool IsOptimizedBuild() =>
+        TimedAssemblies.All(IsOptimized);
+
+    internal static readonly Assembly[] TimedAssemblies =
+    [
+        typeof(BenchEnv).Assembly,
+        typeof(Singularity.Kernel.Table).Assembly,
+        typeof(Singularity.Core.Commands.SetBudgetShares).Assembly,
+        typeof(Singularity.Session.SliceSession).Assembly,
+    ];
+
+    private static bool IsOptimized(Assembly a)
     {
-        var attr = typeof(BenchEnv).Assembly.GetCustomAttribute<DebuggableAttribute>();
+        var attr = a.GetCustomAttribute<DebuggableAttribute>();
         return attr is null || !attr.IsJITOptimizerDisabled;
     }
 
@@ -31,6 +47,10 @@ public static class BenchEnv
 
         w.WriteStartObject("conditions");
         w.WriteString("configuration", IsOptimizedBuild() ? "Release" : "Debug");
+        w.WriteStartObject("assemblies_optimized");
+        foreach (Assembly a in TimedAssemblies)
+            w.WriteBoolean(a.GetName().Name ?? "?", IsOptimized(a));
+        w.WriteEndObject();
         w.WriteString("runtime", RuntimeInformation.FrameworkDescription);
         w.WriteString("runtime_version", Environment.Version.ToString());
         w.WriteString("os", RuntimeInformation.OSDescription);
@@ -96,18 +116,28 @@ public static class BenchEnv
 /// <summary>
 /// Samples the mean CPU frequency (MHz) over logical CPUs once per interval (EXP-0007 П5): <c>scaling_cur_freq</c> of every
 /// <c>/sys/devices/system/cpu/cpu*/cpufreq/</c>, else «cpu MHz» of <c>/proc/cpuinfo</c>. Time stamps are Stopwatch ticks of the host.
+/// The sampler thread runs inside the timed windows and <c>GC.GetTotalAllocatedBytes</c> counts every thread, so the loop does not
+/// allocate in steady state: file handles are opened once and re-read with <c>pread</c> at offset 0 into a reused byte buffer, parsed
+/// with <see cref="Utf8Parser"/>, and samples go into a pre-sized array. What it still allocates (buffer or array growth) is counted in
+/// <see cref="AllocatedBytes"/> so the bench can subtract it.
 /// </summary>
 public sealed class FreqSampler : IDisposable
 {
-    private readonly List<(long Ts, double Mhz)> _samples = [];
+    private const int InitialCapacity = 1 << 14;
+    private (long Ts, double Mhz)[] _samples = new (long, double)[InitialCapacity];
+    private int _count;
+    private readonly object _lock = new();
+    private readonly SafeFileHandle[] _handles;
+    private byte[] _buffer = new byte[4096];
     private readonly Thread _thread;
     private readonly int _intervalMs;
+    private long _allocated;
     private volatile bool _stop;
 
     public FreqSampler(int intervalMs = 1000)
     {
         _intervalMs = intervalMs;
-        Source = DetectSource();
+        (Source, _handles) = OpenSource();
         _thread = new Thread(Loop) { IsBackground = true, Name = "bench-freq" };
         _thread.Start();
     }
@@ -115,9 +145,12 @@ public sealed class FreqSampler : IDisposable
     /// <summary>"scaling_cur_freq", "proc_cpuinfo" or "none".</summary>
     public string Source { get; }
 
+    /// <summary>Bytes the sampler thread allocated in its loop since start (0 in steady state).</summary>
+    public long AllocatedBytes => Interlocked.Read(ref _allocated);
+
     public IReadOnlyList<(long Ts, double Mhz)> Samples
     {
-        get { lock (_samples) return [.. _samples]; }
+        get { lock (_lock) return _samples.AsSpan(0, _count).ToArray(); }
     }
 
     /// <summary>Median of the samples whose time stamp falls inside any of the windows; null if none.</summary>
@@ -142,18 +175,42 @@ public sealed class FreqSampler : IDisposable
     {
         while (!_stop)
         {
+            long a0 = GC.GetAllocatedBytesForCurrentThread();
             if (Read() is double mhz)
             {
-                lock (_samples) _samples.Add((Stopwatch.GetTimestamp(), mhz));
+                lock (_lock)
+                {
+                    if (_count == _samples.Length)
+                        Array.Resize(ref _samples, _samples.Length * 2);
+                    _samples[_count++] = (Stopwatch.GetTimestamp(), mhz);
+                }
             }
+            Interlocked.Add(ref _allocated, GC.GetAllocatedBytesForCurrentThread() - a0);
             Thread.Sleep(_intervalMs);
         }
     }
 
-    private static string DetectSource()
+    private static (string, SafeFileHandle[]) OpenSource()
     {
-        if (ScalingFiles().Length > 0) return "scaling_cur_freq";
-        return File.Exists("/proc/cpuinfo") ? "proc_cpuinfo" : "none";
+        SafeFileHandle[] scaling = OpenAll(ScalingFiles());
+        if (scaling.Length > 0) return ("scaling_cur_freq", scaling);
+        SafeFileHandle[] cpuinfo = OpenAll(["/proc/cpuinfo"]);
+        return cpuinfo.Length > 0 ? ("proc_cpuinfo", cpuinfo) : ("none", []);
+    }
+
+    private static SafeFileHandle[] OpenAll(string[] paths)
+    {
+        var handles = new List<SafeFileHandle>(paths.Length);
+        foreach (string p in paths)
+        {
+            try
+            {
+                handles.Add(File.OpenHandle(p, FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+        return [.. handles];
     }
 
     private static string[] ScalingFiles()
@@ -161,6 +218,21 @@ public sealed class FreqSampler : IDisposable
         const string root = "/sys/devices/system/cpu";
         if (!Directory.Exists(root)) return [];
         return [.. Directory.GetDirectories(root, "cpu*").Select(d => Path.Combine(d, "cpufreq", "scaling_cur_freq")).Where(File.Exists).Order(StringComparer.Ordinal)];
+    }
+
+    // Whole file into _buffer (grown, never shrunk); returns the length.
+    private int ReadAll(SafeFileHandle h)
+    {
+        int len = 0;
+        while (true)
+        {
+            if (len == _buffer.Length)
+                Array.Resize(ref _buffer, _buffer.Length * 2);
+            int n = RandomAccess.Read(h, _buffer.AsSpan(len), len);
+            if (n <= 0)
+                return len;
+            len += n;
+        }
     }
 
     private double? Read()
@@ -171,9 +243,10 @@ public sealed class FreqSampler : IDisposable
             {
                 double sum = 0;
                 int n = 0;
-                foreach (string f in ScalingFiles())
+                foreach (SafeFileHandle h in _handles)
                 {
-                    if (BenchEnv.ReadTrim(f) is string s && long.TryParse(s, NumberStyles.None, CultureInfo.InvariantCulture, out long khz))
+                    int len = ReadAll(h);
+                    if (Utf8Parser.TryParse(_buffer.AsSpan(0, len), out long khz, out _) && khz > 0)
                     {
                         sum += khz / 1000.0;
                         n++;
@@ -183,12 +256,17 @@ public sealed class FreqSampler : IDisposable
             }
             if (Source == "proc_cpuinfo")
             {
+                ReadOnlySpan<byte> rest = _buffer.AsSpan(0, ReadAll(_handles[0]));
                 double sum = 0;
                 int n = 0;
-                foreach (string line in File.ReadLines("/proc/cpuinfo"))
+                while (!rest.IsEmpty)
                 {
-                    if (line.StartsWith("cpu MHz", StringComparison.Ordinal) && line.IndexOf(':') is int i and >= 0
-                        && double.TryParse(line[(i + 1)..].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double mhz))
+                    int eol = rest.IndexOf((byte)'\n');
+                    ReadOnlySpan<byte> line = eol < 0 ? rest : rest[..eol];
+                    rest = eol < 0 ? [] : rest[(eol + 1)..];
+                    if (!line.StartsWith("cpu MHz"u8) || line.IndexOf((byte)':') is not (int i and >= 0))
+                        continue;
+                    if (Utf8Parser.TryParse(line[(i + 1)..].TrimStart((byte)' ').TrimStart((byte)'\t'), out double mhz, out _))
                     {
                         sum += mhz;
                         n++;
@@ -206,6 +284,8 @@ public sealed class FreqSampler : IDisposable
     {
         _stop = true;
         _thread.Join();
+        foreach (SafeFileHandle h in _handles)
+            h.Dispose();
     }
 }
 
