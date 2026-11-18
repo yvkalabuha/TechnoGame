@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Godot;
 
@@ -10,15 +11,23 @@ public enum FontKind { Text, Mono, Draft, Map }
 public static class Ui
 {
     public const int MinSize = 14;
-    public static readonly Color Paper = new("F2EFE6"), Sheet = new("FAF8F2"), Hover = new("E8E4D8"), Ink = new("1D1E20"),
-        Ink2 = new("55575A"), Ink3 = new("6E6C66"), Rule = new("BCB6A8"), Normal = new("86837C"),
-        Alarm = new("C42A1C"), Warn = new("E89A1A"), Command = new("2347A8"), Seq2 = new("C2CDD3");
+    // Palette C «Акварель» (UI_DESIGN_SYSTEM §17, decisions #302, #303, #326): the tokens come from Palette.C, which the contrast validator reads too.
+    static Color H(string hex) => new(hex);
+    public static readonly Color Paper = H(Palette.C.Paper), Sheet = H(Palette.C.Sheet), Hover = H(Palette.C.Hover), Ink = new("1D1E20"),
+        Ink2 = new("55575A"), Ink3 = new("6E6C66"), Rule = new("BDB59F"), Normal = new("86837C"), Border = new("3E3C38"),
+        Alarm = H(Palette.C.Alarm), Warn = H(Palette.C.Warn), Command = H(Palette.C.Command), Seq2 = new("C2CDD3");
 
-    // Palette C «Акварель» (UI_DESIGN_SYSTEM §17.3): the six inks. Line = frames, nodes, bars; wash = fill; text = dark step for text.
+    // Radius scale (§17.7): 0 data, 2 keys and plates, 4 buttons and fields, 6 panels and sheets.
+    public const float R1 = 2, R2 = 4, R3 = 6;
+
+    // The six inks in the order sand, teal, violet, olive, plum, slate. Line = frames, nodes, bars; wash = fill; text = dark step for text.
+    public static readonly Color[] InkLine = Palette.C.Line.Select(H).ToArray(), InkWash = Palette.C.Wash.Select(H).ToArray(), InkText = Palette.C.Text.Select(H).ToArray();
+    public const int Sand = 0, Teal = 1, Violet = 2, Olive = 3, Plum = 4, Slate = 5;
     // Disciplines of the current tree (Aero, Prop, Metal, Chem, Mech) take teal, plum, slate, olive, sand; violet is kept for the «parameter» block.
-    public static readonly Color[] DiscLine = { new("168A92"), new("A03E82"), new("4A7088"), new("4F8A1E"), new("8F7A2E") };
-    public static readonly Color[] DiscWash = { new("BFE6E5"), new("F0C9E0"), new("C3D8EA"), new("CFE6AA"), new("EAD9A3") };
-    public static readonly Color[] DiscText = { new("1F5F63"), new("75335F"), new("3F5666"), new("4A6020"), new("6B5B22") };
+    static readonly int[] DiscInk = { Teal, Plum, Slate, Olive, Sand };
+    public static readonly Color[] DiscLine = DiscInk.Select(i => InkLine[i]).ToArray(), DiscWash = DiscInk.Select(i => InkWash[i]).ToArray(), DiscText = DiscInk.Select(i => InkText[i]).ToArray();
+    public static Color[] Tints => TintCache ??= Palette.C.Tints.Select(H).ToArray();
+    static Color[] TintCache;
     // Node-card blocks (UI_DESIGN_SYSTEM §17): their own muted tokens, none shared with a discipline ink. Neutral steel, terracotta, taupe, paper.
     public static readonly Color AffLine = new("6B6F78"), AffWash = new("E4E5E6"), AffText = new("3F4249"),
         RaiseLine = new("B5562F"), RaiseWash = new("F0DCCF"), RaiseText = new("7A3A1E"),
@@ -27,10 +36,11 @@ public static class Ui
 
     public static Font FontOf(FontKind k) => k switch { FontKind.Mono => Fonts.Mono, FontKind.Draft => Fonts.DraftBold, FontKind.Map => Fonts.Map, _ => Fonts.Text };
 
-    public static StyleBoxFlat Box(Color bg, Color? border = null, int bw = 1, float margin = 6)
+    public static StyleBoxFlat Box(Color bg, Color? border = null, int bw = 1, float margin = 6, float radius = R2)
     {
-        var s = new StyleBoxFlat { BgColor = bg, ContentMarginLeft = margin, ContentMarginRight = margin, ContentMarginTop = margin * 0.5f, ContentMarginBottom = margin * 0.5f };
+        var s = new StyleBoxFlat { BgColor = bg, AntiAliasing = true, ShadowSize = 0, ContentMarginLeft = margin, ContentMarginRight = margin, ContentMarginTop = margin * 0.5f, ContentMarginBottom = margin * 0.5f };
         if (border is Color c) { s.SetBorderWidthAll(bw); s.BorderColor = c; }
+        s.SetCornerRadiusAll((int)radius);
         return s;
     }
 
@@ -118,7 +128,10 @@ public sealed partial class Segment : HBoxContainer
     public event Action<int> Changed;
     public int Selected { get; private set; }
 
-    public Segment(string[] items, int selected, int size = 14, bool translate = true)
+    /// <summary>Unavailable segment: cells are disabled (rule frame, ink-3 text).</summary>
+    public bool Enabled { set { foreach (var c in _cells) { c.Disabled = !value; if (!value) { c.AddThemeStyleboxOverride("disabled", Ui.Box(Ui.Paper, Ui.Rule, 1, 8)); c.AddThemeColorOverride("font_disabled_color", Ui.Ink3); } } } }
+
+    public Segment(string[] items, int selected, int size = 14, bool translate = true, bool focusable = false)
     {
         _items = items; _size = Math.Max(size, Ui.MinSize); _translate = translate;
         AddThemeConstantOverride("separation", -1);
@@ -126,7 +139,8 @@ public sealed partial class Segment : HBoxContainer
         for (int i = 0; i < items.Length; i++)
         {
             int k = i;
-            _cells[i] = new Button { Text = items[i], FocusMode = FocusModeEnum.None, ClipText = false };
+            _cells[i] = new Button { Text = items[i], FocusMode = focusable ? FocusModeEnum.All : FocusModeEnum.None, ClipText = false };
+            if (focusable) MenuUi.FocusRing(_cells[i]);
             _cells[i].AddThemeFontOverride("font", Fonts.Text);
             _cells[i].AddThemeFontSizeOverride("font_size", _size);
             _cells[i].Pressed += () => Select(k, true);
@@ -157,7 +171,7 @@ public sealed partial class Segment : HBoxContainer
     {
         StyleBoxFlat Mk(Color bg, bool sel)
         {
-            var s = Ui.Box(bg, sel ? Ui.Ink : Ui.Rule, sel ? 2 : 1, 8);
+            var s = Ui.Box(bg, sel ? Ui.Ink : Ui.Rule, sel ? 2 : 1, 8, Ui.R2);
             if (sel) s.BorderWidthBottom = 5;
             return s;
         }

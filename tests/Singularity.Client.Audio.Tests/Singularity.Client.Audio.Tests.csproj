@@ -4,5 +4,9 @@
     <Compile Include="../../src/Singularity.Client.Spike/AudioLogic.cs" Link="AudioLogic.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/PlanisphereMath.cs" Link="PlanisphereMath.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/NodeSchematics.cs" Link="NodeSchematics.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/Palette.cs" Link="Palette.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/LegendData.cs" Link="LegendData.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/SettingsLogic.cs" Link="SettingsLogic.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/ContrastValidator.cs" Link="ContrastValidator.cs" />
   </ItemGroup>
 </Project>

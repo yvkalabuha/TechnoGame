@@ -66,7 +66,13 @@ public sealed partial class AudioDirector : Node
     }
 
     // ---------- settings ----------
-    public void SetVolume(Bus b, double v) { _vol[(int)b] = AudioSettings.Clamp(b, v); SaveSettings(); }
+    // Settings sheet order: Master, Music, Ambient, UI, Sfx, Alert; Sfx has no bus of its own yet.
+    static readonly int[] SheetIndex = { 1, 2, 3, 5 };
+    public void SetVolume(Bus b, double v)
+    {
+        _vol[(int)b] = AudioSettings.Clamp(b, v); SaveSettings();
+        Settings.Current.Volume[SheetIndex[(int)b]] = _vol[(int)b] * 100; Settings.Save();
+    }
     public int MusicAmount { get => _sched.Amount; set { _sched.Amount = value; SaveSettings(); } }
     public void ResetFatigue() => _planner.ResetAdaptation();
 
@@ -74,9 +80,10 @@ public sealed partial class AudioDirector : Node
     void LoadSettings()
     {
         var cf = new ConfigFile();
-        if (cf.Load(CfgPath) != Error.Ok) return;
-        for (int i = 0; i < 4; i++) _vol[i] = AudioSettings.Clamp((Bus)i, (double)cf.GetValue("volume", ((Bus)i).ToString(), _vol[i]));
-        _pendingAmount = (int)cf.GetValue("music", "amount", 1);
+        bool have = cf.Load(CfgPath) == Error.Ok;
+        if (Settings.Loaded) for (int i = 0; i < 4; i++) _vol[i] = AudioSettings.Clamp((Bus)i, Settings.Current.Volume[SheetIndex[i]] / 100.0);   // the settings sheet is authoritative
+        else if (have) for (int i = 0; i < 4; i++) _vol[i] = AudioSettings.Clamp((Bus)i, (double)cf.GetValue("volume", ((Bus)i).ToString(), _vol[i]));
+        if (have) _pendingAmount = (int)cf.GetValue("music", "amount", 1);
     }
     int _pendingAmount = 1;
     void SaveSettings()

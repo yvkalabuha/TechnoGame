@@ -69,7 +69,13 @@ public sealed class SimHost : IDisposable
     public SliceLayoutView Layout { get; private set; }
     public bool Ready => _snap != null;
 
-    public SimHost() { _thread = new Thread(Run) { IsBackground = true, Name = "sim" }; }
+    readonly int _seed; readonly GameData _preloaded;
+    /// <summary>Hash of the initial state (tick 0): two starts with the same seed and scenario must give the same value.</summary>
+    public string StartHash { get; private set; } = "";
+
+    /// <param name="seed">World seed (default 7, as the spikes before the menu).</param>
+    /// <param name="data">Mods already loaded by the menu; null = load here.</param>
+    public SimHost(int seed = 7, GameData data = null) { _seed = seed; _preloaded = data; _thread = new Thread(Run) { IsBackground = true, Name = "sim" }; }
     public void Start() => _thread.Start();
 
     public int Speed { get => Volatile.Read(ref _speed); set => Volatile.Write(ref _speed, value); }
@@ -102,6 +108,13 @@ public sealed class SimHost : IDisposable
     /// <summary>Test hook: run <paramref name="ticks"/> ticks on the simulation thread regardless of tempo.</summary>
     public void StepTicks(long ticks) => _jobs.Enqueue(() => Advance(ticks));
 
+    /// <summary>Loads the mods (core) once, so that the menu can list the scenario before a session exists.</summary>
+    public static GameData LoadData()
+    {
+        string root = Environment.GetEnvironmentVariable("SINGULARITY_ROOT") ?? RepoRoot();
+        return ModLoader.Load(Path.Combine(root, "mods", "core"));
+    }
+
     static string RepoRoot()
     {
         string dir = AppContext.BaseDirectory;
@@ -114,10 +127,11 @@ public sealed class SimHost : IDisposable
         try
         {
             string root = Environment.GetEnvironmentVariable("SINGULARITY_ROOT") ?? RepoRoot();
-            Data = ModLoader.Load(Path.Combine(root, "mods", "core"));
+            Data = _preloaded ?? ModLoader.Load(Path.Combine(root, "mods", "core"));
             _status = "status.session";
-            _session = SliceSession.Create(Data, new SliceRunConfig { Seed = 7, HashCheckpoints = false });
+            _session = SliceSession.Create(Data, new SliceRunConfig { Seed = (ulong)_seed, HashCheckpoints = false });
             Layout = _session.Layout;
+            StartHash = _session.LastHash;
             var arr = ImmutableArray.CreateBuilder<BudgetShares?>(Layout.ActorIds.Length);
             for (int i = 0; i < Layout.ActorIds.Length; i++) arr.Add(null);
             _shares = arr.MoveToImmutable();

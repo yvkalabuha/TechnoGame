@@ -10,7 +10,7 @@ ui.pending,Pending a tick…,Ожидает тика…
 ui.sum,sum {0}%,сумма {0}%
 ui.closeline,Close line,Закрыть линию
 ui.cancel,Cancel,Снять
-speed.pause,‖ pause,‖ пауза
+speed.pause,pause,пауза
 speed.day,day/s,день/с
 speed.week,week/s,неделя/с
 speed.month,month/s,месяц/с
@@ -107,7 +107,7 @@ card.system,"System: {0} · discipline {1}","Система: {0} · дисцип
 card.raises,WHAT IT RAISES,ЧТО ПОВЫШАЕТ
 card.param.yield,Process yield now: {0},Выход процесса сейчас: {0}
 card.param.app,Opens the product of generation G{0},Открывает изделие поколения G{0}
-card.param.none,Knowledge step: it raises no parameter by itself; it unlocks what depends on it,Ступень знания: сама параметр не повышает, открывает зависимые узлы
+card.param.none,Knowledge step: it raises no parameter by itself; it unlocks what depends on it,"Ступень знания: сама параметр не повышает, открывает зависимые узлы"
 card.param.cap,"Needs capability: precision {0}, purity {1}, quality control {2} (tier {3})","Требует мощность: точность {0}, чистота {1}, контроль качества {2} (ранг {3})"
 card.param.api,"gain per parameter: no data in Core, needs API NodeEffects(node) -> (parameter, delta)","прирост параметра: данных нет в ядре, нужен API NodeEffects(node) -> (параметр, прирост)"
 card.unlocks,UNLOCKS NEXT,ЧТО ОТКРЫВАЕТ ДАЛЬШЕ
@@ -143,8 +143,6 @@ state.unknown,unknown,неизвестно
 state.licence,by licence,по лицензии
 state.frontier,frontier,фронтир
 state.unavail,unavailable,недоступно
-legend.a1,○ knowledge   □ process   ◇ product   outline: known · dashed: frontier (label №) · dot: unavailable,○ знание   □ процесс   ◇ изделие   контур — известно · пунктир — фронтир (подпись №) · точка — недоступно
-legend.a2,blue: route from the “why not” root ■ to the goal · double circle: the “knowledge ≠ production” line,синий — маршрут от корня «почему не» ■ к цели · двойная окружность — граница «знание ≠ производство»
 legend.a3,rings from the centre: 1 knowledge · 2 principle · 3 engineering · 4 component · 5 process · 6 product; wedge: discipline,кольца изнутри: 1 знание · 2 принцип · 3 инженерия · 4 компонент · 5 процесс · 6 изделие; клин — дисциплина
 legend.b,■ known   □ frontier   · unavailable   (G0–G4: generations)   ┃ blue: the longest chain,■ известно   □ фронтир   · недоступно   (G0–G4 — поколения)   ┃ синий — самая длинная цепочка
 stmt.title,GOAL STATEMENT,ВЕДОМОСТЬ ЦЕЛИ
@@ -229,3 +227,94 @@ actor.short.GBR,GBR,ВБР
 actor.short.SUN,USSR,СССР
 actor.short.FRA,FRA,ФРА
 actor.short.SWE,SWE,ШВЕ
+tip.time.pause,"Pause or continue (Space, P)","Пауза или продолжить (Пробел, P)"
+tip.time.slower,Slower (key [),Медленнее (клавиша [)
+tip.time.faster,Faster (key ]),Быстрее (клавиша ])
+tip.menu,Menu (Esc),Меню (Esc)
+tip.backown,Back to your own power (Esc),К своей державе (Esc)
+panel.backown,To your own power,К своей державе
+ui.back,Back,Назад
+menu.continue,Continue,Продолжить
+menu.new,New game,Новая игра
+menu.load,Load,Загрузить
+menu.save,Save,Сохранить
+menu.settings,Settings,Настройки
+menu.tomain,To the main menu,В главное меню
+menu.quit,Quit,Выход
+menu.reason.persist,Needs the save code (ADR-0013): not written yet,Нужен код сохранений (ADR-0013): его ещё нет
+menu.reason.nosave,No saved game,Нет сохранений
+menu.reason.nogame,No game running,Нет игры
+ng.search,Search a power,Найти державу
+ng.none,No power matches,Нет подходящей державы
+ng.pick,Pick a power on the left: the card shows its starting figures from the scenario.,Выберите державу слева: в карточке стартовые цифры из сценария.
+ng.start,Start,Начать
+ng.start.tip,Pick a power and a valid seed first,Сначала выберите державу и задайте число в поле «Сид»
+ng.gdp,GDP 1945,ВВП 1945
+ng.gdppc,GDP per head 1945,ВВП на душу 1945
+ng.budget,Budget index (USA = 1),Бюджетный индекс (США = 1)
+ng.known,Known knowledge nodes,Известных узлов знания
+ng.trophy,Trophy engineers,Трофейные инженеры
+ng.source,Figures from the scenario data,Цифры из данных сценария
+ng.seed,Seed,Сид
+ng.scenario,Scenario,Сценарий
+set.video,Video,Видео
+set.sound,Sound,Звук
+set.general,General,Общие
+set.reset,Reset,Сбросить
+set.cancel,Cancel,Отмена
+set.apply,Apply,Применить
+set.keep,Keep,Оставить
+set.revert,Revert,Вернуть
+set.rollback,Keep these settings? Reverting in {0} s,Оставить эти параметры? Откат через {0} с
+set.resolution,Resolution,Разрешение
+set.winmode,Window mode,Режим окна
+set.win.window,Window,Окно
+set.win.borderless,Borderless,Без рамки
+set.win.full,Full screen,Полный экран
+set.quality,Quality,Качество
+set.q.low,Low,Низкое
+set.q.mid,Medium,Среднее
+set.q.high,High,Высокое
+set.q.custom,Custom,Своё
+set.upscale,Upscaling,Апскейлинг
+set.up.off,Off,Выкл
+set.dlss.reason,DLSS is unavailable: it needs a plugin (GDExtension) and an RTX card; not confirmed.,DLSS недоступен: нужен плагин (GDExtension) и видеокарта RTX; не подтверждено.
+set.upmode,Upscale mode,Режим апскейла
+set.um.quality,Quality,Качество
+set.um.balance,Balance,Баланс
+set.um.perf,Performance,Скорость
+set.vsync,VSync,Вертикальная синхронизация
+set.fps,Frame limit,Лимит кадров
+set.nolimit,No limit,Без лимита
+set.uiscale,UI scale,Масштаб интерфейса
+set.video.note,Upscaling acts on the 3D globe only; the interface is drawn at the native resolution.,Апскейлинг действует только на 3D-глобус; интерфейс рисуется в родном разрешении.
+set.on,On,Вкл
+set.off,Off,Выкл
+set.reduce,Reduce,Уменьшить
+set.bus.0,Master,Общая
+set.bus.1,Music,Музыка
+set.bus.2,Ambient,Фон
+set.bus.3,Interface,Интерфейс
+set.bus.4,Effects,Эффекты
+set.bus.5,Alerts,Тревоги
+set.alertnote,Alerts never go below 20% (hatched zone): quieter is allowed; silent is not.,Тревоги не тише 20% (заштрихованная зона): тише можно; выключить нельзя.
+set.bg,Sound in background,Звук в фоне
+set.test,Test the last bus,Проверить последнюю шину
+set.lang,Language,Язык
+set.datefmt,Date and numbers,Дата и числа
+set.df.lang,By language,По языку
+set.df.iso,ISO,ISO
+set.pausealarm,Pause on an alert,Пауза при аварии
+set.tipdelay,Tooltip delay,Задержка подсказки
+set.sec,s,с
+set.anim,Animations,Анимации
+set.lang.note,"The language applies at once, no restart needed.","Язык применяется сразу, без перезапуска."
+legend.btn,Legend,Легенда
+legend.disc,Disciplines,Дисциплины
+legend.glyphs,Node types,Типы узлов
+legend.lines,Lines,Линии
+legend.route,Route to the goal,Маршрут к цели
+legend.root,Root of the “why not”,Корень «почему не»
+legend.frontier,Frontier (dashed),Фронтир (пунктир)
+legend.selected,Selected node (double ring),Выбранный узел (двойное кольцо)
+legend.close,Esc or L closes,Esc или L закрывает

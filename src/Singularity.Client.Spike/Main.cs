@@ -4,16 +4,16 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Godot;
+using Singularity.Core.Data;
 
 namespace Singularity.Client.Spike;
 
 /// <summary>Throwaway spike (TASK-0067): globe-sheet surface, ID-raster regions, CC0 objects, bench mode. Not simulation code.</summary>
 public sealed partial class Main : Node3D
 {
-    static readonly Color PaperColor = new("F2EFE6");
-    // Warm land tints only: none is close to the blue-grey sea (review item 5).
-    static readonly string[] TintHex = { "EBCDB7", "D5E0BC", "E3D0E3", "EFE0AE", "E0CAC2", "D4C79F", "DDB9A0", "C9D4A8" };
+    static readonly Color PaperColor = Ui.Paper;
 
     GlobeData _data = new();
     ShaderMaterial _globeMat;
@@ -42,6 +42,12 @@ public sealed partial class Main : Node3D
     AudioDirector _audio;
     Control _audioPop;
     bool _fatalLogged;
+    // v0.5b: menus. The title screen runs over the live globe; "new game" starts the session with the chosen power and seed.
+    MainMenu _mainMenu; NewGameSheet _newGame; SettingsSheet _settings;
+    Task<GameData> _dataTask;
+    bool _titleMode, _pendingNewGame, _startedFromMenu;
+    int _menuResume = -1;
+    static bool s_openTitle;   // "to the main menu" reloads the scene and must not skip the menu again
     Label _loading, _help;
     Button _helpBtn;
     bool _debug;
@@ -50,7 +56,7 @@ public sealed partial class Main : Node3D
     string _powerArg = "USA";
     float _tgtYaw, _tgtPitch; bool _flying;   // smooth turn to a clicked country; the zoom is kept
     int _clickCase = -1; double _clickT; string _clickLog = "";
-    bool _shots; int _shotStep; double _shotT; string _shotDir = "../../docs/ui/prototypes/client-v05a";
+    bool _shots; int _shotStep; double _shotT; string _shotDir = "../../docs/ui/prototypes/client-v05b";
     string _shotLog = ""; int _shotCand = -1; long _shotTick;
 
     // bench
@@ -73,11 +79,17 @@ public sealed partial class Main : Node3D
 
         Fonts.Load();
         Loc.Load();
+        if (!_shots && !_bench) Settings.Load();   // screenshot runs use the defaults, so that they are reproducible
+        Loc.SetLang(Settings.Current.Lang);
         var langIdx = Array.IndexOf(args, "--lang");
         if (langIdx >= 0 && langIdx + 1 < args.Length) Loc.SetLang(args[langIdx + 1]);
+        Settings.Apply(Settings.Current, GetWindow(), !_shots && !_bench);
         _debug = args.Contains("--debug");
         var pwIdx = Array.IndexOf(args, "--power");
         if (pwIdx >= 0 && pwIdx + 1 < args.Length) _powerArg = args[pwIdx + 1];
+        // --power ID is the service shortcut (ui-tester, --shots): it skips the menu and starts that power at once.
+        _titleMode = (!_shots && !_bench && pwIdx < 0) || s_openTitle;
+        s_openTitle = false;
 
         var sky = new Sky { SkyMaterial = new ShaderMaterial { Shader = GD.Load<Shader>("res://shaders/stars.gdshader") } };
         var env = new Godot.Environment { BackgroundMode = Godot.Environment.BGMode.Sky, Sky = sky, AmbientLightSource = Godot.Environment.AmbientSource.Color, AmbientLightColor = Colors.Black };
@@ -120,15 +132,87 @@ public sealed partial class Main : Node3D
         _selected = IdOf("Germany");
         ApplySelection();
         if (_bench) { Directory.CreateDirectory(_outDir); }
-        else BuildClient(layer);
+        else
+        {
+            BuildMenus(layer);
+            if (_titleMode)
+            {
+                _dataTask = Task.Run(SimHost.LoadData);
+                _mainMenu.Open(false);
+            }
+            else BuildClient(layer, 7, null);
+        }
+    }
+
+    public override void _Notification(int what)
+    {
+        // "Sound in background" off: the master bus is muted while the window is not in focus.
+        if (what == NotificationApplicationFocusOut && !Settings.Current.SoundInBackground) AudioServer.SetBusMute(0, true);
+        else if (what == NotificationApplicationFocusIn) AudioServer.SetBusMute(0, false);
     }
 
     public override void _ExitTree() => _host?.Dispose();
 
     // ---------- client ----------
-    void BuildClient(CanvasLayer layer)
+    void BuildMenus(CanvasLayer layer)
     {
-        _host = new SimHost();
+        _mainMenu = new MainMenu(); _newGame = new NewGameSheet(); _settings = new SettingsSheet();
+        layer.AddChild(_mainMenu); layer.AddChild(_newGame); layer.AddChild(_settings);
+        _mainMenu.Continue += CloseGameMenu;
+        _mainMenu.NewGame += () => { _mainMenu.Close(); _pendingNewGame = true; };
+        _mainMenu.OpenSettings += () => { _mainMenu.Close(); _settings.Open(); };
+        _mainMenu.Quit += () => GetTree().Quit();
+        _mainMenu.ToMain += () => { _host?.Dispose(); _host = null; s_openTitle = true; GetTree().ReloadCurrentScene(); };
+        _newGame.Back += () => { _newGame.Close(); _mainMenu.Open(false); };
+        _newGame.Start += StartGame;
+        _newGame.Previewed += PreviewPower;
+        _settings.Closed += () => _mainMenu.Open(!_titleMode);
+        _settings.Applied += s =>
+        {
+            if (_audio == null) return;
+            _audio.SetVolume(Bus.Music, s.Volume[1] / 100); _audio.SetVolume(Bus.Ambient, s.Volume[2] / 100);
+            _audio.SetVolume(Bus.UI, s.Volume[3] / 100); _audio.SetVolume(Bus.Alert, s.Volume[5] / 100);
+        };
+    }
+
+    void CloseGameMenu()
+    {
+        _mainMenu.Close(); GetViewport().GuiReleaseFocus();
+        if (_menuResume > 0) _signal.SetSpeed(_menuResume);
+        _menuResume = -1;
+    }
+
+    void OpenGameMenu()
+    {
+        if (_menuResume >= 0) return;
+        _menuResume = _host.Speed; _signal.SetSpeed(0);
+        _mainMenu.Open(true);
+    }
+
+    bool MenuOpen => _newGame.Visible || _settings.Visible || (_mainMenu.Visible && _mainMenu.InGame);
+
+    // New game: the world starts with the chosen power and seed (the same path as --power ID).
+    void StartGame(string actorId, int seed)
+    {
+        _newGame.Close(); _mainMenu.Close(); GetViewport().GuiReleaseFocus();
+        _titleMode = false; _startedFromMenu = true; _powerArg = actorId;
+        _selected = 0; ApplySelection();
+        BuildClient(_hud.GetParent<CanvasLayer>(), seed, _dataTask.Result);
+    }
+
+    // The globe turns to the selected power while the "new game" sheet is open.
+    void PreviewPower(string actorId)
+    {
+        if (!Names.CountryOfActor.TryGetValue(actorId, out var cn)) return;
+        var c = _data.Countries.First(x => x.Name == cn);
+        _data.ComputeLabelPoint(c);
+        _selected = c.Id; ApplySelection();
+        _tgtYaw = c.LabelPoint.X; _tgtPitch = Mathf.Clamp(c.LabelPoint.Y, -75f, 75f); _flying = true;
+    }
+
+    void BuildClient(CanvasLayer layer, int seed, GameData data)
+    {
+        _host = new SimHost(seed, data);
         _host.Start();
         _loading = Ui.Lbl("ui.loading", 18);
         _loading.Position = new Vector2(20, 60);
@@ -173,8 +257,11 @@ public sealed partial class Main : Node3D
         AddChild(_audio);
         _signal.SignalChanged += _audio.OnSignal;
         _signal.AudioPressed += () => _audioPop.Visible = !_audioPop.Visible;
+        _signal.MenuPressed += OpenGameMenu;
+        _signal.SignalChanged += AlertMarker;
+        _settings.TestBus = bus => { if (bus == 5) _audio.Cue("signal_attention"); else _audio.Tick(); };
         _audioPop = new PanelContainer { Visible = false };
-        ((PanelContainer)_audioPop).AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 2, 12));
+        ((PanelContainer)_audioPop).AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 2, 12, Ui.R3));
         _audioPop.AnchorLeft = 1; _audioPop.AnchorRight = 1; _audioPop.OffsetLeft = -380; _audioPop.OffsetRight = -10; _audioPop.OffsetTop = 52;
         _audioPop.AddChild(_audio.BuildPopover());
         layer.AddChild(_audioPop);
@@ -184,6 +271,8 @@ public sealed partial class Main : Node3D
         _actorPanel.AnchorLeft = 1; _actorPanel.AnchorRight = 1;
         _actorPanel.OffsetLeft = -540; _actorPanel.OffsetRight = -10; _actorPanel.OffsetTop = 56;
         _actorPanel.Closed += () => _actorPanel.Visible = false;
+        _actorPanel.TintOf = i => _actorCountry[i] != 0 ? Ui.Tints[_data.Countries[_actorCountry[i] - 1].Tint] : Ui.Paper;
+        _actorPanel.BackToOwn += () => ShowPower(_player, true);
         _actorPanel.OpenTree += () => OpenTree(0);
         layer.AddChild(_actorPanel);
 
@@ -195,13 +284,25 @@ public sealed partial class Main : Node3D
         BuildHelp(layer);
         _loading.Visible = false;
         _tintsReady = true;
-        ShowPower(_player, false);   // the panel opens for the player's own power
+        foreach (Control c in new Control[] { _mainMenu, _newGame, _settings }) layer.MoveChild(c, -1);   // menus stay above the panels
+        ShowPower(_player, _startedFromMenu);   // the panel opens for the player's own power
+    }
+
+    // Alerts of the player's own power are also plates on the globe: halo, outline, sign (#326). Stacked below each other at the country.
+    static readonly string[] AlertKeys = { "sig.alloy", "sig.licence", "sig.refusal", "sig.fail" };
+    void AlertMarker(string key, bool on)
+    {
+        int idx = Array.IndexOf(AlertKeys, key);
+        if (idx < 0) return;
+        if (!on || _actorCountry[_player] == 0) { _overlay.RemoveMarker(key); return; }
+        var ll = _data.Countries[_actorCountry[_player] - 1].LabelPoint;
+        _overlay.SetMarker(key, new Vector2(ll.X, ll.Y - 3f * idx), idx < 2, key);
     }
 
     void BuildHelp(CanvasLayer layer)
     {
         _help = Ui.Lbl("help.text", 14, Ui.Ink2);
-        _help.AddThemeStyleboxOverride("normal", Ui.Box(Ui.Sheet, Ui.Ink, 1, 10));
+        _help.AddThemeStyleboxOverride("normal", Ui.Box(Ui.Sheet, Ui.Ink, 1, 10, Ui.R3));
         _help.Position = new Vector2(12, 0); _help.AnchorTop = 1; _help.AnchorBottom = 1; _help.OffsetTop = -150; _help.OffsetBottom = -50; _help.OffsetLeft = 12;
         _help.Visible = false;
         layer.AddChild(_help);
@@ -226,9 +327,15 @@ public sealed partial class Main : Node3D
         {
             _selected = _actorCountry[i]; ApplySelection();
             var ll = _data.Countries[_selected - 1].LabelPoint;
-            _tgtYaw = ll.X; _tgtPitch = Mathf.Clamp(ll.Y, -75f, 75f); _flying = true;
+            // The country goes to the middle of the free area left of the open panel (spec section 9), the zoom is kept.
+            (_tgtYaw, _tgtPitch) = PlanisphereMath.CameraForShift(ll.X, ll.Y, _dist, _cam.Fov, GetViewport().GetVisibleRect().Size.Y, PanelShift());
+            _tgtPitch = Mathf.Clamp(_tgtPitch, -75f, 75f);
+            _flying = true;
         }
     }
+
+    /// <summary>Half of the width the open right panel takes (plus its margin): the centre of the free area is this far left of the screen centre.</summary>
+    float PanelShift() => _actorPanel != null && _actorPanel.Visible ? (Math.Max(_actorPanel.Size.X, _actorPanel.CustomMinimumSize.X) + 10) / 2f : 0f;
 
     void FlyStep(double dt)
     {
@@ -285,10 +392,18 @@ public sealed partial class Main : Node3D
         _globeMat = new ShaderMaterial { Shader = GD.Load<Shader>("res://shaders/globe.gdshader") };
         _globeMat.SetShaderParameter("ids", idTex);
         _globeMat.SetShaderParameter("tint_lut", lutTex);
-        var tints = TintHex.Select(h => { var c = new Color(h); return new Vector3(c.R, c.G, c.B); }).ToArray();
+        // The shader works in linear light: the hex tokens of palette C are converted, so that the lit fills match the validator's model.
+        var tints = Palette.C.Tints.Select(h => { var c = new Color(h).SrgbToLinear(); return new Vector3(c.R, c.G, c.B); }).ToArray();
         _globeMat.SetShaderParameter("tints", tints);
+        _globeMat.SetShaderParameter("sea_color", new Color(Palette.C.Sea));
+        _globeMat.SetShaderParameter("grid_color", new Color("A9C4CC"));
+        var pl = Ui.Paper.SrgbToLinear();
+        _globeMat.SetShaderParameter("paper", new Vector3(pl.R, pl.G, pl.B));
         AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = _globeMat });
     }
+
+    int TintOfActor(string actorId) =>
+        Names.CountryOfActor.TryGetValue(actorId, out var cn) ? Math.Max(0, _data.Countries.First(c => c.Name == cn).Tint) : 0;
 
     void ApplySelection() => _globeMat.SetShaderParameter("selected_id", _selected);
 
@@ -407,7 +522,7 @@ public sealed partial class Main : Node3D
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (_bench || (_tree != null && _tree.Visible && e is InputEventMouse)) return;
+        if (_bench || (_tree != null && _tree.Visible && e is InputEventMouse) || (_mainMenu != null && MenuOpen)) return;
         if (e is InputEventMouseButton mb)
         {
             if (mb.ButtonIndex == MouseButton.Left)
@@ -424,10 +539,14 @@ public sealed partial class Main : Node3D
             float k = 0.12f * Math.Min(1f, (_dist - 1f) * 0.8f + 0.05f);
             _yaw -= mm.Relative.X * k; _pitch = Mathf.Clamp(_pitch + mm.Relative.Y * k, -80f, 80f);
         }
-        else if (e is InputEventKey sk && sk.Pressed && _tintsReady && sk.Keycode is Key.Space or Key.Key1 or Key.Key2 or Key.Key3 or Key.T)
+        else if (e is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape } && _tintsReady) OnEscape();
+        else if (e is InputEventKey sk && sk.Pressed && !sk.Echo && _tintsReady && sk.Keycode is Key.Space or Key.P or Key.Bracketleft or Key.Bracketright or Key.Key1 or Key.Key2 or Key.Key3 or Key.T or Key.L)
         {
-            if (sk.Keycode == Key.Space) _signal.SetSpeed(_host.Speed == 0 ? 1 : 0);
+            if (sk.Keycode is Key.Space or Key.P) _signal.TogglePause();
+            else if (sk.Keycode == Key.Bracketleft) _signal.StepSpeed(-1);
+            else if (sk.Keycode == Key.Bracketright) _signal.StepSpeed(1);
             else if (sk.Keycode == Key.T) { if (_tree.Visible) _tree.Visible = false; else OpenTree(0); }
+            else if (sk.Keycode == Key.L) { if (_tree.Visible) _tree.ToggleLegend(!_tree.LegendOpen); }
             else _signal.SetSpeed((int)(sk.Keycode - Key.Key1) + 1);
         }
         else if (e is InputEventKey f3 && f3.Pressed && f3.Keycode == Key.F3)
@@ -443,8 +562,19 @@ public sealed partial class Main : Node3D
         }
     }
 
+    // Esc: closes the legend, the tree, the popovers; a foreign power returns to the player's own; otherwise the game menu.
+    void OnEscape()
+    {
+        if (_tree.Visible) { if (_tree.LegendOpen) _tree.ToggleLegend(false); else _tree.Visible = false; }
+        else if (_help.Visible) _help.Visible = false;
+        else if (_audioPop.Visible) _audioPop.Visible = false;
+        else if (_viewed != _player) ShowPower(_player, true);
+        else OpenGameMenu();
+    }
+
     void Pick(Vector2 screen)
     {
+        if (_titleMode) return;
         var o = _cam.ProjectRayOrigin(screen); var d = _cam.ProjectRayNormal(screen);
         float b = o.Dot(d), c = o.Dot(o) - 1f, disc = b * b - c;
         if (disc < 0) { _selected = 0; ApplySelection(); return; }
@@ -464,6 +594,17 @@ public sealed partial class Main : Node3D
     public override void _Process(double delta)
     {
         _t += delta;
+        if (_titleMode)
+        {
+            // Title screen: the globe turns slowly until a power is picked in "new game".
+            if (!_flying && !_pressed && !(_newGame.Visible && _newGame.Selected != null)) _yaw += (float)(4 * delta);
+            if (_pendingNewGame && _dataTask.IsCompleted)
+            {
+                _pendingNewGame = false;
+                if (_dataTask.IsFaulted) { GD.PrintErr(_dataTask.Exception); _mainMenu.Open(false); }
+                else _newGame.Open(_dataTask.Result.Scenario(Singularity.Session.SliceRunConfig.DefaultScenario), id => Ui.Tints[TintOfActor(id)]);
+            }
+        }
         if (_host != null && !_tintsReady)
         {
             if (_host.Fatal != null)
@@ -521,6 +662,7 @@ public sealed partial class Main : Node3D
         switch (_shotStep)
         {
             case 0:
+                RunValidator();
                 _signal.SetSpeed(3); ShowPower(_player, false); _shotStep = 1; _shotT = 0; break;
             case 1 when _shotT >= 3:
                 // Pause, move 10 points from procurement to R (as the sliders would) and send: the command must stay pending.
@@ -566,14 +708,14 @@ public sealed partial class Main : Node3D
             case 32 when _shotT >= 0.8: _tree.SetMode(1); _shotStep = 8; _shotT = 0; break;
             case 8 when _shotT >= 1.0:
                 Shot("tech_tree_b.png");
-                _signal.SetLang("en"); _shotStep = 9; _shotT = 0; break;
+                Loc.SetLang("en"); _shotStep = 9; _shotT = 0; break;
             case 9 when _shotT >= 1.0:
                 Shot("tech_tree_b_en.png"); _tree.SetMode(0); _shotStep = 10; _shotT = 0; break;
             case 10 when _shotT >= 0.8:
                 Shot("tech_tree_a_en.png"); _tree.Visible = false; _shotStep = 11; _shotT = 0; break;
             case 11 when _shotT >= 0.8:
                 Shot("globe_panel_en.png"); Shot("signal_field_en.png", new Rect2I(0, 0, (int)vp.X, 52));
-                _signal.SetLang("ru");
+                Loc.SetLang("ru");
                 // A valid command lifts the ОТКАЗ place: it shows the cleared state («снят»).
                 _host.Submit(new Singularity.Core.Commands.SetBudgetShares(_player, new Singularity.Core.Policy.BudgetShares(
                     Singularity.Kernel.Fx6.FromRaw(200_000), Singularity.Kernel.Fx6.FromRaw(200_000), Singularity.Kernel.Fx6.FromRaw(200_000),
@@ -592,7 +734,54 @@ public sealed partial class Main : Node3D
                 _audioPop.Visible = true; _shotStep = 15; _shotT = 0; break;
             case 15 when _shotT >= 0.5:
                 Shot("audio_popover.png"); _audioPop.Visible = false;
-                _signal.SetSpeed(1); _shotStep = 16; _shotT = 0; break;
+                _signal.SetSpeed(1); _shotStep = 40; _shotT = 0; break;
+            // v0.5b: time icons in their states
+            case 40 when _shotT >= 0.5: Shot("time_day.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(2); _shotStep = 41; _shotT = 0; break;
+            case 41 when _shotT >= 0.4: Shot("time_week.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(3); _shotStep = 42; _shotT = 0; break;
+            case 42 when _shotT >= 0.4: Shot("time_month.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(0); _shotStep = 43; _shotT = 0; break;
+            case 43 when _shotT >= 0.4: Shot("time_pause.png", new Rect2I(0, 0, 620, 52)); _alertI = 0; _shotStep = 45; _shotT = 0; break;
+            // alert plates on tints 1, 5 and 7: day side, then tint 5 on the night side
+            case 45: AimAlert(_alertI, false); _shotStep = 46; _shotT = 0; break;
+            case 46 when _shotT >= 0.7:
+                Shot($"alert_tint{AlertTints[_alertI] + 1}.png");
+                if (++_alertI < AlertTints.Length) _shotStep = 45; else { AimAlert(1, true); _shotStep = 47; }
+                _shotT = 0; break;
+            case 47 when _shotT >= 0.7:
+                Shot("alert_tint5_night.png");
+                _globeMat.SetShaderParameter("light_dir", new Vector3(0.7f, 0.35f, 0.6f)); _overlay.RemoveMarker("demo0"); _overlay.RemoveMarker("demo1"); _overlay.RemoveMarker("demo2");
+                _shotStep = 50; _shotT = 0; break;
+            // menus: title look, in-game look, EN, new game, settings, rollback, UI scale 150%
+            case 50: _mainMenu.Open(false); _shotStep = 51; _shotT = 0; break;
+            case 51 when _shotT >= 0.5: Shot("main_menu.png"); Loc.SetLang("en"); _shotStep = 52; _shotT = 0; break;
+            case 52 when _shotT >= 0.4: Shot("main_menu_en.png"); Loc.SetLang("ru"); _mainMenu.Open(true); _shotStep = 53; _shotT = 0; break;
+            case 53 when _shotT >= 0.4:
+                Shot("menu_ingame.png"); _mainMenu.Close();
+                _newGame.Open(_host.Data.Scenario(Singularity.Session.SliceRunConfig.DefaultScenario), id => Ui.Tints[TintOfActor(id)]);
+                _shotStep = 54; _shotT = 0; break;
+            case 54 when _shotT >= 0.5: Shot("new_game_empty.png"); _newGame.Select("FRA"); _shotStep = 55; _shotT = 0; break;
+            case 55 when _shotT >= 0.6: Shot("new_game_selected.png"); Loc.SetLang("en"); _shotStep = 56; _shotT = 0; break;
+            case 56 when _shotT >= 0.4:
+                Shot("new_game_selected_en.png"); Loc.SetLang("ru"); _newGame.Close(); _settings.Open(); _shotStep = 57; _shotT = 0; break;
+            case 57 when _shotT >= 0.5: Shot("settings_video.png"); _settings.ShotTab(1); _shotStep = 58; _shotT = 0; break;
+            case 58 when _shotT >= 0.4: Shot("settings_sound.png"); _settings.ShotTab(2); _shotStep = 59; _shotT = 0; break;
+            case 59 when _shotT >= 0.4: Shot("settings_general.png"); Loc.SetLang("en"); _shotStep = 60; _shotT = 0; break;
+            case 60 when _shotT >= 0.4:
+                Shot("settings_general_en.png"); Loc.SetLang("ru"); _settings.ShotTab(0); _settings.ShotRollback(); _shotStep = 61; _shotT = 0; break;
+            case 61 when _shotT >= 0.6:
+                Shot("settings_rollback.png"); _settings.Revert(); _settings.Close();
+                Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false);
+                _mainMenu.Open(true); _shotStep = 62; _shotT = 0; break;
+            case 62 when _shotT >= 0.6:
+                Shot("menu_ingame_150.png"); _mainMenu.Close(); _settings.Open(); _shotStep = 63; _shotT = 0; break;
+            case 63 when _shotT >= 0.6:
+                Shot("settings_video_150.png"); _settings.Close();
+                Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false);
+                ShowPower(_player, false); OpenTree(0); _shotStep = 65; _shotT = 0; break;
+            case 65 when _shotT >= 1.0: Shot("tree_legend_closed.png"); _tree.ToggleLegend(true); _shotStep = 66; _shotT = 0; break;
+            case 66 when _shotT >= 0.5:
+                Shot("tree_legend.png"); _tree.ToggleLegend(false); _tree.ShotZoom(2.4f, _tree.FrontierRow >= 0 ? _tree.FrontierRow : _tree.GoalRow); _shotStep = 67; _shotT = 0; break;
+            case 67 when _shotT >= 0.8:
+                Shot("tree_nodes_frontier_names.png"); _tree.ResetView(); _tree.Visible = false; _signal.SetSpeed(1); _shotStep = 16; _shotT = 0; break;
             case 16 when _shotT >= 0.5:
                 _audio.StartDemo(); _shotStep = 17; _shotT = 0; break;
             case 17:
@@ -607,6 +796,41 @@ public sealed partial class Main : Node3D
                 }
                 break;
         }
+    }
+
+    // Runs the alert-contrast validator on palette C and on the v0.2 palette, prints PASS/FAIL per pair into the log. A failure does not stop the run.
+    void RunValidator()
+    {
+        foreach (var p in new[] { Palette.C, Palette.V02 })
+        {
+            string report = ContrastValidator.Format(p, ContrastValidator.Run(p));
+            _shotLog += report;
+        }
+        _shotLog += "shot-only: the plates on tints 1/5/7 are demo markers; in the game a plate appears only for a real signal of the player's power\n";
+    }
+
+    // Demo alert plates on one country of each of the tints 1, 5 and 7 (palette C risk, spec 6.4); camera on the chosen one.
+    static readonly int[] AlertTints = { 0, 4, 6 };
+    int _alertI;
+    void AimAlert(int which, bool night)
+    {
+        for (int i = 0; i < AlertTints.Length; i++)
+        {
+            // The greedy colouring may leave a tint unused (the last ones are rare): fall back to the next lower tint that is on the map.
+            int tint = AlertTints[i];
+            while (tint > 0 && !_data.Countries.Any(x => x.Tint == tint)) tint--;
+            var c = _data.Countries.Where(x => x.Tint == tint && Names.Country(x.Name) != null).OrderByDescending(x => x.BoxArea).FirstOrDefault()
+                    ?? _data.Countries.Where(x => x.Tint == tint).OrderByDescending(x => x.BoxArea).First();
+            _data.ComputeLabelPoint(c);
+            _overlay.SetMarker("demo" + i, c.LabelPoint, true, "sig.alloy");
+            if (i == which)
+            {
+                _yaw = c.LabelPoint.X; _pitch = Mathf.Clamp(c.LabelPoint.Y, -60, 60); _dist = 2.3f; _flying = false;
+                _shotLog += $"alert demo: tint {tint + 1} (asked {AlertTints[i] + 1}) on {c.Name}{(night ? " (night side)" : "")}\n";
+            }
+        }
+        _globeMat.SetShaderParameter("light_dir", night ? new Vector3(-0.7f, -0.35f, -0.6f) : new Vector3(0.7f, 0.35f, 0.6f));
+        _globeMat.SetShaderParameter("light_amount", 1f);
     }
 
     // Click test: for the USA, the USSR and France a click on the country, before and after rotating the globe. After the turn the country must be
@@ -634,9 +858,9 @@ public sealed partial class Main : Node3D
             return true;
         }
         if (_clickT < 1.8) return true;
-        float err = _cam.UnprojectPosition(sph).DistanceTo(vp * 0.5f);
+        float err = _cam.UnprojectPosition(sph).DistanceTo(vp * 0.5f - new Vector2(PanelShift(), 0));
         _clickLog += $"click {pick[_clickCase / 2]} {(odd ? "after" : "before")} rotation: clicked at ({_clickPoint.X:F0},{_clickPoint.Y:F0}), panel {_viewed == a}, " +
-                     $"centre error {err:F1} px, zoom {_clickDist:F2} -> {_dist:F2}, selected region {_selected == _actorCountry[a]}\n";
+                     $"free-area centre error {err:F1} px (shift {PanelShift():F0}), zoom {_clickDist:F2} -> {_dist:F2}, selected region {_selected == _actorCountry[a]}\n";
         if (!odd) shot($"map_click_{pick[_clickCase / 2]}.png", null);
         _clickCase++; _clickPhase = 0; _clickT = 0;
         if (_clickCase >= 6) { _shotLog += _clickLog; _yaw = 10; _pitch = 35; _dist = 3.0f; _flying = false; ShowPower(_player, false); }

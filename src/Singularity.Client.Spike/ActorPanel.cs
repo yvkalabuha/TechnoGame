@@ -42,7 +42,12 @@ public sealed partial class ActorPanel : PanelContainer
     /// <summary>The player's own power: only it has order controls; any other power opens read-only.</summary>
     public int Player { get; set; }
     bool Foreign => _actor != Player;
-    readonly Label _foreign = Ui.Lbl("panel.foreign", 14, Ui.Warn.Darkened(0.45f), FontKind.Draft);
+    // Tag of the selected foreign power (spec §9): tint chip, name, «FOREIGN POWER · read only» and a button back to the player's own power. Not an alert: ink on paper.
+    readonly PanelContainer _foreign = new();
+    readonly ColorRect _chip = new() { CustomMinimumSize = new Vector2(16, 16), SizeFlagsVertical = SizeFlags.ShrinkCenter };
+    readonly Label _foreignName = Ui.Lbl("", 16, null, FontKind.Draft);
+    public Func<int, Color> TintOf;
+    public event Action BackToOwn;
     readonly List<Control> _orderControls = new();
     // Shares of a foreign power come from its AI doctrine profile (PolicyParams), not from per-country data: the panel says so.
     readonly Label _sharesNote = Ui.Lbl("panel.shares.profile", 14, Ui.Ink3);
@@ -55,7 +60,7 @@ public sealed partial class ActorPanel : PanelContainer
     {
         _host = host;
         CustomMinimumSize = new Vector2(PanelWidth, 0);
-        AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 2, 12));
+        AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 2, 12, Ui.R3));
         AddChild(_scroll);
         _root.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         _root.AddThemeConstantOverride("separation", 6);
@@ -68,6 +73,16 @@ public sealed partial class ActorPanel : PanelContainer
         head.AddChild(Ui.Btn("ui.tree", () => OpenTree?.Invoke()));
         head.AddChild(Ui.Btn("×", () => Closed?.Invoke()));
         _root.AddChild(head);
+        var fv = new VBoxContainer();
+        var fr = new HBoxContainer(); fr.AddThemeConstantOverride("separation", 8);
+        fr.AddChild(_chip); fr.AddChild(_foreignName);
+        fv.AddChild(fr);
+        fv.AddChild(Ui.Lbl("panel.foreign", 14, Ui.Ink2, FontKind.Draft));
+        var back = Ui.Btn("panel.backown", () => BackToOwn?.Invoke());
+        back.TooltipText = "tip.backown";
+        fv.AddChild(back);
+        _foreign.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, Ui.Ink, 1, 8, Ui.R2));
+        _foreign.AddChild(fv);
         _foreign.Visible = false; _root.AddChild(_foreign);
 
         Section("panel.budget");
@@ -200,6 +215,7 @@ public sealed partial class ActorPanel : PanelContainer
         string id = _host.Layout.ActorIds[_actor];
         _title.Text = Names.Actor(id);
         _foreign.Visible = Foreign;
+        if (Foreign) { _foreignName.Text = Names.Actor(_host.Layout.ActorIds[_actor]); if (TintOf != null) _chip.Color = TintOf(_actor); }
         foreach (var c in _orderControls) c.Visible = !Foreign;
         foreach (var sl in _sl) { sl.Editable = !Foreign; sl.MouseFilter = Foreign ? MouseFilterEnum.Ignore : MouseFilterEnum.Stop; sl.Modulate = new Color(1, 1, 1, Foreign ? 0.45f : 1f); }
         _sharesNote.Visible = Foreign;

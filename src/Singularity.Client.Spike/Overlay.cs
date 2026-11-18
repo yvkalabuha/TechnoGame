@@ -10,10 +10,36 @@ public sealed partial class Overlay : Control
     sealed class LabelState { public Country C; public Label Node; public bool On; public bool Slice; }
 
     static readonly Color Ink = new("1D1E20");
-    static readonly Color Paper = new("F2EFE6");
+    static readonly Color Paper = Ui.Paper;
     static readonly Color Limb = new Color("A9B8CC", 0.7f);
 
+    /// <summary>Alert plate on the globe (#326): sheet halo 3 px, ink outline 1 px, sign ▲ (warn) or ■ (alarm) and a word.</summary>
+    sealed record Marker(string Key, Vector2 LonLat, bool Warn, string TextKey);
+    readonly List<Marker> _markers = new();
     readonly List<LabelState> _labels = new();
+
+    public void SetMarker(string key, Vector2 lonLat, bool warn, string textKey)
+    {
+        _markers.RemoveAll(m => m.Key == key);
+        _markers.Add(new Marker(key, lonLat, warn, textKey));
+    }
+
+    public void RemoveMarker(string key) => _markers.RemoveAll(m => m.Key == key);
+
+    void DrawMarkers()
+    {
+        foreach (var m in _markers)
+        {
+            var p = GlobeData.ToSphere(m.LonLat.X, m.LonLat.Y);
+            if (CosTo(p) < 0.2f) continue;
+            string text = (m.Warn ? "▲ " : "■ ") + Loc.T(m.TextKey);
+            var sz = Fonts.Text.GetStringSize(text, HorizontalAlignment.Left, -1, 14) + new Vector2(16, 8);
+            var rect = new Rect2(_cam.UnprojectPosition(p) - sz * 0.5f, sz);
+            DrawStyleBox(Ui.Box(Ui.Sheet, null, 0, 0, Ui.R2 + 3), rect.Grow(3));
+            DrawStyleBox(Ui.Box(m.Warn ? Ui.Warn : Ui.Alarm, Ui.Ink, 1, 0, Ui.R1), rect);
+            DrawString(Fonts.Text, rect.Position + new Vector2(8, sz.Y - 8), text, HorizontalAlignment.Left, -1, 14, m.Warn ? Ui.Ink : Colors.White);
+        }
+    }
     Camera3D _cam;
     float _dist;
     Vector2 VpSize => GetViewportRect().Size;
@@ -72,6 +98,7 @@ public sealed partial class Overlay : Control
     public override void _Draw()
     {
         if (_dist < 1.01f) return;   // camera distance not known before the first frame
+        DrawMarkers();
         var c = VpSize * 0.5f;
         float r = GlobeRadiusPx(_dist);
         DrawArc(c, r, 0, Mathf.Tau, 180, Limb, 1.5f, true);         // thin pale limb line against the dark sky, no glow
