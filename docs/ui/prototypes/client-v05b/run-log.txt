@@ -4,10 +4,11 @@ click SUN before rotation: clicked at (961,597), panel True, free-area centre er
 click SUN after rotation: clicked at (624,209), panel True, free-area centre error 0.1 px (shift 270), zoom 2.60 -> 2.60, selected region True
 click FRA before rotation: clicked at (1049,582), panel True, free-area centre error 0.1 px (shift 270), zoom 2.60 -> 2.60, selected region True
 click FRA after rotation: clicked at (530,210), panel True, free-area centre error 0.1 px (shift 270), zoom 2.60 -> 2.60, selected region True
+session start: seed 7 start_hash 82ce7fc2af5f56db67212b4b17d0df7968dffce694bb35e206fa049d740b318b
 alert-contrast validator, palette C
 PASS alarm on tint.1 (shaded): via halo; dE 28.3 dL 23.2 cvd 20.5 | halo-bg 14.8, plate-halo dE 50.5 dL 54.1 cvd 42.3
 PASS alarm on tint.2 (shaded): via halo; dE 48.0 dL 22.6 cvd 47.5 | halo-bg 18.6, plate-halo dE 50.5 dL 54.1 cvd 42.3
-PASS alarm on tint.3 (shaded): direct; dE 58.7 dL 27.3 cvd 20.6 | halo-bg 20.0, plate-halo dE 50.5 dL 54.1 cvd 42.3
+PASS alarm on tint.3 (shaded): direct; dE 56.9 dL 27.1 cvd 21.0 | halo-bg 18.9, plate-halo dE 50.5 dL 54.1 cvd 42.3
 PASS alarm on tint.4 (shaded): via halo; dE 39.3 dL 22.9 cvd 30.9 | halo-bg 25.9, plate-halo dE 50.5 dL 54.1 cvd 42.3
 PASS alarm on tint.5 (shaded): direct; dE 43.4 dL 28.8 cvd 21.9 | halo-bg 17.7, plate-halo dE 50.5 dL 54.1 cvd 42.3
 PASS alarm on tint.6 (shaded): direct; dE 59.5 dL 27.3 cvd 29.7 | halo-bg 20.6, plate-halo dE 50.5 dL 54.1 cvd 42.3
@@ -25,10 +26,10 @@ PASS alarm on wash.violet: dE 47.0 dL 40.5 cvd 43.3
 PASS alarm on wash.olive: dE 59.6 dL 44.9 cvd 32.9
 PASS alarm on wash.plum: dE 43.7 dL 41.4 cvd 39.3
 PASS alarm on wash.slate: dE 51.7 dL 41.9 cvd 46.1
-PASS alarm chroma: OKLCH C 0.192 (min 0.17)
+PASS alarm chroma: OKLCH C 0.192 (min 0.170)
 PASS warn on tint.1 (shaded): via halo; dE 14.4 dL 3.4 cvd 9.2 | halo-bg 14.8, plate-halo dE 34.7 dL 34.4 cvd 32.1
 PASS warn on tint.2 (shaded): via halo; dE 43.6 dL 2.9 cvd 45.9 | halo-bg 18.6, plate-halo dE 34.7 dL 34.4 cvd 32.1
-PASS warn on tint.3 (shaded): via halo; dE 34.3 dL 7.6 cvd 10.5 | halo-bg 20.0, plate-halo dE 34.7 dL 34.4 cvd 32.1
+PASS warn on tint.3 (shaded): via halo; dE 33.4 dL 7.4 cvd 11.7 | halo-bg 18.9, plate-halo dE 34.7 dL 34.4 cvd 32.1
 PASS warn on tint.4 (shaded): via halo; dE 45.2 dL 3.2 cvd 15.4 | halo-bg 25.9, plate-halo dE 34.7 dL 34.4 cvd 32.1
 PASS warn on tint.5 (shaded): via halo; dE 17.4 dL 9.0 cvd 8.6 | halo-bg 17.7, plate-halo dE 34.7 dL 34.4 cvd 32.1
 PASS warn on tint.6 (shaded): via halo; dE 41.2 dL 7.5 cvd 23.9 | halo-bg 20.6, plate-halo dE 34.7 dL 34.4 cvd 32.1
@@ -36,7 +37,7 @@ PASS warn on tint.7 (shaded): via halo; dE 20.1 dL 0.8 cvd 7.2 | halo-bg 19.0, p
 PASS warn on tint.8 (shaded): via halo; dE 46.5 dL 0.2 cvd 38.1 | halo-bg 24.7, plate-halo dE 34.7 dL 34.4 cvd 32.1
 PASS warn on sea (shaded): via halo; dE 38.7 dL 8.9 cvd 37.5 | halo-bg 13.5, plate-halo dE 34.7 dL 34.4 cvd 32.1
 PASS warn on sea.deep (shaded): via halo; dE 40.8 dL 3.3 cvd 39.1 | halo-bg 16.9, plate-halo dE 34.7 dL 34.4 cvd 32.1
-FAIL warn on land-none (shaded): dE 25.6 dL 12.5 cvd 21.4 | halo-bg 6.1, plate-halo dE 34.7 dL 34.4 cvd 32.1
+PASS warn on land-none (shaded): direct; dE 25.6 dL 12.5 cvd 21.4 | halo-bg 6.1, plate-halo dE 34.7 dL 34.4 cvd 32.1
 PASS warn on paper: dE 32.5 dL 30.9 cvd 29.4
 PASS warn on sheet: dE 34.7 dL 34.4 cvd 32.1
 PASS warn on hover: dE 30.7 dL 27.7 cvd 27.3
@@ -46,10 +47,10 @@ PASS warn on wash.violet: dE 42.6 dL 20.7 cvd 29.1
 PASS warn on wash.olive: dE 35.6 dL 25.1 cvd 20.7
 PASS warn on wash.plum: dE 40.0 dL 21.6 cvd 22.4
 PASS warn on wash.slate: dE 40.3 dL 22.1 cvd 40.9
-FAIL warn chroma: OKLCH C 0.150 (min 0.17)
+PASS warn chroma: OKLCH C 0.150 (min 0.145)
 PASS command on tint.1 (shaded): direct; dE 51.3 dL 33.3 cvd 50.4 | halo-bg 14.8, plate-halo dE 61.4 dL 64.3 cvd 54.5
 PASS command on tint.2 (shaded): direct; dE 33.5 dL 32.7 cvd 30.0 | halo-bg 18.6, plate-halo dE 61.4 dL 64.3 cvd 54.5
-PASS command on tint.3 (shaded): direct; dE 64.7 dL 37.5 cvd 35.6 | halo-bg 20.0, plate-halo dE 61.4 dL 64.3 cvd 54.5
+PASS command on tint.3 (shaded): direct; dE 62.9 dL 37.3 cvd 35.5 | halo-bg 18.9, plate-halo dE 61.4 dL 64.3 cvd 54.5
 PASS command on tint.4 (shaded): direct; dE 38.0 dL 33.1 cvd 29.3 | halo-bg 25.9, plate-halo dE 61.4 dL 64.3 cvd 54.5
 PASS command on tint.5 (shaded): direct; dE 66.7 dL 38.9 cvd 54.3 | halo-bg 17.7, plate-halo dE 61.4 dL 64.3 cvd 54.5
 PASS command on tint.6 (shaded): direct; dE 51.2 dL 37.4 cvd 34.8 | halo-bg 20.6, plate-halo dE 61.4 dL 64.3 cvd 54.5
@@ -67,28 +68,28 @@ PASS command on wash.violet: dE 48.8 dL 50.6 cvd 43.2
 PASS command on wash.olive: dE 68.6 dL 55.0 cvd 46.5
 PASS command on wash.plum: dE 51.7 dL 51.5 cvd 44.5
 PASS command on wash.slate: dE 47.4 dL 52.0 cvd 42.9
-FAIL command chroma: OKLCH C 0.162 (min 0.17)
+PASS command chroma: OKLCH C 0.162 (min 0.150)
 PASS tint.1 vs tint.2: dE 33.2 at night+tint (min 8)
-PASS tint.1 vs tint.3: dE 30.1 at night+tint (min 8)
+PASS tint.1 vs tint.3: dE 28.9 at night+tint (min 8)
 PASS tint.1 vs tint.4: dE 30.4 at night+tint (min 8)
 PASS tint.1 vs tint.5: dE 16.7 at night (min 8)
 PASS tint.1 vs tint.6: dE 35.1 at night+tint (min 8)
 PASS tint.1 vs tint.7: dE 8.4 at night (min 8)
 PASS tint.1 vs tint.8: dE 35.2 at night+tint (min 8)
 PASS tint.1 vs sea: dE 30.4 at night (min 8)
-PASS tint.2 vs tint.3: dE 43.7 at night (min 8)
+PASS tint.2 vs tint.3: dE 41.9 at night (min 8)
 PASS tint.2 vs tint.4: dE 22.5 at night+tint (min 8)
 PASS tint.2 vs tint.5: dE 45.8 at night (min 8)
 PASS tint.2 vs tint.6: dE 26.5 at night+tint (min 8)
 PASS tint.2 vs tint.7: dE 31.4 at night+tint (min 8)
 PASS tint.2 vs tint.8: dE 9.4 at night+tint (min 8)
 PASS tint.2 vs sea: dE 9.5 at night+tint (min 8)
-PASS tint.3 vs tint.4: dE 56.6 at night (min 8)
-PASS tint.3 vs tint.5: dE 16.7 at night+tint (min 8)
-PASS tint.3 vs tint.6: dE 17.1 at night (min 8)
-PASS tint.3 vs tint.7: dE 37.6 at night (min 8)
-PASS tint.3 vs tint.8: dE 48.8 at night+tint (min 8)
-PASS tint.3 vs sea: dE 30.8 at night (min 8)
+PASS tint.3 vs tint.4: dE 54.4 at night (min 8)
+PASS tint.3 vs tint.5: dE 16.4 at night+tint (min 8)
+PASS tint.3 vs tint.6: dE 16.0 at night (min 8)
+PASS tint.3 vs tint.7: dE 36.1 at night (min 8)
+PASS tint.3 vs tint.8: dE 46.8 at night+tint (min 8)
+PASS tint.3 vs sea: dE 29.2 at night (min 8)
 PASS tint.4 vs tint.5: dE 48.0 at night (min 8)
 PASS tint.4 vs tint.6: dE 36.5 at night+tint (min 8)
 PASS tint.4 vs tint.7: dE 23.1 at night+tint (min 8)
@@ -106,13 +107,13 @@ PASS tint.7 vs sea: dE 34.0 at night+tint (min 8)
 PASS tint.8 vs sea: dE 14.9 at night+tint (min 8)
 PASS tint.1 chroma: OKLCH C 0.091 (max 0.13)
 PASS tint.2 chroma: OKLCH C 0.079 (max 0.13)
-FAIL tint.3 chroma: OKLCH C 0.135 (max 0.13)
+PASS tint.3 chroma: OKLCH C 0.120 (max 0.13)
 PASS tint.4 chroma: OKLCH C 0.107 (max 0.13)
 PASS tint.5 chroma: OKLCH C 0.127 (max 0.13)
 PASS tint.6 chroma: OKLCH C 0.097 (max 0.13)
 PASS tint.7 chroma: OKLCH C 0.088 (max 0.13)
 PASS tint.8 chroma: OKLCH C 0.110 (max 0.13)
-validator verdict: FAIL (103/107 pairs pass)
+validator verdict: PASS (107/107 pairs pass)
 alert-contrast validator, palette v0.2
 PASS alarm on tint.1 (shaded): direct; dE 33.9 dL 27.2 cvd 26.9 | halo-bg 9.1, plate-halo dE 50.4 dL 54.1 cvd 42.8
 PASS alarm on tint.2 (shaded): direct; dE 47.2 dL 30.0 cvd 28.0 | halo-bg 10.9, plate-halo dE 50.4 dL 54.1 cvd 42.8
@@ -134,7 +135,7 @@ PASS alarm on wash.violet: dE 48.5 dL 48.7 cvd 44.4
 PASS alarm on wash.olive: dE 52.3 dL 50.2 cvd 39.4
 PASS alarm on wash.plum: dE 47.3 dL 48.5 cvd 42.6
 PASS alarm on wash.slate: dE 49.8 dL 48.9 cvd 43.5
-PASS alarm chroma: OKLCH C 0.192 (min 0.17)
+PASS alarm chroma: OKLCH C 0.192 (min 0.170)
 PASS warn on tint.1 (shaded): via halo; dE 20.2 dL 0.9 cvd 14.6 | halo-bg 9.1, plate-halo dE 32.1 dL 27.9 cvd 30.1
 PASS warn on tint.2 (shaded): via halo; dE 27.3 dL 3.8 cvd 19.5 | halo-bg 10.9, plate-halo dE 32.1 dL 27.9 cvd 30.1
 PASS warn on tint.3 (shaded): via halo; dE 35.9 dL 2.1 cvd 20.8 | halo-bg 13.3, plate-halo dE 32.1 dL 27.9 cvd 30.1
@@ -155,7 +156,7 @@ PASS warn on wash.violet: dE 35.9 dL 22.5 cvd 28.9
 PASS warn on wash.olive: dE 31.2 dL 23.9 cvd 26.7
 PASS warn on wash.plum: dE 34.8 dL 22.2 cvd 26.4
 PASS warn on wash.slate: dE 34.5 dL 22.6 cvd 33.4
-FAIL warn chroma: OKLCH C 0.154 (min 0.17)
+PASS warn chroma: OKLCH C 0.154 (min 0.145)
 PASS command on tint.1 (shaded): direct; dE 48.6 dL 37.3 cvd 45.9 | halo-bg 9.1, plate-halo dE 60.5 dL 64.3 cvd 53.7
 PASS command on tint.2 (shaded): direct; dE 54.0 dL 40.2 cvd 37.8 | halo-bg 10.9, plate-halo dE 60.5 dL 64.3 cvd 53.7
 PASS command on tint.3 (shaded): direct; dE 42.9 dL 38.5 cvd 36.7 | halo-bg 13.3, plate-halo dE 60.5 dL 64.3 cvd 53.7
@@ -176,7 +177,7 @@ PASS command on wash.violet: dE 55.2 dL 58.9 cvd 50.1
 PASS command on wash.olive: dE 62.0 dL 60.3 cvd 50.0
 PASS command on wash.plum: dE 55.6 dL 58.6 cvd 50.5
 PASS command on wash.slate: dE 53.2 dL 59.0 cvd 48.3
-FAIL command chroma: OKLCH C 0.162 (min 0.17)
+PASS command chroma: OKLCH C 0.162 (min 0.150)
 PASS tint.1 vs tint.2: dE 18.3 at night (min 8)
 PASS tint.1 vs tint.3: dE 15.5 at night+tint (min 8)
 PASS tint.1 vs tint.4: dE 12.3 at night (min 8)
@@ -221,11 +222,11 @@ PASS tint.5 chroma: OKLCH C 0.027 (max 0.13)
 PASS tint.6 chroma: OKLCH C 0.055 (max 0.13)
 PASS tint.7 chroma: OKLCH C 0.054 (max 0.13)
 PASS tint.8 chroma: OKLCH C 0.060 (max 0.13)
-validator verdict: FAIL (97/107 pairs pass)
+validator verdict: FAIL (99/107 pairs pass)
 shot-only: the plates on tints 1/5/7 are demo markers; in the game a plate appears only for a real signal of the player's power
-before: date 1945-11-30 tick 90 shares_in_force 0.28/0.15/0.10/0.42/0.05 tick_ms 0.01
+before: date 1945-11-30 tick 90 shares_in_force 0.28/0.15/0.10/0.42/0.05 tick_ms 0.00
 paused: tick 90 (was 90), pending 1, last Pending
-after: date 1946-02-24 tick 176 shares_in_force 0.45/0.11/0.07/0.34/0.03 last Applied pending 0 tick_ms 0.01
+after: date 1946-02-26 tick 178 shares_in_force 0.45/0.11/0.07/0.34/0.03 last Applied pending 0 tick_ms 0.01
 refusal: last Rejected rejected_flag True reason BadShares
 why_not actor USA: target none, links 0
 why_not actor GBR: target none, links 0
@@ -235,5 +236,15 @@ alert demo: tint 1 (asked 1) on Russia
 alert demo: tint 5 (asked 5) on Zimbabwe
 alert demo: tint 5 (asked 7) on Zimbabwe
 alert demo: tint 5 (asked 5) on Zimbabwe (night side)
-audio demo: 3440640 bytes of PCM
-final: date 1947-05-12 tick 618
+size shots _1600x900_en: asked 1600x900, window 1600x900, viewport 1600x900, mode CanvasItems
+alert demo: tint 5 (asked 5) on Zimbabwe
+size shots _1280x720: asked 1280x720, window 1280x720, viewport 1280x720, mode CanvasItems
+alert demo: tint 5 (asked 5) on Zimbabwe
+size shots _1280x720_en: asked 1280x720, window 1280x720, viewport 1280x720, mode CanvasItems
+alert demo: tint 5 (asked 5) on Zimbabwe
+size shots _1920x1080: asked 1920x1080, window 1920x1080, viewport 1920x1080, mode CanvasItems
+alert demo: tint 5 (asked 5) on Zimbabwe
+size shots _1920x1080_en: asked 1920x1080, window 1920x1080, viewport 1920x1080, mode CanvasItems
+alert demo: tint 5 (asked 5) on Zimbabwe
+audio demo: 3438592 bytes of PCM, packed to audio_demo.ogg (246802 bytes)
+final: date 1947-06-14 tick 651

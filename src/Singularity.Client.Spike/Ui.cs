@@ -13,8 +13,8 @@ public static class Ui
     public const int MinSize = 14;
     // Palette C «Акварель» (UI_DESIGN_SYSTEM §17, decisions #302, #303, #326): the tokens come from Palette.C, which the contrast validator reads too.
     static Color H(string hex) => new(hex);
-    public static readonly Color Paper = H(Palette.C.Paper), Sheet = H(Palette.C.Sheet), Hover = H(Palette.C.Hover), Ink = new("1D1E20"),
-        Ink2 = new("55575A"), Ink3 = new("6E6C66"), Rule = new("BDB59F"), Normal = new("86837C"), Border = new("3E3C38"),
+    public static readonly Color Paper = H(Palette.C.Paper), Sheet = H(Palette.C.Sheet), Hover = H(Palette.C.Hover), Ink = H(Palette.Ink),
+        Ink2 = H(Palette.Ink2), Ink3 = H(Palette.Ink3), Rule = H(Palette.Rule), Normal = new("86837C"), Border = H(Palette.Border),
         Alarm = H(Palette.C.Alarm), Warn = H(Palette.C.Warn), Command = H(Palette.C.Command), Seq2 = new("C2CDD3");
 
     // Radius scale (§17.7): 0 data, 2 keys and plates, 4 buttons and fields, 6 panels and sheets.

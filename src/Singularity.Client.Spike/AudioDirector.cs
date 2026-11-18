@@ -68,10 +68,13 @@ public sealed partial class AudioDirector : Node
     // ---------- settings ----------
     // Settings sheet order: Master, Music, Ambient, UI, Sfx, Alert; Sfx has no bus of its own yet.
     static readonly int[] SheetIndex = { 1, 2, 3, 5 };
-    public void SetVolume(Bus b, double v)
+    /// <summary>Sets a bus volume. <paramref name="persist"/> false is for the settings sheet: it saves the file itself, only after «keep».</summary>
+    public void SetVolume(Bus b, double v, bool persist = true)
     {
-        _vol[(int)b] = AudioSettings.Clamp(b, v); SaveSettings();
-        Settings.Current.Volume[SheetIndex[(int)b]] = _vol[(int)b] * 100; Settings.Save();
+        _vol[(int)b] = AudioSettings.Clamp(b, v);
+        Settings.Current.Volume[SheetIndex[(int)b]] = _vol[(int)b] * 100;
+        if (!persist) return;
+        SaveSettings(); Settings.Save();
     }
     public int MusicAmount { get => _sched.Amount; set { _sched.Amount = value; SaveSettings(); } }
     public void ResetFatigue() => _planner.ResetAdaptation();
@@ -88,6 +91,7 @@ public sealed partial class AudioDirector : Node
     int _pendingAmount = 1;
     void SaveSettings()
     {
+        if (Settings.ReadOnly) return;
         var cf = new ConfigFile();
         for (int i = 0; i < 4; i++) cf.SetValue("volume", ((Bus)i).ToString(), _vol[i]);
         cf.SetValue("music", "amount", _sched?.Amount ?? _pendingAmount);
