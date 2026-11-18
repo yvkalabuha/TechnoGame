@@ -34,27 +34,12 @@ internal static class SeriesDriver
         public Stopwatch Clock { get; } = Stopwatch.StartNew();
         public string? Invalid355 { get; set; }
         public int VirtualRepeats { get; set; }
-        /// <summary>The driver and its ancestor chain (the launching session): never a #355 violation.</summary>
         /// <summary>The driver itself (own stat) and its ancestor chain: the launching session is never a #355 violation.</summary>
         public List<PidStat> Ancestors { get; } = [];
         public PidStat? Self { get; set; }
 
-        /// <summary>
-        /// The pids of <paramref name="procs"/> that are the driver or one of its recorded ancestors: pid AND comm must match, and the start time
-        /// too where both sides have it, so that a reused pid (a new dotnet build in a 10 h window) is not hidden.
-        /// </summary>
-        public IReadOnlySet<int> ExcludedAmong(IEnumerable<(int Pid, string Comm, long? Start)> procs)
-        {
-            var set = new HashSet<int>();
-            foreach ((int pid, string comm, long? start) in procs)
-            {
-                bool self = pid == Environment.ProcessId && (Self is not PidStat me || me.Comm == comm && (start is null || start == me.StartTime));
-                bool anc = Ancestors.Any(a => a.Pid == pid && a.Comm == comm && (start is null || a.StartTime == 0 || start == a.StartTime));
-                if (self || anc)
-                    set.Add(pid);
-            }
-            return set;
-        }
+        public IReadOnlySet<int> ExcludedAmong(IEnumerable<(int Pid, string Comm, long? Start)> procs) =>
+            SeriesDriver.ExcludedAmong(Environment.ProcessId, Self, Ancestors, procs);
         public List<ForbiddenHit> Seen355 { get; } = [];
 
         /// <summary>Records the hits; a fatal one stops the series with INVALID (б).</summary>
@@ -169,9 +154,10 @@ internal static class SeriesDriver
                 (pre, preWin, preMeter) = Measure(c, g.PreSeriesSeconds, "pre_series");
                 preTries.Add(pre);
                 // The block is (re)registered before the check, so series.json keeps it when the check stops the series.
-                outJson["pre_series"] = PreSeriesBlock(g, preWait, preTries, pre, preWin, preMeter);
                 // Every window of the wait is checked, not only the last one.
-                c.Check355(Forbidden(c, preMeter, preWin, $"pre_series#{preTries.Count}"));
+                (MachineWindow w0, LoadMeter m0) = (preWin, preMeter);
+                RegisterThenCheck(outJson, "pre_series", PreSeriesBlock(g, preWait.Elapsed.TotalSeconds, preTries, pre, w0, m0),
+                    () => c.Check355(Forbidden(c, m0, w0, $"pre_series#{preTries.Count}")));
                 c.Say($"pre-series foreign {Fmt(pre)} CPUs (limit {g.PreSeriesForeignCpusMax}), waited {preWait.Elapsed.TotalSeconds:F0} s");
                 if (pre is not double pv || pv <= g.PreSeriesForeignCpusMax || preWait.Elapsed.TotalSeconds + g.PreSeriesSeconds > g.PreSeriesDeadlineSeconds)
                     break;
@@ -360,9 +346,50 @@ internal static class SeriesDriver
     private static PidStat? StatOf(int pid, string procRoot) =>
         BenchEnv.ReadTrim(Path.Combine(procRoot, pid.ToString(CultureInfo.InvariantCulture), "stat")) is string l ? ProcParse.Stat(l) : null;
 
-    private static Action<Utf8JsonWriter> PreSeriesBlock(BenchGate g, Stopwatch preWait, List<double?> preTries, double? pre, MachineWindow w, LoadMeter meter)
+    /// <summary>
+    /// #355 exclusion matching (pure): the pids of <paramref name="procs"/> that are the driver (<paramref name="selfPid"/>, matched by comm
+    /// and start time when <paramref name="self"/> is known) or one of <paramref name="ancestors"/>: pid AND comm must match, and the start
+    /// time where both sides have it (an ancestor start time 0 = unknown), so a reused pid cannot hide a new build.
+    /// </summary>
+    internal static IReadOnlySet<int> ExcludedAmong(int selfPid, PidStat? self, IReadOnlyList<PidStat> ancestors, IEnumerable<(int Pid, string Comm, long? Start)> procs)
     {
-        double waited = preWait.Elapsed.TotalSeconds;
+        var set = new HashSet<int>();
+        foreach ((int pid, string comm, long? start) in procs)
+        {
+            bool isSelf = pid == selfPid && (self is not PidStat me || me.Comm == comm && (start is null || start == me.StartTime));
+            bool isAnc = ancestors.Any(a => a.Pid == pid && a.Comm == comm && (start is null || a.StartTime == 0 || start == a.StartTime));
+            if (isSelf || isAnc)
+                set.Add(pid);
+        }
+        return set;
+    }
+
+    /// <summary>
+    /// The pre-series step order (pure): the block is registered in <paramref name="parts"/> before <paramref name="check"/> runs, so a
+    /// check that throws (#355, exit 5) leaves the block for series.json.
+    /// </summary>
+    internal static void RegisterThenCheck(IDictionary<string, Action<Utf8JsonWriter>> parts, string key, Action<Utf8JsonWriter> block, Action check)
+    {
+        parts[key] = block;
+        check();
+    }
+
+    /// <summary>Writes the registered blocks of series.json in their fixed order (pure; absent blocks are skipped).</summary>
+    internal static void WriteParts(Utf8JsonWriter j, IReadOnlyDictionary<string, Action<Utf8JsonWriter>> parts)
+    {
+        foreach (string key in PartOrder)
+        {
+            if (parts.TryGetValue(key, out Action<Utf8JsonWriter>? write))
+                write(j);
+        }
+    }
+
+    internal static readonly string[] PartOrder = ["pre_series", "fref", "validity", "main", "verdict", "reference", "profile", "post_series"];
+
+    /// <summary>The <c>pre_series</c> block of series.json (pure given its inputs).</summary>
+    internal static Action<Utf8JsonWriter> PreSeriesBlock(BenchGate g, double waitedSeconds, IReadOnlyList<double?> preTries, double? pre, MachineWindow w, LoadMeter meter)
+    {
+        double waited = waitedSeconds;
         double?[] tries = [.. preTries];
         return j =>
         {
@@ -683,11 +710,7 @@ internal static class SeriesDriver
             5 => "INVALID (б): #355 (another build or agent on the machine)", _ => "?",
         });
         j.WriteString("last_stage", stage);
-        foreach (string key in (string[])["pre_series", "fref", "validity", "main", "verdict", "reference", "profile", "post_series"])
-        {
-            if (parts.TryGetValue(key, out Action<Utf8JsonWriter>? write))
-                write(j);
-        }
+        WriteParts(j, parts);
         j.WriteEndObject();
     }
 
