@@ -16,7 +16,8 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0106 [IN_PROGRESS] Lab bench harness for EXP-0008: foreign-load gate, top-k frequency, repeat cap; alloc JSON provenance (simulation-engineer)
+- TASK-0107 [IN_PROGRESS] Tick path allocations to <= 1 MiB/month (ADR-0023 p.2.1) (developer)
+- TASK-0106 [REVIEW] Lab bench harness for EXP-0008: foreign-load gate, top-k frequency, repeat cap; alloc JSON provenance (simulation-engineer)
 <!-- registry:active:end -->
 
 ## Блокеры
