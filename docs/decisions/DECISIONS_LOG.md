@@ -412,3 +412,11 @@ This revises #296 (UI sounds by synthesis). Licences stay PD/CC0/CC BY only (#29
 Owner: prototype saves need no migrations until the first public build. An incompatible version is reported honestly | владелец (AskUserQuestion 2026-11-17) + Orchestrator |
 | 308 | 2026-11-18 | The 1945 map is assembled from Natural Earth (PD), with no external historical dataset (none has a compatible licence: docs/research/notes/map-1945-borders.md). The owner wants higher precision than ~200 regions. Proposal for systems-architect: draw borders and ownership at the province level (#195: 2000–5000 provinces, which moves earlier than wave 3), from Natural Earth admin-1 cut to the 1945 lines. Economy regions (~200, #171) stay groups of provinces. The start date stays 1945-09 (#130) | владелец (AskUserQuestion 2026-11-18) |
 | 309 | 2026-11-18 | Audio direction r2 (docs/audio/AUDIO_DIRECTION_r2.md) accepted as the working basis: era objects per event, a five-layer design-bureau ambient bed, ~30 sources with licences checked on their pages. BigSoundBank (CC0) is allowed: CC0 falls under ADR-0009. Recordings are downloaded and assembled into a listening pack for the owner before they enter the client | Orchestrator (light, inside #305) |
+| 310 | 2026-11-18 | Province map (docs/architecture/notes/map-provinces-1945.md):
+- Every province has owner (de jure) and controller (de facto) from day one. The client fills by owner and hatches by controller.
+- Province ids are hierarchical with a '.' separator (`<region_id>.<suffix>`), compatible with the ADR-0018 key grammar.
+- Owners are polities (~70–90 states of 1945); slice actors are a subset.
+- The details go into ADR-0011 revision 2 (PROPOSED), through the gate.
+- Orchestrator reading of ADR-0018 §5: `-country-<ADM0_A3>` means `-country-<polity_id>`.
+
+The milestone plan and tick-benchmark-m0 must be updated: provinces move earlier than wave 3 (#308) | владелец (AskUserQuestion 2026-11-18) + Orchestrator |
