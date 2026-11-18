@@ -110,7 +110,7 @@
 | [TASK-0093](../development/tasks/TASK-0093-lab-matrix-validity.md) | DONE | Lab matrix validity and size fields; registry golden_set_hash for matrix EXPs (ADR-0008, #374) | MS-M1 |
 | [TASK-0094](../development/tasks/TASK-0094-client-v0-5d.md) | DONE | Client v0.5d: tree legend, glyph shapes, alert callout to country, foreign-power tag tint | MS-M1 |
 | [TASK-0095](../development/tasks/TASK-0095-map-t4-owners-import.md) | DONE | Map T4: import world owners/controllers 1945 into owners.yaml and polities.yaml | MS-M1 |
-| [TASK-0096](../development/tasks/TASK-0096-owners-1945-decisions.md) | APPROVED | Owners 1945 data per decisions 397, 399-402 | MS-M1 |
+| [TASK-0096](../development/tasks/TASK-0096-owners-1945-decisions.md) | DONE | Owners 1945 data per decisions 397, 399-402 | MS-M1 |
 | [TASK-0097](../development/tasks/TASK-0097-client-screenshots-prune.md) | DONE | Client screenshots: keep 25 key frames in git | MS-M1 |
 | [TASK-0098](../development/tasks/TASK-0098-r4-double-to-lab.md) | APPROVED | Move remaining double code from Core.Simulation to Lab | MS-M1 |
 | [TASK-0099](../development/tasks/TASK-0099-project-slot-generation.md) | APPROVED | Project slots reuse with generation (ADR-0005 #388) | MS-M1 |
