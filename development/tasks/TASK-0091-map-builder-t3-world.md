@@ -1,7 +1,7 @@
 ---
 id: TASK-0091
 title: "Map builder T3: world beyond Europe, regions split by event lines (#350), territories.yaml"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: developer
@@ -62,3 +62,13 @@ created: 2026-11-18
 - Имена регионов мира по-прежнему от современных стран (DEBT-0043, часть про названия не закрыта); граница 38-й параллели и 16°/17° — по параметру, без внешнего источника геометрии; 16° взята из ADR-0020 п. 14 (в RR-0020 строки нет), дата события не из RR.
 - Для связи континентов добавлен пролив Берингов в `straits.yaml`; 100 регионов-островов/Америк помечены `isolated`.
 - В `ATTRIBUTION.md` добавлены объекты CC BY 4.0 (Управление геодезии Словении, GURS) из снимков Зон A, B и Италии 1929–1940.
+
+**Правки после ревью (2026-11-18, developer; перенесено Orchestrator)**
+1. CI линий событий не тавтологичен: в `EventSet` — `codes` (коды NE adm1), `except_codes`, `except_cuts`; все внутристрановые линии через `codes`/`cuts`; отрицательные тесты (регион с провинцией другого кода; запрет `ids` в `spec/events`).
+2. `AbsorbSlivers` проверяет пустую сторону первой, тест.
+3. `not_drawn` — предупреждение `pending_map`; линия Моргана на t0 и 16-я параллель в Лаосе помечены not_drawn.
+4. `territories.yaml` в `data_binding`.
+5. Германские зоны помечены как приближение по современным землям; adm0 IND/PAK/TWN — только для CI.
+6. Псевдособытие `danzig_not_germany` удалено (Данциг — Q59).
+Проверка: MapBuilder.Tests 54/54, `check_determinism.sh` OK, `dotnet build` 0 предупреждений. Карта пересобрана в main (Orchestrator): 3124 провинции, 373 региона, 0 ошибок, 28 предупреждений сборщика (щели покрытия, T4, 373 > 250, pending_map).
+Открыто: 17-я параллель осталась precision A — правило (c) ADR-0011 для кусков < 5000 км² требует A; нужен источник реки Бенхай или поправка к ADR-0011 (в вопросе Q52 вместе с числом регионов).
