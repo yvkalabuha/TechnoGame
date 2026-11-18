@@ -1,7 +1,7 @@
 ---
 id: EXP-0007
 title: "EXP-0007: tick benchmark M0 (ADR-0016)"
-status: PLANNED          # PLANNED | RUNNING | DONE | FAILED
+status: RUNNING          # PLANNED | RUNNING | DONE | FAILED
 hypothesis: ADR-0016
 kind: benchmark
 related: []
