@@ -93,7 +93,11 @@ public sealed partial class AreaHeader : VBoxContainer
         }
     }
 
-    public AreaHeader(AreaDef def, bool locked)
+    /// <summary>Panel height (du) under which the picture folds into a header strip, freeing room for the work blocks (v0.5d).</summary>
+    public const float CompactBelow = 700, StripHeight = 40;
+
+    /// <param name="compact">Header strip of 40 du (sign, name, state) instead of the picture; the question line is dropped.</param>
+    public AreaHeader(AreaDef def, bool locked, bool compact = false)
     {
         AddThemeConstantOverride("separation", 4);
         var (line, wash, text) = UiArt.Inks(def);
@@ -105,9 +109,10 @@ public sealed partial class AreaHeader : VBoxContainer
         ground.AddThemeStyleboxOverride("panel", Ui.Box(locked ? new Color("5E6670") : new Color("1E4673"), null, 0, 0, 0));
         ground.AddChild(new TextureRect { Texture = UiArt.Picture(def.Slug, locked), CustomMinimumSize = new Vector2(318, 119), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             StretchMode = TextureRect.StretchModeEnum.Scale, TextureFilter = CanvasItem.TextureFilterEnum.LinearWithMipmaps, MouseFilter = MouseFilterEnum.Ignore, SizeFlagsHorizontal = SizeFlags.ShrinkBegin });
-        col.AddChild(ground);
+        if (!compact) col.AddChild(ground);
         var bar = new Bar { Line = line, Hatch = def.Ink == AreaData.Seventh, MouseFilter = MouseFilterEnum.Ignore };
         bar.AddThemeStyleboxOverride("panel", Ui.Box(wash, null, 0, 8, 0));
+        if (compact) bar.CustomMinimumSize = new Vector2(0, StripHeight);
         var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 8);
         row.AddChild(new TextureRect { Texture = UiArt.Icon(def.Slug), CustomMinimumSize = new Vector2(24, 24), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             StretchMode = TextureRect.StretchModeEnum.Scale, SizeFlagsVertical = SizeFlags.ShrinkCenter, MouseFilter = MouseFilterEnum.Ignore });
@@ -117,7 +122,7 @@ public sealed partial class AreaHeader : VBoxContainer
         bar.AddChild(row);
         col.AddChild(bar);
         AddChild(plate);
-        AddChild(Ui.Wrap("area." + def.Slug + ".q", 14, Ui.Ink2));
+        if (!compact) AddChild(Ui.Wrap("area." + def.Slug + ".q", 14, Ui.Ink2));
     }
 }
 

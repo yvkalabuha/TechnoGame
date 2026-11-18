@@ -47,9 +47,9 @@ public sealed partial class ActorPanel : PanelContainer
     bool Foreign => _actor != Player;
     // Tag of the selected foreign power (spec §9): tint chip, name, «FOREIGN POWER · read only» and a button back to the player's own power. Not an alert: ink on paper.
     readonly PanelContainer _foreign = new();
-    readonly ColorRect _chip = new() { CustomMinimumSize = new Vector2(16, 16), SizeFlagsVertical = SizeFlags.ShrinkCenter };
+    readonly Panel _chip = new() { CustomMinimumSize = new Vector2(16, 16), SizeFlagsVertical = SizeFlags.ShrinkCenter };
     readonly Label _foreignName = Ui.Lbl("", 16, null, FontKind.Draft);
-    readonly ColorRect _band = new() { CustomMinimumSize = new Vector2(6, 0) };
+    readonly Panel _band = new() { CustomMinimumSize = new Vector2(6, 0) };
     public Func<int, Color> TintOf;
     public event Action BackToOwn;
     readonly List<Control> _orderControls = new();
@@ -67,6 +67,8 @@ public sealed partial class ActorPanel : PanelContainer
     readonly VBoxContainer _finLaterBox = new();
     Control _treeBtn, _headerView, _prodLater, _finLater;
     AreaId _area = AreaId.Map;
+    bool _compactHead;
+    bool Compact => GetViewportRect().Size.Y < AreaHeader.CompactBelow;
     public AreaId Area
     {
         get => _area;
@@ -76,7 +78,8 @@ public sealed partial class ActorPanel : PanelContainer
             if (_headerView != null) { _root.RemoveChild(_headerView); _headerView.QueueFree(); _headerView = null; }
             if (_areaMode)
             {
-                _headerView = new AreaHeader(AreaData.Of(value), false);
+                _compactHead = Compact;
+                _headerView = new AreaHeader(AreaData.Of(value), false, _compactHead);
                 _root.AddChild(_headerView); _root.MoveChild(_headerView, 0);
                 _secBudget.Visible = _secLicence.Visible = _finLater.Visible = value == AreaId.Finance;
                 _secDesigns.Visible = _prodLater.Visible = value == AreaId.Production;
@@ -159,7 +162,7 @@ public sealed partial class ActorPanel : PanelContainer
         if (areaMode)
         {
             // Finance: only the licence block scrolls, so that the order button above it stays in view at 150 % (v0.5d).
-            var ls = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, CustomMinimumSize = new Vector2(0, 0), SizeFlagsVertical = SizeFlags.ExpandFill };
+            var ls = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, CustomMinimumSize = new Vector2(0, 48), SizeFlagsVertical = SizeFlags.ExpandFill };   // at least one body line stays visible
             _licence.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             var lv = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill }; lv.AddChild(_licence); lv.AddChild(_finLaterBox);
             ls.AddChild(lv); _secLicence.AddChild(ls);
@@ -222,6 +225,13 @@ public sealed partial class ActorPanel : PanelContainer
 
     bool Pending => _awaiting || (_lastSnap != null && _lastSnap.Pending > 0 && _sentPct != null);
 
+    // A pale tint on paper gets a dark 1 px edge (ΔL* to the paper under TintStrip.MinDeltaL), so that the strip never melts into the panel.
+    static void Swatch(Panel p, Color tint)
+    {
+        bool edge = TintStrip.NeedsEdge(tint.ToHtml(false), Palette.C.Paper);
+        p.AddThemeStyleboxOverride("panel", Ui.Box(tint, edge ? Ui.Ink : null, edge ? 1 : 0, 0, 0));
+    }
+
     void Sync()
     {
         for (int k = 0; k < 5; k++) { _sl[k].SetValueNoSignal(_pct[k]); _slVal[k].Text = _pct[k] + "%"; }
@@ -248,6 +258,7 @@ public sealed partial class ActorPanel : PanelContainer
     public override void _Process(double delta)
     {
         // Height follows the content (an inset, not a full-height column), capped by the window.
+        if (_areaMode && _headerView != null && Compact != _compactHead) Area = _area;   // the window was resized across the threshold
         float want = _root.GetCombinedMinimumSize().Y + 6, cap = GetViewportRect().Size.Y - 120;
         bool finance = _areaMode && _area == AreaId.Finance;   // Finance: the outer scroll stays off, the licence block scrolls on its own
         _scroll.CustomMinimumSize = new Vector2(0, finance ? cap : Math.Min(want, cap));
@@ -270,7 +281,7 @@ public sealed partial class ActorPanel : PanelContainer
         string id = _host.Layout.ActorIds[_actor];
         _title.Text = Names.Actor(id);
         _foreign.Visible = Foreign;
-        if (Foreign) { _foreignName.Text = Names.Actor(_host.Layout.ActorIds[_actor]); if (TintOf != null) { _chip.Color = TintOf(_actor); _band.Color = _chip.Color; } }
+        if (Foreign) { _foreignName.Text = Names.Actor(_host.Layout.ActorIds[_actor]); if (TintOf != null) { Swatch(_chip, TintOf(_actor)); Swatch(_band, TintOf(_actor)); } }
         foreach (var c in _orderControls) c.Visible = !Foreign;
         foreach (var sl in _sl) { sl.Editable = !Foreign; sl.MouseFilter = Foreign ? MouseFilterEnum.Ignore : MouseFilterEnum.Stop; sl.Modulate = new Color(1, 1, 1, Foreign ? 0.45f : 1f); }
         _sharesNote.Visible = Foreign;

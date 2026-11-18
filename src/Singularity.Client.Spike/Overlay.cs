@@ -7,7 +7,7 @@ namespace Singularity.Client.Spike;
 /// Labels of the slice countries are bold with an ink underline.</summary>
 public sealed partial class Overlay : Control
 {
-    sealed class LabelState { public Country C; public Label Node; public bool On; public bool Slice; }
+    sealed class LabelState { public Country C; public Label Node; public bool On; public bool Slice, Emph; }
 
     static readonly Color Ink = Ui.Ink;
     static readonly Color Paper = Ui.Paper;
@@ -39,7 +39,7 @@ public sealed partial class Overlay : Control
             var rect = new Rect2(anchor + new Vector2(16, -30 - m.Slot * (sz.Y + 8) - sz.Y * 0.5f), sz);
             var from = anchor; var to = new Vector2(rect.Position.X, rect.GetCenter().Y);
             DrawLine(from, to, Ui.Sheet, 4f, true); DrawLine(from, to, Ui.Ink, 1.5f, true);
-            DrawCircle(anchor, 4.5f, Ui.Sheet); DrawCircle(anchor, 3f, Ui.Ink);
+            DrawCircle(anchor, 4.5f, Ui.Paper); DrawCircle(anchor, 3f, Ui.Ink);   // 1 px paper edge
             DrawStyleBox(Ui.Box(Ui.Sheet, null, 0, 0, Ui.R2 + 3), rect.Grow(3));
             DrawStyleBox(Ui.Box(m.Warn ? Ui.Warn : Ui.Alarm, Ui.Ink, 1, 0, Ui.R1), rect);
             DrawString(Fonts.Text, rect.Position + new Vector2(8, sz.Y - 8), text, HorizontalAlignment.Left, -1, 14, m.Warn ? Ui.Ink : Colors.White);
@@ -73,17 +73,38 @@ public sealed partial class Overlay : Control
             _labels.Add(s = new LabelState { C = c, Node = l });
         }
         s.Slice = slice;
-        if (slice)
-        {
-            // A real bold instance of Literata, a paper halo and an ink underline instead of a frame: a frame covered the outline of small countries (v0.5d).
-            var ul = Ui.Box(Colors.Transparent, null, 0, 2);
-            ul.BorderColor = Ink; ul.BorderWidthBottom = 2; ul.ContentMarginBottom = 3;
-            s.Node.AddThemeStyleboxOverride("normal", ul);
-            s.Node.AddThemeColorOverride("font_outline_color", Paper); s.Node.AddThemeConstantOverride("outline_size", 4);
-            s.Node.AddThemeFontOverride("font", Fonts.MapBold);
-        }
-        else { s.Node.AddThemeColorOverride("font_outline_color", Paper); s.Node.AddThemeConstantOverride("outline_size", 4); }
+        s.Node.AddThemeColorOverride("font_outline_color", Paper); s.Node.AddThemeConstantOverride("outline_size", 4);
+        StyleLabel(s);
         s.Node.Text = Names.Country(c.Name) ?? c.Name;
+    }
+
+    int _selId = -1, _playerId = -1;
+
+    /// <summary>Bold + underline only for the selected power and the player's power; all other labels stay regular (v0.5d).</summary>
+    public void Emphasize(int selectedCountryId, int playerCountryId)
+    {
+        _selId = selectedCountryId; _playerId = playerCountryId;
+        foreach (var s in _labels) StyleLabel(s);
+    }
+
+    void StyleLabel(LabelState s)
+    {
+        s.Emph = s.Slice && (s.C.Id == _selId || s.C.Id == _playerId);
+        s.Node.AddThemeFontOverride("font", s.Emph ? Fonts.MapBold : Fonts.Map);
+    }
+
+    // Underline as long as the word, just under the baseline, with a paper halo so that it does not sink into the coast line.
+    void DrawUnderlines()
+    {
+        foreach (var s in _labels)
+        {
+            if (!s.Emph || !s.Node.Visible) continue;
+            var font = Fonts.MapBold;
+            float w = font.GetStringSize(s.Node.Text, HorizontalAlignment.Left, -1, 14).X;
+            float y = s.Node.Position.Y + font.GetAscent(14) + 3f;
+            var a = new Vector2(s.Node.Position.X, y); var b = new Vector2(s.Node.Position.X + w, y);
+            DrawLine(a, b, Paper, 4f); DrawLine(a, b, Ink, 1.5f);
+        }
     }
 
     void Relabel() { foreach (var s in _labels) s.Node.Text = Names.Country(s.C.Name) ?? s.C.Name; }
@@ -105,6 +126,7 @@ public sealed partial class Overlay : Control
     public override void _Draw()
     {
         if (_dist < 1.01f) return;   // camera distance not known before the first frame
+        DrawUnderlines();
         DrawMarkers();
         var c = VpSize * 0.5f;
         float r = GlobeRadiusPx(_dist);

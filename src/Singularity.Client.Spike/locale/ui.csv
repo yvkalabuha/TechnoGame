@@ -132,6 +132,11 @@ disc.1,Propulsion,Силовые установки
 disc.2,Metals,Металлы
 disc.3,Chemistry,Химия
 disc.4,Mechanics,Механика
+disc.0.s,Aerodyn.,Аэродин.
+disc.1.s,Propuls.,Силов.
+disc.2.s,Metals,Металлы
+disc.3.s,Chem.,Химия
+disc.4.s,Mech.,Механ.
 ntype.0,knowledge,знание
 ntype.1,principle,принцип
 ntype.2,engineering,инженерия

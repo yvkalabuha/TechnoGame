@@ -254,6 +254,7 @@ public sealed partial class Main : Node3D
             _player = Math.Max(0, Array.IndexOf(ids, "USA"));
         }
         _viewed = _player;
+        ApplySelection();
         _signal = new SignalField(_host, _player);
         _signal.SetAnchorsPreset(Control.LayoutPreset.TopWide);
         _signal.Debug = _debug;
@@ -466,7 +467,11 @@ public sealed partial class Main : Node3D
     int TintOfActor(string actorId) =>
         Names.CountryOfActor.TryGetValue(actorId, out var cn) ? Math.Max(0, _data.Countries.First(c => c.Name == cn).Tint) : 0;
 
-    void ApplySelection() => _globeMat.SetShaderParameter("selected_id", _selected);
+    void ApplySelection()
+    {
+        _globeMat.SetShaderParameter("selected_id", _selected);
+        _overlay.Emphasize(_selected, _actorCountry != null && _player >= 0 && _player < _actorCountry.Length ? _actorCountry[_player] : -1);
+    }
 
     // ---------- objects ----------
     ShaderMaterial NewObjMat(Aabb box)
@@ -693,7 +698,7 @@ public sealed partial class Main : Node3D
             else if (_host.Ready && !_coldShot) FinishClient();
             else { _loading.Text = Loc.T(_host.Status); _loading.Visible = !_coldShot; }
         }
-        if (_helpBtn != null) { _helpBtn.Visible = !_tree.Visible; if (_tree.Visible) _help.Visible = false; }
+        if (_helpBtn != null) { _helpBtn.Visible = !_tree.Visible && !_areaPanel.Visible; if (_tree.Visible || _areaPanel.Visible) _help.Visible = false; }   // never over an area panel; F1 still opens the help
         if (_rail != null) LayoutClient();
         if (_shots && _tintsReady) ShotStep(delta);
         if (_bench) BenchStep(delta);

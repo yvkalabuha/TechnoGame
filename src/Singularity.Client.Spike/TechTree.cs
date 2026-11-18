@@ -339,8 +339,11 @@ public sealed partial class TechTree : Control
     {
         float mid = -90f + w * 72f + 36f, cs = Mathf.Cos(Mathf.DegToRad(mid)), sn = Mathf.Sin(Mathf.DegToRad(mid));
         var q = Polar(6.65f, mid);
-        float avail = cs > 0.35f ? Area.End.X - q.X - 4 : cs < -0.35f ? q.X - Area.Position.X - 4 : 220;
-        string s = Fit(Loc.T("disc." + w), Math.Max(60, avail), 14, Fonts.DraftBold);
+        var da = DiscArea;
+        float avail = cs > 0.35f ? da.End.X - q.X - 4 : cs < -0.35f ? q.X - da.Position.X - 4 : 220;
+        string s = Loc.T("disc." + w);
+        if (Fonts.DraftBold.GetStringSize(s, HorizontalAlignment.Left, -1, 14).X > avail) s = Loc.T("disc." + w + ".s");   // short name before any ellipsis
+        s = Fit(s, Math.Max(60, avail), 14, Fonts.DraftBold);
         var sz = Fonts.DraftBold.GetStringSize(s, HorizontalAlignment.Left, -1, 14);
         float x = cs > 0.35f ? q.X : cs < -0.35f ? q.X - sz.X : q.X - sz.X * 0.5f;
         float y = sn > 0.35f ? q.Y + 6 : sn < -0.35f ? q.Y - sz.Y - 2 : q.Y - sz.Y * 0.5f;
@@ -469,15 +472,12 @@ public sealed partial class TechTree : Control
                 _cv.DrawArc(p, r, 0, Mathf.Tau, 20, c, 1.8f, true); _cv.DrawCircle(p, 1.8f, c);
                 break;
             case NodeType.ENG:        // engineering: hexagon
+            case NodeType.CMP:        // component: house (apex up)
             {
-                var pts = new Vector2[7];
-                for (int k = 0; k < 7; k++) pts[k] = p + new Vector2(Mathf.Cos(k * Mathf.Tau / 6), Mathf.Sin(k * Mathf.Tau / 6)) * r;
-                _cv.DrawPolyline(pts, c, 1.8f, true);
+                var pts = Outline(t, p, r * 0.85f);
+                _cv.DrawPolyline(pts.Append(pts[0]).ToArray(), c, 1.8f, true);
                 break;
             }
-            case NodeType.CMP:        // component: a square with a cut corner
-                _cv.DrawPolyline(new[] { p + new Vector2(-r, -r), p + new Vector2(r * 0.4f, -r), p + new Vector2(r, -r * 0.4f), p + new Vector2(r, r), p + new Vector2(-r, r), p + new Vector2(-r, -r) }, c, 1.8f, true);
-                break;
             case NodeType.PRC:        // process: arrow
                 _cv.DrawLine(p + new Vector2(-r, 0), p + new Vector2(r, 0), c, 1.8f, true);
                 _cv.DrawPolyline(new[] { p + new Vector2(r * 0.3f, -r * 0.7f), p + new Vector2(r, 0), p + new Vector2(r * 0.3f, r * 0.7f) }, c, 1.8f, true);
@@ -491,21 +491,11 @@ public sealed partial class TechTree : Control
     // Outline of a node type (LegendData.Types): FND triangle, PRC square, APP diamond, ENG hexagon, CMP pentagon; PRN is a circle (null).
     public static Vector2[] Outline(NodeType t, Vector2 p, float r)
     {
-        static Vector2[] Reg(Vector2 p, float r, int n, float a0)
-        {
-            var q = new Vector2[n];
-            for (int k = 0; k < n; k++) q[k] = p + new Vector2(Mathf.Cos(a0 + k * Mathf.Tau / n), Mathf.Sin(a0 + k * Mathf.Tau / n)) * r;
-            return q;
-        }
-        switch (t)
-        {
-            case NodeType.FND: return Reg(p, r * 1.25f, 3, -Mathf.Pi / 2);
-            case NodeType.ENG: return Reg(p, r * 1.1f, 6, 0);
-            case NodeType.CMP: return Reg(p, r * 1.15f, 5, -Mathf.Pi / 2);
-            case NodeType.PRC: return new[] { p + new Vector2(-r, -r), p + new Vector2(r, -r), p + new Vector2(r, r), p + new Vector2(-r, r) };
-            case NodeType.APP: return new[] { p + new Vector2(0, -r * 1.3f), p + new Vector2(r * 1.3f, 0), p + new Vector2(0, r * 1.3f), p + new Vector2(-r * 1.3f, 0) };
-            default: return null;
-        }
+        var o = GlyphGeometry.Outline(t.ToString(), r);
+        if (o == null) return null;
+        var q = new Vector2[o.Length];
+        for (int k = 0; k < o.Length; k++) q[k] = p + new Vector2(o[k].X, o[k].Y);
+        return q;
     }
 
     void Shape(NodeType t, Vector2 p, float r, Color fill, Color line, bool dashed, float w)
