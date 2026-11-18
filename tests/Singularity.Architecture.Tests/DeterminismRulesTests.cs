@@ -143,7 +143,7 @@ public class DeterminismRulesTests
         Type[] types = [sample, .. sample.GetNestedTypes(IlScanner.AllDeclared)];
         Assert.Contains(DeterminismRules.Check(types, forbidDouble: true),
             v => v.Contains(expected, StringComparison.Ordinal));
-        // Default mode keeps double allowed (R4 exceptions, Kernel).
+        // Default mode keeps double allowed (Kernel allowlist, Lab).
         Assert.Empty(DeterminismRules.Check(types));
     }
 
