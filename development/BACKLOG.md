@@ -9,6 +9,7 @@
 | ID | Статус | Название |
 |---|---|---|
 | [MS-M0](../development/milestones/MS-M0-headless-prototype.md) | PLANNED | Headless-прототип симуляции и Simulation Lab |
+| [MS-M1](../development/milestones/MS-M1-economy-provinces-open-race.md) | PLANNED | M1: economy by regions, 1945 provinces, open race |
 
 ## Задачи
 
@@ -92,7 +93,7 @@
 | [TASK-0076](../development/tasks/TASK-0076-localization-fixes-after-codex-review-of-task-0074.md) | DONE | Localization fixes after Codex review of TASK-0074 | MS-M0 |
 | [TASK-0077](../development/tasks/TASK-0077-client-v0-5a-planisphere-zoom-and-node-icons-node-.md) | DONE | Client v0.5a: planisphere zoom and node icons, node card with schematic and effects, map click fix, starry sky | MS-M0 |
 | [TASK-0078](../development/tasks/TASK-0078-adr-0017-implementation.md) | DONE | ADR-0017 implementation: StateHash schedule, lazy LastHash, column CoW | MS-M0 |
-| [TASK-0079](../development/tasks/TASK-0079-f4a-parallel-view-inputs.md) | REVIEW | F4-A: parallel ViewBuilder.Inputs per actor, TrainingBudget plan once per actor | MS-M0 |
+| [TASK-0079](../development/tasks/TASK-0079-f4a-parallel-view-inputs.md) | DONE | F4-A: parallel ViewBuilder.Inputs per actor, TrainingBudget plan once per actor | MS-M0 |
 
 ## Гипотезы
 
