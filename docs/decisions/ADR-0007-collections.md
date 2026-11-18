@@ -1,14 +1,14 @@
 ---
 id: ADR-0007
 title: "Запрет коллекций с нестабильным порядком обхода"
-status: PROPOSED
+status: ACCEPTED
 date: 2026-11-02
 supersedes:
 superseded_by:
 related: [ADR-0002, ADR-0003, ADR-0004, ADR-0006, ADR-0016, ADR-0017, ADR-0019, ADR-0020, TASK-0087]
-approved_by:
-approved_at:
-approval_ref:
+approved_by: owner
+approved_at: 2026-11-18
+approval_ref: "DECISIONS_LOG #377"
 ---
 
 # ADR-0007 — Запрет коллекций с нестабильным порядком обхода

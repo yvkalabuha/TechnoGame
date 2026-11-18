@@ -143,8 +143,8 @@
 | [ADR-0004](../docs/decisions/ADR-0004-rng.md) | ACCEPTED | Генератор случайных чисел без состояния |
 | [ADR-0005](../docs/decisions/ADR-0005-data-model.md) | PROPOSED | Модель данных ядра: таблицы struct-of-arrays |
 | [ADR-0006](../docs/decisions/ADR-0006-tick-model.md) | ACCEPTED | Модель тика |
-| [ADR-0007](../docs/decisions/ADR-0007-collections.md) | PROPOSED | Запрет коллекций с нестабильным порядком обхода |
-| [ADR-0008](../docs/decisions/ADR-0008-simulation-lab.md) | PROPOSED | Simulation Lab: прогоны, хранение, анализ |
+| [ADR-0007](../docs/decisions/ADR-0007-collections.md) | ACCEPTED | Запрет коллекций с нестабильным порядком обхода |
+| [ADR-0008](../docs/decisions/ADR-0008-simulation-lab.md) | ACCEPTED | Simulation Lab: прогоны, хранение, анализ |
 | [ADR-0009](../docs/decisions/ADR-0009-data-licenses.md) | ACCEPTED | Политика лицензий внешних данных |
 | [ADR-0010](../docs/decisions/ADR-0010-data-format-modding.md) | ACCEPTED | Формат данных и моддинг v0 |
 | [ADR-0011](../docs/decisions/ADR-0011-map-representation.md) | ACCEPTED | Представление карты |
