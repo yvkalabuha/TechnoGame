@@ -18,8 +18,8 @@
 <!-- registry:active:start -->
 - TASK-0098 [IN_PROGRESS] Move remaining double code from Core.Simulation to Lab (developer)
 - TASK-0099 [IN_PROGRESS] Project slots reuse with generation (ADR-0005 #388) (developer)
-- TASK-0100 [IN_PROGRESS] Replace client event sounds with listening-pack r2 (#403) (developer)
 - TASK-0103 [IN_PROGRESS] Tick allocations and GC: 1.1 GB per month, gen2 collections (EXP-0007 P8) (simulation-engineer)
+- TASK-0100 [REVIEW] Replace client event sounds with listening-pack r2 (#403) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры

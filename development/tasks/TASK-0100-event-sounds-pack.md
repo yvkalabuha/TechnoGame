@@ -1,7 +1,7 @@
 ---
 id: TASK-0100
 title: "Replace client event sounds with listening-pack r2 (#403)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M1
 agent: developer
