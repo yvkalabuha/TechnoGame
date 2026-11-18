@@ -16,7 +16,7 @@ public class MapToolingIsolationTests
     private static readonly (string Project, Assembly? Assembly)[] Guarded =
     [
         ("Singularity.Kernel", typeof(Fx6).Assembly),
-        ("Singularity.Core", typeof(Singularity.Core.Simulation.ParamSet).Assembly),
+        ("Singularity.Core", typeof(Singularity.Core.Industry.IndustrySystem).Assembly),
         ("Singularity.Session", typeof(SliceSession).Assembly),
         ("Singularity.Client.Spike", null), // Godot project: checked through its project file only
     ];

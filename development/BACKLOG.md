@@ -80,7 +80,7 @@
 | [TASK-0063](../development/tasks/TASK-0063-session-dailytickprobe-flag-for-direct-daily-mode-.md) | DONE | Session DailyTickProbe flag for direct daily-mode benchmark (ADR-0016 T1a) | MS-M0 |
 | [TASK-0064](../development/tasks/TASK-0064-lab-bench-harness-adr-0016-t1.md) | DONE | lab bench harness (ADR-0016 T1) | MS-M0 |
 | [TASK-0065](../development/tasks/TASK-0065-synthetic-full-scale-world-overlay-and-benchmark-p.md) | DONE | Synthetic full-scale world overlay and benchmark pre-registration (ADR-0016 T2) | MS-M0 |
-| [TASK-0066](../development/tasks/TASK-0066-tick-benchmark-run-and-outcome-adr-0016-t3.md) | IN_PROGRESS | Tick benchmark run and outcome (ADR-0016 T3) | MS-M0 |
+| [TASK-0066](../development/tasks/TASK-0066-tick-benchmark-run-and-outcome-adr-0016-t3.md) | DONE | Tick benchmark run and outcome (ADR-0016 T3) | MS-M0 |
 | [TASK-0067](../development/tasks/TASK-0067-godot-4-net-3d-globe-spike-regions-relief-cc0-obje.md) | DONE | Godot 4 .NET 3D globe spike: regions, relief, CC0 objects, FPS and memory | MS-M0 |
 | [TASK-0068](../development/tasks/TASK-0068-tick-hot-spot-fixes-f1-f3-f5-f6-f8-tick-profile-m0.md) | DONE | Tick hot-spot fixes F1-F3, F5, F6, F8 (tick profile M0) | MS-M0 |
 | [TASK-0069](../development/tasks/TASK-0069-client-prototype-v0-2-design-controls-session-wiri.md) | DONE | Client prototype v0.2: design controls, Session wiring, tech tree A/B | MS-M0 |
@@ -112,10 +112,12 @@
 | [TASK-0095](../development/tasks/TASK-0095-map-t4-owners-import.md) | DONE | Map T4: import world owners/controllers 1945 into owners.yaml and polities.yaml | MS-M1 |
 | [TASK-0096](../development/tasks/TASK-0096-owners-1945-decisions.md) | DONE | Owners 1945 data per decisions 397, 399-402 | MS-M1 |
 | [TASK-0097](../development/tasks/TASK-0097-client-screenshots-prune.md) | DONE | Client screenshots: keep 25 key frames in git | MS-M1 |
-| [TASK-0098](../development/tasks/TASK-0098-r4-double-to-lab.md) | APPROVED | Move remaining double code from Core.Simulation to Lab | MS-M1 |
-| [TASK-0099](../development/tasks/TASK-0099-project-slot-generation.md) | APPROVED | Project slots reuse with generation (ADR-0005 #388) | MS-M1 |
-| [TASK-0100](../development/tasks/TASK-0100-event-sounds-pack.md) | APPROVED | Replace client event sounds with listening-pack r2 (#403) | MS-M1 |
-| [TASK-0101](../development/tasks/TASK-0101-ui-instrument-elements.md) | APPROVED | UI thematic instrument elements (flasks, pencil, ruler, caliper, soldering iron, protractor, gauges) | MS-M1 |
+| [TASK-0098](../development/tasks/TASK-0098-r4-double-to-lab.md) | DONE | Move remaining double code from Core.Simulation to Lab | MS-M1 |
+| [TASK-0099](../development/tasks/TASK-0099-project-slot-generation.md) | REVIEW | Project slots reuse with generation (ADR-0005 #388) | MS-M1 |
+| [TASK-0100](../development/tasks/TASK-0100-event-sounds-pack.md) | DONE | Replace client event sounds with listening-pack r2 (#403) | MS-M1 |
+| [TASK-0101](../development/tasks/TASK-0101-ui-instrument-elements.md) | DONE | UI thematic instrument elements (flasks, pencil, ruler, caliper, soldering iron, protractor, gauges) | MS-M1 |
+| [TASK-0102](../development/tasks/TASK-0102-tick-bench-reregistration.md) | PROPOSED | Re-registered tick benchmark series (frequency rule revision, #405) | MS-M0 |
+| [TASK-0103](../development/tasks/TASK-0103-tick-allocations-gc.md) | IN_PROGRESS | Tick allocations and GC: 1.1 GB per month, gen2 collections (EXP-0007 P8) | MS-M0 |
 
 ## Гипотезы
 
@@ -137,7 +139,7 @@
 | [EXP-0004](../development/experiments/EXP-0004-t6e2-tooling-target.md) | DONE | Цель оснастки A39, повтор после F17b: V0, V1, V3, V4 против VINF (T6e2) | HYP-0002 |
 | [EXP-0005](../development/experiments/EXP-0005-t6e3-tooling-target.md) | DONE | Цель оснастки A39, третий прогон: V0, V4, V5 против VINF (T6e3) | HYP-0002 |
 | [EXP-0006](../development/experiments/EXP-0006-pool-order.md) | DONE | Порядок распределения пула оснастки под V5: CAN, REV, PROP, SEV (малый пул) | HYP-0002 |
-| [EXP-0007](../development/experiments/EXP-0007-tick-benchmark-m0.md) | PLANNED | EXP-0007: tick benchmark M0 (ADR-0016) | ADR-0016 |
+| [EXP-0007](../development/experiments/EXP-0007-tick-benchmark-m0.md) | DONE | EXP-0007: tick benchmark M0 (ADR-0016) | ADR-0016 |
 
 ## ADR
 

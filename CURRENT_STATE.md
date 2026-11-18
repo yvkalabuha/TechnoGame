@@ -16,11 +16,8 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0066 [IN_PROGRESS] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
-- TASK-0098 [APPROVED] Move remaining double code from Core.Simulation to Lab (developer)
-- TASK-0099 [APPROVED] Project slots reuse with generation (ADR-0005 #388) (developer)
-- TASK-0100 [APPROVED] Replace client event sounds with listening-pack r2 (#403) (developer)
-- TASK-0101 [APPROVED] UI thematic instrument elements (flasks, pencil, ruler, caliper, soldering iron, protractor, gauges) (ui-art-director)
+- TASK-0103 [IN_PROGRESS] Tick allocations and GC: 1.1 GB per month, gen2 collections (EXP-0007 P8) (simulation-engineer)
+- TASK-0099 [REVIEW] Project slots reuse with generation (ADR-0005 #388) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры

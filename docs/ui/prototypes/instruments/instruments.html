@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>TASK-0101 · приборы: слой 1 (стол) и слой 2 (инструменты)</title>
+<meta name="viewport" content="width=1000">
+<style>
+:root{--ink:#1D1E20;--ink2:#55575A;--ink3:#64625C;--paper:#F3EEDF;--sheet:#FBF8EF;--hover:#EBE5D2;--rule:#BDB59F;--border:#3E3C38;--desk:#D9D3C0;
+--l1:#B8B094;--l1h:#C6BEA4;--alarm:#C42A1C;--warn:#D9860F;
+--sand:#8F7A2E;--teal:#168A92;--violet:#7A4AA8;--olive:#4F8A1E;--plum:#A03E82;--slate:#4A7088;
+--wsand:#EAD9A3;--wteal:#BFE6E5;--wviolet:#D8CCEE;--wolive:#CFE6AA;--wplum:#F0C9E0;--wslate:#C3D8EA}
+*{box-sizing:border-box}body{margin:0;background:#CFC8B2;color:var(--ink);font:13px/1.4 'Golos Text',system-ui,sans-serif}
+h1{font:600 18px Jura,system-ui,sans-serif;margin:14px 20px 4px}p.n{margin:0 20px 8px;color:var(--ink2);max-width:960px}
+.bar{margin:6px 20px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{font:inherit;color:var(--ink);background:var(--sheet);border:1px solid var(--border);border-radius:4px;padding:5px 10px;cursor:pointer}
+.btn.on{background:var(--ink);color:var(--sheet)}.sep{width:1px;height:22px;background:var(--rule);margin:0 6px}
+.scr{display:none;position:relative;width:960px;height:540px;margin:8px 20px;background:var(--desk);overflow:hidden;border:1px solid var(--border)}
+.scr.on{display:block}
+.grain{position:absolute;inset:0;pointer-events:none;opacity:.5;mix-blend-mode:multiply;z-index:1;
+background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='f' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='3'/><feColorMatrix values='-0.02 0 0 0 1  -0.02 0 0 0 1  -0.02 0 0 0 1  0 0 0 0 1'/></filter><rect width='160' height='160' filter='url(%23f)'/></svg>")}
+svg.desk{position:absolute;inset:0;width:960px;height:540px;z-index:0;fill:none;stroke:var(--l1);stroke-width:1.2;stroke-linejoin:miter;stroke-linecap:butt}
+.hide-l1 svg.desk{display:none}
+body:not(.l1) svg.desk{display:none}
+.rail{position:absolute;left:0;top:40px;bottom:0;width:60px;background:var(--paper);border-right:1px solid var(--border);z-index:3;padding:8px 0}
+.rail i{display:block;margin:6px 8px;height:30px;border:1px solid var(--border);border-left-width:4px;background:var(--sheet);font:600 12px Jura,sans-serif;font-style:normal;text-align:center;line-height:26px}
+.rail i.cur{background:var(--ink);color:var(--sheet)}.rail i.lock{background:repeating-linear-gradient(45deg,var(--sheet) 0 4px,var(--hover) 4px 5px);color:var(--ink3)}
+.top{position:absolute;left:0;top:0;right:0;height:40px;background:var(--paper);border-bottom:1px solid var(--border);z-index:3;display:flex;align-items:center;gap:14px;padding:0 14px}
+.top b{font:600 14px Jura,sans-serif}.top .w{color:var(--ink2)}
+.pnl{position:absolute;background:var(--sheet);border:1px solid var(--border);border-radius:3px;padding:10px 12px;z-index:3;overflow:hidden}
+.pnl h3{font:600 14px Jura,sans-serif;margin:0 0 6px;border-bottom:2px solid var(--ink);padding-bottom:3px}
+.pnl.dsc h3{border-bottom-color:var(--c)}
+.row{display:flex;align-items:center;gap:10px;margin:4px 0}.row .t{width:150px}.row small{color:var(--ink2)}
+.plate{border:1px solid var(--warn);background:#fff6e2;padding:5px 8px;border-left:5px solid var(--warn);display:inline-block}
+.bar0{display:inline-block;width:110px;height:10px;border:1px solid var(--ink);vertical-align:middle;background:linear-gradient(90deg,var(--c) var(--p),transparent var(--p))}
+.ctl .a{display:none}body.l2 .ctl .a{display:inline-block}body.l2 .ctl .b{display:none}
+.era1 .e2,.era1 .e3,.era2 .e1,.era2 .e3,.era3 .e1,.era3 .e2{display:none}
+.zone{position:absolute;z-index:2;display:none;border:1px dashed var(--ink3);background:repeating-linear-gradient(45deg,rgba(100,98,92,.18) 0 4px,transparent 4px 9px);pointer-events:none}
+.zone::after{content:"запрет приборов";position:absolute;left:4px;top:2px;font-size:11px;color:var(--ink)}
+body.zones .zone{display:block}
+.cap{position:absolute;right:10px;bottom:6px;z-index:3;font-size:12px;color:var(--ink)}
+svg.i{vertical-align:middle;fill:none;stroke:var(--ink);stroke-width:1;stroke-linejoin:miter;stroke-linecap:butt}
+table.res{border-collapse:collapse;margin:6px 20px;font-size:12px}table.res td{border:1px solid var(--rule);padding:2px 8px}.ok{color:#2A5E3F;font-weight:600}.no{color:var(--alarm);font-weight:700}
+#chk{margin:0 20px 20px;max-width:960px}
+</style></head>
+<body class="l1 l2 era1">
+<h1>Приборы на столе (слой 1) и приборы в интерфейсе (слой 2) — прототип TASK-0101</h1>
+<p class="n">Слой 1: приглушённые контуры предметов на подложке под панелями, не интерактивны. Слой 2: приборы-органы управления внутри панелей. Один класс предмета живёт только в одном слое (проверка внизу). «До» = слои выключены: так выглядит принятый клиент v0.5c. Нажмите на шкалу скорости и на губку штангенциркуля (слой 2).</p>
+<div class="bar" id="screens"></div>
+<div class="bar">
+<button class="btn" data-l="0">До (оба выкл.)</button><button class="btn" data-l="1">Слой 1 (стол)</button><button class="btn" data-l="2">Слой 2 (приборы)</button><button class="btn on" data-l="3">Оба слоя</button>
+<span class="sep"></span>
+<button class="btn on" data-e="1">1945 механика</button><button class="btn" data-e="2">1985 электроника</button><button class="btn" data-e="3">2025 цифра</button>
+<span class="sep"></span><label><input type="checkbox" id="zc"> показать зоны запрета</label>
+</div>
+
+<!-- S1 Science -->
+<div class="scr on" data-n="Наука"><svg class="desk" viewBox="0 0 960 540">
+ <g data-obj="slide-rule" data-layer="1" class="e1" transform="rotate(-6 700 440)"><rect x="500" y="400" width="400" height="56"/><rect x="500" y="418" width="400" height="20"/><line x1="506" x2="894" y1="409" y2="409" stroke-width="8" stroke-dasharray="1.2 7"/><line x1="506" x2="894" y1="447" y2="447" stroke-width="8" stroke-dasharray="1.2 11"/><rect x="690" y="394" width="42" height="68"/><line x1="711" x2="711" y1="394" y2="462"/></g>
+ <g data-obj="calculator" data-layer="1" class="e2" transform="rotate(-6 700 400)"><rect x="640" y="300" width="150" height="210" rx="8"/><rect x="654" y="314" width="122" height="34"/><line x1="656" x2="774" y1="378" y2="378" stroke-width="14" stroke-dasharray="26 10"/><line x1="656" x2="774" y1="404" y2="404" stroke-width="14" stroke-dasharray="26 10"/><line x1="656" x2="774" y1="430" y2="430" stroke-width="14" stroke-dasharray="26 10"/><line x1="656" x2="774" y1="456" y2="456" stroke-width="14" stroke-dasharray="26 10"/></g>
+ <g data-obj="glass-slab" data-layer="1" class="e3" transform="rotate(-5 700 420)"><rect x="520" y="330" width="380" height="220" rx="16"/><rect x="532" y="342" width="356" height="196" rx="10" stroke-dasharray="2 5"/><path d="M900 470 C 930 470 940 520 960 530"/></g>
+ <g data-obj="set-square" data-layer="1"><path d="M660 296 L800 296 L660 420 Z"/><path d="M676 312 L764 312 L676 388 Z"/></g>
+ <g data-obj="magnifier" data-layer="1"><circle cx="570" cy="330" r="36"/><circle cx="570" cy="330" r="30" stroke-dasharray="1 5"/><line x1="596" y1="356" x2="640" y2="402" stroke-width="7"/></g>
+ <g data-obj="ruler" data-layer="1"><rect x="64" y="526" width="420" height="14"/><line x1="68" x2="482" y1="527" y2="527" stroke-width="7" stroke-dasharray="1 9"/></g>
+</svg><div class="grain"></div>
+<div class="top"><b>12 апр 1946</b><span class="ctl"><span class="b"><svg class="i" width="64" height="24"><g class="cells"></g></svg></span><span class="a"><svg class="i gauge" width="120" height="36" data-obj="gauge" data-layer="2"></svg></span></span><span class="w sw">неделя/с</span><span style="margin-left:auto" class="w">сигналы · журнал · меню</span></div>
+<div class="rail"><i style="border-left-color:var(--ink)">К</i><i class="cur" style="border-left-color:var(--violet)">Т</i><i style="border-left-color:var(--teal)">Э</i><i style="border-left-color:var(--sand)">Ф</i><i class="lock">М</i><i class="lock">И</i><i class="lock">Г</i><i class="lock">Д</i></div>
+<div class="pnl dsc" style="--c:var(--violet);left:76px;top:56px;width:560px;height:300px"><h3>Исследования</h3>
+ <div class="row"><span class="t">Реактивный двигатель</span><span class="ctl"><span class="b"><span class="bar0" style="--c:var(--violet);--p:62%"></span></span><span class="a"><svg class="i flask" width="40" height="58" data-level=".62" data-ink="violet" data-obj="flask" data-layer="2"></svg></span></span><small>62% · 14 мес.</small></div>
+ <div class="row"><span class="t">Жаропрочный сплав</span><span class="ctl"><span class="b"><span class="bar0" style="--c:var(--violet);--p:35%"></span></span><span class="a"><svg class="i flask" width="40" height="58" data-level=".35" data-ink="violet" data-obj="flask" data-layer="2"></svg></span></span><small>35% · 31 мес.</small></div>
+ <div class="row"><span class="t">Радиолокация</span><span class="ctl"><span class="b"><span class="bar0" style="--c:var(--violet);--p:88%"></span></span><span class="a"><svg class="i flask" width="40" height="58" data-level=".88" data-ink="violet" data-obj="flask" data-layer="2"></svg></span></span><small>88% · 3 мес.</small></div>
+ <div class="row" style="margin-top:12px"><span class="t">Приоритет, %</span><span class="ctl"><span class="b" style="border:1px solid var(--border);padding:2px 10px;background:#fff">40</span><span class="a"><svg class="i" width="96" height="24" data-obj="pencil" data-layer="2"><g transform="rotate(-18 10 14)"><path d="M4 11 L14 11 L14 17 L4 17 L0 14 Z"/><rect x="14" y="11" width="62" height="6"/><line x1="14" x2="76" y1="14" y2="14"/><rect x="76" y="11" width="8" height="6"/></g></svg><span style="border-bottom:2px solid var(--ink);padding:2px 10px">40</span></span></span><small>карандаш = поле правится</small></div>
+</div>
+<div class="pnl dsc" style="--c:var(--violet);left:652px;top:56px;width:292px;height:196px"><h3>Открытия</h3><div class="row"><small>Турбина G1 · Алюминий · Радар</small></div><div class="row"><small>Таблица ведётся в журнале</small></div></div>
+<div class="pnl" style="left:76px;top:372px;width:400px;height:120px"><h3>Журнал</h3><div class="row"><small>1946-03 Сплав: изыскание закончено</small></div></div>
+<div class="zone" style="left:76px;top:56px;width:560px;height:6px"></div>
+<div class="cap">Наука · слой 1: 3 предмета + эпоха; слой 2: колбы, карандаш</div></div>
+
+<!-- S2 Production -->
+<div class="scr" data-n="Производство"><svg class="desk" viewBox="0 0 960 540">
+ <g data-obj="soldering-iron" data-layer="1" transform="rotate(-14 740 400)"><rect x="560" y="388" width="170" height="26" rx="4"/><path d="M730 392 L800 398 L830 401 L800 404 L730 410"/><path d="M520 401 Q 540 380 560 401 T 600 401" stroke-dasharray="1 0"/><line x1="580" x2="716" y1="392" y2="392" stroke-width="3" stroke-dasharray="1.2 6"/></g>
+ <g data-obj="tweezers" data-layer="1"><path d="M610 480 L850 462"/><path d="M610 480 L850 474"/><line x1="620" y1="479" x2="660" y2="479" stroke-width="6"/></g>
+ <g data-obj="board" data-layer="1"><rect x="560" y="290" width="150" height="80"/><path d="M570 310 H610 V340 H650 M570 330 H590 V355 H690 M700 300 V350"/><circle cx="610" cy="340" r="4"/><circle cx="650" cy="340" r="4"/><rect x="662" y="302" width="34" height="22" stroke-dasharray="2 3"/></g>
+ <g data-obj="gear" data-layer="1"><circle cx="845" cy="330" r="42" stroke-width="10" stroke-dasharray="7 7" stroke="var(--l1h)"/><circle cx="845" cy="330" r="34"/><circle cx="845" cy="330" r="10"/></g>
+ <g data-obj="ruler" data-layer="1"><rect x="64" y="526" width="420" height="14"/><line x1="68" x2="482" y1="527" y2="527" stroke-width="7" stroke-dasharray="1 9"/></g>
+</svg><div class="grain"></div>
+<div class="top"><b>12 апр 1946</b><span class="ctl"><span class="b"><svg class="i" width="64" height="24"><g class="cells"></g></svg></span><span class="a"><svg class="i gauge" width="120" height="36" data-obj="gauge" data-layer="2"></svg></span></span><span class="w sw">неделя/с</span></div>
+<div class="rail"><i style="border-left-color:var(--ink)">К</i><i style="border-left-color:var(--violet)">Т</i><i class="cur" style="border-left-color:var(--teal)">Э</i><i style="border-left-color:var(--sand)">Ф</i><i class="lock">М</i><i class="lock">И</i><i class="lock">Г</i><i class="lock">Д</i></div>
+<div class="pnl dsc" style="--c:var(--teal);left:76px;top:56px;width:480px;height:240px"><h3>Запасы</h3>
+ <div class="row"><span class="ctl"><span class="b"><span class="bar0" style="--c:var(--teal);--p:70%"></span> сталь 70%</span><span class="a"><svg class="i flask" width="40" height="58" data-level=".7" data-ink="teal" data-obj="flask" data-layer="2"></svg> сталь 70%</span></span>
+ <span class="ctl" style="margin-left:18px"><span class="b"><span class="bar0" style="--c:var(--teal);--p:45%"></span> алюминий 45%</span><span class="a"><svg class="i flask" width="40" height="58" data-level=".45" data-ink="teal" data-obj="flask" data-layer="2"></svg> алюминий 45%</span></span></div>
+ <div class="row"><span class="ctl"><span class="b"><span class="bar0" style="--c:var(--teal);--p:12%"></span> сплав 12%</span><span class="a"><svg class="i flask" width="40" height="58" data-level=".12" data-ink="teal" data-hatch="1" data-obj="flask" data-layer="2"></svg> сплав 12%</span></span> <span class="plate"><b>Нехватка сплава</b></span></div>
+</div>
+<div class="pnl dsc" style="--c:var(--teal);left:572px;top:56px;width:372px;height:150px"><h3>Заказы</h3><div class="row"><small>Таблица заказов (зона запрета приборов)</small></div><div class="row"><small>Двигатель Г1 · 400 · 12 мес.</small></div></div>
+<div class="zone" style="left:572px;top:92px;width:372px;height:114px"></div>
+<div class="cap">Производство · слой 1: паяльник, пинцет, плата, шестерня; слой 2: колбы запасов</div></div>
+
+<!-- S3 Finance -->
+<div class="scr" data-n="Финансы"><svg class="desk" viewBox="0 0 960 540">
+ <g data-obj="ledger" data-layer="1" transform="rotate(4 740 400)"><rect x="560" y="320" width="150" height="170"/><rect x="710" y="320" width="150" height="170"/><path d="M576 346 H694 M576 366 H694 M576 386 H694 M576 406 H694 M576 426 H694 M726 346 H844 M726 366 H844 M726 386 H844 M726 406 H844 M726 426 H844"/></g>
+ <g data-obj="inkwell" data-layer="1"><circle cx="520" cy="440" r="26"/><circle cx="520" cy="440" r="12"/><rect x="508" y="396" width="24" height="12"/></g>
+ <g data-obj="paper-tape" data-layer="1"><path d="M880 120 C 900 170 860 200 900 260 S 880 330 920 360" stroke-width="12" stroke="var(--l1h)"/><path d="M874 120 C 894 170 854 200 894 260 S 874 330 914 360"/></g>
+ <g data-obj="ruler" data-layer="1"><rect x="64" y="526" width="420" height="14"/><line x1="68" x2="482" y1="527" y2="527" stroke-width="7" stroke-dasharray="1 9"/></g>
+</svg><div class="grain"></div>
+<div class="top"><b>12 апр 1946</b><span class="ctl"><span class="b"><svg class="i" width="64" height="24"><g class="cells"></g></svg></span><span class="a"><svg class="i gauge" width="120" height="36" data-obj="gauge" data-layer="2"></svg></span></span><span class="w sw">неделя/с</span></div>
+<div class="rail"><i style="border-left-color:var(--ink)">К</i><i style="border-left-color:var(--violet)">Т</i><i style="border-left-color:var(--teal)">Э</i><i class="cur" style="border-left-color:var(--sand)">Ф</i><i class="lock">М</i><i class="lock">И</i><i class="lock">Г</i><i class="lock">Д</i></div>
+<div class="pnl dsc" style="--c:var(--sand);left:76px;top:56px;width:560px;height:220px"><h3>Бюджет: доля на науку</h3>
+ <div class="ctl"><div class="b"><span class="bar0" style="--c:var(--sand);--p:35%;width:300px"></span> 35%</div><div class="a"><svg class="i cal" width="520" height="120" data-obj="caliper" data-layer="2" data-v="35"></svg></div></div>
+ <div class="row"><small>Остальное: производство 40% · резерв 25%. Приказ — кнопкой ниже.</small></div></div>
+<div class="pnl dsc" style="--c:var(--sand);left:652px;top:56px;width:292px;height:150px"><h3>Лицензия</h3><div class="row"><small>Условия, срок, плата</small></div></div>
+<div class="cap">Финансы · слой 1: гроссбух, чернильница, лента; слой 2: штангенциркуль</div></div>
+
+<!-- S4 Forces (locked) -->
+<div class="scr" data-n="Силы (заперто)"><svg class="desk" viewBox="0 0 960 540">
+ <g data-obj="protractor" data-layer="1"><path d="M560 470 A110 110 0 0 1 780 470 Z"/><path d="M582 470 A88 88 0 0 1 758 470"/><path d="M562 468 A108 108 0 0 1 778 468" stroke-width="8" stroke-dasharray="1 11"/><line x1="670" y1="470" x2="670" y2="452"/></g>
+ <g data-obj="dividers" data-layer="1"><circle cx="850" cy="270" r="6"/><path d="M850 270 L820 400 M850 270 L880 400"/><path d="M850 264 V232"/><circle cx="850" cy="226" r="6"/></g>
+ <g data-obj="staff-pin" data-layer="1"><path d="M520 300 l40 0 M540 280 v40"/><circle cx="540" cy="300" r="20"/><circle cx="540" cy="300" r="3"/></g>
+ <g data-obj="ruler" data-layer="1"><rect x="64" y="526" width="420" height="14"/><line x1="68" x2="482" y1="527" y2="527" stroke-width="7" stroke-dasharray="1 9"/></g>
+</svg><div class="grain"></div>
+<div class="top"><b>12 апр 1946</b><span class="ctl"><span class="b"><svg class="i" width="64" height="24"><g class="cells"></g></svg></span><span class="a"><svg class="i gauge" width="120" height="36" data-obj="gauge" data-layer="2"></svg></span></span><span class="w sw">неделя/с</span></div>
+<div class="rail"><i style="border-left-color:var(--ink)">К</i><i style="border-left-color:var(--violet)">Т</i><i style="border-left-color:var(--teal)">Э</i><i style="border-left-color:var(--sand)">Ф</i><i class="lock cur" style="background:var(--ink);color:var(--sheet)">М</i><i class="lock">И</i><i class="lock">Г</i><i class="lock">Д</i></div>
+<div class="pnl dsc" style="--c:var(--slate);left:76px;top:56px;width:480px;height:170px"><h3>Силы · заперто (M2–M3)</h3><div class="row"><small>Механики пока нет: ни цифр, ни приборов. Слой 2 здесь пуст намеренно (без ложной механики).</small></div></div>
+<div class="cap">Силы · слой 1 — да, слой 2 — нет</div></div>
+
+<!-- S5 Map -->
+<div class="scr" data-n="Карта"><svg class="desk" viewBox="0 0 960 540">
+ <g data-obj="ruler" data-layer="1"><rect x="64" y="526" width="420" height="14"/><line x1="68" x2="482" y1="527" y2="527" stroke-width="7" stroke-dasharray="1 9"/></g>
+</svg><div class="grain"></div>
+<div class="top"><b>12 апр 1946</b><span class="ctl"><span class="b"><svg class="i" width="64" height="24"><g class="cells"></g></svg></span><span class="a"><svg class="i gauge" width="120" height="36" data-obj="gauge" data-layer="2"></svg></span></span><span class="w sw">неделя/с</span></div>
+<div class="rail"><i class="cur" style="border-left-color:var(--ink)">К</i><i style="border-left-color:var(--violet)">Т</i><i style="border-left-color:var(--teal)">Э</i><i style="border-left-color:var(--sand)">Ф</i><i class="lock">М</i><i class="lock">И</i><i class="lock">Г</i><i class="lock">Д</i></div>
+<div style="position:absolute;left:60px;top:40px;right:0;bottom:14px;background:#B8DCEA;z-index:3;display:flex;align-items:center;justify-content:center"><div style="width:380px;height:380px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#EBE3C6 0 22%,#9CCBE0 23%);border:1px solid var(--border)"></div></div>
+<div class="zone" style="left:60px;top:40px;width:900px;height:486px"></div>
+<div class="cap">Карта · приборов нет, кроме шкалы скорости в верхней полосе; на столе только линейка по нижней кромке</div></div>
+
+<h1 style="font-size:15px">Проверка</h1>
+<div id="chk"></div>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const INKS={sand:['8F7A2E','EAD9A3','635420'],teal:['168A92','BFE6E5','1F5F63'],violet:['7A4AA8','D8CCEE','53407A'],olive:['4F8A1E','CFE6AA','4A6020'],plum:['A03E82','F0C9E0','75335F'],slate:['4A7088','C3D8EA','3F5666']};
+const STEPS=[['пауза','--ink3'],['день/с','teal'],['неделя/с','olive'],['месяц/с','plum']];
+let era=1,speed=2;
+// ---- screens, toggles
+$$('.scr').forEach((s,i)=>{const b=document.createElement('button');b.className='btn'+(i?'':' on');b.textContent=s.dataset.n;b.onclick=()=>{$$('.scr').forEach(x=>x.classList.remove('on'));s.classList.add('on');$$('#screens .btn').forEach(x=>x.classList.remove('on'));b.classList.add('on')};$('#screens').append(b)});
+$$('[data-l]').forEach(b=>b.onclick=()=>{const v=+b.dataset.l;document.body.classList.toggle('l1',!!(v&1));document.body.classList.toggle('l2',!!(v&2));$$('[data-l]').forEach(x=>x.classList.remove('on'));b.classList.add('on')});
+$$('[data-e]').forEach(b=>b.onclick=()=>{era=+b.dataset.e;document.body.className=document.body.className.replace(/era\d/,'era'+era);$$('[data-e]').forEach(x=>x.classList.remove('on'));b.classList.add('on');draw();check()});
+$('#zc').onchange=e=>document.body.classList.toggle('zones',e.target.checked);
+// ---- layer 2 drawings (all keep the same 120x36 hit area / same value semantics in every era)
+function cellsSvg(){return [0,1,2,3].map(i=>{const on=i<speed&&i<3,c=['teal','olive','plum'][i];const h=7+4*i;return `<rect x="${i*14+2}" y="${22-h}" width="8" height="${h}" fill="${on?`var(--${c})`:'none'}" stroke="var(--ink)" ${i==3||!on?'stroke-dasharray="2 2"':''}/>`}).join('')}
+function gaugeSvg(g){
+ const cols=['teal','olive','plum'];let o='';
+ if(era==1){ // needle dial: arc segments in the three inks, needle by step
+  const a=d=>{const r=d*Math.PI/180;return[60+34*Math.sin(r),35-34*Math.cos(r)]};
+  const seg=(d0,d1,c,dash)=>{const p=a(d0),q=a(d1);return `<path d="M${p[0]} ${p[1]} A34 34 0 0 1 ${q[0]} ${q[1]}" stroke="var(--${c})" stroke-width="5" ${dash?'stroke-dasharray="2 2"':''}/>`};
+  o+=seg(-72,-36,'teal')+seg(-34,2,'olive')+seg(4,38,'plum')+seg(40,72,'sand',1);
+  for(let d=-72;d<=72;d+=12){const p=a(d),q=[60+27*Math.sin(d*Math.PI/180),35-27*Math.cos(d*Math.PI/180)];o+=`<line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke="var(--ink2)"/>`}
+  const ang=[-60,-18,20,56][speed],n=a(ang);o+=`<line x1="60" y1="35" x2="${60+30*Math.sin(ang*Math.PI/180)}" y2="${35-30*Math.cos(ang*Math.PI/180)}" stroke="var(--ink)" stroke-width="2"/><circle cx="60" cy="35" r="3" fill="var(--ink)"/>`;
+ }else if(era==2){ // lit bar block with segment ticks
+  for(let i=0;i<4;i++){const on=i<speed&&i<3;for(let j=0;j<3;j++)o+=`<rect x="${6+i*28}" y="${30-j*8-4}" width="22" height="6" ${on?`fill="var(--${cols[i]})"`:'fill="none"'} stroke="var(--ink)" ${i==3?'stroke-dasharray="2 2"':''}/>`}
+ }else{ // 2025: plain scale and a cursor
+  o+=`<line x1="8" y1="22" x2="112" y2="22" stroke="var(--ink)" stroke-width="1.5"/>`;for(let i=0;i<4;i++)o+=`<line x1="${14+i*30}" y1="14" x2="${14+i*30}" y2="30" stroke="var(--${i<3?cols[i]:'sand'})" stroke-width="4"/>`;
+  o+=`<path d="M${14+speed*30} 8 l-5 -6 h10 z" fill="var(--ink)" stroke="none" transform="translate(0 6)"/>`;
+ }
+ g.innerHTML=o;
+}
+function flaskSvg(f){
+ const id='fc'+Math.random().toString(36).slice(2,7),ink=INKS[f.dataset.ink],lv=+f.dataset.level,y=54-lv*42;
+ const p='M15 3 H25 V17 L37 48 Q39 55 33 55 H7 Q1 55 3 48 L15 17 Z';
+ f.innerHTML=`<defs><clipPath id="${id}"><path d="${p}"/></clipPath><pattern id="${id}h" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" stroke="var(--ink)" stroke-width="1.2"/></pattern></defs>`+
+ `<rect x="0" y="${y}" width="40" height="60" fill="#${ink[1]}" clip-path="url(#${id})"/>`+(f.dataset.hatch?`<rect x="0" y="${y}" width="40" height="60" fill="url(#${id}h)" clip-path="url(#${id})" opacity=".55"/>`:'')+
+ `<line x1="0" x2="40" y1="${y}" y2="${y}" stroke="var(--ink)" stroke-width="1.4" clip-path="url(#${id})"/><path d="${p}" stroke="#${ink[0]}" stroke-width="1.6"/>`+[.25,.5,.75].map(t=>`<line x1="${34-t*6+0}" x2="${38-t*6}" y1="${54-t*42}" y2="${54-t*42}" stroke="var(--ink2)"/>`).join('');
+}
+function calSvg(c){
+ const v=+c.dataset.v,x0=20,w=460,x=x0+w*v/100;let t='';
+ for(let i=0;i<=100;i+=5)t+=`<line x1="${x0+w*i/100}" x2="${x0+w*i/100}" y1="44" y2="${i%10?52:58}" stroke="var(--ink2)"/>`+(i%20==0?`<text x="${x0+w*i/100}" y="74" font-size="11" text-anchor="middle" fill="var(--ink)" stroke="none">${i}</text>`:'');
+ const vern=era==1?[0,1,2,3,4,5,6,7,8,9].map(i=>`<line x1="${x+i*4.4}" x2="${x+i*4.4}" y1="84" y2="${i%5?90:94}" stroke="var(--ink2)"/>`).join('')+`<rect x="${x}" y="78" width="46" height="18" stroke="var(--ink)"/>`:'';
+ const ro=era==1?'':`<rect x="${Math.min(x+10,x0+w-80)}" y="84" width="76" height="26" rx="${era==2?2:6}" fill="${era==2?'var(--ink)':'var(--sheet)'}" stroke="var(--ink)"/><text x="${Math.min(x+10,x0+w-80)+38}" y="102" font-size="${era==2?14:15}" text-anchor="middle" font-family="${era==2?'monospace':'inherit'}" fill="${era==2?'var(--sheet)':'var(--ink)'}" stroke="none">${v.toFixed(0)} %</text>`;
+ c.innerHTML=`<rect x="${x0}" y="22" width="${w*v/100}" height="20" fill="#EAD9A3" stroke="none"/><rect x="${x0}" y="20" width="${w}" height="24" stroke="var(--ink)"/><line x1="${x0}" x2="${x0+w}" y1="44" y2="44" stroke="var(--ink)" stroke-width="1.4"/>${t}`+
+ `<rect x="${x0-8}" y="12" width="10" height="46" fill="var(--sheet)" stroke="var(--ink)"/><g class="jaw" style="cursor:ew-resize"><rect x="${x-4}" y="12" width="10" height="46" fill="var(--sheet)" stroke="var(--ink)" stroke-width="1.6"/><line x1="${x+1}" x2="${x+1}" y1="12" y2="44" stroke="#${INKS.sand[0]}" stroke-width="2"/><rect x="${x-6}" y="4" width="14" height="10" fill="var(--sheet)" stroke="var(--ink)"/></g>`+vern+ro;
+ const jaw=$('.jaw',c);jaw.onpointerdown=e=>{jaw.setPointerCapture(e.pointerId);const mv=ev=>{const r=c.getBoundingClientRect();c.dataset.v=Math.max(0,Math.min(100,Math.round((ev.clientX-r.left-x0)/w*20)*5));calSvg(c)};c.onpointermove=mv;c.onpointerup=()=>{c.onpointermove=null}};
+}
+function draw(){
+ $$('.gauge').forEach(g=>{gaugeSvg(g);g.onclick=()=>{speed=(speed+1)%4;draw()}});
+ $$('.cells').forEach(c=>c.innerHTML=cellsSvg());
+ $$('.sw').forEach(s=>s.textContent=STEPS[speed][0]);
+ $$('.flask').forEach(flaskSvg);$$('.cal').forEach(calSvg);
+}
+draw();
+// ---- checks: colours (port of ContrastValidator maths) + structural rules
+const h2l=h=>[0,2,4].map(i=>{const c=parseInt(h.replace('#','').substr(i,2),16)/255;return c<=.04045?c/12.92:((c+.055)/1.055)**2.4});
+const sc=(l,k)=>l.map(x=>Math.min(1,x*k)),Y=l=>.2126729*l[0]+.7151522*l[1]+.072175*l[2];
+const lab=l=>{const X=.4124564*l[0]+.3575761*l[1]+.1804375*l[2],y=Y(l),Z=.0193339*l[0]+.119192*l[1]+.9503041*l[2],f=t=>t>216/24389?Math.cbrt(t):(24389/27*t+16)/116,fx=f(X/.95047),fy=f(y),fz=f(Z/1.08883);return[116*fy-16,500*(fx-fy),200*(fy-fz)]};
+function dE(A,B){const[L1,a1,b1]=A,[L2,a2,b2]=B,rad=Math.PI/180,C1=Math.hypot(a1,b1),C2=Math.hypot(a2,b2),Cm=(C1+C2)/2,G=.5*(1-Math.sqrt(Cm**7/(Cm**7+25**7))),a1p=(1+G)*a1,a2p=(1+G)*a2,C1p=Math.hypot(a1p,b1),C2p=Math.hypot(a2p,b2),h1=(Math.atan2(b1,a1p)/rad+360)%360,h2=(Math.atan2(b2,a2p)/rad+360)%360;
+ let dh=0;if(C1p*C2p){dh=h2-h1;if(dh>180)dh-=360;else if(dh<-180)dh+=360}
+ const dL=L2-L1,dC=C2p-C1p,dH=2*Math.sqrt(C1p*C2p)*Math.sin(dh*rad/2),Lm=(L1+L2)/2,Cp=(C1p+C2p)/2;let hm=h1+h2;if(C1p*C2p){hm=Math.abs(h1-h2)<=180?(h1+h2)/2:(h1+h2<360?(h1+h2+360)/2:(h1+h2-360)/2)}
+ const T=1-.17*Math.cos((hm-30)*rad)+.24*Math.cos(2*hm*rad)+.32*Math.cos((3*hm+6)*rad)-.2*Math.cos((4*hm-63)*rad),dt=30*Math.exp(-(((hm-275)/25)**2)),Rc=2*Math.sqrt(Cp**7/(Cp**7+25**7)),Sl=1+.015*(Lm-50)**2/Math.sqrt(20+(Lm-50)**2),Sc=1+.045*Cp,Sh=1+.015*Cp*T,Rt=-Math.sin(2*dt*rad)*Rc;
+ return Math.sqrt((dL/Sl)**2+(dC/Sc)**2+(dH/Sh)**2+Rt*(dC/Sc)*(dH/Sh))}
+const wc=(a,b)=>{let x=Y(a),y=Y(b);if(x<y)[x,y]=[y,x];return(x+.05)/(y+.05)};
+const ok=l=>{const[r,g,b]=l,L=.4122214708*r+.5363325363*g+.0514459929*b,M=.2119034982*r+.6806995451*g+.1073969566*b,S=.0883024619*r+.2817188376*g+.6299787005*b,l_=Math.cbrt(L),m_=Math.cbrt(M),s_=Math.cbrt(S);return Math.hypot(1.9779984951*l_-2.428592205*m_+.4505937099*s_,.0259040371*l_+.7827717662*m_-.808675766*s_)};
+function checks(){
+ const R=[],rec=(n,p,d)=>R.push([n,p,d]),P={ink:'1D1E20',ink2:'55575A',ink3:'64625C',paper:'F3EEDF',sheet:'FBF8EF',desk:'D9D3C0'},L1={line:'B8B094',hatch:'C6BEA4'},KS=[.94,.955,1,1.02],mn=a=>Math.min(...a),mx=a=>Math.max(...a);
+ for(const[k,floor]of[['line',6],['hatch',3]]){const v=[];KS.forEach(q=>{v.push(dE(lab(sc(h2l(P.desk),q)),lab(sc(h2l(L1[k]),q))));v.push(dE(lab(sc(h2l(P.desk),q)),lab(h2l(L1[k]))))});
+  rec(`L1 ${k} против стола, dE2000 в [${floor};14]`,mn(v)>=floor&&mx(v)<=14,`min ${mn(v).toFixed(1)} max ${mx(v).toFixed(1)}`);rec(`L1 ${k}: хрома OKLCH ≤ 0,06`,ok(h2l(L1[k]))<=.06,'C '+ok(h2l(L1[k])).toFixed(3))}
+ let w=wc(h2l(L1.line),h2l(P.desk));rec('L1 линия против стола WCAG < 1,6 (не читается как орган)',w<1.6,w.toFixed(2));
+ w=wc(sc(h2l(P.desk),.94),h2l(P.ink));rec('подпись ink на столе x0,94, WCAG ≥ 4,5',w>=4.5,w.toFixed(2));
+ for(const[n,c,need]of[['ink',P.ink,7],['ink-2',P.ink2,4.5],['ink-3',P.ink3,4.5]]){w=mn([P.sheet,P.paper].flatMap(b=>[.94,1].map(q=>wc(sc(h2l(b),q),h2l(c)))));rec(`L2 ${n} на sheet/paper, WCAG ≥ ${need}`,w>=need,w.toFixed(2))}
+ for(const[n,[ln,ws,tx]]of Object.entries(INKS)){
+  w=mn([.955,1].map(q=>wc(sc(h2l(P.sheet),q),h2l(ln))));rec(`L2 line.${n} на sheet, WCAG ≥ 3`,w>=3,w.toFixed(2));
+  let d=mn([.955,1,1.02].map(q=>dE(lab(sc(h2l(P.sheet),q)),lab(sc(h2l(ws),q)))));rec(`L2 wash.${n} против sheet, dE2000 ≥ 6`,d>=6,d.toFixed(1));
+  w=mn([.94,1].map(q=>wc(sc(h2l(ws),q),h2l(P.ink))));rec(`L2 ink на wash.${n}, WCAG ≥ 7`,w>=7,w.toFixed(2));
+  w=mn([.94,1].map(q=>wc(sc(h2l(P.sheet),q),h2l(tx))));rec(`L2 text.${n} на sheet x0,94, WCAG ≥ 4,5`,w>=4.5,w.toFixed(2));
+  rec(`L2 хрома line.${n} ≤ 0,16 / wash ≤ 0,13`,ok(h2l(ln))<=.16&&ok(h2l(ws))<=.13,`${ok(h2l(ln)).toFixed(3)} / ${ok(h2l(ws)).toFixed(3)}`)}
+ w=dE(lab(h2l(L1.line)),lab(h2l(P.ink)));rec('L1 линия против L2 ink, dE2000 ≥ 40 (слои не спутать)',w>=40,w.toFixed(1));
+ // structural rules, measured on the DOM with all layers on
+ const body=document.body,saved=body.className;body.className='l1 l2 era'+era;const objs={},bad=[],hits=[];
+ $$('.scr').forEach(s=>{const was=s.classList.contains('on');s.classList.add('on');const zs=$$('.zone',s).map(z=>z.getBoundingClientRect()),sr=s.getBoundingClientRect();
+  $$('[data-obj]',s).forEach(e=>{const o=e.dataset.obj,l=e.dataset.layer;(objs[o]=objs[o]||new Set()).add(l);
+   if(l=='2'){const r=e.getBoundingClientRect();if(r.width&&zs.some(z=>r.left<z.right&&r.right>z.left&&r.top<z.bottom&&r.bottom>z.top))hits.push(s.dataset.n+':'+o)}
+   if(l=='2'&&e.closest('.top')===null){} });
+  const pl=$$('.plate',s).map(p=>p.getBoundingClientRect());$$('[data-layer="2"]',s).forEach(e=>{const r=e.getBoundingClientRect();if(r.width&&pl.some(z=>r.left<z.right&&r.right>z.left&&r.top<z.bottom&&r.bottom>z.top))hits.push(s.dataset.n+': '+e.dataset.obj+' перекрывает плашку')});
+  if(!was)s.classList.remove('on')});
+ body.className=saved;
+ for(const o in objs)if(objs[o].size>1)bad.push(o);
+ rec('Правило слоёв: ни один класс предмета не лежит в обоих слоях ('+Object.keys(objs).length+' классов)',bad.length==0,bad.length?bad.join(', '):Object.keys(objs).sort().join(', '));
+ rec('Слой 2 не заходит в зоны запрета и под плашки warn/alarm',hits.length==0,hits.length?hits.join('; '):'0 пересечений');
+ return R}
+function check(){const R=checks(),f=R.filter(r=>!r[1]).length;
+ $('#chk').innerHTML=`<p><b>${f?'FAIL':'PASS'}</b>: ${R.length} проверок, PASS ${R.length-f}, FAIL ${f}. Расчёт идёт в браузере при загрузке (та же математика, что в ContrastValidator.cs); пороги — [Предл.] из UI_INSTRUMENTS.md §5.</p><table class="res">`+R.map(r=>`<tr><td class="${r[1]?'ok':'no'}">${r[1]?'PASS':'FAIL'}</td><td>${r[0]}</td><td>${r[2]}</td></tr>`).join('')+'</table>'}
+check();
+</script></body></html>

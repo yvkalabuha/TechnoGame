@@ -4,7 +4,6 @@ using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
-using Singularity.Core.Simulation;
 using Singularity.Kernel;
 
 namespace Singularity.Architecture.Tests;
@@ -135,7 +134,7 @@ public class DeterminismRulesTests
     [InlineData(typeof(UsesDoubleArray), "System.Double")]
     [InlineData(typeof(UsesNullableDouble), "System.Nullable`1[System.Double]")]
     [InlineData(typeof(CallsNextUnit), "CounterRng.NextUnit (return)")]
-    [InlineData(typeof(CallsGetDouble), "ParamSet.GetDouble (return)")]
+    [InlineData(typeof(CallsGetDouble), "DoubleSource.Get (return)")]
     [InlineData(typeof(CallsToDouble), "Fx6.ToDouble (return)")]
     [InlineData(typeof(CallsPowFrac), "DetMath.PowFrac (return)")]
     [InlineData(typeof(CallsGenericWithDouble), "GenericHelper.Run (type argument)")]
@@ -144,7 +143,7 @@ public class DeterminismRulesTests
         Type[] types = [sample, .. sample.GetNestedTypes(IlScanner.AllDeclared)];
         Assert.Contains(DeterminismRules.Check(types, forbidDouble: true),
             v => v.Contains(expected, StringComparison.Ordinal));
-        // Default mode keeps double allowed (R4 exceptions, Kernel).
+        // Default mode keeps double allowed (Kernel allowlist, Lab).
         Assert.Empty(DeterminismRules.Check(types));
     }
 
@@ -211,9 +210,14 @@ internal sealed class CallsNextUnit
     public static bool Run(CounterRng rng) => rng.NextUnit(0, 0, 0, 0) < 0.5;
 }
 
+internal static class DoubleSource
+{
+    public static double Get(string key) => key.Length;
+}
+
 internal sealed class CallsGetDouble
 {
-    public static bool Run(ParamSet p) => p.GetDouble("x") > 0;
+    public static bool Run() => DoubleSource.Get("x") > 0;
 }
 
 internal sealed class CallsToDouble

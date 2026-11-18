@@ -9,7 +9,7 @@ using System.Reflection;
 using Singularity.Core.Industry;
 using Singularity.Core.Policy;
 using Singularity.Core.Products;
-using Singularity.Core.Simulation;
+using Singularity.Lab.Simulation;
 using Singularity.Kernel;
 using Singularity.Lab.Models.Slice;
 using Singularity.Session;

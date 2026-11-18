@@ -13,7 +13,8 @@ namespace Singularity.Lab.Bench;
 /// <item><c>process</c> — one process: monthly + daily run (П3, R4 with switches), decomposition П4;</item>
 /// <item><c>validity</c> — V1/V2 hashes over threads 1/4/8/16 and ChunkSize 1/8/32 (П6), no timing;</item>
 /// <item><c>r1</c>, <c>r2</c>, <c>kcopy</c>, <c>r3</c> — ADR-0017 R1, R2 (а)–(д), the ADR-0016 п. 2 fallback, R3;</item>
-/// <item><c>fref</c> — the frequency reference f_ref (П5).</item>
+/// <item><c>fref</c> — the frequency reference f_ref (П5);</item>
+/// <item><c>alloc</c> — allocated bytes and GC counts per month and of the main pure reads (TASK-0103), no timing.</item>
 /// </list>
 /// </summary>
 internal static class BenchCommand
@@ -34,6 +35,7 @@ internal static class BenchCommand
             "kcopy" => R2(o, "a", "kcopy"),
             "r3" => R3(o),
             "fref" => FRef(o),
+            "alloc" => Alloc(o),
             _ => throw new UsageException($"Unknown bench mode '{mode}'."),
         };
     }
@@ -134,6 +136,18 @@ internal static class BenchCommand
         o.CheckAllUsed();
         Console.WriteLine($"process {p.Index}: {p.Block} {p.Point.Name} seed {p.Seed} t{p.Threads} r{p.Replica} bg{p.Background}{(rp.Smoke ? " [smoke]" : "")}");
         return ProcessBench.Execute(p, rp, outFile, Console.Out);
+    }
+
+    private static int Alloc(Options o)
+    {
+        string outFile = Path.GetFullPath(o.Required("out"));
+        SynthWorldSpec spec = Point(o);
+        ulong seed = U64(o, "seed") ?? 1;
+        int threads = o.Int("threads", 1, 1024) ?? 1;
+        int months = o.Int("months", 1, 10_000) ?? 36;
+        o.CheckAllUsed();
+        SynthWorld w = Build(spec, outFile);
+        return AllocProfile.Run(w, seed, threads, months, outFile, Console.Out);
     }
 
     private static int Validity(Options o)

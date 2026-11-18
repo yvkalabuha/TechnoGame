@@ -1,4 +1,4 @@
-using Singularity.Core.Simulation;
+using Singularity.Lab.Simulation;
 using Singularity.Kernel;
 
 namespace Singularity.Lab.Models.ToyFunnel;

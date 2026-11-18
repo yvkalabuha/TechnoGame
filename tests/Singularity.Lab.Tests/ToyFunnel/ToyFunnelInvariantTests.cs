@@ -95,7 +95,7 @@ public class ToyFunnelInvariantTests
         // rho0 = 100 makes staff overshoot below zero within two months.
         var values = ToyRun.Values("A", 0.25);
         int index = values.FindIndex(kv => kv.Key == "rho0");
-        values[index] = new("rho0", new Singularity.Core.Simulation.ParamValue(Singularity.Core.Simulation.ParamKind.Number, "100"));
+        values[index] = new("rho0", new Singularity.Lab.Simulation.ParamValue(Singularity.Lab.Simulation.ParamKind.Number, "100"));
         var e = Assert.Throws<ToyFunnelInvariantException>(() => ToyRun.Run(new(values), seed: 1, ticks: 24));
         Assert.Contains("negative stock", e.Message);
         Assert.InRange(e.Tick, 0, 23);
