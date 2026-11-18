@@ -44,6 +44,7 @@ public sealed partial class SettingsSheet : Control
     public SettingsSheet()
     {
         SetAnchorsPreset(LayoutPreset.FullRect); Visible = false; MouseFilter = MouseFilterEnum.Ignore;
+        AddChild(MenuUi.Scrim());
         _sheet = MenuUi.CenteredSheet(new Vector2(880, 560), out _fit);
         AddChild(_sheet);
         var root = new VBoxContainer(); root.AddThemeConstantOverride("separation", 10);
@@ -81,7 +82,7 @@ public sealed partial class SettingsSheet : Control
         var dv = new VBoxContainer(); dv.AddThemeConstantOverride("separation", 12);
         dv.AddChild(_dialogText);
         var dr = new HBoxContainer(); dr.AddThemeConstantOverride("separation", 10);
-        var revert = Ui.Btn("set.revert", Revert); revert.FocusMode = FocusModeEnum.All; MenuUi.FocusRing(revert);
+        var revert = Ui.Btn("set.revert", () => Revert()); revert.FocusMode = FocusModeEnum.All; MenuUi.FocusRing(revert);
         var keep = MenuUi.Primary("set.keep", Keep); MenuUi.FocusRing(keep);
         dr.AddChild(revert); dr.AddChild(keep); dv.AddChild(dr);
         _dialog.AddChild(dv);
@@ -94,14 +95,14 @@ public sealed partial class SettingsSheet : Control
     void OnLang() { if (Visible) Rebuild(); }
 
     // Screenshot hooks: show a tab or the rollback dialog without applying anything.
-    public void Close() { Visible = false; _dialog.Visible = false; }
+    public void Close() { Visible = false; SetDialog(false); }
     public void ShotTab(int tab) { _tab = tab; Rebuild(); }
-    public void ShotRollback() { _before = Settings.Current.Clone(); _rb.Start(); _dialog.Visible = true; UpdateDialog(); }
+    public void ShotRollback() { _before = Settings.Current.Clone(); _rb.Start(); SetDialog(true); UpdateDialog(); }
 
     public void Open()
     {
         _orig = Settings.Current.Clone(); _w = Settings.Current.Clone(); _tab = 0;
-        Visible = true; _dialog.Visible = false; _fit(Size);
+        Visible = true; SetDialog(false); _fit(Size);
         Rebuild();
         _tabs[0].CallDeferred(Control.MethodName.GrabFocus);
     }
@@ -238,25 +239,34 @@ public sealed partial class SettingsSheet : Control
         Visible = false; Closed?.Invoke();
     }
 
+    /// <summary>The rollback dialog is modal: the sheet below stops taking input, so a second Apply cannot overwrite the saved «before» values.</summary>
+    void SetDialog(bool on)
+    {
+        _dialog.Visible = on;
+        _sheet.ProcessMode = on ? ProcessModeEnum.Disabled : ProcessModeEnum.Inherit;
+    }
+
     void Apply()
     {
+        if (_dialog.Visible) return;
         var old = Settings.Current;
         bool confirm = _w.NeedsConfirm(old) && DisplayServer.GetName() != "headless";
         _before = old.Clone();
         Settings.Current = _w.Clone();
         Settings.Apply(Settings.Current, GetWindow());
         Applied?.Invoke(Settings.Current);
-        if (confirm) { _rb.Start(); _dialog.Visible = true; UpdateDialog(); }
+        if (confirm) { _rb.Start(); SetDialog(true); UpdateDialog(); }
         else { Settings.Save(); Visible = false; Closed?.Invoke(); }
     }
 
-    void Keep() { _rb.Confirm(); _dialog.Visible = false; Settings.Save(); Visible = false; Closed?.Invoke(); }
+    void Keep() { _rb.Confirm(); SetDialog(false); Settings.Save(); Visible = false; Closed?.Invoke(); }
 
-    public void Revert()
+    /// <param name="window">False keeps the window size and mode (screenshot runs).</param>
+    public void Revert(bool window = true)
     {
-        _rb.Confirm(); _dialog.Visible = false;
+        _rb.Confirm(); SetDialog(false);
         Settings.Current = _before.Clone(); _w = _before.Clone();
-        Settings.Apply(Settings.Current, GetWindow());
+        Settings.Apply(Settings.Current, GetWindow(), window);
         Applied?.Invoke(Settings.Current);
         if (Loc.Lang != _w.Lang) Loc.SetLang(_w.Lang);
         Rebuild();

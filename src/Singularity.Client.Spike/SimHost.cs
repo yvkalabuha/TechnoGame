@@ -71,6 +71,7 @@ public sealed class SimHost : IDisposable
 
     readonly int _seed; readonly GameData _preloaded;
     /// <summary>Hash of the initial state (tick 0): two starts with the same seed and scenario must give the same value.</summary>
+    public int Seed => _seed;
     public string StartHash { get; private set; } = "";
 
     /// <param name="seed">World seed (default 7, as the spikes before the menu).</param>

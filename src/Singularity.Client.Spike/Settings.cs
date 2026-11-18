@@ -52,6 +52,8 @@ public static class Settings
     const string Path = "user://settings.cfg";
     public static SettingsData Current = new();
     public static bool Loaded { get; private set; }
+    /// <summary>Screenshot and bench runs must not touch the owner's saved settings.</summary>
+    public static bool ReadOnly { get; set; }
     static readonly string[] Months = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
     public static void Load()
@@ -82,6 +84,7 @@ public static class Settings
 
     public static void Save()
     {
+        if (ReadOnly) return;
         var s = Current; var cf = new ConfigFile();
         cf.SetValue("video", "resolution", s.Resolution); cf.SetValue("video", "window_mode", s.WindowMode); cf.SetValue("video", "quality", s.Quality);
         cf.SetValue("video", "upscaler", s.Upscaler); cf.SetValue("video", "upscale_mode", s.UpscaleMode); cf.SetValue("video", "vsync", s.Vsync);

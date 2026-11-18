@@ -9,9 +9,9 @@ public sealed partial class Overlay : Control
 {
     sealed class LabelState { public Country C; public Label Node; public bool On; public bool Slice; }
 
-    static readonly Color Ink = new("1D1E20");
+    static readonly Color Ink = Ui.Ink;
     static readonly Color Paper = Ui.Paper;
-    static readonly Color Limb = new Color("A9B8CC", 0.7f);
+    static readonly Color Limb = new Color(Palette.Limb, 0.7f);
 
     /// <summary>Alert plate on the globe (#326): sheet halo 3 px, ink outline 1 px, sign ▲ (warn) or ■ (alarm) and a word.</summary>
     sealed record Marker(string Key, Vector2 LonLat, bool Warn, string TextKey);

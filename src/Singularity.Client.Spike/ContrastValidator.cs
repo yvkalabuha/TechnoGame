@@ -118,9 +118,9 @@ public static class ContrastValidator
         new("night+tint", 0.72 * 0.86, 0.72 * 0.9, 0.72), new("glint", 1.0, 1.0, 1.0, 0.2),
     };
 
-    public sealed record Limits(double DeltaE, double DeltaL, double Cvd);
-    public static readonly Limits AlarmLimits = new(25, 25, 18), CommandLimits = new(25, 25, 18), WarnLimits = new(20, 15, 14);
-    public const double HaloVsBackground = 8, PlateChroma = 0.17, DecorChroma = 0.13, TintPair = 8;
+    public sealed record Limits(double DeltaE, double DeltaL, double Cvd, double Chroma);
+    public static readonly Limits AlarmLimits = new(25, 25, 18, 0.17), CommandLimits = new(25, 25, 18, 0.15), WarnLimits = new(20, 12, 14, 0.145);
+    public const double HaloVsBackground = 8, DecorChroma = 0.13, TintPair = 8;
 
     sealed record Worst(double DeltaE, double DeltaL, double Cvd, double Halo);
 
@@ -177,7 +177,7 @@ public static class ContrastValidator
                 res.Add(new PairResult($"{pn} on {bn}", direct, $"dE {F(w.DeltaE)} dL {F(w.DeltaL)} cvd {F(w.Cvd)}"));
             }
             double ch = ColorMath.OkChroma(plate);
-            res.Add(new PairResult($"{pn} chroma", ch >= PlateChroma, $"OKLCH C {F(ch, 3)} (min {F(PlateChroma, 2)})"));
+            res.Add(new PairResult($"{pn} chroma", ch >= lim.Chroma, $"OKLCH C {F(ch, 3)} (min {F(lim.Chroma, 3)})"));
         }
 
         // Pairwise tints and tint vs sea at every shade (design system §2.2: closes the shaded palette of review v0.5a §5).

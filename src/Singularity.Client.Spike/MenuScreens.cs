@@ -33,6 +33,14 @@ public static class MenuUi
         sheet.CustomMinimumSize = new Vector2(Math.Min(design.X, parent.X - 24), Math.Min(design.Y, parent.Y - 24));
     }
 
+    /// <summary>Full-screen ink 35 % scrim under a modal sheet; it also blocks the mouse for everything below.</summary>
+    public static ColorRect Scrim()
+    {
+        var r = new ColorRect { Color = new Color(Ui.Ink, 0.35f), MouseFilter = Control.MouseFilterEnum.Stop };
+        r.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        return r;
+    }
+
     public static PanelContainer CenteredSheet(Vector2 design, out Action<Vector2> fit)
     {
         var p = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Stop };
@@ -63,7 +71,7 @@ public static class MenuUi
 public sealed partial class MainMenu : Control
 {
     public event Action Continue, NewGame, OpenSettings, ToMain, Quit;
-    readonly ColorRect _dim = new() { Color = new Color(0, 0, 0, 0.35f), MouseFilter = MouseFilterEnum.Stop };
+    readonly ColorRect _dim = MenuUi.Scrim();
     readonly PanelContainer _panel = new() { MouseFilter = MouseFilterEnum.Stop };
     readonly VBoxContainer _box = new();
     readonly List<(Key Key, Action Act, Button B)> _keys = new();
@@ -74,7 +82,6 @@ public sealed partial class MainMenu : Control
     {
         SetAnchorsPreset(LayoutPreset.FullRect); Visible = false; MouseFilter = MouseFilterEnum.Ignore;
         AddChild(_dim);
-        _dim.SetAnchorsPreset(LayoutPreset.FullRect);
         _panel.AddThemeStyleboxOverride("panel", MenuUi.SheetBox());
         _panel.CustomMinimumSize = new Vector2(320, 0);
         _box.AddThemeConstantOverride("separation", 6);
@@ -193,6 +200,7 @@ public sealed partial class NewGameSheet : Control
     public NewGameSheet()
     {
         SetAnchorsPreset(LayoutPreset.FullRect); Visible = false; MouseFilter = MouseFilterEnum.Ignore;
+        AddChild(MenuUi.Scrim());
         _sheet = MenuUi.CenteredSheet(new Vector2(960, 600), out _fit);
         AddChild(_sheet);
         var root = new VBoxContainer(); root.AddThemeConstantOverride("separation", 10);

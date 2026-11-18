@@ -8,12 +8,15 @@ public sealed record PaletteSet(
 
 public static class Palette
 {
+    // Neutral ink and line tokens shared by the UI and the globe overlay (hex, no leading #).
+    public const string Ink = "1D1E20", Ink2 = "55575A", Ink3 = "6E6C66", Rule = "BDB59F", Border = "3E3C38", GlobeGrid = "A9C4CC", Limb = "A9B8CC";
+
     public static readonly string[] InkNames = { "sand", "teal", "violet", "olive", "plum", "slate" };
 
     /// <summary>Palette C «Акварель» (UI_DESIGN_SYSTEM §17.3-17.4) with warn #D9860F (decision #326).</summary>
     public static readonly PaletteSet C = new(
         "C", "C42A1C", "D9860F", "2347A8", "F3EEDF", "FBF8EF", "EBE5D2", "B8DCEA", "9CCBE0", "EBE3C6",
-        new[] { "F7B98F", "9EC6F5", "B8E07C", "EFB0EC", "F8D56F", "8BE3C3", "EEA894", "A9AAF7" },
+        new[] { "F7B98F", "9EC6F5", "BBDE86", "EFB0EC", "F8D56F", "8BE3C3", "EEA894", "A9AAF7" },
         new[] { "8F7A2E", "168A92", "7A4AA8", "4F8A1E", "A03E82", "4A7088" },
         new[] { "EAD9A3", "BFE6E5", "D8CCEE", "CFE6AA", "F0C9E0", "C3D8EA" },
         new[] { "6B5B22", "1F5F63", "53407A", "4A6020", "75335F", "3F5666" });

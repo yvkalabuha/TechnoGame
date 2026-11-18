@@ -220,7 +220,7 @@ public sealed partial class ActorPanel : PanelContainer
         foreach (var sl in _sl) { sl.Editable = !Foreign; sl.MouseFilter = Foreign ? MouseFilterEnum.Ignore : MouseFilterEnum.Stop; sl.Modulate = new Color(1, 1, 1, Foreign ? 0.45f : 1f); }
         _sharesNote.Visible = Foreign;
         _title.TooltipText = id;
-        _sub.Text = Loc.T("panel.sub", Loc.T("profile." + (int)a.Profile), a.FieldedGen, s.View.Month);
+        _sub.Text = Loc.T("panel.sub", Loc.T("profile." + (int)a.Profile), a.FieldedGen, s.View.Month >= 0 ? s.View.Month.ToString() : "—");
         var inA = s.View.Inputs?.Actors.FirstOrDefault(x => x.Actor == _actor);
         _budget.Text = inA != null ? Loc.T("panel.budget.text", Loc.N(inA.Budget.ToDouble(), 1), Loc.N(inA.ProcurementBudget.ToDouble(), 1)) : Loc.T("panel.budget.none");
         BudgetShares? inForce = s.SharesInForce[_actor];

@@ -71,6 +71,7 @@ public sealed partial class Main : Node3D
         var args = OS.GetCmdlineUserArgs();
         _bench = args.Contains("--bench");
         _shots = args.Contains("--shots");
+        Settings.ReadOnly = _shots || _bench;
         var shotIdx = Array.IndexOf(args, "--shot-dir");
         if (shotIdx >= 0 && shotIdx + 1 < args.Length) _shotDir = args[shotIdx + 1];
         if (_bench) DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
@@ -119,7 +120,7 @@ public sealed partial class Main : Node3D
         _hud = new Label { Position = new Vector2(12, 0), Visible = _debug };
         _hud.AddThemeFontOverride("font", Fonts.Mono);
         _hud.AnchorTop = 1; _hud.AnchorBottom = 1; _hud.OffsetTop = -120; _hud.AddThemeFontSizeOverride("font_size", 14); _hud.OffsetBottom = -46;
-        _hud.AddThemeColorOverride("font_color", new Color("1D1E20"));
+        _hud.AddThemeColorOverride("font_color", Ui.Ink);
         _hud.AddThemeColorOverride("font_outline_color", PaperColor);
         _hud.AddThemeConstantOverride("outline_size", 4);
         layer.AddChild(_hud);
@@ -135,6 +136,7 @@ public sealed partial class Main : Node3D
         else
         {
             BuildMenus(layer);
+            if (_shots) { _coldShot = true; _mainMenu.Open(false); }   // the title shots are taken on a cold start, before any HUD exists
             if (_titleMode)
             {
                 _dataTask = Task.Run(SimHost.LoadData);
@@ -170,8 +172,9 @@ public sealed partial class Main : Node3D
         _settings.Applied += s =>
         {
             if (_audio == null) return;
-            _audio.SetVolume(Bus.Music, s.Volume[1] / 100); _audio.SetVolume(Bus.Ambient, s.Volume[2] / 100);
-            _audio.SetVolume(Bus.UI, s.Volume[3] / 100); _audio.SetVolume(Bus.Alert, s.Volume[5] / 100);
+            // Not persisted here: the sheet saves the file after «keep» (or at once when no confirm is needed).
+            _audio.SetVolume(Bus.Music, s.Volume[1] / 100, false); _audio.SetVolume(Bus.Ambient, s.Volume[2] / 100, false);
+            _audio.SetVolume(Bus.UI, s.Volume[3] / 100, false); _audio.SetVolume(Bus.Alert, s.Volume[5] / 100, false);
         };
     }
 
@@ -396,7 +399,7 @@ public sealed partial class Main : Node3D
         var tints = Palette.C.Tints.Select(h => { var c = new Color(h).SrgbToLinear(); return new Vector3(c.R, c.G, c.B); }).ToArray();
         _globeMat.SetShaderParameter("tints", tints);
         _globeMat.SetShaderParameter("sea_color", new Color(Palette.C.Sea));
-        _globeMat.SetShaderParameter("grid_color", new Color("A9C4CC"));
+        _globeMat.SetShaderParameter("grid_color", new Color(Palette.GlobeGrid));
         var pl = Ui.Paper.SrgbToLinear();
         _globeMat.SetShaderParameter("paper", new Vector3(pl.R, pl.G, pl.B));
         AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = _globeMat });
@@ -605,6 +608,7 @@ public sealed partial class Main : Node3D
                 else _newGame.Open(_dataTask.Result.Scenario(Singularity.Session.SliceRunConfig.DefaultScenario), id => Ui.Tints[TintOfActor(id)]);
             }
         }
+        if (_coldShot) ColdTitleShots(delta);
         if (_host != null && !_tintsReady)
         {
             if (_host.Fatal != null)
@@ -612,8 +616,8 @@ public sealed partial class Main : Node3D
                 _loading.Text = Loc.T("ui.simerror") + _host.Fatal;
                 if (!_fatalLogged) { _fatalLogged = true; GD.PrintErr(_host.Fatal); }   // once, not on every frame
             }
-            else if (_host.Ready) FinishClient();
-            else _loading.Text = Loc.T(_host.Status);
+            else if (_host.Ready && !_coldShot) FinishClient();
+            else { _loading.Text = Loc.T(_host.Status); _loading.Visible = !_coldShot; }
         }
         if (_helpBtn != null) { _helpBtn.Visible = !_tree.Visible; if (_tree.Visible) _help.Visible = false; }
         if (_shots && _tintsReady) ShotStep(delta);
@@ -645,23 +649,65 @@ public sealed partial class Main : Node3D
     }
 
     // ---------- screenshots (acceptance) ----------
+    bool _coldShot; double _coldT; int _coldStep;
+
+    void SaveShot(string name, Rect2I? r = null)
+    {
+        string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
+        Directory.CreateDirectory(dir);
+        var img = GetViewport().GetTexture().GetImage();
+        if (r is Rect2I rr) img = img.GetRegion(rr);
+        img.SavePng(Path.Combine(dir, name));
+    }
+
+    // Title screen on a cold start: the menu over the turning globe, no HUD (the loading label is hidden too).
+    void ColdTitleShots(double dt)
+    {
+        _coldT += dt; _yaw += (float)(4 * dt);
+        if (_loading != null) _loading.Visible = false;
+        if (_coldStep == 0 && _coldT >= 1.0) { SaveShot("main_menu.png"); Loc.SetLang("en"); _coldStep = 1; _coldT = 0; }
+        else if (_coldStep == 1 && _coldT >= 0.4) { SaveShot("main_menu_en.png"); Loc.SetLang("ru"); _mainMenu.Close(); _coldShot = false; if (_loading != null) _loading.Visible = true; }
+    }
+
+    // Extra screens at other window sizes and in EN (spec §10): a queue of (wait before, action).
+    // The project keeps a 1600x900 content base, so the shots set the content size to the window size: the layout is then computed for the real size.
+    readonly List<(double Wait, Action Act)> _sizeQ = new(); int _sizeI; Vector2I _origSize;
+
+    void BuildSizeShots()
+    {
+        _origSize = DisplayServer.WindowGetSize(); _sizeI = 0; _sizeQ.Clear();
+        var combos = new (Vector2I Size, string Lang)[] { (_origSize, "en"), (new Vector2I(1280, 720), "ru"), (new Vector2I(1280, 720), "en"), (new Vector2I(1920, 1080), "ru"), (new Vector2I(1920, 1080), "en") };
+        foreach (var (size, lang) in combos)
+        {
+            string sfx = $"_{size.X}x{size.Y}" + (lang == "en" ? "_en" : "");
+            void Q(double wait, Action act) => _sizeQ.Add((wait, act));
+            Q(0.1, () => { DisplayServer.WindowSetSize(size); GetWindow().ContentScaleSize = size; Loc.SetLang(lang); });
+            Q(1.0, () => { _shotLog += $"size shots {sfx}: asked {size.X}x{size.Y}, window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, viewport {(int)GetViewport().GetVisibleRect().Size.X}x{(int)GetViewport().GetVisibleRect().Size.Y}, mode {GetWindow().ContentScaleMode}\n"; _mainMenu.Open(true); });
+            Q(0.5, () => { SaveShot($"menu_ingame{sfx}.png"); _mainMenu.Close(); _newGame.Open(_host.Data.Scenario(Singularity.Session.SliceRunConfig.DefaultScenario), id => Ui.Tints[TintOfActor(id)]); });
+            Q(0.5, () => { SaveShot($"new_game_empty{sfx}.png"); _newGame.Select("FRA"); });
+            Q(0.6, () => { SaveShot($"new_game_selected{sfx}.png"); _newGame.Close(); _settings.Open(); });
+            Q(0.5, () => { SaveShot($"settings_video{sfx}.png"); _settings.ShotTab(1); });
+            Q(0.4, () => { SaveShot($"settings_sound{sfx}.png"); _settings.ShotTab(2); });
+            Q(0.4, () => { SaveShot($"settings_general{sfx}.png"); _settings.ShotTab(0); _settings.ShotRollback(); });
+            Q(0.5, () => { SaveShot($"settings_rollback{sfx}.png"); _settings.Revert(false); _settings.Close(); AimAlert(1, false); });
+            Q(0.8, () => { SaveShot($"alert_tint5{sfx}.png"); _overlay.RemoveMarker("demo0"); _overlay.RemoveMarker("demo1"); _overlay.RemoveMarker("demo2"); OpenTree(0); });
+            Q(1.0, () => _tree.ToggleLegend(true));
+            Q(0.5, () => { SaveShot($"tree_legend{sfx}.png"); _tree.ToggleLegend(false); _tree.ResetView(); _tree.Visible = false; });
+        }
+        _sizeQ.Add((0.5, () => { DisplayServer.WindowSetSize(_origSize); GetWindow().ContentScaleSize = _origSize; Loc.SetLang("ru"); }));
+    }
     void ShotStep(double dt)
     {
         _shotT += dt;
         string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
-        void Shot(string name, Rect2I? r = null)
-        {
-            Directory.CreateDirectory(dir);
-            var img = GetViewport().GetTexture().GetImage();
-            if (r is Rect2I rr) img = img.GetRegion(rr);
-            img.SavePng(Path.Combine(dir, name));
-        }
+        void Shot(string name, Rect2I? r = null) => SaveShot(name, r);
         var s = _host.Snap;
         var vp = GetViewport().GetVisibleRect().Size;
         if (ClickTest(dt, vp, Shot)) return;
         switch (_shotStep)
         {
             case 0:
+                _shotLog += $"session start: seed {_host.Seed} start_hash {_host.StartHash}\n";
                 RunValidator();
                 _signal.SetSpeed(3); ShowPower(_player, false); _shotStep = 1; _shotT = 0; break;
             case 1 when _shotT >= 3:
@@ -750,10 +796,8 @@ public sealed partial class Main : Node3D
                 Shot("alert_tint5_night.png");
                 _globeMat.SetShaderParameter("light_dir", new Vector3(0.7f, 0.35f, 0.6f)); _overlay.RemoveMarker("demo0"); _overlay.RemoveMarker("demo1"); _overlay.RemoveMarker("demo2");
                 _shotStep = 50; _shotT = 0; break;
-            // menus: title look, in-game look, EN, new game, settings, rollback, UI scale 150%
-            case 50: _mainMenu.Open(false); _shotStep = 51; _shotT = 0; break;
-            case 51 when _shotT >= 0.5: Shot("main_menu.png"); Loc.SetLang("en"); _shotStep = 52; _shotT = 0; break;
-            case 52 when _shotT >= 0.4: Shot("main_menu_en.png"); Loc.SetLang("ru"); _mainMenu.Open(true); _shotStep = 53; _shotT = 0; break;
+            // menus: (title look is taken on a cold start), in-game look, EN, new game, settings, rollback, UI scale 150%
+            case 50: _mainMenu.Open(true); _shotStep = 53; _shotT = 0; break;
             case 53 when _shotT >= 0.4:
                 Shot("menu_ingame.png"); _mainMenu.Close();
                 _newGame.Open(_host.Data.Scenario(Singularity.Session.SliceRunConfig.DefaultScenario), id => Ui.Tints[TintOfActor(id)]);
@@ -768,7 +812,7 @@ public sealed partial class Main : Node3D
             case 60 when _shotT >= 0.4:
                 Shot("settings_general_en.png"); Loc.SetLang("ru"); _settings.ShotTab(0); _settings.ShotRollback(); _shotStep = 61; _shotT = 0; break;
             case 61 when _shotT >= 0.6:
-                Shot("settings_rollback.png"); _settings.Revert(); _settings.Close();
+                Shot("settings_rollback.png"); _settings.Revert(false); _settings.Close();
                 Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false);
                 _mainMenu.Open(true); _shotStep = 62; _shotT = 0; break;
             case 62 when _shotT >= 0.6:
@@ -781,15 +825,28 @@ public sealed partial class Main : Node3D
             case 66 when _shotT >= 0.5:
                 Shot("tree_legend.png"); _tree.ToggleLegend(false); _tree.ShotZoom(2.4f, _tree.FrontierRow >= 0 ? _tree.FrontierRow : _tree.GoalRow); _shotStep = 67; _shotT = 0; break;
             case 67 when _shotT >= 0.8:
-                Shot("tree_nodes_frontier_names.png"); _tree.ResetView(); _tree.Visible = false; _signal.SetSpeed(1); _shotStep = 16; _shotT = 0; break;
+                Shot("tree_nodes_frontier_names.png"); _tree.ResetView(); _tree.Visible = false; _signal.SetSpeed(1); BuildSizeShots(); _shotStep = 70; _shotT = 0; break;
+            case 70 when _sizeI >= _sizeQ.Count: _shotStep = 16; _shotT = 0; break;
+            case 70 when _shotT >= _sizeQ[_sizeI].Wait: _sizeQ[_sizeI++].Act(); _shotT = 0; break;
             case 16 when _shotT >= 0.5:
                 _audio.StartDemo(); _shotStep = 17; _shotT = 0; break;
             case 17:
                 // The demo script runs in real time; its sound is recorded from the Master bus.
                 if (!_audio.StepDemo(dt) && _shotT >= AudioDirector.DemoSeconds + 0.5)
                 {
-                    int bytes = _audio.Active ? _audio.SaveDemo(Path.Combine(dir, "audio_demo.wav")) : 0;
-                    _shotLog += $"audio demo: {(bytes > 0 ? bytes + " bytes of PCM" : "not recorded (no audio device)")}\n";
+                    // The recorder gives WAV; it goes to a temp file and ffmpeg packs it into OGG Vorbis (the WAV was 3.4 MB).
+                    string tmpWav = Path.Combine(Path.GetTempPath(), "singularity_audio_demo.wav");
+                    int bytes = _audio.Active ? _audio.SaveDemo(tmpWav) : 0;
+                    string packed = "";
+                    if (bytes > 0)
+                    {
+                        Directory.CreateDirectory(dir);
+                        string ogg = Path.Combine(dir, "audio_demo.ogg");
+                        var code = OS.Execute("ffmpeg", new[] { "-y", "-loglevel", "error", "-i", tmpWav, "-c:a", "libvorbis", "-q:a", "4", ogg });
+                        packed = code == 0 ? $", packed to audio_demo.ogg ({new FileInfo(ogg).Length} bytes)" : $", ffmpeg failed (exit {code}): audio_demo.ogg not written";
+                        File.Delete(tmpWav);
+                    }
+                    _shotLog += $"audio demo: {(bytes > 0 ? bytes + " bytes of PCM" + packed : "not recorded (no audio device)")}\n";
                     _shotLog += $"final: date {s.Date} tick {s.Tick}\n";
                     Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog); GD.Print(_shotLog);
                     GetTree().Quit(); _shotStep = 18;
