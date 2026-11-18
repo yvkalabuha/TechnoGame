@@ -543,3 +543,4 @@ Design by ui-art-director with game-designer (information architecture); the own
 | 400 | 2026-11-18 | Berlin: two regions (West, East) from allowed sources; no dl-de/by-2.0 licence, ADR-0009 unchanged | владелец (AskUserQuestion 2026-11-18, Q62) |
 | 401 | 2026-11-18 | Disputed territories 1945 by actual control: Tibet owner and controller TIB (until the 1950 event); Ogaden GBR (military administration); Spratly without owner | владелец (AskUserQuestion 2026-11-18, Q63) |
 | 402 | 2026-11-18 | Taiwan: #313 kept (owner JPN, controller ROC from t0); the convention is noted in the data | владелец (AskUserQuestion 2026-11-18, Q64) |
+| 403 | 2026-11-18 | Client event sounds: the candidates in `docs/audio/listening-pack/events` (AUDIO_DIRECTION r2, E01–E20) fit better than the current client sounds and replace them; the variant per event (a/b/c, labelled by era) is picked by the owner or, by default, by the era label | владелец (сообщение в сессии 2026-11-18) |

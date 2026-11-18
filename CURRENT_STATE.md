@@ -19,6 +19,7 @@
 - TASK-0066 [IN_PROGRESS] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
 - TASK-0098 [APPROVED] Move remaining double code from Core.Simulation to Lab (developer)
 - TASK-0099 [APPROVED] Project slots reuse with generation (ADR-0005 #388) (developer)
+- TASK-0100 [APPROVED] Replace client event sounds with listening-pack r2 (#403) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
