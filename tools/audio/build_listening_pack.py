@@ -38,33 +38,24 @@ CM = "https://commons.wikimedia.org/wiki/File:"
 SOURCES = {
     "stamp_fekry": FS + "I.fekry/sounds/470710/",
     "stamp_frigola": FS + "eduardfrigola/sounds/233240/",
-    "stamp_frank": FS + "frank_the_noise/sounds/160879/",
     "relay_bass": FS + "bassmosphere/sounds/384698/",
-    "relay_smokey": FS + "smokeyvw/sounds/85304/",
     "breaker_echo": FS + "EchoCinematics/sounds/131599/",
     "switch_joe": FS + "joedeshon/sounds/139062/",
     "type_triumph": FS + "YleArkisto/sounds/271525/",
-    "type_olympia": FS + "FreqMan/sounds/23169/",
-    "type_smith": FS + "lonemonk/sounds/47045/",
     "teletype": FS + "stratcat322/sounds/169259/",
     "morse": FS + "ERH/sounds/34418/",
     "bell_jake": FS + "jakebagger/sounds/499787/",
     "bell_dbache": FS + "dbache/sounds/696039/",
     "phone_hock": FS + "Hockinfinger/sounds/274436/",
-    "phone_wecompass": FS + "mycompasstv/sounds/456433/",
     "whistle_kent": FS + "kentspublicdomain/sounds/477827/",
-    "whistle_synth": FS + "unreadpages/sounds/494938/",
     "paper_moose": FS + "moose13088/sounds/182889/",
     "paper_bevibel": FS + "bevibeldesign/sounds/635156/",
     "floppy": FS + "MrAuralization/sounds/259292/",
-    "printer": FS + "system_fm/sounds/256897/",
-    "modem": FS + "joedeshon/sounds/80288/",
     "hum_kyles": FS + "kyles/sounds/453444/",
     "static_qr": FS + "quantumriver/sounds/552160/",
     "clock_yuval": FS + "Yuval/sounds/211192/",
     "typing_pool": FS + "Joseph999/sounds/376934/",
     "bsb_bell": "https://bigsoundbank.com/typewriter-bell-s2845.html",
-    "bsb_phone": "https://bigsoundbank.com/dial-phone-s0002.html",
     "music_extrapolation": "https://www.scottbuckley.com.au/library/extrapolation/",
     "music_cobalt": "https://scottbuckley.com.au/library/cobalt",
     "music_starfire": "https://www.scottbuckley.com.au/library/starfire/",
@@ -113,56 +104,36 @@ FAR = {"lp": 2500, "g": 0.0}
 EVENTS = [
     ("E01", "Приказ принят", "P2", [
         ("a", "резиновый штамп (I.fekry)", "1945", [first("stamp_fekry", 0.25)], {}),
-        ("b", "штамп из библиотеки (eduardfrigola)", "1945", [hit("stamp_frigola", 0, 0.25)], {}),
-        ("c", "клавиша электрической машинки (Smith-Corona)", "1980", [hit("type_smith", 0, 0.25)], {"lp": 12000}),
     ]),
     ("E02", "Приказ отклонён", "P1", [
         ("a", "реле пинбола", "1945", [first("relay_bass", 0.19)], {}),
-        ("b", "реле (smokeyvw)", "1945", [hit("relay_smokey", 0, 0.4)], {}),
-        ("c", "бзз матричного принтера, обрыв", "1980", [hit("printer", 0, 0.4)], {"lp": 12000}),
     ]),
     ("E03", "В очереди", "P3", [
         ("a", "шорох листа (moose13088)", "1945", [hit("paper_moose", 2, 0.08)], {}),
-        ("b", "шорох листа (bevibeldesign)", "1945", [hit("paper_bevibel", 0, 0.08)], {}),
-        ("c", "шаговый тик дисковода", "1980", [hit("floppy", 3, 0.08)], {"lp": 12000}),
     ]),
     ("E04", "Команда исполнена", "P2", [
         ("a", "каретка Triumph (автонарезка)", "1945", [hit("type_triumph", 1, 0.25)], {}),
-        ("b", "каретка Olympia (автонарезка)", "1960", [hit("type_olympia", 1, 0.25)], {}),
-        ("c", "щелчок защёлки дисковода", "1980", [hit("floppy", 0, 0.25)], {"lp": 12000}),
     ]),
     ("E05", "Сигнал: внимание", "P1", [
         ("a", "настольный звонок (jakebagger)", "1945", [first("bell_jake", 1.2)], {}),
-        ("b", "старый звонок (dbache)", "1945", [first("bell_dbache", 1.2)], {}),
-        ("c", "один звонок телефона (Stromberg Carlson)", "1960", [first("phone_hock", 1.2)], {}),
     ]),
     ("E06", "Сигнал: тревога", "P0", [
         ("a", "телефон Stromberg Carlson, 1 звонок", "1960", [first("phone_hock", 1.5)], {}),
-        ("b", "телефон Western Electric 500, 1 звонок", "1960", [first("phone_wecompass", 1.5)], {}),
-        ("c", "дисковый телефон (BigSoundBank)", "1960", [first("bsb_phone", 1.5)], {}),
     ]),
     ("E07", "Сигнал: критично", "P0", [
         ("a", "звонок + щелчок реле", "1945", [first("bell_jake", 1.5), first("relay_bass", 0.19, g=-2)], {}),
-        ("b", "телефон + щелчок реле", "1960", [first("phone_hock", 1.5), first("relay_bass", 0.19, g=-2)], {}),
     ]),
     ("E08", "Сигнал снят", "P1", [
         ("a", "звонок тише, питч -2 полутона (jakebagger)", "1945", [first("bell_jake", 1.2, pitch=-2)], {"rel": -3}),
-        ("b", "звонок тише, питч -2 полутона (dbache)", "1945", [first("bell_dbache", 1.2, pitch=-2)], {"rel": -3}),
     ]),
     ("E09", "Узел открыт", "P1", [
-        ("a", "Triumph: каретка/звонок (автонарезка)", "1945", [hit("type_triumph", 0, 1.2)], {}),
-        ("b", "Olympia: звонок/возврат (автонарезка)", "1960", [hit("type_olympia", 0, 1.2)], {}),
         ("c", "звонок пишущей машинки (BigSoundBank)", "1945", [first("bsb_bell", 1.2)], {}),
     ]),
     ("E10", "Ключевой прорыв", "P1", [
         ("a", "двойной звонок (BigSoundBank)", "1945", [first("bsb_bell", 0.7), first("bsb_bell", 0.7, off=0.45)], {}),
-        ("b", "двойной звонок (dbache)", "1945", [first("bell_dbache", 0.7), first("bell_dbache", 0.7, off=0.45)], {}),
-        ("c", "модем-«квитанция» [Предп.]", "2000", [hit("modem", 0, 1.2)], {"lp": 12000}),
     ]),
     ("E11", "Линия введена", "P1", [
         ("a", "далёкий заводской свисток (LP 2.5 кГц, -8 дБ)", "1945", [first("whistle_kent", 2.0, lp=2500)], {"rel": -8}),
-        ("b", "свисток вблизи, без обработки «далёкого»", "1945", [first("whistle_kent", 2.0)], {}),
-        ("c", "синтезированный свисток (unreadpages), запасной", "1945", [first("whistle_synth", 2.0, lp=2500)], {"rel": -8}),
     ]),
     ("E12", "Идёт стройка", "P3", [
         ("a", "шорох бумаги/пера", "1945", [hit("paper_moose", 5, 0.08)], {}),
@@ -170,7 +141,6 @@ EVENTS = [
     ]),
     ("E13", "Война объявлена", "P0", [
         ("a", "рубильник + серия морзе", "1945", [first("breaker_echo", 1.5), hit("morse", 0, 0.8, off=0.5)], {}),
-        ("b", "реле + телетайп", "1945", [first("relay_smokey", 0.6), hit("teletype", 0, 0.9, off=0.3)], {}),
     ]),
     ("E14", "Потеря территории", "P0", [
         ("a", "серия морзе + звонок", "1945", [at("morse", 0.0, 1.0), first("bell_jake", 0.6, off=0.9)], {}),
@@ -181,32 +151,25 @@ EVENTS = [
         ("b", "два штампа (eduardfrigola)", "1945", [hit("stamp_frigola", 0, 0.25), hit("stamp_frigola", 0, 0.25, off=0.6)], {}),
     ]),
     ("E16", "Запуск космический", "P1", [
-        ("a", "свисток + возврат каретки", "1960", [first("whistle_kent", 0.9), hit("type_triumph", 1, 0.5, off=0.7)], {}),
         ("b", "свисток + реле", "1960", [first("whistle_kent", 0.9), first("relay_bass", 0.19, off=0.9)], {}),
     ]),
     ("E17", "Запуск ядерный", "P0", [
         ("a", "рубильник + нарастающий гул трансформатора", "1945", [first("breaker_echo", 0.5), at("hum_kyles", 5.0, 1.8, off=0.0, fadein=1.5, g=-4)], {}),
-        ("b", "реле + нарастающий гул", "1945", [first("relay_smokey", 0.5), at("hum_kyles", 5.0, 1.8, off=0.0, fadein=1.5, g=-4)], {}),
     ]),
     ("E18", "Смена темпа", "P2", [
         ("a", "тумблер (joedeshon)", "1945", [first("switch_joe", 0.25)], {}),
-        ("b", "щелчок реле (bassmosphere)", "1945", [first("relay_bass", 0.19)], {}),
-        ("c", "щелчок реле (smokeyvw)", "1960", [hit("relay_smokey", 1, 0.25)], {}),
     ]),
     ("E19", "Пауза / снятие", "P2", [
         ("a", "вниз: тумблер, питч -2", "1945", [first("switch_joe", 0.25, pitch=-2)], {}),
         ("b", "вверх: тумблер, питч +2", "1945", [first("switch_joe", 0.25, pitch=2)], {}),
-        ("c", "рубильник (EchoCinematics, синтез)", "1945", [first("breaker_echo", 0.25)], {}),
     ]),
     ("E20", "Наведение / выбор", "P3", [
         ("a", "сухой тик бумаги", "1945", [hit("paper_bevibel", 1, 0.08)], {"rel": -2}),
-        ("b", "сухой тик реле", "1945", [first("relay_bass", 0.08)], {"rel": -2}),
     ]),
 ]
 NOT_FOUND = [
     ("E02/E10 1980", "зуммер / «terminal beep» для 1980+ (сигналы, снятие): в r2 не найден"),
     ("E15", "«опустить трубку»: в r2 не назван источник"),
-    ("E04 1960", "возврат каретки без звонка: нарезка автоматическая, подлинность на слух не проверена"),
 ]
 # (key, title, composer, preview start s, composition licence). Classical entries: recording licence is read from the Commons file page.
 SB = "Scott Buckley"
