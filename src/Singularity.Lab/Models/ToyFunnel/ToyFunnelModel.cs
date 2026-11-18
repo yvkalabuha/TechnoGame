@@ -1,7 +1,7 @@
 using Singularity.Core.Simulation;
 using Singularity.Kernel;
 
-namespace Singularity.Core.Science.ToyFunnel;
+namespace Singularity.Lab.Models.ToyFunnel;
 
 /// <summary>Toy "science → engineering → production" model (HYP-0001 / EXP-0001).</summary>
 public sealed class ToyFunnelModelFactory : ILabModelFactory

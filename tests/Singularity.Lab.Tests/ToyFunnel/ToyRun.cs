@@ -1,11 +1,11 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
-using Singularity.Core.Science.ToyFunnel;
+using Singularity.Lab.Models.ToyFunnel;
 using Singularity.Core.Simulation;
 using Singularity.Kernel;
 
-namespace Singularity.Core.Tests.ToyFunnel;
+namespace Singularity.Lab.Tests.ToyFunnel;
 
 /// <summary>Builds EXP-0001 parameter sets and runs the model on the Kernel TickRunner, like the Lab does.</summary>
 internal static class ToyRun

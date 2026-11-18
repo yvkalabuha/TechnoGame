@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Singularity.Core.Simulation;
 
-namespace Singularity.Core.Science.ToyFunnel;
+namespace Singularity.Lab.Models.ToyFunnel;
 
 /// <summary>Model A (funnel) and controls B (single level τ) and C (fixed lag), spec §2, §2.8, §2.9.</summary>
 public enum ToyFunnelVariant { A, B, C }

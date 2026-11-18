@@ -1,8 +1,8 @@
-using Singularity.Core.Science.ToyFunnel;
+using Singularity.Lab.Models.ToyFunnel;
 using Singularity.Core.Simulation;
 using Singularity.Kernel;
 
-namespace Singularity.Core.Tests.ToyFunnel;
+namespace Singularity.Lab.Tests.ToyFunnel;
 
 public class ToyFunnelConfigTests
 {

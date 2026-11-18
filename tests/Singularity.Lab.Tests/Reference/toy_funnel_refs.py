@@ -2,7 +2,7 @@
 """Reference values for ToyFunnelParityTests, produced by the prototype lab/proto/model.py.
 
 Usage (from repo root):
-    python3 tests/Singularity.Core.Tests/Reference/toy_funnel_refs.py lab/proto
+    python3 tests/Singularity.Lab.Tests/Reference/toy_funnel_refs.py lab/proto
 
 Prints one xUnit InlineData line per case. Digests (SHA-256 of UTF-8 lines, see below) cover
 every yearly row, SETUP multiplier and milestone bit for bit:

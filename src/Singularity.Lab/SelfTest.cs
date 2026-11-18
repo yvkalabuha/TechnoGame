@@ -25,7 +25,7 @@ public static class SelfTest
             ("canonical: numbers that decimal would round are rejected", CanonicalNoRounding),
             ("params: Fx6 parsing is exact, >6 decimals rejected", Fx6Params),
             ("params: long decimals reach the model as the exact double", DoubleParams),
-            ("registry: toy-funnel comes from Singularity.Core", ToyFunnelRegistered),
+            ("registry: toy-funnel comes from Singularity.Lab", ToyFunnelRegistered),
             ("metrics: Fx6 formatting", Fx6Format),
             ("manifest: series x sweep expansion order", MatrixExpansion),
             ("manifest: series seeds override top-level seeds", SeriesSeeds),
@@ -173,7 +173,7 @@ public static class SelfTest
     private static string? ToyFunnelRegistered()
     {
         RegisteredModel f = ModelRegistry.Find("toy-funnel");
-        return Expect(!f.IsTestModel && f.Table?.GetType().Assembly.GetName().Name == "Singularity.Core", "toy-funnel not from Core");
+        return Expect(!f.IsTestModel && f.Table?.GetType().Assembly.GetName().Name == "Singularity.Lab", "toy-funnel not from Lab");
     }
 
     private static string? Fx6Format()

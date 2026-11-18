@@ -19,7 +19,6 @@ public class CoreArchitectureTests
     // (sub-namespaces get no rights). A new one needs an ADR.
     private static readonly string[] DoubleExceptions =
     [
-        "Singularity.Core.Science.ToyFunnel",
         "Singularity.Core.Simulation",
     ];
 

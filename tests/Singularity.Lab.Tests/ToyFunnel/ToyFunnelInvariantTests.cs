@@ -1,7 +1,7 @@
-using Singularity.Core.Science.ToyFunnel;
+using Singularity.Lab.Models.ToyFunnel;
 using Singularity.Kernel;
 
-namespace Singularity.Core.Tests.ToyFunnel;
+namespace Singularity.Lab.Tests.ToyFunnel;
 
 /// <summary>
 /// Spec §7 on 200 seeds. The model itself throws on a violation (checked every tick); these tests
