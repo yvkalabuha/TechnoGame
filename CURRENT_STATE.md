@@ -13,6 +13,8 @@
 <!-- registry:active:start -->
 - TASK-0064 [APPROVED] lab bench harness (ADR-0016 T1) (developer)
 - TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
+- TASK-0073 [APPROVED] Audio listening pack from AUDIO_DIRECTION r2 recordings (developer)
+- TASK-0074 [APPROVED] Localization implementation per ADR-0018 (Singularity.Localization, ftl, anchor move) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
