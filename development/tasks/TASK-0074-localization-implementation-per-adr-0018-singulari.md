@@ -98,3 +98,4 @@ Implement ADR-0018 (ACCEPTED; S1 passed, erratum #304) in the main solution. The
 - Глифы: названия акторов и стран проверяются в Golos Text и Jura в дополнение к Literata; цифры и разделители в PT Mono.
 - `OtherLanguageTags` разбит по тегам; оставлен один тест смены DataHash (`DataHashTests.CoreDataHash_IsFrozen`); бюджет `inset_title` 28 и `inset_title_wide` 40.
 - Долг (записывает Orchestrator): отметки `ru/_sources.tsv` поставлены скриптом до проверки человеком. research-scientist должен проверить EN и RU переводы (узлы, `.short`, `.anchor`, названия и падежи стран и акторов) до релиза, затем `stamp ru`.
+- [x] Второе ревью (codex, head 6514af88) — changes_requested: 1 high, 3 medium; report sha256 9cc8e65e85fff5f816bdfcf2dd9679ebc289835b2388fe326e08568461e4b175; fixes in TASK-0076
