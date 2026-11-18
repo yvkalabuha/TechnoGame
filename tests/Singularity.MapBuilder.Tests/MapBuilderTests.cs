@@ -18,6 +18,27 @@ public class MapBuilderTests
     }
 
     [Fact]
+    public void Owners_1945_cover_every_region_with_known_polities_and_confidence()
+    {
+        var root = RepoRoot();
+        var regions = File.ReadAllLines(Path.Combine(root, "mods/core/map/regions.yaml"))
+            .Where(l => l.TrimStart().StartsWith("- {id: ")).Select(l => l.Split("id: ")[1].Split(',')[0]).ToList();
+        var owners = File.ReadAllLines(Path.Combine(root, "mods/core/scenarios/1945/owners.yaml")).Where(l => l.TrimStart().StartsWith("- {region: ")).ToList();
+        var polities = File.ReadAllLines(Path.Combine(root, "mods/core/scenarios/1945/polities.yaml")).Where(l => l.Contains("{id: ")).Select(l => l.Split("id: ")[1].Split(',')[0]).ToList();
+        Assert.Equal(polities.Count, polities.Distinct().Count());
+        Assert.DoesNotContain("CHN", polities);
+        var byRegion = owners.Select(l => l.Split("region: ")[1].Split(',')[0]).ToList();
+        Assert.Equal(regions.OrderBy(x => x, StringComparer.Ordinal), byRegion.OrderBy(x => x, StringComparer.Ordinal));
+        foreach (var l in owners)
+        {
+            Assert.Contains("confidence: ", l);
+            Assert.Contains("source: \"", l);
+            Assert.Contains(l.Split("owner: ")[1].Split(',')[0], polities);
+            Assert.Contains(l.Split("controller: ")[1].Split(',')[0], polities);
+        }
+    }
+
+    [Fact]
     public void Area_of_one_degree_cell_matches_authalic_sphere()
     {
         // R^2 * dLon * (sin 1deg - sin 0) = 12363.7 km2

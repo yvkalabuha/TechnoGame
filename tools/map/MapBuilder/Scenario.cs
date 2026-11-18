@@ -20,6 +20,7 @@ internal sealed class OwnerRow
     public string Controller { get; set; } = "";
     public string Status { get; set; } = "";
     public string Source { get; set; } = "";
+    public string Confidence { get; set; } = "";       // H | M | L (owners-1945-world.md)
     public string? Note { get; set; }
 }
 internal sealed class OwnerFile
