@@ -314,7 +314,7 @@ public sealed partial class Main : Node3D
         if (idx < 0) return;
         if (!on || _actorCountry[_player] == 0) { _overlay.RemoveMarker(key); return; }
         var ll = _data.Countries[_actorCountry[_player] - 1].LabelPoint;
-        _overlay.SetMarker(key, new Vector2(ll.X, ll.Y - 3f * idx), idx < 2, key);
+        _overlay.SetMarker(key, new Vector2(ll.X, ll.Y), idx < 2, key, idx);
     }
 
     void BuildHelp(CanvasLayer layer)
@@ -947,6 +947,7 @@ public sealed partial class Main : Node3D
                 Shot("settings_video_150.png"); _settings.Close(); OpenArea(AreaId.Finance); _shotStep = 64; _shotT = 0; break;
             case 64 when _shotT >= 0.8:
                 Shot("area_finance_150.png");
+                _shotLog += $"finance at 150%: order button in view without scroll {_areaPanel.ApplyInView}\n";
                 _shotLog += $"rail at 150%: fits without scroll {_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f} (min {_rail.GetCombinedMinimumSize().Y:F0} of {_rail.Size.Y:F0})\n";
                 CloseArea();
                 Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false);

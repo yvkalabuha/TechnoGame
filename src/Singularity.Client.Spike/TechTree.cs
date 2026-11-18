@@ -260,9 +260,11 @@ public sealed partial class TechTree : Control
 
     // ---------------- drawing ----------------
     Rect2 Area => new(0, 44, Size.X * 0.6f - 8, Size.Y - 52);
-    Vector2 BaseCentre => Area.Position + new Vector2(Area.Size.X * 0.5f, (Area.Size.Y - 76) * 0.5f + 4);
+    // With the legend open the planisphere gives up the left strip to it, so that the sheet never covers the disc.
+    Rect2 DiscArea => _legendOpen ? new Rect2(Area.Position.X + 360, Area.Position.Y, Area.Size.X - 360, Area.Size.Y) : Area;
+    Vector2 BaseCentre => DiscArea.Position + new Vector2(DiscArea.Size.X * 0.5f, (DiscArea.Size.Y - 76) * 0.5f + 4);
     Vector2 Centre => BaseCentre + _pan;
-    float BaseUnit => (Math.Min(Area.Size.X, Area.Size.Y - 76) * 0.5f - 44f) / 6.5f;
+    float BaseUnit => (Math.Min(DiscArea.Size.X, DiscArea.Size.Y - 76) * 0.5f - 44f) / 6.5f;
     float Unit => BaseUnit * _zoom;
 
     void ClampPan()
@@ -486,13 +488,31 @@ public sealed partial class TechTree : Control
         }
     }
 
+    // Outline of a node type (LegendData.Types): FND triangle, PRC square, APP diamond, ENG hexagon, CMP pentagon; PRN is a circle (null).
+    public static Vector2[] Outline(NodeType t, Vector2 p, float r)
+    {
+        static Vector2[] Reg(Vector2 p, float r, int n, float a0)
+        {
+            var q = new Vector2[n];
+            for (int k = 0; k < n; k++) q[k] = p + new Vector2(Mathf.Cos(a0 + k * Mathf.Tau / n), Mathf.Sin(a0 + k * Mathf.Tau / n)) * r;
+            return q;
+        }
+        switch (t)
+        {
+            case NodeType.FND: return Reg(p, r * 1.25f, 3, -Mathf.Pi / 2);
+            case NodeType.ENG: return Reg(p, r * 1.1f, 6, 0);
+            case NodeType.CMP: return Reg(p, r * 1.15f, 5, -Mathf.Pi / 2);
+            case NodeType.PRC: return new[] { p + new Vector2(-r, -r), p + new Vector2(r, -r), p + new Vector2(r, r), p + new Vector2(-r, r) };
+            case NodeType.APP: return new[] { p + new Vector2(0, -r * 1.3f), p + new Vector2(r * 1.3f, 0), p + new Vector2(0, r * 1.3f), p + new Vector2(-r * 1.3f, 0) };
+            default: return null;
+        }
+    }
+
     void Shape(NodeType t, Vector2 p, float r, Color fill, Color line, bool dashed, float w)
     {
-        if (t == NodeType.PRC || t == NodeType.APP)
+        var pts = Outline(t, p, r);
+        if (pts != null)
         {
-            Vector2[] pts = t == NodeType.PRC
-                ? new[] { p + new Vector2(-r, -r), p + new Vector2(r, -r), p + new Vector2(r, r), p + new Vector2(-r, r) }
-                : new[] { p + new Vector2(0, -r * 1.3f), p + new Vector2(r * 1.3f, 0), p + new Vector2(0, r * 1.3f), p + new Vector2(-r * 1.3f, 0) };
             if (fill.A > 0) _cv.DrawColoredPolygon(pts, fill);
             for (int k = 0; k < pts.Length; k++)
             {
@@ -598,7 +618,7 @@ public sealed partial class TechTree : Control
     // Legend (spec §8): a collapsed button at the lower left (key L), opened to a sheet with disciplines, glyph codes and line kinds.
     bool _legendOpen;
     public bool LegendOpen => _legendOpen;
-    public void ToggleLegend(bool open) { _legendOpen = open; Redraw(); }
+    public void ToggleLegend(bool open) { _legendOpen = open; ClampPan(); Redraw(); }
     Rect2 LegendButton => new(Area.Position.X + 10, Area.End.Y - 36, 128, 28);
 
     void DrawLegend()
@@ -632,12 +652,9 @@ public sealed partial class TechTree : Control
             y += row;
             var mk = new Vector2(x + 8, y - 5);
             var line = Ui.Ink2;
-            switch (t.Shape)
-            {
-                case "square": _cv.DrawRect(new Rect2(mk - new Vector2(7, 7), new Vector2(14, 14)), line, false, 1.8f); break;
-                case "diamond": _cv.DrawPolyline(new[] { mk + new Vector2(0, -9), mk + new Vector2(9, 0), mk + new Vector2(0, 9), mk + new Vector2(-9, 0), mk + new Vector2(0, -9) }, line, 1.8f, true); break;
-                default: _cv.DrawArc(mk, 8, 0, Mathf.Tau, 24, line, 1.8f, true); break;
-            }
+            var pts = Outline(Enum.Parse<NodeType>(t.Code), mk, 7);
+            if (pts == null) _cv.DrawArc(mk, 8, 0, Mathf.Tau, 24, line, 1.8f, true);
+            else _cv.DrawPolyline(pts.Append(pts[0]).ToArray(), line, 1.8f, true);
             Text(new Vector2(x + 26, y), t.Code, 14, Ui.Ink, FontKind.Mono);
             Text(new Vector2(x + 72, y), Loc.T(t.NameKey), 14, Ui.Ink2);
         }

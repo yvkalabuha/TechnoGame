@@ -19,7 +19,7 @@ public static class LegendData
 
     public static readonly GlyphType[] Types =
     {
-        new("FND", "circle", "ntype.0"), new("PRN", "circle", "ntype.1"), new("ENG", "circle", "ntype.2"),
-        new("CMP", "circle", "ntype.3"), new("PRC", "square", "ntype.4"), new("APP", "diamond", "ntype.5"),
+        new("FND", "triangle", "ntype.0"), new("PRN", "circle", "ntype.1"), new("ENG", "hexagon", "ntype.2"),
+        new("CMP", "pentagon", "ntype.3"), new("PRC", "square", "ntype.4"), new("APP", "diamond", "ntype.5"),
     };
 }

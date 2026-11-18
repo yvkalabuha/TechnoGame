@@ -355,7 +355,7 @@ verdict: PASS (7/7 pairs pass)
 shot-only: the plates on tints 1/5/7 are demo markers; in the game a plate appears only for a real signal of the player's power
 before: date 1945-11-30 tick 90 shares_in_force 0.28/0.15/0.10/0.42/0.05 tick_ms 0.01
 paused: tick 90 (was 90), pending 1, last Pending
-after: date 1946-02-24 tick 176 shares_in_force 0.45/0.11/0.07/0.34/0.03 last Applied pending 0 tick_ms 0.01
+after: date 1946-02-23 tick 175 shares_in_force 0.45/0.11/0.07/0.34/0.03 last Applied pending 0 tick_ms 0.01
 refusal: last Rejected rejected_flag True reason BadShares
 rail badge: Finance carries the active ОТКАЗ (■ 1), Production no badge
 PASS T3 no texture inside an alert plate: plate variance 0.000 (max 0.5), textured area variance 8.943, texture on (plate strip 568,15 2x24)
@@ -380,7 +380,7 @@ textures weak: shot taken
 PASS texture acceptance normal: sigma inside 4.30 levels, edge band 0-6 du darker by 5.5% (normal: sigma >= 3.0, 5-9%; weak: 1.5, 2.5-4.5%; off: 0)
 textures normal: shot taken
 T6 edge band: no text, icon or plate within the band
-PASS T6 @CanvasLayer@5/@PanelContainer@183 (Paper) nearest Label 01.04.1947: content 12.0 du from the edge (min 10.0)
+PASS T6 @CanvasLayer@5/@PanelContainer@183 (Paper) nearest Label 05.04.1947: content 12.0 du from the edge (min 10.0)
 PASS T6 @HBoxContainer@138/@Button@180 (Button) nearest TextureRect @TextureRect@179: content 5.0 du from the edge (min 5.0)
 PASS T6 @CanvasLayer@5/@PanelContainer@210 (Paper) nearest Label »: content 14.0 du from the edge (min 10.0)
 PASS T6 @VBoxContainer@186/@Button@188 (Button) nearest glyph: content 7.0 du from the edge (min 5.0)
@@ -392,13 +392,14 @@ PASS T6 @VBoxContainer@186/@Button@200 (Button) nearest glyph: content 7.0 du fr
 PASS T6 @VBoxContainer@186/@Button@202 (Button) nearest glyph: content 7.0 du from the edge (min 5.0)
 PASS T6 @VBoxContainer@186/@Button@204 (Button) nearest glyph: content 7.0 du from the edge (min 5.0)
 PASS T6 @VBoxContainer@186/@Button@207 (Button) nearest Label »: content 6.0 du from the edge (min 5.0)
-PASS T6 @CanvasLayer@5/@PanelContainer@304 (Sheet) nearest TextureRect @TextureRect@2235: content 12.0 du from the edge (min 10.0)
-PASS T6 @HBoxContainer@280/@Button@278 (Button) nearest Label ui.apply: content 5.0 du from the edge (min 5.0)
-PASS T6 @CanvasLayer@5/@Button@432 (Button) nearest Label ?: content 7.0 du from the edge (min 5.0)
+PASS T6 @CanvasLayer@5/@PanelContainer@311 (Sheet) nearest TextureRect @TextureRect@2103: content 12.0 du from the edge (min 10.0)
+PASS T6 @HBoxContainer@282/@Button@280 (Button) nearest Label ui.apply: content 5.0 du from the edge (min 5.0)
+PASS T6 @CanvasLayer@5/@Button@442 (Button) nearest Label ?: content 7.0 du from the edge (min 5.0)
 verdict: PASS (15/15 pairs pass)
 alert demo: tint 1 (asked 1) on Russia
 alert demo: tint 5 (asked 5) on Zimbabwe
 alert demo: tint 5 (asked 5) on Zimbabwe (night side)
+finance at 150%: order button in view without scroll True
 rail at 150%: fits without scroll True (min 508 of 546)
 size shots _1600x900_en: asked 1600x900, window 1600x900, viewport 1600x900, mode CanvasItems
 alert demo: tint 5 (asked 5) on Zimbabwe
@@ -415,5 +416,5 @@ rail _1920x1080: fits without scroll True (min 508 of 1026)
 size shots _1920x1080_en: asked 1920x1080, window 1920x1080, viewport 1920x1080, mode CanvasItems
 alert demo: tint 5 (asked 5) on Zimbabwe
 rail _1920x1080_en: fits without scroll True (min 508 of 1026)
-audio demo: 3442688 bytes of PCM, packed to audio_demo.ogg (252739 bytes)
-final: date 1947-06-21 tick 658
+audio demo: 3442688 bytes of PCM, packed to audio_demo.ogg (252952 bytes)
+final: date 1947-06-26 tick 663

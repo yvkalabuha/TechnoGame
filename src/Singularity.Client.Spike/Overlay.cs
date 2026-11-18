@@ -4,7 +4,7 @@ using Godot;
 namespace Singularity.Client.Spike;
 
 /// <summary>2D layer over the 3D scene: limb line, rim ticks, country labels (map face, localized) with hysteresis and overlap rejection.
-/// Labels of the slice countries carry an ink frame (no fill).</summary>
+/// Labels of the slice countries are bold with an ink underline.</summary>
 public sealed partial class Overlay : Control
 {
     sealed class LabelState { public Country C; public Label Node; public bool On; public bool Slice; }
@@ -14,14 +14,15 @@ public sealed partial class Overlay : Control
     static readonly Color Limb = new Color(Palette.Limb, 0.7f);
 
     /// <summary>Alert plate on the globe (#326): sheet halo 3 px, ink outline 1 px, sign ▲ (warn) or ■ (alarm) and a word.</summary>
-    sealed record Marker(string Key, Vector2 LonLat, bool Warn, string TextKey);
+    sealed record Marker(string Key, Vector2 LonLat, bool Warn, string TextKey, int Slot);
     readonly List<Marker> _markers = new();
     readonly List<LabelState> _labels = new();
 
-    public void SetMarker(string key, Vector2 lonLat, bool warn, string textKey)
+    /// <summary>The plate hangs up and to the right of the country point on a leader line with a dot at the point; slot stacks several plates.</summary>
+    public void SetMarker(string key, Vector2 lonLat, bool warn, string textKey, int slot = 0)
     {
         _markers.RemoveAll(m => m.Key == key);
-        _markers.Add(new Marker(key, lonLat, warn, textKey));
+        _markers.Add(new Marker(key, lonLat, warn, textKey, slot));
     }
 
     public void RemoveMarker(string key) => _markers.RemoveAll(m => m.Key == key);
@@ -34,7 +35,11 @@ public sealed partial class Overlay : Control
             if (CosTo(p) < 0.2f) continue;
             string text = (m.Warn ? "▲ " : "■ ") + Loc.T(m.TextKey);
             var sz = Fonts.Text.GetStringSize(text, HorizontalAlignment.Left, -1, 14) + new Vector2(16, 8);
-            var rect = new Rect2(_cam.UnprojectPosition(p) - sz * 0.5f, sz);
+            var anchor = _cam.UnprojectPosition(p);
+            var rect = new Rect2(anchor + new Vector2(16, -30 - m.Slot * (sz.Y + 8) - sz.Y * 0.5f), sz);
+            var from = anchor; var to = new Vector2(rect.Position.X, rect.GetCenter().Y);
+            DrawLine(from, to, Ui.Sheet, 4f, true); DrawLine(from, to, Ui.Ink, 1.5f, true);
+            DrawCircle(anchor, 4.5f, Ui.Sheet); DrawCircle(anchor, 3f, Ui.Ink);
             DrawStyleBox(Ui.Box(Ui.Sheet, null, 0, 0, Ui.R2 + 3), rect.Grow(3));
             DrawStyleBox(Ui.Box(m.Warn ? Ui.Warn : Ui.Alarm, Ui.Ink, 1, 0, Ui.R1), rect);
             DrawString(Fonts.Text, rect.Position + new Vector2(8, sz.Y - 8), text, HorizontalAlignment.Left, -1, 14, m.Warn ? Ui.Ink : Colors.White);
@@ -70,9 +75,11 @@ public sealed partial class Overlay : Control
         s.Slice = slice;
         if (slice)
         {
-            // No leftover outline (it smeared the glyphs) and a real bold instance of Literata instead of any synthetic weight.
-            s.Node.AddThemeStyleboxOverride("normal", Ui.Box(Colors.Transparent, Ink, 1, 4));
-            s.Node.RemoveThemeColorOverride("font_outline_color"); s.Node.RemoveThemeConstantOverride("outline_size");
+            // A real bold instance of Literata, a paper halo and an ink underline instead of a frame: a frame covered the outline of small countries (v0.5d).
+            var ul = Ui.Box(Colors.Transparent, null, 0, 2);
+            ul.BorderColor = Ink; ul.BorderWidthBottom = 2; ul.ContentMarginBottom = 3;
+            s.Node.AddThemeStyleboxOverride("normal", ul);
+            s.Node.AddThemeColorOverride("font_outline_color", Paper); s.Node.AddThemeConstantOverride("outline_size", 4);
             s.Node.AddThemeFontOverride("font", Fonts.MapBold);
         }
         else { s.Node.AddThemeColorOverride("font_outline_color", Paper); s.Node.AddThemeConstantOverride("outline_size", 4); }
