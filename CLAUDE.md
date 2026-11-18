@@ -36,6 +36,9 @@ The owner runs `/handoff`. If the session ends without it and files changed, rem
 | ui-art-director | visual identity, screen design, visual review of UI (may block with reasons) |
 | economy-analyst | economy, production capability, supply chains, trade |
 | civilization-systems-designer | institutions, personalities, national projects, political systems |
+| sound-director | audio identity, sound map, music, sourcing and licences, audio review |
+| counterfactual-analyst | alternative branches of technology and events, dead ends, ahead-of-time branches |
+| ui-tester | drives the client via the test bridge/MCP (#293), UI defects, client performance |
 
 - Create or change agent files only at the end of a session: changes are not picked up by the running session. Fallback for a missing agent: `general-purpose` with the role file as instructions + `zone_check`.
 - Choose the minimal set of agents. Run agents in parallel only for independent work.
