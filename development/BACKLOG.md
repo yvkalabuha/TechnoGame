@@ -105,7 +105,7 @@
 | [TASK-0088](../development/tasks/TASK-0088-client-v0-5c.md) | DONE | Client v0.5c: navigation rail, 7 areas, speed scale, textures, icons and area pictures | MS-M1 |
 | [TASK-0089](../development/tasks/TASK-0089-adr-0019-r3-inventory.md) | DONE | ADR-0019 R3: inventory of flow columns and non-linear monthly rules in M0 systems | MS-M1 |
 | [TASK-0090](../development/tasks/TASK-0090-adr-0020-r2-multitable.md) | DONE | ADR-0020 R2: multi-table Kernel API sketch and hash-bytes check | MS-M1 |
-| [TASK-0091](../development/tasks/TASK-0091-map-builder-t3-world.md) | APPROVED | Map builder T3: world beyond Europe, regions split by event lines (#350), territories.yaml | MS-M1 |
+| [TASK-0091](../development/tasks/TASK-0091-map-builder-t3-world.md) | REVIEW | Map builder T3: world beyond Europe, regions split by event lines (#350), territories.yaml | MS-M1 |
 | [TASK-0092](../development/tasks/TASK-0092-determinism-rules-ext.md) | DONE | DeterminismRules: string hashing, culture comparisons, threading APIs, Parallel.For allowlist, Lab ToyFunnel check | MS-M1 |
 | [TASK-0093](../development/tasks/TASK-0093-lab-matrix-validity.md) | DONE | Lab matrix validity and size fields; registry golden_set_hash for matrix EXPs (ADR-0008, #374) | MS-M1 |
 | [TASK-0094](../development/tasks/TASK-0094-client-v0-5d.md) | APPROVED | Client v0.5d: tree legend, glyph shapes, alert callout to country, foreign-power tag tint | MS-M1 |

@@ -1,7 +1,7 @@
 ---
 id: TASK-0091
 title: "Map builder T3: world beyond Europe, regions split by event lines (#350), territories.yaml"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: developer
