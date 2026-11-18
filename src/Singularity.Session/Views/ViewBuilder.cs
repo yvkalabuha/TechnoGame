@@ -60,7 +60,7 @@ internal static class ViewBuilder
         for (int b = 0; b < w.ProductsLayout.Bureaus; b++)
         {
             int design = w.Products.BureauDesign(a, b);
-            long required = design < 0 ? 0 : w.Products.BureauReq(w.ProductsLayout.AltAfClass[w.Products.Alternatives(a, design)[w.ProductsLayout.AirframeSlot]]);
+            long required = design < 0 ? 0 : w.Products.BureauReq(w.ProductsLayout.AltAfClass[w.Products.AltAt(a, design, w.ProductsLayout.AirframeSlot)]);
             bureaus.Add(new BureauView(b, design, w.Industry.Granted(a, ProductsLayout.EngineerCategory, w.ProductsLayout.BureauRequester(b)), required));
         }
         var refusals = ImmutableArray.CreateBuilder<long>(Reasons.Length);
@@ -260,7 +260,7 @@ internal static class ViewBuilder
         int[] prc = p.PrcSet(a, d);
         if (prc.Length > 0)
         {
-            admitted = w.Industry.Profile(a, DesignRules.Items(w.ProductsLayout, prc), month).Admitted;
+            admitted = w.Industry.Profile(a, p.PrcItems(a, d), month).Admitted;
             // The first of the minima in prc_set order, as in the print of T6e2.
             yMin = w.ProductsInputs.AdmittedYield(a, prc[0], month);
             argP = prc[0];

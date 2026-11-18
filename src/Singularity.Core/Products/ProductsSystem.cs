@@ -403,6 +403,9 @@ public sealed partial class ProductsSystem : ITickSystem
     /// </summary>
     public bool IsLineNow(int actor, int design) => (DesignStage)_stage[design].Next[actor] == DesignStage.Series;
 
+    /// <summary>The alternative in one slot of a design (<see cref="Alternatives"/> without the array).</summary>
+    public int AltAt(int actor, int design, int slot) => _alt[design * _s + slot].Current[actor];
+
     /// <summary>Alternatives of a design (layout-global indices), −1 for an empty slot.</summary>
     public int[] Alternatives(int actor, int design)
     {
@@ -425,16 +428,36 @@ public sealed partial class ProductsSystem : ITickSystem
         // Memo of DesignRules.PrcSet, built only in the constructor and in Post (single-threaded), never on read, so parallel readers do not race.
         // Keyed by the alternatives in Current: a stale entry is never returned, it is recomputed without being stored. Not state: not hashed or saved.
         // Callers must not mutate the returned array.
+        PrcMemo? memo = SameMemo(actor, design, next: false);
+        return memo is not null ? memo.Prc : DesignRules.PrcSet(_l, Alternatives(actor, design));
+    }
+
+    /// <summary>The <c>prc_set</c> with <c>n_p</c> and <c>base_cost_p</c> of a design for <c>production_profile</c> (<see cref="DesignRules.Items"/> of <see cref="PrcSet"/>); do not mutate.</summary>
+    public PrcSetItem[] PrcItems(int actor, int design) =>
+        SameMemo(actor, design, next: false)?.Items ?? DesignRules.Items(_l, PrcSet(actor, design));
+
+    // The memo of (actor, design) if it was built for the alternatives now in Current (or in Next); no allocation.
+    private PrcMemo? SameMemo(int actor, int design, bool next)
+    {
         PrcMemo? memo = _prcMemo[actor * _d + design];
-        if (memo is not null)
+        if (memo is null)
+            return null;
+        for (int s = 0; s < _s; s++)
         {
-            bool same = true;
-            for (int s = 0; s < _s && same; s++)
-                same = memo.Alts[s] == _alt[design * _s + s].Current[actor];
-            if (same)
-                return memo.Prc;
+            int alt = next ? _alt[design * _s + s].Next[actor] : _alt[design * _s + s].Current[actor];
+            if (memo.Alts[s] != alt)
+                return null;
         }
-        return DesignRules.PrcSet(_l, Alternatives(actor, design));
+        return memo;
+    }
+
+    // Everything that is a pure function of the alternatives, made once when they change (Post, single-threaded).
+    private PrcMemo MakeMemo(int[] alts)
+    {
+        int[] prc = DesignRules.PrcSet(_l, alts);
+        int[] pu = DesignRules.Block(_l, prc, airframe: false), af = DesignRules.Block(_l, prc, airframe: true);
+        return new PrcMemo(alts, prc, DesignRules.Items(_l, prc), DesignRules.Items(_l, pu), DesignRules.Items(_l, af),
+            DesignRules.BaseCostSum(_l, pu), DesignRules.BaseCostSum(_l, af), FloorOf(alts), UpkeepOf(alts));
     }
 
     // Refreshes the memo of every (actor, design) from Current; keeps the entry when the alternatives did not change.
@@ -445,20 +468,25 @@ public sealed partial class ProductsSystem : ITickSystem
             for (int d = 0; d < _d; d++)
             {
                 ref PrcMemo? slot = ref _prcMemo[a * _d + d];
-                int[] alts = Alternatives(a, d);
-                if (Stage(a, d) == DesignStage.None || alts.Any(x => x < 0 || x >= _l.AltPrcStart.Length - 1))
+                bool filled = Stage(a, d) != DesignStage.None;
+                for (int s = 0; s < _s && filled; s++)
+                {
+                    int x = _alt[d * _s + s].Current[a];
+                    filled = x >= 0 && x < _l.AltPrcStart.Length - 1;
+                }
+                if (!filled)
                 {
                     slot = null; // no design or a slot not filled: PrcSet answers without the memo, as before
                     continue;
                 }
-                if (slot is not null && slot.Alts.AsSpan().SequenceEqual(alts))
+                if (SameMemo(a, d, next: false) is not null)
                     continue;
-                slot = new PrcMemo(alts, DesignRules.PrcSet(_l, alts));
+                slot = MakeMemo(Alternatives(a, d));
             }
         }
     }
 
-    private sealed record PrcMemo(int[] Alts, int[] Prc);
+    private sealed record PrcMemo(int[] Alts, int[] Prc, PrcSetItem[] Items, PrcSetItem[] PuItems, PrcSetItem[] AfItems, Fx6 SumPu, Fx6 SumAf, Fx6 Floor, Fx6 Upkeep);
 
     public Fx6 Perf(int actor, int design) => DesignRules.Perf(_l, Alternatives(actor, design));
 
@@ -607,10 +635,12 @@ public sealed partial class ProductsSystem : ITickSystem
         slotGeneration == handleGeneration && (DesignStage)stage is not (DesignStage.None or DesignStage.Withdrawn);
 
     /// <summary><c>unit_cost_floor</c> of a design (STATE_WORDS §3; R-PS2m at <c>U</c> = 1).</summary>
-    public Fx6 UnitCostFloor(int actor, int design) => FloorOf(Alternatives(actor, design));
+    public Fx6 UnitCostFloor(int actor, int design) =>
+        SameMemo(actor, design, next: false) is { } memo ? memo.Floor : FloorOf(Alternatives(actor, design));
 
     /// <summary>Upkeep per unit and month of a design (contract §4.4).</summary>
-    public Fx6 Upkeep(int actor, int design) => UpkeepOf(Alternatives(actor, design));
+    public Fx6 Upkeep(int actor, int design) =>
+        SameMemo(actor, design, next: false) is { } memo ? memo.Upkeep : UpkeepOf(Alternatives(actor, design));
 
     /// <summary>
     /// <c>unit_cost</c> of a design at its current <c>line_E</c> from the <c>production_profile</c> of month <paramref name="month"/>
@@ -633,7 +663,7 @@ public sealed partial class ProductsSystem : ITickSystem
             return Fx6.One;
         if (Stage(actor, design) == DesignStage.None)
             throw new InvalidOperationException($"Design slot {design} of actor {actor} is empty: it has no readiness.");
-        ProductionProfile profile = _inputs.Profile(actor, DesignRules.Items(_l, PrcSet(actor, design)), month);
+        ProductionProfile profile = _inputs.Profile(actor, PrcItems(actor, design), month);
         return ProductsMath.Readiness(PaidRatio(actor), profile.Q, DefectsHidden(actor, design) + DefectsOpen(actor, design), _dRef, _p.PsiD);
     }
 
@@ -935,12 +965,12 @@ public sealed partial class ProductsSystem : ITickSystem
             Fx6 r = Fx6.Zero;
             if ((DesignStage)_stage[d].Next[a] == DesignStage.Series)
             {
-                int[] alts = AltsNext(a, d);
-                int[] prc = DesignRules.PrcSet(_l, alts);
-                CostCard card = CardFor(a, alts, prc, t);
+                PrcMemo m = MemoNext(a, d);
+                int[] alts = m.Alts;
+                CostCard card = CardFor(a, m, t);
                 Fx6 alloyKg = _l.AltAlloyKg[alts[_l.AlloySlot]];
                 bool free = DesignRules.AlloyFree(_l, alts);
-                if (_inputs.Profile(a, DesignRules.Items(_l, prc), t).Admitted)
+                if (_inputs.Profile(a, m.Items, t).Admitted)
                 {
                     // alloy_free: no alloy term, the line does not touch alloy_left (spec v0.14 §1.4 item 1).
                     Fx6 rho = _p.LpRho[_gp[d].Next[a] - 1] * budget;
@@ -951,7 +981,7 @@ public sealed partial class ProductsSystem : ITickSystem
                 // §6.1: price = R-PS2m process part + materials_floor + h_floor hours (print only; no budget is spent).
                 Set(_cost, d, a, card.MaterialsFloor + ProductsMath.AssemblyCost(card.HFloor, card.WageKh) + card.ProcessPart);
                 if (r > Fx6.Zero)
-                    Produce(chunk, a, d, y, r, prc);
+                    Produce(chunk, a, d, y, r, m.Prc);
             }
             Set(_rate, d, a, r);
         }
@@ -1429,9 +1459,9 @@ public sealed partial class ProductsSystem : ITickSystem
             LineBind bind = LineBind.None;
             if ((DesignStage)_stage[d].Next[a] == DesignStage.Series)
             {
-                int[] alts = AltsNext(a, d);
-                int[] prc = DesignRules.PrcSet(_l, alts);
-                Fx6 cost = ProductsMath.UnitCost(CardFor(a, alts, prc, t), e);
+                PrcMemo m = MemoNext(a, d);
+                int[] alts = m.Alts;
+                Fx6 cost = ProductsMath.UnitCost(CardFor(a, m, t), e);
                 Fx6 want = _inputs.LineRate(a, d, t) ?? Get(_rateCmd, d, a);
                 if (want < Fx6.Zero)
                     throw new ProductsInvariantException(t, a, $"negative line rate {want} for design {d}");
@@ -1439,7 +1469,7 @@ public sealed partial class ProductsSystem : ITickSystem
                 // Read for every line of С (a pure read of the snapshot) so the trace shows the input even when the line is not admitted.
                 Fx6 tb = _inputs.TrainingBudget(a, d, t);
                 training = tb;
-                if (_inputs.Profile(a, DesignRules.Items(_l, prc), t).Admitted)
+                if (_inputs.Profile(a, m.Items, t).Admitted)
                 {
                     Fx6 alloyKg = _l.AltAlloyKg[alts[_l.AlloySlot]];
                     bool free = DesignRules.AlloyFree(_l, alts);
@@ -1463,7 +1493,7 @@ public sealed partial class ProductsSystem : ITickSystem
                 _traceLines[a * _d + d] = new LineMoneyStep(d, leftIn, paidFromLeft, training, fromTraining);
                 Set(_cost, d, a, cost);
                 if (r > Fx6.Zero)
-                    Produce(chunk, a, d, y, r, prc);
+                    Produce(chunk, a, d, y, r, m.Prc);
                 // Contract §4.4d step 7 (r4): idle_c counts the months of С with a zero line output, built_any is set by the first output.
                 _idleC[d].Next[a] = r > Fx6.Zero ? 0 : _idleC[d].Next[a] + 1;
             }
@@ -1553,6 +1583,15 @@ public sealed partial class ProductsSystem : ITickSystem
 
     // R-PS2m cost card (contract §4.4a): h_first, h_floor, materials_floor by af_class; process part with U_B from the
     // production_profile of each block (П-8). A block without processes costs nothing and is not asked for.
+    private CostCard CardFor(int a, PrcMemo m, long t)
+    {
+        int k = DesignRules.AfClass(_l, m.Alts), r = DesignRules.PuRank(_l, m.Alts);
+        Fx6 uPu = m.SumPu == Fx6.Zero ? Fx6.One : _inputs.Profile(a, m.PuItems, t).UnitCostMult;
+        Fx6 uAf = m.SumAf == Fx6.Zero ? Fx6.One : _inputs.Profile(a, m.AfItems, t).UnitCostMult;
+        return new CostCard(_l.HFirst[k - 1], _l.HFloor[k - 1], _l.WageKh, _l.MaterialsFloor[k - 1],
+            ProductsMath.ProcessPart(m.SumPu, uPu, _l.ProcScalePu[r - 1], m.SumAf, uAf, _l.ProcScaleAf[k - 1]), _p.LearningQ10);
+    }
+
     private CostCard CardFor(int a, ReadOnlySpan<int> alts, int[] prc, long t)
     {
         int k = DesignRules.AfClass(_l, alts), r = DesignRules.PuRank(_l, alts);
@@ -1577,7 +1616,10 @@ public sealed partial class ProductsSystem : ITickSystem
         ProductsMath.Upkeep(_p.UpkeepShare, FloorOf(alts), DesignRules.Complexity(_l, DesignRules.PrcSet(_l, alts)), _p.UpkeepQ10, _l.Maintainability,
             DesignRules.UpkeepMult(_l, alts));
 
-    private Fx6 UpkeepNext(int a, int d) => UpkeepOf(AltsNext(a, d));
+    private Fx6 UpkeepNext(int a, int d) => SameMemo(a, d, next: true) is { } memo ? memo.Upkeep : UpkeepOf(AltsNext(a, d));
+
+    // The derived data of the alternatives in Next: the memo if they did not change, else made now (a design composed or derived this month).
+    private PrcMemo MemoNext(int a, int d) => SameMemo(a, d, next: true) ?? MakeMemo(AltsNext(a, d));
 
     private int[] AltsNext(int a, int d)
     {

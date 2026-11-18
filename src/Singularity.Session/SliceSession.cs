@@ -31,13 +31,17 @@ public sealed partial class SliceSession
     private readonly SliceWorld _world;
     private readonly List<LoggedCommand> _pending = new();
     private readonly List<LoggedCommand> _journal = new();
-    private readonly List<string> _outcomes = new();
+    private readonly OutcomeLog _outcomes = new();
     // Index of the journal (last local_n per source), rebuilt by replaying the log; not world state.
     private readonly Dictionary<(SourceClass, int), int> _lastLocal = new();
+
+    // One delegate for the life of the session: a method group would allocate one per applied command.
+    private readonly Func<int, int, bool> _knowsProcess;
 
     private SliceSession(SliceWorld world)
     {
         _world = world;
+        _knowsProcess = KnowsProcess;
         _hash = ComputeHash();
         Layout = ViewBuilder.Layout(world);
         _view = ViewBuilder.Snapshot(world, Tick, _hash, _month, null, null);
@@ -45,6 +49,13 @@ public sealed partial class SliceSession
 
     /// <summary>The fixed shape of the world the rows of the views refer to.</summary>
     public SliceLayoutView Layout { get; }
+
+    /// <summary>
+    /// Measurement seam (TASK-0107, ADR-0023 п. 2.1): when set, a tick publishes no snapshot (the <see cref="MonthStepView"/> is still built and
+    /// dropped), so the bytes of a run are the tick path alone. <see cref="View"/> stays at the last published one; the state and the hash do not
+    /// depend on it (views are pure reads). Not part of the public surface.
+    /// </summary>
+    internal bool SkipViews { get; set; }
 
     /// <summary>
     /// The state after the last non-empty tick as an immutable snapshot (SLICE_COMPOSITION §12.1): replaced as one reference after the hash is taken,
@@ -214,6 +225,13 @@ public sealed partial class SliceSession
         string? hash = config.HashEveryTick && nonEmpty || config.HashCheckpoints && (monthly || applied) ? CurrentHash() : null;
         if (monthly || applied || config.DailyTickProbe)
         {
+            if (SkipViews)
+            {
+                // The step view is part of the tick path (ADR-0023 п. 2.1), the snapshot is not: build the one, publish nothing.
+                if (inputs is not null)
+                    _ = ViewBuilder.Step(_world, _month);
+                return;
+            }
             if (!monthly && !applied && _world.DailyViewNeutral)
             {
                 // F7a: no step, no command and only view-neutral systems ran, so the actors are those of the last view, up to the close reasons.
@@ -237,10 +255,10 @@ public sealed partial class SliceSession
         long month = _world.Calendar.MonthIndex(_world.Calendar.NextDue(Cadence.Monthly, tick));
         foreach (LoggedCommand c in _pending)
         {
-            CommandVerdict v = CommandValidator.CheckState(c.Command, KnowsProcess);
+            CommandVerdict v = CommandValidator.CheckState(c.Command, _knowsProcess);
             if (v.Accepted)
                 v = _world.Commands.Apply(c.Command, month);
-            _outcomes.Add(v.Accepted ? $"{c.Key}: accepted" : $"{c.Key}: rejected: {v.Reason}: {v.Message}");
+            _outcomes.Add(c.Key, v);
         }
         _journal.AddRange(_pending);
         _pending.Clear();

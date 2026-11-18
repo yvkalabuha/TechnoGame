@@ -45,5 +45,5 @@ internal sealed class PolicyInputsAdapter(SliceWorld world) : IPolicyInputs
     }
 
     private ProductionProfile ProfileOf(int actorRow, int design, long month) =>
-        world.Industry.Profile(actorRow, DesignRules.Items(world.ProductsLayout, world.Products.PrcSet(actorRow, design)), month);
+        world.Industry.Profile(actorRow, world.Products.PrcItems(actorRow, design), month);
 }

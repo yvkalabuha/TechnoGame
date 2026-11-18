@@ -24,6 +24,8 @@ internal sealed class PolicyProductsAdapter(SliceWorld world) : IPolicyProducts
 
     public int[] Alternatives(int actorRow, int design) => world.Products.Alternatives(actorRow, design);
 
+    public int[] PrcSet(int actorRow, int design) => world.Products.PrcSet(actorRow, design);
+
     public bool Knows(int actorRow, int nodeNumber, long month)
     {
         int row = world.Graph.RowOf(nodeNumber);
@@ -32,8 +34,7 @@ internal sealed class PolicyProductsAdapter(SliceWorld world) : IPolicyProducts
 
     public bool Admitted(int actorRow, int design, long month)
     {
-        int[] prc = world.Products.PrcSet(actorRow, design);
-        return world.Industry.Profile(actorRow, DesignRules.Items(world.ProductsLayout, prc), month).Admitted;
+        return world.Industry.Profile(actorRow, world.Products.PrcItems(actorRow, design), month).Admitted;
     }
 
     public Fx6 AdmittedYield(int actorRow, int processNumber, long month) => world.ProductsInputs.AdmittedYield(actorRow, processNumber, month);

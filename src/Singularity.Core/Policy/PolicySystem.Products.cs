@@ -134,17 +134,46 @@ public sealed partial class PolicySystem
 
     // ---- decisions
 
-    private sealed class Decisions(int generations)
+    // One per thread, reset by Decide: a decision lives from Decide to Commit of the same actor and is never kept, so a compute allocates none.
+    private sealed class Decisions
     {
         public readonly List<DesignCommand> Design = [];
         public readonly List<(int Design, Fx6 Rate)> Starts = [];
         public readonly List<int> Closes = [];
         public readonly List<LineCloseReason> CloseReasons = [];   // parallel to Closes
-        public readonly bool[] Repeat = new bool[generations];
+        public bool[] Repeat = [];
         public readonly List<FleetCommand> Fleet = [];
         public Fx6 IncomeExpected;
         public PolicyDesign[] Designs = [];
+        public bool[] GaveUpNow = [], CancelNow = [];
+        public readonly List<int> Lines = [];
+
+        public void Reset(int generations, int designs)
+        {
+            Design.Clear();
+            Starts.Clear();
+            Closes.Clear();
+            CloseReasons.Clear();
+            Fleet.Clear();
+            Lines.Clear();
+            IncomeExpected = Fx6.Zero;
+            if (Repeat.Length != generations)
+            {
+                Repeat = new bool[generations];
+                GaveUpNow = new bool[generations + 1];
+            }
+            if (Designs.Length != designs)
+            {
+                Designs = new PolicyDesign[designs];
+                CancelNow = new bool[designs];
+            }
+            Array.Clear(Repeat);
+            Array.Clear(GaveUpNow);
+            Array.Clear(CancelNow);
+        }
     }
+
+    [Scratch, ThreadStatic] private static Decisions? t_decisions;
 
     private void InitializeProducts()
     {
@@ -154,8 +183,7 @@ public sealed partial class PolicySystem
         for (int row = 0; row < _actorNumber.Length; row++)
         {
             Decisions dec = Decide(row, 0, annual: true, monthly: false, default, default);
-            int row0 = row;
-            Commit(row, dec, Stamp(0), (c, v) => SetCurrent(c, row0, v), (c, v) => SetCurrent(c, row0, v));
+            Commit(row, dec, Stamp(0), next: false);
         }
     }
 
@@ -169,7 +197,7 @@ public sealed partial class PolicySystem
         for (int i = 0; i < dec.Closes.Count; i++)
             _closeReason[row * _designs + dec.Closes[i]] = dec.CloseReasons[i];
         ComputeLicence(row, t, dec.Designs, dec, sharesNext, budgetNext, why);
-        Commit(row, dec, Stamp(t + 1), (c, v) => c.Next[row] = v, (c, v) => c.Next[row] = v);
+        Commit(row, dec, Stamp(t + 1), next: true);
     }
 
     /// <summary>Adds a close of the design with its reason (callers check <c>Contains</c>: one close per design and month, the first reason stays).</summary>
@@ -232,11 +260,11 @@ public sealed partial class PolicySystem
     {
         IPolicyProducts prod = _prod!;
         var profile = (PolicyProfile)_profile.Current[row];
-        var dec = new Decisions(_gens);
-        var designs = new PolicyDesign[_designs];
+        Decisions dec = t_decisions ??= new Decisions();
+        dec.Reset(_gens, _designs);
+        PolicyDesign[] designs = dec.Designs;
         for (int d = 0; d < _designs; d++)
             designs[d] = prod.Design(row, d, t);
-        dec.Designs = designs;
         ProductsLayout l = prod.Layout;
 
         if (annual)
@@ -288,8 +316,7 @@ public sealed partial class PolicySystem
             return dec;
 
         // A40: one give-up per generation and month; only while the Requirement for the generation has not been repeated.
-        var gaveUpNow = new bool[l.Generations + 1];
-        var cancelNow = new bool[_designs];
+        bool[] gaveUpNow = dec.GaveUpNow, cancelNow = dec.CancelNow;
         Fx6 launchLimit = _pp.LaunchShare[(int)profile] * prod.DRef;
         for (int d = 0; d < _designs; d++)
         {
@@ -302,7 +329,7 @@ public sealed partial class PolicySystem
             // A launch decided last month is still pending in the snapshot: a launching project is not given up.
             if (_startStamp[d].Current[row] == Stamp(t))
                 continue;
-            if (Pending(_dsnStamp, row, t, k => _dsnKind[k].Current[row] == 3 && _dsnTarget[k].Current[row] == d))
+            if (CancelPending(row, t, d))
                 continue;
             dec.Design.Add(new DesignCommand(DesignCommandKind.Cancel, d, []));
             cancelNow[d] = true;
@@ -321,7 +348,7 @@ public sealed partial class PolicySystem
         // «Lines» are the snapshot's С stages minus closes still pending. A start pending from the previous month is not counted: it blocks any
         // new launch (startPending) and lands together with its own closes, so the count never exceeds two when it becomes a line. (The fleet
         // rule A42.4 projects pending starts too, because it looks at the book of t+1.)
-        var lines = new List<int>();
+        List<int> lines = dec.Lines;
         for (int d = 0; d < _designs; d++)
         {
             if (designs[d].Stage == DesignStage.Series && _closeStamp[d].Current[row] != Stamp(t))
@@ -357,7 +384,7 @@ public sealed partial class PolicySystem
                 PolicyDesign x = designs[d];
                 // A project cancelled this month or whose cancel is still pending does not launch.
                 if (x.Stage != DesignStage.Prototype || !x.GateOpen || x.Hidden > launchLimit || cancelNow[d]
-                    || Pending(_dsnStamp, row, t, k => _dsnKind[k].Current[row] == 3 && _dsnTarget[k].Current[row] == d)
+                    || CancelPending(row, t, d)
                     || !prod.Admitted(row, d, t))
                     continue;
                 Fx6 procurement = Shares(row).Procurement * Budget(row);
@@ -389,7 +416,7 @@ public sealed partial class PolicySystem
     // y_min(d, t): the least yield of the design's prc_set at the home site in the snapshot; an unknown process gives 0 (spec A41 F17b).
     private Fx6 YMin(int row, int design, long t)
     {
-        int[] prc = DesignRules.PrcSet(_prod!.Layout, _prod.Alternatives(row, design));
+        int[] prc = _prod!.PrcSet(row, design);
         if (prc.Length == 0)
             return Fx6.Zero;
         Fx6 min = _prod.AdmittedYield(row, prc[0], t);
@@ -416,18 +443,34 @@ public sealed partial class PolicySystem
     }
 
     // A decision of the previous month that the layer applies only in this month's compute is still invisible in the snapshot.
-    private bool Pending(IntColumn[] stamps, int row, long t, Func<int, bool> match)
+    private bool CancelPending(int row, long t, int design)
     {
-        for (int k = 0; k < stamps.Length; k++)
+        for (int k = 0; k < _dsnStamp.Length; k++)
         {
-            if (stamps[k].Current[row] == Stamp(t) && match(k))
+            if (_dsnStamp[k].Current[row] == Stamp(t) && _dsnKind[k].Current[row] == 3 && _dsnTarget[k].Current[row] == design)
                 return true;
         }
         return false;
     }
 
-    private void Commit(int row, Decisions dec, int stamp, Action<IntColumn, int> setInt, Action<LongColumn, long> setLong)
+    // next = true inside the compute (writes Next); false before tick 0 (loads Current).
+    private void Commit(int row, Decisions dec, int stamp, bool next)
     {
+        void setInt(IntColumn c, int v)
+        {
+            if (next)
+                c.Next[row] = v;
+            else
+                SetCurrent(c, row, v);
+        }
+        void setLong(LongColumn c, long v)
+        {
+            if (next)
+                c.Next[row] = v;
+            else
+                SetCurrent(c, row, v);
+        }
+
         if (dec.Design.Count > DesignSlots)
             throw new PolicyInvariantException(stamp, row, $"{dec.Design.Count} design commands for {DesignSlots} slots");
         for (int k = 0; k < dec.Design.Count; k++)

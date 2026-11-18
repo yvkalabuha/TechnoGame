@@ -13,5 +13,6 @@
     <InternalsVisibleTo Include="Singularity.Session.Tests" />
     <!-- Lab bench (TASK-0064) reads the real session table for R1-R3; benchmark only. -->
     <InternalsVisibleTo Include="Singularity.Lab" />
+    <InternalsVisibleTo Include="Singularity.Lab.Tests" />
   </ItemGroup>
 </Project>
