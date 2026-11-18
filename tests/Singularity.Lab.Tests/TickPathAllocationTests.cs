@@ -41,14 +41,14 @@ public sealed class TickPathAllocationTests(ITestOutputHelper output) : IDisposa
     {
         var spec = new SynthWorldSpec(200, 2000, SynthGraph.CrossEdges);
         SynthWorld w = SynthWorldGenerator.Build(spec, Path.Combine(_tmp, spec.Name));
-        const int months = 14;
+        const int months = 26;
         (long[] tick, string hashNoViews) = Run(w, skipViews: true, months);
         (_, string hashViews) = Run(w, skipViews: false, months);
         HashAssert.Equal(hashViews, hashNoViews, "views off vs on");
         output.WriteLine("tick path bytes per month: " + string.Join(", ", tick));
-        // Steady months stay within 1 MiB; the yearly month (12) adds the annual Requirement and the AI's WhyNot closures (open: TASK-0107 result).
+        // Every measured month, the yearly one (12) included, stays within 1 MiB (ADR-0023 п. 2.1).
         for (int m = 2; m < months; m++)
-            Assert.True(tick[m] <= (m % 12 == 0 ? 2 << 20 : 1 << 20), $"month {m}: {tick[m]} B");
+            Assert.True(tick[m] <= 1 << 20, $"month {m}: {tick[m]} B");
         Assert.True(tick.Skip(2).Average() <= 1 << 20, "the mean over a year");
     }
 }

@@ -30,7 +30,7 @@ public sealed partial class SliceSession
 
     private readonly SliceWorld _world;
     private readonly List<LoggedCommand> _pending = new();
-    private readonly List<LoggedCommand> _journal = new();
+    private readonly ChunkedList<LoggedCommand> _journal = new();
     private readonly OutcomeLog _outcomes = new();
     // Index of the journal (last local_n per source), rebuilt by replaying the log; not world state.
     private readonly Dictionary<(SourceClass, int), int> _lastLocal = new();

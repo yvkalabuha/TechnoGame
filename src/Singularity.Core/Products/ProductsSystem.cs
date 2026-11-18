@@ -456,8 +456,9 @@ public sealed partial class ProductsSystem : ITickSystem
     {
         int[] prc = DesignRules.PrcSet(_l, alts);
         int[] pu = DesignRules.Block(_l, prc, airframe: false), af = DesignRules.Block(_l, prc, airframe: true);
+        Fx6 floor = FloorOf(alts);
         return new PrcMemo(alts, prc, DesignRules.Items(_l, prc), DesignRules.Items(_l, pu), DesignRules.Items(_l, af),
-            DesignRules.BaseCostSum(_l, pu), DesignRules.BaseCostSum(_l, af), FloorOf(alts), UpkeepOf(alts));
+            DesignRules.BaseCostSum(_l, pu), DesignRules.BaseCostSum(_l, af), floor, UpkeepOf(alts, floor));
     }
 
     // Refreshes the memo of every (actor, design) from Current; keeps the entry when the alternatives did not change.
@@ -1612,8 +1613,10 @@ public sealed partial class ProductsSystem : ITickSystem
             DesignRules.BaseCostSum(_l, DesignRules.Block(_l, prc, airframe: true)), _l.ProcScaleAf[k - 1]);
     }
 
-    private Fx6 UpkeepOf(ReadOnlySpan<int> alts) =>
-        ProductsMath.Upkeep(_p.UpkeepShare, FloorOf(alts), DesignRules.Complexity(_l, DesignRules.PrcSet(_l, alts)), _p.UpkeepQ10, _l.Maintainability,
+    private Fx6 UpkeepOf(ReadOnlySpan<int> alts) => UpkeepOf(alts, FloorOf(alts));
+
+    private Fx6 UpkeepOf(ReadOnlySpan<int> alts, Fx6 floor) =>
+        ProductsMath.Upkeep(_p.UpkeepShare, floor, DesignRules.Complexity(_l, DesignRules.PrcSet(_l, alts)), _p.UpkeepQ10, _l.Maintainability,
             DesignRules.UpkeepMult(_l, alts));
 
     private Fx6 UpkeepNext(int a, int d) => SameMemo(a, d, next: true) is { } memo ? memo.Upkeep : UpkeepOf(AltsNext(a, d));

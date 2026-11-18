@@ -127,7 +127,7 @@ public static class IndustryMath
     }
 
     // Two buffers of the thread: the items a site builds and the sorted copy Profile makes of them. Pure temporaries, overwritten before every read.
-    [ThreadStatic] private static ProfileItem[]? t_items, t_sorted;
+    [Scratch, ThreadStatic] private static ProfileItem[]? t_items, t_sorted;
 
     /// <summary>The thread's buffer for the items of one <c>Industry.Profile</c> call (<paramref name="n"/> long); the caller fills all of it.</summary>
     internal static Span<ProfileItem> ItemsScratch(int n) => Scratch(ref t_items, n);

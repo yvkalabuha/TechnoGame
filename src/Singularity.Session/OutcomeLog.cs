@@ -9,7 +9,7 @@ namespace Singularity.Session;
 /// </summary>
 internal sealed class OutcomeLog : IReadOnlyList<string>
 {
-    private readonly List<(CommandKey Key, CommandVerdict Verdict)> _items = new();
+    private readonly ChunkedList<(CommandKey Key, CommandVerdict Verdict)> _items = new();
 
     public int Count => _items.Count;
 
