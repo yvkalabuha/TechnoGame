@@ -146,6 +146,7 @@
 | [ADR-0018](../docs/decisions/ADR-0018-localization-keys-locale-files-in-mods-en-and-ru.md) | ACCEPTED | Localization: keys, locale files in mods, EN and RU |
 | [ADR-0019](../docs/decisions/ADR-0019-daily-slices-228.md) | PROPOSED | Monthly systems split into daily slices (#228), revision of ADR-0006 |
 | [ADR-0020](../docs/decisions/ADR-0020-province-budget.md) | PROPOSED | Province storage, aggregation to regions and tick budget |
+| [ADR-0021](../docs/decisions/ADR-0021-stochastic-events.md) | PROPOSED | Stochastic event system next to scripted events (scandals, link failures) |
 
 ## Research Reports
 
