@@ -55,11 +55,11 @@ N — necessary, S — sufficient. `from`-атомы генерируются (�
 | **Saar** (C02b, присоединение 1957-01-01) | `transfer_owner SAAR→FRG`, `transfer_controller FRA→FRG`, `absorb_polity SAAR` | `fired(C09)`, `exists(SAAR)` | `exists(FRG)` |
 | **Austria 1955** (C27, один шаг) | `transfer_controller` 4 державы→AUT и `dissolve_joint ALLIED_VIENNA` в одной записи: оба эффекта в один день, дня «AUT контролирует, ALLIED_VIENNA жива» нет (K9) | `fired(C26)`, `exists(AUT)` | `not at_war` внутри четвёрки |
 | **Algeria 1962** (B56, `war_related`) | `create_polity DZA`, `transfer_owner/controller` | `polity_free(DZA)`, `not war_over(algeria)` | `exists(FRA)` |
-| **Taiwan** (C19, #338) | `transfer_owner JPN→ROC` **и** `transfer_controller JPN→ROC` | `exists(ROC)` | `exists(ROC)` |
+| **Taiwan** (C19, #338) | `transfer_owner JPN→ROC` (controller уже ROC, эффекта на него нет) | `exists(ROC)`, `controls(ROC,taiwan)` (+ генерируемое `owns_all(JPN,taiwan)`) | `exists(ROC)` |
 
 - **C26** (1955-07-27, вступление Договора в силу) — запись `no_effect` (журнал); `after: C26, lag_days: 90` у C27 даёт 1955-10-25. `after` задаёт только порядок и сдвиг, причинность — через N.
 - **Saar.** Старый `alt saar_stays_protectorate` **удалён**: его эффект пуст, значит он равен `skip`; при `skipped(C09)` N провален навсегда ⇒ `skip` с `reason: necessary_permanent:skipped(C09)`. `alt` нужен только при отличающихся эффектах (§6.11). [Предл.] C02b в RR-0020 нет: строка и её `Rek.` — за research-scientist (не [Факт]; даты договора 1956-10-27, референдум 1955-10-23 — RR-0020 стр. 318).
-- **Taiwan.** [Факт, #338, RR-0020 C19] На t0 `owner JPN`, `controller JPN`; 1945-10-25 оба поля → ROC. Конфликт: ADR-0011 rev 3 #313 пишет «owner JPN, controller ROC» на старте. Для «все fired» стартовая запись территории `taiwan` должна быть JPN/JPN; иначе генерируемый `controls_all(JPN,taiwan)` на t0 ложен. Правка #313/`territories.yaml` — OPEN (orchestrator, research-scientist). C20 (Сан-Франциско) — `no_effect` (#338).
+- **Taiwan.** [Факт, #313 + #338] t0: `owner JPN`, `controller ROC`; #338: owner и controller ROC с 1945-10-25. Значит C19 в 1945-10-25 меняет только `owner JPN→ROC`; controller уже ROC. N: `owns(JPN,taiwan) ∧ controls(ROC,taiwan) ∧ exists(ROC)` истинно на дату, событие срабатывает, golden «все fired» держится. Правки #313 не требуется. (Строка RR-0020 C19 «controller JPN→ROC» расходится с #313; приоритет у решения владельца.) C20 (Сан-Франциско) — `no_effect` (#338).
 - **Oder–Neisse** [Факт, #343; #337]. Три записи вместо одной с тремя исходами:
   - **C07** (1950-07-06): `transfer_owner DEU→POL`; N: `exists(GDR)`, `controls(POL,set)`.
   - **C07b_TRANSFER** (Варшавский договор 1970): тот же эффект; `excludes: C07` (ADR-0019 п. 18). Если C07 `fired`, статус `skipped`, reason `excluded_by:C07` (не провал: S5 исключает такие из доли skip). Если C07 `skipped/disabled`, `from` генерируют `owns_all(DEU,set)` ⇒ перевод владения запасным путём.
@@ -140,7 +140,7 @@ N — necessary, S — sufficient. `from`-атомы генерируются (�
 - **Журнал** (производный): `event_id`, `ablation_group`, `atomic_group`, `nominal_date`, `status`, `effective_date`, `lag_days`, `reason_code` (enum: `fired`, `permanent`, `deferred_transient`, `expired`, `excluded_by`, `ablation_cascade`, `partial_from`, `confirmed`), `failed_atoms[]` (id, значение), `alt_name`, `affected_provinces`, **`affected_polities`** (from/to, создание/поглощение). Запись при первом провале, смене статуса и срабатывании. `ablation_cascade` в S5 считается отдельно от `skipped` (иначе раздувает долю skip); `excluded_by` — не провал.
 - S4: события выключены = `disabled`. S5: абляция по 5 группам; отчёт добавляет число `deferred/skipped/alt` и средний `lag_days` по группе.
 - Игровая ценность: «почему не сработало» — по `failed_atoms` и шаблонам i18n; для стохастических событий ветки — шкала словами заранее, число после (#367).
-- **Недостающие тесты** [Предл.]: атомарность группы (§4 п. 6); save/load посреди `defer` и между `D−1` и `D`; `AddMonths` (31 янв); потолок 36 мес.; каскад через `cross_group` при абляции; `why_not` по каждому `reason_code`; независимость журнала от seed; `excluded_by` не попадает в долю skip; `partial_from`; тайваньский t0: `controls_all(JPN,taiwan)` истинно.
+- **Недостающие тесты** [Предл.]: атомарность группы (§4 п. 6); save/load посреди `defer` и между `D−1` и `D`; `AddMonths` (31 янв); потолок 36 мес.; каскад через `cross_group` при абляции; `why_not` по каждому `reason_code`; независимость журнала от seed; `excluded_by` не попадает в долю skip; `partial_from`; тайваньский t0: `owns(JPN,taiwan) ∧ controls(ROC,taiwan)` истинно, C19 срабатывает 1945-10-25.
 
 ## 7. Повторное использование: M2 и ветки #299
 
@@ -159,11 +159,11 @@ N — necessary, S — sufficient. `from`-атомы генерируются (�
 | 5 | Итоговый `skip` | #341: окончателен | advocate: `dormant` | **Q50, открыт у владельца**, оба варианта помечены |
 | 6 | `trait` | GD р.1: расширение | CSD: `has_institution`/`has_figure` | принято CSD |
 | 7 | `absorbed` | GD р.1: «преемник в ожидании» | CSD: только мир + `dissolved` | принято CSD; `was_alive`/`dissolved` выводятся без новых колонок (critic) |
-| 8 | Taiwan t0 | ADR-0011 #313: controller ROC | RR-0020 C19: controller JPN→ROC | принято RR-0020; правка #313 — OPEN |
+| 8 | Taiwan t0 | #313 владельца: owner JPN, controller ROC | critic/RR-0020 C19: JPN/JPN на старте | принято #313 (решение владельца); старт JPN/JPN у critic неверен, C19 меняет только owner |
 
 ## Зависимости и OPEN
 
 - systems-architect: `territories.yaml` (схема, хэш, сейв), чтение слота, `dormant` при Q50=B, версия реестра атомов.
-- research-scientist: строки C02b, C07b, C01b (даты «Рек.»), Taiwan t0 (JPN/JPN), `flags` для каждой строки; пересмотр C20/C24.
-- orchestrator: правка #313; кто фиксирует `data_hash` в HYP-0005; решение по разногласию 2.
+- research-scientist: строки C02b, C07b, C01b (даты «Рек.»), строка C19 под #313 (controller уже ROC), `flags` для каждой строки; пересмотр C20/C24.
+- orchestrator: кто фиксирует `data_hash` в HYP-0005; решение по разногласию 2.
 - test-engineer: тесты §5 п. 8 и §6.
