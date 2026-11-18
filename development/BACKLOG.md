@@ -124,7 +124,7 @@
 | [ADR-0008](../docs/decisions/ADR-0008-simulation-lab.md) | PROPOSED | Simulation Lab: прогоны, хранение, анализ |
 | [ADR-0009](../docs/decisions/ADR-0009-data-licenses.md) | ACCEPTED | Политика лицензий внешних данных |
 | [ADR-0010](../docs/decisions/ADR-0010-data-format-modding.md) | ACCEPTED | Формат данных и моддинг v0 |
-| [ADR-0011](../docs/decisions/ADR-0011-map-representation.md) | PROPOSED | Представление карты |
+| [ADR-0011](../docs/decisions/ADR-0011-map-representation.md) | ACCEPTED | Представление карты |
 | [ADR-0012](../docs/decisions/ADR-0012-deterministic-math-functions.md) | ACCEPTED | Детерминированные степенные функции: PowFrac вместо Pow/Exp/Log |
 | [ADR-0013](../docs/decisions/ADR-0013-save-format-v0.md) | ACCEPTED | Формат сохранения v0: бинарный снимок колонок SoA + заголовок |
 | [ADR-0014](../docs/decisions/ADR-0014-session-test-api.md) | ACCEPTED | Session и Test API: единая сборка мира, команды, test mode |

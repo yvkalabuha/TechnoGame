@@ -424,3 +424,11 @@ The milestone plan and tick-benchmark-m0 must be updated: provinces move earlier
 | 312 | 2026-11-18 | Condominiums and joint administration (Anglo-Egyptian Sudan, New Hebrides, central Vienna, Tangier) are separate "joint" polities with a member list and a two-colour hatch. Events may dissolve them | владелец (AskUserQuestion 2026-11-18) |
 | 313 | 2026-11-18 | Disputed sovereignty in 1945: Germany and Korea are their own polities under occupation (owner without a government; controllers are the occupying powers). Taiwan: owner Japan until the transfer, controller ROC. FRG/GDR and the two Koreas may arise in play, or not | владелец (AskUserQuestion 2026-11-18) |
 | 314 | 2026-11-18 | ADR-0011 rev 3, disagreement 4: COW and CShapes are not used even for fact cross-checks. ADR-0009 forbids them, and reading licensed data carries legal risk. The 1945 owner table is checked against OHM (CC0/CC BY objects) and published primary sources (treaties, AMS maps once their PD status is verified) | Orchestrator (technical) |
+| 315 | 2026-11-18 | ADR-0011 «Представление карты» revision 3 is ACCEPTED:
+- provinces inside regions;
+- owner + controller;
+- polities of 1945, including joint and occupied ones;
+- a deterministic Natural Earth builder with the 1945 cuts (OHM CC0 point sources, parallels as parameters);
+- the map sealed for mods in v1.
+
+First task: the builder on Europe, where NTS shared-boundary simplification is the main risk | владелец (AskUserQuestion 2026-11-18) |

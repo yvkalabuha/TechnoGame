@@ -1,14 +1,14 @@
 ---
 id: ADR-0011
 title: "Представление карты"
-status: PROPOSED
+status: ACCEPTED
 date: 2026-11-18
 supersedes:
 superseded_by:
 related: [RR-0003, RR-0011, ADR-0002, ADR-0005, ADR-0006, ADR-0009, ADR-0010, ADR-0013, ADR-0014, ADR-0016, ADR-0018]
-approved_by:
-approved_at:
-approval_ref:
+approved_by: owner
+approved_at: 2026-11-18
+approval_ref: "DECISIONS_LOG #315"
 ---
 
 # ADR-0011 — Представление карты
