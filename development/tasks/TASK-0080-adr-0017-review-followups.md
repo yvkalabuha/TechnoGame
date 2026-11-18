@@ -36,3 +36,14 @@ created: 2026-11-18
 - [ ] Code review (reviewer)
 
 ## Результат
+Сделаны пункты 1–5.
+1. `Column.Load` бросает `InvalidOperationException` внутри тика (`Owner.InTick`).
+2. В `Column<T>` приватный `_openLock` вместо `lock (this)`.
+3. `SliceSession.Step` вызывает `CheckOwner()`; `StepTo` и `Replay` идут через `Step`.
+4. В `TickRunner` добавлено `LastTickRan`. `HashEveryTick` теперь хеширует каждый непустой тик (месячный, с командами или с запущенной системой), даже если view не публикуется.
+5. Комментарий об ограничении лексического поиска добавлен в `HashAssertUsageTests`.
+
+Файлы: `src/Singularity.Kernel/Column.cs`, `TickRunner.cs`; `src/Singularity.Session/SliceSession.cs`; `tests/Singularity.Kernel.Tests/LoadInTickTests.cs` (новый); `tests/Singularity.Session.Tests/HashScheduleTests.cs` (+2 теста); `tests/Singularity.Architecture.Tests/HashAssertUsageTests.cs`.
+
+Проверка: `dotnet test Singularity.sln` зелёный; `lab selftest` 48/48, golden без изменений.
+Оговорка: сейчас месячные системы не разнесены по дням (#228), поэтому тест п. 4 проверяет соответствие числа хешей `LastTickRan`. Он станет содержательным после #228.

@@ -184,4 +184,39 @@ public class HashScheduleTests
         HashAssert.Equal(expected, replay.LastHash);
         Assert.Equal(2, replay.HashComputations);
     }
+
+    [Fact]
+    public void Step_FromAnotherThread_Throws_AndChangesNothing()
+    {
+        SliceSession s = Create();
+        long tick = s.Tick;
+        Exception? thrown = null;
+        var other = new Thread(() =>
+        {
+            try { s.Step(1); }
+            catch (Exception e) { thrown = e; }
+        });
+        other.Start();
+        other.Join();
+        Assert.IsType<InvalidOperationException>(thrown);
+        Assert.Equal(tick, s.Tick);
+    }
+
+    [Fact]
+    public void HashEveryTick_HashesEveryNonEmptyTick_EvenWithoutAPublishedView()
+    {
+        // No probe: a day on which nothing runs is empty and computes nothing; every other day is hashed.
+        SliceSession s = Create(new SliceRunConfig { Seed = 7, HashEveryTick = true });
+        long expected = s.HashComputations;
+        for (int day = 0; day < 70; day++)
+        {
+            s.Step(1);
+            bool nonEmpty = s.World.Runner.LastTickRan;
+            if (nonEmpty)
+                expected++;
+            Assert.Equal(expected, s.HashComputations);
+            if (nonEmpty)
+                HashAssert.Equal(Fresh(s), s.LastHash, $"day {day}");
+        }
+    }
 }
