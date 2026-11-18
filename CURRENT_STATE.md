@@ -23,6 +23,7 @@
 - TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
 - TASK-0073 [APPROVED] Audio listening pack from AUDIO_DIRECTION r2 recordings (developer)
 - TASK-0075 [APPROVED] Map builder T2: tools/map on NTS, Europe first, 1945 cuts, coverage simplification check (developer)
+- TASK-0077 [APPROVED] Client v0.5a: planisphere zoom and node icons, node card with schematic and effects, map click fix, starry sky (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
