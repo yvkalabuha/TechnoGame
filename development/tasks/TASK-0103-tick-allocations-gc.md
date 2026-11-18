@@ -130,3 +130,9 @@ EXP-0007 (Results, P8), ADR-0016, ADR-0017, DEBT-0045.
 | + F3 | ≈ 110 | 0 |
 | + F4, F5 | ≈ 95 | 0 |
 | + F6 | ≤ 1 (цель P8) | 0 |
+
+## Review of step 1 (reviewer, commit 1c6904c): APPROVE with minors, fold into step 2
+- MED: the `--mode alloc` JSON lacks `BenchEnv.Write` provenance/conditions, `WriteParams` and `WriteWorld` (AllocProfile.cs:64-68); add them (RepoDir from BenchCommand).
+- LOW: re-hash after probes with `StateHash.ComputeHex(world.Table, SliceWorld.SchemaVersion)` instead of lazy `LastHash`; lab-cli.md:94 lacks the 6th probe (Step + Snapshot stepped); add a smoke test for `--mode alloc` in Singularity.Lab.Tests.
+- Before F1: verify `EffortAllocation.E` has no Core consumer other than AllocateEffort.
+- `ViewBuilder.Process` Profile(a, …): not a bug, a site is an actor by design (SliceWorld.cs:17, A27). F1's local layout must still work for `SitesOf(actor).Length > 1`; add a guard `SiteOwner[s] == s` in SliceWorld.
