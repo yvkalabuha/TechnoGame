@@ -4,7 +4,7 @@ title: "lab bench harness (ADR-0016 T1)"
 status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
-agent: developer
+agent: simulation-engineer
 category: lab
 priority: medium         # high | medium | low
 needs_owner: false       # true = ждёт решения владельца

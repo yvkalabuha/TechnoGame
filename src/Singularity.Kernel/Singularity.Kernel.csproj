@@ -7,5 +7,7 @@
   <ItemGroup>
     <!-- Tests drive the double buffer directly (CopyCurrentToNext/Swap) without a runner. -->
     <InternalsVisibleTo Include="Singularity.Kernel.Tests" />
+    <!-- Lab bench (ADR-0016/0017 R1-R2) times internal copy and swap paths; benchmark only. -->
+    <InternalsVisibleTo Include="Singularity.Lab" />
   </ItemGroup>
 </Project>
