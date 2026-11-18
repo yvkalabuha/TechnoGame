@@ -1,7 +1,7 @@
 ---
 id: TASK-0104
 title: "Event sounds: final variants (#407), gain fixes, listening-pack pruning"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: developer         # ответственный агент
@@ -35,3 +35,4 @@ Apply owner decision #407: one sound variant per event for the whole game, chose
 ## Результат
 - Client: node_discovered=E09_c, launch_space=E16_b; GainDb order_done +8, line_commissioned +6; LICENSES.md per map §5; build_listening_pack.py and manifest pruned (commit 5efc28e, merge bd75c34). Audio tests 144/144, Godot import clean.
 - Pack: 27 unchosen event files and 8 CREDITS entries removed, index.html filtered (Orchestrator). E12/E14/E15 kept.
+- Review fixes: order_done re-normalised to -23.8 LUFS / -1.7 dBTP, GainDb 0; gain test added (145/145). Merge 46e0cf8; pack E04_a replaced.
