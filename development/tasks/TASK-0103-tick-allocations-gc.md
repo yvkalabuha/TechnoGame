@@ -136,3 +136,8 @@ EXP-0007 (Results, P8), ADR-0016, ADR-0017, DEBT-0045.
 - LOW: re-hash after probes with `StateHash.ComputeHex(world.Table, SliceWorld.SchemaVersion)` instead of lazy `LastHash`; lab-cli.md:94 lacks the 6th probe (Step + Snapshot stepped); add a smoke test for `--mode alloc` in Singularity.Lab.Tests.
 - Before F1: verify `EffortAllocation.E` has no Core consumer other than AllocateEffort.
 - `ViewBuilder.Process` Profile(a, …): not a bug, a site is an actor by design (SliceWorld.cs:17, A27). F1's local layout must still work for `SitesOf(actor).Length > 1`; add a guard `SiteOwner[s] == s` in SliceWorld.
+
+## Step 2 scope (Orchestrator, 2026-11-18)
+- developer: F1, F3, F4, F5 from the plan. F2 is replaced by the snapshot design R1 + R2 in `docs/architecture/notes/views-snapshot-allocations.md`: compact per-actor blocks; `NodeView` becomes a readonly record struct inside arrays < 85 000 B; reuse of unchanged blocks via a Kernel column version counter (reviewer required for Kernel).
+- The `--mode alloc` review fixes move to TASK-0106.
+- Starts after TASK-0099 is merged (Products.TrainingBudget calls EffortAllocator).
