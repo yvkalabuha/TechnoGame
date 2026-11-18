@@ -26,3 +26,6 @@ paths:
 - .NET 10, nullable enabled, warnings as errors.
 - Small, readable code. Comments in English, explain why, not what.
 - Every behaviour change comes with tests.
+
+## Exception: copy-on-write of `Column<T>.Next` (ADR-0017 p. 16)
+Kernel `Column<T>.Next`: idempotent opening under `lock` with double check is the only allowed shared write in compute; the result does not depend on which thread opened the column.
