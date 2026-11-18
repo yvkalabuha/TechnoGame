@@ -149,14 +149,15 @@ internal static class Validator
         bool Matches(EventSet s, string id, Piece? p)
         {
             if (s.ExceptIds.Any(x => Pat(x, id))) return false;
-            if (p != null && (s.Adm0.Contains(p.Adm0) || s.Cuts.Any(c => p.Sides.Contains(c)))) return true;
+            if (p != null && (s.ExceptCodes.Any(c => p.Src.Contains(c)) || s.ExceptCuts.Any(c => p.Sides.Contains(c)))) return false;
+            if (p != null && (s.Adm0.Contains(p.Adm0) || s.Codes.Any(c => p.Src.Contains(c)) || s.Cuts.Any(c => p.Sides.Contains(c)))) return true;
             return s.Ids.Any(x => Pat(x, id));
         }
         var rows = r.Pieces.Select(p => (Id: p.Id, P: (Piece?)p)).Concat(territoryIds.Select(t => (Id: t, P: (Piece?)null))).ToList();
         int drawn = 0;
         foreach (var ev in r.Spec.Events.OrderBy(e => e.Id, StringComparer.Ordinal))
         {
-            if (ev.NotDrawn != null) { r.Info.Add($"event line not drawn: {ev.Id} ({ev.Rr}, {ev.Date}): {ev.NotDrawn}"); continue; }
+            if (ev.NotDrawn != null) { r.Warnings.Add($"pending_map: event line not drawn: {ev.Id} ({ev.Rr}, {ev.Date}): {ev.NotDrawn}"); continue; }
             if (ev.Sets.Count == 0 || ev.Rr == "" || ev.Date == "") { r.Errors.Add($"event {ev.Id}: sets, rr and date are required"); continue; }
             var setOf = new Dictionary<string, int>(StringComparer.Ordinal);
             for (int si = 0; si < ev.Sets.Count; si++)

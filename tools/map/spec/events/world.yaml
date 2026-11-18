@@ -1,6 +1,8 @@
 # Ownership-event lines outside Europe (RR-0020 rows B01-B134 and C19-C34). Format: see events/europe.yaml.
 # Lines that follow a NE country border (set by 'adm0') hold by construction: clustering never joins provinces of two countries into one region.
-# Lines inside a country (sets by 'ids' or 'cuts') hold because of the isolate rules (12-isolate.yaml) and the cuts (20-cuts-world.yaml).
+# Lines inside a country are sets by 'codes' (NE adm1 codes) or 'cuts', independent of the region id, so the CI can fail (see events/europe.yaml).
+# The 'adm0' sets of IND, PAK and TWN include areas that were not part of those events (Indian-administered Kashmir, Azad Kashmir, Gilgit-Baltistan,
+# Kinmen and Matsu): they are CI-only and must not be used to build the table of 1.6a events.
 events:
   - {id: taiwan_returned_to_china, date: "1945-10-25", rr: C19, sets: [{name: taiwan, adm0: [TWN]}]}
   - {id: taiwan_peace_treaty, date: "1952-04-28", rr: C20, sets: [{name: taiwan, adm0: [TWN]}]}
@@ -15,7 +17,11 @@ events:
     rr: C22
     sets:
       - {name: north_of_38, cuts: ["korea_38th_parallel:north"]}
-  - id: indochina_surrender_zones
+  - id: indochina_surrender_zones_laos
+    date: "1945-10-01"
+    rr: "ADR-0020 section 14 (not an RR-0020 row)"
+    not_drawn: "the 16th parallel also divides Laos (ADR-0020 section 14: Chinese north, British south); the cut rule has no per-country region names yet, so Laos stays one region; the Vietnam part is cut"
+  - id: indochina_surrender_zones_vietnam
     date: "1945-10-01"
     rr: "ADR-0020 section 14 (not an RR-0020 row)"
     sets:
@@ -38,12 +44,12 @@ events:
   - {id: burma, date: "1948-01-04", rr: B12, sets: [{name: burma, adm0: [MMR]}]}
   - {id: ceylon, date: "1948-02-04", rr: B13, sets: [{name: sri_lanka, adm0: [LKA]}]}
   - {id: maldives, date: "1965-07-26", rr: B20, sets: [{name: maldives, adm0: [MDV]}]}
-  - {id: sikkim_joins_india, date: "1975-05-16", rr: B18, sets: [{name: sikkim, ids: ["india_sikkim.*"]}]}
-  - {id: french_india_pondicherry, date: "1954-11-01", rr: B15, sets: [{name: puducherry, ids: ["india_puducherry.*"]}]}
-  - {id: portuguese_india_goa, date: "1961-12-19", rr: B17, sets: [{name: goa_daman_diu, ids: ["india_goa_daman_diu.*"]}]}
-  - {id: indonesia_independence, date: "1949-12-27", rr: B22, sets: [{name: indonesia_without_west_new_guinea, adm0: [IDN], except_ids: ["indonesia_west_new_guinea.*"]}]}
-  - {id: west_new_guinea_to_indonesia, date: "1963-05-01", rr: B24, sets: [{name: west_new_guinea, ids: ["indonesia_west_new_guinea.*"]}]}
-  - {id: borneo_joins_malaysia, date: "1963-09-16", rr: B27, sets: [{name: sabah_sarawak, ids: ["malaysia_borneo.*"]}]}
+  - {id: sikkim_joins_india, date: "1975-05-16", rr: B18, sets: [{name: sikkim, codes: [IND-3259]}]}
+  - {id: french_india_pondicherry, date: "1954-11-01", rr: B15, sets: [{name: puducherry, codes: [IND-3262]}]}
+  - {id: portuguese_india_goa, date: "1961-12-19", rr: B17, sets: [{name: goa_daman_diu, codes: [IND-3265, IND-2445]}]}
+  - {id: indonesia_independence, date: "1949-12-27", rr: B22, sets: [{name: indonesia_without_west_new_guinea, adm0: [IDN], except_codes: [IDN-558, IDN-1933]}]}
+  - {id: west_new_guinea_to_indonesia, date: "1963-05-01", rr: B24, sets: [{name: west_new_guinea, codes: [IDN-558, IDN-1933]}]}
+  - {id: borneo_joins_malaysia, date: "1963-09-16", rr: B27, sets: [{name: sabah_sarawak, codes: [MYS-1186, MYS-1187, MYS-4833]}]}
   - {id: singapore_independence, date: "1965-08-09", rr: B28, sets: [{name: singapore, adm0: [SGP]}]}
   - {id: cambodia, date: "1953-11-09", rr: B29, sets: [{name: cambodia, adm0: [KHM]}]}
   - {id: laos, date: "1953-10-22", rr: B30, sets: [{name: laos, adm0: [LAO]}]}
@@ -56,10 +62,10 @@ events:
     rr: B40
     sets:
       - {name: israel, adm0: [ISR]}
-      - {name: west_bank, ids: ["palestine_west_bank.*"]}
-      - {name: gaza, ids: ["palestine_gaza.*"]}
-  - {id: west_bank_annexed, date: "1950-04-24", rr: B41, sets: [{name: west_bank, ids: ["palestine_west_bank.*"]}]}
-  - {id: gaza_egyptian_administration, date: "1948-09-22", rr: B42, sets: [{name: gaza, ids: ["palestine_gaza.*"]}]}
+      - {name: west_bank, codes: ["WEB+00?"]}
+      - {name: gaza, codes: ["GAZ+00?"]}
+  - {id: west_bank_annexed, date: "1950-04-24", rr: B41, sets: [{name: west_bank, codes: ["WEB+00?"]}]}
+  - {id: gaza_egyptian_administration, date: "1948-09-22", rr: B42, sets: [{name: gaza, codes: ["GAZ+00?"]}]}
   - {id: libya, date: "1951-12-24", rr: B43, sets: [{name: libya, adm0: [LBY]}]}
   - {id: eritrea_federation, date: "1952-09-11", rr: B44, sets: [{name: eritrea, adm0: [ERI]}]}
   - {id: italian_somaliland, date: "1960-07-01", rr: B46, sets: [{name: somalia, adm0: [SOM]}]}
@@ -84,7 +90,7 @@ events:
   - {id: nigeria, date: "1960-10-01", rr: B73, sets: [{name: nigeria, adm0: [NGA]}]}
   - {id: mauritania, date: "1960-11-28", rr: B74, sets: [{name: mauritania, adm0: [MRT]}]}
   - {id: sierra_leone, date: "1961-04-27", rr: B75, sets: [{name: sierra_leone, adm0: [SLE]}]}
-  - {id: southern_british_cameroons, date: "1961-10-01", rr: B77, sets: [{name: south_west_and_north_west, ids: ["cameroon_southern_british.*"]}]}
+  - {id: southern_british_cameroons, date: "1961-10-01", rr: B77, sets: [{name: south_west_and_north_west, codes: [CMR-1477, CMR-799]}]}
   - id: ruanda_urundi
     date: "1962-07-01"
     rr: B79
@@ -92,7 +98,7 @@ events:
       - {name: rwanda, adm0: [RWA]}
       - {name: burundi, adm0: [BDI]}
   - {id: uganda, date: "1962-10-09", rr: B80, sets: [{name: uganda, adm0: [UGA]}]}
-  - {id: zanzibar_independence, date: "1963-12-10", rr: B81, sets: [{name: zanzibar_and_pemba, ids: ["tanzania_zanzibar.*"]}]}
+  - {id: zanzibar_independence, date: "1963-12-10", rr: B81, sets: [{name: zanzibar_and_pemba, codes: [TZA-3337, TZA-3380, TZA-3381, TZA-3383, TZA-3384]}]}
   - {id: kenya, date: "1963-12-12", rr: B82, sets: [{name: kenya, adm0: [KEN]}]}
   - {id: nyasaland, date: "1964-07-06", rr: B84, sets: [{name: malawi, adm0: [MWI]}]}
   - {id: northern_rhodesia, date: "1964-10-24", rr: B85, sets: [{name: zambia, adm0: [ZMB]}]}
@@ -106,11 +112,11 @@ events:
   - {id: mozambique, date: "1975-06-25", rr: B95, sets: [{name: mozambique, adm0: [MOZ]}]}
   - {id: cape_verde, date: "1975-07-05", rr: B96, sets: [{name: cape_verde, adm0: [CPV]}]}
   - {id: sao_tome, date: "1975-07-12", rr: B97, sets: [{name: sao_tome, adm0: [STP]}]}
-  - {id: newfoundland_joins_canada, date: "1949-03-31", rr: B99, sets: [{name: newfoundland, ids: ["canada_newfoundland.*"]}]}
+  - {id: newfoundland_joins_canada, date: "1949-03-31", rr: B99, sets: [{name: newfoundland, codes: [CAN-686]}]}
   - {id: cyprus, date: "1960-08-16", rr: B100, sets: [{name: cyprus, adm0: [CYP]}]}
   - {id: malta, date: "1964-09-21", rr: B101, sets: [{name: malta, adm0: [MLT]}]}
-  - {id: okinawa_reversion, date: "1972-05-15", rr: B111, sets: [{name: okinawa, ids: ["japan_okinawa.*"]}]}
-  - {id: tibet, date: "1950-10-24", rr: B113, sets: [{name: tibet, ids: ["china_tibet.*"]}]}
+  - {id: okinawa_reversion, date: "1972-05-15", rr: B111, sets: [{name: okinawa, codes: [JPN-3502]}]}
+  - {id: tibet, date: "1950-10-24", rr: B113, sets: [{name: tibet, codes: [CHN-1662]}]}
   - {id: kuwait, date: "1961-06-19", rr: B116, sets: [{name: kuwait, adm0: [KWT]}]}
   - {id: bahrain, date: "1971-08-15", rr: B118, sets: [{name: bahrain, adm0: [BHR]}]}
   - {id: qatar, date: "1971-09-03", rr: B119, sets: [{name: qatar, adm0: [QAT]}]}

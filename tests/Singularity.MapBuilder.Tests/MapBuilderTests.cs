@@ -282,7 +282,7 @@ public class MapBuilderTests
         {
             var src = Path.Combine(RepoRoot(), "mods", "core", "map");
             Directory.CreateDirectory(Path.Combine(dir, "geo"));
-            foreach (var f in new[] { "provinces.yaml", "adjacency.yaml", "regions.yaml" }) File.Copy(Path.Combine(src, f), Path.Combine(dir, f));
+            foreach (var f in new[] { "provinces.yaml", "adjacency.yaml", "regions.yaml", "territories.yaml" }) File.Copy(Path.Combine(src, f), Path.Combine(dir, f));
             File.Copy(Path.Combine(src, "geo", "manifest.json"), Path.Combine(dir, "geo", "manifest.json"));
             Writer.VerifyBinding(dir);
             File.AppendAllText(Path.Combine(dir, "provinces.yaml"), "# edit\n");
@@ -532,6 +532,49 @@ public class MapBuilderTests
     }
 
     [Fact]
+    public void Event_check_by_source_codes_fails_when_a_region_straddles_a_line_it_names()
+    {
+        // Region 'zone' carries the name of the event set, but one of its provinces was made from a unit outside the set (a tautological prefix selector would pass).
+        var r = EventWorld(("zone.a", "DEU", new string[0]), ("zone.b", "DEU", new string[0]), ("rest.a", "DEU", new string[0]));
+        r.Pieces[0].Src.Add("DEU-1");
+        r.Pieces[1].Src.Add("DEU-2");
+        r.Pieces[2].Src.Add("DEU-3");
+        r.Spec.Events.Add(new EventEntry { Id = "zone", Date = "1949-10-07", Rr = "C05", Sets = new() { new EventSet { Name = "zone", Codes = new() { "DEU-1" } } } });
+        Validator.CheckEvents(r, new List<string>());
+        Assert.Contains(r.Errors, e => e.Contains("region zone crosses the line"));
+
+        r.Errors.Clear();
+        r.Spec.Events[0].Sets[0].Codes.Add("DEU-2");
+        Validator.CheckEvents(r, new List<string>());
+        Assert.Empty(r.Errors);
+
+        r.Spec.Events[0].Sets[0].ExceptCodes.Add("DEU-2");
+        Validator.CheckEvents(r, new List<string>());
+        Assert.Contains(r.Errors, e => e.Contains("region zone crosses the line"));
+    }
+
+    [Fact]
+    public void Committed_event_sets_do_not_select_by_region_prefix_inside_a_country()
+    {
+        var spec = SpecSet.Load(Path.Combine(RepoRoot(), "tools", "map", "spec"));
+        Assert.All(spec.Events.SelectMany(e => e.Sets), s => Assert.True(s.Ids.Count == 0, $"set {s.Name} selects by id prefix"));
+    }
+
+    [Fact]
+    public void Slivers_an_empty_side_keeps_the_piece_whole_on_the_other_side()
+    {
+        // The whole piece is smaller than the threshold, so All(Small) is true for the non-empty side: the empty side must still lose.
+        var whole = Rect(0, 0, 0.05, 0.05);
+        var empty = Sph.Gf.CreatePolygon();
+        var (a, b) = Pipeline.AbsorbSlivers(whole, empty, 100, whole);
+        Assert.Same(whole, a);
+        Assert.True(b.IsEmpty);
+        var (c, d) = Pipeline.AbsorbSlivers(empty, whole, 100, whole);
+        Assert.True(c.IsEmpty);
+        Assert.Same(whole, d);
+    }
+
+    [Fact]
     public void Event_check_separates_two_sets_of_one_event_and_covers_territories()
     {
         var r = EventWorld(("zone_a.x", "ITA", new[] { "tr:a" }), ("zone_b.x", "HRV", new[] { "tr:b" }), ("italy.rest", "ITA", new string[0]));
@@ -563,7 +606,7 @@ public class MapBuilderTests
         Validator.CheckEvents(r, new List<string>());
         Assert.Contains(r.Errors, e => e.Contains("event empty") && e.Contains("matches nothing"));
         Assert.Contains(r.Errors, e => e.Contains("event line except") && e.Contains("region a crosses the line"));
-        Assert.Contains(r.Info, i => i.Contains("not drawn: undrawn"));
+        Assert.Contains(r.Warnings, i => i.StartsWith("pending_map:") && i.Contains("not drawn: undrawn"));
         Assert.Equal(2, r.Errors.Count);
     }
 
