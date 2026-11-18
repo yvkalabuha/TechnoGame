@@ -1,27 +1,28 @@
 ---
 id: ADR-0003
 title: "Численная политика"
-status: PROPOSED
+status: ACCEPTED
 date: 2026-11-02
 supersedes:
 superseded_by:
 related: [RR-0002, ADR-0002, ADR-0005, ADR-0012, ADR-0017, ADR-0019, ADR-0020, ADR-0021, TASK-0009, TASK-0087]
-approved_by:
-approved_at:
-approval_ref:
+approved_by: owner
+approved_at: 2026-11-18
+approval_ref: "DECISIONS_LOG #377"
 ---
 
 # ADR-0003 — Численная политика
 
 > После ACCEPTED текст не меняется. Изменение решения — новый ADR с `supersedes`.
-> Ревизия 3 (systems-architect, 2026-11-18): правки gate rev 2 (`docs/reviews/adr-0003-0005-0007-0008-critic.md`, `…-advocate.md`, `adr-0003-deepseek.md`) и решения владельца #368 (деньги), #375 (ToyFunnel в Lab, TASK-0087). Добавлены класс «ставки и вероятности» (п. 4), предельные условия на величину (п. 6), раздел сохраняемых величин (п. 7), единица в метаданных колонки (п. 8), запрет SIMD (п. 12). Вариант R4 зависит от вопроса владельца Q43 — оба варианта в п. 11.
+> Ревизия 3 (systems-architect, 2026-11-18): правки gate rev 2 (`docs/reviews/adr-0003-0005-0007-0008-critic.md`, `…-advocate.md`, `adr-0003-deepseek.md`) и решения владельца #368 (деньги), #375 (ToyFunnel в Lab, TASK-0087). Добавлены класс «ставки и вероятности» (п. 4), предельные условия на величину (п. 6), раздел сохраняемых величин (п. 7), единица в метаданных колонки (п. 8), запрет SIMD (п. 12). Финальные правки перед ACCEPTED (2026-11-18): решения владельца #377 (`Rate` вместо `DayRate` ADR-0019 п. 12), #387 (единицы энергии и населения), #389 (исключение R4 снято целиком, Q43 закрыт).
 > Ревизия 2 (2026-11-18): текст приведён к коду и к решению #49. Ревизия 1 (2026-11-02, «поведенческие модели — `double`») и R1–R4 от 2026-11-03 слиты в «Решение».
 
 ## Краткий вывод
 - Состояние мира — только целые числа. Запасы и потоки — `Fx6` (`long`, 10⁶, floor, переполнение — исключение). Ставки и вероятности — отдельный класс `Rate` (Q53, `long`, 2⁵³), он входит в мир только через API Kernel.
-- Единица величины выбирается по четырём проверяемым условиям: предел запаса, предел годового потока, запрет «интегралов по дням», нижний порог точности дневного потока. Деньги — млн междунар. $ 2011 (#368). [Предл.] энергия — ГВт·ч, население — человек.
+- Единица величины выбирается по четырём проверяемым условиям: предел запаса, предел годового потока, запрет «интегралов по дням», нижний порог точности дневного потока. Деньги — млн междунар. $ 2011 (#368), энергия — ГВт·ч, население — человек (#387).
 - Раздел сохраняемой величины между получателями — только `Apportion` Kernel (ADR-0019 п. 8), сумма частей равна входу в raw.
-- `double` в Core и Session запрещён (R1, #49). В Kernel — точный allowlist из 13 членов. После #375 исключение R4 в Core одно — `Singularity.Core.Simulation`; снимается ли и оно, решает владелец (Q43).
+- `double` в Core и Session запрещён (R1, #49). В Kernel — точный allowlist из 13 членов. Исключения R4 в Core нет (#375, #389): весь `double`-код `Singularity.Core.Simulation` переезжает в Lab.
+- `Rate` (2⁵³) заменяет `Fx6`-результат `DayRate` ACCEPTED ADR-0019 п. 12 (#377); сам ADR-0019 не правится.
 - FMA закрыт фактом (TASK-0009); политика от него не зависит.
 
 ## Контекст
@@ -35,7 +36,8 @@ approval_ref:
   - режим `forbidDouble` (`Core_OutsideR4Exceptions_HasNoDouble`, `Session_FollowsDeterminismRules_AndHasNoDouble`) проверяет поля, сигнатуры, локалы, r8-опкоды и **тип возврата и параметры вызываемого метода** (`CheckCallee`). Поэтому вызов `Fx6.FromDouble(ParamSet.GetDouble(…))` из Core вне исключения ловится: у callee `GetDouble` возврат `double`;
   - `KernelArchitectureTests.Kernel_UsesDoubleOnlyInR3AllowList` — точный список из 13 членов;
   - `R4Exceptions_AreNotStale` — каждое исключение указывает на существующий код.
-- [Факт, код, TASK-0087] ToyFunnel перенесён в Lab: `src/Singularity.Lab/Models/ToyFunnel/` (namespace `Singularity.Lab.Models.ToyFunnel`), тесты и `ToyFunnelParityTests` — `tests/Singularity.Lab.Tests/ToyFunnel/`. В `CoreArchitectureTests.DoubleExceptions` осталась одна строка — `Singularity.Core.Simulation` (`ParamSet.GetDouble`, `MetricFormat.Real`). `GetDouble` вызывают только Lab (`ToyFunnelConfig`, `SelfTest`) и `Client.Spike`.
+- [Факт, код, TASK-0087] ToyFunnel перенесён в Lab: `src/Singularity.Lab/Models/ToyFunnel/` (namespace `Singularity.Lab.Models.ToyFunnel`), тесты и `ToyFunnelParityTests` — `tests/Singularity.Lab.Tests/ToyFunnel/`. В `CoreArchitectureTests.DoubleExceptions` осталась одна строка — `Singularity.Core.Simulation` (`ParamSet.GetDouble`, `MetricFormat.Real`). `ParamSet.GetDouble` вызывают только Lab (`ToyFunnelConfig`, `SelfTest`); `Client.Spike` вызывает `JsonElement.GetDouble`, не `ParamSet`.
+- [Факт, код, grep 2026-11-18] `double` в `src/Singularity.Core*` — только в `Singularity.Core.Simulation`: `ParamSet.GetDouble` (`src/Singularity.Core/Simulation/ParamSet.cs`) и `MetricFormat.Real` (`src/Singularity.Core/Simulation/LabModel.cs`); в `CommandCodec.cs` слово `double` — только в комментарии. Типы пространства имён (`ParamSet`, `ILabModelFactory`, `ILabModel`, `ModelSetup`, `MetricTableSpec`, `IMetricSink`, `MetricFormat`) в Core и Session не используются — только в Lab. Тесты, завязанные на них: `tests/Singularity.Core.Tests/Simulation/SimulationContractTests.cs`, фикстура `CallsGetDouble` в `DeterminismRulesTests.cs`.
 - [Факт, код] Единица сопоставления исключения — пространство имён целиком (`type.Namespace == ns`, `CoreArchitectureTests.IsDoubleException`). Новый тип в `Singularity.Core.Simulation` получит право на `double` без ADR.
 - [Факт] #368: деньги — млн международных $ 2011 (Maddison).
 - [Факт] ADR-0019 (ACCEPTED, #353) п. 8 — `Apportion(F, w[])` с суммой частей ровно `F`; п. 12 — дневной параметр `Fx6.DayRate(δ, Y)`. Опись `docs/simulation/adr-0019-r3-inventory.md` §6, R-3: `DayRate` в `Fx6` занимает 99–832 raw, ошибка годовой ставки до 1 %, у `p_d` перебоя при малой `exposure` > 4 %; смещение всегда в сторону медленного распада.
@@ -46,10 +48,10 @@ approval_ref:
 1. **Состояние мира — только целые типы.** Запасы и потоки — `Fx6`; ставки и вероятности — `Rate` (п. 4); счётчики, индексы, стадии, даты — `int`/`long`/`short`. Типы колонок — набор Kernel по ADR-0020 п. 6 (`ColumnKind`: `Long`, `Int`, `Short`); `Fx6` и `Rate` хранятся как `Raw` в `LongColumn`.
 2. **Арифметика `Fx6`.** Округление floor (к −∞). Переполнение — `OverflowException`, не тихий wrap. Произведение и частное — в `Int128`, переполниться может только результат. Потолок — явный `DetMath.MulCeil`.
 3. **Один масштаб 10⁶ для запасов и потоков.** Разные величины различает единица, не масштаб.
-4. **Класс «ставки и вероятности» — `Rate`** [Предл. имя]: `long Raw`, масштаб 2⁵³ (Q53, шаг 1,1·10⁻¹⁶, диапазон ±1024). Сюда относятся дневные ставки распада и роста (ADR-0019 п. 12, в т.ч. отрицательная δ) и пороги вероятности (ADR-0021 п. 10). Правила:
+4. **Класс «ставки и вероятности» — `Rate`** (имя и масштаб — #377): `long Raw`, масштаб 2⁵³ (Q53, шаг 1,1·10⁻¹⁶, диапазон ±1024). Сюда относятся дневные ставки распада и роста (ADR-0019 п. 12, в т.ч. отрицательная δ) и пороги вероятности (ADR-0021 п. 10). Правила:
    - `Rate` создаётся только функциями Kernel из величин данных (`Fx6`): `DetMath.DayRate(Fx6 δ_year, int Y) → Rate` (целочисленная бисекция), `HazardRoll` ADR-0021, `Rate.FromFx6`. Core не строит `Rate` из `Raw` арифметикой; `Rate.FromRaw` — только для чтения колонки.
    - Применение — только API Kernel: `Rate.MulFloor(Fx6 x) = floor(x.Raw · r.Raw / 2⁵³)` в `Int128`, одно округление на результат; `CounterRng.ChanceRaw(u, Rate)`.
-   - **Частично заменяет ADR-0019 п. 12:** тип результата `DayRate` — `Rate`, а не `Fx6`. Формула и проверка п. 12 прежние; допуск «≤ `Y` raw» считается в raw `Fx6` результата `(1−DayRate)^Y`. R-3 описи закрывается.
+   - **Частично заменяет ADR-0019 п. 12 (решение владельца #377):** тип результата `DayRate` — `Rate` (масштаб 2⁵³), а не `Fx6`. ADR-0019 — ACCEPTED и не правится; при расхождении для типа `DayRate` действует этот пункт. Формула и проверка п. 12 прежние; допуск «≤ `Y` raw» считается в raw `Fx6` результата `(1−DayRate)^Y`. R-3 описи закрывается.
 5. **Альтернатива D (свой масштаб на величину) отклонена только для запасов и потоков.** Для ставок и вероятностей отдельный масштаб нужен (п. 4): их значения 10⁻⁵–10⁻⁹ в сутки, шаг 10⁻⁶ даёт ошибку 1–50 %.
 6. **Условия на единицу величины.** Для каждой величины `Fx6` спецификация слоя до первого кода слоя записывает единицу и проверяет:
    - (а) **предел запаса:** сумма по миру в худшем сценарии 1910–2100 ≤ 9,22·10¹¹ единиц (запас ≥ 10× до предела `Fx6`);
@@ -57,15 +59,12 @@ approval_ref:
    - (в) **нет интегралов по дням:** колонка не накапливает «величина × день» (человеко-дни, M$·дни). Накопление — в годовых единицах или среднее за год;
    - (г) **порог точности:** наименьший ненулевой дневной поток на строку (провинция, актор) ≥ 10³ raw. Тогда floor одной операции смещает поток не более чем на 0,1 %. Не проходит — меньшая единица; исключение (крошечные территории) — в спецификации слоя с оценкой ошибки.
    - Безразмерные коэффициенты и доли в `Fx6` — значение ≥ 10³ raw, иначе `Rate`. Цены и удельные величины — единица, при которой типичное значение ≥ 10³ raw (например, $ 2011 за изделие, $ 2011 за МВт·ч).
-   - Единицы: **деньги — млн междунар. $ 2011** (#368; 1 raw = 1 $; мировой ВВП 2100 [Предп.] ≤ 10⁹ M$/год — запас ~10⁴×). [Предл.] **энергия — ГВт·ч** (1 raw = 1 кВт·ч; мир 2100 [Предп.] ≤ 10⁹ ГВт·ч/год; ТВт·ч не проходит (г)). [Предл.] **население — человек** (запас ≤ 1,5·10¹⁰ — запас ~60×; поток рождений ~10⁸/год).
+   - Единицы: **деньги — млн междунар. $ 2011** (#368; 1 raw = 1 $; мировой ВВП 2100 [Предп.] ≤ 10⁹ M$/год — запас ~10⁴×). **Энергия — ГВт·ч** (#387; 1 raw = 1 кВт·ч; мир 2100 [Предп.] ≤ 10⁹ ГВт·ч/год; ТВт·ч не проходит (г)). **Население — человек** (#387; запас ≤ 1,5·10¹⁰ — запас ~60×; поток рождений ~10⁸/год).
 7. **Сохраняемые величины (деньги, энергия, люди, ресурсы)** делятся между получателями только `Apportion` Kernel (ADR-0019 п. 8): сумма частей равна входу в raw при любом знаке, ошибка каждой части < 1 raw. Деление «floor на каждого получателя» запрещено: теряет до N−1 raw за операцию. Инвариант сохранения — K3 ADR-0019 п. 9 (`stock(t+1) = stock(t) + Σin − Σout` в raw) в `Post` каждой книги.
 8. **Единица — метаданные колонки** [Предл.]: регистрация колонки `Fx6`/`Rate` принимает `unit` из закрытого списка Kernel (`musd2011`, `gwh`, `person`, `rate_q53`, `coef`, …; список — строки, без доменной логики). Единица входит в отпечаток схемы (`WorldSchema.Fingerprint`), в хеш состояния — нет. Загрузчик данных сравнивает единицу поля схемы данных с единицей колонки; расхождение — ошибка загрузки (ADR-0010). Типы-обёртки `Money`/`Energy` — только если ошибки единиц появятся на практике.
-9. **R1. `double` в Core и Session запрещён полностью** (вне исключения п. 11): в полях, параметрах, возвратах, локалах, сигнатурах вызываемых методов, опкодах `ldc.r8`, `conv.r8`, `conv.r.un`, `ldind.r8`, `stind.r8`, `ldelem.r8`, `stelem.r8`. Следствие: Core вне исключения не вызывает `CounterRng.NextUnit` и `ParamSet.GetDouble` — это проверяется тестом (callee с `double` в сигнатуре).
+9. **R1. `double` в Core и Session запрещён полностью**, без исключений (п. 11): в полях, параметрах, возвратах, локалах, сигнатурах вызываемых методов, опкодах `ldc.r8`, `conv.r8`, `conv.r.un`, `ldind.r8`, `stind.r8`, `ldelem.r8`, `stelem.r8`. Следствие: Core не вызывает `CounterRng.NextUnit` и `ParamSet.GetDouble` — это проверяется тестом (callee с `double` в сигнатуре).
 10. **R2–R3. Kernel даёт Core API на `Fx6` и `Rate`** (`PowFracFx`, `SmoothStep01`, `MulCeil`, `Chance`, `ChanceRaw`, `DayRate`, `Apportion`). `double` в Kernel — только в точном allowlist (`KernelArchitectureTests.DoubleAllowList`); внутри — только корректно округляемые операции (`+ − × / sqrt`, `Math.Floor`), без `a*b ± c` над `double`. Последнее проверяется **ревью**, не тестом: новый член allowlist проходит пункт чек-листа reviewer «нет `a*b ± c` над `double`».
-11. **R4. Исключение в Core** — точное совпадение пространства имён по `CoreArchitectureTests.DoubleExceptions`, без вложенных. Новое исключение — только через ADR. Состав зависит от ответа владельца на Q43:
-    - **Вариант 1 (только ToyFunnel снят, #375 как сделано в TASK-0087):** исключение одно — `Singularity.Core.Simulation`. [Предл.] Сузить единицу до членов: `DoubleExceptions` = `ParamSet.GetDouble`, `MetricFormat.Real` (как allowlist Kernel), чтобы новый тип в этом пространстве имён не получил `double` без ADR. Снятие — когда `GetDouble` уйдёт из Core.
-    - **Вариант 2 (снимается всё R4):** `ParamSet.GetDouble` и `MetricFormat.Real` переезжают в Lab (расширения над `ParamSet` в `Singularity.Lab`; `ILabModel`/`LabModel` без `double` могут остаться в Core). `DoubleExceptions` пуст, R1 действует на весь Core без исключений.
-    - [Предл.] Вариант 2: `double` нужен только Lab, а правило «нет `double` в Core» становится безусловным. Цена — light-задача (~2 файла Core, ~3 файла Lab).
+11. **R4. Исключений в Core нет** (решения владельца #375, #389; Q43 закрыт). ToyFunnel уже в Lab (TASK-0087). `ParamSet` (с `GetDouble`), `LabModel.cs` (`ILabModelFactory`, `ILabModel`, `ModelSetup`, `MetricTableSpec`, `IMetricSink`, `MetricFormat` с `Real`) и весь прочий `double`-код `Singularity.Core.Simulation` переезжают в Lab (light-задача). `CoreArchitectureTests.DoubleExceptions` удаляется вместе с `R4Exceptions_AreNotStale`; R1 действует на весь Core безусловно. Новое исключение `double` в Core — только новым ADR с `supersedes`.
 12. **Запрещено в состоянии мира везде (Kernel, Core, Session)**: `float`, `Half`, `MathF`, `System.Random`, `Math.*` вне `Sqrt, Floor, Abs, Min, Max, BigMul`, generic math с некорректно округляемыми членами, [Предл.] SIMD-типы с плавающей точкой и порядком редукции: `System.Numerics.Vector<T>`, `Vector2/3/4`, `Complex`, `System.Runtime.Intrinsics.*` (RR-0002 §5.2). Степени — только ADR-0012 (`PowFrac`, показатель `q10` из данных).
 13. **FMA.** Факт: JIT .NET 10 не сжимает `a*b+c` на x64 и ARM64 (TASK-0009). Политика на него не опирается: по п. 10 в allowlist нет `a*b ± c`. Канарейка — сторож семантики JIT: её падение после обновления runtime — разбор до релиза (может значить и другие изменения JIT), а не ослабление теста. Перестановок и векторизации редукций канарейка не ловит — их исключают п. 12 и порядок суммирования по индексу.
 14. **L3** (ADR-0002) этим ADR не заявляется. Входы для L3: зелёные CI на трёх ОС, golden-векторы `PowFrac`, `DayRate`, `ChanceRaw`, закреплённый `DataHash`, golden мира в тестах Session.
@@ -84,16 +83,12 @@ approval_ref:
 | H | `Int128` для денег | запас без границ | удваивает память, меняет формат хеша и снимка; при M$ запас ~10⁴× не нужен |
 
 ## Последствия
-- Плюсы: результат Core не зависит от FMA и платформенной математики; ставки и вероятности точны до 10⁻¹⁶; разделы не теряют raw; R1, R3-allowlist, R4, п. 12 проверяются тестами, `a*b ± c` в allowlist — ревью.
+- Плюсы: результат Core не зависит от FMA и платформенной математики; ставки и вероятности точны до 10⁻¹⁶; разделы не теряют raw; R1 (без исключений), R3-allowlist, п. 12 проверяются тестами, `a*b ± c` в allowlist — ревью.
 - Минусы: два целых класса (`Fx6`, `Rate`); квантование 10⁻⁶ у запасов (floor смещает вниз ≤ 0,1 % на операцию при пороге п. 6 (г)); `PowFracFx(x, 1024)` может вернуть `x − 1 raw`; запасы нельзя гонять через `double`.
 - Обязательно: таблица единиц с проверками п. 6 (а)–(г) в спецификации слоя до первого кода слоя; тест диапазона на худшем сценарии.
 
-## Открыто перед ACCEPTED (вопросы владельцу)
-1. Единицы энергии и населения (п. 6): ГВт·ч и человек — принять или задать свои. Деньги решены #368.
-2. Q43: вариант 1 или 2 п. 11.
-
 ## Проверка
-- `tests/Singularity.Architecture.Tests`: `Kernel_FollowsDeterminismRules`, `Kernel_UsesDoubleOnlyInR3AllowList`, `Core_FollowsDeterminismRules`, `Core_OutsideR4Exceptions_HasNoDouble`, `R4Exceptions_AreNotStale`, `Session_FollowsDeterminismRules_AndHasNoDouble`; фикстуры — `DeterminismRulesTests.cs`. [Предл.] новые: фикстура SIMD (`Vector<double>`, `Vector256<double>`) — нарушение; при варианте 1 — исключение по членам; при варианте 2 — `DoubleExceptions` пуст.
+- `tests/Singularity.Architecture.Tests`: `Kernel_FollowsDeterminismRules`, `Kernel_UsesDoubleOnlyInR3AllowList`, `Core_FollowsDeterminismRules`, `Session_FollowsDeterminismRules_AndHasNoDouble`; фикстуры — `DeterminismRulesTests.cs`. После переезда (п. 11): `Core_OutsideR4Exceptions_HasNoDouble` становится `Core_HasNoDouble` без списка исключений, `R4Exceptions_AreNotStale` удаляется, фикстура `CallsGetDouble` вызывает `double`-метод тестовой сборки вместо `ParamSet.GetDouble`; [Предл.] тест «в Core нет пространства имён `Singularity.Core.Simulation`». [Предл.] новая фикстура SIMD (`Vector<double>`, `Vector256<double>`) — нарушение.
 - `FmaContractionCanaryTests` на ubuntu x64, windows x64, macos ARM64. [Предл.] Тест печатает и проверяет `RuntimeInformation.ProcessArchitecture` (`Arm64` на macos-раннере), раннер задаётся явной меткой ARM64, а не `macos-latest`.
 - Golden-векторы: `DetMathPowFracTests`; [Предл.] `DayRate` (`Y ∈ {365, 366}`, δ из описи §6, отрицательная δ), `Rate.MulFloor`, `ChanceRaw` (ADR-0021 «Проверка» п. 2); `DataHashTests.CoreDataHash`; golden мира Session — на трёх ОС CI.
 - `Apportion` — property-тест ADR-0019 «Проверка» п. 1 (сумма = `F` при любом знаке); инвариант K3 в `Post` книг.
@@ -105,7 +100,7 @@ approval_ref:
 |---|---|---|---|
 | 1 | Масштаб ставок | опись R-3: 10¹² десятичный; critic: Q53 или 10⁹; ADR-0021: Q53 | Q53 (`Rate`): один формат с порогом ADR-0021, сдвиг вместо деления; 10¹² — альтернатива D′ |
 | 2 | `Allocate` (наибольшие остатки) против `Apportion` | advocate: `DetMath.Allocate`; ADR-0019 п. 8 (ACCEPTED): `Apportion` по накопленным суммам | `Apportion`: гарантии совпадают, второй функции раздела не вводим; правило «только `Apportion`» и инвариант приняты (п. 7) |
-| 3 | Объём #375 | critic: неясно, всё R4 или только ToyFunnel; TASK-0087 снял только ToyFunnel | Оба варианта (п. 11), решает владелец (Q43); рекомендация — вариант 2 |
+| 3 | Объём #375 | critic: неясно, всё R4 или только ToyFunnel; TASK-0087 снял только ToyFunnel | Решение владельца #389 (Q43): снято всё R4, `double`-код `Singularity.Core.Simulation` — в Lab (п. 11) |
 | 4 | ARM64 как [Факт] | DeepSeek: метка `macos-latest` не фиксирует архитектуру | Факт оставлен с оговоркой о дате; проверка архитектуры в тесте — [Предл.] |
 | 5 | Блокер релиза при падении канарейки | DeepSeek: противоречит «политика не опирается» | Переформулировано: разбор до релиза как сигнал изменения JIT (п. 13) |
-| 6 | Энергия в ТВт·ч | ревизия 2: ТВт·ч; critic: на душу ≈ 20 raw; провинция 1910 г. ≈ 270 raw/день | ГВт·ч [Предл.] по условию (г) |
+| 6 | Энергия в ТВт·ч | ревизия 2: ТВт·ч; critic: на душу ≈ 20 raw; провинция 1910 г. ≈ 270 raw/день | Решение владельца #387: ГВт·ч (проходит условие (г)); население — человек |
