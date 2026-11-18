@@ -305,7 +305,7 @@ related: [ADR-0011, MS-M1]
 |---|---|---|---|
 | B39 | Декларация 1948-05-14, вступление — с окончанием Мандата, 1948-05-15 | H | https://embassies.gov.il/MFA/AboutIsrael/history/Pages/Declaration of Establishment of State of Israel.aspx (поиск) |
 | B40 | Перемирия: Египет 1949-02-24, Ливан 03-23, Иордания 04-03, Сирия 07-20; «come into force immediately upon being signed» | H | https://avalon.law.yale.edu/20th_century/arm01.asp … arm04.asp (откр.) |
-| B41 | Закон об объединении берегов принят Ассамблеей 1949… **1950-04-24**, королевская санкция; Великобритания сообщила 1950-04-27 | H | https://api.parliament.uk/historic-hansard/commons/1950/apr/27/jordan-and-israel-government-decision (поиск) |
+| B41 | Закон об объединении берегов единогласно принят иорданской Ассамблеей **1950-04-24**, королевская санкция; Великобритания сообщила 1950-04-27 | H | https://api.parliament.uk/historic-hansard/commons/1950/apr/27/jordan-and-israel-government-decision (поиск) |
 | B42 | 22.09.1948 (Всепалестинское правительство, Газа; объявление Лиги 20.09); контроль EGY — фактически египетская администрация | M | Shlaim: https://palquest.palestine-studies.org/sites/default/files/The_Rise_and_Fall_of_All-Palestine_Government_in_Gaza-Avi_Shlaim.pdf (поиск) |
 | B43, B48 | Ливия 1951-12-24; Судан 1956-01-01 | H | https://history.state.gov/countries/libya ; /sudan (откр.) |
 | B44, B45 | Res. 390 A(V) 1950-12-02; федерация провозглашена 1952-09-11 (по ГА ООН) / 09-15 (Wikipedia-наводка); Собрание Эритреи 1962-11-14 | M | https://digitallibrary.un.org/record/624014/files/A_2188-EN.pdf (поиск) |
