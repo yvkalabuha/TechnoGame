@@ -2,7 +2,7 @@ using Singularity.Client.Spike;
 
 namespace Singularity.Client.Audio.Tests;
 
-/// <summary>The generated WAV files match the catalogue: every cue has its files, 48 kHz 16-bit mono, the declared length, peak at most -3 dBFS.</summary>
+/// <summary>The event .ogg files match the catalogue: every cue has its file, 48 kHz mono, the declared playback length.</summary>
 public class AudioAssetsTests
 {
     static string Root()
@@ -14,25 +14,16 @@ public class AudioAssetsTests
 
     static string Assets() => Path.Combine(Root(), "src", "Singularity.Client.Spike", "assets", "audio");
 
-    static (int rate, int bits, int channels, short[] data) ReadWav(string path)
+    /// <summary>Mono Ogg Vorbis: rate and channels from the identification header, length from the last page's granule position.</summary>
+    static (int rate, int channels, double seconds) ReadOgg(string path)
     {
         var b = File.ReadAllBytes(path);
-        Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(b, 0, 4));
-        int pos = 12, rate = 0, bits = 0, ch = 0;
-        while (pos + 8 <= b.Length)
-        {
-            string id = System.Text.Encoding.ASCII.GetString(b, pos, 4);
-            int size = BitConverter.ToInt32(b, pos + 4);
-            if (id == "fmt ") { ch = BitConverter.ToInt16(b, pos + 10); rate = BitConverter.ToInt32(b, pos + 12); bits = BitConverter.ToInt16(b, pos + 22); }
-            if (id == "data")
-            {
-                var d = new short[size / 2];
-                Buffer.BlockCopy(b, pos + 8, d, 0, size / 2 * 2);
-                return (rate, bits, ch, d);
-            }
-            pos += 8 + size + (size & 1);
-        }
-        throw new InvalidDataException(path);
+        Assert.Equal("OggS", System.Text.Encoding.ASCII.GetString(b, 0, 4));
+        Assert.Equal("vorbis", System.Text.Encoding.ASCII.GetString(b, 29, 6));
+        int ch = b[39], rate = BitConverter.ToInt32(b, 40);
+        int last = b.AsSpan().LastIndexOf("OggS"u8);
+        long granule = BitConverter.ToInt64(b, last + 6);
+        return (rate, ch, granule / (double)rate);
     }
 
     public static IEnumerable<object[]> Files() =>
@@ -40,15 +31,13 @@ public class AudioAssetsTests
 
     [Theory]
     [MemberData(nameof(Files))]
-    public void Wav_matches_the_catalogue(string cue, string file)
+    public void Ogg_matches_the_catalogue(string cue, string file)
     {
-        var (rate, bits, ch, data) = ReadWav(Path.Combine(Assets(), "ui", file + ".wav"));
-        Assert.Equal(48000, rate); Assert.Equal(16, bits); Assert.Equal(1, ch);
-        double seconds = data.Length / 48000.0;
-        Assert.InRange(seconds, AudioCatalog.Get(cue).Seconds - 0.03, AudioCatalog.Get(cue).Seconds + 0.03);
-        double peak = data.Max(x => Math.Abs((double)x)) / 32767.0;
-        Assert.True(20 * Math.Log10(peak) <= -2.9, $"{file} peak {20 * Math.Log10(peak):F1} dBFS");
-        Assert.True(peak > 0.01);
+        var (rate, ch, seconds) = ReadOgg(Path.Combine(Assets(), "ui", file + ".ogg"));
+        Assert.Equal(48000, rate); Assert.Equal(1, ch);
+        var c = AudioCatalog.Get(cue);
+        // Seconds is the playback length: the file plus the extra clicks of a repeated cue.
+        Assert.InRange(seconds + (c.Repeats - 1) * Cue.RepeatGap, c.Seconds - 0.02, c.Seconds + 0.02);
     }
 
     [Fact]
@@ -62,7 +51,7 @@ public class AudioAssetsTests
     public void Every_audio_file_has_a_licence_entry()
     {
         string lic = File.ReadAllText(Path.Combine(Root(), "src", "Singularity.Client.Spike", "LICENSES.md"));
-        foreach (var f in new[] { "irradiated_skies.ogg", "led_twilight.ogg", "pale_window.ogg", "assets/audio/ui/" })
+        foreach (var f in new[] { "irradiated_skies.ogg", "led_twilight.ogg", "pale_window.ogg", "assets/audio/ui/", "Bell Ding", "electrical_switch_02" })
             Assert.Contains(f, lic);
     }
 }

@@ -118,7 +118,7 @@ public sealed partial class AudioDirector : Node
     // ---------- cues ----------
     AudioStream Stream(string file)
     {
-        if (!_streams.TryGetValue(file, out var s)) _streams[file] = s = GD.Load<AudioStream>(UiDir + file + ".wav");
+        if (!_streams.TryGetValue(file, out var s)) _streams[file] = s = GD.Load<AudioStream>(UiDir + file + ".ogg");
         return s;
     }
 
@@ -128,12 +128,25 @@ public sealed partial class AudioDirector : Node
         var p = _planner.Request(id, Now(), extraGainDb);
         if (p == null || _muted) return;
         foreach (var v in p.Evicted) if (_voices.Remove(v, out var old)) { old.Stop(); old.QueueFree(); }
-        var pl = new AudioStreamPlayer { Stream = Stream(p.File), Bus = p.Cue.Bus, VolumeDb = (float)p.GainDb, PitchScale = (float)p.Pitch };
-        AddChild(pl);
+        var pl = Spawn(p);
         int voice = p.Voice;
         pl.Finished += () => { _voices.Remove(voice); pl.QueueFree(); };
         _voices[voice] = pl;
         pl.Play();
+        // Repeated clicks of one file (tempo_2/3): later clicks start RepeatGap apart, they are not tracked as voices.
+        for (int r = 1; r < p.Cue.Repeats; r++)
+        {
+            var extra = Spawn(p);
+            extra.Finished += extra.QueueFree;
+            GetTree().CreateTimer(r * Singularity.Client.Spike.Cue.RepeatGap).Timeout += () => { if (IsInstanceValid(extra)) extra.Play(); };
+        }
+    }
+
+    AudioStreamPlayer Spawn(Play p)
+    {
+        var pl = new AudioStreamPlayer { Stream = Stream(p.File), Bus = p.Cue.Bus, VolumeDb = (float)p.GainDb, PitchScale = (float)p.Pitch };
+        AddChild(pl);
+        return pl;
     }
 
     public void Tick() => Cue("ui_tick");

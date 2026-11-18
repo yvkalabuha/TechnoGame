@@ -11,37 +11,42 @@ namespace Singularity.Client.Spike;
 /// <summary>P0 always audible (alert bus); P1 important; P2 confirmations; P3 micro feedback.</summary>
 public enum Prio { P0 = 0, P1 = 1, P2 = 2, P3 = 3 }
 
-/// <summary>A sound of the map. <paramref name="Class"/> is the aggregation class; <paramref name="Seconds"/> is the file length (checked against the WAV in tests).</summary>
-public sealed record Cue(string Id, Prio Prio, string Class, double Seconds, int Variants = 1, double MinGap = 0, double GainDb = 0)
+/// <summary>
+/// A sound of the map. <paramref name="Class"/> is the aggregation class; <paramref name="Seconds"/> is the playback length (checked against the .ogg in tests).
+/// <paramref name="Jitter"/>: pitch ±3% and gain ±1.5 dB per play (one file per cue). <paramref name="Source"/>: shared file name; <paramref name="Repeats"/>: clicks of one file.
+/// </summary>
+public sealed record Cue(string Id, Prio Prio, string Class, double Seconds, int Variants = 1, double MinGap = 0, double GainDb = 0,
+    bool Jitter = false, string? Source = null, int Repeats = 1)
 {
+    public const double RepeatGap = 0.06;
     public string Bus => Prio <= Prio.P1 ? "Alert" : "UI";
-    public string File(int variant) => Variants == 1 ? Id : $"{Id}_{variant}";
+    public string File(int variant) => Variants == 1 ? Source ?? Id : $"{Id}_{variant}";
 }
 
 public static class AudioCatalog
 {
     public static readonly IReadOnlyList<Cue> All = new[]
     {
-        new Cue("order_ok", Prio.P2, "order", 0.125, 4),
-        new Cue("order_reject", Prio.P1, "reject", 0.145),
-        new Cue("queue_tick", Prio.P3, "tick", 0.015, 4),
-        new Cue("order_done", Prio.P2, "order", 0.265, 4),
-        new Cue("signal_attention", Prio.P0, "signal", 0.305),
-        new Cue("signal_alert", Prio.P0, "signal", 0.245),
-        new Cue("signal_critical", Prio.P0, "signal", 0.345, MinGap: 60),
-        new Cue("signal_clear", Prio.P1, "signal", 0.305),
-        new Cue("node_discovered", Prio.P1, "discovery", 1.005),
-        new Cue("breakthrough", Prio.P1, "discovery", 1.125),
-        new Cue("line_commissioned", Prio.P1, "line", 0.755),
-        new Cue("war_declared", Prio.P0, "war", 0.905),
-        new Cue("launch_space", Prio.P1, "launch", 1.455),
-        new Cue("launch_nuclear", Prio.P0, "launch", 1.505, MinGap: 5),
-        new Cue("tempo_1", Prio.P2, "tempo", 0.015),
-        new Cue("tempo_2", Prio.P2, "tempo", 0.055),
-        new Cue("tempo_3", Prio.P2, "tempo", 0.105),
-        new Cue("pause", Prio.P2, "pause", 0.255),
-        new Cue("unpause", Prio.P2, "pause", 0.255),
-        new Cue("ui_tick", Prio.P3, "tick", 0.03, 4),
+        new Cue("order_ok", Prio.P2, "order", 0.25, Jitter: true),
+        new Cue("order_reject", Prio.P1, "reject", 0.19),
+        new Cue("queue_tick", Prio.P3, "tick", 0.08, Jitter: true),
+        new Cue("order_done", Prio.P2, "order", 0.25),
+        new Cue("signal_attention", Prio.P1, "signal", 1.2),
+        new Cue("signal_alert", Prio.P0, "signal", 1.5),
+        new Cue("signal_critical", Prio.P0, "signal", 1.5, MinGap: 60),
+        new Cue("signal_clear", Prio.P1, "signal", 1.2),
+        new Cue("node_discovered", Prio.P1, "discovery", 1.2),
+        new Cue("breakthrough", Prio.P1, "discovery", 1.15),
+        new Cue("line_commissioned", Prio.P1, "line", 2.0),
+        new Cue("war_declared", Prio.P0, "war", 1.5),
+        new Cue("launch_space", Prio.P1, "launch", 1.2),
+        new Cue("launch_nuclear", Prio.P0, "launch", 1.8, MinGap: 5),
+        new Cue("tempo_1", Prio.P2, "tempo", 0.25, Source: "tempo"),
+        new Cue("tempo_2", Prio.P2, "tempo", 0.31, Source: "tempo", Repeats: 2),
+        new Cue("tempo_3", Prio.P2, "tempo", 0.37, Source: "tempo", Repeats: 3),
+        new Cue("pause", Prio.P2, "pause", 0.25),
+        new Cue("unpause", Prio.P2, "pause", 0.25),
+        new Cue("ui_tick", Prio.P3, "tick", 0.08, Jitter: true),
     };
 
     public static Cue Get(string id) => All.First(c => c.Id == id);
@@ -141,7 +146,9 @@ public sealed class AudioPlanner
         _voices.Add(new Voice(id, cue.Prio, now + cue.Seconds, now));
         if (cue.Prio <= Prio.P1) _duckUntil = Math.Max(_duckUntil, now + cue.Seconds + DuckTail);
         double gain = cue.GainDb + extraGainDb + AdaptDb(cue.Prio) + (collective ? 2.0 : 0);
-        return new Play(id, cue, variant, gain, collective ? 1.122462 : 1.0, collective, evicted);
+        double pitch = collective ? 1.122462 : 1.0;
+        if (cue.Jitter) { pitch *= 1 + (Next(1001) / 1000.0 * 0.06 - 0.03); gain += Next(1001) / 1000.0 * 3.0 - 1.5; }
+        return new Play(id, cue, variant, gain, pitch, collective, evicted);
     }
 }
 

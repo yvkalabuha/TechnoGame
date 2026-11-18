@@ -58,18 +58,28 @@ public class AudioPlannerTests
     }
 
     [Fact]
-    public void Variant_never_repeats_twice_in_a_row()
+    public void Jittered_cues_vary_pitch_and_gain_within_bounds_and_others_do_not()
     {
         var p = new AudioPlanner();
-        int last = -1;
+        var pitches = new HashSet<double>();
         for (int i = 0; i < 200; i++)
         {
-            var pl = p.Request("order_ok", i * 1.0);
+            var pl = p.Request("order_ok", i * 3.0);
             Assert.NotNull(pl);
-            Assert.NotEqual(last, pl!.Variant);
-            Assert.InRange(pl.Variant, 0, 3);
-            last = pl.Variant;
+            Assert.Equal(0, pl!.Variant);
+            Assert.InRange(pl.Pitch, 0.97, 1.03);
+            Assert.InRange(pl.GainDb, -1.5, 1.5);
+            pitches.Add(pl.Pitch);
         }
+        Assert.True(pitches.Count > 50);
+        Assert.Equal(1.0, new AudioPlanner().Request("order_reject", 0)!.Pitch);
+    }
+
+    [Fact]
+    public void Signal_attention_is_p1_and_tempo_clicks_follow_the_speed()
+    {
+        Assert.Equal(Prio.P1, AudioCatalog.Get("signal_attention").Prio);
+        Assert.Equal(new[] { 1, 2, 3 }, new[] { "tempo_1", "tempo_2", "tempo_3" }.Select(c => AudioCatalog.Get(c).Repeats));
     }
 
     [Fact]
@@ -138,7 +148,7 @@ public class AudioPlannerTests
         var p = new AudioPlanner();
         for (double t = 0; t <= 100 * 60; t += 60) p.Touch(t);
         var pl = p.Request("ui_tick", 100 * 60 + 1);
-        Assert.Equal(-3.0, pl!.GainDb);
+        Assert.InRange(pl!.GainDb, -4.5, -1.5);   // -3 dB adaptation, +-1.5 dB jitter
     }
 }
 
