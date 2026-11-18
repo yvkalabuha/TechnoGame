@@ -98,6 +98,7 @@
 | [TASK-0081](../development/tasks/TASK-0081-client-v0-5b.md) | REVIEW | Client v0.5b: main menu, settings, new game, palette C with alert validator, time icons | MS-M0 |
 | [TASK-0082](../development/tasks/TASK-0082-f7a-view-reuse.md) | DONE | F7a: reuse the view on probe-only days, cheaper daily snapshot | MS-M0 |
 | [TASK-0083](../development/tasks/TASK-0083-lab-bench-tests.md) | DONE | Tests for lab bench: statistics, manifest, plan, CLI | MS-M0 |
+| [TASK-0084](../development/tasks/TASK-0084-map-ci-debt0043.md) | APPROVED | Map tooling CI and boundary checks (DEBT-0043) | MS-M1 |
 
 ## Гипотезы
 
@@ -107,6 +108,7 @@
 | [HYP-0002](../development/hypotheses/HYP-0002-jet-aviation-slice-layers.md) | REJECTED | Совместная гипотеза среза «реактивная авиация»: три слоя дают персистентное, но не предрешённое лидерство |
 | [HYP-0003](../development/hypotheses/HYP-0003-war-capture-transfer.md) | IDEA | Захват после победной войны: территория, заводы с повреждениями и часть знаний побеждённого |
 | [HYP-0004](../development/hypotheses/HYP-0004-introduction-channel.md) | IDEA | Канал внедрения: новый процесс выбирается из низкого выхода без серийного выпуска |
+| [HYP-0005](../development/hypotheses/HYP-0005-open-race.md) | IDEA | Open race: the 1945-1975 leadership outcome is neither predetermined nor random |
 
 ## Эксперименты
 
@@ -167,3 +169,6 @@
 | [RR-0017](../docs/research/RR-0017-intelligence.md) | DRAFT | Разведка, промышленный шпионаж, контрразведка и дезинформация |
 | [RR-0019](../docs/research/RR-0019-logistics-communications.md) | DRAFT | Логистика, связь и инфраструктура |
 | [RR-0020](../docs/research/RR-0020-scripted-ownership-events.md) | DRAFT | Scripted ownership events 1945-1975: dates and sources |
+| [RR-0021](../docs/research/RR-0021-politics-systems.md) | DRAFT | Politics and political systems: institutions, regimes, succession |
+| [RR-0022](../docs/research/RR-0022-counterfactual-branches.md) | DRAFT | Counterfactual technology branches 1945-2100 (#299) |
+| [RR-0023](../docs/research/RR-0023-start-data-1945.md) | DRAFT | Start data 1945 by region: estimates with uncertainty ranges |
