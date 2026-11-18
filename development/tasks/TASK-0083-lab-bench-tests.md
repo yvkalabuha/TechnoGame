@@ -1,7 +1,7 @@
 ---
 id: TASK-0083
 title: "Tests for lab bench: statistics, manifest, plan, CLI"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: test-engineer
@@ -35,3 +35,11 @@ created: 2026-11-18
 - [ ] Все тесты зелёные; найденные дефекты — списком в «Результате», src/ не менять.
 
 ## Результат
+Тесты: `tests/Singularity.Lab.Tests/BenchTests.cs` (35 тестов; весь проект: 54 зелёных, Debug). Все 7 групп покрыты.
+- 1–2: Percentile (n=1, p=0/1, [1..10] p50=5,5 и p95=9,55, неотсортированный вход, пустой/NaN/p вне [0,1]), Summarize == Percentile.
+- 3: Parse (неизвестный ключ в корне и блоке, kind≠bench, пустые/нулевые threads и seeds, повтор id, grid=24 точки), EXP-0007-bench = 114 (A15 B15 C1 6 C2 3 C3 3 D72), хеш не зависит от форматирования.
+- 4: Plan детерминирован и перестановка таблицы, другой shuffle_seed даёт другой порядок, DailyFirst == чётная реплика.
+- 5: Pick = ⌊C·pct/100⌋, 0 → пусто, 100 → все.
+- 6: Clone даёт тот же StateHash, R2a на клоне не трогает источник; R2(в) (R2c) не меняет состояние (state_unchanged, хеш).
+- 7: CLI через публичный `Program.Main` (BenchCommand internal, InternalsVisibleTo в Lab нет, src/ не менялся): неизвестный режим/ключ/дубль ключа → 2; `--percents 0,101` → 2 без файла; `--warmup/--measure` с манифестом печатают `[smoke]`, совпадающие с манифестом значения не ставят smoke.
+Дефектов не найдено. Заметки: CLI-тесты перехватывают Console, поэтому класс в коллекции LabConsole без параллелизма; smoke проверяется по строке вывода «[smoke]», а не по полю в JSON (запуск процесса реальный, 2 месяца). Изменений в src/ не требуется.

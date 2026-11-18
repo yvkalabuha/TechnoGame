@@ -97,7 +97,7 @@
 | [TASK-0080](../development/tasks/TASK-0080-adr-0017-review-followups.md) | REVIEW | ADR-0017 review follow-ups (DEBT-0045 low items) | MS-M0 |
 | [TASK-0081](../development/tasks/TASK-0081-client-v0-5b.md) | APPROVED | Client v0.5b: main menu, settings, new game, palette C with alert validator, time icons | MS-M0 |
 | [TASK-0082](../development/tasks/TASK-0082-f7a-view-reuse.md) | APPROVED | F7a: reuse the view on probe-only days, cheaper daily snapshot | MS-M0 |
-| [TASK-0083](../development/tasks/TASK-0083-lab-bench-tests.md) | APPROVED | Tests for lab bench: statistics, manifest, plan, CLI | MS-M0 |
+| [TASK-0083](../development/tasks/TASK-0083-lab-bench-tests.md) | DONE | Tests for lab bench: statistics, manifest, plan, CLI | MS-M0 |
 
 ## Гипотезы
 
