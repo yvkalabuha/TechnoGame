@@ -1,7 +1,7 @@
 ---
 id: TASK-0077
 title: "Client v0.5a: planisphere zoom and node icons, node card with schematic and effects, map click fix, starry sky"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer
