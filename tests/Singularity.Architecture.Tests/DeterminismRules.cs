@@ -4,6 +4,7 @@ using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Collections.Specialized;
 using System.Diagnostics;
+using System.Globalization;
 using System.Numerics;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -48,7 +49,7 @@ internal static class DeterminismRules
         (typeof(DateTimeOffset), "get_Now"), (typeof(DateTimeOffset), "get_UtcNow"),
         (typeof(Environment), "get_TickCount"), (typeof(Environment), "get_TickCount64"),
         (typeof(Guid), "NewGuid"),
-        (typeof(Parallel), "ForEach"), (typeof(Parallel), "ForEachAsync"),
+        (typeof(Parallel), "ForEach"), (typeof(Parallel), "ForEachAsync"), (typeof(Parallel), "Invoke"),
         (typeof(ParallelEnumerable), "AsParallel"),
     ];
 
@@ -71,7 +72,26 @@ internal static class DeterminismRules
     [
         typeof(ConcurrentQueue<>), typeof(ConcurrentStack<>), typeof(ConcurrentBag<>),
         typeof(Channel), typeof(Channel<>), typeof(ChannelReader<>), typeof(ChannelWriter<>),
+        // ADR-0007 rev 3 p. 3 and 8: blocking queue and free threading (Task.Run, new Thread, ThreadPool).
+        typeof(BlockingCollection<>), typeof(Task), typeof(Task<>), typeof(TaskFactory), typeof(TaskFactory<>),
+        typeof(Thread), typeof(ThreadPool),
     ];
+
+    /// <summary>
+    /// ADR-0007 rev 3 p. 8: the only methods ("Namespace.Type.Method") that may call Parallel.For.
+    /// A new site means an allowlist edit with review.
+    /// </summary>
+    public static readonly string[] ParallelForAllowlist =
+    [
+        "Singularity.Kernel.TickRunner.RunTick",
+        "Singularity.Session.ViewBuilder.Inputs",
+    ];
+
+    // Culture-dependent string members whose overloads need an explicit ordinal StringComparison.
+    private static readonly string[] CultureStringMethods = ["Compare", "StartsWith", "EndsWith", "IndexOf", "LastIndexOf", "Equals"];
+    private static readonly string[] CultureComparerGetters =
+        ["get_CurrentCulture", "get_CurrentCultureIgnoreCase", "get_InvariantCulture", "get_InvariantCultureIgnoreCase", "Create"];
+    private static readonly string[] SortingMethods = ["OrderBy", "OrderByDescending", "ThenBy", "ThenByDescending", "Order", "OrderDescending"];
 
     private static readonly Type[] UnorderedNonGeneric =
     [
@@ -95,8 +115,11 @@ internal static class DeterminismRules
     /// ADR-0003 R1: also reject <see cref="double"/> anywhere (fields, signatures, locals, callees,
     /// r8 opcodes). Used for Core outside the R4 exceptions.
     /// </param>
-    public static List<string> Check(IEnumerable<Type> types, bool forbidDouble = false)
+    /// <param name="parallelForAllowlist">Methods allowed to call Parallel.For; defaults to <see cref="ParallelForAllowlist"/>.</param>
+    public static List<string> Check(IEnumerable<Type> types, bool forbidDouble = false,
+        IReadOnlyCollection<string>? parallelForAllowlist = null)
     {
+        parallelForAllowlist ??= ParallelForAllowlist;
         var violations = new List<string>();
         foreach (Type type in types)
         {
@@ -104,7 +127,7 @@ internal static class DeterminismRules
                 CheckType(field.FieldType, $"{type}.{field.Name} (field)", violations, forbidDouble);
 
             foreach (MethodBase method in DeclaredMethods(type))
-                CheckMethod(method, $"{type}.{method.Name}", violations, forbidDouble);
+                CheckMethod(method, $"{type}.{method.Name}", violations, forbidDouble, parallelForAllowlist);
         }
         return violations;
     }
@@ -129,8 +152,8 @@ internal static class DeterminismRules
                 // The double check only adds violations, so a longer list means the method uses double.
                 var withDouble = new List<string>();
                 var without = new List<string>();
-                CheckMethod(method, "", withDouble, forbidDouble: true);
-                CheckMethod(method, "", without, forbidDouble: false);
+                CheckMethod(method, "", withDouble, forbidDouble: true, ParallelForAllowlist);
+                CheckMethod(method, "", without, forbidDouble: false, ParallelForAllowlist);
                 if (withDouble.Count > without.Count)
                     users.Add($"{type.Name}.{method.Name}");
             }
@@ -141,7 +164,8 @@ internal static class DeterminismRules
     private static IEnumerable<MethodBase> DeclaredMethods(Type type) =>
         type.GetMethods(IlScanner.AllDeclared).Cast<MethodBase>().Concat(type.GetConstructors(IlScanner.AllDeclared));
 
-    private static void CheckMethod(MethodBase method, string site, List<string> violations, bool forbidDouble)
+    private static void CheckMethod(MethodBase method, string site, List<string> violations, bool forbidDouble,
+        IReadOnlyCollection<string> parallelForAllowlist)
     {
         if (method is MethodInfo info)
             CheckType(info.ReturnType, $"{site} (return)", violations, forbidDouble);
@@ -155,9 +179,17 @@ internal static class DeterminismRules
         // touches an unordered collection must not enumerate anything indirectly.
         bool touchesUnordered = TouchesUnordered(method);
 
+        // Record/struct GetHashCode synthesised by the compiler hashes string members through
+        // EqualityComparer<string>; the hash only serves lookups and never leaves the process.
+        bool generatedHash = method.Name == "GetHashCode" &&
+            method.GetCustomAttribute<System.Runtime.CompilerServices.CompilerGeneratedAttribute>() is not null;
+
         Type? previous = null; // static type of the value the previous instruction pushed
+        IlScanner.Instruction? prevInstruction = null;
         foreach (IlScanner.Instruction instruction in IlScanner.Read(method))
         {
+            IlScanner.Instruction? before = prevInstruction;
+            prevInstruction = instruction;
             // C# emits Object.GetHashCode for a string receiver, so look at what was just loaded.
             if (instruction.Operand is MethodBase { Name: "GetHashCode", DeclaringType: { } hashOwner } &&
                 (hashOwner == typeof(string) || (hashOwner == typeof(object) && previous == typeof(string))))
@@ -173,6 +205,10 @@ internal static class DeterminismRules
             {
                 case MethodBase callee:
                     CheckCallee(callee, site, violations, forbidDouble);
+                    CheckStrings(callee, before, site, violations, generatedHash);
+                    if (callee.DeclaringType == typeof(Parallel) && callee.Name == "For" &&
+                        Array.IndexOf(parallelForAllowlist.ToArray(), site) < 0)
+                        violations.Add($"{site}: Parallel.For outside the allowlist");
                     if (touchesUnordered && EnumeratesIndirectly(callee))
                         violations.Add($"{site}: enumerates an unordered collection indirectly via {callee.DeclaringType?.Name}.{callee.Name}");
                     break;
@@ -262,6 +298,78 @@ internal static class DeterminismRules
             foreach (Type argument in callee.GetGenericArguments())
                 CheckType(argument, $"{site} calls {name} (type argument)", violations, forbidDouble);
         }
+    }
+
+    // ADR-0007 rev 3 p. 4-5: string hashing and culture-dependent comparison/sorting.
+    private static void CheckStrings(MethodBase callee, IlScanner.Instruction? before, string site, List<string> violations, bool generatedHash)
+    {
+        Type? owner = callee.DeclaringType;
+        if (owner is null)
+            return;
+        string name = $"{owner.Name}.{callee.Name}";
+        ParameterInfo[] ps = callee.GetParameters();
+        Type[] generic = callee.IsGenericMethod ? callee.GetGenericArguments() : [];
+        bool hasComparer = ps.Any(p => p.ParameterType.IsGenericType &&
+            p.ParameterType.GetGenericTypeDefinition() is var d && (d == typeof(IComparer<>) || d == typeof(Comparison<>)));
+        bool ownerGeneric = owner.IsGenericType;
+        Type[] ownerArgs = ownerGeneric ? owner.GetGenericArguments() : [];
+        Type? ownerDef = ownerGeneric ? owner.GetGenericTypeDefinition() : null;
+
+        // Hash of a string: HashCode.Combine/Add<string>, StringComparer/EqualityComparer<string>.GetHashCode(string).
+        if (owner == typeof(HashCode) && callee.Name is "Combine" or "Add" && generic.Contains(typeof(string)))
+            violations.Add($"{site}: {name} hashes a string");
+        if (!generatedHash && callee.Name == "GetHashCode" && owner != typeof(object) && ps.Length == 1 && ps[0].ParameterType == typeof(string))
+            violations.Add($"{site}: {name}(string) hashes a string");
+
+        // string members: need StringComparison.Ordinal*, passed as a constant right before the call.
+        if (owner == typeof(string) && Array.IndexOf(CultureStringMethods, callee.Name) >= 0)
+        {
+            bool takesComparison = ps.Length > 0 && ps[^1].ParameterType == typeof(StringComparison);
+            bool stringArg = callee.Name is "Compare" or "Equals" || ps.Length > 0 && ps[0].ParameterType == typeof(string);
+            if (takesComparison ? !IsOrdinalConstant(before) : callee.Name != "Equals" && stringArg)
+                violations.Add($"{site}: culture-dependent {name}");
+        }
+        if ((owner == typeof(string) || owner == typeof(IComparable<string>)) && callee.Name == "CompareTo")
+            violations.Add($"{site}: culture-dependent string.CompareTo");
+        if (owner == typeof(Comparer<string>) && callee.Name == "get_Default")
+            violations.Add($"{site}: Comparer<string>.Default is culture-dependent");
+        if (owner == typeof(string) && callee.Name is "ToLower" or "ToUpper")
+            violations.Add($"{site}: {name} is culture-dependent (use the Invariant variant)");
+        if (owner == typeof(StringComparer) && Array.IndexOf(CultureComparerGetters, callee.Name) >= 0)
+            violations.Add($"{site}: culture-dependent StringComparer.{callee.Name}");
+        if (owner == typeof(CompareInfo))
+            violations.Add($"{site}: culture-dependent {name}");
+
+        // Sorted containers and sorts keyed by string need an explicit comparer.
+        bool sortedOwner = ownerDef == typeof(SortedDictionary<,>) || ownerDef == typeof(SortedSet<>) ||
+            ownerDef == typeof(SortedList<,>) || ownerDef == typeof(ImmutableSortedDictionary<,>.Builder) ||
+            ownerDef == typeof(ImmutableSortedSet<>.Builder);
+        if (sortedOwner && callee is ConstructorInfo && ownerArgs.Length > 0 && ownerArgs[0] == typeof(string) && !hasComparer)
+            violations.Add($"{site}: {owner.Name} with string keys needs an explicit comparer");
+        if (owner.Name.StartsWith("ImmutableSorted", StringComparison.Ordinal) && !ownerGeneric &&
+            generic.Length > 0 && generic[0] == typeof(string) && !hasComparer)
+            violations.Add($"{site}: {name} with string keys needs an explicit comparer");
+        if (owner == typeof(Enumerable) && Array.IndexOf(SortingMethods, callee.Name) >= 0 &&
+            generic.Length > 0 && generic[^1] == typeof(string) && !hasComparer)
+            violations.Add($"{site}: {name} on strings needs an explicit comparer");
+        if (owner == typeof(Array) && callee.Name == "Sort" && generic.Length > 0 && generic[0] == typeof(string) && !hasComparer)
+            violations.Add($"{site}: Array.Sort on strings needs an explicit comparer");
+        if (ownerDef == typeof(List<>) && ownerArgs[0] == typeof(string) && callee.Name == "Sort" && !hasComparer)
+            violations.Add($"{site}: List<string>.Sort needs an explicit comparer");
+    }
+
+    private static bool IsOrdinalConstant(IlScanner.Instruction? i)
+    {
+        if (i is null)
+            return false;
+        int? value = i.Value.OpCode.Name switch
+        {
+            "ldc.i4.4" => 4,
+            "ldc.i4.5" => 5,
+            "ldc.i4.s" or "ldc.i4" => Convert.ToInt32(i.Value.Operand, CultureInfo.InvariantCulture),
+            _ => null,
+        };
+        return value is 4 or 5; // StringComparison.Ordinal, OrdinalIgnoreCase
     }
 
     private static bool TouchesUnordered(MethodBase method)

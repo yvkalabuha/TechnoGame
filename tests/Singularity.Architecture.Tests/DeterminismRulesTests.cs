@@ -66,12 +66,56 @@ public class DeterminismRulesTests
     [InlineData(typeof(UsesConcurrentStack), "forbidden type")]
     [InlineData(typeof(UsesConcurrentBag), "forbidden type")]
     [InlineData(typeof(UsesChannel), "forbidden type")]
+    // TASK-0092 (ADR-0007 rev 3 p. 3-5, 8).
+    [InlineData(typeof(HashesStringViaCombine), "hashes a string")]
+    [InlineData(typeof(HashesStringViaAdd), "hashes a string")]
+    [InlineData(typeof(HashesStringViaComparer), "hashes a string")]
+    [InlineData(typeof(HashesStringViaEqualityComparer), "hashes a string")]
+    [InlineData(typeof(UsesCompareCulture), "culture-dependent")]
+    [InlineData(typeof(UsesStartsWithCulture), "culture-dependent")]
+    [InlineData(typeof(UsesIndexOfCulture), "culture-dependent")]
+    [InlineData(typeof(UsesEndsWithCulture), "culture-dependent")]
+    [InlineData(typeof(UsesCompareWithCulturalComparison), "culture-dependent")]
+    [InlineData(typeof(UsesStringCompareTo), "string.CompareTo")]
+    [InlineData(typeof(UsesDefaultStringComparer), "Comparer<string>.Default")]
+    [InlineData(typeof(UsesToLower), "ToLower")]
+    [InlineData(typeof(UsesToUpper), "ToUpper")]
+    [InlineData(typeof(UsesCultureComparer), "StringComparer.get_CurrentCulture")]
+    [InlineData(typeof(UsesInvariantCultureComparer), "StringComparer.get_InvariantCultureIgnoreCase")]
+    [InlineData(typeof(UsesCompareInfo), "CompareInfo")]
+    [InlineData(typeof(UsesSortedDictionaryStringKey), "explicit comparer")]
+    [InlineData(typeof(UsesSortedSetString), "explicit comparer")]
+    [InlineData(typeof(UsesImmutableSortedSetString), "explicit comparer")]
+    [InlineData(typeof(UsesOrderByString), "explicit comparer")]
+    [InlineData(typeof(UsesArraySortString), "explicit comparer")]
+    [InlineData(typeof(UsesListSortString), "explicit comparer")]
+    [InlineData(typeof(UsesTaskRun), "forbidden type")]
+    [InlineData(typeof(UsesNewThread), "forbidden type")]
+    [InlineData(typeof(UsesThreadPool), "forbidden type")]
+    [InlineData(typeof(UsesParallelInvoke), "Parallel.Invoke")]
+    [InlineData(typeof(UsesBlockingCollection), "forbidden type")]
+    [InlineData(typeof(UsesParallelFor), "outside the allowlist")]
     public void Violation_IsDetected(Type sample, string expected)
     {
         // Lambdas compile into nested types, so scan those too.
         Type[] types = [sample, .. sample.GetNestedTypes(IlScanner.AllDeclared)];
         List<string> violations = DeterminismRules.Check(types);
         Assert.Contains(violations, v => v.Contains(expected, StringComparison.OrdinalIgnoreCase));
+    }
+
+    // Explicit ordinal comparers and allowlisted Parallel.For stay clean.
+    [Fact]
+    public void OrdinalStringCode_HasNoViolations()
+    {
+        Assert.Empty(DeterminismRules.Check([typeof(OrdinalStrings)]));
+    }
+
+    [Fact]
+    public void ParallelFor_AllowedOnlyAtAllowlistedSite()
+    {
+        Assert.Empty(DeterminismRules.Check([typeof(UsesParallelFor)], parallelForAllowlist: [$"{typeof(UsesParallelFor)}.Run"]));
+        Assert.Contains(DeterminismRules.Check([typeof(UsesParallelFor)], parallelForAllowlist: ["Other.Run"]),
+            v => v.Contains("outside the allowlist", StringComparison.Ordinal));
     }
 
     // ADR-0003 R1: forbidDouble mode.
@@ -548,4 +592,165 @@ internal sealed class UsesConcurrentBag
 internal sealed class UsesChannel
 {
     public object Run() => System.Threading.Channels.Channel.CreateUnbounded<int>();
+}
+
+internal sealed class HashesStringViaCombine
+{
+    public int Run(string s) => HashCode.Combine(s, 1);
+}
+
+internal sealed class HashesStringViaAdd
+{
+    public int Run(string s)
+    {
+        var h = new HashCode();
+        h.Add(s);
+        return h.ToHashCode();
+    }
+}
+
+internal sealed class HashesStringViaComparer
+{
+    public int Run(string s) => StringComparer.Ordinal.GetHashCode(s);
+}
+
+internal sealed class HashesStringViaEqualityComparer
+{
+    public int Run(string s) => EqualityComparer<string>.Default.GetHashCode(s);
+}
+
+internal sealed class UsesCompareCulture
+{
+    public int Run(string a, string b) => string.Compare(a, b);
+}
+
+internal sealed class UsesStartsWithCulture
+{
+    public bool Run(string a, string b) => a.StartsWith(b);
+}
+
+internal sealed class UsesIndexOfCulture
+{
+    public int Run(string a, string b) => a.IndexOf(b);
+}
+
+internal sealed class UsesEndsWithCulture
+{
+    public bool Run(string a, string b) => a.EndsWith(b);
+}
+
+internal sealed class UsesCompareWithCulturalComparison
+{
+    public int Run(string a, string b) => string.Compare(a, b, StringComparison.CurrentCulture);
+}
+
+internal sealed class UsesStringCompareTo
+{
+    public int Run(string a, string b) => a.CompareTo(b);
+}
+
+internal sealed class UsesDefaultStringComparer
+{
+    public int Run(string a, string b) => Comparer<string>.Default.Compare(a, b);
+}
+
+internal sealed class UsesToLower
+{
+    public string Run(string a) => a.ToLower();
+}
+
+internal sealed class UsesToUpper
+{
+    public string Run(string a) => a.ToUpper();
+}
+
+internal sealed class UsesCultureComparer
+{
+    public bool Run(string a, string b) => StringComparer.CurrentCulture.Equals(a, b);
+}
+
+internal sealed class UsesInvariantCultureComparer
+{
+    public bool Run(string a, string b) => StringComparer.InvariantCultureIgnoreCase.Equals(a, b);
+}
+
+internal sealed class UsesCompareInfo
+{
+    public int Run(string a, string b) => System.Globalization.CultureInfo.InvariantCulture.CompareInfo.Compare(a, b);
+}
+
+internal sealed class UsesSortedDictionaryStringKey
+{
+    public int Run() => new SortedDictionary<string, int>().Count;
+}
+
+internal sealed class UsesSortedSetString
+{
+    public int Run() => new SortedSet<string>().Count;
+}
+
+internal sealed class UsesImmutableSortedSetString
+{
+    public int Run() => ImmutableSortedSet.Create<string>().Count;
+}
+
+internal sealed class UsesOrderByString
+{
+    public int Run(string[] a) => a.OrderBy(x => x).Count();
+}
+
+internal sealed class UsesArraySortString
+{
+    public void Run(string[] a) => Array.Sort(a);
+}
+
+internal sealed class UsesListSortString
+{
+    public void Run(List<string> a) => a.Sort();
+}
+
+internal sealed class UsesTaskRun
+{
+    public void Run() => System.Threading.Tasks.Task.Run(() => { });
+}
+
+internal sealed class UsesNewThread
+{
+    public void Run() => new System.Threading.Thread(() => { }).Start();
+}
+
+internal sealed class UsesThreadPool
+{
+    public bool Run() => System.Threading.ThreadPool.QueueUserWorkItem(_ => { });
+}
+
+internal sealed class UsesParallelInvoke
+{
+    public void Run() => System.Threading.Tasks.Parallel.Invoke(() => { });
+}
+
+internal sealed class UsesBlockingCollection
+{
+    public int Run() => new BlockingCollection<int>().Count;
+}
+
+internal sealed class UsesParallelFor
+{
+    public void Run(int[] a) => System.Threading.Tasks.Parallel.For(0, a.Length, i => a[i] = i);
+}
+
+internal sealed class OrdinalStrings
+{
+    public int Run(string a, string b, string[] arr, List<string> list)
+    {
+        Array.Sort(arr, StringComparer.Ordinal);
+        list.Sort(StringComparer.Ordinal);
+        var set = new SortedSet<string>(StringComparer.Ordinal);
+        var dict = new SortedDictionary<string, int>(StringComparer.Ordinal);
+        _ = arr.OrderBy(x => x, StringComparer.Ordinal).Count();
+        _ = a.ToLowerInvariant();
+        _ = a.StartsWith(b, StringComparison.Ordinal) | a.EndsWith(b, StringComparison.OrdinalIgnoreCase);
+        _ = a.StartsWith('x') | a.Equals(b) | a.Contains(b, StringComparison.Ordinal);
+        return string.Compare(a, b, StringComparison.Ordinal) + a.IndexOf(b, StringComparison.Ordinal) + set.Count + dict.Count;
+    }
 }

@@ -32,3 +32,12 @@ created: 2026-11-18
 - [ ] `dotnet test Singularity.sln`, `lab selftest` (golden без изменений).
 
 ## Результат
+Сделано (ADR-0007 ред. 3, п. 3–5, 8):
+- `DeterminismRules`: хеш строк (`HashCode.Combine/Add<string>`, любой `GetHashCode(string)` у `StringComparer`/`EqualityComparer<string>`); культурные `string.Compare/StartsWith/EndsWith/IndexOf/LastIndexOf/Equals(…, StringComparison)` без константы Ordinal/OrdinalIgnoreCase прямо перед вызовом, `CompareTo`, `Comparer<string>.Default`, `ToLower/ToUpper`, `StringComparer.(Invariant|Current)Culture*`/`Create`, `CompareInfo.*`; `Sorted*`/`ImmutableSorted*`/`OrderBy`/`Array.Sort`/`List<string>.Sort` по строкам без компаратора; типы `Task`, `Task<>`, `TaskFactory`, `Thread`, `ThreadPool`, `BlockingCollection<>`; `Parallel.Invoke`.
+- Allowlist `Parallel.For`: `TickRunner.RunTick`, `ViewBuilder.Inputs` (параметр `parallelForAllowlist` для фикстур).
+- Исключение: синтезированный компилятором `GetHashCode` (record) не проверяется на хеш строк. Хеш идёт только в поиск и наружу не выходит.
+- Новый `LabModelArchitectureTests`: `Check` (без `forbidDouble`) для `Singularity.Lab.Models.ToyFunnel`.
+- Фикстуры: 28 нарушений, чистый ordinal-класс, allowlist (позитив/негатив).
+Файлы: `tests/Singularity.Architecture.Tests/{DeterminismRules,DeterminismRulesTests,LabModelArchitectureTests}.cs`.
+Проверка: `dotnet test Singularity.sln` зелёный (Architecture 142), `lab selftest` 48/48, golden не менялся.
+Нарушений в Kernel/Core/Session/ToyFunnel не найдено; код не правился.
