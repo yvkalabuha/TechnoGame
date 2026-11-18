@@ -1,12 +1,12 @@
 ---
 id: HYP-0005
 title: "Open race: the 1945-1975 leadership outcome is neither predetermined nor random"
-status: IDEA             # IDEA | HYPOTHESIS | UNDER_RESEARCH | EXPERIMENTAL | VALIDATED | REJECTED | DEFERRED
+status: EXPERIMENTAL             # IDEA | HYPOTHESIS | UNDER_RESEARCH | EXPERIMENTAL | VALIDATED | REJECTED | DEFERRED
 systems: [economy, science, provinces, scripted-events]
 related: [MS-M1, HYP-0002, EXP-0002]
-approved_by:             # owner — для EXPERIMENTAL и VALIDATED
-approved_at:
-approval_ref:
+approved_by: owner
+approved_at: 2026-11-18
+approval_ref: "DECISIONS_LOG #380, #381"
 created: 2026-11-18
 ---
 
