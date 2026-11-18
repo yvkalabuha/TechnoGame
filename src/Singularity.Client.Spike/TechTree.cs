@@ -88,7 +88,7 @@ public sealed partial class TechTree : Control
     void Redraw() { QueueRedraw(); _view.QueueRedraw(); }
 
     public void ResetView() { _zoomTarget = 1f; _anchor = BaseCentre; _pan = Vector2.Zero; Redraw(); }
-    /// <summary>Screenshot run: jumps the zoom to a value about a point of the area (0..1 in both axes).</summary>
+    /// <summary>Screenshot run: jumps the zoom to a value and centres the given row (none: the drawing centre).</summary>
     public void ShotZoom(float zoom, int rowToCentre)
     {
         _zoom = _zoomTarget = PlanisphereMath.ClampZoom(zoom);
@@ -96,7 +96,6 @@ public sealed partial class TechTree : Control
         if (rowToCentre >= 0) { _pan = Area.GetCenter() - PosOf(rowToCentre); ClampPan(); }
         Redraw();
     }
-    public int SelectedRow => _selected;
     public int GoalRow => _goal;
     public int FrontierRow { get { for (int i = 0; _state != null && i < _state.Length; i++) if (_state[i] == St.Frontier && _route[i]) return i; return -1; } }
 
@@ -487,7 +486,7 @@ public sealed partial class TechTree : Control
         }
     }
 
-        void Shape(NodeType t, Vector2 p, float r, Color fill, Color line, bool dashed, float w)
+    void Shape(NodeType t, Vector2 p, float r, Color fill, Color line, bool dashed, float w)
     {
         if (t == NodeType.PRC || t == NodeType.APP)
         {
@@ -566,7 +565,9 @@ public sealed partial class TechTree : Control
         {
             if (!placed.TryGetValue(i, out var pl)) continue;
             _cv.DrawRect(pl.pad, new Color(Ui.Paper, 0.92f));
-            Text(new Vector2(pl.rc.Position.X, pl.rc.Position.Y + pl.h * 0.8f), pl.text, 14, _route[i] ? Ui.Command : Ui.Ink2, pl.kind);
+            var at = new Vector2(pl.rc.Position.X, pl.rc.Position.Y + pl.h * 0.8f);
+            _cv.DrawStringOutline(Ui.FontOf(pl.kind), at, pl.text, HorizontalAlignment.Left, -1, 14, 5, Ui.Paper);   // paper halo keeps text off rings and lines
+            Text(at, pl.text, 14, _route[i] ? Ui.Command : Ui.Ink2, pl.kind);
         }
     }
 
@@ -576,14 +577,14 @@ public sealed partial class TechTree : Control
         for (int k = 0; k <= n; k++) { var q = a.Lerp(b, (float)k / n); into.Add(new Rect2(q - new Vector2(pad, pad), new Vector2(pad * 2, pad * 2))); }
     }
 
-    // Callout with a shelf (§7.3) from the selected node, else from the goal, to the inset.
+    // Short callout with a shelf (§7.3) from the selected node, else from the goal; it does not run to the inset.
     Vector2[] CalloutPoints()
     {
         int i = _selected >= 0 ? _selected : _goal;
         if (i < 0) return Array.Empty<Vector2>();
         var p = PosOf(i);
         float y = Math.Max(Area.Position.Y + 8, p.Y - 30);
-        return new[] { p + new Vector2(0, -NR - 2), new Vector2(p.X + 24, y), new Vector2(Area.End.X + 6, y) };
+        return new[] { p + new Vector2(0, -NR - 2), new Vector2(p.X + 24, y), new Vector2(Math.Min(p.X + 24 + 44, Area.End.X + 6), y) };
     }
 
     void DrawCallout()
@@ -764,23 +765,6 @@ public sealed partial class TechTree : Control
         var nodes = _host.Data.Nodes;
         string id = _host.Layout.ActorIds[_actor];
         _inset.AddChild(Ui.Lbl(Loc.T("inset.title", Names.Actor(id)), 20, null, FontKind.Draft));
-
-        Sec("inset.why");
-        if (s.Target is not { } t) _inset.AddChild(Ui.Wrap(Loc.T("why.none"), 14, Ui.Ink2));
-        else
-        {
-            string goalName = _goal >= 0 ? Names.Node(nodes.Id[_goal]) : Loc.T("why.goalkind", t.Kind.ToString(), t.Id);
-            _inset.AddChild(Ui.Wrap(Loc.T("inset.goal", goalName, _root >= 0 ? _depth[_root] : 0)));
-            int n = 0;
-            foreach (var l in s.Links.Where(l => l.Layer == WhyNotLayer.Knowledge).Take(4))
-            {
-                string text = $"{Loc.TOr("cause." + l.Cause, l.Cause.ToString())}: {Names.Node(_host.Data, l.SubjectId)}" + (l.EtaMonths is int m ? Loc.T("inset.eta", m) : "");
-                var lab = Ui.Wrap(text);
-                _inset.AddChild(n++ == 0 ? Ui.MarkedRow(Ui.Alarm, lab) : lab);
-            }
-            if (_root >= 0 && _goal >= 0) _inset.AddChild(Ui.Wrap("inset.hint", 14, Ui.Ink3));
-        }
-
         if (_selected >= 0)
         {
             Sec("inset.node");
@@ -788,7 +772,8 @@ public sealed partial class TechTree : Control
             var nm = Ui.Lbl(Names.Node(nodes.Id[i]), 18); nm.TooltipText = $"{nodes.Id[i]} · №{nodes.Number[i]}"; nm.MouseFilter = MouseFilterEnum.Pass;
             _inset.AddChild(nm);
             _inset.AddChild(Ui.Wrap($"№{nodes.Number[i]} · {Loc.T("ntype." + (int)nodes.Type[i])} · G{nodes.Gen[i]} · {Loc.T("disc." + (int)nodes.Discipline[i])} · {StateWord(i)}", 14, Ui.Ink2));
-            _inset.AddChild(Ui.Wrap(Loc.T("inset.anchor", nodes.AnchorYear[i], nodes.AnchorBefore[i] ? Loc.T("inset.before") : "", Names.NodeAnchor(nodes.Id[i])), 14, Ui.Ink3));
+            string anchor = Names.NodeAnchor(nodes.Id[i]), before = nodes.AnchorBefore[i] ? Loc.T("inset.before") : "";
+            _inset.AddChild(Ui.Wrap(anchor == "" ? Loc.T("inset.anchor.year", nodes.AnchorYear[i], before) : Loc.T("inset.anchor", nodes.AnchorYear[i], before, anchor), 14, Ui.Ink3));
             BuildCard(i);
             var rq = nodes.Requires;
             var req = new List<string>();
@@ -798,7 +783,7 @@ public sealed partial class TechTree : Control
                 string one = string.Join(" | ", mem.Select(m => (_state[m] == St.Known ? "✓ " : "✗ ") + Names.Node(nodes.Id[m])));
                 req.Add(mem.Length > 1 ? "(" + one + ")" : one);
             }
-            _inset.AddChild(Ui.Wrap(Loc.T("inset.requires", req.Count == 0 ? "—" : string.Join("; ", req))));
+            _inset.AddChild(Block(Ui.ReqLine, Ui.ReqWash, Ui.ReqText, "card.requires", (req.Count == 0 ? new List<string> { "—" } : req).Select(r => (Control)Ui.Wrap(r, 14, Ui.Ink)).ToArray()));
             if (_nv[i].Process is { } pv)
                 _inset.AddChild(Ui.Wrap(Loc.T("inset.process", Loc.N(pv.Yield.ToDouble()), Loc.T(pv.Mastered ? "yes" : "no"), Loc.T(pv.Admitted ? "yes" : "no")), 14, Ui.Ink2));
             if (nodes.Type[i] == NodeType.PRC && _state[i] == St.Known && _actor == Player)
@@ -813,9 +798,14 @@ public sealed partial class TechTree : Control
             }
         }
 
+        _inset.AddChild(new HSeparator());
+        bool whyOpen = _whyOpen || _selected < 0;   // collapsed while a node card is shown, so the card stays above the fold
+        _inset.AddChild(Ui.Btn((whyOpen ? "▾ " : "▸ ") + Loc.T("inset.why"), () => { _whyOpen = !_whyOpen; _insetDirty = true; }));
+        if (whyOpen) BuildWhy(s, _host.Data);
+
         Sec("inset.focus");
         _inset.AddChild(Ui.Wrap(_focus.Count == 0 ? Loc.T("inset.focus.empty") : string.Join(" → ", _focus.Select(f => Names.Node(_host.Data, f))), 14, _focus.Count == 0 ? Ui.Ink2 : Ui.Ink));
-        var send = Ui.Btn("inset.focus.send", () => _host.Submit(new SetEffortFocus(_actor, ImmutableArray.CreateRange(_focus)), "cmd.focus"), 14, _focus.Count > 0);
+        var send = Ui.Btn("inset.focus.send", () => { if (_actor == Player) _host.Submit(new SetEffortFocus(_actor, ImmutableArray.CreateRange(_focus)), "cmd.focus"); }, 14, _focus.Count > 0);
         send.Disabled = _focus.Count == 0 || _actor != Player;
         _inset.AddChild(send);
         if (s.Last.Status != CmdStatus.None)
@@ -846,33 +836,50 @@ public sealed partial class TechTree : Control
         _inset.AddChild(Ui.Wrap("inset.prio.note", 14, Ui.Ink3));
     }
 
+    bool _whyOpen;
+
+    void BuildWhy(HostSnapshot s, GameData data)
+    {
+        var nodes = data.Nodes;
+        if (s.Target is not { } t) _inset.AddChild(Ui.Wrap(Loc.T("why.none"), 14, Ui.Ink2));
+        else
+        {
+            string goalName = _goal >= 0 ? Names.Node(nodes.Id[_goal]) : Loc.T("why.goalkind", t.Kind.ToString(), t.Id);
+            _inset.AddChild(Ui.Wrap(Loc.T("inset.goal", goalName, _root >= 0 ? _depth[_root] : 0)));
+            int n = 0;
+            foreach (var l in s.Links.Where(l => l.Layer == WhyNotLayer.Knowledge).Take(4))
+            {
+                string text = $"{Loc.TOr("cause." + l.Cause, l.Cause.ToString())}: {Names.Node(data, l.SubjectId)}" + (l.EtaMonths is int m ? Loc.T("inset.eta", m) : "");
+                var lab = Ui.Wrap(text);
+                _inset.AddChild(n++ == 0 ? Ui.MarkedRow(Ui.Alarm, lab) : lab);
+            }
+            if (_root >= 0 && _goal >= 0) _inset.AddChild(Ui.Wrap("inset.hint", 14, Ui.Ink3));
+        }
+
+    }
+
     // ---------------- node card ----------------
     static readonly string[] DiscToken = { "aero", "prop", "metal", "chem", "mech" };
     readonly Dictionary<int, Texture2D> _schem = new();
 
-    // Blueprint schematic of ui-art-director (docs/ui/assets/node-schematics/README): a file of the node itself (name = last part of the node id,
-    // the id may extend it), else {type}-{discipline}.svg, else no picture.
+    // Blueprint schematic of ui-art-director: the file is chosen by NodeSchematics (README rule), an unreadable file gives the placeholder.
     Texture2D Schematic(int row)
     {
         if (_schem.TryGetValue(row, out var tex)) return tex;
         var nodes = _host.Data.Nodes;
         string dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(ProjectSettings.GlobalizePath("res://"), "../../docs/ui/assets/node-schematics"));
-        string path = null;
         if (System.IO.Directory.Exists(dir))
         {
-            string id = nodes.Id[row]; string last = id[(id.LastIndexOf('.') + 1)..];
-            string combo = $"{nodes.Type[row].ToString().ToLowerInvariant()}-{DiscToken[(int)nodes.Discipline[row]]}";
-            foreach (var f in System.IO.Directory.GetFiles(dir, "*.svg").OrderBy(f => f, StringComparer.Ordinal))
+            string stem = NodeSchematics.Pick(nodes.Id[row], nodes.Type[row].ToString(), DiscToken[(int)nodes.Discipline[row]], f => System.IO.File.Exists(System.IO.Path.Combine(dir, f + ".svg")));
+            if (stem != null)
             {
-                string stem = System.IO.Path.GetFileNameWithoutExtension(f);
-                if (stem != combo && (last == stem || last.StartsWith(stem + "_"))) { path = f; break; }
+                try
+                {
+                    var img = new Image();
+                    if (img.LoadSvgFromString(System.IO.File.ReadAllText(System.IO.Path.Combine(dir, stem + ".svg")), 2f) == Error.Ok) tex = ImageTexture.CreateFromImage(img);
+                }
+                catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException) { GD.PushWarning("schematic: " + e.Message); }
             }
-            if (path == null && System.IO.File.Exists(System.IO.Path.Combine(dir, combo + ".svg"))) path = System.IO.Path.Combine(dir, combo + ".svg");
-        }
-        if (path != null)
-        {
-            var img = new Image();
-            if (img.LoadSvgFromString(System.IO.File.ReadAllText(path), 2f) == Error.Ok) tex = ImageTexture.CreateFromImage(img);
         }
         return _schem[row] = tex;
     }
@@ -900,10 +907,10 @@ public sealed partial class TechTree : Control
         var nodes = _host.Data.Nodes;
         int t = (int)nodes.Type[i], d = (int)nodes.Discipline[i];
         // 1. schematic: the picture, or a framed placeholder with the type label until the drawing exists
-        var frame = new PanelContainer { CustomMinimumSize = new Vector2(0, 150) };
+        var frame = new PanelContainer { CustomMinimumSize = new Vector2(0, 120) };
         var tex = Schematic(i);
-        frame.AddThemeStyleboxOverride("panel", tex != null ? Plate(new Color("1E4673"), Ui.Ink, 1) : Plate(Ui.DiscWash[d], Ui.DiscLine[d], 1));
-        if (tex != null) frame.AddChild(new TextureRect { Texture = tex, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, CustomMinimumSize = new Vector2(0, 200) });
+        frame.AddThemeStyleboxOverride("panel", tex != null ? Plate(Ui.Sheet, Ui.Rule, 1) : Plate(Ui.DiscWash[d], Ui.DiscLine[d], 1));
+        if (tex != null) frame.AddChild(new TextureRect { Texture = tex, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, CustomMinimumSize = new Vector2(0, 130), Modulate = new Color(1, 1, 1, 0.6f) });
         else
         {
             var ph = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
@@ -914,7 +921,7 @@ public sealed partial class TechTree : Control
         _inset.AddChild(frame);
 
         // 2. affects: layer and system (real data: type, cluster, discipline)
-        _inset.AddChild(Block(Ui.DiscLine[0], Ui.DiscWash[0], Ui.DiscText[0], "card.affects",
+        _inset.AddChild(Block(Ui.AffLine, Ui.AffWash, Ui.AffText, "card.affects",
             Ui.Wrap(Loc.T("card.layer", Loc.T("ntype." + t), t + 1), 14, Ui.Ink),
             Ui.Wrap(Loc.T("card.system", Loc.T("cluster." + (int)nodes.Cluster[i]), Loc.T("disc." + d)), 14, Ui.Ink)));
 
@@ -928,7 +935,7 @@ public sealed partial class TechTree : Control
         var mock = new HBoxContainer(); mock.AddThemeConstantOverride("separation", 8);
         mock.AddChild(Ui.Mock()); mock.AddChild(Ui.Wrap("card.param.api", 14, Ui.Ink3));
         pbody.Add(mock);
-        _inset.AddChild(Block(Ui.VioletLine, Ui.VioletWash, Ui.VioletText, "card.raises", pbody.ToArray()));
+        _inset.AddChild(Block(Ui.RaiseLine, Ui.RaiseWash, Ui.RaiseText, "card.raises", pbody.ToArray()));
 
         // 4. unlocks: the rows that list this node in requires
         var next = new List<Control>();
@@ -937,7 +944,7 @@ public sealed partial class TechTree : Control
             next.Add(Ui.Wrap((_state[x] == St.Known ? "● " : _state[x] == St.Frontier ? "◐ " : "○ ") + Names.Node(nodes.Id[x]) + $" · №{nodes.Number[x]}", 14, Ui.Ink));
         if (dep.Count > 6) next.Add(Ui.Wrap(Loc.T("card.more", dep.Count - 6), 14, Ui.Ink2));
         if (dep.Count == 0) next.Add(Ui.Wrap(Loc.T("card.end"), 14, Ui.Ink2));
-        _inset.AddChild(Block(Ui.DiscLine[3], Ui.DiscWash[3], Ui.DiscText[3], "card.unlocks", next.ToArray()));
+        _inset.AddChild(Block(Ui.OpenLine, Ui.OpenWash, Ui.OpenText, "card.unlocks", next.ToArray()));
     }
 
     void Sec(string key) { _inset.AddChild(new HSeparator()); _inset.AddChild(Ui.Head(key)); }

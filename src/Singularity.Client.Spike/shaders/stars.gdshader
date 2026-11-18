@@ -26,7 +26,7 @@ float stars(vec3 d, float scale, float density, float size) {
 void sky() {
 	vec3 d = normalize(EYEDIR);
 	vec3 col = mix(deep, horizon, 0.5 + 0.5 * d.y);
-	float s = stars(d, 70.0, 0.16, 0.10) + stars(d, 130.0, 0.12, 0.09) * 0.8 + stars(d, 36.0, 0.05, 0.13) * 1.2;
+	float s = min(stars(d, 70.0, 0.16, 0.07) + stars(d, 130.0, 0.12, 0.06) * 0.8 + stars(d, 36.0, 0.05, 0.05), 0.7);   // capped: no big soft discs
 	vec3 tint = mix(vec3(0.85, 0.9, 1.0), vec3(1.0, 0.95, 0.85), h31(floor(d * 70.0) + 3.3));
 	COLOR = col + tint * s * 0.85;
 }

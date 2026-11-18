@@ -49,7 +49,7 @@ public sealed partial class Main : Node3D
     int _player, _viewed;                // the player's own power (launch parameter --power ID, default USA) and the power on show
     string _powerArg = "USA";
     float _tgtYaw, _tgtPitch; bool _flying;   // smooth turn to a clicked country; the zoom is kept
-    int _clickCase = -1; double _clickT; int _clickActor; float _clickShift; string _clickLog = "";
+    int _clickCase = -1; double _clickT; string _clickLog = "";
     bool _shots; int _shotStep; double _shotT; string _shotDir = "../../docs/ui/prototypes/client-v05a";
     string _shotLog = ""; int _shotCand = -1; long _shotTick;
 
@@ -157,7 +157,12 @@ public sealed partial class Main : Node3D
         _globeMat.SetShaderParameter("hatch_id", 0);   // the spike's demo hatching was a mock; the globe now shows the slice only
 
         var layer = _hud.GetParent<CanvasLayer>();
-        _player = Math.Max(0, Array.IndexOf(ids, _powerArg));
+        _player = Array.IndexOf(ids, _powerArg);
+        if (_player < 0)
+        {
+            GD.PushWarning($"--power {_powerArg}: unknown power id, falling back to USA");
+            _player = Math.Max(0, Array.IndexOf(ids, "USA"));
+        }
         _viewed = _player;
         _signal = new SignalField(_host, _player);
         _signal.SetAnchorsPreset(Control.LayoutPreset.TopWide);
