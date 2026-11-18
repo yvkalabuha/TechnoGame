@@ -15,7 +15,18 @@ public sealed record BenchRunParams
     public int Measure { get; init; } = 120;
     public int PrecheckMonths { get; init; }
     public RunSwitches Switches { get; init; } = new(HashCheckpoints: false, HashEveryTick: false, DailyNoop: false, FullCopy: false);
+    /// <summary>f_ref(k) of EXP-0008 П5.2, MHz: the reference of the frequency flag; it decides nothing (ADR-0023 п. 1.2).</summary>
     public double? FRefMhz { get; init; }
+    /// <summary>k of the top-k frequency; null = process threads + background threads.</summary>
+    public int? K { get; init; }
+    /// <summary>Flag «possible thermal throttling» below this fraction of f_ref(k) (EXP-0008: 0.85).</summary>
+    public double ThermalRatio { get; init; } = 0.85;
+    /// <summary>Runs of a process: "both" (EXP-0007 П2), or only "daily" / "monthly" (the П6 profile process).</summary>
+    public string Runs { get; init; } = "both";
+    /// <summary>Id of a П9 reference variant (e.g. "hc"): a manifest process with switches that is a reference run, not a smoke run.</summary>
+    public string? Reference { get; init; }
+    /// <summary>Series attempt number written by the series driver (0 = main pass); null outside a series.</summary>
+    public int? Attempt { get; init; }
     /// <summary>True when an option overrode the manifest (warm-up, months): such output is a smoke run, never an EXP measurement.</summary>
     public bool Smoke { get; init; }
 }
@@ -50,6 +61,12 @@ public sealed class BenchJson : IDisposable
         if (p.ManifestPath is null) j.WriteNull("manifest"); else j.WriteString("manifest", p.ManifestPath);
         if (p.ManifestHash is null) j.WriteNull("manifest_hash"); else j.WriteString("manifest_hash", p.ManifestHash);
         j.WriteBoolean("smoke", p.Smoke);
+        if (p.Reference is null) j.WriteNull("reference"); else j.WriteString("reference", p.Reference);
+        if (p.Attempt is int at) j.WriteNumber("attempt", at); else j.WriteNull("attempt");
+        j.WriteString("runs", p.Runs);
+        if (p.FRefMhz is double fr) j.WriteNumber("f_ref_mhz", fr); else j.WriteNull("f_ref_mhz");
+        if (p.K is int k) j.WriteNumber("k", k); else j.WriteNull("k");
+        j.WriteNumber("thermal_ratio", p.ThermalRatio);
         j.WriteNumber("chunk_size", p.ChunkSize);
         j.WriteNumber("warmup_months", p.Warmup);
         j.WriteNumber("measure_months", p.Measure);

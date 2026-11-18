@@ -14,7 +14,8 @@ namespace Singularity.Lab.Bench;
 /// <item><c>validity</c> — V1/V2 hashes over threads 1/4/8/16 and ChunkSize 1/8/32 (П6), no timing;</item>
 /// <item><c>r1</c>, <c>r2</c>, <c>kcopy</c>, <c>r3</c> — ADR-0017 R1, R2 (а)–(д), the ADR-0016 п. 2 fallback, R3;</item>
 /// <item><c>fref</c> — the frequency reference f_ref (П5);</item>
-/// <item><c>alloc</c> — allocated bytes and GC counts per month and of the main pure reads (TASK-0103), no timing.</item>
+/// <item><c>alloc</c> — allocated bytes and GC counts per month, split into tick path and snapshot path, and of the main pure reads (TASK-0103, ADR-0023 п. 2), no timing;</item>
+/// <item><c>series</c> — the EXP-0008 series driver: pre-series stop, f_ref(k), validity, main pass, foreign-load gate, repeats, exclusions, reference modes (TASK-0106).</item>
 /// </list>
 /// </summary>
 internal static class BenchCommand
@@ -36,11 +37,12 @@ internal static class BenchCommand
             "r3" => R3(o),
             "fref" => FRef(o),
             "alloc" => Alloc(o),
+            "series" => SeriesDriver.Run(o),
             _ => throw new UsageException($"Unknown bench mode '{mode}'."),
         };
     }
 
-    private static string RepoDir() =>
+    internal static string RepoDir() =>
         Path.GetDirectoryName(Path.GetDirectoryName(SynthWorldGenerator.FindCoreMod())!)!;
 
     private static int Plan(Options o)
@@ -98,6 +100,13 @@ internal static class BenchCommand
         int? warmup = o.Int("warmup", 0, 10_000), measure = o.Int("measure", 1, 10_000);
         int precheck = o.Int("precheck-months", 0, 10_000) ?? 1;
         double? fref = Double(o, "fref");
+        int? kOpt = o.Int("k", 1, 4096);
+        double thermal = Double(o, "thermal-ratio") ?? 0.85;
+        string runs = o.Optional("runs") ?? "both";
+        if (runs is not ("both" or "daily" or "monthly"))
+            throw new UsageException("--runs must be both, daily or monthly.");
+        string? reference = o.Optional("reference");
+        int? attempt = o.Int("attempt", 0, 100);
         if (manifestPath is not null)
         {
             BenchManifest m = BenchManifest.Load(manifestPath);
@@ -107,16 +116,18 @@ internal static class BenchCommand
                 throw new UsageException($"--process must be below {plan.Count}.");
             p = plan[k];
             RunSwitches sw = Switches(o, m.HashCheckpoints);
-            bool smoke = (warmup is int w && w != m.WarmupMonths) || (measure is int n && n != m.MeasureMonths) || sw.HashCheckpoints != m.HashCheckpoints;
+            // A reference variant (П9 п. 1) changes the switches on purpose: it is a reference run, not a smoke run.
+            bool smoke = (warmup is int w && w != m.WarmupMonths) || (measure is int n && n != m.MeasureMonths)
+                || (reference is null && sw.HashCheckpoints != m.HashCheckpoints) || runs != "both";
             // П5: a manifest (official) run without f_ref could not be checked for throttling afterwards; refuse instead of writing
             // "throttled": null. Smoke runs are never part of the analysis, so they may go without it.
             if (fref is null && !smoke)
-                throw new UsageException("--fref MHZ is required with --manifest (EXP-0007 П5); measure it with --mode fref.");
+                throw new UsageException("--fref MHZ (f_ref(k), EXP-0008 П5.2) is required with --manifest; measure it with --mode fref --stat topk --k K.");
             rp = new BenchRunParams
             {
                 Mode = "process", RepoDir = RepoDir(), ManifestPath = m.Path, ManifestHash = m.Hash, ChunkSize = m.ChunkSize,
                 Warmup = warmup ?? m.WarmupMonths, Measure = measure ?? m.MeasureMonths, PrecheckMonths = precheck, Switches = sw, FRefMhz = fref,
-                Smoke = smoke,
+                Smoke = smoke, K = kOpt, ThermalRatio = thermal, Runs = runs, Reference = reference, Attempt = attempt,
             };
         }
         else
@@ -131,6 +142,7 @@ internal static class BenchCommand
             {
                 Mode = "process", RepoDir = RepoDir(), ChunkSize = o.Int("chunk", 1, 1 << 20) ?? 8, Warmup = warmup ?? 24, Measure = measure ?? 120,
                 PrecheckMonths = precheck, Switches = Switches(o, false), FRefMhz = fref, Smoke = true,
+                K = kOpt, ThermalRatio = thermal, Runs = runs, Reference = reference, Attempt = attempt,
             };
         }
         o.CheckAllUsed();
@@ -145,9 +157,16 @@ internal static class BenchCommand
         ulong seed = U64(o, "seed") ?? 1;
         int threads = o.Int("threads", 1, 1024) ?? 1;
         int months = o.Int("months", 1, 10_000) ?? 36;
+        int warmup = o.Int("warmup", 0, 10_000) ?? Math.Min(2, months - 1);
+        bool lohEvents = Bool(o, "loh-events", true);
         o.CheckAllUsed();
+        if (warmup >= months)
+            throw new UsageException("--warmup must be below --months.");
+        long b0 = Stopwatch.GetTimestamp();
         SynthWorld w = Build(spec, outFile);
-        return AllocProfile.Run(w, seed, threads, months, outFile, Console.Out);
+        double buildMs = ProcessBench.Ms(Stopwatch.GetTimestamp() - b0);
+        var rp = new BenchRunParams { Mode = "alloc", RepoDir = RepoDir(), Warmup = warmup, Measure = months - warmup, Smoke = true };
+        return AllocProfile.Run(w, seed, threads, months, lohEvents, rp, buildMs, outFile, Console.Out);
     }
 
     private static int Validity(Options o)
@@ -160,6 +179,8 @@ internal static class BenchCommand
         o.CheckAllUsed();
         SynthWorld w = Build(spec, outFile);
         bool all = true;
+        using var meter = new LoadMeter();
+        MachineSnapshot s0 = meter.Snapshot();
         using (var json = BenchJson.Open(outFile))
         {
             Utf8JsonWriter j = json.Writer;
@@ -181,6 +202,7 @@ internal static class BenchCommand
             }
             j.WriteEndArray();
             j.WriteBoolean("valid", all);
+            meter.Write(j, [new MachineWindow("validity", s0, meter.Snapshot())], 16);
             j.WriteEndObject();
         }
         return all ? 0 : 1;
@@ -195,6 +217,8 @@ internal static class BenchCommand
         int calls = o.Int("calls", 1, 10_000_000) ?? 1000;
         ulong seed = U64(o, "seed") ?? 1;
         o.CheckAllUsed();
+        using var meter = new LoadMeter();
+        MachineSnapshot s0 = meter.Snapshot();
         using var json = BenchJson.Open(outFile);
         Utf8JsonWriter j = Header(json, "r1", warmup, calls);
         j.WriteStartArray("points");
@@ -210,6 +234,8 @@ internal static class BenchCommand
             Console.WriteLine($"R1 {w.Spec.Name}: done");
         }
         j.WriteEndArray();
+        // The window includes world builds between the points: R modes are gated by foreign_cpu only (EXP-0008 П9 п. 6).
+        meter.Write(j, [new MachineWindow("r1", s0, meter.Snapshot())], 1);
         j.WriteEndObject();
         return 0;
     }
@@ -224,10 +250,13 @@ internal static class BenchCommand
         o.CheckAllUsed();
         SynthWorld w = Build(spec, outFile);
         SliceSession s = Session(w, seed);
+        using var meter = new LoadMeter();
+        MachineSnapshot s0 = meter.Snapshot();
         using var json = BenchJson.Open(outFile);
         Utf8JsonWriter j = Header(json, "r3", warmup, calls);
         j.WritePropertyName("r3");
         CopyBench.R3(j, w, s.World.Table, warmup, calls);
+        meter.Write(j, [new MachineWindow("r3", s0, meter.Snapshot())], 1);
         j.WriteEndObject();
         Console.WriteLine($"R3 {w.Spec.Name}: done");
         return 0;
@@ -255,6 +284,8 @@ internal static class BenchCommand
         o.CheckAllUsed();
         SynthWorld w = Build(spec, outFile);
         SliceSession s = Session(w, seed);
+        using var meter = new LoadMeter();
+        MachineSnapshot s0 = meter.Snapshot();
         using var json = BenchJson.Open(outFile);
         Utf8JsonWriter j = Header(json, name, warmup, reps);
         BenchJson.WriteWorld(j, w, 0);
@@ -289,27 +320,41 @@ internal static class BenchCommand
         if (v.Contains("d"))
             CopyBench.R2d(j, w, seed, threadsList, chunk, monthWarmup, months, Console.Out);
         j.WriteEndObject();
+        j.WriteNumber("seed", seed);
+        meter.Write(j, [new MachineWindow(name, s0, meter.Snapshot())], Math.Max(threads, threadsList.Max()));
         j.WriteEndObject();
         return 0;
     }
 
-    /// <summary>f_ref (П5): N threads of integer load for the given seconds; f_ref = median of the samples of the last tail seconds.</summary>
+    /// <summary>
+    /// f_ref (EXP-0008 П5.2): N threads of integer load for the given seconds; f_ref = median over the samples of the last tail seconds of
+    /// the statistic: <c>topk</c> (default; mean of the k largest CPU values, k = --k, default the load threads) or <c>mean</c> (all CPUs, EXP-0007).
+    /// </summary>
     private static int FRef(Options o)
     {
         string outFile = Path.GetFullPath(o.Required("out"));
         int seconds = o.Int("seconds", 2, 86_400) ?? 300;
         int tail = o.Int("tail", 1, 86_400) ?? 180;
         int threads = o.Int("threads", 1, 1024) ?? 8;
+        string stat = o.Optional("stat") ?? "topk";
+        if (stat is not ("topk" or "mean"))
+            throw new UsageException("--stat must be topk or mean.");
+        int k = o.Int("k", 1, 4096) ?? threads;
         o.CheckAllUsed();
         if (tail > seconds)
             throw new UsageException("--tail must not exceed --seconds.");
         using var freq = new FreqSampler();
+        using var meter = new LoadMeter();
+        MachineSnapshot s0 = meter.Snapshot();
         long t0 = Stopwatch.GetTimestamp();
         using (new BackgroundLoad(threads))
             Thread.Sleep(TimeSpan.FromSeconds(seconds));
         long t1 = Stopwatch.GetTimestamp();
+        var win = new MachineWindow("fref", s0, meter.Snapshot());
         long tailStart = t1 - (long)(tail * (double)Stopwatch.Frequency);
-        double? fref = freq.MedianIn([(Math.Max(t0, tailStart), t1)]);
+        (long, long)[] w = [(Math.Max(t0, tailStart), t1)];
+        double? topk = freq.TopKMedianIn(w, k), mean = freq.MedianIn(w);
+        double? fref = stat == "topk" ? topk : mean;
         using (var json = BenchJson.Open(outFile))
         {
             Utf8JsonWriter j = json.Writer;
@@ -320,11 +365,17 @@ internal static class BenchCommand
             j.WriteNumber("seconds", seconds);
             j.WriteNumber("tail_seconds", tail);
             j.WriteString("source", freq.Source);
-            if (fref is double f) j.WriteNumber("f_ref_mhz", f); else j.WriteNull("f_ref_mhz");
+            j.WriteString("stat", stat);
+            j.WriteNumber("k", k);
+            LoadMeter.WriteNum(j, "f_ref_mhz", fref);
+            LoadMeter.WriteNum(j, "topk_median_mhz", topk);
+            LoadMeter.WriteNum(j, "mean_median_mhz", mean);
             BenchJson.WriteArray(j, "samples_mhz", [.. freq.Samples.Select(x => x.Mhz)]);
+            BenchJson.WriteArray(j, "samples_topk_mhz", [.. freq.PerCpu.Select(x => LoadMath.TopKMean(x.Mhz, k) ?? 0)]);
+            meter.Write(j, [win], threads);
             j.WriteEndObject();
         }
-        Console.WriteLine(fref is double ff ? string.Create(CultureInfo.InvariantCulture, $"f_ref={ff:F0} MHz ({freq.Source})") : "f_ref: no samples");
+        Console.WriteLine(fref is double ff ? string.Create(CultureInfo.InvariantCulture, $"f_ref={ff:F0} MHz ({stat}, k {k}, {freq.Source})") : "f_ref: no samples");
         return fref is null ? 1 : 0;
     }
 

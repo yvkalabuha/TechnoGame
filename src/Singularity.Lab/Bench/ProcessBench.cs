@@ -36,6 +36,10 @@ public sealed class RunTiming
     public required string FinalHash { get; init; }
     public required long PeakWorkingSetBytes { get; init; }
     public required (long Start, long End) Window { get; init; }
+    /// <summary>Part of <see cref="AllocatedBytes"/> made by the <see cref="LoadMeter"/> loop in the window (0 without a meter).</summary>
+    public required long MeterAllocatedBytes { get; init; }
+    /// <summary>Machine snapshots at the bounds of the window (EXP-0008 П5.5); null without a meter.</summary>
+    public MachineWindow? Machine { get; init; }
 }
 
 /// <summary>
@@ -67,7 +71,7 @@ public static class ProcessBench
     /// no-op command on every day).
     /// </summary>
     public static RunTiming Run(SynthWorld w, ulong seed, int threads, int chunk, bool daily, RunSwitches sw, int warmup, int measure,
-        FreqSampler? sampler = null)
+        FreqSampler? sampler = null, LoadMeter? meter = null)
     {
         SliceSession s = SliceSession.Create(w.Data, Config(w, seed, threads, chunk, daily, sw));
         s.World.Table.FullCopyMode = sw.FullCopy;
@@ -78,7 +82,8 @@ public static class ProcessBench
         int actors = s.World.Table.RowCount;
         int local = 0;
         long commands = 0;
-        long alloc0 = 0, hash0 = 0, samplerAlloc0 = 0;
+        long alloc0 = 0, hash0 = 0, samplerAlloc0 = 0, meterAlloc0 = 0;
+        MachineSnapshot? m0 = null;
         int g0 = 0, g1 = 0, g2 = 0;
         TimeSpan pause0 = TimeSpan.Zero;
         long win0 = 0;
@@ -86,6 +91,9 @@ public static class ProcessBench
         {
             if (m == warmup)
             {
+                // The snapshot allocates (it lists /proc): taken before the allocation count starts.
+                m0 = meter?.Snapshot();
+                meterAlloc0 = meter?.AllocatedBytes ?? 0;
                 alloc0 = GC.GetTotalAllocatedBytes(true);
                 samplerAlloc0 = sampler?.AllocatedBytes ?? 0;
                 g0 = GC.CollectionCount(0);
@@ -122,18 +130,26 @@ public static class ProcessBench
             days[m] = (int)(end - first);
         }
         long win1 = Stopwatch.GetTimestamp();
+        long alloc1 = GC.GetTotalAllocatedBytes(true);
+        long samplerAlloc1 = sampler?.AllocatedBytes ?? 0, meterAlloc1 = meter?.AllocatedBytes ?? 0;
+        int g0b = GC.CollectionCount(0) - g0, g1b = GC.CollectionCount(1) - g1, g2b = GC.CollectionCount(2) - g2;
+        TimeSpan pause = GC.GetTotalPauseDuration() - pause0;
+        // After the allocation count: the end snapshot allocates.
+        MachineSnapshot? m1 = m0 is null ? null : meter!.Snapshot();
         var timing = new RunTiming
         {
             Daily = daily,
             MonthMs = monthMs,
             MonthDays = days,
             WindowTickMs = ticks,
-            AllocatedBytes = GC.GetTotalAllocatedBytes(true) - alloc0,
-            SamplerAllocatedBytes = (sampler?.AllocatedBytes ?? 0) - samplerAlloc0,
-            Gen0 = GC.CollectionCount(0) - g0,
-            Gen1 = GC.CollectionCount(1) - g1,
-            Gen2 = GC.CollectionCount(2) - g2,
-            GcPauseMs = (GC.GetTotalPauseDuration() - pause0).TotalMilliseconds,
+            AllocatedBytes = alloc1 - alloc0,
+            SamplerAllocatedBytes = samplerAlloc1 - samplerAlloc0,
+            MeterAllocatedBytes = meterAlloc1 - meterAlloc0,
+            Machine = m0 is null ? null : new MachineWindow(daily ? "daily" : "monthly", m0, m1!),
+            Gen0 = g0b,
+            Gen1 = g1b,
+            Gen2 = g2b,
+            GcPauseMs = pause.TotalMilliseconds,
             WindowWallMs = Ms(win1 - win0),
             HashComputations = s.HashComputations - hash0,
             CommandsSubmitted = commands,
@@ -169,7 +185,7 @@ public static class ProcessBench
     private static string FinalHash(SynthWorld w, ulong seed, int t, int c, bool daily, RunSwitches sw, int months) =>
         Run(w, seed, t, c, daily, sw with { DailyNoop = false }, 0, months).FinalHash;
 
-    /// <summary>Writes the process JSON: provenance, conditions, world, validity pre-check, both runs, the decomposition (П4) and frequency.</summary>
+    /// <summary>Writes the process JSON: provenance, conditions, world, validity pre-check, the runs, the decomposition (П4), frequency, machine.</summary>
     public static int Execute(BenchProcess p, BenchRunParams rp, string outFile, TextWriter log)
     {
         string worldDir = Path.Combine(Path.GetDirectoryName(outFile)!, "worlds", p.Point.Name);
@@ -186,58 +202,81 @@ public static class ProcessBench
             log.WriteLine($"precheck {rp.PrecheckMonths} month(s): {(pre.Value.Valid ? "valid" : "INVALID")}");
             if (!pre.Value.Valid)
             {
-                WriteProcessJson(outFile, p, rp, w, buildMs, pre, null, null, null);
+                WriteProcessJson(outFile, p, rp, w, buildMs, pre, [], null, null);
                 return 1;
             }
         }
 
         using var freq = new FreqSampler();
+        using var meter = new LoadMeter();
+        if (!meter.Available)
+            log.WriteLine($"load meter unavailable: {meter.Reason}");
         using BackgroundLoad? bg = p.Background > 0 ? new BackgroundLoad(p.Background) : null;
-        RunTiming first = Run(w, p.Seed, p.Threads, rp.ChunkSize, p.DailyFirst, sw, rp.Warmup, rp.Measure, freq);
-        log.WriteLine($"{(first.Daily ? "daily" : "monthly")} run: p50 {BenchStats.Median(first.MonthMs[rp.Warmup..]):F1} ms/month");
-        RunTiming second = Run(w, p.Seed, p.Threads, rp.ChunkSize, !p.DailyFirst, sw, rp.Warmup, rp.Measure, freq);
-        log.WriteLine($"{(second.Daily ? "daily" : "monthly")} run: p50 {BenchStats.Median(second.MonthMs[rp.Warmup..]):F1} ms/month");
-        WriteProcessJson(outFile, p, rp, w, buildMs, pre, first, second, freq);
-        RunTiming monthly = first.Daily ? second : first, dailyRun = first.Daily ? first : second;
-        bool v2 = monthly.FinalHash == dailyRun.FinalHash;
+        bool[] order = rp.Runs switch
+        {
+            "daily" => [true],
+            "monthly" => [false],
+            _ => [p.DailyFirst, !p.DailyFirst],
+        };
+        var runs = new List<RunTiming>();
+        foreach (bool daily in order)
+        {
+            RunTiming r = Run(w, p.Seed, p.Threads, rp.ChunkSize, daily, sw, rp.Warmup, rp.Measure, freq, meter);
+            log.WriteLine($"{(r.Daily ? "daily" : "monthly")} run: p50 {BenchStats.Median(r.MonthMs[rp.Warmup..]):F1} ms/month");
+            runs.Add(r);
+        }
+        WriteProcessJson(outFile, p, rp, w, buildMs, pre, runs, freq, meter);
+        if (runs.Count < 2)
+        {
+            log.WriteLine($"json {outFile}");
+            return 0;
+        }
+        bool v2 = runs[0].FinalHash == runs[1].FinalHash;
         log.WriteLine($"V2 monthly vs daily hash: {(v2 ? "equal" : "DIFFERENT")}; json {outFile}");
         return v2 ? 0 : 1;
     }
 
     private static void WriteProcessJson(string outFile, BenchProcess p, BenchRunParams rp, SynthWorld w, double buildMs,
-        (bool Valid, List<(string Label, string Hash)> Hashes)? pre, RunTiming? first, RunTiming? second, FreqSampler? freq)
+        (bool Valid, List<(string Label, string Hash)> Hashes)? pre, IReadOnlyList<RunTiming> runs, FreqSampler? freq, LoadMeter? meter)
     {
         using var json = BenchJson.Open(outFile);
         Utf8JsonWriter j = json.Writer;
         j.WriteStartObject();
         j.WriteString("kind", "lab-bench/process");
-        j.WriteNumber("format", 1);
+        j.WriteNumber("format", 2);
         BenchEnv.Write(j, rp.RepoDir);
         BenchJson.WriteParams(j, rp);
         j.WriteStartObject("process");
         j.WriteNumber("index", p.Index);
         j.WriteNumber("table_index", p.TableIndex);
         j.WriteString("block", p.Block);
+        j.WriteString("point", p.Point.Name);
         j.WriteNumber("seed", p.Seed);
         j.WriteNumber("threads", p.Threads);
         j.WriteNumber("replica", p.Replica);
         j.WriteNumber("background_threads", p.Background);
-        j.WriteString("order", p.DailyFirst ? "daily,monthly" : "monthly,daily");
+        j.WriteString("order", string.Join(",", runs.Select(r => r.Daily ? "daily" : "monthly")));
         j.WriteEndObject();
         BenchJson.WriteWorld(j, w, buildMs);
         if (pre is { } v)
             BenchJson.WriteValidity(j, "precheck", v.Valid, v.Hashes, rp.PrecheckMonths);
-        if (first is not null && second is not null)
+        if (runs.Count > 0)
         {
-            RunTiming monthly = first.Daily ? second : first, daily = first.Daily ? first : second;
             j.WriteStartArray("runs");
-            WriteRun(j, first, rp.Warmup);
-            WriteRun(j, second, rp.Warmup);
+            foreach (RunTiming r in runs)
+                WriteRun(j, r, rp.Warmup);
             j.WriteEndArray();
-            WriteDecomposition(j, monthly, daily, rp.Warmup, w.Spec);
-            j.WriteBoolean("v2_monthly_daily_hash_equal", monthly.FinalHash == daily.FinalHash);
+            RunTiming? monthly = runs.FirstOrDefault(r => !r.Daily), daily = runs.FirstOrDefault(r => r.Daily);
+            if (monthly is not null && daily is not null)
+            {
+                WriteDecomposition(j, monthly, daily, rp.Warmup, w.Spec);
+                j.WriteBoolean("v2_monthly_daily_hash_equal", monthly.FinalHash == daily.FinalHash);
+            }
+            int k = rp.K ?? p.Threads + p.Background;
             if (freq is not null)
-                WriteFrequency(j, freq, [monthly.Window, daily.Window], rp.FRefMhz);
+                WriteFrequency(j, freq, [.. runs.Select(r => r.Window)], rp.FRefMhz, k, rp.ThermalRatio, daily, rp.Warmup);
+            if (meter is not null)
+                meter.Write(j, [.. runs.Where(r => r.Machine is not null).Select(r => r.Machine!)], k);
         }
         j.WriteEndObject();
     }
@@ -255,6 +294,9 @@ public static class ProcessBench
         j.WriteNumber("allocated_bytes", r.AllocatedBytes);
         // allocated_bytes counts every thread; the frequency sampler's share is given so the analysis can subtract it.
         j.WriteNumber("sampler_alloc_bytes", r.SamplerAllocatedBytes);
+        j.WriteNumber("meter_alloc_bytes", r.MeterAllocatedBytes);
+        // The simulation's own bytes: every thread minus the two measuring threads.
+        j.WriteNumber("allocated_bytes_net", r.AllocatedBytes - r.SamplerAllocatedBytes - r.MeterAllocatedBytes);
         j.WriteNumber("allocated_bytes_per_month", (double)r.AllocatedBytes / window.Length);
         j.WriteBoolean("alloc_le_1mb_per_month", r.AllocatedBytes / (double)window.Length <= 1 << 20);
         j.WriteNumber("gc_gen0", r.Gen0);
@@ -310,26 +352,41 @@ public static class ProcessBench
         j.WriteEndObject();
     }
 
-    private static void WriteFrequency(Utf8JsonWriter j, FreqSampler f, IReadOnlyList<(long, long)> windows, double? fRef)
+    /// <summary>
+    /// The frequency record (EXP-0008 П5.2): top-k median in the windows, the all-CPU mean (EXP-0007 metric, record only), f_ref(k) and the
+    /// flag «possible thermal throttling» = top-k median &lt; ratio × f_ref(k). The flag decides nothing (ADR-0023 п. 1.2); the reference column
+    /// T·f/f_ref uses the daily run's median T.
+    /// </summary>
+    private static void WriteFrequency(Utf8JsonWriter j, FreqSampler f, IReadOnlyList<(long, long)> windows, double? fRef, int k, double ratio, RunTiming? daily, int warmup)
     {
         j.WriteStartObject("frequency");
         j.WriteString("source", f.Source);
         j.WriteNumber("sampler_alloc_bytes_total", f.AllocatedBytes);
-        double? med = f.MedianIn(windows);
-        if (med is double m) j.WriteNumber("median_mhz_in_windows", m); else j.WriteNull("median_mhz_in_windows");
-        if (fRef is double r)
+        j.WriteNumber("k", k);
+        double? top = f.TopKMedianIn(windows, k);
+        LoadMeter.WriteNum(j, "topk_median_mhz", top);
+        LoadMeter.WriteNum(j, "median_mhz_in_windows", f.MedianIn(windows));
+        LoadMeter.WriteNum(j, "f_ref_mhz", fRef);
+        j.WriteNumber("thermal_ratio", ratio);
+        bool? flag = LoadMath.PossibleThermalThrottle(top, fRef, ratio);
+        if (flag is bool b) j.WriteBoolean("possible_thermal_throttle", b); else j.WriteNull("possible_thermal_throttle");
+        LoadMeter.WriteNum(j, "f_over_f_ref", top is double t && fRef is double r ? t / r : null);
+        LoadMeter.WriteNum(j, "T_p50_times_f_over_f_ref_ms",
+            daily is not null && top is double t2 && fRef is double r2 ? BenchStats.Median(daily.MonthMs[warmup..]) * t2 / r2 : null);
+        var per = f.PerCpu;
+        j.WriteNumber("samples", per.Count);
+        j.WriteNumber("cpus", per.Count > 0 ? per[0].Mhz.Length : 0);
+        BenchJson.WriteArray(j, "samples_mhz", [.. per.Select(x => x.Mhz.Length == 0 ? 0 : x.Mhz.Average())]);
+        BenchJson.WriteArray(j, "samples_topk_mhz", [.. per.Select(x => LoadMath.TopKMean(x.Mhz, k) ?? 0)]);
+        j.WriteStartArray("samples_per_cpu_mhz");
+        foreach ((_, double[] mhz) in per)
         {
-            j.WriteNumber("f_ref_mhz", r);
-            if (med is double mm) j.WriteBoolean("throttled", mm < 0.9 * r); else j.WriteNull("throttled");
+            j.WriteStartArray();
+            foreach (double x in mhz)
+                j.WriteNumberValue(Math.Round(x, 1));
+            j.WriteEndArray();
         }
-        else
-        {
-            j.WriteNull("f_ref_mhz");
-            j.WriteNull("throttled");
-        }
-        var samples = f.Samples;
-        j.WriteNumber("samples", samples.Count);
-        BenchJson.WriteArray(j, "samples_mhz", [.. samples.Select(x => x.Mhz)]);
+        j.WriteEndArray();
         j.WriteEndObject();
     }
 }

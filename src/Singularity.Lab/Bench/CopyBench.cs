@@ -340,6 +340,8 @@ public static class CopyBench
             BenchJson.WriteSummary(j, "cow_month_ms", BenchStats.Summarize(mc));
             BenchJson.WriteSummary(j, "full_copy_month_ms", BenchStats.Summarize(mf));
             BenchJson.WriteSummary(j, "ratio_cow_over_full", BenchStats.Summarize(ratio));
+            // Every pairwise ratio: the EXP-0008 П9 п. 4 interval pools the pairs of seeds 1–3 (360 per thread count).
+            BenchJson.WriteArray(j, "ratio_cow_over_full_all", ratio);
             j.WriteNumber("S_growth_p50", BenchStats.Median(mc) / BenchStats.Median(mf) - 1);
             j.WriteNumber("S_growth_p95", BenchStats.Percentile(mc, 0.95) / BenchStats.Percentile(mf, 0.95) - 1);
             j.WriteBoolean("S_growth_p50_le_2pct", BenchStats.Median(mc) <= 1.02 * BenchStats.Median(mf));

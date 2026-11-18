@@ -39,6 +39,7 @@ public static class SelfTest
         };
         checks.AddRange(Models.Slice.SliceChecks.All(tmp));
         checks.AddRange(Bench.SynthChecks.All(tmp));
+        checks.AddRange(Bench.HarnessChecks.All(tmp));
 
         int failed = 0;
         foreach (var (name, body) in checks)

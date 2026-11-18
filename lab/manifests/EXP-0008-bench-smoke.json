@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "experiment": "EXP-0008-smoke",
+  "kind": "bench",
+  "meta": {
+    "note": "TASK-0106 smoke of lab bench --mode series on a small world (EXP-0008 П10 п. 7). Not an EXP measurement. Thresholds are loosened on purpose (the development machine runs other work): foreign_cpu_max 0.5 and pre_series_foreign_max 1.0 so that only the injected flag (--inject-flag) and the median criterion (median_gate_min_ms 0) drive repeats. Run: lab bench --mode series --manifest lab/manifests/EXP-0008-bench-smoke.json --out <new dir> --inject-flag K:3"
+  },
+  "generator_seed": 85621515,
+  "shuffle_seed": 20261117,
+  "chunk_size": 8,
+  "warmup_months": 1,
+  "measure_months": 3,
+  "hash_checkpoints": false,
+  "blocks": [
+    {"id": "A", "points": [[6, 180, "cross"]], "threads": [2], "seeds": [1, 2, 3], "replicas": 2, "note": "outcome (smoke)"},
+    {"id": "B", "points": [[6, 180, "cross"]], "threads": [1], "seeds": [1, 2], "note": "record (smoke)"}
+  ],
+  "gate": {
+    "foreign_cpu_max": 0.5,
+    "median_ratio_max": 1.10,
+    "median_gate_min_ms": 0,
+    "max_repeats": 2,
+    "exclude_max_frac": 0.20,
+    "seed_accept_min_frac": 0.5,
+    "outcome_block": "A",
+    "exclusion_rule": "independent-evidence",
+    "run_delay_max": 0.05,
+    "thermal_ratio": 0.85,
+    "noise_max": 0.10,
+    "quiet_sample_s": 1,
+    "quiet_step_s": 1,
+    "quiet_max_s": 2,
+    "pre_series_s": 2,
+    "pre_series_foreign_max": 1.0,
+    "fref_seconds": 3,
+    "fref_tail_s": 2
+  },
+  "reference": {
+    "validity": {"actors": "6", "nodes": "180", "graph": "cross", "seeds": "1", "months": "2"},
+    "variants": [
+      {"id": "hc", "block": "A", "seeds": [1, 2], "switches": {"hash-checkpoints": "true"}}
+    ],
+    "modes": [
+      {"id": "r1", "mode": "r1", "args": {"points": "6x180", "warmup": "2", "calls": "5"}},
+      {"id": "r2", "mode": "r2", "args": {"actors": "6", "nodes": "180", "variants": "a,b,c,e", "warmup": "2", "reps": "5"}},
+      {"id": "r2d-s1", "mode": "r2", "args": {"actors": "6", "nodes": "180", "variants": "d", "seed": "1", "threads-list": "1,2", "month-warmup": "1", "months": "4"}},
+      {"id": "r3", "mode": "r3", "args": {"actors": "6", "nodes": "180", "warmup": "2", "calls": "5"}}
+    ],
+    "profile": {"block": "A", "seed": 1, "warmup_months": 1, "measure_months": 2, "runs": "daily", "tool": "dotnet-trace", "tool_args": ["collect", "--profile", "dotnet-sampled-thread-time"]}
+  }
+}

@@ -33,9 +33,15 @@ public sealed class BenchManifest
     public int MeasureMonths { get; init; } = 120;
     public bool HashCheckpoints { get; init; }
     public required IReadOnlyList<BenchBlock> Blocks { get; init; }
+    /// <summary>Gate parameters of <c>--mode series</c> (optional key <c>gate</c>; defaults = EXP-0008 П5).</summary>
+    public BenchGate Gate { get; init; } = new();
+    /// <summary>True when the manifest has a <c>gate</c> key (a series manifest).</summary>
+    public bool HasGate { get; init; }
+    /// <summary>Reference part of <c>--mode series</c> (optional key <c>reference</c>; EXP-0008 П6, П9).</summary>
+    public BenchReference Reference { get; init; } = new();
 
     private static readonly string[] TopKeys =
-        ["schema", "experiment", "kind", "generator_seed", "shuffle_seed", "chunk_size", "warmup_months", "measure_months", "hash_checkpoints", "blocks", "meta"];
+        ["schema", "experiment", "kind", "generator_seed", "shuffle_seed", "chunk_size", "warmup_months", "measure_months", "hash_checkpoints", "blocks", "meta", "gate", "reference"];
 
     private static readonly string[] BlockKeys = ["id", "points", "grid", "threads", "seeds", "replicas", "background", "note"];
 
@@ -69,8 +75,12 @@ public sealed class BenchManifest
             blocks.Add(ParseBlock(b, gen));
         if (blocks.Count == 0 || blocks.Select(b => b.Id).Distinct(StringComparer.Ordinal).Count() != blocks.Count)
             throw new ManifestException("blocks must be non-empty with distinct ids");
+        bool hasGate = root.TryGetProperty("gate", out JsonElement gate);
         return new BenchManifest
         {
+            Gate = hasGate ? BenchGate.Parse(gate) : new BenchGate(),
+            HasGate = hasGate,
+            Reference = root.TryGetProperty("reference", out JsonElement re) ? BenchReference.Parse(re, blocks) : new BenchReference(),
             Experiment = Str(root, "experiment"),
             Hash = CanonicalJson.Sha256Hex(canonical),
             Path = path,
@@ -158,7 +168,7 @@ public sealed class BenchManifest
         _ => throw new ManifestException($"block {block}: graph must be \"clones\" or \"cross\""),
     };
 
-    private static void CheckKeys(JsonElement e, string[] allowed, string what)
+    internal static void CheckKeys(JsonElement e, string[] allowed, string what)
     {
         if (e.ValueKind != JsonValueKind.Object)
             throw new ManifestException($"{what} must be an object");

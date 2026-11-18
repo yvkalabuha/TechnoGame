@@ -1,3 +1,5 @@
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Text.Json;
 using Singularity.Core.Commands;
 using Singularity.Core.Industry;
@@ -7,15 +9,33 @@ using Singularity.Session;
 namespace Singularity.Lab.Bench;
 
 /// <summary>
-/// <c>lab bench --mode alloc</c> (TASK-0103): allocated bytes and GC counts per month of a monthly run, and the bytes of single pure reads
-/// that the trace names as the main sources (one allocation of effort, one tooling plan, the inputs view, the snapshot view).
-/// Counts bytes, not time, so it is valid on a busy machine. The probes run after the last month and only read the snapshot;
-/// the run prints the state hash before and after them.
+/// <c>lab bench --mode alloc</c> (TASK-0103, ADR-0023 п. 2, TASK-0106): allocated bytes and GC counts per month of a monthly run, split
+/// into the tick path and the snapshot path, and the bytes of single pure reads (one allocation of effort, one tooling plan, the inputs
+/// view, the step view, a snapshot with and without the per-actor nodes). Counts bytes, not time, so it is valid on a busy machine.
+/// <para>
+/// Split [model, not a direct count]: the session builds the snapshot inside <c>Step</c>, so a month's bytes cannot be cut there without
+/// changing Session. The snapshot path of a month = (snapshots without a step) × the probe «Snapshot (no step)» + (snapshots with a step) ×
+/// the probe «Snapshot (stepped, step given)»; the tick path = the month − the snapshot path − the GC listener's own bytes. The probes are
+/// taken on the state after the last month, so a month whose snapshot differs (the yearly <c>MaxFleetValue</c>) is off by that difference.
+/// </para>
+/// <para>
+/// The probes run after the last month and only read the world; the state hash is recomputed with <see cref="StateHash.ComputeHex"/> before
+/// and after them (not the lazy <c>LastHash</c>).
+/// </para>
 /// </summary>
 internal static class AllocProfile
 {
-    public static int Run(SynthWorld w, ulong seed, int threads, int months, string outFile, TextWriter log)
+    private const double MiB = 1 << 20;
+
+    private sealed record ProbeResult(string Name, long Bytes, int Calls, DateTime From, DateTime To)
     {
+        public double PerCall => Bytes / (double)Calls;
+    }
+
+    public static int Run(SynthWorld w, ulong seed, int threads, int months, bool lohEvents, BenchRunParams rp, double buildMs, string outFile, TextWriter log)
+    {
+        using GcEventListener? gcl = lohEvents ? new GcEventListener() : null;
+        using var meter = new LoadMeter();
         var sw = new RunSwitches(HashCheckpoints: false, HashEveryTick: false, DailyNoop: false, FullCopy: false);
         SliceSession s = SliceSession.Create(w.Data, ProcessBench.Config(w, seed, threads, 8, daily: false, sw));
         SliceWorld world = s.World;
@@ -23,9 +43,22 @@ internal static class AllocProfile
         int actors = world.Table.RowCount;
         var bytes = new long[months];
         var gc = new int[months, 3];
+        var snapPlain = new int[months];
+        var snapStepped = new int[months];
+        var from = new DateTime[months];
+        var to = new DateTime[months];
+        TimeSpan pause0 = TimeSpan.Zero;
+        long win0 = 0, win1;
+        MachineSnapshot? m0 = null;
         int local = 0;
         for (int m = 0; m < months; m++)
         {
+            if (m == rp.Warmup)
+            {
+                m0 = meter.Snapshot();
+                pause0 = GC.GetTotalPauseDuration();
+                win0 = System.Diagnostics.Stopwatch.GetTimestamp();
+            }
             for (int a = 0; a < actors; a++)
             {
                 CommandVerdict v = s.Submit(SourceClass.Harness, 0, local++, new SetBudgetShares(a, world.SharesOf(a)));
@@ -34,29 +67,59 @@ internal static class AllocProfile
             }
             long end = world.Calendar.TickOfMonth(m) + 1;
             int g0 = GC.CollectionCount(0), g1 = GC.CollectionCount(1), g2 = GC.CollectionCount(2);
+            from[m] = DateTime.UtcNow;
             long b0 = GC.GetTotalAllocatedBytes(true);
+            SliceView prev = s.View;
             while (s.Tick < end)
+            {
                 s.Step(1);
+                SliceView now = s.View;
+                if (!ReferenceEquals(now, prev))
+                {
+                    if (now.Step is null) snapPlain[m]++; else snapStepped[m]++;
+                    prev = now;
+                }
+            }
             bytes[m] = GC.GetTotalAllocatedBytes(true) - b0;
+            to[m] = DateTime.UtcNow;
             gc[m, 0] = GC.CollectionCount(0) - g0;
             gc[m, 1] = GC.CollectionCount(1) - g1;
             gc[m, 2] = GC.CollectionCount(2) - g2;
-            log.WriteLine($"month {m,3}: {bytes[m] / 1048576.0,9:F1} MB  gc0 {gc[m, 0]} gc1 {gc[m, 1]} gc2 {gc[m, 2]}");
+            log.WriteLine($"month {m,3}: {bytes[m] / MiB,9:F1} MiB  gc0 {gc[m, 0]} gc1 {gc[m, 1]} gc2 {gc[m, 2]}  snapshots {snapPlain[m]}+{snapStepped[m]} stepped");
         }
-        string hashBefore = s.LastHash;
+        win1 = System.Diagnostics.Stopwatch.GetTimestamp();
+        TimeSpan pause = GC.GetTotalPauseDuration() - pause0;
+        MachineSnapshot m1 = meter.Snapshot();
+
+        string hashBefore = StateHash.ComputeHex(world.Table, SliceWorld.SchemaVersion);
         long month = months;   // the next step's month: the reads the step's compute and views would make
-        var probes = new List<(string Name, long Bytes, int Calls)>
+        MonthStepView step = ViewBuilder.Step(world, month - 1);
+        (Action<int>? nodes, string? nodesReason) = NodesProbe(world, month);
+        var probes = new List<ProbeResult>
         {
             Probe("Industry.RestActor (1 EffortAllocator.Allocate)", actors, a => world.Industry.RestActor(a, month)),
             Probe("IndustryInputs.Plan (ToolingPlan.Compute only)", actors, a => world.IndustryInputs.Plan(a, month, Fx6.Zero)),
             Probe("Industry.Profile (1 item, view Process)", actors, a => world.Industry.Profile(l.SitesOf(a)[0], [new PrcSetItem(l.Number[0], Fx6.One, Fx6.One)], month)),
             Probe("ViewBuilder.Inputs (t1)", 1, _ => ViewBuilder.Inputs(world, month, 1)),
-            Probe("ViewBuilder.Snapshot (no inputs/step)", 1, _ => ViewBuilder.Snapshot(world, s.Tick, null, month - 1, null, null)),
+            Probe("ViewBuilder.Step", 1, _ => ViewBuilder.Step(world, month - 1)),
+            Probe("ViewBuilder.Snapshot (no step)", 1, _ => ViewBuilder.Snapshot(world, s.Tick, null, month - 1, null, null)),
+            Probe("ViewBuilder.Snapshot (stepped, step given)", 1, _ => ViewBuilder.Snapshot(world, s.Tick, null, month - 1, null, step)),
             Probe("ViewBuilder.Step + Snapshot (stepped)", 1, _ => ViewBuilder.Snapshot(world, s.Tick, null, month - 1, null, ViewBuilder.Step(world, month - 1))),
         };
-        string hashAfter = s.LastHash;
-        foreach (var p in probes)
-            log.WriteLine($"probe {p.Name}: {p.Bytes / (double)p.Calls / 1024.0:F1} KB/call × {p.Calls} = {p.Bytes / 1048576.0:F1} MB");
+        ProbeResult? nodesProbe = nodes is null ? null : Probe("ViewBuilder.Nodes (all actors)", actors, nodes);
+        if (nodesProbe is not null)
+            probes.Add(nodesProbe);
+        string hashAfter = StateHash.ComputeHex(world.Table, SliceWorld.SchemaVersion);
+        DateTime last = DateTime.UtcNow;
+        bool flushed = gcl?.Flush(last, TimeSpan.FromSeconds(5)) ?? false;
+        IReadOnlyList<GcEventListener.GcEvent> events = gcl?.Snapshot() ?? [];
+
+        double snapPlainB = probes[5].PerCall, snapSteppedB = probes[6].PerCall;
+        double? nodesB = nodesProbe is null ? null : nodesProbe.Bytes;
+        foreach (ProbeResult p in probes)
+            log.WriteLine($"probe {p.Name}: {p.PerCall / 1024.0:F1} KB/call × {p.Calls} = {p.Bytes / MiB:F2} MiB");
+        if (nodesReason is not null)
+            log.WriteLine($"probe ViewBuilder.Nodes: unavailable ({nodesReason})");
         log.WriteLine($"layout: actors {actors}, sites {l.SiteCount}, processes {l.ProcessCount}, clusters {l.Clusters.Length}, nodes {world.Graph.Count}");
         log.WriteLine($"hash before probes {hashBefore[..16]}, after {hashAfter[..16]} ({(hashBefore == hashAfter ? "equal" : "DIFFERENT")})");
 
@@ -64,9 +127,14 @@ internal static class AllocProfile
         Utf8JsonWriter j = json.Writer;
         j.WriteStartObject();
         j.WriteString("kind", "lab-bench/alloc");
-        j.WriteString("world", w.Spec.Name);
+        j.WriteNumber("format", 2);
+        BenchEnv.Write(j, rp.RepoDir);
+        BenchJson.WriteParams(j, rp);
+        BenchJson.WriteWorld(j, w, buildMs);
         j.WriteNumber("seed", seed);
         j.WriteNumber("threads", threads);
+        j.WriteNumber("months", months);
+        j.WriteNumber("warmup_months", rp.Warmup);
         j.WriteStartObject("layout");
         j.WriteNumber("actors", actors);
         j.WriteNumber("sites", l.SiteCount);
@@ -74,40 +142,122 @@ internal static class AllocProfile
         j.WriteNumber("clusters", l.Clusters.Length);
         j.WriteNumber("nodes", world.Graph.Count);
         j.WriteEndObject();
+        j.WriteBoolean("gc_events", gcl is not null);
+        j.WriteBoolean("gc_events_flushed", flushed);
+        var tickPath = new List<double>();
+        var snapPath = new List<double>();
+        int lohTicksWindow = 0, allocLargeWindow = 0, gen2Window = 0;
         j.WriteStartArray("months");
         for (int m = 0; m < months; m++)
         {
+            var (lohTicks, lohBytes, allocLarge, gen2Gcs) = GcEventListener.In(events, from[m], to[m]);
+            long own = GcEventListener.OwnBytesAt(events, to[m]) - GcEventListener.OwnBytesAt(events, from[m]);
+            double snap = snapPlain[m] * snapPlainB + snapStepped[m] * snapSteppedB;
+            double tick = bytes[m] - snap - own;
             j.WriteStartObject();
             j.WriteNumber("month", m);
+            j.WriteBoolean("measured", m >= rp.Warmup);
             j.WriteNumber("bytes", bytes[m]);
             j.WriteNumber("gc0", gc[m, 0]);
             j.WriteNumber("gc1", gc[m, 1]);
             j.WriteNumber("gc2", gc[m, 2]);
+            j.WriteNumber("snapshots_no_step", snapPlain[m]);
+            j.WriteNumber("snapshots_stepped", snapStepped[m]);
+            j.WriteNumber("snapshot_path_bytes_est", Math.Round(snap));
+            j.WriteNumber("gc_listener_bytes", own);
+            j.WriteNumber("tick_path_bytes_est", Math.Round(tick));
+            j.WriteNumber("loh_alloc_ticks", lohTicks);
+            j.WriteNumber("loh_bytes_sampled", lohBytes);
+            j.WriteNumber("gc_alloc_large", allocLarge);
             j.WriteEndObject();
+            if (m >= rp.Warmup)
+            {
+                tickPath.Add(tick);
+                snapPath.Add(snap);
+                lohTicksWindow += lohTicks;
+                allocLargeWindow += allocLarge;
+                gen2Window += gc[m, 2];
+            }
         }
         j.WriteEndArray();
         j.WriteStartArray("probes");
-        foreach (var p in probes)
+        foreach (ProbeResult p in probes)
         {
+            var (lohTicks, lohBytes, allocLarge, _) = GcEventListener.In(events, p.From, p.To);
             j.WriteStartObject();
             j.WriteString("name", p.Name);
             j.WriteNumber("calls", p.Calls);
             j.WriteNumber("bytes", p.Bytes);
+            j.WriteNumber("bytes_per_call", p.PerCall);
+            j.WriteNumber("loh_alloc_ticks", lohTicks);
+            j.WriteNumber("loh_bytes_sampled", lohBytes);
+            j.WriteNumber("gc_alloc_large", allocLarge);
             j.WriteEndObject();
         }
         j.WriteEndArray();
-        j.WriteString("final_state_hash", hashBefore);
+
+        // ADR-0023 п. 2: the three parts of P8, as records; the limit X of the snapshot is the owner's decision (proposal 10 MiB).
+        j.WriteStartObject("p8_split");
+        j.WriteString("method", "tick path = month − snapshots × probe bytes − GC listener bytes (model; see lab-cli.md «alloc»)");
+        if (tickPath.Count > 0)
+        {
+            j.WriteNumber("measured_months", tickPath.Count);
+            j.WriteNumber("tick_path_mib_per_month_p50", BenchStats.Median(tickPath) / MiB);
+            j.WriteNumber("tick_path_mib_per_month_max", tickPath.Max() / MiB);
+            j.WriteBoolean("tick_path_le_1mib_per_month", BenchStats.Median(tickPath) <= MiB);
+            j.WriteNumber("snapshot_path_mib_per_month_p50", BenchStats.Median(snapPath) / MiB);
+        }
+        j.WriteNumber("snapshot_no_step_bytes", snapPlainB);
+        j.WriteNumber("snapshot_stepped_bytes", snapSteppedB);
+        LoadMeter.WriteNum(j, "snapshot_nodes_bytes", nodesB);
+        LoadMeter.WriteNum(j, "snapshot_without_nodes_bytes", nodesB is double nb ? snapSteppedB - nb : null);
+        if (nodesReason is null) j.WriteNull("nodes_probe_unavailable"); else j.WriteString("nodes_probe_unavailable", nodesReason);
+        j.WriteNumber("snapshot_x_proposed_mib", 10);
+        j.WriteBoolean("snapshot_le_x_proposed", snapSteppedB <= 10 * MiB);
+        j.WriteNumber("loh_alloc_ticks_window", lohTicksWindow);
+        j.WriteNumber("loh_alloc_ticks_snapshot_probes", probes.Where(p => p.Name.StartsWith("ViewBuilder.Snapshot", StringComparison.Ordinal) || p.Name.StartsWith("ViewBuilder.Nodes", StringComparison.Ordinal))
+            .Sum(p => GcEventListener.In(events, p.From, p.To).LohTicks));
+        j.WriteNumber("gc_alloc_large_window", allocLargeWindow);
+        j.WriteNumber("gc_gen2_window", gen2Window);
+        double wallMs = ProcessBench.Ms(win1 - win0);
+        j.WriteNumber("gc_pause_ms_window", pause.TotalMilliseconds);
+        j.WriteNumber("gc_pause_share_window", wallMs > 0 ? pause.TotalMilliseconds / wallMs : 0);
+        j.WriteEndObject();
+
+        j.WriteString("state_hash_before_probes", hashBefore);
+        j.WriteString("state_hash_after_probes", hashAfter);
         j.WriteBoolean("probes_kept_hash", hashBefore == hashAfter);
+        if (m0 is not null)
+            meter.Write(j, [new MachineWindow("alloc", m0, m1)], threads);
         j.WriteEndObject();
         return hashBefore == hashAfter ? 0 : 1;
     }
 
-    private static (string, long, int) Probe(string name, int calls, Action<int> call)
+    /// <summary>
+    /// The per-actor node part of the snapshot: the private <c>ViewBuilder.Nodes(SliceWorld, int actor, long next)</c> through a compiled
+    /// expression (no boxing per call), so «Snapshot without nodes» = stepped snapshot − Σ nodes needs no change in Session. If TASK-0103
+    /// changes that method, the probe is reported unavailable instead of failing the run.
+    /// </summary>
+    private static (Action<int>?, string?) NodesProbe(SliceWorld world, long next)
+    {
+        Type? vb = typeof(SliceSession).Assembly.GetType("Singularity.Session.ViewBuilder");
+        MethodInfo? mi = vb?.GetMethod("Nodes", BindingFlags.NonPublic | BindingFlags.Static, [typeof(SliceWorld), typeof(int), typeof(long)]);
+        if (mi is null)
+            return (null, "Singularity.Session.ViewBuilder.Nodes(SliceWorld, int, long) not found");
+        ParameterExpression a = Expression.Parameter(typeof(int), "a");
+        Action<int> call = Expression.Lambda<Action<int>>(
+            Expression.Call(mi, Expression.Constant(world), a, Expression.Constant(next)), a).Compile();
+        return (call, null);
+    }
+
+    private static ProbeResult Probe(string name, int calls, Action<int> call)
     {
         call(0);   // JIT and lazy memo outside the count
+        DateTime t0 = DateTime.UtcNow;
         long b0 = GC.GetTotalAllocatedBytes(true);
         for (int i = 0; i < calls; i++)
             call(i);
-        return (name, GC.GetTotalAllocatedBytes(true) - b0, calls);
+        long b = GC.GetTotalAllocatedBytes(true) - b0;
+        return new ProbeResult(name, b, calls, t0, DateTime.UtcNow);
     }
 }
