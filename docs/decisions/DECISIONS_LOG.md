@@ -486,3 +486,10 @@ Worked out in PHASE F wave 3 together with the alternative branches (#299): rese
 | 349 | 2026-11-18 | ADR-0020: a region's economy (output, taxes) goes to its controller, not to the de jure owner | владелец (AskUserQuestion 2026-11-18) |
 | 350 | 2026-11-18 | ADR-0020: region borders follow every ownership-event line strictly, with no mixed-region exceptions (Berlin and Vienna zones become separate regions); one calculation path | владелец (AskUserQuestion 2026-11-18) |
 | 351 | 2026-11-18 | ADR-0020: condominiums and joint administrations split the economy equally among members by default; shares from a source override the default | владелец (AskUserQuestion 2026-11-18) |
+| 352 | 2026-11-18 | Client UI feedback (owner):
+- remove the sound button from the top bar (sound stays in Settings);
+- the speed scale is coloured;
+- panels and buttons get textures: grain, roughness, wear;
+- navigation by areas of control: technology, production, finance, intelligence, resources, army, logistics, special projects, map and similar; some may be merged, some split; tabs or buttons to be designed;
+- icons for each area, and pictures that tell at a glance which section is open.
+Design by ui-art-director with game-designer (information architecture); the owner sees variants before implementation (#302). Areas without a working mechanic are not shown as working (no fake mechanics) | владелец (сообщение 2026-11-18) |
