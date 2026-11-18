@@ -7,7 +7,7 @@ public class PseudoLocaleTests
 {
     static LocaleCatalog Pseudo()
     {
-        LocaleCatalog c = LocaleCatalog.Load(TestKit.Data);
+        LocaleCatalog c = LocaleCatalog.Load(ModLocaleSource.From(TestKit.Data));
         PseudoLocale.AddTo(c);
         return c;
     }

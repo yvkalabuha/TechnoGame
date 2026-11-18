@@ -116,7 +116,7 @@ public static class LocaleChecks
         {
             var vars = new SortedSet<string>(StringComparer.Ordinal);
             var funcs = new SortedSet<string>(StringComparer.Ordinal);
-            AstUtil.CollectUsage(p, vars, funcs);
+            AstUtil.CollectUsage(p, vars, funcs, e.IsTerm);
             map[attr is null ? "" : "." + attr] = string.Join(',', vars.Select(v => "$" + v).Concat(funcs.Select(f => f + "()")));
         }
         return map;
@@ -192,7 +192,7 @@ public static class LocaleChecks
         var other = new SortedSet<string>(StringComparer.Ordinal);
         var funcs = new SortedSet<string>(StringComparer.Ordinal);
         foreach ((_, Pattern p) in AstUtil.Patterns(e.Ast))
-            AstUtil.CollectUsage(p, other, funcs);
+            AstUtil.CollectUsage(p, other, funcs, e.IsTerm);
         foreach ((_, Pattern p) in AstUtil.Patterns(e.Ast))
             foreach (SelectExpression s in AstUtil.Selects(p))
                 if (AstUtil.SelectorVariable(s.Selector) is { } sv)

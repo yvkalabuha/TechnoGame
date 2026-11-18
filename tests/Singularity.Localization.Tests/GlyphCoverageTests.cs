@@ -110,7 +110,7 @@ public class GlyphCoverageTests
         // ⟦ ⟧ are not in the fonts, so the ADR fallback [! !] is used; if a font gains them this assertion tells us.
         foreach (string font in new[] { "GolosText", "Jura" })
             Assert.False(Fonts.Value[font].Has(0x27E6) && Fonts.Value[font].Has(0x27E7), $"{font} now has ⟦⟧: switch PseudoLocale to them");
-        LocaleCatalog fresh = LocaleCatalog.Load(TestKit.Data);
+        LocaleCatalog fresh = LocaleCatalog.Load(ModLocaleSource.From(TestKit.Data));
         PseudoLocale.AddTo(fresh);
         Assert.Empty(Missing(fresh.Entities("xx").Values.Where(e => e.Kind is not (KeyKind.Actor or KeyKind.Country or KeyKind.Region)), "GolosText", "Jura"));
     }

@@ -40,3 +40,10 @@ Fix the Codex second-review findings on TASK-0074 (record tools/llm_worker/runs/
 Файлы: `src/Singularity.Localization/{Numbers,BundleFactory,LocaleCatalog,LocaleChecks,AstUtil}.cs`, `tests/Singularity.Localization.Tests/{FontCmap,TestKit,CodexFixTests}.cs`.
 
 Проверка: 5 регрессионных тестов в `CodexFixTests.cs`. Без правки Numbers/AstUtil/BundleFactory падают 3 теста (формат чисел, дата, L3). Без правки FontCmap падает тест .notdef. Тест runtime-Load не компилируется без нового API.
+
+### Раунд 2 (Codex re-review, record review-TASK-0076-2e1127fa-codex.json)
+Полный `dotnet test` зелёный (Localization 131). Без правки src падают 4 новых теста.
+1. **HIGH** Запасной вариант даты по частям: `BundleFactory.Build` добавляет в bundle языка недостающие сообщения `fmt-*` и `date-*` из EN. Шаблон и название месяца (по падежам) откатываются независимо. CWT-механизм `Numbers.SetFallback` убран как лишний. Тест `Date_PatternAndMonthName_FallBackIndependently`.
+2. **MEDIUM** `LocaleCatalog.Load(..., warn)` теперь запускает L4 и L6: `Loc` строится только для проверки (`LocaleChecks.Plurals`, `Budgets`). Тест `RuntimeLoad_RunsPluralAndLengthChecks`.
+3. **MEDIUM** Предупреждающий `warn` обязателен, перегрузки `Load(GameData)` и необязательного `warn` нет. Тест `RuntimeLoad_HasNoSilentDefault`. Тесты без проверок используют `Load(ModLocaleSource.From(data))`.
+4. **MEDIUM** `$case` исключается из L3 только в термах (`CollectUsage(..., inTerm)`). Тест `L3_CaseVariableOfAMessage_IsNotExempt`.

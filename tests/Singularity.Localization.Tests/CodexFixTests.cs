@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using Singularity.Core.Data;
 using Linguini.Shared.Types.Bundle;
 
 namespace Singularity.Localization.Tests;
@@ -65,6 +66,49 @@ public class CodexFixTests : IDisposable
         Assert.True(cmap.Has(0x42));
         Assert.True(cmap.Has(0x43));
         Assert.False(cmap.Has(0x44));
+    }
+
+    [Fact]
+    public void Date_PatternAndMonthName_FallBackIndependently()
+    {
+        string enFmt = File.ReadAllText(Path.Combine(TestKit.CoreDir, "locale", "en", "fmt.ftl"));
+        ModLocaleSource en = _kit.Mod("fmt", [], ("en", "fmt.ftl", enFmt));
+        // A German pattern that refers to the month name, which the locale does not define.
+        ModLocaleSource de = _kit.Mod("de", ["fmt"], ("de", "fmt.ftl", "fmt-date-dmy = { $day }. { date-month-nom } { $year }\n"));
+        var loc = new Loc(LocaleCatalog.Load([en, de]), "de");
+        Assert.Equal("9. February 1945", loc.Date(new GameDate(1945, 2, 9)));
+    }
+
+    [Fact]
+    public void RuntimeLoad_RunsPluralAndLengthChecks()
+    {
+        ModLocaleSource core = ModLocaleSource.From(TestKit.Data).Single(m => m.ModId == "core");
+        ModLocaleSource mod = _kit.Mod("extra", ["core"],
+            ("en", "t.ftl", "ui-p = { NUMBER($n) ->\n   *[one] a\n    [other] b\n}\nui-very_long-btn = This button caption is far too long for its place\n"));
+        var warnings = new List<string>();
+        LocaleCatalog.Load([core, mod], TestKit.Data, warnings.Add);
+        Assert.Contains(warnings, w => w.StartsWith("L4", StringComparison.Ordinal) && w.Contains("ui-p", StringComparison.Ordinal));
+        Assert.Contains(warnings, w => w.StartsWith("L6", StringComparison.Ordinal) && w.Contains("ui-very_long-btn", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void RuntimeLoad_HasNoSilentDefault()
+    {
+        foreach (var m in typeof(LocaleCatalog).GetMethods().Where(m => m.Name == "Load"))
+        {
+            foreach (var prm in m.GetParameters().Where(p => p.ParameterType == typeof(Action<string>)))
+                Assert.False(prm.IsOptional, "warn must be required");
+        }
+        Assert.DoesNotContain(typeof(LocaleCatalog).GetMethods(), m => m.Name == "Load" && m.GetParameters() is [{ ParameterType: var t }] && t == typeof(GameData));
+    }
+
+    [Fact]
+    public void L3_CaseVariableOfAMessage_IsNotExempt()
+    {
+        LocaleCatalog c = _kit.Single(
+            "ui-x = { $case ->\n    [a] A\n   *[b] B\n}\n",
+            "ui-x = Fixed\n");
+        Assert.Contains(LocaleChecks.Variables(c), p => p.Contains("ui-x", StringComparison.Ordinal));
     }
 
     static byte[] Font4(int start, int end, short delta)

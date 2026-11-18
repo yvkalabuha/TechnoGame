@@ -25,7 +25,7 @@ public sealed class Loc
         FrozenBundle? source = null;
         foreach (string lang in catalog.Languages.OrderBy(l => l != LocaleCatalog.SourceLanguage).ThenBy(l => l, StringComparer.Ordinal))
         {
-            FrozenBundle b = BundleFactory.Build(lang, catalog.Entities(lang).Values, () => source);
+            FrozenBundle b = BundleFactory.Build(lang, catalog.Entities(lang).Values, lang == LocaleCatalog.SourceLanguage ? [] : catalog.Entities(LocaleCatalog.SourceLanguage).Values, () => source);
             _bundles[lang] = b;
             if (lang == LocaleCatalog.SourceLanguage)
                 source = b;

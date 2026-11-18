@@ -56,14 +56,14 @@ public sealed partial class LocaleCatalog
 
     /// <summary>
     /// Loads the locales of the mods of <paramref name="data"/> and applies the runtime rules of ADR-0018 §3.2, §3.4:
-    /// orphans (data-backed ids without a data object) are skipped, and L1, L2, L3 problems and stale
-    /// translations are reported through <paramref name="warn"/>. Syntax and grammar errors still throw.
+    /// orphans (data-backed ids without a data object) are skipped, and L1-L4, L6 problems and stale
+    /// translations are reported through <paramref name="warn"/> (required: no silent default). Syntax and grammar errors still throw.
     /// </summary>
-    public static LocaleCatalog Load(GameData data, Action<string>? warn = null) =>
+    public static LocaleCatalog Load(GameData data, Action<string> warn) =>
         Load(ModLocaleSource.From(data), data, warn);
 
     /// <summary>As <see cref="Load(GameData, Action{string})"/>, for an explicit list of locale sources.</summary>
-    public static LocaleCatalog Load(IReadOnlyList<ModLocaleSource> mods, GameData data, Action<string>? warn)
+    public static LocaleCatalog Load(IReadOnlyList<ModLocaleSource> mods, GameData data, Action<string> warn)
     {
         LocaleCatalog catalog = Load(mods);
         SortedDictionary<string, KeyKind> expected = ExpectedKeys.Of(data);
@@ -73,12 +73,13 @@ public sealed partial class LocaleCatalog
             foreach (string id in orphans)
             {
                 catalog._entities[lang].Remove(id);
-                warn?.Invoke($"L2 {lang}: orphan '{id}' has no data object, skipped");
+                warn($"L2 {lang}: orphan '{id}' has no data object, skipped");
             }
         }
-        if (warn is null)
-            return catalog;
-        foreach (string p in LocaleChecks.Completeness(catalog, data).Concat(LocaleChecks.Variables(catalog)))
+        // L4 needs formatting: the Loc is built only for the check (it throws on a bundle that cannot be built).
+        var checkLoc = new Loc(catalog, SourceLanguage);
+        foreach (string p in LocaleChecks.Completeness(catalog, data).Concat(LocaleChecks.Variables(catalog))
+                     .Concat(LocaleChecks.Plurals(catalog, checkLoc)).Concat(LocaleChecks.Budgets(catalog)))
             warn(p);
         foreach (string lang in catalog.Languages)
         {

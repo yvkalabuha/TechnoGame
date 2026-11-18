@@ -34,28 +34,28 @@ static class AstUtil
 
     /// <summary>
     /// Variables and functions used by a pattern, selector expressions included: a caller that does not
-    /// supply a selector variable cannot drive the selector. `$case` is supplied by NAME and is not counted.
+    /// supply a selector variable cannot drive the selector. `$case` is not counted in terms only: NAME supplies it there.
     /// </summary>
-    public static void CollectUsage(Pattern pattern, SortedSet<string> variables, SortedSet<string> functions)
+    public static void CollectUsage(Pattern pattern, SortedSet<string> variables, SortedSet<string> functions, bool inTerm = false)
     {
         foreach (IPatternElement e in pattern.Elements)
         {
             if (e is Placeable p)
-                CollectExpression(p.Expression, variables, functions);
+                CollectExpression(p.Expression, variables, functions, inTerm);
         }
     }
 
-    static void CollectExpression(IExpression x, SortedSet<string> variables, SortedSet<string> functions)
+    static void CollectExpression(IExpression x, SortedSet<string> variables, SortedSet<string> functions, bool inTerm)
     {
         switch (x)
         {
             case SelectExpression s:
-                CollectExpression(s.Selector, variables, functions);
+                CollectExpression(s.Selector, variables, functions, inTerm);
                 foreach (Variant v in s.Variants)
-                    CollectUsage(v.Value, variables, functions);
+                    CollectUsage(v.Value, variables, functions, inTerm);
                 break;
             case VariableReference v:
-                if (v.Id.ToString() != "case")
+                if (!inTerm || v.Id.ToString() != "case")
                     variables.Add(v.Id.ToString());
                 break;
             case FunctionReference f:
@@ -63,21 +63,21 @@ static class AstUtil
                 if (f.Id.ToString() != "GENDER")
                     functions.Add(f.Id.ToString());
                 foreach (IInlineExpression a in f.Arguments.PositionalArgs)
-                    CollectExpression(a, variables, functions);
+                    CollectExpression(a, variables, functions, inTerm);
                 foreach (NamedArgument n in f.Arguments.NamedArgs)
-                    CollectExpression(n.Value, variables, functions);
+                    CollectExpression(n.Value, variables, functions, inTerm);
                 break;
             case TermReference t:
                 if (t.Arguments is { } ta)
                 {
                     foreach (IInlineExpression a in ta.PositionalArgs)
-                        CollectExpression(a, variables, functions);
+                        CollectExpression(a, variables, functions, inTerm);
                     foreach (NamedArgument n in ta.NamedArgs)
-                        CollectExpression(n.Value, variables, functions);
+                        CollectExpression(n.Value, variables, functions, inTerm);
                 }
                 break;
             case Placeable p:
-                CollectExpression(p.Expression, variables, functions);
+                CollectExpression(p.Expression, variables, functions, inTerm);
                 break;
         }
     }

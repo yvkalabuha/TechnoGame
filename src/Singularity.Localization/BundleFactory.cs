@@ -40,7 +40,12 @@ static class BundleFactory
     }
 
     /// <param name="fallback">Source-language bundle used by NAME and GENDER when the term is missing in <paramref name="lang"/>.</param>
-    public static FrozenBundle Build(string lang, IEnumerable<LocaleEntity> entities, Func<IReadBundle?> fallback)
+    /// <param name="sourceEntities">
+    /// Entities of the source language. Its `fmt-*` and `date-*` messages that <paramref name="lang"/> lacks are added to the
+    /// bundle, so each piece of a date or number format (pattern, month name per case, separator) falls back on its own:
+    /// a pattern refers to month names inside the bundle that formats it.
+    /// </param>
+    public static FrozenBundle Build(string lang, IEnumerable<LocaleEntity> entities, IEnumerable<LocaleEntity> sourceEntities, Func<IReadBundle?> fallback)
     {
         var holder = new Holder();
         FluentBundle bundle = FluentBundle.MakeUnchecked(new FluentBundleOption
@@ -54,15 +59,22 @@ static class BundleFactory
         bundle.AddFunctionOverriding("GENDER", (a, _) => Gender(holder, a));
 
         var entries = new List<IEntry>();
+        var own = new HashSet<string>(StringComparer.Ordinal);
         foreach (LocaleEntity e in entities)
+        {
             entries.Add(e.Ast);
+            own.Add(e.Id);
+        }
+        foreach (LocaleEntity e in sourceEntities)
+        {
+            if ((e.Id.StartsWith("fmt-", StringComparison.Ordinal) || e.Id.StartsWith("date-", StringComparison.Ordinal)) && !own.Contains(e.Id))
+                entries.Add(e.Ast);
+        }
         if (!bundle.AddResource(new Resource(entries, new List<ParseError>()), out var errors))
             throw new LocaleLoadException($"{lang}: {string.Join("; ", errors)}");
         FrozenBundle frozen = bundle.ToFrozenBundle();
         holder.Self = frozen;
         holder.Fallback = fallback();
-        if (holder.Fallback is { } fb)
-            Numbers.SetFallback(frozen, fb);
         return frozen;
     }
 
