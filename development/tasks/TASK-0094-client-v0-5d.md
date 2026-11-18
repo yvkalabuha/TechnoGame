@@ -1,7 +1,7 @@
 ---
 id: TASK-0094
 title: "Client v0.5d: tree legend, glyph shapes, alert callout to country, foreign-power tag tint"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: developer         # ответственный агент
@@ -37,3 +37,4 @@ created: 2026-11-18
 - [ ] Визуальное ревью (ui-art-director)
 
 ## Результат
+(developer, 2026-11-18; перенесено Orchestrator) 1. Легенда: диск планисферы сдвигается и уменьшается правее открытой легенды (`DiscArea`). 2. Глифы: FND треугольник, PRN круг, ENG шестиугольник, CMP пятиугольник, PRC квадрат, APP ромб; одна функция `TechTree.Outline` для узлов и легенды; тест «6 форм различны». 3. Плашка тревоги на выноске с точкой к стране, плашки одной страны стопкой. 4. Метка чужой державы — полоса 6 px в тинте державы. 5. Подписи стран: жирный шрифт, ореол бумаги, подчёркивание вместо рамки. 6. «Финансы» при 150 %: блок лицензии в собственной прокрутке, `finance at 150%: order button in view without scroll True`. Проверка: build 0 предупреждений, тесты клиента 151, `--shots` rc=0, палитра C 107/107, текстуры 118/118, T1–T6 PASS. Открыто: при 150 % на 1280×720 блок лицензии сжат до заголовка (лицензий в M1 нет); нет снимка чужой державы (Q49).
