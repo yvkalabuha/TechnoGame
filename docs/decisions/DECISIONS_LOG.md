@@ -448,3 +448,4 @@ Next: implement ADR-0017 and F4 (parallel view inputs), then the official EXP-00
 
 The design system yields to the owner's wish | владелец (сообщения 2026-11-18) |
 | 319 | 2026-11-18 | 1945 map: the lands east of the Oder–Neisse line and the Königsberg area have owner DEU (de jure) and controller POL/SUN (administration under Potsdam). Final recognition is a later in-game event | владелец (AskUserQuestion 2026-11-18) |
+| 320 | 2026-11-18 | The client has no country list. The player plays one country, chosen at game start (in the New game menu; a launch parameter until then). Other countries are inspected read-only by clicking them on the globe. Signals and orders concern only the player's country | владелец (сообщение 2026-11-18) |
