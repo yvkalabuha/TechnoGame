@@ -1,3 +1,5 @@
+using System.Text.Json;
+using Singularity.Core.Commands;
 using Singularity.Kernel;
 
 namespace Singularity.Session.Tests;
@@ -59,5 +61,50 @@ public class DailyTickProbeTests
         HashAssert.Equal(h1, Run(true, 4, 1).LastHash);
         HashAssert.Equal(h1, Run(true, 4, 3).LastHash);
         HashAssert.Equal(h1, Run(true, 1, 1).LastHash);
+    }
+
+    // ---- F7a: the view is reused on a day with no step and no command
+
+    private static readonly JsonSerializerOptions Json = new() { IncludeFields = true };
+
+    private static string FreshJson(SliceSession s)
+    {
+        SliceView v = s.View;
+        return JsonSerializer.Serialize(ViewBuilder.Snapshot(s.World, v.Tick, v.StateHash, v.Month, null, null), Json);
+    }
+
+    [Fact]
+    public void ReusedView_EqualsAFreshSnapshot_OnEveryProbeDay()
+    {
+        SliceSession s = SliceSession.Create(SliceTestData.Data, new SliceRunConfig { Seed = 7, DailyTickProbe = true, HashEveryTick = true });
+        Assert.True(s.World.DailyViewNeutral);
+        int reused = 0;
+        for (int day = 0; day < 75; day++)
+        {
+            var before = s.View.Actors;
+            s.Step(1);
+            SliceView v = s.View;
+            Assert.Equal(s.Tick, v.Tick);
+            HashAssert.Equal(s.LastHash, v.StateHash, $"day {day}");
+            if (v.Inputs is not null)
+                continue;   // a monthly tick builds the view from scratch
+            Assert.Null(v.Step);
+            Assert.Equal(FreshJson(s), JsonSerializer.Serialize(v, Json));
+            if (before == v.Actors)
+                reused++;
+        }
+        Assert.True(reused > 40, $"the actors were reused on {reused} days only");
+    }
+
+    [Fact]
+    public void ATickWithACommand_RebuildsTheView()
+    {
+        SliceSession s = SliceSession.Create(SliceTestData.Data, new SliceRunConfig { Seed = 7, DailyTickProbe = true });
+        s.Step(5);
+        var before = s.View.Actors;
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new StartSeries(0, 0, Fx6.FromInt(5), true)).Accepted);
+        s.Step(1);
+        Assert.False(before == s.View.Actors, "a tick with a command must build the actors anew");
+        Assert.Equal(FreshJson(s), JsonSerializer.Serialize(s.View, Json));
     }
 }

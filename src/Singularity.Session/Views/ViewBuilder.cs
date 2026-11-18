@@ -33,6 +33,20 @@ internal static class ViewBuilder
         return new SliceView(tick, w.Calendar.DateOf(tick), hash, month, actors.MoveToImmutable(), inputs, step);
     }
 
+    /// <summary>The actors of a view as a fresh snapshot of a tick without a monthly step would build them: the close reasons are not read (F7a).</summary>
+    public static ImmutableArray<ActorView> WithoutCloseReasons(ImmutableArray<ActorView> actors)
+    {
+        var result = ImmutableArray.CreateBuilder<ActorView>(actors.Length);
+        foreach (ActorView a in actors)
+        {
+            var closes = ImmutableArray.CreateBuilder<CloseView>(a.Decisions.Closes.Length);
+            foreach (CloseView c in a.Decisions.Closes)
+                closes.Add(c with { Reason = LineCloseReason.None });
+            result.Add(a with { Decisions = a.Decisions with { Closes = closes.MoveToImmutable() } });
+        }
+        return result.MoveToImmutable();
+    }
+
     // `stepped`: the tick ran a monthly step, so the step traces are of month `month`; otherwise they belong to an earlier step and are not read (§13.7).
     private static ActorView Actor(SliceWorld w, int a, long month, bool stepped)
     {
@@ -68,12 +82,18 @@ internal static class ViewBuilder
     private static ImmutableArray<NodeView> Nodes(SliceWorld w, int a, long next)
     {
         var nodes = ImmutableArray.CreateBuilder<NodeView>(w.Graph.Count);
+        // One pass over the grants per actor instead of one per node.
+        var granted = new bool[w.Graph.Count];
+        foreach ((int actor, int node) in w.Knowledge.LastLicenceGrants)
+        {
+            int row = actor == a ? w.Graph.RowOf(node) : -1;
+            if (row >= 0)
+                granted[row] = true;
+        }
         for (int r = 0; r < w.Graph.Count; r++)
         {
             int number = w.Graph.Number[r];
-            bool byLicence = false;
-            foreach ((int actor, int node) in w.Knowledge.LastLicenceGrants)
-                byLicence |= actor == a && node == number;
+            bool byLicence = granted[r];
             int p = w.IndustryLayout.RowOf(number);
             nodes.Add(new NodeView(number, w.Knowledge.IsKnown(a, r), byLicence, p < 0 ? null : Process(w, a, p, number, next),
                 w.Knowledge.TracksKnownSince ? w.Knowledge.KnownSince(a, r) : null));
