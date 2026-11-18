@@ -80,7 +80,7 @@
 | [TASK-0063](../development/tasks/TASK-0063-session-dailytickprobe-flag-for-direct-daily-mode-.md) | DONE | Session DailyTickProbe flag for direct daily-mode benchmark (ADR-0016 T1a) | MS-M0 |
 | [TASK-0064](../development/tasks/TASK-0064-lab-bench-harness-adr-0016-t1.md) | DONE | lab bench harness (ADR-0016 T1) | MS-M0 |
 | [TASK-0065](../development/tasks/TASK-0065-synthetic-full-scale-world-overlay-and-benchmark-p.md) | DONE | Synthetic full-scale world overlay and benchmark pre-registration (ADR-0016 T2) | MS-M0 |
-| [TASK-0066](../development/tasks/TASK-0066-tick-benchmark-run-and-outcome-adr-0016-t3.md) | APPROVED | Tick benchmark run and outcome (ADR-0016 T3) | MS-M0 |
+| [TASK-0066](../development/tasks/TASK-0066-tick-benchmark-run-and-outcome-adr-0016-t3.md) | IN_PROGRESS | Tick benchmark run and outcome (ADR-0016 T3) | MS-M0 |
 | [TASK-0067](../development/tasks/TASK-0067-godot-4-net-3d-globe-spike-regions-relief-cc0-obje.md) | DONE | Godot 4 .NET 3D globe spike: regions, relief, CC0 objects, FPS and memory | MS-M0 |
 | [TASK-0068](../development/tasks/TASK-0068-tick-hot-spot-fixes-f1-f3-f5-f6-f8-tick-profile-m0.md) | DONE | Tick hot-spot fixes F1-F3, F5, F6, F8 (tick profile M0) | MS-M0 |
 | [TASK-0069](../development/tasks/TASK-0069-client-prototype-v0-2-design-controls-session-wiri.md) | DONE | Client prototype v0.2: design controls, Session wiring, tech tree A/B | MS-M0 |
