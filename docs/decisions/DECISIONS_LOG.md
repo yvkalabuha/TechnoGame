@@ -482,3 +482,7 @@ Worked out in PHASE F wave 3 together with the alternative branches (#299): rese
 | 345 | 2026-11-18 | ADR-0019: flow rates are annual, sliced by day of year (365/366); the annual sum is exact and the daily rate is even across months | владелец (AskUserQuestion 2026-11-18) |
 | 346 | 2026-11-18 | ADR-0019: the M0 slice (reproduction of EXP-0002) is kept as a git tag, not as frozen classes in the code; after #228 lands, core changes are checked by Kernel invariants and the new golden, not by the EXP-0002 golden | владелец (AskUserQuestion 2026-11-18) |
 | 347 | 2026-11-18 | ADR-0019: an event dated D takes effect from the morning of D (applied in the merge of D−1); ADR-0011 is unchanged | владелец (AskUserQuestion 2026-11-18) |
+| 348 | 2026-11-18 | ADR-0020 speed rule on WARN: the maximum game speed drops at once to the #331 floor (1 month per 3 s), as in MS-M1 K4; no stepped formula | владелец (AskUserQuestion 2026-11-18) |
+| 349 | 2026-11-18 | ADR-0020: a region's economy (output, taxes) goes to its controller, not to the de jure owner | владелец (AskUserQuestion 2026-11-18) |
+| 350 | 2026-11-18 | ADR-0020: region borders follow every ownership-event line strictly, with no mixed-region exceptions (Berlin and Vienna zones become separate regions); one calculation path | владелец (AskUserQuestion 2026-11-18) |
+| 351 | 2026-11-18 | ADR-0020: condominiums and joint administrations split the economy equally among members by default; shares from a source override the default | владелец (AskUserQuestion 2026-11-18) |
