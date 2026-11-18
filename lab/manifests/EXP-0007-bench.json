@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "experiment": "EXP-0007",
+  "kind": "bench",
+  "meta": {
+    "note": "EXP-0007 pre-registration П1–П3 (TASK-0065) as a lab bench manifest (TASK-0064). Run: lab bench --mode plan, then --mode process --process K in plan order, one process per machine.",
+    "hash_checkpoints": "false = game configuration of ADR-0017 (outcome); the reference run with true is a separate manifest or --hash-checkpoints true"
+  },
+  "generator_seed": 85621515,
+  "shuffle_seed": 20261117,
+  "chunk_size": 8,
+  "warmup_months": 24,
+  "measure_months": 120,
+  "hash_checkpoints": false,
+  "blocks": [
+    {"id": "A", "points": [[200, 2000, "cross"]], "threads": [8], "seeds": [1, 2, 3], "replicas": 5, "note": "outcome"},
+    {"id": "B", "points": [[200, 2000, "cross"]], "threads": [1], "seeds": [1, 2, 3], "replicas": 5, "note": "mandatory record"},
+    {"id": "C1", "points": [[200, 2000, "cross"]], "threads": [4, 16], "seeds": [1, 2, 3], "note": "reference"},
+    {"id": "C2", "points": [[200, 2000, "cross"]], "threads": [8], "seeds": [1, 2, 3], "background": 2, "note": "weak machine (#271)"},
+    {"id": "C3", "points": [[200, 2000, "clones"]], "threads": [8], "seeds": [1, 2, 3], "note": "cost of cross edges"},
+    {"id": "D", "grid": "benchmark", "threads": [8], "seeds": [1, 2, 3], "note": "log-log slopes, 24 points"}
+  ]
+}

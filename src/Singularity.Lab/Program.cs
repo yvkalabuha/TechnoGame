@@ -18,6 +18,7 @@ public static class Program
           culture-rules --out <dir> [--mods <dir>] [--only check|gate|holdout|...]  culture_H rule selection (culture-rule-selection.md)
           c5-stand --out <dir> [--mods <dir>] [--manifest <json> [--point P]] [--horizon H] [--threshold Y]  C5 stand (#248); H < 383 or Y != 0.7 = smoke
           lk-draws --out <dir> --manifest <json> [--point P] [--seeds N]  L_K schedule draws (never, clock, own, req) -> lk_draws.csv
+          bench  --mode plan|process|validity|r1|r2|kcopy|r3|fref --out <json> [...]  tick benchmark EXP-0007 / ADR-0017 R1-R4 (TASK-0064; lab-cli.md «lab bench»)
           calib-print --out <dir> --manifest <json> [--point P] [--seeds N] [--jobs J]  #247 G by fielded_L vs r6, designs (JetSliceCalib)
 
         Exit codes: 0 ok, 1 run/matrix failure or self-check failure, 2 usage or manifest error.
@@ -48,6 +49,7 @@ public static class Program
                 "calib-print" => CalibPrint(opts),
                 "c5-stand" => C5Stand(opts),
                 "lk-draws" => LkDraws(opts),
+                "bench" => Bench.BenchCommand.Run(opts),
                 _ => throw new UsageException($"Unknown command '{args[0]}'."),
             };
         }
