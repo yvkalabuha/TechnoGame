@@ -126,6 +126,19 @@ public static class IndustryMath
         return new ProcessYield(active, new Dims3(c[0], c[1], c[2]), new Dims3(g[0], g[1], g[2]), mSource, xh, ramp, acc * ramp, qp);
     }
 
+    // Two buffers of the thread: the items a site builds and the sorted copy Profile makes of them. Pure temporaries, overwritten before every read.
+    [Scratch, ThreadStatic] private static ProfileItem[]? t_items, t_sorted;
+
+    /// <summary>The thread's buffer for the items of one <c>Industry.Profile</c> call (<paramref name="n"/> long); the caller fills all of it.</summary>
+    internal static Span<ProfileItem> ItemsScratch(int n) => Scratch(ref t_items, n);
+
+    private static Span<ProfileItem> Scratch(ref ProfileItem[]? buffer, int n)
+    {
+        if (buffer is null || buffer.Length < n)
+            buffer = new ProfileItem[Math.Max(n, 16)];
+        return buffer.AsSpan(0, n);
+    }
+
     /// <summary>
     /// <c>production_profile</c> (contract §4.2): admitted, <c>unit_cost_mult</c> with <c>yc_p = max(yield_p, ε)</c>,
     /// <c>q = min q_p</c>, bottleneck (A5, A6; ties by process number, then canonical dimension order). Items
@@ -137,9 +150,9 @@ public static class IndustryMath
     {
         if (items.IsEmpty)
             throw new ArgumentException("A prc_set needs at least one process.", nameof(items));
-        // A set of up to four items stays on the stack: no garbage per call (a view builds one per process).
+        // A set of up to four items stays on the stack, a larger one in the thread's scratch: no garbage per call (a view builds one per process).
         Span<ProfileItem> stack = stackalloc ProfileItem[4];
-        Span<ProfileItem> sorted = items.Length <= 4 ? stack[..items.Length] : new ProfileItem[items.Length];
+        Span<ProfileItem> sorted = items.Length <= 4 ? stack[..items.Length] : Scratch(ref t_sorted, items.Length);
         items.CopyTo(sorted);
         sorted.Sort(static (a, b) => a.ProcessNumber.CompareTo(b.ProcessNumber));
         bool admitted = true;

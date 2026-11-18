@@ -5,16 +5,18 @@ namespace Singularity.Core.WhyNot;
 /// <summary>
 /// Requires-closures of spec §5.6 (v0.15, W1) over an abstract graph: <c>cl(n)</c> is empty for a known node, else <c>n</c> and the closure of the
 /// chosen member (least closure cost, ties by node number) of every requires-group without a known member. Pure; the graph is acyclic.
+/// Rule: its sets come from the thread's <see cref="ClosureArena"/>, so call <see cref="ClosureArena.Reset"/> before each analysis
+/// (<c>WhyNotAnalyzer.WhyNot</c> does); without it the arena only grows.
 /// </summary>
 internal sealed class NodeClosure(int count, Func<int, bool> known, Func<int, int[][]> groups, Func<int, Fx6> left, Func<int, int> number)
 {
-    private readonly bool[]?[] _memo = new bool[]?[count];
+    private readonly bool[]?[] _memo = ClosureArena.TakeMemo(count);
 
     public bool[] OfNode(int row)
     {
         if (_memo[row] is { } done)
             return done;
-        var set = new bool[count];
+        bool[] set = ClosureArena.TakeSet(count);
         if (!known(row))
         {
             set[row] = true;
@@ -27,7 +29,7 @@ internal sealed class NodeClosure(int count, Func<int, bool> known, Func<int, in
     /// <summary>Closure of an alternative: the groups without a known member and the nodes that are unknown.</summary>
     public bool[] OfRequirements(int[][] alternativeGroups, IEnumerable<int> nodes)
     {
-        var set = new bool[count];
+        bool[] set = ClosureArena.TakeSet(count);
         Require(set, alternativeGroups, nodes);
         return set;
     }
@@ -99,5 +101,49 @@ internal sealed class NodeClosure(int count, Func<int, bool> known, Func<int, in
     {
         for (int i = 0; i < into.Length; i++)
             into[i] |= other[i];
+    }
+}
+
+/// <summary>
+/// Reusable sets of the closures of one why_not analysis, per thread (TASK-0107: one analysis made ~100 KB of garbage per actor and call). Pure
+/// scratch, never read across analyses: <see cref="Reset"/> at the start of <c>WhyNotAnalyzer.WhyNot</c> hands every set back, so nothing
+/// returned to a caller refers to it (the result is a list of links).
+/// </summary>
+internal static class ClosureArena
+{
+    [ThreadStatic] private static List<bool[]>? t_sets;
+    [ThreadStatic] private static List<bool[]?[]>? t_memos;
+    [ThreadStatic] private static int t_setsUsed, t_memosUsed;
+
+    public static void Reset()
+    {
+        t_setsUsed = 0;
+        t_memosUsed = 0;
+    }
+
+    /// <summary>A cleared set of <paramref name="count"/> flags, valid until the next <see cref="Reset"/> on this thread.</summary>
+    public static bool[] TakeSet(int count)
+    {
+        t_sets ??= [];
+        if (t_setsUsed == t_sets.Count)
+            t_sets.Add(new bool[count]);
+        else if (t_sets[t_setsUsed].Length != count)
+            t_sets[t_setsUsed] = new bool[count];
+        else
+            Array.Clear(t_sets[t_setsUsed]);
+        return t_sets[t_setsUsed++];
+    }
+
+    /// <summary>A cleared memo table of <paramref name="count"/> entries, valid until the next <see cref="Reset"/> on this thread.</summary>
+    public static bool[]?[] TakeMemo(int count)
+    {
+        t_memos ??= [];
+        if (t_memosUsed == t_memos.Count)
+            t_memos.Add(new bool[]?[count]);
+        else if (t_memos[t_memosUsed].Length != count)
+            t_memos[t_memosUsed] = new bool[]?[count];
+        else
+            Array.Clear(t_memos[t_memosUsed]);
+        return t_memos[t_memosUsed++];
     }
 }

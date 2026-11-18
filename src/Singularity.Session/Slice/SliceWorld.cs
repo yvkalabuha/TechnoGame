@@ -299,7 +299,7 @@ internal sealed class SliceWorld
         {
             if (Products.Stage(actor, d) is not (DesignStage.Series or DesignStage.InService))
                 continue;
-            g = Math.Max(g, ProductsLayout.AltEngGen[Products.Alternatives(actor, d)[ProductsLayout.BaseSlot]]);
+            g = Math.Max(g, ProductsLayout.AltEngGen[Products.AltAt(actor, d, ProductsLayout.BaseSlot)]);
         }
         return g;
     }

@@ -373,7 +373,7 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
     {
         // A prc_set is a few processes (a design has ≤ 4 alternatives): the common case stays on the stack, no garbage per view row.
         Span<ProfileItem> stack = stackalloc ProfileItem[4];
-        Span<ProfileItem> items = prcSet.Length <= 4 ? stack[..prcSet.Length] : new ProfileItem[prcSet.Length];
+        Span<ProfileItem> items = prcSet.Length <= 4 ? stack[..prcSet.Length] : IndustryMath.ItemsScratch(prcSet.Length);
         for (int i = 0; i < prcSet.Length; i++)
         {
             int r = _l.RowOf(prcSet[i].ProcessNumber);

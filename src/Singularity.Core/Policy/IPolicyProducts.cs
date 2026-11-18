@@ -27,6 +27,9 @@ public interface IPolicyProducts
     /// <summary>Layout-global alternative per slot of the design (−1 for an empty slot).</summary>
     int[] Alternatives(int actorRow, int design);
 
+    /// <summary><c>prc_set</c> of the design (ascending process numbers); an implementation may return a shared array: do not mutate.</summary>
+    int[] PrcSet(int actorRow, int design) => DesignRules.PrcSet(Layout, Alternatives(actorRow, design));
+
     bool Knows(int actorRow, int nodeNumber, long month);
 
     /// <summary>

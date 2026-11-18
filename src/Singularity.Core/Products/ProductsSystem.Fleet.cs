@@ -389,13 +389,15 @@ public sealed partial class ProductsSystem
             book.SoldY[d] = next ? _soldY[d].Next[a] : _soldY[d].Current[a];
             if (book.Stage[d] == DesignStage.None)
                 continue;
-            int[] alts = next ? AltsNext(a, d) : Alternatives(a, d);
+            // The memo holds the alternatives and what follows from them alone; it is used while they are unchanged.
+            PrcMemo? memo = SameMemo(a, d, next);
+            int[] alts = memo?.Alts ?? (next ? AltsNext(a, d) : Alternatives(a, d));
             book.Gen[d] = DesignRules.Gen(_l, next ? _gp[d].Next[a] : _gp[d].Current[a], alts);
-            book.UnitCostFloor[d] = FloorOf(alts);
+            book.UnitCostFloor[d] = memo?.Floor ?? FloorOf(alts);
             if (!next)
             {
                 book.Perf[d] = DesignRules.Perf(_l, alts);
-                book.Upkeep[d] = UpkeepOf(alts);
+                book.Upkeep[d] = memo?.Upkeep ?? UpkeepOf(alts);
                 book.Bind[d] = Bind(a, d);
                 book.Excess[d] = ExcessDefects(a, d) > Fx6.Zero;
             }

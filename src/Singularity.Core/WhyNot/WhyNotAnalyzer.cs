@@ -53,6 +53,7 @@ public sealed partial class WhyNotAnalyzer
     /// <summary>All links of the target for <paramref name="actor"/> in month <paramref name="month"/>, sorted; empty when nothing stands in the way.</summary>
     public IReadOnlyList<Link> WhyNot(int actor, WhyNotTarget target, long month)
     {
+        ClosureArena.Reset();
         var links = new List<Link>();
         switch (target.Kind)
         {
