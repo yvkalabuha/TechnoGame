@@ -122,6 +122,8 @@
 | [TASK-0105](../development/tasks/TASK-0105-adr-0022-map-validator.md) | DONE | ADR-0022 map validator: region limit 150-400, great-power core quota, single status per region | MS-M1 |
 | [TASK-0106](../development/tasks/TASK-0106-bench-harness-exp0008.md) | DONE | Lab bench harness for EXP-0008: foreign-load gate, top-k frequency, repeat cap; alloc JSON provenance | MS-M0 |
 | [TASK-0107](../development/tasks/TASK-0107-tick-path-allocations.md) | DONE | Tick path allocations to <= 1 MiB/month (ADR-0023 p.2.1) | MS-M0 |
+| [TASK-0108](../development/tasks/TASK-0108-ui-instruments-gauge.md) | IN_PROGRESS | UI instruments: tokens, settings, contrast rules and GaugeControl (UI_INSTRUMENTS §8 steps 1-2) | MS-M1 |
+| [TASK-0109](../development/tasks/TASK-0109-t4-region-status-edge-cases.md) | IN_PROGRESS | T4: region status edge cases for 1945 (ADR-0022 p.2.6) | MS-M1 |
 
 ## Гипотезы
 
