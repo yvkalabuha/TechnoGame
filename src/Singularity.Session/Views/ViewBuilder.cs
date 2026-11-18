@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using Singularity.Core.Data;
 using Singularity.Core.Industry;
@@ -138,7 +139,25 @@ internal static class ViewBuilder
         }
         else
         {
-            Parallel.For(0, rows.Length, new ParallelOptions { MaxDegreeOfParallelism = maxThreads }, a => rows[a] = ActorInputs(w, a, month));
+            // Failures are recorded, not thrown: every actor runs, and the lowest failed actor is rethrown as is,
+            // so the exception does not depend on the thread count or on scheduling (as in TickRunner).
+            var errors = new Exception?[rows.Length];
+            Parallel.For(0, rows.Length, new ParallelOptions { MaxDegreeOfParallelism = maxThreads }, a =>
+            {
+                try
+                {
+                    rows[a] = ActorInputs(w, a, month);
+                }
+                catch (Exception e)
+                {
+                    errors[a] = e;
+                }
+            });
+            foreach (Exception? e in errors)
+            {
+                if (e is not null)
+                    ExceptionDispatchInfo.Capture(e).Throw();
+            }
         }
         // The adapter of the policy asks GFront(t − 1); the fielded set does not depend on the month, but the call is the same.
         return new MonthInputsView(month, w.Products.GFront(month - 1), ImmutableCollectionsMarshal.AsImmutableArray(rows));
