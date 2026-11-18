@@ -22,6 +22,7 @@ public class LegendDataTests
     {
         Assert.Equal(new[] { "FND", "PRN", "ENG", "CMP", "PRC", "APP" }, LegendData.Types.Select(t => t.Code));
         Assert.Equal(new[] { "ntype.0", "ntype.1", "ntype.2", "ntype.3", "ntype.4", "ntype.5" }, LegendData.Types.Select(t => t.NameKey));
+        Assert.Equal(6, LegendData.Types.Select(t => t.Shape).Distinct().Count());
         Assert.Equal("square", LegendData.Types[4].Shape);
         Assert.Equal("diamond", LegendData.Types[5].Shape);
     }

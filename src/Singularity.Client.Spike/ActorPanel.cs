@@ -40,6 +40,8 @@ public sealed partial class ActorPanel : PanelContainer
     public event Action Closed;
 
     public int Actor => _actor;
+    /// <summary>Screenshot run: true while the order button is inside the panel and the outer scroll is off (v0.5d).</summary>
+    public bool ApplyInView => _apply.GetGlobalRect().End.Y <= GetGlobalRect().End.Y && _scroll.VerticalScrollMode == ScrollContainer.ScrollMode.Disabled;
     /// <summary>The player's own power: only it has order controls; any other power opens read-only.</summary>
     public int Player { get; set; }
     bool Foreign => _actor != Player;
@@ -47,6 +49,7 @@ public sealed partial class ActorPanel : PanelContainer
     readonly PanelContainer _foreign = new();
     readonly ColorRect _chip = new() { CustomMinimumSize = new Vector2(16, 16), SizeFlagsVertical = SizeFlags.ShrinkCenter };
     readonly Label _foreignName = Ui.Lbl("", 16, null, FontKind.Draft);
+    readonly ColorRect _band = new() { CustomMinimumSize = new Vector2(6, 0) };
     public Func<int, Color> TintOf;
     public event Action BackToOwn;
     readonly List<Control> _orderControls = new();
@@ -61,6 +64,7 @@ public sealed partial class ActorPanel : PanelContainer
     // The right panel without an area is the read-only view of a foreign power with every section.
     readonly bool _areaMode;
     readonly VBoxContainer _secBudget = new(), _secDesigns = new(), _secLicence = new(), _secWhy = new();
+    readonly VBoxContainer _finLaterBox = new();
     Control _treeBtn, _headerView, _prodLater, _finLater;
     AreaId _area = AreaId.Map;
     public AreaId Area
@@ -110,7 +114,10 @@ public sealed partial class ActorPanel : PanelContainer
         back.TooltipText = "tip.backown";
         fv.AddChild(back);
         _foreign.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, Ui.Ink, 1, 8, Ui.R2));
-        _foreign.AddChild(fv);
+        // A 6 px band on the left edge in the power's tint (set in ShowActor) marks whose panel this is.
+        var fh = new HBoxContainer(); fh.AddThemeConstantOverride("separation", 10);
+        fh.AddChild(_band); fv.SizeFlagsHorizontal = SizeFlags.ExpandFill; fh.AddChild(fv);
+        _foreign.AddChild(fh);
         _foreign.Visible = false; _root.AddChild(_foreign);
 
         foreach (var sec in new[] { _secBudget, _secDesigns, _secLicence, _secWhy }) { sec.AddThemeConstantOverride("separation", 6); _root.AddChild(sec); }
@@ -149,8 +156,19 @@ public sealed partial class ActorPanel : PanelContainer
         _secDesigns.AddChild(_designs);
         _prodLater = Ui.Wrap("area.production.later", 14, Ui.Ink3); _secDesigns.AddChild(_prodLater);
         Section("panel.licence", _secLicence);
-        _secLicence.AddChild(_licence);
-        _finLater = Ui.Wrap("area.finance.later", 14, Ui.Ink3); _secLicence.AddChild(_finLater);
+        if (areaMode)
+        {
+            // Finance: only the licence block scrolls, so that the order button above it stays in view at 150 % (v0.5d).
+            var ls = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, CustomMinimumSize = new Vector2(0, 0), SizeFlagsVertical = SizeFlags.ExpandFill };
+            _licence.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            var lv = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill }; lv.AddChild(_licence); lv.AddChild(_finLaterBox);
+            ls.AddChild(lv); _secLicence.AddChild(ls);
+            _secLicence.SizeFlagsVertical = SizeFlags.ExpandFill;
+            _pad.SizeFlagsVertical = SizeFlags.ExpandFill; _root.SizeFlagsVertical = SizeFlags.ExpandFill;
+        }
+        else _secLicence.AddChild(_licence);
+        _finLater = Ui.Wrap("area.finance.later", 14, Ui.Ink3); _finLaterBox.AddChild(_finLater);
+        if (!areaMode) _secLicence.AddChild(_finLaterBox);
         Section("panel.why", _secWhy);
         _treeBtn = Ui.Btn("ui.tree", () => OpenTree?.Invoke()); _treeBtn.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; _secWhy.AddChild(_treeBtn);
         _secWhy.AddChild(_why);
@@ -231,9 +249,10 @@ public sealed partial class ActorPanel : PanelContainer
     {
         // Height follows the content (an inset, not a full-height column), capped by the window.
         float want = _root.GetCombinedMinimumSize().Y + 6, cap = GetViewportRect().Size.Y - 120;
-        _scroll.CustomMinimumSize = new Vector2(0, Math.Min(want, cap));
-        _pad.AddThemeConstantOverride("margin_right", want <= cap ? 0 : 12);
-        _scroll.VerticalScrollMode = want <= cap ? ScrollContainer.ScrollMode.Disabled : ScrollContainer.ScrollMode.Auto;   // a scroll bar only when the content really does not fit
+        bool finance = _areaMode && _area == AreaId.Finance;   // Finance: the outer scroll stays off, the licence block scrolls on its own
+        _scroll.CustomMinimumSize = new Vector2(0, finance ? cap : Math.Min(want, cap));
+        _pad.AddThemeConstantOverride("margin_right", want <= cap || finance ? 0 : 12);
+        _scroll.VerticalScrollMode = want <= cap || finance ? ScrollContainer.ScrollMode.Disabled : ScrollContainer.ScrollMode.Auto;   // a scroll bar only when the content really does not fit
         var s = _host.Snap;
         if (s == null || _actor < 0 || !Visible) return;
         if (s.WhyActor != _actor) return;
@@ -251,7 +270,7 @@ public sealed partial class ActorPanel : PanelContainer
         string id = _host.Layout.ActorIds[_actor];
         _title.Text = Names.Actor(id);
         _foreign.Visible = Foreign;
-        if (Foreign) { _foreignName.Text = Names.Actor(_host.Layout.ActorIds[_actor]); if (TintOf != null) _chip.Color = TintOf(_actor); }
+        if (Foreign) { _foreignName.Text = Names.Actor(_host.Layout.ActorIds[_actor]); if (TintOf != null) { _chip.Color = TintOf(_actor); _band.Color = _chip.Color; } }
         foreach (var c in _orderControls) c.Visible = !Foreign;
         foreach (var sl in _sl) { sl.Editable = !Foreign; sl.MouseFilter = Foreign ? MouseFilterEnum.Ignore : MouseFilterEnum.Stop; sl.Modulate = new Color(1, 1, 1, Foreign ? 0.45f : 1f); }
         _sharesNote.Visible = Foreign;
