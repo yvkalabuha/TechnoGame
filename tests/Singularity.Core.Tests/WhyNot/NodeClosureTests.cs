@@ -8,7 +8,14 @@ public class NodeClosureTests
 {
     // Rows 0…n−1; requires[r] = groups of members; left[r] = money left; known[r]; number[r] = row + 100 unless given.
     private static NodeClosure Make(int[][][] requires, long[] left, bool[]? known = null, int[]? number = null) =>
-        new(requires.Length, r => known?[r] ?? false, r => requires[r], r => Fx6.FromInt((int)left[r]), r => number?[r] ?? r + 100);
+        Fresh(requires.Length, r => known?[r] ?? false, r => requires[r], r => Fx6.FromInt((int)left[r]), r => number?[r] ?? r + 100);
+
+    // A NodeClosure takes its sets from the thread's arena: every analysis starts with a Reset, as WhyNotAnalyzer.WhyNot does.
+    private static NodeClosure Fresh(int count, Func<int, bool> known, Func<int, int[][]> groups, Func<int, Fx6> left, Func<int, int> number)
+    {
+        ClosureArena.Reset();
+        return new NodeClosure(count, known, groups, left, number);
+    }
 
     private static bool[] Set(int n, params int[] rows)
     {
@@ -76,7 +83,7 @@ public class NodeClosureTests
         NodeClosure c = Make(requires, [1, 9, 6], number: [10, 11, 5]);
         Assert.Equal(2, c.Choose([0, 2]));
         Assert.Equal(Set(3, 2), c.OfRequirements([[0, 2]], []));
-        var known = new NodeClosure(3, r => r == 2, r => requires[r], r => Fx6.FromInt(1), r => r);
+        var known = Fresh(3, r => r == 2, r => requires[r], r => Fx6.FromInt(1), r => r);
         Assert.Equal(Set(3), known.OfRequirements([[0, 2]], []));
         // Equal cost: the smaller node number.
         NodeClosure tie = Make([[], []], [4, 4], number: [30, 20]);

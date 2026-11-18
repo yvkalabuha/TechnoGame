@@ -5,6 +5,8 @@ namespace Singularity.Core.WhyNot;
 /// <summary>
 /// Requires-closures of spec §5.6 (v0.15, W1) over an abstract graph: <c>cl(n)</c> is empty for a known node, else <c>n</c> and the closure of the
 /// chosen member (least closure cost, ties by node number) of every requires-group without a known member. Pure; the graph is acyclic.
+/// Rule: its sets come from the thread's <see cref="ClosureArena"/>, so call <see cref="ClosureArena.Reset"/> before each analysis
+/// (<c>WhyNotAnalyzer.WhyNot</c> does); without it the arena only grows.
 /// </summary>
 internal sealed class NodeClosure(int count, Func<int, bool> known, Func<int, int[][]> groups, Func<int, Fx6> left, Func<int, int> number)
 {

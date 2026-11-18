@@ -13,7 +13,8 @@ internal sealed class ChunkedList<T> : IEnumerable<T>
 
     public int Count { get; private set; }
 
-    public T this[int index] => _chunks[index / ChunkSize][index % ChunkSize];
+    public T this[int index] =>
+        (uint)index >= (uint)Count ? throw new ArgumentOutOfRangeException(nameof(index), index, "Index outside the list.") : _chunks[index / ChunkSize][index % ChunkSize];
 
     public void Add(T item)
     {
