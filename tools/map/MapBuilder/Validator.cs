@@ -6,7 +6,7 @@ namespace Singularity.MapBuilder;
 internal static class Validator
 {
     private static readonly string[] Confidences = { "H", "M", "L" };
-    private static readonly string[] Statuses = { "core", "colony", "protectorate", "mandate", "leased" };
+    private static readonly string[] Statuses = { "core", "colony", "protectorate", "mandate", "leased", "unclaimed" };
     private static readonly Regex PolityId = new("^[A-Z][A-Z0-9_]*$", RegexOptions.Compiled);
 
     public static void Run(BuildResult r, List<Atom> atoms, SortedSet<string> adm0, OwnerFile? owners, BuildOptions o)
@@ -181,7 +181,7 @@ internal static class Validator
         r.Info.Add($"event lines checked against region borders: {drawn}");
     }
 
-    private static void ValidateOwners(BuildResult r, OwnerFile owners, HashSet<string> idSet, HashSet<string> regionSet, HashSet<string> polityIds)
+    internal static void ValidateOwners(BuildResult r, OwnerFile owners, HashSet<string> idSet, HashSet<string> regionSet, HashSet<string> polityIds)
     {
         if (owners.AsOf != "1945-10-01") r.Errors.Add($"owners: as_of must be 1945-10-01, got '{owners.AsOf}'");
         var def = new Dictionary<string, OwnerRow>(StringComparer.Ordinal);
@@ -190,7 +190,12 @@ internal static class Validator
         {
             if (string.IsNullOrWhiteSpace(row.Source)) r.Errors.Add($"owners {what}: source is required");
             if (!Confidences.Contains(row.Confidence)) r.Errors.Add($"owners {what}: confidence must be H, M or L, got '{row.Confidence}'");
-            if (!polityIds.Contains(row.Owner)) r.Errors.Add($"owners {what}: unknown owner '{row.Owner}'");
+            if (row.Status == "unclaimed")
+            {
+                if (row.Owner != null) r.Errors.Add($"owners {what}: unclaimed needs owner null, got '{row.Owner}'");
+            }
+            else if (row.Owner == null) r.Errors.Add($"owners {what}: owner is null, only status unclaimed allows that");
+            else if (!polityIds.Contains(row.Owner)) r.Errors.Add($"owners {what}: unknown owner '{row.Owner}'");
             if (!polityIds.Contains(row.Controller)) r.Errors.Add($"owners {what}: unknown controller '{row.Controller}'");
             if (!Statuses.Contains(row.Status)) r.Errors.Add($"owners {what}: bad status '{row.Status}'");
             if (row.Status == "leased" && row.Owner == row.Controller) r.Errors.Add($"owners {what}: leased needs controller != owner");
@@ -217,7 +222,7 @@ internal static class Validator
                 r.Errors.Add($"owners: province {p.Id} has no record");
                 continue;
             }
-            r.Owners[p.Id] = new Resolved { Owner = row.Owner, Controller = row.Controller, Status = row.Status };
+            r.Owners[p.Id] = new Resolved { Owner = row.Owner ?? "", Controller = row.Controller, Status = row.Status };
             if (!controllersByRegion.TryGetValue(region, out var set)) controllersByRegion[region] = set = new SortedSet<string>(StringComparer.Ordinal);
             set.Add(row.Controller);
         }

@@ -106,8 +106,7 @@ rules:
   - merge: {from: [EGY-1549, EGY-1551, EGY-1552, EGY-5494]}
   - merge: {from: [ERI-1561, ERI-1564]}
   - merge: {from: [ESP-5815, ESP-5829, ESP-5835, ESP-5842]}
-  - merge: {from: [ETH-3131, ETH-3133, ETH-3136]}
-  - merge: {from: [ETH-3134, ETH-3135]}
+  - merge: {from: [ETH-3131, ETH-3133, ETH-3135, ETH-3136]}
   - merge: {from: [FJI-2617, FJI-2618, FJI-2658]}
   - merge: {from: [FRA-1442, FRA-4601, FRA-4602, FRA-4603]}
   - merge: {from: [FSM-4941, FSM-4942, FSM-4943, FSM-4944]}

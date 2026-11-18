@@ -99,7 +99,7 @@ defaults:
   - {region: trieste_zone_a, owner: ITA, controller: AMG_TRIESTE, status: core, confidence: M, source: "Zone A under Allied Military Government (US and British) from 1945-06-12; Italian de jure until 1947-09-15 (RR-0020 C14, C17); draft, T4 to verify"}
   - {region: trieste_zone_b, owner: ITA, controller: YUG, status: core, confidence: M, source: "Zone B under Yugoslav military administration; Italian de jure until 1947-09-15 (RR-0020 C15, C17); draft, T4 to verify"}
 # World regions (TASK-0095): imported from docs/research/owners-1945-world.md (T4 draft of research-scientist). Source keys K1-K12 are listed there.
-# Rule (#313): owner = metropole/protector for colonies, mandates and protectorates; occupation changes the controller only. Owner decisions applied (TASK-0096): #397 Danzig owner POL; #399 protectorates owner = protecting power, independence by events; #400 Berlin is two regions (west, east); #401 Tibet owner and controller TIB until the 1950 event, Ogaden owner GBR, Spratly without owner (polity UNOWNED); #402 Taiwan as #313.
+# Rule (#313): owner = metropole/protector for colonies, mandates and protectorates; occupation changes the controller only. Owner decisions applied (TASK-0096): #397 Danzig owner POL; #399 protectorates owner = protecting power, independence by events; #400 Berlin is two regions (west, east); #401 Tibet owner and controller TIB until the 1950 event, Ogaden owner GBR, Spratly without owner (owner null, status unclaimed); #402 Taiwan as #313.
 # Mixed regions (F1 of the research) are given by the dominant part; the split is a map decision for the owner.
   - {region: afghanistan, owner: AFG, controller: AFG, status: core, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: akrotiri_sovereign_base_area, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
@@ -190,7 +190,7 @@ defaults:
   - {region: equatorial_guinea, owner: ESP, controller: ESP, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: eritrea, owner: ITA, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K1, K6"}
   - {region: ethiopia_amhara, owner: ETH, controller: ETH, status: core, confidence: M, source: "owners-1945-world.md: K2"}
-  - {region: ethiopia_ogaden, owner: GBR, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K1; #401: Ogaden under British military administration (owner GBR by decision; Ethiopian de jure sovereignty ignored); Dire Dawa included by NE merge"}
+  - {region: ethiopia_ogaden, owner: GBR, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K1; #401: Ogaden under British military administration (owner GBR by decision; Ethiopian de jure sovereignty ignored); status colony is the nearest of the allowed statuses (there is none for military administration)"}
   - {region: ethiopia_oromiya, owner: ETH, controller: ETH, status: core, confidence: M, source: "owners-1945-world.md: K2"}
   - {region: falkland_islands, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: federated_states_of_micronesia, owner: JPN, controller: USA, status: mandate, confidence: M, source: "owners-1945-world.md: K3, K8"}
@@ -335,7 +335,7 @@ defaults:
   - {region: south_africa_northern_cape, owner: ZAF, controller: ZAF, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: south_georgia_and_the_islands, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: spain, owner: ESP, controller: ESP, status: core, confidence: H, source: "owners-1945-world.md: K2"}
-  - {region: spratly_is, owner: UNOWNED, controller: JPN, status: core, confidence: L, source: "owners-1945-world.md: K3; #401: no owner (terra nullius), Japanese garrison until repatriation; UNOWNED is a placeholder polity without government, status core is formal"}
+  - {region: spratly_is, owner: null, controller: JPN, status: unclaimed, confidence: L, source: "owners-1945-world.md: K3; #401: no owner (terra nullius), Japanese garrison until repatriation"}
   - {region: sri_lanka, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1, K6 B13"}
   - {region: sudan_north_kordufan, owner: SDN_AE, controller: SDN_AE, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: sudan_northern, owner: SDN_AE, controller: SDN_AE, status: colony, confidence: H, source: "owners-1945-world.md: K1"}

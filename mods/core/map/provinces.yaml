@@ -940,14 +940,14 @@ provinces:
   - {id: ethiopia_amhara.benshangul_gumaz, area_km2: 50275, centroid: [10565522, 35462795], label: [10596550, 35316557], coastal: false}
   - {id: ethiopia_amhara.gambela_peoples, area_km2: 25592, centroid: [7821232, 34221846], label: [7811850, 33963213], coastal: false}
   - {id: ethiopia_amhara.tigray, area_km2: 49396, centroid: [13777667, 38441832], label: [13562170, 39115137], coastal: false}
-  - {id: ethiopia_ogaden.somali_1, area_km2: 65902, centroid: [9428060, 42470836], label: [9285946, 43121618], coastal: false}
-  - {id: ethiopia_ogaden.somali_2, area_km2: 80043, centroid: [7381275, 45619739], label: [7129540, 45768174], coastal: false}
-  - {id: ethiopia_ogaden.somali_3, area_km2: 94169, centroid: [6331456, 43547844], label: [5955812, 43653733], coastal: false}
-  - {id: ethiopia_ogaden.somali_4, area_km2: 72838, centroid: [5000532, 41260533], label: [5051953, 41310353], coastal: false}
-  - {id: ethiopia_oromiya.oromiya_1, area_km2: 111965, centroid: [8901754, 36609440], label: [8803029, 37465324], coastal: false}
-  - {id: ethiopia_oromiya.oromiya_2, area_km2: 74644, centroid: [8314509, 41169736], label: [7994590, 40974237], coastal: false}
-  - {id: ethiopia_oromiya.oromiya_3, area_km2: 76334, centroid: [7008584, 39601876], label: [7265539, 39441861], coastal: false}
-  - {id: ethiopia_oromiya.oromiya_4, area_km2: 64967, centroid: [4786691, 38460875], label: [4987048, 38348246], coastal: false}
+  - {id: ethiopia_ogaden.somali_1, area_km2: 65092, centroid: [9420224, 42482480], label: [9285946, 43121618], coastal: false}
+  - {id: ethiopia_ogaden.somali_2, area_km2: 79841, centroid: [7379929, 45623169], label: [7129540, 45769907], coastal: false}
+  - {id: ethiopia_ogaden.somali_3, area_km2: 94060, centroid: [6330248, 43550221], label: [5956230, 43655582], coastal: false}
+  - {id: ethiopia_ogaden.somali_4, area_km2: 72895, centroid: [5001128, 41261398], label: [5051953, 41311170], coastal: false}
+  - {id: ethiopia_oromiya.oromiya_1, area_km2: 111792, centroid: [8902406, 36606475], label: [8803029, 37453753], coastal: false}
+  - {id: ethiopia_oromiya.oromiya_2, area_km2: 73654, centroid: [8335727, 41218080], label: [7994590, 41007054], coastal: false}
+  - {id: ethiopia_oromiya.oromiya_3, area_km2: 77868, centroid: [7053854, 39611379], label: [7315303, 39477929], coastal: false}
+  - {id: ethiopia_oromiya.oromiya_4, area_km2: 65660, centroid: [4798133, 38466806], label: [4987048, 38348246], coastal: false}
   - {id: ethiopia_oromiya.southern_nations_nationalities_and_p, area_km2: 114647, centroid: [6460371, 36726344], label: [6448522, 36293300], coastal: false}
   - {id: falkland_islands.falkland_islands, area_km2: 11553, centroid: [-51733307, -59376103], label: [-51794245, -58613888], coastal: true}
   - {id: faroe_islands.eysturoyar, area_km2: 1321, centroid: [62074027, -6870555], label: [62199185, -6788307], coastal: true}

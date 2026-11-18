@@ -82,7 +82,6 @@ polities:
   - {id: TANGIER, name: "Tangier International Zone", government: false}
   - {id: THA, name: "Thailand", ne_adm0: THA}
   - {id: TIB, name: "Tibet"}
-  - {id: UNOWNED, name: "No owner (terra nullius)", government: false}
   - {id: TUR, name: "Turkey", ne_adm0: TUR}
   - {id: URY, name: "Uruguay", ne_adm0: URY}
   - {id: VEN, name: "Venezuela", ne_adm0: VEN}

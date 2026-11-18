@@ -26,7 +26,7 @@ rules:
   - isolate: {codes: [CAN-686], region: canada_newfoundland, ref: "RR-0020 B99"}
   - isolate: {codes: [JPN-3502], region: japan_okinawa, ref: "RR-0020 B111"}
   - isolate: {codes: [TZA-3337, TZA-3380, TZA-3381, TZA-3383, TZA-3384], region: tanzania_zanzibar, ref: "RR-0020 B81"}
-  - isolate: {codes: [ETH-3134, ETH-3135], region: ethiopia_ogaden, ref: "#401: Ogaden under British military administration 1941-1948 (owners-1945-world.md); Dire Dawa is merged with the Somali region in the NE data (approximation)"}
+  - isolate: {codes: [ETH-3134], region: ethiopia_ogaden, ref: "#401: Ogaden under British military administration (owners-1945-world.md); the NE Somali region stands for Ogaden and Haud (approximation)"}
   - isolate: {codes: [CHN-1662], region: china_tibet, ref: "RR-0020 B113"}
   - isolate: {codes: [CMR-1477, CMR-799], region: cameroon_southern_british, ref: "RR-0020 B77: Southern British Cameroons joined Cameroon 1961-10-01"}
   - isolate: {codes: ["WEB+00?"], region: palestine_west_bank, ref: "RR-0020 B41"}

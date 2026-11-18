@@ -37,6 +37,8 @@ internal static class Render
         return (uint)(Ch(R + m) << 16 | Ch(G + m) << 8 | Ch(B + m));
     }
 
+    private const uint Unclaimed = 0xF2F2F2;   // no owner: land left unfilled, no palette slot
+
     public static void Png(BuildResult r, string path)
     {
         double k = Math.Cos(53 * Math.PI / 180);
@@ -47,7 +49,7 @@ internal static class Render
 
         var pal = Palette(r).ToDictionary(x => x.Polity, x => x.Rgb, StringComparer.Ordinal);
         var polity = r.Polities.ToDictionary(p => p.Id, StringComparer.Ordinal);
-        uint Col(string id) => pal.GetValueOrDefault(id, 0x808080u);
+        uint Col(string id) => id == "" ? Unclaimed : pal.GetValueOrDefault(id, 0x808080u);
         uint[] Colours(string id) =>
             polity.TryGetValue(id, out var pe) && pe.Kind == "joint" ? pe.Members.Select(Col).ToArray() : new[] { Col(id) };
 

@@ -2807,6 +2807,7 @@ adjacency:
   - [ethiopia_amhara.amhara_2, ethiopia_amhara.tigray]
   - [ethiopia_amhara.amhara_2, ethiopia_oromiya.oromiya_1]
   - [ethiopia_amhara.amhara_2, ethiopia_oromiya.oromiya_2]
+  - [ethiopia_amhara.amhara_2, ethiopia_oromiya.oromiya_3]
   - [ethiopia_amhara.benshangul_gumaz, ethiopia_oromiya.oromiya_1]
   - [ethiopia_amhara.benshangul_gumaz, s_sudan.upper_nile]
   - [ethiopia_amhara.benshangul_gumaz, sudan_north_kordufan.blue_nile]

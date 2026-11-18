@@ -33,9 +33,33 @@ public class MapBuilderTests
         {
             Assert.Contains("confidence: ", l);
             Assert.Contains("source: \"", l);
-            Assert.Contains(l.Split("owner: ")[1].Split(',')[0], polities);
+            var ownerId = l.Split("owner: ")[1].Split(',')[0];
+            if (ownerId == "null") Assert.Contains("status: unclaimed", l);
+            else Assert.Contains(ownerId, polities);
             Assert.Contains(l.Split("controller: ")[1].Split(',')[0], polities);
         }
+    }
+
+    private static List<string> OwnerErrors(string? owner, string status, string? controller = "JPN")
+    {
+        var r = new BuildResult();
+        r.Pieces.Add(new Piece { Id = "reg.p1" });
+        var f = new OwnerFile
+        {
+            AsOf = "1945-10-01",
+            Defaults = { new OwnerRow { Region = "reg", Owner = owner, Controller = controller ?? "", Status = status, Source = "s", Confidence = "L" } }
+        };
+        Validator.ValidateOwners(r, f, new HashSet<string> { "reg.p1" }, new HashSet<string> { "reg" }, new HashSet<string> { "JPN", "FRA" });
+        return r.Errors;
+    }
+
+    [Fact]
+    public void Owners_unclaimed_allows_null_owner_only_with_that_status()
+    {
+        Assert.Empty(OwnerErrors(null, "unclaimed"));
+        Assert.Contains(OwnerErrors(null, "core"), e => e.Contains("only status unclaimed"));
+        Assert.Contains(OwnerErrors("FRA", "unclaimed"), e => e.Contains("unclaimed needs owner null"));
+        Assert.Contains(OwnerErrors(null, "unclaimed", "XXX"), e => e.Contains("unknown controller"));
     }
 
     [Fact]

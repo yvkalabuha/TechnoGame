@@ -16,7 +16,7 @@ internal sealed class OwnerRow
 {
     public string? Region { get; set; }
     public string? Province { get; set; }
-    public string Owner { get; set; } = "";
+    public string? Owner { get; set; }   // null only with status unclaimed (#401)
     public string Controller { get; set; } = "";
     public string Status { get; set; } = "";
     public string Source { get; set; } = "";
