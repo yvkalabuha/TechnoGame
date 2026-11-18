@@ -8,8 +8,8 @@ namespace Singularity.Lab.Bench;
 /// <param name="Total">Busy + idle + iowait: every tick of every CPU, so ΔTotal = window × logical CPUs × USER_HZ.</param>
 public readonly record struct CpuTotals(long Busy, long Total);
 
-/// <summary>One line of <c>/proc/[pid]/stat</c>: pid, comm, utime + stime (USER_HZ ticks, all threads) and the start time (ticks after boot).</summary>
-public readonly record struct PidStat(int Pid, string Comm, long CpuTicks, long StartTime);
+/// <summary>One line of <c>/proc/[pid]/stat</c>: pid, comm, utime + stime (USER_HZ ticks, all threads), the start time (ticks after boot) and the parent pid (field 4).</summary>
+public readonly record struct PidStat(int Pid, string Comm, long CpuTicks, long StartTime, int Ppid = 0);
 
 /// <summary>
 /// Pure parsers of the Linux <c>/proc</c> files the bench reads (EXP-0008 П10, ADR-0023 gate addition). No I/O here: the callers pass the
@@ -68,7 +68,9 @@ public static class ProcParse
             || !long.TryParse(rest[12], NumberStyles.None, CultureInfo.InvariantCulture, out long st)
             || !long.TryParse(rest[19], NumberStyles.None, CultureInfo.InvariantCulture, out long start))
             return null;
-        return new PidStat(pid, line[(open + 1)..close], ut + st, start);
+        // ppid (field 4) = index 1 after ')'.
+        int ppid = int.TryParse(rest[1], NumberStyles.None, CultureInfo.InvariantCulture, out int pp) ? pp : 0;
+        return new PidStat(pid, line[(open + 1)..close], ut + st, start, ppid);
     }
 
     /// <summary>The first field of a stat line: the pid.</summary>

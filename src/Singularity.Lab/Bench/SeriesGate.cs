@@ -23,6 +23,13 @@ public sealed record AttemptEval(bool Flag, bool Evidence, IReadOnlyList<string>
 
 public enum ProcessStatus { NeedsRepeat, Accepted, Excluded }
 
+/// <summary>A forbidden process seen in a foreign list (#355): where, pid, comm, mean CPUs over the window, and whether it is fatal.</summary>
+public sealed record ForbiddenHit(string Where, int Pid, string Comm, double Cpus, bool Fatal)
+{
+    public override string ToString() =>
+        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{Where}: {Comm} (pid {Pid}, {Cpus:F3} CPU{(Fatal ? "" : ", below the limit")})");
+}
+
 /// <summary>The decision on a process after its attempts so far.</summary>
 /// <param name="AcceptedAttempt">The attempt number that enters the statistics (Accepted only).</param>
 /// <param name="AcceptedBy">"clean" (first attempt without a flag) or "no-evidence" (independent-evidence rule: every attempt flagged, but not every one has evidence).</param>
@@ -119,6 +126,15 @@ public static class SeriesGate
         }
         return new ProcessDecision(ProcessStatus.Excluded, null, null, evals);
     }
+
+    /// <summary>
+    /// #355 check (ADR-0023 п. 1.1): the foreign processes whose comm starts with a forbidden name (case-insensitive), skipping
+    /// <paramref name="excluded"/> (the driver and its ancestor chain). Fatal = mean CPUs over the window ≥ <c>forbidden_min_cpus</c>;
+    /// a hit below it is recorded only.
+    /// </summary>
+    public static List<ForbiddenHit> Forbidden(IEnumerable<(int Pid, string Comm, double Cpus)> procs, BenchGate g, IReadOnlySet<int> excluded, string where) =>
+        [.. procs.Where(p => !excluded.Contains(p.Pid) && g.ForbiddenProcesses.Any(n => p.Comm.StartsWith(n, StringComparison.OrdinalIgnoreCase)))
+            .Select(p => new ForbiddenHit(where, p.Pid, p.Comm, p.Cpus, p.Cpus >= g.ForbiddenMinCpus))];
 
     /// <summary>
     /// The exclusion part of INCONCLUSIVE (ADR-0023 п. 1.7, EXP-0008 П5.4): in the outcome block excluded &gt; frac; a seed of the outcome block

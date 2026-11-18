@@ -15,6 +15,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- TASK-0106: SeriesDriver internals (#355 check, ancestor exclusion) are unit-tested. -->
+    <InternalsVisibleTo Include="Singularity.Lab.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="examples\**\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

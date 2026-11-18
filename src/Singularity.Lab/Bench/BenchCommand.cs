@@ -107,6 +107,10 @@ internal static class BenchCommand
             throw new UsageException("--runs must be both, daily or monthly.");
         string? reference = o.Optional("reference");
         int? attempt = o.Int("attempt", 0, 100);
+        // Smoke series (gate.main_pass_only): no f_ref was measured; the run is marked smoke instead of refusing.
+        bool noFref = Bool(o, "no-fref", false);
+        if (noFref && fref is not null)
+            throw new UsageException("--no-fref true and --fref exclude each other.");
         if (manifestPath is not null)
         {
             BenchManifest m = BenchManifest.Load(manifestPath);
@@ -118,7 +122,7 @@ internal static class BenchCommand
             RunSwitches sw = Switches(o, m.HashCheckpoints);
             // A reference variant (П9 п. 1) changes the switches on purpose: it is a reference run, not a smoke run.
             bool smoke = (warmup is int w && w != m.WarmupMonths) || (measure is int n && n != m.MeasureMonths)
-                || (reference is null && sw.HashCheckpoints != m.HashCheckpoints) || runs != "both";
+                || (reference is null && sw.HashCheckpoints != m.HashCheckpoints) || runs != "both" || noFref;
             // П5: a manifest (official) run without f_ref could not be checked for throttling afterwards; refuse instead of writing
             // "throttled": null. Smoke runs are never part of the analysis, so they may go without it.
             if (fref is null && !smoke)

@@ -56,6 +56,26 @@ public static class LoadMath
         return list.Count > n ? list.GetRange(0, n) : list;
     }
 
+    /// <summary>
+    /// The ancestor chain of <paramref name="pid"/> (parent, grandparent, … up to pid 1 or an unreadable entry) through the ppid of each
+    /// <c>/proc/[pid]/stat</c>. Used by the #355 check: the session that launched the series driver is not a foreign build or agent.
+    /// Stops on a cycle or after 64 levels.
+    /// </summary>
+    public static List<PidStat> Ancestors(int pid, Func<int, PidStat?> stat)
+    {
+        var chain = new List<PidStat>();
+        var seen = new HashSet<int> { pid };
+        int cur = pid;
+        for (int i = 0; i < 64; i++)
+        {
+            if (stat(cur) is not PidStat s || s.Ppid <= 0 || !seen.Add(s.Ppid) || stat(s.Ppid) is not PidStat parent)
+                break;
+            chain.Add(parent);
+            cur = parent.Pid;
+        }
+        return chain;
+    }
+
     /// <summary>Sums the top lists of several windows by (pid, comm) and keeps the n largest (the union window of a process).</summary>
     public static List<ForeignProcess> MergeTop(IEnumerable<IReadOnlyList<ForeignProcess>> windows, long dTotal, int n)
     {

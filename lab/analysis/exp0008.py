@@ -161,7 +161,6 @@ def point_stats(procs):
         "gen2_total": sum(p["gen2"] for p in procs),
     }
     out["K_d_gt_150_flag"] = out["K_d_p95_ms"] is not None and out["K_d_p95_ms"] > KD_FLAG_MS
-    out["gc_pause_le_2pct"] = out["gc_pause_share_pooled"] is not None and out["gc_pause_share_pooled"] <= GC_PAUSE_MAX
     return out
 
 
@@ -246,6 +245,14 @@ def analyse(series_dir):
     s = load(os.path.join(series_dir, "series.json"))
     gate = s["gate"]
     outcome_block = gate["outcome_block"]
+    if "main" not in s:
+        # Exit 3 (not started), 5 (INVALID (б) #355) or 1 before the main pass: no statistics.
+        outcome = "INVALID" if s.get("exit_code") in (1, 5) else "NOT_STARTED"
+        reasons = [f"#355: {s['invalid_355']}"] if s.get("invalid_355") else []
+        return {"experiment": s["experiment"], "manifest_hash": s["manifest_hash"], "series_exit_code": s.get("exit_code"),
+                "smoke": s.get("smoke"), "outcome": outcome, "outcome_point": None, "outcome_marks": [], "invalid_reasons": reasons,
+                "exit_meaning": s.get("exit_meaning"), "last_stage": s.get("last_stage"), "points": {}, "points_r2": {}, "blocks": {},
+                "r1_row": None, "r2_row": None, "r1_r2_differ": False, "r2d": {"by_threads": {}, "debt_0045_closes": False}}
     procs = s["main"]["processes"]
     by_block = {}
     chosen, firsts, gc_all, thermal_hits, all_stats = {}, {}, {}, {}, []

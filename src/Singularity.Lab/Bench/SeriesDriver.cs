@@ -16,7 +16,8 @@ namespace Singularity.Lab.Bench;
 /// <item>reference variants (П9 п. 1) with the same gate, R modes with the foreign-only gate, the profile;</item>
 /// <item>post-series machine record.</item>
 /// </list>
-/// Exit codes: 0 series done; 1 a child failed (INVALID or a crash); 3 pre-series stop; 4 INCONCLUSIVE by exclusions. A series is never
+/// Exit codes: 0 series done; 1 a child failed (INVALID (а) or a crash); 2 usage error; 3 not started (no quiet before the deadline);
+/// 4 INCONCLUSIVE by exclusions; 5 INVALID (б) by #355 (a forbidden process at work on the machine). A series is never
 /// resumed or repeated by hand: the output directory must be new (the repeat plan is the driver's alone).
 /// </summary>
 internal static class SeriesDriver
@@ -33,6 +34,21 @@ internal static class SeriesDriver
         public Stopwatch Clock { get; } = Stopwatch.StartNew();
         public string? Invalid355 { get; set; }
         public int VirtualRepeats { get; set; }
+        /// <summary>The driver and its ancestor chain (the launching session): never a #355 violation.</summary>
+        public HashSet<int> Excluded355 { get; } = [Environment.ProcessId];
+        public List<PidStat> Ancestors { get; } = [];
+        public List<ForbiddenHit> Seen355 { get; } = [];
+
+        /// <summary>Records the hits; a fatal one stops the series with INVALID (б).</summary>
+        public void Check355(List<ForbiddenHit> hits)
+        {
+            Seen355.AddRange(hits);
+            foreach (ForbiddenHit h in hits.Where(h => !h.Fatal))
+                Say($"#355 recorded (idle): {h}");
+            List<ForbiddenHit> fatal = [.. hits.Where(h => h.Fatal)];
+            if (fatal.Count > 0)
+                throw new Invalid355(string.Join("; ", fatal));
+        }
 
         public void Say(string line)
         {
@@ -88,6 +104,11 @@ internal static class SeriesDriver
         Directory.CreateDirectory(dir);
         using var log = new StreamWriter(Path.Combine(dir, "series.log"), append: false);
         var ctx = new Ctx { M = m, Dir = dir, Log = log, AllowDebug = allowDebug, Injected = ParseInject(inject), Calibration = calibration };
+        ctx.Ancestors.AddRange(LoadMath.Ancestors(Environment.ProcessId,
+            pid => BenchEnv.ReadTrim($"/proc/{pid.ToString(CultureInfo.InvariantCulture)}/stat") is string l ? ProcParse.Stat(l) : null));
+        foreach (PidStat a in ctx.Ancestors)
+            ctx.Excluded355.Add(a.Pid);
+        ctx.Say($"#355: driver pid {Environment.ProcessId}, ancestors excluded: {string.Join(" ← ", ctx.Ancestors.Select(a => $"{a.Comm}({a.Pid})"))}");
         return Execute(ctx);
     }
 
@@ -113,8 +134,8 @@ internal static class SeriesDriver
         BenchManifest m = c.M;
         BenchGate g = m.Gate;
         IReadOnlyList<BenchProcess> plan = m.Plan();
-        bool smoke = c.Injected.Count > 0;
-        c.Say($"series {m.Experiment}: manifest_hash {m.Hash}, {plan.Count} processes, exclusion rule {g.ExclusionRule}{(smoke ? ", injected flags (smoke)" : "")}");
+        bool smoke = c.Injected.Count > 0 || g.MainPassOnly;
+        c.Say($"series {m.Experiment}: manifest_hash {m.Hash}, {plan.Count} processes, exclusion rule {g.ExclusionRule}{(smoke ? ", smoke (injected flags or main_pass_only)" : "")}");
         var outJson = new Dictionary<string, Action<Utf8JsonWriter>>();
         int exit = 0;
         string stage = "pre_series";
@@ -130,11 +151,12 @@ internal static class SeriesDriver
             {
                 (pre, preWin, preMeter) = Measure(c, g.PreSeriesSeconds, "pre_series");
                 preTries.Add(pre);
+                // Every window of the wait is checked, not only the last one.
+                c.Check355(Forbidden(c, preMeter, preWin, $"pre_series#{preTries.Count}"));
                 c.Say($"pre-series foreign {Fmt(pre)} CPUs (limit {g.PreSeriesForeignCpusMax}), waited {preWait.Elapsed.TotalSeconds:F0} s");
                 if (pre is not double pv || pv <= g.PreSeriesForeignCpusMax || preWait.Elapsed.TotalSeconds + g.PreSeriesSeconds > g.PreSeriesDeadlineSeconds)
                     break;
             }
-            List<string> hits355 = Forbidden(c, preMeter, preWin, "pre_series");
             (double? preF, MachineWindow preW, LoadMeter preM) = (pre, preWin, preMeter);
             outJson["pre_series"] = j =>
             {
@@ -150,8 +172,6 @@ internal static class SeriesDriver
                 preM.Write(j, [preW], 0);
                 j.WriteEndObject();
             };
-            if (hits355.Count > 0)
-                throw new Invalid355(string.Join("; ", hits355));
             if (pre is double p0 && p0 > g.PreSeriesForeignCpusMax)
             {
                 c.Say($"NOT STARTED: no quiet within {g.PreSeriesDeadlineSeconds} s; the question goes to the owner's queue (ADR-0023 п. 1.8). Top foreign: "
@@ -163,7 +183,7 @@ internal static class SeriesDriver
 
             // 2. f_ref(k).
             stage = "fref";
-            int[] ks = [.. plan.Select(p => p.Threads + p.Background).Distinct().Order()];
+            int[] ks = g.MainPassOnly ? [] : [.. plan.Select(p => p.Threads + p.Background).Distinct().Order()];
             foreach (int k in ks)
             {
                 string f = Path.Combine(c.Dir, "fref", $"fref-k{k}.json");
@@ -184,7 +204,7 @@ internal static class SeriesDriver
 
             // 3. Validity.
             stage = "validity";
-            if (m.Reference.Validity is { } va)
+            if (!g.MainPassOnly && m.Reference.Validity is { } va)
             {
                 string f = Path.Combine(c.Dir, "validity.json");
                 int code = Child(c, ["bench", "--mode", "validity", .. Flat(va), "--out", f], "validity");
@@ -212,75 +232,78 @@ internal static class SeriesDriver
             if (verdict.Inconclusive)
                 exit = 4;
 
-            // 6. Reference: variants, modes, profile (the #355 window does not stop them; only repeats are cut, п. 1.9).
-            stage = "reference";
-            var variantResults = new List<(BenchVariant V, List<GateProcess> Gp, GatedResult R)>();
-            foreach (BenchVariant v in m.Reference.Variants)
+            if (!g.MainPassOnly)
             {
-                var vp = new List<GateProcess>();
-                var map = new Dictionary<int, BenchProcess>();
-                int id = 0;
-                foreach (ulong seed in v.Seeds)
+                // 6. Reference: variants, modes, profile (the #355 window does not stop them; only repeats are cut, п. 1.9).
+                stage = "reference";
+                var variantResults = new List<(BenchVariant V, List<GateProcess> Gp, GatedResult R)>();
+                foreach (BenchVariant v in m.Reference.Variants)
                 {
-                    BenchProcess bp = plan.Where(p => p.Block == v.Block && p.Seed == seed).OrderBy(p => p.Replica).ThenBy(p => p.Index).FirstOrDefault()
-                        ?? throw new ManifestException($"variant {v.Id}: block {v.Block} has no process with seed {seed}");
-                    map[id] = bp;
-                    vp.Add(new GateProcess(id++, v.Block, $"{v.Id}|{Group(bp)}", seed, 1));
+                    var vp = new List<GateProcess>();
+                    var map = new Dictionary<int, BenchProcess>();
+                    int id = 0;
+                    foreach (ulong seed in v.Seeds)
+                    {
+                        BenchProcess bp = plan.Where(p => p.Block == v.Block && p.Seed == seed).OrderBy(p => p.Replica).ThenBy(p => p.Index).FirstOrDefault()
+                            ?? throw new ManifestException($"variant {v.Id}: block {v.Block} has no process with seed {seed}");
+                        map[id] = bp;
+                        vp.Add(new GateProcess(id++, v.Block, $"{v.Id}|{Group(bp)}", seed, 1));
+                    }
+                    GatedResult r = Gated(c, vp, (p, n) => ProcessArgs(c, map[p.Index], n, v.Id, v.Switches), $"{v.Id}-", medianGate: true);
+                    variantResults.Add((v, vp, r));
                 }
-                GatedResult r = Gated(c, vp, (p, n) => ProcessArgs(c, map[p.Index], n, v.Id, v.Switches), $"{v.Id}-", medianGate: true);
-                variantResults.Add((v, vp, r));
-            }
-            var modeResults = new List<(BenchModeRun Mode, GatedResult R)>();
-            foreach (BenchModeRun mr in m.Reference.Modes)
-            {
-                var one = new List<GateProcess> { new(0, mr.Id, mr.Id, 0, 1) };
-                GatedResult r = Gated(c, one, (_, n) => (["bench", "--mode", mr.Mode, .. Flat(mr.Args)], Path.Combine(c.Dir, "reference", $"{mr.Id}-a{n}.json")),
-                    mr.Id + "#", medianGate: false);
-                modeResults.Add((mr, r));
-            }
-            outJson["reference"] = j =>
-            {
-                j.WriteStartObject("reference");
-                j.WriteStartArray("variants");
-                foreach (var (v, vp, r) in variantResults)
+                var modeResults = new List<(BenchModeRun Mode, GatedResult R)>();
+                foreach (BenchModeRun mr in m.Reference.Modes)
                 {
-                    j.WriteStartObject();
-                    j.WriteString("id", v.Id);
-                    WriteGated(j, "gate", vp, r, c, null);
-                    j.WriteEndObject();
+                    var one = new List<GateProcess> { new(0, mr.Id, mr.Id, 0, 1) };
+                    GatedResult r = Gated(c, one, (_, n) => (["bench", "--mode", mr.Mode, .. Flat(mr.Args)], Path.Combine(c.Dir, "reference", $"{mr.Id}-a{n}.json")),
+                        mr.Id + "#", medianGate: false);
+                    modeResults.Add((mr, r));
                 }
-                j.WriteEndArray();
-                j.WriteStartArray("modes");
-                foreach (var (mr, r) in modeResults)
+                outJson["reference"] = j =>
                 {
-                    j.WriteStartObject();
-                    j.WriteString("id", mr.Id);
-                    j.WriteString("mode", mr.Mode);
-                    ProcessDecision d = r.Decisions[0];
-                    // An excluded R mode leaves its ADR-0017 threshold «not evaluated» (EXP-0008 П9 п. 6).
-                    j.WriteBoolean("evaluated", d.Status == ProcessStatus.Accepted);
-                    WriteGated(j, "gate", [new GateProcess(0, mr.Id, mr.Id, 0, 1)], r, c, null);
-                    j.WriteEndObject();
-                }
-                j.WriteEndArray();
-                j.WriteEndObject();
-            };
-            if (m.Reference.Profile is { } prof)
-            {
-                (string status, string? file) = Profile(c, prof, plan);
-                outJson["profile"] = j =>
-                {
-                    j.WriteStartObject("profile");
-                    j.WriteString("status", status);
-                    if (file is null) j.WriteNull("file"); else j.WriteString("file", Rel(c, file));
+                    j.WriteStartObject("reference");
+                    j.WriteStartArray("variants");
+                    foreach (var (v, vp, r) in variantResults)
+                    {
+                        j.WriteStartObject();
+                        j.WriteString("id", v.Id);
+                        WriteGated(j, "gate", vp, r, c, null);
+                        j.WriteEndObject();
+                    }
+                    j.WriteEndArray();
+                    j.WriteStartArray("modes");
+                    foreach (var (mr, r) in modeResults)
+                    {
+                        j.WriteStartObject();
+                        j.WriteString("id", mr.Id);
+                        j.WriteString("mode", mr.Mode);
+                        ProcessDecision d = r.Decisions[0];
+                        // An excluded R mode leaves its ADR-0017 threshold «not evaluated» (EXP-0008 П9 п. 6).
+                        j.WriteBoolean("evaluated", d.Status == ProcessStatus.Accepted);
+                        WriteGated(j, "gate", [new GateProcess(0, mr.Id, mr.Id, 0, 1)], r, c, null);
+                        j.WriteEndObject();
+                    }
+                    j.WriteEndArray();
                     j.WriteEndObject();
                 };
+                if (m.Reference.Profile is { } prof)
+                {
+                    (string status, string? file) = Profile(c, prof, plan);
+                    outJson["profile"] = j =>
+                    {
+                        j.WriteStartObject("profile");
+                        j.WriteString("status", status);
+                        if (file is null) j.WriteNull("file"); else j.WriteString("file", Rel(c, file));
+                        j.WriteEndObject();
+                    };
+                }
             }
 
             // 7. Post-series record.
             stage = "post_series";
             (double? post, MachineWindow postWin, LoadMeter postMeter) = Measure(c, g.PreSeriesSeconds, "post_series");
-            List<string> postHits = Forbidden(c, postMeter, postWin, "post_series");
+            c.Check355(Forbidden(c, postMeter, postWin, "post_series"));
             outJson["post_series"] = j =>
             {
                 j.WriteStartObject("post_series");
@@ -288,8 +311,6 @@ internal static class SeriesDriver
                 postMeter.Write(j, [postWin], 0);
                 j.WriteEndObject();
             };
-            if (postHits.Count > 0)
-                throw new Invalid355(string.Join("; ", postHits));
             c.Say($"post-series foreign {Fmt(post)} CPUs; series done, exit {exit}");
             return exit;
         }
@@ -316,22 +337,28 @@ internal static class SeriesDriver
 
     private sealed class Invalid355(string message) : Exception(message);
 
-    /// <summary>
-    /// #355 check (ADR-0023 п. 1.1): CPU-active foreign processes of a window whose comm starts with a forbidden name (case-insensitive),
-    /// the driver itself excluded. Off Linux the list is empty and nothing is found.
-    /// </summary>
-    private static List<string> Forbidden(Ctx c, LoadMeter meter, MachineWindow w, string where)
+    /// <summary>#355 check as the driver applies it (see <see cref="SeriesGate.Forbidden"/>); internal for Singularity.Lab.Tests.</summary>
+    internal static List<ForbiddenHit> ForbiddenIn(IEnumerable<(int Pid, string Comm, double Cpus)> procs, BenchGate g, IReadOnlySet<int> excluded, string where) =>
+        SeriesGate.Forbidden(procs, g, excluded, where);
+
+    /// <summary>The driver's #355 exclusion set: <paramref name="pid"/> and its ancestor chain read from <paramref name="procRoot"/>.</summary>
+    internal static HashSet<int> ExcludedFor(int pid, string procRoot = "/proc")
+    {
+        var set = new HashSet<int> { pid };
+        foreach (PidStat a in LoadMath.Ancestors(pid, x => BenchEnv.ReadTrim(Path.Combine(procRoot, x.ToString(CultureInfo.InvariantCulture), "stat")) is string l ? ProcParse.Stat(l) : null))
+            set.Add(a.Pid);
+        return set;
+    }
+
+    /// <summary>#355 hits of a driver window (CPU-active foreign processes with their mean CPUs). Off Linux there are no pids and no hits.</summary>
+    private static List<ForbiddenHit> Forbidden(Ctx c, LoadMeter meter, MachineWindow w, string where)
     {
         if (w.Start.Pids is null || w.End.Pids is null)
             return [];
         long dTotal = w.End.Cpu?.Total - w.Start.Cpu?.Total ?? 0;
-        return ForbiddenIn(LoadMath.TopForeign(w.Start.Pids, w.End.Pids, meter.SelfPid, dTotal, int.MaxValue).Select(t => (t.Pid, t.Comm)), c.M.Gate, Environment.ProcessId, where);
+        return SeriesGate.Forbidden(LoadMath.TopForeign(w.Start.Pids, w.End.Pids, meter.SelfPid, dTotal, int.MaxValue)
+            .Select(t => (t.Pid, t.Comm, t.MachineShare * Environment.ProcessorCount)), c.M.Gate, c.Excluded355, where);
     }
-
-    /// <summary>Pure part of the #355 check: the forbidden (pid, comm) of a foreign list, skipping <paramref name="driverPid"/>.</summary>
-    internal static List<string> ForbiddenIn(IEnumerable<(int Pid, string Comm)> procs, BenchGate g, int driverPid, string where) =>
-        [.. procs.Where(p => p.Pid != driverPid && g.ForbiddenProcesses.Any(n => p.Comm.StartsWith(n, StringComparison.OrdinalIgnoreCase)))
-            .Select(p => $"{where}: {p.Comm} (pid {p.Pid})")];
 
     /// <summary>Attempts, med_points and decisions of one gated set (main pass, a variant, an R mode).</summary>
     private sealed record GatedResult(Dictionary<int, List<AttemptRec>> Attempts, Dictionary<string, double> MedPoints,
@@ -395,11 +422,15 @@ internal static class SeriesDriver
         BenchGate g = c.M.Gate;
         // Wait for quiet (EXP-0008 П5.4 [Предл.]): sample, then wait in steps up to the maximum, then start in any case.
         var sw = Stopwatch.StartNew();
-        (double? q, _, _) = Measure(c, g.QuietSampleSeconds, null);
+        string qkey = $"{tag}{p.Index}-a{n}";
+        int qi = 0;
+        (double? q, MachineWindow qw, LoadMeter qm) = Measure(c, g.QuietSampleSeconds, null);
+        c.Check355(Forbidden(c, qm, qw, $"{qkey} quiet#{++qi}"));
         while (q is double f && f > g.ForeignCpusMax && sw.Elapsed.TotalSeconds + g.QuietStepSeconds <= g.QuietMaxSeconds + g.QuietSampleSeconds)
         {
             Thread.Sleep(TimeSpan.FromSeconds(g.QuietStepSeconds));
-            (q, _, _) = Measure(c, g.QuietSampleSeconds, null);
+            (q, qw, qm) = Measure(c, g.QuietSampleSeconds, null);
+            c.Check355(Forbidden(c, qm, qw, $"{qkey} quiet#{++qi}"));
         }
         double waited = sw.Elapsed.TotalSeconds;
         (string[] args, string file) = argsFor(p, n);
@@ -434,10 +465,9 @@ internal static class SeriesDriver
             thermal = ThermalOf(mx);
             if (mx.TryGetProperty("top_foreign_window", out JsonElement tf) && tf.ValueKind == JsonValueKind.Array)
             {
-                List<string> hits = ForbiddenIn(tf.EnumerateArray().Select(x => (x.GetProperty("pid").GetInt32(), x.GetProperty("comm").GetString() ?? "")),
-                    g, Environment.ProcessId, $"{tag}{p.Index}-a{n}");
-                if (hits.Count > 0)
-                    throw new Invalid355(string.Join("; ", hits));
+                // The child's top-5 over its windows; "cores" = mean CPUs of the process over the child's union window.
+                c.Check355(SeriesGate.Forbidden(tf.EnumerateArray().Select(x => (x.GetProperty("pid").GetInt32(), x.GetProperty("comm").GetString() ?? "",
+                    x.TryGetProperty("cores", out JsonElement cr) ? cr.GetDouble() : 0)), g, c.Excluded355, $"{tag}{p.Index}-a{n}"));
             }
         }
         JsonElement? top = machine is { } m3 && m3.TryGetProperty("top_foreign_window", out JsonElement t) ? t.Clone() : null;
@@ -457,8 +487,9 @@ internal static class SeriesDriver
     private static (string[] Args, string File) ProcessArgs(Ctx c, BenchProcess p, int attempt, string? reference, IReadOnlyList<(string Key, string Value)> switches)
     {
         int k = p.Threads + p.Background;
-        var args = new List<string> { "bench", "--mode", "process", "--manifest", c.M.Path, "--process", I(p.Index), "--fref", D(c.FRef[k]), "--k", I(k),
+        var args = new List<string> { "bench", "--mode", "process", "--manifest", c.M.Path, "--process", I(p.Index), "--k", I(k),
             "--thermal-ratio", D(c.M.Gate.ThermalRatio), "--attempt", I(attempt) };
+        args.AddRange(c.FRef.TryGetValue(k, out double fr) ? ["--fref", D(fr)] : ["--no-fref", "true"]);
         if (reference is not null)
             args.AddRange(["--reference", reference]);
         args.AddRange(Flat(switches));
@@ -512,10 +543,11 @@ internal static class SeriesDriver
     /// </summary>
     private static (double?, MachineWindow, LoadMeter) Measure(Ctx c, int seconds, string? name)
     {
+        // Quiet windows (name null) need no per-second series, but they read the pids: the #355 check covers every quiet window.
         var meter = new LoadMeter(background: name is not null);
-        MachineSnapshot s0 = meter.Snapshot(full: name is not null);
+        MachineSnapshot s0 = meter.Snapshot();
         Thread.Sleep(TimeSpan.FromSeconds(seconds));
-        var w = new MachineWindow(name ?? "quiet", s0, meter.Snapshot(full: name is not null));
+        var w = new MachineWindow(name ?? "quiet", s0, meter.Snapshot());
         meter.Dispose();
         if (name is not null && !meter.Available)
             c.Say($"load meter unavailable: {meter.Reason}");
@@ -583,6 +615,32 @@ internal static class SeriesDriver
         j.WriteNumber("elapsed_s", Math.Round(c.Clock.Elapsed.TotalSeconds, 1));
         j.WriteNumber("repeats_not_started_window_end", c.VirtualRepeats);
         if (c.Invalid355 is null) j.WriteNull("invalid_355"); else j.WriteString("invalid_355", c.Invalid355);
+        j.WriteStartObject("check_355");
+        j.WriteNumber("driver_pid", Environment.ProcessId);
+        j.WriteStartArray("excluded_ancestors");
+        foreach (PidStat a in c.Ancestors)
+        {
+            j.WriteStartObject();
+            j.WriteNumber("pid", a.Pid);
+            j.WriteString("comm", a.Comm);
+            j.WriteNumber("ppid", a.Ppid);
+            j.WriteEndObject();
+        }
+        j.WriteEndArray();
+        j.WriteNumber("forbidden_min_cpus", c.M.Gate.ForbiddenMinCpus);
+        j.WriteStartArray("seen");
+        foreach (ForbiddenHit h in c.Seen355)
+        {
+            j.WriteStartObject();
+            j.WriteString("where", h.Where);
+            j.WriteNumber("pid", h.Pid);
+            j.WriteString("comm", h.Comm);
+            j.WriteNumber("cpus", Math.Round(h.Cpus, 4));
+            j.WriteBoolean("fatal", h.Fatal);
+            j.WriteEndObject();
+        }
+        j.WriteEndArray();
+        j.WriteEndObject();
         j.WriteNumber("exit_code", exit);
         j.WriteString("exit_meaning", exit switch
         {

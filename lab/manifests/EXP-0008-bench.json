@@ -4,7 +4,7 @@
   "kind": "bench",
   "meta": {
     "note": "EXP-0008 pre-registration П1–П3, П5, П6, П9 (TASK-0102) as a lab bench series manifest (TASK-0106). Run: lab bench --mode series --manifest lab/manifests/EXP-0008-bench.json --out lab/results/EXP-0008/series (a new directory). Blocks are EXP-0007 П2 unchanged (same plan, same order).",
-    "gate": "ADR-0023 rev 2 п. 1.3–1.11. EXP-level numbers (foreign_cpus_max 0.8 CPU = 5 % of 16 CPUs, foreign_over1_share_max, run_delay_max, quiet and deadline) are proposals until the calibration run of п. 1.10 replaces them before manifest_hash is frozen; ADR-level numbers: max_repeats 2, exclude_max_frac 0.20, seed_accept_min_frac 0.5, thermal_mark_frac 0.20, exclusion_rule independent-evidence (п. 1.5)",
+    "gate": "ADR-0023 rev 2 п. 1.3–1.11. EXP-level numbers (foreign_cpus_max 0.8 CPU = 5 % of 16 CPUs, foreign_over1_share_max, run_delay_max, quiet and deadline) are proposals until the calibration run of п. 1.10 replaces them before manifest_hash is frozen; ADR-level numbers: max_repeats 2, exclude_max_frac 0.20, seed_accept_min_frac 0.5, thermal_mark_frac 0.20, exclusion_rule independent-evidence (п. 1.5). window_s 36000 = 10 h (#414) from the driver start, so it includes the waits for quiet and f_ref. #355: the driver and its ancestor chain are excluded; a forbidden process below forbidden_min_cpus (mean CPUs over the window) is recorded, not fatal",
     "hash_checkpoints": "false = game configuration of ADR-0017 (outcome); hc variants are reference runs (П9 п. 1)"
   },
   "generator_seed": 85621515,
@@ -41,9 +41,10 @@
     "pre_series_s": 60,
     "pre_series_foreign_cpus_max": 0.8,
     "pre_series_deadline_s": 1800,
-    "window_s": 21600,
+    "window_s": 36000,
     "forbidden_processes": ["dotnet", "MSBuild", "VBCSCompiler", "claude", "node"],
     "thermal_mark_frac": 0.20,
+    "forbidden_min_cpus": 0.05,
     "fref_seconds": 300,
     "fref_tail_s": 180
   },

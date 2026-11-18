@@ -40,12 +40,25 @@ public sealed record BenchGate
     public double RunDelayMax { get; init; } = 0.05;
     /// <summary>Wait for quiet before the series: at most this long (ADR-0023 п. 1.8, default 30 min), then the series is not started.</summary>
     public int PreSeriesDeadlineSeconds { get; init; } = 1800;
-    /// <summary>The #355 window (ADR-0023 п. 1.9): no repeat is started after it; 0 = no limit. Default 6 h.</summary>
-    public int WindowSeconds { get; init; } = 21_600;
+    /// <summary>
+    /// The #355 window (ADR-0023 п. 1.9, #414: 10 h): measured from the driver's start, so it includes the wait for quiet and f_ref; no
+    /// repeat is started after it; 0 = no limit.
+    /// </summary>
+    public int WindowSeconds { get; init; } = 36_000;
     /// <summary>
     /// Process names (comm, case-insensitive prefix) whose CPU activity in a foreign list makes the series INVALID (б) (ADR-0023 п. 1.1, #355).
     /// </summary>
     public IReadOnlyList<string> ForbiddenProcesses { get; init; } = ["dotnet", "MSBuild", "VBCSCompiler", "claude", "node"];
+    /// <summary>
+    /// A forbidden process is fatal (INVALID (б)) only with at least this mean CPU over the window; below it the hit is recorded only (an idle
+    /// MCP server or editor helper is not a build or an agent at work). [Предл.] 0.05 CPU.
+    /// </summary>
+    public double ForbiddenMinCpus { get; init; } = 0.05;
+    /// <summary>
+    /// Smoke only: the series runs the waits, the main pass with its gate and the post window, and skips f_ref, validity and the whole
+    /// reference part (variants, R modes, profile). Processes then run without f_ref (<c>--no-fref true</c>, always smoke).
+    /// </summary>
+    public bool MainPassOnly { get; init; }
     /// <summary>The «possible throttling» mark of a PASS: Δthrottle &gt; 0 in more than this share of the outcome processes (ADR-0023 п. 1.2).</summary>
     public double ThermalMarkFrac { get; init; } = 0.20;
     public double ThermalRatio { get; init; } = 0.85;
@@ -61,7 +74,7 @@ public sealed record BenchGate
 
     internal static readonly string[] Keys =
     [
-        "foreign_cpus_max", "foreign_over1_share_max", "foreign_second_cpus", "pre_series_deadline_s", "window_s", "forbidden_processes",
+        "foreign_cpus_max", "foreign_over1_share_max", "foreign_second_cpus", "pre_series_deadline_s", "window_s", "forbidden_processes", "forbidden_min_cpus", "main_pass_only",
         "thermal_mark_frac", "median_ratio_max", "median_gate_min_ms", "max_repeats", "exclude_max_frac", "seed_accept_min_frac", "outcome_block",
         "exclusion_rule", "run_delay_max", "thermal_ratio", "noise_max", "quiet_sample_s", "quiet_step_s", "quiet_max_s", "pre_series_s",
         "pre_series_foreign_cpus_max", "fref_seconds", "fref_tail_s", "note",
@@ -98,6 +111,10 @@ public sealed record BenchGate
                     ? [.. fp.EnumerateArray().Select(x => x.GetString()!)] : throw new ManifestException("gate.forbidden_processes must be an array of strings"))
                 : d.ForbiddenProcesses,
             ThermalMarkFrac = F("thermal_mark_frac", d.ThermalMarkFrac, 0, 1),
+            ForbiddenMinCpus = F("forbidden_min_cpus", d.ForbiddenMinCpus, 0, 4096),
+            MainPassOnly = e.TryGetProperty("main_pass_only", out JsonElement mpo)
+                ? mpo.ValueKind switch { JsonValueKind.True => true, JsonValueKind.False => false, _ => throw new ManifestException("gate.main_pass_only must be true or false") }
+                : false,
             MedianRatioMax = F("median_ratio_max", d.MedianRatioMax, 1, 100),
             MedianGateMinMs = F("median_gate_min_ms", d.MedianGateMinMs, 0, 1e9),
             MaxRepeats = I("max_repeats", d.MaxRepeats, 0, 10),
@@ -138,6 +155,8 @@ public sealed record BenchGate
         foreach (string n in ForbiddenProcesses) j.WriteStringValue(n);
         j.WriteEndArray();
         j.WriteNumber("thermal_mark_frac", ThermalMarkFrac);
+        j.WriteNumber("forbidden_min_cpus", ForbiddenMinCpus);
+        j.WriteBoolean("main_pass_only", MainPassOnly);
         j.WriteNumber("median_ratio_max", MedianRatioMax);
         j.WriteNumber("median_gate_min_ms", MedianGateMinMs);
         j.WriteNumber("max_repeats", MaxRepeats);

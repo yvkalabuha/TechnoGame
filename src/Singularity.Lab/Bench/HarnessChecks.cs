@@ -17,7 +17,7 @@ public static class HarnessChecks
         ("bench: foreign_cpu, top-k mean, top-5 foreign (own pid out, pid reuse by start time), run-delay share", LoadMathFixtures),
         ("bench: top-k frequency median in windows; /proc/cpuinfo «cpu MHz» lines; thermal flag only with both values", FreqFixtures),
         ("bench: LoadMeter on a fixture /proc tree writes the machine block; without /proc it is available:false and does not throw", () => MeterFixtures(tmp)),
-        ("bench: series gate (ADR-0023 п. 1.3–1.5, 1.9) — н1/н2/м, exclusion only with н1|н2 on every attempt, window-end repeats, fixed med_point, #355 names", GateDecide),
+        ("bench: series gate (ADR-0023 п. 1.3–1.5, 1.9) — н1/н2/м, exclusion only with н1|н2 on every attempt, window-end repeats, fixed med_point, #355 names/ancestors/idle", GateDecide),
         ("bench: series verdict — A 4/15 excluded INCONCLUSIVE, 3/15 not; seed 2/5 INCONCLUSIVE; series 23/114 INCONCLUSIVE, 22/114 not", GateVerdict),
         ("bench: EXP-0008 manifest — gate equals the П5 numbers, plan = EXP-0007 plan, reference modes parse; bad gate key rejected", Manifests),
     ];
@@ -158,6 +158,8 @@ public static class HarnessChecks
 
     private static readonly BenchGate G = new();
 
+    private static int? PidStatOf(string line) => ProcParse.Stat(line)?.Ppid;
+
     private static string? GateDecide()
     {
         // Frequency and temperature are not inputs of GateAttempt at all; a clean first attempt is accepted with no repeat.
@@ -214,8 +216,18 @@ public static class HarnessChecks
         if (rep.Status != ProcessStatus.Accepted || rep.AcceptedAttempt != 1)
             return "repeat against fixed med_point";
         // #355 names: prefix, case-insensitive, the driver's own pid skipped.
-        List<string> hits = SeriesDriver.ForbiddenIn([(10, "dotnet"), (11, "VBCSCompiler"), (12, "firefox"), (13, "Claude"), (99, "dotnet")], G, 99, "t");
-        return hits.Count == 3 && hits.All(h => !h.Contains("pid 99", StringComparison.Ordinal)) ? null : $"#355 names: {string.Join(", ", hits)}";
+        // #355: prefix, case-insensitive; the driver (99) and its ancestors (claude 50 ← bash 40) skipped; below forbidden_min_cpus recorded, not fatal.
+        var stats = new Dictionary<int, PidStat> { [99] = new(99, "dotnet", 0, 0, 40), [40] = new(40, "bash", 0, 0, 50), [50] = new(50, "claude", 0, 0, 1), [1] = new(1, "systemd", 0, 0, 0) };
+        List<PidStat> anc = LoadMath.Ancestors(99, x => stats.TryGetValue(x, out PidStat ps) ? ps : null);
+        if (string.Join(",", anc.Select(x => x.Pid)) != "40,50,1")
+            return $"ancestors {string.Join(",", anc.Select(x => x.Pid))}";
+        var excluded = new HashSet<int>([99, .. anc.Select(x => x.Pid)]);
+        List<ForbiddenHit> hits = SeriesGate.Forbidden([(10, "dotnet", 1.0), (11, "VBCSCompiler", 0.5), (12, "firefox", 2.0), (13, "Claude", 0.3),
+            (14, "node", 0.01), (50, "claude", 3.0), (99, "dotnet", 4.0)], G, excluded, "t");
+        string got = string.Join(",", hits.Select(h => $"{h.Pid}{(h.Fatal ? "!" : "")}"));
+        if (PidStatOf("50 (claude) S 40 50 50 0 -1 0 0 0 0 0 1 1 0 0 20 0 1 0 7 0 0 0") != 40)
+            return "ppid field";
+        return got == "10!,11!,13!,14" ? null : $"#355 hits {got}";
     }
 
     private static string? GateVerdict()
@@ -270,7 +282,7 @@ public static class HarnessChecks
         BenchManifest m7 = BenchManifest.Load(Path.Combine(dir, "lab", "manifests", "EXP-0007-bench.json"));
         BenchGate g = m8.Gate;
         if (!m8.HasGate || g.ForeignCpusMax != 0.8 || g.ForeignOverShareMax != 0.10 || g.ForeignSecondCpus != 1.0 || g.RunDelayMax != 0.05
-            || g.PreSeriesDeadlineSeconds != 1800 || g.WindowSeconds != 21_600 || g.ThermalMarkFrac != 0.20 || g.ExclusionRule != ExclusionRule.IndependentEvidence || g.MedianRatioMax != 1.10 || g.MedianGateMinMs != 50 || g.MaxRepeats != 2 || g.ExcludeMaxFrac != 0.20
+            || g.PreSeriesDeadlineSeconds != 1800 || g.WindowSeconds != 36_000 || g.ThermalMarkFrac != 0.20 || g.ExclusionRule != ExclusionRule.IndependentEvidence || g.MedianRatioMax != 1.10 || g.MedianGateMinMs != 50 || g.MaxRepeats != 2 || g.ExcludeMaxFrac != 0.20
             || g.ThermalRatio != 0.85 || g.QuietSampleSeconds != 10 || g.QuietStepSeconds != 30 || g.QuietMaxSeconds != 300 || g.PreSeriesSeconds != 60
             || g.PreSeriesForeignCpusMax != 0.8 || g.FRefSeconds != 300 || g.FRefTailSeconds != 180 || g.OutcomeBlock != "A")
             return "EXP-0008 gate differs from П5";

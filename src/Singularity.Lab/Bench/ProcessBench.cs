@@ -306,7 +306,8 @@ public static class ProcessBench
         // The simulation's own bytes: every thread minus the two measuring threads.
         j.WriteNumber("allocated_bytes_net", r.AllocatedBytes - r.SamplerAllocatedBytes - r.MeterAllocatedBytes);
         j.WriteNumber("allocated_bytes_per_month", (double)r.AllocatedBytes / window.Length);
-        j.WriteBoolean("alloc_le_1mb_per_month", r.AllocatedBytes / (double)window.Length <= 1 << 20);
+        // Reference only (the ADR-0016 §6 limit before ADR-0023): P8 is now split into tick path and snapshot path (bench --mode alloc).
+        j.WriteBoolean("alloc_le_1mib_per_month_reference_pre_adr0023", r.AllocatedBytes / (double)window.Length <= 1 << 20);
         j.WriteNumber("gc_gen0", r.Gen0);
         j.WriteNumber("gc_gen1", r.Gen1);
         j.WriteNumber("gc_gen2", r.Gen2);

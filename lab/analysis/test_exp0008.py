@@ -54,6 +54,16 @@ class Series:
         return X.analyse(self.d)
 
 
+class NoMainPass(unittest.TestCase):
+    def test_not_started_and_invalid_355_have_no_key_error(self):
+        with tempfile.TemporaryDirectory() as d:
+            for code, want in ((3, "NOT_STARTED"), (5, "INVALID")):
+                s = {"experiment": "T", "manifest_hash": "0" * 64, "exit_code": code, "gate": GATE, "invalid_355": "x" if code == 5 else None}
+                with open(os.path.join(d, "series.json"), "w", encoding="utf-8") as fh:
+                    json.dump(s, fh)
+                self.assertEqual(X.analyse(d)["outcome"], want)
+
+
 class Stats(unittest.TestCase):
     def test_percentile_type7(self):
         x = list(range(1, 11))
