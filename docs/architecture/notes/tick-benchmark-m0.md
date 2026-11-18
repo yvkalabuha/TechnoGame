@@ -133,3 +133,5 @@
   - медиана 10 медиан процессов против оптимизированного C#.
 - **T6 (test-engineer):** CI — аллокации на тик при N = 24, отсутствие gen2, сравнение base/head на одном раннере.
 - **T7 (Orchestrator → developer):** правило «0 Б в `Compute`» в `.claude/rules/csharp-core.md`, когда будет BDN-замер.
+
+> Note (Orchestrator, 2026-11-18): the province ownership layer (owner + controller, about 14 KB; ADR-0011 rev 2, #310) is part of `K_d` in the next measurement. Province systems need a new budget ADR.
