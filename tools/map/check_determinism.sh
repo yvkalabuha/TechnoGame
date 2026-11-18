@@ -6,7 +6,9 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 cache="${SINGULARITY_MAP_CACHE:-$here/.cache}"
 for i in 1 2; do
-  dotnet run -c Release --project "$here/MapBuilder" -- build --cache "$cache" --out "$tmp/out$i" --render "$tmp/render$i.png" > "$tmp/log$i.txt"
+  if ! dotnet run -c Release --project "$here/MapBuilder" -- build --cache "$cache" --out "$tmp/out$i" --render "$tmp/render$i.png" > "$tmp/log$i.txt" 2>&1; then
+    echo "build $i failed:" >&2; tail -n 40 "$tmp/log$i.txt" >&2; exit 1
+  fi
 done
 diff -r "$tmp/out1" "$tmp/out2"
 cmp "$tmp/render1.png" "$tmp/render2.png"
