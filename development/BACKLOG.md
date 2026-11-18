@@ -95,7 +95,7 @@
 | [TASK-0078](../development/tasks/TASK-0078-adr-0017-implementation.md) | DONE | ADR-0017 implementation: StateHash schedule, lazy LastHash, column CoW | MS-M0 |
 | [TASK-0079](../development/tasks/TASK-0079-f4a-parallel-view-inputs.md) | DONE | F4-A: parallel ViewBuilder.Inputs per actor, TrainingBudget plan once per actor | MS-M0 |
 | [TASK-0080](../development/tasks/TASK-0080-adr-0017-review-followups.md) | DONE | ADR-0017 review follow-ups (DEBT-0045 low items) | MS-M0 |
-| [TASK-0081](../development/tasks/TASK-0081-client-v0-5b.md) | APPROVED | Client v0.5b: main menu, settings, new game, palette C with alert validator, time icons | MS-M0 |
+| [TASK-0081](../development/tasks/TASK-0081-client-v0-5b.md) | REVIEW | Client v0.5b: main menu, settings, new game, palette C with alert validator, time icons | MS-M0 |
 | [TASK-0082](../development/tasks/TASK-0082-f7a-view-reuse.md) | REVIEW | F7a: reuse the view on probe-only days, cheaper daily snapshot | MS-M0 |
 | [TASK-0083](../development/tasks/TASK-0083-lab-bench-tests.md) | DONE | Tests for lab bench: statistics, manifest, plan, CLI | MS-M0 |
 
