@@ -97,6 +97,7 @@ public static class Ui
         b.AddThemeFontOverride("font", Fonts.Text);
         b.AddThemeFontSizeOverride("font_size", Math.Max(size, MinSize));
         StyleButton(b, command);
+        if (!command) PaperSurface.Apply(b, SurfaceKind.Button, text);   // an order-ready command plate is an alert colour: no texture
         b.Pressed += onPress;
         return b;
     }
@@ -104,6 +105,9 @@ public static class Ui
     /// <summary>Plain button: sheet with an ink frame. Command button (an order is ready): ultramarine plate, white text.</summary>
     public static void StyleButton(Button b, bool command)
     {
+        // An order-ready command plate is an alert colour: it gets no paper texture, and takes it back when it turns plain again.
+        if (command && b.Material != null) { b.SetMeta("paper_mat", b.Material); b.Material = null; }
+        else if (!command && b.Material == null && b.HasMeta("paper_mat")) b.Material = b.GetMeta("paper_mat").As<Material>();
         b.AddThemeStyleboxOverride("normal", command ? Box(Command, Ink, 1, 10) : Box(Sheet, Ink, 1, 10));
         b.AddThemeStyleboxOverride("hover", command ? Box(Command.Lightened(0.1f), Ink, 1, 10) : Box(Hover, Ink, 1, 10));
         b.AddThemeStyleboxOverride("pressed", Box(Ink, Ink, 1, 10));

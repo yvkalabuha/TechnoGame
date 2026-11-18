@@ -9,7 +9,7 @@ public sealed record PaletteSet(
 public static class Palette
 {
     // Neutral ink and line tokens shared by the UI and the globe overlay (hex, no leading #).
-    public const string Ink = "1D1E20", Ink2 = "55575A", Ink3 = "6E6C66", Rule = "BDB59F", Border = "3E3C38", GlobeGrid = "A9C4CC", Limb = "A9B8CC";
+    public const string Ink = "1D1E20", Ink2 = "55575A", Ink3 = "64625C", Rule = "BDB59F", Border = "3E3C38", GlobeGrid = "A9C4CC", Limb = "A9B8CC";
 
     public static readonly string[] InkNames = { "sand", "teal", "violet", "olive", "plum", "slate" };
 
@@ -19,7 +19,7 @@ public static class Palette
         new[] { "F7B98F", "9EC6F5", "BBDE86", "EFB0EC", "F8D56F", "8BE3C3", "EEA894", "A9AAF7" },
         new[] { "8F7A2E", "168A92", "7A4AA8", "4F8A1E", "A03E82", "4A7088" },
         new[] { "EAD9A3", "BFE6E5", "D8CCEE", "CFE6AA", "F0C9E0", "C3D8EA" },
-        new[] { "6B5B22", "1F5F63", "53407A", "4A6020", "75335F", "3F5666" });
+        new[] { "635420", "1F5F63", "53407A", "4A6020", "75335F", "3F5666" });   // sand text darkened from 6B5B22 for T1 on the sand wash x0.94
 
     /// <summary>The v0.5a client palette (warm tints, grey-blue sea): the reference that the validator must pass.</summary>
     public static readonly PaletteSet V02 = new(

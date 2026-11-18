@@ -11,10 +11,19 @@ public static class ColorMath
     public readonly record struct Lin(double R, double G, double B);
     public readonly record struct Lab(double L, double A, double B);
 
-    public static Lin FromHex(string hex)
+    /// <summary>Hex colour to linear RGB. <paramref name="k"/> multiplies the sRGB channels first: the 2D canvas works in sRGB, so the paper texture (a grey multiplier) acts there.</summary>
+    public static Lin FromHex(string hex, double k = 1)
     {
         int v = int.Parse(hex.TrimStart('#'), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-        return new Lin(ToLinear(((v >> 16) & 255) / 255.0), ToLinear(((v >> 8) & 255) / 255.0), ToLinear((v & 255) / 255.0));
+        double R(int sh) => Math.Min(1.0, ((v >> sh) & 255) / 255.0 * k);
+        return new Lin(ToLinear(R(16)), ToLinear(R(8)), ToLinear(R(0)));
+    }
+
+    /// <summary>WCAG relative luminance contrast ratio of two colours.</summary>
+    public static double Contrast(Lin a, Lin b)
+    {
+        double ya = 0.2126729 * a.R + 0.7151522 * a.G + 0.072175 * a.B, yb = 0.2126729 * b.R + 0.7151522 * b.G + 0.072175 * b.B;
+        return (Math.Max(ya, yb) + 0.05) / (Math.Min(ya, yb) + 0.05);
     }
 
     static double ToLinear(double c) => c <= 0.04045 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);

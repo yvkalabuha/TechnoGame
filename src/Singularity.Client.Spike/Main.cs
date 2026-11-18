@@ -40,7 +40,9 @@ public sealed partial class Main : Node3D
     ActorPanel _actorPanel;
     TechTree _tree;
     AudioDirector _audio;
-    Control _audioPop;
+    // v0.5c: left rail of areas, area panels (live: the real ActorPanel in area mode; locked: a card), journal of signals
+    Rail _rail; ActorPanel _areaPanel; AreaCard _areaCard; JournalPanel _journal;
+    AreaId _area = AreaId.Map;
     bool _fatalLogged;
     // v0.5b: menus. The title screen runs over the live globe; "new game" starts the session with the chosen power and seed.
     MainMenu _mainMenu; NewGameSheet _newGame; SettingsSheet _settings;
@@ -56,7 +58,7 @@ public sealed partial class Main : Node3D
     string _powerArg = "USA";
     float _tgtYaw, _tgtPitch; bool _flying;   // smooth turn to a clicked country; the zoom is kept
     int _clickCase = -1; double _clickT; string _clickLog = "";
-    bool _shots; int _shotStep; double _shotT; string _shotDir = "../../docs/ui/prototypes/client-v05b";
+    bool _shots; int _shotStep; double _shotT; string _shotDir = "../../docs/ui/prototypes/client-v05c";
     string _shotLog = ""; int _shotCand = -1; long _shotTick;
 
     // bench
@@ -171,6 +173,7 @@ public sealed partial class Main : Node3D
         _settings.Closed += () => _mainMenu.Open(!_titleMode);
         _settings.Applied += s =>
         {
+            if (_rail != null && _rail.Wide != s.RailWide) { _rail.SetWide(s.RailWide); Recenter(); }
             if (_audio == null) return;
             // Not persisted here: the sheet saves the file after «keep» (or at once when no confirm is needed).
             _audio.SetVolume(Bus.Music, s.Volume[1] / 100, false); _audio.SetVolume(Bus.Ambient, s.Volume[2] / 100, false);
@@ -259,15 +262,26 @@ public sealed partial class Main : Node3D
         _audio = new AudioDirector(_host);
         AddChild(_audio);
         _signal.SignalChanged += _audio.OnSignal;
-        _signal.AudioPressed += () => _audioPop.Visible = !_audioPop.Visible;
+        _signal.JournalPressed += ToggleJournal;
+        _signal.SignalChanged += (key, on) => { if (_host.Snap != null) _journal.Add(Settings.Date(_host.Snap.Date), key, on); };
         _signal.MenuPressed += OpenGameMenu;
         _signal.SignalChanged += AlertMarker;
         _settings.TestBus = bus => { if (bus == 5) _audio.Cue("signal_attention"); else _audio.Tick(); };
-        _audioPop = new PanelContainer { Visible = false };
-        ((PanelContainer)_audioPop).AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 2, 12, Ui.R3));
-        _audioPop.AnchorLeft = 1; _audioPop.AnchorRight = 1; _audioPop.OffsetLeft = -380; _audioPop.OffsetRight = -10; _audioPop.OffsetTop = 52;
-        _audioPop.AddChild(_audio.BuildPopover());
-        layer.AddChild(_audioPop);
+        _settings.MusicAmount = () => _audio.MusicAmount; _settings.MusicAmountSet = i => _audio.MusicAmount = i; _settings.ResetFatigue = _audio.ResetFatigue;
+
+        _rail = new Rail { AnchorTop = 0, AnchorBottom = 1, AnchorLeft = 0, AnchorRight = 0, OffsetLeft = 0, OffsetBottom = 0 };
+        _rail.SetWide(Settings.Current.RailWide);
+        _rail.Pressed += OpenArea;
+        _rail.ToggleWide += ToggleRail;
+        layer.AddChild(_rail);
+        _areaPanel = new ActorPanel(_host, true) { Visible = false, Player = _player };
+        _areaPanel.OpenTree += () => OpenTree(0);
+        layer.AddChild(_areaPanel);
+        _areaCard = new AreaCard();
+        layer.AddChild(_areaCard);
+        _journal = new JournalPanel { AnchorLeft = 1, AnchorRight = 1, OffsetLeft = -JournalPanel.PanelWidth - 10, OffsetRight = -10 };
+        _journal.Closed += () => _journal.Visible = false;
+        layer.AddChild(_journal);
 
         // Inset sized by its content: anchored top-right, no bottom anchor.
         _actorPanel = new ActorPanel(_host) { Visible = false, Debug = _debug, Player = _player };
@@ -278,6 +292,7 @@ public sealed partial class Main : Node3D
         _actorPanel.BackToOwn += () => ShowPower(_player, true);
         _actorPanel.OpenTree += () => OpenTree(0);
         layer.AddChild(_actorPanel);
+        layer.MoveChild(_journal, -1);   // the journal slides over the foreign-power panel
 
         _tree = new TechTree(_host) { Visible = false, Player = _player };
         _tree.SetAnchorsPreset(Control.LayoutPreset.FullRect);
@@ -288,7 +303,7 @@ public sealed partial class Main : Node3D
         _loading.Visible = false;
         _tintsReady = true;
         foreach (Control c in new Control[] { _mainMenu, _newGame, _settings }) layer.MoveChild(c, -1);   // menus stay above the panels
-        ShowPower(_player, _startedFromMenu);   // the panel opens for the player's own power
+        ShowPower(_player, _startedFromMenu);   // the player's own power has no right panel: the map shows, the areas open from the rail
     }
 
     // Alerts of the player's own power are also plates on the globe: halo, outline, sign (#326). Stacked below each other at the country.
@@ -317,28 +332,71 @@ public sealed partial class Main : Node3D
 
     void OpenTree(int mode) { _audio?.Tick(); _tree.ShowFor(_viewed, mode); }
 
-    // Opens a power's panel (read-only unless it is the player's own) and, on a click, turns the globe to it. The zoom is not touched.
+    // A foreign power opens in the right panel (read-only); the player's own power is the area panels on the left. Only one of them is open at a time
+    // (one why_not target in the Session snapshot). On a click the globe turns to the power; the zoom is not touched.
     void ShowPower(int i, bool turn)
     {
         _viewed = i;
         _host.WhyActor = i;
-        _actorPanel.ShowActor(i);
+        if (i == _player) _actorPanel.Visible = false;
+        else { CloseArea(); _actorPanel.ShowActor(i); }
         if (_tree.Visible) _tree.ShowFor(i, 0);
         if (!turn) return;
         _audio?.Tick();
-        if (_actorCountry[i] != 0)
-        {
-            _selected = _actorCountry[i]; ApplySelection();
-            var ll = _data.Countries[_selected - 1].LabelPoint;
-            // The country goes to the middle of the free area left of the open panel (spec section 9), the zoom is kept.
-            (_tgtYaw, _tgtPitch) = PlanisphereMath.CameraForShift(ll.X, ll.Y, _dist, _cam.Fov, GetViewport().GetVisibleRect().Size.Y, PanelShift());
-            _tgtPitch = Mathf.Clamp(_tgtPitch, -75f, 75f);
-            _flying = true;
-        }
+        FlyTo(i);
     }
 
-    /// <summary>Half of the width the open right panel takes (plus its margin): the centre of the free area is this far left of the screen centre.</summary>
-    float PanelShift() => _actorPanel != null && _actorPanel.Visible ? (Math.Max(_actorPanel.Size.X, _actorPanel.CustomMinimumSize.X) + 10) / 2f : 0f;
+    void FlyTo(int i)
+    {
+        if (_actorCountry[i] == 0) return;
+        _selected = _actorCountry[i]; ApplySelection();
+        var ll = _data.Countries[_selected - 1].LabelPoint;
+        // The country goes to the middle of the free area beside the open panel and the rail (spec section 9), the zoom is kept.
+        (_tgtYaw, _tgtPitch) = PlanisphereMath.CameraForShift(ll.X, ll.Y, _dist, _cam.Fov, GetViewport().GetVisibleRect().Size.Y, PanelShift());
+        _tgtPitch = Mathf.Clamp(_tgtPitch, -75f, 75f);
+        _flying = true;
+    }
+
+    // The free area changed (an area opened or closed, the rail changed width): the selected own country moves to its middle again.
+    void Recenter() { if (_tintsReady && _actorCountry != null && _actorCountry[_viewed] != 0 && _selected == _actorCountry[_viewed]) FlyTo(_viewed); }
+
+    void OpenArea(AreaId id)
+    {
+        if (id == AreaId.Map) { CloseArea(); Recenter(); return; }
+        var def = AreaData.Of(id);
+        if (_viewed != _player) ShowPower(_player, false);
+        _audio?.Tick();
+        _area = id; _rail.Select(id);
+        _host.WhyActor = _player;
+        if (def.State == AreaState.Locked) { _areaPanel.Visible = false; _areaCard.ShowArea(def); }
+        else { _areaCard.Visible = false; _areaPanel.Area = id; _areaPanel.ShowActor(_player); }
+        Recenter();
+    }
+
+    void CloseArea()
+    {
+        _area = AreaId.Map; _rail?.Select(AreaId.Map);
+        if (_areaPanel != null) _areaPanel.Visible = false;
+        if (_areaCard != null) _areaCard.Visible = false;
+    }
+
+    void ToggleRail()
+    {
+        Settings.Current.RailWide = !Settings.Current.RailWide; Settings.Save();
+        _rail.SetWide(Settings.Current.RailWide); Recenter();
+    }
+
+    void ToggleJournal() { _audio?.Tick(); _journal.Visible = !_journal.Visible; }
+
+    /// <summary>Signed offset of the middle of the free area from the screen centre: positive when a right panel takes room, negative for the rail and an area panel on the left.</summary>
+    float PanelShift()
+    {
+        if (_actorPanel != null && _actorPanel.Visible) return (Math.Max(_actorPanel.Size.X, _actorPanel.CustomMinimumSize.X) + 10) / 2f;
+        if (_rail == null) return 0f;
+        float left = _rail.RailWidth;
+        if (_area != AreaId.Map) left += 8 + (_areaPanel.Visible ? Math.Max(_areaPanel.Size.X, _areaPanel.CustomMinimumSize.X) : _areaCard.CustomMinimumSize.X) + 8;
+        return -left / 2f;
+    }
 
     void FlyStep(double dt)
     {
@@ -543,12 +601,12 @@ public sealed partial class Main : Node3D
             _yaw -= mm.Relative.X * k; _pitch = Mathf.Clamp(_pitch + mm.Relative.Y * k, -80f, 80f);
         }
         else if (e is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape } && _tintsReady) OnEscape();
-        else if (e is InputEventKey sk && sk.Pressed && !sk.Echo && _tintsReady && sk.Keycode is Key.Space or Key.P or Key.Bracketleft or Key.Bracketright or Key.Key1 or Key.Key2 or Key.Key3 or Key.T or Key.L)
+        else if (e is InputEventKey ak && ak.Pressed && !ak.Echo && _tintsReady && AreaKey(ak)) { }
+        else if (e is InputEventKey sk && sk.Pressed && !sk.Echo && _tintsReady && sk.Keycode is Key.Space or Key.P or Key.Bracketleft or Key.Bracketright or Key.Key1 or Key.Key2 or Key.Key3 or Key.L)
         {
             if (sk.Keycode is Key.Space or Key.P) _signal.TogglePause();
             else if (sk.Keycode == Key.Bracketleft) _signal.StepSpeed(-1);
             else if (sk.Keycode == Key.Bracketright) _signal.StepSpeed(1);
-            else if (sk.Keycode == Key.T) { if (_tree.Visible) _tree.Visible = false; else OpenTree(0); }
             else if (sk.Keycode == Key.L) { if (_tree.Visible) _tree.ToggleLegend(!_tree.LegendOpen); }
             else _signal.SetSpeed((int)(sk.Keycode - Key.Key1) + 1);
         }
@@ -565,12 +623,28 @@ public sealed partial class Main : Node3D
         }
     }
 
-    // Esc: closes the legend, the tree, the popovers; a foreign power returns to the player's own; otherwise the game menu.
+    // Hotkeys of the rail (by Keycode, not by the typed character): T E F M I G J open an area, the backslash switches the rail width, the backquote opens the journal.
+    // T inside Science opens the tree, T in the tree closes it. Returns true when the key was taken.
+    bool AreaKey(InputEventKey k)
+    {
+        if (k.CtrlPressed || k.AltPressed || k.MetaPressed) return false;
+        if (k.Keycode == Key.Backslash) { ToggleRail(); return true; }
+        if (k.Keycode == Key.Quoteleft) { ToggleJournal(); return true; }
+        var code = k.Keycode is >= Key.A and <= Key.Z ? k.Keycode : k.PhysicalKeycode;   // a non-Latin layout reports the physical Latin key
+        var def = code is >= Key.A and <= Key.Z ? AreaData.ByLetter((char)code) : null;
+        if (def == null) return false;
+        if (_tree.Visible) { if (def.Id == AreaId.Science) _tree.Visible = false; return true; }
+        if (def.Id == AreaId.Science && _area == AreaId.Science) OpenTree(0); else OpenArea(def.Id);
+        return true;
+    }
+
+    // Esc: closes the legend, the tree, the journal, the open area (back to the map); a foreign power returns to the player's own; otherwise the game menu.
     void OnEscape()
     {
         if (_tree.Visible) { if (_tree.LegendOpen) _tree.ToggleLegend(false); else _tree.Visible = false; }
         else if (_help.Visible) _help.Visible = false;
-        else if (_audioPop.Visible) _audioPop.Visible = false;
+        else if (_journal.Visible) _journal.Visible = false;
+        else if (_area != AreaId.Map) { CloseArea(); Recenter(); }
         else if (_viewed != _player) ShowPower(_player, true);
         else OpenGameMenu();
     }
@@ -620,6 +694,7 @@ public sealed partial class Main : Node3D
             else { _loading.Text = Loc.T(_host.Status); _loading.Visible = !_coldShot; }
         }
         if (_helpBtn != null) { _helpBtn.Visible = !_tree.Visible; if (_tree.Visible) _help.Visible = false; }
+        if (_rail != null) LayoutClient();
         if (_shots && _tintsReady) ShotStep(delta);
         if (_bench) BenchStep(delta);
         FlyStep(delta);
@@ -632,6 +707,24 @@ public sealed partial class Main : Node3D
             _hud.Text = $"FPS {Engine.GetFramesPerSecond()}  draw calls {(long)Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame)}  labels {_overlay.VisibleLabels}\n" +
                         $"region: {sel}  (factory, aircraft: spike mock)" + (_host?.Snap is { JobError: not "" } js ? "\njob error: " + js.JobError : "");
         }
+    }
+
+    // Rail, area panels and the journal sit under the top bar, whose height follows its content; the help button clears the rail.
+    void LayoutClient()
+    {
+        float top = _signal.Size.Y, left = _rail.RailWidth;
+        _rail.OffsetTop = top; _rail.OffsetRight = left;
+        foreach (Control c in new Control[] { _areaPanel, _areaCard })
+        {
+            c.AnchorLeft = c.AnchorRight = 0; c.OffsetLeft = left + 8; c.OffsetTop = top + 8; c.OffsetRight = left + 8 + c.CustomMinimumSize.X;
+        }
+        _journal.OffsetTop = top + 8;
+        _helpBtn.OffsetLeft = left + 8; _helpBtn.OffsetRight = left + 44; _help.OffsetLeft = left + 8;
+        // Badges: the active signals of an area, with the worst severity; locked areas never get one.
+        var count = new int[AreaData.All.Length]; var sev = new int[AreaData.All.Length];
+        foreach (var key in AlertKeys)
+            if (_signal.Active(key) && AreaData.OfSignal(key) is { } a) { count[(int)a.Area]++; sev[(int)a.Area] = Math.Max(sev[(int)a.Area], a.Severity); }
+        foreach (var d in AreaData.All) if (d.Id != AreaId.Map) _rail.SetBadge(d.Id, count[(int)d.Id], sev[(int)d.Id]);
     }
 
     void AnimateObjects()
@@ -689,8 +782,10 @@ public sealed partial class Main : Node3D
             Q(0.5, () => { SaveShot($"settings_video{sfx}.png"); _settings.ShotTab(1); });
             Q(0.4, () => { SaveShot($"settings_sound{sfx}.png"); _settings.ShotTab(2); });
             Q(0.4, () => { SaveShot($"settings_general{sfx}.png"); _settings.ShotTab(0); _settings.ShotRollback(); });
-            Q(0.5, () => { SaveShot($"settings_rollback{sfx}.png"); _settings.Revert(false); _settings.Close(); AimAlert(1, false); });
-            Q(0.8, () => { SaveShot($"alert_tint5{sfx}.png"); _overlay.RemoveMarker("demo0"); _overlay.RemoveMarker("demo1"); _overlay.RemoveMarker("demo2"); OpenTree(0); });
+            Q(0.5, () => { SaveShot($"settings_rollback{sfx}.png"); _settings.Revert(false); _settings.Close(); Loc.SetLang(lang); AimAlert(1, false); });
+            Q(0.8, () => { SaveShot($"alert_tint5{sfx}.png"); _overlay.RemoveMarker("demo0"); _overlay.RemoveMarker("demo1"); _overlay.RemoveMarker("demo2"); OpenArea(AreaId.Finance); });
+            Q(0.8, () => { SaveShot($"area_finance{sfx}.png"); _shotLog += $"rail {sfx}: fits without scroll {_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f} (min {_rail.GetCombinedMinimumSize().Y:F0} of {_rail.Size.Y:F0})\n"; OpenArea(AreaId.Forces); });
+            Q(0.6, () => { SaveShot($"area_forces{sfx}.png"); CloseArea(); OpenTree(0); });
             Q(1.0, () => _tree.ToggleLegend(true));
             Q(0.5, () => { SaveShot($"tree_legend{sfx}.png"); _tree.ToggleLegend(false); _tree.ResetView(); _tree.Visible = false; });
         }
@@ -709,13 +804,13 @@ public sealed partial class Main : Node3D
             case 0:
                 _shotLog += $"session start: seed {_host.Seed} start_hash {_host.StartHash}\n";
                 RunValidator();
-                _signal.SetSpeed(3); ShowPower(_player, false); _shotStep = 1; _shotT = 0; break;
+                _signal.SetSpeed(3); ShowPower(_player, false); OpenArea(AreaId.Finance); _shotStep = 1; _shotT = 0; break;
             case 1 when _shotT >= 3:
                 // Pause, move 10 points from procurement to R (as the sliders would) and send: the command must stay pending.
                 _shotLog += $"before: date {s.Date} tick {s.Tick} shares_in_force {Fmt(s.SharesInForce[0])} tick_ms {s.LastTickMs:F2}\n";
                 _signal.SetSpeed(0);
                 _shotTick = s.Tick;
-                _actorPanel.ShotEdit(0, 45);
+                _areaPanel.ShotEdit(0, 45);
                 _shotStep = 2; _shotT = 0; break;
             case 2 when _shotT >= 1.2:
                 _shotLog += $"paused: tick {s.Tick} (was {_shotTick}), pending {s.Pending}, last {s.Last.Status}\n";
@@ -731,6 +826,7 @@ public sealed partial class Main : Node3D
             case 4 when _shotT >= 1.0:
                 _shotLog += $"refusal: last {s.Last.Status} rejected_flag {s.LastRejected} reason {s.Last.Reason}\n";
                 Shot("signal_active_new.png", new Rect2I(0, 0, (int)vp.X, 52)); Shot("globe_panel_refused.png");
+                CheckPlateFlat();
                 _signal.AckAll(); _shotStep = 5; _shotT = 0; break;
             case 5 when _shotT >= 0.4:
                 Shot("signal_active_acked.png", new Rect2I(0, 0, (int)vp.X, 52)); _shotStep = 6; _shotT = 0; break;
@@ -777,10 +873,33 @@ public sealed partial class Main : Node3D
                 _signal.AckAll(); _shotStep = 14; _shotT = 0; break;
             case 14 when _shotT >= 0.4:
                 Shot("signal_fail_acked.png", new Rect2I(0, 0, (int)vp.X, 52));
-                _audioPop.Visible = true; _shotStep = 15; _shotT = 0; break;
-            case 15 when _shotT >= 0.5:
-                Shot("audio_popover.png"); _audioPop.Visible = false;
-                _signal.SetSpeed(1); _shotStep = 40; _shotT = 0; break;
+                _signal.SetSpeed(1); _areaHot = 0; _shotStep = 80; _shotT = 0; break;
+            // v0.5c: areas by their hotkeys (a real key event each), the rail, the wide rail, EN, the texture presets, the journal
+            case 80 when _shotT >= 0.5: _shotLog += $"hotkeys: sound button in the top bar: {(FindText(_signal, "♪") ? "PRESENT" : "absent")}\n"; PressKey(Key.T); _shotStep = 81; _shotT = 0; break;
+            case 81 when _shotT >= 0.8: AreaShot(); if (++_areaHot < HotKeys.Length) PressKey(HotKeys[_areaHot]); else PressKey(Key.Escape); _shotT = 0; if (_areaHot >= HotKeys.Length) _shotStep = 82; break;
+            case 82 when _shotT >= 0.6: _shotLog += $"hotkeys: Escape -> area {_area}\n"; Shot("area_none.png"); _rail.FocusArea(AreaId.Production); _shotStep = 94; _shotT = 0; break;
+            case 94 when _shotT >= 0.4: Shot("rail_focus.png", new Rect2I(0, 0, 420, 360)); GetViewport().GuiReleaseFocus(); PressKey(Key.Backslash); _shotStep = 83; _shotT = 0; break;
+            case 83 when _shotT >= 0.5: PressKey(Key.F); _shotStep = 84; _shotT = 0; break;
+            case 84 when _shotT >= 0.8:
+                _shotLog += $"rail wide: width {_rail.RailWidth}, wide {_rail.Wide}, fits without scroll {_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f} (min {_rail.GetCombinedMinimumSize().Y:F0} of {_rail.Size.Y:F0})\n";
+                Shot("rail_wide_finance.png"); Loc.SetLang("en"); _shotStep = 85; _shotT = 0; break;
+            case 85 when _shotT >= 0.6: Shot("rail_wide_finance_en.png"); PressKey(Key.M); _shotStep = 86; _shotT = 0; break;
+            case 86 when _shotT >= 0.6: Shot("rail_wide_forces_en.png"); PressKey(Key.Backslash); _shotStep = 87; _shotT = 0; break;
+            case 87 when _shotT >= 0.6: Shot("area_forces_en.png"); PressKey(Key.F); _shotStep = 88; _shotT = 0; break;
+            case 88 when _shotT >= 0.6: Shot("area_finance_en.png"); Loc.SetLang("ru"); _shotStep = 89; _shotT = 0; break;
+            case 89 when _shotT >= 0.5:
+                foreach (var (preset, name) in new[] { (0, "off"), (1, "weak"), (2, "normal") })
+                {
+                    _texQ.Add((preset, name));
+                }
+                _shotStep = 90; _shotT = 0; break;
+            case 90 when _shotT >= 0.5:
+                if (_texQ.Count > 0) { var (preset, name) = _texQ[0]; _texQ.RemoveAt(0); PaperSurface.SetPreset(preset); _shotT = 0; _texName = name; _shotStep = 91; }
+                else { PaperSurface.SetPreset(2); _shotStep = 92; _shotT = 0; }
+                break;
+            case 91 when _shotT >= 0.4: Shot($"textures_{_texName}.png", new Rect2I(0, 0, 640, 700)); _shotLog += $"textures {_texName}: shot taken\n"; _shotStep = 90; _shotT = 0; break;
+            case 92 when _shotT >= 0.4: ToggleJournal(); _shotStep = 93; _shotT = 0; break;
+            case 93 when _shotT >= 0.6: Shot("journal.png"); _journal.Visible = false; CloseArea(); _shotStep = 40; _shotT = 0; break;
             // v0.5b: time icons in their states
             case 40 when _shotT >= 0.5: Shot("time_day.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(2); _shotStep = 41; _shotT = 0; break;
             case 41 when _shotT >= 0.4: Shot("time_week.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(3); _shotStep = 42; _shotT = 0; break;
@@ -818,7 +937,11 @@ public sealed partial class Main : Node3D
             case 62 when _shotT >= 0.6:
                 Shot("menu_ingame_150.png"); _mainMenu.Close(); _settings.Open(); _shotStep = 63; _shotT = 0; break;
             case 63 when _shotT >= 0.6:
-                Shot("settings_video_150.png"); _settings.Close();
+                Shot("settings_video_150.png"); _settings.Close(); OpenArea(AreaId.Finance); _shotStep = 64; _shotT = 0; break;
+            case 64 when _shotT >= 0.8:
+                Shot("area_finance_150.png");
+                _shotLog += $"rail at 150%: fits without scroll {_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f} (min {_rail.GetCombinedMinimumSize().Y:F0} of {_rail.Size.Y:F0})\n";
+                CloseArea();
                 Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false);
                 ShowPower(_player, false); OpenTree(0); _shotStep = 65; _shotT = 0; break;
             case 65 when _shotT >= 1.0: Shot("tree_legend_closed.png"); _tree.ToggleLegend(true); _shotStep = 66; _shotT = 0; break;
@@ -855,6 +978,48 @@ public sealed partial class Main : Node3D
         }
     }
 
+    // ---------- v0.5c shot helpers ----------
+    static readonly Key[] HotKeys = { Key.T, Key.E, Key.F, Key.M, Key.I, Key.G, Key.J };
+    int _areaHot; string _texName = ""; readonly List<(int, string)> _texQ = new();
+
+    // A real key press through the input pipeline, so that the hotkey route is the one a player uses.
+    static void PressKey(Key k) => Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = true });
+
+    void AreaShot()
+    {
+        var def = AreaData.Of(_area);
+        _shotLog += $"hotkey {HotKeys[_areaHot]} -> area {_area}; live panel {_areaPanel.Visible}, locked card {_areaCard.Visible}; rail selected {_rail.Selected}\n";
+        SaveShot("area_" + def.Slug + ".png");
+    }
+
+    static bool FindText(Node n, string text)
+    {
+        if ((n is Button b && b.Text == text) || (n is Label l && l.Text == text)) return true;
+        foreach (var c in n.GetChildren()) if (FindText(c, text)) return true;
+        return false;
+    }
+
+    // Validator rule T3 on the screenshot: inside a «new» alert plate the luminance does not vary (no paper texture), while a textured stretch of the bar does.
+    void CheckPlateFlat()
+    {
+        var img = GetViewport().GetTexture().GetImage();
+        float k = img.GetWidth() / GetViewport().GetVisibleRect().Size.X;
+        IReadOnlyList<byte> Luma(Rect2 r)
+        {
+            var l = new List<byte>();
+            for (int y = (int)(r.Position.Y * k); y < (int)(r.End.Y * k); y++)
+                for (int x = (int)(r.Position.X * k); x < (int)(r.End.X * k); x++)
+                { var c = img.GetPixel(x, y); l.Add((byte)Math.Round((0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B) * 255)); }
+            return l;
+        }
+        var plate = _signal.PlateRect("sig.refusal");
+        // The strip between the 3 du frame and the label: only the plate fill is in it.
+        var strip = new Rect2(plate.Position.X + 3.5f, plate.Position.Y + 5, 2, plate.Size.Y - 10);
+        var free = _signal.FreeRect; var area = new Rect2(free.Position.X + free.Size.X / 2 - 10, free.Position.Y + 6, 20, free.Size.Y - 12);
+        var r3 = TextureValidator.T3(TextureValidator.Variance(Luma(strip)), TextureValidator.Variance(Luma(area)), PaperSurface.Strength > 0);
+        _shotLog += (r3.Pass ? "PASS " : "FAIL ") + r3.Name + ": " + r3.Detail + $" (plate strip {strip.Position.X:F0},{strip.Position.Y:F0} {strip.Size.X:F0}x{strip.Size.Y:F0})\n";
+    }
+
     // Runs the alert-contrast validator on palette C and on the v0.2 palette, prints PASS/FAIL per pair into the log. A failure does not stop the run.
     void RunValidator()
     {
@@ -863,6 +1028,8 @@ public sealed partial class Main : Node3D
             string report = ContrastValidator.Format(p, ContrastValidator.Run(p));
             _shotLog += report;
         }
+        _shotLog += TextureValidator.Format("texture rules T1, T2, T4, T5 (T3 runs on the screenshot below), palette C", TextureValidator.Run(Palette.C));
+        _shotLog += TextureValidator.Format("speed gauge", TextureValidator.RunGauge());
         _shotLog += "shot-only: the plates on tints 1/5/7 are demo markers; in the game a plate appears only for a real signal of the player's power\n";
     }
 

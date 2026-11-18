@@ -31,7 +31,7 @@ Godot 4.7.2 mono is a .NET 8 host; the game assembly and Core/Kernel/Session are
 ## v0.3 (TASK-0070)
 - Fonts (OFL, `assets/fonts/`): Golos Text (interface), PT Mono (numbers), Jura (headings), Literata (map labels); minimum size 14 px (`Ui.MinSize`).
 - Localization (decision #83): `locale/ui.csv` (interface) and `locale/data.csv` (node, country, actor names) with columns `keys,en,ru`, loaded at startup into Godot `Translation` objects (`Loc.cs`); language switch RU/EN in the signal field, RU by default. `Names.cs` is the only reader of `data.csv`.
-- Keys: Space pause, 1/2/3 tempo, T tech tree, F3 debug (FPS, tick time, Session text), F1 help. `--lang en|ru`, `--debug`.
+- Keys: Space pause, 1/2/3 tempo, T E F M I G J areas of the left rail (T again: tech tree), Esc back to the map, backslash rail width, backquote journal, F3 debug (FPS, tick time, Session text), F1 help. `--lang en|ru`, `--debug`.
 - A command sent on pause stays pending (`HostSnapshot.Pending`) and applies at the first tick after unpause.
 - Known stubs: ComposeDesign/StartSeries, research priorities, node progress shares, ETA intervals, G1-G4 clock arcs, signals GOAL/GAP/WAR have no Session API (shown with the neutral «mock» marker); the layer names are in the legend, not on the radial axis.
 

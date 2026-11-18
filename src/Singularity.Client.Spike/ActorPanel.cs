@@ -15,7 +15,7 @@ namespace Singularity.Client.Spike;
 /// CancelDesign / CloseLine; why_not from Session. A command sent on pause stays «pending» with the slider values kept.</summary>
 public sealed partial class ActorPanel : PanelContainer
 {
-    const int PanelWidth = 520;
+    const int PanelWidth = 520, AreaPanelWidth = 420;
 
     readonly SimHost _host;
     readonly VBoxContainer _root = new();
@@ -56,11 +56,36 @@ public sealed partial class ActorPanel : PanelContainer
     /// <summary>F3 switches Session text on and off: the panel is rebuilt at once.</summary>
     public bool Debug { get => _debug; set { if (_debug == value) return; _debug = value; Invalidate(); _dirty = true; } }
 
-    public ActorPanel(SimHost host)
+    // Area mode (v0.5c): the player's own power opens in the left area panels: Science (why_not and the tree), Production (design lines), Finance (budget, licences).
+    // The right panel without an area is the read-only view of a foreign power with every section.
+    readonly bool _areaMode;
+    readonly VBoxContainer _secBudget = new(), _secDesigns = new(), _secLicence = new(), _secWhy = new();
+    Control _treeBtn, _headerView, _prodLater, _finLater;
+    AreaId _area = AreaId.Map;
+    public AreaId Area
     {
-        _host = host;
-        CustomMinimumSize = new Vector2(PanelWidth, 0);
+        get => _area;
+        set
+        {
+            _area = value;
+            if (_headerView != null) { _root.RemoveChild(_headerView); _headerView.QueueFree(); _headerView = null; }
+            if (_areaMode)
+            {
+                _headerView = new AreaHeader(AreaData.Of(value), false);
+                _root.AddChild(_headerView); _root.MoveChild(_headerView, 0);
+                _secBudget.Visible = _secLicence.Visible = _finLater.Visible = value == AreaId.Finance;
+                _secDesigns.Visible = _prodLater.Visible = value == AreaId.Production;
+                _secWhy.Visible = _treeBtn.Visible = value == AreaId.Science;
+            }
+        }
+    }
+
+    public ActorPanel(SimHost host, bool areaMode = false)
+    {
+        _host = host; _areaMode = areaMode;
+        CustomMinimumSize = new Vector2(areaMode ? AreaPanelWidth : PanelWidth, 0);
         AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 2, 12, Ui.R3));
+        PaperSurface.Apply(this, SurfaceKind.Sheet, areaMode ? "area" : "actor");
         AddChild(_scroll);
         _root.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         _root.AddThemeConstantOverride("separation", 6);
@@ -72,7 +97,7 @@ public sealed partial class ActorPanel : PanelContainer
         head.AddChild(tb);
         head.AddChild(Ui.Btn("ui.tree", () => OpenTree?.Invoke()));
         head.AddChild(Ui.Btn("×", () => Closed?.Invoke()));
-        _root.AddChild(head);
+        _root.AddChild(head); head.Visible = !areaMode;
         var fv = new VBoxContainer();
         var fr = new HBoxContainer(); fr.AddThemeConstantOverride("separation", 8);
         fr.AddChild(_chip); fr.AddChild(_foreignName);
@@ -85,15 +110,16 @@ public sealed partial class ActorPanel : PanelContainer
         _foreign.AddChild(fv);
         _foreign.Visible = false; _root.AddChild(_foreign);
 
-        Section("panel.budget");
-        _root.AddChild(_budget);
-        _sharesNote.Visible = false; _root.AddChild(_sharesNote);
+        foreach (var sec in new[] { _secBudget, _secDesigns, _secLicence, _secWhy }) { sec.AddThemeConstantOverride("separation", 6); _root.AddChild(sec); }
+        Section("panel.budget", _secBudget);
+        _secBudget.AddChild(_budget);
+        _sharesNote.Visible = false; _secBudget.AddChild(_sharesNote);
         var hd = new HBoxContainer();
         hd.AddChild(new Control { CustomMinimumSize = new Vector2(138, 0) });
         hd.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
         hd.AddChild(Ui.Num("col.share", 14, Ui.Ink2, 52));
         hd.AddChild(Ui.Num("col.inforce", 14, Ui.Ink2, 84));
-        _root.AddChild(hd);
+        _secBudget.AddChild(hd);
         for (int i = 0; i < 5; i++)
         {
             int k = i;
@@ -105,23 +131,27 @@ public sealed partial class ActorPanel : PanelContainer
             _slVal[i] = Ui.Num("", 14, null, 52);
             _slForce[i] = Ui.Num("", 14, Ui.Ink2, 84);
             r.AddChild(n); r.AddChild(_sl[i]); r.AddChild(_slVal[i]); r.AddChild(_slForce[i]);
-            _root.AddChild(r);
+            _secBudget.AddChild(r);
         }
         var ar = new HBoxContainer();
         ar.AddThemeConstantOverride("separation", 10);
         _apply = Ui.Btn("ui.apply", Apply);
         ar.AddChild(_apply); ar.AddChild(_sum);
-        _root.AddChild(ar); _orderControls.Add(ar);
+        _secBudget.AddChild(ar); _orderControls.Add(ar);
         var rr = new HBoxContainer(); rr.AddThemeConstantOverride("separation", 6);
         rr.AddChild(_resultMark); rr.AddChild(_result);
-        _root.AddChild(rr); _orderControls.Add(rr);
+        _secBudget.AddChild(rr); _orderControls.Add(rr);
 
-        _designsHead = Section("panel.designs");
-        _root.AddChild(_designs);
-        Section("panel.licence");
-        _root.AddChild(_licence);
-        Section("panel.why");
-        _root.AddChild(_why);
+        _designsHead = Section("panel.designs", _secDesigns);
+        _secDesigns.AddChild(_designs);
+        _prodLater = Ui.Wrap("area.production.later", 14, Ui.Ink3); _secDesigns.AddChild(_prodLater);
+        Section("panel.licence", _secLicence);
+        _secLicence.AddChild(_licence);
+        _finLater = Ui.Wrap("area.finance.later", 14, Ui.Ink3); _secLicence.AddChild(_finLater);
+        Section("panel.why", _secWhy);
+        _treeBtn = Ui.Btn("ui.tree", () => OpenTree?.Invoke()); _treeBtn.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; _secWhy.AddChild(_treeBtn);
+        _secWhy.AddChild(_why);
+        _prodLater.Visible = _finLater.Visible = _treeBtn.Visible = areaMode;
         Loc.Changed += Invalidate;
         TreeExiting += () => Loc.Changed -= Invalidate;
     }
@@ -137,12 +167,12 @@ public sealed partial class ActorPanel : PanelContainer
         s.FocusMode = FocusModeEnum.None;
     }
 
-    Control Section(string key)
+    Control Section(string key, Container into)
     {
         var v = new VBoxContainer();
         v.AddChild(new HSeparator());
         v.AddChild(Ui.Head(key));
-        _root.AddChild(v);
+        into.AddChild(v);
         return v;
     }
 
@@ -197,7 +227,9 @@ public sealed partial class ActorPanel : PanelContainer
     public override void _Process(double delta)
     {
         // Height follows the content (an inset, not a full-height column), capped by the window.
-        _scroll.CustomMinimumSize = new Vector2(0, Math.Min(_root.GetCombinedMinimumSize().Y, GetViewportRect().Size.Y - 90));
+        float want = _root.GetCombinedMinimumSize().Y + 6, cap = GetViewportRect().Size.Y - 120;
+        _scroll.CustomMinimumSize = new Vector2(0, Math.Min(want, cap));
+        _scroll.VerticalScrollMode = want <= cap ? ScrollContainer.ScrollMode.Disabled : ScrollContainer.ScrollMode.Auto;   // a scroll bar only when the content really does not fit
         var s = _host.Snap;
         if (s == null || _actor < 0 || !Visible) return;
         if (s.WhyActor != _actor) return;
@@ -277,8 +309,10 @@ public sealed partial class ActorPanel : PanelContainer
         {
             var r = new HBoxContainer();
             r.AddChild(Ui.Wrap(text));
-            if (!Foreign && action == "close") r.AddChild(Ui.Btn("ui.closeline", () => _host.Submit(new CloseLine(_actor, design), "cmd.close", design)));
-            else if (!Foreign && action == "cancel") r.AddChild(Ui.Btn("ui.cancel", () => _host.Submit(new CancelDesign(_actor, design), "cmd.cancel", design)));
+            Button act = null;
+            if (!Foreign && action == "close") act = Ui.Btn("ui.closeline", () => _host.Submit(new CloseLine(_actor, design), "cmd.close", design));
+            else if (!Foreign && action == "cancel") act = Ui.Btn("ui.cancel", () => _host.Submit(new CancelDesign(_actor, design), "cmd.cancel", design));
+            if (act != null) { act.SizeFlagsVertical = SizeFlags.ShrinkBegin; r.AddChild(act); }
             _designs.AddChild(r);
         }
         var note = new HBoxContainer(); note.AddThemeConstantOverride("separation", 8);

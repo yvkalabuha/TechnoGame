@@ -3,8 +3,7 @@ using Godot;
 
 namespace Singularity.Client.Spike;
 
-/// <summary>Time group (UI_DESIGN_SYSTEM §17.8, spec §5): pause, slower, faster as 28x28 line icons on a 20-unit grid, and a tempo meter of three ticks of
-/// growing height (filled: 0 pause, 1 day/s, 2 week/s, 3 month/s) with the tempo word beside it. State reads without colour: fill and the number of ticks.</summary>
+/// <summary>Time group (UI_DESIGN_SYSTEM §17.8, spec §5): pause, slower, faster as 28x28 line icons on a 20-unit grid, and a coloured four-cell tempo gauge (filled: 0 pause, 1 day/s, 2 week/s, 3 month/s) with the tempo word beside it. State reads without colour: fill and the number of ticks.</summary>
 public sealed partial class TimeControl : HBoxContainer
 {
     public enum Kind { Pause, Slower, Faster }
@@ -50,18 +49,42 @@ public sealed partial class TimeControl : HBoxContainer
         }
     }
 
+    // Speed gauge (CLIENT_V05C_SPEC §2): four cells 8 wide, 7/11/15/19 high, 2 apart. Cells 1..N are filled in their own ink (teal, olive, plum), the current one has an outer ring,
+    // empty cells are hatched at 45 degrees. The fourth (reserve, sand, #331) is dashed and inactive while the simulation has three tempos.
+    // Read without colour: number of filled cells, height, hatching. Decor ink: no ■ ▲ ●, no blinking.
+    static readonly int[] GaugeInk = { Ui.Teal, Ui.Olive, Ui.Plum, Ui.Sand };
+
     sealed partial class Meter : Control
     {
         public int Filled;
-        static readonly float[] Heights = { 5, 9, 14 };
-        public Meter() { CustomMinimumSize = new Vector2(22, 28); MouseFilter = MouseFilterEnum.Ignore; }
+        static readonly float[] Heights = { 7, 11, 15, 19 };
+        public Meter() { CustomMinimumSize = new Vector2(46, 28); MouseFilter = MouseFilterEnum.Ignore; }
+
+        static void Hatch(CanvasItem c, Rect2 r, Color col)
+        {
+            for (float a = r.Position.X - r.Size.Y; a < r.End.X; a += 3f)
+            {
+                float s0 = Math.Max(0, r.Position.X - a), s1 = Math.Min(r.Size.Y, r.End.X - a);
+                if (s0 < s1) c.DrawLine(new Vector2(a + s0, r.End.Y - s0), new Vector2(a + s1, r.End.Y - s1), col, 1f);
+            }
+        }
+
         public override void _Draw()
         {
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 4; i++)
             {
-                var r = new Rect2(2 + i * 6, Size.Y - 7 - Heights[i], 4, Heights[i]);
-                if (i < Filled) DrawRect(r, Ui.Ink);
+                var r = new Rect2(4 + i * 10, Size.Y - 4 - Heights[i], 8, Heights[i]);
+                if (i == 3)
+                {
+                    var c = Ui.Ink3;
+                    DrawDashedLine(r.Position, new Vector2(r.End.X, r.Position.Y), c, 1f, 2f); DrawDashedLine(new Vector2(r.End.X, r.Position.Y), r.End, c, 1f, 2f);
+                    DrawDashedLine(r.End, new Vector2(r.Position.X, r.End.Y), c, 1f, 2f); DrawDashedLine(new Vector2(r.Position.X, r.End.Y), r.Position, c, 1f, 2f);
+                    continue;
+                }
+                bool on = i < Filled;
+                if (on) DrawRect(r, Ui.InkLine[GaugeInk[i]]); else Hatch(this, r, new Color(Ui.Ink, 0.45f));
                 DrawRect(r, Ui.Ink, false, 1f);
+                if (i == Filled - 1) DrawRect(r.Grow(2), Ui.Ink, false, 1.5f);
             }
         }
     }
@@ -115,6 +138,7 @@ public sealed partial class TimeControl : HBoxContainer
         _slower.Disabled = level <= 1; _faster.Disabled = level >= 3;
         _meter.Filled = _speed;
         _word.Text = Words[_speed];
+        _word.AddThemeColorOverride("font_color", _speed == 0 ? Ui.Ink2 : Ui.InkText[GaugeInk[_speed - 1]]);
         _pause.QueueRedraw(); _slower.QueueRedraw(); _faster.QueueRedraw(); _meter.QueueRedraw();
     }
 }

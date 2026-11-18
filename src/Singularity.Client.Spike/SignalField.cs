@@ -38,15 +38,21 @@ public sealed partial class SignalField : PanelContainer
     readonly TimeControl _speed;
     readonly Place[] _places;
     readonly Place _fail;
+    readonly Control _spacer;
     readonly int _actor;   // signals and orders belong to the player's own power only
     double _alloyDeficit; bool _alloyKnown;
     long _seq = -1; long _rejects, _lastCmdSeq;
     /// <summary>A place got a signal (true) or lost it (false); the key is the place key (sig.alloy, ...). Sounds follow this event.</summary>
     public event Action<string, bool> SignalChanged;
-    public event Action AudioPressed;
+    public event Action JournalPressed;
     public event Action MenuPressed;
 
     public int Actor => _actor;
+    /// <summary>True while the signal of this place key is active (new or acknowledged), for the rail badges.</summary>
+    public bool Active(string key) { foreach (var p in _places.Append(_fail)) if (p.Key == key) return p.Cond; return false; }
+    /// <summary>Screen rectangle of a place (screenshot checks of the validator rule T3) and of the free stretch of the bar (a textured control area).</summary>
+    public Rect2 PlateRect(string key) { foreach (var p in _places.Append(_fail)) if (p.Key == key) return p.Box.GetGlobalRect(); return default; }
+    public Rect2 FreeRect => _spacer.GetGlobalRect();
     public bool Debug { set => _perf.Visible = value; }
     public void SetSpeed(int s) { _speed.Select(s, false); _host.Speed = _speed.Selected; }
     public void StepSpeed(int d) => _speed.Step(d);
@@ -59,6 +65,7 @@ public sealed partial class SignalField : PanelContainer
         _host = host; _actor = player;
         CustomMinimumSize = new Vector2(0, 46);
         AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, Ui.Ink, 1, 8, 0));
+        PaperSurface.Apply(this, SurfaceKind.Paper, "top");
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 10);
         AddChild(row);
@@ -82,11 +89,15 @@ public sealed partial class SignalField : PanelContainer
         _fail = new Place { Key = "sig.fail", Real = true, Plate = Ui.Alarm };
         var fb = MakePlace(_fail); fb.Visible = false; row.AddChild(fb);
 
-        row.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
+        _spacer = new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        row.AddChild(_spacer);
         row.AddChild(_perf);
-        var snd = Ui.Btn("♪", () => AudioPressed?.Invoke());
-        snd.TooltipText = "tip.audio";
-        row.AddChild(snd);
+        // The sound button left the bar (#352): sound lives in Settings. The journal of signals took its place.
+        var jr = Ui.Btn("", () => JournalPressed?.Invoke());
+        jr.TooltipText = "tip.journal"; jr.CustomMinimumSize = new Vector2(34, 30);
+        jr.AddChild(new TextureRect { Texture = UiArt.Icon("journal"), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.Scale,
+            MouseFilter = MouseFilterEnum.Ignore, Position = new Vector2(5, 3), Size = new Vector2(24, 24) });
+        row.AddChild(jr);
         row.AddChild(Ui.VRule());
         var menu = new MenuButton3Lines { TooltipText = "tip.menu" };
         menu.Pressed += () => MenuPressed?.Invoke();

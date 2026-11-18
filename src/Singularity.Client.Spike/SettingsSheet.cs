@@ -22,6 +22,7 @@ public sealed partial class SettingsSheet : Control
     public event Action Closed;
     /// <summary>Plays a test sound on a bus (index in SettingsData.BusNames); null = no audio yet (no game), the button is disabled.</summary>
     public Action<int> TestBus;
+    public Func<int> MusicAmount; public Action<int> MusicAmountSet; public Action ResetFatigue;   // set once a game runs
     public event Action<SettingsData> Applied;
 
     readonly PanelContainer _sheet;
@@ -214,6 +215,14 @@ public sealed partial class SettingsSheet : Control
         var test = Ui.Btn("set.test", () => TestBus?.Invoke(_soundFocus)); test.FocusMode = FocusModeEnum.All; MenuUi.FocusRing(test);
         if (TestBus == null) { test.Disabled = true; test.TooltipText = "menu.reason.nogame"; }
         _body.AddChild(test);
+        // Music amount and the fatigue reset moved here from the sound popover (the sound button left the top bar, #352); they need a running game.
+        var amount = new Segment(new[] { "audio.few", "audio.normal", "audio.many" }, MusicAmount?.Invoke() ?? 1, 14, true, true);
+        amount.Changed += i => MusicAmountSet?.Invoke(i);
+        if (MusicAmountSet == null) amount.Enabled = false;
+        Row("set.musicamount", amount, MusicAmountSet == null ? "menu.reason.nogame" : null);
+        var fatigue = Ui.Btn("audio.resetfatigue", () => ResetFatigue?.Invoke()); fatigue.FocusMode = FocusModeEnum.All; MenuUi.FocusRing(fatigue);
+        if (ResetFatigue == null) { fatigue.Disabled = true; fatigue.TooltipText = "menu.reason.nogame"; }
+        _body.AddChild(fatigue);
     }
 
     void BuildGeneral()
@@ -222,6 +231,8 @@ public sealed partial class SettingsSheet : Control
         Row("set.datefmt", Seg(new[] { "set.df.lang", "set.df.iso" }, _w.DateFormat, i => _w.DateFormat = i));
         Row("set.pausealarm", Seg(OnOff, _w.PauseOnAlarm ? 0 : 1, i => _w.PauseOnAlarm = i == 0), null, true);
         Row("set.tipdelay", Seg(SettingsData.TipDelays.Select(d => Loc.N(d, d < 1 ? 1 : 0) + " " + Loc.T("set.sec")).ToArray(), _w.TipDelay, i => _w.TipDelay = i, false));
+        Row("set.textures", Seg(new[] { "set.tex.off", "set.tex.weak", "set.tex.normal" }, _w.Textures, i => { _w.Textures = i; PaperSurface.SetPreset(i); }));
+        Row("set.railwide", Seg(new[] { "set.rail.narrow", "set.rail.wide" }, _w.RailWide ? 1 : 0, i => _w.RailWide = i == 1));
         Row("set.anim", Seg(new[] { "set.on", "set.reduce" }, _w.Animations ? 0 : 1, i => _w.Animations = i == 0), null, true);
         _body.AddChild(Ui.Wrap("set.lang.note", 14, Ui.Ink3));
     }
@@ -236,6 +247,7 @@ public sealed partial class SettingsSheet : Control
     void Cancel()
     {
         if (Loc.Lang != _orig.Lang) Loc.SetLang(_orig.Lang);
+        PaperSurface.SetPreset(_orig.Textures);   // the preset previews live while the sheet is open
         Visible = false; Closed?.Invoke();
     }
 

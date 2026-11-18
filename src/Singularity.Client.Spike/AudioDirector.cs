@@ -278,38 +278,4 @@ public sealed partial class AudioDirector : Node
         wav.SaveToWav(path);
         return wav.Data.Length;
     }
-
-    // ---------- settings popover ----------
-    public Control BuildPopover()
-    {
-        var box = new VBoxContainer();
-        box.AddThemeConstantOverride("separation", 6);
-        box.AddChild(Ui.Head("audio.title"));
-        var rows = new[] { ("audio.music", Bus.Music), ("audio.ambient", Bus.Ambient), ("audio.ui", Bus.UI), ("audio.alert", Bus.Alert) };
-        foreach (var (key, bus) in rows)
-        {
-            var r = new HBoxContainer();
-            r.AddChild(new Label { Text = key, CustomMinimumSize = new Vector2(120, 0) });
-            ((Label)r.GetChild(0)).AddThemeFontOverride("font", Fonts.Text);
-            ((Label)r.GetChild(0)).AddThemeFontSizeOverride("font_size", Ui.MinSize);
-            ((Label)r.GetChild(0)).AddThemeColorOverride("font_color", Ui.Ink);
-            var sl = new HSlider { MinValue = bus == Bus.Alert ? AudioSettings.AlertFloor * 100 : 0, MaxValue = 100, Step = 1, Value = _vol[(int)bus] * 100,
-                SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(140, 22) };
-            ActorPanel.StyleSlider(sl);
-            var val = Ui.Num(((int)(_vol[(int)bus] * 100)) + "%", 14, null, 48);
-            var b = bus;
-            sl.ValueChanged += v => { SetVolume(b, v / 100.0); val.Text = (int)v + "%"; };
-            r.AddChild(sl); r.AddChild(val);
-            box.AddChild(r);
-        }
-        var note = Ui.Wrap("audio.alertnote", 14, Ui.Ink3);
-        box.AddChild(note);
-        var amount = new Segment(new[] { "audio.few", "audio.normal", "audio.many" }, _pendingAmount);
-        amount.Changed += i => MusicAmount = i;
-        var ar = new HBoxContainer(); ar.AddThemeConstantOverride("separation", 8);
-        ar.AddChild(Ui.Lbl("audio.musicamount", 14, Ui.Ink2)); ar.AddChild(amount);
-        box.AddChild(ar);
-        box.AddChild(Ui.Btn("audio.resetfatigue", ResetFatigue));
-        return box;
-    }
 }
