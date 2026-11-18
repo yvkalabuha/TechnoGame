@@ -36,3 +36,12 @@ Uses the TASK-0065 world generator.
 
 ## Acceptance
 - Matches the ADR-0016 rules; the full `dotnet test` is green; zone_check is clean.
+
+## Дополнение 2026-11-18 (Orchestrator): замеры ADR-0017
+ADR-0017 (ACCEPTED, #317) реализован в TASK-0078; его R1–R4 замеряются в EXP-0007. Харнесс поддерживает:
+- флаги Session `HashCheckpoints` / `HashEveryTick` и вариант «no-op-команда каждый день» (R4 б);
+- переключатель Kernel `Table.FullCopyMode` (полная копия против CoW);
+- R1: `StateHash` на (200, 2000) и (200, 500), прогрев 100, 1000 вызовов, медиана и p95;
+- R2: (а) полная копия, (б) CoW на месячном шаге среза (открытые колонки, цена копии, swap), (в) синтетическая дневная система, пишущая 0/10/50/100 % колонок, (г) месяц `M` с CoW против полной копии при t1 и t8, (д) slab — одно memcpy той же таблицы; 1000 повторов;
+- R3 (справка): `XxHash3`/`XxHash128` той же таблицы, мс на вызов (только Lab, не ядро).
+Пороги и правила — ADR-0017 «Research»; R2(г) обязателен (DEBT-0045).
