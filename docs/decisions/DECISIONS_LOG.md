@@ -450,3 +450,10 @@ The design system yields to the owner's wish | владелец (сообщен�
 | 319 | 2026-11-18 | 1945 map: the lands east of the Oder–Neisse line and the Königsberg area have owner DEU (de jure) and controller POL/SUN (administration under Potsdam). Final recognition is a later in-game event | владелец (AskUserQuestion 2026-11-18) |
 | 320 | 2026-11-18 | The client has no country list. The player plays one country, chosen at game start (in the New game menu; a launch parameter until then). Other countries are inspected read-only by clicking them on the globe. Signals and orders concern only the player's country | владелец (сообщение 2026-11-18) |
 | 321 | 2026-11-18 | M1 focus: economy E1 by regions (#164, #170–#171), province ownership in the simulation with the full 1945 world map (ADR-0011), and a new "open race" hypothesis (game-designer defines the metric before any runs; new seeds). PHASE F wave 3 runs in parallel (RR-0015 politics, RR-0016 final, RR-0017/RR-0019 gate, counterfactual branches #299). War, intelligence and logistics follow in M2–M3, on top of the economy and the map. The M1 milestone plan is drafted after MS-M0 closes | владелец (AskUserQuestion 2026-11-18) |
+| 322 | 2026-11-18 | National technologies:
+- national engineering schools are modifiers of how designs are realised: reliability, complexity, cost, mass production;
+- special nodes open through conditions (a resource, an institution, a personality, an event), never through a country flag;
+- espionage, licences and trophies work as usual;
+- no country-locked nodes.
+
+Worked out in PHASE F wave 3 together with the alternative branches (#299): research-scientist (facts on the schools of the USSR, USA, Britain, France, Sweden and the PRC), counterfactual-analyst and game-designer | владелец (AskUserQuestion 2026-11-18) |
