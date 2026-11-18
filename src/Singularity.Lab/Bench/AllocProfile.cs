@@ -1,5 +1,3 @@
-using System.Linq.Expressions;
-using System.Reflection;
 using System.Text.Json;
 using Singularity.Core.Commands;
 using Singularity.Core.Industry;
@@ -11,7 +9,7 @@ namespace Singularity.Lab.Bench;
 /// <summary>
 /// <c>lab bench --mode alloc</c> (TASK-0103, ADR-0023 п. 2, TASK-0106): allocated bytes and GC counts per month of a monthly run, split
 /// into the tick path and the snapshot path, and the bytes of single pure reads (one allocation of effort, one tooling plan, the inputs
-/// view, the step view, a snapshot with and without the per-actor nodes). Counts bytes, not time, so it is valid on a busy machine.
+/// view, the step view, a snapshot with fresh and with reused per-actor node blocks: «without nodes» = all blocks reused). Counts bytes, not time, so it is valid on a busy machine.
 /// <para>
 /// Split [model, not a direct count]: the session builds the snapshot inside <c>Step</c>, so a month's bytes cannot be cut there without
 /// changing Session. The snapshot path of a month = (snapshots without a step) × the probe «Snapshot (no step)» + (snapshots with a step) ×
@@ -32,7 +30,7 @@ internal static class AllocProfile
         public double PerCall => Bytes / (double)Calls;
     }
 
-    public static int Run(SynthWorld w, ulong seed, int threads, int months, bool lohEvents, BenchRunParams rp, double buildMs, string outFile, TextWriter log)
+    public static int Run(SynthWorld w, ulong seed, int threads, int months, bool lohEvents, double snapshotXMib, BenchRunParams rp, double buildMs, string outFile, TextWriter log)
     {
         using GcEventListener? gcl = lohEvents ? new GcEventListener() : null;
         using var meter = new LoadMeter();
@@ -94,7 +92,6 @@ internal static class AllocProfile
         string hashBefore = StateHash.ComputeHex(world.Table, SliceWorld.SchemaVersion);
         long month = months;   // the next step's month: the reads the step's compute and views would make
         MonthStepView step = ViewBuilder.Step(world, month - 1);
-        (Action<int>? nodes, string? nodesReason) = NodesProbe(world, month);
         var probes = new List<ProbeResult>
         {
             Probe("Industry.RestActor (1 EffortAllocator.Allocate)", actors, a => world.Industry.RestActor(a, month)),
@@ -102,24 +99,23 @@ internal static class AllocProfile
             Probe("Industry.Profile (1 item, view Process)", actors, a => world.Industry.Profile(l.SitesOf(a)[0], [new PrcSetItem(l.Number[0], Fx6.One, Fx6.One)], month)),
             Probe("ViewBuilder.Inputs (t1)", 1, _ => ViewBuilder.Inputs(world, month, 1)),
             Probe("ViewBuilder.Step", 1, _ => ViewBuilder.Step(world, month - 1)),
-            Probe("ViewBuilder.Snapshot (no step)", 1, _ => ViewBuilder.Snapshot(world, s.Tick, null, month - 1, null, null)),
-            Probe("ViewBuilder.Snapshot (stepped, step given)", 1, _ => ViewBuilder.Snapshot(world, s.Tick, null, month - 1, null, step)),
+            // The node blocks (TASK-0103 R1/R2) are reused when no column they read changed since the last snapshot of the month: fresh
+            // blocks are forced with ReuseNodeBlocks = false (views only, the hash is untouched). Order matters: (6) leaves blocks that (7) reuses.
+            Probe("ViewBuilder.Snapshot (stepped, step given, fresh node blocks)", 1, _ => Fresh(world, () => ViewBuilder.Snapshot(world, s.Tick, null, month - 1, null, step))),
+            Probe("ViewBuilder.Snapshot (no step, node blocks reused)", 1, _ => ViewBuilder.Snapshot(world, s.Tick, null, month - 1, null, null)),
+            Probe("ViewBuilder.Snapshot (no step, fresh node blocks)", 1, _ => Fresh(world, () => ViewBuilder.Snapshot(world, s.Tick, null, month - 1, null, null))),
             Probe("ViewBuilder.Step + Snapshot (stepped)", 1, _ => ViewBuilder.Snapshot(world, s.Tick, null, month - 1, null, ViewBuilder.Step(world, month - 1))),
         };
-        ProbeResult? nodesProbe = nodes is null ? null : Probe("ViewBuilder.Nodes (all actors)", actors, nodes);
-        if (nodesProbe is not null)
-            probes.Add(nodesProbe);
         string hashAfter = StateHash.ComputeHex(world.Table, SliceWorld.SchemaVersion);
         DateTime last = DateTime.UtcNow;
         bool flushed = gcl?.Flush(last, TimeSpan.FromSeconds(5)) ?? false;
         IReadOnlyList<GcEventListener.GcEvent> events = gcl?.Snapshot() ?? [];
 
-        double snapPlainB = probes[5].PerCall, snapSteppedB = probes[6].PerCall;
-        double? nodesB = nodesProbe is null ? null : nodesProbe.Bytes;
+        // In the run the monthly (stepped) snapshot builds fresh blocks and the command-tick snapshot after it reuses them (TASK-0103 R2).
+        double snapSteppedB = probes[5].PerCall, snapPlainB = probes[6].PerCall, snapPlainFreshB = probes[7].PerCall;
+        double nodesB = snapPlainFreshB - snapPlainB;
         foreach (ProbeResult p in probes)
             log.WriteLine($"probe {p.Name}: {p.PerCall / 1024.0:F1} KB/call × {p.Calls} = {p.Bytes / MiB:F2} MiB");
-        if (nodesReason is not null)
-            log.WriteLine($"probe ViewBuilder.Nodes: unavailable ({nodesReason})");
         log.WriteLine($"layout: actors {actors}, sites {l.SiteCount}, processes {l.ProcessCount}, clusters {l.Clusters.Length}, nodes {world.Graph.Count}");
         log.WriteLine($"hash before probes {hashBefore[..16]}, after {hashAfter[..16]} ({(hashBefore == hashAfter ? "equal" : "DIFFERENT")})");
 
@@ -196,7 +192,7 @@ internal static class AllocProfile
         }
         j.WriteEndArray();
 
-        // ADR-0023 п. 2: the three parts of P8, as records; the limit X of the snapshot is the owner's decision (proposal 10 MiB).
+        // ADR-0023 п. 2: the three parts of P8, as records; the limit X of the snapshot is the owner's decision (rev 2 proposal: 8 MiB).
         j.WriteStartObject("p8_split");
         j.WriteString("method", "tick path = month − snapshots × probe bytes − GC listener bytes (model; see lab-cli.md «alloc»)");
         if (tickPath.Count > 0)
@@ -207,15 +203,16 @@ internal static class AllocProfile
             j.WriteBoolean("tick_path_le_1mib_per_month", BenchStats.Median(tickPath) <= MiB);
             j.WriteNumber("snapshot_path_mib_per_month_p50", BenchStats.Median(snapPath) / MiB);
         }
-        j.WriteNumber("snapshot_no_step_bytes", snapPlainB);
-        j.WriteNumber("snapshot_stepped_bytes", snapSteppedB);
-        LoadMeter.WriteNum(j, "snapshot_nodes_bytes", nodesB);
-        LoadMeter.WriteNum(j, "snapshot_without_nodes_bytes", nodesB is double nb ? snapSteppedB - nb : null);
-        if (nodesReason is null) j.WriteNull("nodes_probe_unavailable"); else j.WriteString("nodes_probe_unavailable", nodesReason);
-        j.WriteNumber("snapshot_x_proposed_mib", 10);
-        j.WriteBoolean("snapshot_le_x_proposed", snapSteppedB <= 10 * MiB);
+        j.WriteNumber("snapshot_stepped_fresh_bytes", snapSteppedB);
+        j.WriteNumber("snapshot_no_step_reused_bytes", snapPlainB);
+        j.WriteNumber("snapshot_no_step_fresh_bytes", snapPlainFreshB);
+        // «Snapshot without nodes» (ADR-0023 п. 2.3) = a snapshot whose node blocks are all reused; nodes = fresh − reused.
+        j.WriteNumber("snapshot_without_nodes_bytes", snapPlainB);
+        j.WriteNumber("snapshot_nodes_bytes", nodesB);
+        j.WriteNumber("snapshot_x_mib", snapshotXMib);
+        j.WriteBoolean("snapshot_le_x", Math.Max(snapSteppedB, snapPlainFreshB) <= snapshotXMib * MiB);
         j.WriteNumber("loh_alloc_ticks_window", lohTicksWindow);
-        j.WriteNumber("loh_alloc_ticks_snapshot_probes", probes.Where(p => p.Name.StartsWith("ViewBuilder.Snapshot", StringComparison.Ordinal) || p.Name.StartsWith("ViewBuilder.Nodes", StringComparison.Ordinal))
+        j.WriteNumber("loh_alloc_ticks_snapshot_probes", probes.Where(p => p.Name.StartsWith("ViewBuilder.Snapshot", StringComparison.Ordinal))
             .Sum(p => GcEventListener.In(events, p.From, p.To).LohTicks));
         j.WriteNumber("gc_alloc_large_window", allocLargeWindow);
         j.WriteNumber("gc_gen2_window", gen2Window);
@@ -233,21 +230,12 @@ internal static class AllocProfile
         return hashBefore == hashAfter ? 0 : 1;
     }
 
-    /// <summary>
-    /// The per-actor node part of the snapshot: the private <c>ViewBuilder.Nodes(SliceWorld, int actor, long next)</c> through a compiled
-    /// expression (no boxing per call), so «Snapshot without nodes» = stepped snapshot − Σ nodes needs no change in Session. If TASK-0103
-    /// changes that method, the probe is reported unavailable instead of failing the run.
-    /// </summary>
-    private static (Action<int>?, string?) NodesProbe(SliceWorld world, long next)
+    private static SliceView Fresh(SliceWorld world, Func<SliceView> build)
     {
-        Type? vb = typeof(SliceSession).Assembly.GetType("Singularity.Session.ViewBuilder");
-        MethodInfo? mi = vb?.GetMethod("Nodes", BindingFlags.NonPublic | BindingFlags.Static, [typeof(SliceWorld), typeof(int), typeof(long)]);
-        if (mi is null)
-            return (null, "Singularity.Session.ViewBuilder.Nodes(SliceWorld, int, long) not found");
-        ParameterExpression a = Expression.Parameter(typeof(int), "a");
-        Action<int> call = Expression.Lambda<Action<int>>(
-            Expression.Call(mi, Expression.Constant(world), a, Expression.Constant(next)), a).Compile();
-        return (call, null);
+        bool reuse = world.ReuseNodeBlocks;
+        world.ReuseNodeBlocks = false;
+        try { return build(); }
+        finally { world.ReuseNodeBlocks = reuse; }
     }
 
     private static ProbeResult Probe(string name, int calls, Action<int> call)

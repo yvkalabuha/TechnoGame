@@ -17,7 +17,7 @@ public static class HarnessChecks
         ("bench: foreign_cpu, top-k mean, top-5 foreign (own pid out, pid reuse by start time), run-delay share", LoadMathFixtures),
         ("bench: top-k frequency median in windows; /proc/cpuinfo «cpu MHz» lines; thermal flag only with both values", FreqFixtures),
         ("bench: LoadMeter on a fixture /proc tree writes the machine block; without /proc it is available:false and does not throw", () => MeterFixtures(tmp)),
-        ("bench: series gate — frequency is no input, 3 flagged attempts excluded and no 4th, med_point fixed, independent-evidence keeps median-only", GateDecide),
+        ("bench: series gate (ADR-0023 п. 1.3–1.5, 1.9) — н1/н2/м, exclusion only with н1|н2 on every attempt, window-end repeats, fixed med_point, #355 names", GateDecide),
         ("bench: series verdict — A 4/15 excluded INCONCLUSIVE, 3/15 not; seed 2/5 INCONCLUSIVE; series 23/114 INCONCLUSIVE, 22/114 not", GateVerdict),
         ("bench: EXP-0008 manifest — gate equals the П5 numbers, plan = EXP-0007 plan, reference modes parse; bad gate key rejected", Manifests),
     ];
@@ -160,47 +160,62 @@ public static class HarnessChecks
 
     private static string? GateDecide()
     {
-        // Frequency is not an input of GateAttempt at all; a clean first attempt is accepted with no repeat.
-        var clean = SeriesGate.Decide([new GateAttempt(0, 300, 0.01, 0.0)], 300, G);
+        // Frequency and temperature are not inputs of GateAttempt at all; a clean first attempt is accepted with no repeat.
+        var clean = SeriesGate.Decide([new GateAttempt(0, 300, 0.1, 0.0, 0.0)], 300, G);
         if (clean.Status != ProcessStatus.Accepted || clean.AcceptedAttempt != 0)
             return "clean attempt not accepted";
-        // foreign_cpu on all three attempts: excluded (both rules); with 3 attempts no further repeat is possible.
-        GateAttempt[] loaded = [new(0, 300, 0.2, 0), new(1, 300, 0.3, 0), new(2, 300, 0.1, 0)];
+        // (н1) on all three attempts (mean CPUs, or seconds above 1 CPU): excluded under both rules; no 4th attempt.
+        GateAttempt[] loaded = [new(0, 300, 2.0, 0, 0), new(1, 300, 0.1, 0.5, 0), new(2, 300, 1.5, 0, 0)];
         if (SeriesGate.Decide(loaded[..2], 300, G).Status != ProcessStatus.NeedsRepeat)
             return "2 flagged attempts must ask for a repeat";
         if (SeriesGate.Decide(loaded, 300, G).Status != ProcessStatus.Excluded || SeriesGate.Decide(loaded, 300, G with { ExclusionRule = ExclusionRule.AnyFlag }).Status != ProcessStatus.Excluded)
-            return "3 foreign-flagged attempts not excluded";
+            return "3 (н1)-flagged attempts not excluded";
         try
         {
-            SeriesGate.Decide([.. loaded, new GateAttempt(3, 300, 0.2, 0)], 300, G);
+            SeriesGate.Decide([.. loaded, new GateAttempt(3, 300, 2.0, 0, 0)], 300, G);
             return "a 4th attempt was accepted as input";
         }
         catch (ArgumentException) { }
-        // Median only (slow but no foreign evidence): any-flag excludes, independent-evidence accepts the first attempt ("no-evidence").
-        GateAttempt[] slow = [new(0, 400, 0.01, 0), new(1, 380, 0.0, 0), new(2, 390, 0.02, 0)];
+        // (м) only: any-flag excludes; independent-evidence (ADR-0023 п. 1.5) keeps the process with its first attempt.
+        GateAttempt[] slow = [new(0, 400, 0.1, 0, 0), new(1, 380, 0.0, 0, 0), new(2, 390, 0.2, 0, 0)];
         if (SeriesGate.Decide(slow, 300, G with { ExclusionRule = ExclusionRule.AnyFlag }).Status != ProcessStatus.Excluded)
-            return "any-flag: median-only not excluded";
+            return "any-flag: (м)-only not excluded";
         ProcessDecision ie = SeriesGate.Decide(slow, 300, G);
         if (ie.Status != ProcessStatus.Accepted || ie.AcceptedAttempt != 0 || ie.AcceptedBy != "no-evidence")
             return $"independent-evidence: {ie.Status} {ie.AcceptedAttempt} {ie.AcceptedBy}";
-        // Run delay is evidence for exclusion but does not trigger a repeat on its own.
-        if (SeriesGate.Decide([new GateAttempt(0, 300, 0.01, 0.5)], 300, G).Status != ProcessStatus.Accepted)
-            return "run delay alone triggered a repeat";
-        GateAttempt[] slowDelayed = [new(0, 400, 0.01, 0.2), new(1, 380, 0.0, 0.3), new(2, 390, 0.02, 0.1)];
-        if (SeriesGate.Decide(slowDelayed, 300, G).Status != ProcessStatus.Excluded)
-            return "median + run-delay evidence on every attempt not excluded";
-        // The median criterion is off below median_gate_min_ms (small D points).
-        if (SeriesGate.Decide([new GateAttempt(0, 40, 0.0, 0)], 20, G).Status != ProcessStatus.Accepted)
-            return "median criterion applied below 50 ms";
+        // Mixed: (н1), then (м) only, then (н2): accepted with attempt 1, the first without independent evidence.
+        GateAttempt[] mixed = [new(0, 300, 2.0, 0, 0), new(1, 400, 0.1, 0, 0), new(2, 300, 0.1, 0, 0.3)];
+        ProcessDecision mx = SeriesGate.Decide(mixed, 300, G);
+        if (mx.Status != ProcessStatus.Accepted || mx.AcceptedAttempt != 1)
+            return $"mixed: {mx.Status} {mx.AcceptedAttempt}";
+        // (н2) alone is a flag (п. 1.4) and evidence; on every attempt it excludes.
+        if (SeriesGate.Decide([new GateAttempt(0, 300, 0.1, 0, 0.5)], 300, G).Status != ProcessStatus.NeedsRepeat)
+            return "(н2) alone did not trigger a repeat";
+        GateAttempt[] delayed = [new(0, 300, 0.1, 0, 0.2), new(1, 300, 0.0, 0, 0.3), new(2, 300, 0.2, 0, 0.1)];
+        if (SeriesGate.Decide(delayed, 300, G).Status != ProcessStatus.Excluded)
+            return "(н2) on every attempt not excluded";
+        // The (м) criterion is off below median_gate_min_ms (small D points).
+        if (SeriesGate.Decide([new GateAttempt(0, 40, 0.0, 0, 0)], 20, G).Status != ProcessStatus.Accepted)
+            return "(м) applied below 50 ms";
+        // #355 window end (п. 1.9): a virtual repeat is (м) without evidence → not excluded; first real attempt without evidence, else the first.
+        GateAttempt[] cut = [new(0, 300, 2.0, 0, 0), new(1, 300, 0.1, 0, 0.9), new(2, null, null, null, null, Virtual: true)];
+        ProcessDecision cd = SeriesGate.Decide(cut, 300, G);
+        if (cd.Status != ProcessStatus.Accepted || cd.AcceptedAttempt != 0 || cd.AcceptedBy != "window-end")
+            return $"window end: {cd.Status} {cd.AcceptedAttempt} {cd.AcceptedBy}";
+        if (SeriesGate.Decide([new GateAttempt(0, 300, 2.0, 0, 0), new GateAttempt(1, null, null, null, null, Virtual: true)], 300, G).Status != ProcessStatus.Accepted)
+            return "window end after one repeat must be final";
         // med_point is the median of first attempts and does not move with repeats.
         GateProcess[] ps = [new(0, "A", "g", 1, 1), new(1, "A", "g", 1, 2), new(2, "A", "g", 2, 1)];
-        var first = new Dictionary<int, GateAttempt> { [0] = new(0, 100, 0, 0), [1] = new(0, 200, 0, 0), [2] = new(0, 900, 0, 0) };
+        var first = new Dictionary<int, GateAttempt> { [0] = new(0, 100, 0, 0, 0), [1] = new(0, 200, 0, 0, 0), [2] = new(0, 900, 0, 0, 0) };
         var med = SeriesGate.MedPoints(ps, first);
         if (med["g"] != 200)
             return $"med_point {med["g"]}";
-        // A repeat of process 2 at 150 ms does not change med_point: Decide takes the fixed value.
-        ProcessDecision rep = SeriesGate.Decide([first[2], new GateAttempt(1, 150, 0, 0)], med["g"], G);
-        return rep.Status == ProcessStatus.Accepted && rep.AcceptedAttempt == 1 ? null : "repeat against fixed med_point";
+        ProcessDecision rep = SeriesGate.Decide([first[2], new GateAttempt(1, 150, 0, 0, 0)], med["g"], G);
+        if (rep.Status != ProcessStatus.Accepted || rep.AcceptedAttempt != 1)
+            return "repeat against fixed med_point";
+        // #355 names: prefix, case-insensitive, the driver's own pid skipped.
+        List<string> hits = SeriesDriver.ForbiddenIn([(10, "dotnet"), (11, "VBCSCompiler"), (12, "firefox"), (13, "Claude"), (99, "dotnet")], G, 99, "t");
+        return hits.Count == 3 && hits.All(h => !h.Contains("pid 99", StringComparison.Ordinal)) ? null : $"#355 names: {string.Join(", ", hits)}";
     }
 
     private static string? GateVerdict()
@@ -254,11 +269,13 @@ public static class HarnessChecks
         BenchManifest m8 = BenchManifest.Load(Path.Combine(dir, "lab", "manifests", "EXP-0008-bench.json"));
         BenchManifest m7 = BenchManifest.Load(Path.Combine(dir, "lab", "manifests", "EXP-0007-bench.json"));
         BenchGate g = m8.Gate;
-        if (!m8.HasGate || g.ForeignCpuMax != 0.05 || g.MedianRatioMax != 1.10 || g.MedianGateMinMs != 50 || g.MaxRepeats != 2 || g.ExcludeMaxFrac != 0.20
+        if (!m8.HasGate || g.ForeignCpusMax != 0.8 || g.ForeignOverShareMax != 0.10 || g.ForeignSecondCpus != 1.0 || g.RunDelayMax != 0.05
+            || g.PreSeriesDeadlineSeconds != 1800 || g.WindowSeconds != 21_600 || g.ThermalMarkFrac != 0.20 || g.ExclusionRule != ExclusionRule.IndependentEvidence || g.MedianRatioMax != 1.10 || g.MedianGateMinMs != 50 || g.MaxRepeats != 2 || g.ExcludeMaxFrac != 0.20
             || g.ThermalRatio != 0.85 || g.QuietSampleSeconds != 10 || g.QuietStepSeconds != 30 || g.QuietMaxSeconds != 300 || g.PreSeriesSeconds != 60
-            || g.PreSeriesForeignMax != 0.05 || g.FRefSeconds != 300 || g.FRefTailSeconds != 180 || g.OutcomeBlock != "A")
+            || g.PreSeriesForeignCpusMax != 0.8 || g.FRefSeconds != 300 || g.FRefTailSeconds != 180 || g.OutcomeBlock != "A")
             return "EXP-0008 gate differs from П5";
-        if (g with { } != new BenchGate())
+        if (g with { ForbiddenProcesses = [] } != new BenchGate() with { ForbiddenProcesses = [] }
+            || !g.ForbiddenProcesses.SequenceEqual(new BenchGate().ForbiddenProcesses))
             return "EXP-0008 gate differs from the BenchGate defaults";
         var a = m8.Plan().Select(p => (p.Block, p.Point.Name, p.Seed, p.Threads, p.Replica, p.Background));
         var b = m7.Plan().Select(p => (p.Block, p.Point.Name, p.Seed, p.Threads, p.Replica, p.Background));
@@ -270,7 +287,7 @@ public static class HarnessChecks
             return "EXP-0007 manifest has a gate";
         try
         {
-            BenchManifest.Parse(File.ReadAllText(Path.Combine(dir, "lab", "manifests", "EXP-0008-bench.json")).Replace("\"foreign_cpu_max\"", "\"foreign_cpu_mx\""), "/x.json");
+            BenchManifest.Parse(File.ReadAllText(Path.Combine(dir, "lab", "manifests", "EXP-0008-bench.json")).Replace("\"foreign_cpus_max\"", "\"foreign_cpu_max\""), "/x.json");
             return "unknown gate key accepted";
         }
         catch (ManifestException) { }

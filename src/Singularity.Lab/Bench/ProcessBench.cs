@@ -272,6 +272,14 @@ public static class ProcessBench
                 WriteDecomposition(j, monthly, daily, rp.Warmup, w.Spec);
                 j.WriteBoolean("v2_monthly_daily_hash_equal", monthly.FinalHash == daily.FinalHash);
             }
+            // ADR-0023 п. 2.4: the GC pause share of the process (all its timed windows); the statistic over processes is the analysis's.
+            double pauseMs = runs.Sum(r => r.GcPauseMs), wallMs = runs.Sum(r => r.WindowWallMs);
+            j.WriteStartObject("gc");
+            j.WriteNumber("pause_ms", pauseMs);
+            j.WriteNumber("window_wall_ms", wallMs);
+            j.WriteNumber("pause_share", wallMs > 0 ? pauseMs / wallMs : 0);
+            j.WriteNumber("gen2", runs.Sum(r => r.Gen2));
+            j.WriteEndObject();
             int k = rp.K ?? p.Threads + p.Background;
             if (freq is not null)
                 WriteFrequency(j, freq, [.. runs.Select(r => r.Window)], rp.FRefMhz, k, rp.ThermalRatio, daily, rp.Warmup);

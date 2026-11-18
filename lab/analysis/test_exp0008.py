@@ -128,29 +128,62 @@ class Outcome(unittest.TestCase):
         self.assertEqual(r["outcome"], "INVALID")
         self.assertTrue(any("different builds" in x for x in r["invalid_reasons"]))
 
-    def test_sensitivity_marks_pass_depending_on_exclusions(self):
+    def test_r1_r2_differ_gives_inconclusive(self):
         self.fill_a([110] * 13, m=90)
         self.s.add("A", [process_doc(800, 790)] * 3, status="Excluded")
         self.s.add("A", [process_doc(800, 790)] * 3, status="Excluded")
         r = self.s.write()
-        self.assertEqual(r["outcome"], "PASS")
-        self.assertTrue(r["sensitivity"]["differs"])
-        self.assertTrue(r["sensitivity"]["pass_depends_on_exclusions"])
+        self.assertEqual((r["r1_row"], r["r2_row"]), ("PASS", "FAIL"))
+        self.assertTrue(r["r1_r2_differ"])
+        self.assertEqual(r["outcome"], "INCONCLUSIVE")
         self.assertEqual(r["blocks"]["A"]["excluded"], 2)
         self.assertEqual(r["blocks"]["A"]["repeats"], 4)
+
+    def test_r2_uses_first_attempts_of_accepted_too(self):
+        # Every process accepted on its repeat; its slow first attempt is in Р2 only.
+        for _ in range(15):
+            self.s.add("A", [process_doc(900, 890, foreign=0.3), process_doc(110, 90)], accepted=1)
+        r = self.s.write()
+        self.assertEqual(r["r1_row"], "PASS")
+        self.assertEqual(r["r2_row"], "FAIL")
+        self.assertEqual(r["outcome"], "INCONCLUSIVE")
+
+    def test_throttle_mark_on_pass(self):
+        for i in range(15):
+            self.s.add("A", [process_doc(110, 90)])
+        for p in self.s.procs[:4]:
+            p["attempts"][0]["thermal"] = {"core_throttle_delta": 3, "package_throttle_delta": 0}
+        r = self.s.write()
+        self.assertEqual(r["outcome"], "PASS")
+        self.assertEqual(len(r["outcome_marks"]), 1)   # 4/15 = 27 % > 20 %
+
+    def test_calibration_rounds_p90_up(self):
+        for i in range(10):
+            self.s.add("A", [process_doc(110, 90)])
+            self.s.procs[-1]["attempts"][0].update({"foreign_cpus": 0.1 * (i + 1), "foreign_over_share": 0.01 * i, "run_delay_share": 0.001 * i})
+        self.s.write()
+        c = X.calibrate(self.tmp.name)
+        self.assertAlmostEqual(c["foreign_cpus_max"]["q"], 0.91)
+        self.assertAlmostEqual(c["foreign_cpus_max"]["threshold"], 1.0)
+        self.assertAlmostEqual(c["run_delay_max"]["threshold"], 0.01)
+        self.assertEqual(c["windows"], 10)
 
     def test_accepted_repeat_is_used(self):
         for _ in range(15):
             self.s.add("A", [process_doc(900, 890, foreign=0.3), process_doc(300, 290)], accepted=1)
         r = self.s.write()
         self.assertAlmostEqual(r["points"][r["outcome_point"]]["median_T_ms"], 300)
+        self.assertAlmostEqual(r["points_r2"][r["outcome_point"]]["median_T_ms"], 900)
 
     def test_gc_pause_share(self):
         for _ in range(15):
             self.s.add("A", [process_doc(300, 290, gc_pause=30.0)])   # 60 ms over 2000 ms
+        self.s.add("A", [process_doc(300, 290, gc_pause=0.0)] * 3, status="Excluded")
         a = self.s.write()["points"]["A|pt|t8|bg0"]
         self.assertAlmostEqual(a["gc_pause_share_pooled"], 0.03)
-        self.assertFalse(a["gc_pause_le_2pct"])
+        # Median over all 16 processes, the excluded one with its first attempt.
+        self.assertAlmostEqual(a["gc_pause_share_median_all"], 0.03)
+        self.assertFalse(a["gc_pause_median_le_2pct"])
 
     def r2d_mode(self, mid, ratios_t1, ratios_t8, hashes=True, status="Accepted"):
         f = f"attempts/{mid}.json"

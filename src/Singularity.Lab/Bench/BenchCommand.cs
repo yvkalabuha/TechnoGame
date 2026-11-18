@@ -159,6 +159,7 @@ internal static class BenchCommand
         int months = o.Int("months", 1, 10_000) ?? 36;
         int warmup = o.Int("warmup", 0, 10_000) ?? Math.Min(2, months - 1);
         bool lohEvents = Bool(o, "loh-events", true);
+        double snapshotX = Double(o, "snapshot-x-mib") ?? 8;   // ADR-0023 rev 2 п. 2.3 proposal; the owner's decision
         o.CheckAllUsed();
         if (warmup >= months)
             throw new UsageException("--warmup must be below --months.");
@@ -166,7 +167,7 @@ internal static class BenchCommand
         SynthWorld w = Build(spec, outFile);
         double buildMs = ProcessBench.Ms(Stopwatch.GetTimestamp() - b0);
         var rp = new BenchRunParams { Mode = "alloc", RepoDir = RepoDir(), Warmup = warmup, Measure = months - warmup, Smoke = true };
-        return AllocProfile.Run(w, seed, threads, months, lohEvents, rp, buildMs, outFile, Console.Out);
+        return AllocProfile.Run(w, seed, threads, months, lohEvents, snapshotX, rp, buildMs, outFile, Console.Out);
     }
 
     private static int Validity(Options o)

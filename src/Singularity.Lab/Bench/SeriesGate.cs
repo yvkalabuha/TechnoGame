@@ -2,11 +2,14 @@ namespace Singularity.Lab.Bench;
 
 /// <summary>One attempt of a series process as the gate sees it (read back from the attempt JSON).</summary>
 /// <param name="Number">0 = first attempt (main pass), 1 and 2 = repeats.</param>
-/// <param name="MedianTMs">Median month time of the daily run (T), ms; null for an R mode (foreign-only gate).</param>
-/// <param name="ForeignCpu">foreign_cpu of the union window; null when the meter was unavailable.</param>
-/// <param name="RunDelay">Run-queue wait share of the own threads; null when unavailable.</param>
-/// <param name="Injected">Smoke only: an artificial load flag (EXP-0008 П10 п. 7).</param>
-public sealed record GateAttempt(int Number, double? MedianTMs, double? ForeignCpu, double? RunDelay, bool Injected = false);
+/// <param name="MedianTMs">Median month time of the daily run (T), ms; null for an R mode (no (м) signal).</param>
+/// <param name="ForeignCpus">(н1) mean foreign load of the union window in absolute CPUs; null when the meter was unavailable.</param>
+/// <param name="ForeignOverShare">(н1) share of the window's seconds above the per-second level; null without a per-second series.</param>
+/// <param name="RunDelay">(н2) run-queue wait share of the own threads; null when unavailable.</param>
+/// <param name="Injected">Smoke only: an artificial (н1) flag (EXP-0008 П10 п. 7).</param>
+/// <param name="Virtual">A repeat not started because the #355 window ended (ADR-0023 п. 1.9): counts as an attempt flagged by (м) only.</param>
+public sealed record GateAttempt(int Number, double? MedianTMs, double? ForeignCpus, double? ForeignOverShare, double? RunDelay,
+    bool Injected = false, bool Virtual = false);
 
 /// <summary>A process of the gate: its plan index, block, group key of med_point, seed and replica.</summary>
 /// <param name="Group">
@@ -58,42 +61,32 @@ public static class SeriesGate
     }
 
     /// <summary>
-    /// Flags of one attempt. Load flag: foreign_cpu &gt; max, or (the median criterion applies when med_point ≥ the minimum) median T &gt;
-    /// ratio × med_point. Evidence of foreign load (independent of the code's own speed): foreign_cpu &gt; max, run delay &gt; max, or an
-    /// injected flag.
+    /// Signals of one attempt (ADR-0023 п. 1.3): (н1) foreign CPUs mean &gt; max or share of seconds above the level &gt; max; (н2) run delay &gt;
+    /// max; (м) median T &gt; ratio × med_point, only when med_point ≥ the minimum. Any signal is a flag (п. 1.4). (н1) and (н2) are the
+    /// independent evidence of foreign load; (м) is not (it selects by the outcome value itself).
     /// </summary>
     public static AttemptEval Evaluate(GateAttempt a, double? medPoint, BenchGate g)
     {
         var reasons = new List<string>();
-        bool evidence = false;
-        if (a.Injected)
-        {
-            reasons.Add("injected");
-            evidence = true;
-        }
-        if (a.ForeignCpu is double f && f > g.ForeignCpuMax)
-        {
-            reasons.Add("foreign_cpu");
-            evidence = true;
-        }
-        bool runDelay = a.RunDelay is double d && d > g.RunDelayMax;
-        if (runDelay)
-            evidence = true;
-        bool median = a.MedianTMs is double m && medPoint is double mp && mp >= g.MedianGateMinMs && m > g.MedianRatioMax * mp;
-        if (median)
-            reasons.Add("median");
-        // Run delay is evidence only: it alone does not trigger a repeat (it is a recorded column; the gate decides П5.3 by foreign_cpu
-        // and the median). Under any-flag it is ignored entirely.
-        if (runDelay)
-            reasons.Add("run_delay(evidence)");
-        bool flag = a.Injected || a.ForeignCpu is double ff && ff > g.ForeignCpuMax || median;
-        return new AttemptEval(flag, evidence, reasons);
+        if (a.Virtual)
+            return new AttemptEval(true, false, ["not_started_window_end(м)"]);
+        bool n1 = a.Injected || a.ForeignCpus is double f && f > g.ForeignCpusMax || a.ForeignOverShare is double o && o > g.ForeignOverShareMax;
+        if (a.Injected) reasons.Add("injected(н1)");
+        if (a.ForeignCpus is double f2 && f2 > g.ForeignCpusMax) reasons.Add("н1_mean");
+        if (a.ForeignOverShare is double o2 && o2 > g.ForeignOverShareMax) reasons.Add("н1_seconds");
+        bool n2 = a.RunDelay is double d && d > g.RunDelayMax;
+        if (n2) reasons.Add("н2");
+        bool m = a.MedianTMs is double t && medPoint is double mp && mp >= g.MedianGateMinMs && t > g.MedianRatioMax * mp;
+        if (m) reasons.Add("м");
+        return new AttemptEval(n1 || n2 || m, n1 || n2, reasons);
     }
 
     /// <summary>
-    /// The state of a process after its attempts (in order, 0-based numbers): accepted with the first attempt without a flag; a repeat while
-    /// fewer than 1 + max_repeats attempts exist; after the last one either excluded or — independent-evidence rule, not every attempt with
-    /// evidence — accepted with the first attempt without evidence.
+    /// The state of a process after its attempts (in order, 0-based numbers; ADR-0023 п. 1.4–1.5): accepted with the first attempt without
+    /// a flag; a repeat while fewer than 1 + max_repeats attempts exist; after the last one excluded only if every attempt has (н1) or (н2)
+    /// (rule <c>independent-evidence</c>; <c>any-flag</c> excludes on any flags), otherwise accepted with the first attempt without
+    /// independent evidence. A virtual attempt (window end) has no data: then the first real attempt without evidence is taken, else the
+    /// first real attempt ("window-end").
     /// </summary>
     public static ProcessDecision Decide(IReadOnlyList<GateAttempt> attempts, double? medPoint, BenchGate g)
     {
@@ -101,6 +94,8 @@ public static class SeriesGate
             throw new ArgumentException("A process has at least its first attempt.", nameof(attempts));
         if (attempts.Count > 1 + g.MaxRepeats)
             throw new ArgumentException($"{attempts.Count} attempts exceed 1 + max_repeats = {1 + g.MaxRepeats}.", nameof(attempts));
+        if (attempts[0].Virtual)
+            throw new ArgumentException("The first attempt is always run.", nameof(attempts));
         var evals = new List<AttemptEval>(attempts.Count);
         for (int i = 0; i < attempts.Count; i++)
         {
@@ -111,13 +106,16 @@ public static class SeriesGate
             if (!e.Flag)
                 return new ProcessDecision(ProcessStatus.Accepted, i, "clean", evals);
         }
-        if (attempts.Count < 1 + g.MaxRepeats)
+        bool hasVirtual = attempts.Any(a => a.Virtual);
+        if (attempts.Count < 1 + g.MaxRepeats && !hasVirtual)
             return new ProcessDecision(ProcessStatus.NeedsRepeat, null, null, evals);
         if (g.ExclusionRule == ExclusionRule.IndependentEvidence)
         {
-            int noEvidence = evals.FindIndex(e => !e.Evidence);
+            int noEvidence = Enumerable.Range(0, attempts.Count).FirstOrDefault(i => !attempts[i].Virtual && !evals[i].Evidence, -1);
             if (noEvidence >= 0)
                 return new ProcessDecision(ProcessStatus.Accepted, noEvidence, "no-evidence", evals);
+            if (hasVirtual)
+                return new ProcessDecision(ProcessStatus.Accepted, 0, "window-end", evals);
         }
         return new ProcessDecision(ProcessStatus.Excluded, null, null, evals);
     }

@@ -3,7 +3,7 @@
   "experiment": "EXP-0008-smoke",
   "kind": "bench",
   "meta": {
-    "note": "TASK-0106 smoke of lab bench --mode series on a small world (EXP-0008 П10 п. 7). Not an EXP measurement. Thresholds are loosened on purpose (the development machine runs other work): foreign_cpu_max 0.5 and pre_series_foreign_max 1.0 so that only the injected flag (--inject-flag) and the median criterion (median_gate_min_ms 0) drive repeats. Run: lab bench --mode series --manifest lab/manifests/EXP-0008-bench-smoke.json --out <new dir> --inject-flag K:3"
+    "note": "TASK-0106 smoke of lab bench --mode series on a small world (EXP-0008 П10 п. 7). Not an EXP measurement. Thresholds are loosened on purpose (the development machine runs other work): (н1) foreign_cpus_max 16, (н2) run_delay_max 100, pre_series_foreign_cpus_max 16, window_s 0 and an empty forbidden_processes list (the #355 check would stop a smoke run next to other agents; it is covered by selftest) so that only the injected flag (--inject-flag) and the median criterion (median_gate_min_ms 0) drive repeats. Run: lab bench --mode series --manifest lab/manifests/EXP-0008-bench-smoke.json --out <new dir> --inject-flag K:3"
   },
   "generator_seed": 85621515,
   "shuffle_seed": 20261117,
@@ -16,7 +16,9 @@
     {"id": "B", "points": [[6, 180, "cross"]], "threads": [1], "seeds": [1, 2], "note": "record (smoke)"}
   ],
   "gate": {
-    "foreign_cpu_max": 0.5,
+    "foreign_cpus_max": 16,
+    "foreign_over1_share_max": 1.0,
+    "foreign_second_cpus": 1.0,
     "median_ratio_max": 1.10,
     "median_gate_min_ms": 0,
     "max_repeats": 2,
@@ -24,14 +26,18 @@
     "seed_accept_min_frac": 0.5,
     "outcome_block": "A",
     "exclusion_rule": "independent-evidence",
-    "run_delay_max": 0.05,
+    "run_delay_max": 100,
     "thermal_ratio": 0.85,
     "noise_max": 0.10,
     "quiet_sample_s": 1,
     "quiet_step_s": 1,
     "quiet_max_s": 2,
     "pre_series_s": 2,
-    "pre_series_foreign_max": 1.0,
+    "pre_series_foreign_cpus_max": 16,
+    "pre_series_deadline_s": 5,
+    "window_s": 0,
+    "forbidden_processes": [],
+    "thermal_mark_frac": 0.20,
     "fref_seconds": 3,
     "fref_tail_s": 2
   },

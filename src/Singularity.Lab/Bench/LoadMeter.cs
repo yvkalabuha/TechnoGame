@@ -17,6 +17,54 @@ public sealed class MachineSnapshot
     public IReadOnlyList<PidStat>? Pids { get; init; }
     public IReadOnlyDictionary<int, long>? TaskWaitNs { get; init; }
     public IReadOnlyDictionary<int, long>? TaskNvcsw { get; init; }
+    public ThermalState? Thermal { get; init; }
+    /// <summary>UTC time of the snapshot (the start time of an attempt, ADR-0023 п. 1.3).</summary>
+    public DateTime Utc { get; init; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// Thermal state of the machine (ADR-0023 п. 1.2, record only): Σ <c>core_throttle_count</c> over CPUs, Σ <c>package_throttle_count</c> over
+/// packages (one CPU per <c>physical_package_id</c>), package temperature (thermal zone <c>x86_pkg_temp</c>), EPP of cpu0, intel_pstate
+/// <c>no_turbo</c>. Every field is null where the file does not exist.
+/// </summary>
+public sealed record ThermalState(long? CoreThrottle, long? PackageThrottle, double? PackageTempC, string? Epp, string? NoTurbo)
+{
+    public static ThermalState Read(string sysRoot)
+    {
+        string cpu = Path.Combine(sysRoot, "devices", "system", "cpu");
+        long? core = null, pkg = null;
+        var packages = new HashSet<string>(StringComparer.Ordinal);
+        if (Directory.Exists(cpu))
+        {
+            foreach (string d in Directory.GetDirectories(cpu, "cpu*").Order(StringComparer.Ordinal))
+            {
+                string tt = Path.Combine(d, "thermal_throttle");
+                if (Num(Path.Combine(tt, "core_throttle_count")) is long c)
+                    core = (core ?? 0) + c;
+                string id = BenchEnv.ReadTrim(Path.Combine(d, "topology", "physical_package_id")) ?? "0";
+                if (Num(Path.Combine(tt, "package_throttle_count")) is long p && packages.Add(id))
+                    pkg = (pkg ?? 0) + p;
+            }
+        }
+        double? temp = null;
+        string zones = Path.Combine(sysRoot, "class", "thermal");
+        if (Directory.Exists(zones))
+        {
+            foreach (string z in Directory.GetDirectories(zones, "thermal_zone*").Order(StringComparer.Ordinal))
+            {
+                if (BenchEnv.ReadTrim(Path.Combine(z, "type")) == "x86_pkg_temp" && Num(Path.Combine(z, "temp")) is long mc)
+                {
+                    temp = mc / 1000.0;
+                    break;
+                }
+            }
+        }
+        return new ThermalState(core, pkg, temp, BenchEnv.ReadTrim(Path.Combine(cpu, "cpu0", "cpufreq", "energy_performance_preference")),
+            BenchEnv.ReadTrim(Path.Combine(cpu, "intel_pstate", "no_turbo")));
+    }
+
+    private static long? Num(string path) =>
+        BenchEnv.ReadTrim(path) is string t && long.TryParse(t, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out long v) ? v : null;
 }
 
 /// <summary>One timed window: its start and end snapshot.</summary>
@@ -36,7 +84,7 @@ public sealed record MachineWindow(string Name, MachineSnapshot Start, MachineSn
 public sealed class LoadMeter : IDisposable
 {
     private const int InitialCapacity = 1 << 14;
-    private readonly string _root;
+    private readonly string _root, _sys;
     private readonly SafeFileHandle? _stat, _self;
     private readonly byte[] _buffer = new byte[16384];
     private (long Ts, long Busy, long Total, long Self)[] _series = new (long, long, long, long)[InitialCapacity];
@@ -47,9 +95,10 @@ public sealed class LoadMeter : IDisposable
     private long _allocated;
     private volatile bool _stop;
 
-    public LoadMeter(string procRoot = "/proc", int intervalMs = 1000, bool background = true)
+    public LoadMeter(string procRoot = "/proc", int intervalMs = 1000, bool background = true, string sysRoot = "/sys")
     {
         _root = procRoot;
+        _sys = sysRoot;
         _intervalMs = intervalMs;
         try
         {
@@ -104,8 +153,9 @@ public sealed class LoadMeter : IDisposable
     {
         long ts = Stopwatch.GetTimestamp();
         double selfCpu = SelfCpu();
+        ThermalState? thermal = full ? ThermalState.Read(_sys) : null;
         if (!Available)
-            return new MachineSnapshot { Ts = ts, SelfCpuSeconds = selfCpu };
+            return new MachineSnapshot { Ts = ts, SelfCpuSeconds = selfCpu, Thermal = thermal };
         (CpuTotals Cpu, long Self)? pair;
         lock (_buffer)
             pair = ReadPair();
@@ -120,6 +170,7 @@ public sealed class LoadMeter : IDisposable
             Pids = full ? ScanPids() : null,
             TaskWaitNs = full ? ScanTasks("schedstat", ProcParse.SchedstatWaitNs) : null,
             TaskNvcsw = full ? ScanTasks("status", ProcParse.NonvoluntarySwitches) : null,
+            Thermal = thermal,
         };
     }
 
@@ -295,7 +346,10 @@ public sealed class LoadMeter : IDisposable
             j.WriteNumber("wall_s", wall);
             WriteStr(j, "loadavg_start", w.Start.Loadavg);
             WriteStr(j, "loadavg_end", w.End.Loadavg);
+            j.WriteString("start_utc", w.Start.Utc.ToString("O", CultureInfo.InvariantCulture));
             WriteNum(j, "foreign_cpu", ForeignCpu([w]));
+            WriteNum(j, "foreign_cpus", ForeignCpu([w]) * Environment.ProcessorCount);
+            WriteThermal(j, w);
             double selfCpu = w.End.SelfCpuSeconds - w.Start.SelfCpuSeconds;
             WriteNum(j, "self_cpu_s", double.IsNaN(selfCpu) ? null : selfCpu);
             WriteNum(j, "self_cpu_ticks", w.Start.SelfTicks is long a && w.End.SelfTicks is long b ? b - a : null);
@@ -318,6 +372,14 @@ public sealed class LoadMeter : IDisposable
         }
         j.WriteEndArray();
         WriteNum(j, "foreign_cpu_window", ForeignCpu(windows));
+        // (н1) of ADR-0023 п. 1.3 in absolute CPUs: the mean, and the share of seconds with more than 1 foreign CPU.
+        WriteNum(j, "foreign_cpus_window", ForeignCpu(windows) * Environment.ProcessorCount);
+        double[] perSecond = ForeignSeries(windows);
+        j.WriteNumber("foreign_seconds", perSecond.Length);
+        WriteNum(j, "foreign_seconds_over_1cpu_share", perSecond.Length == 0 ? null : perSecond.Count(f => f * Environment.ProcessorCount > 1.0) / (double)perSecond.Length);
+        long? dCore = SumThermal(windows, t => t.CoreThrottle), dPkg = SumThermal(windows, t => t.PackageThrottle);
+        WriteNum(j, "core_throttle_delta_window", dCore);
+        WriteNum(j, "package_throttle_delta_window", dPkg);
         WriteNum(j, "run_delay_share_window", RunDelayShare(windows, threads));
         double self = windows.Sum(w => w.End.SelfCpuSeconds - w.Start.SelfCpuSeconds);
         WriteNum(j, "self_cpu_s_window", double.IsNaN(self) ? null : self);
@@ -326,19 +388,50 @@ public sealed class LoadMeter : IDisposable
             WriteTop(j, "top_foreign_window", LoadMath.MergeTop(tops, totalAll, top));
         else
             j.WriteNull("top_foreign_window");
-        // Per-second series: one value per pair of consecutive samples that both fall inside a window.
-        var series = Series;
         j.WriteStartArray("foreign_cpu_series");
+        foreach (double f in perSecond)
+            j.WriteNumberValue(Math.Round(f, 6));
+        j.WriteEndArray();
+        j.WriteEndObject();
+    }
+
+    /// <summary>Per-second foreign_cpu (fraction of the machine): one value per pair of consecutive samples that both fall inside a window.</summary>
+    public double[] ForeignSeries(IReadOnlyList<MachineWindow> windows)
+    {
+        var series = Series;
+        var r = new List<double>();
         for (int i = 1; i < series.Count; i++)
         {
             var (t0, b0, tt0, s0) = series[i - 1];
             var (t1, b1, tt1, s1) = series[i];
-            if (!windows.Any(w => t0 >= w.Start.Ts && t1 <= w.End.Ts))
-                continue;
-            if (LoadMath.ForeignCpu(b1 - b0, tt1 - tt0, s1 - s0) is double f)
-                j.WriteNumberValue(Math.Round(f, 6));
+            if (windows.Any(w => t0 >= w.Start.Ts && t1 <= w.End.Ts) && LoadMath.ForeignCpu(b1 - b0, tt1 - tt0, s1 - s0) is double f)
+                r.Add(f);
         }
-        j.WriteEndArray();
+        return [.. r];
+    }
+
+    private static long? SumThermal(IReadOnlyList<MachineWindow> windows, Func<ThermalState, long?> pick)
+    {
+        long sum = 0;
+        foreach (MachineWindow w in windows)
+        {
+            if (w.Start.Thermal is not { } a || w.End.Thermal is not { } b || pick(a) is not long x || pick(b) is not long y)
+                return null;
+            sum += y - x;
+        }
+        return sum;
+    }
+
+    private static void WriteThermal(Utf8JsonWriter j, MachineWindow w)
+    {
+        j.WriteStartObject("thermal");
+        ThermalState? a = w.Start.Thermal, b = w.End.Thermal;
+        WriteNum(j, "core_throttle_delta", a?.CoreThrottle is long c0 && b?.CoreThrottle is long c1 ? c1 - c0 : null);
+        WriteNum(j, "package_throttle_delta", a?.PackageThrottle is long p0 && b?.PackageThrottle is long p1 ? p1 - p0 : null);
+        WriteNum(j, "package_temp_c_start", a?.PackageTempC);
+        WriteNum(j, "package_temp_c_end", b?.PackageTempC);
+        WriteStr(j, "energy_performance_preference", a?.Epp);
+        WriteStr(j, "no_turbo", a?.NoTurbo);
         j.WriteEndObject();
     }
 

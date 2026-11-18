@@ -22,7 +22,12 @@ public enum ExclusionRule
 /// </summary>
 public sealed record BenchGate
 {
-    public double ForeignCpuMax { get; init; } = 0.05;
+    /// <summary>(н1) mean foreign load over the window, in absolute CPUs (ADR-0023 п. 1.3). [Предл.] 0.8 = 5 % of 16 CPUs; calibrated by п. 1.10.</summary>
+    public double ForeignCpusMax { get; init; } = 0.8;
+    /// <summary>(н1) share of the window's seconds with more than <see cref="ForeignSecondCpus"/> foreign CPUs. [Предл.] 0.10; calibrated by п. 1.10.</summary>
+    public double ForeignOverShareMax { get; init; } = 0.10;
+    /// <summary>The per-second level of (н1) «more than 1 CPU».</summary>
+    public double ForeignSecondCpus { get; init; } = 1.0;
     public double MedianRatioMax { get; init; } = 1.10;
     public double MedianGateMinMs { get; init; } = 50;
     public int MaxRepeats { get; init; } = 2;
@@ -31,23 +36,35 @@ public sealed record BenchGate
     public double SeedAcceptMinFrac { get; init; } = 0.5;
     public string OutcomeBlock { get; init; } = "A";
     public ExclusionRule ExclusionRule { get; init; } = ExclusionRule.IndependentEvidence;
-    /// <summary>[Предл.] Run-queue wait share of the own threads above which an attempt has evidence of foreign load (independent-evidence).</summary>
+    /// <summary>(н2) run-queue wait of the own threads per thread and window second (ADR-0023 п. 1.3). [Предл.] 0.05; calibrated by п. 1.10.</summary>
     public double RunDelayMax { get; init; } = 0.05;
+    /// <summary>Wait for quiet before the series: at most this long (ADR-0023 п. 1.8, default 30 min), then the series is not started.</summary>
+    public int PreSeriesDeadlineSeconds { get; init; } = 1800;
+    /// <summary>The #355 window (ADR-0023 п. 1.9): no repeat is started after it; 0 = no limit. Default 6 h.</summary>
+    public int WindowSeconds { get; init; } = 21_600;
+    /// <summary>
+    /// Process names (comm, case-insensitive prefix) whose CPU activity in a foreign list makes the series INVALID (б) (ADR-0023 п. 1.1, #355).
+    /// </summary>
+    public IReadOnlyList<string> ForbiddenProcesses { get; init; } = ["dotnet", "MSBuild", "VBCSCompiler", "claude", "node"];
+    /// <summary>The «possible throttling» mark of a PASS: Δthrottle &gt; 0 in more than this share of the outcome processes (ADR-0023 п. 1.2).</summary>
+    public double ThermalMarkFrac { get; init; } = 0.20;
     public double ThermalRatio { get; init; } = 0.85;
     public double NoiseMax { get; init; } = 0.10;
     public int QuietSampleSeconds { get; init; } = 10;
     public int QuietStepSeconds { get; init; } = 30;
     public int QuietMaxSeconds { get; init; } = 300;
     public int PreSeriesSeconds { get; init; } = 60;
-    public double PreSeriesForeignMax { get; init; } = 0.05;
+    /// <summary>(н1) mean in CPUs below which the machine is quiet before the series (ADR-0023 п. 1.8).</summary>
+    public double PreSeriesForeignCpusMax { get; init; } = 0.8;
     public int FRefSeconds { get; init; } = 300;
     public int FRefTailSeconds { get; init; } = 180;
 
     internal static readonly string[] Keys =
     [
-        "foreign_cpu_max", "median_ratio_max", "median_gate_min_ms", "max_repeats", "exclude_max_frac", "seed_accept_min_frac", "outcome_block",
+        "foreign_cpus_max", "foreign_over1_share_max", "foreign_second_cpus", "pre_series_deadline_s", "window_s", "forbidden_processes",
+        "thermal_mark_frac", "median_ratio_max", "median_gate_min_ms", "max_repeats", "exclude_max_frac", "seed_accept_min_frac", "outcome_block",
         "exclusion_rule", "run_delay_max", "thermal_ratio", "noise_max", "quiet_sample_s", "quiet_step_s", "quiet_max_s", "pre_series_s",
-        "pre_series_foreign_max", "fref_seconds", "fref_tail_s", "note",
+        "pre_series_foreign_cpus_max", "fref_seconds", "fref_tail_s", "note",
     ];
 
     public static BenchGate Parse(JsonElement e)
@@ -71,7 +88,16 @@ public sealed record BenchGate
         string rule = e.TryGetProperty("exclusion_rule", out JsonElement r) ? r.GetString() ?? "" : "independent-evidence";
         var g = new BenchGate
         {
-            ForeignCpuMax = F("foreign_cpu_max", d.ForeignCpuMax, 0, 1),
+            ForeignCpusMax = F("foreign_cpus_max", d.ForeignCpusMax, 0, 4096),
+            ForeignOverShareMax = F("foreign_over1_share_max", d.ForeignOverShareMax, 0, 1),
+            ForeignSecondCpus = F("foreign_second_cpus", d.ForeignSecondCpus, 0, 4096),
+            PreSeriesDeadlineSeconds = I("pre_series_deadline_s", d.PreSeriesDeadlineSeconds, 0, 7 * 86_400),
+            WindowSeconds = I("window_s", d.WindowSeconds, 0, 30 * 86_400),
+            ForbiddenProcesses = e.TryGetProperty("forbidden_processes", out JsonElement fp)
+                ? (fp.ValueKind == JsonValueKind.Array && fp.EnumerateArray().All(x => x.ValueKind == JsonValueKind.String)
+                    ? [.. fp.EnumerateArray().Select(x => x.GetString()!)] : throw new ManifestException("gate.forbidden_processes must be an array of strings"))
+                : d.ForbiddenProcesses,
+            ThermalMarkFrac = F("thermal_mark_frac", d.ThermalMarkFrac, 0, 1),
             MedianRatioMax = F("median_ratio_max", d.MedianRatioMax, 1, 100),
             MedianGateMinMs = F("median_gate_min_ms", d.MedianGateMinMs, 0, 1e9),
             MaxRepeats = I("max_repeats", d.MaxRepeats, 0, 10),
@@ -91,7 +117,7 @@ public sealed record BenchGate
             QuietStepSeconds = I("quiet_step_s", d.QuietStepSeconds, 1, 3600),
             QuietMaxSeconds = I("quiet_max_s", d.QuietMaxSeconds, 0, 86_400),
             PreSeriesSeconds = I("pre_series_s", d.PreSeriesSeconds, 1, 86_400),
-            PreSeriesForeignMax = F("pre_series_foreign_max", d.PreSeriesForeignMax, 0, 1),
+            PreSeriesForeignCpusMax = F("pre_series_foreign_cpus_max", d.PreSeriesForeignCpusMax, 0, 4096),
             FRefSeconds = I("fref_seconds", d.FRefSeconds, 2, 86_400),
             FRefTailSeconds = I("fref_tail_s", d.FRefTailSeconds, 1, 86_400),
         };
@@ -103,7 +129,15 @@ public sealed record BenchGate
     public void Write(Utf8JsonWriter j)
     {
         j.WriteStartObject("gate");
-        j.WriteNumber("foreign_cpu_max", ForeignCpuMax);
+        j.WriteNumber("foreign_cpus_max", ForeignCpusMax);
+        j.WriteNumber("foreign_over1_share_max", ForeignOverShareMax);
+        j.WriteNumber("foreign_second_cpus", ForeignSecondCpus);
+        j.WriteNumber("pre_series_deadline_s", PreSeriesDeadlineSeconds);
+        j.WriteNumber("window_s", WindowSeconds);
+        j.WriteStartArray("forbidden_processes");
+        foreach (string n in ForbiddenProcesses) j.WriteStringValue(n);
+        j.WriteEndArray();
+        j.WriteNumber("thermal_mark_frac", ThermalMarkFrac);
         j.WriteNumber("median_ratio_max", MedianRatioMax);
         j.WriteNumber("median_gate_min_ms", MedianGateMinMs);
         j.WriteNumber("max_repeats", MaxRepeats);
@@ -118,7 +152,7 @@ public sealed record BenchGate
         j.WriteNumber("quiet_step_s", QuietStepSeconds);
         j.WriteNumber("quiet_max_s", QuietMaxSeconds);
         j.WriteNumber("pre_series_s", PreSeriesSeconds);
-        j.WriteNumber("pre_series_foreign_max", PreSeriesForeignMax);
+        j.WriteNumber("pre_series_foreign_cpus_max", PreSeriesForeignCpusMax);
         j.WriteNumber("fref_seconds", FRefSeconds);
         j.WriteNumber("fref_tail_s", FRefTailSeconds);
         j.WriteEndObject();

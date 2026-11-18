@@ -4,7 +4,7 @@
   "kind": "bench",
   "meta": {
     "note": "EXP-0008 pre-registration П1–П3, П5, П6, П9 (TASK-0102) as a lab bench series manifest (TASK-0106). Run: lab bench --mode series --manifest lab/manifests/EXP-0008-bench.json --out lab/results/EXP-0008/series (a new directory). Blocks are EXP-0007 П2 unchanged (same plan, same order).",
-    "gate": "EXP-0008 П5.2–П5.4 / ADR-0023 п. 1.9 calibration numbers; exclusion_rule is chosen at the ADR-0023 gate (any-flag = П5.4 text, independent-evidence = gate addition); run_delay_max is a proposal",
+    "gate": "ADR-0023 rev 2 п. 1.3–1.11. EXP-level numbers (foreign_cpus_max 0.8 CPU = 5 % of 16 CPUs, foreign_over1_share_max, run_delay_max, quiet and deadline) are proposals until the calibration run of п. 1.10 replaces them before manifest_hash is frozen; ADR-level numbers: max_repeats 2, exclude_max_frac 0.20, seed_accept_min_frac 0.5, thermal_mark_frac 0.20, exclusion_rule independent-evidence (п. 1.5)",
     "hash_checkpoints": "false = game configuration of ADR-0017 (outcome); hc variants are reference runs (П9 п. 1)"
   },
   "generator_seed": 85621515,
@@ -22,7 +22,9 @@
     {"id": "D", "grid": "benchmark", "threads": [8], "seeds": [1, 2, 3], "note": "log-log slopes, 24 points"}
   ],
   "gate": {
-    "foreign_cpu_max": 0.05,
+    "foreign_cpus_max": 0.8,
+    "foreign_over1_share_max": 0.10,
+    "foreign_second_cpus": 1.0,
     "median_ratio_max": 1.10,
     "median_gate_min_ms": 50,
     "max_repeats": 2,
@@ -37,7 +39,11 @@
     "quiet_step_s": 30,
     "quiet_max_s": 300,
     "pre_series_s": 60,
-    "pre_series_foreign_max": 0.05,
+    "pre_series_foreign_cpus_max": 0.8,
+    "pre_series_deadline_s": 1800,
+    "window_s": 21600,
+    "forbidden_processes": ["dotnet", "MSBuild", "VBCSCompiler", "claude", "node"],
+    "thermal_mark_frac": 0.20,
     "fref_seconds": 300,
     "fref_tail_s": 180
   },

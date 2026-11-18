@@ -29,6 +29,10 @@ internal static class SeriesDriver
         public required bool AllowDebug { get; init; }
         public required Dictionary<int, int> Injected { get; init; }
         public Dictionary<int, double> FRef { get; } = [];
+        public required bool Calibration { get; init; }
+        public Stopwatch Clock { get; } = Stopwatch.StartNew();
+        public string? Invalid355 { get; set; }
+        public int VirtualRepeats { get; set; }
 
         public void Say(string line)
         {
@@ -41,7 +45,32 @@ internal static class SeriesDriver
 
     /// <summary>One attempt as recorded: the gate input plus where it came from.</summary>
     private sealed record AttemptRec(string Key, int Number, string File, int Exit, double WaitQuietSeconds, double? QuietForeign, GateAttempt Gate,
-        JsonElement? TopForeign, double? TopkMhz, bool? ThermalFlag, DateTime Started, DateTime Ended);
+        JsonElement? TopForeign, double? TopkMhz, bool? ThermalFlag, JsonElement? Thermal, DateTime Started, DateTime Ended);
+
+    /// <summary>The thermal record of an attempt (ADR-0023 п. 1.2): Δthrottle of the union, temperature at the start of the first and end of the last window, EPP, no_turbo.</summary>
+    private static JsonElement ThermalOf(JsonElement machine)
+    {
+        using var ms = new MemoryStream();
+        using (var j = new Utf8JsonWriter(ms))
+        {
+            j.WriteStartObject();
+            LoadMeter.WriteNum(j, "core_throttle_delta", Num(machine, "core_throttle_delta_window"));
+            LoadMeter.WriteNum(j, "package_throttle_delta", Num(machine, "package_throttle_delta_window"));
+            JsonElement ws = machine.GetProperty("windows");
+            int n = ws.GetArrayLength();
+            JsonElement? first = n > 0 && ws[0].TryGetProperty("thermal", out JsonElement t0) ? t0 : null;
+            JsonElement? last = n > 0 && ws[n - 1].TryGetProperty("thermal", out JsonElement t1) ? t1 : null;
+            LoadMeter.WriteNum(j, "package_temp_c_start", first is { } f ? Num(f, "package_temp_c_start") : null);
+            LoadMeter.WriteNum(j, "package_temp_c_end", last is { } l ? Num(l, "package_temp_c_end") : null);
+            string? epp = first is { } f2 && f2.TryGetProperty("energy_performance_preference", out JsonElement e) && e.ValueKind == JsonValueKind.String ? e.GetString() : null;
+            string? nt = first is { } f3 && f3.TryGetProperty("no_turbo", out JsonElement t) && t.ValueKind == JsonValueKind.String ? t.GetString() : null;
+            if (epp is null) j.WriteNull("energy_performance_preference"); else j.WriteString("energy_performance_preference", epp);
+            if (nt is null) j.WriteNull("no_turbo"); else j.WriteString("no_turbo", nt);
+            j.WriteEndObject();
+        }
+        using JsonDocument d = JsonDocument.Parse(ms.ToArray());
+        return d.RootElement.Clone();
+    }
 
     public static int Run(Options o)
     {
@@ -49,6 +78,7 @@ internal static class SeriesDriver
         string dir = Path.GetFullPath(o.Required("out"));
         string? inject = o.Optional("inject-flag");
         bool allowDebug = o.Optional("allow-debug") == "true";
+        bool calibration = o.Optional("calibration") == "true";
         o.CheckAllUsed();
         if (Directory.Exists(dir) && Directory.EnumerateFileSystemEntries(dir).Any())
             throw new UsageException($"{dir} is not empty: a series is never resumed or repeated by hand (EXP-0008 П10 п. 4); use a new directory.");
@@ -57,7 +87,7 @@ internal static class SeriesDriver
             throw new UsageException("--mode series needs a manifest with a \"gate\" block (EXP-0008 П10 п. 5).");
         Directory.CreateDirectory(dir);
         using var log = new StreamWriter(Path.Combine(dir, "series.log"), append: false);
-        var ctx = new Ctx { M = m, Dir = dir, Log = log, AllowDebug = allowDebug, Injected = ParseInject(inject) };
+        var ctx = new Ctx { M = m, Dir = dir, Log = log, AllowDebug = allowDebug, Injected = ParseInject(inject), Calibration = calibration };
         return Execute(ctx);
     }
 
@@ -90,21 +120,43 @@ internal static class SeriesDriver
         string stage = "pre_series";
         try
         {
-            // 1. Pre-series stop.
-            (double? pre, MachineWindow preWin, LoadMeter preMeter) = Measure(c, g.PreSeriesSeconds, "pre_series");
+            // 1. Wait for quiet before the series (ADR-0023 п. 1.8): windows of pre_series_s until (н1) is below the limit or the deadline.
+            var preWait = Stopwatch.StartNew();
+            var preTries = new List<double?>();
+            double? pre;
+            MachineWindow preWin;
+            LoadMeter preMeter;
+            while (true)
+            {
+                (pre, preWin, preMeter) = Measure(c, g.PreSeriesSeconds, "pre_series");
+                preTries.Add(pre);
+                c.Say($"pre-series foreign {Fmt(pre)} CPUs (limit {g.PreSeriesForeignCpusMax}), waited {preWait.Elapsed.TotalSeconds:F0} s");
+                if (pre is not double pv || pv <= g.PreSeriesForeignCpusMax || preWait.Elapsed.TotalSeconds + g.PreSeriesSeconds > g.PreSeriesDeadlineSeconds)
+                    break;
+            }
+            List<string> hits355 = Forbidden(c, preMeter, preWin, "pre_series");
+            (double? preF, MachineWindow preW, LoadMeter preM) = (pre, preWin, preMeter);
             outJson["pre_series"] = j =>
             {
                 j.WriteStartObject("pre_series");
                 j.WriteNumber("seconds", g.PreSeriesSeconds);
-                LoadMeter.WriteNum(j, "foreign_cpu", pre);
-                j.WriteNumber("limit", g.PreSeriesForeignMax);
-                preMeter.Write(j, [preWin], 0);
+                j.WriteNumber("waited_s", Math.Round(preWait.Elapsed.TotalSeconds, 1));
+                j.WriteNumber("deadline_s", g.PreSeriesDeadlineSeconds);
+                LoadMeter.WriteNum(j, "foreign_cpus", preF);
+                j.WriteStartArray("foreign_cpus_tries");
+                foreach (double? t in preTries) { if (t is double tv) j.WriteNumberValue(tv); else j.WriteNullValue(); }
+                j.WriteEndArray();
+                j.WriteNumber("limit_cpus", g.PreSeriesForeignCpusMax);
+                preM.Write(j, [preW], 0);
                 j.WriteEndObject();
             };
-            c.Say($"pre-series foreign_cpu {Fmt(pre)} (limit {g.PreSeriesForeignMax})");
-            if (pre is double p0 && p0 > g.PreSeriesForeignMax)
+            if (hits355.Count > 0)
+                throw new Invalid355(string.Join("; ", hits355));
+            if (pre is double p0 && p0 > g.PreSeriesForeignCpusMax)
             {
-                c.Say("STOP before the series: the machine is above the gate; the decision goes to the Orchestrator/owner (EXP-0008 П5.4).");
+                c.Say($"NOT STARTED: no quiet within {g.PreSeriesDeadlineSeconds} s; the question goes to the owner's queue (ADR-0023 п. 1.8). Top foreign: "
+                    + string.Join(", ", LoadMath.TopForeign(preWin.Start.Pids ?? [], preWin.End.Pids ?? [], preMeter.SelfPid,
+                        preWin.End.Cpu?.Total - preWin.Start.Cpu?.Total ?? 0, 5).Select(t => $"{t.Comm}({t.Pid}) {t.MachineShare * Environment.ProcessorCount:F2} CPU")));
                 exit = 3;
                 return exit;
             }
@@ -145,6 +197,13 @@ internal static class SeriesDriver
             stage = "main";
             var gp = plan.Select(p => new GateProcess(p.Index, p.Block, Group(p), p.Seed, p.Replica)).ToList();
             var main = Gated(c, gp, (p, n) => ProcessArgs(c, plan[p.Index], n, null, []), $"p", medianGate: true);
+            if (c.Calibration)
+            {
+                c.Say("calibration run (ADR-0023 п. 1.10): no repeats, no reference; thresholds are chosen by lab/analysis/exp0008.py --calibrate");
+                outJson["main"] = j => WriteGated(j, "main", gp, main, c, plan);
+                stage = "calibration_done";
+                return exit;
+            }
             SeriesVerdict verdict = SeriesGate.Verdict(gp, main.Decisions, g);
             outJson["main"] = j => WriteGated(j, "main", gp, main, c, plan);
             outJson["verdict"] = j => WriteVerdict(j, verdict);
@@ -153,7 +212,7 @@ internal static class SeriesDriver
             if (verdict.Inconclusive)
                 exit = 4;
 
-            // 6. Reference: variants, modes, profile.
+            // 6. Reference: variants, modes, profile (the #355 window does not stop them; only repeats are cut, п. 1.9).
             stage = "reference";
             var variantResults = new List<(BenchVariant V, List<GateProcess> Gp, GatedResult R)>();
             foreach (BenchVariant v in m.Reference.Variants)
@@ -221,14 +280,24 @@ internal static class SeriesDriver
             // 7. Post-series record.
             stage = "post_series";
             (double? post, MachineWindow postWin, LoadMeter postMeter) = Measure(c, g.PreSeriesSeconds, "post_series");
+            List<string> postHits = Forbidden(c, postMeter, postWin, "post_series");
             outJson["post_series"] = j =>
             {
                 j.WriteStartObject("post_series");
-                LoadMeter.WriteNum(j, "foreign_cpu", post);
+                LoadMeter.WriteNum(j, "foreign_cpus", post);
                 postMeter.Write(j, [postWin], 0);
                 j.WriteEndObject();
             };
-            c.Say($"post-series foreign_cpu {Fmt(post)}; series done, exit {exit}");
+            if (postHits.Count > 0)
+                throw new Invalid355(string.Join("; ", postHits));
+            c.Say($"post-series foreign {Fmt(post)} CPUs; series done, exit {exit}");
+            return exit;
+        }
+        catch (Invalid355 e)
+        {
+            c.Say($"INVALID (б) #355 at {stage}: {e.Message}");
+            c.Invalid355 = e.Message;
+            exit = 5;
             return exit;
         }
         catch (ChildFailed e)
@@ -244,6 +313,25 @@ internal static class SeriesDriver
     }
 
     private sealed class ChildFailed(string message) : Exception(message);
+
+    private sealed class Invalid355(string message) : Exception(message);
+
+    /// <summary>
+    /// #355 check (ADR-0023 п. 1.1): CPU-active foreign processes of a window whose comm starts with a forbidden name (case-insensitive),
+    /// the driver itself excluded. Off Linux the list is empty and nothing is found.
+    /// </summary>
+    private static List<string> Forbidden(Ctx c, LoadMeter meter, MachineWindow w, string where)
+    {
+        if (w.Start.Pids is null || w.End.Pids is null)
+            return [];
+        long dTotal = w.End.Cpu?.Total - w.Start.Cpu?.Total ?? 0;
+        return ForbiddenIn(LoadMath.TopForeign(w.Start.Pids, w.End.Pids, meter.SelfPid, dTotal, int.MaxValue).Select(t => (t.Pid, t.Comm)), c.M.Gate, Environment.ProcessId, where);
+    }
+
+    /// <summary>Pure part of the #355 check: the forbidden (pid, comm) of a foreign list, skipping <paramref name="driverPid"/>.</summary>
+    internal static List<string> ForbiddenIn(IEnumerable<(int Pid, string Comm)> procs, BenchGate g, int driverPid, string where) =>
+        [.. procs.Where(p => p.Pid != driverPid && g.ForbiddenProcesses.Any(n => p.Comm.StartsWith(n, StringComparison.OrdinalIgnoreCase)))
+            .Select(p => $"{where}: {p.Comm} (pid {p.Pid})")];
 
     /// <summary>Attempts, med_points and decisions of one gated set (main pass, a variant, an R mode).</summary>
     private sealed record GatedResult(Dictionary<int, List<AttemptRec>> Attempts, Dictionary<string, double> MedPoints,
@@ -268,16 +356,29 @@ internal static class SeriesDriver
         foreach ((string grp, double v) in med.OrderBy(x => x.Key, StringComparer.Ordinal))
             c.Say($"med_point {grp} = {v:F2} ms");
         var plan = new List<(int, List<int>)>();
-        for (int round = 1; round <= g.MaxRepeats; round++)
+        for (int round = 1; round <= (c.Calibration ? 0 : g.MaxRepeats); round++)
         {
             var todo = ps.Where(p => attempts[p.Index].Count == round
                 && SeriesGate.Decide([.. attempts[p.Index].Select(a => a.Gate)], MedOf(med, p), g).Status == ProcessStatus.NeedsRepeat).ToList();
             plan.Add((round, [.. todo.Select(p => p.Index)]));
             c.Say($"repeat round {round}: {todo.Count} process(es) {string.Join(" ", todo.Select(p => p.Index))}");
             foreach (GateProcess p in todo)
+            {
+                if (g.WindowSeconds > 0 && c.Clock.Elapsed.TotalSeconds >= g.WindowSeconds)
+                {
+                    // ADR-0023 п. 1.9: after the #355 window no repeat is started; the missing repeat counts as an attempt flagged by (м).
+                    c.VirtualRepeats++;
+                    c.Say($"{tag}{p.Index}-a{round}: not started, the #355 window of {g.WindowSeconds} s ended");
+                    attempts[p.Index].Add(new AttemptRec($"{tag}{p.Index}-a{round}", round, "", -1, 0, null,
+                        new GateAttempt(round, null, null, null, null, Virtual: true), null, null, null, null, DateTime.UtcNow, DateTime.UtcNow));
+                    continue;
+                }
                 attempts[p.Index].Add(RunAttempt(c, p, round, argsFor, tag, medianGate));
+            }
         }
-        var decisions = ps.ToDictionary(p => p.Index, p => SeriesGate.Decide([.. attempts[p.Index].Select(a => a.Gate)], MedOf(med, p), g));
+        // Calibration: one attempt per process, decided as if final (no repeats asked).
+        BenchGate gd = c.Calibration ? g with { MaxRepeats = 0 } : g;
+        var decisions = ps.ToDictionary(p => p.Index, p => SeriesGate.Decide([.. attempts[p.Index].Select(a => a.Gate)], MedOf(med, p), gd));
         foreach (GateProcess p in ps)
         {
             ProcessDecision d = decisions[p.Index];
@@ -295,7 +396,7 @@ internal static class SeriesDriver
         // Wait for quiet (EXP-0008 П5.4 [Предл.]): sample, then wait in steps up to the maximum, then start in any case.
         var sw = Stopwatch.StartNew();
         (double? q, _, _) = Measure(c, g.QuietSampleSeconds, null);
-        while (q is double f && f > g.ForeignCpuMax && sw.Elapsed.TotalSeconds + g.QuietStepSeconds <= g.QuietMaxSeconds + g.QuietSampleSeconds)
+        while (q is double f && f > g.ForeignCpusMax && sw.Elapsed.TotalSeconds + g.QuietStepSeconds <= g.QuietMaxSeconds + g.QuietSampleSeconds)
         {
             Thread.Sleep(TimeSpan.FromSeconds(g.QuietStepSeconds));
             (q, _, _) = Measure(c, g.QuietSampleSeconds, null);
@@ -320,20 +421,37 @@ internal static class SeriesDriver
             }
         }
         JsonElement? machine = r.TryGetProperty("machine", out JsonElement mm) ? mm : null;
-        double? foreign = machine is { } m1 ? Num(m1, "foreign_cpu_window") : null;
-        double? delay = machine is { } m2 ? Num(m2, "run_delay_share_window") : null;
+        double? foreign = null, over = null, delay = null;
+        JsonElement? thermal = null;
+        if (machine is { } mx)
+        {
+            int cpus = mx.TryGetProperty("logical_cpus", out JsonElement lc) ? lc.GetInt32() : Environment.ProcessorCount;
+            foreign = Num(mx, "foreign_cpu_window") * cpus;
+            delay = Num(mx, "run_delay_share_window");
+            // (н1) seconds share recomputed with the manifest's per-second level from the raw series (fraction of the machine).
+            if (mx.TryGetProperty("foreign_cpu_series", out JsonElement fs) && fs.GetArrayLength() > 0)
+                over = fs.EnumerateArray().Count(x => x.GetDouble() * cpus > g.ForeignSecondCpus) / (double)fs.GetArrayLength();
+            thermal = ThermalOf(mx);
+            if (mx.TryGetProperty("top_foreign_window", out JsonElement tf) && tf.ValueKind == JsonValueKind.Array)
+            {
+                List<string> hits = ForbiddenIn(tf.EnumerateArray().Select(x => (x.GetProperty("pid").GetInt32(), x.GetProperty("comm").GetString() ?? "")),
+                    g, Environment.ProcessId, $"{tag}{p.Index}-a{n}");
+                if (hits.Count > 0)
+                    throw new Invalid355(string.Join("; ", hits));
+            }
+        }
         JsonElement? top = machine is { } m3 && m3.TryGetProperty("top_foreign_window", out JsonElement t) ? t.Clone() : null;
         double? topk = null;
-        bool? thermal = null;
+        bool? thermalFlag = null;
         if (r.TryGetProperty("frequency", out JsonElement fr))
         {
             topk = Num(fr, "topk_median_mhz");
-            thermal = fr.TryGetProperty("possible_thermal_throttle", out JsonElement th) && th.ValueKind is JsonValueKind.True or JsonValueKind.False ? th.GetBoolean() : null;
+            thermalFlag = fr.TryGetProperty("possible_thermal_throttle", out JsonElement th) && th.ValueKind is JsonValueKind.True or JsonValueKind.False ? th.GetBoolean() : null;
         }
         bool injected = tag == "p" && c.Injected.TryGetValue(p.Index, out int upTo) && n < upTo;
-        var ga = new GateAttempt(n, medT, foreign, delay, injected);
-        c.Say($"{key}: T p50 {Fmt(medT)} ms, foreign {Fmt(foreign)}, run delay {Fmt(delay)}, waited {waited:F0} s{(injected ? ", injected flag" : "")}");
-        return new AttemptRec(key, n, file, code, waited, q, ga, top, topk, thermal, t0, t1);
+        var ga = new GateAttempt(n, medT, foreign, over, delay, injected);
+        c.Say($"{key}: T p50 {Fmt(medT)} ms, н1 {Fmt(foreign)} CPUs / {Fmt(over)} s>1, н2 {Fmt(delay)}, waited {waited:F0} s{(injected ? ", injected flag" : "")}");
+        return new AttemptRec(key, n, file, code, waited, q, ga, top, topk, thermalFlag, thermal, t0, t1);
     }
 
     private static (string[] Args, string File) ProcessArgs(Ctx c, BenchProcess p, int attempt, string? reference, IReadOnlyList<(string Key, string Value)> switches)
@@ -401,7 +519,7 @@ internal static class SeriesDriver
         meter.Dispose();
         if (name is not null && !meter.Available)
             c.Say($"load meter unavailable: {meter.Reason}");
-        return (LoadMeter.ForeignCpu([w]), w, meter);
+        return (LoadMeter.ForeignCpu([w]) * Environment.ProcessorCount, w, meter);
     }
 
     // ---------------- children ----------------
@@ -461,8 +579,16 @@ internal static class SeriesDriver
             j.WriteNumber(I(k), n);
         j.WriteEndObject();
         c.M.Gate.Write(j);
+        j.WriteBoolean("calibration", c.Calibration);
+        j.WriteNumber("elapsed_s", Math.Round(c.Clock.Elapsed.TotalSeconds, 1));
+        j.WriteNumber("repeats_not_started_window_end", c.VirtualRepeats);
+        if (c.Invalid355 is null) j.WriteNull("invalid_355"); else j.WriteString("invalid_355", c.Invalid355);
         j.WriteNumber("exit_code", exit);
-        j.WriteString("exit_meaning", exit switch { 0 => "series done", 1 => "process failure", 3 => "pre-series stop", 4 => "INCONCLUSIVE by exclusions", _ => "?" });
+        j.WriteString("exit_meaning", exit switch
+        {
+            0 => "series done", 1 => "process failure", 3 => "not started (no quiet before the deadline)", 4 => "INCONCLUSIVE by exclusions",
+            5 => "INVALID (б): #355 (another build or agent on the machine)", _ => "?",
+        });
         j.WriteString("last_stage", stage);
         foreach (string key in (string[])["pre_series", "fref", "validity", "main", "verdict", "reference", "profile", "post_series"])
         {
@@ -513,15 +639,18 @@ internal static class SeriesDriver
                 AttemptEval e = d.Evals.Count > i ? d.Evals[i] : SeriesGate.Evaluate(a.Gate, MedOf(r.MedPoints, p), c.M.Gate);
                 j.WriteStartObject();
                 j.WriteNumber("attempt", a.Number);
-                j.WriteString("file", Rel(c, a.File));
+                j.WriteString("file", a.File.Length == 0 ? "" : Rel(c, a.File));
                 j.WriteString("started_utc", a.Started.ToString("O", CultureInfo.InvariantCulture));
                 j.WriteString("ended_utc", a.Ended.ToString("O", CultureInfo.InvariantCulture));
                 j.WriteNumber("wait_quiet_s", Math.Round(a.WaitQuietSeconds, 1));
                 LoadMeter.WriteNum(j, "quiet_foreign_cpu_last", a.QuietForeign);
                 LoadMeter.WriteNum(j, "median_T_ms", a.Gate.MedianTMs);
-                LoadMeter.WriteNum(j, "foreign_cpu", a.Gate.ForeignCpu);
+                LoadMeter.WriteNum(j, "foreign_cpus", a.Gate.ForeignCpus);
+                LoadMeter.WriteNum(j, "foreign_over_share", a.Gate.ForeignOverShare);
                 LoadMeter.WriteNum(j, "run_delay_share", a.Gate.RunDelay);
                 j.WriteBoolean("injected", a.Gate.Injected);
+                j.WriteBoolean("virtual", a.Gate.Virtual);
+                if (a.Thermal is JsonElement th) { j.WritePropertyName("thermal"); th.WriteTo(j); } else j.WriteNull("thermal");
                 LoadMeter.WriteNum(j, "topk_median_mhz", a.TopkMhz);
                 if (a.ThermalFlag is bool tf) j.WriteBoolean("possible_thermal_throttle", tf); else j.WriteNull("possible_thermal_throttle");
                 j.WriteBoolean("flag", e.Flag);
