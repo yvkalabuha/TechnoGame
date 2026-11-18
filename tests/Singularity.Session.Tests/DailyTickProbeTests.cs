@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Singularity.Core.Commands;
+using Singularity.Core.Policy;
 using Singularity.Kernel;
 
 namespace Singularity.Session.Tests;
@@ -76,14 +77,22 @@ public class DailyTickProbeTests
     [Fact]
     public void ReusedView_EqualsAFreshSnapshot_OnEveryProbeDay()
     {
-        SliceSession s = SliceSession.Create(SliceTestData.Data, new SliceRunConfig { Seed = 7, DailyTickProbe = true, HashEveryTick = true });
+        // Seed 3 with the A40 stress arm first closes a line in month 220 (found by a scan): the window below holds that monthly view.
+        SliceSession s = SliceSession.Create(SliceTestData.Data, new SliceRunConfig
+        {
+            Seed = 3, LicKnows = true, EffortShare = EffortShareArm.X0, DailyTickProbe = true, HashEveryTick = true,
+        });
         Assert.True(s.World.DailyViewNeutral);
+        s.StepThroughMonth(219);
         int reused = 0;
+        bool monthlyReasons = false;
         for (int day = 0; day < 75; day++)
         {
             var before = s.View.Actors;
             s.Step(1);
             SliceView v = s.View;
+            if (v.Inputs is not null && v.Actors.Any(a => a.Decisions.Closes.Any(c => c.Reason != LineCloseReason.None)))
+                monthlyReasons = true;
             Assert.Equal(s.Tick, v.Tick);
             HashAssert.Equal(s.LastHash, v.StateHash, $"day {day}");
             if (v.Inputs is not null)
@@ -94,6 +103,40 @@ public class DailyTickProbeTests
                 reused++;
         }
         Assert.True(reused > 40, $"the actors were reused on {reused} days only");
+        Assert.True(monthlyReasons, "no monthly view had a close reason: the WithoutCloseReasons trap is not exercised");
+    }
+
+    [Fact]
+    public void GameSchedule_ReusedDaysCarryNoStateHash()
+    {
+        var s = SliceSession.Create(SliceTestData.Data,
+            new SliceRunConfig { Seed = 7, DailyTickProbe = true, HashCheckpoints = true, HashEveryTick = false });
+        int reused = 0;
+        for (int day = 0; day < 75; day++)
+        {
+            s.Step(1);
+            if (s.View.Inputs is not null)
+                continue;
+            Assert.Null(s.View.StateHash);
+            reused++;
+        }
+        Assert.True(reused > 40);
+    }
+
+    private sealed class WeeklySystem : ITickSystem
+    {
+        public int SystemId => 99;
+        public Cadence Cadence => Cadence.Weekly;
+        public void Compute(in TickContext context, int chunk, int rowStart, int rowEnd) { }
+        public void Merge(in TickContext context, int chunkCount) { }
+        public void Post(in TickContext context) { }
+    }
+
+    [Fact]
+    public void AWeeklySystem_IsNotViewNeutral()
+    {
+        Assert.True(SliceWorld.IsDailyViewNeutral([new DailyProbeSystem()]));
+        Assert.False(SliceWorld.IsDailyViewNeutral([new DailyProbeSystem(), new WeeklySystem()]));
     }
 
     [Fact]

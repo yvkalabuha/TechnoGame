@@ -147,7 +147,7 @@ internal sealed class SliceWorld
 
         Policy.Initialize();
         ITickSystem[] systems = config.DailyTickProbe ? [Knowledge, Industry, Products, Policy, new DailyProbeSystem()] : [Knowledge, Industry, Products, Policy];
-        DailyViewNeutral = systems.All(x => x.Cadence != Cadence.Daily || x is DailyProbeSystem);
+        DailyViewNeutral = IsDailyViewNeutral(systems);
         Runner = new TickRunner(Table, config.Seed, systems, config.ChunkSize, config.Threads, Calendar);
     }
 
@@ -156,6 +156,10 @@ internal sealed class SliceWorld
     /// not a default, so a new daily system must be added here on purpose (F7a).
     /// </summary>
     internal bool DailyViewNeutral { get; }
+
+    // Allow-list: a Weekly or Daily system other than the probe may write what a view reads, so it must not pass as neutral.
+    internal static bool IsDailyViewNeutral(IEnumerable<ITickSystem> systems) =>
+        systems.All(x => x.Cadence is Cadence.Monthly or Cadence.Yearly || x is DailyProbeSystem);
 
     // L_K and L_K0 replace the knowledge model by a schedule; the other layers read `known` as before.
     private KnowledgeSystem NewKnowledge(KnowledgeStart kStart, KnowledgeParams kp, int chunks)
