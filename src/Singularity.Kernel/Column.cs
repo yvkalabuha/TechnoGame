@@ -41,7 +41,8 @@ public abstract class Column<T> : Column where T : unmanaged
 
     private T[] _current;
     private T[] _next;
-    private bool _open;
+    private bool _open;   // fast-path flag: true only when no trace is active
+    private bool _copied;  // Next holds the copy of Current (guarded by _openLock / sequential phases)
     private readonly object _openLock = new();
 
     // private protected: only Kernel column types exist, so the hash layout stays under Kernel control.
@@ -79,8 +80,15 @@ public abstract class Column<T> : Column where T : unmanaged
         {
             if (Volatile.Read(ref _open))
                 return;
-            _current.CopyTo(_next, 0);
-            Volatile.Write(ref _open, true);
+            Owner?.Trace?.Record(Owner.TraceSystemId, Name);
+            if (!_copied)
+            {
+                _current.CopyTo(_next, 0);
+                _copied = true;
+            }
+            // With a trace on, _open stays false so every Next access is recorded.
+            if (Owner?.Trace is null)
+                Volatile.Write(ref _open, true);
         }
     }
 
@@ -95,19 +103,25 @@ public abstract class Column<T> : Column where T : unmanaged
         Owner?.BumpVersion();
     }
 
-    internal override void Close() => Volatile.Write(ref _open, false);
+    internal override void Close()
+    {
+        _copied = false;
+        Volatile.Write(ref _open, false);
+    }
 
     internal override void CopyCurrentToNext()
     {
         _current.CopyTo(_next, 0);
-        Volatile.Write(ref _open, true);
+        _copied = true;
+        Volatile.Write(ref _open, Owner?.Trace is null);
     }
 
     internal override bool SwapIfOpen()
     {
-        if (!Volatile.Read(ref _open))
+        if (!_copied)
             return false;
         (_current, _next) = (_next, _current);
+        _copied = false;
         Volatile.Write(ref _open, false);
         return true;
     }

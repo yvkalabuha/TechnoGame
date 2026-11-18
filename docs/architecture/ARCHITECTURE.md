@@ -63,6 +63,7 @@ Lab и клиент ссылаются и на Session, и на Core; Core сс�
 1 тик = 1 день; системы с частотами день / месяц / год. Фазы: команды → compute (параллельно по чанкам, чтение `Current`) → merge (детерминированный порядок чанков) → post (инварианты, метрики, хеш по расписанию ADR-0017). `Next` колонки открывается copy-on-write.
 
 ## Проверки
+- Правило «одна колонка — один писатель» (ADR-0006) проверяет тестовая трассировка `Table.Trace` (`ColumnWriteTrace`): выключена по умолчанию, пишет пары (система, колонка) при каждом `Column.Next`, id системы берёт из `TickRunner`; тест `Session.Tests/OneWriterPerColumnTests`, список исключений пуст (TASK-0086).
 - Архитектурные тесты (`tests/Singularity.Architecture.Tests`): зависимости сборок, `DeterminismRules` (ADR-0003, 0004, 0007), allowlist `double` Kernel, нет состояния вне таблиц (`ScratchTests`, ADR-0013).
 - Детерминизм L1/L2 и закреплённые golden в CI на ubuntu x64, windows x64, macos ARM64; FMA-канарейка (TASK-0009).
 - Правила кода: `.claude/rules/csharp-core.md`.

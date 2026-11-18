@@ -31,6 +31,12 @@ public sealed class Table
     /// </summary>
     public bool FullCopyMode { get; set; }
 
+    /// <summary>Test-only one-writer trace (ADR-0006); null (off) by default. Set it before the first tick.</summary>
+    public ColumnWriteTrace? Trace { get; set; }
+
+    /// <summary>Id of the system whose phase is running; set by <see cref="TickRunner"/> only while <see cref="Trace"/> is on.</summary>
+    internal int TraceSystemId { get; set; }
+
     internal void BumpVersion() => _version++;
 
     internal void BeginTick()

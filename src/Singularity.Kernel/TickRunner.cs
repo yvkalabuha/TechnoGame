@@ -159,6 +159,8 @@ public sealed class TickRunner
                 if (!_due[s])
                     continue;
                 ITickSystem system = _systems[s];
+                if (_table.Trace is not null)
+                    _table.TraceSystemId = system.SystemId;
                 if (_parallel.MaxDegreeOfParallelism == 1)
                 {
                     for (int chunk = 0; chunk < ChunkCount; chunk++)
@@ -191,8 +193,11 @@ public sealed class TickRunner
 
             for (int s = 0; s < _systems.Length; s++)
             {
-                if (_due[s])
-                    _systems[s].Merge(context, ChunkCount);
+                if (!_due[s])
+                    continue;
+                if (_table.Trace is not null)
+                    _table.TraceSystemId = _systems[s].SystemId;
+                _systems[s].Merge(context, ChunkCount);
             }
 
             _table.Swap();
