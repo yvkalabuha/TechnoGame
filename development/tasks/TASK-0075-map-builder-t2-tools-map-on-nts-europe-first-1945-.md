@@ -1,7 +1,7 @@
 ---
 id: TASK-0075
 title: "Map builder T2: tools/map on NTS, Europe first, 1945 cuts, coverage simplification check"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer
@@ -49,11 +49,11 @@ The rest of the world; the simulation ownership layer; client integration (later
 **Главный риск закрыт.** [Факт] В закреплённом NetTopologySuite 2.6.0 (лицензия пакета BSD-3-Clause, проверено по nuspec) есть `CoverageValidator`, `CoverageSimplifier` (TPVW), `CoverageGapFinder`, `CoverageUnion`. На 1629 объектах Европы валидатор даёт 0 ошибок, упрощение с допуском 0,01° уменьшает число вершин с 324 714 до 152 637, результат остаётся валидным покрытием и повторяется побайтово. Резервный путь mapshaper не нужен.
 
 **Что внутри**
-- `tools/map/sources.lock.yaml`: NE 10m admin-1 и admin-0 map units (тег v5.1.2, public domain) и 9 снимков OHM (CC0 по умолчанию OHM). SHA-256 проверены повторной загрузкой с нуля. Запрос Overpass закреплён `[date:...]`: основной API OHM закрыт Cloudflare (403), поэтому используется Overpass.
+- `tools/map/sources.lock.yaml`: NE 10m admin-1 и admin-0 map units (тег v5.1.2, public domain) и 6 снимков OHM (CC0 по умолчанию OHM). SHA-256 проверены повторной загрузкой с нуля. Запрос Overpass закреплён `[date:...]`: основной API OHM закрыт Cloudflare (403), поэтому используется Overpass.
 - `tools/map/MapBuilder` (C#, NTS 2.6.0 и YamlDotNet 18.1.0): `fetch`, `bootstrap`, `build`, `verify` и вспомогательные `find/at/overlap/dump`. `global.json`, `packages.lock.json` (locked restore), `check_packages.sh` (граф без LGPL), `check_determinism.sh`.
 - `tools/map/spec/`: `05-keep` (Берлин, Вена, Бремен), `10-merge` (жадное слияние малых единиц), `15-subdivide` (Вороной, 5 крупных областей РФ), `20-cuts` (7 разрезов класса A), `ids/` (якоря), `regions/`, `straits.yaml`, `area.yaml`.
 - Разрезы по полигонам OHM: граница Германии 1937 по воеводствам Польши (Одер–Нейсе), зона США в Баден-Вюртемберге и Баварии (Линдау во французской зоне), зоны Австрии (Верхняя Австрия, Восточный Тироль), Карелия и Петсамо по границе Финляндии до 1940, Порккала; Додеканес по меридиану 26,1° в. д. Прибалтика, Бессарабия, Закарпатье — только в `owners.yaml`.
-- Выход: `mods/core/map/{provinces,regions,adjacency,straits}.yaml`, `geo/manifest.json` с `data_binding`, `geo/arcs.bin` (738 КБ, в git не идёт: `geo/.gitignore`). Черновик владения: `mods/core/map/scenarios/1945/{polities,owners}.yaml`.
+- Выход: `mods/core/map/{provinces,regions,adjacency,straits}.yaml`, `geo/manifest.json` с `data_binding`, `geo/arcs.bin` (738 КБ, в git не идёт: `geo/.gitignore`). Черновик владения: `mods/core/scenarios/1945/{polities,owners}.yaml`.
 - Рендер: `docs/ui/prototypes/map-1945/europe-1945-10-01.png` и `README.md` (заливка owner, штриховка controller).
 
 **Проверка**
@@ -70,3 +70,9 @@ The rest of the world; the simulation ownership layer; client integration (later
 - Две щели NE (Эстония–Латвия, Италия–Словения, шире 0 и уже 0,01°) выводятся предупреждением, не заполняются.
 - Манифест не хранит SHA-256 растра R16 (его печёт клиент, T6). Расстояние Хаусдорфа для линий класса A не считается: линии взяты из OHM или заданы параметром.
 - Файлы вне моей зоны не менялись: `mod.yaml` не включает `map/*` (загрузчик ModLoader их пока не знает), CI-шаги не добавлены.
+
+**Правки после ревью (2026-11-18)**
+- Культура: все числа в таблицах, манифесте и спецификациях пишутся через `FormattableString.Invariant`; `InvariantGlobalization` и InvariantCulture в CLI. Тест гоняет writer под sv-SE и сверяет байты.
+- Лицензии: явный список CC0-1.0, CC-BY-2.0/3.0/4.0, PD; написания OHM («CC BY 4.0», «Creative Commons BY 4.0 International») нормализуются, SA/NC отклоняются. Лицензия читается и с member ways (запрос закреплён `way(r.r);out tags`, хеши обновлены). [Факт] CC BY 4.0 объекты в снимках есть (Kartverket, геодезическая служба Словении, участники OHM): они перечислены в `mods/core/map/ATTRIBUTION.md`, который строит `build`.
+- Сценарий перенесён в `mods/core/scenarios/1945/`. Класс A ставится только на куски, названные в `a_pieces` разреза (иначе на оба); при слиянии и клонировании флаг не наследуется. Пины 2852444 и 2746444 удалены, id `@vN` сверяется с версией снимка. Heal падает, если площадь группы меняется больше 1e-6 или брошена грань больше 5 км² без владельца. Центроид (плоский, в градусах) описан в `tools/map/README.md`. Тест «сдвиг линии разреза в пределах якорей не меняет набор id» добавлен (39 тестов).
+- Для T3/T4: Данциг и земли к востоку от Одера–Нейсе, не входившие в границы 1937 (Гданьск попал в `former_german` с owner DEU); привязка Калининграда к региону `russia_vologda` (кластер k-means); id регионов по стране и крупнейшей провинции вместо географии; границы зон Берлина и Вены.

@@ -1,0 +1,18 @@
+# Units kept whole by the merge step: occupation enclaves and four-power cities (class A, ADR-0011 §2.7 exception (c)).
+# Berlin and Vienna are not yet cut into sectors: no PD or CC0 geometry source for the sector lines was found, see the task report.
+rules:
+  - keep:
+      codes: [DEU-1599]   # Berlin
+      class: A
+      ref: "Protocol on the zones of occupation in Germany and the administration of Greater Berlin, London, 1944-09-12 (EAC)"
+      reason: four-power city
+  - keep:
+      codes: [AUT-2331]   # Wien
+      class: A
+      ref: "Agreement on zones of occupation in Austria and the administration of Vienna, 1945-07-09 (EAC)"
+      reason: four-power city
+  - keep:
+      codes: [DEU-1575]   # Bremen and Bremerhaven
+      class: A
+      ref: "US enclave of Bremen and Bremerhaven in the British zone (Potsdam Protocol, 1945-08-02, and US-UK agreement 1945) - to be confirmed by T4"
+      reason: US enclave in the British zone

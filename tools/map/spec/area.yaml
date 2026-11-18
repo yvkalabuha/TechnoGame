@@ -1,0 +1,9 @@
+# Europe-first build area (TASK-0075). The area is a selection of NE admin-1 objects by ADM0_A3 and centroid window;
+# overseas parts and objects outside Europe are dropped. Bands are in km2 (ADR-0011 §2.7).
+adm0: [ISL, IRL, GBR, FRA, BEL, NLD, LUX, DEU, DNK, NOR, SWE, FIN, EST, LVA, LTU, POL, CZE, SVK, AUT, CHE, LIE, HUN, ROU, BGR, ALB, GRC, ITA, ESP, PRT, AND, MCO, SMR, VAT, MLT, MKD, SRB, MNE, BIH, HRV, SVN, KOS, MDA, UKR, BLR, RUS, ALD, FRO, GIB, IMN, JEY, GGY]
+lon: [-25, 60]
+lat: [34, 72]
+drop: [ESP-5815, ESP-5835]   # Ceuta and Melilla (Africa)
+min_area_km2: 5000
+max_area_km2: 150000
+sparse_max_km2: 500000

@@ -1,0 +1,38 @@
+# Polities of Europe at 1945-10-01 (ADR-0011 §1, #312, #313). Ids: the NE ADM0_A3 code when the 1945 entity coincides
+# (ne_adm0 set), otherwise a project code. DRAFT: research-scientist (T4) fixes the final codes and the world list.
+polities:
+  - {id: USA, name: "United States", ne_adm0: USA, actor: USA}
+  - {id: GBR, name: "United Kingdom and its dependencies", ne_adm0: GBR, actor: GBR}
+  - {id: FRA, name: "France", ne_adm0: FRA, actor: FRA}
+  - {id: SUN, name: "Soviet Union", actor: SUN}
+  - {id: SWE, name: "Sweden", ne_adm0: SWE, actor: SWE}
+  - {id: DEU, name: "Germany under occupation", ne_adm0: DEU, government: false}
+  - {id: AUT, name: "Austria", ne_adm0: AUT}
+  - {id: POL, name: "Poland", ne_adm0: POL}
+  - {id: CSK, name: "Czechoslovakia"}
+  - {id: YUG, name: "Yugoslavia"}
+  - {id: HUN, name: "Hungary", ne_adm0: HUN}
+  - {id: ROU, name: "Romania", ne_adm0: ROU}
+  - {id: BGR, name: "Bulgaria", ne_adm0: BGR}
+  - {id: ALB, name: "Albania", ne_adm0: ALB}
+  - {id: GRC, name: "Greece", ne_adm0: GRC}
+  - {id: ITA, name: "Italy", ne_adm0: ITA}
+  - {id: ESP, name: "Spain", ne_adm0: ESP}
+  - {id: PRT, name: "Portugal", ne_adm0: PRT}
+  - {id: IRL, name: "Ireland", ne_adm0: IRL}
+  - {id: ISL, name: "Iceland", ne_adm0: ISL}
+  - {id: BEL, name: "Belgium", ne_adm0: BEL}
+  - {id: NLD, name: "Netherlands", ne_adm0: NLD}
+  - {id: LUX, name: "Luxembourg", ne_adm0: LUX}
+  - {id: DNK, name: "Denmark", ne_adm0: DNK}
+  - {id: NOR, name: "Norway", ne_adm0: NOR}
+  - {id: FIN, name: "Finland", ne_adm0: FIN}
+  - {id: CHE, name: "Switzerland", ne_adm0: CHE}
+  - {id: LIE, name: "Liechtenstein", ne_adm0: LIE}
+  - {id: AND, name: "Andorra", ne_adm0: AND}
+  - {id: MCO, name: "Monaco", ne_adm0: MCO}
+  - {id: SMR, name: "San Marino", ne_adm0: SMR}
+  - {id: VAT, name: "Vatican City", ne_adm0: VAT}
+  # Four-power administration of the two cities (#312): the colours of the hatching follow the member order.
+  - {id: ALLIED_BERLIN, name: "Allied administration of Berlin", kind: joint, government: false, members: [USA, GBR, SUN, FRA]}
+  - {id: ALLIED_VIENNA, name: "Allied administration of Vienna", kind: joint, government: false, members: [USA, GBR, SUN, FRA]}

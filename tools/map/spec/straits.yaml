@@ -1,0 +1,10 @@
+# Manual connections for the region graph and province adjacency (ADR-0011 §2.6): crossings over water and enclaves
+# whose shared border is shorter than 1 km. Each entry names the geographic fact it encodes.
+straits:
+  - {a: united_kingdom_kent.kent, b: france_marne.pas_de_calais, source: "Strait of Dover, about 33 km"}
+  - {a: united_kingdom_highland.argyll_and_bute, b: united_kingdom_highland.fermanagh, source: "North Channel, Kintyre to Antrim, about 20 km (Northern Ireland province)"}
+  - {a: denmark.sjaaelland, b: sweden_vastra_gotaland.skane, source: "Oeresund, about 4 km"}
+  - {a: denmark.sjaaelland, b: denmark.syddanmark, source: "Great Belt (Zealand to Funen), about 18 km"}
+  - {a: italy_salerno.messina, b: italy_salerno.reggio_calabria, source: "Strait of Messina, about 3 km"}
+  - {a: france_ain.haute_corse, b: italy_firenze.sassari, source: "Strait of Bonifacio, about 11 km"}
+  - {a: vatican.vatican, b: italy_firenze.roma, source: "Enclave in Rome; shared border about 0.9 km is below the 1 km adjacency threshold"}

@@ -19,10 +19,10 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
+- TASK-0075 [REVIEW] Map builder T2: tools/map on NTS, Europe first, 1945 cuts, coverage simplification check (developer)
 - TASK-0077 [REVIEW] Client v0.5a: planisphere zoom and node icons, node card with schematic and effects, map click fix, starry sky (developer)
 - TASK-0064 [APPROVED] lab bench harness (ADR-0016 T1) (developer)
 - TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
-- TASK-0075 [APPROVED] Map builder T2: tools/map on NTS, Europe first, 1945 cuts, coverage simplification check (developer)
 <!-- registry:active:end -->
 
 ## Блокеры

@@ -1,0 +1,66 @@
+# Source lock (ADR-0011 §2.1, ADR-0009). Every file is pinned by SHA-256; a mismatch is a loud build error.
+# Raw files live in a cache outside git (tools/map/.cache or SINGULARITY_MAP_CACHE) and are read only as data.
+# Refresh a hash: 'dotnet run --project tools/map/MapBuilder -- fetch --pin' (remove the cached file first), then update this file.
+sources:
+  - id: ne_admin1
+    kind: ne
+    url: https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_1_states_provinces.geojson
+    sha256: 22d0e3ad85eb3e27f17cabf8ba2d50e554fbc27a87796ff891d958185da62fb5
+    license: public-domain
+    retrieved: 2026-11-18
+    note: "Natural Earth 10m admin-1, tag v5.1.2 (https://www.naturalearthdata.com/about/terms-of-use/)"
+  - id: ne_map_units
+    kind: ne
+    url: https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_map_units.geojson
+    sha256: 57da82be755f4afccd8f3b14251bb2752f5df1395f47d2d86f817470c4a48862
+    license: public-domain
+    retrieved: 2026-11-18
+    note: "Natural Earth 10m admin-0 map units, tag v5.1.2"
+  - id: "ohm:relation/2852492@v37"
+    kind: ohm
+    url: https://overpass-api.openhistoricalmap.org/api/interpreter
+    query: '[out:json][timeout:100][date:"2026-11-18T00:00:00Z"];rel(2852492)->.r;.r out geom meta;way(r.r);out tags;'
+    sha256: 9cfb4a12c55ffd8be9d520956fbc683c65dbcf1e2f26e12d2962dfdc409d5ce6
+    license: CC0-1.0
+    retrieved: 2026-11-18
+    note: "American occupation zone in Germany, 1945-09-17..1949-05-23. No licence tag on the object: OHM default CC0 (https://www.openhistoricalmap.org/copyright)"
+  - id: "ohm:relation/2746442@v14"
+    kind: ohm
+    url: https://overpass-api.openhistoricalmap.org/api/interpreter
+    query: '[out:json][timeout:100][date:"2026-11-18T00:00:00Z"];rel(2746442)->.r;.r out geom meta;way(r.r);out tags;'
+    sha256: 17294786f2baf4527b5769d9cb9dff0154ab6513787791263e3718e5c16512d2
+    license: CC0-1.0
+    retrieved: 2026-11-18
+    note: "American occupation zone in Austria. No licence tag on the object: OHM default CC0 (https://www.openhistoricalmap.org/copyright)"
+  - id: "ohm:relation/2746443@v19"
+    kind: ohm
+    url: https://overpass-api.openhistoricalmap.org/api/interpreter
+    query: '[out:json][timeout:100][date:"2026-11-18T00:00:00Z"];rel(2746443)->.r;.r out geom meta;way(r.r);out tags;'
+    sha256: 75b76410e475de3e0919d3946722f60881bc648033dd400d43e68c16702de431
+    license: CC0-1.0
+    retrieved: 2026-11-18
+    note: "British occupation zone in Austria. No licence tag on the object: OHM default CC0 (https://www.openhistoricalmap.org/copyright)"
+  - id: "ohm:relation/2692205@v214"
+    kind: ohm
+    url: https://overpass-api.openhistoricalmap.org/api/interpreter
+    query: '[out:json][timeout:100][date:"2026-11-18T00:00:00Z"];rel(2692205)->.r;.r out geom meta;way(r.r);out tags;'
+    sha256: d8505de56ceed26f29e3cce5ab84c38198c05aa05edf0177e896368db25e14ad
+    license: CC0-1.0
+    retrieved: 2026-11-18
+    note: "Polska 1924-06-22..1938-11-01 (interwar border; cuts Polish voivodeships along the 1937 German border). No licence tag on the object: OHM default CC0 (https://www.openhistoricalmap.org/copyright)"
+  - id: "ohm:relation/2959045@v9"
+    kind: ohm
+    url: https://overpass-api.openhistoricalmap.org/api/interpreter
+    query: '[out:json][timeout:100][date:"2026-11-18T00:00:00Z"];rel(2959045)->.r;.r out geom meta;way(r.r);out tags;'
+    sha256: 8ea7fb12a71db8813b07613a35e1e085f5c7dce05cb787eb66e5b3c8937b7124
+    license: CC0-1.0
+    retrieved: 2026-11-18
+    note: "Suomi 1920-10-14..1940-03-12 (Finland before the Winter War; cuts ceded Karelia, Petsamo). No licence tag on the object: OHM default CC0 (https://www.openhistoricalmap.org/copyright)"
+  - id: "ohm:relation/2855285@v12"
+    kind: ohm
+    url: https://overpass-api.openhistoricalmap.org/api/interpreter
+    query: '[out:json][timeout:100][date:"2026-11-18T00:00:00Z"];rel(2855285)->.r;.r out geom meta;way(r.r);out tags;'
+    sha256: b4d92e7b39b41c87bfd00a26c3eb7347190efff2a4418c15d9c042f085e37146
+    license: CC0-1.0
+    retrieved: 2026-11-18
+    note: "Suomi 1944-09-19..1947-04-18 (Finland under the armistice; used to cut Finnish Lapland and to check Porkkala). No licence tag on the object: OHM default CC0 (https://www.openhistoricalmap.org/copyright)"

@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Tests of tools/map (ADR-0011). Not part of Singularity.sln: the offline builder is separate from the game solution. -->
+  <ItemGroup>
+    <ProjectReference Include="../../tools/map/MapBuilder/MapBuilder.csproj" />
+  </ItemGroup>
+</Project>

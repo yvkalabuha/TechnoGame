@@ -1,0 +1,85 @@
+# Class A cuts for Europe as of 1945-10-01 (ADR-0011 §6). Each cut lists source, as_of, precision and ref.
+# 'ohm' cutters are polygons from pinned OpenHistoricalMap snapshots (sources.lock.yaml, CC0 by the OHM default).
+# The first piece is the part inside the polygon (or south/west of a parallel/meridian), the second the rest.
+# Order: this file runs after 15-subdivide and before nothing else, so cells of subdivided units are cut as well.
+rules:
+  # Polish voivodeships along the German border of 1937-12-31 (Oder-Neisse administration, Potsdam). Voivodeships fully west of the
+  # line (Lubusz, Opole, West Pomerania, Lower Silesia) and the Polish interior are not cut and need no entry here.
+  - cut:
+      id: poland_german_border_1937
+      within: [POL-3144, POL-3140, POL-3139, POL-3146]   # Greater Poland, Pomeranian, Warmian-Masurian, Silesian
+      ohm: "ohm:relation/2692205@v214"
+      pieces: [prewar_poland, former_german]
+      source: "OHM relation 2692205 Polska 1924-06-22..1938-11-01 (CC0), border of 1937"
+      as_of: "1945-10-01"
+      precision: A
+      ref: "Berlin Declaration 1945-06-05 (Germany within her frontiers of 1937-12-31); Potsdam Protocol 1945-08-02 section IX"
+      min_piece_km2: 100
+  # Zones of Germany: the US zone polygon splits Baden-Wuerttemberg (US north, French south) and Bavaria (Lindau in the French zone).
+  - cut:
+      id: germany_us_zone
+      within: [DEU-1573, DEU-1591]   # Baden-Wuerttemberg, Bavaria
+      ohm: "ohm:relation/2852492@v37"
+      pieces: [us_zone, french_zone]
+      source: "OHM relation 2852492 American occupation zone in Germany 1945-09-17..1949-05-23 (CC0)"
+      as_of: "1945-10-01"
+      precision: A
+      ref: "Agreement on zones of occupation in Germany 1944-09-12 (EAC) with the US-French boundary in Baden and Wuerttemberg of 1945-07; Lindau in the French zone"
+      min_piece_km2: 150
+  # Zones of Austria.
+  - cut:
+      id: austria_us_zone_upper_austria
+      within: [AUT-2326]   # Upper Austria: US south of the Danube, Soviet in the Muehlviertel
+      ohm: "ohm:relation/2746442@v14"
+      pieces: [us_zone, soviet_zone]
+      a_pieces: [soviet_zone]
+      source: "OHM relation 2746442 American Occupation Zone in Austria 1945-04-27..1955-07-27 (CC0)"
+      as_of: "1945-10-01"
+      precision: A
+      ref: "Agreement on zones of occupation in Austria and the administration of Vienna 1945-07-09 (EAC); Danube boundary in Upper Austria"
+      min_piece_km2: 150
+  - cut:
+      id: austria_british_zone_east_tyrol
+      within: [AUT-2329]   # Tyrol: British East Tyrol, French rest
+      ohm: "ohm:relation/2746443@v19"
+      pieces: [british_zone, french_zone]
+      a_pieces: [british_zone]
+      source: "OHM relation 2746443 British Occupation Zone in Austria 1945-04-27..1955-07-27 (CC0)"
+      as_of: "1945-10-01"
+      precision: A
+      ref: "Agreement on zones of occupation in Austria and the administration of Vienna 1945-07-09 (EAC); East Tyrol in the British zone"
+      min_piece_km2: 150
+  # Finland: Karelian Isthmus, Ladoga Karelia, Salla area, Petsamo (ceded by the Moscow Peace of 1940 and the Armistice of 1944).
+  - cut:
+      id: finland_ceded_1940_1944
+      within: [RUS-2353, RUS-2333, RUS-2336]   # Karelia (both cells), Murmansk, Leningrad oblast
+      ohm: "ohm:relation/2959045@v9"
+      pieces: [ceded_from_finland, russian]
+      a_pieces: [ceded_from_finland]
+      source: "OHM relation 2959045 Suomi 1920-10-14..1940-03-12 (CC0)"
+      as_of: "1945-10-01"
+      precision: A
+      ref: "Moscow Peace Treaty 1940-03-12 art. 1-3; Armistice with Finland 1944-09-19 art. 4 (Petsamo)"
+      min_piece_km2: 150
+  - cut:
+      id: porkkala_lease
+      within: [FIN-3193]   # Uusimaa
+      ohm: "ohm:relation/2855285@v12"
+      pieces: [finland, porkkala_lease]
+      a_pieces: [porkkala_lease]
+      source: "OHM relation 2855285 Suomi 1944-09-19..1947-04-18 (CC0): the Porkkala area lies outside this polygon"
+      as_of: "1945-10-01"
+      precision: A
+      ref: "Armistice with Finland 1944-09-19 art. 8 (lease of the Porkkala area to the USSR)"
+      min_piece_km2: 100
+  # Dodecanese: islands east of 26.1E in South Aegean (Cyclades end at 25.9E, Astypalaia starts at 26.3E).
+  - cut:
+      id: dodecanese
+      within: [GRC-3013]
+      meridian: 26.1
+      pieces: [cyclades, dodecanese]
+      source: "meridian parameter 26.1E"
+      as_of: "1945-10-01"
+      precision: A
+      ref: "Treaty of Peace with Italy 1947-02-10 art. 14 (list of the Dodecanese islands); Italian possession until 1947, British military administration from 1945-05"
+      min_piece_km2: 100
