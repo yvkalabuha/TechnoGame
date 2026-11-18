@@ -1,7 +1,7 @@
 ---
 id: TASK-0104
 title: "Event sounds: final variants (#407), gain fixes, listening-pack pruning"
-status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: developer         # ответственный агент
