@@ -1,7 +1,7 @@
 ---
 id: TASK-0075
 title: "Map builder T2: tools/map on NTS, Europe first, 1945 cuts, coverage simplification check"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer
