@@ -1,14 +1,14 @@
 ---
 id: ADR-0019
 title: "Monthly systems split into daily slices (#228), revision of ADR-0006"
-status: PROPOSED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
+status: ACCEPTED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
 date: 2026-11-18
 supersedes:              # пусто намеренно: замена частичная, см. «Частично заменяет»
 superseded_by:           # заполняется при замене
 related: [ADR-0006, ADR-0011, ADR-0014, ADR-0016, ADR-0017, ADR-0020, ADR-0002, MS-M1]
-approved_by:             # owner — обязательно для ACCEPTED
-approved_at:
-approval_ref:
+approved_by: owner
+approved_at: 2026-11-18
+approval_ref: "DECISIONS_LOG #353"
 ---
 
 # ADR-0019 — Monthly systems split into daily slices (#228), revision of ADR-0006

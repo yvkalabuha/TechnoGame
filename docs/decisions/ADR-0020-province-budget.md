@@ -1,14 +1,14 @@
 ---
 id: ADR-0020
 title: "Province storage, aggregation to regions and tick budget"
-status: PROPOSED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
+status: ACCEPTED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
 date: 2026-11-18
 supersedes:              # пусто намеренно: замены частичные, см. «Частично заменяет»
 superseded_by:           # заполняется при замене
 related: [ADR-0011, ADR-0013, ADR-0016, ADR-0017, ADR-0019, MS-M1]
-approved_by:             # owner — обязательно для ACCEPTED
-approved_at:
-approval_ref:
+approved_by: owner
+approved_at: 2026-11-18
+approval_ref: "DECISIONS_LOG #354"
 ---
 
 # ADR-0020 — Province storage, aggregation to regions and tick budget

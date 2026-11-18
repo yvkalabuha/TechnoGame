@@ -100,7 +100,7 @@
 | [TASK-0083](../development/tasks/TASK-0083-lab-bench-tests.md) | DONE | Tests for lab bench: statistics, manifest, plan, CLI | MS-M0 |
 | [TASK-0084](../development/tasks/TASK-0084-map-ci-debt0043.md) | DONE | Map tooling CI and boundary checks (DEBT-0043) | MS-M1 |
 | [TASK-0085](../development/tasks/TASK-0085-adr-0007-ban-list.md) | APPROVED | ADR-0007: extend the ban list (string.GetHashCode, Concurrent*, Channel) | MS-M1 |
-| [TASK-0086](../development/tasks/TASK-0086-one-writer-test.md) | APPROVED | Architecture test: one writer per column (CoW open tracing in test mode) | MS-M1 |
+| [TASK-0086](../development/tasks/TASK-0086-one-writer-test.md) | REVIEW | Architecture test: one writer per column (CoW open tracing in test mode) | MS-M1 |
 
 ## Гипотезы
 
@@ -146,8 +146,8 @@
 | [ADR-0016](../docs/decisions/ADR-0016-tick-budget.md) | ACCEPTED | Бюджет тика |
 | [ADR-0017](../docs/decisions/ADR-0017-statehash-schedule-and-table-copy-in-daily-mode.md) | ACCEPTED | StateHash schedule and table copy in daily mode |
 | [ADR-0018](../docs/decisions/ADR-0018-localization-keys-locale-files-in-mods-en-and-ru.md) | ACCEPTED | Localization: keys, locale files in mods, EN and RU |
-| [ADR-0019](../docs/decisions/ADR-0019-daily-slices-228.md) | PROPOSED | Monthly systems split into daily slices (#228), revision of ADR-0006 |
-| [ADR-0020](../docs/decisions/ADR-0020-province-budget.md) | PROPOSED | Province storage, aggregation to regions and tick budget |
+| [ADR-0019](../docs/decisions/ADR-0019-daily-slices-228.md) | ACCEPTED | Monthly systems split into daily slices (#228), revision of ADR-0006 |
+| [ADR-0020](../docs/decisions/ADR-0020-province-budget.md) | ACCEPTED | Province storage, aggregation to regions and tick budget |
 | [ADR-0021](../docs/decisions/ADR-0021-stochastic-events.md) | PROPOSED | Stochastic event system next to scripted events (scandals, link failures) |
 
 ## Research Reports

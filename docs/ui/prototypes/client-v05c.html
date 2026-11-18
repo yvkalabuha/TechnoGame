@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Клиент v0.5c: рейка областей, шкала скорости, текстуры (макет)</title>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=PT+Mono&family=Jura:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1D1E20;--ink2:#55575A;--ink3:#6E6C66;--paper:#F3EEDF;--sheet:#FBF8EF;--hover:#EBE5D2;--rule:#BDB59F;--border:#3E3C38;
+--alarm:#C42A1C;--warn:#D9860F;--command:#2347A8;--tex:1;
+--grain:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='f' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='3'/><feColorMatrix values='-0.02 0 0 0 1  -0.02 0 0 0 1  -0.02 0 0 0 1  0 0 0 0 1'/></filter><rect width='160' height='160' filter='url(%23f)'/></svg>");
+--fibre:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='f' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='0.012 0.45' numOctaves='2' seed='8'/><feColorMatrix values='-0.025 0 0 0 1  -0.025 0 0 0 1  -0.025 0 0 0 1  0 0 0 0 1'/></filter><rect width='300' height='300' filter='url(%23f)'/></svg>");
+--blotch:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><filter id='f' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='0.007' numOctaves='3' seed='5'/><feColorMatrix values='-0.03 0 0 0 1  -0.03 0 0 0 1  -0.03 0 0 0 1  0 0 0 0 1'/></filter><rect width='400' height='400' filter='url(%23f)'/></svg>")}
+*{box-sizing:border-box}body{margin:0;background:#D9D3C0;color:var(--ink);font:13px/1.4 'Golos Text',sans-serif}
+h1{font:600 18px Jura;margin:14px 20px 4px}h2{font:600 15px Jura;margin:22px 20px 8px}p.n{margin:0 20px 10px;color:var(--ink2);max-width:900px}
+.ctl{margin:6px 20px;display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:inherit;color:var(--ink);background:var(--sheet);border:1px solid var(--border);border-radius:4px;padding:5px 10px;cursor:pointer;position:relative}
+.btn:hover{background:var(--hover)}.btn.on{background:var(--ink);color:var(--sheet)}
+.btn:active{transform:translate(1px,1px);border-width:2px;padding:4px 9px}
+/* textures: multiply-only, luminance-only, worst case about -6% (spec 3.2) */
+.tex{position:relative}
+.tex::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:var(--tex);mix-blend-mode:multiply;
+ background-image:var(--grain),var(--fibre),var(--blotch);box-shadow:inset 0 0 0 1px rgba(90,70,40,.10),inset 0 0 7px rgba(90,70,40,.12)}
+.btn.tex:active::before{box-shadow:inset 0 0 0 1px rgba(90,70,40,.16),inset 0 0 9px rgba(90,70,40,.18)}
+.stage{position:relative;width:1100px;height:640px;margin:0 20px;background:#B8DCEA;overflow:hidden;border:1px solid var(--border)}
+.stage.grey,.three.grey{filter:grayscale(1)}
+.sea{position:absolute;inset:0}
+.top{position:absolute;left:0;right:0;top:0;height:42px;background:var(--paper);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;padding:0 10px;z-index:5}
+.date{font:500 15px 'PT Mono'}.sep{width:1px;height:24px;background:var(--border)}
+.tgrp{display:flex}.tb{width:28px;height:28px;border:1px solid var(--border);background:var(--sheet);margin-left:-1px;display:grid;place-items:center;cursor:pointer;position:relative}
+.tb:first-child{border-radius:4px 0 0 4px;margin-left:0}.tb:last-child{border-radius:0 4px 4px 0}.tb:hover{background:var(--hover)}.tb.on{background:var(--ink)}.tb.on svg{stroke:var(--sheet)}
+.tb svg{width:18px;height:18px;fill:none;stroke:var(--ink);stroke-width:1.5}
+.gauge{display:flex;align-items:flex-end;gap:2px;height:22px}
+.cell{width:8px;border:1px solid var(--ink);background:transparent;position:relative;overflow:hidden}
+.cell.f{background:var(--c)}.cell.cur{outline:1.5px solid var(--ink);outline-offset:1px}
+.cell:not(.f){background:repeating-linear-gradient(45deg,transparent 0 2px,rgba(29,30,32,.45) 2px 2.6px)}
+.sp-word{font:500 12px Jura;min-width:70px}
+.chip{font:500 11px Jura;padding:3px 7px;border:1px solid var(--rule);border-radius:2px;background:var(--sheet);color:var(--ink2)}
+.chip.warn{background:var(--warn);color:var(--ink);border:1px solid var(--ink)}
+.rail{position:absolute;left:0;top:42px;bottom:0;background:var(--paper);border-right:1px solid var(--border);padding:8px 4px;display:flex;flex-direction:column;gap:4px;z-index:4;width:60px;transition:width .12s}
+.rail.wide{width:184px}.gap{height:6px;border-top:1px solid var(--rule);margin:2px 4px}
+.ab{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;width:52px;height:52px;border:1px solid transparent;border-radius:4px;background:transparent;cursor:pointer;font:inherit;color:var(--ink);padding:0}
+.wide .ab{flex-direction:row;width:174px;height:40px;justify-content:flex-start;gap:10px;padding:0 10px}
+.ab img{width:24px;height:24px}.ab .k{font:10px 'PT Mono';color:var(--ink3)}.ab .nm{display:none;font:500 13px 'Golos Text'}.wide .ab .nm{display:block}.wide .ab .k{margin-left:auto}
+.ab:hover{background:var(--hover);box-shadow:inset 0 -1px 0 var(--ink2)}
+.ab:active{background:var(--hover);border:2px solid var(--border)}.ab:active img{transform:translate(1px,1px)}
+.ab.sel{background:var(--hover);border:1px solid var(--border);box-shadow:inset 3px 0 0 var(--ink-c)}
+.ab.sel::after{content:"";position:absolute;right:-1px;top:50%;margin-top:-5px;border:5px solid transparent;border-right-color:var(--border);border-left:0;transform:translateX(1px)}
+.ab:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.ab.lock{border:1px dashed var(--ink3);color:var(--ink3);background:repeating-linear-gradient(45deg,transparent 0 5px,rgba(29,30,32,.07) 5px 6px)}
+.ab.lock img.ic{opacity:.45}.ab.lock .lk{position:absolute;width:12px;height:12px;right:5px;bottom:5px;opacity:.9}.wide .ab.lock .lk{right:10px;bottom:auto}
+.badge{position:absolute;right:2px;top:2px;min-width:14px;height:14px;font:600 10px/12px 'PT Mono';text-align:center;border:1px solid var(--ink);border-radius:2px;outline:2px solid var(--sheet)}
+.badge.warn{background:var(--warn)}.badge.alarm{background:var(--alarm);color:#fff}
+.tip{position:absolute;left:62px;display:none;white-space:nowrap;background:var(--sheet);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:12px;z-index:9}
+.rail:not(.wide) .ab:hover .tip{display:block}.ab{position:relative}.tip{top:50%;transform:translateY(-50%)}
+.panel{position:absolute;left:68px;top:50px;width:344px;max-height:578px;overflow:hidden;background:var(--sheet);border:1px solid var(--border);border-radius:6px;z-index:3;padding:12px}
+.wide ~ .panel{left:192px}
+.plate{border:1px solid var(--border);border-radius:2px;overflow:hidden;background:var(--wash)}
+.plate img{display:block;width:318px;height:119px}.locked .plate img{filter:grayscale(1) contrast(.8);opacity:.55}
+.plate .hd{display:flex;align-items:center;gap:8px;padding:5px 8px;border-top:3px solid var(--ink-c);font:600 15px Jura;color:var(--txt)}
+.plate .hd img{width:24px;height:24px}.plate .hd .tag{margin-left:auto;font:11px 'PT Mono';color:var(--ink2)}
+.q{font:italic 13px 'Golos Text';color:var(--ink2);margin:8px 2px 6px}.sec{font:500 11px Jura;letter-spacing:.06em;color:var(--txt);text-transform:uppercase;border-top:1px solid var(--rule);padding-top:6px;margin-top:8px}
+.row{display:flex;align-items:center;gap:8px;margin:5px 0}.row .lb{width:98px}.bar{flex:1;height:8px;border:1px solid var(--ink);background:var(--hover);position:relative}.bar i{position:absolute;inset:0 auto 0 0;background:var(--ink-c)}
+.v{font:12px 'PT Mono';width:36px;text-align:right}.note{font-size:12px;color:var(--ink2)}.card{border:1px dashed var(--ink3);border-radius:4px;padding:8px;margin-top:8px;background:repeating-linear-gradient(45deg,transparent 0 5px,rgba(29,30,32,.05) 5px 6px)}
+.land{position:absolute;right:30px;top:90px;z-index:1}
+.alert{position:absolute;right:210px;top:300px;z-index:2;font:600 11px Jura;background:var(--warn);color:var(--ink);padding:3px 8px;border:1px solid var(--ink);outline:2px solid var(--sheet);border-radius:2px}
+.three{display:flex;gap:16px;margin:0 20px;flex-wrap:wrap}.three .panel{position:relative;left:0;top:0}
+.spec{display:flex;gap:22px;margin:0 20px;flex-wrap:wrap}.sw{width:200px;height:120px;border:1px solid var(--border);border-radius:6px;background:var(--sheet);padding:8px;font:12px 'PT Mono'}
+</style></head><body>
+<h1>Клиент v0.5c: навигация по областям, шкала скорости, текстуры (макет, код клиента не менялся)</h1>
+<p class="n">[Предл.] Макет для владельца (#352, #302). Данные в панелях условные, подписаны «макет». Рейка слева, панель поверх карты, запертые области видны серыми. Клавиши T / E / F / M / I / G / J, Esc — на карту. Пробел — пауза, [ ] — скорость.</p>
+<div class="ctl"><button class="btn on" id="bTex">Текстуры: обычные</button><button class="btn" id="bGrey">Серая шкала</button><button class="btn" id="bWide">Рейка: широкая</button><button class="btn" id="bNine">Вариант 9 областей</button></div>
+<div class="stage" id="stage">
+<svg class="sea" viewBox="0 0 1100 640" preserveAspectRatio="none"><rect width="1100" height="640" fill="#B8DCEA"/><path d="M0 330C200 300 300 380 500 350S800 300 1100 360V640H0Z" fill="#9CCBE0"/><g stroke="#A9C4CC" stroke-width="1" fill="none"><path d="M0 120H1100M0 260H1100M0 400H1100M0 540H1100M200 0V640M450 0V640M700 0V640M950 0V640"/></g>
+<path d="M520 120L640 100 720 150 700 240 610 270 540 230Z" fill="#F7B98F" stroke="#3E3C38"/><path d="M730 180L870 150 940 230 900 330 780 320Z" fill="#9EC6F5" stroke="#3E3C38"/><path d="M560 300L680 290 720 380 650 460 580 420Z" fill="#BBDE86" stroke="#3E3C38"/><path d="M800 380L940 360 980 460 880 520 810 470Z" fill="#EFB0EC" stroke="#3E3C38"/></svg>
+<div class="alert">▲ СПЛАВ</div>
+<div class="top tex"><span class="date">21 апр 1947</span><div class="tgrp" id="tg"></div><div class="gauge" id="gauge"></div><span class="sp-word" id="spw"></span><span class="sep"></span>
+<span class="chip">СПЛАВ</span><span class="chip">ЛИЦЕНЗИЯ</span><span class="chip warn">▲ ОТКАЗ</span><span style="flex:1"></span><button class="btn tex" id="bJ" title="Журнал (`)" style="padding:3px 6px"><img src="../assets/area-icons/journal-24.svg" width="20" height="20" alt="журнал" style="vertical-align:middle"></button><button class="btn tex" style="padding:3px 8px">≡</button></div>
+<nav class="rail tex" id="rail"></nav><div class="panel tex" id="panel"></div></div>
+
+<h2>Три области рядом (панель 344 du, картинка 320x120)</h2><div class="three" id="three"></div>
+
+<h2>Текстуры: образцы по силе (0 / слабые x0,5 / обычные x1; сильнее нельзя)</h2>
+<div class="spec"><div class="sw" style="--tex:0">выкл<br>sheet, ink 16:1<br><span style="color:#6E6C66">ink-3 текст 5:1</span></div><div class="sw tex" style="--tex:.5">слабые<br>sheet<br><span style="color:#6E6C66">ink-3 текст</span></div><div class="sw tex" style="--tex:1">обычные<br>sheet<br><span style="color:#6E6C66">ink-3 текст</span></div><div class="sw tex" style="--tex:1;background:var(--hover)"><button class="btn tex">кнопка</button> <button class="btn tex" style="border-width:2px;transform:translate(1px,1px);box-shadow:inset 0 0 9px rgba(90,70,40,.18)">нажата</button><br><br>плашка без текстуры:<br><span class="chip warn" style="outline:2px solid var(--sheet)">▲ СПЛАВ</span></div></div>
+<script>
+const A=[
+{id:'map',nm:'Карта',k:'Esc',c:'#1D1E20',w:'#EBE5D2',t:'#1D1E20',live:1,q:'Где что происходит?'},
+{id:'science',nm:'Наука',k:'T',c:'#7A4AA8',w:'#D8CCEE',t:'#53407A',live:1,q:'Куда нас ведёт знание и что мы упустим?'},
+{id:'production',nm:'Производство',k:'E',c:'#168A92',w:'#BFE6E5',t:'#1F5F63',live:1,q:'Чем мы упираемся и что можем построить?'},
+{id:'finance',nm:'Финансы и торговля',k:'F',c:'#8F7A2E',w:'#EAD9A3',t:'#6B5B22',live:1,q:'Хватит ли денег и кто от нас зависит?',badge:'warn'},
+{id:'forces',nm:'Силы',k:'M',c:'#4A7088',w:'#C3D8EA',t:'#3F5666',live:1,part:1,q:'Выдержим ли мы войну и чем её снабжать?'},
+{id:'intel',nm:'Разведка',k:'I',c:'#A03E82',w:'#F0C9E0',t:'#75335F',live:0,ms:'M2–M3',q:'Что мы знаем о других, а что они о нас?'},
+{id:'politics',nm:'Политика',k:'G',c:'#4F8A1E',w:'#CFE6AA',t:'#4A6020',live:0,ms:'M1 (поддержка) — M3',q:'Кто на нашей стороне и чего это стоит?'},
+{id:'projects',nm:'Проекты и люди',k:'J',c:'#1D1E20',w:'#EBE5D2',t:'#1D1E20',live:0,ms:'M1',q:'На что мы ставим и кому доверяем?'}];
+const NINE={forces:[['army','Армия','M','forces'],['logi','Логистика','L','forces']],politics:[['dom','Внутренняя политика','G','politics'],['dip','Дипломатия','D','politics']]};
+let cur='science',nine=0,speed=1,paused=false;
+const $=s=>document.querySelector(s),I=(n,s=24)=>`../assets/area-icons/${n}-${s}.svg`;
+function list(){return nine?A.flatMap(a=>NINE[a.id]?NINE[a.id].map(x=>({...a,id:x[0],nm:x[1],k:x[2],ic:x[3],live:x[0]=='army'||x[0]=='dom'?a.live:0,ms:'M2–M3'})):[a]):A}
+function rail(){const L=list();$('#rail').innerHTML=L.map((a,i)=>(i==1||a.id=='forces'||a.id=='army'||a.id=='politics'||a.id=='dom'?'<div class="gap"></div>':'')+
+`<button class="ab ${a.id==cur?'sel':''} ${a.live?'':'lock'}" style="--ink-c:${a.c}" data-id="${a.id}"><img class="ic" src="${I(a.ic||a.id)}" alt=""><span class="nm">${a.nm}</span><span class="k">${a.k}</span>${a.live?'':`<img class="lk" src="${I('lock')}" alt="">`}${a.badge?`<span class="badge ${a.badge}">${a.badge=='warn'?'▲1':''}</span>`:''}<span class="tip">${a.nm} · ${a.k}${a.live?'':' · появится в '+a.ms}</span></button>`).join('');
+ document.querySelectorAll('.ab').forEach(b=>b.onclick=()=>{cur=b.dataset.id;rail();panel()})}
+const bar=(l,v,c)=>`<div class="row"><span class="lb">${l}</span><span class="bar"><i style="width:${v}%;--ink-c:${c}"></i></span><span class="v">${v}%</span></div>`;
+function body(a){const c=a.c;if(!a.live)return`<div class="card"><b>Область заперта</b><br>${a.q}<br><span class="note">Появится в ${a.ms} [Предп.]. Чисел и управления здесь нет.</span></div>`;
+ if(a.id=='science')return`<div class="sec">Закреплённая цель (макет)</div><div class="row"><span class="lb">Турбореактивный G2</span><span class="bar"><i style="width:62%;--ink-c:${c}"></i></span></div><div class="note">Не хватает: жаропрочный сплав, стреловидное крыло</div><div class="sec">Фронтир</div>${bar('Аэродинамика',48,'#168A92')}${bar('Силовые установки',35,'#A03E82')}${bar('Металлы',70,'#4A7088')}<button class="btn tex" style="margin-top:8px">Открыть дерево (T)</button>`;
+ if(a.id=='production')return`<div class="sec">Приоритет снабжения (макет)</div>${bar('Армия',40,c)}${bar('Гражданское',45,c)}${bar('Наука',15,c)}<div class="sec">Упираемся</div><div class="note">Жаропрочные сплавы: мощность 0,6 от нужной</div>`;
+ if(a.id=='finance')return`<div class="sec">Доли бюджета (макет)</div>${bar('НИОКР',20,c)}${bar('Мощности',20,c)}${bar('Освоение',20,c)}${bar('Закупки',20,c)}${bar('Качество',20,c)}<div class="sec">Лицензии</div><div class="note">Нет выданных</div>`;
+ return`<div class="sec">Доли сил (макет)</div>${bar('Армия',50,c)}${bar('Флот',25,c)}${bar('Авиация',25,c)}<div class="note" style="margin-top:8px">Война и снабжение: будет в M2–M3.</div>`}
+function html(a){const pic=a.id=='dip'||a.id=='dom'||a.id=='army'||a.id=='logi'?{dip:'politics',dom:'politics',army:'forces',logi:'forces'}[a.id]:a.id;
+ return`<div class="${a.live?'':'locked'}" style="--ink-c:${a.c};--wash:${a.w};--txt:${a.t}"><div class="plate"><img src="../assets/area-pictures/${pic}.svg" alt="${a.nm}"><div class="hd" style="background:${a.w}"><img src="${I(a.ic||pic)}" alt="">${a.nm}<span class="tag">${a.live?(a.part?'частично':'работает'):'заперто'}</span></div></div><div class="q">${a.q}</div>${body(a)}</div>`}
+function panel(){const a=list().find(x=>x.id==cur);const p=$('#panel');if(cur=='map'){p.style.display='none'}else{p.style.display='block';p.innerHTML=html(a)}}
+function gauge(){const hu=['#168A92','#4F8A1E','#A03E82','#8F7A2E'],tx=['#1F5F63','#4A6020','#75335F','#6B5B22'],nm=['день/с','неделя/с','месяц/с','резерв'];
+ $('#gauge').innerHTML=hu.map((h,i)=>`<span class="cell ${!paused&&i<=speed?'f':''} ${!paused&&i==speed?'cur':''}" style="height:${7+i*4}px;--c:${h}"></span>`).join('');
+ $('#spw').textContent=paused?'пауза':nm[speed];$('#spw').style.color=paused?'#55575A':tx[speed];
+ $('#tg').innerHTML=`<button class="tb ${paused?'on':''}" id="p"><svg viewBox="0 0 20 20"><path d="M6 4v12M14 4v12"/></svg></button><button class="tb" id="sl"><svg viewBox="0 0 20 20"><path d="M10 4 3 10l7 6zM17 4l-7 6 7 6z"/></svg></button><button class="tb" id="fs"><svg viewBox="0 0 20 20"><path d="M3 4l7 6-7 6zM10 4l7 6-7 6z"/></svg></button>`;
+ $('#p').onclick=()=>{paused=!paused;gauge()};$('#sl').onclick=()=>{speed=Math.max(0,speed-1);paused=false;gauge()};$('#fs').onclick=()=>{speed=Math.min(2,speed+1);paused=false;gauge()}}
+document.addEventListener('keydown',e=>{const m={KeyT:'science',KeyE:'production',KeyF:'finance',KeyM:'forces',KeyI:'intel',KeyG:'politics',KeyJ:'projects',Escape:'map'};
+ if(e.code=='Space'){paused=!paused;gauge();e.preventDefault()}else if(m[e.code]){cur=m[e.code];rail();panel()}});
+let tex=1;$('#bTex').onclick=e=>{tex=tex==1?.5:tex==.5?0:1;document.documentElement.style.setProperty('--tex',tex);e.target.textContent='Текстуры: '+(tex==1?'обычные':tex?'слабые':'выкл')};
+$('#bGrey').onclick=e=>{e.target.classList.toggle('on');document.body.classList.toggle('grey');$('#stage').classList.toggle('grey');$('#three').classList.toggle('grey')};
+$('#bWide').onclick=e=>{$('#rail').classList.toggle('wide');e.target.classList.toggle('on')};
+$('#bNine').onclick=e=>{nine=!nine;e.target.classList.toggle('on');if(!list().find(x=>x.id==cur))cur='science';rail();panel()};
+$('#three').innerHTML=['science','production','finance'].map(id=>`<div class="panel tex">${html(A.find(a=>a.id==id))}</div>`).join('')+`<div class="panel tex">${html(A.find(a=>a.id=='intel'))}</div>`;
+gauge();rail();panel();
+</script></body></html>
