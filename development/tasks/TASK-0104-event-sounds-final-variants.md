@@ -1,7 +1,7 @@
 ---
 id: TASK-0104
 title: "Event sounds: final variants (#407), gain fixes, listening-pack pruning"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: developer         # ответственный агент
@@ -28,6 +28,10 @@ Apply owner decision #407: one sound variant per event for the whole game, chose
 4. Prune `docs/audio/listening-pack/events/`: remove the 27 unchosen files listed in map §6 and the 8 CREDITS.yml entries used only by them. Update listening-pack/index.html, tools/audio/listening_pack_manifest.json and build_listening_pack.py to match. Keep E12/E14/E15.
 
 ## Acceptance criteria
-- [ ] The client plays the final variants; audio tests pass; Godot import is clean.
-- [ ] The listening pack holds only the chosen variants plus E12/E14/E15; index, manifest and credits are consistent.
-- [ ] Licences are only CC0/CC BY.
+- [x] The client plays the final variants; audio tests pass; Godot import is clean.
+- [x] The listening pack holds only the chosen variants plus E12/E14/E15; index, manifest and credits are consistent.
+- [x] Licences are only CC0/CC BY.
+
+## Результат
+- Client: node_discovered=E09_c, launch_space=E16_b; GainDb order_done +8, line_commissioned +6; LICENSES.md per map §5; build_listening_pack.py and manifest pruned (commit 5efc28e, merge bd75c34). Audio tests 144/144, Godot import clean.
+- Pack: 27 unchosen event files and 8 CREDITS entries removed, index.html filtered (Orchestrator). E12/E14/E15 kept.
