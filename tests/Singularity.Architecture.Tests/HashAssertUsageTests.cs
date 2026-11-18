@@ -5,6 +5,8 @@ namespace Singularity.Architecture.Tests;
 /// <summary>
 /// ADR-0017 п. 11: a hash is compared in tests only through <c>HashAssert</c>, which fails on null. A plain <c>Assert.Equal(a.StateHash, b.StateHash)</c>
 /// or <c>==</c> would pass for two views that both skipped their hash (<c>null == null</c>).
+/// Known limit: the scan is lexical (statements split at ';', strings and comments removed). A hash passed through a variable with another name,
+/// or a comparison split over several statements, is not seen; the reviewer covers that.
 /// </summary>
 public class HashAssertUsageTests
 {

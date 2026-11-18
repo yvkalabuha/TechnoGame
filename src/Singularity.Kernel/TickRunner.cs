@@ -130,6 +130,9 @@ public sealed class TickRunner
 
     public int ChunkCount { get; }
 
+    /// <summary>True if the last <see cref="RunTick"/> ran at least one system (a non-empty tick, ADR-0006); false for an empty day.</summary>
+    public bool LastTickRan { get; private set; }
+
     public TickCalendar? Calendar => _calendar;
 
     public void RunTick()
@@ -137,10 +140,12 @@ public sealed class TickRunner
         if (Tick < _minNextDue)
         {
             // Nothing runs today: the state is unchanged, only the clock moves (spec v0.5 §2).
+            LastTickRan = false;
             Tick++;
             return;
         }
 
+        LastTickRan = true;
         var context = new TickContext(_table, _rng, Tick, _calendar);
         for (int s = 0; s < _systems.Length; s++)
             _due[s] = _nextDue[s] == Tick;

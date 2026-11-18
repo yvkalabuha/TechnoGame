@@ -150,10 +150,11 @@ public sealed partial class SliceSession
 
     private long NextMonth() => _world.Calendar.MonthIndex(_world.Calendar.NextDue(Cadence.Monthly, Tick));
 
-    /// <summary>Runs <paramref name="ticks"/> ticks.</summary>
+    /// <summary>Runs <paramref name="ticks"/> ticks. Owner thread only (ADR-0014 п. 5).</summary>
     public void Step(long ticks)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(ticks);
+        CheckOwner();
         for (long i = 0; i < ticks; i++)
             StepOne();
     }
@@ -204,10 +205,12 @@ public sealed partial class SliceSession
             _month = month;
         }
         _world.Runner.RunTick();
-        if (monthly || applied || _world.Config.DailyTickProbe)
+        SliceRunConfig config = _world.Config;
+        // HashEveryTick hashes every non-empty tick (ADR-0017 п. 4), also one that publishes no view.
+        bool nonEmpty = monthly || applied || _world.Runner.LastTickRan;
+        string? hash = config.HashEveryTick && nonEmpty || config.HashCheckpoints && (monthly || applied) ? CurrentHash() : null;
+        if (monthly || applied || config.DailyTickProbe)
         {
-            SliceRunConfig config = _world.Config;
-            string? hash = config.HashEveryTick || config.HashCheckpoints && (monthly || applied) ? CurrentHash() : null;
             // The traces belong to the step that just ran; only a tick with a monthly step reads them (inputs is set exactly then).
             MonthStepView? step = inputs is null ? null : ViewBuilder.Step(_world, _month);
             Volatile.Write(ref _view, ViewBuilder.Snapshot(_world, Tick, hash, _month, inputs, step));

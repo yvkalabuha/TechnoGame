@@ -42,6 +42,7 @@ public abstract class Column<T> : Column where T : unmanaged
     private T[] _current;
     private T[] _next;
     private bool _open;
+    private readonly object _openLock = new();
 
     // private protected: only Kernel column types exist, so the hash layout stays under Kernel control.
     private protected Column(string name, int length) : base(name)
@@ -74,7 +75,7 @@ public abstract class Column<T> : Column where T : unmanaged
     {
         if (Owner is { InTick: false })
             throw new InvalidOperationException($"Column '{Name}': Next is only available inside a tick; use Load to set the state outside a tick.");
-        lock (this)
+        lock (_openLock)
         {
             if (Volatile.Read(ref _open))
                 return;
@@ -83,9 +84,11 @@ public abstract class Column<T> : Column where T : unmanaged
         }
     }
 
-    /// <summary>Sets the current state directly. Only for setup and loading, never inside a tick.</summary>
+    /// <summary>Sets the current state directly. Only for setup and loading, never inside a tick (it throws there, ADR-0017 п. 12).</summary>
     public void Load(ReadOnlySpan<T> values)
     {
+        if (Owner is { InTick: true })
+            throw new InvalidOperationException($"Column '{Name}': Load is not allowed inside a tick.");
         if (values.Length != _current.Length)
             throw new ArgumentException($"Column '{Name}' expects {_current.Length} values, got {values.Length}.", nameof(values));
         values.CopyTo(_current);
