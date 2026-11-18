@@ -50,10 +50,14 @@ internal static class Bootstrap
         var spec = SpecSet.Load(specDir);
         var min = spec.Area.MinAreaKm2 * 1e6;
         var max = spec.Area.MaxAreaKm2 * 1e6;
-        var mergeFile = Path.Combine(specDir, "10-merge-europe.yaml");
-        var subFile = Path.Combine(specDir, "15-subdivide-europe.yaml");
+        var mergeFile = Path.Combine(specDir, spec.Area.World ? "10-merge-world.yaml" : "10-merge-europe.yaml");
+        var subFile = Path.Combine(specDir, spec.Area.World ? "15-subdivide-world.yaml" : "15-subdivide-europe.yaml");
+        var idsFile = Path.Combine(specDir, "ids", spec.Area.World ? "world.yaml" : "europe.yaml");
+        var regionsFile = Path.Combine(specDir, "regions", spec.Area.World ? "world.yaml" : "europe.yaml");
+        double regionUnit = spec.Area.World ? spec.Area.WorldRegionUnitKm2 : RegionUnitKm2;
 
-        if (!File.Exists(mergeFile)) WriteMerges(mergeFile, atoms, spec, min);
+        // The world build merges only the atoms added to the Europe selection: the Europe merge file is never regenerated.
+        if (!File.Exists(mergeFile)) WriteMerges(mergeFile, spec.Area.World ? atoms.Where(a => !a.Europe).ToList() : atoms, spec, min);
         spec = SpecSet.Load(specDir);
 
         var pieces = Pipeline.Apply(Pipeline.Initial(atoms), spec, ohm);
@@ -71,13 +75,20 @@ internal static class Bootstrap
         var bigUnits = needSub.Where(p => p.Cuts.Count == 0).ToList();
         var clusterable = units.Concat(bigUnits).ToList();
 
-        var regionOf = Cluster(clusterable, regionIds, newRegions);
+        var forced = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (_, rule) in spec.Rules.Where(r => r.Rule.Isolate != null))
+            foreach (var c in rule.Isolate!.Codes) forced[c] = rule.Isolate.Region;
+        // Regions named by the spec are reserved before clustering so that generated names never take them.
+        foreach (var r in forced.Values.Concat(pieces.Select(p => p.RegionHint).Where(h => h != "")).Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal))
+            if (regionIds.Add(r)) newRegions.Add(new RegionEntry { Id = r });
+        var regionOf = Cluster(clusterable, regionIds, newRegions, regionUnit, forced);
         var bases = new Dictionary<Piece, string>();
         foreach (var p in clusterable)
         {
             var region = regionOf[p];
             var id = Unique(region + "." + Slug(p.Name), allIds);
             bases[p] = id;
+            allIds.Add(id);
             if (!bigUnits.Contains(p)) { newIds.Add(Entry(id, p)); }
         }
 
@@ -100,7 +111,11 @@ internal static class Bootstrap
         foreach (var p in unanchored.ToList())
         {
             string? id = null;
-            if (p.SubBase != null)
+            if (p.RegionHint != "" && p.SubBase == null && p.Cuts.Count > 0)
+            {
+                id = Unique(p.RegionHint + "." + Slug(p.Name + " " + p.Hint), allIds);
+            }
+            else if (p.SubBase != null)
             {
                 var cell = p.SubBase + "_" + p.SubK;
                 id = p.Cuts.Count == 0 ? cell : Unique(cell + "_" + Slug(p.Hint), allIds);
@@ -116,10 +131,10 @@ internal static class Bootstrap
             p.Id = id;
         }
 
-        AppendIds(Path.Combine(specDir, "ids", "europe.yaml"), newIds);
+        AppendIds(idsFile, newIds);
         pieces = Pipeline.Apply(Pipeline.Initial(atoms), spec, ohm);
         Ids.Assign(pieces, spec.Ids.Concat(newIds).ToList(), new List<Piece>());
-        AppendRegions(Path.Combine(specDir, "regions", "europe.yaml"), newRegions, pieces);
+        AppendRegions(regionsFile, newRegions, pieces);
         Console.WriteLine($"bootstrap: {newIds.Count} ids, {newRegions.Count} regions appended");
     }
 
@@ -233,14 +248,21 @@ internal static class Bootstrap
     // ---- regions ----
 
     /// <summary>Per-country k-means on area-weighted centroids; deterministic farthest-point initialisation.</summary>
-    private static Dictionary<Piece, string> Cluster(List<Piece> units, HashSet<string> regionIds, List<RegionEntry> newRegions)
+    private static Dictionary<Piece, string> Cluster(List<Piece> all, HashSet<string> regionIds, List<RegionEntry> newRegions, double unitKm2, Dictionary<string, string> forced)
     {
         var res = new Dictionary<Piece, string>();
+        var units = new List<Piece>();
+        foreach (var u in all)
+        {
+            var hit = u.Src.Where(forced.ContainsKey).Select(c => forced[c]).Concat(u.RegionHint != "" ? new[] { u.RegionHint } : Array.Empty<string>()).Distinct(StringComparer.Ordinal).ToList();
+            if (hit.Count > 1) throw new InvalidDataException($"isolate: unit {string.Join(",", u.Src.Take(3))} is claimed by regions {string.Join(", ", hit)}");
+            if (hit.Count == 1) res[u] = hit[0]; else units.Add(u);
+        }
         foreach (var grp in units.GroupBy(u => u.Adm0).OrderBy(g => g.Key, StringComparer.Ordinal))
         {
             var us = grp.OrderBy(u => u.Name, StringComparer.Ordinal).ThenBy(u => u.Src.First(), StringComparer.Ordinal).ToList();
             double total = us.Sum(u => Sph.AreaM2(u.Shape)) / 1e6;
-            int k = (int)Math.Round(Math.Sqrt(total / RegionUnitKm2), MidpointRounding.ToEven);
+            int k = (int)Math.Round(Math.Sqrt(total / unitKm2), MidpointRounding.ToEven);
             k = Math.Clamp(k, 1, Math.Min(RegionCap.GetValueOrDefault(grp.Key, 99), us.Count));
             var pts = us.Select(u => { var c = u.Shape.Centroid; return (X: c.X * Math.Cos(c.Y * Math.PI / 180), Y: c.Y); }).ToList();
             var w = us.Select(u => Sph.AreaM2(u.Shape)).ToList();
@@ -268,7 +290,7 @@ internal static class Bootstrap
                 if (m.Count == 0) continue;
                 var head = m.OrderByDescending(i => w[i]).First();
                 var country = Slug(us[head].Admin);
-                var rid = Unique(k == 1 ? country : country + "_" + Slug(us[head].Name), regionIds);
+                var rid = k == 1 && !regionIds.Contains(country) ? country : Unique(country + "_" + Slug(us[head].Name), regionIds);
                 regionIds.Add(rid);
                 newRegions.Add(new RegionEntry { Id = rid });
                 foreach (var i in m) res[us[i]] = rid;
@@ -300,7 +322,8 @@ internal static class Bootstrap
         if (!File.Exists(file)) sb.Append("# Regions (ADR-0011 §1). Province membership is the id prefix. Written by 'bootstrap'; edited by hand afterwards.\nregions:\n");
         foreach (var r in regions.OrderBy(r => r.Id, StringComparer.Ordinal))
         {
-            var cap = pieces.Where(p => p.Id.StartsWith(r.Id + ".", StringComparison.Ordinal)).OrderByDescending(p => Sph.AreaM2(p.Shape)).ThenBy(p => p.Id, StringComparer.Ordinal).First();
+            var cap = pieces.Where(p => p.Id.StartsWith(r.Id + ".", StringComparison.Ordinal)).OrderByDescending(p => Sph.AreaM2(p.Shape)).ThenBy(p => p.Id, StringComparer.Ordinal).FirstOrDefault();
+            if (cap == null) { Console.WriteLine($"bootstrap: region {r.Id} has no province and is skipped"); continue; }
             sb.Append(FormattableString.Invariant($"  - {{id: {r.Id}, capital: {cap.Id}, isolated: false}}\n"));
         }
         File.AppendAllText(file, sb.ToString());

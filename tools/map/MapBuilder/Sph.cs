@@ -17,7 +17,12 @@ internal static class Sph
 
     public static int Micro(double deg) => (int)Math.Round(deg * 1e6, MidpointRounding.ToEven);
 
-    public static Geometry Overlay(Geometry a, Geometry b, SpatialFunction op) => OverlayNG.Overlay(a, b, op, Pm);
+    /// <summary>Overlay of areas. A touch of the inputs can add lines or points to the result: only its polygons are kept.</summary>
+    public static Geometry Overlay(Geometry a, Geometry b, SpatialFunction op)
+    {
+        var r = OverlayNG.Overlay(a, b, op, Pm);
+        return a.Dimension != Dimension.Surface || b.Dimension != Dimension.Surface || r is Polygon or MultiPolygon ? r : FromPolygons(Polygons(r));
+    }
 
     /// <summary>Spherical excess of a ring, Chamberlain and Duquette 2007: R^2/2 * |sum (lon[i+1] - lon[i-1]) * sin(lat[i])|. Square metres.</summary>
     public static double RingArea(Coordinate[] ring)

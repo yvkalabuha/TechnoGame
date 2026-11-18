@@ -10,6 +10,7 @@ rules:
       within: [POL-3144, POL-3140, POL-3139, POL-3146]   # Greater Poland, Pomeranian, Warmian-Masurian, Silesian
       ohm: "ohm:relation/2692205@v214"
       pieces: [prewar_poland, former_german]
+      regions: ["", poland_former_german]   # #350: the lands east of the Oder-Neisse form their own region
       source: "OHM relation 2692205 Polska 1924-06-22..1938-11-01 (CC0 and CC-BY-4.0, see ATTRIBUTION.md), border of 1937"
       as_of: "1945-10-01"
       precision: A
@@ -21,6 +22,7 @@ rules:
       within: [DEU-1573, DEU-1591]   # Baden-Wuerttemberg, Bavaria
       ohm: "ohm:relation/2852492@v37"
       pieces: [us_zone, french_zone]
+      regions: [germany_us_zone, germany_french_zone]
       source: "OHM relation 2852492 American occupation zone in Germany 1945-09-17..1949-05-23 (CC0)"
       as_of: "1945-10-01"
       precision: A
@@ -32,6 +34,7 @@ rules:
       within: [AUT-2326]   # Upper Austria: US south of the Danube, Soviet in the Muehlviertel
       ohm: "ohm:relation/2746442@v14"
       pieces: [us_zone, soviet_zone]
+      regions: [austria_us_zone, austria_soviet_zone]
       a_pieces: [soviet_zone]
       source: "OHM relation 2746442 American Occupation Zone in Austria 1945-04-27..1955-07-27 (CC0)"
       as_of: "1945-10-01"
@@ -43,6 +46,7 @@ rules:
       within: [AUT-2329]   # Tyrol: British East Tyrol, French rest
       ohm: "ohm:relation/2746443@v19"
       pieces: [british_zone, french_zone]
+      regions: [austria_british_zone, austria_french_zone]
       a_pieces: [british_zone]
       source: "OHM relation 2746443 British Occupation Zone in Austria 1945-04-27..1955-07-27 (CC0 and CC-BY-4.0, see ATTRIBUTION.md)"
       as_of: "1945-10-01"
@@ -66,6 +70,7 @@ rules:
       within: [FIN-3193]   # Uusimaa
       ohm: "ohm:relation/2855285@v12"
       pieces: [finland, porkkala_lease]
+      regions: ["", porkkala]
       a_pieces: [porkkala_lease]
       source: "OHM relation 2855285 Suomi 1944-09-19..1947-04-18 (CC0 and CC-BY-4.0, see ATTRIBUTION.md): the Porkkala area lies outside this polygon"
       as_of: "1945-10-01"
@@ -78,8 +83,81 @@ rules:
       within: [GRC-3013]
       meridian: 26.1
       pieces: [cyclades, dodecanese]
+      regions: ["", dodecanese]
       source: "meridian parameter 26.1E"
       as_of: "1945-10-01"
       precision: A
       ref: "Treaty of Peace with Italy 1947-02-10 art. 14 (list of the Dodecanese islands); Italian possession until 1947, British military administration from 1945-05"
       min_piece_km2: 100
+  # Danzig: the Free City (1920-1939) was not part of Germany of 1937, so it is a region of its own (DEBT-0043); its owner is an open question for the owner.
+  - cut:
+      id: danzig_free_city
+      within: [POL-3140]   # Pomeranian
+      ohm: "ohm:relation/2691478@v26"
+      pieces: [free_city, rest]
+      regions: [danzig, ""]
+      source: "OHM relation 2691478 Freie Stadt Danzig 1920-12-24..1939-09-01 (CC0)"
+      as_of: "1945-10-01"
+      precision: A
+      ref: "Treaty of Versailles art. 100-108 (Free City of Danzig); annexed to the Reich 1939-09-01; Potsdam Protocol 1945-08-02 section VI-IX; DEBT-0043"
+      min_piece_km2: 20
+  # Berlin: the three western sectors against the Soviet sector. The lines between the US, British and French sectors are not in any acceptable source.
+  - cut:
+      id: berlin_western_sectors
+      within: [DEU-1599]
+      ohm: "ohm:relation/2692239@v13"
+      pieces: [west, east]
+      regions: [berlin_west, berlin_east]
+      source: "OHM relation 2692239 Westberlin 1949..1972 (CC0): the area of the three western sectors"
+      as_of: "1945-10-01"
+      precision: A
+      ref: "Protocol on the zones of occupation in Germany and the administration of Greater Berlin, London, 1944-09-12 (EAC)"
+      min_piece_km2: 20
+  # Free Territory of Trieste (Peace Treaty with Italy 1947-02-10, in force 1947-09-15): zone B first, so that the Venezia Giulia cut below leaves it whole.
+  - cut:
+      id: trieste_zone_b
+      within_adm0: [HRV, SVN]
+      ohm: "ohm:relation/2800539@v9"
+      pieces: [zone_b, rest]
+      regions: [trieste_zone_b, ""]
+      source: "OHM relation 2800539 Zona B 1947..1954-10-26 (CC0 and CC-BY-4.0, see ATTRIBUTION.md)"
+      as_of: "1945-10-01"
+      precision: A
+      ref: "Treaty of Peace with Italy 1947-02-10 art. 21 and annex VI-VII (Free Territory of Trieste); Memorandum of Understanding, London, 1954-10-05 (zone B)"
+      min_piece_km2: 20
+  - cut:
+      id: trieste_zone_a
+      within: [ITA-5455, ITA-5457, ITA-5458]   # Udine, Gorizia, Trieste (one unit)
+      ohm: "ohm:relation/2800540@v6"
+      pieces: [zone_a, rest]
+      regions: [trieste_zone_a, ""]
+      source: "OHM relation 2800540 Zona A 1947..1954-10-26 (CC0 and CC-BY-4.0, see ATTRIBUTION.md)"
+      as_of: "1945-10-01"
+      precision: A
+      ref: "Treaty of Peace with Italy 1947-02-10 art. 21 and annex VI-VII (Free Territory of Trieste); Memorandum of Understanding, London, 1954-10-05 (zone A)"
+      min_piece_km2: 20
+  # Venezia Giulia ceded to Yugoslavia (Peace Treaty with Italy art. 3): Istria, Rijeka, Zadar, the Slovene Littoral. One cut per country: the rest stays in its national region.
+  - cut:
+      id: venezia_giulia_croatia
+      within_adm0: [HRV]
+      ohm: "ohm:relation/2851104@v65"
+      pieces: [ceded, rest]
+      keep_regions: true   # the zone B pieces keep the region of the zone B cut
+      regions: [venezia_giulia_ceded, croatia]
+      source: "OHM relation 2851104 Italia 1929-06-07..1940-06-24 (CC0 and CC-BY-4.0, see ATTRIBUTION.md): Italy before the war with Istria, Fiume, Zara and the Julian March"
+      as_of: "1945-10-01"
+      precision: A
+      ref: "Treaty of Peace with Italy 1947-02-10 art. 3 and annex I-IV (frontier with Yugoslavia)"
+      min_piece_km2: 20
+  - cut:
+      id: venezia_giulia_slovenia
+      within_adm0: [SVN]
+      ohm: "ohm:relation/2851104@v65"
+      pieces: [ceded, rest]
+      keep_regions: true
+      regions: [venezia_giulia_ceded, slovenia]
+      source: "OHM relation 2851104 Italia 1929-06-07..1940-06-24 (CC0 and CC-BY-4.0, see ATTRIBUTION.md): Italy before the war with Istria, Fiume, Zara and the Julian March"
+      as_of: "1945-10-01"
+      precision: A
+      ref: "Treaty of Peace with Italy 1947-02-10 art. 3 and annex I-IV (frontier with Yugoslavia)"
+      min_piece_km2: 20

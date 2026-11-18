@@ -8,3 +8,4 @@ straits:
   - {a: italy_salerno.messina, b: italy_salerno.reggio_calabria, source: "Strait of Messina, about 3 km"}
   - {a: france_ain.haute_corse, b: italy_firenze.sassari, source: "Strait of Bonifacio, about 11 km"}
   - {a: vatican.vatican, b: italy_firenze.roma, source: "Enclave in Rome; shared border about 0.9 km is below the 1 km adjacency threshold"}
+  - {a: russia_sakha_yakutia.chukchi_autonomous_okrug_5, b: united_states_of_america_alaska.alaska_3, source: "Bering Strait, Cape Dezhnev to Cape Prince of Wales, about 85 km"}

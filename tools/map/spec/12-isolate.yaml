@@ -1,0 +1,32 @@
+# Regions formed by event lines (#350, ADR-0020 §2.9). 'isolate' makes the units with these adm1 codes one region (used by bootstrap; the geometry is untouched).
+# Berlin, Danzig, the zone pieces of Baden-Wuerttemberg, Bavaria, Upper Austria and Tyrol, the Trieste zones, Venezia Giulia, Porkkala, the Dodecanese,
+# the lands east of the Oder-Neisse, Korea and Vietnam get their regions from the 'regions' list of their cuts (20-cuts-*.yaml).
+rules:
+  # Germany by occupation zone (Berlin Declaration 1945-06-05; EAC protocol 1944-09-12).
+  - isolate: {codes: [DEU-1577, DEU-1600, DEU-1601, DEU-3487, DEU-3488], region: germany_soviet_zone, ref: "Soviet zone: Thuringia, Saxony-Anhalt, Saxony, Brandenburg, Mecklenburg-Vorpommern"}
+  - isolate: {codes: [DEU-1572, DEU-1576, DEU-1578, DEU-1579], region: germany_british_zone, ref: "British zone: North Rhine-Westphalia, Lower Saxony, Hamburg, Schleswig-Holstein"}
+  - isolate: {codes: [DEU-1574], region: germany_us_zone, ref: "US zone: Hesse"}
+  - isolate: {codes: [DEU-1580], region: germany_french_zone, ref: "French zone: Rhineland-Palatinate"}
+  - isolate: {codes: [DEU-1575], region: germany_us_enclave, ref: "US enclave of Bremen and Bremerhaven in the British zone"}
+  - isolate: {codes: [DEU-1581], region: saar, ref: "RR-0020 C02: Saar"}
+  # The lands east of the Oder-Neisse that are whole voivodeships (the cut pieces of the others are named by the 1937-border cut).
+  - isolate: {codes: [POL-3143, POL-3167, POL-3142, POL-3141], region: poland_former_german, ref: "Lubusz, Opole, West Pomerania, Lower Silesia: German of 1937, Polish administration from 1945 (Potsdam Protocol section IX)"}
+  # Austria by occupation zone and Vienna (EAC agreement 1945-07-09).
+  - isolate: {codes: [AUT-2322, AUT-2330], region: austria_soviet_zone, ref: "Soviet zone: Lower Austria, Burgenland"}
+  - isolate: {codes: [AUT-2323, AUT-2325], region: austria_british_zone, ref: "British zone: Styria, Carinthia"}
+  - isolate: {codes: [AUT-2327], region: austria_us_zone, ref: "US zone: Salzburg"}
+  - isolate: {codes: [AUT-2331], region: vienna, ref: "Vienna: four-power city"}
+  - isolate: {codes: [RUS-2324], region: kaliningrad, ref: "RR-0020 C01: Koenigsberg area, Soviet from 1946-04-07"}
+  # World: sub-national units on event lines.
+  - isolate: {codes: [IND-3265, IND-2445], region: india_goa_daman_diu, ref: "RR-0020 B16/B17"}
+  - isolate: {codes: [IND-3262], region: india_puducherry, ref: "RR-0020 B15"}
+  - isolate: {codes: [IND-3259], region: india_sikkim, ref: "RR-0020 B18"}
+  - isolate: {codes: [IDN-558, IDN-1933], region: indonesia_west_new_guinea, ref: "RR-0020 B24"}
+  - isolate: {codes: [MYS-1186, MYS-1187, MYS-4833], region: malaysia_borneo, ref: "RR-0020 B27"}
+  - isolate: {codes: [CAN-686], region: canada_newfoundland, ref: "RR-0020 B99"}
+  - isolate: {codes: [JPN-3502], region: japan_okinawa, ref: "RR-0020 B111"}
+  - isolate: {codes: [TZA-3337, TZA-3380, TZA-3381, TZA-3383, TZA-3384], region: tanzania_zanzibar, ref: "RR-0020 B81"}
+  - isolate: {codes: [CHN-1662], region: china_tibet, ref: "RR-0020 B113"}
+  - isolate: {codes: [CMR-1477, CMR-799], region: cameroon_southern_british, ref: "RR-0020 B77: Southern British Cameroons joined Cameroon 1961-10-01"}
+  - isolate: {codes: ["WEB+00?"], region: palestine_west_bank, ref: "RR-0020 B41"}
+  - isolate: {codes: ["GAZ+00?"], region: palestine_gaza, ref: "RR-0020 B42"}

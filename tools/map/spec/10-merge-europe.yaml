@@ -7,7 +7,7 @@ rules:
   - merge: {from: [ALB-1498, ALB-1502, ALB-1526]}
   - merge: {from: [ALD-4810, ALD-4812, ALD-4814, ALD-4817, ALD-4818, ALD-4819, ALD-4820, ALD-4821, ALD-4822, ALD-4823, ALD-4824]}
   - merge: {from: [AND-4876, AND-4877, AND-4878, AND-4879, AND-4880, AND-4881, AND-4882]}
-  - merge: {from: [AUT-2322, AUT-2323]}
+  - merge: {from: [AUT-2322, AUT-2330]}   # Burgenland joins Lower Austria (both Soviet zone), not Styria (British zone): #350
   - merge: {from: [AUT-2320, AUT-2329]}
   - merge: {from: [BEL-3474, BEL-3475, BEL-3476, BEL-3482]}
   - merge: {from: [BEL-3477, BEL-3481]}
@@ -41,7 +41,6 @@ rules:
   - merge: {from: [CZE-1595, CZE-1596]}
   - merge: {from: [CZE-1597, CZE-1598]}
   - merge: {from: [DEU-1578, DEU-1579]}
-  - merge: {from: [DEU-1580, DEU-1581]}
   - merge: {from: [DNK-3419, DNK-3420]}
   - merge: {from: [ESP-5838, ESP-5840]}
   - merge: {from: [ESP-5801, ESP-5823, ESP-5851]}

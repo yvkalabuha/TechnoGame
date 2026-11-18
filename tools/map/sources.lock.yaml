@@ -64,3 +64,43 @@ sources:
     license: CC-BY-4.0+CC0-1.0
     retrieved: 2026-11-18
     note: "Suomi 1944-09-19..1947-04-18 (Finland under the armistice; used to cut Finnish Lapland and to check Porkkala). Member ways carry CC-BY-4.0 (see mods/core/map/ATTRIBUTION.md), the rest the OHM default CC0 (https://www.openhistoricalmap.org/copyright)"
+  - id: "ohm:relation/2691478@v26"
+    kind: ohm
+    url: https://overpass-api.openhistoricalmap.org/api/interpreter
+    query: '[out:json][timeout:100][date:"2026-11-18T00:00:00Z"];rel(2691478)->.r;.r out geom meta;way(r.r);out tags;'
+    sha256: 3f40a62422d90c49f06e5f2604bb6457d50d555aeb1dc92e20faafe97a642c58
+    license: CC0-1.0
+    retrieved: 2026-11-18
+    note: "Free City of Danzig 1920-12-24..1939-09-01 (cuts the Free City out of the former German part of the Pomeranian voivodeship). No licence tag on the object: OHM default CC0 (https://www.openhistoricalmap.org/copyright)"
+  - id: "ohm:relation/2692239@v13"
+    kind: ohm
+    url: https://overpass-api.openhistoricalmap.org/api/interpreter
+    query: '[out:json][timeout:100][date:"2026-11-18T00:00:00Z"];rel(2692239)->.r;.r out geom meta;way(r.r);out tags;'
+    sha256: 0e2d3e291e777b01d419bff2b889618c6ec0173d3542847a75b0cdca0b76499a
+    license: CC0-1.0
+    retrieved: 2026-11-18
+    note: "Westberlin 1949..1972 (the three western sectors of Berlin as one area; the sector lines between them are not in any acceptable source). No licence tag on the object: OHM default CC0 (https://www.openhistoricalmap.org/copyright)"
+  - id: "ohm:relation/2800540@v6"
+    kind: ohm
+    url: https://overpass-api.openhistoricalmap.org/api/interpreter
+    query: '[out:json][timeout:100][date:"2026-11-18T00:00:00Z"];rel(2800540)->.r;.r out geom meta;way(r.r);out tags;'
+    sha256: ab21affc535914058d08301d1944e970d98b0ad7c03afb0930aa9196a65eafff
+    license: CC-BY-4.0+CC0-1.0
+    retrieved: 2026-11-18
+    note: "Zona A of the Free Territory of Trieste 1947..1954-10-26. Some member ways carry CC-BY-4.0 (Surveying and Mapping Authority of the Republic of Slovenia; see mods/core/map/ATTRIBUTION.md), the rest the OHM default CC0 (https://www.openhistoricalmap.org/copyright)"
+  - id: "ohm:relation/2800539@v9"
+    kind: ohm
+    url: https://overpass-api.openhistoricalmap.org/api/interpreter
+    query: '[out:json][timeout:100][date:"2026-11-18T00:00:00Z"];rel(2800539)->.r;.r out geom meta;way(r.r);out tags;'
+    sha256: dab3b7e167138fac90d4a679778d4312edff566abac6f37c60c54d53ad57fb64
+    license: CC-BY-4.0+CC0-1.0
+    retrieved: 2026-11-18
+    note: "Zona B of the Free Territory of Trieste 1947..1954-10-26. Some member ways carry CC-BY-4.0 (Surveying and Mapping Authority of the Republic of Slovenia; see mods/core/map/ATTRIBUTION.md), the rest the OHM default CC0 (https://www.openhistoricalmap.org/copyright)"
+  - id: "ohm:relation/2851104@v65"
+    kind: ohm
+    url: https://overpass-api.openhistoricalmap.org/api/interpreter
+    query: '[out:json][timeout:100][date:"2026-11-18T00:00:00Z"];rel(2851104)->.r;.r out geom meta;way(r.r);out tags;'
+    sha256: 045ab4924c4dce5efaab6e3cddf6eb598785a740bccd25fe74702822764f54a7
+    license: CC-BY-4.0+CC0-1.0
+    retrieved: 2026-11-18
+    note: "Italia 1929-06-07..1940-06-24 (Italy before the Second World War, with Istria, Fiume, Zara and the Julian March; cuts the lands ceded to Yugoslavia in 1947). Some member ways carry CC-BY-4.0 (Surveying and Mapping Authority of the Republic of Slovenia; see mods/core/map/ATTRIBUTION.md), the rest the OHM default CC0 (https://www.openhistoricalmap.org/copyright)"

@@ -28,6 +28,7 @@ internal sealed class BuildResult
     public Dictionary<string, Resolved> Owners = new(StringComparer.Ordinal);
     public SpecSet Spec = new();
     public Dictionary<string, OhmShape> Ohm = new(StringComparer.Ordinal);
+    public HashSet<string> EuropeCodes = new(StringComparer.Ordinal);   // adm1 codes of the legacy Europe selection
 }
 
 internal sealed class PairComparer : IComparer<(string, string)>
@@ -64,6 +65,7 @@ internal static class Builder
 
         var atoms = Data.LoadNe(ne, res.Spec.Area);
         res.Info.Add($"atoms: {atoms.Count}");
+        res.EuropeCodes = atoms.Where(a => a.Europe).Select(a => a.Code).ToHashSet(StringComparer.Ordinal);
         var pieces = Pipeline.Apply(Pipeline.Initial(atoms), res.Spec, Ohm);
         var unanchored = new List<Piece>();
         res.Errors.AddRange(Ids.Assign(pieces, res.Spec.Ids, unanchored));
