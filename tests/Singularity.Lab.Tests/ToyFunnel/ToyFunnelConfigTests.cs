@@ -1,5 +1,5 @@
 using Singularity.Lab.Models.ToyFunnel;
-using Singularity.Core.Simulation;
+using Singularity.Lab.Simulation;
 using Singularity.Kernel;
 
 namespace Singularity.Lab.Tests.ToyFunnel;

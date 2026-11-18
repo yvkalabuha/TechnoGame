@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Singularity.Core.Simulation;
+namespace Singularity.Lab.Simulation;
 
 public enum ParamKind { Number, String, Bool, Json }
 

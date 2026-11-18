@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Singularity.Core.Simulation;
+using Singularity.Lab.Simulation;
 
 namespace Singularity.Lab.Models.ToyFunnel;
 

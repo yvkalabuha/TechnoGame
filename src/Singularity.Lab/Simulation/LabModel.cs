@@ -1,7 +1,7 @@
 using System.Globalization;
 using Singularity.Kernel;
 
-namespace Singularity.Core.Simulation;
+namespace Singularity.Lab.Simulation;
 
 /// <summary>Everything a model needs to build its initial state.</summary>
 public sealed record ModelSetup(ParamSet Parameters, ulong Seed, int ChunkSize, long Ticks);

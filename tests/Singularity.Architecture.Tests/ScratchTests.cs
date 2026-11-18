@@ -1,7 +1,6 @@
 using System.Reflection;
 using System.Reflection.Emit;
 using Singularity.Core;
-using Singularity.Core.Simulation;
 using Singularity.Kernel;
 
 namespace Singularity.Architecture.Tests;
@@ -14,7 +13,7 @@ namespace Singularity.Architecture.Tests;
 /// </summary>
 public class ScratchTests
 {
-    private static readonly Assembly Core = typeof(ParamSet).Assembly;
+    private static readonly Assembly Core = typeof(Singularity.Core.Industry.IndustrySystem).Assembly;
 
     // Immutable data computed once in the constructor (never in a tick), so they are not scratch and not state.
     private static readonly string[] PrecomputedFields =

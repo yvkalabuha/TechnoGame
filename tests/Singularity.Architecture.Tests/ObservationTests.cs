@@ -2,7 +2,6 @@ using System.Reflection;
 using Singularity.Core;
 using Singularity.Core.Policy;
 using Singularity.Core.Products;
-using Singularity.Core.Simulation;
 
 namespace Singularity.Architecture.Tests;
 
@@ -13,7 +12,7 @@ namespace Singularity.Architecture.Tests;
 /// </summary>
 public class ObservationTests
 {
-    private static readonly Assembly Core = typeof(ParamSet).Assembly;
+    private static readonly Assembly Core = typeof(Singularity.Core.Industry.IndustrySystem).Assembly;
 
     private static IEnumerable<MethodBase> Marked(Assembly assembly) =>
         assembly.GetTypes().SelectMany(t => t.GetMethods(IlScanner.AllDeclared))
