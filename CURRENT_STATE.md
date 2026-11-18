@@ -19,10 +19,10 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
+- TASK-0079 [IN_PROGRESS] F4-A: parallel ViewBuilder.Inputs per actor, TrainingBudget plan once per actor (developer)
+- TASK-0078 [REVIEW] ADR-0017 implementation: StateHash schedule, lazy LastHash, column CoW (developer)
 - TASK-0064 [APPROVED] lab bench harness (ADR-0016 T1) (developer)
 - TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
-- TASK-0078 [APPROVED] ADR-0017 implementation: StateHash schedule, lazy LastHash, column CoW (developer)
-- TASK-0079 [APPROVED] F4-A: parallel ViewBuilder.Inputs per actor, TrainingBudget plan once per actor (developer)
 <!-- registry:active:end -->
 
 ## Блокеры

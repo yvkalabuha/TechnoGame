@@ -457,3 +457,7 @@ The design system yields to the owner's wish | владелец (сообщен�
 - no country-locked nodes.
 
 Worked out in PHASE F wave 3 together with the alternative branches (#299): research-scientist (facts on the schools of the USSR, USA, Britain, France, Sweden and the PRC), counterfactual-analyst and game-designer | владелец (AskUserQuestion 2026-11-18) |
+| 323 | 2026-11-18 | M1 "open race" hypothesis (draft `docs/game-design/MS-M1-draft.md`): pre-registered bands instead of the point target of #24 — P1 leader change over 30 years in 20–50 % of seeds, P2 effective number of contenders 1.6–4.0, P3 more than 3 leader changes in ≤ 10 % of seeds. Exact thresholds are fixed in the HYP at its gate | владелец (AskUserQuestion 2026-11-18) |
+| 324 | 2026-11-18 | M1 scope: E1b and the light H/M layer (labour and materials) are in M1; the race hypothesis runs on full E1, not on E1a with exogenous labour. M1 is longer and has more gates | владелец (AskUserQuestion 2026-11-18) |
+| 325 | 2026-11-18 | M1 province ownership: scripted owner/controller changes without war are allowed (decolonisation, division of Germany and Korea), by date-driven scenario events. War-driven changes stay in M2 | владелец (AskUserQuestion 2026-11-18) |
+| 326 | 2026-11-18 | Palette C alerts (#303): `warn` becomes darker #D9860F; every alert on the map and globe gets a paper halo, an ink outline and the ▲ sign. The alert-contrast validator confirms it on real v0.5b screenshots before the client switches | владелец (AskUserQuestion 2026-11-18) |

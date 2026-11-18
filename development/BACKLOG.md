@@ -91,8 +91,8 @@
 | [TASK-0075](../development/tasks/TASK-0075-map-builder-t2-tools-map-on-nts-europe-first-1945-.md) | DONE | Map builder T2: tools/map on NTS, Europe first, 1945 cuts, coverage simplification check | MS-M0 |
 | [TASK-0076](../development/tasks/TASK-0076-localization-fixes-after-codex-review-of-task-0074.md) | DONE | Localization fixes after Codex review of TASK-0074 | MS-M0 |
 | [TASK-0077](../development/tasks/TASK-0077-client-v0-5a-planisphere-zoom-and-node-icons-node-.md) | DONE | Client v0.5a: planisphere zoom and node icons, node card with schematic and effects, map click fix, starry sky | MS-M0 |
-| [TASK-0078](../development/tasks/TASK-0078-adr-0017-implementation.md) | APPROVED | ADR-0017 implementation: StateHash schedule, lazy LastHash, column CoW | MS-M0 |
-| [TASK-0079](../development/tasks/TASK-0079-f4a-parallel-view-inputs.md) | APPROVED | F4-A: parallel ViewBuilder.Inputs per actor, TrainingBudget plan once per actor | MS-M0 |
+| [TASK-0078](../development/tasks/TASK-0078-adr-0017-implementation.md) | REVIEW | ADR-0017 implementation: StateHash schedule, lazy LastHash, column CoW | MS-M0 |
+| [TASK-0079](../development/tasks/TASK-0079-f4a-parallel-view-inputs.md) | IN_PROGRESS | F4-A: parallel ViewBuilder.Inputs per actor, TrainingBudget plan once per actor | MS-M0 |
 
 ## Гипотезы
 
