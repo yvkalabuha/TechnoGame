@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "experiment": "EXP-0008-calibration",
+  "kind": "bench",
+  "meta": {
+    "note": "EXP-0008 calibration run of ADR-0023 п. 1.10 (П0, П5.6): block A of EXP-0008-bench.json unchanged (15 processes: point A, t8, seeds 1-3 × 5 replicas), same gate and protocol, no reference block (no validity, variants, modes, profile). Run with --calibration true (one attempt per process, no repeats), then lab/analysis/exp0008.py --calibrate DIR. Not an outcome measurement; its manifest_hash is recorded in П5.6 next to the numbers. Script: lab/series/exp0008-calibrate.sh.",
+    "gate": "Copy of the EXP-0008-bench.json gate at calibration time (proposals 0.8 / 0.10 / 0.05). The calibrated numbers are written into EXP-0008-bench.json only; selftest checks that the two gates agree outside the calibrated keys."
+  },
+  "generator_seed": 85621515,
+  "shuffle_seed": 20261117,
+  "chunk_size": 8,
+  "warmup_months": 24,
+  "measure_months": 120,
+  "hash_checkpoints": false,
+  "blocks": [
+    {
+      "id": "A",
+      "points": [
+        [
+          200,
+          2000,
+          "cross"
+        ]
+      ],
+      "threads": [
+        8
+      ],
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "replicas": 5,
+      "note": "outcome"
+    }
+  ],
+  "gate": {
+    "foreign_cpus_max": 0.8,
+    "foreign_over1_share_max": 0.1,
+    "foreign_second_cpus": 1.0,
+    "median_ratio_max": 1.1,
+    "median_gate_min_ms": 50,
+    "max_repeats": 2,
+    "exclude_max_frac": 0.2,
+    "seed_accept_min_frac": 0.5,
+    "outcome_block": "A",
+    "exclusion_rule": "independent-evidence",
+    "run_delay_max": 0.05,
+    "thermal_ratio": 0.85,
+    "noise_max": 0.1,
+    "quiet_sample_s": 10,
+    "quiet_step_s": 30,
+    "quiet_max_s": 300,
+    "pre_series_s": 60,
+    "pre_series_foreign_cpus_max": 0.8,
+    "pre_series_deadline_s": 1800,
+    "window_s": 36000,
+    "forbidden_processes": [
+      "dotnet",
+      "MSBuild",
+      "VBCSCompiler",
+      "claude",
+      "node"
+    ],
+    "thermal_mark_frac": 0.2,
+    "forbidden_min_cpus": 0.05,
+    "fref_seconds": 300,
+    "fref_tail_s": 180
+  }
+}

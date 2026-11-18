@@ -19,8 +19,38 @@ public static class HarnessChecks
         ("bench: LoadMeter on a fixture /proc tree writes the machine block; without /proc it is available:false and does not throw", () => MeterFixtures(tmp)),
         ("bench: series gate (ADR-0023 п. 1.3–1.5, 1.9) — н1/н2/м, exclusion only with н1|н2 on every attempt, window-end repeats, fixed med_point, #355 names/ancestors/idle", GateDecide),
         ("bench: series verdict — A 4/15 excluded INCONCLUSIVE, 3/15 not; seed 2/5 INCONCLUSIVE; series 23/114 INCONCLUSIVE, 22/114 not", GateVerdict),
-        ("bench: EXP-0008 manifest — gate equals the П5 numbers, plan = EXP-0007 plan, reference modes parse; bad gate key rejected", Manifests),
+        ("bench: EXP-0008 manifest — gate equals the П5 numbers (calibrated keys: proposal or П5.6 grid), plan = EXP-0007 plan, reference modes parse; calibration manifest = block A, same gate; bad gate key rejected", Manifests),
+        ("bench: alloc direct split (6, 180) 4 months — tick-only (SkipViews) and full runs end with the same hash, probes keep it, tick + snapshot + listener = full every month, snapshot path > 0", () => AllocSplit(tmp)),
     ];
+
+    private static string? AllocSplit(string tmp)
+    {
+        var spec = new SynthWorldSpec(6, 180, SynthGraph.CrossEdges);
+        string dir = Path.Combine(tmp, "bench-alloc");
+        SynthWorld w = SynthWorldGenerator.Build(spec, Path.Combine(dir, "worlds", spec.Name));
+        string f = Path.Combine(dir, "alloc.json");
+        var rp = new BenchRunParams { Mode = "alloc", RepoDir = BenchCommand.RepoDir(), Warmup = 1, Measure = 3, Smoke = true };
+        int code = AllocProfile.Run(w, 1, 1, 4, lohEvents: false, 8, rp, 0, f, TextWriter.Null);
+        using JsonDocument d = JsonDocument.Parse(File.ReadAllBytes(f));
+        JsonElement r = d.RootElement;
+        JsonElement p8 = r.GetProperty("p8_split");
+        if (code != 0 || !p8.GetProperty("runs_same_hash").GetBoolean() || !r.GetProperty("probes_kept_hash").GetBoolean())
+            return $"exit {code}, runs_same_hash {p8.GetProperty("runs_same_hash")}, probes_kept_hash {r.GetProperty("probes_kept_hash")}";
+        if (p8.GetProperty("state_hash_tick_only_run").GetString() != r.GetProperty("state_hash_before_probes").GetString())
+            return "state_hash_tick_only_run differs from the full run";
+        if (r.GetProperty("format").GetInt32() != 3 || !p8.GetProperty("method").GetString()!.StartsWith("direct", StringComparison.Ordinal))
+            return "not format 3 / direct method";
+        foreach (JsonElement m in r.GetProperty("months").EnumerateArray())
+        {
+            long full = m.GetProperty("bytes").GetInt64(), tick = m.GetProperty("tick_path_bytes").GetInt64(), snap = m.GetProperty("snapshot_path_bytes").GetInt64();
+            long own = m.GetProperty("gc_listener_bytes").GetInt64();
+            if (tick + snap + own != full)
+                return $"month {m.GetProperty("month")}: {tick} + {snap} + {own} != {full}";
+            if (m.GetProperty("measured").GetBoolean() && (tick <= 0 || snap <= 0))
+                return $"month {m.GetProperty("month")}: tick {tick}, snapshot {snap}";
+        }
+        return null;
+    }
 
     private static byte[] B(string s) => Encoding.UTF8.GetBytes(s);
 
@@ -281,14 +311,32 @@ public static class HarnessChecks
         BenchManifest m8 = BenchManifest.Load(Path.Combine(dir, "lab", "manifests", "EXP-0008-bench.json"));
         BenchManifest m7 = BenchManifest.Load(Path.Combine(dir, "lab", "manifests", "EXP-0007-bench.json"));
         BenchGate g = m8.Gate;
-        if (!m8.HasGate || g.ForeignCpusMax != 0.8 || g.ForeignOverShareMax != 0.10 || g.ForeignSecondCpus != 1.0 || g.RunDelayMax != 0.05
+        // The calibrated keys (ADR-0023 п. 1.10, EXP-0008 П5.6): the [Предл.] numbers before calibration, or the p90 rule's grid after it
+        // (н1а step 0.25 CPU, н1б step 0.05, н2 step 0.01); pre_series_foreign_cpus_max follows н1а. Everything else is fixed.
+        if (!Calibrated(g.ForeignCpusMax, 0.8, 0.25) || !Calibrated(g.ForeignOverShareMax, 0.10, 0.05) || !Calibrated(g.RunDelayMax, 0.05, 0.01)
+            || g.PreSeriesForeignCpusMax != g.ForeignCpusMax)
+            return $"EXP-0008 calibrated gate keys off the П5.6 grid: н1а {g.ForeignCpusMax}, н1б {g.ForeignOverShareMax}, н2 {g.RunDelayMax}, pre-series {g.PreSeriesForeignCpusMax}";
+        BenchGate d = new();
+        BenchGate fixedPart = g with { ForeignCpusMax = d.ForeignCpusMax, ForeignOverShareMax = d.ForeignOverShareMax, RunDelayMax = d.RunDelayMax, PreSeriesForeignCpusMax = d.PreSeriesForeignCpusMax };
+        if (!m8.HasGate || g.ForeignSecondCpus != 1.0
             || g.PreSeriesDeadlineSeconds != 1800 || g.WindowSeconds != 36_000 || g.ThermalMarkFrac != 0.20 || g.ExclusionRule != ExclusionRule.IndependentEvidence || g.MedianRatioMax != 1.10 || g.MedianGateMinMs != 50 || g.MaxRepeats != 2 || g.ExcludeMaxFrac != 0.20
             || g.ThermalRatio != 0.85 || g.QuietSampleSeconds != 10 || g.QuietStepSeconds != 30 || g.QuietMaxSeconds != 300 || g.PreSeriesSeconds != 60
-            || g.PreSeriesForeignCpusMax != 0.8 || g.FRefSeconds != 300 || g.FRefTailSeconds != 180 || g.OutcomeBlock != "A")
+            || g.FRefSeconds != 300 || g.FRefTailSeconds != 180 || g.OutcomeBlock != "A")
             return "EXP-0008 gate differs from П5";
-        if (g with { ForbiddenProcesses = [] } != new BenchGate() with { ForbiddenProcesses = [] }
-            || !g.ForbiddenProcesses.SequenceEqual(new BenchGate().ForbiddenProcesses))
+        if (fixedPart with { ForbiddenProcesses = [] } != d with { ForbiddenProcesses = [] }
+            || !g.ForbiddenProcesses.SequenceEqual(d.ForbiddenProcesses))
             return "EXP-0008 gate differs from the BenchGate defaults";
+        // Calibration manifest (п. 1.10): block A of EXP-0008 unchanged, the same gate outside the calibrated keys, no reference block.
+        BenchManifest mc = BenchManifest.Load(Path.Combine(dir, "lab", "manifests", "EXP-0008-calibration.json"));
+        BenchGate gc = mc.Gate;
+        if (!mc.HasGate || gc with { ForeignCpusMax = d.ForeignCpusMax, ForeignOverShareMax = d.ForeignOverShareMax, RunDelayMax = d.RunDelayMax, PreSeriesForeignCpusMax = d.PreSeriesForeignCpusMax, ForbiddenProcesses = [] }
+                != fixedPart with { ForbiddenProcesses = [] } || !gc.ForbiddenProcesses.SequenceEqual(g.ForbiddenProcesses))
+            return "EXP-0008 calibration gate differs from the series gate outside the calibrated keys";
+        var ca = mc.Plan().Select(p => (p.Block, p.Point.Name, p.Seed, p.Threads, p.Replica, p.Background)).Order();
+        var sa = m8.Plan().Where(p => p.Block == "A").Select(p => (p.Block, p.Point.Name, p.Seed, p.Threads, p.Replica, p.Background)).Order();
+        if (!ca.SequenceEqual(sa) || ca.Count() < 5 || mc.Reference.Validity is not null || mc.Reference.Variants.Count != 0 || mc.Reference.Modes.Count != 0 || mc.Reference.Profile is not null
+            || mc.WarmupMonths != m8.WarmupMonths || mc.MeasureMonths != m8.MeasureMonths || mc.ChunkSize != m8.ChunkSize || mc.HashCheckpoints != m8.HashCheckpoints)
+            return "EXP-0008 calibration manifest is not block A of the series without reference";
         var a = m8.Plan().Select(p => (p.Block, p.Point.Name, p.Seed, p.Threads, p.Replica, p.Background));
         var b = m7.Plan().Select(p => (p.Block, p.Point.Name, p.Seed, p.Threads, p.Replica, p.Background));
         if (!a.SequenceEqual(b))
@@ -310,5 +358,13 @@ public static class HarnessChecks
         }
         catch (ManifestException) { }
         return null;
+    }
+
+    private static bool Calibrated(double v, double proposal, double step)
+    {
+        if (v == proposal)
+            return true;
+        double k = Math.Round(v / step);
+        return v > 0 && k >= 1 && Math.Abs(v - k * step) < 1e-9;
     }
 }
