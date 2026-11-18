@@ -1,7 +1,7 @@
 ---
 id: TASK-0088
 title: "Client v0.5c: navigation rail, 7 areas, speed scale, textures, icons and area pictures"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: developer
