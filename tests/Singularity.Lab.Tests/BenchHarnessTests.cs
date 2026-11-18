@@ -328,6 +328,133 @@ public sealed class BenchHarnessTests : IDisposable
         }
     }
 
+    // ---------- #355 ancestors, Forbidden, main_pass_only ----------
+
+    private static PidStat PS(int pid, string comm, int ppid) => new(pid, comm, 0, 0, ppid);
+
+    private static List<PidStat> Anc(int pid, params PidStat[] table)
+    {
+        var d = table.ToDictionary(x => x.Pid);
+        return LoadMath.Ancestors(pid, x => d.TryGetValue(x, out PidStat v) ? v : null);
+    }
+
+    [Fact]
+    public void Ancestors_Chain_StopsAtPid1()
+    {
+        var a = Anc(99, PS(99, "dotnet", 40), PS(40, "bash", 50), PS(50, "claude", 1), PS(1, "systemd", 0), PS(7, "other", 1));
+        Assert.Equal([40, 50, 1], a.Select(x => x.Pid));
+    }
+
+    [Fact]
+    public void Ancestors_Cycle_Stops()
+    {
+        Assert.Equal([3], Anc(2, PS(2, "a", 3), PS(3, "b", 2)).Select(x => x.Pid));
+        Assert.Equal([3, 4], Anc(2, PS(2, "a", 3), PS(3, "b", 4), PS(4, "c", 3)).Select(x => x.Pid));
+    }
+
+    [Fact]
+    public void Ancestors_MissingEntry_StopsAndKeepsKnown()
+    {
+        Assert.Empty(Anc(99));
+        Assert.Equal([40], Anc(99, PS(99, "x", 40), PS(40, "bash", 50)).Select(x => x.Pid));
+    }
+
+    [Fact]
+    public void Ancestors_Guard64Levels()
+    {
+        PidStat[] t = [.. Enumerable.Range(1000, 200).Select(i => PS(i, "p", i + 1)), PS(1200, "p", 0)];
+        Assert.Equal(64, Anc(1000, t).Count);
+    }
+
+    [Fact]
+    public void ExcludedFor_FixtureProc_SelfAndAncestors()
+    {
+        string root = Path.Combine(_tmp, "xproc");
+        void Put(int pid, string comm, int ppid)
+        {
+            Directory.CreateDirectory(Path.Combine(root, pid.ToString()));
+            // fields: pid (comm) state ppid ... utime(14) stime(15) ... starttime(22)
+            File.WriteAllText(Path.Combine(root, pid.ToString(), "stat"), $"{pid} ({comm}) S {ppid} 1 1 0 -1 0 0 0 0 0 1 1 0 0 20 0 1 0 {1000 + pid} 0 0 0");
+        }
+        Put(99, "dotnet", 40);
+        Put(40, "bash", 50);
+        Put(50, "claude", 1);
+        Put(1, "systemd", 0);
+        Put(60, "sibling", 50);
+        HashSet<int> ex = SeriesDriver.ExcludedFor(99, root);
+        Assert.True(ex.SetEquals([99, 40, 50, 1]));
+        Assert.True(SeriesDriver.ExcludedFor(5, Path.Combine(_tmp, "none")).SetEquals([5]));
+    }
+
+    [Fact]
+    public void Forbidden_IdleBelowMin_NonFatal_BusyFatal()
+    {
+        List<ForbiddenHit> h = SeriesGate.Forbidden([(1, "claude", 0.049), (2, "node", 0.0), (3, "dotnet", 0.05), (4, "DotNetX", 1.5), (5, "firefox", 9)],
+            G, new HashSet<int>(), "t");
+        Assert.Equal([1, 2, 3, 4], h.Select(x => x.Pid));
+        Assert.Equal([false, false, true, true], h.Select(x => x.Fatal));
+    }
+
+    [Fact]
+    public void Forbidden_AncestorsSkipped_ChildrenOfAncestorsNot()
+    {
+        var excluded = new HashSet<int> { 99, 40, 50 };
+        List<ForbiddenHit> h = SeriesGate.Forbidden([(50, "claude", 3.0), (40, "node", 2.0), (51, "node", 1.0), (99, "dotnet", 4.0)], G, excluded, "t");
+        Assert.Equal([51], h.Select(x => x.Pid));
+        Assert.True(h[0].Fatal);
+        Assert.Equal(h, SeriesDriver.ForbiddenIn([(51, "node", 1.0)], G, excluded, "t") is var x && x.Count == 1 ? h : []);
+    }
+
+    [Fact]
+    public void Manifest_MainPassOnly_Parsing()
+    {
+        string text = File.ReadAllText(LabFile("EXP-0008-bench-smoke.json"));
+        Assert.False(BenchManifest.Parse(text, "/x.json").Gate.MainPassOnly);
+        BenchManifest m = BenchManifest.Parse(text.Replace("\"window_s\": 0,", "\"window_s\": 0, \"main_pass_only\": true,"), "/x.json");
+        Assert.True(m.Gate.MainPassOnly);
+        Assert.Throws<ManifestException>(() => BenchManifest.Parse(text.Replace("\"window_s\": 0,", "\"window_s\": 0, \"main_pass_only\": 1,"), "/x.json"));
+    }
+
+    [Fact]
+    public void Cli_NoFref_WithFref_Exit2()
+    {
+        string f = Path.Combine(_tmp, "nf.json");
+        Assert.Equal(2, Cli("bench", "--mode", "process", "--actors", "6", "--nodes", "180", "--threads", "1", "--warmup", "1", "--measure", "1",
+            "--no-fref", "true", "--fref", "3000", "--allow-debug", "true", "--out", f).Code);
+    }
+
+    private string MainOnlyManifest() => SmokeManifest(g =>
+    {
+        g["main_pass_only"] = true;
+        g["pre_series_s"] = 1;
+    });
+
+    [Fact]
+    public void Cli_Series_Smoke_Inject_Exit4()
+    {
+        if (!OperatingSystem.IsLinux() || !File.Exists("/proc/stat"))
+            return;
+        string dir = Path.Combine(_tmp, "s4");
+        // Two injected A processes out of 6 (> 20 % of the outcome block): INCONCLUSIVE.
+        var r = Cli("bench", "--mode", "series", "--manifest", MainOnlyManifest(), "--out", dir, "--allow-debug", "true", "--inject-flag", "0:3,1:3");
+        Assert.Equal(4, r.Code);
+        using JsonDocument d = Json(Path.Combine(dir, "series.json"));
+        Assert.Equal(4, d.RootElement.GetProperty("exit_code").GetInt32());
+    }
+
+    [Fact]
+    public void Cli_Series_Calibration_NoRepeats()
+    {
+        if (!OperatingSystem.IsLinux() || !File.Exists("/proc/stat"))
+            return;
+        string dir = Path.Combine(_tmp, "cal");
+        var r = Cli("bench", "--mode", "series", "--manifest", MainOnlyManifest(), "--out", dir, "--allow-debug", "true", "--calibration", "true");
+        Assert.Equal(0, r.Code);
+        string[] files = [.. Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories).Select(f => Path.GetRelativePath(dir, f))];
+        Assert.Contains(files, f => f.EndsWith("-a0.json", StringComparison.Ordinal));
+        Assert.DoesNotContain(files, f => f.EndsWith("-a1.json", StringComparison.Ordinal) || f.EndsWith("-a2.json", StringComparison.Ordinal));
+    }
+
     // ---------- ProcParse ----------
 
     [Fact]
@@ -581,7 +708,9 @@ public sealed class BenchHarnessTests : IDisposable
         Assert.Equal(1.0, g.ForeignSecondCpus);
         Assert.Equal(0.05, g.RunDelayMax);
         Assert.Equal(1800, g.PreSeriesDeadlineSeconds);
-        Assert.Equal(21_600, g.WindowSeconds);
+        Assert.Equal(36_000, g.WindowSeconds);
+        Assert.Equal(0.05, g.ForbiddenMinCpus);
+        Assert.False(g.MainPassOnly);
         Assert.Equal(0.20, g.ThermalMarkFrac);
         Assert.Equal(ExclusionRule.IndependentEvidence, g.ExclusionRule);
         Assert.Equal(1.10, g.MedianRatioMax);
