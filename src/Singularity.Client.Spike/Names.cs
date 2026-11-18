@@ -17,6 +17,8 @@ public static class Names
 
     /// <summary>Node name by id; the id itself belongs in tooltips only.</summary>
     public static string Node(string id) => Loc.TOr("node." + Short(id), id);
+    /// <summary>Historical anchor event of a node. ADR-0018 moved it out of Core into mods/core/locale (.ftl); until the client migrates to Fluent (CSV key node-anchor.*), an empty string means "not shown".</summary>
+    public static string NodeAnchor(string id) => Loc.TOr("node-anchor." + Short(id), "");
 
     public static string Node(GameData d, int number)
     {

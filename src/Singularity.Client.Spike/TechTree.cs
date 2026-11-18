@@ -646,7 +646,7 @@ public sealed partial class TechTree : Control
             var nm = Ui.Lbl(Names.Node(nodes.Id[i]), 18); nm.TooltipText = $"{nodes.Id[i]} · №{nodes.Number[i]}"; nm.MouseFilter = MouseFilterEnum.Pass;
             _inset.AddChild(nm);
             _inset.AddChild(Ui.Wrap($"№{nodes.Number[i]} · {Loc.T("ntype." + (int)nodes.Type[i])} · G{nodes.Gen[i]} · {Loc.T("disc." + (int)nodes.Discipline[i])} · {StateWord(i)}", 14, Ui.Ink2));
-            _inset.AddChild(Ui.Wrap(Loc.T("inset.anchor", nodes.AnchorYear[i], nodes.AnchorBefore[i] ? Loc.T("inset.before") : "", nodes.AnchorEvent[i]), 14, Ui.Ink3));
+            _inset.AddChild(Ui.Wrap(Loc.T("inset.anchor", nodes.AnchorYear[i], nodes.AnchorBefore[i] ? Loc.T("inset.before") : "", Names.NodeAnchor(nodes.Id[i])), 14, Ui.Ink3));
             var rq = nodes.Requires;
             var req = new List<string>();
             for (int g = rq.GroupStart[i]; g < rq.GroupStart[i + 1]; g++)
