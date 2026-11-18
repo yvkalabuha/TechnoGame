@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Offline synthesiser for the UI sounds of the client (AUDIO_DIRECTION §5).
 
+NOTE: the client's assets/audio/ui/ sounds now come from the listening pack r2 (TASK-0100, #403, docs/audio/EVENT_SOUNDS_MAP.md).
+This script is only a service generator; its default --out is lab/results/audio_synth/, never ui/.
+
 Pure standard library, fully deterministic: all noise comes from a seeded generator of our own, so the same seed gives
 byte-identical WAV files. Output: 48 kHz, 16-bit, mono WAV, normalised to the loudness target of the recipe
 (BS.1770 K-weighted level over the whole file) with a sample-peak ceiling of -3 dBFS.
@@ -410,7 +413,7 @@ def write_wav(path, x):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=os.path.join(os.path.dirname(__file__), "..", "..", "src", "Singularity.Client.Spike", "assets", "audio", "ui"))
+    ap.add_argument("--out", default=os.path.join(os.path.dirname(__file__), "..", "..", "lab", "results", "audio_synth"))
     ap.add_argument("--seed", type=int, default=1910)
     ap.add_argument("--era", type=float, default=0.0)
     args = ap.parse_args()
