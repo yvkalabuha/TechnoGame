@@ -28,7 +28,7 @@ sig.goal,GOAL,ЦЕЛЬ
 sig.gap,GAP,РАЗРЫВ
 sig.war,WAR,ВОЙНА
 sig.fail,FAULT,СБОЙ
-help.text,"LMB drag: rotate, wheel: zoom, click a slice country: panel.\nSpace: pause, 1/2/3: tempo, T: knowledge tree, F3: debug, F1: this help.","ЛКМ-тяга — вращать, колесо — масштаб, клик по державе среза — панель.\nПробел — пауза, 1/2/3 — темп, T — дерево знаний, F3 — отладка, F1 — эта подсказка."
+help.text,"LMB drag: rotate, wheel: zoom, click a foreign power: panel.\nSpace: pause, 1/2/3: tempo, [ ]: speed.\nT E F M I G J: areas (T again: knowledge tree), Esc: back to the map, \: rail width, `: journal, F3: debug, F1: this help.","ЛКМ-тяга — вращать, колесо — масштаб, клик по чужой державе — панель.\nПробел — пауза, 1/2/3 — темп, [ ] — скорость.\nT E F M I G J — области (T ещё раз — дерево знаний), Esc — на карту, \ — ширина рейки, ` — журнал, F3 — отладка, F1 — эта помощь."
 panel.budget,BUDGET,БЮДЖЕТ
 panel.budget.text,"Monthly budget: {0} (scenario units), procurement {1}","Бюджет месяца: {0} (ед. сценария), закупки {1}"
 panel.budget.none,Monthly budget: not computed yet,Бюджет месяца: ещё не считался
@@ -102,8 +102,8 @@ panel.shares.profile,Shares of the AI doctrine profile (not this country's data)
 tree.reset,Reset view,Сбросить вид
 card.noschem,schematic: placeholder,схема: заглушка
 card.affects,AFFECTS,ЧТО ЗАТРАГИВАЕТ
-card.layer,"Layer: {0} (ring {1})","Слой: {0} (кольцо {1})"
-card.system,"System: {0} · discipline {1}","Система: {0} · дисциплина {1}"
+card.layer,Layer: {0} (ring {1}),Слой: {0} (кольцо {1})
+card.system,System: {0} · discipline {1},Система: {0} · дисциплина {1}
 card.raises,WHAT IT RAISES,ЧТО ПОВЫШАЕТ
 card.param.yield,Process yield now: {0},Выход процесса сейчас: {0}
 card.param.app,Opens the product of generation G{0},Открывает изделие поколения G{0}
@@ -208,18 +208,10 @@ refusal.DuplicateKey,duplicate command,повтор команды
 refusal.LocalNotMonotonic,command out of order,команда не по порядку
 refusal.TooManyDesignCommands,too many design commands,слишком много команд по изделиям
 refusal.SlotOverflow,slot overflow,переполнение слота
-audio.title,SOUND,ЗВУК
-audio.music,Music,Музыка
-audio.ambient,Ambient,Фон
-audio.ui,Effects,Эффекты
-audio.alert,Alerts,Тревоги
-audio.alertnote,"Alerts can be turned down but not off.","Тревоги можно приглушить, но не выключить."
-audio.musicamount,Music,Музыки
 audio.few,few,мало
 audio.normal,normal,обычно
 audio.many,many,много
 audio.resetfatigue,Reset fatigue adaptation,Сбросить адаптацию к усталости
-tip.audio,Sound settings,Настройки звука
 legend.b2,bar: filled = can start now · dashed = waits for earlier steps · grey = off the route,столбик: залитый — можно начинать сейчас · пунктир — ждёт прошлых ступеней · серый — вне маршрута
 tip.sig.cleared,Signal lifted,Сигнал снят
 actor.short.USA,USA,США
@@ -318,3 +310,45 @@ legend.root,Root of the “why not”,Корень «почему не»
 legend.frontier,Frontier (dashed),Фронтир (пунктир)
 legend.selected,Selected node (double ring),Выбранный узел (двойное кольцо)
 legend.close,Esc or L closes,Esc или L закрывает
+area.map,Map,Карта
+area.science,Science,Наука
+area.production,Production,Производство
+area.finance,Finance and trade,Финансы и торговля
+area.forces,Forces,Силы
+area.intel,Intelligence,Разведка
+area.politics,Politics,Политика
+area.projects,Projects and people,Проекты и люди
+area.map.q,Where is what happening?,Где что происходит?
+area.science.q,"Where is knowledge taking us, and what will we miss?",Куда нас ведёт знание и что мы упустим?
+area.production.q,"What holds us back, and what can we build?",Чем мы упираемся и что можем построить?
+area.finance.q,"Will the money last, and who depends on us?",Хватит ли денег и кто от нас зависит?
+area.forces.q,"Can we withstand a war, and what will supply it?",Выдержим ли мы войну и чем её снабжать?
+area.intel.q,"What do we know about others, and what do they know about us?","Что мы знаем о других, а что они о нас?"
+area.politics.q,"Who is on our side, and what does it cost?",Кто на нашей стороне и чего это стоит?
+area.projects.q,"What do we bet on, and whom do we trust?",На что мы ставим и кому доверяем?
+area.state.live,working,работает
+area.state.part,partly,частично
+area.state.locked,locked,заперто
+area.locked,Area is locked,Область заперта
+area.locked.when,Appears in {0}.,Появится в {0}.
+area.locked.note,The term is provisional. There are no figures or controls here until the mechanic exists.,"Срок ориентировочный. Чисел и управления здесь нет, пока нет механики."
+area.production.later,Supply priority and the choice of variants: in M1. Here are the design lines of the power.,Приоритет снабжения и выбор вариантов: в M1. Здесь линии изделий державы.
+area.finance.later,Taxes by region: in M1; trade and embargo: M1–M2. Here are the budget shares and licences.,Налоги по регионам: в M1; торговля и эмбарго: M1–M2. Здесь доли бюджета и лицензии.
+tip.area,{0} · {1},{0} · {1}
+tip.area.locked,{0} · {1} · appears in {2},{0} · {1} · появится в {2}
+tip.rail,Rail width: narrow or wide (\),Ширина рейки: узкая или широкая (\)
+tip.journal,Journal of signals (`),Журнал сигналов (`)
+journal.title,Journal,Журнал
+journal.empty,No entries yet.,Пока записей нет.
+journal.system,system,система
+journal.line,{0} · {1} · {2}: {3},{0} · {1} · {2}: {3}
+journal.on,appeared,появился
+journal.off,lifted,снят
+set.textures,Paper texture,Текстура бумаги
+set.tex.off,Off,Выкл
+set.tex.weak,Weak,Слабые
+set.tex.normal,Normal,Обычные
+set.railwide,Area rail,Рейка областей
+set.rail.narrow,Narrow,Узкая
+set.rail.wide,Wide,Широкая
+set.musicamount,Music amount,Количество музыки

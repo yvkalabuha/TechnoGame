@@ -33,10 +33,10 @@ public static class MenuUi
         sheet.CustomMinimumSize = new Vector2(Math.Min(design.X, parent.X - 24), Math.Min(design.Y, parent.Y - 24));
     }
 
-    /// <summary>Full-screen ink 35 % scrim under a modal sheet; it also blocks the mouse for everything below.</summary>
+    /// <summary>Full-screen ink 50 % scrim (35 % was too faint behind the dialogs, review v0.5b) under a modal sheet; it also blocks the mouse for everything below.</summary>
     public static ColorRect Scrim()
     {
-        var r = new ColorRect { Color = new Color(Ui.Ink, 0.35f), MouseFilter = Control.MouseFilterEnum.Stop };
+        var r = new ColorRect { Color = new Color(Ui.Ink, 0.5f), MouseFilter = Control.MouseFilterEnum.Stop };
         r.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         return r;
     }
@@ -45,6 +45,7 @@ public static class MenuUi
     {
         var p = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Stop };
         p.AddThemeStyleboxOverride("panel", SheetBox());
+        PaperSurface.Apply(p, SurfaceKind.Sheet, "sheet");
         p.AnchorLeft = p.AnchorRight = p.AnchorTop = p.AnchorBottom = 0.5f;
         p.GrowHorizontal = Control.GrowDirection.Both; p.GrowVertical = Control.GrowDirection.Both;
         fit = vp => Fit(p, vp, design);

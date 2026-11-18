@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" width="320" height="120"><title>Проекты и люди: ракета у башни обслуживания, траектория, люди для масштаба</title>
+<defs><pattern id="g" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0V20M0 20H20" fill="none" stroke="#3A6491" stroke-width="0.4" opacity="0.6"/></pattern></defs>
+<rect width="320" height="120" fill="#1E4673"/><rect width="320" height="120" fill="url(#g)"/>
+<rect x="6" y="6" width="308" height="108" fill="none" stroke="#B9CBDA" stroke-width="0.75"/><rect width="4" height="120" fill="#EEF2F0"/>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+<g stroke="#EEF2F0" stroke-width="1.5"><path d="M20 100H300"/><path d="M120 14C128 24 130 36 130 52V88H110V52C110 36 112 24 120 14Z"/><path d="M110 78L98 96V100H110M130 78L142 96V100H130M114 88L112 96H128L126 88"/><circle cx="120" cy="40" r="4"/></g>
+<g stroke="#EEF2F0" stroke-width="1"><path d="M150 100V20M166 100V20M150 100L166 88L150 76L166 64L150 52L166 40L150 28M150 36H130M150 66H130M110 62H130M110 72H130"/>
+<path d="M40 91v5M36 93h8M40 96l-3 4M40 96l3 4M54 91v5M50 93h8M54 96l-3 4M54 96l3 4M68 91v5M64 93h8M68 96l-3 4M68 96l3 4"/><circle cx="40" cy="88" r="3"/><circle cx="54" cy="88" r="3"/><circle cx="68" cy="88" r="3"/></g>
+<g stroke="#B9CBDA" stroke-width="0.75"><path stroke-dasharray="4 2" d="M190 100Q230 20 296 41"/><circle cx="296" cy="41" r="2"/><path d="M190 96V104M215 96V104M240 96V104M265 96V104M286 96V104"/><path stroke-dasharray="10 2 2 2" d="M120 8V106"/></g>
+</g></svg>

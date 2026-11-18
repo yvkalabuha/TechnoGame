@@ -8,5 +8,8 @@
     <Compile Include="../../src/Singularity.Client.Spike/LegendData.cs" Link="LegendData.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/SettingsLogic.cs" Link="SettingsLogic.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/ContrastValidator.cs" Link="ContrastValidator.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/PaperTexture.cs" Link="PaperTexture.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/AreaData.cs" Link="AreaData.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/TextureValidator.cs" Link="TextureValidator.cs" />
   </ItemGroup>
 </Project>

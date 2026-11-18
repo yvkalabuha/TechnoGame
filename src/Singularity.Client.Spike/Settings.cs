@@ -30,6 +30,8 @@ public sealed class SettingsData
     public bool PauseOnAlarm = true;
     public int TipDelay = 1;             // index of TipDelays
     public bool Animations = true;
+    public int Textures = 2;             // paper texture preset: 0 off, 1 weak, 2 normal (#360)
+    public bool RailWide;                // area rail: false narrow (icon + letter), true wide (with names)
 
     public SettingsData Clone()
     {
@@ -43,7 +45,7 @@ public sealed class SettingsData
 
     public void ResetVideo() { var d = new SettingsData(); Resolution = d.Resolution; WindowMode = d.WindowMode; Quality = d.Quality; Upscaler = d.Upscaler; UpscaleMode = d.UpscaleMode; Vsync = d.Vsync; FpsLimit = d.FpsLimit; UiScale = d.UiScale; }
     public void ResetSound() { var d = new SettingsData(); Volume = d.Volume; SoundInBackground = d.SoundInBackground; }
-    public void ResetGeneral() { var d = new SettingsData(); DateFormat = d.DateFormat; PauseOnAlarm = d.PauseOnAlarm; TipDelay = d.TipDelay; Animations = d.Animations; }
+    public void ResetGeneral() { var d = new SettingsData(); DateFormat = d.DateFormat; PauseOnAlarm = d.PauseOnAlarm; TipDelay = d.TipDelay; Animations = d.Animations; Textures = d.Textures; RailWide = d.RailWide; }
 }
 
 /// <summary>Current settings, `user://settings.cfg`, and their effect on the engine.</summary>
@@ -79,6 +81,8 @@ public static class Settings
         s.PauseOnAlarm = (bool)cf.GetValue("general", "pause_on_alarm", s.PauseOnAlarm);
         s.TipDelay = Math.Clamp((int)cf.GetValue("general", "tip_delay", s.TipDelay), 0, 2);
         s.Animations = (bool)cf.GetValue("general", "animations", s.Animations);
+        s.Textures = Math.Clamp((int)cf.GetValue("general", "textures", s.Textures), 0, 2);
+        s.RailWide = (bool)cf.GetValue("general", "rail_wide", s.RailWide);
         Current = s;
     }
 
@@ -93,6 +97,7 @@ public static class Settings
         cf.SetValue("sound", "in_background", s.SoundInBackground);
         cf.SetValue("general", "lang", s.Lang); cf.SetValue("general", "date_format", s.DateFormat); cf.SetValue("general", "pause_on_alarm", s.PauseOnAlarm);
         cf.SetValue("general", "tip_delay", s.TipDelay); cf.SetValue("general", "animations", s.Animations);
+        cf.SetValue("general", "textures", s.Textures); cf.SetValue("general", "rail_wide", s.RailWide);
         cf.Save(Path);
     }
 
@@ -119,6 +124,7 @@ public static class Settings
         vp.Scaling3DScale = s.Upscaler == 0 ? 1f : (float)SettingsLogic.RenderScale(s.UpscaleMode);
         ProjectSettings.SetSetting("gui/timers/tooltip_delay_sec", SettingsData.TipDelays[s.TipDelay]);
         Loc.IsoNumbers = s.DateFormat == 1;
+        PaperSurface.SetPreset(s.Textures);
         AudioServer.SetBusVolumeDb(0, (float)(s.Volume[0] < 0.1 ? -80 : 20 * Math.Log10(s.Volume[0] / 100)));
     }
 
