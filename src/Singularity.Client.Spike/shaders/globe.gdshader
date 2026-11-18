@@ -23,6 +23,16 @@ uniform sampler2D slice_lut : filter_nearest, repeat_disable, hint_default_black
 uniform float dim_others = 0.0;  // 0..1: pulls the tints of countries outside the slice towards paper
 uniform vec3 paper = vec3(0.949, 0.937, 0.902);
 
+// Light: one fixed directional key light (world space), the same direction the day/night terminator will use (#288).
+// Soft Lambert with wrap so the terminator is gentle, plenty of ambient so the night side stays readable.
+uniform float light_amount : hint_range(0.0, 1.0) = 1.0;
+uniform vec3 light_dir = vec3(0.7, 0.35, 0.6);   // towards the light, world space (lon ~49E, lat ~20N)
+uniform float ambient = 0.72;                      // shade factor on the night side
+uniform vec3 night_tint = vec3(0.86, 0.9, 1.0);    // cool tint of the shaded side (multiplies the fill)
+uniform float sea_spec = 0.2;
+uniform vec3 rim_color : source_color = vec3(0.55, 0.72, 0.95);
+uniform float rim_amount = 0.3;
+
 const vec2 SZ = vec2(4096.0, 2048.0);
 
 int id_at(vec2 uv) {
@@ -50,6 +60,23 @@ void fragment() {
 		float h = 1.0 - smoothstep(hatch_width * 0.5 - 0.5, hatch_width * 0.5 + 0.5, d);
 		col = mix(col, line_of(tint_of(hatch_owner_id)), h * 0.9);
 	}
+
+	// Lighting on the fills only: borders, hatching and selection are drawn after it and are not shaded.
+	vec3 n_w = normalize((INV_VIEW_MATRIX * vec4(normalize(NORMAL), 0.0)).xyz);
+	vec3 l_w = normalize(light_dir);
+	float ndl = dot(n_w, l_w);
+	float lit = smoothstep(-0.3, 0.55, ndl);                       // wrapped Lambert: a wide soft terminator
+	vec3 shade = mix(night_tint * ambient, vec3(1.03), lit);
+	col = mix(col, col * shade, light_amount);
+	if (id == 0) {                                                  // ocean only: a faint specular glint
+		vec3 l_v = normalize((VIEW_MATRIX * vec4(l_w, 0.0)).xyz);
+		vec3 hv = normalize(l_v + normalize(VIEW));
+		float sp = pow(max(dot(normalize(NORMAL), hv), 0.0), 48.0) * smoothstep(0.0, 0.3, ndl);
+		col += vec3(1.0, 0.98, 0.92) * sp * sea_spec * light_amount;
+	}
+	float ndv0 = clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0);
+	float rim = pow(1.0 - ndv0, 3.0) * rim_amount * light_amount * (0.45 + 0.55 * lit);
+	col = mix(col, rim_color, clamp(rim, 0.0, 0.6));
 
 	// graticule 30 deg
 	vec2 g = uv * vec2(12.0, 6.0);

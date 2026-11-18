@@ -46,7 +46,11 @@ public sealed partial class Main : Node3D
     Button _helpBtn;
     bool _debug;
     int[] _actorCountry;                 // actor index -> country id (0 = none)
-    bool _shots; int _shotStep; double _shotT; string _shotDir = "../../docs/ui/prototypes/client-v04";
+    int _player, _viewed;                // the player's own power (launch parameter --power ID, default USA) and the power on show
+    string _powerArg = "USA";
+    float _tgtYaw, _tgtPitch; bool _flying;   // smooth turn to a clicked country; the zoom is kept
+    int _clickCase = -1; double _clickT; int _clickActor; float _clickShift; string _clickLog = "";
+    bool _shots; int _shotStep; double _shotT; string _shotDir = "../../docs/ui/prototypes/client-v05a";
     string _shotLog = ""; int _shotCand = -1; long _shotTick;
 
     // bench
@@ -72,8 +76,11 @@ public sealed partial class Main : Node3D
         var langIdx = Array.IndexOf(args, "--lang");
         if (langIdx >= 0 && langIdx + 1 < args.Length) Loc.SetLang(args[langIdx + 1]);
         _debug = args.Contains("--debug");
+        var pwIdx = Array.IndexOf(args, "--power");
+        if (pwIdx >= 0 && pwIdx + 1 < args.Length) _powerArg = args[pwIdx + 1];
 
-        var env = new Godot.Environment { BackgroundMode = Godot.Environment.BGMode.Color, BackgroundColor = PaperColor };
+        var sky = new Sky { SkyMaterial = new ShaderMaterial { Shader = GD.Load<Shader>("res://shaders/stars.gdshader") } };
+        var env = new Godot.Environment { BackgroundMode = Godot.Environment.BGMode.Sky, Sky = sky, AmbientLightSource = Godot.Environment.AmbientSource.Color, AmbientLightColor = Colors.Black };
         AddChild(new WorldEnvironment { Environment = env });
 
         Mark("start");
@@ -150,9 +157,10 @@ public sealed partial class Main : Node3D
         _globeMat.SetShaderParameter("hatch_id", 0);   // the spike's demo hatching was a mock; the globe now shows the slice only
 
         var layer = _hud.GetParent<CanvasLayer>();
-        _signal = new SignalField(_host, ids);
+        _player = Math.Max(0, Array.IndexOf(ids, _powerArg));
+        _viewed = _player;
+        _signal = new SignalField(_host, _player);
         _signal.SetAnchorsPreset(Control.LayoutPreset.TopWide);
-        _signal.PowerChosen += i => ChoosePower(i, false);
         _signal.Debug = _debug;
         layer.AddChild(_signal);
 
@@ -167,14 +175,14 @@ public sealed partial class Main : Node3D
         layer.AddChild(_audioPop);
 
         // Inset sized by its content: anchored top-right, no bottom anchor.
-        _actorPanel = new ActorPanel(_host) { Visible = false, Debug = _debug };
+        _actorPanel = new ActorPanel(_host) { Visible = false, Debug = _debug, Player = _player };
         _actorPanel.AnchorLeft = 1; _actorPanel.AnchorRight = 1;
         _actorPanel.OffsetLeft = -540; _actorPanel.OffsetRight = -10; _actorPanel.OffsetTop = 56;
         _actorPanel.Closed += () => _actorPanel.Visible = false;
         _actorPanel.OpenTree += () => OpenTree(0);
         layer.AddChild(_actorPanel);
 
-        _tree = new TechTree(_host) { Visible = false };
+        _tree = new TechTree(_host) { Visible = false, Player = _player };
         _tree.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         _tree.OffsetTop = 44;
         _tree.Closed += () => _tree.Visible = false;
@@ -182,7 +190,7 @@ public sealed partial class Main : Node3D
         BuildHelp(layer);
         _loading.Visible = false;
         _tintsReady = true;
-        _host.WhyActor = 0;
+        ShowPower(_player, false);   // the panel opens for the player's own power
     }
 
     void BuildHelp(CanvasLayer layer)
@@ -198,21 +206,32 @@ public sealed partial class Main : Node3D
         layer.AddChild(_helpBtn);
     }
 
-    void OpenTree(int mode) { _audio?.Tick(); _tree.ShowFor(_signal.Actor, mode); }
+    void OpenTree(int mode) { _audio?.Tick(); _tree.ShowFor(_viewed, mode); }
 
-    void ChoosePower(int i, bool selectInSegment = true)
+    // Opens a power's panel (read-only unless it is the player's own) and, on a click, turns the globe to it. The zoom is not touched.
+    void ShowPower(int i, bool turn)
     {
-        if (selectInSegment) _signal.SelectPower(i);
+        _viewed = i;
         _host.WhyActor = i;
         _actorPanel.ShowActor(i);
         if (_tree.Visible) _tree.ShowFor(i, 0);
+        if (!turn) return;
         _audio?.Tick();
         if (_actorCountry[i] != 0)
         {
             _selected = _actorCountry[i]; ApplySelection();
             var ll = _data.Countries[_selected - 1].LabelPoint;
-            _yaw = ll.X; _pitch = Mathf.Clamp(ll.Y, -60, 60); _dist = 2.4f;
+            _tgtYaw = ll.X; _tgtPitch = Mathf.Clamp(ll.Y, -75f, 75f); _flying = true;
         }
+    }
+
+    void FlyStep(double dt)
+    {
+        if (!_flying) return;
+        float k = PlanisphereMath.EaseStep(dt, 7f);
+        _yaw += PlanisphereMath.ShortestTurn(_yaw, _tgtYaw) * k;
+        _pitch += (_tgtPitch - _pitch) * k;
+        if (Mathf.Abs(PlanisphereMath.ShortestTurn(_yaw, _tgtYaw)) < 0.02f && Mathf.Abs(_tgtPitch - _pitch) < 0.02f) { _yaw = _tgtYaw; _pitch = _tgtPitch; _flying = false; }
     }
 
     void Mark(string key)
@@ -388,7 +407,7 @@ public sealed partial class Main : Node3D
         {
             if (mb.ButtonIndex == MouseButton.Left)
             {
-                if (mb.Pressed) { _pressed = true; _dragged = false; _pressPos = mb.Position; }
+                if (mb.Pressed) { _pressed = true; _dragged = false; _pressPos = mb.Position; _flying = false; }
                 else { _pressed = false; if (!_dragged) Pick(mb.Position); }
             }
             else if (mb.Pressed && mb.ButtonIndex == MouseButton.WheelUp) _dist = Math.Max(1.02f, 1f + (_dist - 1f) * 0.88f);
@@ -430,7 +449,7 @@ public sealed partial class Main : Node3D
         if (_tintsReady && id != 0)
         {
             int a = Array.IndexOf(_actorCountry, id);
-            if (a >= 0) { ChoosePower(a); return; }
+            if (a >= 0) { ShowPower(a, true); return; }
         }
         _selected = id;
         ApplySelection();
@@ -453,8 +472,9 @@ public sealed partial class Main : Node3D
         if (_helpBtn != null) { _helpBtn.Visible = !_tree.Visible; if (_tree.Visible) _help.Visible = false; }
         if (_shots && _tintsReady) ShotStep(delta);
         if (_bench) BenchStep(delta);
+        FlyStep(delta);
         UpdateCamera();
-        if (_audio != null) { _audio.Actor = _signal.Actor; _audio.CameraMoved(new Vector2(_yaw + _pitch * 1.7f, _dist)); }
+        if (_audio != null) { _audio.Actor = _player; _audio.CameraMoved(new Vector2(_yaw + _pitch * 1.7f, _dist)); }
         AnimateObjects();
         if (_debug)
         {
@@ -492,10 +512,11 @@ public sealed partial class Main : Node3D
         }
         var s = _host.Snap;
         var vp = GetViewport().GetVisibleRect().Size;
+        if (ClickTest(dt, vp, Shot)) return;
         switch (_shotStep)
         {
             case 0:
-                _signal.SetSpeed(3); ChoosePower(0); _shotStep = 1; _shotT = 0; break;
+                _signal.SetSpeed(3); ShowPower(_player, false); _shotStep = 1; _shotT = 0; break;
             case 1 when _shotT >= 3:
                 // Pause, move 10 points from procurement to R (as the sliders would) and send: the command must stay pending.
                 _shotLog += $"before: date {s.Date} tick {s.Tick} shares_in_force {Fmt(s.SharesInForce[0])} tick_ms {s.LastTickMs:F2}\n";
@@ -511,7 +532,7 @@ public sealed partial class Main : Node3D
                 _shotLog += $"after: date {s.Date} tick {s.Tick} shares_in_force {Fmt(s.SharesInForce[0])} last {s.Last.Status} pending {s.Pending} tick_ms {s.LastTickMs:F2}\n";
                 Shot("globe_panel.png"); Shot("signal_field.png", new Rect2I(0, 0, (int)vp.X, 52));
                 // A refused command (shares do not sum to 1) lights the ОТКАЗ place.
-                _host.Submit(new Singularity.Core.Commands.SetBudgetShares(0, new Singularity.Core.Policy.BudgetShares(
+                _host.Submit(new Singularity.Core.Commands.SetBudgetShares(_player, new Singularity.Core.Policy.BudgetShares(
                     Singularity.Kernel.Fx6.FromRaw(1_000_000), Singularity.Kernel.Fx6.FromRaw(500_000), default, default, default)), "cmd.budget");
                 _shotStep = 4; _shotT = 0; break;
             case 4 when _shotT >= 1.0:
@@ -526,11 +547,18 @@ public sealed partial class Main : Node3D
                 {
                     bool has = s.WhyActor == _shotCand && s.Target != null;
                     if (_shotCand >= 0) _shotLog += $"why_not actor {_host.Layout.ActorIds[_shotCand]}: target {(s.Target is { } tt ? tt.Kind + " " + tt.Id : "none")}, links {s.Links.Count}\n";
-                    if (has || _shotCand >= _host.Layout.ActorIds.Length - 1) { ChoosePower(Math.Max(_shotCand, 0)); OpenTree(0); _shotStep = 7; _shotT = 0; }
+                    if (has || _shotCand >= _host.Layout.ActorIds.Length - 1) { ShowPower(Math.Max(_shotCand, 0), false); OpenTree(0); _shotStep = 7; _shotT = 0; }
                     else { _shotCand++; _host.WhyActor = _shotCand; _shotT = 0; }
                 }
                 break;
-            case 7 when _shotT >= 1.5: Shot("tech_tree_a.png"); _tree.SetMode(1); _shotStep = 8; _shotT = 0; break;
+            case 7 when _shotT >= 1.5: Shot("tech_tree_a.png"); _tree.ShotZoom(2.4f, _tree.FrontierRow >= 0 ? _tree.FrontierRow : _tree.GoalRow); _shotStep = 30; _shotT = 0; break;
+            case 30 when _shotT >= 0.8:
+                Shot("tree_zoom_nodes.png");
+                { int row = _tree.FrontierRow >= 0 ? _tree.FrontierRow : _tree.GoalRow; _tree.ShotZoom(5.5f, row); if (row >= 0) _tree.Select(row); }
+                _shotStep = 31; _shotT = 0; break;
+            case 31 when _shotT >= 1.0:
+                Shot("tree_zoom_icons_card.png"); _tree.ResetView(); _shotStep = 32; _shotT = 0; break;
+            case 32 when _shotT >= 0.8: _tree.SetMode(1); _shotStep = 8; _shotT = 0; break;
             case 8 when _shotT >= 1.0:
                 Shot("tech_tree_b.png");
                 _signal.SetLang("en"); _shotStep = 9; _shotT = 0; break;
@@ -542,7 +570,7 @@ public sealed partial class Main : Node3D
                 Shot("globe_panel_en.png"); Shot("signal_field_en.png", new Rect2I(0, 0, (int)vp.X, 52));
                 _signal.SetLang("ru");
                 // A valid command lifts the ОТКАЗ place: it shows the cleared state («снят»).
-                _host.Submit(new Singularity.Core.Commands.SetBudgetShares(0, new Singularity.Core.Policy.BudgetShares(
+                _host.Submit(new Singularity.Core.Commands.SetBudgetShares(_player, new Singularity.Core.Policy.BudgetShares(
                     Singularity.Kernel.Fx6.FromRaw(200_000), Singularity.Kernel.Fx6.FromRaw(200_000), Singularity.Kernel.Fx6.FromRaw(200_000),
                     Singularity.Kernel.Fx6.FromRaw(200_000), Singularity.Kernel.Fx6.FromRaw(200_000))), "cmd.budget");
                 _shotStep = 12; _shotT = 0; break;
@@ -574,6 +602,40 @@ public sealed partial class Main : Node3D
                 }
                 break;
         }
+    }
+
+    // Click test: for the USA, the USSR and France a click on the country, before and after rotating the globe. After the turn the country must be
+    // at the viewport centre and the zoom must be unchanged.
+    int _clickPhase, _lightShot; Vector2 _clickPoint; float _clickDist;
+    bool ClickTest(double dt, Vector2 vp, Action<string, Rect2I?> shot)
+    {
+        if (_clickCase >= 6) return false;
+        if (_clickCase < 0) { _clickCase = 0; _clickT = 0; _clickPhase = 0; _globeMat.SetShaderParameter("light_amount", 0f); }
+        _clickT += dt;
+        var ids = _host.Layout.ActorIds.ToArray();
+        string[] pick = { "USA", "SUN", "FRA" };
+        int a = Array.IndexOf(ids, pick[_clickCase / 2]);
+        bool odd = _clickCase % 2 == 1;
+        var c = _data.Countries[_actorCountry[a] - 1];
+        var sph = GlobeData.ToSphere(c.LabelPoint.X, c.LabelPoint.Y);
+        if (_clickPhase == 0)
+        {
+            _yaw = c.LabelPoint.X + (odd ? 28 : -25); _pitch = Mathf.Clamp(c.LabelPoint.Y + (odd ? -14 : 12), -80, 80); _dist = 2.6f; _flying = false; UpdateCamera();
+            if (_clickT < 0.4) return true;
+            if (_clickCase == 0 && _lightShot == 0) { shot("globe_unlit.png", null); _globeMat.SetShaderParameter("light_amount", 1f); _lightShot = 1; _clickT = 0; return true; }
+            if (_clickCase == 0 && _lightShot == 1) { if (_clickT < 0.3) return true; shot("globe_lit.png", null); _lightShot = 2; }
+            _clickPoint = _cam.UnprojectPosition(sph); _clickDist = _dist;
+            Pick(_clickPoint); _clickPhase = 1; _clickT = 0;
+            return true;
+        }
+        if (_clickT < 1.8) return true;
+        float err = _cam.UnprojectPosition(sph).DistanceTo(vp * 0.5f);
+        _clickLog += $"click {pick[_clickCase / 2]} {(odd ? "after" : "before")} rotation: clicked at ({_clickPoint.X:F0},{_clickPoint.Y:F0}), panel {_viewed == a}, " +
+                     $"centre error {err:F1} px, zoom {_clickDist:F2} -> {_dist:F2}, selected region {_selected == _actorCountry[a]}\n";
+        if (!odd) shot($"map_click_{pick[_clickCase / 2]}.png", null);
+        _clickCase++; _clickPhase = 0; _clickT = 0;
+        if (_clickCase >= 6) { _shotLog += _clickLog; _yaw = 10; _pitch = 35; _dist = 3.0f; _flying = false; ShowPower(_player, false); }
+        return true;
     }
 
     static string Fmt(Singularity.Core.Policy.BudgetShares? b) => b is { } x ? $"{x.Research.ToDouble():F2}/{x.Capability.ToDouble():F2}/{x.Effort.ToDouble():F2}/{x.Procurement.ToDouble():F2}/{x.Quality.ToDouble():F2}" : "none";

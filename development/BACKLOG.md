@@ -90,7 +90,7 @@
 | [TASK-0074](../development/tasks/TASK-0074-localization-implementation-per-adr-0018-singulari.md) | DONE | Localization implementation per ADR-0018 (Singularity.Localization, ftl, anchor move) | MS-M0 |
 | [TASK-0075](../development/tasks/TASK-0075-map-builder-t2-tools-map-on-nts-europe-first-1945-.md) | APPROVED | Map builder T2: tools/map on NTS, Europe first, 1945 cuts, coverage simplification check | MS-M0 |
 | [TASK-0076](../development/tasks/TASK-0076-localization-fixes-after-codex-review-of-task-0074.md) | DONE | Localization fixes after Codex review of TASK-0074 | MS-M0 |
-| [TASK-0077](../development/tasks/TASK-0077-client-v0-5a-planisphere-zoom-and-node-icons-node-.md) | APPROVED | Client v0.5a: planisphere zoom and node icons, node card with schematic and effects, map click fix, starry sky | MS-M0 |
+| [TASK-0077](../development/tasks/TASK-0077-client-v0-5a-planisphere-zoom-and-node-icons-node-.md) | REVIEW | Client v0.5a: planisphere zoom and node icons, node card with schematic and effects, map click fix, starry sky | MS-M0 |
 
 ## Гипотезы
 

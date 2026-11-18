@@ -1,0 +1,16 @@
+click USA before rotation: clicked at (1079,580), panel True, centre error 0.0 px, zoom 2.60 -> 2.60, selected region True
+click USA after rotation: clicked at (498,216), panel True, centre error 0.0 px, zoom 2.60 -> 2.60, selected region True
+click SUN before rotation: clicked at (961,597), panel True, centre error 0.0 px, zoom 2.60 -> 2.60, selected region True
+click SUN after rotation: clicked at (624,209), panel True, centre error 0.0 px, zoom 2.60 -> 2.60, selected region True
+click FRA before rotation: clicked at (1049,582), panel True, centre error 0.0 px, zoom 2.60 -> 2.60, selected region True
+click FRA after rotation: clicked at (530,210), panel True, centre error 0.0 px, zoom 2.60 -> 2.60, selected region True
+before: date 1945-11-30 tick 90 shares_in_force 0.28/0.15/0.10/0.42/0.05 tick_ms 0.01
+paused: tick 90 (was 90), pending 1, last Pending
+after: date 1946-02-25 tick 177 shares_in_force 0.45/0.11/0.07/0.34/0.03 last Applied pending 0 tick_ms 0.00
+refusal: last Rejected rejected_flag True reason BadShares
+why_not actor USA: target none, links 0
+why_not actor GBR: target none, links 0
+why_not actor SUN: target Requirement 1, links 2
+cleared: last Applied rejected_flag False
+audio demo: 3442688 bytes of PCM
+final: date 1947-04-24 tick 600

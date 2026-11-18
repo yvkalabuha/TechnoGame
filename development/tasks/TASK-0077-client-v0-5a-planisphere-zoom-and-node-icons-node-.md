@@ -1,7 +1,7 @@
 ---
 id: TASK-0077
 title: "Client v0.5a: planisphere zoom and node icons, node card with schematic and effects, map click fix, starry sky"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer
@@ -42,3 +42,18 @@ Owner feedback #318 for the client prototype (src/Singularity.Client.Spike).
 ## Acceptance
 - Zoom and pan are smooth; the node card shows all four blocks; the country click works for at least the USA, the USSR and France, before and after rotation; the sky is visible.
 - The main solution's full `dotnet test` is green.
+
+## Результат
+**Сделано** (клиент `src/Singularity.Client.Spike`; Core, Session, Kernel не менялись).
+1. **Планисфера:** колесо — масштаб под курсором (плавный, 1–9×), перетаскивание — сдвиг, кнопка «Сбросить вид». Область рисунка обрезается по своему прямоугольнику. Три уровня детализации (`PlanisphereMath.LodOf`): обзор (<1,6×) — росписи клеток «слой × дисциплина» со счётом «известно/всего»; узлы (1,6–3,4×) — отдельные узлы цветом дисциплины; значки (≥3,4×) — пластина по типу узла (круг/квадрат/ромб) и глиф по типу (FND, PRN, ENG, CMP, PRC, APP), подписи всех узлов где есть место. Цвета — чернила палитры C (§17.3): Аэро — teal, Силовые — plum, Металлы — slate, Химия — olive, Механика — sand. Маршрут остаётся синим, корень «почему не» — красным.
+2. **Карточка узла** (вкладка «Узел» справа): схема из `docs/ui/assets/node-schematics/` по правилу README (файл узла по id, иначе `{type}-{discipline}.svg`, `Image.LoadSvgFromString`; без файла — рамка-заглушка); проверено на снимке (токарный станок для PRC/mech), блоки «Что затрагивает» (teal; слой, кластер, дисциплина: реальные данные), «Что повышает» (violet; выход процесса и требуемая мощность — реальные, **прирост параметра — «макет»**), «Что открывает дальше» (olive; зависимые узлы по `requires`, с состоянием).
+3. **Баг карты:** формулы lon/lat и камеры согласованы; причина — `ChoosePower` жёстко ставил `_dist = 2.4` (зум прыгал) и мгновенно переставлял камеру. Теперь камера плавно летит по кратчайшему пути, зум не меняется. Проверка кликом (shots, `run-log.txt`): США, СССР, Франция, до и после поворота — ошибка центрирования 0,0 px, зум 2,60 → 2,60, регион выбран.
+4. **Небо:** процедурный звёздный шейдер `shaders/stars.gdshader` (детерминированный хэш по направлению, без времени); лимб глобуса — тонкая светлая линия. Бумажный фон остался только на панелях.
+5. **Свет глобуса** (#288, дополнение): `globe.gdshader` — один фиксированный направленный свет (`light_dir`, тот же вектор для будущего терминатора), мягкий Ламберт с широким терминатором, `ambient 0,72` (ночная сторона читается), лёгкая холодная тень, блик только на океане, слабая дымка на лимбе. Свет применяется к заливкам; границы, штриховка, выделение, подписи не затеняются. Снимки до/после: `globe_unlit.png` / `globe_lit.png`. Внешнего ореола за лимбом нет (нужна вторая сфера; не делалось).
+6. **Одна держава игрока** (дополнение): список держав убран из сигнального поля. Держава игрока — параметр запуска `--power ID` (по умолчанию USA; позже уйдёт в меню «Новая игра»). Панель держателя открывается для неё при старте; клик по другой стране открывает панель только для чтения: заголовок «ЧУЖАЯ ДЕРЖАВА», без приказов, ползунков, кнопок линий; фокус освоения в дереве тоже только для своей. Сигналы считаются только по державе игрока.
+
+**Файлы:** `TechTree.cs`, `Main.cs`, `SignalField.cs`, `ActorPanel.cs`, `Overlay.cs`, `Ui.cs`, `PlanisphereMath.cs` (новый, без Godot), `shaders/globe.gdshader`, `shaders/stars.gdshader` (новый), `locale/ui.csv`; тесты `tests/Singularity.Client.Audio.Tests/PlanisphereMathTests.cs` (+ ссылка в csproj); снимки `docs/ui/prototypes/client-v05a/`.
+
+**Недостающие API (Core/Session):** (а) `NodeEffects(node) -> (параметр, прирост)` — какой параметр и на сколько повышает узел; (б) прогресс и ETA по узлу (без изменений с прежнего). Выбор державы игрока в Session пока не нужен (только клиент).
+
+**Проверка:** `dotnet build src/Singularity.Client.Spike`; `./run-globe-spike.sh --shots` (сборка Godot + снимки + проверка кликов); полный `dotnet test` главного решения.

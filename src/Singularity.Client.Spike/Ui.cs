@@ -14,6 +14,13 @@ public static class Ui
         Ink2 = new("55575A"), Ink3 = new("6E6C66"), Rule = new("BCB6A8"), Normal = new("86837C"),
         Alarm = new("C42A1C"), Warn = new("E89A1A"), Command = new("2347A8"), Seq2 = new("C2CDD3");
 
+    // Palette C «Акварель» (UI_DESIGN_SYSTEM §17.3): the six inks. Line = frames, nodes, bars; wash = fill; text = dark step for text.
+    // Disciplines of the current tree (Aero, Prop, Metal, Chem, Mech) take teal, plum, slate, olive, sand; violet is kept for the «parameter» block.
+    public static readonly Color[] DiscLine = { new("168A92"), new("A03E82"), new("4A7088"), new("4F8A1E"), new("8F7A2E") };
+    public static readonly Color[] DiscWash = { new("BFE6E5"), new("F0C9E0"), new("C3D8EA"), new("CFE6AA"), new("EAD9A3") };
+    public static readonly Color[] DiscText = { new("1F5F63"), new("75335F"), new("3F5666"), new("4A6020"), new("6B5B22") };
+    public static readonly Color VioletLine = new("7A4AA8"), VioletWash = new("D8CCEE"), VioletText = new("53407A");
+
     public static Font FontOf(FontKind k) => k switch { FontKind.Mono => Fonts.Mono, FontKind.Draft => Fonts.DraftBold, FontKind.Map => Fonts.Map, _ => Fonts.Text };
 
     public static StyleBoxFlat Box(Color bg, Color? border = null, int bw = 1, float margin = 6)

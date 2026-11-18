@@ -97,6 +97,29 @@ tree.path,Map ▸ Knowledge,Карта ▸ Знание
 tree.a,A · Planisphere,A · Планисфера
 tree.b,B · Goal statement,B · Ведомость цели
 tree.close,Close ×,Закрыть ×
+panel.foreign,◆ FOREIGN POWER · read only,◆ ЧУЖАЯ ДЕРЖАВА · только просмотр
+tree.reset,Reset view,Сбросить вид
+card.noschem,schematic: placeholder,схема: заглушка
+card.affects,AFFECTS,ЧТО ЗАТРАГИВАЕТ
+card.layer,"Layer: {0} (ring {1})","Слой: {0} (кольцо {1})"
+card.system,"System: {0} · discipline {1}","Система: {0} · дисциплина {1}"
+card.raises,WHAT IT RAISES,ЧТО ПОВЫШАЕТ
+card.param.yield,Process yield now: {0},Выход процесса сейчас: {0}
+card.param.app,Opens the product of generation G{0},Открывает изделие поколения G{0}
+card.param.none,Knowledge step: it raises no parameter by itself; it unlocks what depends on it,Ступень знания: сама параметр не повышает, открывает зависимые узлы
+card.param.cap,"Needs capability: precision {0}, purity {1}, quality control {2} (tier {3})","Требует мощность: точность {0}, чистота {1}, контроль качества {2} (ранг {3})"
+card.param.api,"gain per parameter: no data in Core, needs API NodeEffects(node) -> (parameter, delta)","прирост параметра: данных нет в ядре, нужен API NodeEffects(node) -> (параметр, прирост)"
+card.unlocks,UNLOCKS NEXT,ЧТО ОТКРЫВАЕТ ДАЛЬШЕ
+card.more,and {0} more,и ещё {0}
+card.end,A terminal node: nothing depends on it yet,Конечный узел: от него пока ничего не зависит
+cluster.0,metals,металлургия
+cluster.1,chemistry,химия
+cluster.2,mechanics,механика
+cluster.3,electronics,электроника
+cluster.4,aerospace,авиакосмос
+cluster.5,nuclear,ядерная техника
+cluster.6,energy,энергетика
+cluster.7,base industry,базовая промышленность
 tree.stamp,KNOWLEDGE TREE,ДЕРЕВО ЗНАНИЙ
 tree.sheet,sheet {0},лист {0}
 level.0,pause,пауза

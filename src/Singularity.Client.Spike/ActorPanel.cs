@@ -39,6 +39,11 @@ public sealed partial class ActorPanel : PanelContainer
     public event Action Closed;
 
     public int Actor => _actor;
+    /// <summary>The player's own power: only it has order controls; any other power opens read-only.</summary>
+    public int Player { get; set; }
+    bool Foreign => _actor != Player;
+    readonly Label _foreign = Ui.Lbl("panel.foreign", 14, Ui.Warn.Darkened(0.45f), FontKind.Draft);
+    readonly List<Control> _orderControls = new();
     bool _debug;
     /// <summary>F3 switches Session text on and off: the panel is rebuilt at once.</summary>
     public bool Debug { get => _debug; set { if (_debug == value) return; _debug = value; Invalidate(); _dirty = true; } }
@@ -60,6 +65,7 @@ public sealed partial class ActorPanel : PanelContainer
         head.AddChild(Ui.Btn("ui.tree", () => OpenTree?.Invoke()));
         head.AddChild(Ui.Btn("×", () => Closed?.Invoke()));
         _root.AddChild(head);
+        _foreign.Visible = false; _root.AddChild(_foreign);
 
         Section("panel.budget");
         _root.AddChild(_budget);
@@ -86,10 +92,10 @@ public sealed partial class ActorPanel : PanelContainer
         ar.AddThemeConstantOverride("separation", 10);
         _apply = Ui.Btn("ui.apply", Apply);
         ar.AddChild(_apply); ar.AddChild(_sum);
-        _root.AddChild(ar);
+        _root.AddChild(ar); _orderControls.Add(ar);
         var rr = new HBoxContainer(); rr.AddThemeConstantOverride("separation", 6);
         rr.AddChild(_resultMark); rr.AddChild(_result);
-        _root.AddChild(rr);
+        _root.AddChild(rr); _orderControls.Add(rr);
 
         Section("panel.designs");
         _root.AddChild(_designs);
@@ -185,6 +191,9 @@ public sealed partial class ActorPanel : PanelContainer
         var a = s.View.Actors[_actor];
         string id = _host.Layout.ActorIds[_actor];
         _title.Text = Names.Actor(id);
+        _foreign.Visible = Foreign;
+        foreach (var c in _orderControls) c.Visible = !Foreign;
+        foreach (var sl in _sl) sl.Editable = !Foreign;
         _title.TooltipText = id;
         _sub.Text = Loc.T("panel.sub", Loc.T("profile." + (int)a.Profile), a.FieldedGen, s.View.Month);
         var inA = s.View.Inputs?.Actors.FirstOrDefault(x => x.Actor == _actor);
@@ -241,13 +250,13 @@ public sealed partial class ActorPanel : PanelContainer
         {
             var r = new HBoxContainer();
             r.AddChild(Ui.Wrap(text));
-            if (action == "close") r.AddChild(Ui.Btn("ui.closeline", () => _host.Submit(new CloseLine(_actor, design), "cmd.close", design)));
-            else if (action == "cancel") r.AddChild(Ui.Btn("ui.cancel", () => _host.Submit(new CancelDesign(_actor, design), "cmd.cancel", design)));
+            if (!Foreign && action == "close") r.AddChild(Ui.Btn("ui.closeline", () => _host.Submit(new CloseLine(_actor, design), "cmd.close", design)));
+            else if (!Foreign && action == "cancel") r.AddChild(Ui.Btn("ui.cancel", () => _host.Submit(new CancelDesign(_actor, design), "cmd.cancel", design)));
             _designs.AddChild(r);
         }
         var note = new HBoxContainer(); note.AddThemeConstantOverride("separation", 8);
         note.AddChild(Ui.Mock()); note.AddChild(Ui.Wrap(rows.Count == 0 ? "design.none" : "design.nocreate", 14, Ui.Ink3));
-        _designs.AddChild(note);
+        if (!Foreign) _designs.AddChild(note);
     }
 
     void FillLicence(ActorView a)

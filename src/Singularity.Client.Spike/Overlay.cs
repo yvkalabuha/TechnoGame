@@ -11,6 +11,7 @@ public sealed partial class Overlay : Control
 
     static readonly Color Ink = new("1D1E20");
     static readonly Color Paper = new("F2EFE6");
+    static readonly Color Limb = new Color("A9B8CC", 0.7f);
 
     readonly List<LabelState> _labels = new();
     Camera3D _cam;
@@ -73,12 +74,12 @@ public sealed partial class Overlay : Control
         if (_dist < 1.01f) return;   // camera distance not known before the first frame
         var c = VpSize * 0.5f;
         float r = GlobeRadiusPx(_dist);
-        DrawArc(c, r, 0, Mathf.Tau, 180, Ink, 2f, true);            // solid limb line, no glow
+        DrawArc(c, r, 0, Mathf.Tau, 180, Limb, 1.5f, true);         // thin pale limb line against the dark sky, no glow
         for (int i = 0; i < 72; i++)                                  // rim: 5-degree ticks, 30-degree long ticks
         {
             float a = i * Mathf.Tau / 72f, len = i % 6 == 0 ? 12f : 5f;
             var d = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
-            DrawLine(c + d * (r + 5f), c + d * (r + 5f + len), Ink, 1f, true);
+            DrawLine(c + d * (r + 5f), c + d * (r + 5f + len), Limb, 1f, true);
         }
     }
 

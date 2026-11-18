@@ -5,7 +5,7 @@ using Godot;
 
 namespace Singularity.Client.Spike;
 
-/// <summary>Top bar (design system §7.5). Left: controls (date, tempo, power, language). Right, after a vertical rule: the six annunciator
+/// <summary>Top bar (design system §7.5). Left: controls (date, tempo; the player plays one power, others open by a click on the globe). Right, after a vertical rule: the six annunciator
 /// places and the simulation-failure place. Place states: calm; new (plate + double frame, until a click acknowledges it); acknowledged (calm frame, only a filled ■);
 /// cleared (calm frame, hollow □ for a few seconds, then calm again).</summary>
 public sealed partial class SignalField : PanelContainer
@@ -35,28 +35,26 @@ public sealed partial class SignalField : PanelContainer
     readonly SimHost _host;
     readonly Label _date = Ui.Lbl("—", 18, null, FontKind.Mono);
     readonly Label _perf = Ui.Lbl("", 14, Ui.Ink3, FontKind.Mono);
-    readonly Segment _speed, _power, _lang;
+    readonly Segment _speed, _lang;
     readonly Place[] _places;
     readonly Place _fail;
-    int _actor;
+    readonly int _actor;   // signals and orders belong to the player's own power only
     double _alloyDeficit; bool _alloyKnown;
     long _seq = -1; long _rejects, _lastCmdSeq;
-    public event Action<int> PowerChosen;
     /// <summary>A place got a signal (true) or lost it (false); the key is the place key (sig.alloy, ...). Sounds follow this event.</summary>
     public event Action<string, bool> SignalChanged;
     public event Action AudioPressed;
 
     public int Actor => _actor;
     public bool Debug { set => _perf.Visible = value; }
-    public void SelectPower(int i) { _actor = i; _power.Select(i, false); }
     public void SetSpeed(int s) { _speed.Select(s, false); _host.Speed = s; }
     /// <summary>Screenshot run: acknowledges every new signal as a click would.</summary>
     public void AckAll() { foreach (var p in _places.Append(_fail)) if (p.State == PState.New) { p.State = PState.Acked; Paint(p); } }
     public void SetLang(string lang) => _lang.Select(Array.IndexOf(Loc.Languages, lang), true);
 
-    public SignalField(SimHost host, string[] actors)
+    public SignalField(SimHost host, int player)
     {
-        _host = host;
+        _host = host; _actor = player;
         CustomMinimumSize = new Vector2(0, 46);
         AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, Ui.Ink, 1, 8));
         var row = new HBoxContainer();
@@ -71,11 +69,6 @@ public sealed partial class SignalField : PanelContainer
         _speed.TooltipText = "tip.tempo";
         _speed.Changed += i => _host.Speed = i;
         row.AddChild(_speed);
-
-        _power = new Segment(actors.Select(a => "actor.short." + a).ToArray(), 0);
-        _power.TooltipText = "tip.power";
-        _power.Changed += i => { _actor = i; PowerChosen?.Invoke(i); };
-        row.AddChild(_power);
 
         row.AddChild(Ui.VRule());
         _places = new[]
