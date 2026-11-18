@@ -23,7 +23,6 @@
 - TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
 - TASK-0088 [APPROVED] Client v0.5c: navigation rail, 7 areas, speed scale, textures, icons and area pictures (developer)
 - TASK-0091 [APPROVED] Map builder T3: world beyond Europe, regions split by event lines (#350), territories.yaml (developer)
-- TASK-0092 [APPROVED] DeterminismRules: string hashing, culture comparisons, threading APIs, Parallel.For allowlist, Lab ToyFunnel check (developer)
 <!-- registry:active:end -->
 
 ## Блокеры

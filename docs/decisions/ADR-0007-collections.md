@@ -80,3 +80,4 @@ approval_ref:
 | 4 | Ссылка на ADR-0017 п. 16 для порядка merge | DeepSeek: п. 16 — исключение `lock`, не порядок | Порядок merge — ADR-0006, ADR-0017 п. 11, ADR-0020 п. 2; п. 16 — только про `lock` (внесено в `csharp-core.md`) |
 | 5 | ToyFunnel в Lab | critic: выпал из проверки | `Check` для его пространства имён (п. 1) |
 | 6 | BannedApiAnalyzers | advocate: добавить | Необязательное дополнение (B′), не часть решения |
+| 7 | Синтезированный `GetHashCode` у record (вызывает `EqualityComparer<string>.Default.GetHashCode`) | TASK-0092: десятки record в Core/Session | Исключён по `CompilerGeneratedAttribute`: значение идёт только в поиск, обход хеш-коллекций запрещён отдельно; ручной `GetHashCode` со строкой ловится (Orchestrator, light, 2026-11-18) |
