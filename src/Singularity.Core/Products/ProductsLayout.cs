@@ -23,7 +23,7 @@ public enum DesignStage
     InService = 4,
 
     /// <summary>
-    /// «снят»: line closed and every cohort written off. Final: no command reopens the slot, and slots are never reused.
+    /// «снят»: line closed and every cohort written off. Final for the design: no command reopens it; the slot is free and a new design retakes it with generation + 1 (ADR-0005 p. 3).
     /// </summary>
     Withdrawn = 5,
 }
@@ -32,7 +32,7 @@ public enum DesignStage
 /// Immutable shape of the product layer for one product class (spec §1.4, §3.3; contract §4.4, §4.6). Everything
 /// is resolved from data once: slots and alternatives with their <c>prc_set</c> as process numbers and
 /// <c>requires_nodes</c> as node numbers, process costs, airframe classes, generations. A design is a slot index
-/// <c>i &lt; max_designs</c> per actor (contract §3.1, G4-8): the lowest free slot, never reused; <c>design_id = i</c> and
+/// <c>i &lt; max_designs</c> per actor (contract §3.1, G4-8): the lowest free slot, reused with a generation counter (ADR-0005 p. 3); <c>design_id = i</c> and
 /// its production line has the same index. Requester ids (contract §4.6, one id space): skilled requests of line l for
 /// cluster c are <c>l·C + c</c> (spec §3.5 A26), then the bureaus, then one defect-fix team per design.
 /// </summary>

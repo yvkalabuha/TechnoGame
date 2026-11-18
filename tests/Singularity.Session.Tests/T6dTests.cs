@@ -194,7 +194,7 @@ public class T6dTests
     ];
 
     private static bool Existed(string name) =>
-        !name.StartsWith("pol.lic.", StringComparison.Ordinal) && !name.StartsWith("pol.dis.", StringComparison.Ordinal) && name != "run.t6d" && name != "run.scenario";   // run.scenario: the scenario hash changed with «exposure to data» (TASK-0033)
+        !ColumnProjection.IsSlotGenerationColumn(name) && !name.StartsWith("pol.lic.", StringComparison.Ordinal) && !name.StartsWith("pol.dis.", StringComparison.Ordinal) && name != "run.t6d" && name != "run.scenario";   // run.scenario: the scenario hash changed with «exposure to data» (TASK-0033)
 
     [Fact]
     public void T6dOff_GivesTheTrajectoryOfTheBuildBeforeT6d_ByProjectionOnTheOldColumns()
@@ -205,6 +205,8 @@ public class T6dTests
             foreach (var (_, month, hash) in Before.Where(b => b.Seed == seed))
             {
                 s.StepThroughMonth(month);
+                if (ColumnProjection.SlotReused(s))
+                    break;   // the build before T6d never retook a slot (TASK-0099)
                 Assert.True(hash == ColumnProjection.Hash(s, Existed), $"T6D_OFF seed {seed} month {month}: the old columns differ from the build before T6d");
             }
         }

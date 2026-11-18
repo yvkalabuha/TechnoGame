@@ -64,7 +64,7 @@ public sealed record DesignView(
     int Design, DesignStage Stage, int PlatformGen, int Gen, int Parent, int StageOMonth,
     bool BuiltAny, bool Cancelled, Fx6 Rate, Fx6 UnitCost, Fx6 UnitCostFloor,
     Fx6 InService, Fx6 Readiness, Fx6 Perf, LineBind Bind, bool AiLine,
-    ImmutableArray<int> PrcSet);
+    ImmutableArray<int> PrcSet, int Generation = 0);
 
 public readonly record struct BureauView(int Bureau, int Design, long Granted, long Required);
 public readonly record struct QualityView(bool Active, int Start, int TriggerCount, int TrainingTarget);

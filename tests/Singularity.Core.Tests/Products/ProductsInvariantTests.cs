@@ -115,6 +115,7 @@ public class ProductsInvariantTests
     {
         private readonly ProductsLayout _l = h.Layout;
         private DesignStage[,] _stage = new DesignStage[0, 0];
+        private int[,] _gen = new int[0, 0];
         private Fx6[,,] _cohort = new Fx6[0, 0, 0];
         private Fx6[,] _found = new Fx6[0, 0];
 
@@ -126,6 +127,7 @@ public class ProductsInvariantTests
             ProductsSystem p = h.Products;
             int rows = h.Table.RowCount;
             _stage = new DesignStage[rows, _l.Designs];
+            _gen = new int[rows, _l.Designs];
             _cohort = new Fx6[rows, _l.Designs, _l.Years];
             _found = new Fx6[rows, _l.Designs];
             for (int a = 0; a < rows; a++)
@@ -133,6 +135,7 @@ public class ProductsInvariantTests
                 for (int d = 0; d < _l.Designs; d++)
                 {
                     _stage[a, d] = p.Stage(a, d);
+                    _gen[a, d] = p.Generation(a, d);
                     _found[a, d] = p.DefectsFound(a, d);
                     for (int y = 0; y < _l.Years; y++)
                         _cohort[a, d, y] = p.Cohort(a, d, _l.StartYear + y);
@@ -161,9 +164,18 @@ public class ProductsInvariantTests
                 {
                     string ad = $"{at}, design {d}";
                     DesignStage prev = _stage[a, d], cur = p.Stage(a, d);
+                    // A retaken slot is a new design (ADR-0005 p. 3): the per-design monotone checks restart from an empty slot.
+                    if (p.Generation(a, d) != _gen[a, d])
+                    {
+                        Assert.True(prev is DesignStage.None or DesignStage.Withdrawn, $"{ad}: a live slot was retaken");
+                        prev = DesignStage.None;
+                        _found[a, d] = Fx6.Zero;
+                        for (int y = 0; y < _l.Years; y++)
+                            _cohort[a, d, y] = Fx6.Zero;
+                    }
                     Assert.True(Rank(cur) >= Rank(prev), $"{ad}: stage went back {prev} → {cur}");
                     if (prev == DesignStage.Withdrawn)
-                        Assert.Equal(DesignStage.Withdrawn, cur); // «снят» is final in the full model
+                        Assert.Equal(DesignStage.Withdrawn, cur); // «снят» of one generation is final; only a retaken slot starts over
                     if (prev == DesignStage.None && cur != DesignStage.None)
                         Orders++;
                     if (prev == DesignStage.Project && cur != DesignStage.Project)

@@ -9,7 +9,7 @@ namespace Singularity.Session.Tests;
 public class CalibrationParamsTests
 {
     // Hash of seed 1 after month 149 under the default config (as in SeriesSwitchTests).
-    private const string MainSeed1Month149 = "b3266453fb2ca5070f1fff85059d31ec4ce83fdad32973bf430cb601b04d3759";
+    private const string MainSeed1Month149 = "6e49185f4bf45c314f3b5981aa9e5b9ea21bd498d9381e591289970411b68e75";
 
     private static SliceRunConfig Base(ulong seed = 1, int threads = 2) => new() { Seed = seed, Threads = threads };
 

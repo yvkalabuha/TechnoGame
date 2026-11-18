@@ -30,7 +30,7 @@ public sealed class ProductsInvariantException(long month, int actor, string mes
 /// <summary>
 /// Product layer of the jet slice (contract v2.4 §3.1, §4.4, §4.6, §5; spec §1.4, §3.3, §3.5 A32–A38, §5.5, §6.1): a monthly
 /// system on a table with one row per actor (one site per actor, site row = actor row, spec §3.5 A27). All state is in Table
-/// columns (ADR-0013 §4): per design slot <c>i &lt; max_designs</c> (the lowest free slot, never reused) its stage П/О/С/В (#67),
+/// columns (ADR-0013 §4): per design slot <c>i &lt; max_designs</c> (the lowest free slot, reused with generation + 1) its stage П/О/С/В (#67),
 /// alternatives, platform generation <c>g_p</c>, parent, design work left, defects, cumulative test and fleet hours,
 /// <c>line_E</c>, series gate (<c>d_gate</c>, <c>stage_o_month</c>, <c>gate_opened</c>, <c>series_forced</c>), accident and
 /// retrofit state (<c>loss_acc</c>, <c>retro_pool</c>), last rate and unit cost; per bureau <c>bureau_exp</c> and its design; per
@@ -64,7 +64,7 @@ public sealed partial class ProductsSystem : ITickSystem
     // bureau_req[af_class] (§3.3, A34): computed once at construction, never in a tick.
     private readonly int[] _bureauReq;
 
-    private readonly IntColumn[] _stage, _bureauOf, _alt, _bureauDesign, _gp, _parent, _stageO, _gateOpened, _forced, _lpSlot;
+    private readonly IntColumn[] _stage, _bureauOf, _alt, _bureauDesign, _gp, _parent, _stageO, _gateOpened, _forced, _lpSlot, _gen, _parentGen, _lpGen;
     private readonly IntColumn[] _cancelled, _idleC, _built, _quotaBase, _soldY, _lineBind;
     private readonly LongColumn[] _work, _d0, _hidden, _open, _found, _hours, _lineE, _rate, _cost, _exp, _cohort;
     private readonly LongColumn[] _qMask;   // q[design, y] as a bit per cohort year (contract r13a §3.1, §9.1)
@@ -130,6 +130,8 @@ public sealed partial class ProductsSystem : ITickSystem
             _bureauReq[k] = parameters.BureauReq(layout.DesignScale[k]);
 
         _stage = new IntColumn[_d];
+        _gen = new IntColumn[_d];
+        _parentGen = new IntColumn[_d];
         _bureauOf = new IntColumn[_d];
         _gp = new IntColumn[_d];
         _parent = new IntColumn[_d];
@@ -168,6 +170,8 @@ public sealed partial class ProductsSystem : ITickSystem
         {
             string n = $"prd.d{d}";
             _stage[d] = table.AddInt($"{n}.stage");
+            _gen[d] = table.AddInt($"{n}.generation");
+            _parentGen[d] = table.AddInt($"{n}.parentGen");
             _bureauOf[d] = table.AddInt($"{n}.bureau");
             _gp[d] = table.AddInt($"{n}.gp");
             _parent[d] = table.AddInt($"{n}.parent");
@@ -211,8 +215,12 @@ public sealed partial class ProductsSystem : ITickSystem
             _bureauDesign[b] = table.AddInt($"prd.b{b}.design");
         }
         _lpSlot = new IntColumn[layout.Generations];
+        _lpGen = new IntColumn[layout.Generations];
         for (int g = 0; g < layout.Generations; g++)
+        {
             _lpSlot[g] = table.AddInt($"prd.lp.g{g + 1}");
+            _lpGen[g] = table.AddInt($"prd.lp.g{g + 1}.gen");
+        }
         _rejected = new LongColumn[RejectionKinds];
         for (int r = 0; r < RejectionKinds; r++)
             _rejected[r] = table.AddLong($"prd.rejected.{(CommandRejection)r}");
@@ -236,6 +244,10 @@ public sealed partial class ProductsSystem : ITickSystem
             for (int a = 0; a < rows; a++)
                 ints[a] = start.PlatformGen[a * _d + d];
             _gp[d].Load(ints);
+            // generation = number of times the slot was taken: a design of the scenario start counts as the first taking.
+            for (int a = 0; a < rows; a++)
+                ints[a] = start.Stage[a * _d + d] == DesignStage.None ? 0 : 1;
+            _gen[d].Load(ints);
             for (int a = 0; a < rows; a++)
                 ints[a] = start.Stage[a * _d + d] == DesignStage.None ? 0 : 1;
             _gateOpened[d].Load(ints);
@@ -566,8 +578,23 @@ public sealed partial class ProductsSystem : ITickSystem
     /// <summary>Commands of the actor rejected for <paramref name="reason"/> so far (the journal of rejections, contract §3.1).</summary>
     public long RejectionCount(int actor, CommandRejection reason) => _rejected[(int)reason].Current[actor];
 
-    /// <summary>The canonical L_P project slot of generation <paramref name="gen"/>, −1 before it exists.</summary>
-    public int CanonicalSlot(int actor, int gen) => _lpSlot[gen - 1].Current[actor];
+    /// <summary>
+    /// The canonical L_P project slot of generation <paramref name="gen"/>, −1 before it exists and −1 once the slot was freed and
+    /// retaken (its handle is stale: the canonical design no longer exists).
+    /// </summary>
+    public int CanonicalSlot(int actor, int gen) =>
+        _lpSlot[gen - 1].Current[actor] is var slot and >= 0 && _lpGen[gen - 1].Current[actor] == _gen[slot].Current[actor] ? slot : -1;
+
+    /// <summary>Generation of a design slot (ADR-0005 p. 3): +1 each time the slot is taken; a handle is the pair (slot, generation).</summary>
+    public int Generation(int actor, int slot) => _gen[slot].Current[actor];
+
+    /// <summary>Handle resolution on the snapshot <c>Current</c> (ADR-0005 p. 3): the slot is occupied and its generation equals the handle's.</summary>
+    public bool Resolves(int actor, int slot, int generation) =>
+        slot >= 0 && slot < _d && HandleHolds(_stage[slot].Current[actor], _gen[slot].Current[actor], generation);
+
+    // The single predicate over (stage, generation); Current and Next wrappers differ only in the buffer they read.
+    private static bool HandleHolds(int stage, int slotGeneration, int handleGeneration) =>
+        slotGeneration == handleGeneration && (DesignStage)stage is not (DesignStage.None or DesignStage.Withdrawn);
 
     /// <summary><c>unit_cost_floor</c> of a design (STATE_WORDS §3; R-PS2m at <c>U</c> = 1).</summary>
     public Fx6 UnitCostFloor(int actor, int design) => FloorOf(Alternatives(actor, design));
@@ -928,6 +955,7 @@ public sealed partial class ProductsSystem : ITickSystem
     // lowest free slot, g_p = g; it is created once per generation and never relaunched.
     private void LaunchCanonical(int a, long t, int gen)
     {
+        // Created once per generation: the mark stays even when its slot is later freed and reused.
         int slot = _lpSlot[gen - 1].Next[a];
         if (slot >= 0)
             return;
@@ -949,7 +977,9 @@ public sealed partial class ProductsSystem : ITickSystem
             Reject(a, CommandRejection.DesignCapacity);
             return;
         }
+        TakeSlot(a, slot);
         _lpSlot[gen - 1].Next[a] = slot;
+        _lpGen[gen - 1].Next[a] = _gen[slot].Next[a];
         for (int d = 0; d < _d; d++)
         {
             if ((DesignStage)_stage[d].Next[a] == DesignStage.Series)
@@ -1026,7 +1056,7 @@ public sealed partial class ProductsSystem : ITickSystem
             {
                 DesignCommandKind.Compose => Compose(a, cmd, knows),
                 DesignCommandKind.Derive => Derive(a, cmd, knows),
-                _ => Cancel(a, cmd.Target),
+                _ => cmd.Generation >= 0 && !IsCurrent(a, cmd.Target, cmd.Generation) ? CommandRejection.StaleHandle : Cancel(a, cmd.Target),
             };
             if (rejected is { } reason)
                 Reject(a, reason);
@@ -1061,6 +1091,8 @@ public sealed partial class ProductsSystem : ITickSystem
     private CommandRejection? Derive(int a, DesignCommand cmd, Func<int, bool> knows)
     {
         int parent = cmd.Target;
+        if (cmd.Generation >= 0 && !IsCurrent(a, parent, cmd.Generation))
+            return CommandRejection.StaleHandle;
         if (!SlotsInRange(cmd.Alts, allowUnchanged: true))
             return CommandRejection.SlotUnavailable;
         if (parent < 0 || parent >= _d || (DesignStage)_stage[parent].Next[a] is not (DesignStage.Series or DesignStage.InService))
@@ -1151,12 +1183,14 @@ public sealed partial class ProductsSystem : ITickSystem
         if (parent >= 0)
             work = work * Fx6.FromInt(changed) / Fx6.FromInt(slots);
         Fx6 d0 = ProductsMath.InitialDefects(_p.D0Factor, novelty, complexity, exp, _p.EB);
+        TakeSlot(a, d);
         SetAlts(a, d, alts);
         _stage[d].Next[a] = (int)DesignStage.Project;
         _bureauOf[d].Next[a] = bureau;
         _bureauDesign[bureau].Next[a] = d;
         _gp[d].Next[a] = platformGen;
         _parent[d].Next[a] = parent;
+        _parentGen[d].Next[a] = parent >= 0 ? _gen[parent].Next[a] : 0;
         _stageO[d].Next[a] = -1;
         _gateOpened[d].Next[a] = 0;
         _forced[d].Next[a] = 0;
@@ -1239,7 +1273,7 @@ public sealed partial class ProductsSystem : ITickSystem
         for (int e = 0; e < _d; e++)
         {
             // The parent's line moved to a derived design in series: a second line of the platform is FUTURE (#118).
-            if (_parent[e].Next[a] == d && (DesignStage)_stage[e].Next[a] == DesignStage.Series)
+            if (_parent[e].Next[a] == d && _parentGen[e].Next[a] == _gen[d].Next[a] && (DesignStage)_stage[e].Next[a] == DesignStage.Series)
             {
                 Reject(a, CommandRejection.LineTransferred);
                 return;
@@ -1258,7 +1292,7 @@ public sealed partial class ProductsSystem : ITickSystem
         {
             Set(_retro, d, a, ProductsMath.Excess(Get(_hidden, d, a), Get(_dGate, d, a)));
             int parent = _parent[d].Next[a];
-            if (parent >= 0 && (DesignStage)_stage[parent].Next[a] == DesignStage.Series)
+            if (parent >= 0 && _parentGen[d].Next[a] == _gen[parent].Next[a] && (DesignStage)_stage[parent].Next[a] == DesignStage.Series)
             {
                 // The line moves, it is not copied: E → τ_der·E of the snapshot, the parent's line closes (§4.4a).
                 Set(_lineE, d, a, _p.TauDer * Fx6.FromRaw(_lineE[parent].Current[a]));
@@ -1468,16 +1502,42 @@ public sealed partial class ProductsSystem : ITickSystem
 
     // ---- helpers
 
-    /// <summary>The lowest slot without a design (stage None), −1 if the capacity is used up. Slots are never reused (§3.1).</summary>
+    /// <summary>
+    /// The lowest free slot, −1 only when all <c>max_designs</c> are taken (ADR-0005 p. 3). A function of <c>Current</c> only: a slot is free
+    /// when its snapshot stage is None or «снят» and no command of this step has taken it yet (its generation in Next is still the snapshot's).
+    /// A slot freed by a command of this step (cancel) is not reusable until the next step. No free-list, so history of releases is irrelevant.
+    /// </summary>
     private int FreeSlot(int a)
     {
         for (int d = 0; d < _d; d++)
         {
-            if ((DesignStage)_stage[d].Next[a] == DesignStage.None)
+            if ((DesignStage)_stage[d].Current[a] is DesignStage.None or DesignStage.Withdrawn && _gen[d].Next[a] == _gen[d].Current[a])
                 return d;
         }
         return -1;
     }
+
+    // Takes a free slot: generation + 1 (checked) and every per-design column back to the state of a never used slot, so
+    // nothing of the previous design survives into the new one.
+    private void TakeSlot(int a, int d)
+    {
+        _gen[d].Next[a] = checked(_gen[d].Next[a] + 1);
+        _parentGen[d].Next[a] = 0;
+        _stage[d].Next[a] = (int)DesignStage.None;
+        foreach (IntColumn[] col in (IntColumn[][])[_bureauOf, _parent, _stageO])
+            col[d].Next[a] = -1;
+        foreach (IntColumn[] col in (IntColumn[][])[_gp, _gateOpened, _forced, _cancelled, _idleC, _built, _quotaBase, _soldY, _lineBind])
+            col[d].Next[a] = 0;
+        foreach (LongColumn[] col in (LongColumn[][])[_work, _d0, _hidden, _open, _found, _hours, _lineE, _rate, _rateCmd, _cost, _dGate,
+            _lossAcc, _retro, _lost, _inService0, _qMask, _retired, _sold])
+            col[d].Next[a] = 0;
+        for (int y = 0; y < _y; y++)
+            _cohort[d * _y + y].Next[a] = 0;
+    }
+
+    // Handle resolution on the live state of the step (Next): earlier commands of the step may have cancelled or retaken the slot.
+    private bool IsCurrent(int a, int slot, int generation) =>
+        slot >= 0 && slot < _d && HandleHolds(_stage[slot].Next[a], _gen[slot].Next[a], generation);
 
     private void Reject(int a, CommandRejection reason) => _rejected[(int)reason].Next[a]++;
 
