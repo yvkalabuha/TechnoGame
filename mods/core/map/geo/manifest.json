@@ -8,10 +8,10 @@
     {"id": "ne_map_units", "sha256": "57da82be755f4afccd8f3b14251bb2752f5df1395f47d2d86f817470c4a48862", "license": "public-domain"},
     {"id": "ohm:relation/2852492@v37", "sha256": "9cfb4a12c55ffd8be9d520956fbc683c65dbcf1e2f26e12d2962dfdc409d5ce6", "license": "CC0-1.0"},
     {"id": "ohm:relation/2746442@v14", "sha256": "17294786f2baf4527b5769d9cb9dff0154ab6513787791263e3718e5c16512d2", "license": "CC0-1.0"},
-    {"id": "ohm:relation/2746443@v19", "sha256": "75b76410e475de3e0919d3946722f60881bc648033dd400d43e68c16702de431", "license": "CC0-1.0"},
-    {"id": "ohm:relation/2692205@v214", "sha256": "d8505de56ceed26f29e3cce5ab84c38198c05aa05edf0177e896368db25e14ad", "license": "CC0-1.0"},
-    {"id": "ohm:relation/2959045@v9", "sha256": "8ea7fb12a71db8813b07613a35e1e085f5c7dce05cb787eb66e5b3c8937b7124", "license": "CC0-1.0"},
-    {"id": "ohm:relation/2855285@v12", "sha256": "b4d92e7b39b41c87bfd00a26c3eb7347190efff2a4418c15d9c042f085e37146", "license": "CC0-1.0"}
+    {"id": "ohm:relation/2746443@v19", "sha256": "75b76410e475de3e0919d3946722f60881bc648033dd400d43e68c16702de431", "license": "CC-BY-4.0+CC0-1.0"},
+    {"id": "ohm:relation/2692205@v214", "sha256": "d8505de56ceed26f29e3cce5ab84c38198c05aa05edf0177e896368db25e14ad", "license": "CC-BY-4.0+CC0-1.0"},
+    {"id": "ohm:relation/2959045@v9", "sha256": "8ea7fb12a71db8813b07613a35e1e085f5c7dce05cb787eb66e5b3c8937b7124", "license": "CC-BY-4.0+CC0-1.0"},
+    {"id": "ohm:relation/2855285@v12", "sha256": "b4d92e7b39b41c87bfd00a26c3eb7347190efff2a4418c15d9c042f085e37146", "license": "CC-BY-4.0+CC0-1.0"}
   ],
   "provenance": {
     "aland.jomala": {"ne_src": ["ALD-4810", "ALD-4812", "ALD-4814", "ALD-4817", "ALD-4818", "ALD-4819", "ALD-4820", "ALD-4821", "ALD-4822", "ALD-4823", "ALD-4824"], "cuts": []},

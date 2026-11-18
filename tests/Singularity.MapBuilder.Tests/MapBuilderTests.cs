@@ -131,6 +131,51 @@ public class MapBuilderTests
     }
 
     [Fact]
+    public void Cut_with_an_unknown_a_pieces_hint_is_an_error()
+    {
+        var p = new Piece { Shape = Rect(0, 0, 1, 1) };
+        p.Src.Add("A-1");
+        var spec = new SpecSet();
+        spec.Rules.Add(("20-test.yaml", new Rule
+        {
+            Cut = new CutRule { Id = "t", Within = new() { "A-1" }, Parallel = 0.5, Pieces = new() { "south", "north" }, APieces = new() { "nrth" }, Source = "s", AsOf = "1945-10-01", Precision = "A", Ref = "r" },
+        }));
+        var ex = Assert.Throws<InvalidDataException>(() => Pipeline.Apply(new List<Piece> { p }, spec, _ => throw new InvalidOperationException()));
+        Assert.Contains("nrth", ex.Message);
+    }
+
+    private static Piece Holed(double hole)
+    {
+        var shell = Sph.Gf.CreateLinearRing(new[] { new Coordinate(0, 0), new Coordinate(3, 0), new Coordinate(3, 3), new Coordinate(0, 3), new Coordinate(0, 0) });
+        var h = Sph.Gf.CreateLinearRing(new[] { new Coordinate(1, 1), new Coordinate(1 + hole, 1), new Coordinate(1 + hole, 1 + hole), new Coordinate(1, 1 + hole), new Coordinate(1, 1) });
+        var p = new Piece { Shape = Sph.Gf.CreatePolygon(shell, new[] { h }), Adm0 = "AAA", Name = "holed" };
+        p.Src.Add("A-1");
+        p.Cuts.Add("t");
+        return p;
+    }
+
+    [Fact]
+    public void Heal_fails_loudly_when_a_large_face_belongs_to_no_piece()
+    {
+        // A 0.1 degree hole (about 120 km2) is a gap no piece owns.
+        var ex = Assert.Throws<InvalidDataException>(() => Pipeline.Heal(new List<Piece> { Holed(0.1) }));
+        Assert.Contains("dropped a face", ex.Message);
+    }
+
+    [Fact]
+    public void Heal_fails_loudly_when_a_small_overlap_changes_the_area()
+    {
+        // Pieces overlapping by 0.01 x 0.01 degrees (about 1.2 km2): the face goes to one piece only, so the total drops beyond 1e-6.
+        var a = new Piece { Shape = Rect(0, 0, 1, 1), Adm0 = "AAA", Name = "a" };
+        a.Src.Add("A-1");
+        a.Cuts.Add("t");
+        var b = new Piece { Shape = Rect(0.99, 0.99, 2, 2), Adm0 = "AAA", Name = "b" };
+        b.Src.Add("A-2");
+        var ex = Assert.Throws<InvalidDataException>(() => Pipeline.Heal(new List<Piece> { a, b }));
+        Assert.Contains("changed the area", ex.Message);
+    }
+
+    [Fact]
     public void Cut_without_ref_for_class_A_is_an_error()
     {
         var p = new Piece { Shape = Rect(0, 0, 1, 1) };
@@ -208,7 +253,7 @@ public class MapBuilderTests
             Assert.Matches("^[0-9a-f]{64}$", s.Sha256);
             Assert.False(string.IsNullOrEmpty(s.License));
             Assert.Matches(@"^\d{4}-\d{2}-\d{2}$", s.Retrieved);
-            Assert.True(Licenses.Allowed(s.License), s.License);
+            Assert.All(s.License.Split('+'), l => Assert.True(Licenses.Allowed(l), s.License));
         });
     }
 

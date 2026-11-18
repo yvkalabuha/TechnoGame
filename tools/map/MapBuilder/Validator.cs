@@ -102,8 +102,13 @@ internal static class Validator
                     r.Errors.Add($"{file} cut {c.Id}: OHM licence '{l}' is not allowed (CC0, CC BY 2.0/3.0/4.0, PD)");
         }
         foreach (var s in r.Lock.Sources.Where(s => s.Kind == "ohm"))
-            if (!Licenses.Allowed(s.License))
-                r.Errors.Add($"lock {s.Id}: licence '{s.License}' is not allowed (ADR-0009)");
+        {
+            // The lock licence is the '+'-joined set of licences found in the snapshot (relation and member ways).
+            foreach (var l in s.License.Split('+').Where(l => !Licenses.Allowed(l)))
+                r.Errors.Add($"lock {s.Id}: licence '{l}' is not allowed (ADR-0009)");
+            if (r.Ohm.TryGetValue(s.Id, out var snap) && string.Join("+", snap.Licenses) != s.License)
+                r.Errors.Add($"lock {s.Id}: licence '{s.License}' differs from the snapshot licences '{string.Join("+", snap.Licenses)}'");
+        }
 
         // World-wide ranges are informational for a partial area.
         r.Info.Add($"provinces: {r.Pieces.Count} (world target 2000-5000, not enforced for a partial area)");

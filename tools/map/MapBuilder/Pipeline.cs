@@ -161,6 +161,10 @@ internal static class Pipeline
             throw new InvalidDataException($"{file} cut {c.Id}: class A needs a ref");
         var idx = Select(pieces, c.Within, $"{file} cut {c.Id}");
         var cutter = Cutter(c, ohm, file);
+        // a_pieces must name existing hints: a typo would silently leave the cut without class A.
+        var hints = c.Pieces.Count > 0 ? c.Pieces : new List<string> { "a", "b" };
+        foreach (var h in c.APieces)
+            if (!hints.Contains(h)) throw new InvalidDataException($"{file} cut {c.Id}: a_pieces '{h}' is not one of the pieces ({string.Join(", ", hints)})");
         var res = new List<Piece>(pieces.Count + 4);
         var set = idx.ToHashSet();
         for (int i = 0; i < pieces.Count; i++)

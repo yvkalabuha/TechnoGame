@@ -37,30 +37,30 @@ sources:
     url: https://overpass-api.openhistoricalmap.org/api/interpreter
     query: '[out:json][timeout:100][date:"2026-11-18T00:00:00Z"];rel(2746443)->.r;.r out geom meta;way(r.r);out tags;'
     sha256: 75b76410e475de3e0919d3946722f60881bc648033dd400d43e68c16702de431
-    license: CC0-1.0
+    license: CC-BY-4.0+CC0-1.0
     retrieved: 2026-11-18
-    note: "British occupation zone in Austria. No licence tag on the object: OHM default CC0 (https://www.openhistoricalmap.org/copyright)"
+    note: "British occupation zone in Austria. Member ways carry CC-BY-4.0 (see mods/core/map/ATTRIBUTION.md), the rest the OHM default CC0 (https://www.openhistoricalmap.org/copyright)"
   - id: "ohm:relation/2692205@v214"
     kind: ohm
     url: https://overpass-api.openhistoricalmap.org/api/interpreter
     query: '[out:json][timeout:100][date:"2026-11-18T00:00:00Z"];rel(2692205)->.r;.r out geom meta;way(r.r);out tags;'
     sha256: d8505de56ceed26f29e3cce5ab84c38198c05aa05edf0177e896368db25e14ad
-    license: CC0-1.0
+    license: CC-BY-4.0+CC0-1.0
     retrieved: 2026-11-18
-    note: "Polska 1924-06-22..1938-11-01 (interwar border; cuts Polish voivodeships along the 1937 German border). No licence tag on the object: OHM default CC0 (https://www.openhistoricalmap.org/copyright)"
+    note: "Polska 1924-06-22..1938-11-01 (interwar border; cuts Polish voivodeships along the 1937 German border). Member ways carry CC-BY-4.0 (see mods/core/map/ATTRIBUTION.md), the rest the OHM default CC0 (https://www.openhistoricalmap.org/copyright)"
   - id: "ohm:relation/2959045@v9"
     kind: ohm
     url: https://overpass-api.openhistoricalmap.org/api/interpreter
     query: '[out:json][timeout:100][date:"2026-11-18T00:00:00Z"];rel(2959045)->.r;.r out geom meta;way(r.r);out tags;'
     sha256: 8ea7fb12a71db8813b07613a35e1e085f5c7dce05cb787eb66e5b3c8937b7124
-    license: CC0-1.0
+    license: CC-BY-4.0+CC0-1.0
     retrieved: 2026-11-18
-    note: "Suomi 1920-10-14..1940-03-12 (Finland before the Winter War; cuts ceded Karelia, Petsamo). No licence tag on the object: OHM default CC0 (https://www.openhistoricalmap.org/copyright)"
+    note: "Suomi 1920-10-14..1940-03-12 (Finland before the Winter War; cuts ceded Karelia, Petsamo). Member ways carry CC-BY-4.0 (see mods/core/map/ATTRIBUTION.md), the rest the OHM default CC0 (https://www.openhistoricalmap.org/copyright)"
   - id: "ohm:relation/2855285@v12"
     kind: ohm
     url: https://overpass-api.openhistoricalmap.org/api/interpreter
     query: '[out:json][timeout:100][date:"2026-11-18T00:00:00Z"];rel(2855285)->.r;.r out geom meta;way(r.r);out tags;'
     sha256: b4d92e7b39b41c87bfd00a26c3eb7347190efff2a4418c15d9c042f085e37146
-    license: CC0-1.0
+    license: CC-BY-4.0+CC0-1.0
     retrieved: 2026-11-18
-    note: "Suomi 1944-09-19..1947-04-18 (Finland under the armistice; used to cut Finnish Lapland and to check Porkkala). No licence tag on the object: OHM default CC0 (https://www.openhistoricalmap.org/copyright)"
+    note: "Suomi 1944-09-19..1947-04-18 (Finland under the armistice; used to cut Finnish Lapland and to check Porkkala). Member ways carry CC-BY-4.0 (see mods/core/map/ATTRIBUTION.md), the rest the OHM default CC0 (https://www.openhistoricalmap.org/copyright)"
