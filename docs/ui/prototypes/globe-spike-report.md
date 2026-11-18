@@ -41,7 +41,7 @@
 - «Draw calls» — монитор `RenderTotalDrawCallsInFrame` в момент снятия кадра; он меняется от видимости (отсечение), не от сложности.
 
 ## Скриншоты (`docs/ui/prototypes/globe-spike/`)
-`shot_idle.png` (Z0), `shot_rotate.png` (лимб, обод, плашки у обода), `shot_region.png` (штриховка, подписи, 300 инстансов), `shot_zoom.png`, `shot_construction.png` (завод на 49% + ВПП).
+`shot_idle.png` (Z0), `shot_rotate.png` (лимб, обод, плашки у обода), `shot_region.png` (штриховка, подписи, 300 инстансов), `shot_zoom.png`, `shot_construction.png` (завод на 49% + ВПП). Хранится только `shot_rotate.png`; остальные: кадр не хранится, генерируется: `./run-globe-spike.sh --shots`.
 
 ## Проблемы и наблюдения
 1. [Факт] **Границы на Z2+ ступенчатые**: ID-текстура 4096×2048 даёт ≈ 10 км/пиксель. Подтверждает §2.1: вблизи нужны векторные ribbon-линии или тайловая ID-текстура.

@@ -32,3 +32,6 @@ lab/results/
 *.pem
 *.key
 .mcp.json
+
+# Client --shots output (key frames are copied into docs/ui by hand, TASK-0097)
+shots-out/
