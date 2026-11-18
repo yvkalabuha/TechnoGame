@@ -149,6 +149,45 @@ public class MapBuilderTests
     }
 
     [Fact]
+    public void Quota_outside_world_build_prints_info_without_warnings()
+    {
+        var r = Quota("GBR", 2, 3, Gp("GBR"), world: false);
+        Assert.Empty(r.Warnings);
+        Assert.Contains("actor GBR: core 2, colony 3, protectorate 0, mandate 0, leased 0", r.Info);
+    }
+
+    [Fact]
+    public void Great_powers_exception_misuse_is_an_error()
+    {
+        GreatPowerFile F(params GreatPowerException[] ex) => new() { Ids = { "SUN", "GBR" }, Exceptions = ex.ToList() };
+        GreatPowerException E(string id, int max) => new() { Id = id, MaxCore = max, Reason = "x" };
+        Assert.Contains(Quota("SUN", 5, 0, F(E("USA", 35))).Errors, e => e.Contains("not in ids"));
+        Assert.Contains(Quota("SUN", 5, 0, F(E("SUN", 35), E("SUN", 36))).Errors, e => e.Contains("duplicate exception"));
+        Assert.Contains(Quota("SUN", 5, 0, F(E("SUN", 0))).Errors, e => e.Contains("above 15"));
+        Assert.Contains(Quota("SUN", 5, 0, F(E("SUN", 15))).Errors, e => e.Contains("above 15"));
+        var dup = new GreatPowerFile { Ids = { "SUN", "SUN" } };
+        Assert.Contains(Quota("SUN", 5, 0, dup).Errors, e => e.Contains("duplicate id 'SUN'"));
+    }
+
+    [Fact]
+    public void Territory_exception_with_another_status_is_an_error()
+    {
+        var r = new BuildResult();
+        r.Spec.Territories.Add(new TerritoryEntry { Id = "reg.t1" });
+        r.Pieces.Add(new Piece { Id = "reg.p1" });
+        var f = new OwnerFile
+        {
+            AsOf = "1945-10-01",
+            Defaults = { new OwnerRow { Region = "reg", Owner = "GBR", Controller = "GBR", Status = "core", Source = "s", Confidence = "H" } },
+            Exceptions = { new OwnerRow { Province = "reg.t1", Owner = "GBR", Controller = "GBR", Status = "colony", Source = "s", Confidence = "H" } }
+        };
+        Validator.ValidateOwners(r, f, new HashSet<string> { "reg.p1" }, new HashSet<string> { "reg" }, new HashSet<string> { "GBR" });
+        var e = Assert.Single(r.Errors);
+        Assert.Contains("reg.t1", e);
+        Assert.Contains("reg.p1", e);
+    }
+
+    [Fact]
     public void Great_powers_file_1945_has_SUN_exception_with_reason()
     {
         var gp = SpecSet.Read<GreatPowerFile>(Path.Combine(RepoRoot(), "tools/map/spec/great_powers.yaml"));

@@ -215,7 +215,7 @@ internal static class Validator
         }
         foreach (var e in owners.Exceptions)
         {
-            if (e.Province == null || !idSet.Contains(e.Province)) { r.Errors.Add($"owners exception: unknown province '{e.Province}'"); continue; }
+            if (e.Province == null || !(idSet.Contains(e.Province) || r.Spec.Territories.Any(t => t.Id == e.Province))) { r.Errors.Add($"owners exception: unknown province '{e.Province}'"); continue; }
             if (!exc.TryAdd(e.Province, e)) r.Errors.Add($"owners exception: province {e.Province} twice");
             Check(e, "province " + e.Province);
         }
@@ -241,9 +241,19 @@ internal static class Validator
 
         // One status per region (ADR-0022 §2.8): the quota counts regions, so all provinces of a region must agree.
         var statusOf = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        // Rows of a region: provinces with geometry and territories (ADR-0022 §2.8); a territory resolves like a province.
+        var rowsByRegion = new Dictionary<string, List<(string Id, string Status)>>(StringComparer.Ordinal);
+        foreach (var id in r.Pieces.Select(p => p.Id).Concat(r.Spec.Territories.Select(t => t.Id)))
+        {
+            var reg = id[..id.IndexOf('.')];
+            string? st = r.Owners.TryGetValue(id, out var res) ? res.Status : (exc.GetValueOrDefault(id) ?? def.GetValueOrDefault(reg))?.Status;
+            if (st == null) continue;
+            if (!rowsByRegion.TryGetValue(reg, out var list)) rowsByRegion[reg] = list = new();
+            list.Add((id, st));
+        }
         foreach (var reg in regionSet.OrderBy(x => x, StringComparer.Ordinal))
         {
-            var provs = r.Pieces.Where(p => p.Id[..p.Id.IndexOf('.')] == reg && r.Owners.ContainsKey(p.Id)).Select(p => (p.Id, r.Owners[p.Id].Status)).ToList();
+            var provs = rowsByRegion.GetValueOrDefault(reg) ?? new();
             var statuses = provs.Select(x => x.Status).Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList();
             if (statuses.Count > 1)
                 r.Errors.Add($"owners: region {reg} has several statuses: " + string.Join("; ", statuses.Select(st => st + " = " + string.Join(",", provs.Where(x => x.Status == st).Select(x => x.Id)))));
@@ -257,9 +267,13 @@ internal static class Validator
         foreach (var e in greatPowers.Exceptions)
         {
             if (string.IsNullOrWhiteSpace(e.Reason)) r.Errors.Add($"great_powers: exception {e.Id} needs a reason");
-            exceptions[e.Id] = e;
+            if (!greatPowers.Ids.Contains(e.Id)) r.Errors.Add($"great_powers: exception id '{e.Id}' is not in ids");
+            if (e.MaxCore <= 15) r.Errors.Add($"great_powers: exception {e.Id} needs max_core above 15, got {e.MaxCore}");
+            if (!exceptions.TryAdd(e.Id, e)) r.Errors.Add($"great_powers: duplicate exception '{e.Id}'");
         }
-        foreach (var id in greatPowers.Ids)
+        foreach (var dup in greatPowers.Ids.GroupBy(x => x, StringComparer.Ordinal).Where(g => g.Count() > 1))
+            r.Errors.Add($"great_powers: duplicate id '{dup.Key}'");
+        foreach (var id in greatPowers.Ids.Distinct(StringComparer.Ordinal))
         {
             if (!polityIds.Contains(id)) { r.Errors.Add($"great_powers: unknown id '{id}'"); continue; }
             var regs = def.Values.Where(d => d.Owner == id && d.Region != null).Select(d => d.Region!).ToList();
