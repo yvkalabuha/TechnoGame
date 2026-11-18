@@ -19,7 +19,7 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0064 [APPROVED] lab bench harness (ADR-0016 T1) (developer)
+- TASK-0064 [IN_PROGRESS] lab bench harness (ADR-0016 T1) (developer)
 - TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
 <!-- registry:active:end -->
 
