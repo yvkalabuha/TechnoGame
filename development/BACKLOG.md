@@ -100,7 +100,7 @@
 | [TASK-0083](../development/tasks/TASK-0083-lab-bench-tests.md) | DONE | Tests for lab bench: statistics, manifest, plan, CLI | MS-M0 |
 | [TASK-0084](../development/tasks/TASK-0084-map-ci-debt0043.md) | DONE | Map tooling CI and boundary checks (DEBT-0043) | MS-M1 |
 | [TASK-0085](../development/tasks/TASK-0085-adr-0007-ban-list.md) | DONE | ADR-0007: extend the ban list (string.GetHashCode, Concurrent*, Channel) | MS-M1 |
-| [TASK-0086](../development/tasks/TASK-0086-one-writer-test.md) | REVIEW | Architecture test: one writer per column (CoW open tracing in test mode) | MS-M1 |
+| [TASK-0086](../development/tasks/TASK-0086-one-writer-test.md) | DONE | Architecture test: one writer per column (CoW open tracing in test mode) | MS-M1 |
 | [TASK-0087](../development/tasks/TASK-0087-toyfunnel-to-lab.md) | DONE | ToyFunnel moves from Core to Lab (#375) | MS-M1 |
 | [TASK-0088](../development/tasks/TASK-0088-client-v0-5c.md) | APPROVED | Client v0.5c: navigation rail, 7 areas, speed scale, textures, icons and area pictures | MS-M1 |
 | [TASK-0089](../development/tasks/TASK-0089-adr-0019-r3-inventory.md) | DONE | ADR-0019 R3: inventory of flow columns and non-linear monthly rules in M0 systems | MS-M1 |
