@@ -94,6 +94,8 @@
 | [TASK-0077](../development/tasks/TASK-0077-client-v0-5a-planisphere-zoom-and-node-icons-node-.md) | DONE | Client v0.5a: planisphere zoom and node icons, node card with schematic and effects, map click fix, starry sky | MS-M0 |
 | [TASK-0078](../development/tasks/TASK-0078-adr-0017-implementation.md) | DONE | ADR-0017 implementation: StateHash schedule, lazy LastHash, column CoW | MS-M0 |
 | [TASK-0079](../development/tasks/TASK-0079-f4a-parallel-view-inputs.md) | DONE | F4-A: parallel ViewBuilder.Inputs per actor, TrainingBudget plan once per actor | MS-M0 |
+| [TASK-0080](../development/tasks/TASK-0080-adr-0017-review-followups.md) | APPROVED | ADR-0017 review follow-ups (DEBT-0045 low items) | MS-M0 |
+| [TASK-0081](../development/tasks/TASK-0081-client-v0-5b.md) | APPROVED | Client v0.5b: main menu, settings, new game, palette C with alert validator, time icons | MS-M0 |
 
 ## Гипотезы
 
@@ -138,6 +140,8 @@
 | [ADR-0016](../docs/decisions/ADR-0016-tick-budget.md) | ACCEPTED | Бюджет тика |
 | [ADR-0017](../docs/decisions/ADR-0017-statehash-schedule-and-table-copy-in-daily-mode.md) | ACCEPTED | StateHash schedule and table copy in daily mode |
 | [ADR-0018](../docs/decisions/ADR-0018-localization-keys-locale-files-in-mods-en-and-ru.md) | ACCEPTED | Localization: keys, locale files in mods, EN and RU |
+| [ADR-0019](../docs/decisions/ADR-0019-daily-slices-228.md) | PROPOSED | Monthly systems split into daily slices (#228), revision of ADR-0006 |
+| [ADR-0020](../docs/decisions/ADR-0020-province-budget.md) | PROPOSED | Province storage, aggregation to regions and tick budget |
 
 ## Research Reports
 
@@ -160,3 +164,4 @@
 | [RR-0016](../docs/research/RR-0016-geopolitics-conflicts-war-endings.md) | DRAFT | Геополитика, конфликты, завершение войн |
 | [RR-0017](../docs/research/RR-0017-intelligence.md) | DRAFT | Разведка, промышленный шпионаж, контрразведка и дезинформация |
 | [RR-0019](../docs/research/RR-0019-logistics-communications.md) | DRAFT | Логистика, связь и инфраструктура |
+| [RR-0020](../docs/research/RR-0020-scripted-ownership-events.md) | DRAFT | Scripted ownership events 1945-1975: dates and sources |
