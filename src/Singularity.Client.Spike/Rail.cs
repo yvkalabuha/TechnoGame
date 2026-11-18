@@ -16,7 +16,7 @@ public sealed partial class Rail : PanelContainer
         public override void _Draw() => Paint?.Invoke(this);
     }
 
-    sealed partial class AreaButton : Button
+    sealed partial class AreaButton : Button, IGlyphBounds
     {
         public readonly AreaDef Def;
         public bool Sel, Wide; public int Count, Sev;
@@ -36,6 +36,15 @@ public sealed partial class Rail : PanelContainer
         }
 
         public bool Locked => Def.State == AreaState.Locked;
+
+        // Ink of the button for T6 (the badge is an untextured alert plate on its own layer and is left out).
+        public System.Collections.Generic.IEnumerable<Rect2> GlyphRects()
+        {
+            var t = GetGlobalTransform(); var s = Size;
+            Rect2 G(Rect2 r) => new(t * r.Position, r.Size * t.Scale);
+            if (!Wide) { yield return G(new Rect2((s.X - 24) / 2f - 2, 7, 24, 24)); yield return G(new Rect2(s.X / 2f - 6, s.Y - 17, 12, 9)); }
+            else { yield return G(new Rect2(10, (s.Y - 24) / 2f, 24, 24)); yield return G(new Rect2(44, (s.Y - 17) / 2f, s.X - 88, 17)); }
+        }
 
         public void Restyle()
         {
@@ -58,9 +67,9 @@ public sealed partial class Rail : PanelContainer
             Rect2 iconRect;
             if (!Wide)
             {
-                iconRect = new Rect2((s.X - 24) / 2f - 2, 5, 24, 24);
+                iconRect = new Rect2((s.X - 24) / 2f - 2, 7, 24, 24);
                 string l = Def.Letter == '\0' ? "Esc" : Def.Letter.ToString();
-                g.DrawString(Fonts.Mono, new Vector2(0, s.Y - 6), l, HorizontalAlignment.Center, s.X - 4, 14, Ui.Ink3);
+                g.DrawString(Fonts.Mono, new Vector2(0, s.Y - 8), l, HorizontalAlignment.Center, s.X - 4, 12, Ui.Ink3);
             }
             else
             {
@@ -110,7 +119,7 @@ public sealed partial class Rail : PanelContainer
 
     readonly AreaButton[] _buttons = new AreaButton[AreaData.All.Length];
     readonly VBoxContainer _col = new();
-    readonly Button _toggle;
+    readonly CaptionButton _toggle;
     readonly PanelContainer _tip = new() { TopLevel = true, Visible = false, MouseFilter = MouseFilterEnum.Ignore };
     readonly Label _tipText = Ui.Lbl("", 14);
     readonly Control[] _seps = new Control[3];
@@ -126,10 +135,14 @@ public sealed partial class Rail : PanelContainer
         PaperSurface.Apply(this, SurfaceKind.Paper, "rail");
         _col.AddThemeConstantOverride("separation", 4);
         AddChild(_col);
-        int sep = 0, group = 0;
+        int sep = 0, group = 0; AreaDef prev = null;
         foreach (var def in AreaData.All)
         {
-            if (def.Group != group) { var l = new ColorRect { Color = Ui.Rule, CustomMinimumSize = new Vector2(0, 1) }; _seps[sep++] = l; _col.AddChild(l); group = def.Group; }
+            // Locked buttons are already dashed: no rule line between two locked groups.
+            bool bothLocked = prev != null && prev.State == AreaState.Locked && def.State == AreaState.Locked;
+            if (def.Group != group && bothLocked) group = def.Group;
+            else if (def.Group != group) { var l = new ColorRect { Color = Ui.Rule, CustomMinimumSize = new Vector2(0, 1) }; _seps[sep++] = l; _col.AddChild(l); group = def.Group; }
+            prev = def;
             var b = new AreaButton(def);
             _buttons[(int)def.Id] = b;
             b.Pressed += () => Pressed?.Invoke(def.Id);
@@ -180,6 +193,12 @@ public sealed partial class Rail : PanelContainer
 
     /// <summary>Puts the keyboard focus on an area button (the focus ring and the tip show).</summary>
     public void FocusArea(AreaId id) => _buttons[(int)id].GrabFocus();
+
+    /// <summary>Centre of an area button in window pixels (screenshot run: real mouse events).</summary>
+    public Vector2 ButtonCenter(AreaId id) { var b = _buttons[(int)id]; return b.GlobalPosition + b.Size * b.GetGlobalTransform().Scale / 2f; }
+
+    /// <summary>The badge of an area as text for the log: count and severity, or none.</summary>
+    public string BadgeText(AreaId id) { var b = _buttons[(int)id]; return b.Count == 0 ? "no badge" : $"{(b.Sev >= 2 ? "■" : "▲")} {b.Count}"; }
 
     void Refresh() { foreach (var b in _buttons) b.Restyle(); }
 

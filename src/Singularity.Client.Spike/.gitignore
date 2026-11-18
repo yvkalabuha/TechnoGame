@@ -3,3 +3,5 @@
 *.import
 bench-out/
 *.translation
+# Copied from docs/ui/assets/ by run-globe-spike.sh (the single source of the SVGs)
+/assets/ui/

@@ -223,7 +223,7 @@ PASS tint.6 chroma: OKLCH C 0.055 (max 0.13)
 PASS tint.7 chroma: OKLCH C 0.054 (max 0.13)
 PASS tint.8 chroma: OKLCH C 0.060 (max 0.13)
 validator verdict: FAIL (99/107 pairs pass)
-texture rules T1, T2, T4, T5 (T3 runs on the screenshot below), palette C
+texture rules T1, T2, T4, T5 and moss/olive (T3 and T6 run on the live client below), palette C
 PASS T1 ink on sheet x0.94: contrast 13.8:1 (min 4.5)
 PASS T1 ink-2 on sheet x0.94: contrast 6.0:1 (min 4.5)
 PASS T1 ink-3 on sheet x0.94: contrast 5.0:1 (min 4.5)
@@ -321,27 +321,28 @@ PASS T4 wash.olive chroma x1.02: OKLCH C 0.083 -> 0.084 (max 0.13)
 PASS T4 wash.plum chroma x1.02: OKLCH C 0.053 -> 0.054 (max 0.13)
 PASS T4 wash.slate chroma x1.02: OKLCH C 0.034 -> 0.034 (max 0.13)
 PASS T4 wash.moss chroma x1.02: OKLCH C 0.043 -> 0.044 (max 0.13)
-PASS T5 warn on paper interior x0.968: dL* 30.9 -> 28.2 (loss 2.7, max 3; min 12)
-PASS T5 warn on paper interior x1.020: dL* 30.9 -> 32.6 (loss -1.7, max 3; min 12)
-PASS T5 warn on sheet interior x0.968: dL* 34.4 -> 31.6 (loss 2.8, max 3; min 12)
-PASS T5 warn on sheet interior x1.020: dL* 34.4 -> 36.0 (loss -1.6, max 3; min 12)
-PASS T5 warn on hover interior x0.968: dL* 27.7 -> 25.1 (loss 2.6, max 3; min 12)
-PASS T5 warn on hover interior x1.020: dL* 27.7 -> 29.3 (loss -1.6, max 3; min 12)
-PASS T5 warn on wash.sand interior x0.968: dL* 23.7 -> 21.2 (loss 2.5, max 3; min 12)
-PASS T5 warn on wash.sand interior x1.020: dL* 23.7 -> 25.2 (loss -1.5, max 3; min 12)
-PASS T5 warn on wash.teal interior x0.968: dL* 25.4 -> 22.9 (loss 2.5, max 3; min 12)
-PASS T5 warn on wash.teal interior x1.020: dL* 25.4 -> 27.0 (loss -1.6, max 3; min 12)
-PASS T5 warn on wash.violet interior x0.968: dL* 20.7 -> 18.3 (loss 2.4, max 3; min 12)
-PASS T5 warn on wash.violet interior x1.020: dL* 20.7 -> 22.2 (loss -1.5, max 3; min 12)
-PASS T5 warn on wash.olive interior x0.968: dL* 25.1 -> 22.6 (loss 2.5, max 3; min 12)
-PASS T5 warn on wash.olive interior x1.020: dL* 25.1 -> 26.7 (loss -1.6, max 3; min 12)
-PASS T5 warn on wash.plum interior x0.968: dL* 21.6 -> 19.2 (loss 2.4, max 3; min 12)
-PASS T5 warn on wash.plum interior x1.020: dL* 21.6 -> 23.1 (loss -1.5, max 3; min 12)
-PASS T5 warn on wash.slate interior x0.968: dL* 22.1 -> 19.7 (loss 2.4, max 3; min 12)
-PASS T5 warn on wash.slate interior x1.020: dL* 22.1 -> 23.6 (loss -1.5, max 3; min 12)
-PASS T5 warn on wash.moss interior x0.968: dL* 25.4 -> 22.8 (loss 2.5, max 3; min 12)
-PASS T5 warn on wash.moss interior x1.020: dL* 25.4 -> 26.9 (loss -1.6, max 3; min 12)
-verdict: PASS (117/117 pairs pass)
+PASS T5 warn on paper x0.955: dL* 30.9 -> 27.1 (min 15)
+PASS T5 warn on paper x1.020: dL* 30.9 -> 32.6 (min 15)
+PASS T5 warn on sheet x0.955: dL* 34.4 -> 30.5 (min 15)
+PASS T5 warn on sheet x1.020: dL* 34.4 -> 36.0 (min 15)
+PASS T5 warn on hover x0.955: dL* 27.7 -> 24.1 (min 15)
+PASS T5 warn on hover x1.020: dL* 27.7 -> 29.3 (min 15)
+PASS T5 warn on wash.sand x0.955: dL* 23.7 -> 20.2 (min 15)
+PASS T5 warn on wash.sand x1.020: dL* 23.7 -> 25.2 (min 15)
+PASS T5 warn on wash.teal x0.955: dL* 25.4 -> 21.8 (min 15)
+PASS T5 warn on wash.teal x1.020: dL* 25.4 -> 27.0 (min 15)
+PASS T5 warn on wash.violet x0.955: dL* 20.7 -> 17.3 (min 15)
+PASS T5 warn on wash.violet x1.020: dL* 20.7 -> 22.2 (min 15)
+PASS T5 warn on wash.olive x0.955: dL* 25.1 -> 21.6 (min 15)
+PASS T5 warn on wash.olive x1.020: dL* 25.1 -> 26.7 (min 15)
+PASS T5 warn on wash.plum x0.955: dL* 21.6 -> 18.2 (min 15)
+PASS T5 warn on wash.plum x1.020: dL* 21.6 -> 23.1 (min 15)
+PASS T5 warn on wash.slate x0.955: dL* 22.1 -> 18.7 (min 15)
+PASS T5 warn on wash.slate x1.020: dL* 22.1 -> 23.6 (min 15)
+PASS T5 warn on wash.moss x0.955: dL* 25.4 -> 21.8 (min 15)
+PASS T5 warn on wash.moss x1.020: dL* 25.4 -> 26.9 (min 15)
+PASS moss vs olive (line): dE 12.6 (min 8) cvd 5.7 (min 5, the review asked 8: moss is told from olive by hatching too); moss is used only hatched
+verdict: PASS (118/118 pairs pass)
 speed gauge
 PASS gauge cell 1 vs 2: dE 31.6 (min 20), cvd 8.5 (min 8); L* 52.3 / 51.8
 PASS gauge cell 2 vs 3: dE 71.0 (min 20), cvd 35.8 (min 8); L* 51.8 / 42.0
@@ -352,11 +353,12 @@ PASS gauge #A03E82 hue and chroma: hue 340 (not 15..45), OKLCH C 0.152 (max 0.16
 PASS gauge #8F7A2E hue and chroma: hue 91 (not 15..45), OKLCH C 0.098 (max 0.16)
 verdict: PASS (7/7 pairs pass)
 shot-only: the plates on tints 1/5/7 are demo markers; in the game a plate appears only for a real signal of the player's power
-before: date 1945-11-29 tick 89 shares_in_force 0.28/0.15/0.10/0.42/0.05 tick_ms 0.01
-paused: tick 89 (was 89), pending 1, last Pending
-after: date 1946-02-22 tick 174 shares_in_force 0.45/0.11/0.07/0.34/0.03 last Applied pending 0 tick_ms 0.01
+before: date 1945-11-30 tick 90 shares_in_force 0.28/0.15/0.10/0.42/0.05 tick_ms 0.01
+paused: tick 90 (was 90), pending 1, last Pending
+after: date 1946-02-24 tick 176 shares_in_force 0.45/0.11/0.07/0.34/0.03 last Applied pending 0 tick_ms 0.01
 refusal: last Rejected rejected_flag True reason BadShares
-PASS T3 no texture inside an alert plate: plate variance 0.000 (max 0.5), textured area variance 3.195, texture on (plate strip 564,9 2x28)
+rail badge: Finance carries the active ОТКАЗ (■ 1), Production no badge
+PASS T3 no texture inside an alert plate: plate variance 0.000 (max 0.5), textured area variance 8.943, texture on (plate strip 568,15 2x24)
 why_not actor USA: target none, links 0
 why_not actor GBR: target none, links 0
 why_not actor SUN: target Requirement 1, links 2
@@ -370,29 +372,48 @@ hotkey I -> area Intel; live panel False, locked card True; rail selected Intel
 hotkey G -> area Politics; live panel False, locked card True; rail selected Politics
 hotkey J -> area Projects; live panel False, locked card True; rail selected Projects
 hotkeys: Escape -> area Map
-rail wide: width 196, wide True, fits without scroll True (min 449 of 854)
+rail wide: width 196, wide True, fits without scroll True (min 444 of 846)
+PASS texture acceptance off: sigma inside 0.00 levels, edge band 0-6 du darker by -0.0% (normal: sigma >= 3.0, 5-9%; weak: 1.5, 2.5-4.5%; off: 0)
 textures off: shot taken
+PASS texture acceptance weak: sigma inside 2.16 levels, edge band 0-6 du darker by 2.9% (normal: sigma >= 3.0, 5-9%; weak: 1.5, 2.5-4.5%; off: 0)
 textures weak: shot taken
+PASS texture acceptance normal: sigma inside 4.30 levels, edge band 0-6 du darker by 5.5% (normal: sigma >= 3.0, 5-9%; weak: 1.5, 2.5-4.5%; off: 0)
 textures normal: shot taken
+T6 edge band: no text, icon or plate within the band
+PASS T6 @CanvasLayer@5/@PanelContainer@183 (Paper) nearest Label 01.04.1947: content 12.0 du from the edge (min 10.0)
+PASS T6 @HBoxContainer@138/@Button@180 (Button) nearest TextureRect @TextureRect@179: content 5.0 du from the edge (min 5.0)
+PASS T6 @CanvasLayer@5/@PanelContainer@210 (Paper) nearest Label »: content 14.0 du from the edge (min 10.0)
+PASS T6 @VBoxContainer@186/@Button@188 (Button) nearest glyph: content 7.0 du from the edge (min 5.0)
+PASS T6 @VBoxContainer@186/@Button@191 (Button) nearest glyph: content 7.0 du from the edge (min 5.0)
+PASS T6 @VBoxContainer@186/@Button@193 (Button) nearest glyph: content 7.0 du from the edge (min 5.0)
+PASS T6 @VBoxContainer@186/@Button@195 (Button) nearest glyph: content 7.0 du from the edge (min 5.0)
+PASS T6 @VBoxContainer@186/@Button@198 (Button) nearest glyph: content 7.0 du from the edge (min 5.0)
+PASS T6 @VBoxContainer@186/@Button@200 (Button) nearest glyph: content 7.0 du from the edge (min 5.0)
+PASS T6 @VBoxContainer@186/@Button@202 (Button) nearest glyph: content 7.0 du from the edge (min 5.0)
+PASS T6 @VBoxContainer@186/@Button@204 (Button) nearest glyph: content 7.0 du from the edge (min 5.0)
+PASS T6 @VBoxContainer@186/@Button@207 (Button) nearest Label »: content 6.0 du from the edge (min 5.0)
+PASS T6 @CanvasLayer@5/@PanelContainer@304 (Sheet) nearest TextureRect @TextureRect@2235: content 12.0 du from the edge (min 10.0)
+PASS T6 @HBoxContainer@280/@Button@278 (Button) nearest Label ui.apply: content 5.0 du from the edge (min 5.0)
+PASS T6 @CanvasLayer@5/@Button@432 (Button) nearest Label ?: content 7.0 du from the edge (min 5.0)
+verdict: PASS (15/15 pairs pass)
 alert demo: tint 1 (asked 1) on Russia
 alert demo: tint 5 (asked 5) on Zimbabwe
-alert demo: tint 5 (asked 7) on Zimbabwe
 alert demo: tint 5 (asked 5) on Zimbabwe (night side)
-rail at 150%: fits without scroll True (min 513 of 554)
+rail at 150%: fits without scroll True (min 508 of 546)
 size shots _1600x900_en: asked 1600x900, window 1600x900, viewport 1600x900, mode CanvasItems
 alert demo: tint 5 (asked 5) on Zimbabwe
-rail _1600x900_en: fits without scroll True (min 513 of 854)
+rail _1600x900_en: fits without scroll True (min 508 of 846)
 size shots _1280x720: asked 1280x720, window 1280x720, viewport 1280x720, mode CanvasItems
 alert demo: tint 5 (asked 5) on Zimbabwe
-rail _1280x720: fits without scroll True (min 513 of 674)
+rail _1280x720: fits without scroll True (min 508 of 666)
 size shots _1280x720_en: asked 1280x720, window 1280x720, viewport 1280x720, mode CanvasItems
 alert demo: tint 5 (asked 5) on Zimbabwe
-rail _1280x720_en: fits without scroll True (min 513 of 674)
+rail _1280x720_en: fits without scroll True (min 508 of 666)
 size shots _1920x1080: asked 1920x1080, window 1920x1080, viewport 1920x1080, mode CanvasItems
 alert demo: tint 5 (asked 5) on Zimbabwe
-rail _1920x1080: fits without scroll True (min 513 of 1034)
+rail _1920x1080: fits without scroll True (min 508 of 1026)
 size shots _1920x1080_en: asked 1920x1080, window 1920x1080, viewport 1920x1080, mode CanvasItems
 alert demo: tint 5 (asked 5) on Zimbabwe
-rail _1920x1080_en: fits without scroll True (min 513 of 1034)
-audio demo: 3438592 bytes of PCM, packed to audio_demo.ogg (247112 bytes)
-final: date 1947-06-27 tick 664
+rail _1920x1080_en: fits without scroll True (min 508 of 1026)
+audio demo: 3442688 bytes of PCM, packed to audio_demo.ogg (252739 bytes)
+final: date 1947-06-21 tick 658

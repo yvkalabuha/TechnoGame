@@ -628,8 +628,8 @@ public sealed partial class Main : Node3D
     bool AreaKey(InputEventKey k)
     {
         if (k.CtrlPressed || k.AltPressed || k.MetaPressed) return false;
-        if (k.Keycode == Key.Backslash) { ToggleRail(); return true; }
-        if (k.Keycode == Key.Quoteleft) { ToggleJournal(); return true; }
+        if (k.Keycode == Key.Backslash || k.PhysicalKeycode == Key.Backslash) { ToggleRail(); return true; }
+        if (k.Keycode == Key.Quoteleft || k.PhysicalKeycode == Key.Quoteleft) { ToggleJournal(); return true; }
         var code = k.Keycode is >= Key.A and <= Key.Z ? k.Keycode : k.PhysicalKeycode;   // a non-Latin layout reports the physical Latin key
         var def = code is >= Key.A and <= Key.Z ? AreaData.ByLetter((char)code) : null;
         if (def == null) return false;
@@ -826,6 +826,8 @@ public sealed partial class Main : Node3D
             case 4 when _shotT >= 1.0:
                 _shotLog += $"refusal: last {s.Last.Status} rejected_flag {s.LastRejected} reason {s.Last.Reason}\n";
                 Shot("signal_active_new.png", new Rect2I(0, 0, (int)vp.X, 52)); Shot("globe_panel_refused.png");
+                _shotLog += $"rail badge: Finance carries the active ОТКАЗ ({_rail.BadgeText(AreaId.Finance)}), Production {_rail.BadgeText(AreaId.Production)}\n";
+                Shot("rail_badge_finance.png", new Rect2I(0, 0, 420, 360));
                 CheckPlateFlat();
                 _signal.AckAll(); _shotStep = 5; _shotT = 0; break;
             case 5 when _shotT >= 0.4:
@@ -894,18 +896,23 @@ public sealed partial class Main : Node3D
                 }
                 _shotStep = 90; _shotT = 0; break;
             case 90 when _shotT >= 0.5:
-                if (_texQ.Count > 0) { var (preset, name) = _texQ[0]; _texQ.RemoveAt(0); PaperSurface.SetPreset(preset); _shotT = 0; _texName = name; _shotStep = 91; }
-                else { PaperSurface.SetPreset(2); _shotStep = 92; _shotT = 0; }
+                if (_texQ.Count > 0) { var (preset, name) = _texQ[0]; _texQ.RemoveAt(0); PaperSurface.SetPreset(preset); AddProbe(); _shotT = 0; _texName = name; _shotStep = 91; }
+                else { PaperSurface.SetPreset(2); RunT6(); _shotStep = 92; _shotT = 0; }
                 break;
-            case 91 when _shotT >= 0.4: Shot($"textures_{_texName}.png", new Rect2I(0, 0, 640, 700)); _shotLog += $"textures {_texName}: shot taken\n"; _shotStep = 90; _shotT = 0; break;
+            case 91 when _shotT >= 0.4: ProbeMetrics(_texName); Shot($"textures_{_texName}.png", new Rect2I(0, 0, 640, 700)); _shotLog += $"textures {_texName}: shot taken\n"; _shotStep = 90; _shotT = 0; break;
             case 92 when _shotT >= 0.4: ToggleJournal(); _shotStep = 93; _shotT = 0; break;
-            case 93 when _shotT >= 0.6: Shot("journal.png"); _journal.Visible = false; CloseArea(); _shotStep = 40; _shotT = 0; break;
+            case 93 when _shotT >= 0.6: Shot("journal.png"); _journal.Visible = false; CloseArea(); _shotStep = 95; _shotT = 0; break;
+            // hover and press of a rail button by real mouse events (the press is released outside, so nothing opens)
+            case 95: Mouse(_rail.ButtonCenter(AreaId.Science), null); _shotStep = 96; _shotT = 0; break;
+            case 96 when _shotT >= 0.4: Shot("rail_hover.png", new Rect2I(0, 0, 420, 360)); Mouse(_rail.ButtonCenter(AreaId.Science), true); _shotStep = 97; _shotT = 0; break;
+            case 97 when _shotT >= 0.3: Shot("rail_press.png", new Rect2I(0, 0, 420, 360)); Mouse(_rail.ButtonCenter(AreaId.Science) + new Vector2(0, 600), null); _shotStep = 98; _shotT = 0; break;
+            case 98 when _shotT >= 0.2: Mouse(_rail.ButtonCenter(AreaId.Science) + new Vector2(0, 600), false); CloseArea(); _shotStep = 40; _shotT = 0; break;
             // v0.5b: time icons in their states
             case 40 when _shotT >= 0.5: Shot("time_day.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(2); _shotStep = 41; _shotT = 0; break;
             case 41 when _shotT >= 0.4: Shot("time_week.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(3); _shotStep = 42; _shotT = 0; break;
             case 42 when _shotT >= 0.4: Shot("time_month.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(0); _shotStep = 43; _shotT = 0; break;
             case 43 when _shotT >= 0.4: Shot("time_pause.png", new Rect2I(0, 0, 620, 52)); _alertI = 0; _shotStep = 45; _shotT = 0; break;
-            // alert plates on tints 1, 5 and 7: day side, then tint 5 on the night side
+            // alert plates on tints 1 and 5 (7 is not on the map): day side, then tint 5 on the night side
             case 45: AimAlert(_alertI, false); _shotStep = 46; _shotT = 0; break;
             case 46 when _shotT >= 0.7:
                 Shot($"alert_tint{AlertTints[_alertI] + 1}.png");
@@ -983,6 +990,13 @@ public sealed partial class Main : Node3D
     int _areaHot; string _texName = ""; readonly List<(int, string)> _texQ = new();
 
     // A real key press through the input pipeline, so that the hotkey route is the one a player uses.
+    // Mouse by the input pipeline: null = move only, true = left button down, false = up.
+    static void Mouse(Vector2 p, bool? down)
+    {
+        if (down == null) Input.ParseInputEvent(new InputEventMouseMotion { Position = p, GlobalPosition = p });
+        else Input.ParseInputEvent(new InputEventMouseButton { Position = p, GlobalPosition = p, ButtonIndex = MouseButton.Left, Pressed = down.Value, ButtonMask = down.Value ? MouseButtonMask.Left : 0 });
+    }
+
     static void PressKey(Key k) => Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = true });
 
     void AreaShot()
@@ -994,7 +1008,7 @@ public sealed partial class Main : Node3D
 
     static bool FindText(Node n, string text)
     {
-        if ((n is Button b && b.Text == text) || (n is Label l && l.Text == text)) return true;
+        if ((n is CaptionButton cb && cb.Text == text) || (n is Button b && b.Text == text) || (n is Label l && l.Text == text)) return true;
         foreach (var c in n.GetChildren()) if (FindText(c, text)) return true;
         return false;
     }
@@ -1020,6 +1034,99 @@ public sealed partial class Main : Node3D
         _shotLog += (r3.Pass ? "PASS " : "FAIL ") + r3.Name + ": " + r3.Detail + $" (plate strip {strip.Position.X:F0},{strip.Position.Y:F0} {strip.Size.X:F0}x{strip.Size.Y:F0})\n";
     }
 
+    // Texture acceptance (spec §3.3): a bare sheet 240x240 without any text is drawn next to the panel; sigma of luminance inside it and the darkening of the 0-6 du edge band are measured on the screenshot.
+    Panel _probe;
+    void AddProbe()
+    {
+        _probe?.QueueFree();
+        _probe = new Panel { Position = new Vector2(700, 80), Size = new Vector2(240, 240), MouseFilter = Control.MouseFilterEnum.Ignore };
+        _probe.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, null, 0, 0, 0));
+        PaperSurface.Apply(_probe, SurfaceKind.Sheet, "probe");
+        _areaPanel.GetParent().AddChild(_probe);
+    }
+
+    void ProbeMetrics(string name)
+    {
+        var img = GetViewport().GetTexture().GetImage();
+        float k = img.GetWidth() / GetViewport().GetVisibleRect().Size.X;
+        double L(int x, int y) { var c = img.GetPixel(x, y); return (0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B) * 255; }
+        var inner = new List<double>(); double band = 0; int bn = 0;
+        for (int y = 0; y < 240 * k; y++)
+            for (int x = 0; x < 240 * k; x++)
+            {
+                double e = Math.Min(Math.Min(x, 240 * k - 1 - x), Math.Min(y, 240 * k - 1 - y)) / k;
+                int px = (int)(_probe.GlobalPosition.X * k) + x, py = (int)(_probe.GlobalPosition.Y * k) + y;
+                if (e >= 12) inner.Add(L(px, py));
+                else if (e < 6) { band += L(px, py); bn++; }
+            }
+        double mean = inner.Average(), sigma = Math.Sqrt(inner.Average(v => (v - mean) * (v - mean)));
+        double drop = 1 - band / bn / mean;
+        bool ok = name switch
+        {
+            "normal" => sigma >= 3.0 && drop is >= 0.05 and <= 0.09,
+            "weak" => sigma >= 1.5 && drop is >= 0.025 and <= 0.045,
+            _ => sigma < 0.5 && Math.Abs(drop) < 0.005,
+        };
+        _shotLog += $"{(ok ? "PASS" : "FAIL")} texture acceptance {name}: sigma inside {sigma:F2} levels, edge band 0-6 du darker by {drop * 100:F1}% (normal: sigma >= 3.0, 5-9%; weak: 1.5, 2.5-4.5%; off: 0)\n";
+        _probe.QueueFree(); _probe = null;
+    }
+
+    // T6 on the live layout: the distance from the edge of every textured surface to the nearest text, icon or plate inside it.
+    void RunT6()
+    {
+        var items = new List<(string, double, double)>();
+        foreach (var (node, kind) in PaperSurface.Surfaces())
+        {
+            if (!GodotObject.IsInstanceValid(node) || !node.IsVisibleInTree()) continue;
+            var r = node.GetGlobalRect(); double min = double.MaxValue; string who = "";
+            void Visit(Node n)
+            {
+                foreach (var c in n.GetChildren())
+                {
+                    if (c is not Control ch || !ch.Visible) continue;   // content outside the surface (scrolled away) is clipped, not drawn
+                    if (ch is Label or TextureRect or RichTextLabel)
+                    {
+                        foreach (var g in Content(ch))
+                        {
+                            if (!r.Intersects(g)) continue;
+                            double d = Math.Min(Math.Min(g.Position.X - r.Position.X, r.End.X - g.End.X), Math.Min(g.Position.Y - r.Position.Y, r.End.Y - g.End.Y));
+                            if (d < min) { min = d; who = ch.GetType().Name + " " + (ch is Label lb ? lb.Text : ch.Name); }
+                        }
+                    }
+                    Visit(ch);
+                }
+            }
+            if (node is IGlyphBounds gb)
+                foreach (var g in gb.GlyphRects())
+                {
+                    double d = Math.Min(Math.Min(g.Position.X - r.Position.X, r.End.X - g.End.X), Math.Min(g.Position.Y - r.Position.Y, r.End.Y - g.End.Y));
+                    if (d < min) { min = d; who = "glyph"; }
+                }
+            Visit(node);
+            if (min < double.MaxValue) items.Add(($"{node.GetParent()?.Name}/{node.Name} ({kind}) nearest {who}", min / UiScaleOf(node), TextureValidator.Limit(kind)));
+        }
+        _shotLog += TextureValidator.Format("T6 edge band: no text, icon or plate within the band", TextureValidator.T6(items));
+    }
+
+    // Distance in du: global rects are in pixels; the UI scale of the window multiplies them.
+    static double UiScaleOf(Control c) => c.GetGlobalTransform().Scale.X;
+
+    // The ink of a control: a Label shows its text as big as the text really is (centred or aligned), not the whole rect; an icon its rect; a button glyph layer the rects it registered.
+    static IEnumerable<Rect2> Content(Control c)
+    {
+        if (c is Label l)
+        {
+            var font = l.GetThemeFont("font"); int size = l.GetThemeFontSize("font_size");
+            var ts = font.GetMultilineStringSize(l.Text == "" ? " " : TranslationServer.Translate(l.Text), l.HorizontalAlignment, c.Size.X, size);
+            var gr = c.GetGlobalRect(); float k = c.GetGlobalTransform().Scale.X;
+            float w = Math.Min(ts.X * k, gr.Size.X), h = Math.Min(ts.Y * k, gr.Size.Y);
+            float x = l.HorizontalAlignment switch { HorizontalAlignment.Center => gr.Position.X + (gr.Size.X - w) / 2, HorizontalAlignment.Right => gr.End.X - w, _ => gr.Position.X };
+            float y = l.VerticalAlignment switch { VerticalAlignment.Center => gr.Position.Y + (gr.Size.Y - h) / 2, VerticalAlignment.Bottom => gr.End.Y - h, _ => gr.Position.Y };
+            yield return new Rect2(x, y, w, h);
+        }
+        else yield return c.GetGlobalRect();
+    }
+
     // Runs the alert-contrast validator on palette C and on the v0.2 palette, prints PASS/FAIL per pair into the log. A failure does not stop the run.
     void RunValidator()
     {
@@ -1028,13 +1135,13 @@ public sealed partial class Main : Node3D
             string report = ContrastValidator.Format(p, ContrastValidator.Run(p));
             _shotLog += report;
         }
-        _shotLog += TextureValidator.Format("texture rules T1, T2, T4, T5 (T3 runs on the screenshot below), palette C", TextureValidator.Run(Palette.C));
+        _shotLog += TextureValidator.Format("texture rules T1, T2, T4, T5 and moss/olive (T3 and T6 run on the live client below), palette C", TextureValidator.Run(Palette.C));
         _shotLog += TextureValidator.Format("speed gauge", TextureValidator.RunGauge());
         _shotLog += "shot-only: the plates on tints 1/5/7 are demo markers; in the game a plate appears only for a real signal of the player's power\n";
     }
 
     // Demo alert plates on one country of each of the tints 1, 5 and 7 (palette C risk, spec 6.4); camera on the chosen one.
-    static readonly int[] AlertTints = { 0, 4, 6 };
+    static readonly int[] AlertTints = { 0, 4 };
     int _alertI;
     void AimAlert(int which, bool night)
     {

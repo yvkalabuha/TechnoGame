@@ -19,6 +19,8 @@ $G --path . -- --bench --out bench-out      # automatic benchmark + screenshots,
 ```
 
 ## Data and assets (see `LICENSES.md`)
+Area icons and pictures (SVG) have one source: `docs/ui/assets/area-icons/` and `area-pictures/`. `assets/ui/` is a git-ignored copy that
+`run-globe-spike.sh` makes before the Godot import (so after editing an SVG, run the script; opening the project in the editor without it needs `cp -r` of the two folders into `assets/ui/` by hand).
 Committed because small: `assets/data/ne_50m_admin_0_countries_min.json` (derived from Natural Earth),
 `assets/models/*` (6 Kenney glb, 1 OpenGameArt obj).
 Regenerate the data: download

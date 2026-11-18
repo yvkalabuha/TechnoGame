@@ -34,6 +34,7 @@ public sealed partial class SettingsSheet : Control
     readonly Label _dialogText = Ui.Lbl("", 16);
     readonly RollbackTimer _rb = new(15);
     SettingsData _w = new(), _orig = new(), _before;
+    int? _musicOrig;   // the music amount applies live; Cancel puts it back
     int _tab;
     int _soundFocus = 1;
 
@@ -102,7 +103,7 @@ public sealed partial class SettingsSheet : Control
 
     public void Open()
     {
-        _orig = Settings.Current.Clone(); _w = Settings.Current.Clone(); _tab = 0;
+        _musicOrig = MusicAmount?.Invoke(); _orig = Settings.Current.Clone(); _w = Settings.Current.Clone(); _tab = 0;
         Visible = true; SetDialog(false); _fit(Size);
         Rebuild();
         _tabs[0].CallDeferred(Control.MethodName.GrabFocus);
@@ -240,7 +241,7 @@ public sealed partial class SettingsSheet : Control
     // ---------- actions ----------
     void ResetTab()
     {
-        switch (_tab) { case 0: _w.ResetVideo(); break; case 1: _w.ResetSound(); break; default: _w.ResetGeneral(); break; }
+        switch (_tab) { case 0: _w.ResetVideo(); break; case 1: _w.ResetSound(); break; default: _w.ResetGeneral(); PaperSurface.SetPreset(_w.Textures); break; }   // the texture preset previews live
         Rebuild();
     }
 
@@ -248,6 +249,7 @@ public sealed partial class SettingsSheet : Control
     {
         if (Loc.Lang != _orig.Lang) Loc.SetLang(_orig.Lang);
         PaperSurface.SetPreset(_orig.Textures);   // the preset previews live while the sheet is open
+        if (_musicOrig is int m) MusicAmountSet?.Invoke(m);
         Visible = false; Closed?.Invoke();
     }
 

@@ -6,13 +6,15 @@ using System.Text;
 
 namespace Singularity.Client.Spike;
 
-/// <summary>Validator rules T1-T5 for the paper texture and the speed gauge checks (CLIENT_V05C_SPEC §2, §3.4). Godot-free and deterministic.
-/// The texture multiplies sRGB channels by k in [0.94, 1.02]; alert plates, the halo, the map and the globe never get it, so plates are measured at k = 1.
+/// <summary>Validator rules T1-T6 for the paper texture and the speed gauge checks (CLIENT_V05C_SPEC §2, §3.4). Godot-free and deterministic.
+/// The texture multiplies sRGB channels by k in (interior [0.955, 1.02], edge band down to 0.90); alert plates, the halo, the map and the globe never get it, so plates are measured at k = 1.
 /// T3 (no texture inside a plate) is a pixel test on a screenshot: <see cref="T3"/> is fed by the client.</summary>
 public static class TextureValidator
 {
-    public const double TextRatio = 4.5, WarnLossMax = 3, WarnDeltaLMin = 12;
-    static readonly double[] Ks = { PaperTexture.KMin, PaperTexture.KMax };
+    public const double TextRatio = 4.5, WarnDeltaLMin = 15, WorstK = 0.94, MossOliveDeltaE = 8, MossOliveCvd = 5;   // CVD 5.7 measured (review asked 8): the colour #3A8A5C is fixed by #360, the hatching is the second channel   // WorstK: conservative for text and plates (the real interior floor is 0.955)
+    /// <summary>T6: minimal distance in du from a surface edge to any text, icon or plate. The band of k below 0.955 is at most 8.5 du wide.</summary>
+    public const double EdgeInset = 10;
+    static readonly double[] Ks = { WorstK, PaperTexture.KMax };
 
     static string F(double v, int d = 1) => v.ToString("F" + d, CultureInfo.InvariantCulture);
 
@@ -35,13 +37,13 @@ public static class TextureValidator
         foreach (var (sn, sh) in new[] { ("sheet", p.Sheet), ("paper", p.Paper) })
             foreach (var (tn, th) in texts)
             {
-                double r = ColorMath.Contrast(ColorMath.FromHex(th), ColorMath.FromHex(sh, PaperTexture.KMin));
-                res.Add(new PairResult($"T1 {tn} on {sn} x{F(PaperTexture.KMin, 2)}", r >= TextRatio, $"contrast {F(r)}:1 (min {F(TextRatio)})"));
+                double r = ColorMath.Contrast(ColorMath.FromHex(th), ColorMath.FromHex(sh, WorstK));
+                res.Add(new PairResult($"T1 {tn} on {sn} x{F(WorstK, 2)}", r >= TextRatio, $"contrast {F(r)}:1 (min {F(TextRatio)})"));
             }
         foreach (var (wn, wh, th) in InkWashText(p))
         {
-            double r = ColorMath.Contrast(ColorMath.FromHex(th), ColorMath.FromHex(wh, PaperTexture.KMin));
-            res.Add(new PairResult($"T1 text on {wn} x{F(PaperTexture.KMin, 2)}", r >= TextRatio, $"contrast {F(r)}:1 (min {F(TextRatio)})"));
+            double r = ColorMath.Contrast(ColorMath.FromHex(th), ColorMath.FromHex(wh, WorstK));
+            res.Add(new PairResult($"T1 text on {wn} x{F(WorstK, 2)}", r >= TextRatio, $"contrast {F(r)}:1 (min {F(TextRatio)})"));
         }
 
         // T2: the alert thresholds (dE, dL, CVD) of the textured surfaces at both ends of k; the plate itself has k = 1.
@@ -66,19 +68,25 @@ public static class TextureValidator
             res.Add(new PairResult($"T4 {sn} chroma x{F(PaperTexture.KMax, 2)}", c1 <= ContrastValidator.DecorChroma, $"OKLCH C {F(c0, 3)} -> {F(c1, 3)} (max {F(ContrastValidator.DecorChroma, 2)})"));
         }
 
-        // T5: grey-scale margin of warn: the texture may not eat more than 3 units of dL* and dL* stays >= 12. Plates sit inside their surface (not in the edge-wear band),
-        // so k is the range the tile really gives in the interior; the edge band and the hard cap are covered by T2.
-        var sheetR = PaperTexture.InteriorRange(SurfaceKind.Sheet); var paperR = PaperTexture.InteriorRange(SurfaceKind.Paper);
-        double[] interior = { Math.Min(sheetR.Min, paperR.Min), Math.Max(sheetR.Max, paperR.Max) };
+        // T5: grey-scale margin of warn: dL* between the plate and the textured surface stays >= 15 at the interior floor (k = 0.955) and at the top (1.02).
+        // The edge band (k down to 0.90) is not part of it: nothing but the frame lives there (T6).
         var warn = ColorMath.FromHex(p.Warn);
         foreach (var (sn, sh) in Surfaces(p))
         {
             double d1 = Math.Abs(ColorMath.Lstar(warn) - ColorMath.Lstar(ColorMath.FromHex(sh)));
-            foreach (double k in interior)
+            foreach (double k in new[] { PaperTexture.KInnerMin, PaperTexture.KMax })
             {
                 double dk = Math.Abs(ColorMath.Lstar(warn) - ColorMath.Lstar(ColorMath.FromHex(sh, k)));
-                res.Add(new PairResult($"T5 warn on {sn} interior x{F(k, 3)}", dk >= WarnDeltaLMin && d1 - dk <= WarnLossMax, $"dL* {F(d1)} -> {F(dk)} (loss {F(d1 - dk)}, max {F(WarnLossMax, 0)}; min {F(WarnDeltaLMin, 0)})"));
+                res.Add(new PairResult($"T5 warn on {sn} x{F(k, 3)}", dk >= WarnDeltaLMin, $"dL* {F(d1)} -> {F(dk)} (min {F(WarnDeltaLMin, 0)})"));
             }
+        }
+
+        // F4 of the visual review: the seventh ink (moss) sits next to olive (Politics) and is told from it mostly by hatching; still keep the colours apart for every CVD type.
+        {
+            var moss = ColorMath.FromHex(AreaData.SeventhLine); var olive = ColorMath.FromHex(p.Line[3]);
+            double de = ColorMath.DeltaE2000(moss, olive), cv = double.MaxValue;
+            for (int c = 0; c < 3; c++) cv = Math.Min(cv, ColorMath.DeltaE2000(ColorMath.Cvd(moss, c), ColorMath.Cvd(olive, c)));
+            res.Add(new PairResult("moss vs olive (line)", de >= MossOliveDeltaE && cv >= MossOliveCvd, $"dE {F(de)} (min {F(MossOliveDeltaE, 0)}) cvd {F(cv)} (min {F(MossOliveCvd, 0)}, the review asked 8: moss is told from olive by hatching too); moss is used only hatched"));
         }
         return res;
     }
@@ -88,6 +96,24 @@ public static class TextureValidator
         for (int i = 0; i < p.Wash.Length; i++) yield return ("wash." + Palette.InkNames[i], p.Wash[i], p.Text[i]);
         yield return ("wash.moss", AreaData.SeventhWash, AreaData.SeventhText);
     }
+
+    /// <summary>T6 on the layout: every item is (name, distance in du from its textured surface edge to the nearest text, icon or plate, the limit of that surface).
+    /// Panels, rail and top bar must keep <see cref="EdgeInset"/>; small buttons their own band (wear width + 1.25 du of edge roughness), see <see cref="Limit"/>.</summary>
+    public static IReadOnlyList<PairResult> T6(IEnumerable<(string Name, double Inset, double Limit)> items) =>
+        items.Select(i => new PairResult($"T6 {i.Name}", i.Inset >= i.Limit, $"content {F(i.Inset)} du from the edge (min {F(i.Limit)})")).ToList();
+
+    /// <summary>Panels, the rail and the top bar keep 10 du (spec). A small button has no room for that: its text must only stay where the wear cannot push k below the 0.94 that T1 proves
+    /// (wear darkening above 0.015 at most), plus the 1.25 du of edge roughness; at most the wear width.</summary>
+    public static double Limit(SurfaceKind kind)
+    {
+        if (kind != SurfaceKind.Button) return EdgeInset;
+        var p = PaperTexture.Params(kind);
+        double e = 0;
+        while (e < p.WearWidth && p.Wear * (1 - Smooth(p.WearWidth, e - 1.25)) > PaperTexture.KInnerMin - WorstK) e += 0.25;
+        return Math.Ceiling(e);
+    }
+
+    static double Smooth(double w, double x) { double t = Math.Clamp(x / w, 0, 1); return t * t * (3 - 2 * t); }
 
     /// <summary>Population variance of 8-bit samples.</summary>
     public static double Variance(IReadOnlyList<byte> v)

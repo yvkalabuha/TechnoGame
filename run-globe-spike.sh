@@ -18,6 +18,12 @@ fi
 # Godot's C# build needs the .NET SDK on PATH.
 export PATH="$HOME/.dotnet:$PATH"
 
+# The area icons and pictures live only in docs/ui/assets/ (single source); the client reads a build-time copy (git-ignored).
+rm -rf "$PROJECT/assets/ui"
+mkdir -p "$PROJECT/assets/ui"
+cp -r "$ROOT/docs/ui/assets/area-icons" "$ROOT/docs/ui/assets/area-pictures" "$PROJECT/assets/ui/"
+rm -f "$PROJECT"/assets/ui/*/README.md
+
 cd "$PROJECT"
 
 # Import assets (models, fonts, audio); cheap when nothing changed. .godot/ is git-ignored. Import errors are shown, not hidden.

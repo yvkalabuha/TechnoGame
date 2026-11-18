@@ -82,16 +82,30 @@ public sealed partial class AreaHeader : VBoxContainer
         }
     }
 
+    // The blueprint ground of the picture: the same blue and 20 du grid as the picture itself, carried on to the full inner width of the panel (the drawing stays 320x120 on the left).
+    sealed partial class Ground : PanelContainer
+    {
+        public override void _Draw()
+        {
+            var c = new Color("3A6491", 0.6f * 0.8f);
+            for (float x = 20; x < Size.X; x += 20) DrawLine(new Vector2(x, 0), new Vector2(x, Size.Y), c, 0.5f);
+            for (float y = 20; y < Size.Y; y += 20) DrawLine(new Vector2(0, y), new Vector2(Size.X, y), c, 0.5f);
+        }
+    }
+
     public AreaHeader(AreaDef def, bool locked)
     {
         AddThemeConstantOverride("separation", 4);
         var (line, wash, text) = UiArt.Inks(def);
-        var plate = new PanelContainer { SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
+        var plate = new PanelContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         plate.AddThemeStyleboxOverride("panel", Ui.Box(wash, Ui.Border, 1, 0, Ui.R1));
         var col = new VBoxContainer(); col.AddThemeConstantOverride("separation", 0);
         plate.AddChild(col);
-        col.AddChild(new TextureRect { Texture = UiArt.Picture(def.Slug, locked), CustomMinimumSize = new Vector2(318, 119), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-            StretchMode = TextureRect.StretchModeEnum.Scale, TextureFilter = CanvasItem.TextureFilterEnum.LinearWithMipmaps, MouseFilter = MouseFilterEnum.Ignore });
+        var ground = new Ground { MouseFilter = MouseFilterEnum.Ignore };
+        ground.AddThemeStyleboxOverride("panel", Ui.Box(locked ? new Color("5E6670") : new Color("1E4673"), null, 0, 0, 0));
+        ground.AddChild(new TextureRect { Texture = UiArt.Picture(def.Slug, locked), CustomMinimumSize = new Vector2(318, 119), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.Scale, TextureFilter = CanvasItem.TextureFilterEnum.LinearWithMipmaps, MouseFilter = MouseFilterEnum.Ignore, SizeFlagsHorizontal = SizeFlags.ShrinkBegin });
+        col.AddChild(ground);
         var bar = new Bar { Line = line, Hatch = def.Ink == AreaData.Seventh, MouseFilter = MouseFilterEnum.Ignore };
         bar.AddThemeStyleboxOverride("panel", Ui.Box(wash, null, 0, 8, 0));
         var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 8);
@@ -121,14 +135,14 @@ public sealed partial class AreaCard : PanelContainer
         }
     }
 
-    public const int PanelWidth = 360;
+    public const int PanelWidth = 420;
     readonly VBoxContainer _root = new();
     AreaDef _def;
 
     public AreaCard()
     {
         CustomMinimumSize = new Vector2(PanelWidth, 0);
-        AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 2, 12, Ui.R3));
+        AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 2, 12, Ui.R3, 12));
         PaperSurface.Apply(this, SurfaceKind.Sheet, "card");
         _root.AddThemeConstantOverride("separation", 8);
         AddChild(_root);
@@ -163,7 +177,7 @@ public sealed partial class JournalPanel : PanelContainer
     public JournalPanel()
     {
         CustomMinimumSize = new Vector2(PanelWidth, 0);
-        AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 2, 12, Ui.R3));
+        AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 2, 12, Ui.R3, 12));
         PaperSurface.Apply(this, SurfaceKind.Sheet, "journal");
         var root = new VBoxContainer(); root.AddThemeConstantOverride("separation", 6);
         AddChild(root);

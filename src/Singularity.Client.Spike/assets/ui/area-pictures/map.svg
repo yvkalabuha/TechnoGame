@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" width="320" height="120"><title>Карта: планисфера с градусной сеткой, условные очертания суши, маршрут и роза румбов</title>
-<defs><pattern id="g" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0V20M0 20H20" fill="none" stroke="#3A6491" stroke-width="0.4" opacity="0.6"/></pattern></defs>
-<rect width="320" height="120" fill="#1E4673"/><rect width="320" height="120" fill="url(#g)"/>
-<rect x="6" y="6" width="308" height="108" fill="none" stroke="#B9CBDA" stroke-width="0.75"/><rect width="4" height="120" fill="#EEF2F0"/>
-<g fill="none" stroke-linecap="round" stroke-linejoin="round">
-<g stroke="#EEF2F0" stroke-width="1.5"><rect x="20" y="16" width="220" height="88"/><path d="M34 40L54 32L74 38L70 54L50 64L38 56Z"/><path d="M104 28L134 26L150 40L140 62L148 82L130 94L116 76L110 52Z"/><path d="M164 36L198 30L214 48L192 60L170 56Z"/><path d="M170 80L192 74L204 90L180 98Z"/></g>
-<g stroke="#B9CBDA" stroke-width="0.75"><path d="M64 16V104M108 16V104M152 16V104M196 16V104M20 38H240M20 60H240M20 82H240"/><path stroke-dasharray="5 2" d="M54 50Q110 6 176 44"/><circle cx="270" cy="60" r="12"/><path d="M270 40V80M250 60H290M270 40l-3 6M270 40l3 6"/><path d="M20 110H80M20 107V113M50 107V113M80 107V113"/></g>
-</g></svg>

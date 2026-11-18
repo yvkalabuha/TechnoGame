@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" width="320" height="120"><title>Силы: бронеобъект в профиль и линия снабжения от склада к фронту</title>
-<defs><pattern id="g" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0V20M0 20H20" fill="none" stroke="#3A6491" stroke-width="0.4" opacity="0.6"/></pattern></defs>
-<rect width="320" height="120" fill="#1E4673"/><rect width="320" height="120" fill="url(#g)"/>
-<rect x="6" y="6" width="308" height="108" fill="none" stroke="#B9CBDA" stroke-width="0.75"/><rect width="4" height="120" fill="#C3D8EA"/>
-<g fill="none" stroke-linecap="round" stroke-linejoin="round">
-<g stroke="#EEF2F0" stroke-width="1.5"><path d="M20 102H300"/><rect x="52" y="85" width="156" height="17" rx="8.500"/><path d="M60 85L74 68H188L204 80V85"/><path d="M100 68L108 50H160L172 68"/><path d="M160 56H254M160 60H254M254 56V60"/></g>
-<g stroke="#EEF2F0" stroke-width="1"><circle cx="68" cy="93.500" r="5"/><circle cx="92" cy="93.500" r="5"/><circle cx="116" cy="93.500" r="5"/><circle cx="140" cy="93.500" r="5"/><circle cx="164" cy="93.500" r="5"/><circle cx="192" cy="93.500" r="5"/></g>
-<g stroke="#B9CBDA" stroke-width="0.75"><path d="M52 108H208M52 105V111M208 105V111M222 68V102M219 68H225M219 102H225"/><path stroke-dasharray="10 2 2 2" d="M40 30H272"/><path d="M272 30l-6-3M272 30l-6 3"/><rect x="24" y="23" width="12" height="14"/><path d="M286 22V38M286 22h14l-4 4 4 4h-14"/></g>
-</g></svg>

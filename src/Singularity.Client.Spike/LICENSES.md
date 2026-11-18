@@ -13,7 +13,7 @@
 | `assets/audio/music/irradiated_skies.ogg` | "Irradiated Skies" by Tsorthan Grove, https://opengameart.org/content/irradiated-skies (file `irradiated_skies.ogg`); converted and gain-adjusted by `tools/audio/prepare_external.py`. **Temporary** music | CC0 (licence field of the page: CC0) |
 | `assets/audio/music/led_twilight.ogg` | "LED Twilight" by Tsorthan Grove, https://opengameart.org/content/led-twilight (file `led_twlight.ogg`); converted as above. **Temporary** music | CC0 (licence field of the page: CC0) |
 | `assets/audio/ambient/pale_window.ogg` | "Light Through a Pale Window" from "Background Drones Vol 1" by Tsorthan Grove, https://opengameart.org/content/background-drones-vol-1 (file `light_through_a_pale_window.mp3`, first 120 s); converted as above. Ambient bed | CC0 (licence field of the page: CC0) |
-| `assets/ui/area-icons/*.svg`, `assets/ui/area-pictures/*.svg` | own drawings of the ui-art-director (copies of `docs/ui/assets/`; nothing traced, no third-party art) | own |
+| `assets/ui/area-icons/*.svg`, `assets/ui/area-pictures/*.svg` | own drawings of the ui-art-director (build-time copy of `docs/ui/assets/`, made by `run-globe-spike.sh`; nothing traced, no third-party art) | own |
 | `locale/ui.csv`, `locale/data.csv` | own work: UI strings; node, country and actor names (EN, RU) | own |
 | Runway strip | procedural box mesh in code | none (own) |
 

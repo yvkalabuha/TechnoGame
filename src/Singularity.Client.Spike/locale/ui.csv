@@ -333,7 +333,7 @@ area.locked,Area is locked,Область заперта
 area.locked.when,Appears in {0}.,Появится в {0}.
 area.locked.note,The term is provisional. There are no figures or controls here until the mechanic exists.,"Срок ориентировочный. Чисел и управления здесь нет, пока нет механики."
 area.production.later,Supply priority and the choice of variants: in M1. Here are the design lines of the power.,Приоритет снабжения и выбор вариантов: в M1. Здесь линии изделий державы.
-area.finance.later,Taxes by region: in M1; trade and embargo: M1–M2. Here are the budget shares and licences.,Налоги по регионам: в M1; торговля и эмбарго: M1–M2. Здесь доли бюджета и лицензии.
+area.finance.later,Taxes by region: M1; trade and embargo: M1–M2.,Налоги по регионам: M1; торговля и эмбарго: M1–M2.
 tip.area,{0} · {1},{0} · {1}
 tip.area.locked,{0} · {1} · appears in {2},{0} · {1} · появится в {2}
 tip.rail,Rail width: narrow or wide (\),Ширина рейки: узкая или широкая (\)

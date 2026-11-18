@@ -64,7 +64,7 @@ public sealed partial class SignalField : PanelContainer
     {
         _host = host; _actor = player;
         CustomMinimumSize = new Vector2(0, 46);
-        AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, Ui.Ink, 1, 8, 0));
+        AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, Ui.Ink, 1, 12, 0, 10));
         PaperSurface.Apply(this, SurfaceKind.Paper, "top");
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 10);
@@ -94,9 +94,9 @@ public sealed partial class SignalField : PanelContainer
         row.AddChild(_perf);
         // The sound button left the bar (#352): sound lives in Settings. The journal of signals took its place.
         var jr = Ui.Btn("", () => JournalPressed?.Invoke());
-        jr.TooltipText = "tip.journal"; jr.CustomMinimumSize = new Vector2(34, 30);
+        jr.TooltipText = "tip.journal"; jr.CustomMinimumSize = new Vector2(34, 34);
         jr.AddChild(new TextureRect { Texture = UiArt.Icon("journal"), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.Scale,
-            MouseFilter = MouseFilterEnum.Ignore, Position = new Vector2(5, 3), Size = new Vector2(24, 24) });
+            MouseFilter = MouseFilterEnum.Ignore, Position = new Vector2(5, 5), Size = new Vector2(24, 24) });
         row.AddChild(jr);
         row.AddChild(Ui.VRule());
         var menu = new MenuButton3Lines { TooltipText = "tip.menu" };

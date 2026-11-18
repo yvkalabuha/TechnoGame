@@ -19,6 +19,7 @@ public sealed partial class ActorPanel : PanelContainer
 
     readonly SimHost _host;
     readonly VBoxContainer _root = new();
+    readonly MarginContainer _pad = new();   // right inset of 12 du while the scroll bar shows, so that it never covers the last column
     readonly ScrollContainer _scroll = new() { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
     readonly Label _title = Ui.Lbl("", 20, null, FontKind.Draft);
     readonly Prose _sub = Ui.Wrap("", 14, Ui.Ink2);
@@ -28,7 +29,7 @@ public sealed partial class ActorPanel : PanelContainer
     readonly Label _sum = Ui.Lbl("", 14, Ui.Ink2, FontKind.Mono);
     readonly Prose _result = Ui.Wrap("", 14, Ui.Ink2);
     readonly Control _resultMark = new ColorRect { Color = Ui.Alarm, CustomMinimumSize = new Vector2(9, 9), SizeFlagsVertical = SizeFlags.ShrinkCenter, Visible = false };
-    readonly Button _apply;
+    readonly CaptionButton _apply;
     readonly VBoxContainer _designs = new(), _licence = new(), _why = new();
     readonly int[] _pct = new int[5];
     int[] _sentPct;
@@ -84,12 +85,14 @@ public sealed partial class ActorPanel : PanelContainer
     {
         _host = host; _areaMode = areaMode;
         CustomMinimumSize = new Vector2(areaMode ? AreaPanelWidth : PanelWidth, 0);
-        AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 2, 12, Ui.R3));
+        AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 2, 12, Ui.R3, 12));
         PaperSurface.Apply(this, SurfaceKind.Sheet, areaMode ? "area" : "actor");
         AddChild(_scroll);
         _root.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         _root.AddThemeConstantOverride("separation", 6);
-        _scroll.AddChild(_root);
+        _pad.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        _pad.AddChild(_root);
+        _scroll.AddChild(_pad);
 
         var head = new HBoxContainer();
         var tb = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
@@ -229,6 +232,7 @@ public sealed partial class ActorPanel : PanelContainer
         // Height follows the content (an inset, not a full-height column), capped by the window.
         float want = _root.GetCombinedMinimumSize().Y + 6, cap = GetViewportRect().Size.Y - 120;
         _scroll.CustomMinimumSize = new Vector2(0, Math.Min(want, cap));
+        _pad.AddThemeConstantOverride("margin_right", want <= cap ? 0 : 12);
         _scroll.VerticalScrollMode = want <= cap ? ScrollContainer.ScrollMode.Disabled : ScrollContainer.ScrollMode.Auto;   // a scroll bar only when the content really does not fit
         var s = _host.Snap;
         if (s == null || _actor < 0 || !Visible) return;

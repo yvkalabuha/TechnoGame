@@ -10,16 +10,16 @@ namespace Singularity.Client.Spike;
 /// <summary>Shared building blocks of the menu screens (spec §1-§4).</summary>
 public static class MenuUi
 {
-    public static StyleBoxFlat SheetBox() => Ui.Box(Ui.Sheet, Ui.Ink, 1, 16, Ui.R3);
+    public static StyleBoxFlat SheetBox() => Ui.Box(Ui.Sheet, Ui.Ink, 1, 16, Ui.R3, 16);
 
     /// <summary>Primary button: ink fill, sheet text (§17.7).</summary>
-    public static Button Primary(string text, Action onPress)
+    public static CaptionButton Primary(string text, Action onPress)
     {
         var b = Ui.Btn(text, onPress);
         b.AddThemeStyleboxOverride("normal", Ui.Box(Ui.Ink, Ui.Ink, 1, 12));
         b.AddThemeStyleboxOverride("hover", Ui.Box(Ui.Ink2, Ui.Ink, 1, 12));
         b.AddThemeStyleboxOverride("pressed", Ui.Box(Ui.Ink2, Ui.Ink, 2, 12));
-        foreach (var n in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color" }) b.AddThemeColorOverride(n, Ui.Sheet);
+        foreach (var n in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color" }) b.CaptionColor(n, Ui.Sheet);
         b.FocusMode = Control.FocusModeEnum.All;
         return b;
     }

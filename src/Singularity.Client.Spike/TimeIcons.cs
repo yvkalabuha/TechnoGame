@@ -62,7 +62,7 @@ public sealed partial class TimeControl : HBoxContainer
 
         static void Hatch(CanvasItem c, Rect2 r, Color col)
         {
-            for (float a = r.Position.X - r.Size.Y; a < r.End.X; a += 3f)
+            for (float a = r.Position.X - r.Size.Y; a < r.End.X; a += 4f)
             {
                 float s0 = Math.Max(0, r.Position.X - a), s1 = Math.Min(r.Size.Y, r.End.X - a);
                 if (s0 < s1) c.DrawLine(new Vector2(a + s0, r.End.Y - s0), new Vector2(a + s1, r.End.Y - s1), col, 1f);
@@ -106,6 +106,7 @@ public sealed partial class TimeControl : HBoxContainer
         AddChild(_pause); AddChild(_slower); AddChild(_faster);
         var gap = new Control { CustomMinimumSize = new Vector2(10, 0) };
         AddChild(gap); AddChild(_meter);
+        _word.AddThemeFontSizeOverride("font_size", 12);   // draft.s: the tempo word is a caption, not a control (visual review F5)
         _word.CustomMinimumSize = new Vector2(96, 0);
         _word.VerticalAlignment = VerticalAlignment.Center;
         AddChild(_word);

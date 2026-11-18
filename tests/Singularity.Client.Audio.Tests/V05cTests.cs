@@ -17,7 +17,7 @@ public class V05cTests
                             foreach (double rub in new[] { 0.0, 1.0 })
                             {
                                 double k = PaperTexture.K(PaperTexture.Params(kind, pressed), n, 1 - n, n, e, pressed ? 1 : 0, rub, s);
-                                Assert.InRange(k, PaperTexture.KMin, PaperTexture.KMax);
+                                Assert.InRange(k, e <= PaperTexture.BandEdge ? PaperTexture.KBandMin : PaperTexture.KInnerMin, PaperTexture.KMax);
                             }
     }
 
@@ -28,6 +28,38 @@ public class V05cTests
         Assert.Equal(0.5, PaperTexture.Strength(1));
         Assert.Equal(1.0, PaperTexture.Strength(2));
         Assert.Equal(1.0, PaperTexture.Strength(9));
+    }
+
+    [Fact]
+    public void Off_preset_gives_exactly_k_1_inside_the_wear_width()
+    {
+        foreach (var kind in new[] { SurfaceKind.Sheet, SurfaceKind.Paper, SurfaceKind.Button })
+            foreach (bool pressed in new[] { false, true })
+            {
+                var p = PaperTexture.Params(kind, pressed);
+                for (double e = 0; e < p.WearWidth; e += 0.5)
+                    Assert.Equal(1.0, PaperTexture.K(p, 0.2, 0.8, 0.1, e, pressed ? 1 : 0, 1, PaperTexture.Strength(0)));
+            }
+    }
+
+    [Fact]
+    public void Normal_interior_spread_is_visible_and_weak_is_half_of_it()
+    {
+        var (_, s1) = PaperTexture.InteriorStats(SurfaceKind.Sheet);
+        var (_, sw) = PaperTexture.InteriorStats(SurfaceKind.Sheet, PaperTexture.Strength(1));
+        Assert.True(s1 * 255 * 0.95 >= 3.0, $"sigma of k {s1} -> about {s1 * 255 * 0.95:F1} levels");
+        Assert.InRange(sw / s1, 0.4, 0.6);
+    }
+
+    [Fact]
+    public void Edge_band_is_darker_than_the_interior_by_5_to_9_percent()
+    {
+        var p = PaperTexture.Params(SurfaceKind.Sheet);
+        var (mid, _) = PaperTexture.InteriorStats(SurfaceKind.Sheet);
+        double band = 0; int n = 0;
+        for (double e = 0; e < 6; e += 0.25) { band += PaperTexture.K(p, 0.5, 0.5, 0.5, e, 0, 0, 1); n++; }
+        double drop = 1 - band / n / mid;
+        Assert.InRange(drop, 0.03, 0.09);
     }
 
     [Fact]

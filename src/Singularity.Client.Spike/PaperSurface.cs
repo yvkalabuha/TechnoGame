@@ -9,6 +9,7 @@ public static class PaperSurface
     static Shader _shader;
     static ImageTexture _tile;
     static bool _ready;
+    static readonly System.Collections.Generic.List<(Control Node, SurfaceKind Kind)> Applied = new();   // for the T6 layout check; insertion order
     static float _strength = 1f;
 
     /// <summary>Registers the global uniform and bakes the tile (once). Safe to call again.</summary>
@@ -31,6 +32,8 @@ public static class PaperSurface
 
     public static float Strength => _strength;
 
+    public static System.Collections.Generic.IReadOnlyList<(Control Node, SurfaceKind Kind)> Surfaces() { Applied.RemoveAll(a => !GodotObject.IsInstanceValid(a.Node)); return Applied; }
+
     /// <summary>Gives <paramref name="node"/> the texture. <paramref name="seed"/> (a stable name) sets the tile offset and the pressed-centre spot. Buttons also react to the press.</summary>
     public static void Apply(Control node, SurfaceKind kind, string seed)
     {
@@ -46,6 +49,7 @@ public static class PaperSurface
         m.SetShaderParameter("rub_c", new Vector2((float)(0.3 + 0.4 * a), (float)(0.3 + 0.4 * b)));
         m.SetShaderParameter("rect_size", node.Size);
         node.Material = m;
+        Applied.Add((node, kind));
         node.Resized += () => m.SetShaderParameter("rect_size", node.Size);
         if (node is BaseButton btn && kind == SurfaceKind.Button)
         {
@@ -60,4 +64,10 @@ public static class PaperSurface
             btn.ButtonUp += () => Set(p, 0f);
         }
     }
+}
+
+/// <summary>A textured control that draws its ink (icons, letters) itself on a child layer: gives the global rects of that ink for the T6 check.</summary>
+public interface IGlyphBounds
+{
+    System.Collections.Generic.IEnumerable<Rect2> GlyphRects();
 }

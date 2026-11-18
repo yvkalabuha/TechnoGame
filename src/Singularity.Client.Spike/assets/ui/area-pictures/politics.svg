@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" width="320" height="120"><title>Политика: план зала заседаний (амфитеатр), трибуна и флаги</title>
-<defs><pattern id="g" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0V20M0 20H20" fill="none" stroke="#3A6491" stroke-width="0.4" opacity="0.6"/></pattern></defs>
-<rect width="320" height="120" fill="#1E4673"/><rect width="320" height="120" fill="url(#g)"/>
-<rect x="6" y="6" width="308" height="108" fill="none" stroke="#B9CBDA" stroke-width="0.75"/><rect width="4" height="120" fill="#CFE6AA"/>
-<g fill="none" stroke-linecap="round" stroke-linejoin="round">
-<g stroke="#EEF2F0" stroke-width="1.5"><path d="M60 100H260"/><path d="M80 100A80 80 0 0 1 240 100"/><rect x="150" y="90" width="20" height="10"/><path d="M40 100V40M40 40H66L61 46L66 52H40M280 100V40M280 40H254L259 46L254 52H280"/></g>
-<g stroke="#B9CBDA" stroke-width="0.75"><path stroke-dasharray="2 4" d="M96 100A64 64 0 0 1 224 100M108 100A52 52 0 0 1 212 100M122 100A38 38 0 0 1 198 100M136 100A24 24 0 0 1 184 100"/>
-<path d="M178.500 92.300L237.600 67.900M141.500 92.300L82.400 67.900M174.100 85.900L219.400 40.600M145.900 85.900L100.600 40.600M167.700 81.500L192.100 22.400M152.300 81.500L127.900 22.400M160 80V16"/></g>
-</g></svg>

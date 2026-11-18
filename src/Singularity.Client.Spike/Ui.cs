@@ -36,9 +36,10 @@ public static class Ui
 
     public static Font FontOf(FontKind k) => k switch { FontKind.Mono => Fonts.Mono, FontKind.Draft => Fonts.DraftBold, FontKind.Map => Fonts.Map, _ => Fonts.Text };
 
-    public static StyleBoxFlat Box(Color bg, Color? border = null, int bw = 1, float margin = 6, float radius = R2)
+    /// <summary>vMargin: vertical content margin when it is not half of the horizontal one (textured surfaces keep 10 du from every edge, validator T6).</summary>
+    public static StyleBoxFlat Box(Color bg, Color? border = null, int bw = 1, float margin = 6, float radius = R2, float? vMargin = null)
     {
-        var s = new StyleBoxFlat { BgColor = bg, AntiAliasing = true, ShadowSize = 0, ContentMarginLeft = margin, ContentMarginRight = margin, ContentMarginTop = margin * 0.5f, ContentMarginBottom = margin * 0.5f };
+        var s = new StyleBoxFlat { BgColor = bg, AntiAliasing = true, ShadowSize = 0, ContentMarginLeft = margin, ContentMarginRight = margin, ContentMarginTop = vMargin ?? margin * 0.5f, ContentMarginBottom = vMargin ?? margin * 0.5f };
         if (border is Color c) { s.SetBorderWidthAll(bw); s.BorderColor = c; }
         s.SetCornerRadiusAll((int)radius);
         return s;
@@ -91,19 +92,19 @@ public static class Ui
         return l;
     }
 
-    public static Button Btn(string text, Action onPress, int size = 14, bool command = false)
+    public static CaptionButton Btn(string text, Action onPress, int size = 14, bool command = false)
     {
-        var b = new Button { Text = text, FocusMode = Control.FocusModeEnum.None, ToggleMode = false };
+        var b = new CaptionButton { Text = text, FocusMode = Control.FocusModeEnum.None, ToggleMode = false };
         b.AddThemeFontOverride("font", Fonts.Text);
         b.AddThemeFontSizeOverride("font_size", Math.Max(size, MinSize));
+        PaperSurface.Apply(b, SurfaceKind.Button, text);   // StyleButton takes the material off again while the button is an order-ready command plate (an alert colour)
         StyleButton(b, command);
-        if (!command) PaperSurface.Apply(b, SurfaceKind.Button, text);   // an order-ready command plate is an alert colour: no texture
         b.Pressed += onPress;
         return b;
     }
 
     /// <summary>Plain button: sheet with an ink frame. Command button (an order is ready): ultramarine plate, white text.</summary>
-    public static void StyleButton(Button b, bool command)
+    public static void StyleButton(CaptionButton b, bool command)
     {
         // An order-ready command plate is an alert colour: it gets no paper texture, and takes it back when it turns plain again.
         if (command && b.Material != null) { b.SetMeta("paper_mat", b.Material); b.Material = null; }
@@ -113,9 +114,9 @@ public static class Ui
         b.AddThemeStyleboxOverride("pressed", Box(Ink, Ink, 1, 10));
         b.AddThemeStyleboxOverride("disabled", Box(Paper, Rule, 1, 10));
         foreach (var n in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color" })
-            b.AddThemeColorOverride(n, command ? Colors.White : Ink);
-        b.AddThemeColorOverride("font_pressed_color", Paper);
-        b.AddThemeColorOverride("font_disabled_color", Ink3);
+            b.CaptionColor(n, command ? Colors.White : Ink);
+        b.CaptionColor("font_pressed_color", Paper);
+        b.CaptionColor("font_disabled_color", Ink3);
     }
 
     public static ColorRect VRule() => new() { Color = Ink, CustomMinimumSize = new Vector2(2, 26), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
@@ -224,3 +225,50 @@ public sealed partial class Prose : RichTextLabel
         base.Text = Number.Replace(s.Replace("[", "[lb]"), m => "[code]" + m.Value + "[/code]");
     }
 }
+
+/// <summary>Button whose caption is drawn by a child Label, so that the paper texture (a material on the button) never touches text. Button.Text stays the source of the text and
+/// of the minimum size, but the button's own text is transparent; colours go through <see cref="CaptionColor"/> (the theme font colours stay transparent).</summary>
+public sealed partial class CaptionButton : Button
+{
+    readonly Label _cap = new() { MouseFilter = MouseFilterEnum.Ignore, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+    Color _normal = Ui.Ink, _hover = Ui.Ink, _pressed = Ui.Paper, _disabled = Ui.Ink3;
+
+    public CaptionButton()
+    {
+        _cap.SetAnchorsPreset(LayoutPreset.FullRect);
+        AddChild(_cap);
+        foreach (var n in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color", "font_disabled_color" })
+            AddThemeColorOverride(n, Colors.Transparent);
+    }
+
+    /// <summary>Same names as the theme colours of a Button.</summary>
+    public void CaptionColor(string name, Color c)
+    {
+        switch (name)
+        {
+            case "font_color": case "font_focus_color": _normal = c; break;
+            case "font_hover_color": _hover = c; break;
+            case "font_pressed_color": _pressed = c; break;
+            case "font_disabled_color": _disabled = c; break;
+        }
+        QueueRedraw();
+    }
+
+    public override void _Draw()
+    {
+        var sb = GetThemeStylebox("normal");
+        _cap.OffsetLeft = sb.GetContentMargin(Side.Left); _cap.OffsetRight = -sb.GetContentMargin(Side.Right);
+        _cap.OffsetTop = sb.GetContentMargin(Side.Top); _cap.OffsetBottom = -sb.GetContentMargin(Side.Bottom);
+        _cap.Text = Text;
+        _cap.AddThemeFontOverride("font", GetThemeFont("font"));
+        _cap.AddThemeFontSizeOverride("font_size", GetThemeFontSize("font_size"));
+        _cap.AddThemeColorOverride("font_color", GetDrawMode() switch
+        {
+            DrawMode.Disabled => _disabled,
+            DrawMode.Pressed or DrawMode.HoverPressed => _pressed,
+            DrawMode.Hover => _hover,
+            _ => _normal,
+        });
+    }
+}
+
