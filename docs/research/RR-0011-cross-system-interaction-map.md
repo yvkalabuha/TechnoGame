@@ -436,3 +436,5 @@ actor (= country в v1)                       # решения, бюджет, з
 
 ## Источники
 Внутренние (доступ 2026-11-14): `docs/architecture/LAYER_CONTRACT.md` v2.4 r10; `docs/architecture/notes/contract-proposals-wave1.md`; `docs/game-design/economy/E1-model.md` v0.4; `docs/game-design/PHASE_F_WAVE1_CLOSURE.md` §2; `docs/game-design/CONCEPT_EXPANSION_ANALYSIS.md` §4; `docs/research/RR-0005` §8; `RR-0006` (поправка §3/§8.2); `RR-0007` §11.7; `RR-0008`; `RR-0009`; `RR-0010` §5а–§5д; `RR-0012` (FINAL) §3–§9; `RR-0013` (FINAL, revised) §2.5, §6; `RR-0014` (FINAL) §4, §7; `docs/decisions/DECISIONS_LOG.md` #18–#226 (#217–#224 — RR-0013; прежде #18–#216) (особенно #19, #28, #171–#173, #192–#216; #209–#212 — торговля RR-0014, #213–#214 — E1, #215 — конкурс КБ после MVP, #216 — Wikidata CC0 для структурных фактов о личностях). Внешних источников нет.
+
+> Erratum (Orchestrator, 2026-11-18): the province id separator is '.', not '/'. The form is `province_id = <region_id>.<suffix>` (DECISIONS_LOG #310, ADR-0011 rev 3). It applies to line 80, G07 and I09.
