@@ -252,4 +252,15 @@ public class AmbientGateTests
         Assert.True(g.Update(4.0, false));
         Assert.True(g.Update(4.1, true));
     }
+
+    [Fact]
+    public void Cue_gain_is_zero_except_line_commissioned_and_reaches_the_play()
+    {
+        Assert.Equal(0, AudioCatalog.Get("order_done").GainDb);
+        Assert.Equal(6, AudioCatalog.Get("line_commissioned").GainDb);
+        foreach (var c in AudioCatalog.All.Where(c => !c.Jitter && c.Id != "line_commissioned"))
+            Assert.Equal(0, c.GainDb);
+        Assert.Equal(6, new AudioPlanner().Request("line_commissioned", 1.0)!.GainDb);
+        Assert.Equal(0, new AudioPlanner().Request("order_done", 1.0)!.GainDb);
+    }
 }

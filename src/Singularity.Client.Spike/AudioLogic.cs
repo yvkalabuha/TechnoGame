@@ -30,7 +30,7 @@ public static class AudioCatalog
         new Cue("order_ok", Prio.P2, "order", 0.25, Jitter: true),
         new Cue("order_reject", Prio.P1, "reject", 0.19),
         new Cue("queue_tick", Prio.P3, "tick", 0.08, Jitter: true),
-        new Cue("order_done", Prio.P2, "order", 0.25, GainDb: 8),
+        new Cue("order_done", Prio.P2, "order", 0.25),
         new Cue("signal_attention", Prio.P1, "signal", 1.2),
         new Cue("signal_alert", Prio.P0, "signal", 1.5),
         new Cue("signal_critical", Prio.P0, "signal", 1.5, MinGap: 60),
