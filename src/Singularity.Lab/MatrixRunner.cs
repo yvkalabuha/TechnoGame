@@ -90,7 +90,25 @@ public static class MatrixRunner
         foreach (string p in problems.Take(20)) log.WriteLine($"  problem: {p}");
         foreach (string p in threadMismatch.Take(20)) log.WriteLine($"  thread mismatch: {p}");
         if (goldenSet is not null) log.WriteLine($"golden_set_hash={goldenSet}");
+        List<string> invalid = InvalidReasons(m.Threads, threadMismatch.Count, problems.Count, m.Selection, goldenSet);
+        log.WriteLine(invalid.Count == 0 ? "matrix: valid=true" : $"matrix: valid=false ({string.Join("; ", invalid)})");
         return problems.Count == 0 && threadMismatch.Count == 0 ? 0 : 1;
+    }
+
+    /// <summary>
+    /// ADR-0008 p. 6: a matrix is valid (usable as an exact reproducibility reference) only if it ran at least two distinct
+    /// thread counts, no thread mismatch, no problems, the whole manifest (no --point/--seeds) and has a golden_set_hash.
+    /// Empty list = valid.
+    /// </summary>
+    public static List<string> InvalidReasons(IReadOnlyList<int> threads, int threadMismatch, int problems, string? selection, string? goldenSet)
+    {
+        var reasons = new List<string>();
+        if (threads.Distinct().Count() < 2) reasons.Add("threads: fewer than 2 distinct values");
+        if (threadMismatch != 0) reasons.Add($"thread_mismatch: {threadMismatch}");
+        if (problems != 0) reasons.Add($"problems: {problems}");
+        if (selection is not null) reasons.Add($"partial matrix: {selection}");
+        if (string.IsNullOrEmpty(goldenSet)) reasons.Add("golden_set_hash: null");
+        return reasons;
     }
 
     /// <summary>SHA-256 over "run_id golden_hash\n" lines in run order: one hash for the whole matrix.</summary>
@@ -259,6 +277,15 @@ public static class MatrixRunner
         w.WriteStartArray("merged_csv");
         w.WriteStringValue(RunExecutor.RunsFile);
         foreach (string n in merged) w.WriteStringValue(n);
+        w.WriteEndArray();
+        // Size of the matrix CSVs: the Parquet threshold of ADR-0008 p. 8 (10 GB) is checked against this.
+        long csvBytes = new FileInfo(Path.Combine(outDir, RunExecutor.RunsFile)).Length
+                        + merged.Sum(n => new FileInfo(Path.Combine(outDir, n)).Length);
+        w.WriteNumber("csv_bytes", csvBytes);
+        List<string> invalid = InvalidReasons(m.Threads, threadMismatch.Count, problems.Count, m.Selection, goldenSet);
+        w.WriteBoolean("valid", invalid.Count == 0);
+        w.WriteStartArray("invalid_reasons");
+        foreach (string r in invalid) w.WriteStringValue(r);
         w.WriteEndArray();
         w.WriteStartObject("golden");
         for (int i = 0; i < jobs.Count; i++)

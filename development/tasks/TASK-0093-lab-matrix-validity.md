@@ -30,3 +30,8 @@ created: 2026-11-18
 - [ ] Поля пишутся; selftest 48/48.
 
 ## Результат
+- [Факт] `MatrixRunner` пишет в `matrix.json`: `csv_bytes` (размер `runs.csv` + объединённых CSV), `valid`, `invalid_reasons`; в лог — `matrix: valid=true|false (...)`. Условие — `MatrixRunner.InvalidReasons` (ADR-0008 п. 6: ≥ 2 разных `threads`, `thread_mismatch` = 0, `problems` пуст, нет `--point`/`--seeds`, `golden_set_hash` не null).
+- [Факт] selftest 49/49 (добавлена проверка `matrix: valid flag`; было 48). Ручная проверка: матрица `threads [1]` → `valid: false`, `[1, 4]` → `valid: true`.
+- `analysis_seconds`: печатает скрипт анализа, хранится в EXP-записи (поле журнала; в код Lab не входит). [Предл.] добавить строку `analysis_seconds:` в `development/templates/experiment.md` (зона Orchestrator).
+- [Предл.] для test-engineer (`tests/Singularity.Lab.Tests`): тест `InvalidReasons` по каждому условию; интеграционный `matrix` с `threads [1]` → `valid=false`, `csv_bytes` = сумма размеров CSV.
+- Правило `registry.py` (Orchestrator): EXP со `status: DONE` и `runner: matrix` во frontmatter обязан иметь непустой `golden_set_hash` (в дополнение к `REPRO_FIELDS`); если матрица невалидна — `golden_set_hash` не заполнять и outcome не DONE.

@@ -30,6 +30,7 @@ public static class SelfTest
             ("manifest: series x sweep expansion order", MatrixExpansion),
             ("manifest: series seeds override top-level seeds", SeriesSeeds),
             ("manifest: unknown key rejected", UnknownKey),
+            ("matrix: valid flag (threads [1], mismatch, problems, selection, null golden_set_hash)", MatrixValidity),
             ("run: same seed twice -> same golden_hash", () => SameSeed(tmp)),
             ("run: threads 1 vs 4 -> same golden_hash and CSV", () => ThreadInvariance(tmp)),
             ("run: different seed -> different golden_hash", () => SeedSensitivity(tmp)),
@@ -211,6 +212,19 @@ public static class SelfTest
             return "accepted unknown key";
         }
         catch (ManifestException) { return null; }
+    }
+
+    private static string? MatrixValidity()
+    {
+        const string g = "abc";
+        bool ok = MatrixRunner.InvalidReasons([1, 4], 0, 0, null, g).Count == 0
+                  && MatrixRunner.InvalidReasons([1], 0, 0, null, g).Count == 1
+                  && MatrixRunner.InvalidReasons([4, 4], 0, 0, null, g).Count == 1
+                  && MatrixRunner.InvalidReasons([1, 4], 1, 0, null, g).Count == 1
+                  && MatrixRunner.InvalidReasons([1, 4], 0, 2, null, g).Count == 1
+                  && MatrixRunner.InvalidReasons([1, 4], 0, 0, "point=0 seeds=all", g).Count == 1
+                  && MatrixRunner.InvalidReasons([1, 4], 0, 0, null, null).Count == 1;
+        return Expect(ok, "InvalidReasons does not match ADR-0008 p. 6");
     }
 
     private static (RunOutcome Outcome, string Dir) RunOnce(string tmp, string json, ulong seed, int threads, string tag)
