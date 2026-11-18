@@ -34,3 +34,19 @@ internal sealed class Resolved
 {
     public string Owner = "", Controller = "", Status = "";
 }
+
+/// <summary>Named exception to the 5-15 core quota (ADR-0022 §3 variant A, #406); the reason is kept in the data.</summary>
+internal sealed class GreatPowerException
+{
+    public string Id { get; set; } = "";
+    public int MaxCore { get; set; }
+    public string Reason { get; set; } = "";
+}
+/// <summary>Build-time list of great powers for the quota check (ADR-0022 §2.1); not game data, not part of scenario_hash.</summary>
+internal sealed class GreatPowerFile
+{
+    public string Scenario { get; set; } = "";
+    public string Source { get; set; } = "";
+    public List<string> Ids { get; set; } = new();
+    public List<GreatPowerException> Exceptions { get; set; } = new();
+}

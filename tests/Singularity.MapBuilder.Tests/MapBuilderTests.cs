@@ -53,6 +53,111 @@ public class MapBuilderTests
         return r.Errors;
     }
 
+    private static BuildResult Quota(string owner, int core, int colony, GreatPowerFile gp, bool world = true, string? secondStatusForFirst = null)
+    {
+        var r = new BuildResult();
+        r.Spec.Area.World = world;
+        var f = new OwnerFile { AsOf = "1945-10-01" };
+        var ids = new HashSet<string>();
+        var regs = new HashSet<string>();
+        for (int i = 0; i < core + colony; i++)
+        {
+            var reg = "r" + i;
+            regs.Add(reg);
+            r.Pieces.Add(new Piece { Id = reg + ".p1" });
+            ids.Add(reg + ".p1");
+            f.Defaults.Add(new OwnerRow { Region = reg, Owner = owner, Controller = owner, Status = i < core ? "core" : "colony", Source = "s", Confidence = "H" });
+        }
+        if (secondStatusForFirst != null)
+        {
+            r.Pieces.Add(new Piece { Id = "r0.p2" });
+            ids.Add("r0.p2");
+            f.Exceptions.Add(new OwnerRow { Province = "r0.p2", Owner = owner, Controller = owner, Status = secondStatusForFirst, Source = "s", Confidence = "H" });
+        }
+        Validator.ValidateOwners(r, f, ids, regs, new HashSet<string> { "GBR", "SUN", "XXX" }, gp);
+        return r;
+    }
+
+    private static GreatPowerFile Gp(params string[] ids) => new() { Ids = ids.ToList() };
+    private static GreatPowerFile GpSun() => new()
+    {
+        Ids = { "SUN" },
+        Exceptions = { new GreatPowerException { Id = "SUN", MaxCore = 35, Reason = "#406" } }
+    };
+
+    [Fact]
+    public void Region_count_limit_is_150_to_400_warning_only()
+    {
+        foreach (var (n, warns) in new[] { (400, false), (401, true), (150, false), (149, true) })
+        {
+            var r = new BuildResult();
+            Validator.CheckRegionCount(r, n);
+            Assert.Equal(warns, r.Warnings.Count == 1);
+            Assert.Empty(r.Errors);
+        }
+        var hi = new BuildResult(); Validator.CheckRegionCount(hi, 401);
+        Assert.Contains("exceed the ADR-0022 provisional limit of 400 (report to the owner)", hi.Warnings[0]);
+        var lo = new BuildResult(); Validator.CheckRegionCount(lo, 149);
+        Assert.Contains("below the ADR-0022 minimum of 150", lo.Warnings[0]);
+    }
+
+    [Fact]
+    public void Quota_warns_above_15_and_below_5_core()
+    {
+        Assert.Contains(Quota("GBR", 16, 0, Gp("GBR")).Warnings, w => w.Contains("actor GBR") && w.Contains("maximum of 15"));
+        Assert.Contains(Quota("GBR", 4, 0, Gp("GBR")).Warnings, w => w.Contains("below the #171 minimum of 5"));
+        Assert.DoesNotContain(Quota("GBR", 5, 0, Gp("GBR")).Warnings, w => w.Contains("actor"));
+    }
+
+    [Fact]
+    public void Quota_counts_only_core_and_prints_status_info()
+    {
+        var r = Quota("GBR", 10, 80, Gp("GBR"));
+        Assert.Empty(r.Warnings);
+        Assert.Contains("actor GBR: core 10, colony 80, protectorate 0, mandate 0, leased 0", r.Info);
+    }
+
+    [Fact]
+    public void Quota_ignores_actors_outside_great_powers()
+    {
+        var r = Quota("XXX", 20, 0, Gp());
+        Assert.DoesNotContain(r.Warnings, w => w.Contains("actor"));
+        Assert.Empty(r.Errors);
+    }
+
+    [Fact]
+    public void Great_powers_unknown_id_is_an_error()
+    {
+        Assert.Contains(Quota("GBR", 5, 0, Gp("GBR", "NOPE")).Errors, e => e.Contains("unknown id 'NOPE'"));
+    }
+
+    [Fact]
+    public void Region_with_two_statuses_is_an_error_listing_provinces()
+    {
+        var r = Quota("GBR", 5, 0, Gp("GBR"), secondStatusForFirst: "colony");
+        var e = Assert.Single(r.Errors);
+        Assert.Contains("region r0 has several statuses", e);
+        Assert.Contains("r0.p1", e);
+        Assert.Contains("r0.p2", e);
+    }
+
+    [Fact]
+    public void Quota_named_exception_raises_the_limit_for_SUN_only()
+    {
+        Assert.DoesNotContain(Quota("SUN", 31, 0, GpSun()).Warnings, w => w.Contains("actor"));
+        Assert.Contains(Quota("SUN", 36, 0, GpSun()).Warnings, w => w.Contains("maximum of 35"));
+    }
+
+    [Fact]
+    public void Great_powers_file_1945_has_SUN_exception_with_reason()
+    {
+        var gp = SpecSet.Read<GreatPowerFile>(Path.Combine(RepoRoot(), "tools/map/spec/great_powers.yaml"));
+        Assert.Equal(new[] { "USA", "SUN", "GBR", "FRA", "ROC" }, gp.Ids);
+        var ex = Assert.Single(gp.Exceptions);
+        Assert.Equal(("SUN", 35), (ex.Id, ex.MaxCore));
+        Assert.False(string.IsNullOrWhiteSpace(ex.Reason));
+    }
+
     [Fact]
     public void Owners_unclaimed_allows_null_owner_only_with_that_status()
     {

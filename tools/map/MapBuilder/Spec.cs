@@ -147,6 +147,7 @@ internal sealed class SpecSet
     public List<RegionEntry> Regions = new();
     public List<StraitEntry> Straits = new();
     public string Dir = "";
+    public GreatPowerFile? GreatPowers;
 
     private static readonly IDeserializer Yaml = new DeserializerBuilder()
         .WithNamingConvention(UnderscoredNamingConvention.Instance).Build();
@@ -160,7 +161,7 @@ internal sealed class SpecSet
         foreach (var f in Directory.GetFiles(dir, "*.yaml").OrderBy(p => Path.GetFileName(p), StringComparer.Ordinal))
         {
             var name = Path.GetFileName(f);
-            if (name is "area.yaml" or "straits.yaml" or "territories.yaml") continue;
+            if (name is "area.yaml" or "straits.yaml" or "territories.yaml" or "great_powers.yaml") continue;
             foreach (var r in Read<RuleFile>(f).Rules) s.Rules.Add((name, r));
         }
         foreach (var f in Sorted(Path.Combine(dir, "ids"))) s.Ids.AddRange(Read<IdFile>(f).Ids);
@@ -168,6 +169,8 @@ internal sealed class SpecSet
         foreach (var f in Sorted(Path.Combine(dir, "events"))) s.Events.AddRange(Read<EventFile>(f).Events);
         var tf = Path.Combine(dir, "territories.yaml");
         if (File.Exists(tf)) s.Territories.AddRange(Read<TerritoryFile>(tf).Territories);
+        var gp = Path.Combine(dir, "great_powers.yaml");
+        if (File.Exists(gp)) s.GreatPowers = Read<GreatPowerFile>(gp);
         var st = Path.Combine(dir, "straits.yaml");
         if (File.Exists(st)) s.Straits.AddRange(Read<StraitFile>(st).Straits);
         return s;
