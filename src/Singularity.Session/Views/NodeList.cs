@@ -167,6 +167,7 @@ internal sealed class NodeBlock
 /// <summary>
 /// The node blocks of the last snapshot and the state they were read from: the month of the snapshot (<c>next</c>) and the version stamp of the columns
 /// (<see cref="SliceWorld.NodeStamp"/>). A snapshot of the same month and stamp takes the blocks as they are (R2, TASK-0103). Used by one thread.
+/// Invariant: the blocks also read <c>Knowledge.LastLicenceGrants</c>, which is not a column; it is rewritten only by the monthly merge, which changes the month of the key.
 /// </summary>
 internal sealed class NodeBlockCache
 {

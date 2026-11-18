@@ -373,8 +373,10 @@ public sealed partial class ProductsSystem
     // A book of the fleet of the actor: from the live state of the step (Next) or from the snapshot (Current, with the facts the AI reads).
     private FleetBook NewBook(int a, bool next, FleetBook? reuse = null)
     {
-        FleetBook book = reuse ?? new FleetBook(_p, _m0, _d);
-        if (reuse is not null)
+        // A book of another world (parameters, midyears, design count) is never refilled.
+        bool fits = reuse is not null && ReferenceEquals(reuse.Parameters, _p) && reuse.Designs == _d && reuse.MatchesMidyears(_m0);
+        FleetBook book = fits ? reuse! : new FleetBook(_p, _m0, _d);
+        if (fits)
             book.Clear();
         for (int d = 0; d < _d; d++)
         {

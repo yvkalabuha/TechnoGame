@@ -35,6 +35,9 @@ public class NodeBlockReuseTests
             {
                 for (int a = 0; a < 3; a++)
                     Assert.True(s.Submit(SourceClass.Harness, 0, local + a, new SetBudgetShares(a, ShareSets[(int)((m + a) % 2)])).Accepted);
+                Assert.True(s.Submit(SourceClass.Player, 0, (int)m, new SetEffortFocus(1, [47])).Accepted);
+                Assert.True(s.Submit(SourceClass.Player, 1, (int)m, new StartSeries(0, 0, Fx6.FromInt(5), true)).Accepted);
+                Assert.True(s.Submit(SourceClass.Player, 2, (int)m, new CloseLine(1, 0)).Accepted);
             }
             local += 3;
             long end = reuse.World.Calendar.TickOfMonth(m) + 3;

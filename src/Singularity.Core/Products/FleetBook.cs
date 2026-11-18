@@ -63,6 +63,8 @@ public sealed class FleetBook
         SaleIncome = Fx6.Zero;
     }
 
+    internal bool MatchesMidyears(ReadOnlySpan<int> midyears) => midyears.SequenceEqual(_m0);
+
     public int Designs { get; }
     public ProductsParams Parameters => _p;
 

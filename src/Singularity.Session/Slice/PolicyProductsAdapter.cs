@@ -42,10 +42,11 @@ internal sealed class PolicyProductsAdapter(SliceWorld world) : IPolicyProducts
 
     public int FreeBureaus(int actorRow) => world.Products.FreeBureaus(actorRow);
 
-    // One book per thread, refilled for every call: the policy projects it and drops it before it asks for the next one (F5, TASK-0103).
-    [ThreadStatic] private static FleetBook? _book;
+    // One book per thread and per world (the book keeps the parameters of its world), refilled for every call: the policy projects it and drops it
+    // before it asks for the next one (F5, TASK-0103).
+    private readonly ThreadLocal<FleetBook?> _book = new();
 
-    public FleetBook? Fleet(int actorRow, long month) => _book = world.Products.SnapshotBook(actorRow, month, _book);
+    public FleetBook? Fleet(int actorRow, long month) => _book.Value = world.Products.SnapshotBook(actorRow, month, _book.Value);
 
     public int GFront(long month) => world.Products.GFront(month - 1);
 

@@ -168,6 +168,7 @@ internal sealed class SliceWorld
 
     private NodeShape? _nodeShape;
     private Column[]? _nodeColumns;
+    private int _nodeColumnCount;
 
     /// <summary>The node numbers and process slots shared by the node blocks of all actors; built on first use by the thread that builds snapshots.</summary>
     internal NodeShape NodeShape => _nodeShape ??= BuildNodeShape();
@@ -182,6 +183,9 @@ internal sealed class SliceWorld
     internal long NodeStamp()
     {
         _nodeColumns ??= [.. Table.Columns.Where(c => !c.Name.StartsWith("cmd.", StringComparison.Ordinal))];
+        // The set is cached once: a column added later would be missing from the stamp.
+        if (_nodeColumnCount != Table.Columns.Count)
+            _nodeColumnCount = _nodeColumnCount == 0 ? Table.Columns.Count : throw new InvalidOperationException("The table gained columns after the first snapshot.");
         long sum = 0;
         foreach (Column c in _nodeColumns)
             sum += c.Version;
