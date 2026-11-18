@@ -39,6 +39,30 @@ public sealed class FleetBook
         RetireSlot = new bool[designs];
     }
 
+    /// <summary>Back to the state of a new book (every array zero, every counter 0), so one object can be refilled for the next actor.</summary>
+    public void Clear()
+    {
+        foreach (Fx6[] counts in Counts)
+            Array.Clear(counts);
+        Array.Clear(Stage);
+        Array.Clear(Gen);
+        Array.Clear(Perf);
+        Array.Clear(Upkeep);
+        Array.Clear(UnitCostFloor);
+        Array.Clear(Bind);
+        Array.Clear(Excess);
+        Array.Clear(InDefK);
+        Array.Clear(Retired);
+        Array.Clear(Sold);
+        Array.Clear(QuotaBase);
+        Array.Clear(SoldY);
+        Array.Clear(SellSlot);
+        Array.Clear(RetireSlot);
+        SaleY = Fx6.Zero;
+        SaleCap = Fx6.Zero;
+        SaleIncome = Fx6.Zero;
+    }
+
     public int Designs { get; }
     public ProductsParams Parameters => _p;
 

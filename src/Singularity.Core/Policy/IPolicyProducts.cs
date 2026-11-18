@@ -47,7 +47,7 @@ public interface IPolicyProducts
     Fx6 CandidateValue(int actorRow, ReadOnlySpan<int> alts, Fx6 budget, long month);
 
     /// <summary>
-    /// The actor's fleet as the snapshot holds it (spec A42.4; <c>ProductsSystem.SnapshotBook</c>), a fresh copy the caller projects and changes.
+    /// The actor's fleet as the snapshot holds it (spec A42.4; <c>ProductsSystem.SnapshotBook</c>), a copy the caller projects and changes. It may be refilled by the next call on the same thread: use it before asking again, never keep it.
     /// Null for a build without a fleet layer: the fleet rule is then silent.
     /// </summary>
     FleetBook? Fleet(int actorRow, long month) => null;

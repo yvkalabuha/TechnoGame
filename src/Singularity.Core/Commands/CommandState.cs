@@ -181,18 +181,26 @@ public sealed class CommandState
 
     private static int Stamp(long month) => checked((int)month + 1);
 
-    // Column has no single-cell Current writer (Kernel); the tables here are tiny (one row per actor).
-    private static void Set(IntColumn column, int row, int value)
+    // Column has no single-cell Current writer (Kernel); the tables here are tiny (one row per actor). The copy goes through a buffer kept between the
+    // calls (commands are written between ticks, by one thread), so a command allocates nothing.
+    private int[] _intCopy = [];
+    private long[] _longCopy = [];
+
+    private void Set(IntColumn column, int row, int value)
     {
-        int[] copy = column.Current.ToArray();
-        copy[row] = value;
-        column.Load(copy);
+        if (_intCopy.Length != column.Length)
+            _intCopy = new int[column.Length];
+        column.Current.CopyTo(_intCopy);
+        _intCopy[row] = value;
+        column.Load(_intCopy);
     }
 
-    private static void Set(LongColumn column, int row, long value)
+    private void Set(LongColumn column, int row, long value)
     {
-        long[] copy = column.Current.ToArray();
-        copy[row] = value;
-        column.Load(copy);
+        if (_longCopy.Length != column.Length)
+            _longCopy = new long[column.Length];
+        column.Current.CopyTo(_longCopy);
+        _longCopy[row] = value;
+        column.Load(_longCopy);
     }
 }
