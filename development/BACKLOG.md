@@ -112,10 +112,10 @@
 | [TASK-0095](../development/tasks/TASK-0095-map-t4-owners-import.md) | DONE | Map T4: import world owners/controllers 1945 into owners.yaml and polities.yaml | MS-M1 |
 | [TASK-0096](../development/tasks/TASK-0096-owners-1945-decisions.md) | DONE | Owners 1945 data per decisions 397, 399-402 | MS-M1 |
 | [TASK-0097](../development/tasks/TASK-0097-client-screenshots-prune.md) | DONE | Client screenshots: keep 25 key frames in git | MS-M1 |
-| [TASK-0098](../development/tasks/TASK-0098-r4-double-to-lab.md) | APPROVED | Move remaining double code from Core.Simulation to Lab | MS-M1 |
-| [TASK-0099](../development/tasks/TASK-0099-project-slot-generation.md) | APPROVED | Project slots reuse with generation (ADR-0005 #388) | MS-M1 |
-| [TASK-0100](../development/tasks/TASK-0100-event-sounds-pack.md) | APPROVED | Replace client event sounds with listening-pack r2 (#403) | MS-M1 |
-| [TASK-0101](../development/tasks/TASK-0101-ui-instrument-elements.md) | APPROVED | UI thematic instrument elements (flasks, pencil, ruler, caliper, soldering iron, protractor, gauges) | MS-M1 |
+| [TASK-0098](../development/tasks/TASK-0098-r4-double-to-lab.md) | IN_PROGRESS | Move remaining double code from Core.Simulation to Lab | MS-M1 |
+| [TASK-0099](../development/tasks/TASK-0099-project-slot-generation.md) | IN_PROGRESS | Project slots reuse with generation (ADR-0005 #388) | MS-M1 |
+| [TASK-0100](../development/tasks/TASK-0100-event-sounds-pack.md) | IN_PROGRESS | Replace client event sounds with listening-pack r2 (#403) | MS-M1 |
+| [TASK-0101](../development/tasks/TASK-0101-ui-instrument-elements.md) | IN_PROGRESS | UI thematic instrument elements (flasks, pencil, ruler, caliper, soldering iron, protractor, gauges) | MS-M1 |
 
 ## Гипотезы
 

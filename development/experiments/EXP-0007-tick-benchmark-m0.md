@@ -6,15 +6,15 @@ hypothesis: ADR-0016
 kind: benchmark
 related: []
 # Воспроизводимость — обязательно для DONE. Lab записывает сама.
-core_commit:
-data_hash:
-manifest_hash:
-manifest:                # путь к манифесту в lab/
-seeds:
-threads:
-golden_hash:
+core_commit: a474d1b45a0cd3ccf951344026825c08acd899f9   # build_commit всех процессов; HEAD при прогоне 0b3b187 (только docs, src/mods не менялись)
+data_hash: 8f1183a4caa9e308ea4f028620ec0002f77a64f7499ee407fe0f193b852e56cd   # точка исхода (200, 2000, cross); OverlaySha256 d0562c2f…8a83
+manifest_hash: 6112abb435b9dc972edf72e97326da78fa75de3d1069f460520882e4a5ad21ac
+manifest: lab/manifests/EXP-0007-bench.json
+seeds: [1, 2, 3]          # generator_seed 85621515, shuffle_seed 20261117
+threads: [1, 4, 8, 16]    # исход — t8
+golden_hash: 4b8a4fd835901246fe3f275d0e9961c73e28e5e067deae51a16fbea340ccbf36   # финальный StateHash, точка A, seed 1, 144 мес. (seed 2 d6e56ade…09d2, seed 3 5f108033…04f2)
 baseline:                # контрольная версия (commit или EXP-NNNN)
-outcome:                 # supports | refutes | inconclusive
+outcome: inconclusive     # ADR-0016 §4: повтор снова троттлит (П5) и шум A 11,8 % > 10 %
 created: 2026-11-17
 ---
 

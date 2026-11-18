@@ -1,7 +1,7 @@
 ---
 id: TASK-0101
 title: "UI thematic instrument elements (flasks, pencil, ruler, caliper, soldering iron, protractor, gauges)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M1
 agent: ui-art-director
