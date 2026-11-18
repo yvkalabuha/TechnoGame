@@ -1,4 +1,4 @@
-namespace Singularity.Core.Tests.ToyFunnel;
+namespace Singularity.Lab.Tests.ToyFunnel;
 
 /// <summary>L1 (repeat) and L2 (thread count) for 6 and 64 countries, every tick hashed.</summary>
 public class ToyFunnelDeterminismTests

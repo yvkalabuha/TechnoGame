@@ -1,4 +1,4 @@
-using Singularity.Core.Science.ToyFunnel;
+using Singularity.Lab.Models.ToyFunnel;
 using Singularity.Lab.Models.Slice;
 using Singularity.Lab.Models.Test;
 

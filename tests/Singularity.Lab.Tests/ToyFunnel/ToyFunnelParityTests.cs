@@ -2,14 +2,14 @@ using System.Buffers.Binary;
 using System.Globalization;
 using System.Security.Cryptography;
 using Singularity.Kernel;
-using Singularity.Core.Science.ToyFunnel;
+using Singularity.Lab.Models.ToyFunnel;
 
-namespace Singularity.Core.Tests.ToyFunnel;
+namespace Singularity.Lab.Tests.ToyFunnel;
 
 /// <summary>
 /// Bit-for-bit parity with the reference prototype lab/proto/model.py (TASK-0004 acceptance).
 /// Expected values come from (repo root):
-///     python3 tests/Singularity.Core.Tests/Reference/toy_funnel_refs.py lab/proto
+///     python3 tests/Singularity.Lab.Tests/Reference/toy_funnel_refs.py lab/proto
 /// state_hash = prototype runs.csv layout after 492 ticks; the three digests cover every yearly row
 /// (raw stocks, Y_year, B, eng_binding_months, bits of the mean shock), SETUP multipliers and milestones.
 /// </summary>

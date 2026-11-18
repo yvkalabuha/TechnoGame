@@ -29,3 +29,11 @@ created: 2026-11-18
 - [ ] `dotnet test Singularity.sln`, `lab selftest` (golden без изменений).
 
 ## Результат
+Сделано: ToyFunnel перенесён из Core в Lab (`git mv`, история сохранена).
+- `src/Singularity.Core/Science/ToyFunnel` -> `src/Singularity.Lab/Models/ToyFunnel`, пространство имён `Singularity.Lab.Models.ToyFunnel`. Каталог `Core/Science` стал пустым и исчез.
+- Тесты `tests/Singularity.Core.Tests/ToyFunnel` и `Reference/toy_funnel_refs.py` -> `tests/Singularity.Lab.Tests/` (пространство имён `Singularity.Lab.Tests.ToyFunnel`, путь к скрипту в комментарии обновлён).
+- `CoreArchitectureTests.cs`: из `DoubleExceptions` удалена запись ToyFunnel; осталось только `Singularity.Core.Simulation`.
+- `ModelRegistry.cs` — новый `using`; `SelfTest.cs` — проверка источника модели теперь ждёт сборку `Singularity.Lab`.
+- Манифест EXP-0001 не менялся: имя модели `toy-funnel` то же, путей манифеста перенос не касается.
+Проверка: `dotnet test Singularity.sln` — всё зелёно (Architecture 111, Core 993, Lab 121, Session 372 + 2 skip, Localization 131); `lab selftest` — 48/48, golden не изменился.
+Не тронуто (вне зоны): ссылки на `Core.Science.ToyFunnel` в ADR-0003, LAYER_CONTRACT, TECH_DEBT — их правит Orchestrator.
