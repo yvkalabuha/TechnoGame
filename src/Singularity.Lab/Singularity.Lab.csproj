@@ -17,4 +17,9 @@
   <ItemGroup>
     <None Include="examples\**\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- lab bench R3 (ADR-0017): XxHash3/XxHash128 reference timing only. Lab only: Kernel and Core never get this package (MIT). -->
+    <PackageReference Include="System.IO.Hashing" Version="10.0.0" />
+  </ItemGroup>
 </Project>
