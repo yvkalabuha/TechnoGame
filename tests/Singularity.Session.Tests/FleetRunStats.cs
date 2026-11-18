@@ -284,7 +284,8 @@ internal sealed class FleetRunStats
         for (int d = 0; d < was.StageSnapshot.GetLength(1); d++)
         {
             // The line the commands were decided against: a canonical launch of a retaken slot in the same step may put another one in С.
-            // The newest line is the one of the highest generation: with slot reuse a higher slot index no longer means a later design.
+            // The newest line is the one of the highest technology generation (p.Gen, the design's G, not the slot generation): with slot
+            // reuse a higher slot index no longer means a later design.
             if (was.StageSnapshot[a, d] == DesignStage.Series && (line < 0 || p.Gen(a, d) >= p.Gen(a, line)))
                 line = d;
         }

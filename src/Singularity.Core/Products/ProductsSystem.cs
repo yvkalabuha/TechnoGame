@@ -578,17 +578,23 @@ public sealed partial class ProductsSystem : ITickSystem
     /// <summary>Commands of the actor rejected for <paramref name="reason"/> so far (the journal of rejections, contract §3.1).</summary>
     public long RejectionCount(int actor, CommandRejection reason) => _rejected[(int)reason].Current[actor];
 
-    /// <summary>The canonical L_P project slot of generation <paramref name="gen"/>, −1 before it exists.</summary>
+    /// <summary>
+    /// The canonical L_P project slot of generation <paramref name="gen"/>, −1 before it exists and −1 once the slot was freed and
+    /// retaken (its handle is stale: the canonical design no longer exists).
+    /// </summary>
     public int CanonicalSlot(int actor, int gen) =>
         _lpSlot[gen - 1].Current[actor] is var slot and >= 0 && _lpGen[gen - 1].Current[actor] == _gen[slot].Current[actor] ? slot : -1;
 
     /// <summary>Generation of a design slot (ADR-0005 p. 3): +1 each time the slot is taken; a handle is the pair (slot, generation).</summary>
     public int Generation(int actor, int slot) => _gen[slot].Current[actor];
 
-    /// <summary>The one handle resolver (ADR-0005 p. 3): the slot is occupied and its generation equals that of the handle.</summary>
+    /// <summary>Handle resolution on the snapshot <c>Current</c> (ADR-0005 p. 3): the slot is occupied and its generation equals the handle's.</summary>
     public bool Resolves(int actor, int slot, int generation) =>
-        slot >= 0 && slot < _d && _gen[slot].Current[actor] == generation
-        && (DesignStage)_stage[slot].Current[actor] is not (DesignStage.None or DesignStage.Withdrawn);
+        slot >= 0 && slot < _d && HandleHolds(_stage[slot].Current[actor], _gen[slot].Current[actor], generation);
+
+    // The single predicate over (stage, generation); Current and Next wrappers differ only in the buffer they read.
+    private static bool HandleHolds(int stage, int slotGeneration, int handleGeneration) =>
+        slotGeneration == handleGeneration && (DesignStage)stage is not (DesignStage.None or DesignStage.Withdrawn);
 
     /// <summary><c>unit_cost_floor</c> of a design (STATE_WORDS §3; R-PS2m at <c>U</c> = 1).</summary>
     public Fx6 UnitCostFloor(int actor, int design) => FloorOf(Alternatives(actor, design));
@@ -1497,14 +1503,15 @@ public sealed partial class ProductsSystem : ITickSystem
     // ---- helpers
 
     /// <summary>
-    /// The lowest free slot (stage None or «снят»), −1 only when all <c>max_designs</c> are taken (ADR-0005 p. 3). A function of the
-    /// occupancy by index alone: no free-list, so the choice does not depend on the history of releases.
+    /// The lowest free slot, −1 only when all <c>max_designs</c> are taken (ADR-0005 p. 3). A function of <c>Current</c> only: a slot is free
+    /// when its snapshot stage is None or «снят» and no command of this step has taken it yet (its generation in Next is still the snapshot's).
+    /// A slot freed by a command of this step (cancel) is not reusable until the next step. No free-list, so history of releases is irrelevant.
     /// </summary>
     private int FreeSlot(int a)
     {
         for (int d = 0; d < _d; d++)
         {
-            if ((DesignStage)_stage[d].Next[a] is DesignStage.None or DesignStage.Withdrawn)
+            if ((DesignStage)_stage[d].Current[a] is DesignStage.None or DesignStage.Withdrawn && _gen[d].Next[a] == _gen[d].Current[a])
                 return d;
         }
         return -1;
@@ -1528,9 +1535,9 @@ public sealed partial class ProductsSystem : ITickSystem
             _cohort[d * _y + y].Next[a] = 0;
     }
 
-    // A handle is current when its generation equals the slot's live one (Next: earlier commands of the step may have retaken it).
+    // Handle resolution on the live state of the step (Next): earlier commands of the step may have cancelled or retaken the slot.
     private bool IsCurrent(int a, int slot, int generation) =>
-        slot >= 0 && slot < _d && _gen[slot].Next[a] == generation;
+        slot >= 0 && slot < _d && HandleHolds(_stage[slot].Next[a], _gen[slot].Next[a], generation);
 
     private void Reject(int a, CommandRejection reason) => _rejected[(int)reason].Next[a]++;
 

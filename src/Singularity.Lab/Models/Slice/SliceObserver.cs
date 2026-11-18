@@ -50,6 +50,7 @@ internal sealed class SliceObserver
     // gen_times (g = 1…G at index g − 1)
     private long?[,] _tReq = null!, _tFirstUnit = null!, _tFielded = null!;
     private long?[,] _costU100 = null!;
+    private int[,] _slotGen = null!;            // [a, d] generation of the design slot last seen (ADR-0005 p. 3)
     private int[,] _firstSeries = null!;        // design of the first series of a generation, −2 = a series at the start, −1 = none yet
     private long[,] _cum = null!;               // cumulative output of that series, raw
     private long?[,] _tLaunch = null!;          // [a, d] first month in С (post), −1 at the start
@@ -214,6 +215,7 @@ internal sealed class SliceObserver
         _tFirstUnit = new long?[_nA, _nG];
         _tFielded = new long?[_nA, _nG];
         _costU100 = new long?[_nA, _nG];
+        _slotGen = new int[_nA, _nD];
         _firstSeries = new int[_nA, _nG];
         _cum = new long[_nA, _nG];
         _tLaunch = new long?[_nA, _nD];
@@ -251,6 +253,7 @@ internal sealed class SliceObserver
             }
             foreach (DesignView d in av.Designs)
             {
+                _slotGen[a, d.Design] = d.Generation;
                 if (d.Stage == DesignStage.None)
                     continue;
                 if (d.PlatformGen >= 1 && d.PlatformGen <= _nG)
@@ -516,12 +519,22 @@ internal sealed class SliceObserver
         }
         foreach (DesignView d in av.Designs)
         {
-            // _tLaunch and _forcedSent are per slot. A freed slot is retaken (ADR-0005 p. 3): a slot that was launched and is back in П/О holds
-            // a new design, so its launch month and force mark start over. The retake always shows as a П month, so no case is missed.
-            if (_tLaunch[a, d.Design] is not null && d.Stage is DesignStage.None or DesignStage.Project or DesignStage.Prototype)
+            // Per-slot state belongs to one design. A freed slot is retaken with generation + 1 (ADR-0005 p. 3), also straight into С by the
+            // L_P canonical launch, which a stage test would miss: on a generation change the launch month, the force mark and a first-series
+            // measurement still in progress start over.
+            if (d.Generation != _slotGen[a, d.Design])
             {
+                _slotGen[a, d.Design] = d.Generation;
                 _tLaunch[a, d.Design] = null;
                 _forcedSent[a, d.Design] = null;
+                for (int g = 0; g < _nG; g++)
+                {
+                    if (_firstSeries[a, g] == d.Design && _costU100[a, g] is null)
+                    {
+                        _firstSeries[a, g] = -1;
+                        _cum[a, g] = 0;
+                    }
+                }
             }
             if (d.Stage == DesignStage.Series && _tLaunch[a, d.Design] is null)
                 _tLaunch[a, d.Design] = t;
