@@ -28,3 +28,6 @@ ADR-0022 p.2.6 (ACCEPTED, #410): the legal status of edge-case territories in 19
 ## Acceptance criteria
 - [ ] Every edge case has a sourced verdict.
 - [ ] owners.yaml is updated; the build warnings match ADR-0022 p.2.7 or the difference is explained.
+
+## Отчёт research-scientist
+Полный отчёт: `docs/research/TASK-0109-edge-case-report.md`. Итог: 8 регионов core -> colony (guernsey, jersey, isle_of_man, puerto_rico, united_states_virgin_islands, algeria_ouargla, algeria_tamanghasset, taiwan); Аляска, Гавайи, Прибалтика, Молдавия остаются core. Ожидание: USA 5, SUN 31, GBR 2, FRA 4, ROC 7 (два региона Монголии — сомнительная пара, оставлены core).
