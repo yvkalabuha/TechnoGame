@@ -65,3 +65,6 @@
 - `KeyKind.Country` belongs in L2 `IsDataBacked`.
 - `TagWithoutPluralRules` should assert one branch.
 - The task text says 95 countries; there are 90. | Open |
+| DEBT-0043 | Map builder TASK-0075 review: data and CI.
+- Data (T3/T4): Danzig is in `pomeranian_former_german` with owner DEU, but it was a Free City, not part of 1937 Germany (owner question); Kaliningrad sits in a far k-means region; region ids are named after modern states instead of geography; region capitals = largest province.
+- CI: no step runs `tools/map` check_determinism, check_packages and the MapBuilder tests; no Architecture test forbids NTS references from Core/Session/client; `mod.yaml` does not list `map/*`; R16 SHA in the manifest and the Hausdorff check are not implemented. | Open |
