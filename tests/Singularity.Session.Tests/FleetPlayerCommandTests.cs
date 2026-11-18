@@ -52,7 +52,7 @@ public class FleetPlayerCommandTests
         Assert.Equal(Fx6.FromInt(10), p.Retired(Usa, 0));
         Assert.True(before > Fx6.Zero);
         SliceSession replay = SliceSession.Replay(SliceTestData.Data, s.World.Config, s.CommandLog, s.Tick);
-        Assert.Equal(s.LastHash, replay.LastHash);
+        HashAssert.Equal(s.LastHash, replay.LastHash);
     }
 
     [Fact]

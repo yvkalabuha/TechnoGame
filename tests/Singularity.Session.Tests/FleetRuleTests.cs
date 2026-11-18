@@ -321,7 +321,7 @@ public class FleetRuleTests
         FleetForecast sell = f.Products.SellForecast(Usa, 0, 1, 101);
         Assert.NotNull(sell.Sale);
         Assert.Equal(SaleReject.NotSurplus, sell.Sale!.Value.Reject);   // nobody is ahead of the park
-        Assert.Equal(before, f.Session.LastHash);   // a forecast changes nothing
+        HashAssert.Equal(before, f.Session.LastHash);   // a forecast changes nothing
     }
 
     [Fact]

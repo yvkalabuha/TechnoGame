@@ -35,8 +35,9 @@ public sealed class ViewWalk
                 Before before = Before.Take(w, t);
                 s.StepThroughMonth(t);
                 SliceView v = s.View;
-                Check("core", v.Month == t && v.Inputs is { } i && i.Month == t && v.Tick == s.Tick && v.Date == s.Date && v.StateHash == s.LastHash
-                    && v.Actors.Length == w.Scenario.ActorCount, $"month {t}: tick, date, hash, month or inputs");
+                Check("core", v.Month == t && v.Inputs is { } i && i.Month == t && v.Tick == s.Tick && v.Date == s.Date
+                    && v.Actors.Length == w.Scenario.ActorCount, $"month {t}: tick, date, month or inputs");
+                HashAssert.Equal(s.LastHash, v.StateHash, $"month {t}: view hash");
                 for (int a = 0; a < w.Scenario.ActorCount; a++)
                 {
                     ActorView av = v.Actors[a];
@@ -419,7 +420,7 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
         SliceView v = s.View;
         Assert.Equal(-1, v.Month);
         Assert.Null(v.Inputs);
-        Assert.Equal(s.LastHash, v.StateHash);
+        HashAssert.Equal(s.LastHash, v.StateHash);
         Assert.Equal(0, v.Tick);
         Assert.Equal(s.Date, v.Date);
         Assert.All(v.Actors, a => Assert.Null(a.FleetValue));
@@ -445,8 +446,8 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
         Assert.NotSame(afterMonth, afterCommand);
         Assert.Equal(0, afterCommand.Month);
         Assert.Null(afterCommand.Inputs);
-        Assert.Equal(s.LastHash, afterCommand.StateHash);
-        Assert.NotEqual(afterMonth.StateHash, afterCommand.StateHash);
+        HashAssert.Equal(s.LastHash, afterCommand.StateHash);
+        HashAssert.NotEqual(afterMonth.StateHash, afterCommand.StateHash);
         Assert.Equal(s.Tick, afterCommand.Tick);
         s.StepThroughMonth(1);
         Assert.Equal(1, s.View.Month);
@@ -503,11 +504,11 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
             a.StepThroughMonth(t);
             b.StepThroughMonth(t);
             c.StepThroughMonth(t);
-            Assert.Equal(a.LastHash, b.LastHash);
-            Assert.Equal(a.LastHash, c.LastHash);
+            HashAssert.Equal(a.LastHash, b.LastHash);
+            HashAssert.Equal(a.LastHash, c.LastHash);
             Assert.True(ViewSupport.Dump(a.View) == ViewSupport.Dump(b.View), $"month {t}: the view differs between thread counts");
         }
-        Assert.Equal("b3266453fb2ca5070f1fff85059d31ec4ce83fdad32973bf430cb601b04d3759", a.LastHash);
+        HashAssert.Equal("b3266453fb2ca5070f1fff85059d31ec4ce83fdad32973bf430cb601b04d3759", a.LastHash);
     }
 
     [Fact]
@@ -520,7 +521,7 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
             full.StepThroughMonth(t);
             calib.StepThroughMonth(t);
             Assert.All(calib.View.Actors, a => Assert.True(a.Key is null && a.FleetValue is null));
-            Assert.Equal(full.LastHash, calib.LastHash);
+            HashAssert.Equal(full.LastHash, calib.LastHash);
             // Everything else of the view is the same as in Full mode.
             for (int a = 0; a < full.View.Actors.Length; a++)
                 Assert.True(ViewSupport.Dump(full.View.Actors[a] with { Key = null, FleetValue = null }) == ViewSupport.Dump(calib.View.Actors[a]), $"month {t} actor {a}");

@@ -253,7 +253,7 @@ public class ObservablesTests
             Assert.All(calib.View.Inputs!.Actors, a => Assert.Null(a.Requirement));
             if (t % 12 == 0)
                 Assert.All(full.View.Inputs!.Actors, a => Assert.NotNull(a.Requirement));
-            Assert.Equal(full.LastHash, calib.LastHash);     // the mode changes no state
+            HashAssert.Equal(full.LastHash, calib.LastHash);     // the mode changes no state
         }
     }
 

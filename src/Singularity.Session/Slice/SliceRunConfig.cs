@@ -262,6 +262,16 @@ public sealed record SliceRunConfig
     /// </summary>
     public bool DailyTickProbe { get; init; }
 
+    /// <summary>
+    /// Execution only (ADR-0017 п. 3): the state hash is taken right after post on a tick with a monthly step and on a tick with applied
+    /// external commands. On by default so that tests and Lab keep their checks; the game host sets it off. Start, save, load and the end
+    /// of <c>Replay</c> always hash. Not state, not hashed.
+    /// </summary>
+    public bool HashCheckpoints { get; init; } = true;
+
+    /// <summary>Execution only (ADR-0017 п. 4): a hash on every tick that publishes a view; implies <see cref="HashCheckpoints"/>. To find the first diverging day.</summary>
+    public bool HashEveryTick { get; init; }
+
     /// <summary>Execution only (L2): threads and rows per chunk. They never change the result.</summary>
     public int Threads { get; init; } = 1;
 

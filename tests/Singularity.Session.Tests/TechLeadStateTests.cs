@@ -17,15 +17,15 @@ public class TechLeadStateTests
         Assert.NotEmpty(qCols);
         Assert.Contains(qCols, c => c.Current.ToArray().Any(v => v != 0));          // the scenario fleet carries q
         string before = StateHash.ComputeHex(table, SliceWorld.SchemaVersion);
-        Assert.Equal(s.LastHash, before);
+        HashAssert.Equal(s.LastHash, before);
         LongColumn col = qCols[0];
         long[] saved = col.Current.ToArray();
         long[] flipped = (long[])saved.Clone();
         flipped[0] ^= 1L << 3;                                                       // one cohort-year bit of one row
         col.Load(flipped);
-        Assert.NotEqual(before, StateHash.ComputeHex(table, SliceWorld.SchemaVersion));
+        HashAssert.NotEqual(before, StateHash.ComputeHex(table, SliceWorld.SchemaVersion));
         col.Load(saved);
-        Assert.Equal(before, StateHash.ComputeHex(table, SliceWorld.SchemaVersion));
+        HashAssert.Equal(before, StateHash.ComputeHex(table, SliceWorld.SchemaVersion));
     }
 
     [Fact]

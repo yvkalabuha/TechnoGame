@@ -18,5 +18,11 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Using Include="Singularity.TestSupport" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- HashAssert: every hash comparison in tests goes through it (ADR-0017 п. 11). -->
+    <Compile Include="$(MSBuildThisFileDirectory)Shared/HashAssert.cs" Link="Shared/HashAssert.cs" />
   </ItemGroup>
 </Project>

@@ -145,50 +145,58 @@ public sealed class TickRunner
         for (int s = 0; s < _systems.Length; s++)
             _due[s] = _nextDue[s] == Tick;
 
-        _table.CopyCurrentToNext();
-
-        for (int s = 0; s < _systems.Length; s++)
+        _table.BeginTick();
+        bool completed = false;
+        try
         {
-            if (!_due[s])
-                continue;
-            ITickSystem system = _systems[s];
-            if (_parallel.MaxDegreeOfParallelism == 1)
+            for (int s = 0; s < _systems.Length; s++)
             {
-                for (int chunk = 0; chunk < ChunkCount; chunk++)
-                    ComputeChunk(system, context, chunk);
-            }
-            else
-            {
-                // Each iteration writes only its own rows/slot (and its own failure slot), so there are
-                // no shared writes. Failures are recorded, not thrown: every chunk runs, so the set of
-                // failed chunks, and with it the reported lowest one, does not depend on scheduling.
-                Array.Clear(_failures);
-                Parallel.For(0, ChunkCount, _parallel, chunk =>
+                if (!_due[s])
+                    continue;
+                ITickSystem system = _systems[s];
+                if (_parallel.MaxDegreeOfParallelism == 1)
                 {
-                    try
-                    {
+                    for (int chunk = 0; chunk < ChunkCount; chunk++)
                         ComputeChunk(system, context, chunk);
-                    }
-                    catch (TickComputeException e)
-                    {
-                        _failures[chunk] = e;
-                    }
-                });
-                for (int chunk = 0; chunk < ChunkCount; chunk++)
+                }
+                else
                 {
-                    if (_failures[chunk] is { } failure)
-                        ExceptionDispatchInfo.Capture(failure).Throw();
+                    // Each iteration writes only its own rows/slot (and its own failure slot), so there are
+                    // no shared writes. Failures are recorded, not thrown: every chunk runs, so the set of
+                    // failed chunks, and with it the reported lowest one, does not depend on scheduling.
+                    Array.Clear(_failures);
+                    Parallel.For(0, ChunkCount, _parallel, chunk =>
+                    {
+                        try
+                        {
+                            ComputeChunk(system, context, chunk);
+                        }
+                        catch (TickComputeException e)
+                        {
+                            _failures[chunk] = e;
+                        }
+                    });
+                    for (int chunk = 0; chunk < ChunkCount; chunk++)
+                    {
+                        if (_failures[chunk] is { } failure)
+                            ExceptionDispatchInfo.Capture(failure).Throw();
+                    }
                 }
             }
-        }
 
-        for (int s = 0; s < _systems.Length; s++)
+            for (int s = 0; s < _systems.Length; s++)
+            {
+                if (_due[s])
+                    _systems[s].Merge(context, ChunkCount);
+            }
+
+            _table.Swap();
+            completed = true;
+        }
+        finally
         {
-            if (_due[s])
-                _systems[s].Merge(context, ChunkCount);
+            _table.EndTick(completed);
         }
-
-        _table.Swap();
         Tick++;
         UpdateNextDue();
 

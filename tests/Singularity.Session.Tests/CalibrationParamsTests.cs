@@ -67,7 +67,7 @@ public class CalibrationParamsTests
     {
         SliceRunConfig explicitDefaults = Base() with { CostDivisor = Fx6.One, ThetaStart = null, HMax = null, KappaQ10 = null, Alpha = null, XHalfByTier = default, DeltaH = null, CM = null, CapabilityTables = null };
         SliceSession s = ViewSupport.Run(explicitDefaults, 150);
-        Assert.Equal(MainSeed1Month149, s.LastHash);
+        HashAssert.Equal(MainSeed1Month149, s.LastHash);
         Assert.DoesNotContain(s.World.Table.Columns, c => c.Name.StartsWith("run.k.", StringComparison.Ordinal) || c.Name == "run.layer.capability");
         Assert.Equal(SliceTestData.Create(Base()).World.SchemaFingerprint(), SliceTestData.Create(explicitDefaults).World.SchemaFingerprint());
     }
@@ -136,8 +136,8 @@ public class CalibrationParamsTests
             a.StepThroughMonth(t);
             b.StepThroughMonth(t);
             again.StepThroughMonth(t);
-            Assert.Equal(a.LastHash, b.LastHash);          // L2
-            Assert.Equal(a.LastHash, again.LastHash);      // L1
+            HashAssert.Equal(a.LastHash, b.LastHash);          // L2
+            HashAssert.Equal(a.LastHash, again.LastHash);      // L1
         }
         Assert.NotEqual(SimulationDigest(ViewSupport.Run(Base(1, 1), 60)), SimulationDigest(a));
         Assert.Contains(a.World.Table.Columns, col => col.Name == "run.layer.capability");
@@ -159,8 +159,8 @@ public class CalibrationParamsTests
     {
         SliceRunConfig c = Base(10002, 1) with { Layer = LayerControl.Lc, CapabilityTables = Tables() };
         SliceSession a = ViewSupport.Run(c, 130), b = ViewSupport.Run(c with { Threads = 4, ChunkSize = 3 }, 130), again = ViewSupport.Run(c, 130);
-        Assert.Equal(a.LastHash, b.LastHash);
-        Assert.Equal(a.LastHash, again.LastHash);
+        HashAssert.Equal(a.LastHash, b.LastHash);
+        HashAssert.Equal(a.LastHash, again.LastHash);
     }
 
     [Fact]

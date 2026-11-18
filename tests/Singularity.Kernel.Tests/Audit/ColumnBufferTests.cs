@@ -6,27 +6,27 @@ namespace Singularity.Kernel.Tests.Audit;
 public class ColumnBufferTests
 {
     [Fact]
-    public void StrayWritesToNext_BeforeRunTick_AreDiscarded()
+    public void NextOutsideATick_Throws_LoadIsTheOnlyWayToWriteState()
     {
         var table = new Table(3);
         var x = table.AddLong("x");
         x.Load([1, 2, 3]);
-        x.Next[0] = 999; // misuse: writing Next outside a tick
+        Assert.Throws<InvalidOperationException>(() => x.Next[0] = 999);
         new TickRunner(table, 0, [], chunkSize: 2, maxThreads: 1).RunTick();
         Assert.Equal([1, 2, 3], x.Current.ToArray());
     }
 
     [Fact]
-    public void SwapWithoutCopy_ExposesStaleBuffer_RunnerAlwaysCopies()
+    public void SwapOfUnopenedColumns_ChangesNothing_AndKeepsTheVersion()
     {
-        // Documents why RunTick must call CopyCurrentToNext: a bare swap shows the old Next.
+        // Copy-on-write (ADR-0017): a column nobody touched is not swapped, so a bare swap never shows a stale buffer.
         var table = new Table(2);
         var x = table.AddInt("x");
         x.Load([5, 6]);
+        long version = table.Version;
         table.Swap();
-        Assert.Equal([0, 0], x.Current.ToArray());
-        table.Swap();
-        Assert.Equal([5, 6], x.Current.ToArray()); // double swap is identity
+        Assert.Equal([5, 6], x.Current.ToArray());
+        Assert.Equal(version, table.Version);
     }
 
     [Fact]
@@ -41,7 +41,7 @@ public class ColumnBufferTests
         string before = StateHash.ComputeHex(table, 1);
         for (int i = 0; i < 7; i++)
             runner.RunTick();
-        Assert.Equal(before, StateHash.ComputeHex(table, 1));
+        HashAssert.Equal(before, StateHash.ComputeHex(table, 1));
     }
 
     [Fact]

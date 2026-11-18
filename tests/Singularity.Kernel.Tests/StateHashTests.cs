@@ -19,24 +19,24 @@ public class StateHashTests
     [Fact]
     public void FixedTable_MatchesReference()
     {
-        Assert.Equal(FixedTableHash, StateHash.ComputeHex(FixedTable(), schemaVersion: 1));
+        HashAssert.Equal(FixedTableHash, StateHash.ComputeHex(FixedTable(), schemaVersion: 1));
     }
 
     [Fact]
     public void EmptyTable_HashesHeaderOnly()
     {
-        Assert.Equal(EmptyTableHash, StateHash.ComputeHex(new Table(0), schemaVersion: 1));
+        HashAssert.Equal(EmptyTableHash, StateHash.ComputeHex(new Table(0), schemaVersion: 1));
     }
 
     [Fact]
     public void SchemaVersionAndValues_AffectTheHash()
     {
         string baseline = StateHash.ComputeHex(FixedTable(), 1);
-        Assert.NotEqual(baseline, StateHash.ComputeHex(FixedTable(), 2));
+        HashAssert.NotEqual(baseline, StateHash.ComputeHex(FixedTable(), 2));
 
         var changed = FixedTable();
         changed.GetInt("level").Load([0, 1, -1, int.MaxValue]);
-        Assert.NotEqual(baseline, StateHash.ComputeHex(changed, 1));
+        HashAssert.NotEqual(baseline, StateHash.ComputeHex(changed, 1));
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public class StateHashTests
         runner.RunTick();
         runner.RunTick();
         Assert.Equal(2, runner.Tick);
-        Assert.Equal(before, StateHash.ComputeHex(table, 1));
+        HashAssert.Equal(before, StateHash.ComputeHex(table, 1));
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class StateHashTests
         var table = FixedTable();
         table.CopyCurrentToNext();
         table.GetLong("stock").Next[0] = 999;
-        Assert.Equal(FixedTableHash, StateHash.ComputeHex(table, 1));
+        HashAssert.Equal(FixedTableHash, StateHash.ComputeHex(table, 1));
     }
 
     [Fact]
@@ -81,6 +81,6 @@ public class StateHashTests
         Assert.True(BitConverter.IsLittleEndian, "Expected bytes are built with the host byte order.");
 
         string expected = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes.ToArray()));
-        Assert.Equal(expected, StateHash.ComputeHex(table, 3));
+        HashAssert.Equal(expected, StateHash.ComputeHex(table, 3));
     }
 }

@@ -393,7 +393,7 @@ internal sealed class SliceObserver
             Licences(snap, v, t);
             Leads(v);
             if (t % 12 == 11)
-                _hashYears.Add(v.StateHash);
+                _hashYears.Add(v.StateHash ?? throw new InvalidOperationException("The observer needs HashCheckpoints (ADR-0017)."));
         }
     }
 

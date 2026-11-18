@@ -14,11 +14,16 @@ namespace Singularity.Session;
 /// </summary>
 public sealed partial class SliceSession
 {
-    /// <summary>Version of the public surface of the session (ADR-0014 п. 6): raised with every change of the views or of <see cref="SliceRunConfig"/>; the surface test pins it. 0 was the surface before the read views; 8 (TASK-0063) adds the execution-only <c>SliceRunConfig.DailyTickProbe</c>; 7 (TASK-0058 step 5) drops <c>PilotChoice</c>/<c>IntroChannel</c> (I-OC and A41 SLOT are the build; <c>PilotForm</c>, <c>PilotProfiles</c> stay as options) and adds <c>RequirementView.PilotSlots</c>; 6 added <c>PilotForm</c>/<c>PilotProfiles</c>; 5 adds <c>PilotChoice</c> (HYP-0004 sketch); 4 adds the «К» parameters and <c>CapabilityTables</c> (L_C/L_P) to <c>SliceRunConfig</c>; 3 adds <c>LicenceView.Active</c>; 2 adds the step traces, <c>t_known</c> and the Requirement variants (SLICE_COMPOSITION §13.7).</summary>
-    public const int TestApiVersion = 8;
+    /// <summary>Version of the public surface of the session (ADR-0014 п. 6): raised with every change of the views or of <see cref="SliceRunConfig"/>; the surface test pins it. 9 (TASK-0078, ADR-0017) adds <c>HashCheckpoints</c>/<c>HashEveryTick</c>, makes <c>SliceView.StateHash</c> nullable and <c>LastHash</c> lazy (owner thread only); 0 was the surface before the read views; 8 (TASK-0063) adds the execution-only <c>SliceRunConfig.DailyTickProbe</c>; 7 (TASK-0058 step 5) drops <c>PilotChoice</c>/<c>IntroChannel</c> (I-OC and A41 SLOT are the build; <c>PilotForm</c>, <c>PilotProfiles</c> stay as options) and adds <c>RequirementView.PilotSlots</c>; 6 added <c>PilotForm</c>/<c>PilotProfiles</c>; 5 adds <c>PilotChoice</c> (HYP-0004 sketch); 4 adds the «К» parameters and <c>CapabilityTables</c> (L_C/L_P) to <c>SliceRunConfig</c>; 3 adds <c>LicenceView.Active</c>; 2 adds the step traces, <c>t_known</c> and the Requirement variants (SLICE_COMPOSITION §13.7).</summary>
+    public const int TestApiVersion = 9;
 
     private SliceView _view = null!;
     private long _month = -1;
+
+    // Lazy hash (ADR-0017 п. 6-7): valid while the table version is unchanged. Only the owner thread computes it.
+    private readonly int _ownerThread = Environment.CurrentManagedThreadId;
+    private long _hashVersion;
+    private string? _hash;
 
     private readonly SliceWorld _world;
     private readonly List<LoggedCommand> _pending = new();
@@ -30,10 +35,9 @@ public sealed partial class SliceSession
     private SliceSession(SliceWorld world)
     {
         _world = world;
-        LastHash = StateHash.ComputeHex(world.Table, SliceWorld.SchemaVersion);
-        HashComputations = 1;
+        _hash = ComputeHash();
         Layout = ViewBuilder.Layout(world);
-        _view = ViewBuilder.Snapshot(world, Tick, LastHash, _month, null, null);
+        _view = ViewBuilder.Snapshot(world, Tick, _hash, _month, null, null);
     }
 
     /// <summary>The fixed shape of the world the rows of the views refer to.</summary>
@@ -53,11 +57,37 @@ public sealed partial class SliceSession
 
     public CivilDate Date => _world.Calendar.DateOf(Tick);
 
-    /// <summary>Hash of the state after the last non-empty tick (hex), or of the initial state.</summary>
-    public string LastHash { get; private set; }
+    /// <summary>
+    /// Hash of the state after the last post (hex), or of the initial state; never null. Computed on demand and cached until the table changes
+    /// (ADR-0017 п. 6-8), so it equals the hash taken right after post. Owner thread only (the one that called <see cref="Create"/>).
+    /// </summary>
+    public string LastHash
+    {
+        get
+        {
+            CheckOwner();
+            return CurrentHash();
+        }
+    }
 
-    /// <summary>How many state hashes were computed (an empty tick computes none).</summary>
+    /// <summary>How many state hashes were actually computed (a cache hit and an empty tick compute none).</summary>
     public long HashComputations { get; private set; }
+
+    private void CheckOwner()
+    {
+        if (Environment.CurrentManagedThreadId != _ownerThread)
+            throw new InvalidOperationException("The state hash is computed on the thread that created the session (ADR-0017 п. 7).");
+    }
+
+    private string CurrentHash() => _hashVersion == _world.Table.Version && _hash is not null ? _hash : (_hash = ComputeHash());
+
+    private string ComputeHash()
+    {
+        string hash = StateHash.ComputeHex(_world.Table, SliceWorld.SchemaVersion);
+        _hashVersion = _world.Table.Version;
+        HashComputations++;
+        return hash;
+    }
 
     /// <summary>All accepted external commands in key order, one JSON line each (<c>commands.log</c>).</summary>
     public string CommandLog => CommandCodec.EncodeLog(_journal.Concat(_pending));
@@ -154,6 +184,7 @@ public sealed partial class SliceSession
                 throw new InvalidOperationException($"The log command {c.Key} was refused on replay: {v.Message}");
         }
         session.StepTo(untilTick);
+        _ = session.LastHash;   // the end of a replay is a mandatory hash point (ADR-0017 п. 2)
         return session;
     }
 
@@ -175,11 +206,11 @@ public sealed partial class SliceSession
         _world.Runner.RunTick();
         if (monthly || applied || _world.Config.DailyTickProbe)
         {
-            LastHash = StateHash.ComputeHex(_world.Table, SliceWorld.SchemaVersion);
-            HashComputations++;
+            SliceRunConfig config = _world.Config;
+            string? hash = config.HashEveryTick || config.HashCheckpoints && (monthly || applied) ? CurrentHash() : null;
             // The traces belong to the step that just ran; only a tick with a monthly step reads them (inputs is set exactly then).
             MonthStepView? step = inputs is null ? null : ViewBuilder.Step(_world, _month);
-            Volatile.Write(ref _view, ViewBuilder.Snapshot(_world, Tick, LastHash, _month, inputs, step));
+            Volatile.Write(ref _view, ViewBuilder.Snapshot(_world, Tick, hash, _month, inputs, step));
         }
     }
 

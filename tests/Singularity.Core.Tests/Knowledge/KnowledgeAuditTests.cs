@@ -111,7 +111,7 @@ public class KnowledgeAuditTests
         {
             single.RunThroughMonth(t);
             multi.RunThroughMonth(t);
-            Assert.Equal(StateHash.ComputeHex(single.Table, 1), StateHash.ComputeHex(multi.Table, 1));
+            HashAssert.Equal(StateHash.ComputeHex(single.Table, 1), StateHash.ComputeHex(multi.Table, 1));
         }
     }
 
@@ -129,7 +129,7 @@ public class KnowledgeAuditTests
         var y = new SliceRun(null, null, 1, 1, 43);
         x.RunThroughMonth(119);
         y.RunThroughMonth(119);
-        Assert.NotEqual(StateHash.ComputeHex(x.Table, 1), StateHash.ComputeHex(y.Table, 1)); // the seed matters (hazard draws)
+        HashAssert.NotEqual(StateHash.ComputeHex(x.Table, 1), StateHash.ComputeHex(y.Table, 1)); // the seed matters (hazard draws)
     }
 
     private static void AssertSameByIds(SliceRun a, SliceRun b, long t)
