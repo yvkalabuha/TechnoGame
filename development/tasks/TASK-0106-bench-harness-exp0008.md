@@ -1,7 +1,7 @@
 ---
 id: TASK-0106
 title: "Lab bench harness for EXP-0008: foreign-load gate, top-k frequency, repeat cap; alloc JSON provenance"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: simulation-engineer         # ответственный агент
@@ -40,8 +40,8 @@ Build the `lab bench` harness that EXP-0008 needs (П10 of `development/experime
    - a smoke test for `--mode alloc`.
 
 ## Acceptance criteria
-- [ ] `lab selftest` covers the new modes; a smoke series on a small world runs end to end and produces the EXP-0008 records (loadavg, foreign_cpu, top-5, top-k frequency, repeats/exclusions).
-- [ ] Unit tests in Singularity.Lab.Tests and lab/analysis; `dotnet test`, the analysis tests and `lab selftest` pass. Golden hashes are unchanged (harness only).
+- [x] `lab selftest` covers the new modes; a smoke series on a small world runs end to end and produces the EXP-0008 records (loadavg, foreign_cpu, top-5, top-k frequency, repeats/exclusions).
+- [x] Unit tests in Singularity.Lab.Tests and lab/analysis; `dotnet test`, the analysis tests and `lab selftest` pass. Golden hashes are unchanged (harness only).
 
 ## Implementation notes (simulation-engineer, 2026-11-18)
 - Code: `src/Singularity.Lab/Bench/` — `ProcParse.cs`, `LoadMath.cs` (pure), `LoadMeter.cs` (`procRoot` parameter, `available:false` off Linux), `FreqSampler.cs` (per-CPU values, `TopKMedianIn`, no `throttled`), `GcEventListener.cs` (LOH ticks, `AllocLarge`), `BenchGate.cs` (manifest `gate`, `reference`), `SeriesGate.cs` (pure decisions), `SeriesDriver.cs` (`--mode series`), `HarnessChecks.cs` (selftest), changes in `ProcessBench`, `BenchCommand`, `BenchJson`, `BenchManifest`, `AllocProfile`, `CopyBench` (R2(г) `ratio_cow_over_full_all`).
@@ -87,3 +87,8 @@ Not done (left for a follow-up):
 Tests to add, changes against the list above: in 1, 2, 7 the foreign values are absolute CPUs (`GateAttempt(n, T, foreignCpus, overShare, runDelay)`); run delay alone now triggers a repeat (`RunDelayAlone_Repeat`, not `NoRepeat`); add `WindowEnd_VirtualRepeat_AcceptedWindowEnd` ([н1, н2, virtual] → Accepted attempt 0, `window-end`), `Mixed_FirstWithoutEvidenceAccepted` ([н1, м, н2] → attempt 1), `Forbidden355_PrefixCaseInsensitive_SkipsDriverPid` (`SeriesDriver.ForbiddenIn` is internal: test through a series CLI run with `forbidden_processes: ["dotnet"]` and an active `dotnet` neighbour, or make it public), `Cli_Series_Calibration_NoRepeats`, `Cli_Series_DeadlineNotStarted_Exit3` (`pre_series_foreign_cpus_max 0`, `pre_series_deadline_s 1`), and in analysis `test_r1_r2_differ_gives_inconclusive` (present in `test_exp0008.py`).
 
 Point A `alloc` after the TASK-0103 merge (6cd45ec, t1, 5 months, bytes only, busy machine) [Факт: lab/results/TASK-0106/alloc-A.json]: month 9.9 MiB; fresh snapshot 6.86 MiB (≤ X = 8 MiB), «Snapshot without nodes» 0.73 MiB, nodes 6.13 MiB; snapshot path ≈ 7.59 MiB/month; tick path ≈ 2.26 MiB/month by the model — above the 1 MiB of ADR-0023 п. 2.1; LOH ticks 0, AllocLarge 0; gen2 1 in 3 measured months; GC pause share 0.36 %. The probe after the merge replaced the reflection on `ViewBuilder.Nodes` (blocks are now cached, so a direct call returned 0 B).
+
+## Результат
+- Harness: `lab bench --mode series` (SeriesDriver, SeriesGate, BenchGate), machine block (load, run_delay, nvcsw, CPU time, thermal), top-k frequency, GC listener, split `--mode alloc`, manifests EXP-0008 (window 36000 s, #414) and smoke, lab/analysis/exp0008.py. Commits ecea1e7, 25f1634, 6109e3b, a7f6b66, 59c4e15; tests eedd77d, b47fb06, fb59c63 (Lab.Tests 201/201).
+- Reviews: CHANGES ×3 (#355 self-detection; window; tests for new behaviour), all closed.
+- Known gap: the start_time of ancestors in the check_355 JSON is not unit-tested (written inside WriteSeries); top_foreign start_time is tested. Rust-port protocol: DEBT-0056.
