@@ -109,9 +109,12 @@ internal sealed class EventSet
 {
     public string Name { get; set; } = "";
     public List<string> Adm0 { get; set; } = new();     // NE ADM0_A3 of the province
-    public List<string> Ids { get; set; } = new();      // province ids; a trailing '*' is a prefix
+    public List<string> Ids { get; set; } = new();      // province ids; a trailing '*' is a prefix (depends on the region id: use codes or cuts for lines inside a country)
+    public List<string> Codes { get; set; } = new();    // NE adm1 codes the province was made from (Piece.Src): independent of the region the province ended up in
     public List<string> Cuts { get; set; } = new();     // "cut_id:hint" of a cut piece
     public List<string> ExceptIds { get; set; } = new(); // province ids (trailing * = prefix) removed from the selection above
+    public List<string> ExceptCuts { get; set; } = new();  // "cut_id:piece" removed from the selection above
+    public List<string> ExceptCodes { get; set; } = new(); // NE adm1 codes removed from the selection above
 }
 
 internal sealed class EventEntry

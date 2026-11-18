@@ -227,12 +227,15 @@ internal static class Pipeline
     };
 
     /// <summary>Polygons smaller than the threshold move to the other side so that a cut never leaves slivers.</summary>
-    private static (Geometry, Geometry) AbsorbSlivers(Geometry a, Geometry b, double minKm2, Geometry whole)
+    internal static (Geometry, Geometry) AbsorbSlivers(Geometry a, Geometry b, double minKm2, Geometry whole)
     {
         var pa = Sph.Polygons(a).ToList();
         var pb = Sph.Polygons(b).ToList();
         bool Small(Polygon p) => Sph.PolygonArea(p) / 1e6 < minKm2;
         // A side made only of small polygons is the noise of a line that does not cross the piece: the piece stays whole on the other side.
+        // An empty side is checked first: All() is true for an empty list.
+        if (pb.Count == 0) return (whole, Sph.Gf.CreatePolygon());
+        if (pa.Count == 0) return (Sph.Gf.CreatePolygon(), whole);
         if (pa.All(Small)) return (Sph.Gf.CreatePolygon(), whole);
         if (pb.All(Small)) return (whole, Sph.Gf.CreatePolygon());
         var moveA = pa.Where(Small).ToList();

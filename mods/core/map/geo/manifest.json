@@ -1,7 +1,7 @@
 {
   "format_version": 1,
-  "data_binding": "3529c025e750b41c3395fb4a537109e9535772649fb8ca7cf2077a23fd4f8a64",
-  "files": {"arcs.bin": {"sha256": "47cf071c37dc0581719efcb6f3110a6f5322fe0433807a8e8f2ddc562bce25a9", "bytes": 3699740}},
+  "data_binding": "45967bee6357e0eba3204f3c82333ac2b536f449784f100f4880422b6614fa34",
+  "files": {"arcs.bin": {"sha256": "a0c0bb0ba71af7a99360f0582ed59f78fa93db7f339e4bb6ad2b9d023e0c1a1e", "bytes": 3699740}},
   "counts": {"provinces": 3124, "territories": 8, "regions": 373, "arcs": 13307},
   "sources": [
     {"id": "ne_admin1", "sha256": "22d0e3ad85eb3e27f17cabf8ba2d50e554fbc27a87796ff891d958185da62fb5", "license": "public-domain"},

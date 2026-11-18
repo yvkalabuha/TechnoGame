@@ -2,7 +2,7 @@
 # Berlin, Danzig, the zone pieces of Baden-Wuerttemberg, Bavaria, Upper Austria and Tyrol, the Trieste zones, Venezia Giulia, Porkkala, the Dodecanese,
 # the lands east of the Oder-Neisse, Korea and Vietnam get their regions from the 'regions' list of their cuts (20-cuts-*.yaml).
 rules:
-  # Germany by occupation zone (Berlin Declaration 1945-06-05; EAC protocol 1944-09-12).
+  # Germany by occupation zone (Berlin Declaration 1945-06-05; EAC protocol 1944-09-12). APPROXIMATION: the zones follow modern Laender, not the exact zone borders.
   - isolate: {codes: [DEU-1577, DEU-1600, DEU-1601, DEU-3487, DEU-3488], region: germany_soviet_zone, ref: "Soviet zone: Thuringia, Saxony-Anhalt, Saxony, Brandenburg, Mecklenburg-Vorpommern"}
   - isolate: {codes: [DEU-1572, DEU-1576, DEU-1578, DEU-1579], region: germany_british_zone, ref: "British zone: North Rhine-Westphalia, Lower Saxony, Hamburg, Schleswig-Holstein"}
   - isolate: {codes: [DEU-1574], region: germany_us_zone, ref: "US zone: Hesse"}

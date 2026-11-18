@@ -15,14 +15,15 @@ internal static class Writer
         var adj = Adjacency(r);
         var reg = Regions(r);
         var strait = Straits(r);
-        File.WriteAllBytes(Path.Combine(outDir, "territories.yaml"), Territories(r));
+        var terr = Territories(r);
+        File.WriteAllBytes(Path.Combine(outDir, "territories.yaml"), terr);
         File.WriteAllBytes(Path.Combine(outDir, "provinces.yaml"), prov);
         File.WriteAllBytes(Path.Combine(outDir, "adjacency.yaml"), adj);
         File.WriteAllBytes(Path.Combine(outDir, "regions.yaml"), reg);
         File.WriteAllBytes(Path.Combine(outDir, "straits.yaml"), strait);
         File.WriteAllBytes(Path.Combine(outDir, "ATTRIBUTION.md"), Attribution(r));
 
-        var binding = SHA256.HashData(prov.Concat(adj).Concat(reg).ToArray());
+        var binding = SHA256.HashData(prov.Concat(adj).Concat(reg).Concat(terr).ToArray());
         var arcs = ArcsBin(r.Simple, binding);
         File.WriteAllBytes(Path.Combine(outDir, "geo", "arcs.bin"), arcs);
         File.WriteAllBytes(Path.Combine(outDir, "geo", "manifest.json"), Manifest(r, binding, arcs));
@@ -102,16 +103,16 @@ internal static class Writer
     }
 
     /// <summary>
-    /// Binding check (ADR-0011 §4): manifest.json must match the canonical bytes of provinces, adjacency and regions, and arcs.bin
+    /// Binding check (ADR-0011 §4): manifest.json must match the canonical bytes of provinces, adjacency, regions and territories, and arcs.bin
     /// (when present) must carry the same binding and the SHA-256 listed in the manifest. A mismatch is a loud error.
     /// </summary>
     public static void VerifyBinding(string mapDir)
     {
         var manifest = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(Path.Combine(mapDir, "geo", "manifest.json"))).RootElement;
-        var bytes = new[] { "provinces.yaml", "adjacency.yaml", "regions.yaml" }.SelectMany(f => File.ReadAllBytes(Path.Combine(mapDir, f))).ToArray();
+        var bytes = new[] { "provinces.yaml", "adjacency.yaml", "regions.yaml", "territories.yaml" }.SelectMany(f => File.ReadAllBytes(Path.Combine(mapDir, f))).ToArray();
         var binding = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
         if (manifest.GetProperty("data_binding").GetString() != binding)
-            throw new InvalidDataException("geo/manifest.json does not match provinces.yaml, adjacency.yaml and regions.yaml: rebuild geo/ with 'MapBuilder build'");
+            throw new InvalidDataException("geo/manifest.json does not match provinces.yaml, adjacency.yaml, regions.yaml and territories.yaml: rebuild geo/ with 'MapBuilder build'");
         var arcsPath = Path.Combine(mapDir, "geo", "arcs.bin");
         if (!File.Exists(arcsPath)) return;
         var arcs = File.ReadAllBytes(arcsPath);

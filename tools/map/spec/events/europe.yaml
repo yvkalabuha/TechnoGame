@@ -1,5 +1,8 @@
 # Ownership-event lines (RR-0020, ADR-0020 §2.9, #350): the provinces of a set change owner or controller together, so every region lies
 # wholly in one set or wholly outside it. The CI check of 'MapBuilder build' fails on a region that crosses a line.
+# Selectors must not depend on the region a province ended up in: use 'codes' (NE adm1 codes the province was made from, Piece.Src), 'adm0' or 'cuts'
+# ("cut_id:piece"). 'ids' is for territories without a source piece; a region id prefix would make the check tautological.
+# The German zones are approximated by modern Laender (Hesse, Lower Saxony, NRW, Rhineland-Palatinate do not follow the zone borders exactly), except the cut zones.
 # A set selects provinces by 'adm0' (NE country), 'ids' (a trailing * is a prefix) or 'cuts' ("cut_id:piece" of a cut in spec/20-cuts-*.yaml).
 # 'not_drawn' records a line that is not on the map and why (printed by the build).
 events:
@@ -7,64 +10,59 @@ events:
     date: "1946-04-07"
     rr: C01
     sets:
-      - {name: kaliningrad, ids: ["kaliningrad.*"]}
+      - {name: kaliningrad, codes: [RUS-2324]}
   - id: saar_protectorate
     date: "1947-12-17"
     rr: C02
     sets:
-      - {name: saar, ids: ["saar.*"]}
+      - {name: saar, codes: [DEU-1581]}
   - id: saar_to_frg
     date: "1957-01-01"
     rr: C02b
     sets:
-      - {name: saar, ids: ["saar.*"]}
+      - {name: saar, codes: [DEU-1581]}
   - id: frg_founding
     date: "1949-05-23"
     rr: C03
     sets:
-      - {name: western_zones, ids: ["germany_us_zone.*", "germany_british_zone.*", "germany_french_zone.*", "germany_us_enclave.*"]}
+      - {name: western_zones, codes: [DEU-1574, DEU-1572, DEU-1576, DEU-1578, DEU-1579, DEU-1580, DEU-1575], cuts: ["germany_us_zone:us_zone", "germany_us_zone:french_zone"]}
   - id: frg_sovereignty
     date: "1955-05-05"
     rr: C09
     sets:
-      - {name: western_zones, ids: ["germany_us_zone.*", "germany_british_zone.*", "germany_french_zone.*", "germany_us_enclave.*"]}
+      - {name: western_zones, codes: [DEU-1574, DEU-1572, DEU-1576, DEU-1578, DEU-1579, DEU-1580, DEU-1575], cuts: ["germany_us_zone:us_zone", "germany_us_zone:french_zone"]}
   - id: gdr_founding
     date: "1949-10-07"
     rr: C05
     sets:
-      - {name: soviet_zone, ids: ["germany_soviet_zone.*"]}
+      - {name: soviet_zone, codes: [DEU-1577, DEU-1600, DEU-1601, DEU-3487, DEU-3488]}
   - id: gdr_administration
     date: "1949-10-10"
     rr: C06
     sets:
-      - {name: soviet_zone_and_east_berlin, ids: ["germany_soviet_zone.*", "berlin_east.*"]}
+      - {name: soviet_zone_and_east_berlin, codes: [DEU-1577, DEU-1600, DEU-1601, DEU-3487, DEU-3488], cuts: ["berlin_western_sectors:east"]}
   - id: gdr_sovereignty
     date: "1954-03-25"
     rr: C08
     sets:
-      - {name: soviet_zone, ids: ["germany_soviet_zone.*"]}
+      - {name: soviet_zone, codes: [DEU-1577, DEU-1600, DEU-1601, DEU-3487, DEU-3488]}
   - id: oder_neisse_zgorzelec
     date: "1950-07-06"
     rr: C07
     sets:
-      - {name: former_german_lands, ids: ["poland_former_german.*"]}
+      - {name: former_german_lands, codes: [POL-3143, POL-3167, POL-3142, POL-3141], cuts: ["poland_german_border_1937:former_german"]}
   - id: oder_neisse_warsaw
     date: "1970-12-07"
     rr: C07b
     sets:
-      - {name: former_german_lands, ids: ["poland_former_german.*"]}
-      - {name: kaliningrad, ids: ["kaliningrad.*"]}
-  - id: danzig_not_germany
-    date: "1945-10-01"
-    rr: "C07 and DEBT-0043"
-    sets:
-      - {name: free_city_of_danzig, ids: ["danzig.*"]}
+      - {name: former_german_lands, codes: [POL-3143, POL-3167, POL-3142, POL-3141], cuts: ["poland_german_border_1937:former_german"]}
+      - {name: kaliningrad, codes: [RUS-2324]}
   - id: berlin_city_split
     date: "1948-11-30"
     rr: C12
     sets:
-      - {name: western_sectors, ids: ["berlin_west.*"]}
-      - {name: soviet_sector, ids: ["berlin_east.*"]}
+      - {name: western_sectors, cuts: ["berlin_western_sectors:west"]}
+      - {name: soviet_sector, cuts: ["berlin_western_sectors:east"]}
   - id: berlin_us_british_french_sectors
     date: "1948-11-30"
     rr: C12
@@ -77,26 +75,26 @@ events:
     date: "1955-10-25"
     rr: C27
     sets:
-      - {name: soviet_zone, ids: ["austria_soviet_zone.*"]}
-      - {name: us_zone, ids: ["austria_us_zone.*"]}
-      - {name: british_zone, ids: ["austria_british_zone.*"]}
-      - {name: french_zone, ids: ["austria_french_zone.*"]}
-      - {name: vienna, ids: ["vienna.*"]}
+      - {name: soviet_zone, codes: [AUT-2322, AUT-2330], cuts: ["austria_us_zone_upper_austria:soviet_zone"]}
+      - {name: us_zone, codes: [AUT-2327], cuts: ["austria_us_zone_upper_austria:us_zone"]}
+      - {name: british_zone, codes: [AUT-2323, AUT-2325], cuts: ["austria_british_zone_east_tyrol:british_zone"]}
+      - {name: french_zone, cuts: ["austria_british_zone_east_tyrol:french_zone"]}
+      - {name: vienna, codes: [AUT-2331]}
   - id: porkkala_returned
     date: "1956-01-26"
     rr: C30
     sets:
-      - {name: porkkala, ids: ["porkkala.*"]}
+      - {name: porkkala, cuts: ["porkkala_lease:porkkala_lease"]}
   - id: dodecanese_to_greece
     date: "1947-09-15"
     rr: C31
     sets:
-      - {name: dodecanese, ids: ["dodecanese.*"]}
+      - {name: dodecanese, cuts: ["dodecanese:dodecanese"]}
   - id: venezia_giulia_peace_treaty
     date: "1947-09-15"
     rr: "C16, C17"
     sets:
-      - {name: ceded_to_yugoslavia, cuts: ["venezia_giulia_croatia:ceded", "venezia_giulia_slovenia:ceded"], except_ids: ["trieste_zone_b.*"]}
+      - {name: ceded_to_yugoslavia, cuts: ["venezia_giulia_croatia:ceded", "venezia_giulia_slovenia:ceded"], except_cuts: ["trieste_zone_b:zone_b"]}
       - {name: zone_a, cuts: ["trieste_zone_a:zone_a"]}
       - {name: zone_b, cuts: ["trieste_zone_b:zone_b"]}
   - id: trieste_memorandum
@@ -105,6 +103,10 @@ events:
     sets:
       - {name: zone_a, cuts: ["trieste_zone_a:zone_a"]}
       - {name: zone_b, cuts: ["trieste_zone_b:zone_b"]}
+  - id: morgan_line_1945
+    date: "1945-06-12"
+    rr: "C14-C17 (state at t0)"
+    not_drawn: "the Morgan Line of 1945-06-12 (AMG controlled Gorizia, the Soca valley and Pula) is in no PD, CC0 or CC BY source; the cuts use the 1947 zones of the Free Territory of Trieste (OHM; as_of 1945-10-01 is an approximation), so the t0 control of the Julian March is approximate"
   - id: poland_ussr_border_exchange
     date: "1951-06-14"
     rr: B104

@@ -34,6 +34,6 @@ rules:
       regions: ["", vietnam_north]
       source: "parallel parameter 17.0N"
       as_of: "1945-10-01"
-      precision: A
+      precision: A   # a parameter (17.0N), not the Ben Hai river: B would break the area exception (c) of the small pieces, see TASK-0091 review notes
       ref: "Geneva Agreements on the Cessation of Hostilities in Viet-Nam, 1954-07-20, art. 1 (provisional demarcation line at 17N); RR-0020 B32"
       min_piece_km2: 40
