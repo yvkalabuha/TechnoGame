@@ -145,9 +145,18 @@ static class Numbers
     // A missing separator message shows as the missing-key marker, like any other missing key.
     static string Sep(IReadBundle b, string id) => Msg(b, id);
 
+    // Source-language bundle per bundle: format messages follow the same lang -> en chain as all text (ADR-0018 §3.1).
+    static readonly System.Runtime.CompilerServices.ConditionalWeakTable<IReadBundle, IReadBundle> Fallbacks = new();
+
+    public static void SetFallback(IReadBundle bundle, IReadBundle fallback) => Fallbacks.AddOrUpdate(bundle, fallback);
+
     static string Msg(IReadBundle b, string id, params (string, IFluentType)[] args)
     {
         var d = args.ToDictionary(x => x.Item1, x => x.Item2);
-        return b.TryGetMessage(id, d, out _, out string? s) ? s : $"[[{id}]]";
+        if (b.TryGetMessage(id, d, out _, out string? s))
+            return s;
+        if (Fallbacks.TryGetValue(b, out IReadBundle? fb) && fb.TryGetMessage(id, d, out _, out s))
+            return s;
+        return $"[[{id}]]";
     }
 }

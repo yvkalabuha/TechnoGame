@@ -54,7 +54,39 @@ public sealed partial class LocaleCatalog
 
     public bool Has(string lang, string id) => _entities.TryGetValue(lang, out var e) && e.ContainsKey(id);
 
-    public static LocaleCatalog Load(GameData data) => Load(ModLocaleSource.From(data));
+    /// <summary>
+    /// Loads the locales of the mods of <paramref name="data"/> and applies the runtime rules of ADR-0018 §3.2, §3.4:
+    /// orphans (data-backed ids without a data object) are skipped, and L1, L2, L3 problems and stale
+    /// translations are reported through <paramref name="warn"/>. Syntax and grammar errors still throw.
+    /// </summary>
+    public static LocaleCatalog Load(GameData data, Action<string>? warn = null) =>
+        Load(ModLocaleSource.From(data), data, warn);
+
+    /// <summary>As <see cref="Load(GameData, Action{string})"/>, for an explicit list of locale sources.</summary>
+    public static LocaleCatalog Load(IReadOnlyList<ModLocaleSource> mods, GameData data, Action<string>? warn)
+    {
+        LocaleCatalog catalog = Load(mods);
+        SortedDictionary<string, KeyKind> expected = ExpectedKeys.Of(data);
+        foreach (string lang in catalog.Languages)
+        {
+            var orphans = catalog._entities[lang].Values.Where(e => LocaleChecks.IsDataBacked(e.Kind) && !expected.ContainsKey(e.Id)).Select(e => e.Id).ToList();
+            foreach (string id in orphans)
+            {
+                catalog._entities[lang].Remove(id);
+                warn?.Invoke($"L2 {lang}: orphan '{id}' has no data object, skipped");
+            }
+        }
+        if (warn is null)
+            return catalog;
+        foreach (string p in LocaleChecks.Completeness(catalog, data).Concat(LocaleChecks.Variables(catalog)))
+            warn(p);
+        foreach (string lang in catalog.Languages)
+        {
+            foreach (string id in Staleness.Stale(catalog, lang))
+                warn($"stale translation '{id}' ({lang}): source text changed or no stamp in {SidecarName}");
+        }
+        return catalog;
+    }
 
     public static LocaleCatalog Load(IReadOnlyList<ModLocaleSource> mods)
     {

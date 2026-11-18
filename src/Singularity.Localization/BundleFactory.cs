@@ -61,6 +61,8 @@ static class BundleFactory
         FrozenBundle frozen = bundle.ToFrozenBundle();
         holder.Self = frozen;
         holder.Fallback = fallback();
+        if (holder.Fallback is { } fb)
+            Numbers.SetFallback(frozen, fb);
         return frozen;
     }
 

@@ -11,7 +11,7 @@ internal sealed class TestKit : IDisposable
     public static string FontDir => Path.Combine(RepoRoot, "src", "Singularity.Client.Spike", "assets", "fonts");
 
     static readonly Lazy<GameData> CoreData = new(() => ModLoader.Load(CoreDir));
-    static readonly Lazy<LocaleCatalog> CoreCatalog = new(() => LocaleCatalog.Load(Data));
+    static readonly Lazy<LocaleCatalog> CoreCatalog = new(() => LocaleCatalog.Load(ModLocaleSource.From(Data))); // raw: the tests must see orphans
     public static GameData Data => CoreData.Value;
     public static LocaleCatalog Catalog => CoreCatalog.Value;
 

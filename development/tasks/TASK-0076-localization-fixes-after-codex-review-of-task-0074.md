@@ -1,7 +1,7 @@
 ---
 id: TASK-0076
 title: "Localization fixes after Codex review of TASK-0074"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer
@@ -28,3 +28,15 @@ Fix the Codex second-review findings on TASK-0074 (record tools/llm_worker/runs/
 ## Acceptance
 - A test for each finding: it fails before the fix and passes after.
 - The full `dotnet test` is green.
+
+## Результат
+Исправлены все 4 замечания Codex. Полный `dotnet test` зелёный (Localization 127, Core 1060, Session 353, Lab 20, Kernel 322, Architecture 101, Audio 54).
+
+1. **HIGH** `Numbers.Msg` теперь идёт по цепочке язык → en → маркер. Связь «bundle → en-bundle» ставит `BundleFactory.Build` через `Numbers.SetFallback`.
+2. **MEDIUM** `LocaleCatalog.Load(GameData, Action<string>? warn)` (и перегрузка со списком источников + `GameData`) пропускает сирот (L2) и шлёт предупреждения: L1, L2, L3 и устаревшие переводы. Синтаксис и грамматика по-прежнему бросают исключение. `TestKit.Catalog` теперь грузит без удаления сирот, чтобы тесты ядра видели их.
+3. **MEDIUM** `AstUtil.CollectUsage` обходит селекторы. Переменная `$case` не учитывается: её задаёт NAME.
+4. **MEDIUM** `FontCmap`: формат 4 считает `idDelta`/`idRangeOffset`/glyphIdArray, формат 12 учитывает `startGlyph`. Глиф 0 (.notdef) считается отсутствующим.
+
+Файлы: `src/Singularity.Localization/{Numbers,BundleFactory,LocaleCatalog,LocaleChecks,AstUtil}.cs`, `tests/Singularity.Localization.Tests/{FontCmap,TestKit,CodexFixTests}.cs`.
+
+Проверка: 5 регрессионных тестов в `CodexFixTests.cs`. Без правки Numbers/AstUtil/BundleFactory падают 3 теста (формат чисел, дата, L3). Без правки FontCmap падает тест .notdef. Тест runtime-Load не компилируется без нового API.

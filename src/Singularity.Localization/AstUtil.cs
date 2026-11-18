@@ -33,8 +33,8 @@ static class AstUtil
     };
 
     /// <summary>
-    /// Variables and functions used for output. Selectors (the expression before `->`) are skipped:
-    /// L3 allows selectors to differ between languages.
+    /// Variables and functions used by a pattern, selector expressions included: a caller that does not
+    /// supply a selector variable cannot drive the selector. `$case` is supplied by NAME and is not counted.
     /// </summary>
     public static void CollectUsage(Pattern pattern, SortedSet<string> variables, SortedSet<string> functions)
     {
@@ -50,11 +50,13 @@ static class AstUtil
         switch (x)
         {
             case SelectExpression s:
+                CollectExpression(s.Selector, variables, functions);
                 foreach (Variant v in s.Variants)
                     CollectUsage(v.Value, variables, functions);
                 break;
             case VariableReference v:
-                variables.Add(v.Id.ToString());
+                if (v.Id.ToString() != "case")
+                    variables.Add(v.Id.ToString());
                 break;
             case FunctionReference f:
                 // GENDER only feeds selectors, which may differ between languages.

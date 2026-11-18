@@ -5,7 +5,7 @@ namespace Singularity.Localization.Tests;
 /// <summary>Minimal TrueType 'cmap' reader (formats 4 and 12): the set of code points a font has glyphs for (ADR-0018 §3.5).</summary>
 internal sealed class FontCmap
 {
-    readonly List<(int First, int Last)> _ranges = [];
+    readonly HashSet<int> _covered = [];
 
     public string Name { get; }
 
@@ -37,19 +37,38 @@ internal sealed class FontCmap
             else if (format == 12)
                 ReadFormat12(d, sub);
         }
-        if (_ranges.Count == 0)
+        if (_covered.Count == 0)
             throw new InvalidDataException(path + ": no Unicode cmap of format 4 or 12");
     }
 
+    // A code point is covered only when it maps to a glyph other than 0 (.notdef).
     void ReadFormat4(byte[] d, int sub)
     {
         int segX2 = U16(d, sub + 6);
-        int ends = sub + 14, starts = ends + segX2 + 2;
+        int ends = sub + 14, starts = ends + segX2 + 2, deltas = starts + segX2, offsets = deltas + segX2;
         for (int s = 0; s < segX2 / 2; s++)
         {
             int end = U16(d, ends + 2 * s), start = U16(d, starts + 2 * s);
-            if (start != 0xFFFF)
-                _ranges.Add((start, end));
+            if (start == 0xFFFF || start > end)
+                continue;
+            int delta = U16(d, deltas + 2 * s), rangeOffset = U16(d, offsets + 2 * s);
+            for (int cp = start; cp <= end; cp++)
+            {
+                int glyph;
+                if (rangeOffset == 0)
+                    glyph = (cp + delta) & 0xFFFF;
+                else
+                {
+                    int at = offsets + 2 * s + rangeOffset + 2 * (cp - start);
+                    if (at + 2 > d.Length)
+                        continue;
+                    glyph = U16(d, at);
+                    if (glyph != 0)
+                        glyph = (glyph + delta) & 0xFFFF;
+                }
+                if (glyph != 0)
+                    _covered.Add(cp);
+            }
         }
     }
 
@@ -57,19 +76,17 @@ internal sealed class FontCmap
     {
         uint groups = U32(d, sub + 12);
         for (int g = 0; g < groups; g++)
-            _ranges.Add(((int)U32(d, sub + 16 + 12 * g), (int)U32(d, sub + 20 + 12 * g)));
+        {
+            uint first = U32(d, sub + 16 + 12 * g), last = U32(d, sub + 20 + 12 * g), glyph = U32(d, sub + 24 + 12 * g);
+            for (uint cp = first; cp <= last && cp <= 0x10FFFF; cp++)
+            {
+                if (glyph + (cp - first) != 0)
+                    _covered.Add((int)cp);
+            }
+        }
     }
 
-    // Segments with a zero glyph index may be mapped to .notdef; for ranges built from cmap this is accepted as covered.
-    public bool Has(int codePoint)
-    {
-        foreach ((int first, int last) in _ranges)
-        {
-            if (codePoint >= first && codePoint <= last)
-                return true;
-        }
-        return false;
-    }
+    public bool Has(int codePoint) => _covered.Contains(codePoint);
 
     static int U16(byte[] d, int o) => BinaryPrimitives.ReadUInt16BigEndian(d.AsSpan(o));
     static uint U32(byte[] d, int o) => BinaryPrimitives.ReadUInt32BigEndian(d.AsSpan(o));

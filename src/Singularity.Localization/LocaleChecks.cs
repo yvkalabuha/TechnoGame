@@ -81,7 +81,7 @@ public static class LocaleChecks
     static SortedSet<string> Attributes(LocaleEntity e) =>
         new(AstUtil.Patterns(e.Ast).Where(p => p.Attribute is not null).Select(p => p.Attribute!), StringComparer.Ordinal);
 
-    static bool IsDataBacked(KeyKind k) =>
+    internal static bool IsDataBacked(KeyKind k) =>
         k is KeyKind.Node or KeyKind.ProductClass or KeyKind.Slot or KeyKind.Alternative or KeyKind.Scenario or KeyKind.Actor
             or KeyKind.Cluster or KeyKind.Discipline or KeyKind.NodeType or KeyKind.Enum;
 

@@ -11,11 +11,11 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
+- TASK-0076 [REVIEW] Localization fixes after Codex review of TASK-0074 (developer)
 - TASK-0064 [APPROVED] lab bench harness (ADR-0016 T1) (developer)
 - TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
 - TASK-0073 [APPROVED] Audio listening pack from AUDIO_DIRECTION r2 recordings (developer)
 - TASK-0075 [APPROVED] Map builder T2: tools/map on NTS, Europe first, 1945 cuts, coverage simplification check (developer)
-- TASK-0076 [APPROVED] Localization fixes after Codex review of TASK-0074 (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
