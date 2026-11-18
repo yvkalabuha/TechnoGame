@@ -326,8 +326,18 @@ public sealed class BenchTests : IDisposable
         string m2 = Path.Combine(_tmp, "m2.json");
         File.WriteAllText(m2, Manifest(Block()));
         var r2 = Cli("bench", "--mode", "process", "--manifest", m2, "--process", "0", "--warmup", "1", "--measure", "1",
-            "--out", Path.Combine(_tmp, "p2.json"), "--allow-debug", "true");
+            "--out", Path.Combine(_tmp, "p2.json"), "--allow-debug", "true", "--fref", "1");
         Assert.False(r2.Out.Contains("[smoke]"), r2.Out + r2.Err);
+    }
+
+    [Fact]
+    public void Cli_NonSmokeManifestProcessWithoutFref_ExitsWithCode2()
+    {
+        string m = Path.Combine(_tmp, "m3.json");
+        File.WriteAllText(m, Manifest(Block()));
+        var r = Cli("bench", "--mode", "process", "--manifest", m, "--process", "0", "--warmup", "1", "--measure", "1",
+            "--out", Path.Combine(_tmp, "p3.json"), "--allow-debug", "true");
+        Assert.Equal(2, r.Code);
     }
 }
 
