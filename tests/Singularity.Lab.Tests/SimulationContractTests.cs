@@ -1,7 +1,7 @@
 using System.Globalization;
-using Singularity.Core.Simulation;
+using Singularity.Lab.Simulation;
 
-namespace Singularity.Core.Tests.Simulation;
+namespace Singularity.Lab.Tests;
 
 public class SimulationContractTests
 {

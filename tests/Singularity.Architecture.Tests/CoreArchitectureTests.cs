@@ -1,13 +1,12 @@
 using System.Reflection;
 using System.Xml.Linq;
-using Singularity.Core.Simulation;
 
 namespace Singularity.Architecture.Tests;
 
 /// <summary>Core is world-state code: same determinism rules as Kernel, and it depends only on Kernel.</summary>
 public class CoreArchitectureTests
 {
-    private static readonly Assembly Core = typeof(ParamSet).Assembly;
+    private static readonly Assembly Core = typeof(Singularity.Core.Industry.IndustrySystem).Assembly;
 
     [Fact]
     public void Core_FollowsDeterminismRules()
@@ -15,29 +14,12 @@ public class CoreArchitectureTests
         Assert.Empty(DeterminismRules.Check(Core.GetTypes()));
     }
 
-    // ADR-0003 R4: the only Core namespaces still allowed to use double, matched exactly
-    // (sub-namespaces get no rights). A new one needs an ADR.
-    private static readonly string[] DoubleExceptions =
-    [
-        "Singularity.Core.Simulation",
-    ];
-
+    // ADR-0003 R4: no exceptions, Core has no double at all.
     [Fact]
-    public void Core_OutsideR4Exceptions_HasNoDouble()
+    public void Core_HasNoDouble()
     {
-        Type[] checkedTypes = Core.GetTypes().Where(t => !IsDoubleException(t)).ToArray();
-        Assert.Empty(DeterminismRules.Check(checkedTypes, forbidDouble: true));
+        Assert.Empty(DeterminismRules.Check(Core.GetTypes(), forbidDouble: true));
     }
-
-    [Fact]
-    public void R4Exceptions_AreNotStale()
-    {
-        // Each exception must still name real code; a dead entry would silently admit future code.
-        foreach (string ns in DoubleExceptions)
-            Assert.Contains(Core.GetTypes(), t => t.Namespace == ns);
-    }
-
-    private static bool IsDoubleException(Type type) => Array.IndexOf(DoubleExceptions, type.Namespace) >= 0;
 
     [Fact]
     public void Core_ReferencesOnlyKernel()
