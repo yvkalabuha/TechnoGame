@@ -97,3 +97,5 @@ Bring the client prototype (src/Singularity.Client.Spike, v0.2 from TASK-0069) t
 **Проверка.** `dotnet build` клиента без ошибок. `./run-globe-spike.sh` и `--shots` отрабатывают (13 снимков, в логе нет ошибок). Основной `dotnet test`: все зелёные (Architecture 98, Kernel 322, Core 1060, Lab 20, Session 353). Тестов клиента нет (клиент вне sln, ADR-0014); экран проверен снимками, взаимодействие пользователя мышью вживую не прогонялось.
 
 **OPEN.** (1) Названия узлов и стран живут в `locale/data.csv` до решения systems-architect о mods-формате. (2) Нужна ли вторая колонка «в силе» рядом с долей (решение game-designer). (3) `.gitignore` клиента игнорирует `*.import`: шрифты и CSV переимпортируются при запуске, `*.translation` добавлен в игнор.
+
+> Снимки, на которые ссылается задача: часть не хранится в репозитории (TASK-0097); см. `docs/ui/KEY_SHOTS.md`, кадры генерирует `./run-globe-spike.sh --shots`.

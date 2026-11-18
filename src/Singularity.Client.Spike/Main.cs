@@ -58,7 +58,7 @@ public sealed partial class Main : Node3D
     string _powerArg = "USA";
     float _tgtYaw, _tgtPitch; bool _flying;   // smooth turn to a clicked country; the zoom is kept
     int _clickCase = -1; double _clickT; string _clickLog = "";
-    bool _shots; int _shotStep; double _shotT; string _shotDir = "../../docs/ui/prototypes/client-v05c";
+    bool _shots; int _shotStep; double _shotT; string _shotDir = "../../shots-out";
     string _shotLog = ""; int _shotCand = -1; long _shotTick;
 
     // bench

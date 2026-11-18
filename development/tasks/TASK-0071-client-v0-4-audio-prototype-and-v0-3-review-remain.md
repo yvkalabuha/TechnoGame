@@ -111,3 +111,5 @@ Client v0.4 in src/Singularity.Client.Spike. Two parts: the audio prototype (#29
 **Проверка.** `dotnet build` клиента без предупреждений. Весь `dotnet test` решения зелёный: Architecture 98, Kernel 322, Core 1060, Lab 20, Session 353 и новый `tests/Singularity.Client.Audio.Tests` (54: планировщик, напоминания, настройки, музыка, фон, WAV-файлы против каталога; добавлен в sln, компилирует `AudioLogic.cs` ссылкой, клиент вне sln). `./run-globe-spike.sh --shots` отрабатывает; при выходе Godot пишет утечки рендерера (ERROR/WARNING «leaked at exit»), сравнение с v0.3 не делалось.
 
 **OPEN.** (1) Пересмотр audio direction владельцем: рецепты и привязки выше временные. (2) Нужен ли в sln тест-проект, ссылающийся на файл клиента (решение systems-architect, ADR-0014). (3) Реальные источники для войны, запусков и тревоги (`signal_alert`) в Session отсутствуют.
+
+> Снимки, на которые ссылается задача: часть не хранится в репозитории (TASK-0097); см. `docs/ui/KEY_SHOTS.md`, кадры генерирует `./run-globe-spike.sh --shots`.

@@ -27,3 +27,9 @@ created: 2026-11-18
 ## Критерии приёмки
 - [ ] В git только кадры из `docs/ui/KEY_SHOTS.md`; папка вывода `--shots` в `.gitignore`.
 - [ ] Ссылки на удалённые снимки в docs/ui исправлены или указывают на команду генерации.
+
+## Результат
+- Удалено 241 PNG под `docs/ui/prototypes/` (обычный коммит), оставлено 34 (25 в client-v05c + 9 старых, как в KEY_SHOTS.md); все перечисленные файлы существуют. Не-PNG (run-log.txt, audio_demo.ogg) сохранены. `docs/ui`: 86 МБ -> 18 МБ.
+- `Main.cs`: `_shotDir` по умолчанию `../../shots-out` (было `docs/ui/prototypes/client-v05c`); `shots-out/` добавлен в `.gitignore`; комментарий в `run-globe-spike.sh`.
+- Ссылки исправлены: CLIENT_V05B_SPEC, task-0077/0081/0088-visual, client-v02-review, globe-spike-report; в закрытые TASK-0070/0071/0077/0081/0088 добавлена пометка. KEY_SHOTS.md: объёмы по `du -sh`.
+- Проверка: сборка клиента (`dotnet build`), см. отчёт оркестратору.

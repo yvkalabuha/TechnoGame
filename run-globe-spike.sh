@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Launch the Godot 3D globe spike (TASK-0067).
 # Usage: ./run-globe-spike.sh          interactive client prototype v0.4 (TASK-0069..0071; real Session on a background thread)
-#        ./run-globe-spike.sh --shots  automatic run + screenshots and an audio demo WAV into docs/ui/prototypes/client-v05c/ (RU and EN)
+#        ./run-globe-spike.sh --shots  automatic run + screenshots and an audio demo WAV into shots-out/ (git-ignored; copy key frames into docs/ui by hand)
 #        ./run-globe-spike.sh --bench  automatic benchmark + screenshots into bench-out/
 set -euo pipefail
 
