@@ -52,3 +52,4 @@ created: 2026-11-18
 
 **Файлы.** src/Singularity.Session/SliceSession.cs, Slice/SliceWorld.cs, Views/ViewBuilder.cs, tests/Singularity.Session.Tests/DailyTickProbeTests.cs, этот файл.
 
+**Правки ревью.** `DailyViewNeutral` — allow-list (Monthly/Yearly или `DailyProbeSystem`, `SliceWorld.IsDailyViewNeutral`) + тест с недельной системой; тест требует месячный вид с причиной закрытия; прогон с `HashCheckpoints`, без `HashEveryTick`: `StateHash` null на днях переиспользования.
