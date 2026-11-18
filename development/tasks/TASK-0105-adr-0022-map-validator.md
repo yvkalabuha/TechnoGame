@@ -1,7 +1,7 @@
 ---
 id: TASK-0105
 title: "ADR-0022 map validator: region limit 150-400, great-power core quota, single status per region"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: developer         # ответственный агент
@@ -29,7 +29,7 @@ Implement ADR-0022 amendment p.6 (ACCEPTED, #410) in `tools/map/MapBuilder/Valid
 - Unknown id in `great_powers.yaml`: error.
 
 ## Acceptance criteria
-- [ ] Tests per ADR-0022 "Проверка": 400 regions without a warning, 401 with one; 150 without, 149 with; a power with 16 core warns; 4 core warns "< 5"; 10 core + 80 colony gives no warning plus the exact Info line; a non-listed actor with 20 core gives no quota warning; an unknown id is an error; a region with two statuses is an error; SUN 31 gives no warning, 36 warns.
+- [x] Tests per ADR-0022 "Проверка": 400 regions without a warning, 401 with one; 150 without, 149 with; a power with 16 core warns; 4 core warns "< 5"; 10 core + 80 colony gives no warning plus the exact Info line; a non-listed actor with 20 core gives no quota warning; an unknown id is an error; a region with two statuses is an error; SUN 31 gives no warning, 36 warns.
 - [ ] The 1945 map build gives exactly the quota warnings of ADR-0022 table p.2.7; MapBuilder tests and `check_determinism.sh` pass.
 
 ## Результат
