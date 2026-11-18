@@ -1,14 +1,14 @@
 ---
 id: ADR-0022
 title: "Region count limit amendment to ADR-0011"
-status: PROPOSED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
+status: ACCEPTED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
 date: 2026-11-18
 supersedes:              # пусто намеренно: замены частичные, см. «Частично заменяет»
 superseded_by:           # заполняется при замене
 related: [ADR-0011, ADR-0020, ADR-0016, EXP-0007, TASK-0091, TASK-0095]
-approved_by:             # owner — обязательно для ACCEPTED
-approved_at:
-approval_ref:
+approved_by: owner
+approved_at: 2026-11-18
+approval_ref: "DECISIONS_LOG #410 (with #406)"
 ---
 
 # ADR-0022 — Region count limit amendment to ADR-0011

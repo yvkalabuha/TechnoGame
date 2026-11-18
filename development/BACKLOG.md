@@ -167,7 +167,7 @@
 | [ADR-0019](../docs/decisions/ADR-0019-daily-slices-228.md) | ACCEPTED | Monthly systems split into daily slices (#228), revision of ADR-0006 |
 | [ADR-0020](../docs/decisions/ADR-0020-province-budget.md) | ACCEPTED | Province storage, aggregation to regions and tick budget |
 | [ADR-0021](../docs/decisions/ADR-0021-stochastic-events.md) | ACCEPTED | Stochastic event system next to scripted events (scandals, link failures) |
-| [ADR-0022](../docs/decisions/ADR-0022-region-limit-amendment.md) | PROPOSED | Region count limit amendment to ADR-0011 |
+| [ADR-0022](../docs/decisions/ADR-0022-region-limit-amendment.md) | ACCEPTED | Region count limit amendment to ADR-0011 |
 
 ## Research Reports
 
