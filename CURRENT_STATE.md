@@ -23,6 +23,8 @@
 - TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
 - TASK-0088 [APPROVED] Client v0.5c: navigation rail, 7 areas, speed scale, textures, icons and area pictures (developer)
 - TASK-0091 [APPROVED] Map builder T3: world beyond Europe, regions split by event lines (#350), territories.yaml (developer)
+- TASK-0092 [APPROVED] DeterminismRules: string hashing, culture comparisons, threading APIs, Parallel.For allowlist, Lab ToyFunnel check (developer)
+- TASK-0093 [APPROVED] Lab matrix validity and size fields; registry golden_set_hash for matrix EXPs (ADR-0008, #374) (simulation-engineer)
 <!-- registry:active:end -->
 
 ## Блокеры

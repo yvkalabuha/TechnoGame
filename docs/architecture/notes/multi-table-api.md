@@ -102,7 +102,7 @@ public static class WorldSchema { public static string Fingerprint(World world);
 | Шаг | Что | Файлы |
 |---|---|---|
 | 1 | Kernel: `World`, `ShortColumn`, `ColumnKind`, `Table.Name/SchemaVersion`, трасса в `World`, раннер, хеш, `WorldSchema`; тесты Kernel переписаны | `World.cs` (нов.), `Table.cs`, `Column.cs`, `ColumnWriteTrace.cs`, `TickRunner.cs`, `StateHash.cs`; 14 файлов `tests/Singularity.Kernel.Tests` |
-| 2 | Core: `public Table? ChunkTable => _table;` в 4 системах (таблица уже приходит в конструктор); `ToyFunnelModel` и `ILabModel` — `World World` вместо `Table Table` + `SchemaVersion` переезжает в таблицу | `IndustrySystem.cs`, `KnowledgeSystem.cs`, `PolicySystem.cs`, `ProductsSystem.cs`, `ToyFunnelModel.cs`, `Simulation/LabModel.cs` |
+| 2 | Core: `public Table? ChunkTable => _table;` в 4 системах (таблица уже приходит в конструктор); `ToyFunnelModel` (с TASK-0087 — в Lab, `src/Singularity.Lab/Models/ToyFunnel/`) и `ILabModel` — `World World` вместо `Table Table` + `SchemaVersion` переезжает в таблицу | `IndustrySystem.cs`, `KnowledgeSystem.cs`, `PolicySystem.cs`, `ProductsSystem.cs`, `ToyFunnelModel.cs`, `Simulation/LabModel.cs` |
 | 3 | Session: мир из одной таблицы `actors` (`SchemaVersion` = `SliceWorld.SchemaVersion`); `SchemaFingerprint` → Kernel; кэш по `World.Version`; `DailyProbeSystem.ChunkTable` | `SliceWorld.cs`, `SliceSession.cs`, `DailyProbeSystem.cs` |
 | 4 | Lab: раннер и golden от `World` | `RunExecutor.cs`, `Bench/CopyBench.cs`, `Models/Test/RandomWalkTestModel.cs`, `Smoke/C1Stand.cs`, `C5Stand.cs`, `SmokeT4s.cs` |
 | 5 | Тесты Core/Session/Lab: механическая замена конструкторов, `ChunkTable` в тестовых системах | ~29 файлов |
