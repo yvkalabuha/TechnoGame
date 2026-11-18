@@ -22,7 +22,6 @@
 - TASK-0064 [REVIEW] lab bench harness (ADR-0016 T1) (simulation-engineer)
 - TASK-0086 [REVIEW] Architecture test: one writer per column (CoW open tracing in test mode) (developer)
 - TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
-- TASK-0085 [APPROVED] ADR-0007: extend the ban list (string.GetHashCode, Concurrent*, Channel) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
