@@ -20,7 +20,6 @@
 ## Активные задачи
 <!-- registry:active:start -->
 - TASK-0064 [REVIEW] lab bench harness (ADR-0016 T1) (simulation-engineer)
-- TASK-0088 [REVIEW] Client v0.5c: navigation rail, 7 areas, speed scale, textures, icons and area pictures (developer)
 - TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
 - TASK-0091 [APPROVED] Map builder T3: world beyond Europe, regions split by event lines (#350), territories.yaml (developer)
 <!-- registry:active:end -->
