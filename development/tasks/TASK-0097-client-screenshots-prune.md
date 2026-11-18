@@ -1,7 +1,7 @@
 ---
 id: TASK-0097
 title: "Client screenshots: keep 25 key frames in git"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M1
 agent: developer
