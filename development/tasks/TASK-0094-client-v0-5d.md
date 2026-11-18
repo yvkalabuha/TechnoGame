@@ -1,7 +1,7 @@
 ---
 id: TASK-0094
 title: "Client v0.5d: tree legend, glyph shapes, alert callout to country, foreign-power tag tint"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: developer         # ответственный агент
