@@ -439,3 +439,11 @@ First task: the builder on Europe, where NTS shared-boundary simplification is t
 - SHA-256 and golden are unchanged.
 
 Next: implement ADR-0017 and F4 (parallel view inputs), then the official EXP-0007 benchmark and the MS-M0 closure | владелец (AskUserQuestion 2026-11-18) |
+| 318 | 2026-11-18 | Client feedback for the next client task (owner):
+- **Planisphere:** needs zoom (and pan). On zoom, nodes become icons or at least colour-coded.
+- **Node click:** opens a picture, a blueprint-style schematic in the game's style made by us as SVG (first per type and discipline, later individual pictures for key nodes). The card shows, in distinct colours: what the node affects, which parameter it raises, and what it unlocks next.
+- **Map:** clicking a country centres and rezooms it incorrectly (bug).
+- **Background:** a dark starry sky around the globe.
+
+The design system yields to the owner's wish | владелец (сообщения 2026-11-18) |
+| 319 | 2026-11-18 | 1945 map: the lands east of the Oder–Neisse line and the Königsberg area have owner DEU (de jure) and controller POL/SUN (administration under Potsdam). Final recognition is a later in-game event | владелец (AskUserQuestion 2026-11-18) |
