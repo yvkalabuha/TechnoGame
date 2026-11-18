@@ -1,7 +1,7 @@
 ---
 id: TASK-0099
 title: "Project slots reuse with generation (ADR-0005 #388)"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M1
 agent: developer
@@ -25,8 +25,8 @@ created: 2026-11-18
 Колонка `generation` (int, +1 при занятии слота); выбор слота — наименьший свободный индекс; handle = (slot, generation); устаревший handle — «сущности нет», команда с ним отклоняется с `why_not`; создание отклоняется только при 12 занятых. `generation` входит в StateHash и сейв. Выполнять после серии EXP-0007 (#355).
 
 ## Критерии приёмки
-- [ ] Тесты: переиспользование слота, устаревший handle, отказ при 12 занятых, детерминизм L1/L2 (golden обновляются только с объяснением).
-- [ ] `dotnet test Singularity.sln`, `lab selftest` зелёные.
+- [x] Тесты: переиспользование слота, устаревший handle, отказ при 12 занятых, детерминизм L1/L2 (golden обновляются только с объяснением).
+- [x] `dotnet test Singularity.sln`, `lab selftest` зелёные.
 
 ## Результат
 **Сделано.** Колонки `prd.d{d}.generation`, `prd.d{d}.parentGen`, `prd.lp.g{g}.gen`; `FreeSlot` — наименьший индекс со стадией None или «снят»; `TakeSlot` — +1 (checked) и сброс всех колонок слота. Слот сценария на старте имеет generation 1 (первое занятие), свободный — 0. `ProductsSystem.Generation`, `Resolves` (единая функция разрешения handle), `CanonicalSlot` проверяет пару. `DesignCommand` (Derive/Cancel) и `FleetCommand` получили `Generation` (по умолчанию −1 = handle не передан); устаревший — `CommandRejection.StaleHandle` (18), состояние не меняется. `DesignCapacity` — только когда заняты все `max_designs`. SchemaVersion 8 → 9.
@@ -46,3 +46,5 @@ created: 2026-11-18
 - Тесты: `Generation_IsInTheStateHash` сравнивает два состояния, различающихся только generation; `ReuseAfterService_...` (В → «снят» → новый проект, колонки равны колонкам пустого слота, cohorts = 0); комментарий в `FleetRunStats` про технологическое `p.Gen` против generation слота.
 - Известное отклонение: на путях Session/AI/UI по-прежнему передаётся голый индекс (Generation = −1, проверка пропускается); последующая работа — сквозной handle (формат лога команд, ADR-0014). Вторая последующая работа — `PolicySystem.Fleet.Candidate` выбирает линию по индексу слота.
 - Больше не проверяются: `FleetAblation` на месяце 383 и поздние точки T6d (после первого переиспользования слота траектория уже не совпадает со сборкой без реюза).
+
+- Review: CHANGES then APPROVE (dafb258). test-engineer added coverage (0f40a20). Merge 2a7aad2. Follow-ups: DEBT-0052..0055.

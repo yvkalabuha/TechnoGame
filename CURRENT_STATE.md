@@ -19,7 +19,6 @@
 - TASK-0103 [IN_PROGRESS] Tick allocations and GC: 1.1 GB per month, gen2 collections (EXP-0007 P8) (simulation-engineer)
 - TASK-0105 [IN_PROGRESS] ADR-0022 map validator: region limit 150-400, great-power core quota, single status per region (developer)
 - TASK-0106 [IN_PROGRESS] Lab bench harness for EXP-0008: foreign-load gate, top-k frequency, repeat cap; alloc JSON provenance (simulation-engineer)
-- TASK-0099 [REVIEW] Project slots reuse with generation (ADR-0005 #388) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
