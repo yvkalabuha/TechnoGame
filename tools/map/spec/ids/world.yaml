@@ -879,10 +879,10 @@ ids:
   - {id: ethiopia_oromiya.oromiya_2, anchor: [7994590, 40974237]}
   - {id: ethiopia_oromiya.oromiya_3, anchor: [7265539, 39441861]}
   - {id: ethiopia_oromiya.oromiya_4, anchor: [4987048, 38348246]}
-  - {id: ethiopia_oromiya.somali_1, anchor: [9285946, 43121618]}
-  - {id: ethiopia_oromiya.somali_2, anchor: [7129540, 45768174]}
-  - {id: ethiopia_oromiya.somali_3, anchor: [5955812, 43653733]}
-  - {id: ethiopia_oromiya.somali_4, anchor: [5051953, 41310353]}
+  - {id: ethiopia_ogaden.somali_1, anchor: [9285946, 43121618]}
+  - {id: ethiopia_ogaden.somali_2, anchor: [7129540, 45768174]}
+  - {id: ethiopia_ogaden.somali_3, anchor: [5955812, 43653733]}
+  - {id: ethiopia_ogaden.somali_4, anchor: [5051953, 41310353]}
   - {id: ethiopia_oromiya.southern_nations_nationalities_and_p, anchor: [6448522, 36293300]}
   - {id: falkland_islands.falkland_islands, anchor: [-51794245, -58613888]}
   - {id: federated_states_of_micronesia.pohnpei, anchor: [6885037, 158247463]}

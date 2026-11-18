@@ -96,6 +96,7 @@ regions:
   - {id: eritrea, capital: eritrea.gash_barka, isolated: false}
   - {id: ethiopia_amhara, capital: ethiopia_amhara.afar, isolated: false}
   - {id: ethiopia_oromiya, capital: ethiopia_oromiya.southern_nations_nationalities_and_p, isolated: false}
+  - {id: ethiopia_ogaden, capital: ethiopia_ogaden.somali_1, isolated: false}
   - {id: falkland_islands, capital: falkland_islands.falkland_islands, isolated: true}
   - {id: federated_states_of_micronesia, capital: federated_states_of_micronesia.pohnpei, isolated: true}
   - {id: fiji, capital: fiji.western, isolated: true}
