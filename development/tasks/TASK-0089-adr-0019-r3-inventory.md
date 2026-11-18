@@ -1,7 +1,7 @@
 ---
 id: TASK-0089
 title: "ADR-0019 R3: inventory of flow columns and non-linear monthly rules in M0 systems"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: simulation-engineer
@@ -28,3 +28,4 @@ ADR-0019 «Research до ACCEPTED» R3: опись колонок-потоков
 - [ ] Покрыты все системы среза M0; для каждой нелинейной формулы — предложенный дневной эквивалент и ожидаемая погрешность.
 
 ## Результат
+Опись — `docs/simulation/adr-0019-r3-inventory.md` (simulation-engineer; перенесено Orchestrator). SliceRoles: KnowledgeFlow; IndustryDecision + IndustryFlow; ProductsFlow; PolicyDecision + PolicyFlow. Перевод параметров — 5 классов (P1 ×12 + DaySlice; P2 DayRate; P3 годовой эквивалент приращения + DaySlice; P4 даты AddMonths; P5 без изменений). 21 нелинейное правило с дневным эквивалентом и аналитической оценкой погрешности (обычно ≤ 1 %, исключения §5). Риски R-1…R-8; R-1 (пороги против дневных объёмов, ×30) и R-2 (разовые деньги сгорают на дневном шаге) — высокие, решить до кода #228. Объём #228 ≈ 2,5–3,9 тыс. строк src/ и 96 тестовых файлов. Погрешности проверяет EXP после кода #228 (§9).

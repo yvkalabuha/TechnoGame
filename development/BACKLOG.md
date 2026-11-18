@@ -103,7 +103,7 @@
 | [TASK-0086](../development/tasks/TASK-0086-one-writer-test.md) | REVIEW | Architecture test: one writer per column (CoW open tracing in test mode) | MS-M1 |
 | [TASK-0087](../development/tasks/TASK-0087-toyfunnel-to-lab.md) | APPROVED | ToyFunnel moves from Core to Lab (#375) | MS-M1 |
 | [TASK-0088](../development/tasks/TASK-0088-client-v0-5c.md) | APPROVED | Client v0.5c: navigation rail, 7 areas, speed scale, textures, icons and area pictures | MS-M1 |
-| [TASK-0089](../development/tasks/TASK-0089-adr-0019-r3-inventory.md) | APPROVED | ADR-0019 R3: inventory of flow columns and non-linear monthly rules in M0 systems | MS-M1 |
+| [TASK-0089](../development/tasks/TASK-0089-adr-0019-r3-inventory.md) | DONE | ADR-0019 R3: inventory of flow columns and non-linear monthly rules in M0 systems | MS-M1 |
 | [TASK-0090](../development/tasks/TASK-0090-adr-0020-r2-multitable.md) | DONE | ADR-0020 R2: multi-table Kernel API sketch and hash-bytes check | MS-M1 |
 | [TASK-0091](../development/tasks/TASK-0091-map-builder-t3-world.md) | APPROVED | Map builder T3: world beyond Europe, regions split by event lines (#350), territories.yaml | MS-M1 |
 
