@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 320 200" width="320" height="200">
+<title>Axial compressor: casing, rotor drum with rotor blades, stator vanes between stages</title>
+<rect width="320" height="200" fill="#1E4673"/>
+<path d="M20 0V200M40 0V200M60 0V200M80 0V200M100 0V200M120 0V200M140 0V200M160 0V200M180 0V200M200 0V200M220 0V200M240 0V200M260 0V200M280 0V200M300 0V200M0 20H320M0 40H320M0 60H320M0 80H320M0 100H320M0 120H320M0 140H320M0 160H320M0 180H320" fill="none" stroke="#3A6491" stroke-width="0.4" opacity="0.6"/>
+<rect x="6" y="6" width="308" height="188" fill="none" stroke="#B9CBDA" stroke-width="0.75"/>
+<defs>
+<g id="half" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path stroke="#EEF2F0" stroke-width="1.5" d="M20 32L300 36M20 38L300 42M30 84L290 68"/>
+<path stroke="#EEF2F0" stroke-width="1" d="M50 82.8L51 40.4H55L56 82.8M80 81L81 40.9H85L86 81M110 79.1L111 41.3H115L116 79.1M140 77.2L141 41.7H145L146 77.2M170 75.4L171 42.1H175L176 75.4M200 73.5L201 42.6H205L206 73.5M230 71.7L231 43H235L236 71.7M260 69.8L261 43.4H265L266 69.8"/>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M65 39L69 39.2L67.5 76.5L66 76.5ZM95 39.2L99 39.4L97.5 75L96 75ZM125 39.4L129 39.6L127.5 73.1L126 73.1ZM155 39.6L159 39.8L157.5 71.3L156 71.3ZM185 39.8L189 40L187.5 69.4L186 69.4ZM215 40L219 40.2L217.5 67.6L216 67.6ZM245 40.2L249 40.4L247.5 65.7L246 65.7ZM275 40.4L279 40.6L277.5 63.9L276 63.9Z"/>
+</g>
+</defs>
+<use href="#half" xlink:href="#half"/>
+<use href="#half" xlink:href="#half" transform="translate(0 196) scale(1 -1)"/>
+<g fill="none" stroke="#B9CBDA" stroke-width="0.75" stroke-linecap="round" stroke-linejoin="round">
+<path d="M24 38l6-6M38 38l6-6M52 38l6-6M66 38l6-6M80 38l6-6M94 38l6-6M108 38l6-6M122 38l6-6M136 38l6-6M150 38l6-6M164 38l6-6M178 38l6-6M192 38l6-6M206 38l6-6M220 38l6-6M234 38l6-6M248 38l6-6M262 38l6-6M276 38l6-6M290 38l6-6"/>
+<path stroke-dasharray="10 2 2 2" d="M10 98H306"/>
+<path d="M14 60H38l-2.5-1m2.5 1l-2.5 1M14 136H38l-2.5-1m2.5 1l-2.5 1"/>
+<path d="M50 164V182M290 164V182M50 178H290M50 178l3-1.2M50 178l3 1.2M290 178l-3-1.2M290 178l-3 1.2M113 60L100 24M127 56L140 24"/>
+</g>
+<g fill="#B9CBDA" stroke="none" font-family="monospace" font-size="6" text-anchor="middle"><text x="170" y="176">L</text><text x="97" y="22">R</text><text x="143" y="22">S</text></g>
+</svg>

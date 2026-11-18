@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" width="320" height="200">
+<title>Process, mechanics: lathe turning a stepped shaft between chuck and tailstock centre</title>
+<rect width="320" height="200" fill="#1E4673"/>
+<path d="M20 0V200M40 0V200M60 0V200M80 0V200M100 0V200M120 0V200M140 0V200M160 0V200M180 0V200M200 0V200M220 0V200M240 0V200M260 0V200M280 0V200M300 0V200M0 20H320M0 40H320M0 60H320M0 80H320M0 100H320M0 120H320M0 140H320M0 160H320M0 180H320" fill="none" stroke="#3A6491" stroke-width="0.4" opacity="0.6"/>
+<rect x="6" y="6" width="308" height="188" fill="none" stroke="#B9CBDA" stroke-width="0.75"/>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path stroke="#EEF2F0" stroke-width="1.5" d="M20 150H300V172H20ZM24 90H70V150H24ZM70 96H80V144H70ZM88 104H200V112H228V128H200V136H88ZM228 114L246 120L228 126M246 106H276V134H246ZM276 112H294V128H276ZM252 134H300V150M140 70H176V94H140ZM150 94L156 104L162 94"/>
+<path stroke="#EEF2F0" stroke-width="1" d="M80 100H88M80 140H88"/>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M20 172l22-22M34 172l22-22M48 172l22-22M62 172l22-22M76 172l22-22M90 172l22-22M104 172l22-22M118 172l22-22M132 172l22-22M146 172l22-22M160 172l22-22M174 172l22-22M188 172l22-22M202 172l22-22M216 172l22-22M230 172l22-22M244 172l22-22M258 172l22-22M272 172l22-22"/>
+<path stroke="#B9CBDA" stroke-width="0.75" stroke-dasharray="10 2 2 2" d="M14 120H305"/>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M88 104V64M200 112V64M88 66H200M88 66l3-1.2M88 66l3 1.2M200 66l-3-1.2M200 66l-3 1.2M214 112L240 96H252M120 50H160l-3-1.2m3 1.2l-3 1.2"/>
+<circle cx="214" cy="112" r="1" fill="#B9CBDA"/>
+</g>
+<g fill="#B9CBDA" stroke="none" font-family="monospace" font-size="6"><text x="144" y="64" text-anchor="middle">L</text><text x="254" y="98">Ø</text></g>
+</svg>

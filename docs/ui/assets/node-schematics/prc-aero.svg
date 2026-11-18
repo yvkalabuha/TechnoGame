@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" width="320" height="200">
+<title>Process, aerodynamics: stressed-skin assembly, skin, stringers, frame, rivets</title>
+<rect width="320" height="200" fill="#1E4673"/>
+<path d="M20 0V200M40 0V200M60 0V200M80 0V200M100 0V200M120 0V200M140 0V200M160 0V200M180 0V200M200 0V200M220 0V200M240 0V200M260 0V200M280 0V200M300 0V200M0 20H320M0 40H320M0 60H320M0 80H320M0 100H320M0 120H320M0 140H320M0 160H320M0 180H320" fill="none" stroke="#3A6491" stroke-width="0.4" opacity="0.6"/>
+<rect x="6" y="6" width="308" height="188" fill="none" stroke="#B9CBDA" stroke-width="0.75"/>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path stroke="#EEF2F0" stroke-width="1.5" d="M25 50H295V57H25ZM25 120H295V128H25Z"/>
+<path stroke="#EEF2F0" stroke-width="1" d="M54 57V61H62L65 80H75L78 61H86V57M114 57V61H122L125 80H135L138 61H146V57M174 57V61H182L185 80H195L198 61H206V57M234 57V61H242L245 80H255L258 61H266V57"/>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M32 57l7-7M44 57l7-7M56 57l7-7M68 57l7-7M80 57l7-7M92 57l7-7M104 57l7-7M116 57l7-7M128 57l7-7M140 57l7-7M152 57l7-7M164 57l7-7M176 57l7-7M188 57l7-7M200 57l7-7M212 57l7-7M224 57l7-7M236 57l7-7M248 57l7-7M260 57l7-7M272 57l7-7M284 57l7-7M32 128l8-8M44 128l8-8M56 128l8-8M68 128l8-8M80 128l8-8M92 128l8-8M104 128l8-8M116 128l8-8M128 128l8-8M140 128l8-8M152 128l8-8M164 128l8-8M176 128l8-8M188 128l8-8M200 128l8-8M212 128l8-8M224 128l8-8M236 128l8-8M248 128l8-8M260 128l8-8M272 128l8-8M284 128l8-8"/>
+<g stroke="#EEF2F0" stroke-width="0.75" fill="#1E4673"><circle cx="58" cy="53.5" r="2"/><circle cx="82" cy="53.5" r="2"/><circle cx="118" cy="53.5" r="2"/><circle cx="142" cy="53.5" r="2"/><circle cx="178" cy="53.5" r="2"/><circle cx="202" cy="53.5" r="2"/><circle cx="238" cy="53.5" r="2"/><circle cx="262" cy="53.5" r="2"/></g>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M70 80V112M130 80V112M190 80V112M250 80V112M70 50V34M130 50V34M70 38H130M70 38l3-1.2M70 38l3 1.2M130 38l-3-1.2M130 38l-3 1.2M200 53.5L228 28H240M270 57H284M270 120H284M280 57V120M280 57l-1.2 3M280 57l1.2 3M280 120l-1.2-3M280 120l1.2-3" stroke-dasharray="none"/>
+<path stroke="#B9CBDA" stroke-width="0.75" stroke-dasharray="10 2 2 2" d="M20 150H300"/>
+</g>
+<g fill="#B9CBDA" stroke="none" font-family="monospace" font-size="6"><text x="100" y="36" text-anchor="middle">p</text><text x="242" y="30">t</text><text x="284" y="92">h</text></g>
+</svg>

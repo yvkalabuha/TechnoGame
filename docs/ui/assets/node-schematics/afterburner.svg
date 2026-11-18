@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 320 200" width="320" height="200">
+<title>Afterburner: cut-away of tailpipe with spray bars, flame holders and convergent nozzle</title>
+<rect width="320" height="200" fill="#1E4673"/>
+<path d="M20 0V200M40 0V200M60 0V200M80 0V200M100 0V200M120 0V200M140 0V200M160 0V200M180 0V200M200 0V200M220 0V200M240 0V200M260 0V200M280 0V200M300 0V200M0 20H320M0 40H320M0 60H320M0 80H320M0 100H320M0 120H320M0 140H320M0 160H320M0 180H320" fill="none" stroke="#3A6491" stroke-width="0.4" opacity="0.6"/>
+<rect x="6" y="6" width="308" height="188" fill="none" stroke="#B9CBDA" stroke-width="0.75"/>
+<defs>
+<g id="half" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path stroke="#EEF2F0" stroke-width="1.5" d="M20 62H150L200 58L250 52M20 67H150L200 63L250 57M20 100V62M20 78H50L110 96V100M250 57L288 75"/>
+<path stroke="#EEF2F0" stroke-width="1" d="M125 70V100M135 70V100M175 71L165 78L175 85M175 87L165 94L175 101"/>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M60 71H240M185 84Q215 80 245 96M148 78H158M148 90H158" stroke-dasharray="none"/>
+</g>
+</defs>
+<use href="#half" xlink:href="#half"/>
+<use href="#half" xlink:href="#half" transform="translate(0 200) scale(1 -1)"/>
+<g fill="none" stroke="#B9CBDA" stroke-width="0.75" stroke-linecap="round" stroke-linejoin="round">
+<path d="M22 67L26 62M30 67L34 62M38 67L42 62M46 67L50 62M54 67L58 62M62 67L66 62M70 67L74 62M78 67L82 62M86 67L90 62M94 67L98 62M102 67L106 62M110 67L114 62M118 67L122 62M126 67L130 62M134 67L138 62M142 67L146 62M160 66.2L164 61M170 65.6L174 60.4M180 65L184 59.8M190 64.4L194 59.3M205 62.4L209 57.4M215 61.2L219 56.2M225 60L229 55M235 58.8L239 53.8"/>
+<path stroke-dasharray="10 2 2 2" d="M10 100H306"/>
+<path d="M125 130V162M288 125V162M125 158H288M125 158l3-1.2M125 158l3 1.2M288 158l-3-1.2M288 158l-3 1.2M288 75H302M288 125H302M298 75V125M298 75l-1.2 3M298 75l1.2 3M298 125l-1.2-3M298 125l1.2-3"/>
+</g>
+<g fill="#B9CBDA" stroke="none" font-family="monospace" font-size="6" text-anchor="middle"><text x="206" y="156">L</text><text x="305" y="102" text-anchor="start">d</text></g>
+</svg>

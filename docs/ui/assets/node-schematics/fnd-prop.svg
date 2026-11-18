@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" width="320" height="200">
+<title>Foundation, propulsion: Brayton cycle p-v diagram</title>
+<rect width="320" height="200" fill="#1E4673"/>
+<path d="M20 0V200M40 0V200M60 0V200M80 0V200M100 0V200M120 0V200M140 0V200M160 0V200M180 0V200M200 0V200M220 0V200M240 0V200M260 0V200M280 0V200M300 0V200M0 20H320M0 40H320M0 60H320M0 80H320M0 100H320M0 120H320M0 140H320M0 160H320M0 180H320" fill="none" stroke="#3A6491" stroke-width="0.4" opacity="0.6"/>
+<rect x="6" y="6" width="308" height="188" fill="none" stroke="#B9CBDA" stroke-width="0.75"/>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path stroke="#EEF2F0" stroke-width="1.5" d="M135 137L126.5 131.7L118 124.9L109.5 115.6L101 102.7L92.5 82.9L84 51L81.6 38H132.1L152 72.7L177.5 98.7L203 114.9L237 128.4L271 137Z"/>
+<path stroke="#EEF2F0" stroke-width="1" d="M50 170H300M50 170V20"/>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M296 168l4 2l-4 2M48 24l2-4l2 4M86.4 60H144.7M89.1 70H150.5M91.7 80H159.6M95.7 90H169.8M100 100H179.5M106.6 110H195.5M113.5 120H215.8M124.5 130H242.6M81.6 38H66M135 137H66M70 38V137M70 38l-1.2 3M70 38l1.2 3M70 137l-1.2-3M70 137l1.2-3"/>
+<circle cx="135" cy="137" r="1.6"/><circle cx="81.6" cy="38" r="1.6"/><circle cx="132.1" cy="38" r="1.6"/><circle cx="271" cy="137" r="1.6"/>
+</g>
+<g fill="#B9CBDA" stroke="none" font-family="monospace" font-size="6" text-anchor="middle"><text x="296" y="179">v</text><text x="44" y="26">p</text><text x="66" y="92" text-anchor="end">π</text><text x="165" y="50">w</text></g>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" width="320" height="200">
+<title>Component, propulsion: turbine blade cross-section with cooling passages</title>
+<rect width="320" height="200" fill="#1E4673"/>
+<path d="M20 0V200M40 0V200M60 0V200M80 0V200M100 0V200M120 0V200M140 0V200M160 0V200M180 0V200M200 0V200M220 0V200M240 0V200M260 0V200M280 0V200M300 0V200M0 20H320M0 40H320M0 60H320M0 80H320M0 100H320M0 120H320M0 140H320M0 160H320M0 180H320" fill="none" stroke="#3A6491" stroke-width="0.4" opacity="0.6"/>
+<rect x="6" y="6" width="308" height="188" fill="none" stroke="#B9CBDA" stroke-width="0.75"/>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path stroke="#B9CBDA" stroke-width="0.75" d="M62 102L82 82M66 106L94 78M77 103L108 72M86 102L117 71M96 100L125 71M108 96L135 69M116 96L144 68M124 96L153 67M132 96L161 67M140 96L169 67M148 96L176 68M156 96L183 69M164 96L191 69M172 96L197 71M179 97L203 73M187 97L209 75M195 97L215 77M202 98L221 79M210 98L226 82M217 99L232 84M224 100L238 86"/>
+<path stroke="#EEF2F0" stroke-width="1.5" d="M60 105C62 90 80 79 110 72S170 64 200 71S245 92 252 106L246 108C225 100 200 96 160 96S100 96 80 104C70 108 62 108 60 105Z"/>
+<g stroke="#EEF2F0" stroke-width="1.5" fill="#1E4673"><circle cx="100" cy="86" r="7"/><circle cx="135" cy="82" r="8"/><circle cx="172" cy="82" r="7"/><circle cx="208" cy="86" r="4.5"/></g>
+<g stroke="#B9CBDA" stroke-width="0.75"><circle cx="72" cy="95" r="1.5"/><circle cx="76" cy="100" r="1.5"/></g>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M60 112V140M252 108V140M60 136H252M60 136l3-1.2M60 136l3 1.2M252 136l-3-1.2M252 136l-3 1.2M50 105H262M178 86L200 128H212"/>
+</g>
+<g fill="#B9CBDA" stroke="none" font-family="monospace" font-size="6"><text x="156" y="134" text-anchor="middle">b</text><text x="214" y="130">d</text></g>
+</svg>

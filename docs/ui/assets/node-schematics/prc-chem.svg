@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" width="320" height="200">
+<title>Process, chemistry: refining column with trays, condenser and reboiler</title>
+<rect width="320" height="200" fill="#1E4673"/>
+<path d="M20 0V200M40 0V200M60 0V200M80 0V200M100 0V200M120 0V200M140 0V200M160 0V200M180 0V200M200 0V200M220 0V200M240 0V200M260 0V200M280 0V200M300 0V200M0 20H320M0 40H320M0 60H320M0 80H320M0 100H320M0 120H320M0 140H320M0 160H320M0 180H320" fill="none" stroke="#3A6491" stroke-width="0.4" opacity="0.6"/>
+<rect x="6" y="6" width="308" height="188" fill="none" stroke="#B9CBDA" stroke-width="0.75"/>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path stroke="#EEF2F0" stroke-width="1.5" d="M120 25H170V145H120ZM170 35H205V55M205 55L212 60L198 66L212 72L198 78L212 84L198 90L212 96L198 102L212 108L198 114L212 120L205 125M145 147V145"/>
+<circle cx="145" cy="165" r="18" stroke="#EEF2F0" stroke-width="1.5"/>
+<path stroke="#EEF2F0" stroke-width="1" d="M120 40H158M120 70H158M120 100H158M120 130H158M170 55H132M170 85H132M170 115H132M30 85H116l-3-1.2m3 1.2l-3 1.2M205 125V148l-1.2-3m1.2 3l1.2-3M135 190L138 185L141 190M149 190L152 185L155 190"/>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M190 52H220V128H190ZM129 163H161M145 12V150M170 25H252M170 145H252M250 25V145M250 25l-1.2 3M250 25l1.2 3M250 145l-1.2-3M250 145l1.2-3M139 100L95 125" stroke-dasharray="none"/>
+<circle cx="139" cy="100" r="1" fill="#B9CBDA"/>
+</g>
+<g fill="#B9CBDA" stroke="none" font-family="monospace" font-size="6"><text x="254" y="88">H</text><text x="90" y="128" text-anchor="end">n</text></g>
+</svg>

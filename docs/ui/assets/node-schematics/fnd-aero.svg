@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" width="320" height="200">
+<title>Foundation, aerodynamics: boundary layer on a flat plate</title>
+<rect width="320" height="200" fill="#1E4673"/>
+<path d="M20 0V200M40 0V200M60 0V200M80 0V200M100 0V200M120 0V200M140 0V200M160 0V200M180 0V200M200 0V200M220 0V200M240 0V200M260 0V200M280 0V200M300 0V200M0 20H320M0 40H320M0 60H320M0 80H320M0 100H320M0 120H320M0 140H320M0 160H320M0 180H320" fill="none" stroke="#3A6491" stroke-width="0.4" opacity="0.6"/>
+<rect x="6" y="6" width="308" height="188" fill="none" stroke="#B9CBDA" stroke-width="0.75"/>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path stroke="#EEF2F0" stroke-width="1.5" d="M30 150H300M30 150V158H300V150"/>
+<path stroke="#EEF2F0" stroke-width="1" d="M80 150L96.6 145.75L108.5 141.5L115.6 137.25L118 133M160 150L176.6 143.5L188.5 137L195.6 130.5L198 124M250 150L266.6 141.6L278.5 133.2L285.6 124.8L288 116.4"/>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M34 158l8-8M46 158l8-8M58 158l8-8M70 158l8-8M82 158l8-8M94 158l8-8M106 158l8-8M118 158l8-8M130 158l8-8M142 158l8-8M154 158l8-8M166 158l8-8M178 158l8-8M190 158l8-8M202 158l8-8M214 158l8-8M226 158l8-8M238 158l8-8M250 158l8-8M262 158l8-8M274 158l8-8M286 158l8-8"/>
+<path stroke="#B9CBDA" stroke-width="0.75" stroke-dasharray="4 2" d="M30 143L55 137L80 133L120 128L160 124L205 120L250 116.4L300 113"/>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M80 145.75H96.6l-2.5-1m2.5 1l-2.5 1M80 141.5H108.5l-2.5-1m2.5 1l-2.5 1M80 137.25H115.6l-2.5-1m2.5 1l-2.5 1M80 133H118l-2.5-1m2.5 1l-2.5 1M160 143.5H176.6l-2.5-1m2.5 1l-2.5 1M160 137H188.5l-2.5-1m2.5 1l-2.5 1M160 130.5H195.6l-2.5-1m2.5 1l-2.5 1M160 124H198l-2.5-1m2.5 1l-2.5 1M250 141.6H266.6l-2.5-1m2.5 1l-2.5 1M250 133.2H278.5l-2.5-1m2.5 1l-2.5 1M250 124.8H285.6l-2.5-1m2.5 1l-2.5 1M250 116.4H288l-2.5-1m2.5 1l-2.5 1"/>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M30 60H58l-2.5-1m2.5 1l-2.5 1M30 80H58l-2.5-1m2.5 1l-2.5 1M30 100H58l-2.5-1m2.5 1l-2.5 1"/>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M244 150V116.4M244 150l-1.2-3M244 150l1.2-3M244 116.4l-1.2 3M244 116.4l1.2 3"/>
+</g>
+<g fill="#B9CBDA" stroke="none" font-family="monospace" font-size="6" text-anchor="middle"><text x="42" y="52">U∞</text><text x="239" y="134" text-anchor="end">δ</text></g>
+</svg>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" width="320" height="200">
+<title>Component, metallurgy: rolled alloy plate section with elongated grains</title>
+<rect width="320" height="200" fill="#1E4673"/>
+<path d="M20 0V200M40 0V200M60 0V200M80 0V200M100 0V200M120 0V200M140 0V200M160 0V200M180 0V200M200 0V200M220 0V200M240 0V200M260 0V200M280 0V200M300 0V200M0 20H320M0 40H320M0 60H320M0 80H320M0 100H320M0 120H320M0 140H320M0 160H320M0 180H320" fill="none" stroke="#3A6491" stroke-width="0.4" opacity="0.6"/>
+<rect x="6" y="6" width="308" height="188" fill="none" stroke="#B9CBDA" stroke-width="0.75"/>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path stroke="#EEF2F0" stroke-width="1.5" d="M25 40H285V170H25Z"/>
+<path stroke="#EEF2F0" stroke-width="1" d="M25 65L70 62L130 66L190 63L240 66L285 64M25 90L80 93L150 89L220 92L285 90M25 115L60 112L140 116L210 113L285 116M25 140L90 138L160 141L230 138L285 141M90 40V63M180 40V64M250 40V65M60 65V91M140 65V89M215 65V92M100 90V114M170 90V115M260 90V116M50 115V139M125 115V140M200 115V139M255 115V140M85 140V170M160 140V170M235 140V170"/>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M25 48l8-8m4 8l8-8m4 8l8-8m4 8l8-8m4 8l8-8m4 8l8-8m4 8l8-8m4 8l8-8m4 8l8-8m4 8l8-8m4 8l8-8m4 8l8-8m4 8l8-8m4 8l8-8m4 8l8-8m4 8l8-8m4 8l8-8m4 8l8-8m4 8l8-8m4 8l8-8"/>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M285 40H298M285 170H298M294 40V170M294 40l-1.2 3M294 40l1.2 3M294 170l-1.2-3M294 170l1.2-3M30 186H80l-3-1.2m3 1.2l-3 1.2"/>
+</g>
+<g fill="#B9CBDA" stroke="none" font-family="monospace" font-size="6"><text x="297" y="108">t</text></g>
+</svg>

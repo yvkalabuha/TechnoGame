@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" width="320" height="200">
+<title>Process, metallurgy: four-high rolling mill reducing sheet thickness</title>
+<rect width="320" height="200" fill="#1E4673"/>
+<path d="M20 0V200M40 0V200M60 0V200M80 0V200M100 0V200M120 0V200M140 0V200M160 0V200M180 0V200M200 0V200M220 0V200M240 0V200M260 0V200M280 0V200M300 0V200M0 20H320M0 40H320M0 60H320M0 80H320M0 100H320M0 120H320M0 140H320M0 160H320M0 180H320" fill="none" stroke="#3A6491" stroke-width="0.4" opacity="0.6"/>
+<rect x="6" y="6" width="308" height="188" fill="none" stroke="#B9CBDA" stroke-width="0.75"/>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path stroke="#EEF2F0" stroke-width="1.5" d="M20 91H134Q146 92 154 96H290V104H154Q146 108 134 109H20Z"/>
+<g stroke="#EEF2F0" stroke-width="1.5"><circle cx="160" cy="80" r="16"/><circle cx="160" cy="38" r="26"/><circle cx="160" cy="120" r="16"/><circle cx="160" cy="162" r="26"/></g>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M24 109l18-18M36 109l18-18M48 109l18-18M60 109l18-18M72 109l18-18M84 109l18-18M96 109l18-18M108 109l18-18M180 104l8-8M192 104l8-8M204 104l8-8M216 104l8-8M228 104l8-8M240 104l8-8M252 104l8-8M264 104l8-8M276 104l8-8"/>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M160 10V190M157 80h6M157 120h6M157 38h6M157 162h6M30 78H70l-3-1.2m3 1.2l-3 1.2M250 78H290l-3-1.2m3 1.2l-3 1.2M80 91V109M80 91l-1.2 3M80 91l1.2 3M80 109l-1.2-3M80 109l1.2-3M262 100L276 124H292"/>
+<circle cx="262" cy="100" r="1" fill="#B9CBDA"/>
+</g>
+<g fill="#B9CBDA" stroke="none" font-family="monospace" font-size="6"><text x="84" y="102">h0</text><text x="294" y="126">h1</text></g>
+</svg>

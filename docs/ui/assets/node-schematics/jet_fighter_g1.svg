@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 320 200" width="320" height="200">
+<title>Jet fighter G1: plan view, straight wing</title>
+<rect width="320" height="200" fill="#1E4673"/>
+<path d="M20 0V200M40 0V200M60 0V200M80 0V200M100 0V200M120 0V200M140 0V200M160 0V200M180 0V200M200 0V200M220 0V200M240 0V200M260 0V200M280 0V200M300 0V200M0 20H320M0 40H320M0 60H320M0 80H320M0 100H320M0 120H320M0 140H320M0 160H320M0 180H320" fill="none" stroke="#3A6491" stroke-width="0.4" opacity="0.6"/>
+<rect x="6" y="6" width="308" height="188" fill="none" stroke="#B9CBDA" stroke-width="0.75"/>
+<defs>
+<g id="half" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path stroke="#EEF2F0" stroke-width="1.5" d="M30 95L44 91L70 87L110 86H200L240 88L278 89L286 91V95M125 86V36H155L171 86M246 89L262 66H270L278 89"/>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M62 93L80 91L92 95"/>
+</g>
+</defs>
+<use href="#half" xlink:href="#half"/>
+<use href="#half" xlink:href="#half" transform="translate(0 190) scale(1 -1)"/>
+<g fill="none" stroke="#B9CBDA" stroke-width="0.75" stroke-linecap="round" stroke-linejoin="round">
+<path stroke-dasharray="10 2 2 2" d="M26 95H300"/>
+<path d="M125 36H12M125 154H12M16 36V154M16 36l-1.2 3M16 36l1.2 3M16 154l-1.2-3M16 154l1.2-3"/>
+</g>
+<g fill="#B9CBDA" stroke="none" font-family="monospace" font-size="6"><text x="19" y="93">b</text></g>
+</svg>

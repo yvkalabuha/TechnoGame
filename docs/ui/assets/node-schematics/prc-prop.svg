@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" width="320" height="200">
+<title>Process, propulsion: engine on a thrust test stand with load cell</title>
+<rect width="320" height="200" fill="#1E4673"/>
+<path d="M20 0V200M40 0V200M60 0V200M80 0V200M100 0V200M120 0V200M140 0V200M160 0V200M180 0V200M200 0V200M220 0V200M240 0V200M260 0V200M280 0V200M300 0V200M0 20H320M0 40H320M0 60H320M0 80H320M0 100H320M0 120H320M0 140H320M0 160H320M0 180H320" fill="none" stroke="#3A6491" stroke-width="0.4" opacity="0.6"/>
+<rect x="6" y="6" width="308" height="188" fill="none" stroke="#B9CBDA" stroke-width="0.75"/>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path stroke="#EEF2F0" stroke-width="1.5" d="M20 165H300V180H20ZM90 92L120 80H200L236 90L250 96V104L236 110L200 120H120L90 108ZM90 92L70 86L60 90V110L70 114L90 108M110 120V140M210 120V140M100 140H220M100 140V165M220 140V165M60 128V165M60 140H70L73 134L79 146L85 134L91 146L97 140H100"/>
+<path stroke="#EEF2F0" stroke-width="1" d="M125 82V118M145 82V118M165 82V118M26 100H56l-3-1.2m3 1.2l-3 1.2M262 100H298l-3-1.2m3 1.2l-3 1.2M150 80V66"/>
+<circle cx="150" cy="62" r="4" stroke="#EEF2F0" stroke-width="1"/>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M20 180l-0 0M34 180l14-14M48 180l14-14M62 180l14-14M76 180l14-14M90 180l14-14M104 180l14-14M118 180l14-14M132 180l14-14M146 180l14-14M160 180l14-14M174 180l14-14M188 180l14-14M202 180l14-14M216 180l14-14M230 180l14-14M244 180l14-14M258 180l14-14M272 180l14-14M286 180l14-14"/>
+<path stroke="#B9CBDA" stroke-width="0.75" stroke-dasharray="10 2 2 2" d="M14 100H305"/>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M90 90V50M250 96V50M90 54H250M90 54l3-1.2M90 54l3 1.2M250 54l-3-1.2M250 54l-3 1.2"/>
+</g>
+<g fill="#B9CBDA" stroke="none" font-family="monospace" font-size="6"><text x="170" y="52" text-anchor="middle">L</text><text x="157" y="64">T</text><text x="280" y="94" text-anchor="middle">F</text></g>
+</svg>

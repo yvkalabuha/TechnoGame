@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 320 200" width="320" height="200">
+<title>Turbojet G2: cut-away, 7-stage axial compressor, 2-stage turbine</title>
+<rect width="320" height="200" fill="#1E4673"/>
+<path d="M20 0V200M40 0V200M60 0V200M80 0V200M100 0V200M120 0V200M140 0V200M160 0V200M180 0V200M200 0V200M220 0V200M240 0V200M260 0V200M280 0V200M300 0V200M0 20H320M0 40H320M0 60H320M0 80H320M0 100H320M0 120H320M0 140H320M0 160H320M0 180H320" fill="none" stroke="#3A6491" stroke-width="0.4" opacity="0.6"/>
+<rect x="6" y="6" width="308" height="188" fill="none" stroke="#B9CBDA" stroke-width="0.75"/>
+<defs>
+<g id="half" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path stroke="#EEF2F0" stroke-width="1.5" d="M34 90V58L130 64L136 55H172L180 61H228L252 69H262M34 61.5L130 67.5L136 58.5H172L180 64.5H228L252 72.5H262M40 84L130 74M130 74H136L140 66H166L174 73M174 79H230L258 89"/>
+<path stroke="#EEF2F0" stroke-width="1" d="M48 83.1L50 63M60 81.8L62 63.8M72 80.4L74 64.5M84 79.1L86 65.3M96 77.8L98 66M108 76.4L110 66.9M120 75L122 67.8M54 63.4L53 77M66 64L65 75M78 64.6L77 73M90 65.4L89 72M102 66L101 71M114 67L113 70M190 79L191.5 65M208 79L209.5 65M182 65L183 72M199 65L200 72"/>
+<path stroke="#B9CBDA" stroke-width="0.75" d="M40 87H190"/>
+</g>
+</defs>
+<use href="#half" xlink:href="#half"/>
+<use href="#half" xlink:href="#half" transform="translate(0 180) scale(1 -1)"/>
+<g fill="none" stroke="#B9CBDA" stroke-width="0.75" stroke-linecap="round" stroke-linejoin="round">
+<path d="M40 62L43.5 58.6M50 62.5L53.5 59.2M60 63.1L63.5 59.8M70 63.7L73.5 60.5M80 64.4L83.5 61.1M90 65L93.5 61.7M100 65.6L103.5 62.3M110 66.3L113.5 62.9M120 66.9L123.5 63.5M140 58.5L143.5 55M148 58.5L151.5 55M156 58.5L159.5 55M164 58.5L167.5 55M184 64.5L187.5 61M192 64.5L195.5 61M200 64.5L203.5 61M208 64.5L211.5 61M216 64.5L219.5 61M224 64.5L227.5 61M232 65.8L235.5 63.5M240 68.5L243.5 66.2M248 71.2L251.5 68.8M254 72.5L257.5 69"/>
+<path stroke-dasharray="10 2 2 2" d="M20 90H278"/>
+<path d="M34 125V152M262 112V152M34 148H262M34 148l3-1.2M34 148l3 1.2M262 148l-3-1.2M262 148l-3 1.2M85 62V47M155 54V47M205 62V47"/>
+</g>
+<g fill="#B9CBDA" stroke="none" font-family="monospace" font-size="6" text-anchor="middle"><text x="148" y="146">L</text><text x="85" y="44">C</text><text x="155" y="44">B</text><text x="205" y="44">T</text></g>
+</svg>
