@@ -121,7 +121,7 @@
 | [TASK-0104](../development/tasks/TASK-0104-event-sounds-final-variants.md) | DONE | Event sounds: final variants (#407), gain fixes, listening-pack pruning | MS-M1 |
 | [TASK-0105](../development/tasks/TASK-0105-adr-0022-map-validator.md) | DONE | ADR-0022 map validator: region limit 150-400, great-power core quota, single status per region | MS-M1 |
 | [TASK-0106](../development/tasks/TASK-0106-bench-harness-exp0008.md) | REVIEW | Lab bench harness for EXP-0008: foreign-load gate, top-k frequency, repeat cap; alloc JSON provenance | MS-M0 |
-| [TASK-0107](../development/tasks/TASK-0107-tick-path-allocations.md) | IN_PROGRESS | Tick path allocations to <= 1 MiB/month (ADR-0023 p.2.1) | MS-M0 |
+| [TASK-0107](../development/tasks/TASK-0107-tick-path-allocations.md) | REVIEW | Tick path allocations to <= 1 MiB/month (ADR-0023 p.2.1) | MS-M0 |
 
 ## Гипотезы
 

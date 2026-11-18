@@ -1,7 +1,7 @@
 ---
 id: TASK-0107
 title: "Tick path allocations to <= 1 MiB/month (ADR-0023 p.2.1)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -29,3 +29,10 @@ The split `--mode alloc` probe (TASK-0106) measures the tick path at point A at 
 ## Acceptance criteria
 - [ ] Tick path ≤ 1 MiB/month at point A (direct probe), LOH 0, gen2 0 over 12 months; numbers in this task.
 - [ ] Golden hashes unchanged; `dotnet test`, `lab selftest` pass; reviewer APPROVE.
+
+## Результат (developer, commit 1e78510, branch worktree-agent-af65edb8b9d14490a)
+- Direct tick-path probe, point A, t1 (SkipViews seam): 2.17 MiB/month before, then 0.49–0.59 MiB in steady months. Steps: profile items in scratch plus lazy outcome strings 1.40; per-design memo plus pooled policy decisions 0.67; fleet book from the memo 0.52–0.60.
+- Yearly month (12): 1.85 MiB, above 1 MiB. Sources: WhyNot closures (NodeClosure bool arrays) from TrainingTargetP3/Compose, annual ProductPresets.Variants/CandidateValue, WhyList per actor. 12-month mean about 0.6 MiB.
+- Lab probe: p50 0.48–0.59 MiB, snapshot 6.6 MiB (X = 8), gen2 0, GC pauses 0.29 %.
+- Golden hashes unchanged; full suite green; `lab selftest` 57/57.
+- Open: the Lab probe should measure the tick path directly via SkipViews (AllocProfile.cs, simulation-engineer).
