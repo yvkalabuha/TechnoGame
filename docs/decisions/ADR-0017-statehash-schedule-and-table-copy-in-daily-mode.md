@@ -1,14 +1,14 @@
 ---
 id: ADR-0017
 title: "StateHash schedule and table copy in daily mode"
-status: PROPOSED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
+status: ACCEPTED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
 date: 2026-11-17
 supersedes:              # пусто намеренно: замена частичная, см. раздел «Частично заменяет»; ADR-0006, ADR-0014, ADR-0016 остаются ACCEPTED
 superseded_by:
 related: [ADR-0002, ADR-0006, ADR-0013, ADR-0014, ADR-0016]
-approved_by:
-approved_at:
-approval_ref:
+approved_by: owner
+approved_at: 2026-11-18
+approval_ref: "DECISIONS_LOG #317"
 ---
 
 # ADR-0017 — StateHash schedule and table copy in daily mode

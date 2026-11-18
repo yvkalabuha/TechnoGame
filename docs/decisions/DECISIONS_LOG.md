@@ -433,3 +433,9 @@ The milestone plan and tick-benchmark-m0 must be updated: provinces move earlier
 
 First task: the builder on Europe, where NTS shared-boundary simplification is the main risk | владелец (AskUserQuestion 2026-11-18) |
 | 316 | 2026-11-18 | TASK-0074 (ADR-0018 localization) moves the anchor texts out of Core. Core DataHash 6eba0cea3e6af277446c6017cf5765ed4f0813d047304c4c14dff9ccfc585bce → 7deed8f095d0e09084b4e8300af2ac46ce4fba537811e63acf6133497de95a53. Dynamics are unchanged: the Orchestrator reran EXP-0002-det, which gave golden_set_hash 824f4ded07216828ee6354f95f6bd942dcefd6059f70fdff24fbf9f9ab91ea5b (60/60 ok, thread_mismatch 0), identical to before. Frozen EXP records are not edited | Orchestrator (#297) |
+| 317 | 2026-11-18 | ADR-0017 «Расписание StateHash и копия таблиц» revision 2 is ACCEPTED:
+- in play the hash runs at the start, save, load and end of replay; the monthly and command points are a flag for tests and Lab (#291);
+- tables are copied per column on first write;
+- SHA-256 and golden are unchanged.
+
+Next: implement ADR-0017 and F4 (parallel view inputs), then the official EXP-0007 benchmark and the MS-M0 closure | владелец (AskUserQuestion 2026-11-18) |
