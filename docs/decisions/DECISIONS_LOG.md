@@ -397,3 +397,16 @@ This revises UI_DESIGN_SYSTEM where it conflicts (no fills, square edges, minima
 - We add the Unicode V3 notice to LICENSES.md ourselves (the packages carry none).
 - Linguini needs ICU cultures; check ICU in the Godot .NET export.
 - Term lookup ids have no leading '-'. | Orchestrator (technical, inside ADR-0018) |
+| 305 | 2026-11-17 | Audio revision (owner listened to the v0.4 prototype): synthesised UI sounds do not fit the style. Direction:
+- real recordings of the era instead of synthesis: relays, toggle switches, teletype, typewriter, stamps, paper, rotary phone and others;
+- the atmosphere of a headquarters or design bureau as the ambient bed: lamp hum, distant typewriters, radio ether, a clock.
+
+This revises #296 (UI sounds by synthesis). Licences stay PD/CC0/CC BY only (#298) | владелец (AskUserQuestion 2026-11-17) |
+| 306 | 2026-11-17 | The map must show 1945 borders, not modern ones. Steps:
+- research-scientist finds 1945 border data with licences checked against ADR-0009 (OpenHistoricalMap, CShapes, historical-basemaps and others);
+- systems-architect designs a region map (~200 regions, #195) whose owner is simulation state; the 1945 scenario sets the start borders, and the client draws by owner. | владелец (AskUserQuestion 2026-11-17) |
+| 307 | 2026-11-17 | Save/load for the client implements ACCEPTED ADR-0013 as light tasks (docs/architecture/notes/client-save-load.md): a state snapshot plus a header. Orchestrator interpretations of ADR-0013:
+- (a) the command section after the tables executes item 5 and does not change the format;
+- (b) the section holds the whole command journal.
+
+Owner: prototype saves need no migrations until the first public build. An incompatible version is reported honestly | владелец (AskUserQuestion 2026-11-17) + Orchestrator |
