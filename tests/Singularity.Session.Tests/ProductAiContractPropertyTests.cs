@@ -32,6 +32,7 @@ public class ProductAiContractPropertyTests(ITestOutputHelper output)
             var idle = new int[n, designs];
             var built = new bool[n, designs];
             var canc = new bool[n, designs];
+            var gen = new int[n, designs];
             for (long t = 0; t < Months; t++)
             {
                 s.StepThroughMonth(t);
@@ -42,6 +43,15 @@ public class ProductAiContractPropertyTests(ITestOutputHelper output)
                     for (int d = 0; d < designs; d++)
                     {
                         string at = $"seed {seed} month {t} actor {a} design {d}";
+                        // A retaken slot is a new design (ADR-0005 p. 3): its monotone flags start over.
+                        if (w.Products.Generation(a, d) != gen[a, d])
+                        {
+                            gen[a, d] = w.Products.Generation(a, d);
+                            stage[a, d] = DesignStage.None;
+                            built[a, d] = false;
+                            canc[a, d] = false;
+                            idle[a, d] = 0;
+                        }
                         DesignStage st = w.Products.Stage(a, d);
                         bool b = w.Products.BuiltAny(a, d), c = w.Products.Cancelled(a, d);
                         int ic = w.Products.IdleMonths(a, d);

@@ -424,5 +424,5 @@ public class ProductAiSessionTests(ITestOutputHelper output)
     // Re-recorded in F17b (951bcf96… before), reason: F17b — LINE_CLOSE YPROD bit 12 of run.fleet in the hash of an AI run (ADMIT keeps the old hash, see F17bTests).
     // Re-recorded in T6d (409293e4… before), reason: T6d — licences, alloy disruption and the why_not triggers of the AI, new policy columns, schema v7; then «exposure to data» (1d6a59a9… before; the scenario hash is in the run columns).
     // Re-recorded in TASK-0058 step 5 (e99b1c3e… before), reason: I-OC + A41 SLOT as the build, fielded_L and the column prd.d*.q (#242–#247), schema v8.
-    private const string Golden150 = "ee2dabdb0d66c22052f874e5c5643c72a42c292070379042814b629a3f660452";
+    private const string Golden150 = "9cbfbc6834e143d76e71c0f23e89eb28685b98cc057e0628f64bba5130582a87";
 }

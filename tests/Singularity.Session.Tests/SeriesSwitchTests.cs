@@ -8,7 +8,7 @@ namespace Singularity.Session.Tests;
 public class SeriesSwitchTests
 {
     // Hash of seed 1 after month 149 under the default config (F17b YProdGolden[0], recorded before the switches existed).
-    private const string MainSeed1Month149 = "b3266453fb2ca5070f1fff85059d31ec4ce83fdad32973bf430cb601b04d3759";
+    private const string MainSeed1Month149 = "6e49185f4bf45c314f3b5981aa9e5b9ea21bd498d9381e591289970411b68e75";
 
     private static SliceRunConfig Base(ulong seed = 1) => new() { Seed = seed, Threads = 2 };
 
@@ -45,7 +45,7 @@ public class SeriesSwitchTests
         HashAssert.Equal(MainSeed1Month149, Run(Base() with { ViewMode = SliceViewMode.Full }, 150).LastHash);
         Assert.DoesNotContain(s.World.Table.Columns, c => c.Name.StartsWith("run.layer", StringComparison.Ordinal) || c.Name is "run.grid" or "run.effort_share");
         Assert.Equal(SliceTestData.Create(Base()).World.SchemaFingerprint(), SliceTestData.Create(explicitDefaults).World.SchemaFingerprint());
-        Assert.Equal(8, SliceWorld.SchemaVersion);
+        Assert.Equal(9, SliceWorld.SchemaVersion);
     }
 
     [Fact]

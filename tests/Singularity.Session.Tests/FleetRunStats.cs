@@ -283,7 +283,9 @@ internal sealed class FleetRunStats
         int line = -1;
         for (int d = 0; d < was.StageSnapshot.GetLength(1); d++)
         {
-            if (p.Stage(a, d) == DesignStage.Series)
+            // The line the commands were decided against: a canonical launch of a retaken slot in the same step may put another one in С.
+            // The newest line is the one of the highest generation: with slot reuse a higher slot index no longer means a later design.
+            if (was.StageSnapshot[a, d] == DesignStage.Series && (line < 0 || p.Gen(a, d) >= p.Gen(a, line)))
                 line = d;
         }
         foreach (FleetCommand c in was.Commands)

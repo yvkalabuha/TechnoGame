@@ -25,8 +25,10 @@ public class FleetAblationTests
             foreach (long month in new long[] { 59, 149, 383 })
             {
                 s.StepThroughMonth(month);
+                if (ColumnProjection.SlotReused(s))
+                    break;   // the T6c2 build never retook a slot (TASK-0099)
                 string expected = baseline.Single(l => l.StartsWith($"{seed} {month} ", StringComparison.Ordinal))[($"{seed} {month} ").Length..];
-                Assert.True(expected == ColumnProjection.Hash(s, n => n != "run.scenario" && oldNames.Contains(n)), $"seed {seed}, month {month}: an old column differs");
+                Assert.True(expected == ColumnProjection.Hash(s, n => n != "run.scenario" && !ColumnProjection.IsSlotGenerationColumn(n) && oldNames.Contains(n)), $"seed {seed}, month {month}: an old column differs");
             }
         }
     }

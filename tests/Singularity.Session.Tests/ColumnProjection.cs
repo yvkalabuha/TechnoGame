@@ -33,5 +33,21 @@ internal static class ColumnProjection
         return Convert.ToHexStringLower(h.GetHashAndReset());
     }
 
+    /// <summary>
+    /// Columns added with the slot generation (ADR-0005 p. 3, TASK-0099): <c>prd.dN.generation</c>, <c>prd.dN.parentGen</c>, <c>prd.lp.gN.gen</c>
+    /// and the <c>StaleHandle</c> rejection counter. Projections onto "the old columns" leave them out.
+    /// </summary>
+    public static bool IsSlotGenerationColumn(string name) =>
+        name.EndsWith(".generation", StringComparison.Ordinal) || name.EndsWith(".parentGen", StringComparison.Ordinal)
+        || name.StartsWith("prd.lp.g", StringComparison.Ordinal) && name.EndsWith(".gen", StringComparison.Ordinal)
+        || name == "prd.rejected.StaleHandle";
+
+    /// <summary>
+    /// A design slot has been retaken (generation ≥ 2): from then on the run is no longer the run of a build without slot reuse, so a
+    /// comparison with a hash pinned before TASK-0099 stops being meaningful.
+    /// </summary>
+    public static bool SlotReused(SliceSession s) =>
+        s.World.Table.Columns.OfType<IntColumn>().Any(c => c.Name.EndsWith(".generation", StringComparison.Ordinal) && c.Current.ToArray().Any(v => v >= 2));
+
     public static IEnumerable<string> Names(SliceSession s) => s.World.Table.Columns.Select(c => c.Name);
 }

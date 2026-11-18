@@ -516,11 +516,15 @@ internal sealed class SliceObserver
         }
         foreach (DesignView d in av.Designs)
         {
+            // _tLaunch and _forcedSent are per slot. A freed slot is retaken (ADR-0005 p. 3): a slot that was launched and is back in П/О holds
+            // a new design, so its launch month and force mark start over. The retake always shows as a П month, so no case is missed.
+            if (_tLaunch[a, d.Design] is not null && d.Stage is DesignStage.None or DesignStage.Project or DesignStage.Prototype)
+            {
+                _tLaunch[a, d.Design] = null;
+                _forcedSent[a, d.Design] = null;
+            }
             if (d.Stage == DesignStage.Series && _tLaunch[a, d.Design] is null)
                 _tLaunch[a, d.Design] = t;
-            // _tLaunch and _forcedSent are per slot: Core never reuses a slot (ProductsLayout, contract §3.1), so a launched slot never returns to П/О.
-            if (_tLaunch[a, d.Design] is not null && d.Stage is DesignStage.None or DesignStage.Project or DesignStage.Prototype)
-                throw new SliceFormatException($"Month {t} actor {_ids[a]}: design slot {d.Design} was in С and is now {d.Stage}: a reused slot breaks t_launch and force (§4.9).");
             if (d.Gen < 1 || d.Gen > _nG)
                 continue;
             int gi = d.Gen - 1;

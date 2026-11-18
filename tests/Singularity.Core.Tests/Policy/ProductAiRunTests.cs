@@ -113,11 +113,14 @@ public class ProductAiRunTests
         long annual = (s + 62 + 11) / 12 * 12;
         while (t <= annual)
             h.RunThroughMonth(t++);
-        Assert.Equal(DesignStage.None, p.Stage(Gbr, 2));               // decided at `annual`, in force a month later
+        int genBefore = p.Generation(Gbr, 1);
+        Assert.Equal(DesignStage.Withdrawn, p.Stage(Gbr, 1));          // decided at `annual`, in force a month later
         h.RunThroughMonth(t++);
-        Assert.Equal(DesignStage.Project, p.Stage(Gbr, 2));
-        Assert.Equal(2, p.PlatformGen(Gbr, 2));
-        Assert.Equal(1, policy.Repeats(Gbr, 2));
+        // ADR-0005 p. 3: the freed slot 1 is the lowest free one, so the new project takes it with generation + 1.
+        Assert.Equal(DesignStage.Project, p.Stage(Gbr, 1));
+        Assert.Equal(genBefore + 1, p.Generation(Gbr, 1));
+        Assert.Equal(2, p.PlatformGen(Gbr, 1));
+        Assert.Equal(1, policy.Repeats(Gbr, 2));   // per requirement generation
     }
 
     [Fact]

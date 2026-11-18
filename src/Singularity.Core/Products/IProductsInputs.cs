@@ -24,7 +24,12 @@ public enum DesignCommandKind
 /// knows) for <see cref="DesignCommandKind.Compose"/> and the parent <c>design_id</c> for <see cref="DesignCommandKind.Derive"/>.
 /// <paramref name="Alts"/> holds one layout-global alternative index per slot (−1 = unchanged, Derive only).
 /// </summary>
-public sealed record DesignCommand(DesignCommandKind Kind, int Target, ImmutableArray<int> Alts);
+/// <remarks>
+/// <paramref name="Generation"/> completes the handle <c>(slot, generation)</c> of the target design for Derive and Cancel (ADR-0005 p. 3);
+/// a stale one is rejected with <see cref="CommandRejection.StaleHandle"/>. −1 means "no handle supplied" (Compose, or a caller that
+/// has not been moved to handles yet): the slot index alone is then trusted.
+/// </remarks>
+public sealed record DesignCommand(DesignCommandKind Kind, int Target, ImmutableArray<int> Alts, int Generation = -1);
 
 /// <summary>
 /// <c>start_series(design_id, rate, force)</c> in force at month t (contract §4.4c). <c>force = true</c> is a player command only:
@@ -83,6 +88,9 @@ public enum CommandRejection
     BadSellQuota = 16,
     /// <summary><c>BAD_SELL{REVENUE_CAP}</c>: over the actor's revenue ceiling of the policy year.</summary>
     BadSellRevenueCap = 17,
+
+    /// <summary>The command's handle <c>(slot, generation)</c> is stale: the design it named no longer exists (ADR-0005 p. 3).</summary>
+    StaleHandle = 18,
 }
 
 /// <summary>Kind of a fleet command (contract r6 §4.4f). Names leave room for <c>mothball_cohort</c> of the second wave.</summary>
@@ -95,7 +103,8 @@ public enum FleetCommandKind
 }
 
 /// <summary><c>retire_cohort</c> / <c>sell_cohort</c> in force at month t, in command order (contract r6 §4.4f; ADR-0006, ADR-0014).</summary>
-public readonly record struct FleetCommand(FleetCommandKind Kind, int Design, long N);
+/// <remarks><paramref name="Generation"/> is the handle generation of <paramref name="Design"/>; −1 = not supplied (see <see cref="DesignCommand"/>).</remarks>
+public readonly record struct FleetCommand(FleetCommandKind Kind, int Design, long N, int Generation = -1);
 
 /// <summary>
 /// What the product layer reads from other layers and from commands in the compute of month t. Contract (as

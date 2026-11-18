@@ -27,3 +27,9 @@ created: 2026-11-18
 ## Критерии приёмки
 - [ ] Тесты: переиспользование слота, устаревший handle, отказ при 12 занятых, детерминизм L1/L2 (golden обновляются только с объяснением).
 - [ ] `dotnet test Singularity.sln`, `lab selftest` зелёные.
+
+## Результат
+**Сделано.** Колонки `prd.d{d}.generation`, `prd.d{d}.parentGen`, `prd.lp.g{g}.gen`; `FreeSlot` — наименьший индекс со стадией None или «снят»; `TakeSlot` — +1 (checked) и сброс всех колонок слота. Слот сценария на старте имеет generation 1 (первое занятие), свободный — 0. `ProductsSystem.Generation`, `Resolves` (единая функция разрешения handle), `CanonicalSlot` проверяет пару. `DesignCommand` (Derive/Cancel) и `FleetCommand` получили `Generation` (по умолчанию −1 = handle не передан); устаревший — `CommandRejection.StaleHandle` (18), состояние не меняется. `DesignCapacity` — только когда заняты все `max_designs`. SchemaVersion 8 → 9.
+**Файлы:** `src/Singularity.Core/Products/{ProductsSystem,ProductsSystem.Fleet,ProductsLayout,IProductsInputs}.cs`, `src/Singularity.Session/Slice/SliceWorld.cs`, `src/Singularity.Lab/Models/Slice/{SliceObserver,SliceChecks}.cs`, тесты `ProductsSlotGenerationTests` (9) и правки существующих.
+**Golden:** все полные хеши изменились из-за новых колонок и SchemaVersion 9 (траектория до месяца 149 не меняется; первое переиспользование слота — около месяца 265). Перезаписаны: Main seed1 m149, F17b Admit/YProd ×5, LinkedRun, ProductAiSession; fingerprint схемы. Проекции «старых колонок» (T6d, FleetAblation, ToolingUnmet) исключают новые колонки и останавливаются на первом переиспользовании слота.
+**Проверка:** `dotnet build -c Release` 0 предупреждений; `dotnet test` зелёный; `lab selftest` 49/49.
