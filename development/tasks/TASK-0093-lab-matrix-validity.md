@@ -1,7 +1,7 @@
 ---
 id: TASK-0093
 title: "Lab matrix validity and size fields; registry golden_set_hash for matrix EXPs (ADR-0008, #374)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: simulation-engineer

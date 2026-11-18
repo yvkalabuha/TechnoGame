@@ -214,6 +214,10 @@ def check_items(items: list[Item], errors: list[str]) -> None:
                     errors.append(f"{where}: DONE experiment needs '{f}'")
             if it.meta.get("outcome") not in EXP_OUTCOMES:
                 errors.append(f"{where}: outcome must be one of {EXP_OUTCOMES}")
+            # ADR-0008 rev 3 (#374): a matrix experiment is DONE only with a valid matrix.
+            if it.meta.get("runner") == "matrix" \
+                    and it.meta.get("golden_set_hash") in (None, ""):
+                errors.append(f"{where}: DONE matrix experiment needs 'golden_set_hash'")
         if t.prefix == "ADR" and status == "SUPERSEDED" \
                 and not it.meta.get("superseded_by"):
             errors.append(f"{where}: SUPERSEDED ADR needs 'superseded_by'")

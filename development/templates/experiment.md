@@ -13,6 +13,9 @@ manifest:                # путь к манифесту в lab/
 seeds:
 threads:
 golden_hash:
+runner:                  # matrix | bench | other (ADR-0008); matrix ⇒ golden_set_hash обязателен для DONE
+golden_set_hash:
+analysis_seconds:        # время анализа (ADR-0008, порог Parquet #374)
 baseline:                # контрольная версия (commit или EXP-NNNN)
 outcome:                 # supports | refutes | inconclusive
 created: {{DATE}}

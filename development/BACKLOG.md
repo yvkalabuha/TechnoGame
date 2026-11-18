@@ -107,7 +107,7 @@
 | [TASK-0090](../development/tasks/TASK-0090-adr-0020-r2-multitable.md) | DONE | ADR-0020 R2: multi-table Kernel API sketch and hash-bytes check | MS-M1 |
 | [TASK-0091](../development/tasks/TASK-0091-map-builder-t3-world.md) | APPROVED | Map builder T3: world beyond Europe, regions split by event lines (#350), territories.yaml | MS-M1 |
 | [TASK-0092](../development/tasks/TASK-0092-determinism-rules-ext.md) | APPROVED | DeterminismRules: string hashing, culture comparisons, threading APIs, Parallel.For allowlist, Lab ToyFunnel check | MS-M1 |
-| [TASK-0093](../development/tasks/TASK-0093-lab-matrix-validity.md) | APPROVED | Lab matrix validity and size fields; registry golden_set_hash for matrix EXPs (ADR-0008, #374) | MS-M1 |
+| [TASK-0093](../development/tasks/TASK-0093-lab-matrix-validity.md) | DONE | Lab matrix validity and size fields; registry golden_set_hash for matrix EXPs (ADR-0008, #374) | MS-M1 |
 
 ## Гипотезы
 
