@@ -19,10 +19,12 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0064 [IN_PROGRESS] lab bench harness (ADR-0016 T1) (simulation-engineer)
+- TASK-0064 [REVIEW] lab bench harness (ADR-0016 T1) (simulation-engineer)
 - TASK-0080 [REVIEW] ADR-0017 review follow-ups (DEBT-0045 low items) (developer)
 - TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
 - TASK-0081 [APPROVED] Client v0.5b: main menu, settings, new game, palette C with alert validator, time icons (developer)
+- TASK-0082 [APPROVED] F7a: reuse the view on probe-only days, cheaper daily snapshot (developer)
+- TASK-0083 [APPROVED] Tests for lab bench: statistics, manifest, plan, CLI (test-engineer)
 <!-- registry:active:end -->
 
 ## Блокеры

@@ -78,7 +78,7 @@
 | [TASK-0061](../development/tasks/TASK-0061-debts-before-exp0002-freeze.md) | DONE | Долги перед заморозкой EXP-0002: DEBT-0030, 0034, 0035, 0036 | MS-M0 |
 | [TASK-0062](../development/tasks/TASK-0062-llm-worker-gate-file-markers-trigger-gitleaks-gene.md) | DONE | llm_worker gate: file markers trigger gitleaks generic-api-key | MS-M0 |
 | [TASK-0063](../development/tasks/TASK-0063-session-dailytickprobe-flag-for-direct-daily-mode-.md) | DONE | Session DailyTickProbe flag for direct daily-mode benchmark (ADR-0016 T1a) | MS-M0 |
-| [TASK-0064](../development/tasks/TASK-0064-lab-bench-harness-adr-0016-t1.md) | IN_PROGRESS | lab bench harness (ADR-0016 T1) | MS-M0 |
+| [TASK-0064](../development/tasks/TASK-0064-lab-bench-harness-adr-0016-t1.md) | REVIEW | lab bench harness (ADR-0016 T1) | MS-M0 |
 | [TASK-0065](../development/tasks/TASK-0065-synthetic-full-scale-world-overlay-and-benchmark-p.md) | DONE | Synthetic full-scale world overlay and benchmark pre-registration (ADR-0016 T2) | MS-M0 |
 | [TASK-0066](../development/tasks/TASK-0066-tick-benchmark-run-and-outcome-adr-0016-t3.md) | APPROVED | Tick benchmark run and outcome (ADR-0016 T3) | MS-M0 |
 | [TASK-0067](../development/tasks/TASK-0067-godot-4-net-3d-globe-spike-regions-relief-cc0-obje.md) | DONE | Godot 4 .NET 3D globe spike: regions, relief, CC0 objects, FPS and memory | MS-M0 |
@@ -96,6 +96,8 @@
 | [TASK-0079](../development/tasks/TASK-0079-f4a-parallel-view-inputs.md) | DONE | F4-A: parallel ViewBuilder.Inputs per actor, TrainingBudget plan once per actor | MS-M0 |
 | [TASK-0080](../development/tasks/TASK-0080-adr-0017-review-followups.md) | REVIEW | ADR-0017 review follow-ups (DEBT-0045 low items) | MS-M0 |
 | [TASK-0081](../development/tasks/TASK-0081-client-v0-5b.md) | APPROVED | Client v0.5b: main menu, settings, new game, palette C with alert validator, time icons | MS-M0 |
+| [TASK-0082](../development/tasks/TASK-0082-f7a-view-reuse.md) | APPROVED | F7a: reuse the view on probe-only days, cheaper daily snapshot | MS-M0 |
+| [TASK-0083](../development/tasks/TASK-0083-lab-bench-tests.md) | APPROVED | Tests for lab bench: statistics, manifest, plan, CLI | MS-M0 |
 
 ## Гипотезы
 

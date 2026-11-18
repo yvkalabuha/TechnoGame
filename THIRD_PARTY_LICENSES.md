@@ -74,3 +74,7 @@ not be used in advertising or otherwise to promote the sale, use or other
 dealings in these Data Files or Software without prior written
 authorization of the copyright holder.
 ```
+
+## System.IO.Hashing 10.0.0
+- Used by: `src/Singularity.Lab` only (tick bench R3, ADR-0017; non-canonical hash comparison). Not referenced by Core, Kernel or Session.
+- Licence: MIT (.NET Foundation; https://www.nuget.org/packages/System.IO.Hashing , accessed 2026-11-18).
