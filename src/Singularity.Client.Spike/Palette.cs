@@ -11,6 +11,10 @@ public static class Palette
     // Neutral ink and line tokens shared by the UI and the globe overlay (hex, no leading #).
     public const string Ink = "1D1E20", Ink2 = "55575A", Ink3 = "64625C", Rule = "BDB59F", Border = "3E3C38", GlobeGrid = "A9C4CC", Limb = "A9B8CC";
 
+    // Instrument tokens (UI_INSTRUMENTS §2, #404). Desk is the table under the panels; desk-line and desk-hatch are the quiet layer-1 strokes (not drawn yet, validated now).
+    // Layer 2 (the controls) draws in Ink, Ink2 and the six inks above.
+    public const string Desk = "D9D3C0", DeskLine = "B8B094", DeskHatch = "C6BEA4";
+
     public static readonly string[] InkNames = { "sand", "teal", "violet", "olive", "plum", "slate" };
 
     /// <summary>Palette C «Акварель» (UI_DESIGN_SYSTEM §17.3-17.4) with warn #D9860F (decision #326).</summary>

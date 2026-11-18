@@ -233,6 +233,8 @@ public sealed partial class SettingsSheet : Control
         Row("set.pausealarm", Seg(OnOff, _w.PauseOnAlarm ? 0 : 1, i => _w.PauseOnAlarm = i == 0), null, true);
         Row("set.tipdelay", Seg(SettingsData.TipDelays.Select(d => Loc.N(d, d < 1 ? 1 : 0) + " " + Loc.T("set.sec")).ToArray(), _w.TipDelay, i => _w.TipDelay = i, false));
         Row("set.textures", Seg(new[] { "set.tex.off", "set.tex.weak", "set.tex.normal" }, _w.Textures, i => { _w.Textures = i; PaperSurface.SetPreset(i); }));
+        Row("set.desk", Seg(new[] { "set.tex.off", "set.tex.weak", "set.tex.normal" }, _w.DeskInstruments, i => _w.DeskInstruments = i));
+        Row("set.organs", Seg(new[] { "set.tex.off", "set.tex.weak", "set.tex.normal" }, _w.OrganInstruments, i => { _w.OrganInstruments = i; InstrumentLogic.OrganLevel = i; }));
         Row("set.railwide", Seg(new[] { "set.rail.narrow", "set.rail.wide" }, _w.RailWide ? 1 : 0, i => _w.RailWide = i == 1));
         Row("set.anim", Seg(new[] { "set.on", "set.reduce" }, _w.Animations ? 0 : 1, i => _w.Animations = i == 0), null, true);
         _body.AddChild(Ui.Wrap("set.lang.note", 14, Ui.Ink3));
@@ -241,7 +243,7 @@ public sealed partial class SettingsSheet : Control
     // ---------- actions ----------
     void ResetTab()
     {
-        switch (_tab) { case 0: _w.ResetVideo(); break; case 1: _w.ResetSound(); break; default: _w.ResetGeneral(); PaperSurface.SetPreset(_w.Textures); break; }   // the texture preset previews live
+        switch (_tab) { case 0: _w.ResetVideo(); break; case 1: _w.ResetSound(); break; default: _w.ResetGeneral(); PaperSurface.SetPreset(_w.Textures); InstrumentLogic.OrganLevel = _w.OrganInstruments; break; }   // the texture preset previews live
         Rebuild();
     }
 
@@ -249,6 +251,7 @@ public sealed partial class SettingsSheet : Control
     {
         if (Loc.Lang != _orig.Lang) Loc.SetLang(_orig.Lang);
         PaperSurface.SetPreset(_orig.Textures);   // the preset previews live while the sheet is open
+        InstrumentLogic.OrganLevel = _orig.OrganInstruments;
         if (_musicOrig is int m) MusicAmountSet?.Invoke(m);
         Visible = false; Closed?.Invoke();
     }
