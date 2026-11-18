@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Runtime.InteropServices;
 using Singularity.Core.Data;
 using Singularity.Core.Industry;
 using Singularity.Core.Policy;
@@ -120,33 +121,49 @@ internal static class ViewBuilder
         return new PolicyDecisionView(commands.ToImmutable(), starts.ToImmutable(), closes.ToImmutable(), [.. pol.AiFleetCommands(a, next)], repeats.MoveToImmutable());
     }
 
-    /// <summary>The inputs of the monthly step <paramref name="month"/>, read before its compute (after the deals and the commands of the tick).</summary>
-    public static MonthInputsView Inputs(SliceWorld w, long month)
+    /// <summary>
+    /// The inputs of the monthly step <paramref name="month"/>, read before its compute (after the deals and the commands of the tick).
+    /// Actors are independent pure reads of the snapshot (nothing is written, the memo of <c>PrcSet</c> is built only in the constructor and Post),
+    /// so they run in parallel; each result goes to its own slot <c>rows[a]</c>, so the order does not depend on the threads (tick-profile-m0 §4 F4-A).
+    /// </summary>
+    public static MonthInputsView Inputs(SliceWorld w, long month) => Inputs(w, month, w.Config.Threads);
+
+    internal static MonthInputsView Inputs(SliceWorld w, long month, int maxThreads)
     {
-        var actors = ImmutableArray.CreateBuilder<ActorInputsView>(w.Scenario.ActorCount);
-        for (int a = 0; a < w.Scenario.ActorCount; a++)
+        var rows = new ActorInputsView[w.Scenario.ActorCount];
+        if (maxThreads <= 1)
         {
-            ToolingPlanResult plan = w.IndustryInputs.Plan(a, month, w.Industry.RestActor(a, month));
-            int participating = 0;
-            var unmet = new Fx6[w.IndustryLayout.Clusters.Length];
-            for (int c = 0; c < unmet.Length; c++)
-            {
-                for (int dim = 0; dim < Dims3.Count; dim++)
-                {
-                    participating += plan.Participates(a, c, (Dimension)dim) ? 1 : 0;
-                    unmet[c] += plan.Unmet(a, c, (Dimension)dim);
-                }
-            }
-            var tooling = new ToolingLedgerView(plan.Rest, plan.CapBudget, plan.Total, plan.TakenRest, plan.TakenCap, plan.RestReturned,
-                plan.TrainingBudget, participating, [.. unmet]);
-            var designs = ImmutableArray.CreateBuilder<DesignInputsView>(w.ProductsLayout.Designs);
-            for (int d = 0; d < w.ProductsLayout.Designs; d++)
-                designs.Add(DesignInputs(w, a, d, month));
-            actors.Add(new ActorInputsView(a, w.Policy.Budget(a), w.SharesOf(a), w.ProcurementBudget(a), tooling,
-                new CapabilityView(w.Industry.Alloy(a, month).Supply, w.Policy.AlloyDeficit(a, month)), designs.MoveToImmutable(), Requirement(w, a, month)));
+            for (int a = 0; a < rows.Length; a++)
+                rows[a] = ActorInputs(w, a, month);
+        }
+        else
+        {
+            Parallel.For(0, rows.Length, new ParallelOptions { MaxDegreeOfParallelism = maxThreads }, a => rows[a] = ActorInputs(w, a, month));
         }
         // The adapter of the policy asks GFront(t − 1); the fielded set does not depend on the month, but the call is the same.
-        return new MonthInputsView(month, w.Products.GFront(month - 1), actors.MoveToImmutable());
+        return new MonthInputsView(month, w.Products.GFront(month - 1), ImmutableCollectionsMarshal.AsImmutableArray(rows));
+    }
+
+    private static ActorInputsView ActorInputs(SliceWorld w, int a, long month)
+    {
+        ToolingPlanResult plan = w.IndustryInputs.Plan(a, month, w.Industry.RestActor(a, month));
+        int participating = 0;
+        var unmet = new Fx6[w.IndustryLayout.Clusters.Length];
+        for (int c = 0; c < unmet.Length; c++)
+        {
+            for (int dim = 0; dim < Dims3.Count; dim++)
+            {
+                participating += plan.Participates(a, c, (Dimension)dim) ? 1 : 0;
+                unmet[c] += plan.Unmet(a, c, (Dimension)dim);
+            }
+        }
+        var tooling = new ToolingLedgerView(plan.Rest, plan.CapBudget, plan.Total, plan.TakenRest, plan.TakenCap, plan.RestReturned,
+            plan.TrainingBudget, participating, [.. unmet]);
+        var designs = ImmutableArray.CreateBuilder<DesignInputsView>(w.ProductsLayout.Designs);
+        for (int d = 0; d < w.ProductsLayout.Designs; d++)
+            designs.Add(DesignInputs(w, a, d, month));
+        return new ActorInputsView(a, w.Policy.Budget(a), w.SharesOf(a), w.ProcurementBudget(a), tooling,
+            new CapabilityView(w.Industry.Alloy(a, month).Supply, w.Policy.AlloyDeficit(a, month)), designs.MoveToImmutable(), Requirement(w, a, month));
     }
 
     // The variants of the yearly Requirement; FV is not read in the calibration mode (spec §8.2 п. 2). Initialize writes only pol.* columns,
