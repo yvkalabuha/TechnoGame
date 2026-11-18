@@ -1,0 +1,16 @@
+# Gate HYP-0005 — advocate (2026-11-18)
+
+The draft is solid on peeking, pairing and pre-fixing choices. Three alternatives clearly beat it: a simpler outcome rule (each metric tests one side), a continuous tie-break inside the rank sum, and a continuous lead-margin metric plus a positive control as the floor guard.
+
+1. **Strong — the tie-break silently turns #330 back into #27.** In a bipolar world one actor is 1st on A and 2nd on B, the other the reverse: R = 3 for both, the 12-month mean ties too, and the next tie-break `rankB` (tech_lead) decides. Change: tie-break first by a continuous score (sum of normalised gaps: A_share/max A + B position normalised to the top), then rankB, then id; print the share of months decided by tie-break.
+2. **Strong — outcome rule.** refutes = P1 fail AND P2 fail; if P1 fails low (the HYP-0002 case) and `mob5` passes → inconclusive, which blocks closure (#332). Alternative: "predetermined" = P1 fail-low; "random" = P3 fail or Neff_c fail-high; refutes = either side; supports = P1, P2, P3 all pass. `mob5` diagnostic only (its bands are uncalibrated; switching metrics mid-rule is hard to audit).
+3. **Strong — floor guard (#335).** The pilot only reports "≥ 90 % one leader"; the owner then cannot separate "source uncertainty" from "start asymmetry". Add (a) a positive control: START_SYM-like series on 22001–22100 (EXP-0002 gave chg 0.78) — if it is also closed, the dynamics close the race, not the start; (b) a continuous `margin` (gap in R or the continuous score between L(t0) and the best challenger at t1), informative at chg ≈ 0. Neither touches chg30 (RISK-0021).
+4. **Moderate-strong — S1/S5 power.** McNemar counts only discordant seeds; at low chg30 it is blind (same floor as EXP-0002). Alternative: paired Wilcoxon on `margin` and on the leader's months in power (full vs off); McNemar secondary.
+5. **Moderate — endpoint hides episodes.** P1 compares only L(t1) vs L(t0). Keep the endpoint (comparable with HYP-0002), also print "ever changed" and a Kaplan–Meier curve of time to first change, no threshold. Fix the reading of #323 at the gate (owner).
+6. **Moderate — hysteresis resets** on one tie/noise month. Alternative: leader = argmin of R averaged over the trailing 12 months (smooth the signal, not the label). Adopt only if the pilot shows resets.
+7. **Moderate — pass/fail asymmetry.** Pass by point estimate, fail by whole CI. Bayesian design only renames the grey zone; keep Pocock. Real lever: forced decision at n = 600 by point vs band midpoints — owner question (#332).
+8. **Moderate — compute.** Make S5 (5 event-group ablations) conditional on S4 differing from full on the paired `margin` test; S3: 2 presets first, the other 2 only if Δ > 0.10. Saves ~6 × 600 runs.
+9. **Moderate — inconsistencies.** "Success criteria" require `knife_edge` = no but the outcome rule omits it; the sensitivity grid ×1.5 exceeds the source interval (#329). Make `knife_edge` diagnostic; grid ×{0.5, 0.75, 1} or mark ×1.5 outside #329.
+10. Weak — keep Neff_c (Hill order 2, #323) and P3 at low chg30.
+
+Open: owner — forced decision at n = 600 by point estimate? Reading of #323 (end state vs any change in 30 years)? Continuous tie-break inside #330? systems-architect — separate RNG streams per subsystem for paired designs.
