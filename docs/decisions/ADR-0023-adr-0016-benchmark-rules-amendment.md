@@ -1,14 +1,14 @@
 ---
 id: ADR-0023
 title: "Benchmark validity rules and split allocation limit (amendment to ADR-0016)"
-status: PROPOSED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
+status: ACCEPTED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
 date: 2026-11-18
 supersedes:              # пусто намеренно: замены частичные, см. «Частично заменяет»
 superseded_by:           # заполняется при замене
 related: [ADR-0016, ADR-0014, ADR-0017, ADR-0022, EXP-0007, EXP-0008, TASK-0102, TASK-0103, TASK-0106]
-approved_by:             # owner — обязательно для ACCEPTED
-approved_at:
-approval_ref:
+approved_by: owner
+approved_at: 2026-11-18
+approval_ref: "DECISIONS_LOG #411 (with #412, #413, #414)"
 ---
 
 # ADR-0023 — Benchmark validity rules and split allocation limit (amendment to ADR-0016)
@@ -248,6 +248,8 @@ approval_ref:
 - **Неизменность:** `registry.py check` подтверждает, что ADR-0016 не изменён; golden-хеши не меняются.
 
 ## Точки решения владельца
+Решения владельца 2026-11-18: 1 — принят (#411); 2 — X = 8 МиБ (#412); 3 — «Р1 ≠ Р2 → INCONCLUSIVE» (#413); 4 — окно #355 продлено до 10 ч (#414); 5 — МиБ принят (#411).
+
 1. Принять ADR (gate).
 2. X = 8 МиБ на снимок (п. 2.3) или другой вариант таблицы.
 3. Правило «(Р1) ≠ (Р2) → INCONCLUSIVE» (п. 1.6).

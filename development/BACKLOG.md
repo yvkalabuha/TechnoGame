@@ -117,7 +117,7 @@
 | [TASK-0100](../development/tasks/TASK-0100-event-sounds-pack.md) | DONE | Replace client event sounds with listening-pack r2 (#403) | MS-M1 |
 | [TASK-0101](../development/tasks/TASK-0101-ui-instrument-elements.md) | DONE | UI thematic instrument elements (flasks, pencil, ruler, caliper, soldering iron, protractor, gauges) | MS-M1 |
 | [TASK-0102](../development/tasks/TASK-0102-tick-bench-reregistration.md) | PROPOSED | Re-registered tick benchmark series (frequency rule revision, #405) | MS-M0 |
-| [TASK-0103](../development/tasks/TASK-0103-tick-allocations-gc.md) | REVIEW | Tick allocations and GC: 1.1 GB per month, gen2 collections (EXP-0007 P8) | MS-M0 |
+| [TASK-0103](../development/tasks/TASK-0103-tick-allocations-gc.md) | DONE | Tick allocations and GC: 1.1 GB per month, gen2 collections (EXP-0007 P8) | MS-M0 |
 | [TASK-0104](../development/tasks/TASK-0104-event-sounds-final-variants.md) | DONE | Event sounds: final variants (#407), gain fixes, listening-pack pruning | MS-M1 |
 | [TASK-0105](../development/tasks/TASK-0105-adr-0022-map-validator.md) | DONE | ADR-0022 map validator: region limit 150-400, great-power core quota, single status per region | MS-M1 |
 | [TASK-0106](../development/tasks/TASK-0106-bench-harness-exp0008.md) | IN_PROGRESS | Lab bench harness for EXP-0008: foreign-load gate, top-k frequency, repeat cap; alloc JSON provenance | MS-M0 |
@@ -171,7 +171,7 @@
 | [ADR-0020](../docs/decisions/ADR-0020-province-budget.md) | ACCEPTED | Province storage, aggregation to regions and tick budget |
 | [ADR-0021](../docs/decisions/ADR-0021-stochastic-events.md) | ACCEPTED | Stochastic event system next to scripted events (scandals, link failures) |
 | [ADR-0022](../docs/decisions/ADR-0022-region-limit-amendment.md) | ACCEPTED | Region count limit amendment to ADR-0011 |
-| [ADR-0023](../docs/decisions/ADR-0023-adr-0016-benchmark-rules-amendment.md) | PROPOSED | Benchmark validity rules and split allocation limit (amendment to ADR-0016) |
+| [ADR-0023](../docs/decisions/ADR-0023-adr-0016-benchmark-rules-amendment.md) | ACCEPTED | Benchmark validity rules and split allocation limit (amendment to ADR-0016) |
 
 ## Research Reports
 

@@ -1,7 +1,7 @@
 ---
 id: TASK-0103
 title: "Tick allocations and GC: 1.1 GB per month, gen2 collections (EXP-0007 P8)"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: simulation-engineer
@@ -26,9 +26,9 @@ EXP-0007 P8 (high): the tick allocates 1.1 GB per month against a 1 MB limit. Th
 2. developer fixes the hot spots inside approved architecture (ADR-0017 columns, ADR-0003 rules). Reviewer checks every diff.
 
 ## Acceptance criteria
-- [ ] The allocation report by source is in this task.
-- [ ] Steady-state allocations per month are at or below the P8 limit, or the gap is explained with a follow-up item.
-- [ ] Golden hashes are unchanged; `dotnet test`, `lab selftest` pass.
+- [x] The allocation report by source is in this task.
+- [x] Steady-state allocations per month are at or below the P8 limit, or the gap is explained with a follow-up item.
+- [x] Golden hashes are unchanged; `dotnet test`, `lab selftest` pass.
 
 ## Related
 EXP-0007 (Results, P8), ADR-0016, ADR-0017, DEBT-0045.
@@ -156,3 +156,7 @@ Point A, t1, steady state (`lab bench --mode alloc`, raw data lab/results/TASK-0
 - Remaining: ~5 MiB is `ProcessView[651]` per actor in the fresh monthly snapshot; ~3 MiB is other view parts, Inputs and Step. The 1 MB limit is met only with the ADR-0023 split P8 or option A2.
 - Golden hashes unchanged. Tests: Core 1005, Session 384 (2 skip), Lab 132, Kernel 336 (1 skip), Architecture 141. `lab selftest` 49/49; validity 3 seeds valid.
 - Kernel: `Column.Version` (+1 in SwapIfOpen and Load); `SliceWorld` throws if `SiteOwner[s] != s`; API surface v11.
+
+## Результат
+- Point A 1055 -> 9.8 MiB/month, LOH in tick 0, gen2 0 (t1). Review CHANGES (cross-world FleetBook) fixed in 541ce54, 9bd1ed1; test-engineer 3cf6164. Merge 5b131da; full suite green on merged main, `lab selftest` 57/57.
+- P8 per ADR-0023 (tick ≤ 1 MiB/month, snapshot ≤ 8 MiB) is checked by the TASK-0106 split probe in EXP-0008; a violation is recorded there, not here.
