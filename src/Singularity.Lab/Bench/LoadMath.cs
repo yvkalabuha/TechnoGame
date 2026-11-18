@@ -1,7 +1,8 @@
 namespace Singularity.Lab.Bench;
 
 /// <summary>One foreign process of the top list: CPU ticks in the window and the share of the whole machine (Δticks / ΔTotal of /proc/stat).</summary>
-public sealed record ForeignProcess(int Pid, string Comm, long CpuTicks, double MachineShare);
+/// <param name="StartTime">Start time of the process (field 22 of its stat, ticks after boot): with pid and comm it identifies the process across pid reuse.</param>
+public sealed record ForeignProcess(int Pid, string Comm, long CpuTicks, double MachineShare, long? StartTime = null);
 
 /// <summary>Pure arithmetic of the machine-load records (EXP-0008 П5.2, П5.3, П5.5). Host-side only, never world state.</summary>
 public static class LoadMath
@@ -50,7 +51,7 @@ public static class LoadMath
                 continue;
             long d = p.CpuTicks - (before.TryGetValue((p.Pid, p.StartTime), out long b) ? b : 0);
             if (d > 0)
-                list.Add(new ForeignProcess(p.Pid, p.Comm, d, dTotal > 0 ? d / (double)dTotal : 0));
+                list.Add(new ForeignProcess(p.Pid, p.Comm, d, dTotal > 0 ? d / (double)dTotal : 0, p.StartTime));
         }
         list.Sort((x, y) => x.CpuTicks != y.CpuTicks ? y.CpuTicks.CompareTo(x.CpuTicks) : x.Pid.CompareTo(y.Pid));
         return list.Count > n ? list.GetRange(0, n) : list;

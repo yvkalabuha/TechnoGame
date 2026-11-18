@@ -444,6 +444,7 @@ public sealed class LoadMeter : IDisposable
             j.WriteNumber("pid", p.Pid);
             j.WriteString("comm", p.Comm);
             j.WriteNumber("cpu_ticks", p.CpuTicks);
+            if (p.StartTime is long st) j.WriteNumber("start_time", st); else j.WriteNull("start_time");
             j.WriteNumber("machine_share", Math.Round(p.MachineShare, 6));
             j.WriteNumber("cores", Math.Round(p.MachineShare * Environment.ProcessorCount, 4));
             j.WriteEndObject();

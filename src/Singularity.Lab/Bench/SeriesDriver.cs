@@ -35,8 +35,26 @@ internal static class SeriesDriver
         public string? Invalid355 { get; set; }
         public int VirtualRepeats { get; set; }
         /// <summary>The driver and its ancestor chain (the launching session): never a #355 violation.</summary>
-        public HashSet<int> Excluded355 { get; } = [Environment.ProcessId];
+        /// <summary>The driver itself (own stat) and its ancestor chain: the launching session is never a #355 violation.</summary>
         public List<PidStat> Ancestors { get; } = [];
+        public PidStat? Self { get; set; }
+
+        /// <summary>
+        /// The pids of <paramref name="procs"/> that are the driver or one of its recorded ancestors: pid AND comm must match, and the start time
+        /// too where both sides have it, so that a reused pid (a new dotnet build in a 10 h window) is not hidden.
+        /// </summary>
+        public IReadOnlySet<int> ExcludedAmong(IEnumerable<(int Pid, string Comm, long? Start)> procs)
+        {
+            var set = new HashSet<int>();
+            foreach ((int pid, string comm, long? start) in procs)
+            {
+                bool self = pid == Environment.ProcessId && (Self is not PidStat me || me.Comm == comm && (start is null || start == me.StartTime));
+                bool anc = Ancestors.Any(a => a.Pid == pid && a.Comm == comm && (start is null || a.StartTime == 0 || start == a.StartTime));
+                if (self || anc)
+                    set.Add(pid);
+            }
+            return set;
+        }
         public List<ForbiddenHit> Seen355 { get; } = [];
 
         /// <summary>Records the hits; a fatal one stops the series with INVALID (б).</summary>
@@ -104,10 +122,9 @@ internal static class SeriesDriver
         Directory.CreateDirectory(dir);
         using var log = new StreamWriter(Path.Combine(dir, "series.log"), append: false);
         var ctx = new Ctx { M = m, Dir = dir, Log = log, AllowDebug = allowDebug, Injected = ParseInject(inject), Calibration = calibration };
-        ctx.Ancestors.AddRange(LoadMath.Ancestors(Environment.ProcessId,
-            pid => BenchEnv.ReadTrim($"/proc/{pid.ToString(CultureInfo.InvariantCulture)}/stat") is string l ? ProcParse.Stat(l) : null));
-        foreach (PidStat a in ctx.Ancestors)
-            ctx.Excluded355.Add(a.Pid);
+        // One walk (shared with ExcludedFor); the chain with comm and start time is kept for the matching and for series.json.
+        ctx.Ancestors.AddRange(AncestorChain(Environment.ProcessId));
+        ctx.Self = StatOf(Environment.ProcessId, "/proc");
         ctx.Say($"#355: driver pid {Environment.ProcessId}, ancestors excluded: {string.Join(" ← ", ctx.Ancestors.Select(a => $"{a.Comm}({a.Pid})"))}");
         return Execute(ctx);
     }
@@ -151,27 +168,14 @@ internal static class SeriesDriver
             {
                 (pre, preWin, preMeter) = Measure(c, g.PreSeriesSeconds, "pre_series");
                 preTries.Add(pre);
+                // The block is (re)registered before the check, so series.json keeps it when the check stops the series.
+                outJson["pre_series"] = PreSeriesBlock(g, preWait, preTries, pre, preWin, preMeter);
                 // Every window of the wait is checked, not only the last one.
                 c.Check355(Forbidden(c, preMeter, preWin, $"pre_series#{preTries.Count}"));
                 c.Say($"pre-series foreign {Fmt(pre)} CPUs (limit {g.PreSeriesForeignCpusMax}), waited {preWait.Elapsed.TotalSeconds:F0} s");
                 if (pre is not double pv || pv <= g.PreSeriesForeignCpusMax || preWait.Elapsed.TotalSeconds + g.PreSeriesSeconds > g.PreSeriesDeadlineSeconds)
                     break;
             }
-            (double? preF, MachineWindow preW, LoadMeter preM) = (pre, preWin, preMeter);
-            outJson["pre_series"] = j =>
-            {
-                j.WriteStartObject("pre_series");
-                j.WriteNumber("seconds", g.PreSeriesSeconds);
-                j.WriteNumber("waited_s", Math.Round(preWait.Elapsed.TotalSeconds, 1));
-                j.WriteNumber("deadline_s", g.PreSeriesDeadlineSeconds);
-                LoadMeter.WriteNum(j, "foreign_cpus", preF);
-                j.WriteStartArray("foreign_cpus_tries");
-                foreach (double? t in preTries) { if (t is double tv) j.WriteNumberValue(tv); else j.WriteNullValue(); }
-                j.WriteEndArray();
-                j.WriteNumber("limit_cpus", g.PreSeriesForeignCpusMax);
-                preM.Write(j, [preW], 0);
-                j.WriteEndObject();
-            };
             if (pre is double p0 && p0 > g.PreSeriesForeignCpusMax)
             {
                 c.Say($"NOT STARTED: no quiet within {g.PreSeriesDeadlineSeconds} s; the question goes to the owner's queue (ADR-0023 п. 1.8). Top foreign: "
@@ -345,9 +349,35 @@ internal static class SeriesDriver
     internal static HashSet<int> ExcludedFor(int pid, string procRoot = "/proc")
     {
         var set = new HashSet<int> { pid };
-        foreach (PidStat a in LoadMath.Ancestors(pid, x => BenchEnv.ReadTrim(Path.Combine(procRoot, x.ToString(CultureInfo.InvariantCulture), "stat")) is string l ? ProcParse.Stat(l) : null))
+        foreach (PidStat a in AncestorChain(pid, procRoot))
             set.Add(a.Pid);
         return set;
+    }
+
+    /// <summary>The ancestor chain of <paramref name="pid"/> with comm and start time (the one walk behind <see cref="ExcludedFor"/> and the driver).</summary>
+    internal static List<PidStat> AncestorChain(int pid, string procRoot = "/proc") => LoadMath.Ancestors(pid, x => StatOf(x, procRoot));
+
+    private static PidStat? StatOf(int pid, string procRoot) =>
+        BenchEnv.ReadTrim(Path.Combine(procRoot, pid.ToString(CultureInfo.InvariantCulture), "stat")) is string l ? ProcParse.Stat(l) : null;
+
+    private static Action<Utf8JsonWriter> PreSeriesBlock(BenchGate g, Stopwatch preWait, List<double?> preTries, double? pre, MachineWindow w, LoadMeter meter)
+    {
+        double waited = preWait.Elapsed.TotalSeconds;
+        double?[] tries = [.. preTries];
+        return j =>
+        {
+            j.WriteStartObject("pre_series");
+            j.WriteNumber("seconds", g.PreSeriesSeconds);
+            j.WriteNumber("waited_s", Math.Round(waited, 1));
+            j.WriteNumber("deadline_s", g.PreSeriesDeadlineSeconds);
+            LoadMeter.WriteNum(j, "foreign_cpus", pre);
+            j.WriteStartArray("foreign_cpus_tries");
+            foreach (double? t in tries) { if (t is double tv) j.WriteNumberValue(tv); else j.WriteNullValue(); }
+            j.WriteEndArray();
+            j.WriteNumber("limit_cpus", g.PreSeriesForeignCpusMax);
+            meter.Write(j, [w], 0);
+            j.WriteEndObject();
+        };
     }
 
     /// <summary>#355 hits of a driver window (CPU-active foreign processes with their mean CPUs). Off Linux there are no pids and no hits.</summary>
@@ -356,8 +386,9 @@ internal static class SeriesDriver
         if (w.Start.Pids is null || w.End.Pids is null)
             return [];
         long dTotal = w.End.Cpu?.Total - w.Start.Cpu?.Total ?? 0;
-        return SeriesGate.Forbidden(LoadMath.TopForeign(w.Start.Pids, w.End.Pids, meter.SelfPid, dTotal, int.MaxValue)
-            .Select(t => (t.Pid, t.Comm, t.MachineShare * Environment.ProcessorCount)), c.M.Gate, c.Excluded355, where);
+        List<ForeignProcess> procs = LoadMath.TopForeign(w.Start.Pids, w.End.Pids, meter.SelfPid, dTotal, int.MaxValue);
+        IReadOnlySet<int> excluded = c.ExcludedAmong(procs.Select(t => (t.Pid, t.Comm, t.StartTime)));
+        return SeriesGate.Forbidden(procs.Select(t => (t.Pid, t.Comm, t.MachineShare * Environment.ProcessorCount)), c.M.Gate, excluded, where);
     }
 
     /// <summary>Attempts, med_points and decisions of one gated set (main pass, a variant, an R mode).</summary>
@@ -466,8 +497,11 @@ internal static class SeriesDriver
             if (mx.TryGetProperty("top_foreign_window", out JsonElement tf) && tf.ValueKind == JsonValueKind.Array)
             {
                 // The child's top-5 over its windows; "cores" = mean CPUs of the process over the child's union window.
-                c.Check355(SeriesGate.Forbidden(tf.EnumerateArray().Select(x => (x.GetProperty("pid").GetInt32(), x.GetProperty("comm").GetString() ?? "",
-                    x.TryGetProperty("cores", out JsonElement cr) ? cr.GetDouble() : 0)), g, c.Excluded355, $"{tag}{p.Index}-a{n}"));
+                var procs = tf.EnumerateArray().Select(x => (Pid: x.GetProperty("pid").GetInt32(), Comm: x.GetProperty("comm").GetString() ?? "",
+                    Start: x.TryGetProperty("start_time", out JsonElement stt) && stt.ValueKind == JsonValueKind.Number ? stt.GetInt64() : (long?)null,
+                    Cpus: x.TryGetProperty("cores", out JsonElement cr) ? cr.GetDouble() : 0)).ToList();
+                IReadOnlySet<int> excluded = c.ExcludedAmong(procs.Select(x => (x.Pid, x.Comm, x.Start)));
+                c.Check355(SeriesGate.Forbidden(procs.Select(x => (x.Pid, x.Comm, x.Cpus)), g, excluded, $"{tag}{p.Index}-a{n}"));
             }
         }
         JsonElement? top = machine is { } m3 && m3.TryGetProperty("top_foreign_window", out JsonElement t) ? t.Clone() : null;
@@ -624,6 +658,7 @@ internal static class SeriesDriver
             j.WriteNumber("pid", a.Pid);
             j.WriteString("comm", a.Comm);
             j.WriteNumber("ppid", a.Ppid);
+            j.WriteNumber("start_time", a.StartTime);
             j.WriteEndObject();
         }
         j.WriteEndArray();
