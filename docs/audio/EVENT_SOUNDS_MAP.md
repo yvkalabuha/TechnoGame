@@ -83,3 +83,6 @@ CC0 (кредит не требуется, указать по желанию):
 - E04_a (Triumph) помечен 1945 в пакете, но запись 1970-х, автонарезка; E13_a/E17_a используют синтезированный рубильник (EchoCinematics): подлинность решается слухом (r2 открытый вопрос 2).
 - E06_a и E16_b — звуки эпохи 1960, остаются на всю игру (#407).
 - E12, E14, E15 клиентом не используются: их файлы и записи CREDITS.yml (dbache, stratcat322, eduardfrigola, MrAuralization) в пакете остаются.
+
+
+> Note (TASK-0104 review, 2026-11-18): E04_a was re-normalised for the client from -34.0 LUFS / -5.3 dBTP to -23.8 LUFS-I / -1.7 dBTP (+14 dB, alimiter 0.78); the pack file was replaced with the same file. order_done GainDb is 0.

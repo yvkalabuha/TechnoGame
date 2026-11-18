@@ -4,7 +4,7 @@ title: "Lab bench harness for EXP-0008: foreign-load gate, top-k frequency, repe
 status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
-agent: developer         # ответственный агент
+agent: simulation-engineer         # ответственный агент
 category: lab
 priority: high
 needs_owner: false       # true = ждёт решения владельца

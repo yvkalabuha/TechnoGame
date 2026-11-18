@@ -171,6 +171,7 @@
 | [ADR-0020](../docs/decisions/ADR-0020-province-budget.md) | ACCEPTED | Province storage, aggregation to regions and tick budget |
 | [ADR-0021](../docs/decisions/ADR-0021-stochastic-events.md) | ACCEPTED | Stochastic event system next to scripted events (scandals, link failures) |
 | [ADR-0022](../docs/decisions/ADR-0022-region-limit-amendment.md) | ACCEPTED | Region count limit amendment to ADR-0011 |
+| [ADR-0023](../docs/decisions/ADR-0023-adr-0016-benchmark-rules-amendment.md) | PROPOSED | Benchmark validity rules and split allocation limit (amendment to ADR-0016) |
 
 ## Research Reports
 
