@@ -16,8 +16,8 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0103 [IN_PROGRESS] Tick allocations and GC: 1.1 GB per month, gen2 collections (EXP-0007 P8) (simulation-engineer)
 - TASK-0106 [IN_PROGRESS] Lab bench harness for EXP-0008: foreign-load gate, top-k frequency, repeat cap; alloc JSON provenance (simulation-engineer)
+- TASK-0103 [REVIEW] Tick allocations and GC: 1.1 GB per month, gen2 collections (EXP-0007 P8) (simulation-engineer)
 <!-- registry:active:end -->
 
 ## Блокеры

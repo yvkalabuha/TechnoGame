@@ -1,7 +1,7 @@
 ---
 id: TASK-0103
 title: "Tick allocations and GC: 1.1 GB per month, gen2 collections (EXP-0007 P8)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: simulation-engineer
@@ -141,3 +141,18 @@ EXP-0007 (Results, P8), ADR-0016, ADR-0017, DEBT-0045.
 - developer: F1, F3, F4, F5 from the plan. F2 is replaced by the snapshot design R1 + R2 in `docs/architecture/notes/views-snapshot-allocations.md`: compact per-actor blocks; `NodeView` becomes a readonly record struct inside arrays < 85 000 B; reuse of unchanged blocks via a Kernel column version counter (reviewer required for Kernel).
 - The `--mode alloc` review fixes move to TASK-0106.
 - Starts after TASK-0099 is merged (Products.TrainingBudget calls EffortAllocator).
+
+## Step 2 results (developer, branch worktree-agent-ac55e57321ad2a374: 9ec04c9, 62e77f4, e6f208a)
+Point A, t1, steady state (`lab bench --mode alloc`, raw data lab/results/TASK-0103s2/):
+
+| Step | MiB/month | LOH in tick | gen2 |
+|---|---|---|---|
+| before | 1055.0 | ~806 | 8–9 per month |
+| F1+F3+F4 | 171.6 | 0 | 1 per month |
+| R1+R2 | 14.0 | 0 | 0–1 per month |
+| F5 | 9.8 | 0 | 0 |
+
+- t8, 14 months: 9.8–10.5 MiB/month, gen2 3 times in 14 months.
+- Remaining: ~5 MiB is `ProcessView[651]` per actor in the fresh monthly snapshot; ~3 MiB is other view parts, Inputs and Step. The 1 MB limit is met only with the ADR-0023 split P8 or option A2.
+- Golden hashes unchanged. Tests: Core 1005, Session 384 (2 skip), Lab 132, Kernel 336 (1 skip), Architecture 141. `lab selftest` 49/49; validity 3 seeds valid.
+- Kernel: `Column.Version` (+1 in SwapIfOpen and Load); `SliceWorld` throws if `SiteOwner[s] != s`; API surface v11.
