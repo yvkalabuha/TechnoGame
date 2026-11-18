@@ -108,6 +108,7 @@
 | [TASK-0091](../development/tasks/TASK-0091-map-builder-t3-world.md) | APPROVED | Map builder T3: world beyond Europe, regions split by event lines (#350), territories.yaml | MS-M1 |
 | [TASK-0092](../development/tasks/TASK-0092-determinism-rules-ext.md) | DONE | DeterminismRules: string hashing, culture comparisons, threading APIs, Parallel.For allowlist, Lab ToyFunnel check | MS-M1 |
 | [TASK-0093](../development/tasks/TASK-0093-lab-matrix-validity.md) | DONE | Lab matrix validity and size fields; registry golden_set_hash for matrix EXPs (ADR-0008, #374) | MS-M1 |
+| [TASK-0094](../development/tasks/TASK-0094-client-v0-5d.md) | APPROVED | Client v0.5d: tree legend, glyph shapes, alert callout to country, foreign-power tag tint | MS-M1 |
 
 ## Гипотезы
 

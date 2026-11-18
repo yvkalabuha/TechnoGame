@@ -22,6 +22,7 @@
 - TASK-0064 [REVIEW] lab bench harness (ADR-0016 T1) (simulation-engineer)
 - TASK-0066 [APPROVED] Tick benchmark run and outcome (ADR-0016 T3) (simulation-engineer)
 - TASK-0091 [APPROVED] Map builder T3: world beyond Europe, regions split by event lines (#350), territories.yaml (developer)
+- TASK-0094 [APPROVED] Client v0.5d: tree legend, glyph shapes, alert callout to country, foreign-power tag tint (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
