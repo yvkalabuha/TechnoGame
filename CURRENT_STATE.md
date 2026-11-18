@@ -16,7 +16,7 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0107 [REVIEW] Tick path allocations to <= 1 MiB/month (ADR-0023 p.2.1) (developer)
+_нет активных задач_
 <!-- registry:active:end -->
 
 ## Блокеры
