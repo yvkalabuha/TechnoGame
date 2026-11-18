@@ -94,13 +94,11 @@ public class CbEffortPropertyTests
                 {
                     foreach (int r in l.Order)
                     {
-                        Fx6 e = x.E[site * l.ProcessCount + r];
-                        Assert.True(e >= Fx6.Zero);
+                        // Local layout: only the actor's own sites are stored.
                         if (l.SiteOwner[site] != a)
-                        {
-                            Assert.Equal(Fx6.Zero, e);
                             continue;
-                        }
+                        Fx6 e = x.E[l.LocalSiteIndex(site) * l.ProcessCount + r];
+                        Assert.True(e >= Fx6.Zero);
                         Assert.True(e <= Rule.EUseful(s, site, r, 0), $"case {i}: E above E_useful");
                         if (e == Fx6.Zero)
                             continue;

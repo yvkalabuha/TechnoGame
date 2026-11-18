@@ -11,39 +11,83 @@ namespace Singularity.Core.Policy;
 /// </summary>
 public sealed class ToolingPlanResult
 {
-    private readonly Fx6[] _invest, _notional, _goal, _unmet;
-    private readonly bool[] _participates;
-    private readonly int _clusters;
+    // Local layout: only the sites of the actor, cell (k, c, d) at (k·C + c)·3 + d with k = IndustryLayout.LocalSiteIndex (F3, TASK-0103).
+    // The arrays may be longer than the cells in use; a result that was built into a reused object lives until its next use.
+    private Fx6[] _invest = [], _notional = [], _goal = [], _unmet = [];
+    private bool[] _participates = [];
+    private IndustryLayout _layout = null!;
+    private int _actor, _clusters;
 
-    internal ToolingPlanResult(Fx6[] invest, Fx6[] notional, Fx6[] goal, Fx6[] unmet, bool[] participates, int clusters, Fx6 rest, Fx6 bCap, Fx6 total)
+    public ToolingPlanResult()
     {
-        _unmet = unmet;
-        _invest = invest;
-        _notional = notional;
-        _goal = goal;
-        _participates = participates;
-        _clusters = clusters;
+    }
+
+    internal Fx6[] InvestCells => _invest;
+
+    internal Fx6[] NotionalCells => _notional;
+
+    internal Fx6[] GoalCells => _goal;
+
+    internal Fx6[] UnmetCells => _unmet;
+
+    internal bool[] ParticipatesCells => _participates;
+
+    /// <summary>Sizes and zeroes the cell arrays for the actor and binds the layout; values follow with <see cref="Finish"/>.</summary>
+    internal void Begin(IndustryLayout layout, int actor, int cells)
+    {
+        _layout = layout;
+        _actor = actor;
+        _clusters = layout.Clusters.Length;
+        Size(ref _invest, cells);
+        Size(ref _notional, cells);
+        Size(ref _goal, cells);
+        Size(ref _unmet, cells);
+        if (_participates.Length < cells)
+            _participates = new bool[cells];
+        else
+            Array.Clear(_participates, 0, cells);
+    }
+
+    private static void Size(ref Fx6[] a, int len)
+    {
+        if (a.Length < len)
+            a = new Fx6[len];
+        else
+            a.AsSpan(0, len).Clear();
+    }
+
+    internal void Finish(Fx6 rest, Fx6 bCap, Fx6 total, Fx6 notionalTotal)
+    {
         Rest = rest;
         CapBudget = bCap;
         Total = total;
         TakenRest = total < rest ? total : rest;
         TakenCap = total - TakenRest;
+        NotionalTotal = notionalTotal;
+    }
+
+    // Local cell index of a global site, or −1 for a site of another actor (its cells are 0).
+    private int Cell(int site, int cluster, Dimension dim)
+    {
+        if ((uint)site >= (uint)_layout.SiteCount || _layout.SiteOwner[site] != _actor)
+            return -1;
+        return (_layout.LocalSiteIndex(site) * _clusters + cluster) * Dims3.Count + (int)dim;
     }
 
     /// <summary><c>rest_a</c> offered to the plan (first source).</summary>
-    public Fx6 Rest { get; }
+    public Fx6 Rest { get; private set; }
 
     /// <summary><c>B_cap</c> offered to the plan (second source).</summary>
-    public Fx6 CapBudget { get; }
+    public Fx6 CapBudget { get; private set; }
 
     /// <summary>Σ over all cells.</summary>
-    public Fx6 Total { get; }
+    public Fx6 Total { get; private set; }
 
     /// <summary><c>taken_rest = min(rest_a, Σ invest)</c>.</summary>
-    public Fx6 TakenRest { get; }
+    public Fx6 TakenRest { get; private set; }
 
     /// <summary><c>taken_cap = Σ invest − taken_rest</c>.</summary>
-    public Fx6 TakenCap { get; }
+    public Fx6 TakenCap { get; private set; }
 
     /// <summary><c>rest_a − taken_rest</c>: the unspent residue of the month (#118).</summary>
     public Fx6 RestReturned => Rest - TakenRest;
@@ -52,27 +96,27 @@ public sealed class ToolingPlanResult
     public Fx6 TrainingBudget => CapBudget - TakenCap;
 
     /// <summary><c>Σ need∞</c> of the reference arm VINF (ledger column <c>invest_notional</c>); 0 in every other arm. Not part of <see cref="Total"/>.</summary>
-    public Fx6 NotionalTotal { get; internal init; }
+    public Fx6 NotionalTotal { get; private set; }
 
     /// <summary>Notional money of the cell (VINF only), not taken from the pool.</summary>
-    public Fx6 Notional(int site, int cluster, Dimension dim) => _notional[(site * _clusters + cluster) * Dims3.Count + (int)dim];
+    public Fx6 Notional(int site, int cluster, Dimension dim) => Cell(site, cluster, dim) is var i and >= 0 ? _notional[i] : Fx6.Zero;
 
     /// <summary>What <c>tooling_M</c> receives (spec §3.2): the pool money <see cref="Invest"/> plus the notional money of VINF.</summary>
     public Fx6 Applied(int site, int cluster, Dimension dim) => Invest(site, cluster, dim) + Notional(site, cluster, dim);
 
     /// <summary>Pass 2 took the cell into account under the arm's participation rule (ledger of M1(г)); false for cells of other actors.</summary>
-    public bool Participates(int site, int cluster, Dimension dim) => _participates[(site * _clusters + cluster) * Dims3.Count + (int)dim];
+    public bool Participates(int site, int cluster, Dimension dim) => Cell(site, cluster, dim) is var i and >= 0 && _participates[i];
 
     /// <summary>The pass-2 target of a participating cell, already capped by <c>M_cap</c> (VINF: <c>M_cap</c>); 0 otherwise.</summary>
-    public Fx6 Goal(int site, int cluster, Dimension dim) => _goal[(site * _clusters + cluster) * Dims3.Count + (int)dim];
+    public Fx6 Goal(int site, int cluster, Dimension dim) => Cell(site, cluster, dim) is var i and >= 0 ? _goal[i] : Fx6.Zero;
 
     /// <summary>
     /// <c>tool_unmet</c> (contract r8 §3.1): what the cell was short only because the pool ran out, <c>Σ (min(need, room − invest_before) − x)</c> over
     /// both passes; the <c>room</c> ceiling is not counted, nor is the notional pass 2 of VINF.
     /// </summary>
-    public Fx6 Unmet(int site, int cluster, Dimension dim) => _unmet[(site * _clusters + cluster) * Dims3.Count + (int)dim];
+    public Fx6 Unmet(int site, int cluster, Dimension dim) => Cell(site, cluster, dim) is var i and >= 0 ? _unmet[i] : Fx6.Zero;
 
-    public Fx6 Invest(int site, int cluster, Dimension dim) => _invest[(site * _clusters + cluster) * Dims3.Count + (int)dim];
+    public Fx6 Invest(int site, int cluster, Dimension dim) => Cell(site, cluster, dim) is var i and >= 0 ? _invest[i] : Fx6.Zero;
 }
 
 /// <summary>
@@ -84,8 +128,20 @@ public sealed class ToolingPlanResult
 /// </summary>
 public static class ToolingPlan
 {
+    // Working buffers of one call, per thread: Compute does not nest and never hands them out.
+    private sealed class Temp
+    {
+        public Fx6[] Room = [], MDec = [], Cost = [], MCap = [], Wants = [];
+        public int[] PStar = [];
+        public ProcessYield[] Yields = [];
+        public readonly List<Pass2Cell> Cells = new();
+    }
+
+    [ThreadStatic] private static Temp? _temp;
+
+    /// <param name="reuse">A result object to fill (a memo slot): valid until its next use. Null = a fresh result.</param>
     public static ToolingPlanResult Compute(IndustrySystem industry, IIndustryInputs inputs, Fx6 mKeep, int actor, long month, Fx6 rest, Fx6 bCap,
-        ToolingTargetSpec? target = null)
+        ToolingTargetSpec? target = null, ToolingPlanResult? reuse = null)
     {
         target ??= new ToolingTargetSpec();
         target.Validate();
@@ -95,46 +151,44 @@ public static class ToolingPlan
         IndustryParams p = industry.Parameters;
         int clusters = l.Clusters.Length, n = l.ProcessCount;
         int mech = l.Clusters.IndexOf(Cluster.MECH);
-        var invest = new Fx6[l.SiteCount * clusters * Dims3.Count];
-        var notional = new Fx6[invest.Length];
-        var goals = new Fx6[invest.Length];
-        var unmet = new Fx6[invest.Length];
-        var takes = new bool[invest.Length];
-        var room = new Fx6[invest.Length];
-        var mDec = new Fx6[invest.Length];
-        var cost = new Fx6[invest.Length];
-        var mCap = new Fx6[l.SiteCount];
-        var sites = new List<int>();
-        var yields = new ProcessYield[l.SiteCount][];
-        var pStar = new int[l.SiteCount];
-        foreach (int s in l.SitesOf(actor))
+        // Local layout: only the sites of the actor, cell (k, c, d) at (k·C + c)·3 + d, k = position of the site among SitesOf(actor).
+        ReadOnlySpan<int> sites = l.SitesOf(actor);
+        int cellCount = sites.Length * clusters * Dims3.Count;
+        ToolingPlanResult result = reuse ?? new ToolingPlanResult();
+        result.Begin(l, actor, cellCount);
+        Fx6[] invest = result.InvestCells, notional = result.NotionalCells, goals = result.GoalCells, unmet = result.UnmetCells;
+        bool[] takes = result.ParticipatesCells;
+        Temp t = _temp ??= new Temp();
+        Fx6[] room = Fit(ref t.Room, cellCount), mDec = Fit(ref t.MDec, cellCount), cost = Fit(ref t.Cost, cellCount), mCap = Fit(ref t.MCap, sites.Length);
+        int[] pStar = t.PStar.Length < sites.Length ? t.PStar = new int[sites.Length] : t.PStar;
+        ProcessYield[] yields = t.Yields.Length < sites.Length * n ? t.Yields = new ProcessYield[sites.Length * n] : t.Yields;
+        for (int k = 0; k < sites.Length; k++)
         {
-            sites.Add(s);
-            yields[s] = new ProcessYield[n];
+            int s = sites[k];
             int tier = 0;
-            pStar[s] = -1;
+            pStar[k] = -1;
             for (int r = 0; r < n; r++)
-                yields[s][r] = industry.Yield(s, r, month);
+                yields[k * n + r] = industry.Yield(s, r, month);
             // p*: ties on the tier go to the lower process number, so the scan runs in number order (Order), not in row order.
             foreach (int r in l.Order)
             {
-                bool admitted = inputs.KnowsProcess(s, r, month) && yields[s][r].Yield > Fx6.Zero;
+                bool admitted = inputs.KnowsProcess(s, r, month) && yields[k * n + r].Yield > Fx6.Zero;
                 if (admitted && l.Clusters[l.ClusterIndex[r]] == Cluster.MECH && l.Tier[r] > tier)
                 {
                     tier = l.Tier[r];
-                    pStar[s] = r;
+                    pStar[k] = r;
                 }
             }
-            mCap[s] = Fx6.FromInt(1 + (tier > 3 ? tier : 3));
+            mCap[k] = Fx6.FromInt(1 + (tier > 3 ? tier : 3));
             for (int c = 0; c < clusters; c++)
             {
                 for (int d = 0; d < Dims3.Count; d++)
                 {
-                    int i = (s * clusters + c) * Dims3.Count + d;
+                    int i = (k * clusters + c) * Dims3.Count + d;
                     Fx6 m = industry.ToolingM(s, c, (Dimension)d);
                     cost[i] = p.CostM(IndustryMath.CostTier(m));
                     mDec[i] = m - p.DeltaM * m;
-                    room[i] = mDec[i] < mCap[s] ? (mCap[s] - mDec[i]) * cost[i] : Fx6.Zero;
+                    room[i] = mDec[i] < mCap[k] ? (mCap[k] - mDec[i]) * cost[i] : Fx6.Zero;
                 }
             }
         }
@@ -165,16 +219,16 @@ public static class ToolingPlan
         // Pass 1 (A30): keep the dimensions p* needs above the admission threshold.
         if (mech >= 0)
         {
-            foreach (int s in sites)
+            for (int k = 0; k < sites.Length; k++)
             {
-                if (pStar[s] < 0)
+                if (pStar[k] < 0)
                     continue;
-                Dims3 req = l.Req[pStar[s]];
+                Dims3 req = l.Req[pStar[k]];
                 for (int d = 0; d < Dims3.Count; d++)
                 {
                     if (req[d] <= Fx6.Zero)
                         continue;
-                    int i = (s * clusters + mech) * Dims3.Count + d;
+                    int i = (k * clusters + mech) * Dims3.Count + d;
                     Give(i, (req[d] - mKeep - mDec[i]) * cost[i]);
                 }
             }
@@ -185,18 +239,18 @@ public static class ToolingPlan
         {
             // Reference arm: pass 2 is replaced; M reaches M_cap wherever a known process with v_exp > 0 and r_d > 0 uses the cell. The money is
             // notional: the pool, taken_rest, taken_cap and T_a stay as with a zero pass 2.
-            foreach (int s in sites)
+            for (int k = 0; k < sites.Length; k++)
             {
                 for (int c = 0; c < clusters; c++)
                 {
                     for (int d = 0; d < Dims3.Count; d++)
                     {
-                        int i = (s * clusters + c) * Dims3.Count + d;
-                        if (!(mDec[i] < mCap[s]) || !UsedCell(l, inputs, s, c, d, month))
+                        int i = (k * clusters + c) * Dims3.Count + d;
+                        if (!(mDec[i] < mCap[k]) || !UsedCell(l, inputs, sites[k], c, d, month))
                             continue;
                         takes[i] = true;
-                        goals[i] = mCap[s];
-                        Fx6 need = (mCap[s] - mDec[i]) * cost[i] - invest[i];
+                        goals[i] = mCap[k];
+                        Fx6 need = (mCap[k] - mDec[i]) * cost[i] - invest[i];
                         if (need <= Fx6.Zero)
                             continue;
                         notional[i] = need;
@@ -204,27 +258,32 @@ public static class ToolingPlan
                     }
                 }
             }
-            return new ToolingPlanResult(invest, notional, goals, unmet, takes, clusters, rest, bCap, total) { NotionalTotal = notionalTotal };
+            result.Finish(rest, bCap, total, notionalTotal);
+            return result;
         }
 
         // Pass 2 (TOOLING_TARGET, spec §11 T6e v0.19): the bottleneck cells of the processes the actor knows and plans to run, in the canonical order.
-        var cells = new List<Pass2Cell>();
-        foreach (int s in sites)
+        List<Pass2Cell> cells = t.Cells;
+        cells.Clear();
+        for (int k = 0; k < sites.Length; k++)
         {
+            int s = sites[k];
+            ReadOnlySpan<ProcessYield> siteYields = yields.AsSpan(k * n, n);
             for (int c = 0; c < clusters; c++)
             {
                 for (int d = 0; d < Dims3.Count; d++)
                 {
-                    int i = (s * clusters + c) * Dims3.Count + d;
+                    int i = (k * clusters + c) * Dims3.Count + d;
                     Fx6 h = industry.CultureH(s, c, (Dimension)d);
                     Fx6 m = industry.ToolingM(s, c, (Dimension)d);
-                    if (!CellTarget(target, industry, l, inputs, yields[s], s, c, d, month, h, m, mDec[i], out Fx6 goal, out Fx6 severity))
+                    if (!CellTarget(target, industry, l, inputs, siteYields, s, c, d, month, h, m, mDec[i], out Fx6 goal, out Fx6 severity))
                         continue;
-                    if (goal > mCap[s])
-                        goal = mCap[s];
+                    if (goal > mCap[k])
+                        goal = mCap[k];
                     takes[i] = true;
                     goals[i] = goal;
-                    cells.Add(new Pass2Cell(i, s, c, goal, severity, cells.Count));
+                    // Site = local index k: ascending like the site id, so the sorts below order the same way.
+                    cells.Add(new Pass2Cell(i, k, c, goal, severity, cells.Count));
                 }
             }
         }
@@ -250,7 +309,7 @@ public static class ToolingPlan
                 break;
             case PoolOrder.Prop:
                 // x_i = ⌊need'_i·P/N⌋ when the pool does not cover N = Σ need'_i; else every need in full. The remainder is not handed out.
-                var wants = new Fx6[cells.Count];
+                Fx6[] wants = Fit(ref t.Wants, cells.Count);
                 Int128 sum = 0;
                 for (int k = 0; k < cells.Count; k++)
                 {
@@ -271,7 +330,18 @@ public static class ToolingPlan
                 // The pool is not reduced cell by cell: P stays the month's pool for every cell, and nothing follows pass 2.
                 break;
         }
-        return new ToolingPlanResult(invest, notional, goals, unmet, takes, clusters, rest, bCap, total);
+        result.Finish(rest, bCap, total, notionalTotal);
+        return result;
+    }
+
+    // Grows only; the used prefix is zeroed.
+    private static Fx6[] Fit(ref Fx6[] a, int len)
+    {
+        if (a.Length < len)
+            a = new Fx6[len];
+        else
+            a.AsSpan(0, len).Clear();
+        return a;
     }
 
     // Position = index in the canonical list: the tie-break that makes the in-place span sort behave as a stable one (DEBT-0021).
@@ -292,7 +362,7 @@ public static class ToolingPlan
     // The cell takes part and has a target when a process of the cluster that the actor knows and plans to run (v_exp > 0) has this dimension as its
     // bottleneck (A5, A6: first dimension of minimal g below 1). V0 and V1 also need the source M (M < H strictly); V2…V4 take M or H as the source
     // and add their own condition on M. With several processes the target is the maximum over them (V2: the maximum H').
-    private static bool CellTarget(ToolingTargetSpec t, IndustrySystem industry, IndustryLayout l, IIndustryInputs inputs, ProcessYield[] yields,
+    private static bool CellTarget(ToolingTargetSpec t, IndustrySystem industry, IndustryLayout l, IIndustryInputs inputs, ReadOnlySpan<ProcessYield> yields,
         int site, int cluster, int dim, long month, Fx6 h, Fx6 m, Fx6 mDec, out Fx6 goal, out Fx6 severity)
     {
         goal = Fx6.Zero;

@@ -73,6 +73,14 @@ public sealed class IndustryLayout
     public ReadOnlySpan<int> SitesOf(int actor) =>
         (uint)actor < (uint)(SiteStart.Length - 1) ? SiteList.AsSpan().Slice(SiteStart[actor], SiteStart[actor + 1] - SiteStart[actor]) : [];
 
+    /// <summary>Position of <paramref name="site"/> among the sites of its owner (the local site index of per-actor buffers), or −1 for an unknown site.</summary>
+    public int LocalSiteIndex(int site)
+    {
+        if ((uint)site >= (uint)SiteOwner.Length)
+            return -1;
+        return SitesOf(SiteOwner[site]).IndexOf(site);
+    }
+
     public static IndustryLayout Create(IReadOnlyList<Cluster> clusters, IReadOnlyList<IndustryProcessSpec> processes,
         IReadOnlyList<int> siteOwner, int workforceCategories, int skilledCategory, int requesters, IReadOnlyList<int>? alloyGrades = null)
     {

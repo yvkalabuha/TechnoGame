@@ -185,7 +185,11 @@ internal static class ViewBuilder
 
     private static ActorInputsView ActorInputs(SliceWorld w, int a, long month)
     {
-        ToolingPlanResult plan = w.IndustryInputs.Plan(a, month, w.Industry.RestActor(a, month));
+        // One allocation and one plan per actor and month: the compute of the step reads them from the memo on the same snapshot.
+        if (w.MemoizeInputs)
+            w.Industry.MemoizeActor(a, month);
+        Fx6 rest = w.Industry.RestActor(a, month);
+        ToolingPlanResult plan = w.MemoizeInputs ? w.IndustryInputs.Memoize(a, month, rest) : w.IndustryInputs.Plan(a, month, rest);
         int participating = 0;
         var unmet = new Fx6[w.IndustryLayout.Clusters.Length];
         for (int c = 0; c < unmet.Length; c++)

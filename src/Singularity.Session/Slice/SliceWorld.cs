@@ -96,6 +96,12 @@ internal sealed class SliceWorld
         // One more id above every line, bureau and fix-team id: the quality programme, which the bureaus outrank in the rounding of grants (A41).
         QualityRequester = requesters;
         IndustryLayout = IndustryLayout.FromData(data.Nodes, scenario, WorkforceCategories, requesters + 1);
+        // A site is an actor (A27): row s of the actor tables is the site of actor s. Per-actor buffers and memos are indexed by this identity.
+        for (int s = 0; s < IndustryLayout.SiteCount; s++)
+        {
+            if (IndustryLayout.SiteOwner[s] != s)
+                throw new InvalidOperationException($"Site {s} belongs to actor {IndustryLayout.SiteOwner[s]}: the slice needs one site per actor (A27).");
+        }
         IndustryStart iStart = IndustryStart.FromScenario(scenario, data.Nodes, IndustryLayout, ip);
         // S-2 (spec §1.1): a process the base scenario calls mastered must have yield(t0) >= 0.7; checked before START_PERT, which scales culture by design.
         if (!config.SkipStartValidation)
@@ -156,6 +162,9 @@ internal sealed class SliceWorld
     /// not a default, so a new daily system must be added here on purpose (F7a).
     /// </summary>
     internal bool DailyViewNeutral { get; }
+
+    /// <summary>Test switch (F4, TASK-0103): false = the inputs phase keeps no memo of the allocation and the tooling plan, so every reader recomputes. The state must not depend on it.</summary>
+    internal bool MemoizeInputs { get; set; } = true;
 
     // Allow-list: a Weekly or Daily system other than the probe may write what a view reads, so it must not pass as neutral.
     internal static bool IsDailyViewNeutral(IEnumerable<ITickSystem> systems) =>
