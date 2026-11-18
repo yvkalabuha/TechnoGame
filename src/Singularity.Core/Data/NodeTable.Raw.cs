@@ -20,7 +20,7 @@ public sealed partial class NodeTable
         public Fx6 LabourP;
         public readonly Fx6[] Req = new Fx6[3];
         public bool AnchorBefore, AnchorEstimated;
-        public string AnchorEvent = "", AnchorSource = "";
+        public string AnchorSource = "";
 
         public static RawNode Read(YMap map)
         {
@@ -91,7 +91,6 @@ public sealed partial class NodeTable
             var a = new MapReader(node);
             n.AnchorYear = a.Int("year");
             n.AnchorBefore = a.Optional("before") is {} b && Scalars.Bool(b);
-            n.AnchorEvent = a.Str("event");
             n.AnchorSource = a.Str("source");
             n.AnchorEstimated = a.Bool("estimated");
             a.End();

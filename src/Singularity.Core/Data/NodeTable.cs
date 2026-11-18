@@ -36,7 +36,6 @@ public sealed partial class NodeTable
 
     public required ImmutableArray<int> AnchorYear { get; init; }
     public required ImmutableArray<bool> AnchorBefore { get; init; }
-    public required ImmutableArray<string> AnchorEvent { get; init; }
     public required ImmutableArray<string> AnchorSource { get; init; }
     public required ImmutableArray<bool> AnchorEstimated { get; init; }
 
@@ -123,7 +122,6 @@ public sealed partial class NodeTable
             InformsWeight = [.. informsWeight],
             AnchorYear = [.. raw.Select(r => r.AnchorYear)],
             AnchorBefore = [.. raw.Select(r => r.AnchorBefore)],
-            AnchorEvent = [.. raw.Select(r => r.AnchorEvent)],
             AnchorSource = [.. raw.Select(r => r.AnchorSource)],
             AnchorEstimated = [.. raw.Select(r => r.AnchorEstimated)],
             _sortedIds = [.. sortedIds],

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Localization facade over Project Fluent (ADR-0018). Reads Core data types only; Kernel, Core, Session
+       and Lab never reference this assembly (checked by architecture tests). No Godot dependency. -->
+  <PropertyGroup>
+    <RootNamespace>Singularity.Localization</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Singularity.Core\Singularity.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- MIT OR Apache-2.0. Version pinned (ADR-0018); everything stays behind this assembly. -->
+    <PackageReference Include="Linguini.Bundle" Version="0.11.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Singularity.Localization.Tests" />
+  </ItemGroup>
+</Project>

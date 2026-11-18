@@ -92,7 +92,6 @@ public sealed partial class NodeTable
             }
             w.Int(AnchorYear[r]);
             w.Bool(AnchorBefore[r]);
-            w.Str(AnchorEvent[r]);
             w.Str(AnchorSource[r]);
             w.Bool(AnchorEstimated[r]);
         }

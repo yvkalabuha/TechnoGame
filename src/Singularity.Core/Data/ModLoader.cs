@@ -15,6 +15,12 @@ public static class ModLoader
     public const string ProductClassKind = "product_class";
     public const string ScenarioKind = "scenario";
 
+    /// <summary>
+    /// Reserved sub-directory of a mod for localization (ADR-0018 §2). The loader never reads, lists or hashes it:
+    /// text cannot reach <see cref="GameData"/>, <see cref="GameData.DataHash"/> or any world state.
+    /// </summary>
+    public const string LocaleDirectory = "locale";
+
     public static GameData Load(params string[] modDirectories)
     {
         ImmutableArray<ModManifest> mods = ResolveOrder(modDirectories.Select(ModManifest.Read).ToList());
@@ -142,6 +148,10 @@ public static class ModLoader
     // Only the .yaml extension is valid; a *.yml file is always an error (likely a typo).
     private static void CheckUnlistedFiles(ModManifest mod)
     {
+        // Only files directly in the mod directory are examined; the reserved locale/ sub-directory is skipped on purpose.
+        // A file with the reserved name would hide the directory from localization tools, so it is an error.
+        if (File.Exists(Path.Combine(mod.Directory, LocaleDirectory)))
+            throw new DataLoadException($"{mod.Directory}: '{LocaleDirectory}' is reserved for the localization directory");
         // Exact extension check: on Windows the pattern "*.yml" would also match *.yaml.
         string[] yml = [.. Directory.GetFiles(mod.Directory).Where(f => Path.GetExtension(f) == ".yml")];
         Array.Sort(yml, StringComparer.Ordinal);

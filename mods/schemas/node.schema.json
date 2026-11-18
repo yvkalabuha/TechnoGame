@@ -51,12 +51,11 @@
         "anchor": {
           "description": "Historical date reference (calibration anchor C4 only).",
           "type": "object",
-          "required": ["year", "event", "source", "estimated"],
+          "required": ["year", "source", "estimated"],
           "additionalProperties": false,
           "properties": {
             "year": { "type": "integer", "minimum": 1800, "maximum": 2100 },
             "before": { "description": "true: the date is 'before year' (RULE-G0).", "type": "boolean" },
-            "event": { "type": "string", "minLength": 1 },
             "source": { "type": "string", "minLength": 1 },
             "estimated": { "type": "boolean" }
           }

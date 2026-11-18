@@ -52,7 +52,6 @@ public class CoreNodesTests
             Assert.Equal(row["hazard"], DataNames.NameOf(DataNames.Hazards, n.Hazard[r]));
             Assert.Equal(CsvRequires(row["requires"]), LoadedRequires(n, r));
             Assert.Equal(row["anchor_year"], (n.AnchorBefore[r] ? "<" : "") + n.AnchorYear[r]);
-            Assert.Equal(row["anchor_event"], n.AnchorEvent[r]);
             Assert.Equal(row["anchor_src"], n.AnchorSource[r]);
             Assert.Equal(bool.Parse(row["anchor_estimated"]), n.AnchorEstimated[r]);
         }

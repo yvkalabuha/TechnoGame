@@ -377,7 +377,7 @@ public static class SynthWorldGenerator
                 if (informs.Count > 0)
                     Line(w, "informs", "[" + string.Join(", ", informs) + "]");
                 string before = n.AnchorBefore[r] ? "before: true, " : "";
-                Line(w, "anchor", $"{{year: {I(n.AnchorYear[r])}, {before}event: {Q(n.AnchorEvent[r])}, source: {Q(n.AnchorSource[r])}, " +
+                Line(w, "anchor", $"{{year: {I(n.AnchorYear[r])}, {before}source: {Q(n.AnchorSource[r])}, " +
                                   $"estimated: {B(n.AnchorEstimated[r])}}}");
             }
         }

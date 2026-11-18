@@ -59,3 +59,9 @@
 - SignalField keeps stale alloy flags when the new actor has no inputs, and `View.Actors[_actor]` is indexed by position.
 - Move AudioLogic to a `Singularity.Client.Logic` library once 2–3 files are shared.
 - `--shots` rewrites a large audio demo: convert it to OGG. | Open |
+| DEBT-0042 | TASK-0074 localization (reviewer round 2, low).
+- research-scientist reviews every EN translation (61 `.anchor`, `.short`) and every RU country name, case and gender, then re-stamps `ru/_sources.tsv` (the stamps were placed by script before human review).
+- Gender of indeclinables: Мали, Сомали and Зимбабве are fem; Чили fem/neut; Бангладеш is indeclinable, fem.
+- `KeyKind.Country` belongs in L2 `IsDataBacked`.
+- `TagWithoutPluralRules` should assert one branch.
+- The task text says 95 countries; there are 90. | Open |

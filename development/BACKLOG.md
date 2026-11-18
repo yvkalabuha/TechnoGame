@@ -87,7 +87,7 @@
 | [TASK-0071](../development/tasks/TASK-0071-client-v0-4-audio-prototype-and-v0-3-review-remain.md) | DONE | Client v0.4: audio prototype and v0.3 review remainder | MS-M0 |
 | [TASK-0072](../development/tasks/TASK-0072-adr-0018-spike-s1-linguini-bundle-on-net-10-russia.md) | DONE | ADR-0018 spike S1: Linguini.Bundle on .NET 10, Russian case/gender, plurals | MS-M0 |
 | [TASK-0073](../development/tasks/TASK-0073-audio-listening-pack-from-audio-direction-r2-recor.md) | APPROVED | Audio listening pack from AUDIO_DIRECTION r2 recordings | MS-M0 |
-| [TASK-0074](../development/tasks/TASK-0074-localization-implementation-per-adr-0018-singulari.md) | APPROVED | Localization implementation per ADR-0018 (Singularity.Localization, ftl, anchor move) | MS-M0 |
+| [TASK-0074](../development/tasks/TASK-0074-localization-implementation-per-adr-0018-singulari.md) | DONE | Localization implementation per ADR-0018 (Singularity.Localization, ftl, anchor move) | MS-M0 |
 | [TASK-0075](../development/tasks/TASK-0075-map-builder-t2-tools-map-on-nts-europe-first-1945-.md) | APPROVED | Map builder T2: tools/map on NTS, Europe first, 1945 cuts, coverage simplification check | MS-M0 |
 
 ## Гипотезы

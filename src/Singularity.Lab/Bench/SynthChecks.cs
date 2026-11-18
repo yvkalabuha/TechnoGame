@@ -69,7 +69,7 @@ public static class SynthChecks
                 if (n.Type[r] != n.Type[src] || n.Gen[r] != n.Gen[src] || n.Discipline[r] != n.Discipline[src] || n.Cluster[r] != n.Cluster[src]
                     || n.Tier[r] != n.Tier[src] || n.ReqPrecision[r] != n.ReqPrecision[src] || n.ReqPurity[r] != n.ReqPurity[src]
                     || n.ReqQualityControl[r] != n.ReqQualityControl[src] || n.LabourP[r] != n.LabourP[src] || n.Hazard[r] != n.Hazard[src]
-                    || n.AnchorYear[r] != n.AnchorYear[src] || n.AnchorBefore[r] != n.AnchorBefore[src] || n.AnchorEvent[r] != n.AnchorEvent[src]
+                    || n.AnchorYear[r] != n.AnchorYear[src] || n.AnchorBefore[r] != n.AnchorBefore[src]
                     || n.AnchorSource[r] != n.AnchorSource[src] || n.AnchorEstimated[r] != n.AnchorEstimated[src])
                     return $"{n.Id[r]}: a column differs from {n.Id[src]}";
                 // In-copy requires groups map one to one onto the source's; any other member is a cross edge.
