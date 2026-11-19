@@ -30,11 +30,19 @@ public sealed class FreqSampler : IDisposable
     private readonly int _intervalMs;
     private long _allocated;
     private volatile bool _stop;
+    private volatile string? _failure;
 
-    public FreqSampler(int intervalMs = 1000)
+    public FreqSampler(int intervalMs = 1000) : this(intervalMs, OpenSource()) { }
+
+    /// <summary>Test seam: a given source over given files (e.g. a <c>/proc/cpuinfo</c> fixture larger than the initial buffer).</summary>
+    internal FreqSampler(int intervalMs, string source, string[] paths) : this(intervalMs, (source, OpenAll(paths))) { }
+
+    private FreqSampler(int intervalMs, (string Source, SafeFileHandle[] Handles) src)
     {
         _intervalMs = intervalMs;
-        (Source, _handles) = OpenSource();
+        (Source, _handles) = src;
+        if (_handles.Length == 0)
+            Source = "none";
         _width = Math.Max(1, Source == "scaling_cur_freq" ? _handles.Length : Environment.ProcessorCount);
         _values = new double[InitialCapacity * _width];
         _row = new double[_width];
@@ -44,6 +52,12 @@ public sealed class FreqSampler : IDisposable
 
     /// <summary>"scaling_cur_freq", "proc_cpuinfo" or "none".</summary>
     public string Source { get; }
+
+    /// <summary>
+    /// Null while sampling works; else the unexpected exception (type and message) that stopped the sampler thread. A sampler fault must
+    /// never take the process down: the loop stops, the samples so far are kept, and the harness reports this field.
+    /// </summary>
+    public string? Failure => _failure;
 
     /// <summary>Bytes the sampler thread allocated in its loop since start (0 in steady state).</summary>
     public long AllocatedBytes => Interlocked.Read(ref _allocated);
@@ -102,6 +116,18 @@ public sealed class FreqSampler : IDisposable
     }
 
     private void Loop()
+    {
+        try
+        {
+            Sample();
+        }
+        catch (Exception e)
+        {
+            _failure = $"{e.GetType().FullName}: {e.Message}";
+        }
+    }
+
+    private void Sample()
     {
         while (!_stop)
         {
@@ -190,7 +216,12 @@ public sealed class FreqSampler : IDisposable
                 return n;
             }
             if (Source == "proc_cpuinfo")
-                return CpuinfoMhz(_buffer.AsSpan(0, ReadAll(_handles[0])), _row);
+            {
+                // ReadAll may grow _buffer: read the length first, then take the span of the grown buffer (the field read before the call
+                // in `_buffer.AsSpan(0, ReadAll(..))` is the old array; with a /proc/cpuinfo above 4096 bytes that threw, TASK-0116).
+                int len = ReadAll(_handles[0]);
+                return CpuinfoMhz(_buffer.AsSpan(0, len), _row);
+            }
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }

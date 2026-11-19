@@ -44,6 +44,8 @@ public sealed class RunTiming
     public (DateTime From, DateTime To) WindowUtc { get; init; }
     /// <summary>Host UTC bounds of the forced collection after <c>SliceSession.Create</c> (<see cref="ProcessBench.SettleGc"/>).</summary>
     public (DateTime From, DateTime To) SettleUtc { get; init; }
+    /// <summary><c>GC.CollectionCount(0)</c> before and after the settle collection: its GCs are the indices in (After, Upto].</summary>
+    public (int After, int Upto) SettleGcs { get; init; }
     /// <summary>Part of <see cref="AllocatedBytes"/> made by the <see cref="GcEventListener"/> dispatch thread in the window (0 without a listener).</summary>
     public long ListenerAllocatedBytes { get; init; }
 }
@@ -103,7 +105,9 @@ public static class ProcessBench
         SliceSession s = SliceSession.Create(w.Data, Config(w, seed, threads, chunk, daily, sw));
         s.World.Table.FullCopyMode = sw.FullCopy;
         DateTime settle0 = DateTime.UtcNow;
+        int settleGc0 = GC.CollectionCount(0);
         SettleGc();
+        int settleGc1 = GC.CollectionCount(0);
         DateTime settle1 = DateTime.UtcNow;
         int months = warmup + measure;
         var monthMs = new double[months];
@@ -192,6 +196,7 @@ public static class ProcessBench
             Window = (win0, win1),
             WindowUtc = (utc0, utc1),
             SettleUtc = (settle0, settle1),
+            SettleGcs = (settleGc0, settleGc1),
             ListenerAllocatedBytes = listenerAlloc1 - listenerAlloc0,
         };
         return timing;
@@ -378,9 +383,12 @@ public static class ProcessBench
         j.WriteNumber("gc_pause_share", r.WindowWallMs > 0 ? r.GcPauseMs / r.WindowWallMs : 0);
         if (gcEv is not null)
         {
-            GcPauses.Summary settle = GcPauses.Summarize(gcEv.Timeline, [r.SettleUtc], (r.SettleUtc.To - r.SettleUtc.From).TotalMilliseconds);
+            GcPauses.Summary settle = GcPauses.SummarizeGcs(gcEv.Timeline, [r.SettleGcs], (r.SettleUtc.To - r.SettleUtc.From).TotalMilliseconds);
             j.WriteNumber("gc_settle_host_ms", settle.WallMs);
+            j.WriteNumber("gc_settle_gcs", settle.Gcs.Count);
             j.WriteNumber("gc_settle_pause_ms", settle.TotalMs);
+            // Record only: the same span matched by host time (equal on Linux; off Linux the event clock may move it out, TASK-0116).
+            j.WriteNumber("gc_settle_pause_ms_host_window", GcPauses.Summarize(gcEv.Timeline, [r.SettleUtc], 0).TotalMs);
             GcPauses.Write(j, "gc_pauses", gcEv.Of([r]), r.WindowUtc.From);
         }
         j.WriteNumber("hash_computations", r.HashComputations);
@@ -439,6 +447,7 @@ public static class ProcessBench
     {
         j.WriteStartObject("frequency");
         j.WriteString("source", f.Source);
+        if (f.Failure is string fail) j.WriteString("sampler_failure", fail); else j.WriteNull("sampler_failure");
         j.WriteNumber("sampler_alloc_bytes_total", f.AllocatedBytes);
         j.WriteNumber("k", k);
         double? top = f.TopKMedianIn(windows, k);

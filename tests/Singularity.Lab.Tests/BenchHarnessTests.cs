@@ -659,6 +659,38 @@ public sealed class BenchHarnessTests : IDisposable
         Assert.Equal(0, FreqSampler.CpuinfoMhz([], row));
     }
 
+    // TASK-0116: the CI runner's /proc/cpuinfo is larger than the sampler's initial 4096-byte buffer; the proc_cpuinfo path took the span of
+    // the old buffer after ReadAll had grown it (ArgumentOutOfRangeException on the sampler thread, test host crash).
+    [Fact]
+    public void FreqSampler_ProcCpuinfo_LargerThanBuffer_Samples()
+    {
+        string flags = string.Join(' ', Enumerable.Range(0, 1000).Select(i => $"flag{i}"));
+        var sb = new StringBuilder();
+        double[] mhz = [3200.5, 800.25];
+        for (int cpu = 0; cpu < mhz.Length; cpu++)
+            sb.Append($"processor\t: {cpu}\nmodel name\t: Fixture CPU\ncpu MHz\t\t: {mhz[cpu].ToString(System.Globalization.CultureInfo.InvariantCulture)}\nflags\t\t: {flags}\n\n");
+        string file = Path.Combine(_tmp, "cpuinfo");
+        File.WriteAllText(file, sb.ToString());
+        Assert.True(new FileInfo(file).Length > 2 * 4096);
+        using var f = new FreqSampler(10, "proc_cpuinfo", [file]);
+        Assert.Equal("proc_cpuinfo", f.Source);
+        var sw = Stopwatch.StartNew();
+        while (f.PerCpu.Count == 0 && f.Failure is null && sw.ElapsedMilliseconds < 10_000)
+            Thread.Sleep(10);
+        Assert.Null(f.Failure);
+        Assert.Equal(mhz, f.PerCpu[0].Mhz);
+    }
+
+    [Fact]
+    public void FreqSampler_MissingSource_IsNone()
+    {
+        using var f = new FreqSampler(10, "proc_cpuinfo", [Path.Combine(_tmp, "no-such-cpuinfo")]);
+        Assert.Equal("none", f.Source);
+        Thread.Sleep(50);
+        Assert.Empty(f.PerCpu);
+        Assert.Null(f.Failure);
+    }
+
     // ---------- LoadMeter ----------
 
     [Fact]

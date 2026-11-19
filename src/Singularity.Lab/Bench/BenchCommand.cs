@@ -372,6 +372,7 @@ internal static class BenchCommand
             j.WriteNumber("seconds", seconds);
             j.WriteNumber("tail_seconds", tail);
             j.WriteString("source", freq.Source);
+            if (freq.Failure is string fail) j.WriteString("sampler_failure", fail); else j.WriteNull("sampler_failure");
             j.WriteString("stat", stat);
             j.WriteNumber("k", k);
             LoadMeter.WriteNum(j, "f_ref_mhz", fref);
@@ -382,6 +383,8 @@ internal static class BenchCommand
             meter.Write(j, [win], threads);
             j.WriteEndObject();
         }
+        if (freq.Failure is string failure)
+            Console.Error.WriteLine($"frequency sampler stopped: {failure}");
         Console.WriteLine(fref is double ff ? string.Create(CultureInfo.InvariantCulture, $"f_ref={ff:F0} MHz ({stat}, k {k}, {freq.Source})") : "f_ref: no samples");
         return fref is null ? 1 : 0;
     }
