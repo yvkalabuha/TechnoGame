@@ -18,16 +18,88 @@ public class CreditsTests
     [Fact]
     public void Every_audio_file_has_a_credits_entry_and_every_listed_file_exists()
     {
-        var listed = Load().SelectMany(e => e.Files).ToHashSet(StringComparer.Ordinal);   // a mixed sound may sit under several entries
+        var listed = Load().SelectMany(e => e.Files).ToHashSet(StringComparer.Ordinal);   // a mixed sound sits under several entries
         string audio = Path.Combine(Client(), "assets", "audio");
-        var onDisk = new[] { "music", "ui", "ambient" }
-            .SelectMany(d => Directory.GetFiles(Path.Combine(audio, d)))
+        var onDisk = Directory.GetFiles(audio, "*", SearchOption.AllDirectories)
             .Where(f => !f.EndsWith(".import"))
             .Select(f => "assets/audio/" + Path.GetRelativePath(audio, f).Replace('\\', '/'))
             .ToList();
         Assert.NotEmpty(onDisk);
         foreach (var f in onDisk) Assert.True(listed.Contains(f), "no credits entry: " + f);
         foreach (var f in listed) Assert.True(File.Exists(Path.Combine(Client(), f.Replace('/', Path.DirectorySeparatorChar))), "listed but missing: " + f);
+    }
+
+    // Every source of each event file (EVENT_SOUNDS_MAP §5 / LICENSES history): a file made from several sources must list them all, so a CC BY credit cannot be lost.
+    static readonly (string File, string[] Sources)[] Sources =
+    {
+        ("signal_attention", new[] { "sound_bell_ding" }),
+        ("signal_critical", new[] { "sound_bell_ding", "sound_relay_switch" }),
+        ("signal_clear", new[] { "sound_bell_ding" }),
+        ("tempo", new[] { "sound_electrical_switch_02" }), ("pause", new[] { "sound_electrical_switch_02" }), ("unpause", new[] { "sound_electrical_switch_02" }),
+        ("war_declared", new[] { "sound_kill_switch", "sound_morse_static" }),
+        ("order_done", new[] { "sound_triumph_matura_300" }), ("order_ok", new[] { "sound_traditional_stamp" }),
+        ("order_reject", new[] { "sound_relay_switch" }), ("queue_tick", new[] { "sound_paper_shuffle_stack" }),
+        ("signal_alert", new[] { "sound_stromberg_carlson_1543" }),
+        ("node_discovered", new[] { "sound_typewriter_bell_2" }), ("breakthrough", new[] { "sound_typewriter_bell_2" }),
+        ("line_commissioned", new[] { "sound_factory_whistle" }),
+        ("launch_space", new[] { "sound_factory_whistle", "sound_relay_switch" }),
+        ("launch_nuclear", new[] { "sound_kill_switch", "sound_transformer_hum" }),
+        ("ui_tick", new[] { "sound_shuffling_papers" }),
+    };
+
+    [Fact]
+    public void Each_event_file_lists_exactly_all_its_sources()
+    {
+        var all = Load();
+        string audio = Path.Combine(Client(), "assets", "audio", "ui");
+        var files = Directory.GetFiles(audio, "*.ogg").Select(f => Path.GetFileNameWithoutExtension(f)!).OrderBy(x => x, StringComparer.Ordinal).ToList();
+        Assert.Equal(Sources.Select(x => x.File).OrderBy(x => x, StringComparer.Ordinal), files);
+        foreach (var (file, sources) in Sources)
+        {
+            var have = all.Where(e => e.Files.Contains($"assets/audio/ui/{file}.ogg")).Select(e => e.Id).OrderBy(x => x, StringComparer.Ordinal);
+            Assert.Equal(sources.OrderBy(x => x, StringComparer.Ordinal), have);
+        }
+    }
+
+    static string[] DocLines(string name) => File.ReadAllLines(Path.Combine(Root(), "docs", "audio", name));
+
+    [Fact]
+    public void Authors_and_licences_match_the_research_records()
+    {
+        var all = Load();
+        // EVENT_SOUNDS_MAP §5: «- Title — author — url ...», under a "CC BY" or "CC0" heading line.
+        var lines = DocLines("EVENT_SOUNDS_MAP.md");
+        int from = Array.FindIndex(lines, l => l.StartsWith("## 5.")), to = Array.FindIndex(lines, l => l.StartsWith("## 6."));
+        Assert.True(from >= 0 && to > from);
+        string lic = "";
+        int seen = 0;
+        var row = new System.Text.RegularExpressions.Regex("^- .+? — (.+?) — (https?://\\S+)");
+        foreach (var l in lines[from..to])
+        {
+            if (l.StartsWith("CC BY")) lic = "CC BY 4.0"; else if (l.StartsWith("CC0")) lic = "CC0 1.0";
+            var m = row.Match(l);
+            if (!m.Success) continue;
+            seen++;
+            var e = all.SingleOrDefault(x => x.Url == m.Groups[2].Value);
+            Assert.True(e != null, "not in credits.json: " + m.Groups[2].Value);
+            Assert.Equal(m.Groups[1].Value, e!.Author);
+            Assert.Equal(lic, e.Licence);
+        }
+        Assert.Equal(13, seen);
+        // MUSIC_SELECTION: «| 01 | MacLeod | Impact Prelude | url |»; credits.json keeps the full author string.
+        int music = 0;
+        foreach (var l in DocLines("MUSIC_SELECTION.md"))
+        {
+            var c = l.Split('|').Select(x => x.Trim()).ToArray();
+            if (c.Length < 6 || !System.Text.RegularExpressions.Regex.IsMatch(c[1], "^\\d\\d$")) continue;
+            music++;
+            var e = all.SingleOrDefault(x => x.Url == c[4]);
+            Assert.True(e != null, "not in credits.json: " + c[4]);
+            Assert.Equal(c[3], e!.Title);
+            Assert.StartsWith(c[2] == "MacLeod" ? "Kevin MacLeod" : "Scott Buckley", e.Author);
+            Assert.Equal("CC BY 4.0", e.Licence);
+        }
+        Assert.Equal(16, music);
     }
 
     [Fact]

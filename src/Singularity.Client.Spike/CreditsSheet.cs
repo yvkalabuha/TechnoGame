@@ -88,15 +88,27 @@ public sealed partial class CreditsSheet : Control
         {
             var box = new VBoxContainer(); box.AddThemeConstantOverride("separation", 2);
             box.AddChild(Ui.Wrap($"{e.Title} — {e.Author}", 16));
-            string line = $"{Loc.T("credits.licence")}: {e.Licence} · {e.LicenceUrl}";
-            box.AddChild(Ui.Wrap(line, 14, Ui.Ink2));
-            box.AddChild(Ui.Wrap(e.Url, 14, Ui.Ink2));
+            var lic = new HBoxContainer(); lic.AddThemeConstantOverride("separation", 6);
+            lic.AddChild(Ui.Lbl($"{Loc.T("credits.licence")}: {e.Licence} ·", 14, Ui.Ink2));
+            lic.AddChild(Link(e.LicenceUrl));
+            box.AddChild(lic);
+            box.AddChild(Link(e.Url));
             string ch = e.ChangesIn(Loc.Lang);
             if (ch != "") box.AddChild(Ui.Wrap($"{Loc.T("credits.changes")}: {ch}", 14, Ui.Ink2));
             if (e.Files.Count == 0) box.AddChild(Status());
             var margin = new MarginContainer(); margin.AddThemeConstantOverride("margin_bottom", 8); margin.AddChild(box);
             _body.AddChild(margin);
         }
+    }
+
+    /// <summary>A URL that opens in the system browser on click or Enter (LinkButton.Uri); keyboard focus shows a 2 px ink frame (A6, A7).</summary>
+    static LinkButton Link(string url)
+    {
+        var b = new LinkButton { Text = url, Uri = url, Underline = LinkButton.UnderlineMode.Always, FocusMode = FocusModeEnum.All, SizeFlagsHorizontal = SizeFlags.ShrinkBegin, TooltipText = url };
+        b.AddThemeFontOverride("font", Fonts.Text); b.AddThemeFontSizeOverride("font_size", 14);
+        foreach (var n in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color" }) b.AddThemeColorOverride(n, Ui.Ink);
+        MenuUi.FocusRing(b);
+        return b;
     }
 
     /// <summary>Status plate on its own line: an ink frame and a word, not a grey tone (C1, A5).</summary>
