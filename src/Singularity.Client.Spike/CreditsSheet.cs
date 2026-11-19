@@ -87,7 +87,7 @@ public sealed partial class CreditsSheet : Control
         foreach (var e in _entries.Where(x => x.Kind == kind))
         {
             var box = new VBoxContainer(); box.AddThemeConstantOverride("separation", 2);
-            box.AddChild(Ui.Wrap(e.Credit != "" ? e.Credit : $"{e.Title} · {Loc.T("credits.by")} {e.Author}", 16));
+            box.AddChild(Ui.Wrap($"{e.Title} — {e.Author}", 16));
             string line = $"{Loc.T("credits.licence")}: {e.Licence} · {e.LicenceUrl}";
             box.AddChild(Ui.Wrap(line, 14, Ui.Ink2));
             box.AddChild(Ui.Wrap(e.Url, 14, Ui.Ink2));
