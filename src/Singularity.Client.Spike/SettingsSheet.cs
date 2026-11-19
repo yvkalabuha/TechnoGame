@@ -172,10 +172,7 @@ public sealed partial class SettingsSheet : Control
     // ---------- tabs ----------
     void BuildVideo()
     {
-        var res = new string[SettingsData.Resolutions.Length];
-        for (int i = 0; i < res.Length; i++) res[i] = $"{SettingsData.Resolutions[i].W}×{SettingsData.Resolutions[i].H}";
-        Row("set.resolution", Option(res, _w.Resolution, i => _w.Resolution = i));
-        Row("set.winmode", Seg(new[] { "set.win.window", "set.win.borderless", "set.win.full" }, _w.WindowMode, i => _w.WindowMode = i));
+        Row("set.winmode", Seg(new[] { "set.win.borderless", "set.win.full" }, _w.WindowMode, i => _w.WindowMode = i));
         Row("set.quality", Seg(new[] { "set.q.low", "set.q.mid", "set.q.high", "set.q.custom" }, _w.Quality, i => _w.Quality = i));
         Segment mode = null;
         Row("set.upscale", Option(new[] { "set.up.off", "FSR 1.0", "FSR 2.2", "DLSS" }, _w.Upscaler, i => { _w.Upscaler = i; if (mode != null) SetModeEnabled(mode); }, 3), "set.dlss.reason");

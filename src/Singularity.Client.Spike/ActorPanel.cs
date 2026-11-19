@@ -232,7 +232,8 @@ public sealed partial class ActorPanel : PanelContainer
         s.AddThemeStyleboxOverride("slider", track);
         s.AddThemeStyleboxOverride("grabber_area", Ui.Box(Ui.Ink, null, 0, 0));
         s.AddThemeStyleboxOverride("grabber_area_highlight", Ui.Box(Ui.Ink, null, 0, 0));
-        s.FocusMode = FocusModeEnum.None;
+        s.FocusMode = FocusModeEnum.All;   // arrow keys move a slider: it must be reachable without the mouse (A6)
+        MenuUi.FocusRing(s);
     }
 
     Control Section(string key, Container into)
