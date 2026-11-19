@@ -3,74 +3,138 @@ using System.Diagnostics.Tracing;
 namespace Singularity.Lab.Bench;
 
 /// <summary>
-/// In-process listener of the runtime GC events for <c>lab bench --mode alloc</c> (ADR-0023 п. 2.2, 2.4): <c>GCAllocationTick</c> with its
-/// heap kind (0 small, 1 large = LOH, 2 pinned) and amount, and <c>GCStart</c> with generation and reason (4 = AllocLarge).
+/// In-process listener of the runtime GC events for <c>lab bench --mode alloc</c> and <c>--mode process</c> (ADR-0023 п. 2.2, 2.4, decision
+/// #416): <c>GCAllocationTick</c> with its heap kind (0 small, 1 large = LOH, 2 pinned) and amount (Verbose level only), <c>GCStart</c> with
+/// generation, reason (4 = AllocLarge), type (0 non-concurrent, 1 background, 2 foreground) and count, <c>GCEnd</c>,
+/// <c>GCSuspendEEBegin</c> (with its suspend reason) and <c>GCRestartEEEnd</c>: a pause is SuspendEEBegin → RestartEEEnd
+/// (<see cref="GcPauses"/>).
 /// <para>
 /// Precision [Факт: runtime GC event contract]: an allocation tick fires each time ~100 KB have been allocated on a heap kind since the last
 /// tick, so LOH ticks = 0 over a window means &lt; 100 KB of LOH there, not exactly 0 B; a single array of 85–100 KB may stay unseen until
 /// the next one. The bytes are a sample sum, not an exact count.
 /// </para>
 /// <para>
-/// The listener runs on its own dispatch thread and allocates (event payloads): <see cref="OwnBytesAt"/> gives the dispatch thread's own
-/// allocations so the bench can subtract them. Events arrive with a delay; <see cref="Flush"/> waits for a sentinel LOH allocation made
-/// after the last mark.
+/// The listener runs on its own dispatch thread and allocates (event payloads): <see cref="OwnBytes"/> / <see cref="OwnBytesAt"/> give the
+/// dispatch thread's own allocations so the bench can subtract them. Events arrive with a delay; <see cref="Flush"/> forces one gen0
+/// collection after the last window and waits for its events.
 /// </para>
 /// </summary>
 internal sealed class GcEventListener : EventListener
 {
-    public readonly record struct GcEvent(DateTime Ts, string Name, int Kind, long Amount, int Gen, int Reason, long OwnBytes);
+    /// <summary>
+    /// One kept event. <paramref name="Name"/>: tick, start, end, suspend, restart. <paramref name="Gen"/>: depth of start/end;
+    /// <paramref name="Reason"/>: GC reason of start, suspend reason of suspend; <paramref name="Type"/>: GC type of start;
+    /// <paramref name="Count"/>: GC count of start/end/suspend.
+    /// </summary>
+    public readonly record struct GcEvent(DateTime Ts, string Name, int Kind, long Amount, int Gen, int Reason, long OwnBytes, int Type = -1, int Count = -1);
 
+    private const string RuntimeSource = "Microsoft-Windows-DotNETRuntime";
     private List<GcEvent>? _events;
     private readonly object _lock = new();
     [ThreadStatic] private static long t_last;
     private long _own;
     private readonly List<string>? _raw;
+    private EventSource? _runtime;
+    private EventLevel _level;
+    private bool _configured;
 
-    /// <summary><paramref name="raw"/>: also keep every GC event (start, end, heap stats, global history, allocation ticks with type name) as one JSON line (DEBT-0057 diagnosis).</summary>
-    public GcEventListener(bool raw = false)
+    /// <summary>
+    /// <paramref name="raw"/>: also keep every GC event (start, end, heap stats, global history, allocation ticks with type name) as one JSON
+    /// line (DEBT-0057 diagnosis). <paramref name="verbose"/>: Verbose level with allocation ticks (alloc mode); false = Informational
+    /// (start, end, suspension, restart only: the timed process mode keeps the listener's work per GC, not per 100 KB).
+    /// </summary>
+    public GcEventListener(bool raw = false, bool verbose = true)
     {
         if (raw)
             lock (_lock) _raw = new List<string>(1 << 12);
+        lock (_lock)
+        {
+            _level = verbose || raw ? EventLevel.Verbose : EventLevel.Informational;
+            _configured = true;
+        }
+        Enable();
     }
 
     private List<GcEvent> Events
     {
         get
         {
-            // OnEventSourceCreated runs from the base constructor before field initializers of this class.
+            // OnEventSourceCreated may run from the base constructor, before the constructor body.
             lock (_lock) return _events ??= new List<GcEvent>(1 << 12);
         }
     }
 
     protected override void OnEventSourceCreated(EventSource source)
     {
-        if (source.Name == "Microsoft-Windows-DotNETRuntime")
-            EnableEvents(source, EventLevel.Verbose, (EventKeywords)0x1);   // GC keyword
+        if (source.Name != RuntimeSource)
+            return;
+        // Called from the base constructor for sources that already exist (field initializers have run, the constructor body has not):
+        // the level is known only after the constructor body, which then enables the source.
+        lock (_lock)
+            _runtime = source;
+        Enable();
+    }
+
+    private void Enable()
+    {
+        EventSource? src;
+        EventLevel level;
+        lock (_lock)
+        {
+            if (!_configured || _runtime is null)
+                return;
+            src = _runtime;
+            level = _level;
+        }
+        EnableEvents(src, level, (EventKeywords)0x1);   // GC keyword
+    }
+
+    /// <summary>Name without the version suffix: "GCStart_V2" → "GCStart".</summary>
+    internal static string BaseName(string name)
+    {
+        int i = name.IndexOf("_V", StringComparison.Ordinal);
+        return i > 0 ? name[..i] : name;
     }
 
     protected override void OnEventWritten(EventWrittenEventArgs e)
     {
-        string name = e.EventName ?? "";
-        bool tick = name.StartsWith("GCAllocationTick", StringComparison.Ordinal);
-        bool start = !tick && name.StartsWith("GCStart", StringComparison.Ordinal);
+        string name = BaseName(e.EventName ?? "");
         // The raw line is built before `now` so that its bytes count as the listener's own (subtracted from the paths).
         if (_raw is not null)
             RawAdd(e);
         long now = GC.GetAllocatedBytesForCurrentThread();
         if (t_last != 0)
             Interlocked.Add(ref _own, now - t_last);
-        if (tick || start)
+        string? kind = name switch
         {
-            var ev = new GcEvent(e.TimeStamp.Kind == DateTimeKind.Utc ? e.TimeStamp : e.TimeStamp.ToUniversalTime(), tick ? "tick" : "start",
-                tick ? U32(e, "AllocationKind") : -1,
-                tick ? (Payload(e, "AllocationAmount64") is long a64 ? a64 : U32(e, "AllocationAmount")) : 0,
-                start ? U32(e, "Depth") : -1, start ? U32(e, "Reason") : -1, Interlocked.Read(ref _own));
+            "GCAllocationTick" => "tick",
+            "GCStart" => "start",
+            "GCEnd" => "end",
+            "GCSuspendEEBegin" => "suspend",
+            "GCRestartEEEnd" => "restart",
+            _ => null,
+        };
+        if (kind is not null)
+        {
+            DateTime ts = e.TimeStamp.Kind == DateTimeKind.Utc ? e.TimeStamp : e.TimeStamp.ToUniversalTime();
+            long own = Interlocked.Read(ref _own);
+            GcEvent ev = kind switch
+            {
+                "tick" => new GcEvent(ts, kind, U32(e, "AllocationKind"), Payload(e, "AllocationAmount64") is long a64 ? a64 : U32(e, "AllocationAmount"), -1, -1, own),
+                "start" => new GcEvent(ts, kind, -1, 0, U32(e, "Depth"), U32(e, "Reason"), own, U32(e, "Type"), U32(e, "Count")),
+                "end" => new GcEvent(ts, kind, -1, 0, U32(e, "Depth"), -1, own, -1, U32(e, "Count")),
+                "suspend" => new GcEvent(ts, kind, -1, 0, -1, U32(e, "Reason"), own, -1, U32(e, "Count")),
+                _ => new GcEvent(ts, kind, -1, 0, -1, -1, own),
+            };
             List<GcEvent> list = Events;
             lock (_lock)
                 list.Add(ev);
         }
         t_last = GC.GetAllocatedBytesForCurrentThread();
     }
+
+    /// <summary>Bytes allocated so far by the dispatch thread (read at window bounds, like the sampler's and the meter's).</summary>
+    public long OwnBytes => Interlocked.Read(ref _own);
 
     private void RawAdd(EventWrittenEventArgs e)
     {
@@ -125,19 +189,44 @@ internal sealed class GcEventListener : EventListener
         lock (_lock) return [.. list];
     }
 
-    /// <summary>Allocates one LOH array after <paramref name="after"/> and waits (≤ timeout) until an event later than it has arrived.</summary>
-    public bool Flush(DateTime after, TimeSpan timeout)
+    /// <summary>
+    /// After the last measured window: one induced blocking gen0 collection (the runtime may escalate it), then waits (≤ timeout) for its GCStart and RestartEEEnd, so
+    /// that every earlier event has been delivered. <c>ClockOffsetMs</c> = event time of that GCStart − host <see cref="DateTime.UtcNow"/>
+    /// just before the call (expected in [0, host span]; a check of the window bounds, which are host times, against event times).
+    /// </summary>
+    public (bool Flushed, double? ClockOffsetMs, double HostSpanMs) Flush(TimeSpan timeout)
     {
-        var sentinel = new byte[512 * 1024];
-        GC.KeepAlive(sentinel);
+        DateTime before = DateTime.UtcNow;
+        GC.Collect(0, GCCollectionMode.Forced, blocking: true);
+        DateTime after = DateTime.UtcNow;
+        double span = (after - before).TotalMilliseconds;
         DateTime until = DateTime.UtcNow + timeout;
-        while (DateTime.UtcNow < until)
+        while (true)
         {
-            if (Snapshot().Any(x => x.Ts > after))
-                return true;
+            IReadOnlyList<GcEvent> ev = Snapshot();
+            // The flush GC: the last induced (reason 1) start not earlier than 1 s before the call, followed by a restart. Any depth: the
+            // runtime may escalate the requested gen0 (seen: gen1).
+            int si = -1;
+            for (int i = ev.Count - 1; i >= 0; i--)
+            {
+                if (ev[i].Name == "start" && ev[i].Reason == 1 && ev[i].Ts >= before.AddSeconds(-1))
+                {
+                    si = i;
+                    break;
+                }
+            }
+            if (si >= 0)
+            {
+                for (int i = si + 1; i < ev.Count; i++)
+                {
+                    if (ev[i].Name == "restart")
+                        return (true, (ev[si].Ts - before).TotalMilliseconds, span);
+                }
+            }
+            if (DateTime.UtcNow >= until)
+                return (false, si >= 0 ? (ev[si].Ts - before).TotalMilliseconds : null, span);
             Thread.Sleep(50);
         }
-        return false;
     }
 
     /// <summary>LOH ticks, sampled LOH bytes, GCStart with reason AllocLarge and gen2 GCStart inside [from, to].</summary>

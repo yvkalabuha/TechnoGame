@@ -33,7 +33,8 @@ public static class BenchEnv
         return attr is null || !attr.IsJITOptimizerDisabled;
     }
 
-    public static void Write(Utf8JsonWriter w, string repoDir)
+    /// <summary><paramref name="extraConditions"/>: mode-specific entries appended to <c>conditions</c> (e.g. the GC settle of decision #416).</summary>
+    public static void Write(Utf8JsonWriter w, string repoDir, Action<Utf8JsonWriter>? extraConditions = null)
     {
         (string commit, bool? dirty) = Provenance.Git(repoDir);
         w.WriteStartObject("provenance");
@@ -65,6 +66,7 @@ public static class BenchEnv
         w.WriteString("env_DOTNET_TieredPGO", Environment.GetEnvironmentVariable("DOTNET_TieredPGO") ?? "");
         w.WriteString("env_DOTNET_TieredCompilation", Environment.GetEnvironmentVariable("DOTNET_TieredCompilation") ?? "");
         w.WriteNumber("process_id", Environment.ProcessId);
+        extraConditions?.Invoke(w);
         w.WriteEndObject();
     }
 

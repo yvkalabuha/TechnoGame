@@ -11,6 +11,10 @@ Statistics (all host-side, no numpy):
 - S, K_d per month pair (П4): k = (T - M)/29, K_d = 30 k, S = M - k; p95 over the pooled pairs;
 - noise = (p90 - p10)/median of the accepted medians (main criterion, Р1); recorded for Р2 too; robust noise MAD/median (record);
 - Р1 and Р2 rows differ -> INCONCLUSIVE; GC pause share = median over every process of the point (chosen attempt, first for excluded);
+- GC pauses (decision #416, process format 3): every pause of the timed windows from the runtime events (runs[].gc_pauses.pauses);
+  per process max, p99, blocking gen2 after warm-up; per point and over the series the pooled distribution (p50, p99, max, by kind),
+  the per-process max distribution and the processes with a blocking gen2. Record only: the ADR on the pause criterion sets P and the rule;
+  `--calibrate` reports the pooled pause distribution of the calibration run (p50, p90, p99, max) for that rule;
 - R2(г): g = median of the pooled CoW/full ratios - 1; 95 % CI of the median from order statistics (binomial, distribution-free);
   DEBT-0045 closes only if the upper bound of g <= 2 % at t1 and t8 and the hashes are equal.
 
@@ -121,6 +125,7 @@ def process_stats(doc):
     st["gen2"] = sum(r.get("gc_gen2", 0) for r in runs.values())
     gc = doc.get("gc")
     st["gc_pause_share"] = gc["pause_share"] if gc else (st["gc_pause_ms"] / st["wall_ms"] if st["wall_ms"] else None)
+    st.update(gc_pauses_of(doc))
     st["alloc_net_per_month"] = [r.get("allocated_bytes_net", r.get("allocated_bytes")) / max(1, r["window_months"]) for r in runs.values()]
     fr = doc.get("frequency") or {}
     st["thermal_flag"] = fr.get("possible_thermal_throttle")
@@ -135,6 +140,52 @@ def process_stats(doc):
     st["build_commit"] = (doc.get("provenance") or {}).get("build_commit")
     st["dirty"] = (doc.get("provenance") or {}).get("dirty")
     return st
+
+
+def gc_pauses_of(doc):
+    """Decision #416: the pauses of every timed window of a process JSON (format 3). Old formats give pauses None."""
+    runs = doc.get("runs", [])
+    have = bool(runs) and all("gc_pauses" in r for r in runs)
+    pauses = [{"ms": x["ms"], "kind": x["kind"], "gen": x.get("gen")} for r in runs for x in (r.get("gc_pauses") or {}).get("pauses", [])] if have else None
+    gc = doc.get("gc") or {}
+    ms = [x["ms"] for x in pauses] if pauses else []
+    return {
+        "pauses": pauses,
+        "pause_max_ms": max(ms) if ms else (0.0 if have else None),
+        "pause_p99_ms": percentile(ms, 0.99) if ms else None,
+        "gen2_blocking": sum(1 for x in pauses if x["kind"] == "FullBlocking" and x.get("gen") == 2) if have else None,
+        "gen2_blocking_gcs": gc.get("gen2_blocking_after_warmup"),
+        "gc_events_complete": gc.get("events_complete"),
+        "gc_settle": (doc.get("conditions") or {}).get("gc_settle_before_window", False),
+    }
+
+
+def pause_distribution(stats):
+    """Pooled pause distribution over processes (decision #416): p50/p90/p99/max (type 7), by kind, per-process max, blocking gen2.
+    None when no process has pause records (old format)."""
+    have = [p for p in stats if p.get("pauses") is not None]
+    if not have:
+        return None
+    ms = [x["ms"] for p in have for x in p["pauses"]]
+    kinds = {}
+    for p in have:
+        for x in p["pauses"]:
+            k = kinds.setdefault(x["kind"], {"pauses": 0, "max_ms": 0.0, "total_ms": 0.0})
+            k["pauses"] += 1
+            k["max_ms"] = max(k["max_ms"], x["ms"])
+            k["total_ms"] += x["ms"]
+    per_max = [p["pause_max_ms"] for p in have]
+    # Blocking gen2 = FullBlocking GCs started in the windows (gc block); the count of FullBlocking gen2 pauses if the block lacks it.
+    blocking = [p["gen2_blocking_gcs"] if p.get("gen2_blocking_gcs") is not None else p["gen2_blocking"] for p in have]
+    blocking = [b for b in blocking if b is not None]
+    out = {"processes": len(have), "processes_without_records": len(stats) - len(have), "pauses": len(ms),
+           "p50_ms": percentile(ms, 0.5) if ms else None, "p90_ms": percentile(ms, 0.9) if ms else None,
+           "p99_ms": percentile(ms, 0.99) if ms else None, "max_ms": max(ms) if ms else None, "by_kind": kinds,
+           "per_process_max_ms": {"p50": percentile(per_max, 0.5), "p90": percentile(per_max, 0.9), "max": max(per_max)},
+           "gen2_blocking_total": sum(blocking) if blocking else None,
+           "processes_with_blocking_gen2": sum(1 for b in blocking if b > 0),
+           "events_incomplete_processes": sum(1 for p in have if p.get("gc_events_complete") is False)}
+    return out
 
 
 def point_stats(procs):
@@ -159,6 +210,7 @@ def point_stats(procs):
         "gc_pause_share_pooled": sum(p["gc_pause_ms"] for p in procs) / wall if wall else None,
         "gc_pause_share_max": max((p["gc_pause_ms"] / p["wall_ms"] for p in procs if p["wall_ms"]), default=None),
         "gen2_total": sum(p["gen2"] for p in procs),
+        "gc_pauses": pause_distribution(procs),
     }
     out["K_d_gt_150_flag"] = out["K_d_p95_ms"] is not None and out["K_d_p95_ms"] > KD_FLAG_MS
     return out
@@ -205,6 +257,9 @@ def invalid_reasons(all_stats, validity_exit):
             r.append("V2 monthly != daily hash")
         if s.get("dirty"):
             r.append("dirty tree")
+    settle = {bool(s.get("gc_settle")) for s in all_stats}
+    if len(settle) > 1:
+        r.append("mixed GC settle conditions (decision #416)")
     runtimes = {s["conditions"].get("runtime_version") for s in all_stats}
     if len(runtimes) > 1:
         r.append(f"different .NET versions: {sorted(runtimes)}")
@@ -255,7 +310,7 @@ def analyse(series_dir):
                 "r1_row": None, "r2_row": None, "r1_r2_differ": False, "r2d": {"by_threads": {}, "debt_0045_closes": False}}
     procs = s["main"]["processes"]
     by_block = {}
-    chosen, firsts, gc_all, thermal_hits, all_stats = {}, {}, {}, {}, []
+    chosen, firsts, gc_all, thermal_hits, all_stats, gc_series = {}, {}, {}, {}, [], []
     for p in procs:
         b = by_block.setdefault(p["block"], {"processes": 0, "repeats": 0, "excluded": 0, "accepted_no_evidence": 0, "accepted_window_end": 0,
                                              "thermal_flags": 0, "throttle_delta_processes": 0, "attempts": 0})
@@ -279,6 +334,7 @@ def analyse(series_dir):
             att, st = p["attempts"][0], first
         # ADR-0023 п. 2.4: GC pause share of every process of the point (chosen attempt, the first for excluded ones).
         gc_all.setdefault(key, []).append(st["gc_pause_share"])
+        gc_series.append(st)
         th = att.get("thermal") or {}
         hit = (th.get("core_throttle_delta") or 0) > 0 or (th.get("package_throttle_delta") or 0) > 0
         thermal_hits.setdefault(key, []).append(hit)
@@ -319,6 +375,8 @@ def analyse(series_dir):
     }
     if a1:
         result["wall_threads_over_cpu_outcome"] = [p["wall_threads_over_cpu"] for p in chosen[out_key]]
+    # Decision #416: pauses over the whole series (chosen attempts, the first for excluded processes), record for the pause criterion.
+    result["gc_pauses_series"] = pause_distribution(gc_series)
     return result
 
 
@@ -326,7 +384,7 @@ def calibrate(series_dir, step_cpus=0.25, step_share=0.05, step_delay=0.01, q=0.
     """ADR-0023 п. 1.10 [Предл. rule]: thresholds = the q-quantile over the calibration windows, rounded up to the step. T is recorded but
     the rule does not use it."""
     s = load(os.path.join(series_dir, "series.json"))
-    n1, over, n2, ts = [], [], [], []
+    n1, over, n2, ts, gcs, shares = [], [], [], [], [], []
     for p in s["main"]["processes"]:
         for a in p["attempts"]:
             if a.get("virtual"):
@@ -334,6 +392,14 @@ def calibrate(series_dir, step_cpus=0.25, step_share=0.05, step_delay=0.01, q=0.
             for v, lst in ((a.get("foreign_cpus"), n1), (a.get("foreign_over_share"), over), (a.get("run_delay_share"), n2), (a.get("median_T_ms"), ts)):
                 if v is not None:
                     lst.append(v)
+            # Decision #416: the pauses of every calibration process, for the rule of P in the pause ADR.
+            f = os.path.join(series_dir, a.get("file") or "")
+            if a.get("file") and os.path.exists(f):
+                doc = load(f)
+                gcs.append(gc_pauses_of(doc))
+                share = (doc.get("gc") or {}).get("pause_share")
+                if share is not None:
+                    shares.append(share)
 
     def up(x, step):
         return math.ceil(x / step - 1e-12) * step
@@ -343,7 +409,14 @@ def calibrate(series_dir, step_cpus=0.25, step_share=0.05, step_delay=0.01, q=0.
                                       "min": min(vals), "max": max(vals)}
     return {"rule": f"p{int(q * 100)} over the calibration windows, rounded up to {step_cpus} CPU / {step_share} / {step_delay}",
             "windows": len(n1), "foreign_cpus_max": pick(n1, step_cpus), "foreign_over1_share_max": pick(over, step_share),
-            "run_delay_max": pick(n2, step_delay), "median_T_ms_record": ts}
+            "run_delay_max": pick(n2, step_delay), "median_T_ms_record": ts,
+            "gc_pauses": pause_distribution(gcs),
+            "gc_pause_share": None if not shares else {"p50": percentile(shares, 0.5), "p90": percentile(shares, 0.9), "max": max(shares), "n": len(shares)},
+            "gc_pauses_note": "record for the pause ADR (decision #416): P is fixed by that ADR's rule from p50/p99/max; no threshold is chosen here"}
+
+
+def fmt(x):
+    return "n/a" if x is None else f"{x:.3f}"
 
 
 def main(argv=None):
@@ -369,6 +442,16 @@ def main(argv=None):
     if a:
         print(f"  point {r['outcome_point']}: median T {a['median_T_ms']:.1f} ms, p95 {a['p95_T_ms']:.1f} ms, noise {a['noise']:.3f}"
               f" (MAD {a['noise_mad']:.3f}), S_p95 {a['S_p95_ms']}, K_d_p95 {a['K_d_p95_ms']}, GC pause {a['gc_pause_share_pooled']}")
+    for k, v in sorted(r["points"].items()):
+        g = (v or {}).get("gc_pauses")
+        if g:
+            print(f"  GC pauses {k}: {g['pauses']} pauses, p50 {fmt(g['p50_ms'])} p99 {fmt(g['p99_ms'])} max {fmt(g['max_ms'])} ms,"
+                  f" blocking gen2 {g['gen2_blocking_total']} in {g['processes_with_blocking_gen2']} process(es)")
+    g = r.get("gc_pauses_series")
+    if g:
+        print(f"  GC pauses series: {g['pauses']} pauses over {g['processes']} processes, p50 {fmt(g['p50_ms'])} p99 {fmt(g['p99_ms'])}"
+              f" max {fmt(g['max_ms'])} ms, per-process max p90 {fmt(g['per_process_max_ms']['p90'])} ms,"
+              f" blocking gen2 {g['gen2_blocking_total']}")
     for b, v in sorted(r["blocks"].items()):
         print(f"  block {b}: {v['processes']} processes, {v['repeats']} repeats, {v['excluded']} excluded,"
               f" {v['accepted_no_evidence']} accepted without evidence, thermal flag share {v['thermal_flag_share']}")
