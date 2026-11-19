@@ -1,7 +1,7 @@
 ---
 id: TASK-0110
 title: "Novelty memory per actor: tried alternatives survive slot reuse (DEBT-0054)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: developer         # ответственный агент
@@ -34,3 +34,6 @@ Fix DEBT-0054. After slot reuse (TASK-0099), `ProductsSystem.Create` builds `use
   - (d) a different slot-freeing order gives the same novelty;
   - (e) L1/L2 and column save/load.
 - [ ] `dotnet test`, `lab selftest` pass; reviewer APPROVE.
+
+## Решение Orchestrator (2026-11-19)
+Live projects in П still count as "used" for novelty (`InLiveProject`), as before TASK-0110. Reason: the old behaviour; two parallel projects on the same alternatives should not both count as new; a live slot cannot be reused, so the result does not depend on slot history. The pure "reached О" reading of C10 would shift the trajectory before the first reuse; not adopted. Withdrawn-in-П projects are not counted (§4.4e).
