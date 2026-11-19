@@ -107,43 +107,55 @@ public class NoveltyMemoryTests
         Assert.Equal(Fx6.Zero, p.Novelty(Gbr, fleet));
     }
 
-    // Two projects reach О and are cancelled in either order; the slots are then retaken. Novelty must not depend on the order.
-    private static ProductsHarness TwoProjects(bool cancelAFirst, int threads = 1, int chunk = 1) =>
-        Stand(threads, chunk, (p, t) =>
+    private static readonly string[] CIds = ["eng_g1", "hot_sa2_forged", "comp_axial", "af_swept", "ab_none"];
+
+    // A (slot 1) and B (slot 2) reach О. Variant x: A is withdrawn in month m, its slot is retaken by C in m + 1, B is withdrawn in m + 3.
+    // Variant y: the reverse (B first, C retakes slot 2, then A). The slots are freed and retaken in a different order.
+    private static ProductsHarness FreeingOrder(bool aFirst, int threads = 1, int chunk = 1)
+    {
+        long m = -1;
+        return Stand(threads, chunk, (p, t) =>
         {
-            var cmds = new List<DesignCommand>();
             if (t == 0)
-                cmds.Add(Cmd(AIds));
+                return [Cmd(AIds)];
             if (t == 1)
-                cmds.Add(Cmd(BIds));
-            if (p.Stage(Gbr, 1) == DesignStage.Prototype && p.Stage(Gbr, 2) == DesignStage.Prototype)
-            {
-                cmds.Add(cancelAFirst ? Cancel(1, 1) : Cancel(2, 1));
-                cmds.Add(cancelAFirst ? Cancel(2, 1) : Cancel(1, 1));
-            }
-            return cmds;
+                return [Cmd(BIds)];
+            if (m < 0 && p.Stage(Gbr, 1) == DesignStage.Prototype && p.Stage(Gbr, 2) == DesignStage.Prototype)
+                m = t;
+            if (m < 0)
+                return [];
+            int first = aFirst ? 1 : 2, second = aFirst ? 2 : 1;
+            if (t == m)
+                return [Cancel(first, 1)];
+            if (t == m + 1)
+                return [Cmd(CIds)];
+            if (t == m + 3)
+                return [Cancel(second, 1)];
+            return [];
         }, maxDesigns: 4);
+    }
 
     // (d)
     [Fact]
     public void SlotFreeingOrder_DoesNotChangeNovelty()
     {
-        ProductsHarness x = TwoProjects(true), y = TwoProjects(false);
+        ProductsHarness x = FreeingOrder(true), y = FreeingOrder(false);
         for (long t = 0; t < 60; t++)
         {
             x.RunThroughMonth(t);
             y.RunThroughMonth(t);
         }
-        foreach (ProductsHarness h in new[] { x, y })
-        {
-            Assert.Equal(DesignStage.Withdrawn, h.Products.Stage(Gbr, 1));
-            Assert.Equal(DesignStage.Withdrawn, h.Products.Stage(Gbr, 2));
-        }
-        foreach (string[] ids in new[] { AIds, BIds })
-        {
-            Assert.Equal(Fx6.Zero, x.Products.Novelty(Gbr, Alts(ids)));
+        // Different slots were freed and retaken in the two runs.
+        Assert.Equal(2, x.Products.Generation(Gbr, 1));
+        Assert.Equal(1, x.Products.Generation(Gbr, 2));
+        Assert.Equal(1, y.Products.Generation(Gbr, 1));
+        Assert.Equal(2, y.Products.Generation(Gbr, 2));
+        Assert.Equal(DesignStage.Withdrawn, x.Products.Stage(Gbr, 2));
+        Assert.Equal(DesignStage.Withdrawn, y.Products.Stage(Gbr, 1));
+        foreach (string[] ids in new[] { AIds, BIds, CIds })
             Assert.Equal(x.Products.Novelty(Gbr, Alts(ids)), y.Products.Novelty(Gbr, Alts(ids)));
-        }
+        Assert.Equal(Fx6.Zero, x.Products.Novelty(Gbr, Alts(AIds)));
+        Assert.Equal(Fx6.Zero, x.Products.Novelty(Gbr, Alts(BIds)));
         for (int alt = 0; alt < Probe.AltStart[Probe.SlotCount]; alt++)
             Assert.Equal(x.Products.AltReached(Gbr, alt), y.Products.AltReached(Gbr, alt));
     }
@@ -155,7 +167,7 @@ public class NoveltyMemoryTests
     [InlineData(8, 3)]
     public void L1_L2_ThreadsAndChunks_GiveTheSameHashEveryMonth(int threads, int chunk)
     {
-        ProductsHarness one = TwoProjects(true), again = TwoProjects(true), many = TwoProjects(true, threads, chunk);
+        ProductsHarness one = FreeingOrder(true), again = FreeingOrder(true), many = FreeingOrder(true, threads, chunk);
         for (long t = 0; t < 40; t++)
         {
             one.RunThroughMonth(t);
@@ -181,7 +193,7 @@ public class NoveltyMemoryTests
     [Fact]
     public void Memory_SurvivesSaveLoad_AndIsPartOfTheHash()
     {
-        ProductsHarness src = TwoProjects(true);
+        ProductsHarness src = FreeingOrder(true);
         for (long t = 0; t < 60; t++)
             src.RunThroughMonth(t);
         Assert.Contains(src.Table.Columns, c => c.Name.StartsWith("prd.altReached.", StringComparison.Ordinal));

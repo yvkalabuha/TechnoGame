@@ -424,7 +424,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
     // Re-recorded in F17b (951bcf96… before), reason: F17b — LINE_CLOSE YPROD bit 12 of run.fleet in the hash of an AI run (ADMIT keeps the old hash, see F17bTests).
     // Re-recorded in T6d (409293e4… before), reason: T6d — licences, alloy disruption and the why_not triggers of the AI, new policy columns, schema v7; then «exposure to data» (1d6a59a9… before; the scenario hash is in the run columns).
     // Re-recorded in TASK-0058 step 5 (e99b1c3e… before), reason: I-OC + A41 SLOT as the build, fielded_L and the column prd.d*.q (#242–#247), schema v8.
-    // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the run ends before the first slot reuse and the old columns are unchanged (projection tests, NoveltyMemoryTests), so only the new columns change the hash.
+    // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
     // Re-recorded in TASK-0099 (ADR-0005 p. 3), reason: schema v9 (new columns prd.d*.generation, parentGen, prd.lp.g*.gen, StaleHandle counter); the run ends before the first slot reuse, the old columns are unchanged (SlotReuseL2Tests.NoSlotIsReused_BeforeTheMonthOfAnyRewrittenGolden, projection tests).
     private const string Golden150 = "fa9642e57048639b18a1b81ad510eea456afd29a8c6cbf7ef07555286983981c";
 }

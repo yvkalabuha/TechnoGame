@@ -80,7 +80,7 @@ public class F17bTests(ITestOutputHelper output)
     // Re-recorded in TASK-0058 step 5 (all hashes below), reason: I-OC + A41 SLOT as the build (#242, #243, #245), fielded_L and the column prd.d*.q (#247), schema v8: the trajectory changed by decision, so ADMIT/V0 no longer equals the build before F17b.
     // Hashes after month 149 of seeds 1…5 (AI on, threads 2). Until TASK-0032 part 2 ADMIT (with V0) equalled the build before F17b (commit 29cd914) bit for bit;
     // re-recorded there only for the new column tool_unmet («tool_unmet column», F33): by the old columns the trajectory is unchanged (ToolingUnmetTests).
-    // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the run ends before the first slot reuse and the old columns are unchanged (projection tests, NoveltyMemoryTests), so only the new columns change the hash.
+    // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
     // Re-recorded in TASK-0099 (ADR-0005 p. 3), reason: schema v9 (new columns prd.d*.generation, parentGen, prd.lp.g*.gen, StaleHandle counter); the run ends before the first slot reuse, the old columns are unchanged (SlotReuseL2Tests.NoSlotIsReused_BeforeTheMonthOfAnyRewrittenGolden, projection tests).
     private static readonly string[] AdmitGolden =
     [
@@ -92,6 +92,7 @@ public class F17bTests(ITestOutputHelper output)
     ];
 
     // Recorded in F17b (TASK-0030); re-recorded in TASK-0033, reason: T6d (columns of the licence and the disruption, run.t6d, the events themselves; both arms), then «exposure to data» (the scenario hash is in the run columns); in TASK-0032: part 1 (A39 «V5 default», #163: the default tooling target is V5), part 2 («tool_unmet column», F33).
+    // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (prd.altReached.*); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
     private static readonly string[] YProdGolden = [
         "7044a31fd0f808df14ae680111adc16ee7376391f8a3cbff24ed2840cb18fea5",
         "d542bc6f3808014bfe4770c5db8989530dcc4d1bc2a7759c48601a412df8beff",

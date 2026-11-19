@@ -31,7 +31,7 @@ public class LinkedRunTests
     // D2 (#155, #159): start rule R-H-MS'; the data of the scenario changed, the model did not.
     // Re-recorded in T6d (ec3ce196… before), reason: T6d — policy columns of the licence and the disruption, run.t6d, schema v7, then «exposure to data» (dd12a4b5… before; the scenario hash is in the run columns); the alloy disruption acts on the scripted player's run too.
     // Re-recorded in TASK-0058 step 5 (6aefe310… before), reason: I-OC + A41 SLOT as the build, fielded_L and the column prd.d*.q (#242–#247), schema v8.
-    // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the run ends before the first slot reuse and the old columns are unchanged (projection tests, NoveltyMemoryTests), so only the new columns change the hash.
+    // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
     // Re-recorded in TASK-0099 (ADR-0005 p. 3), reason: schema v9 (new columns prd.d*.generation, parentGen, prd.lp.g*.gen, StaleHandle counter); the run ends before the first slot reuse, the old columns are unchanged (SlotReuseL2Tests.NoSlotIsReused_BeforeTheMonthOfAnyRewrittenGolden, projection tests).
     private const string Golden60 = "88fcca52ee2e4b79f3ce4f50176d46eded6bb9bede94d36b544841e0174ab8c5";
 

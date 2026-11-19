@@ -16,7 +16,7 @@ namespace Singularity.Lab.Models.Slice;
 public static class SliceChecks
 {
     // Seed 1, months 0…149, default config: the golden of the Session (SeriesSwitchTests.MainSeed1Month149, F17b YProdGolden[0]).
-    // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the run ends before the first slot reuse and the old columns are unchanged (projection tests, NoveltyMemoryTests), so only the new columns change the hash.
+    // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
     private const string Golden150 = "7044a31fd0f808df14ae680111adc16ee7376391f8a3cbff24ed2840cb18fea5";
     private const long Ticks150 = 4564;   // 1945-09-01 → 1958-03-01: the tick of month 150, so month 149 is the last one run
     private const long Ticks60 = 1826;    // 1945-09-01 → 1950-09-01

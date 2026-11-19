@@ -291,7 +291,7 @@ public sealed partial class ProductsSystem : ITickSystem
         Array.Fill(ints, -1);
         for (int g = 0; g < layout.Generations; g++)
             _lpSlot[g].Load(ints);
-        // The start fleet counts as tried: every alternative of a scenario design that is not withdrawn.
+        // The start fleet counts as tried: every alternative of a scenario design past П.
         for (int alt = 0; alt < _altReached.Length; alt++)
         {
             Array.Clear(ints);
@@ -299,8 +299,8 @@ public sealed partial class ProductsSystem : ITickSystem
             {
                 for (int d = 0; d < _d && ints[a] == 0; d++)
                 {
-                    if (start.Stage[a * _d + d] is DesignStage.None or DesignStage.Withdrawn)
-                        continue;
+                    if (start.Stage[a * _d + d] is DesignStage.None or DesignStage.Withdrawn or DesignStage.Project)
+                        continue;   // a start project in П is covered by InLiveProject
                     for (int s = 0; s < _s; s++)
                     {
                         if (start.Alts[(a * _d + d) * _s + s] == alt)
@@ -1042,6 +1042,9 @@ public sealed partial class ProductsSystem : ITickSystem
                 _stage[d].Next[a] = (int)DesignStage.InService;
         }
         SetAlts(a, slot, alts);
+        // L_P goes straight to С (past О): the canonical project counts as tried.
+        for (int s = 0; s < _s; s++)
+            _altReached[alts[s]].Next[a] = 1;
         _gp[slot].Next[a] = gen;
         _gateOpened[slot].Next[a] = 1;
         _stage[slot].Next[a] = (int)DesignStage.Series;

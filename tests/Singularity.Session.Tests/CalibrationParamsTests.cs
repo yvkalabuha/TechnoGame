@@ -9,7 +9,7 @@ namespace Singularity.Session.Tests;
 public class CalibrationParamsTests
 {
     // Hash of seed 1 after month 149 under the default config (as in SeriesSwitchTests).
-    // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the run ends before the first slot reuse and the old columns are unchanged (projection tests, NoveltyMemoryTests), so only the new columns change the hash.
+    // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
     private const string MainSeed1Month149 = "7044a31fd0f808df14ae680111adc16ee7376391f8a3cbff24ed2840cb18fea5";
 
     private static SliceRunConfig Base(ulong seed = 1, int threads = 2) => new() { Seed = seed, Threads = threads };

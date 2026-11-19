@@ -36,6 +36,29 @@ public class ProductsLpTests
     };
 
     [Fact]
+    public void Lp_Launch_MarksItsAlternativesAsTried()
+    {
+        ProductsHarness h = Lp(1, 1);
+        ProductsSystem p = h.Products;
+        for (long t = 0; t < 12; t++)
+            h.RunThroughMonth(t);
+        int checkedAny = 0;
+        for (int a = 0; a < h.Table.RowCount; a++)
+        {
+            for (int d = 0; d < h.Layout.Designs; d++)
+            {
+                if (h.Start.Stage[a * h.Layout.Designs + d] == DesignStage.None && p.Stage(a, d) is DesignStage.Series or DesignStage.InService)
+                {
+                    foreach (int alt in p.Alternatives(a, d))
+                        Assert.True(p.AltReached(a, alt));
+                    checkedAny++;
+                }
+            }
+        }
+        Assert.True(checkedAny > 0, "no L_P project was launched");
+    }
+
+    [Fact]
     public void Lp_HasNoBureausDefectsLineExperienceOrSpending_AndIgnoresCommands()
     {
         ProductsHarness h = Lp(1, 1);
