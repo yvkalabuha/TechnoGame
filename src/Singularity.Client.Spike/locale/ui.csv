@@ -272,10 +272,8 @@ set.apply,Apply,Применить
 set.keep,Keep,Оставить
 set.revert,Revert,Вернуть
 set.rollback,Keep these settings? Reverting in {0} s,Оставить эти параметры? Откат через {0} с
-set.resolution,Resolution,Разрешение
 set.winmode,Window mode,Режим окна
-set.win.window,Window,Окно
-set.win.borderless,Borderless,Без рамки
+set.win.borderless,Borderless window,Безрамочное окно
 set.win.full,Full screen,Полный экран
 set.quality,Quality,Качество
 set.q.low,Low,Низкое

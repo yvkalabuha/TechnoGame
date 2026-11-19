@@ -19,6 +19,21 @@ public class InstrumentTests
     }
 
     [Fact]
+    public void GaugeHatch_PassesNonTextContrastOnTexturedPaper()
+    {
+        // A4: the empty-cell hatch is a meaningful non-text mark, 3:1 on the paper at the worst texture multiplier (k 0.94)
+        var paper = ColorMath.FromHex(Palette.C.Paper, 0.94);
+        Assert.True(ColorMath.Contrast(ColorMath.FromHex(Palette.GaugeHatch), paper) >= 3.0);
+        // the old hatch (Ink at 45 % alpha over that paper) was below it
+        string Blend(string ink, string bg)
+        {
+            int Ch(int i) => (int)Math.Round(0.45 * Convert.ToInt32(ink.Substring(i, 2), 16) + 0.55 * 0.94 * Convert.ToInt32(bg.Substring(i, 2), 16));
+            return $"{Ch(0):X2}{Ch(2):X2}{Ch(4):X2}";
+        }
+        Assert.True(ColorMath.Contrast(ColorMath.FromHex(Blend(Palette.Ink, Palette.C.Paper)), paper) < 3.0);
+    }
+
+    [Fact]
     public void LoudDeskLine_Fails()
     {
         // a dark line on the desk reads as a control: dE and WCAG rules break

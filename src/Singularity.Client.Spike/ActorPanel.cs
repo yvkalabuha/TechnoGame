@@ -40,7 +40,8 @@ public sealed partial class ActorPanel : PanelContainer
     readonly VBoxContainer _sciBox = new();   // caption line, then the flask row, then the empty note
     readonly VBoxContainer[] _sciCell = { new(), new(), new() };
     readonly Label[] _sciName = { Ui.Lbl("", 14, Ui.Ink2), Ui.Lbl("", 14, Ui.Ink2), Ui.Lbl("", 14, Ui.Ink2) };
-    readonly Label[] _sciNote = { Ui.Lbl("", 14, Ui.Ink2), Ui.Lbl("", 14, Ui.Ink2), Ui.Lbl("", 14, Ui.Ink2) };   // «threshold reached» line of a hazard link
+    readonly Label _sciThrNote = Ui.Lbl("", 14, Ui.Ink2);   // one «threshold reached» line under the flask row (hatched flasks)
+    readonly bool[] _sciThr = new bool[3];
     int _instLevel = -1, _instYear = -1;
     readonly Label[] _slVal = new Label[5], _slForce = new Label[5];
     readonly Label _sum = Ui.Lbl("", 14, Ui.Ink2, FontKind.Mono);
@@ -191,12 +192,11 @@ public sealed partial class ActorPanel : PanelContainer
         if (areaMode)
         {
             // Finance: only the licence block scrolls, so that the order button above it stays in view at 150 % (v0.5d).
-            var ls = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, CustomMinimumSize = new Vector2(0, 48), SizeFlagsVertical = SizeFlags.ExpandFill };   // at least one body line stays visible
+            var ls = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, CustomMinimumSize = new Vector2(0, 48) };   // at least one body line stays visible; the height follows the content up to 200 du (see _Process)
+            _licScroll = ls;
             _licence.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             var lv = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill }; lv.AddChild(_licence); lv.AddChild(_finLaterBox);
-            ls.AddChild(lv); _secLicence.AddChild(ls);
-            _secLicence.SizeFlagsVertical = SizeFlags.ExpandFill;
-            _pad.SizeFlagsVertical = SizeFlags.ExpandFill; _root.SizeFlagsVertical = SizeFlags.ExpandFill;
+            ls.AddChild(lv); _licInner = lv; _secLicence.AddChild(ls);
         }
         else _secLicence.AddChild(_licence);
         _finLater = Ui.Wrap("area.finance.later", 14, Ui.Ink3); _finLaterBox.AddChild(_finLater);
@@ -208,15 +208,17 @@ public sealed partial class ActorPanel : PanelContainer
         for (int i = 0; i < _flaskSci.Length; i++)
         {
             _sciName[i].CustomMinimumSize = new Vector2(112, 0); _flaskSci[i].SizeFlagsHorizontal = SizeFlags.ShrinkCenter; _sciName[i].TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            // C1: the name wraps by words to at most two lines at the text size; only a longer name is trimmed (tooltip has the full one)
+            _sciName[i].AutowrapMode = TextServer.AutowrapMode.WordSmart; _sciName[i].MaxLinesVisible = 2; _sciName[i].CustomMinimumSize = new Vector2(112, 40);
             _sciName[i].HorizontalAlignment = HorizontalAlignment.Center; _sciName[i].MouseFilter = MouseFilterEnum.Pass;
             _sciCell[i].AddThemeConstantOverride("separation", 0);
-            _sciNote[i].AutowrapMode = TextServer.AutowrapMode.WordSmart; _sciNote[i].CustomMinimumSize = new Vector2(112, 0); _sciNote[i].HorizontalAlignment = HorizontalAlignment.Center; _sciNote[i].MouseFilter = MouseFilterEnum.Pass; _sciNote[i].Visible = false;
-            _sciCell[i].AddChild(_flaskSci[i]); _sciCell[i].AddChild(_sciName[i]); _sciCell[i].AddChild(_sciNote[i]);
+            _sciCell[i].AddChild(_flaskSci[i]); _sciCell[i].AddChild(_sciName[i]);
             _flaskSciRow.AddChild(_sciCell[i]);
         }
         var sciCap = Ui.Wrap("flask.sci.cap", 14, Ui.Ink2);
         _sciNone.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        _sciBox.AddChild(sciCap); _sciBox.AddChild(_flaskSciRow); _sciBox.AddChild(_sciNone);
+        _sciThrNote.AutowrapMode = TextServer.AutowrapMode.WordSmart; _sciThrNote.Visible = false;
+        _sciBox.AddChild(sciCap); _sciBox.AddChild(_flaskSciRow); _sciBox.AddChild(_sciThrNote); _sciBox.AddChild(_sciNone);
         _secWhy.AddChild(_sciBox);
         _secWhy.AddChild(_why);
         _prodLater.Visible = _finLater.Visible = _treeBtn.Visible = areaMode;
@@ -226,13 +228,31 @@ public sealed partial class ActorPanel : PanelContainer
 
     void Invalidate() { _dirty = true; _sigDesigns = _sigLicence = _sigWhy = ""; }
 
+    ScrollContainer _licScroll; Control _licInner;
+    static ImageTexture _grabber;
+
+    // A 16 x 24 du grabber with a 2 du ink frame (A2, A10): the value mark must be visible and the whole 24 du row is the click target.
+    static ImageTexture Grabber()
+    {
+        if (_grabber != null) return _grabber;
+        var img = Image.CreateEmpty(16, 24, false, Image.Format.Rgba8);
+        for (int y = 0; y < 24; y++)
+            for (int x = 0; x < 16; x++)
+                img.SetPixel(x, y, x < 2 || x >= 14 || y < 2 || y >= 22 ? Ui.Ink : Ui.Sheet);
+        return _grabber = ImageTexture.CreateFromImage(img);
+    }
+
     public static void StyleSlider(HSlider s)
     {
-        var track = Ui.Box(Ui.Rule, null, 0, 0); track.ContentMarginTop = 2; track.ContentMarginBottom = 2;
+        var track = new StyleBoxFlat { BgColor = Ui.Rule, BorderColor = Ui.Ink2, ContentMarginTop = 3, ContentMarginBottom = 3 };
+        track.SetBorderWidthAll(1);
         s.AddThemeStyleboxOverride("slider", track);
         s.AddThemeStyleboxOverride("grabber_area", Ui.Box(Ui.Ink, null, 0, 0));
         s.AddThemeStyleboxOverride("grabber_area_highlight", Ui.Box(Ui.Ink, null, 0, 0));
-        s.FocusMode = FocusModeEnum.None;
+        foreach (string n in new[] { "grabber", "grabber_highlight", "grabber_disabled" }) s.AddThemeIconOverride(n, Grabber());
+        s.CustomMinimumSize = new Vector2(Math.Max(s.CustomMinimumSize.X, 100), 24);
+        s.FocusMode = FocusModeEnum.All;   // arrow keys move a slider: it must be reachable without the mouse (A6)
+        MenuUi.FocusRing(s);
     }
 
     Control Section(string key, Container into)
@@ -331,9 +351,10 @@ public sealed partial class ActorPanel : PanelContainer
     {
         // Height follows the content (an inset, not a full-height column), capped by the window.
         if (_areaMode && _headerView != null && Compact != _compactHead) Area = _area;   // the window was resized across the threshold
-        float want = _root.GetCombinedMinimumSize().Y + 6, cap = GetViewportRect().Size.Y - 120;
         bool finance = _areaMode && _area == AreaId.Finance;   // Finance: the outer scroll stays off, the licence block scrolls on its own
-        _scroll.CustomMinimumSize = new Vector2(0, finance ? cap : Math.Min(want, cap));
+        if (_licScroll != null) _licScroll.CustomMinimumSize = new Vector2(0, Math.Clamp(_licInner.GetCombinedMinimumSize().Y, 48, 200));
+        float want = _root.GetCombinedMinimumSize().Y + 6, cap = GetViewportRect().Size.Y - 120;
+        _scroll.CustomMinimumSize = new Vector2(0, Math.Min(want, cap));
         _pad.AddThemeConstantOverride("margin_right", want <= cap || finance ? 0 : 12);
         _scroll.VerticalScrollMode = want <= cap || finance ? ScrollContainer.ScrollMode.Disabled : ScrollContainer.ScrollMode.Auto;   // a scroll bar only when the content really does not fit
         var s = _host.Snap;
@@ -402,8 +423,8 @@ public sealed partial class ActorPanel : PanelContainer
         bool thr = f.Threshold;   // a hazard node at its threshold: full, hatched, not discovered
         _flaskSci[n].Set(lv, false, thr);
         _sciName[n].Text = name;
-        _sciNote[n].Visible = thr; _sciNote[n].Text = thr ? Loc.T("flask.sci.threshold.note") : "";
-        _flaskSci[n].TooltipText = _sciName[n].TooltipText = _sciNote[n].TooltipText = thr
+        _sciThr[n] = thr;
+        _flaskSci[n].TooltipText = _sciName[n].TooltipText = thr
             ? Loc.T("flask.sci.threshold", name, Loc.N(have), Loc.N(need))
             : Loc.T("flask.sci.tip", name, InstrumentLogic.FlaskPercent(lv, false), Loc.N(have), Loc.N(need));
     }
@@ -431,6 +452,8 @@ public sealed partial class ActorPanel : PanelContainer
         foreach (var f in InstrumentLogic.ResearchFlasks(links, _flaskSci.Length)) SetResearchFlask(n++, f);
         for (int i = 0; i < _flaskSci.Length; i++) _sciCell[i].Visible = i < n;
         _flaskSciRow.Visible = n > 0;
+        bool anyThr = false; for (int i = 0; i < n; i++) anyThr |= _sciThr[i];
+        _sciThrNote.Visible = anyThr; _sciThrNote.Text = anyThr ? Loc.T("flask.sci.threshold.note") : "";
         _sciNone.Visible = n == 0;   // no research chain on the current target: say so, never an empty row
     }
 

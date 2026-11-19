@@ -6,6 +6,27 @@ namespace Singularity.Client.Audio.Tests;
 public class SettingsLogicTests
 {
     [Theory]
+    [InlineData(1920, 1080, 100, 1.0, 1920, 1080)]
+    [InlineData(1920, 1080, 150, 1.5, 1280, 720)]      // A9: the 150 % canvas is 1280x720 du
+    [InlineData(3840, 2160, 100, 2.0, 1920, 1080)]
+    [InlineData(2560, 1440, 100, 4.0 / 3.0, 1920, 1080)]
+    [InlineData(3440, 1440, 100, 4.0 / 3.0, 2580, 1080)]  // ultra-wide: scale by height, the extra width goes to the content
+    [InlineData(1920, 1200, 100, 1.0, 1920, 1200)]
+    [InlineData(1280, 720, 100, 2.0 / 3.0, 1920, 1080)]   // below Full HD: scales down, test windows only (never a PASS)
+    public void ScalePolicy_FollowsSection43(int w, int h, double ui, double px, double cw, double ch)
+    {
+        Assert.Equal(px, SettingsLogic.PixelsPerDu(w, h, ui), 6);
+        var (x, y) = SettingsLogic.CanvasSize(w, h, ui);
+        Assert.Equal(cw, x, 3); Assert.Equal(ch, y, 3);
+    }
+
+    [Theory]
+    [InlineData(1920, 1080, true)]
+    [InlineData(1600, 900, false)]   // the old shots: files named 1920x1080 were 1600x900
+    [InlineData(2560, 1440, false)]
+    public void BaseFrame_OnlyExact1920x1080(int w, int h, bool ok) => Assert.Equal(ok, SettingsLogic.IsBaseFrame(w, h));
+
+    [Theory]
     [InlineData(80, 100)]
     [InlineData(100, 100)]
     [InlineData(105, 100)]

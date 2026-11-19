@@ -8,6 +8,9 @@
 - Архитектура: [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md)
 - Процесс разработки: [docs/architecture/DEVELOPMENT_FRAMEWORK.md](docs/architecture/DEVELOPMENT_FRAMEWORK.md)
 
+## Запуск игры
+`./play.sh` — собирает клиент (если нужно) и запускает игру на весь экран (минимальный экран Full HD 1920×1080; на больших интерфейс увеличивается). Выход: `Esc` открывает меню игры, пункт «Выход» (в главном меню — `Q`). `./play.sh --window` — окно с рамкой 1920×1080, только для тестов.
+
 ## Как работать с проектом
 
 Разработка ведётся в Claude Code. Основная сессия — Orchestrator; она запускает специализированных агентов (`.claude/agents/`).

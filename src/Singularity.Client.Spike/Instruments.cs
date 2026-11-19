@@ -245,7 +245,7 @@ public sealed partial class PencilMarker : Control
         if (!_active && !_focus) return;
         // pencil lying at 45 degrees: body, tip, lead; about 18 x 18 du (the icon minimum is 16 x 16 at 100 %)
         const float c = 0.707f, s = -0.707f;   // cos and sin of -45 degrees
-        Vector2 O = new(2, Size.Y * 0.5f + 9);
+        Vector2 O = new(Size.X + 6, Size.Y * 0.5f + 9);   // right of the field, so that the pencil never touches its frame
         Vector2 P(float x, float y) => O + new Vector2(x * c - y * s, x * s + y * c);
         _body[0] = P(6, -5); _body[1] = P(20, -5); _body[2] = P(20, 5); _body[3] = P(6, 5);
         _tip[0] = P(6, -5); _tip[1] = P(0, 0); _tip[2] = P(6, 5);
