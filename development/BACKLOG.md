@@ -133,6 +133,7 @@
 | [TASK-0115](../development/tasks/TASK-0115-end-to-end-project-handle.md) | IN_PROGRESS | End-to-end project handle through Session, AI, UI and command log v2 (DEBT-0052) | MS-M1 |
 | [TASK-0116](../development/tasks/TASK-0116-ci-green.md) | IN_PROGRESS | CI green on all jobs: Lab tests off Linux, llm_worker pilot contracts | MS-M0 |
 | [TASK-0117](../development/tasks/TASK-0117-client-ui-scale-policy.md) | APPROVED | Client UI scale policy: text never below the A1 floor at 1280x720 | MS-M05 |
+| [TASK-0118](../development/tasks/TASK-0118-codex-catchup-findings.md) | PROPOSED | Codex catch-up findings on landed core tasks (TASK-0099, 0103, 0107, 0110) | MS-M05 |
 
 ## Гипотезы
 
