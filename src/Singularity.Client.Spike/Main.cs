@@ -923,13 +923,17 @@ public sealed partial class Main : Node3D
             case 141 when _shotT >= 0.5: SaveProbe("flask_levels_100"); Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false); _shotStep = 142; _shotT = 0; break;
             case 142 when _shotT >= 0.6: SaveProbe("flask_levels_150"); Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _flaskProbe.QueueFree(); _shotStep = 143; _shotT = 0; break;
             // Science from a real session state: no fixture; a month at a time until the chain shows (at most about 12 s), then the live panel is checked against the snapshot
-            case 143 when _shotT >= 0.3: Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); InstrumentLogic.YearOverride = null; OpenArea(AreaId.Science); _signal.SetSpeed(3); _shotStep = 144; _shotT = 0; break;
-            case 144 when _shotT >= 12 || (_shotT >= 1.5 && LiveKnowledgeLinks() > 0): _signal.SetSpeed(0); _shotStep = 145; _shotT = 0; break;
+            case 143 when _shotT >= 0.3: Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); InstrumentLogic.YearOverride = null; OpenArea(AreaId.Science); _signal.SetSpeed(0); _liveTicks = 0; _shotStep = 144; _shotT = 0; break;
+            // a year of ticks per step until the snapshot carries a Knowledge link; a fixed limit of 30 years, then the run fails
+            case 144 when _shotT >= 0.6:
+                if (LiveKnowledgeLinks() > 0) { _shotStep = 145; _shotT = 0; break; }
+                if (_liveTicks >= 30 * 365) { InstFail($"no live research chain in {_liveTicks / 30} months (date {_host.Snap.Date})"); break; }
+                _host.StepTicks(365); _liveTicks += 365; _shotT = 0; break;
             case 145 when _shotT >= 0.8:
             {
-                int links = LiveKnowledgeLinks(), flasks = _areaPanel.ShotFlaskCount;
+                int links = LiveKnowledgeLinks(), flasks = _areaPanel.ShotFlaskCount, want = Math.Min(links, 3);
                 _shotLog += $"live science: knowledge links {links}, flasks shown {flasks}, date {_host.Snap.Date}\n";
-                if (links > 0 && flasks < 1) { InstFail($"live science check failed: snapshot has {links} Knowledge links, the panel shows {flasks} flasks"); break; }
+                if (flasks != want) { InstFail($"live science check failed: snapshot has {links} Knowledge links, the panel shows {flasks} flasks, expected {want}"); break; }
                 var gr = _areaPanel.GetGlobalRect(); float k = GetWindow().ContentScaleFactor;
                 SaveShot("flask_science_live.png", new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)));
                 CloseArea(); _shotStep = 45; _shotT = 0; break;
@@ -1021,6 +1025,7 @@ public sealed partial class Main : Node3D
     }
 
     // Instrument shots: 3 areas x 3 eras x 2 UI scales; the previous configuration is saved, then the next one is set up. Returns true when all are done.
+    int _liveTicks;
     int _instI, _instPhase, _instShareBefore; bool _instCheckInput, _instCheckSend, _instSent, _instSkipShot; int _instAppliedBefore;
 
     // A failed shot-run check: the error goes to the run log and the process exits non-zero.
@@ -1072,7 +1077,7 @@ public sealed partial class Main : Node3D
             float w = GetWindow().ContentScaleFactor;   // events are window pixels, the panel reports canvas units
             if (_instPhase == 1) { var c = _areaPanel.ShotRowPoint(1) * w; Mouse(c, null); Mouse(c, true); Mouse(c, false); }
             else if (_instPhase == 3) PressKey(Key.Tab);   // after the frame with the unsent edit: Tab from the caliper to Apply
-            else if (_instPhase == 4) { _instAppliedBefore = _areaPanel.ShotApplied; PressKey(Key.Enter); PressKey(Key.Enter, false); _instCheckSend = true; }
+            else if (_instPhase == 4) { if (_instI == 0) { var gr = _areaPanel.GetGlobalRect(); SaveShot("apply_focus.png", new Rect2I((int)(gr.Position.X * w), (int)(gr.Position.Y * w), (int)(gr.Size.X * w), (int)(gr.Size.Y * w))); } _instAppliedBefore = _areaPanel.ShotApplied; PressKey(Key.Enter); PressKey(Key.Enter, false); _instCheckSend = true; }
             else
             {
                 _instShareBefore = _areaPanel.ShotShare(1);

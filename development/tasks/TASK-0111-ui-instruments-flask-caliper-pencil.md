@@ -22,7 +22,7 @@ created: 2026-11-19
 Next slice of the UI instruments (`docs/ui/UI_INSTRUMENTS.md` §8 steps 3–5), plus DEBT-0059.
 
 ## Description
-1. FlaskControl: Science (research progress), with deficit hatching; forbidden under plates and in tables; hatching is checked by the standalone greyscale probe. The Production stock flask is moved to a follow-up task (one Session alloy-coverage field; Orchestrator decision of 2026-11-19; the ids are not in this branch yet, the Orchestrator adds the links on landing).
+1. FlaskControl: Science flask: level = research progress; hatching = threshold reached without discovery; stock-deficit hatching belongs to the Production flask (follow-up task) and is checked here only by the standalone greyscale probe. Forbidden under plates and in tables. The Production stock flask is moved to a follow-up task (one Session alloy-coverage field; Orchestrator decision of 2026-11-19; the ids are not in this branch yet, the Orchestrator adds the links on landing).
 2. CaliperControl: Finance budget shares, step 5, the number and the order as for the current bar, keyboard arrows, eras E1–E3.
 3. PencilMarker on the Science and Finance input fields.
 4. DEBT-0059: at 100 % UI scale the E1 speed gauge has a larger dial and stronger tick contrast.

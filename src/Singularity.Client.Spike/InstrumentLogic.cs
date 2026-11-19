@@ -51,6 +51,10 @@ public static class InstrumentLogic
         return r;
     }
 
+    /// <summary>Focus ring of a focusable button (A7): outer tone and inner tone, hex. Each background the ring meets has one tone at 3:1 or better against it.</summary>
+    public const string FocusOuter = Palette.Ink;
+    public static string FocusInner => Palette.C.Paper;
+
     /// <summary>A research link still listed with Have at or above Need: a hazard node past the threshold where its discovery becomes possible; the discovery is a draw, not certain.</summary>
     public static bool ThresholdReached(double have, double need) => need > 0 && have >= need;
 

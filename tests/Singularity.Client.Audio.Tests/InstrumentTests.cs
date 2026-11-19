@@ -261,4 +261,19 @@ public class InstrumentTests
         Assert.True(f[0].Threshold);
         Assert.False(f[1].Threshold);
     }
+
+    [Fact]
+    public void FocusRing_OneToneReadsOnEveryBackgroundItMeets()
+    {
+        var outer = ColorMath.FromHex(InstrumentLogic.FocusOuter); var inner = ColorMath.FromHex(InstrumentLogic.FocusInner);
+        // outside the button: the panel paper and the sheet; inside: the plain sheet fill, the command fill (an order is ready)
+        foreach (var bg in new[] { Palette.C.Paper, Palette.C.Sheet, Palette.C.Command })
+        {
+            var b = ColorMath.FromHex(bg);
+            double best = Math.Max(ColorMath.Contrast(outer, b), ColorMath.Contrast(inner, b));
+            Assert.True(best >= 3.0, $"focus ring on {bg}: best contrast {best:F2}");
+        }
+        // the single ink ring failed on the command fill (the reason for two tones)
+        Assert.True(ColorMath.Contrast(outer, ColorMath.FromHex(Palette.C.Command)) < 3.0);
+    }
 }
