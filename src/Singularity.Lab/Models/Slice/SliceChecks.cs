@@ -57,8 +57,28 @@ public static class SliceChecks
         ("slice: lk-draws — t_known of an L_K run = max(req, 0) of the exported draws, req ≥ own (spec v0.34 §6.1 self-check, #251)", () => LkDrawsExact(tmp)),
         ("slice: c5-stand — the output months of the C5 site equal the C1 DevSite FULL_T0 (same culture rule C-B + I-OC, 8 months)", C5DevSiteEquivalence),
         ("slice: c5-stand — smoke (horizon 6, threshold 0,25): idle and restart run, two runs give the same bytes, no statistic row (#248)", () => C5Smoke(tmp)),
+        ("slice: full run to 2030-12 — FULL, 1024 months, seed 1: status ok, months 1024, last lines row t = 1023, threads 1 = 2 (TASK-0121)", () => FullRun2030(tmp)),
         ("slice: H8 — a control layer (LK, LK0, LC0, LC, LP) past 384 months is rejected before any month runs; FULL is not (TASK-0121)", () => ControlHorizon(tmp)),
     ];
+
+    // §5 item 5 of slice-horizon-2030.md (TASK-0121): the Lab path, with the standard observer and every table, runs the whole cohort horizon
+    // 1945-09 … 2030-12. Ticks 31168 = 1945-09-01 → 2031-01-01 (31046 would be 1020 months, through 2030-08).
+    private static string? FullRun2030(string tmp)
+    {
+        const long Ticks2030 = 31168;
+        var (a, da) = Run(tmp, Manifest("JetSlice", Ticks2030), 1, 1, "y2030-t1");
+        var (b, _) = Run(tmp, Manifest("JetSlice", Ticks2030), 1, 2, "y2030-t2");
+        if (!a.Ok || !b.Ok)
+            return $"status: {a.Error}{b.Error}";
+        if (a.GoldenHash != b.GoldenHash)
+            return $"threads 1 vs 2: {a.GoldenHash} vs {b.GoldenHash}";
+        using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(da, RunExecutor.RunJsonFile)));
+        string? months = doc.RootElement.GetProperty("model_info").GetProperty("months").GetString();
+        if (months != "1024")
+            return $"model_info.months {months}";
+        string last = File.ReadLines(Path.Combine(da, SliceTables.Lines.Name + ".csv")).Last();
+        return last.Split(',')[1] == "1023" ? null : $"last lines row {last}";
+    }
 
     // H8 of slice-horizon-2030.md §2.2 (TASK-0121): the control layers are calibration stands of 1945-1977. 384 months (ticks 11688) is the last
     // accepted run of a control layer; one more month fails loudly in the model factory and in calib-print; FULL is never limited by it.
@@ -76,7 +96,7 @@ public static class SliceChecks
         {
             try { JetSliceModelFactory.CheckControlHorizon(layer, last, sc); }
             catch (ParamException e) { return $"{layer} rejected at {h} months: {e.Message}"; }
-            foreach (long t in new[] { over, y2030 })
+            foreach (long t in new[] { over, y2030, int.MaxValue, long.MaxValue })
             {
                 try
                 {

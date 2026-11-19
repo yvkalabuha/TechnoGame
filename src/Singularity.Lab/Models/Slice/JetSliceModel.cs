@@ -68,10 +68,12 @@ public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactor
     {
         if (layer == LayerControl.Full)
             return;
-        long months = MonthsOf(ticks, scenario);
-        if (months > SliceHorizonMonths)
-            throw new ParamException($"LAYER = {LayerName(layer)} is a control layer calibrated to the 1945-1977 horizon ({SliceHorizonMonths} months); "
-                + $"ticks = {ticks} runs {months} months. Use LAYER = FULL past month {SliceHorizonMonths - 1} (slice-horizon-2030.md H8).");
+        // O(1): a run steps more than H months exactly when it ends after the first tick of month H (MonthsOf counts months m with
+        // TickOfMonth(m) < ticks). No month walk, so a huge ticks value (the manifest allows up to long.MaxValue) is refused at once.
+        long end = new TickCalendar(new CivilDate(scenario.StartYear, scenario.StartMonth, 1)).TickOfMonth(SliceHorizonMonths);
+        if (ticks > end)
+            throw new ParamException($"LAYER = {LayerName(layer)} is a control layer calibrated to the 1945-1977 horizon ({SliceHorizonMonths} months, "
+                + $"ticks ≤ {end}); ticks = {ticks} runs past it. Use LAYER = FULL past month {SliceHorizonMonths - 1} (slice-horizon-2030.md H8).");
     }
 
     private static string LayerName(LayerControl layer) => layer switch
