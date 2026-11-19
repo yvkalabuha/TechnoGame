@@ -60,6 +60,9 @@ def checks(root) -> list[str]:
     w = run(root, "python3", "tools/development/watch.py", "--brief", timeout=10.0)
     if w:
         out.append(f"- Watch: {w}")
+    kb = run(root, "python3", "tools/development/kb_check.py", "check", "--brief", timeout=15.0)
+    if kb:
+        out.append(f"- Knowledge base: {kb}")
     q = root / "development" / "OPEN_QUESTIONS.md"
     if q.exists():
         n = len(re.findall(r"^\| Q\d+ ", q.read_text(encoding="utf-8"), re.M))

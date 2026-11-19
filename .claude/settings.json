@@ -63,6 +63,24 @@
             "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/agent_log.py\" launched"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/kb_guard.py\" file"
+          }
+        ]
+      },
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/kb_guard.py\" answers"
+          }
+        ]
       }
     ],
     "SubagentStop": [

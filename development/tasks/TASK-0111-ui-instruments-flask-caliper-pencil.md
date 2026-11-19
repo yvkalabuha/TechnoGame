@@ -32,3 +32,11 @@ Locked areas get no layer 2 (#409). Own procedural drawing. No per-frame allocat
 ## Acceptance criteria
 - [ ] Client tests and contrast rules pass; `--shots` of each control in E1–E3 at 100 % and 150 %.
 - [ ] Code review APPROVE; ui-art-director PASS.
+
+## Scope after owner decision #417 and Orchestrator decisions O-004, O-008 (2026-11-19)
+This section replaces the matching lines of "Description" and is the scope a review checks against:
+- The speed gauge as an instrument is NOT shipped. The speed control is the plain four-cell meter with a text value and unit next to it. DEBT-0059 (E1 dial at 100 %) is closed by removing the dial.
+- PencilMarker is on Finance only: Science has no input field in the client.
+- Finance has one caliper for the selected share (not five); the other shares are plain rows.
+- Each instrument has one reading layout in every era; the era changes only the skin.
+- Frames: the minimal screen is Full HD (#424, #425). Frames at 1920x1080, UI scale 100 % and 150 %, come with TASK-0117 (scale policy); until then frames are resamples of the 1600x900 render.

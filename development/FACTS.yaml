@@ -1,0 +1,94 @@
+# Known facts of the project, checked by tools/development/kb_check.py.
+#
+# Each fact has a plain statement and its source. A fact may have:
+#   probe          how to verify it against the source of truth (a file in the repository):
+#                    {file, regex, expect}   first capture group of the regex must equal expect
+#                    {file, count, expect}   number of lines matching the regex `count`
+#   stale_patterns regexes that contradict the fact; kb_check flags them in the living documents
+#                  (CLAUDE.md, CURRENT_STATE.md, PLAN, ROADMAP, open milestones, rules, agents, skills,
+#                  ARCHITECTURE, the vision, the UI design system, the M-play loop)
+#   keywords       words that make the fact show up in `kb_check.py related "<text>"`
+#
+# When a probe fails, either the code changed (update the fact and every document that states it)
+# or the fact was wrong. Add a fact whenever a wrong number or an outdated claim reaches a document.
+facts:
+  - id: campaign-years
+    statement: "Основная кампания идёт с 1945 года; горизонт игры 1945–2100. Старт 1910 отменён."
+    source: "DECISIONS_LOG #23"
+    stale_patterns: ['1910[–-]2100', 'simulator 1910']
+    keywords: [1945, 1910, кампания, старт, горизонт]
+
+  - id: slice-actors
+    statement: "В срезе «реактивная авиация» 5 акторов: USA, GBR, SUN, FRA, SWE."
+    source: "src/Singularity.Client.Spike/Names.cs; SliceChecks.cs"
+    probe: {file: "src/Singularity.Client.Spike/Names.cs", regex: '\["USA"\].*\["GBR"\].*\["SUN"\].*\["FRA"\].*\["(SWE)"\]', expect: "SWE"}
+    stale_patterns: ['8 держав']
+    keywords: [срез, актор, держав, страны, стран, USA, SWE]
+
+  - id: slice-horizon
+    statement: "Срез сейчас считает 33 года: с 1945 до января 1978. До 2030 года он не доходит, пока не выполнено продление (#423)."
+    source: "src/Singularity.Session/Slice/SliceWorld.cs; docs/simulation/m-play-horizon-2030.md"
+    probe: {file: "src/Singularity.Session/Slice/SliceWorld.cs", regex: 'const int Years = (\d+);', expect: "33"}
+    keywords: [горизонт, 2030, 1977, 1978, партия, длина, лет]
+
+  - id: slice-content
+    statement: "В данных среза 61 узел знаний и поколения изделий G1–G4; новые знания кончаются к 1961–1970."
+    source: "mods/core/nodes.yaml; docs/simulation/m-play-horizon-2030.md"
+    keywords: [узл, поколени, G4, G5, знани, контент]
+
+  - id: schema-version
+    statement: "SchemaVersion состояния среза — 10."
+    source: "src/Singularity.Session/Slice/SliceWorld.cs"
+    probe: {file: "src/Singularity.Session/Slice/SliceWorld.cs", regex: 'const int SchemaVersion = (\d+);', expect: "10"}
+    keywords: [SchemaVersion, схем, golden, хеш]
+
+  - id: api-version
+    statement: "Версия тестового API сессии (TestApiVersion) — 12."
+    source: "src/Singularity.Session/SliceSession.cs"
+    probe: {file: "src/Singularity.Session/SliceSession.cs", regex: 'const int TestApiVersion = (\d+);', expect: "12"}
+    keywords: [TestApiVersion, API, surface]
+
+  - id: map-regions
+    statement: "Карта мира 1945: 3124 провинции, 374 региона (379 после слияния TASK-0114). Предел предупреждения — 400 регионов (ADR-0022)."
+    source: "mods/core/map/regions.yaml"
+    probe: {file: "mods/core/map/regions.yaml", count: '^  - \{id: ', expect: "374"}
+    stale_patterns: ['373 региона', '150[–-]250 регион']
+    keywords: [регион, провинци, карта, 400, квот]
+
+  - id: milestones
+    statement: "M0 закрыт (#419). Идёт M-play (MS-M05) — первая играбельная сборка, она раньше M1 (#418). M1 ждёт вердикта партии; #328, #364, #394 и провинции #195 отложены (#420)."
+    source: "DECISIONS_LOG #418–#420; development/PLAN.md"
+    stale_patterns: ['MS-M0, закрытие', 'Сейчас идёт \*\*MS-M0\*\*']
+    keywords: [M0, M1, M-play, этап, milestone, отложен]
+
+  - id: benchmark
+    statement: "Замер тика M0: EXP-0007, исход INCONCLUSIVE, цифры — справка. Решающий замер — на мире M1. EXP-0008 и ADR-0024 отложены, харнесс заморожен (#419)."
+    source: "DECISIONS_LOG #405, #419"
+    stale_patterns: ['EXP-0008 calibration ready', 'готов к калибровке']
+    keywords: [замер, бенчмарк, EXP-0007, EXP-0008, тик, серия, калибровк]
+
+  - id: screen
+    statement: "Игра идёт во весь экран или окном без рамок; минимальный экран — Full HD 1920x1080; меньшие окна только для тестов (#424, #425)."
+    source: "DECISIONS_LOG #424, #425; docs/ui/UI_DESIGN_SYSTEM.md §4.3"
+    stale_patterns: ['1280x720 and 1920x1080']
+    keywords: [экран, окно, 1280, 1920, масштаб, fullscreen, полный экран]
+
+  - id: m-play-loop
+    statement: "Партия M-play: цель — догоняние (ранг выше стартового хотя бы на 1 или первое место), с 1945 до 2030 года, пять стран без пометок, поражение мягкое (#422). Промежуточной версии до 1977 нет (#425)."
+    source: "DECISIONS_LOG #422, #423, #425; docs/game-design/M_PLAY_LOOP.md"
+    keywords: [цель, победа, поражение, партия, догонян, ранг]
+
+  - id: second-review
+    statement: "Дифф ядра (Kernel, Core, Session, их тесты, golden, проектные файлы) и tools/** проходит второе ревью Codex до слияния (ADR-0015); land.py запускает его сам."
+    source: "ADR-0015; tools/development/land.py"
+    keywords: [Codex, ревью, review, слияни, land, DeepSeek]
+
+  - id: decision-levels
+    statement: "Крупные решения (направление, объём, необратимое, дороже дня работы) принимает владелец; мелкие обратимые — Orchestrator с записью в ORCH_DECISIONS.md (#421)."
+    source: "DECISIONS_LOG #421"
+    keywords: [решени, владелец, вопрос, Orchestrator]
+
+  - id: data-licences
+    statement: "Внешние данные и ассеты — только PD, CC0 или CC BY (ADR-0009)."
+    source: "ADR-0009"
+    keywords: [лицензи, CC, ассет, текстур, музык, звук]

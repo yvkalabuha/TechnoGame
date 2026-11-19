@@ -27,3 +27,7 @@ A credits screen reachable from the main menu, with sections for music and sound
 ## Acceptance criteria
 - [ ] Every CC BY asset used by the client appears with author, licence and link; a test checks that every audio file in assets has a credits entry.
 - [ ] Code review APPROVE; ui-art-director PASS on the screen.
+
+## Scope notes (2026-11-19)
+- "One machine-readable list" means `src/Singularity.Client.Spike/assets/credits.json` is the only source the client and `LICENSES.md` use. `docs/audio/MUSIC_SELECTION.md` and `docs/audio/EVENT_SOUNDS_MAP.md` are research records of how the files were chosen; they are not kept in sync by hand. A test compares the authors and licences of credits.json with EVENT_SOUNDS_MAP §5 if that is cheap; otherwise the docs get a line that credits.json is authoritative.
+- The visual PASS for text size (criterion A1) comes with TASK-0117 (decision O-010).
