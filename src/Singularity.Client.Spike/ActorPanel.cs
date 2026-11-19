@@ -254,8 +254,10 @@ public sealed partial class ActorPanel : PanelContainer
     readonly Label _sciNone = Ui.Lbl("flask.sci.none", 14, Ui.Ink2);
 
     /// <summary>Screenshot run: the Science flasks show these (have, need) research links instead of the Session chain (the shot scenario has none); null clears it.</summary>
-    public void ShotResearch((string Name, double Have, double Need)[] links) { _shotSci = links; _dirty = true; }
-    (string Name, double Have, double Need)[] _shotSci;
+    public void ShotResearch(IReadOnlyList<Link> links) { _shotLinks = links; _dirty = true; }
+    IReadOnlyList<Link> _shotLinks;
+    public int ShotFlaskCount { get { int c = 0; foreach (var x in _sciCell) if (x.Visible) c++; return c; } }
+    public float ShotCaptionWidth(string lang) => FlaskControl.WidestCaption(lang);
 
     /// <summary>Screenshot run: the caliper takes the keyboard focus (focus frame and pencil).</summary>
     /// <summary>Screenshot run: canvas centres of the blank part of a share row and of the caliper, for the real mouse events the shot sends.</summary>
@@ -393,11 +395,11 @@ public sealed partial class ActorPanel : PanelContainer
         }
     }
 
-    void SetResearchFlask(int n, string name, double have, double need)
+    void SetResearchFlask(int n, InstrumentLogic.ResearchFlask f)
     {
-        double lv = InstrumentLogic.FlaskLevel(have, need);
-        // A link that is still listed with Have at Need is a hazard node at its threshold: full, hatched, not discovered.
-        bool thr = InstrumentLogic.ThresholdReached(have, need);
+        string name = Names.Node(_host.Data, f.Node);
+        double have = f.Have, need = f.Need, lv = InstrumentLogic.FlaskLevel(have, need);
+        bool thr = f.Threshold;   // a hazard node at its threshold: full, hatched, not discovered
         _flaskSci[n].Set(lv, false, thr);
         _sciName[n].Text = name;
         _sciNote[n].Visible = thr; _sciNote[n].Text = thr ? Loc.T("flask.sci.threshold.note") : "";
@@ -425,15 +427,8 @@ public sealed partial class ActorPanel : PanelContainer
     void FillFlasks(HostSnapshot s)
     {
         int n = 0;
-        if (_shotSci != null)
-            foreach (var (nm, h, nd) in _shotSci) { if (n < _flaskSci.Length) SetResearchFlask(n++, nm, h, nd); }
-        else if (s.WhyError == "" && s.Target != null)
-            foreach (var l in s.Links)
-            {
-                if (n >= _flaskSci.Length) break;
-                if (l.Layer != WhyNotLayer.Knowledge) continue;   // research progress only; product and capability blockers stay as text
-                SetResearchFlask(n++, Names.Node(_host.Data, l.SubjectId), l.Have.ToDouble(), l.Need.ToDouble());
-            }
+        IReadOnlyList<Link> links = _shotLinks ?? (s.WhyError == "" && s.Target != null ? s.Links : Array.Empty<Link>());
+        foreach (var f in InstrumentLogic.ResearchFlasks(links, _flaskSci.Length)) SetResearchFlask(n++, f);
         for (int i = 0; i < _flaskSci.Length; i++) _sciCell[i].Visible = i < n;
         _flaskSciRow.Visible = n > 0;
         _sciNone.Visible = n == 0;   // no research chain on the current target: say so, never an empty row

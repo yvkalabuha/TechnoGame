@@ -1,6 +1,9 @@
 using System;
 using System.Linq;
 using Singularity.Client.Spike;
+using System.Collections.Immutable;
+using Singularity.Core.WhyNot;
+using Singularity.Kernel;
 using Xunit;
 
 namespace Singularity.Client.Audio.Tests;
@@ -221,5 +224,41 @@ public class InstrumentTests
     public void ThresholdReached_MarksAHazardLinkAtItsNeed(double have, double need, bool expected)
     {
         Assert.Equal(expected, InstrumentLogic.ThresholdReached(have, need));
+    }
+
+    static Link K(int node, double have, double need, WhyNotLayer layer = WhyNotLayer.Knowledge) =>
+        new(layer, WhyNotCause.MissingNode, node, Fx6.FromDouble(have), Fx6.FromDouble(need), ImmutableArray<Lever>.Empty, Fx6.Zero, null);
+
+    [Fact]
+    public void ResearchFlasks_EmptyLinksGiveNoFlask() => Assert.Empty(InstrumentLogic.ResearchFlasks(new Link[0], 3));
+
+    [Fact]
+    public void ResearchFlasks_ThreeKnowledgeLinksGiveThree()
+    {
+        var f = InstrumentLogic.ResearchFlasks(new[] { K(1, 0.5, 1), K(2, 0.25, 1), K(3, 0, 1) }, 3);
+        Assert.Equal(new[] { 1, 2, 3 }, f.ConvertAll(x => x.Node));
+        Assert.Equal(0.5, f[0].Have);
+    }
+
+    [Fact]
+    public void ResearchFlasks_SkipsOtherLayers()
+    {
+        var f = InstrumentLogic.ResearchFlasks(new[] { K(9, 0, 1, WhyNotLayer.Product), K(4, 0.5, 1), K(8, 0, 1, WhyNotLayer.Capability) }, 3);
+        Assert.Equal(new[] { 4 }, f.ConvertAll(x => x.Node));
+    }
+
+    [Fact]
+    public void ResearchFlasks_KeepsTheFirstMax()
+    {
+        var f = InstrumentLogic.ResearchFlasks(new[] { K(1, 0, 1), K(2, 0, 1), K(3, 0, 1), K(4, 0, 1) }, 3);
+        Assert.Equal(new[] { 1, 2, 3 }, f.ConvertAll(x => x.Node));
+    }
+
+    [Fact]
+    public void ResearchFlasks_FlagsAThresholdLink()
+    {
+        var f = InstrumentLogic.ResearchFlasks(new[] { K(1, 0.25, 0.25), K(2, 0.125, 1) }, 3);
+        Assert.True(f[0].Threshold);
+        Assert.False(f[1].Threshold);
     }
 }

@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Godot;
 using Singularity.Core.Data;
+using Singularity.Core.WhyNot;
 
 namespace Singularity.Client.Spike;
 
@@ -920,7 +921,19 @@ public sealed partial class Main : Node3D
             // layer-2 instruments in the area panels: caliper (Finance), flasks (Science, Production); every era at 100 % and 150 %, plus a greyscale copy of each
             case 140 when _shotT >= 0.7: if (InstShot() && _shotStep == 140) { _shotStep = 141; AddFlaskProbe(); } _shotT = 0; break;
             case 141 when _shotT >= 0.5: SaveProbe("flask_levels_100"); Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false); _shotStep = 142; _shotT = 0; break;
-            case 142 when _shotT >= 0.6: SaveProbe("flask_levels_150"); Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _flaskProbe.QueueFree(); _shotStep = 45; _shotT = 0; break;
+            case 142 when _shotT >= 0.6: SaveProbe("flask_levels_150"); Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _flaskProbe.QueueFree(); _shotStep = 143; _shotT = 0; break;
+            // Science from a real session state: no fixture; a month at a time until the chain shows (at most about 12 s), then the live panel is checked against the snapshot
+            case 143 when _shotT >= 0.3: Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); InstrumentLogic.YearOverride = null; OpenArea(AreaId.Science); _signal.SetSpeed(3); _shotStep = 144; _shotT = 0; break;
+            case 144 when _shotT >= 12 || (_shotT >= 1.5 && LiveKnowledgeLinks() > 0): _signal.SetSpeed(0); _shotStep = 145; _shotT = 0; break;
+            case 145 when _shotT >= 0.8:
+            {
+                int links = LiveKnowledgeLinks(), flasks = _areaPanel.ShotFlaskCount;
+                _shotLog += $"live science: knowledge links {links}, flasks shown {flasks}, date {_host.Snap.Date}\n";
+                if (links > 0 && flasks < 1) { InstFail($"live science check failed: snapshot has {links} Knowledge links, the panel shows {flasks} flasks"); break; }
+                var gr = _areaPanel.GetGlobalRect(); float k = GetWindow().ContentScaleFactor;
+                SaveShot("flask_science_live.png", new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)));
+                CloseArea(); _shotStep = 45; _shotT = 0; break;
+            }
             // alert plates on tints 1 and 5 (7 is not on the map): day side, then tint 5 on the night side
             case 45: AimAlert(_alertI, false); _shotStep = 46; _shotT = 0; break;
             case 46 when _shotT >= 0.7:
@@ -1011,6 +1024,9 @@ public sealed partial class Main : Node3D
     int _instI, _instPhase, _instShareBefore; bool _instCheckInput, _instCheckSend, _instSent, _instSkipShot; int _instAppliedBefore;
 
     // A failed shot-run check: the error goes to the run log and the process exits non-zero.
+    // Knowledge links the panel would read: the same condition as the live path of the Science flasks.
+    int LiveKnowledgeLinks() => _host.Snap is { WhyError: "", Target: not null } sn ? Singularity.Client.Spike.InstrumentLogic.ResearchFlasks(sn.Links, int.MaxValue).Count : 0;
+
     void InstFail(string msg)
     {
         _shotLog += "ERROR: " + msg + "\n";
@@ -1096,6 +1112,9 @@ public sealed partial class Main : Node3D
                 c.Convert(Image.Format.La8); c.SavePng(Path.Combine(dir, name + "_grey.png"));
             }
             string sfx = $"e{p % 3 + 1}_{pct}";
+            if (p / 3 == 1)
+                foreach (string lang in Loc.Languages)
+                    if (_areaPanel.ShotCaptionWidth(lang) > FlaskControl.CaptionLimit) { InstFail($"flask caption check failed: {lang} caption is {_areaPanel.ShotCaptionWidth(lang)} du, cell limit {FlaskControl.CaptionLimit}"); return true; }
             if (p / 3 != 0 && Math.Abs(_areaPanel.GetGlobalRect().Size.X - 420) > 0.5f) { InstFail($"area panel width check failed: {InstNames[p / 3]}_{sfx} is {_areaPanel.GetGlobalRect().Size.X} du wide, expected 420"); return true; }
             if (p / 3 != 0 && _areaPanel.ShotMinWidthWithBar() > 420.5f) { InstFail($"area panel width check failed: {InstNames[p / 3]}_{sfx} needs {_areaPanel.ShotMinWidthWithBar()} du with the scroll bar, limit 420"); return true; }
             _shotLog += $"panel scrolls: {_areaPanel.ShotScrolls}\n";
@@ -1116,9 +1135,18 @@ public sealed partial class Main : Node3D
         InstrumentLogic.YearOverride = InstYears[era];
         OpenArea(InstAreas[q / 3]);
         // shot-only state: the scenario has no research chain
-        _areaPanel.ShotResearch(InstAreas[q / 3] == AreaId.Science ? new[] { (Names.Node("s8.fnd.compressible_flow"), 3.0, 4.0), (Names.Node("s8.fnd.boundary_layer"), 1.0, 5.0), (Names.Node("s7.fnd.brayton_cycle"), 5.0, 5.0) } : null);
+        _areaPanel.ShotResearch(InstAreas[q / 3] == AreaId.Science ? new[] { ShotLink("s8.fnd.compressible_flow", 3, 4), ShotLink("s8.fnd.boundary_layer", 1, 5), ShotLink("s7.fnd.brayton_cycle", 5, 5) } : null);
         if (InstAreas[q / 3] == AreaId.Finance) _instPhase = 1;   // an unsent edit and the focus come from real input: pencil marker and focus frame show
         return false;
+    }
+
+    // A why_not Knowledge link for the shot fixture: the panel reads links the same way as in play.
+    Link ShotLink(string id, long have, long need)
+    {
+        var n = _host.Data.Nodes;
+        int number = -1;
+        for (int i = 0; i < n.Count; i++) if (n.Id[i] == id) number = n.Number[i];
+        return new Link(WhyNotLayer.Knowledge, WhyNotCause.MissingNode, number, Singularity.Kernel.Fx6.FromInt(have), Singularity.Kernel.Fx6.FromInt(need), System.Collections.Immutable.ImmutableArray<Lever>.Empty, Singularity.Kernel.Fx6.Zero, null);
     }
 
     static void PressKey(Key k, bool pressed = true) => Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = pressed });

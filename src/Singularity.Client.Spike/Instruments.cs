@@ -24,6 +24,17 @@ public sealed partial class FlaskControl : Control
     double _level = -1; string _txt = "", _lang = ""; int _lvl = -1;
     readonly Vector2[] _liq4 = new Vector2[4], _liq6 = new Vector2[6];   // reused by _Draw, no per-frame allocation
 
+    /// <summary>Caption width limit (the flask control width), du.</summary>
+    public const float CaptionLimit = W;
+
+    /// <summary>Widest caption this control can draw in a language: «100 %» and the hatched deficit caption.</summary>
+    public static float WidestCaption(string lang)
+    {
+        float w = 0;
+        foreach (var t in new[] { "100 %", "99 % · " + Loc.In(lang, "flask.deficit") }) w = Math.Max(w, Fonts.Mono.GetStringSize(t, HorizontalAlignment.Left, -1, 14).X);
+        return w;
+    }
+
     public FlaskControl() { MouseFilter = MouseFilterEnum.Pass; CustomMinimumSize = new Vector2(W, H); }
 
     /// <summary>Fill 0..1 and the deficit flag; redraws only when something changed.</summary>
@@ -48,7 +59,7 @@ public sealed partial class FlaskControl : Control
     void BuildText()
     {
         _lang = Loc.Lang;
-        _txt = InstrumentLogic.FlaskPercent(_level, Deficit).ToString(System.Globalization.CultureInfo.InvariantCulture) + " %" + (Deficit ? " · " + Loc.T("flask.deficit") : Threshold ? " · " + Loc.T("flask.threshold") : "");
+        _txt = InstrumentLogic.FlaskPercent(_level, Deficit).ToString(System.Globalization.CultureInfo.InvariantCulture) + " %" + (Deficit ? " · " + Loc.T("flask.deficit") : "");   // a reached threshold is said in the cell's note line, never here: the caption must fit the 100 du cell in both languages
     }
 
     static float HalfAt(float y) => y <= NeckBottom ? NeckHalf : NeckHalf + (y - NeckBottom) * Slope;

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Singularity.Core.WhyNot;
 
 namespace Singularity.Client.Spike;
 
@@ -30,6 +32,24 @@ public static class InstrumentLogic
 
     /// <summary>Fill of a flask 0..1 from have and need; no need (0 or less) reads as full.</summary>
     public static double FlaskLevel(double have, double need) => need <= 0 ? 1 : Math.Clamp(have / need, 0, 1);
+
+    /// <summary>One research flask: a Knowledge link of the why_not chain as Have against Need; Threshold marks a hazard node at its threshold.</summary>
+    public readonly record struct ResearchFlask(int Node, double Have, double Need, bool Threshold);
+
+    /// <summary>The flasks of the Science panel from the why_not links: Knowledge links only (product and capability blockers stay as text), in link order, at most <paramref name="max"/>.
+    /// One function for the live panel and the screenshot run.</summary>
+    public static List<ResearchFlask> ResearchFlasks(IReadOnlyList<Link> links, int max)
+    {
+        var r = new List<ResearchFlask>();
+        foreach (var l in links)
+        {
+            if (r.Count >= max) break;
+            if (l.Layer != WhyNotLayer.Knowledge) continue;
+            double have = l.Have.ToDouble(), need = l.Need.ToDouble();
+            r.Add(new ResearchFlask(l.SubjectId, have, need, ThresholdReached(have, need)));
+        }
+        return r;
+    }
 
     /// <summary>A research link still listed with Have at or above Need: a hazard node past the threshold where its discovery becomes possible; the discovery is a draw, not certain.</summary>
     public static bool ThresholdReached(double have, double need) => need > 0 && have >= need;
