@@ -146,7 +146,8 @@ internal sealed class SliceWorld
             Industry.CreateMailbox(chunks, Cadence.Monthly), QualityRequester, forced,
             products: config.ProductAi ? new PolicyProductsAdapter(this) : null, designs: ProductsLayout.Designs,
             generations: ProductsLayout.Generations, derive: config.Derive, startLines: StartLines(pStart),
-            events: Streams.Events, eventInputs: new PolicyEventsAdapter(this), disruptionExposure: scenario.Exposure);
+            events: Streams.Events, eventInputs: new PolicyEventsAdapter(this), disruptionExposure: scenario.Exposure,
+            budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId));
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs);
         Limits = new CommandLimits(scenario.ActorCount, ProductsLayout.SlotCount, ProductsLayout.Designs,
             [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)]);
@@ -544,6 +545,9 @@ internal sealed class SliceWorld
         // A41 options (#244): a column only for a value that is not the default (SLOT, P2+P3), so main carries none (ADR-0013 п. 4).
         if (Config.PilotForm != PilotForm.Slot || Config.PilotProfiles != PilotProfileSet.P2P3)
             Table.AddInt("run.a41").Load([.. Enumerable.Repeat((int)Config.PilotForm * 2 + (int)Config.PilotProfiles, rows)]);
+        // A budget-rule variant is part of the state; NOW adds nothing, so its hash is that of a build without the switch.
+        if (Config.BudgetRule != BudgetRule.Now)
+            Table.AddInt("run.budget_rule").Load([.. Enumerable.Repeat((int)Config.BudgetRule, rows)]);
         if (Config.Grid.Code != 0)
             Table.AddInt("run.grid").Load([.. Enumerable.Repeat(Config.Grid.Code, rows)]);
         if (Config.EffortShare != EffortShareArm.X1)

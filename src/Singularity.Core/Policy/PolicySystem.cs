@@ -36,6 +36,7 @@ public sealed partial class PolicySystem : ITickSystem
     private readonly CounterRng _ai;
     private readonly IPolicyInputs _inputs;
     private readonly IndustryMailbox _mailbox;
+    private readonly BudgetRulePlan? _budgetRule;
     private readonly int _qpRequester;
     private readonly ImmutableArray<long> _qpEngineers;
 
@@ -54,12 +55,13 @@ public sealed partial class PolicySystem : ITickSystem
     /// <param name="events">Stream <c>E</c> of the events (<c>EVT_LIC</c>, <c>EVT_DIS</c>; its seed already reflects <c>FIX_E</c>); without it the policy has no disruptions and no licences.</param>
     /// <param name="eventInputs">Reads of the licence and why_not rules (spec A43); without them the policy has no licences and no why_not triggers.</param>
     /// <param name="disruptionExposure"><c>exposure_a</c> by row (spec §8.1), default 1.</param>
+    /// <param name="budgetRule"><c>BUDGET_RULE</c> presets by row (a measurement switch); null or <see cref="BudgetRule.Now"/> is the constant growth of main.</param>
     /// <param name="startLines">(row, design) of the start lines of the scenario (E1): their rate is <c>r_AI</c> from tick 0. The slot must hold a start line (stage С at load, so its first occupant, generation 1): the line is attributed to that occupant by <see cref="AiLine"/>.</param>
     public PolicySystem(Table table, PolicyParams parameters, ImmutableArray<int> actorNumber, ImmutableArray<Fx6> budget0,
         ImmutableArray<Fx6> growthPerYear, CounterRng ai, IPolicyInputs inputs, IndustryMailbox mailbox, int qpRequesterId,
         ImmutableArray<int> forcedProfile = default, int systemId = DefaultSystemId, IPolicyProducts? products = null, int designs = 0,
         int generations = 0, bool derive = false, ImmutableArray<(int Row, int Design)> startLines = default,
-        CounterRng? events = null, IPolicyEvents? eventInputs = null, ImmutableArray<Fx6> disruptionExposure = default)
+        CounterRng? events = null, IPolicyEvents? eventInputs = null, ImmutableArray<Fx6> disruptionExposure = default, BudgetRulePlan? budgetRule = null)
     {
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(mailbox);
@@ -87,6 +89,9 @@ public sealed partial class PolicySystem : ITickSystem
             if (r < 0 || r >= actorNumber.Length || d < 0 || d >= designs)
                 throw new ArgumentOutOfRangeException(nameof(startLines), (r, d), "A start line names a row of the table and a design slot of the layout.");
         }
+        if (budgetRule is { Rule: not BudgetRule.Now } br && br.Share.Length != actorNumber.Length)
+            throw new ArgumentException("One budget-rule preset per table row is required.", nameof(budgetRule));
+        _budgetRule = budgetRule is { Rule: not BudgetRule.Now } ? budgetRule : null;
         _ai = ai;
         _inputs = inputs;
         _mailbox = mailbox;
@@ -206,7 +211,7 @@ public sealed partial class PolicySystem : ITickSystem
             ComputeDisruption(row, t);
             var why = new WhyList(this, row, t);
             // budget(t+1) from budget(t): the budget column always holds the month being computed.
-            _budget.Next[row] = BudgetMath.Next(Fx6.FromRaw(_budget.Current[row]), _growth[row]).Raw;
+            _budget.Next[row] = NextBudget(row).Raw;
             var profile = (PolicyProfile)_profile.Current[row];
             bool active = _qpActive.Current[row] != 0;
             int start = _qpStart.Current[row];
@@ -261,6 +266,25 @@ public sealed partial class PolicySystem : ITickSystem
             if (annual)
                 _round.Next[row] = _round.Current[row] + 1;
         }
+    }
+
+    // The frontier budget is read from Current (the same snapshot for every row), the result goes to the row's own Next: row order is irrelevant.
+    private Fx6 NextBudget(int row)
+    {
+        Fx6 own = Fx6.FromRaw(_budget.Current[row]);
+        if (_budgetRule is not { } plan || row == plan.FrontierRow)
+            return BudgetMath.Next(own, _growth[row]);
+        Fx6 frontier = Fx6.FromRaw(_budget.Current[plan.FrontierRow]);
+        Fx6 frontierGrowth = _growth[plan.FrontierRow];
+        if (plan.Rule == BudgetRule.A)
+        {
+            return plan.Share[row] == Fx6.Zero
+                ? BudgetMath.Next(own, _growth[row])
+                : BudgetMath.NextConverging(own, frontier, frontierGrowth, plan.Share[row], plan.LambdaPerYear[row]);
+        }
+        return plan.Ceiling[row] == Fx6.Zero
+            ? BudgetMath.Next(own, _growth[row])
+            : BudgetMath.NextCapped(own, _growth[row], frontier, frontierGrowth, plan.Ceiling[row]);
     }
 
     public void Merge(in TickContext context, int chunkCount)

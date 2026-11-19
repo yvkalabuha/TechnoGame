@@ -306,12 +306,54 @@ public static class BudgetMath
     /// <c>budget(t+1) = ⌊budget(t)·(1 + g_m)⌋</c>, <c>g_m = ⌊g/12⌋</c> once per actor (spec §3.5 A12): the rounding of
     /// <c>g/12</c> comes first, then one floored product.
     /// </summary>
-    public static Fx6 Next(Fx6 budget, Fx6 growthPerYear)
+    public static Fx6 Next(Fx6 budget, Fx6 growthPerYear) => budget * (Fx6.One + Monthly(growthPerYear));
+
+    /// <summary>A yearly rate as a monthly one, <c>⌊r/12⌋</c> toward −∞ (the rounding of <c>g_m</c>, spec §3.5 A12).</summary>
+    public static Fx6 Monthly(Fx6 perYear)
     {
-        long q = growthPerYear.Raw / 12;
-        if (growthPerYear.Raw % 12 < 0)
+        long q = perYear.Raw / 12;
+        if (perYear.Raw % 12 < 0)
             q--;
-        return budget * (Fx6.One + Fx6.FromRaw(q));
+        return Fx6.FromRaw(q);
+    }
+
+    /// <summary>
+    /// Rule A (slice-budget-convergence.md §3): <c>max(1 raw, (B + λ_m·(s·B_F − B))·(1 + g_m))</c>; <paramref name="frontier"/> is the
+    /// frontier budget of the same month and <paramref name="frontierGrowth"/> its growth (used for the actor too, so the share has the
+    /// fixed point <c>s</c>). The result is then clamped so that the share never crosses <c>s</c> (see the body): the target of the next month is
+    /// <c>s·Next(B_F, g_F)</c>, the very value the frontier row writes, so no <c>Next</c> column is read.
+    /// </summary>
+    public static Fx6 NextConverging(Fx6 budget, Fx6 frontier, Fx6 frontierGrowth, Fx6 share, Fx6 lambdaPerYear)
+    {
+        Fx6 pulled = budget + Monthly(lambdaPerYear) * (share * frontier - budget);
+        Fx6 frontierNext = Next(frontier, frontierGrowth);   // what the frontier row itself computes for the next month
+        Fx6 next = pulled * (Fx6.One + Monthly(frontierGrowth));
+        // Floor rounding must not carry the share across s (§3: s is never crossed). Compared exactly against the real target s·B_F:
+        // a share at or above s stays at or above it (round the next target up), a share below s stays below (round it down).
+        Int128 targetNow = checked((Int128)share.Raw * frontier.Raw);
+        Int128 targetNext = checked((Int128)share.Raw * frontierNext.Raw);
+        Int128 scale = Fx6.Scale;
+        if ((Int128)budget.Raw * scale >= targetNow)
+        {
+            long ceil = checked((long)((targetNext + scale - 1) / scale));
+            if (next.Raw < ceil)
+                next = Fx6.FromRaw(ceil);
+        }
+        else
+        {
+            long floor = checked((long)(targetNext / scale));
+            if (next.Raw > floor)
+                next = Fx6.FromRaw(floor);
+        }
+        return next.Raw < 1 ? Fx6.FromRaw(1) : next;
+    }
+
+    /// <summary>Rule B (§4): <c>min(Next(B, g), c·Next(B_F, g_F))</c>.</summary>
+    public static Fx6 NextCapped(Fx6 budget, Fx6 growthPerYear, Fx6 frontier, Fx6 frontierGrowth, Fx6 ceiling)
+    {
+        Fx6 own = Next(budget, growthPerYear);
+        Fx6 cap = ceiling * Next(frontier, frontierGrowth);
+        return cap < own ? cap : own;
     }
 
     /// <summary><c>⌊value·budget(t)/budget(t0)⌋</c> in one 128-bit step: a pool that follows the budget (workforce base, alloy capacity; §1.1, §1.4).</summary>

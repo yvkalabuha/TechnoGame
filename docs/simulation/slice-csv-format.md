@@ -4,6 +4,11 @@
 > Соглашения унаследованы от `exp0001-csv-format.md` и Lab (ADR-0008, `src/Singularity.Lab/RunExecutor.cs`, `MatrixRunner.cs`).
 > Модели `JetSlice` и `JetSliceCalib` — `src/Singularity.Lab/Models/Slice/` (T10 этап 2): читают только `SliceSession` и его views по имени свойств. Проверки — `Singularity.Lab selftest` (`SliceChecks`), малая матрица `lab/manifests/EXP-0002-t10-smoke.json`, серия `det` (`EXP-0002-det.json`).
 
+## Изменения v0.5 r14 (TASK-0123, решение #430; Session v14 — TASK-0122)
+- §3: ключ `BUDGET_RULE` (`NOW`/`A`/`B1`/`B2`, по умолчанию `NOW`) → `SliceRunConfig.BudgetRule`. Модели читают поверхность Session v14 (`JetSliceModelFactory.SurfaceVersion` 13 → 14).
+- §4.17: новая таблица `supply_month.csv` (всегда, только `JetSlice`): кадры, потолок сплавов, выпуск линий и что его ограничило, неиспользованный остаток оснастки. `JetSlice` пишет 15 таблиц.
+- [Факт: прогоны seed 1, 150 мес. до и после правки, сборки `a4e385a` и этой ветки] при `NOW` (ключ задан или нет) все 15 прежних файлов побайтно равны, `golden_hash` тот же (`a0b7ab02…` — эталон `SliceChecks.Golden150`). Колонка состояния `run.budget_rule` появляется только при правиле не `NOW` (Session), поэтому golden `A`/`B1`/`B2` отличается от `NOW` с месяца 0, даже пока бюджеты равны. Эталоны Lab не перезаписывались.
+
 ## Изменения v0.5 r13 (TASK-0056, решения #251, #252)
 - §6.1: `c5_stand.csv` — колонка `outcome`, `d_c5` пусто при `undefined`; `c5_meta.csv`; флаги ячеек; `lk_draws.csv` (`lk-draws`) и `exp0002.py --lk-check`. Таблицы прогонов и golden не менялись.
 
@@ -88,7 +93,7 @@
 - [Предл.] Lab пишет `runs.csv` (свои колонки + параметры точки) и по одной таблице на файл; первая колонка — `run`. Lab склеивает CSV прогонов и **требует одинаковый набор файлов и заголовков у всех прогонов**: модель всегда создаёт все свои таблицы, «тяжёлые» в `detail = lite` остаются с одним заголовком.
 - [Предл.] Время — индекс месяца `t` 0…383 (спец. §2). Годовые строки — `t mod 12 = 0`. Значение строки «месяца t» — состояние **после** месячного шага t (post), если не сказано «снимок t» (то, что читает compute t).
 - [Предл.] `Fx6` пишется **целым raw** (`MetricFormat.Int(raw)`, не `MetricFormat.Fx6`). Пусто — «не наступило к 383»; `−1` — «уже на старте».
-- [Предл.] `JetSlice` — 14 таблиц (v0.5: `requirements.csv` вернулась, §4.6), `JetSliceCalib` — 8 (§4, §5). Запрет спец. §8.2 п.2 проверяют тест T10 (заголовок) и `exp0002.py --calib` по одному списку файлов и подстрок.
+- [Предл.] `JetSlice` — 15 таблиц (v0.5: `requirements.csv` вернулась, §4.6; r14: `supply_month.csv`, §4.17), `JetSliceCalib` — 8 (§4, §5). Запрет спец. §8.2 п.2 проверяют тест T10 (заголовок) и `exp0002.py --calib` по одному списку файлов и подстрок.
 - [Предл.] A40 печатается каждым срабатыванием, с классом: ветка О — `PROCESSES` / `DEFECTS` (L-O0), ветка С — `CULTURE` / `COEXIST_MONEY` / `OTHER` (v0.5, §4.16), L-C0: `OTHER` в main = 0. `cancel_design` = строки `branch = O`.
 - [Предл.] Все колонки v0.5 берутся из read views SC §12.2 и §13.7 (§9). `left`, причина закрытия линии, варианты `Requirement`, отказ ИИ по деньгам — след шага Core (SC §13), не состояние; Lab их не выводит заново. Причина закрытия в печати F17b — отображение кода Core + роль линии по стадиям (§4.12).
 
@@ -147,6 +152,7 @@
 | `FLEET_LINE_COND` | `GEN`/`KAPPA`/`NONE` | `FleetLineCond` | `GEN` |
 | `SALE_ARM` | `NONE`/`SIGMA_LO`/`PHI_FLAT`/`QUOTA_LO`/`QUOTA_HI`/`CHI_OFF` | `SaleArm` | `NONE` |
 | `LINE_CLOSE` | `YPROD`/`ADMIT` | `LineClose` | `YPROD` |
+| `BUDGET_RULE` | `NOW`/`A`/`B1`/`B2` (r14, TASK-0123) | `BudgetRule`: `NOW` — постоянный рост (main); `A` — сходимость к доле рубежа USA, `B1`/`B2` — потолок доли при прежнем росте (`slice-budget-convergence.md` §3, §4; константы — `BudgetRulePlan`, `src/Singularity.Core/Policy/BudgetRule.cs`). Ключ замера, не принятое правило | `NOW`; не `NOW` — колонка `run.budget_rule` (golden другой) |
 | `LIC_OFF`, `T6D_OFF`, `LIC_KNOWS` | bool | `LicOff`, `T6dOff`, `LicKnows` | false |
 | `TOOLING_TARGET` | `V0`…`V5`, `VINF` | `ToolingTarget.Variant` | `V5` (#163) |
 | `TOOLING_RHO_MAX`, `TOOLING_H_LO`, `TOOLING_H_HI`, `TOOLING_M_LEAD`, `TOOLING_H_HI_CONTROL` | число | числа `ToolingTargetSpec` | значения спец. §8.1 |
@@ -292,6 +298,23 @@
 - **(б) `COEXIST_MONEY`** (v0.5 r3, SC §13.3 r6) — для срабатывания С линии d: в **каждом** из `T_ab` месяцев строк `a40_c_months` одновременно: у актора две линии и d — `N` (`role` по снимку месяца, §4.12); выпуск `rate(d) = 0` (`DesignView.Rate` post t); `left = LeftIn(d) = 0` (§4.16 (а)); `training = Training(d) = 0` (`T_a` у линии d: учебные деньги идут только на линию цели учебной серии, спец. A41); `DesignView.Bind(d) = Money` (post t: шаг 7 месяца t ограничил выпуск деньгами, договор r6 §4.4d). Это «`N` с выпуском 0 … при `left` после `W` = 0 и без `T_a`» спец. A40 «v0.20: две линии». Условие `Bind = Money` оставлено: у недопущенной линии `Bind = None`, такие месяцы — `OTHER`. Это строже буквы спец., L-C0 от этого только строже. **v0.5 r4** (ревью Codex r4 TASK-0044): в r3 было одно `Bind = Money`. Оно выполняется и при `left > 0`, которого не хватает на единицу, и при `T_a > 0` у линии; такие срабатывания ошибочно уходили из L-C0. Нет строки шага 7 (`left` пусто) — не `COEXIST_MONEY`. Проверяется после `CULTURE` (§4.9). ~~v0.5: `LeftIn(d) = 0` и `Training(d) = 0`~~ — заменено в r3 (не отличало «нет денег» от «нет допуска»).
 - **(в) `left_share`** (строка `lines` линии d месяца t) = `FromLeft(d) / LeftStart` — доля общих денег начала шага 7, взятая линией d; raw `Fx6`: `⌊FromLeft·10⁶ / LeftStart⌋` в целых (`checked`), без `double`. Пусто при `LeftStart = 0` и при `Money = null`. Пишется для любой `role`; «доля `left`, взятая `N`» спец. A41 F17b «Печать» — строки `role = N`. Сумма по линиям актора месяца ≤ 10⁶ (инвариант SC §13.8 `Σ FromLeft ≤ LeftStart` с округлением вниз) — проверка анализа.
 - **(г) Оговорка про `design_id`.** Шаг 7 тратит деньги по возрастанию `design_id`. «`left` после `W`» спец. равно `LeftIn(N)` только при `design_id(W) < design_id(N)` — обычный случай [Факт: спец. A41 F17b п.3 — «lowest free slot, never reused»]. При `design_id(W) > design_id(N)` (спец. F17b п.2: запуск `X` с `g_p(X) < g_p(W)`) `N` покупает раньше `W`, и `LeftIn(N)` — деньги **до** `W`, не после: условие (б) строже, чем в спец., а `left_share(N)` не учитывает трату `W`. Lab такие месяцы **не пересчитывает** — помечает `w_after_n = 1` (в `lines` у обеих линий пары, в `a40_c_months`) и печатает их число отдельно [Предп.: случай редкий; SC §13.9 Р-13-4]. Если в main такие месяцы есть у срабатываний С — вопрос к спец. (уточнение «после `W`»), а не правка формата.
+
+### 4.17 `supply_month.csv` — кадры, сплавы, выпуск и его ограничитель (всегда; r14, TASK-0123)
+Строка на (месяц t, актор), порядок акторов сценария. Источники [Факт: код]: колонки «вход шага t» читаются до месячного тика t (`SliceObserver.BeforeStep` → `SupplyProbe`), когда столбец бюджета держит `budget(t)`; «шаг t» — после тика (post t). `SupplyProbe` (`src/Singularity.Lab/Models/Slice/SupplyProbe.cs`) читает состояние мира Session чистыми геттерами (`SliceSession.World`, internal): этих величин в read views нет. Ничего не пересчитывается в Lab; совпадение бюджета пробы с `ActorInputsView.Budget` того же месяца проверяется в каждой строке (иначе прогон `failed`).
+
+| Колонка | Тип | Смысл и источник |
+|---|---|---|
+| `budget`, `proc_budget` | Fx6 | `ActorInputsView.Budget`, `ProcurementBudget` месяца t (контроль правила `BUDGET_RULE`, §7 п. 6 записки) |
+| `wf_eng`, `wf_skilled` | int (чел.) | вход шага t: `IndustryInputsAdapter.WorkforceAvailable(site, категория, t)` (`IndustryInputsAdapter.cs:168`): инженеры = `⌊E_ref·b0⌋·budget/b0` + трофейные, квалифицированные = `10·⌊E_ref·b0⌋·budget/b0` (`FollowBudget`) |
+| `alloy_cap` | Fx6 (кг/мес.) | вход шага t: `IndustryInputsAdapter.AlloyCap(site, t)` (`IndustryInputsAdapter.cs:179`) |
+| `alloy_supply` | Fx6 (кг/мес.) | `ActorInputsView.Capability.AlloySupply` месяца t: `alloy_cap·(1 − deficit)·yield` лучшей допущенной плавки (`IndustryMath.AlloySupply`); 0 без плавки |
+| `eng_n`, `eng_granted`, `sk_n`, `sk_granted` | int | шаг t: Σ по всем запросчикам площадки актора `IndustrySystem.Requested`/`Granted` (`IndustrySystem.cs:324,327`) категории «инженеры» (`ProductsLayout.EngineerCategory`) и «квалифицированные» (`SkilledCategory`). Инвариант I6: `granted ≤ n`, `Σ granted ≤ wf_*` |
+| `lines` | int | шаг t: линий в шаге 7 (`MoneyStepView.Lines`, стадия С на шаге 7; линия, запущенная в t, здесь есть, а в `lines.csv` месяца t ещё нет, §4.12) |
+| `rate_max`, `rate_sum` | Fx6 (машин/мес.) | шаг t: наибольший и суммарный `DesignView.Rate` post t по проектам актора |
+| `bind_rate`, `bind_alloy`, `bind_money` | int | шаг t: число линий с `DesignView.Bind` = `Rate`/`Alloy`/`Money`. Это единственный ограничитель выпуска линии в модели [Факт: `ProductsSystem.Purchases`, `ProductsSystem.cs:1583–1585`]: `r = min(rate, alloy_left/alloy_kg, (left + tb)/unit_cost)`; ничья → `RATE`, затем `ALLOY`; `MONEY` — только строго наименьшее. Недопущенная линия — `None` (не считается) |
+| `tool_rest`, `tool_unspent` | Fx6 | `ToolingLedgerView.Rest` и `Rest − TakenRest` месяца t (те же числа, что `tooling_ledger.rest`, `rest_unspent`; здесь — и в `lite`) |
+
+**Кадры как ограничитель.** В формуле выпуска линии кадров нет (`ProductsSystem.cs:1583`): кадры ограничивают проекты КБ и процессы через раздачу `granted < n` (`IndustryMath.SplitWorkforce`). Поэтому «месяц ограничен кадрами» в анализе = `eng_granted < eng_n` или `sk_granted < sk_n`; это не ограничитель выпуска линии, а признак нехватки пула.
 
 ## 5. Таблицы `JetSliceCalib` (серия `calib`)
 | Файл | Колонки |

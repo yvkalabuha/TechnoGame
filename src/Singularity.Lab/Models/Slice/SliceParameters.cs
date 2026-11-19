@@ -16,7 +16,7 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
     /// <summary>Keys of §3 (ordinal order). <c>detail</c> is a key of <c>JetSlice</c> only.</summary>
     public static readonly string[] Keys =
     [
-        "A41_FORM", "ALPHA", "C_M", "CHANNELS", "CONTROL_TABLES", "DELTA_H", "DERIV", "EFFORT_SHARE", "FIX_A", "FIX_E", "FIX_K", "FLEET_ARM", "FLEET_LINE_COND", "FORCE", "GRID", "H_MAX",
+        "A41_FORM", "ALPHA", "BUDGET_RULE", "C_M", "CHANNELS", "CONTROL_TABLES", "DELTA_H", "DERIV", "EFFORT_SHARE", "FIX_A", "FIX_E", "FIX_K", "FLEET_ARM", "FLEET_LINE_COND", "FORCE", "GRID", "H_MAX",
         "K_DIV", "KAPPA_Q10", "LAYER", "LIC_KNOWS", "LIC_OFF", "LINE_CLOSE", "POOL_ORDER", "PILOT_PROFILES", "PROFILE_CELL", "SALE_ARM", "START", "T6D_OFF",
         "TOOLING_H_HI", "TOOLING_H_HI_CONTROL", "TOOLING_H_LO", "TOOLING_M_LEAD", "TOOLING_RHO_MAX", "TOOLING_TARGET", "THETA_START", "X_SCALE", "detail",
     ];
@@ -108,6 +108,7 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
                 _ => throw Bad("SALE_ARM", v),
             }),
             LineClose = Enum(p, "LINE_CLOSE", "YPROD", LineCloseRules.Parse),
+            BudgetRule = Enum(p, "BUDGET_RULE", "NOW", BudgetRules.Parse),
             PilotForm = Enum(p, "A41_FORM", "SLOT", v => v switch
             {
                 "SLOT" => PilotForm.Slot,
