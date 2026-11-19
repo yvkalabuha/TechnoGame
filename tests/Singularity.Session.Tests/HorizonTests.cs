@@ -6,15 +6,6 @@ namespace Singularity.Session.Tests;
 /// <summary>TASK-0121 (#423): the slice computes to 2030; the trajectory up to 1977 is that of the build before the horizon change.</summary>
 public class HorizonTests
 {
-    private static SliceRunConfig Config(string name, ulong seed) => name switch
-    {
-        "Main" => new SliceRunConfig { Seed = seed, Threads = 4, ChunkSize = 2 },
-        "ProductAi" => new SliceRunConfig { Seed = seed, Threads = 1, ChunkSize = 1 },
-        "T6dOff" => new SliceRunConfig { Seed = seed, Threads = 4, ChunkSize = 2, T6dOff = true },
-        "NoRetire" => new SliceRunConfig { Seed = seed, Threads = 4, ChunkSize = 2, FleetArm = FleetArm.NoRetire },
-        _ => throw new ArgumentException(name),
-    };
-
     [Fact]
     public void OldColumns_EqualTheBuildBeforeTheHorizonChange_AtEveryFixturePoint()
     {
@@ -23,7 +14,7 @@ public class HorizonTests
         Assert.Equal(48, rows.Length);
         foreach (var group in rows.GroupBy(r => (r[0], r[1])))
         {
-            SliceSession s = SliceTestData.Create(Config(group.Key.Item1, ulong.Parse(group.Key.Item2)));
+            SliceSession s = SliceTestData.Create(HorizonConfigs.Config(group.Key.Item1, ulong.Parse(group.Key.Item2)));
             foreach (string[] r in group)
             {
                 s.StepThroughMonth(long.Parse(r[2]));
@@ -59,7 +50,7 @@ public class HorizonTests
         string[] fin = new string[3], at387 = new string[3];
         for (ulong seed = 1; seed <= 3; seed++)
         {
-            SliceSession s = SliceTestData.Create(Config("Main", seed));
+            SliceSession s = SliceTestData.Create(HorizonConfigs.Config("Main", seed));
             s.StepThroughMonth(387);
             at387[seed - 1] = ColumnProjection.Hash(s, _ => true);
             s.StepThroughMonth(1019);
@@ -68,7 +59,7 @@ public class HorizonTests
             Assert.Contains(s.World.Table.Columns.OfType<LongColumn>().Where(c => c.Name.EndsWith(".q.1", StringComparison.Ordinal)), c => c.Current.ToArray().Any(v => v != 0));
         }
         // L1: the same run again.
-        SliceSession again = SliceTestData.Create(Config("Main", 1));
+        SliceSession again = SliceTestData.Create(HorizonConfigs.Config("Main", 1));
         again.StepThroughMonth(1019);
         Assert.Equal(fin[0], ColumnProjection.Hash(again, _ => true));
         // L2: one thread gives the same hashes at months 387 and 1019.

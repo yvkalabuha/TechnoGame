@@ -43,6 +43,31 @@ public class HorizonMaskTests
         Assert.Equal((1L << 0) | (1L << 2), Raw(h, "prd.d1.q.1"));
     }
 
+    [Fact]
+    public void QMask_AtTheLimit124Years_LastYearIsTheLastBitOfBlock1()
+    {
+        var h = new ProductsHarness(startLine: false, years: 124, isMastered: (_, _) => true, tweakStart: s =>
+        {
+            ProductsLayout l = s.Layout;
+            var alts = new int[l.SlotCount];
+            Assert.True(DesignRules.Superior(l, 2, l.KnownUpTo(2), alts));
+            int row = Gbr * l.Designs + 1;
+            s.Stage[row] = DesignStage.InService;
+            s.PlatformGen[row] = 2;
+            for (int k = 0; k < alts.Length; k++)
+                s.Alts[row * l.SlotCount + k] = alts[k];
+            foreach (int y in new[] { 63, 123 })
+                s.Cohort[row * l.Years + y] = Fx6.FromInt(60);
+        });
+        Assert.True(h.Products.CohortMastered(Gbr, 1, 63));
+        Assert.True(h.Products.CohortMastered(Gbr, 1, 123));
+        Assert.False(h.Products.CohortMastered(Gbr, 1, 62));
+        Assert.False(h.Products.CohortMastered(Gbr, 1, 122));
+        Assert.Equal(0L, Raw(h, "prd.d1.q"));
+        Assert.Equal((1L << 1) | (1L << 61), Raw(h, "prd.d1.q.1"));   // bit 63 of the word stays unused
+        Assert.Throws<ArgumentOutOfRangeException>(() => MakeLayout(out _, 125, Scenario.MaxDesigns));
+    }
+
     private static long Raw(ProductsHarness h, string name) =>
         ((LongColumn)h.Table.Columns.Single(c => c.Name == name)).Current[Gbr];
 }

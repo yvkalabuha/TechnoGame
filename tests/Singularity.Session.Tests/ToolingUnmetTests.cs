@@ -39,7 +39,7 @@ public class ToolingUnmetTests
         {
             // T6d: the columns before F33 of the build before T6d are those of T6D_OFF (the new T6d columns and run.t6d are left out).
             SliceSession s = Run(new SliceRunConfig { Seed = seed, Threads = 4, T6dOff = true }, months);
-            Assert.True(hash == ColumnProjection.Hash(s, n => !ColumnProjection.IsSlotGenerationColumn(n) && !n.StartsWith("ind.unmet.", StringComparison.Ordinal) && !n.StartsWith("pol.lic.", StringComparison.Ordinal)
+            Assert.True(hash == ColumnProjection.Hash(s, n => !ColumnProjection.IsAddedSinceBaselineColumn(n) && !n.StartsWith("ind.unmet.", StringComparison.Ordinal) && !n.StartsWith("pol.lic.", StringComparison.Ordinal)
                     && !n.StartsWith("pol.dis.", StringComparison.Ordinal) && n != "run.t6d" && n != "run.scenario"),
                 $"seed {seed}, {months} months: an old column differs (the new column must not touch the decisions)");
         }

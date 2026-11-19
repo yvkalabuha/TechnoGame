@@ -39,7 +39,7 @@ internal static class ColumnProjection
     /// design handle (TASK-0115): the <c>.gen</c> column beside every design reference of <c>cmd.*</c> and <c>pol.*</c>; and with the horizon to 2030 (TASK-0121): <see cref="IsHorizonColumn"/>.
     /// Projections onto "the old columns" leave them out.
     /// </summary>
-    public static bool IsSlotGenerationColumn(string name) =>
+    public static bool IsAddedSinceBaselineColumn(string name) =>
         name.EndsWith(".generation", StringComparison.Ordinal) || name.EndsWith(".parentGen", StringComparison.Ordinal)
         || name.StartsWith("prd.lp.g", StringComparison.Ordinal) && name.EndsWith(".gen", StringComparison.Ordinal)
         || IsDesignRefGenColumn(name) || IsHorizonColumn(name)
@@ -65,7 +65,7 @@ internal static class ColumnProjection
         if (!name.StartsWith(prefix, StringComparison.Ordinal))
             return false;
         int dot = name.IndexOf('.', prefix.Length);
-        if (dot <= prefix.Length || !int.TryParse(name.AsSpan(prefix.Length, dot - prefix.Length), out _))
+        if (dot <= prefix.Length || !int.TryParse(name.AsSpan(prefix.Length, dot - prefix.Length), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out _))
             return false;
         string rest = name[(dot + 1)..];
         if (rest == "q.1")

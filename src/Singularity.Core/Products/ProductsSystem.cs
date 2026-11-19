@@ -163,10 +163,10 @@ public sealed partial class ProductsSystem : ITickSystem
         _lost = new LongColumn[_d];
         _inService0 = new LongColumn[_d];
         _cohort = new LongColumn[_d * _y];
-        _qb = ProductsLayout.MaskBlocks(_y);
-        _qMask = new LongColumn[_d * _qb];
         if (_y > ProductsLayout.MaxCohortYears)
             throw new ArgumentException($"q[design, y] is one bit per cohort year: at most {ProductsLayout.MaxCohortYears} years.", nameof(layout));
+        _qb = ProductsLayout.MaskBlocks(_y);
+        _qMask = new LongColumn[_d * _qb];
         for (int d = 0; d < _d; d++)
         {
             string n = $"prd.d{d}";
