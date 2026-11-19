@@ -31,3 +31,5 @@ Owner decisions #424 and #425: the game runs fullscreen or as a borderless full 
 - [ ] A1, A2, A9 pass on the key screens at 1920x1080 (frames are a real 1920x1080 render), UI scale 100 % and 150 %.
 - [ ] Client tests pass; code review APPROVE; ui-art-director PASS.
 - [ ] TASK-0112 (credits) and TASK-0111 (instruments) get their visual PASS for A1 on the new frames.
+- [ ] From DEBT-0066 (reviewer, 2026-11-19): gauge hatching in `GaugeControl.cs:39` has contrast of at least 3:1; shares at level 0 can be selected from the keyboard (`ActorPanel.cs:235`).
+- [ ] Rail and tree legend layout follows `docs/ui/specs/task-0117-rail-and-legend.md`; check T6 sees the real rects of the lock and the badge.
