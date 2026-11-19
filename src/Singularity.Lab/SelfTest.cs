@@ -13,7 +13,7 @@ public static class SelfTest
          "seeds": [1, 2], "threads": [1, 4], "params": {"rows": 100, "noise": 0.5, "drift": 0.001}}
         """;
 
-    public static int Run(TextWriter log)
+    public static int Run(TextWriter log, string? only = null)
     {
         string tmp = Directory.CreateTempSubdirectory("singularity-lab-selftest-").FullName;
         var checks = new List<(string Name, Func<string?> Body)>
@@ -40,6 +40,11 @@ public static class SelfTest
         checks.AddRange(Models.Slice.SliceChecks.All(tmp));
         checks.AddRange(Bench.SynthChecks.All(tmp));
         checks.AddRange(Bench.HarnessChecks.All(tmp));
+        // `selftest --only TEXT`: only the checks whose name contains TEXT (ordinal), e.g. to repeat one check under load.
+        if (only is not null)
+            checks = checks.Where(c => c.Name.Contains(only, StringComparison.Ordinal)).ToList();
+        if (checks.Count == 0)
+            throw new UsageException($"selftest --only '{only}': no check name contains it");
 
         int failed = 0;
         foreach (var (name, body) in checks)
