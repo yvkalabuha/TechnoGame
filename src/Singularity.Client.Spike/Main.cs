@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Godot;
 using Singularity.Core.Data;
+using Singularity.Core.WhyNot;
 
 namespace Singularity.Client.Spike;
 
@@ -69,6 +70,9 @@ public sealed partial class Main : Node3D
     public override void _Ready()
     {
         System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+        // Space is the pause key everywhere: no Godot control activates on it (Enter and keypad Enter still do), so a focused button never takes it.
+        foreach (var ev in InputMap.ActionGetEvents("ui_accept"))
+            if (ev is InputEventKey { Keycode: Key.Space } or InputEventKey { PhysicalKeycode: Key.Space }) InputMap.ActionEraseEvent("ui_accept", ev);
         _startup["engine_to_ready_ms"] = (long)Time.GetTicksMsec();
         var args = OS.GetCmdlineUserArgs();
         _bench = args.Contains("--bench");
@@ -922,17 +926,38 @@ public sealed partial class Main : Node3D
             case 40 when _shotT >= 0.5: Shot("time_day.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(2); _shotStep = 41; _shotT = 0; break;
             case 41 when _shotT >= 0.4: Shot("time_week.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(3); _shotStep = 42; _shotT = 0; break;
             case 42 when _shotT >= 0.4: Shot("time_month.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(0); _shotStep = 43; _shotT = 0; break;
-            case 43 when _shotT >= 0.4: Shot("time_pause.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(2); _signal.YearOverride = 1950; _shotStep = 130; _shotT = 0; break;
-            // UI instruments: the speed gauge in E1, E2, E3 and the «before» look (setting off)
-            case 130 when _shotT >= 0.4: Shot("gauge_e1.png", new Rect2I(0, 0, 620, 52)); _signal.YearOverride = 1985; _shotStep = 131; _shotT = 0; break;
-            case 131 when _shotT >= 0.4: Shot("gauge_e2.png", new Rect2I(0, 0, 620, 52)); _signal.YearOverride = 2030; _shotStep = 132; _shotT = 0; break;
-            case 132 when _shotT >= 0.4: Shot("gauge_e3.png", new Rect2I(0, 0, 620, 52)); InstrumentLogic.OrganLevel = 0; _shotStep = 133; _shotT = 0; break;
-            case 133 when _shotT >= 0.4: Shot("gauge_before.png", new Rect2I(0, 0, 620, 52)); InstrumentLogic.OrganLevel = Settings.Current.OrganInstruments; _signal.YearOverride = 1950; Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false); _shotStep = 134; _shotT = 0; break;
-            // the same four looks at 150 % UI scale
-            case 134 when _shotT >= 0.5: Shot("gauge_e1_150.png", new Rect2I(0, 0, 930, 78)); _signal.YearOverride = 1985; _shotStep = 135; _shotT = 0; break;
-            case 135 when _shotT >= 0.4: Shot("gauge_e2_150.png", new Rect2I(0, 0, 930, 78)); _signal.YearOverride = 2030; _shotStep = 136; _shotT = 0; break;
-            case 136 when _shotT >= 0.4: Shot("gauge_e3_150.png", new Rect2I(0, 0, 930, 78)); InstrumentLogic.OrganLevel = 0; _shotStep = 137; _shotT = 0; break;
-            case 137 when _shotT >= 0.4: Shot("gauge_before_150.png", new Rect2I(0, 0, 930, 78)); InstrumentLogic.OrganLevel = Settings.Current.OrganInstruments; _signal.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _signal.SetSpeed(0); _alertI = 0; _shotStep = 45; _shotT = 0; break;
+            case 43 when _shotT >= 0.4: Shot("time_pause.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(0); _alertI = 0; _instI = -1; _shotStep = 140; _shotT = 0; break;
+            // layer-2 instruments in the area panels: caliper (Finance), flasks (Science, Production); every era at 100 % and 150 %, plus a greyscale copy of each
+            case 140 when _shotT >= 0.7: if (InstShot() && _shotStep == 140) { _shotStep = 141; AddFlaskProbe(); } _shotT = 0; break;
+            case 141 when _shotT >= 0.5: SaveProbe("flask_levels_100"); Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false); _shotStep = 142; _shotT = 0; break;
+            case 142 when _shotT >= 0.6: SaveProbe("flask_levels_150"); Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _flaskProbe.QueueFree(); _shotStep = 143; _shotT = 0; break;
+            // Science from a real session state: no fixture; a month at a time until the chain shows (at most about 12 s), then the live panel is checked against the snapshot
+            case 143 when _shotT >= 0.3: Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); InstrumentLogic.YearOverride = null; OpenArea(AreaId.Science); _signal.SetSpeed(0); _liveMonths = 0; _liveFirst = -1; _liveHit = null; _shotStep = 144; _shotT = 0; break;
+            // Live Science: the simulation runs in steps of 30 ticks (about a month); in each step every power's why_not snapshot is read. At the first step where a power has a Knowledge link,
+            // that power's Science panel is opened (the area panel pointed at it) and checked; the scan then goes on to 30 years for the shares per power. No power with a link in 30 years: the run fails.
+            case 144 when _shotT >= 0.2:
+                if (!ScanMonths(6)) break;
+                if (_liveFirst >= 0)
+                {
+                    _shotLog += $"live science: first Knowledge link: {_host.Layout.ActorIds[_liveFirst]} at step {_liveMonths} (date {_host.Snap.Date})\n";
+                    _host.WhyActor = _liveFirst; _areaPanel.ShowActor(_liveFirst); _shotStep = 145; _shotT = 0; break;
+                }
+                if (_liveMonths >= LiveMonthLimit) { LogLiveShares(); InstFail($"no live research chain in {_liveMonths} months for any power (date {_host.Snap.Date})"); }
+                _shotT = 0; break;
+            case 145 when _shotT >= 0.8:
+            {
+                int links = LiveKnowledgeLinks(), flasks = _areaPanel.ShotFlaskCount, want = Math.Min(links, 3);
+                _shotLog += $"live science: actor {_host.Layout.ActorIds[_liveFirst]}, knowledge links {links}, flasks shown {flasks}, date {_host.Snap.Date}\n";
+                if (links == 0) { InstFail("live science check failed: the snapshot lost its Knowledge links before the check"); break; }
+                if (flasks != want) { InstFail($"live science check failed: snapshot has {links} Knowledge links, the panel shows {flasks} flasks, expected {want}"); break; }
+                var gr = _areaPanel.GetGlobalRect(); float k = GetWindow().ContentScaleFactor;
+                SaveShot("flask_science_live.png", new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)));
+                CloseArea(); _host.WhyActor = _player; _shotStep = 146; _shotT = 0; break;
+            }
+            case 146 when _shotT >= 0.2:
+                if (!ScanMonths(60)) break;
+                if (_liveMonths >= LiveMonthLimit) { LogLiveShares(); _shotStep = 45; }
+                _shotT = 0; break;
             // alert plates on tints 1 and 5 (7 is not on the map): day side, then tint 5 on the night side
             case 45: AimAlert(_alertI, false); _shotStep = 46; _shotT = 0; break;
             case 46 when _shotT >= 0.7:
@@ -1019,7 +1044,198 @@ public sealed partial class Main : Node3D
         else Input.ParseInputEvent(new InputEventMouseButton { Position = p, GlobalPosition = p, ButtonIndex = MouseButton.Left, Pressed = down.Value, ButtonMask = down.Value ? MouseButtonMask.Left : 0 });
     }
 
-    static void PressKey(Key k) => Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = true });
+    // Instrument shots: 3 areas x 3 eras x 2 UI scales; the previous configuration is saved, then the next one is set up. Returns true when all are done.
+    int _instTarget, _instSpeedBefore;
+    int _instI, _instPhase, _instShareBefore; bool _instCheckInput, _instCheckSend, _instSent, _instSkipShot; int _instAppliedBefore;
+
+    // A failed shot-run check: the error goes to the run log and the process exits non-zero.
+    const int LiveMonthLimit = 360;
+    int[] _liveHit; int _liveMonths, _liveFirst = -1;
+
+    bool WaitFor(Func<bool> done, string what)
+    {
+        var sw = Stopwatch.StartNew();
+        while (!done()) { if (sw.ElapsedMilliseconds > 20000) { InstFail($"timeout waiting for {what} (tick {_host.Snap.Tick}, speed {_host.Speed}, why actor {_host.Snap.WhyActor})"); return false; } System.Threading.Thread.Sleep(1); }
+        return true;
+    }
+
+    // Steps the simulation n times 30 ticks and reads every power's why_not snapshot after each step (blocking: a shot-run helper). False after a failure.
+    bool ScanMonths(int n)
+    {
+        int na = _host.Layout.ActorIds.Length;
+        _liveHit ??= new int[na];
+        for (int m = 0; m < n && _liveMonths < LiveMonthLimit; m++)
+        {
+            long target = _host.Snap.Tick + 30;
+            _host.StepTicks(30);
+            if (!WaitFor(() => _host.Snap.Tick >= target, "a simulation step")) return false;
+            for (int a = 0; a < na; a++)
+            {
+                _host.WhyActor = a;
+                if (!WaitFor(() => _host.Snap.WhyActor == a && _host.Snap.Tick >= target, "the why_not snapshot of a power")) return false;
+                if (LiveKnowledgeLinks() > 0) { _liveHit[a]++; if (_liveFirst < 0) _liveFirst = a; }
+            }
+            _liveMonths++;
+            if (_liveFirst >= 0 && _shotStep == 144) return true;   // the first month with a link: stop here for the panel check
+        }
+        return true;
+    }
+
+    void LogLiveShares()
+    {
+        for (int a = 0; a < _liveHit.Length; a++)
+            _shotLog += $"live science share: {_host.Layout.ActorIds[a]} has a Knowledge link in {_liveHit[a]} of {_liveMonths} steps ({100.0 * _liveHit[a] / Math.Max(_liveMonths, 1):F1} %)\n";
+    }
+
+    // Knowledge links the panel would read: the same condition as the live path of the Science flasks.
+    int LiveKnowledgeLinks() => _host.Snap is { WhyError: "", Target: not null } sn ? Singularity.Client.Spike.InstrumentLogic.ResearchFlasks(sn.Links, int.MaxValue).Count : 0;
+
+    void InstFail(string msg)
+    {
+        _shotLog += "ERROR: " + msg + "\n";
+        string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
+        Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog);
+        GD.PrintErr(msg);
+        GetTree().Quit(1); _shotStep = 18;
+    }
+    // Shot-only strip: flasks at 15, 60 and 95 % without and with a deficit (the live data has no deficit and no Science chain in the shot scenario).
+    PanelContainer _flaskProbe;
+    void AddFlaskProbe()
+    {
+        var box = new PanelContainer { Position = new Vector2(200, 80), MouseFilter = Control.MouseFilterEnum.Ignore };
+        box.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 2, 12, Ui.R3, 12));
+        var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 10);
+        foreach (bool def in new[] { false, true })
+            foreach (double lv in new[] { 0.15, 0.6, 0.95 })
+            { var f = new FlaskControl { Ink = Ui.Teal }; f.Set(lv, def); row.AddChild(f); }
+        box.AddChild(row);
+        _areaPanel.GetParent().AddChild(box);
+        _flaskProbe = box;
+    }
+
+    void SaveProbe(string name)
+    {
+        var img = GetViewport().GetTexture().GetImage();
+        float k = img.GetWidth() / GetViewport().GetVisibleRect().Size.X;
+        var gr = _flaskProbe.GetGlobalRect();
+        img = img.GetRegion(new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)).Intersection(new Rect2I(0, 0, img.GetWidth(), img.GetHeight())));
+        string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
+        img.SavePng(Path.Combine(dir, name + ".png")); img.Convert(Image.Format.La8); img.SavePng(Path.Combine(dir, name + "_grey.png"));
+    }
+    static readonly int[] InstYears = { 1950, 1985, 2030 };
+    static readonly AreaId[] InstAreas = { AreaId.Finance, AreaId.Science, AreaId.Production };
+    static readonly string[] InstNames = { "caliper_finance", "flask_science", "flask_production" };
+    // Base-size frames at 100 % and 150 % UI scale (#417; Full HD frames come with the scale policy task): 3 areas x 3 eras x 2 scales, each with a greyscale copy,
+    // the whole screen too, and the speed meter bar with the Finance rows.
+    bool InstShot()
+    {
+        // Finance: the edit goes through the input pipeline (a click on a share row, a click on the caliper, an arrow key), one step per call so that the layout settles in between.
+        if (_instPhase > 0)
+        {
+            float w = GetWindow().ContentScaleFactor;   // events are window pixels, the panel reports canvas units
+            if (_instPhase == 1) { var c = _areaPanel.ShotRowPoint(1) * w; Mouse(c, null); Mouse(c, true); Mouse(c, false); }
+            else if (_instPhase == 3) PressKey(Key.Tab);   // after the frame with the unsent edit: Tab from the caliper to Apply
+            else if (_instPhase == 4) { if (_instI == 0) { var gr = _areaPanel.GetGlobalRect(); SaveShot("apply_focus.png", new Rect2I((int)(gr.Position.X * w), (int)(gr.Position.Y * w), (int)(gr.Size.X * w), (int)(gr.Size.Y * w))); } _instAppliedBefore = _areaPanel.ShotApplied; _instSpeedBefore = _host.Speed; PressKey(Key.Space); PressKey(Key.Space, false); }   // Space is the pause key even with Apply focused
+            else if (_instPhase == 5)
+            {
+                // Space must not have submitted the order, and must have toggled the pause; then it is toggled back
+                if (_areaPanel.ShotApplied != _instAppliedBefore || _host.Speed == _instSpeedBefore) { InstFail($"finance Space check failed: orders submitted {_areaPanel.ShotApplied - _instAppliedBefore}, speed {_instSpeedBefore} -> {_host.Speed}"); return true; }
+                PressKey(Key.Space); PressKey(Key.Space, false);
+            }
+            else if (_instPhase == 6)
+            {
+                if (_host.Speed != _instSpeedBefore) { InstFail($"finance Space check failed: pause was not restored ({_instSpeedBefore} -> {_host.Speed})"); return true; }
+                PressKey(Key.Space); PressKey(Key.Tab, true, true); PressKey(Key.Tab, false, true);   // Space down on Apply, then Shift+Tab away from it
+            }
+            else if (_instPhase == 7) { PressKey(Key.Space, false); PressKey(Key.Tab); PressKey(Key.Tab, false); }   // Space up on another control, then Tab back to Apply
+            else if (_instPhase == 8)
+            {
+                if (_areaPanel.ShotApplied != _instAppliedBefore || _host.Speed == _instSpeedBefore) { InstFail($"finance Space-release check failed: orders submitted {_areaPanel.ShotApplied - _instAppliedBefore}, speed {_instSpeedBefore} -> {_host.Speed}"); return true; }
+                PressKey(Key.Space); PressKey(Key.Space, false);   // pause back
+            }
+            else if (_instPhase == 9)
+            {
+                if (_host.Speed != _instSpeedBefore) { InstFail($"finance Space-release check failed: pause was not restored ({_instSpeedBefore} -> {_host.Speed})"); return true; }
+                _instAppliedBefore = _areaPanel.ShotApplied; PressKey(Key.Enter); PressKey(Key.Enter, false); _instCheckSend = true;   // Enter still submits after the Space sequence
+            }
+            else
+            {
+                _instShareBefore = _areaPanel.ShotShare(1);
+                _instTarget = _instShareBefore == 45 ? 60 : 40;   // an order sent in an earlier pass may be in force by now: pick a different spot
+                var c = _areaPanel.ShotCaliperPoint(_instTarget) * w; Mouse(c, null); Mouse(c, true); Mouse(c, false); PressKey(Key.Right);
+                _instCheckInput = true;   // the events are processed on the next frame: checked at the next call
+            }
+            _instPhase = _instPhase switch { 1 => 2, 3 => 4, 4 => 5, 5 => 6, 6 => 7, 7 => 8, 8 => 9, _ => 0 };
+            return false;
+        }
+        if (_instCheckInput)
+        {
+            // The injected row click, caliper click and arrow key must have selected share 1 and moved it (click to the target, one step right = target + 5); otherwise the frames would show an untouched panel.
+            _instCheckInput = false;
+            int sel = _areaPanel.ShotSelected, val = _areaPanel.ShotShare(1);
+            _shotLog += $"finance input: selected share {sel}, share value {val} (was {_instShareBefore})\n";
+            if (sel != 1 || val == _instShareBefore || val != _instTarget + 5) { InstFail($"finance input check failed: expected share 1 at {_instTarget + 5} (was {_instShareBefore}), got share {sel} at {val}"); return true; }
+        }
+        if (_instCheckSend)
+        {
+            // Keyboard only: Tab reached Apply and Enter submitted the edit (the panel is waiting for the command result).
+            _instCheckSend = false; _instSkipShot = true;
+            bool sent = _areaPanel.ShotApplied == _instAppliedBefore + 1;
+            _shotLog += $"finance keyboard submit: order submitted {sent}\n";
+            if (!sent) { InstFail("finance keyboard check failed: Tab then Enter did not submit the order"); return true; }
+        }
+        if (_instI >= 0 && !_instSkipShot)
+        {
+            int p = _instI % 9, pct = _instI < 9 ? 100 : 150;
+            var img = GetViewport().GetTexture().GetImage();
+            float k = img.GetWidth() / GetViewport().GetVisibleRect().Size.X;
+            var all = new Rect2I(0, 0, img.GetWidth(), img.GetHeight());
+            string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
+            void Save(Image im, Rect2 gr, string name)
+            {
+                var c = im.GetRegion(new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)).Intersection(all));
+                c.SavePng(Path.Combine(dir, name + ".png"));
+                c.Convert(Image.Format.La8); c.SavePng(Path.Combine(dir, name + "_grey.png"));
+            }
+            string sfx = $"e{p % 3 + 1}_{pct}";
+            if (p / 3 == 1)
+                foreach (string lang in Loc.Languages)
+                    if (_areaPanel.ShotCaptionWidth(lang) > FlaskControl.CaptionLimit) { InstFail($"flask caption check failed: {lang} caption is {_areaPanel.ShotCaptionWidth(lang)} du, cell limit {FlaskControl.CaptionLimit}"); return true; }
+            if (p / 3 != 0 && Math.Abs(_areaPanel.GetGlobalRect().Size.X - 420) > 0.5f) { InstFail($"area panel width check failed: {InstNames[p / 3]}_{sfx} is {_areaPanel.GetGlobalRect().Size.X} du wide, expected 420"); return true; }
+            if (p / 3 != 0 && _areaPanel.ShotMinWidthWithBar() > 420.5f) { InstFail($"area panel width check failed: {InstNames[p / 3]}_{sfx} needs {_areaPanel.ShotMinWidthWithBar()} du with the scroll bar, limit 420"); return true; }
+            _shotLog += $"panel scrolls: {_areaPanel.ShotScrolls}\n";
+            Save(img, _areaPanel.GetGlobalRect(), $"{InstNames[p / 3]}_{sfx}");
+            if (p / 3 == 0) Save(img, new Rect2(0, 0, 620, 52), $"speed_{sfx}");
+            Save(img, new Rect2(Vector2.Zero, GetViewport().GetVisibleRect().Size), $"full_{InstNames[p / 3]}_{sfx}");   // the whole screen, for the control in context
+            _shotLog += $"instrument shot {InstNames[p / 3]}_{sfx}: image {img.GetWidth()}x{img.GetHeight()}, scale {pct} %\n";
+            if (p / 3 == 0) { _instPhase = 3; return false; }   // the frame with the unsent edit is kept; now the keyboard route to Apply
+        }
+        _instSkipShot = false;
+        if (++_instI >= 18)
+        {
+            _areaPanel.ShotResearch(null); InstrumentLogic.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); CloseArea();
+            return true;
+        }
+        int q = _instI % 9, era = q % 3;
+        Settings.Current.UiScale = _instI < 9 ? 100 : 150; Settings.Apply(Settings.Current, GetWindow(), false);
+        InstrumentLogic.YearOverride = InstYears[era];
+        OpenArea(InstAreas[q / 3]);
+        // shot-only state: the scenario has no research chain
+        _areaPanel.ShotResearch(InstAreas[q / 3] == AreaId.Science ? new[] { ShotLink("s8.fnd.compressible_flow", 3, 4), ShotLink("s8.fnd.boundary_layer", 1, 5), ShotLink("s7.fnd.brayton_cycle", 5, 5) } : null);
+        if (InstAreas[q / 3] == AreaId.Finance) _instPhase = 1;   // an unsent edit and the focus come from real input: pencil marker and focus frame show
+        return false;
+    }
+
+    // A why_not Knowledge link for the shot fixture: the panel reads links the same way as in play.
+    Link ShotLink(string id, long have, long need)
+    {
+        var n = _host.Data.Nodes;
+        int number = -1;
+        for (int i = 0; i < n.Count; i++) if (n.Id[i] == id) number = n.Number[i];
+        return new Link(WhyNotLayer.Knowledge, WhyNotCause.MissingNode, number, Singularity.Kernel.Fx6.FromInt(have), Singularity.Kernel.Fx6.FromInt(need), System.Collections.Immutable.ImmutableArray<Lever>.Empty, Singularity.Kernel.Fx6.Zero, null);
+    }
+
+    static void PressKey(Key k, bool pressed = true, bool shift = false) => Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = pressed, ShiftPressed = shift });
 
     void AreaShot()
     {

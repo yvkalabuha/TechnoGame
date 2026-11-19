@@ -15,4 +15,8 @@
     <Compile Include="../../src/Singularity.Client.Spike/AreaData.cs" Link="AreaData.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/TextureValidator.cs" Link="TextureValidator.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Singularity.Core/Singularity.Core.csproj" />
+    <ProjectReference Include="../../src/Singularity.Kernel/Singularity.Kernel.csproj" />
+  </ItemGroup>
 </Project>

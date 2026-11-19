@@ -92,9 +92,11 @@ public static class Ui
         return l;
     }
 
-    public static CaptionButton Btn(string text, Action onPress, int size = 14, bool command = false)
+    public static CaptionButton Btn(string text, Action onPress, int size = 14, bool command = false, bool focusable = false)
     {
-        var b = new CaptionButton { Text = text, FocusMode = Control.FocusModeEnum.None, ToggleMode = false };
+        var b = new CaptionButton { Text = text, FocusMode = focusable ? Control.FocusModeEnum.All : Control.FocusModeEnum.None, ToggleMode = false };
+        if (focusable) b.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());   // CaptionButton draws its own two-tone ring (A7)
+        b.TwoToneFocus = focusable;
         b.AddThemeFontOverride("font", Fonts.Text);
         b.AddThemeFontSizeOverride("font_size", Math.Max(size, MinSize));
         PaperSurface.Apply(b, SurfaceKind.Button, text);   // StyleButton takes the material off again while the button is an order-ready command plate (an alert colour)
@@ -231,6 +233,10 @@ public sealed partial class Prose : RichTextLabel
 public sealed partial class CaptionButton : Button
 {
     readonly Label _cap = new() { MouseFilter = MouseFilterEnum.Ignore, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+    /// <summary>Two-tone focus ring (A7): 2 px ink outside, 2 px paper inside, so that one of the two reads on the paper and on the command fill alike.</summary>
+    public bool TwoToneFocus;
+    static readonly StyleBoxFlat RingOuter = Ring(Ui.Ink), RingInner = Ring(Ui.Paper);
+    static StyleBoxFlat Ring(Color c) { var s = new StyleBoxFlat { DrawCenter = false, BorderColor = c }; s.SetBorderWidthAll(2); s.SetCornerRadiusAll(3); return s; }
     Color _normal = Ui.Ink, _hover = Ui.Ink, _pressed = Ui.Paper, _disabled = Ui.Ink3;
 
     public CaptionButton()
@@ -256,6 +262,7 @@ public sealed partial class CaptionButton : Button
 
     public override void _Draw()
     {
+        if (TwoToneFocus && HasFocus()) { DrawStyleBox(RingOuter, new Rect2(Vector2.Zero, Size)); DrawStyleBox(RingInner, new Rect2(new Vector2(2, 2), Size - new Vector2(4, 4))); }
         var sb = GetThemeStylebox("normal");
         _cap.OffsetLeft = sb.GetContentMargin(Side.Left); _cap.OffsetRight = -sb.GetContentMargin(Side.Right);
         _cap.OffsetTop = sb.GetContentMargin(Side.Top); _cap.OffsetBottom = -sb.GetContentMargin(Side.Bottom);

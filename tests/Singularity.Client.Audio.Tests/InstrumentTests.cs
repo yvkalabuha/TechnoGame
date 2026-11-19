@@ -1,5 +1,9 @@
+using System;
 using System.Linq;
 using Singularity.Client.Spike;
+using System.Collections.Immutable;
+using Singularity.Core.WhyNot;
+using Singularity.Kernel;
 using Xunit;
 
 namespace Singularity.Client.Audio.Tests;
@@ -54,4 +58,222 @@ public class InstrumentTests
     [InlineData(2000, 3)]
     [InlineData(2100, 3)]
     public void Era_ByYear(int year, int era) => Assert.Equal(era, InstrumentLogic.Era(year));
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(2, 0)]
+    [InlineData(3, 5)]
+    [InlineData(47, 45)]
+    [InlineData(48, 50)]
+    [InlineData(100, 100)]
+    [InlineData(130, 100)]
+    public void CaliperSnap_ToStepOfFive(double v, int expect) => Assert.Equal(expect, InstrumentLogic.CaliperSnap(v));
+
+    [Theory]
+    [InlineData(40, 1, 45)]
+    [InlineData(40, -1, 35)]
+    [InlineData(47, 1, 50)]
+    [InlineData(47, -1, 45)]
+    [InlineData(100, 1, 100)]
+    [InlineData(0, -1, 0)]
+    [InlineData(3, -1, 0)]
+    public void CaliperArrow_StepsOnTheGrid(int v, int dir, int expect) => Assert.Equal(expect, InstrumentLogic.CaliperArrow(v, dir));
+
+    [Fact]
+    public void AlloyFlask_NoMeltIsEmptyHatchedAndNamedNoSmelting()
+    {
+        var f = InstrumentLogic.AlloyFlask(0, 0, null);
+        Assert.Equal(0, f.Level); Assert.True(f.Hatched); Assert.Equal(InstrumentLogic.AlloyState.NoSmelting, f.State);
+        Assert.Equal("flask.alloy.none", InstrumentLogic.AlloyTipKey(f.State));
+    }
+
+    [Fact]
+    public void AlloyFlask_LinkWithHaveBelowNeedIsAShortage()
+    {
+        var f = InstrumentLogic.AlloyFlask(40, 0, (40, 100));
+        Assert.Equal(0.4, f.Level, 9); Assert.True(f.Hatched); Assert.Equal(InstrumentLogic.AlloyState.Shortage, f.State);
+        Assert.Equal("flask.alloy.deficit", InstrumentLogic.AlloyTipKey(f.State));
+    }
+
+    [Theory]
+    [InlineData(100, 100)]
+    [InlineData(120, 100)]
+    public void AlloyFlask_LinkWithHaveAtOrAboveNeedIsNoShortage(double have, double need)
+    {
+        var f = InstrumentLogic.AlloyFlask(have, 0, (have, need));
+        Assert.False(f.Hatched); Assert.Equal(InstrumentLogic.AlloyState.Normal, f.State); Assert.Equal(1.0, f.Level);
+        Assert.Equal("flask.alloy.tip", InstrumentLogic.AlloyTipKey(f.State));
+    }
+
+    [Theory]
+    [InlineData(InstrumentLogic.AlloyState.Normal, "flask.alloy.cap.ok")]
+    [InlineData(InstrumentLogic.AlloyState.Shortage, "flask.alloy.cap.deficit")]
+    [InlineData(InstrumentLogic.AlloyState.Disrupted, "flask.alloy.cap.disrupted")]
+    [InlineData(InstrumentLogic.AlloyState.NoSmelting, "flask.alloy.cap.none")]
+    public void AlloyCaptionKey_NamesWhatEachStateMeasures(InstrumentLogic.AlloyState state, string key) => Assert.Equal(key, InstrumentLogic.AlloyCaptionKey(state));
+
+    [Fact]
+    public void AlloyFlask_DisruptionIsNotAShortage_AndHealthyStockIsNormal()
+    {
+        var d = InstrumentLogic.AlloyFlask(10, 0.25, null);
+        Assert.Equal(0.75, d.Level, 9); Assert.True(d.Hatched); Assert.Equal(InstrumentLogic.AlloyState.Disrupted, d.State);
+        Assert.Equal("flask.alloy.disrupted", InstrumentLogic.AlloyTipKey(d.State));
+        var n = InstrumentLogic.AlloyFlask(10, 0, null);
+        Assert.Equal(1.0, n.Level); Assert.False(n.Hatched); Assert.Equal(InstrumentLogic.AlloyState.Normal, n.State);
+    }
+
+    [Theory]
+    [InlineData(0.996, true, 99)]    // a hatched flask never reads 100 %
+    [InlineData(0.9, true, 90)]
+    [InlineData(1.0, false, 100)]
+    [InlineData(0.996, false, 100)]
+    [InlineData(0.0, true, 0)]
+    public void FlaskPercent_CapsHatchedAt99_ForCaptionAndTooltipAlike(double level, bool hatched, int expect) => Assert.Equal(expect, InstrumentLogic.FlaskPercent(level, hatched));
+
+    [Fact]
+    public void AlloyFlask_TinyDisruptionTooltipPercentIs99()
+    {
+        var f = InstrumentLogic.AlloyFlask(10, 0.001, null);
+        Assert.Equal(99, InstrumentLogic.FlaskPercent(f.Level, f.Hatched));
+    }
+
+    [Fact]
+    public void FlaskLevel_ClampsAndHandlesNoNeed()
+    {
+        Assert.Equal(0.5, InstrumentLogic.FlaskLevel(5, 10));
+        Assert.Equal(1, InstrumentLogic.FlaskLevel(12, 10));
+        Assert.Equal(0, InstrumentLogic.FlaskLevel(-1, 10));
+        Assert.Equal(1, InstrumentLogic.FlaskLevel(0, 0));
+    }
+
+    [Theory]
+    [InlineData(0.0, 1.0)]      // no disruption: the deficit fraction is 0, the stock is the whole normal supply
+    [InlineData(0.5, 0.5)]      // PolicyParams.DisruptionDeficit = 0.5 (a real view value): half of the normal supply
+    [InlineData(0.25, 0.75)]
+    [InlineData(1.0, 0.0)]
+    [InlineData(1.5, 0.0)]
+    public void AlloyLevel_IsWhatIsLeftOfTheNormalSupply(double deficitFraction, double expected) => Assert.Equal(expected, InstrumentLogic.AlloyLevel(deficitFraction), 9);
+
+    [Fact]
+    public void AlloyLevel_IgnoresTheKilogramSupply()
+    {
+        // the view gives supply in kg (cap * (1 - deficit) * yield, e.g. 4200 kg) and the deficit as a fraction; only the fraction may set the level
+        Assert.Equal(0.5, InstrumentLogic.AlloyLevel(0.5));
+    }
+
+    [Theory]
+    [InlineData(1e-6)]
+    [InlineData(0.01)]
+    [InlineData(0.5)]
+    public void AlloyLevel_AnyDeficitIsBelowFull(double deficitFraction) => Assert.True(InstrumentLogic.AlloyLevel(deficitFraction) < 1);
+
+    [Theory]
+    [InlineData(0, true, false, false)]    // layer off
+    [InlineData(1, true, false, true)]     // weak, own area panel
+    [InlineData(2, true, false, true)]     // normal, own area panel
+    [InlineData(2, true, true, false)]     // foreign power
+    [InlineData(2, false, false, false)]   // not an area panel
+    public void CaliperShown_OnlyOwnAreaPanelWithTheLayerOn(int level, bool area, bool foreign, bool expected) =>
+        Assert.Equal(expected, InstrumentLogic.CaliperShown(level, area, foreign));
+
+    [Fact]
+    public void Caliper_NeverShownAtLevelZeroOrForeign()
+    {
+        Assert.False(InstrumentLogic.CaliperShown(0, true, false));
+        Assert.False(InstrumentLogic.CaliperShown(2, true, true));
+        Assert.False(InstrumentLogic.OrganShown(2, false));
+        Assert.True(InstrumentLogic.CaliperShown(1, true, false));
+    }
+
+    [Fact]
+    public void HatchSpan_NeckLinesStayInsideTheNeck()
+    {
+        // flask neck: y 2..16, half-width 6 about the axis; every drawn point (c - y, y) must lie within 6 of the axis (t = c - axis)
+        int drawn = 0;
+        for (float t = -4; t <= 80; t += 5)
+        {
+            var (lo, hi) = InstrumentLogic.HatchSpan(2, 16, 6, 0, t);
+            if (lo >= hi) continue;
+            drawn++;
+            foreach (float y in new[] { lo, (lo + hi) / 2, hi })
+            {
+                Assert.InRange(y, 2f, 16f);
+                Assert.InRange(Math.Abs(t - y), 0f, 6.001f);
+            }
+        }
+        Assert.True(drawn >= 3);   // the neck really gets hatching lines
+    }
+
+    [Theory]
+    [InlineData(10f)]
+    [InlineData(14f)]
+    [InlineData(16f)]
+    public void HatchSpan_NeckIsHatchedAtAnyEmptyHeight(float yLevel)
+    {
+        // the empty neck above the liquid is y 2..yLevel: at least one line is drawn for every level below full
+        bool any = false;
+        for (float t = -4; t <= 80; t += 5) { var (lo, hi) = InstrumentLogic.HatchSpan(2, yLevel, 6, 0, t); any |= lo < hi; }
+        Assert.True(any);
+    }
+
+    [Theory]
+    [InlineData(0.3, 0.3, true)]    // hazard node at its threshold: full flask, discovery still a draw
+    [InlineData(0.5, 0.3, true)]
+    [InlineData(0.29, 0.3, false)]
+    [InlineData(5, 0, false)]       // no need: nothing to reach
+    public void ThresholdReached_MarksAHazardLinkAtItsNeed(double have, double need, bool expected)
+    {
+        Assert.Equal(expected, InstrumentLogic.ThresholdReached(have, need));
+    }
+
+    static Link K(int node, double have, double need, WhyNotLayer layer = WhyNotLayer.Knowledge) =>
+        new(layer, WhyNotCause.MissingNode, node, Fx6.FromDouble(have), Fx6.FromDouble(need), ImmutableArray<Lever>.Empty, Fx6.Zero, null);
+
+    [Fact]
+    public void ResearchFlasks_EmptyLinksGiveNoFlask() => Assert.Empty(InstrumentLogic.ResearchFlasks(new Link[0], 3));
+
+    [Fact]
+    public void ResearchFlasks_ThreeKnowledgeLinksGiveThree()
+    {
+        var f = InstrumentLogic.ResearchFlasks(new[] { K(1, 0.5, 1), K(2, 0.25, 1), K(3, 0, 1) }, 3);
+        Assert.Equal(new[] { 1, 2, 3 }, f.ConvertAll(x => x.Node));
+        Assert.Equal(0.5, f[0].Have);
+    }
+
+    [Fact]
+    public void ResearchFlasks_SkipsOtherLayers()
+    {
+        var f = InstrumentLogic.ResearchFlasks(new[] { K(9, 0, 1, WhyNotLayer.Product), K(4, 0.5, 1), K(8, 0, 1, WhyNotLayer.Capability) }, 3);
+        Assert.Equal(new[] { 4 }, f.ConvertAll(x => x.Node));
+    }
+
+    [Fact]
+    public void ResearchFlasks_KeepsTheFirstMax()
+    {
+        var f = InstrumentLogic.ResearchFlasks(new[] { K(1, 0, 1), K(2, 0, 1), K(3, 0, 1), K(4, 0, 1) }, 3);
+        Assert.Equal(new[] { 1, 2, 3 }, f.ConvertAll(x => x.Node));
+    }
+
+    [Fact]
+    public void ResearchFlasks_FlagsAThresholdLink()
+    {
+        var f = InstrumentLogic.ResearchFlasks(new[] { K(1, 0.25, 0.25), K(2, 0.125, 1) }, 3);
+        Assert.True(f[0].Threshold);
+        Assert.False(f[1].Threshold);
+    }
+
+    [Fact]
+    public void FocusRing_OneToneReadsOnEveryBackgroundItMeets()
+    {
+        var outer = ColorMath.FromHex(InstrumentLogic.FocusOuter); var inner = ColorMath.FromHex(InstrumentLogic.FocusInner);
+        // outside the button: the panel paper and the sheet; inside: the plain sheet fill, the command fill (an order is ready)
+        foreach (var bg in new[] { Palette.C.Paper, Palette.C.Sheet, Palette.C.Command })
+        {
+            var b = ColorMath.FromHex(bg);
+            double best = Math.Max(ColorMath.Contrast(outer, b), ColorMath.Contrast(inner, b));
+            Assert.True(best >= 3.0, $"focus ring on {bg}: best contrast {best:F2}");
+        }
+        // the single ink ring failed on the command fill (the reason for two tones)
+        Assert.True(ColorMath.Contrast(outer, ColorMath.FromHex(Palette.C.Command)) < 3.0);
+    }
 }

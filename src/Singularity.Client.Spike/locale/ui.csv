@@ -11,9 +11,9 @@ ui.sum,sum {0}%,сумма {0}%
 ui.closeline,Close line,Закрыть линию
 ui.cancel,Cancel,Снять
 speed.pause,pause,пауза
-speed.day,day/s,день/с
-speed.week,week/s,неделя/с
-speed.month,month/s,месяц/с
+speed.day,1 day/s,1 день/с
+speed.week,1 week/s,1 неделя/с
+speed.month,1 month/s,1 месяц/с
 tip.date,Date in the game,Дата в игре
 tip.tempo,"Time tempo: pause, day, week, month per second (Space, 1, 2, 3)","Темп времени: пауза, день, неделя, месяц в секунду (Пробел, 1, 2, 3)"
 tip.power,The power you play,"Держава, за которую вы играете"
@@ -349,6 +349,21 @@ area.locked.note,The term is provisional. There are no figures or controls here 
 area.production.later,Supply priority and the choice of variants: in M1. Here are the design lines of the power.,Приоритет снабжения и выбор вариантов: в M1. Здесь линии изделий державы.
 area.finance.later,Taxes by region: M1; trade and embargo: M1–M2.,Налоги по регионам: M1; торговля и эмбарго: M1–M2.
 tip.area,{0} · {1},{0} · {1}
+flask.sci.cap,Progress of the first links of the chain,Ход первых звеньев цепи
+flask.sci.tip,{0}: {1}% of the need ({2} of {3}),{0}: {1}% от потребности ({2} из {3})
+flask.sci.threshold,{0}: threshold reached ({1} of {2}); discovery is not certain (hatched),{0}: порог достигнут ({1} из {2}); открытие не гарантировано (штриховка)
+flask.sci.threshold.note,threshold reached: discovery not certain,порог достигнут: открытие не гарантировано
+flask.sci.none,No research in progress on the current target,Нет хода исследования по текущей цели
+flask.alloy.cap.ok,Alloy: sufficient,Сплав: хватает
+flask.alloy.cap.deficit,Alloy: {0} % of demand · low,Сплав: {0} % потребности · мало
+flask.alloy.cap.disrupted,Alloy supply: {0} % of normal,Снабжение сплавом: {0} % от обычного
+flask.alloy.cap.none,No alloy,Сплава нет
+flask.alloy.tip,Stock is {0}% of the normal supply,Запас — {0}% от обычного снабжения
+flask.deficit,low,мало
+flask.alloy.deficit,Supply covers {0}% of the demand: a shortage (hatched),Снабжение покрывает {0}% потребности: дефицит (штриховка)
+flask.alloy.disrupted,Supply is {0}% of normal while the disruption lasts (hatched),Снабжение — {0}% от обычного, пока длится сбой (штриховка)
+flask.alloy.none,No alloy is being smelted (hatched),Сплав не выплавляется (штриховка)
+caliper.tip,Left and right arrows: 5 points; or drag the jaw,Стрелки влево и вправо: 5 пунктов; или тяните губку
 tip.area.locked,{0} · {1} · appears in {2},{0} · {1} · появится в {2}
 tip.rail,Rail width: narrow or wide (\),Ширина рейки: узкая или широкая (\)
 tip.journal,Journal of signals (`),Журнал сигналов (`)

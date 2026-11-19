@@ -49,7 +49,7 @@ public sealed partial class TimeControl : HBoxContainer
         }
     }
 
-    // The tempo gauge is GaugeControl: four steps (0 pause, 1 day/s, 2 week/s, 3 month/s; the fourth is a dashed reserve, #331), a look per era or the plain cells.
+    // The tempo meter is GaugeControl: four steps (0 pause, 1 day/s, 2 week/s, 3 month/s; the fourth is a dashed reserve, #331), with the tempo word and its unit beside it.
     static readonly int[] GaugeInk = { Ui.Teal, Ui.Olive, Ui.Plum, Ui.Sand };
 
     readonly IconButton _pause = new(Kind.Pause), _slower = new(Kind.Slower), _faster = new(Kind.Faster);
@@ -58,8 +58,6 @@ public sealed partial class TimeControl : HBoxContainer
     int _speed, _resume = 1;
     public event Action<int> Changed;
     public int Selected => _speed;
-    /// <summary>Game year, for the era look of the gauge.</summary>
-    public int Year { set => _meter.Year = value; }
 
     public TimeControl()
     {
@@ -71,11 +69,13 @@ public sealed partial class TimeControl : HBoxContainer
         AddChild(_pause); AddChild(_slower); AddChild(_faster);
         var gap = new Control { CustomMinimumSize = new Vector2(10, 0) };
         AddChild(gap); AddChild(_meter);
-        _word.AddThemeFontSizeOverride("font_size", 12);   // draft.s: the tempo word is a caption, not a control (visual review F5)
-        _word.CustomMinimumSize = new Vector2(96, 0);
+        _word.AddThemeFontSizeOverride("font_size", 14);   // draft.s 14 du: number and unit of the gauge never smaller (#417 C3, A1)
+        _word.CustomMinimumSize = new Vector2(124, 0);
         _word.VerticalAlignment = VerticalAlignment.Center;
         AddChild(_word);
         Select(0, false);
+        Loc.Changed += Refresh;
+        TreeExiting += () => Loc.Changed -= Refresh;
     }
 
     /// <summary>Slower and faster move the tempo steps 1..3; while paused they only change the tempo that «continue» resumes at.</summary>
@@ -103,7 +103,7 @@ public sealed partial class TimeControl : HBoxContainer
         _pause.On = _speed == 0;
         _slower.Disabled = level <= 1; _faster.Disabled = level >= 3;
         _meter.Filled = _speed;
-        _word.Text = Words[_speed];
+        _word.Text = _speed == 0 ? Loc.T("speed.pause") : Loc.T(Words[_speed]);   // the real rate with its unit ("неделя/с"), full ink (O-008); never the step index
         _word.AddThemeColorOverride("font_color", Ui.Ink);   // full-strength ink: the word carries the value (review TASK-0108)
         _pause.QueueRedraw(); _slower.QueueRedraw(); _faster.QueueRedraw(); _meter.QueueRedraw();
     }
