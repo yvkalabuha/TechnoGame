@@ -20,6 +20,9 @@ from .provider import OpenAICompatProvider
 from .worktree import GitError
 
 MAX_INPUT_BYTES = 1_000_000
+# Codex reads the changed files from its worktree on demand; the prompt keeps the 1 MB limit, the files it may open
+# get a wider one (DEBT-0064: a diff of 300 KB over 74 files was refused because the whole files summed to 1.4 MB).
+MAX_WORK_BYTES = 4_000_000
 REVIEW_SCHEMA = config.PACKAGE_DIR / "schemas" / "review.schema.json"
 GATE_SCHEMA = config.PACKAGE_DIR / "schemas" / "gate.schema.json"
 DEFAULT_PROFILE = "deepseek-v4-pro"
@@ -91,7 +94,8 @@ def _fence(label, body):
     return f"=== {label} ===\n{body}\n=== END {label} (sha256 {hashlib.sha256(body.encode()).hexdigest()[:12]}) ==="
 
 
-def build_review_input(task_id, base, head, root=config.REPO_ROOT, max_bytes=MAX_INPUT_BYTES, codex_mode=False):
+def build_review_input(task_id, base, head, root=config.REPO_ROOT, max_bytes=MAX_INPUT_BYTES, codex_mode=False,
+                       max_work_bytes=MAX_WORK_BYTES):
     """(prompt text, meta). Codex reads the changed files from its worktree, DeepSeek gets them in the prompt."""
     root = Path(root)
     head, base = _resolve(root, head), _resolve(root, base)
@@ -105,7 +109,7 @@ def build_review_input(task_id, base, head, root=config.REPO_ROOT, max_bytes=MAX
     parts = [_fence(f"TASK {task_id} ({_q(task_path)})", goal), _fence("DIFF", diff)]
     if withheld:
         parts.append(_fence("WITHHELD FILES (sensitive paths)", "\n".join(_q(n) for n in withheld)))
-    extra = 0  # bytes Codex reads from /work: they count against the limit like DeepSeek's file blocks
+    extra = 0  # bytes Codex may read from /work: limited by max_work_bytes, apart from the prompt limit
     if codex_mode:
         parts.append(_fence("CHANGED FILES (read them in /work)", "\n".join(f"- {_q(n)}" for n in shown)))
         for n in shown:
@@ -132,8 +136,10 @@ def build_review_input(task_id, base, head, root=config.REPO_ROOT, max_bytes=MAX
                 raise ReviewError("bad_input", f"required rule file missing in git: {rel}")
             parts.append(_fence(f"RULES {_q(rel)}", text))
     text = "\n\n".join(parts)
-    if len(text.encode()) + extra > max_bytes:
-        raise ReviewError("input_too_large", f"{len(text.encode()) + extra} bytes > {max_bytes}")
+    if len(text.encode()) > max_bytes:
+        raise ReviewError("input_too_large", f"{len(text.encode())} bytes > {max_bytes}")
+    if codex_mode and len(text.encode()) + extra > max_work_bytes:
+        raise ReviewError("input_too_large", f"prompt and changed files {len(text.encode()) + extra} bytes > {max_work_bytes}")
     return text, {"base": base, "head": head, "task_path": task_path, "files": shown, "withheld": withheld,
                   "risk": overall}
 

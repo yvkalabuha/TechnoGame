@@ -60,7 +60,11 @@ public sealed partial class WhyNotAnalyzer
             case WhyNotTargetKind.Design:
                 if (target.Id < 0 || target.Id >= _pl.Designs)
                     throw new ArgumentOutOfRangeException(nameof(target), target.Id, "No such design slot.");
-                ExplainDesign(links, actor, target.Id, month);
+                // A handle that no longer resolves names no project: one StaleHandle link, and nothing of the slot's new tenant is read.
+                if (_p.Resolves(actor, new DesignHandle(target.Id, target.SlotGeneration)))
+                    ExplainDesign(links, actor, target.Id, month);
+                else
+                    links.Add(new Link(WhyNotLayer.Product, WhyNotCause.StaleHandle, target.Id, Fx6.Zero, Fx6.Zero, [], Fx6.Zero, null, Slot: target.Id));
                 break;
             case WhyNotTargetKind.App:
                 int gen = _pl.GenApp.IndexOf(target.Id) + 1;

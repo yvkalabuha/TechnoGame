@@ -149,7 +149,7 @@
 
 | region_id | owner | controller | source | confidence | note |
 |---|---|---|---|---|---|
-| algeria_ouargla, algeria_tamanghasset | FRA | FRA | K2, K1 | H | департаменты Франции |
+| algeria_oran, algeria_alger, algeria_constantine (core); algeria_ain_sefra, algeria_ghardaia, algeria_oasis, algeria_touggourt (colony) | FRA | FRA | K2, K1 | M | департаменты и Территории Юга, границы по вилаям (TASK-0114) |
 | angola_lunda_norte, angola_moxico | PRT | PRT | K2 | H | |
 | benin | FRA | FRA | K1 | H | Дагомея |
 | botswana | GBR | GBR | K1 | H | Бечуаналенд (протекторат) |

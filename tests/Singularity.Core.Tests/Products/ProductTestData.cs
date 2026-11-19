@@ -34,7 +34,7 @@ internal static class ProductTestData
 
     /// <summary>A <c>compose_design</c> command from alternative ids in slot order.</summary>
     public static DesignCommand Compose(ProductsLayout l, int targetGen, params string[] altIds) =>
-        new(DesignCommandKind.Compose, targetGen, [.. altIds.Select(id => Alt(l, id))]);
+        DesignCommand.Compose(targetGen, [.. altIds.Select(id => Alt(l, id))]);
 
     public static string[] AltIds(ProductsLayout l, ReadOnlySpan<int> alts)
     {
@@ -67,7 +67,7 @@ internal static class ProductTestData
         bool ok = actorRow % 2 == 0 && DesignRules.Superior(l, g, knows, alts)
             || actorRow % 2 != 0 && DesignRules.Producible(l, g, knows, yieldOf, new ProductsParams().YProd, null, alts)
             || DesignRules.Superior(l, g, knows, alts);
-        return ok ? [new DesignCommand(DesignCommandKind.Compose, g, [.. alts])] : [];
+        return ok ? [DesignCommand.Compose(g, [.. alts])] : [];
     }
 
     public static bool StandInLaunch(ProductsSystem products, int actorRow, int design, long month) =>

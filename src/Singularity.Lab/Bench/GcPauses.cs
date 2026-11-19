@@ -117,6 +117,29 @@ internal static class GcPauses
     public static Summary Summarize(Timeline t, IReadOnlyList<(DateTime From, DateTime To)> windows, double wallMs) =>
         new([.. t.Pauses.Where(p => In(p.Start, windows))], [.. t.Gcs.Where(g => In(g.Start, windows))], [.. t.Other.Where(o => In(o.Start, windows))], wallMs);
 
+    /// <summary>Pauses and non-GC suspensions by start inside the time windows; GCs by index in (After, Upto] of the ranges (see <see cref="SummarizeGcs"/>).</summary>
+    public static Summary Summarize(Timeline t, IReadOnlyList<(DateTime From, DateTime To)> windows, IReadOnlyList<(int After, int Upto)> gcRanges, double wallMs) =>
+        new([.. t.Pauses.Where(p => In(p.Start, windows))], [.. t.Gcs.Where(g => InRange(g.Count, gcRanges))], [.. t.Other.Where(o => In(o.Start, windows))], wallMs);
+
+    /// <summary>
+    /// Pauses and GCs of the GCs with index in (After, Upto] — <c>GC.CollectionCount(0)</c> read before and after a forced collection
+    /// (the GCStart <c>Count</c> of a GC is <c>CollectionCount(0)</c> + 1 at its start). Clock-free: the event time stamps of the runtime
+    /// (EventPipe) and the host <see cref="DateTime.UtcNow"/> differ by up to milliseconds off Linux, so a span as short as one settle
+    /// collection is matched by GC index, not by time (TASK-0116).
+    /// </summary>
+    public static Summary SummarizeGcs(Timeline t, IReadOnlyList<(int After, int Upto)> ranges, double wallMs) =>
+        new([.. t.Pauses.Where(p => InRange(p.GcCount, ranges))], [.. t.Gcs.Where(g => InRange(g.Count, ranges))], [], wallMs);
+
+    private static bool InRange(int gc, IReadOnlyList<(int After, int Upto)> ranges)
+    {
+        foreach ((int after, int upto) in ranges)
+        {
+            if (gc > after && gc <= upto)
+                return true;
+        }
+        return false;
+    }
+
     /// <summary>
     /// Writes the summary object <paramref name="name"/>: count, total, max, p50, p99, share (events), per kind (count of GCs and of pauses,
     /// total and max pause), blocking gen2, gen2, unknown pauses, non-GC suspensions; with <paramref name="origin"/> also every pause

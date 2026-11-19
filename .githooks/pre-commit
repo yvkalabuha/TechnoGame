@@ -1,6 +1,10 @@
 #!/bin/sh
 # Validate the project registry and the knowledge base before every commit.
 # Enable once per clone: git config core.hooksPath .githooks
+top="$(git rev-parse --show-toplevel)" || exit 1
+cd "$top" || exit 1
 python3 tools/development/registry.py check --staged || exit 1
-# Unknown ids (#NNN, ADR, TASK, DEBT, RISK, O-NNN) in staged documents stop the commit; warnings do not.
+# Unknown ids (#NNN, ADR, TASK, DEBT, RISK, O-NNN) in the lines a commit adds stop it; warnings do not.
+# A worktree cut before kb_check.py existed has no such file: skip the check there.
+[ -f tools/development/kb_check.py ] || exit 0
 exec python3 tools/development/kb_check.py check --staged --errors-only

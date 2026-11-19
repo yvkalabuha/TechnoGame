@@ -11,7 +11,7 @@ public static class Program
           matrix --manifest <json> --out <dir> [--jobs J] [--timeout SECONDS] [--force] [--point P] [--seeds N]
           hash   --manifest <json> [--canonical]     print manifest_hash (and canonical form)
           models                                     list registered models
-          selftest                                   built-in self-checks (until tests/ has Lab tests)
+          selftest [--only TEXT]                     built-in self-checks (until tests/ has Lab tests); --only: names containing TEXT
           smoke-t4s --out <dir> [--mods <dir>] [--seeds N] [--only c1|c2|c3]  anchor smoke C1(yield)/C2/C3 (TASK-0017)
           c1-stand --out <dir> [--mods <dir>] [--manifest <json> [--point P]]  C1 stand -> c1_stand.csv per point (TASK-0054/0055, format §6)
           c3-stand --out <dir> --manifest <json> [--point P] [--seeds N] [--mods <dir>]  C3 stand of calibration points -> c3_summary.csv
@@ -41,7 +41,7 @@ public static class Program
                 "matrix" => Matrix(opts),
                 "hash" => Hash(opts),
                 "models" => Models(),
-                "selftest" => SelfTest.Run(Console.Out),
+                "selftest" => SelfTest.Run(Console.Out, opts.Optional("only")),
                 "smoke-t4s" => SmokeT4s(opts),
                 "culture-rules" => CultureRules(opts),
                 "c1-stand" => C1Stand(opts),

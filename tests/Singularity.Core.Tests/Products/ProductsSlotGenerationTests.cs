@@ -1,3 +1,4 @@
+using Singularity.Core.Data;
 using Singularity.Core.Products;
 using Singularity.Kernel;
 using static Singularity.Core.Tests.Products.ProductTestData;
@@ -19,7 +20,7 @@ public class ProductsSlotGenerationTests
         };
 
     // Start fleet in slot 0; t0 compose -> slot 1; t2 cancel (generation 1); t3 compose -> the freed slot 1 again;
-    // t5 cancel with the old handle; t6 derive from slot 0 with generation 0; t7 retire with the old handle of slot 0.
+    // t5 cancel with the old handle; t6 derive from slot 0 with a generation it never had; t7 retire with the old handle of slot 0.
     private static IReadOnlyList<DesignCommand> Script(int a, long t)
     {
         if (a != Gbr)
@@ -27,9 +28,9 @@ public class ProductsSlotGenerationTests
         return t switch
         {
             0 or 3 => [SuperiorG2()],
-            2 => [new DesignCommand(DesignCommandKind.Cancel, 1, [], Generation: 1)],
-            5 => [new DesignCommand(DesignCommandKind.Cancel, 1, [], Generation: 1)],
-            6 => [new DesignCommand(DesignCommandKind.Derive, 0, [.. Enumerable.Repeat(-1, Probe.SlotCount - 1), Alt(Probe, "ab_none")], Generation: 0)],
+            2 => [DesignCommand.Cancel(new DesignHandle(1, 1))],
+            5 => [DesignCommand.Cancel(new DesignHandle(1, 1))],
+            6 => [DesignCommand.Derive(new DesignHandle(0, 7), [.. Enumerable.Repeat(-1, Probe.SlotCount - 1), Alt(Probe, "ab_none")])],
             _ => [],
         };
     }
@@ -37,7 +38,7 @@ public class ProductsSlotGenerationTests
     private static ProductsHarness ScriptedRun(int threads = 1, int chunkSize = 1, int months = 8)
     {
         ProductsHarness h = Stand(threads, chunkSize, 3, Script);
-        h.FleetScript = (a, t) => a == Gbr && t == 7 ? [new FleetCommand(FleetCommandKind.Retire, 0, 1, Generation: 0)] : [];
+        h.FleetScript = (a, t) => a == Gbr && t == 7 ? [new FleetCommand(FleetCommandKind.Retire, new DesignHandle(0, 7), 1)] : [];
         for (long t = 0; t < months; t++)
             h.RunThroughMonth(t);
         return h;
@@ -57,14 +58,14 @@ public class ProductsSlotGenerationTests
             h.RunThroughMonth(t);
         Assert.Equal(DesignStage.Withdrawn, p.Stage(Gbr, 1));
         Assert.Equal(1, p.Generation(Gbr, 1));   // freeing does not change the generation
-        Assert.False(p.Resolves(Gbr, 1, 1));     // a withdrawn slot resolves to nothing
+        Assert.False(p.Resolves(Gbr, new DesignHandle(1, 1)));     // a withdrawn slot resolves to nothing
         h.RunThroughMonth(3);
         Assert.Equal(DesignStage.Project, p.Stage(Gbr, 1));   // lowest free, not slot 2
         Assert.Equal(2, p.Generation(Gbr, 1));
         Assert.Equal(DesignStage.None, p.Stage(Gbr, 2));
         Assert.Equal(0, p.Generation(Gbr, 2));
-        Assert.True(p.Resolves(Gbr, 1, 2));
-        Assert.False(p.Resolves(Gbr, 1, 1));
+        Assert.True(p.Resolves(Gbr, new DesignHandle(1, 2)));
+        Assert.False(p.Resolves(Gbr, new DesignHandle(1, 1)));
         // The retaken slot carries nothing of the first design.
         Assert.False(p.Cancelled(Gbr, 1));
     }
@@ -90,7 +91,7 @@ public class ProductsSlotGenerationTests
     public void CurrentHandle_IsAccepted()
     {
         ProductsHarness h = Stand(1, 1, 3, (a, t) => a == Gbr && t == 0 ? [SuperiorG2()] : a == Gbr && t == 1
-            ? [new DesignCommand(DesignCommandKind.Cancel, 1, [], Generation: 1)] : []);
+            ? [DesignCommand.Cancel(new DesignHandle(1, 1))] : []);
         for (long t = 0; t <= 1; t++)
             h.RunThroughMonth(t);
         Assert.Equal(DesignStage.Withdrawn, h.Products.Stage(Gbr, 1));
@@ -104,7 +105,7 @@ public class ProductsSlotGenerationTests
         ProductsHarness h = Stand(1, 1, 2, (a, t) => a != Gbr ? [] : t switch
         {
             0 or 1 or 3 => [SuperiorG2()],
-            2 => [new DesignCommand(DesignCommandKind.Cancel, 1, [], Generation: 1)],
+            2 => [DesignCommand.Cancel(new DesignHandle(1, 1))],
             _ => [],
         });
         ProductsSystem p = h.Products;
@@ -150,16 +151,14 @@ public class ProductsSlotGenerationTests
 
     // [Cancel d, Compose, Cancel d] in one step: slot choice reads Current only, so the new design takes the next None slot and the second
     // cancel does not touch it (before: it silently cancelled the new design in the freed slot).
-    [Theory]
-    [InlineData(1, CommandRejection.StaleHandle)]
-    [InlineData(-1, CommandRejection.BadCancel)]
-    public void CancelThenCompose_InOneStep_DoesNotReuseTheSlotUntilTheNextStep(int handleGeneration, CommandRejection expected)
+    [Fact]
+    public void CancelThenCompose_InOneStep_DoesNotReuseTheSlotUntilTheNextStep()
     {
         ProductsHarness h = Stand(1, 1, 4, (a, t) => a != Gbr ? [] : t switch
         {
             0 => [SuperiorG2()],
-            2 => [new DesignCommand(DesignCommandKind.Cancel, 1, [], Generation: 1), SuperiorG2(),
-                  new DesignCommand(DesignCommandKind.Cancel, 1, [], Generation: handleGeneration)],
+            2 => [DesignCommand.Cancel(new DesignHandle(1, 1)), SuperiorG2(),
+                  DesignCommand.Cancel(new DesignHandle(1, 1))],
             _ => [],
         });
         ProductsSystem p = h.Products;
@@ -170,7 +169,7 @@ public class ProductsSlotGenerationTests
         Assert.Equal(DesignStage.Project, p.Stage(Gbr, 2));   // the next None slot, not the slot freed in the same step
         Assert.Equal(1, p.Generation(Gbr, 2));
         Assert.False(p.Cancelled(Gbr, 2));
-        Assert.Equal(1, p.RejectionCount(Gbr, expected));
+        Assert.Equal(1, p.RejectionCount(Gbr, CommandRejection.StaleHandle));
     }
 
     private static long ColumnValue(ProductsHarness h, string name) =>
@@ -193,7 +192,7 @@ public class ProductsSlotGenerationTests
         ProductsSystem p = h.Products;
         long whole = p.InService(Gbr, 0).Raw / Fx6.Scale;
         Assert.True(whole > 0);
-        h.FleetScript = (a, t) => a == Gbr && t == 0 ? [new FleetCommand(FleetCommandKind.Retire, 0, whole, Generation: 1)] : [];
+        h.FleetScript = (a, t) => a == Gbr && t == 0 ? [new FleetCommand(FleetCommandKind.Retire, new DesignHandle(0, 1), whole)] : [];
         for (long t = 0; t <= 2; t++)
             h.RunThroughMonth(t);
         Assert.Equal(DesignStage.Withdrawn, p.Stage(Gbr, 0));
@@ -212,6 +211,39 @@ public class ProductsSlotGenerationTests
             Assert.Equal(Fx6.Zero, p.Cohort(Gbr, 0, year));
         Assert.Equal(-1, p.Parent(Gbr, 0));
         Assert.Equal(-1, p.StageOMonth(Gbr, 0));
+    }
+
+    // Derive changes the compressor of the start design (as ProductsV24SystemTests): the one slot that differs from the parent.
+    private static int[] CompressorSwap()
+    {
+        var alts = new int[Probe.SlotCount];
+        Array.Fill(alts, -1);
+        alts[Enumerable.Range(0, Probe.SlotCount).Single(i => CoreData.ProductClasses.SlotId[i] == "compressor")] = Alt(Probe, "comp_axial");
+        return alts;
+    }
+
+    [Fact]
+    public void LiveParent_IsTheParentSlotOnlyWhileItHoldsTheProjectTheDesignWasDerivedFrom()
+    {
+        // t1 derive from slot 0 (generation 1) -> slot 1; t2 retire all of slot 0 -> «снят»; t4 compose takes the freed slot 0 (generation 2).
+        ProductsHarness h = new(1, 1, startLine: false, maxDesigns: 3)
+        {
+            Knows = (a, n) => a == Gbr && Probe.KnownUpTo(2)(n),
+        };
+        ProductsSystem p = h.Products;
+        long whole = p.InService(Gbr, 0).Raw / Fx6.Scale;
+        h.Commands = (a, t) => a != Gbr ? []
+            : t == 1 ? [DesignCommand.Derive(new DesignHandle(0, 1), [.. CompressorSwap()])]
+            : t == 4 ? [SuperiorG2()] : [];
+        h.FleetScript = (a, t) => a == Gbr && t == 2 ? [new FleetCommand(FleetCommandKind.Retire, new DesignHandle(0, 1), whole)] : [];
+        h.RunThroughMonth(0);
+        h.RunThroughMonth(1);
+        Assert.Equal(0, p.LiveParent(Gbr, 1));
+        for (long t = 2; t <= 4; t++)
+            h.RunThroughMonth(t);
+        Assert.Equal(2, p.Generation(Gbr, 0));
+        Assert.Equal(0, p.Parent(Gbr, 1));          // the raw column still names the slot ...
+        Assert.Equal(-1, p.LiveParent(Gbr, 1));     // ... which now holds an unrelated project
     }
 
     [Fact]

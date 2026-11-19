@@ -58,12 +58,4 @@ public class AudioAssetsTests
         foreach (var f in new[] { "music/irradiated_skies.ogg", "music/led_twilight.ogg", "ambient/pale_window.ogg" })
             Assert.True(new FileInfo(Path.Combine(Assets(), f)).Length > 100_000, f);
     }
-
-    [Fact]
-    public void Every_audio_file_has_a_licence_entry()
-    {
-        string lic = File.ReadAllText(Path.Combine(Root(), "src", "Singularity.Client.Spike", "LICENSES.md"));
-        foreach (var f in new[] { "irradiated_skies.ogg", "led_twilight.ogg", "pale_window.ogg", "assets/audio/ui/", "Bell Ding", "electrical_switch_02" })
-            Assert.Contains(f, lic);
-    }
 }

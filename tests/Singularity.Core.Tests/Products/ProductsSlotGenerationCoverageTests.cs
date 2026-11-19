@@ -22,7 +22,7 @@ public class ProductsSlotGenerationCoverageTests
     private static IReadOnlyList<DesignCommand> CycleScript(int a, long t) => a != Gbr ? [] : (t % 3) switch
     {
         0 => [SuperiorG2()],
-        2 => [new DesignCommand(DesignCommandKind.Cancel, 1, [], Generation: (int)(t / 3) + 1)],
+        2 => [DesignCommand.Cancel(new DesignHandle(1, (int)(t / 3) + 1))],
         _ => [],
     };
 
@@ -81,7 +81,7 @@ public class ProductsSlotGenerationCoverageTests
     public void Generation_SurvivesSaveLoad_AndAStaleHandleStillResolvesToNothing()
     {
         ProductsHarness src = Stand(1, 1, 3, (a, t) => a == Gbr && (t == 0 || t == 3) ? [SuperiorG2()]
-            : a == Gbr && t == 2 ? [new DesignCommand(DesignCommandKind.Cancel, 1, [], Generation: 1)] : []);
+            : a == Gbr && t == 2 ? [DesignCommand.Cancel(new DesignHandle(1, 1))] : []);
         for (long t = 0; t < 5; t++)
             src.RunThroughMonth(t);
         Assert.Equal(2, src.Products.Generation(Gbr, 1));
@@ -94,8 +94,8 @@ public class ProductsSlotGenerationCoverageTests
             Assert.Equal(src.Products.Generation(Gbr, d), loaded.Products.Generation(Gbr, d));
             Assert.Equal(src.Products.Stage(Gbr, d), loaded.Products.Stage(Gbr, d));
         }
-        Assert.False(loaded.Products.Resolves(Gbr, 1, 1));   // the stale handle of the first design
-        Assert.True(loaded.Products.Resolves(Gbr, 1, 2));
+        Assert.False(loaded.Products.Resolves(Gbr, new DesignHandle(1, 1)));   // the stale handle of the first design
+        Assert.True(loaded.Products.Resolves(Gbr, new DesignHandle(1, 2)));
         // A loaded state with a changed generation is a different state.
         ProductsHarness tampered = Stand(1, 1, 3, (_, _) => []);
         CopyState(src.Table, tampered.Table);
@@ -107,7 +107,7 @@ public class ProductsSlotGenerationCoverageTests
     }
 
     // Hash of everything except the rejection counters.
-    private static string StateWithoutRejections(Table t)
+    internal static string StateWithoutRejections(Table t)
     {
         var sb = new System.Text.StringBuilder();
         foreach (Column c in t.Columns)
@@ -144,16 +144,16 @@ public class ProductsSlotGenerationCoverageTests
             for (int n = rng.Next(0, 3); n > 0; n--)
             {
                 int slot = rng.Next(0, 3);
-                // Placeholder generation: replaced with a stale value at the time of the month (see StaleOf).
+                // Placeholder generation: replaced with a stale value at the time of the month (see the noisy script below).
                 extra[t].Add(rng.Next(2) == 0
-                    ? new DesignCommand(DesignCommandKind.Cancel, slot, [], Generation: int.MinValue)
-                    : new DesignCommand(DesignCommandKind.Derive, slot, [.. Enumerable.Repeat(-1, Probe.SlotCount - 1), Alt(Probe, "ab_none")], Generation: int.MinValue));
+                    ? DesignCommand.Cancel(new DesignHandle(slot, 0))
+                    : DesignCommand.Derive(new DesignHandle(slot, 0), [.. Enumerable.Repeat(-1, Probe.SlotCount - 1), Alt(Probe, "ab_none")]));
             }
         }
         IReadOnlyList<DesignCommand> Base(int a, long t) => a != Gbr ? [] : (t % 3) switch
         {
             0 => [SuperiorG2()],
-            2 => [new DesignCommand(DesignCommandKind.Cancel, 1, [], Generation: (int)(t / 3) + 1)],
+            2 => [DesignCommand.Cancel(new DesignHandle(1, (int)(t / 3) + 1))],
             _ => [],
         };
         ProductsHarness clean = Stand(1, 1, 3, Base), noisy = null!;
@@ -165,8 +165,8 @@ public class ProductsSlotGenerationCoverageTests
             // Stale by construction: a generation below the one the slot holds at the start of the month (gens only grow), or far above.
             IEnumerable<DesignCommand> stale = extra[t].Select(c =>
             {
-                int g = noisy.Products.Generation(Gbr, c.Target);
-                return c with { Generation = g >= 1 ? g - 1 : 1000 };
+                int g = noisy.Products.Generation(Gbr, c.Design.Slot);
+                return c with { Design = new DesignHandle(c.Design.Slot, g >= 1 ? g - 1 : 1000) };
             });
             return [.. b, .. stale];
         });

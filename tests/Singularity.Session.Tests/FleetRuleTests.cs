@@ -20,6 +20,8 @@ public class FleetRuleTests
         public SliceWorld World => Session.World;
         public ProductsSystem Products => World.Products;
 
+        public DesignHandle HandleOf(int d) => new(d, Products.Generation(Usa, d));
+
         public void Int(string name, int value) => Poke.Int(Session, name, Usa, value);
         public void Long(string name, long value) => Poke.Long(Session, name, Usa, value);
 
@@ -30,6 +32,8 @@ public class FleetRuleTests
             var alts = new int[l.SlotCount];
             Assert.True(DesignRules.Superior(l, compositionGen, l.KnownUpTo(compositionGen), alts));
             Int($"prd.d{d}.stage", (int)stage);
+            // An occupied slot has been taken at least once (ADR-0005 p. 3): the AI's commands then carry a real handle.
+            Int($"prd.d{d}.generation", Math.Max(1, Products.Generation(Usa, d)));
             foreach (string col in new[] { "d0", "hidden", "found", "open", "dGate", "work", "retroPool", "lossAcc", "rate" })
                 Long($"prd.d{d}.{col}", 0);
             Int($"prd.d{d}.forced", 0);
@@ -130,7 +134,7 @@ public class FleetRuleTests
         long expected = f.ExpectedN(0, 101, 0.10, 0, Fx6.Zero);
         IReadOnlyList<FleetCommand> cmds = f.Run(101);
         FleetCommand c = Assert.Single(cmds);
-        Assert.Equal(new FleetCommand(FleetCommandKind.Retire, 0, expected), c);
+        Assert.Equal(new FleetCommand(FleetCommandKind.Retire, f.HandleOf(0), expected), c);
         Assert.True(expected > 0);
         Assert.Equal(Fx6.Zero, f.World.Policy.ExpectedSaleIncome(Usa));
         Assert.Equal(1, f.World.Policy.FleetCommandsByPair(Usa, 2, 1));
@@ -219,7 +223,7 @@ public class FleetRuleTests
         f.Design(1, DesignStage.Series, 1, 1, [.. park]);   // a second project in С: not a candidate
         f.Design(2, DesignStage.Series, 2, 2, 10);          // the line (highest id in С)
         IReadOnlyList<FleetCommand> cmds = f.Run(101);
-        Assert.All(cmds, c => Assert.Equal(0, c.Design));
+        Assert.All(cmds, c => Assert.Equal(f.HandleOf(0), c.Design));
 
         // Every cohort of the park is younger than 60 months at month 102: nothing is taken.
         Fixture young = Start();
@@ -269,9 +273,9 @@ public class FleetRuleTests
         f.Int("prd.d0.quotaBase", 120);
         IReadOnlyList<FleetCommand> cmds = f.Run(101);
         Assert.Equal(2, cmds.Count);
-        Assert.Equal(new FleetCommand(FleetCommandKind.Sell, 0, 12), cmds[0]);
+        Assert.Equal(new FleetCommand(FleetCommandKind.Sell, f.HandleOf(0), 12), cmds[0]);
         Assert.Equal(FleetCommandKind.Retire, cmds[1].Kind);
-        Assert.Equal(0, cmds[1].Design);
+        Assert.Equal(f.HandleOf(0), cmds[1].Design);
         Fx6 promised = f.World.Policy.ExpectedSaleIncome(Usa);
         Assert.True(promised > Fx6.Zero);
         // FL7: the month after, the layer pays exactly the promised revenue, and refuses nothing. (The month's merge recomputes mastered_run from the

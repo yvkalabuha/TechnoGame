@@ -291,14 +291,14 @@ internal sealed class FleetRunStats
         }
         foreach (FleetCommand c in was.Commands)
         {
-            if (was.StageSnapshot[a, c.Design] == DesignStage.Series || p.Stage(a, c.Design) == DesignStage.Series)
-                Violations.Add($"R4 actor {a} month {m}: design {c.Design} in С was commanded");
-            if (was.DefK[c.Design] && p.InService(a, c.Design).Raw / Fx6.Scale < p.Parameters.NServiceMin)
-                Violations.Add($"R1 actor {a} month {m}: design {c.Design} in Def(K) fell below keep");
-            if (line >= 0 && p.Gen(a, line) <= p.Gen(a, c.Design))
-                Violations.Add($"R-gen actor {a} month {m}: gen(L) {p.Gen(a, line)} <= gen(d) {p.Gen(a, c.Design)}");
+            if (was.StageSnapshot[a, c.Design.Slot] == DesignStage.Series || p.Stage(a, c.Design.Slot) == DesignStage.Series)
+                Violations.Add($"R4 actor {a} month {m}: design {c.Design.Slot} in С was commanded");
+            if (was.DefK[c.Design.Slot] && p.InService(a, c.Design.Slot).Raw / Fx6.Scale < p.Parameters.NServiceMin)
+                Violations.Add($"R1 actor {a} month {m}: design {c.Design.Slot} in Def(K) fell below keep");
+            if (line >= 0 && p.Gen(a, line) <= p.Gen(a, c.Design.Slot))
+                Violations.Add($"R-gen actor {a} month {m}: gen(L) {p.Gen(a, line)} <= gen(d) {p.Gen(a, c.Design.Slot)}");
             // R4 (age): the cohorts younger than A_PROT are as they were after the decision month.
-            Fx6[] before = was.CohortsAfterDecision[c.Design], after = p.Cohorts(a, c.Design);
+            Fx6[] before = was.CohortsAfterDecision[c.Design.Slot], after = p.Cohorts(a, c.Design.Slot);
             for (int y = 0; y < before.Length; y++)
             {
                 if (m - p.CohortMidyear(y) < 60 && before[y] != after[y] && !(after[y] == Fx6.Zero && m - p.CohortMidyear(y) >= p.Parameters.ServiceLife))

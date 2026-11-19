@@ -13,7 +13,11 @@ namespace Singularity.Lab.Bench;
 /// <para>
 /// Split [direct count, format 3]: two sessions with the same seed, threads and commands. The first runs with
 /// <see cref="SliceSession.SkipViews"/> (TASK-0107 seam: the step view is built, no snapshot is published), so its month bytes are the tick path
-/// (ADR-0023 п. 2.1); the second is the full run. Snapshot path of a month = (full − GC listener) − (tick − GC listener). Both runs must end
+/// (ADR-0023 п. 2.1); the second is the full run. Snapshot path of a month = (full − GC listener) − (tick − GC listener).
+/// [format 5, DEBT-0060] With one thread both runs count only the run thread's bytes (<see cref="GC.GetAllocatedBytesForCurrentThread"/>):
+/// the process counter also takes runtime background threads (one-time ~240 KB seen in a month of one run under load, larger than the
+/// snapshot path of a small world), so the per-month difference of two process counts is not a measurement. With more threads the
+/// process counter stays (workers are pool threads) and <c>noise_floor_bytes</c> is null. Both runs must end
 /// with the same <see cref="StateHash.ComputeHex"/> (views are pure reads), else the profile fails. The tick-only run goes first, so bytes of
 /// one-time warm-up that outlast the warm-up months (static pools, lazy statics) fall on the tick path, the strict side of P8.
 /// The old subtraction model (snapshots × probe bytes) is still written as <c>*_model</c> for comparison.
@@ -93,6 +97,10 @@ internal static class AllocProfile
         IndustryLayout l = world.IndustryLayout;
         int actors = world.Table.RowCount;
         long[] bytes = full.Bytes;
+        // DEBT-0060: with one thread the whole step (TickRunner and ViewBuilder loops inline at Threads = 1) and Submit run on this
+        // thread, so its own counter is the simulation's bytes; the process counter adds runtime background threads (seen: ~240 KB once
+        // in one run under load). With more threads the workers are pool threads and only the process counter covers them.
+        bool simThread = threads == 1;
         int[,] gc = full.Gc;
         int[] snapPlain = full.SnapPlain, snapStepped = full.SnapStepped;
         DateTime[] from = full.From, to = full.To;
@@ -100,6 +108,8 @@ internal static class AllocProfile
         string hashBefore = StateHash.ComputeHex(world.Table, SliceWorld.SchemaVersion);
         long month = months;   // the next step's month: the reads the step's compute and views would make
         MonthStepView step = ViewBuilder.Step(world, month - 1);
+        Func<long> counter = simThread ? GC.GetAllocatedBytesForCurrentThread : () => GC.GetTotalAllocatedBytes(true);
+        ProbeResult Probe(string name, int calls, Action<int> call) => ProbeWith(counter, name, calls, call);
         var probes = new List<ProbeResult>
         {
             Probe("Industry.RestActor (1 EffortAllocator.Allocate)", actors, a => world.Industry.RestActor(a, month)),
@@ -139,8 +149,9 @@ internal static class AllocProfile
         Utf8JsonWriter j = json.Writer;
         j.WriteStartObject();
         j.WriteString("kind", "lab-bench/alloc");
-        // Format 4 (decision #416): settle collection after each SliceSession.Create, GC pauses from events.
-        j.WriteNumber("format", 4);
+        // Format 4 (decision #416): settle collection after each SliceSession.Create, GC pauses from events. Format 5 (DEBT-0060): with one
+        // thread the split counts the run thread's bytes only (byte_counter, noise_floor_bytes, *_run_thread_bytes, *_other_threads_bytes).
+        j.WriteNumber("format", 5);
         j.WriteString("run_order", fullFirst ? "full-first" : "tick-first");
         j.WriteBoolean("gc_trace", gcTrace);
         BenchEnv.Write(j, rp.RepoDir, c => ProcessBench.WriteSettleCondition(c,
@@ -167,6 +178,7 @@ internal static class AllocProfile
         var snapPath = new List<double>();
         var snapPerSnapshot = new List<double>();
         var tickModel = new List<double>();
+        long noiseFloor = 0;
         int lohTicksWindow = 0, allocLargeWindow = 0, gen2Window = 0, gen2TickWindow = 0;
         j.WriteStartArray("months");
         for (int m = 0; m < months; m++)
@@ -176,11 +188,15 @@ internal static class AllocProfile
             GcPauses.Summary pmTick = GcPauses.Summarize(timeline, [(tickRun.From[m], tickRun.To[m])], (tickRun.To[m] - tickRun.From[m]).TotalMilliseconds);
             long own = GcEventListener.OwnBytesAt(events, to[m]) - GcEventListener.OwnBytesAt(events, from[m]);
             long ownTick = GcEventListener.OwnBytesAt(events, tickRun.To[m]) - GcEventListener.OwnBytesAt(events, tickRun.From[m]);
-            long tick = tickRun.Bytes[m] - ownTick;
-            long snap = bytes[m] - own - tick;
+            // Bytes of other threads in the month window (process − run thread): the GC listener, tiered JIT, pool, timers. Only with
+            // one simulation thread is this not simulation work.
+            long other = bytes[m] - full.ThreadBytes[m], otherTick = tickRun.Bytes[m] - tickRun.ThreadBytes[m];
+            long fullSim = simThread ? full.ThreadBytes[m] : bytes[m] - own;
+            long tick = simThread ? tickRun.ThreadBytes[m] : tickRun.Bytes[m] - ownTick;
+            long snap = fullSim - tick;
             int snapshots = snapPlain[m] + snapStepped[m];
             double snapModel = snapPlain[m] * snapPlainB + snapStepped[m] * snapSteppedB;
-            double tickM = bytes[m] - snapModel - own;
+            double tickM = fullSim - snapModel;
             j.WriteStartObject();
             j.WriteNumber("month", m);
             j.WriteBoolean("measured", m >= rp.Warmup);
@@ -191,11 +207,16 @@ internal static class AllocProfile
             j.WriteNumber("snapshots_no_step", snapPlain[m]);
             j.WriteNumber("snapshots_stepped", snapStepped[m]);
             j.WriteNumber("gc_listener_bytes", own);
+            j.WriteNumber("sim_bytes", fullSim);
+            j.WriteNumber("run_thread_bytes", full.ThreadBytes[m]);
+            j.WriteNumber("other_threads_bytes", other);
             j.WriteNumber("tick_only_bytes", tickRun.Bytes[m]);
             j.WriteNumber("tick_only_gc0", tickRun.Gc[m, 0]);
             j.WriteNumber("tick_only_gc1", tickRun.Gc[m, 1]);
             j.WriteNumber("tick_only_gc2", tickRun.Gc[m, 2]);
             j.WriteNumber("tick_only_gc_listener_bytes", ownTick);
+            j.WriteNumber("tick_only_run_thread_bytes", tickRun.ThreadBytes[m]);
+            j.WriteNumber("tick_only_other_threads_bytes", otherTick);
             j.WriteNumber("tick_path_bytes", tick);
             j.WriteNumber("snapshot_path_bytes", snap);
             j.WriteNumber("snapshot_path_bytes_per_snapshot", snapshots > 0 ? snap / (double)snapshots : 0);
@@ -216,6 +237,7 @@ internal static class AllocProfile
                 if (snapshots > 0)
                     snapPerSnapshot.Add(snap / (double)snapshots);
                 tickModel.Add(tickM);
+                noiseFloor = Math.Max(noiseFloor, Math.Max(other, otherTick));
                 lohTicksWindow += lohTicks;
                 allocLargeWindow += allocLarge;
                 gen2Window += gc[m, 2];
@@ -241,7 +263,18 @@ internal static class AllocProfile
 
         // ADR-0023 п. 2: the three parts of P8, as records; the limit X of the snapshot is the owner's decision (rev 2 proposal: 8 MiB).
         j.WriteStartObject("p8_split");
-        j.WriteString("method", "direct: tick path = bytes of a SkipViews run (same seed, threads, commands) − its GC listener bytes; snapshot path = (full − GC listener) − tick path (lab-cli.md «alloc»)");
+        j.WriteString("method", simThread
+            ? "direct: tick path = run-thread bytes of a SkipViews run (same seed, threads, commands); snapshot path = run-thread bytes of the full run − tick path (lab-cli.md «alloc»)"
+            : "direct: tick path = process bytes of a SkipViews run (same seed, threads, commands) − its GC listener bytes; snapshot path = (full − GC listener) − tick path (lab-cli.md «alloc»)");
+        // sim_thread (threads = 1): other threads excluded. process (threads > 1): the workers are pool threads, so each month's path also
+        // carries other threads' bytes and the noise floor is not measurable (null) — DEBT-0060.
+        j.WriteString("byte_counter", simThread ? "sim_thread" : "process");
+        // Largest bytes of other threads in one measured month window of either run: what the process counter would have added to a
+        // month's path (the sim_thread split excludes it).
+        if (simThread)
+            j.WriteNumber("noise_floor_bytes", noiseFloor);
+        else
+            j.WriteNull("noise_floor_bytes");
         j.WriteString("state_hash_tick_only_run", hashTick);
         j.WriteBoolean("runs_same_hash", runsSameHash);
         if (tickPath.Count > 0)
@@ -292,7 +325,8 @@ internal static class AllocProfile
             GcPauses.Write(j, "gc_pauses_window", sFull, wFull.From);
             GcPauses.Write(j, "gc_pauses_window_tick_only", sTick, wTick.From);
         }
-        j.WriteNumber("gc_settle_pause_ms", GcPauses.Summarize(timeline, [full.Settle, tickRun.Settle], 0).TotalMs);
+        // By GC index, not by time (TASK-0116): event and host clocks differ by milliseconds off Linux.
+        j.WriteNumber("gc_settle_pause_ms", GcPauses.SummarizeGcs(timeline, [full.SettleGcs, tickRun.SettleGcs], 0).TotalMs);
         j.WriteEndObject();
 
         j.WriteString("state_hash_before_probes", hashBefore);
@@ -306,8 +340,8 @@ internal static class AllocProfile
 
     private readonly record struct StepMark(string Run, int Month, long Tick, DateTime From, DateTime To, string Snapshot);
 
-    private sealed record MonthRun(SliceSession? Session, long[] Bytes, int[,] Gc, int[] SnapPlain, int[] SnapStepped, DateTime[] From, DateTime[] To, string Hash,
-        (DateTime From, DateTime To) Settle);
+    private sealed record MonthRun(SliceSession? Session, long[] Bytes, long[] ThreadBytes, int[,] Gc, int[] SnapPlain, int[] SnapStepped, DateTime[] From, DateTime[] To, string Hash,
+        (DateTime From, DateTime To) Settle, (int After, int Upto) SettleGcs);
 
     // One monthly run with the harness load (one SetBudgetShares per actor and month, as П2). atWarmupEnd runs at the start of month warmup.
     private static MonthRun RunMonths(SynthWorld w, ulong seed, int threads, int months, bool skipViews, int warmup, Action? atWarmupEnd, TextWriter log, string tag,
@@ -318,11 +352,14 @@ internal static class AllocProfile
         s.SkipViews = skipViews;
         // Decision #416: the forced settle collection after the session is built, before month 0 (outside every month window).
         DateTime settle0 = DateTime.UtcNow;
+        int settleGc0 = GC.CollectionCount(0);
         ProcessBench.SettleGc();
+        (int, int) settleGcs = (settleGc0, GC.CollectionCount(0));
         (DateTime, DateTime) settle = (settle0, DateTime.UtcNow);
         SliceWorld world = s.World;
         int actors = world.Table.RowCount;
         var bytes = new long[months];
+        var threadBytes = new long[months];
         var gc = new int[months, 3];
         var snapPlain = new int[months];
         var snapStepped = new int[months];
@@ -344,6 +381,7 @@ internal static class AllocProfile
             int g0 = GC.CollectionCount(0), g1 = GC.CollectionCount(1), g2 = GC.CollectionCount(2);
             from[m] = DateTime.UtcNow;
             long b0 = GC.GetTotalAllocatedBytes(true);
+            long t0 = GC.GetAllocatedBytesForCurrentThread();
             SliceView prev = s.View;
             while (s.Tick < end)
             {
@@ -368,13 +406,14 @@ internal static class AllocProfile
                 }
             }
             bytes[m] = GC.GetTotalAllocatedBytes(true) - b0;
+            threadBytes[m] = GC.GetAllocatedBytesForCurrentThread() - t0;
             to[m] = DateTime.UtcNow;
             gc[m, 0] = GC.CollectionCount(0) - g0;
             gc[m, 1] = GC.CollectionCount(1) - g1;
             gc[m, 2] = GC.CollectionCount(2) - g2;
-            log.WriteLine($"{tag} month {m,3}: {bytes[m] / MiB,9:F2} MiB  gc0 {gc[m, 0]} gc1 {gc[m, 1]} gc2 {gc[m, 2]}  snapshots {snapPlain[m]}+{snapStepped[m]} stepped");
+            log.WriteLine($"{tag} month {m,3}: {bytes[m] / MiB,9:F2} MiB (run thread {threadBytes[m] / MiB:F2})  gc0 {gc[m, 0]} gc1 {gc[m, 1]} gc2 {gc[m, 2]}  snapshots {snapPlain[m]}+{snapStepped[m]} stepped");
         }
-        return new MonthRun(s, bytes, gc, snapPlain, snapStepped, from, to, StateHash.ComputeHex(world.Table, SliceWorld.SchemaVersion), settle);
+        return new MonthRun(s, bytes, threadBytes, gc, snapPlain, snapStepped, from, to, StateHash.ComputeHex(world.Table, SliceWorld.SchemaVersion), settle, settleGcs);
     }
 
     private static SliceView Fresh(SliceWorld world, Func<SliceView> build)
@@ -385,14 +424,14 @@ internal static class AllocProfile
         finally { world.ReuseNodeBlocks = reuse; }
     }
 
-    private static ProbeResult Probe(string name, int calls, Action<int> call)
+    private static ProbeResult ProbeWith(Func<long> counter, string name, int calls, Action<int> call)
     {
         call(0);   // JIT and lazy memo outside the count
         DateTime t0 = DateTime.UtcNow;
-        long b0 = GC.GetTotalAllocatedBytes(true);
+        long b0 = counter();
         for (int i = 0; i < calls; i++)
             call(i);
-        long b = GC.GetTotalAllocatedBytes(true) - b0;
+        long b = counter() - b0;
         return new ProbeResult(name, b, calls, t0, DateTime.UtcNow);
     }
 }

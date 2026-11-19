@@ -188,7 +188,7 @@ class LedgerTest(LedgerBase):
         # The readiness flag is the Orchestrator's switch (ADR-0015 §9); only its type is checked here.
         p = load_prices()
         self.assertIsInstance(p["ready"], bool)
-        self.assertEqual(p["cap"], Decimal("5.00"))
+        self.assertEqual(p["cap"], Decimal("7.00"))
         for prof in config.PROFILES.values():
             if prof.paid:
                 self.assertIn(prof.model, p["models"])

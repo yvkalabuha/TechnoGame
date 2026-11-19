@@ -215,9 +215,12 @@ class RunTest(unittest.TestCase):
         repo, base, head = make_repo(changed={"tools/a.py": "y" * 5000})
         text, _ = review.build_review_input("TASK-0001", base, head, repo.root, max_bytes=100000, codex_mode=True)
         with self.assertRaises(ReviewError) as cm:  # the prompt is small, the file Codex reads is not
-            review.build_review_input("TASK-0001", base, head, repo.root, max_bytes=len(text.encode()) + 100,
-                                      codex_mode=True)
+            review.build_review_input("TASK-0001", base, head, repo.root, max_bytes=100000, codex_mode=True,
+                                      max_work_bytes=len(text.encode()) + 100)
         self.assertEqual(cm.exception.code, "input_too_large")
+        # the changed files have their own, wider limit: the prompt limit alone does not refuse them (DEBT-0064)
+        review.build_review_input("TASK-0001", base, head, repo.root, max_bytes=len(text.encode()) + 100,
+                                  codex_mode=True)
 
     def test_codex_failed_falls_back_to_deepseek(self):
         def runner(prompt, wt):

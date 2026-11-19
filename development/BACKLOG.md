@@ -128,11 +128,15 @@
 | [TASK-0110](../development/tasks/TASK-0110-novelty-memory-per-actor.md) | DONE | Novelty memory per actor: tried alternatives survive slot reuse (DEBT-0054) | MS-M1 |
 | [TASK-0111](../development/tasks/TASK-0111-ui-instruments-flask-caliper-pencil.md) | REVIEW | UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) | MS-M1 |
 | [TASK-0112](../development/tasks/TASK-0112-credits-screen.md) | REVIEW | Credits screen with music and sound attribution (DEBT-0050) | MS-M1 |
-| [TASK-0113](../development/tasks/TASK-0113-policy-candidate-generation.md) | REVIEW | Policy line candidate by generation and DesignView SlotGeneration rename (DEBT-0053, DEBT-0055) | MS-M1 |
-| [TASK-0114](../development/tasks/TASK-0114-northern-algeria-regions.md) | REVIEW | Northern Algeria regions for the 1945 map (DEBT-0058) | MS-M1 |
-| [TASK-0115](../development/tasks/TASK-0115-end-to-end-project-handle.md) | IN_PROGRESS | End-to-end project handle through Session, AI, UI and command log v2 (DEBT-0052) | MS-M1 |
-| [TASK-0116](../development/tasks/TASK-0116-ci-green.md) | IN_PROGRESS | CI green on all jobs: Lab tests off Linux, llm_worker pilot contracts | MS-M0 |
+| [TASK-0113](../development/tasks/TASK-0113-policy-candidate-generation.md) | DONE | Policy line candidate by generation and DesignView SlotGeneration rename (DEBT-0053, DEBT-0055) | MS-M1 |
+| [TASK-0114](../development/tasks/TASK-0114-northern-algeria-regions.md) | DONE | Northern Algeria regions for the 1945 map (DEBT-0058) | MS-M1 |
+| [TASK-0115](../development/tasks/TASK-0115-end-to-end-project-handle.md) | DONE | End-to-end project handle through Session, AI, UI and command log v2 (DEBT-0052) | MS-M1 |
+| [TASK-0116](../development/tasks/TASK-0116-ci-green.md) | DONE | CI green on all jobs: Lab tests off Linux, llm_worker pilot contracts | MS-M0 |
 | [TASK-0117](../development/tasks/TASK-0117-client-ui-scale-policy.md) | APPROVED | Client UI scale policy: text never below the A1 floor at 1280x720 | MS-M05 |
+| [TASK-0118](../development/tasks/TASK-0118-codex-catchup-findings.md) | PROPOSED | Codex catch-up findings on landed core tasks (TASK-0099, 0103, 0107, 0110) | MS-M05 |
+| [TASK-0119](../development/tasks/TASK-0119-instrument-view-fields.md) | PROPOSED | Instrument data fields in the Session view: alloy coverage, research progress | MS-M05 |
+| [TASK-0120](../development/tasks/TASK-0120-core-command-verdicts.md) | PROPOSED | Core emits a per-command verdict; commands keyed by handle | MS-M05 |
+| [TASK-0121](../development/tasks/TASK-0121-slice-horizon-2030-train-1.md) | IN_PROGRESS | Slice horizon to 2030, train 1: Years = 86, q mask in 62-bit blocks, horizon fixture | MS-M05 |
 
 ## Гипотезы
 

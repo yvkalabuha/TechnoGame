@@ -4,8 +4,13 @@ regions:
   - {id: akrotiri_sovereign_base_area, capital_province: akrotiri_sovereign_base_area.akrotiri, isolated: true}
   - {id: aland, capital_province: aland.jomala, isolated: true}
   - {id: albania, capital_province: albania.shkoder, isolated: false}
-  - {id: algeria_ouargla, capital_province: algeria_ouargla.gharda_a, isolated: false}
-  - {id: algeria_tamanghasset, capital_province: algeria_tamanghasset.adrar_4, isolated: false}
+  - {id: algeria_ain_sefra, capital_province: algeria_ain_sefra.b_char_1, isolated: false}
+  - {id: algeria_alger, capital_province: algeria_alger.tipaza, isolated: false}
+  - {id: algeria_constantine, capital_province: algeria_constantine.mila, isolated: false}
+  - {id: algeria_ghardaia, capital_province: algeria_ghardaia.laghouat, isolated: false}
+  - {id: algeria_oasis, capital_province: algeria_oasis.ouargla_1, isolated: false}
+  - {id: algeria_oran, capital_province: algeria_oran.mascara, isolated: false}
+  - {id: algeria_touggourt, capital_province: algeria_touggourt.biskra, isolated: false}
   - {id: american_samoa, capital_province: american_samoa.western, isolated: true}
   - {id: andorra, capital_province: andorra.sant_julia_de_loria, isolated: false}
   - {id: angola_lunda_norte, capital_province: angola_lunda_norte.lunda_norte, isolated: false}

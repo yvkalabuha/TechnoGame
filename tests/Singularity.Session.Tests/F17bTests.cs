@@ -44,7 +44,7 @@ public class F17bTests(ITestOutputHelper output)
                     }
                     if (w.Products.Rate(a, candidate) > Fx6.Zero)
                         candidateProduces++;
-                    Assert.Equal(candidate, new PolicyInputsAdapter(w).NewestSeriesDesign(a, t));   // training target = N (A41)
+                    Assert.Equal(candidate, new PolicyInputsAdapter(w).NewestSeriesDesign(a, t)!.Value.Slot);   // training target = N (A41)
                     Assert.True(w.Products.Rate(a, working) <= rKeep, $"seed {seed} month {t} actor {a}: working line output {w.Products.Rate(a, working)} above r_keep {rKeep}");
                 }
             }
@@ -82,23 +82,25 @@ public class F17bTests(ITestOutputHelper output)
     // re-recorded there only for the new column tool_unmet («tool_unmet column», F33): by the old columns the trajectory is unchanged (ToolingUnmetTests).
     // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
     // Re-recorded in TASK-0099 (ADR-0005 p. 3), reason: schema v9 (new columns prd.d*.generation, parentGen, prd.lp.g*.gen, StaleHandle counter); the run ends before the first slot reuse, the old columns are unchanged (SlotReuseL2Tests.NoSlotIsReused_BeforeTheMonthOfAnyRewrittenGolden, projection tests).
+    // Re-recorded in TASK-0115 (ADR-0005 p. 3, DEBT-0052), reason: schema v11 (new columns cmd.dsn.*.gen, cmd.flt.*.gen, cmd.series.*.gen, cmd.close.*.gen, pol.dsn.*.gen, pol.flt.*.gen, pol.start.*.gen, pol.close.*.gen); the run ends before the first slot reuse, so no handle is stale and the old columns are unchanged (projection tests T6dOff, FleetAblation, ToolingUnmet; SlotReuseL2Tests), only the new columns change the hash.
     private static readonly string[] AdmitGolden =
     [
-        "297cdb8fe1e80dc9dd442f12ab134695fe207ed74a4ca05c7e7c8f12bfd382d0",
-        "814da1d69c6d7bd90ad2f17a726a8ab5eb926a747442862bf439b05c7d8be648",
-        "7babdfe340dfe4486407c11ea25ee38605bcee86893ff6b6e3a62c182f3b37dd",
-        "01cfa3d0a7548c9927e0a2691bf63ca7ccae252a9c6c98fa716bbfd43c3d20da",
-        "18d21fe2f04adae224c5a71f096a14dbbb09c15fb497bb2aa55c8ee27145ee23",
+        "3df8872cd58531728ba8ff8646a70585b14d63588101821862a3222990cb2036",
+        "d26c09ac2046893824c5f9fcfc0adad14648343c022f6b658614b8b7b5c16376",
+        "82bf0d44165edf82bf6a4e6fb8e1e47d6ff5b68f3c81459547a646c2d4478103",
+        "38388d6e5053dc9f6a7e0462d4be56c7f0f83263768a24c18c2b5807e261cb47",
+        "1c34b1cd162bd671efc34e0b4931ef5303a25e6e0144f6857e957b485bb1bb81",
     ];
 
     // Recorded in F17b (TASK-0030); re-recorded in TASK-0033, reason: T6d (columns of the licence and the disruption, run.t6d, the events themselves; both arms), then «exposure to data» (the scenario hash is in the run columns); in TASK-0032: part 1 (A39 «V5 default», #163: the default tooling target is V5), part 2 («tool_unmet column», F33).
     // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (prd.altReached.*); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
+    // Re-recorded in TASK-0115 (ADR-0005 p. 3, DEBT-0052), reason: schema v11 (new columns cmd.dsn.*.gen, cmd.flt.*.gen, cmd.series.*.gen, cmd.close.*.gen, pol.dsn.*.gen, pol.flt.*.gen, pol.start.*.gen, pol.close.*.gen); the run ends before the first slot reuse, so no handle is stale and the old columns are unchanged (projection tests T6dOff, FleetAblation, ToolingUnmet; SlotReuseL2Tests), only the new columns change the hash.
     private static readonly string[] YProdGolden = [
-        "7044a31fd0f808df14ae680111adc16ee7376391f8a3cbff24ed2840cb18fea5",
-        "d542bc6f3808014bfe4770c5db8989530dcc4d1bc2a7759c48601a412df8beff",
-        "f0ff809da0c47b2ce9cf051c70fb1ca253e56ad67461fa720b52855d4846282f",
-        "a3f4f9b21934733dd40f8b313b8da5027876045b9802380b1ea498b086cfcb44",
-        "96052e94d57c9c6df4b03a9b5f266a51c267b4a32f5efc9713bf560db291b390",
+        "c3ab59c3f8bf14cd4096d20190d546429f40b62646de23fa6af42db4f2498b4c",
+        "7807ad209b738278a34bfc912fab664cc88299df4d2a26352dc683847298ac58",
+        "7eae997a3dc0722bb0e3479e2dc8c11f47915e411133627e00e9c32d46e396b7",
+        "daf519e2e8b4318d14c3fc1905d6155185347e5d115fbd2dadda0c6775de1678",
+        "bb2022bd1f4faf0708bd0be81b7294d60ec257dea48d4efee3cf451aa90dff18",
     ];
 
     private static string HashOf(ulong seed, LineCloseRule rule)
@@ -108,6 +110,9 @@ public class F17bTests(ITestOutputHelper output)
         SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2, LineClose = rule, ToolingTarget = target });
         for (long t = 0; t < 150; t++)
             s.StepThroughMonth(t);
+        // StaleHandle is outside the old-column projections: prove here that the golden runs never hit it.
+        for (int a = 0; a < s.World.Scenario.ActorCount; a++)
+            Assert.Equal(0, s.World.Products.RejectionCount(a, CommandRejection.StaleHandle));
         return s.LastHash;
     }
 

@@ -60,7 +60,7 @@ public class ProductsSnapshotTests
         Assert.Equal(Fx6.Zero, p.GrowthNominal(Gbr, 9999, true));
         // О → С: the same value (the design is in V_O before, in V_C after, never in both).
         long launch = t;
-        h.Series = (a, d, tt) => a == Gbr && d == 1 && tt == launch ? new SeriesStart(Fx6.FromInt(5), true) : null;
+        h.Series = (a, d, tt) => a == Gbr && d == 1 && tt == launch ? new ScriptedStart(Fx6.FromInt(5), true) : null;
         h.RunThroughMonth(t);
         Assert.Equal(DesignStage.Series, p.Stage(Gbr, 1));
         foreach (int prc in prcs)
@@ -71,7 +71,7 @@ public class ProductsSnapshotTests
     public void GrowthNominal_TwoProjectsInPrototypeSum_AndAWithdrawnOneIsZero()
     {
         long cancelAt = long.MaxValue;
-        var h = Gb((a, t) => a != Gbr ? [] : t == 0 ? [SuperiorG2(), SuperiorG2()] : t == cancelAt ? [new DesignCommand(DesignCommandKind.Cancel, 1, [])] : []);
+        var h = Gb((a, t) => a != Gbr ? [] : t == 0 ? [SuperiorG2(), SuperiorG2()] : t == cancelAt ? [DesignCommand.Cancel(ProductsHarness.Now(1))] : []);
         ProductsSystem p = h.Products;
         long t = 0;
         while (p.Stage(Gbr, 1) != DesignStage.Prototype || p.Stage(Gbr, 2) != DesignStage.Prototype)

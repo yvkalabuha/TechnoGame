@@ -164,6 +164,29 @@ public class ProductsLpTests
     }
 
     [Fact]
+    public void Lp_CanonicalLaunchInAReusedSlot_ResetsTheStageOMonthOfTheOldProject()
+    {
+        var h = new ProductsHarness(mode: ProductsMode.CanonicalLp, parameters: LpParams)
+        {
+            Knows = (_, n) => Probe.KnownUpTo(1)(n),
+            AppKnownSince = (a, g) => g == 1 && a == 1 ? 0 : -1,
+        };
+        // A free slot that still carries the O month of a project that used it before.
+        for (int d = 0; d < h.Layout.Designs; d++)
+        {
+            IntColumn col = (IntColumn)h.Table.Columns.Single(c => c.Name == $"prd.d{d}.stageO");
+            int[] values = col.Current.ToArray();
+            if (h.Products.Stage(1, d) == DesignStage.None)
+                values[1] = 77;
+            col.Load(values);
+        }
+        h.RunThroughMonth(2);
+        int slot = h.Products.CanonicalSlot(1, 1);
+        Assert.True(slot >= 0);
+        Assert.Equal(-1, h.Products.StageOMonth(1, slot));
+    }
+
+    [Fact]
     public void Lp_NotAdmitted_NoOutputNoReports_AndUnknownAppNoProject()
     {
         var h = new ProductsHarness(mode: ProductsMode.CanonicalLp, parameters: LpParams)

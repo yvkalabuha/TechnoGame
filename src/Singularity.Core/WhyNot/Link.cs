@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using Singularity.Core.Data;
 using Singularity.Core.Industry;
+using Singularity.Core.Products;
 using Singularity.Kernel;
 
 namespace Singularity.Core.WhyNot;
@@ -65,6 +66,9 @@ public enum WhyNotCause
 
     /// <summary>ECONOMY: admitted but <c>unit_cost·n_plan + upkeep</c> is above the procurement budget.</summary>
     NotAffordable,
+
+    /// <summary>PRODUCT (ADR-0005 p. 3): the handle names a project that no longer stands in its slot; <c>subject</c> = the slot. Nothing of the slot's new tenant is read.</summary>
+    StaleHandle,
 }
 
 /// <summary>
@@ -157,7 +161,7 @@ public readonly record struct Link(
     }
 }
 
-/// <summary>What the target of <c>why_not</c> is: <c>app_id</c> (an APP node number), <c>design_id</c> (a slot) or <c>requirement_id</c> (the generation <c>g*</c>).</summary>
+/// <summary>What the target of <c>why_not</c> is: <c>app_id</c> (an APP node number), <c>design_id</c> (a design handle) or <c>requirement_id</c> (the generation <c>g*</c>).</summary>
 public enum WhyNotTargetKind
 {
     App,
@@ -165,13 +169,16 @@ public enum WhyNotTargetKind
     Requirement,
 }
 
-public readonly record struct WhyNotTarget(WhyNotTargetKind Kind, int Id)
+/// <param name="Id">The node number (App), the design slot (Design) or the requirement generation (Requirement).</param>
+/// <param name="SlotGeneration">The generation of the design handle (Design only, ≥ 1); 0 for the other kinds.</param>
+public readonly record struct WhyNotTarget(WhyNotTargetKind Kind, int Id, int SlotGeneration)
 {
-    public static WhyNotTarget App(int nodeNumber) => new(WhyNotTargetKind.App, nodeNumber);
+    public static WhyNotTarget App(int nodeNumber) => new(WhyNotTargetKind.App, nodeNumber, 0);
 
-    public static WhyNotTarget Design(int design) => new(WhyNotTargetKind.Design, design);
+    /// <summary>A design by handle (ADR-0005 p. 3): a stale handle explains nothing, as an empty slot does not.</summary>
+    public static WhyNotTarget Design(DesignHandle design) => new(WhyNotTargetKind.Design, design.Slot, design.Generation);
 
-    public static WhyNotTarget Requirement(int generation) => new(WhyNotTargetKind.Requirement, generation);
+    public static WhyNotTarget Requirement(int generation) => new(WhyNotTargetKind.Requirement, generation, 0);
 }
 
 /// <summary>

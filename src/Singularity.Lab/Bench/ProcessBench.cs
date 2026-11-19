@@ -44,6 +44,10 @@ public sealed class RunTiming
     public (DateTime From, DateTime To) WindowUtc { get; init; }
     /// <summary>Host UTC bounds of the forced collection after <c>SliceSession.Create</c> (<see cref="ProcessBench.SettleGc"/>).</summary>
     public (DateTime From, DateTime To) SettleUtc { get; init; }
+    /// <summary><c>GC.CollectionCount(0)</c> before and after the settle collection: its GCs are the indices in (After, Upto].</summary>
+    public (int After, int Upto) SettleGcs { get; init; }
+    /// <summary><c>GC.CollectionCount(0)</c> at the window start and end: the window's GCs are the indices in (After, Upto] (TASK-0116).</summary>
+    public (int After, int Upto) WindowGcs { get; init; }
     /// <summary>Part of <see cref="AllocatedBytes"/> made by the <see cref="GcEventListener"/> dispatch thread in the window (0 without a listener).</summary>
     public long ListenerAllocatedBytes { get; init; }
 }
@@ -103,7 +107,9 @@ public static class ProcessBench
         SliceSession s = SliceSession.Create(w.Data, Config(w, seed, threads, chunk, daily, sw));
         s.World.Table.FullCopyMode = sw.FullCopy;
         DateTime settle0 = DateTime.UtcNow;
+        int settleGc0 = GC.CollectionCount(0);
         SettleGc();
+        int settleGc1 = GC.CollectionCount(0);
         DateTime settle1 = DateTime.UtcNow;
         int months = warmup + measure;
         var monthMs = new double[months];
@@ -191,7 +197,9 @@ public static class ProcessBench
             PeakWorkingSetBytes = Process.GetCurrentProcess().PeakWorkingSet64,
             Window = (win0, win1),
             WindowUtc = (utc0, utc1),
+            WindowGcs = (g0, g0 + g0b),
             SettleUtc = (settle0, settle1),
+            SettleGcs = (settleGc0, settleGc1),
             ListenerAllocatedBytes = listenerAlloc1 - listenerAlloc0,
         };
         return timing;
@@ -378,9 +386,12 @@ public static class ProcessBench
         j.WriteNumber("gc_pause_share", r.WindowWallMs > 0 ? r.GcPauseMs / r.WindowWallMs : 0);
         if (gcEv is not null)
         {
-            GcPauses.Summary settle = GcPauses.Summarize(gcEv.Timeline, [r.SettleUtc], (r.SettleUtc.To - r.SettleUtc.From).TotalMilliseconds);
+            GcPauses.Summary settle = GcPauses.SummarizeGcs(gcEv.Timeline, [r.SettleGcs], (r.SettleUtc.To - r.SettleUtc.From).TotalMilliseconds);
             j.WriteNumber("gc_settle_host_ms", settle.WallMs);
+            j.WriteNumber("gc_settle_gcs", settle.Gcs.Count);
             j.WriteNumber("gc_settle_pause_ms", settle.TotalMs);
+            // Record only: the same span matched by host time (equal on Linux; off Linux the event clock may move it out, TASK-0116).
+            j.WriteNumber("gc_settle_pause_ms_host_window", GcPauses.Summarize(gcEv.Timeline, [r.SettleUtc], 0).TotalMs);
             GcPauses.Write(j, "gc_pauses", gcEv.Of([r]), r.WindowUtc.From);
         }
         j.WriteNumber("hash_computations", r.HashComputations);
@@ -435,15 +446,18 @@ public static class ProcessBench
     /// flag «possible thermal throttling» = top-k median &lt; ratio × f_ref(k). The flag decides nothing (ADR-0023 п. 1.2); the reference column
     /// T·f/f_ref uses the daily run's median T.
     /// </summary>
-    private static void WriteFrequency(Utf8JsonWriter j, FreqSampler f, IReadOnlyList<(long, long)> windows, double? fRef, int k, double ratio, RunTiming? daily, int warmup)
+    internal static void WriteFrequency(Utf8JsonWriter j, FreqSampler f, IReadOnlyList<(long, long)> windows, double? fRef, int k, double ratio, RunTiming? daily, int warmup)
     {
         j.WriteStartObject("frequency");
         j.WriteString("source", f.Source);
+        if (f.Failure is string fail) j.WriteString("sampler_failure", fail); else j.WriteNull("sampler_failure");
         j.WriteNumber("sampler_alloc_bytes_total", f.AllocatedBytes);
         j.WriteNumber("k", k);
-        double? top = f.TopKMedianIn(windows, k);
+        // A sampler that stopped on a fault gives no frequency (TASK-0116): the samples before the fault cover only part of the windows,
+        // so the top-k median, the flag and the derived columns are null (samples are still written as a record).
+        double? top = f.Failure is null ? f.TopKMedianIn(windows, k) : null;
         LoadMeter.WriteNum(j, "topk_median_mhz", top);
-        LoadMeter.WriteNum(j, "median_mhz_in_windows", f.MedianIn(windows));
+        LoadMeter.WriteNum(j, "median_mhz_in_windows", f.Failure is null ? f.MedianIn(windows) : null);
         LoadMeter.WriteNum(j, "f_ref_mhz", fRef);
         j.WriteNumber("thermal_ratio", ratio);
         bool? flag = LoadMath.PossibleThermalThrottle(top, fRef, ratio);
@@ -472,8 +486,13 @@ public static class ProcessBench
 /// <summary>The paired GC events of a process and the flush record; <see cref="Of"/> gives the summary over the windows of some runs.</summary>
 internal sealed record GcEvents(GcPauses.Timeline Timeline, bool Flushed, double? ClockOffsetMs, double FlushHostSpanMs)
 {
+    /// <summary>
+    /// Pauses by host time of their start; GCs by GC index in the runs' <see cref="RunTiming.WindowGcs"/> — the same rule as the runtime
+    /// counters they are checked against (<see cref="WriteChecks"/>). Off Linux the event clock differs from the host clock by milliseconds,
+    /// and a GC at a window edge was counted by time on one side and by the counter on the other (TASK-0116, CI Windows «gcs 1 vs 0»).
+    /// </summary>
     public GcPauses.Summary Of(IReadOnlyList<RunTiming> runs) =>
-        GcPauses.Summarize(Timeline, [.. runs.Select(r => r.WindowUtc)], runs.Sum(r => r.WindowWallMs));
+        GcPauses.Summarize(Timeline, [.. runs.Select(r => r.WindowUtc)], [.. runs.Select(r => r.WindowGcs)], runs.Sum(r => r.WindowWallMs));
 
     /// <summary>Completeness: events flushed, GC and gen2 counts of the events equal the runtime counters, clock offset of the flush GC.</summary>
     public void WriteChecks(Utf8JsonWriter j, IReadOnlyList<RunTiming> runs, GcPauses.Summary s)
