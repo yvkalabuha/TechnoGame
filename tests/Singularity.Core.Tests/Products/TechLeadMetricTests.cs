@@ -32,9 +32,9 @@ public class TechLeadMetricTests
             s.Cohort[(Usa * s.Layout.Designs + 0) * s.Layout.Years + y] = y == 0 ? Fx6.FromInt(52) : Fx6.Zero;
     }
 
-    private static FleetCommand Retire(int d, long n) => new(FleetCommandKind.Retire, d, n);
+    private static FleetCommand Retire(int d, long n) => new(FleetCommandKind.Retire, ProductsHarness.Now(d), n);
 
-    private static FleetCommand Sell(int d, long n) => new(FleetCommandKind.Sell, d, n);
+    private static FleetCommand Sell(int d, long n) => new(FleetCommandKind.Sell, ProductsHarness.Now(d), n);
 
     [Fact]
     public void FieldedL_InitialScenarioFleet()

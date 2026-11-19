@@ -10,6 +10,9 @@ public class CommandTests
 {
     private static SliceSession Make() => SliceTestData.Create(new SliceRunConfig { Seed = 3 });
 
+    // Form-only handle for tests that never read the design back: generation 1 is the first taking of a slot.
+    private static DesignHandle H(int slot) => new(slot, 1);
+
     private static BudgetShares Shares(long r, long c, long d, long p, long q) =>
         new(Fx6.FromRaw(r), Fx6.FromRaw(c), Fx6.FromRaw(d), Fx6.FromRaw(p), Fx6.FromRaw(q));
 
@@ -29,7 +32,7 @@ public class CommandTests
         CommandVerdict v = s.Submit(SourceClass.Player, 0, 0, new SetEffortFocus(0, [47, 47]));
         Assert.Equal(CommandRefusal.FocusRepeat, v.Reason);
         Assert.Contains("47", v.Message);
-        Assert.Equal("", s.CommandLog);                  // refused commands are not logged
+        Assert.Equal(CommandCodec.EncodeLog([]), s.CommandLog);   // refused commands are not logged: the log is only its header
         for (long m = 0; m < 24; m++)
             s.StepThroughMonth(m);                       // EffortAllocator would throw on a repeat: nothing arrived
     }
@@ -39,10 +42,10 @@ public class CommandTests
     {
         SliceSession s = Make();
         // The AI submits no commands at all (its decisions are pol.* columns): neither with nor without force.
-        Assert.Equal(CommandRefusal.BadSource, s.Submit(SourceClass.Ai, 1, 0, new StartSeries(0, 0, Fx6.FromInt(5), true)).Reason);
-        Assert.Equal(CommandRefusal.BadSource, s.Submit(SourceClass.Ai, 1, 1, new StartSeries(0, 0, Fx6.FromInt(5), false)).Reason);
-        Assert.True(s.Submit(SourceClass.Player, 0, 0, new StartSeries(0, 0, Fx6.FromInt(5), true)).Accepted);
-        Assert.True(s.Submit(SourceClass.Harness, 0, 0, new StartSeries(0, 1, Fx6.FromInt(5), true)).Accepted);
+        Assert.Equal(CommandRefusal.BadSource, s.Submit(SourceClass.Ai, 1, 0, new StartSeries(0, H(0), Fx6.FromInt(5), true)).Reason);
+        Assert.Equal(CommandRefusal.BadSource, s.Submit(SourceClass.Ai, 1, 1, new StartSeries(0, H(0), Fx6.FromInt(5), false)).Reason);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new StartSeries(0, H(0), Fx6.FromInt(5), true)).Accepted);
+        Assert.True(s.Submit(SourceClass.Harness, 0, 0, new StartSeries(0, H(1), Fx6.FromInt(5), true)).Accepted);
         Assert.DoesNotContain("\"source\":2", s.CommandLog);
     }
 
@@ -59,25 +62,25 @@ public class CommandTests
     public void Submit_Malformed_IsRefused()
     {
         SliceSession s = Make();
-        Assert.Equal(CommandRefusal.UnknownActor, s.Submit(SourceClass.Player, 0, 0, new CloseLine(9, 0)).Reason);
-        Assert.Equal(CommandRefusal.BadDesign, s.Submit(SourceClass.Player, 0, 1, new CloseLine(0, 99)).Reason);
+        Assert.Equal(CommandRefusal.UnknownActor, s.Submit(SourceClass.Player, 0, 0, new CloseLine(9, H(0))).Reason);
+        Assert.Equal(CommandRefusal.BadDesign, s.Submit(SourceClass.Player, 0, 1, new CloseLine(0, H(99))).Reason);
         Assert.Equal(CommandRefusal.FocusTooMany, s.Submit(SourceClass.Player, 0, 2, new SetEffortFocus(0, [47, 48, 49, 50])).Reason);
         Assert.Equal(CommandRefusal.FocusUnknownProcess, s.Submit(SourceClass.Player, 0, 3, new SetEffortFocus(0, [9999])).Reason);
         Assert.Equal(CommandRefusal.BadSource, s.Submit(SourceClass.Ai, 0, 4, new SetEffortFocus(0, [47])).Reason);
         Assert.Equal(CommandRefusal.BadAlternatives, s.Submit(SourceClass.Player, 0, 5, new ComposeDesign(0, 1, [0, 1])).Reason);
-        Assert.Equal(CommandRefusal.BadRate, s.Submit(SourceClass.Player, 0, 6, new StartSeries(0, 0, Fx6.FromRaw(-1), false)).Reason);
+        Assert.Equal(CommandRefusal.BadRate, s.Submit(SourceClass.Player, 0, 6, new StartSeries(0, H(0), Fx6.FromRaw(-1), false)).Reason);
     }
 
     [Fact]
     public void Submit_DuplicateAndNonMonotonicLocalN_AreRefused()
     {
         SliceSession s = Make();
-        Assert.True(s.Submit(SourceClass.Player, 0, 5, new CloseLine(0, 0)).Accepted);
-        Assert.Equal(CommandRefusal.DuplicateKey, s.Submit(SourceClass.Player, 0, 5, new CloseLine(0, 1)).Reason);
-        Assert.Equal(CommandRefusal.LocalNotMonotonic, s.Submit(SourceClass.Player, 0, 4, new CloseLine(0, 1)).Reason);
-        Assert.True(s.Submit(SourceClass.Player, 1, 0, new CloseLine(0, 1)).Accepted);   // another source has its own counter
+        Assert.True(s.Submit(SourceClass.Player, 0, 5, new CloseLine(0, H(0))).Accepted);
+        Assert.Equal(CommandRefusal.DuplicateKey, s.Submit(SourceClass.Player, 0, 5, new CloseLine(0, H(1))).Reason);
+        Assert.Equal(CommandRefusal.LocalNotMonotonic, s.Submit(SourceClass.Player, 0, 4, new CloseLine(0, H(1))).Reason);
+        Assert.True(s.Submit(SourceClass.Player, 1, 0, new CloseLine(0, H(1))).Accepted);   // another source has its own counter
         s.Step(1);
-        Assert.Equal(CommandRefusal.LocalNotMonotonic, s.Submit(SourceClass.Player, 0, 5, new CloseLine(0, 1)).Reason);   // also across ticks
+        Assert.Equal(CommandRefusal.LocalNotMonotonic, s.Submit(SourceClass.Player, 0, 5, new CloseLine(0, H(1))).Reason);   // also across ticks
     }
 
     [Fact]
@@ -131,18 +134,18 @@ public class CommandTests
         ImmutableArray<int> alts = Alts(s.World, 1);
         s.StepThroughMonth(3);                               // now on a mid-month day: the next monthly step is month 4
         Assert.True(s.Submit(SourceClass.Player, 0, 0, new ComposeDesign(1, 1, alts)).Accepted);
-        Assert.True(s.Submit(SourceClass.Player, 0, 1, new StartSeries(1, 2, Fx6.FromInt(7), true)).Accepted);
-        Assert.True(s.Submit(SourceClass.Player, 0, 2, new CloseLine(1, 3)).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new StartSeries(1, H(2), Fx6.FromInt(7), true)).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, 2, new CloseLine(1, H(3))).Accepted);
         s.Step(1);
         CommandState c = s.World.Commands;
         Assert.Empty(c.DesignCommands(1, 3));
         Assert.Single(c.DesignCommands(1, 4));
         Assert.Empty(c.DesignCommands(1, 5));
-        Assert.Equal((Fx6.FromInt(7), true), c.Series(1, 2, 4));
+        Assert.Equal((H(2), Fx6.FromInt(7), true), c.Series(1, 2, 4));
         Assert.Null(c.Series(1, 2, 5));
         Assert.Null(c.Series(1, 2, 3));
-        Assert.True(c.CloseLine(1, 3, 4));
-        Assert.False(c.CloseLine(1, 3, 5));
+        Assert.Equal(H(3), c.CloseLine(1, 3, 4));
+        Assert.Null(c.CloseLine(1, 3, 5));
         Assert.Null(c.Series(0, 2, 4));
     }
 
@@ -156,7 +159,7 @@ public class CommandTests
         Assert.True(s.Submit(SourceClass.Player, 0, 0, new ComposeDesign(1, 1, alts)).Accepted);
         s.Step(1);
         var list = s.World.Commands.DesignCommands(1, 0);   // applied at tick 0, a monthly tick: seen by month 0
-        Assert.Equal([1, 2], list.Select(x => x.Target));
+        Assert.Equal([1, 2], list.Select(x => x.Target.Slot));
     }
 
     // ---- order of sources, journal, replay
@@ -249,9 +252,9 @@ public class CommandTests
             new(new CommandKey(10, SourceClass.Player, 0, 0), new SetBudgetShares(1, Shares(350_000, 120_000, 80_000, 400_000, 50_000))),
             new(new CommandKey(10, SourceClass.Player, 0, 1), new SetEffortFocus(2, [47, 40])),
             new(new CommandKey(11, SourceClass.Harness, 3, 0), new ComposeDesign(0, 2, [1, 2, 3, 4, 5])),
-            new(new CommandKey(12, SourceClass.Harness, 3, 1), new DeriveDesign(0, 4, alts)),
-            new(new CommandKey(13, SourceClass.Player, 0, 2), new StartSeries(4, 1, Fx6.FromRaw(25_500_001), true)),
-            new(new CommandKey(14, SourceClass.Player, 0, 3), new CloseLine(4, 2)),
+            new(new CommandKey(12, SourceClass.Harness, 3, 1), new DeriveDesign(0, H(4), alts)),
+            new(new CommandKey(13, SourceClass.Player, 0, 2), new StartSeries(4, H(1), Fx6.FromRaw(25_500_001), true)),
+            new(new CommandKey(14, SourceClass.Player, 0, 3), new CloseLine(4, H(2))),
             new(new CommandKey(15, SourceClass.Player, 0, 4), new SetEffortFocus(2, [])),
         ];
         string text = CommandCodec.EncodeLog(all);
@@ -271,8 +274,8 @@ public class CommandTests
     [Fact]
     public void Codec_Format_IsStable_RawValuesAreStrings()
     {
-        var c = new LoggedCommand(new CommandKey(10, SourceClass.Harness, 3, 1), new StartSeries(4, 1, Fx6.FromRaw(25_500_001), true));
-        Assert.Equal("{\"apply_tick\":10,\"source\":1,\"source_id\":3,\"local_n\":1,\"kind\":\"start_series\",\"actor\":4,\"design\":1,\"rate\":\"25500001\",\"force\":true}",
+        var c = new LoggedCommand(new CommandKey(10, SourceClass.Harness, 3, 1), new StartSeries(4, H(1), Fx6.FromRaw(25_500_001), true));
+        Assert.Equal("{\"apply_tick\":10,\"source\":1,\"source_id\":3,\"local_n\":1,\"kind\":\"start_series\",\"actor\":4,\"design\":1,\"design_gen\":1,\"rate\":\"25500001\",\"force\":true}",
             CommandCodec.Encode(c));
         var s = new LoggedCommand(new CommandKey(0, SourceClass.Player, 0, 0), new SetBudgetShares(0, Shares(1, 2, 3, 4, 999_990)));
         Assert.Equal("{\"apply_tick\":0,\"source\":0,\"source_id\":0,\"local_n\":0,\"kind\":\"set_budget_shares\",\"actor\":0,\"shares\":[\"1\",\"2\",\"3\",\"4\",\"999990\"]}",

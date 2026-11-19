@@ -24,8 +24,8 @@ public class ProductAiRunTests
         {
             ProductsSystem p = h.Products;
             DesignStage st = p.Stage(a, d);
-            return new PolicyDesign(st, p.PlatformGen(a, d), p.Cancelled(a, d), p.BuiltAny(a, d), p.IdleMonths(a, d), p.StageOMonth(a, d), p.Parent(a, d),
-                st == DesignStage.Prototype && p.GateOpen(a, d, month), p.DefectsHidden(a, d), st == DesignStage.None ? Fx6.One : p.UnitCostFloor(a, d));
+            return new PolicyDesign(st, p.PlatformGen(a, d), p.Cancelled(a, d), p.BuiltAny(a, d), p.IdleMonths(a, d), p.StageOMonth(a, d), p.LiveParent(a, d),
+                st == DesignStage.Prototype && p.GateOpen(a, d, month), p.DefectsHidden(a, d), st == DesignStage.None ? Fx6.One : p.UnitCostFloor(a, d), p.Generation(a, d));
         }
 
         public int[] Alternatives(int a, int d) => h.Products.Alternatives(a, d);
@@ -50,15 +50,15 @@ public class ProductAiRunTests
 
     private sealed class NoInputs : IPolicyInputs
     {
-        public int NewestSeriesDesign(int actorRow, long month) => -1;
+        public DesignHandle? NewestSeriesDesign(int actorRow, long month) => null;
         public BottleneckLimit? Bottleneck(int actorRow, int design, long month) => null;
         public bool SeriesBelowQuality(int actorRow, Fx6 threshold, long month) => false;
     }
 
-    private static (ProductsHarness H, PolicySystem Policy) Stand(ProductsParams parameters, Func<int, int, bool>? knows = null, int knownGen = 2)
+    private static (ProductsHarness H, PolicySystem Policy) Stand(ProductsParams parameters, Func<int, int, bool>? knows = null, int knownGen = 2, int threads = 1, int chunkSize = 1)
     {
         PolicySystem? policy = null;
-        var h = new ProductsHarness(parameters: parameters, extraSystems: (hh, table) =>
+        var h = new ProductsHarness(threads, chunkSize, parameters: parameters, extraSystems: (hh, table) =>
         {
             int n = table.RowCount;
             policy = new PolicySystem(table, new PolicyParams() with { FvBudget = Fx6.FromInt(10) }, [.. Enumerable.Range(0, n)],
@@ -72,9 +72,9 @@ public class ProductAiRunTests
         };
         PolicySystem p = policy!;
         h.Commands = (a, t) => p.AiDesignCommands(a, t);
-        h.Series = (a, d, t) => p.AiStart(a, d, t) is { } r ? new SeriesStart(r, false) : null;
-        h.Close = (a, d, t) => p.AiClose(a, d, t);
-        h.Rate = (a, d, t) => p.AiLine(a, d)
+        h.Series = (a, d, t) => p.AiStart(a, d, t) is { } r ? new ScriptedStart(r.Rate, false) : null;
+        h.Close = (a, d, t) => p.AiClose(a, d, t) is not null;
+        h.Rate = (a, d, t) => p.AiLine(a, d, h.Products.Generation(a, d))
             ? PolicyRules.LineRate(p.Shares(a).Procurement * p.Budget(a), h.Products.UnitCostFloor(a, d)) : null;
         p.Initialize();
         return (h, p);
@@ -123,6 +123,71 @@ public class ProductAiRunTests
         Assert.Equal(1, policy.Repeats(Gbr, 2));   // per requirement generation
     }
 
+    // TASK-0115 (H3): the AI decides in the compute of month t on the snapshot t−1 and the layer applies the decision in t+1, after the external
+    // commands of that step. Before the handle, an external cancel in t followed by an external compose in t+1 gave the slot to a new project, and the AI's
+    // cancel (decided in t for the old one) cancelled the new one.
+    // Runs the scenario through month decide + 1 and returns the state hash after every month.
+    private static (List<string> Hashes, ProductsHarness H, PolicySystem Policy, int OldGeneration, long Decide) RunH3(int threads, int chunkSize)
+    {
+        (ProductsHarness h, PolicySystem policy) = Stand(new ProductsParams { LambdaD = Fx6.FromRaw(3_000) }, threads: threads, chunkSize: chunkSize);
+        ProductsSystem p = h.Products;
+        var hashes = new List<string>();
+        long t = 0;
+        while (p.Stage(Gbr, 1) != DesignStage.Prototype)
+        {
+            h.RunThroughMonth(t++);
+            hashes.Add(h.Hash());
+        }
+        int s = p.StageOMonth(Gbr, 1);
+        long decide = s + 60;                     // the AI decides to give the project up in this compute (see the A40 test)
+        int oldGeneration = p.Generation(Gbr, 1);
+        var superior = Compose(Probe, 2, "eng_g2", "hot_sa2_forged", "comp_axial", "af_swept", "ab_on");
+        // External commands first, then the AI's (key order, as the Session adapter does).
+        h.Commands = (a, m) =>
+        {
+            var list = new List<DesignCommand>();
+            if (a == Gbr && m == decide)
+                list.Add(DesignCommand.Cancel(new DesignHandle(1, p.Generation(Gbr, 1))));
+            if (a == Gbr && m == decide + 1)
+                list.Add(superior);
+            list.AddRange(policy.AiDesignCommands(a, m));
+            return list;
+        };
+        for (; t <= decide + 1; t++)
+        {
+            h.RunThroughMonth(t);
+            hashes.Add(h.Hash());
+        }
+        return (hashes, h, policy, oldGeneration, decide);
+    }
+
+    [Fact]
+    public void H3_AnAiCancelDecidedInT_DoesNotHitAProjectComposedInTPlus1_InTheSlotTheExternalCancelFreed()
+    {
+        (_, ProductsHarness h, PolicySystem policy, int oldGeneration, long decide) = RunH3(1, 1);
+        ProductsSystem p = h.Products;
+        // The AI's decision of month `decide` carries the handle it saw, in force at decide + 1; the external cancel of `decide` and the external compose
+        // of decide + 1 happen around it: the compose retook slot 1 before the AI's cancel of the OLD project arrived.
+        Assert.Contains(policy.AiDesignCommands(Gbr, decide + 1), c => c.Kind == DesignCommandKind.Cancel && c.Design == new DesignHandle(1, oldGeneration));
+        Assert.Equal(DesignStage.Project, p.Stage(Gbr, 1));
+        Assert.Equal(oldGeneration + 1, p.Generation(Gbr, 1));
+        Assert.False(p.Cancelled(Gbr, 1));
+        Assert.Equal(1, p.RejectionCount(Gbr, CommandRejection.StaleHandle));
+    }
+
+    [Theory]
+    [InlineData(2, 1)]
+    [InlineData(4, 1)]
+    [InlineData(4, 2)]
+    public void H3_L2_TheSameSequenceAtOneAndManyThreads_GivesTheSameHandlesAndTheSameHashEveryMonth(int threads, int chunkSize)
+    {
+        var one = RunH3(1, 1);
+        var many = RunH3(threads, chunkSize);
+        Assert.Equal(one.Hashes, many.Hashes);
+        Assert.Equal(one.OldGeneration, many.OldGeneration);
+        Assert.Equal(one.Policy.AiDesignCommands(Gbr, one.Decide + 1), many.Policy.AiDesignCommands(Gbr, many.Decide + 1));
+    }
+
     [Fact]
     public void WithTheNumbersOfSection81_AProjectInOLaunchesBeforeTAb_NothingIsCancelled_AndNeitherIsForced()
     {
@@ -134,7 +199,7 @@ public class ProductAiRunTests
         Assert.False(p.Cancelled(Gbr, 1));
         Assert.False(p.SeriesForced(Gbr, 1));
         Assert.True(p.Rate(Gbr, 1) > Fx6.Zero);
-        Assert.True(policy.AiLine(Gbr, 1));
+        Assert.True(policy.AiLine(Gbr, 1, h.Products.Generation(Gbr, 1)));
         // Launched at the doctrine's month: the decision at t − stage_o_month = the reference month for this D0, in force the month after.
         int month = PolicyLiveness.LaunchMonth(h.Params, p.InitialDefects(Gbr, 1), p.DRef, new PolicyParams().LaunchShare[(int)PolicyProfile.Quality]);
         Assert.True(month is > 0 and < 60);
@@ -156,7 +221,7 @@ public class ProductAiRunTests
         (ProductsHarness h, PolicySystem policy) = Stand(new ProductsParams(), knownGen: 1);
         h.RunThroughMonth(0);
         Assert.Equal(DesignStage.Series, h.Products.Stage(Gbr, 0));
-        Assert.True(policy.AiLine(Gbr, 0));
+        Assert.True(policy.AiLine(Gbr, 0, h.Products.Generation(Gbr, 0)));
         Assert.True(h.Products.Rate(Gbr, 0) > Fx6.Zero);
         Assert.Equal(0, h.Products.IdleMonths(Gbr, 0));
     }

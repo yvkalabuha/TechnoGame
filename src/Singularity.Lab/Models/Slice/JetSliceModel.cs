@@ -16,7 +16,7 @@ namespace Singularity.Lab.Models.Slice;
 public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactory
 {
     /// <summary>The version of the Session surface this model was written against (SLICE_COMPOSITION §13.7).</summary>
-    public const int SurfaceVersion = 12;
+    public const int SurfaceVersion = 13;
 
     /// <summary>Horizon H of the slice, months (spec §2): the control tables have curve knots τ 0…2·H−1.</summary>
     public const int SliceHorizonMonths = 384;
@@ -227,10 +227,11 @@ public sealed class JetSliceModel : ISessionModel
     // when the proxy sent something.
     private static int ForcedStarts(SliceSession s, SliceObserver observer, long month, int seen)
     {
+        // Line 0 is the header {"commands_log":2} (command log v2, TASK-0115): counted, never decoded as a command.
         int n = 0;
         foreach (string line in s.CommandLog.Split('\n'))
         {
-            if (line.Length == 0 || n++ < seen)
+            if (line.Length == 0 || n++ < seen || n == 1)
                 continue;
             if (CommandCodec.Decode(line).Command is StartSeries { Force: true } start)
                 observer.ForcedStart(start.Actor, start.Design, month);

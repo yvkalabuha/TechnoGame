@@ -68,7 +68,11 @@ public sealed record DesignView(
     int Design, DesignStage Stage, int PlatformGen, int Gen, int Parent, int StageOMonth,
     bool BuiltAny, bool Cancelled, Fx6 Rate, Fx6 UnitCost, Fx6 UnitCostFloor,
     Fx6 InService, Fx6 Readiness, Fx6 Perf, LineBind Bind, bool AiLine,
-    ImmutableArray<int> PrcSet, int SlotGeneration = 0);
+    ImmutableArray<int> PrcSet, int SlotGeneration = 0)
+{
+    /// <summary>The handle UI and clients put into commands about this project: never computed on the client side (ADR-0005 p. 3).</summary>
+    public DesignHandle Handle => new(Design, SlotGeneration);
+}
 
 public readonly record struct BureauView(int Bureau, int Design, long Granted, long Required);
 public readonly record struct QualityView(bool Active, int Start, int TriggerCount, int TrainingTarget);
@@ -86,11 +90,13 @@ public sealed record PolicyDecisionView(
     ImmutableArray<FleetCommand> Fleet,
     ImmutableArray<int> Repeats);
 
-public sealed record DesignCommandView(DesignCommandKind Kind, int Target, ImmutableArray<int> Alts);
-public readonly record struct StartView(int Design, Fx6 Rate);
+/// <summary><see cref="Handle"/> is the project a Derive or Cancel names (the generation the AI saw at its decision, ADR-0005 p. 3); <c>default</c> for a Compose.</summary>
+public sealed record DesignCommandView(DesignCommandKind Kind, int Target, ImmutableArray<int> Alts, DesignHandle Handle);
+/// <summary>An AI start; <see cref="Handle"/> is the handle the AI decided on.</summary>
+public readonly record struct StartView(int Design, Fx6 Rate, DesignHandle Handle);
 
 /// <summary>A closed line and the rule that closed it; <see cref="Reason"/> is <c>None</c> in a snapshot without a monthly step (the trace is of that step only).</summary>
-public readonly record struct CloseView(int Design, LineCloseReason Reason);
+public readonly record struct CloseView(int Design, LineCloseReason Reason, DesignHandle Handle);
 
 /// <summary>Inputs of the monthly step <see cref="Month"/> as its compute saw them (after the deals and the commands of the tick, before the step).</summary>
 public sealed record MonthInputsView(long Month, int GFront, ImmutableArray<ActorInputsView> Actors);

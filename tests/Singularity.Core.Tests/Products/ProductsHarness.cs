@@ -15,6 +15,15 @@ internal sealed class ProductsHarness
 {
     /// <param name="actorPerm">Storage order of the actors: table row r holds scenario actor <c>actorPerm[r]</c>; scripts get the stable actor index.</param>
     /// <param name="years">Cohort years of the layout (default <see cref="ProductTestData.Years"/>).</param>
+    // A script names a project of the snapshot by slot, as a sender that has just read the view: Now(slot) is resolved to that slot's current
+    // generation before the command reaches the layer. Tests about stale handles write the pair explicitly instead.
+    private const int NowGeneration = int.MinValue;
+
+    public static DesignHandle Now(int slot) => new(slot, NowGeneration);
+
+    private DesignHandle Seen(int row, DesignHandle h) =>
+        h.Generation != NowGeneration ? h : new DesignHandle(h.Slot, h.Slot >= 0 && h.Slot < Layout.Designs ? Products.Generation(row, h.Slot) : 0);
+
     public ProductsHarness(int threads = 1, int chunkSize = 1, ProductsMode mode = ProductsMode.Full, ProductsParams? parameters = null,
         int[]? actorPerm = null, int years = Years, int? maxDesigns = null, Action<Table>? corruptInMerge = null,
         Func<ProductsHarness, Table, ITickSystem[]>? extraSystems = null, bool? startLine = null, Action<ProductsStart>? tweakStart = null,
@@ -86,7 +95,15 @@ internal sealed class ProductsHarness
     public Func<int, long, IReadOnlyList<DesignCommand>> Commands { get; set; } = (_, _) => [];
 
     /// <summary>Explicit <c>start_series</c> of the script; when it returns null, <see cref="Launch"/> and <see cref="Rate"/> decide.</summary>
-    public Func<int, int, long, SeriesStart?> Series { get; set; } = (_, _, _) => null;
+    public Func<int, int, long, ScriptedStart?> Series { get; set; } = (_, _, _) => null;
+    /// <summary>
+    /// Raw sender candidates of <c>start_series</c> and <c>close_line</c> for a slot (stable actor, slot, month), handles written out by the test: for tests of
+    /// the layer's own resolution of a handle (stale, two candidates in key order). When set they replace <see cref="Series"/>/<see cref="Close"/>.
+    /// </summary>
+    public Func<int, int, long, IReadOnlyList<SeriesStart>>? RawStarts { get; set; }
+
+    public Func<int, int, long, IReadOnlyList<DesignHandle>>? RawCloses { get; set; }
+
     public Func<int, int, long> AppKnownSince { get; set; } = (_, _) => -1;
 
     public long Month => Calendar.MonthIndex(Runner.Tick);
@@ -196,7 +213,8 @@ internal sealed class ProductsHarness
 
         public bool Mastered(int actorRow, int processNumber, long month) => h.IsMastered?.Invoke(A(actorRow), processNumber) ?? false;
 
-        public IReadOnlyList<FleetCommand> FleetCommands(int actorRow, long month) => h.FleetScript?.Invoke(A(actorRow), month) ?? [];
+        public IReadOnlyList<FleetCommand> FleetCommands(int actorRow, long month) =>
+            [.. (h.FleetScript?.Invoke(A(actorRow), month) ?? []).Select(c => c with { Design = h.Seen(actorRow, c.Design) })];
 
         // A scripted order becomes a compose_design for the newest APP the actor knows (the validator's g*), with the preset
         // composition of the order's variant; the order's generation is only a trigger.
@@ -217,17 +235,47 @@ internal sealed class ProductsHarness
                 if (target > 0 && ((order.Variant == DesignVariant.Producible
                         && DesignRules.Producible(h.Layout, target, knows, p => AdmittedYield(actorRow, p, month), h.Params.YProd, null, alts))
                         || DesignRules.Superior(h.Layout, target, knows, alts)))
-                    list.Add(new DesignCommand(DesignCommandKind.Compose, target, [.. alts]));
+                    list.Add(DesignCommand.Compose(target, [.. alts]));
             }
-            list.AddRange(h.Commands(A(actorRow), month));
+            foreach (DesignCommand c in h.Commands(A(actorRow), month))
+                list.Add(c.Kind == DesignCommandKind.Compose ? c : c with { Design = h.Seen(actorRow, c.Design) });
             return list;
         }
 
-        public SeriesStart? StartSeries(int actorRow, int design, long month) =>
-            h.Series(A(actorRow), design, month) ?? (h.Launch(A(actorRow), design, month)
-                ? new SeriesStart(h.Rate(A(actorRow), design, month) ?? Fx6.Zero, false) : null);
+        // The script is a sender that read the snapshot: its handle is the slot's current one. A free slot sends nothing (the script is about projects).
+        public int SeriesStarts(int actorRow, int design, long month, Span<SeriesStart> into)
+        {
+            if (h.RawStarts is { } raw)
+            {
+                IReadOnlyList<SeriesStart> list = raw(A(actorRow), design, month);
+                for (int i = 0; i < list.Count; i++)
+                    into[i] = list[i];
+                return list.Count;
+            }
+            if (h.Products.HandleOf(actorRow, design) is not { } handle)
+                return 0;
+            ScriptedStart? start = h.Series(A(actorRow), design, month) ?? (h.Launch(A(actorRow), design, month)
+                ? new ScriptedStart(h.Rate(A(actorRow), design, month) ?? Fx6.Zero, false) : null);
+            if (start is not { } s)
+                return 0;
+            into[0] = new SeriesStart(handle, s.Rate, s.Force);
+            return 1;
+        }
 
-        public bool CloseLine(int actorRow, int design, long month) => h.Close(A(actorRow), design, month);
+        public int LineCloses(int actorRow, int design, long month, Span<DesignHandle> into)
+        {
+            if (h.RawCloses is { } raw)
+            {
+                IReadOnlyList<DesignHandle> list = raw(A(actorRow), design, month);
+                for (int i = 0; i < list.Count; i++)
+                    into[i] = list[i];
+                return list.Count;
+            }
+            if (h.Products.HandleOf(actorRow, design) is not { } handle || !h.Close(A(actorRow), design, month))
+                return 0;
+            into[0] = handle;
+            return 1;
+        }
 
         public Fx6? LineRate(int actorRow, int design, long month) => h.Rate(A(actorRow), design, month);
         public Fx6 TrainingBudget(int actorRow, int design, long month) => h.Training(A(actorRow), design, month);
@@ -235,3 +283,6 @@ internal sealed class ProductsHarness
         public long AppKnownSince(int actorRow, int gen, long month) => h.AppKnownSince(A(actorRow), gen);
     }
 }
+
+/// <summary>A scripted <c>start_series</c>: what a test sender wants; the harness attaches the handle of the slot it reads in the snapshot.</summary>
+internal readonly record struct ScriptedStart(Fx6 Rate, bool Force);

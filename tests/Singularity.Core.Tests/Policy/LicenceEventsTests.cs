@@ -155,12 +155,12 @@ public class LicenceEventsTests
         public int EngineGen(int actorRow, long month) => Gen[actorRow];
         public LicenceSubject? Subject(int sellerRow, int gen, long month) => new LicenceSubject(Cost, Mask[sellerRow]);
         public IReadOnlyList<Link> WhyNot(int actorRow, long month) => List(actorRow);
-        public IReadOnlyList<Link> WhyNotDesign(int actorRow, int design, long month) => List(actorRow);
+        public IReadOnlyList<Link> WhyNotDesign(int actorRow, DesignHandle design, long month) => List(actorRow);
     }
 
     private sealed class NoInputs : IPolicyInputs
     {
-        public int NewestSeriesDesign(int actorRow, long month) => -1;
+        public DesignHandle? NewestSeriesDesign(int actorRow, long month) => null;
         public BottleneckLimit? Bottleneck(int actorRow, int design, long month) => null;
         public bool SeriesBelowQuality(int actorRow, Fx6 threshold, long month) => false;
     }

@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Singularity.Core.Policy;
+using Singularity.Core.Products;
 using Singularity.Kernel;
 
 namespace Singularity.Core.Commands;
@@ -18,11 +19,11 @@ public sealed class CommandState
     private readonly IntColumn _sharesSet;
     private readonly LongColumn[] _shares;
     private readonly IntColumn[] _focus;
-    private readonly IntColumn[] _dKind, _dTarget, _dStamp;
+    private readonly IntColumn[] _dKind, _dTarget, _dGen, _dStamp;
     private readonly IntColumn[][] _dAlt;
-    private readonly IntColumn[] _sStamp, _sForce, _cStamp;
+    private readonly IntColumn[] _sStamp, _sGen, _sForce, _cStamp, _cGen;
     private readonly LongColumn[] _sRate;
-    private readonly IntColumn[] _fKind, _fDesign, _fN, _fStamp;
+    private readonly IntColumn[] _fKind, _fDesign, _fGen, _fN, _fStamp;
 
     /// <param name="altSlots">Alternatives per design command: the slot count of the product class.</param>
     /// <param name="designs"><c>max_designs</c>.</param>
@@ -36,12 +37,14 @@ public sealed class CommandState
         _focus = [table.AddInt("cmd.focus.0"), table.AddInt("cmd.focus.1"), table.AddInt("cmd.focus.2")];
         _dKind = new IntColumn[_slots];
         _dTarget = new IntColumn[_slots];
+        _dGen = new IntColumn[_slots];
         _dStamp = new IntColumn[_slots];
         _dAlt = new IntColumn[_slots][];
         for (int k = 0; k < _slots; k++)
         {
             _dKind[k] = table.AddInt($"cmd.dsn.{k}.kind");
             _dTarget[k] = table.AddInt($"cmd.dsn.{k}.target");
+            _dGen[k] = table.AddInt($"cmd.dsn.{k}.gen");
             _dStamp[k] = table.AddInt($"cmd.dsn.{k}.stamp");
             _dAlt[k] = new IntColumn[altSlots];
             for (int s = 0; s < altSlots; s++)
@@ -49,25 +52,31 @@ public sealed class CommandState
         }
         _fKind = new IntColumn[CommandLimits.FleetSlots];
         _fDesign = new IntColumn[CommandLimits.FleetSlots];
+        _fGen = new IntColumn[CommandLimits.FleetSlots];
         _fN = new IntColumn[CommandLimits.FleetSlots];
         _fStamp = new IntColumn[CommandLimits.FleetSlots];
         for (int k = 0; k < CommandLimits.FleetSlots; k++)
         {
             _fKind[k] = table.AddInt($"cmd.flt.{k}.kind");
             _fDesign[k] = table.AddInt($"cmd.flt.{k}.design");
+            _fGen[k] = table.AddInt($"cmd.flt.{k}.gen");
             _fN[k] = table.AddInt($"cmd.flt.{k}.n");
             _fStamp[k] = table.AddInt($"cmd.flt.{k}.stamp");
         }
         _sStamp = new IntColumn[designs];
         _sForce = new IntColumn[designs];
         _cStamp = new IntColumn[designs];
+        _sGen = new IntColumn[designs];
+        _cGen = new IntColumn[designs];
         _sRate = new LongColumn[designs];
         for (int d = 0; d < designs; d++)
         {
             _sStamp[d] = table.AddInt($"cmd.series.{d}.stamp");
+            _sGen[d] = table.AddInt($"cmd.series.{d}.gen");
             _sRate[d] = table.AddLong($"cmd.series.{d}.rate");
             _sForce[d] = table.AddInt($"cmd.series.{d}.force");
             _cStamp[d] = table.AddInt($"cmd.close.{d}.stamp");
+            _cGen[d] = table.AddInt($"cmd.close.{d}.gen");
         }
     }
 
@@ -82,10 +91,13 @@ public sealed class CommandState
     /// <summary>Process number of the k-th focus priority, −1 = empty.</summary>
     public int Focus(int actor, int k) => _focus[k].Current[actor] - 1;
 
-    /// <summary>The <c>compose</c>/<c>derive</c> commands the month step <paramref name="month"/> consumes, in command order.</summary>
-    public IReadOnlyList<(CommandKind Kind, int Target, ImmutableArray<int> Alts)> DesignCommands(int actor, long month)
+    /// <summary>
+    /// The <c>compose</c>/<c>derive</c>/<c>cancel</c> commands the month step <paramref name="month"/> consumes, in command order. <c>Target</c> is the handle of the
+    /// parent or of the project to cancel; for a compose its slot is the requirement generation <c>g*</c> and its generation 0.
+    /// </summary>
+    public IReadOnlyList<(CommandKind Kind, DesignHandle Target, ImmutableArray<int> Alts)> DesignCommands(int actor, long month)
     {
-        var list = new List<(CommandKind, int, ImmutableArray<int>)>();
+        var list = new List<(CommandKind, DesignHandle, ImmutableArray<int>)>();
         for (int k = 0; k < _slots; k++)
         {
             if (_dStamp[k].Current[actor] != Stamp(month))
@@ -94,28 +106,32 @@ public sealed class CommandState
             for (int s = 0; s < _altSlots; s++)
                 alts[s] = _dAlt[k][s].Current[actor];
             CommandKind kind = _dKind[k].Current[actor] switch { 1 => CommandKind.ComposeDesign, 2 => CommandKind.DeriveDesign, _ => CommandKind.CancelDesign };
-            list.Add((kind, _dTarget[k].Current[actor], [.. alts]));
+            list.Add((kind, new DesignHandle(_dTarget[k].Current[actor], _dGen[k].Current[actor]), [.. alts]));
         }
         return list;
     }
 
     /// <summary>The <c>sell_cohort</c>/<c>retire_cohort</c> commands the month step <paramref name="month"/> consumes, in command order.</summary>
-    public IReadOnlyList<(CommandKind Kind, int Design, int N)> FleetCommands(int actor, long month)
+    public IReadOnlyList<(CommandKind Kind, DesignHandle Design, int N)> FleetCommands(int actor, long month)
     {
-        var list = new List<(CommandKind, int, int)>();
+        var list = new List<(CommandKind, DesignHandle, int)>();
         for (int k = 0; k < CommandLimits.FleetSlots; k++)
         {
             if (_fStamp[k].Current[actor] == Stamp(month))
-                list.Add((_fKind[k].Current[actor] == 1 ? CommandKind.SellCohort : CommandKind.RetireCohort, _fDesign[k].Current[actor], _fN[k].Current[actor]));
+                list.Add((_fKind[k].Current[actor] == 1 ? CommandKind.SellCohort : CommandKind.RetireCohort, new DesignHandle(_fDesign[k].Current[actor], _fGen[k].Current[actor]), _fN[k].Current[actor]));
         }
         return list;
     }
 
-    /// <summary><c>start_series</c> consumed at <paramref name="month"/>: rate and force, or null.</summary>
-    public (Fx6 Rate, bool Force)? Series(int actor, int design, long month) =>
-        _sStamp[design].Current[actor] == Stamp(month) ? (Fx6.FromRaw(_sRate[design].Current[actor]), _sForce[design].Current[actor] != 0) : null;
+    /// <summary><c>start_series</c> consumed at <paramref name="month"/>: handle, rate and force, or null.</summary>
+    public (DesignHandle Design, Fx6 Rate, bool Force)? Series(int actor, int design, long month) =>
+        _sStamp[design].Current[actor] == Stamp(month)
+            ? (new DesignHandle(design, _sGen[design].Current[actor]), Fx6.FromRaw(_sRate[design].Current[actor]), _sForce[design].Current[actor] != 0)
+            : null;
 
-    public bool CloseLine(int actor, int design, long month) => _cStamp[design].Current[actor] == Stamp(month);
+    /// <summary><c>close_line</c> consumed at <paramref name="month"/>: the handle, or null.</summary>
+    public DesignHandle? CloseLine(int actor, int design, long month) =>
+        _cStamp[design].Current[actor] == Stamp(month) ? new DesignHandle(design, _cGen[design].Current[actor]) : null;
 
     // ---- writer (between ticks)
 
@@ -148,7 +164,9 @@ public sealed class CommandState
                 if (slot == _slots)
                     return CommandVerdict.Refuse(CommandRefusal.SlotOverflow, $"actor {a} already has {_slots} design commands for month {consumedAtMonth}");
                 Set(_dKind[slot], a, command switch { ComposeDesign => 1, DeriveDesign => 2, _ => 3 });
-                Set(_dTarget[slot], a, command switch { ComposeDesign c => c.Generation, DeriveDesign v => v.Parent, _ => ((CancelDesign)command).Design });
+                DesignHandle target = command switch { ComposeDesign c => new DesignHandle(c.Generation, 0), DeriveDesign v => v.Parent, _ => ((CancelDesign)command).Design };
+                Set(_dTarget[slot], a, target.Slot);
+                Set(_dGen[slot], a, target.Generation);
                 ImmutableArray<int> alts = command switch { ComposeDesign c => c.Alts, DeriveDesign v => v.Alts, _ => [] };
                 for (int i = 0; i < _altSlots; i++)
                     Set(_dAlt[slot][i], a, alts.IsEmpty ? -1 : alts[i]);
@@ -161,23 +179,35 @@ public sealed class CommandState
                 if (slotNo == CommandLimits.FleetSlots)
                     return CommandVerdict.Refuse(CommandRefusal.SlotOverflow, $"actor {a} already has {CommandLimits.FleetSlots} fleet commands for month {consumedAtMonth}");
                 Set(_fKind[slotNo], a, command is SellCohort ? 1 : 2);
-                Set(_fDesign[slotNo], a, command is SellCohort sc ? sc.Design : ((RetireCohort)command).Design);
+                DesignHandle fleetDesign = command is SellCohort sc ? sc.Design : ((RetireCohort)command).Design;
+                Set(_fDesign[slotNo], a, fleetDesign.Slot);
+                Set(_fGen[slotNo], a, fleetDesign.Generation);
                 Set(_fN[slotNo], a, command is SellCohort sn ? sn.N : ((RetireCohort)command).N);
                 Set(_fStamp[slotNo], a, stamp);
                 break;
             case StartSeries s:
-                Set(_sStamp[s.Design], a, stamp);
-                Set(_sRate[s.Design], a, s.Rate.Raw);
-                Set(_sForce[s.Design], a, s.Force ? 1 : 0);
+                // One entry per (actor, slot, month): a stale client's later command (always the lower generation) must not displace the valid one.
+                if (_sStamp[s.Design.Slot].Current[a] == stamp && _sGen[s.Design.Slot].Current[a] > s.Design.Generation)
+                    return Superseded(s.Design, _sGen[s.Design.Slot].Current[a]);
+                Set(_sStamp[s.Design.Slot], a, stamp);
+                Set(_sGen[s.Design.Slot], a, s.Design.Generation);
+                Set(_sRate[s.Design.Slot], a, s.Rate.Raw);
+                Set(_sForce[s.Design.Slot], a, s.Force ? 1 : 0);
                 break;
             case CloseLine l:
-                Set(_cStamp[l.Design], a, stamp);
+                if (_cStamp[l.Design.Slot].Current[a] == stamp && _cGen[l.Design.Slot].Current[a] > l.Design.Generation)
+                    return Superseded(l.Design, _cGen[l.Design.Slot].Current[a]);
+                Set(_cStamp[l.Design.Slot], a, stamp);
+                Set(_cGen[l.Design.Slot], a, l.Design.Generation);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(command), command.GetType(), "Unknown command type.");
         }
         return CommandVerdict.Ok;
     }
+
+    private static CommandVerdict Superseded(DesignHandle stale, int kept) =>
+        CommandVerdict.Refuse(CommandRefusal.StaleHandle, $"design {stale.Slot} generation {stale.Generation} is older than generation {kept}, already commanded for this month");
 
     private static int Stamp(long month) => checked((int)month + 1);
 

@@ -141,13 +141,12 @@ public sealed partial class PolicySystem
     {
         if (_p.T6dOff || _ev is null)
             return -1;
-        int d = _inputs.NewestSeriesDesign(row, t);
-        if (d < 0 || _inputs.Bottleneck(row, d, t) is not { Process: >= 0 } b)
+        if (_inputs.NewestSeriesDesign(row, t) is not { } d || _inputs.Bottleneck(row, d.Slot, t) is not { Process: >= 0 } b)
             return -1;
         foreach (Link l in _ev.WhyNotDesign(row, d, t))
         {
             if (l.Layer == WhyNotLayer.Capability && l.Cause == WhyNotCause.CultureH && l.Process == b.Process)
-                return (l.EtaMonths is null || l.EtaMonths > 36) && (l.Limiter != Industry.LimiterKind.Effort || !b.HasOutput) ? d : -1;
+                return (l.EtaMonths is null || l.EtaMonths > 36) && (l.Limiter != Industry.LimiterKind.Effort || !b.HasOutput) ? d.Slot : -1;
         }
         return -1;
     }

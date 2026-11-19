@@ -17,7 +17,8 @@ public static class SliceChecks
 {
     // Seed 1, months 0…149, default config: the golden of the Session (SeriesSwitchTests.MainSeed1Month149, F17b YProdGolden[0]).
     // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
-    private const string Golden150 = "7044a31fd0f808df14ae680111adc16ee7376391f8a3cbff24ed2840cb18fea5";
+    // Re-recorded in TASK-0115: new columns cmd.*.gen / pol.*.gen and SchemaVersion 11; old columns unchanged per the projection tests.
+    private const string Golden150 = "c3ab59c3f8bf14cd4096d20190d546429f40b62646de23fa6af42db4f2498b4c";
     private const long Ticks150 = 4564;   // 1945-09-01 → 1958-03-01: the tick of month 150, so month 149 is the last one run
     private const long Ticks60 = 1826;    // 1945-09-01 → 1950-09-01
 

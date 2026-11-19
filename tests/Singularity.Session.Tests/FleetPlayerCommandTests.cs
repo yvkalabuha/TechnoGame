@@ -15,25 +15,25 @@ public class FleetPlayerCommandTests
     public void Codec_RoundTrips_BothCommands()
     {
         var key = new CommandKey(5, SourceClass.Player, 0, 3);
-        foreach (SliceCommand c in new SliceCommand[] { new RetireCohort(1, 2, 30), new SellCohort(4, 0, 7) })
+        foreach (SliceCommand c in new SliceCommand[] { new RetireCohort(1, new DesignHandle(2, 5), 30), new SellCohort(4, new DesignHandle(0, 1), 7) })
         {
             LoggedCommand back = CommandCodec.Decode(CommandCodec.Encode(new LoggedCommand(key, c)));
             Assert.Equal(c, back.Command);
             Assert.Equal(key, back.Key);
         }
-        Assert.Contains("\"kind\":\"retire_cohort\"", CommandCodec.Encode(new LoggedCommand(key, new RetireCohort(1, 2, 30))));
-        Assert.Contains("\"kind\":\"sell_cohort\"", CommandCodec.Encode(new LoggedCommand(key, new SellCohort(1, 2, 30))));
+        Assert.Contains("\"kind\":\"retire_cohort\"", CommandCodec.Encode(new LoggedCommand(key, new RetireCohort(1, new DesignHandle(2, 5), 30))));
+        Assert.Contains("\"kind\":\"sell_cohort\"", CommandCodec.Encode(new LoggedCommand(key, new SellCohort(1, new DesignHandle(2, 5), 30))));
     }
 
     [Fact]
     public void Submit_ChecksTheForm_AndTheAiCannotSubmit()
     {
         SliceSession s = Make();
-        Assert.Equal(CommandRefusal.BadDesign, s.Submit(SourceClass.Player, 0, 0, new RetireCohort(Usa, 99, 1)).Reason);
-        Assert.Equal(CommandRefusal.BadDesign, s.Submit(SourceClass.Player, 0, 1, new SellCohort(Usa, -1, 1)).Reason);
-        Assert.Equal(CommandRefusal.UnknownActor, s.Submit(SourceClass.Player, 0, 2, new SellCohort(9, 0, 1)).Reason);
-        Assert.Equal(CommandRefusal.BadSource, s.Submit(SourceClass.Ai, 0, 0, new RetireCohort(Usa, 0, 1)).Reason);
-        Assert.True(s.Submit(SourceClass.Player, 0, 3, new RetireCohort(Usa, 0, 1)).Accepted);
+        Assert.Equal(CommandRefusal.BadDesign, s.Submit(SourceClass.Player, 0, 0, new RetireCohort(Usa, new DesignHandle(99, 1), 1)).Reason);
+        Assert.Equal(CommandRefusal.BadDesign, s.Submit(SourceClass.Player, 0, 1, new SellCohort(Usa, new DesignHandle(-1, 1), 1)).Reason);
+        Assert.Equal(CommandRefusal.UnknownActor, s.Submit(SourceClass.Player, 0, 2, new SellCohort(9, new DesignHandle(0, 1), 1)).Reason);
+        Assert.Equal(CommandRefusal.BadSource, s.Submit(SourceClass.Ai, 0, 0, new RetireCohort(Usa, s.HandleOf(Usa, 0), 1)).Reason);
+        Assert.True(s.Submit(SourceClass.Player, 0, 3, new RetireCohort(Usa, s.HandleOf(Usa, 0), 1)).Accepted);
     }
 
     [Fact]
@@ -42,8 +42,8 @@ public class FleetPlayerCommandTests
         SliceSession s = Make();
         s.StepThroughMonth(0);
         Fx6 before = s.World.Products.InService(Usa, 0);
-        Assert.True(s.Submit(SourceClass.Player, 0, 0, new RetireCohort(Usa, 0, 10)).Accepted);
-        Assert.True(s.Submit(SourceClass.Player, 0, 1, new RetireCohort(Usa, 0, 5)).Accepted);   // a second one for the project: refused by the layer (SLOT)
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new RetireCohort(Usa, s.HandleOf(Usa, 0), 10)).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new RetireCohort(Usa, s.HandleOf(Usa, 0), 5)).Accepted);   // a second one for the project: refused by the layer (SLOT)
         s.StepThroughMonth(1);
         ProductsSystem p = s.World.Products;
         Assert.Equal(Fx6.FromInt(10), p.Retired(Usa, 0));
@@ -60,7 +60,7 @@ public class FleetPlayerCommandTests
     {
         SliceSession s = Make();
         s.StepThroughMonth(0);
-        Assert.True(s.Submit(SourceClass.Player, 0, 0, new SellCohort(Usa, 0, 1)).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new SellCohort(Usa, s.HandleOf(Usa, 0), 1)).Accepted);
         s.StepThroughMonth(1);
         Assert.Equal(1, s.World.Products.RejectionCount(Usa, CommandRejection.BadSellNotSurplus) + s.World.Products.RejectionCount(Usa, CommandRejection.BadSellStage));
         Assert.Equal(Fx6.Zero, s.World.Products.SaleIncome(Usa));
@@ -72,7 +72,7 @@ public class FleetPlayerCommandTests
         SliceSession s = Make();
         s.StepThroughMonth(0);
         for (int i = 0; i < CommandLimits.FleetSlots + 1; i++)
-            Assert.True(s.Submit(SourceClass.Player, 0, i, new RetireCohort(Usa, i % 12, 1)).Accepted);
+            Assert.True(s.Submit(SourceClass.Player, 0, i, new RetireCohort(Usa, new DesignHandle(i % 12, 1), 1)).Accepted);
         s.StepThroughMonth(1);
         Assert.Contains(s.Outcomes, o => o.Contains("SlotOverflow"));
     }

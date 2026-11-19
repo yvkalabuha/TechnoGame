@@ -1,4 +1,5 @@
 using Singularity.Core.Commands;
+using Singularity.Core.Products;
 using Singularity.Core.Policy;
 using Singularity.Kernel;
 
@@ -43,8 +44,8 @@ public class AssembledSliceProperties
                 SliceCommand c = rnd.Next(3) switch
                 {
                     0 => new SetBudgetShares(actor, ShareSets[rnd.Next(ShareSets.Length)]),
-                    1 => new StartSeries(actor, rnd.Next(3), Fx6.FromInt(rnd.Next(1, 40)), rnd.Next(2) == 0),
-                    _ => new CloseLine(actor, rnd.Next(3)),
+                    1 => new StartSeries(actor, new DesignHandle(rnd.Next(3), 1), Fx6.FromInt(rnd.Next(1, 40)), rnd.Next(2) == 0),
+                    _ => new CloseLine(actor, new DesignHandle(rnd.Next(3), 1)),
                 };
                 items.Add(new Item(tick, sources[s].Item1, sources[s].Item2, local[s]++, c));
             }

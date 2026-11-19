@@ -13,8 +13,8 @@ public class FleetCommandTests
     private const int Usa = 0, Gbr = 1;
     private const long S = Fx6.Scale;
 
-    private static FleetCommand Sell(int d, long n) => new(FleetCommandKind.Sell, d, n);
-    private static FleetCommand Retire(int d, long n) => new(FleetCommandKind.Retire, d, n);
+    private static FleetCommand Sell(int d, long n) => new(FleetCommandKind.Sell, ProductsHarness.Now(d), n);
+    private static FleetCommand Retire(int d, long n) => new(FleetCommandKind.Retire, ProductsHarness.Now(d), n);
 
     // GBR also holds a G2 «superior» project (slot 1) of the given size in 1950: with everything mastered it makes G_front = 2 once it has 50 units.
     private static Action<ProductsStart> WithGbrG2(long units) => s =>
@@ -115,7 +115,8 @@ public class FleetCommandTests
         h.RunThroughMonth(0);
         ProductsSystem p = h.Products;
         Assert.Equal(2, p.RejectionCount(Usa, CommandRejection.BadRetireCount));
-        Assert.Equal(2, p.RejectionCount(Usa, CommandRejection.BadRetireStage));
+        Assert.Equal(2, p.RejectionCount(Usa, CommandRejection.StaleHandle));   // an empty slot and slot −1 name no project
+        Assert.Equal(0, p.RejectionCount(Usa, CommandRejection.BadRetireStage));
         Assert.Equal(1, p.RejectionCount(Usa, CommandRejection.BadRetireSlot));
         Assert.Equal(Fx6.FromInt(90), p.InService(Usa, 0));
     }
@@ -180,7 +181,8 @@ public class FleetCommandTests
         none.FleetScript = (a, m) => a == Usa && m == 0 ? [Sell(0, 11), Sell(0, 0), Sell(3, 1), Sell(0, 5)] : [];
         none.RunThroughMonth(0);
         Assert.Equal(1, none.Products.RejectionCount(Usa, CommandRejection.BadSellCount));
-        Assert.Equal(1, none.Products.RejectionCount(Usa, CommandRejection.BadSellStage));
+        Assert.Equal(1, none.Products.RejectionCount(Usa, CommandRejection.StaleHandle));   // slot 3 is empty: no project to sell
+        Assert.Equal(0, none.Products.RejectionCount(Usa, CommandRejection.BadSellStage));
         Assert.Equal(2, none.Products.RejectionCount(Usa, CommandRejection.BadSellNotSurplus));
         Assert.Equal(Fx6.Zero, none.Products.SaleIncome(Usa));
 

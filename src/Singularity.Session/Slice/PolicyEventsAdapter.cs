@@ -47,6 +47,6 @@ internal sealed class PolicyEventsAdapter(SliceWorld world) : IPolicyEvents
         return target is { } t ? world.WhyNot.WhyNot(actorRow, t, month) : [];
     }
 
-    public IReadOnlyList<Link> WhyNotDesign(int actorRow, int design, long month) =>
+    public IReadOnlyList<Link> WhyNotDesign(int actorRow, DesignHandle design, long month) =>
         world.WhyNot.WhyNot(actorRow, WhyNotTarget.Design(design), month);
 }

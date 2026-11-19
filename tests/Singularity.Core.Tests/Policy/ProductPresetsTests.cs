@@ -15,7 +15,7 @@ public class ProductPresetsTests
         public ProductsLayout Layout => L;
         public Fx6 DRef => Fx6.One;
         public PolicyDesign Design(int actorRow, int design, long month) => design < designs.Count
-            ? new PolicyDesign(designs[design].Stage, 1, designs[design].Cancelled, false, 0, -1, -1, false, Fx6.Zero, Fx6.Zero)
+            ? new PolicyDesign(designs[design].Stage, 1, designs[design].Cancelled, false, 0, -1, -1, false, Fx6.Zero, Fx6.Zero, 1)
             : default;
         public int[] Alternatives(int actorRow, int design) => design < designs.Count ? designs[design].Alts : [.. Enumerable.Repeat(-1, L.SlotCount)];
         public bool Knows(int actorRow, int nodeNumber, long month) => L.KnownUpTo(known)(nodeNumber);

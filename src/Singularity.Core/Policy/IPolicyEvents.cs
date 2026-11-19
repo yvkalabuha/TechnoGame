@@ -1,3 +1,4 @@
+using Singularity.Core.Products;
 using Singularity.Core.WhyNot;
 using Singularity.Kernel;
 
@@ -24,5 +25,5 @@ public interface IPolicyEvents
     IReadOnlyList<Link> WhyNot(int actorRow, long month);
 
     /// <summary><c>why_not(a, Design(d), t)</c>.</summary>
-    IReadOnlyList<Link> WhyNotDesign(int actorRow, int design, long month);
+    IReadOnlyList<Link> WhyNotDesign(int actorRow, DesignHandle design, long month);
 }

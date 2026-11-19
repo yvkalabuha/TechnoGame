@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Singularity.Core.Commands;
+using Singularity.Core.Products;
 using Singularity.Core.Data;
 using Singularity.Core.WhyNot;
 using Singularity.Kernel;
@@ -15,8 +16,8 @@ namespace Singularity.Session;
 /// </summary>
 public sealed partial class SliceSession
 {
-    /// <summary>Version of the public surface of the session (ADR-0014 п. 6): raised with every change of the views or of <see cref="SliceRunConfig"/>; the surface test pins it. 12 (TASK-0113) renames <c>DesignView.Generation</c> to <c>SlotGeneration</c>; 11 (TASK-0103 R1) replaces <c>ActorView.Nodes</c> (an <c>ImmutableArray</c> of record-class <c>NodeView</c>) by the compact <c>NodeList</c> of record-struct <c>NodeView</c>; 10 (TASK-0099) adds <c>DesignView.Generation</c> (slot generation, ADR-0005 p. 3); 9 (TASK-0078, ADR-0017) adds <c>HashCheckpoints</c>/<c>HashEveryTick</c>, makes <c>SliceView.StateHash</c> nullable and <c>LastHash</c> lazy (owner thread only); 0 was the surface before the read views; 8 (TASK-0063) adds the execution-only <c>SliceRunConfig.DailyTickProbe</c>; 7 (TASK-0058 step 5) drops <c>PilotChoice</c>/<c>IntroChannel</c> (I-OC and A41 SLOT are the build; <c>PilotForm</c>, <c>PilotProfiles</c> stay as options) and adds <c>RequirementView.PilotSlots</c>; 6 added <c>PilotForm</c>/<c>PilotProfiles</c>; 5 adds <c>PilotChoice</c> (HYP-0004 sketch); 4 adds the «К» parameters and <c>CapabilityTables</c> (L_C/L_P) to <c>SliceRunConfig</c>; 3 adds <c>LicenceView.Active</c>; 2 adds the step traces, <c>t_known</c> and the Requirement variants (SLICE_COMPOSITION §13.7).</summary>
-    public const int TestApiVersion = 12;
+    /// <summary>Version of the public surface of the session (ADR-0014 п. 6): raised with every change of the views or of <see cref="SliceRunConfig"/>; the surface test pins it. 13 (TASK-0115) makes <c>DesignHandle(Slot, Generation)</c> mandatory: <c>Submit</c> takes commands about a design by handle, <c>WhyNotTarget.Design</c> takes a handle, <c>DesignView.Handle</c>; 12 (TASK-0113) renames <c>DesignView.Generation</c> to <c>SlotGeneration</c>; 11 (TASK-0103 R1) replaces <c>ActorView.Nodes</c> (an <c>ImmutableArray</c> of record-class <c>NodeView</c>) by the compact <c>NodeList</c> of record-struct <c>NodeView</c>; 10 (TASK-0099) adds <c>DesignView.Generation</c> (slot generation, ADR-0005 p. 3); 9 (TASK-0078, ADR-0017) adds <c>HashCheckpoints</c>/<c>HashEveryTick</c>, makes <c>SliceView.StateHash</c> nullable and <c>LastHash</c> lazy (owner thread only); 0 was the surface before the read views; 8 (TASK-0063) adds the execution-only <c>SliceRunConfig.DailyTickProbe</c>; 7 (TASK-0058 step 5) drops <c>PilotChoice</c>/<c>IntroChannel</c> (I-OC and A41 SLOT are the build; <c>PilotForm</c>, <c>PilotProfiles</c> stay as options) and adds <c>RequirementView.PilotSlots</c>; 6 added <c>PilotForm</c>/<c>PilotProfiles</c>; 5 adds <c>PilotChoice</c> (HYP-0004 sketch); 4 adds the «К» parameters and <c>CapabilityTables</c> (L_C/L_P) to <c>SliceRunConfig</c>; 3 adds <c>LicenceView.Active</c>; 2 adds the step traces, <c>t_known</c> and the Requirement variants (SLICE_COMPOSITION §13.7).</summary>
+    public const int TestApiVersion = 13;
 
     private SliceView _view = null!;
     private long _month = -1;
@@ -32,6 +33,9 @@ public sealed partial class SliceSession
     private readonly List<LoggedCommand> _pending = new();
     private readonly ChunkedList<LoggedCommand> _journal = new();
     private readonly OutcomeLog _outcomes = new();
+    // Accepted commands about a design that the month step still to run will consume: (index in _outcomes, command), in journal order.
+    private readonly List<(int Outcome, SliceCommand Command)> _tracked = new();
+    private readonly List<(int Actor, DesignHandle Handle)> _ended = new();
     // Index of the journal (last local_n per source), rebuilt by replaying the log; not world state.
     private readonly Dictionary<(SourceClass, int), int> _lastLocal = new();
 
@@ -208,6 +212,8 @@ public sealed partial class SliceSession
         long tick = Tick;
         bool applied = ApplyPending(tick);
         bool monthly = _world.Calendar.IsDue(Cadence.Monthly, tick);
+        if (monthly)
+            ReconcileOutcomes();
         // The licences bought in the last compute begin now, after the player's commands saw the shares of the month (contract §5, spec A43.5).
         MonthInputsView? inputs = null;
         if (monthly)
@@ -258,12 +264,60 @@ public sealed partial class SliceSession
             CommandVerdict v = CommandValidator.CheckState(c.Command, _knowsProcess);
             if (v.Accepted)
                 v = _world.Commands.Apply(c.Command, month);
+            // The layer rejects a stale handle in its step and only counts it; the snapshot at the tick boundary is the one it reads first, so the outcome names it here.
+            if (v.Accepted && HandleOf(c.Command) is { } h && !_world.Products.Resolves(c.Command.Actor, h))
+                v = CommandVerdict.Refuse(CommandRefusal.StaleHandle, $"design {h.Slot} generation {h.Generation} no longer stands in its slot");
+            if (v.Accepted && HandleOf(c.Command) is not null)
+                _tracked.Add((_outcomes.Count, c.Command));
             _outcomes.Add(c.Key, v);
         }
         _journal.AddRange(_pending);
         _pending.Clear();
         return true;
     }
+
+    /// <summary>
+    /// Makes the outcomes of the month's commands agree with the verdict of the layer (H2). Its step applies the design commands first, in journal order,
+    /// then the line closes, the fleet commands and the starts: a cancel that succeeds ends its handle, so every later command on that handle in the step is
+    /// <c>StaleHandle</c>. Only a cancel ends a handle inside the command phases of a step; the commands of the AI of the same actor are not modelled
+    /// (an externally controlled actor runs without the product AI). Runs on the monthly tick, once the month's commands are all applied.
+    /// </summary>
+    private void ReconcileOutcomes()
+    {
+        if (_tracked.Count == 0)
+            return;
+        _ended.Clear();
+        foreach ((int outcome, SliceCommand command) in _tracked)
+        {
+            if (command is not (DeriveDesign or CancelDesign))
+                continue;
+            DesignHandle h = HandleOf(command)!.Value;
+            if (_ended.Contains((command.Actor, h)))
+                MarkStale(outcome, h);
+            else if (command is CancelDesign && _world.Products.Stage(command.Actor, h.Slot) is DesignStage.Project or DesignStage.Prototype)
+                _ended.Add((command.Actor, h));
+        }
+        foreach ((int outcome, SliceCommand command) in _tracked)
+        {
+            if (command is not (DeriveDesign or CancelDesign) && HandleOf(command) is { } h && _ended.Contains((command.Actor, h)))
+                MarkStale(outcome, h);
+        }
+        _tracked.Clear();
+    }
+
+    private void MarkStale(int outcome, DesignHandle h) =>
+        _outcomes.Replace(outcome, CommandVerdict.Refuse(CommandRefusal.StaleHandle, $"design {h.Slot} generation {h.Generation} was ended by an earlier command of the same month step"));
+
+    private static DesignHandle? HandleOf(SliceCommand command) => command switch
+    {
+        DeriveDesign d => d.Parent,
+        StartSeries s => s.Design,
+        CloseLine l => l.Design,
+        CancelDesign x => x.Design,
+        RetireCohort r => r.Design,
+        SellCohort s => s.Design,
+        _ => null,
+    };
 
     private bool KnowsProcess(int actor, int processNumber)
     {
