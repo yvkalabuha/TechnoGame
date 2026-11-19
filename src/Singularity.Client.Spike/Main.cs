@@ -923,23 +923,32 @@ public sealed partial class Main : Node3D
             case 141 when _shotT >= 0.5: SaveProbe("flask_levels_100"); Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false); _shotStep = 142; _shotT = 0; break;
             case 142 when _shotT >= 0.6: SaveProbe("flask_levels_150"); Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _flaskProbe.QueueFree(); _shotStep = 143; _shotT = 0; break;
             // Science from a real session state: no fixture; a month at a time until the chain shows (at most about 12 s), then the live panel is checked against the snapshot
-            case 143 when _shotT >= 0.3: Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); InstrumentLogic.YearOverride = null; OpenArea(AreaId.Science); _signal.SetSpeed(0); _liveTicks = 0; _liveTarget = 0; _shotStep = 144; _shotT = 0; break;
-            // a year of ticks per step until the snapshot carries a Knowledge link; a fixed limit of 30 years, then the run fails
-            case 144 when _shotT >= 0.3:
-                if (_host.Snap.Tick < _liveTarget) { _shotT = 0; break; }   // the queued batch is still running on the simulation thread
-                if (LiveKnowledgeLinks() > 0) { _shotStep = 145; _shotT = 0; break; }
-                if (_liveTicks >= 30 * 365) { InstFail($"no live research chain in {_liveTicks / 30} months (date {_host.Snap.Date})"); break; }
-                _host.StepTicks(365); _liveTicks += 365; _liveTarget = _host.Snap.Tick + 365; _shotT = 0; break;
+            case 143 when _shotT >= 0.3: Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); InstrumentLogic.YearOverride = null; OpenArea(AreaId.Science); _signal.SetSpeed(0); _liveMonths = 0; _liveFirst = -1; _liveHit = null; _shotStep = 144; _shotT = 0; break;
+            // Live Science: the simulation runs in steps of 30 ticks (about a month); in each step every power's why_not snapshot is read. At the first step where a power has a Knowledge link,
+            // that power's Science panel is opened (the area panel pointed at it) and checked; the scan then goes on to 30 years for the shares per power. No power with a link in 30 years: the run fails.
+            case 144 when _shotT >= 0.2:
+                if (!ScanMonths(6)) break;
+                if (_liveFirst >= 0)
+                {
+                    _shotLog += $"live science: first Knowledge link: {_host.Layout.ActorIds[_liveFirst]} at step {_liveMonths} (date {_host.Snap.Date})\n";
+                    _host.WhyActor = _liveFirst; _areaPanel.ShowActor(_liveFirst); _shotStep = 145; _shotT = 0; break;
+                }
+                if (_liveMonths >= LiveMonthLimit) { LogLiveShares(); InstFail($"no live research chain in {_liveMonths} months for any power (date {_host.Snap.Date})"); }
+                _shotT = 0; break;
             case 145 when _shotT >= 0.8:
             {
                 int links = LiveKnowledgeLinks(), flasks = _areaPanel.ShotFlaskCount, want = Math.Min(links, 3);
-                _shotLog += $"live science: knowledge links {links}, flasks shown {flasks}, date {_host.Snap.Date}\n";
+                _shotLog += $"live science: actor {_host.Layout.ActorIds[_liveFirst]}, knowledge links {links}, flasks shown {flasks}, date {_host.Snap.Date}\n";
                 if (links == 0) { InstFail("live science check failed: the snapshot lost its Knowledge links before the check"); break; }
                 if (flasks != want) { InstFail($"live science check failed: snapshot has {links} Knowledge links, the panel shows {flasks} flasks, expected {want}"); break; }
                 var gr = _areaPanel.GetGlobalRect(); float k = GetWindow().ContentScaleFactor;
                 SaveShot("flask_science_live.png", new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)));
-                CloseArea(); _shotStep = 45; _shotT = 0; break;
+                CloseArea(); _host.WhyActor = _player; _shotStep = 146; _shotT = 0; break;
             }
+            case 146 when _shotT >= 0.2:
+                if (!ScanMonths(60)) break;
+                if (_liveMonths >= LiveMonthLimit) { LogLiveShares(); _shotStep = 45; }
+                _shotT = 0; break;
             // alert plates on tints 1 and 5 (7 is not on the map): day side, then tint 5 on the night side
             case 45: AimAlert(_alertI, false); _shotStep = 46; _shotT = 0; break;
             case 46 when _shotT >= 0.7:
@@ -1027,10 +1036,48 @@ public sealed partial class Main : Node3D
     }
 
     // Instrument shots: 3 areas x 3 eras x 2 UI scales; the previous configuration is saved, then the next one is set up. Returns true when all are done.
-    int _instTarget, _liveTicks; long _liveTarget; int _instSpeedBefore;
+    int _instTarget, _instSpeedBefore;
     int _instI, _instPhase, _instShareBefore; bool _instCheckInput, _instCheckSend, _instSent, _instSkipShot; int _instAppliedBefore;
 
     // A failed shot-run check: the error goes to the run log and the process exits non-zero.
+    const int LiveMonthLimit = 360;
+    int[] _liveHit; int _liveMonths, _liveFirst = -1;
+
+    bool WaitFor(Func<bool> done, string what)
+    {
+        var sw = Stopwatch.StartNew();
+        while (!done()) { if (sw.ElapsedMilliseconds > 20000) { InstFail("timeout waiting for " + what); return false; } System.Threading.Thread.Sleep(1); }
+        return true;
+    }
+
+    // Steps the simulation n times 30 ticks and reads every power's why_not snapshot after each step (blocking: a shot-run helper). False after a failure.
+    bool ScanMonths(int n)
+    {
+        int na = _host.Layout.ActorIds.Length;
+        _liveHit ??= new int[na];
+        for (int m = 0; m < n && _liveMonths < LiveMonthLimit; m++)
+        {
+            long target = _host.Snap.Tick + 30;
+            _host.StepTicks(30);
+            if (!WaitFor(() => _host.Snap.Tick >= target, "a simulation step")) return false;
+            for (int a = 0; a < na; a++)
+            {
+                _host.WhyActor = a;
+                if (!WaitFor(() => _host.Snap.WhyActor == a && _host.Snap.Tick >= target, "the why_not snapshot of a power")) return false;
+                if (LiveKnowledgeLinks() > 0) { _liveHit[a]++; if (_liveFirst < 0) _liveFirst = a; }
+            }
+            _liveMonths++;
+            if (_liveFirst >= 0 && _shotStep == 144) return true;   // the first month with a link: stop here for the panel check
+        }
+        return true;
+    }
+
+    void LogLiveShares()
+    {
+        for (int a = 0; a < _liveHit.Length; a++)
+            _shotLog += $"live science share: {_host.Layout.ActorIds[a]} has a Knowledge link in {_liveHit[a]} of {_liveMonths} steps ({100.0 * _liveHit[a] / Math.Max(_liveMonths, 1):F1} %)\n";
+    }
+
     // Knowledge links the panel would read: the same condition as the live path of the Science flasks.
     int LiveKnowledgeLinks() => _host.Snap is { WhyError: "", Target: not null } sn ? Singularity.Client.Spike.InstrumentLogic.ResearchFlasks(sn.Links, int.MaxValue).Count : 0;
 
