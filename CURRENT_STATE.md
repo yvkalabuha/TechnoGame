@@ -18,9 +18,9 @@
 ## Активные задачи
 <!-- registry:active:start -->
 - TASK-0117 [IN_PROGRESS] Client UI scale policy: text never below the A1 floor at 1280x720 (developer)
+- TASK-0122 [IN_PROGRESS] Budget rule variants behind a run switch for the Lab measurement (NOW, A, B1, B2) (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0112 [REVIEW] Credits screen with music and sound attribution (DEBT-0050) (developer)
-- TASK-0122 [APPROVED] Budget rule variants behind a run switch for the Lab measurement (NOW, A, B1, B2) (developer)
 - TASK-0123 [APPROVED] Lab measurement of budget rule variants: workforce, alloy and limiter columns, manifest, analysis (simulation-engineer)
 <!-- registry:active:end -->
 
