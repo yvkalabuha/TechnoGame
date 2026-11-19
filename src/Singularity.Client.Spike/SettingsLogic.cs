@@ -7,6 +7,9 @@ public static class SettingsLogic
 {
     public const double UiScaleMin = 100, UiScaleMax = 150, UiScaleStep = 12.5;
 
+    /// <summary>Old three-state video.window_mode (0 window, 1 borderless, 2 fullscreen) to the current display mode (0 borderless, 1 fullscreen); a framed window has no successor and becomes fullscreen.</summary>
+    public static int MigrateWindowMode(int oldMode) => oldMode == 1 ? 0 : 1;
+
     /// <summary>Nearest allowed UI scale in percent: 100 to 150 in steps of 12.5.</summary>
     public static double SnapUiScale(double percent)
     {

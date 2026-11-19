@@ -27,6 +27,12 @@ public class SettingsLogicTests
     public void BaseFrame_OnlyExact1920x1080(int w, int h, bool ok) => Assert.Equal(ok, SettingsLogic.IsBaseFrame(w, h));
 
     [Theory]
+    [InlineData(0, 1)]   // framed window: no successor, fullscreen
+    [InlineData(1, 0)]   // borderless is kept
+    [InlineData(2, 1)]   // fullscreen is kept
+    public void WindowMode_MigratesFromThreeStateSetting(int old, int expected) => Assert.Equal(expected, SettingsLogic.MigrateWindowMode(old));
+
+    [Theory]
     [InlineData(80, 100)]
     [InlineData(100, 100)]
     [InlineData(105, 100)]

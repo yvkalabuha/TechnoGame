@@ -261,9 +261,8 @@ public sealed partial class TechTree : Control
     // ---------------- drawing ----------------
     Rect2 Area => new(0, 44, Size.X * 0.6f - 8, Size.Y - 52);
     // With the legend open the planisphere gives up the left strip to it, so that the sheet never covers the disc.
-    // On a small canvas (150 % on Full HD: 1280x720 du) the disc needs the whole area, so the legend is an on-demand sheet over its left part instead.
-    bool SmallCanvas => Area.Size.Y < 760;
-    Rect2 DiscArea => _legendOpen && !SmallCanvas ? new Rect2(Area.Position.X + 360, Area.Position.Y, Area.Size.X - 360, Area.Size.Y) : Area;
+    // The same at 150 % on Full HD (1280x720 du): the disc is smaller while the legend is open (A9: the sheet never covers chart content).
+    Rect2 DiscArea => _legendOpen ? new Rect2(Area.Position.X + 360, Area.Position.Y, Area.Size.X - 360, Area.Size.Y) : Area;
     Vector2 BaseCentre => DiscArea.Position + new Vector2(DiscArea.Size.X * 0.5f, (DiscArea.Size.Y - 76) * 0.5f + 4);
     Vector2 Centre => BaseCentre + _pan;
     float BaseUnit => (Math.Min(DiscArea.Size.X, DiscArea.Size.Y - 76) * 0.5f - 44f) / 6.5f;

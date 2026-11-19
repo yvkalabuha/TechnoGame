@@ -343,6 +343,7 @@ area.state.part,partly,частично
 area.state.locked,locked,заперто
 area.locked,Area is locked,Область заперта
 area.locked.when,Appears in {0}.,Появится в {0}.
+area.locked.cap,from {0},с {0}
 area.locked.note,The term is provisional. There are no figures or controls here until the mechanic exists.,"Срок ориентировочный. Чисел и управления здесь нет, пока нет механики."
 area.production.later,Supply priority and the choice of variants: in M1. Here are the design lines of the power.,Приоритет снабжения и выбор вариантов: в M1. Здесь линии изделий державы.
 area.finance.later,Taxes by region: M1; trade and embargo: M1–M2.,Налоги по регионам: M1; торговля и эмбарго: M1–M2.

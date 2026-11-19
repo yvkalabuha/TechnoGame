@@ -66,7 +66,8 @@ public static class Settings
         if (cf.Load(Path) != Error.Ok) return;
         Loaded = true;
         var s = new SettingsData();
-        s.WindowMode = Math.Clamp((int)cf.GetValue("video", "display_mode", s.WindowMode), 0, 1);
+        if (cf.HasSectionKey("video", "display_mode")) s.WindowMode = Math.Clamp((int)cf.GetValue("video", "display_mode", s.WindowMode), 0, 1);
+        else if (cf.HasSectionKey("video", "window_mode")) s.WindowMode = SettingsLogic.MigrateWindowMode((int)cf.GetValue("video", "window_mode", 2));   // preference of the build before #424
         s.Quality = Math.Clamp((int)cf.GetValue("video", "quality", s.Quality), 0, 3);
         s.Upscaler = Math.Clamp((int)cf.GetValue("video", "upscaler", s.Upscaler), 0, 2);
         s.UpscaleMode = Math.Clamp((int)cf.GetValue("video", "upscale_mode", s.UpscaleMode), 0, 2);

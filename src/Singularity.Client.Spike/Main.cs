@@ -829,8 +829,10 @@ public sealed partial class Main : Node3D
             Q(0.6, () => { SaveShot($"area_forces{sfx}.png"); OpenArea(AreaId.Science); });
             Q(0.8, () => { SaveShot($"area_science{sfx}.png"); OpenArea(AreaId.Production); });
             Q(0.8, () => { SaveShot($"area_production{sfx}.png"); CloseArea(); OpenTree(0); });
-            Q(1.0, () => { string ov = _tree.ShotOverlap(); if (ov != null) InstFail($"tree overlap {sfx}: {ov}"); else _shotLog += $"tree overlap {sfx}: none\n"; _tree.ToggleLegend(true); });
-            Q(0.5, () => { SaveShot($"tree_legend{sfx}.png"); _tree.ToggleLegend(false); _tree.ResetView(); _tree.Visible = false; });
+            Q(1.0, () => _tree.ToggleLegend(true));
+            // A9 is checked on the state that is saved: the legend is open.
+            Q(0.5, () => { string ov = _tree.ShotOverlap(); if (ov != null) InstFail($"tree overlap {sfx}: {ov}"); else _shotLog += $"tree overlap {sfx}: none\n"; SaveShot($"tree_legend{sfx}.png"); _tree.ToggleLegend(false); _tree.ResetView(); _tree.Visible = false; _journal.Visible = true; });
+            Q(0.6, () => { SaveShot($"journal{sfx}.png"); _journal.Visible = false; });
         }
         _sizeQ.Add((0.5, () => { Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); Loc.SetLang("ru"); }));
     }
