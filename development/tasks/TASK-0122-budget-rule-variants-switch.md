@@ -1,7 +1,7 @@
 ---
 id: TASK-0122
 title: "Budget rule variants behind a run switch for the Lab measurement (NOW, A, B1, B2)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M05
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: [TASK-0123]
 approved_by: orchestrator  # owner | orchestrator (orchestrator — только level: light)
 approved_at: 2026-11-19
 approval_ref: "#430, O-025"
+review_ref: "reviewer: APPROVE dba5f7a (in 2939b80), fixes 810e12a, d8a7617, 9109a9c by Orchestrator decision O-028; codex accept c5604833 (round 3, 3 medium deferred to TASK-0123 and TASK-0118); landed f570000"
 created: 2026-11-19
 ---
 
