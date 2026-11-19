@@ -25,7 +25,7 @@ public sealed partial class CreditsSheet : Control
         _sheet.AddChild(root);
         root.AddChild(Ui.Lbl("credits.title", 22, null, FontKind.Draft));
         root.AddChild(new ColorRect { Color = Ui.InkLine[Ui.Olive], CustomMinimumSize = new Vector2(0, 3) });
-        _scroll = new ScrollContainer { SizeFlagsVertical = SizeFlags.ExpandFill, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        _scroll = new ScrollContainer { SizeFlagsVertical = SizeFlags.ExpandFill, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, FollowFocus = true };   // A7: Tab scrolls the focused link into view
         _body.SizeFlagsHorizontal = SizeFlags.ExpandFill; _body.AddThemeConstantOverride("separation", 8);
         var pad = new MarginContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };   // keeps the text clear of the 12 px bar
         pad.AddThemeConstantOverride("margin_right", 18);
@@ -86,7 +86,7 @@ public sealed partial class CreditsSheet : Control
         _body.AddChild(new ColorRect { Color = Ui.Rule, CustomMinimumSize = new Vector2(0, 1) });
         foreach (var e in _entries.Where(x => x.Kind == kind))
         {
-            var box = new VBoxContainer(); box.AddThemeConstantOverride("separation", 2);
+            var box = new VBoxContainer(); box.AddThemeConstantOverride("separation", 6);   // A10: gap between link targets >= 4 du
             box.AddChild(Ui.Wrap($"{e.Title} — {e.Author}", 16));
             var lic = new HBoxContainer(); lic.AddThemeConstantOverride("separation", 6);
             lic.AddChild(Ui.Lbl($"{Loc.T("credits.licence")}: {e.Licence} ·", 14, Ui.Ink2));
@@ -104,7 +104,7 @@ public sealed partial class CreditsSheet : Control
     /// <summary>A URL that opens in the system browser on click or Enter (LinkButton.Uri); keyboard focus shows a 2 px ink frame (A6, A7).</summary>
     static LinkButton Link(string url)
     {
-        var b = new LinkButton { Text = url, Uri = url, Underline = LinkButton.UnderlineMode.Always, FocusMode = FocusModeEnum.All, SizeFlagsHorizontal = SizeFlags.ShrinkBegin, TooltipText = url };
+        var b = new LinkButton { Text = url, Uri = url, Underline = LinkButton.UnderlineMode.Always, FocusMode = FocusModeEnum.All, SizeFlagsHorizontal = SizeFlags.ShrinkBegin, TooltipText = url, CustomMinimumSize = new Vector2(0, 24) };   // A10: target at least 24 du high
         b.AddThemeFontOverride("font", Fonts.Text); b.AddThemeFontSizeOverride("font_size", 14);
         foreach (var n in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color" }) b.AddThemeColorOverride(n, Ui.Ink);
         MenuUi.FocusRing(b);

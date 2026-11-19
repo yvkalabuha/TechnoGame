@@ -117,7 +117,11 @@ public class CreditsTests
             {
                 Assert.Equal("CC BY 4.0", e.Licence);
                 Assert.StartsWith("http", e.LicenceUrl);
-                Assert.False(string.IsNullOrWhiteSpace(e.ChangesIn("en")) || string.IsNullOrWhiteSpace(e.ChangesIn("ru")), e.Id);
+                foreach (var lang in new[] { "en", "ru" })   // explicit keys: ChangesIn falls back to English
+                {
+                    Assert.True(e.Changes.TryGetValue(lang, out var ch), e.Id + " lacks changes." + lang);
+                    Assert.False(string.IsNullOrWhiteSpace(ch), e.Id + " empty changes." + lang);
+                }
             }
             else Assert.Equal("CC0 1.0", e.Licence);
         }
