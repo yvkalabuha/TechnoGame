@@ -23,6 +23,10 @@
 
 Не PNG, оставить: `client-v05c/run-log.txt`.
 
+## 1a. Инструменты (TASK-0108, 2 кадра)
+
+`prototypes/instruments/shots/gauge_e1_150.png`, `prototypes/instruments/shots/gauge_e3_150.png` — шкала скорости в эпохах 1945–69 и 2000–2100 при масштабе 150 % (ui-art-director PASS; кадры при 100 % не оставлены: E1 там нечитаем).
+
 ## 2. Оставить: старые версии (визуальная история, 9 кадров)
 
 | Версия | Кадры | Почему |

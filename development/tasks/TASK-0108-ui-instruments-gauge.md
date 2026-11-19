@@ -1,7 +1,7 @@
 ---
 id: TASK-0108
 title: "UI instruments: tokens, settings, contrast rules and GaugeControl (UI_INSTRUMENTS §8 steps 1-2)"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: developer         # ответственный агент
@@ -28,5 +28,9 @@ First implementation slice of the UI instruments (TASK-0101 concept, `docs/ui/UI
 Own procedural drawing, no external assets. Locked areas get no layer 2 (#409).
 
 ## Acceptance criteria
-- [ ] Contrast validator rules with tests; client builds; client tests pass.
-- [ ] `--shots` of the speed gauge in E1–E3 and "before"; ui-art-director visual review PASS.
+- [x] Contrast validator rules with tests; client builds; client tests pass.
+- [x] `--shots` of the speed gauge in E1–E3 and "before"; ui-art-director visual review PASS.
+
+## Результат
+- Tokens, two settings, §5 contrast rules (47 checks), GaugeControl E1–E3 plus "before" (ae74dfd, b5b86a7; merge 422fe7e). Client tests 157/157.
+- Code review APPROVE (minors fixed); ui-art-director REJECT then PASS (conditional: E1 at 100 % -> DEBT-0059). Key shots: E1 and E3 at 150 % in docs/ui/prototypes/instruments/shots/.
