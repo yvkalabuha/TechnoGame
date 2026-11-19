@@ -71,7 +71,7 @@ public static class MenuUi
 /// <summary>Main menu (spec §1): a radius.3 panel on the left over the live globe; inside a game (Esc) the same panel in the centre over a dimmed client.</summary>
 public sealed partial class MainMenu : Control
 {
-    public event Action Continue, NewGame, OpenSettings, ToMain, Quit;
+    public event Action Continue, NewGame, OpenSettings, OpenCredits, ToMain, Quit;
     readonly ColorRect _dim = MenuUi.Scrim();
     readonly PanelContainer _panel = new() { MouseFilter = MouseFilterEnum.Stop };
     readonly VBoxContainer _box = new();
@@ -134,6 +134,7 @@ public sealed partial class MainMenu : Control
             Item("menu.load", Ui.Sand, "L", Key.L, null, "menu.reason.persist");
             Item("menu.save", Ui.Violet, "S", Key.S, null, "menu.reason.persist");
             Item("menu.settings", Ui.Slate, "O", Key.O, () => OpenSettings?.Invoke());
+            Item("menu.credits", Ui.Olive, "A", Key.A, () => OpenCredits?.Invoke());
             Item("menu.tomain", Ui.Plum, "M", Key.M, () => ToMain?.Invoke());
             Item("menu.quit", Ui.Plum, "Q", Key.Q, () => Quit?.Invoke());
         }
@@ -144,6 +145,7 @@ public sealed partial class MainMenu : Control
             Item("menu.load", Ui.Sand, "L", Key.L, null, "menu.reason.persist");
             Item("menu.save", Ui.Violet, "S", Key.S, null, "menu.reason.nogame");
             Item("menu.settings", Ui.Slate, "O", Key.O, () => OpenSettings?.Invoke());
+            Item("menu.credits", Ui.Olive, "A", Key.A, () => OpenCredits?.Invoke());
             Item("menu.quit", Ui.Plum, "Q", Key.Q, () => Quit?.Invoke());
         }
         if (first != null) first.CallDeferred(Control.MethodName.GrabFocus);
