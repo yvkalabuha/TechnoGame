@@ -313,9 +313,9 @@ public class T6c2Tests(ITestOutputHelper output)
                             sunMonth = t;
                         if (w.Policy.AiStart(a, d, t + 1) is not null && !admitted[a, d])
                             startsNotAdmitted++;
-                        if (w.Policy.AiClose(a, d, t + 1) && stage[a, d] == DesignStage.Series && idle[a, d] >= 60)
+                        if (w.Policy.AiClose(a, d, t + 1) is not null && stage[a, d] == DesignStage.Series && idle[a, d] >= 60)
                             cByActor[a]++;
-                        else if (w.Policy.AiClose(a, d, t + 1) && stage[a, d] == DesignStage.Series)
+                        else if (w.Policy.AiClose(a, d, t + 1) is not null && stage[a, d] == DesignStage.Series)
                         {
                             bool launch = false;
                             for (int e = 0; e < designs; e++)

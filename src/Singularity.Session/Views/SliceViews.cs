@@ -68,7 +68,11 @@ public sealed record DesignView(
     int Design, DesignStage Stage, int PlatformGen, int Gen, int Parent, int StageOMonth,
     bool BuiltAny, bool Cancelled, Fx6 Rate, Fx6 UnitCost, Fx6 UnitCostFloor,
     Fx6 InService, Fx6 Readiness, Fx6 Perf, LineBind Bind, bool AiLine,
-    ImmutableArray<int> PrcSet, int SlotGeneration = 0);
+    ImmutableArray<int> PrcSet, int SlotGeneration = 0)
+{
+    /// <summary>The handle UI and clients put into commands about this project: never computed on the client side (ADR-0005 p. 3).</summary>
+    public DesignHandle Handle => new(Design, SlotGeneration);
+}
 
 public readonly record struct BureauView(int Bureau, int Design, long Granted, long Required);
 public readonly record struct QualityView(bool Active, int Start, int TriggerCount, int TrainingTarget);

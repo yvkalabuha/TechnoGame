@@ -168,10 +168,10 @@ public class WhyNotTests
         StrongCapability(s, Usa);
         PutDesign(s, Usa, 1, DesignStage.Prototype, Fx6.Zero, Fx6.FromInt(100));
         SetInt(s, "prd.d0.gateOpened", Usa, 1);
-        Assert.Empty(s.WhyNot(Usa, WhyNotTarget.Design(0)));
+        Assert.Empty(s.WhyNot(Usa, WhyNotTarget.Design(s.HandleOf(Usa, 0))));
         // The standing upkeep alone exceeds the procurement budget.
         SetLong(s, "prd.upkeepNeed", Usa, Fx6.FromInt(1_000_000_000).Raw);
-        IReadOnlyList<Link> links = s.WhyNot(Usa, WhyNotTarget.Design(0));
+        IReadOnlyList<Link> links = s.WhyNot(Usa, WhyNotTarget.Design(s.HandleOf(Usa, 0)));
         Link first = Assert.Single(links);
         Assert.Equal(WhyNotLayer.Economy, first.Layer);
         Assert.Equal(WhyNotCause.NotAffordable, first.Cause);
@@ -195,13 +195,13 @@ public class WhyNotTests
         string n = $"ind.wf.n.{ProductsLayout.EngineerCategory}.{l.BureauRequester(0)}", g = $"ind.wf.granted.{ProductsLayout.EngineerCategory}.{l.BureauRequester(0)}";
         SetLong(s, n, Usa, 100);
         SetLong(s, g, Usa, 89);
-        Link e = Assert.Single(s.WhyNot(Usa, WhyNotTarget.Design(0)), x => x.Cause == WhyNotCause.Engineers);
+        Link e = Assert.Single(s.WhyNot(Usa, WhyNotTarget.Design(s.HandleOf(Usa, 0))), x => x.Cause == WhyNotCause.Engineers);
         Assert.Equal(WhyNotLayer.Product, e.Layer);
         Assert.Equal(Fx6.FromInt(89), e.Have);
         Assert.Equal(Fx6.FromInt(100), e.Need);
         Assert.Equal(new[] { Lever.ReassignWorkforce }, e.Levers.ToArray());
         SetLong(s, g, Usa, 90);
-        Assert.DoesNotContain(s.WhyNot(Usa, WhyNotTarget.Design(0)), x => x.Cause == WhyNotCause.Engineers);
+        Assert.DoesNotContain(s.WhyNot(Usa, WhyNotTarget.Design(s.HandleOf(Usa, 0))), x => x.Cause == WhyNotCause.Engineers);
     }
 
     [Fact]
@@ -214,7 +214,7 @@ public class WhyNotTests
         PutDesign(s, Usa, 1, DesignStage.Prototype, level + Fx6.FromInt(50), level + Fx6.FromInt(60), stageOMonth: 0);
         SetLong(s, "prd.d0.hours", Usa, 0);
         SetInt(s, "prd.d0.gateOpened", Usa, 0);
-        Link gate = Assert.Single(s.WhyNot(Usa, WhyNotTarget.Design(0)), x => x.Cause == WhyNotCause.SeriesGate);
+        Link gate = Assert.Single(s.WhyNot(Usa, WhyNotTarget.Design(s.HandleOf(Usa, 0))), x => x.Cause == WhyNotCause.SeriesGate);
         Assert.Equal(level + Fx6.FromInt(50), gate.Have);
         Assert.Equal(level, gate.Need);
         Assert.Equal(new[] { Lever.ForceSeries }, gate.Levers.ToArray());
@@ -223,7 +223,7 @@ public class WhyNotTests
         // The gate level is met and the minimum tests are done: no link.
         SetLong(s, "prd.d0.hidden", Usa, level.Raw);
         SetInt(s, "prd.d0.gateOpened", Usa, 1);
-        Assert.DoesNotContain(s.WhyNot(Usa, WhyNotTarget.Design(0)), x => x.Cause == WhyNotCause.SeriesGate);
+        Assert.DoesNotContain(s.WhyNot(Usa, WhyNotTarget.Design(s.HandleOf(Usa, 0))), x => x.Cause == WhyNotCause.SeriesGate);
     }
 
     [Fact]
@@ -234,7 +234,7 @@ public class WhyNotTests
         PutDesign(s, Usa, 1, DesignStage.Withdrawn, Fx6.FromInt(500), Fx6.FromInt(500));
         foreach (Column col in s.World.Table.Columns.Where(c => c.Name.StartsWith("prd.d0.cohort.", StringComparison.Ordinal)).ToList())
             SetLong(s, col.Name, Usa, 0);                                   // a withdrawn project has no units (§9.1: «снят» ⇒ Σ count = 0)
-        Assert.Empty(s.WhyNot(Usa, WhyNotTarget.Design(0)));
+        Assert.Empty(s.WhyNot(Usa, WhyNotTarget.Design(s.HandleOf(Usa, 0))));
         Link first = Assert.Single(s.WhyNot(Usa, WhyNotTarget.Requirement(1)));
         Assert.Equal(WhyNotCause.NoDesign, first.Cause);
     }
@@ -258,7 +258,7 @@ public class WhyNotTests
     [Fact]
     public void EmptySlot_GivesNoLinks()
     {
-        Assert.Empty(New().WhyNot(Usa, WhyNotTarget.Design(3)));
+        Assert.Empty(New().WhyNot(Usa, WhyNotTarget.Design(new DesignHandle(3, 1))));
     }
 
     [Fact]
@@ -471,7 +471,7 @@ public class WhyNotTests
     {
         SliceSession s = New();
         Assert.Throws<ArgumentOutOfRangeException>(() => s.WhyNot(Usa, WhyNotTarget.Requirement(0)));
-        Assert.Throws<ArgumentOutOfRangeException>(() => s.WhyNot(Usa, WhyNotTarget.Design(99)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => s.WhyNot(Usa, WhyNotTarget.Design(new DesignHandle(99, 1))));
         Assert.Throws<ArgumentException>(() => s.WhyNot(Usa, WhyNotTarget.App(1)));
     }
 }

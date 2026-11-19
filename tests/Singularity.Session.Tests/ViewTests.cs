@@ -217,9 +217,9 @@ public sealed class ViewWalk
             dec.DesignCommands[i].Kind == cmds[i].Kind && dec.DesignCommands[i].Target == cmds[i].Target && dec.DesignCommands[i].Alts.SequenceEqual(cmds[i].Alts)),
             $"month {t} actor {a}: design commands");
         ImmutableArray<StartView> starts = [.. Enumerable.Range(0, w.ProductsLayout.Designs).Where(d => w.Policy.AiStart(a, d, next) is not null)
-            .Select(d => new StartView(d, w.Policy.AiStart(a, d, next)!.Value))];
+            .Select(d => new StartView(d, w.Policy.AiStart(a, d, next)!.Value.Rate))];
         Check("decisions", dec.Starts.SequenceEqual(starts), $"month {t} actor {a}: starts");
-        Check("decisions", dec.Closes.Select(c => c.Design).SequenceEqual(Enumerable.Range(0, w.ProductsLayout.Designs).Where(d => w.Policy.AiClose(a, d, next))), $"month {t} actor {a}: closes");
+        Check("decisions", dec.Closes.Select(c => c.Design).SequenceEqual(Enumerable.Range(0, w.ProductsLayout.Designs).Where(d => w.Policy.AiClose(a, d, next) is not null)), $"month {t} actor {a}: closes");
         Check("decisions", dec.Fleet.SequenceEqual(w.Policy.AiFleetCommands(a, next)), $"month {t} actor {a}: fleet");
         Check("decisions", dec.Repeats.Length == w.ProductsLayout.Generations && Enumerable.Range(1, dec.Repeats.Length).All(g => dec.Repeats[g - 1] == w.Policy.Repeats(a, g)),
             $"month {t} actor {a}: repeats");
@@ -478,13 +478,16 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
         Assert.Empty(offenders);
     }
 
-    // Whitelist: primitives, Fx6, enums, view types, NodeList, FleetCommand (readonly record struct of an enum and numbers), ImmutableArray of the same.
+    // Whitelist: primitives, Fx6, enums, view types, NodeList, FleetCommand and DesignHandle (readonly record structs of an enum, numbers and a handle), ImmutableArray of the same.
     private static bool IsImmutableShape(Type t, Type[] viewTypes)
     {
         if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(ImmutableArray<>))
             return IsImmutableShape(t.GetGenericArguments()[0], viewTypes);
         if (Nullable.GetUnderlyingType(t) is { } inner)
             return IsImmutableShape(inner, viewTypes);
+        if (t == typeof(DesignHandle))
+            return typeof(DesignHandle).GetProperties().All(p => p.SetMethod is null || p.SetMethod.ReturnParameter.GetRequiredCustomModifiers().Contains(typeof(IsExternalInit)))
+                && typeof(DesignHandle).IsValueType;
         if (t == typeof(FleetCommand))
             return typeof(FleetCommand).GetProperties().All(p => p.SetMethod is null || p.SetMethod.ReturnParameter.GetRequiredCustomModifiers().Contains(typeof(IsExternalInit)))
                 && typeof(FleetCommand).IsValueType;
@@ -509,7 +512,8 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
             Assert.True(ViewSupport.Dump(a.View) == ViewSupport.Dump(b.View), $"month {t}: the view differs between thread counts");
         }
         // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
-        HashAssert.Equal("7044a31fd0f808df14ae680111adc16ee7376391f8a3cbff24ed2840cb18fea5", a.LastHash);
+        // Re-recorded in TASK-0115: schema v11 (cmd.*.gen, pol.*.gen columns); the old columns are unchanged (projection tests).
+        HashAssert.Equal("c3ab59c3f8bf14cd4096d20190d546429f40b62646de23fa6af42db4f2498b4c", a.LastHash);
     }
 
     [Fact]

@@ -22,7 +22,7 @@ public class ProductsR4Tests
 
     private static DesignCommand SuperiorG2() => Compose(Probe, 2, "eng_g2", "hot_sa2_forged", "comp_axial", "af_swept", "ab_on");
 
-    private static DesignCommand Cancel(int design) => new(DesignCommandKind.Cancel, design, []);
+    private static DesignCommand Cancel(int design) => DesignCommand.Cancel(ProductsHarness.Now(design));
 
     private static long ToPrototype(ProductsHarness h, int design = 1, long from = 0)
     {
@@ -107,15 +107,17 @@ public class ProductsR4Tests
         long at = -1;
         var h = Gb((a, t) => a != Gbr ? [] : t == 0 ? [SuperiorG2()]
             : t == at ? [Cancel(0) /* a fleet in В */, Cancel(7) /* empty slot */, Cancel(99) /* out of range */, Cancel(1), Cancel(1) /* twice */,
-                         new DesignCommand(DesignCommandKind.Derive, 1, [.. Enumerable.Repeat(-1, Probe.SlotCount - 1), Alt(Probe, "ab_none")])] : []);
+                         DesignCommand.Derive(ProductsHarness.Now(1), [.. Enumerable.Repeat(-1, Probe.SlotCount - 1), Alt(Probe, "ab_none")])] : []);
         ProductsSystem p = h.Products;
         long t = ToPrototype(h);
         at = t;
-        h.Series = (a, d, tt) => a == Gbr && d == 1 && tt >= at ? new SeriesStart(Fx6.FromInt(5), true) : null;
+        h.Series = (a, d, tt) => a == Gbr && d == 1 && tt >= at ? new ScriptedStart(Fx6.FromInt(5), true) : null;
         h.RunThroughMonth(t);
         Assert.Equal(DesignStage.Withdrawn, p.Stage(Gbr, 1));        // start_series of the same month after the cancel does nothing
-        Assert.Equal(4, p.RejectionCount(Gbr, CommandRejection.BadCancel));
-        Assert.Equal(1, p.RejectionCount(Gbr, CommandRejection.BadDerive));
+        // A handle that names no project (empty slot, out of range, already cancelled in the step) is stale (ADR-0005 p. 3); BAD_CANCEL is the fleet in В.
+        Assert.Equal(1, p.RejectionCount(Gbr, CommandRejection.BadCancel));
+        Assert.Equal(5, p.RejectionCount(Gbr, CommandRejection.StaleHandle));   // Cancel(7), Cancel(99), the second Cancel(1), the derive and the start of the cancelled project
+        Assert.Equal(0, p.RejectionCount(Gbr, CommandRejection.BadDerive));
         h.RunThroughMonth(t + 1);
         Assert.Equal(DesignStage.Withdrawn, p.Stage(Gbr, 1));        // nor in later months
         Assert.Equal(Fx6.Zero, p.Rate(Gbr, 1));
@@ -135,7 +137,7 @@ public class ProductsR4Tests
         long t = ToPrototype(h);
         dead = true;
         long launch = t;
-        h.Series = (a, d, tt) => a == Gbr && d == 1 && tt == launch ? new SeriesStart(Fx6.FromInt(5), true) : null;
+        h.Series = (a, d, tt) => a == Gbr && d == 1 && tt == launch ? new ScriptedStart(Fx6.FromInt(5), true) : null;
         var script = new (bool Dead, int Months)[] { (true, 3), (false, 2), (true, 2), (false, 1), (true, 4) };
         int idle = 0;
         bool built = false;
@@ -178,7 +180,7 @@ public class ProductsR4Tests
             long t = ToPrototype(h);
             h.Yield = (_, _) => Fx6.Zero;                              // the processes are not admitted: output 0
             long start = t;
-            h.Series = (a, d, tt) => a == Gbr && d == 1 && tt == start ? new SeriesStart(Fx6.FromInt(5), true) : null;
+            h.Series = (a, d, tt) => a == Gbr && d == 1 && tt == start ? new ScriptedStart(Fx6.FromInt(5), true) : null;
             h.RunThroughMonth(t++);
             ProductsSystem p = h.Products;
             Assert.Equal(DesignStage.Series, p.Stage(Gbr, 1));
@@ -226,7 +228,7 @@ public class ProductsR4Tests
         long t = ToPrototype(h);
         dead = true;
         long start = t;
-        h.Series = (a, d, tt) => a == Gbr && d == 1 && tt == start ? new SeriesStart(Fx6.FromInt(5), true) : null;
+        h.Series = (a, d, tt) => a == Gbr && d == 1 && tt == start ? new ScriptedStart(Fx6.FromInt(5), true) : null;
         h.RunThroughMonth(t++);
         Assert.False(p.BuiltAny(Gbr, 1));
         long deriveAt = t;
@@ -237,7 +239,7 @@ public class ProductsR4Tests
             Assert.True(t < 200, "the derived design never reached stage О");
         }
         long launch = t;
-        h.Series = (a, d, tt) => a == Gbr && d == 2 && tt == launch ? new SeriesStart(Fx6.FromInt(5), true) : null;
+        h.Series = (a, d, tt) => a == Gbr && d == 2 && tt == launch ? new ScriptedStart(Fx6.FromInt(5), true) : null;
         h.RunThroughMonth(t++);
         Assert.Equal(DesignStage.Series, p.Stage(Gbr, 2));
         Assert.Equal(DesignStage.Withdrawn, p.Stage(Gbr, 1));
@@ -254,7 +256,7 @@ public class ProductsR4Tests
         ProductsSystem p = h.Products;
         long t = ToPrototype(h);
         long start = t;
-        h.Series = (a, d, tt) => a == Gbr && d == 1 && tt == start ? new SeriesStart(Fx6.FromInt(5), true) : null;
+        h.Series = (a, d, tt) => a == Gbr && d == 1 && tt == start ? new ScriptedStart(Fx6.FromInt(5), true) : null;
         for (int i = 0; i < 4; i++)
             h.RunThroughMonth(t++);
         Assert.True(p.BuiltAny(Gbr, 1));
@@ -267,7 +269,7 @@ public class ProductsR4Tests
         }
         dead = true;                                                    // the derived line will produce nothing
         long launch = t;
-        h.Series = (a, d, tt) => a == Gbr && d == 2 && tt == launch ? new SeriesStart(Fx6.FromInt(5), true) : null;
+        h.Series = (a, d, tt) => a == Gbr && d == 2 && tt == launch ? new ScriptedStart(Fx6.FromInt(5), true) : null;
         h.RunThroughMonth(t++);
         Assert.Equal(DesignStage.InService, p.Stage(Gbr, 1));            // the parent's line moved
         Assert.Equal(DesignStage.Series, p.Stage(Gbr, 2));
@@ -289,7 +291,7 @@ public class ProductsR4Tests
         Array.Fill(alts, -1);
         foreach ((string slot, string alt) in changes)
             alts[Enumerable.Range(0, Probe.SlotCount).Single(s => CoreData.ProductClasses.SlotId[s] == slot)] = Alt(Probe, alt);
-        return [new DesignCommand(DesignCommandKind.Derive, parent, [.. alts])];
+        return [DesignCommand.Derive(ProductsHarness.Now(parent), [.. alts])];
     }
 
     // ---- v_exp (contract §4.1a r4; V3, V4)
@@ -301,7 +303,7 @@ public class ProductsR4Tests
         ProductsSystem p = h.Products;
         long t = ToPrototype(h);
         long launchMonth = t;
-        h.Series = (a, d, tt) => a == Gbr && d == 1 && tt == launchMonth ? new SeriesStart(Fx6.FromInt(5), true) : null;
+        h.Series = (a, d, tt) => a == Gbr && d == 1 && tt == launchMonth ? new ScriptedStart(Fx6.FromInt(5), true) : null;
         h.RunThroughMonth(t);
         var rnd = new Random(41);
         foreach (int prc in new[] { 53, 40, 41, 9999 })

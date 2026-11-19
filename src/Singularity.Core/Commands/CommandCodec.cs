@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Singularity.Core.Policy;
+using Singularity.Core.Products;
 using Singularity.Kernel;
 
 namespace Singularity.Core.Commands;
@@ -10,9 +11,16 @@ namespace Singularity.Core.Commands;
 /// <summary>
 /// The one codec of <c>commands.log</c> and of the command queue in a save (ADR-0013 п. 5, ADR-0014): JSON Lines, one command per
 /// line, keys in a fixed order, identifiers as JSON integers, <see cref="Fx6"/> raw values as exact decimal strings (no <c>double</c>).
+/// A design handle is two keys: <c>design</c> + <c>design_gen</c> (<c>parent</c> + <c>parent_gen</c> for a derive). The log starts with a header line
+/// <c>{"commands_log":2}</c>; a log without it is version 1 (bare design indices) and is rejected, never migrated (ADR-0005 p. 3, ORCH_DECISIONS O-003).
 /// </summary>
 public static class CommandCodec
 {
+    /// <summary>Version of <c>commands.log</c> written and read by this build.</summary>
+    public const int LogVersion = 2;
+
+    private static readonly string Header = "{\"commands_log\":" + LogVersion.ToString(CultureInfo.InvariantCulture) + "}";
+
     public static string Encode(in LoggedCommand logged)
     {
         var sb = new StringBuilder(128);
@@ -42,24 +50,24 @@ public static class CommandCodec
                 Ints(sb, d.Alts);
                 break;
             case DeriveDesign v:
-                sb.Append(",\"parent\":").Append(I(v.Parent)).Append(",\"alts\":");
+                sb.Append(",\"parent\":").Append(I(v.Parent.Slot)).Append(",\"parent_gen\":").Append(I(v.Parent.Generation)).Append(",\"alts\":");
                 Ints(sb, v.Alts);
                 break;
             case StartSeries s:
-                sb.Append(",\"design\":").Append(I(s.Design)).Append(",\"rate\":");
+                Handle(sb, s.Design).Append(",\"rate\":");
                 Raw(sb, s.Rate).Append(",\"force\":").Append(s.Force ? "true" : "false");
                 break;
             case CloseLine l:
-                sb.Append(",\"design\":").Append(I(l.Design));
+                Handle(sb, l.Design);
                 break;
             case CancelDesign x:
-                sb.Append(",\"design\":").Append(I(x.Design));
+                Handle(sb, x.Design);
                 break;
             case RetireCohort r:
-                sb.Append(",\"design\":").Append(I(r.Design)).Append(",\"n\":").Append(I(r.N));
+                Handle(sb, r.Design).Append(",\"n\":").Append(I(r.N));
                 break;
             case SellCohort v:
-                sb.Append(",\"design\":").Append(I(v.Design)).Append(",\"n\":").Append(I(v.N));
+                Handle(sb, v.Design).Append(",\"n\":").Append(I(v.N));
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(logged), c.GetType(), "Unknown command type.");
@@ -69,7 +77,7 @@ public static class CommandCodec
 
     public static string EncodeLog(IEnumerable<LoggedCommand> commands)
     {
-        var sb = new StringBuilder();
+        var sb = new StringBuilder(Header).Append('\n');
         foreach (LoggedCommand c in commands)
             sb.Append(Encode(c)).Append('\n');
         return sb.ToString();
@@ -88,12 +96,12 @@ public static class CommandCodec
             "set_budget_shares" => ReadShares(actor, r.GetProperty("shares")),
             "set_effort_focus" => new SetEffortFocus(actor, ReadInts(r.GetProperty("processes"))),
             "compose_design" => new ComposeDesign(actor, r.GetProperty("generation").GetInt32(), ReadInts(r.GetProperty("alts"))),
-            "derive_design" => new DeriveDesign(actor, r.GetProperty("parent").GetInt32(), ReadInts(r.GetProperty("alts"))),
-            "start_series" => new StartSeries(actor, r.GetProperty("design").GetInt32(), ReadRaw(r.GetProperty("rate")), r.GetProperty("force").GetBoolean()),
-            "close_line" => new CloseLine(actor, r.GetProperty("design").GetInt32()),
-            "cancel_design" => new CancelDesign(actor, r.GetProperty("design").GetInt32()),
-            "retire_cohort" => new RetireCohort(actor, r.GetProperty("design").GetInt32(), r.GetProperty("n").GetInt32()),
-            "sell_cohort" => new SellCohort(actor, r.GetProperty("design").GetInt32(), r.GetProperty("n").GetInt32()),
+            "derive_design" => new DeriveDesign(actor, ReadHandle(r, "parent"), ReadInts(r.GetProperty("alts"))),
+            "start_series" => new StartSeries(actor, ReadHandle(r, "design"), ReadRaw(r.GetProperty("rate")), r.GetProperty("force").GetBoolean()),
+            "close_line" => new CloseLine(actor, ReadHandle(r, "design")),
+            "cancel_design" => new CancelDesign(actor, ReadHandle(r, "design")),
+            "retire_cohort" => new RetireCohort(actor, ReadHandle(r, "design"), r.GetProperty("n").GetInt32()),
+            "sell_cohort" => new SellCohort(actor, ReadHandle(r, "design"), r.GetProperty("n").GetInt32()),
             _ => throw new FormatException($"Unknown command kind '{kind}'."),
         };
         return new LoggedCommand(key, command);
@@ -102,12 +110,33 @@ public static class CommandCodec
     public static List<LoggedCommand> DecodeLog(string text)
     {
         var list = new List<LoggedCommand>();
+        bool header = false;
         foreach (string line in text.Split('\n'))
         {
-            if (line.Length > 0)
-                list.Add(Decode(line));
+            if (line.Length == 0)
+                continue;
+            if (!header)
+            {
+                CheckHeader(line);
+                header = true;
+                continue;
+            }
+            list.Add(Decode(line));
         }
+        if (!header)
+            throw new FormatException("commands.log has no header line {\"commands_log\":2}: it is version 1 (no design handles, ADR-0005 p. 3); re-record the run");
         return list;
+    }
+
+    private static void CheckHeader(string line)
+    {
+        using JsonDocument doc = JsonDocument.Parse(line);
+        JsonElement r = doc.RootElement;
+        if (r.ValueKind != JsonValueKind.Object || !r.TryGetProperty("commands_log", out JsonElement v))
+            throw new FormatException("commands.log v1 has no design handles (ADR-0005 p. 3); re-record the run");
+        int version = v.GetInt32();
+        if (version != LogVersion)
+            throw new FormatException($"commands.log version {version} is not supported (this build reads {LogVersion})");
     }
 
     private static string Name(CommandKind kind) => kind switch
@@ -123,6 +152,13 @@ public static class CommandCodec
         CommandKind.SellCohort => "sell_cohort",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
+
+    // The handle's second key is mandatory: a missing one is a format error, never defaulted (a defaulted generation would make the check always pass).
+    private static DesignHandle ReadHandle(JsonElement r, string key) =>
+        new(r.GetProperty(key).GetInt32(), r.TryGetProperty(key + "_gen", out JsonElement g) ? g.GetInt32() : throw new FormatException($"'{key}' needs '{key}_gen' (design handle, ADR-0005 p. 3)"));
+
+    private static StringBuilder Handle(StringBuilder sb, DesignHandle h) =>
+        sb.Append(",\"design\":").Append(I(h.Slot)).Append(",\"design_gen\":").Append(I(h.Generation));
 
     private static string I(long v) => v.ToString(CultureInfo.InvariantCulture);
 

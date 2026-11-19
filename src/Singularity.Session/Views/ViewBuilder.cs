@@ -141,9 +141,9 @@ internal static class ViewBuilder
         var closes = ImmutableArray.CreateBuilder<CloseView>();
         for (int d = 0; d < w.ProductsLayout.Designs; d++)
         {
-            if (pol.AiStart(a, d, next) is Fx6 rate)
-                starts.Add(new StartView(d, rate));
-            if (pol.AiClose(a, d, next))
+            if (pol.AiStart(a, d, next) is { } start)
+                starts.Add(new StartView(d, start.Rate));
+            if (pol.AiClose(a, d, next) is not null)
                 closes.Add(new CloseView(d, stepped ? pol.LastCloseReason(a, d) : LineCloseReason.None));
         }
         var repeats = ImmutableArray.CreateBuilder<int>(w.ProductsLayout.Generations);

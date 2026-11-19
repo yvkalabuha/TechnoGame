@@ -347,11 +347,11 @@ public sealed partial class ProductsSystem
             {
                 if (c.Kind != kind)
                     continue;
-                CommandRejection? rejected = c.Generation >= 0 && !IsCurrent(a, c.Design, c.Generation)
+                CommandRejection? rejected = !IsCurrent(a, c.Design)
                     ? CommandRejection.StaleHandle
                     : kind == FleetCommandKind.Sell
-                    ? book.Sell(c.Design, c.N, t, gFront)
-                    : book.Retire(c.Design, c.N);
+                    ? book.Sell(c.Design.Slot, c.N, t, gFront)
+                    : book.Retire(c.Design.Slot, c.N);
                 if (rejected is { } reason)
                     Reject(a, reason);
             }

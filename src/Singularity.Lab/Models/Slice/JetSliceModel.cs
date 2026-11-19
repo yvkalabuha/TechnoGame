@@ -16,7 +16,7 @@ namespace Singularity.Lab.Models.Slice;
 public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactory
 {
     /// <summary>The version of the Session surface this model was written against (SLICE_COMPOSITION §13.7).</summary>
-    public const int SurfaceVersion = 12;
+    public const int SurfaceVersion = 13;
 
     /// <summary>Horizon H of the slice, months (spec §2): the control tables have curve knots τ 0…2·H−1.</summary>
     public const int SliceHorizonMonths = 384;
@@ -233,7 +233,7 @@ public sealed class JetSliceModel : ISessionModel
             if (line.Length == 0 || n++ < seen)
                 continue;
             if (CommandCodec.Decode(line).Command is StartSeries { Force: true } start)
-                observer.ForcedStart(start.Actor, start.Design, month);
+                observer.ForcedStart(start.Actor, start.Design.Slot, month);
         }
         return n;
     }

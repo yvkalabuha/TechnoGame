@@ -16,7 +16,7 @@ public class NoveltyMemoryTests
 
     private static int[] Alts(string[] ids) => [.. ids.Select(id => Alt(Probe, id))];
 
-    private static DesignCommand Cancel(int slot, int generation) => new(DesignCommandKind.Cancel, slot, [], Generation: generation);
+    private static DesignCommand Cancel(int slot, int generation) => DesignCommand.Cancel(new DesignHandle(slot, generation));
 
     private static ProductsHarness Stand(int threads, int chunkSize, Func<ProductsSystem, long, IReadOnlyList<DesignCommand>> script, int maxDesigns = 3)
     {

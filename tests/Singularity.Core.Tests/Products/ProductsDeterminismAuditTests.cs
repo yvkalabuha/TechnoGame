@@ -321,10 +321,21 @@ public class ProductsDeterminismAuditTests
         public IReadOnlyList<DesignCommand> DesignCommands(int actorRow, long month) =>
             StandInCommands(run.PLayout, run.Products, actorRow, n => run.Knows(actorRow, n), p => AdmittedYield(actorRow, p, month));
 
-        public SeriesStart? StartSeries(int actorRow, int design, long month) =>
-            StandInLaunch(run.Products, actorRow, design, month) ? new SeriesStart(Fx6.FromInt(30), false) : null;
+        public int SeriesStarts(int actorRow, int design, long month, Span<SeriesStart> into)
+        {
+            if (!StandInLaunch(run.Products, actorRow, design, month) || run.Products.HandleOf(actorRow, design) is not { } handle)
+                return 0;
+            into[0] = new SeriesStart(handle, Fx6.FromInt(30), false);
+            return 1;
+        }
 
-        public bool CloseLine(int actorRow, int design, long month) => StandInClose(run.PLayout, run.Products, actorRow, design);
+        public int LineCloses(int actorRow, int design, long month, Span<DesignHandle> into)
+        {
+            if (!StandInClose(run.PLayout, run.Products, actorRow, design) || run.Products.HandleOf(actorRow, design) is not { } handle)
+                return 0;
+            into[0] = handle;
+            return 1;
+        }
 
         // The start line (E1) runs at the same 30 a month as a launched series.
         public Fx6? LineRate(int actorRow, int design, long month) => Fx6.FromInt(30);

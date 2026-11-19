@@ -42,7 +42,7 @@ public class ProductAiTests
 
     private sealed class NoInputs : IPolicyInputs
     {
-        public int NewestSeriesDesign(int actorRow, long month) => -1;
+        public DesignHandle? NewestSeriesDesign(int actorRow, long month) => null;
         public BottleneckLimit? Bottleneck(int actorRow, int design, long month) => null;
         public bool SeriesBelowQuality(int actorRow, Fx6 threshold, long month) => false;
     }
@@ -77,16 +77,16 @@ public class ProductAiTests
     }
 
     private static PolicyDesign Prototype(int stageO, int gp, Fx6 hidden, bool gate, int parent = -1) =>
-        new(DesignStage.Prototype, gp, false, false, 0, stageO, parent, gate, hidden, Fx6.FromInt(1000));
+        new(DesignStage.Prototype, gp, false, false, 0, stageO, parent, gate, hidden, Fx6.FromInt(1000), 1);
 
     private static PolicyDesign Series(int gp, int idle, bool built) =>
-        new(DesignStage.Series, gp, false, built, idle, 5, -1, true, Fx6.Zero, Fx6.FromInt(1000));
+        new(DesignStage.Series, gp, false, built, idle, 5, -1, true, Fx6.Zero, Fx6.FromInt(1000), 1);
 
     private static PolicyDesign Live(DesignStage stage, int gp) =>
-        new(stage, gp, false, stage != DesignStage.Project && stage != DesignStage.Prototype, 0, 3, -1, true, Fx6.Zero, Fx6.FromInt(1000));
+        new(stage, gp, false, stage != DesignStage.Project && stage != DesignStage.Prototype, 0, 3, -1, true, Fx6.Zero, Fx6.FromInt(1000), 1);
 
     private static PolicyDesign Cancelled(int gp) =>
-        new(DesignStage.Withdrawn, gp, true, false, 61, 3, -1, true, Fx6.Zero, Fx6.FromInt(1000));
+        new(DesignStage.Withdrawn, gp, true, false, 61, 3, -1, true, Fx6.Zero, Fx6.FromInt(1000), 1);
 
     // ---- A40, branch О
 
@@ -166,18 +166,18 @@ public class ProductAiTests
             var rig = new Rig(PolicyProfile.Mass, s => s.Design[0] = Live(DesignStage.InService, 1));
             rig.S.Design[1] = Series(2, idle: 59, built);
             rig.Month(20);
-            Assert.False(rig.Policy.AiClose(0, 1, 21));
+            Assert.Null(rig.Policy.AiClose(0, 1, 21));
             rig.S.Design[1] = Series(2, idle: 60, built);               // the snapshot t has idle_c = T_ab: close_line, in force from t + 1
             rig.Month(21);
-            Assert.True(rig.Policy.AiClose(0, 1, 22));
+            Assert.NotNull(rig.Policy.AiClose(0, 1, 22));
             rig.Month(22);                                              // still in С in the snapshot: the command is pending, not repeated
-            Assert.False(rig.Policy.AiClose(0, 1, 23));
+            Assert.Null(rig.Policy.AiClose(0, 1, 23));
             // The repeat of the Requirement is spent: a second stuck series of the generation is not closed.
             var spent = new Rig(PolicyProfile.Mass, s => { s.Design[0] = Cancelled(2); s.Design[1] = Live(DesignStage.InService, 1); });
             Assert.Equal(1, spent.Policy.Repeats(0, 2));
             spent.S.Design[2] = Series(2, idle: 100, built);
             spent.Month(1);
-            Assert.False(spent.Policy.AiClose(0, 2, 2));
+            Assert.Null(spent.Policy.AiClose(0, 2, 2));
         }
     }
 
@@ -191,9 +191,9 @@ public class ProductAiTests
         rig.Month(0);
         Assert.NotNull(rig.Policy.AiStart(0, 2, 1));
         Assert.True(rig.Policy.AiLine(0, 2));
-        Assert.True(rig.Policy.AiClose(0, 1, 1));
-        Assert.True(rig.Policy.AiClose(0, 3, 1));                       // one line per actor: every other line in С is closed
-        Assert.False(rig.Policy.AiClose(0, 2, 1));
+        Assert.NotNull(rig.Policy.AiClose(0, 1, 1));
+        Assert.NotNull(rig.Policy.AiClose(0, 3, 1));                       // one line per actor: every other line in С is closed
+        Assert.Null(rig.Policy.AiClose(0, 2, 1));
         Assert.Null(rig.Policy.AiStart(0, 1, 1));
     }
 
@@ -223,8 +223,8 @@ public class ProductAiTests
         derived.S.Design[2] = Prototype(5, 2, Fx6.FromInt(100), gate: true, parent: 1);
         derived.S.Design[3] = Series(1, 0, true);
         derived.Month(0);
-        Assert.False(derived.Policy.AiClose(0, 1, 1));                  // the layer moves the parent's line
-        Assert.True(derived.Policy.AiClose(0, 3, 1));
+        Assert.Null(derived.Policy.AiClose(0, 1, 1));                  // the layer moves the parent's line
+        Assert.NotNull(derived.Policy.AiClose(0, 3, 1));
     }
 
     [Fact]
@@ -234,7 +234,7 @@ public class ProductAiTests
         rig.S.Design[1] = Prototype(5, 2, Fx6.FromInt(100), gate: true);
         Fx6 b = rig.Policy.Shares(0).Procurement * rig.Policy.Budget(0);     // growth 0: the budget of every month is the start one
         rig.Month(0);
-        Assert.Equal(PolicyRules.LineRate(b, Fx6.FromInt(1000)), rig.Policy.AiStart(0, 1, 1));
+        Assert.Equal(PolicyRules.LineRate(b, Fx6.FromInt(1000)), rig.Policy.AiStart(0, 1, 1)!.Value.Rate);
         Assert.Equal(Fx6.FromRaw(400_000) / Fx6.FromInt(1000), PolicyRules.LineRate(Fx6.FromRaw(400_000), Fx6.FromInt(1000)));
     }
 
@@ -253,12 +253,12 @@ public class ProductAiTests
         {
             rig.Month(t);
             Assert.Null(rig.Policy.AiStart(0, 1, t + 1));
-            Assert.False(rig.Policy.AiClose(0, 0, t + 1));
+            Assert.Null(rig.Policy.AiClose(0, 0, t + 1));
         }
         rig.S.AdmittedOf = _ => true;
         rig.Month(5);
         Assert.NotNull(rig.Policy.AiStart(0, 1, 6));
-        Assert.True(rig.Policy.AiClose(0, 0, 6));                        // one bundle: start of the new line, close of the previous one
+        Assert.NotNull(rig.Policy.AiClose(0, 0, 6));                        // one bundle: start of the new line, close of the previous one
     }
 
     [Fact]
@@ -308,7 +308,7 @@ public class ProductAiTests
         rig.Month(0);
         Assert.Null(rig.Policy.AiStart(0, 1, 1));
         Assert.NotNull(rig.Policy.AiStart(0, 2, 1));
-        Assert.True(rig.Policy.AiClose(0, 0, 1));
+        Assert.NotNull(rig.Policy.AiClose(0, 0, 1));
     }
 
     [Fact]
@@ -328,7 +328,7 @@ public class ProductAiTests
         rig.S.Design[1] = Prototype(5, 2, Fx6.FromInt(100), gate: true);
         rig.Month(25);
         Assert.NotNull(rig.Policy.AiStart(0, 1, 26));
-        Assert.True(rig.Policy.AiClose(0, 0, 26));
+        Assert.NotNull(rig.Policy.AiClose(0, 0, 26));
     }
 
     [Fact]
@@ -336,10 +336,10 @@ public class ProductAiTests
     {
         var rig = new Rig(PolicyProfile.Mass, s => s.Design[0] = Series(1, 60, true));
         rig.Month(0);
-        Assert.True(rig.Policy.AiClose(0, 0, 1));
+        Assert.NotNull(rig.Policy.AiClose(0, 0, 1));
         var young = new Rig(PolicyProfile.Mass, s => s.Design[0] = Series(1, 59, true));
         young.Month(0);
-        Assert.False(young.Policy.AiClose(0, 0, 1));
+        Assert.Null(young.Policy.AiClose(0, 0, 1));
     }
 
     // ---- F17b (#160, A41): the working line closes when the candidate reaches y_prod
@@ -360,14 +360,14 @@ public class ProductAiTests
         var below = HandoverRig(YProdRaw - 1, Setup);
         below.Month(0);
         Assert.NotNull(below.Policy.AiStart(0, 1, 1));
-        Assert.False(below.Policy.AiClose(0, 0, 1));
+        Assert.Null(below.Policy.AiClose(0, 0, 1));
         var at = HandoverRig(YProdRaw, Setup);
         at.Month(0);
         Assert.NotNull(at.Policy.AiStart(0, 1, 1));
-        Assert.True(at.Policy.AiClose(0, 0, 1));
+        Assert.NotNull(at.Policy.AiClose(0, 0, 1));
         var unknown = HandoverRig(Fx6.One.Raw, s => { Setup(s); s.KnownGen = 0; });   // an unknown process gives y_min = 0
         unknown.Month(0);
-        Assert.False(unknown.Policy.AiClose(0, 0, 1));
+        Assert.Null(unknown.Policy.AiClose(0, 0, 1));
     }
 
     [Fact]
@@ -380,7 +380,7 @@ public class ProductAiTests
         }, new PolicyParams { LineClose = LineCloseRule.Admit });
         rig.Month(0);
         Assert.NotNull(rig.Policy.AiStart(0, 1, 1));
-        Assert.True(rig.Policy.AiClose(0, 0, 1));
+        Assert.NotNull(rig.Policy.AiClose(0, 0, 1));
     }
 
     [Fact]
@@ -394,12 +394,12 @@ public class ProductAiTests
         }
         var low = HandoverRig(YProdRaw - 1, Setup);
         low.Month(0);
-        Assert.True(low.Policy.AiClose(0, 1, 1));
-        Assert.False(low.Policy.AiClose(0, 0, 1));
+        Assert.NotNull(low.Policy.AiClose(0, 1, 1));
+        Assert.Null(low.Policy.AiClose(0, 0, 1));
         var high = HandoverRig(YProdRaw, Setup);
         high.Month(0);
-        Assert.True(high.Policy.AiClose(0, 1, 1));
-        Assert.True(high.Policy.AiClose(0, 0, 1));
+        Assert.NotNull(high.Policy.AiClose(0, 1, 1));
+        Assert.NotNull(high.Policy.AiClose(0, 0, 1));
     }
 
     [Fact]
@@ -412,14 +412,14 @@ public class ProductAiTests
         }
         var low = HandoverRig(YProdRaw - 1, Setup);
         low.Month(0);
-        Assert.False(low.Policy.AiClose(0, 0, 1));
-        Assert.False(low.Policy.AiClose(0, 1, 1));
+        Assert.Null(low.Policy.AiClose(0, 0, 1));
+        Assert.Null(low.Policy.AiClose(0, 1, 1));
         var high = HandoverRig(YProdRaw, Setup);
         high.Month(0);
-        Assert.True(high.Policy.AiClose(0, 0, 1));
-        Assert.False(high.Policy.AiClose(0, 1, 1));
+        Assert.NotNull(high.Policy.AiClose(0, 0, 1));
+        Assert.Null(high.Policy.AiClose(0, 1, 1));
         high.Month(1);                                                          // the close is still pending in the snapshot: no second command
-        Assert.False(high.Policy.AiClose(0, 0, 2));
+        Assert.Null(high.Policy.AiClose(0, 0, 2));
     }
 
     [Fact]
@@ -431,16 +431,16 @@ public class ProductAiTests
             s.Design[1] = Series(2, 60, false);
         });
         idle.Month(0);
-        Assert.True(idle.Policy.AiClose(0, 1, 1));
-        Assert.False(idle.Policy.AiClose(0, 0, 1));
+        Assert.NotNull(idle.Policy.AiClose(0, 1, 1));
+        Assert.Null(idle.Policy.AiClose(0, 0, 1));
         var both = HandoverRig(YProdRaw, s =>
         {
             s.Design[0] = Series(1, 60, true);                                  // A40 branch С on the working line, and the y_prod rule
             s.Design[1] = Series(2, 0, true);
         });
         both.Month(0);
-        Assert.True(both.Policy.AiClose(0, 0, 1));
-        Assert.False(both.Policy.AiClose(0, 1, 1));
+        Assert.NotNull(both.Policy.AiClose(0, 0, 1));
+        Assert.Null(both.Policy.AiClose(0, 1, 1));
     }
 
     [Fact]
@@ -452,8 +452,8 @@ public class ProductAiTests
             s.Design[1] = Series(1, 0, true);
         });
         rig.Month(0);
-        Assert.True(rig.Policy.AiClose(0, 1, 1));
-        Assert.False(rig.Policy.AiClose(0, 0, 1));
+        Assert.NotNull(rig.Policy.AiClose(0, 1, 1));
+        Assert.Null(rig.Policy.AiClose(0, 0, 1));
     }
 
     [Fact]
@@ -485,8 +485,8 @@ public class ProductAiTests
             s.Alts[2] = Slots("comp_axial");
         });
         rig.Month(0);
-        Assert.True(rig.Policy.AiClose(0, 0, 1));                       // W closes: N has y_prod
-        Assert.False(rig.Policy.AiClose(0, 1, 1));                      // N is the working line now, X below y_prod does not replace it
+        Assert.NotNull(rig.Policy.AiClose(0, 0, 1));                       // W closes: N has y_prod
+        Assert.Null(rig.Policy.AiClose(0, 1, 1));                      // N is the working line now, X below y_prod does not replace it
         Assert.NotNull(rig.Policy.AiStart(0, 2, 1));                    // two lines after the month: N and X
         Assert.NotEqual(centrifugal, axial);
     }
@@ -582,7 +582,7 @@ public class ProductAiTests
         Assert.Contains(rig.Commands(0), c => c.Kind == DesignCommandKind.Derive && c.Target == 1 && c.Alts[Probe.AirframeSlot] == -1);
         var onlyOne = new Rig(PolicyProfile.Quality, s => { Parent(s); s.Free = 1; }, derive: true);
         Assert.DoesNotContain(onlyOne.Commands(0), c => c.Kind == DesignCommandKind.Derive);   // one bureau for the Requirement, none left
-        var has = new Rig(PolicyProfile.Quality, s => { Parent(s); s.Design[0] = Cancelled(1); s.Design[2] = new PolicyDesign(DesignStage.Project, 2, false, false, 0, -1, 1, false, Fx6.Zero, Fx6.One); }, derive: true);
+        var has = new Rig(PolicyProfile.Quality, s => { Parent(s); s.Design[0] = Cancelled(1); s.Design[2] = new PolicyDesign(DesignStage.Project, 2, false, false, 0, -1, 1, false, Fx6.Zero, Fx6.One, 1); }, derive: true);
         Assert.DoesNotContain(has.Commands(0), c => c.Kind == DesignCommandKind.Derive);       // the platform has a derived design already
         var off = new Rig(PolicyProfile.Quality, Parent, derive: false);
         Assert.DoesNotContain(off.Commands(0), c => c.Kind == DesignCommandKind.Derive);       // main: no derive
@@ -660,7 +660,7 @@ public class ProductAiTests
             var rig = new Rig(PolicyProfile.Mass, s => { s.KnownGen = 3; s.Design[0] = Live(DesignStage.InService, 3); s.Design[1] = Cancelled(gen); });
             rig.S.Design[2] = Series(gen, idle: 100, built: false);
             rig.Month(0);
-            Assert.False(rig.Policy.AiClose(0, 2, 1));
+            Assert.Null(rig.Policy.AiClose(0, 2, 1));
             rig.S.Design[3] = Prototype(0, gen, Fx6.FromInt(700), gate: true);
             rig.Month(70);
             Assert.DoesNotContain(rig.Commands(71), c => c.Kind == DesignCommandKind.Cancel);
@@ -762,7 +762,7 @@ public class ProductAiTests
     private static void AssertEveryCloseHasAReason(Rig rig, long consumedAt)
     {
         for (int d = 0; d < Designs; d++)
-            Assert.Equal(rig.Policy.AiClose(0, d, consumedAt), rig.Policy.LastCloseReason(0, d) != LineCloseReason.None);
+            Assert.Equal(rig.Policy.AiClose(0, d, consumedAt) is not null, rig.Policy.LastCloseReason(0, d) != LineCloseReason.None);
     }
 
     [Fact]

@@ -19,7 +19,7 @@ internal sealed class PolicyProductsAdapter(SliceWorld world) : IPolicyProducts
         return new PolicyDesign(stage, p.PlatformGen(actorRow, design), p.Cancelled(actorRow, design), p.BuiltAny(actorRow, design),
             p.IdleMonths(actorRow, design), p.StageOMonth(actorRow, design), p.Parent(actorRow, design),
             stage == DesignStage.Prototype && p.GateOpen(actorRow, design, month), p.DefectsHidden(actorRow, design),
-            exists ? p.UnitCostFloor(actorRow, design) : Fx6.One);
+            exists ? p.UnitCostFloor(actorRow, design) : Fx6.One, p.Generation(actorRow, design));
     }
 
     public int[] Alternatives(int actorRow, int design) => world.Products.Alternatives(actorRow, design);

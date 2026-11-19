@@ -61,7 +61,7 @@ internal sealed class PlayerScript(SliceSession session)
             {
                 // The player may force an early launch (A36). The old line is closed by the A41 rule (see the class summary).
                 if (w.Products.Stage(a, d) == DesignStage.Prototype)
-                    Send(a, new StartSeries(a, d, Fx6.FromInt(30), !w.Products.GateOpen(a, d, month)));
+                    Send(a, new StartSeries(a, new DesignHandle(d, w.Products.Generation(a, d)), Fx6.FromInt(30), !w.Products.GateOpen(a, d, month)));
                 if (w.Products.Stage(a, d) == DesignStage.Series)
                 {
                     for (int e = 0; e < l.Designs; e++)
@@ -75,7 +75,7 @@ internal sealed class PlayerScript(SliceSession session)
                             continue;
                         }
                         Switches.Add((month, a, d, e, min));
-                        Send(a, new CloseLine(a, d));
+                        Send(a, new CloseLine(a, new DesignHandle(d, w.Products.Generation(a, d))));
                         break;
                     }
                 }

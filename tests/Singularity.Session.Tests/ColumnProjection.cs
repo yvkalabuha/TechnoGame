@@ -35,12 +35,14 @@ internal static class ColumnProjection
 
     /// <summary>
     /// Columns added with the slot generation (ADR-0005 p. 3, TASK-0099): <c>prd.dN.generation</c>, <c>prd.dN.parentGen</c>, <c>prd.lp.gN.gen</c>
-    /// and the <c>StaleHandle</c> rejection counter; and with the novelty memory (TASK-0110, DEBT-0054): <c>prd.altReached.N</c>.
+    /// and the <c>StaleHandle</c> rejection counter; with the novelty memory (TASK-0110, DEBT-0054): <c>prd.altReached.N</c>; and with the end-to-end
+    /// design handle (TASK-0115): the <c>.gen</c> column beside every design reference of <c>cmd.*</c> and <c>pol.*</c>.
     /// Projections onto "the old columns" leave them out.
     /// </summary>
     public static bool IsSlotGenerationColumn(string name) =>
         name.EndsWith(".generation", StringComparison.Ordinal) || name.EndsWith(".parentGen", StringComparison.Ordinal)
         || name.StartsWith("prd.lp.g", StringComparison.Ordinal) && name.EndsWith(".gen", StringComparison.Ordinal)
+        || (name.StartsWith("cmd.", StringComparison.Ordinal) || name.StartsWith("pol.", StringComparison.Ordinal)) && name.EndsWith(".gen", StringComparison.Ordinal)
         || name == "prd.rejected.StaleHandle" || name.StartsWith("prd.altReached.", StringComparison.Ordinal);
 
     /// <summary>
