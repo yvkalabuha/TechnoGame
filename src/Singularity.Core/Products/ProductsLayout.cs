@@ -142,6 +142,15 @@ public sealed class ProductsLayout
     public required int StartYear { get; init; }
     public required int Years { get; init; }
 
+    /// <summary>Cohort years per word of the <c>q</c> mask: bit 63 (the sign) stays unused.</summary>
+    public const int MaskBits = 62;
+
+    /// <summary>Most cohort years the layout accepts: two mask words; raise it (and the schema) when the horizon passes 2068.</summary>
+    public const int MaxCohortYears = 2 * MaskBits;
+
+    /// <summary>Number of <c>q</c> mask words for <paramref name="years"/> cohort years.</summary>
+    public static int MaskBlocks(int years) => (years + MaskBits - 1) / MaskBits;
+
     /// <summary>Generation of every node by stable number (index = number; −1 for unused numbers).</summary>
     public required ImmutableArray<int> NodeGen { get; init; }
 
@@ -235,6 +244,7 @@ public sealed class ProductsLayout
             throw new ArgumentException($"Product class '{classId}' is not loaded.", nameof(classId));
         ArgumentOutOfRangeException.ThrowIfLessThan(bureaus, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(years, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(years, MaxCohortYears);
         ArgumentOutOfRangeException.ThrowIfLessThan(maxDesigns, 1);
 
         int firstSlot = classes.SlotStart[c], slotCount = classes.SlotStart[c + 1] - firstSlot;

@@ -9,7 +9,7 @@
 - **Клиент:** v0.5b–v0.5d приняты (меню, настройки, палитра C, рейка 7 областей, текстуры, иконки, картинки областей). Остатки — DEBT-0047, DEBT-0049.
 - **Исследования волны 3:** RR-0016 (война) ред. 2 после gate, RR-0017, RR-0019 (вариант B), RR-0021 (политика), RR-0022 (ветки), RR-0023 (старт 1945) — черновики, обновлены под решения #361–#375.
 - **Очередь вопросов владельцу:** пуста; следующие придут со страницей «контур игры» (M-play, шаг 4.1).
-- **Решения:** владельца — до #429; Orchestrator (D2, #421) — `docs/decisions/ORCH_DECISIONS.md`, до O-015.
+- **Решения:** владельца — до #431; Orchestrator (D2, #421) — `docs/decisions/ORCH_DECISIONS.md`, до O-022.
 - **Внешние исполнители:** Codex — второй ревьюер; DeepSeek — третий голос каждого gate.
 - **Стек:** .NET 10.0.403 в `~/.dotnet`; Godot 4.7.2 mono в `~/.local/opt/godot`; Python 3 + PyYAML; ffmpeg; gitleaks 8.30.1.
 - **Последний handoff:** `development/handoff/2026-11-18-3.md`.
@@ -17,7 +17,6 @@
 ## Активные задачи
 <!-- registry:active:start -->
 - TASK-0117 [IN_PROGRESS] Client UI scale policy: text never below the A1 floor at 1280x720 (developer)
-- TASK-0121 [IN_PROGRESS] Slice horizon to 2030, train 1: Years = 86, q mask in 62-bit blocks, horizon fixture (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0112 [REVIEW] Credits screen with music and sound attribution (DEBT-0050) (developer)
 <!-- registry:active:end -->

@@ -33,6 +33,7 @@ public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactor
             throw new InvalidOperationException($"The Session surface is v{SliceSession.TestApiVersion}, the slice models read v{SurfaceVersion}: update them first.");
         SliceParameters p = SliceParameters.Parse(setup.Parameters, setup.Seed, setup.Threads, setup.ChunkSize, calibration);
         GameData data = SliceData.Load(setup.ManifestDirectory, setup.RecordedDataFiles ?? []);
+        CheckControlHorizon(p.Config.Layer, setup.Ticks, data.Scenario(p.Config.ScenarioId));
         ControlTables? tables = null;
         if (p.ControlTablesPath is string rel)
         {
@@ -47,6 +48,43 @@ public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactor
         }
         return new JetSliceModel(data, p, setup.Ticks, calibration, tables?.Sha256);
     }
+
+    /// <summary>Months a run of <paramref name="ticks"/> ticks steps, as <see cref="JetSliceModel.Run"/> counts them (month m runs if its first tick is before the end).</summary>
+    internal static long MonthsOf(long ticks, ScenarioData scenario)
+    {
+        var calendar = new TickCalendar(new CivilDate(scenario.StartYear, scenario.StartMonth, 1));
+        long months = 0;
+        while (calendar.TickOfMonth(months) < ticks)
+            months++;
+        return months;
+    }
+
+    /// <summary>
+    /// H8 (slice-horizon-2030.md §2.2, TASK-0121): the control layers L_K, L_K0, L_C0, L_C and L_P are calibration stands of 1945-1977; their
+    /// tables and lags are defined on the horizon of <see cref="SliceHorizonMonths"/> months only. A run of such a layer past that horizon fails
+    /// here, before any month runs, instead of reading curves past their last knot.
+    /// </summary>
+    internal static void CheckControlHorizon(LayerControl layer, long ticks, ScenarioData scenario)
+    {
+        if (layer == LayerControl.Full)
+            return;
+        // O(1): a run steps more than H months exactly when it ends after the first tick of month H (MonthsOf counts months m with
+        // TickOfMonth(m) < ticks). No month walk, so a huge ticks value (the manifest allows up to long.MaxValue) is refused at once.
+        long end = new TickCalendar(new CivilDate(scenario.StartYear, scenario.StartMonth, 1)).TickOfMonth(SliceHorizonMonths);
+        if (ticks > end)
+            throw new ParamException($"LAYER = {LayerName(layer)} is a control layer calibrated to the 1945-1977 horizon ({SliceHorizonMonths} months, "
+                + $"ticks ≤ {end}); ticks = {ticks} runs past it. Use LAYER = FULL past month {SliceHorizonMonths - 1} (slice-horizon-2030.md H8).");
+    }
+
+    private static string LayerName(LayerControl layer) => layer switch
+    {
+        LayerControl.Lk => "LK",
+        LayerControl.Lk0 => "LK0",
+        LayerControl.Lc0 => "LC0",
+        LayerControl.Lc => "LC",
+        LayerControl.Lp => "LP",
+        _ => layer.ToString(),
+    };
 
     /// <summary>The files <see cref="SliceData.Load"/> reads for this manifest: they go into the standard data_hash of the run.</summary>
     public IReadOnlyList<string> DataFiles(string manifestDirectory) => SliceData.Files(manifestDirectory);
