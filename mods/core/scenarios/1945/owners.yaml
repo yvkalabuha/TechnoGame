@@ -27,14 +27,14 @@ defaults:
   - {region: gibraltar, owner: GBR, controller: GBR, status: colony, confidence: M, source: "British colony or dependency in 1945; draft, T4 to verify"}
   - {region: greece_kentriki_makedonia, owner: GRC, controller: GRC, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
   - {region: greece_peloponnisos, owner: GRC, controller: GRC, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: guernsey, owner: GBR, controller: GBR, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: guernsey, owner: GBR, controller: GBR, status: colony, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify; status colony per TASK-0109 report"}
   - {region: hungary, owner: HUN, controller: HUN, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
   - {region: iceland, owner: ISL, controller: ISL, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
   - {region: ireland, owner: IRL, controller: IRL, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: isle_of_man, owner: GBR, controller: GBR, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: isle_of_man, owner: GBR, controller: GBR, status: colony, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify; status colony per TASK-0109 report"}
   - {region: italy_firenze, owner: ITA, controller: ITA, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
   - {region: italy_salerno, owner: ITA, controller: ITA, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
-  - {region: jersey, owner: GBR, controller: GBR, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
+  - {region: jersey, owner: GBR, controller: GBR, status: colony, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify; status colony per TASK-0109 report"}
   - {region: kosovo, owner: YUG, controller: YUG, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
   - {region: latvia, owner: SUN, controller: SUN, status: core, confidence: M, source: "Annexations of 1940 and the 1945 settlement (Yalta, Potsdam); draft, T4 to verify"}
   - {region: liechtenstein, owner: LIE, controller: LIE, status: core, confidence: M, source: "Frontiers and sovereigns of 1945-10-01; draft, T4 research-scientist to verify"}
@@ -103,8 +103,8 @@ defaults:
 # Mixed regions (F1 of the research) are given by the dominant part; the split is a map decision for the owner.
   - {region: afghanistan, owner: AFG, controller: AFG, status: core, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: akrotiri_sovereign_base_area, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
-  - {region: algeria_ouargla, owner: FRA, controller: FRA, status: core, confidence: H, source: "owners-1945-world.md: K2, K1"}
-  - {region: algeria_tamanghasset, owner: FRA, controller: FRA, status: core, confidence: H, source: "owners-1945-world.md: K2, K1"}
+  - {region: algeria_ouargla, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K2, K1; status colony per TASK-0109 report"}
+  - {region: algeria_tamanghasset, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K2, K1; status colony per TASK-0109 report"}
   - {region: american_samoa, owner: USA, controller: USA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: angola_lunda_norte, owner: PRT, controller: PRT, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: angola_moxico, owner: PRT, controller: PRT, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
@@ -299,7 +299,7 @@ defaults:
   - {region: pitcairn_islands, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: port_arthur, owner: ROC, controller: SUN, status: leased, confidence: H, source: "owners-1945-world.md: K11, K6 B01–B02"}
   - {region: portugal_azores, owner: PRT, controller: PRT, status: core, confidence: H, source: "owners-1945-world.md: K2"}
-  - {region: puerto_rico, owner: USA, controller: USA, status: core, confidence: H, source: "owners-1945-world.md: K1, K2"}
+  - {region: puerto_rico, owner: USA, controller: USA, status: colony, confidence: H, source: "owners-1945-world.md: K1, K2; status colony per TASK-0109 report"}
   - {region: qatar, owner: GBR, controller: GBR, status: protectorate, confidence: M, source: "owners-1945-world.md: K1"}
   - {region: republic_of_the_congo, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: russia_irkutsk, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: K2"}
@@ -342,7 +342,7 @@ defaults:
   - {region: suriname, owner: NLD, controller: NLD, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: swaziland, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: syria, owner: SYR, controller: SYR, status: core, confidence: M, source: "owners-1945-world.md: K2"}
-  - {region: taiwan, owner: JPN, controller: ROC, status: core, confidence: H, source: "owners-1945-world.md: K7 #313, #338, K6 C19; #402 convention: owner stays JPN until the peace treaty (1952-04-28), controller is ROC from t0 (1945-10-25)"} # Taiwan convention (#402): owner and controller differ on purpose
+  - {region: taiwan, owner: JPN, controller: ROC, status: colony, confidence: H, source: "owners-1945-world.md: K7 #313, #338, K6 C19; #402 convention: owner stays JPN until the peace treaty (1952-04-28), controller is ROC from t0 (1945-10-25); status colony per TASK-0109 report"} # Taiwan convention (#402): owner and controller differ on purpose
   - {region: tajikistan, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
   - {region: tangier, owner: TANGIER, controller: ESP, status: core, confidence: M, source: "owners-1945-world.md: K5"}
   - {region: tanzania_zanzibar, owner: GBR, controller: GBR, status: protectorate, confidence: H, source: "owners-1945-world.md: K1"}
@@ -367,7 +367,7 @@ defaults:
   - {region: united_states_of_america_michigan, owner: USA, controller: USA, status: core, confidence: H, source: "owners-1945-world.md: K1, K2"}
   - {region: united_states_of_america_montana, owner: USA, controller: USA, status: core, confidence: H, source: "owners-1945-world.md: K1, K2"}
   - {region: united_states_of_america_texas, owner: USA, controller: USA, status: core, confidence: H, source: "owners-1945-world.md: K1, K2"}
-  - {region: united_states_virgin_islands, owner: USA, controller: USA, status: core, confidence: H, source: "owners-1945-world.md: K1, K2"}
+  - {region: united_states_virgin_islands, owner: USA, controller: USA, status: colony, confidence: H, source: "owners-1945-world.md: K1, K2; status colony per TASK-0109 report"}
   - {region: uruguay, owner: URY, controller: URY, status: core, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: us_naval_base_guantanamo_bay, owner: CUB, controller: USA, status: leased, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: uzbekistan, owner: SUN, controller: SUN, status: core, confidence: H, source: "owners-1945-world.md: union republic of the USSR"}
