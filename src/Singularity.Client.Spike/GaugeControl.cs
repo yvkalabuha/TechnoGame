@@ -9,7 +9,7 @@ namespace Singularity.Client.Spike;
 public sealed partial class GaugeControl : Control
 {
     static readonly int[] Ink = { Ui.Teal, Ui.Olive, Ui.Plum, Ui.Sand };
-    const float InstrW = 84, InstrH = 36, BeforeW = 46, BeforeH = 28, MoveSeconds = 0.12f;
+    const float InstrW = 84, InstrH = 44, BeforeW = 46, BeforeH = 28, MoveSeconds = 0.12f;
 
     public int Filled;               // speed step 0..3
     public int Year = 1945;
@@ -57,17 +57,26 @@ public sealed partial class GaugeControl : Control
     }
 
     // E1: four step ticks (pause, day, week, month) and a dashed reserve tick on a half dial; a 2 px needle with a counterweight and the step number. No arc.
+    // DEBT-0059: at 100 % the dial is larger (r 33) and every tick is a full-ink stroke (7:1 on paper); the tempo ink rides on a bead beyond the tick end, so the value never rests on the ink colour.
     static readonly double[] TickDeg = { -60, -30, 0, 30, 60 };
+    static readonly Vector2[] TickDir = BuildTickDir();
+    static Vector2[] BuildTickDir()
+    {
+        var r = new Vector2[TickDeg.Length];
+        for (int i = 0; i < r.Length; i++) { double a = TickDeg[i] * Math.PI / 180; r[i] = new Vector2((float)Math.Sin(a), -(float)Math.Cos(a)); }
+        return r;
+    }
 
     void DrawDial(Vector2 o)
     {
-        var c = o + new Vector2(42, 33);
-        const float r = 30;
+        var c = o + new Vector2(42, InstrH - 3);
+        const float r = InstrumentLogic.DialRadius, len = InstrumentLogic.DialTickLength, w = InstrumentLogic.DialTickWidth;
         for (int i = 0; i < 5; i++)
         {
-            double a = TickDeg[i] * Math.PI / 180; var dir = new Vector2((float)Math.Sin(a), -(float)Math.Cos(a));
-            if (i == 4) DrawDashedLine(c + dir * (r - 7), c + dir * r, Ui.Ink3, 1f, 2f);
-            else DrawLine(c + dir * (r - 8), c + dir * r, i == 0 ? Ui.Ink : Col(_level, i - 1), 2f);
+            var dir = TickDir[i];
+            if (i == 4) { DrawDashedLine(c + dir * (r - len + 3), c + dir * r, Ui.Ink2, 1.5f, 2f); continue; }
+            DrawLine(c + dir * (r - len), c + dir * r, Ui.Ink, w);
+            if (i > 0) DrawCircle(c + dir * (r + 4), 3, Col(_level, i - 1));
         }
         double ang = NeedleAngle() * Math.PI / 180; var nd = new Vector2((float)Math.Sin(ang), -(float)Math.Cos(ang));
         DrawLine(c - nd * 6, c + nd * (r - 4), Ui.Ink, 2f);

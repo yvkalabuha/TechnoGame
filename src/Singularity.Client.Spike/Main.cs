@@ -926,7 +926,11 @@ public sealed partial class Main : Node3D
             case 134 when _shotT >= 0.5: Shot("gauge_e1_150.png", new Rect2I(0, 0, 930, 78)); _signal.YearOverride = 1985; _shotStep = 135; _shotT = 0; break;
             case 135 when _shotT >= 0.4: Shot("gauge_e2_150.png", new Rect2I(0, 0, 930, 78)); _signal.YearOverride = 2030; _shotStep = 136; _shotT = 0; break;
             case 136 when _shotT >= 0.4: Shot("gauge_e3_150.png", new Rect2I(0, 0, 930, 78)); InstrumentLogic.OrganLevel = 0; _shotStep = 137; _shotT = 0; break;
-            case 137 when _shotT >= 0.4: Shot("gauge_before_150.png", new Rect2I(0, 0, 930, 78)); InstrumentLogic.OrganLevel = Settings.Current.OrganInstruments; _signal.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _signal.SetSpeed(0); _alertI = 0; _shotStep = 45; _shotT = 0; break;
+            case 137 when _shotT >= 0.4: Shot("gauge_before_150.png", new Rect2I(0, 0, 930, 78)); InstrumentLogic.OrganLevel = Settings.Current.OrganInstruments; _signal.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _signal.SetSpeed(0); _alertI = 0; _instI = -1; _shotStep = 140; _shotT = 0; break;
+            // layer-2 instruments in the area panels: caliper (Finance), flasks (Science, Production); every era at 100 % and 150 %, plus a greyscale copy of each
+            case 140 when _shotT >= 0.7: if (InstShot()) { _shotStep = 141; AddFlaskProbe(); } _shotT = 0; break;
+            case 141 when _shotT >= 0.5: SaveProbe("flask_levels_100"); Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false); _shotStep = 142; _shotT = 0; break;
+            case 142 when _shotT >= 0.6: SaveProbe("flask_levels_150"); Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _flaskProbe.QueueFree(); _shotStep = 45; _shotT = 0; break;
             // alert plates on tints 1 and 5 (7 is not on the map): day side, then tint 5 on the night side
             case 45: AimAlert(_alertI, false); _shotStep = 46; _shotT = 0; break;
             case 46 when _shotT >= 0.7:
@@ -1011,6 +1015,63 @@ public sealed partial class Main : Node3D
     {
         if (down == null) Input.ParseInputEvent(new InputEventMouseMotion { Position = p, GlobalPosition = p });
         else Input.ParseInputEvent(new InputEventMouseButton { Position = p, GlobalPosition = p, ButtonIndex = MouseButton.Left, Pressed = down.Value, ButtonMask = down.Value ? MouseButtonMask.Left : 0 });
+    }
+
+    // Instrument shots: 3 areas x 3 eras x 2 UI scales; the previous configuration is saved, then the next one is set up. Returns true when all are done.
+    int _instI;
+    // Shot-only strip: flasks at 15, 60 and 95 % without and with a deficit (the live data has no deficit and no Science chain in the shot scenario).
+    PanelContainer _flaskProbe;
+    void AddFlaskProbe()
+    {
+        var box = new PanelContainer { Position = new Vector2(700, 80), MouseFilter = Control.MouseFilterEnum.Ignore };
+        box.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 2, 12, Ui.R3, 12));
+        var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 10);
+        foreach (bool def in new[] { false, true })
+            foreach (double lv in new[] { 0.15, 0.6, 0.95 })
+            { var f = new FlaskControl { Ink = Ui.Teal }; f.Set(lv, def); row.AddChild(f); }
+        box.AddChild(row);
+        _areaPanel.GetParent().AddChild(box);
+        _flaskProbe = box;
+    }
+
+    void SaveProbe(string name)
+    {
+        var img = GetViewport().GetTexture().GetImage();
+        float k = img.GetWidth() / GetViewport().GetVisibleRect().Size.X;
+        var gr = _flaskProbe.GetGlobalRect();
+        img = img.GetRegion(new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)).Intersection(new Rect2I(0, 0, img.GetWidth(), img.GetHeight())));
+        string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
+        img.SavePng(Path.Combine(dir, name + ".png")); img.Convert(Image.Format.La8); img.SavePng(Path.Combine(dir, name + "_grey.png"));
+    }
+    static readonly int[] InstYears = { 1950, 1985, 2030 };
+    static readonly AreaId[] InstAreas = { AreaId.Finance, AreaId.Science, AreaId.Production };
+    static readonly string[] InstNames = { "caliper_finance", "flask_science", "flask_production" };
+    bool InstShot()
+    {
+        if (_instI >= 0)
+        {
+            int p = _instI % 9;
+            var img = GetViewport().GetTexture().GetImage();
+            float k = img.GetWidth() / GetViewport().GetVisibleRect().Size.X;
+            var gr = _areaPanel.GetGlobalRect();
+            img = img.GetRegion(new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)).Intersection(new Rect2I(0, 0, img.GetWidth(), img.GetHeight())));
+            string name = $"{InstNames[p / 3]}_e{p % 3 + 1}_{(_instI < 9 ? 100 : 150)}";
+            string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
+            img.SavePng(Path.Combine(dir, name + ".png"));
+            img.Convert(Image.Format.La8); img.SavePng(Path.Combine(dir, name + "_grey.png"));
+            _shotLog += $"instrument shot {name}\n";
+        }
+        if (++_instI >= 18)
+        {
+            InstrumentLogic.YearOverride = null; _signal.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); CloseArea();
+            return true;
+        }
+        int q = _instI % 9, era = q % 3;
+        Settings.Current.UiScale = _instI < 9 ? 100 : 150; Settings.Apply(Settings.Current, GetWindow(), false);
+        InstrumentLogic.YearOverride = InstYears[era]; _signal.YearOverride = InstYears[era];
+        OpenArea(InstAreas[q / 3]);
+        if (InstAreas[q / 3] == AreaId.Finance) _areaPanel.ShotMove(0, 35);   // an unsent edit: the pencil marker shows
+        return false;
     }
 
     static void PressKey(Key k) => Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = true });

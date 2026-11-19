@@ -25,6 +25,15 @@ public sealed partial class ActorPanel : PanelContainer
     readonly Prose _sub = Ui.Wrap("", 14, Ui.Ink2);
     readonly Prose _budget = Ui.Wrap("", 14);
     readonly HSlider[] _sl = new HSlider[5];
+    // Layer-2 instruments (UI_INSTRUMENTS, #404): calipers replace the sliders at organ levels 1 and 2, flasks stand beside the Science and Production text.
+    readonly CaliperControl[] _cal = new CaliperControl[5];
+    readonly PencilMarker[] _pen = new PencilMarker[5];
+    readonly int[] _force = new int[5];
+    bool _haveForce;
+    readonly FlaskControl[] _flaskSci = { new() { Ink = Ui.Violet }, new() { Ink = Ui.Violet }, new() { Ink = Ui.Violet } };
+    readonly FlaskControl _flaskProd = new() { Ink = Ui.Teal };
+    readonly HBoxContainer _flaskSciRow = new(), _flaskProdRow = new();
+    int _instLevel = -1, _instYear = -1;
     readonly Label[] _slVal = new Label[5], _slForce = new Label[5];
     readonly Label _sum = Ui.Lbl("", 14, Ui.Ink2, FontKind.Mono);
     readonly Prose _result = Ui.Wrap("", 14, Ui.Ink2);
@@ -141,9 +150,12 @@ public sealed partial class ActorPanel : PanelContainer
             _sl[i] = new HSlider { MinValue = 0, MaxValue = 100, Step = 1, SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(100, 22) };
             StyleSlider(_sl[i]);
             _sl[i].ValueChanged += v => OnSlider(k, (int)v);
+            _cal[i] = new CaliperControl { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+            _cal[i].Changed += v => OnSlider(k, v);
             _slVal[i] = Ui.Num("", 14, null, 52);
+            _pen[i] = new PencilMarker(); _slVal[i].AddChild(_pen[i]);
             _slForce[i] = Ui.Num("", 14, Ui.Ink2, 84);
-            r.AddChild(n); r.AddChild(_sl[i]); r.AddChild(_slVal[i]); r.AddChild(_slForce[i]);
+            r.AddChild(n); r.AddChild(_sl[i]); r.AddChild(_cal[i]); r.AddChild(_slVal[i]); r.AddChild(_slForce[i]);
             _secBudget.AddChild(r);
         }
         var ar = new HBoxContainer();
@@ -156,6 +168,10 @@ public sealed partial class ActorPanel : PanelContainer
         _secBudget.AddChild(rr); _orderControls.Add(rr);
 
         _designsHead = Section("panel.designs", _secDesigns);
+        _flaskProdRow.AddThemeConstantOverride("separation", 8);
+        _flaskProdRow.AddChild(_flaskProd);
+        _flaskProdRow.AddChild(Ui.Lbl("flask.alloy.cap", 14, Ui.Ink2));
+        _secDesigns.AddChild(_flaskProdRow);
         _secDesigns.AddChild(_designs);
         _prodLater = Ui.Wrap("area.production.later", 14, Ui.Ink3); _secDesigns.AddChild(_prodLater);
         Section("panel.licence", _secLicence);
@@ -174,6 +190,11 @@ public sealed partial class ActorPanel : PanelContainer
         if (!areaMode) _secLicence.AddChild(_finLaterBox);
         Section("panel.why", _secWhy);
         _treeBtn = Ui.Btn("ui.tree", () => OpenTree?.Invoke()); _treeBtn.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; _secWhy.AddChild(_treeBtn);
+        _flaskSciRow.AddThemeConstantOverride("separation", 8);
+        foreach (var f in _flaskSci) _flaskSciRow.AddChild(f);
+        var sciCap = Ui.Lbl("flask.sci.cap", 14, Ui.Ink2); sciCap.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        _flaskSciRow.AddChild(sciCap);
+        _secWhy.AddChild(_flaskSciRow);
         _secWhy.AddChild(_why);
         _prodLater.Visible = _finLater.Visible = _treeBtn.Visible = areaMode;
         Loc.Changed += Invalidate;
@@ -205,6 +226,9 @@ public sealed partial class ActorPanel : PanelContainer
     /// <summary>Screenshot run: the same path as a user dragging slider <paramref name="i"/> and pressing the order button.</summary>
     public void ShotEdit(int i, int v) { OnSlider(i, v); Apply(); }
 
+    /// <summary>Screenshot run: the drag of a share without sending it (the pencil marker shows).</summary>
+    public void ShotMove(int i, int v) => OnSlider(i, v);
+
     void OnSlider(int i, int v)
     {
         _edited = true;
@@ -234,7 +258,12 @@ public sealed partial class ActorPanel : PanelContainer
 
     void Sync()
     {
-        for (int k = 0; k < 5; k++) { _sl[k].SetValueNoSignal(_pct[k]); _slVal[k].Text = _pct[k] + "%"; }
+        for (int k = 0; k < 5; k++)
+        {
+            _sl[k].SetValueNoSignal(_pct[k]); _cal[k].Value = _pct[k]; _slVal[k].Text = _pct[k] + "%";
+            // pencil: this share was moved away from the value in force and is not applied yet
+            _pen[k].Set(!Foreign && _edited && _haveForce && _pct[k] != _force[k], _slVal[k].Text.Length * 8.4f);
+        }
         _sum.Text = Loc.T("ui.sum", _pct.Sum());
         bool changed = _sentPct == null || !_pct.SequenceEqual(_sentPct);
         bool ready = _pct.Sum() == 100 && _edited && changed && !Pending;
@@ -265,6 +294,7 @@ public sealed partial class ActorPanel : PanelContainer
         _pad.AddThemeConstantOverride("margin_right", want <= cap || finance ? 0 : 12);
         _scroll.VerticalScrollMode = want <= cap || finance ? ScrollContainer.ScrollMode.Disabled : ScrollContainer.ScrollMode.Auto;   // a scroll bar only when the content really does not fit
         var s = _host.Snap;
+        SyncInstruments(s?.View.Date.Year ?? 1945);
         if (s == null || _actor < 0 || !Visible) return;
         if (s.WhyActor != _actor) return;
         _lastSnap = s;
@@ -283,6 +313,7 @@ public sealed partial class ActorPanel : PanelContainer
         _foreign.Visible = Foreign;
         if (Foreign) { _foreignName.Text = Names.Actor(_host.Layout.ActorIds[_actor]); if (TintOf != null) { Swatch(_chip, TintOf(_actor)); Swatch(_band, TintOf(_actor)); } }
         foreach (var c in _orderControls) c.Visible = !Foreign;
+        foreach (var cl in _cal) { cl.Editable = !Foreign; cl.MouseFilter = Foreign ? MouseFilterEnum.Ignore : MouseFilterEnum.Stop; cl.FocusMode = Foreign ? FocusModeEnum.None : FocusModeEnum.All; cl.Modulate = new Color(1, 1, 1, Foreign ? 0.45f : 1f); }
         foreach (var sl in _sl) { sl.Editable = !Foreign; sl.MouseFilter = Foreign ? MouseFilterEnum.Ignore : MouseFilterEnum.Stop; sl.Modulate = new Color(1, 1, 1, Foreign ? 0.45f : 1f); }
         _sharesNote.Visible = Foreign;
         _title.TooltipText = id;
@@ -297,11 +328,47 @@ public sealed partial class ActorPanel : PanelContainer
         if (_edited && _sentPct != null && !_awaiting && inForce != null && _sentPct.SequenceEqual(forcePct) && _pct.SequenceEqual(forcePct)) { _edited = false; _sentPct = null; }
         if (!_edited) { Array.Copy(forcePct, _pct, 5); }
         for (int k = 0; k < 5; k++) _slForce[k].Text = inForce != null ? forcePct[k] + "%" : "—";
+        _haveForce = inForce != null; Array.Copy(forcePct, _force, 5);
         Sync();
         FillResult(s);
         FillDesigns(a);
         FillLicence(a);
         FillWhy(s);
+        FillFlasks(s, inA);
+    }
+
+    // Instrument layer: level and era follow the setting and the game date; at level 0 the sliders are back and the flasks are gone (the «before» look).
+    void SyncInstruments(int year)
+    {
+        int level = InstrumentLogic.OrganLevel;
+        year = InstrumentLogic.YearOverride ?? year;
+        if (level == _instLevel && year == _instYear) return;
+        _instLevel = level; _instYear = year;
+        for (int k = 0; k < 5; k++) { _sl[k].Visible = level == 0; _cal[k].Visible = level > 0; _cal[k].Year = year; }
+        _flaskSciRow.Visible = _flaskProdRow.Visible = level > 0 && _areaMode;
+    }
+
+    // Science: the first links of the why_not chain as Have against Need (the same numbers as the text lines). Production: alloy stock against the need (supply plus deficit), hatched in a deficit.
+    void FillFlasks(HostSnapshot s, ActorInputsView inA)
+    {
+        int n = 0;
+        if (s.WhyError == "" && s.Target != null)
+            foreach (var l in s.Links)
+            {
+                if (n >= _flaskSci.Length) break;
+                double have = l.Have.ToDouble(), need = l.Need.ToDouble(), lv = InstrumentLogic.FlaskLevel(have, need);
+                _flaskSci[n].Set(lv, false);
+                _flaskSci[n].TooltipText = Loc.T("flask.sci.tip", n + 1, Math.Round(lv * 100), Loc.N(have), Loc.N(need));
+                n++;
+            }
+        for (int i = 0; i < _flaskSci.Length; i++) _flaskSci[i].Visible = i < n;
+        _flaskSciRow.GetChild<Control>(_flaskSci.Length).Visible = n > 0;
+        bool has = inA != null;
+        _flaskProdRow.GetChild<Control>(1).Visible = has; _flaskProd.Visible = has;
+        if (!has) return;
+        double sup = inA.Capability.AlloySupply.ToDouble(), def = inA.Capability.AlloyDeficit.ToDouble(), lev = InstrumentLogic.AlloyLevel(sup, def);
+        _flaskProd.Set(lev, def > 0);
+        _flaskProd.TooltipText = Loc.T(def > 0 ? "flask.alloy.deficit" : "flask.alloy.tip", Math.Round(lev * 100));
     }
 
     void FillResult(HostSnapshot s)
