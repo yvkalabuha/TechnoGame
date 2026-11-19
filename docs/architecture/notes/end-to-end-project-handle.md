@@ -29,7 +29,7 @@
 | `ProductsInputsAdapter` | склеивает внешние и ИИ, проверок нет | только переносит handle; **никакой проверки в Session** (проверка — Core) |
 | `ProductsSystem` | `cmd.Generation >= 0 && !IsCurrent(...)` | безусловно `!IsCurrent(a, handle) → StaleHandle`, для Derive, Cancel, Retire, Sell, StartSeries, CloseLine |
 | `ForceProxy` (harness) | `_sent` по `(a, d)` | `_sent` по `DesignHandle`; команды с handle |
-| `WhyNotTarget.Design` | голый слот | handle; устаревший → ответ «сущности нет» (в реализации — ответ как для пустого слота, ссылок нет), без чтения данных чужого проекта |
+| `WhyNotTarget.Design` | голый слот | handle; устаревший → ответ «сущности нет» (одна ссылка-причина `StaleHandle`), без чтения данных чужого проекта |
 | `PolicySystem.CancelPending` | сравнивает target | сравнивает handle |
 
 ### 2.1. `start_series` и `close_line`: внешний и ИИ в одном месяце
@@ -81,7 +81,7 @@
 - **stale из UI:** вид снят в месяце m, сессия прошла до m+k, слот переиспользован; `Submit(CancelDesign(handle из старого вида))` принят в журнал, применение → `StaleHandle`, новый проект не тронут;
 - `Submit` с `Generation = 0` → `BadHandle`, в журнал не попадает.
 
-**H5. why_not.** `WhyNotTarget.Design(DesignHandle)`; устаревший → одна ссылка `StaleHandle`. Тест: why_not по устаревшему handle не читает поля нового проекта (ответ равен ответу для пустого слота).
+**H5. why_not.** `WhyNotTarget.Design(DesignHandle)`; устаревший → одна ссылка `StaleHandle`. Тест: why_not по устаревшему handle не читает поля нового проекта (ровно одна ссылка `StaleHandle`).
 
 **Порядок:** H1 → H2 → H3 → H4 → H5; H1–H2 одним PR допустимо (иначе не компилируется). Reviewer на каждый diff; test-engineer — property-тест «случайные последовательности cancel/compose/start/close с handle из случайного прошлого вида: ни одна команда не меняет проект другой generation».
 
