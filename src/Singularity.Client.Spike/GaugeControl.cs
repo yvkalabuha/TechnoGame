@@ -3,25 +3,24 @@ using Godot;
 
 namespace Singularity.Client.Spike;
 
-/// <summary>The game-speed gauge (UI_INSTRUMENTS §3, #404, #409): a layer-2 instrument drawn procedurally, no assets. Three looks by game year: E1 needle dial (1945–69),
-/// E2 lit segment block (1970–99), E3 plain scale with a cursor (2000–2100). Level 0 of the setting «Приборы-органы» gives the plain four-cell meter («before»).
-/// The value is shown by the needle position, the number of lit cells or the cursor, and by the tempo word beside it, never by colour alone. Not interactive: the keys and tooltips stay with the buttons.</summary>
+/// <summary>The game-speed gauge (UI_INSTRUMENTS §3, #404, #409, O-008): a layer-2 instrument drawn procedurally, no assets. One layout in every era: a tick scale with a marker, and the tempo word beside it (the label of the gauge in the bar).
+/// The era (E1 1945–69, E2 1970–99, E3 2000–2100) changes only the skin of the ticks and of the marker, never how the value is read. Level 0 of the setting «Приборы-органы» gives the plain four-cell meter («before»).
+/// No colour carries a value here. Not interactive: the keys and tooltips stay with the buttons.</summary>
 public sealed partial class GaugeControl : Control
 {
-    static readonly int[] Ink = { Ui.Teal, Ui.Olive, Ui.Plum, Ui.Sand };
-    const float InstrW = 84, InstrH = 44, BeforeW = 46, BeforeH = 28, MoveSeconds = 0.12f;
+    static readonly int[] Ink = { Ui.Teal, Ui.Olive, Ui.Plum, Ui.Sand };   // the plain cells of the «before» look
+    const float InstrW = 84, InstrH = 36, BeforeW = 46, BeforeH = 28, MoveSeconds = 0.12f;
 
     public int Filled;               // speed step 0..3
     public int Year = 1945;
     int _era, _level = -1;
-    float _pos;                      // displayed step; the needle travels to Filled in 120 ms (at once with «reduce motion»)
+    float _pos;                      // displayed step; the marker travels to Filled in 120 ms (at once with «reduce motion»)
 
     public GaugeControl() { MouseFilter = MouseFilterEnum.Ignore; Sync(); }
 
     void Sync()
     {
         int level = InstrumentLogic.OrganLevel, era = InstrumentLogic.Era(Year);
-        if (era == 1 && level > 0 && IsInsideTree() && !InstrumentLogic.DialFits(GetWindow().Size.X, GetWindow().Size.Y)) level = 0;   // #417 C7: the dial does not fit at this size, the plain cells take over
         if (level == _level && era == _era) return;
         _level = level; _era = era;
         CustomMinimumSize = level == 0 ? new Vector2(BeforeW, BeforeH) : new Vector2(InstrW, InstrH);
@@ -36,86 +35,41 @@ public sealed partial class GaugeControl : Control
         QueueRedraw();
     }
 
-    // E2 fills sit one step below the buttons: saturation cut by 15 %.
-    static readonly Color[] E2Fill = BuildE2();
-    static Color[] BuildE2()
-    {
-        var r = new Color[3];
-        for (int i = 0; i < 3; i++) { var c = Ui.InkLine[Ink[i]]; r[i] = Color.FromHsv(c.H, c.S * 0.85f, c.V); }
-        return r;
-    }
-
-    // Weak: ink and grey only. Normal: the tempo inks (teal, olive, plum).
-    static Color Col(int level, int i) => level == 2 ? Ui.InkLine[Ink[i]] : Ui.Ink2;
-
-    readonly Vector2[] _tri = new Vector2[3];   // reused by the E3 cursor, no per-frame allocation
+    readonly Vector2[] _tri = new Vector2[3];   // reused by the E3 marker, no per-frame allocation
 
     public override void _Draw()
     {
         if (_level == 0) { DrawBefore(); return; }
-        var o = new Vector2(0, Size.Y - InstrH);
-        if (_era == 1) DrawDial(o); else if (_era == 2) DrawBlock(o); else DrawScale(o);
-    }
-
-    // E1: four step ticks (pause, day, week, month) and a dashed reserve tick on a half dial; a 2 px needle with a counterweight and the step number. No arc.
-    // DEBT-0059: at 100 % the dial is larger (r 33) and every tick is a full-ink stroke (7:1 on paper); the tempo ink rides on a bead beyond the tick end, so the value never rests on the ink colour.
-    static readonly double[] TickDeg = { -60, -30, 0, 30, 60 };
-    static readonly Vector2[] TickDir = BuildTickDir();
-    static Vector2[] BuildTickDir()
-    {
-        var r = new Vector2[TickDeg.Length];
-        for (int i = 0; i < r.Length; i++) { double a = TickDeg[i] * Math.PI / 180; r[i] = new Vector2((float)Math.Sin(a), -(float)Math.Cos(a)); }
-        return r;
-    }
-
-    void DrawDial(Vector2 o)
-    {
-        var c = o + new Vector2(42, InstrH - 3);
-        const float r = InstrumentLogic.DialRadius, len = InstrumentLogic.DialTickLength, w = InstrumentLogic.DialTickWidth;
-        for (int i = 0; i < 5; i++)
-        {
-            var dir = TickDir[i];
-            if (i == 4) { DrawDashedLine(c + dir * (r - len + 3), c + dir * r, Ui.Ink2, 1.5f, 2f); continue; }
-            DrawLine(c + dir * (r - len), c + dir * r, Ui.Ink, w);
-            if (i > 0) DrawCircle(c + dir * (r + 4), 3, Col(_level, i - 1));
-        }
-        double ang = NeedleAngle() * Math.PI / 180; var nd = new Vector2((float)Math.Sin(ang), -(float)Math.Cos(ang));
-        DrawLine(c - nd * 6, c + nd * (r - 4), Ui.Ink, 2f);
-        DrawCircle(c - nd * 7, 2.5f, Ui.Ink);   // counterweight
-        DrawCircle(c, 3, Ui.Ink);
-    }
-
-    double NeedleAngle()
-    {
-        int i = Math.Clamp((int)Math.Floor(_pos), 0, 2); float t = Math.Clamp(_pos - i, 0f, 1f);
-        return InstrumentLogic.NeedleDeg[i] + (InstrumentLogic.NeedleDeg[i + 1] - InstrumentLogic.NeedleDeg[i]) * t;
-    }
-
-    // E2: four columns of three lit segments, filled up to the tempo; the reserve column is dashed.
-    void DrawBlock(Vector2 o)
-    {
-        for (int i = 0; i < 4; i++)
-            for (int j = 0; j < 3; j++)
-            {
-                var r = new Rect2(o.X + 4 + i * 20, o.Y + 26 - j * 8, 16, 6);
-                if (i < Filled && i < 3) DrawRect(r, _level == 2 ? E2Fill[i] : Ui.Ink2);
-                if (i == 3) DrawDashedRect(r, Ui.Ink3); else DrawRect(r, Ui.Ink, false, 1f);
-            }
-    }
-
-    // E3: a plain scale, hairline stops, a 2 px tick on the current step and a small cursor triangle over it.
-    void DrawScale(Vector2 o)
-    {
-        DrawLine(o + new Vector2(6, 26), o + new Vector2(78, 26), Ui.Ink, 1f);
+        float y0 = Size.Y - InstrH, sy = y0 + 26;
+        DrawLine(new Vector2(6, sy), new Vector2(78, sy), Ui.Ink, 1f);
+        // four step ticks (pause, day, week, month), 12 px high and 2 px wide in every era; the fourth is the dashed reserve
         for (int i = 0; i < 4; i++)
         {
-            float x = o.X + 12 + i * 20;
-            DrawLine(new Vector2(x, o.Y + 20), new Vector2(x, o.Y + 32), i == 3 ? Ui.Ink3 : Ui.Ink2, 1f);
+            float x = 12 + i * 20;
+            if (i == 3) { DrawDashedLine(new Vector2(x, sy - 6), new Vector2(x, sy + 6), Ui.Ink2, 1.5f, 2f); continue; }
+            if (_era == 2) DrawRect(new Rect2(x - 1.5f, sy - 6, 3, 12), Ui.Ink);   // E2: blocky tick
+            else DrawLine(new Vector2(x, sy - 6), new Vector2(x, sy + 6), Ui.Ink, 2f);
         }
-        float cx = o.X + 12 + _pos * 20;
-        DrawLine(new Vector2(cx, o.Y + 18), new Vector2(cx, o.Y + 34), Filled > 0 && Filled < 4 ? Col(_level, Filled - 1) : Ui.Ink, 2f);
-        _tri[0] = new Vector2(cx, o.Y + 17); _tri[1] = new Vector2(cx - 3, o.Y + 11); _tri[2] = new Vector2(cx + 3, o.Y + 11);
-        DrawColoredPolygon(_tri, Ui.Ink);
+        float cx = 12 + _pos * 20;
+        if (_era == 1)
+        {
+            // E1: a needle with a round head
+            DrawLine(new Vector2(cx, sy + 8), new Vector2(cx, y0 + 12), Ui.Ink, 2.5f);
+            DrawCircle(new Vector2(cx, y0 + 10), 3.5f, Ui.Ink);
+        }
+        else if (_era == 2)
+        {
+            // E2: a solid block over the scale
+            DrawRect(new Rect2(cx - 4, y0 + 5, 8, 8), Ui.Ink);
+            DrawLine(new Vector2(cx, y0 + 13), new Vector2(cx, sy + 8), Ui.Ink, 2f);
+        }
+        else
+        {
+            // E3: a triangle cursor on a 2 px stroke
+            DrawLine(new Vector2(cx, sy - 8), new Vector2(cx, sy + 8), Ui.Ink, 2f);
+            _tri[0] = new Vector2(cx, sy - 8); _tri[1] = new Vector2(cx - 4, sy - 15); _tri[2] = new Vector2(cx + 4, sy - 15);
+            DrawColoredPolygon(_tri, Ui.Ink);
+        }
     }
 
     void DrawDashedRect(Rect2 r, Color c)

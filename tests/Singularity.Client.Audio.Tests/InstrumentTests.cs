@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Singularity.Client.Spike;
 using Xunit;
@@ -93,13 +94,6 @@ public class InstrumentTests
         Assert.Equal(1, InstrumentLogic.AlloyLevel(0, 0));
     }
 
-    [Fact]
-    public void Dial_IsLargerThanTheFirstCut()
-    {
-        // DEBT-0059: the first cut had radius 30 and 2 px ticks of 8 du
-        Assert.True(InstrumentLogic.DialRadius > 30 && InstrumentLogic.DialTickLength > 8 && InstrumentLogic.DialTickWidth > 2);
-    }
-
     [Theory]
     [InlineData(1e9, 1e-6)]
     [InlineData(1, 1)]
@@ -107,9 +101,50 @@ public class InstrumentTests
     public void AlloyLevel_AnyDeficitIsBelowFull(double supply, double deficit) => Assert.True(InstrumentLogic.AlloyLevel(supply, deficit) < 1);
 
     [Theory]
-    [InlineData(1280, 720, true)]
-    [InlineData(1920, 1080, true)]
-    [InlineData(1024, 600, false)]
-    [InlineData(1280, 700, false)]
-    public void DialFits_OnlyFrom1280x720(int w, int h, bool fits) => Assert.Equal(fits, InstrumentLogic.DialFits(w, h));
+    [InlineData(0, true, false, false)]
+    [InlineData(1, true, false, true)]
+    [InlineData(2, true, true, false)]
+    [InlineData(2, false, false, false)]
+    public void CaliperShown_OnlyOwnAreaPanelWithTheLayerOn(int level, bool area, bool foreign, bool expectShown) =>
+        Assert.Equal(expectShown && level > 0 && area && !foreign, InstrumentLogic.CaliperShown(level, area, foreign));
+
+    [Fact]
+    public void Caliper_NeverShownAtLevelZeroOrForeign()
+    {
+        Assert.False(InstrumentLogic.CaliperShown(0, true, false));
+        Assert.False(InstrumentLogic.CaliperShown(2, true, true));
+        Assert.False(InstrumentLogic.OrganShown(2, false));
+        Assert.True(InstrumentLogic.CaliperShown(1, true, false));
+    }
+
+    [Fact]
+    public void HatchSpan_NeckLinesStayInsideTheNeck()
+    {
+        // flask neck: y 2..16, half-width 6 about the axis; every drawn point (c - y, y) must lie within 6 of the axis (t = c - axis)
+        int drawn = 0;
+        for (float t = -4; t <= 80; t += 5)
+        {
+            var (lo, hi) = InstrumentLogic.HatchSpan(2, 16, 6, 0, t);
+            if (lo >= hi) continue;
+            drawn++;
+            foreach (float y in new[] { lo, (lo + hi) / 2, hi })
+            {
+                Assert.InRange(y, 2f, 16f);
+                Assert.InRange(Math.Abs(t - y), 0f, 6.001f);
+            }
+        }
+        Assert.True(drawn >= 3);   // the neck really gets hatching lines
+    }
+
+    [Theory]
+    [InlineData(10f)]
+    [InlineData(14f)]
+    [InlineData(16f)]
+    public void HatchSpan_NeckIsHatchedAtAnyEmptyHeight(float yLevel)
+    {
+        // the empty neck above the liquid is y 2..yLevel: at least one line is drawn for every level below full
+        bool any = false;
+        for (float t = -4; t <= 80; t += 5) { var (lo, hi) = InstrumentLogic.HatchSpan(2, yLevel, 6, 0, t); any |= lo < hi; }
+        Assert.True(any);
+    }
 }

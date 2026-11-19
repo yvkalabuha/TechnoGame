@@ -1055,6 +1055,9 @@ public sealed partial class Main : Node3D
         {
             int p = _instI % 9; var sz = InstSizes[_instI / 9];
             var img = GetViewport().GetTexture().GetImage();
+            var raw = img.GetSize();
+            // The window manager keeps the real window at its start size while the layout follows the asked content size: resample to the asked pixel size, so a 1280x720 frame has 1280x720 pixels at 1 px per du.
+            if (raw != sz) img.Resize(sz.X, sz.Y, Image.Interpolation.Lanczos);
             float k = img.GetWidth() / GetViewport().GetVisibleRect().Size.X;
             var all = new Rect2I(0, 0, img.GetWidth(), img.GetHeight());
             string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
@@ -1067,12 +1070,13 @@ public sealed partial class Main : Node3D
             string sfx = $"e{p % 3 + 1}_{sz.X}x{sz.Y}";
             Save(img, _areaPanel.GetGlobalRect(), $"{InstNames[p / 3]}_{sfx}");
             if (p / 3 == 0) Save(img, new Rect2(0, 0, 620, 52), $"gauge_{sfx}");
-            _shotLog += $"instrument shot {InstNames[p / 3]}_{sfx}\n";
+            Save(img, new Rect2(Vector2.Zero, GetViewport().GetVisibleRect().Size), $"full_{InstNames[p / 3]}_{sfx}");   // the whole screen, for the control in context
+            _shotLog += $"instrument shot {InstNames[p / 3]}_{sfx}: image {img.GetWidth()}x{img.GetHeight()} (raw {raw.X}x{raw.Y}), window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}\n";
         }
         if (_instI < 0) _instOrig = DisplayServer.WindowGetSize();
         if (++_instI >= 18)
         {
-            InstrumentLogic.YearOverride = null; _signal.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); CloseArea();
+            _areaPanel.ShotAlloy(null); InstrumentLogic.YearOverride = null; _signal.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); CloseArea();
             DisplayServer.WindowSetSize(_instOrig); GetWindow().ContentScaleSize = _instOrig;
             return true;
         }
@@ -1082,6 +1086,7 @@ public sealed partial class Main : Node3D
         Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false);
         InstrumentLogic.YearOverride = InstYears[era]; _signal.YearOverride = InstYears[era];
         OpenArea(InstAreas[q / 3]);
+        _areaPanel.ShotAlloy(InstAreas[q / 3] == AreaId.Production ? 3.0 : null, 1.0);   // shot-only: a real deficit in the live Production panel (the scenario has none)
         if (InstAreas[q / 3] == AreaId.Finance) { _areaPanel.ShotMove(0, 35); _areaPanel.ShotFocus(); }   // an unsent edit and the focus: pencil marker and focus frame show
         return false;
     }

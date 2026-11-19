@@ -164,12 +164,12 @@ public sealed partial class ActorPanel : PanelContainer
             _secBudget.AddChild(r);
         }
         _calRow = new HBoxContainer(); _calRow.AddThemeConstantOverride("separation", 0);
-        _calName.CustomMinimumSize = new Vector2(138, 0);
+        _calName.CustomMinimumSize = new Vector2(138, 0); _calName.SizeFlagsVertical = SizeFlags.ShrinkCenter; _calVal.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         _cal.Changed += v => OnSlider(_sel, v);
         _cal.Neighbour += d => Select(Math.Clamp(_sel + d, 0, 4));
         _pen = new PencilMarker(_cal); _calVal.AddChild(_pen);
         _calRow.AddChild(_calName); _calRow.AddChild(_cal); _calRow.AddChild(_calVal); _calRow.AddChild(new Control { CustomMinimumSize = new Vector2(84, 0) });
-        _secBudget.AddChild(_calRow); _orderControls.Add(_calRow);
+        _secBudget.AddChild(_calRow);
         var ar = new HBoxContainer();
         ar.AddThemeConstantOverride("separation", 10);
         _apply = Ui.Btn("ui.apply", Apply);
@@ -240,6 +240,10 @@ public sealed partial class ActorPanel : PanelContainer
 
     /// <summary>Screenshot run: the drag of a share without sending it (the pencil marker shows).</summary>
     public void ShotMove(int i, int v) => OnSlider(i, v);
+
+    /// <summary>Screenshot run: the alloy flask shows this stock and deficit instead of the Session numbers (the shot scenario never has a deficit); null clears it. The panel itself is the live one.</summary>
+    public void ShotAlloy(double? supply, double deficit = 0) { _shotAlloy = supply is double v ? (v, deficit) : null; _dirty = true; }
+    (double Supply, double Deficit)? _shotAlloy;
 
     /// <summary>Screenshot run: the caliper takes the keyboard focus (focus frame and pencil).</summary>
     public void ShotFocus() => _cal.GrabFocus();
@@ -331,6 +335,7 @@ public sealed partial class ActorPanel : PanelContainer
         _foreign.Visible = Foreign;
         if (Foreign) { _foreignName.Text = Names.Actor(_host.Layout.ActorIds[_actor]); if (TintOf != null) { Swatch(_chip, TintOf(_actor)); Swatch(_band, TintOf(_actor)); } }
         foreach (var c in _orderControls) c.Visible = !Foreign;
+        _calRow.Visible = InstrumentLogic.CaliperShown(InstrumentLogic.OrganLevel, _areaMode, Foreign);
         foreach (var sl in _sl) { sl.Editable = !Foreign; sl.MouseFilter = Foreign ? MouseFilterEnum.Ignore : MouseFilterEnum.Stop; sl.Modulate = new Color(1, 1, 1, Foreign ? 0.45f : 1f); }
         _sharesNote.Visible = Foreign;
         _title.TooltipText = id;
@@ -354,16 +359,18 @@ public sealed partial class ActorPanel : PanelContainer
         FillFlasks(s, inA);
     }
 
+    static readonly StyleBoxFlat _nameOn = Ui.Box(Ui.Hover, Ui.Ink, 1, 4, Ui.R1), _nameOff = Ui.Box(Colors.Transparent, null, 0, 4, 0);   // shared, built once
+
     void Select(int k) { _sel = k; Sync(); }
 
     // The chosen share is marked by a frame and a wash on its name (a shape, not a colour); only while the caliper is on.
     void StyleNames()
     {
-        bool organ = InstrumentLogic.OrganLevel > 0 && _areaMode;
+        bool organ = InstrumentLogic.OrganShown(InstrumentLogic.OrganLevel, _areaMode);
         for (int k = 0; k < 5; k++)
         {
             if (!organ) { _name[k].RemoveThemeStyleboxOverride("normal"); continue; }
-            _name[k].AddThemeStyleboxOverride("normal", k == _sel ? Ui.Box(Ui.Hover, Ui.Ink, 1, 4, Ui.R1) : Ui.Box(Colors.Transparent, null, 0, 4, 0));
+            _name[k].AddThemeStyleboxOverride("normal", k == _sel ? _nameOn : _nameOff);
         }
     }
 
@@ -375,9 +382,9 @@ public sealed partial class ActorPanel : PanelContainer
         if (level == _instLevel && year == _instYear) return;
         _instLevel = level; _instYear = year;
         _cal.Year = year;
-        bool organ = level > 0 && _areaMode;   // layer 2 never shows in the read-only panel of a foreign power
+        bool organ = InstrumentLogic.OrganShown(level, _areaMode);   // layer 2 never shows in the read-only panel of a foreign power
         for (int k = 0; k < 5; k++) { _sl[k].Visible = !organ; _gap[k].Visible = organ; }
-        _calRow.Visible = organ && !Foreign;
+        _calRow.Visible = InstrumentLogic.CaliperShown(level, _areaMode, Foreign);
         StyleNames();
         _flaskSciRow.Visible = _flaskProdRow.Visible = level > 0 && _areaMode;
     }
@@ -397,10 +404,10 @@ public sealed partial class ActorPanel : PanelContainer
             }
         for (int i = 0; i < _flaskSci.Length; i++) _flaskSci[i].Visible = i < n;
         _flaskSciRow.GetChild<Control>(_flaskSci.Length).Visible = n > 0;
-        bool has = inA != null;
+        bool has = inA != null || _shotAlloy != null;
         _flaskProdRow.GetChild<Control>(1).Visible = has; _flaskProd.Visible = has;
         if (!has) return;
-        double sup = inA.Capability.AlloySupply.ToDouble(), def = inA.Capability.AlloyDeficit.ToDouble(), lev = InstrumentLogic.AlloyLevel(sup, def);
+        double sup = _shotAlloy?.Supply ?? inA.Capability.AlloySupply.ToDouble(), def = _shotAlloy?.Deficit ?? inA.Capability.AlloyDeficit.ToDouble(), lev = InstrumentLogic.AlloyLevel(sup, def);
         _flaskProd.Set(lev, def > 0);
         _flaskProd.TooltipText = Loc.T(def > 0 ? "flask.alloy.deficit" : "flask.alloy.tip", Math.Round(lev * 100));
     }

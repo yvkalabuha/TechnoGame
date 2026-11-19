@@ -38,6 +38,7 @@ public sealed partial class FlaskControl : Control
     {
         if (_lvl == InstrumentLogic.OrganLevel && _lang == Loc.Lang) return;
         _lvl = InstrumentLogic.OrganLevel;
+        if (_level >= 0) BuildText();   // also updates _lang while hidden, so that no redraw is asked every frame
         QueueRedraw();
     }
 
@@ -98,18 +99,19 @@ public sealed partial class FlaskControl : Control
         for (float c = Cx - BodyHalf + NeckTop; c <= Cx + BodyHalf + Bottom; c += 5f)
         {
             float t = c - Cx;
-            float lo = Math.Max(y0, (t - a0) / (1 + slope)), hi = Math.Min(y1, (t + a0) / (1 - slope));
+            var (lo, hi) = InstrumentLogic.HatchSpan(y0, y1, a0, slope, t);
             if (lo < hi) DrawLine(new Vector2(c - lo, lo), new Vector2(c - hi, hi), col, 1f);
         }
     }
 }
 
-/// <summary>Caliper (UI_INSTRUMENTS §3, #417): one large instrument per panel; it edits the share chosen by the owner of the layout. A fixed and a sliding jaw on a 0..100 % scale, step 5, mouse drag,
-/// Left/Right arrows (Up/Down ask for the neighbour share). No vernier. E1 a plain jaw pair with a band, E2 a digital indicator with a monospace number on the jaw, E3 a plain scale with a cursor.
-/// The number also stays in its own field beside it. Raises <see cref="Changed"/> with a value on the grid; the owner sets <see cref="Value"/> back, so the order and the redistribution rules stay where they were.</summary>
+/// <summary>Caliper (UI_INSTRUMENTS §3, #417, O-008): one large instrument per panel; it edits the share chosen by the owner of the layout. One layout in every era: a fixed and a sliding jaw on a 0..100 % scale with its ends marked,
+/// step 5, mouse drag, Left/Right arrows (Up/Down ask for the neighbour share). The era changes only the skin (E1 plain jaws, E2 blocky 3 px ticks, E3 a cursor triangle on the jaw). No vernier.
+/// The one number with its unit is the value field beside it (never a second number over the jaw). Raises <see cref="Changed"/> with a value on the grid; the owner sets <see cref="Value"/> back,
+/// so the order and the redistribution rules stay where they were.</summary>
 public sealed partial class CaliperControl : Control
 {
-    const float H = 40, Pad = 8, ScaleY = 28, BoxW = 44;
+    const float H = 52, Pad = 8, ScaleY = 24;
     public int Value;                          // 0..100, may sit off the grid (the other shares are rounded shares)
     public int Year = 1945;
     public bool Editable = true;
@@ -117,12 +119,11 @@ public sealed partial class CaliperControl : Control
     public event Action<int> Neighbour;        // -1 up, +1 down
     bool _drag;
     int _shown = int.MinValue, _era, _level = -1;
-    string _num = "";
     readonly Vector2[] _tri = new Vector2[3];
 
     public CaliperControl()
     {
-        CustomMinimumSize = new Vector2(120, H);   // 40 du high: above the 24 du hard minimum and the 32 du target (A10)
+        CustomMinimumSize = new Vector2(120, H);   // above the 24 du hard minimum and the 32 du target (A10)
         FocusMode = FocusModeEnum.All;
         MouseDefaultCursorShape = CursorShape.Hsize;
         TooltipText = "caliper.tip";
@@ -132,7 +133,6 @@ public sealed partial class CaliperControl : Control
     {
         int era = InstrumentLogic.Era(Year), level = InstrumentLogic.OrganLevel;
         if (Value == _shown && era == _era && level == _level) return;
-        if (Value != _shown) _num = Value + "%";
         _shown = Value; _era = era; _level = level;
         QueueRedraw();
     }
@@ -170,30 +170,26 @@ public sealed partial class CaliperControl : Control
     {
         float x0 = X0, x1 = X1, xv = XOf(Value), step = (x1 - x0) / 20f;
         var fill = InstrumentLogic.OrganLevel == 2 ? Ui.InkWash[Ui.Sand] : Ui.Hover;
-        // between the jaws: a thin band (E1, E2) or a 2 px line (E3); decoration, the jaw position and the number carry the value
-        if (_era == 3) DrawLine(new Vector2(x0, ScaleY - 4), new Vector2(xv, ScaleY - 4), Ui.Ink, 2f);
-        else DrawRect(new Rect2(x0, ScaleY - 8, xv - x0, 5), fill);
+        DrawRect(new Rect2(x0, ScaleY - 8, xv - x0, 5), fill);   // between the jaws: decoration, the jaw position and the number carry the value
         DrawLine(new Vector2(x0, ScaleY), new Vector2(x1, ScaleY), Ui.Ink, 1f);
+        // ticks every 5 points: 6 px, 9 px every 10, 12 px at the two ends; E2 draws them 3 px wide
+        float tw = _era == 2 ? 3f : 1f;
         for (int i = 0; i <= 20; i++)
         {
-            float x = x0 + i * step, len = i % 10 == 0 ? 7 : i % 2 == 0 ? 5 : 3;
-            DrawLine(new Vector2(x, ScaleY), new Vector2(x, ScaleY + len), i % 2 == 0 ? Ui.Ink2 : Ui.Ink3, 1f);
+            float x = x0 + i * step, len = i == 0 || i == 20 ? 12 : i % 2 == 0 ? 9 : 6;
+            DrawLine(new Vector2(x, ScaleY), new Vector2(x, ScaleY + len), i % 2 == 0 ? Ui.Ink : Ui.Ink2, i == 0 || i == 20 ? 2f : tw);
         }
+        // the ends are named: 0 and 100
+        DrawString(Fonts.Mono, new Vector2(x0 - 4, H - 3), "0", HorizontalAlignment.Left, -1, 14, Ui.Ink);
+        DrawString(Fonts.Mono, new Vector2(x1 - 30, H - 3), "100", HorizontalAlignment.Right, 34, 14, Ui.Ink);
         DrawLine(new Vector2(x0, 6), new Vector2(x0, ScaleY + 8), Ui.Ink, 2f);
-        DrawLine(new Vector2(xv, 6), new Vector2(xv, ScaleY + 8), Ui.Ink, 2f);
-        if (_era == 2)
+        DrawLine(new Vector2(xv, 6), new Vector2(xv, ScaleY + 8), Ui.Ink, 2.5f);
+        if (_era == 3)
         {
-            // digital indicator: a framed window with the number in the monospace face, set beside the sliding jaw
-            float bx = Math.Clamp(xv + 4, x0, x1 - BoxW);
-            DrawRect(new Rect2(bx, 0, BoxW, 20), Ui.Sheet);
-            DrawRect(new Rect2(bx, 0, BoxW, 20), Ui.Ink, false, 1f);
-            DrawString(Fonts.Mono, new Vector2(bx, 15), _num, HorizontalAlignment.Center, BoxW, 14, Ui.Ink);
-        }
-        else if (_era == 3)
-        {
-            _tri[0] = new Vector2(xv, ScaleY - 1); _tri[1] = new Vector2(xv - 3.5f, ScaleY - 9); _tri[2] = new Vector2(xv + 3.5f, ScaleY - 9);
+            _tri[0] = new Vector2(xv, ScaleY - 9); _tri[1] = new Vector2(xv - 4, ScaleY - 16); _tri[2] = new Vector2(xv + 4, ScaleY - 16);
             DrawColoredPolygon(_tri, Ui.Ink);
         }
+        else DrawLine(new Vector2(xv, 6), new Vector2(xv + 8, 6), Ui.Ink, 2.5f);   // E1, E2: the arm of the sliding jaw
         if (HasFocus()) DrawRect(new Rect2(1, 1, Size.X - 2, Size.Y - 2), Ui.Ink, false, 2f);   // focus frame, 2 px (A7)
     }
 }

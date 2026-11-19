@@ -14,9 +14,6 @@ public static class InstrumentLogic
     /// <summary>Era step of an instrument by game year: 1 = 1945–69 (and earlier), 2 = 1970–99, 3 = 2000–2100.</summary>
     public static int Era(int year) => year < 1970 ? 1 : year < 2000 ? 2 : 3;
 
-    /// <summary>Needle angle in degrees from vertical for a speed step 0..3 (E1 dial: the step ticks, 30 degrees apart).</summary>
-    public static readonly double[] NeedleDeg = { -60, -30, 0, 30 };
-
     /// <summary>Caliper step in percent points (UI_INSTRUMENTS §3).</summary>
     public const int CaliperStep = 5;
 
@@ -37,9 +34,13 @@ public static class InstrumentLogic
     /// <summary>Alloy stock as a share of what the power needs: supply against supply plus deficit; nothing needed and nothing in stock reads as full.</summary>
     public static double AlloyLevel(double supply, double deficit) => FlaskLevel(supply, supply + Math.Max(deficit, 0));
 
-    /// <summary>Era-1 dial (DEBT-0059): radius, tick length and tick width in du; larger and heavier than the first cut so that the dial reads at 100 % UI scale.</summary>
-    /// <summary>The E1 dial (disc 44 px, ticks 2.5 px, 17 px between ticks) is checked on 1280x720 and up (#417 A1/A2). A smaller window gets the plain cells (C7): the physical size is what counts.</summary>
-    public static bool DialFits(int windowWidth, int windowHeight) => windowWidth >= 1280 && windowHeight >= 720;
+    /// <summary>Layer-2 instruments of the budget block show at organ levels 1 and 2 and only in an area panel (never in the read-only panel of a foreign power).</summary>
+    public static bool OrganShown(int level, bool areaMode) => level > 0 && areaMode;
 
-    public const float DialRadius = 33, DialTickLength = 11, DialTickWidth = 2.5f;
+    /// <summary>The caliper row: the instrument layer is on and the panel is the player's own.</summary>
+    public static bool CaliperShown(int level, bool areaMode, bool foreign) => OrganShown(level, areaMode) && !foreign;
+
+    /// <summary>Clips a 45-degree hatching line x + y = c (t = c - centre) to a band y0..y1 whose half-width is a0 + slope * y; returns the y range on the line, empty when lo >= hi.</summary>
+    public static (float Lo, float Hi) HatchSpan(float y0, float y1, float a0, float slope, float t) =>
+        (Math.Max(y0, (t - a0) / (1 + slope)), Math.Min(y1, (t + a0) / (1 - slope)));
 }
