@@ -212,4 +212,14 @@ public class InstrumentTests
         for (float t = -4; t <= 80; t += 5) { var (lo, hi) = InstrumentLogic.HatchSpan(2, yLevel, 6, 0, t); any |= lo < hi; }
         Assert.True(any);
     }
+
+    [Theory]
+    [InlineData(0.3, 0.3, true)]    // hazard node at its threshold: full flask, discovery still a draw
+    [InlineData(0.5, 0.3, true)]
+    [InlineData(0.29, 0.3, false)]
+    [InlineData(5, 0, false)]       // no need: nothing to reach
+    public void ThresholdReached_MarksAHazardLinkAtItsNeed(double have, double need, bool expected)
+    {
+        Assert.Equal(expected, InstrumentLogic.ThresholdReached(have, need));
+    }
 }

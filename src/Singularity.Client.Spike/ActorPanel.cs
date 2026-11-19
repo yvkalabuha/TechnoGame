@@ -36,12 +36,11 @@ public sealed partial class ActorPanel : PanelContainer
     readonly int[] _force = new int[5];
     int _sel;
     readonly FlaskControl[] _flaskSci = { new() { Ink = Ui.Violet }, new() { Ink = Ui.Violet }, new() { Ink = Ui.Violet } };
-    readonly FlaskControl _flaskProd = new() { Ink = Ui.Teal };
-    readonly HBoxContainer _flaskSciRow = new(), _flaskProdRow = new();
+    readonly HBoxContainer _flaskSciRow = new();
     readonly VBoxContainer _sciBox = new();   // caption line, then the flask row, then the empty note
     readonly VBoxContainer[] _sciCell = { new(), new(), new() };
     readonly Label[] _sciName = { Ui.Lbl("", 14, Ui.Ink2), Ui.Lbl("", 14, Ui.Ink2), Ui.Lbl("", 14, Ui.Ink2) };
-    readonly Label _prodCap = Ui.Lbl("", 14, Ui.Ink2);
+    readonly Label[] _sciNote = { Ui.Lbl("", 14, Ui.Ink2), Ui.Lbl("", 14, Ui.Ink2), Ui.Lbl("", 14, Ui.Ink2) };   // «threshold reached» line of a hazard link
     int _instLevel = -1, _instYear = -1;
     readonly Label[] _slVal = new Label[5], _slForce = new Label[5];
     readonly Label _sum = Ui.Lbl("", 14, Ui.Ink2, FontKind.Mono);
@@ -123,15 +122,15 @@ public sealed partial class ActorPanel : PanelContainer
         var tb = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         tb.AddChild(_title); tb.AddChild(_sub);
         head.AddChild(tb);
-        head.AddChild(Ui.Btn("ui.tree", () => OpenTree?.Invoke()));
-        head.AddChild(Ui.Btn("×", () => Closed?.Invoke()));
+        head.AddChild(Ui.Btn("ui.tree", () => OpenTree?.Invoke(), focusable: true));
+        head.AddChild(Ui.Btn("×", () => Closed?.Invoke(), focusable: true));
         _root.AddChild(head); head.Visible = !areaMode;
         var fv = new VBoxContainer();
         var fr = new HBoxContainer(); fr.AddThemeConstantOverride("separation", 8);
         fr.AddChild(_chip); fr.AddChild(_foreignName);
         fv.AddChild(fr);
         fv.AddChild(Ui.Lbl("panel.foreign", 14, Ui.Ink2, FontKind.Draft));
-        var back = Ui.Btn("panel.backown", () => BackToOwn?.Invoke());
+        var back = Ui.Btn("panel.backown", () => BackToOwn?.Invoke(), focusable: true);
         back.TooltipText = "tip.backown";
         fv.AddChild(back);
         _foreign.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, Ui.Ink, 1, 8, Ui.R2));
@@ -177,7 +176,7 @@ public sealed partial class ActorPanel : PanelContainer
         _secBudget.AddChild(_calRow);
         var ar = new HBoxContainer();
         ar.AddThemeConstantOverride("separation", 10);
-        _apply = Ui.Btn("ui.apply", Apply);
+        _apply = Ui.Btn("ui.apply", Apply, focusable: true);   // a control that changes game state is reachable by keyboard (A6)
         ar.AddChild(_apply); ar.AddChild(_sum);
         _secBudget.AddChild(ar); _orderControls.Add(ar);
         var rr = new HBoxContainer(); rr.AddThemeConstantOverride("separation", 6);
@@ -185,11 +184,7 @@ public sealed partial class ActorPanel : PanelContainer
         _secBudget.AddChild(rr); _orderControls.Add(rr);
 
         _designsHead = Section("panel.designs", _secDesigns);
-        _flaskProdRow.AddThemeConstantOverride("separation", 8);
-        _flaskProdRow.AddChild(_flaskProd);
-        _prodCap.AutowrapMode = TextServer.AutowrapMode.WordSmart; _prodCap.CustomMinimumSize = new Vector2(150, 0); _prodCap.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        _flaskProdRow.AddChild(_prodCap);
-        _secDesigns.AddChild(_flaskProdRow);
+        // alloy flask: waits for a Session alloy-coverage field (follow-up task)
         _secDesigns.AddChild(_designs);
         _prodLater = Ui.Wrap("area.production.later", 14, Ui.Ink3); _secDesigns.AddChild(_prodLater);
         Section("panel.licence", _secLicence);
@@ -207,15 +202,16 @@ public sealed partial class ActorPanel : PanelContainer
         _finLater = Ui.Wrap("area.finance.later", 14, Ui.Ink3); _finLaterBox.AddChild(_finLater);
         if (!areaMode) _secLicence.AddChild(_finLaterBox);
         Section("panel.why", _secWhy);
-        _treeBtn = Ui.Btn("ui.tree", () => OpenTree?.Invoke()); _treeBtn.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; _secWhy.AddChild(_treeBtn);
-        // The caption has its own line, the row holds only the flask cells (3 x 100 du + gaps < 420 du), so the panel keeps its width.
+        _treeBtn = Ui.Btn("ui.tree", () => OpenTree?.Invoke(), focusable: true); _treeBtn.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; _secWhy.AddChild(_treeBtn);
+        // The caption has its own line, the row holds only the flask cells (3 x 112 du + gaps + insets + scroll bar < 420 du), so the panel keeps its width.
         _flaskSciRow.AddThemeConstantOverride("separation", 8);
         for (int i = 0; i < _flaskSci.Length; i++)
         {
-            _sciName[i].CustomMinimumSize = new Vector2(124, 0); _flaskSci[i].SizeFlagsHorizontal = SizeFlags.ShrinkCenter; _sciName[i].TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            _sciName[i].CustomMinimumSize = new Vector2(112, 0); _flaskSci[i].SizeFlagsHorizontal = SizeFlags.ShrinkCenter; _sciName[i].TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
             _sciName[i].HorizontalAlignment = HorizontalAlignment.Center; _sciName[i].MouseFilter = MouseFilterEnum.Pass;
             _sciCell[i].AddThemeConstantOverride("separation", 0);
-            _sciCell[i].AddChild(_flaskSci[i]); _sciCell[i].AddChild(_sciName[i]);
+            _sciNote[i].AutowrapMode = TextServer.AutowrapMode.WordSmart; _sciNote[i].CustomMinimumSize = new Vector2(112, 0); _sciNote[i].HorizontalAlignment = HorizontalAlignment.Center; _sciNote[i].MouseFilter = MouseFilterEnum.Pass; _sciNote[i].Visible = false;
+            _sciCell[i].AddChild(_flaskSci[i]); _sciCell[i].AddChild(_sciName[i]); _sciCell[i].AddChild(_sciNote[i]);
             _flaskSciRow.AddChild(_sciCell[i]);
         }
         var sciCap = Ui.Wrap("flask.sci.cap", 14, Ui.Ink2);
@@ -253,9 +249,8 @@ public sealed partial class ActorPanel : PanelContainer
     /// <summary>Screenshot run: the same path as a user dragging slider <paramref name="i"/> and pressing the order button.</summary>
     public void ShotEdit(int i, int v) { OnSlider(i, v); Apply(); }
 
-    /// <summary>Screenshot run: the alloy flask shows this stock and deficit instead of the Session numbers (the shot scenario never has a deficit); null clears it. The panel itself is the live one.</summary>
-    public void ShotAlloy(double? deficitFraction) { _shotAlloy = deficitFraction; _dirty = true; }
-    double? _shotAlloy;
+    /// <summary>Screenshot run: the narrowest width the panel can take with the scroll bar present (content, insets, bar), in du.</summary>
+    public float ShotMinWidthWithBar() => _root.GetCombinedMinimumSize().X + 24 + 12 + _scroll.GetVScrollBar().GetCombinedMinimumSize().X;
     readonly Label _sciNone = Ui.Lbl("flask.sci.none", 14, Ui.Ink2);
 
     /// <summary>Screenshot run: the Science flasks show these (have, need) research links instead of the Session chain (the shot scenario has none); null clears it.</summary>
@@ -267,6 +262,8 @@ public sealed partial class ActorPanel : PanelContainer
     public Vector2 ShotRowPoint(int k) => _gap[k].GetGlobalRect().GetCenter();
     public Vector2 ShotCaliperPoint(double percent) { var r = _cal.GetGlobalRect(); return new Vector2(r.Position.X + _cal.XOf(percent), r.GetCenter().Y); }
     public int ShotSelected => _sel;
+    public int ShotApplied { get; private set; }
+    public bool ShotScrolls => _scroll.VerticalScrollMode == ScrollContainer.ScrollMode.Auto;
     public int ShotShare(int k) => _pct[k];
 
     void OnSlider(int i, int v)
@@ -322,6 +319,7 @@ public sealed partial class ActorPanel : PanelContainer
         if (Foreign) return;
         var sh = new BudgetShares(Pct(_pct[0]), Pct(_pct[1]), Pct(_pct[2]), Pct(_pct[3]), Pct(_pct[4]));
         _host.Submit(new SetBudgetShares(_actor, sh), "cmd.budget");
+        ShotApplied++;
         _sentPct = (int[])_pct.Clone();
         _awaiting = true; _sentSeq = _lastSnap?.CmdSeq ?? 0;
         Sync();
@@ -377,7 +375,7 @@ public sealed partial class ActorPanel : PanelContainer
         FillDesigns(a);
         FillLicence(a);
         FillWhy(s);
-        FillFlasks(s, inA);
+        FillFlasks(s);
     }
 
     static readonly StyleBoxFlat _nameOn = Ui.Box(Ui.Hover, Ui.Ink, 1, 4, Ui.R1), _nameOff = Ui.Box(Colors.Transparent, null, 0, 4, 0);   // shared, built once
@@ -398,9 +396,14 @@ public sealed partial class ActorPanel : PanelContainer
     void SetResearchFlask(int n, string name, double have, double need)
     {
         double lv = InstrumentLogic.FlaskLevel(have, need);
-        _flaskSci[n].Set(lv, false);
+        // A link that is still listed with Have at Need is a hazard node at its threshold: full, hatched, not discovered.
+        bool thr = InstrumentLogic.ThresholdReached(have, need);
+        _flaskSci[n].Set(lv, false, thr);
         _sciName[n].Text = name;
-        _flaskSci[n].TooltipText = _sciName[n].TooltipText = Loc.T("flask.sci.tip", name, InstrumentLogic.FlaskPercent(lv, false), Loc.N(have), Loc.N(need));
+        _sciNote[n].Visible = thr; _sciNote[n].Text = thr ? Loc.T("flask.sci.threshold.note") : "";
+        _flaskSci[n].TooltipText = _sciName[n].TooltipText = _sciNote[n].TooltipText = thr
+            ? Loc.T("flask.sci.threshold", name, Loc.N(have), Loc.N(need))
+            : Loc.T("flask.sci.tip", name, InstrumentLogic.FlaskPercent(lv, false), Loc.N(have), Loc.N(need));
     }
 
     // Instrument layer: level and era follow the setting and the game date; at level 0 the sliders are back and the flasks are gone (the «before» look).
@@ -415,11 +418,11 @@ public sealed partial class ActorPanel : PanelContainer
         for (int k = 0; k < 5; k++) { _sl[k].Visible = !organ; _gap[k].Visible = organ; }
         _calRow.Visible = InstrumentLogic.CaliperShown(level, _areaMode, Foreign);
         StyleNames();
-        _sciBox.Visible = _flaskProdRow.Visible = level > 0 && _areaMode;
+        _sciBox.Visible = level > 0 && _areaMode;
     }
 
-    // Science: the first links of the why_not chain as Have against Need (the same numbers as the text lines). Production: alloy stock against the need (supply plus deficit), hatched in a deficit.
-    void FillFlasks(HostSnapshot s, ActorInputsView inA)
+    // Science: the first links of the why_not chain as Have against Need (the same numbers as the text lines).
+    void FillFlasks(HostSnapshot s)
     {
         int n = 0;
         if (_shotSci != null)
@@ -434,18 +437,6 @@ public sealed partial class ActorPanel : PanelContainer
         for (int i = 0; i < _flaskSci.Length; i++) _sciCell[i].Visible = i < n;
         _flaskSciRow.Visible = n > 0;
         _sciNone.Visible = n == 0;   // no research chain on the current target: say so, never an empty row
-        bool has = inA != null || _shotAlloy != null;
-        _prodCap.Visible = has; _flaskProd.Visible = has;
-        if (!has) return;
-        double supply = _shotAlloy == null ? inA.Capability.AlloySupply.ToDouble() : 1, def = _shotAlloy ?? inA.Capability.AlloyDeficit.ToDouble();
-        (double, double)? shortage = null;
-        if (_shotAlloy == null && s.WhyError == "")
-            foreach (var l in s.Links) if (l.Layer == WhyNotLayer.Product && l.Cause == WhyNotCause.AlloyDeficit) { shortage = (l.Have.ToDouble(), l.Need.ToDouble()); break; }
-        var fl = InstrumentLogic.AlloyFlask(supply, def, shortage);
-        _flaskProd.Set(fl.Level, fl.Hatched);
-        int pct = InstrumentLogic.FlaskPercent(fl.Level, fl.Hatched);
-        _flaskProd.TooltipText = Loc.T(InstrumentLogic.AlloyTipKey(fl.State), pct);
-        _prodCap.Text = Loc.T(InstrumentLogic.AlloyCaptionKey(fl.State), pct);
     }
 
     void FillResult(HostSnapshot s)
@@ -488,8 +479,8 @@ public sealed partial class ActorPanel : PanelContainer
             var r = new HBoxContainer();
             r.AddChild(Ui.Wrap(text));
             Button act = null;
-            if (!Foreign && action == "close") act = Ui.Btn("ui.closeline", () => _host.Submit(new CloseLine(_actor, design), "cmd.close", design));
-            else if (!Foreign && action == "cancel") act = Ui.Btn("ui.cancel", () => _host.Submit(new CancelDesign(_actor, design), "cmd.cancel", design));
+            if (!Foreign && action == "close") act = Ui.Btn("ui.closeline", () => _host.Submit(new CloseLine(_actor, design), "cmd.close", design), focusable: true);
+            else if (!Foreign && action == "cancel") act = Ui.Btn("ui.cancel", () => _host.Submit(new CancelDesign(_actor, design), "cmd.cancel", design), focusable: true);
             if (act != null) { act.SizeFlagsVertical = SizeFlags.ShrinkBegin; r.AddChild(act); }
             _designs.AddChild(r);
         }

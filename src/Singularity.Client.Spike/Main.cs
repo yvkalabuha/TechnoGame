@@ -1008,7 +1008,7 @@ public sealed partial class Main : Node3D
     }
 
     // Instrument shots: 3 areas x 3 eras x 2 UI scales; the previous configuration is saved, then the next one is set up. Returns true when all are done.
-    int _instI, _instPhase, _instShareBefore; bool _instCheckInput;
+    int _instI, _instPhase, _instShareBefore; bool _instCheckInput, _instCheckSend, _instSent, _instSkipShot; int _instAppliedBefore;
 
     // A failed shot-run check: the error goes to the run log and the process exits non-zero.
     void InstFail(string msg)
@@ -1055,13 +1055,15 @@ public sealed partial class Main : Node3D
         {
             float w = GetWindow().ContentScaleFactor;   // events are window pixels, the panel reports canvas units
             if (_instPhase == 1) { var c = _areaPanel.ShotRowPoint(1) * w; Mouse(c, null); Mouse(c, true); Mouse(c, false); }
+            else if (_instPhase == 3) PressKey(Key.Tab);   // after the frame with the unsent edit: Tab from the caliper to Apply
+            else if (_instPhase == 4) { _instAppliedBefore = _areaPanel.ShotApplied; PressKey(Key.Enter); PressKey(Key.Enter, false); _instCheckSend = true; }
             else
             {
                 _instShareBefore = _areaPanel.ShotShare(1);
                 var c = _areaPanel.ShotCaliperPoint(40) * w; Mouse(c, null); Mouse(c, true); Mouse(c, false); PressKey(Key.Right);
                 _instCheckInput = true;   // the events are processed on the next frame: checked at the next call
             }
-            _instPhase = _instPhase == 1 ? 2 : 0;
+            _instPhase = _instPhase == 1 ? 2 : _instPhase == 3 ? 4 : 0;
             return false;
         }
         if (_instCheckInput)
@@ -1072,7 +1074,15 @@ public sealed partial class Main : Node3D
             _shotLog += $"finance input: selected share {sel}, share value {val} (was {_instShareBefore})\n";
             if (sel != 1 || val == _instShareBefore || val != 45) { InstFail($"finance input check failed: expected share 1 at 45 (was {_instShareBefore}), got share {sel} at {val}"); return true; }
         }
-        if (_instI >= 0)
+        if (_instCheckSend)
+        {
+            // Keyboard only: Tab reached Apply and Enter submitted the edit (the panel is waiting for the command result).
+            _instCheckSend = false; _instSkipShot = true;
+            bool sent = _areaPanel.ShotApplied == _instAppliedBefore + 1;
+            _shotLog += $"finance keyboard submit: order submitted {sent}\n";
+            if (!sent) { InstFail("finance keyboard check failed: Tab then Enter did not submit the order"); return true; }
+        }
+        if (_instI >= 0 && !_instSkipShot)
         {
             int p = _instI % 9, pct = _instI < 9 ? 100 : 150;
             var img = GetViewport().GetTexture().GetImage();
@@ -1087,28 +1097,31 @@ public sealed partial class Main : Node3D
             }
             string sfx = $"e{p % 3 + 1}_{pct}";
             if (p / 3 != 0 && Math.Abs(_areaPanel.GetGlobalRect().Size.X - 420) > 0.5f) { InstFail($"area panel width check failed: {InstNames[p / 3]}_{sfx} is {_areaPanel.GetGlobalRect().Size.X} du wide, expected 420"); return true; }
+            if (p / 3 != 0 && _areaPanel.ShotMinWidthWithBar() > 420.5f) { InstFail($"area panel width check failed: {InstNames[p / 3]}_{sfx} needs {_areaPanel.ShotMinWidthWithBar()} du with the scroll bar, limit 420"); return true; }
+            _shotLog += $"panel scrolls: {_areaPanel.ShotScrolls}\n";
             Save(img, _areaPanel.GetGlobalRect(), $"{InstNames[p / 3]}_{sfx}");
             if (p / 3 == 0) Save(img, new Rect2(0, 0, 620, 52), $"speed_{sfx}");
             Save(img, new Rect2(Vector2.Zero, GetViewport().GetVisibleRect().Size), $"full_{InstNames[p / 3]}_{sfx}");   // the whole screen, for the control in context
             _shotLog += $"instrument shot {InstNames[p / 3]}_{sfx}: image {img.GetWidth()}x{img.GetHeight()}, scale {pct} %\n";
+            if (p / 3 == 0) { _instPhase = 3; return false; }   // the frame with the unsent edit is kept; now the keyboard route to Apply
         }
+        _instSkipShot = false;
         if (++_instI >= 18)
         {
-            _areaPanel.ShotAlloy(null); _areaPanel.ShotResearch(null); InstrumentLogic.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); CloseArea();
+            _areaPanel.ShotResearch(null); InstrumentLogic.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); CloseArea();
             return true;
         }
         int q = _instI % 9, era = q % 3;
         Settings.Current.UiScale = _instI < 9 ? 100 : 150; Settings.Apply(Settings.Current, GetWindow(), false);
         InstrumentLogic.YearOverride = InstYears[era];
         OpenArea(InstAreas[q / 3]);
-        // shot-only states: the scenario has no research chain and no alloy deficit
-        _areaPanel.ShotAlloy(InstAreas[q / 3] == AreaId.Production ? 0.25 : null);
+        // shot-only state: the scenario has no research chain
         _areaPanel.ShotResearch(InstAreas[q / 3] == AreaId.Science ? new[] { (Names.Node("s8.fnd.compressible_flow"), 3.0, 4.0), (Names.Node("s8.fnd.boundary_layer"), 1.0, 5.0), (Names.Node("s7.fnd.brayton_cycle"), 5.0, 5.0) } : null);
         if (InstAreas[q / 3] == AreaId.Finance) _instPhase = 1;   // an unsent edit and the focus come from real input: pencil marker and focus frame show
         return false;
     }
 
-    static void PressKey(Key k) => Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = true });
+    static void PressKey(Key k, bool pressed = true) => Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = pressed });
 
     void AreaShot()
     {

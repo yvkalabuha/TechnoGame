@@ -92,9 +92,10 @@ public static class Ui
         return l;
     }
 
-    public static CaptionButton Btn(string text, Action onPress, int size = 14, bool command = false)
+    public static CaptionButton Btn(string text, Action onPress, int size = 14, bool command = false, bool focusable = false)
     {
-        var b = new CaptionButton { Text = text, FocusMode = Control.FocusModeEnum.None, ToggleMode = false };
+        var b = new CaptionButton { Text = text, FocusMode = focusable ? Control.FocusModeEnum.All : Control.FocusModeEnum.None, ToggleMode = false };
+        if (focusable) MenuUi.FocusRing(b);   // 2 px ink frame (A7)
         b.AddThemeFontOverride("font", Fonts.Text);
         b.AddThemeFontSizeOverride("font_size", Math.Max(size, MinSize));
         PaperSurface.Apply(b, SurfaceKind.Button, text);   // StyleButton takes the material off again while the button is an order-ready command plate (an alert colour)

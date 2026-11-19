@@ -342,6 +342,8 @@ area.finance.later,Taxes by region: M1; trade and embargo: M1–M2.,Налоги
 tip.area,{0} · {1},{0} · {1}
 flask.sci.cap,Progress of the first links of the chain,Ход первых звеньев цепи
 flask.sci.tip,{0}: {1}% of the need ({2} of {3}),{0}: {1}% от потребности ({2} из {3})
+flask.sci.threshold,{0}: threshold reached ({1} of {2}); discovery is not certain (hatched),{0}: порог достигнут ({1} из {2}); открытие не гарантировано (штриховка)
+flask.sci.threshold.note,threshold reached: discovery not certain,порог достигнут: открытие не гарантировано
 flask.sci.none,No research in progress on the current target,Нет хода исследования по текущей цели
 flask.alloy.cap.ok,Alloy: sufficient,Сплав: хватает
 flask.alloy.cap.deficit,Alloy: {0} % of demand · low,Сплав: {0} % потребности · мало
@@ -349,6 +351,7 @@ flask.alloy.cap.disrupted,Alloy supply: {0} % of normal,Снабжение сп�
 flask.alloy.cap.none,No alloy,Сплава нет
 flask.alloy.tip,Stock is {0}% of the normal supply,Запас — {0}% от обычного снабжения
 flask.deficit,low,мало
+flask.threshold,threshold,порог
 flask.alloy.deficit,Supply covers {0}% of the demand: a shortage (hatched),Снабжение покрывает {0}% потребности: дефицит (штриховка)
 flask.alloy.disrupted,Supply is {0}% of normal while the disruption lasts (hatched),Снабжение — {0}% от обычного, пока длится сбой (штриховка)
 flask.alloy.none,No alloy is being smelted (hatched),Сплав не выплавляется (штриховка)

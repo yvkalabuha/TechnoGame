@@ -31,6 +31,9 @@ public static class InstrumentLogic
     /// <summary>Fill of a flask 0..1 from have and need; no need (0 or less) reads as full.</summary>
     public static double FlaskLevel(double have, double need) => need <= 0 ? 1 : Math.Clamp(have / need, 0, 1);
 
+    /// <summary>A research link still listed with Have at or above Need: a hazard node past the threshold where its discovery becomes possible; the discovery is a draw, not certain.</summary>
+    public static bool ThresholdReached(double have, double need) => need > 0 && have >= need;
+
     /// <summary>Alloy stock as a share of the normal supply. The view gives the supply in kg already cut by the disruption (cap·(1 − deficit)·yield) and the deficit as a fraction 0..1 (the cut itself), never in kg:
     /// the two are not added. The level is what is left of the normal supply, 1 − deficit.</summary>
     public static double AlloyLevel(double deficitFraction) => Math.Clamp(1 - deficitFraction, 0, 1);
