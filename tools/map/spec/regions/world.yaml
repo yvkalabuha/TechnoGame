@@ -2,8 +2,13 @@
 regions:
   - {id: afghanistan, capital: afghanistan.hilmand, isolated: false}
   - {id: akrotiri_sovereign_base_area, capital: akrotiri_sovereign_base_area.akrotiri, isolated: true}
-  - {id: algeria_ouargla, capital: algeria_ouargla.gharda_a, isolated: false}
-  - {id: algeria_tamanghasset, capital: algeria_tamanghasset.adrar_4, isolated: false}
+  - {id: algeria_ain_sefra, capital: algeria_ain_sefra.b_char_1, isolated: false}
+  - {id: algeria_alger, capital: algeria_alger.tipaza, isolated: false}
+  - {id: algeria_constantine, capital: algeria_constantine.mila, isolated: false}
+  - {id: algeria_ghardaia, capital: algeria_ghardaia.laghouat, isolated: false}
+  - {id: algeria_oasis, capital: algeria_oasis.ouargla_1, isolated: false}
+  - {id: algeria_oran, capital: algeria_oran.mascara, isolated: false}
+  - {id: algeria_touggourt, capital: algeria_touggourt.biskra, isolated: false}
   - {id: american_samoa, capital: american_samoa.western, isolated: true}
   - {id: angola_lunda_norte, capital: angola_lunda_norte.lunda_norte, isolated: false}
   - {id: angola_moxico, capital: angola_moxico.moxico_2, isolated: false}

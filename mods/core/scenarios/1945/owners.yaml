@@ -103,8 +103,13 @@ defaults:
 # Mixed regions (F1 of the research) are given by the dominant part; the split is a map decision for the owner.
   - {region: afghanistan, owner: AFG, controller: AFG, status: core, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: akrotiri_sovereign_base_area, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
-  - {region: algeria_ouargla, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K2, K1; status colony per TASK-0109 report"}
-  - {region: algeria_tamanghasset, owner: FRA, controller: FRA, status: colony, confidence: H, source: "owners-1945-world.md: K2, K1; status colony per TASK-0109 report"}
+  - {region: algeria_ain_sefra, owner: FRA, controller: FRA, status: colony, confidence: M, source: "TASK-0114 report; by-wilaya borders, law of 24.12.1902"}
+  - {region: algeria_alger, owner: FRA, controller: FRA, status: core, confidence: M, source: "TASK-0114 report; by-wilaya borders, law of 24.12.1902"}
+  - {region: algeria_constantine, owner: FRA, controller: FRA, status: core, confidence: M, source: "TASK-0114 report; by-wilaya borders, law of 24.12.1902"}
+  - {region: algeria_ghardaia, owner: FRA, controller: FRA, status: colony, confidence: M, source: "TASK-0114 report; by-wilaya borders, law of 24.12.1902"}
+  - {region: algeria_oasis, owner: FRA, controller: FRA, status: colony, confidence: M, source: "TASK-0114 report; by-wilaya borders, law of 24.12.1902"}
+  - {region: algeria_oran, owner: FRA, controller: FRA, status: core, confidence: M, source: "TASK-0114 report; by-wilaya borders, law of 24.12.1902"}
+  - {region: algeria_touggourt, owner: FRA, controller: FRA, status: colony, confidence: M, source: "TASK-0114 report; by-wilaya borders, law of 24.12.1902"}
   - {region: american_samoa, owner: USA, controller: USA, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: angola_lunda_norte, owner: PRT, controller: PRT, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: angola_moxico, owner: PRT, controller: PRT, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
