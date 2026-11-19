@@ -64,7 +64,34 @@ internal static class SeriesDriver
 
     /// <summary>One attempt as recorded: the gate input plus where it came from.</summary>
     private sealed record AttemptRec(string Key, int Number, string File, int Exit, double WaitQuietSeconds, double? QuietForeign, GateAttempt Gate,
-        JsonElement? TopForeign, double? TopkMhz, bool? ThermalFlag, JsonElement? Thermal, DateTime Started, DateTime Ended);
+        JsonElement? TopForeign, double? TopkMhz, bool? ThermalFlag, JsonElement? Thermal, DateTime Started, DateTime Ended, JsonElement? Gc = null);
+
+    /// <summary>Keys of the child's <c>gc</c> block copied into the attempt (decision #416: the pause criterion's inputs; the pause list stays in the child file).</summary>
+    internal static readonly string[] GcKeys = ["pause_max_ms", "pause_p50_ms", "pause_p99_ms", "pause_count", "gen2_blocking_after_warmup",
+        "gen2_background_after_warmup", "gen2", "pause_share", "pause_share_events", "events_complete"];
+
+    /// <summary>The attempt's copy of the child's <c>gc</c> block (pure): only <see cref="GcKeys"/>, absent keys skipped; null without the block.</summary>
+    internal static JsonElement? GcOf(JsonElement child)
+    {
+        if (!child.TryGetProperty("gc", out JsonElement gc) || gc.ValueKind != JsonValueKind.Object)
+            return null;
+        using var ms = new MemoryStream();
+        using (var j = new Utf8JsonWriter(ms))
+        {
+            j.WriteStartObject();
+            foreach (string k in GcKeys)
+            {
+                if (gc.TryGetProperty(k, out JsonElement v))
+                {
+                    j.WritePropertyName(k);
+                    v.WriteTo(j);
+                }
+            }
+            j.WriteEndObject();
+        }
+        using JsonDocument d = JsonDocument.Parse(ms.ToArray());
+        return d.RootElement.Clone();
+    }
 
     /// <summary>The thermal record of an attempt (ADR-0023 п. 1.2): Δthrottle of the union, temperature at the start of the first and end of the last window, EPP, no_turbo.</summary>
     private static JsonElement ThermalOf(JsonElement machine)
@@ -541,8 +568,10 @@ internal static class SeriesDriver
         }
         bool injected = tag == "p" && c.Injected.TryGetValue(p.Index, out int upTo) && n < upTo;
         var ga = new GateAttempt(n, medT, foreign, over, delay, injected);
-        c.Say($"{key}: T p50 {Fmt(medT)} ms, н1 {Fmt(foreign)} CPUs / {Fmt(over)} s>1, н2 {Fmt(delay)}, waited {waited:F0} s{(injected ? ", injected flag" : "")}");
-        return new AttemptRec(key, n, file, code, waited, q, ga, top, topk, thermalFlag, thermal, t0, t1);
+        JsonElement? gcRec = GcOf(r);
+        string gcSay = gcRec is { } gx ? $", GC pause max {Fmt(Num(gx, "pause_max_ms"))} ms, blocking gen2 {(Num(gx, "gen2_blocking_after_warmup") is double bg ? I((int)bg) : "n/a")}" : "";
+        c.Say($"{key}: T p50 {Fmt(medT)} ms, н1 {Fmt(foreign)} CPUs / {Fmt(over)} s>1, н2 {Fmt(delay)}, waited {waited:F0} s{(injected ? ", injected flag" : "")}{gcSay}");
+        return new AttemptRec(key, n, file, code, waited, q, ga, top, topk, thermalFlag, thermal, t0, t1, gcRec);
     }
 
     private static (string[] Args, string File) ProcessArgs(Ctx c, BenchProcess p, int attempt, string? reference, IReadOnlyList<(string Key, string Value)> switches)
@@ -617,12 +646,7 @@ internal static class SeriesDriver
 
     // ---------------- children ----------------
 
-    private static (string Exe, string[] Prefix) SelfCommand()
-    {
-        string exe = Environment.ProcessPath ?? "dotnet";
-        string name = Path.GetFileNameWithoutExtension(exe);
-        return name.Equals("dotnet", StringComparison.OrdinalIgnoreCase) ? (exe, [typeof(SeriesDriver).Assembly.Location]) : (exe, []);
-    }
+    private static (string Exe, string[] Prefix) SelfCommand() => SelfInvocation.Current();
 
     private static string[] AllowDebug(Ctx c) => c.AllowDebug ? ["--allow-debug", "true"] : [];
 
@@ -776,6 +800,8 @@ internal static class SeriesDriver
                 j.WriteEndArray();
                 if (a.TopForeign is JsonElement top) { j.WritePropertyName("top_foreign"); top.WriteTo(j); }
                 else j.WriteNull("top_foreign");
+                // Decision #416: the child's GC pause summary (record only; the gate does not use it).
+                if (a.Gc is JsonElement gce) { j.WritePropertyName("gc"); gce.WriteTo(j); } else j.WriteNull("gc");
                 j.WriteEndObject();
             }
             j.WriteEndArray();

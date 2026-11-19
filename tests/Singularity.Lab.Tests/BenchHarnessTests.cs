@@ -796,8 +796,19 @@ public sealed class BenchHarnessTests : IDisposable
     public void Cli_Fref_TopK()
     {
         string f = Path.Combine(_tmp, "fref.json");
-        Assert.Equal(0, Cli("bench", "--mode", "fref", "--seconds", "2", "--tail", "1", "--threads", "1", "--k", "1", "--out", f, "--allow-debug", "true").Code);
+        int code = Cli("bench", "--mode", "fref", "--seconds", "2", "--tail", "1", "--threads", "1", "--k", "1", "--out", f, "--allow-debug", "true").Code;
         using JsonDocument d = Json(f);
+        // Documented (BenchCommand.FRef): exit 1 = no frequency samples. Only Linux cpufreq gives samples; elsewhere the command
+        // must not throw, must still write the JSON, and must exit 1 with f_ref_mhz null (TASK-0116).
+        if (OperatingSystem.IsLinux() && code == 0)
+            Assert.NotEqual(JsonValueKind.Null, d.RootElement.GetProperty("f_ref_mhz").ValueKind);
+        else if (!OperatingSystem.IsLinux())
+        {
+            Assert.Equal(1, code);
+            Assert.Equal(JsonValueKind.Null, d.RootElement.GetProperty("f_ref_mhz").ValueKind);
+        }
+        else
+            Assert.Equal(1, code); // Linux without cpufreq (container): same documented exit 1
         Assert.Equal("topk", d.RootElement.GetProperty("stat").GetString());
         Assert.Equal(1, d.RootElement.GetProperty("k").GetInt32());
         Assert.True(d.RootElement.TryGetProperty("machine", out _));

@@ -35,7 +35,8 @@ internal static class AllocProfile
     public static int Run(SynthWorld w, ulong seed, int threads, int months, bool lohEvents, double snapshotXMib, BenchRunParams rp, double buildMs, string outFile, TextWriter log,
         bool fullFirst = false, bool gcTrace = false)
     {
-        using GcEventListener? gcl = lohEvents || gcTrace ? new GcEventListener(raw: gcTrace) : null;
+        // Always on (decision #416: GC pauses with kind); Verbose (allocation ticks) only for the LOH count or the trace.
+        using var gcl = new GcEventListener(raw: gcTrace, verbose: lohEvents || gcTrace);
         using var meter = new LoadMeter();
         // Preallocated so that the marks do not allocate inside the month windows.
         List<StepMark>? steps = gcTrace ? new List<StepMark>(1 << 16) : null;
@@ -114,12 +115,12 @@ internal static class AllocProfile
             Probe("ViewBuilder.Step + Snapshot (stepped)", 1, _ => ViewBuilder.Snapshot(world, s.Tick, null, month - 1, null, ViewBuilder.Step(world, month - 1))),
         };
         string hashAfter = StateHash.ComputeHex(world.Table, SliceWorld.SchemaVersion);
-        DateTime last = DateTime.UtcNow;
-        bool flushed = gcl?.Flush(last, TimeSpan.FromSeconds(5)) ?? false;
-        IReadOnlyList<GcEventListener.GcEvent> events = gcl?.Snapshot() ?? [];
+        (bool flushed, double? clockMs, double flushSpanMs) = gcl.Flush(TimeSpan.FromSeconds(5));
+        IReadOnlyList<GcEventListener.GcEvent> events = gcl.Snapshot();
+        GcPauses.Timeline timeline = GcPauses.Build(events);
         if (gcTrace)
         {
-            File.WriteAllLines(outFile + ".gc.jsonl", gcl!.Raw());
+            File.WriteAllLines(outFile + ".gc.jsonl", gcl.Raw());
             File.WriteAllLines(outFile + ".steps.jsonl", steps!.Select(x =>
                 $"{{\"run\":\"{x.Run}\",\"month\":{x.Month},\"tick\":{x.Tick},\"from\":\"{x.From:O}\",\"to\":\"{x.To:O}\",\"snapshot\":\"{x.Snapshot}\"}}"));
         }
@@ -138,10 +139,12 @@ internal static class AllocProfile
         Utf8JsonWriter j = json.Writer;
         j.WriteStartObject();
         j.WriteString("kind", "lab-bench/alloc");
-        j.WriteNumber("format", 3);
+        // Format 4 (decision #416): settle collection after each SliceSession.Create, GC pauses from events.
+        j.WriteNumber("format", 4);
         j.WriteString("run_order", fullFirst ? "full-first" : "tick-first");
         j.WriteBoolean("gc_trace", gcTrace);
-        BenchEnv.Write(j, rp.RepoDir);
+        BenchEnv.Write(j, rp.RepoDir, c => ProcessBench.WriteSettleCondition(c,
+            $"GcEventListener, {(lohEvents || gcTrace ? "Verbose (allocation ticks)" : "Informational")}: GCStart/GCEnd/GCSuspendEEBegin/GCRestartEEEnd"));
         BenchJson.WriteParams(j, rp);
         BenchJson.WriteWorld(j, w, buildMs);
         j.WriteNumber("seed", seed);
@@ -155,8 +158,11 @@ internal static class AllocProfile
         j.WriteNumber("clusters", l.Clusters.Length);
         j.WriteNumber("nodes", world.Graph.Count);
         j.WriteEndObject();
-        j.WriteBoolean("gc_events", gcl is not null);
+        j.WriteBoolean("gc_events", true);
         j.WriteBoolean("gc_events_flushed", flushed);
+        LoadMeter.WriteNum(j, "gc_events_clock_offset_ms", clockMs);
+        j.WriteNumber("gc_events_flush_host_span_ms", flushSpanMs);
+        j.WriteNumber("gc_events_unpaired_suspensions", timeline.Unpaired);
         var tickPath = new List<double>();
         var snapPath = new List<double>();
         var snapPerSnapshot = new List<double>();
@@ -166,6 +172,8 @@ internal static class AllocProfile
         for (int m = 0; m < months; m++)
         {
             var (lohTicks, lohBytes, allocLarge, gen2Gcs) = GcEventListener.In(events, from[m], to[m]);
+            GcPauses.Summary pm = GcPauses.Summarize(timeline, [(from[m], to[m])], (to[m] - from[m]).TotalMilliseconds);
+            GcPauses.Summary pmTick = GcPauses.Summarize(timeline, [(tickRun.From[m], tickRun.To[m])], (tickRun.To[m] - tickRun.From[m]).TotalMilliseconds);
             long own = GcEventListener.OwnBytesAt(events, to[m]) - GcEventListener.OwnBytesAt(events, from[m]);
             long ownTick = GcEventListener.OwnBytesAt(events, tickRun.To[m]) - GcEventListener.OwnBytesAt(events, tickRun.From[m]);
             long tick = tickRun.Bytes[m] - ownTick;
@@ -196,6 +204,10 @@ internal static class AllocProfile
             j.WriteNumber("loh_alloc_ticks", lohTicks);
             j.WriteNumber("loh_bytes_sampled", lohBytes);
             j.WriteNumber("gc_alloc_large", allocLarge);
+            LoadMeter.WriteNum(j, "gc_pause_max_ms", pm.MaxMs);
+            j.WriteNumber("gc_gen2_blocking", pm.BlockingGen2);
+            LoadMeter.WriteNum(j, "tick_only_gc_pause_max_ms", pmTick.MaxMs);
+            j.WriteNumber("tick_only_gc_gen2_blocking", pmTick.BlockingGen2);
             j.WriteEndObject();
             if (m >= rp.Warmup)
             {
@@ -266,6 +278,21 @@ internal static class AllocProfile
         double wallMs = ProcessBench.Ms(win1 - win0);
         j.WriteNumber("gc_pause_ms_window", pause.TotalMilliseconds);
         j.WriteNumber("gc_pause_share_window", wallMs > 0 ? pause.TotalMilliseconds / wallMs : 0);
+        // Decision #416: every GC pause of the measured months (from the first measured month's start to the last one's end, the
+        // inter-month command submission included) with kind; blocking gen2 = FullBlocking GCs there.
+        if (months > rp.Warmup)
+        {
+            (DateTime From, DateTime To) wFull = (from[rp.Warmup], to[months - 1]), wTick = (tickRun.From[rp.Warmup], tickRun.To[months - 1]);
+            GcPauses.Summary sFull = GcPauses.Summarize(timeline, [wFull], (wFull.To - wFull.From).TotalMilliseconds);
+            GcPauses.Summary sTick = GcPauses.Summarize(timeline, [wTick], (wTick.To - wTick.From).TotalMilliseconds);
+            j.WriteNumber("gc_gen2_blocking_window", sFull.BlockingGen2);
+            j.WriteNumber("gc_gen2_blocking_window_tick_only", sTick.BlockingGen2);
+            LoadMeter.WriteNum(j, "gc_pause_max_ms_window", sFull.MaxMs);
+            LoadMeter.WriteNum(j, "gc_pause_p99_ms_window", sFull.P99Ms);
+            GcPauses.Write(j, "gc_pauses_window", sFull, wFull.From);
+            GcPauses.Write(j, "gc_pauses_window_tick_only", sTick, wTick.From);
+        }
+        j.WriteNumber("gc_settle_pause_ms", GcPauses.Summarize(timeline, [full.Settle, tickRun.Settle], 0).TotalMs);
         j.WriteEndObject();
 
         j.WriteString("state_hash_before_probes", hashBefore);
@@ -279,7 +306,8 @@ internal static class AllocProfile
 
     private readonly record struct StepMark(string Run, int Month, long Tick, DateTime From, DateTime To, string Snapshot);
 
-    private sealed record MonthRun(SliceSession? Session, long[] Bytes, int[,] Gc, int[] SnapPlain, int[] SnapStepped, DateTime[] From, DateTime[] To, string Hash);
+    private sealed record MonthRun(SliceSession? Session, long[] Bytes, int[,] Gc, int[] SnapPlain, int[] SnapStepped, DateTime[] From, DateTime[] To, string Hash,
+        (DateTime From, DateTime To) Settle);
 
     // One monthly run with the harness load (one SetBudgetShares per actor and month, as П2). atWarmupEnd runs at the start of month warmup.
     private static MonthRun RunMonths(SynthWorld w, ulong seed, int threads, int months, bool skipViews, int warmup, Action? atWarmupEnd, TextWriter log, string tag,
@@ -288,6 +316,10 @@ internal static class AllocProfile
         var sw = new RunSwitches(HashCheckpoints: false, HashEveryTick: false, DailyNoop: false, FullCopy: false);
         SliceSession s = SliceSession.Create(w.Data, ProcessBench.Config(w, seed, threads, 8, daily: false, sw));
         s.SkipViews = skipViews;
+        // Decision #416: the forced settle collection after the session is built, before month 0 (outside every month window).
+        DateTime settle0 = DateTime.UtcNow;
+        ProcessBench.SettleGc();
+        (DateTime, DateTime) settle = (settle0, DateTime.UtcNow);
         SliceWorld world = s.World;
         int actors = world.Table.RowCount;
         var bytes = new long[months];
@@ -342,7 +374,7 @@ internal static class AllocProfile
             gc[m, 2] = GC.CollectionCount(2) - g2;
             log.WriteLine($"{tag} month {m,3}: {bytes[m] / MiB,9:F2} MiB  gc0 {gc[m, 0]} gc1 {gc[m, 1]} gc2 {gc[m, 2]}  snapshots {snapPlain[m]}+{snapStepped[m]} stepped");
         }
-        return new MonthRun(s, bytes, gc, snapPlain, snapStepped, from, to, StateHash.ComputeHex(world.Table, SliceWorld.SchemaVersion));
+        return new MonthRun(s, bytes, gc, snapPlain, snapStepped, from, to, StateHash.ComputeHex(world.Table, SliceWorld.SchemaVersion), settle);
     }
 
     private static SliceView Fresh(SliceWorld world, Func<SliceView> build)

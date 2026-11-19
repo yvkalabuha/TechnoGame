@@ -5,7 +5,7 @@ status: PROPOSED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | B
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
-category:                # core | lab | data | tooling | docs | design
+category:                # core | lab | client | data | tooling | docs | design (lab -> agent simulation-engineer)
 priority: medium         # high | medium | low
 needs_owner: false       # true = ждёт решения владельца
 depends_on: []
