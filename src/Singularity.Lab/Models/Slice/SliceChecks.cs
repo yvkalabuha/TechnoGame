@@ -59,7 +59,95 @@ public static class SliceChecks
         ("slice: c5-stand — smoke (horizon 6, threshold 0,25): idle and restart run, two runs give the same bytes, no statistic row (#248)", () => C5Smoke(tmp)),
         ("slice: full run to 2030-12 — FULL, 1024 months, seed 1: status ok, months 1024, last lines row t = 1023, threads 1 = 2 (TASK-0121)", () => FullRun2030(tmp)),
         ("slice: H8 — a control layer (LK, LK0, LC0, LC, LP) past 384 months is rejected before any month runs; FULL is not (TASK-0121)", () => ControlHorizon(tmp)),
+        ("slice: BUDGET_RULE — NOW/A/B1/B2 parsed, other values rejected; NOW gives the main golden, B2 another (TASK-0123)", () => BudgetRuleKey(tmp)),
+        ("slice: supply_month — pools follow the budget of the same month, granted ≤ requested ≤ pool, output and limiters agree with lines and the ledger (TASK-0123)", () => SupplyMonth(tmp)),
     ];
+
+    // TASK-0123: the Lab key of the Session switch (TASK-0122). NOW is main: same golden as without the key (the Session adds run.budget_rule
+    // only for another rule); B2 is a different world from month 0 by that column, so its golden differs even before any ceiling binds.
+    private static string? BudgetRuleKey(string tmp)
+    {
+        foreach (var (v, want) in new[] { ("NOW", BudgetRule.Now), ("A", BudgetRule.A), ("B1", BudgetRule.B1), ("B2", BudgetRule.B2) })
+        {
+            Manifest m = Lab.Manifest.Parse(Manifest("JetSlice", Ticks60, pars: $$"""{"BUDGET_RULE": "{{v}}"}"""), "/x/m.json");
+            BudgetRule got = SliceParameters.Parse(m.Points[0].CreateParamSet(), 1, 1, 1, calibration: false).Config.BudgetRule;
+            if (got != want)
+                return $"BUDGET_RULE {v} parsed as {got}";
+        }
+        Manifest none = Lab.Manifest.Parse(Manifest("JetSlice", Ticks60), "/x/m.json");
+        if (SliceParameters.Parse(none.Points[0].CreateParamSet(), 1, 1, 1, calibration: false).Config.BudgetRule != BudgetRule.Now)
+            return "the default is not NOW";
+        foreach (string bad in new[] { "X", "now", "B" })
+        {
+            Manifest m = Lab.Manifest.Parse(Manifest("JetSlice", Ticks60, pars: $$"""{"BUDGET_RULE": "{{bad}}"}"""), "/x/m.json");
+            try
+            {
+                SliceParameters.Parse(m.Points[0].CreateParamSet(), 1, 1, 1, calibration: false);
+                return $"accepted BUDGET_RULE {bad}";
+            }
+            catch (ParamException) { }
+        }
+        var (now, _) = Run(tmp, Manifest("JetSlice", Ticks150, pars: """{"detail": "lite", "BUDGET_RULE": "NOW"}"""), 1, 1, "br-now");
+        if (!now.Ok || now.GoldenHash != Golden150)
+            return $"NOW: {now.GoldenHash} {now.Error}";
+        var (b2, _) = Run(tmp, Manifest("JetSlice", Ticks150, pars: """{"detail": "lite", "BUDGET_RULE": "B2"}"""), 1, 1, "br-b2");
+        return b2.Ok && b2.GoldenHash != Golden150 ? null : $"B2: {b2.GoldenHash} {b2.Error}";
+    }
+
+    // TASK-0123, format §4.17. The pools are read before the step of t, so they follow budget(t) of the same row: a read after the tick would see
+    // budget(t + 1) and break the identities below. Expected values here are test-only recomputations from the row at t = 0 and the scenario.
+    private static string? SupplyMonth(string tmp)
+    {
+        var (r, dir) = Run(tmp, Manifest("JetSlice", Ticks150, pars: """{"detail": "full"}"""), 1, 1, "supply");
+        if (!r.Ok)
+            return r.Error;
+        ScenarioData sc = SliceData.Load(tmp).Scenario(SliceRunConfig.DefaultScenario);
+        var rows = Rows(dir, "supply_month.csv");
+        if (rows.Count != 150 * sc.ActorCount)
+            return $"{rows.Count} rows, want {150 * sc.ActorCount}";
+        static long L(Dictionary<string, string> x, string c) => long.Parse(x[c], System.Globalization.CultureInfo.InvariantCulture);
+        var first = rows.Take(sc.ActorCount).ToList();
+        // lines.csv has the lines of snapshot t; a line started in t is in step 7 of t (supply_month.lines) but not yet in that snapshot (§4.12).
+        var lineRate = new Dictionary<(string, string), (long Rate, int N)>();
+        foreach (var l in Rows(dir, "lines.csv"))
+        {
+            var k = (l["t"], l["actor"]);
+            var v = lineRate.GetValueOrDefault(k);
+            lineRate[k] = (v.Rate + L(l, "rate"), v.N + 1);
+        }
+        var ledger = Rows(dir, "tooling_ledger.csv").ToDictionary(x => (x["t"], x["actor"]));
+        bool granted = false, money = false;
+        for (int i = 0; i < rows.Count; i++)
+        {
+            var x = rows[i];
+            int a = i % sc.ActorCount;
+            string where = $"t {x["t"]} {x["actor"]}";
+            if (x["t"] != (i / sc.ActorCount).ToString(System.Globalization.CultureInfo.InvariantCulture) || x["actor"] != sc.ActorId[a])
+                return $"row {i}: {where}";
+            var x0 = first[a];
+            Fx6 b = Fx6.FromRaw(L(x, "budget")), b0 = Fx6.FromRaw(L(x0, "budget"));
+            if (b0 != sc.BudgetIndex[a] || L(x0, "alloy_cap") != sc.AlloyCapAtStart(a).Raw)
+                return $"{sc.ActorId[a]} at t 0: budget {b0}, alloy_cap {L(x0, "alloy_cap")}";
+            long trophy = sc.TrophyEngineers[a];
+            if (L(x, "wf_eng") != BudgetMath.FollowBudget(L(x0, "wf_eng") - trophy, b, b0) + trophy
+                || L(x, "wf_skilled") != BudgetMath.FollowBudget(L(x0, "wf_skilled"), b, b0)
+                || L(x, "alloy_cap") != BudgetMath.FollowBudget(L(x0, "alloy_cap") / Fx6.Scale, b, b0) * Fx6.Scale)
+                return $"{where}: pools {x["wf_eng"]}/{x["wf_skilled"]}/{x["alloy_cap"]} do not follow budget {b} of the same month";
+            if (L(x, "eng_granted") > L(x, "eng_n") || L(x, "sk_granted") > L(x, "sk_n") || L(x, "eng_granted") > L(x, "wf_eng") || L(x, "sk_granted") > L(x, "wf_skilled"))
+                return $"{where}: granted above requested or pool";
+            if (L(x, "bind_rate") + L(x, "bind_alloy") + L(x, "bind_money") > L(x, "lines") || L(x, "rate_max") > L(x, "rate_sum"))
+                return $"{where}: binds or rates inconsistent";
+            var lr = lineRate.GetValueOrDefault((x["t"], x["actor"]));
+            if (lr.N == L(x, "lines") ? L(x, "rate_sum") != lr.Rate : L(x, "rate_sum") < lr.Rate || lr.N > L(x, "lines"))
+                return $"{where}: rate_sum {x["rate_sum"]} of {x["lines"]} lines, lines.csv {lr.Rate} of {lr.N}";
+            var led = ledger[(x["t"], x["actor"])];
+            if (x["tool_rest"] != led["rest"] || x["tool_unspent"] != led["rest_unspent"])
+                return $"{where}: tooling {x["tool_rest"]}/{x["tool_unspent"]} vs ledger {led["rest"]}/{led["rest_unspent"]}";
+            granted |= L(x, "eng_granted") > 0 && L(x, "sk_granted") > 0;
+            money |= L(x, "bind_money") > 0;
+        }
+        return granted && money ? null : $"trivial run: granted {granted}, money-bound line {money}";
+    }
 
     // §5 item 5 of slice-horizon-2030.md (TASK-0121): the Lab path, with the standard observer and every table, runs the whole cohort horizon
     // 1945-09 … 2030-12. Ticks 31168 = 1945-09-01 → 2031-01-01 (31046 would be 1020 months, through 2030-08).
@@ -651,7 +739,7 @@ public static class SliceChecks
                     problems.Add($"{t.Name}:{c}");
             }
         }
-        if (SliceTables.Calibration.Length != 8 || SliceTables.Full.Length != 14)
+        if (SliceTables.Calibration.Length != 8 || SliceTables.Full.Length != 15)
             problems.Add($"table counts {SliceTables.Calibration.Length}/{SliceTables.Full.Length}");
         return problems.Count == 0 ? null : string.Join(", ", problems);
     }
