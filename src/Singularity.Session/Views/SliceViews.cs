@@ -60,11 +60,15 @@ public readonly record struct NodeView(int Number, bool Known, bool ByLicence, P
 /// <summary>A process at the actor's home site (A27: a site is an actor), month <c>Month + 1</c> of the snapshot.</summary>
 public readonly record struct ProcessView(Fx6 Yield, Fx6 V, bool Admitted, Fx6 UnitCostMult, bool Mastered, Fx6 LicenceShare);
 
+/// <summary>
+/// A design slot. <c>Gen</c> is the technology generation of the design (G1..G4 of the product class); <c>SlotGeneration</c> counts how many
+/// times the slot was taken (ADR-0005 p. 3): the pair (<c>Design</c>, <c>SlotGeneration</c>) is the handle of a project, and a reused slot has a larger value.
+/// </summary>
 public sealed record DesignView(
     int Design, DesignStage Stage, int PlatformGen, int Gen, int Parent, int StageOMonth,
     bool BuiltAny, bool Cancelled, Fx6 Rate, Fx6 UnitCost, Fx6 UnitCostFloor,
     Fx6 InService, Fx6 Readiness, Fx6 Perf, LineBind Bind, bool AiLine,
-    ImmutableArray<int> PrcSet, int Generation = 0);
+    ImmutableArray<int> PrcSet, int SlotGeneration = 0);
 
 public readonly record struct BureauView(int Bureau, int Design, long Granted, long Required);
 public readonly record struct QualityView(bool Active, int Start, int TriggerCount, int TrainingTarget);

@@ -408,10 +408,19 @@ public sealed partial class PolicySystem
     }
 
     /// <summary>
-    /// The candidate of a pair of lines (spec A41 F17b): the one with the larger platform generation, a tie to the larger design id.
+    /// The candidate of a pair of lines (spec A41 F17b): the one with the larger platform generation, a tie to the newer project
+    /// (the later <see cref="PolicyDesign.StageOMonth"/>, the month the project entered stage O), a further tie to the larger design id.
+    /// A slot index alone is not an age: a reused lower slot holds a newer project (ADR-0005 p. 3, DEBT-0053).
     /// </summary>
-    internal static int Candidate(PolicyDesign[] designs, int a, int b) =>
-        designs[a].PlatformGen != designs[b].PlatformGen ? (designs[a].PlatformGen > designs[b].PlatformGen ? a : b) : Math.Max(a, b);
+    internal static int Candidate(PolicyDesign[] designs, int a, int b)
+    {
+        PolicyDesign x = designs[a], y = designs[b];
+        if (x.PlatformGen != y.PlatformGen)
+            return x.PlatformGen > y.PlatformGen ? a : b;
+        if (x.StageOMonth != y.StageOMonth)
+            return x.StageOMonth > y.StageOMonth ? a : b;
+        return Math.Max(a, b);
+    }
 
     // y_min(d, t): the least yield of the design's prc_set at the home site in the snapshot; an unknown process gives 0 (spec A41 F17b).
     private Fx6 YMin(int row, int design, long t)
