@@ -45,3 +45,13 @@ created: 2026-11-19
 ## REVIEW
 
 ## Результат
+
+Ветка worktree-agent-abe3fd84f580ef583 (developer, 2026-11-19).
+
+**Сделано.** `SliceWorld.Years = 86`; маска `q` блоками по 62 бита (`ProductsLayout.MaskBits/MaxCohortYears/MaskBlocks`, блок 0 = `prd.d{d}.q`, блок 1 = `prd.d{d}.q.1`); страж `years ≤ 124` в `ProductsLayout.FromData`; `SchemaVersion` 11 → 12, один перезапис golden (комментарий у каждого). Новых колонок 648 (636 когорт 1978…2030 + 12 `q.1`): 1903 → 2551.
+
+**Проверка.** Фикстура `Fixtures/horizon-baseline.txt` (отдельный коммит без правок src) — 48 точек; `HorizonTests.OldColumns_…` проходит: старые колонки не изменились. Тесты 1–3 красные на старом коде (проверено откатом src). Дым 1020 мес. seeds 1–3, L1, L2 (мес. 387 и 1019) — `HorizonTests`, зелёные.
+
+**Замер** (seed 1, threads 1, мс/мес.): 388 мес. старый 4,18, новый 5,06–5,31 (×1,21–1,27); 1020 мес. новый 2,73–3,08. Пик RSS 111 → 112 МБ (388), 115–116 МБ (1020).
+
+**Не сделано (вне зоны, Lab).** `src/Singularity.Lab/Models/Slice/SliceChecks.cs:21` `Golden150` → `a0b7ab02e5f089a2c7e344132eae6d298b8f2e1f3d3ab117cf7261841460869e` (+ строка «Re-recorded in TASK-0121»); страж H8 в Lab (манифест LK/LK0/LC/LP с ticks > 384 мес. → ошибка) и его тест. До правки красен `SliceModelTests.Lab_path_gives_Session_golden_seed1_month149`.

@@ -435,5 +435,6 @@ public class ProductAiSessionTests(ITestOutputHelper output)
     // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
     // Re-recorded in TASK-0099 (ADR-0005 p. 3), reason: schema v9 (new columns prd.d*.generation, parentGen, prd.lp.g*.gen, StaleHandle counter); the run ends before the first slot reuse, the old columns are unchanged (SlotReuseL2Tests.NoSlotIsReused_BeforeTheMonthOfAnyRewrittenGolden, projection tests).
     // Re-recorded in TASK-0115: schema v11 (cmd.*.gen, pol.*.gen columns); the run ends before the first slot reuse, the AI's handles are all current, the old columns are unchanged.
-    private const string Golden150 = "d9a43e395cf4c5868fe741bfe7065969630762cb45faa11f07709b3efc5579a7";
+    // Re-recorded in TASK-0121 (#423), reason: schema v12 (new columns prd.d*.cohort.1978…2030 and prd.d*.q.1: the cohort years to 2030, the second block of the q mask); the old columns are unchanged (HorizonTests projection at 48 points of the build before the change, GoldenProjectionAgainstMainTests), so only the new columns change the hash.
+    private const string Golden150 = "557aef80ed8fdb4b9f262479bb16b97ad93a8fd170191ca268df01152ca28ce9";
 }
