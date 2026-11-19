@@ -1008,12 +1008,12 @@ public sealed partial class Main : Node3D
     }
 
     // Instrument shots: 3 areas x 3 eras x 2 UI scales; the previous configuration is saved, then the next one is set up. Returns true when all are done.
-    int _instI;
+    int _instI, _instPhase;
     // Shot-only strip: flasks at 15, 60 and 95 % without and with a deficit (the live data has no deficit and no Science chain in the shot scenario).
     PanelContainer _flaskProbe;
     void AddFlaskProbe()
     {
-        var box = new PanelContainer { Position = new Vector2(700, 80), MouseFilter = Control.MouseFilterEnum.Ignore };
+        var box = new PanelContainer { Position = new Vector2(200, 80), MouseFilter = Control.MouseFilterEnum.Ignore };
         box.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 2, 12, Ui.R3, 12));
         var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 10);
         foreach (bool def in new[] { false, true })
@@ -1040,6 +1040,19 @@ public sealed partial class Main : Node3D
     // the whole screen too, and the speed meter bar with the Finance rows.
     bool InstShot()
     {
+        // Finance: the edit goes through the input pipeline (a click on a share row, a click on the caliper, an arrow key), one step per call so that the layout settles in between.
+        if (_instPhase > 0)
+        {
+            float w = GetWindow().ContentScaleFactor;   // events are window pixels, the panel reports canvas units
+            if (_instPhase == 1) { var c = _areaPanel.ShotRowPoint(1) * w; Mouse(c, null); Mouse(c, true); Mouse(c, false); }
+            else
+            {
+                var c = _areaPanel.ShotCaliperPoint(40) * w; Mouse(c, null); Mouse(c, true); Mouse(c, false); PressKey(Key.Right);
+                _shotLog += $"finance input: selected share {_areaPanel.ShotSelected}, share value {_areaPanel.ShotShare(_areaPanel.ShotSelected)}\n";
+            }
+            _instPhase = _instPhase == 1 ? 2 : 0;
+            return false;
+        }
         if (_instI >= 0)
         {
             int p = _instI % 9, pct = _instI < 9 ? 100 : 150;
@@ -1071,7 +1084,7 @@ public sealed partial class Main : Node3D
         // shot-only states: the scenario has no research chain and no alloy deficit
         _areaPanel.ShotAlloy(InstAreas[q / 3] == AreaId.Production ? 0.25 : null);
         _areaPanel.ShotResearch(InstAreas[q / 3] == AreaId.Science ? new[] { (3.0, 4.0), (1.0, 5.0), (5.0, 5.0) } : null);
-        if (InstAreas[q / 3] == AreaId.Finance) { _areaPanel.ShotMove(0, 35); _areaPanel.ShotFocus(); }   // an unsent edit and the focus: pencil marker and focus frame show
+        if (InstAreas[q / 3] == AreaId.Finance) _instPhase = 1;   // an unsent edit and the focus come from real input: pencil marker and focus frame show
         return false;
     }
 

@@ -35,6 +35,15 @@ public static class InstrumentLogic
     /// the two are not added. The level is what is left of the normal supply, 1 − deficit.</summary>
     public static double AlloyLevel(double deficitFraction) => Math.Clamp(1 - deficitFraction, 0, 1);
 
+    /// <summary>The Production flask: no admitted melt (supply 0) is an empty hatched flask; a why_not alloy link gives the real supply against the planned demand (hatched: it is a shortage);
+    /// otherwise the stock is what the policy disruption leaves, hatched while the disruption lasts.</summary>
+    public static (double Level, bool Hatched) AlloyFlask(double supply, double deficitFraction, (double Have, double Need)? shortage)
+    {
+        if (shortage is { } s) return (FlaskLevel(s.Have, s.Need), true);
+        if (supply <= 0) return (0, true);
+        return (AlloyLevel(deficitFraction), deficitFraction > 0);
+    }
+
     /// <summary>Layer-2 instruments of the budget block show at organ levels 1 and 2 and only in an area panel (never in the read-only panel of a foreign power).</summary>
     public static bool OrganShown(int level, bool areaMode) => level > 0 && areaMode;
 

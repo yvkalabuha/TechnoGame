@@ -77,6 +77,27 @@ public class InstrumentTests
     public void CaliperArrow_StepsOnTheGrid(int v, int dir, int expect) => Assert.Equal(expect, InstrumentLogic.CaliperArrow(v, dir));
 
     [Fact]
+    public void AlloyFlask_NoMeltIsEmptyAndHatched_NotFull()
+    {
+        var (lv, hatched) = InstrumentLogic.AlloyFlask(0, 0, null);
+        Assert.Equal(0, lv); Assert.True(hatched);
+    }
+
+    [Fact]
+    public void AlloyFlask_SupplyBelowDemandIsHatchedWithoutADisruption()
+    {
+        var (lv, hatched) = InstrumentLogic.AlloyFlask(40, 0, (40, 100));
+        Assert.Equal(0.4, lv, 9); Assert.True(hatched);
+    }
+
+    [Fact]
+    public void AlloyFlask_DisruptionAndHealthyStock()
+    {
+        Assert.Equal((0.75, true), InstrumentLogic.AlloyFlask(10, 0.25, null));
+        Assert.Equal((1.0, false), InstrumentLogic.AlloyFlask(10, 0, null));
+    }
+
+    [Fact]
     public void FlaskLevel_ClampsAndHandlesNoNeed()
     {
         Assert.Equal(0.5, InstrumentLogic.FlaskLevel(5, 10));

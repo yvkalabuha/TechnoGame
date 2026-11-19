@@ -11,9 +11,9 @@ ui.sum,sum {0}%,сумма {0}%
 ui.closeline,Close line,Закрыть линию
 ui.cancel,Cancel,Снять
 speed.pause,pause,пауза
-speed.day,day/s,день/с
-speed.week,week/s,неделя/с
-speed.month,month/s,месяц/с
+speed.day,1 day/s,1 день/с
+speed.week,1 week/s,1 неделя/с
+speed.month,1 month/s,1 месяц/с
 tip.date,Date in the game,Дата в игре
 tip.tempo,"Time tempo: pause, day, week, month per second (Space, 1, 2, 3)","Темп времени: пауза, день, неделя, месяц в секунду (Пробел, 1, 2, 3)"
 tip.power,The power you play,"Держава, за которую вы играете"
@@ -342,10 +342,11 @@ area.finance.later,Taxes by region: M1; trade and embargo: M1–M2.,Налоги
 tip.area,{0} · {1},{0} · {1}
 flask.sci.cap,Progress of the first links of the chain,Ход первых звеньев цепи
 flask.sci.tip,Link {0}: {1}% of the need ({2} of {3}),Звено {0}: {1}% от потребности ({2} из {3})
+flask.sci.none,No research in progress on the current target,Нет хода исследования по текущей цели
 flask.alloy.cap,Alloy stock,Запас сплава
-flask.alloy.tip,Stock is {0}% of the demand,Запас — {0}% от потребности
+flask.alloy.tip,Stock is {0}% of the normal supply,Запас — {0}% от обычного снабжения
 flask.deficit,low,мало
-flask.alloy.deficit,Stock is {0}% of the demand: a deficit (hatched),Запас — {0}% от потребности: дефицит (штриховка)
+flask.alloy.deficit,Stock is {0}% of the demand: a shortage (hatched),Запас — {0}% от потребности: дефицит (штриховка)
 caliper.tip,Left and right arrows: 5 points; or drag the jaw,Стрелки влево и вправо: 5 пунктов; или тяните губку
 tip.area.locked,{0} · {1} · appears in {2},{0} · {1} · появится в {2}
 tip.rail,Rail width: narrow or wide (\),Ширина рейки: узкая или широкая (\)

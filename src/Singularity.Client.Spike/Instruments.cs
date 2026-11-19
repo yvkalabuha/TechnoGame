@@ -144,7 +144,7 @@ public sealed partial class CaliperControl : Control
 
     float X0 => Pad;
     float X1 => Size.X - Pad;
-    float XOf(double v) => X0 + (float)(v / 100.0) * (X1 - X0);
+    public float XOf(double v) => X0 + (float)(v / 100.0) * (X1 - X0);
 
     public override void _GuiInput(InputEvent e)
     {
@@ -172,8 +172,8 @@ public sealed partial class CaliperControl : Control
         var fill = InstrumentLogic.OrganLevel == 2 ? Ui.InkWash[Ui.Sand] : Ui.Hover;
         DrawRect(new Rect2(x0, ScaleY - 8, xv - x0, 5), fill);   // between the jaws: decoration, the jaw position and the number carry the value
         DrawLine(new Vector2(x0, ScaleY), new Vector2(x1, ScaleY), Ui.Ink, 1f);
-        // ticks every 5 points: 6 px, 9 px every 10, 12 px at the two ends; E2 draws them 3 px wide
-        float tw = _era == 2 ? 3f : 1f;
+        // ticks every 5 points: 6 px, 9 px every 10, 12 px at the two ends; 2 px wide (A2), E2 draws them 3 px
+        float tw = _era == 2 ? 3f : 2f;
         for (int i = 0; i <= 20; i++)
         {
             float x = x0 + i * step, len = i == 0 || i == 20 ? 12 : i % 2 == 0 ? 9 : 6;

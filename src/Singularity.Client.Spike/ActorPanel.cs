@@ -160,6 +160,7 @@ public sealed partial class ActorPanel : PanelContainer
             _slVal[i] = Ui.Num("", 14, null, 52);
             _slForce[i] = Ui.Num("", 14, Ui.Ink2, 84);
             r.AddChild(n); _gap[i] = new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill, Visible = false };   // keeps the number columns in place while the caliper replaces the slider
+            _gap[i].MouseFilter = MouseFilterEnum.Ignore;   // a click on the blank part still reaches the row (selects the share)
             r.AddChild(_sl[i]); r.AddChild(_gap[i]); r.AddChild(_slVal[i]); r.AddChild(_slForce[i]);
             _secBudget.AddChild(r);
         }
@@ -206,6 +207,7 @@ public sealed partial class ActorPanel : PanelContainer
         foreach (var f in _flaskSci) _flaskSciRow.AddChild(f);
         var sciCap = Ui.Lbl("flask.sci.cap", 14, Ui.Ink2); sciCap.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         _flaskSciRow.AddChild(sciCap);
+        _sciNone.SizeFlagsVertical = SizeFlags.ShrinkCenter; _flaskSciRow.AddChild(_sciNone);
         _secWhy.AddChild(_flaskSciRow);
         _secWhy.AddChild(_why);
         _prodLater.Visible = _finLater.Visible = _treeBtn.Visible = areaMode;
@@ -238,19 +240,21 @@ public sealed partial class ActorPanel : PanelContainer
     /// <summary>Screenshot run: the same path as a user dragging slider <paramref name="i"/> and pressing the order button.</summary>
     public void ShotEdit(int i, int v) { OnSlider(i, v); Apply(); }
 
-    /// <summary>Screenshot run: the drag of a share without sending it (the pencil marker shows).</summary>
-    public void ShotMove(int i, int v) => OnSlider(i, v);
-
     /// <summary>Screenshot run: the alloy flask shows this stock and deficit instead of the Session numbers (the shot scenario never has a deficit); null clears it. The panel itself is the live one.</summary>
     public void ShotAlloy(double? deficitFraction) { _shotAlloy = deficitFraction; _dirty = true; }
     double? _shotAlloy;
+    readonly Label _sciNone = Ui.Lbl("flask.sci.none", 14, Ui.Ink2);
 
     /// <summary>Screenshot run: the Science flasks show these (have, need) research links instead of the Session chain (the shot scenario has none); null clears it.</summary>
     public void ShotResearch((double Have, double Need)[] links) { _shotSci = links; _dirty = true; }
     (double Have, double Need)[] _shotSci;
 
     /// <summary>Screenshot run: the caliper takes the keyboard focus (focus frame and pencil).</summary>
-    public void ShotFocus() => _cal.GrabFocus();
+    /// <summary>Screenshot run: canvas centres of the blank part of a share row and of the caliper, for the real mouse events the shot sends.</summary>
+    public Vector2 ShotRowPoint(int k) => _gap[k].GetGlobalRect().GetCenter();
+    public Vector2 ShotCaliperPoint(double percent) { var r = _cal.GetGlobalRect(); return new Vector2(r.Position.X + _cal.XOf(percent), r.GetCenter().Y); }
+    public int ShotSelected => _sel;
+    public int ShotShare(int k) => _pct[k];
 
     void OnSlider(int i, int v)
     {
@@ -415,12 +419,17 @@ public sealed partial class ActorPanel : PanelContainer
             }
         for (int i = 0; i < _flaskSci.Length; i++) _flaskSci[i].Visible = i < n;
         _flaskSciRow.GetChild<Control>(_flaskSci.Length).Visible = n > 0;
+        _sciNone.Visible = n == 0;   // no research chain on the current target: say so, never an empty row
         bool has = inA != null || _shotAlloy != null;
         _flaskProdRow.GetChild<Control>(1).Visible = has; _flaskProd.Visible = has;
         if (!has) return;
-        double def = _shotAlloy ?? inA.Capability.AlloyDeficit.ToDouble(), lev = InstrumentLogic.AlloyLevel(def);
-        _flaskProd.Set(lev, def > 0);
-        _flaskProd.TooltipText = Loc.T(def > 0 ? "flask.alloy.deficit" : "flask.alloy.tip", Math.Round(lev * 100));
+        double supply = _shotAlloy == null ? inA.Capability.AlloySupply.ToDouble() : 1, def = _shotAlloy ?? inA.Capability.AlloyDeficit.ToDouble();
+        (double, double)? shortage = null;
+        if (_shotAlloy == null && s.WhyError == "")
+            foreach (var l in s.Links) if (l.Layer == WhyNotLayer.Product && l.Cause == WhyNotCause.AlloyDeficit) { shortage = (l.Have.ToDouble(), l.Need.ToDouble()); break; }
+        var (lev, hatched) = InstrumentLogic.AlloyFlask(supply, def, shortage);
+        _flaskProd.Set(lev, hatched);
+        _flaskProd.TooltipText = Loc.T(hatched ? "flask.alloy.deficit" : "flask.alloy.tip", Math.Round(lev * 100));
     }
 
     void FillResult(HostSnapshot s)
