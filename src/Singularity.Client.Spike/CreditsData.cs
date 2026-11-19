@@ -45,3 +45,14 @@ public static class CreditsData
 
     static string Str(JsonElement e, string name) => e.TryGetProperty(name, out var v) ? v.GetString() ?? "" : "";
 }
+
+/// <summary>Cyclic focus order over a list of controls (index 0 = the Back button, then the links in reading order).</summary>
+public static class FocusRing
+{
+    /// <summary>Indices of the next (Tab) and previous (Shift+Tab) element, wrapping at both ends.</summary>
+    public static (int Next, int Prev) Neighbours(int index, int count)
+    {
+        if (count <= 0 || index < 0 || index >= count) throw new ArgumentOutOfRangeException(nameof(index));
+        return ((index + 1) % count, (index + count - 1) % count);
+    }
+}

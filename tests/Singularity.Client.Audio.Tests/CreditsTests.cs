@@ -158,4 +158,17 @@ public class CreditsTests
         Assert.True(ColorMath.Contrast(ColorMath.FromHex(Palette.Ink2), sheet) >= 4.5);
         Assert.True(ColorMath.Contrast(ColorMath.FromHex(Palette.Ink), sheet) >= 7);
     }
+
+    [Fact]
+    public void Focus_ring_walks_back_then_links_and_wraps_both_ways()
+    {
+        const int n = 5;   // Back + 4 links
+        var order = new List<int> { 0 };
+        for (int i = FocusRing.Neighbours(0, n).Next; i != 0; i = FocusRing.Neighbours(i, n).Next) order.Add(i);
+        Assert.Equal(new[] { 0, 1, 2, 3, 4 }, order);
+        Assert.Equal(0, FocusRing.Neighbours(n - 1, n).Next);   // last link -> Back
+        for (int i = 0; i < n; i++) Assert.Equal(i, FocusRing.Neighbours(FocusRing.Neighbours(i, n).Next, n).Prev);   // Shift+Tab reverses Tab
+        Assert.Equal(n - 1, FocusRing.Neighbours(0, n).Prev);   // Shift+Tab from Back -> last link
+        Assert.Equal((0, 0), FocusRing.Neighbours(0, 1));
+    }
 }

@@ -14,6 +14,7 @@ public sealed partial class CreditsSheet : Control
     readonly CaptionButton _back;
     readonly ScrollContainer _scroll;
     System.Collections.Generic.IReadOnlyList<CreditEntry> _entries;
+    readonly System.Collections.Generic.List<Control> _links = new();
 
     public CreditsSheet()
     {
@@ -62,6 +63,7 @@ public sealed partial class CreditsSheet : Control
         _entries ??= CreditsData.Parse(Godot.FileAccess.GetFileAsString("res://assets/credits.json"));
         Visible = true; _fit(Size);
         Rebuild();
+        _scroll.ScrollVertical = 0;
         _back.CallDeferred(Control.MethodName.GrabFocus);
     }
 
@@ -73,10 +75,26 @@ public sealed partial class CreditsSheet : Control
     void Rebuild()
     {
         foreach (var c in _body.GetChildren()) { _body.RemoveChild(c); c.QueueFree(); }
+        _links.Clear();
         _body.AddChild(Ui.Wrap(Loc.T("credits.intro"), 14, Ui.Ink2));
         Section("credits.music", CreditsData.Music);
         Section("credits.sound", CreditsData.Sound);
         _body.AddChild(new Control { CustomMinimumSize = new Vector2(0, 12) });   // A12: the last row is never clipped
+        LinkFocusChain();
+    }
+
+    /// <summary>Tab order in reading order: Back, first link, ..., last link, back to Back; Shift+Tab is the exact reverse (the sheet is under a CanvasLayer, so the tree does not wrap by itself).</summary>
+    void LinkFocusChain()
+    {
+        var ring = new System.Collections.Generic.List<Control> { _back };
+        ring.AddRange(_links);
+        for (int i = 0; i < ring.Count; i++)
+        {
+            var (next, prev) = FocusRing.Neighbours(i, ring.Count);
+            ring[i].FocusNext = ring[i].GetPathTo(ring[next]);
+            ring[i].FocusPrevious = ring[i].GetPathTo(ring[prev]);
+            ring[i].FocusNeighborBottom = ring[i].FocusNext; ring[i].FocusNeighborTop = ring[i].FocusPrevious;
+        }
     }
 
     void Section(string key, string kind)
@@ -102,12 +120,13 @@ public sealed partial class CreditsSheet : Control
     }
 
     /// <summary>A URL that opens in the system browser on click or Enter (LinkButton.Uri); keyboard focus shows a 2 px ink frame (A6, A7).</summary>
-    static LinkButton Link(string url)
+    LinkButton Link(string url)
     {
         var b = new LinkButton { Text = url, Uri = url, Underline = LinkButton.UnderlineMode.Always, FocusMode = FocusModeEnum.All, SizeFlagsHorizontal = SizeFlags.ShrinkBegin, TooltipText = url, CustomMinimumSize = new Vector2(0, 24) };   // A10: target at least 24 du high
         b.AddThemeFontOverride("font", Fonts.Text); b.AddThemeFontSizeOverride("font_size", 14);
         foreach (var n in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color" }) b.AddThemeColorOverride(n, Ui.Ink);
         MenuUi.FocusRing(b);
+        _links.Add(b);
         return b;
     }
 
