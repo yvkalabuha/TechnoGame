@@ -253,7 +253,7 @@ internal sealed class SliceObserver
             }
             foreach (DesignView d in av.Designs)
             {
-                _slotGen[a, d.Design] = d.Generation;
+                _slotGen[a, d.Design] = d.SlotGeneration;
                 if (d.Stage == DesignStage.None)
                     continue;
                 if (d.PlatformGen >= 1 && d.PlatformGen <= _nG)
@@ -522,9 +522,9 @@ internal sealed class SliceObserver
             // Per-slot state belongs to one design. A freed slot is retaken with generation + 1 (ADR-0005 p. 3), also straight into С by the
             // L_P canonical launch, which a stage test would miss: on a generation change the launch month, the force mark and a first-series
             // measurement still in progress start over.
-            if (d.Generation != _slotGen[a, d.Design])
+            if (d.SlotGeneration != _slotGen[a, d.Design])
             {
-                _slotGen[a, d.Design] = d.Generation;
+                _slotGen[a, d.Design] = d.SlotGeneration;
                 _tLaunch[a, d.Design] = null;
                 _forcedSent[a, d.Design] = null;
                 for (int g = 0; g < _nG; g++)
