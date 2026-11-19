@@ -762,6 +762,21 @@ public sealed partial class Main : Node3D
     // ---------- screenshots (acceptance) ----------
     bool _coldShot; double _coldT; int _coldStep;
 
+    // A10 on the credits sheet: every link zone is at least 24 du high and two zones never come closer than 4 du (spec: no accidental neighbour hit).
+    bool CheckCreditsLinks(string sfx)
+    {
+        var z = _credits.ShotLinkZones();
+        if (z.Count == 0) { InstFail($"credits link check {sfx}: no links found"); return false; }
+        for (int a = 0; a < z.Count; a++)
+        {
+            if (z[a].Size.Y < 24 - 0.01f) { InstFail($"credits link check {sfx}: link {a} is {z[a].Size.Y} du high, minimum 24"); return false; }
+            for (int b = a + 1; b < z.Count; b++)
+                if (z[a].Grow(3.99f).Intersects(z[b])) { InstFail($"credits link check {sfx}: links {a} and {b} are closer than 4 du ({z[a]} / {z[b]})"); return false; }
+        }
+        _shotLog += $"credits links {sfx}: {z.Count} zones, all >= 24 du high, gaps >= 4 du\n";
+        return true;
+    }
+
     // Physical pixels per canvas unit now (base scale times the UI setting).
     float PxPerDu() => DisplayServer.WindowGetSize().X / GetViewport().GetVisibleRect().Size.X;
 
@@ -801,7 +816,7 @@ public sealed partial class Main : Node3D
             Q(0.1, () => { Settings.Current.UiScale = scale; Settings.Apply(Settings.Current, GetWindow(), false); Loc.SetLang(lang); });
             Q(1.0, () => { var cv = GetViewport().GetVisibleRect().Size; _shotLog += $"size shots {sfx}: window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, canvas {cv.X}x{cv.Y} du, scale {scale} %, content scale {GetWindow().ContentScaleSize.X}x{GetWindow().ContentScaleSize.Y} {GetWindow().ContentScaleMode} {GetWindow().ContentScaleAspect}\n"; _mainMenu.Open(true); });
             Q(0.5, () => { SaveShot($"menu_ingame{sfx}.png"); _mainMenu.Close(); _credits.Open(); });
-            Q(0.6, () => { SaveShot($"credits{sfx}.png"); _credits.ShotScroll(100000); });
+            Q(0.6, () => { SaveShot($"credits{sfx}.png"); CheckCreditsLinks(sfx); _credits.ShotScroll(100000); });
             Q(0.4, () => { SaveShot($"credits_end{sfx}.png"); _credits.Visible = false; _newGame.Open(_host.Data.Scenario(Singularity.Session.SliceRunConfig.DefaultScenario), id => Ui.Tints[TintOfActor(id)]); });
             Q(0.5, () => { SaveShot($"new_game_empty{sfx}.png"); _newGame.Select("FRA"); });
             Q(0.6, () => { SaveShot($"new_game_selected{sfx}.png"); _newGame.Close(); _settings.Open(); });
@@ -814,7 +829,7 @@ public sealed partial class Main : Node3D
             Q(0.6, () => { SaveShot($"area_forces{sfx}.png"); OpenArea(AreaId.Science); });
             Q(0.8, () => { SaveShot($"area_science{sfx}.png"); OpenArea(AreaId.Production); });
             Q(0.8, () => { SaveShot($"area_production{sfx}.png"); CloseArea(); OpenTree(0); });
-            Q(1.0, () => _tree.ToggleLegend(true));
+            Q(1.0, () => { string ov = _tree.ShotOverlap(); if (ov != null) InstFail($"tree overlap {sfx}: {ov}"); else _shotLog += $"tree overlap {sfx}: none\n"; _tree.ToggleLegend(true); });
             Q(0.5, () => { SaveShot($"tree_legend{sfx}.png"); _tree.ToggleLegend(false); _tree.ResetView(); _tree.Visible = false; });
         }
         _sizeQ.Add((0.5, () => { Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); Loc.SetLang("ru"); }));

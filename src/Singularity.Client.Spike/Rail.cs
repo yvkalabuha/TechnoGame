@@ -42,7 +42,7 @@ public sealed partial class Rail : PanelContainer
         {
             var t = GetGlobalTransform(); var s = Size;
             Rect2 G(Rect2 r) => new(t * r.Position, r.Size * t.Scale);
-            if (!Wide) { yield return G(new Rect2((s.X - 24) / 2f - 2, 7, 24, 24)); yield return G(new Rect2(s.X / 2f - 6, s.Y - 17, 12, 9)); }
+            if (!Wide) { yield return G(new Rect2((s.X - 24) / 2f - 2, 4, 24, 24)); yield return G(new Rect2(s.X / 2f - 12, s.Y - 19, 24, 11)); }
             else { yield return G(new Rect2(10, (s.Y - 24) / 2f, 24, 24)); yield return G(new Rect2(44, (s.Y - 17) / 2f, s.X - 88, 17)); }
         }
 
@@ -67,9 +67,9 @@ public sealed partial class Rail : PanelContainer
             Rect2 iconRect;
             if (!Wide)
             {
-                iconRect = new Rect2((s.X - 24) / 2f - 2, 7, 24, 24);
+                iconRect = new Rect2((s.X - 24) / 2f - 2, 4, 24, 24);
                 string l = Def.Letter == '\0' ? "Esc" : Def.Letter.ToString();
-                g.DrawString(Fonts.Mono, new Vector2(0, s.Y - 8), l, HorizontalAlignment.Center, s.X - 4, 12, Ui.Ink3);
+                g.DrawString(Fonts.Mono, new Vector2(0, s.Y - 7), l, HorizontalAlignment.Center, s.X - 4, 14, Ui.Ink2);   // A1: a hotkey letter is a value, 14 du (cap height 10 px)
             }
             else
             {
@@ -90,7 +90,7 @@ public sealed partial class Rail : PanelContainer
                 var c = Ui.Ink3;
                 g.DrawDashedLine(new Vector2(0, 0), new Vector2(s.X, 0), c, 1f, 3f); g.DrawDashedLine(new Vector2(s.X, 0), s, c, 1f, 3f);
                 g.DrawDashedLine(s, new Vector2(0, s.Y), c, 1f, 3f); g.DrawDashedLine(new Vector2(0, s.Y), Vector2.Zero, c, 1f, 3f);
-                g.DrawTextureRect(UiArt.Icon("lock"), new Rect2(Wide ? s.X - 38 : s.X - 17, Wide ? s.Y - 17 : s.Y - 17, 12, 12), false, new Color(1, 1, 1, 0.9f));
+                g.DrawTextureRect(UiArt.Icon("lock"), new Rect2(Wide ? s.X - 38 : s.X - 19, Wide ? (s.Y - 16) / 2f : s.Y - 19, 16, 16), false);   // A2: the lock is the only mark of a closed area, 16 du
             }
             if (Sel)
             {

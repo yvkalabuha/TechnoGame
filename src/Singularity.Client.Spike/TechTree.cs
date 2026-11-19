@@ -261,7 +261,9 @@ public sealed partial class TechTree : Control
     // ---------------- drawing ----------------
     Rect2 Area => new(0, 44, Size.X * 0.6f - 8, Size.Y - 52);
     // With the legend open the planisphere gives up the left strip to it, so that the sheet never covers the disc.
-    Rect2 DiscArea => _legendOpen ? new Rect2(Area.Position.X + 360, Area.Position.Y, Area.Size.X - 360, Area.Size.Y) : Area;
+    // On a small canvas (150 % on Full HD: 1280x720 du) the disc needs the whole area, so the legend is an on-demand sheet over its left part instead.
+    bool SmallCanvas => Area.Size.Y < 760;
+    Rect2 DiscArea => _legendOpen && !SmallCanvas ? new Rect2(Area.Position.X + 360, Area.Position.Y, Area.Size.X - 360, Area.Size.Y) : Area;
     Vector2 BaseCentre => DiscArea.Position + new Vector2(DiscArea.Size.X * 0.5f, (DiscArea.Size.Y - 76) * 0.5f + 4);
     Vector2 Centre => BaseCentre + _pan;
     float BaseUnit => (Math.Min(DiscArea.Size.X, DiscArea.Size.Y - 76) * 0.5f - 44f) / 6.5f;
@@ -352,6 +354,7 @@ public sealed partial class TechTree : Control
 
     void DrawPlanisphere()
     {
+        _countRects.Clear(); _labelRects.Clear();
         var c = Centre; float u = Unit;
         // layers: six rings; the double circle between processes and products is the «knowledge ≠ production» line
         for (int r = 1; r <= 6; r++) if (r != 6) _cv.DrawArc(c, r * u, 0, Mathf.Tau, 96, Ui.Rule, 1f, true);
@@ -411,7 +414,9 @@ public sealed partial class TechTree : Control
     }
 
     // Node radius grows a little with the zoom; icon plates are larger.
-    float NR => CurLod switch { Lod.Overview => NodeR, Lod.Nodes => NodeR * 1.25f, _ => 13f + Math.Min(6f, (_zoom - PlanisphereMath.IconsFrom) * 2f) };
+    // The ring shrinks with the canvas; node marks keep their physical size (du scaled down to 0.7) so that clusters stay apart.
+    float NodeScale => Math.Clamp(BaseUnit / 60f, 0.7f, 1f);
+    float NR => CurLod switch { Lod.Overview => NodeR * NodeScale, Lod.Nodes => NodeR * 1.25f * NodeScale, _ => 13f + Math.Min(6f, (_zoom - PlanisphereMath.IconsFrom) * 2f) };
 
     // Overview: every (layer, discipline) cell is a wash with «known/total»; zoomed in the wash fades into a quiet band.
     void DrawCells(Vector2 c, float u)
@@ -431,9 +436,38 @@ public sealed partial class TechTree : Control
                 string txt = kn[t, d] + "/" + tot[t, d];
                 var sz = Fonts.Mono.GetStringSize(txt, HorizontalAlignment.Left, -1, 14);
                 var rc = new Rect2(q - sz * 0.5f, sz);
+                if (!CountFits(rc.Grow(2))) continue;   // a tag that would sit on a node or another label is left out (A9)
+                _countRects.Add(rc.Grow(2));
                 _cv.DrawRect(rc.Grow(2), new Color(Ui.Paper, 0.85f));
                 Text(new Vector2(rc.Position.X, rc.Position.Y + sz.Y * 0.8f), txt, 14, Ui.DiscText[d], FontKind.Mono);
             }
+    }
+
+    readonly List<Rect2> _countRects = new(), _labelRects = new();
+
+    Rect2 NodeBox(int i) { var p = PosOf(i); float h = NR + 1; return new Rect2(p - new Vector2(h, h), new Vector2(h * 2, h * 2)); }
+
+    bool CountFits(Rect2 r)
+    {
+        for (int i = 0; i < _rad.Length; i++) if (NodeBox(i).Intersects(r)) return false;
+        for (int w = 0; w < 5; w++) if (WedgeLabel(w).rect.Intersects(r)) return false;
+        foreach (var o in _countRects) if (o.Intersects(r)) return false;
+        return true;
+    }
+
+    /// <summary>Shot-run assertion (A9): rectangles of the drawn count tags, node labels and wedge names that touch a node mark or each other. Returns the first offender or null.</summary>
+    public string ShotOverlap()
+    {
+        var boxes = new List<(string what, Rect2 r)>();
+        foreach (var r in _countRects) boxes.Add(("count tag", r));
+        foreach (var r in _labelRects) boxes.Add(("label", r));
+        for (int w = 0; w < 5; w++) boxes.Add(("wedge name", WedgeLabel(w).rect));
+        for (int a = 0; a < boxes.Count; a++)
+        {
+            for (int i = 0; i < _rad.Length; i++) if (NodeBox(i).Intersects(boxes[a].r)) return $"{boxes[a].what} {boxes[a].r} touches node {i}";
+            for (int b = a + 1; b < boxes.Count; b++) if (boxes[a].r.Intersects(boxes[b].r)) return $"{boxes[a].what} {boxes[a].r} touches {boxes[b].what} {boxes[b].r}";
+        }
+        return null;
     }
 
     void DrawNode(int i)
@@ -527,6 +561,7 @@ public sealed partial class TechTree : Control
         {
             occupied.Add(WedgeLabel(w).rect.Grow(2));
         }
+        occupied.AddRange(_countRects);   // the count tags of the cells are drawn first; labels keep off them
         // The leader line and the route are obstacles too, so that no label sits on them.
         var lp = CalloutPoints();
         for (int k = 0; k + 1 < lp.Length; k++) AddSegment(occupied, lp[k], lp[k + 1], 5f);
@@ -574,6 +609,7 @@ public sealed partial class TechTree : Control
         foreach (int i in order)
         {
             if (!placed.TryGetValue(i, out var pl)) continue;
+            _labelRects.Add(pl.pad);
             _cv.DrawRect(pl.pad, new Color(Ui.Paper, 0.92f));
             var at = new Vector2(pl.rc.Position.X, pl.rc.Position.Y + pl.h * 0.8f);
             _cv.DrawStringOutline(Ui.FontOf(pl.kind), at, pl.text, HorizontalAlignment.Left, -1, 14, 5, Ui.Paper);   // paper halo keeps text off rings and lines

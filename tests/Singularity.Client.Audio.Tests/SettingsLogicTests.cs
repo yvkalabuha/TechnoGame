@@ -12,6 +12,7 @@ public class SettingsLogicTests
     [InlineData(2560, 1440, 100, 4.0 / 3.0, 1920, 1080)]
     [InlineData(3440, 1440, 100, 4.0 / 3.0, 2580, 1080)]  // ultra-wide: scale by height, the extra width goes to the content
     [InlineData(1920, 1200, 100, 1.0, 1920, 1200)]
+    [InlineData(1280, 720, 100, 2.0 / 3.0, 1920, 1080)]   // below Full HD: scales down, test windows only (never a PASS)
     public void ScalePolicy_FollowsSection43(int w, int h, double ui, double px, double cw, double ch)
     {
         Assert.Equal(px, SettingsLogic.PixelsPerDu(w, h, ui), 6);
