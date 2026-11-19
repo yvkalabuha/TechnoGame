@@ -11,6 +11,8 @@ approved_at:
 approval_ref:
 ---
 
+> **Отложен (#419, 2026-11-19).** Критерий пауз понадобится для замера на масштабе M1; до него ADR остаётся PROPOSED и на gate не выносится.
+
 # ADR-0024 — GC pause criterion instead of the gen2 counter (amendment to ADR-0023 p. 2.4)
 
 > После ACCEPTED текст не меняется. Изменение решения — новый ADR с `supersedes`.

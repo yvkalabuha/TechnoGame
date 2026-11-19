@@ -8,7 +8,8 @@
 
 | ID | Статус | Название |
 |---|---|---|
-| [MS-M0](../development/milestones/MS-M0-headless-prototype.md) | PLANNED | Headless-прототип симуляции и Simulation Lab |
+| [MS-M0](../development/milestones/MS-M0-headless-prototype.md) | RELEASED | Headless-прототип симуляции и Simulation Lab |
+| [MS-M05](../development/milestones/MS-M05-first-play.md) | ACTIVE | M-play: first playable session on the M0 slice |
 | [MS-M1](../development/milestones/MS-M1-economy-provinces-open-race.md) | PLANNED | M1: economy by regions, 1945 provinces, open race |
 
 ## Задачи
@@ -127,7 +128,7 @@
 | [TASK-0110](../development/tasks/TASK-0110-novelty-memory-per-actor.md) | DONE | Novelty memory per actor: tried alternatives survive slot reuse (DEBT-0054) | MS-M1 |
 | [TASK-0111](../development/tasks/TASK-0111-ui-instruments-flask-caliper-pencil.md) | REVIEW | UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) | MS-M1 |
 | [TASK-0112](../development/tasks/TASK-0112-credits-screen.md) | REVIEW | Credits screen with music and sound attribution (DEBT-0050) | MS-M1 |
-| [TASK-0113](../development/tasks/TASK-0113-policy-candidate-generation.md) | REVIEW | Policy line candidate by generation and DesignView SlotGeneration rename (DEBT-0053, DEBT-0055) | MS-M1 |
+| [TASK-0113](../development/tasks/TASK-0113-policy-candidate-generation.md) | DONE | Policy line candidate by generation and DesignView SlotGeneration rename (DEBT-0053, DEBT-0055) | MS-M1 |
 | [TASK-0114](../development/tasks/TASK-0114-northern-algeria-regions.md) | REVIEW | Northern Algeria regions for the 1945 map (DEBT-0058) | MS-M1 |
 | [TASK-0115](../development/tasks/TASK-0115-end-to-end-project-handle.md) | APPROVED | End-to-end project handle through Session, AI, UI and command log v2 (DEBT-0052) | MS-M1 |
 | [TASK-0116](../development/tasks/TASK-0116-ci-green.md) | IN_PROGRESS | CI green on all jobs: Lab tests off Linux, llm_worker pilot contracts | MS-M0 |

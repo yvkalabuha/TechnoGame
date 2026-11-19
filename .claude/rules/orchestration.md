@@ -24,7 +24,7 @@ Source: `docs/reviews/project-review-2026-11-19.md`. Current plan: `development/
 - Routing: `src/Singularity.Lab/**` and `lab/**` go to simulation-engineer; client code goes to developer, then to ui-art-director; a data edit in `mods/` or `tools/map/spec` needs a check against the actual data (for example the composition of a region), not only against sources.
 - The first prompt of a code task carries the review checklist: tests fail without the fix; no `[ThreadStatic]` or static buffer keeps world-bound state; entities are addressed by handle, not by bare index; no allocations on the tick path; what was not verified.
 - After two CHANGES rounds on one task, stop: read the diff yourself, then split the task or change the approach.
-- Agents commit on their worktree branch only. `land.py` refuses a branch that changes `status:` fields.
+- Every agent that changes code or data runs in an isolated worktree and commits on its branch only; no agent commits on `main` (a commit on `main` during a landing makes `land.py` refuse it). `land.py` also refuses a branch that changes `status:` fields.
 
 ## 5. Schema train
 - Changes of `SchemaVersion`, table columns or golden hashes land as one train per day at most: collect the tasks, land them together, re-record the goldens once, explain each re-record.
