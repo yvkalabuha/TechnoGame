@@ -24,7 +24,7 @@ public class ProductAiRunTests
         {
             ProductsSystem p = h.Products;
             DesignStage st = p.Stage(a, d);
-            return new PolicyDesign(st, p.PlatformGen(a, d), p.Cancelled(a, d), p.BuiltAny(a, d), p.IdleMonths(a, d), p.StageOMonth(a, d), p.Parent(a, d),
+            return new PolicyDesign(st, p.PlatformGen(a, d), p.Cancelled(a, d), p.BuiltAny(a, d), p.IdleMonths(a, d), p.StageOMonth(a, d), p.LiveParent(a, d),
                 st == DesignStage.Prototype && p.GateOpen(a, d, month), p.DefectsHidden(a, d), st == DesignStage.None ? Fx6.One : p.UnitCostFloor(a, d), p.Generation(a, d));
         }
 
@@ -74,7 +74,7 @@ public class ProductAiRunTests
         h.Commands = (a, t) => p.AiDesignCommands(a, t);
         h.Series = (a, d, t) => p.AiStart(a, d, t) is { } r ? new ScriptedStart(r.Rate, false) : null;
         h.Close = (a, d, t) => p.AiClose(a, d, t) is not null;
-        h.Rate = (a, d, t) => p.AiLine(a, d)
+        h.Rate = (a, d, t) => p.AiLine(a, d, h.Products.Generation(a, d))
             ? PolicyRules.LineRate(p.Shares(a).Procurement * p.Budget(a), h.Products.UnitCostFloor(a, d)) : null;
         p.Initialize();
         return (h, p);
@@ -199,7 +199,7 @@ public class ProductAiRunTests
         Assert.False(p.Cancelled(Gbr, 1));
         Assert.False(p.SeriesForced(Gbr, 1));
         Assert.True(p.Rate(Gbr, 1) > Fx6.Zero);
-        Assert.True(policy.AiLine(Gbr, 1));
+        Assert.True(policy.AiLine(Gbr, 1, h.Products.Generation(Gbr, 1)));
         // Launched at the doctrine's month: the decision at t − stage_o_month = the reference month for this D0, in force the month after.
         int month = PolicyLiveness.LaunchMonth(h.Params, p.InitialDefects(Gbr, 1), p.DRef, new PolicyParams().LaunchShare[(int)PolicyProfile.Quality]);
         Assert.True(month is > 0 and < 60);
@@ -221,7 +221,7 @@ public class ProductAiRunTests
         (ProductsHarness h, PolicySystem policy) = Stand(new ProductsParams(), knownGen: 1);
         h.RunThroughMonth(0);
         Assert.Equal(DesignStage.Series, h.Products.Stage(Gbr, 0));
-        Assert.True(policy.AiLine(Gbr, 0));
+        Assert.True(policy.AiLine(Gbr, 0, h.Products.Generation(Gbr, 0)));
         Assert.True(h.Products.Rate(Gbr, 0) > Fx6.Zero);
         Assert.Equal(0, h.Products.IdleMonths(Gbr, 0));
     }

@@ -140,6 +140,7 @@ public class DesignHandleTests
         Assert.Equal(2, s.World.Products.Generation(Usa, slot));
         Assert.False(s.World.Products.Cancelled(Usa, slot));
         Assert.Equal(before + 1, s.World.Products.RejectionCount(Usa, CommandRejection.StaleHandle));
+        Assert.Contains(s.Outcomes, o => o.Contains("rejected: StaleHandle"));
         // The view the client reads now carries the new handle, taken from the view and not computed by the client.
         Assert.Equal(new DesignHandle(slot, 2), s.HandleOf(Usa, slot));
     }
@@ -153,11 +154,13 @@ public class DesignHandleTests
         s.StepThroughMonth(4);
         long stale = s.World.Products.RejectionCount(Usa, CommandRejection.StaleHandle);
         Assert.Equal(1, stale);
+        Assert.Contains(s.Outcomes, o => o.Contains("rejected: StaleHandle"));
         SliceSession replay = SliceSession.Replay(SliceTestData.Data, s.World.Config, s.CommandLog, s.Tick);
         HashAssert.Equal(s.LastHash, replay.LastHash);
         Assert.Equal(stale, replay.World.Products.RejectionCount(Usa, CommandRejection.StaleHandle));
         Assert.Equal(DesignStage.Project, replay.World.Products.Stage(Usa, slot));
         Assert.Equal(2, replay.World.Products.Generation(Usa, slot));
+        Assert.Equal(s.Outcomes, replay.Outcomes);   // the replay publishes the same `rejected: StaleHandle`
     }
 
     [Theory]
@@ -255,8 +258,8 @@ public class DesignHandleTests
         Assert.Equal(new DesignHandle(slot, 2), now);
         Assert.NotEmpty(s.WhyNot(Usa, WhyNotTarget.Design(now)));   // the closed gate of the new project, at least
         IReadOnlyList<Link> stale = s.WhyNot(Usa, WhyNotTarget.Design(old));
-        IReadOnlyList<Link> emptySlot = s.WhyNot(Usa, WhyNotTarget.Design(new DesignHandle(s.World.ProductsLayout.Designs - 1, 1)));
-        Assert.Empty(emptySlot);
-        Assert.Equal(emptySlot, stale);   // the answer for a slot that holds nothing
+        Link only = Assert.Single(stale);   // H5: one StaleHandle link, none of the new project's links
+        Assert.Equal(WhyNotCause.StaleHandle, only.Cause);
+        Assert.Equal(slot, only.SubjectId);
     }
 }

@@ -89,6 +89,30 @@ public class ProductsHandleResolutionTests
     }
 
     [Fact]
+    public void StartSeries_ExternalValid_AiStale_AppliesTheFirst_AndStillCountsTheStaleOne()
+    {
+        ProductsHarness h = Stand();
+        long at = ToPrototype(h);
+        DesignHandle stale = Stale(h, 1), valid = Current(h, 1);
+        h.RawStarts = (a, d, t) => a == Gbr && d == 1 && t == at ? [new SeriesStart(valid, Fx6.FromInt(5), true), new SeriesStart(stale, Fx6.FromInt(5), false)] : [];
+        h.RunThroughMonth(at);
+        Assert.Equal(DesignStage.Series, h.Products.Stage(Gbr, 1));
+        Assert.Equal(1, h.Products.RejectionCount(Gbr, CommandRejection.StaleHandle));
+    }
+
+    [Fact]
+    public void CloseLine_ExternalValid_AiStale_ClosesTheLine_AndStillCountsTheStaleOne()
+    {
+        ProductsHarness h = Stand();
+        long at = ToPrototype(h);
+        DesignHandle stale = Stale(h, 0), valid = Current(h, 0);
+        h.RawCloses = (a, d, t) => a == Gbr && d == 0 && t == at ? [valid, stale] : [];
+        h.RunThroughMonth(at);
+        Assert.Equal(DesignStage.InService, h.Products.Stage(Gbr, 0));
+        Assert.Equal(1, h.Products.RejectionCount(Gbr, CommandRejection.StaleHandle));
+    }
+
+    [Fact]
     public void StartSeries_TwoValidCandidates_TheFirstWins_TheSecondDoesNotRescueIt()
     {
         ProductsHarness h = Stand();

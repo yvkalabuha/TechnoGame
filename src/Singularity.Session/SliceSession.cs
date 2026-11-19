@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Singularity.Core.Commands;
+using Singularity.Core.Products;
 using Singularity.Core.Data;
 using Singularity.Core.WhyNot;
 using Singularity.Kernel;
@@ -258,12 +259,26 @@ public sealed partial class SliceSession
             CommandVerdict v = CommandValidator.CheckState(c.Command, _knowsProcess);
             if (v.Accepted)
                 v = _world.Commands.Apply(c.Command, month);
+            // The layer rejects a stale handle in its step and only counts it; the snapshot at the tick boundary is the one it reads first, so the outcome names it here.
+            if (v.Accepted && HandleOf(c.Command) is { } h && !_world.Products.Resolves(c.Command.Actor, h))
+                v = CommandVerdict.Refuse(CommandRefusal.StaleHandle, $"design {h.Slot} generation {h.Generation} no longer stands in its slot");
             _outcomes.Add(c.Key, v);
         }
         _journal.AddRange(_pending);
         _pending.Clear();
         return true;
     }
+
+    private static DesignHandle? HandleOf(SliceCommand command) => command switch
+    {
+        DeriveDesign d => d.Parent,
+        StartSeries s => s.Design,
+        CloseLine l => l.Design,
+        CancelDesign x => x.Design,
+        RetireCohort r => r.Design,
+        SellCohort s => s.Design,
+        _ => null,
+    };
 
     private bool KnowsProcess(int actor, int processNumber)
     {

@@ -24,6 +24,9 @@ public enum CommandRefusal
 
     /// <summary>A design handle is malformed: its generation is below 1 (ADR-0005 p. 3). Only the form; whether it is stale is the layer's check at application.</summary>
     BadHandle,
+
+    /// <summary>The handle named a project that no longer stood in its slot when the command was applied (ADR-0005 p. 3); the layer counts it as <c>StaleHandle</c> and leaves the new tenant untouched.</summary>
+    StaleHandle,
 }
 
 public readonly record struct CommandVerdict(CommandRefusal Reason, string Message)

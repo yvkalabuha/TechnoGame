@@ -531,6 +531,16 @@ public sealed partial class ProductsSystem : ITickSystem
     /// <summary><c>parent_design</c>, −1 for a design that is not derived.</summary>
     public int Parent(int actor, int design) => _parent[design].Current[actor];
 
+    /// <summary>
+    /// The parent slot while it still holds the project this design was derived from (same generation), else −1: a slot reused by another
+    /// project is not a parent (ADR-0005 p. 3), as in the line transfer of step 2f.
+    /// </summary>
+    public int LiveParent(int actor, int design)
+    {
+        int parent = _parent[design].Current[actor];
+        return parent >= 0 && _parentGen[design].Current[actor] == _gen[parent].Current[actor] ? parent : -1;
+    }
+
     public Fx6 WorkLeft(int actor, int design) => Fx6.FromRaw(_work[design].Current[actor]);
     public Fx6 InitialDefects(int actor, int design) => Fx6.FromRaw(_d0[design].Current[actor]);
     public Fx6 DefectsHidden(int actor, int design) => Fx6.FromRaw(_hidden[design].Current[actor]);
@@ -1327,7 +1337,8 @@ public sealed partial class ProductsSystem : ITickSystem
         for (int d = 0; d < _d; d++)
         {
             int n = _inputs.LineCloses(a, d, t, candidates);
-            // The first candidate that resolves wins; every stale one is counted (ADR-0005 p. 3).
+            // The first candidate that resolves wins; every stale one is counted, also after the winner (ADR-0005 p. 3).
+            bool done = false;
             for (int i = 0; i < n; i++)
             {
                 if (candidates[i].Slot != d)
@@ -1337,9 +1348,11 @@ public sealed partial class ProductsSystem : ITickSystem
                     Reject(a, CommandRejection.StaleHandle);
                     continue;
                 }
+                if (done)
+                    continue;
+                done = true;
                 if ((DesignStage)_stage[d].Next[a] == DesignStage.Series)
                     CloseSeries(a, d);
-                break;
             }
         }
     }
@@ -1351,6 +1364,7 @@ public sealed partial class ProductsSystem : ITickSystem
         for (int d = 0; d < _d; d++)
         {
             int n = _inputs.SeriesStarts(a, d, t, candidates);
+            bool done = false;
             for (int i = 0; i < n; i++)
             {
                 if (candidates[i].Design.Slot != d)
@@ -1360,11 +1374,13 @@ public sealed partial class ProductsSystem : ITickSystem
                     Reject(a, CommandRejection.StaleHandle);
                     continue;
                 }
+                if (done)
+                    continue;
+                done = true;
                 var snapshot = (DesignStage)_stage[d].Current[a];
                 // A project cancelled earlier in this step (Next stage «снят») cannot start a series.
                 if (snapshot is (DesignStage.Prototype or DesignStage.InService) && (DesignStage)_stage[d].Next[a] == snapshot)
                     StartSeries(a, d, snapshot, candidates[i]);
-                break;
             }
         }
     }

@@ -195,7 +195,7 @@ public sealed class ViewWalk
             Check("design", dv.Design == d && dv.Stage == stage && dv.PlatformGen == p.PlatformGen(a, d) && dv.Gen == p.Gen(a, d) && dv.Parent == p.Parent(a, d)
                 && dv.StageOMonth == p.StageOMonth(a, d) && dv.BuiltAny == p.BuiltAny(a, d) && dv.Cancelled == p.Cancelled(a, d) && dv.Rate == p.Rate(a, d)
                 && dv.UnitCost == p.UnitCost(a, d) && dv.UnitCostFloor == p.UnitCostFloor(a, d) && dv.InService == p.InService(a, d)
-                && dv.Readiness == p.Readiness(a, d, t + 1) && dv.Perf == p.Perf(a, d) && dv.Bind == p.Bind(a, d) && dv.AiLine == w.Policy.AiLine(a, d)
+                && dv.Readiness == p.Readiness(a, d, t + 1) && dv.Perf == p.Perf(a, d) && dv.Bind == p.Bind(a, d) && dv.AiLine == w.Policy.AiLine(a, d, p.Generation(a, d))
                 && dv.PrcSet.SequenceEqual(p.PrcSet(a, d)), $"month {t} actor {a} design {d}");
             See("design project", stage == DesignStage.Project);
             See("design prototype", stage == DesignStage.Prototype);

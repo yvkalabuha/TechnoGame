@@ -59,7 +59,7 @@ public class T6c2Tests(ITestOutputHelper output)
             Assert.False(p.Cancelled(a, 0));
             Assert.Equal(Fx6.FromInt(100), p.LineE(a, 0));
             Assert.Equal(Fx6.FromInt(100), p.Cohort(a, 0, 1945));
-            Assert.True(w.Policy.AiLine(a, 0));
+            Assert.True(w.Policy.AiLine(a, 0, p.Generation(a, 0)));
             for (int d = 1; d < w.ProductsLayout.Designs; d++)
                 Assert.Equal(DesignStage.None, p.Stage(a, d));
         }

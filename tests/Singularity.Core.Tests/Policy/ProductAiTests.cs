@@ -190,7 +190,9 @@ public class ProductAiTests
         rig.S.Design[3] = Series(1, idle: 0, built: true);
         rig.Month(0);
         Assert.NotNull(rig.Policy.AiStart(0, 2, 1));
-        Assert.True(rig.Policy.AiLine(0, 2));
+        Assert.True(rig.Policy.AiLine(0, 2, 1));
+        // A slot reused by another project (generation 2) is not the project the AI started: no AI rate for it.
+        Assert.False(rig.Policy.AiLine(0, 2, 2));
         Assert.NotNull(rig.Policy.AiClose(0, 1, 1));
         Assert.NotNull(rig.Policy.AiClose(0, 3, 1));                       // one line per actor: every other line in С is closed
         Assert.Null(rig.Policy.AiClose(0, 2, 1));

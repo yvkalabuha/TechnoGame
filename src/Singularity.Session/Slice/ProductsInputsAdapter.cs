@@ -102,7 +102,7 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
     // the capability item (B_proc + B_cap). A line started by a command keeps the rate of that command.
     public Fx6? LineRate(int actorRow, int design, long month)
     {
-        if (!world.Policy.AiLine(actorRow, design))
+        if (!world.Policy.AiLine(actorRow, design, world.Products.Generation(actorRow, design)))
             return null;
         BudgetShares shares = world.SharesOf(actorRow);
         Fx6 budget = shares.Procurement * world.Policy.Budget(actorRow);
@@ -137,8 +137,10 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
         }
         if (other < 0)
             return false;
-        int gThis = world.Products.PlatformGen(actorRow, design), gOther = world.Products.PlatformGen(actorRow, other);
-        return gThis != gOther ? gThis < gOther : design < other;
+        // The working line is the one the shared ordering does not pick as the candidate (the same rule as training and the policy).
+        ProductsSystem p = world.Products;
+        return PolicySystem.Candidate(design, p.PlatformGen(actorRow, design), p.StageOMonth(actorRow, design),
+            other, p.PlatformGen(actorRow, other), p.StageOMonth(actorRow, other)) == other;
     }
 
     // Only the L_P control reads it (spec §6.1): t_known of the APP node of the generation.

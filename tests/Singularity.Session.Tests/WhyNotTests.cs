@@ -227,14 +227,14 @@ public class WhyNotTests
     }
 
     [Fact]
-    public void WithdrawnProject_GivesNoLinks_AndDoesNotCountAsAProject()
+    public void WithdrawnProject_GivesOneStaleHandleLink_AndDoesNotCountAsAProject()
     {
         SliceSession s = New();
         StrongCapability(s, Usa);
         PutDesign(s, Usa, 1, DesignStage.Withdrawn, Fx6.FromInt(500), Fx6.FromInt(500));
         foreach (Column col in s.World.Table.Columns.Where(c => c.Name.StartsWith("prd.d0.cohort.", StringComparison.Ordinal)).ToList())
             SetLong(s, col.Name, Usa, 0);                                   // a withdrawn project has no units (§9.1: «снят» ⇒ Σ count = 0)
-        Assert.Empty(s.WhyNot(Usa, WhyNotTarget.Design(s.HandleOf(Usa, 0))));
+        Assert.Equal(WhyNotCause.StaleHandle, Assert.Single(s.WhyNot(Usa, WhyNotTarget.Design(s.HandleOf(Usa, 0)))).Cause);   // a withdrawn project no longer resolves (H5)
         Link first = Assert.Single(s.WhyNot(Usa, WhyNotTarget.Requirement(1)));
         Assert.Equal(WhyNotCause.NoDesign, first.Cause);
     }
@@ -256,9 +256,9 @@ public class WhyNotTests
     }
 
     [Fact]
-    public void EmptySlot_GivesNoLinks()
+    public void EmptySlot_GivesOneStaleHandleLink()
     {
-        Assert.Empty(New().WhyNot(Usa, WhyNotTarget.Design(new DesignHandle(3, 1))));
+        Assert.Equal(WhyNotCause.StaleHandle, Assert.Single(New().WhyNot(Usa, WhyNotTarget.Design(new DesignHandle(3, 1)))).Cause);   // nothing to resolve to (H5)
     }
 
     [Fact]

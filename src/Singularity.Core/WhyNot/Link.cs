@@ -66,6 +66,9 @@ public enum WhyNotCause
 
     /// <summary>ECONOMY: admitted but <c>unit_cost·n_plan + upkeep</c> is above the procurement budget.</summary>
     NotAffordable,
+
+    /// <summary>PRODUCT (ADR-0005 p. 3): the handle names a project that no longer stands in its slot; <c>subject</c> = the slot. Nothing of the slot's new tenant is read.</summary>
+    StaleHandle,
 }
 
 /// <summary>

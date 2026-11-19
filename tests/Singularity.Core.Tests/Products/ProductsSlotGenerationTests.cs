@@ -1,3 +1,4 @@
+using Singularity.Core.Data;
 using Singularity.Core.Products;
 using Singularity.Kernel;
 using static Singularity.Core.Tests.Products.ProductTestData;
@@ -210,6 +211,39 @@ public class ProductsSlotGenerationTests
             Assert.Equal(Fx6.Zero, p.Cohort(Gbr, 0, year));
         Assert.Equal(-1, p.Parent(Gbr, 0));
         Assert.Equal(-1, p.StageOMonth(Gbr, 0));
+    }
+
+    // Derive changes the compressor of the start design (as ProductsV24SystemTests): the one slot that differs from the parent.
+    private static int[] CompressorSwap()
+    {
+        var alts = new int[Probe.SlotCount];
+        Array.Fill(alts, -1);
+        alts[Enumerable.Range(0, Probe.SlotCount).Single(i => CoreData.ProductClasses.SlotId[i] == "compressor")] = Alt(Probe, "comp_axial");
+        return alts;
+    }
+
+    [Fact]
+    public void LiveParent_IsTheParentSlotOnlyWhileItHoldsTheProjectTheDesignWasDerivedFrom()
+    {
+        // t1 derive from slot 0 (generation 1) -> slot 1; t2 retire all of slot 0 -> «снят»; t4 compose takes the freed slot 0 (generation 2).
+        ProductsHarness h = new(1, 1, startLine: false, maxDesigns: 3)
+        {
+            Knows = (a, n) => a == Gbr && Probe.KnownUpTo(2)(n),
+        };
+        ProductsSystem p = h.Products;
+        long whole = p.InService(Gbr, 0).Raw / Fx6.Scale;
+        h.Commands = (a, t) => a != Gbr ? []
+            : t == 1 ? [DesignCommand.Derive(new DesignHandle(0, 1), [.. CompressorSwap()])]
+            : t == 4 ? [SuperiorG2()] : [];
+        h.FleetScript = (a, t) => a == Gbr && t == 2 ? [new FleetCommand(FleetCommandKind.Retire, new DesignHandle(0, 1), whole)] : [];
+        h.RunThroughMonth(0);
+        h.RunThroughMonth(1);
+        Assert.Equal(0, p.LiveParent(Gbr, 1));
+        for (long t = 2; t <= 4; t++)
+            h.RunThroughMonth(t);
+        Assert.Equal(2, p.Generation(Gbr, 0));
+        Assert.Equal(0, p.Parent(Gbr, 1));          // the raw column still names the slot ...
+        Assert.Equal(-1, p.LiveParent(Gbr, 1));     // ... which now holds an unrelated project
     }
 
     [Fact]

@@ -40,7 +40,7 @@ public sealed class ForceProxy(SliceSession session, int rateDivisor = 1)
                 Sent++;
                 for (int e = 0; e < w.ProductsLayout.Designs; e++)
                 {
-                    if (p.Stage(a, e) == DesignStage.Series && e != p.Parent(a, d))
+                    if (p.Stage(a, e) == DesignStage.Series && e != p.LiveParent(a, d))
                         Send(new CloseLine(a, new DesignHandle(e, p.Generation(a, e))));
                 }
             }

@@ -127,7 +127,7 @@ internal static class ViewBuilder
         bool exists = stage != DesignStage.None;
         return new DesignView(d, stage, p.PlatformGen(a, d), exists ? p.Gen(a, d) : 0, p.Parent(a, d), p.StageOMonth(a, d),
             p.BuiltAny(a, d), p.Cancelled(a, d), p.Rate(a, d), p.UnitCost(a, d), exists ? p.UnitCostFloor(a, d) : Fx6.Zero,
-            p.InService(a, d), exists ? p.Readiness(a, d, next) : Fx6.Zero, exists ? p.Perf(a, d) : Fx6.Zero, p.Bind(a, d), w.Policy.AiLine(a, d),
+            p.InService(a, d), exists ? p.Readiness(a, d, next) : Fx6.Zero, exists ? p.Perf(a, d) : Fx6.Zero, p.Bind(a, d), w.Policy.AiLine(a, d, p.Generation(a, d)),
             [.. p.PrcSet(a, d)], p.Generation(a, d));
     }
 

@@ -126,7 +126,15 @@ public sealed partial class PolicySystem
         _closeStamp[design].Current[actor] == Stamp(month) ? new DesignHandle(design, _closeGen[design].Current[actor]) : null;
 
     /// <summary>The line of the design was launched by the AI and takes its rate from <c>r_AI</c> (spec A41); a line started by a command keeps that rate.</summary>
-    public bool AiLine(int actor, int design) => _line[design].Current[actor] != 0;
+    /// <remarks>The flag counts only for the project the AI started (its stamped generation): a slot reused by another project is not an AI line.</remarks>
+    public bool AiLine(int actor, int design, int generation)
+    {
+        if (_line[design].Current[actor] == 0)
+            return false;
+        // No stamped generation: the scenario's start line (E1, spec A32), set at load; its slot was first taken at generation 1.
+        int started = _startGen[design].Current[actor];
+        return generation == (started == 0 ? 1 : started);
+    }
 
     /// <summary>Times a <c>Requirement</c> for the generation was repeated after a project of it was given up (spec A40); at most 1.</summary>
     public int Repeats(int actor, int generation) => _rep[generation - 1].Current[actor];
