@@ -28,7 +28,8 @@ public sealed class SliceModelTests : IDisposable
     {
         var matches = SliceChecks.All(_tmp).Where(c => c.Name.StartsWith(prefix, StringComparison.Ordinal)).ToList();
         Assert.Single(matches);
-        Assert.Null(matches[0].Body());
+        string? problem = matches[0].Body();
+        Assert.True(problem is null, problem); // a message is never truncated, unlike Assert.Null's value dump
     }
 
     [Fact] public void Calibration_tables_have_no_forbidden_file_or_column() => Check(Prefixes[0]);
