@@ -341,9 +341,12 @@ area.production.later,Supply priority and the choice of variants: in M1. Here ar
 area.finance.later,Taxes by region: M1; trade and embargo: M1–M2.,Налоги по регионам: M1; торговля и эмбарго: M1–M2.
 tip.area,{0} · {1},{0} · {1}
 flask.sci.cap,Progress of the first links of the chain,Ход первых звеньев цепи
-flask.sci.tip,Link {0}: {1}% of the need ({2} of {3}),Звено {0}: {1}% от потребности ({2} из {3})
+flask.sci.tip,{0}: {1}% of the need ({2} of {3}),{0}: {1}% от потребности ({2} из {3})
 flask.sci.none,No research in progress on the current target,Нет хода исследования по текущей цели
-flask.alloy.cap,Alloy stock,Запас сплава
+flask.alloy.cap.ok,Alloy: sufficient,Сплав: хватает
+flask.alloy.cap.deficit,Alloy: {0} % of demand · low,Сплав: {0} % потребности · мало
+flask.alloy.cap.disrupted,Alloy supply: {0} % of normal,Снабжение сплавом: {0} % от обычного
+flask.alloy.cap.none,No alloy,Сплава нет
 flask.alloy.tip,Stock is {0}% of the normal supply,Запас — {0}% от обычного снабжения
 flask.deficit,low,мало
 flask.alloy.deficit,Supply covers {0}% of the demand: a shortage (hatched),Снабжение покрывает {0}% потребности: дефицит (штриховка)

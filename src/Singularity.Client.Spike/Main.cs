@@ -1086,6 +1086,7 @@ public sealed partial class Main : Node3D
                 c.Convert(Image.Format.La8); c.SavePng(Path.Combine(dir, name + "_grey.png"));
             }
             string sfx = $"e{p % 3 + 1}_{pct}";
+            if (p / 3 != 0 && Math.Abs(_areaPanel.GetGlobalRect().Size.X - 420) > 0.5f) { InstFail($"area panel width check failed: {InstNames[p / 3]}_{sfx} is {_areaPanel.GetGlobalRect().Size.X} du wide, expected 420"); return true; }
             Save(img, _areaPanel.GetGlobalRect(), $"{InstNames[p / 3]}_{sfx}");
             if (p / 3 == 0) Save(img, new Rect2(0, 0, 620, 52), $"speed_{sfx}");
             Save(img, new Rect2(Vector2.Zero, GetViewport().GetVisibleRect().Size), $"full_{InstNames[p / 3]}_{sfx}");   // the whole screen, for the control in context
@@ -1102,7 +1103,7 @@ public sealed partial class Main : Node3D
         OpenArea(InstAreas[q / 3]);
         // shot-only states: the scenario has no research chain and no alloy deficit
         _areaPanel.ShotAlloy(InstAreas[q / 3] == AreaId.Production ? 0.25 : null);
-        _areaPanel.ShotResearch(InstAreas[q / 3] == AreaId.Science ? new[] { (3.0, 4.0), (1.0, 5.0), (5.0, 5.0) } : null);
+        _areaPanel.ShotResearch(InstAreas[q / 3] == AreaId.Science ? new[] { (Names.Node("s8.fnd.compressible_flow"), 3.0, 4.0), (Names.Node("s8.fnd.boundary_layer"), 1.0, 5.0), (Names.Node("s7.fnd.brayton_cycle"), 5.0, 5.0) } : null);
         if (InstAreas[q / 3] == AreaId.Finance) _instPhase = 1;   // an unsent edit and the focus come from real input: pencil marker and focus frame show
         return false;
     }

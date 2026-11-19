@@ -65,6 +65,15 @@ public static class InstrumentLogic
         _ => "flask.alloy.tip",
     };
 
+    /// <summary>Visible caption key of the Production flask per case; it names what the number is measured against (the denominators differ).</summary>
+    public static string AlloyCaptionKey(AlloyState state) => state switch
+    {
+        AlloyState.Shortage => "flask.alloy.cap.deficit",
+        AlloyState.Disrupted => "flask.alloy.cap.disrupted",
+        AlloyState.NoSmelting => "flask.alloy.cap.none",
+        _ => "flask.alloy.cap.ok",
+    };
+
     /// <summary>Layer-2 instruments of the budget block show at organ levels 1 and 2 and only in an area panel (never in the read-only panel of a foreign power).</summary>
     public static bool OrganShown(int level, bool areaMode) => level > 0 && areaMode;
 

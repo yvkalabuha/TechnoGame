@@ -83,7 +83,7 @@ public sealed partial class FlaskControl : Control
         for (int i = 0; i < Marks.Length; i++)
         {
             float y = Bottom - Marks[i] * (Bottom - LevelTop);
-            DrawLine(new Vector2(Cx + HalfAt(y) + 2, y), new Vector2(Cx + HalfAt(y) + 7, y), Ui.Ink2, 1f);
+            DrawLine(new Vector2(Cx + HalfAt(y) + 2, y), new Vector2(Cx + HalfAt(y) + 7, y), Ui.Ink2, 2f);   // A2 minimum stroke at 100 %
         }
         DrawPolyline(Outline, Ui.Ink, 1.5f);
         DrawLine(new Vector2(Cx - NeckHalf - 3, NeckTop), new Vector2(Cx + NeckHalf + 3, NeckTop), Ui.Ink, 1.5f);   // rim

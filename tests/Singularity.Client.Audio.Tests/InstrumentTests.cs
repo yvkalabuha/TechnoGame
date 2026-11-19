@@ -102,6 +102,13 @@ public class InstrumentTests
         Assert.Equal("flask.alloy.tip", InstrumentLogic.AlloyTipKey(f.State));
     }
 
+    [Theory]
+    [InlineData(InstrumentLogic.AlloyState.Normal, "flask.alloy.cap.ok")]
+    [InlineData(InstrumentLogic.AlloyState.Shortage, "flask.alloy.cap.deficit")]
+    [InlineData(InstrumentLogic.AlloyState.Disrupted, "flask.alloy.cap.disrupted")]
+    [InlineData(InstrumentLogic.AlloyState.NoSmelting, "flask.alloy.cap.none")]
+    public void AlloyCaptionKey_NamesWhatEachStateMeasures(InstrumentLogic.AlloyState state, string key) => Assert.Equal(key, InstrumentLogic.AlloyCaptionKey(state));
+
     [Fact]
     public void AlloyFlask_DisruptionIsNotAShortage_AndHealthyStockIsNormal()
     {
