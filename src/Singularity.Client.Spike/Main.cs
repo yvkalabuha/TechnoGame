@@ -785,7 +785,9 @@ public sealed partial class Main : Node3D
             void Q(double wait, Action act) => _sizeQ.Add((wait, act));
             Q(0.1, () => { DisplayServer.WindowSetSize(size); GetWindow().ContentScaleSize = size; Loc.SetLang(lang); });
             Q(1.0, () => { _shotLog += $"size shots {sfx}: asked {size.X}x{size.Y}, window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, viewport {(int)GetViewport().GetVisibleRect().Size.X}x{(int)GetViewport().GetVisibleRect().Size.Y}, mode {GetWindow().ContentScaleMode}\n"; _mainMenu.Open(true); });
-            Q(0.5, () => { SaveShot($"menu_ingame{sfx}.png"); _mainMenu.Close(); _newGame.Open(_host.Data.Scenario(Singularity.Session.SliceRunConfig.DefaultScenario), id => Ui.Tints[TintOfActor(id)]); });
+            Q(0.5, () => { SaveShot($"menu_ingame{sfx}.png"); _mainMenu.Close(); _credits.Open(); });
+            Q(0.6, () => { SaveShot($"credits{sfx}.png"); _credits.ShotScroll(100000); });
+            Q(0.4, () => { SaveShot($"credits_end{sfx}.png"); _credits.Visible = false; _newGame.Open(_host.Data.Scenario(Singularity.Session.SliceRunConfig.DefaultScenario), id => Ui.Tints[TintOfActor(id)]); });
             Q(0.5, () => { SaveShot($"new_game_empty{sfx}.png"); _newGame.Select("FRA"); });
             Q(0.6, () => { SaveShot($"new_game_selected{sfx}.png"); _newGame.Close(); _settings.Open(); });
             Q(0.5, () => { SaveShot($"settings_video{sfx}.png"); _settings.ShotTab(1); });

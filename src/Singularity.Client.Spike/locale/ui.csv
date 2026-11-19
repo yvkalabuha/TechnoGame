@@ -237,14 +237,14 @@ menu.load,Load,Загрузить
 menu.save,Save,Сохранить
 menu.settings,Settings,Настройки
 menu.credits,Credits,Авторы
-credits.title,Credits,Авторы
+credits.title,Sound credits,Авторы звука
 credits.music,Music,Музыка
 credits.sound,Sounds,Звуки
-credits.intro,Audio used in the game. Entries marked CC BY 4.0 are shown under the terms of that licence.,Звук в игре. Записи с лицензией CC BY 4.0 показаны на условиях этой лицензии.
+credits.intro,Music and sounds of the game. CC BY 4.0: the work may be used if the author is named. CC0: no credit is needed; the author is named anyway.,Музыка и звуки игры. CC BY 4.0: произведение можно использовать с указанием автора. CC0: указание автора не требуется; автор назван всё равно.
 credits.by,by,автор
 credits.licence,Licence,Лицензия
-credits.changes,Changes,Изменения
-credits.soon,Not in the build yet,Ещё не в сборке
+credits.changes,What was changed,Что изменено
+credits.soon,Not in the game yet: the track is chosen for the future soundtrack and is listed in advance,Пока не в игре: трек выбран для будущего саундтрека и указан заранее
 credits.back,Back,Назад
 menu.tomain,To the main menu,В главное меню
 menu.quit,Quit,Выход

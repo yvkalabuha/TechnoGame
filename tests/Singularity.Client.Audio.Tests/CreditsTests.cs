@@ -73,4 +73,13 @@ public class CreditsTests
         Assert.Throws<FormatException>(() => CreditsData.Parse(Doc().Replace("\"author\":\"a\",", "")));
         Assert.Throws<FormatException>(() => CreditsData.Parse(Doc(extra: ",\"licenсe\":\"x\"")));
     }
+
+    [Fact]
+    public void Credits_text_colours_pass_4_5_to_1_on_the_worst_paper_texture()
+    {
+        // The screen uses only ink and ink-2 (never the lighter ink-3); the sheet texture darkens the paper to 0.94 at worst (A3).
+        var sheet = ColorMath.FromHex(Palette.C.Sheet, 0.94);
+        Assert.True(ColorMath.Contrast(ColorMath.FromHex(Palette.Ink2), sheet) >= 4.5);
+        Assert.True(ColorMath.Contrast(ColorMath.FromHex(Palette.Ink), sheet) >= 7);
+    }
 }
