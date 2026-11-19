@@ -136,7 +136,7 @@
 | [TASK-0118](../development/tasks/TASK-0118-codex-catchup-findings.md) | PROPOSED | Codex catch-up findings on landed core tasks (TASK-0099, 0103, 0107, 0110) | MS-M05 |
 | [TASK-0119](../development/tasks/TASK-0119-instrument-view-fields.md) | PROPOSED | Instrument data fields in the Session view: alloy coverage, research progress | MS-M05 |
 | [TASK-0120](../development/tasks/TASK-0120-core-command-verdicts.md) | PROPOSED | Core emits a per-command verdict; commands keyed by handle | MS-M05 |
-| [TASK-0121](../development/tasks/TASK-0121-slice-horizon-2030-train-1.md) | IN_PROGRESS | Slice horizon to 2030, train 1: Years = 86, q mask in 62-bit blocks, horizon fixture | MS-M05 |
+| [TASK-0121](../development/tasks/TASK-0121-slice-horizon-2030-train-1.md) | DONE | Slice horizon to 2030, train 1: Years = 86, q mask in 62-bit blocks, horizon fixture | MS-M05 |
 
 ## Гипотезы
 

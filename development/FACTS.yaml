@@ -26,9 +26,10 @@ facts:
     keywords: [срез, актор, держав, страны, стран, USA, SWE]
 
   - id: slice-horizon
-    statement: "Срез сейчас считает 33 года: с 1945 до января 1978. До 2030 года он не доходит, пока не выполнено продление (#423)."
-    source: "src/Singularity.Session/Slice/SliceWorld.cs; docs/simulation/m-play-horizon-2030.md"
-    probe: {file: "src/Singularity.Session/Slice/SliceWorld.cs", regex: 'const int Years = (\d+);', expect: "33"}
+    statement: "Срез считает 86 лет: с 1945 до декабря 2030 (TASK-0121, #423). Новых знаний и поколений после G4 в данных ещё нет: контент G5–G6 — второй шаг продления."
+    source: "src/Singularity.Session/Slice/SliceWorld.cs; docs/architecture/notes/slice-horizon-2030.md"
+    probe: {file: "src/Singularity.Session/Slice/SliceWorld.cs", regex: 'const int Years = (\d+);', expect: "86"}
+    stale_patterns: ['срез обрывается в январе 1978', 'Years = 33']
     keywords: [горизонт, 2030, 1977, 1978, партия, длина, лет]
 
   - id: slice-content
@@ -37,9 +38,9 @@ facts:
     keywords: [узл, поколени, G4, G5, знани, контент]
 
   - id: schema-version
-    statement: "SchemaVersion состояния среза — 11 (TASK-0115)."
+    statement: "SchemaVersion состояния среза — 12 (TASK-0115: 11; TASK-0121: 12)."
     source: "src/Singularity.Session/Slice/SliceWorld.cs"
-    probe: {file: "src/Singularity.Session/Slice/SliceWorld.cs", regex: 'const int SchemaVersion = (\d+);', expect: "11"}
+    probe: {file: "src/Singularity.Session/Slice/SliceWorld.cs", regex: 'const int SchemaVersion = (\d+);', expect: "12"}
     keywords: [SchemaVersion, схем, golden, хеш]
 
   - id: api-version

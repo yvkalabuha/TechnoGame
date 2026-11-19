@@ -1,7 +1,7 @@
 ---
 id: TASK-0121
 title: "Slice horizon to 2030, train 1: Years = 86, q mask in 62-bit blocks, horizon fixture"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M05
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: []
 approved_by: orchestrator
 approved_at: 2026-11-19
 approval_ref: "#423"
+review_ref: "reviewer: APPROVE 27c2463 (+lows fixed 30288a6); Codex accept 30288a6c; fixture verified on base 3d730e8 by Orchestrator; landed d63289e"
 created: 2026-11-19
 ---
 
