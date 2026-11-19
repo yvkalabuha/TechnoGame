@@ -81,12 +81,14 @@ public static class HarnessChecks
         JsonElement gc = r.GetProperty("gc");
         if (!gc.GetProperty("events_flushed").GetBoolean() || !gc.GetProperty("events_complete").GetBoolean())
             return $"events flushed {gc.GetProperty("events_flushed")}, complete {gc.GetProperty("events_complete")} (gcs {gc.GetProperty("gcs_events")} vs {gc.GetProperty("gcs_runtime")})";
+        if (r.TryGetProperty("frequency", out JsonElement fq) && fq.GetProperty("sampler_failure").ValueKind != JsonValueKind.Null)
+            return $"frequency sampler stopped: {fq.GetProperty("sampler_failure")}";
         if (gc.GetProperty("pause_count").GetInt32() != gc.GetProperty("pauses").GetProperty("pause_count").GetInt32())
             return "process pause count differs from its pauses block";
         foreach (JsonElement run in r.GetProperty("runs").EnumerateArray())
         {
-            if (!(run.GetProperty("gc_settle_pause_ms").GetDouble() > 0))
-                return $"{run.GetProperty("mode")}: no settle pause seen";
+            if (!(run.GetProperty("gc_settle_pause_ms").GetDouble() > 0) || run.GetProperty("gc_settle_gcs").GetInt32() < 1)
+                return $"{run.GetProperty("mode")}: no settle pause seen ({run.GetProperty("gc_settle_gcs")} settle GCs, {run.GetProperty("gc_settle_pause_ms")} ms, by host time {run.GetProperty("gc_settle_pause_ms_host_window")} ms)";
             JsonElement gp = run.GetProperty("gc_pauses");
             if (gp.GetProperty("pauses").GetArrayLength() != gp.GetProperty("pause_count").GetInt32())
                 return $"{run.GetProperty("mode")}: pause list length";
@@ -117,7 +119,8 @@ public static class HarnessChecks
             return "not format 5 / direct method";
         if (!r.GetProperty("conditions").GetProperty("gc_settle_before_window").GetBoolean() || !r.GetProperty("gc_events_flushed").GetBoolean()
             || p8.GetProperty("gc_pauses_window").ValueKind != JsonValueKind.Object || !(p8.GetProperty("gc_settle_pause_ms").GetDouble() > 0))
-            return "settle condition, flushed events, pause window or settle pause missing";
+            return $"settle condition {r.GetProperty("conditions").GetProperty("gc_settle_before_window")}, events flushed {r.GetProperty("gc_events_flushed")}, "
+                + $"pause window {p8.GetProperty("gc_pauses_window").ValueKind}, settle pause {p8.GetProperty("gc_settle_pause_ms")} ms";
         // DEBT-0060: one thread → the split counts the run thread only; other threads' bytes (runtime background work, GC listener) are
         // reported apart and bounded by noise_floor_bytes, but never enter the paths.
         if (p8.GetProperty("byte_counter").GetString() != "sim_thread" || p8.GetProperty("noise_floor_bytes").ValueKind != JsonValueKind.Number)

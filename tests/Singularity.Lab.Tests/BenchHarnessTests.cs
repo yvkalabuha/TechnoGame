@@ -659,6 +659,105 @@ public sealed class BenchHarnessTests : IDisposable
         Assert.Equal(0, FreqSampler.CpuinfoMhz([], row));
     }
 
+    // TASK-0116: the CI runner's /proc/cpuinfo is larger than the sampler's initial 4096-byte buffer; the proc_cpuinfo path took the span of
+    // the old buffer after ReadAll had grown it (ArgumentOutOfRangeException on the sampler thread, test host crash).
+    [Fact]
+    public void FreqSampler_ProcCpuinfo_LargerThanBuffer_Samples()
+    {
+        string flags = string.Join(' ', Enumerable.Range(0, 1000).Select(i => $"flag{i}"));
+        var sb = new StringBuilder();
+        double[] mhz = [3200.5, 800.25];
+        for (int cpu = 0; cpu < mhz.Length; cpu++)
+            sb.Append($"processor\t: {cpu}\nmodel name\t: Fixture CPU\ncpu MHz\t\t: {mhz[cpu].ToString(System.Globalization.CultureInfo.InvariantCulture)}\nflags\t\t: {flags}\n\n");
+        string file = Path.Combine(_tmp, "cpuinfo");
+        File.WriteAllText(file, sb.ToString());
+        Assert.True(new FileInfo(file).Length > 2 * 4096);
+        using var f = new FreqSampler(10, "proc_cpuinfo", [file]);
+        Assert.Equal("proc_cpuinfo", f.Source);
+        var sw = Stopwatch.StartNew();
+        while (f.PerCpu.Count == 0 && f.Failure is null && sw.ElapsedMilliseconds < 10_000)
+            Thread.Sleep(10);
+        Assert.Null(f.Failure);
+        Assert.Equal(mhz, f.PerCpu[0].Mhz);
+    }
+
+    private string CpuinfoFixture()
+    {
+        string file = Path.Combine(_tmp, "cpuinfo-small");
+        File.WriteAllText(file, "processor\t: 0\ncpu MHz\t\t: 3000\nprocessor\t: 1\ncpu MHz\t\t: 3000\n");
+        return file;
+    }
+
+    // TASK-0116 review: a fault on the sampler thread stops sampling, is recorded, and the frequency of that run is null (no partial top-k,
+    // no thermal flag) while a healthy sampler over the same file gives both.
+    [Fact]
+    public void FreqSampler_Fault_Recorded_FrequencyNull()
+    {
+        int reads = 0;
+        string cpuinfo = CpuinfoFixture();   // written once, before both samplers start reading it
+        using var bad = new FreqSampler(5, "proc_cpuinfo", [cpuinfo], () =>
+        {
+            if (++reads > 2) throw new InvalidOperationException("injected");
+        });
+        using var good = new FreqSampler(5, "proc_cpuinfo", [cpuinfo]);
+        var sw = Stopwatch.StartNew();
+        while ((bad.Failure is null || good.PerCpu.Count < 2) && sw.ElapsedMilliseconds < 10_000)
+            Thread.Sleep(5);
+        Assert.Equal("System.InvalidOperationException: injected", bad.Failure);
+        Assert.Equal(2, bad.PerCpu.Count);
+        Assert.Null(good.Failure);
+        (long, long)[] all = [(0, long.MaxValue)];
+        JsonElement Freq(FreqSampler f)
+        {
+            using var ms = new MemoryStream();
+            using (var w = new Utf8JsonWriter(ms))
+            {
+                w.WriteStartObject();
+                ProcessBench.WriteFrequency(w, f, all, 3000, 2, 0.9, null, 0);
+                w.WriteEndObject();
+            }
+            return JsonDocument.Parse(ms.ToArray()).RootElement.GetProperty("frequency").Clone();
+        }
+        JsonElement fb = Freq(bad), fg = Freq(good);
+        Assert.Equal("System.InvalidOperationException: injected", fb.GetProperty("sampler_failure").GetString());
+        Assert.Equal(JsonValueKind.Null, fb.GetProperty("topk_median_mhz").ValueKind);
+        Assert.Equal(JsonValueKind.Null, fb.GetProperty("possible_thermal_throttle").ValueKind);
+        Assert.Equal(JsonValueKind.Null, fb.GetProperty("f_over_f_ref").ValueKind);
+        Assert.Equal(JsonValueKind.Null, fg.GetProperty("sampler_failure").ValueKind);
+        Assert.Equal(3000, fg.GetProperty("topk_median_mhz").GetDouble());
+        Assert.False(fg.GetProperty("possible_thermal_throttle").GetBoolean());
+    }
+
+    [Fact]
+    public void SeriesDriver_FrequencyOf_StoppedSampler_IsNoFrequency()
+    {
+        using JsonDocument ok = JsonDocument.Parse("{\"frequency\":{\"sampler_failure\":null,\"topk_median_mhz\":2500,\"possible_thermal_throttle\":true}}");
+        Assert.Equal((2500.0, true, (string?)null), SeriesDriver.FrequencyOf(ok.RootElement));
+        // A file written before the review fix: values present, failure set → still no frequency.
+        using JsonDocument bad = JsonDocument.Parse("{\"frequency\":{\"sampler_failure\":\"X: y\",\"topk_median_mhz\":2500,\"possible_thermal_throttle\":true}}");
+        Assert.Equal(((double?)null, (bool?)null, "X: y"), SeriesDriver.FrequencyOf(bad.RootElement));
+        using JsonDocument none = JsonDocument.Parse("{}");
+        Assert.Equal(((double?)null, (bool?)null, (string?)null), SeriesDriver.FrequencyOf(none.RootElement));
+    }
+
+    [Fact]
+    public void FRef_Exit_FailsOnStoppedSampler()
+    {
+        Assert.Equal(0, BenchCommand.FRefExit(3000, null));
+        Assert.Equal(1, BenchCommand.FRefExit(3000, "System.InvalidOperationException: injected"));
+        Assert.Equal(1, BenchCommand.FRefExit(null, null));
+    }
+
+    [Fact]
+    public void FreqSampler_MissingSource_IsNone()
+    {
+        using var f = new FreqSampler(10, "proc_cpuinfo", [Path.Combine(_tmp, "no-such-cpuinfo")]);
+        Assert.Equal("none", f.Source);
+        Thread.Sleep(50);
+        Assert.Empty(f.PerCpu);
+        Assert.Null(f.Failure);
+    }
+
     // ---------- LoadMeter ----------
 
     [Fact]
