@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "experiment": "TM-horizon-2030",
+  "description": "Step T-M of docs/architecture/notes/slice-horizon-2030.md §5: main (FULL) to 2030-12 (1024 months, ticks 31168), seeds 1-5, threads 1 and 2 (L2 check). Probe, not a frozen EXP; analysis lab/analysis/tm_horizon_2030.py.",
+  "model": "JetSlice",
+  "ticks": 31168,
+  "chunk_size": 1,
+  "threads": [1, 2],
+  "seeds": { "start": 1, "count": 5 },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full"
+  },
+  "series": [ { "name": "main" } ],
+  "meta": {
+    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.34 r1",
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r13",
+    "note": "docs/simulation/m-play-horizon-2030.md, section after 1977"
+  }
+}
