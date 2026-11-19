@@ -1,7 +1,7 @@
 ---
 id: TASK-0114
 title: "Northern Algeria regions for the 1945 map (DEBT-0058)"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: research-scientist
@@ -13,6 +13,7 @@ related: [TASK-0109, ADR-0022]
 approved_by: orchestrator
 approved_at: 2026-11-19
 approval_ref: "DEBT-0058 (light)"
+review_ref: "reviewer: APPROVE (spec and owners diff); Codex waived, DEBT-0064 (O-013); landed f09054f"
 created: 2026-11-19
 ---
 

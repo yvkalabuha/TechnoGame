@@ -49,10 +49,10 @@ facts:
     keywords: [TestApiVersion, API, surface]
 
   - id: map-regions
-    statement: "Карта мира 1945: 3124 провинции, 374 региона (379 после слияния TASK-0114). Предел предупреждения — 400 регионов (ADR-0022)."
+    statement: "Карта мира 1945: 3124 провинции, 379 регионов. Предел предупреждения — 400 регионов (ADR-0022)."
     source: "mods/core/map/regions.yaml"
-    probe: {file: "mods/core/map/regions.yaml", count: '^  - \{id: ', expect: "374"}
-    stale_patterns: ['373 региона', '150[–-]250 регион']
+    probe: {file: "mods/core/map/regions.yaml", count: '^  - \{id: ', expect: "379"}
+    stale_patterns: ['373 региона', '374 региона', '150[–-]250 регион']
     keywords: [регион, провинци, карта, 400, квот]
 
   - id: milestones
