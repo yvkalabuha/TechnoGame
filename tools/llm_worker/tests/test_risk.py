@@ -283,8 +283,8 @@ class IssueContractAllowedPathsTest(unittest.TestCase):
 
     def test_validation_rejects_allowed_above_risk(self):
         from tools.llm_worker.contract import validate_contract
-        from helpers import load_contract
-        c = load_contract("B1-fx6-tests.json")
+        from helpers import load_pilot_contract
+        c = load_pilot_contract("B1-fx6-tests.json")
         self.assertEqual([e for e in validate_contract(c) if "allowed_paths" in e], [])
         for bad in (["tests/**"], ["src/Singularity.Core/*.cs"], ["tools/llm_worker/*.py"], ["docs/decisions/*.md"]):
             errs = validate_contract(dict(c, allowed_paths=bad))
@@ -292,8 +292,8 @@ class IssueContractAllowedPathsTest(unittest.TestCase):
 
     def test_pilot_b1_is_valid(self):
         from tools.llm_worker.contract import validate_contract
-        from helpers import load_contract
-        self.assertEqual(validate_contract(load_contract("B1-fx6-tests.json")), [])
+        from helpers import load_pilot_contract
+        self.assertEqual(validate_contract(load_pilot_contract("B1-fx6-tests.json")), [])
 
 
 class IssueFrontmatterAndModesTest(unittest.TestCase):
