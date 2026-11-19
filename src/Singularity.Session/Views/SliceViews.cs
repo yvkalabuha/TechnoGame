@@ -90,11 +90,13 @@ public sealed record PolicyDecisionView(
     ImmutableArray<FleetCommand> Fleet,
     ImmutableArray<int> Repeats);
 
-public sealed record DesignCommandView(DesignCommandKind Kind, int Target, ImmutableArray<int> Alts);
-public readonly record struct StartView(int Design, Fx6 Rate);
+/// <summary><see cref="Handle"/> is the project a Derive or Cancel names (the generation the AI saw at its decision, ADR-0005 p. 3); <c>default</c> for a Compose.</summary>
+public sealed record DesignCommandView(DesignCommandKind Kind, int Target, ImmutableArray<int> Alts, DesignHandle Handle);
+/// <summary>An AI start; <see cref="Handle"/> is the handle the AI decided on.</summary>
+public readonly record struct StartView(int Design, Fx6 Rate, DesignHandle Handle);
 
 /// <summary>A closed line and the rule that closed it; <see cref="Reason"/> is <c>None</c> in a snapshot without a monthly step (the trace is of that step only).</summary>
-public readonly record struct CloseView(int Design, LineCloseReason Reason);
+public readonly record struct CloseView(int Design, LineCloseReason Reason, DesignHandle Handle);
 
 /// <summary>Inputs of the monthly step <see cref="Month"/> as its compute saw them (after the deals and the commands of the tick, before the step).</summary>
 public sealed record MonthInputsView(long Month, int GFront, ImmutableArray<ActorInputsView> Actors);

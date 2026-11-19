@@ -142,7 +142,7 @@ public sealed partial class PolicySystem
         {
             if (_closeStamp[d].Current[row] == Stamp(t))
                 series[d] = false;
-            if (_startStamp[d].Current[row] == Stamp(t))
+            if (StartPending(row, d, t, designs[d]))
                 series[d] = true;
         }
         foreach (int d in dec.Closes)

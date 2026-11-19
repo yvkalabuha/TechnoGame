@@ -54,7 +54,7 @@ public sealed partial class PolicySystem : ITickSystem
     /// <param name="events">Stream <c>E</c> of the events (<c>EVT_LIC</c>, <c>EVT_DIS</c>; its seed already reflects <c>FIX_E</c>); without it the policy has no disruptions and no licences.</param>
     /// <param name="eventInputs">Reads of the licence and why_not rules (spec A43); without them the policy has no licences and no why_not triggers.</param>
     /// <param name="disruptionExposure"><c>exposure_a</c> by row (spec §8.1), default 1.</param>
-    /// <param name="startLines">(row, design) of the start lines of the scenario (E1): their rate is <c>r_AI</c> from tick 0.</param>
+    /// <param name="startLines">(row, design) of the start lines of the scenario (E1): their rate is <c>r_AI</c> from tick 0. The slot must hold a start line (stage С at load, so its first occupant, generation 1): the line is attributed to that occupant by <see cref="AiLine"/>.</param>
     public PolicySystem(Table table, PolicyParams parameters, ImmutableArray<int> actorNumber, ImmutableArray<Fx6> budget0,
         ImmutableArray<Fx6> growthPerYear, CounterRng ai, IPolicyInputs inputs, IndustryMailbox mailbox, int qpRequesterId,
         ImmutableArray<int> forcedProfile = default, int systemId = DefaultSystemId, IPolicyProducts? products = null, int designs = 0,
@@ -82,6 +82,11 @@ public sealed partial class PolicySystem : ITickSystem
         _growth = growthPerYear;
         _forcedProfile = forcedProfile;
         _startLines = startLines.IsDefault ? [] : startLines;
+        foreach ((int r, int d) in _startLines)
+        {
+            if (r < 0 || r >= actorNumber.Length || d < 0 || d >= designs)
+                throw new ArgumentOutOfRangeException(nameof(startLines), (r, d), "A start line names a row of the table and a design slot of the layout.");
+        }
         _ai = ai;
         _inputs = inputs;
         _mailbox = mailbox;

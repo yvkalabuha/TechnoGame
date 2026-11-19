@@ -186,12 +186,17 @@ public sealed class CommandState
                 Set(_fStamp[slotNo], a, stamp);
                 break;
             case StartSeries s:
+                // One entry per (actor, slot, month): a stale client's later command (always the lower generation) must not displace the valid one.
+                if (_sStamp[s.Design.Slot].Current[a] == stamp && _sGen[s.Design.Slot].Current[a] > s.Design.Generation)
+                    return Superseded(s.Design, _sGen[s.Design.Slot].Current[a]);
                 Set(_sStamp[s.Design.Slot], a, stamp);
                 Set(_sGen[s.Design.Slot], a, s.Design.Generation);
                 Set(_sRate[s.Design.Slot], a, s.Rate.Raw);
                 Set(_sForce[s.Design.Slot], a, s.Force ? 1 : 0);
                 break;
             case CloseLine l:
+                if (_cStamp[l.Design.Slot].Current[a] == stamp && _cGen[l.Design.Slot].Current[a] > l.Design.Generation)
+                    return Superseded(l.Design, _cGen[l.Design.Slot].Current[a]);
                 Set(_cStamp[l.Design.Slot], a, stamp);
                 Set(_cGen[l.Design.Slot], a, l.Design.Generation);
                 break;
@@ -200,6 +205,9 @@ public sealed class CommandState
         }
         return CommandVerdict.Ok;
     }
+
+    private static CommandVerdict Superseded(DesignHandle stale, int kept) =>
+        CommandVerdict.Refuse(CommandRefusal.StaleHandle, $"design {stale.Slot} generation {stale.Generation} is older than generation {kept}, already commanded for this month");
 
     private static int Stamp(long month) => checked((int)month + 1);
 

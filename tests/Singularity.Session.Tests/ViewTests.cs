@@ -192,7 +192,7 @@ public sealed class ViewWalk
                     && dv.Readiness == Fx6.Zero && dv.InService == Fx6.Zero, $"month {t} actor {a} slot {d}: empty slot");
                 continue;
             }
-            Check("design", dv.Design == d && dv.Stage == stage && dv.PlatformGen == p.PlatformGen(a, d) && dv.Gen == p.Gen(a, d) && dv.Parent == p.Parent(a, d)
+            Check("design", dv.Design == d && dv.Stage == stage && dv.PlatformGen == p.PlatformGen(a, d) && dv.Gen == p.Gen(a, d) && dv.Parent == p.LiveParent(a, d)
                 && dv.StageOMonth == p.StageOMonth(a, d) && dv.BuiltAny == p.BuiltAny(a, d) && dv.Cancelled == p.Cancelled(a, d) && dv.Rate == p.Rate(a, d)
                 && dv.UnitCost == p.UnitCost(a, d) && dv.UnitCostFloor == p.UnitCostFloor(a, d) && dv.InService == p.InService(a, d)
                 && dv.Readiness == p.Readiness(a, d, t + 1) && dv.Perf == p.Perf(a, d) && dv.Bind == p.Bind(a, d) && dv.AiLine == w.Policy.AiLine(a, d, p.Generation(a, d))
@@ -214,12 +214,12 @@ public sealed class ViewWalk
         PolicyDecisionView dec = av.Decisions;
         IReadOnlyList<DesignCommand> cmds = w.Policy.AiDesignCommands(a, next);
         Check("decisions", dec.DesignCommands.Length == cmds.Count && Enumerable.Range(0, cmds.Count).All(i =>
-            dec.DesignCommands[i].Kind == cmds[i].Kind && dec.DesignCommands[i].Target == cmds[i].Target && dec.DesignCommands[i].Alts.SequenceEqual(cmds[i].Alts)),
+            dec.DesignCommands[i].Kind == cmds[i].Kind && dec.DesignCommands[i].Target == cmds[i].Target && dec.DesignCommands[i].Handle == cmds[i].Design && dec.DesignCommands[i].Alts.SequenceEqual(cmds[i].Alts)),
             $"month {t} actor {a}: design commands");
         ImmutableArray<StartView> starts = [.. Enumerable.Range(0, w.ProductsLayout.Designs).Where(d => w.Policy.AiStart(a, d, next) is not null)
-            .Select(d => new StartView(d, w.Policy.AiStart(a, d, next)!.Value.Rate))];
+            .Select(d => new StartView(d, w.Policy.AiStart(a, d, next)!.Value.Rate, w.Policy.AiStart(a, d, next)!.Value.Design))];
         Check("decisions", dec.Starts.SequenceEqual(starts), $"month {t} actor {a}: starts");
-        Check("decisions", dec.Closes.Select(c => c.Design).SequenceEqual(Enumerable.Range(0, w.ProductsLayout.Designs).Where(d => w.Policy.AiClose(a, d, next) is not null)), $"month {t} actor {a}: closes");
+        Check("decisions", dec.Closes.Select(c => (c.Design, c.Handle)).SequenceEqual(Enumerable.Range(0, w.ProductsLayout.Designs).Where(d => w.Policy.AiClose(a, d, next) is not null).Select(d => (d, w.Policy.AiClose(a, d, next)!.Value))), $"month {t} actor {a}: closes");
         Check("decisions", dec.Fleet.SequenceEqual(w.Policy.AiFleetCommands(a, next)), $"month {t} actor {a}: fleet");
         Check("decisions", dec.Repeats.Length == w.ProductsLayout.Generations && Enumerable.Range(1, dec.Repeats.Length).All(g => dec.Repeats[g - 1] == w.Policy.Repeats(a, g)),
             $"month {t} actor {a}: repeats");

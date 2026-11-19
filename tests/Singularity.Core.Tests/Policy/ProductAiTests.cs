@@ -693,6 +693,51 @@ public class ProductAiTests
         Assert.NotNull(other.Policy.AiStart(0, 1, 1));
     }
 
+    // ---- TASK-0115 round 3: a stale AI start stamp blocks nothing
+
+    [Fact]
+    public void AStartStamp_OfAProjectCancelledInTheSameCompute_DoesNotBlockTheLaunchOfAnotherEligiblePrototype()
+    {
+        var rig = new Rig(PolicyProfile.Mass, s => s.Design[0] = Live(DesignStage.InService, 1));
+        rig.S.Design[1] = Prototype(5, 2, Fx6.FromInt(100), gate: true);
+        rig.S.Design[2] = Prototype(5, 2, Fx6.FromInt(100), gate: true);
+        rig.Month(0);
+        Assert.Equal(new DesignHandle(1, 1), rig.Policy.AiStart(0, 1, 1)!.Value.Design);   // the first eligible by id launches
+        // The player's cancel was consumed by the same step: the next snapshot shows slot 1 withdrawn while the stamp for month 1 is still read.
+        rig.S.Design[1] = Cancelled(2);
+        rig.Month(1);
+        Assert.Equal(new DesignHandle(2, 1), rig.Policy.AiStart(0, 2, 2)!.Value.Design);   // not skipped because of the dead stamp
+    }
+
+    [Fact]
+    public void AStartStamp_OfASlotRetakenByAnotherProject_IsNotAPendingLaunchOfTheNewTenant()
+    {
+        var rig = new Rig(PolicyProfile.Mass, s => s.Design[0] = Live(DesignStage.InService, 1));
+        rig.S.Design[1] = Prototype(5, 2, Fx6.FromInt(100), gate: true);
+        rig.Month(0);
+        Assert.NotNull(rig.Policy.AiStart(0, 1, 1));
+        rig.S.Design[1] = Prototype(5, 2, Fx6.FromInt(100), gate: true) with { SlotGeneration = 2 };   // another project of generation 2 stands there now
+        rig.Month(1);
+        Assert.Equal(new DesignHandle(1, 2), rig.Policy.AiStart(0, 1, 2)!.Value.Design);
+    }
+
+    [Fact]
+    public void AStartLine_OnASlotOutsideTheLayout_IsRefusedAtConstruction()
+    {
+        var table = new Table(1);
+        Assert.Throws<ArgumentOutOfRangeException>(() => new PolicySystem(table, new PolicyParams() with { FvBudget = Fx6.FromInt(10) }, [0], [Fx6.One], [Fx6.Zero],
+            new CounterRng(1), new NoInputs(), new IndustryMailbox(1), 99, [0], products: new Snapshot(), designs: Designs, generations: Probe.Generations,
+            startLines: [(0, Designs)]));
+    }
+
+    [Fact]
+    public void Candidate_OfTwoLinesOfEqualPlatformGeneration_IsTheNewerProject_EvenInTheLowerSlot()
+    {
+        // The slot 1 was retaken (stage O in month 40), the slot 3 holds the older project (month 10): the candidate is the newer one, not the higher slot.
+        Assert.Equal(1, PolicySystem.Candidate(1, 2, 40, 3, 2, 10));
+        Assert.Equal(1, PolicySystem.Candidate(3, 2, 10, 1, 2, 40));
+    }
+
     // ---- A40 guard (spec v0.21, #162): no cancel_design while L(d, t) = gate_open ∧ D_hidden ≤ k_P·D_ref ∧ admitted holds in the snapshot.
 
     [Fact]

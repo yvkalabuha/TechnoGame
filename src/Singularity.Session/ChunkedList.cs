@@ -16,6 +16,14 @@ internal sealed class ChunkedList<T> : IEnumerable<T>
     public T this[int index] =>
         (uint)index >= (uint)Count ? throw new ArgumentOutOfRangeException(nameof(index), index, "Index outside the list.") : _chunks[index / ChunkSize][index % ChunkSize];
 
+    /// <summary>Replaces an item that is already in the list (the list still never shrinks or moves).</summary>
+    public void Set(int index, T item)
+    {
+        if ((uint)index >= (uint)Count)
+            throw new ArgumentOutOfRangeException(nameof(index), index, "Index outside the list.");
+        _chunks[index / ChunkSize][index % ChunkSize] = item;
+    }
+
     public void Add(T item)
     {
         if (Count == _chunks.Count * ChunkSize)

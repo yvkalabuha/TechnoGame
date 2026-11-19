@@ -17,6 +17,9 @@ internal sealed class OutcomeLog : IReadOnlyList<string>
 
     public void Add(CommandKey key, CommandVerdict verdict) => _items.Add((key, verdict));
 
+    /// <summary>Replaces the verdict of an earlier outcome (the layer's verdict on a command is known only when its month step is about to run).</summary>
+    public void Replace(int index, CommandVerdict verdict) => _items.Set(index, (_items[index].Key, verdict));
+
     private static string Format((CommandKey Key, CommandVerdict Verdict) o) =>
         o.Verdict.Accepted ? $"{o.Key}: accepted" : $"{o.Key}: rejected: {o.Verdict.Reason}: {o.Verdict.Message}";
 

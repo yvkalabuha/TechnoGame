@@ -46,7 +46,7 @@ internal static class ColumnProjection
         || name == "prd.rejected.StaleHandle" || name.StartsWith("prd.altReached.", StringComparison.Ordinal);
 
     // Only the new design-reference generation columns; the old pol.lic.gen, pol.lic.q.gen and pol.lic.bad.gen stay in projections.
-    static bool IsDesignRefGenColumn(string name)
+    public static bool IsDesignRefGenColumn(string name)
     {
         if (!name.EndsWith(".gen", StringComparison.Ordinal)) return false;
         string[] prefixes = ["cmd.dsn.", "cmd.flt.", "cmd.series.", "cmd.close.", "pol.dsn.", "pol.flt.", "pol.start.", "pol.close."];

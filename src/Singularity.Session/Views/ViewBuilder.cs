@@ -125,7 +125,7 @@ internal static class ViewBuilder
         DesignStage stage = p.Stage(a, d);
         // An empty slot has no alternatives, so the functions of the design are not defined: only the columns are copied.
         bool exists = stage != DesignStage.None;
-        return new DesignView(d, stage, p.PlatformGen(a, d), exists ? p.Gen(a, d) : 0, p.Parent(a, d), p.StageOMonth(a, d),
+        return new DesignView(d, stage, p.PlatformGen(a, d), exists ? p.Gen(a, d) : 0, p.LiveParent(a, d), p.StageOMonth(a, d),
             p.BuiltAny(a, d), p.Cancelled(a, d), p.Rate(a, d), p.UnitCost(a, d), exists ? p.UnitCostFloor(a, d) : Fx6.Zero,
             p.InService(a, d), exists ? p.Readiness(a, d, next) : Fx6.Zero, exists ? p.Perf(a, d) : Fx6.Zero, p.Bind(a, d), w.Policy.AiLine(a, d, p.Generation(a, d)),
             [.. p.PrcSet(a, d)], p.Generation(a, d));
@@ -136,15 +136,15 @@ internal static class ViewBuilder
         PolicySystem pol = w.Policy;
         var commands = ImmutableArray.CreateBuilder<DesignCommandView>();
         foreach (DesignCommand c in pol.AiDesignCommands(a, next))
-            commands.Add(new DesignCommandView(c.Kind, c.Target, [.. c.Alts]));
+            commands.Add(new DesignCommandView(c.Kind, c.Target, [.. c.Alts], c.Design));
         var starts = ImmutableArray.CreateBuilder<StartView>();
         var closes = ImmutableArray.CreateBuilder<CloseView>();
         for (int d = 0; d < w.ProductsLayout.Designs; d++)
         {
             if (pol.AiStart(a, d, next) is { } start)
-                starts.Add(new StartView(d, start.Rate));
-            if (pol.AiClose(a, d, next) is not null)
-                closes.Add(new CloseView(d, stepped ? pol.LastCloseReason(a, d) : LineCloseReason.None));
+                starts.Add(new StartView(d, start.Rate, start.Design));
+            if (pol.AiClose(a, d, next) is { } close)
+                closes.Add(new CloseView(d, stepped ? pol.LastCloseReason(a, d) : LineCloseReason.None, close));
         }
         var repeats = ImmutableArray.CreateBuilder<int>(w.ProductsLayout.Generations);
         for (int g = 1; g <= w.ProductsLayout.Generations; g++)

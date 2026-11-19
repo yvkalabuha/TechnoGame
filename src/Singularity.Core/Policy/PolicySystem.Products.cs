@@ -118,6 +118,13 @@ public sealed partial class PolicySystem
     public (DesignHandle Design, Fx6 Rate)? AiStart(int actor, int design, long month) =>
         _startStamp[design].Current[actor] == Stamp(month) ? (new DesignHandle(design, _startGen[design].Current[actor]), Fx6.FromRaw(_startRate[design].Current[actor])) : null;
 
+    /// <summary>
+    /// An AI start stamped for month <paramref name="t"/> still counts as a pending launch only while its handle is the slot's current one and the project is
+    /// not withdrawn: a project cancelled in the same compute (or a slot retaken) leaves a stamp the layer will reject, and it must block nothing.
+    /// </summary>
+    private bool StartPending(int row, int d, long t, in PolicyDesign x) =>
+        _startStamp[d].Current[row] == Stamp(t) && _startGen[d].Current[row] == x.SlotGeneration && x.Stage is not (DesignStage.None or DesignStage.Withdrawn);
+
     /// <summary><c>LINE_CLOSE</c> of the run (spec A41 F17b).</summary>
     public LineCloseRule LineClose => _pp.LineClose;
 
@@ -345,7 +352,7 @@ public sealed partial class PolicySystem
             if (x.GateOpen && x.Hidden <= launchLimit && prod.Admitted(row, d, t))
                 continue;
             // A launch decided last month is still pending in the snapshot: a launching project is not given up.
-            if (_startStamp[d].Current[row] == Stamp(t))
+            if (StartPending(row, d, t, x))
                 continue;
             if (CancelPending(row, t, x.HandleOf(d)))
                 continue;
@@ -394,7 +401,7 @@ public sealed partial class PolicySystem
         // processes are admitted at the site; one line per actor. A project that waits keeps the working line: nothing is closed without a launch.
         bool startPending = false;
         for (int d = 0; d < _designs; d++)
-            startPending |= _startStamp[d].Current[row] == Stamp(t);
+            startPending |= StartPending(row, d, t, designs[d]);
         if (!startPending)
         {
             for (int d = 0; d < _designs; d++)

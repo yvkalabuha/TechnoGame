@@ -113,15 +113,18 @@ public static class CommandCodec
         bool header = false;
         foreach (string line in text.Split('\n'))
         {
-            if (line.Length == 0)
-                continue;
             if (!header)
             {
-                CheckHeader(line);
+                // The header is the first line, not the first non-empty one.
+                if (line.Length > 0)
+                    CheckHeader(line);
+                else
+                    break;
                 header = true;
                 continue;
             }
-            list.Add(Decode(line));
+            if (line.Length > 0)
+                list.Add(Decode(line));
         }
         if (!header)
             throw new FormatException("commands.log has no header line {\"commands_log\":2}: it is version 1 (no design handles, ADR-0005 p. 3); re-record the run");
