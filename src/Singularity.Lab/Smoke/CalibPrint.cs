@@ -50,6 +50,8 @@ internal static class CalibPrint
                 // session from the config alone, so such a point would run another world than the matrix and its hash would not be golden.
                 if (sp.ForceDivisor != 0 || sp.ControlTablesPath is not null)
                     throw new UsageException($"calib-print does not support FORCE or CONTROL_TABLES (point {p.Index}): the print would not run the matrix world.");
+                // H8 (TASK-0121): LK0 and LC0 need no CONTROL_TABLES, so the horizon of the control layers is checked here as in the model.
+                JetSliceModelFactory.CheckControlHorizon(sp.Config.Layer, m.Ticks, data.Scenario(sp.Config.ScenarioId));
                 work.Add((p, s, sp.Config));
             }
         }
