@@ -16,10 +16,8 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0115 [IN_PROGRESS] End-to-end project handle through Session, AI, UI and command log v2 (DEBT-0052) (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0112 [REVIEW] Credits screen with music and sound attribution (DEBT-0050) (developer)
-- TASK-0113 [REVIEW] Policy line candidate by generation and DesignView SlotGeneration rename (DEBT-0053, DEBT-0055) (developer)
 - TASK-0117 [APPROVED] Client UI scale policy: text never below the A1 floor at 1280x720 (developer)
 <!-- registry:active:end -->
 

@@ -37,15 +37,15 @@ facts:
     keywords: [узл, поколени, G4, G5, знани, контент]
 
   - id: schema-version
-    statement: "SchemaVersion состояния среза — 10."
+    statement: "SchemaVersion состояния среза — 11 (TASK-0115)."
     source: "src/Singularity.Session/Slice/SliceWorld.cs"
-    probe: {file: "src/Singularity.Session/Slice/SliceWorld.cs", regex: 'const int SchemaVersion = (\d+);', expect: "10"}
+    probe: {file: "src/Singularity.Session/Slice/SliceWorld.cs", regex: 'const int SchemaVersion = (\d+);', expect: "11"}
     keywords: [SchemaVersion, схем, golden, хеш]
 
   - id: api-version
-    statement: "Версия тестового API сессии (TestApiVersion) — 12."
+    statement: "Версия тестового API сессии (TestApiVersion) — 13 (TASK-0115)."
     source: "src/Singularity.Session/SliceSession.cs"
-    probe: {file: "src/Singularity.Session/SliceSession.cs", regex: 'const int TestApiVersion = (\d+);', expect: "12"}
+    probe: {file: "src/Singularity.Session/SliceSession.cs", regex: 'const int TestApiVersion = (\d+);', expect: "13"}
     keywords: [TestApiVersion, API, surface]
 
   - id: map-regions
