@@ -103,6 +103,9 @@ defaults:
 # Mixed regions (F1 of the research) are given by the dominant part; the split is a map decision for the owner.
   - {region: afghanistan, owner: AFG, controller: AFG, status: core, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: akrotiri_sovereign_base_area, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
+  # Algeria (TASK-0114): regions follow whole NE wilayas; no pinned source gives the 1902/1945 lines.
+  # Approximation: merged unit relizane (Chlef+Mostaganem+Relizane) is whole in algeria_oran, although Chlef (Orleansville) was in the Alger departement in 1945.
+  # Capitals: merged units mascara, tipaza, mila contain the cities Oran (NE 2145), Alger (2195), Constantine (2217), hence the capitals of oran, alger, constantine.
   - {region: algeria_ain_sefra, owner: FRA, controller: FRA, status: colony, confidence: M, source: "TASK-0114 report; by-wilaya borders, law of 24.12.1902"}
   - {region: algeria_alger, owner: FRA, controller: FRA, status: core, confidence: M, source: "TASK-0114 report; by-wilaya borders, law of 24.12.1902"}
   - {region: algeria_constantine, owner: FRA, controller: FRA, status: core, confidence: M, source: "TASK-0114 report; by-wilaya borders, law of 24.12.1902"}
