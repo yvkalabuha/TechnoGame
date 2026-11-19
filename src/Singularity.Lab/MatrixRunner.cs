@@ -127,7 +127,7 @@ public static class MatrixRunner
         if (Directory.Exists(job.Dir))
             Directory.Delete(job.Dir, recursive: true);
         Directory.CreateDirectory(job.Dir);
-        var psi = SelfInvocation();
+        var psi = SelfInvocation.StartInfo();
         foreach (string a in new[]
                  {
                      "run", "--manifest", m.SourcePath, "--point", job.Point.Index.ToString(CultureInfo.InvariantCulture),
@@ -175,19 +175,6 @@ public static class MatrixRunner
             // A broken run.json is a failed run, not a crash of the whole matrix.
             return new JobResult(exit, "bad-run-json", null, $"{e.GetType().Name}: {e.Message}", null, null);
         }
-    }
-
-    /// <summary>The same Lab binary: apphost directly, or `dotnet Singularity.Lab.dll`.</summary>
-    private static ProcessStartInfo SelfInvocation()
-    {
-        string process = Environment.ProcessPath ?? throw new InvalidOperationException("Cannot find own executable.");
-        if (string.Equals(Path.GetFileNameWithoutExtension(process), "dotnet", StringComparison.OrdinalIgnoreCase))
-        {
-            var psi = new ProcessStartInfo(process);
-            psi.ArgumentList.Add(typeof(MatrixRunner).Assembly.Location);
-            return psi;
-        }
-        return new ProcessStartInfo(process);
     }
 
     /// <summary>Concatenates each metric CSV over successful runs in run order; headers must match.</summary>

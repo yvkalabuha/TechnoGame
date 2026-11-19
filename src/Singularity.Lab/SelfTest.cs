@@ -31,6 +31,7 @@ public static class SelfTest
             ("manifest: series seeds override top-level seeds", SeriesSeeds),
             ("manifest: unknown key rejected", UnknownKey),
             ("matrix: valid flag (threads [1], mismatch, problems, selection, null golden_set_hash)", MatrixValidity),
+            ("self-invocation: apphost only when the process name is the Lab assembly; dotnet, testhost(.exe) -> <dotnet> Lab.dll (DOTNET_HOST_PATH, else \"dotnet\")", SelfInvocation.Check),
             ("run: same seed twice -> same golden_hash", () => SameSeed(tmp)),
             ("run: threads 1 vs 4 -> same golden_hash and CSV", () => ThreadInvariance(tmp)),
             ("run: different seed -> different golden_hash", () => SeedSensitivity(tmp)),
