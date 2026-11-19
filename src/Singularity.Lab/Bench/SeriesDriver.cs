@@ -646,12 +646,7 @@ internal static class SeriesDriver
 
     // ---------------- children ----------------
 
-    private static (string Exe, string[] Prefix) SelfCommand()
-    {
-        string exe = Environment.ProcessPath ?? "dotnet";
-        string name = Path.GetFileNameWithoutExtension(exe);
-        return name.Equals("dotnet", StringComparison.OrdinalIgnoreCase) ? (exe, [typeof(SeriesDriver).Assembly.Location]) : (exe, []);
-    }
+    private static (string Exe, string[] Prefix) SelfCommand() => SelfInvocation.Current();
 
     private static string[] AllowDebug(Ctx c) => c.AllowDebug ? ["--allow-debug", "true"] : [];
 
