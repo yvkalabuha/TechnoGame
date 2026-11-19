@@ -61,6 +61,7 @@ def next_now(b, g):
 
 
 def next_a(b, f, gf, s, lam):
+    """Rule A step (BudgetMath.NextConverging). The ONE place to change when the Core formula of rule A changes (TASK-0122 follow-up)."""
     pulled = b + fmul(monthly(lam), fmul(s, f) - b)
     nxt = fmul(pulled, FX + monthly(gf))
     return max(nxt, 1)
@@ -237,11 +238,12 @@ def analyse_run(run_dir):
                 lim_money=sum(1 for r in rows if int(r["bind_money"]) > 0) / n,
                 unspent=(sum(int(r["tool_unspent"]) for r in rows) / rest) if rest else None,
             )
+    output_total = {a: sum(int(month[(t, a)]["rate_sum"]) for t in range(months)) / FX for a in ACTORS}
     r0, r1 = rank[0], rank[t_sept(2030)]
     win = {a: (r0[a] - r1[a] >= 1 or r1[a] == 1) for a in ACTORS}
     return dict(seed=int(info["seed"]), months=months, golden=info["golden_hash"], data_hash=info["data_hash"],
                 manifest_hash=info["manifest_hash"], core=info["core_commit"], dirty=info.get("dirty"), budget=budget,
-                yearly=yearly, rank=rank, win=win, first_unit=first_unit, t_req=t_req, starts=starts, dir=run_dir)
+                yearly=yearly, output_total=output_total, rank=rank, win=win, first_unit=first_unit, t_req=t_req, starts=starts, dir=run_dir)
 
 
 # ---------------------------------------------------------------- checks
@@ -305,28 +307,45 @@ def tolerance_s8(var, base):
             out.append(f"key_G {a} 1977: median {mv} vs {mb}")
     for s in seeds:
         v, b = var[s], base[s]
-        for a, g in sorted(b["first_unit"]):
-            for name, col in (("first unit", "first_unit"), ("project t_req", "t_req")):
-                tb = b[col].get((a, g))
-                tv = v[col].get((a, g))
-                if tb is None or tb < 0 or tb >= H_CALIB:
-                    continue
-                if tv is None or tv < 0 or abs(tv - tb) > SHIFT_MAX:
-                    out.append(f"seed {s} {a} G{g} {name}: {tv} vs {tb}")
+        for name, col in (("first unit", "first_unit"), ("project t_req", "t_req")):
+            for a, g in sorted(set(b[col]) | set(v[col])):
+                verdict = timing(v[col].get((a, g)), b[col].get((a, g)))
+                if verdict:
+                    out.append(f"seed {s} {a} G{g} {name}: {verdict}")
         for a in ACTORS:
-            lb = [t for t in b["starts"][a] if t < H_CALIB]
-            lv = [t for t in v["starts"][a] if t < H_CALIB]
-            if len(lb) != len(lv):
-                out.append(f"seed {s} {a} lines before {H_CALIB}: {len(lv)} vs {len(lb)}")
-            for k, (x, z) in enumerate(zip(lv, lb)):
-                if abs(x - z) > SHIFT_MAX:
+            lv, lb = v["starts"][a], b["starts"][a]
+            # The k-th line start of each side is one item; "number of lines before 1977" changes only when an item in the window has no
+            # partner (an item that crosses month 384 within SHIFT_MAX is a shift, not a count change).
+            for k in range(max(len(lv), len(lb))):
+                x = lv[k] if k < len(lv) else None
+                z = lb[k] if k < len(lb) else None
+                verdict = timing(x, z)
+                if verdict:
                     tag = " (FRA first line, #169)" if a == "FRA" and k == 0 else ""
-                    out.append(f"seed {s} {a} line {k + 1}: month {x} vs {z}{tag}")
+                    kind = "count change" if (x is None) != (z is None) else "shift"
+                    out.append(f"seed {s} {a} line {k + 1} ({kind}): {verdict}{tag}")
     return sorted(set(out))
 
 
-def money_limits(var, base):
-    """§7: places differ by ≥ 2 (median rank, some check year) or wins differ by ≥ 3 (of the seeds) for some country."""
+def timing(tv, tb):
+    """§8 date rule for one item (variant date tv, NOW date tb; None = never, −1 = at the start). The item is in scope when EITHER date is before
+    H_CALIB; then it violates when one side has no date or the dates differ by more than SHIFT_MAX. Returns the violation text or None."""
+    dates = [t for t in (tv, tb) if t is not None]
+    if not dates or min(dates) >= H_CALIB:
+        return None
+    if tv is None or tb is None:
+        return f"{tv} vs {tb} (present on one side only)"
+    return f"{tv} vs {tb} (shift {tv - tb})" if abs(tv - tb) > SHIFT_MAX else None
+
+
+PLACES_DEFINITION = ("place difference = |median over seeds of the variant's rank − median over seeds of NOW's rank| at a check year "
+                     "(a difference of medians, not a per-seed difference); wins = catch-up wins among the paired seeds")
+
+
+def places_or_wins(var, base):
+    """§7 criterion "money limits": places differ by ≥ 2 (PLACES_DEFINITION) at some check year or wins differ by ≥ 3 for some country.
+    Only places and wins: the line limiter Bind cannot separate the rules (the asked rate r_AI is itself ⌊B_proc/unit_cost⌋, a function of the
+    budget, so a line is money-bound under every rule)."""
     seeds = sorted(set(var) & set(base))
     hits = []
     for a in ACTORS:
@@ -342,6 +361,29 @@ def money_limits(var, base):
     return hits
 
 
+MIN_SEEDS = 10  # §7: ≥ 10 seeds per series for a decision
+
+
+def seed_problems(seeds, pilot):
+    """A series run (not --pilot) with fewer than MIN_SEEDS seeds per series is not valid."""
+    if pilot or len(seeds) >= MIN_SEEDS:
+        return []
+    return [f"{len(seeds)} seed(s) per series, the series needs ≥ {MIN_SEEDS} (§7); use --pilot for a pilot"]
+
+
+def b1_compare_end(tc):
+    """B1 = NOW is required for months t < tc − 1, tc = first month whose budget differs. The products step of month t reads the next budget
+    (PolicySystem: ComputeProducts(..., _budget.Next) = budget(t + 1)), so month tc − 1 may already differ."""
+    return tc - 1
+
+
+def b1_problem(seed, tc, tw):
+    end = b1_compare_end(tc)
+    if tw is not None and tw < end:
+        return f"B1 seed {seed} differs from NOW at t = {tw}, before month {end} (first budget difference t = {tc}, minus the month the products step reads ahead)"
+    return None
+
+
 # ---------------------------------------------------------------- print
 
 def med_rng(vals, fmt="{:.2f}"):
@@ -352,10 +394,13 @@ def med_rng(vals, fmt="{:.2f}"):
     return fmt.format(m) if lo == hi else f"{fmt.format(m)} ({fmt.format(lo)}…{fmt.format(hi)})"
 
 
-FIELDS = [
+FIELDS_PLACE = [
     ("rank", "место (ранг TechKey, сентябрь)", "{:.0f}"),
     ("key_g", "поколение на вооружении key_G", "{:.0f}"),
     ("gens", "поколений когда-либо в строю", "{:.0f}"),
+]
+# What the budget changes in volume (§6 of the note): pools, alloy and output.
+FIELDS_VOLUME = [
     ("budget", "бюджет (USA 1945 = 1)", "{:.3f}"),
     ("wf_eng", "кадры: инженеры WorkforceAvailable", "{:.0f}"),
     ("wf_skilled", "кадры: квалифицированные WorkforceAvailable", "{:.0f}"),
@@ -364,6 +409,9 @@ FIELDS = [
     ("rate_max", "наибольший месячный выпуск линии", "{:.1f}"),
     ("output", "выпуск линий за год", "{:.0f}"),
     ("volume", "volume (tier ≥ 4, yield ≥ 0,7)", "{:.0f}"),
+]
+# Descriptive only: not evidence that money limits (see places_or_wins).
+FIELDS_DESCRIPTIVE = [
     ("lines", "доля месяцев с линией", "{:.2f}"),
     ("lim_wf", "доля месяцев: кадров выдано меньше запроса", "{:.2f}"),
     ("lim_alloy", "доля месяцев: линия упёрлась в сплавы", "{:.2f}"),
@@ -404,6 +452,7 @@ def main():
     if missing:
         problems.append(f"series missing: {missing}")
     seeds = sorted(runs["NOW"]) if "NOW" in runs else []
+    problems += seed_problems(seeds, pilot)
     for s_name in SERIES:
         if sorted(runs.get(s_name, {})) != seeds:
             problems.append(f"series {s_name} seeds {sorted(runs.get(s_name, {}))} != NOW seeds {seeds}")
@@ -444,22 +493,39 @@ def main():
             b0 = {k: runs["NOW"][seeds[0]]["budget"][k][0] for k in ACTORS}
             note, real = NOTE_CEILING[s_name].get(a), real_ceiling_month(s_name, a, b0, growth)
             print(f"- {s_name} {a}: observed first capped month {obs}; real closed form without rounding {real}; note §4 table {note or '—'}")
+    print("- rule: B1 must equal NOW in every monthly table for t < tc − 1, tc = first month whose budget differs; month tc − 1 may differ "
+          "because its products step reads budget(t + 1) (ComputeProducts(..., _budget.Next))")
     for sd in seeds:
         tc = min(t for t in (first_budget_diff(runs["B1"][sd], runs["NOW"][sd], a) for a in ACTORS) if t is not None)
         tw = first_world_diff(runs["B1"][sd]["dir"], runs["NOW"][sd]["dir"], MONTHS)
         b1_until[sd] = (tc, tw)
-        print(f"- B1 s{sd}: first budget difference t = {tc} ({year_of(tc)}); first difference of any monthly table t = {tw}")
-        if tw is not None and tw < tc:
-            problems.append(f"B1 seed {sd} differs from NOW at t = {tw} before its first ceiling month {tc}")
+        print(f"- B1 s{sd}: first budget difference t = {tc} ({year_of(tc)}); compared t < {b1_compare_end(tc)}; "
+              f"first difference of any monthly table t = {tw}")
+        p = b1_problem(sd, tc, tw)
+        if p:
+            problems.append(p)
 
     # §7 tables
-    for y in CHECK_YEARS:
-        print(f"\n## {y} (September; window of months {t_sept(y)}…{min(t_sept(y) + 11, MONTHS - 1)}), median (min…max) over seeds")
-        print("| величина | actor | " + " | ".join(SERIES) + " |")
-        print("|---|---|" + "---|" * len(SERIES))
-        for f, label, fmt in FIELDS:
-            for a in ACTORS:
-                print(f"| {label} | {a} | " + " | ".join(med_rng([x["yearly"][(y, a)][f] for x in runs[s].values()], fmt) for s in SERIES) + " |")
+    def table(title, fields):
+        for y in CHECK_YEARS:
+            print(f"\n## {title}: {y} (September; window of months {t_sept(y)}…{min(t_sept(y) + 11, MONTHS - 1)}), median (min…max) over seeds")
+            print("| величина | actor | " + " | ".join(SERIES) + " |")
+            print("|---|---|" + "---|" * len(SERIES))
+            for f, label, fmt in fields:
+                for a in ACTORS:
+                    print(f"| {label} | {a} | " + " | ".join(med_rng([x["yearly"][(y, a)][f] for x in runs[s].values()], fmt) for s in SERIES) + " |")
+
+    table("Places and generations", FIELDS_PLACE)
+    table("What the budget changes in volume", FIELDS_VOLUME)
+    print("\n## Line output 1945-09…2030-12, sum over all months (machines), median (min…max) over seeds")
+    print("| actor | " + " | ".join(SERIES) + " |")
+    print("|---|" + "---|" * len(SERIES))
+    for a in ACTORS:
+        print(f"| {a} | " + " | ".join(med_rng([x["output_total"][a] for x in runs[s].values()], "{:.0f}") for s in SERIES) + " |")
+    print("\nDESCRIPTIVE ONLY, not evidence for \"money limits\": Bind = Money is expected under every rule, because the asked line rate "
+          "r_AI = ⌊B_proc / unit_cost_floor⌋ is itself a function of the budget; the shares below describe the runs, the §7 criterion uses "
+          "places and wins only.")
+    table("Descriptive: limiter shares and unused tooling", FIELDS_DESCRIPTIVE)
     print("\n## Catch-up goal (win if rank_1945 − rank_2030 ≥ 1 or rank_2030 = 1): wins of the seeds")
     print("| actor | " + " | ".join(SERIES) + " |")
     print("|---|" + "---|" * len(SERIES))
@@ -472,12 +538,13 @@ def main():
         print(f"- {s_name}: {'passes' if not v else f'{len(v)} violations'}")
         for line in v[:40]:
             print(f"  - {line}")
-    print("\n## §7 money limits (≥ 2 places or ≥ 3 wins of the seeds for some country)")
+    print("\n## §7 criterion \"money limits\": ≥ 2 places or ≥ 3 wins of the seeds for some country (places and wins only)")
+    print(f"- definition: {PLACES_DEFINITION}")
     for s_name in ("A", "B1", "B2"):
-        h = money_limits(runs[s_name], runs["NOW"])
+        h = places_or_wins(runs[s_name], runs["NOW"])
         print(f"- {s_name}: {'yes: ' + '; '.join(h) if h else 'no'}")
-    if len(seeds) < 10:
-        print(f"\nNOTE: {len(seeds)} seed(s): the criteria are computed but the decision needs ≥ 10 seeds (§7).")
+    if len(seeds) < MIN_SEEDS:
+        print(f"\nNOTE: {len(seeds)} seed(s): the criteria are computed but the decision needs ≥ {MIN_SEEDS} seeds (§7).")
     print("\nVALIDITY: " + ("OK" if not problems else "FAILED"))
     for p in problems:
         print(f"- {p}")

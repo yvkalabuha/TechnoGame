@@ -48,10 +48,10 @@ class Replica(unittest.TestCase):
         self.assertIsNone(T.real_ceiling_month("B2", "GBR", B0, self.g))
 
 
-def run(ranks, key_g=2, win=None, first_unit=None, starts=None):
+def run(ranks, key_g=2, win=None, first_unit=None, starts=None, t_req=None):
     """A synthetic analysed run: ranks[(year, actor)] (default 1), the same key_G everywhere, catch-up wins by actor."""
     yearly = {(y, a): {"rank": ranks.get((y, a), 1), "key_g": key_g} for y in T.CHECK_YEARS for a in T.ACTORS}
-    return {"yearly": yearly, "win": win or {a: False for a in T.ACTORS}, "first_unit": first_unit or {}, "t_req": {},
+    return {"yearly": yearly, "win": win or {a: False for a in T.ACTORS}, "first_unit": first_unit or {}, "t_req": t_req or {},
             "starts": starts or {a: [] for a in T.ACTORS}}
 
 
@@ -73,15 +73,46 @@ class Criteria(unittest.TestCase):
         v = T.tolerance_s8(late, base)
         self.assertTrue(any("first unit" in x for x in v))
         self.assertTrue(any("FRA first line" in x for x in v))
-        self.assertTrue(any("lines before" in x for x in v))
+        self.assertTrue(any("count change" in x for x in v))
+
+    def test_s8_project_moved_into_the_window_by_the_variant_is_compared(self):
+        # Codex (TASK-0123): NOW t_req 410 is past the cutoff, the variant brings it to 350: a 60-month shift inside the window.
+        base = {1: run({}, first_unit={("SWE", 2): None}, t_req={("SWE", 2): 410})}
+        var = {1: run({}, first_unit={("SWE", 2): None}, t_req={("SWE", 2): 350})}
+        self.assertTrue(any("SWE G2 project t_req" in x and "shift -60" in x for x in T.tolerance_s8(var, base)))
+        # Present before the cutoff on one side only.
+        only = {1: run({}, first_unit={("SWE", 2): 370})}
+        self.assertTrue(any("one side only" in x for x in T.tolerance_s8(only, {1: run({})})))
+
+    def test_s8_line_crossing_384_within_24_months_is_no_count_change(self):
+        # Reviewer (TASK-0123): base line at 370, variant at 390 — a 20-month shift across the cutoff.
+        base = {1: run({}, starts={**{a: [] for a in T.ACTORS}, "GBR": [370]})}
+        var = {1: run({}, starts={**{a: [] for a in T.ACTORS}, "GBR": [390]})}
+        self.assertEqual(T.tolerance_s8(var, base), [])
+        far = {1: run({}, starts={**{a: [] for a in T.ACTORS}, "GBR": [420]})}
+        self.assertTrue(any("GBR line 1 (shift)" in x for x in T.tolerance_s8(far, base)))
 
     def test_money_limits_by_places_or_wins(self):
         base = {s: run({}) for s in range(1, 11)}
-        self.assertEqual(T.money_limits(base, base), [])
+        self.assertEqual(T.places_or_wins(base, base), [])
         places = {s: run({(2010, "GBR"): 3}) for s in range(1, 11)}
-        self.assertTrue(any("GBR 2010" in h for h in T.money_limits(places, base)))
+        self.assertTrue(any("GBR 2010" in h for h in T.places_or_wins(places, base)))
         wins = {s: run({}, win={**{a: False for a in T.ACTORS}, "SWE": s <= 3}) for s in range(1, 11)}
-        self.assertTrue(any("SWE: catch-up wins 3 vs 0" in h for h in T.money_limits(wins, base)))
+        self.assertTrue(any("SWE: catch-up wins 3 vs 0" in h for h in T.places_or_wins(wins, base)))
+
+
+class Validity(unittest.TestCase):
+    def test_series_with_fewer_than_10_seeds_fails_unless_pilot(self):
+        # Codex (TASK-0123): a non-pilot directory with 1 seed printed VALIDITY: OK.
+        self.assertTrue(T.seed_problems([1], pilot=False))
+        self.assertEqual(T.seed_problems([1], pilot=True), [])
+        self.assertEqual(T.seed_problems(list(range(1, 11)), pilot=False), [])
+
+    def test_b1_may_differ_one_month_before_the_first_budget_difference(self):
+        # Reviewer risk: the products step of month tc - 1 reads budget(tc), so a difference at tc - 1 is not a failure; at tc - 2 it is.
+        self.assertIsNone(T.b1_problem(1, 396, 395))
+        self.assertIsNotNone(T.b1_problem(1, 396, 394))
+        self.assertIsNone(T.b1_problem(1, 396, None))
 
 
 if __name__ == "__main__":
