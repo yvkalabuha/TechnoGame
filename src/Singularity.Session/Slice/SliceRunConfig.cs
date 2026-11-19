@@ -181,6 +181,9 @@ public sealed record SliceRunConfig
     /// <summary><c>LINE_CLOSE</c> (spec A41 F17b, #160): <c>YPROD</c> in main; <c>ADMIT</c> is the rule before F17b (regression, diagnostics).</summary>
     public LineCloseRule LineClose { get; init; } = LineCloseRule.YProd;
 
+    /// <summary><c>BUDGET_RULE</c> (#430): <c>NOW</c> (constant growth) in main; <c>A</c>, <c>B1</c>, <c>B2</c> are measurement variants of slice-budget-convergence.md.</summary>
+    public BudgetRule BudgetRule { get; init; } = BudgetRule.Now;
+
     /// <summary><c>A41_FORM</c> (#244, #245): SLOT = per slot (contract, main), WHOLE = the whole <c>superior</c> as the HYP-0004 hook. A switch of the Lab, not a default.</summary>
     public PilotForm PilotForm { get; init; } = PilotForm.Slot;
 
