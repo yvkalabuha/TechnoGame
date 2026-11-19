@@ -122,7 +122,7 @@ public sealed partial class Rail : PanelContainer
             var r = new Rect2((float)bd.X, (float)bd.Y, (float)bd.W, (float)bd.H);
             bool alarm = Sev >= 2;
             g.DrawRect(r, alarm ? Ui.Alarm : Ui.Warn);
-            g.DrawRect(r, Ui.Ink, false, 1f);
+            g.DrawRect(r.Grow(-0.5f), Ui.Ink, false, 1f);   // the 1 du line is centred on the rect it is given: inset by half so that the ink box equals the plate rect (T6)
             var ink = alarm ? Colors.White : Ui.Ink;
             float x = r.Position.X, y = r.Position.Y;
             if (alarm) g.DrawRect(new Rect2(x + RailMetrics.BadgeSignX, y + RailMetrics.BadgeSignY, RailMetrics.BadgeSignSize, RailMetrics.BadgeSignSize), ink);

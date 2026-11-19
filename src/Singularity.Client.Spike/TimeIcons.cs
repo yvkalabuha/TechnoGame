@@ -3,7 +3,7 @@ using Godot;
 
 namespace Singularity.Client.Spike;
 
-/// <summary>Time group (UI_DESIGN_SYSTEM §17.8, spec §5): pause, slower, faster as 28x28 line icons on a 20-unit grid, and a coloured four-cell tempo gauge (filled: 0 pause, 1 day/s, 2 week/s, 3 month/s) with the tempo word beside it. State reads without colour: fill and the number of ticks.</summary>
+/// <summary>Time group (UI_DESIGN_SYSTEM §17.8, spec §5): pause, slower, faster as 28x28 line icons with a 15 du glyph box, and a coloured four-cell tempo gauge (filled: 0 pause, 1 day/s, 2 week/s, 3 month/s) with the tempo word beside it. State reads without colour: fill and the number of ticks.</summary>
 public sealed partial class TimeControl : HBoxContainer
 {
     public enum Kind { Pause, Slower, Faster }
@@ -27,22 +27,12 @@ public sealed partial class TimeControl : HBoxContainer
             bool filled = K == Kind.Pause && On;
             if (filled) DrawStyleBox(Ui.Box(Ui.Ink, Ui.Ink, 1, 0, Ui.R2), new Rect2(Vector2.Zero, Size));
             var c = Disabled ? Ui.Ink3 : filled ? Ui.Sheet : Ui.Ink;
-            var o = (Size - new Vector2(20, 20)) * 0.5f;
-            Vector2 P(float x, float y) => o + new Vector2(x, y);
-            switch (K)
+            var o = (Size - new Vector2((float)TimeGlyphMetrics.GlyphSize, (float)TimeGlyphMetrics.GlyphSize)) * 0.5f;   // glyph boxes: TimeGlyphMetrics (A2: ink >= 16 x 16 du)
+            foreach (var shape in TimeGlyphMetrics.Shapes((int)K))
             {
-                case Kind.Pause:
-                    DrawPolyline(new[] { P(6, 4), P(9, 4), P(9, 16), P(6, 16), P(6, 4) }, c, 1.5f);
-                    DrawPolyline(new[] { P(11, 4), P(14, 4), P(14, 16), P(11, 16), P(11, 4) }, c, 1.5f);
-                    break;
-                case Kind.Slower:
-                    DrawPolyline(new[] { P(10, 4), P(3, 10), P(10, 16), P(10, 4) }, c, 1.5f);
-                    DrawPolyline(new[] { P(17, 4), P(10, 10), P(17, 16), P(17, 4) }, c, 1.5f);
-                    break;
-                default:
-                    DrawPolyline(new[] { P(3, 4), P(10, 10), P(3, 16), P(3, 4) }, c, 1.5f);
-                    DrawPolyline(new[] { P(10, 4), P(17, 10), P(10, 16), P(10, 4) }, c, 1.5f);
-                    break;
+                var pts = new Vector2[shape.Length];
+                for (int i = 0; i < pts.Length; i++) pts[i] = o + new Vector2((float)shape[i].X, (float)shape[i].Y);
+                DrawPolyline(pts, c, (float)TimeGlyphMetrics.Stroke);
             }
         }
     }

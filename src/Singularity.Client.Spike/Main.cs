@@ -837,9 +837,33 @@ public sealed partial class Main : Node3D
             Q(0.6, () => { SaveShot($"area_forces{sfx}.png"); OpenArea(AreaId.Science); });
             Q(0.8, () => { SaveShot($"area_science{sfx}.png"); OpenArea(AreaId.Production); });
             Q(0.8, () => { SaveShot($"area_production{sfx}.png"); CloseArea(); if (Settings.Current.RailWide) ToggleRail(); _pinBadges = Array.Empty<(AreaId, int, int)>(); });
+            // Level 0 keyboard check: the panel shows five sliders; one is reached by Tab alone (no mouse) and moved by an arrow key.
+            if (scale == 100 && lang == "ru")
+            {
+                int levelBefore = InstrumentLogic.OrganLevel; int[] shareBefore = new int[5]; bool tabHit = false; int tabs = 0, hitShare = -1; string trail = "";
+                Q(0.6, () => { InstrumentLogic.OrganLevel = 0; OpenArea(AreaId.Finance); });
+                Q(0.3, () => _areaPanel.ShotFocusFirst());   // Tab does not leave the rail into the panel (separate Tab scopes): start at the panel's first control, then Tab only
+                for (int i = 0; i < 70; i++)
+                    Q(0.06, () =>
+                    {
+                        if (tabHit) return;
+                        hitShare = _areaPanel.ShotFocusedSlider;
+                        if (hitShare >= 0 && tabs >= 1) { tabHit = true; for (int k = 0; k < 5; k++) shareBefore[k] = _areaPanel.ShotShare(k); PressKey(Key.Right); PressKey(Key.Right, false); return; }
+                        var fo = GetViewport().GuiGetFocusOwner(); string fn = fo == null ? "none" : fo.GetType().Name + (fo is Button fb ? " " + fb.Text : ""); if (!trail.EndsWith(fn)) trail += (trail == "" ? "" : " > ") + fn;
+                        PressKey(Key.Tab); PressKey(Key.Tab, false); tabs++;
+                    });
+                Q(0.4, () =>
+                {
+                    int changed = tabHit && _areaPanel.ShotShare(hitShare) != shareBefore[hitShare] ? hitShare : -1;   // the panel rebalances the other shares: only the focused one is asserted
+                    bool ok = tabHit && changed == hitShare;
+                    _shotLog += $"finance level 0 keyboard: share slider {hitShare} reached by {tabs} Tab presses without the mouse, Right arrow changed share {changed} ({(tabHit ? shareBefore[Math.Max(hitShare, 0)] + " -> " + _areaPanel.ShotShare(Math.Max(hitShare, 0)) : "no slider reached; sliders visible " + _areaPanel.ShotSlidersVisible + ", focus trail " + trail)}): {(ok ? "PASS" : "FAIL")}\n";
+                    if (!ok) InstFail("finance level 0 keyboard check failed");
+                    InstrumentLogic.OrganLevel = levelBefore; GetViewport().GuiReleaseFocus(); CloseArea();
+                });
+            }
             // The rail in its states: all normal, then an alarm on Finance and a warning "9+" on Production, narrow and wide (spec task-0117-rail-and-legend §4).
             Q(0.5, () => { SaveShot($"rail_narrow_normal{sfx}.png"); RunT6($"rail narrow normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });
-            Q(0.5, () => { SaveShot($"rail_narrow_badges{sfx}.png"); RunT6($"rail narrow badges{sfx}", true); _shotLog += _rail.BadgeFitLog(); _pinBadges = Array.Empty<(AreaId, int, int)>(); ToggleRail(); });
+            Q(0.5, () => { SaveShot($"rail_narrow_badges{sfx}.png"); RunT6($"rail narrow badges{sfx}", true); _shotLog += _rail.BadgeFitLog(); _shotLog += "wedge totals are checked at the base view; zoomed and panned frames are not required to show them\n"; _pinBadges = Array.Empty<(AreaId, int, int)>(); ToggleRail(); });
             // Wide, Map selected, no badge: "Esc" and the marker are apart.
             Q(0.6, () => { SaveShot($"rail_wide_normal{sfx}.png", null, scale == 100); RunT6($"rail wide normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });
             Q(0.5, () => { SaveShot($"rail_wide_badges{sfx}.png", null, scale == 100 && lang == "ru"); RunT6($"rail wide badges{sfx}", true); _shotLog += _rail.NameFitLog(); _shotLog += $"rail wide {sfx}: fits without scroll {_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f} (min {_rail.GetCombinedMinimumSize().Y:F0} of {_rail.Size.Y:F0}, rail {_rail.Size.Y:F0} du)\n"; ToggleRail(); _pinBadges = null; OpenTree(0); });

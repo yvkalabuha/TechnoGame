@@ -13,6 +13,7 @@
     <Compile Include="../../src/Singularity.Client.Spike/ContrastValidator.cs" Link="ContrastValidator.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/PaperTexture.cs" Link="PaperTexture.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/AreaData.cs" Link="AreaData.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/TimeGlyphMetrics.cs" Link="TimeGlyphMetrics.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/TextureValidator.cs" Link="TextureValidator.cs" />
   </ItemGroup>
   <ItemGroup>

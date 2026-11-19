@@ -286,6 +286,24 @@ public sealed partial class ActorPanel : PanelContainer
     public int ShotApplied { get; private set; }
     public bool ShotScrolls => _scroll.VerticalScrollMode == ScrollContainer.ScrollMode.Auto;
     public int ShotShare(int k) => _pct[k];
+    /// <summary>Screenshot run: the budget slider that holds the keyboard focus, or -1.</summary>
+    /// <summary>Screenshot run: puts the focus on the first visible focusable control of the panel (the panel is its own Tab scope: Tab from the rail does not enter it).</summary>
+    public void ShotFocusFirst()
+    {
+        Control Find(Node n)
+        {
+            foreach (var c in n.GetChildren())
+            {
+                if (c is not Control ch || !ch.IsVisibleInTree()) continue;
+                if (ch.FocusMode == FocusModeEnum.All) return ch;
+                var f = Find(ch); if (f != null) return f;
+            }
+            return null;
+        }
+        Find(this)?.GrabFocus();
+    }
+    public bool ShotSlidersVisible => _sl[0].IsVisibleInTree();
+    public int ShotFocusedSlider { get { for (int k = 0; k < 5; k++) if (_sl[k].HasFocus()) return k; return -1; } }
 
     void OnSlider(int i, int v)
     {
