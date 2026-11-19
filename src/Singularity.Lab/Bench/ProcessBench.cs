@@ -46,6 +46,8 @@ public sealed class RunTiming
     public (DateTime From, DateTime To) SettleUtc { get; init; }
     /// <summary><c>GC.CollectionCount(0)</c> before and after the settle collection: its GCs are the indices in (After, Upto].</summary>
     public (int After, int Upto) SettleGcs { get; init; }
+    /// <summary><c>GC.CollectionCount(0)</c> at the window start and end: the window's GCs are the indices in (After, Upto] (TASK-0116).</summary>
+    public (int After, int Upto) WindowGcs { get; init; }
     /// <summary>Part of <see cref="AllocatedBytes"/> made by the <see cref="GcEventListener"/> dispatch thread in the window (0 without a listener).</summary>
     public long ListenerAllocatedBytes { get; init; }
 }
@@ -195,6 +197,7 @@ public static class ProcessBench
             PeakWorkingSetBytes = Process.GetCurrentProcess().PeakWorkingSet64,
             Window = (win0, win1),
             WindowUtc = (utc0, utc1),
+            WindowGcs = (g0, g0 + g0b),
             SettleUtc = (settle0, settle1),
             SettleGcs = (settleGc0, settleGc1),
             ListenerAllocatedBytes = listenerAlloc1 - listenerAlloc0,
@@ -483,8 +486,13 @@ public static class ProcessBench
 /// <summary>The paired GC events of a process and the flush record; <see cref="Of"/> gives the summary over the windows of some runs.</summary>
 internal sealed record GcEvents(GcPauses.Timeline Timeline, bool Flushed, double? ClockOffsetMs, double FlushHostSpanMs)
 {
+    /// <summary>
+    /// Pauses by host time of their start; GCs by GC index in the runs' <see cref="RunTiming.WindowGcs"/> — the same rule as the runtime
+    /// counters they are checked against (<see cref="WriteChecks"/>). Off Linux the event clock differs from the host clock by milliseconds,
+    /// and a GC at a window edge was counted by time on one side and by the counter on the other (TASK-0116, CI Windows «gcs 1 vs 0»).
+    /// </summary>
     public GcPauses.Summary Of(IReadOnlyList<RunTiming> runs) =>
-        GcPauses.Summarize(Timeline, [.. runs.Select(r => r.WindowUtc)], runs.Sum(r => r.WindowWallMs));
+        GcPauses.Summarize(Timeline, [.. runs.Select(r => r.WindowUtc)], [.. runs.Select(r => r.WindowGcs)], runs.Sum(r => r.WindowWallMs));
 
     /// <summary>Completeness: events flushed, GC and gen2 counts of the events equal the runtime counters, clock offset of the flush GC.</summary>
     public void WriteChecks(Utf8JsonWriter j, IReadOnlyList<RunTiming> runs, GcPauses.Summary s)
