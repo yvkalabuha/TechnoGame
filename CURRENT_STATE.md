@@ -16,7 +16,6 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0109 [IN_PROGRESS] T4: region status edge cases for 1945 (ADR-0022 p.2.6) (research-scientist)
 - TASK-0110 [IN_PROGRESS] Novelty memory per actor: tried alternatives survive slot reuse (DEBT-0054) (developer)
 - TASK-0108 [REVIEW] UI instruments: tokens, settings, contrast rules and GaugeControl (UI_INSTRUMENTS §8 steps 1-2) (developer)
 <!-- registry:active:end -->

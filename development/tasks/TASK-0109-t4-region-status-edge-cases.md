@@ -1,7 +1,7 @@
 ---
 id: TASK-0109
 title: "T4: region status edge cases for 1945 (ADR-0022 p.2.6)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: research-scientist
@@ -26,8 +26,12 @@ ADR-0022 p.2.6 (ACCEPTED, #410): the legal status of edge-case territories in 19
 2. developer: apply the confirmed `status` changes in owners.yaml; the map build then prints exactly the p.2.7 warnings (GBR, FRA "< 5"); MapBuilder tests and check_determinism.sh pass.
 
 ## Acceptance criteria
-- [ ] Every edge case has a sourced verdict.
-- [ ] owners.yaml is updated; the build warnings match ADR-0022 p.2.7 or the difference is explained.
+- [x] Every edge case has a sourced verdict.
+- [x] owners.yaml is updated; the build warnings match ADR-0022 p.2.7 or the difference is explained.
 
 ## Отчёт research-scientist
 Полный отчёт: `docs/research/TASK-0109-edge-case-report.md`. Итог: 8 регионов core -> colony (guernsey, jersey, isle_of_man, puerto_rico, united_states_virgin_islands, algeria_ouargla, algeria_tamanghasset, taiwan); Аляска, Гавайи, Прибалтика, Молдавия остаются core. Ожидание: USA 5, SUN 31, GBR 2, FRA 4, ROC 7 (два региона Монголии — сомнительная пара, оставлены core).
+
+## Результат
+- owners.yaml: 8 regions core -> colony (5b9bf37, merge). Build: USA core 5, SUN 31, GBR 2, FRA 4, ROC 7; warnings GBR and FRA "< 5", none for SUN (#406), as ADR-0022 p.2.7. MapBuilder 67/67, determinism OK (tables unchanged), full suite green. Review APPROVE.
+- ROC 7 vs the ADR 6: the two Mongolia regions are doubtful and kept core. Northern Algeria has no region: DEBT-0058.
