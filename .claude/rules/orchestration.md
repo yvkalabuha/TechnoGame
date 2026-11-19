@@ -38,6 +38,11 @@ Source: `docs/reviews/project-review-2026-11-19.md`. Current plan: `development/
 - D1 goes to the owner (AskUserQuestion): product direction, scope, milestone content, anything irreversible, a change of an ACCEPTED ADR or of an owner decision, work costing more than about one day.
 - D2 is decided by the Orchestrator: a reversible detail inside an approved design. Record it in `docs/decisions/ORCH_DECISIONS.md` (O-NNN) and list new rows in the next report; the owner may veto any row.
 - Ask the owner at most 4 questions per call, the critical ones first. Every option states its cost in scope or time.
+- Write every owner question in plain Russian for a reader outside the project (owner, 2026-11-19: he picks "recommended" either from trust or because the wording is unclear). Explain the situation in 2–4 sentences inside the question; no bare ids (#NNN, ADR, TASK) and no internal terms without a few words of explanation; each option says what will happen in practice and what the owner will see. If a question cannot be made clear in the dialog, explain it in chat first and then ask.
+
+## 7a. Showing results
+- The owner judges by looking (owner, 2026-11-19). After every task that changes what the player sees, show it: frames at 100 % in the report (SendUserFile or a gallery page), and keep `./run-client.sh` (or the current run command) working so that the owner can start the client himself.
+- The client runs fullscreen or as a borderless full window (#424); windowed sizes are for tests only.
 
 ## 8. State hygiene
 - At each phase end and before a handoff: update `CURRENT_STATE.md` "Сводка", `development/PLAN.md` "Фокус" and, when a milestone changes, `development/ROADMAP.md`.
