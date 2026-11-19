@@ -286,9 +286,10 @@ public sealed partial class ActorPanel : PanelContainer
     public int ShotApplied { get; private set; }
     public bool ShotScrolls => _scroll.VerticalScrollMode == ScrollContainer.ScrollMode.Auto;
     public int ShotShare(int k) => _pct[k];
-    /// <summary>Screenshot run: the budget slider that holds the keyboard focus, or -1.</summary>
-    /// <summary>Screenshot run: puts the focus on the first visible focusable control of the panel (the panel is its own Tab scope: Tab from the rail does not enter it).</summary>
-    public void ShotFocusFirst()
+    /// <summary>Opened from the keyboard: the focus moves to the first focusable control of the panel once it has laid out (the panel is its own Tab scope, so Tab alone cannot enter it from the rail).</summary>
+    public void FocusFirstWhenReady() => _focusWait = 2;
+    int _focusWait;
+    void FocusFirst()
     {
         Control Find(Node n)
         {
@@ -302,6 +303,9 @@ public sealed partial class ActorPanel : PanelContainer
         }
         Find(this)?.GrabFocus();
     }
+    /// <summary>True while a control of this panel holds the keyboard focus.</summary>
+    public bool HasFocusInside() { var f = GetViewport()?.GuiGetFocusOwner(); return f != null && IsAncestorOf(f); }
+    /// <summary>Screenshot run: the budget slider that holds the keyboard focus, or -1.</summary>
     public bool ShotSlidersVisible => _sl[0].IsVisibleInTree();
     public int ShotFocusedSlider { get { for (int k = 0; k < 5; k++) if (_sl[k].HasFocus()) return k; return -1; } }
 
@@ -366,6 +370,7 @@ public sealed partial class ActorPanel : PanelContainer
 
     public override void _Process(double delta)
     {
+        if (_focusWait > 0 && Visible && --_focusWait == 0) FocusFirst();
         // Height follows the content (an inset, not a full-height column), capped by the window.
         if (_areaMode && _headerView != null && Compact != _compactHead) Area = _area;   // the window was resized across the threshold
         bool finance = _areaMode && _area == AreaId.Finance;   // Finance: the outer scroll stays off, the licence block scrolls on its own

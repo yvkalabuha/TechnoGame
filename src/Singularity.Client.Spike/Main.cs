@@ -83,7 +83,12 @@ public sealed partial class Main : Node3D
         {
             // Frames are a real 1920x1080 render: a borderless window of the base size, so that no window manager decoration can clamp it (#424).
             DisplayServer.WindowSetFlag(DisplayServer.WindowFlags.Borderless, true);
-            DisplayServer.WindowSetSize(new Vector2I(SettingsLogic.BaseWidth, SettingsLogic.BaseHeight));
+            // --shot-size WxH: a native larger display (spec 4.3 item 6): map and tree frames only, the frame size is checked against the requested size.
+            var sizeIdx = Array.IndexOf(args, "--shot-size");
+            if (_shots && sizeIdx >= 0 && sizeIdx + 1 < args.Length && args[sizeIdx + 1].Split('x') is { Length: 2 } wh && int.TryParse(wh[0], out int lw) && int.TryParse(wh[1], out int lh)) _largeSize = new Vector2I(lw, lh);
+            DisplayServer.WindowSetSize(_largeSize.X > 0 ? _largeSize : new Vector2I(SettingsLogic.BaseWidth, SettingsLogic.BaseHeight));
+            // A window of the full screen size cannot be had from a window manager that keeps a panel (it clamps the height): the screen-sized run uses fullscreen, where the render is the screen.
+            if (_largeSize.X > 0 && _largeSize == DisplayServer.ScreenGetSize()) DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
         }
         var shotIdx = Array.IndexOf(args, "--shot-dir");
         if (shotIdx >= 0 && shotIdx + 1 < args.Length) _shotDir = args[shotIdx + 1];
@@ -149,7 +154,7 @@ public sealed partial class Main : Node3D
         else
         {
             BuildMenus(layer);
-            if (_shots) { _coldShot = true; _mainMenu.Open(false); }   // the title shots are taken on a cold start, before any HUD exists
+            if (_shots && _largeSize.X == 0) { _coldShot = true; _mainMenu.Open(false); }   // the title shots are taken on a cold start, before any HUD exists
             if (_titleMode)
             {
                 _dataTask = Task.Run(SimHost.LoadData);
@@ -285,7 +290,7 @@ public sealed partial class Main : Node3D
 
         _rail = new Rail { AnchorTop = 0, AnchorBottom = 1, AnchorLeft = 0, AnchorRight = 0, OffsetLeft = 0, OffsetBottom = 0 };
         _rail.SetWide(Settings.Current.RailWide);
-        _rail.Pressed += OpenArea;
+        _rail.Pressed += (id, fromKeyboard) => OpenArea(id, fromKeyboard);
         _rail.ToggleWide += ToggleRail;
         layer.AddChild(_rail);
         _areaPanel = new ActorPanel(_host, true) { Visible = false, Player = _player };
@@ -374,7 +379,8 @@ public sealed partial class Main : Node3D
     // The free area changed (an area opened or closed, the rail changed width): the selected own country moves to its middle again.
     void Recenter() { if (_tintsReady && _actorCountry != null && _actorCountry[_viewed] != 0 && _selected == _actorCountry[_viewed]) FlyTo(_viewed); }
 
-    void OpenArea(AreaId id)
+    // fromKeyboard: a hotkey or Enter on the rail button. Then the focus follows into the live panel (it is its own Tab scope, so Tab alone could not enter it); a mouse opening keeps the focus as it is.
+    void OpenArea(AreaId id, bool fromKeyboard = false)
     {
         if (id == AreaId.Map) { CloseArea(); Recenter(); return; }
         var def = AreaData.Of(id);
@@ -383,15 +389,17 @@ public sealed partial class Main : Node3D
         _area = id; _rail.Select(id);
         _host.WhyActor = _player;
         if (def.State == AreaState.Locked) { _areaPanel.Visible = false; _areaCard.ShowArea(def); }
-        else { _areaCard.Visible = false; _areaPanel.Area = id; _areaPanel.ShowActor(_player); }
+        else { _areaCard.Visible = false; _areaPanel.Area = id; _areaPanel.ShowActor(_player); if (fromKeyboard) _areaPanel.FocusFirstWhenReady(); }
         Recenter();
     }
 
     void CloseArea()
     {
+        var closed = _area; bool focusInside = _areaPanel != null && _areaPanel.HasFocusInside();
         _area = AreaId.Map; _rail?.Select(AreaId.Map);
         if (_areaPanel != null) _areaPanel.Visible = false;
         if (_areaCard != null) _areaCard.Visible = false;
+        if (focusInside && closed != AreaId.Map) _rail?.FocusArea(closed);   // Esc from the panel returns the focus to the button of that area
     }
 
     void ToggleRail()
@@ -652,7 +660,7 @@ public sealed partial class Main : Node3D
         var def = code is >= Key.A and <= Key.Z ? AreaData.ByLetter((char)code) : null;
         if (def == null) return false;
         if (_tree.Visible) { if (def.Id == AreaId.Science) _tree.Visible = false; return true; }
-        if (def.Id == AreaId.Science && _area == AreaId.Science) OpenTree(0); else OpenArea(def.Id);
+        if (def.Id == AreaId.Science && _area == AreaId.Science) OpenTree(0); else OpenArea(def.Id, true);
         return true;
     }
 
@@ -792,7 +800,7 @@ public sealed partial class Main : Node3D
         Directory.CreateDirectory(dir);
         var img = GetViewport().GetTexture().GetImage();
         if (r is Rect2I rr) img = img.GetRegion(rr);
-        else if (!SettingsLogic.IsBaseFrame(img.GetWidth(), img.GetHeight())) { InstFail($"frame {name} is {img.GetWidth()}x{img.GetHeight()}, a full frame must be a real 1920x1080 render (window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, display {DisplayServer.ScreenGetSize().X}x{DisplayServer.ScreenGetSize().Y})"); return; }
+        else if (_largeSize.X > 0 ? (img.GetWidth() != _largeSize.X || img.GetHeight() != _largeSize.Y) : !SettingsLogic.IsBaseFrame(img.GetWidth(), img.GetHeight())) { InstFail($"frame {name} is {img.GetWidth()}x{img.GetHeight()}, a full frame must be a real 1920x1080 render (window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, display {DisplayServer.ScreenGetSize().X}x{DisplayServer.ScreenGetSize().Y})"); return; }
         img.SavePng(Path.Combine(dir, name));
         if (grey) { img.Convert(Image.Format.L8); img.SavePng(Path.Combine(dir, name.Replace(".png", "_grey.png"))); }   // A5: a greyscale frame next to the colour one
     }
@@ -812,14 +820,39 @@ public sealed partial class Main : Node3D
     // The window is a real 1920x1080 render (SaveShot asserts it); other window sizes are not evidence and are not shot.
     readonly List<(double Wait, Action Act)> _sizeQ = new(); int _sizeI;
 
+    Vector2I _largeSize;   // non-zero: the native-size run (map and tree frames at this window size)
     float _discClosed; Vector2 _panBefore;
+
+    // Native larger display: the window is asked for _largeSize; if the render is another size SaveShot rejects the frame and the run fails (no faked size).
+    void BuildLargeShots()
+    {
+        _sizeI = 0; _sizeQ.Clear();
+        string sfx = $"_{_largeSize.X}x{_largeSize.Y}";
+        void Q(double wait, Action act) => _sizeQ.Add((wait, act));
+        Q(0.5, () => { var cv = GetViewport().GetVisibleRect().Size; _shotLog += $"large display {sfx}: asked {_largeSize.X}x{_largeSize.Y}, window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, screen {DisplayServer.ScreenGetSize().X}x{DisplayServer.ScreenGetSize().Y}, canvas {cv.X}x{cv.Y} du, content scale {GetWindow().ContentScaleMode} {GetWindow().ContentScaleAspect}\n"; _host.WhyActor = _player; ShowPower(_player, false); });
+        Q(1.5, () => { SaveShot($"map{sfx}.png"); OpenArea(AreaId.Finance); });
+        Q(0.8, () => { SaveShot($"area_finance{sfx}.png"); CloseArea(); OpenTree(0); });
+        Q(1.5, () =>
+        {
+            string sm = _tree.ShotSummaryCheck(true, out int nIn);
+            _shotLog += $"tree summaries {sfx} (base view): {nIn} of 5 totals fully inside the chart area: {(sm == null && nIn == 5 ? "PASS" : "FAIL " + sm)}\n"; if (sm != null || nIn != 5) InstFail($"tree summaries {sfx}: {sm}");
+            SaveShot($"tree_nolegend{sfx}.png"); _discClosed = _tree.DiscDiameter; _tree.ToggleLegend(true);
+        });
+        Q(0.6, () =>
+        {
+            string ov = _tree.ShotOverlap(); string fit = _tree.ShotLegendFit(); float d = _tree.DiscDiameter;
+            bool ok = ov == null && fit == null && Math.Abs(d - _discClosed) < 0.01f;
+            _shotLog += $"tree legend {sfx}: disc {d:F1} du (closed {_discClosed:F1}), overlap {ov ?? "none"}, legend {fit ?? "clear"}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail($"tree legend {sfx}");
+            SaveShot($"tree_legend{sfx}.png"); _tree.ToggleLegend(false); _tree.Visible = false;
+        });
+    }
     void BuildSizeShots()
     {
         _sizeI = 0; _sizeQ.Clear();
-        var combos = new (int Scale, string Lang)[] { (100, "ru"), (100, "en"), (150, "ru"), (150, "en") };
+        var combos = new (int Scale, string Lang)[] { (100, "ru"), (100, "en"), (125, "ru"), (125, "en"), (150, "ru"), (150, "en") };
         foreach (var (scale, lang) in combos)
         {
-            string sfx = "_1920x1080" + (scale == 150 ? "_s150" : "") + (lang == "en" ? "_en" : "");
+            string sfx = "_1920x1080" + (scale == 150 ? "_s150" : scale == 125 ? "_s125" : "") + (lang == "en" ? "_en" : "");
             void Q(double wait, Action act) => _sizeQ.Add((wait, act));
             Q(0.1, () => { Settings.Current.UiScale = scale; Settings.Apply(Settings.Current, GetWindow(), false); Loc.SetLang(lang); });
             Q(1.0, () => { var cv = GetViewport().GetVisibleRect().Size; _shotLog += $"size shots {sfx}: window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, canvas {cv.X}x{cv.Y} du, scale {scale} %, content scale {GetWindow().ContentScaleSize.X}x{GetWindow().ContentScaleSize.Y} {GetWindow().ContentScaleMode} {GetWindow().ContentScaleAspect}\n"; _mainMenu.Open(true); });
@@ -837,46 +870,55 @@ public sealed partial class Main : Node3D
             Q(0.6, () => { SaveShot($"area_forces{sfx}.png"); OpenArea(AreaId.Science); });
             Q(0.8, () => { SaveShot($"area_science{sfx}.png"); OpenArea(AreaId.Production); });
             Q(0.8, () => { SaveShot($"area_production{sfx}.png"); CloseArea(); if (Settings.Current.RailWide) ToggleRail(); _pinBadges = Array.Empty<(AreaId, int, int)>(); });
-            // Level 0 keyboard check: the panel shows five sliders; one is reached by Tab alone (no mouse) and moved by an arrow key.
+            // Level 0 keyboard check through the real route only: the Finance hotkey opens the panel and moves the focus into it, Tab and an arrow key move a share slider, Space still pauses, Esc returns to the rail button.
             if (scale == 100 && lang == "ru")
             {
-                int levelBefore = InstrumentLogic.OrganLevel; int[] shareBefore = new int[5]; bool tabHit = false; int tabs = 0, hitShare = -1; string trail = "";
-                Q(0.6, () => { InstrumentLogic.OrganLevel = 0; OpenArea(AreaId.Finance); });
-                Q(0.3, () => _areaPanel.ShotFocusFirst());   // Tab does not leave the rail into the panel (separate Tab scopes): start at the panel's first control, then Tab only
-                for (int i = 0; i < 70; i++)
-                    Q(0.06, () =>
-                    {
-                        if (tabHit) return;
-                        hitShare = _areaPanel.ShotFocusedSlider;
-                        if (hitShare >= 0 && tabs >= 1) { tabHit = true; for (int k = 0; k < 5; k++) shareBefore[k] = _areaPanel.ShotShare(k); PressKey(Key.Right); PressKey(Key.Right, false); return; }
-                        var fo = GetViewport().GuiGetFocusOwner(); string fn = fo == null ? "none" : fo.GetType().Name + (fo is Button fb ? " " + fb.Text : ""); if (!trail.EndsWith(fn)) trail += (trail == "" ? "" : " > ") + fn;
-                        PressKey(Key.Tab); PressKey(Key.Tab, false); tabs++;
-                    });
+                int levelBefore = InstrumentLogic.OrganLevel; int[] shareBefore = new int[5]; bool hotFocus = false; int slider = -1, speedBefore = 0;
+                Q(0.6, () => { InstrumentLogic.OrganLevel = 0; CloseArea(); });
+                Q(0.3, () => { PressKey(Key.F); PressKey(Key.F, false); });
+                Q(0.6, () => { hotFocus = _areaPanel.HasFocusInside(); PressKey(Key.Tab); PressKey(Key.Tab, false); });
+                Q(0.3, () => { slider = _areaPanel.ShotFocusedSlider; for (int k = 0; k < 5; k++) shareBefore[k] = _areaPanel.ShotShare(k); PressKey(Key.Right); PressKey(Key.Right, false); });
+                Q(0.3, () =>
+                {
+                    bool changed = slider >= 0 && _areaPanel.ShotShare(slider) != shareBefore[slider];
+                    bool ok = hotFocus && changed;
+                    _shotLog += $"finance level 0 keyboard: hotkey F moved the focus into the panel {hotFocus}, Tab reached share slider {slider}, Right arrow changed it {(slider >= 0 ? shareBefore[slider] + " -> " + _areaPanel.ShotShare(slider) : "n/a")}: {(ok ? "PASS" : "FAIL")}\n";
+                    if (!ok) InstFail("finance level 0 keyboard check failed (real route)");
+                    speedBefore = _host.Speed; PressKey(Key.Space); PressKey(Key.Space, false);
+                });
+                Q(0.3, () =>
+                {
+                    bool paused = _host.Speed != speedBefore;
+                    _shotLog += $"finance level 0 keyboard: Space with a slider focused toggled the pause {paused} ({speedBefore} -> {_host.Speed}): {(paused ? "PASS" : "FAIL")}\n";
+                    if (!paused) InstFail("Space did not pause with a share slider focused");
+                    PressKey(Key.Space); PressKey(Key.Space, false);
+                });
+                Q(0.3, () => { PressKey(Key.Escape); PressKey(Key.Escape, false); });
                 Q(0.4, () =>
                 {
-                    int changed = tabHit && _areaPanel.ShotShare(hitShare) != shareBefore[hitShare] ? hitShare : -1;   // the panel rebalances the other shares: only the focused one is asserted
-                    bool ok = tabHit && changed == hitShare;
-                    _shotLog += $"finance level 0 keyboard: share slider {hitShare} reached by {tabs} Tab presses without the mouse, Right arrow changed share {changed} ({(tabHit ? shareBefore[Math.Max(hitShare, 0)] + " -> " + _areaPanel.ShotShare(Math.Max(hitShare, 0)) : "no slider reached; sliders visible " + _areaPanel.ShotSlidersVisible + ", focus trail " + trail)}): {(ok ? "PASS" : "FAIL")}\n";
-                    if (!ok) InstFail("finance level 0 keyboard check failed");
-                    InstrumentLogic.OrganLevel = levelBefore; GetViewport().GuiReleaseFocus(); CloseArea();
+                    bool back = _rail.HasAreaFocus(AreaId.Finance) && _host.Speed == speedBefore;
+                    _shotLog += $"finance level 0 keyboard: Esc closed the panel and the focus is on the Finance rail button {_rail.HasAreaFocus(AreaId.Finance)}, pause restored {_host.Speed == speedBefore}: {(back ? "PASS" : "FAIL")}\n";
+                    if (!back) InstFail("focus did not return to the rail button");
+                    InstrumentLogic.OrganLevel = levelBefore; GetViewport().GuiReleaseFocus();
                 });
             }
             // The rail in its states: all normal, then an alarm on Finance and a warning "9+" on Production, narrow and wide (spec task-0117-rail-and-legend §4).
             Q(0.5, () => { SaveShot($"rail_narrow_normal{sfx}.png"); RunT6($"rail narrow normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });
-            Q(0.5, () => { SaveShot($"rail_narrow_badges{sfx}.png"); RunT6($"rail narrow badges{sfx}", true); _shotLog += _rail.BadgeFitLog(); _shotLog += "wedge totals are checked at the base view; zoomed and panned frames are not required to show them\n"; _pinBadges = Array.Empty<(AreaId, int, int)>(); ToggleRail(); });
+            Q(0.5, () => { SaveShot($"rail_narrow_badges{sfx}.png"); RunT6($"rail narrow badges{sfx}", true); LogCheck(_rail.BadgeFitLog()); _pinBadges = Array.Empty<(AreaId, int, int)>(); ToggleRail(); });
             // Wide, Map selected, no badge: "Esc" and the marker are apart.
             Q(0.6, () => { SaveShot($"rail_wide_normal{sfx}.png", null, scale == 100); RunT6($"rail wide normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });
-            Q(0.5, () => { SaveShot($"rail_wide_badges{sfx}.png", null, scale == 100 && lang == "ru"); RunT6($"rail wide badges{sfx}", true); _shotLog += _rail.NameFitLog(); _shotLog += $"rail wide {sfx}: fits without scroll {_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f} (min {_rail.GetCombinedMinimumSize().Y:F0} of {_rail.Size.Y:F0}, rail {_rail.Size.Y:F0} du)\n"; ToggleRail(); _pinBadges = null; OpenTree(0); });
+            Q(0.5, () => { SaveShot($"rail_wide_badges{sfx}.png", null, scale == 100 && lang == "ru"); RunT6($"rail wide badges{sfx}", true); LogCheck(_rail.NameFitLog()); _shotLog += $"rail wide {sfx}: fits without scroll {_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f} (min {_rail.GetCombinedMinimumSize().Y:F0} of {_rail.Size.Y:F0}, rail {_rail.Size.Y:F0} du)\n"; ToggleRail(); _pinBadges = null; OpenTree(0); });
             // Tree, legend closed: the five wedge summaries (the closed-legend button is checked in the same call).
             Q(1.0, () =>
             {
-                string sm = _tree.ShotSummaryCheck();
-                _shotLog += $"tree summaries {sfx}: 5 of 5 drawn, no overlap with node, label, summary, stamp, legend button: {(sm == null ? "PASS" : "FAIL " + sm)}\n"; if (sm != null) InstFail($"tree summaries {sfx}: {sm}");
+                string sm = _tree.ShotSummaryCheck(true, out int nIn);
+                _shotLog += $"tree summaries {sfx} (base view): {nIn} of 5 totals fully inside the chart area, no overlap with node, label, total, stamp, legend button: {(sm == null && nIn == 5 ? "PASS" : "FAIL " + sm)}\n"; if (sm != null || nIn != 5) InstFail($"tree summaries {sfx}: {sm}");
+                _shotLog += "rule: wedge totals belong to the chart and move with the wedge label; asserted at the base view (zoom 1.0, pan 0): 5 of 5 inside the chart area. Zoomed or panned frames have no visibility requirement; asserted there: totals still in view touch no node, label or other total\n";
                 SaveShot($"tree_nolegend{sfx}.png", null, scale == 100 && lang == "ru"); _discClosed = _tree.DiscDiameter;
                 _tree.ShotZoom(2.6f, -1); _tree.ShotPanBy(new Vector2(160, -120));
             });
             // The closed button over the zoomed and panned chart; a real click must open the legend and must not pan.
-            Q(0.6, () => { SaveShot($"tree_legend_closed_zoom{sfx}.png"); _panBefore = _tree.ShotPan; Mouse(_tree.ShotButtonCenter * PxPerDu(), null); });
+            Q(0.6, () => { SaveShot($"tree_legend_closed_zoom{sfx}.png"); string zs = _tree.ShotSummaryCheck(false, out int zin); _shotLog += $"tree summaries {sfx} (zoomed, panned): {zin} of 5 totals in the view; those clear of node, label, total: {(zs == null ? "PASS" : "FAIL " + zs)}\n"; if (zs != null) InstFail($"tree zoomed summaries {sfx}: {zs}"); _panBefore = _tree.ShotPan; Mouse(_tree.ShotButtonCenter * PxPerDu(), null); });
             Q(0.2, () => Mouse(_tree.ShotButtonCenter * PxPerDu(), true));
             Q(0.1, () => Mouse(_tree.ShotButtonCenter * PxPerDu(), false));
             Q(0.5, () =>
@@ -888,7 +930,7 @@ public sealed partial class Main : Node3D
             // A9 is checked on the state that is saved: the legend is open. The disc keeps its size and stays at 650 physical px or more (spec §3).
             Q(0.5, () =>
             {
-                string ov = _tree.ShotOverlap(); string fit = _tree.ShotLegendFit(); string sm = _tree.ShotSummaryCheck();
+                string ov = _tree.ShotOverlap(); string fit = _tree.ShotLegendFit(); string sm = _tree.ShotSummaryCheck(true, out int nIn2);
                 if (ov != null) InstFail($"tree overlap {sfx}: {ov}"); else _shotLog += $"tree overlap {sfx}: none\n";
                 _shotLog += $"tree summaries (legend open) {sfx}: {(sm == null ? "PASS" : "FAIL " + sm)}\n"; if (sm != null) InstFail($"tree summaries open {sfx}: {sm}");
                 float d = _tree.DiscDiameter, px = d * scale / 100f;
@@ -900,7 +942,7 @@ public sealed partial class Main : Node3D
             // A node is selected with the legend open: the goal panel yields (bottom 8 du above the sheet) and scrolls inside.
             Q(0.9, () =>
             {
-                string fit = _tree.ShotLegendFit(); bool sc = _tree.ShotPanelScrolls; string sm = _tree.ShotSummaryCheck();
+                string fit = _tree.ShotLegendFit(); bool sc = _tree.ShotPanelScrolls; string sm = _tree.ShotSummaryCheck(true, out int nIn3);
                 bool ok = fit == null && sc && sm == null;
                 _shotLog += $"tree legend + selected node {sfx}: {_tree.ShotPanelInfo}; panel clear of the sheet {(fit == null ? "yes" : fit)}, scrolls {sc}, summaries clear {(sm ?? "yes")}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail($"tree legend + selection {sfx}: {fit} {sc} {sm}");
                 SaveShot($"tree_legend_sel{sfx}.png", null, scale == 100 && lang == "ru"); _tree.ToggleLegend(false); _tree.ResetView(); _tree.Visible = false; _journal.Visible = true;
@@ -917,6 +959,7 @@ public sealed partial class Main : Node3D
         var s = _host.Snap;
         var vp = GetViewport().GetVisibleRect().Size;
         if (ClickTest(dt, vp, Shot)) return;
+        if (_largeSize.X > 0 && _shotStep == 0) { BuildLargeShots(); _shotStep = 70; _shotT = 0; }
         switch (_shotStep)
         {
             case 0:
@@ -1106,7 +1149,7 @@ public sealed partial class Main : Node3D
                 Shot("tree_legend.png"); _tree.ToggleLegend(false); _tree.ShotZoom(2.4f, _tree.FrontierRow >= 0 ? _tree.FrontierRow : _tree.GoalRow); _shotStep = 67; _shotT = 0; break;
             case 67 when _shotT >= 0.8:
                 Shot("tree_nodes_frontier_names.png"); _tree.ResetView(); _tree.Visible = false; _signal.SetSpeed(1); BuildSizeShots(); _shotStep = 70; _shotT = 0; break;
-            case 70 when _sizeI >= _sizeQ.Count: _shotStep = 16; _shotT = 0; break;
+            case 70 when _sizeI >= _sizeQ.Count: if (_largeSize.X > 0) FinishShotRun(dir); else { _shotStep = 16; _shotT = 0; } break;
             case 70 when _shotT >= _sizeQ[_sizeI].Wait: _sizeQ[_sizeI++].Act(); _shotT = 0; break;
             case 16 when _shotT >= 0.5:
                 _audio.StartDemo(); _shotStep = 17; _shotT = 0; break;
@@ -1128,8 +1171,7 @@ public sealed partial class Main : Node3D
                     }
                     _shotLog += $"audio demo: {(bytes > 0 ? bytes + " bytes of PCM" + packed : "not recorded (no audio device)")}\n";
                     _shotLog += $"final: date {s.Date} tick {s.Tick}\n";
-                    Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog); GD.Print(_shotLog);
-                    GetTree().Quit(); _shotStep = 18;
+                    FinishShotRun(dir);
                 }
                 break;
         }
@@ -1192,6 +1234,32 @@ public sealed partial class Main : Node3D
 
     // Knowledge links the panel would read: the same condition as the live path of the Science flasks.
     int LiveKnowledgeLinks() => _host.Snap is { WhyError: "", Target: not null } sn ? Singularity.Client.Spike.InstrumentLogic.ResearchFlasks(sn.Links, int.MaxValue).Count : 0;
+
+    // The shot run exits non-zero when any live check failed (T6, rail, tree, input). Palette validator failures that exist on main are listed below by exact name: reported, not failing.
+    bool _shotFailed;
+    static readonly HashSet<string> KnownDebt = new()
+    {
+        "warn on sea (shaded)", "warn on sea.deep (shaded)", "warn on land-none (shaded)",
+        "tint.1 vs tint.5", "tint.1 vs tint.7", "tint.2 vs tint.8", "tint.4 vs tint.6", "tint.5 vs tint.7",
+    };
+    void LogCheck(string text) { _shotLog += text; if (text.Contains("FAIL")) _shotFailed = true; }
+    void Validate(string title, IReadOnlyList<PairResult> res, PaletteSet p = null)
+    {
+        _shotLog += p != null ? ContrastValidator.Format(p, res) : TextureValidator.Format(title, res);
+        if (res.Count == 0) _shotFailed = true;
+        foreach (var r in res)
+        {
+            if (r.Pass) continue;
+            if (KnownDebt.Contains(r.Name)) _shotLog += $"known, DEBT: {r.Name}\n";
+            else { _shotLog += $"UNLISTED FAILURE: {r.Name}\n"; _shotFailed = true; }
+        }
+    }
+    void FinishShotRun(string dir)
+    {
+        _shotLog += $"shot run result: {(_shotFailed ? "FAILED (a live check failed, exit 1)" : "OK (exit 0)")}\n";
+        Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog); GD.Print(_shotLog);
+        GetTree().Quit(_shotFailed ? 1 : 0); _shotStep = 18;
+    }
 
     void InstFail(string msg)
     {
@@ -1448,7 +1516,7 @@ public sealed partial class Main : Node3D
             Visit(node);
             if (min < double.MaxValue) items.Add(($"{node.GetParent()?.Name}/{node.Name} ({kind}) nearest {who}", min / UiScaleOf(node), TextureValidator.Limit(kind)));
         }
-        _shotLog += TextureValidator.Format("T6 edge band" + (tag != null ? " (" + tag + ")" : "") + ": no text, icon or plate within the band", TextureValidator.T6(items));
+        Validate("T6 edge band" + (tag != null ? " (" + tag + ")" : "") + ": no text, icon or plate within the band", TextureValidator.T6(items));
     }
 
     // Distance in du: global rects are in pixels; the UI scale of the window multiplies them.
@@ -1473,14 +1541,10 @@ public sealed partial class Main : Node3D
     // Runs the alert-contrast validator on palette C and on the v0.2 palette, prints PASS/FAIL per pair into the log. A failure does not stop the run.
     void RunValidator()
     {
-        foreach (var p in new[] { Palette.C, Palette.V02 })
-        {
-            string report = ContrastValidator.Format(p, ContrastValidator.Run(p));
-            _shotLog += report;
-        }
-        _shotLog += TextureValidator.Format("texture rules T1, T2, T4, T5 and moss/olive (T3 and T6 run on the live client below), palette C", TextureValidator.Run(Palette.C));
-        _shotLog += TextureValidator.Format("speed gauge", TextureValidator.RunGauge());
-        _shotLog += TextureValidator.Format("instrument layers (UI_INSTRUMENTS §5), palette C", ContrastValidator.RunInstruments(Palette.C));
+        foreach (var p in new[] { Palette.C, Palette.V02 }) Validate("", ContrastValidator.Run(p), p);
+        Validate("texture rules T1, T2, T4, T5 and moss/olive (T3 and T6 run on the live client below), palette C", TextureValidator.Run(Palette.C));
+        Validate("speed gauge", TextureValidator.RunGauge());
+        Validate("instrument layers (UI_INSTRUMENTS §5), palette C", ContrastValidator.RunInstruments(Palette.C));
         _shotLog += "shot-only: the plates on tints 1/5/7 are demo markers; in the game a plate appears only for a real signal of the player's power\n";
     }
 

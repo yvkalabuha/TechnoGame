@@ -777,19 +777,24 @@ public sealed partial class TechTree : Control
     public Vector2 ShotPan => _pan;
     public void ShotPanBy(Vector2 d) { _pan += d; ClampPan(); Redraw(); }
 
-    /// <summary>Shot run: the five wedge summaries are drawn, inside the tree, and touch no node, label, other summary, legend sheet, goal panel or stamp. Returns the first offender or null.</summary>
-    public string ShotSummaryCheck()
+    /// <summary>Shot run, spec 5.1 rule (a): the totals belong to the chart and move with the wedge label. At the base view (baseView) all five lie fully inside the visible chart area and
+    /// touch no node, label, other total, legend sheet, goal panel or stamp. In a zoomed or panned view only the totals that are still inside the view are checked, and only against nodes, labels and each other.
+    /// Returns the first offender or null; inView receives the number of totals inside the chart area.</summary>
+    public string ShotSummaryCheck(bool baseView, out int inView)
     {
+        inView = 0;
         var others = new List<(string, Rect2)> { ("stamp", StampRect) };
         if (_legendOpen) others.Add(("legend sheet", LegendSheet));
         if (_insetBox.Visible) others.Add(("goal panel", PanelRect));
-        var whole = new Rect2(Vector2.Zero, Size);
         for (int w = 0; w < 5; w++)
         {
             var r = _sumRects[w];
             if (_sumText[w] == null || r.Size.X <= 0) return $"summary {w} not drawn";
-            if (!whole.Encloses(r) || !whole.Encloses(WedgeLabel(w).rect)) return $"summary {w} leaves the tree: {r}";
-            foreach (var (n, o) in others) if (o.Intersects(r) || o.Intersects(WedgeLabel(w).rect)) return $"summary {w} {r} touches {n} {o}";
+            bool inside = Area.Encloses(r) && Area.Encloses(WedgeLabel(w).rect);
+            if (inside) inView++;
+            else if (baseView) return $"summary {w} {r} is not fully inside the chart area {Area}";
+            else continue;
+            if (baseView) foreach (var (n, o) in others) if (o.Intersects(r) || o.Intersects(WedgeLabel(w).rect)) return $"summary {w} {r} touches {n} {o}";
             for (int v = 0; v < 5; v++) { if (v != w && _sumRects[v].Intersects(r)) return $"summary {w} touches summary {v}"; if (WedgeLabel(v).rect.Intersects(r)) return $"summary {w} touches wedge name {v}"; }
             for (int i = 0; i < _rad.Length; i++) if (NodeBox(i).Intersects(r)) return $"summary {w} touches node {i}";
             foreach (var l in _labelRects) if (l.Intersects(r)) return $"summary {w} touches a node label";

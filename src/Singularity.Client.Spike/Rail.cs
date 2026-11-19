@@ -140,7 +140,8 @@ public sealed partial class Rail : PanelContainer
     AreaId _selected = AreaId.Map;
     public bool Wide { get; private set; }
     public int RailWidth => Wide ? WideWidth : NarrowWidth;
-    public event Action<AreaId> Pressed;
+    /// <summary>An area button was activated; the flag is true for the keyboard (Enter), false for the mouse.</summary>
+    public event Action<AreaId, bool> Pressed;
     public event Action ToggleWide;
 
     public Rail()
@@ -159,9 +160,14 @@ public sealed partial class Rail : PanelContainer
             prev = def;
             var b = new AreaButton(def);
             _buttons[(int)def.Id] = b;
-            b.Pressed += () => Pressed?.Invoke(def.Id);
+            bool byMouse = false;   // the source of the one activation in flight: the gui_input signal comes before the button's own Pressed
+            b.Pressed += () => Pressed?.Invoke(def.Id, !byMouse);
             // A mouse click must not leave the keyboard focus on the button (Space pauses the game); keyboard activation keeps it.
-            b.GuiInput += e => { if (e is InputEventMouseButton { Pressed: false, ButtonIndex: MouseButton.Left }) b.CallDeferred(Control.MethodName.ReleaseFocus); };
+            b.GuiInput += e =>
+            {
+                if (e is InputEventMouseButton) byMouse = true; else if (e is InputEventKey) byMouse = false;
+                if (e is InputEventMouseButton { Pressed: false, ButtonIndex: MouseButton.Left }) b.CallDeferred(Control.MethodName.ReleaseFocus);
+            };
             b.MouseEntered += () => ShowTip(b);
             b.MouseExited += HideTip;
             b.FocusEntered += () => ShowTip(b);
@@ -208,6 +214,8 @@ public sealed partial class Rail : PanelContainer
 
     /// <summary>Puts the keyboard focus on an area button (the focus ring and the tip show).</summary>
     public void FocusArea(AreaId id) => _buttons[(int)id].GrabFocus();
+    /// <summary>True when the keyboard focus is on the button of this area.</summary>
+    public bool HasAreaFocus(AreaId id) => _buttons[(int)id].HasFocus();
 
     /// <summary>Centre of an area button in window pixels (screenshot run: real mouse events).</summary>
     public Vector2 ButtonCenter(AreaId id) { var b = _buttons[(int)id]; return b.GlobalPosition + b.Size * b.GetGlobalTransform().Scale / 2f; }

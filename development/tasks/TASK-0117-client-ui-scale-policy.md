@@ -33,3 +33,12 @@ Owner decisions #424 and #425: the game runs fullscreen or as a borderless full 
 - [ ] TASK-0112 (credits) and TASK-0111 (instruments) get their visual PASS for A1 on the new frames.
 - [ ] From DEBT-0066 (reviewer, 2026-11-19): gauge hatching in `GaugeControl.cs:39` has contrast of at least 3:1; shares at level 0 can be selected from the keyboard (`ActorPanel.cs:235`).
 - [ ] Rail and tree legend layout follows `docs/ui/specs/task-0117-rail-and-legend.md`; check T6 sees the real rects of the lock and the badge.
+
+## Результат
+Ветка `worktree-agent-ad4c3f162fff85a3a` (developer, раунды 1–6). [Факт] Сделано:
+- Политика масштаба: полноэкранный старт, кадры 1920x1080, масштаб 100/125/150 % (матрица кадров в `Main.cs` `BuildSizeShots`); крупные дисплеи 2560x1440 снимаются (`--shot-size`, режим fullscreen), 3440x1440 на этой машине невозможен: экран 2560x1440, окно зажато до 2560x1413, `SaveShot` отвергает кадр, прогон выходит с кодом 1.
+- Рейл по спеке (`RailMetrics.Of` — один источник геометрии для рисования и T6), легенда дерева, сводки по клиньям, настоящая кнопка легенды, панель цели уступает легенде.
+- Клавиатура: горячая клавиша или Enter на кнопке рейла переносит фокус в первую управляющую точку панели (`OpenArea(id, fromKeyboard)`), Esc возвращает фокус на кнопку области; Space ставит паузу при фокусе на ползунке. Проверка в прогоне идёт только настоящим путём.
+- Прогон кадров завершается кодом 1 при любом провале живой проверки (T6, рейл, дерево, ввод); пустой набор измерений = FAIL; известные провалы палитры перечислены по точным именам как «known, DEBT».
+- Тесты: `RailMetricsTests`, `TimeGlyphMetricsTests`, `ValidatorFormatTests`. Кадры раундов лежат вне репозитория в `shots-out/task-0117-r*`.
+- Находка: Tab из рейла не входит в панель (отдельные области Tab) — решено явным переносом фокуса при открытии с клавиатуры.
