@@ -368,11 +368,11 @@ public class BudgetRuleTests
     private static readonly (BudgetRule Rule, string Id, int FirstCapped)[] Ceilings =
     [
         (BudgetRule.B1, "SUN", 397),   // Oct 1978
-        (BudgetRule.B1, "FRA", 396),   // Aug 1978
-        (BudgetRule.B1, "SWE", 418),   // Feb 1980
+        (BudgetRule.B1, "FRA", 396),   // Sep 1978
+        (BudgetRule.B1, "SWE", 418),   // Jul 1980
         (BudgetRule.B2, "SUN", 305),   // Feb 1971
-        (BudgetRule.B2, "FRA", 343),   // Mar 1974
-        (BudgetRule.B2, "SWE", 298),   // Feb 1970
+        (BudgetRule.B2, "FRA", 343),   // Apr 1974
+        (BudgetRule.B2, "SWE", 298),   // Jul 1970
     ];
 
     public static IEnumerable<object[]> CeilingCases => Ceilings.Select(c => new object[] { c.Rule, c.Id, c.FirstCapped });
