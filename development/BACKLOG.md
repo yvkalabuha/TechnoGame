@@ -130,7 +130,7 @@
 | [TASK-0112](../development/tasks/TASK-0112-credits-screen.md) | REVIEW | Credits screen with music and sound attribution (DEBT-0050) | MS-M1 |
 | [TASK-0113](../development/tasks/TASK-0113-policy-candidate-generation.md) | DONE | Policy line candidate by generation and DesignView SlotGeneration rename (DEBT-0053, DEBT-0055) | MS-M1 |
 | [TASK-0114](../development/tasks/TASK-0114-northern-algeria-regions.md) | REVIEW | Northern Algeria regions for the 1945 map (DEBT-0058) | MS-M1 |
-| [TASK-0115](../development/tasks/TASK-0115-end-to-end-project-handle.md) | APPROVED | End-to-end project handle through Session, AI, UI and command log v2 (DEBT-0052) | MS-M1 |
+| [TASK-0115](../development/tasks/TASK-0115-end-to-end-project-handle.md) | IN_PROGRESS | End-to-end project handle through Session, AI, UI and command log v2 (DEBT-0052) | MS-M1 |
 | [TASK-0116](../development/tasks/TASK-0116-ci-green.md) | IN_PROGRESS | CI green on all jobs: Lab tests off Linux, llm_worker pilot contracts | MS-M0 |
 
 ## Гипотезы
