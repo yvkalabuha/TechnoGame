@@ -11,6 +11,6 @@ public static class InstrumentLogic
     /// <summary>Era step of an instrument by game year: 1 = 1945–69 (and earlier), 2 = 1970–99, 3 = 2000–2100.</summary>
     public static int Era(int year) => year < 1970 ? 1 : year < 2000 ? 2 : 3;
 
-    /// <summary>Needle angle in degrees from vertical for a speed step 0..3 (E1 dial, spans -72..72).</summary>
-    public static readonly double[] NeedleDeg = { -60, -18, 20, 56 };
+    /// <summary>Needle angle in degrees from vertical for a speed step 0..3 (E1 dial: the step ticks, 30 degrees apart).</summary>
+    public static readonly double[] NeedleDeg = { -60, -30, 0, 30 };
 }

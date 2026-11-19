@@ -258,6 +258,8 @@ public static class ContrastValidator
             double r = Math.Min(Worst(hex, p.Sheet, 0.94, 1.0), Worst(hex, p.Paper, 0.94, 1.0));
             res.Add(new PairResult($"L2 {name} on sheet/paper WCAG >= {F(need)}", r >= need, F(r, 2)));
         }
+        double moss = Worst(Palette.MossLine, p.Sheet, 0.955, 1.0);
+        res.Add(new PairResult($"L2 line.moss on sheet WCAG >= {F(LineWcag)}", moss >= LineWcag, F(moss, 2)));
         for (int i = 0; i < p.Line.Length; i++)
         {
             string n = Palette.InkNames[i];

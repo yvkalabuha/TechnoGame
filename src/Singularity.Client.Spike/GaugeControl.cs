@@ -35,33 +35,45 @@ public sealed partial class GaugeControl : Control
         QueueRedraw();
     }
 
+    // E2 fills sit one step below the buttons: saturation cut by 15 %.
+    static readonly Color[] E2Fill = BuildE2();
+    static Color[] BuildE2()
+    {
+        var r = new Color[3];
+        for (int i = 0; i < 3; i++) { var c = Ui.InkLine[Ink[i]]; r[i] = Color.FromHsv(c.H, c.S * 0.85f, c.V); }
+        return r;
+    }
+
+    // Weak: ink and grey only. Normal: the tempo inks (teal, olive, plum).
+    static Color Col(int level, int i) => level == 2 ? Ui.InkLine[Ink[i]] : Ui.Ink2;
+
+    readonly Vector2[] _tri = new Vector2[3];   // reused by the E3 cursor, no per-frame allocation
+
     public override void _Draw()
     {
         if (_level == 0) { DrawBefore(); return; }
-        // Weak: ink and grey only. Normal: the three inks of the tempo steps (teal, olive, plum; sand is the reserve).
-        Color Col(int i) => _level == 2 ? Ui.InkLine[Ink[i]] : Ui.Ink2;
         var o = new Vector2(0, Size.Y - InstrH);
-        if (_era == 1) DrawDial(o, Col); else if (_era == 2) DrawBlock(o, Col); else DrawScale(o, Col);
+        if (_era == 1) DrawDial(o); else if (_era == 2) DrawBlock(o); else DrawScale(o);
     }
 
-    // E1: arc of four segments, ticks every 12 degrees, a needle on a hub. Centre (42, 33), radius 30.
-    void DrawDial(Vector2 o, Func<int, Color> col)
+    // E1: four step ticks (pause, day, week, month) and a dashed reserve tick on a half dial; a 2 px needle with a counterweight and the step number. No arc.
+    static readonly double[] TickDeg = { -60, -30, 0, 30, 60 };
+
+    void DrawDial(Vector2 o)
     {
         var c = o + new Vector2(42, 33);
         const float r = 30;
-        Vector2 At(double deg, float rad) { double a = deg * Math.PI / 180; return c + new Vector2((float)Math.Sin(a), -(float)Math.Cos(a)) * rad; }
-        (double a0, double a1)[] seg = { (-72, -36), (-34, 2), (4, 38), (40, 72) };
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < 5; i++)
         {
-            if (i < 3) DrawArc(c, r - 2, (float)((seg[i].a0 - 90) * Math.PI / 180), (float)((seg[i].a1 - 90) * Math.PI / 180), 14, col(i), 4f);
-            else   // reserve step: dashed, inactive
-                for (double d = seg[i].a0; d < seg[i].a1; d += 8)
-                    DrawArc(c, r - 2, (float)((d - 90) * Math.PI / 180), (float)((Math.Min(d + 4, seg[i].a1) - 90) * Math.PI / 180), 3, Ui.Ink3, 3f);
+            double a = TickDeg[i] * Math.PI / 180; var dir = new Vector2((float)Math.Sin(a), -(float)Math.Cos(a));
+            if (i == 4) DrawDashedLine(c + dir * (r - 7), c + dir * r, Ui.Ink3, 1f, 2f);
+            else DrawLine(c + dir * (r - 8), c + dir * r, i == 0 ? Ui.Ink : Col(_level, i - 1), 2f);
         }
-        for (int d = -72; d <= 72; d += 12) DrawLine(At(d, r + 1), At(d, r - 6), Ui.Ink2, 1f);
-        double ang = NeedleAngle();
-        DrawLine(c, At(ang, r - 3), Ui.Ink, 2f);
+        double ang = NeedleAngle() * Math.PI / 180; var nd = new Vector2((float)Math.Sin(ang), -(float)Math.Cos(ang));
+        DrawLine(c - nd * 6, c + nd * (r - 4), Ui.Ink, 2f);
+        DrawCircle(c - nd * 7, 2.5f, Ui.Ink);   // counterweight
         DrawCircle(c, 3, Ui.Ink);
+        DrawString(ThemeDB.FallbackFont, c + new Vector2(9, 0), Filled.ToString(), HorizontalAlignment.Left, -1, 12, Ui.Ink);
     }
 
     double NeedleAngle()
@@ -71,29 +83,30 @@ public sealed partial class GaugeControl : Control
     }
 
     // E2: four columns of three lit segments, filled up to the tempo; the reserve column is dashed.
-    void DrawBlock(Vector2 o, Func<int, Color> col)
+    void DrawBlock(Vector2 o)
     {
         for (int i = 0; i < 4; i++)
             for (int j = 0; j < 3; j++)
             {
                 var r = new Rect2(o.X + 4 + i * 20, o.Y + 26 - j * 8, 16, 6);
-                bool on = i < Filled && i < 3;
-                if (on) DrawRect(r, col(i));
+                if (i < Filled && i < 3) DrawRect(r, _level == 2 ? E2Fill[i] : Ui.Ink2);
                 if (i == 3) DrawDashedRect(r, Ui.Ink3); else DrawRect(r, Ui.Ink, false, 1f);
             }
     }
 
-    // E3: a plain scale with four stops and a cursor triangle over the current one.
-    void DrawScale(Vector2 o, Func<int, Color> col)
+    // E3: a plain scale, hairline stops, a 2 px tick on the current step and a small cursor triangle over it.
+    void DrawScale(Vector2 o)
     {
-        DrawLine(o + new Vector2(6, 26), o + new Vector2(78, 26), Ui.Ink, 1.5f);
+        DrawLine(o + new Vector2(6, 26), o + new Vector2(78, 26), Ui.Ink, 1f);
         for (int i = 0; i < 4; i++)
         {
             float x = o.X + 12 + i * 20;
-            DrawLine(new Vector2(x, o.Y + 19), new Vector2(x, o.Y + 33), i < 3 ? col(i) : Ui.Ink3, i < 3 ? 4f : 2f);
+            DrawLine(new Vector2(x, o.Y + 20), new Vector2(x, o.Y + 32), i == 3 ? Ui.Ink3 : Ui.Ink2, 1f);
         }
         float cx = o.X + 12 + _pos * 20;
-        DrawColoredPolygon(new[] { new Vector2(cx, o.Y + 17), new Vector2(cx - 5, o.Y + 7), new Vector2(cx + 5, o.Y + 7) }, Ui.Ink);
+        DrawLine(new Vector2(cx, o.Y + 18), new Vector2(cx, o.Y + 34), Filled > 0 && Filled < 4 ? Col(_level, Filled - 1) : Ui.Ink, 2f);
+        _tri[0] = new Vector2(cx, o.Y + 17); _tri[1] = new Vector2(cx - 3, o.Y + 11); _tri[2] = new Vector2(cx + 3, o.Y + 11);
+        DrawColoredPolygon(_tri, Ui.Ink);
     }
 
     void DrawDashedRect(Rect2 r, Color c)

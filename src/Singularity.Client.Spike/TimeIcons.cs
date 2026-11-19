@@ -104,7 +104,7 @@ public sealed partial class TimeControl : HBoxContainer
         _slower.Disabled = level <= 1; _faster.Disabled = level >= 3;
         _meter.Filled = _speed;
         _word.Text = Words[_speed];
-        _word.AddThemeColorOverride("font_color", _speed == 0 ? Ui.Ink2 : Ui.InkText[GaugeInk[_speed - 1]]);
+        _word.AddThemeColorOverride("font_color", Ui.Ink);   // full-strength ink: the word carries the value (review TASK-0108)
         _pause.QueueRedraw(); _slower.QueueRedraw(); _faster.QueueRedraw(); _meter.QueueRedraw();
     }
 }

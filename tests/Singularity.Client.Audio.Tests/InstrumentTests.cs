@@ -11,7 +11,7 @@ public class InstrumentTests
     {
         var res = ContrastValidator.RunInstruments(Palette.C);
         Assert.Empty(res.Where(r => !r.Pass).Select(r => r.Name + ": " + r.Detail));
-        Assert.True(res.Count >= 40);
+        Assert.Equal(47, res.Count);
     }
 
     [Fact]

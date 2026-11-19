@@ -13,7 +13,7 @@ public static class Palette
 
     // Instrument tokens (UI_INSTRUMENTS §2, #404). Desk is the table under the panels; desk-line and desk-hatch are the quiet layer-1 strokes (not drawn yet, validated now).
     // Layer 2 (the controls) draws in Ink, Ink2 and the six inks above.
-    public const string Desk = "D9D3C0", DeskLine = "B8B094", DeskHatch = "C6BEA4";
+    public const string Desk = "D9D3C0", DeskLine = "B8B094", DeskHatch = "C6BEA4", MossLine = "3A8A5C";
 
     public static readonly string[] InkNames = { "sand", "teal", "violet", "olive", "plum", "slate" };
 
