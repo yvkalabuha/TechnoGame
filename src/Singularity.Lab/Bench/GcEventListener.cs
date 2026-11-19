@@ -24,6 +24,14 @@ internal sealed class GcEventListener : EventListener
     private readonly object _lock = new();
     [ThreadStatic] private static long t_last;
     private long _own;
+    private readonly List<string>? _raw;
+
+    /// <summary><paramref name="raw"/>: also keep every GC event (start, end, heap stats, global history, allocation ticks with type name) as one JSON line (DEBT-0057 diagnosis).</summary>
+    public GcEventListener(bool raw = false)
+    {
+        if (raw)
+            lock (_lock) _raw = new List<string>(1 << 12);
+    }
 
     private List<GcEvent> Events
     {
@@ -48,6 +56,8 @@ internal sealed class GcEventListener : EventListener
         long now = GC.GetAllocatedBytesForCurrentThread();
         if (t_last != 0)
             Interlocked.Add(ref _own, now - t_last);
+        if (_raw is not null)
+            RawAdd(e);
         if (tick || start)
         {
             var ev = new GcEvent(e.TimeStamp.Kind == DateTimeKind.Utc ? e.TimeStamp : e.TimeStamp.ToUniversalTime(), tick ? "tick" : "start",
@@ -59,6 +69,34 @@ internal sealed class GcEventListener : EventListener
                 list.Add(ev);
         }
         t_last = GC.GetAllocatedBytesForCurrentThread();
+    }
+
+    private void RawAdd(EventWrittenEventArgs e)
+    {
+        var sb = new System.Text.StringBuilder(256);
+        DateTime ts = e.TimeStamp.Kind == DateTimeKind.Utc ? e.TimeStamp : e.TimeStamp.ToUniversalTime();
+        sb.Append("{\"ts\":\"").Append(ts.ToString("O", System.Globalization.CultureInfo.InvariantCulture)).Append("\",\"event\":\"").Append(e.EventName)
+            .Append("\",\"os_thread\":").Append(e.OSThreadId);
+        if (e.PayloadNames is not null && e.Payload is not null)
+            for (int i = 0; i < e.PayloadNames.Count && i < e.Payload.Count; i++)
+            {
+                object? v = e.Payload[i];
+                sb.Append(",\"").Append(e.PayloadNames[i]).Append("\":");
+                if (v is string str)
+                    sb.Append('"').Append(str.Replace("\\", "\\\\").Replace("\"", "\\\"")).Append('"');
+                else if (v is null || v is byte[] || v is Guid)
+                    sb.Append('"').Append(v?.ToString() ?? "").Append('"');
+                else
+                    sb.Append(Convert.ToString(v, System.Globalization.CultureInfo.InvariantCulture));
+            }
+        sb.Append('}');
+        lock (_lock) _raw!.Add(sb.ToString());
+    }
+
+    /// <summary>The raw event lines (empty unless constructed with <c>raw: true</c>).</summary>
+    public IReadOnlyList<string> Raw()
+    {
+        lock (_lock) return _raw is null ? [] : [.. _raw];
     }
 
     private static object? PayloadObj(EventWrittenEventArgs e, string key)

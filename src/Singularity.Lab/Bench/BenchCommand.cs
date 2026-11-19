@@ -164,6 +164,8 @@ internal static class BenchCommand
         int warmup = o.Int("warmup", 0, 10_000) ?? Math.Min(2, months - 1);
         bool lohEvents = Bool(o, "loh-events", true);
         double snapshotX = Double(o, "snapshot-x-mib") ?? 8;   // ADR-0023 rev 2 п. 2.3 proposal; the owner's decision
+        bool fullFirst = Bool(o, "full-first", false);   // DEBT-0057: the full run first in the process (format 2 order)
+        bool gcTrace = Bool(o, "gc-trace", false);       // DEBT-0057: raw GC events and step timeline next to the JSON
         o.CheckAllUsed();
         if (warmup >= months)
             throw new UsageException("--warmup must be below --months.");
@@ -171,7 +173,7 @@ internal static class BenchCommand
         SynthWorld w = Build(spec, outFile);
         double buildMs = ProcessBench.Ms(Stopwatch.GetTimestamp() - b0);
         var rp = new BenchRunParams { Mode = "alloc", RepoDir = RepoDir(), Warmup = warmup, Measure = months - warmup, Smoke = true };
-        return AllocProfile.Run(w, seed, threads, months, lohEvents, snapshotX, rp, buildMs, outFile, Console.Out);
+        return AllocProfile.Run(w, seed, threads, months, lohEvents, snapshotX, rp, buildMs, outFile, Console.Out, fullFirst, gcTrace);
     }
 
     private static int Validity(Options o)

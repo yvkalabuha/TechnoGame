@@ -32,30 +32,61 @@ internal static class AllocProfile
         public double PerCall => Bytes / (double)Calls;
     }
 
-    public static int Run(SynthWorld w, ulong seed, int threads, int months, bool lohEvents, double snapshotXMib, BenchRunParams rp, double buildMs, string outFile, TextWriter log)
+    public static int Run(SynthWorld w, ulong seed, int threads, int months, bool lohEvents, double snapshotXMib, BenchRunParams rp, double buildMs, string outFile, TextWriter log,
+        bool fullFirst = false, bool gcTrace = false)
     {
-        using GcEventListener? gcl = lohEvents ? new GcEventListener() : null;
+        using GcEventListener? gcl = lohEvents || gcTrace ? new GcEventListener(raw: gcTrace) : null;
         using var meter = new LoadMeter();
-        // 1. Tick path alone (SkipViews): the same seed, threads, commands and months as the full run below.
-        // The session itself is dropped before the full run (only the counts are kept).
-        MonthRun tickRun = RunMonths(w, seed, threads, months, skipViews: true, rp.Warmup, null, log, "tick") with { Session = null };
-        string hashTick = tickRun.Hash;
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
-        // 2. Full run (views on): machine window and GC pause window of the measured months.
+        // Preallocated so that the marks do not allocate inside the month windows.
+        List<StepMark>? steps = gcTrace ? new List<StepMark>(1 << 16) : null;
         TimeSpan pause0 = TimeSpan.Zero;
         long win0 = 0;
         MachineSnapshot? m0 = null;
-        MonthRun full = RunMonths(w, seed, threads, months, skipViews: false, rp.Warmup, () =>
+        long win1 = 0;
+        TimeSpan pause = TimeSpan.Zero;
+        MachineSnapshot? m1 = null;
+        void WindowStart()
         {
             m0 = meter.Snapshot();
             pause0 = GC.GetTotalPauseDuration();
             win0 = System.Diagnostics.Stopwatch.GetTimestamp();
-        }, log, "full");
-        long win1 = System.Diagnostics.Stopwatch.GetTimestamp();
-        TimeSpan pause = GC.GetTotalPauseDuration() - pause0;
-        MachineSnapshot m1 = meter.Snapshot();
+        }
+        void WindowEnd()
+        {
+            win1 = System.Diagnostics.Stopwatch.GetTimestamp();
+            pause = GC.GetTotalPauseDuration() - pause0;
+            m1 = meter.Snapshot();
+        }
+        // DEBT-0057 diagnosis (--full-first): the full run is the first run of the process, as in the format 2 probe; the tick-only run follows
+        // after a forced collection. Default (format 3): the tick-only run first.
+        MonthRun? early = null;
+        if (fullFirst)
+        {
+            early = RunMonths(w, seed, threads, months, skipViews: false, rp.Warmup, WindowStart, log, "full", steps);
+            WindowEnd();
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+        }
+        // 1. Tick path alone (SkipViews): the same seed, threads, commands and months as the full run below.
+        // The session itself is dropped before the full run (only the counts are kept).
+        MonthRun tickRun = RunMonths(w, seed, threads, months, skipViews: true, rp.Warmup, null, log, "tick", steps) with { Session = null };
+        string hashTick = tickRun.Hash;
+        if (!fullFirst)
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+        }
+        // 2. Full run (views on): machine window and GC pause window of the measured months.
+        MonthRun full;
+        if (early is not null)
+            full = early;
+        else
+        {
+            full = RunMonths(w, seed, threads, months, skipViews: false, rp.Warmup, WindowStart, log, "full", steps);
+            WindowEnd();
+        }
         SliceSession s = full.Session!;
         SliceWorld world = s.World;
         IndustryLayout l = world.IndustryLayout;
@@ -86,6 +117,12 @@ internal static class AllocProfile
         DateTime last = DateTime.UtcNow;
         bool flushed = gcl?.Flush(last, TimeSpan.FromSeconds(5)) ?? false;
         IReadOnlyList<GcEventListener.GcEvent> events = gcl?.Snapshot() ?? [];
+        if (gcTrace)
+        {
+            File.WriteAllLines(outFile + ".gc.jsonl", gcl!.Raw());
+            File.WriteAllLines(outFile + ".steps.jsonl", steps!.Select(x =>
+                $"{{\"run\":\"{x.Run}\",\"month\":{x.Month},\"tick\":{x.Tick},\"from\":\"{x.From:O}\",\"to\":\"{x.To:O}\",\"snapshot\":\"{x.Snapshot}\"}}"));
+        }
 
         // In the run the monthly (stepped) snapshot builds fresh blocks and the command-tick snapshot after it reuses them (TASK-0103 R2).
         double snapSteppedB = probes[5].PerCall, snapPlainB = probes[6].PerCall, snapPlainFreshB = probes[7].PerCall;
@@ -102,6 +139,8 @@ internal static class AllocProfile
         j.WriteStartObject();
         j.WriteString("kind", "lab-bench/alloc");
         j.WriteNumber("format", 3);
+        j.WriteString("run_order", fullFirst ? "full-first" : "tick-first");
+        j.WriteBoolean("gc_trace", gcTrace);
         BenchEnv.Write(j, rp.RepoDir);
         BenchJson.WriteParams(j, rp);
         BenchJson.WriteWorld(j, w, buildMs);
@@ -233,15 +272,18 @@ internal static class AllocProfile
         j.WriteString("state_hash_after_probes", hashAfter);
         j.WriteBoolean("probes_kept_hash", hashBefore == hashAfter);
         if (m0 is not null)
-            meter.Write(j, [new MachineWindow("alloc", m0, m1)], threads);
+            meter.Write(j, [new MachineWindow("alloc", m0, m1!)], threads);
         j.WriteEndObject();
         return hashBefore == hashAfter && runsSameHash ? 0 : 1;
     }
 
+    private readonly record struct StepMark(string Run, int Month, long Tick, DateTime From, DateTime To, string Snapshot);
+
     private sealed record MonthRun(SliceSession? Session, long[] Bytes, int[,] Gc, int[] SnapPlain, int[] SnapStepped, DateTime[] From, DateTime[] To, string Hash);
 
     // One monthly run with the harness load (one SetBudgetShares per actor and month, as П2). atWarmupEnd runs at the start of month warmup.
-    private static MonthRun RunMonths(SynthWorld w, ulong seed, int threads, int months, bool skipViews, int warmup, Action? atWarmupEnd, TextWriter log, string tag)
+    private static MonthRun RunMonths(SynthWorld w, ulong seed, int threads, int months, bool skipViews, int warmup, Action? atWarmupEnd, TextWriter log, string tag,
+        List<StepMark>? steps = null)
     {
         var sw = new RunSwitches(HashCheckpoints: false, HashEveryTick: false, DailyNoop: false, FullCopy: false);
         SliceSession s = SliceSession.Create(w.Data, ProcessBench.Config(w, seed, threads, 8, daily: false, sw));
@@ -272,13 +314,18 @@ internal static class AllocProfile
             SliceView prev = s.View;
             while (s.Tick < end)
             {
+                DateTime st0 = steps is null ? default : DateTime.UtcNow;
+                long tick0 = s.Tick;
                 s.Step(1);
                 SliceView now = s.View;
+                string kind = "none";
                 if (!ReferenceEquals(now, prev))
                 {
                     if (now.Step is null) snapPlain[m]++; else snapStepped[m]++;
+                    kind = now.Step is null ? "plain" : "stepped";
                     prev = now;
                 }
+                steps?.Add(new StepMark(tag, m, tick0, st0, steps is null ? default : DateTime.UtcNow, kind));
             }
             bytes[m] = GC.GetTotalAllocatedBytes(true) - b0;
             to[m] = DateTime.UtcNow;
