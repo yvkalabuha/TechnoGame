@@ -113,7 +113,10 @@ public class BudgetRuleTests
         }
     }
 
-    // ---- T2: monotone, never crosses s, never above the frontier
+    // ---- T2: monotone, never crosses s (exactly), never above the frontier
+
+    // share(b, f) >= s in real numbers: b / f >= s / Scale, by cross-multiplication.
+    private static bool AtOrAbove(Fx6 b, Fx6 f, Fx6 s) => (Int128)b.Raw * Fx6.Scale >= (Int128)s.Raw * f.Raw;
 
     [Theory]
     [InlineData("SUN")]   // r0 0.229 < s 0.44: the share does not fall
@@ -124,18 +127,49 @@ public class BudgetRuleTests
     {
         var rig = new Rig(BudgetRule.A, Ids);
         BudgetRulePlan plan = BudgetRulePlan.For(BudgetRule.A, [.. Ids]);
-        int row = Array.IndexOf(Ids, id);
-        Fx6 s = plan.Share[row];
-        Fx6 prev = rig.Budget(id) / rig.Budget("USA");
-        bool rising = prev < s;
+        Fx6 s = plan.Share[Array.IndexOf(Ids, id)];
+        bool rising = !AtOrAbove(rig.Budget(id), rig.Budget("USA"), s);
         for (long t = 0; t < 1024; t++)
         {
+            Fx6 b = rig.Budget(id), f = rig.Budget("USA");
             rig.Month(t);
-            Fx6 r = rig.Budget(id) / rig.Budget("USA");
-            Assert.True(rising ? r.Raw >= prev.Raw - 2 : r.Raw <= prev.Raw + 2, $"{id} month {t}");   // 2 raw: floor rounding of the step
-            Assert.True(rising ? r.Raw <= s.Raw : r.Raw >= s.Raw - 2, $"{id} crossed s at month {t}");
-            Assert.True(rig.Budget(id) <= rig.Budget("USA"));
-            prev = r;
+            Fx6 bn = rig.Budget(id), fn = rig.Budget("USA");
+            // The share stays on its side of s, with no allowance for rounding: a share at or above s stays at or above, one below stays at most s.
+            if (AtOrAbove(b, f, s))
+                Assert.True(AtOrAbove(bn, fn, s), $"{id} fell below s at month {t}");
+            else
+                Assert.True((Int128)bn.Raw * Fx6.Scale <= (Int128)s.Raw * fn.Raw, $"{id} rose above s at month {t}");
+            // Monotone by cross-multiplication: bn/fn against b/f.
+            Int128 after = (Int128)bn.Raw * f.Raw, before = (Int128)b.Raw * fn.Raw;
+            Assert.True(rising ? after >= before : after <= before, $"{id} share moved the wrong way at month {t}");
+            Assert.True(bn <= fn);
+        }
+    }
+
+    [Fact]
+    public void T2_NearTarget_FromAbove_ShareStaysAtOrAboveS()
+    {
+        // GBR preset: s = 0,12, λ_pa = 0,025. B_GBR 120 001 raw against B_USA 1 000 000 raw is just above s.
+        Fx6 f = Fx6.FromRaw(1_000_000), g = Fx6.FromRaw(29_900), s = Fx6.FromRaw(120_000), lambda = Fx6.FromRaw(25_000);
+        Fx6 fn = BudgetMath.Next(f, g);
+        Assert.Equal(Fx6.FromRaw(1_002_491), fn);
+        Fx6 bn = BudgetMath.NextConverging(Fx6.FromRaw(120_001), f, g, s, lambda);
+        Assert.True(AtOrAbove(bn, fn, s), $"{bn.Raw} / {fn.Raw} is below 0,12");
+        Assert.Equal(120_299, bn.Raw);   // ⌈0,12·1 002 491⌉; the unclamped step gave 120 298 (ratio 0,119999)
+    }
+
+    [Fact]
+    public void T2_NearTarget_FromBelow_ShareStaysAtMostS()
+    {
+        Fx6 f = Fx6.FromRaw(1_000_000), g = Fx6.FromRaw(29_900), s = Fx6.FromRaw(120_000);
+        Fx6 fn = BudgetMath.Next(f, g);
+        foreach (long raw in (long[])[119_999, 119_990, 119_000])
+        {
+            foreach (long lambdaRaw in (long[])[25_000, 1_000_000])
+            {
+                Fx6 bn = BudgetMath.NextConverging(Fx6.FromRaw(raw), f, g, s, Fx6.FromRaw(lambdaRaw));
+                Assert.True((Int128)bn.Raw * Fx6.Scale <= (Int128)s.Raw * fn.Raw, $"{raw} λ {lambdaRaw}: {bn.Raw}");
+            }
         }
     }
 
@@ -245,35 +279,73 @@ public class BudgetRuleTests
         Assert.InRange(System.Math.Abs(actual - expected), 0, 1e-4);
     }
 
-    // ---- T7: the ceiling first binds in the month of the note's table, ±1, and holds afterwards
+    // ---- T7: the ceiling first binds in an exact month, and holds afterwards
+
+    // Convention: month 0 = 1945-09, the month of the start budgets. Budget(m) is the budget of month m; month m is capped when
+    // Budget(m) equals the ceiling value c * B_USA(m), and "first capped month" is the smallest such m.
+    private static readonly (BudgetRule Rule, string Id, int FirstCapped, int Table)[] Ceilings =
+    [
+        (BudgetRule.B1, "SUN", 397, 397),   // note: Oct 1978
+        (BudgetRule.B1, "FRA", 396, 395),   // Aug 1978
+        (BudgetRule.B1, "SWE", 418, 413),   // Feb 1980
+        (BudgetRule.B2, "SUN", 305, 305),   // Feb 1971
+        (BudgetRule.B2, "FRA", 343, 342),   // Mar 1974
+        (BudgetRule.B2, "SWE", 298, 293),   // Feb 1970
+    ];
+
+    public static IEnumerable<object[]> CeilingCases => Ceilings.Select(c => new object[] { c.Rule, c.Id, c.FirstCapped });
 
     [Theory]
-    [InlineData(BudgetRule.B1, "SUN", 397)]   // Oct 1978
-    [InlineData(BudgetRule.B1, "FRA", 395)]   // Aug 1978
-    [InlineData(BudgetRule.B1, "SWE", 413)]   // Feb 1980
-    [InlineData(BudgetRule.B2, "SUN", 305)]   // Feb 1971
-    [InlineData(BudgetRule.B2, "FRA", 342)]   // Mar 1974
-    [InlineData(BudgetRule.B2, "SWE", 293)]   // Feb 1970
-    public void T7_CeilingFirstBindsInTheTableMonth_AndHoldsAfter(BudgetRule rule, string id, int expectedMonth)
+    [MemberData(nameof(CeilingCases))]
+    public void T7_CeilingFirstBindsInTheExactMonth_AndHoldsAfter(BudgetRule rule, string id, int firstCapped)
     {
         var rig = new Rig(rule, Ids);
-        BudgetRulePlan plan = BudgetRulePlan.For(rule, [.. Ids]);
-        Fx6 c = plan.Ceiling[Array.IndexOf(Ids, id)];
+        Fx6 c = BudgetRulePlan.For(rule, [.. Ids]).Ceiling[Array.IndexOf(Ids, id)];
         int first = -1;
-        for (int t = 0; t < 1000; t++)
+        for (int m = 1; m <= 1000; m++)
         {
-            rig.Month(t);
-            bool bound = rig.Budget(id) == c * rig.Budget("USA");
-            if (first < 0 && bound)
-                first = t;
+            rig.Month(m - 1);   // after the step of month m - 1 the columns hold month m
+            bool capped = rig.Budget(id) == c * rig.Budget("USA");
+            if (first < 0 && capped)
+                first = m;
             if (first >= 0)
-                Assert.True(bound, $"{id} leaves the ceiling at month {t}");
+                Assert.True(capped, $"{id} leaves the ceiling at month {m}");
             else
-                Assert.True(rig.Budget(id) < c * rig.Budget("USA"), $"{id} above the ceiling at month {t}");
+                Assert.True(rig.Budget(id) < c * rig.Budget("USA"), $"{id} above the ceiling at month {m}");
         }
-        // The note's table is a hand calculation with continuous growth; SWE (budget 24 000 raw) grows 0,4 % slower per month because Fx6 floors
-        // the step, so it binds 4 months later than the table (measured: 417 and 297). SUN and FRA are within ±1.
-        int tolerance = id == "SWE" ? 5 : 1;
-        Assert.InRange(first, expectedMonth - tolerance, expectedMonth + tolerance);
+        Assert.Equal(firstCapped, first);
+    }
+
+    [Theory]
+    [MemberData(nameof(CeilingCases))]
+    public void T7_TheFixedPointRecurrenceGivesTheSameMonth(BudgetRule rule, string id, int firstCapped)
+    {
+        Fx6 c = BudgetRulePlan.For(rule, [.. Ids]).Ceiling[Array.IndexOf(Ids, id)];
+        Fx6 b = Fx6.FromRaw(Start[id].Budget), usa = Fx6.FromRaw(Start["USA"].Budget);
+        Fx6 gb = Fx6.FromRaw(Start[id].Growth), gu = Fx6.FromRaw(Start["USA"].Growth);
+        int m = 0;
+        while (b != c * usa && m < 1000)
+        {
+            b = BudgetMath.NextCapped(b, gb, usa, gu, c);
+            usa = BudgetMath.Next(usa, gu);
+            m++;
+        }
+        Assert.Equal(firstCapped, m);
+    }
+
+    [Fact]
+    public void T7_DistanceToTheNotesUnroundedTable_SunAndFraWithinOne_SweFourOrFiveLater()
+    {
+        // The note's table is continuous-growth arithmetic. Fx6 floors every step, and at a budget near 24 000 raw (SWE) that loses about 2e-5
+        // of the budget per step, so SWE binds 4 (B1) and 5 (B2) months after the table; SUN and FRA agree within a month.
+        foreach ((BudgetRule _, string id, int exact, int table) in Ceilings)
+        {
+            int distance = exact - table;
+            if (id == "SWE")
+                Assert.InRange(distance, 4, 5);
+            else
+                Assert.InRange(distance, -1, 1);
+        }
     }
 }
+
