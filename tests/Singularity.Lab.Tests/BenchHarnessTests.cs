@@ -728,6 +728,44 @@ public sealed class BenchHarnessTests : IDisposable
         Assert.False(fg.GetProperty("possible_thermal_throttle").GetBoolean());
     }
 
+    // TASK-0116 (CI Windows «gcs 1 vs 0»): the event clock differs from the host clock off Linux. A GC of the window (index in the
+    // CollectionCount interval) whose events are stamped 1 ms before the host window start must count; a GC stamped inside the host window
+    // but with an index after it must not. Events and runtime counters then follow one rule and events_complete holds.
+    [Fact]
+    public void GcEvents_Completeness_ByGcIndex_NotByHostTime()
+    {
+        DateTime o = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        GcEventListener.GcEvent E(double ms, string name, int gen = -1, int reason = -1, int type = -1, int count = -1) =>
+            new(o.AddMilliseconds(ms), name, -1, 0, gen, reason, 0, type, count);
+        GcEventListener.GcEvent[] ev =
+        [
+            E(-1, "suspend", reason: 1, count: 10), E(-0.8, "start", 2, 1, 0, 11), E(-0.5, "end", 2, count: 11), E(-0.4, "restart"),
+            E(99.5, "suspend", reason: 1, count: 11), E(99.6, "start", 0, 0, 0, 12), E(99.7, "end", 0, count: 12), E(99.8, "restart"),
+        ];
+        var gcEv = new GcEvents(GcPauses.Build(ev), true, 0, 1);
+        var run = new RunTiming
+        {
+            Daily = false, MonthMs = [1], MonthDays = [30], WindowTickMs = [], AllocatedBytes = 0, SamplerAllocatedBytes = 0,
+            Gen0 = 1, Gen1 = 1, Gen2 = 1, GcPauseMs = 0, WindowWallMs = 100, HashComputations = 0, CommandsSubmitted = 0, FinalHash = "",
+            PeakWorkingSetBytes = 0, Window = (0, 1), MeterAllocatedBytes = 0,
+            WindowUtc = (o, o.AddMilliseconds(100)), WindowGcs = (10, 11),
+        };
+        GcPauses.Summary s = gcEv.Of([run]);
+        Assert.Equal([11], s.Gcs.Select(g => g.Count));
+        Assert.Equal(1, s.Gen2);
+        using var ms = new MemoryStream();
+        using (var w = new Utf8JsonWriter(ms))
+        {
+            w.WriteStartObject();
+            gcEv.WriteChecks(w, [run], s);
+            w.WriteEndObject();
+        }
+        JsonElement r = JsonDocument.Parse(ms.ToArray()).RootElement;
+        Assert.Equal(1, r.GetProperty("gcs_events").GetInt32());
+        Assert.Equal(1, r.GetProperty("gen2_events").GetInt32());
+        Assert.True(r.GetProperty("events_complete").GetBoolean());
+    }
+
     [Fact]
     public void SeriesDriver_FrequencyOf_StoppedSampler_IsNoFrequency()
     {

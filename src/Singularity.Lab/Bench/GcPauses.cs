@@ -117,6 +117,10 @@ internal static class GcPauses
     public static Summary Summarize(Timeline t, IReadOnlyList<(DateTime From, DateTime To)> windows, double wallMs) =>
         new([.. t.Pauses.Where(p => In(p.Start, windows))], [.. t.Gcs.Where(g => In(g.Start, windows))], [.. t.Other.Where(o => In(o.Start, windows))], wallMs);
 
+    /// <summary>Pauses and non-GC suspensions by start inside the time windows; GCs by index in (After, Upto] of the ranges (see <see cref="SummarizeGcs"/>).</summary>
+    public static Summary Summarize(Timeline t, IReadOnlyList<(DateTime From, DateTime To)> windows, IReadOnlyList<(int After, int Upto)> gcRanges, double wallMs) =>
+        new([.. t.Pauses.Where(p => In(p.Start, windows))], [.. t.Gcs.Where(g => InRange(g.Count, gcRanges))], [.. t.Other.Where(o => In(o.Start, windows))], wallMs);
+
     /// <summary>
     /// Pauses and GCs of the GCs with index in (After, Upto] — <c>GC.CollectionCount(0)</c> read before and after a forced collection
     /// (the GCStart <c>Count</c> of a GC is <c>CollectionCount(0)</c> + 1 at its start). Clock-free: the event time stamps of the runtime
