@@ -18,7 +18,8 @@ internal sealed class PolicyInputsAdapter(SliceWorld world) : IPolicyInputs
                 continue;
             if (world.Policy.LineClose == LineCloseRule.Admit || !world.Config.ProductAi)
                 return HandleOf(actorRow, d);
-            if (best < 0 || world.Products.PlatformGen(actorRow, d) > world.Products.PlatformGen(actorRow, best))
+            if (best < 0 || PolicySystem.Candidate(d, world.Products.PlatformGen(actorRow, d), world.Products.StageOMonth(actorRow, d),
+                    best, world.Products.PlatformGen(actorRow, best), world.Products.StageOMonth(actorRow, best)) == d)
                 best = d;
         }
         return best < 0 ? null : HandleOf(actorRow, best);

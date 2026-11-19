@@ -392,6 +392,8 @@ public class ProductAiSessionTests(ITestOutputHelper output)
                 r.StepThroughMonth(t);
             Assert.All(runs, r => HashAssert.Equal(runs[0].LastHash, r.LastHash, $"month {t}: hash differs"));
         }
+        for (int a = 0; a < runs[0].World.Scenario.ActorCount; a++)
+            Assert.Equal(0, runs[0].World.Products.RejectionCount(a, CommandRejection.StaleHandle));   // outside the old-column projections
         HashAssert.Equal(Golden150, runs[0].LastHash, $"golden hash of the AI run changed: {runs[0].LastHash}; update only with a reason written in the commit message");
     }
 

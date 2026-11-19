@@ -499,6 +499,9 @@ public class ProductAiTests
         PolicyDesign newer = Series(2, 0, true) with { StageOMonth = 300 };
         PolicyDesign[] d = [newer, Series(1, 0, true), older];
         Assert.Equal(0, PolicySystem.Candidate(d, 0, 2));
+        // The raw-key overload (shared with the slice adapter) orders the same way: a reused lower slot with a later O month wins a platform tie.
+        Assert.Equal(0, PolicySystem.Candidate(0, 2, 300, 2, 2, 120));
+        Assert.Equal(0, PolicySystem.Candidate(2, 2, 120, 0, 2, 300));
         Assert.Equal(0, PolicySystem.Candidate(d, 2, 0));
     }
 

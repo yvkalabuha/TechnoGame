@@ -42,8 +42,18 @@ internal static class ColumnProjection
     public static bool IsSlotGenerationColumn(string name) =>
         name.EndsWith(".generation", StringComparison.Ordinal) || name.EndsWith(".parentGen", StringComparison.Ordinal)
         || name.StartsWith("prd.lp.g", StringComparison.Ordinal) && name.EndsWith(".gen", StringComparison.Ordinal)
-        || (name.StartsWith("cmd.", StringComparison.Ordinal) || name.StartsWith("pol.", StringComparison.Ordinal)) && name.EndsWith(".gen", StringComparison.Ordinal)
+        || IsDesignRefGenColumn(name)
         || name == "prd.rejected.StaleHandle" || name.StartsWith("prd.altReached.", StringComparison.Ordinal);
+
+    // Only the new design-reference generation columns; the old pol.lic.gen, pol.lic.q.gen and pol.lic.bad.gen stay in projections.
+    static bool IsDesignRefGenColumn(string name)
+    {
+        if (!name.EndsWith(".gen", StringComparison.Ordinal)) return false;
+        string[] prefixes = ["cmd.dsn.", "cmd.flt.", "cmd.series.", "cmd.close.", "pol.dsn.", "pol.flt.", "pol.start.", "pol.close."];
+        foreach (string p in prefixes)
+            if (name.StartsWith(p, StringComparison.Ordinal)) return true;
+        return false;
+    }
 
     /// <summary>
     /// A design slot has been retaken (generation ≥ 2): from then on the run is no longer the run of a build without slot reuse, so a

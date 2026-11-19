@@ -422,13 +422,16 @@ public sealed partial class PolicySystem
     /// (the later <see cref="PolicyDesign.StageOMonth"/>, the month the project entered stage O), a further tie to the larger design id.
     /// A slot index alone is not an age: a reused lower slot holds a newer project (ADR-0005 p. 3, DEBT-0053).
     /// </summary>
-    internal static int Candidate(PolicyDesign[] designs, int a, int b)
+    internal static int Candidate(PolicyDesign[] designs, int a, int b) =>
+        Candidate(a, designs[a].PlatformGen, designs[a].StageOMonth, b, designs[b].PlatformGen, designs[b].StageOMonth);
+
+    /// <summary>The same ordering on bare keys, shared by every reader that picks the candidate line (policy and the slice adapter).</summary>
+    public static int Candidate(int a, int platformGenA, int stageOA, int b, int platformGenB, int stageOB)
     {
-        PolicyDesign x = designs[a], y = designs[b];
-        if (x.PlatformGen != y.PlatformGen)
-            return x.PlatformGen > y.PlatformGen ? a : b;
-        if (x.StageOMonth != y.StageOMonth)
-            return x.StageOMonth > y.StageOMonth ? a : b;
+        if (platformGenA != platformGenB)
+            return platformGenA > platformGenB ? a : b;
+        if (stageOA != stageOB)
+            return stageOA > stageOB ? a : b;
         return Math.Max(a, b);
     }
 

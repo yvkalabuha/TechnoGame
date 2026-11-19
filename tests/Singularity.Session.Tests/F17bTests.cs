@@ -110,6 +110,9 @@ public class F17bTests(ITestOutputHelper output)
         SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2, LineClose = rule, ToolingTarget = target });
         for (long t = 0; t < 150; t++)
             s.StepThroughMonth(t);
+        // StaleHandle is outside the old-column projections: prove here that the golden runs never hit it.
+        for (int a = 0; a < s.World.Scenario.ActorCount; a++)
+            Assert.Equal(0, s.World.Products.RejectionCount(a, CommandRejection.StaleHandle));
         return s.LastHash;
     }
 
