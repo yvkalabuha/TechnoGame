@@ -45,4 +45,8 @@ T1–T7 записки §9; существующие эталоны при `NOW`
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
-<!-- Заполняет исполнитель: что сделано, файлы, коммит. -->
+Сделано в Core и Session (зона developer): `BudgetRule` (NOW, A, B1, B2), `BudgetRulePlan` (константы замера по строке, ключ — id актора; USA — рубеж, строка находится при сборке мира), `BudgetMath.Monthly/NextConverging/NextCapped`, `PolicySystem.NextBudget` (рубеж читается из `Current`, результат в `Next` своей строки), `SliceRunConfig.BudgetRule`, колонка `run.budget_rule` только при не-NOW (хеш NOW не меняется), `TestApiVersion` 13 → 14 и снимок `session-surface.v14.txt`.
+Параметры: A (s, λ_pa): GBR 0,12/0,025; SUN 0,44/0,06; FRA 0,17/0,08; SWE 0,027/0,06. Потолок c: B1 SUN 0,52, FRA 0,23, SWE 0,036; B2 SUN 0,43, FRA 0,196, SWE 0,032; GBR без потолка; USA — как `BudgetMath.Next`.
+Тесты: `tests/Singularity.Core.Tests/Policy/BudgetRuleTests.cs` (T1–T7). Сессионные эталоны при NOW не менялись (Session.Tests 419 пройдено).
+НЕ сделано (вне зоны, нужен simulation-engineer): разбор `BUDGET_RULE` в `src/Singularity.Lab/Models/Slice/SliceParameters.cs` (ключ в `Keys` после `ALPHA` + строка `BudgetRule = Enum(p, "BUDGET_RULE", "NOW", BudgetRules.Parse),`) и `JetSliceModel.SurfaceVersion` 13 → 14. До этого Lab падает по версии поверхности.
+`PolicyLiveness` для A/B не менялась: считает постоянный рост (R3).
