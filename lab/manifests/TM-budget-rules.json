@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "experiment": "TM-budget-rules",
+  "description": "TASK-0123, docs/game-design/economy/slice-budget-convergence.md §7: budget rules NOW (main), A, B1, B2 on JetSlice FULL to 2030-12 (1024 months, ticks 31168), seeds 1-10, threads 1 and 2 (L2 check). The outcome changes the owner's choice between A, B and postponing (#430). Analysis lab/analysis/tm_budget_rules.py.",
+  "model": "JetSlice",
+  "ticks": 31168,
+  "chunk_size": 1,
+  "threads": [1, 2],
+  "seeds": { "start": 1, "count": 10 },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full"
+  },
+  "series": [
+    { "name": "NOW", "params": { "BUDGET_RULE": "NOW" } },
+    { "name": "A", "params": { "BUDGET_RULE": "A" } },
+    { "name": "B1", "params": { "BUDGET_RULE": "B1" } },
+    { "name": "B2", "params": { "BUDGET_RULE": "B2" } }
+  ],
+  "meta": {
+    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.34 r1",
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r14",
+    "note": "docs/game-design/economy/slice-budget-convergence.md §7, §8",
+    "baseline": "lab/manifests/TM-horizon-2030.json (series NOW must give the same golden per seed)"
+  }
+}

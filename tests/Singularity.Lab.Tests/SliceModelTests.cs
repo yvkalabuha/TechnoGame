@@ -13,7 +13,7 @@ public sealed class SliceModelTests : IDisposable
         "slice: JetSliceCalib tables", "slice: JetSliceCalib run", "slice: parameters", "slice: Lab path gives",
         "slice: L1", "slice: L2", "slice: matrix", "slice: data_hash", "slice: data cache", "slice: a40.force", "slice: COEXIST_MONEY", "slice: LIC_END", "slice: eng_short_months",
         "slice: licence track", "slice: control tables", "slice: design capacity", "slice: calibration points", "slice: switches", "slice: stage manifests", "slice: C3 distance",
-        "slice: H8", "slice: full run to 2030-12",
+        "slice: H8", "slice: full run to 2030-12", "slice: BUDGET_RULE", "slice: supply_month",
     ];
 
     private readonly string _tmp = Path.Combine(Path.GetTempPath(), "sing-lab-tests-" + Guid.NewGuid().ToString("N"));
@@ -55,4 +55,6 @@ public sealed class SliceModelTests : IDisposable
     [Fact] public void C3_distance_is_never_rounded_to_zero() => Check(Prefixes[19]);
     [Fact] public void Control_layer_past_384_months_is_rejected_and_FULL_is_not() => Check(Prefixes[20]);
     [Fact] public void Full_run_to_2030_12_is_ok_with_1024_months_and_thread_invariant() => Check(Prefixes[21]);
+    [Fact] public void Budget_rule_key_parses_the_four_rules_and_NOW_keeps_the_main_golden() => Check(Prefixes[22]);
+    [Fact] public void Supply_month_pools_follow_the_same_month_budget_and_agree_with_lines_and_ledger() => Check(Prefixes[23]);
 }

@@ -50,9 +50,14 @@ public static class SliceTables
     public static readonly MetricTableSpec ActorMonth = new("actor_month",
         ["t", "actor", "budget", "proc_budget", "out_g1", "out_g2", "out_g3", "out_g4", "active_g1", "active_g2", "active_g3", "active_g4"]);
 
-    /// <summary><c>JetSlice</c>: 14 tables (§4).</summary>
+    /// <summary><c>supply_month</c> (§4.17, TASK-0123): workforce, alloy, line output and its limiter, unused tooling money; JetSlice only, always written.</summary>
+    public static readonly MetricTableSpec SupplyMonth = new("supply_month",
+        ["t", "actor", "budget", "proc_budget", "wf_eng", "wf_skilled", "alloy_cap", "alloy_supply", "eng_n", "eng_granted", "sk_n", "sk_granted",
+         "lines", "rate_max", "rate_sum", "bind_rate", "bind_alloy", "bind_money", "tool_rest", "tool_unspent"]);
+
+    /// <summary><c>JetSlice</c>: 15 tables (§4; <c>supply_month</c> since v0.5 r14).</summary>
     public static readonly MetricTableSpec[] Full =
-        [Summary, ActorYear, WhyNot, NodeTimes, GenTimes, Requirements, Events, PrcYear, A40, A40CMonths, ToolingLedger, Lines, FleetCmd, Licences];
+        [Summary, ActorYear, WhyNot, NodeTimes, GenTimes, Requirements, Events, PrcYear, A40, A40CMonths, ToolingLedger, Lines, FleetCmd, Licences, SupplyMonth];
 
     /// <summary><c>JetSliceCalib</c>: 8 tables (§5).</summary>
     public static readonly MetricTableSpec[] Calibration = [CalibSummary, NodeTimes, GenTimes, PrcMonth, ActorMonth, A40, A40CMonths, ToolingLedger];

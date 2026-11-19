@@ -16,8 +16,8 @@ public sealed class SliceFormatException(string message) : Exception(message);
 
 /// <summary>
 /// Writes the tables of slice-csv-format.md v0.5 from the read views of one run. Reads views by property name only (SLICE_COMPOSITION §13.7 r5),
-/// never writes the world. "Snapshot t" is the view the compute of month t read (post t−1, or the initial view); "post t" is the view published
-/// by the monthly tick of t, with the inputs and the step traces of t (§12.1, §13.7).
+/// never writes the world; the only reads past the views are the pure getters of <see cref="SupplyProbe"/> (supply_month, §4.17). "Snapshot t"
+/// is the view the compute of month t read (post t−1, or the initial view); "post t" is the view published by the monthly tick of t, with the inputs and the step traces of t (§12.1, §13.7).
 /// </summary>
 internal sealed class SliceObserver
 {
@@ -74,6 +74,8 @@ internal sealed class SliceObserver
     private readonly LicenceRow?[] _openLicence;
     private readonly LicenceRow?[] _lapsedLicence;   // the last licence that lapsed by Active 1 -> 0 and was not replaced (DEBT-0032)
     private int _req;
+    // supply_month (§4.17, TASK-0123): world reads the views do not carry; null in the calibration build
+    private readonly SupplyProbe? _supply;
     // counters for run.json (format §4.9, §4.7)
     private long _closeIdleOtherReason, _wAfterNMonths, _closesWithoutLine, _linesWithoutMoney, _licResumes;
     // Design capacity (contract-proposals T3, TASK-0054): AI compose/derive commands, those that gave no new design, and the slots used.
@@ -159,6 +161,8 @@ internal sealed class SliceObserver
         _qcRankMonth = new long[_nA];
         _openLicence = new LicenceRow?[_nA];
         _lapsedLicence = new LicenceRow?[_nA];
+        if (!calibration && Has(SliceTables.SupplyMonth.Name))
+            _supply = new SupplyProbe(s, _nA);
     }
 
     private bool Has(string table) => _table.ContainsKey(table);
@@ -291,6 +295,7 @@ internal sealed class SliceObserver
 
     public void BeforeStep(long t)
     {
+        _supply?.BeforeStep(t);
         if (_calib)
             return;   // ViewMode.Calibration: why_not is never called (spec §8.2 п. 2)
         var cache = new Dictionary<(int, WhyNotTarget), IReadOnlyList<Link>>();
@@ -392,6 +397,7 @@ internal sealed class SliceObserver
             Events(sv, av, ai, st, t, a);
             Requirements(t == 0 ? _initial.Actors[a] : null, av, ai, t, a);
             Year(av, ai, t, a);
+            Supply(av, ai, st, t, a);
         }
         if (!_calib)
         {
@@ -912,6 +918,40 @@ internal sealed class SliceObserver
                 Row("requirements", I(_req++), _ids[a], I(r.Gen), I(t), I(r.Count), F(r.FvSuperior), r.Count == 2 && r.FvProducible is Fx6 f ? F(f) : "");
             }
         }
+    }
+
+    // ---------------------------------------------------------------- supply_month
+
+    // §4.17 (TASK-0123): one row per actor and month t. budget … alloy_cap are the inputs of the step of t (probe before the tick; budget checked
+    // against ActorInputsView.Budget); eng_*/sk_* are requested and granted in that step; rate_*, bind_* are DesignView post t (step 7 of t,
+    // ProductsSystem.Purchases: bind = what bound the output, ties to RATE, then ALLOY, MONEY only when strictly least).
+    private void Supply(ActorView av, ActorInputsView ai, ActorStepView st, long t, int a)
+    {
+        if (_supply is not SupplyProbe p)
+            return;
+        if (p.Month != t || p.Budget(a) != ai.Budget.Raw)
+            throw new SliceFormatException($"Month {t} actor {_ids[a]}: supply probe of month {p.Month} saw budget {p.Budget(a)}, the inputs view {ai.Budget.Raw}.");
+        (long engN, long engG) = p.Workforce(a, skilled: false);
+        (long skN, long skG) = p.Workforce(a, skilled: true);
+        long rateMax = 0, rateSum = 0;
+        int bRate = 0, bAlloy = 0, bMoney = 0;
+        foreach (DesignView d in av.Designs)
+        {
+            long r = d.Rate.Raw;
+            rateSum = checked(rateSum + r);
+            if (r > rateMax)
+                rateMax = r;
+            switch (d.Bind)
+            {
+                case LineBind.Rate: bRate++; break;
+                case LineBind.Alloy: bAlloy++; break;
+                case LineBind.Money: bMoney++; break;
+            }
+        }
+        ToolingLedgerView l = ai.Tooling;
+        Row(SliceTables.SupplyMonth.Name, I(t), _ids[a], F(ai.Budget), F(ai.ProcurementBudget), I(p.Engineers(a)), I(p.Skilled(a)),
+            I(p.AlloyCap(a)), F(ai.Capability.AlloySupply), I(engN), I(engG), I(skN), I(skG), I(st.Money?.Lines.Length ?? 0),
+            I(rateMax), I(rateSum), I(bRate), I(bAlloy), I(bMoney), F(l.Rest), F(l.Rest - l.TakenRest));
     }
 
     // ---------------------------------------------------------------- actor_year
