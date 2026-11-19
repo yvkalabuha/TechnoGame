@@ -31,6 +31,12 @@ class Replica(unittest.TestCase):
         first = next(t for t in range(1024) if now["SWE"][t] != b2["SWE"][t])
         self.assertEqual(first, 298)
 
+    def test_rule_A_clamp_keeps_the_share_from_crossing_s(self):
+        # 810e12a: share exactly s = 0.027 of B_F = 1; the plain floor step gives 27067 < s·Next(B_F) = 27067.257, the clamp rounds up.
+        self.assertEqual(T.next_a(27_000, 1_000_000, 29_900, 27_000, 60_000), 27_068)
+        # Below s the result stays at or below floor(s·Next(B_F)).
+        self.assertLessEqual(T.next_a(26_999, 1_000_000, 29_900, 27_000, 12_000_000) * T.FX, 27_000 * T.next_now(1_000_000, 29_900))
+
     def test_floor_arithmetic_is_floor_not_truncation(self):
         self.assertEqual(T.fmul(-1, 1), -1)  # FloorDiv(−1, 10^6) = −1
         self.assertEqual(T.monthly(-1), -1)

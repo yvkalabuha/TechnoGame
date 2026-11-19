@@ -64,6 +64,12 @@ def next_a(b, f, gf, s, lam):
     """Rule A step (BudgetMath.NextConverging). The ONE place to change when the Core formula of rule A changes (TASK-0122 follow-up)."""
     pulled = b + fmul(monthly(lam), fmul(s, f) - b)
     nxt = fmul(pulled, FX + monthly(gf))
+    # Clamp (810e12a): the share never crosses s. Exact comparison with the real target s·B_F; the next target is s·Next(B_F, g_F).
+    target_next = s * next_now(f, gf)
+    if b * FX >= s * f:
+        nxt = max(nxt, -(-target_next // FX))  # ceil
+    else:
+        nxt = min(nxt, target_next // FX)  # floor
     return max(nxt, 1)
 
 
