@@ -23,6 +23,10 @@ import time
 from pathlib import Path
 
 
+# Paths whose content verify.py builds or tests.
+CODE_PATHS = ("src/", "tests/", "mods/", "tools/", "lab/", ".github/")
+
+
 def git(*args: str, cwd: Path, check: bool = True) -> subprocess.CompletedProcess:
     return subprocess.run(["git", *args], cwd=cwd, text=True,
                           capture_output=True, check=check)
@@ -86,9 +90,28 @@ def main() -> int:
             print("land: verify failed on the merged tree, main untouched")
             return 1
         sha = git("rev-parse", "HEAD", cwd=tmp).stdout.strip()
+        now = git("rev-parse", args.target, cwd=root).stdout.strip()
+        if now != base:
+            # main moved while verify ran. If only non-code files moved, merge again
+            # on the new main and accept it when the code tree equals the verified one.
+            moved = git("diff", "--name-only", base, now, cwd=root).stdout.split()
+            code = [f for f in moved if f.startswith(CODE_PATHS) or f == "Singularity.sln"]
+            if code:
+                print("land: main moved in code paths while verify ran; nothing landed. Run again.")
+                for f in code[:10]:
+                    print("  -", f)
+                return 4
+            git("reset", "--hard", now, cwd=tmp)
+            m = git("merge", "--no-ff", "-m", args.message, args.branch, cwd=tmp, check=False)
+            same = m.returncode == 0 and git("diff", "--quiet", sha, "HEAD", "--", *CODE_PATHS,
+                                             "Singularity.sln", cwd=tmp, check=False).returncode == 0
+            if not same:
+                print("land: could not re-merge on the moved main; nothing landed. Run again.")
+                return 4
+            sha = git("rev-parse", "HEAD", cwd=tmp).stdout.strip()
         ff = git("merge", "--ff-only", sha, cwd=root, check=False)
         if ff.returncode != 0:
-            print("land: main moved or has conflicting local changes; nothing landed.")
+            print("land: main has conflicting local changes; nothing landed.")
             print(ff.stdout + ff.stderr)
             return 4
         print(f"land: {args.branch} landed on {args.target} as {sha[:7]}")
