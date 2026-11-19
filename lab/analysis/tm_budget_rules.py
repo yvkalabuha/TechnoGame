@@ -320,16 +320,22 @@ def tolerance_s8(var, base):
                     out.append(f"seed {s} {a} G{g} {name}: {verdict}")
         for a in ACTORS:
             lv, lb = v["starts"][a], b["starts"][a]
-            # The k-th line start of each side is one item; "number of lines before 1977" changes only when an item in the window has no
-            # partner (an item that crosses month 384 within SHIFT_MAX is a shift, not a count change).
+            # §8 has two separate conditions. (1) Shift: the k-th line start of each side is one item, compared by timing().
             for k in range(max(len(lv), len(lb))):
                 x = lv[k] if k < len(lv) else None
                 z = lb[k] if k < len(lb) else None
                 verdict = timing(x, z)
                 if verdict:
                     tag = " (FRA first line, #169)" if a == "FRA" and k == 0 else ""
-                    kind = "count change" if (x is None) != (z is None) else "shift"
-                    out.append(f"seed {s} {a} line {k + 1} ({kind}): {verdict}{tag}")
+                    out.append(f"seed {s} {a} line {k + 1} (shift): {verdict}{tag}")
+            # (2) "The number of lines does not change": the count of starts before H_CALIB, strictly. A start that crosses the cutoff within
+            # SHIFT_MAX is annotated, but it is still a count violation (the letter of §8).
+            nv, nb = sum(1 for t in lv if t < H_CALIB), sum(1 for t in lb if t < H_CALIB)
+            if nv != nb:
+                cross = [f"line {k + 1} {lv[k]} vs {lb[k]}" for k in range(min(len(lv), len(lb)))
+                         if (lv[k] < H_CALIB) != (lb[k] < H_CALIB) and abs(lv[k] - lb[k]) <= SHIFT_MAX]
+                note = f"; boundary crossing within {SHIFT_MAX} months: {', '.join(cross)}" if cross else ""
+                out.append(f"seed {s} {a} lines before {H_CALIB} (count change): {nv} vs {nb}{note}")
     return sorted(set(out))
 
 

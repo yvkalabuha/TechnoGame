@@ -79,7 +79,7 @@ class Criteria(unittest.TestCase):
         v = T.tolerance_s8(late, base)
         self.assertTrue(any("first unit" in x for x in v))
         self.assertTrue(any("FRA first line" in x for x in v))
-        self.assertTrue(any("count change" in x for x in v))
+        self.assertTrue(any("FRA lines before 384 (count change): 3 vs 2" in x for x in v))
 
     def test_s8_project_moved_into_the_window_by_the_variant_is_compared(self):
         # Codex (TASK-0123): NOW t_req 410 is past the cutoff, the variant brings it to 350: a 60-month shift inside the window.
@@ -90,13 +90,23 @@ class Criteria(unittest.TestCase):
         only = {1: run({}, first_unit={("SWE", 2): 370})}
         self.assertTrue(any("one side only" in x for x in T.tolerance_s8(only, {1: run({})})))
 
-    def test_s8_line_crossing_384_within_24_months_is_no_count_change(self):
-        # Reviewer (TASK-0123): base line at 370, variant at 390 — a 20-month shift across the cutoff.
+    def test_s8_line_crossing_384_within_24_months_is_a_count_change_with_a_note(self):
+        # Codex r2 (TASK-0123): §8 "the number of lines does not change" is its own condition. Base 370, variant 390: the shift (20) passes,
+        # the count before 384 changes 1 -> 0, so it is a violation, annotated as a boundary crossing.
         base = {1: run({}, starts={**{a: [] for a in T.ACTORS}, "GBR": [370]})}
         var = {1: run({}, starts={**{a: [] for a in T.ACTORS}, "GBR": [390]})}
-        self.assertEqual(T.tolerance_s8(var, base), [])
+        v = T.tolerance_s8(var, base)
+        self.assertEqual(len(v), 1, v)
+        self.assertIn("GBR lines before 384 (count change): 0 vs 1; boundary crossing within 24 months: line 1 390 vs 370", v[0])
+        # Mirror: the variant brings the line into the window.
+        v = T.tolerance_s8(base, var)
+        self.assertEqual(len(v), 1, v)
+        self.assertIn("GBR lines before 384 (count change): 1 vs 0; boundary crossing within 24 months: line 1 370 vs 390", v[0])
+        # Far: a shift violation and a count violation without the note.
         far = {1: run({}, starts={**{a: [] for a in T.ACTORS}, "GBR": [420]})}
-        self.assertTrue(any("GBR line 1 (shift)" in x for x in T.tolerance_s8(far, base)))
+        v = T.tolerance_s8(far, base)
+        self.assertTrue(any("GBR line 1 (shift)" in x for x in v))
+        self.assertTrue(any("(count change): 0 vs 1" in x and "boundary" not in x for x in v))
 
     def test_money_limits_by_places_or_wins(self):
         base = {s: run({}) for s in range(1, 11)}
