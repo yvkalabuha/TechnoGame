@@ -389,12 +389,13 @@ public sealed partial class Main : Node3D
         _area = id; _rail.Select(id);
         _host.WhyActor = _player;
         if (def.State == AreaState.Locked) { _areaPanel.Visible = false; _areaCard.ShowArea(def); }
-        else { _areaCard.Visible = false; _areaPanel.Area = id; _areaPanel.ShowActor(_player); if (fromKeyboard) _areaPanel.FocusFirstWhenReady(); }
+        else { _areaCard.Visible = false; _areaPanel.Area = id; _areaPanel.ShowActor(_player); if (fromKeyboard) _areaPanel.FocusFirstWhenReady(); else _areaPanel.CancelFocusWait(); }
         Recenter();
     }
 
     void CloseArea()
     {
+        _areaPanel?.CancelFocusWait();
         var closed = _area; bool focusInside = _areaPanel != null && _areaPanel.HasFocusInside();
         _area = AreaId.Map; _rail?.Select(AreaId.Map);
         if (_areaPanel != null) _areaPanel.Visible = false;
@@ -800,7 +801,7 @@ public sealed partial class Main : Node3D
         Directory.CreateDirectory(dir);
         var img = GetViewport().GetTexture().GetImage();
         if (r is Rect2I rr) img = img.GetRegion(rr);
-        else if (_largeSize.X > 0 ? (img.GetWidth() != _largeSize.X || img.GetHeight() != _largeSize.Y) : !SettingsLogic.IsBaseFrame(img.GetWidth(), img.GetHeight())) { InstFail($"frame {name} is {img.GetWidth()}x{img.GetHeight()}, a full frame must be a real 1920x1080 render (window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, display {DisplayServer.ScreenGetSize().X}x{DisplayServer.ScreenGetSize().Y})"); return; }
+        else if (_largeSize.X > 0 ? (img.GetWidth() != _largeSize.X || img.GetHeight() != _largeSize.Y) : !SettingsLogic.IsBaseFrame(img.GetWidth(), img.GetHeight())) { InstFail($"frame {name} is {img.GetWidth()}x{img.GetHeight()}, a full frame must be a real {(_largeSize.X > 0 ? _largeSize.X + "x" + _largeSize.Y : "1920x1080")} render (window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, display {DisplayServer.ScreenGetSize().X}x{DisplayServer.ScreenGetSize().Y})"); return; }
         img.SavePng(Path.Combine(dir, name));
         if (grey) { img.Convert(Image.Format.L8); img.SavePng(Path.Combine(dir, name.Replace(".png", "_grey.png"))); }   // A5: a greyscale frame next to the colour one
     }
@@ -866,7 +867,7 @@ public sealed partial class Main : Node3D
             Q(0.4, () => { SaveShot($"settings_general{sfx}.png"); _settings.ShotTab(0); _settings.ShotRollback(); });
             Q(0.5, () => { SaveShot($"settings_rollback{sfx}.png"); _settings.Revert(false); _settings.Close(); Loc.SetLang(lang); AimAlert(1, false); });
             Q(0.8, () => { SaveShot($"alert_tint5{sfx}.png"); _overlay.RemoveMarker("demo0"); _overlay.RemoveMarker("demo1"); _overlay.RemoveMarker("demo2"); OpenArea(AreaId.Finance); });
-            Q(0.8, () => { SaveShot($"area_finance{sfx}.png"); _shotLog += $"rail {sfx}: fits without scroll {_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f} (min {_rail.GetCombinedMinimumSize().Y:F0} of {_rail.Size.Y:F0})\n"; OpenArea(AreaId.Forces); });
+            Q(0.8, () => { SaveShot($"area_finance{sfx}.png"); FitCheck(_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f); _shotLog += $"rail {sfx}: fits without scroll {_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f} (min {_rail.GetCombinedMinimumSize().Y:F0} of {_rail.Size.Y:F0})\n"; OpenArea(AreaId.Forces); });
             Q(0.6, () => { SaveShot($"area_forces{sfx}.png"); OpenArea(AreaId.Science); });
             Q(0.8, () => { SaveShot($"area_science{sfx}.png"); OpenArea(AreaId.Production); });
             Q(0.8, () => { SaveShot($"area_production{sfx}.png"); CloseArea(); if (Settings.Current.RailWide) ToggleRail(); _pinBadges = Array.Empty<(AreaId, int, int)>(); });
@@ -907,7 +908,7 @@ public sealed partial class Main : Node3D
             Q(0.5, () => { SaveShot($"rail_narrow_badges{sfx}.png"); RunT6($"rail narrow badges{sfx}", true); LogCheck(_rail.BadgeFitLog()); _pinBadges = Array.Empty<(AreaId, int, int)>(); ToggleRail(); });
             // Wide, Map selected, no badge: "Esc" and the marker are apart.
             Q(0.6, () => { SaveShot($"rail_wide_normal{sfx}.png", null, scale == 100); RunT6($"rail wide normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });
-            Q(0.5, () => { SaveShot($"rail_wide_badges{sfx}.png", null, scale == 100 && lang == "ru"); RunT6($"rail wide badges{sfx}", true); LogCheck(_rail.NameFitLog()); _shotLog += $"rail wide {sfx}: fits without scroll {_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f} (min {_rail.GetCombinedMinimumSize().Y:F0} of {_rail.Size.Y:F0}, rail {_rail.Size.Y:F0} du)\n"; ToggleRail(); _pinBadges = null; OpenTree(0); });
+            Q(0.5, () => { SaveShot($"rail_wide_badges{sfx}.png", null, scale == 100 && lang == "ru"); RunT6($"rail wide badges{sfx}", true); LogCheck(_rail.NameFitLog()); FitCheck(_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f); _shotLog += $"rail wide {sfx}: fits without scroll {_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f} (min {_rail.GetCombinedMinimumSize().Y:F0} of {_rail.Size.Y:F0}, rail {_rail.Size.Y:F0} du)\n"; ToggleRail(); _pinBadges = null; OpenTree(0); });
             // Tree, legend closed: the five wedge summaries (the closed-legend button is checked in the same call).
             Q(1.0, () =>
             {
@@ -915,10 +916,17 @@ public sealed partial class Main : Node3D
                 _shotLog += $"tree summaries {sfx} (base view): {nIn} of 5 totals fully inside the chart area, no overlap with node, label, total, stamp, legend button: {(sm == null && nIn == 5 ? "PASS" : "FAIL " + sm)}\n"; if (sm != null || nIn != 5) InstFail($"tree summaries {sfx}: {sm}");
                 _shotLog += "rule: wedge totals belong to the chart and move with the wedge label; asserted at the base view (zoom 1.0, pan 0): 5 of 5 inside the chart area. Zoomed or panned frames have no visibility requirement; asserted there: totals still in view touch no node, label or other total\n";
                 SaveShot($"tree_nolegend{sfx}.png", null, scale == 100 && lang == "ru"); _discClosed = _tree.DiscDiameter;
+                _tree.ShotZoom(1.2f, -1);   // a mild zoom keeps the lower wedge total in view for the zoomed-view assertion below
+            });
+            Q(0.4, () =>
+            {
+                string zs = _tree.ShotSummaryCheck(false, out int zin);
+                bool zok = zs == null && zin >= 1;
+                _shotLog += $"tree summaries {sfx} (zoom 1.2, pan 0): {zin} of 5 totals in the view; those clear of node, label, total: {(zok ? "PASS" : "FAIL " + zs)}\n"; if (!zok) InstFail($"tree zoomed summaries {sfx}: {zs} in view {zin}");
                 _tree.ShotZoom(2.6f, -1); _tree.ShotPanBy(new Vector2(160, -120));
             });
             // The closed button over the zoomed and panned chart; a real click must open the legend and must not pan.
-            Q(0.6, () => { SaveShot($"tree_legend_closed_zoom{sfx}.png"); string zs = _tree.ShotSummaryCheck(false, out int zin); _shotLog += $"tree summaries {sfx} (zoomed, panned): {zin} of 5 totals in the view; those clear of node, label, total: {(zs == null ? "PASS" : "FAIL " + zs)}\n"; if (zs != null) InstFail($"tree zoomed summaries {sfx}: {zs}"); _panBefore = _tree.ShotPan; Mouse(_tree.ShotButtonCenter * PxPerDu(), null); });
+            Q(0.6, () => { SaveShot($"tree_legend_closed_zoom{sfx}.png"); _panBefore = _tree.ShotPan; Mouse(_tree.ShotButtonCenter * PxPerDu(), null); });
             Q(0.2, () => Mouse(_tree.ShotButtonCenter * PxPerDu(), true));
             Q(0.1, () => Mouse(_tree.ShotButtonCenter * PxPerDu(), false));
             Q(0.5, () =>
@@ -1044,7 +1052,7 @@ public sealed partial class Main : Node3D
             case 94 when _shotT >= 0.4: Shot("rail_focus.png", new Rect2I(0, 0, 420, 360)); GetViewport().GuiReleaseFocus(); PressKey(Key.Backslash); _shotStep = 83; _shotT = 0; break;
             case 83 when _shotT >= 0.5: PressKey(Key.F); _shotStep = 84; _shotT = 0; break;
             case 84 when _shotT >= 0.8:
-                _shotLog += $"rail wide: width {_rail.RailWidth}, wide {_rail.Wide}, fits without scroll {_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f} (min {_rail.GetCombinedMinimumSize().Y:F0} of {_rail.Size.Y:F0})\n";
+                FitCheck(_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f); _shotLog += $"rail wide: width {_rail.RailWidth}, wide {_rail.Wide}, fits without scroll {_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f} (min {_rail.GetCombinedMinimumSize().Y:F0} of {_rail.Size.Y:F0})\n";
                 Shot("rail_wide_finance.png"); Loc.SetLang("en"); _shotStep = 85; _shotT = 0; break;
             case 85 when _shotT >= 0.6: Shot("rail_wide_finance_en.png"); PressKey(Key.M); _shotStep = 86; _shotT = 0; break;
             case 86 when _shotT >= 0.6: Shot("rail_wide_forces_en.png"); PressKey(Key.Backslash); _shotStep = 87; _shotT = 0; break;
@@ -1139,8 +1147,8 @@ public sealed partial class Main : Node3D
                 Shot("settings_video_150.png"); _settings.Close(); OpenArea(AreaId.Finance); _shotStep = 64; _shotT = 0; break;
             case 64 when _shotT >= 0.8:
                 Shot("area_finance_150.png");
-                _shotLog += $"finance at 150%: order button in view without scroll {_areaPanel.ApplyInView}\n";
-                _shotLog += $"rail at 150%: fits without scroll {_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f} (min {_rail.GetCombinedMinimumSize().Y:F0} of {_rail.Size.Y:F0})\n";
+                FitCheck(_areaPanel.ApplyInView); _shotLog += $"finance at 150%: order button in view without scroll {_areaPanel.ApplyInView}\n";
+                FitCheck(_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f); _shotLog += $"rail at 150%: fits without scroll {_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f} (min {_rail.GetCombinedMinimumSize().Y:F0} of {_rail.Size.Y:F0})\n";
                 CloseArea();
                 Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false);
                 ShowPower(_player, false); OpenTree(0); _shotStep = 65; _shotT = 0; break;
@@ -1237,11 +1245,13 @@ public sealed partial class Main : Node3D
 
     // The shot run exits non-zero when any live check failed (T6, rail, tree, input). Palette validator failures that exist on main are listed below by exact name: reported, not failing.
     bool _shotFailed;
-    static readonly HashSet<string> KnownDebt = new()
+    static readonly HashSet<(string Palette, string Name)> KnownDebt = new()
     {
-        "warn on sea (shaded)", "warn on sea.deep (shaded)", "warn on land-none (shaded)",
-        "tint.1 vs tint.5", "tint.1 vs tint.7", "tint.2 vs tint.8", "tint.4 vs tint.6", "tint.5 vs tint.7",
+        // only the v0.2 palette (kept for comparison) carries these; the same names failing on palette C, the one the game uses, are not debt
+        ("V02", "warn on sea (shaded)"), ("V02", "warn on sea.deep (shaded)"), ("V02", "warn on land-none (shaded)"),
+        ("V02", "tint.1 vs tint.5"), ("V02", "tint.1 vs tint.7"), ("V02", "tint.2 vs tint.8"), ("V02", "tint.4 vs tint.6"), ("V02", "tint.5 vs tint.7"),
     };
+    void FitCheck(bool ok) { if (!ok) _shotFailed = true; }   // a logged "fits without scroll False" fails the run
     void LogCheck(string text) { _shotLog += text; if (text.Contains("FAIL")) _shotFailed = true; }
     void Validate(string title, IReadOnlyList<PairResult> res, PaletteSet p = null)
     {
@@ -1250,7 +1260,7 @@ public sealed partial class Main : Node3D
         foreach (var r in res)
         {
             if (r.Pass) continue;
-            if (KnownDebt.Contains(r.Name)) _shotLog += $"known, DEBT: {r.Name}\n";
+            if (p != null && KnownDebt.Contains((ReferenceEquals(p, Palette.V02) ? "V02" : "C", r.Name))) _shotLog += $"known, DEBT: {r.Name} (palette V02)\n";
             else { _shotLog += $"UNLISTED FAILURE: {r.Name}\n"; _shotFailed = true; }
         }
     }

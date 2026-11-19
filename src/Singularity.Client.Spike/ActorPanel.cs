@@ -289,6 +289,8 @@ public sealed partial class ActorPanel : PanelContainer
     /// <summary>Opened from the keyboard: the focus moves to the first focusable control of the panel once it has laid out (the panel is its own Tab scope, so Tab alone cannot enter it from the rail).</summary>
     public void FocusFirstWhenReady() => _focusWait = 2;
     int _focusWait;
+    /// <summary>A pending keyboard focus request is dropped (the panel closed, or was opened with the mouse).</summary>
+    public void CancelFocusWait() => _focusWait = 0;
     void FocusFirst()
     {
         Control Find(Node n)
