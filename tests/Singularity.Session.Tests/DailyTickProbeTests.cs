@@ -145,7 +145,7 @@ public class DailyTickProbeTests
         SliceSession s = SliceSession.Create(SliceTestData.Data, new SliceRunConfig { Seed = 7, DailyTickProbe = true });
         s.Step(5);
         var before = s.View.Actors;
-        Assert.True(s.Submit(SourceClass.Player, 0, 0, new StartSeries(0, 0, Fx6.FromInt(5), true)).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new StartSeries(0, s.HandleOf(0, 0), Fx6.FromInt(5), true)).Accepted);
         s.Step(1);
         Assert.False(before == s.View.Actors, "a tick with a command must build the actors anew");
         Assert.Equal(FreshJson(s), JsonSerializer.Serialize(s.View, Json));

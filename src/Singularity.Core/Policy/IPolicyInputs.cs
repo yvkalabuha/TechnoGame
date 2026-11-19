@@ -1,4 +1,5 @@
 using Singularity.Core.Industry;
+using Singularity.Core.Products;
 
 namespace Singularity.Core.Policy;
 
@@ -22,8 +23,8 @@ public readonly record struct BottleneckLimit(BottleneckSource Source, LimiterKi
 /// </summary>
 public interface IPolicyInputs
 {
-    /// <summary>The actor's design in series (stage С) with the highest <c>design_id</c>, −1 without one.</summary>
-    int NewestSeriesDesign(int actorRow, long month);
+    /// <summary>The handle of the actor's design in series (stage С) with the highest <c>design_id</c>, null without one.</summary>
+    DesignHandle? NewestSeriesDesign(int actorRow, long month);
 
     /// <summary>Bottleneck of the production profile of the design in month t and the limiter of that process at the actor's site; null when the profile has none.</summary>
     BottleneckLimit? Bottleneck(int actorRow, int design, long month);

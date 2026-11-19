@@ -47,7 +47,7 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
     public IReadOnlyList<FleetCommand> FleetCommands(int actorRow, long month)
     {
         var list = new List<FleetCommand>();
-        foreach ((CommandKind kind, int design, int n) in world.Commands.FleetCommands(actorRow, month))
+        foreach ((CommandKind kind, DesignHandle design, int n) in world.Commands.FleetCommands(actorRow, month))
             list.Add(new FleetCommand(kind == CommandKind.SellCohort ? FleetCommandKind.Sell : FleetCommandKind.Retire, design, n));
         list.AddRange(world.Policy.AiFleetCommands(actorRow, month));
         return list;
@@ -57,27 +57,40 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
     {
         var list = new List<DesignCommand>();
         // Key order: the external sources (player, harness) first, then the AI (SourceClass.Ai is last).
-        foreach ((CommandKind kind, int target, var alts) in world.Commands.DesignCommands(actorRow, month))
+        foreach ((CommandKind kind, DesignHandle target, var alts) in world.Commands.DesignCommands(actorRow, month))
         {
-            DesignCommandKind k = kind switch
+            list.Add(kind switch
             {
-                CommandKind.ComposeDesign => DesignCommandKind.Compose,
-                CommandKind.DeriveDesign => DesignCommandKind.Derive,
-                _ => DesignCommandKind.Cancel,
-            };
-            list.Add(new DesignCommand(k, target, kind == CommandKind.CancelDesign ? [] : alts));
+                CommandKind.ComposeDesign => DesignCommand.Compose(target.Slot, alts),
+                CommandKind.DeriveDesign => DesignCommand.Derive(target, alts),
+                _ => DesignCommand.Cancel(target),
+            });
         }
         list.AddRange(world.Policy.AiDesignCommands(actorRow, month));
         return list;
     }
 
-    // An external command wins; the AI's start never carries force (spec A36).
-    public SeriesStart? StartSeries(int actorRow, int design, long month) =>
-        world.Commands.Series(actorRow, design, month) is { } s ? new SeriesStart(s.Rate, s.Force)
-            : world.Policy.AiStart(actorRow, design, month) is { } r ? new SeriesStart(r, false) : null;
+    // Key order: the external command, then the AI's; the layer applies the first whose handle resolves (SLICE_COMPOSITION §7.5). The AI's start never
+    // carries force (spec A36). Nothing is checked here: resolution of a handle is the layer's alone.
+    public int SeriesStarts(int actorRow, int design, long month, Span<SeriesStart> into)
+    {
+        int n = 0;
+        if (world.Commands.Series(actorRow, design, month) is { } s)
+            into[n++] = new SeriesStart(s.Design, s.Rate, s.Force);
+        if (world.Policy.AiStart(actorRow, design, month) is { } ai)
+            into[n++] = new SeriesStart(ai.Design, ai.Rate, false);
+        return n;
+    }
 
-    public bool CloseLine(int actorRow, int design, long month) =>
-        world.Commands.CloseLine(actorRow, design, month) || world.Policy.AiClose(actorRow, design, month);
+    public int LineCloses(int actorRow, int design, long month, Span<DesignHandle> into)
+    {
+        int n = 0;
+        if (world.Commands.CloseLine(actorRow, design, month) is { } c)
+            into[n++] = c;
+        if (world.Policy.AiClose(actorRow, design, month) is { } ai)
+            into[n++] = ai;
+        return n;
+    }
 
     // Spec A39, A41 (F15): T_a of this month's plan on the line the policy chose as the training series, else 0.
     public Fx6 TrainingBudget(int actorRow, int design, long month) =>

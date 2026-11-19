@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Singularity.Core.Products;
 
 namespace Singularity.Core.Commands;
 
@@ -20,6 +21,9 @@ public enum CommandRefusal
     LocalNotMonotonic,
     TooManyDesignCommands,
     SlotOverflow,
+
+    /// <summary>A design handle is malformed: its generation is below 1 (ADR-0005 p. 3). Only the form; whether it is stale is the layer's check at application.</summary>
+    BadHandle,
 }
 
 public readonly record struct CommandVerdict(CommandRefusal Reason, string Message)
@@ -85,36 +89,36 @@ public static class CommandValidator
                     ? CommandVerdict.Refuse(CommandRefusal.BadAlternatives, $"compose_design needs generation ≥ 1 and {limits.SlotCount} alternatives")
                     : CommandVerdict.Ok;
             case DeriveDesign v:
-                if (v.Parent < 0 || v.Parent >= limits.Designs)
-                    return CommandVerdict.Refuse(CommandRefusal.BadDesign, $"design {v.Parent} is out of range");
+                if (HandleRefusal(v.Parent, limits) is { } badParent)
+                    return badParent;
                 return v.Alts.IsDefault || v.Alts.Length != limits.SlotCount || v.Alts.Any(a => a < -1)
                     ? CommandVerdict.Refuse(CommandRefusal.BadAlternatives, $"derive needs {limits.SlotCount} alternatives (−1 = unchanged)")
                     : CommandVerdict.Ok;
             case StartSeries s:
-                if (s.Design < 0 || s.Design >= limits.Designs)
-                    return CommandVerdict.Refuse(CommandRefusal.BadDesign, $"design {s.Design} is out of range");
+                if (HandleRefusal(s.Design, limits) is { } badStart)
+                    return badStart;
                 if (s.Rate.Raw < 0)
                     return CommandVerdict.Refuse(CommandRefusal.BadRate, "the rate must not be negative");
                 return CommandVerdict.Ok;
             case CancelDesign x:
-                return x.Design < 0 || x.Design >= limits.Designs
-                    ? CommandVerdict.Refuse(CommandRefusal.BadDesign, $"design {x.Design} is out of range")
-                    : CommandVerdict.Ok;
+                return HandleRefusal(x.Design, limits) ?? CommandVerdict.Ok;
             case RetireCohort r:
-                return r.Design < 0 || r.Design >= limits.Designs
-                    ? CommandVerdict.Refuse(CommandRefusal.BadDesign, $"design {r.Design} is out of range")
-                    : CommandVerdict.Ok;
+                return HandleRefusal(r.Design, limits) ?? CommandVerdict.Ok;
             case SellCohort v:
-                return v.Design < 0 || v.Design >= limits.Designs
-                    ? CommandVerdict.Refuse(CommandRefusal.BadDesign, $"design {v.Design} is out of range")
-                    : CommandVerdict.Ok;
+                return HandleRefusal(v.Design, limits) ?? CommandVerdict.Ok;
             case CloseLine l:
-                return l.Design < 0 || l.Design >= limits.Designs
-                    ? CommandVerdict.Refuse(CommandRefusal.BadDesign, $"design {l.Design} is out of range")
-                    : CommandVerdict.Ok;
+                return HandleRefusal(l.Design, limits) ?? CommandVerdict.Ok;
             default:
                 throw new ArgumentOutOfRangeException(nameof(logged), c.GetType(), "Unknown command type.");
         }
+    }
+
+    // Form only: a stale handle is accepted into the journal and rejected by the layer at application, identically in replay (ADR-0005 p. 3, note §3.3).
+    private static CommandVerdict? HandleRefusal(DesignHandle h, CommandLimits limits)
+    {
+        if (h.Slot < 0 || h.Slot >= limits.Designs)
+            return CommandVerdict.Refuse(CommandRefusal.BadDesign, $"design {h.Slot} is out of range");
+        return h.Generation < 1 ? CommandVerdict.Refuse(CommandRefusal.BadHandle, $"design handle ({h.Slot}, {h.Generation}) has no generation ≥ 1") : null;
     }
 
     /// <summary>Checks that depend on the state at application: every process of the focus is known to the actor.</summary>

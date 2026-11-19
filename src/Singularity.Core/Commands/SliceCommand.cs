@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Singularity.Core.Policy;
+using Singularity.Core.Products;
 using Singularity.Kernel;
 
 namespace Singularity.Core.Commands;
@@ -57,7 +58,7 @@ public enum CommandKind
 }
 
 /// <summary>
-/// A typed external command of the slice (ADR-0014 п. 3; contract §5). Arguments are integers and <see cref="Fx6"/> only.
+/// A typed external command of the slice (ADR-0014 п. 3; contract §5). Arguments are integers, <see cref="Fx6"/> and <see cref="DesignHandle"/> (a pair of integers); a command about a design always names it by handle (ADR-0005 p. 3).
 /// Only commands with a consumer in the current build exist; AI decisions are not commands (they are <c>pol.*</c> columns).
 /// </summary>
 public abstract record SliceCommand(int Actor)
@@ -86,8 +87,8 @@ public sealed record ComposeDesign(int Actor, int Generation, ImmutableArray<int
     public override CommandKind Kind => CommandKind.ComposeDesign;
 }
 
-/// <summary><c>derive(parent, alts[5])</c>: −1 = unchanged slot.</summary>
-public sealed record DeriveDesign(int Actor, int Parent, ImmutableArray<int> Alts) : SliceCommand(Actor)
+/// <summary><c>derive(parent, alts[5])</c>: −1 = unchanged slot. <paramref name="Parent"/> is the handle of the parent project (ADR-0005 p. 3).</summary>
+public sealed record DeriveDesign(int Actor, DesignHandle Parent, ImmutableArray<int> Alts) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.DeriveDesign;
 }
@@ -96,13 +97,13 @@ public sealed record DeriveDesign(int Actor, int Parent, ImmutableArray<int> Alt
 /// <c>start_series(design, rate, force)</c>. <c>force = true</c> is allowed for the player and a harness only (#94, A36): the AI
 /// never sends commands at all (<see cref="SourceClass.Ai"/> is refused at Submit).
 /// </summary>
-public sealed record StartSeries(int Actor, int Design, Fx6 Rate, bool Force) : SliceCommand(Actor)
+public sealed record StartSeries(int Actor, DesignHandle Design, Fx6 Rate, bool Force) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.StartSeries;
 }
 
 /// <summary><c>close_line(design)</c>: stage С → В.</summary>
-public sealed record CloseLine(int Actor, int Design) : SliceCommand(Actor)
+public sealed record CloseLine(int Actor, DesignHandle Design) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.CloseLine;
 }
@@ -111,7 +112,7 @@ public sealed record CloseLine(int Actor, int Design) : SliceCommand(Actor)
 /// <c>cancel_design(design)</c> (contract §4.4e, F14): an own project in П or О becomes «снят». The player may send it any time; the AI only by the
 /// rule A40 (a policy decision in <c>pol.*</c>, not a journal command).
 /// </summary>
-public sealed record CancelDesign(int Actor, int Design) : SliceCommand(Actor)
+public sealed record CancelDesign(int Actor, DesignHandle Design) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.CancelDesign;
 }
@@ -120,7 +121,7 @@ public sealed record CancelDesign(int Actor, int Design) : SliceCommand(Actor)
 /// <c>retire_cohort(design, n)</c> (contract r6 §4.4f, #141): <c>n</c> units of a project in С or В leave the fleet without money, the oldest first.
 /// The player and the AI send the same command (the AI's are <c>pol.*</c> columns). Checks that need the state are the layer's (<c>BAD_RETIRE</c>).
 /// </summary>
-public sealed record RetireCohort(int Actor, int Design, int N) : SliceCommand(Actor)
+public sealed record RetireCohort(int Actor, DesignHandle Design, int N) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.RetireCohort;
 }
@@ -129,7 +130,7 @@ public sealed record RetireCohort(int Actor, int Design, int N) : SliceCommand(A
 /// <c>sell_cohort(design, n)</c> (contract r6 §4.4f, #142): <c>n</c> units of a project in В go to buyers outside the slice for money, the oldest first.
 /// Checks that need the state are the layer's (<c>BAD_SELL</c>).
 /// </summary>
-public sealed record SellCohort(int Actor, int Design, int N) : SliceCommand(Actor)
+public sealed record SellCohort(int Actor, DesignHandle Design, int N) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.SellCohort;
 }

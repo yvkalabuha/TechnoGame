@@ -10,7 +10,7 @@ namespace Singularity.Core.Policy;
 /// </summary>
 public sealed partial class PolicySystem
 {
-    private IntColumn[] _fltStamp = [], _fltKind = [], _fltDesign = [], _fltN = [];
+    private IntColumn[] _fltStamp = [], _fltKind = [], _fltDesign = [], _fltGen = [], _fltN = [];
     private LongColumn _incExp = null!;
     private LongColumn _nSell = null!, _nRetire = null!, _armed = null!, _silentBind = null!;
     private LongColumn[] _pair = [];
@@ -21,12 +21,14 @@ public sealed partial class PolicySystem
         _fltStamp = new IntColumn[slots];
         _fltKind = new IntColumn[slots];
         _fltDesign = new IntColumn[slots];
+        _fltGen = new IntColumn[slots];
         _fltN = new IntColumn[slots];
         for (int k = 0; k < slots; k++)
         {
             _fltStamp[k] = table.AddInt($"pol.flt.{k}.stamp");
             _fltKind[k] = table.AddInt($"pol.flt.{k}.kind");
             _fltDesign[k] = table.AddInt($"pol.flt.{k}.design");
+            _fltGen[k] = table.AddInt($"pol.flt.{k}.gen");
             _fltN[k] = table.AddInt($"pol.flt.{k}.n");
         }
         _incExp = table.AddLong("pol.flt.incExp");
@@ -51,7 +53,7 @@ public sealed partial class PolicySystem
         for (int k = 0; k < _fltStamp.Length; k++)
         {
             if (_fltStamp[k].Current[actor] == Stamp(month))
-                list.Add(new FleetCommand((FleetCommandKind)_fltKind[k].Current[actor], _fltDesign[k].Current[actor], _fltN[k].Current[actor]));
+                list.Add(new FleetCommand((FleetCommandKind)_fltKind[k].Current[actor], new DesignHandle(_fltDesign[k].Current[actor], _fltGen[k].Current[actor]), _fltN[k].Current[actor]));
         }
         return list;
     }
@@ -123,7 +125,7 @@ public sealed partial class PolicySystem
             foreach (FleetCommand c in pending)
             {
                 if (c.Kind == kind)
-                    _ = kind == FleetCommandKind.Sell ? book.Sell(c.Design, c.N, t, gFront) : book.Retire(c.Design, c.N);
+                    _ = kind == FleetCommandKind.Sell ? book.Sell(c.Design.Slot, c.N, t, gFront) : book.Retire(c.Design.Slot, c.N);
             }
         }
         book.AgeOut(t + 1);
@@ -216,7 +218,7 @@ public sealed partial class PolicySystem
                 CommandRejection? bad = book.Sell(d, s, t + 1, gFront, out Fx6 income);
                 if (bad is not null)
                     throw new PolicyInvariantException(t, row, $"the AI's sell_cohort of design {d} would be refused: {bad}");
-                result.Commands.Add(new FleetCommand(FleetCommandKind.Sell, d, s));
+                result.Commands.Add(new FleetCommand(FleetCommandKind.Sell, designs[d].HandleOf(d), s));
                 result.IncomeExpected += income;
             }
             if (n - s >= 1)
@@ -224,7 +226,7 @@ public sealed partial class PolicySystem
                 CommandRejection? bad = book.Retire(d, n - s);
                 if (bad is not null)
                     throw new PolicyInvariantException(t, row, $"the AI's retire_cohort of design {d} would be refused: {bad}");
-                result.Commands.Add(new FleetCommand(FleetCommandKind.Retire, d, n - s));
+                result.Commands.Add(new FleetCommand(FleetCommandKind.Retire, designs[d].HandleOf(d), n - s));
             }
             excess -= Fx6.FromInt(n) * book.Upkeep[d];
             CountPair(row, genLine, book.Gen[d], s >= 1 ? 1 : 0, n - s >= 1 ? 1 : 0, s, n - s);

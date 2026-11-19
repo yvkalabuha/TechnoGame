@@ -15,7 +15,8 @@ namespace Singularity.Session;
 /// </summary>
 public sealed class ForceProxy(SliceSession session, int rateDivisor = 1)
 {
-    private readonly HashSet<(int Actor, int Design)> _sent = new();
+    // Keyed by the handle: a project in a reused slot is a new entity and gets its own FORCE (ADR-0005 p. 3).
+    private readonly HashSet<(int Actor, DesignHandle Design)> _sent = new();
     private int _local;
 
     public int Sent { get; private set; }
@@ -29,16 +30,18 @@ public sealed class ForceProxy(SliceSession session, int rateDivisor = 1)
         {
             for (int d = 0; d < w.ProductsLayout.Designs; d++)
             {
-                if (p.Stage(a, d) != DesignStage.Prototype || p.GateOpen(a, d, month + 1) || _sent.Contains((a, d)))
+                if (p.Stage(a, d) != DesignStage.Prototype || p.GateOpen(a, d, month + 1))
                     continue;
-                _sent.Add((a, d));
+                var handle = new DesignHandle(d, p.Generation(a, d));
+                if (!_sent.Add((a, handle)))
+                    continue;
                 Fx6 rate = PolicyRules.LineRate(w.ProcurementBudget(a), p.UnitCostFloor(a, d)) / Fx6.FromInt(rateDivisor);
-                Send(new StartSeries(a, d, rate, Force: true));
+                Send(new StartSeries(a, handle, rate, Force: true));
                 Sent++;
                 for (int e = 0; e < w.ProductsLayout.Designs; e++)
                 {
                     if (p.Stage(a, e) == DesignStage.Series && e != p.Parent(a, d))
-                        Send(new CloseLine(a, e));
+                        Send(new CloseLine(a, new DesignHandle(e, p.Generation(a, e))));
                 }
             }
         }

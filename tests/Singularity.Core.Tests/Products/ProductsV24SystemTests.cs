@@ -68,8 +68,8 @@ public class ProductsV24SystemTests
             Compose(l, 1, "eng_g2", "hot_sa2_forged", "comp_axial", "af_swept", "ab_on"),          // g* is not the newest known APP
             Compose(l, 2, "eng_g3", "hot_sa2_forged", "comp_axial", "af_swept", "ab_on"),          // eng_g3 not available
             Compose(l, 2, "eng_g2", "hot_sa2_forged", "comp_axial", "af_straight", "ab_on"),       // rank 1 < platform_min_rank[2]
-            new DesignCommand(DesignCommandKind.Compose, 2, [0, 0, 0]),                            // wrong slot count
-            new DesignCommand(DesignCommandKind.Compose, 2, [l.AltStart[1], 0, 0, 0, 0]),          // alternative in the wrong slot
+            DesignCommand.Compose(2, [0, 0, 0]),                            // wrong slot count
+            DesignCommand.Compose(2, [l.AltStart[1], 0, 0, 0, 0]),          // alternative in the wrong slot
             SuperiorG2(l), SuperiorG2(l), SuperiorG2(l),                                           // 1st and 2nd take the bureaus, 3rd has none
         ]);
         h.RunThroughMonth(0);
@@ -120,7 +120,7 @@ public class ProductsV24SystemTests
         Array.Fill(alts, -1);
         foreach ((string slot, string alt) in changes)
             alts[Enumerable.Range(0, Probe.SlotCount).Single(s => CoreData.ProductClasses.SlotId[s] == slot)] = Alt(Probe, alt);
-        return [new DesignCommand(DesignCommandKind.Derive, parent, [.. alts])];
+        return [DesignCommand.Derive(ProductsHarness.Now(parent), [.. alts])];
     }
 
     [Fact]
@@ -152,8 +152,9 @@ public class ProductsV24SystemTests
         });
         h.RunThroughMonth(0);
         ProductsSystem p = h.Products;
-        // airframe changed, nothing changed (same alternative), parent not an own design in С/В (slot 1 empty), parent out of range.
-        Assert.Equal(4, p.RejectionCount(Gbr, CommandRejection.BadDerive));
+        // BAD_DERIVE: airframe changed, nothing changed (same alternative). A parent in an empty slot (1) or out of range (7) names no project: stale handle.
+        Assert.Equal(2, p.RejectionCount(Gbr, CommandRejection.BadDerive));
+        Assert.Equal(2, p.RejectionCount(Gbr, CommandRejection.StaleHandle));
         Assert.Equal(1, p.RejectionCount(Gbr, CommandRejection.SlotUnavailable));   // eng_g3 not available
         Assert.Equal(DesignStage.None, p.Stage(Gbr, 1));
     }
@@ -165,7 +166,7 @@ public class ProductsV24SystemTests
         ProductsSystem p = h.Products;
         h.Launch = (a, d, t) => a == Gbr && d == 0 && t == 0;
         h.Rate = (a, d, t) => d == 0 ? Fx6.FromInt(10) : Fx6.Zero;
-        h.Series = (a, d, t) => a == Gbr && d == 1 && p.Stage(a, d) == DesignStage.Prototype && p.GateOpen(a, d, t) ? new SeriesStart(Fx6.Zero, false) : null;
+        h.Series = (a, d, t) => a == Gbr && d == 1 && p.Stage(a, d) == DesignStage.Prototype && p.GateOpen(a, d, t) ? new ScriptedStart(Fx6.Zero, false) : null;
         long launch = -1;
         Fx6 parentE = Fx6.Zero;
         for (long t = 1; t < 80 && launch < 0; t++)
@@ -243,13 +244,13 @@ public class ProductsV24SystemTests
     {
         ProductsHarness h = Prototype(out long stageO);
         ProductsSystem p = h.Products;
-        h.Series = (a, d, t) => a == Gbr && d == 1 ? new SeriesStart(Fx6.FromInt(10), false) : null;
+        h.Series = (a, d, t) => a == Gbr && d == 1 ? new ScriptedStart(Fx6.FromInt(10), false) : null;
         h.RunThroughMonth(stageO + 1);
         Assert.Equal(DesignStage.Prototype, p.Stage(Gbr, 1));
         Assert.Equal(1, p.RejectionCount(Gbr, CommandRejection.SeriesGate));
         Assert.False(p.SeriesForced(Gbr, 1));
 
-        h.Series = (a, d, t) => a == Gbr && d == 1 ? new SeriesStart(Fx6.FromInt(10), true) : null;
+        h.Series = (a, d, t) => a == Gbr && d == 1 ? new ScriptedStart(Fx6.FromInt(10), true) : null;
         Fx6 hidden = p.DefectsHidden(Gbr, 1);
         Fx6 dGate = p.DGate(Gbr, 1);
         h.RunThroughMonth(stageO + 2);
@@ -268,7 +269,7 @@ public class ProductsV24SystemTests
         // Slow detection (λ_D small): the excess X = D_hidden − d_gate stays ≈ 0.3·D_ref, so a forced fleet keeps losing machines.
         ProductsHarness h = Prototype(out long stageO, new ProductsParams { LambdaD = Fx6.FromRaw(100) });
         ProductsSystem p = h.Products;
-        h.Series = (a, d, t) => a == Gbr && d == 1 ? new SeriesStart(Fx6.FromInt(200), true) : null;
+        h.Series = (a, d, t) => a == Gbr && d == 1 ? new ScriptedStart(Fx6.FromInt(200), true) : null;
         h.Budget = (a, t) => Fx6.FromInt(2);
         Fx6 lost = Fx6.Zero;
         for (long t = stageO + 1; t <= stageO + 12; t++)
@@ -290,7 +291,7 @@ public class ProductsV24SystemTests
     {
         ProductsHarness h = Prototype(out long stageO);
         ProductsSystem p = h.Products;
-        h.Series = (a, d, t) => a == Gbr && d == 1 ? new SeriesStart(Fx6.FromInt(20), true) : null;
+        h.Series = (a, d, t) => a == Gbr && d == 1 ? new ScriptedStart(Fx6.FromInt(20), true) : null;
         h.Budget = (a, t) => Fx6.FromRaw(200_000);
         Fx6 pool0 = Fx6.Zero;
         for (long t = stageO + 1; t <= stageO + 14; t++)
@@ -312,7 +313,7 @@ public class ProductsV24SystemTests
     {
         ProductsHarness h = Prototype(out long stageO);
         ProductsSystem p = h.Products;
-        h.Series = (a, d, t) => a == Gbr && d == 1 && t == stageO + 1 ? new SeriesStart(Fx6.FromInt(20), true) : null;
+        h.Series = (a, d, t) => a == Gbr && d == 1 && t == stageO + 1 ? new ScriptedStart(Fx6.FromInt(20), true) : null;
         h.RunThroughMonth(stageO + 1);
         h.Budget = (_, _) => Fx6.Zero;
         Fx6 pool = p.RetroPool(Gbr, 1);
@@ -329,7 +330,7 @@ public class ProductsV24SystemTests
     {
         ProductsHarness h = Gb(2, (a, t) => a == Gbr && t == 0 ? [SuperiorG2(Probe)] : []);
         ProductsSystem p = h.Products;
-        h.Series = (a, d, t) => a == Gbr && d == 1 && p.Stage(a, d) == DesignStage.Prototype ? new SeriesStart(Fx6.FromInt(15), false) : null;
+        h.Series = (a, d, t) => a == Gbr && d == 1 && p.Stage(a, d) == DesignStage.Prototype ? new ScriptedStart(Fx6.FromInt(15), false) : null;
         Fx6 lost = Fx6.Zero;
         for (long t = 0; t < 110; t++)
         {
@@ -390,7 +391,7 @@ public class ProductsV24SystemTests
         long t = 0;
         while (p.Stage(Gbr, 1) != DesignStage.Prototype)
             h.RunThroughMonth(t++);
-        h.Series = (a, d, tt) => a == Gbr && d == 1 ? new SeriesStart(Fx6.FromInt(50), true) : null;
+        h.Series = (a, d, tt) => a == Gbr && d == 1 ? new ScriptedStart(Fx6.FromInt(50), true) : null;
         h.RunThroughMonth(t);
         Assert.Equal(Fx6.FromInt(2900) / Fx6.FromInt(670), p.Rate(Gbr, 1));
     }
@@ -419,7 +420,7 @@ public class ProductsV24SystemTests
             h.RunThroughMonth(t++);
         Fx6 asInO = Fx6.FromInt(25) * Fx6.One * Fx6.FromInt(3700);
         Assert.Equal(asInO, V(Gbr, 53, Fx6.Zero));   // О: r_plan = r_ref
-        h.Series = (a, d, tt) => a == Gbr && d == 1 ? new SeriesStart(Fx6.FromInt(5), true) : null;
+        h.Series = (a, d, tt) => a == Gbr && d == 1 ? new ScriptedStart(Fx6.FromInt(5), true) : null;
         h.RunThroughMonth(t);
         // V1/V2: the series (rate 5, forced) is planned like a project in О, its first output changes nothing while proc_v ≤ V_C.
         Assert.Equal(DesignStage.Series, p.Stage(Gbr, 1));
@@ -478,7 +479,7 @@ public class ProductsV24SystemTests
         ProductsSystem p = h.Products;
         h.Launch = (a, d, t) => a == Gbr && d == 0 && t == 0;
         h.Rate = (a, d, t) => d == 0 ? Fx6.FromInt(10) : Fx6.Zero;
-        h.Series = (a, d, t) => a == Gbr && d == 1 && p.Stage(a, d) == DesignStage.Prototype && p.GateOpen(a, d, t) ? new SeriesStart(Fx6.Zero, false) : null;
+        h.Series = (a, d, t) => a == Gbr && d == 1 && p.Stage(a, d) == DesignStage.Prototype && p.GateOpen(a, d, t) ? new ScriptedStart(Fx6.Zero, false) : null;
         long t = 1;
         while (p.Stage(Gbr, 1) != DesignStage.Series)
         {
@@ -486,7 +487,7 @@ public class ProductsV24SystemTests
             Assert.True(t < 90, "the derived design never reached the series");
         }
         Assert.Equal(DesignStage.InService, p.Stage(Gbr, 0));
-        h.Series = (a, d, tt) => a == Gbr && d == 0 ? new SeriesStart(Fx6.FromInt(5), false) : null;
+        h.Series = (a, d, tt) => a == Gbr && d == 0 ? new ScriptedStart(Fx6.FromInt(5), false) : null;
         h.RunThroughMonth(t);
         Assert.Equal(DesignStage.InService, p.Stage(Gbr, 0));   // two lines of one platform are FUTURE (#118)
         Assert.Equal(1, p.RejectionCount(Gbr, CommandRejection.LineTransferred));

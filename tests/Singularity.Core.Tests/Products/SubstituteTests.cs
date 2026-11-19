@@ -209,7 +209,7 @@ public class SubstituteTests : IDisposable
             Array.Fill(alts, -1);
             foreach ((int slot, string alt) in changes)
                 alts[slot] = Alt(L, alt);
-            return [new DesignCommand(DesignCommandKind.Derive, parent, [.. alts])];
+            return [DesignCommand.Derive(ProductsHarness.Now(parent), [.. alts])];
         }
         int engine = L.BaseSlot, hot = L.AlloySlot;
         var h = Gb((a, t) => a != Gbr || t != 0 ? [] :
@@ -259,7 +259,7 @@ public class SubstituteTests : IDisposable
                 : [],
         };
         ProductsSystem p = h.Products;
-        h.Series = (a, d, t) => a == Gbr && d is 1 or 2 && p.Stage(a, d) == DesignStage.Prototype && p.GateOpen(a, d, t) ? new SeriesStart(Fx6.FromInt(10), false) : null;
+        h.Series = (a, d, t) => a == Gbr && d is 1 or 2 && p.Stage(a, d) == DesignStage.Prototype && p.GateOpen(a, d, t) ? new ScriptedStart(Fx6.FromInt(10), false) : null;
         Fx6 steelOut = Fx6.Zero, nicrOut = Fx6.Zero;
         for (long t = 0; t < 90 && steelOut == Fx6.Zero; t++)
         {
@@ -286,7 +286,7 @@ public class SubstituteTests : IDisposable
                 : [],
         };
         ProductsSystem p = h.Products;
-        h.Series = (a, d, t) => a == Gbr && d is 1 or 2 && p.Stage(a, d) == DesignStage.Prototype && p.GateOpen(a, d, t) ? new SeriesStart(Fx6.FromInt(10), false) : null;
+        h.Series = (a, d, t) => a == Gbr && d is 1 or 2 && p.Stage(a, d) == DesignStage.Prototype && p.GateOpen(a, d, t) ? new ScriptedStart(Fx6.FromInt(10), false) : null;
         bool both = false;
         for (long t = 0; t < 120 && !both; t++)
         {

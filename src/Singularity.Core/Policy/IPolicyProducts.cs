@@ -9,7 +9,11 @@ namespace Singularity.Core.Policy;
 /// r4, the gate and the numbers of the launch rule. <see cref="GateOpen"/> and <see cref="Hidden"/> are those of the month being computed.
 /// </summary>
 public readonly record struct PolicyDesign(DesignStage Stage, int PlatformGen, bool Cancelled, bool BuiltAny, int IdleMonths,
-    int StageOMonth, int Parent, bool GateOpen, Fx6 Hidden, Fx6 UnitCostFloor);
+    int StageOMonth, int Parent, bool GateOpen, Fx6 Hidden, Fx6 UnitCostFloor, int SlotGeneration)
+{
+    /// <summary>The handle the AI's decisions about this project carry (ADR-0005 p. 3): the generation is the snapshot's at the moment of decision.</summary>
+    public DesignHandle HandleOf(int slot) => new(slot, SlotGeneration);
+}
 
 /// <summary>
 /// What the product AI reads from the knowledge, capability and product layers in the compute of month t: pure functions of the

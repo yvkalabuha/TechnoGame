@@ -32,7 +32,7 @@ public sealed partial class PolicySystem
     private int _designs, _gens;
     private bool _derive;
     private PolicyParams _pp = new();
-    private IntColumn[] _dsnStamp = [], _dsnKind = [], _dsnTarget = [], _startStamp = [], _closeStamp = [], _line = [], _rep = [];
+    private IntColumn[] _dsnStamp = [], _dsnKind = [], _dsnTarget = [], _dsnGen = [], _startStamp = [], _startGen = [], _closeStamp = [], _closeGen = [], _line = [], _rep = [];
     private IntColumn[][] _dsnAlt = [];
     private LongColumn[] _startRate = [];
 
@@ -58,25 +58,31 @@ public sealed partial class PolicySystem
         _dsnStamp = new IntColumn[slots];
         _dsnKind = new IntColumn[slots];
         _dsnTarget = new IntColumn[slots];
+        _dsnGen = new IntColumn[slots];
         _dsnAlt = new IntColumn[slots][];
         for (int k = 0; k < slots; k++)
         {
             _dsnStamp[k] = table.AddInt($"pol.dsn.{k}.stamp");
             _dsnKind[k] = table.AddInt($"pol.dsn.{k}.kind");
             _dsnTarget[k] = table.AddInt($"pol.dsn.{k}.target");
+            _dsnGen[k] = table.AddInt($"pol.dsn.{k}.gen");
             _dsnAlt[k] = new IntColumn[alts];
             for (int s = 0; s < alts; s++)
                 _dsnAlt[k][s] = table.AddInt($"pol.dsn.{k}.alt.{s}");
         }
         _startStamp = new IntColumn[designs];
         _startRate = new LongColumn[designs];
+        _startGen = new IntColumn[designs];
+        _closeGen = new IntColumn[designs];
         _closeStamp = new IntColumn[designs];
         _line = new IntColumn[designs];
         for (int d = 0; d < designs; d++)
         {
             _startStamp[d] = table.AddInt($"pol.start.{d}.stamp");
             _startRate[d] = table.AddLong($"pol.start.{d}.rate");
+            _startGen[d] = table.AddInt($"pol.start.{d}.gen");
             _closeStamp[d] = table.AddInt($"pol.close.{d}.stamp");
+            _closeGen[d] = table.AddInt($"pol.close.{d}.gen");
             _line[d] = table.AddInt($"pol.line.{d}");
         }
         _rep = new IntColumn[generations];
@@ -101,19 +107,23 @@ public sealed partial class PolicySystem
             var alts = new int[_dsnAlt[k].Length];
             for (int s = 0; s < alts.Length; s++)
                 alts[s] = _dsnAlt[k][s].Current[actor];
-            list.Add(new DesignCommand(kind, _dsnTarget[k].Current[actor], kind == DesignCommandKind.Cancel ? [] : [.. alts]));
+            list.Add(kind == DesignCommandKind.Compose
+                ? DesignCommand.Compose(_dsnTarget[k].Current[actor], [.. alts])
+                : new DesignCommand(kind, 0, kind == DesignCommandKind.Cancel ? [] : [.. alts], new DesignHandle(_dsnTarget[k].Current[actor], _dsnGen[k].Current[actor])));
         }
         return list;
     }
 
-    /// <summary>The AI's <c>start_series</c> for the design consumed at <paramref name="month"/>: its rate (<c>force</c> is never set), or null.</summary>
-    public Fx6? AiStart(int actor, int design, long month) =>
-        _startStamp[design].Current[actor] == Stamp(month) ? Fx6.FromRaw(_startRate[design].Current[actor]) : null;
+    /// <summary>The AI's <c>start_series</c> for the slot consumed at <paramref name="month"/>: the handle seen at the decision and the rate (<c>force</c> is never set), or null.</summary>
+    public (DesignHandle Design, Fx6 Rate)? AiStart(int actor, int design, long month) =>
+        _startStamp[design].Current[actor] == Stamp(month) ? (new DesignHandle(design, _startGen[design].Current[actor]), Fx6.FromRaw(_startRate[design].Current[actor])) : null;
 
     /// <summary><c>LINE_CLOSE</c> of the run (spec A41 F17b).</summary>
     public LineCloseRule LineClose => _pp.LineClose;
 
-    public bool AiClose(int actor, int design, long month) => _closeStamp[design].Current[actor] == Stamp(month);
+    /// <summary>The AI's <c>close_line</c> for the slot consumed at <paramref name="month"/>: the handle seen at the decision, or null.</summary>
+    public DesignHandle? AiClose(int actor, int design, long month) =>
+        _closeStamp[design].Current[actor] == Stamp(month) ? new DesignHandle(design, _closeGen[design].Current[actor]) : null;
 
     /// <summary>The line of the design was launched by the AI and takes its rate from <c>r_AI</c> (spec A41); a line started by a command keeps that rate.</summary>
     public bool AiLine(int actor, int design) => _line[design].Current[actor] != 0;
@@ -287,7 +297,7 @@ public sealed partial class PolicySystem
                 var alts = new int[l.SlotCount];
                 if (!live && repeatOk && free > 0 && ProductPresets.Compose(profile, prod, _pp, row, g, t, alts))
                 {
-                    dec.Design.Add(new DesignCommand(DesignCommandKind.Compose, g, [.. alts]));
+                    dec.Design.Add(DesignCommand.Compose(g, [.. alts]));
                     // The repeat is counted when the Requirement is issued, even if the layer later rejects the command (no bureau, capacity): the
                     // dead end then stays visible instead of looping; the next year does not repeat it again.
                     dec.Repeat[g - 1] = gaveUp;
@@ -309,7 +319,7 @@ public sealed partial class PolicySystem
                 }
                 var alts = new int[l.SlotCount];
                 if (parent >= 0 && ProductPresets.Derive(profile, prod, _pp, row, parent, t, alts))
-                    dec.Design.Add(new DesignCommand(DesignCommandKind.Derive, parent, [.. alts]));
+                    dec.Design.Add(DesignCommand.Derive(designs[parent].HandleOf(parent), [.. alts]));
             }
         }
         if (!monthly)
@@ -329,9 +339,9 @@ public sealed partial class PolicySystem
             // A launch decided last month is still pending in the snapshot: a launching project is not given up.
             if (_startStamp[d].Current[row] == Stamp(t))
                 continue;
-            if (CancelPending(row, t, d))
+            if (CancelPending(row, t, x.HandleOf(d)))
                 continue;
-            dec.Design.Add(new DesignCommand(DesignCommandKind.Cancel, d, []));
+            dec.Design.Add(DesignCommand.Cancel(x.HandleOf(d)));
             cancelNow[d] = true;
             gaveUpNow[x.PlatformGen] = true;
         }
@@ -384,7 +394,7 @@ public sealed partial class PolicySystem
                 PolicyDesign x = designs[d];
                 // A project cancelled this month or whose cancel is still pending does not launch.
                 if (x.Stage != DesignStage.Prototype || !x.GateOpen || x.Hidden > launchLimit || cancelNow[d]
-                    || CancelPending(row, t, d)
+                    || CancelPending(row, t, x.HandleOf(d))
                     || !prod.Admitted(row, d, t))
                     continue;
                 Fx6 procurement = Shares(row).Procurement * Budget(row);
@@ -452,11 +462,12 @@ public sealed partial class PolicySystem
     }
 
     // A decision of the previous month that the layer applies only in this month's compute is still invisible in the snapshot.
-    private bool CancelPending(int row, long t, int design)
+    private bool CancelPending(int row, long t, DesignHandle design)
     {
         for (int k = 0; k < _dsnStamp.Length; k++)
         {
-            if (_dsnStamp[k].Current[row] == Stamp(t) && _dsnKind[k].Current[row] == 3 && _dsnTarget[k].Current[row] == design)
+            if (_dsnStamp[k].Current[row] == Stamp(t) && _dsnKind[k].Current[row] == 3 && _dsnTarget[k].Current[row] == design.Slot
+                && _dsnGen[k].Current[row] == design.Generation)
                 return true;
         }
         return false;
@@ -488,6 +499,7 @@ public sealed partial class PolicySystem
             setInt(_dsnStamp[k], stamp);
             setInt(_dsnKind[k], (int)c.Kind + 1);
             setInt(_dsnTarget[k], c.Target);
+            setInt(_dsnGen[k], c.Design.Generation);
             for (int s = 0; s < _dsnAlt[k].Length; s++)
                 setInt(_dsnAlt[k][s], c.Alts.IsDefaultOrEmpty ? -1 : c.Alts[s]);
         }
@@ -495,19 +507,24 @@ public sealed partial class PolicySystem
         {
             setInt(_startStamp[d], stamp);
             setLong(_startRate[d], rate.Raw);
+            setInt(_startGen[d], dec.Designs[d].SlotGeneration);
             // Limitation: a start_series of the player/harness in the same month wins (the adapter takes the external command first), but this flag
             // still gives the line to r_AI afterwards; a line whose rate must be kept is started by a command in an earlier month than the AI's start.
             setInt(_line[d], 1);
         }
         foreach (int d in dec.Closes)
+        {
             setInt(_closeStamp[d], stamp);
+            setInt(_closeGen[d], dec.Designs[d].SlotGeneration);
+        }
         if (dec.Fleet.Count > _fltStamp.Length)
             throw new PolicyInvariantException(stamp, row, $"{dec.Fleet.Count} fleet commands for {_fltStamp.Length} slots");
         for (int k = 0; k < dec.Fleet.Count; k++)
         {
             setInt(_fltStamp[k], stamp);
             setInt(_fltKind[k], (int)dec.Fleet[k].Kind);
-            setInt(_fltDesign[k], dec.Fleet[k].Design);
+            setInt(_fltDesign[k], dec.Fleet[k].Design.Slot);
+            setInt(_fltGen[k], dec.Fleet[k].Design.Generation);
             setInt(_fltN[k], checked((int)dec.Fleet[k].N));
         }
         setLong(_incExp, dec.IncomeExpected.Raw);

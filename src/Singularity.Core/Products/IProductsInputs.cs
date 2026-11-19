@@ -20,22 +20,28 @@ public enum DesignCommandKind
 
 /// <summary>
 /// A <c>compose_design</c>, <c>derive</c> or <c>cancel_design</c> command in force at month t (contract §4.4a, §4.4e, §5; ADR-0006, ADR-0014: applied at the
-/// start of the tick, in command order). <paramref name="Target"/> is the requirement generation <c>g*</c> (the newest APP the actor
-/// knows) for <see cref="DesignCommandKind.Compose"/> and the parent <c>design_id</c> for <see cref="DesignCommandKind.Derive"/>.
-/// <paramref name="Alts"/> holds one layout-global alternative index per slot (−1 = unchanged, Derive only).
+/// start of the tick, in command order). <paramref name="Requirement"/> is the requirement generation <c>g*</c> (the newest APP the actor
+/// knows) of <see cref="DesignCommandKind.Compose"/> and 0 otherwise. <paramref name="Design"/> is the handle of the parent (Derive) or of the
+/// project to cancel (Cancel); Compose creates the entity and carries none (<c>default</c>). A handle that no longer resolves is rejected with
+/// <see cref="CommandRejection.StaleHandle"/> (ADR-0005 p. 3). <paramref name="Alts"/> holds one layout-global alternative index per slot (−1 = unchanged, Derive only).
 /// </summary>
-/// <remarks>
-/// <paramref name="Generation"/> completes the handle <c>(slot, generation)</c> of the target design for Derive and Cancel (ADR-0005 p. 3);
-/// a stale one is rejected with <see cref="CommandRejection.StaleHandle"/>. −1 means "no handle supplied" (Compose, or a caller that
-/// has not been moved to handles yet): the slot index alone is then trusted.
-/// </remarks>
-public sealed record DesignCommand(DesignCommandKind Kind, int Target, ImmutableArray<int> Alts, int Generation = -1);
+public sealed record DesignCommand(DesignCommandKind Kind, int Requirement, ImmutableArray<int> Alts, DesignHandle Design)
+{
+    /// <summary>The requirement generation of a Compose, the slot of a Derive or Cancel.</summary>
+    public int Target => Kind == DesignCommandKind.Compose ? Requirement : Design.Slot;
+
+    public static DesignCommand Compose(int requirement, ImmutableArray<int> alts) => new(DesignCommandKind.Compose, requirement, alts, default);
+
+    public static DesignCommand Derive(DesignHandle parent, ImmutableArray<int> alts) => new(DesignCommandKind.Derive, 0, alts, parent);
+
+    public static DesignCommand Cancel(DesignHandle design) => new(DesignCommandKind.Cancel, 0, [], design);
+}
 
 /// <summary>
-/// <c>start_series(design_id, rate, force)</c> in force at month t (contract §4.4c). <c>force = true</c> is a player command only:
+/// <c>start_series(design, rate, force)</c> in force at month t (contract §4.4c). <c>force = true</c> is a player command only:
 /// the AI never sends it (the decision-journal invariant lives with the AI; the layer cannot tell the sender).
 /// </summary>
-public readonly record struct SeriesStart(Fx6 Rate, bool Force);
+public readonly record struct SeriesStart(DesignHandle Design, Fx6 Rate, bool Force);
 
 /// <summary>Why the layer rejected a command; counted per actor (<see cref="ProductsSystem.RejectionCount"/>) as the journal of rejections.</summary>
 public enum CommandRejection
@@ -103,8 +109,7 @@ public enum FleetCommandKind
 }
 
 /// <summary><c>retire_cohort</c> / <c>sell_cohort</c> in force at month t, in command order (contract r6 §4.4f; ADR-0006, ADR-0014).</summary>
-/// <remarks><paramref name="Generation"/> is the handle generation of <paramref name="Design"/>; −1 = not supplied (see <see cref="DesignCommand"/>).</remarks>
-public readonly record struct FleetCommand(FleetCommandKind Kind, int Design, long N, int Generation = -1);
+public readonly record struct FleetCommand(FleetCommandKind Kind, DesignHandle Design, long N);
 
 /// <summary>
 /// What the product layer reads from other layers and from commands in the compute of month t. Contract (as
@@ -158,11 +163,17 @@ public interface IProductsInputs
     /// </summary>
     IReadOnlyList<DesignCommand> DesignCommands(int actorRow, long month);
 
-    /// <summary><c>start_series(design, rate, force)</c> in force for a design in stage О or В, or null (contract §4.4c).</summary>
-    SeriesStart? StartSeries(int actorRow, int design, long month);
+    /// <summary>
+    /// The <c>start_series</c> commands in force for the slot <paramref name="design"/> at month t, in key order: the external one, then the AI's (at most
+    /// two; contract §4.4c). Writes them to <paramref name="into"/> (length ≥ 2) and returns the count. The layer applies the first whose handle resolves.
+    /// </summary>
+    int SeriesStarts(int actorRow, int design, long month, Span<SeriesStart> into);
 
-    /// <summary>Close the line of a design in series (stage С → В; «снят» when it never produced, contract §4.4e r4).</summary>
-    bool CloseLine(int actorRow, int design, long month);
+    /// <summary>
+    /// The <c>close_line</c> handles in force for the slot <paramref name="design"/> (stage С → В; «снят» when it never produced, contract §4.4e r4), in key
+    /// order: external, then the AI's. At most two, written to <paramref name="into"/> (length ≥ 2); returns the count. The layer applies the first that resolves.
+    /// </summary>
+    int LineCloses(int actorRow, int design, long month, Span<DesignHandle> into);
 
     /// <summary>
     /// Line rate the AI asks for in month t, units per month (spec §4 "темп линий"); ≥ 0. Null keeps the rate of the last

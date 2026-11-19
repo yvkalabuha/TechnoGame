@@ -239,9 +239,8 @@ public sealed partial class PolicySystem : ITickSystem
             int train = -1;
             if (profile == PolicyProfile.Quality)
             {
-                int d = _inputs.NewestSeriesDesign(row, t);
-                if (d >= 0 && _inputs.Bottleneck(row, d, t) is { Source: BottleneckSource.H, OutLim: true })
-                    train = d;
+                if (_inputs.NewestSeriesDesign(row, t) is { } d && _inputs.Bottleneck(row, d.Slot, t) is { Source: BottleneckSource.H, OutLim: true })
+                    train = d.Slot;
             }
             else if (profile == PolicyProfile.Adaptive)
                 train = TrainingTargetP3(row, t);

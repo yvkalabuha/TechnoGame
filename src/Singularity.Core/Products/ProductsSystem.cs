@@ -652,8 +652,12 @@ public sealed partial class ProductsSystem : ITickSystem
     public int Generation(int actor, int slot) => _gen[slot].Current[actor];
 
     /// <summary>Handle resolution on the snapshot <c>Current</c> (ADR-0005 p. 3): the slot is occupied and its generation equals the handle's.</summary>
-    public bool Resolves(int actor, int slot, int generation) =>
-        slot >= 0 && slot < _d && HandleHolds(_stage[slot].Current[actor], _gen[slot].Current[actor], generation);
+    public bool Resolves(int actor, DesignHandle handle) =>
+        handle.Slot >= 0 && handle.Slot < _d && HandleHolds(_stage[handle.Slot].Current[actor], _gen[handle.Slot].Current[actor], handle.Generation);
+
+    /// <summary>The current handle of an occupied slot of the snapshot, or null when the slot is free.</summary>
+    public DesignHandle? HandleOf(int actor, int slot) =>
+        slot >= 0 && slot < _d && Resolves(actor, new DesignHandle(slot, _gen[slot].Current[actor])) ? new DesignHandle(slot, _gen[slot].Current[actor]) : null;
 
     // The single predicate over (stage, generation); Current and Next wrappers differ only in the buffer they read.
     private static bool HandleHolds(int stage, int slotGeneration, int handleGeneration) =>
@@ -1155,7 +1159,7 @@ public sealed partial class ProductsSystem : ITickSystem
             {
                 DesignCommandKind.Compose => Compose(a, cmd, knows),
                 DesignCommandKind.Derive => Derive(a, cmd, knows),
-                _ => cmd.Generation >= 0 && !IsCurrent(a, cmd.Target, cmd.Generation) ? CommandRejection.StaleHandle : Cancel(a, cmd.Target),
+                _ => !IsCurrent(a, cmd.Design) ? CommandRejection.StaleHandle : Cancel(a, cmd.Design.Slot),
             };
             if (rejected is { } reason)
                 Reject(a, reason);
@@ -1189,8 +1193,8 @@ public sealed partial class ProductsSystem : ITickSystem
 
     private CommandRejection? Derive(int a, DesignCommand cmd, Func<int, bool> knows)
     {
-        int parent = cmd.Target;
-        if (cmd.Generation >= 0 && !IsCurrent(a, parent, cmd.Generation))
+        int parent = cmd.Design.Slot;
+        if (!IsCurrent(a, cmd.Design))
             return CommandRejection.StaleHandle;
         if (!SlotsInRange(cmd.Alts, allowUnchanged: true))
             return CommandRejection.SlotUnavailable;
@@ -1319,23 +1323,49 @@ public sealed partial class ProductsSystem : ITickSystem
     // Step 2c (contract §4.4d): close_line of a line in С by the live stage, before the fleet commands and the starts.
     private void CloseLines(int a, long t)
     {
+        Span<DesignHandle> candidates = stackalloc DesignHandle[2];
         for (int d = 0; d < _d; d++)
         {
-            if ((DesignStage)_stage[d].Next[a] == DesignStage.Series && _inputs.CloseLine(a, d, t))
-                CloseSeries(a, d);
+            int n = _inputs.LineCloses(a, d, t, candidates);
+            // The first candidate that resolves wins; every stale one is counted (ADR-0005 p. 3).
+            for (int i = 0; i < n; i++)
+            {
+                if (candidates[i].Slot != d)
+                    throw new ProductsInvariantException(-1, a, $"close_line candidate {candidates[i]} offered for slot {d}");
+                if (!IsCurrent(a, candidates[i]))
+                {
+                    Reject(a, CommandRejection.StaleHandle);
+                    continue;
+                }
+                if ((DesignStage)_stage[d].Next[a] == DesignStage.Series)
+                    CloseSeries(a, d);
+                break;
+            }
         }
     }
 
     // Step 2f (contract §4.4c): start_series from О or В, validated against the snapshot stage; a line closes (line_E → 0, contract §3) in CloseLines.
     private void StartSeriesCommands(int a, long t)
     {
+        Span<SeriesStart> candidates = stackalloc SeriesStart[2];
         for (int d = 0; d < _d; d++)
         {
-            var snapshot = (DesignStage)_stage[d].Current[a];
-            // A project cancelled earlier in this step (Next stage «снят») cannot start a series.
-            if (snapshot is (DesignStage.Prototype or DesignStage.InService) && (DesignStage)_stage[d].Next[a] == snapshot
-                && _inputs.StartSeries(a, d, t) is { } cmd)
-                StartSeries(a, d, snapshot, cmd);
+            int n = _inputs.SeriesStarts(a, d, t, candidates);
+            for (int i = 0; i < n; i++)
+            {
+                if (candidates[i].Design.Slot != d)
+                    throw new ProductsInvariantException(-1, a, $"start_series candidate {candidates[i].Design} offered for slot {d}");
+                if (!IsCurrent(a, candidates[i].Design))
+                {
+                    Reject(a, CommandRejection.StaleHandle);
+                    continue;
+                }
+                var snapshot = (DesignStage)_stage[d].Current[a];
+                // A project cancelled earlier in this step (Next stage «снят») cannot start a series.
+                if (snapshot is (DesignStage.Prototype or DesignStage.InService) && (DesignStage)_stage[d].Next[a] == snapshot)
+                    StartSeries(a, d, snapshot, candidates[i]);
+                break;
+            }
         }
     }
 
@@ -1625,8 +1655,8 @@ public sealed partial class ProductsSystem : ITickSystem
     }
 
     // Handle resolution on the live state of the step (Next): earlier commands of the step may have cancelled or retaken the slot.
-    private bool IsCurrent(int a, int slot, int generation) =>
-        slot >= 0 && slot < _d && HandleHolds(_stage[slot].Next[a], _gen[slot].Next[a], generation);
+    private bool IsCurrent(int a, DesignHandle h) =>
+        h.Slot >= 0 && h.Slot < _d && HandleHolds(_stage[h.Slot].Next[a], _gen[h.Slot].Next[a], h.Generation);
 
     private void Reject(int a, CommandRejection reason) => _rejected[(int)reason].Next[a]++;
 

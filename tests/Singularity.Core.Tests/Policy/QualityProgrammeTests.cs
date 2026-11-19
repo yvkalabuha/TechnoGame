@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using Singularity.Core.Data;
 using Singularity.Core.Industry;
 using Singularity.Core.Policy;
+using Singularity.Core.Products;
 using Singularity.Kernel;
 
 namespace Singularity.Core.Tests.Policy;
@@ -14,9 +15,9 @@ public class QualityProgrammeTests
     private sealed class PolicyIn : IPolicyInputs
     {
         public Func<long, bool> Below = _ => false;
-        public int Newest = -1;
+        public DesignHandle? Newest;
         public BottleneckLimit? Limit;
-        public int NewestSeriesDesign(int actorRow, long month) => Newest;
+        public DesignHandle? NewestSeriesDesign(int actorRow, long month) => Newest;
         public BottleneckLimit? Bottleneck(int actorRow, int design, long month) => Limit;
         public bool SeriesBelowQuality(int actorRow, Fx6 threshold, long month) => Below(month);
     }
@@ -195,12 +196,12 @@ public class QualityProgrammeTests
         ];
         foreach ((PolicyProfile profile, BottleneckLimit? limit, int expect) in cases)
         {
-            var rig = new Rig(profile, new PolicyIn { Newest = 3, Limit = limit });
+            var rig = new Rig(profile, new PolicyIn { Newest = new DesignHandle(3, 1), Limit = limit });
             Assert.Equal(-1, rig.Policy.TrainingTarget(0));
             rig.RunThroughMonth(0);
             Assert.Equal(expect, rig.Policy.TrainingTarget(0));
         }
-        var none = new Rig(PolicyProfile.Quality, new PolicyIn { Newest = -1, Limit = Ok(LimiterKind.Volume) });
+        var none = new Rig(PolicyProfile.Quality, new PolicyIn { Newest = null, Limit = Ok(LimiterKind.Volume) });
         none.RunThroughMonth(0);
         Assert.Equal(-1, none.Policy.TrainingTarget(0));
     }

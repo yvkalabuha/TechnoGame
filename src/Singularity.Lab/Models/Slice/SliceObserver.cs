@@ -731,7 +731,7 @@ internal sealed class SliceObserver
         }
         foreach (FleetCommand c in av.Decisions.Fleet)
         {
-            Row("fleet_cmd", I(t), _ids[a], Snake(c.Kind.ToString()), I(c.Design), I(sv.Designs[c.Design].Gen), line >= 0 ? I(sv.Designs[line].Gen) : "",
+            Row("fleet_cmd", I(t), _ids[a], Snake(c.Kind.ToString()), I(c.Design.Slot), I(sv.Designs[c.Design.Slot].Gen), line >= 0 ? I(sv.Designs[line].Gen) : "",
                 I(checked(c.N * Fx6.Scale)), I(inputs.GFront), line >= 0 ? Snake(av.Designs[line].Bind.ToString()) : "");
         }
     }

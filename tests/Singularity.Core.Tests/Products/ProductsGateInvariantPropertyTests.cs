@@ -56,7 +56,7 @@ public class ProductsGateInvariantPropertyTests
         };
         ProductsSystem p = h.Products;
         h.Series = (a, d, t) => a == Gbr && d == 1 && p.Stage(a, d) == DesignStage.Prototype && t >= p.StageOMonth(a, d) + launchAfter
-            ? new SeriesStart(rate, force) : null;
+            ? new ScriptedStart(rate, force) : null;
 
         bool everInSeries = false;
         Fx6 lastPool = Fx6.Zero, lostTotal = Fx6.Zero, poolMax = Fx6.Zero;

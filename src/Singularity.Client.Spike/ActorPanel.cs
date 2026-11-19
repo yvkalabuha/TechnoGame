@@ -325,15 +325,16 @@ public sealed partial class ActorPanel : PanelContainer
 
     void FillDesigns(ActorView a)
     {
-        var rows = new List<(string text, string action, int design)>();
+        // The handle comes from the view, never computed here (ADR-0005 p. 3): a button sent after the slot was retaken is rejected by the layer.
+        var rows = new List<(string text, string action, DesignHandle design)>();
         foreach (var d in a.Designs)
         {
             if (d.Stage == DesignStage.None) continue;
             string line = Loc.T("design.line", d.Design, d.Gen, Loc.T("stage." + (int)d.Stage), Loc.N(d.UnitCost.ToDouble()), Loc.N(d.Readiness.ToDouble()), Loc.N(d.InService.ToDouble(), 0))
                 + (d.Stage is DesignStage.Series ? Loc.T("design.series", Loc.N(d.Rate.ToDouble()), Loc.T("bind." + d.Bind)) : "");
-            rows.Add((line, d.Stage == DesignStage.Series ? "close" : d.Stage is DesignStage.Project or DesignStage.Prototype ? "cancel" : "", d.Design));
+            rows.Add((line, d.Stage == DesignStage.Series ? "close" : d.Stage is DesignStage.Project or DesignStage.Prototype ? "cancel" : "", d.Handle));
         }
-        string sig = Loc.Lang + "|" + string.Join("\n", rows.Select(r => r.text + r.action));
+        string sig = Loc.Lang + "|" + string.Join("\n", rows.Select(r => r.text + r.action + r.design.Generation));
         if (sig == _sigDesigns) return;
         _sigDesigns = sig;
         Clear(_designs);
@@ -344,8 +345,8 @@ public sealed partial class ActorPanel : PanelContainer
             var r = new HBoxContainer();
             r.AddChild(Ui.Wrap(text));
             Button act = null;
-            if (!Foreign && action == "close") act = Ui.Btn("ui.closeline", () => _host.Submit(new CloseLine(_actor, design), "cmd.close", design));
-            else if (!Foreign && action == "cancel") act = Ui.Btn("ui.cancel", () => _host.Submit(new CancelDesign(_actor, design), "cmd.cancel", design));
+            if (!Foreign && action == "close") act = Ui.Btn("ui.closeline", () => _host.Submit(new CloseLine(_actor, design), "cmd.close", design.Slot));
+            else if (!Foreign && action == "cancel") act = Ui.Btn("ui.cancel", () => _host.Submit(new CancelDesign(_actor, design), "cmd.cancel", design.Slot));
             if (act != null) { act.SizeFlagsVertical = SizeFlags.ShrinkBegin; r.AddChild(act); }
             _designs.AddChild(r);
         }

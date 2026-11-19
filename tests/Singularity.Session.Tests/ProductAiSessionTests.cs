@@ -107,7 +107,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
                 }
                 for (int d = 0; d < designs; d++)
                 {
-                    if (!w.Policy.AiClose(a, d, t + 1))
+                    if (w.Policy.AiClose(a, d, t + 1) is null)
                         continue;
                     // (11): a close is either a part of the launch bundle (some start in the same month) or idle_c ≥ T_ab by the snapshot.
                     bool idle = stageBefore[a, d] == DesignStage.Series && idleBefore[a, d] >= TAb;
@@ -284,7 +284,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
             }
             List<LoggedCommand> log = CommandCodec.DecodeLog(s.CommandLog);
             Assert.All(log, c => Assert.Equal(SourceClass.Harness, c.Key.Source));
-            var forcedByLog = log.Where(c => c.Command is StartSeries { Force: true }).Select(c => (c.Command.Actor, ((StartSeries)c.Command).Design)).ToHashSet();
+            var forcedByLog = log.Where(c => c.Command is StartSeries { Force: true }).Select(c => (c.Command.Actor, ((StartSeries)c.Command).Design.Slot)).ToHashSet();
             int forcedInState = 0;
             for (int a = 0; a < w.Scenario.ActorCount; a++)
             {
@@ -358,17 +358,23 @@ public class ProductAiSessionTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void CancelDesign_IsAPlayerCommand_JournalledByTheCodec_RefusedOutOfRange_AndBadCancelWhenThereIsNoProject()
+    public void CancelDesign_IsAPlayerCommand_JournalledByTheCodec_RefusedOutOfRange_BadCancelForAFleet_StaleHandleForAnEmptySlot()
     {
         SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 3, ProductAi = false });
-        Assert.False(s.Submit(SourceClass.Player, 0, 0, new CancelDesign(0, 99)).Accepted);
-        Assert.Equal(CommandRefusal.BadDesign, s.Submit(SourceClass.Player, 0, 1, new CancelDesign(0, -1)).Reason);
-        Assert.True(s.Submit(SourceClass.Player, 0, 2, new CancelDesign(0, 4)).Accepted);
-        LoggedCommand logged = Assert.Single(CommandCodec.DecodeLog(s.CommandLog));
-        Assert.Equal(new CancelDesign(0, 4), logged.Command);
+        Assert.False(s.Submit(SourceClass.Player, 0, 0, new CancelDesign(0, new DesignHandle(99, 1))).Accepted);
+        Assert.Equal(CommandRefusal.BadDesign, s.Submit(SourceClass.Player, 0, 1, new CancelDesign(0, new DesignHandle(-1, 1))).Reason);
+        Assert.Equal(CommandRefusal.BadHandle, s.Submit(SourceClass.Player, 0, 2, new CancelDesign(0, new DesignHandle(4, 0))).Reason);
+        Assert.True(s.Submit(SourceClass.Player, 0, 3, new CancelDesign(0, new DesignHandle(4, 1))).Accepted);
+        DesignHandle fleet = s.HandleOf(0, 0);
+        Assert.True(s.Submit(SourceClass.Player, 0, 4, new CancelDesign(0, fleet)).Accepted);
+        List<LoggedCommand> log = CommandCodec.DecodeLog(s.CommandLog);
+        Assert.Equal(2, log.Count);
+        Assert.Equal(new CancelDesign(0, new DesignHandle(4, 1)), log[0].Command);
+        Assert.Equal(new CancelDesign(0, fleet), log[1].Command);
         Assert.Contains("\"kind\":\"cancel_design\"", s.CommandLog);
         s.StepThroughMonth(0);
-        Assert.Equal(1, s.World.Products.RejectionCount(0, CommandRejection.BadCancel));   // design 4 of USA is an empty slot
+        Assert.Equal(1, s.World.Products.RejectionCount(0, CommandRejection.StaleHandle));   // slot 4 of USA is an empty slot: the handle names nothing
+        Assert.Equal(1, s.World.Products.RejectionCount(0, CommandRejection.BadCancel));     // slot 0 is a fleet in В/С, not a project in П or О
     }
 
     [Fact]
@@ -426,5 +432,6 @@ public class ProductAiSessionTests(ITestOutputHelper output)
     // Re-recorded in TASK-0058 step 5 (e99b1c3e… before), reason: I-OC + A41 SLOT as the build, fielded_L and the column prd.d*.q (#242–#247), schema v8.
     // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
     // Re-recorded in TASK-0099 (ADR-0005 p. 3), reason: schema v9 (new columns prd.d*.generation, parentGen, prd.lp.g*.gen, StaleHandle counter); the run ends before the first slot reuse, the old columns are unchanged (SlotReuseL2Tests.NoSlotIsReused_BeforeTheMonthOfAnyRewrittenGolden, projection tests).
-    private const string Golden150 = "fa9642e57048639b18a1b81ad510eea456afd29a8c6cbf7ef07555286983981c";
+    // Re-recorded in TASK-0115: schema v11 (cmd.*.gen, pol.*.gen columns); the run ends before the first slot reuse, the AI's handles are all current, the old columns are unchanged.
+    private const string Golden150 = "d9a43e395cf4c5868fe741bfe7065969630762cb45faa11f07709b3efc5579a7";
 }
