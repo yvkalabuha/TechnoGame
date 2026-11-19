@@ -35,14 +35,24 @@ public class ProductsLpTests
         Rate = (_, _, _) => Fx6.FromInt(1000),
     };
 
+    private static bool StartHas(ProductsHarness h, int a, int alt)
+    {
+        for (int i = 0; i < h.Layout.Designs * h.Layout.SlotCount; i++)
+        {
+            if (h.Start.Alts[a * h.Layout.Designs * h.Layout.SlotCount + i] == alt)
+                return true;
+        }
+        return false;
+    }
+
     [Fact]
     public void Lp_Launch_MarksItsAlternativesAsTried()
     {
         ProductsHarness h = Lp(1, 1);
         ProductsSystem p = h.Products;
-        for (long t = 0; t < 12; t++)
+        for (long t = 0; t < 24; t++)
             h.RunThroughMonth(t);
-        int checkedAny = 0;
+        int checkedAny = 0, notInStartFleet = 0;
         for (int a = 0; a < h.Table.RowCount; a++)
         {
             for (int d = 0; d < h.Layout.Designs; d++)
@@ -50,12 +60,18 @@ public class ProductsLpTests
                 if (h.Start.Stage[a * h.Layout.Designs + d] == DesignStage.None && p.Stage(a, d) is DesignStage.Series or DesignStage.InService)
                 {
                     foreach (int alt in p.Alternatives(a, d))
+                    {
                         Assert.True(p.AltReached(a, alt));
+                        // Unmarked before the launch: only the launch can have set it.
+                        if (!StartHas(h, a, alt))
+                            notInStartFleet++;
+                    }
                     checkedAny++;
                 }
             }
         }
         Assert.True(checkedAny > 0, "no L_P project was launched");
+        Assert.True(notInStartFleet > 0, "every launched alternative was already in the start fleet");
     }
 
     [Fact]
