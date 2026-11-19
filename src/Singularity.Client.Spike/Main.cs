@@ -928,7 +928,7 @@ public sealed partial class Main : Node3D
             case 136 when _shotT >= 0.4: Shot("gauge_e3_150.png", new Rect2I(0, 0, 930, 78)); InstrumentLogic.OrganLevel = 0; _shotStep = 137; _shotT = 0; break;
             case 137 when _shotT >= 0.4: Shot("gauge_before_150.png", new Rect2I(0, 0, 930, 78)); InstrumentLogic.OrganLevel = Settings.Current.OrganInstruments; _signal.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _signal.SetSpeed(0); _alertI = 0; _instI = -1; _shotStep = 140; _shotT = 0; break;
             // layer-2 instruments in the area panels: caliper (Finance), flasks (Science, Production); every era at 100 % and 150 %, plus a greyscale copy of each
-            case 140 when _shotT >= 0.7: if (InstShot()) { _shotStep = 141; AddFlaskProbe(); } _shotT = 0; break;
+            case 140 when _shotT >= 0.7: if (InstShot()) { _shotStep = 141; AddFlaskProbe(); } _shotT = _instWait; _instWait = 0; break;
             case 141 when _shotT >= 0.5: SaveProbe("flask_levels_100"); Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false); _shotStep = 142; _shotT = 0; break;
             case 142 when _shotT >= 0.6: SaveProbe("flask_levels_150"); Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _flaskProbe.QueueFree(); _shotStep = 45; _shotT = 0; break;
             // alert plates on tints 1 and 5 (7 is not on the map): day side, then tint 5 on the night side
@@ -1046,31 +1046,43 @@ public sealed partial class Main : Node3D
     static readonly int[] InstYears = { 1950, 1985, 2030 };
     static readonly AreaId[] InstAreas = { AreaId.Finance, AreaId.Science, AreaId.Production };
     static readonly string[] InstNames = { "caliper_finance", "flask_science", "flask_production" };
+    static readonly Vector2I[] InstSizes = { new(1280, 720), new(1920, 1080) };
+    double _instWait; Vector2I _instOrig;
+    // 100 % frames first (#417): 3 areas x 3 eras x 2 window sizes, each with a greyscale copy; the gauge bar of the same state is saved with the Finance rows.
     bool InstShot()
     {
         if (_instI >= 0)
         {
-            int p = _instI % 9;
+            int p = _instI % 9; var sz = InstSizes[_instI / 9];
             var img = GetViewport().GetTexture().GetImage();
             float k = img.GetWidth() / GetViewport().GetVisibleRect().Size.X;
-            var gr = _areaPanel.GetGlobalRect();
-            img = img.GetRegion(new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)).Intersection(new Rect2I(0, 0, img.GetWidth(), img.GetHeight())));
-            string name = $"{InstNames[p / 3]}_e{p % 3 + 1}_{(_instI < 9 ? 100 : 150)}";
+            var all = new Rect2I(0, 0, img.GetWidth(), img.GetHeight());
             string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
-            img.SavePng(Path.Combine(dir, name + ".png"));
-            img.Convert(Image.Format.La8); img.SavePng(Path.Combine(dir, name + "_grey.png"));
-            _shotLog += $"instrument shot {name}\n";
+            void Save(Image im, Rect2 gr, string name)
+            {
+                var c = im.GetRegion(new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)).Intersection(all));
+                c.SavePng(Path.Combine(dir, name + ".png"));
+                c.Convert(Image.Format.La8); c.SavePng(Path.Combine(dir, name + "_grey.png"));
+            }
+            string sfx = $"e{p % 3 + 1}_{sz.X}x{sz.Y}";
+            Save(img, _areaPanel.GetGlobalRect(), $"{InstNames[p / 3]}_{sfx}");
+            if (p / 3 == 0) Save(img, new Rect2(0, 0, 620, 52), $"gauge_{sfx}");
+            _shotLog += $"instrument shot {InstNames[p / 3]}_{sfx}\n";
         }
+        if (_instI < 0) _instOrig = DisplayServer.WindowGetSize();
         if (++_instI >= 18)
         {
             InstrumentLogic.YearOverride = null; _signal.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); CloseArea();
+            DisplayServer.WindowSetSize(_instOrig); GetWindow().ContentScaleSize = _instOrig;
             return true;
         }
         int q = _instI % 9, era = q % 3;
-        Settings.Current.UiScale = _instI < 9 ? 100 : 150; Settings.Apply(Settings.Current, GetWindow(), false);
+        var want = InstSizes[_instI / 9];
+        if (_instI % 9 == 0) { DisplayServer.WindowSetSize(want); GetWindow().ContentScaleSize = want; _instWait = -1.2; }
+        Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false);
         InstrumentLogic.YearOverride = InstYears[era]; _signal.YearOverride = InstYears[era];
         OpenArea(InstAreas[q / 3]);
-        if (InstAreas[q / 3] == AreaId.Finance) _areaPanel.ShotMove(0, 35);   // an unsent edit: the pencil marker shows
+        if (InstAreas[q / 3] == AreaId.Finance) { _areaPanel.ShotMove(0, 35); _areaPanel.ShotFocus(); }   // an unsent edit and the focus: pencil marker and focus frame show
         return false;
     }
 

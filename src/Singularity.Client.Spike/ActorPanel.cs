@@ -26,10 +26,15 @@ public sealed partial class ActorPanel : PanelContainer
     readonly Prose _budget = Ui.Wrap("", 14);
     readonly HSlider[] _sl = new HSlider[5];
     // Layer-2 instruments (UI_INSTRUMENTS, #404): calipers replace the sliders at organ levels 1 and 2, flasks stand beside the Science and Production text.
-    readonly CaliperControl[] _cal = new CaliperControl[5];
-    readonly PencilMarker[] _pen = new PencilMarker[5];
+    // One caliper per panel (UI_INSTRUMENTS §4): it edits the share chosen by a click on its row (Up/Down on the caliper moves the choice). The other rows stay plain numbers.
+    readonly CaliperControl _cal = new() { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+    PencilMarker _pen;
+    readonly Label _calName = Ui.Lbl("", 14), _calVal = Ui.Num("", 14, null, 52);
+    readonly Label[] _name = new Label[5];
+    readonly Control[] _gap = new Control[5];
+    HBoxContainer _calRow;
     readonly int[] _force = new int[5];
-    bool _haveForce;
+    int _sel;
     readonly FlaskControl[] _flaskSci = { new() { Ink = Ui.Violet }, new() { Ink = Ui.Violet }, new() { Ink = Ui.Violet } };
     readonly FlaskControl _flaskProd = new() { Ink = Ui.Teal };
     readonly HBoxContainer _flaskSciRow = new(), _flaskProdRow = new();
@@ -146,18 +151,25 @@ public sealed partial class ActorPanel : PanelContainer
         {
             int k = i;
             var r = new HBoxContainer();
-            var n = Ui.Lbl("share." + i, 14); n.CustomMinimumSize = new Vector2(138, 0);
+            var n = Ui.Lbl("share." + i, 14); n.CustomMinimumSize = new Vector2(138, 0); _name[i] = n;
+            r.MouseFilter = MouseFilterEnum.Stop;
+            r.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } && InstrumentLogic.OrganLevel > 0 && _areaMode) Select(k); };
             _sl[i] = new HSlider { MinValue = 0, MaxValue = 100, Step = 1, SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(100, 22) };
             StyleSlider(_sl[i]);
             _sl[i].ValueChanged += v => OnSlider(k, (int)v);
-            _cal[i] = new CaliperControl { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-            _cal[i].Changed += v => OnSlider(k, v);
             _slVal[i] = Ui.Num("", 14, null, 52);
-            _pen[i] = new PencilMarker(); _slVal[i].AddChild(_pen[i]);
             _slForce[i] = Ui.Num("", 14, Ui.Ink2, 84);
-            r.AddChild(n); r.AddChild(_sl[i]); r.AddChild(_cal[i]); r.AddChild(_slVal[i]); r.AddChild(_slForce[i]);
+            r.AddChild(n); _gap[i] = new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill, Visible = false };   // keeps the number columns in place while the caliper replaces the slider
+            r.AddChild(_sl[i]); r.AddChild(_gap[i]); r.AddChild(_slVal[i]); r.AddChild(_slForce[i]);
             _secBudget.AddChild(r);
         }
+        _calRow = new HBoxContainer(); _calRow.AddThemeConstantOverride("separation", 0);
+        _calName.CustomMinimumSize = new Vector2(138, 0);
+        _cal.Changed += v => OnSlider(_sel, v);
+        _cal.Neighbour += d => Select(Math.Clamp(_sel + d, 0, 4));
+        _pen = new PencilMarker(_cal); _calVal.AddChild(_pen);
+        _calRow.AddChild(_calName); _calRow.AddChild(_cal); _calRow.AddChild(_calVal); _calRow.AddChild(new Control { CustomMinimumSize = new Vector2(84, 0) });
+        _secBudget.AddChild(_calRow); _orderControls.Add(_calRow);
         var ar = new HBoxContainer();
         ar.AddThemeConstantOverride("separation", 10);
         _apply = Ui.Btn("ui.apply", Apply);
@@ -229,6 +241,9 @@ public sealed partial class ActorPanel : PanelContainer
     /// <summary>Screenshot run: the drag of a share without sending it (the pencil marker shows).</summary>
     public void ShotMove(int i, int v) => OnSlider(i, v);
 
+    /// <summary>Screenshot run: the caliper takes the keyboard focus (focus frame and pencil).</summary>
+    public void ShotFocus() => _cal.GrabFocus();
+
     void OnSlider(int i, int v)
     {
         _edited = true;
@@ -260,10 +275,13 @@ public sealed partial class ActorPanel : PanelContainer
     {
         for (int k = 0; k < 5; k++)
         {
-            _sl[k].SetValueNoSignal(_pct[k]); _cal[k].Value = _pct[k]; _slVal[k].Text = _pct[k] + "%";
-            // pencil: this share was moved away from the value in force and is not applied yet
-            _pen[k].Set(!Foreign && _edited && _haveForce && _pct[k] != _force[k], _slVal[k].Text.Length * 8.4f);
+            _sl[k].SetValueNoSignal(_pct[k]); _slVal[k].Text = _pct[k] + "%";
         }
+        _cal.Value = _pct[_sel]; _calVal.Text = _pct[_sel] + "%"; _calName.Text = Loc.T("share." + _sel);
+        // pencil: the chosen share holds an edit that was not sent yet (after the order it goes out)
+        bool unsent = _edited && (_sentPct == null ? _pct[_sel] != _force[_sel] : _pct[_sel] != _sentPct[_sel]);
+        _pen.Set(!Foreign, unsent);
+        StyleNames();
         _sum.Text = Loc.T("ui.sum", _pct.Sum());
         bool changed = _sentPct == null || !_pct.SequenceEqual(_sentPct);
         bool ready = _pct.Sum() == 100 && _edited && changed && !Pending;
@@ -313,7 +331,6 @@ public sealed partial class ActorPanel : PanelContainer
         _foreign.Visible = Foreign;
         if (Foreign) { _foreignName.Text = Names.Actor(_host.Layout.ActorIds[_actor]); if (TintOf != null) { Swatch(_chip, TintOf(_actor)); Swatch(_band, TintOf(_actor)); } }
         foreach (var c in _orderControls) c.Visible = !Foreign;
-        foreach (var cl in _cal) { cl.Editable = !Foreign; cl.MouseFilter = Foreign ? MouseFilterEnum.Ignore : MouseFilterEnum.Stop; cl.FocusMode = Foreign ? FocusModeEnum.None : FocusModeEnum.All; cl.Modulate = new Color(1, 1, 1, Foreign ? 0.45f : 1f); }
         foreach (var sl in _sl) { sl.Editable = !Foreign; sl.MouseFilter = Foreign ? MouseFilterEnum.Ignore : MouseFilterEnum.Stop; sl.Modulate = new Color(1, 1, 1, Foreign ? 0.45f : 1f); }
         _sharesNote.Visible = Foreign;
         _title.TooltipText = id;
@@ -328,13 +345,26 @@ public sealed partial class ActorPanel : PanelContainer
         if (_edited && _sentPct != null && !_awaiting && inForce != null && _sentPct.SequenceEqual(forcePct) && _pct.SequenceEqual(forcePct)) { _edited = false; _sentPct = null; }
         if (!_edited) { Array.Copy(forcePct, _pct, 5); }
         for (int k = 0; k < 5; k++) _slForce[k].Text = inForce != null ? forcePct[k] + "%" : "—";
-        _haveForce = inForce != null; Array.Copy(forcePct, _force, 5);
+        Array.Copy(forcePct, _force, 5);
         Sync();
         FillResult(s);
         FillDesigns(a);
         FillLicence(a);
         FillWhy(s);
         FillFlasks(s, inA);
+    }
+
+    void Select(int k) { _sel = k; Sync(); }
+
+    // The chosen share is marked by a frame and a wash on its name (a shape, not a colour); only while the caliper is on.
+    void StyleNames()
+    {
+        bool organ = InstrumentLogic.OrganLevel > 0 && _areaMode;
+        for (int k = 0; k < 5; k++)
+        {
+            if (!organ) { _name[k].RemoveThemeStyleboxOverride("normal"); continue; }
+            _name[k].AddThemeStyleboxOverride("normal", k == _sel ? Ui.Box(Ui.Hover, Ui.Ink, 1, 4, Ui.R1) : Ui.Box(Colors.Transparent, null, 0, 4, 0));
+        }
     }
 
     // Instrument layer: level and era follow the setting and the game date; at level 0 the sliders are back and the flasks are gone (the «before» look).
@@ -344,7 +374,11 @@ public sealed partial class ActorPanel : PanelContainer
         year = InstrumentLogic.YearOverride ?? year;
         if (level == _instLevel && year == _instYear) return;
         _instLevel = level; _instYear = year;
-        for (int k = 0; k < 5; k++) { _sl[k].Visible = level == 0; _cal[k].Visible = level > 0; _cal[k].Year = year; }
+        _cal.Year = year;
+        bool organ = level > 0 && _areaMode;   // layer 2 never shows in the read-only panel of a foreign power
+        for (int k = 0; k < 5; k++) { _sl[k].Visible = !organ; _gap[k].Visible = organ; }
+        _calRow.Visible = organ && !Foreign;
+        StyleNames();
         _flaskSciRow.Visible = _flaskProdRow.Visible = level > 0 && _areaMode;
     }
 

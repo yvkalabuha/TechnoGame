@@ -38,5 +38,8 @@ public static class InstrumentLogic
     public static double AlloyLevel(double supply, double deficit) => FlaskLevel(supply, supply + Math.Max(deficit, 0));
 
     /// <summary>Era-1 dial (DEBT-0059): radius, tick length and tick width in du; larger and heavier than the first cut so that the dial reads at 100 % UI scale.</summary>
+    /// <summary>The E1 dial (disc 44 px, ticks 2.5 px, 17 px between ticks) is checked on 1280x720 and up (#417 A1/A2). A smaller window gets the plain cells (C7): the physical size is what counts.</summary>
+    public static bool DialFits(int windowWidth, int windowHeight) => windowWidth >= 1280 && windowHeight >= 720;
+
     public const float DialRadius = 33, DialTickLength = 11, DialTickWidth = 2.5f;
 }

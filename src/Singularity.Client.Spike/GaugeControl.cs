@@ -21,6 +21,7 @@ public sealed partial class GaugeControl : Control
     void Sync()
     {
         int level = InstrumentLogic.OrganLevel, era = InstrumentLogic.Era(Year);
+        if (era == 1 && level > 0 && IsInsideTree() && !InstrumentLogic.DialFits(GetWindow().Size.X, GetWindow().Size.Y)) level = 0;   // #417 C7: the dial does not fit at this size, the plain cells take over
         if (level == _level && era == _era) return;
         _level = level; _era = era;
         CustomMinimumSize = level == 0 ? new Vector2(BeforeW, BeforeH) : new Vector2(InstrW, InstrH);
@@ -82,7 +83,6 @@ public sealed partial class GaugeControl : Control
         DrawLine(c - nd * 6, c + nd * (r - 4), Ui.Ink, 2f);
         DrawCircle(c - nd * 7, 2.5f, Ui.Ink);   // counterweight
         DrawCircle(c, 3, Ui.Ink);
-        DrawString(ThemeDB.FallbackFont, c + new Vector2(9, 0), Filled.ToString(), HorizontalAlignment.Left, -1, 12, Ui.Ink);
     }
 
     double NeedleAngle()

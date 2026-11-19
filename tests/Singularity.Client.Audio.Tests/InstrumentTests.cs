@@ -99,4 +99,17 @@ public class InstrumentTests
         // DEBT-0059: the first cut had radius 30 and 2 px ticks of 8 du
         Assert.True(InstrumentLogic.DialRadius > 30 && InstrumentLogic.DialTickLength > 8 && InstrumentLogic.DialTickWidth > 2);
     }
+
+    [Theory]
+    [InlineData(1e9, 1e-6)]
+    [InlineData(1, 1)]
+    [InlineData(0, 5)]
+    public void AlloyLevel_AnyDeficitIsBelowFull(double supply, double deficit) => Assert.True(InstrumentLogic.AlloyLevel(supply, deficit) < 1);
+
+    [Theory]
+    [InlineData(1280, 720, true)]
+    [InlineData(1920, 1080, true)]
+    [InlineData(1024, 600, false)]
+    [InlineData(1280, 700, false)]
+    public void DialFits_OnlyFrom1280x720(int w, int h, bool fits) => Assert.Equal(fits, InstrumentLogic.DialFits(w, h));
 }

@@ -71,7 +71,7 @@ public sealed partial class TimeControl : HBoxContainer
         AddChild(_pause); AddChild(_slower); AddChild(_faster);
         var gap = new Control { CustomMinimumSize = new Vector2(10, 0) };
         AddChild(gap); AddChild(_meter);
-        _word.AddThemeFontSizeOverride("font_size", 12);   // draft.s: the tempo word is a caption, not a control (visual review F5)
+        _word.AddThemeFontSizeOverride("font_size", 14);   // draft.s 14 du: number and unit of the gauge never smaller (#417 C3, A1)
         _word.CustomMinimumSize = new Vector2(96, 0);
         _word.VerticalAlignment = VerticalAlignment.Center;
         AddChild(_word);

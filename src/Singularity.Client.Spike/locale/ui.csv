@@ -344,6 +344,7 @@ flask.sci.cap,Progress of the first links of the chain,Ход первых зв�
 flask.sci.tip,Link {0}: {1}% ({2} of {3}),Звено {0}: {1}% ({2} из {3})
 flask.alloy.cap,Alloy stock,Запас сплава
 flask.alloy.tip,Stock covers {0}% of the need,Запас покрывает {0}% потребности
+flask.deficit,low,мало
 flask.alloy.deficit,Stock covers {0}% of the need: a deficit (hatched),Запас покрывает {0}% потребности: дефицит (штриховка)
 caliper.tip,Left and right arrows: 5 points; or drag the jaw,Стрелки влево и вправо: 5 пунктов; или тяните губку
 tip.area.locked,{0} · {1} · appears in {2},{0} · {1} · появится в {2}
