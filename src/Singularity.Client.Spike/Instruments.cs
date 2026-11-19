@@ -243,15 +243,15 @@ public sealed partial class PencilMarker : Control
         if (!_editable || _level == 0) return;
         DrawRect(new Rect2(0.5f, 0.5f, Size.X - 1, Size.Y - 1), _focus ? Ui.Ink : Ui.Ink3, false, 1f);
         if (!_active && !_focus) return;
-        // pencil lying at about -18 degrees: body, tip, lead; 16 du long
-        const float c = 0.951f, s = -0.309f;   // cos and sin of -18 degrees
-        Vector2 O = new(3, Size.Y * 0.5f + 4);
+        // pencil lying at 45 degrees: body, tip, lead; about 18 x 18 du (the icon minimum is 16 x 16 at 100 %)
+        const float c = 0.707f, s = -0.707f;   // cos and sin of -45 degrees
+        Vector2 O = new(2, Size.Y * 0.5f + 9);
         Vector2 P(float x, float y) => O + new Vector2(x * c - y * s, x * s + y * c);
-        _body[0] = P(5, -3); _body[1] = P(16, -3); _body[2] = P(16, 3); _body[3] = P(5, 3);
-        _tip[0] = P(5, -3); _tip[1] = P(0, 0); _tip[2] = P(5, 3);
+        _body[0] = P(6, -5); _body[1] = P(20, -5); _body[2] = P(20, 5); _body[3] = P(6, 5);
+        _tip[0] = P(6, -5); _tip[1] = P(0, 0); _tip[2] = P(6, 5);
         DrawColoredPolygon(_body, Ui.Sheet);
         DrawPolyline(_body, Ui.Ink, 1f); DrawLine(_body[3], _body[0], Ui.Ink, 1f);
-        DrawLine(P(5, 0), P(16, 0), Ui.Ink2, 1f);
+        DrawLine(P(6, 0), P(20, 0), Ui.Ink2, 1f);
         DrawPolyline(_tip, Ui.Ink, 1f);
         DrawLine(P(1.5f, 0), P(0, 0), Ui.Ink, 2f);
     }

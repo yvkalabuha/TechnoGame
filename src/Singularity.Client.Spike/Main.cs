@@ -923,16 +923,18 @@ public sealed partial class Main : Node3D
             case 141 when _shotT >= 0.5: SaveProbe("flask_levels_100"); Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false); _shotStep = 142; _shotT = 0; break;
             case 142 when _shotT >= 0.6: SaveProbe("flask_levels_150"); Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _flaskProbe.QueueFree(); _shotStep = 143; _shotT = 0; break;
             // Science from a real session state: no fixture; a month at a time until the chain shows (at most about 12 s), then the live panel is checked against the snapshot
-            case 143 when _shotT >= 0.3: Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); InstrumentLogic.YearOverride = null; OpenArea(AreaId.Science); _signal.SetSpeed(0); _liveTicks = 0; _shotStep = 144; _shotT = 0; break;
+            case 143 when _shotT >= 0.3: Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); InstrumentLogic.YearOverride = null; OpenArea(AreaId.Science); _signal.SetSpeed(0); _liveTicks = 0; _liveTarget = 0; _shotStep = 144; _shotT = 0; break;
             // a year of ticks per step until the snapshot carries a Knowledge link; a fixed limit of 30 years, then the run fails
-            case 144 when _shotT >= 0.6:
+            case 144 when _shotT >= 0.3:
+                if (_host.Snap.Tick < _liveTarget) { _shotT = 0; break; }   // the queued batch is still running on the simulation thread
                 if (LiveKnowledgeLinks() > 0) { _shotStep = 145; _shotT = 0; break; }
                 if (_liveTicks >= 30 * 365) { InstFail($"no live research chain in {_liveTicks / 30} months (date {_host.Snap.Date})"); break; }
-                _host.StepTicks(365); _liveTicks += 365; _shotT = 0; break;
+                _host.StepTicks(365); _liveTicks += 365; _liveTarget = _host.Snap.Tick + 365; _shotT = 0; break;
             case 145 when _shotT >= 0.8:
             {
                 int links = LiveKnowledgeLinks(), flasks = _areaPanel.ShotFlaskCount, want = Math.Min(links, 3);
                 _shotLog += $"live science: knowledge links {links}, flasks shown {flasks}, date {_host.Snap.Date}\n";
+                if (links == 0) { InstFail("live science check failed: the snapshot lost its Knowledge links before the check"); break; }
                 if (flasks != want) { InstFail($"live science check failed: snapshot has {links} Knowledge links, the panel shows {flasks} flasks, expected {want}"); break; }
                 var gr = _areaPanel.GetGlobalRect(); float k = GetWindow().ContentScaleFactor;
                 SaveShot("flask_science_live.png", new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)));
@@ -1025,7 +1027,7 @@ public sealed partial class Main : Node3D
     }
 
     // Instrument shots: 3 areas x 3 eras x 2 UI scales; the previous configuration is saved, then the next one is set up. Returns true when all are done.
-    int _liveTicks;
+    int _instTarget, _liveTicks; long _liveTarget; int _instSpeedBefore;
     int _instI, _instPhase, _instShareBefore; bool _instCheckInput, _instCheckSend, _instSent, _instSkipShot; int _instAppliedBefore;
 
     // A failed shot-run check: the error goes to the run log and the process exits non-zero.
@@ -1077,23 +1079,34 @@ public sealed partial class Main : Node3D
             float w = GetWindow().ContentScaleFactor;   // events are window pixels, the panel reports canvas units
             if (_instPhase == 1) { var c = _areaPanel.ShotRowPoint(1) * w; Mouse(c, null); Mouse(c, true); Mouse(c, false); }
             else if (_instPhase == 3) PressKey(Key.Tab);   // after the frame with the unsent edit: Tab from the caliper to Apply
-            else if (_instPhase == 4) { if (_instI == 0) { var gr = _areaPanel.GetGlobalRect(); SaveShot("apply_focus.png", new Rect2I((int)(gr.Position.X * w), (int)(gr.Position.Y * w), (int)(gr.Size.X * w), (int)(gr.Size.Y * w))); } _instAppliedBefore = _areaPanel.ShotApplied; PressKey(Key.Enter); PressKey(Key.Enter, false); _instCheckSend = true; }
+            else if (_instPhase == 4) { if (_instI == 0) { var gr = _areaPanel.GetGlobalRect(); SaveShot("apply_focus.png", new Rect2I((int)(gr.Position.X * w), (int)(gr.Position.Y * w), (int)(gr.Size.X * w), (int)(gr.Size.Y * w))); } _instAppliedBefore = _areaPanel.ShotApplied; _instSpeedBefore = _host.Speed; PressKey(Key.Space); PressKey(Key.Space, false); }   // Space is the pause key even with Apply focused
+            else if (_instPhase == 5)
+            {
+                // Space must not have submitted the order, and must have toggled the pause; then it is toggled back
+                if (_areaPanel.ShotApplied != _instAppliedBefore || _host.Speed == _instSpeedBefore) { InstFail($"finance Space check failed: orders submitted {_areaPanel.ShotApplied - _instAppliedBefore}, speed {_instSpeedBefore} -> {_host.Speed}"); return true; }
+                PressKey(Key.Space); PressKey(Key.Space, false);
+            }
+            else if (_instPhase == 6)
+            {
+                if (_host.Speed != _instSpeedBefore) { InstFail($"finance Space check failed: pause was not restored ({_instSpeedBefore} -> {_host.Speed})"); return true; }
+                _instAppliedBefore = _areaPanel.ShotApplied; PressKey(Key.Enter); PressKey(Key.Enter, false); _instCheckSend = true; }
             else
             {
                 _instShareBefore = _areaPanel.ShotShare(1);
-                var c = _areaPanel.ShotCaliperPoint(40) * w; Mouse(c, null); Mouse(c, true); Mouse(c, false); PressKey(Key.Right);
+                _instTarget = _instShareBefore == 45 ? 60 : 40;   // an order sent in an earlier pass may be in force by now: pick a different spot
+                var c = _areaPanel.ShotCaliperPoint(_instTarget) * w; Mouse(c, null); Mouse(c, true); Mouse(c, false); PressKey(Key.Right);
                 _instCheckInput = true;   // the events are processed on the next frame: checked at the next call
             }
-            _instPhase = _instPhase == 1 ? 2 : _instPhase == 3 ? 4 : 0;
+            _instPhase = _instPhase switch { 1 => 2, 3 => 4, 4 => 5, 5 => 6, _ => 0 };
             return false;
         }
         if (_instCheckInput)
         {
-            // The injected row click, caliper click and arrow key must have selected share 1 and moved it (click to 40, one step right = 45); otherwise the frames would show an untouched panel.
+            // The injected row click, caliper click and arrow key must have selected share 1 and moved it (click to the target, one step right = target + 5); otherwise the frames would show an untouched panel.
             _instCheckInput = false;
             int sel = _areaPanel.ShotSelected, val = _areaPanel.ShotShare(1);
             _shotLog += $"finance input: selected share {sel}, share value {val} (was {_instShareBefore})\n";
-            if (sel != 1 || val == _instShareBefore || val != 45) { InstFail($"finance input check failed: expected share 1 at 45 (was {_instShareBefore}), got share {sel} at {val}"); return true; }
+            if (sel != 1 || val == _instShareBefore || val != _instTarget + 5) { InstFail($"finance input check failed: expected share 1 at {_instTarget + 5} (was {_instShareBefore}), got share {sel} at {val}"); return true; }
         }
         if (_instCheckSend)
         {
