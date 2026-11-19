@@ -16,7 +16,7 @@ Usage:
   python3 tools/development/registry.py list [--type TASK] [--status DONE]
   python3 tools/development/registry.py index
   python3 tools/development/registry.py new TASK "Title of the task"
-  python3 tools/development/registry.py set-status TASK-0001 DONE
+  python3 tools/development/registry.py set-status TASK-0001 DONE --review "reviewer APPROVE <sha>"
 
 Only dependency outside the standard library: PyYAML.
 """
@@ -99,6 +99,13 @@ TYPES: dict[str, ItemType] = {
 }
 
 TASK_LEVELS = ["light", "gate", "gate+research"]
+# Tasks in these categories change code or data: DONE needs a review record
+# (review_ref), for tasks created on or after REVIEW_RULE_FROM.
+CODE_CATEGORIES = {"core", "lab", "client", "tooling", "data"}
+REVIEW_RULE_FROM = "2026-11-19"
+TERMINAL_TASK_STATUSES = {"DONE", "REJECTED", "DEFERRED"}
+# The developer write zone excludes src/Singularity.Lab and lab/.
+LAB_AGENTS = {"simulation-engineer", "test-engineer"}
 EXP_OUTCOMES = ["supports", "refutes", "inconclusive"]
 # Fields of an ACCEPTED ADR that may still change.
 ADR_MUTABLE_FIELDS = {"status", "superseded_by"}
@@ -174,6 +181,13 @@ def rel(path: Path) -> str:
 # check
 # --------------------------------------------------------------------------
 
+def needs_review(it: Item) -> bool:
+    """True for a task that changes code or data and is under the review rule."""
+    return it.type.prefix == "TASK" \
+        and it.meta.get("category") in CODE_CATEGORIES \
+        and str(it.meta.get("created") or "") >= REVIEW_RULE_FROM
+
+
 def check_items(items: list[Item], errors: list[str]) -> None:
     ids = {}
     for it in items:
@@ -208,6 +222,16 @@ def check_items(items: list[Item], errors: list[str]) -> None:
 
         if t.prefix == "TASK" and it.meta.get("level") not in TASK_LEVELS:
             errors.append(f"{where}: level must be one of {TASK_LEVELS}")
+        if t.prefix == "TASK":
+            cat = it.meta.get("category")
+            if status == "DONE" and needs_review(it) \
+                    and it.meta.get("review_ref") in (None, ""):
+                errors.append(f"{where}: DONE {cat} task needs 'review_ref' "
+                              "(set-status ... DONE --review \"<who: verdict, commit>\")")
+            if cat == "lab" and status not in TERMINAL_TASK_STATUSES \
+                    and it.meta.get("agent") not in LAB_AGENTS:
+                errors.append(f"{where}: category lab needs agent in {sorted(LAB_AGENTS)} "
+                              "(developer cannot write src/Singularity.Lab or lab/)")
         if t.prefix == "EXP" and status == "DONE":
             for f in REPRO_FIELDS:
                 if it.meta.get(f) in (None, ""):
@@ -435,12 +459,26 @@ def cmd_set_status(args) -> int:
         print(f"status {status} not in {it.type.statuses}")
         return 2
     text = it.path.read_text(encoding="utf-8")
+    review = getattr(args, "review", None)
+    if status == "DONE" and needs_review(it) and not review \
+            and it.meta.get("review_ref") in (None, ""):
+        print(f"{it.id}: category {it.meta.get('category')} changes code or data; "
+              "DONE needs --review \"<who: verdict, commit>\" (reviewer APPROVE first)")
+        return 2
     new, n = re.subn(r"^(status:[ \t]*)[A-Z_]+", lambda m: m.group(1) + status, text, count=1, flags=re.M)
     if n != 1:
         print(f"{rel(it.path)}: no status line found")
         return 1
+    if review:
+        line = "review_ref: " + json.dumps(review, ensure_ascii=False)
+        if re.search(r"^review_ref:.*$", new, flags=re.M):
+            new = re.sub(r"^review_ref:.*$", lambda m: line, new, count=1, flags=re.M)
+        else:
+            new = re.sub(r"^(created:.*)$", lambda m: line + "\n" + m.group(1), new, count=1, flags=re.M)
     it.path.write_text(new, encoding="utf-8")
     print(f"{it.id}: {it.meta.get('status')} -> {status}")
+    if not getattr(args, "no_index", False):
+        cmd_index(args)  # BACKLOG.md and the active block follow every status change
     return 0
 
 
@@ -469,6 +507,10 @@ def main(argv: list[str] | None = None) -> int:
     st = sub.add_parser("set-status")
     st.add_argument("id")
     st.add_argument("status")
+    st.add_argument("--review", metavar="REF",
+                    help="review record, required for DONE on code/data tasks, "
+                         "e.g. \"reviewer APPROVE 5a9ec5b; test-engineer 3cf6164\"")
+    st.add_argument("--no-index", action="store_true", help="do not regenerate BACKLOG.md")
     st.set_defaults(func=cmd_set_status)
     args = p.parse_args(argv)
     return args.func(args)

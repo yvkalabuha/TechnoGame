@@ -8,7 +8,7 @@ hooks:
     - matcher: "Bash"
       hooks:
         - type: command
-          command: 'python3 "${CLAUDE_PROJECT_DIR}/.claude/hooks/guard_bash.py" --agent reviewer --allow "git diff" --allow "git log" --allow "git show" --allow "git status" --allow "dotnet build" --allow "dotnet test" --allow "~/.dotnet/dotnet build" --allow "~/.dotnet/dotnet test"'
+          command: 'python3 "${CLAUDE_PROJECT_DIR}/.claude/hooks/guard_bash.py" --agent reviewer --allow "git diff" --allow "git log" --allow "git show" --allow "git status" --allow "dotnet build" --allow "dotnet test" --allow "~/.dotnet/dotnet build" --allow "~/.dotnet/dotnet test" --allow "$HOME/.dotnet/dotnet build" --allow "$HOME/.dotnet/dotnet test" --allow "dotnet src/Singularity.Lab/bin/Release/net10.0/Singularity.Lab.dll selftest" --allow "~/.dotnet/dotnet src/Singularity.Lab/bin/Release/net10.0/Singularity.Lab.dll selftest" --allow "$HOME/.dotnet/dotnet src/Singularity.Lab/bin/Release/net10.0/Singularity.Lab.dll selftest" --allow "python3 tools/development/verify.py" --allow "python3 -m unittest" --allow "bash -n" --allow "bash tools/map/check_determinism.sh" --allow "bash tools/map/check_packages.sh" --allow "git merge-base" --allow "git branch" --allow "git ls-files" --allow "git grep"'
           onFailure: block
 ---
 
@@ -27,7 +27,7 @@ You did not write the code. You get the task file and the diff range.
 Use the code-review table (template `development/templates/code-review.md`): severity, file:line, problem, fix. Verdict: approve | changes-requested. Bash is limited to git read commands and dotnet build/test (hook-enforced).
 
 ## Project rules (all agents)
-- Project: PROJECT SINGULARITY, a civilization simulator 1910–2100. Files and git are the source of truth. Start from `CURRENT_STATE.md` only if the task needs project context.
+- Project: PROJECT SINGULARITY, a civilization simulator 1945–2100 (the main campaign starts in 1945, DECISIONS_LOG #23). Files and git are the source of truth. Start from `CURRENT_STATE.md` only if the task needs project context.
 - You were started by the Orchestrator (main session). You do not see its conversation: rely on the task prompt and the files it names.
 - Do not start other agents. Do not change item statuses (`status:` fields) — the Orchestrator does that.
 - Write only inside your write zone (enforced by a hook). If a change is needed elsewhere, describe it under OPEN.
@@ -35,6 +35,9 @@ Use the code-review table (template `development/templates/code-review.md`): sev
 - Documents for the owner are in Russian; code, identifiers and file names in English. Mark claims as [Факт] (with source), [Предп.] or [Предл.].
 - Read long documents from their "Краткий вывод" section first. Check `docs/research/` before researching a topic again.
 - Never present a stub or a guess as a finished result.
+- Finish your own background commands before the final report: run builds and tests in the foreground with a timeout. You get one final report; a report sent while your work still runs is lost.
+- A test written for a fix must fail without the fix. Check it (apply the test to the old code, or remove the fix locally) and say in the report whether you checked.
+- In the report, list what you did not verify. Do not write "tests pass" for a run you did not see finish.
 
 ## Output format (max 40 lines, Russian text, English identifiers)
 ```
