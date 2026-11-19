@@ -36,13 +36,13 @@ internal static class ColumnProjection
     /// <summary>
     /// Columns added with the slot generation (ADR-0005 p. 3, TASK-0099): <c>prd.dN.generation</c>, <c>prd.dN.parentGen</c>, <c>prd.lp.gN.gen</c>
     /// and the <c>StaleHandle</c> rejection counter; with the novelty memory (TASK-0110, DEBT-0054): <c>prd.altReached.N</c>; and with the end-to-end
-    /// design handle (TASK-0115): the <c>.gen</c> column beside every design reference of <c>cmd.*</c> and <c>pol.*</c>.
+    /// design handle (TASK-0115): the <c>.gen</c> column beside every design reference of <c>cmd.*</c> and <c>pol.*</c>; and with the horizon to 2030 (TASK-0121): <see cref="IsHorizonColumn"/>.
     /// Projections onto "the old columns" leave them out.
     /// </summary>
-    public static bool IsSlotGenerationColumn(string name) =>
+    public static bool IsAddedSinceBaselineColumn(string name) =>
         name.EndsWith(".generation", StringComparison.Ordinal) || name.EndsWith(".parentGen", StringComparison.Ordinal)
         || name.StartsWith("prd.lp.g", StringComparison.Ordinal) && name.EndsWith(".gen", StringComparison.Ordinal)
-        || IsDesignRefGenColumn(name)
+        || IsDesignRefGenColumn(name) || IsHorizonColumn(name)
         || name == "prd.rejected.StaleHandle" || name.StartsWith("prd.altReached.", StringComparison.Ordinal);
 
     // Only the new design-reference generation columns; the old pol.lic.gen, pol.lic.q.gen and pol.lic.bad.gen stay in projections.
@@ -53,6 +53,26 @@ internal static class ColumnProjection
         foreach (string p in prefixes)
             if (name.StartsWith(p, StringComparison.Ordinal)) return true;
         return false;
+    }
+
+    /// <summary>
+    /// Columns added with the horizon to 2030 (TASK-0121, #423): the cohorts of the years 1978…2030 (<c>prd.dN.cohort.YYYY</c>) and the second block of
+    /// the <c>q</c> mask (<c>prd.dN.q.1</c>). Matched by exact name pattern, never by a broad suffix.
+    /// </summary>
+    public static bool IsHorizonColumn(string name)
+    {
+        const string prefix = "prd.d";
+        if (!name.StartsWith(prefix, StringComparison.Ordinal))
+            return false;
+        int dot = name.IndexOf('.', prefix.Length);
+        if (dot <= prefix.Length || !int.TryParse(name.AsSpan(prefix.Length, dot - prefix.Length), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out _))
+            return false;
+        string rest = name[(dot + 1)..];
+        if (rest == "q.1")
+            return true;
+        return rest.StartsWith("cohort.", StringComparison.Ordinal)
+            && int.TryParse(rest.AsSpan("cohort.".Length), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int year)
+            && year is >= 1978 and <= 2030;
     }
 
     /// <summary>

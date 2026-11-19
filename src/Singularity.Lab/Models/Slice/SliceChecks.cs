@@ -18,7 +18,8 @@ public static class SliceChecks
     // Seed 1, months 0…149, default config: the golden of the Session (SeriesSwitchTests.MainSeed1Month149, F17b YProdGolden[0]).
     // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
     // Re-recorded in TASK-0115: new columns cmd.*.gen / pol.*.gen and SchemaVersion 11; old columns unchanged per the projection tests.
-    private const string Golden150 = "c3ab59c3f8bf14cd4096d20190d546429f40b62646de23fa6af42db4f2498b4c";
+    // Re-recorded in TASK-0121 (#423): schema v12, new columns prd.d*.cohort.1978…2030 and prd.d*.q.1.
+    private const string Golden150 = "a0b7ab02e5f089a2c7e344132eae6d298b8f2e1f3d3ab117cf7261841460869e";
     private const long Ticks150 = 4564;   // 1945-09-01 → 1958-03-01: the tick of month 150, so month 149 is the last one run
     private const long Ticks60 = 1826;    // 1945-09-01 → 1950-09-01
 
@@ -56,7 +57,76 @@ public static class SliceChecks
         ("slice: lk-draws — t_known of an L_K run = max(req, 0) of the exported draws, req ≥ own (spec v0.34 §6.1 self-check, #251)", () => LkDrawsExact(tmp)),
         ("slice: c5-stand — the output months of the C5 site equal the C1 DevSite FULL_T0 (same culture rule C-B + I-OC, 8 months)", C5DevSiteEquivalence),
         ("slice: c5-stand — smoke (horizon 6, threshold 0,25): idle and restart run, two runs give the same bytes, no statistic row (#248)", () => C5Smoke(tmp)),
+        ("slice: full run to 2030-12 — FULL, 1024 months, seed 1: status ok, months 1024, last lines row t = 1023, threads 1 = 2 (TASK-0121)", () => FullRun2030(tmp)),
+        ("slice: H8 — a control layer (LK, LK0, LC0, LC, LP) past 384 months is rejected before any month runs; FULL is not (TASK-0121)", () => ControlHorizon(tmp)),
     ];
+
+    // §5 item 5 of slice-horizon-2030.md (TASK-0121): the Lab path, with the standard observer and every table, runs the whole cohort horizon
+    // 1945-09 … 2030-12. Ticks 31168 = 1945-09-01 → 2031-01-01 (31046 would be 1020 months, through 2030-08).
+    private static string? FullRun2030(string tmp)
+    {
+        const long Ticks2030 = 31168;
+        var (a, da) = Run(tmp, Manifest("JetSlice", Ticks2030), 1, 1, "y2030-t1");
+        var (b, _) = Run(tmp, Manifest("JetSlice", Ticks2030), 1, 2, "y2030-t2");
+        if (!a.Ok || !b.Ok)
+            return $"status: {a.Error}{b.Error}";
+        if (a.GoldenHash != b.GoldenHash)
+            return $"threads 1 vs 2: {a.GoldenHash} vs {b.GoldenHash}";
+        using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(da, RunExecutor.RunJsonFile)));
+        string? months = doc.RootElement.GetProperty("model_info").GetProperty("months").GetString();
+        if (months != "1024")
+            return $"model_info.months {months}";
+        string last = File.ReadLines(Path.Combine(da, SliceTables.Lines.Name + ".csv")).Last();
+        return last.Split(',')[1] == "1023" ? null : $"last lines row {last}";
+    }
+
+    // H8 of slice-horizon-2030.md §2.2 (TASK-0121): the control layers are calibration stands of 1945-1977. 384 months (ticks 11688) is the last
+    // accepted run of a control layer; one more month fails loudly in the model factory and in calib-print; FULL is never limited by it.
+    private static string? ControlHorizon(string tmp)
+    {
+        GameData data = SliceData.Load(tmp);
+        ScenarioData sc = data.Scenario(SliceRunConfig.DefaultScenario);
+        var calendar = new TickCalendar(new CivilDate(sc.StartYear, sc.StartMonth, 1));
+        int h = JetSliceModelFactory.SliceHorizonMonths;
+        long last = calendar.TickOfMonth(h), over = last + 1, y2030 = calendar.TickOfMonth(1020);
+        if (last != 11688 || JetSliceModelFactory.MonthsOf(last, sc) != h || JetSliceModelFactory.MonthsOf(over, sc) != h + 1)
+            return $"month count: ticks {last} → {JetSliceModelFactory.MonthsOf(last, sc)}, {over} → {JetSliceModelFactory.MonthsOf(over, sc)}";
+        LayerControl[] control = [LayerControl.Lk, LayerControl.Lk0, LayerControl.Lc0, LayerControl.Lc, LayerControl.Lp];
+        foreach (LayerControl layer in control)
+        {
+            try { JetSliceModelFactory.CheckControlHorizon(layer, last, sc); }
+            catch (ParamException e) { return $"{layer} rejected at {h} months: {e.Message}"; }
+            foreach (long t in new[] { over, y2030, int.MaxValue, long.MaxValue })
+            {
+                try
+                {
+                    JetSliceModelFactory.CheckControlHorizon(layer, t, sc);
+                    return $"{layer} accepted ticks {t}";
+                }
+                catch (ParamException e) when (e.Message.Contains("1945-1977", StringComparison.Ordinal)) { }
+            }
+        }
+        JetSliceModelFactory.CheckControlHorizon(LayerControl.Full, y2030, sc);
+
+        // End to end: the run fails with the parameter error, before any month (no CONTROL_TABLES file is even read: the check comes first).
+        foreach (string pars in new[] { """{"LAYER": "LK0", "detail": "lite"}""", """{"LAYER": "LK", "CONTROL_TABLES": "absent.json", "detail": "lite"}""" })
+        {
+            var (r, _) = Run(tmp, Manifest("JetSlice", y2030, pars: pars), 1, 1, "h8");
+            if (r.Ok || r.Error?.Contains("ParamException", StringComparison.Ordinal) != true || r.Error.Contains("1945-1977", StringComparison.Ordinal) != true)
+                return $"run {pars} past the horizon: ok={r.Ok} {r.Error}";
+        }
+        string dir = Path.Combine(tmp, "h8-print");
+        Directory.CreateDirectory(dir);
+        string path = Path.Combine(dir, "m.json");
+        File.WriteAllText(path, Manifest("JetSliceCalib", over, seeds: "[1]", pars: """{"LAYER": "LC0"}"""));
+        try
+        {
+            Smoke.CalibPrint.Run(path, null, null, Path.Combine(dir, "out"), 1, TextWriter.Null);
+            return "calib-print accepted LC0 past the horizon";
+        }
+        catch (ParamException e) when (e.Message.Contains("1945-1977", StringComparison.Ordinal)) { }
+        return null;
+    }
 
     // Review M5 of 321d8c9: the print runs the matrix world (final hash = golden_hash) and its invariants hold on a short run.
     private static string? CalibPrintSmoke(string tmp)

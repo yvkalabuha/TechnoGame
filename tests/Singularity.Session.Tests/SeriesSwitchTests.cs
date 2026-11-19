@@ -10,7 +10,8 @@ public class SeriesSwitchTests
     // Hash of seed 1 after month 149 under the default config (F17b YProdGolden[0], recorded before the switches existed).
     // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
     // Re-recorded in TASK-0115: schema v11 (cmd.*.gen, pol.*.gen columns); the old columns are unchanged (projection tests).
-    private const string MainSeed1Month149 = "c3ab59c3f8bf14cd4096d20190d546429f40b62646de23fa6af42db4f2498b4c";
+    // Re-recorded in TASK-0121 (#423), reason: schema v12 (new columns prd.d*.cohort.1978…2030 and prd.d*.q.1: the cohort years to 2030, the second block of the q mask); the old columns are unchanged (HorizonTests projection at 48 points of the build before the change, GoldenProjectionAgainstMainTests), so only the new columns change the hash.
+    private const string MainSeed1Month149 = "a0b7ab02e5f089a2c7e344132eae6d298b8f2e1f3d3ab117cf7261841460869e";
 
     private static SliceRunConfig Base(ulong seed = 1) => new() { Seed = seed, Threads = 2 };
 
@@ -47,7 +48,7 @@ public class SeriesSwitchTests
         HashAssert.Equal(MainSeed1Month149, Run(Base() with { ViewMode = SliceViewMode.Full }, 150).LastHash);
         Assert.DoesNotContain(s.World.Table.Columns, c => c.Name.StartsWith("run.layer", StringComparison.Ordinal) || c.Name is "run.grid" or "run.effort_share");
         Assert.Equal(SliceTestData.Create(Base()).World.SchemaFingerprint(), SliceTestData.Create(explicitDefaults).World.SchemaFingerprint());
-        Assert.Equal(11, SliceWorld.SchemaVersion);
+        Assert.Equal(12, SliceWorld.SchemaVersion);
     }
 
     [Fact]

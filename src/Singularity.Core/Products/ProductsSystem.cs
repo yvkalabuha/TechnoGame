@@ -58,7 +58,7 @@ public sealed partial class ProductsSystem : ITickSystem
     private readonly IProductsInputs _inputs;
     private readonly IndustryMailbox _mailbox;
     private readonly ProductsMode _mode;
-    private readonly int _d, _s, _y, _b;
+    private readonly int _d, _s, _y, _b, _qb;
     private readonly Fx6 _dRef;
 
     // bureau_req[af_class] (§3.3, A34): computed once at construction, never in a tick.
@@ -67,7 +67,7 @@ public sealed partial class ProductsSystem : ITickSystem
     private readonly IntColumn[] _stage, _bureauOf, _alt, _bureauDesign, _gp, _parent, _stageO, _gateOpened, _forced, _lpSlot, _gen, _parentGen, _lpGen, _altReached;
     private readonly IntColumn[] _cancelled, _idleC, _built, _quotaBase, _soldY, _lineBind;
     private readonly LongColumn[] _work, _d0, _hidden, _open, _found, _hours, _lineE, _rate, _cost, _exp, _cohort;
-    private readonly LongColumn[] _qMask;   // q[design, y] as a bit per cohort year (contract r13a §3.1, §9.1)
+    private readonly LongColumn[] _qMask;   // q[design, y] as a bit per cohort year, 62 years per block: [design * _qb + y / 62] (contract r13a §3.1, §9.1)
     private readonly LongColumn[] _rateCmd, _dGate, _lossAcc, _retro, _lost, _inService0, _rejected, _retired, _sold;
     private readonly LongColumn _need, _paid, _spent, _tbSpent, _saleIncome, _saleCap, _saleY, _extTotal;
 
@@ -163,9 +163,10 @@ public sealed partial class ProductsSystem : ITickSystem
         _lost = new LongColumn[_d];
         _inService0 = new LongColumn[_d];
         _cohort = new LongColumn[_d * _y];
-        _qMask = new LongColumn[_d];
-        if (_y > 62)
-            throw new ArgumentException("q[design, y] is one bit per cohort year: at most 62 years.", nameof(layout));
+        if (_y > ProductsLayout.MaxCohortYears)
+            throw new ArgumentException($"q[design, y] is one bit per cohort year: at most {ProductsLayout.MaxCohortYears} years.", nameof(layout));
+        _qb = ProductsLayout.MaskBlocks(_y);
+        _qMask = new LongColumn[_d * _qb];
         for (int d = 0; d < _d; d++)
         {
             string n = $"prd.d{d}";
@@ -203,7 +204,9 @@ public sealed partial class ProductsSystem : ITickSystem
             _retro[d] = table.AddLong($"{n}.retroPool");
             _lost[d] = table.AddLong($"{n}.lost");
             _inService0[d] = table.AddLong($"{n}.inService0");
-            _qMask[d] = table.AddLong($"{n}.q");
+            // Block 0 keeps the name of the single-word mask; later blocks are new columns (.q.1: years 62…123).
+            for (int b = 0; b < _qb; b++)
+                _qMask[d * _qb + b] = table.AddLong(b == 0 ? $"{n}.q" : $"{n}.q.{b}");
             for (int y = 0; y < _y; y++)
                 _cohort[d * _y + y] = table.AddLong($"{n}.cohort.{layout.StartYear + y}");
         }
@@ -321,18 +324,22 @@ public sealed partial class ProductsSystem : ITickSystem
         var q = new long[rows];
         for (int d = 0; d < _d; d++)
         {
-            for (int a = 0; a < rows; a++)
+            for (int b = 0; b < _qb; b++)
             {
-                q[a] = 0;
-                if (Stage(a, d) == DesignStage.None || !PrcSet(a, d).All(p => _inputs.Mastered(a, p, 0)))
-                    continue;
-                for (int y = 0; y < _y; y++)
+                for (int a = 0; a < rows; a++)
                 {
-                    if (_cohort[d * _y + y].Current[a] > 0)
-                        q[a] |= 1L << y;
+                    q[a] = 0;
+                    if (Stage(a, d) == DesignStage.None || !PrcSet(a, d).All(p => _inputs.Mastered(a, p, 0)))
+                        continue;
+                    int yEnd = Math.Min(_y, (b + 1) * ProductsLayout.MaskBits);
+                    for (int y = b * ProductsLayout.MaskBits; y < yEnd; y++)
+                    {
+                        if (_cohort[d * _y + y].Current[a] > 0)
+                            q[a] |= 1L << y % ProductsLayout.MaskBits;
+                    }
                 }
+                _qMask[d * _qb + b].Load(q);
             }
-            _qMask[d].Load(q);
         }
         RebuildPrcMemo();
     }
@@ -341,7 +348,7 @@ public sealed partial class ProductsSystem : ITickSystem
     /// <c>q(d, y)</c> of the cohort of year index <paramref name="yearIndex"/>: it was built while every process of the <c>prc_set</c> was mastered in the
     /// last month of its output (contract r13a §9.1). State; written by <see cref="Compute"/> from the snapshot.
     /// </summary>
-    public bool CohortMastered(int actor, int design, int yearIndex) => (_qMask[design].Current[actor] >> yearIndex & 1) != 0;
+    public bool CohortMastered(int actor, int design, int yearIndex) => (_qMask[design * _qb + yearIndex / ProductsLayout.MaskBits].Current[actor] >> yearIndex % ProductsLayout.MaskBits & 1) != 0;
 
     // Month t writes q(d, year(t−1)) for every line with rate(t−1) > 0 from the snapshot of t−1 (mastered_run is visible from t+1, §4.0).
     private void WriteQ(int a, long t, TickCalendar calendar, long tick)
@@ -358,8 +365,9 @@ public sealed partial class ProductsSystem : ITickSystem
             bool all = true;
             foreach (int p in PrcSet(a, d))
                 all &= _inputs.Mastered(a, p, t - 1);
-            long mask = _qMask[d].Next[a];
-            _qMask[d].Next[a] = all ? mask | 1L << yi : mask & ~(1L << yi);
+            LongColumn word = _qMask[d * _qb + yi / ProductsLayout.MaskBits];
+            long bit = 1L << yi % ProductsLayout.MaskBits;
+            word.Next[a] = all ? word.Next[a] | bit : word.Next[a] & ~bit;
         }
     }
 
@@ -1664,8 +1672,10 @@ public sealed partial class ProductsSystem : ITickSystem
         foreach (IntColumn[] col in (IntColumn[][])[_gp, _gateOpened, _forced, _cancelled, _idleC, _built, _quotaBase, _soldY, _lineBind])
             col[d].Next[a] = 0;
         foreach (LongColumn[] col in (LongColumn[][])[_work, _d0, _hidden, _open, _found, _hours, _lineE, _rate, _rateCmd, _cost, _dGate,
-            _lossAcc, _retro, _lost, _inService0, _qMask, _retired, _sold])
+            _lossAcc, _retro, _lost, _inService0, _retired, _sold])
             col[d].Next[a] = 0;
+        for (int b = 0; b < _qb; b++)
+            _qMask[d * _qb + b].Next[a] = 0;
         for (int y = 0; y < _y; y++)
             _cohort[d * _y + y].Next[a] = 0;
     }

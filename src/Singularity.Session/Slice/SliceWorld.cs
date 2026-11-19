@@ -23,12 +23,16 @@ namespace Singularity.Session;
 internal sealed class SliceWorld
 {
     /// <summary>Version of the column schema (ADR-0013 п. 2); raised with every change of the table layout (pinned by a fingerprint test).</summary>
-    public const int SchemaVersion = 11;
+    public const int SchemaVersion = 12;
 
-    // Layout constants of the slice (spec §1.4, §3.3, §2): engineer and skilled pools, bureaus, cohort years 1945…1977.
+    // Layout constants of the slice (spec §1.4, §3.3, §2): engineer and skilled pools, bureaus, cohort years 1945…2030 (#423).
     public const int WorkforceCategories = 2;
     public const int Bureaus = 2;
-    public const int Years = 33;
+    /// <summary>
+    /// Cohort years: 2030 − 1945 + 1. Fixed, not derived from the length of a run, so the column layout (and the schema fingerprint) does not
+    /// depend on the manifest (ADR-0013 p. 2). A run past 2030-12 fails loudly in <c>ProductsSystem</c> (outside the cohort years).
+    /// </summary>
+    public const int Years = 86;
     public const string ProductClass = "jet_fighter";
 
     public SliceWorld(GameData data, SliceRunConfig config)
