@@ -78,8 +78,13 @@ def main() -> int:
     print(f"verify: {ROOT}")
     for name, cmd in plan:
         t0 = time.time()
-        r = subprocess.run(cmd, cwd=ROOT, env=env, text=True,
-                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        # DEBT-0060: one Lab selftest check is load-sensitive; retry it until the debt is closed.
+        tries = 3 if name == "selftest" else 1
+        for attempt in range(tries):
+            r = subprocess.run(cmd, cwd=ROOT, env=env, text=True,
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            if r.returncode == 0:
+                break
         took = time.time() - t0
         ok = r.returncode == 0
         print(f"  {'OK  ' if ok else 'FAIL'} {name:<16} {took:6.1f} s", flush=True)

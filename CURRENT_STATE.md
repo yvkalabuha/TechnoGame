@@ -18,10 +18,11 @@
 <!-- registry:active:start -->
 - TASK-0115 [IN_PROGRESS] End-to-end project handle through Session, AI, UI and command log v2 (DEBT-0052) (developer)
 - TASK-0116 [IN_PROGRESS] CI green on all jobs: Lab tests off Linux, llm_worker pilot contracts (test-engineer)
-- TASK-0117 [IN_PROGRESS] Client UI scale policy: text never below the A1 floor at 1280x720 (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0112 [REVIEW] Credits screen with music and sound attribution (DEBT-0050) (developer)
+- TASK-0113 [REVIEW] Policy line candidate by generation and DesignView SlotGeneration rename (DEBT-0053, DEBT-0055) (developer)
 - TASK-0114 [REVIEW] Northern Algeria regions for the 1945 map (DEBT-0058) (research-scientist)
+- TASK-0117 [APPROVED] Client UI scale policy: text never below the A1 floor at 1280x720 (developer)
 <!-- registry:active:end -->
 
 ## Блокеры

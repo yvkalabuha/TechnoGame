@@ -1,7 +1,7 @@
 ---
 id: TASK-0113
 title: "Policy line candidate by generation and DesignView SlotGeneration rename (DEBT-0053, DEBT-0055)"
-status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: developer         # ответственный агент
@@ -31,3 +31,10 @@ Golden hashes may change only after the first slot reuse (~month 265); explain e
 ## Acceptance criteria
 - [ ] A test with ≥ 2 lines in С after slot reuse: the candidate is the newest project.
 - [ ] `dotnet test`, `lab selftest` pass; TickPathAllocationTests pass; reviewer APPROVE.
+
+## Codex second review (2026-11-19, record review-TASK-0113-797780a8-*-codex.json): changes_requested
+Run after landing (catch-up, DEBT-0063). Findings to check and fix in the horizon/handle schema train:
+1. [high] PolicySystem.Products.cs:420: equal-platform candidates are ordered by prototype entry (`StageOMonth`), which can select the older production line after slot reuse.
+2. [high] SliceObserver.cs:468: Lab still assigns candidate and working roles by slot index and can reject valid F17b close decisions.
+3. [medium] PolicyInputsAdapter.cs:21: training can still target the working line when fleet and closure policy select the reused lower slot.
+4. [medium] ProductAiTests.cs:495: the regression test never reuses a slot or exercises the policy decision.

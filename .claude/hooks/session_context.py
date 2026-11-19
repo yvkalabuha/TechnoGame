@@ -57,6 +57,9 @@ def checks(root) -> list[str]:
     wt = run(root, "git", "worktree", "list")
     if wt and len(wt.splitlines()) > 6:
         out.append(f"- Worktrees: {len(wt.splitlines()) - 1} (prune merged ones: tools/development/worktrees.py)")
+    w = run(root, "python3", "tools/development/watch.py", "--brief", timeout=10.0)
+    if w:
+        out.append(f"- Watch: {w}")
     q = root / "development" / "OPEN_QUESTIONS.md"
     if q.exists():
         n = len(re.findall(r"^\| Q\d+ ", q.read_text(encoding="utf-8"), re.M))
