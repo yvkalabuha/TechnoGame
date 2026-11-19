@@ -45,7 +45,7 @@ public sealed partial class Main : Node3D
     AreaId _area = AreaId.Map;
     bool _fatalLogged;
     // v0.5b: menus. The title screen runs over the live globe; "new game" starts the session with the chosen power and seed.
-    MainMenu _mainMenu; NewGameSheet _newGame; SettingsSheet _settings;
+    MainMenu _mainMenu; NewGameSheet _newGame; SettingsSheet _settings; CreditsSheet _credits;
     Task<GameData> _dataTask;
     bool _titleMode, _pendingNewGame, _startedFromMenu;
     int _menuResume = -1;
@@ -160,11 +160,13 @@ public sealed partial class Main : Node3D
     // ---------- client ----------
     void BuildMenus(CanvasLayer layer)
     {
-        _mainMenu = new MainMenu(); _newGame = new NewGameSheet(); _settings = new SettingsSheet();
-        layer.AddChild(_mainMenu); layer.AddChild(_newGame); layer.AddChild(_settings);
+        _mainMenu = new MainMenu(); _newGame = new NewGameSheet(); _settings = new SettingsSheet(); _credits = new CreditsSheet();
+        layer.AddChild(_mainMenu); layer.AddChild(_newGame); layer.AddChild(_settings); layer.AddChild(_credits);
         _mainMenu.Continue += CloseGameMenu;
         _mainMenu.NewGame += () => { _mainMenu.Close(); _pendingNewGame = true; };
         _mainMenu.OpenSettings += () => { _mainMenu.Close(); _settings.Open(); };
+        _mainMenu.OpenCredits += () => { _mainMenu.Close(); _credits.Open(); };
+        _credits.Closed += () => _mainMenu.Open(!_titleMode);
         _mainMenu.Quit += () => GetTree().Quit();
         _mainMenu.ToMain += () => { _host?.Dispose(); _host = null; s_openTitle = true; GetTree().ReloadCurrentScene(); };
         _newGame.Back += () => { _newGame.Close(); _mainMenu.Open(false); };
@@ -195,7 +197,7 @@ public sealed partial class Main : Node3D
         _mainMenu.Open(true);
     }
 
-    bool MenuOpen => _newGame.Visible || _settings.Visible || (_mainMenu.Visible && _mainMenu.InGame);
+    bool MenuOpen => _newGame.Visible || _settings.Visible || _credits.Visible || (_mainMenu.Visible && _mainMenu.InGame);
 
     // New game: the world starts with the chosen power and seed (the same path as --power ID).
     void StartGame(string actorId, int seed)
@@ -303,7 +305,7 @@ public sealed partial class Main : Node3D
         BuildHelp(layer);
         _loading.Visible = false;
         _tintsReady = true;
-        foreach (Control c in new Control[] { _mainMenu, _newGame, _settings }) layer.MoveChild(c, -1);   // menus stay above the panels
+        foreach (Control c in new Control[] { _mainMenu, _newGame, _settings, _credits }) layer.MoveChild(c, -1);   // menus stay above the panels
         ShowPower(_player, _startedFromMenu);   // the player's own power has no right panel: the map shows, the areas open from the rail
     }
 
@@ -764,7 +766,9 @@ public sealed partial class Main : Node3D
         _coldT += dt; _yaw += (float)(4 * dt);
         if (_loading != null) _loading.Visible = false;
         if (_coldStep == 0 && _coldT >= 1.0) { SaveShot("main_menu.png"); Loc.SetLang("en"); _coldStep = 1; _coldT = 0; }
-        else if (_coldStep == 1 && _coldT >= 0.4) { SaveShot("main_menu_en.png"); Loc.SetLang("ru"); _mainMenu.Close(); _coldShot = false; if (_loading != null) _loading.Visible = true; }
+        else if (_coldStep == 1 && _coldT >= 0.4) { SaveShot("main_menu_en.png"); _mainMenu.Close(); _credits.Open(); _coldStep = 2; _coldT = 0; }
+        else if (_coldStep == 2 && _coldT >= 0.5) { SaveShot("credits_en.png"); Loc.SetLang("ru"); _coldStep = 3; _coldT = 0; }
+        else if (_coldStep == 3 && _coldT >= 0.4) { SaveShot("credits_ru.png"); _credits.Visible = false; _coldShot = false; if (_loading != null) _loading.Visible = true; }
     }
 
     // Extra screens at other window sizes and in EN (spec §10): a queue of (wait before, action).

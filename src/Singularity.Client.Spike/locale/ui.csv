@@ -236,6 +236,16 @@ menu.new,New game,Новая игра
 menu.load,Load,Загрузить
 menu.save,Save,Сохранить
 menu.settings,Settings,Настройки
+menu.credits,Credits,Авторы
+credits.title,Credits,Авторы
+credits.music,Music,Музыка
+credits.sound,Sounds,Звуки
+credits.intro,Audio used in the game. Entries marked CC BY 4.0 are shown under the terms of that licence.,Звук в игре. Записи с лицензией CC BY 4.0 показаны на условиях этой лицензии.
+credits.by,by,автор
+credits.licence,Licence,Лицензия
+credits.changes,Changes,Изменения
+credits.soon,Not in the build yet,Ещё не в сборке
+credits.back,Back,Назад
 menu.tomain,To the main menu,В главное меню
 menu.quit,Quit,Выход
 menu.reason.persist,Needs the save code (ADR-0013): not written yet,Нужен код сохранений (ADR-0013): его ещё нет
