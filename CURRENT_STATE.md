@@ -16,6 +16,7 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
+- TASK-0116 [IN_PROGRESS] CI green on all jobs: Lab tests off Linux, llm_worker pilot contracts (test-engineer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0112 [REVIEW] Credits screen with music and sound attribution (DEBT-0050) (developer)
 - TASK-0113 [REVIEW] Policy line candidate by generation and DesignView SlotGeneration rename (DEBT-0053, DEBT-0055) (developer)
