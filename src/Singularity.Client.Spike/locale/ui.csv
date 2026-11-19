@@ -148,7 +148,6 @@ state.unknown,unknown,неизвестно
 state.licence,by licence,по лицензии
 state.frontier,frontier,фронтир
 state.unavail,unavailable,недоступно
-legend.a3,rings from the centre: 1 knowledge · 2 principle · 3 engineering · 4 component · 5 process · 6 product; wedge: discipline,кольца изнутри: 1 знание · 2 принцип · 3 инженерия · 4 компонент · 5 процесс · 6 изделие; клин — дисциплина
 legend.b,■ known   □ frontier   · unavailable   (G0–G4: generations)   ┃ blue: the longest chain,■ известно   □ фронтир   · недоступно   (G0–G4 — поколения)   ┃ синий — самая длинная цепочка
 stmt.title,GOAL STATEMENT,ВЕДОМОСТЬ ЦЕЛИ
 stmt.goal,goal: {0} (product {1}),цель: {0} (изделие {1})
@@ -314,13 +313,13 @@ set.sec,s,с
 set.anim,Animations,Анимации
 set.lang.note,"The language applies at once, no restart needed.","Язык применяется сразу, без перезапуска."
 legend.btn,Legend,Легенда
-legend.disc,Disciplines,Дисциплины
-legend.glyphs,Node types,Типы узлов
+legend.disc,Disciplines (wedge),Дисциплины (клин)
+legend.glyphs,Node types · ring,Типы узлов · кольцо
 legend.lines,Lines,Линии
-legend.route,Route to the goal,Маршрут к цели
+legend.route,Route to goal,Маршрут к цели
 legend.root,Root of the “why not”,Корень «почему не»
 legend.frontier,Frontier (dashed),Фронтир (пунктир)
-legend.selected,Selected node (double ring),Выбранный узел (двойное кольцо)
+legend.selected,Selected node,Выбранный узел
 legend.close,Esc or L closes,Esc или L закрывает
 area.map,Map,Карта
 area.science,Science,Наука
@@ -343,7 +342,7 @@ area.state.part,partly,частично
 area.state.locked,locked,заперто
 area.locked,Area is locked,Область заперта
 area.locked.when,Appears in {0}.,Появится в {0}.
-area.locked.cap,from {0},с {0}
+area.locked.cap,Opens later,Откроется позже
 area.locked.note,The term is provisional. There are no figures or controls here until the mechanic exists.,"Срок ориентировочный. Чисел и управления здесь нет, пока нет механики."
 area.production.later,Supply priority and the choice of variants: in M1. Here are the design lines of the power.,Приоритет снабжения и выбор вариантов: в M1. Здесь линии изделий державы.
 area.finance.later,Taxes by region: M1; trade and embargo: M1–M2.,Налоги по регионам: M1; торговля и эмбарго: M1–M2.
@@ -363,7 +362,7 @@ flask.alloy.deficit,Supply covers {0}% of the demand: a shortage (hatched),Сн�
 flask.alloy.disrupted,Supply is {0}% of normal while the disruption lasts (hatched),Снабжение — {0}% от обычного, пока длится сбой (штриховка)
 flask.alloy.none,No alloy is being smelted (hatched),Сплав не выплавляется (штриховка)
 caliper.tip,Left and right arrows: 5 points; or drag the jaw,Стрелки влево и вправо: 5 пунктов; или тяните губку
-tip.area.locked,{0} · {1} · appears in {2},{0} · {1} · появится в {2}
+tip.area.locked,{0} · {1} · opens later (development stage {2}),{0} · {1} · откроется позже (этап разработки {2})
 tip.rail,Rail width: narrow or wide (\),Ширина рейки: узкая или широкая (\)
 tip.journal,Journal of signals (`),Журнал сигналов (`)
 journal.title,Journal,Журнал

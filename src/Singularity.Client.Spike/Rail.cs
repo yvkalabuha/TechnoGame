@@ -7,7 +7,7 @@ namespace Singularity.Client.Spike;
 /// Selected state is told by form as well as colour (frame, 3 du domain edge, ▸ on the right edge). A locked area is dashed, hatched, with a lock and no badge.</summary>
 public sealed partial class Rail : PanelContainer
 {
-    public const int NarrowWidth = 60, WideWidth = 196;
+    public const int NarrowWidth = RailMetrics.NarrowWidth, WideWidth = RailMetrics.WideWidth;
 
     /// <summary>Draws the glyphs of a button (icon, letter, name, badge) on a child node, so that the paper texture of the button never touches them.</summary>
     sealed partial class Glyphs : Control
@@ -37,13 +37,33 @@ public sealed partial class Rail : PanelContainer
 
         public bool Locked => Def.State == AreaState.Locked;
 
-        // Ink of the button for T6 (the badge is an untextured alert plate on its own layer and is left out).
+        string LetterText => Def.Letter == '\0' ? "Esc" : Def.Letter.ToString();
+        bool Badged => Count > 0 && !Locked;
+        ButtonRects Rects => RailMetrics.Of(Wide, Locked, Badged, LetterText.Length);
+
+        // Wide button: the text block (name lines, then the lock caption) and where it starts.
+        (Vector2 Name, float Cap, float Top) NameBlock(ButtonRects r)
+        {
+            var font = Ui.FontOf(FontKind.Text);
+            var name = font.GetMultilineStringSize(Loc.T("area." + Def.Slug), HorizontalAlignment.Left, (float)r.NameW, 14);
+            float cap = r.Caption ? font.GetHeight(RailMetrics.CaptionFontDu) : 0;   // C4: the reason of the lock is on the button, in words
+            return (name, cap, (float)RailMetrics.CentreTop(r.H, name.Y + cap));
+        }
+
+        // Ink of the button for T6, the same boxes that PaintGlyphs draws (the badge too: it is an untextured plate, but it must keep its distance as well).
         public System.Collections.Generic.IEnumerable<Rect2> GlyphRects()
         {
-            var t = GetGlobalTransform(); var s = Size;
-            Rect2 G(Rect2 r) => new(t * r.Position, r.Size * t.Scale);
-            if (!Wide) { yield return G(new Rect2((s.X - 24) / 2f - 2, 4, 24, 24)); yield return G(new Rect2(s.X / 2f - 12, s.Y - 19, 24, 11)); }
-            else { yield return G(new Rect2(10, (s.Y - 24) / 2f, 24, 24)); yield return G(new Rect2(44, (s.Y - 17) / 2f, s.X - 88, 17)); }
+            var t = GetGlobalTransform(); var r = Rects;
+            Rect2 G(Box b) => new(t * new Vector2((float)b.X, (float)b.Y), new Vector2((float)b.W, (float)b.H) * t.Scale);
+            yield return G(r.Icon); yield return G(r.Letter);
+            if (r.Badge is { } bd) yield return G(bd);
+            if (r.LockInk is { } lk) yield return G(lk);
+            if (Wide)
+            {
+                var (name, cap, top) = NameBlock(r);
+                yield return G(new Box(r.NameX, top, Math.Min(name.X, r.NameW), name.Y));
+                if (r.Caption) yield return G(new Box(r.NameX, top + name.Y, r.NameW, cap));
+            }
         }
 
         public void Restyle()
@@ -62,30 +82,19 @@ public sealed partial class Rail : PanelContainer
         {
             var s = Size; bool locked = Locked;
             var (line, _, _) = UiArt.Inks(Def);
-            var icon = UiArt.Icon(Def.Slug);
-            float iconA = locked ? 0.45f : 1f;
-            Rect2 iconRect;
-            if (!Wide)
+            var r = Rects;
+            float iconA = locked ? 0.45f : 1f;   // the icon stays (muted); the lock is the common sign of the state
+            g.DrawTextureRect(UiArt.Icon(Def.Slug), new Rect2((float)r.Icon.X, (float)r.Icon.Y, (float)r.Icon.W, (float)r.Icon.H), false, new Color(1, 1, 1, iconA));
+            // A1: a hotkey letter is a value, 14 du (cap height 10 px)
+            g.DrawString(Fonts.Mono, new Vector2((float)r.Letter.X, (float)r.LetterBase), LetterText, HorizontalAlignment.Left, -1, RailMetrics.LetterFontDu, Wide && !locked ? Ui.Ink3 : Ui.Ink2);
+            if (Wide)
             {
-                iconRect = new Rect2((s.X - 24) / 2f - 2, 4, 24, 24);
-                string l = Def.Letter == '\0' ? "Esc" : Def.Letter.ToString();
-                g.DrawString(Fonts.Mono, new Vector2(0, s.Y - (locked ? 5 : 7)), l, HorizontalAlignment.Center, s.X - 4, 14, Ui.Ink2);   // A1: a hotkey letter is a value, 14 du (cap height 10 px)
-            }
-            else
-            {
-                iconRect = new Rect2(10, (s.Y - 24) / 2f, 24, 24);
-                string l = Def.Letter == '\0' ? "Esc" : Def.Letter.ToString();
-                if (!locked) g.DrawString(Fonts.Mono, new Vector2(s.X - 40, s.Y / 2f + 5), l, HorizontalAlignment.Right, 30, 14, Ui.Ink3);   // a locked area shows the lock here
-                float w = s.X - 44 - (locked ? 44 : 44);
                 var font = Ui.FontOf(FontKind.Text);
-                string name = Loc.T("area." + Def.Slug);
-                var lines = font.GetMultilineStringSize(name, HorizontalAlignment.Left, w, 14);
-                float cap = locked ? font.GetHeight(RailMetrics.CaptionFontDu) : 0;   // C4: the reason of the lock is on the button, in words
-                float y0 = (s.Y - lines.Y - cap) / 2f + font.GetAscent(14);
-                g.DrawMultilineString(font, new Vector2(44, y0), name, HorizontalAlignment.Left, w, 14, -1, locked ? Ui.Ink3 : Ui.Ink);
-                if (locked) g.DrawString(font, new Vector2(44, y0 + lines.Y - font.GetAscent(14) + font.GetAscent(RailMetrics.CaptionFontDu)), Loc.T("area.locked.cap", Def.Milestone), HorizontalAlignment.Left, w, RailMetrics.CaptionFontDu, Ui.Ink2);
+                var (name, _, top) = NameBlock(r);
+                float y0 = top + font.GetAscent(14);
+                g.DrawMultilineString(font, new Vector2((float)r.NameX, y0), Loc.T("area." + Def.Slug), HorizontalAlignment.Left, (float)r.NameW, 14, -1, locked ? Ui.Ink3 : Ui.Ink);
+                if (locked) g.DrawString(font, new Vector2((float)r.NameX, top + name.Y + font.GetAscent(RailMetrics.CaptionFontDu)), Loc.T("area.locked.cap"), HorizontalAlignment.Left, (float)r.NameW, RailMetrics.CaptionFontDu, Ui.Ink2);
             }
-            if (!(locked && !Wide)) g.DrawTextureRect(icon, iconRect, false, new Color(1, 1, 1, iconA));   // narrow: the lock takes the icon place, the letter stays
             if (locked)
             {
                 Hatching.Draw(g, new Rect2(1, 1, s.X - 2, s.Y - 2), new Color(Ui.Ink, 0.07f), 6f);
@@ -93,8 +102,8 @@ public sealed partial class Rail : PanelContainer
                 g.DrawDashedLine(new Vector2(0, 0), new Vector2(s.X, 0), c, 1f, 3f); g.DrawDashedLine(new Vector2(s.X, 0), s, c, 1f, 3f);
                 g.DrawDashedLine(s, new Vector2(0, s.Y), c, 1f, 3f); g.DrawDashedLine(new Vector2(0, s.Y), Vector2.Zero, c, 1f, 3f);
                 // A2: the SVG body is 14/24 of the drawn box, so a 28 du box gives a visible lock of 16 px and more.
-                float ld = RailMetrics.LockDrawDu;
-                g.DrawTextureRect(UiArt.Icon("lock"), new Rect2(Wide ? s.X - 12 - ld : (s.X - ld) / 2f - 2, Wide ? (s.Y - ld) / 2f : -2, ld, ld), false);
+                var lb = r.LockDraw;
+                g.DrawTextureRect(UiArt.Icon("lock"), new Rect2((float)lb.X, (float)lb.Y, (float)lb.W, (float)lb.H), false);
             }
             if (Sel)
             {
@@ -103,21 +112,21 @@ public sealed partial class Rail : PanelContainer
                 if (Def.Ink == AreaData.Seventh) Hatching.Draw(g, new Rect2(0, 2, 4, s.Y - 4), Ui.Sheet, 4f);
                 g.DrawColoredPolygon(new[] { new Vector2(s.X + 1, s.Y / 2 - 5), new Vector2(s.X - 5, s.Y / 2), new Vector2(s.X + 1, s.Y / 2 + 5) }, Ui.Border);
             }
-            if (Count > 0 && !locked) DrawBadge(g, s);
+            if (r.Badge is { } bd) DrawBadge(g, bd);
         }
 
-        // A real alert: halo, ink outline, sign by the worst severity, the count. Never textured, so it sits on the glyph layer.
-        void DrawBadge(Glyphs g, Vector2 s)
+        // A real alert: ink outline, sign by the worst severity, the count. Never textured, so it sits on the glyph layer. No halo: it would run over the icon.
+        void DrawBadge(Glyphs g, Box bd)
         {
-            var r = new Rect2(s.X - 32, 0, RailMetrics.BadgeW, RailMetrics.BadgeH);
+            var r = new Rect2((float)bd.X, (float)bd.Y, (float)bd.W, (float)bd.H);
             bool alarm = Sev >= 2;
-            g.DrawRect(r.Grow(2), Ui.Sheet);
             g.DrawRect(r, alarm ? Ui.Alarm : Ui.Warn);
             g.DrawRect(r, Ui.Ink, false, 1f);
             var ink = alarm ? Colors.White : Ui.Ink;
-            if (alarm) g.DrawRect(new Rect2(r.Position.X + 4, r.Position.Y + 6, 8, 8), ink);
-            else g.DrawColoredPolygon(new[] { new Vector2(r.Position.X + 8, r.Position.Y + 4), new Vector2(r.Position.X + 13, r.Position.Y + 15), new Vector2(r.Position.X + 3, r.Position.Y + 15) }, ink);
-            g.DrawString(Fonts.Mono, new Vector2(r.Position.X + 15, r.Position.Y + 15), Count >= 10 ? "9+" : Count.ToString(), HorizontalAlignment.Left, 18, RailMetrics.BadgeFontDu, ink);   // A1: a count is a value, >= 13 du and a digit >= 9 px
+            float x = r.Position.X, y = r.Position.Y;
+            if (alarm) g.DrawRect(new Rect2(x + RailMetrics.BadgeSignX, y + RailMetrics.BadgeSignY, RailMetrics.BadgeSignSize, RailMetrics.BadgeSignSize), ink);
+            else g.DrawColoredPolygon(new[] { new Vector2(x + 8, y + 4), new Vector2(x + 13, y + 15), new Vector2(x + 3, y + 15) }, ink);
+            g.DrawString(Fonts.Mono, new Vector2(x + RailMetrics.BadgeTextX, y + RailMetrics.BadgeTextBase), Count >= 10 ? "9+" : Count.ToString(), HorizontalAlignment.Left, RailMetrics.BadgeTextW, RailMetrics.BadgeFontDu, ink);   // A1: a count is a value, >= 13 du and a digit >= 9 px
         }
     }
 
@@ -135,7 +144,7 @@ public sealed partial class Rail : PanelContainer
 
     public Rail()
     {
-        AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = Ui.Paper, BorderColor = Ui.Border, BorderWidthRight = 1, ContentMarginLeft = 4, ContentMarginRight = 4, ContentMarginTop = 8, ContentMarginBottom = 8 });
+        AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = Ui.Paper, BorderColor = Ui.Border, BorderWidthRight = 1, ContentMarginLeft = RailMetrics.SideMargin(false), ContentMarginRight = RailMetrics.SideMargin(false), ContentMarginTop = 8, ContentMarginBottom = 8 });
         PaperSurface.Apply(this, SurfaceKind.Paper, "rail");
         _col.AddThemeConstantOverride("separation", 4);
         AddChild(_col);
@@ -175,6 +184,7 @@ public sealed partial class Rail : PanelContainer
         Wide = wide;
         foreach (var b in _buttons) { b.Wide = wide; b.Restyle(); }
         _toggle.Text = wide ? "«" : "»";
+        if (GetThemeStylebox("panel") is StyleBoxFlat sb) { sb.ContentMarginLeft = sb.ContentMarginRight = RailMetrics.SideMargin(wide); }
         OffsetRight = OffsetLeft + RailWidth;
         Layout();
     }
@@ -206,12 +216,49 @@ public sealed partial class Rail : PanelContainer
 
     void Refresh() { foreach (var b in _buttons) b.Restyle(); }
 
-    // Button height follows the free height (52 du, down to 40), so that eight areas fit without a scroll bar also at 150% on 1280x720.
-    const float FixedHeight = 93f;
+    // Button sizes are fixed by the spec (58 du narrow; 44, locked 52 wide): eight areas fit without a scroll bar down to 1280x720 du (checked in the shot run).
     void Layout()
     {
-        float h = Math.Clamp((Size.Y - FixedHeight) / 8f, 40f, 52f);
-        foreach (var b in _buttons) b.CustomMinimumSize = new Vector2(Wide ? WideWidth - 12 : 52, Wide ? (b.Locked ? h : Math.Min(h, 44f)) : h);   // a locked wide button also holds the reason line
+        foreach (var b in _buttons) b.CustomMinimumSize = new Vector2(RailMetrics.ButtonW(Wide), RailMetrics.ButtonH(Wide, b.Locked));
+    }
+
+    /// <summary>Widths of the longest word of every area name at 14 du against the name column, for the log (the spec: the name must not be cut).</summary>
+    public string NameFitLog()
+    {
+        var font = Ui.FontOf(FontKind.Text); string log = ""; float worst = 0, worstLocked = 0;
+        foreach (var d in AreaData.All)
+        {
+            string name = Loc.T("area." + d.Slug);
+            foreach (var word in name.Split(' ')) worst = Math.Max(worst, font.GetStringSize(word, HorizontalAlignment.Left, -1, 14).X);
+            if (d.State == AreaState.Locked) worstLocked = Math.Max(worstLocked, font.GetStringSize(name, HorizontalAlignment.Left, -1, 14).X);
+        }
+        float cap = font.GetStringSize(Loc.T("area.locked.cap"), HorizontalAlignment.Left, -1, RailMetrics.CaptionFontDu).X;
+        log += $"rail names ({Loc.Lang}): longest word {worst:F1} du of {RailMetrics.WideNameW} {(worst <= RailMetrics.WideNameW ? "PASS" : "FAIL")}; locked name on one line {worstLocked:F1} of {RailMetrics.WideLockedNameW} {(worstLocked <= RailMetrics.WideLockedNameW ? "PASS" : "FAIL")}; caption {cap:F1} of {RailMetrics.WideLockedNameW} {(cap <= RailMetrics.WideLockedNameW ? "PASS" : "FAIL")}\n";
+        // Text block height of every wide button against the 5 du margin the spec asks for.
+        foreach (var d in AreaData.All)
+        {
+            bool locked = d.State == AreaState.Locked;
+            float w = locked ? RailMetrics.WideLockedNameW : RailMetrics.WideNameW;
+            float h = font.GetMultilineStringSize(Loc.T("area." + d.Slug), HorizontalAlignment.Left, w, 14).Y + (locked ? font.GetHeight(RailMetrics.CaptionFontDu) : 0);
+            float margin = (RailMetrics.ButtonH(true, locked) - h) / 2f;
+            log += $"  wide {d.Slug}: text block {h:F1} du, margin {margin:F1} {(margin >= 5 - 1e-3 ? "PASS" : "FAIL")}\n";
+        }
+        return log + $"  line height at 14 du {font.GetHeight(14):F1}, caption at 12 du {font.GetHeight(RailMetrics.CaptionFontDu):F1}\n";
+    }
+
+    /// <summary>Check for the log: the badge of every button lies inside it and touches neither the icon nor the letter.</summary>
+    public string BadgeFitLog()
+    {
+        string log = ""; int bad = 0, n = 0;
+        foreach (var wide in new[] { false, true })
+            foreach (var chars in new[] { 1, 3 })
+            {
+                if (!wide && chars == 3) continue;   // Map never carries a badge, and narrow "Esc" would not fit beside one
+                var r = RailMetrics.Of(wide, false, true, chars); n++;
+                bool ok = r.Badge is { } b && !b.Intersects(r.Icon) && !b.Intersects(r.Letter) && b.EdgeGap(r.W, r.H) >= 5 - 1e-9;
+                if (!ok) { bad++; log += $"  badge layout fails: wide {wide} letter chars {chars}\n"; }
+            }
+        return $"rail badge geometry: no overlap with icon or letter, 5 du from the edge: {(bad == 0 ? "PASS" : "FAIL")} ({n} layouts)\n" + log;
     }
 
     public override void _Notification(int what)

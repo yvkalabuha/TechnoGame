@@ -279,7 +279,6 @@ public sealed partial class ActorPanel : PanelContainer
     public int ShotFlaskCount { get { int c = 0; foreach (var x in _sciCell) if (x.Visible) c++; return c; } }
     public float ShotCaptionWidth(string lang) => FlaskControl.WidestCaption(lang);
 
-    /// <summary>Screenshot run: the caliper takes the keyboard focus (focus frame and pencil).</summary>
     /// <summary>Screenshot run: canvas centres of the blank part of a share row and of the caliper, for the real mouse events the shot sends.</summary>
     public Vector2 ShotRowPoint(int k) => _gap[k].GetGlobalRect().GetCenter();
     public Vector2 ShotCaliperPoint(double percent) { var r = _cal.GetGlobalRect(); return new Vector2(r.Position.X + _cal.XOf(percent), r.GetCenter().Y); }

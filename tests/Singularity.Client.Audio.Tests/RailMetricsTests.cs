@@ -38,7 +38,7 @@ public class RailMetricsTests
     public void BadgeBox_HoldsSignAndTwoGlyphs()
     {
         // mono advance is 0.6 em; the sign takes 15 du from the left edge (Rail.DrawBadge)
-        Assert.True(15 + 2 * 0.6 * RailMetrics.BadgeFontDu + 2 <= RailMetrics.BadgeW);
+        Assert.True(RailMetrics.BadgeTextX + 2 * RailMetrics.MonoAdvanceEm * RailMetrics.BadgeFontDu + 2 <= RailMetrics.BadgeW);   // "9+" and 2 du before the right edge of the plate
     }
 
     [Fact]
@@ -54,5 +54,67 @@ public class RailMetricsTests
         var svg = File.ReadAllText(Path.Combine(Repo(), "docs/ui/assets/area-icons/lock-24.svg"));
         Assert.Contains("M5 11h14v10H5Z", svg);   // body x 5..19 = 14 of 24 units
         Assert.Equal(14.0, RailMetrics.LockBodyUnits);
+    }
+
+    public static readonly object[][] Cases =
+    {
+        new object[] { false, false, true, 1 }, new object[] { false, false, false, 3 }, new object[] { false, true, false, 1 },
+        new object[] { true, false, true, 1 }, new object[] { true, false, true, 3 }, new object[] { true, true, false, 1 }, new object[] { true, true, false, 3 },
+    };
+
+    [Theory, MemberData(nameof(Cases))]
+    public void Button_EveryMarkIsAtLeast5DuFromTheEdge(bool wide, bool locked, bool badge, int chars)
+    {
+        var r = RailMetrics.Of(wide, locked, badge, chars);
+        Assert.Equal(RailMetrics.ButtonW(wide), r.W); Assert.Equal(RailMetrics.ButtonH(wide, locked), r.H);
+        var marks = new System.Collections.Generic.List<Box> { r.Icon, r.Letter };
+        if (r.Badge is { } b) marks.Add(b);
+        if (r.LockInk is { } l) marks.Add(l);
+        foreach (var m in marks) Assert.True(m.EdgeGap(r.W, r.H) >= 5 - 1e-9, $"{m} gap {m.EdgeGap(r.W, r.H)}");
+    }
+
+    [Theory, MemberData(nameof(Cases))]
+    public void Button_MarksDoNotOverlap(bool wide, bool locked, bool badge, int chars)
+    {
+        var r = RailMetrics.Of(wide, locked, badge, chars);
+        if (r.Badge is { } b) { Assert.False(b.Intersects(r.Icon)); Assert.False(b.Intersects(r.Letter)); }
+        if (r.LockInk is { } l) { Assert.False(l.Intersects(r.Icon)); Assert.False(l.Intersects(r.Letter)); Assert.True(l.Y - r.Icon.B >= 0 || wide); }
+        Assert.False(r.Letter.Intersects(r.Icon));
+    }
+
+    [Fact]
+    public void LockedButton_HasLockOf28DuAndTheIconStays()
+    {
+        foreach (bool wide in new[] { false, true })
+        {
+            var r = RailMetrics.Of(wide, true, false, 1);
+            Assert.Equal(28, r.LockDraw.W); Assert.Equal(24, r.Icon.W);   // the area icon is kept, the lock is an extra sign
+            Assert.True(r.LockInk!.Value.W >= 16);
+        }
+    }
+
+    [Fact]
+    public void WideButton_PlateAndLetterShareNoColumn_NameEndsBeforeThePlate()
+    {
+        var r = RailMetrics.Of(true, false, true, 3);   // "Esc" is the widest letter
+        Assert.True(r.Badge!.Value.R <= r.Letter.X);
+        Assert.True(r.NameX + r.NameW + 5 <= r.Badge.Value.X);
+    }
+
+    [Fact]
+    public void WideLockedButton_HoldsNameAndCaptionWithoutPlate()
+    {
+        var r = RailMetrics.Of(true, true, false, 1);
+        Assert.True(r.Caption); Assert.Null(r.Badge);
+        Assert.True(r.NameX + r.NameW <= r.LockInk!.Value.X - 5);   // name and caption stop before the lock
+        Assert.True(RailMetrics.CentreTop(r.H, 17 + 15) >= 5);      // name line (17) + caption (<= 15) inside 52 du with 5 du above
+    }
+
+    [Fact]
+    public void RailWidth_HoldsTheButtonCentred()
+    {
+        Assert.Equal(68, RailMetrics.NarrowWidth); Assert.Equal(224 + RailMetrics.WideGrow, RailMetrics.WideWidth);
+        Assert.Equal(34, RailMetrics.WideGrow);   // 134 du longest locked name (EN) + 1 du - 101 du of the spec
+        Assert.Equal(4, RailMetrics.SideMargin(false)); Assert.Equal(6, RailMetrics.SideMargin(true));
     }
 }

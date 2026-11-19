@@ -742,8 +742,14 @@ public sealed partial class Main : Node3D
         var count = new int[AreaData.All.Length]; var sev = new int[AreaData.All.Length];
         foreach (var key in AlertKeys)
             if (_signal.Active(key) && AreaData.OfSignal(key) is { } a) { count[(int)a.Area]++; sev[(int)a.Area] = Math.Max(sev[(int)a.Area], a.Severity); }
+        if (_pinBadges != null)   // shot run: fixed badges instead of the live signals
+        {
+            Array.Clear(count); Array.Clear(sev);
+            foreach (var (id, n, v) in _pinBadges) { count[(int)id] = n; sev[(int)id] = v; }
+        }
         foreach (var d in AreaData.All) if (d.Id != AreaId.Map) _rail.SetBadge(d.Id, count[(int)d.Id], sev[(int)d.Id]);
     }
+    (AreaId Id, int Count, int Sev)[] _pinBadges;
 
     void AnimateObjects()
     {
@@ -805,6 +811,7 @@ public sealed partial class Main : Node3D
     // The window is a real 1920x1080 render (SaveShot asserts it); other window sizes are not evidence and are not shot.
     readonly List<(double Wait, Action Act)> _sizeQ = new(); int _sizeI;
 
+    float _discClosed;
     void BuildSizeShots()
     {
         _sizeI = 0; _sizeQ.Clear();
@@ -828,10 +835,23 @@ public sealed partial class Main : Node3D
             Q(0.8, () => { SaveShot($"area_finance{sfx}.png"); _shotLog += $"rail {sfx}: fits without scroll {_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f} (min {_rail.GetCombinedMinimumSize().Y:F0} of {_rail.Size.Y:F0})\n"; OpenArea(AreaId.Forces); });
             Q(0.6, () => { SaveShot($"area_forces{sfx}.png"); OpenArea(AreaId.Science); });
             Q(0.8, () => { SaveShot($"area_science{sfx}.png"); OpenArea(AreaId.Production); });
-            Q(0.8, () => { SaveShot($"area_production{sfx}.png"); CloseArea(); OpenTree(0); });
-            Q(1.0, () => _tree.ToggleLegend(true));
-            // A9 is checked on the state that is saved: the legend is open.
-            Q(0.5, () => { string ov = _tree.ShotOverlap(); if (ov != null) InstFail($"tree overlap {sfx}: {ov}"); else _shotLog += $"tree overlap {sfx}: none\n"; SaveShot($"tree_legend{sfx}.png"); _tree.ToggleLegend(false); _tree.ResetView(); _tree.Visible = false; _journal.Visible = true; });
+            Q(0.8, () => { SaveShot($"area_production{sfx}.png"); CloseArea(); if (Settings.Current.RailWide) ToggleRail(); _pinBadges = Array.Empty<(AreaId, int, int)>(); });
+            // The rail in its states: all normal, then an alarm on Finance and a warning "9+" on Production, narrow and wide (spec task-0117-rail-and-legend §4).
+            Q(0.5, () => { SaveShot($"rail_narrow_normal{sfx}.png"); RunT6($"rail narrow normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });
+            Q(0.5, () => { SaveShot($"rail_narrow_badges{sfx}.png"); RunT6($"rail narrow badges{sfx}", true); _shotLog += _rail.BadgeFitLog(); ToggleRail(); });
+            Q(0.6, () => { SaveShot($"rail_wide_badges{sfx}.png"); RunT6($"rail wide badges{sfx}", true); _shotLog += _rail.NameFitLog(); _shotLog += $"rail wide {sfx}: fits without scroll {_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f} (min {_rail.GetCombinedMinimumSize().Y:F0} of {_rail.Size.Y:F0}, rail {_rail.Size.Y:F0} du)\n"; ToggleRail(); _pinBadges = null; OpenTree(0); });
+            Q(1.0, () => { SaveShot($"tree_nolegend{sfx}.png"); _discClosed = _tree.DiscDiameter; _tree.ToggleLegend(true); });
+            // A9 is checked on the state that is saved: the legend is open. The disc keeps its size and stays at 650 physical px or more (spec §3).
+            Q(0.5, () =>
+            {
+                string ov = _tree.ShotOverlap(); string fit = _tree.ShotLegendFit();
+                if (ov != null) InstFail($"tree overlap {sfx}: {ov}"); else _shotLog += $"tree overlap {sfx}: none\n";
+                float d = _tree.DiscDiameter, px = d * scale / 100f;
+                bool ok = Math.Abs(d - _discClosed) < 0.01f && px >= 650f && fit == null;
+                _shotLog += $"tree legend {sfx}: disc {d:F1} du = {px:F0} px (closed {_discClosed:F1} du), legend sheet {_tree.LegendSheet}, {(fit ?? "clear of stamp and disc area")}: {(ok ? "PASS" : "FAIL")}\n";
+                if (!ok) InstFail($"tree legend {sfx}: disc {d:F1} du (closed {_discClosed:F1}), {px:F0} px, {fit}");
+                SaveShot($"tree_legend{sfx}.png"); _tree.ToggleLegend(false); _tree.ResetView(); _tree.Visible = false; _journal.Visible = true;
+            });
             Q(0.6, () => { SaveShot($"journal{sfx}.png"); _journal.Visible = false; });
         }
         _sizeQ.Add((0.5, () => { Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); Loc.SetLang("ru"); }));
@@ -1341,12 +1361,13 @@ public sealed partial class Main : Node3D
     }
 
     // T6 on the live layout: the distance from the edge of every textured surface to the nearest text, icon or plate inside it.
-    void RunT6()
+    void RunT6(string tag = null, bool railOnly = false)
     {
         var items = new List<(string, double, double)>();
         foreach (var (node, kind) in PaperSurface.Surfaces())
         {
             if (!GodotObject.IsInstanceValid(node) || !node.IsVisibleInTree()) continue;
+            if (railOnly && !_rail.IsAncestorOf(node)) continue;
             var r = node.GetGlobalRect(); double min = double.MaxValue; string who = "";
             void Visit(Node n)
             {
@@ -1374,7 +1395,7 @@ public sealed partial class Main : Node3D
             Visit(node);
             if (min < double.MaxValue) items.Add(($"{node.GetParent()?.Name}/{node.Name} ({kind}) nearest {who}", min / UiScaleOf(node), TextureValidator.Limit(kind)));
         }
-        _shotLog += TextureValidator.Format("T6 edge band: no text, icon or plate within the band", TextureValidator.T6(items));
+        _shotLog += TextureValidator.Format("T6 edge band" + (tag != null ? " (" + tag + ")" : "") + ": no text, icon or plate within the band", TextureValidator.T6(items));
     }
 
     // Distance in du: global rects are in pixels; the UI scale of the window multiplies them.

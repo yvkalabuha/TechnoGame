@@ -260,12 +260,12 @@ public sealed partial class TechTree : Control
 
     // ---------------- drawing ----------------
     Rect2 Area => new(0, 44, Size.X * 0.6f - 8, Size.Y - 52);
-    // With the legend open the planisphere gives up the left strip to it, so that the sheet never covers the disc.
-    // The same at 150 % on Full HD (1280x720 du): the disc is smaller while the legend is open (A9: the sheet never covers chart content).
-    Rect2 DiscArea => _legendOpen ? new Rect2(Area.Position.X + 360, Area.Position.Y, Area.Size.X - 360, Area.Size.Y) : Area;
-    Vector2 BaseCentre => DiscArea.Position + new Vector2(DiscArea.Size.X * 0.5f, (DiscArea.Size.Y - 76) * 0.5f + 4);
+    // The legend never takes room from the disc (spec task-0117-rail-and-legend §3): it docks in the right column above the sheet stamp.
+    Vector2 BaseCentre => Area.Position + new Vector2(Area.Size.X * 0.5f, (Area.Size.Y - 76) * 0.5f + 4);
     Vector2 Centre => BaseCentre + _pan;
-    float BaseUnit => (Math.Min(DiscArea.Size.X, DiscArea.Size.Y - 76) * 0.5f - 44f) / 6.5f;
+    public float BaseUnit => (Math.Min(Area.Size.X, Area.Size.Y - 76) * 0.5f - 44f) / 6.5f;
+    /// <summary>Diameter of the disc in du (13 base units).</summary>
+    public float DiscDiameter => 13f * BaseUnit;
     float Unit => BaseUnit * _zoom;
 
     void ClampPan()
@@ -284,7 +284,7 @@ public sealed partial class TechTree : Control
         _cv.DrawStyleBox(Ui.Box(Ui.Paper, Ui.Ink, 2, 0), new Rect2(Vector2.Zero, Size));
         DrawStamp();
         if (_state == null) return;
-        if (_mode == 1) DrawStatement();
+        if (_mode == 1) DrawStatement(); else DrawLegend();
     }
 
     // The planisphere is painted on the clipped view; coordinates stay in the parent's space.
@@ -340,7 +340,7 @@ public sealed partial class TechTree : Control
     {
         float mid = -90f + w * 72f + 36f, cs = Mathf.Cos(Mathf.DegToRad(mid)), sn = Mathf.Sin(Mathf.DegToRad(mid));
         var q = Polar(6.65f, mid);
-        var da = DiscArea;
+        var da = Area;
         float avail = cs > 0.35f ? da.End.X - q.X - 4 : cs < -0.35f ? q.X - da.Position.X - 4 : 220;
         string s = Loc.T("disc." + w);
         if (Fonts.DraftBold.GetStringSize(s, HorizontalAlignment.Left, -1, 14).X > avail) s = Loc.T("disc." + w + ".s");   // short name before any ellipsis
@@ -392,7 +392,6 @@ public sealed partial class TechTree : Control
         for (int i = 0; i < nodes.Count; i++) DrawNode(i);
         DrawLabels(c);
         DrawCallout();
-        DrawLegend();
     }
 
     // Clock: 1910 → 2100 around the circle, the hand shows the session date; G1–G4 arcs and the P10–P90 interval have no data (not drawn).
@@ -640,11 +639,15 @@ public sealed partial class TechTree : Control
         _cv.DrawCircle(pts[2], 3f, Ui.Ink);
     }
 
-    // Legend (spec §8): a collapsed button at the lower left (key L), opened to a sheet with disciplines, glyph codes and line kinds.
+    // Legend (spec §8): a collapsed button at the lower left (key L), opened to a compact two-column sheet docked in the right column above the stamp.
     bool _legendOpen;
     public bool LegendOpen => _legendOpen;
     public void ToggleLegend(bool open) { _legendOpen = open; ClampPan(); Redraw(); }
     Rect2 LegendButton => new(Area.Position.X + 10, Area.End.Y - 36, 128, 28);
+    const float LegendRow = 21, LegendPad = 12, LegendCol = 229, LegendGap = 16, LegendH = 256, StampH = 62, StampGap = 8;
+    /// <summary>The open legend sheet: right of the disc area, 8 du above the sheet stamp (spec §3).</summary>
+    public Rect2 LegendSheet { get { float x = Size.X * 0.6f + 8; return new Rect2(x, Size.Y - 6 - StampH - StampGap - LegendH, Math.Min(500, Size.X - x - 6), LegendH); } }
+    Rect2 StampRect => new(Size.X - 6 - 360, Size.Y - 6 - StampH, 360, StampH);
 
     void DrawLegend()
     {
@@ -657,43 +660,53 @@ public sealed partial class TechTree : Control
             return;
         }
         var discs = LegendData.Disciplines(Palette.C);
-        const float row = 22, w = 340;
-        float h = 8 + 3 * 30 + (discs.Length + LegendData.Types.Length + 4) * row + 90;
-        var r = new Rect2(Area.Position.X + 10, Area.End.Y - 8 - h, w, h);
+        var r = LegendSheet;
         _cv.DrawStyleBox(Ui.Box(Ui.Sheet, Ui.Ink, 1, 0, Ui.R3), r);
-        float x = r.Position.X + 14, y = r.Position.Y - 2;
-        void Head(string key) { y += 28; Text(new Vector2(x, y), Loc.T(key), 14, Ui.Ink2, FontKind.Draft); y += 2; }
-        Head("legend.disc");
-        foreach (var d in discs)
+        float xl = r.Position.X + LegendPad, xr = xl + LegendCol + LegendGap;
+        float Y(int row) => r.Position.Y + LegendPad + 15 + row * LegendRow;
+        void Head(float x, int row, string key) => Text(new Vector2(x, Y(row)), Loc.T(key), 14, Ui.Ink2, FontKind.Draft);
+        // left column: disciplines, then lines
+        Head(xl, 0, "legend.disc");
+        for (int k = 0; k < discs.Length; k++)
         {
-            y += row;
-            var mk = new Vector2(x + 8, y - 5);
+            var d = discs[k]; var mk = new Vector2(xl + 8, Y(1 + k) - 5);
             _cv.DrawCircle(mk, 8, new Color(d.WashHex)); _cv.DrawArc(mk, 8, 0, Mathf.Tau, 24, new Color(d.LineHex), 1.8f, true);
-            Text(new Vector2(x + 26, y), Loc.T(d.NameKey), 14, Ui.Ink2);
+            Text(new Vector2(xl + 26, Y(1 + k)), Loc.T(d.NameKey), 14, Ui.Ink2);
         }
-        Head("legend.glyphs");
-        foreach (var t in LegendData.Types)
+        int ly = 1 + discs.Length;
+        Head(xl, ly, "legend.lines");
+        float y = Y(ly + 1); _cv.DrawLine(new Vector2(xl, y - 5), new Vector2(xl + 18, y - 5), Ui.Sheet, 6f); _cv.DrawLine(new Vector2(xl, y - 5), new Vector2(xl + 18, y - 5), Ui.Command, 3f);
+        Text(new Vector2(xl + 26, y), Loc.T("legend.route"), 14, Ui.Ink2);
+        y = Y(ly + 2); _cv.DrawRect(new Rect2(xl + 4, y - 14, 10, 10), Ui.Alarm);
+        Text(new Vector2(xl + 26, y), Loc.T("legend.root"), 14, Ui.Ink2);
+        y = Y(ly + 3); for (int k = 0; k < 6; k++) _cv.DrawArc(new Vector2(xl + 9, y - 5), 8, k * Mathf.Tau / 6, k * Mathf.Tau / 6 + Mathf.Tau / 6 * 0.55f, 5, Ui.Ink2, 1.8f, true);
+        Text(new Vector2(xl + 26, y), Loc.T("legend.frontier"), 14, Ui.Ink2);
+        y = Y(ly + 4); _cv.DrawArc(new Vector2(xl + 9, y - 5), 5, 0, Mathf.Tau, 16, Ui.Ink, 1.5f, true); _cv.DrawArc(new Vector2(xl + 9, y - 5), 9, 0, Mathf.Tau, 20, Ui.Ink, 1.5f, true);
+        Text(new Vector2(xl + 26, y), Loc.T("legend.selected"), 14, Ui.Ink2);
+        // right column: node types with the ring number first, then the close hint
+        Head(xr, 0, "legend.glyphs");
+        for (int k = 0; k < LegendData.Types.Length; k++)
         {
-            y += row;
-            var mk = new Vector2(x + 8, y - 5);
-            var line = Ui.Ink2;
+            var t = LegendData.Types[k]; y = Y(1 + k);
+            var mk = new Vector2(xr + 30, y - 5);
             var pts = Outline(Enum.Parse<NodeType>(t.Code), mk, 7);
-            if (pts == null) _cv.DrawArc(mk, 8, 0, Mathf.Tau, 24, line, 1.8f, true);
-            else _cv.DrawPolyline(pts.Append(pts[0]).ToArray(), line, 1.8f, true);
-            Text(new Vector2(x + 26, y), t.Code, 14, Ui.Ink, FontKind.Mono);
-            Text(new Vector2(x + 72, y), Loc.T(t.NameKey), 14, Ui.Ink2);
+            Text(new Vector2(xr + 4, y), (k + 1).ToString(), 14, Ui.Ink, FontKind.Mono);
+            if (pts == null) _cv.DrawArc(mk, 8, 0, Mathf.Tau, 24, Ui.Ink2, 1.8f, true);
+            else _cv.DrawPolyline(pts.Append(pts[0]).ToArray(), Ui.Ink2, 1.8f, true);
+            Text(new Vector2(xr + 46, y), t.Code, 14, Ui.Ink, FontKind.Mono);
+            Text(new Vector2(xr + 92, y), Loc.T(t.NameKey), 14, Ui.Ink2);
         }
-        Head("legend.lines");
-        y += row; _cv.DrawLine(new Vector2(x, y - 5), new Vector2(x + 18, y - 5), Ui.Sheet, 6f); _cv.DrawLine(new Vector2(x, y - 5), new Vector2(x + 18, y - 5), Ui.Command, 3f);
-        Text(new Vector2(x + 26, y), Loc.T("legend.route"), 14, Ui.Ink2);
-        y += row; _cv.DrawRect(new Rect2(x + 4, y - 14, 10, 10), Ui.Alarm);
-        Text(new Vector2(x + 26, y), Loc.T("legend.root"), 14, Ui.Ink2);
-        y += row; for (int k = 0; k < 6; k++) _cv.DrawArc(new Vector2(x + 9, y - 5), 8, k * Mathf.Tau / 6, k * Mathf.Tau / 6 + Mathf.Tau / 6 * 0.55f, 5, Ui.Ink2, 1.8f, true);
-        Text(new Vector2(x + 26, y), Loc.T("legend.frontier"), 14, Ui.Ink2);
-        y += row; _cv.DrawArc(new Vector2(x + 9, y - 5), 5, 0, Mathf.Tau, 16, Ui.Ink, 1.5f, true); _cv.DrawArc(new Vector2(x + 9, y - 5), 9, 0, Mathf.Tau, 20, Ui.Ink, 1.5f, true);
-        Text(new Vector2(x + 26, y), Loc.T("legend.selected"), 14, Ui.Ink2);
-        y += 26; _cv.DrawMultilineString(Fonts.Text, new Vector2(x, y), Loc.T("legend.a3"), HorizontalAlignment.Left, w - 28, 14, 3, Ui.Ink3);
-        y += 58; Text(new Vector2(x, y), Loc.T("legend.close"), 14, Ui.Ink3);
+        Text(new Vector2(xr, Y(1 + LegendData.Types.Length + 1)), Loc.T("legend.close"), 14, Ui.Ink3);
+    }
+
+    /// <summary>For the shot run: the legend sheet touches neither the stamp nor the disc area (A9); empty when it is fine.</summary>
+    public string ShotLegendFit()
+    {
+        var r = LegendSheet;
+        if (r.Intersects(StampRect)) return "sheet touches the stamp";
+        if (r.Intersects(Area)) return "sheet touches the disc area";
+        if (r.Position.X < 0 || r.End.X > Size.X || r.Position.Y < 0 || r.End.Y > Size.Y) return "sheet leaves the tree";
+        return null;
     }
 
     // ---- B: statement of the goal ----
