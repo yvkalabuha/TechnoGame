@@ -78,6 +78,13 @@ public sealed partial class Main : Node3D
         _bench = args.Contains("--bench");
         _shots = args.Contains("--shots");
         Settings.ReadOnly = _shots || _bench;
+        Settings.Framed = args.Contains("--window");
+        if (_shots || _bench)
+        {
+            // Frames are a real 1920x1080 render: a borderless window of the base size, so that no window manager decoration can clamp it (#424).
+            DisplayServer.WindowSetFlag(DisplayServer.WindowFlags.Borderless, true);
+            DisplayServer.WindowSetSize(new Vector2I(SettingsLogic.BaseWidth, SettingsLogic.BaseHeight));
+        }
         var shotIdx = Array.IndexOf(args, "--shot-dir");
         if (shotIdx >= 0 && shotIdx + 1 < args.Length) _shotDir = args[shotIdx + 1];
         if (_bench) DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
@@ -755,12 +762,31 @@ public sealed partial class Main : Node3D
     // ---------- screenshots (acceptance) ----------
     bool _coldShot; double _coldT; int _coldStep;
 
+    // A10 on the credits sheet: every link zone is at least 24 du high and two zones never come closer than 4 du (spec: no accidental neighbour hit).
+    bool CheckCreditsLinks(string sfx)
+    {
+        var z = _credits.ShotLinkZones();
+        if (z.Count == 0) { InstFail($"credits link check {sfx}: no links found"); return false; }
+        for (int a = 0; a < z.Count; a++)
+        {
+            if (z[a].Size.Y < 24 - 0.01f) { InstFail($"credits link check {sfx}: link {a} is {z[a].Size.Y} du high, minimum 24"); return false; }
+            for (int b = a + 1; b < z.Count; b++)
+                if (z[a].Grow(3.99f).Intersects(z[b])) { InstFail($"credits link check {sfx}: links {a} and {b} are closer than 4 du ({z[a]} / {z[b]})"); return false; }
+        }
+        _shotLog += $"credits links {sfx}: {z.Count} zones, all >= 24 du high, gaps >= 4 du\n";
+        return true;
+    }
+
+    // Physical pixels per canvas unit now (base scale times the UI setting).
+    float PxPerDu() => DisplayServer.WindowGetSize().X / GetViewport().GetVisibleRect().Size.X;
+
     void SaveShot(string name, Rect2I? r = null)
     {
         string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
         Directory.CreateDirectory(dir);
         var img = GetViewport().GetTexture().GetImage();
         if (r is Rect2I rr) img = img.GetRegion(rr);
+        else if (!SettingsLogic.IsBaseFrame(img.GetWidth(), img.GetHeight())) { InstFail($"frame {name} is {img.GetWidth()}x{img.GetHeight()}, a full frame must be a real 1920x1080 render (window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, display {DisplayServer.ScreenGetSize().X}x{DisplayServer.ScreenGetSize().Y})"); return; }
         img.SavePng(Path.Combine(dir, name));
     }
 
@@ -775,22 +801,22 @@ public sealed partial class Main : Node3D
         else if (_coldStep == 3 && _coldT >= 0.4) { SaveShot("credits_ru.png"); _credits.Visible = false; _coldShot = false; if (_loading != null) _loading.Visible = true; }
     }
 
-    // Extra screens at other window sizes and in EN (spec §10): a queue of (wait before, action).
-    // The project keeps a 1600x900 content base, so the shots set the content size to the window size: the layout is then computed for the real size.
-    readonly List<(double Wait, Action Act)> _sizeQ = new(); int _sizeI; Vector2I _origSize;
+    // Key screens at the base size in RU and EN, at 100 % and 150 % UI scale (spec §10; #424/#425): a queue of (wait before, action).
+    // The window is a real 1920x1080 render (SaveShot asserts it); other window sizes are not evidence and are not shot.
+    readonly List<(double Wait, Action Act)> _sizeQ = new(); int _sizeI;
 
     void BuildSizeShots()
     {
-        _origSize = DisplayServer.WindowGetSize(); _sizeI = 0; _sizeQ.Clear();
-        var combos = new (Vector2I Size, string Lang)[] { (_origSize, "en"), (new Vector2I(1280, 720), "ru"), (new Vector2I(1280, 720), "en"), (new Vector2I(1920, 1080), "ru"), (new Vector2I(1920, 1080), "en") };
-        foreach (var (size, lang) in combos)
+        _sizeI = 0; _sizeQ.Clear();
+        var combos = new (int Scale, string Lang)[] { (100, "ru"), (100, "en"), (150, "ru"), (150, "en") };
+        foreach (var (scale, lang) in combos)
         {
-            string sfx = $"_{size.X}x{size.Y}" + (lang == "en" ? "_en" : "");
+            string sfx = "_1920x1080" + (scale == 150 ? "_s150" : "") + (lang == "en" ? "_en" : "");
             void Q(double wait, Action act) => _sizeQ.Add((wait, act));
-            Q(0.1, () => { DisplayServer.WindowSetSize(size); GetWindow().ContentScaleSize = size; Loc.SetLang(lang); });
-            Q(1.0, () => { _shotLog += $"size shots {sfx}: asked {size.X}x{size.Y}, window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, viewport {(int)GetViewport().GetVisibleRect().Size.X}x{(int)GetViewport().GetVisibleRect().Size.Y}, mode {GetWindow().ContentScaleMode}\n"; _mainMenu.Open(true); });
+            Q(0.1, () => { Settings.Current.UiScale = scale; Settings.Apply(Settings.Current, GetWindow(), false); Loc.SetLang(lang); });
+            Q(1.0, () => { var cv = GetViewport().GetVisibleRect().Size; _shotLog += $"size shots {sfx}: window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, canvas {cv.X}x{cv.Y} du, scale {scale} %, content scale {GetWindow().ContentScaleSize.X}x{GetWindow().ContentScaleSize.Y} {GetWindow().ContentScaleMode} {GetWindow().ContentScaleAspect}\n"; _mainMenu.Open(true); });
             Q(0.5, () => { SaveShot($"menu_ingame{sfx}.png"); _mainMenu.Close(); _credits.Open(); });
-            Q(0.6, () => { SaveShot($"credits{sfx}.png"); _credits.ShotScroll(100000); });
+            Q(0.6, () => { SaveShot($"credits{sfx}.png"); CheckCreditsLinks(sfx); _credits.ShotScroll(100000); });
             Q(0.4, () => { SaveShot($"credits_end{sfx}.png"); _credits.Visible = false; _newGame.Open(_host.Data.Scenario(Singularity.Session.SliceRunConfig.DefaultScenario), id => Ui.Tints[TintOfActor(id)]); });
             Q(0.5, () => { SaveShot($"new_game_empty{sfx}.png"); _newGame.Select("FRA"); });
             Q(0.6, () => { SaveShot($"new_game_selected{sfx}.png"); _newGame.Close(); _settings.Open(); });
@@ -800,11 +826,15 @@ public sealed partial class Main : Node3D
             Q(0.5, () => { SaveShot($"settings_rollback{sfx}.png"); _settings.Revert(false); _settings.Close(); Loc.SetLang(lang); AimAlert(1, false); });
             Q(0.8, () => { SaveShot($"alert_tint5{sfx}.png"); _overlay.RemoveMarker("demo0"); _overlay.RemoveMarker("demo1"); _overlay.RemoveMarker("demo2"); OpenArea(AreaId.Finance); });
             Q(0.8, () => { SaveShot($"area_finance{sfx}.png"); _shotLog += $"rail {sfx}: fits without scroll {_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f} (min {_rail.GetCombinedMinimumSize().Y:F0} of {_rail.Size.Y:F0})\n"; OpenArea(AreaId.Forces); });
-            Q(0.6, () => { SaveShot($"area_forces{sfx}.png"); CloseArea(); OpenTree(0); });
+            Q(0.6, () => { SaveShot($"area_forces{sfx}.png"); OpenArea(AreaId.Science); });
+            Q(0.8, () => { SaveShot($"area_science{sfx}.png"); OpenArea(AreaId.Production); });
+            Q(0.8, () => { SaveShot($"area_production{sfx}.png"); CloseArea(); OpenTree(0); });
             Q(1.0, () => _tree.ToggleLegend(true));
-            Q(0.5, () => { SaveShot($"tree_legend{sfx}.png"); _tree.ToggleLegend(false); _tree.ResetView(); _tree.Visible = false; });
+            // A9 is checked on the state that is saved: the legend is open.
+            Q(0.5, () => { string ov = _tree.ShotOverlap(); if (ov != null) InstFail($"tree overlap {sfx}: {ov}"); else _shotLog += $"tree overlap {sfx}: none\n"; SaveShot($"tree_legend{sfx}.png"); _tree.ToggleLegend(false); _tree.ResetView(); _tree.Visible = false; _journal.Visible = true; });
+            Q(0.6, () => { SaveShot($"journal{sfx}.png"); _journal.Visible = false; });
         }
-        _sizeQ.Add((0.5, () => { DisplayServer.WindowSetSize(_origSize); GetWindow().ContentScaleSize = _origSize; Loc.SetLang("ru"); }));
+        _sizeQ.Add((0.5, () => { Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); Loc.SetLang("ru"); }));
     }
     void ShotStep(double dt)
     {
@@ -950,7 +980,7 @@ public sealed partial class Main : Node3D
                 _shotLog += $"live science: actor {_host.Layout.ActorIds[_liveFirst]}, knowledge links {links}, flasks shown {flasks}, date {_host.Snap.Date}\n";
                 if (links == 0) { InstFail("live science check failed: the snapshot lost its Knowledge links before the check"); break; }
                 if (flasks != want) { InstFail($"live science check failed: snapshot has {links} Knowledge links, the panel shows {flasks} flasks, expected {want}"); break; }
-                var gr = _areaPanel.GetGlobalRect(); float k = GetWindow().ContentScaleFactor;
+                var gr = _areaPanel.GetGlobalRect(); float k = PxPerDu();
                 SaveShot("flask_science_live.png", new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)));
                 CloseArea(); _host.WhyActor = _player; _shotStep = 146; _shotT = 0; break;
             }
@@ -1125,14 +1155,14 @@ public sealed partial class Main : Node3D
     static readonly int[] InstYears = { 1950, 1985, 2030 };
     static readonly AreaId[] InstAreas = { AreaId.Finance, AreaId.Science, AreaId.Production };
     static readonly string[] InstNames = { "caliper_finance", "flask_science", "flask_production" };
-    // Base-size frames at 100 % and 150 % UI scale (#417; Full HD frames come with the scale policy task): 3 areas x 3 eras x 2 scales, each with a greyscale copy,
+    // Real 1920x1080 frames at 100 % and 150 % UI scale (#417, #424): 3 areas x 3 eras x 2 scales, each with a greyscale copy,
     // the whole screen too, and the speed meter bar with the Finance rows.
     bool InstShot()
     {
         // Finance: the edit goes through the input pipeline (a click on a share row, a click on the caliper, an arrow key), one step per call so that the layout settles in between.
         if (_instPhase > 0)
         {
-            float w = GetWindow().ContentScaleFactor;   // events are window pixels, the panel reports canvas units
+            float w = PxPerDu();   // events are window pixels, the panel reports canvas units
             if (_instPhase == 1) { var c = _areaPanel.ShotRowPoint(1) * w; Mouse(c, null); Mouse(c, true); Mouse(c, false); }
             else if (_instPhase == 3) PressKey(Key.Tab);   // after the frame with the unsent edit: Tab from the caliper to Apply
             else if (_instPhase == 4) { if (_instI == 0) { var gr = _areaPanel.GetGlobalRect(); SaveShot("apply_focus.png", new Rect2I((int)(gr.Position.X * w), (int)(gr.Position.Y * w), (int)(gr.Size.X * w), (int)(gr.Size.Y * w))); } _instAppliedBefore = _areaPanel.ShotApplied; _instSpeedBefore = _host.Speed; PressKey(Key.Space); PressKey(Key.Space, false); }   // Space is the pause key even with Apply focused
@@ -1190,6 +1220,7 @@ public sealed partial class Main : Node3D
             var img = GetViewport().GetTexture().GetImage();
             float k = img.GetWidth() / GetViewport().GetVisibleRect().Size.X;
             var all = new Rect2I(0, 0, img.GetWidth(), img.GetHeight());
+            if (!SettingsLogic.IsBaseFrame(img.GetWidth(), img.GetHeight())) { InstFail($"instrument frame is {img.GetWidth()}x{img.GetHeight()}, expected a real 1920x1080 render"); return true; }
             string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
             void Save(Image im, Rect2 gr, string name)
             {

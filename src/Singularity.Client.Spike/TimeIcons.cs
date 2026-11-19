@@ -44,8 +44,6 @@ public sealed partial class TimeControl : HBoxContainer
                     DrawPolyline(new[] { P(10, 4), P(17, 10), P(10, 16), P(10, 4) }, c, 1.5f);
                     break;
             }
-            if (Disabled)   // unavailable: hatching at 45 degrees (not colour alone)
-                for (float d = -Size.Y; d < Size.X; d += 6) DrawLine(new Vector2(d, Size.Y - 2), new Vector2(d + Size.Y - 4, 2), new Color(Ui.Ink3, 0.35f), 1f);
         }
     }
 

@@ -160,7 +160,7 @@ public sealed partial class MainMenu : Control
             s.ContentMarginLeft = 14;
             return s;
         }
-        b.AddThemeStyleboxOverride("normal", S(Ui.Sheet, Ui.InkWash[ink], 0, 3));
+        b.AddThemeStyleboxOverride("normal", S(Ui.Sheet, Ui.Rule, 0, 0));   // no colour stripe: it carried no meaning (C2)
         b.AddThemeStyleboxOverride("hover", S(Ui.Hover, Ui.Ink, 1, 3));
         b.AddThemeStyleboxOverride("pressed", S(Ui.Hover, Ui.Ink, 2, 3));
         b.AddThemeStyleboxOverride("disabled", S(Ui.Paper, Ui.Rule, 1, 1));

@@ -120,6 +120,9 @@ public sealed partial class CreditsSheet : Control
     }
 
     /// <summary>A URL that opens in the system browser on click or Enter (LinkButton.Uri); keyboard focus shows a 2 px ink frame (A6, A7).</summary>
+    /// <summary>Click zones of all links in canvas units (shot-run layout check, A10).</summary>
+    public System.Collections.Generic.List<Rect2> ShotLinkZones() { var r = new System.Collections.Generic.List<Rect2>(); foreach (var l in _links) r.Add(l.GetGlobalRect()); return r; }
+
     LinkButton Link(string url)
     {
         var b = new LinkButton { Text = url, Uri = url, Underline = LinkButton.UnderlineMode.Always, FocusMode = FocusModeEnum.All, SizeFlagsHorizontal = SizeFlags.ShrinkBegin, TooltipText = url, CustomMinimumSize = new Vector2(0, 24) };   // A10: target at least 24 du high

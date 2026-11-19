@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Launch the Godot 3D globe spike (TASK-0067).
 # Usage: ./run-globe-spike.sh          interactive client prototype v0.4 (TASK-0069..0071; real Session on a background thread)
+#        ./run-globe-spike.sh --window  a framed 1920x1080 window instead of fullscreen (tests only; other flags such as --lang en pass through)
 #        ./run-globe-spike.sh --shots  automatic run + screenshots and an audio demo WAV into shots-out/ (git-ignored; copy key frames into docs/ui by hand)
 #        ./run-globe-spike.sh --bench  automatic benchmark + screenshots into bench-out/
 set -euo pipefail
@@ -43,6 +44,6 @@ elif [[ "${1:-}" == "--bench" ]]; then
   "$GODOT" --path . -- --bench --out bench-out
   echo "Benchmark output: $PROJECT/bench-out"
 else
-  echo "Controls: LMB drag = rotate, wheel = zoom, click a slice country = actor panel, Space pause, 1/2/3 tempo, T E F M I G J areas (Esc map), F3 debug, F1 help; --lang en|ru"
-  "$GODOT" --path .
+  echo "Controls: LMB drag = rotate, wheel = zoom, click a slice country = actor panel, Space pause, 1/2/3 tempo, T E F M I G J areas (Esc map), F3 debug, F1 help; Esc = game menu (Quit game); --lang en|ru"
+  "$GODOT" --path . -- "$@"
 fi

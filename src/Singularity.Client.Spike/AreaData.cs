@@ -11,6 +11,17 @@ public enum AreaState { Live, Part, Locked }
 /// <summary>One navigation area (CLIENT_V05C_SPEC §4, decisions #352, #360). Ink: index into the six inks, -1 neutral, 6 the seventh colour (hatched, #360).</summary>
 public sealed record AreaDef(AreaId Id, string Slug, char Letter, int Ink, AreaState State, string Milestone, int Group);
 
+/// <summary>Floors of the rail marks (UI_DESIGN_SYSTEM A1, A2), in du; 1 du = 1 px at 1920x1080 and 100 %.</summary>
+public static class RailMetrics
+{
+    public const int BadgeFontDu = 14, CaptionFontDu = 12;
+    public const int BadgeW = 34, BadgeH = 20;
+    /// <summary>lock-24.svg: the body spans x 5..19 of a 24-unit box (stroke 1.5), the rest is transparent padding.</summary>
+    public const double LockBodyUnits = 14, LockBoxUnits = 24;
+    public const int LockDrawDu = 28;
+    public static double LockVisibleWidthPx(double drawDu) => drawDu * LockBodyUnits / LockBoxUnits;
+}
+
 public static class AreaData
 {
     public const int Neutral = -1, Seventh = 6;

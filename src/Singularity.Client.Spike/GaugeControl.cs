@@ -8,6 +8,7 @@ namespace Singularity.Client.Spike;
 public sealed partial class GaugeControl : Control
 {
     static readonly int[] Ink = { Ui.Teal, Ui.Olive, Ui.Plum, Ui.Sand };
+    static readonly Color HatchColor = new(Palette.GaugeHatch);
     public int Filled;               // speed step 0..3
 
     public GaugeControl() { MouseFilter = MouseFilterEnum.Ignore; CustomMinimumSize = new Vector2(46, 28); }
@@ -36,7 +37,7 @@ public sealed partial class GaugeControl : Control
         {
             var r = new Rect2(4 + i * 10, Size.Y - 4 - Heights[i], 8, Heights[i]);
             if (i == 3) { DrawDashedRect(r, Ui.Ink3); continue; }
-            if (i < Filled) DrawRect(r, Ui.InkLine[Ink[i]]); else Hatch(r, new Color(Ui.Ink, 0.45f));
+            if (i < Filled) DrawRect(r, Ui.InkLine[Ink[i]]); else Hatch(r, HatchColor);
             DrawRect(r, Ui.Ink, false, 1f);
             if (i == Filled - 1) DrawRect(r.Grow(2), Ui.Ink, false, 1.5f);
         }
