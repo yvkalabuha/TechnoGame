@@ -16,7 +16,7 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0110 [REVIEW] Novelty memory per actor: tried alternatives survive slot reuse (DEBT-0054) (developer)
+_нет активных задач_
 <!-- registry:active:end -->
 
 ## Блокеры

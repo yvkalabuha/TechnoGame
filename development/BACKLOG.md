@@ -124,7 +124,7 @@
 | [TASK-0107](../development/tasks/TASK-0107-tick-path-allocations.md) | DONE | Tick path allocations to <= 1 MiB/month (ADR-0023 p.2.1) | MS-M0 |
 | [TASK-0108](../development/tasks/TASK-0108-ui-instruments-gauge.md) | DONE | UI instruments: tokens, settings, contrast rules and GaugeControl (UI_INSTRUMENTS §8 steps 1-2) | MS-M1 |
 | [TASK-0109](../development/tasks/TASK-0109-t4-region-status-edge-cases.md) | DONE | T4: region status edge cases for 1945 (ADR-0022 p.2.6) | MS-M1 |
-| [TASK-0110](../development/tasks/TASK-0110-novelty-memory-per-actor.md) | REVIEW | Novelty memory per actor: tried alternatives survive slot reuse (DEBT-0054) | MS-M1 |
+| [TASK-0110](../development/tasks/TASK-0110-novelty-memory-per-actor.md) | DONE | Novelty memory per actor: tried alternatives survive slot reuse (DEBT-0054) | MS-M1 |
 
 ## Гипотезы
 

@@ -1,7 +1,7 @@
 ---
 id: TASK-0110
 title: "Novelty memory per actor: tried alternatives survive slot reuse (DEBT-0054)"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: developer         # ответственный агент
@@ -27,13 +27,13 @@ Fix DEBT-0054. After slot reuse (TASK-0099), `ProductsSystem.Create` builds `use
 - SchemaVersion +1. The golden hashes change: explain them; the trajectory must stay identical until the first slot reuse (~month 265).
 
 ## Acceptance criteria
-- [ ] Tests:
+- [x] Tests:
   - (a) withdrawn in О, then reuse: novelty unchanged;
   - (b) withdrawn in П: the alternatives stay new;
   - (c) the starting fleet;
   - (d) a different slot-freeing order gives the same novelty;
   - (e) L1/L2 and column save/load.
-- [ ] `dotnet test`, `lab selftest` pass; reviewer APPROVE.
+- [x] `dotnet test`, `lab selftest` pass; reviewer APPROVE.
 
 ## Решение Orchestrator (2026-11-19)
 Live projects in П still count as "used" for novelty (`InLiveProject`), as before TASK-0110. Reason: the old behaviour; two parallel projects on the same alternatives should not both count as new; a live slot cannot be reused, so the result does not depend on slot history. The pure "reached О" reading of C10 would shift the trajectory before the first reuse; not adopted. Withdrawn-in-П projects are not counted (§4.4e).
@@ -43,3 +43,4 @@ Live projects in П still count as "used" for novelty (`InLiveProject`), as befo
 **Golden.** Перезаписаны с комментарием «Re-recorded in TASK-0110»: Main seed1 m149 (Calibration, SeriesSwitch, ViewTests, SliceChecks), F17b Admit/YProd ×5, LinkedRun, ProductAiSession, SchemaTests (v10). Траектория до первого реюза (~месяц 265) не меняется: проекции на старые колонки (`ColumnProjection.IsSlotGenerationColumn` теперь исключает и `prd.altReached.*`) проходят: T6dOff, FleetAblation NoRetire, ToolingUnmet; SlotReuseL2Tests подтверждает, что реюза до месяцев golden нет.
 **Тесты.** `NoveltyMemoryTests` (8): (a) снят в О, реюз; (b) снят в П, реюз; (c) стартовый парк; (d) порядок освобождения слотов; (e) L1/L2 (threads 2/4/8, chunk 1..3) и save/load колонки, подмена колонки меняет хеш.
 **Проверка.** `dotnet build -c Release` 0 предупреждений; `dotnet test -c Release` зелёный (Core 1012, Session 392, Lab 202, Kernel, Architecture, Localization, Audio); `lab selftest` 58/58; `TickPathAllocationTests` проходит.
+- Review CHANGES ×2 (LaunchCanonical path; test (d) without retake; L_P test vacuous) fixed in 9dbb7d4, 5a9ec5b (mutation check: the L_P test fails without the fix). Merge 08a9d0f; full suite green on merged main (Core 1013), `lab selftest` 58/58.
