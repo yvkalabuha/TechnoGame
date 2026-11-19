@@ -59,12 +59,12 @@ public static class SliceChecks
         ("slice: c5-stand — smoke (horizon 6, threshold 0,25): idle and restart run, two runs give the same bytes, no statistic row (#248)", () => C5Smoke(tmp)),
         ("slice: full run to 2030-12 — FULL, 1024 months, seed 1: status ok, months 1024, last lines row t = 1023, threads 1 = 2 (TASK-0121)", () => FullRun2030(tmp)),
         ("slice: H8 — a control layer (LK, LK0, LC0, LC, LP) past 384 months is rejected before any month runs; FULL is not (TASK-0121)", () => ControlHorizon(tmp)),
-        ("slice: BUDGET_RULE — NOW/A/B1/B2 parsed, other values rejected; NOW gives the main golden, B2 another (TASK-0123)", () => BudgetRuleKey(tmp)),
+        ("slice: BUDGET_RULE — NOW/A/B1/B2 parsed, other values rejected; NOW gives the main golden; A, B1, B2 change a preset budget, B1/B2 not before their first ceiling (TASK-0123)", () => BudgetRuleKey(tmp)),
         ("slice: supply_month — pools follow the budget of the same month, granted ≤ requested ≤ pool, output and limiters agree with lines and the ledger (TASK-0123)", () => SupplyMonth(tmp)),
     ];
 
     // TASK-0123: the Lab key of the Session switch (TASK-0122). NOW is main: same golden as without the key (the Session adds run.budget_rule
-    // only for another rule); B2 is a different world from month 0 by that column, so its golden differs even before any ceiling binds.
+    // only for another rule); that the rule acts on the budgets is BudgetRuleActs.
     private static string? BudgetRuleKey(string tmp)
     {
         foreach (var (v, want) in new[] { ("NOW", BudgetRule.Now), ("A", BudgetRule.A), ("B1", BudgetRule.B1), ("B2", BudgetRule.B2) })
@@ -90,8 +90,88 @@ public static class SliceChecks
         var (now, _) = Run(tmp, Manifest("JetSlice", Ticks150, pars: """{"detail": "lite", "BUDGET_RULE": "NOW"}"""), 1, 1, "br-now");
         if (!now.Ok || now.GoldenHash != Golden150)
             return $"NOW: {now.GoldenHash} {now.Error}";
-        var (b2, _) = Run(tmp, Manifest("JetSlice", Ticks150, pars: """{"detail": "lite", "BUDGET_RULE": "B2"}"""), 1, 1, "br-b2");
-        return b2.Ok && b2.GoldenHash != Golden150 ? null : $"B2: {b2.GoldenHash} {b2.Error}";
+        return BudgetRuleActs(tmp);
+    }
+
+    // Codex r3 on TASK-0122 (SliceChecks.cs:93): a golden that differs proves nothing (the run.budget_rule column alone changes it). Through the Lab
+    // path, to month BudgetRuleMonths: NOW = the run without the key; A changes the budget of a preset actor; B1 and B2 equal NOW in every budget
+    // before their first ceiling month and differ in it. The ceiling month is a test-only recomputation from the NOW budgets (BudgetMath.NextCapped
+    // on the rows of NOW, which are the rows of B before the first cap), not a constant: B1 caps FRA at t 396, B2 SWE at t 298 (pilot TASK-0123).
+    private const int BudgetRuleMonths = 400;
+
+    private static string? BudgetRuleActs(string tmp)
+    {
+        GameData data = SliceData.Load(tmp);
+        ScenarioData sc = data.Scenario(SliceRunConfig.DefaultScenario);
+        long ticks = new TickCalendar(new CivilDate(sc.StartYear, sc.StartMonth, 1)).TickOfMonth(BudgetRuleMonths);
+        var budgets = new Dictionary<string, long[,]>(StringComparer.Ordinal);
+        string? baseline = null;
+        foreach (string v in new[] { "", "NOW", "A", "B1", "B2" })
+        {
+            string pars = v.Length == 0 ? """{"detail": "lite"}""" : $$"""{"detail": "lite", "BUDGET_RULE": "{{v}}"}""";
+            var (r, dir) = Run(tmp, Manifest("JetSlice", ticks, pars: pars), 1, 1, "br-acts-" + (v.Length == 0 ? "none" : v));
+            if (!r.Ok)
+                return $"{(v.Length == 0 ? "no key" : v)}: {r.Error}";
+            if (v.Length == 0)
+            {
+                baseline = r.GoldenHash;
+                continue;
+            }
+            if (v == "NOW" && r.GoldenHash != baseline)
+                return $"NOW {r.GoldenHash} differs from the run without the key {baseline}";
+            var rows = Rows(dir, "supply_month.csv");
+            if (rows.Count != BudgetRuleMonths * sc.ActorCount)
+                return $"{v}: {rows.Count} supply_month rows, want {BudgetRuleMonths * sc.ActorCount}";
+            var b = new long[BudgetRuleMonths, sc.ActorCount];
+            foreach (var x in rows)
+                b[int.Parse(x["t"], System.Globalization.CultureInfo.InvariantCulture), sc.ActorIndex(x["actor"])] =
+                    long.Parse(x["budget"], System.Globalization.CultureInfo.InvariantCulture);
+            budgets[v] = b;
+        }
+        long[,] now = budgets["NOW"];
+        static int FirstDiff(long[,] x, long[,] y, int row)
+        {
+            for (int t = 0; t < x.GetLength(0); t++)
+            {
+                if (x[t, row] != y[t, row])
+                    return t;
+            }
+            return -1;
+        }
+        BudgetRulePlan planA = BudgetRulePlan.For(BudgetRule.A, sc.ActorId);
+        if (!Enumerable.Range(0, sc.ActorCount).Any(a => planA.Share[a] != Fx6.Zero && FirstDiff(budgets["A"], now, a) >= 0))
+            return $"A: no preset actor has a budget different from NOW by month {BudgetRuleMonths}";
+        var caps = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (BudgetRule rule in new[] { BudgetRule.B1, BudgetRule.B2 })
+        {
+            string v = rule == BudgetRule.B1 ? "B1" : "B2";
+            BudgetRulePlan plan = BudgetRulePlan.For(rule, sc.ActorId);
+            int f = plan.FrontierRow, cap = -1;
+            for (int t = 0; t + 1 < BudgetRuleMonths && cap < 0; t++)
+            {
+                for (int a = 0; a < sc.ActorCount; a++)
+                {
+                    if (plan.Ceiling[a] == Fx6.Zero)
+                        continue;
+                    Fx6 own = BudgetMath.Next(Fx6.FromRaw(now[t, a]), sc.GrowthPa[a]);
+                    if (BudgetMath.NextCapped(Fx6.FromRaw(now[t, a]), sc.GrowthPa[a], Fx6.FromRaw(now[t, f]), sc.GrowthPa[f], plan.Ceiling[a]) != own)
+                        cap = t + 1;
+                }
+            }
+            if (cap < 0)
+                return $"{v}: no ceiling binds by month {BudgetRuleMonths}; raise BudgetRuleMonths";
+            for (int a = 0; a < sc.ActorCount; a++)
+            {
+                int d = FirstDiff(budgets[v], now, a);
+                if (d >= 0 && d < cap)
+                    return $"{v}: budget of {sc.ActorId[a]} differs from NOW at t {d}, before the first ceiling month {cap}";
+            }
+            if (!Enumerable.Range(0, sc.ActorCount).Any(a => plan.Ceiling[a] != Fx6.Zero && FirstDiff(budgets[v], now, a) == cap))
+                return $"{v}: no preset actor's budget differs from NOW at the first ceiling month {cap}";
+            caps[v] = cap;
+        }
+        // The meaning of the presets (note §4): B1 keeps 1945-1977 (no cap before month 384), B2 caps earlier; catches B1/B2 swapped in the wiring.
+        return caps["B1"] >= 384 && caps["B2"] < caps["B1"] ? null : $"first ceiling months B1 {caps["B1"]}, B2 {caps["B2"]}: want B1 ≥ 384 > B2";
     }
 
     // TASK-0123, format §4.17. The pools are read before the step of t, so they follow budget(t) of the same row: a read after the tick would see
