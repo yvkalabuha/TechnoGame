@@ -135,6 +135,7 @@
 | [TASK-0117](../development/tasks/TASK-0117-client-ui-scale-policy.md) | APPROVED | Client UI scale policy: text never below the A1 floor at 1280x720 | MS-M05 |
 | [TASK-0118](../development/tasks/TASK-0118-codex-catchup-findings.md) | PROPOSED | Codex catch-up findings on landed core tasks (TASK-0099, 0103, 0107, 0110) | MS-M05 |
 | [TASK-0119](../development/tasks/TASK-0119-alloy-coverage-view-field.md) | PROPOSED | Alloy coverage field in the Session view for the Production flask | MS-M05 |
+| [TASK-0120](../development/tasks/TASK-0120-core-command-verdicts.md) | PROPOSED | Core emits a per-command verdict; commands keyed by handle | MS-M05 |
 
 ## Гипотезы
 
