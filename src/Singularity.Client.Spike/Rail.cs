@@ -110,7 +110,8 @@ public sealed partial class Rail : PanelContainer
                 // Domain edge (3 du; the seventh ink is hatched) and a triangle on the right edge: a second channel besides colour.
                 g.DrawRect(new Rect2(0, 2, 4, s.Y - 4), line);
                 if (Def.Ink == AreaData.Seventh) Hatching.Draw(g, new Rect2(0, 2, 4, s.Y - 4), Ui.Sheet, 4f);
-                g.DrawColoredPolygon(new[] { new Vector2(s.X + 1, s.Y / 2 - 5), new Vector2(s.X - 5, s.Y / 2), new Vector2(s.X + 1, s.Y / 2 + 5) }, Ui.Border);
+                var m = r.Marker;
+                g.DrawColoredPolygon(new[] { new Vector2((float)m.R, (float)m.Y), new Vector2((float)m.X, (float)(m.Y + m.H / 2)), new Vector2((float)m.R, (float)m.B) }, Ui.Border);
             }
             if (r.Badge is { } bd) DrawBadge(g, bd);
         }
@@ -125,7 +126,7 @@ public sealed partial class Rail : PanelContainer
             var ink = alarm ? Colors.White : Ui.Ink;
             float x = r.Position.X, y = r.Position.Y;
             if (alarm) g.DrawRect(new Rect2(x + RailMetrics.BadgeSignX, y + RailMetrics.BadgeSignY, RailMetrics.BadgeSignSize, RailMetrics.BadgeSignSize), ink);
-            else g.DrawColoredPolygon(new[] { new Vector2(x + 8, y + 4), new Vector2(x + 13, y + 15), new Vector2(x + 3, y + 15) }, ink);
+            else g.DrawColoredPolygon(new[] { new Vector2(x + RailMetrics.BadgeTriApexX, y + RailMetrics.BadgeTriTop), new Vector2(x + RailMetrics.BadgeTriRight, y + RailMetrics.BadgeTriBottom), new Vector2(x + RailMetrics.BadgeTriLeft, y + RailMetrics.BadgeTriBottom) }, ink);
             g.DrawString(Fonts.Mono, new Vector2(x + RailMetrics.BadgeTextX, y + RailMetrics.BadgeTextBase), Count >= 10 ? "9+" : Count.ToString(), HorizontalAlignment.Left, RailMetrics.BadgeTextW, RailMetrics.BadgeFontDu, ink);   // A1: a count is a value, >= 13 du and a digit >= 9 px
         }
     }
@@ -243,7 +244,8 @@ public sealed partial class Rail : PanelContainer
             float margin = (RailMetrics.ButtonH(true, locked) - h) / 2f;
             log += $"  wide {d.Slug}: text block {h:F1} du, margin {margin:F1} {(margin >= 5 - 1e-3 ? "PASS" : "FAIL")}\n";
         }
-        return log + $"  line height at 14 du {font.GetHeight(14):F1}, caption at 12 du {font.GetHeight(RailMetrics.CaptionFontDu):F1}\n";
+        bool lh = Math.Abs(font.GetHeight(14) - RailMetrics.Line14Du) < 0.5f && Math.Abs(font.GetHeight(RailMetrics.CaptionFontDu) - RailMetrics.Line12Du) < 0.5f;
+        return log + $"  line height at 14 du {font.GetHeight(14):F1}, caption at 12 du {font.GetHeight(RailMetrics.CaptionFontDu):F1} (constants {RailMetrics.Line14Du}, {RailMetrics.Line12Du}): {(lh ? "PASS" : "FAIL")}\n";
     }
 
     /// <summary>Check for the log: the badge of every button lies inside it and touches neither the icon nor the letter.</summary>
@@ -251,14 +253,25 @@ public sealed partial class Rail : PanelContainer
     {
         string log = ""; int bad = 0, n = 0;
         foreach (var wide in new[] { false, true })
-            foreach (var chars in new[] { 1, 3 })
+            foreach (var d in AreaData.All)
             {
-                if (!wide && chars == 3) continue;   // Map never carries a badge, and narrow "Esc" would not fit beside one
-                var r = RailMetrics.Of(wide, false, true, chars); n++;
-                bool ok = r.Badge is { } b && !b.Intersects(r.Icon) && !b.Intersects(r.Letter) && b.EdgeGap(r.W, r.H) >= 5 - 1e-9;
-                if (!ok) { bad++; log += $"  badge layout fails: wide {wide} letter chars {chars}\n"; }
+                bool locked = d.State == AreaState.Locked, mapNarrow = !wide && d.Id == AreaId.Map;   // Map never carries a badge, and narrow "Esc" would not fit beside one
+                var r = RailMetrics.Of(wide, locked, !locked && !mapNarrow, d.Letter == '\0' ? 3 : 1); n++;
+                var marks = new System.Collections.Generic.List<Box> { r.Letter, r.Marker };
+                if (r.Badge is { } bd) marks.Add(bd);
+                if (r.LockInk is { } lk) marks.Add(lk);
+                bool ok = true;
+                for (int i = 0; i < marks.Count; i++)
+                {
+                    if (marks[i].Intersects(r.Icon) && !marks[i].Equals(r.Marker)) ok = false;
+                    for (int j = i + 1; j < marks.Count; j++) if (marks[i].Intersects(marks[j])) ok = false;
+                }
+                if (r.Badge is { } b2 && b2.EdgeGap(r.W, r.H) < 5 - 1e-9) ok = false;
+                if (wide && r.Marker.X - r.Letter.R < 6) ok = false;
+                if (wide && r.Badge is { } b3 && b3.X - (r.NameX + r.NameW) < 6) ok = false;
+                if (!ok) { bad++; log += $"  layout fails: {d.Slug} wide {wide}\n"; }
             }
-        return $"rail badge geometry: no overlap with icon or letter, 5 du from the edge: {(bad == 0 ? "PASS" : "FAIL")} ({n} layouts)\n" + log;
+        return $"rail geometry (letter, marker, badge, lock do not intersect; letter-marker >= 6, name-badge >= 6, badge 5 du from the edge): {(bad == 0 ? "PASS" : "FAIL")} ({n} buttons)\n" + log;
     }
 
     public override void _Notification(int what)

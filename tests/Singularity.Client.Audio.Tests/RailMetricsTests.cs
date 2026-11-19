@@ -107,14 +107,40 @@ public class RailMetricsTests
         var r = RailMetrics.Of(true, true, false, 1);
         Assert.True(r.Caption); Assert.Null(r.Badge);
         Assert.True(r.NameX + r.NameW <= r.LockInk!.Value.X - 5);   // name and caption stop before the lock
-        Assert.True(RailMetrics.CentreTop(r.H, 17 + 15) >= 5);      // name line (17) + caption (<= 15) inside 52 du with 5 du above
+        Assert.True(RailMetrics.CentreTop(r.H, RailMetrics.Line14Du + RailMetrics.Line12Du) >= 5);   // name line + caption (measured line heights) inside 52 du with 5 du above
     }
 
     [Fact]
     public void RailWidth_HoldsTheButtonCentred()
     {
-        Assert.Equal(68, RailMetrics.NarrowWidth); Assert.Equal(224 + RailMetrics.WideGrow, RailMetrics.WideWidth);
-        Assert.Equal(34, RailMetrics.WideGrow);   // 134 du longest locked name (EN) + 1 du - 101 du of the spec
-        Assert.Equal(4, RailMetrics.SideMargin(false)); Assert.Equal(6, RailMetrics.SideMargin(true));
+        foreach (bool wide in new[] { false, true })
+        {
+            int width = wide ? RailMetrics.WideWidth : RailMetrics.NarrowWidth;
+            Assert.Equal(width, RailMetrics.ButtonW(wide) + 2 * RailMetrics.SideMargin(wide));
+        }
+    }
+
+    [Theory, MemberData(nameof(Cases))]
+    public void Button_LetterMarkerBadgeLockAreSeparate(bool wide, bool locked, bool badge, int chars)
+    {
+        var r = RailMetrics.Of(wide, locked, badge, chars);
+        var marks = new System.Collections.Generic.List<Box> { r.Letter, r.Marker };
+        if (r.Badge is { } b) marks.Add(b);
+        if (r.LockInk is { } l) marks.Add(l);
+        for (int i = 0; i < marks.Count; i++) for (int j = i + 1; j < marks.Count; j++) Assert.False(marks[i].Intersects(marks[j]), $"{marks[i]} / {marks[j]}");
+        if (wide)
+        {
+            Assert.True(r.Marker.X - r.Letter.R >= 6);
+            Assert.Equal(230, r.Letter.R, 6);
+            if (r.Badge is { } bd) Assert.True(bd.X - (r.NameX + r.NameW) >= 6);
+        }
+    }
+
+    [Fact]
+    public void WideBadgeColumn_ClearsTheWidestLetter()
+    {
+        var r = RailMetrics.Of(true, false, true, 3);   // "Esc" under a hypothetical badge on Map
+        Assert.True(r.Letter.X - r.Badge!.Value.R >= 4.5);   // advance box of "Esc" (25.2 du); the spec's ink box (206..230) gives 6
+        Assert.Equal(166, r.Badge.Value.X); Assert.Equal(238, r.Marker.X); Assert.Equal(244, r.Marker.R);
     }
 }

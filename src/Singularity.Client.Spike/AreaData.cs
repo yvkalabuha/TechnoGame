@@ -22,7 +22,7 @@ public readonly record struct Box(double X, double Y, double W, double H)
 }
 
 /// <summary>Where the marks of one rail button sit. Ink boxes: Letter and Lock are the drawn ink, not the padding of the glyph box.</summary>
-public readonly record struct ButtonRects(double W, double H, Box Icon, Box Letter, double LetterBase, Box? Badge, Box? LockInk, Box LockDraw, double NameX, double NameW, bool Caption);
+public readonly record struct ButtonRects(double W, double H, Box Icon, Box Letter, double LetterBase, Box? Badge, Box? LockInk, Box LockDraw, double NameX, double NameW, bool Caption, Box Marker);
 
 /// <summary>Geometry of the rail (TASK-0117, docs/ui/specs/task-0117-rail-and-legend.md) and the floors of its marks (UI_DESIGN_SYSTEM A1, A2), in du; 1 du = 1 px at 1920x1080 and 100 %.
 /// The one source: the painting code and the T6 glyph bounds of the button read the same boxes.</summary>
@@ -32,6 +32,10 @@ public static class RailMetrics
     public const int BadgeW = 34, BadgeH = 20;
     // Sign and count inside the badge (offsets from the badge corner).
     public const int BadgeSignX = 4, BadgeSignY = 6, BadgeSignSize = 8, BadgeTextX = 14, BadgeTextBase = 15, BadgeTextW = 18;
+    // Warning triangle inside the badge (offsets from the badge corner): base from x 3 to 13 at y 15, apex at x 8, y 4.
+    public const int BadgeTriLeft = 3, BadgeTriRight = 13, BadgeTriApexX = 8, BadgeTriTop = 4, BadgeTriBottom = 15;
+    /// <summary>Measured line heights of the text font (shot run, "line height at 14 du"): 14 du text and 12 du caption.</summary>
+    public const int Line14Du = 18, Line12Du = 15;
     /// <summary>lock-24.svg: the body spans x 5..19 of a 24-unit box (stroke 1.5), the rest is transparent padding.</summary>
     public const double LockBodyUnits = 14, LockBoxUnits = 24;
     public const int LockDrawDu = 28;
@@ -57,7 +61,9 @@ public static class RailMetrics
     public static double LetterWidth(int chars) => chars * MonoAdvanceEm * LetterFontDu;
 
     /// <summary>Width of the name column of a wide button: 93 beside the plate, 101 in a locked button (no plate).</summary>
-    public const int WideNameX = 44, WideNameW = 93 + WideGrow, WideLockedNameW = 101 + WideGrow;
+    /// <summary>Wide button columns (spec section 5.4): letter ink ends at x 230, the selection marker box is x 238..244, the badge column x 166..200; the name keeps 6 du before the badge.</summary>
+    public const int WideLetterRight = 196 + WideGrow, WideBadgeX = 132 + WideGrow, WideMarkerGap = 8, MarkerW = 6, MarkerH = 10;
+    public const int WideNameX = 44, WideNameW = WideBadgeX - 6 - WideNameX, WideLockedNameW = 101 + WideGrow;
     /// <summary>Top of a text block of height textH centred in a button of height h.</summary>
     public static double CentreTop(double h, double textH) => (h - textH) / 2.0;
 
@@ -73,13 +79,14 @@ public static class RailMetrics
             // The lock box sits so that its ink is 1 du under the icon box (y 29) and then 5+ du over the bottom edge.
             var lockBox = new Box((w - lockDu) / 2.0, 27.5, lockDu, lockDu);
             return new ButtonRects(w, h, new Box(18, 5, 24, 24), new Box(lx, 46 - LetterCapDu, lw, LetterCapDu), 46,
-                badge ? new Box(21, 32, BadgeW, BadgeH) : null, locked ? InkOf(lockBox, k) : null, lockBox, 0, 0, false);
+                badge ? new Box(21, 32, BadgeW, BadgeH) : null, locked ? InkOf(lockBox, k) : null, lockBox, 0, 0, false, new Box(w - 5, h / 2 - MarkerH / 2, MarkerW, MarkerH));
         }
         double dy = locked ? 0 : (WideButtonH - SpecWideButtonH) / 2.0;   // the spec rows are centred in 44 du; keep them centred
         double iy = locked ? 14 : 10 + dy, bl = locked ? 31 : 27 + dy;
         var lockW = new Box(147 + WideGrow, 12, lockDu, lockDu);
-        return new ButtonRects(w, h, new Box(10, iy, 24, 24), new Box(207 + WideGrow - lw, bl - LetterCapDu, lw, LetterCapDu), bl,
-            badge ? new Box(143 + WideGrow, 12 + dy, BadgeW, BadgeH) : null, locked ? InkOf(lockW, k) : null, lockW, WideNameX, locked ? WideLockedNameW : WideNameW, locked);
+        return new ButtonRects(w, h, new Box(10, iy, 24, 24), new Box(WideLetterRight - lw, bl - LetterCapDu, lw, LetterCapDu), bl,
+            badge ? new Box(WideBadgeX, 12 + dy, BadgeW, BadgeH) : null, locked ? InkOf(lockW, k) : null, lockW, WideNameX, locked ? WideLockedNameW : WideNameW, locked,
+            new Box(w - WideMarkerGap, h / 2 - MarkerH / 2, MarkerW, MarkerH));
     }
 
     static Box InkOf(Box b, double k) => new(b.X + LockInkX0 * k, b.Y + LockInkY0 * k, (LockInkX1 - LockInkX0) * k, (LockInkY1 - LockInkY0) * k);

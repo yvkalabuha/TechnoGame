@@ -30,6 +30,7 @@ public sealed partial class TechTree : Control
     readonly PanelContainer _insetBox = new();
     readonly ScrollContainer _insetScroll;
     readonly Segment _viewSwitch;
+    readonly Button _legendBtn = new() { FocusMode = Control.FocusModeEnum.All, MouseFilter = MouseFilterEnum.Stop, Text = "", Alignment = HorizontalAlignment.Left };
     int _actor = -1, _mode;
     bool _modelDirty = true, _insetDirty = true;
     SliceView _lastView; CmdResult _lastCmd; long _drawnTick = -1; CivilDate _date;
@@ -70,6 +71,17 @@ public sealed partial class TechTree : Control
         top.AddChild(Ui.Btn("tree.close", () => Closed?.Invoke()));
         AddChild(_view);
         _view.Draw += PaintView;
+        // The closed legend is a real button above the canvas (opaque sheet, 1 du ink border, 2 px focus ring): chart ink never shows through it.
+        _legendBtn.AddThemeFontOverride("font", Fonts.Text); _legendBtn.AddThemeFontSizeOverride("font_size", 14);
+        foreach (var n in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color" }) _legendBtn.AddThemeColorOverride(n, Ui.Ink2);
+        _legendBtn.AddThemeStyleboxOverride("normal", Ui.Box(Ui.Sheet, Ui.Ink, 1, 6, Ui.R2));
+        _legendBtn.AddThemeStyleboxOverride("hover", Ui.Box(Ui.Hover, Ui.Ink, 1, 6, Ui.R2));
+        _legendBtn.AddThemeStyleboxOverride("pressed", Ui.Box(Ui.Hover, Ui.Ink, 2, 6, Ui.R2));
+        MenuUi.FocusRing(_legendBtn);
+        _legendBtn.Text = "L  " + Loc.T("legend.btn");
+        _legendBtn.Pressed += () => ToggleLegend(true);
+        _legendBtn.GuiInput += e => { if (e is InputEventMouseButton { Pressed: false, ButtonIndex: MouseButton.Left }) _legendBtn.CallDeferred(Control.MethodName.ReleaseFocus); };   // a click must not leave the focus (Space pauses)
+        AddChild(_legendBtn);
         AddChild(top);
 
         _insetBox.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 1, 12));
@@ -84,7 +96,7 @@ public sealed partial class TechTree : Control
         TreeExiting += () => Loc.Changed -= Invalidate;
     }
 
-    void Invalidate() { _insetDirty = true; Redraw(); }
+    void Invalidate() { _insetDirty = true; _lgDirty = true; _legendBtn.Text = "L  " + Loc.T("legend.btn"); Redraw(); }
     void Redraw() { QueueRedraw(); _view.QueueRedraw(); }
 
     public void ResetView() { _zoomTarget = 1f; _anchor = BaseCentre; _pan = Vector2.Zero; Redraw(); }
@@ -109,7 +121,11 @@ public sealed partial class TechTree : Control
     // ---------------- model ----------------
     public override void _Process(double delta)
     {
-        _insetScroll.CustomMinimumSize = new Vector2(0, Math.Min(_inset.GetCombinedMinimumSize().Y, Size.Y - 100));
+        // The goal panel yields to the open legend: its bottom stays 8 du above the sheet (the sheet top is Size.Y - 332) and the rest scrolls inside.
+        float limit = _legendOpen ? Size.Y - 346 : Size.Y - 100;
+        _insetScroll.CustomMinimumSize = new Vector2(0, Math.Min(_inset.GetCombinedMinimumSize().Y, _legendOpen ? limit - _insetBox.GetThemeStylebox("panel").GetMinimumSize().Y : limit));
+        _legendBtn.Position = new Vector2(Area.Position.X + 10, Area.End.Y - 42); _legendBtn.Size = new Vector2(144, 32);
+        _legendBtn.Visible = _mode == 0 && !_legendOpen;
         _view.Position = Area.Position; _view.Size = Area.Size;
         if (Math.Abs(_zoom - _zoomTarget) > 0.001f)
         {
@@ -354,6 +370,7 @@ public sealed partial class TechTree : Control
     void DrawPlanisphere()
     {
         _countRects.Clear(); _labelRects.Clear();
+        CountCells();
         var c = Centre; float u = Unit;
         // layers: six rings; the double circle between processes and products is the «knowledge ≠ production» line
         for (int r = 1; r <= 6; r++) if (r != 6) _cv.DrawArc(c, r * u, 0, Mathf.Tau, 96, Ui.Rule, 1f, true);
@@ -367,6 +384,10 @@ public sealed partial class TechTree : Control
             _cv.DrawLine(c + d * u * 0.6f, c + d * (6.5f * u), Ui.Rule, 1f);
             var (rc, s) = WedgeLabel(w);
             Text(new Vector2(rc.Position.X, rc.End.Y - 4), s, 14, Ui.Ink2, FontKind.Draft);
+            // The wedge summary known/total: under the wedge name, never skipped, on the paper (no plate).
+            var ssz = Fonts.Mono.GetStringSize(_sumText[w], HorizontalAlignment.Left, -1, 14);
+            _sumRects[w] = new Rect2(rc.GetCenter().X - ssz.X * 0.5f, rc.End.Y + 2, ssz);
+            Text(new Vector2(_sumRects[w].Position.X, _sumRects[w].Position.Y + ssz.Y * 0.8f), _sumText[w], 14, Ui.DiscText[w], FontKind.Mono);
         }
         DrawClock(c, u);
         DrawCells(c, u);
@@ -416,12 +437,29 @@ public sealed partial class TechTree : Control
     float NodeScale => Math.Clamp(BaseUnit / 60f, 0.7f, 1f);
     float NR => CurLod switch { Lod.Overview => NodeR * NodeScale, Lod.Nodes => NodeR * 1.25f * NodeScale, _ => 13f + Math.Min(6f, (_zoom - PlanisphereMath.IconsFrom) * 2f) };
 
+    // Counts per (ring, wedge) cell and per wedge, filled once per draw into fields (no allocation); the wedge summaries are the always-visible counts.
+    readonly int[,] _cellTot = new int[6, 5], _cellKn = new int[6, 5];
+    readonly int[] _wTot = new int[5], _wKn = new int[5], _sumShown = { -1, -1, -1, -1, -1 };
+    readonly string[] _sumText = new string[5];
+    readonly Rect2[] _sumRects = new Rect2[5];
+    void CountCells()
+    {
+        var nodes = _host.Data.Nodes;
+        Array.Clear(_cellTot); Array.Clear(_cellKn); Array.Clear(_wTot); Array.Clear(_wKn);
+        for (int i = 0; i < nodes.Count; i++)
+        {
+            int t = (int)nodes.Type[i], d = (int)nodes.Discipline[i]; bool kn = _state[i] == St.Known;
+            _cellTot[t, d]++; _wTot[d]++;
+            if (kn) { _cellKn[t, d]++; _wKn[d]++; }
+        }
+        for (int w = 0; w < 5; w++) if (_sumShown[w] != _wKn[w] * 10000 + _wTot[w]) { _sumShown[w] = _wKn[w] * 10000 + _wTot[w]; _sumText[w] = _wKn[w] + "/" + _wTot[w]; }
+    }
+
     // Overview: every (layer, discipline) cell is a wash with «known/total»; zoomed in the wash fades into a quiet band.
     void DrawCells(Vector2 c, float u)
     {
         var nodes = _host.Data.Nodes;
-        var tot = new int[6, 5]; var kn = new int[6, 5];
-        for (int i = 0; i < nodes.Count; i++) { tot[(int)nodes.Type[i], (int)nodes.Discipline[i]]++; if (_state[i] == St.Known) kn[(int)nodes.Type[i], (int)nodes.Discipline[i]]++; }
+        var tot = _cellTot; var kn = _cellKn;
         float alpha = CurLod == Lod.Overview ? 0.75f : CurLod == Lod.Nodes ? 0.4f : 0.22f;
         for (int t = 0; t < 6; t++)
             for (int d = 0; d < 5; d++)
@@ -449,6 +487,7 @@ public sealed partial class TechTree : Control
     {
         for (int i = 0; i < _rad.Length; i++) if (NodeBox(i).Intersects(r)) return false;
         for (int w = 0; w < 5; w++) if (WedgeLabel(w).rect.Intersects(r)) return false;
+        for (int w = 0; w < 5; w++) if (_sumRects[w].Intersects(r)) return false;
         foreach (var o in _countRects) if (o.Intersects(r)) return false;
         return true;
     }
@@ -459,6 +498,7 @@ public sealed partial class TechTree : Control
         var boxes = new List<(string what, Rect2 r)>();
         foreach (var r in _countRects) boxes.Add(("count tag", r));
         foreach (var r in _labelRects) boxes.Add(("label", r));
+        for (int w = 0; w < 5; w++) boxes.Add(("wedge summary", _sumRects[w]));
         for (int w = 0; w < 5; w++) boxes.Add(("wedge name", WedgeLabel(w).rect));
         for (int a = 0; a < boxes.Count; a++)
         {
@@ -557,7 +597,7 @@ public sealed partial class TechTree : Control
         occupied.Add(new Rect2(c - new Vector2(Unit * 0.7f, Unit * 0.7f), new Vector2(Unit * 1.4f, Unit * 1.4f)));
         for (int w = 0; w < 5; w++)   // wedge names
         {
-            occupied.Add(WedgeLabel(w).rect.Grow(2));
+            occupied.Add(WedgeLabel(w).rect.Grow(2)); occupied.Add(_sumRects[w].Grow(2));
         }
         occupied.AddRange(_countRects);   // the count tags of the cells are drawn first; labels keep off them
         // The leader line and the route are obstacles too, so that no label sits on them.
@@ -643,60 +683,77 @@ public sealed partial class TechTree : Control
     bool _legendOpen;
     public bool LegendOpen => _legendOpen;
     public void ToggleLegend(bool open) { _legendOpen = open; ClampPan(); Redraw(); }
-    Rect2 LegendButton => new(Area.Position.X + 10, Area.End.Y - 36, 128, 28);
     const float LegendRow = 21, LegendPad = 12, LegendCol = 229, LegendGap = 16, LegendH = 256, StampH = 62, StampGap = 8;
     /// <summary>The open legend sheet: right of the disc area, 8 du above the sheet stamp (spec §3).</summary>
     public Rect2 LegendSheet { get { float x = Size.X * 0.6f + 8; return new Rect2(x, Size.Y - 6 - StampH - StampGap - LegendH, Math.Min(500, Size.X - x - 6), LegendH); } }
     Rect2 StampRect => new(Size.X - 6 - 360, Size.Y - 6 - StampH, 360, StampH);
 
+    // Cached legend content: localized texts (rebuilt when the language changes), colours and closed node outlines (built once).
+    bool _lgDirty = true;
+    readonly string[] _lgText = new string[19];
+    static readonly string[] LgNum = { "1", "2", "3", "4", "5", "6" };
+    readonly LegendData.Discipline[] _lgDiscs = LegendData.Disciplines(Palette.C);
+    Color[] _lgWash, _lgLine;
+    Vector2[][] _lgShapes;
+
+    void BuildLegendCache()
+    {
+        _lgDirty = false;
+        string[] keys = { "legend.disc", "", "", "", "", "", "legend.lines", "legend.route", "legend.root", "legend.frontier", "legend.selected", "legend.glyphs", "legend.close" };
+        for (int k = 0; k < keys.Length; k++) if (keys[k] != "") _lgText[k] = Loc.T(keys[k]);
+        for (int k = 0; k < 5; k++) _lgText[1 + k] = Loc.T(_lgDiscs[k].NameKey);
+        for (int k = 0; k < 6; k++) _lgText[13 + k] = Loc.T(LegendData.Types[k].NameKey);
+        if (_lgShapes != null) return;
+        _lgWash = new Color[5]; _lgLine = new Color[5];
+        for (int k = 0; k < 5; k++) { _lgWash[k] = new Color(_lgDiscs[k].WashHex); _lgLine[k] = new Color(_lgDiscs[k].LineHex); }
+        _lgShapes = new Vector2[6][];
+        for (int k = 0; k < 6; k++)
+        {
+            var pts = Outline(Enum.Parse<NodeType>(LegendData.Types[k].Code), Vector2.Zero, 7);
+            if (pts != null) { var closed = new Vector2[pts.Length + 1]; pts.CopyTo(closed, 0); closed[pts.Length] = pts[0]; _lgShapes[k] = closed; }
+        }
+    }
+
     void DrawLegend()
     {
-        if (!_legendOpen)
-        {
-            var b = LegendButton;
-            _cv.DrawStyleBox(Ui.Box(Ui.Sheet, Ui.Ink, 1, 0, Ui.R2), b);
-            Text(b.Position + new Vector2(10, 19), "L", 14, Ui.Ink2, FontKind.Mono);
-            Text(b.Position + new Vector2(30, 19), Loc.T("legend.btn"), 14, Ui.Ink2);
-            return;
-        }
-        var discs = LegendData.Disciplines(Palette.C);
+        if (!_legendOpen) return;   // closed: the real button _legendBtn stands in its place
+        if (_lgDirty || _lgShapes == null) BuildLegendCache();
         var r = LegendSheet;
         _cv.DrawStyleBox(Ui.Box(Ui.Sheet, Ui.Ink, 1, 0, Ui.R3), r);
         float xl = r.Position.X + LegendPad, xr = xl + LegendCol + LegendGap;
         float Y(int row) => r.Position.Y + LegendPad + 15 + row * LegendRow;
-        void Head(float x, int row, string key) => Text(new Vector2(x, Y(row)), Loc.T(key), 14, Ui.Ink2, FontKind.Draft);
+        void Head(float x, int row, int t) => Text(new Vector2(x, Y(row)), _lgText[t], 14, Ui.Ink2, FontKind.Draft);
         // left column: disciplines, then lines
-        Head(xl, 0, "legend.disc");
-        for (int k = 0; k < discs.Length; k++)
+        Head(xl, 0, 0);
+        for (int k = 0; k < 5; k++)
         {
-            var d = discs[k]; var mk = new Vector2(xl + 8, Y(1 + k) - 5);
-            _cv.DrawCircle(mk, 8, new Color(d.WashHex)); _cv.DrawArc(mk, 8, 0, Mathf.Tau, 24, new Color(d.LineHex), 1.8f, true);
-            Text(new Vector2(xl + 26, Y(1 + k)), Loc.T(d.NameKey), 14, Ui.Ink2);
+            var mk = new Vector2(xl + 8, Y(1 + k) - 5);
+            _cv.DrawCircle(mk, 8, _lgWash[k]); _cv.DrawArc(mk, 8, 0, Mathf.Tau, 24, _lgLine[k], 1.8f, true);
+            Text(new Vector2(xl + 26, Y(1 + k)), _lgText[1 + k], 14, Ui.Ink2);
         }
-        int ly = 1 + discs.Length;
-        Head(xl, ly, "legend.lines");
+        const int ly = 6;
+        Head(xl, ly, 6);
         float y = Y(ly + 1); _cv.DrawLine(new Vector2(xl, y - 5), new Vector2(xl + 18, y - 5), Ui.Sheet, 6f); _cv.DrawLine(new Vector2(xl, y - 5), new Vector2(xl + 18, y - 5), Ui.Command, 3f);
-        Text(new Vector2(xl + 26, y), Loc.T("legend.route"), 14, Ui.Ink2);
+        Text(new Vector2(xl + 26, y), _lgText[7], 14, Ui.Ink2);
         y = Y(ly + 2); _cv.DrawRect(new Rect2(xl + 4, y - 14, 10, 10), Ui.Alarm);
-        Text(new Vector2(xl + 26, y), Loc.T("legend.root"), 14, Ui.Ink2);
+        Text(new Vector2(xl + 26, y), _lgText[8], 14, Ui.Ink2);
         y = Y(ly + 3); for (int k = 0; k < 6; k++) _cv.DrawArc(new Vector2(xl + 9, y - 5), 8, k * Mathf.Tau / 6, k * Mathf.Tau / 6 + Mathf.Tau / 6 * 0.55f, 5, Ui.Ink2, 1.8f, true);
-        Text(new Vector2(xl + 26, y), Loc.T("legend.frontier"), 14, Ui.Ink2);
+        Text(new Vector2(xl + 26, y), _lgText[9], 14, Ui.Ink2);
         y = Y(ly + 4); _cv.DrawArc(new Vector2(xl + 9, y - 5), 5, 0, Mathf.Tau, 16, Ui.Ink, 1.5f, true); _cv.DrawArc(new Vector2(xl + 9, y - 5), 9, 0, Mathf.Tau, 20, Ui.Ink, 1.5f, true);
-        Text(new Vector2(xl + 26, y), Loc.T("legend.selected"), 14, Ui.Ink2);
+        Text(new Vector2(xl + 26, y), _lgText[10], 14, Ui.Ink2);
         // right column: node types with the ring number first, then the close hint
-        Head(xr, 0, "legend.glyphs");
-        for (int k = 0; k < LegendData.Types.Length; k++)
+        Head(xr, 0, 11);
+        for (int k = 0; k < 6; k++)
         {
-            var t = LegendData.Types[k]; y = Y(1 + k);
+            y = Y(1 + k);
             var mk = new Vector2(xr + 30, y - 5);
-            var pts = Outline(Enum.Parse<NodeType>(t.Code), mk, 7);
-            Text(new Vector2(xr + 4, y), (k + 1).ToString(), 14, Ui.Ink, FontKind.Mono);
-            if (pts == null) _cv.DrawArc(mk, 8, 0, Mathf.Tau, 24, Ui.Ink2, 1.8f, true);
-            else _cv.DrawPolyline(pts.Append(pts[0]).ToArray(), Ui.Ink2, 1.8f, true);
-            Text(new Vector2(xr + 46, y), t.Code, 14, Ui.Ink, FontKind.Mono);
-            Text(new Vector2(xr + 92, y), Loc.T(t.NameKey), 14, Ui.Ink2);
+            Text(new Vector2(xr + 4, y), LgNum[k], 14, Ui.Ink, FontKind.Mono);
+            if (_lgShapes[k] == null) _cv.DrawArc(mk, 8, 0, Mathf.Tau, 24, Ui.Ink2, 1.8f, true);
+            else { _cv.DrawSetTransform(mk); _cv.DrawPolyline(_lgShapes[k], Ui.Ink2, 1.8f, true); _cv.DrawSetTransform(Vector2.Zero); }
+            Text(new Vector2(xr + 46, y), LegendData.Types[k].Code, 14, Ui.Ink, FontKind.Mono);
+            Text(new Vector2(xr + 92, y), _lgText[13 + k], 14, Ui.Ink2);
         }
-        Text(new Vector2(xr, Y(1 + LegendData.Types.Length + 1)), Loc.T("legend.close"), 14, Ui.Ink3);
+        Text(new Vector2(xr, Y(8)), _lgText[12], 14, Ui.Ink3);
     }
 
     /// <summary>For the shot run: the legend sheet touches neither the stamp nor the disc area (A9); empty when it is fine.</summary>
@@ -706,6 +763,44 @@ public sealed partial class TechTree : Control
         if (r.Intersects(StampRect)) return "sheet touches the stamp";
         if (r.Intersects(Area)) return "sheet touches the disc area";
         if (r.Position.X < 0 || r.End.X > Size.X || r.Position.Y < 0 || r.End.Y > Size.Y) return "sheet leaves the tree";
+        var p = PanelRect;
+        if (_insetBox.Visible && (p.Intersects(r) || r.Position.Y - p.End.Y < 8 - 0.01f)) return $"goal panel {p} is not 8 du above the sheet {r}";
+        return null;
+    }
+
+    Rect2 PanelRect => new(_insetBox.Position, _insetBox.Size);
+    /// <summary>Shot run: the goal panel scrolls inside (content taller than the panel), as the spec asks with the legend open.</summary>
+    public bool ShotPanelScrolls => _insetScroll.GetVScrollBar().MaxValue - _insetScroll.GetVScrollBar().Page > 0.5;
+    public string ShotPanelInfo => $"panel {PanelRect}, scroll max {_insetScroll.GetVScrollBar().MaxValue:F0} page {_insetScroll.GetVScrollBar().Page:F0}";
+    /// <summary>Shot run: centre of the closed-legend button in canvas units (a real click; the view must not pan).</summary>
+    public Vector2 ShotButtonCenter => _legendBtn.GlobalPosition + _legendBtn.Size / 2f;
+    public Vector2 ShotPan => _pan;
+    public void ShotPanBy(Vector2 d) { _pan += d; ClampPan(); Redraw(); }
+
+    /// <summary>Shot run: the five wedge summaries are drawn, inside the tree, and touch no node, label, other summary, legend sheet, goal panel or stamp. Returns the first offender or null.</summary>
+    public string ShotSummaryCheck()
+    {
+        var others = new List<(string, Rect2)> { ("stamp", StampRect) };
+        if (_legendOpen) others.Add(("legend sheet", LegendSheet));
+        if (_insetBox.Visible) others.Add(("goal panel", PanelRect));
+        var whole = new Rect2(Vector2.Zero, Size);
+        for (int w = 0; w < 5; w++)
+        {
+            var r = _sumRects[w];
+            if (_sumText[w] == null || r.Size.X <= 0) return $"summary {w} not drawn";
+            if (!whole.Encloses(r) || !whole.Encloses(WedgeLabel(w).rect)) return $"summary {w} leaves the tree: {r}";
+            foreach (var (n, o) in others) if (o.Intersects(r) || o.Intersects(WedgeLabel(w).rect)) return $"summary {w} {r} touches {n} {o}";
+            for (int v = 0; v < 5; v++) { if (v != w && _sumRects[v].Intersects(r)) return $"summary {w} touches summary {v}"; if (WedgeLabel(v).rect.Intersects(r)) return $"summary {w} touches wedge name {v}"; }
+            for (int i = 0; i < _rad.Length; i++) if (NodeBox(i).Intersects(r)) return $"summary {w} touches node {i}";
+            foreach (var l in _labelRects) if (l.Intersects(r)) return $"summary {w} touches a node label";
+        }
+        if (_legendBtn.Visible)
+        {
+            var b = new Rect2(_legendBtn.Position, _legendBtn.Size);
+            if (b.Intersects(StampRect)) return "legend button touches the stamp";
+            for (int w = 0; w < 5; w++) if (b.Intersects(_sumRects[w]) || b.Intersects(WedgeLabel(w).rect)) return $"legend button touches wedge {w}";
+            if (_legendBtn.Modulate.A < 1f || _legendBtn.GetIndex() != _view.GetIndex() + 1) return "legend button is not the node right after the canvas, or not opaque";
+        }
         return null;
     }
 
@@ -831,7 +926,6 @@ public sealed partial class TechTree : Control
     // Wheel zooms about the cursor, a drag pans, a click without a drag selects a node.
     public override void _GuiInput(InputEvent e)
     {
-        if (_mode == 0 && e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } lb && !_legendOpen && LegendButton.HasPoint(lb.Position)) { ToggleLegend(true); AcceptEvent(); return; }
         if (_mode == 0 && e is InputEventMouseButton { Pressed: true } w && Area.HasPoint(w.Position) && w.ButtonIndex is MouseButton.WheelUp or MouseButton.WheelDown)
         {
             _zoomTarget = PlanisphereMath.ClampZoom(_zoomTarget * (w.ButtonIndex == MouseButton.WheelUp ? 1.25f : 0.8f));

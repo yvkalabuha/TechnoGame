@@ -786,7 +786,7 @@ public sealed partial class Main : Node3D
     // Physical pixels per canvas unit now (base scale times the UI setting).
     float PxPerDu() => DisplayServer.WindowGetSize().X / GetViewport().GetVisibleRect().Size.X;
 
-    void SaveShot(string name, Rect2I? r = null)
+    void SaveShot(string name, Rect2I? r = null, bool grey = false)
     {
         string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
         Directory.CreateDirectory(dir);
@@ -794,6 +794,7 @@ public sealed partial class Main : Node3D
         if (r is Rect2I rr) img = img.GetRegion(rr);
         else if (!SettingsLogic.IsBaseFrame(img.GetWidth(), img.GetHeight())) { InstFail($"frame {name} is {img.GetWidth()}x{img.GetHeight()}, a full frame must be a real 1920x1080 render (window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, display {DisplayServer.ScreenGetSize().X}x{DisplayServer.ScreenGetSize().Y})"); return; }
         img.SavePng(Path.Combine(dir, name));
+        if (grey) { img.Convert(Image.Format.L8); img.SavePng(Path.Combine(dir, name.Replace(".png", "_grey.png"))); }   // A5: a greyscale frame next to the colour one
     }
 
     // Title screen on a cold start: the menu over the turning globe, no HUD (the loading label is hidden too).
@@ -811,7 +812,7 @@ public sealed partial class Main : Node3D
     // The window is a real 1920x1080 render (SaveShot asserts it); other window sizes are not evidence and are not shot.
     readonly List<(double Wait, Action Act)> _sizeQ = new(); int _sizeI;
 
-    float _discClosed;
+    float _discClosed; Vector2 _panBefore;
     void BuildSizeShots()
     {
         _sizeI = 0; _sizeQ.Clear();
@@ -838,19 +839,47 @@ public sealed partial class Main : Node3D
             Q(0.8, () => { SaveShot($"area_production{sfx}.png"); CloseArea(); if (Settings.Current.RailWide) ToggleRail(); _pinBadges = Array.Empty<(AreaId, int, int)>(); });
             // The rail in its states: all normal, then an alarm on Finance and a warning "9+" on Production, narrow and wide (spec task-0117-rail-and-legend §4).
             Q(0.5, () => { SaveShot($"rail_narrow_normal{sfx}.png"); RunT6($"rail narrow normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });
-            Q(0.5, () => { SaveShot($"rail_narrow_badges{sfx}.png"); RunT6($"rail narrow badges{sfx}", true); _shotLog += _rail.BadgeFitLog(); ToggleRail(); });
-            Q(0.6, () => { SaveShot($"rail_wide_badges{sfx}.png"); RunT6($"rail wide badges{sfx}", true); _shotLog += _rail.NameFitLog(); _shotLog += $"rail wide {sfx}: fits without scroll {_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f} (min {_rail.GetCombinedMinimumSize().Y:F0} of {_rail.Size.Y:F0}, rail {_rail.Size.Y:F0} du)\n"; ToggleRail(); _pinBadges = null; OpenTree(0); });
-            Q(1.0, () => { SaveShot($"tree_nolegend{sfx}.png"); _discClosed = _tree.DiscDiameter; _tree.ToggleLegend(true); });
+            Q(0.5, () => { SaveShot($"rail_narrow_badges{sfx}.png"); RunT6($"rail narrow badges{sfx}", true); _shotLog += _rail.BadgeFitLog(); _pinBadges = Array.Empty<(AreaId, int, int)>(); ToggleRail(); });
+            // Wide, Map selected, no badge: "Esc" and the marker are apart.
+            Q(0.6, () => { SaveShot($"rail_wide_normal{sfx}.png", null, scale == 100); RunT6($"rail wide normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });
+            Q(0.5, () => { SaveShot($"rail_wide_badges{sfx}.png", null, scale == 100 && lang == "ru"); RunT6($"rail wide badges{sfx}", true); _shotLog += _rail.NameFitLog(); _shotLog += $"rail wide {sfx}: fits without scroll {_rail.GetCombinedMinimumSize().Y <= _rail.Size.Y + 0.5f} (min {_rail.GetCombinedMinimumSize().Y:F0} of {_rail.Size.Y:F0}, rail {_rail.Size.Y:F0} du)\n"; ToggleRail(); _pinBadges = null; OpenTree(0); });
+            // Tree, legend closed: the five wedge summaries (the closed-legend button is checked in the same call).
+            Q(1.0, () =>
+            {
+                string sm = _tree.ShotSummaryCheck();
+                _shotLog += $"tree summaries {sfx}: 5 of 5 drawn, no overlap with node, label, summary, stamp, legend button: {(sm == null ? "PASS" : "FAIL " + sm)}\n"; if (sm != null) InstFail($"tree summaries {sfx}: {sm}");
+                SaveShot($"tree_nolegend{sfx}.png", null, scale == 100 && lang == "ru"); _discClosed = _tree.DiscDiameter;
+                _tree.ShotZoom(2.6f, -1); _tree.ShotPanBy(new Vector2(160, -120));
+            });
+            // The closed button over the zoomed and panned chart; a real click must open the legend and must not pan.
+            Q(0.6, () => { SaveShot($"tree_legend_closed_zoom{sfx}.png"); _panBefore = _tree.ShotPan; Mouse(_tree.ShotButtonCenter * PxPerDu(), null); });
+            Q(0.2, () => Mouse(_tree.ShotButtonCenter * PxPerDu(), true));
+            Q(0.1, () => Mouse(_tree.ShotButtonCenter * PxPerDu(), false));
+            Q(0.5, () =>
+            {
+                bool ok = _tree.LegendOpen && _tree.ShotPan == _panBefore;
+                _shotLog += $"tree legend button {sfx}: real click opens the legend {_tree.LegendOpen}, pan unchanged {_tree.ShotPan == _panBefore}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail($"tree legend button {sfx}");
+                _tree.ResetView();
+            });
             // A9 is checked on the state that is saved: the legend is open. The disc keeps its size and stays at 650 physical px or more (spec §3).
             Q(0.5, () =>
             {
-                string ov = _tree.ShotOverlap(); string fit = _tree.ShotLegendFit();
+                string ov = _tree.ShotOverlap(); string fit = _tree.ShotLegendFit(); string sm = _tree.ShotSummaryCheck();
                 if (ov != null) InstFail($"tree overlap {sfx}: {ov}"); else _shotLog += $"tree overlap {sfx}: none\n";
+                _shotLog += $"tree summaries (legend open) {sfx}: {(sm == null ? "PASS" : "FAIL " + sm)}\n"; if (sm != null) InstFail($"tree summaries open {sfx}: {sm}");
                 float d = _tree.DiscDiameter, px = d * scale / 100f;
                 bool ok = Math.Abs(d - _discClosed) < 0.01f && px >= 650f && fit == null;
-                _shotLog += $"tree legend {sfx}: disc {d:F1} du = {px:F0} px (closed {_discClosed:F1} du), legend sheet {_tree.LegendSheet}, {(fit ?? "clear of stamp and disc area")}: {(ok ? "PASS" : "FAIL")}\n";
+                _shotLog += $"tree legend {sfx}: disc {d:F1} du = {px:F0} px (closed {_discClosed:F1} du), legend sheet {_tree.LegendSheet}, {(fit ?? "clear of stamp, disc area and goal panel")}: {(ok ? "PASS" : "FAIL")}\n";
                 if (!ok) InstFail($"tree legend {sfx}: disc {d:F1} du (closed {_discClosed:F1}), {px:F0} px, {fit}");
-                SaveShot($"tree_legend{sfx}.png"); _tree.ToggleLegend(false); _tree.ResetView(); _tree.Visible = false; _journal.Visible = true;
+                SaveShot($"tree_legend{sfx}.png"); _tree.Select(_tree.GoalRow >= 0 ? _tree.GoalRow : _tree.FrontierRow);
+            });
+            // A node is selected with the legend open: the goal panel yields (bottom 8 du above the sheet) and scrolls inside.
+            Q(0.9, () =>
+            {
+                string fit = _tree.ShotLegendFit(); bool sc = _tree.ShotPanelScrolls; string sm = _tree.ShotSummaryCheck();
+                bool ok = fit == null && sc && sm == null;
+                _shotLog += $"tree legend + selected node {sfx}: {_tree.ShotPanelInfo}; panel clear of the sheet {(fit == null ? "yes" : fit)}, scrolls {sc}, summaries clear {(sm ?? "yes")}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail($"tree legend + selection {sfx}: {fit} {sc} {sm}");
+                SaveShot($"tree_legend_sel{sfx}.png", null, scale == 100 && lang == "ru"); _tree.ToggleLegend(false); _tree.ResetView(); _tree.Visible = false; _journal.Visible = true;
             });
             Q(0.6, () => { SaveShot($"journal{sfx}.png"); _journal.Visible = false; });
         }
