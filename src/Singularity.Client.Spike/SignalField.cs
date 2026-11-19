@@ -54,7 +54,6 @@ public sealed partial class SignalField : PanelContainer
     public Rect2 PlateRect(string key) { foreach (var p in _places.Append(_fail)) if (p.Key == key) return p.Box.GetGlobalRect(); return default; }
     public Rect2 FreeRect => _spacer.GetGlobalRect();
     /// <summary>Screenshot runs: the year the gauge era follows instead of the game date.</summary>
-    public int? YearOverride { get; set; }
     public bool Debug { set => _perf.Visible = value; }
     public void SetSpeed(int s) { _speed.Select(s, false); _host.Speed = _speed.Selected; }
     public void StepSpeed(int d) => _speed.Step(d);
@@ -194,7 +193,6 @@ public sealed partial class SignalField : PanelContainer
         var s = _host.Snap;
         if (s == null) { _date.Text = _host.Fatal != null ? Loc.T("sig.fail") : Loc.T(_host.Status); return; }
         _date.Text = Settings.Date(s.Date);
-        _speed.Year = YearOverride ?? s.Date.Year;
         _perf.Text = $"tick {s.Tick} · {s.LastTickMs.ToString("F1", CultureInfo.InvariantCulture)} ms" + (s.JobError != "" ? " · " + s.JobError : "");
         if (s.Seq == _seq) return;
         _seq = s.Seq;

@@ -3,74 +3,14 @@ using Godot;
 
 namespace Singularity.Client.Spike;
 
-/// <summary>The game-speed gauge (UI_INSTRUMENTS §3, #404, #409, O-008): a layer-2 instrument drawn procedurally, no assets. One layout in every era: a tick scale with a marker, and the tempo word beside it (the label of the gauge in the bar).
-/// The era (E1 1945–69, E2 1970–99, E3 2000–2100) changes only the skin of the ticks and of the marker, never how the value is read. Level 0 of the setting «Приборы-органы» gives the plain four-cell meter («before»).
-/// No colour carries a value here. Not interactive: the keys and tooltips stay with the buttons.</summary>
+/// <summary>The game-speed meter: four cells 7/11/15/19 high (pause, day/s, week/s, month/s; the fourth is the dashed reserve, #331). The same plain control at every organ level (O-008: the era-skinned gauge was not shipped);
+/// the value is read from the tempo word with its unit next to it, which TimeControl sets in full ink. Not interactive: the keys and tooltips stay with the buttons.</summary>
 public sealed partial class GaugeControl : Control
 {
-    static readonly int[] Ink = { Ui.Teal, Ui.Olive, Ui.Plum, Ui.Sand };   // the plain cells of the «before» look
-    const float InstrW = 84, InstrH = 36, BeforeW = 46, BeforeH = 28, MoveSeconds = 0.12f;
-
+    static readonly int[] Ink = { Ui.Teal, Ui.Olive, Ui.Plum, Ui.Sand };
     public int Filled;               // speed step 0..3
-    public int Year = 1945;
-    int _era, _level = -1;
-    float _pos;                      // displayed step; the marker travels to Filled in 120 ms (at once with «reduce motion»)
 
-    public GaugeControl() { MouseFilter = MouseFilterEnum.Ignore; Sync(); }
-
-    void Sync()
-    {
-        int level = InstrumentLogic.OrganLevel, era = InstrumentLogic.Era(Year);
-        if (level == _level && era == _era) return;
-        _level = level; _era = era;
-        CustomMinimumSize = level == 0 ? new Vector2(BeforeW, BeforeH) : new Vector2(InstrW, InstrH);
-        QueueRedraw();
-    }
-
-    public override void _Process(double delta)
-    {
-        Sync();
-        if (Mathf.IsEqualApprox(_pos, Filled)) return;
-        _pos = Settings.Current.Animations ? Mathf.MoveToward(_pos, Filled, (float)delta * 3f / MoveSeconds) : Filled;
-        QueueRedraw();
-    }
-
-    readonly Vector2[] _tri = new Vector2[3];   // reused by the E3 marker, no per-frame allocation
-
-    public override void _Draw()
-    {
-        if (_level == 0) { DrawBefore(); return; }
-        float y0 = Size.Y - InstrH, sy = y0 + 26;
-        DrawLine(new Vector2(6, sy), new Vector2(78, sy), Ui.Ink, 1f);
-        // four step ticks (pause, day, week, month), 12 px high and 2 px wide in every era; the fourth is the dashed reserve
-        for (int i = 0; i < 4; i++)
-        {
-            float x = 12 + i * 20;
-            if (i == 3) { DrawDashedLine(new Vector2(x, sy - 6), new Vector2(x, sy + 6), Ui.Ink2, 1.5f, 2f); continue; }
-            if (_era == 2) DrawRect(new Rect2(x - 1.5f, sy - 6, 3, 12), Ui.Ink);   // E2: blocky tick
-            else DrawLine(new Vector2(x, sy - 6), new Vector2(x, sy + 6), Ui.Ink, 2f);
-        }
-        float cx = 12 + _pos * 20;
-        if (_era == 1)
-        {
-            // E1: a needle with a round head
-            DrawLine(new Vector2(cx, sy + 8), new Vector2(cx, y0 + 12), Ui.Ink, 2.5f);
-            DrawCircle(new Vector2(cx, y0 + 10), 3.5f, Ui.Ink);
-        }
-        else if (_era == 2)
-        {
-            // E2: a solid block over the scale
-            DrawRect(new Rect2(cx - 4, y0 + 5, 8, 8), Ui.Ink);
-            DrawLine(new Vector2(cx, y0 + 13), new Vector2(cx, sy + 8), Ui.Ink, 2f);
-        }
-        else
-        {
-            // E3: a triangle cursor on a 2 px stroke
-            DrawLine(new Vector2(cx, sy - 8), new Vector2(cx, sy + 8), Ui.Ink, 2f);
-            _tri[0] = new Vector2(cx, sy - 8); _tri[1] = new Vector2(cx - 4, sy - 15); _tri[2] = new Vector2(cx + 4, sy - 15);
-            DrawColoredPolygon(_tri, Ui.Ink);
-        }
-    }
+    public GaugeControl() { MouseFilter = MouseFilterEnum.Ignore; CustomMinimumSize = new Vector2(46, 28); }
 
     void DrawDashedRect(Rect2 r, Color c)
     {
@@ -90,7 +30,7 @@ public sealed partial class GaugeControl : Control
         }
     }
 
-    void DrawBefore()
+    public override void _Draw()
     {
         for (int i = 0; i < 4; i++)
         {

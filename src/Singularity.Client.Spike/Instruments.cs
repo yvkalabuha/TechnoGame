@@ -8,7 +8,7 @@ namespace Singularity.Client.Spike;
 /// Never put it under an alert plate or in a table: the owner of the layout places it beside the text.</summary>
 public sealed partial class FlaskControl : Control
 {
-    const float W = 72, H = 80, Cx = 36, NeckTop = 2, NeckBottom = 16, Bottom = 56, NeckHalf = 6, BodyHalf = 20, LevelTop = 10;
+    const float W = 100, H = 80, Cx = 50, NeckTop = 2, NeckBottom = 16, Bottom = 56, NeckHalf = 6, BodyHalf = 20, LevelTop = 10;
     const float Slope = (BodyHalf - NeckHalf) / (Bottom - NeckBottom);   // half-width growth per du of height in the cone
 
     static readonly Vector2[] Outline =
@@ -38,7 +38,7 @@ public sealed partial class FlaskControl : Control
     {
         if (_lvl == InstrumentLogic.OrganLevel && _lang == Loc.Lang) return;
         _lvl = InstrumentLogic.OrganLevel;
-        if (_level >= 0) BuildText();   // also updates _lang while hidden, so that no redraw is asked every frame
+        if (_level >= 0) BuildText(); else _lang = Loc.Lang;   // _lang follows also while hidden or unset, so that no redraw is asked every frame
         QueueRedraw();
     }
 
@@ -48,7 +48,7 @@ public sealed partial class FlaskControl : Control
         _lang = Loc.Lang;
         double pct = Math.Round(_level * 100);
         if (Deficit) pct = Math.Min(pct, 99);
-        _txt = pct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) + "%" + (Deficit ? " " + Loc.T("flask.deficit") : "");
+        _txt = pct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) + " %" + (Deficit ? " · " + Loc.T("flask.deficit") : "");
     }
 
     static float HalfAt(float y) => y <= NeckBottom ? NeckHalf : NeckHalf + (y - NeckBottom) * Slope;

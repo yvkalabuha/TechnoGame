@@ -341,11 +341,11 @@ area.production.later,Supply priority and the choice of variants: in M1. Here ar
 area.finance.later,Taxes by region: M1; trade and embargo: M1–M2.,Налоги по регионам: M1; торговля и эмбарго: M1–M2.
 tip.area,{0} · {1},{0} · {1}
 flask.sci.cap,Progress of the first links of the chain,Ход первых звеньев цепи
-flask.sci.tip,Link {0}: {1}% ({2} of {3}),Звено {0}: {1}% ({2} из {3})
+flask.sci.tip,Link {0}: {1}% of the need ({2} of {3}),Звено {0}: {1}% от потребности ({2} из {3})
 flask.alloy.cap,Alloy stock,Запас сплава
-flask.alloy.tip,Stock covers {0}% of the need,Запас покрывает {0}% потребности
+flask.alloy.tip,Stock is {0}% of the demand,Запас — {0}% от потребности
 flask.deficit,low,мало
-flask.alloy.deficit,Stock covers {0}% of the need: a deficit (hatched),Запас покрывает {0}% потребности: дефицит (штриховка)
+flask.alloy.deficit,Stock is {0}% of the demand: a deficit (hatched),Запас — {0}% от потребности: дефицит (штриховка)
 caliper.tip,Left and right arrows: 5 points; or drag the jaw,Стрелки влево и вправо: 5 пунктов; или тяните губку
 tip.area.locked,{0} · {1} · appears in {2},{0} · {1} · появится в {2}
 tip.rail,Rail width: narrow or wide (\),Ширина рейки: узкая или широкая (\)

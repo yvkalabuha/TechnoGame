@@ -916,17 +916,7 @@ public sealed partial class Main : Node3D
             case 40 when _shotT >= 0.5: Shot("time_day.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(2); _shotStep = 41; _shotT = 0; break;
             case 41 when _shotT >= 0.4: Shot("time_week.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(3); _shotStep = 42; _shotT = 0; break;
             case 42 when _shotT >= 0.4: Shot("time_month.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(0); _shotStep = 43; _shotT = 0; break;
-            case 43 when _shotT >= 0.4: Shot("time_pause.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(2); _signal.YearOverride = 1950; _shotStep = 130; _shotT = 0; break;
-            // UI instruments: the speed gauge in E1, E2, E3 and the «before» look (setting off)
-            case 130 when _shotT >= 0.4: Shot("gauge_e1.png", new Rect2I(0, 0, 620, 52)); _signal.YearOverride = 1985; _shotStep = 131; _shotT = 0; break;
-            case 131 when _shotT >= 0.4: Shot("gauge_e2.png", new Rect2I(0, 0, 620, 52)); _signal.YearOverride = 2030; _shotStep = 132; _shotT = 0; break;
-            case 132 when _shotT >= 0.4: Shot("gauge_e3.png", new Rect2I(0, 0, 620, 52)); InstrumentLogic.OrganLevel = 0; _shotStep = 133; _shotT = 0; break;
-            case 133 when _shotT >= 0.4: Shot("gauge_before.png", new Rect2I(0, 0, 620, 52)); InstrumentLogic.OrganLevel = Settings.Current.OrganInstruments; _signal.YearOverride = 1950; Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false); _shotStep = 134; _shotT = 0; break;
-            // the same four looks at 150 % UI scale
-            case 134 when _shotT >= 0.5: Shot("gauge_e1_150.png", new Rect2I(0, 0, 930, 78)); _signal.YearOverride = 1985; _shotStep = 135; _shotT = 0; break;
-            case 135 when _shotT >= 0.4: Shot("gauge_e2_150.png", new Rect2I(0, 0, 930, 78)); _signal.YearOverride = 2030; _shotStep = 136; _shotT = 0; break;
-            case 136 when _shotT >= 0.4: Shot("gauge_e3_150.png", new Rect2I(0, 0, 930, 78)); InstrumentLogic.OrganLevel = 0; _shotStep = 137; _shotT = 0; break;
-            case 137 when _shotT >= 0.4: Shot("gauge_before_150.png", new Rect2I(0, 0, 930, 78)); InstrumentLogic.OrganLevel = Settings.Current.OrganInstruments; _signal.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _signal.SetSpeed(0); _alertI = 0; _instI = -1; _shotStep = 140; _shotT = 0; break;
+            case 43 when _shotT >= 0.4: Shot("time_pause.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(0); _alertI = 0; _instI = -1; _shotStep = 140; _shotT = 0; break;
             // layer-2 instruments in the area panels: caliper (Finance), flasks (Science, Production); every era at 100 % and 150 %, plus a greyscale copy of each
             case 140 when _shotT >= 0.7: if (InstShot()) { _shotStep = 141; AddFlaskProbe(); } _shotT = _instWait; _instWait = 0; break;
             case 141 when _shotT >= 0.5: SaveProbe("flask_levels_100"); Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false); _shotStep = 142; _shotT = 0; break;
@@ -1076,7 +1066,7 @@ public sealed partial class Main : Node3D
         if (_instI < 0) _instOrig = DisplayServer.WindowGetSize();
         if (++_instI >= 18)
         {
-            _areaPanel.ShotAlloy(null); InstrumentLogic.YearOverride = null; _signal.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); CloseArea();
+            _areaPanel.ShotAlloy(null); InstrumentLogic.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); CloseArea();
             DisplayServer.WindowSetSize(_instOrig); GetWindow().ContentScaleSize = _instOrig;
             return true;
         }
@@ -1084,7 +1074,7 @@ public sealed partial class Main : Node3D
         var want = InstSizes[_instI / 9];
         if (_instI % 9 == 0) { DisplayServer.WindowSetSize(want); GetWindow().ContentScaleSize = want; _instWait = -1.2; }
         Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false);
-        InstrumentLogic.YearOverride = InstYears[era]; _signal.YearOverride = InstYears[era];
+        InstrumentLogic.YearOverride = InstYears[era];
         OpenArea(InstAreas[q / 3]);
         _areaPanel.ShotAlloy(InstAreas[q / 3] == AreaId.Production ? 3.0 : null, 1.0);   // shot-only: a real deficit in the live Production panel (the scenario has none)
         if (InstAreas[q / 3] == AreaId.Finance) { _areaPanel.ShotMove(0, 35); _areaPanel.ShotFocus(); }   // an unsent edit and the focus: pencil marker and focus frame show

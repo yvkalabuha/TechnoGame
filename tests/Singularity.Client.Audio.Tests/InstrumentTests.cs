@@ -101,12 +101,13 @@ public class InstrumentTests
     public void AlloyLevel_AnyDeficitIsBelowFull(double supply, double deficit) => Assert.True(InstrumentLogic.AlloyLevel(supply, deficit) < 1);
 
     [Theory]
-    [InlineData(0, true, false, false)]
-    [InlineData(1, true, false, true)]
-    [InlineData(2, true, true, false)]
-    [InlineData(2, false, false, false)]
-    public void CaliperShown_OnlyOwnAreaPanelWithTheLayerOn(int level, bool area, bool foreign, bool expectShown) =>
-        Assert.Equal(expectShown && level > 0 && area && !foreign, InstrumentLogic.CaliperShown(level, area, foreign));
+    [InlineData(0, true, false, false)]    // layer off
+    [InlineData(1, true, false, true)]     // weak, own area panel
+    [InlineData(2, true, false, true)]     // normal, own area panel
+    [InlineData(2, true, true, false)]     // foreign power
+    [InlineData(2, false, false, false)]   // not an area panel
+    public void CaliperShown_OnlyOwnAreaPanelWithTheLayerOn(int level, bool area, bool foreign, bool expected) =>
+        Assert.Equal(expected, InstrumentLogic.CaliperShown(level, area, foreign));
 
     [Fact]
     public void Caliper_NeverShownAtLevelZeroOrForeign()
