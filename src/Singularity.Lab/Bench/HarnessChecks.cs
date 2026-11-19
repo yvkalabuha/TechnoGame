@@ -20,7 +20,7 @@ public static class HarnessChecks
         ("bench: series gate (ADR-0023 п. 1.3–1.5, 1.9) — н1/н2/м, exclusion only with н1|н2 on every attempt, window-end repeats, fixed med_point, #355 names/ancestors/idle", GateDecide),
         ("bench: series verdict — A 4/15 excluded INCONCLUSIVE, 3/15 not; seed 2/5 INCONCLUSIVE; series 23/114 INCONCLUSIVE, 22/114 not", GateVerdict),
         ("bench: EXP-0008 manifest — gate equals the П5 numbers (calibrated keys: proposal or П5.6 grid), plan = EXP-0007 plan, reference modes parse; calibration manifest = block A, same gate; bad gate key rejected", Manifests),
-        ("bench: alloc direct split (6, 180) 4 months — tick-only (SkipViews) and full runs end with the same hash, probes keep it, tick + snapshot + listener = full every month, snapshot path > 0; format 4: settle condition, events flushed, pause blocks", () => AllocSplit(tmp)),
+        ("bench: alloc direct split (6, 180) 4 months — tick-only (SkipViews) and full runs end with the same hash, probes keep it, run-thread count (DEBT-0060): tick + snapshot = run-thread bytes, process = run thread + other threads every month, noise_floor_bytes = max other threads, both paths > 0; format 5: settle condition, events flushed, pause blocks", () => AllocSplit(tmp)),
         ("bench: GC pause pairing (#416) — SuspendEE→RestartEE pauses, kind by GCStart type/depth (deepest in the pause), BGC final suspension → Background, non-GC suspension apart, unpaired counted; window summary max/p99/blocking gen2; series attempt gc copy", GcPairing),
         ("bench: process (6, 180) 1+2 months — format 3, settle condition, settle pause > 0, events flushed and complete (GC and gen2 counts = runtime), pauses per run, net bytes = all − sampler − meter − listener", () => ProcessGc(tmp)),
     ];
@@ -113,21 +113,35 @@ public static class HarnessChecks
             return $"exit {code}, runs_same_hash {p8.GetProperty("runs_same_hash")}, probes_kept_hash {r.GetProperty("probes_kept_hash")}";
         if (p8.GetProperty("state_hash_tick_only_run").GetString() != r.GetProperty("state_hash_before_probes").GetString())
             return "state_hash_tick_only_run differs from the full run";
-        if (r.GetProperty("format").GetInt32() != 4 || !p8.GetProperty("method").GetString()!.StartsWith("direct", StringComparison.Ordinal))
-            return "not format 4 / direct method";
+        if (r.GetProperty("format").GetInt32() != 5 || !p8.GetProperty("method").GetString()!.StartsWith("direct", StringComparison.Ordinal))
+            return "not format 5 / direct method";
         if (!r.GetProperty("conditions").GetProperty("gc_settle_before_window").GetBoolean() || !r.GetProperty("gc_events_flushed").GetBoolean()
             || p8.GetProperty("gc_pauses_window").ValueKind != JsonValueKind.Object || !(p8.GetProperty("gc_settle_pause_ms").GetDouble() > 0))
             return "settle condition, flushed events, pause window or settle pause missing";
+        // DEBT-0060: one thread → the split counts the run thread only; other threads' bytes (runtime background work, GC listener) are
+        // reported apart and bounded by noise_floor_bytes, but never enter the paths.
+        if (p8.GetProperty("byte_counter").GetString() != "sim_thread" || p8.GetProperty("noise_floor_bytes").ValueKind != JsonValueKind.Number)
+            return $"byte_counter {p8.GetProperty("byte_counter")}, noise_floor_bytes {p8.GetProperty("noise_floor_bytes")}";
+        long noise = 0;
         foreach (JsonElement m in r.GetProperty("months").EnumerateArray())
         {
-            long full = m.GetProperty("bytes").GetInt64(), tick = m.GetProperty("tick_path_bytes").GetInt64(), snap = m.GetProperty("snapshot_path_bytes").GetInt64();
-            long own = m.GetProperty("gc_listener_bytes").GetInt64();
-            if (tick + snap + own != full)
-                return $"month {m.GetProperty("month")}: {tick} + {snap} + {own} != {full}";
-            if (m.GetProperty("measured").GetBoolean() && (tick <= 0 || snap <= 0))
-                return $"month {m.GetProperty("month")}: tick {tick}, snapshot {snap}";
+            long sim = m.GetProperty("sim_bytes").GetInt64(), tick = m.GetProperty("tick_path_bytes").GetInt64(), snap = m.GetProperty("snapshot_path_bytes").GetInt64();
+            long thread = m.GetProperty("run_thread_bytes").GetInt64(), other = m.GetProperty("other_threads_bytes").GetInt64();
+            long tickThread = m.GetProperty("tick_only_run_thread_bytes").GetInt64(), tickOther = m.GetProperty("tick_only_other_threads_bytes").GetInt64();
+            string at = $"month {m.GetProperty("month")}";
+            if (sim != thread || tick != tickThread || tick + snap != sim)
+                return $"{at}: tick {tick} + snapshot {snap} vs run thread {thread} (tick-only run thread {tickThread})";
+            if (thread + other != m.GetProperty("bytes").GetInt64() || tickThread + tickOther != m.GetProperty("tick_only_bytes").GetInt64() || other < 0 || tickOther < 0)
+                return $"{at}: process bytes ≠ run thread + other threads (other {other}, tick-only other {tickOther})";
+            if (m.GetProperty("measured").GetBoolean())
+            {
+                if (tick <= 0 || snap <= 0)
+                    return $"{at}: tick {tick}, snapshot {snap} (other threads {other}, tick-only {tickOther})";
+                noise = Math.Max(noise, Math.Max(other, tickOther));
+            }
         }
-        return null;
+        long floor = p8.GetProperty("noise_floor_bytes").GetInt64();
+        return floor == noise ? null : $"noise_floor_bytes {floor} ≠ max other threads {noise}";
     }
 
     private static byte[] B(string s) => Encoding.UTF8.GetBytes(s);
