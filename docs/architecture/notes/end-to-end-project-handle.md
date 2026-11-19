@@ -29,7 +29,7 @@
 | `ProductsInputsAdapter` | склеивает внешние и ИИ, проверок нет | только переносит handle; **никакой проверки в Session** (проверка — Core) |
 | `ProductsSystem` | `cmd.Generation >= 0 && !IsCurrent(...)` | безусловно `!IsCurrent(a, handle) → StaleHandle`, для Derive, Cancel, Retire, Sell, StartSeries, CloseLine |
 | `ForceProxy` (harness) | `_sent` по `(a, d)` | `_sent` по `DesignHandle`; команды с handle |
-| `WhyNotTarget.Design` | голый слот | handle; устаревший → ответ «сущности нет» (одна ссылка-причина `StaleHandle`), без чтения данных чужого проекта |
+| `WhyNotTarget.Design` | голый слот | handle; устаревший → ответ «сущности нет» (в реализации — ответ как для пустого слота, ссылок нет), без чтения данных чужого проекта |
 | `PolicySystem.CancelPending` | сравнивает target | сравнивает handle |
 
 ### 2.1. `start_series` и `close_line`: внешний и ИИ в одном месяце
@@ -61,7 +61,7 @@
 - Все `new StartSeries/CloseLine/CancelDesign/DeriveDesign/RetireCohort/SellCohort(...)` [Факт: 51 вызов в 10 файлах, из них тесты: `CommandTests` 18, `FleetPlayerCommandTests` 12, `ProductAiSessionTests` 4, `AssembledSliceProperties` 2, `NodeBlockReuseTests` 2, `PlayerScript` 2, `DailyTickProbeTests` 1]. Тестовый помощник `Handle(session, actor, slot)` читает generation из `View` — тесты не должны подставлять константу 1 вслепую.
 - `ProductsSlotGenerationTests`: тесты, передающие −1 «чтобы пропустить проверку», переписать на явный handle; удалить сценарии «без handle».
 - Golden: `SchemaVersion` 10 → 11 и fingerprint схемы меняются из-за колонок `cmd.*.gen`/`pol.*.gen`; полные хеши перезаписываются **с объяснением в задаче**. Критерий «траектория не изменилась»: проекции без новых колонок (как в TASK-0099) совпадают до последнего golden-месяца.
-- `TestApiVersion` 11 → 12 (меняются типы аргументов `Submit`, ADR-0014 п. 6), новый `session-surface.v12.txt`; `JetSliceModel.SurfaceVersion`.
+- `TestApiVersion` 12 → 13 (в записке было «11 → 12»; на момент слияния версия на `main` — 12) (меняются типы аргументов `Submit`, ADR-0014 п. 6), новый `session-surface.v13.txt`; `JetSliceModel.SurfaceVersion`.
 - `lab selftest`: `SliceObserver`/`SliceChecks`, где они строят команды или читают `FleetCommand.Generation`.
 
 ## 6. Разбиение для developer (light, после утверждения Orchestrator)
