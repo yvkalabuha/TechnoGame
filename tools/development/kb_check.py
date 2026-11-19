@@ -81,8 +81,19 @@ def rel(p: Path) -> str:
         return str(p)
 
 
+def added_lines(path: Path) -> set[int]:
+    """Line numbers added or changed in the staged version of the file."""
+    out = subprocess.run(["git", "diff", "--cached", "-U0", "--", rel(path)], cwd=ROOT,
+                         capture_output=True, text=True).stdout
+    lines: set[int] = set()
+    for m in re.finditer(r"^@@ -\S+ \+(\d+)(?:,(\d+))? @@", out, re.M):
+        start, count = int(m.group(1)), int(m.group(2) or 1)
+        lines.update(range(start, start + count))
+    return lines
+
+
 def check_file(path: Path, ids: dict, facts: list[dict], living: bool,
-               errors: list[str], warnings: list[str]) -> None:
+               errors: list[str], warnings: list[str], only: set[int] | None = None) -> None:
     try:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
@@ -90,6 +101,8 @@ def check_file(path: Path, ids: dict, facts: list[dict], living: bool,
     where = rel(path)
     statuses = {i.id: i.meta.get("status") for i in registry.load_items([]) if i.type.prefix == "ADR"}
     for n, line in enumerate(text.splitlines(), 1):
+        if only is not None and n not in only:
+            continue  # pre-commit judges only the lines this commit adds: old logs are history
         for m in re.finditer(r"(?<![\w/&])#(\d{2,4})\b", line):
             if int(m.group(1)) > ids["max_decision"] and not re.search(r"[0-9A-Fa-f]{6}", line[m.start():m.start() + 8]):
                 errors.append(f"{where}:{n}: decision #{m.group(1)} does not exist (last is #{ids['max_decision']})")
@@ -159,7 +172,8 @@ def cmd_check(args) -> int:
         targets = sorted(living)
     for t in targets:
         if t.suffix == ".md" and t.exists():
-            check_file(t, ids, facts, t.resolve() in living, errors, warnings)
+            check_file(t, ids, facts, t.resolve() in living, errors, warnings,
+                       added_lines(t) if args.staged else None)
     if not args.file:
         check_facts(facts, warnings)
     if args.brief:
