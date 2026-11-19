@@ -85,20 +85,26 @@ public class InstrumentTests
         Assert.Equal(1, InstrumentLogic.FlaskLevel(0, 0));
     }
 
+    [Theory]
+    [InlineData(0.0, 1.0)]      // no disruption: the deficit fraction is 0, the stock is the whole normal supply
+    [InlineData(0.5, 0.5)]      // PolicyParams.DisruptionDeficit = 0.5 (a real view value): half of the normal supply
+    [InlineData(0.25, 0.75)]
+    [InlineData(1.0, 0.0)]
+    [InlineData(1.5, 0.0)]
+    public void AlloyLevel_IsWhatIsLeftOfTheNormalSupply(double deficitFraction, double expected) => Assert.Equal(expected, InstrumentLogic.AlloyLevel(deficitFraction), 9);
+
     [Fact]
-    public void AlloyLevel_IsSupplyAgainstSupplyPlusDeficit()
+    public void AlloyLevel_IgnoresTheKilogramSupply()
     {
-        Assert.Equal(0.75, InstrumentLogic.AlloyLevel(3, 1));
-        Assert.Equal(1, InstrumentLogic.AlloyLevel(3, 0));
-        Assert.Equal(0, InstrumentLogic.AlloyLevel(0, 2));
-        Assert.Equal(1, InstrumentLogic.AlloyLevel(0, 0));
+        // the view gives supply in kg (cap * (1 - deficit) * yield, e.g. 4200 kg) and the deficit as a fraction; only the fraction may set the level
+        Assert.Equal(0.5, InstrumentLogic.AlloyLevel(0.5));
     }
 
     [Theory]
-    [InlineData(1e9, 1e-6)]
-    [InlineData(1, 1)]
-    [InlineData(0, 5)]
-    public void AlloyLevel_AnyDeficitIsBelowFull(double supply, double deficit) => Assert.True(InstrumentLogic.AlloyLevel(supply, deficit) < 1);
+    [InlineData(1e-6)]
+    [InlineData(0.01)]
+    [InlineData(0.5)]
+    public void AlloyLevel_AnyDeficitIsBelowFull(double deficitFraction) => Assert.True(InstrumentLogic.AlloyLevel(deficitFraction) < 1);
 
     [Theory]
     [InlineData(0, true, false, false)]    // layer off

@@ -103,7 +103,7 @@ public sealed partial class TimeControl : HBoxContainer
         _pause.On = _speed == 0;
         _slower.Disabled = level <= 1; _faster.Disabled = level >= 3;
         _meter.Filled = _speed;
-        _word.Text = _speed == 0 ? Loc.T("speed.pause") : $"×{_speed} · {Loc.T(Words[_speed])}";   // value and unit in words, full ink (O-008)
+        _word.Text = _speed == 0 ? Loc.T("speed.pause") : Loc.T(Words[_speed]);   // the real rate with its unit ("неделя/с"), full ink (O-008); never the step index
         _word.AddThemeColorOverride("font_color", Ui.Ink);   // full-strength ink: the word carries the value (review TASK-0108)
         _pause.QueueRedraw(); _slower.QueueRedraw(); _faster.QueueRedraw(); _meter.QueueRedraw();
     }

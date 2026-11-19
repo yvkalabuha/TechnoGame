@@ -30,7 +30,8 @@ public sealed partial class FlaskControl : Control
     {
         level = Math.Clamp(level, 0, 1);
         if (Math.Abs(level - _level) < 1e-9 && deficit == Deficit) return;
-        _level = level; Deficit = deficit; _lang = "";
+        _level = level; Deficit = deficit;
+        BuildText();
         QueueRedraw();
     }
 
@@ -38,7 +39,7 @@ public sealed partial class FlaskControl : Control
     {
         if (_lvl == InstrumentLogic.OrganLevel && _lang == Loc.Lang) return;
         _lvl = InstrumentLogic.OrganLevel;
-        if (_level >= 0) BuildText(); else _lang = Loc.Lang;   // _lang follows also while hidden or unset, so that no redraw is asked every frame
+        if (_level >= 0) BuildText(); else _lang = Loc.Lang;   // strings are built here and in Set, never in _Draw; _lang follows also while unset, so that no redraw is asked every frame
         QueueRedraw();
     }
 
@@ -56,7 +57,6 @@ public sealed partial class FlaskControl : Control
     public override void _Draw()
     {
         if (_level < 0) return;
-        if (_lang != Loc.Lang) BuildText();
         int lvl = InstrumentLogic.OrganLevel;
         float yL = Bottom - (float)_level * (Bottom - LevelTop);
         if (_level > 0.004)

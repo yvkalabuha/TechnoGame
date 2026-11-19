@@ -242,8 +242,12 @@ public sealed partial class ActorPanel : PanelContainer
     public void ShotMove(int i, int v) => OnSlider(i, v);
 
     /// <summary>Screenshot run: the alloy flask shows this stock and deficit instead of the Session numbers (the shot scenario never has a deficit); null clears it. The panel itself is the live one.</summary>
-    public void ShotAlloy(double? supply, double deficit = 0) { _shotAlloy = supply is double v ? (v, deficit) : null; _dirty = true; }
-    (double Supply, double Deficit)? _shotAlloy;
+    public void ShotAlloy(double? deficitFraction) { _shotAlloy = deficitFraction; _dirty = true; }
+    double? _shotAlloy;
+
+    /// <summary>Screenshot run: the Science flasks show these (have, need) research links instead of the Session chain (the shot scenario has none); null clears it.</summary>
+    public void ShotResearch((double Have, double Need)[] links) { _shotSci = links; _dirty = true; }
+    (double Have, double Need)[] _shotSci;
 
     /// <summary>Screenshot run: the caliper takes the keyboard focus (focus frame and pencil).</summary>
     public void ShotFocus() => _cal.GrabFocus();
@@ -374,6 +378,13 @@ public sealed partial class ActorPanel : PanelContainer
         }
     }
 
+    void SetResearchFlask(int n, double have, double need)
+    {
+        double lv = InstrumentLogic.FlaskLevel(have, need);
+        _flaskSci[n].Set(lv, false);
+        _flaskSci[n].TooltipText = Loc.T("flask.sci.tip", n + 1, Math.Round(lv * 100), Loc.N(have), Loc.N(need));
+    }
+
     // Instrument layer: level and era follow the setting and the game date; at level 0 the sliders are back and the flasks are gone (the «before» look).
     void SyncInstruments(int year)
     {
@@ -393,21 +404,21 @@ public sealed partial class ActorPanel : PanelContainer
     void FillFlasks(HostSnapshot s, ActorInputsView inA)
     {
         int n = 0;
-        if (s.WhyError == "" && s.Target != null)
+        if (_shotSci != null)
+            foreach (var (h, nd) in _shotSci) { if (n < _flaskSci.Length) SetResearchFlask(n++, h, nd); }
+        else if (s.WhyError == "" && s.Target != null)
             foreach (var l in s.Links)
             {
                 if (n >= _flaskSci.Length) break;
-                double have = l.Have.ToDouble(), need = l.Need.ToDouble(), lv = InstrumentLogic.FlaskLevel(have, need);
-                _flaskSci[n].Set(lv, false);
-                _flaskSci[n].TooltipText = Loc.T("flask.sci.tip", n + 1, Math.Round(lv * 100), Loc.N(have), Loc.N(need));
-                n++;
+                if (l.Layer != WhyNotLayer.Knowledge) continue;   // research progress only; product and capability blockers stay as text
+                SetResearchFlask(n++, l.Have.ToDouble(), l.Need.ToDouble());
             }
         for (int i = 0; i < _flaskSci.Length; i++) _flaskSci[i].Visible = i < n;
         _flaskSciRow.GetChild<Control>(_flaskSci.Length).Visible = n > 0;
         bool has = inA != null || _shotAlloy != null;
         _flaskProdRow.GetChild<Control>(1).Visible = has; _flaskProd.Visible = has;
         if (!has) return;
-        double sup = _shotAlloy?.Supply ?? inA.Capability.AlloySupply.ToDouble(), def = _shotAlloy?.Deficit ?? inA.Capability.AlloyDeficit.ToDouble(), lev = InstrumentLogic.AlloyLevel(sup, def);
+        double def = _shotAlloy ?? inA.Capability.AlloyDeficit.ToDouble(), lev = InstrumentLogic.AlloyLevel(def);
         _flaskProd.Set(lev, def > 0);
         _flaskProd.TooltipText = Loc.T(def > 0 ? "flask.alloy.deficit" : "flask.alloy.tip", Math.Round(lev * 100));
     }

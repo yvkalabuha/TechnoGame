@@ -918,7 +918,7 @@ public sealed partial class Main : Node3D
             case 42 when _shotT >= 0.4: Shot("time_month.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(0); _shotStep = 43; _shotT = 0; break;
             case 43 when _shotT >= 0.4: Shot("time_pause.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(0); _alertI = 0; _instI = -1; _shotStep = 140; _shotT = 0; break;
             // layer-2 instruments in the area panels: caliper (Finance), flasks (Science, Production); every era at 100 % and 150 %, plus a greyscale copy of each
-            case 140 when _shotT >= 0.7: if (InstShot()) { _shotStep = 141; AddFlaskProbe(); } _shotT = _instWait; _instWait = 0; break;
+            case 140 when _shotT >= 0.7: if (InstShot()) { _shotStep = 141; AddFlaskProbe(); } _shotT = 0; break;
             case 141 when _shotT >= 0.5: SaveProbe("flask_levels_100"); Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false); _shotStep = 142; _shotT = 0; break;
             case 142 when _shotT >= 0.6: SaveProbe("flask_levels_150"); Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _flaskProbe.QueueFree(); _shotStep = 45; _shotT = 0; break;
             // alert plates on tints 1 and 5 (7 is not on the map): day side, then tint 5 on the night side
@@ -1036,18 +1036,14 @@ public sealed partial class Main : Node3D
     static readonly int[] InstYears = { 1950, 1985, 2030 };
     static readonly AreaId[] InstAreas = { AreaId.Finance, AreaId.Science, AreaId.Production };
     static readonly string[] InstNames = { "caliper_finance", "flask_science", "flask_production" };
-    static readonly Vector2I[] InstSizes = { new(1280, 720), new(1920, 1080) };
-    double _instWait; Vector2I _instOrig;
-    // 100 % frames first (#417): 3 areas x 3 eras x 2 window sizes, each with a greyscale copy; the gauge bar of the same state is saved with the Finance rows.
+    // Base-size frames at 100 % and 150 % UI scale (#417; Full HD frames come with the scale policy task): 3 areas x 3 eras x 2 scales, each with a greyscale copy,
+    // the whole screen too, and the speed meter bar with the Finance rows.
     bool InstShot()
     {
         if (_instI >= 0)
         {
-            int p = _instI % 9; var sz = InstSizes[_instI / 9];
+            int p = _instI % 9, pct = _instI < 9 ? 100 : 150;
             var img = GetViewport().GetTexture().GetImage();
-            var raw = img.GetSize();
-            // The window manager keeps the real window at its start size while the layout follows the asked content size: resample to the asked pixel size, so a 1280x720 frame has 1280x720 pixels at 1 px per du.
-            if (raw != sz) img.Resize(sz.X, sz.Y, Image.Interpolation.Lanczos);
             float k = img.GetWidth() / GetViewport().GetVisibleRect().Size.X;
             var all = new Rect2I(0, 0, img.GetWidth(), img.GetHeight());
             string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
@@ -1057,26 +1053,24 @@ public sealed partial class Main : Node3D
                 c.SavePng(Path.Combine(dir, name + ".png"));
                 c.Convert(Image.Format.La8); c.SavePng(Path.Combine(dir, name + "_grey.png"));
             }
-            string sfx = $"e{p % 3 + 1}_{sz.X}x{sz.Y}";
+            string sfx = $"e{p % 3 + 1}_{pct}";
             Save(img, _areaPanel.GetGlobalRect(), $"{InstNames[p / 3]}_{sfx}");
-            if (p / 3 == 0) Save(img, new Rect2(0, 0, 620, 52), $"gauge_{sfx}");
+            if (p / 3 == 0) Save(img, new Rect2(0, 0, 620, 52), $"speed_{sfx}");
             Save(img, new Rect2(Vector2.Zero, GetViewport().GetVisibleRect().Size), $"full_{InstNames[p / 3]}_{sfx}");   // the whole screen, for the control in context
-            _shotLog += $"instrument shot {InstNames[p / 3]}_{sfx}: image {img.GetWidth()}x{img.GetHeight()} (raw {raw.X}x{raw.Y}), window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}\n";
+            _shotLog += $"instrument shot {InstNames[p / 3]}_{sfx}: image {img.GetWidth()}x{img.GetHeight()}, scale {pct} %\n";
         }
-        if (_instI < 0) _instOrig = DisplayServer.WindowGetSize();
         if (++_instI >= 18)
         {
-            _areaPanel.ShotAlloy(null); InstrumentLogic.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); CloseArea();
-            DisplayServer.WindowSetSize(_instOrig); GetWindow().ContentScaleSize = _instOrig;
+            _areaPanel.ShotAlloy(null); _areaPanel.ShotResearch(null); InstrumentLogic.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); CloseArea();
             return true;
         }
         int q = _instI % 9, era = q % 3;
-        var want = InstSizes[_instI / 9];
-        if (_instI % 9 == 0) { DisplayServer.WindowSetSize(want); GetWindow().ContentScaleSize = want; _instWait = -1.2; }
-        Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false);
+        Settings.Current.UiScale = _instI < 9 ? 100 : 150; Settings.Apply(Settings.Current, GetWindow(), false);
         InstrumentLogic.YearOverride = InstYears[era];
         OpenArea(InstAreas[q / 3]);
-        _areaPanel.ShotAlloy(InstAreas[q / 3] == AreaId.Production ? 3.0 : null, 1.0);   // shot-only: a real deficit in the live Production panel (the scenario has none)
+        // shot-only states: the scenario has no research chain and no alloy deficit
+        _areaPanel.ShotAlloy(InstAreas[q / 3] == AreaId.Production ? 0.25 : null);
+        _areaPanel.ShotResearch(InstAreas[q / 3] == AreaId.Science ? new[] { (3.0, 4.0), (1.0, 5.0), (5.0, 5.0) } : null);
         if (InstAreas[q / 3] == AreaId.Finance) { _areaPanel.ShotMove(0, 35); _areaPanel.ShotFocus(); }   // an unsent edit and the focus: pencil marker and focus frame show
         return false;
     }

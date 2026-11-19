@@ -31,8 +31,9 @@ public static class InstrumentLogic
     /// <summary>Fill of a flask 0..1 from have and need; no need (0 or less) reads as full.</summary>
     public static double FlaskLevel(double have, double need) => need <= 0 ? 1 : Math.Clamp(have / need, 0, 1);
 
-    /// <summary>Alloy stock as a share of what the power needs: supply against supply plus deficit; nothing needed and nothing in stock reads as full.</summary>
-    public static double AlloyLevel(double supply, double deficit) => FlaskLevel(supply, supply + Math.Max(deficit, 0));
+    /// <summary>Alloy stock as a share of the normal supply. The view gives the supply in kg already cut by the disruption (cap·(1 − deficit)·yield) and the deficit as a fraction 0..1 (the cut itself), never in kg:
+    /// the two are not added. The level is what is left of the normal supply, 1 − deficit.</summary>
+    public static double AlloyLevel(double deficitFraction) => Math.Clamp(1 - deficitFraction, 0, 1);
 
     /// <summary>Layer-2 instruments of the budget block show at organ levels 1 and 2 and only in an area panel (never in the read-only panel of a foreign power).</summary>
     public static bool OrganShown(int level, bool areaMode) => level > 0 && areaMode;
