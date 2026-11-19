@@ -70,12 +70,12 @@ rules:
   - subdivide: {within: [COD-1872], parts: 2, base: democratic_republic_of_the_congo_bandundu.kasa_occidental, method: voronoi}
   - subdivide: {within: [COD-1896], parts: 2, base: democratic_republic_of_the_congo_orientale.kasa_oriental, method: voronoi}
   - subdivide: {within: [COD-1897], parts: 5, base: democratic_republic_of_the_congo_orientale.katanga, method: voronoi}
-  - subdivide: {within: [DZA-2143], parts: 5, base: algeria_tamanghasset.adrar, method: voronoi}
-  - subdivide: {within: [DZA-2148], parts: 2, base: algeria_tamanghasset.b_char, method: voronoi}
-  - subdivide: {within: [DZA-2150], parts: 2, base: algeria_tamanghasset.tindouf, method: voronoi}
-  - subdivide: {within: [DZA-2188], parts: 2, base: algeria_tamanghasset.illizi, method: voronoi}
-  - subdivide: {within: [DZA-2189], parts: 7, base: algeria_tamanghasset.tamanghasset, method: voronoi}
-  - subdivide: {within: [DZA-2194], parts: 3, base: algeria_ouargla.ouargla, method: voronoi}
+  - subdivide: {within: [DZA-2143], parts: 5, base: algeria_oasis.adrar, method: voronoi}
+  - subdivide: {within: [DZA-2148], parts: 2, base: algeria_ain_sefra.b_char, method: voronoi}
+  - subdivide: {within: [DZA-2150], parts: 2, base: algeria_ain_sefra.tindouf, method: voronoi}
+  - subdivide: {within: [DZA-2188], parts: 2, base: algeria_oasis.illizi, method: voronoi}
+  - subdivide: {within: [DZA-2189], parts: 7, base: algeria_oasis.tamanghasset, method: voronoi}
+  - subdivide: {within: [DZA-2194], parts: 3, base: algeria_oasis.ouargla, method: voronoi}
   - subdivide: {within: [EGY-1540], parts: 2, base: egypt_matruh.matruh, method: voronoi}
   - subdivide: {within: [EGY-1550], parts: 5, base: egypt_al_wadi_at_jadid.al_wadi_at_jadid, method: voronoi}
   - subdivide: {within: [EGY-1556], parts: 2, base: egypt_al_wadi_at_jadid.al_bahr_al_ahmar, method: voronoi}
