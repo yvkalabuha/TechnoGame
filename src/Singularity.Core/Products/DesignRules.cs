@@ -337,21 +337,6 @@ public static class DesignRules
         return sum;
     }
 
-    /// <summary>
-    /// <c>novelty</c> (spec §3.3): share of slots whose alternative the actor has not used in any earlier design;
-    /// <paramref name="usedAlts"/> lists the alternatives of the actor's existing designs.
-    /// </summary>
-    public static Fx6 Novelty(ProductsLayout l, ReadOnlySpan<int> alts, ReadOnlySpan<int> usedAlts)
-    {
-        int fresh = 0;
-        foreach (int a in alts)
-        {
-            if (usedAlts.IndexOf(a) < 0)
-                fresh++;
-        }
-        return Fx6.FromInt(fresh) / Fx6.FromInt(l.SlotCount);
-    }
-
     private static Fx6 BottleneckYield(ProductsLayout l, int alt, Func<int, Fx6> yieldOf)
     {
         Fx6 min = Fx6.One;

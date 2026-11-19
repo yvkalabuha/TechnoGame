@@ -8,7 +8,8 @@ namespace Singularity.Session.Tests;
 public class SeriesSwitchTests
 {
     // Hash of seed 1 after month 149 under the default config (F17b YProdGolden[0], recorded before the switches existed).
-    private const string MainSeed1Month149 = "6e49185f4bf45c314f3b5981aa9e5b9ea21bd498d9381e591289970411b68e75";
+    // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the run ends before the first slot reuse and the old columns are unchanged (projection tests, NoveltyMemoryTests), so only the new columns change the hash.
+    private const string MainSeed1Month149 = "7044a31fd0f808df14ae680111adc16ee7376391f8a3cbff24ed2840cb18fea5";
 
     private static SliceRunConfig Base(ulong seed = 1) => new() { Seed = seed, Threads = 2 };
 
@@ -45,7 +46,7 @@ public class SeriesSwitchTests
         HashAssert.Equal(MainSeed1Month149, Run(Base() with { ViewMode = SliceViewMode.Full }, 150).LastHash);
         Assert.DoesNotContain(s.World.Table.Columns, c => c.Name.StartsWith("run.layer", StringComparison.Ordinal) || c.Name is "run.grid" or "run.effort_share");
         Assert.Equal(SliceTestData.Create(Base()).World.SchemaFingerprint(), SliceTestData.Create(explicitDefaults).World.SchemaFingerprint());
-        Assert.Equal(9, SliceWorld.SchemaVersion);
+        Assert.Equal(10, SliceWorld.SchemaVersion);
     }
 
     [Fact]

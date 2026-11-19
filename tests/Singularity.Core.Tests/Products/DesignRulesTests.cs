@@ -118,14 +118,4 @@ public class DesignRulesTests
         int[] alts = [Alt(L, "eng_g1"), Alt(L, "hot_nicr_forged"), Alt(L, "comp_centrifugal"), Alt(L, airframe), Alt(L, "ab_none")];
         Assert.Equal(expected, DesignRules.PlatformGen(L, alts, L.KnownUpTo(knownUpTo)));
     }
-
-    [Fact]
-    public void Novelty_IsShareOfSlotsNewToTheActor()
-    {
-        int[] g1 = [Alt(L, "eng_g1"), Alt(L, "hot_nicr_forged"), Alt(L, "comp_centrifugal"), Alt(L, "af_straight"), Alt(L, "ab_none")];
-        int[] g2 = [Alt(L, "eng_g2"), Alt(L, "hot_nicr_forged"), Alt(L, "comp_axial"), Alt(L, "af_swept"), Alt(L, "ab_on")];
-        Assert.Equal(Fx6.FromRaw(800_000), DesignRules.Novelty(L, g2, g1));
-        Assert.Equal(Fx6.One, DesignRules.Novelty(L, g2, []));
-        Assert.Equal(Fx6.Zero, DesignRules.Novelty(L, g1, g1));
-    }
 }

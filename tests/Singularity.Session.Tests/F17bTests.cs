@@ -80,23 +80,24 @@ public class F17bTests(ITestOutputHelper output)
     // Re-recorded in TASK-0058 step 5 (all hashes below), reason: I-OC + A41 SLOT as the build (#242, #243, #245), fielded_L and the column prd.d*.q (#247), schema v8: the trajectory changed by decision, so ADMIT/V0 no longer equals the build before F17b.
     // Hashes after month 149 of seeds 1…5 (AI on, threads 2). Until TASK-0032 part 2 ADMIT (with V0) equalled the build before F17b (commit 29cd914) bit for bit;
     // re-recorded there only for the new column tool_unmet («tool_unmet column», F33): by the old columns the trajectory is unchanged (ToolingUnmetTests).
+    // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the run ends before the first slot reuse and the old columns are unchanged (projection tests, NoveltyMemoryTests), so only the new columns change the hash.
     // Re-recorded in TASK-0099 (ADR-0005 p. 3), reason: schema v9 (new columns prd.d*.generation, parentGen, prd.lp.g*.gen, StaleHandle counter); the run ends before the first slot reuse, the old columns are unchanged (SlotReuseL2Tests.NoSlotIsReused_BeforeTheMonthOfAnyRewrittenGolden, projection tests).
     private static readonly string[] AdmitGolden =
     [
-        "a5d35b580fe5c8d4590f66504f93ce9f8b92899afda5ce925e7760a17b480b5c",
-        "9a6495f67a929396811d33ede0db3b7339c27a6930edcb8a8849e3d9bc242fe9",
-        "b417b00e9e0e1f9f0a5c129037163fe999c6080b7824e58c929d38c433ede735",
-        "323474ab2f33e54edded8ea1f070523d49a21aa7402fadd3134168d66b44c802",
-        "9ca6cece183a9d62643db985ded09380d39991fda855cb139f79fdf2ee6d5e63",
+        "297cdb8fe1e80dc9dd442f12ab134695fe207ed74a4ca05c7e7c8f12bfd382d0",
+        "814da1d69c6d7bd90ad2f17a726a8ab5eb926a747442862bf439b05c7d8be648",
+        "7babdfe340dfe4486407c11ea25ee38605bcee86893ff6b6e3a62c182f3b37dd",
+        "01cfa3d0a7548c9927e0a2691bf63ca7ccae252a9c6c98fa716bbfd43c3d20da",
+        "18d21fe2f04adae224c5a71f096a14dbbb09c15fb497bb2aa55c8ee27145ee23",
     ];
 
     // Recorded in F17b (TASK-0030); re-recorded in TASK-0033, reason: T6d (columns of the licence and the disruption, run.t6d, the events themselves; both arms), then «exposure to data» (the scenario hash is in the run columns); in TASK-0032: part 1 (A39 «V5 default», #163: the default tooling target is V5), part 2 («tool_unmet column», F33).
     private static readonly string[] YProdGolden = [
-        "6e49185f4bf45c314f3b5981aa9e5b9ea21bd498d9381e591289970411b68e75",
-        "58ab2af2a21702f294e1ccf221e7f3aa3cf8aec69181c99a51e5dc6533f55253",
-        "7dda9da1aba157514e025104bc4ead536976836403025f94eb00ace7e3ad3d81",
-        "1470eb0e3792a68c0a25dfb5e8169b2239cb82468648408eb92355c1f966cf29",
-        "c50fe1883147f29672a5978bfefa09ea4290e52ed103985f0a8cb32fa2ac1630",
+        "7044a31fd0f808df14ae680111adc16ee7376391f8a3cbff24ed2840cb18fea5",
+        "d542bc6f3808014bfe4770c5db8989530dcc4d1bc2a7759c48601a412df8beff",
+        "f0ff809da0c47b2ce9cf051c70fb1ca253e56ad67461fa720b52855d4846282f",
+        "a3f4f9b21934733dd40f8b313b8da5027876045b9802380b1ea498b086cfcb44",
+        "96052e94d57c9c6df4b03a9b5f266a51c267b4a32f5efc9713bf560db291b390",
     ];
 
     private static string HashOf(ulong seed, LineCloseRule rule)
