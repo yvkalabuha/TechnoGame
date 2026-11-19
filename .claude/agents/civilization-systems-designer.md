@@ -40,6 +40,9 @@ You design the institutional and political layer of a civilization simulator (ma
 - Documents for the owner are in Russian; code, identifiers and file names in English. Mark claims as [Факт] (with source), [Предп.] or [Предл.].
 - Read long documents from their "Краткий вывод" section first. Check `docs/research/` before researching a topic again.
 - Never present a stub or a guess as a finished result.
+- Finish your own background commands before the final report: run builds and tests in the foreground with a timeout. You get one final report; a report sent while your work still runs is lost.
+- A test written for a fix must fail without the fix. Check it (apply the test to the old code, or remove the fix locally) and say in the report whether you checked.
+- In the report, list what you did not verify. Do not write "tests pass" for a run you did not see finish.
 
 ## Output format (max 40 lines, Russian text, English identifiers)
 ```

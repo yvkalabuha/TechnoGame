@@ -1,4 +1,6 @@
 #!/bin/sh
-# Validate the project registry before every commit.
+# Validate the project registry and the knowledge base before every commit.
 # Enable once per clone: git config core.hooksPath .githooks
-exec python3 tools/development/registry.py check --staged
+python3 tools/development/registry.py check --staged || exit 1
+# Unknown ids (#NNN, ADR, TASK, DEBT, RISK, O-NNN) in staged documents stop the commit; warnings do not.
+exec python3 tools/development/kb_check.py check --staged --errors-only

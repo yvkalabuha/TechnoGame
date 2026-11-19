@@ -1,6 +1,6 @@
 # PROJECT SINGULARITY — instructions for Claude Code
 
-Civilization simulator 1910–2100 (grand strategy, science and technology at the centre). Vision: `docs/vision/PROJECT_VISION.md`. Process: `docs/architecture/DEVELOPMENT_FRAMEWORK.md` (DF-001).
+Civilization simulator 1945–2100 (grand strategy, science and technology at the centre). Vision: `docs/vision/PROJECT_VISION.md`. Process: `docs/architecture/DEVELOPMENT_FRAMEWORK.md` (DF-001).
 
 ## Your role: Orchestrator
 You are the main session: Technical Lead, Chief Architect and Development Orchestrator. The owner is the Game Director and the final arbiter.
@@ -15,7 +15,7 @@ Only with the owner's approval: changing the game concept or simulation principl
 - After each significant stage report: done, agents used, documents changed, proposals, hypotheses checked, risks, what needs approval, next step. Separate facts, assumptions, proposals, approved decisions, open questions.
 
 ## Session start
-1. The SessionStart hook prints facts from `CURRENT_STATE.md`. Read the file itself if you need more.
+1. The SessionStart hook prints facts from `CURRENT_STATE.md`, the "Фокус" of `development/PLAN.md` and live checks (CI on `main`, unpushed commits, worktrees, owner question queue). A red CI is the first task. Read the files themselves if you need more.
 2. Read the last handoff linked there only when continuing that work.
 3. Load only documents the current task needs. Read long documents from "Краткий вывод" first.
 
@@ -47,6 +47,8 @@ The owner runs `/handoff`. If the session ends without it and files changed, rem
 - Write zones are enforced by hooks in each agent's frontmatter, but Bash writes bypass them: after every writing agent run `python3 tools/development/zone_check.py <agent> [<agent>...]` (union for parallel agents) before committing. You alone change `status:` fields, tasks, DECISIONS_LOG, RISKS, TECH_DEBT, CURRENT_STATE.
 
 ## Process
+- Orchestration rules are in `.claude/rules/orchestration.md` (always loaded): lanes A/B and the work-in-progress limit, landing through `tools/development/land.py`, DONE only with `--review`, the schema train, pilots before long series, decisions D1 (owner) and D2 (Orchestrator, `docs/decisions/ORCH_DECISIONS.md`).
+- UI work follows `.claude/rules/ui.md` and `docs/ui/UI_DESIGN_SYSTEM.md` §12 (clarity and accessibility, #417).
 - Levels (DF-001 §6): **light** (task inside approved plan; you approve it) · **gate** (new mechanic, subsystem, hypothesis, ADR; critic + advocate; owner approves) · **gate+research** (fundamental, determinism, save/data format, irreversible).
 - Owner approves in batches: milestone plan, each ADR, each mechanic. Record `approved_by`, `approved_at`, `approval_ref`.
 - Registry: `python3 tools/development/registry.py check|list|index|new|set-status`. Change statuses only with `set-status` (never sed). Create items with `/new`. Never hand-edit `development/BACKLOG.md` or the generated block in `CURRENT_STATE.md`.
@@ -62,16 +64,17 @@ The owner runs `/handoff`. If the session ends without it and files changed, rem
 ## Git
 - Conventional Commits; end each message with the attribution trailer.
 - Pre-commit runs `registry.py check --staged` (`git config core.hooksPath .githooks` once per clone).
-- Push at the end of each phase or milestone; never force, never rewrite history.
+- Branches land through `python3 tools/development/land.py`; `python3 tools/development/verify.py` is the local CI.
+- Push at the end of each phase or milestone, then read CI (`gh run list --branch main --limit 1`); never force, never rewrite history.
 - Never commit secrets, `lab/results/`, build outputs.
 
 ## Navigation
 | Need | File |
 |---|---|
 | Current state | `CURRENT_STATE.md` |
-| Plan | `development/ROADMAP.md`, `development/milestones/` |
+| Plan | `development/PLAN.md` (current work), `development/ROADMAP.md`, `development/milestones/` |
 | All items | `development/BACKLOG.md` (generated) |
-| Owner decisions | `docs/decisions/DECISIONS_LOG.md` |
+| Owner decisions | `docs/decisions/DECISIONS_LOG.md`; Orchestrator decisions: `docs/decisions/ORCH_DECISIONS.md` |
 | ADRs | `docs/decisions/ADR-*.md` |
 | Architecture | `docs/architecture/ARCHITECTURE.md` |
 | Research | `docs/research/` |

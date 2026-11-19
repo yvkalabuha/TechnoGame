@@ -15,16 +15,28 @@ GATE = {"outcome_block": "A", "noise_max": 0.10}
 COND = {"configuration": "Release", "gc_server": False, "power": "ac", "runtime_version": "10.0.0"}
 
 
-def process_doc(t_ms, m_ms, months=10, warmup=2, gc_pause=0.0, gen2=0, v2=True, commit="abc", foreign=0.01):
-    """A process JSON whose daily months are all t_ms and monthly months all m_ms (after warm-up)."""
+def process_doc(t_ms, m_ms, months=10, warmup=2, gc_pause=0.0, gen2=0, v2=True, commit="abc", foreign=0.01, pauses=None, blocking=0, settle=None):
+    """A process JSON whose daily months are all t_ms and monthly months all m_ms (after warm-up). pauses: list of (ms, kind, gen) in the
+    daily run's window (format 3, decision #416); None = an older format without pause records."""
     def run(mode, v):
         all_ = [v] * (warmup + months)
         return {"mode": mode, "month_ms": {"p50": v}, "month_ms_all": all_, "window_months": months, "window_wall_ms": 1000.0,
                 "gc_pause_ms": gc_pause, "gc_gen2": gen2, "allocated_bytes": 1000, "allocated_bytes_net": 900}
-    return {"params": {"warmup_months": warmup}, "runs": [run("monthly", m_ms), run("daily", t_ms)], "v2_monthly_daily_hash_equal": v2,
-            "conditions": COND, "provenance": {"build_commit": commit, "dirty": False},
+    runs = [run("monthly", m_ms), run("daily", t_ms)]
+    cond = dict(COND)
+    gc = None
+    if pauses is not None:
+        runs[0]["gc_pauses"] = {"pauses": []}
+        runs[1]["gc_pauses"] = {"pauses": [{"t_ms": 1.0 * i, "ms": ms, "kind": k, "gen": g, "reason": 0} for i, (ms, k, g) in enumerate(pauses)]}
+        gc = {"pause_share": 2 * gc_pause / 2000.0, "gen2_blocking_after_warmup": blocking, "events_complete": True}
+        cond["gc_settle_before_window"] = True if settle is None else settle
+    doc = {"params": {"warmup_months": warmup}, "runs": runs, "v2_monthly_daily_hash_equal": v2,
+            "conditions": cond, "provenance": {"build_commit": commit, "dirty": False},
             "frequency": {"possible_thermal_throttle": False},
             "machine": {"foreign_cpu_window": foreign, "threads_k": 8, "self_cpu_s_window": 8.0, "wall_s_window": 1.0, "run_delay_share_window": 0.0}}
+    if gc is not None:
+        doc["gc"] = gc
+    return doc
 
 
 class Series:
@@ -194,6 +206,58 @@ class Outcome(unittest.TestCase):
         # Median over all 16 processes, the excluded one with its first attempt.
         self.assertAlmostEqual(a["gc_pause_share_median_all"], 0.03)
         self.assertFalse(a["gc_pause_median_le_2pct"])
+
+    def test_gc_pauses_pooled_per_point_and_series(self):
+        # Decision #416: 15 processes with pauses 1..4 ms (ephemeral) and one with a 30 ms blocking gen2; one excluded process (first attempt).
+        for i in range(15):
+            self.s.add("A", [process_doc(300, 290, pauses=[(1.0, "Ephemeral", 0), (2.0, "Ephemeral", 1), (3.0, "Background", 2), (4.0, "Background", 2)])])
+        self.s.add("A", [process_doc(300, 290, pauses=[(30.0, "FullBlocking", 2)], blocking=1)] * 3, status="Excluded")
+        self.s.add("B", [process_doc(300, 290)])   # older format: no pause records
+        r = self.s.write()
+        g = r["points"]["A|pt|t8|bg0"]["gc_pauses"]
+        # Point (Р1, accepted only): 60 pauses 1..4 ms.
+        self.assertEqual(g["pauses"], 60)
+        self.assertAlmostEqual(g["max_ms"], 4.0)
+        self.assertAlmostEqual(g["p50_ms"], 2.5)
+        self.assertEqual(g["gen2_blocking_total"], 0)
+        self.assertEqual(g["by_kind"]["Background"]["pauses"], 30)
+        # Series: accepted + first attempt of the excluded one; the old-format process counted apart.
+        sg = r["gc_pauses_series"]
+        self.assertEqual(sg["pauses"], 61)
+        self.assertAlmostEqual(sg["max_ms"], 30.0)
+        self.assertAlmostEqual(sg["p99_ms"], X.percentile([1.0, 2.0, 3.0, 4.0] * 15 + [30.0], 0.99))
+        self.assertEqual(sg["gen2_blocking_total"], 1)
+        self.assertEqual(sg["processes_with_blocking_gen2"], 1)
+        self.assertEqual(sg["processes_without_records"], 1)
+        self.assertAlmostEqual(sg["per_process_max_ms"]["max"], 30.0)
+        self.assertIsNone(r["points"]["B|pt|t8|bg0"]["gc_pauses"])
+
+    def test_gc_pause_of_process_without_pauses_is_zero(self):
+        st = X.process_stats(process_doc(300, 290, pauses=[]))
+        self.assertEqual((st["pause_max_ms"], st["pause_p99_ms"], st["gen2_blocking"]), (0.0, None, 0))
+        old = X.process_stats(process_doc(300, 290))
+        self.assertEqual((old["pauses"], old["pause_max_ms"], old["gc_settle"]), (None, None, False))
+
+    def test_mixed_settle_conditions_invalid(self):
+        self.fill_a([300] * 14)
+        self.s.add("A", [process_doc(300, 290, pauses=[], settle=True)])
+        r = self.s.write()
+        self.assertEqual(r["outcome"], "INVALID")
+        self.assertIn("mixed GC settle conditions (decision #416)", r["invalid_reasons"])
+
+    def test_calibration_reports_pause_distribution(self):
+        for i in range(10):
+            self.s.add("A", [process_doc(110, 90, gc_pause=5.0, pauses=[(0.5 * (i + 1), "Ephemeral", 0), (10.0, "Background", 2)])])
+            self.s.procs[-1]["attempts"][0].update({"foreign_cpus": 0.1, "foreign_over_share": 0.0, "run_delay_share": 0.0})
+        self.s.write()
+        c = X.calibrate(self.tmp.name)
+        g = c["gc_pauses"]
+        ms = [0.5 * (i + 1) for i in range(10)] + [10.0] * 10
+        self.assertEqual(g["pauses"], 20)
+        self.assertAlmostEqual(g["p50_ms"], X.percentile(ms, 0.5))
+        self.assertAlmostEqual(g["p99_ms"], X.percentile(ms, 0.99))
+        self.assertAlmostEqual(g["max_ms"], 10.0)
+        self.assertAlmostEqual(c["gc_pause_share"]["p50"], 0.005)
 
     def r2d_mode(self, mid, ratios_t1, ratios_t8, hashes=True, status="Accepted"):
         f = f"attempts/{mid}.json"

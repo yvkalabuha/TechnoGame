@@ -492,6 +492,17 @@ public class ProductAiTests
     }
 
     [Fact]
+    public void F17b_Candidate_AfterSlotReuse_IsTheNewestProject_NotTheHigherSlotIndex()
+    {
+        // Slot 0 was reused by a newer project (entered O at month 300); slot 2 is an older line of the same platform generation.
+        PolicyDesign older = Series(2, 0, true) with { StageOMonth = 120 };
+        PolicyDesign newer = Series(2, 0, true) with { StageOMonth = 300 };
+        PolicyDesign[] d = [newer, Series(1, 0, true), older];
+        Assert.Equal(0, PolicySystem.Candidate(d, 0, 2));
+        Assert.Equal(0, PolicySystem.Candidate(d, 2, 0));
+    }
+
+    [Fact]
     public void F17b_Candidate_IsTheLargerPlatformGeneration_ThenTheLargerDesignId()
     {
         PolicyDesign[] d = [Series(2, 0, true), Series(1, 0, true), Series(2, 0, true)];

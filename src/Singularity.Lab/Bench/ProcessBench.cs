@@ -40,6 +40,12 @@ public sealed class RunTiming
     public required long MeterAllocatedBytes { get; init; }
     /// <summary>Machine snapshots at the bounds of the window (EXP-0008 П5.5); null without a meter.</summary>
     public MachineWindow? Machine { get; init; }
+    /// <summary>Host UTC bounds of the measured window (the GC events are matched against them).</summary>
+    public (DateTime From, DateTime To) WindowUtc { get; init; }
+    /// <summary>Host UTC bounds of the forced collection after <c>SliceSession.Create</c> (<see cref="ProcessBench.SettleGc"/>).</summary>
+    public (DateTime From, DateTime To) SettleUtc { get; init; }
+    /// <summary>Part of <see cref="AllocatedBytes"/> made by the <see cref="GcEventListener"/> dispatch thread in the window (0 without a listener).</summary>
+    public long ListenerAllocatedBytes { get; init; }
 }
 
 /// <summary>
@@ -51,6 +57,27 @@ public static class ProcessBench
 {
     /// <summary>Thread × ChunkSize pairs of V1 (ADR-0016 §4 INVALID (а)): threads 1/4/8/16 at ChunkSize 8, and t8 at ChunkSize 1/32.</summary>
     public static readonly (int Threads, int Chunk)[] ValidityGrid = [(1, 8), (4, 8), (8, 8), (16, 8), (8, 1), (8, 32)];
+
+    /// <summary>
+    /// Decision #416 / DEBT-0057 п. 3: after the world (session) is built and before the first month, outside every timed span, one forced
+    /// blocking compacting gen2 collection and the pending finalizers, so the start-up gen2 (the world passing gen0 → gen1 → gen2) does not
+    /// fall into the run. Written into <c>conditions</c> by <see cref="WriteSettleCondition"/>.
+    /// </summary>
+    public static void SettleGc()
+    {
+        GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+        GC.WaitForPendingFinalizers();
+    }
+
+    public const string SettleDescription = "GC.Collect(2, Forced, blocking: true, compacting: true) + GC.WaitForPendingFinalizers() after SliceSession.Create, before month 0, outside every timed span (decision #416)";
+
+    /// <summary>The conditions entries of the settle collection and of the GC event listener.</summary>
+    public static void WriteSettleCondition(Utf8JsonWriter j, string gcEvents)
+    {
+        j.WriteBoolean("gc_settle_before_window", true);
+        j.WriteString("gc_settle", SettleDescription);
+        j.WriteString("gc_events", gcEvents);
+    }
 
     public static SliceRunConfig Config(SynthWorld w, ulong seed, int threads, int chunk, bool daily, RunSwitches sw) => new()
     {
@@ -70,11 +97,14 @@ public static class ProcessBench
     /// also gets, before every tick of the month except its first one, actor 0's shares from the start of the month again (R4 б: a
     /// no-op command on every day).
     /// </summary>
-    public static RunTiming Run(SynthWorld w, ulong seed, int threads, int chunk, bool daily, RunSwitches sw, int warmup, int measure,
-        FreqSampler? sampler = null, LoadMeter? meter = null)
+    internal static RunTiming Run(SynthWorld w, ulong seed, int threads, int chunk, bool daily, RunSwitches sw, int warmup, int measure,
+        FreqSampler? sampler = null, LoadMeter? meter = null, GcEventListener? gcl = null)
     {
         SliceSession s = SliceSession.Create(w.Data, Config(w, seed, threads, chunk, daily, sw));
         s.World.Table.FullCopyMode = sw.FullCopy;
+        DateTime settle0 = DateTime.UtcNow;
+        SettleGc();
+        DateTime settle1 = DateTime.UtcNow;
         int months = warmup + measure;
         var monthMs = new double[months];
         var days = new int[months];
@@ -82,7 +112,8 @@ public static class ProcessBench
         int actors = s.World.Table.RowCount;
         int local = 0;
         long commands = 0;
-        long alloc0 = 0, hash0 = 0, samplerAlloc0 = 0, meterAlloc0 = 0;
+        long alloc0 = 0, hash0 = 0, samplerAlloc0 = 0, meterAlloc0 = 0, listenerAlloc0 = 0;
+        DateTime utc0 = default;
         MachineSnapshot? m0 = null;
         int g0 = 0, g1 = 0, g2 = 0;
         TimeSpan pause0 = TimeSpan.Zero;
@@ -96,11 +127,13 @@ public static class ProcessBench
                 meterAlloc0 = meter?.AllocatedBytes ?? 0;
                 alloc0 = GC.GetTotalAllocatedBytes(true);
                 samplerAlloc0 = sampler?.AllocatedBytes ?? 0;
+                listenerAlloc0 = gcl?.OwnBytes ?? 0;
                 g0 = GC.CollectionCount(0);
                 g1 = GC.CollectionCount(1);
                 g2 = GC.CollectionCount(2);
                 pause0 = GC.GetTotalPauseDuration();
                 hash0 = s.HashComputations;
+                utc0 = DateTime.UtcNow;
                 win0 = Stopwatch.GetTimestamp();
             }
             BudgetShares shares0 = s.World.SharesOf(0);
@@ -130,8 +163,9 @@ public static class ProcessBench
             days[m] = (int)(end - first);
         }
         long win1 = Stopwatch.GetTimestamp();
+        DateTime utc1 = DateTime.UtcNow;
         long alloc1 = GC.GetTotalAllocatedBytes(true);
-        long samplerAlloc1 = sampler?.AllocatedBytes ?? 0, meterAlloc1 = meter?.AllocatedBytes ?? 0;
+        long samplerAlloc1 = sampler?.AllocatedBytes ?? 0, meterAlloc1 = meter?.AllocatedBytes ?? 0, listenerAlloc1 = gcl?.OwnBytes ?? 0;
         int g0b = GC.CollectionCount(0) - g0, g1b = GC.CollectionCount(1) - g1, g2b = GC.CollectionCount(2) - g2;
         TimeSpan pause = GC.GetTotalPauseDuration() - pause0;
         // After the allocation count: the end snapshot allocates.
@@ -156,6 +190,9 @@ public static class ProcessBench
             FinalHash = s.LastHash,
             PeakWorkingSetBytes = Process.GetCurrentProcess().PeakWorkingSet64,
             Window = (win0, win1),
+            WindowUtc = (utc0, utc1),
+            SettleUtc = (settle0, settle1),
+            ListenerAllocatedBytes = listenerAlloc1 - listenerAlloc0,
         };
         return timing;
     }
@@ -202,7 +239,7 @@ public static class ProcessBench
             log.WriteLine($"precheck {rp.PrecheckMonths} month(s): {(pre.Value.Valid ? "valid" : "INVALID")}");
             if (!pre.Value.Valid)
             {
-                WriteProcessJson(outFile, p, rp, w, buildMs, pre, [], null, null);
+                WriteProcessJson(outFile, p, rp, w, buildMs, pre, [], null, null, null);
                 return 1;
             }
         }
@@ -211,6 +248,8 @@ public static class ProcessBench
         using var meter = new LoadMeter();
         if (!meter.Available)
             log.WriteLine($"load meter unavailable: {meter.Reason}");
+        // Decision #416: every GC of the windows with kind, generation and pause; Informational level (no allocation ticks in the timed path).
+        using var gcl = new GcEventListener(raw: false, verbose: false);
         using BackgroundLoad? bg = p.Background > 0 ? new BackgroundLoad(p.Background) : null;
         bool[] order = rp.Runs switch
         {
@@ -221,11 +260,17 @@ public static class ProcessBench
         var runs = new List<RunTiming>();
         foreach (bool daily in order)
         {
-            RunTiming r = Run(w, p.Seed, p.Threads, rp.ChunkSize, daily, sw, rp.Warmup, rp.Measure, freq, meter);
+            RunTiming r = Run(w, p.Seed, p.Threads, rp.ChunkSize, daily, sw, rp.Warmup, rp.Measure, freq, meter, gcl);
             log.WriteLine($"{(r.Daily ? "daily" : "monthly")} run: p50 {BenchStats.Median(r.MonthMs[rp.Warmup..]):F1} ms/month");
             runs.Add(r);
         }
-        WriteProcessJson(outFile, p, rp, w, buildMs, pre, runs, freq, meter);
+        // After the last window: the flush collection cannot fall into a timed span.
+        (bool flushed, double? clockMs, double flushSpanMs) = gcl.Flush(TimeSpan.FromSeconds(5));
+        var gcEv = new GcEvents(GcPauses.Build(gcl.Snapshot()), flushed, clockMs, flushSpanMs);
+        GcPauses.Summary all = gcEv.Of(runs);
+        log.WriteLine($"gc: {all.Count} pauses, max {all.MaxMs ?? 0:F2} ms, p99 {all.P99Ms ?? 0:F2} ms, blocking gen2 {all.BlockingGen2}, gen2 {all.Gen2}"
+            + $"{(flushed ? "" : " (events not flushed)")}");
+        WriteProcessJson(outFile, p, rp, w, buildMs, pre, runs, freq, meter, gcEv);
         if (runs.Count < 2)
         {
             log.WriteLine($"json {outFile}");
@@ -237,14 +282,15 @@ public static class ProcessBench
     }
 
     private static void WriteProcessJson(string outFile, BenchProcess p, BenchRunParams rp, SynthWorld w, double buildMs,
-        (bool Valid, List<(string Label, string Hash)> Hashes)? pre, IReadOnlyList<RunTiming> runs, FreqSampler? freq, LoadMeter? meter)
+        (bool Valid, List<(string Label, string Hash)> Hashes)? pre, IReadOnlyList<RunTiming> runs, FreqSampler? freq, LoadMeter? meter, GcEvents? gcEv)
     {
         using var json = BenchJson.Open(outFile);
         Utf8JsonWriter j = json.Writer;
         j.WriteStartObject();
         j.WriteString("kind", "lab-bench/process");
-        j.WriteNumber("format", 2);
-        BenchEnv.Write(j, rp.RepoDir);
+        // Format 3 (decision #416): settle collection before every run, GC pauses from events per run and per process.
+        j.WriteNumber("format", 3);
+        BenchEnv.Write(j, rp.RepoDir, c => WriteSettleCondition(c, "GcEventListener, Informational: GCStart/GCEnd/GCSuspendEEBegin/GCRestartEEEnd"));
         BenchJson.WriteParams(j, rp);
         j.WriteStartObject("process");
         j.WriteNumber("index", p.Index);
@@ -264,7 +310,7 @@ public static class ProcessBench
         {
             j.WriteStartArray("runs");
             foreach (RunTiming r in runs)
-                WriteRun(j, r, rp.Warmup);
+                WriteRun(j, r, rp.Warmup, gcEv);
             j.WriteEndArray();
             RunTiming? monthly = runs.FirstOrDefault(r => !r.Daily), daily = runs.FirstOrDefault(r => r.Daily);
             if (monthly is not null && daily is not null)
@@ -279,6 +325,21 @@ public static class ProcessBench
             j.WriteNumber("window_wall_ms", wallMs);
             j.WriteNumber("pause_share", wallMs > 0 ? pauseMs / wallMs : 0);
             j.WriteNumber("gen2", runs.Sum(r => r.Gen2));
+            if (gcEv is not null)
+            {
+                // Decision #416: the pause criterion's inputs over all timed windows of the process (events; the share above is the runtime's).
+                GcPauses.Summary s = gcEv.Of(runs);
+                LoadMeter.WriteNum(j, "pause_max_ms", s.MaxMs);
+                LoadMeter.WriteNum(j, "pause_p50_ms", s.P50Ms);
+                LoadMeter.WriteNum(j, "pause_p99_ms", s.P99Ms);
+                j.WriteNumber("pause_count", s.Count);
+                j.WriteNumber("gen2_blocking_after_warmup", s.BlockingGen2);
+                j.WriteNumber("gen2_background_after_warmup", s.Gcs.Count(g => g.Kind == GcPauses.Background));
+                j.WriteNumber("pause_ms_events", s.TotalMs);
+                LoadMeter.WriteNum(j, "pause_share_events", s.Share);
+                gcEv.WriteChecks(j, runs, s);
+                GcPauses.Write(j, "pauses", s, null);
+            }
             j.WriteEndObject();
             int k = rp.K ?? p.Threads + p.Background;
             if (freq is not null)
@@ -289,7 +350,7 @@ public static class ProcessBench
         j.WriteEndObject();
     }
 
-    private static void WriteRun(Utf8JsonWriter j, RunTiming r, int warmup)
+    private static void WriteRun(Utf8JsonWriter j, RunTiming r, int warmup, GcEvents? gcEv)
     {
         double[] window = r.MonthMs[warmup..];
         j.WriteStartObject();
@@ -303,8 +364,9 @@ public static class ProcessBench
         // allocated_bytes counts every thread; the frequency sampler's share is given so the analysis can subtract it.
         j.WriteNumber("sampler_alloc_bytes", r.SamplerAllocatedBytes);
         j.WriteNumber("meter_alloc_bytes", r.MeterAllocatedBytes);
-        // The simulation's own bytes: every thread minus the two measuring threads.
-        j.WriteNumber("allocated_bytes_net", r.AllocatedBytes - r.SamplerAllocatedBytes - r.MeterAllocatedBytes);
+        j.WriteNumber("gc_listener_alloc_bytes", r.ListenerAllocatedBytes);
+        // The simulation's own bytes: every thread minus the three measuring threads.
+        j.WriteNumber("allocated_bytes_net", r.AllocatedBytes - r.SamplerAllocatedBytes - r.MeterAllocatedBytes - r.ListenerAllocatedBytes);
         j.WriteNumber("allocated_bytes_per_month", (double)r.AllocatedBytes / window.Length);
         // Reference only (the ADR-0016 §6 limit before ADR-0023): P8 is now split into tick path and snapshot path (bench --mode alloc).
         j.WriteBoolean("alloc_le_1mib_per_month_reference_pre_adr0023", r.AllocatedBytes / (double)window.Length <= 1 << 20);
@@ -314,6 +376,13 @@ public static class ProcessBench
         j.WriteBoolean("gc_gen2_zero", r.Gen2 == 0);
         j.WriteNumber("gc_pause_ms", r.GcPauseMs);
         j.WriteNumber("gc_pause_share", r.WindowWallMs > 0 ? r.GcPauseMs / r.WindowWallMs : 0);
+        if (gcEv is not null)
+        {
+            GcPauses.Summary settle = GcPauses.Summarize(gcEv.Timeline, [r.SettleUtc], (r.SettleUtc.To - r.SettleUtc.From).TotalMilliseconds);
+            j.WriteNumber("gc_settle_host_ms", settle.WallMs);
+            j.WriteNumber("gc_settle_pause_ms", settle.TotalMs);
+            GcPauses.Write(j, "gc_pauses", gcEv.Of([r]), r.WindowUtc.From);
+        }
         j.WriteNumber("hash_computations", r.HashComputations);
         j.WriteNumber("commands_submitted", r.CommandsSubmitted);
         j.WriteNumber("peak_working_set_bytes", r.PeakWorkingSetBytes);
@@ -397,5 +466,27 @@ public static class ProcessBench
         }
         j.WriteEndArray();
         j.WriteEndObject();
+    }
+}
+
+/// <summary>The paired GC events of a process and the flush record; <see cref="Of"/> gives the summary over the windows of some runs.</summary>
+internal sealed record GcEvents(GcPauses.Timeline Timeline, bool Flushed, double? ClockOffsetMs, double FlushHostSpanMs)
+{
+    public GcPauses.Summary Of(IReadOnlyList<RunTiming> runs) =>
+        GcPauses.Summarize(Timeline, [.. runs.Select(r => r.WindowUtc)], runs.Sum(r => r.WindowWallMs));
+
+    /// <summary>Completeness: events flushed, GC and gen2 counts of the events equal the runtime counters, clock offset of the flush GC.</summary>
+    public void WriteChecks(Utf8JsonWriter j, IReadOnlyList<RunTiming> runs, GcPauses.Summary s)
+    {
+        int gcsRuntime = runs.Sum(r => r.Gen0), gen2Runtime = runs.Sum(r => r.Gen2);
+        j.WriteBoolean("events_flushed", Flushed);
+        j.WriteNumber("gcs_events", s.Gcs.Count);
+        j.WriteNumber("gcs_runtime", gcsRuntime);
+        j.WriteNumber("gen2_events", s.Gen2);
+        j.WriteBoolean("events_complete", Flushed && s.Gcs.Count == gcsRuntime && s.Gen2 == gen2Runtime);
+        j.WriteNumber("unpaired_suspensions", Timeline.Unpaired);
+        LoadMeter.WriteNum(j, "clock_offset_ms", ClockOffsetMs);
+        j.WriteNumber("flush_host_span_ms", FlushHostSpanMs);
+        j.WriteNumber("listener_alloc_bytes", runs.Sum(r => r.ListenerAllocatedBytes));
     }
 }

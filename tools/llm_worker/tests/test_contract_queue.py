@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from helpers import NODES_CSV, TempRepo, a2_contract, load_contract
+from helpers import NODES_CSV, TempRepo, a2_contract, load_pilot_contract
 
 from tools.llm_worker import paths
 from tools.llm_worker.contract import ContractError, validate_contract
@@ -11,7 +11,7 @@ from tools.llm_worker.taskqueue import QUEUED, RUNNING, TaskQueue
 class PilotContractsTest(unittest.TestCase):
     def test_pilot_contracts_are_valid(self):
         for name in ("A1-product-class-inventory.json", "A2-jet-nodes-clean.json", "B1-fx6-tests.json"):
-            self.assertEqual(validate_contract(load_contract(name)), [], name)
+            self.assertEqual(validate_contract(load_pilot_contract(name)), [], name)
 
 
 class ContractValidationTest(unittest.TestCase):

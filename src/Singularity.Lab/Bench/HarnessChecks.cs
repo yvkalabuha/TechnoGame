@@ -20,8 +20,83 @@ public static class HarnessChecks
         ("bench: series gate (ADR-0023 п. 1.3–1.5, 1.9) — н1/н2/м, exclusion only with н1|н2 on every attempt, window-end repeats, fixed med_point, #355 names/ancestors/idle", GateDecide),
         ("bench: series verdict — A 4/15 excluded INCONCLUSIVE, 3/15 not; seed 2/5 INCONCLUSIVE; series 23/114 INCONCLUSIVE, 22/114 not", GateVerdict),
         ("bench: EXP-0008 manifest — gate equals the П5 numbers (calibrated keys: proposal or П5.6 grid), plan = EXP-0007 plan, reference modes parse; calibration manifest = block A, same gate; bad gate key rejected", Manifests),
-        ("bench: alloc direct split (6, 180) 4 months — tick-only (SkipViews) and full runs end with the same hash, probes keep it, tick + snapshot + listener = full every month, snapshot path > 0", () => AllocSplit(tmp)),
+        ("bench: alloc direct split (6, 180) 4 months — tick-only (SkipViews) and full runs end with the same hash, probes keep it, tick + snapshot + listener = full every month, snapshot path > 0; format 4: settle condition, events flushed, pause blocks", () => AllocSplit(tmp)),
+        ("bench: GC pause pairing (#416) — SuspendEE→RestartEE pauses, kind by GCStart type/depth (deepest in the pause), BGC final suspension → Background, non-GC suspension apart, unpaired counted; window summary max/p99/blocking gen2; series attempt gc copy", GcPairing),
+        ("bench: process (6, 180) 1+2 months — format 3, settle condition, settle pause > 0, events flushed and complete (GC and gen2 counts = runtime), pauses per run, net bytes = all − sampler − meter − listener", () => ProcessGc(tmp)),
     ];
+
+    private static GcEventListener.GcEvent E(int ms, string name, int gen = -1, int reason = -1, int type = -1, int count = -1) =>
+        new(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddMilliseconds(ms), name, -1, 0, gen, reason, 0, type, count);
+
+    private static string? GcPairing()
+    {
+        GcEventListener.GcEvent[] ev =
+        [
+            E(0, "suspend", reason: 1, count: 1), E(1, "start", 0, 0, 0, 2), E(3, "end", 0, count: 2), E(4, "restart"),                 // gen0: 4 ms
+            E(10, "suspend", reason: 1, count: 2), E(11, "start", 2, 0, 1, 3), E(11, "start", 1, 0, 0, 4), E(13, "end", 1, count: 4),
+            E(15, "restart"),                                                                                                          // BGC start: 5 ms
+            E(20, "suspend", reason: 0), E(20, "restart"),                                                                             // non-GC
+            E(30, "suspend", reason: 6, count: 3), E(32, "restart"), E(40, "end", 2, count: 3),                                        // BGC final: 2 ms
+            E(50, "suspend", reason: 1, count: 4), E(51, "start", 2, 1, 0, 5), E(70, "end", 2, count: 5), E(80, "restart"),           // blocking: 30 ms
+            E(90, "restart"),                                                                                                          // unpaired
+            E(95, "tick"),
+        ];
+        // Shuffled input: Build orders by time (stable).
+        GcPauses.Timeline t = GcPauses.Build([.. ev.Reverse().Take(3), .. ev.Take(ev.Length - 3)]);
+        string kinds = string.Join(",", t.Pauses.Select(p => $"{p.Kind}:{p.Ms:F0}"));
+        if (kinds != "Ephemeral:4,Background:5,Background:2,FullBlocking:30" || t.Other.Count != 1 || t.Unpaired != 1 || t.Gcs.Count != 4)
+            return $"pauses {kinds}, other {t.Other.Count}, unpaired {t.Unpaired}, gcs {t.Gcs.Count}";
+        DateTime o = ev[0].Ts;
+        GcPauses.Summary all = GcPauses.Summarize(t, [(o, o.AddMilliseconds(100))], 100);
+        if (all.MaxMs != 30 || all.BlockingGen2 != 1 || all.Gen2 != 2 || Math.Abs(all.TotalMs - 41) > 1e-9 || Math.Abs(all.Share!.Value - 0.41) > 1e-9
+            || Math.Abs(all.P99Ms!.Value - BenchStats.Percentile([4, 5, 2, 30], 0.99)) > 1e-9 || all.GcsOf(GcPauses.Ephemeral) != 2)
+            return $"summary max {all.MaxMs}, blocking {all.BlockingGen2}, gen2 {all.Gen2}, total {all.TotalMs}, p99 {all.P99Ms}";
+        // A window with only the BGC final suspension: the pause counts, the GC (started before) does not.
+        GcPauses.Summary late = GcPauses.Summarize(t, [(o.AddMilliseconds(25), o.AddMilliseconds(45))], 20);
+        if (late.Count != 1 || late.Gcs.Count != 0 || late.MaxMs != 2 || late.BlockingGen2 != 0)
+            return $"late window: {late.Count} pauses, {late.Gcs.Count} gcs";
+        if (GcPauses.Summarize(t, [(o.AddMilliseconds(200), o.AddMilliseconds(300))], 100) is { Count: not 0 } or { MaxMs: not null })
+            return "empty window has pauses";
+        using JsonDocument d = JsonDocument.Parse("{\"gc\":{\"pause_max_ms\":3.5,\"gen2_blocking_after_warmup\":0,\"pauses\":{},\"other\":1}}");
+        JsonElement? g = SeriesDriver.GcOf(d.RootElement);
+        if (g is not JsonElement ge || ge.EnumerateObject().Count() != 2 || ge.GetProperty("pause_max_ms").GetDouble() != 3.5)
+            return $"series gc copy {g}";
+        if (SeriesDriver.GcOf(JsonDocument.Parse("{}").RootElement) is not null)
+            return "series gc copy without a gc block";
+        return GcEventListener.BaseName("GCStart_V2") == "GCStart" && GcEventListener.BaseName("GCEnd") == "GCEnd" ? null : "BaseName";
+    }
+
+    private static string? ProcessGc(string tmp)
+    {
+        var spec = new SynthWorldSpec(6, 180, SynthGraph.CrossEdges);
+        string dir = Path.Combine(tmp, "bench-process-gc");
+        string f = Path.Combine(dir, "process.json");
+        var p = new BenchProcess(0, 0, "selftest", spec, 1, 1, 1, 0);
+        var rp = new BenchRunParams { Mode = "process", RepoDir = BenchCommand.RepoDir(), Warmup = 1, Measure = 2, PrecheckMonths = 0, Smoke = true };
+        int code = ProcessBench.Execute(p, rp, f, TextWriter.Null);
+        using JsonDocument d = JsonDocument.Parse(File.ReadAllBytes(f));
+        JsonElement r = d.RootElement;
+        if (code != 0 || r.GetProperty("format").GetInt32() != 3 || !r.GetProperty("conditions").GetProperty("gc_settle_before_window").GetBoolean())
+            return $"exit {code}, format {r.GetProperty("format")}, settle condition missing";
+        JsonElement gc = r.GetProperty("gc");
+        if (!gc.GetProperty("events_flushed").GetBoolean() || !gc.GetProperty("events_complete").GetBoolean())
+            return $"events flushed {gc.GetProperty("events_flushed")}, complete {gc.GetProperty("events_complete")} (gcs {gc.GetProperty("gcs_events")} vs {gc.GetProperty("gcs_runtime")})";
+        if (gc.GetProperty("pause_count").GetInt32() != gc.GetProperty("pauses").GetProperty("pause_count").GetInt32())
+            return "process pause count differs from its pauses block";
+        foreach (JsonElement run in r.GetProperty("runs").EnumerateArray())
+        {
+            if (!(run.GetProperty("gc_settle_pause_ms").GetDouble() > 0))
+                return $"{run.GetProperty("mode")}: no settle pause seen";
+            JsonElement gp = run.GetProperty("gc_pauses");
+            if (gp.GetProperty("pauses").GetArrayLength() != gp.GetProperty("pause_count").GetInt32())
+                return $"{run.GetProperty("mode")}: pause list length";
+            long net = run.GetProperty("allocated_bytes").GetInt64() - run.GetProperty("sampler_alloc_bytes").GetInt64()
+                - run.GetProperty("meter_alloc_bytes").GetInt64() - run.GetProperty("gc_listener_alloc_bytes").GetInt64();
+            if (net != run.GetProperty("allocated_bytes_net").GetInt64())
+                return $"{run.GetProperty("mode")}: net bytes";
+        }
+        return null;
+    }
 
     private static string? AllocSplit(string tmp)
     {
@@ -38,8 +113,11 @@ public static class HarnessChecks
             return $"exit {code}, runs_same_hash {p8.GetProperty("runs_same_hash")}, probes_kept_hash {r.GetProperty("probes_kept_hash")}";
         if (p8.GetProperty("state_hash_tick_only_run").GetString() != r.GetProperty("state_hash_before_probes").GetString())
             return "state_hash_tick_only_run differs from the full run";
-        if (r.GetProperty("format").GetInt32() != 3 || !p8.GetProperty("method").GetString()!.StartsWith("direct", StringComparison.Ordinal))
-            return "not format 3 / direct method";
+        if (r.GetProperty("format").GetInt32() != 4 || !p8.GetProperty("method").GetString()!.StartsWith("direct", StringComparison.Ordinal))
+            return "not format 4 / direct method";
+        if (!r.GetProperty("conditions").GetProperty("gc_settle_before_window").GetBoolean() || !r.GetProperty("gc_events_flushed").GetBoolean()
+            || p8.GetProperty("gc_pauses_window").ValueKind != JsonValueKind.Object || !(p8.GetProperty("gc_settle_pause_ms").GetDouble() > 0))
+            return "settle condition, flushed events, pause window or settle pause missing";
         foreach (JsonElement m in r.GetProperty("months").EnumerateArray())
         {
             long full = m.GetProperty("bytes").GetInt64(), tick = m.GetProperty("tick_path_bytes").GetInt64(), snap = m.GetProperty("snapshot_path_bytes").GetInt64();

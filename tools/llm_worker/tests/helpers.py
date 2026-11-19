@@ -36,6 +36,15 @@ def load_contract(name):
     return json.loads((CONTRACTS / name).read_text(encoding="utf-8"))
 
 
+def load_pilot_contract(name):
+    """Pilot contract with context hashes refreshed: tests check its structure, not live repo drift.
+
+    Staleness detection is covered by fixture tests (test_excluded_or_changed_context_rejected).
+    """
+    from tools.llm_worker.contract import fill_hashes
+    return fill_hashes(load_contract(name))
+
+
 def sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 

@@ -1,7 +1,7 @@
 ---
 id: TASK-0114
 title: "Northern Algeria regions for the 1945 map (DEBT-0058)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: research-scientist
