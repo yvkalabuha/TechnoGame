@@ -16,6 +16,7 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
+- TASK-0121 [IN_PROGRESS] Slice horizon to 2030, train 1: Years = 86, q mask in 62-bit blocks, horizon fixture (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0112 [REVIEW] Credits screen with music and sound attribution (DEBT-0050) (developer)
 - TASK-0117 [APPROVED] Client UI scale policy: text never below the A1 floor at 1280x720 (developer)
