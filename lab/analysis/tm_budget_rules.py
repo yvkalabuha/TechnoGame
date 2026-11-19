@@ -194,7 +194,8 @@ def line_starts(lines):
 
 
 def analyse_run(run_dir):
-    info = json.load(open(os.path.join(run_dir, "run.json")))
+    with open(os.path.join(run_dir, "run.json")) as f:
+        info = json.load(f)
     months = int(info["model_info"]["months"])
     ay = read(run_dir, "actor_year")
     key, volume = {}, {}
@@ -436,8 +437,10 @@ def main():
     root = sys.argv[1]
     repo = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     growth = scenario_growth(repo)
-    runs_csv = list(csv.DictReader(open(os.path.join(root, "runs.csv"))))
-    matrix = json.load(open(os.path.join(root, "matrix.json")))
+    with open(os.path.join(root, "runs.csv"), newline="") as f:
+        runs_csv = list(csv.DictReader(f))
+    with open(os.path.join(root, "matrix.json")) as f:
+        matrix = json.load(f)
     problems = []
     pilot = "--pilot" in sys.argv[2:]
     # A pilot (matrix --seeds 1) is a partial matrix by definition; the series itself must be a valid matrix (ADR-0008 п. 6).
