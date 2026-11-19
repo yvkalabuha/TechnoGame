@@ -79,7 +79,7 @@ def second_review(root: Path, task: str, base: str, head: str, run: bool) -> tup
     path, rec = found
     res = rec["result"]
     marks = {}
-    side = path.with_name(path.name[:-5] + ".confirm.json")
+    side = path.with_name(path.name + ".confirm.json")  # same name as tools/llm_worker/review.py confirm_path
     if side.exists():
         try:
             marks = json.loads(side.read_text(encoding="utf-8")).get("confirmed", {})
