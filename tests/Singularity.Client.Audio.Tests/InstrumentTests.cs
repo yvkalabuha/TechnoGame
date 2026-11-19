@@ -77,24 +77,54 @@ public class InstrumentTests
     public void CaliperArrow_StepsOnTheGrid(int v, int dir, int expect) => Assert.Equal(expect, InstrumentLogic.CaliperArrow(v, dir));
 
     [Fact]
-    public void AlloyFlask_NoMeltIsEmptyAndHatched_NotFull()
+    public void AlloyFlask_NoMeltIsEmptyHatchedAndNamedNoSmelting()
     {
-        var (lv, hatched) = InstrumentLogic.AlloyFlask(0, 0, null);
-        Assert.Equal(0, lv); Assert.True(hatched);
+        var f = InstrumentLogic.AlloyFlask(0, 0, null);
+        Assert.Equal(0, f.Level); Assert.True(f.Hatched); Assert.Equal(InstrumentLogic.AlloyState.NoSmelting, f.State);
+        Assert.Equal("flask.alloy.none", InstrumentLogic.AlloyTipKey(f.State));
     }
 
     [Fact]
-    public void AlloyFlask_SupplyBelowDemandIsHatchedWithoutADisruption()
+    public void AlloyFlask_LinkWithHaveBelowNeedIsAShortage()
     {
-        var (lv, hatched) = InstrumentLogic.AlloyFlask(40, 0, (40, 100));
-        Assert.Equal(0.4, lv, 9); Assert.True(hatched);
+        var f = InstrumentLogic.AlloyFlask(40, 0, (40, 100));
+        Assert.Equal(0.4, f.Level, 9); Assert.True(f.Hatched); Assert.Equal(InstrumentLogic.AlloyState.Shortage, f.State);
+        Assert.Equal("flask.alloy.deficit", InstrumentLogic.AlloyTipKey(f.State));
+    }
+
+    [Theory]
+    [InlineData(100, 100)]
+    [InlineData(120, 100)]
+    public void AlloyFlask_LinkWithHaveAtOrAboveNeedIsNoShortage(double have, double need)
+    {
+        var f = InstrumentLogic.AlloyFlask(have, 0, (have, need));
+        Assert.False(f.Hatched); Assert.Equal(InstrumentLogic.AlloyState.Normal, f.State); Assert.Equal(1.0, f.Level);
+        Assert.Equal("flask.alloy.tip", InstrumentLogic.AlloyTipKey(f.State));
     }
 
     [Fact]
-    public void AlloyFlask_DisruptionAndHealthyStock()
+    public void AlloyFlask_DisruptionIsNotAShortage_AndHealthyStockIsNormal()
     {
-        Assert.Equal((0.75, true), InstrumentLogic.AlloyFlask(10, 0.25, null));
-        Assert.Equal((1.0, false), InstrumentLogic.AlloyFlask(10, 0, null));
+        var d = InstrumentLogic.AlloyFlask(10, 0.25, null);
+        Assert.Equal(0.75, d.Level, 9); Assert.True(d.Hatched); Assert.Equal(InstrumentLogic.AlloyState.Disrupted, d.State);
+        Assert.Equal("flask.alloy.disrupted", InstrumentLogic.AlloyTipKey(d.State));
+        var n = InstrumentLogic.AlloyFlask(10, 0, null);
+        Assert.Equal(1.0, n.Level); Assert.False(n.Hatched); Assert.Equal(InstrumentLogic.AlloyState.Normal, n.State);
+    }
+
+    [Theory]
+    [InlineData(0.996, true, 99)]    // a hatched flask never reads 100 %
+    [InlineData(0.9, true, 90)]
+    [InlineData(1.0, false, 100)]
+    [InlineData(0.996, false, 100)]
+    [InlineData(0.0, true, 0)]
+    public void FlaskPercent_CapsHatchedAt99_ForCaptionAndTooltipAlike(double level, bool hatched, int expect) => Assert.Equal(expect, InstrumentLogic.FlaskPercent(level, hatched));
+
+    [Fact]
+    public void AlloyFlask_TinyDisruptionTooltipPercentIs99()
+    {
+        var f = InstrumentLogic.AlloyFlask(10, 0.001, null);
+        Assert.Equal(99, InstrumentLogic.FlaskPercent(f.Level, f.Hatched));
     }
 
     [Fact]

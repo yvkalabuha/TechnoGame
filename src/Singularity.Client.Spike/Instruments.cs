@@ -47,9 +47,7 @@ public sealed partial class FlaskControl : Control
     void BuildText()
     {
         _lang = Loc.Lang;
-        double pct = Math.Round(_level * 100);
-        if (Deficit) pct = Math.Min(pct, 99);
-        _txt = pct.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) + " %" + (Deficit ? " · " + Loc.T("flask.deficit") : "");
+        _txt = InstrumentLogic.FlaskPercent(_level, Deficit).ToString(System.Globalization.CultureInfo.InvariantCulture) + " %" + (Deficit ? " · " + Loc.T("flask.deficit") : "");
     }
 
     static float HalfAt(float y) => y <= NeckBottom ? NeckHalf : NeckHalf + (y - NeckBottom) * Slope;

@@ -35,14 +35,35 @@ public static class InstrumentLogic
     /// the two are not added. The level is what is left of the normal supply, 1 − deficit.</summary>
     public static double AlloyLevel(double deficitFraction) => Math.Clamp(1 - deficitFraction, 0, 1);
 
-    /// <summary>The Production flask: no admitted melt (supply 0) is an empty hatched flask; a why_not alloy link gives the real supply against the planned demand (hatched: it is a shortage);
-    /// otherwise the stock is what the policy disruption leaves, hatched while the disruption lasts.</summary>
-    public static (double Level, bool Hatched) AlloyFlask(double supply, double deficitFraction, (double Have, double Need)? shortage)
+    /// <summary>Which case a Production flask shows: Disrupted is the supply below normal (demand not measured), Shortage is the supply against a measured demand (the AlloyDeficit link), NoSmelting is no admitted melt.</summary>
+    public enum AlloyState { Normal, Disrupted, Shortage, NoSmelting }
+
+    public readonly record struct AlloyFlaskView(double Level, bool Hatched, AlloyState State);
+
+    /// <summary>The Production flask. A why_not alloy link with Have below Need is a shortage (real supply against the planned demand); with Have at or above Need it is no shortage and the other rules apply.
+    /// No admitted melt (supply 0) is an empty hatched flask; otherwise the stock is what the policy disruption leaves, hatched while the disruption lasts.</summary>
+    public static AlloyFlaskView AlloyFlask(double supply, double deficitFraction, (double Have, double Need)? shortage)
     {
-        if (shortage is { } s) return (FlaskLevel(s.Have, s.Need), true);
-        if (supply <= 0) return (0, true);
-        return (AlloyLevel(deficitFraction), deficitFraction > 0);
+        if (shortage is { } s && s.Have < s.Need) return new(FlaskLevel(s.Have, s.Need), true, AlloyState.Shortage);
+        if (supply <= 0) return new(0, true, AlloyState.NoSmelting);
+        return deficitFraction > 0 ? new(AlloyLevel(deficitFraction), true, AlloyState.Disrupted) : new(AlloyLevel(deficitFraction), false, AlloyState.Normal);
     }
+
+    /// <summary>Percent shown for a flask level, in the caption and in the tooltip alike: rounded, and a hatched (deficit) flask never reads 100 %.</summary>
+    public static int FlaskPercent(double level, bool hatched)
+    {
+        int pct = (int)Math.Round(level * 100, MidpointRounding.AwayFromZero);
+        return hatched ? Math.Min(pct, 99) : pct;
+    }
+
+    /// <summary>Tooltip key of the Production flask per case; each states only what was measured.</summary>
+    public static string AlloyTipKey(AlloyState state) => state switch
+    {
+        AlloyState.Shortage => "flask.alloy.deficit",
+        AlloyState.Disrupted => "flask.alloy.disrupted",
+        AlloyState.NoSmelting => "flask.alloy.none",
+        _ => "flask.alloy.tip",
+    };
 
     /// <summary>Layer-2 instruments of the budget block show at organ levels 1 and 2 and only in an area panel (never in the read-only panel of a foreign power).</summary>
     public static bool OrganShown(int level, bool areaMode) => level > 0 && areaMode;

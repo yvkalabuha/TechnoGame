@@ -918,7 +918,7 @@ public sealed partial class Main : Node3D
             case 42 when _shotT >= 0.4: Shot("time_month.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(0); _shotStep = 43; _shotT = 0; break;
             case 43 when _shotT >= 0.4: Shot("time_pause.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(0); _alertI = 0; _instI = -1; _shotStep = 140; _shotT = 0; break;
             // layer-2 instruments in the area panels: caliper (Finance), flasks (Science, Production); every era at 100 % and 150 %, plus a greyscale copy of each
-            case 140 when _shotT >= 0.7: if (InstShot()) { _shotStep = 141; AddFlaskProbe(); } _shotT = 0; break;
+            case 140 when _shotT >= 0.7: if (InstShot() && _shotStep == 140) { _shotStep = 141; AddFlaskProbe(); } _shotT = 0; break;
             case 141 when _shotT >= 0.5: SaveProbe("flask_levels_100"); Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false); _shotStep = 142; _shotT = 0; break;
             case 142 when _shotT >= 0.6: SaveProbe("flask_levels_150"); Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _flaskProbe.QueueFree(); _shotStep = 45; _shotT = 0; break;
             // alert plates on tints 1 and 5 (7 is not on the map): day side, then tint 5 on the night side
@@ -1008,7 +1008,17 @@ public sealed partial class Main : Node3D
     }
 
     // Instrument shots: 3 areas x 3 eras x 2 UI scales; the previous configuration is saved, then the next one is set up. Returns true when all are done.
-    int _instI, _instPhase;
+    int _instI, _instPhase, _instShareBefore; bool _instCheckInput;
+
+    // A failed shot-run check: the error goes to the run log and the process exits non-zero.
+    void InstFail(string msg)
+    {
+        _shotLog += "ERROR: " + msg + "\n";
+        string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
+        Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog);
+        GD.PrintErr(msg);
+        GetTree().Quit(1); _shotStep = 18;
+    }
     // Shot-only strip: flasks at 15, 60 and 95 % without and with a deficit (the live data has no deficit and no Science chain in the shot scenario).
     PanelContainer _flaskProbe;
     void AddFlaskProbe()
@@ -1047,11 +1057,20 @@ public sealed partial class Main : Node3D
             if (_instPhase == 1) { var c = _areaPanel.ShotRowPoint(1) * w; Mouse(c, null); Mouse(c, true); Mouse(c, false); }
             else
             {
+                _instShareBefore = _areaPanel.ShotShare(1);
                 var c = _areaPanel.ShotCaliperPoint(40) * w; Mouse(c, null); Mouse(c, true); Mouse(c, false); PressKey(Key.Right);
-                _shotLog += $"finance input: selected share {_areaPanel.ShotSelected}, share value {_areaPanel.ShotShare(_areaPanel.ShotSelected)}\n";
+                _instCheckInput = true;   // the events are processed on the next frame: checked at the next call
             }
             _instPhase = _instPhase == 1 ? 2 : 0;
             return false;
+        }
+        if (_instCheckInput)
+        {
+            // The injected row click, caliper click and arrow key must have selected share 1 and moved it (click to 40, one step right = 45); otherwise the frames would show an untouched panel.
+            _instCheckInput = false;
+            int sel = _areaPanel.ShotSelected, val = _areaPanel.ShotShare(1);
+            _shotLog += $"finance input: selected share {sel}, share value {val} (was {_instShareBefore})\n";
+            if (sel != 1 || val == _instShareBefore || val != 45) { InstFail($"finance input check failed: expected share 1 at 45 (was {_instShareBefore}), got share {sel} at {val}"); return true; }
         }
         if (_instI >= 0)
         {

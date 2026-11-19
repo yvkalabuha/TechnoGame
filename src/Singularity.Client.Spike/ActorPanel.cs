@@ -208,6 +208,9 @@ public sealed partial class ActorPanel : PanelContainer
         var sciCap = Ui.Lbl("flask.sci.cap", 14, Ui.Ink2); sciCap.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         _flaskSciRow.AddChild(sciCap);
         _sciNone.SizeFlagsVertical = SizeFlags.ShrinkCenter; _flaskSciRow.AddChild(_sciNone);
+        // the row stays inside the 420 du panel: the caption wraps in a fixed width instead of widening the row
+        _sciNone.AutowrapMode = TextServer.AutowrapMode.WordSmart; _sciNone.CustomMinimumSize = new Vector2(150, 0); _sciNone.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        sciCap.AutowrapMode = TextServer.AutowrapMode.WordSmart; sciCap.CustomMinimumSize = new Vector2(120, 0); sciCap.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         _secWhy.AddChild(_flaskSciRow);
         _secWhy.AddChild(_why);
         _prodLater.Visible = _finLater.Visible = _treeBtn.Visible = areaMode;
@@ -427,9 +430,9 @@ public sealed partial class ActorPanel : PanelContainer
         (double, double)? shortage = null;
         if (_shotAlloy == null && s.WhyError == "")
             foreach (var l in s.Links) if (l.Layer == WhyNotLayer.Product && l.Cause == WhyNotCause.AlloyDeficit) { shortage = (l.Have.ToDouble(), l.Need.ToDouble()); break; }
-        var (lev, hatched) = InstrumentLogic.AlloyFlask(supply, def, shortage);
-        _flaskProd.Set(lev, hatched);
-        _flaskProd.TooltipText = Loc.T(hatched ? "flask.alloy.deficit" : "flask.alloy.tip", Math.Round(lev * 100));
+        var fl = InstrumentLogic.AlloyFlask(supply, def, shortage);
+        _flaskProd.Set(fl.Level, fl.Hatched);
+        _flaskProd.TooltipText = Loc.T(InstrumentLogic.AlloyTipKey(fl.State), InstrumentLogic.FlaskPercent(fl.Level, fl.Hatched));
     }
 
     void FillResult(HostSnapshot s)

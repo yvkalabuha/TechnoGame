@@ -346,7 +346,9 @@ flask.sci.none,No research in progress on the current target,Нет хода и�
 flask.alloy.cap,Alloy stock,Запас сплава
 flask.alloy.tip,Stock is {0}% of the normal supply,Запас — {0}% от обычного снабжения
 flask.deficit,low,мало
-flask.alloy.deficit,Stock is {0}% of the demand: a shortage (hatched),Запас — {0}% от потребности: дефицит (штриховка)
+flask.alloy.deficit,Supply covers {0}% of the demand: a shortage (hatched),Снабжение покрывает {0}% потребности: дефицит (штриховка)
+flask.alloy.disrupted,Supply is {0}% of normal while the disruption lasts (hatched),Снабжение — {0}% от обычного, пока длится сбой (штриховка)
+flask.alloy.none,No alloy is being smelted (hatched),Сплав не выплавляется (штриховка)
 caliper.tip,Left and right arrows: 5 points; or drag the jaw,Стрелки влево и вправо: 5 пунктов; или тяните губку
 tip.area.locked,{0} · {1} · appears in {2},{0} · {1} · появится в {2}
 tip.rail,Rail width: narrow or wide (\),Ширина рейки: узкая или широкая (\)
