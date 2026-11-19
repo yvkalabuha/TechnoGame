@@ -19,13 +19,15 @@ created: 2026-11-19
 # TASK-0117 — Client UI scale policy: text never below the A1 floor at 1280x720
 
 ## Goal
-At a 1280x720 window the whole client is drawn about 0.8 times smaller than at 1600x900: text set at 14 du renders at about 11 px, and criterion A1 (#417) fails on every screen, not only on the credits screen (ui-art-director, TASK-0112 review). Fix the scale policy for the whole client.
+Owner decisions #424 and #425: the game runs fullscreen or as a borderless full window; the minimal supported screen is Full HD 1920x1080; larger screens scale the interface up. Today the client is laid out for a 1600x900 window and draws smaller text in smaller windows (ui-art-director, TASK-0112 review: criterion A1 fails). Set the scale policy for the whole client and give the owner one command to start the game.
 
 ## Description
-1. ui-art-director: write the policy into `docs/ui/UI_DESIGN_SYSTEM.md` §12/§4: what one du is at 1280x720, 1600x900 and 1920x1080; the text floor in rendered pixels; what gives way when the window is small (layout reflows, panels narrow, lists scroll; text does not shrink).
-2. developer: implement it in `Settings.cs` / window setup (`ContentScaleMode`, `ContentScaleFactor`, `ContentScaleSize`) and fix the layouts that break. `--shots` of the key screens at a real 1280x720, 1600x900 and 1920x1080 window, UI scale 100 % and 150 %.
+1. ui-art-director: write the policy into `docs/ui/UI_DESIGN_SYSTEM.md` (§4 and §12): the base layout is 1920x1080; what one du is there; integer or fractional scale for 2560x1440 and 3840x2160; the text floor in rendered pixels; the settings "Масштаб интерфейса" 100–150 % on top of it. Windows smaller than 1920x1080 are test-only and may scale down.
+2. developer: start fullscreen or borderless by default (a setting: fullscreen / borderless window; a framed window only with a command-line flag for tests and `--shots`); implement the policy (`ContentScaleMode`, `ContentScaleFactor`, `ContentScaleSize`); fix the layouts that break at 1920x1080; `--shots` at a real 1920x1080 render.
+3. developer: `./play.sh` in the repository root starts the game fullscreen with one command (build if needed, then run); a line in README or `docs/ui/` says how to quit.
 
 ## Acceptance criteria
-- [ ] A1, A2, A9 pass on the key screens at a real 1280x720 window (frames checked by pixel size).
+- [ ] The game starts fullscreen or borderless with `./play.sh`; Esc or the menu quits.
+- [ ] A1, A2, A9 pass on the key screens at 1920x1080 (frames are a real 1920x1080 render), UI scale 100 % and 150 %.
 - [ ] Client tests pass; code review APPROVE; ui-art-director PASS.
-- [ ] TASK-0112 (credits) gets its visual PASS on the new frames.
+- [ ] TASK-0112 (credits) and TASK-0111 (instruments) get their visual PASS for A1 on the new frames.
