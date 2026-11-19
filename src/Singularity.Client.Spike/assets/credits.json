@@ -13,7 +13,8 @@
     "en": "Converted to Ogg Vorbis, loudness normalised.",
     "ru": "Конвертация в Ogg Vorbis, нормировка громкости."
    },
-   "files": []
+   "files": [],
+   "credit": "Impact Prelude Kevin MacLeod (incompetech.com)"
   },
   {
    "id": "music_crusade",
@@ -27,7 +28,8 @@
     "en": "Converted to Ogg Vorbis, loudness normalised.",
     "ru": "Конвертация в Ogg Vorbis, нормировка громкости."
    },
-   "files": []
+   "files": [],
+   "credit": "Crusade Kevin MacLeod (incompetech.com)"
   },
   {
    "id": "music_five_armies",
@@ -41,7 +43,8 @@
     "en": "Converted to Ogg Vorbis, loudness normalised.",
     "ru": "Конвертация в Ogg Vorbis, нормировка громкости."
    },
-   "files": []
+   "files": [],
+   "credit": "Five Armies Kevin MacLeod (incompetech.com)"
   },
   {
    "id": "music_clash_defiant",
@@ -55,7 +58,8 @@
     "en": "Converted to Ogg Vorbis, loudness normalised.",
     "ru": "Конвертация в Ogg Vorbis, нормировка громкости."
    },
-   "files": []
+   "files": [],
+   "credit": "Clash Defiant Kevin MacLeod (incompetech.com)"
   },
   {
    "id": "music_heroic_age",
@@ -69,7 +73,8 @@
     "en": "Converted to Ogg Vorbis, loudness normalised.",
     "ru": "Конвертация в Ogg Vorbis, нормировка громкости."
    },
-   "files": []
+   "files": [],
+   "credit": "Heroic Age Kevin MacLeod (incompetech.com)"
   },
   {
    "id": "music_prelude_and_action",
@@ -83,7 +88,8 @@
     "en": "Converted to Ogg Vorbis, loudness normalised.",
     "ru": "Конвертация в Ogg Vorbis, нормировка громкости."
    },
-   "files": []
+   "files": [],
+   "credit": "Prelude and Action Kevin MacLeod (incompetech.com)"
   },
   {
    "id": "music_achilles",
@@ -97,7 +103,8 @@
     "en": "Converted to Ogg Vorbis, loudness normalised.",
     "ru": "Конвертация в Ogg Vorbis, нормировка громкости."
    },
-   "files": []
+   "files": [],
+   "credit": "Achilles Kevin MacLeod (incompetech.com)"
   },
   {
    "id": "music_volatile_reaction",
@@ -111,7 +118,8 @@
     "en": "Converted to Ogg Vorbis, loudness normalised.",
     "ru": "Конвертация в Ogg Vorbis, нормировка громкости."
    },
-   "files": []
+   "files": [],
+   "credit": "Volatile Reaction Kevin MacLeod (incompetech.com)"
   },
   {
    "id": "music_aphelion",
@@ -125,7 +133,8 @@
     "en": "Converted to Ogg Vorbis, loudness normalised.",
     "ru": "Конвертация в Ogg Vorbis, нормировка громкости."
    },
-   "files": []
+   "files": [],
+   "credit": "Aphelion by Scott Buckley (scottbuckley.com.au)"
   },
   {
    "id": "music_convergence",
@@ -139,7 +148,8 @@
     "en": "Converted to Ogg Vorbis, loudness normalised.",
     "ru": "Конвертация в Ogg Vorbis, нормировка громкости."
    },
-   "files": []
+   "files": [],
+   "credit": "Convergence by Scott Buckley (scottbuckley.com.au)"
   },
   {
    "id": "music_song_of_the_forge",
@@ -153,7 +163,8 @@
     "en": "Converted to Ogg Vorbis, loudness normalised.",
     "ru": "Конвертация в Ogg Vorbis, нормировка громкости."
    },
-   "files": []
+   "files": [],
+   "credit": "Song of the Forge by Scott Buckley (scottbuckley.com.au)"
   },
   {
    "id": "music_cobalt",
@@ -167,7 +178,8 @@
     "en": "Converted to Ogg Vorbis, loudness normalised.",
     "ru": "Конвертация в Ogg Vorbis, нормировка громкости."
    },
-   "files": []
+   "files": [],
+   "credit": "Cobalt by Scott Buckley (scottbuckley.com.au)"
   },
   {
    "id": "music_starfire",
@@ -181,7 +193,8 @@
     "en": "Converted to Ogg Vorbis, loudness normalised.",
     "ru": "Конвертация в Ogg Vorbis, нормировка громкости."
    },
-   "files": []
+   "files": [],
+   "credit": "Starfire by Scott Buckley (scottbuckley.com.au)"
   },
   {
    "id": "music_hyperion",
@@ -195,7 +208,8 @@
     "en": "Converted to Ogg Vorbis, loudness normalised.",
     "ru": "Конвертация в Ogg Vorbis, нормировка громкости."
    },
-   "files": []
+   "files": [],
+   "credit": "Hyperion by Scott Buckley (scottbuckley.com.au)"
   },
   {
    "id": "music_sanctum",
@@ -209,7 +223,8 @@
     "en": "Converted to Ogg Vorbis, loudness normalised.",
     "ru": "Конвертация в Ogg Vorbis, нормировка громкости."
    },
-   "files": []
+   "files": [],
+   "credit": "Sanctum by Scott Buckley (scottbuckley.com.au)"
   },
   {
    "id": "music_vanguard",
@@ -223,7 +238,8 @@
     "en": "Converted to Ogg Vorbis, loudness normalised.",
     "ru": "Конвертация в Ogg Vorbis, нормировка громкости."
    },
-   "files": []
+   "files": [],
+   "credit": "Vanguard by Scott Buckley (scottbuckley.com.au)"
   },
   {
    "id": "music_irradiated_skies",
@@ -282,8 +298,8 @@
    "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
    "url": "https://freesound.org/people/jakebagger/sounds/499787/",
    "changes": {
-    "en": "Cutting, filtering, loudness normalisation, pitch shifted by up to 2 semitones.",
-    "ru": "Нарезка, фильтрация, нормировка громкости, сдвиг высоты до 2 полутонов."
+    "en": "Cutting, filtering, loudness normalisation, pitch shifted by up to 2 semitones (signal_clear only).",
+    "ru": "Нарезка, фильтрация, нормировка громкости, сдвиг высоты до 2 полутонов (только signal_clear)."
    },
    "files": [
     "assets/audio/ui/signal_attention.ogg",
@@ -300,8 +316,8 @@
    "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
    "url": "https://freesound.org/people/joedeshon/sounds/139062/",
    "changes": {
-    "en": "Cutting, filtering, loudness normalisation, pitch shifted by up to 2 semitones.",
-    "ru": "Нарезка, фильтрация, нормировка громкости, сдвиг высоты до 2 полутонов."
+    "en": "Cutting, filtering, loudness normalisation, pitch shifted by up to 2 semitones (pause and unpause only).",
+    "ru": "Нарезка, фильтрация, нормировка громкости, сдвиг высоты до 2 полутонов (только pause и unpause)."
    },
    "files": [
     "assets/audio/ui/tempo.ogg",

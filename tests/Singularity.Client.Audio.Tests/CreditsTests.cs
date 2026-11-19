@@ -59,4 +59,18 @@ public class CreditsTests
         Assert.Contains("assets/credits.json", text);
         foreach (var e in Load()) Assert.DoesNotContain(e.Url, text);
     }
+
+    const string Ok = """{"id":"x","kind":"KIND","title":"t","author":"AUTHOR","licence":"CC0 1.0","licenceUrl":"u","url":"http://x","changes":{},"files":[]}""";
+    static string Doc(string kind = "music", string author = "a", string extra = "") =>
+        "{\"entries\":[" + Ok.Replace("KIND", kind).Replace("AUTHOR", author).Replace("\"files\":[]", "\"files\":[]" + extra) + "]}";
+
+    [Fact]
+    public void Parser_is_strict()
+    {
+        Assert.Single(CreditsData.Parse(Doc()));
+        Assert.Throws<FormatException>(() => CreditsData.Parse(Doc(kind: "video")));
+        Assert.Throws<FormatException>(() => CreditsData.Parse(Doc(author: "")));
+        Assert.Throws<FormatException>(() => CreditsData.Parse(Doc().Replace("\"author\":\"a\",", "")));
+        Assert.Throws<FormatException>(() => CreditsData.Parse(Doc(extra: ",\"licenсe\":\"x\"")));
+    }
 }
