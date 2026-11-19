@@ -297,6 +297,7 @@ internal static class AllocProfile
         var from = new DateTime[months];
         var to = new DateTime[months];
         int local = 0;
+        bool stepsFull = false;
         for (int m = 0; m < months; m++)
         {
             if (m == warmup)
@@ -325,7 +326,14 @@ internal static class AllocProfile
                     kind = now.Step is null ? "plain" : "stepped";
                     prev = now;
                 }
-                steps?.Add(new StepMark(tag, m, tick0, st0, steps is null ? default : DateTime.UtcNow, kind));
+                // Past the preallocated capacity the list would grow inside the window: stop recording instead (warned once).
+                if (steps is not null && steps.Count < steps.Capacity)
+                    steps.Add(new StepMark(tag, m, tick0, st0, DateTime.UtcNow, kind));
+                else if (steps is not null && !stepsFull)
+                {
+                    stepsFull = true;
+                    log.WriteLine($"warning: --gc-trace step marks full ({steps.Capacity}); later steps of run '{tag}' are not recorded");
+                }
             }
             bytes[m] = GC.GetTotalAllocatedBytes(true) - b0;
             to[m] = DateTime.UtcNow;

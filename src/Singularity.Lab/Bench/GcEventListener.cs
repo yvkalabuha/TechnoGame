@@ -53,11 +53,12 @@ internal sealed class GcEventListener : EventListener
         string name = e.EventName ?? "";
         bool tick = name.StartsWith("GCAllocationTick", StringComparison.Ordinal);
         bool start = !tick && name.StartsWith("GCStart", StringComparison.Ordinal);
+        // The raw line is built before `now` so that its bytes count as the listener's own (subtracted from the paths).
+        if (_raw is not null)
+            RawAdd(e);
         long now = GC.GetAllocatedBytesForCurrentThread();
         if (t_last != 0)
             Interlocked.Add(ref _own, now - t_last);
-        if (_raw is not null)
-            RawAdd(e);
         if (tick || start)
         {
             var ev = new GcEvent(e.TimeStamp.Kind == DateTimeKind.Utc ? e.TimeStamp : e.TimeStamp.ToUniversalTime(), tick ? "tick" : "start",
