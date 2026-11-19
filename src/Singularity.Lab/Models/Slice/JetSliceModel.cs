@@ -227,13 +227,14 @@ public sealed class JetSliceModel : ISessionModel
     // when the proxy sent something.
     private static int ForcedStarts(SliceSession s, SliceObserver observer, long month, int seen)
     {
+        // Line 0 is the header {"commands_log":2} (command log v2, TASK-0115): counted, never decoded as a command.
         int n = 0;
         foreach (string line in s.CommandLog.Split('\n'))
         {
-            if (line.Length == 0 || n++ < seen)
+            if (line.Length == 0 || n++ < seen || n == 1)
                 continue;
             if (CommandCodec.Decode(line).Command is StartSeries { Force: true } start)
-                observer.ForcedStart(start.Actor, start.Design.Slot, month);
+                observer.ForcedStart(start.Actor, start.Design, month);
         }
         return n;
     }

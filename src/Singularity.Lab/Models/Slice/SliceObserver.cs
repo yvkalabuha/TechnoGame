@@ -55,6 +55,7 @@ internal sealed class SliceObserver
     private long[,] _cum = null!;               // cumulative output of that series, raw
     private long?[,] _tLaunch = null!;          // [a, d] first month in С (post), −1 at the start
     private long?[,] _forcedSent = null!;       // [a, d] month after whose step the harness sent start_series with force (FORCE arms)
+    private int[,] _forcedGen = null!;          // [a, d] slot generation of the handle that _forcedSent was sent for (ADR-0005 p. 3)
     // summary
     private readonly StringBuilder _lead = new(), _leadAll = new(), _leadField = new();
     private readonly List<string> _hashYears = new();
@@ -220,6 +221,7 @@ internal sealed class SliceObserver
         _cum = new long[_nA, _nG];
         _tLaunch = new long?[_nA, _nD];
         _forcedSent = new long?[_nA, _nD];
+        _forcedGen = new int[_nA, _nD];
         var prc = new List<int>();
         for (int r = 0; r < nN; r++)
         {
@@ -442,7 +444,7 @@ internal sealed class SliceObserver
     // The lines of month t (format v0.5 r3 §4.12): in С by the snapshot the AI decided on (spec A41 F17b «Пара линий»: no state, the pair is read
     // from the stages), without a line the AI closed in the previous compute (it leaves С in this step). A line of the snapshot that step 7 did not
     // reach (closed by a command before it: the FORCE proxy, a derive that moves its parent) keeps its role and has no money row: counted, left empty.
-    // N: the larger g_p (tie: the larger design), W: the other.
+    // N: the candidate in the order of PolicySystem.Candidate (Newer), W: the other.
     private Role[] Roles(ActorView sv, MoneyStepView? money, out int w, out int n)
     {
         var lines = new List<int>();
@@ -465,7 +467,7 @@ internal sealed class SliceObserver
             throw new SliceFormatException($"Actor {_ids[sv.Actor]} has {lines.Count} lines in С; F17b allows at most two.");
         foreach (int d in lines)
         {
-            if (n < 0 || sv.Designs[d].PlatformGen > sv.Designs[n].PlatformGen || sv.Designs[d].PlatformGen == sv.Designs[n].PlatformGen && d > n)
+            if (n < 0 || Newer(sv.Designs[d], sv.Designs[n]))
                 n = d;
         }
         foreach (int d in lines)
@@ -475,6 +477,17 @@ internal sealed class SliceObserver
                 w = d;
         }
         return roles;
+    }
+
+    // The candidate order of PolicySystem.Candidate (spec A41 F17b): the larger platform generation, then the later StageOMonth (the newer
+    // project), then the larger design id. A slot index alone is not an age: a reused lower slot holds a newer project (ADR-0005 p. 3, TASK-0113).
+    internal static bool Newer(DesignView x, DesignView y)
+    {
+        if (x.PlatformGen != y.PlatformGen)
+            return x.PlatformGen > y.PlatformGen;
+        if (x.StageOMonth != y.StageOMonth)
+            return x.StageOMonth > y.StageOMonth;
+        return x.Design > y.Design;
     }
 
     // ---------------------------------------------------------------- node_times, prc_year, prc_month
@@ -621,7 +634,7 @@ internal sealed class SliceObserver
     /// the next tick boundary, so an accepted one puts the design in С in the post of month f + 1; a refused one (e.g. the line moved to a derived
     /// design) leaves it in О, and a later start of the AI is never forced (P0) — then <c>t_launch ≠ f + 1</c> and the flag is 0.
     /// </summary>
-    private bool LaunchedWithForce(int a, int d) => _forcedSent[a, d] is long f && _tLaunch[a, d] == f + 1;
+    private bool LaunchedWithForce(int a, int d) => _forcedSent[a, d] is long f && _forcedGen[a, d] == _slotGen[a, d] && _tLaunch[a, d] == f + 1;
 
     private static bool RepBefore(ActorView sv, int gp) => gp >= 1 && gp <= sv.Decisions.Repeats.Length && sv.Decisions.Repeats[gp - 1] > 0;
 
@@ -1042,7 +1055,15 @@ internal sealed class SliceObserver
     }
 
     /// <summary>The harness sent <c>start_series</c> with <c>force</c> for (actor row, design) after the step of month <paramref name="month"/>.</summary>
-    public void ForcedStart(int actor, int design, long month) => _forcedSent[actor, design] ??= month;
+    /// The mark follows the handle (TASK-0115): a forced start of another project in the same slot replaces it, never inherits it.
+    public void ForcedStart(int actor, DesignHandle design, long month)
+    {
+        if (_forcedSent[actor, design.Slot] is null || _forcedGen[actor, design.Slot] != design.Generation)
+        {
+            _forcedSent[actor, design.Slot] = month;
+            _forcedGen[actor, design.Slot] = design.Generation;
+        }
+    }
 
     /// <summary>
     /// Design capacity (contract-proposals T3): the compose/derive commands the AI decided in month t−1 (they are consumed by the compute of t)
