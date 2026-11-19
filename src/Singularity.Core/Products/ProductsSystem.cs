@@ -64,7 +64,7 @@ public sealed partial class ProductsSystem : ITickSystem
     // bureau_req[af_class] (§3.3, A34): computed once at construction, never in a tick.
     private readonly int[] _bureauReq;
 
-    private readonly IntColumn[] _stage, _bureauOf, _alt, _bureauDesign, _gp, _parent, _stageO, _gateOpened, _forced, _lpSlot, _gen, _parentGen, _lpGen;
+    private readonly IntColumn[] _stage, _bureauOf, _alt, _bureauDesign, _gp, _parent, _stageO, _gateOpened, _forced, _lpSlot, _gen, _parentGen, _lpGen, _altReached;
     private readonly IntColumn[] _cancelled, _idleC, _built, _quotaBase, _soldY, _lineBind;
     private readonly LongColumn[] _work, _d0, _hidden, _open, _found, _hours, _lineE, _rate, _cost, _exp, _cohort;
     private readonly LongColumn[] _qMask;   // q[design, y] as a bit per cohort year (contract r13a §3.1, §9.1)
@@ -214,6 +214,11 @@ public sealed partial class ProductsSystem : ITickSystem
             _exp[b] = table.AddLong($"prd.b{b}.exp");
             _bureauDesign[b] = table.AddInt($"prd.b{b}.design");
         }
+        // Novelty memory (DEBT-0054, spec C10): per actor and alternative, 1 once a project with it reached О or the start fleet
+        // had it. Monotone and independent of the design slots, so it survives slot reuse.
+        _altReached = new IntColumn[layout.AltStart[layout.SlotCount]];
+        for (int alt = 0; alt < _altReached.Length; alt++)
+            _altReached[alt] = table.AddInt($"prd.altReached.{alt}");
         _lpSlot = new IntColumn[layout.Generations];
         _lpGen = new IntColumn[layout.Generations];
         for (int g = 0; g < layout.Generations; g++)
@@ -286,6 +291,25 @@ public sealed partial class ProductsSystem : ITickSystem
         Array.Fill(ints, -1);
         for (int g = 0; g < layout.Generations; g++)
             _lpSlot[g].Load(ints);
+        // The start fleet counts as tried: every alternative of a scenario design past П.
+        for (int alt = 0; alt < _altReached.Length; alt++)
+        {
+            Array.Clear(ints);
+            for (int a = 0; a < rows; a++)
+            {
+                for (int d = 0; d < _d && ints[a] == 0; d++)
+                {
+                    if (start.Stage[a * _d + d] is DesignStage.None or DesignStage.Withdrawn or DesignStage.Project)
+                        continue;   // a start project in П is covered by InLiveProject
+                    for (int s = 0; s < _s; s++)
+                    {
+                        if (start.Alts[(a * _d + d) * _s + s] == alt)
+                            ints[a] = 1;
+                    }
+                }
+            }
+            _altReached[alt].Load(ints);
+        }
         Array.Fill(longs, Fx6.Scale);
         _paid.Load(longs);
         LoadInitialQ(rows);
@@ -697,15 +721,6 @@ public sealed partial class ProductsSystem : ITickSystem
     {
         int[] prc = DesignRules.PrcSet(_l, alts);
         Fx6 q = _inputs.Profile(actor, DesignRules.Items(_l, prc), month).Q;
-        var used = new List<int>();
-        for (int e = 0; e < _d; e++)
-        {
-            var st = Stage(actor, e);
-            if (st == DesignStage.None || st == DesignStage.Withdrawn && StageOMonth(actor, e) < 0)
-                continue;
-            for (int s = 0; s < _s; s++)
-                used.Add(_alt[e * _s + s].Current[actor]);
-        }
         Fx6 exp = Fx6.Zero;
         for (int b = 0; b < _b; b++)
         {
@@ -713,7 +728,7 @@ public sealed partial class ProductsSystem : ITickSystem
                 exp = BureauExp(actor, b);
         }
         int complexity = DesignRules.Complexity(_l, prc);
-        Fx6 d0 = ProductsMath.InitialDefects(_p.D0Factor, DesignRules.Novelty(_l, alts, used.ToArray()), complexity, exp, _p.EB);
+        Fx6 d0 = ProductsMath.InitialDefects(_p.D0Factor, FreshShare(alts, actor, next: false), complexity, exp, _p.EB);
         Fx6 readiness = ProductsMath.Readiness(Fx6.One, q, d0, _dRef, _p.PsiD);
         return FleetValue(actor, alts, Fx6.Zero, readiness, DesignRules.Perf(_l, alts), budget, month);
     }
@@ -1027,6 +1042,9 @@ public sealed partial class ProductsSystem : ITickSystem
                 _stage[d].Next[a] = (int)DesignStage.InService;
         }
         SetAlts(a, slot, alts);
+        // L_P goes straight to С (past О): the canonical project counts as tried.
+        for (int s = 0; s < _s; s++)
+            _altReached[alts[s]].Next[a] = 1;
         _gp[slot].Next[a] = gen;
         _gateOpened[slot].Next[a] = 1;
         _stage[slot].Next[a] = (int)DesignStage.Series;
@@ -1084,8 +1102,48 @@ public sealed partial class ProductsSystem : ITickSystem
             _bureauDesign[b].Next[a] = -1;
             Set(_exp, b, a, Get(_exp, b, a) + Fx6.One);
             _stageO[d].Next[a] = checked((int)t);
+            for (int s = 0; s < _s; s++)
+                _altReached[_alt[d * _s + s].Next[a]].Next[a] = 1;
             Set(_dGate, d, a, ProductsMath.PreliminaryGate(_p.KGate, _dRef, Get(_d0, d, a), _p.TTestMin, _p.TestRate, _p.LambdaD, _p.BetaQ10));
         }
+    }
+
+    /// <summary>
+    /// <c>novelty</c> (spec C10) a project with <paramref name="alts"/> would get now: the share of alternatives that no project of the actor
+    /// has taken to О, that are not in the start fleet and not in a project still in П. A pure function of the snapshot.
+    /// </summary>
+    public Fx6 Novelty(int actor, ReadOnlySpan<int> alts) => FreshShare(alts, actor, next: false);
+
+    /// <summary>The actor has taken alternative <paramref name="alt"/> to О or has it in the start fleet (novelty memory, spec C10).</summary>
+    public bool AltReached(int actor, int alt) => _altReached[alt].Current[actor] != 0;
+
+    // A project still in П counts as tried too (behaviour before DEBT-0054): it is live, so its slot cannot be reused and the
+    // answer does not depend on slot history; one cancelled in П leaves the stage Project and its alternatives are new again (§4.4e).
+    private bool InLiveProject(int alt, int a, bool next)
+    {
+        for (int e = 0; e < _d; e++)
+        {
+            if ((DesignStage)(next ? _stage[e].Next[a] : _stage[e].Current[a]) != DesignStage.Project)
+                continue;
+            for (int s = 0; s < _s; s++)
+            {
+                if ((next ? _alt[e * _s + s].Next[a] : _alt[e * _s + s].Current[a]) == alt)
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    // novelty (spec C10): the share of alternatives not yet reached О by the actor and not in the start fleet.
+    private Fx6 FreshShare(ReadOnlySpan<int> alts, int a, bool next)
+    {
+        int fresh = 0;
+        foreach (int alt in alts)
+        {
+            if ((next ? _altReached[alt].Next[a] : _altReached[alt].Current[a]) == 0 && !InLiveProject(alt, a, next))
+                fresh++;
+        }
+        return Fx6.FromInt(fresh) / Fx6.FromInt(_l.SlotCount);
     }
 
     // compose_design / derive in command order (contract §4.4a); an invalid command is rejected with its reason and changes nothing.
@@ -1206,17 +1264,7 @@ public sealed partial class ProductsSystem : ITickSystem
         if (bureau < 0)
             return CommandRejection.NoBureau;
 
-        var used = new List<int>();
-        for (int e = 0; e < _d; e++)
-        {
-            // A project cancelled in П never tested its alternatives: they stay new (contract §4.4e; one cancelled in О does not).
-            var st = (DesignStage)_stage[e].Next[a];
-            if (st == DesignStage.None || st == DesignStage.Withdrawn && _stageO[e].Next[a] < 0)
-                continue;
-            for (int s = 0; s < _s; s++)
-                used.Add(_alt[e * _s + s].Next[a]);
-        }
-        Fx6 novelty = DesignRules.Novelty(_l, noveltyAlts, used.ToArray());
+        Fx6 novelty = FreshShare(noveltyAlts, a, next: true);
         int complexity = DesignRules.Complexity(_l, DesignRules.PrcSet(_l, alts));
         int k = DesignRules.AfClass(_l, alts);
         Fx6 exp = Get(_exp, bureau, a);

@@ -508,7 +508,8 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
             HashAssert.Equal(a.LastHash, c.LastHash);
             Assert.True(ViewSupport.Dump(a.View) == ViewSupport.Dump(b.View), $"month {t}: the view differs between thread counts");
         }
-        HashAssert.Equal("6e49185f4bf45c314f3b5981aa9e5b9ea21bd498d9381e591289970411b68e75", a.LastHash);
+        // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
+        HashAssert.Equal("7044a31fd0f808df14ae680111adc16ee7376391f8a3cbff24ed2840cb18fea5", a.LastHash);
     }
 
     [Fact]

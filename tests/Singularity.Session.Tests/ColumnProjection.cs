@@ -35,12 +35,13 @@ internal static class ColumnProjection
 
     /// <summary>
     /// Columns added with the slot generation (ADR-0005 p. 3, TASK-0099): <c>prd.dN.generation</c>, <c>prd.dN.parentGen</c>, <c>prd.lp.gN.gen</c>
-    /// and the <c>StaleHandle</c> rejection counter. Projections onto "the old columns" leave them out.
+    /// and the <c>StaleHandle</c> rejection counter; and with the novelty memory (TASK-0110, DEBT-0054): <c>prd.altReached.N</c>.
+    /// Projections onto "the old columns" leave them out.
     /// </summary>
     public static bool IsSlotGenerationColumn(string name) =>
         name.EndsWith(".generation", StringComparison.Ordinal) || name.EndsWith(".parentGen", StringComparison.Ordinal)
         || name.StartsWith("prd.lp.g", StringComparison.Ordinal) && name.EndsWith(".gen", StringComparison.Ordinal)
-        || name == "prd.rejected.StaleHandle";
+        || name == "prd.rejected.StaleHandle" || name.StartsWith("prd.altReached.", StringComparison.Ordinal);
 
     /// <summary>
     /// A design slot has been retaken (generation ≥ 2): from then on the run is no longer the run of a build without slot reuse, so a
