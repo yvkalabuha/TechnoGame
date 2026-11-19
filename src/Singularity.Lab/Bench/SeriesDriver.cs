@@ -559,19 +559,29 @@ internal static class SeriesDriver
             }
         }
         JsonElement? top = machine is { } m3 && m3.TryGetProperty("top_foreign_window", out JsonElement t) ? t.Clone() : null;
-        double? topk = null;
-        bool? thermalFlag = null;
-        if (r.TryGetProperty("frequency", out JsonElement fr))
-        {
-            topk = Num(fr, "topk_median_mhz");
-            thermalFlag = fr.TryGetProperty("possible_thermal_throttle", out JsonElement th) && th.ValueKind is JsonValueKind.True or JsonValueKind.False ? th.GetBoolean() : null;
-        }
+        (double? topk, bool? thermalFlag, string? samplerFailure) = FrequencyOf(r);
+        if (samplerFailure is not null)
+            c.Say($"{key}: frequency sampler stopped ({samplerFailure}): no frequency for this attempt");
         bool injected = tag == "p" && c.Injected.TryGetValue(p.Index, out int upTo) && n < upTo;
         var ga = new GateAttempt(n, medT, foreign, over, delay, injected);
         JsonElement? gcRec = GcOf(r);
         string gcSay = gcRec is { } gx ? $", GC pause max {Fmt(Num(gx, "pause_max_ms"))} ms, blocking gen2 {(Num(gx, "gen2_blocking_after_warmup") is double bg ? I((int)bg) : "n/a")}" : "";
         c.Say($"{key}: T p50 {Fmt(medT)} ms, н1 {Fmt(foreign)} CPUs / {Fmt(over)} s>1, н2 {Fmt(delay)}, waited {waited:F0} s{(injected ? ", injected flag" : "")}{gcSay}");
         return new AttemptRec(key, n, file, code, waited, q, ga, top, topk, thermalFlag, thermal, t0, t1, gcRec);
+    }
+
+    /// <summary>
+    /// Top-k median and thermal flag of an attempt; both null without a frequency block or when the sampler stopped on a fault (then the
+    /// third value is its message): an attempt with a stopped sampler has no frequency (TASK-0116).
+    /// </summary>
+    internal static (double? TopK, bool? ThermalFlag, string? SamplerFailure) FrequencyOf(JsonElement r)
+    {
+        if (!r.TryGetProperty("frequency", out JsonElement fr))
+            return (null, null, null);
+        if (fr.TryGetProperty("sampler_failure", out JsonElement sf) && sf.ValueKind != JsonValueKind.Null)
+            return (null, null, sf.ValueKind == JsonValueKind.String ? sf.GetString() : sf.GetRawText());
+        bool? flag = fr.TryGetProperty("possible_thermal_throttle", out JsonElement th) && th.ValueKind is JsonValueKind.True or JsonValueKind.False ? th.GetBoolean() : null;
+        return (Num(fr, "topk_median_mhz"), flag, null);
     }
 
     private static (string[] Args, string File) ProcessArgs(Ctx c, BenchProcess p, int attempt, string? reference, IReadOnlyList<(string Key, string Value)> switches)

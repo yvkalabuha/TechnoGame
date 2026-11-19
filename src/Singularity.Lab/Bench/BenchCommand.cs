@@ -386,8 +386,11 @@ internal static class BenchCommand
         if (freq.Failure is string failure)
             Console.Error.WriteLine($"frequency sampler stopped: {failure}");
         Console.WriteLine(fref is double ff ? string.Create(CultureInfo.InvariantCulture, $"f_ref={ff:F0} MHz ({stat}, k {k}, {freq.Source})") : "f_ref: no samples");
-        return fref is null ? 1 : 0;
+        return FRefExit(fref, freq.Failure);
     }
+
+    /// <summary>f_ref feeds <c>--fref</c> of a whole series: no value or a sampler that stopped on a fault (partial window) is a failure (TASK-0116).</summary>
+    internal static int FRefExit(double? fref, string? samplerFailure) => fref is null || samplerFailure is not null ? 1 : 0;
 
     private static Utf8JsonWriter Header(BenchJson json, string mode, int warmup, int reps)
     {

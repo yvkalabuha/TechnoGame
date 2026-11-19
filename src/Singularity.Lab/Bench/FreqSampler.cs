@@ -31,15 +31,18 @@ public sealed class FreqSampler : IDisposable
     private long _allocated;
     private volatile bool _stop;
     private volatile string? _failure;
+    private readonly Action? _beforeRead;
 
     public FreqSampler(int intervalMs = 1000) : this(intervalMs, OpenSource()) { }
 
-    /// <summary>Test seam: a given source over given files (e.g. a <c>/proc/cpuinfo</c> fixture larger than the initial buffer).</summary>
-    internal FreqSampler(int intervalMs, string source, string[] paths) : this(intervalMs, (source, OpenAll(paths))) { }
+    /// <summary>Test seam: a given source over given files (e.g. a <c>/proc/cpuinfo</c> fixture larger than the initial buffer);
+    /// <paramref name="beforeRead"/> runs on the sampler thread before every read (a fault injected there must stop sampling, not the process).</summary>
+    internal FreqSampler(int intervalMs, string source, string[] paths, Action? beforeRead = null) : this(intervalMs, (source, OpenAll(paths)), beforeRead) { }
 
-    private FreqSampler(int intervalMs, (string Source, SafeFileHandle[] Handles) src)
+    private FreqSampler(int intervalMs, (string Source, SafeFileHandle[] Handles) src, Action? beforeRead = null)
     {
         _intervalMs = intervalMs;
+        _beforeRead = beforeRead;
         (Source, _handles) = src;
         if (_handles.Length == 0)
             Source = "none";
@@ -132,6 +135,7 @@ public sealed class FreqSampler : IDisposable
         while (!_stop)
         {
             long a0 = GC.GetAllocatedBytesForCurrentThread();
+            _beforeRead?.Invoke();
             int n = Read();
             if (n > 0)
             {

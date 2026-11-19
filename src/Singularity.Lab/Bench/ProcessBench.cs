@@ -443,16 +443,18 @@ public static class ProcessBench
     /// flag «possible thermal throttling» = top-k median &lt; ratio × f_ref(k). The flag decides nothing (ADR-0023 п. 1.2); the reference column
     /// T·f/f_ref uses the daily run's median T.
     /// </summary>
-    private static void WriteFrequency(Utf8JsonWriter j, FreqSampler f, IReadOnlyList<(long, long)> windows, double? fRef, int k, double ratio, RunTiming? daily, int warmup)
+    internal static void WriteFrequency(Utf8JsonWriter j, FreqSampler f, IReadOnlyList<(long, long)> windows, double? fRef, int k, double ratio, RunTiming? daily, int warmup)
     {
         j.WriteStartObject("frequency");
         j.WriteString("source", f.Source);
         if (f.Failure is string fail) j.WriteString("sampler_failure", fail); else j.WriteNull("sampler_failure");
         j.WriteNumber("sampler_alloc_bytes_total", f.AllocatedBytes);
         j.WriteNumber("k", k);
-        double? top = f.TopKMedianIn(windows, k);
+        // A sampler that stopped on a fault gives no frequency (TASK-0116): the samples before the fault cover only part of the windows,
+        // so the top-k median, the flag and the derived columns are null (samples are still written as a record).
+        double? top = f.Failure is null ? f.TopKMedianIn(windows, k) : null;
         LoadMeter.WriteNum(j, "topk_median_mhz", top);
-        LoadMeter.WriteNum(j, "median_mhz_in_windows", f.MedianIn(windows));
+        LoadMeter.WriteNum(j, "median_mhz_in_windows", f.Failure is null ? f.MedianIn(windows) : null);
         LoadMeter.WriteNum(j, "f_ref_mhz", fRef);
         j.WriteNumber("thermal_ratio", ratio);
         bool? flag = LoadMath.PossibleThermalThrottle(top, fRef, ratio);
