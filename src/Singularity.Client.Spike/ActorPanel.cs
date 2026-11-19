@@ -153,7 +153,7 @@ public sealed partial class ActorPanel : PanelContainer
         for (int i = 0; i < 5; i++)
         {
             int k = i;
-            var r = new HBoxContainer();
+            var r = new HBoxContainer { CustomMinimumSize = new Vector2(0, 24) };   // a click target of at least 24 du
             var n = Ui.Lbl("share." + i, 14); n.CustomMinimumSize = new Vector2(138, 0); _name[i] = n;
             r.MouseFilter = MouseFilterEnum.Stop;
             r.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } && InstrumentLogic.OrganLevel > 0 && _areaMode) Select(k); };

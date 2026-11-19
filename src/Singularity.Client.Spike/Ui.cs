@@ -101,7 +101,7 @@ public static class Ui
         b.AddThemeFontSizeOverride("font_size", Math.Max(size, MinSize));
         PaperSurface.Apply(b, SurfaceKind.Button, text);   // StyleButton takes the material off again while the button is an order-ready command plate (an alert colour)
         StyleButton(b, command);
-        b.Pressed += () => { if (!b.SpaceHeld) onPress(); };
+        b.Pressed += onPress;
         return b;
     }
 
@@ -259,17 +259,6 @@ public sealed partial class CaptionButton : Button
         }
         QueueRedraw();
     }
-
-    // A focusable button activates on Enter and keypad Enter only: Space is the pause key. The native button still sees the Space key, so the press it would emit is dropped
-    // (SpaceHeld is set on the Space press and cleared after its release has been handled); the event itself still reaches the pause handler.
-    bool _space;
-    public bool SpaceHeld => TwoToneFocus && _space;
-    public override void _GuiInput(InputEvent e)
-    {
-        if (!TwoToneFocus || e is not InputEventKey { Keycode: Key.Space } k) return;
-        if (k.Pressed) _space = true; else CallDeferred(nameof(ClearSpace));
-    }
-    void ClearSpace() => _space = false;
 
     public override void _Draw()
     {

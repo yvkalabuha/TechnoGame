@@ -70,6 +70,9 @@ public sealed partial class Main : Node3D
     public override void _Ready()
     {
         System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+        // Space is the pause key everywhere: no Godot control activates on it (Enter and keypad Enter still do), so a focused button never takes it.
+        foreach (var ev in InputMap.ActionGetEvents("ui_accept"))
+            if (ev is InputEventKey { Keycode: Key.Space } or InputEventKey { PhysicalKeycode: Key.Space }) InputMap.ActionEraseEvent("ui_accept", ev);
         _startup["engine_to_ready_ms"] = (long)Time.GetTicksMsec();
         var args = OS.GetCmdlineUserArgs();
         _bench = args.Contains("--bench");
@@ -1046,7 +1049,7 @@ public sealed partial class Main : Node3D
     bool WaitFor(Func<bool> done, string what)
     {
         var sw = Stopwatch.StartNew();
-        while (!done()) { if (sw.ElapsedMilliseconds > 20000) { InstFail("timeout waiting for " + what); return false; } System.Threading.Thread.Sleep(1); }
+        while (!done()) { if (sw.ElapsedMilliseconds > 20000) { InstFail($"timeout waiting for {what} (tick {_host.Snap.Tick}, speed {_host.Speed}, why actor {_host.Snap.WhyActor})"); return false; } System.Threading.Thread.Sleep(1); }
         return true;
     }
 
@@ -1136,7 +1139,19 @@ public sealed partial class Main : Node3D
             else if (_instPhase == 6)
             {
                 if (_host.Speed != _instSpeedBefore) { InstFail($"finance Space check failed: pause was not restored ({_instSpeedBefore} -> {_host.Speed})"); return true; }
-                _instAppliedBefore = _areaPanel.ShotApplied; PressKey(Key.Enter); PressKey(Key.Enter, false); _instCheckSend = true; }
+                PressKey(Key.Space); PressKey(Key.Tab, true, true); PressKey(Key.Tab, false, true);   // Space down on Apply, then Shift+Tab away from it
+            }
+            else if (_instPhase == 7) { PressKey(Key.Space, false); PressKey(Key.Tab); PressKey(Key.Tab, false); }   // Space up on another control, then Tab back to Apply
+            else if (_instPhase == 8)
+            {
+                if (_areaPanel.ShotApplied != _instAppliedBefore || _host.Speed == _instSpeedBefore) { InstFail($"finance Space-release check failed: orders submitted {_areaPanel.ShotApplied - _instAppliedBefore}, speed {_instSpeedBefore} -> {_host.Speed}"); return true; }
+                PressKey(Key.Space); PressKey(Key.Space, false);   // pause back
+            }
+            else if (_instPhase == 9)
+            {
+                if (_host.Speed != _instSpeedBefore) { InstFail($"finance Space-release check failed: pause was not restored ({_instSpeedBefore} -> {_host.Speed})"); return true; }
+                _instAppliedBefore = _areaPanel.ShotApplied; PressKey(Key.Enter); PressKey(Key.Enter, false); _instCheckSend = true;   // Enter still submits after the Space sequence
+            }
             else
             {
                 _instShareBefore = _areaPanel.ShotShare(1);
@@ -1144,7 +1159,7 @@ public sealed partial class Main : Node3D
                 var c = _areaPanel.ShotCaliperPoint(_instTarget) * w; Mouse(c, null); Mouse(c, true); Mouse(c, false); PressKey(Key.Right);
                 _instCheckInput = true;   // the events are processed on the next frame: checked at the next call
             }
-            _instPhase = _instPhase switch { 1 => 2, 3 => 4, 4 => 5, 5 => 6, _ => 0 };
+            _instPhase = _instPhase switch { 1 => 2, 3 => 4, 4 => 5, 5 => 6, 6 => 7, 7 => 8, 8 => 9, _ => 0 };
             return false;
         }
         if (_instCheckInput)
@@ -1214,7 +1229,7 @@ public sealed partial class Main : Node3D
         return new Link(WhyNotLayer.Knowledge, WhyNotCause.MissingNode, number, Singularity.Kernel.Fx6.FromInt(have), Singularity.Kernel.Fx6.FromInt(need), System.Collections.Immutable.ImmutableArray<Lever>.Empty, Singularity.Kernel.Fx6.Zero, null);
     }
 
-    static void PressKey(Key k, bool pressed = true) => Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = pressed });
+    static void PressKey(Key k, bool pressed = true, bool shift = false) => Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = pressed, ShiftPressed = shift });
 
     void AreaShot()
     {
