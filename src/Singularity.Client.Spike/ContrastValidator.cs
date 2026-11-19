@@ -215,6 +215,70 @@ public static class ContrastValidator
         return res;
     }
 
+    /// <summary>Thresholds of the instrument layers, UI_INSTRUMENTS §5 [Предл.].</summary>
+    public const double L1DeMin = 6, L1DeMax = 14, L1HatchDeMin = 3, L1ChromaMax = 0.06, L1WcagMax = 1.6, L1VsInkMin = 40;
+    public const double InkWcag = 7, SoftInkWcag = 4.5, LineWcag = 3, WashDeMin = 6, LineChromaMax = 0.16, WashChromaMax = 0.13;
+    static readonly double[] TextureK = { 0.94, 0.955, 1.0, 1.02 };
+
+    /// <summary>Instrument rules of UI_INSTRUMENTS §5: layer 1 (desk-line, desk-hatch on the desk) is visible but quiet, layer 2 (ink and the six inks on sheet and paper) is legible.
+    /// <paramref name="p"/> supplies the six inks and surfaces; desk and layer-1 strokes are the Palette tokens.</summary>
+    public static IReadOnlyList<PairResult> RunInstruments(PaletteSet p, string desk = Palette.Desk, string deskLine = Palette.DeskLine, string deskHatch = Palette.DeskHatch)
+    {
+        var res = new List<PairResult>();
+        var d0 = ColorMath.FromHex(desk);
+        foreach (var (key, hex, hatch) in new[] { ("desk-line", deskLine, false), ("desk-hatch", deskHatch, true) })
+        {
+            double lo = double.MaxValue, hi = 0;
+            foreach (double k in TextureK)
+            {
+                // the line against the shaded desk, and both shaded alike (the texture sits under and over the stroke)
+                double a = ColorMath.DeltaE2000(ColorMath.FromHex(desk, k), ColorMath.FromHex(hex, k)), b = ColorMath.DeltaE2000(ColorMath.FromHex(desk, k), ColorMath.FromHex(hex));
+                lo = Math.Min(lo, Math.Min(a, b)); hi = Math.Max(hi, Math.Max(a, b));
+            }
+            double min = hatch ? L1HatchDeMin : L1DeMin;
+            res.Add(new PairResult($"L1 {key} vs desk dE00 in [{F(min, 0)}, {F(L1DeMax, 0)}]", lo >= min && hi <= L1DeMax, $"min {F(lo)} max {F(hi)}"));
+            double c = ColorMath.OkChroma(ColorMath.FromHex(hex));
+            res.Add(new PairResult($"L1 {key} OKLCH chroma <= {F(L1ChromaMax, 2)}", c <= L1ChromaMax, $"C {F(c, 3)}"));
+        }
+        double w = ColorMath.Contrast(ColorMath.FromHex(deskLine), d0);
+        res.Add(new PairResult($"L1 desk-line vs desk WCAG < {F(L1WcagMax)} (never reads as a control)", w < L1WcagMax, F(w, 2)));
+        double cap = ColorMath.Contrast(ColorMath.FromHex(desk, 0.94), ColorMath.FromHex(Palette.Ink));
+        res.Add(new PairResult($"ink caption on desk x0.94 WCAG >= {F(SoftInkWcag)}", cap >= SoftInkWcag, F(cap, 2)));
+        double sep = ColorMath.DeltaE2000(ColorMath.FromHex(deskLine), ColorMath.FromHex(Palette.Ink));
+        res.Add(new PairResult($"L1 desk-line vs L2 ink dE00 >= {F(L1VsInkMin, 0)} (the layers never confusable)", sep >= L1VsInkMin, F(sep)));
+
+        double Worst(string fg, string bg, params double[] ks)
+        {
+            double m = double.MaxValue;
+            foreach (double k in ks) m = Math.Min(m, ColorMath.Contrast(ColorMath.FromHex(bg, k), ColorMath.FromHex(fg)));
+            return m;
+        }
+        foreach (var (hex, name, need) in new[] { (Palette.Ink, "ink strokes", InkWcag), (Palette.Ink2, "ink-2 ticks and labels", SoftInkWcag), (Palette.Ink3, "ink-3 minor ticks", SoftInkWcag) })
+        {
+            double r = Math.Min(Worst(hex, p.Sheet, 0.94, 1.0), Worst(hex, p.Paper, 0.94, 1.0));
+            res.Add(new PairResult($"L2 {name} on sheet/paper WCAG >= {F(need)}", r >= need, F(r, 2)));
+        }
+        double moss = Worst(Palette.MossLine, p.Sheet, 0.955, 1.0);
+        res.Add(new PairResult($"L2 line.moss on sheet WCAG >= {F(LineWcag)}", moss >= LineWcag, F(moss, 2)));
+        for (int i = 0; i < p.Line.Length; i++)
+        {
+            string n = Palette.InkNames[i];
+            double r = Worst(p.Line[i], p.Sheet, 0.955, 1.0);
+            res.Add(new PairResult($"L2 line.{n} on sheet WCAG >= {F(LineWcag)}", r >= LineWcag, F(r, 2)));
+            double de = double.MaxValue;
+            foreach (double k in new[] { 0.955, 1.0, 1.02 }) de = Math.Min(de, ColorMath.DeltaE2000(ColorMath.FromHex(p.Sheet, k), ColorMath.FromHex(p.Wash[i], k)));
+            res.Add(new PairResult($"L2 wash.{n} vs sheet dE00 >= {F(WashDeMin, 0)}", de >= WashDeMin, F(de)));
+            double inkOn = Worst(Palette.Ink, p.Wash[i], 0.94, 1.0);
+            res.Add(new PairResult($"L2 ink on wash.{n} WCAG >= {F(InkWcag)}", inkOn >= InkWcag, F(inkOn, 2)));
+            double cw = ColorMath.OkChroma(ColorMath.FromHex(p.Wash[i])), cl = ColorMath.OkChroma(ColorMath.FromHex(p.Line[i]));
+            res.Add(new PairResult($"L2 wash.{n} OKLCH chroma <= {F(WashChromaMax, 2)}", cw <= WashChromaMax, F(cw, 3)));
+            res.Add(new PairResult($"L2 line.{n} OKLCH chroma <= {F(LineChromaMax, 2)}", cl <= LineChromaMax, F(cl, 3)));
+            double rt = Worst(p.Text[i], p.Sheet, 0.94, 1.0);
+            res.Add(new PairResult($"L2 text.{n} on sheet x0.94 WCAG >= {F(SoftInkWcag)}", rt >= SoftInkWcag, F(rt, 2)));
+        }
+        return res;
+    }
+
     public static string Format(PaletteSet p, IReadOnlyList<PairResult> results)
     {
         var sb = new StringBuilder();

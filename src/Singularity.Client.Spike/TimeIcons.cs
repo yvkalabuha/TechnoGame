@@ -49,52 +49,17 @@ public sealed partial class TimeControl : HBoxContainer
         }
     }
 
-    // Speed gauge (CLIENT_V05C_SPEC §2): four cells 8 wide, 7/11/15/19 high, 2 apart. Cells 1..N are filled in their own ink (teal, olive, plum), the current one has an outer ring,
-    // empty cells are hatched at 45 degrees. The fourth (reserve, sand, #331) is dashed and inactive while the simulation has three tempos.
-    // Read without colour: number of filled cells, height, hatching. Decor ink: no ■ ▲ ●, no blinking.
+    // The tempo gauge is GaugeControl: four steps (0 pause, 1 day/s, 2 week/s, 3 month/s; the fourth is a dashed reserve, #331), a look per era or the plain cells.
     static readonly int[] GaugeInk = { Ui.Teal, Ui.Olive, Ui.Plum, Ui.Sand };
 
-    sealed partial class Meter : Control
-    {
-        public int Filled;
-        static readonly float[] Heights = { 7, 11, 15, 19 };
-        public Meter() { CustomMinimumSize = new Vector2(46, 28); MouseFilter = MouseFilterEnum.Ignore; }
-
-        static void Hatch(CanvasItem c, Rect2 r, Color col)
-        {
-            for (float a = r.Position.X - r.Size.Y; a < r.End.X; a += 4f)
-            {
-                float s0 = Math.Max(0, r.Position.X - a), s1 = Math.Min(r.Size.Y, r.End.X - a);
-                if (s0 < s1) c.DrawLine(new Vector2(a + s0, r.End.Y - s0), new Vector2(a + s1, r.End.Y - s1), col, 1f);
-            }
-        }
-
-        public override void _Draw()
-        {
-            for (int i = 0; i < 4; i++)
-            {
-                var r = new Rect2(4 + i * 10, Size.Y - 4 - Heights[i], 8, Heights[i]);
-                if (i == 3)
-                {
-                    var c = Ui.Ink3;
-                    DrawDashedLine(r.Position, new Vector2(r.End.X, r.Position.Y), c, 1f, 2f); DrawDashedLine(new Vector2(r.End.X, r.Position.Y), r.End, c, 1f, 2f);
-                    DrawDashedLine(r.End, new Vector2(r.Position.X, r.End.Y), c, 1f, 2f); DrawDashedLine(new Vector2(r.Position.X, r.End.Y), r.Position, c, 1f, 2f);
-                    continue;
-                }
-                bool on = i < Filled;
-                if (on) DrawRect(r, Ui.InkLine[GaugeInk[i]]); else Hatch(this, r, new Color(Ui.Ink, 0.45f));
-                DrawRect(r, Ui.Ink, false, 1f);
-                if (i == Filled - 1) DrawRect(r.Grow(2), Ui.Ink, false, 1.5f);
-            }
-        }
-    }
-
     readonly IconButton _pause = new(Kind.Pause), _slower = new(Kind.Slower), _faster = new(Kind.Faster);
-    readonly Meter _meter = new();
+    readonly GaugeControl _meter = new();
     readonly Label _word = Ui.Lbl("speed.pause", 14, null, FontKind.Draft);
     int _speed, _resume = 1;
     public event Action<int> Changed;
     public int Selected => _speed;
+    /// <summary>Game year, for the era look of the gauge.</summary>
+    public int Year { set => _meter.Year = value; }
 
     public TimeControl()
     {
@@ -139,7 +104,7 @@ public sealed partial class TimeControl : HBoxContainer
         _slower.Disabled = level <= 1; _faster.Disabled = level >= 3;
         _meter.Filled = _speed;
         _word.Text = Words[_speed];
-        _word.AddThemeColorOverride("font_color", _speed == 0 ? Ui.Ink2 : Ui.InkText[GaugeInk[_speed - 1]]);
+        _word.AddThemeColorOverride("font_color", Ui.Ink);   // full-strength ink: the word carries the value (review TASK-0108)
         _pause.QueueRedraw(); _slower.QueueRedraw(); _faster.QueueRedraw(); _meter.QueueRedraw();
     }
 }

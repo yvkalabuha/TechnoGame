@@ -353,6 +353,8 @@ set.textures,Paper texture,Текстура бумаги
 set.tex.off,Off,Выкл
 set.tex.weak,Weak,Слабые
 set.tex.normal,Normal,Обычные
+set.desk,Desk instruments,Приборы на столе
+set.organs,Instrument controls,Приборы-органы
 set.railwide,Area rail,Рейка областей
 set.rail.narrow,Narrow,Узкая
 set.rail.wide,Wide,Широкая

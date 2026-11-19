@@ -916,7 +916,17 @@ public sealed partial class Main : Node3D
             case 40 when _shotT >= 0.5: Shot("time_day.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(2); _shotStep = 41; _shotT = 0; break;
             case 41 when _shotT >= 0.4: Shot("time_week.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(3); _shotStep = 42; _shotT = 0; break;
             case 42 when _shotT >= 0.4: Shot("time_month.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(0); _shotStep = 43; _shotT = 0; break;
-            case 43 when _shotT >= 0.4: Shot("time_pause.png", new Rect2I(0, 0, 620, 52)); _alertI = 0; _shotStep = 45; _shotT = 0; break;
+            case 43 when _shotT >= 0.4: Shot("time_pause.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(2); _signal.YearOverride = 1950; _shotStep = 130; _shotT = 0; break;
+            // UI instruments: the speed gauge in E1, E2, E3 and the «before» look (setting off)
+            case 130 when _shotT >= 0.4: Shot("gauge_e1.png", new Rect2I(0, 0, 620, 52)); _signal.YearOverride = 1985; _shotStep = 131; _shotT = 0; break;
+            case 131 when _shotT >= 0.4: Shot("gauge_e2.png", new Rect2I(0, 0, 620, 52)); _signal.YearOverride = 2030; _shotStep = 132; _shotT = 0; break;
+            case 132 when _shotT >= 0.4: Shot("gauge_e3.png", new Rect2I(0, 0, 620, 52)); InstrumentLogic.OrganLevel = 0; _shotStep = 133; _shotT = 0; break;
+            case 133 when _shotT >= 0.4: Shot("gauge_before.png", new Rect2I(0, 0, 620, 52)); InstrumentLogic.OrganLevel = Settings.Current.OrganInstruments; _signal.YearOverride = 1950; Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false); _shotStep = 134; _shotT = 0; break;
+            // the same four looks at 150 % UI scale
+            case 134 when _shotT >= 0.5: Shot("gauge_e1_150.png", new Rect2I(0, 0, 930, 78)); _signal.YearOverride = 1985; _shotStep = 135; _shotT = 0; break;
+            case 135 when _shotT >= 0.4: Shot("gauge_e2_150.png", new Rect2I(0, 0, 930, 78)); _signal.YearOverride = 2030; _shotStep = 136; _shotT = 0; break;
+            case 136 when _shotT >= 0.4: Shot("gauge_e3_150.png", new Rect2I(0, 0, 930, 78)); InstrumentLogic.OrganLevel = 0; _shotStep = 137; _shotT = 0; break;
+            case 137 when _shotT >= 0.4: Shot("gauge_before_150.png", new Rect2I(0, 0, 930, 78)); InstrumentLogic.OrganLevel = Settings.Current.OrganInstruments; _signal.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _signal.SetSpeed(0); _alertI = 0; _shotStep = 45; _shotT = 0; break;
             // alert plates on tints 1 and 5 (7 is not on the map): day side, then tint 5 on the night side
             case 45: AimAlert(_alertI, false); _shotStep = 46; _shotT = 0; break;
             case 46 when _shotT >= 0.7:
@@ -1143,6 +1153,7 @@ public sealed partial class Main : Node3D
         }
         _shotLog += TextureValidator.Format("texture rules T1, T2, T4, T5 and moss/olive (T3 and T6 run on the live client below), palette C", TextureValidator.Run(Palette.C));
         _shotLog += TextureValidator.Format("speed gauge", TextureValidator.RunGauge());
+        _shotLog += TextureValidator.Format("instrument layers (UI_INSTRUMENTS §5), palette C", ContrastValidator.RunInstruments(Palette.C));
         _shotLog += "shot-only: the plates on tints 1/5/7 are demo markers; in the game a plate appears only for a real signal of the player's power\n";
     }
 
