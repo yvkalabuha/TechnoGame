@@ -18,8 +18,8 @@
 <!-- registry:active:start -->
 - TASK-0111 [IN_PROGRESS] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0112 [IN_PROGRESS] Credits screen with music and sound attribution (DEBT-0050) (developer)
-- TASK-0113 [IN_PROGRESS] Policy line candidate by generation and DesignView SlotGeneration rename (DEBT-0053, DEBT-0055) (developer)
 - TASK-0114 [IN_PROGRESS] Northern Algeria regions for the 1945 map (DEBT-0058) (research-scientist)
+- TASK-0113 [REVIEW] Policy line candidate by generation and DesignView SlotGeneration rename (DEBT-0053, DEBT-0055) (developer)
 - TASK-0115 [APPROVED] End-to-end project handle through Session, AI, UI and command log v2 (DEBT-0052) (developer)
 <!-- registry:active:end -->
 

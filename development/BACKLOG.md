@@ -127,7 +127,7 @@
 | [TASK-0110](../development/tasks/TASK-0110-novelty-memory-per-actor.md) | DONE | Novelty memory per actor: tried alternatives survive slot reuse (DEBT-0054) | MS-M1 |
 | [TASK-0111](../development/tasks/TASK-0111-ui-instruments-flask-caliper-pencil.md) | IN_PROGRESS | UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) | MS-M1 |
 | [TASK-0112](../development/tasks/TASK-0112-credits-screen.md) | IN_PROGRESS | Credits screen with music and sound attribution (DEBT-0050) | MS-M1 |
-| [TASK-0113](../development/tasks/TASK-0113-policy-candidate-generation.md) | IN_PROGRESS | Policy line candidate by generation and DesignView SlotGeneration rename (DEBT-0053, DEBT-0055) | MS-M1 |
+| [TASK-0113](../development/tasks/TASK-0113-policy-candidate-generation.md) | REVIEW | Policy line candidate by generation and DesignView SlotGeneration rename (DEBT-0053, DEBT-0055) | MS-M1 |
 | [TASK-0114](../development/tasks/TASK-0114-northern-algeria-regions.md) | IN_PROGRESS | Northern Algeria regions for the 1945 map (DEBT-0058) | MS-M1 |
 | [TASK-0115](../development/tasks/TASK-0115-end-to-end-project-handle.md) | APPROVED | End-to-end project handle through Session, AI, UI and command log v2 (DEBT-0052) | MS-M1 |
 
@@ -181,6 +181,7 @@
 | [ADR-0021](../docs/decisions/ADR-0021-stochastic-events.md) | ACCEPTED | Stochastic event system next to scripted events (scandals, link failures) |
 | [ADR-0022](../docs/decisions/ADR-0022-region-limit-amendment.md) | ACCEPTED | Region count limit amendment to ADR-0011 |
 | [ADR-0023](../docs/decisions/ADR-0023-adr-0016-benchmark-rules-amendment.md) | ACCEPTED | Benchmark validity rules and split allocation limit (amendment to ADR-0016) |
+| [ADR-0024](../docs/decisions/ADR-0024-adr-0023-gc-pause-criterion.md) | PROPOSED | GC pause criterion instead of the gen2 counter (amendment to ADR-0023 p. 2.4) |
 
 ## Research Reports
 
