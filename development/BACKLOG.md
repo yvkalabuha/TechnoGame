@@ -132,7 +132,7 @@
 | [TASK-0114](../development/tasks/TASK-0114-northern-algeria-regions.md) | DONE | Northern Algeria regions for the 1945 map (DEBT-0058) | MS-M1 |
 | [TASK-0115](../development/tasks/TASK-0115-end-to-end-project-handle.md) | DONE | End-to-end project handle through Session, AI, UI and command log v2 (DEBT-0052) | MS-M1 |
 | [TASK-0116](../development/tasks/TASK-0116-ci-green.md) | DONE | CI green on all jobs: Lab tests off Linux, llm_worker pilot contracts | MS-M0 |
-| [TASK-0117](../development/tasks/TASK-0117-client-ui-scale-policy.md) | APPROVED | Client UI scale policy: text never below the A1 floor at 1280x720 | MS-M05 |
+| [TASK-0117](../development/tasks/TASK-0117-client-ui-scale-policy.md) | IN_PROGRESS | Client UI scale policy: text never below the A1 floor at 1280x720 | MS-M05 |
 | [TASK-0118](../development/tasks/TASK-0118-codex-catchup-findings.md) | PROPOSED | Codex catch-up findings on landed core tasks (TASK-0099, 0103, 0107, 0110) | MS-M05 |
 | [TASK-0119](../development/tasks/TASK-0119-instrument-view-fields.md) | PROPOSED | Instrument data fields in the Session view: alloy coverage, research progress | MS-M05 |
 | [TASK-0120](../development/tasks/TASK-0120-core-command-verdicts.md) | PROPOSED | Core emits a per-command verdict; commands keyed by handle | MS-M05 |
