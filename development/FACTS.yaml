@@ -44,9 +44,9 @@ facts:
     keywords: [SchemaVersion, схем, golden, хеш]
 
   - id: api-version
-    statement: "Версия тестового API сессии (TestApiVersion) — 13 (TASK-0115)."
+    statement: "Версия тестового API сессии (TestApiVersion) — 14 (TASK-0122)."
     source: "src/Singularity.Session/SliceSession.cs"
-    probe: {file: "src/Singularity.Session/SliceSession.cs", regex: 'const int TestApiVersion = (\d+);', expect: "13"}
+    probe: {file: "src/Singularity.Session/SliceSession.cs", regex: 'const int TestApiVersion = (\d+);', expect: "14"}
     keywords: [TestApiVersion, API, surface]
 
   - id: map-regions
