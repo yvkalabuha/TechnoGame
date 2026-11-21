@@ -20,6 +20,14 @@ public class SettingsLogicTests
         Assert.Equal(cw, x, 3); Assert.Equal(ch, y, 3);
     }
 
+    [Theory]
+    [InlineData(1920, 1080, 100, true)]
+    [InlineData(1920, 1080, 150, true)]
+    [InlineData(2560, 1413, 100, true)]    // a larger screen scales up
+    [InlineData(1920, 1040, 100, false)]   // a window clamped to the work area: below 1 px/du
+    [InlineData(1920, 1050, 150, false)]
+    public void ScaleFloor_RejectsAClampedWindow(int w, int h, double ui, bool ok) => Assert.Equal(ok, SettingsLogic.ScaleFloorOk(w, h, ui));
+
     [Fact]
     public void WhyNotMark_AtLeast16PhysicalPxAtBaseScale() => Assert.True(SettingsLogic.PixelsPerDu(1920, 1080, 100) * SettingsLogic.WhyNotMarkDu >= 16);
 

@@ -636,7 +636,7 @@ public sealed partial class Main : Node3D
             if (sk.Keycode is Key.Space or Key.P) _signal.TogglePause();
             else if (sk.Keycode == Key.Bracketleft) _signal.StepSpeed(-1);
             else if (sk.Keycode == Key.Bracketright) _signal.StepSpeed(1);
-            else if (sk.Keycode == Key.L) { if (_tree.Visible) _tree.ToggleLegend(!_tree.LegendOpen); }
+            else if (sk.Keycode == Key.L) { if (_tree.Visible && _tree.CanLegend) _tree.ToggleLegend(!_tree.LegendOpen); }
             else _signal.SetSpeed((int)(sk.Keycode - Key.Key1) + 1);
         }
         else if (e is InputEventKey f3 && f3.Pressed && f3.Keycode == Key.F3)
@@ -797,6 +797,25 @@ public sealed partial class Main : Node3D
     // Physical pixels per canvas unit now (base scale times the UI setting).
     float PxPerDu() => DisplayServer.WindowGetSize().X / GetViewport().GetVisibleRect().Size.X;
 
+    readonly HashSet<string> _savedShots = new();
+    static readonly System.Text.RegularExpressions.Regex SizedShot = new(@"^(.*)_1920x1080(?:_s(\d+))?(_en)?\.png$");
+
+    // Category C: every screen of the matrix that is shot at 100 % is shot at 125 % and 150 % too (the same language); a missing one fails the run.
+    void CheckScaleCoverage()
+    {
+        if (_largeSize.X > 0) return;
+        var sets = new Dictionary<string, HashSet<string>>();
+        foreach (var n in _savedShots)
+            if (SizedShot.Match(n) is { Success: true } m) { string sc = m.Groups[2].Success ? m.Groups[2].Value : "100"; if (!sets.TryGetValue(sc, out var hs)) sets[sc] = hs = new(); hs.Add(m.Groups[1].Value + m.Groups[3].Value); }
+        if (!sets.TryGetValue("100", out var at100)) { _shotLog += "scale coverage: FAIL no 100 % frames in the matrix\n"; _shotFailed = true; return; }
+        foreach (var sc in new[] { "125", "150" })
+        {
+            var miss = at100.Where(x => !(sets.TryGetValue(sc, out var o) && o.Contains(x))).OrderBy(x => x, StringComparer.Ordinal).ToList();
+            _shotLog += $"scale coverage {sc} %: {at100.Count} screens at 100 %, missing {miss.Count}{(miss.Count > 0 ? " (" + string.Join(", ", miss) + ")" : "")}: {(miss.Count == 0 ? "PASS" : "FAIL")}\n";
+            if (miss.Count > 0) _shotFailed = true;
+        }
+    }
+
     // A failed PNG write fails the run: a missing frame is not evidence.
     void CheckSave(Error e, string path) { if (e != Error.Ok) InstFail($"cannot save {path}: {e}"); }
 
@@ -807,6 +826,7 @@ public sealed partial class Main : Node3D
         var img = GetViewport().GetTexture().GetImage();
         if (r is Rect2I rr) img = img.GetRegion(rr);
         else if (_largeSize.X > 0 ? (img.GetWidth() != _largeSize.X || img.GetHeight() != _largeSize.Y) : !SettingsLogic.IsBaseFrame(img.GetWidth(), img.GetHeight())) { InstFail($"frame {name} is {img.GetWidth()}x{img.GetHeight()}, a full frame must be a real {(_largeSize.X > 0 ? _largeSize.X + "x" + _largeSize.Y : "1920x1080")} render (window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, display {DisplayServer.ScreenGetSize().X}x{DisplayServer.ScreenGetSize().Y})"); return; }
+        _savedShots.Add(name);
         CheckSave(img.SavePng(Path.Combine(dir, name)), Path.Combine(dir, name));
         if (grey) { string gp = Path.Combine(dir, name.Replace(".png", "_grey.png")); img.Convert(Image.Format.L8); CheckSave(img.SavePng(gp), gp); }   // A5: a greyscale frame next to the colour one
     }
@@ -861,8 +881,10 @@ public sealed partial class Main : Node3D
             string sfx = "_1920x1080" + (scale == 150 ? "_s150" : scale == 125 ? "_s125" : "") + (lang == "en" ? "_en" : "");
             void Q(double wait, Action act) => _sizeQ.Add((wait, act));
             Q(0.1, () => { Settings.Current.UiScale = scale; Settings.Apply(Settings.Current, GetWindow(), false); Loc.SetLang(lang); });
-            Q(1.0, () => { var cv = GetViewport().GetVisibleRect().Size; _shotLog += $"size shots {sfx}: window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, canvas {cv.X}x{cv.Y} du, scale {scale} %, content scale {GetWindow().ContentScaleSize.X}x{GetWindow().ContentScaleSize.Y} {GetWindow().ContentScaleMode} {GetWindow().ContentScaleAspect}\n"; _mainMenu.Open(true); });
-            Q(0.5, () => { SaveShot($"menu_ingame{sfx}.png"); _mainMenu.Close(); _credits.Open(); });
+            Q(1.0, () => { var cv = GetViewport().GetVisibleRect().Size; _shotLog += $"size shots {sfx}: window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, canvas {cv.X}x{cv.Y} du, scale {scale} %, content scale {GetWindow().ContentScaleSize.X}x{GetWindow().ContentScaleSize.Y} {GetWindow().ContentScaleMode} {GetWindow().ContentScaleAspect}\n"; FitCheck(SettingsLogic.ScaleFloorOk(DisplayServer.WindowGetSize().X, DisplayServer.WindowGetSize().Y, scale)); _mainMenu.Open(true); });
+            Q(0.5, () => { SaveShot($"menu_ingame{sfx}.png"); _mainMenu.Close(); _mainMenu.Open(false); });
+            Q(0.5, () => { SaveShot($"main_menu{sfx}.png"); _mainMenu.Close(); _credits.Open(); });   // the title menu at every scale
+
             Q(0.6, () => { SaveShot($"credits{sfx}.png"); CheckCreditsLinks(sfx); _credits.ShotScroll(100000); });
             Q(0.4, () => { SaveShot($"credits_end{sfx}.png"); _credits.Visible = false; _newGame.Open(_host.Data.Scenario(Singularity.Session.SliceRunConfig.DefaultScenario), id => Ui.Tints[TintOfActor(id)]); });
             Q(0.5, () => { SaveShot($"new_game_empty{sfx}.png"); _newGame.Select("FRA"); });
@@ -908,6 +930,20 @@ public sealed partial class Main : Node3D
                     InstrumentLogic.OrganLevel = levelBefore; GetViewport().GuiReleaseFocus();
                 });
             }
+            // The goal statement with the legend flag left open in the chart view: the hidden sheet must reserve no space and the first Esc must close the tree (category D).
+            Q(0.3, () => { OpenTree(1); _tree.ToggleLegend(true); });
+            Q(0.8, () =>
+            {
+                bool ok = !_tree.LegendOpen && _tree.InsetLimit == _tree.Size.Y - 100;
+                _shotLog += $"goal statement {sfx}: hidden legend open {_tree.LegendOpen}, goal panel limit {_tree.InsetLimit:F0} of {_tree.Size.Y - 100:F0} (no reserve): {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail($"goal statement reserves space for a hidden legend {sfx}");
+                SaveShot($"tech_tree_b{sfx}.png"); PressKey(Key.Escape); PressKey(Key.Escape, false);
+            });
+            Q(0.3, () =>
+            {
+                bool ok = !_tree.Visible;
+                _shotLog += $"goal statement {sfx}: first Esc closed the tree with a hidden legend flag: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail($"Esc was consumed by a hidden legend {sfx}");
+                _tree.ToggleLegend(false); _tree.Visible = false;
+            });
             // The rail in its states: all normal, then an alarm on Finance and a warning "9+" on Production, narrow and wide (spec task-0117-rail-and-legend §4).
             Q(0.5, () => { SaveShot($"rail_narrow_normal{sfx}.png"); RunT6($"rail narrow normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });
             Q(0.5, () => { SaveShot($"rail_narrow_badges{sfx}.png"); RunT6($"rail narrow badges{sfx}", true); LogCheck(_rail.BadgeFitLog()); _pinBadges = Array.Empty<(AreaId, int, int)>(); ToggleRail(); });
@@ -1275,6 +1311,7 @@ public sealed partial class Main : Node3D
     }
     void FinishShotRun(string dir)
     {
+        CheckScaleCoverage();
         _shotLog += $"shot run result: {(_shotFailed ? "FAILED (a live check failed, exit 1)" : "OK (exit 0)")}\n";
         Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog); GD.Print(_shotLog);
         GetTree().Quit(_shotFailed ? 1 : 0); _shotStep = 18;

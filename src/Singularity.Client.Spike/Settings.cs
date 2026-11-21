@@ -108,21 +108,32 @@ public static class Settings
 
     static bool Headless => DisplayServer.GetName() == "headless";
 
+    /// <summary>Logs the real window size and px/du; a real game on a display of 1920x1080 or more that renders below the scale of its setting is put back into fullscreen once.</summary>
+    static void ReportScale(SettingsData s, Window win)
+    {
+        var size = DisplayServer.WindowGetSize(); var screen = DisplayServer.ScreenGetSize(DisplayServer.WindowGetCurrentScreen());
+        double k = SettingsLogic.PixelsPerDu(size.X, size.Y, s.UiScale);
+        Godot.GD.Print($"window {size.X}x{size.Y} on screen {screen.X}x{screen.Y}: {k:F3} px/du at UI scale {s.UiScale} % ({(Framed ? "framed test window, no visual PASS" : "game")})");
+        if (!Framed && screen.X >= SettingsLogic.BaseWidth && screen.Y >= SettingsLogic.BaseHeight && !SettingsLogic.ScaleFloorOk(size.X, size.Y, s.UiScale))
+        {
+            Godot.GD.PushWarning("render below 1 px/du on a Full HD display: forcing fullscreen");
+            DisplayServer.WindowSetMode(DisplayServer.WindowMode.Windowed); DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
+        }
+    }
+
     /// <summary>Applies a settings set to the engine. <paramref name="window"/> false leaves the window size and mode alone (screenshot runs keep a fixed window).</summary>
     public static void Apply(SettingsData s, Window win, bool window = true)
     {
         if (!Headless && window)
         {
             if (Framed) { DisplayServer.WindowSetFlag(DisplayServer.WindowFlags.Borderless, false); DisplayServer.WindowSetMode(DisplayServer.WindowMode.Windowed); DisplayServer.WindowSetSize(new Vector2I(SettingsLogic.BaseWidth, SettingsLogic.BaseHeight)); }
-            else if (s.WindowMode == 1) DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
             else
             {
-                // borderless full window: a window without decoration the size of the screen it is on
-                int scr = DisplayServer.WindowGetCurrentScreen();
-                DisplayServer.WindowSetMode(DisplayServer.WindowMode.Windowed);
-                DisplayServer.WindowSetFlag(DisplayServer.WindowFlags.Borderless, true);
-                DisplayServer.WindowSetPosition(DisplayServer.ScreenGetPosition(scr)); DisplayServer.WindowSetSize(DisplayServer.ScreenGetSize(scr));
+                // Both modes are Godot's non-exclusive Fullscreen: the render is the screen. A Windowed window of the monitor size is not used: a window manager with a panel clamps it
+                // below the screen height and the UI would scale under 1 px/du (A1).
+                DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
             }
+            win.GetTree().CreateTimer(1.0).Timeout += () => ReportScale(s, win);   // the mode change lands a few frames later
         }
         DisplayServer.WindowSetVsyncMode(s.Vsync ? DisplayServer.VSyncMode.Enabled : DisplayServer.VSyncMode.Disabled);
         Engine.MaxFps = SettingsData.FpsLimits[s.FpsLimit];

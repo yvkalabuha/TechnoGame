@@ -116,16 +116,18 @@ public sealed partial class TechTree : Control
         _actor = actor; _modelDirty = true; _insetDirty = true; _mode = mode; _viewSwitch.Select(mode, false); _focus.Clear(); _selected = -1; Visible = true;
     }
     public void SetMode(int mode) { _mode = mode; _viewSwitch.Select(mode, false); Redraw(); }
+    /// <summary>Lowest edge of the goal panel: above the open legend sheet, else the bottom margin.</summary>
+    public float InsetLimit => LegendOpen ? Size.Y - 346 : Size.Y - 100;
     public void Select(int row) { _selected = row; _insetDirty = true; Redraw(); }
 
     // ---------------- model ----------------
     public override void _Process(double delta)
     {
         // The goal panel yields to the open legend: its bottom stays 8 du above the sheet (the sheet top is Size.Y - 332) and the rest scrolls inside.
-        float limit = _legendOpen ? Size.Y - 346 : Size.Y - 100;
-        _insetScroll.CustomMinimumSize = new Vector2(0, Math.Min(_inset.GetCombinedMinimumSize().Y, _legendOpen ? limit - _insetBox.GetThemeStylebox("panel").GetMinimumSize().Y : limit));
+        float limit = InsetLimit;
+        _insetScroll.CustomMinimumSize = new Vector2(0, Math.Min(_inset.GetCombinedMinimumSize().Y, LegendOpen ? limit - _insetBox.GetThemeStylebox("panel").GetMinimumSize().Y : limit));
         _legendBtn.Position = new Vector2(Area.Position.X + 10, Area.End.Y - 42); _legendBtn.Size = new Vector2(144, 32);
-        _legendBtn.Visible = _mode == 0 && !_legendOpen;
+        _legendBtn.Visible = _mode == 0 && !LegendOpen;
         _view.Position = Area.Position; _view.Size = Area.Size;
         if (Math.Abs(_zoom - _zoomTarget) > 0.001f)
         {
@@ -525,7 +527,7 @@ public sealed partial class TechTree : Control
             if (lod == Lod.Icons && st == St.Unavailable) fill = Ui.Paper;
             Shape(type, p, r, fill, line, st != St.Known, 1.7f);
             if (st == St.Unavailable && lod != Lod.Icons) _cv.DrawCircle(p, 1.8f, line);
-            if (lod == Lod.Icons) Glyph(type, p, r * 0.52f, st == St.Known && mastered ? Colors.White : (st == St.Unavailable ? Ui.Ink3 : Ui.DiscText[d]));
+            if (lod == Lod.Icons) Glyph(type, p, r * GlyphGeometry.NodeGlyphShare, st == St.Known && mastered ? Colors.White : (st == St.Unavailable ? Ui.Ink3 : Ui.DiscText[d]));
         }
         if (i == _goal) Shape(type, p, r + 4, Colors.Transparent, Ui.Command, false, 1.6f);
         if (i == _selected) _cv.DrawArc(p, r + 6, 0, Mathf.Tau, 24, Ui.Ink, 2f, true);
@@ -681,7 +683,9 @@ public sealed partial class TechTree : Control
 
     // Legend (spec §8): a collapsed button at the lower left (key L), opened to a compact two-column sheet docked in the right column above the stamp.
     bool _legendOpen;
-    public bool LegendOpen => _legendOpen;
+    /// <summary>The legend is on screen only in the chart view (mode 0); in the goal statement the flag is kept but the sheet reserves no space and takes no input.</summary>
+    public bool LegendOpen => _legendOpen && _mode == 0;
+    public bool CanLegend => _mode == 0;
     public void ToggleLegend(bool open) { _legendOpen = open; ClampPan(); Redraw(); }
     const float LegendRow = 21, LegendPad = 12, LegendCol = 229, LegendGap = 16, LegendH = 256, StampH = 62, StampGap = 8;
     /// <summary>The open legend sheet: right of the disc area, 8 du above the sheet stamp (spec §3).</summary>
@@ -695,6 +699,7 @@ public sealed partial class TechTree : Control
     readonly LegendData.Discipline[] _lgDiscs = LegendData.Disciplines(Palette.C);
     Color[] _lgWash, _lgLine;
     Vector2[][] _lgShapes;
+    readonly float[] _lgRadius = new float[6];
 
     void BuildLegendCache()
     {
@@ -709,14 +714,17 @@ public sealed partial class TechTree : Control
         _lgShapes = new Vector2[6][];
         for (int k = 0; k < 6; k++)
         {
-            var pts = Outline(Enum.Parse<NodeType>(LegendData.Types[k].Code), Vector2.Zero, 7);
+            string code = LegendData.Types[k].Code;
+            _lgRadius[k] = GlyphGeometry.LegendRadius(code);
+            var (bx0, by0, bx1, by1) = GlyphGeometry.Bounds(code, _lgRadius[k]);
+            var pts = Outline(Enum.Parse<NodeType>(code), new Vector2(-(bx0 + bx1) / 2, -(by0 + by1) / 2), _lgRadius[k]);   // centred on the box, not on the circumcentre
             if (pts != null) { var closed = new Vector2[pts.Length + 1]; pts.CopyTo(closed, 0); closed[pts.Length] = pts[0]; _lgShapes[k] = closed; }
         }
     }
 
     void DrawLegend()
     {
-        if (!_legendOpen) return;   // closed: the real button _legendBtn stands in its place
+        if (!LegendOpen) return;   // closed: the real button _legendBtn stands in its place
         if (_lgDirty || _lgShapes == null) BuildLegendCache();
         var r = LegendSheet;
         _cv.DrawStyleBox(Ui.Box(Ui.Sheet, Ui.Ink, 1, 0, Ui.R3), r);
@@ -735,7 +743,7 @@ public sealed partial class TechTree : Control
         Head(xl, ly, 6);
         float y = Y(ly + 1); _cv.DrawLine(new Vector2(xl, y - 5), new Vector2(xl + 18, y - 5), Ui.Sheet, 6f); _cv.DrawLine(new Vector2(xl, y - 5), new Vector2(xl + 18, y - 5), Ui.Command, 3f);
         Text(new Vector2(xl + 26, y), _lgText[7], 14, Ui.Ink2);
-        y = Y(ly + 2); _cv.DrawRect(new Rect2(xl + 2, y - 3 - SettingsLogic.WhyNotMarkDu, SettingsLogic.WhyNotMarkDu, SettingsLogic.WhyNotMarkDu), Ui.Alarm);
+        y = Y(ly + 2); _cv.DrawRect(new Rect2(xl + 2, y - 5 - SettingsLogic.WhyNotMarkDu / 2, SettingsLogic.WhyNotMarkDu, SettingsLogic.WhyNotMarkDu), Ui.Alarm);
         Text(new Vector2(xl + 26, y), _lgText[8], 14, Ui.Ink2);
         y = Y(ly + 3); for (int k = 0; k < 6; k++) _cv.DrawArc(new Vector2(xl + 9, y - 5), 8, k * Mathf.Tau / 6, k * Mathf.Tau / 6 + Mathf.Tau / 6 * 0.55f, 5, Ui.Ink2, 1.8f, true);
         Text(new Vector2(xl + 26, y), _lgText[9], 14, Ui.Ink2);
@@ -748,7 +756,7 @@ public sealed partial class TechTree : Control
             y = Y(1 + k);
             var mk = new Vector2(xr + 30, y - 5);
             Text(new Vector2(xr + 4, y), LgNum[k], 14, Ui.Ink, FontKind.Mono);
-            if (_lgShapes[k] == null) _cv.DrawArc(mk, 8, 0, Mathf.Tau, 24, Ui.Ink2, 1.8f, true);
+            if (_lgShapes[k] == null) _cv.DrawArc(mk, _lgRadius[k], 0, Mathf.Tau, 24, Ui.Ink2, 1.8f, true);
             else { _cv.DrawSetTransform(mk); _cv.DrawPolyline(_lgShapes[k], Ui.Ink2, 1.8f, true); _cv.DrawSetTransform(Vector2.Zero); }
             Text(new Vector2(xr + 46, y), LegendData.Types[k].Code, 14, Ui.Ink, FontKind.Mono);
             Text(new Vector2(xr + 92, y), _lgText[13 + k], 14, Ui.Ink2);
@@ -784,7 +792,7 @@ public sealed partial class TechTree : Control
     {
         inView = 0;
         var others = new List<(string, Rect2)> { ("stamp", StampRect) };
-        if (_legendOpen) others.Add(("legend sheet", LegendSheet));
+        if (LegendOpen) others.Add(("legend sheet", LegendSheet));
         if (_insetBox.Visible) others.Add(("goal panel", PanelRect));
         for (int w = 0; w < 5; w++)
         {

@@ -24,6 +24,9 @@ public static class SettingsLogic
     public static double PixelsPerDu(int width, int height, double uiScalePercent) =>
         Math.Min(width / (double)BaseWidth, height / (double)BaseHeight) * uiScalePercent / 100.0;
 
+    /// <summary>A1 floor: the UI never renders below 1 px/du at 100 % (below the px/du of its setting at a larger scale).</summary>
+    public static bool ScaleFloorOk(int width, int height, double uiScalePercent) => PixelsPerDu(width, height, uiScalePercent) >= uiScalePercent / 100.0 - 1e-9;
+
     /// <summary>Canvas size in du for a window size and a UI scale (the extra width or height of a wider or taller screen goes to the content).</summary>
     public static (double W, double H) CanvasSize(int width, int height, double uiScalePercent)
     {
