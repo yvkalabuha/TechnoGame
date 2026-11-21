@@ -85,7 +85,7 @@ public class ScratchTests
     }
 
     // The runtime Nullable<T> and ImmutableArray<T> are readonly structs, but the runtime assemblies do not carry the attribute.
-    private static bool IsReadOnlyStruct(Type t) =>
+    internal static bool IsReadOnlyStruct(Type t) =>
         t.GetCustomAttributesData().Any(a => a.AttributeType.Name == "IsReadOnlyAttribute")
         || t.IsGenericType && t.GetGenericTypeDefinition() is var d && (d == typeof(Nullable<>) || d == typeof(System.Collections.Immutable.ImmutableArray<>));
 

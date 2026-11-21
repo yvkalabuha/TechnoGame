@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Singularity.Core;
@@ -8,8 +9,8 @@ namespace Singularity.Architecture.Tests;
 
 /// <summary>
 /// TASK-0125 (review 2026-11-19, A6): two worlds share one process and one thread pool, so no type of Kernel, Core or Session may keep
-/// state in a static field. Allowed: <c>const</c>, a <c>static readonly</c> field of an immutable type (the rules of
-/// <see cref="ScratchTests.IsSafeType"/>), and the explicit list below. Forbidden: any other static field, [ThreadStatic],
+/// state in a static field. Allowed: <c>const</c>, a <c>static readonly</c> field of an immutable type (the closed
+/// allow-list <see cref="IsAllowedStaticType"/>), and the explicit list below. Forbidden: any other static field, [ThreadStatic],
 /// and any field of type ThreadLocal / AsyncLocal. Nested and compiler-generated types are scanned too; skipped are the lambda caches
 /// of the compiler (<c>&lt;&gt;9*</c>, <c>&lt;&gt;O</c>) and <c>&lt;PrivateImplementationDetails&gt;</c> (static readonly structs of constant bytes).
 /// </summary>
@@ -24,7 +25,7 @@ public class NoMutableStaticsTests
 
     // Type.Field -> (expected kind, reason). The kind is checked against the real field, and every entry must resolve to a real field,
     // so a stale or mistyped entry fails instead of hiding a violation.
-    private enum Kind { None, ThreadStatic, InstanceThreadLocal, ConstantArray }
+    private enum Kind { None, ThreadStatic, InstanceThreadLocal, ConstantArray, ImmutableObject }
 
     private static readonly Dictionary<string, (Kind Kind, string Reason)> Exceptions = new(StringComparer.Ordinal)
     {
@@ -54,11 +55,13 @@ public class NoMutableStaticsTests
         ["Singularity.Core.Data.ScenarioData.SymmetricActors"] = (Kind.ConstantArray, "constant name list"),
         ["Singularity.Core.Data.ScenarioData.NoMultiplier"] = (Kind.ConstantArray, "constant name list"),
         ["Singularity.Core.Data.Yaml.StrictYaml.ImplicitBoolOrNull"] = (Kind.ConstantArray, "constant literal list"),
+        // A class whose instance fields are all readonly and of safe types (a lever bit mask), built once.
+        ["Singularity.Core.WhyNot.LeverRegistry.<Slice>k__BackingField"] = (Kind.ImmutableObject, "immutable lever mask of the slice"),
         ["Singularity.Session.ViewBuilder.Reasons"] = (Kind.ConstantArray, "constant table of licence reasons"),
     };
 
     private static bool IsThreadBound(Type t) =>
-        t.IsGenericType && (t.GetGenericTypeDefinition() == typeof(ThreadLocal<>) || t.GetGenericTypeDefinition() == typeof(AsyncLocal<>)
+        t.HasElementType ? IsThreadBound(t.GetElementType()!) : t.IsGenericType && (t.GetGenericTypeDefinition() == typeof(ThreadLocal<>) || t.GetGenericTypeDefinition() == typeof(AsyncLocal<>)
             || t.GetGenericArguments().Any(IsThreadBound));
 
     // The compiler caches a lambda in a static field of its closure class (<>9__x_y): written once, idempotent, holds no data.
@@ -66,8 +69,31 @@ public class NoMutableStaticsTests
         (f.Name.StartsWith("<>9", StringComparison.Ordinal) || f.DeclaringType!.Name == "<>O") // <>O: cache of a method-group delegate
         && f.DeclaringType!.GetCustomAttribute<CompilerGeneratedAttribute>() is not null;
 
-    // Readonly structs of the runtime that carry no IsReadOnly attribute in the reference view.
-    private static bool IsValueLike(Type t) => t == typeof(Int128) || t == typeof(UInt128) || t == typeof(decimal);
+    /// <summary>
+    /// The CLOSED allow-list for a static readonly field (an interface, object, array, class or generic wrapper is not on it; the instance-field
+    /// rule of <see cref="ScratchTests"/> that an injected interface is safe does not apply to statics): primitive, enum, string, Int128, UInt128,
+    /// decimal; a readonly struct whose instance fields are all allowed; Nullable of an allowed type; an Immutable* / Frozen* collection of allowed types.
+    /// </summary>
+    private static bool IsAllowedStaticType(Type t, HashSet<Type>? seen = null)
+    {
+        if (t.IsPrimitive || t.IsEnum || t == typeof(string) || t == typeof(Int128) || t == typeof(UInt128) || t == typeof(decimal))
+            return true;
+        if (t.IsArray || t.IsInterface || t.IsPointer || t.IsByRef || t == typeof(object))
+            return false;
+        if (t.IsGenericType)
+        {
+            Type d = t.GetGenericTypeDefinition();
+            string ns = d.Namespace ?? "";
+            bool immutable = d == typeof(Nullable<>) || ns == "System.Collections.Immutable" || ns == "System.Collections.Frozen";
+            return immutable && t.GetGenericArguments().All(a => IsAllowedStaticType(a, seen));
+        }
+        if (!t.IsValueType || !ScratchTests.IsReadOnlyStruct(t) || t.Namespace?.StartsWith("System", StringComparison.Ordinal) == true)
+            return false;
+        seen ??= [];
+        if (!seen.Add(t))
+            return true;
+        return t.GetFields(IlScanner.AllDeclared).Where(x => !x.IsStatic).All(x => x.IsInitOnly && IsAllowedStaticType(x.FieldType, seen));
+    }
 
     private static Kind KindOf(FieldInfo f)
     {
@@ -77,6 +103,8 @@ public class NoMutableStaticsTests
             return Kind.InstanceThreadLocal;
         if (f.IsStatic && f.IsInitOnly && f.FieldType.IsArray)
             return Kind.ConstantArray;
+        if (f.IsStatic && f.IsInitOnly && !f.FieldType.IsInterface && f.FieldType.IsClass && ScratchTests.IsSafeType(f.FieldType))
+            return Kind.ImmutableObject;
         return Kind.None;
     }
 
@@ -105,8 +133,8 @@ public class NoMutableStaticsTests
                     found.Add($"{name}: [ThreadStatic]");
                 else if (!f.IsInitOnly)
                     found.Add($"{name}: static field is not readonly");
-                else if (!IsValueLike(f.FieldType) && !ScratchTests.IsSafeType(f.FieldType))
-                    found.Add($"{name}: static readonly of a mutable type {f.FieldType.Name}");
+                else if (!IsAllowedStaticType(f.FieldType))
+                    found.Add($"{name}: static readonly of a type that is not on the allow-list ({f.FieldType.Name})");
             }
         }
         return found;
@@ -133,10 +161,13 @@ public class NoMutableStaticsTests
         List<string> found = Violations([typeof(StaticMutant), .. typeof(StaticMutant).GetNestedTypes(IlScanner.AllDeclared)], MutantExceptions);
         Assert.Contains(found, f => f.Contains("Counter") && f.Contains("not readonly"));
         Assert.Contains(found, f => f.Contains("Buffer") && f.Contains("ThreadStatic"));
-        Assert.Contains(found, f => f.Contains("Shared") && f.Contains("mutable type"));
+        Assert.Contains(found, f => f.Contains("Shared") && f.Contains("allow-list"));
         Assert.Contains(found, f => f.Contains("Local") && f.Contains("ThreadLocal"));
         Assert.Contains(found, f => f.Contains("Async") && f.Contains("ThreadLocal"));
-        Assert.DoesNotContain(found, f => f.Contains("Fine") || f.Contains("Max") || f.Contains("<>9") || f.Contains("<>O") || f.Contains("Listed"));
+        Assert.Contains(found, f => f.Contains("AsInterface") && f.Contains("allow-list"));   // an interface is not safe for a static
+        Assert.Contains(found, f => f.Contains("LocalArray") && f.Contains("ThreadLocal"));  // an array of ThreadLocal
+        Assert.Contains(found, f => f.Contains("Boxed") && f.Contains("allow-list"));
+        Assert.DoesNotContain(found, f => f.Contains("Fine") || f.Contains("Frozen") || f.Contains("Wide") || f.Contains("Max") || f.Contains("<>9") || f.Contains("<>O") || f.Contains("Listed"));
         // A closure class with a static lambda cache really exists in the mutant (the scan skips it on purpose).
         Assert.Contains(typeof(StaticMutant).GetNestedTypes(IlScanner.AllDeclared), t => t.GetFields(IlScanner.AllDeclared).Any(IsLambdaCache));
         // An exception entry of the wrong kind or of a missing kind is reported.
@@ -174,6 +205,15 @@ internal static class StaticMutant
     public static readonly List<int> WrongArray = [];
     public static readonly string[] Listed = ["a"];
 
-    // A static lambda: the compiler caches it in a static field of a closure class, which the scan must not report.
-    public static readonly Func<int, int> Twice = static x => x * 2;
+    // A static lambda in a method: the compiler caches it in a static field of a closure class, which the scan must not report.
+    public static readonly IList<int> AsInterface = new List<int>();
+    public static readonly ThreadLocal<int>[] LocalArray = [];
+    public static readonly object Boxed = new();
+    public static readonly ImmutableArray<string> Frozen = ["a"];
+    public static readonly Int128 Wide = 1;
+    public static int Twice(int x)
+    {
+        Func<int, int> f = static y => y * 2;
+        return f(x);
+    }
 }
