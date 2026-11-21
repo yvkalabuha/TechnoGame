@@ -10,7 +10,8 @@ namespace Singularity.Architecture.Tests;
 /// TASK-0125 (review 2026-11-19, A6): two worlds share one process and one thread pool, so no type of Kernel, Core or Session may keep
 /// state in a static field. Allowed: <c>const</c>, a <c>static readonly</c> field of an immutable type (the rules of
 /// <see cref="ScratchTests.IsSafeType"/>), and the explicit list below. Forbidden: any other static field, [ThreadStatic],
-/// and any field of type ThreadLocal / AsyncLocal. Nested and compiler-generated types are scanned too.
+/// and any field of type ThreadLocal / AsyncLocal. Nested and compiler-generated types are scanned too; skipped are the lambda caches
+/// of the compiler (<c>&lt;&gt;9*</c>, <c>&lt;&gt;O</c>) and <c>&lt;PrivateImplementationDetails&gt;</c> (static readonly structs of constant bytes).
 /// </summary>
 public class NoMutableStaticsTests
 {
@@ -21,36 +22,39 @@ public class NoMutableStaticsTests
         typeof(SliceSession).Assembly,
     ];
 
-    // Type.Field -> reason. Empty unless a field is proven safe and cannot be written in the safe form.
-    private static readonly Dictionary<string, string> Exceptions = new(StringComparer.Ordinal)
+    // Type.Field -> (expected kind, reason). The kind is checked against the real field, and every entry must resolve to a real field,
+    // so a stale or mistyped entry fails instead of hiding a violation.
+    private enum Kind { None, ThreadStatic, InstanceThreadLocal, ConstantArray }
+
+    private static readonly Dictionary<string, (Kind Kind, string Reason)> Exceptions = new(StringComparer.Ordinal)
     {
         // Thread-bound pure temporaries: sizes and contents are rewritten before every read, never hashed or saved, hold no world data.
         // Moving them into per-chunk buffers is not mechanical (DEBT proposal, see the TASK-0125 report); TwoWorldsOnOnePoolTests (Session.Tests) guards the behaviour.
-        ["Singularity.Core.WhyNot.ClosureArena.t_sets"] = "ThreadStatic temporary of the closure walk",
-        ["Singularity.Core.WhyNot.ClosureArena.t_memos"] = "ThreadStatic temporary of the closure walk",
-        ["Singularity.Core.WhyNot.ClosureArena.t_setsUsed"] = "ThreadStatic fill count of the arena, Reset before each walk",
-        ["Singularity.Core.WhyNot.ClosureArena.t_memosUsed"] = "ThreadStatic fill count of the arena, Reset before each walk",
-        ["Singularity.Core.Policy.PolicySystem.t_decisions"] = "ThreadStatic [Scratch] temporary of the policy decision",
-        ["Singularity.Core.Policy.ToolingPlan._temp"] = "ThreadStatic temporary of the tooling plan",
-        ["Singularity.Core.Industry.EffortScratch._forThread"] = "ThreadStatic arrays of the effort allocator, overwritten per call",
-        ["Singularity.Core.Industry.IndustryMath.t_items"] = "ThreadStatic [Scratch] items of one Profile call",
-        ["Singularity.Core.Industry.IndustryMath.t_sorted"] = "ThreadStatic [Scratch] sorted copy of one Profile call",
+        ["Singularity.Core.WhyNot.ClosureArena.t_sets"] = (Kind.ThreadStatic, "ThreadStatic temporary of the closure walk"),
+        ["Singularity.Core.WhyNot.ClosureArena.t_memos"] = (Kind.ThreadStatic, "ThreadStatic temporary of the closure walk"),
+        ["Singularity.Core.WhyNot.ClosureArena.t_setsUsed"] = (Kind.ThreadStatic, "ThreadStatic fill count of the arena, Reset before each walk"),
+        ["Singularity.Core.WhyNot.ClosureArena.t_memosUsed"] = (Kind.ThreadStatic, "ThreadStatic fill count of the arena, Reset before each walk"),
+        ["Singularity.Core.Policy.PolicySystem.t_decisions"] = (Kind.ThreadStatic, "ThreadStatic [Scratch] temporary of the policy decision"),
+        ["Singularity.Core.Policy.ToolingPlan._temp"] = (Kind.ThreadStatic, "ThreadStatic temporary of the tooling plan"),
+        ["Singularity.Core.Industry.EffortScratch._forThread"] = (Kind.ThreadStatic, "ThreadStatic arrays of the effort allocator, overwritten per call"),
+        ["Singularity.Core.Industry.IndustryMath.t_items"] = (Kind.ThreadStatic, "ThreadStatic [Scratch] items of one Profile call"),
+        ["Singularity.Core.Industry.IndustryMath.t_sorted"] = (Kind.ThreadStatic, "ThreadStatic [Scratch] sorted copy of one Profile call"),
         // An instance field, one per world adapter; the book is refilled with the parameters of its own world (TASK-0103, CrossWorldScratchTests).
-        ["Singularity.Session.PolicyProductsAdapter._book"] = "per-world ThreadLocal book, refilled per call",
+        ["Singularity.Session.PolicyProductsAdapter._book"] = (Kind.InstanceThreadLocal, "per-world ThreadLocal book, refilled per call"),
         // Constant tables: filled once in the static initialiser, never written afterwards (reviewed; an ImmutableArray would change many call sites).
-        ["Singularity.Core.Industry.IndustrySystem.DimNames"] = "constant name table",
-        ["Singularity.Core.Data.DataNames.NodeTypes"] = "constant name table",
-        ["Singularity.Core.Data.DataNames.Clusters"] = "constant name table",
-        ["Singularity.Core.Data.DataNames.Disciplines"] = "constant name table",
-        ["Singularity.Core.Data.DataNames.Dimensions"] = "constant name table",
-        ["Singularity.Core.Data.DataNames.Hazards"] = "constant name table",
-        ["Singularity.Core.Data.DataNames.ActorClasses"] = "constant name table",
-        ["Singularity.Core.Data.DataNames.Variants"] = "constant name table",
-        ["Singularity.Core.Data.ScenarioData.ActorFields"] = "constant name list",
-        ["Singularity.Core.Data.ScenarioData.SymmetricActors"] = "constant name list",
-        ["Singularity.Core.Data.ScenarioData.NoMultiplier"] = "constant name list",
-        ["Singularity.Core.Data.Yaml.StrictYaml.ImplicitBoolOrNull"] = "constant literal list",
-        ["Singularity.Session.ViewBuilder.Reasons"] = "constant table of licence reasons",
+        ["Singularity.Core.Industry.IndustrySystem.DimNames"] = (Kind.ConstantArray, "constant name table"),
+        ["Singularity.Core.Data.DataNames.NodeTypes"] = (Kind.ConstantArray, "constant name table"),
+        ["Singularity.Core.Data.DataNames.Clusters"] = (Kind.ConstantArray, "constant name table"),
+        ["Singularity.Core.Data.DataNames.Disciplines"] = (Kind.ConstantArray, "constant name table"),
+        ["Singularity.Core.Data.DataNames.Dimensions"] = (Kind.ConstantArray, "constant name table"),
+        ["Singularity.Core.Data.DataNames.Hazards"] = (Kind.ConstantArray, "constant name table"),
+        ["Singularity.Core.Data.DataNames.ActorClasses"] = (Kind.ConstantArray, "constant name table"),
+        ["Singularity.Core.Data.DataNames.Variants"] = (Kind.ConstantArray, "constant name table"),
+        ["Singularity.Core.Data.ScenarioData.ActorFields"] = (Kind.ConstantArray, "constant name list"),
+        ["Singularity.Core.Data.ScenarioData.SymmetricActors"] = (Kind.ConstantArray, "constant name list"),
+        ["Singularity.Core.Data.ScenarioData.NoMultiplier"] = (Kind.ConstantArray, "constant name list"),
+        ["Singularity.Core.Data.Yaml.StrictYaml.ImplicitBoolOrNull"] = (Kind.ConstantArray, "constant literal list"),
+        ["Singularity.Session.ViewBuilder.Reasons"] = (Kind.ConstantArray, "constant table of licence reasons"),
     };
 
     private static bool IsThreadBound(Type t) =>
@@ -65,21 +69,37 @@ public class NoMutableStaticsTests
     // Readonly structs of the runtime that carry no IsReadOnly attribute in the reference view.
     private static bool IsValueLike(Type t) => t == typeof(Int128) || t == typeof(UInt128) || t == typeof(decimal);
 
-    internal static List<string> Violations(IEnumerable<Type> types)
+    private static Kind KindOf(FieldInfo f)
+    {
+        if (f.IsStatic && f.GetCustomAttribute<ThreadStaticAttribute>() is not null)
+            return Kind.ThreadStatic;
+        if (!f.IsStatic && IsThreadBound(f.FieldType))
+            return Kind.InstanceThreadLocal;
+        if (f.IsStatic && f.IsInitOnly && f.FieldType.IsArray)
+            return Kind.ConstantArray;
+        return Kind.None;
+    }
+
+    private static List<string> Violations(IEnumerable<Type> types, IReadOnlyDictionary<string, (Kind Kind, string Reason)> exceptions)
     {
         var found = new List<string>();
         foreach (Type type in types)
         {
             if (type.Name.StartsWith("<PrivateImplementationDetails>", StringComparison.Ordinal))
-                continue; // compiler data blobs: static readonly structs of constant bytes
+                continue;
             foreach (FieldInfo f in type.GetFields(IlScanner.AllDeclared))
             {
                 string name = $"{type.FullName}.{f.Name}";
-                if (Exceptions.ContainsKey(name))
+                if (exceptions.TryGetValue(name, out var allowed))
+                {
+                    Kind actual = KindOf(f);
+                    if (actual != allowed.Kind)
+                        found.Add($"{name}: listed as {allowed.Kind} but is {actual}");
                     continue;
+                }
                 if (IsThreadBound(f.FieldType))
                     found.Add($"{name}: ThreadLocal/AsyncLocal keeps state per thread");
-                if (!f.IsStatic || f.IsLiteral || IsLambdaCache(f) || Exceptions.ContainsKey(name))
+                if (!f.IsStatic || f.IsLiteral || IsLambdaCache(f))
                     continue;
                 if (f.GetCustomAttribute<ThreadStaticAttribute>() is not null)
                     found.Add($"{name}: [ThreadStatic]");
@@ -95,21 +115,41 @@ public class NoMutableStaticsTests
     [Fact]
     public void KernelCoreSession_HaveNoMutableStaticFields()
     {
-        List<string> found = Violations(Assemblies.SelectMany(a => a.GetTypes()));
+        List<string> found = Violations(Assemblies.SelectMany(a => a.GetTypes()), Exceptions);
         Assert.True(found.Count == 0, string.Join("\n", found));
     }
 
     [Fact]
-    public void TheScan_SeesAStaticInt_AThreadStatic_AMutableReadonlyList_AThreadLocal_AndAClosureOfAStaticLambda()
+    public void EveryException_ResolvesToARealField()
     {
-        List<string> found = Violations([typeof(StaticMutant)]);
+        Type[] all = [.. Assemblies.SelectMany(a => a.GetTypes())];
+        List<string> stale = [.. Exceptions.Keys.Where(k => !all.Any(t => t.GetFields(IlScanner.AllDeclared).Any(f => $"{t.FullName}.{f.Name}" == k)))];
+        Assert.True(stale.Count == 0, "stale exception entries: " + string.Join(", ", stale));
+    }
+
+    [Fact]
+    public void TheScan_SeesAStaticInt_AThreadStatic_AMutableReadonlyList_AThreadLocal_AndIgnoresAStaticLambdaCache()
+    {
+        List<string> found = Violations([typeof(StaticMutant), .. typeof(StaticMutant).GetNestedTypes(IlScanner.AllDeclared)], MutantExceptions);
         Assert.Contains(found, f => f.Contains("Counter") && f.Contains("not readonly"));
         Assert.Contains(found, f => f.Contains("Buffer") && f.Contains("ThreadStatic"));
         Assert.Contains(found, f => f.Contains("Shared") && f.Contains("mutable type"));
         Assert.Contains(found, f => f.Contains("Local") && f.Contains("ThreadLocal"));
         Assert.Contains(found, f => f.Contains("Async") && f.Contains("ThreadLocal"));
-        Assert.DoesNotContain(found, f => f.Contains("Fine") || f.Contains("Max"));
+        Assert.DoesNotContain(found, f => f.Contains("Fine") || f.Contains("Max") || f.Contains("<>9") || f.Contains("<>O") || f.Contains("Listed"));
+        // A closure class with a static lambda cache really exists in the mutant (the scan skips it on purpose).
+        Assert.Contains(typeof(StaticMutant).GetNestedTypes(IlScanner.AllDeclared), t => t.GetFields(IlScanner.AllDeclared).Any(IsLambdaCache));
+        // An exception entry of the wrong kind or of a missing kind is reported.
+        Assert.Contains(found, f => f.Contains("WrongKind") && f.Contains("listed as ThreadStatic but is None"));
+        Assert.Contains(found, f => f.Contains("WrongArray") && f.Contains("listed as ConstantArray but is None"));
     }
+
+    private static readonly Dictionary<string, (Kind Kind, string Reason)> MutantExceptions = new()
+    {
+        ["Singularity.Architecture.Tests.StaticMutant.WrongKind"] = (Kind.ThreadStatic, "a plain static named like a ThreadStatic entry"),
+        ["Singularity.Architecture.Tests.StaticMutant.WrongArray"] = (Kind.ConstantArray, "a list named like a constant array entry"),
+        ["Singularity.Architecture.Tests.StaticMutant.Listed"] = (Kind.ConstantArray, "a real constant array: allowed"),
+    };
 
     [Fact]
     public void TheAssembliesAreScanned_NestedAndGeneratedTypesIncluded()
@@ -129,5 +169,11 @@ internal static class StaticMutant
     public static readonly ThreadLocal<int> Local = new();
     public static readonly AsyncLocal<int> Async = new();
     public const int Max = 3;
-        public static readonly string Fine = "x";
+    public static readonly string Fine = "x";
+    public static int WrongKind = 2;
+    public static readonly List<int> WrongArray = [];
+    public static readonly string[] Listed = ["a"];
+
+    // A static lambda: the compiler caches it in a static field of a closure class, which the scan must not report.
+    public static readonly Func<int, int> Twice = static x => x * 2;
 }
