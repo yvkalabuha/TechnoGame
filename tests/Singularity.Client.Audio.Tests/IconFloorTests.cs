@@ -39,7 +39,7 @@ public class IconFloorTests
     [Fact]
     public void NodeGlyph_WidestSideReachesTheFloorInTheSmallestPlate()
     {
-        const float smallestPlateRadius = 13f;   // TechTree.NR at the Icons level
+        const float smallestPlateRadius = GlyphGeometry.IconsPlateMin;   // TechTree.NR at the Icons level starts here
         Assert.True(2 * smallestPlateRadius * GlyphGeometry.NodeGlyphShare >= GlyphGeometry.IconFloor);
     }
 
@@ -48,7 +48,7 @@ public class IconFloorTests
     {
         foreach (var t in Types)
         {
-            var (x0, y0, x1, y1) = GlyphGeometry.Bounds(t, 13f);
+            var (x0, y0, x1, y1) = GlyphGeometry.Bounds(t, GlyphGeometry.IconsPlateMin);
             Assert.True(x1 - x0 >= GlyphGeometry.IconFloor && y1 - y0 >= GlyphGeometry.IconFloor, t);
         }
     }
@@ -65,8 +65,9 @@ public class IconFloorTests
     [Fact]
     public void WhyNotSquare_IsCentredOnItsLegendRow()
     {
-        // legend row: swatch centre at y - 5; the square is drawn at y - 5 - mark / 2 (it stood 6 du too high)
-        double top = -5 - SettingsLogic.WhyNotMarkDu / 2;
-        Assert.Equal(-5, top + SettingsLogic.WhyNotMarkDu / 2, 6);
+        // the geometry TechTree draws: swatch centre at row y - 5 (it stood 6 du too high)
+        var (_, y, side) = SettingsLogic.WhyNotLegendMark(0, 100);
+        Assert.Equal(95, y + side / 2, 6);
+        Assert.True(side >= GlyphGeometry.IconFloor);
     }
 }

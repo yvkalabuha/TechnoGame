@@ -129,9 +129,9 @@ public static class Settings
             if (Framed) { DisplayServer.WindowSetFlag(DisplayServer.WindowFlags.Borderless, false); DisplayServer.WindowSetMode(DisplayServer.WindowMode.Windowed); DisplayServer.WindowSetSize(new Vector2I(SettingsLogic.BaseWidth, SettingsLogic.BaseHeight)); }
             else
             {
-                // Both modes are Godot's non-exclusive Fullscreen: the render is the screen. A Windowed window of the monitor size is not used: a window manager with a panel clamps it
-                // below the screen height and the UI would scale under 1 px/du (A1).
-                DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
+                // O-034: "fullscreen" is exclusive, "borderless" is Godot's non-exclusive Fullscreen (a borderless full window). A Windowed window of the monitor size is not used:
+                // a window manager with a panel clamps it below the screen height and the UI would scale under 1 px/du (A1).
+                DisplayServer.WindowSetMode(s.WindowMode == 1 ? DisplayServer.WindowMode.ExclusiveFullscreen : DisplayServer.WindowMode.Fullscreen);
             }
             win.GetTree().CreateTimer(1.0).Timeout += () => ReportScale(s, win);   // the mode change lands a few frames later
         }

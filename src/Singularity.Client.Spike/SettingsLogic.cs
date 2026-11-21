@@ -37,6 +37,9 @@ public static class SettingsLogic
     /// <summary>Side of the why-not root square in du (tree chart and legend): a meaningful icon is at least 16 physical px at 100 % (UI_DESIGN_SYSTEM 12).</summary>
     public const float WhyNotMarkDu = 16;
 
+    /// <summary>Legend row of the why-not root: the swatch centre is at row y - 5; the square is centred on it (x, y, side).</summary>
+    public static (float X, float Y, float Side) WhyNotLegendMark(float xl, float rowY) => (xl + 2, rowY - 5 - WhyNotMarkDu / 2, WhyNotMarkDu);
+
     /// <summary>A saved full frame must be a real base-size render; anything else is not evidence for A1/A2/A9.</summary>
     public static bool IsBaseFrame(int width, int height) => width == BaseWidth && height == BaseHeight;
 

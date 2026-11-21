@@ -319,9 +319,28 @@ public sealed partial class TechTree : Control
     {
         font ??= Fonts.Text;
         if (font.GetStringSize(s, HorizontalAlignment.Left, -1, size).X <= maxW) return s;
+        _fitCuts++;
         while (s.Length > 1 && font.GetStringSize(s + "…", HorizontalAlignment.Left, -1, size).X > maxW) s = s[..^1];
         return s + "…";
     }
+
+    // Word-wrapped paragraph (a line of meaning is never cut with an ellipsis); returns its height.
+    float Para(Vector2 p, string s, float maxW, int size, Color c, FontKind kind = FontKind.Text)
+    {
+        var font = Ui.FontOf(kind); int fs = Math.Max(size, Ui.MinSize);
+        string line = ""; float y = p.Y;
+        foreach (var word in s.Split(' '))
+        {
+            string next = line.Length == 0 ? word : line + " " + word;
+            if (line.Length > 0 && font.GetStringSize(next, HorizontalAlignment.Left, -1, fs).X > maxW) { _cv.DrawString(font, new Vector2(p.X, y), line, HorizontalAlignment.Left, -1, fs, c); y += RailMetrics.Line14Du; next = word; }
+            line = next;
+        }
+        _cv.DrawString(font, new Vector2(p.X, y), line, HorizontalAlignment.Left, -1, fs, c);
+        return y - p.Y + RailMetrics.Line14Du;
+    }
+
+    int _fitCuts;   // ellipsized strings drawn since the statement began (shot run check)
+    public int ShotFitCuts => _fitCuts;
 
     void Text(Vector2 p, string s, int size, Color c, FontKind kind = FontKind.Text, HorizontalAlignment al = HorizontalAlignment.Left, float w = -1)
         => _cv.DrawString(Ui.FontOf(kind), p, s, al, w, Math.Max(size, Ui.MinSize), c);
@@ -437,7 +456,7 @@ public sealed partial class TechTree : Control
     // Node radius grows a little with the zoom; icon plates are larger.
     // The ring shrinks with the canvas; node marks keep their physical size (du scaled down to 0.7) so that clusters stay apart.
     float NodeScale => Math.Clamp(BaseUnit / 60f, 0.7f, 1f);
-    float NR => CurLod switch { Lod.Overview => NodeR * NodeScale, Lod.Nodes => NodeR * 1.25f * NodeScale, _ => 13f + Math.Min(6f, (_zoom - PlanisphereMath.IconsFrom) * 2f) };
+    float NR => CurLod switch { Lod.Overview => NodeR * NodeScale, Lod.Nodes => NodeR * 1.25f * NodeScale, _ => GlyphGeometry.IconsPlateMin + Math.Min(6f, (_zoom - PlanisphereMath.IconsFrom) * 2f) };
 
     // Counts per (ring, wedge) cell and per wedge, filled once per draw into fields (no allocation); the wedge summaries are the always-visible counts.
     readonly int[,] _cellTot = new int[6, 5], _cellKn = new int[6, 5];
@@ -722,6 +741,8 @@ public sealed partial class TechTree : Control
         }
     }
 
+    static Rect2 LegendMarkRect(float xl, float rowY) { var (x, y, s) = SettingsLogic.WhyNotLegendMark(xl, rowY); return new Rect2(x, y, s, s); }
+
     void DrawLegend()
     {
         if (!LegendOpen) return;   // closed: the real button _legendBtn stands in its place
@@ -743,7 +764,7 @@ public sealed partial class TechTree : Control
         Head(xl, ly, 6);
         float y = Y(ly + 1); _cv.DrawLine(new Vector2(xl, y - 5), new Vector2(xl + 18, y - 5), Ui.Sheet, 6f); _cv.DrawLine(new Vector2(xl, y - 5), new Vector2(xl + 18, y - 5), Ui.Command, 3f);
         Text(new Vector2(xl + 26, y), _lgText[7], 14, Ui.Ink2);
-        y = Y(ly + 2); _cv.DrawRect(new Rect2(xl + 2, y - 5 - SettingsLogic.WhyNotMarkDu / 2, SettingsLogic.WhyNotMarkDu, SettingsLogic.WhyNotMarkDu), Ui.Alarm);
+        y = Y(ly + 2); _cv.DrawRect(LegendMarkRect(xl, y), Ui.Alarm);
         Text(new Vector2(xl + 26, y), _lgText[8], 14, Ui.Ink2);
         y = Y(ly + 3); for (int k = 0; k < 6; k++) _cv.DrawArc(new Vector2(xl + 9, y - 5), 8, k * Mathf.Tau / 6, k * Mathf.Tau / 6 + Mathf.Tau / 6 * 0.55f, 5, Ui.Ink2, 1.8f, true);
         Text(new Vector2(xl + 26, y), _lgText[9], 14, Ui.Ink2);
@@ -779,6 +800,25 @@ public sealed partial class TechTree : Control
     Rect2 PanelRect => new(_insetBox.Position, _insetBox.Size);
     /// <summary>Shot run: the goal panel scrolls inside (content taller than the panel), as the spec asks with the legend open.</summary>
     public bool ShotPanelScrolls => _insetScroll.GetVScrollBar().MaxValue - _insetScroll.GetVScrollBar().Page > 0.5;
+    /// <summary>Shot run: the goal statement draws no ellipsized string and no Label of the goal panel is clipped; null when clean.</summary>
+    public string ShotClippedText()
+    {
+        var bad = new List<string>();
+        if (_fitCuts > 0) bad.Add($"{_fitCuts} ellipsized string(s) in the statement");
+        void Walk(Node n)
+        {
+            if (n is CanvasItem { Visible: false }) return;
+            if (n is Label l && l.Text.Length > 0)
+            {
+                float w = l.GetThemeFont("font").GetStringSize(l.Text, HorizontalAlignment.Left, -1, l.GetThemeFontSize("font_size")).X;
+                bool trims = l.TextOverrunBehavior != TextServer.OverrunBehavior.NoTrimming;
+                if (l.GetVisibleLineCount() < l.GetLineCount() || ((trims || l.ClipText) && l.AutowrapMode == TextServer.AutowrapMode.Off && w > l.Size.X + 0.5f)) bad.Add($"label '{l.Text}' ({w:F0} of {l.Size.X:F0} du)");
+            }
+            foreach (var c in n.GetChildren()) Walk(c);
+        }
+        Walk(_insetBox);
+        return bad.Count == 0 ? null : string.Join("; ", bad);
+    }
     public string ShotPanelInfo => $"panel {PanelRect}, scroll max {_insetScroll.GetVScrollBar().MaxValue:F0} page {_insetScroll.GetVScrollBar().Page:F0}";
     /// <summary>Shot run: centre of the closed-legend button in canvas units (a real click; the view must not pan).</summary>
     public Vector2 ShotButtonCenter => _legendBtn.GlobalPosition + _legendBtn.Size / 2f;
@@ -821,12 +861,12 @@ public sealed partial class TechTree : Control
     void DrawStatement()
     {
         var nodes = _host.Data.Nodes; var rq = nodes.Requires;
-        _rowRects.Clear();
+        _rowRects.Clear(); _fitCuts = 0;
         var a = Area; float x0 = a.Position.X + 14, y = a.Position.Y + 8;
         Text(new Vector2(x0, y + 16), Loc.T("stmt.title"), 18, Ui.Ink, FontKind.Draft);
         string goal = _goal >= 0 ? Loc.T("stmt.goal", Names.Node(nodes.Id[_goal]), Loc.T(_state[_goal] == St.Known ? "state.known" : "state.unknown")) : Loc.T("stmt.nogoal");
-        Text(new Vector2(x0 + 210, y + 16), Fit(goal, a.Size.X - 240, 14), 14, Ui.Ink);
-        y += 28;
+        float gh = Para(new Vector2(x0 + 210, y + 16), goal, a.Size.X - 240, 14, Ui.Ink);
+        y += Math.Max(28, gh + 10);
         float sy = Math.Clamp(a.Size.Y / 560f, 1f, 1.6f);   // rows breathe when the window is tall
         float nameW = 340, cellW = 56, rowH = 24 * sy;
         float gx = x0 + nameW + 8;
@@ -838,10 +878,8 @@ public sealed partial class TechTree : Control
         int goalD = rows.Where(r => r.row != _goal).Select(r => _depth[r.row]).DefaultIfEmpty(-1).Max() + 1;
         if (_goal >= 0) _depth[_goal] = goalD;
         int maxD = rows.Count == 0 ? 0 : rows.Max(r => _depth[r.row]);
-        Text(new Vector2(x0, y + 12), Fit(Loc.T("stmt.scale"), a.Size.X - 28, 14), 14, Ui.Ink2);
-        y += 22;
-        for (int d = 0; d <= maxD; d++) Text(new Vector2(gx + d * cellW + 6, y + 12), d == 0 ? Loc.T("stmt.now") : "+" + d, 14, Ui.Ink2, FontKind.Mono);
-        y += 20;
+        y += Para(new Vector2(x0, y + 12), Loc.T("stmt.scale"), a.Size.X - 28, 14, Ui.Ink2) + 4;
+        bool capsDrawn = false;   // the column captions ("now", "+1"...) stand in the row of the first group header, over the cells they label
         var yOf = new Dictionary<int, float>();
         string last = "";
         // longest chain: from the root of «why not», follow the unknown requirement with the largest depth
@@ -855,7 +893,12 @@ public sealed partial class TechTree : Control
         }
         foreach (var (row, group) in rows)
         {
-            if (group != last) { y += 4; Text(new Vector2(x0, y + 14), Loc.T(group), 14, Ui.Ink2, FontKind.Draft); y += 20; last = group; }
+            if (group != last)
+            {
+                y += 4; Text(new Vector2(x0, y + 14), Loc.T(group), 14, Ui.Ink2, FontKind.Draft);
+                if (!capsDrawn) { for (int d = 0; d <= maxD; d++) Text(new Vector2(gx + d * cellW + 6, y + 14), d == 0 ? Loc.T("stmt.now") : "+" + d, 14, Ui.Ink2, FontKind.Mono); capsDrawn = true; }
+                y += 20; last = group;
+            }
             yOf[row] = y;
             var rr = new Rect2(x0 - 4, y - 1, gx - x0 + (maxD + 1) * cellW + 8, rowH);
             _rowRects.Add((rr, row));

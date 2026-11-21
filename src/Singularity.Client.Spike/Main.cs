@@ -936,6 +936,8 @@ public sealed partial class Main : Node3D
             {
                 bool ok = !_tree.LegendOpen && _tree.InsetLimit == _tree.Size.Y - 100;
                 _shotLog += $"goal statement {sfx}: hidden legend open {_tree.LegendOpen}, goal panel limit {_tree.InsetLimit:F0} of {_tree.Size.Y - 100:F0} (no reserve): {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail($"goal statement reserves space for a hidden legend {sfx}");
+                string clip = _tree.ShotClippedText();
+                _shotLog += $"goal statement {sfx}: no clipped or ellipsized text: {(clip == null ? "PASS" : "FAIL " + clip)}\n"; if (clip != null) InstFail($"goal statement text is clipped {sfx}: {clip}");
                 SaveShot($"tech_tree_b{sfx}.png"); PressKey(Key.Escape); PressKey(Key.Escape, false);
             });
             Q(0.3, () =>
