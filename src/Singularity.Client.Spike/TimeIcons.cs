@@ -11,9 +11,10 @@ public sealed partial class TimeControl : HBoxContainer
     sealed partial class IconButton : Button
     {
         public Kind K; public bool On;
+        readonly Prim[] _prims;
         public IconButton(Kind k)
         {
-            K = k; CustomMinimumSize = new Vector2(28, 28); FocusMode = FocusModeEnum.None; Text = ""; ClipContents = true;
+            K = k; _prims = TimeGlyphMetrics.Prims((int)k); CustomMinimumSize = new Vector2(28, 28); FocusMode = FocusModeEnum.None; Text = ""; ClipContents = true;
             var normal = Ui.Box(Ui.Sheet, Ui.Ink, 1, 0, Ui.R2);
             AddThemeStyleboxOverride("normal", normal);
             AddThemeStyleboxOverride("hover", Ui.Box(Ui.Hover, Ui.Ink, 1, 0, Ui.R2));
@@ -27,13 +28,7 @@ public sealed partial class TimeControl : HBoxContainer
             bool filled = K == Kind.Pause && On;
             if (filled) DrawStyleBox(Ui.Box(Ui.Ink, Ui.Ink, 1, 0, Ui.R2), new Rect2(Vector2.Zero, Size));
             var c = Disabled ? Ui.Ink3 : filled ? Ui.Sheet : Ui.Ink;
-            var o = (Size - new Vector2((float)TimeGlyphMetrics.GlyphSize, (float)TimeGlyphMetrics.GlyphSize)) * 0.5f;   // glyph boxes: TimeGlyphMetrics (A2: ink >= 16 x 16 du)
-            foreach (var shape in TimeGlyphMetrics.Shapes((int)K))
-            {
-                var pts = new Vector2[shape.Length];
-                for (int i = 0; i < pts.Length; i++) pts[i] = o + new Vector2((float)shape[i].X, (float)shape[i].Y);
-                DrawPolyline(pts, c, (float)TimeGlyphMetrics.Stroke);
-            }
+            GlyphDraw.Draw(this, _prims, Vector2.Zero, c);   // primitives in button coordinates: TimeGlyphMetrics (A2: ink >= 16 x 16 du, stroke >= 2 du)
         }
     }
 

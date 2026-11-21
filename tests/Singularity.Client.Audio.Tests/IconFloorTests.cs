@@ -36,11 +36,39 @@ public class IconFloorTests
         }
     }
 
-    [Fact]
-    public void NodeGlyph_WidestSideReachesTheFloorInTheSmallestPlate()
+    // What is drawn, measured: ink box incl. stroke >= 16 x 16 du and every stroke >= 2 du for the glyphs that carry meaning (UI_DESIGN_SYSTEM A2).
+    static float Plate => GlyphGeometry.IconsPlateMin;   // the smallest plate of the Icons level (TechTree.NR starts here)
+
+    [Theory, InlineData("FND"), InlineData("PRN"), InlineData("ENG"), InlineData("CMP"), InlineData("PRC"), InlineData("APP")]
+    public void NodeGlyph_InkAndStroke(string code)
     {
-        const float smallestPlateRadius = GlyphGeometry.IconsPlateMin;   // TechTree.NR at the Icons level starts here
-        Assert.True(2 * smallestPlateRadius * GlyphGeometry.NodeGlyphShare >= GlyphGeometry.IconFloor);
+        var g = GlyphPrims.NodeGlyph(code, Plate * GlyphGeometry.NodeGlyphShare);
+        var (x0, y0, x1, y1) = GlyphPrims.Ink(g);
+        Assert.True(x1 - x0 >= GlyphPrims.IconFloor, $"{code} ink width {x1 - x0}");
+        Assert.True(y1 - y0 >= GlyphPrims.IconFloor, $"{code} ink height {y1 - y0}");
+        float s = GlyphPrims.MinStroke(g);
+        Assert.True(s == 0 || s >= GlyphPrims.ArrowStroke, $"{code} stroke {s}");
+    }
+
+    [Theory, InlineData("FND"), InlineData("PRN"), InlineData("ENG"), InlineData("CMP"), InlineData("PRC"), InlineData("APP")]
+    public void LegendSwatch_InkAndRow(string code)
+    {
+        var (x0, y0, x1, y1) = GlyphPrims.Ink(GlyphPrims.LegendSwatch(code));
+        Assert.True(x1 - x0 >= GlyphPrims.IconFloor && y1 - y0 >= GlyphPrims.IconFloor, $"{code} {x1 - x0} x {y1 - y0}");
+        Assert.True(y1 - y0 <= 20 && x1 - x0 <= 21, code);   // 21 du row pitch; the column is 16 du wide between number and code
+    }
+
+    [Theory, InlineData(0), InlineData(1), InlineData(2)]
+    public void TimeGlyph_StrokeIsAtLeast2(int kind) => Assert.True(GlyphPrims.MinStroke(TimeGlyphMetrics.Prims(kind)) >= GlyphPrims.ArrowStroke);
+
+    [Fact]
+    public void MenuGlyph_InkAndStroke()
+    {
+        var m = GlyphPrims.MenuGlyph();
+        var (x0, y0, x1, y1) = GlyphPrims.Ink(m);
+        Assert.True(x1 - x0 >= GlyphPrims.IconFloor && y1 - y0 >= GlyphPrims.IconFloor, $"{x1 - x0} x {y1 - y0}");
+        Assert.True(GlyphPrims.MinStroke(m) >= GlyphPrims.ArrowStroke);
+        Assert.True(y1 - y0 <= 30 - 10 && x1 - x0 <= 34 - 10);   // inside the 34 x 30 button with 5 du around
     }
 
     [Fact]

@@ -55,8 +55,7 @@ public sealed partial class Rail : PanelContainer
         {
             var t = GetGlobalTransform(); var r = Rects;
             Rect2 G(Box b) => new(t * new Vector2((float)b.X, (float)b.Y), new Vector2((float)b.W, (float)b.H) * t.Scale);
-            yield return G(r.Icon); yield return G(r.Letter);
-            if (r.Badge is { } bd) yield return G(bd);
+            yield return G(r.Icon); yield return G(r.Letter);            if (r.Badge is { } bd) yield return G(bd);
             if (r.LockInk is { } lk) yield return G(lk);
             if (Wide)
             {

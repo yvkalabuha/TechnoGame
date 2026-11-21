@@ -324,26 +324,38 @@ public sealed partial class TechTree : Control
         return s + "…";
     }
 
-    // Word-wrapped paragraph (a line of meaning is never cut with an ellipsis); returns its height.
+    // Word-wrapped paragraph (a line of meaning is never cut with an ellipsis; a word wider than the line is broken between characters); returns its height.
     float Para(Vector2 p, string s, float maxW, int size, Color c, FontKind kind = FontKind.Text)
     {
         var font = Ui.FontOf(kind); int fs = Math.Max(size, Ui.MinSize);
-        string line = ""; float y = p.Y;
-        foreach (var word in s.Split(' '))
+        float y = p.Y;
+        foreach (var line in TextWrap.Lines(s, maxW, t => font.GetStringSize(t, HorizontalAlignment.Left, -1, fs).X))
         {
-            string next = line.Length == 0 ? word : line + " " + word;
-            if (line.Length > 0 && font.GetStringSize(next, HorizontalAlignment.Left, -1, fs).X > maxW) { _cv.DrawString(font, new Vector2(p.X, y), line, HorizontalAlignment.Left, -1, fs, c); y += RailMetrics.Line14Du; next = word; }
-            line = next;
+            Record(font, new Vector2(p.X, y), line, fs, HorizontalAlignment.Left, -1);
+            _cv.DrawString(font, new Vector2(p.X, y), line, HorizontalAlignment.Left, -1, fs, c); y += RailMetrics.Line14Du;
         }
-        _cv.DrawString(font, new Vector2(p.X, y), line, HorizontalAlignment.Left, -1, fs, c);
-        return y - p.Y + RailMetrics.Line14Du;
+        return y - p.Y;
+    }
+
+    // Rendered bounds of every line the statement draws on the canvas (shot run: each must stay inside the statement area).
+    readonly List<Rect2> _drawn = new(); readonly List<string> _drawnText = new(); bool _recording;
+    void Record(Font font, Vector2 p, string s, int fs, HorizontalAlignment al, float w)
+    {
+        if (!_recording) return;
+        float sw = font.GetStringSize(s, HorizontalAlignment.Left, -1, fs).X;
+        float x = al == HorizontalAlignment.Right && w > 0 ? p.X + w - sw : p.X;
+        _drawn.Add(new Rect2(x, p.Y - font.GetAscent(fs), sw, font.GetAscent(fs) + font.GetDescent(fs))); _drawnText.Add(s);
     }
 
     int _fitCuts;   // ellipsized strings drawn since the statement began (shot run check)
     public int ShotFitCuts => _fitCuts;
 
     void Text(Vector2 p, string s, int size, Color c, FontKind kind = FontKind.Text, HorizontalAlignment al = HorizontalAlignment.Left, float w = -1)
-        => _cv.DrawString(Ui.FontOf(kind), p, s, al, w, Math.Max(size, Ui.MinSize), c);
+    {
+        var font = Ui.FontOf(kind); int fs = Math.Max(size, Ui.MinSize);
+        Record(font, p, s, fs, al, w);
+        _cv.DrawString(font, p, s, al, w, fs, c);
+    }
 
     // Sheet stamp (DraftFrame §7.10.1): title, actor, session date.
     void DrawStamp()
@@ -553,32 +565,14 @@ public sealed partial class TechTree : Control
         if (i == _root) _cv.DrawRect(new Rect2(p + new Vector2(-r - 2 - SettingsLogic.WhyNotMarkDu, -r - SettingsLogic.WhyNotMarkDu), new Vector2(SettingsLogic.WhyNotMarkDu, SettingsLogic.WhyNotMarkDu)), Ui.Alarm);
     }
 
-    // One simple glyph per node type, drawn in a plate of radius 2r (zoomed-in level of detail).
+    // One simple glyph per node type, drawn in a plate (Icons level); the primitives come from GlyphPrims (measured by the tests), rebuilt only when the radius changes.
+    readonly Prim[][] _ngPrims = new Prim[6][];
+    readonly float[] _ngR = new float[6];
     void Glyph(NodeType t, Vector2 p, float r, Color c)
     {
-        switch (t)
-        {
-            case NodeType.FND:        // foundation: three stacked bars
-                for (int k = -1; k <= 1; k++) _cv.DrawLine(p + new Vector2(-r, k * r * 0.6f), p + new Vector2(r, k * r * 0.6f), c, 2f, true);
-                break;
-            case NodeType.PRN:        // principle: ring with a dot
-                _cv.DrawArc(p, r, 0, Mathf.Tau, 20, c, 1.8f, true); _cv.DrawCircle(p, 1.8f, c);
-                break;
-            case NodeType.ENG:        // engineering: hexagon
-            case NodeType.CMP:        // component: house (apex up)
-            {
-                var pts = Outline(t, p, r * 0.85f);
-                _cv.DrawPolyline(pts.Append(pts[0]).ToArray(), c, 1.8f, true);
-                break;
-            }
-            case NodeType.PRC:        // process: arrow
-                _cv.DrawLine(p + new Vector2(-r, 0), p + new Vector2(r, 0), c, 1.8f, true);
-                _cv.DrawPolyline(new[] { p + new Vector2(r * 0.3f, -r * 0.7f), p + new Vector2(r, 0), p + new Vector2(r * 0.3f, r * 0.7f) }, c, 1.8f, true);
-                break;
-            default:                  // product: a small solid diamond
-                _cv.DrawColoredPolygon(new[] { p + new Vector2(0, -r), p + new Vector2(r, 0), p + new Vector2(0, r), p + new Vector2(-r, 0) }, c);
-                break;
-        }
+        int k = (int)t;
+        if (_ngPrims[k] == null || _ngR[k] != r) { _ngPrims[k] = GlyphPrims.NodeGlyph(t.ToString(), r); _ngR[k] = r; }
+        GlyphDraw.Draw(_cv, _ngPrims[k], p, c);
     }
 
     // Outline of a node type (LegendData.Types): FND triangle, PRC square, APP diamond, ENG hexagon, CMP pentagon; PRN is a circle (null).
@@ -717,8 +711,7 @@ public sealed partial class TechTree : Control
     static readonly string[] LgNum = { "1", "2", "3", "4", "5", "6" };
     readonly LegendData.Discipline[] _lgDiscs = LegendData.Disciplines(Palette.C);
     Color[] _lgWash, _lgLine;
-    Vector2[][] _lgShapes;
-    readonly float[] _lgRadius = new float[6];
+    Prim[][] _lgPrims;
 
     void BuildLegendCache()
     {
@@ -727,18 +720,11 @@ public sealed partial class TechTree : Control
         for (int k = 0; k < keys.Length; k++) if (keys[k] != "") _lgText[k] = Loc.T(keys[k]);
         for (int k = 0; k < 5; k++) _lgText[1 + k] = Loc.T(_lgDiscs[k].NameKey);
         for (int k = 0; k < 6; k++) _lgText[13 + k] = Loc.T(LegendData.Types[k].NameKey);
-        if (_lgShapes != null) return;
+        if (_lgPrims != null) return;
         _lgWash = new Color[5]; _lgLine = new Color[5];
         for (int k = 0; k < 5; k++) { _lgWash[k] = new Color(_lgDiscs[k].WashHex); _lgLine[k] = new Color(_lgDiscs[k].LineHex); }
-        _lgShapes = new Vector2[6][];
-        for (int k = 0; k < 6; k++)
-        {
-            string code = LegendData.Types[k].Code;
-            _lgRadius[k] = GlyphGeometry.LegendRadius(code);
-            var (bx0, by0, bx1, by1) = GlyphGeometry.Bounds(code, _lgRadius[k]);
-            var pts = Outline(Enum.Parse<NodeType>(code), new Vector2(-(bx0 + bx1) / 2, -(by0 + by1) / 2), _lgRadius[k]);   // centred on the box, not on the circumcentre
-            if (pts != null) { var closed = new Vector2[pts.Length + 1]; pts.CopyTo(closed, 0); closed[pts.Length] = pts[0]; _lgShapes[k] = closed; }
-        }
+        _lgPrims = new Prim[6][];
+        for (int k = 0; k < 6; k++) _lgPrims[k] = GlyphPrims.LegendSwatch(LegendData.Types[k].Code);
     }
 
     static Rect2 LegendMarkRect(float xl, float rowY) { var (x, y, s) = SettingsLogic.WhyNotLegendMark(xl, rowY); return new Rect2(x, y, s, s); }
@@ -746,7 +732,7 @@ public sealed partial class TechTree : Control
     void DrawLegend()
     {
         if (!LegendOpen) return;   // closed: the real button _legendBtn stands in its place
-        if (_lgDirty || _lgShapes == null) BuildLegendCache();
+        if (_lgDirty || _lgPrims == null) BuildLegendCache();
         var r = LegendSheet;
         _cv.DrawStyleBox(Ui.Box(Ui.Sheet, Ui.Ink, 1, 0, Ui.R3), r);
         float xl = r.Position.X + LegendPad, xr = xl + LegendCol + LegendGap;
@@ -777,8 +763,7 @@ public sealed partial class TechTree : Control
             y = Y(1 + k);
             var mk = new Vector2(xr + 30, y - 5);
             Text(new Vector2(xr + 4, y), LgNum[k], 14, Ui.Ink, FontKind.Mono);
-            if (_lgShapes[k] == null) _cv.DrawArc(mk, _lgRadius[k], 0, Mathf.Tau, 24, Ui.Ink2, 1.8f, true);
-            else { _cv.DrawSetTransform(mk); _cv.DrawPolyline(_lgShapes[k], Ui.Ink2, 1.8f, true); _cv.DrawSetTransform(Vector2.Zero); }
+            GlyphDraw.Draw(_cv, _lgPrims[k], mk, Ui.Ink2);
             Text(new Vector2(xr + 46, y), LegendData.Types[k].Code, 14, Ui.Ink, FontKind.Mono);
             Text(new Vector2(xr + 92, y), _lgText[13 + k], 14, Ui.Ink2);
         }
@@ -805,6 +790,17 @@ public sealed partial class TechTree : Control
     {
         var bad = new List<string>();
         if (_fitCuts > 0) bad.Add($"{_fitCuts} ellipsized string(s) in the statement");
+        if (_mode == 1)
+        {
+            // every line drawn on the canvas, by its rendered bounds, stays inside the statement area
+            var a = Area;
+            for (int i = 0; i < _drawn.Count; i++)
+            {
+                var r = _drawn[i];
+                if (r.Position.X < a.Position.X - 0.5f || r.End.X > a.End.X + 0.5f || r.Position.Y < a.Position.Y - 0.5f || r.End.Y > a.End.Y + 0.5f) bad.Add($"line '{_drawnText[i]}' {r} leaves the area {a}");
+            }
+            if (_drawn.Count == 0) bad.Add("no statement line was recorded");
+        }
         void Walk(Node n)
         {
             if (n is CanvasItem { Visible: false }) return;
@@ -861,7 +857,7 @@ public sealed partial class TechTree : Control
     void DrawStatement()
     {
         var nodes = _host.Data.Nodes; var rq = nodes.Requires;
-        _rowRects.Clear(); _fitCuts = 0;
+        _rowRects.Clear(); _fitCuts = 0; _drawn.Clear(); _drawnText.Clear(); _recording = true;
         var a = Area; float x0 = a.Position.X + 14, y = a.Position.Y + 8;
         Text(new Vector2(x0, y + 16), Loc.T("stmt.title"), 18, Ui.Ink, FontKind.Draft);
         string goal = _goal >= 0 ? Loc.T("stmt.goal", Names.Node(nodes.Id[_goal]), Loc.T(_state[_goal] == St.Known ? "state.known" : "state.unknown")) : Loc.T("stmt.nogoal");
@@ -949,8 +945,9 @@ public sealed partial class TechTree : Control
             }
         }
         y += 5 * 24 * sy + 8;
-        Text(new Vector2(x0, y + 12), Loc.T("legend.b"), 14, Ui.Ink2);
-        Text(new Vector2(x0, y + 34), Fit(Loc.T("legend.b2"), a.Size.X - 28, 14), 14, Ui.Ink2);
+        float lh = Para(new Vector2(x0, y + 12), Loc.T("legend.b"), a.Size.X - 28, 14, Ui.Ink2);
+        Para(new Vector2(x0, y + 12 + lh + 4), Loc.T("legend.b2"), a.Size.X - 28, 14, Ui.Ink2);
+        _recording = false;
     }
 
     void DrawDashedRect(Rect2 r, Color c)

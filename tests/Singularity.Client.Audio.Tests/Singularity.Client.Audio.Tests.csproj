@@ -8,6 +8,8 @@
     <Compile Include="../../src/Singularity.Client.Spike/Palette.cs" Link="Palette.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/LegendData.cs" Link="LegendData.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/GlyphGeometry.cs" Link="GlyphGeometry.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/GlyphPrims.cs" Link="GlyphPrims.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/TextWrap.cs" Link="TextWrap.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/SettingsLogic.cs" Link="SettingsLogic.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/InstrumentLogic.cs" Link="InstrumentLogic.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/ContrastValidator.cs" Link="ContrastValidator.cs" />

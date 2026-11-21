@@ -85,7 +85,13 @@ public sealed partial class Main : Node3D
             DisplayServer.WindowSetFlag(DisplayServer.WindowFlags.Borderless, true);
             // --shot-size WxH: a native larger display (spec 4.3 item 6): map and tree frames only, the frame size is checked against the requested size.
             var sizeIdx = Array.IndexOf(args, "--shot-size");
-            if (_shots && sizeIdx >= 0 && sizeIdx + 1 < args.Length && args[sizeIdx + 1].Split('x') is { Length: 2 } wh && int.TryParse(wh[0], out int lw) && int.TryParse(wh[1], out int lh)) _largeSize = new Vector2I(lw, lh);
+            if (_shots && sizeIdx >= 0 && sizeIdx + 1 < args.Length && args[sizeIdx + 1].Split('x') is { Length: 2 } wh && int.TryParse(wh[0], out int lw) && int.TryParse(wh[1], out int lh))
+            {
+                // A display below the base cannot give a PASS (A1/A2): refuse it instead of scaling below 1 px/du.
+                if (lw < SettingsLogic.BaseWidth || lh < SettingsLogic.BaseHeight) { GD.PrintErr($"--shot-size {lw}x{lh}: both dimensions must be at least {SettingsLogic.BaseWidth}x{SettingsLogic.BaseHeight}"); GetTree().Quit(2); return; }
+                _largeSize = new Vector2I(lw, lh);
+            }
+            else if (_shots && sizeIdx >= 0) { GD.PrintErr("--shot-size expects WxH, for example 2560x1440"); GetTree().Quit(2); return; }
             DisplayServer.WindowSetSize(_largeSize.X > 0 ? _largeSize : new Vector2I(SettingsLogic.BaseWidth, SettingsLogic.BaseHeight));
             // A window of the full screen size cannot be had from a window manager that keeps a panel (it clamps the height): a run whose frame size equals the screen uses fullscreen, where the render is the screen.
             // A larger screen takes the borderless window; a smaller one fails at the first full frame with the sizes in the message.
@@ -855,7 +861,7 @@ public sealed partial class Main : Node3D
         _sizeI = 0; _sizeQ.Clear();
         string sfx = $"_{_largeSize.X}x{_largeSize.Y}";
         void Q(double wait, Action act) => _sizeQ.Add((wait, act));
-        Q(0.5, () => { var cv = GetViewport().GetVisibleRect().Size; _shotLog += $"large display {sfx}: asked {_largeSize.X}x{_largeSize.Y}, window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, screen {DisplayServer.ScreenGetSize().X}x{DisplayServer.ScreenGetSize().Y}, canvas {cv.X}x{cv.Y} du, content scale {GetWindow().ContentScaleMode} {GetWindow().ContentScaleAspect}\n"; _host.WhyActor = _player; ShowPower(_player, false); });
+        Q(0.5, () => { var cv = GetViewport().GetVisibleRect().Size; FitCheck(SettingsLogic.ScaleFloorOk(DisplayServer.WindowGetSize().X, DisplayServer.WindowGetSize().Y, 100)); _shotLog += $"large display {sfx}: asked {_largeSize.X}x{_largeSize.Y}, window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, screen {DisplayServer.ScreenGetSize().X}x{DisplayServer.ScreenGetSize().Y}, canvas {cv.X}x{cv.Y} du, content scale {GetWindow().ContentScaleMode} {GetWindow().ContentScaleAspect}\n"; _host.WhyActor = _player; ShowPower(_player, false); });
         Q(1.5, () => { SaveShot($"map{sfx}.png"); OpenArea(AreaId.Finance); });
         Q(0.8, () => { SaveShot($"area_finance{sfx}.png"); CloseArea(); OpenTree(0); });
         Q(1.5, () =>
@@ -1311,9 +1317,26 @@ public sealed partial class Main : Node3D
             else { _shotLog += $"UNLISTED FAILURE: {r.Name}\n"; _shotFailed = true; }
         }
     }
+    // A2 on the drawn pixels: the alpha box of each rasterised icon, in du at its drawn size (24 du; the lock 28 du), must reach 16 x 16.
+    void CheckIconInk()
+    {
+        var slugs = AreaData.All.Select(d => d.Slug).Append("journal").Append("lock");
+        foreach (var slug in slugs)
+        {
+            var img = UiArt.Icon(slug).GetImage(); int x0 = int.MaxValue, y0 = int.MaxValue, x1 = -1, y1 = -1;
+            for (int y = 0; y < img.GetHeight(); y++)
+                for (int x = 0; x < img.GetWidth(); x++)
+                    if (img.GetPixel(x, y).A >= 0.35f) { x0 = Math.Min(x0, x); y0 = Math.Min(y0, y); x1 = Math.Max(x1, x); y1 = Math.Max(y1, y); }
+            float k = (slug == "lock" ? RailMetrics.LockDrawDu : 24f) / img.GetWidth();
+            float w = (x1 - x0 + 1) * k, h = (y1 - y0 + 1) * k;
+            bool ok = x1 >= 0 && w >= GlyphPrims.IconFloor && h >= GlyphPrims.IconFloor;
+            _shotLog += $"icon ink {slug}: {w:F1} x {h:F1} du (raster {img.GetWidth()} px): {(ok ? "PASS" : "FAIL")}\n"; if (!ok) _shotFailed = true;
+        }
+    }
+
     void FinishShotRun(string dir)
     {
-        CheckScaleCoverage();
+        CheckScaleCoverage(); if (_largeSize.X == 0) CheckIconInk();
         _shotLog += $"shot run result: {(_shotFailed ? "FAILED (a live check failed, exit 1)" : "OK (exit 0)")}\n";
         Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog); GD.Print(_shotLog);
         GetTree().Quit(_shotFailed ? 1 : 0); _shotStep = 18;

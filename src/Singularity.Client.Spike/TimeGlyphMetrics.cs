@@ -6,7 +6,7 @@ namespace Singularity.Client.Spike;
 /// UI_DESIGN_SYSTEM A2 floor (a meaningful glyph is at least 16 x 16 physical px at 1920x1080, 100 %) and the 5 du edge band (T6).</summary>
 public static class TimeGlyphMetrics
 {
-    public const double Button = 28, Stroke = 1.5, GlyphSize = 15;
+    public const double Button = 28, Stroke = 2, GlyphSize = 15;   // the chevrons and bars are arrows and pointers: 2 px (A2)
     /// <summary>Top-left corner of the glyph box in the button.</summary>
     public const double Origin = (Button - GlyphSize) / 2.0;
 
@@ -20,12 +20,23 @@ public static class TimeGlyphMetrics
         _ => new[] { new[] { (0.0, 0.0), (H, H), (0.0, GlyphSize), (0.0, 0.0) }, new[] { (H, 0.0), (GlyphSize, H), (H, GlyphSize), (H, 0.0) } },
     };
 
-    /// <summary>Visible ink box (geometry grown by half the stroke) in button coordinates: x, y, width, height.</summary>
+    /// <summary>The primitives of a glyph in button coordinates: what TimeControl draws and what the tests measure.</summary>
+    public static Prim[] Prims(int kind)
+    {
+        var shapes = Shapes(kind); var res = new Prim[shapes.Length];
+        for (int i = 0; i < res.Length; i++)
+        {
+            var pts = new (float, float)[shapes[i].Length];
+            for (int k = 0; k < pts.Length; k++) pts[k] = ((float)(Origin + shapes[i][k].X), (float)(Origin + shapes[i][k].Y));
+            res[i] = new Prim(PrimKind.Polyline, pts, (float)Stroke);
+        }
+        return res;
+    }
+
+    /// <summary>Visible ink box of the drawn primitives in button coordinates: x, y, width, height.</summary>
     public static (double X, double Y, double W, double H) InkBox(int kind)
     {
-        double x0 = double.MaxValue, y0 = double.MaxValue, x1 = double.MinValue, y1 = double.MinValue;
-        foreach (var s in Shapes(kind)) foreach (var (x, y) in s) { x0 = Math.Min(x0, x); y0 = Math.Min(y0, y); x1 = Math.Max(x1, x); y1 = Math.Max(y1, y); }
-        double g = Stroke / 2;
-        return (Origin + x0 - g, Origin + y0 - g, x1 - x0 + Stroke, y1 - y0 + Stroke);
+        var (x0, y0, x1, y1) = GlyphPrims.Ink(Prims(kind));
+        return (x0, y0, x1 - x0, y1 - y0);
     }
 }
