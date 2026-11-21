@@ -229,12 +229,29 @@ public sealed partial class SliceSession
         using var buffer = new MemoryStream();
         buffer.Write(SnapshotMagic);
         WriteInt(buffer, SnapshotFormat);
-        buffer.Write(_world.Config.SnapshotFingerprint());
+        buffer.Write(SnapshotIdentity());
         WriteInt(buffer, checked((int)table.Length));
         table.WriteTo(buffer);
         WriteBlock(buffer, System.Text.Encoding.UTF8.GetBytes(CommandCodec.EncodeLog(_journal)));
         WriteBlock(buffer, System.Text.Encoding.UTF8.GetBytes(CommandCodec.EncodeLog(_pending)));
         buffer.WriteTo(output);
+    }
+
+    /// <summary>
+    /// What the saved table does not say about the run: the run configuration (<see cref="SliceRunConfig.SnapshotFingerprint"/>) and the content hash of
+    /// the loaded data (<see cref="GameData.DataHash"/>: nodes, product classes and every scenario, so the same scenario id with another growth_pa differs).
+    /// </summary>
+    private byte[] SnapshotIdentity()
+    {
+        using var hash = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
+        hash.AppendData(_world.Config.SnapshotFingerprint());
+        string data = _world.Data.DataHash;
+        var bytes = new byte[sizeof(int) + data.Length * sizeof(char)];
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(bytes, data.Length);
+        for (int i = 0; i < data.Length; i++)
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(sizeof(int) + i * sizeof(char)), data[i]);
+        hash.AppendData(bytes);
+        return hash.GetHashAndReset();
     }
 
     private static void WriteInt(Stream s, int v)
@@ -310,8 +327,8 @@ public sealed partial class SliceSession
             throw new InvalidDataException($"Session snapshot format {format} is not supported (expected {SnapshotFormat}).");
         var configFingerprint = new byte[32];
         input.ReadExactly(configFingerprint);
-        if (!configFingerprint.AsSpan().SequenceEqual(_world.Config.SnapshotFingerprint()))
-            throw new InvalidDataException("The snapshot was taken with another run configuration.");
+        if (!configFingerprint.AsSpan().SequenceEqual(SnapshotIdentity()))
+            throw new InvalidDataException("The snapshot was taken with another run configuration or another data set.");
         int expected = TableSnapshot.ExpectedBytes(_world.Table);
         int tableLength = ReadInt(input);
         if (tableLength != expected)
@@ -330,6 +347,7 @@ public sealed partial class SliceSession
         List<LoggedCommand> pending = DecodeCommands(pendingBytes, "queue");
         CheckKeys(journal, "journal", c => c.Key.ApplyTick < tick);
         CheckKeys(pending, "queue", c => c.Key.ApplyTick == tick);
+        CheckLocalNumbers(journal, pending);
 
         // Phase 2: one rollback for every failure.
         using var backup = new MemoryStream();
@@ -390,6 +408,22 @@ public sealed partial class SliceSession
         {
             throw new InvalidDataException($"Snapshot {what} is not a command log: {e.Message}", e);
         }
+    }
+
+    // As Submit demands: per (source, id) local_n grows in apply order, so the restored index of last numbers is the maximum.
+    private static void CheckLocalNumbers(List<LoggedCommand> journal, List<LoggedCommand> pending)
+    {
+        var last = new Dictionary<(SourceClass, int), int>();
+        foreach (LoggedCommand c in journal.Concat(pending))
+            CheckLocalNumber(last, c);
+    }
+
+    private static void CheckLocalNumber(Dictionary<(SourceClass, int), int> last, LoggedCommand c)
+    {
+        (SourceClass, int) source = (c.Key.Source, c.Key.SourceId);
+        if (last.TryGetValue(source, out int previous) && c.Key.LocalN <= previous)
+            throw new InvalidDataException($"Snapshot command {c.Key}: local_n {c.Key.LocalN} is not above {previous} at {c.Key.Source}/{c.Key.SourceId}.");
+        last[source] = c.Key.LocalN;
     }
 
     // Keys strictly ascending (the order Submit keeps), apply ticks as the part of the history requires, each command well formed.

@@ -58,6 +58,7 @@ public static class TableSnapshot
     public static void Write(Table table, int schemaVersion, long tick, Stream output)
     {
         ArgumentNullException.ThrowIfNull(output);
+        ArgumentOutOfRangeException.ThrowIfNegative(tick);
         if (table.InTick)
             throw new InvalidOperationException("A snapshot is taken between ticks.");
         int columns = table.Columns.Count;

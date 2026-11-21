@@ -162,6 +162,12 @@ public class TableSnapshotTests
     }
 
     [Fact]
+    public void Write_NegativeTick_Rejected()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => Take(Build(1), -1));
+    }
+
+    [Fact]
     public void Read_NegativeTick_Rejected()
     {
         byte[] bytes = Take(Build(1), 0);

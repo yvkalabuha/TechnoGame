@@ -364,8 +364,6 @@ public class SnapshotContinuityTests
             ["tick of long.MaxValue"] = Patch(snap, tableAt + 20, BitConverter.GetBytes(long.MaxValue)),
             ["journal is not a log"] = Rebuild(src, snap, _ => "this is not json\n", p => p),
             ["queue is not a log"] = Rebuild(src, snap, j => j, _ => "{\n"),
-            ["journal keys not ascending"] = Rebuild(src, snap, j => ReverseLines(j), p => p),
-            ["queue keys not ascending"] = Rebuild(src, snap, j => j, p => ReverseLines(p + p)),
             ["journal command at the snapshot tick"] = Rebuild(src, snap, _ => ReadLog(snap, src, 1), p => p),
             ["queue command of an earlier tick"] = Rebuild(src, snap, j => j, _ => ReadLog(snap, src, 0)),
             ["command of an actor that does not exist"] = Rebuild(src, snap, j => j, p => CommandCodec.EncodeLog(CommandCodec.DecodeLog(p).Select(c => c with { Command = c.Command with { Actor = 999 } }))),
@@ -387,9 +385,6 @@ public class SnapshotContinuityTests
         }
     }
 
-    private static string ReverseLines(string log) =>
-        string.Join("\n", log.Split('\n', StringSplitOptions.RemoveEmptyEntries).Reverse()) + "\n";
-
     private static string ReadLog(byte[] snap, SliceSession source, int which)
     {
         int p = PrefixBytes + 4 + TableBytes(source);
@@ -399,6 +394,87 @@ public class SnapshotContinuityTests
             if (i == which)
                 return System.Text.Encoding.UTF8.GetString(snap, p + 4, len);
             p += 4 + len;
+        }
+    }
+
+    private static string Encode(IEnumerable<LoggedCommand> commands) => CommandCodec.EncodeLog(commands);
+
+    // The records are re-encoded by the codec, so the log itself is well formed and CheckKeys is what refuses it.
+    [Fact]
+    public void Load_RefusesKeysOutOfOrder_AndLocalNumbersThatDoNotGrow_WithTheirOwnMessage()
+    {
+        SliceSession src = WithPending(out _);
+        byte[] snap = Save(src);
+        List<LoggedCommand> journal = CommandCodec.DecodeLog(ReadLog(snap, src, 0));
+        List<LoggedCommand> pending = CommandCodec.DecodeLog(ReadLog(snap, src, 1));
+        Assert.True(journal.Count >= 2 && pending.Count >= 1);
+
+        (string Name, byte[] Bytes, string Message)[] cases =
+        [
+            ("journal reversed", Rebuild(src, snap, _ => Encode(Enumerable.Reverse(journal)), p => p), "not strictly ascending"),
+            ("queue duplicated", Rebuild(src, snap, j => j, _ => Encode(pending.Concat(pending))), "not strictly ascending"),
+            // The first queued command gets local_n 0 at a source that already issued numbers: its key still sorts after the journal.
+            ("local_n does not grow", Rebuild(src, snap, j => j, _ => Encode(pending.Select((c, i) => i == 0 ? c with { Key = c.Key with { LocalN = 0 } } : c))), "local_n"),
+        ];
+        foreach ((string name, byte[] bytes, string message) in cases)
+        {
+            SliceSession dest = SliceTestData.Create(PlayerCfg);
+            Untouched untouched = Untouched.Of(dest);
+            var e = Assert.Throws<InvalidDataException>(() => dest.LoadSnapshot(new MemoryStream(bytes)));
+            Assert.True(e.Message.Contains(message, StringComparison.Ordinal), $"case '{name}': {e.Message}");
+            untouched.Check(dest, PlayerCfg);
+        }
+    }
+
+    [Fact]
+    public void RestoredLocalIndex_IsTheMaximumOfJournalAndQueue()
+    {
+        SliceSession src = WithPending(out _);
+        SliceSession b = Load(PlayerCfg, Save(src));
+        List<LoggedCommand> all = CommandCodec.DecodeLog(b.CommandLog);
+        foreach (IGrouping<(SourceClass, int), LoggedCommand> g in all.GroupBy(c => (c.Key.Source, c.Key.SourceId)))
+        {
+            LoggedCommand top = g.OrderBy(c => c.Key.LocalN).Last();
+            CommandVerdict at = b.Submit(top.Key.Source, top.Key.SourceId, top.Key.LocalN, top.Command);
+            Assert.False(at.Accepted, "the highest local_n of a source must not be accepted again");
+            CommandVerdict above = b.Submit(top.Key.Source, top.Key.SourceId, top.Key.LocalN + 1, top.Command);
+            Assert.NotEqual(CommandRefusal.LocalNotMonotonic, above.Reason);
+        }
+    }
+
+    // Same scenario id, one number of the scenario edited: the table is the same shape, the data is not.
+    [Fact]
+    public void Load_IsRefused_WhenTheDataDiffers_AndSessionIsUnchanged()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "sing-snap-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            foreach (string f in Directory.GetFiles(Path.Combine(SliceTestData.RepoRoot, "mods", "core")))
+            {
+                string text = File.ReadAllText(f);
+                if (Path.GetFileName(f) == "scenario_1945.yaml")
+                {
+                    Assert.Contains("growth_pa: 0.0299", text);
+                    text = text.Replace("growth_pa: 0.0299", "growth_pa: 0.0300");
+                }
+                File.WriteAllText(Path.Combine(dir, Path.GetFileName(f)), text);
+            }
+            Singularity.Core.Data.GameData edited = Singularity.Core.Data.ModLoader.Load(dir);
+            Assert.NotEqual(SliceTestData.Data.DataHash, edited.DataHash);
+
+            SliceSession src = SliceTestData.Create(PlayerCfg);
+            src.StepThroughMonth(3);
+            byte[] snap = Save(src);
+            SliceSession dest = SliceSession.Create(edited, PlayerCfg);
+            string hash = dest.LastHash;
+            Assert.Throws<InvalidDataException>(() => dest.LoadSnapshot(new MemoryStream(snap)));
+            HashAssert.Equal(hash, dest.LastHash, "hash after a refused load");
+            Assert.Equal(0, dest.Tick);
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
         }
     }
 
