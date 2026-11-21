@@ -1,7 +1,7 @@
 ---
 id: TASK-0124
 title: "Kernel table snapshot and save-load-continue continuity test (A4)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: [ADR-0013, ADR-0014, ADR-0017]
 approved_by: orchestrator
 approved_at: 2026-11-21
 approval_ref: "PLAN.md этап 3, шаг 3.2; project-review-2026-11-19 A4 (light)"
+review_ref: "reviewer: APPROVE 2760ca7 (rounds 1-7); codex accept 2760ca74, 3 findings to DEBT-0072; landed a86303b"
 created: 2026-11-21
 ---
 
@@ -36,3 +37,10 @@ created: 2026-11-21
 ## Связанные документы
 - `docs/decisions/ADR-0013-*.md`, `ADR-0014`, `ADR-0017` п. 6
 - `docs/reviews/project-review-2026-11-19.md` (A4)
+
+## Результат
+Слито a86303b (ветка `worktree-agent-a62a356b37b06d526`, 7 кругов второго ревью).
+- **Kernel:** `TableSnapshot` (формат 2): заголовок (magic, формат, `SchemaVersion`, строки, колонки, тик, отпечаток схемы с префиксами длины в UTF-16, хеш состояния), тело `Current` всех колонок, SHA-256 на весь снимок; проверка до первой замены колонки. `TickRunner.Restore` считает расписание в локальный массив, затем фиксирует; часы в 0…`MaxTick` (2^40); `Restore`/`Read`/`Write` запрещены во время тика, включая Post.
+- **Session:** внутренние `WriteSnapshot`/`LoadSnapshot` (формат 2): таблица, журнал и очередь команд через `CommandCodec` (ADR-0013 п. 5), идентичность = SHA-256 отпечатка конфигурации и `GameData.DataHash`, проверка seed, `local_n`, размеров; две фазы загрузки, один откат; SHA-256 на весь снимок. Страж отражением: каждое поле `SliceRunConfig` влияет на отпечаток или в списке исключений с причиной.
+- **Тесты:** непрерывность на 3 seed, 2 точках K, 1/2/4 потоках (`ChunkSize` 1); мутация «колонка не сохранена»; 23+ испорченных снимка и перебор байт — отказ без изменения сессии. Kernel 358, Session 452, Architecture 141; `verify.py` на слитом дереве OK.
+- **Остаток:** DEBT-0072. Поверхность Kernel не закреплена — DEBT-0071.
