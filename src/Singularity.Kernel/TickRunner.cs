@@ -135,6 +135,26 @@ public sealed class TickRunner
 
     public TickCalendar? Calendar => _calendar;
 
+    /// <summary>
+    /// Puts the clock at <paramref name="tick"/> (the number of completed ticks) after the table was loaded from a snapshot taken at that tick,
+    /// and recomputes when each system is next due. Not allowed inside a tick; nothing but the clock and the due ticks lives in the runner.
+    /// </summary>
+    public void Restore(long tick)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(tick);
+        if (_table.InTick)
+            throw new InvalidOperationException("Restore is not allowed inside a tick.");
+        long min = long.MaxValue;
+        for (int s = 0; s < _systems.Length; s++)
+        {
+            _nextDue[s] = _calendar is null ? tick : _calendar.NextDue(_systems[s].Cadence, tick);
+            min = Math.Min(min, _nextDue[s]);
+        }
+        _minNextDue = _systems.Length == 0 ? long.MaxValue : min;
+        Tick = tick;
+        LastTickRan = false;
+    }
+
     public void RunTick()
     {
         if (Tick < _minNextDue)

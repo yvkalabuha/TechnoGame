@@ -207,6 +207,53 @@ public sealed partial class SliceSession
         return session;
     }
 
+    /// <summary>
+    /// In-memory snapshot of the state that decides the next tick (TASK-0124): the table (<see cref="TableSnapshot"/>) and the command journal.
+    /// Not a player save file. Refused while commands wait for their tick: their keys are not part of the table. The outcomes are an
+    /// observation and are not saved.
+    /// </summary>
+    internal void WriteSnapshot(Stream output)
+    {
+        CheckOwner();
+        if (_pending.Count > 0)
+            throw new InvalidOperationException("A snapshot is taken with no command waiting for its tick.");
+        using var table = new MemoryStream();
+        TableSnapshot.Write(_world.Table, SliceWorld.SchemaVersion, Tick, table);
+        Span<byte> length = stackalloc byte[sizeof(int)];
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(length, checked((int)table.Length));
+        output.Write(length);
+        table.WriteTo(output);
+        output.Write(System.Text.Encoding.UTF8.GetBytes(CommandLog));
+    }
+
+    /// <summary>Loads a snapshot into a session that was just created with the same data and configuration and has not run.</summary>
+    internal void LoadSnapshot(Stream input)
+    {
+        CheckOwner();
+        if (Tick != 0 || _journal.Count != 0)
+            throw new InvalidOperationException("A snapshot is loaded into a new session only.");
+        var length = new byte[sizeof(int)];
+        input.ReadExactly(length);
+        var tableBytes = new byte[System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(length)];
+        input.ReadExactly(tableBytes);
+        using var rest = new MemoryStream();
+        input.CopyTo(rest);
+        string log = System.Text.Encoding.UTF8.GetString(rest.ToArray());
+        List<LoggedCommand> journal = [.. CommandCodec.DecodeLog(log)];
+        long tick = TableSnapshot.Read(_world.Table, SliceWorld.SchemaVersion, new MemoryStream(tableBytes));
+        _world.Runner.Restore(tick);
+        foreach (LoggedCommand c in journal)
+        {
+            _journal.Add(c);
+            RememberLocal(c.Key.Source, c.Key.SourceId, c.Key.LocalN);
+        }
+        // The last monthly step ran on day 1 of the month of the last completed tick.
+        _month = tick == 0 ? -1 : _world.Calendar.MonthIndex(tick - 1);
+        _hash = ComputeHash();
+        _actorsMid = null;
+        Volatile.Write(ref _view, ViewBuilder.Snapshot(_world, Tick, _hash, _month, null, null));
+    }
+
     private void StepOne()
     {
         long tick = Tick;
