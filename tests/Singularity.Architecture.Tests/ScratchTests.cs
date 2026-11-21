@@ -57,7 +57,7 @@ public class ScratchTests
     /// an injected service (interface); an immutable value (<c>ImmutableArray</c>, <c>Nullable</c>, tuple, struct or class whose instance
     /// fields are all read-only or init-only and themselves safe). Anything else (arrays, <c>List</c>, a class with a mutable field) is a buffer.
     /// </summary>
-    private static bool IsSafeType(Type t, HashSet<Type>? seen = null)
+    internal static bool IsSafeType(Type t, HashSet<Type>? seen = null)
     {
         if (t.IsPrimitive || t.IsEnum || t == typeof(string) || t.IsInterface || IsTableType(t) && !t.HasElementType && !t.IsGenericType
             || IsColumnDescriptor(t))
