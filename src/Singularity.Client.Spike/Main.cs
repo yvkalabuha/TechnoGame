@@ -87,8 +87,10 @@ public sealed partial class Main : Node3D
             var sizeIdx = Array.IndexOf(args, "--shot-size");
             if (_shots && sizeIdx >= 0 && sizeIdx + 1 < args.Length && args[sizeIdx + 1].Split('x') is { Length: 2 } wh && int.TryParse(wh[0], out int lw) && int.TryParse(wh[1], out int lh)) _largeSize = new Vector2I(lw, lh);
             DisplayServer.WindowSetSize(_largeSize.X > 0 ? _largeSize : new Vector2I(SettingsLogic.BaseWidth, SettingsLogic.BaseHeight));
-            // A window of the full screen size cannot be had from a window manager that keeps a panel (it clamps the height): the screen-sized run uses fullscreen, where the render is the screen.
-            if (_largeSize.X > 0 && _largeSize == DisplayServer.ScreenGetSize()) DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
+            // A window of the full screen size cannot be had from a window manager that keeps a panel (it clamps the height): a run whose frame size equals the screen uses fullscreen, where the render is the screen.
+            // A larger screen takes the borderless window; a smaller one fails at the first full frame with the sizes in the message.
+            var target = _largeSize.X > 0 ? _largeSize : new Vector2I(SettingsLogic.BaseWidth, SettingsLogic.BaseHeight);
+            if (target == DisplayServer.ScreenGetSize()) DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
         }
         var shotIdx = Array.IndexOf(args, "--shot-dir");
         if (shotIdx >= 0 && shotIdx + 1 < args.Length) _shotDir = args[shotIdx + 1];
@@ -795,6 +797,9 @@ public sealed partial class Main : Node3D
     // Physical pixels per canvas unit now (base scale times the UI setting).
     float PxPerDu() => DisplayServer.WindowGetSize().X / GetViewport().GetVisibleRect().Size.X;
 
+    // A failed PNG write fails the run: a missing frame is not evidence.
+    void CheckSave(Error e, string path) { if (e != Error.Ok) InstFail($"cannot save {path}: {e}"); }
+
     void SaveShot(string name, Rect2I? r = null, bool grey = false)
     {
         string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
@@ -802,8 +807,8 @@ public sealed partial class Main : Node3D
         var img = GetViewport().GetTexture().GetImage();
         if (r is Rect2I rr) img = img.GetRegion(rr);
         else if (_largeSize.X > 0 ? (img.GetWidth() != _largeSize.X || img.GetHeight() != _largeSize.Y) : !SettingsLogic.IsBaseFrame(img.GetWidth(), img.GetHeight())) { InstFail($"frame {name} is {img.GetWidth()}x{img.GetHeight()}, a full frame must be a real {(_largeSize.X > 0 ? _largeSize.X + "x" + _largeSize.Y : "1920x1080")} render (window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, display {DisplayServer.ScreenGetSize().X}x{DisplayServer.ScreenGetSize().Y})"); return; }
-        img.SavePng(Path.Combine(dir, name));
-        if (grey) { img.Convert(Image.Format.L8); img.SavePng(Path.Combine(dir, name.Replace(".png", "_grey.png"))); }   // A5: a greyscale frame next to the colour one
+        CheckSave(img.SavePng(Path.Combine(dir, name)), Path.Combine(dir, name));
+        if (grey) { string gp = Path.Combine(dir, name.Replace(".png", "_grey.png")); img.Convert(Image.Format.L8); CheckSave(img.SavePng(gp), gp); }   // A5: a greyscale frame next to the colour one
     }
 
     // Title screen on a cold start: the menu over the turning globe, no HUD (the loading label is hidden too).
@@ -914,7 +919,7 @@ public sealed partial class Main : Node3D
             {
                 string sm = _tree.ShotSummaryCheck(true, out int nIn);
                 _shotLog += $"tree summaries {sfx} (base view): {nIn} of 5 totals fully inside the chart area, no overlap with node, label, total, stamp, legend button: {(sm == null && nIn == 5 ? "PASS" : "FAIL " + sm)}\n"; if (sm != null || nIn != 5) InstFail($"tree summaries {sfx}: {sm}");
-                _shotLog += "rule: wedge totals belong to the chart and move with the wedge label; asserted at the base view (zoom 1.0, pan 0): 5 of 5 inside the chart area. Zoomed or panned frames have no visibility requirement; asserted there: totals still in view touch no node, label or other total\n";
+                _shotLog += "rule: wedge totals belong to the chart and move with the wedge label; asserted at the base view (zoom 1.0, pan 0): 5 of 5 inside the chart area. Zoomed or panned frames have no visibility requirement; asserted there: totals still in view touch no node, label or other total (zoom 1.2: at least 1 in view; zoom 2.6 + pan, the tree_legend_closed_zoom state: no count, overlaps only)\n";
                 SaveShot($"tree_nolegend{sfx}.png", null, scale == 100 && lang == "ru"); _discClosed = _tree.DiscDiameter;
                 _tree.ShotZoom(1.2f, -1);   // a mild zoom keeps the lower wedge total in view for the zoomed-view assertion below
             });
@@ -926,7 +931,11 @@ public sealed partial class Main : Node3D
                 _tree.ShotZoom(2.6f, -1); _tree.ShotPanBy(new Vector2(160, -120));
             });
             // The closed button over the zoomed and panned chart; a real click must open the legend and must not pan.
-            Q(0.6, () => { SaveShot($"tree_legend_closed_zoom{sfx}.png"); _panBefore = _tree.ShotPan; Mouse(_tree.ShotButtonCenter * PxPerDu(), null); });
+            Q(0.6, () =>
+            {
+                string zz = _tree.ShotSummaryCheck(false, out _);
+                _shotLog += $"tree summaries {sfx} (zoom 2.6, pan): totals in view clear of node, label, total: {(zz == null ? "PASS" : "FAIL " + zz)}\n"; if (zz != null) InstFail($"tree zoom 2.6 summaries {sfx}: {zz}");
+                SaveShot($"tree_legend_closed_zoom{sfx}.png"); _panBefore = _tree.ShotPan; Mouse(_tree.ShotButtonCenter * PxPerDu(), null); });
             Q(0.2, () => Mouse(_tree.ShotButtonCenter * PxPerDu(), true));
             Q(0.1, () => Mouse(_tree.ShotButtonCenter * PxPerDu(), false));
             Q(0.5, () =>
@@ -1376,8 +1385,8 @@ public sealed partial class Main : Node3D
             void Save(Image im, Rect2 gr, string name)
             {
                 var c = im.GetRegion(new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)).Intersection(all));
-                c.SavePng(Path.Combine(dir, name + ".png"));
-                c.Convert(Image.Format.La8); c.SavePng(Path.Combine(dir, name + "_grey.png"));
+                CheckSave(c.SavePng(Path.Combine(dir, name + ".png")), Path.Combine(dir, name + ".png"));
+                c.Convert(Image.Format.La8); CheckSave(c.SavePng(Path.Combine(dir, name + "_grey.png")), Path.Combine(dir, name + "_grey.png"));
             }
             string sfx = $"e{p % 3 + 1}_{pct}";
             if (p / 3 == 1)

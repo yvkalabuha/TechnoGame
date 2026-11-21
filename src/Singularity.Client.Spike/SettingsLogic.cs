@@ -31,6 +31,9 @@ public static class SettingsLogic
         return (width / k, height / k);
     }
 
+    /// <summary>Side of the why-not root square in du (tree chart and legend): a meaningful icon is at least 16 physical px at 100 % (UI_DESIGN_SYSTEM 12).</summary>
+    public const float WhyNotMarkDu = 16;
+
     /// <summary>A saved full frame must be a real base-size render; anything else is not evidence for A1/A2/A9.</summary>
     public static bool IsBaseFrame(int width, int height) => width == BaseWidth && height == BaseHeight;
 

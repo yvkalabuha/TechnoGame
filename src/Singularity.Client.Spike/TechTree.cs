@@ -529,7 +529,7 @@ public sealed partial class TechTree : Control
         }
         if (i == _goal) Shape(type, p, r + 4, Colors.Transparent, Ui.Command, false, 1.6f);
         if (i == _selected) _cv.DrawArc(p, r + 6, 0, Mathf.Tau, 24, Ui.Ink, 2f, true);
-        if (i == _root) _cv.DrawRect(new Rect2(p + new Vector2(-r - 12, -r - 10), new Vector2(10, 10)), Ui.Alarm);
+        if (i == _root) _cv.DrawRect(new Rect2(p + new Vector2(-r - 2 - SettingsLogic.WhyNotMarkDu, -r - SettingsLogic.WhyNotMarkDu), new Vector2(SettingsLogic.WhyNotMarkDu, SettingsLogic.WhyNotMarkDu)), Ui.Alarm);
     }
 
     // One simple glyph per node type, drawn in a plate of radius 2r (zoomed-in level of detail).
@@ -735,7 +735,7 @@ public sealed partial class TechTree : Control
         Head(xl, ly, 6);
         float y = Y(ly + 1); _cv.DrawLine(new Vector2(xl, y - 5), new Vector2(xl + 18, y - 5), Ui.Sheet, 6f); _cv.DrawLine(new Vector2(xl, y - 5), new Vector2(xl + 18, y - 5), Ui.Command, 3f);
         Text(new Vector2(xl + 26, y), _lgText[7], 14, Ui.Ink2);
-        y = Y(ly + 2); _cv.DrawRect(new Rect2(xl + 4, y - 14, 10, 10), Ui.Alarm);
+        y = Y(ly + 2); _cv.DrawRect(new Rect2(xl + 2, y - 3 - SettingsLogic.WhyNotMarkDu, SettingsLogic.WhyNotMarkDu, SettingsLogic.WhyNotMarkDu), Ui.Alarm);
         Text(new Vector2(xl + 26, y), _lgText[8], 14, Ui.Ink2);
         y = Y(ly + 3); for (int k = 0; k < 6; k++) _cv.DrawArc(new Vector2(xl + 9, y - 5), 8, k * Mathf.Tau / 6, k * Mathf.Tau / 6 + Mathf.Tau / 6 * 0.55f, 5, Ui.Ink2, 1.8f, true);
         Text(new Vector2(xl + 26, y), _lgText[9], 14, Ui.Ink2);

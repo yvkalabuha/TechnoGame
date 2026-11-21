@@ -20,6 +20,9 @@ public class SettingsLogicTests
         Assert.Equal(cw, x, 3); Assert.Equal(ch, y, 3);
     }
 
+    [Fact]
+    public void WhyNotMark_AtLeast16PhysicalPxAtBaseScale() => Assert.True(SettingsLogic.PixelsPerDu(1920, 1080, 100) * SettingsLogic.WhyNotMarkDu >= 16);
+
     [Theory]
     [InlineData(1920, 1080, true)]
     [InlineData(1600, 900, false)]   // the old shots: files named 1920x1080 were 1600x900
