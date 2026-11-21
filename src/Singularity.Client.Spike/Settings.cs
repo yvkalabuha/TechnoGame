@@ -117,7 +117,7 @@ public static class Settings
         if (!Framed && screen.X >= SettingsLogic.BaseWidth && screen.Y >= SettingsLogic.BaseHeight && !SettingsLogic.ScaleFloorOk(size.X, size.Y, s.UiScale))
         {
             Godot.GD.PushWarning("render below 1 px/du on a Full HD display: forcing fullscreen");
-            DisplayServer.WindowSetMode(DisplayServer.WindowMode.Windowed); DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
+            DisplayServer.WindowSetMode(DisplayServer.WindowMode.Windowed); DisplayServer.WindowSetMode(s.WindowMode == 1 ? DisplayServer.WindowMode.ExclusiveFullscreen : DisplayServer.WindowMode.Fullscreen);   // O-034, as in Apply
         }
     }
 

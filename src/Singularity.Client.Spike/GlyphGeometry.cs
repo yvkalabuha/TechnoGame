@@ -28,9 +28,9 @@ public static class GlyphGeometry
 
     /// <summary>A2 floor for a meaningful icon: 16 physical px, which is 16 du at 1920x1080 and 100 %.</summary>
     public const float IconFloor = 16f;
-    /// <summary>In-node glyph radius as a share of the node plate radius (Icons level). Every glyph spans 2 x this radius in its widest direction.</summary>
     /// <summary>Smallest node plate radius at the Icons level (TechTree.NR starts here).</summary>
     public const float IconsPlateMin = 13f;
+    /// <summary>In-node glyph radius as a share of the node plate radius (Icons level). Every glyph spans 2 x this radius in its widest direction.</summary>
     public const float NodeGlyphShare = 0.62f;
 
     /// <summary>Bounding box of the closed outline of a type at radius r (PRN: circle): min x, min y, max x, max y.</summary>
