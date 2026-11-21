@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 namespace Singularity.Core.Data;
 
 /// <summary>Knowledge node types (RR-0008 §3).</summary>
@@ -22,31 +24,31 @@ public enum DesignVariant { Superior, Producible }
 /// <summary>Data spellings of the enums. Explicit tables: no reflection, no culture rules.</summary>
 public static class DataNames
 {
-    public static readonly (string Name, NodeType Value)[] NodeTypes =
+    public static readonly ImmutableArray<(string Name, NodeType Value)> NodeTypes =
         [("FND", NodeType.FND), ("PRN", NodeType.PRN), ("ENG", NodeType.ENG), ("CMP", NodeType.CMP), ("PRC", NodeType.PRC), ("APP", NodeType.APP)];
 
-    public static readonly (string Name, Cluster Value)[] Clusters =
+    public static readonly ImmutableArray<(string Name, Cluster Value)> Clusters =
     [
         ("MET", Cluster.MET), ("CHEM", Cluster.CHEM), ("MECH", Cluster.MECH), ("ELEC", Cluster.ELEC),
         ("AERO", Cluster.AERO), ("NUC", Cluster.NUC), ("ENER", Cluster.ENER), ("BASE", Cluster.BASE),
     ];
 
-    public static readonly (string Name, Discipline Value)[] Disciplines =
+    public static readonly ImmutableArray<(string Name, Discipline Value)> Disciplines =
         [("aero", Discipline.Aero), ("prop", Discipline.Prop), ("metal", Discipline.Metal), ("chem", Discipline.Chem), ("mech", Discipline.Mech)];
 
-    public static readonly (string Name, Dimension Value)[] Dimensions =
+    public static readonly ImmutableArray<(string Name, Dimension Value)> Dimensions =
         [("precision", Dimension.Precision), ("purity", Dimension.Purity), ("quality_control", Dimension.QualityControl)];
 
-    public static readonly (string Name, Hazard Value)[] Hazards =
+    public static readonly ImmutableArray<(string Name, Hazard Value)> Hazards =
         [("none", Hazard.None), ("hz", Hazard.Hz), ("key", Hazard.Key)];
 
-    public static readonly (string Name, ActorClass Value)[] ActorClasses =
+    public static readonly ImmutableArray<(string Name, ActorClass Value)> ActorClasses =
         [("great", ActorClass.Great), ("middle", ActorClass.Middle), ("small", ActorClass.Small)];
 
-    public static readonly (string Name, DesignVariant Value)[] Variants =
+    public static readonly ImmutableArray<(string Name, DesignVariant Value)> Variants =
         [("superior", DesignVariant.Superior), ("producible", DesignVariant.Producible)];
 
-    public static string NameOf<T>((string Name, T Value)[] table, T value) where T : struct, Enum
+    public static string NameOf<T>(ImmutableArray<(string Name, T Value)> table, T value) where T : struct, Enum
     {
         foreach ((string name, T v) in table)
         {

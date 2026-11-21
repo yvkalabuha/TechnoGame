@@ -14,7 +14,7 @@ namespace Singularity.Core.Data;
 public sealed partial class ScenarioData
 {
     /// <summary>Actor fields that need a source or an estimation rule (spec §1.1).</summary>
-    public static readonly string[] ActorFields =
+    public static readonly ImmutableArray<string> ActorFields =
     [
         "gdp_1945", "gdppc_1945", "budget_index", "growth_pa", "culture_h", "tooling_m", "hcap", "w",
         "known", "k_d", "k_ind", "mastered", "fleet", "trophy_engineers",
