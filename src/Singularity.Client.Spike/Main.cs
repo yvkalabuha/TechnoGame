@@ -955,11 +955,13 @@ public sealed partial class Main : Node3D
             // The Icons level with all six node types in one view (FND, PRN, ENG, CMP, PRC, APP): the in-node glyphs the legend shows.
             string allTypes = null;
             Q(0.4, () => OpenTree(0));
-            Q(0.8, () => { allTypes = _tree.ShotZoomAllTypes(); });
+            Q(0.8, () => { _tree.ShotProbe = true; allTypes = _tree.ShotZoomAllTypes(); });
             Q(0.9, () =>
             {
                 _shotLog += $"tree zoom icons all types {sfx}: {(allTypes == null ? "PASS" : "FAIL " + allTypes)}\n"; if (allTypes != null) { InstFail($"icons view {sfx}: {allTypes}"); return; }
-                SaveShot($"tree_zoom_icons_all{sfx}.png", null, scale == 100); _tree.ResetView(); _tree.Visible = false;
+                string probe = allTypes == null ? ProbeTreeGlyphs() : null;
+                _shotLog += $"tree glyph probe {sfx}: {(probe == null ? "PASS" : "FAIL " + probe)}\n"; if (probe != null) { InstFail($"glyph probe {sfx}: {probe}"); return; }
+                SaveShot($"tree_zoom_icons_all{sfx}.png", null, scale == 100); _tree.ShotProbe = false; _tree.ResetView(); _tree.Visible = false;
             });
             // The rail in its states: all normal, then an alarm on Finance and a warning "9+" on Production, narrow and wide (spec task-0117-rail-and-legend §4).
             Q(0.5, () => { SaveShot($"rail_narrow_normal{sfx}.png"); RunT6($"rail narrow normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });
@@ -1326,6 +1328,37 @@ public sealed partial class Main : Node3D
             else { _shotLog += $"UNLISTED FAILURE: {r.Name}\n"; _shotFailed = true; }
         }
     }
+    // The rendered frame, not the layout numbers: every glyph at the Icons level stands inside its node box and has ink where it was told to be drawn, and every label has ink in its rectangle.
+    string ProbeTreeGlyphs()
+    {
+        var img = GetViewport().GetTexture().GetImage(); float k = PxPerDu(); var org = _tree.GlobalPosition; var area = _tree.ShotArea;
+        int ink(Rect2 r)
+        {
+            int x0 = (int)((org.X + r.Position.X) * k), y0 = (int)((org.Y + r.Position.Y) * k), x1 = (int)((org.X + r.End.X) * k), y1 = (int)((org.Y + r.End.Y) * k), n = 0;
+            if (x0 < 1 || y0 < 1 || x1 >= img.GetWidth() || y1 >= img.GetHeight()) return -1;
+            var bg = img.GetPixel(x0, y0);   // the corner of the box is fill or paper, never the stroke
+            for (int y = y0; y <= y1; y++) for (int x = x0; x <= x1; x++) { var p = img.GetPixel(x, y); if (Math.Abs(p.R - bg.R) + Math.Abs(p.G - bg.G) + Math.Abs(p.B - bg.B) > 0.5f) n++; }
+            return n;
+        }
+        int seen = 0, labels = 0;
+        foreach (var (row, inkBox, box) in _tree.ShotGlyphs)
+        {
+            if (!area.Encloses(box)) continue;
+            seen++;
+            if (!box.Grow(0.5f).Encloses(inkBox)) return $"glyph of node {row}: ink {inkBox} leaves its node box {box}";
+            int n = ink(inkBox);
+            if (n >= 0 && n < 12) return $"glyph of node {row}: only {n} ink pixels where it should be drawn at {inkBox}";
+        }
+        foreach (var lr in _tree.ShotLabelRects)
+        {
+            if (!area.Encloses(lr)) continue;
+            labels++;
+            int n = ink(lr);
+            if (n >= 0 && n < 8) return $"label {lr}: only {n} ink pixels (it was drawn elsewhere)";
+        }
+        return seen >= 6 && labels >= 3 ? null : $"probe saw {seen} glyphs and {labels} labels in the area";
+    }
+
     // A2 on the drawn pixels: the alpha box of each rasterised icon, in du at its drawn size (24 du; the lock 28 du), must reach 16 x 16.
     void CheckIconInk()
     {

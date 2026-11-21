@@ -23,9 +23,10 @@ public sealed class GlyphSet
 /// <summary>Draws a GlyphSet on a canvas item at offset o. A set built at unit size is scaled by `scale` through the canvas transform; the strokes and dots are divided by it so that they keep their size in du.</summary>
 public static class GlyphDraw
 {
-    public static void Draw(CanvasItem ci, GlyphSet g, Vector2 o, Color c, float scale = 1f)
+    /// <summary>basis: the translation the caller already set with DrawSetTransform (a clipped view paints in its parent's space); it is composed with o and restored at the end.</summary>
+    public static void Draw(CanvasItem ci, GlyphSet g, Vector2 o, Color c, float scale = 1f, Vector2 basis = default)
     {
-        ci.DrawSetTransform(o, 0, new Vector2(scale, scale));
+        ci.DrawSetTransform(basis + o, 0, new Vector2(scale, scale));
         for (int i = 0; i < g.Prims.Length; i++)
         {
             var p = g.Prims[i]; var pts = g.Pts[i];
@@ -37,6 +38,6 @@ public static class GlyphDraw
                 default: ci.DrawPolyline(pts, c, p.Stroke / scale, true); break;
             }
         }
-        ci.DrawSetTransform(Vector2.Zero);
+        ci.DrawSetTransform(basis);
     }
 }

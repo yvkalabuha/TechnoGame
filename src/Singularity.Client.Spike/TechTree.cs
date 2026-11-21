@@ -332,7 +332,7 @@ public sealed partial class TechTree : Control
     void PaintView()
     {
         if (_state == null || _mode != 0) return;
-        _cv = _view;
+        _cv = _view; ShotGlyphs.Clear();
         _view.DrawSetTransform(-Area.Position);
         DrawPlanisphere();
         _cv = this;
@@ -352,7 +352,7 @@ public sealed partial class TechTree : Control
     {
         var font = Ui.FontOf(kind); int fs = Math.Max(size, Ui.MinSize);
         float y = p.Y;
-        if (!_wrap.TryGet(s, maxW, fs, (int)kind, out var lines)) lines = _wrap.Add(s, maxW, fs, (int)kind, TextWrap.Lines(s, maxW, t => font.GetStringSize(t, HorizontalAlignment.Left, -1, fs).X));
+        if (!_wrap.TryGet(s, maxW, fs, (int)kind, out var lines)) lines = WrapMiss(s, maxW, fs, kind, font);
         foreach (var line in lines)
         {
             Record(font, new Vector2(p.X, y), line, fs, HorizontalAlignment.Left, -1);
@@ -362,6 +362,8 @@ public sealed partial class TechTree : Control
     }
 
     readonly WrapCache _wrap = new();
+    // The cache miss lives apart so that the hit path of Para holds no closure.
+    List<string> WrapMiss(string s, float maxW, int fs, FontKind kind, Font font) => _wrap.Add(s, maxW, fs, (int)kind, TextWrap.Lines(s, maxW, t => font.GetStringSize(t, HorizontalAlignment.Left, -1, fs).X));
 
     // Rendered bounds of every line the statement draws on the canvas (shot run: each must stay inside the statement area).
     readonly List<Rect2> _drawn = new(); readonly List<string> _drawnText = new(); bool _recording;
@@ -584,7 +586,7 @@ public sealed partial class TechTree : Control
             if (lod == Lod.Icons && st == St.Unavailable) fill = Ui.Paper;
             Shape(type, p, r, fill, line, st != St.Known, 1.7f);
             if (st == St.Unavailable && lod != Lod.Icons) _cv.DrawCircle(p, 1.8f, line);
-            if (lod == Lod.Icons) Glyph(type, p, r * GlyphGeometry.NodeGlyphShare, st == St.Known && mastered ? Colors.White : (st == St.Unavailable ? Ui.Ink3 : Ui.DiscText[d]));
+            if (lod == Lod.Icons) Glyph(i, type, p, r, st == St.Known && mastered ? Colors.White : (st == St.Unavailable ? Ui.Ink3 : Ui.DiscText[d]));
         }
         if (i == _goal) Shape(type, p, r + 4, Colors.Transparent, Ui.Command, false, 1.6f);
         if (i == _selected) _cv.DrawArc(p, r + 6, 0, Mathf.Tau, 24, Ui.Ink, 2f, true);
@@ -593,11 +595,23 @@ public sealed partial class TechTree : Control
 
     // One simple glyph per node type, drawn in a plate (Icons level). The primitives come from GlyphPrims (measured by the tests), built once at unit radius and scaled by the canvas transform.
     readonly GlyphSet[] _ngSets = new GlyphSet[6];
-    void Glyph(NodeType t, Vector2 p, float r, Color c)
+    Vector2 CvBasis => _cv == _view ? -Area.Position : Vector2.Zero;   // the transform PaintView set on the clipped view
+
+    // Shot run: where each glyph should land (ink box from the same primitives, in the tree's space) so that the rendered frame can be probed.
+    public Rect2 ShotArea => Area;
+    public bool ShotProbe;
+    public readonly List<(int Row, Rect2 Ink, Rect2 Box)> ShotGlyphs = new();
+    public IReadOnlyList<Rect2> ShotLabelRects => _labelRects;
+    void Glyph(int row, NodeType t, Vector2 p, float r, Color c)
     {
-        int k = (int)t;
+        int k = (int)t; float rg = r * GlyphGeometry.NodeGlyphShare;
         _ngSets[k] ??= new GlyphSet(GlyphPrims.NodeGlyph(t.ToString(), 1f));
-        GlyphDraw.Draw(_cv, _ngSets[k], p, c, r * GlyphGeometry.NodeGlyphShare);
+        GlyphDraw.Draw(_cv, _ngSets[k], p, c, rg, CvBasis);
+        if (ShotProbe)
+        {
+            var (x0, y0, x1, y1) = GlyphPrims.Ink(GlyphPrims.NodeGlyph(t.ToString(), rg));
+            ShotGlyphs.Add((row, new Rect2(p.X + x0, p.Y + y0, x1 - x0, y1 - y0), NodeBox(row)));
+        }
     }
 
     // Outline of a node type (LegendData.Types): FND triangle, PRC square, APP diamond, ENG hexagon, CMP pentagon; PRN is a circle (null).
