@@ -1,0 +1,24 @@
+# TASK-0117 visual review 5 (round 9, frames at 100 %)
+
+Verdict: FAIL (one defect, everything else in scope passes)
+
+## Passed (checked at 1920x1080, s100 and s150, RU and EN)
+- Legend (tree_legend, _s150, _sel, _en): the why-not mark is 16 du, sits on the row centre line, same size as the other swatches. Type swatches (FND triangle, PRN, ENG, CMP, PRC, APP) read at one visual size; the FND triangle no longer looks smaller than the circle. Legend does not overlap the info panel at 150 % (panel scrolls, legend stays below it).
+- Icons level (tree_zoom_icons_card): in-node arrow glyph at 0.62 of the plate is legible in the plate, both for the filled (known) and dashed (frontier) plate; the selected ring does not swallow it.
+- Title menu at 150 % (main_menu_s150): nothing clipped, hint lines wrap whole.
+- Round-6 PASS items (rail, signals, settings) not re-checked beyond a glance; no regression seen.
+
+## Defect (blocks PASS)
+- tech_tree_b_1920x1080_s150.png (goal statement, scale 150 %): the explanatory line under "ВЕДОМОСТЬ ЦЕЛИ" is cut with an ellipsis: "...«+n» — пос...". At 100 % and 125 % it reads in full ("— после n ступеней"). The cut part explains what "+n" means, so information is lost (A9: no clipped meaning at larger scale). Also the column caption "сейчас" floats alone on its own line under it, detached from the column it labels.
+- Fix: wrap the line to two lines (autowrap, no clip) at any UI scale, and put the "сейчас" caption in the same row as the cells it labels. Re-shoot tech_tree_b at s150 (RU and EN).
+
+## Круг 10
+
+Кадры: shots-out/task-0117-r10 (tech_tree_b 1920x1080: 100 %, s125, s150, ru и en; tree_legend_1920x1080).
+
+- Подпись под «ВЕДОМОСТЬ ЦЕЛИ»: на s150 переносится на вторую строку («n ступеней.») без многоточия; на 100 % и s125 умещается в одну строку. Закрыто.
+- Подписи столбцов («ЦЕЛЬ», «сейчас»/«now») стоят одной шапочной строкой прямо над строкой ячеек, на одной базовой линии друг с другом; сдвигов нет ни в ru, ни в en, ни на одном масштабе. Закрыто.
+- Регрессий нет: сетка дисциплина × поколение, легенда, правая панель и штамп листа на месте, обрезаний нет. Легенда планисферы читаема, без наложений.
+- Замечание (не блокирует, было раньше): на планисфере подпись цели «Реактивный истребитель, поколение 4» упирается в маркер у внешнего кольца.
+
+Вердикт: PASS (проверено глазами на перечисленных кадрах; остальные кадры каталога круга 10 не смотрел).
