@@ -119,6 +119,20 @@ public class TableSnapshotTests
     }
 
     [Fact]
+    public void Fingerprint_NamesThatWouldCollideWithoutLengthPrefix_Differ()
+    {
+        static Table T(string x, string y)
+        {
+            var t = new Table(1);
+            t.AddLong(x);
+            t.AddLong(y);
+            return t;
+        }
+        // "a" + ":l\n" + "b:l\nc"  ==  "a:l\nb" + ":l\n" + "c" under the old name:type\n encoding.
+        Assert.NotEqual(TableSnapshot.Fingerprint(T("a", "b:l\nc")), TableSnapshot.Fingerprint(T("a:l\nb", "c")));
+    }
+
+    [Fact]
     public void Read_NegativeTick_Rejected()
     {
         byte[] bytes = Take(Build(1), 0);
@@ -184,7 +198,7 @@ public class TableSnapshotTests
     }
 
     [Fact]
-    public void RunnerRestore_WithoutRestore_WouldRunMonthlySystemOnTheWrongDay()
+    public void RunnerRestore_MidMonth_DoesNotRunTheMonthlySystemOnTheNextDay()
     {
         // Documents why Restore recomputes the due ticks: a fresh runner is due at tick 0, a restored one is not.
         var t = new Table(1);

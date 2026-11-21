@@ -24,7 +24,13 @@ public static class TableSnapshot
         for (int i = 0; i < table.Columns.Count; i++)
         {
             Column c = table.Columns[i];
-            hash.AppendData(Encoding.UTF8.GetBytes(c.Name + ":" + c.TypeTag + "\n"));
+            // Length-prefixed, so no name (it may hold ':' or a newline) can run into its neighbour.
+            byte[] name = Encoding.UTF8.GetBytes(c.Name);
+            var prefix = new byte[sizeof(int)];
+            BinaryPrimitives.WriteInt32LittleEndian(prefix, name.Length);
+            hash.AppendData(prefix);
+            hash.AppendData(name);
+            hash.AppendData([(byte)c.TypeTag]);
         }
         Span<byte> rows = stackalloc byte[sizeof(int)];
         BinaryPrimitives.WriteInt32LittleEndian(rows, table.RowCount);

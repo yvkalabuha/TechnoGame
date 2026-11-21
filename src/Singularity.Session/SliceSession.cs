@@ -218,7 +218,7 @@ public sealed partial class SliceSession
         if (_pending.Count > 0)
             throw new InvalidOperationException("A snapshot is taken with no command waiting for its tick.");
         using var table = new MemoryStream();
-        TableSnapshot.Write(_world.Table, SliceWorld.SchemaVersion, Tick, table);
+        TableSnapshot.Write(SnapshotSource(), SliceWorld.SchemaVersion, Tick, table);
         Span<byte> length = stackalloc byte[sizeof(int)];
         System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(length, checked((int)table.Length));
         output.Write(length);
@@ -226,21 +226,60 @@ public sealed partial class SliceSession
         output.Write(System.Text.Encoding.UTF8.GetBytes(CommandLog));
     }
 
+    /// <summary>Test seam (TASK-0124): columns whose name it accepts are saved with the values of a fresh world, as if they had not been saved.</summary>
+    internal Func<string, bool>? OmitColumnInSnapshot { get; set; }
+
+    private Table SnapshotSource()
+    {
+        if (OmitColumnInSnapshot is not { } omit)
+            return _world.Table;
+        Table fresh = new SliceWorld(_world.Data, _world.Config).Table;
+        var mixed = new Table(_world.Table.RowCount);
+        for (int i = 0; i < _world.Table.Columns.Count; i++)
+        {
+            Column c = _world.Table.Columns[i];
+            Column from = omit(c.Name) ? fresh.Columns[i] : c;
+            if (c is LongColumn)
+                mixed.AddLong(c.Name).Load(((LongColumn)from).Current);
+            else
+                mixed.AddInt(c.Name).Load(((IntColumn)from).Current);
+        }
+        return mixed;
+    }
+
     /// <summary>Loads a snapshot into a session that was just created with the same data and configuration and has not run.</summary>
     internal void LoadSnapshot(Stream input)
     {
         CheckOwner();
-        if (Tick != 0 || _journal.Count != 0)
+        if (Tick != 0 || _journal.Count != 0 || _pending.Count != 0 || _tracked.Count != 0 || _outcomes.Count != 0)
             throw new InvalidOperationException("A snapshot is loaded into a new session only.");
         var length = new byte[sizeof(int)];
         input.ReadExactly(length);
-        var tableBytes = new byte[System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(length)];
+        int tableLength = System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(length);
+        if (tableLength < 0)
+            throw new InvalidDataException($"Snapshot table length {tableLength} is negative.");
+        var tableBytes = new byte[tableLength];
         input.ReadExactly(tableBytes);
         using var rest = new MemoryStream();
         input.CopyTo(rest);
         string log = System.Text.Encoding.UTF8.GetString(rest.ToArray());
         List<LoggedCommand> journal = [.. CommandCodec.DecodeLog(log)];
+        // The seeds are the identity of the run: a snapshot of another seed must not continue in this session. Restored if they differ.
+        string[] seedColumns = ["run.seed.know", "run.seed.events", "run.seed.ai", "run.seed.start"];
+        long[][] seeds = [.. seedColumns.Select(n => _world.Table.GetLong(n).Current.ToArray())];
+        using var backup = new MemoryStream();
+        TableSnapshot.Write(_world.Table, SliceWorld.SchemaVersion, Tick, backup);
         long tick = TableSnapshot.Read(_world.Table, SliceWorld.SchemaVersion, new MemoryStream(tableBytes));
+        for (int i = 0; i < seedColumns.Length; i++)
+        {
+            LongColumn col = _world.Table.GetLong(seedColumns[i]);
+            if (!col.Current.SequenceEqual(seeds[i]))
+            {
+                backup.Position = 0;
+                TableSnapshot.Read(_world.Table, SliceWorld.SchemaVersion, backup);
+                throw new InvalidDataException($"Snapshot column {seedColumns[i]} differs from the seed of this session.");
+            }
+        }
         _world.Runner.Restore(tick);
         foreach (LoggedCommand c in journal)
         {

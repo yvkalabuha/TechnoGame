@@ -11,7 +11,7 @@ public class SnapshotContinuityTests
 {
     private const long Months = 40;
 
-    private static SliceRunConfig Cfg(ulong seed, int threads) => new() { Seed = seed, Threads = threads, ChunkSize = 4 };
+    private static SliceRunConfig Cfg(ulong seed, int threads) => new() { Seed = seed, Threads = threads, ChunkSize = 1 };
 
     private static byte[] Save(SliceSession s)
     {
@@ -87,21 +87,72 @@ public class SnapshotContinuityTests
         Assert.Equal(a.World.SchemaFingerprint(), b.World.SchemaFingerprint());
     }
 
-    // Mutation: one column is not restored exactly (every value off by one raw unit after the load). The continuity check must see it.
+    // Mutation: a column is not saved (the writer gives the values of a fresh world for it). The continuity check must see it.
     [Theory]
     [InlineData("pol.budget")]
-    [InlineData("run.seed.ai")]
-    public void Continuity_Fails_WhenOneColumnIsNotRestored(string name)
+    [InlineData("know.prog.")]
+    public void Continuity_Fails_WhenOneColumnIsNotSaved(string prefix)
     {
         const ulong seed = 1;
         const long k = 12;
         string[] tail = Reference(seed, 1)[(int)(k + 1)..];
-        string[] got = Continued(seed, 1, k, s =>
+
+        SliceSession first = SliceTestData.Create(Cfg(seed, 1));
+        first.StepThroughMonth(k);
+        SliceSession fresh = SliceTestData.Create(Cfg(seed, 1));
+        // The omitted column must matter: pick one whose saved values differ from a fresh world's.
+        string name = first.World.Table.Columns.OfType<LongColumn>()
+            .Where(c => c.Name.StartsWith(prefix, StringComparison.Ordinal))
+            .First(c => !c.Current.SequenceEqual(fresh.World.Table.GetLong(c.Name).Current)).Name;
+
+        first.OmitColumnInSnapshot = n => n == name;
+        SliceSession s = Load(Cfg(seed, 1), Save(first));
+        var got = new List<string>();
+        for (long m = k + 1; m < Months; m++)
         {
-            LongColumn c = s.World.Table.GetLong(name);
-            c.Load([.. c.Current.ToArray().Select(v => v + 1)]);
-        });
-        Assert.NotEqual(tail, got);
+            s.StepThroughMonth(m);
+            got.Add(s.LastHash);
+        }
+        Assert.NotEqual(tail, got.ToArray());
+    }
+
+    [Fact]
+    public void Load_IsRefused_WhenTheDestinationHasAPendingCommandAtTickZero()
+    {
+        var cfg = new SliceRunConfig { Seed = 7, ProductAi = false };
+        SliceSession source = SliceTestData.Create(cfg);
+        source.StepThroughMonth(1);
+        byte[] snap = Save(source);
+
+        SliceSession dest = SliceTestData.Create(cfg);
+        var player = new PlayerScript(dest);
+        player.Issue(0);
+        Assert.True(player.Accepted > 0);
+        Assert.Equal(0, dest.Tick);
+        Assert.Throws<InvalidOperationException>(() => dest.LoadSnapshot(new MemoryStream(snap)));
+    }
+
+    [Fact]
+    public void Load_IsRefused_WhenTheSeedDiffers_AndTheSessionIsUnchanged()
+    {
+        SliceSession other = SliceTestData.Create(Cfg(2, 1));
+        other.StepThroughMonth(3);
+        byte[] snap = Save(other);
+
+        SliceSession dest = SliceTestData.Create(Cfg(1, 1));
+        string before = dest.LastHash;
+        Assert.Throws<InvalidDataException>(() => dest.LoadSnapshot(new MemoryStream(snap)));
+        HashAssert.Equal(before, dest.LastHash, "the session after a refused load");
+        Assert.Equal(0, dest.Tick);
+    }
+
+    [Fact]
+    public void Load_NegativeTableLength_IsRefused()
+    {
+        SliceSession a = SliceTestData.Create(Cfg(1, 1));
+        byte[] snap = Save(a);
+        BitConverter.GetBytes(-1).CopyTo(snap, 0);
+        Assert.Throws<InvalidDataException>(() => Load(Cfg(1, 1), snap));
     }
 
     [Fact]
