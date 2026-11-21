@@ -211,7 +211,7 @@ public sealed partial class SignalField : PanelContainer
 /// <summary>Menu button: three lines on a radius.2 plate (#302: the language switch left the signal field, the menu took its place).</summary>
 public sealed partial class MenuButton3Lines : Button
 {
-    readonly Prim[] _prims = GlyphPrims.MenuGlyph();
+    readonly GlyphSet _prims = new(GlyphPrims.MenuGlyph());
     public MenuButton3Lines()
     {
         CustomMinimumSize = new Vector2(34, 30); FocusMode = FocusModeEnum.None;

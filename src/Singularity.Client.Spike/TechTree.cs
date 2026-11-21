@@ -108,6 +108,29 @@ public sealed partial class TechTree : Control
         if (rowToCentre >= 0) { _pan = Area.GetCenter() - PosOf(rowToCentre); ClampPan(); }
         Redraw();
     }
+    /// <summary>Shot run: zooms to the Icons level and centres on a node so that all six node types stand fully in the chart area; returns null on success, else why not.</summary>
+    public string ShotZoomAllTypes()
+    {
+        var nodes = _host.Data.Nodes;
+        for (float z = PlanisphereMath.IconsFrom; z <= PlanisphereMath.IconsFrom + 1.5f; z += 0.1f)
+        {
+            ShotZoom(z, -1);
+            var area = Area.Grow(-(NR + 8));
+            for (int c = 0; c < _rad.Length; c++)
+            {
+                var d = Area.GetCenter() - PosOf(c);
+                var seen = new bool[6];
+                for (int j = 0; j < _rad.Length; j++) if (area.HasPoint(PosOf(j) + d)) seen[(int)nodes.Type[j]] = true;
+                if (Array.IndexOf(seen, false) >= 0) continue;
+                ShotZoom(z, c);
+                var seen2 = new bool[6];
+                for (int j = 0; j < _rad.Length; j++) if (area.HasPoint(PosOf(j))) seen2[(int)nodes.Type[j]] = true;
+                if (Array.IndexOf(seen2, false) < 0 && CurLod == Lod.Icons) return null;
+            }
+        }
+        ShotZoom(PlanisphereMath.IconsFrom, -1);
+        return "no view of the Icons level shows all six node types";
+    }
     public int GoalRow => _goal;
     public int FrontierRow { get { for (int i = 0; _state != null && i < _state.Length; i++) if (_state[i] == St.Frontier && _route[i]) return i; return -1; } }
 
@@ -329,13 +352,16 @@ public sealed partial class TechTree : Control
     {
         var font = Ui.FontOf(kind); int fs = Math.Max(size, Ui.MinSize);
         float y = p.Y;
-        foreach (var line in TextWrap.Lines(s, maxW, t => font.GetStringSize(t, HorizontalAlignment.Left, -1, fs).X))
+        if (!_wrap.TryGet(s, maxW, fs, (int)kind, out var lines)) lines = _wrap.Add(s, maxW, fs, (int)kind, TextWrap.Lines(s, maxW, t => font.GetStringSize(t, HorizontalAlignment.Left, -1, fs).X));
+        foreach (var line in lines)
         {
             Record(font, new Vector2(p.X, y), line, fs, HorizontalAlignment.Left, -1);
             _cv.DrawString(font, new Vector2(p.X, y), line, HorizontalAlignment.Left, -1, fs, c); y += RailMetrics.Line14Du;
         }
         return y - p.Y;
     }
+
+    readonly WrapCache _wrap = new();
 
     // Rendered bounds of every line the statement draws on the canvas (shot run: each must stay inside the statement area).
     readonly List<Rect2> _drawn = new(); readonly List<string> _drawnText = new(); bool _recording;
@@ -565,14 +591,13 @@ public sealed partial class TechTree : Control
         if (i == _root) _cv.DrawRect(new Rect2(p + new Vector2(-r - 2 - SettingsLogic.WhyNotMarkDu, -r - SettingsLogic.WhyNotMarkDu), new Vector2(SettingsLogic.WhyNotMarkDu, SettingsLogic.WhyNotMarkDu)), Ui.Alarm);
     }
 
-    // One simple glyph per node type, drawn in a plate (Icons level); the primitives come from GlyphPrims (measured by the tests), rebuilt only when the radius changes.
-    readonly Prim[][] _ngPrims = new Prim[6][];
-    readonly float[] _ngR = new float[6];
+    // One simple glyph per node type, drawn in a plate (Icons level). The primitives come from GlyphPrims (measured by the tests), built once at unit radius and scaled by the canvas transform.
+    readonly GlyphSet[] _ngSets = new GlyphSet[6];
     void Glyph(NodeType t, Vector2 p, float r, Color c)
     {
         int k = (int)t;
-        if (_ngPrims[k] == null || _ngR[k] != r) { _ngPrims[k] = GlyphPrims.NodeGlyph(t.ToString(), r); _ngR[k] = r; }
-        GlyphDraw.Draw(_cv, _ngPrims[k], p, c);
+        _ngSets[k] ??= new GlyphSet(GlyphPrims.NodeGlyph(t.ToString(), 1f));
+        GlyphDraw.Draw(_cv, _ngSets[k], p, c, r * GlyphGeometry.NodeGlyphShare);
     }
 
     // Outline of a node type (LegendData.Types): FND triangle, PRC square, APP diamond, ENG hexagon, CMP pentagon; PRN is a circle (null).
@@ -711,7 +736,7 @@ public sealed partial class TechTree : Control
     static readonly string[] LgNum = { "1", "2", "3", "4", "5", "6" };
     readonly LegendData.Discipline[] _lgDiscs = LegendData.Disciplines(Palette.C);
     Color[] _lgWash, _lgLine;
-    Prim[][] _lgPrims;
+    GlyphSet[] _lgPrims;
 
     void BuildLegendCache()
     {
@@ -723,8 +748,8 @@ public sealed partial class TechTree : Control
         if (_lgPrims != null) return;
         _lgWash = new Color[5]; _lgLine = new Color[5];
         for (int k = 0; k < 5; k++) { _lgWash[k] = new Color(_lgDiscs[k].WashHex); _lgLine[k] = new Color(_lgDiscs[k].LineHex); }
-        _lgPrims = new Prim[6][];
-        for (int k = 0; k < 6; k++) _lgPrims[k] = GlyphPrims.LegendSwatch(LegendData.Types[k].Code);
+        _lgPrims = new GlyphSet[6];
+        for (int k = 0; k < 6; k++) _lgPrims[k] = new GlyphSet(GlyphPrims.LegendSwatch(LegendData.Types[k].Code));
     }
 
     static Rect2 LegendMarkRect(float xl, float rowY) { var (x, y, s) = SettingsLogic.WhyNotLegendMark(xl, rowY); return new Rect2(x, y, s, s); }

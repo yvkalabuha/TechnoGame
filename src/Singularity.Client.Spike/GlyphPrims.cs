@@ -39,17 +39,31 @@ public static class GlyphPrims
         }
     }
 
-    /// <summary>Legend swatch of a node type, centred on the middle of its box (not on the circumcentre).</summary>
+    /// <summary>Legend swatch of a node type as the player sees it at the Icons level: the plate outline with the in-node glyph (same primitives, same share of the plate radius),
+    /// the whole centred on the middle of the plate box (not on its circumcentre).</summary>
     public static Prim[] LegendSwatch(string code)
     {
         float r = GlyphGeometry.LegendRadius(code);
         var o = GlyphGeometry.Outline(code, r);
-        if (o == null) return new[] { new Prim(PrimKind.Ring, new[] { (0f, 0f) }, 1.8f, r) };
         var (x0, y0, x1, y1) = GlyphGeometry.Bounds(code, r);
         float cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-        var pts = new (float, float)[o.Length];
-        for (int i = 0; i < o.Length; i++) pts[i] = (o[i].X - cx, o[i].Y - cy);
-        return new[] { new Prim(PrimKind.Closed, pts, 1.8f) };
+        Prim plate;
+        if (o == null) plate = new Prim(PrimKind.Ring, new[] { (-cx, -cy) }, 1.8f, r);
+        else
+        {
+            var pts = new (float, float)[o.Length];
+            for (int i = 0; i < o.Length; i++) pts[i] = (o[i].X - cx, o[i].Y - cy);
+            plate = new Prim(PrimKind.Closed, pts, 1.8f);
+        }
+        var glyph = NodeGlyph(code, r * GlyphGeometry.NodeGlyphShare);
+        var res = new Prim[glyph.Length + 1]; res[0] = plate;
+        for (int i = 0; i < glyph.Length; i++)
+        {
+            var g = glyph[i]; var q = new (float, float)[g.P.Length];
+            for (int k = 0; k < q.Length; k++) q[k] = (g.P[k].X - cx, g.P[k].Y - cy);
+            res[i + 1] = g with { P = q };
+        }
+        return res;
     }
 
     /// <summary>Menu button glyph: three bars centred on (0, 0).</summary>

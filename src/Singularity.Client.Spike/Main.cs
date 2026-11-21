@@ -952,6 +952,15 @@ public sealed partial class Main : Node3D
                 _shotLog += $"goal statement {sfx}: first Esc closed the tree with a hidden legend flag: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail($"Esc was consumed by a hidden legend {sfx}");
                 _tree.ToggleLegend(false); _tree.Visible = false;
             });
+            // The Icons level with all six node types in one view (FND, PRN, ENG, CMP, PRC, APP): the in-node glyphs the legend shows.
+            string allTypes = null;
+            Q(0.4, () => OpenTree(0));
+            Q(0.8, () => { allTypes = _tree.ShotZoomAllTypes(); });
+            Q(0.9, () =>
+            {
+                _shotLog += $"tree zoom icons all types {sfx}: {(allTypes == null ? "PASS" : "FAIL " + allTypes)}\n"; if (allTypes != null) { InstFail($"icons view {sfx}: {allTypes}"); return; }
+                SaveShot($"tree_zoom_icons_all{sfx}.png", null, scale == 100); _tree.ResetView(); _tree.Visible = false;
+            });
             // The rail in its states: all normal, then an alarm on Finance and a warning "9+" on Production, narrow and wide (spec task-0117-rail-and-legend §4).
             Q(0.5, () => { SaveShot($"rail_narrow_normal{sfx}.png"); RunT6($"rail narrow normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });
             Q(0.5, () => { SaveShot($"rail_narrow_badges{sfx}.png"); RunT6($"rail narrow badges{sfx}", true); LogCheck(_rail.BadgeFitLog()); _pinBadges = Array.Empty<(AreaId, int, int)>(); ToggleRail(); });

@@ -11,10 +11,10 @@ public sealed partial class TimeControl : HBoxContainer
     sealed partial class IconButton : Button
     {
         public Kind K; public bool On;
-        readonly Prim[] _prims;
+        readonly GlyphSet _prims;
         public IconButton(Kind k)
         {
-            K = k; _prims = TimeGlyphMetrics.Prims((int)k); CustomMinimumSize = new Vector2(28, 28); FocusMode = FocusModeEnum.None; Text = ""; ClipContents = true;
+            K = k; _prims = new GlyphSet(TimeGlyphMetrics.Prims((int)k)); CustomMinimumSize = new Vector2(28, 28); FocusMode = FocusModeEnum.None; Text = ""; ClipContents = true;
             var normal = Ui.Box(Ui.Sheet, Ui.Ink, 1, 0, Ui.R2);
             AddThemeStyleboxOverride("normal", normal);
             AddThemeStyleboxOverride("hover", Ui.Box(Ui.Hover, Ui.Ink, 1, 0, Ui.R2));
