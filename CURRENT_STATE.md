@@ -17,7 +17,6 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0124 [IN_PROGRESS] Kernel table snapshot and save-load-continue continuity test (A4) (developer)
 - TASK-0125 [IN_PROGRESS] No mutable static fields in Kernel, Core, Session; two worlds on one thread pool (A6) (test-engineer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0117 [REVIEW] Client UI scale policy: text never below the A1 floor at 1280x720 (developer)

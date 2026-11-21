@@ -46,6 +46,13 @@ public class NoMutableStaticsTests
         ["Singularity.Core.WhyNot.LeverRegistry.<Slice>k__BackingField"] = (Kind.ImmutableObject, "immutable lever mask of the slice"),
     };
 
+    private static bool IsThreadLocal(Type t) => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(ThreadLocal<>);
+
+    // A sealed class whose instance fields are all readonly and pass the static allow-list (no interface shortcut): a value in all but name.
+    private static bool IsImmutableClass(Type t) =>
+        t.IsClass && t.IsSealed && !t.IsGenericType
+        && t.GetFields(IlScanner.AllDeclared).Where(x => !x.IsStatic).All(x => x.IsInitOnly && IsAllowedStaticType(x.FieldType));
+
     private static bool IsThreadBound(Type t) =>
         t.HasElementType ? IsThreadBound(t.GetElementType()!) : t.IsGenericType && (t.GetGenericTypeDefinition() == typeof(ThreadLocal<>) || t.GetGenericTypeDefinition() == typeof(AsyncLocal<>)
             || t.GetGenericArguments().Any(IsThreadBound));
@@ -88,9 +95,9 @@ public class NoMutableStaticsTests
     {
         if (f.IsStatic && f.GetCustomAttribute<ThreadStaticAttribute>() is not null)
             return Kind.ThreadStatic;
-        if (!f.IsStatic && IsThreadBound(f.FieldType))
+        if (!f.IsStatic && IsThreadLocal(f.FieldType))
             return Kind.InstanceThreadLocal;
-        if (f.IsStatic && f.IsInitOnly && !f.FieldType.IsInterface && f.FieldType.IsClass && ScratchTests.IsSafeType(f.FieldType))
+        if (f.IsStatic && f.IsInitOnly && !f.FieldType.IsInterface && f.FieldType.IsClass && IsImmutableClass(f.FieldType))
             return Kind.ImmutableObject;
         return Kind.None;
     }
@@ -127,6 +134,67 @@ public class NoMutableStaticsTests
         return found;
     }
 
+    // Calls that break the immutability of an ImmutableArray or of a readonly field from outside: the call site must be listed with a reason.
+    private static readonly Dictionary<string, string> UnsafeCallSites = new(StringComparer.Ordinal)
+    {
+        ["Singularity.Session.ViewBuilder.Inputs"] = "wraps a fresh local array that nobody else holds (not a static, not captured) into an ImmutableArray without a copy",
+    };
+
+    private static bool IsUnsafeCall(MethodBase m) =>
+        (m.DeclaringType?.FullName == "System.Runtime.InteropServices.ImmutableCollectionsMarshal" && m.Name is "AsImmutableArray" or "AsArray")
+        || (m.DeclaringType?.FullName == "System.Runtime.CompilerServices.Unsafe" && m.Name is "As" or "AsRef");
+
+    // The compiler lowers a collection expression for ImmutableArray to AsImmutableArray over an array it has just built (newarr/stelem,
+    // a static-data InitializeArray, or a ToArray copy). Wrapping such an array hands out no alias, so it is not a violation.
+    private static bool IsFreshArray(IlScanner.Instruction? before) =>
+        before is { } b && (b.OpCode == System.Reflection.Emit.OpCodes.Newarr || b.OpCode.Name!.StartsWith("stelem", StringComparison.Ordinal)
+            || (b.Operand is MethodBase m && (m.Name == "InitializeArray" || (m.Name == "ToArray" && m.DeclaringType?.Name is "List`1" or "Enumerable" or "ReadOnlySpan`1"))));
+
+    private static List<string> UnsafeCalls(IEnumerable<Type> types, IReadOnlyDictionary<string, string> allowed, HashSet<string>? used = null)
+    {
+        var found = new List<string>();
+        foreach (Type type in types)
+        {
+            foreach (MethodBase method in type.GetMethods(IlScanner.AllDeclared).Cast<MethodBase>().Concat(type.GetConstructors(IlScanner.AllDeclared)))
+            {
+                string name = $"{type.FullName}.{method.Name}";
+                IlScanner.Instruction? prev = null;
+                foreach (var ins in IlScanner.Read(method))
+                {
+                    var before = prev; prev = ins;
+                    if (ins.Operand is not MethodBase callee || !IsUnsafeCall(callee) || (callee.Name == "AsImmutableArray" && IsFreshArray(before)))
+                        continue;
+                    if (allowed.ContainsKey(name))
+                        used?.Add(name);
+                    else
+                        found.Add($"{name}: calls {callee.DeclaringType!.Name}.{callee.Name} (breaks immutability)");
+                }
+            }
+        }
+        return found;
+    }
+
+    [Fact]
+    public void KernelCoreSession_DoNotCallMarshalAsArrayOrUnsafeAs_ExceptListedSites()
+    {
+        var used = new HashSet<string>(StringComparer.Ordinal);
+        List<string> found = UnsafeCalls(Assemblies.SelectMany(a => a.GetTypes()), UnsafeCallSites, used);
+        Assert.True(found.Count == 0, string.Join("\n", found));
+        Assert.True(UnsafeCallSites.Keys.All(used.Contains), "stale allowed call site: " + string.Join(", ", UnsafeCallSites.Keys.Where(k => !used.Contains(k))));
+    }
+
+    [Fact]
+    public void TheUnsafeCallScan_SeesEachMutantCall()
+    {
+        List<string> found = UnsafeCalls([typeof(UnsafeMutant)], new Dictionary<string, string>());
+        Assert.Contains(found, f => f.Contains("Wrap") && f.Contains("AsImmutableArray"));
+        Assert.Contains(found, f => f.Contains("Unwrap") && f.Contains("AsArray"));
+        Assert.Contains(found, f => f.Contains("Cast") && f.Contains("Unsafe.As"));
+        Assert.Contains(found, f => f.Contains("Ref") && f.Contains("Unsafe.AsRef"));
+        Assert.DoesNotContain(found, f => f.Contains("Clean") || f.Contains("Fresh")); // collection expressions wrap a fresh array
+        Assert.Empty(UnsafeCalls([typeof(UnsafeMutant)], new Dictionary<string, string> { ["Singularity.Architecture.Tests.UnsafeMutant.Wrap"] = "x", ["Singularity.Architecture.Tests.UnsafeMutant.Unwrap"] = "x", ["Singularity.Architecture.Tests.UnsafeMutant.Cast"] = "x", ["Singularity.Architecture.Tests.UnsafeMutant.Ref"] = "x" }));
+    }
+
     [Fact]
     public void KernelCoreSession_HaveNoMutableStaticFields()
     {
@@ -157,6 +225,10 @@ public class NoMutableStaticsTests
         Assert.DoesNotContain(found, f => f.Contains("Fine") || f.Contains("StaticMutant.Frozen:") || f.Contains("Wide") || f.Contains("Pairs") || f.Contains("Max") || f.Contains("<>9") || f.Contains("<>O"));
         // A closure class with a static lambda cache really exists in the mutant (the scan skips it on purpose).
         Assert.Contains(typeof(StaticMutant).GetNestedTypes(IlScanner.AllDeclared), t => t.GetFields(IlScanner.AllDeclared).Any(IsLambdaCache));
+        Assert.Contains(found, f => f.Contains("AsyncOnly") && f.Contains("ThreadLocal"));          // AsyncLocal is not a ThreadLocal exception kind
+        Assert.Contains(found, f => f.Contains("OpenObject") && f.Contains("listed as ImmutableObject but is None")); // unsealed, interface field
+        Assert.Contains(found, f => f.Contains("MutObject") && f.Contains("listed as ImmutableObject but is None"));  // sealed, writable field
+        Assert.DoesNotContain(found, f => f.Contains("GoodObject"));
         // An exception entry of the wrong kind or of a missing kind is reported.
         Assert.Contains(found, f => f.Contains("WrongKind") && f.Contains("listed as ThreadStatic but is None"));
         Assert.Contains(found, f => f.Contains("Table") && f.Contains("allow-list"));       // a static readonly array is writable: never allowed
@@ -168,6 +240,10 @@ public class NoMutableStaticsTests
 
     private static readonly Dictionary<string, (Kind Kind, string Reason)> MutantExceptions = new()
     {
+        ["Singularity.Architecture.Tests.StaticMutant.AsyncOnly"] = (Kind.InstanceThreadLocal, "an AsyncLocal listed as a ThreadLocal"),
+        ["Singularity.Architecture.Tests.StaticMutant.OpenObject"] = (Kind.ImmutableObject, "unsealed class with an interface field"),
+        ["Singularity.Architecture.Tests.StaticMutant.MutObject"] = (Kind.ImmutableObject, "sealed class with a writable field"),
+        ["Singularity.Architecture.Tests.StaticMutant.GoodObject"] = (Kind.ImmutableObject, "sealed class of readonly allowed fields"),
         ["Singularity.Architecture.Tests.StaticMutant.WrongKind"] = (Kind.ThreadStatic, "DEBT-0070: a plain static named like a ThreadStatic entry"),
     };
 
@@ -181,6 +257,21 @@ public class NoMutableStaticsTests
     }
 }
 
+internal class OpenClass { public readonly IList<int> Items = []; }
+internal sealed class MutClass { public int Count = 1; }
+internal sealed class GoodClass { public readonly long Mask = 1; public readonly ImmutableArray<int> Ids = [1]; }
+
+internal static class UnsafeMutant
+{
+    public static ImmutableArray<int> Wrap(int[] a) => System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(a);
+    public static int[]? Unwrap(ImmutableArray<int> a) => System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsArray(a);
+    public static string Cast(object o) => System.Runtime.CompilerServices.Unsafe.As<string>(o);
+    public static ref int Ref(in int x) => ref System.Runtime.CompilerServices.Unsafe.AsRef(in x);
+    public static int Clean(int x) => x + 1;
+    public static ImmutableArray<int> FreshCollection(int n) => [n, n + 1];
+    public static ImmutableArray<int> FreshSpread(List<int> l) => [.. l];
+}
+
 internal static class StaticMutant
 {
     public static int Counter = 1;
@@ -188,6 +279,7 @@ internal static class StaticMutant
     public static readonly List<int> Shared = [];
     public static readonly ThreadLocal<int> Local = new();
     public static readonly AsyncLocal<int> Async = new();
+    public static readonly AsyncLocal<int> AsyncOnly = new();
     public const int Max = 3;
     public static readonly string Fine = "x";
     public static int WrongKind = 2;
@@ -200,6 +292,9 @@ internal static class StaticMutant
     public static readonly object Boxed = new();
     public static readonly ImmutableArray<string> Frozen = ["a"];
     public static readonly Int128 Wide = 1;
+    public static readonly OpenClass OpenObject = new();
+    public static readonly MutClass MutObject = new();
+    public static readonly GoodClass GoodObject = new();
     public static readonly ImmutableDictionary<int, int> ImmDict = ImmutableDictionary<int, int>.Empty;
     public static readonly System.Collections.Frozen.FrozenSet<int> SetOfInt = System.Collections.Frozen.FrozenSet<int>.Empty;
     public static readonly ImmutableArray<(string Name, int Value)> Pairs = [("a", 1)];

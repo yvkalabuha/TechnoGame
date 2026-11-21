@@ -36,7 +36,7 @@ public class TwoWorldsOnOnePoolTests
         {
             Seed = seed,
             Threads = threads,
-            ChunkSize = threads == 2 ? 1 : 4,
+            ChunkSize = 1, // 5 actors give 5 chunks, at least as many as Threads, so every thread count really runs in parallel
             HashEveryTick = true,
             // Different arms make the two worlds differ in parameters too, not only in seed.
             SaleArm = seed % 2 == 0 ? SaleArm.ChiOff : SaleArm.None,

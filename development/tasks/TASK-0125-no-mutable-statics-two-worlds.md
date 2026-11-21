@@ -53,6 +53,8 @@ created: 2026-11-21
 **Раунд 5.** Allow-list общих типов теперь точный закрытый список: ImmutableArray/List/Queue/Stack, ValueTuple, Nullable; Immutable/Frozen словари и множества нарушают (мутанты `ImmDict`, `SetOfInt`). Тест двух миров получил случаи с Threads = 1 (3 пары + 2 одиночных).
 **Мутация буфера тика (копия `mut125`, не реальный src):** снят `[ThreadStatic]` с `IndustryMath.t_items/t_sorted`, Threads = 1. Один мир в своём процессе (seed 1 и seed 4): ПРОХОДИТ. Поочерёдно в одном потоке (2 мира): проходит (5 из 8 случаев с threads 1 зелёные). Одновременно два мира, каждый Threads = 1: ПАДАЕТ 3 из 3 ("TickComputeException : System 400 failed in Compute, chunk 0, tick 153: Process 39 is twice in the prc_set" и "System 300 ... tick 334: Process 54 is twice in the prc_set").
 
+**Раунд 6.** ChunkSize = 1 для всех чисел потоков (5 актёров = 5 чанков ≥ Threads): digests не изменились. Новый тест `KernelCoreSession_DoNotCallMarshalAsArrayOrUnsafeAs_ExceptListedSites`: вызовы `ImmutableCollectionsMarshal.AsArray`, `Unsafe.As/AsRef` и `AsImmutableArray` над не свежим массивом в Kernel/Core/Session падают, кроме точных мест: `ViewBuilder.Inputs` (оборачивает локальный `rows`, созданный в методе, никем не удерживаемый). `AsImmutableArray` сразу после newarr/stelem/InitializeArray/ToArray (разворачивание выражений коллекций компилятором) не нарушение. Мутанты на каждый вызов. Виды исключений: `InstanceThreadLocal` только для `ThreadLocal<>`; `ImmutableObject` требует sealed-класс с readonly-полями, проходящими закрытый список (мутанты: не sealed/интерфейс, sealed/изменяемое поле, AsyncLocal).
+
 **Не проверено:** полный набор тестов и `verify.py`; мутации в реальном `src/`.
 
 ## Связанные документы
