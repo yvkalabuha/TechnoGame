@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Reflection;
+using static Singularity.Architecture.Tests.IlScanner;
 using System.Runtime.CompilerServices;
 using Singularity.Core;
 using Singularity.Kernel;
@@ -51,7 +52,13 @@ public class NoMutableStaticsTests
     // A sealed class whose instance fields are all readonly and pass the static allow-list (no interface shortcut): a value in all but name.
     private static bool IsImmutableClass(Type t) =>
         t.IsClass && t.IsSealed && !t.IsGenericType
-        && t.GetFields(IlScanner.AllDeclared).Where(x => !x.IsStatic).All(x => x.IsInitOnly && IsAllowedStaticType(x.FieldType));
+        && BaseChain(t).SelectMany(c => c.GetFields(IlScanner.AllDeclared)).Where(x => !x.IsStatic).All(x => x.IsInitOnly && IsAllowedStaticType(x.FieldType));
+
+    private static IEnumerable<Type> BaseChain(Type t)
+    {
+        for (Type? c = t; c is not null && c != typeof(object); c = c.BaseType)
+            yield return c;
+    }
 
     private static bool IsThreadBound(Type t) =>
         t.HasElementType ? IsThreadBound(t.GetElementType()!) : t.IsGenericType && (t.GetGenericTypeDefinition() == typeof(ThreadLocal<>) || t.GetGenericTypeDefinition() == typeof(AsyncLocal<>)
@@ -134,65 +141,109 @@ public class NoMutableStaticsTests
         return found;
     }
 
-    // Calls that break the immutability of an ImmutableArray or of a readonly field from outside: the call site must be listed with a reason.
-    private static readonly Dictionary<string, string> UnsafeCallSites = new(StringComparer.Ordinal)
+    // The "write through an unsafe API" category, closed at once: in Kernel, Core and Session any call into these classes, and any raw pointer
+    // access (ldind/stind/cpblk/initblk, or a pinned local made by `fixed`), is a violation unless the exact (method -> callee) pair is listed
+    // with the number of its occurrences and a reason. A bare ref/span over memory a caller owns is the way a static ImmutableArray or List is written.
+    private static readonly HashSet<string> UnsafeClasses = new(StringComparer.Ordinal)
     {
-        ["Singularity.Session.ViewBuilder.Inputs"] = "wraps a fresh local array that nobody else holds (not a static, not captured) into an ImmutableArray without a copy",
+        "System.Runtime.InteropServices.MemoryMarshal",
+        "System.Runtime.InteropServices.CollectionsMarshal",
+        "System.Runtime.InteropServices.ImmutableCollectionsMarshal",
+        "System.Runtime.CompilerServices.Unsafe",
     };
 
-    private static bool IsUnsafeCall(MethodBase m) =>
-        (m.DeclaringType?.FullName == "System.Runtime.InteropServices.ImmutableCollectionsMarshal" && m.Name is "AsImmutableArray" or "AsArray")
-        || (m.DeclaringType?.FullName == "System.Runtime.CompilerServices.Unsafe" && m.Name is "As" or "AsRef");
+    private static readonly Dictionary<string, (int Count, string Reason)> UnsafeUses = new(StringComparer.Ordinal)
+    {
+        ["Singularity.Kernel.Column`1.AppendCurrentTo -> MemoryMarshal.AsBytes"] = (1, "read-only byte view of the column's own current array, passed to IncrementalHash.AppendData (a ReadOnlySpan sink); no write"),
+        ["Singularity.Core.Policy.ToolingPlan.Compute -> CollectionsMarshal.AsSpan"] = (2, "sorts in place the thread-bound scratch list t.Cells of the plan (DEBT-0070), cleared and refilled each call; no static or world storage"),
+        // Only the single non-fresh AsImmutableArray of this method: another unsafe callee or a second call in it still fails.
+        ["Singularity.Session.ViewBuilder.Inputs -> ImmutableCollectionsMarshal.AsImmutableArray"] = (1, "wraps the local array rows that this method has just created and nobody else holds (not a static, not captured), no copy"),
+    };
 
-    // The compiler lowers a collection expression for ImmutableArray to AsImmutableArray over an array it has just built (newarr/stelem,
-    // a static-data InitializeArray, or a ToArray copy). Wrapping such an array hands out no alias, so it is not a violation.
-    private static bool IsFreshArray(IlScanner.Instruction? before) =>
+    private static string? UnsafeCallee(Instruction ins, Instruction? before)
+    {
+        if (ins.Operand is MethodBase callee && callee.DeclaringType?.FullName is { } dt && UnsafeClasses.Contains(dt))
+        {
+            // The compiler lowers a collection expression for ImmutableArray to AsImmutableArray over an array it has just built (newarr/stelem,
+            // a static-data InitializeArray, or a ToArray copy): no alias exists, so this exact shape is not a use.
+            if (callee.Name == "AsImmutableArray" && IsFreshArray(before))
+                return null;
+            return $"{callee.DeclaringType!.Name}.{callee.Name}";
+        }
+        string? op = ins.OpCode.Name;
+        // ldind/stind are not flagged: every ref/out/in parameter uses them. A raw pointer is caught by its type (see HasPointer).
+        return op is "cpblk" or "initblk" or "calli" ? "opcode " + op : null;
+    }
+
+    private static bool IsFreshArray(Instruction? before) =>
         before is { } b && (b.OpCode == System.Reflection.Emit.OpCodes.Newarr || b.OpCode.Name!.StartsWith("stelem", StringComparison.Ordinal)
             || (b.Operand is MethodBase m && (m.Name == "InitializeArray" || (m.Name == "ToArray" && m.DeclaringType?.Name is "List`1" or "Enumerable" or "ReadOnlySpan`1"))));
 
-    private static List<string> UnsafeCalls(IEnumerable<Type> types, IReadOnlyDictionary<string, string> allowed, HashSet<string>? used = null)
+    // A pointer or a pinned local anywhere in the signature or the locals: the way unmanaged code reaches storage without the type system.
+    private static bool HasPointer(MethodBase m) =>
+        m.GetParameters().Any(p => p.ParameterType.IsPointer || p.ParameterType.IsByRef && p.ParameterType.GetElementType()!.IsPointer)
+        || (m is MethodInfo mi && mi.ReturnType.IsPointer)
+        || m.GetMethodBody()?.LocalVariables.Any(l => l.IsPinned || l.LocalType.IsPointer) == true;
+
+    private static Dictionary<string, int> UnsafeCalls(IEnumerable<Type> types)
     {
-        var found = new List<string>();
+        var found = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (Type type in types)
         {
             foreach (MethodBase method in type.GetMethods(IlScanner.AllDeclared).Cast<MethodBase>().Concat(type.GetConstructors(IlScanner.AllDeclared)))
             {
                 string name = $"{type.FullName}.{method.Name}";
-                IlScanner.Instruction? prev = null;
-                foreach (var ins in IlScanner.Read(method))
+                if (HasPointer(method))
+                    found[name + " -> raw pointer (fixed or unsafe)"] = 1;
+                Instruction? prev = null;
+                foreach (Instruction ins in IlScanner.Read(method))
                 {
-                    var before = prev; prev = ins;
-                    if (ins.Operand is not MethodBase callee || !IsUnsafeCall(callee) || (callee.Name == "AsImmutableArray" && IsFreshArray(before)))
+                    string? what = UnsafeCallee(ins, prev);
+                    prev = ins;
+                    if (what is null)
                         continue;
-                    if (allowed.ContainsKey(name))
-                        used?.Add(name);
-                    else
-                        found.Add($"{name}: calls {callee.DeclaringType!.Name}.{callee.Name} (breaks immutability)");
+                    string key = $"{name} -> {what}";
+                    found[key] = found.GetValueOrDefault(key) + 1;
                 }
             }
         }
         return found;
     }
 
+    private static List<string> UnsafeViolations(Dictionary<string, int> found, IReadOnlyDictionary<string, (int Count, string Reason)> allowed) =>
+    [
+        .. found.Where(kv => !allowed.TryGetValue(kv.Key, out var a) || a.Count != kv.Value).Select(kv => $"{kv.Key} x{kv.Value}: not allowed (or the listed count differs)"),
+        .. allowed.Where(kv => !found.ContainsKey(kv.Key)).Select(kv => $"{kv.Key}: stale allow-list entry"),
+    ];
+
     [Fact]
-    public void KernelCoreSession_DoNotCallMarshalAsArrayOrUnsafeAs_ExceptListedSites()
+    public void KernelCoreSession_UseNoUnsafeApi_ExceptListedMethodCalleePairs()
     {
-        var used = new HashSet<string>(StringComparer.Ordinal);
-        List<string> found = UnsafeCalls(Assemblies.SelectMany(a => a.GetTypes()), UnsafeCallSites, used);
-        Assert.True(found.Count == 0, string.Join("\n", found));
-        Assert.True(UnsafeCallSites.Keys.All(used.Contains), "stale allowed call site: " + string.Join(", ", UnsafeCallSites.Keys.Where(k => !used.Contains(k))));
+        List<string> v = UnsafeViolations(UnsafeCalls(Assemblies.SelectMany(a => a.GetTypes())), UnsafeUses);
+        Assert.True(v.Count == 0, string.Join("\n", v));
     }
 
     [Fact]
-    public void TheUnsafeCallScan_SeesEachMutantCall()
+    public void TheUnsafeScan_SeesEachMutant_AndOnlyTheListedPairIsExempt()
     {
-        List<string> found = UnsafeCalls([typeof(UnsafeMutant)], new Dictionary<string, string>());
-        Assert.Contains(found, f => f.Contains("Wrap") && f.Contains("AsImmutableArray"));
-        Assert.Contains(found, f => f.Contains("Unwrap") && f.Contains("AsArray"));
-        Assert.Contains(found, f => f.Contains("Cast") && f.Contains("Unsafe.As"));
-        Assert.Contains(found, f => f.Contains("Ref") && f.Contains("Unsafe.AsRef"));
-        Assert.DoesNotContain(found, f => f.Contains("Clean") || f.Contains("Fresh")); // collection expressions wrap a fresh array
-        Assert.Empty(UnsafeCalls([typeof(UnsafeMutant)], new Dictionary<string, string> { ["Singularity.Architecture.Tests.UnsafeMutant.Wrap"] = "x", ["Singularity.Architecture.Tests.UnsafeMutant.Unwrap"] = "x", ["Singularity.Architecture.Tests.UnsafeMutant.Cast"] = "x", ["Singularity.Architecture.Tests.UnsafeMutant.Ref"] = "x" }));
+        Dictionary<string, int> found = UnsafeCalls([typeof(UnsafeMutant)]);
+        List<string> v = UnsafeViolations(found, new Dictionary<string, (int, string)>());
+        Assert.Contains(v, f => f.Contains("Wrap") && f.Contains("AsImmutableArray"));
+        Assert.Contains(v, f => f.Contains("Unwrap") && f.Contains("AsArray"));
+        Assert.Contains(v, f => f.Contains("Cast") && f.Contains("Unsafe.As"));
+        Assert.Contains(v, f => f.Contains("Ref") && f.Contains("Unsafe.AsRef"));
+        Assert.Contains(v, f => f.Contains("PokeStatic") && f.Contains("MemoryMarshal.GetReference"));  // writes into a static ImmutableArray
+        Assert.Contains(v, f => f.Contains("SpanOfStatic") && f.Contains("CollectionsMarshal.AsSpan")); // a span over a static list
+        Assert.Contains(v, f => f.Contains("Fixed") && f.Contains("raw pointer"));
+        Assert.Contains(v, f => f.Contains("Raw") && f.Contains("raw pointer"));
+        Assert.DoesNotContain(v, f => f.Contains("Clean") || f.Contains("Fresh")); // collection expressions wrap a fresh array
+        // An allow entry covers exactly its pair and its count: another callee in the same method, or a second call, still fails.
+        var one = new Dictionary<string, (int, string)> { ["Singularity.Architecture.Tests.UnsafeMutant.Two -> ImmutableCollectionsMarshal.AsImmutableArray"] = (1, "x") };
+        List<string> two = UnsafeViolations(UnsafeCalls([typeof(UnsafeMutant)]), one);
+        Assert.Contains(two, f => f.Contains("Two -> Unsafe.As") && f.Contains("not allowed"));
+        Assert.DoesNotContain(two, f => f.Contains("Two -> ImmutableCollectionsMarshal"));
+        var twice = new Dictionary<string, (int, string)> { ["Singularity.Architecture.Tests.UnsafeMutant.Twice -> ImmutableCollectionsMarshal.AsImmutableArray"] = (1, "x") };
+        Assert.Contains(UnsafeViolations(UnsafeCalls([typeof(UnsafeMutant)]), twice), f => f.Contains("Twice") && f.Contains("count differs"));
     }
 
     [Fact]
@@ -228,6 +279,7 @@ public class NoMutableStaticsTests
         Assert.Contains(found, f => f.Contains("AsyncOnly") && f.Contains("ThreadLocal"));          // AsyncLocal is not a ThreadLocal exception kind
         Assert.Contains(found, f => f.Contains("OpenObject") && f.Contains("listed as ImmutableObject but is None")); // unsealed, interface field
         Assert.Contains(found, f => f.Contains("MutObject") && f.Contains("listed as ImmutableObject but is None"));  // sealed, writable field
+        Assert.Contains(found, f => f.Contains("InheritedObject") && f.Contains("listed as ImmutableObject but is None")); // mutable field in the base class
         Assert.DoesNotContain(found, f => f.Contains("GoodObject"));
         // An exception entry of the wrong kind or of a missing kind is reported.
         Assert.Contains(found, f => f.Contains("WrongKind") && f.Contains("listed as ThreadStatic but is None"));
@@ -243,6 +295,7 @@ public class NoMutableStaticsTests
         ["Singularity.Architecture.Tests.StaticMutant.AsyncOnly"] = (Kind.InstanceThreadLocal, "an AsyncLocal listed as a ThreadLocal"),
         ["Singularity.Architecture.Tests.StaticMutant.OpenObject"] = (Kind.ImmutableObject, "unsealed class with an interface field"),
         ["Singularity.Architecture.Tests.StaticMutant.MutObject"] = (Kind.ImmutableObject, "sealed class with a writable field"),
+        ["Singularity.Architecture.Tests.StaticMutant.InheritedObject"] = (Kind.ImmutableObject, "sealed class whose base class has a writable field"),
         ["Singularity.Architecture.Tests.StaticMutant.GoodObject"] = (Kind.ImmutableObject, "sealed class of readonly allowed fields"),
         ["Singularity.Architecture.Tests.StaticMutant.WrongKind"] = (Kind.ThreadStatic, "DEBT-0070: a plain static named like a ThreadStatic entry"),
     };
@@ -259,6 +312,8 @@ public class NoMutableStaticsTests
 
 internal class OpenClass { public readonly IList<int> Items = []; }
 internal sealed class MutClass { public int Count = 1; }
+internal class MutBase { public int Count = 1; }
+internal sealed class InheritedClass : MutBase { public readonly long Mask = 1; }
 internal sealed class GoodClass { public readonly long Mask = 1; public readonly ImmutableArray<int> Ids = [1]; }
 
 internal static class UnsafeMutant
@@ -267,6 +322,15 @@ internal static class UnsafeMutant
     public static int[]? Unwrap(ImmutableArray<int> a) => System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsArray(a);
     public static string Cast(object o) => System.Runtime.CompilerServices.Unsafe.As<string>(o);
     public static ref int Ref(in int x) => ref System.Runtime.CompilerServices.Unsafe.AsRef(in x);
+    private static readonly ImmutableArray<int> Shared = [1, 2];
+    private static readonly List<int> SharedList = [1];
+    public static void PokeStatic() { ref int r = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(Shared.AsSpan()); r = 5; }
+    public static Span<int> SpanOfStatic() => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(SharedList);
+    public static unsafe void Fixed(int[] a) { fixed (int* p = a) { *p = 1; } }
+    public static unsafe void Raw(int* p) { *p = 2; }
+    // Two callees in one method (an entry for the first must not exempt the second); one callee twice (an entry with count 1 must not exempt both).
+    public static ImmutableArray<int> Two(int[] a, object o) { _ = System.Runtime.CompilerServices.Unsafe.As<string>(o); return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(a); }
+    public static (ImmutableArray<int>, ImmutableArray<int>) Twice(int[] a, int[] b) => (System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(a), System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(b));
     public static int Clean(int x) => x + 1;
     public static ImmutableArray<int> FreshCollection(int n) => [n, n + 1];
     public static ImmutableArray<int> FreshSpread(List<int> l) => [.. l];
@@ -295,6 +359,7 @@ internal static class StaticMutant
     public static readonly OpenClass OpenObject = new();
     public static readonly MutClass MutObject = new();
     public static readonly GoodClass GoodObject = new();
+    public static readonly InheritedClass InheritedObject = new();
     public static readonly ImmutableDictionary<int, int> ImmDict = ImmutableDictionary<int, int>.Empty;
     public static readonly System.Collections.Frozen.FrozenSet<int> SetOfInt = System.Collections.Frozen.FrozenSet<int>.Empty;
     public static readonly ImmutableArray<(string Name, int Value)> Pairs = [("a", 1)];
