@@ -1,6 +1,6 @@
+using System.Buffers.Binary;
 using System.Globalization;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace Singularity.Session;
 
@@ -32,13 +32,15 @@ public sealed partial record SliceRunConfig
             XHalfByTier.IsDefault ? "-" : string.Join(',', XHalfByTier.Select(x => x.Raw.ToString(CultureInfo.InvariantCulture))),
             Raw(DeltaH), Raw(CM), Grid.Code.ToString(CultureInfo.InvariantCulture), ((int)EffortShare).ToString(CultureInfo.InvariantCulture),
         ];
-        // Length-prefixed fields: no value can run into its neighbour.
+        // Length-prefixed fields written as UTF-16 code units, integers little-endian (the encoding of TableSnapshot.Fingerprint): no value can run into its neighbour.
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        foreach (string f in fields)
+        foreach (string field in fields)
         {
-            byte[] b = Encoding.UTF8.GetBytes(f);
-            hash.AppendData(BitConverter.GetBytes(b.Length));
-            hash.AppendData(b);
+            var bytes = new byte[sizeof(int) + field.Length * sizeof(char)];
+            BinaryPrimitives.WriteInt32LittleEndian(bytes, field.Length);
+            for (int i = 0; i < field.Length; i++)
+                BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(sizeof(int) + i * sizeof(char)), field[i]);
+            hash.AppendData(bytes);
         }
         return hash.GetHashAndReset();
     }
