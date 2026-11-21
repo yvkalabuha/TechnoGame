@@ -414,8 +414,10 @@ public sealed partial class SliceSession
     private static void CheckLocalNumbers(List<LoggedCommand> journal, List<LoggedCommand> pending)
     {
         var last = new Dictionary<(SourceClass, int), int>();
-        foreach (LoggedCommand c in journal.Concat(pending))
-            CheckLocalNumber(last, c);
+        for (int i = 0; i < journal.Count; i++)
+            CheckLocalNumber(last, journal[i]);
+        for (int i = 0; i < pending.Count; i++)
+            CheckLocalNumber(last, pending[i]);
     }
 
     private static void CheckLocalNumber(Dictionary<(SourceClass, int), int> last, LoggedCommand c)
