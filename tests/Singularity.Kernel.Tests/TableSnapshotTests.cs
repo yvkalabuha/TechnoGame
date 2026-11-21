@@ -133,6 +133,35 @@ public class TableSnapshotTests
     }
 
     [Fact]
+    public void Fingerprint_LoneSurrogateAndReplacementCharacter_Differ()
+    {
+        static Table T(string name)
+        {
+            var t = new Table(1);
+            t.AddLong(name);
+            return t;
+        }
+        // UTF-8 encoding turns a lone surrogate into U+FFFD; the fingerprint must still tell them apart.
+        Assert.NotEqual(TableSnapshot.Fingerprint(T("a\uD800")), TableSnapshot.Fingerprint(T("a\uFFFD")));
+        Assert.NotEqual(TableSnapshot.Fingerprint(T("a\uD800")), TableSnapshot.Fingerprint(T("a\uDC00")));
+    }
+
+    [Fact]
+    public void Inspect_ChecksWithoutChangingTheTable_AndReturnsTheTick()
+    {
+        Table src = Build(3);
+        src.GetLong("a").Load([1, 2, 3]);
+        byte[] bytes = Take(src, 77);
+        Table dst = Build(3);
+        Assert.Equal(bytes.Length, TableSnapshot.ExpectedBytes(dst));
+        Assert.Equal(77, TableSnapshot.Inspect(dst, Schema, bytes));
+        Assert.Equal([0L, 0L, 0L], dst.GetLong("a").Current.ToArray());
+        Assert.Throws<InvalidDataException>(() => TableSnapshot.Inspect(dst, Schema, bytes[..^1]));
+        Assert.Throws<InvalidDataException>(() => TableSnapshot.Inspect(dst, Schema + 1, bytes));
+        Assert.Throws<InvalidDataException>(() => TableSnapshot.Inspect(Build(2), Schema, bytes));
+    }
+
+    [Fact]
     public void Read_NegativeTick_Rejected()
     {
         byte[] bytes = Take(Build(1), 0);

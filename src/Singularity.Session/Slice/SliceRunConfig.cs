@@ -136,7 +136,7 @@ public enum StartVariant
 /// variant, the factorial profile cell (§6.6) and the channel switches (§6.2). All of it except the execution options is written to
 /// the <c>run.*</c> columns, so it is part of the state hash.
 /// </summary>
-public sealed record SliceRunConfig
+public sealed partial record SliceRunConfig
 {
     /// <summary>The seed of a source under <c>FIX_*</c> (spec §6.3).</summary>
     public const ulong FixedSeed = 0x5EED;

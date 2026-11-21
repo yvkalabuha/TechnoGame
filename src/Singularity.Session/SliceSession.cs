@@ -207,23 +207,65 @@ public sealed partial class SliceSession
         return session;
     }
 
+    private const int SnapshotFormat = 0;
+    private static ReadOnlySpan<byte> SnapshotMagic => "SGSS"u8;
+
+    /// <summary>Upper bound of a saved command log (journal or queue): a corrupt length must not allocate more.</summary>
+    internal const int MaxSnapshotLogBytes = 64 << 20;
+
+    /// <summary>The last tick a snapshot may name (about 8200 years of days): keeps every date and due-tick calculation inside its range.</summary>
+    internal const long MaxSnapshotTick = 3_000_000;
+
     /// <summary>
-    /// In-memory snapshot of the state that decides the next tick (TASK-0124): the table (<see cref="TableSnapshot"/>) and the command journal.
-    /// Not a player save file. Refused while commands wait for their tick: their keys are not part of the table. The outcomes are an
-    /// observation and are not saved.
+    /// In-memory snapshot of everything that decides the next tick (TASK-0124, ADR-0013 п. 5): magic, format, the fingerprint of the run
+    /// configuration (<see cref="SliceRunConfig.SnapshotFingerprint"/>), the table (<see cref="TableSnapshot"/>), the journal and the queue of
+    /// commands waiting for their tick, both as <see cref="CommandCodec"/> logs. Not a player save file. The outcomes are an observation and are not saved.
     /// </summary>
     internal void WriteSnapshot(Stream output)
     {
         CheckOwner();
-        if (_pending.Count > 0)
-            throw new InvalidOperationException("A snapshot is taken with no command waiting for its tick.");
         using var table = new MemoryStream();
         TableSnapshot.Write(SnapshotSource(), SliceWorld.SchemaVersion, Tick, table);
-        Span<byte> length = stackalloc byte[sizeof(int)];
-        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(length, checked((int)table.Length));
-        output.Write(length);
-        table.WriteTo(output);
-        output.Write(System.Text.Encoding.UTF8.GetBytes(CommandLog));
+        using var buffer = new MemoryStream();
+        buffer.Write(SnapshotMagic);
+        WriteInt(buffer, SnapshotFormat);
+        buffer.Write(_world.Config.SnapshotFingerprint());
+        WriteInt(buffer, checked((int)table.Length));
+        table.WriteTo(buffer);
+        WriteBlock(buffer, System.Text.Encoding.UTF8.GetBytes(CommandCodec.EncodeLog(_journal)));
+        WriteBlock(buffer, System.Text.Encoding.UTF8.GetBytes(CommandCodec.EncodeLog(_pending)));
+        buffer.WriteTo(output);
+    }
+
+    private static void WriteInt(Stream s, int v)
+    {
+        Span<byte> b = stackalloc byte[sizeof(int)];
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(b, v);
+        s.Write(b);
+    }
+
+    private static void WriteBlock(Stream s, byte[] block)
+    {
+        WriteInt(s, block.Length);
+        s.Write(block);
+    }
+
+    private static int ReadInt(Stream s)
+    {
+        Span<byte> b = stackalloc byte[sizeof(int)];
+        s.ReadExactly(b);
+        return System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(b);
+    }
+
+    // The length is checked against the bound before anything is allocated.
+    private static byte[] ReadBlock(Stream s, int max, string what)
+    {
+        int length = ReadInt(s);
+        if (length < 0 || length > max)
+            throw new InvalidDataException($"Snapshot {what} length {length} is outside 0…{max}.");
+        var block = new byte[length];
+        s.ReadExactly(block);
+        return block;
     }
 
     /// <summary>Test seam (TASK-0124): columns whose name it accepts are saved with the values of a fresh world, as if they had not been saved.</summary>
@@ -247,50 +289,123 @@ public sealed partial class SliceSession
         return mixed;
     }
 
-    /// <summary>Loads a snapshot into a session that was just created with the same data and configuration and has not run.</summary>
+    /// <summary>
+    /// Loads a snapshot into a session just created with the same data and configuration that has not run. Two phases: everything the stream says
+    /// is read and checked first (a failure there changes nothing); then the table is replaced under one rollback, so any failure leaves the session
+    /// as it was (state, clock, journal, queue, view).
+    /// </summary>
     internal void LoadSnapshot(Stream input)
     {
         CheckOwner();
         if (Tick != 0 || _journal.Count != 0 || _pending.Count != 0 || _tracked.Count != 0 || _outcomes.Count != 0)
             throw new InvalidOperationException("A snapshot is loaded into a new session only.");
-        var length = new byte[sizeof(int)];
-        input.ReadExactly(length);
-        int tableLength = System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(length);
-        if (tableLength < 0)
-            throw new InvalidDataException($"Snapshot table length {tableLength} is negative.");
+
+        // Phase 1: parse and validate, no mutation.
+        var magic = new byte[SnapshotMagic.Length];
+        input.ReadExactly(magic);
+        if (!SnapshotMagic.SequenceEqual(magic))
+            throw new InvalidDataException("Not a session snapshot (bad magic).");
+        int format = ReadInt(input);
+        if (format != SnapshotFormat)
+            throw new InvalidDataException($"Session snapshot format {format} is not supported (expected {SnapshotFormat}).");
+        var configFingerprint = new byte[32];
+        input.ReadExactly(configFingerprint);
+        if (!configFingerprint.AsSpan().SequenceEqual(_world.Config.SnapshotFingerprint()))
+            throw new InvalidDataException("The snapshot was taken with another run configuration.");
+        int expected = TableSnapshot.ExpectedBytes(_world.Table);
+        int tableLength = ReadInt(input);
+        if (tableLength != expected)
+            throw new InvalidDataException($"Snapshot table length {tableLength} differs from the {expected} bytes this world needs.");
         var tableBytes = new byte[tableLength];
         input.ReadExactly(tableBytes);
-        using var rest = new MemoryStream();
-        input.CopyTo(rest);
-        string log = System.Text.Encoding.UTF8.GetString(rest.ToArray());
-        List<LoggedCommand> journal = [.. CommandCodec.DecodeLog(log)];
-        // The seeds are the identity of the run: a snapshot of another seed must not continue in this session. Restored if they differ.
-        string[] seedColumns = ["run.seed.know", "run.seed.events", "run.seed.ai", "run.seed.start"];
-        long[][] seeds = [.. seedColumns.Select(n => _world.Table.GetLong(n).Current.ToArray())];
+        byte[] journalBytes = ReadBlock(input, MaxSnapshotLogBytes, "journal");
+        byte[] pendingBytes = ReadBlock(input, MaxSnapshotLogBytes, "queue");
+        if (input.ReadByte() >= 0)
+            throw new InvalidDataException("Session snapshot has data after the queue.");
+
+        long tick = TableSnapshot.Inspect(_world.Table, SliceWorld.SchemaVersion, tableBytes);
+        if (tick > MaxSnapshotTick)
+            throw new InvalidDataException($"Snapshot tick {tick} is beyond the calendar (last {MaxSnapshotTick}).");
+        List<LoggedCommand> journal = DecodeCommands(journalBytes, "journal");
+        List<LoggedCommand> pending = DecodeCommands(pendingBytes, "queue");
+        CheckKeys(journal, "journal", c => c.Key.ApplyTick < tick);
+        CheckKeys(pending, "queue", c => c.Key.ApplyTick == tick);
+
+        // Phase 2: one rollback for every failure.
         using var backup = new MemoryStream();
-        TableSnapshot.Write(_world.Table, SliceWorld.SchemaVersion, Tick, backup);
-        long tick = TableSnapshot.Read(_world.Table, SliceWorld.SchemaVersion, new MemoryStream(tableBytes));
-        for (int i = 0; i < seedColumns.Length; i++)
+        TableSnapshot.Write(_world.Table, SliceWorld.SchemaVersion, 0, backup);
+        string hash;
+        long month;
+        SliceView view;
+        try
         {
-            LongColumn col = _world.Table.GetLong(seedColumns[i]);
-            if (!col.Current.SequenceEqual(seeds[i]))
+            string[] seedColumns = ["run.seed.know", "run.seed.events", "run.seed.ai", "run.seed.start"];
+            long[][] seeds = [.. seedColumns.Select(n => _world.Table.GetLong(n).Current.ToArray())];
+            TableSnapshot.Read(_world.Table, SliceWorld.SchemaVersion, new MemoryStream(tableBytes));
+            // The seeds are the identity of the run: a snapshot of another seed must not continue in this session.
+            for (int i = 0; i < seedColumns.Length; i++)
             {
-                backup.Position = 0;
-                TableSnapshot.Read(_world.Table, SliceWorld.SchemaVersion, backup);
-                throw new InvalidDataException($"Snapshot column {seedColumns[i]} differs from the seed of this session.");
+                if (!_world.Table.GetLong(seedColumns[i]).Current.SequenceEqual(seeds[i]))
+                    throw new InvalidDataException($"Snapshot column {seedColumns[i]} differs from the seed of this session.");
             }
+            _world.Runner.Restore(tick);
+            // The last monthly step ran on day 1 of the month of the last completed tick.
+            month = tick == 0 ? -1 : _world.Calendar.MonthIndex(tick - 1);
+            hash = ComputeHash();
+            view = ViewBuilder.Snapshot(_world, Tick, hash, month, null, null);
         }
-        _world.Runner.Restore(tick);
+        catch
+        {
+            backup.Position = 0;
+            TableSnapshot.Read(_world.Table, SliceWorld.SchemaVersion, backup);
+            _world.Runner.Restore(0);
+            _hash = null;
+            throw;
+        }
+
+        // Commit: nothing below can fail.
         foreach (LoggedCommand c in journal)
         {
             _journal.Add(c);
             RememberLocal(c.Key.Source, c.Key.SourceId, c.Key.LocalN);
         }
-        // The last monthly step ran on day 1 of the month of the last completed tick.
-        _month = tick == 0 ? -1 : _world.Calendar.MonthIndex(tick - 1);
-        _hash = ComputeHash();
+        foreach (LoggedCommand c in pending)
+        {
+            _pending.Add(c);
+            RememberLocal(c.Key.Source, c.Key.SourceId, c.Key.LocalN);
+        }
+        _month = month;
+        _hash = hash;
         _actorsMid = null;
-        Volatile.Write(ref _view, ViewBuilder.Snapshot(_world, Tick, _hash, _month, null, null));
+        Volatile.Write(ref _view, view);
+    }
+
+    private static List<LoggedCommand> DecodeCommands(byte[] bytes, string what)
+    {
+        try
+        {
+            return CommandCodec.DecodeLog(System.Text.Encoding.UTF8.GetString(bytes));
+        }
+        catch (Exception e) when (e is not InvalidDataException)
+        {
+            throw new InvalidDataException($"Snapshot {what} is not a command log: {e.Message}", e);
+        }
+    }
+
+    // Keys strictly ascending (the order Submit keeps), apply ticks as the part of the history requires, each command well formed.
+    private void CheckKeys(List<LoggedCommand> commands, string what, Func<LoggedCommand, bool> tickOk)
+    {
+        for (int i = 0; i < commands.Count; i++)
+        {
+            LoggedCommand c = commands[i];
+            if (!tickOk(c))
+                throw new InvalidDataException($"Snapshot {what}: command {c.Key} has an apply tick that does not fit the snapshot tick.");
+            if (i > 0 && commands[i - 1].Key >= c.Key)
+                throw new InvalidDataException($"Snapshot {what}: keys are not strictly ascending at {c.Key}.");
+            CommandVerdict v = CommandValidator.CheckForm(c, _world.Limits);
+            if (!v.Accepted)
+                throw new InvalidDataException($"Snapshot {what}: command {c.Key} is malformed: {v.Message}");
+        }
     }
 
     private void StepOne()

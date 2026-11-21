@@ -24,18 +24,34 @@ public static class TableSnapshot
         for (int i = 0; i < table.Columns.Count; i++)
         {
             Column c = table.Columns[i];
-            // Length-prefixed, so no name (it may hold ':' or a newline) can run into its neighbour.
-            byte[] name = Encoding.UTF8.GetBytes(c.Name);
-            var prefix = new byte[sizeof(int)];
-            BinaryPrimitives.WriteInt32LittleEndian(prefix, name.Length);
-            hash.AppendData(prefix);
-            hash.AppendData(name);
-            hash.AppendData([(byte)c.TypeTag]);
+            // Length-prefixed (so no name can run into its neighbour) and written as raw UTF-16 code units: UTF-8 would turn every
+            // lone surrogate into U+FFFD and give two different names the same bytes.
+            string name = c.Name;
+            var bytes = new byte[sizeof(int) + name.Length * sizeof(char) + 1];
+            BinaryPrimitives.WriteInt32LittleEndian(bytes, name.Length);
+            for (int j = 0; j < name.Length; j++)
+                BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(sizeof(int) + j * sizeof(char)), name[j]);
+            bytes[^1] = (byte)c.TypeTag;
+            hash.AppendData(bytes);
         }
         Span<byte> rows = stackalloc byte[sizeof(int)];
         BinaryPrimitives.WriteInt32LittleEndian(rows, table.RowCount);
         hash.AppendData(rows);
         return hash.GetHashAndReset();
+    }
+
+    /// <summary>Exact size in bytes of a snapshot of this table.</summary>
+    public static int ExpectedBytes(Table table) => checked(HeaderBytes + BodyBytes(table));
+
+    /// <summary>
+    /// Checks a whole snapshot against the table (length, magic, format, schema version, counts, fingerprint, tick) without changing anything
+    /// and returns its tick. <see cref="Read"/> does the same checks while reading.
+    /// </summary>
+    public static long Inspect(Table table, int schemaVersion, ReadOnlySpan<byte> snapshot)
+    {
+        if (snapshot.Length != ExpectedBytes(table))
+            throw new InvalidDataException($"Snapshot is {snapshot.Length} bytes, the table needs {ExpectedBytes(table)}.");
+        return ValidateHeader(table, schemaVersion, snapshot[..HeaderBytes]);
     }
 
     /// <summary>Writes the <c>Current</c> state of every column, the schema version and the tick. Outside a tick only.</summary>
@@ -76,7 +92,25 @@ public static class TableSnapshot
             throw new InvalidOperationException("A snapshot is loaded between ticks.");
         var header = new byte[HeaderBytes];
         input.ReadExactly(header);
-        ReadOnlySpan<byte> h = header;
+        long tick = ValidateHeader(table, schemaVersion, header);
+
+        var body = new byte[BodyBytes(table)];
+        input.ReadExactly(body);
+        if (input.ReadByte() >= 0)
+            throw new InvalidDataException("Snapshot has data after the last column.");
+        int at = 0;
+        for (int i = 0; i < table.Columns.Count; i++)
+        {
+            Column c = table.Columns[i];
+            int size = c.Length * c.ElementBytes;
+            c.LoadFrom(body.AsSpan(at, size));
+            at += size;
+        }
+        return tick;
+    }
+
+    private static long ValidateHeader(Table table, int schemaVersion, ReadOnlySpan<byte> h)
+    {
         if (!h[..4].SequenceEqual(Magic))
             throw new InvalidDataException("Not a table snapshot (bad magic).");
         int format = BinaryPrimitives.ReadInt32LittleEndian(h[4..]);
@@ -92,19 +126,6 @@ public static class TableSnapshot
         long tick = BinaryPrimitives.ReadInt64LittleEndian(h[20..]);
         if (tick < 0)
             throw new InvalidDataException($"Snapshot tick {tick} is negative.");
-
-        var body = new byte[BodyBytes(table)];
-        input.ReadExactly(body);
-        if (input.ReadByte() >= 0)
-            throw new InvalidDataException("Snapshot has data after the last column.");
-        int at = 0;
-        for (int i = 0; i < table.Columns.Count; i++)
-        {
-            Column c = table.Columns[i];
-            int size = c.Length * c.ElementBytes;
-            c.LoadFrom(body.AsSpan(at, size));
-            at += size;
-        }
         return tick;
     }
 
