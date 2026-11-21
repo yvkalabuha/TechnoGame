@@ -31,17 +31,17 @@ public class NoMutableStaticsTests
     {
         // Thread-bound pure temporaries: sizes and contents are rewritten before every read, never hashed or saved, hold no world data.
         // Moving them into per-chunk buffers is not mechanical (DEBT proposal, see the TASK-0125 report); TwoWorldsOnOnePoolTests (Session.Tests) guards the behaviour.
-        ["Singularity.Core.WhyNot.ClosureArena.t_sets"] = (Kind.ThreadStatic, "ThreadStatic temporary of the closure walk"),
-        ["Singularity.Core.WhyNot.ClosureArena.t_memos"] = (Kind.ThreadStatic, "ThreadStatic temporary of the closure walk"),
-        ["Singularity.Core.WhyNot.ClosureArena.t_setsUsed"] = (Kind.ThreadStatic, "ThreadStatic fill count of the arena, Reset before each walk"),
-        ["Singularity.Core.WhyNot.ClosureArena.t_memosUsed"] = (Kind.ThreadStatic, "ThreadStatic fill count of the arena, Reset before each walk"),
-        ["Singularity.Core.Policy.PolicySystem.t_decisions"] = (Kind.ThreadStatic, "ThreadStatic [Scratch] temporary of the policy decision"),
-        ["Singularity.Core.Policy.ToolingPlan._temp"] = (Kind.ThreadStatic, "ThreadStatic temporary of the tooling plan"),
-        ["Singularity.Core.Industry.EffortScratch._forThread"] = (Kind.ThreadStatic, "ThreadStatic arrays of the effort allocator, overwritten per call"),
-        ["Singularity.Core.Industry.IndustryMath.t_items"] = (Kind.ThreadStatic, "ThreadStatic [Scratch] items of one Profile call"),
-        ["Singularity.Core.Industry.IndustryMath.t_sorted"] = (Kind.ThreadStatic, "ThreadStatic [Scratch] sorted copy of one Profile call"),
+        ["Singularity.Core.WhyNot.ClosureArena.t_sets"] = (Kind.ThreadStatic, "DEBT-0070: ThreadStatic temporary of the closure walk"),
+        ["Singularity.Core.WhyNot.ClosureArena.t_memos"] = (Kind.ThreadStatic, "DEBT-0070: ThreadStatic temporary of the closure walk"),
+        ["Singularity.Core.WhyNot.ClosureArena.t_setsUsed"] = (Kind.ThreadStatic, "DEBT-0070: ThreadStatic fill count of the arena, Reset before each walk"),
+        ["Singularity.Core.WhyNot.ClosureArena.t_memosUsed"] = (Kind.ThreadStatic, "DEBT-0070: ThreadStatic fill count of the arena, Reset before each walk"),
+        ["Singularity.Core.Policy.PolicySystem.t_decisions"] = (Kind.ThreadStatic, "DEBT-0070: ThreadStatic [Scratch] temporary of the policy decision"),
+        ["Singularity.Core.Policy.ToolingPlan._temp"] = (Kind.ThreadStatic, "DEBT-0070: ThreadStatic temporary of the tooling plan"),
+        ["Singularity.Core.Industry.EffortScratch._forThread"] = (Kind.ThreadStatic, "DEBT-0070: ThreadStatic arrays of the effort allocator, overwritten per call"),
+        ["Singularity.Core.Industry.IndustryMath.t_items"] = (Kind.ThreadStatic, "DEBT-0070: ThreadStatic [Scratch] items of one Profile call"),
+        ["Singularity.Core.Industry.IndustryMath.t_sorted"] = (Kind.ThreadStatic, "DEBT-0070: ThreadStatic [Scratch] sorted copy of one Profile call"),
         // An instance field, one per world adapter; the book is refilled with the parameters of its own world (TASK-0103, CrossWorldScratchTests).
-        ["Singularity.Session.PolicyProductsAdapter._book"] = (Kind.InstanceThreadLocal, "per-world ThreadLocal book, refilled per call"),
+        ["Singularity.Session.PolicyProductsAdapter._book"] = (Kind.InstanceThreadLocal, "DEBT-0070: per-world ThreadLocal book, refilled per call"),
         // A class whose instance fields are all readonly and of safe types (a lever bit mask), built once.
         ["Singularity.Core.WhyNot.LeverRegistry.<Slice>k__BackingField"] = (Kind.ImmutableObject, "immutable lever mask of the slice"),
     };
@@ -58,7 +58,7 @@ public class NoMutableStaticsTests
     /// <summary>
     /// The CLOSED allow-list for a static readonly field (an interface, object, array, class or generic wrapper is not on it; the instance-field
     /// rule of <see cref="ScratchTests"/> that an injected interface is safe does not apply to statics): primitive, enum, string, Int128, UInt128,
-    /// decimal; a readonly struct whose instance fields are all allowed; Nullable of an allowed type; an Immutable* / Frozen* collection of allowed types.
+    /// decimal; a readonly struct whose instance fields are all allowed; Nullable of an allowed type; an ImmutableArray / List / Queue / Stack of allowed types (exact list).
     /// </summary>
     private static bool IsAllowedStaticType(Type t, HashSet<Type>? seen = null)
     {
@@ -69,11 +69,11 @@ public class NoMutableStaticsTests
         if (t.IsGenericType)
         {
             Type d = t.GetGenericTypeDefinition();
-            string ns = d.Namespace ?? "";
-            // A nested type (ImmutableArray<T>.Builder) or any Builder is mutable even in these namespaces.
-            // A ValueTuple of allowed types is a value copy: a readonly static or an immutable element of it cannot be written through.
-            bool immutable = d == typeof(Nullable<>) || (ns == "System" && d.Name.StartsWith("ValueTuple`", StringComparison.Ordinal))
-                || ((ns == "System.Collections.Immutable" || ns == "System.Collections.Frozen") && !d.IsNested && !d.Name.Contains("Builder", StringComparison.Ordinal));
+            // Exact closed list of generic definitions. Immutable/Frozen dictionaries and sets are not on it: their comparer can be stateful
+            // and reflection cannot see it. A Builder or any nested type is mutable and is not listed either.
+            bool immutable = d == typeof(Nullable<>) || d == typeof(ImmutableArray<>) || d == typeof(ImmutableList<>)
+                || d == typeof(ImmutableQueue<>) || d == typeof(ImmutableStack<>)
+                || (d.Namespace == "System" && d.Name.StartsWith("ValueTuple`", StringComparison.Ordinal));
             return immutable && t.GetGenericArguments().All(a => IsAllowedStaticType(a, seen));
         }
         if (!t.IsValueType || !ScratchTests.IsReadOnlyStruct(t) || t.Namespace?.StartsWith("System", StringComparison.Ordinal) == true)
@@ -154,7 +154,7 @@ public class NoMutableStaticsTests
         Assert.Contains(found, f => f.Contains("AsInterface") && f.Contains("allow-list"));   // an interface is not safe for a static
         Assert.Contains(found, f => f.Contains("LocalArray") && f.Contains("ThreadLocal"));  // an array of ThreadLocal
         Assert.Contains(found, f => f.Contains("Boxed") && f.Contains("allow-list"));
-        Assert.DoesNotContain(found, f => f.Contains("Fine") || f.Contains("Frozen") || f.Contains("Wide") || f.Contains("Pairs") || f.Contains("Max") || f.Contains("<>9") || f.Contains("<>O"));
+        Assert.DoesNotContain(found, f => f.Contains("Fine") || f.Contains("StaticMutant.Frozen:") || f.Contains("Wide") || f.Contains("Pairs") || f.Contains("Max") || f.Contains("<>9") || f.Contains("<>O"));
         // A closure class with a static lambda cache really exists in the mutant (the scan skips it on purpose).
         Assert.Contains(typeof(StaticMutant).GetNestedTypes(IlScanner.AllDeclared), t => t.GetFields(IlScanner.AllDeclared).Any(IsLambdaCache));
         // An exception entry of the wrong kind or of a missing kind is reported.
@@ -162,11 +162,13 @@ public class NoMutableStaticsTests
         Assert.Contains(found, f => f.Contains("Table") && f.Contains("allow-list"));       // a static readonly array is writable: never allowed
         Assert.Contains(found, f => f.Contains("ImmBuilder") && f.Contains("allow-list"));  // ImmutableArray<int>.Builder is mutable
         Assert.Contains(found, f => f.Contains("DictBuilder") && f.Contains("allow-list"));
+        Assert.Contains(found, f => f.Contains("ImmDict") && f.Contains("allow-list"));         // comparer may be stateful
+        Assert.Contains(found, f => f.Contains("SetOfInt") && f.Contains("allow-list"));
     }
 
     private static readonly Dictionary<string, (Kind Kind, string Reason)> MutantExceptions = new()
     {
-        ["Singularity.Architecture.Tests.StaticMutant.WrongKind"] = (Kind.ThreadStatic, "a plain static named like a ThreadStatic entry"),
+        ["Singularity.Architecture.Tests.StaticMutant.WrongKind"] = (Kind.ThreadStatic, "DEBT-0070: a plain static named like a ThreadStatic entry"),
     };
 
     [Fact]
@@ -198,6 +200,8 @@ internal static class StaticMutant
     public static readonly object Boxed = new();
     public static readonly ImmutableArray<string> Frozen = ["a"];
     public static readonly Int128 Wide = 1;
+    public static readonly ImmutableDictionary<int, int> ImmDict = ImmutableDictionary<int, int>.Empty;
+    public static readonly System.Collections.Frozen.FrozenSet<int> SetOfInt = System.Collections.Frozen.FrozenSet<int>.Empty;
     public static readonly ImmutableArray<(string Name, int Value)> Pairs = [("a", 1)];
     // A static lambda in a method: the compiler caches it in a static field of a closure class, which the scan must not report.
     public static int Twice(int x)

@@ -24,7 +24,7 @@ created: 2026-11-21
 ## Описание
 1. IL/reflection-тест в `tests/Singularity.Architecture.Tests`: во всех типах сборок Kernel, Core, Session (вложенные и сгенерированные компилятором типы включительно) нет изменяемых static-полей и нет `[ThreadStatic]` / `ThreadLocal<T>` / `AsyncLocal<T>`. Разрешено: `const`, `static readonly` неизменяемого значения (правила «неизменяемого» — как в `ScratchTests`, переиспользовать), явный список исключений с причиной на каждую строку. `static readonly` массив или коллекция, в которую пишут, — нарушение.
 2. Тест «два мира на одном пуле потоков»: два независимых мира среза с разными seed считаются поочерёдно и параллельно (на одном `ThreadPool` / одном экземпляре исполнителя тика, 2 и 4 потока); хеши каждого мира по месяцам совпадают с хешами того же мира, посчитанного в одиночку.
-3. Найденные нарушения на текущем main: исправить, если правка механическая и не меняет golden; иначе внести в список исключений с ссылкой на новую строку DEBT в отчёте (строку DEBT пишет Orchestrator).
+3. Найденные нарушения на текущем main: исправить, если правка механическая и не меняет golden; иначе внести в список исключений со ссылкой на строку DEBT (DEBT-0070).
 
 ## Критерии приёмки
 - [ ] Тест static-полей падает на намеренно добавленном `static int` / `[ThreadStatic]` / изменяемом `static readonly List` в Core (мутации проверены, затем убраны).
@@ -46,9 +46,12 @@ created: 2026-11-21
 - В репозитории (`StaticMutant`, тест `TheScan_Sees...`): `static int`, `[ThreadStatic]`, `static readonly List`, `IList`, `object`, `ThreadLocal<int>[]`, `ThreadLocal`, `AsyncLocal` должны быть найдены; `Fine`, `Max`, `ImmutableArray<string>`, `Int128` и кэш статической лямбды — не найдены; исключение неверного вида (`WrongKind`, `WrongArray`) даёт "listed as ThreadStatic but is None" / "listed as ConstantArray but is None".
 - Устаревшая запись: временно переименовал `ClosureArena.t_sets` в `t_setsX`, упали `KernelCoreSession_HaveNoMutableStaticFields` и `EveryException_ResolvesToARealField` ("stale exception entries: ...t_setsX"); возвращено.
 
-**Найденные нарушения (в исключениях, правка не механическая):** 9 `[ThreadStatic]` (ClosureArena x4, PolicySystem.t_decisions, ToolingPlan._temp, EffortScratch._forThread, IndustryMath.t_items/t_sorted) — потокозависимые временные буферы; нужна строка DEBT (Orchestrator). Константные массивы заменены на ImmutableArray (раунд 4).
+**Найденные нарушения (в исключениях, правка не механическая):** 9 `[ThreadStatic]` (ClosureArena x4, PolicySystem.t_decisions, ToolingPlan._temp, EffortScratch._forThread, IndustryMath.t_items/t_sorted) — потокозависимые временные буферы; строка DEBT-0070 создана; каждое исключение в тесте ссылается на неё. Константные массивы заменены на ImmutableArray (раунд 4).
 
 **Мутация межмирной утечки (раунд 4, копия `.../scratchpad/mut125`, не реальный src).** В `SliceWorld`: `private static SliceStreams? s_firstStreams;` и `Streams = s_firstStreams ??= SliceStreams.Create(config);` (кэш на время жизни процесса по первому миру). Один мир в своём процессе (seed 1, 2, 4, каждый отдельным запуском): ПРОХОДИТ (эталон совпал). Парные тесты (16): 14 падают, в т.ч. все 12 парных, напр. "TwoWorlds_StepInTurn_KeepTheirOwnHashes(seedA: 3, seedB: 4, threads: 2)": "A seed 3, 2 threads: digest dd295a0d..., pinned f6e47b9a..." (мир A получил потоки первого мира). Два прогона одиночных миров в одном процессе после первого тоже падают (seed 2, seed 4), т.к. кэш уже занят.
+
+**Раунд 5.** Allow-list общих типов теперь точный закрытый список: ImmutableArray/List/Queue/Stack, ValueTuple, Nullable; Immutable/Frozen словари и множества нарушают (мутанты `ImmDict`, `SetOfInt`). Тест двух миров получил случаи с Threads = 1 (3 пары + 2 одиночных).
+**Мутация буфера тика (копия `mut125`, не реальный src):** снят `[ThreadStatic]` с `IndustryMath.t_items/t_sorted`, Threads = 1. Один мир в своём процессе (seed 1 и seed 4): ПРОХОДИТ. Поочерёдно в одном потоке (2 мира): проходит (5 из 8 случаев с threads 1 зелёные). Одновременно два мира, каждый Threads = 1: ПАДАЕТ 3 из 3 ("TickComputeException : System 400 failed in Compute, chunk 0, tick 153: Process 39 is twice in the prc_set" и "System 300 ... tick 334: Process 54 is twice in the prc_set").
 
 **Не проверено:** полный набор тестов и `verify.py`; мутации в реальном `src/`.
 

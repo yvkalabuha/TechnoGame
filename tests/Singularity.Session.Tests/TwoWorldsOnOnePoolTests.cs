@@ -6,11 +6,11 @@ namespace Singularity.Session.Tests;
 
 /// <summary>
 /// TASK-0125 (review 2026-11-19, A6): two independent worlds share the process and the .NET thread pool. Each world's monthly hashes must
-/// equal the PINNED reference of its seed, whether the worlds are stepped in turn or at the same time, with 2 and 4 threads each.
+/// equal the PINNED reference of its seed, whether the worlds are stepped in turn or at the same time, with 1, 2 and 4 threads each.
 /// A shared static buffer (or a thread-bound one that carries world data) breaks this.
 /// The reference is pinned, not recomputed in this process: a process-lifetime leak (a static cache of the first world's config) would
 /// poison a reference run in the same process as well. The digest is SHA-256 of the 37 monthly hashes joined by '\n'; it is the same
-/// for 2 and 4 threads (L2). Re-record it with the goldens on a schema train (a failure prints the actual digest and all hashes).
+/// for 1, 2 and 4 threads (L2). Re-record it with the goldens on a schema train (a failure prints the actual digest and all hashes).
 /// </summary>
 public class TwoWorldsOnOnePoolTests
 {
@@ -21,7 +21,7 @@ public class TwoWorldsOnOnePoolTests
         get
         {
             var d = new TheoryData<ulong, ulong, int>();
-            foreach (int threads in new[] { 2, 4 })
+            foreach (int threads in new[] { 1, 2, 4 })
             {
                 d.Add(1, 2, threads);
                 d.Add(3, 4, threads);
@@ -55,6 +55,8 @@ public class TwoWorldsOnOnePoolTests
     }
 
     [Theory]
+    [InlineData(1UL, 1)]
+    [InlineData(4UL, 1)]
     [InlineData(1UL, 2)]
     [InlineData(2UL, 2)]
     [InlineData(4UL, 4)]
