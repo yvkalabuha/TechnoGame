@@ -6,16 +6,19 @@ namespace Singularity.Kernel;
 
 /// <summary>
 /// In-memory snapshot of a table (ADR-0013 v0: binary SoA + header). Not a player save file: no versions to migrate, no compression.
-/// Layout, all little-endian: magic "SGTS", int32 format (0), int32 schema_version, int32 n_rows, int32 n_columns, int64 tick,
-/// 32 bytes schema fingerprint, then the <c>Current</c> values of every column in registration order (int64 or int32 each).
+/// Layout, all little-endian: magic "SGTS", int32 format (1), int32 schema_version, int32 n_rows, int32 n_columns, int64 tick,
+/// 32 bytes schema fingerprint, 32 bytes state hash (the SHA-256 of <see cref="StateHash"/>: schema version, rows, the column values), then the <c>Current</c> values of every column in registration order (int64 or int32 each).
 /// The fingerprint covers column names, types and row count, so a snapshot of another layout is refused even under the same schema version.
 /// </summary>
 public static class TableSnapshot
 {
-    private const int Format = 0;
+    private const int Format = 1;
     private const int FingerprintBytes = 32;
     private static ReadOnlySpan<byte> Magic => "SGTS"u8;
-    private const int HeaderBytes = 4 + 4 + 4 + 4 + 4 + 8 + FingerprintBytes;
+    private const int StateHashOffset = 4 + 4 + 4 + 4 + 4 + 8 + FingerprintBytes;
+
+    /// <summary>Size of the header in bytes; the column values follow.</summary>
+    public const int HeaderBytes = StateHashOffset + 32;
 
     /// <summary>SHA-256 of the column names and types in table order and the row count.</summary>
     public static byte[] Fingerprint(Table table)
@@ -51,7 +54,31 @@ public static class TableSnapshot
     {
         if (snapshot.Length != ExpectedBytes(table))
             throw new InvalidDataException($"Snapshot is {snapshot.Length} bytes, the table needs {ExpectedBytes(table)}.");
-        return ValidateHeader(table, schemaVersion, snapshot[..HeaderBytes]);
+        long tick = ValidateHeader(table, schemaVersion, snapshot[..HeaderBytes]);
+        VerifyBody(table, schemaVersion, snapshot[..HeaderBytes], snapshot[HeaderBytes..]);
+        return tick;
+    }
+
+    /// <summary>The state hash a snapshot carries (hex, the form of <see cref="StateHash.ComputeHex"/>); call <see cref="Inspect"/> first.</summary>
+    public static string StoredStateHash(ReadOnlySpan<byte> snapshot) =>
+        Convert.ToHexStringLower(snapshot.Slice(StateHashOffset, 32));
+
+    private static byte[] HashOfBody(int schemaVersion, int rows, ReadOnlySpan<byte> body)
+    {
+        // The same bytes as StateHash.Compute: header (schema version, rows), then every column's values little-endian in order.
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        Span<byte> head = stackalloc byte[sizeof(int) + sizeof(int)];
+        BinaryPrimitives.WriteInt32LittleEndian(head, schemaVersion);
+        BinaryPrimitives.WriteInt32LittleEndian(head[4..], rows);
+        hash.AppendData(head);
+        hash.AppendData(body);
+        return hash.GetHashAndReset();
+    }
+
+    private static void VerifyBody(Table table, int schemaVersion, ReadOnlySpan<byte> header, ReadOnlySpan<byte> body)
+    {
+        if (!HashOfBody(schemaVersion, table.RowCount, body).AsSpan().SequenceEqual(header.Slice(StateHashOffset, 32)))
+            throw new InvalidDataException("Snapshot state hash differs from its column values.");
     }
 
     /// <summary>Writes the <c>Current</c> state of every column, the schema version and the tick. Outside a tick only.</summary>
@@ -59,7 +86,7 @@ public static class TableSnapshot
     {
         ArgumentNullException.ThrowIfNull(output);
         ArgumentOutOfRangeException.ThrowIfNegative(tick);
-        if (table.InTick)
+        if (table.InTick || table.RunActive)
             throw new InvalidOperationException("A snapshot is taken between ticks.");
         int columns = table.Columns.Count;
         var buffer = new byte[HeaderBytes + BodyBytes(table)];
@@ -79,6 +106,7 @@ public static class TableSnapshot
             c.WriteCurrentTo(b.Slice(at, size));
             at += size;
         }
+        HashOfBody(schemaVersion, table.RowCount, b[HeaderBytes..]).CopyTo(b[StateHashOffset..]);
         output.Write(buffer);
     }
 
@@ -89,7 +117,7 @@ public static class TableSnapshot
     public static long Read(Table table, int schemaVersion, Stream input)
     {
         ArgumentNullException.ThrowIfNull(input);
-        if (table.InTick)
+        if (table.InTick || table.RunActive)
             throw new InvalidOperationException("A snapshot is loaded between ticks.");
         var header = new byte[HeaderBytes];
         input.ReadExactly(header);
@@ -99,6 +127,7 @@ public static class TableSnapshot
         input.ReadExactly(body);
         if (input.ReadByte() >= 0)
             throw new InvalidDataException("Snapshot has data after the last column.");
+        VerifyBody(table, schemaVersion, header, body);
         int at = 0;
         for (int i = 0; i < table.Columns.Count; i++)
         {

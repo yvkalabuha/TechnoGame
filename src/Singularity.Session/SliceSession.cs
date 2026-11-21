@@ -207,11 +207,15 @@ public sealed partial class SliceSession
         return session;
     }
 
-    private const int SnapshotFormat = 0;
+    // 1: the identity field now holds the data hash as well as the configuration; the table carries its state hash (format 1).
+    private const int SnapshotFormat = 1;
     private static ReadOnlySpan<byte> SnapshotMagic => "SGSS"u8;
 
     /// <summary>Upper bound of a saved command log (journal or queue): a corrupt length must not allocate more.</summary>
     internal const int MaxSnapshotLogBytes = 64 << 20;
+
+    /// <summary>Test seam: the bound of a saved log block that <see cref="WriteSnapshot"/> and <see cref="LoadSnapshot"/> enforce.</summary>
+    internal int SnapshotLogLimit { get; set; } = MaxSnapshotLogBytes;
 
     /// <summary>The last tick a snapshot may name (about 8200 years of days): keeps every date and due-tick calculation inside its range.</summary>
     internal const long MaxSnapshotTick = 3_000_000;
@@ -232,8 +236,13 @@ public sealed partial class SliceSession
         buffer.Write(SnapshotIdentity());
         WriteInt(buffer, checked((int)table.Length));
         table.WriteTo(buffer);
-        WriteBlock(buffer, System.Text.Encoding.UTF8.GetBytes(CommandCodec.EncodeLog(_journal)));
-        WriteBlock(buffer, System.Text.Encoding.UTF8.GetBytes(CommandCodec.EncodeLog(_pending)));
+        byte[] journalBytes = System.Text.Encoding.UTF8.GetBytes(CommandCodec.EncodeLog(_journal));
+        byte[] pendingBytes = System.Text.Encoding.UTF8.GetBytes(CommandCodec.EncodeLog(_pending));
+        // What Load would refuse must not be written.
+        if (journalBytes.Length > SnapshotLogLimit || pendingBytes.Length > SnapshotLogLimit)
+            throw new InvalidOperationException($"The command journal ({journalBytes.Length} bytes) or queue ({pendingBytes.Length} bytes) is larger than a snapshot may hold ({SnapshotLogLimit}).");
+        WriteBlock(buffer, journalBytes);
+        WriteBlock(buffer, pendingBytes);
         buffer.WriteTo(output);
     }
 
@@ -335,8 +344,8 @@ public sealed partial class SliceSession
             throw new InvalidDataException($"Snapshot table length {tableLength} differs from the {expected} bytes this world needs.");
         var tableBytes = new byte[tableLength];
         input.ReadExactly(tableBytes);
-        byte[] journalBytes = ReadBlock(input, MaxSnapshotLogBytes, "journal");
-        byte[] pendingBytes = ReadBlock(input, MaxSnapshotLogBytes, "queue");
+        byte[] journalBytes = ReadBlock(input, SnapshotLogLimit, "journal");
+        byte[] pendingBytes = ReadBlock(input, SnapshotLogLimit, "queue");
         if (input.ReadByte() >= 0)
             throw new InvalidDataException("Session snapshot has data after the queue.");
 
@@ -370,6 +379,9 @@ public sealed partial class SliceSession
             // The last monthly step ran on day 1 of the month of the last completed tick.
             month = tick == 0 ? -1 : _world.Calendar.MonthIndex(tick - 1);
             hash = ComputeHash();
+            // The state as loaded must hash to what the snapshot carries (ADR-0013 п. 8); a mismatch rolls back.
+            if (hash != TableSnapshot.StoredStateHash(tableBytes))
+                throw new InvalidDataException("The loaded state does not hash to the state hash of the snapshot.");
             view = ViewBuilder.Snapshot(_world, Tick, hash, month, null, null);
         }
         catch

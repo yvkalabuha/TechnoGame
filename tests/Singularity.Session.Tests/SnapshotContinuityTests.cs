@@ -304,6 +304,16 @@ public class SnapshotContinuityTests
         untouched.Check(dest, cfg);
     }
 
+    /// <summary>Writes the state hash of the (patched) column values into the table header, so only the checks after the hash can refuse it.</summary>
+    private static byte[] Rehash(byte[] snap, int tableAt, SliceSession source)
+    {
+        using var hash = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
+        hash.AppendData(BitConverter.GetBytes(SliceWorld.SchemaVersion));
+        hash.AppendData(BitConverter.GetBytes(source.World.Table.RowCount));
+        hash.AppendData(snap.AsSpan(tableAt + TableSnapshot.HeaderBytes, TableBytes(source) - TableSnapshot.HeaderBytes));
+        return Patch(snap, tableAt + TableSnapshot.HeaderBytes - 32, hash.GetHashAndReset());
+    }
+
     private static byte[] Patch(byte[] snap, int offset, byte[] value)
     {
         byte[] copy = (byte[])snap.Clone();
@@ -358,6 +368,8 @@ public class SnapshotContinuityTests
             ["journal length huge"] = Patch(snap, journalLenAt, BitConverter.GetBytes(int.MaxValue)),
             ["journal length over the bound"] = Patch(snap, journalLenAt, BitConverter.GetBytes(SliceSession.MaxSnapshotLogBytes + 1)),
             ["table schema version"] = Patch(snap, tableAt + 8, BitConverter.GetBytes(SliceWorld.SchemaVersion + 1)),
+            ["table payload byte flipped (pol.budget)"] = Patch(snap, tableAt + TableSnapshot.HeaderBytes + ColumnOffset(src, "pol.budget"), [(byte)(snap[tableAt + TableSnapshot.HeaderBytes + ColumnOffset(src, "pol.budget")] ^ 1)]),
+            ["table state hash"] = Patch(snap, tableAt + TableSnapshot.HeaderBytes - 32, [(byte)(snap[tableAt + TableSnapshot.HeaderBytes - 32] ^ 1)]),
             ["table fingerprint"] = Patch(snap, tableAt + 28, [(byte)(snap[tableAt + 28] ^ 1)]),
             ["table negative tick"] = Patch(snap, tableAt + 20, BitConverter.GetBytes(-1L)),
             ["tick beyond the calendar"] = Patch(snap, tableAt + 20, BitConverter.GetBytes(SliceSession.MaxSnapshotTick + 1)),
@@ -383,6 +395,15 @@ public class SnapshotContinuityTests
                 throw new Xunit.Sdk.XunitException($"case '{name}': {e.Message}");
             }
         }
+    }
+
+    private static int ColumnOffset(SliceSession s, string name)
+    {
+        Table t = s.World.Table;
+        int offset = 0;
+        for (int i = 0; t.Columns[i].Name != name; i++)
+            offset += t.Columns[i].Length * (t.Columns[i] is LongColumn ? sizeof(long) : sizeof(int));
+        return offset;
     }
 
     private static string ReadLog(byte[] snap, SliceSession source, int which)
@@ -486,16 +507,39 @@ public class SnapshotContinuityTests
         src.StepThroughMonth(6);
         byte[] snap = Save(src);
         Table t = src.World.Table;
-        int offset = PrefixBytes + 4 + 60;
+        int tableAt = PrefixBytes + 4;
+        int offset = tableAt + TableSnapshot.HeaderBytes;
         for (int i = 0; t.Columns[i].Name != "run.seed.events"; i++)
             offset += t.Columns[i].Length * (t.Columns[i] is LongColumn ? sizeof(long) : sizeof(int));
-        snap = Patch(snap, offset, [(byte)(snap[offset] ^ 1)]);
+        snap = Rehash(Patch(snap, offset, [(byte)(snap[offset] ^ 1)]), tableAt, src);
 
         SliceSession dest = SliceTestData.Create(PlayerCfg);
         Untouched untouched = Untouched.Of(dest);
         var e = Assert.Throws<InvalidDataException>(() => dest.LoadSnapshot(new MemoryStream(snap)));
         Assert.Contains("run.seed.events", e.Message);
         untouched.Check(dest, PlayerCfg);
+    }
+
+    [Fact]
+    public void WriteSnapshot_Refuses_WhatLoadWouldRefuse_ForTheLogBlocks()
+    {
+        SliceSession src = WithPending(out _);
+        src.SnapshotLogLimit = 16;
+        Assert.Throws<InvalidOperationException>(() => Save(src));
+        src.SnapshotLogLimit = SliceSession.MaxSnapshotLogBytes;
+        byte[] ok = Save(src);
+        SliceSession dest = SliceTestData.Create(PlayerCfg);
+        dest.SnapshotLogLimit = 16;
+        Assert.Throws<InvalidDataException>(() => dest.LoadSnapshot(new MemoryStream(ok)));
+    }
+
+    [Fact]
+    public void SaveLoadSave_GivesTheSameBytes_IncludingJournalAndQueue()
+    {
+        SliceSession src = WithPending(out _);
+        byte[] first = Save(src);
+        SliceSession b = Load(PlayerCfg, first);
+        Assert.Equal(first, Save(b));
     }
 
     [Fact]

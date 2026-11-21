@@ -242,4 +242,122 @@ public class TableSnapshotTests
         r.RunTick();
         Assert.False(r.LastTickRan);
     }
+
+    [Fact]
+    public void StateHashInTheHeader_IsTheStateHashOfTheTable_AndAFlippedPayloadByteIsRefused()
+    {
+        Table src = Build(3);
+        src.GetLong("a").Load([5, 6, 7]);
+        byte[] bytes = Take(src, 4);
+        HashAssert.Equal(StateHash.ComputeHex(src, Schema), TableSnapshot.StoredStateHash(bytes));
+
+        byte[] flipped = (byte[])bytes.Clone();
+        flipped[TableSnapshot.HeaderBytes] ^= 1;
+        Table dst = Build(3);
+        dst.GetLong("a").Load([9, 9, 9]);
+        Assert.Throws<InvalidDataException>(() => TableSnapshot.Read(dst, Schema, new MemoryStream(flipped)));
+        Assert.Throws<InvalidDataException>(() => TableSnapshot.Inspect(dst, Schema, flipped));
+        Assert.Equal([9L, 9L, 9L], dst.GetLong("a").Current.ToArray());   // refused before the first column was replaced
+    }
+
+    [Fact]
+    public void SaveLoadSave_GivesTheSameBytes()
+    {
+        Table src = Build(3);
+        src.GetLong("a").Load([5, -6, 7]);
+        src.GetInt("b").Load([1, 2, 3]);
+        byte[] first = Take(src, 12);
+        Table dst = Build(3);
+        long tick = TableSnapshot.Read(dst, Schema, new MemoryStream(first));
+        Assert.Equal(first, Take(dst, tick));
+    }
+
+    // ---- the runner: restore and snapshot calls are refused for the whole tick, post included ----
+
+    private sealed class PostCaller : ITickSystem
+    {
+        public Action? OnPost;
+        private readonly LongColumn _n;
+        public PostCaller(Table t) => _n = t.AddLong("n");
+        public int SystemId => 1;
+        public void Compute(in TickContext ctx, int chunk, int rowStart, int rowEnd) => _n.Next[rowStart]++;
+        public void Merge(in TickContext ctx, int chunkCount) { }
+        public void Post(in TickContext ctx) => OnPost?.Invoke();
+    }
+
+    [Fact]
+    public void RestoreAndRead_AreRefusedFromPost()
+    {
+        var t = new Table(1);
+        var system = new PostCaller(t);
+        var runner = new TickRunner(t, 1, [system], 1, 1);
+        byte[] bytes = Take(t, 0);
+        Exception? restore = null, read = null, write = null;
+        system.OnPost = () =>
+        {
+            restore = Record(() => runner.Restore(3));
+            read = Record(() => TableSnapshot.Read(t, Schema, new MemoryStream(bytes)));
+            write = Record(() => Take(t, 1));
+        };
+        runner.RunTick();
+        Assert.IsType<InvalidOperationException>(restore);
+        Assert.IsType<InvalidOperationException>(read);
+        Assert.IsType<InvalidOperationException>(write);
+        Assert.Equal(1, runner.Tick);
+        // Between ticks they work again (the flag is cleared).
+        system.OnPost = null;
+        runner.Restore(5);
+        Assert.Equal(5, runner.Tick);
+    }
+
+    private static Exception? Record(Action a)
+    {
+        try
+        {
+            a();
+            return null;
+        }
+        catch (Exception e)
+        {
+            return e;
+        }
+    }
+
+    private sealed class DailyAndMonthly(Table t, Cadence cadence, string column) : ITickSystem
+    {
+        private readonly LongColumn _n = t.AddLong(column);
+        public int SystemId => cadence == Cadence.Daily ? 1 : 2;
+        public Cadence Cadence => cadence;
+        public void Compute(in TickContext ctx, int chunk, int rowStart, int rowEnd) => _n.Next[rowStart]++;
+        public void Merge(in TickContext ctx, int chunkCount) { }
+        public void Post(in TickContext ctx) { }
+    }
+
+    [Fact]
+    public void Restore_OfAHugeTick_ThrowsAndChangesNothing()
+    {
+        static (Table, TickRunner) New()
+        {
+            var t = new Table(1);
+            var r = new TickRunner(t, 1, [new DailyAndMonthly(t, Cadence.Daily, "d"), new DailyAndMonthly(t, Cadence.Monthly, "m")], 1, 1,
+                new TickCalendar(new CivilDate(1945, 1, 1)));
+            return (t, r);
+        }
+        var (ta, ra) = New();
+        var (tb, rb) = New();
+        for (int i = 0; i < 40; i++)
+        {
+            ra.RunTick();
+            rb.RunTick();
+        }
+        Assert.ThrowsAny<Exception>(() => rb.Restore(long.MaxValue));
+        Assert.Equal(40, rb.Tick);
+        for (int i = 0; i < 70; i++)
+        {
+            ra.RunTick();
+            rb.RunTick();
+        }
+        HashAssert.Equal(StateHash.ComputeHex(ta, 1), StateHash.ComputeHex(tb, 1));
+        Assert.Equal(ta.GetLong("m").Current[0], tb.GetLong("m").Current[0]);
+    }
 }

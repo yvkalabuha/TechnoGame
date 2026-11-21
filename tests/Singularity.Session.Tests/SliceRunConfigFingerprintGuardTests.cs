@@ -74,7 +74,8 @@ public class SliceRunConfigFingerprintGuardTests
             {
                 foreach (PropertyInfo q in p.PropertyType.GetProperties().Where(Settable))
                 {
-                    object inner = Clone(current!);
+                    // A fresh copy per property: GetValue boxes a struct anew each time, so no axis sees another axis's change.
+                    object inner = Clone(p.GetValue(baseline)!);
                     q.SetValue(inner, Changed(q.PropertyType, q.GetValue(inner)));
                     var v = (SliceRunConfig)Clone(baseline);
                     p.SetValue(v, inner);
