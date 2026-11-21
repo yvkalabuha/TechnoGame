@@ -25,6 +25,15 @@ public sealed class Table
     /// <summary>True from the start of a tick to its swap; <c>Column.Next</c> works only then.</summary>
     internal bool InTick => Volatile.Read(ref _inTick);
 
+    private int _runActive;
+
+    /// <summary>True for the whole of <see cref="TickRunner.RunTick"/>, post included: the state is not settled, so no snapshot is loaded or taken.</summary>
+    internal bool RunActive
+    {
+        get => Volatile.Read(ref _runActive) != 0;
+        set => Volatile.Write(ref _runActive, value ? 1 : 0);
+    }
+
     /// <summary>
     /// Test switch: copy every column at the start of each non-empty tick (the pre-ADR-0017 behaviour) instead of copy-on-write.
     /// The state and its hash must not depend on it.
