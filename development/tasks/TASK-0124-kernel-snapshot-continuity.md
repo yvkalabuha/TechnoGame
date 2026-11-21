@@ -1,7 +1,7 @@
 ---
 id: TASK-0124
 title: "Kernel table snapshot and save-load-continue continuity test (A4)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: [ADR-0013, ADR-0014, ADR-0017]
 approved_by: orchestrator
 approved_at: 2026-11-21
 approval_ref: "PLAN.md этап 3, шаг 3.2; project-review-2026-11-19 A4 (light)"
+review_ref: "reviewer: APPROVE 2760ca7 (rounds 1-7); codex accept 2760ca74, 3 findings to DEBT-0072; landed a86303b"
 created: 2026-11-21
 ---
 
