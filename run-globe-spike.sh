@@ -39,7 +39,7 @@ echo "Building C# scripts..."
 "$GODOT" --headless --path . --build-solutions --quit
 
 if [[ "${1:-}" == "--shots" ]]; then
-  "$GODOT" --path . -- --shots
+  "$GODOT" --path . -- "$@"
 elif [[ "${1:-}" == "--bench" ]]; then
   "$GODOT" --path . -- --bench --out bench-out
   echo "Benchmark output: $PROJECT/bench-out"
