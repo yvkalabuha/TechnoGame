@@ -1,7 +1,7 @@
 ---
 id: TASK-0123
 title: "Lab measurement of budget rule variants: workforce, alloy and limiter columns, manifest, analysis"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M05
 agent: simulation-engineer  # ответственный агент
@@ -13,6 +13,7 @@ related: [TASK-0122]
 approved_by: orchestrator  # owner | orchestrator (orchestrator — только level: light)
 approved_at: 2026-11-19
 approval_ref: "#430, O-025"
+review_ref: "reviewer: APPROVE 2939b80 (step 1) and fdea2b7 (series, report); codex accept c5604833 (step 1, with TASK-0122); land.py ran no second review for the step 2 diff; landed f570000 and ffe8d0f"
 created: 2026-11-19
 ---
 

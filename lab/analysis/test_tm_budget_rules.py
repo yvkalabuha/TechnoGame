@@ -130,6 +130,47 @@ class Validity(unittest.TestCase):
         self.assertIsNotNone(T.b1_problem(1, 396, 394))
         self.assertIsNone(T.b1_problem(1, 396, None))
 
+    def test_a_seed_without_a_successful_b1_run_reports_validity_failed(self):
+        # Codex r3 on TASK-0122 (tm_budget_rules.py:504): both B1 runs of seed 1 failed while NOW succeeded; the analyzer raised KeyError
+        # before printing its problems. Synthetic runs stand in for analyse_run; their budgets are the exact replica, so only the gap fails.
+        import contextlib
+        import io
+        import json
+        import tempfile
+        g = T.scenario_growth(REPO)
+        tm = {1: T.TM2030_GOLDEN[1], 2: T.TM2030_GOLDEN[2]}
+        with tempfile.TemporaryDirectory() as root:
+            with open(os.path.join(root, "matrix.json"), "w") as f:
+                json.dump({"valid": False, "invalid_reasons": ["run B1-s1-t1 failed"]}, f)
+            with open(os.path.join(root, "runs.csv"), "w") as f:
+                f.write("run,series,seed,threads,status,golden_hash\n")
+                for series in T.SERIES:
+                    for sd in (1, 2):
+                        for th in (1, 2):
+                            bad = series == "B1" and sd == 1
+                            golden = tm[sd] if series == "NOW" else f"{series}{sd}"
+                            f.write(f"{series}-s{sd}-t{th},{series},{sd},{th},{'failed' if bad else 'ok'},{'' if bad else golden}\n")
+
+            def fake(run_dir):
+                series, sd, _ = os.path.basename(run_dir).split("-")
+                sd = int(sd[1:])
+                return dict(seed=sd, months=T.MONTHS, golden=tm[sd] if series == "NOW" else f"{series}{sd}", data_hash="d", manifest_hash="m",
+                            core="c", dirty=False, budget=T.replica(series, B0, g, T.MONTHS), dir=run_dir)
+
+            saved, saved_argv = T.analyse_run, sys.argv
+            T.analyse_run, sys.argv = fake, ["tm_budget_rules.py", root, "--pilot"]
+            out = io.StringIO()
+            try:
+                with contextlib.redirect_stdout(out):
+                    code = T.main()
+            finally:
+                T.analyse_run, sys.argv = saved, saved_argv
+        self.assertEqual(code, 1)
+        text = out.getvalue()
+        self.assertIn("VALIDITY: FAILED", text)
+        self.assertIn("cannot pair the series with NOW (no successful threads-1 run): {'B1': [1]}", text)
+        self.assertIn("runs not ok", text)
+
 
 if __name__ == "__main__":
     unittest.main()

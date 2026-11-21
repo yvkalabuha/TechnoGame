@@ -1,7 +1,7 @@
 ---
 id: TASK-0117
 title: "Client UI scale policy: text never below the A1 floor at 1280x720"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M05
 agent: developer         # ответственный агент

@@ -132,13 +132,15 @@
 | [TASK-0114](../development/tasks/TASK-0114-northern-algeria-regions.md) | DONE | Northern Algeria regions for the 1945 map (DEBT-0058) | MS-M1 |
 | [TASK-0115](../development/tasks/TASK-0115-end-to-end-project-handle.md) | DONE | End-to-end project handle through Session, AI, UI and command log v2 (DEBT-0052) | MS-M1 |
 | [TASK-0116](../development/tasks/TASK-0116-ci-green.md) | DONE | CI green on all jobs: Lab tests off Linux, llm_worker pilot contracts | MS-M0 |
-| [TASK-0117](../development/tasks/TASK-0117-client-ui-scale-policy.md) | IN_PROGRESS | Client UI scale policy: text never below the A1 floor at 1280x720 | MS-M05 |
+| [TASK-0117](../development/tasks/TASK-0117-client-ui-scale-policy.md) | REVIEW | Client UI scale policy: text never below the A1 floor at 1280x720 | MS-M05 |
 | [TASK-0118](../development/tasks/TASK-0118-codex-catchup-findings.md) | PROPOSED | Codex catch-up findings on landed core tasks (TASK-0099, 0103, 0107, 0110) | MS-M05 |
 | [TASK-0119](../development/tasks/TASK-0119-instrument-view-fields.md) | PROPOSED | Instrument data fields in the Session view: alloy coverage, research progress | MS-M05 |
 | [TASK-0120](../development/tasks/TASK-0120-core-command-verdicts.md) | PROPOSED | Core emits a per-command verdict; commands keyed by handle | MS-M05 |
 | [TASK-0121](../development/tasks/TASK-0121-slice-horizon-2030-train-1.md) | DONE | Slice horizon to 2030, train 1: Years = 86, q mask in 62-bit blocks, horizon fixture | MS-M05 |
 | [TASK-0122](../development/tasks/TASK-0122-budget-rule-variants-switch.md) | DONE | Budget rule variants behind a run switch for the Lab measurement (NOW, A, B1, B2) | MS-M05 |
-| [TASK-0123](../development/tasks/TASK-0123-budget-rule-lab-measurement.md) | IN_PROGRESS | Lab measurement of budget rule variants: workforce, alloy and limiter columns, manifest, analysis | MS-M05 |
+| [TASK-0123](../development/tasks/TASK-0123-budget-rule-lab-measurement.md) | DONE | Lab measurement of budget rule variants: workforce, alloy and limiter columns, manifest, analysis | MS-M05 |
+| [TASK-0124](../development/tasks/TASK-0124-kernel-snapshot-continuity.md) | IN_PROGRESS | Kernel table snapshot and save-load-continue continuity test (A4) | MS-M1 |
+| [TASK-0125](../development/tasks/TASK-0125-no-mutable-statics-two-worlds.md) | IN_PROGRESS | No mutable static fields in Kernel, Core, Session; two worlds on one thread pool (A6) | MS-M1 |
 
 ## Гипотезы
 

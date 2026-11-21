@@ -194,7 +194,8 @@ def line_starts(lines):
 
 
 def analyse_run(run_dir):
-    info = json.load(open(os.path.join(run_dir, "run.json")))
+    with open(os.path.join(run_dir, "run.json")) as f:
+        info = json.load(f)
     months = int(info["model_info"]["months"])
     ay = read(run_dir, "actor_year")
     key, volume = {}, {}
@@ -436,8 +437,10 @@ def main():
     root = sys.argv[1]
     repo = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     growth = scenario_growth(repo)
-    runs_csv = list(csv.DictReader(open(os.path.join(root, "runs.csv"))))
-    matrix = json.load(open(os.path.join(root, "matrix.json")))
+    with open(os.path.join(root, "runs.csv"), newline="") as f:
+        runs_csv = list(csv.DictReader(f))
+    with open(os.path.join(root, "matrix.json")) as f:
+        matrix = json.load(f)
     problems = []
     pilot = "--pilot" in sys.argv[2:]
     # A pilot (matrix --seeds 1) is a partial matrix by definition; the series itself must be a valid matrix (ADR-0008 п. 6).
@@ -471,6 +474,12 @@ def main():
         for x in runs.get(s_name, {}).values():
             if x["months"] != MONTHS:
                 problems.append(f"{s_name} seed {x['seed']}: months {x['months']}")
+    # Codex r3 on TASK-0122: every later section pairs each series with NOW by seed. A series without a successful threads-1 run for a NOW seed
+    # (or no NOW at all) cannot be paired: report the recorded problems and stop instead of indexing a missing run.
+    unpaired = unpaired_seeds(runs, seeds)
+    if unpaired:
+        problems.append(f"cannot pair the series with NOW (no successful threads-1 run): {unpaired}")
+        return report_validity(problems)
     one = next(iter(runs["NOW"].values()))
     print(f"matrix: valid={matrix.get('valid')} invalid_reasons={matrix.get('invalid_reasons')} golden_set_hash={matrix.get('golden_set_hash')}")
     print(f"core_commit={one['core']} dirty={one['dirty']} data_hash={one['data_hash']} manifest_hash={one['manifest_hash']} seeds={seeds}")
@@ -557,6 +566,18 @@ def main():
         print(f"- {s_name}: {'yes: ' + '; '.join(h) if h else 'no'}")
     if len(seeds) < MIN_SEEDS:
         print(f"\nNOTE: {len(seeds)} seed(s): the criteria are computed but the decision needs ≥ {MIN_SEEDS} seeds (§7).")
+    return report_validity(problems)
+
+
+def unpaired_seeds(runs, seeds):
+    """{series: [NOW seeds without a successful threads-1 run of that series]}; {"NOW": []} when NOW has no run at all."""
+    if not seeds:
+        return {"NOW": []}
+    out = {s: [sd for sd in seeds if sd not in runs.get(s, {})] for s in SERIES}
+    return {s: v for s, v in out.items() if v}
+
+
+def report_validity(problems):
     print("\nVALIDITY: " + ("OK" if not problems else "FAILED"))
     for p in problems:
         print(f"- {p}")
