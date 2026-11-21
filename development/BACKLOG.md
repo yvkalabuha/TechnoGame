@@ -139,6 +139,8 @@
 | [TASK-0121](../development/tasks/TASK-0121-slice-horizon-2030-train-1.md) | DONE | Slice horizon to 2030, train 1: Years = 86, q mask in 62-bit blocks, horizon fixture | MS-M05 |
 | [TASK-0122](../development/tasks/TASK-0122-budget-rule-variants-switch.md) | DONE | Budget rule variants behind a run switch for the Lab measurement (NOW, A, B1, B2) | MS-M05 |
 | [TASK-0123](../development/tasks/TASK-0123-budget-rule-lab-measurement.md) | DONE | Lab measurement of budget rule variants: workforce, alloy and limiter columns, manifest, analysis | MS-M05 |
+| [TASK-0124](../development/tasks/TASK-0124-kernel-snapshot-continuity.md) | IN_PROGRESS | Kernel table snapshot and save-load-continue continuity test (A4) | MS-M1 |
+| [TASK-0125](../development/tasks/TASK-0125-no-mutable-statics-two-worlds.md) | IN_PROGRESS | No mutable static fields in Kernel, Core, Session; two worlds on one thread pool (A6) | MS-M1 |
 
 ## Гипотезы
 
