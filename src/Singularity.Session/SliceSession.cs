@@ -207,8 +207,9 @@ public sealed partial class SliceSession
         return session;
     }
 
-    // 1: the identity field now holds the data hash as well as the configuration; the table carries its state hash (format 1).
-    private const int SnapshotFormat = 1;
+    // 1: the identity field holds the data hash as well as the configuration; the table carries its state hash.
+    // 2: a SHA-256 digest of every byte before it closes the snapshot (and the table snapshot inside carries its own).
+    private const int SnapshotFormat = 2;
     private static ReadOnlySpan<byte> SnapshotMagic => "SGSS"u8;
 
     /// <summary>Upper bound of a saved command log (journal or queue): a corrupt length must not allocate more.</summary>
@@ -243,7 +244,9 @@ public sealed partial class SliceSession
             throw new InvalidOperationException($"The command journal ({journalBytes.Length} bytes) or queue ({pendingBytes.Length} bytes) is larger than a snapshot may hold ({SnapshotLogLimit}).");
         WriteBlock(buffer, journalBytes);
         WriteBlock(buffer, pendingBytes);
-        buffer.WriteTo(output);
+        byte[] content = buffer.ToArray();
+        output.Write(content);
+        output.Write(System.Security.Cryptography.SHA256.HashData(content));
     }
 
     /// <summary>
@@ -261,6 +264,20 @@ public sealed partial class SliceSession
             System.Buffers.Binary.BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(sizeof(int) + i * sizeof(char)), data[i]);
         hash.AppendData(bytes);
         return hash.GetHashAndReset();
+    }
+
+    private static byte[] ReadBounded(Stream s, long max)
+    {
+        using var m = new MemoryStream();
+        var chunk = new byte[81920];
+        int n;
+        while ((n = s.Read(chunk, 0, (int)Math.Min(chunk.Length, max + 1 - m.Length))) > 0)
+        {
+            m.Write(chunk, 0, n);
+            if (m.Length > max)
+                throw new InvalidDataException($"Session snapshot is longer than the {max} bytes this world can hold.");
+        }
+        return m.ToArray();
     }
 
     private static void WriteInt(Stream s, int v)
@@ -320,13 +337,19 @@ public sealed partial class SliceSession
     /// is read and checked first (a failure there changes nothing); then the table is replaced under one rollback, so any failure leaves the session
     /// as it was (state, clock, journal, queue, view).
     /// </summary>
-    internal void LoadSnapshot(Stream input)
+    internal void LoadSnapshot(Stream source)
     {
         CheckOwner();
         if (Tick != 0 || _journal.Count != 0 || _pending.Count != 0 || _tracked.Count != 0 || _outcomes.Count != 0)
             throw new InvalidOperationException("A snapshot is loaded into a new session only.");
 
-        // Phase 1: parse and validate, no mutation.
+        // Phase 1: parse and validate, no mutation. The digest over every byte before it is checked first: a flipped byte anywhere is refused
+        // before any field is parsed. The read is bounded by what a snapshot of this world can hold at most.
+        long most = (long)SnapshotMagic.Length + 4 + 32 + 4 + TableSnapshot.ExpectedBytes(_world.Table) + 2 * (4L + SnapshotLogLimit) + 32;
+        byte[] all = ReadBounded(source, most);
+        if (all.Length < 32 || !System.Security.Cryptography.SHA256.HashData(all.AsSpan(0, all.Length - 32)).AsSpan().SequenceEqual(all.AsSpan(all.Length - 32)))
+            throw new InvalidDataException("Session snapshot digest does not match its bytes.");
+        var input = new MemoryStream(all, 0, all.Length - 32, writable: false);
         var magic = new byte[SnapshotMagic.Length];
         input.ReadExactly(magic);
         if (!SnapshotMagic.SequenceEqual(magic))

@@ -19,6 +19,10 @@ public class TableSnapshotTests
         return t;
     }
 
+    /// <summary>Recomputes the closing digest, so a test reaches the check of the field it changed.</summary>
+    private static void Reseal(byte[] snapshot) =>
+        System.Security.Cryptography.SHA256.HashData(snapshot.AsSpan(0, snapshot.Length - TableSnapshot.DigestBytes)).CopyTo(snapshot.AsSpan(snapshot.Length - TableSnapshot.DigestBytes));
+
     private static byte[] Take(Table t, long tick)
     {
         using var s = new MemoryStream();
@@ -99,8 +103,10 @@ public class TableSnapshotTests
     [Fact]
     public void Read_OtherRowOrColumnCount_Rejected()
     {
-        Assert.Throws<InvalidDataException>(() => TableSnapshot.Read(Build(3), Schema, new MemoryStream(Take(Build(2), 0))));
-        Assert.Throws<InvalidDataException>(() => TableSnapshot.Read(Build(2, withExtra: true), Schema, new MemoryStream(Take(Build(2), 0))));
+        // The size is the table's, not the stream's: a stream of another size is refused as truncated or too long.
+        Assert.ThrowsAny<Exception>(() => TableSnapshot.Read(Build(3), Schema, new MemoryStream(Take(Build(2), 0))));
+        Assert.ThrowsAny<Exception>(() => TableSnapshot.Read(Build(2, withExtra: true), Schema, new MemoryStream(Take(Build(2), 0))));
+        Assert.ThrowsAny<Exception>(() => TableSnapshot.Read(Build(2), Schema, new MemoryStream(Take(Build(3), 0))));
     }
 
     [Fact]
@@ -114,6 +120,7 @@ public class TableSnapshotTests
         Assert.Throws<InvalidDataException>(() => TableSnapshot.Read(dst, Schema, new MemoryStream([.. bytes, 0])));
         byte[] bad = (byte[])bytes.Clone();
         bad[0] ^= 1;
+        Reseal(bad);
         Assert.Throws<InvalidDataException>(() => TableSnapshot.Read(dst, Schema, new MemoryStream(bad)));
         Assert.Equal([3, 3], dst.GetInt("b").Current.ToArray());
     }
@@ -172,6 +179,7 @@ public class TableSnapshotTests
     {
         byte[] bytes = Take(Build(1), 0);
         BinaryPrimitives.WriteInt64LittleEndian(bytes.AsSpan(20), -1);
+        Reseal(bytes);
         Assert.Throws<InvalidDataException>(() => TableSnapshot.Read(Build(1), Schema, new MemoryStream(bytes)));
     }
 
@@ -350,7 +358,7 @@ public class TableSnapshotTests
             ra.RunTick();
             rb.RunTick();
         }
-        Assert.ThrowsAny<Exception>(() => rb.Restore(long.MaxValue));
+        Assert.ThrowsAny<Exception>(() => rb.Restore(TickRunner.MaxTick));   // in range for the clock, but beyond what the calendar can date
         Assert.Equal(40, rb.Tick);
         for (int i = 0; i < 70; i++)
         {
@@ -359,5 +367,40 @@ public class TableSnapshotTests
         }
         HashAssert.Equal(StateHash.ComputeHex(ta, 1), StateHash.ComputeHex(tb, 1));
         Assert.Equal(ta.GetLong("m").Current[0], tb.GetLong("m").Current[0]);
+    }
+
+    [Fact]
+    public void EveryByteFlipOfASnapshot_IsRefused_BeforeAnyFieldIsParsed()
+    {
+        Table src = Build(3);
+        src.GetLong("a").Load([5, -6, 7]);
+        byte[] bytes = Take(src, 12);
+        for (int i = 0; i < bytes.Length; i++)
+        {
+            byte[] flipped = (byte[])bytes.Clone();
+            flipped[i] ^= 0x10;
+            Table dst = Build(3);
+            dst.GetLong("a").Load([1, 1, 1]);
+            var e = Assert.Throws<InvalidDataException>(() => TableSnapshot.Read(dst, Schema, new MemoryStream(flipped)));
+            Assert.Contains("digest", e.Message);
+            Assert.Equal([1L, 1L, 1L], dst.GetLong("a").Current.ToArray());
+        }
+    }
+
+    // The rule: the clock stays in 0..MaxTick. Restore takes a tick up to MaxTick, RunTick refuses to step past it.
+    [Fact]
+    public void Clock_NeverLeavesItsRange()
+    {
+        var t = new Table(1);
+        var r = new TickRunner(t, 1, [new DailyAndMonthly(t, Cadence.Daily, "d")], 1, 1);
+        Assert.Throws<ArgumentOutOfRangeException>(() => r.Restore(TickRunner.MaxTick + 1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => r.Restore(long.MaxValue));
+        Assert.Throws<ArgumentOutOfRangeException>(() => r.Restore(-1));
+        Assert.Equal(0, r.Tick);
+        r.Restore(TickRunner.MaxTick - 1);
+        r.RunTick();
+        Assert.Equal(TickRunner.MaxTick, r.Tick);
+        Assert.Throws<InvalidOperationException>(() => r.RunTick());
+        Assert.Equal(TickRunner.MaxTick, r.Tick);   // not negative, not moved
     }
 }

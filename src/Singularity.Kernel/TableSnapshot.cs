@@ -6,13 +6,17 @@ namespace Singularity.Kernel;
 
 /// <summary>
 /// In-memory snapshot of a table (ADR-0013 v0: binary SoA + header). Not a player save file: no versions to migrate, no compression.
-/// Layout, all little-endian: magic "SGTS", int32 format (1), int32 schema_version, int32 n_rows, int32 n_columns, int64 tick,
-/// 32 bytes schema fingerprint, 32 bytes state hash (the SHA-256 of <see cref="StateHash"/>: schema version, rows, the column values), then the <c>Current</c> values of every column in registration order (int64 or int32 each).
+/// Layout, all little-endian: magic "SGTS", int32 format (2), int32 schema_version, int32 n_rows, int32 n_columns, int64 tick,
+/// 32 bytes schema fingerprint, 32 bytes state hash (the SHA-256 of <see cref="StateHash"/>: schema version, rows, the column values), then the <c>Current</c> values of every column in registration order (int64 or int32 each), then a 32-byte SHA-256 digest of every byte before it.
+/// The digest is checked first, so a flipped byte anywhere is refused before any field is parsed.
 /// The fingerprint covers column names, types and row count, so a snapshot of another layout is refused even under the same schema version.
 /// </summary>
 public static class TableSnapshot
 {
-    private const int Format = 1;
+    private const int Format = 2;
+
+    /// <summary>Size of the trailing digest over the whole snapshot.</summary>
+    public const int DigestBytes = 32;
     private const int FingerprintBytes = 32;
     private static ReadOnlySpan<byte> Magic => "SGTS"u8;
     private const int StateHashOffset = 4 + 4 + 4 + 4 + 4 + 8 + FingerprintBytes;
@@ -44,7 +48,7 @@ public static class TableSnapshot
     }
 
     /// <summary>Exact size in bytes of a snapshot of this table.</summary>
-    public static int ExpectedBytes(Table table) => checked(HeaderBytes + BodyBytes(table));
+    public static int ExpectedBytes(Table table) => checked(HeaderBytes + BodyBytes(table) + DigestBytes);
 
     /// <summary>
     /// Checks a whole snapshot against the table (length, magic, format, schema version, counts, fingerprint, tick) without changing anything
@@ -54,8 +58,10 @@ public static class TableSnapshot
     {
         if (snapshot.Length != ExpectedBytes(table))
             throw new InvalidDataException($"Snapshot is {snapshot.Length} bytes, the table needs {ExpectedBytes(table)}.");
+        if (!SHA256.HashData(snapshot[..^DigestBytes]).AsSpan().SequenceEqual(snapshot[^DigestBytes..]))
+            throw new InvalidDataException("Snapshot digest does not match its bytes.");
         long tick = ValidateHeader(table, schemaVersion, snapshot[..HeaderBytes]);
-        VerifyBody(table, schemaVersion, snapshot[..HeaderBytes], snapshot[HeaderBytes..]);
+        VerifyBody(table, schemaVersion, snapshot[..HeaderBytes], snapshot[HeaderBytes..^DigestBytes]);
         return tick;
     }
 
@@ -89,7 +95,7 @@ public static class TableSnapshot
         if (table.InTick || table.RunActive)
             throw new InvalidOperationException("A snapshot is taken between ticks.");
         int columns = table.Columns.Count;
-        var buffer = new byte[HeaderBytes + BodyBytes(table)];
+        var buffer = new byte[ExpectedBytes(table)];
         Span<byte> b = buffer;
         Magic.CopyTo(b);
         BinaryPrimitives.WriteInt32LittleEndian(b[4..], Format);
@@ -106,7 +112,8 @@ public static class TableSnapshot
             c.WriteCurrentTo(b.Slice(at, size));
             at += size;
         }
-        HashOfBody(schemaVersion, table.RowCount, b[HeaderBytes..]).CopyTo(b[StateHashOffset..]);
+        HashOfBody(schemaVersion, table.RowCount, b[HeaderBytes..^DigestBytes]).CopyTo(b[StateHashOffset..]);
+        SHA256.HashData(b[..^DigestBytes]).CopyTo(b[^DigestBytes..]);
         output.Write(buffer);
     }
 
@@ -119,21 +126,19 @@ public static class TableSnapshot
         ArgumentNullException.ThrowIfNull(input);
         if (table.InTick || table.RunActive)
             throw new InvalidOperationException("A snapshot is loaded between ticks.");
-        var header = new byte[HeaderBytes];
-        input.ReadExactly(header);
-        long tick = ValidateHeader(table, schemaVersion, header);
-
-        var body = new byte[BodyBytes(table)];
-        input.ReadExactly(body);
+        // The size comes from the table, never from the stream; the digest over everything before it is checked before any field is read.
+        var all = new byte[ExpectedBytes(table)];
+        input.ReadExactly(all);
         if (input.ReadByte() >= 0)
-            throw new InvalidDataException("Snapshot has data after the last column.");
-        VerifyBody(table, schemaVersion, header, body);
+            throw new InvalidDataException("Snapshot has data after the digest.");
+        long tick = Inspect(table, schemaVersion, all);
+        ReadOnlySpan<byte> body = all.AsSpan(HeaderBytes, all.Length - HeaderBytes - DigestBytes);
         int at = 0;
         for (int i = 0; i < table.Columns.Count; i++)
         {
             Column c = table.Columns[i];
             int size = c.Length * c.ElementBytes;
-            c.LoadFrom(body.AsSpan(at, size));
+            c.LoadFrom(body.Slice(at, size));
             at += size;
         }
         return tick;

@@ -310,14 +310,25 @@ public class SnapshotContinuityTests
         using var hash = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
         hash.AppendData(BitConverter.GetBytes(SliceWorld.SchemaVersion));
         hash.AppendData(BitConverter.GetBytes(source.World.Table.RowCount));
-        hash.AppendData(snap.AsSpan(tableAt + TableSnapshot.HeaderBytes, TableBytes(source) - TableSnapshot.HeaderBytes));
+        hash.AppendData(snap.AsSpan(tableAt + TableSnapshot.HeaderBytes, TableBytes(source) - TableSnapshot.HeaderBytes - TableSnapshot.DigestBytes));
         return Patch(snap, tableAt + TableSnapshot.HeaderBytes - 32, hash.GetHashAndReset());
     }
 
+    /// <summary>
+    /// Changes bytes and then closes both digests again (the one inside the table snapshot and the session one), so the test reaches the check
+    /// of the field it changed. Whole-snapshot corruption without resealing is covered by the byte-flip test.
+    /// </summary>
     private static byte[] Patch(byte[] snap, int offset, byte[] value)
     {
         byte[] copy = (byte[])snap.Clone();
         value.CopyTo(copy, offset);
+        int tableAt = PrefixBytes + 4;
+        int tableLen = BitConverter.ToInt32(snap, PrefixBytes);   // of the unpatched snapshot
+        if (tableLen > TableSnapshot.DigestBytes && copy.Length >= tableAt + tableLen)
+        {
+            System.Security.Cryptography.SHA256.HashData(copy.AsSpan(tableAt, tableLen - TableSnapshot.DigestBytes)).CopyTo(copy.AsSpan(tableAt + tableLen - TableSnapshot.DigestBytes));
+        }
+        System.Security.Cryptography.SHA256.HashData(copy.AsSpan(0, copy.Length - 32)).CopyTo(copy.AsSpan(copy.Length - 32));
         return copy;
     }
 
@@ -342,7 +353,8 @@ public class SnapshotContinuityTests
             m.Write(BitConverter.GetBytes(b.Length));
             m.Write(b);
         }
-        return m.ToArray();
+        byte[] content = m.ToArray();
+        return [.. content, .. System.Security.Cryptography.SHA256.HashData(content)];
     }
 
     [Fact]
@@ -517,6 +529,52 @@ public class SnapshotContinuityTests
         Untouched untouched = Untouched.Of(dest);
         var e = Assert.Throws<InvalidDataException>(() => dest.LoadSnapshot(new MemoryStream(snap)));
         Assert.Contains("run.seed.events", e.Message);
+        untouched.Check(dest, PlayerCfg);
+    }
+
+    // Any single flipped byte, wherever it lies, is refused by the closing digest before a field is parsed, and the session stays as it was.
+    [Fact]
+    public void EveryByteClass_FlippedAnywhere_IsRefusedByTheDigest_AndTheSessionIsUnchanged()
+    {
+        SliceSession src = WithPending(out _);
+        byte[] snap = Save(src);
+        int tableAt = PrefixBytes + 4;
+        int tableLen = TableBytes(src);
+        int journalAt = tableAt + tableLen;
+        int journalLen = BitConverter.ToInt32(snap, journalAt);
+        int queueAt = journalAt + 4 + journalLen;
+        int queueLen = BitConverter.ToInt32(snap, queueAt);
+        Assert.True(journalLen > 0 && queueLen > 0);
+        var positions = new SortedSet<int>
+        {
+            0, 4, 8, PrefixBytes - 1,                                   // session magic, format, identity
+            PrefixBytes, tableAt,                                       // table length, table magic
+            tableAt + 8, tableAt + 12, tableAt + 20, tableAt + 27,      // schema version, rows, tick, tick's last byte
+            tableAt + 28, tableAt + 60,                                 // fingerprint, state hash
+            tableAt + TableSnapshot.HeaderBytes - 1,
+            tableAt + TableSnapshot.HeaderBytes + ColumnOffset(src, "pol.budget"),   // payload
+            tableAt + tableLen - 1, tableAt + tableLen - TableSnapshot.DigestBytes,  // the table digest
+            journalAt, journalAt + 4, journalAt + 4 + journalLen - 1,   // journal length, first and last byte of its text
+            queueAt, queueAt + 4, queueAt + 4 + queueLen - 1,           // queue
+            snap.Length - 32, snap.Length - 1,                          // the session digest itself
+        };
+        for (int i = 0; i < 80; i++)
+            positions.Add((int)((long)snap.Length * i / 80));           // an even sweep over the whole snapshot
+        for (int i = 0; i < 100; i++)
+            positions.Add(i);
+
+        SliceSession dest = SliceTestData.Create(PlayerCfg);
+        Untouched untouched = Untouched.Of(dest);
+        foreach (int at in positions)
+        {
+            byte[] flipped = (byte[])snap.Clone();
+            flipped[at] ^= 0x01;
+            var e = Assert.Throws<InvalidDataException>(() => dest.LoadSnapshot(new MemoryStream(flipped)));
+            Assert.True(e.Message.Contains("digest", StringComparison.Ordinal), $"byte {at}: {e.Message}");
+            Assert.Equal(untouched.Tick, dest.Tick);
+            Assert.Equal(untouched.Log, dest.CommandLog);
+            HashAssert.Equal(untouched.Hash, dest.LastHash, $"hash after a flip at byte {at}");
+        }
         untouched.Check(dest, PlayerCfg);
     }
 

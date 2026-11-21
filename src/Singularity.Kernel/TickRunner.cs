@@ -142,6 +142,7 @@ public sealed class TickRunner
     public void Restore(long tick)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(tick);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(tick, MaxTick);
         if (_table.InTick || _table.RunActive)
             throw new InvalidOperationException("Restore is not allowed during a tick (compute, merge or post).");
         // The whole schedule is computed first (a calendar can overflow for a huge tick), then committed: no partial write.
@@ -158,8 +159,16 @@ public sealed class TickRunner
         LastTickRan = false;
     }
 
+    /// <summary>
+    /// The last tick the clock may show. <see cref="Restore"/> accepts a tick up to it and <see cref="RunTick"/> refuses to step past it, so the
+    /// clock stays in 0…MaxTick for ever (an increment can never overflow into a negative tick). 2^40 days is far beyond any calendar.
+    /// </summary>
+    public const long MaxTick = 1L << 40;
+
     public void RunTick()
     {
+        if (Tick >= MaxTick)
+            throw new InvalidOperationException($"The clock is at its limit ({MaxTick}).");
         if (Tick < _minNextDue)
         {
             // Nothing runs today: the state is unchanged, only the clock moves (spec v0.5 §2).
