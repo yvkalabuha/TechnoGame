@@ -57,7 +57,7 @@ public class ScratchTests
     /// an injected service (interface); an immutable value (<c>ImmutableArray</c>, <c>Nullable</c>, tuple, struct or class whose instance
     /// fields are all read-only or init-only and themselves safe). Anything else (arrays, <c>List</c>, a class with a mutable field) is a buffer.
     /// </summary>
-    private static bool IsSafeType(Type t, HashSet<Type>? seen = null)
+    internal static bool IsSafeType(Type t, HashSet<Type>? seen = null)
     {
         if (t.IsPrimitive || t.IsEnum || t == typeof(string) || t.IsInterface || IsTableType(t) && !t.HasElementType && !t.IsGenericType
             || IsColumnDescriptor(t))
@@ -85,7 +85,7 @@ public class ScratchTests
     }
 
     // The runtime Nullable<T> and ImmutableArray<T> are readonly structs, but the runtime assemblies do not carry the attribute.
-    private static bool IsReadOnlyStruct(Type t) =>
+    internal static bool IsReadOnlyStruct(Type t) =>
         t.GetCustomAttributesData().Any(a => a.AttributeType.Name == "IsReadOnlyAttribute")
         || t.IsGenericType && t.GetGenericTypeDefinition() is var d && (d == typeof(Nullable<>) || d == typeof(System.Collections.Immutable.ImmutableArray<>));
 

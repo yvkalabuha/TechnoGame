@@ -33,7 +33,7 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
     /// <summary>Slots of <c>effort_focus</c> (contract §3.1).</summary>
     public const int EffortFocusSlots = 3;
 
-    private static readonly string[] DimNames = ["precision", "purity", "quality_control"];
+    private static readonly ImmutableArray<string> DimNames = ["precision", "purity", "quality_control"];
 
     private readonly IndustryLayout _l;
     private readonly IndustryParams _p;

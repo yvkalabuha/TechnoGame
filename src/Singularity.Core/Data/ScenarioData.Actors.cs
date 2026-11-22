@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Singularity.Core.Data.Yaml;
 using Singularity.Kernel;
 
@@ -84,7 +85,7 @@ public sealed partial class ScenarioData
             map.End();
         }
 
-        private static void ReadKeyed<T>(YNode node, T[] keys, (string Name, T Value)[] names, List<Fx6> target, string what)
+        private static void ReadKeyed<T>(YNode node, T[] keys, ImmutableArray<(string Name, T Value)> names, List<Fx6> target, string what)
             where T : struct, Enum
         {
             var map = new MapReader(node);
@@ -148,7 +149,7 @@ public sealed partial class ScenarioData
             foreach (YNode item in seq.Items)
             {
                 string field = Scalars.Str(item);
-                if (Array.IndexOf(ActorFields, field) < 0 || fields.Contains(field))
+                if (ActorFields.IndexOf(field) < 0 || fields.Contains(field))
                     throw DataLoadException.At(item, $"estimated: '{field}' is not an actor field or is listed twice");
                 fields.Add(field);
                 EstimatedRefs.Add((item, field));

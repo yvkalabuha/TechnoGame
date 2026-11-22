@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Singularity.Core.Data.Yaml;
 using Singularity.Kernel;
 
@@ -45,7 +46,7 @@ internal static class Scalars
         return value;
     }
 
-    public static T Enum<T>(YNode node, (string Name, T Value)[] table) where T : struct, System.Enum
+    public static T Enum<T>(YNode node, ImmutableArray<(string Name, T Value)> table) where T : struct, System.Enum
     {
         string text = Str(node);
         foreach ((string name, T value) in table)
@@ -129,7 +130,7 @@ internal sealed class MapReader
     public int Int(string key) => Scalars.Int(Required(key));
     public Fx6 Fixed(string key) => Scalars.Fixed(Required(key));
     public YSeq Seq(string key) => Scalars.Seq(Required(key));
-    public T Enum<T>(string key, (string Name, T Value)[] table) where T : struct, System.Enum => Scalars.Enum(Required(key), table);
+    public T Enum<T>(string key, ImmutableArray<(string Name, T Value)> table) where T : struct, System.Enum => Scalars.Enum(Required(key), table);
 
     /// <summary>Call after reading: any field not read is unknown.</summary>
     public void End()

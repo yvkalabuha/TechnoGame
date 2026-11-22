@@ -6,10 +6,10 @@ namespace Singularity.Core.Data;
 public sealed partial class ScenarioData
 {
     /// <summary>The scenario actors that <c>START_SYM</c> makes equal (spec §6.5).</summary>
-    public static readonly string[] SymmetricActors = ["USA", "GBR", "SUN"];
+    public static readonly ImmutableArray<string> SymmetricActors = ["USA", "GBR", "SUN"];
 
     // Estimated fields that get no multiplier: node sets never change, tooling_m and hcap are derived from culture_h by a rule (spec §6.5).
-    private static readonly string[] NoMultiplier = ["known", "mastered", "tooling_m", "hcap"];
+    private static readonly ImmutableArray<string> NoMultiplier = ["known", "mastered", "tooling_m", "hcap"];
 
     /// <summary>
     /// <c>START_PERT</c> (spec §6.5, v0.12): every field with <c>estimated: true</c> (scenario-wide in the provenance, or listed by the actor) is
@@ -27,7 +27,7 @@ public sealed partial class ScenarioData
             // Canonical order of the scenario: ActorFields (spec §6.5); an estimated field Scale does not know throws.
             foreach (string field in ActorFields)
             {
-                if (IsEstimated(a, field) && Array.IndexOf(NoMultiplier, field) < 0)
+                if (IsEstimated(a, field) && NoMultiplier.IndexOf(field) < 0)
                     Scale(f, a, field, multiplier(index++));
             }
         }

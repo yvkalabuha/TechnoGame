@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Globalization;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
@@ -15,7 +16,7 @@ namespace Singularity.Core.Data.Yaml;
 public static class StrictYaml
 {
     // YAML 1.1 booleans and null forms. Only the lower-case true/false are accepted as booleans.
-    private static readonly string[] ImplicitBoolOrNull =
+    private static readonly ImmutableArray<string> ImplicitBoolOrNull =
     [
         "y", "Y", "yes", "Yes", "YES", "n", "N", "no", "No", "NO",
         "on", "On", "ON", "off", "Off", "OFF",
@@ -57,7 +58,7 @@ public static class StrictYaml
             return ScalarKind.Number;
         if (value.Length == 0)
             throw new DataLoadException($"{where}: empty value is not allowed");
-        if (Array.IndexOf(ImplicitBoolOrNull, value) >= 0)
+        if (ImplicitBoolOrNull.IndexOf(value) >= 0)
             throw new DataLoadException($"{where}: implicit bool/null '{value}' is not allowed; write true/false or quote the text");
         if (LooksNumeric(value))
             throw new DataLoadException($"{where}: ambiguous plain scalar '{value}'; write a plain decimal or quote the text");

@@ -1,4 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- The mutants of the unsafe-API scan use fixed and pointers. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Singularity.Kernel/Singularity.Kernel.csproj" />
     <ProjectReference Include="../../src/Singularity.Core/Singularity.Core.csproj" />

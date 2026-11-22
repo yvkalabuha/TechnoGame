@@ -16,7 +16,7 @@ namespace Singularity.Session;
 internal static class ViewBuilder
 {
     // Refusal reasons in BadLicence order, without None.
-    private static readonly BadLicence[] Reasons = [BadLicence.Self, BadLicence.Empty, BadLicence.Gen, BadLicence.Money];
+    private static readonly ImmutableArray<BadLicence> Reasons = [BadLicence.Self, BadLicence.Empty, BadLicence.Gen, BadLicence.Money];
 
     public static SliceLayoutView Layout(SliceWorld w) => new(
         [.. w.Scenario.ActorId], w.Graph.Number, w.Graph.Gen, w.IndustryLayout.Number, w.IndustryLayout.Tier,

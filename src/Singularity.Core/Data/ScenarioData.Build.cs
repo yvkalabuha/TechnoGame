@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Singularity.Core.Data.Yaml;
 using Singularity.Kernel;
 
@@ -88,7 +89,7 @@ public sealed partial class ScenarioData
         {
             var p = new MapReader(item);
             string field = p.Str("field");
-            if (Array.IndexOf(ActorFields, field) < 0)
+            if (ActorFields.IndexOf(field) < 0)
                 throw DataLoadException.At(item, $"provenance names unknown actor field '{field}'");
             if (result.Exists(r => r.Field == field))
                 throw DataLoadException.At(item, $"provenance of '{field}' is given twice");
@@ -110,7 +111,7 @@ public sealed partial class ScenarioData
         return result;
     }
 
-    private static T[] ReadUniqueEnums<T>(YSeq seq, (string Name, T Value)[] table, string what) where T : struct, Enum
+    private static T[] ReadUniqueEnums<T>(YSeq seq, ImmutableArray<(string Name, T Value)> table, string what) where T : struct, Enum
     {
         var result = new List<T>();
         foreach (YNode item in seq.Items)
