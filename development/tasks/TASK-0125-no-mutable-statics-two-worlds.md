@@ -1,7 +1,7 @@
 ---
 id: TASK-0125
 title: "No mutable static fields in Kernel, Core, Session; two worlds on one thread pool (A6)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M1
 agent: test-engineer     # ответственный агент

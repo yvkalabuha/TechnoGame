@@ -1,14 +1,14 @@
 ---
 id: ADR-0025
 title: "View snapshot: scoped client view"
-status: PROPOSED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
+status: ACCEPTED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
 date: 2026-11-21
 supersedes:              # пусто: ADR-0014 п. 5 не меняется, решение его дополняет
 superseded_by:           # заполняется при замене
 related: [ADR-0014, ADR-0017, ADR-0019, ADR-0023, ADR-0024, ADR-0002, ADR-0013, TASK-0124, TASK-0125]
-approved_by:             # owner — обязательно для ACCEPTED
-approved_at:
-approval_ref:
+approved_by: owner
+approved_at: 2026-11-22
+approval_ref: "#434"
 ---
 
 # ADR-0025 — Снимок вида: клиент получает блоки узлов только своих акторов
