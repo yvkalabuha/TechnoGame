@@ -135,8 +135,40 @@ public sealed class TickRunner
 
     public TickCalendar? Calendar => _calendar;
 
+    /// <summary>
+    /// Puts the clock at <paramref name="tick"/> (the number of completed ticks) after the table was loaded from a snapshot taken at that tick,
+    /// and recomputes when each system is next due. Not allowed inside a tick; nothing but the clock and the due ticks lives in the runner.
+    /// </summary>
+    public void Restore(long tick)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(tick);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(tick, MaxTick);
+        if (_table.InTick || _table.RunActive)
+            throw new InvalidOperationException("Restore is not allowed during a tick (compute, merge or post).");
+        // The whole schedule is computed first (a calendar can overflow for a huge tick), then committed: no partial write.
+        var due = new long[_systems.Length];
+        long min = long.MaxValue;
+        for (int s = 0; s < _systems.Length; s++)
+        {
+            due[s] = _calendar is null ? tick : _calendar.NextDue(_systems[s].Cadence, tick);
+            min = Math.Min(min, due[s]);
+        }
+        due.CopyTo(_nextDue, 0);
+        _minNextDue = min;
+        Tick = tick;
+        LastTickRan = false;
+    }
+
+    /// <summary>
+    /// The last tick the clock may show. <see cref="Restore"/> accepts a tick up to it and <see cref="RunTick"/> refuses to step past it, so the
+    /// clock stays in 0…MaxTick for ever (an increment can never overflow into a negative tick). 2^40 days is far beyond any calendar.
+    /// </summary>
+    public const long MaxTick = 1L << 40;
+
     public void RunTick()
     {
+        if (Tick >= MaxTick)
+            throw new InvalidOperationException($"The clock is at its limit ({MaxTick}).");
         if (Tick < _minNextDue)
         {
             // Nothing runs today: the state is unchanged, only the clock moves (spec v0.5 §2).
@@ -146,75 +178,84 @@ public sealed class TickRunner
         }
 
         LastTickRan = true;
-        var context = new TickContext(_table, _rng, Tick, _calendar);
-        for (int s = 0; s < _systems.Length; s++)
-            _due[s] = _nextDue[s] == Tick;
-
-        _table.BeginTick();
-        bool completed = false;
+        // The flag spans the whole tick, post included: no snapshot is loaded or taken and no restore happens while the state is not settled.
+        _table.RunActive = true;
         try
         {
+            var context = new TickContext(_table, _rng, Tick, _calendar);
             for (int s = 0; s < _systems.Length; s++)
+                _due[s] = _nextDue[s] == Tick;
+
+            _table.BeginTick();
+            bool completed = false;
+            try
             {
-                if (!_due[s])
-                    continue;
-                ITickSystem system = _systems[s];
-                if (_table.Trace is not null)
-                    _table.TraceSystemId = system.SystemId;
-                if (_parallel.MaxDegreeOfParallelism == 1)
+                for (int s = 0; s < _systems.Length; s++)
                 {
-                    for (int chunk = 0; chunk < ChunkCount; chunk++)
-                        ComputeChunk(system, context, chunk);
-                }
-                else
-                {
-                    // Each iteration writes only its own rows/slot (and its own failure slot), so there are
-                    // no shared writes. Failures are recorded, not thrown: every chunk runs, so the set of
-                    // failed chunks, and with it the reported lowest one, does not depend on scheduling.
-                    Array.Clear(_failures);
-                    Parallel.For(0, ChunkCount, _parallel, chunk =>
+                    if (!_due[s])
+                        continue;
+                    ITickSystem system = _systems[s];
+                    if (_table.Trace is not null)
+                        _table.TraceSystemId = system.SystemId;
+                    if (_parallel.MaxDegreeOfParallelism == 1)
                     {
-                        try
-                        {
+                        for (int chunk = 0; chunk < ChunkCount; chunk++)
                             ComputeChunk(system, context, chunk);
-                        }
-                        catch (TickComputeException e)
-                        {
-                            _failures[chunk] = e;
-                        }
-                    });
-                    for (int chunk = 0; chunk < ChunkCount; chunk++)
+                    }
+                    else
                     {
-                        if (_failures[chunk] is { } failure)
-                            ExceptionDispatchInfo.Capture(failure).Throw();
+                        // Each iteration writes only its own rows/slot (and its own failure slot), so there are
+                        // no shared writes. Failures are recorded, not thrown: every chunk runs, so the set of
+                        // failed chunks, and with it the reported lowest one, does not depend on scheduling.
+                        Array.Clear(_failures);
+                        Parallel.For(0, ChunkCount, _parallel, chunk =>
+                        {
+                            try
+                            {
+                                ComputeChunk(system, context, chunk);
+                            }
+                            catch (TickComputeException e)
+                            {
+                                _failures[chunk] = e;
+                            }
+                        });
+                        for (int chunk = 0; chunk < ChunkCount; chunk++)
+                        {
+                            if (_failures[chunk] is { } failure)
+                                ExceptionDispatchInfo.Capture(failure).Throw();
+                        }
                     }
                 }
-            }
 
+                for (int s = 0; s < _systems.Length; s++)
+                {
+                    if (!_due[s])
+                        continue;
+                    if (_table.Trace is not null)
+                        _table.TraceSystemId = _systems[s].SystemId;
+                    _systems[s].Merge(context, ChunkCount);
+                }
+
+                _table.Swap();
+                completed = true;
+            }
+            finally
+            {
+                _table.EndTick(completed);
+            }
+            Tick++;
+            UpdateNextDue();
+
+            var postContext = new TickContext(_table, _rng, Tick, _calendar);
             for (int s = 0; s < _systems.Length; s++)
             {
-                if (!_due[s])
-                    continue;
-                if (_table.Trace is not null)
-                    _table.TraceSystemId = _systems[s].SystemId;
-                _systems[s].Merge(context, ChunkCount);
+                if (_due[s])
+                    _systems[s].Post(postContext);
             }
-
-            _table.Swap();
-            completed = true;
         }
         finally
         {
-            _table.EndTick(completed);
-        }
-        Tick++;
-        UpdateNextDue();
-
-        var postContext = new TickContext(_table, _rng, Tick, _calendar);
-        for (int s = 0; s < _systems.Length; s++)
-        {
-            if (_due[s])
-                _systems[s].Post(postContext);
+            _table.RunActive = false;
         }
     }
 

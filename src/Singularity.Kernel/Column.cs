@@ -43,6 +43,17 @@ public abstract class Column
 
     /// <summary>Appends <c>Current</c> to the hash as little-endian values, independent of CPU byte order.</summary>
     internal abstract void AppendCurrentTo(IncrementalHash hash);
+
+    /// <summary>One letter per element type, part of the schema fingerprint of a snapshot.</summary>
+    internal abstract char TypeTag { get; }
+
+    internal abstract int ElementBytes { get; }
+
+    /// <summary>Writes <c>Current</c> as little-endian values; <paramref name="destination"/> is exactly <c>Length * ElementBytes</c> long.</summary>
+    internal abstract void WriteCurrentTo(Span<byte> destination);
+
+    /// <summary>Sets <c>Current</c> from little-endian values (the same checks and version bumps as <c>Load</c> of the typed column).</summary>
+    internal abstract void LoadFrom(ReadOnlySpan<byte> source);
 }
 
 public abstract class Column<T> : Column where T : unmanaged
@@ -142,6 +153,24 @@ public abstract class Column<T> : Column where T : unmanaged
 
     private protected abstract void WriteLittleEndian(Span<byte> destination, T value);
 
+    private protected abstract T ReadLittleEndian(ReadOnlySpan<byte> source);
+
+    internal override int ElementBytes => ElementSize;
+
+    internal override void WriteCurrentTo(Span<byte> destination)
+    {
+        for (int i = 0; i < _current.Length; i++)
+            WriteLittleEndian(destination.Slice(i * ElementSize, ElementSize), _current[i]);
+    }
+
+    internal override void LoadFrom(ReadOnlySpan<byte> source)
+    {
+        var values = new T[_current.Length];
+        for (int i = 0; i < values.Length; i++)
+            values[i] = ReadLittleEndian(source.Slice(i * ElementSize, ElementSize));
+        Load(values);
+    }
+
     internal override void AppendCurrentTo(IncrementalHash hash)
     {
         // Little-endian host: the memory is already the hashed byte layout, one call (the same bytes as the element-wise path).
@@ -172,6 +201,10 @@ public sealed class LongColumn : Column<long>
 
     private protected override int ElementSize => sizeof(long);
 
+    internal override char TypeTag => 'l';
+
+    private protected override long ReadLittleEndian(ReadOnlySpan<byte> source) => BinaryPrimitives.ReadInt64LittleEndian(source);
+
     private protected override void WriteLittleEndian(Span<byte> destination, long value) =>
         BinaryPrimitives.WriteInt64LittleEndian(destination, value);
 }
@@ -181,6 +214,10 @@ public sealed class IntColumn : Column<int>
     internal IntColumn(string name, int length) : base(name, length) { }
 
     private protected override int ElementSize => sizeof(int);
+
+    internal override char TypeTag => 'i';
+
+    private protected override int ReadLittleEndian(ReadOnlySpan<byte> source) => BinaryPrimitives.ReadInt32LittleEndian(source);
 
     private protected override void WriteLittleEndian(Span<byte> destination, int value) =>
         BinaryPrimitives.WriteInt32LittleEndian(destination, value);

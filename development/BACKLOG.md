@@ -139,8 +139,10 @@
 | [TASK-0121](../development/tasks/TASK-0121-slice-horizon-2030-train-1.md) | DONE | Slice horizon to 2030, train 1: Years = 86, q mask in 62-bit blocks, horizon fixture | MS-M05 |
 | [TASK-0122](../development/tasks/TASK-0122-budget-rule-variants-switch.md) | DONE | Budget rule variants behind a run switch for the Lab measurement (NOW, A, B1, B2) | MS-M05 |
 | [TASK-0123](../development/tasks/TASK-0123-budget-rule-lab-measurement.md) | DONE | Lab measurement of budget rule variants: workforce, alloy and limiter columns, manifest, analysis | MS-M05 |
-| [TASK-0124](../development/tasks/TASK-0124-kernel-snapshot-continuity.md) | IN_PROGRESS | Kernel table snapshot and save-load-continue continuity test (A4) | MS-M1 |
-| [TASK-0125](../development/tasks/TASK-0125-no-mutable-statics-two-worlds.md) | IN_PROGRESS | No mutable static fields in Kernel, Core, Session; two worlds on one thread pool (A6) | MS-M1 |
+| [TASK-0124](../development/tasks/TASK-0124-kernel-snapshot-continuity.md) | DONE | Kernel table snapshot and save-load-continue continuity test (A4) | MS-M1 |
+| [TASK-0125](../development/tasks/TASK-0125-no-mutable-statics-two-worlds.md) | REVIEW | No mutable static fields in Kernel, Core, Session; two worlds on one thread pool (A6) | MS-M1 |
+| [TASK-0126](../development/tasks/TASK-0126-task-0117-codex-remainder.md) | PROPOSED | Open Codex findings after TASK-0117 landing (#432) | MS-M05 |
+| [TASK-0127](../development/tasks/TASK-0127-task-0125-codex-remainder.md) | PROPOSED | Open Codex findings after TASK-0125 landing (#432) | MS-M05 |
 
 ## Гипотезы
 
@@ -193,6 +195,7 @@
 | [ADR-0022](../docs/decisions/ADR-0022-region-limit-amendment.md) | ACCEPTED | Region count limit amendment to ADR-0011 |
 | [ADR-0023](../docs/decisions/ADR-0023-adr-0016-benchmark-rules-amendment.md) | ACCEPTED | Benchmark validity rules and split allocation limit (amendment to ADR-0016) |
 | [ADR-0024](../docs/decisions/ADR-0024-adr-0023-gc-pause-criterion.md) | PROPOSED | GC pause criterion instead of the gen2 counter (amendment to ADR-0023 p. 2.4) |
+| [ADR-0025](../docs/decisions/ADR-0025-view-snapshot-buffer-ring.md) | ACCEPTED | View snapshot: scoped client view |
 
 ## Research Reports
 
