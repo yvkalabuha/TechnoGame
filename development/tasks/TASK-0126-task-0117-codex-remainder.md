@@ -1,7 +1,7 @@
 ---
 id: TASK-0126
 title: "Open Codex findings after TASK-0117 landing (#432)"
-status: PROPOSED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M05
 agent: developer
@@ -10,9 +10,9 @@ priority: medium
 needs_owner: false
 depends_on: [TASK-0117]
 related: [TASK-0117]
-approved_by:
-approved_at:
-approval_ref:
+approved_by: orchestrator
+approved_at: 2026-11-22
+approval_ref: "#432 (light)"
 created: 2026-11-22
 ---
 

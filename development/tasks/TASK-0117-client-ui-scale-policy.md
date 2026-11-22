@@ -1,7 +1,7 @@
 ---
 id: TASK-0117
 title: "Client UI scale policy: text never below the A1 floor at 1280x720"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M05
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: [TASK-0112, TASK-0111]
 approved_by: orchestrator
 approved_at: 2026-11-19
 approval_ref: "#417 A1; ui-art-director review of TASK-0112 (light)"
+review_ref: "reviewer: APPROVE 6883be2 (rounds 1-13); ui-art-director PASS round 13 (docs/ui/reviews/task-0117-visual-5.md); codex 11 returns, waived by owner #432, open findings in TASK-0126; landed 14b5f81"
 created: 2026-11-19
 ---
 
