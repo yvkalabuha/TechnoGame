@@ -7,14 +7,12 @@ namespace Singularity.Client.Spike;
 /// <summary>Values of the settings screen (spec §4). A plain record so that the sheet can keep «at open» and «working» copies.</summary>
 public sealed class SettingsData
 {
-    public static readonly (int W, int H)[] Resolutions = { (1280, 720), (1600, 900), (1920, 1080), (2560, 1440), (3840, 2160) };
     public static readonly int[] FpsLimits = { 30, 60, 120, 0 };
     public static readonly double[] TipDelays = { 0.3, 0.6, 1.0 };
     public static readonly string[] BusNames = { "Master", "Music", "Ambient", "UI", "Sfx", "Alert" };
 
     // video
-    public int Resolution = 1;           // index of Resolutions
-    public int WindowMode;               // 0 window, 1 borderless, 2 fullscreen
+    public int WindowMode = 1;           // 0 borderless full window, 1 fullscreen (a framed window exists only behind the --window flag, #424)
     public int Quality = 2;              // 0 low, 1 medium, 2 high, 3 custom
     public int Upscaler;                 // 0 off, 1 FSR 1.0, 2 FSR 2.2 (DLSS is shown disabled)
     public int UpscaleMode;              // 0 quality, 1 balance, 2 performance
@@ -43,9 +41,9 @@ public sealed class SettingsData
     }
 
     /// <summary>True when a change needs the «keep these settings?» dialog (a bad value could leave the screen unusable).</summary>
-    public bool NeedsConfirm(SettingsData old) => Resolution != old.Resolution || WindowMode != old.WindowMode || Upscaler != old.Upscaler || UpscaleMode != old.UpscaleMode;
+    public bool NeedsConfirm(SettingsData old) => WindowMode != old.WindowMode || Upscaler != old.Upscaler || UpscaleMode != old.UpscaleMode;
 
-    public void ResetVideo() { var d = new SettingsData(); Resolution = d.Resolution; WindowMode = d.WindowMode; Quality = d.Quality; Upscaler = d.Upscaler; UpscaleMode = d.UpscaleMode; Vsync = d.Vsync; FpsLimit = d.FpsLimit; UiScale = d.UiScale; }
+    public void ResetVideo() { var d = new SettingsData(); WindowMode = d.WindowMode; Quality = d.Quality; Upscaler = d.Upscaler; UpscaleMode = d.UpscaleMode; Vsync = d.Vsync; FpsLimit = d.FpsLimit; UiScale = d.UiScale; }
     public void ResetSound() { var d = new SettingsData(); Volume = d.Volume; SoundInBackground = d.SoundInBackground; }
     public void ResetGeneral() { var d = new SettingsData(); DateFormat = d.DateFormat; PauseOnAlarm = d.PauseOnAlarm; TipDelay = d.TipDelay; Animations = d.Animations; Textures = d.Textures; DeskInstruments = d.DeskInstruments; OrganInstruments = d.OrganInstruments; RailWide = d.RailWide; }
 }
@@ -58,6 +56,8 @@ public static class Settings
     public static bool Loaded { get; private set; }
     /// <summary>Screenshot and bench runs must not touch the owner's saved settings.</summary>
     public static bool ReadOnly { get; set; }
+    /// <summary>--window: a framed 1920x1080 window for tests (the game itself is fullscreen or borderless, #424).</summary>
+    public static bool Framed { get; set; }
     static readonly string[] Months = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
     public static void Load()
@@ -66,8 +66,8 @@ public static class Settings
         if (cf.Load(Path) != Error.Ok) return;
         Loaded = true;
         var s = new SettingsData();
-        s.Resolution = Math.Clamp((int)cf.GetValue("video", "resolution", s.Resolution), 0, SettingsData.Resolutions.Length - 1);
-        s.WindowMode = Math.Clamp((int)cf.GetValue("video", "window_mode", s.WindowMode), 0, 2);
+        if (cf.HasSectionKey("video", "display_mode")) s.WindowMode = Math.Clamp((int)cf.GetValue("video", "display_mode", s.WindowMode), 0, 1);
+        else if (cf.HasSectionKey("video", "window_mode")) s.WindowMode = SettingsLogic.MigrateWindowMode((int)cf.GetValue("video", "window_mode", 2));   // preference of the build before #424
         s.Quality = Math.Clamp((int)cf.GetValue("video", "quality", s.Quality), 0, 3);
         s.Upscaler = Math.Clamp((int)cf.GetValue("video", "upscaler", s.Upscaler), 0, 2);
         s.UpscaleMode = Math.Clamp((int)cf.GetValue("video", "upscale_mode", s.UpscaleMode), 0, 2);
@@ -94,7 +94,7 @@ public static class Settings
     {
         if (ReadOnly) return;
         var s = Current; var cf = new ConfigFile();
-        cf.SetValue("video", "resolution", s.Resolution); cf.SetValue("video", "window_mode", s.WindowMode); cf.SetValue("video", "quality", s.Quality);
+        cf.SetValue("video", "display_mode", s.WindowMode); cf.SetValue("video", "quality", s.Quality);
         cf.SetValue("video", "upscaler", s.Upscaler); cf.SetValue("video", "upscale_mode", s.UpscaleMode); cf.SetValue("video", "vsync", s.Vsync);
         cf.SetValue("video", "fps_limit", s.FpsLimit); cf.SetValue("video", "ui_scale", s.UiScale);
         for (int i = 0; i < s.Volume.Length; i++) cf.SetValue("sound", SettingsData.BusNames[i], s.Volume[i]);
@@ -108,19 +108,39 @@ public static class Settings
 
     static bool Headless => DisplayServer.GetName() == "headless";
 
+    /// <summary>Logs the real window size and px/du; a real game on a display of 1920x1080 or more that renders below the scale of its setting is put back into fullscreen once.</summary>
+    static void ReportScale(SettingsData s, Window win)
+    {
+        var size = DisplayServer.WindowGetSize(); var screen = DisplayServer.ScreenGetSize(DisplayServer.WindowGetCurrentScreen());
+        double k = SettingsLogic.PixelsPerDu(size.X, size.Y, s.UiScale);
+        Godot.GD.Print($"window {size.X}x{size.Y} on screen {screen.X}x{screen.Y}: {k:F3} px/du at UI scale {s.UiScale} % ({(Framed ? "framed test window, no visual PASS" : "game")})");
+        if (!Framed && screen.X >= SettingsLogic.BaseWidth && screen.Y >= SettingsLogic.BaseHeight && !SettingsLogic.ScaleFloorOk(size.X, size.Y, s.UiScale))
+        {
+            Godot.GD.PushWarning("render below 1 px/du on a Full HD display: forcing fullscreen");
+            DisplayServer.WindowSetMode(DisplayServer.WindowMode.Windowed); DisplayServer.WindowSetMode(s.WindowMode == 1 ? DisplayServer.WindowMode.ExclusiveFullscreen : DisplayServer.WindowMode.Fullscreen);   // O-034, as in Apply
+        }
+    }
+
     /// <summary>Applies a settings set to the engine. <paramref name="window"/> false leaves the window size and mode alone (screenshot runs keep a fixed window).</summary>
     public static void Apply(SettingsData s, Window win, bool window = true)
     {
         if (!Headless && window)
         {
-            var (w, h) = SettingsData.Resolutions[s.Resolution];
-            DisplayServer.WindowSetFlag(DisplayServer.WindowFlags.Borderless, s.WindowMode == 1);
-            DisplayServer.WindowSetMode(s.WindowMode == 2 ? DisplayServer.WindowMode.ExclusiveFullscreen : DisplayServer.WindowMode.Windowed);
-            if (s.WindowMode != 2) DisplayServer.WindowSetSize(new Vector2I(w, h));
+            if (Framed) { DisplayServer.WindowSetFlag(DisplayServer.WindowFlags.Borderless, false); DisplayServer.WindowSetMode(DisplayServer.WindowMode.Windowed); DisplayServer.WindowSetSize(new Vector2I(SettingsLogic.BaseWidth, SettingsLogic.BaseHeight)); }
+            else
+            {
+                // O-034: "fullscreen" is exclusive, "borderless" is Godot's non-exclusive Fullscreen (a borderless full window). A Windowed window of the monitor size is not used:
+                // a window manager with a panel clamps it below the screen height and the UI would scale under 1 px/du (A1).
+                DisplayServer.WindowSetMode(s.WindowMode == 1 ? DisplayServer.WindowMode.ExclusiveFullscreen : DisplayServer.WindowMode.Fullscreen);
+            }
+            win.GetTree().CreateTimer(1.0).Timeout += () => ReportScale(s, win);   // the mode change lands a few frames later
         }
         DisplayServer.WindowSetVsyncMode(s.Vsync ? DisplayServer.VSyncMode.Enabled : DisplayServer.VSyncMode.Disabled);
         Engine.MaxFps = SettingsData.FpsLimits[s.FpsLimit];
+        // Scale policy (UI_DESIGN_SYSTEM 4.3): base 1920x1080 du, larger screens scale up by min(w/1920, h/1080), the setting multiplies on top.
+        win.ContentScaleSize = new Vector2I(SettingsLogic.BaseWidth, SettingsLogic.BaseHeight);
         win.ContentScaleMode = Window.ContentScaleModeEnum.CanvasItems;
+        win.ContentScaleAspect = Window.ContentScaleAspectEnum.Expand;
         win.ContentScaleFactor = (float)(s.UiScale / 100.0);
         var vp = win.GetViewport();
         vp.Msaa3D = s.Quality switch { 0 => Viewport.Msaa.Disabled, 1 => Viewport.Msaa.Msaa2X, 3 => vp.Msaa3D, _ => Viewport.Msaa.Msaa4X };

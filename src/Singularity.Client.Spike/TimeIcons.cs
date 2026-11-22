@@ -3,7 +3,7 @@ using Godot;
 
 namespace Singularity.Client.Spike;
 
-/// <summary>Time group (UI_DESIGN_SYSTEM §17.8, spec §5): pause, slower, faster as 28x28 line icons on a 20-unit grid, and a coloured four-cell tempo gauge (filled: 0 pause, 1 day/s, 2 week/s, 3 month/s) with the tempo word beside it. State reads without colour: fill and the number of ticks.</summary>
+/// <summary>Time group (UI_DESIGN_SYSTEM §17.8, spec §5): pause, slower, faster as 28x28 line icons with a 15 du glyph box, and a coloured four-cell tempo gauge (filled: 0 pause, 1 day/s, 2 week/s, 3 month/s) with the tempo word beside it. State reads without colour: fill and the number of ticks.</summary>
 public sealed partial class TimeControl : HBoxContainer
 {
     public enum Kind { Pause, Slower, Faster }
@@ -11,9 +11,10 @@ public sealed partial class TimeControl : HBoxContainer
     sealed partial class IconButton : Button
     {
         public Kind K; public bool On;
+        readonly GlyphSet _prims;
         public IconButton(Kind k)
         {
-            K = k; CustomMinimumSize = new Vector2(28, 28); FocusMode = FocusModeEnum.None; Text = ""; ClipContents = true;
+            K = k; _prims = new GlyphSet(TimeGlyphMetrics.Prims((int)k)); CustomMinimumSize = new Vector2(28, 28); FocusMode = FocusModeEnum.None; Text = ""; ClipContents = true;
             var normal = Ui.Box(Ui.Sheet, Ui.Ink, 1, 0, Ui.R2);
             AddThemeStyleboxOverride("normal", normal);
             AddThemeStyleboxOverride("hover", Ui.Box(Ui.Hover, Ui.Ink, 1, 0, Ui.R2));
@@ -27,25 +28,7 @@ public sealed partial class TimeControl : HBoxContainer
             bool filled = K == Kind.Pause && On;
             if (filled) DrawStyleBox(Ui.Box(Ui.Ink, Ui.Ink, 1, 0, Ui.R2), new Rect2(Vector2.Zero, Size));
             var c = Disabled ? Ui.Ink3 : filled ? Ui.Sheet : Ui.Ink;
-            var o = (Size - new Vector2(20, 20)) * 0.5f;
-            Vector2 P(float x, float y) => o + new Vector2(x, y);
-            switch (K)
-            {
-                case Kind.Pause:
-                    DrawPolyline(new[] { P(6, 4), P(9, 4), P(9, 16), P(6, 16), P(6, 4) }, c, 1.5f);
-                    DrawPolyline(new[] { P(11, 4), P(14, 4), P(14, 16), P(11, 16), P(11, 4) }, c, 1.5f);
-                    break;
-                case Kind.Slower:
-                    DrawPolyline(new[] { P(10, 4), P(3, 10), P(10, 16), P(10, 4) }, c, 1.5f);
-                    DrawPolyline(new[] { P(17, 4), P(10, 10), P(17, 16), P(17, 4) }, c, 1.5f);
-                    break;
-                default:
-                    DrawPolyline(new[] { P(3, 4), P(10, 10), P(3, 16), P(3, 4) }, c, 1.5f);
-                    DrawPolyline(new[] { P(10, 4), P(17, 10), P(10, 16), P(10, 4) }, c, 1.5f);
-                    break;
-            }
-            if (Disabled)   // unavailable: hatching at 45 degrees (not colour alone)
-                for (float d = -Size.Y; d < Size.X; d += 6) DrawLine(new Vector2(d, Size.Y - 2), new Vector2(d + Size.Y - 4, 2), new Color(Ui.Ink3, 0.35f), 1f);
+            GlyphDraw.Draw(this, _prims, Vector2.Zero, c);   // primitives in button coordinates: TimeGlyphMetrics (A2: ink >= 16 x 16 du, stroke >= 2 du)
         }
     }
 

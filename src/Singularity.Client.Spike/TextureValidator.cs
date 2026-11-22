@@ -166,7 +166,8 @@ public static class TextureValidator
             if (!r.Pass) fail++;
             sb.Append(r.Pass ? "PASS " : "FAIL ").Append(r.Name).Append(": ").Append(r.Detail).Append('\n');
         }
-        sb.Append($"verdict: {(fail == 0 ? "PASS" : "FAIL")} ({results.Count - fail}/{results.Count} pairs pass)\n");
+        if (results.Count == 0) fail = 1;   // nothing measured proves nothing
+        sb.Append($"verdict: {(fail == 0 ? "PASS" : "FAIL")} ({results.Count - fail}/{results.Count} pairs pass{(results.Count == 0 ? ", NO MEASUREMENTS" : "")})\n");
         return sb.ToString();
     }
 }

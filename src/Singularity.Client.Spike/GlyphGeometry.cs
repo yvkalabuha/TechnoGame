@@ -26,6 +26,30 @@ public static class GlyphGeometry
         _ => null,
     };
 
+    /// <summary>A2 floor for a meaningful icon: 16 physical px, which is 16 du at 1920x1080 and 100 %.</summary>
+    public const float IconFloor = 16f;
+    /// <summary>Smallest node plate radius at the Icons level (TechTree.NR starts here).</summary>
+    public const float IconsPlateMin = 13f;
+    /// <summary>In-node glyph radius as a share of the node plate radius (Icons level). Every glyph spans 2 x this radius in its widest direction.</summary>
+    public const float NodeGlyphShare = 0.62f;
+
+    /// <summary>Bounding box of the closed outline of a type at radius r (PRN: circle): min x, min y, max x, max y.</summary>
+    public static (float X0, float Y0, float X1, float Y1) Bounds(string code, float r)
+    {
+        var o = Outline(code, r);
+        if (o == null) return (-r, -r, r, r);
+        float x0 = float.MaxValue, y0 = float.MaxValue, x1 = float.MinValue, y1 = float.MinValue;
+        foreach (var (x, y) in o) { x0 = Math.Min(x0, x); y0 = Math.Min(y0, y); x1 = Math.Max(x1, x); y1 = Math.Max(y1, y); }
+        return (x0, y0, x1, y1);
+    }
+
+    /// <summary>Smallest radius at which both sides of the outline box reach the icon floor (legend swatches use it, so each stays at 16 du and the shapes keep their proportions).</summary>
+    public static float LegendRadius(string code)
+    {
+        var (x0, y0, x1, y1) = Bounds(code, 1f);
+        return (IconFloor + 0.1f) / Math.Min(x1 - x0, y1 - y0);
+    }
+
     public static double Area((float X, float Y)[] p)
     {
         double s = 0;

@@ -211,6 +211,7 @@ public sealed partial class SignalField : PanelContainer
 /// <summary>Menu button: three lines on a radius.2 plate (#302: the language switch left the signal field, the menu took its place).</summary>
 public sealed partial class MenuButton3Lines : Button
 {
+    readonly GlyphSet _prims = new(GlyphPrims.MenuGlyph());
     public MenuButton3Lines()
     {
         CustomMinimumSize = new Vector2(34, 30); FocusMode = FocusModeEnum.None;
@@ -221,7 +222,6 @@ public sealed partial class MenuButton3Lines : Button
 
     public override void _Draw()
     {
-        var c = Size * 0.5f;
-        for (int i = -1; i <= 1; i++) DrawLine(c + new Vector2(-8, i * 5), c + new Vector2(8, i * 5), Ui.Ink, 1.5f);
+        GlyphDraw.Draw(this, _prims, Size * 0.5f, Ui.Ink);   // primitives: GlyphPrims.MenuGlyph (A2: 16 x 16 du ink, 2 du bars)
     }
 }
