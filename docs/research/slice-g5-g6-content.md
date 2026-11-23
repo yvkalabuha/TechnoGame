@@ -1,0 +1,172 @@
+# Контент G5/G6 для среза «реактивная авиация» (TASK-0128, поезд 2, шаг T-C), ред. 2
+
+> research-scientist, 2026-11-23. Проект данных [Предл.] для повторного gate, не решение. `mods/` и `src/` не менялись. Ред. 2 — по трём рецензиям (`docs/reviews/slice-g5-g6-content-{critic,advocate,deepseek}.md`) и O-038 (`docs/decisions/ORCH_DECISIONS.md`).
+> Входы: `docs/architecture/notes/slice-horizon-2030.md` §3, §5; `docs/simulation/m-play-horizon-2030.md`; `docs/simulation/slice-jet-aviation.md` §1.3, §1.4, §2, §8.1; `mods/core/nodes.yaml`, `product_classes.yaml`; `docs/research/RR-0008-technology-space-architecture.md` §3–4 (грамматика `hazard`).
+> Документ RR-контента из записки (`RR-jet-slice-1970-2030-content.md`) в репозитории не найден: узлы составлены заново.
+
+## Краткий вывод
+- [Предл.] 20 новых узлов (62–81): 2 FND, 3 PRN, 7 ENG, 2 CMP, 4 PRC, 2 APP. Было 61, станет 81. Номера 64–81 — второе слово лицензионной маски (≤127). G5: электронное управление, композиты, монокристалл, цифровая автоматика двигателя (1970–1984); G6: малозаметность, вектор тяги, АФАР (1962–2005); поздний хвост 1997–2021: АФАР, керамические композиты (CMC), адаптивный цикл.
+- [Предл.] Только существующие дисциплины и кластеры, PRC не выше tier 5; `elec` и tier 6 не нужны.
+- [Предл.] `hazard` по типу (RR-0008 §3–4): FND и PRN — `hz`; ENG-двигатели, CMP 72 и PRC 73 — `key`; APP — `none`. Контрольные слои Lab (L_K/L_K0/L_P) остаются на G1–G4 и отклоняют данные с `gen > 4` стражем (O-038); отсутствие покрытия — не довод против hazard.
+- [Предл.] Выбор для догоняющей страны: два пути к G5 (композитный и «цифровой» через `any_of`) и два класса планера ранга 6 (`af_class` 4 дешёвый, 5 дороже и лучше). G6 идёт только через композит и `af_class 6`.
+- [Предл.] `c_n` G5/G6 — не геометрический ряд, а стартовые значения под целевые годы открытия лидера (G5 APP 1980–85, G6 APP 2000–05); калибрует зонд (раздел 6). `proc_scale` — стартовые, считаются по R-PS2m.
+- [Факт] Якоря APP: G5 — ввод Mirage 2000 в строй, FRA, 1984; G6 — IOC F-22, USA, декабрь 2005. 8 якорей подтверждены поиском или открытой страницей, остальные — `estimated: true` (раздел «Не проверено»).
+- [Факт, TASK-0131] Обязательных правок Core две: `CostGenMultiplier` для G5/G6 и второе слово лицензионной маски (полный объём H13 в разделе 4).
+
+## 1. Узлы G5–G6
+Поля как у G1–G4: `id, number, type, gen, discipline, cluster, requires, hazard, informs, anchor{year, source, estimated}`; у PRC ещё `tier, capability_req, labour_p`. Кластер: aero и prop-двигатель → AERO, metal → MET, chem → CHEM. Строка требований: `+` — AND, `|` — `any_of`.
+
+| # | id | Тип | G | Дисц. | Tier | hazard | requires | Якорь: год, страна, событие | Ист. |
+|---|---|---|---|---|---|---|---|---|---|
+| 62 | s8.fnd.electronic_flight_control_theory | FND | 5 | aero | – | hz | transonic_aerodynamics | 1972 USA: F-8 DFBW, 25 мая [Факт] | S-A |
+| 63 | s8.fnd.edge_wave_diffraction | FND | 5 | aero | – | hz | compressible_flow | 1962 SUN: Уфимцев [Факт, вторичн.]; 1962/1964 не разрешено, est | S-B |
+| 64 | s5.prn.single_crystal_growth | PRN | 5 | metal | – | hz | ds_casting | 1974 USA, est | S-C |
+| 65 | s5.prn.fibre_composite_laminate_design | PRN | 5 | chem | – | hz | aluminium_alloy_sheet | 1970 USA: борэпоксид F-14 [Факт, вторичн.] | S-D |
+| 66 | s8.prn.low_observable_shaping | PRN | 6 | aero | – | hz | 63 | 1975 USA, est | S-B |
+| 67 | s8.eng.fly_by_wire_relaxed_stability | ENG | 5 | aero | – | none | 62 + all_moving_tail | 1974 USA: YF-16, 2 февр., аналоговая ЭДСУ [Факт, вторичн.] | S-E |
+| 68 | s8.eng.turbofan_g5 | ENG | 5 | prop | – | key | turbofan_g4 + 62 | 1981 USA: DEEC на F100, 1981–83 [Факт, вторичн.] | S-F |
+| 69 | s8.eng.composite_airframe | ENG | 5 | aero | – | none | 65 + mach2_airframe_g4 | 1978 USA: YAV-8B, 9 нояб. [Факт, вторичн.] | S-G |
+| 70 | s8.eng.low_observable_airframe | ENG | 6 | aero | – | none | 66 + 67 | 1977 USA: Have Blue, 1 дек. [Факт, вторичн.] | S-H |
+| 71 | s8.eng.thrust_vectoring_supercruise_engine | ENG | 6 | prop | – | key | 68 + 72 | 1990 USA: YF-22, вектор 15 нояб., сверхзвук без форсажа 3 нояб. [Факт] | S-I |
+| 72 | s8.cmp.turbine_blade_single_crystal | CMP | 5 | prop | – | key | 64 + turbine_blade_cooled | 1982 USA, est | S-C |
+| 73 | s5.prc.single_crystal_casting | PRC | 5 | metal | 5 | key | 64 + ds_casting | 1982 USA, est | S-C |
+| 74 | s8.prc.composite_layup_cure | PRC | 5 | aero | 4 | none | 65 | 1978 USA, est | S-G |
+| 75 | s5.prc.low_observable_finishing | PRC | 6 | chem | 5 | none | 66 | 1981 USA, est | S-H |
+| 76 | s8.app.jet_fighter_g5 | APP | 5 | aero | – | none | 67 + (69 \| 68) | 1984 FRA: Mirage 2000 в строю [Факт, по выдаче] | S-J |
+| 77 | s8.app.jet_fighter_g6 | APP | 6 | aero | – | none | 71 + 70 + 78 | 2005 USA: F-22 IOC, дек. [Факт] | S-I, S-K |
+| 78 | s8.eng.aesa_sensor_fusion | ENG | 6 | aero | – | none | 62 | 1997 USA: лётные испытания APG-77, нояб., est | S-L |
+| 79 | s5.cmp.ceramic_matrix_composite | CMP | 6 | chem | – | key | 72 + ceramic_shell_moulding | 2016 USA: CMC-кожухи GE (LEAP), est | S-M |
+| 80 | s5.prc.cmc_fabrication | PRC | 6 | chem | 5 | none | 79 + ceramic_shell_moulding | 2016 USA, est | S-M |
+| 81 | s8.eng.adaptive_cycle_engine | ENG | 6 | prop | – | key | 71 + 79 | 2021 USA: испытания XA100, est | S-N |
+
+Заметки.
+- [Предл.] **Hazard по типу (п.1).** Грамматика RR-0008 §4: `hz` для FND/PRN, у APP только `none`, у ENG/CMP/PRC любой. По образцу G1–G4 (`key` у двигателей, горячих компонентов, трудных PRC) `key` получили 68, 71, 81, 72, 79, 73. Механика hazard не зависит от поколения [Факт, advocate: `KnowledgeMath.Hazard`, `KnowledgeRng.Hazard`], не проверено мной.
+- [Предл.] **Порядок якорей** (п.4): ни одна предпосылка не имеет якоря позже узла; проверено скриптом по таблице (20 узлов, нарушений 0; для старых узлов взяты годы из `nodes.yaml`).
+- [Предл.] **Узел 62** переименован из `digital_flight_control_theory` в «электронную теорию управления» (аналог + цифра), иначе YF-16 1974 (аналоговый) не мог требовать узел 1972 с «цифровой» теорией. Цифровая часть живёт в 68 и APP.
+- [Предл.] **Узел 63 → G5:** теория 1962 не должна стоять по цене G6 и открываться позже G5-узлов; стоимость по поколению, где применяется (66 → G6 заметность). Окна: G5 1970–1990, G6 1975–2025 [Предп.]; окна только маркируют.
+- [Предл.] **Узел 70 не требует 69** (п.4): Have Blue 1977 раньше AV-8B 1978. Композит входит в G6 на уровне слота (`af_lo` содержит процесс 74), не графа.
+- [Предл.] **Стелс-планер** (п.13) — условие входа в G6 (ранг 7, `af_class 6`, процессы 74 + 75), **не модель малозаметности**: ось `perf` её не выражает; модель «вероятность обнаружения» — решение game-designer, вне поезда.
+- [Предл.] **Узел 65** требует лист алюминия: узла химии волокна и смолы нет; упрощение принято (critic п.11).
+- [Предл.] **Якоря APP** G5 и G6 — ввод в строй (в G4 — первый полёт 1972, не менялся): в игре «G в строю» считается по введению. Mirage 2000 (FRA, слайс-страна) заменил EAP 1986; Рафаль A 1986 и Су-27 1977 не взяты (раздел «Разногласия»).
+- [Предл.] **`informs`** (п.5), правило по G1–G4: 0,6 — прямые потомки по `requires`, 0,3 — потомки на два шага. Исходящие рёбра новых узлов:
+  62→67 0,6; 68 0,6; 78 0,6; 70, 76, 71, 77 0,3 · 63→66 0,6; 70, 75 0,3 · 64→72 0,6; 73 0,6; 71, 79 0,3 · 65→69 0,6; 74 0,6; 76 0,3 · 66→70 0,6; 75 0,6; 77 0,3 · 67→70 0,6; 76 0,6; 77 0,3 · 68→71 0,6; 76 0,6; 77, 81 0,3 · 69→76 0,6 · 70→77 0,6 · 71→77 0,6; 81 0,6 · 72→71 0,6; 79 0,6; 77, 81, 80 0,3 · 78→77 0,6 · 79→80 0,6; 81 0,6. У 73–77, 80, 81 исходящих рёбер нет (листья).
+  Входящие рёбра от старых узлов (правка `informs` в `nodes.yaml`): transonic_aerodynamics→62 0,6; 67, 68, 78 0,3 · compressible_flow→63 0,6; 66 0,3 · ds_casting→64 0,6; 73 0,6; 72 0,3 · aluminium_alloy_sheet→65 0,6; 69, 74 0,3 · all_moving_tail→67 0,6; 70, 76 0,3 · turbofan_g4→68 0,6; 71, 76 0,3 · mach2_airframe_g4→69 0,6; 76 0,3 · turbine_blade_cooled→72 0,6; 71, 79 0,3 · ceramic_shell_moulding→79 0,6; 80 0,6; 81 0,3.
+- [Предп.] `capability_req` и `labour_p` (без источника): 73 — 5,5/5,5/5,5, 5000 ч; 74 (tier 4) — 4,5/–/5, 8000 ч; 75 — 5/5,5/5,5, 6000 ч; 80 — 5,5/5,5/5,5, 6500 ч. Эталоны: узел 43 (5/5/5, 3750 ч), 52 (5,5/–/5, 5250 ч).
+
+## 2. Данные класса `jet_fighter`
+Все числа [Предп.], `estimated: true`. Правила — как в G1–G4: `prc_set` альтернативы = её процессы; планер кумулятивен (F-PC1).
+
+**Слот engine:**
+| id | rank | eng_gen | perf_mult | prc_set | requires_nodes |
+|---|---|---|---|---|---|
+| eng_g5 | 5 | 5 | 2,8 | jet_engine_assembly_test, alloying_element_refining | turbofan_g5 (68) |
+| eng_g6 | 6 | 6 | 3,4 | то же | thrust_vectoring_supercruise_engine (71) |
+| eng_g6_adaptive | 7 | 6 | 3,8 | то же | adaptive_cycle_engine (81) |
+
+**Слот hot_section:** `hot_sc_sc` (монокристалл) rank 5, `alloy_kg` 3600, perf 1,6, prc_set [vacuum_induction_melt, single_crystal_casting, cooled_blade_drilling], узел 72. `hot_sc_cmc` rank 6, `alloy_kg` 1800 (CMC заменяет часть сплава), perf 1,75, prc_set [cmc_fabrication, cooled_blade_drilling], узел 79. Стартовые числа без источника.
+
+**Слот airframe** (выбор догоняющей страны, п.3):
+| id | rank | af_class | perf_mult | prc_set | requires_nodes | Для кого |
+|---|---|---|---|---|---|---|
+| af_fbw | 6 | 4 | 1,75 | af_mach2 | 67, mach2_airframe_g4, titanium_alloy | «цифровой» путь, дёшево: FRA/SUN-тип |
+| af_composite | 6 | 5 | 1,95 | af_mach2 + composite_layup_cure | 69, mach2_airframe_g4, titanium_alloy | США-тип: +11 % perf, h_first ×1,19 |
+| af_lo_composite | 7 | 6 | 2,1 | af_composite + low_observable_finishing | 70 + требования af_composite | вход в G6 |
+
+- [Предл.] Что выбирает игрок: (а) G5 дешевле всего через узлы 62, 67, 68 и `af_fbw` (3 узла, класс 4); композитный путь — узлы 62, 65, 67, 69, 74 и класс 5, но лучше `perf`; (б) для G6 путь через композит обязателен: стране на `af_fbw` придётся добрать 65, 69, 74, 66, 70, 75 — цена выбора «дёшево сейчас»; (в) монокристалл и CMC — ступени `perf` горячей части, не условие G5.
+- [Предл.] `perf` верхнего проекта: G4 ≈ 7,6; G5 через `af_fbw` ≈ 9,4 (2,8·1,45·1,15·1,75·1,15; горячая часть ранга 4); G5 композит ≈ 11,6; G6 ≈ 15,1; G6 + CMC + адаптивный ≈ 18,5. [Предп., арифметика]
+- Стелс (п.13): `perf_mult` 2,1 ранга 7 — подставка, не модель малозаметности.
+
+**`af_classes`** [Предп.; стартовые, до расчёта по R-HF, R-MF, R-DS — `product_inputs.md` §14]:
+| af_class | h_first | h_floor | materials_floor | design_scale | proc_scale_af |
+|---|---|---|---|---|---|
+| 4 (есть) | 125920 | 31480 | 0,002098 | 3,12 | 3,754 |
+| 5 | 150000 | 37500 | 0,0028 | 3,6 | 4,6 |
+| 6 | 226000 | 56500 | 0,0042 | 4,8 | 6,0 |
+Класс 5 — ×1,19 к классу 4 (не ×3, как 3→4): композит доступен малому бюджету (Gripen, EAP; advocate п.5); класс 6 — ×1,5 к классу 5.
+
+**`pu_ranks`** [Предп., стартовые, до R-PS2m (LAYER_CONTRACT §4.4a), эталоны G1–G4 точны]: ранги идут парами; шаг между парами 0,5155 → 0,8275 равен ×1,61 (в ред. 1 стояло ×1,45 — ошибка). Старт: ранги 5, 6 — 1,33 (×1,61 к 0,8275); ранг 7 — 2,14 (следующая пара). `proc_scale_af` и `proc_scale_pu` вычисляет simulation-engineer в зонде; числа выше — не вывод из ряда.
+
+**`processes`** (`n_p` 1, `base_cost = labour_hours · 1,25·10⁻⁷`): single_crystal_casting 5000 ч / 0,000625; composite_layup_cure 8000 ч / 0,001; low_observable_finishing 6000 ч / 0,00075; cmc_fabrication 6500 ч / 0,000813. `c_ref` не меняется.
+
+**`generations`:** `{gen: 5, app: 76, crew_req: 1, platform_min_rank: 6}`, `{gen: 6, app: 77, crew_req: 1, platform_min_rank: 7}`. Оба пути G5 дают ранг 6; `platform_min_rank` 6 оставлен: при 5 G5 был бы планером G4 «на бумаге» (advocate п.8). `SalePhi` режет разрыв ≥ 3 до 0,3 — G6 против G1 как G4 против G1; [Предл.] принято сознательно (critic п.8).
+
+**`max_designs` остаётся 12** [Предп.]: в зонде занято 4 из 12; пересмотр, только если слоты заполнятся.
+
+**`T_design[5/6]`, ρ[5/6]** (п.8): L_P исключён для `gen > 4` стражем (O-038), значения не нужны. [Факт по critic, `ProductsSystem.cs:107-108`]: `LpTDesign` используется в `CanonicalLp` и требует длину = числу поколений; страж должен отклонять манифест L_P/L_K/L_K0 по `gen > 4`, а не только по тактам > 384 [Предл.]. В FULL не используется [Не проверено].
+
+## 3. Поправки спецификации `slice-jet-aviation.md` (список; файл не правился)
+1. Краткий вывод: 61 → 81 узел; FND 8→10, PRN 8→11, ENG 13→20, CMP 8→10, PRC 20→24, APP 4→6; шесть поколений.
+2. §1.2: добавить «электроника входит в `aero`/`prop`». §1.3: заголовок «Узлы (81)», окна G5/G6, 20 строк (раздел 1), правка `informs` старых узлов. §1.4: слоты (раздел 2), `af_class` 5, 6, `pu_ranks` 5–7, пороги платформы 1/2/3/5/6/7.
+3. §2 (стр. 411–417): «384 месяца», «окно 360 / хвост 24», «G4 входит около 1970–75» — калибровочные стенды; для M-play до 2030-12 (1024 мес.) окна метрик переопределить.
+4. §3.5 A19 и §8.1: `c_n` G0…G4 = 1,0 / 1,0 / 1,6 / 2,5 / 4,0, добавить G5, G6 (раздел 4).
+5. §6.1: контрольные слои L_K, L_K0, L_C, L_P покрывают G0–G4; `gen > 4` и ticks > 384 отклоняются (O-038).
+6. §12/§13: расхождения — стелс-планер как условие входа, `proc_scale` стартовые, якоря APP «в строю».
+
+## 4. Правки Core, нужные данным
+| # | Правка | Статус | Почему |
+|---|---|---|---|
+| 1 | `KnowledgeParams.CostGenMultiplier`: G5, G6. Стартовые [Предп.] 7,0 и 12,0; не продолжение ряда 1,6 → 2,5 → 4,0 | **Обязательно**, TASK-0131 | иначе `CostN` бросает исключение |
+| 2 | Лицензионная маска, **полный объём H13**: `LicenceRules` (хранение прав), `Has` (вне диапазона — исключение, не `false`), `LicenceView.Mask` → массив слов (`TestApiVersion` +1), цикл `KnowledgeInputsAdapter` 1…63 → до максимального номера (81), колонки `PolicySystem.Events` (второе слово), сохранение и загрузка; тесты на биты 64 и 81, `Has` вне диапазона | **Обязательно**, TASK-0131 | номера 64–81 вне `ulong` |
+| 3 | tier 6; дисциплина `elec` | Не нужно | все PRC ≤ tier 5 |
+| 4 | Страж Lab: L_K/L_K0/L_P отклоняют `gen > 4` | Lab, O-038 | долг в TECH_DEBT (H9, H10, H15) |
+| 5 | Lab CSV по поколениям (`out_g1..g4`) | Желательно | H15: `gen > 4` молча отбрасывается |
+| 6 | Клиент: дуги G1–G4, локали узлов | Отдельно (ui-art-director) | H20 |
+| 7 | `ProductClassTable.Build` для `af_class` 5, 6, ранги 6, 7 | Факт по записке §3 (параметричен); проверка прогоном | «Проверить» снято |
+
+## 5. Альтернативы и опции
+- [Предл.] **Основной вариант**: разделы 1–2 целиком.
+- Вариант Л (только G5, 11 узлов) отклонён: усиливает мёртвое время после 1990 (advocate п.9).
+- Вариант Т распадается: `hz` и `af_class 6` включены в основной; Lab-таблицы L_K для G5/G6 не делаются (страж).
+- Не включено: G7 (2030+); отдельный слот авионики; модель малозаметности.
+
+## 6. Ожидаемый эффект на гонку и критерии зонда (pre-registered, O-038)
+- [Предп.] Сейчас новое знание кончается в 1961–1971; USA знает 61 узел к 1970; в 2000–2030 неистрачено 94–98 % бюджета; лидер USA с 1997–2024 в 5 из 5 [m-play-horizon-2030.md]. Прежний довод «16 узлов открываются до 2010» расчётом не подтверждён; ред. 2 его снимает: эффект — гипотеза до зонда.
+- [Предп.] **Калибровочные цели `c_n`** (лидер USA): G5 APP — 1980–85; AESA (78) — 1995–2000; G6 APP — 2000–05; CMC (79, 80) — 2008–2015; адаптивный (81) — 2015–2022. Стартовые 7,0 и 12,0 подбираются под них; все поздние узлы G6 делят один множитель, разброс по годам даёт глубина цепочки; если хвост слипнется, simulation-engineer предлагает отдельный множитель узла (Core, новый D1).
+- [Предл.] **Пороги O-038:** (1) год последнего нового узла у лидера ≥ 2005; (2) G5 в строю у ≥ 2 стран к 2030; (3) узкая метрика простоя 1978–2030 < 0,8; (4) годы с G = 0 по странам.
+- [Предл.] **Старение парка** (#431, #435–#437; период полураспада 5 лет): (5) годы с G = 0 для каждой страны с G4 к 1990; (6) доля времени 1990–2030, когда проверка «в строю» (50 эффективных единиц) не выполнена. Пороги (4), (6) [Предл.]: у лидера G = 0 нуль лет и доля < 0,2; уточняет simulation-engineer до запуска. Страна, переведшая линию на G5 без серии, теряет единицы — зонд обязан это показать.
+- [Предп.] Риски: слишком дёшево — насыщение R7; слишком дорого — страны застревают на G4. Проверяются прогоном. Для GBR и SWE содержание не решает бюджет (записка §4 R2).
+- Остальное: год первого G5, G6 по странам; доля месяцев без событий; доля процессов с `e ≥ E_full` (RISK-0014).
+
+## 7. Разногласия
+| # | Тема | Позиции | Итог |
+|---|---|---|---|
+| 1 | Hazard G5/G6 | ред. 1: все `none` (L_K падает на G5). critic, advocate, DeepSeek: падение не зависит от hazard | Принято: hazard по типу; L_K защищён стражем (O-038) |
+| 2 | Якорь APP G5 | advocate: Mirage 2000 1978 или F/A-18; critic: Рафаль A 1986 или Су-27 1977 | Mirage 2000, но по вводу в строй (1984): первый полёт 1978 раньше DEEC 1981, нарушил бы порядок якорей. Рафаль, Су-27 отклонены |
+| 3 | `platform_min_rank` G5 | critic: 5; advocate: 6 | 6, выбор даёт `af_fbw` |
+| 4 | `af_class 6` | ред. 1: вариант Т; advocate: взять сейчас | Принято (вход G6) |
+| 5 | G7 или поздние узлы | critic: D1 владельца | Решение Orchestrator: 4 поздних узла 78–81, без G7 |
+| 6 | Вариант Л | advocate: не нужен | Отклонён |
+| 7 | Расчёт «открытия до 2010» | critic: не показан | Принято: гипотеза, зонд |
+| 8 | DeepSeek H10 (ключи L_K) | расширить ключи или исключить G5/G6 | Исключено стражем; долг — TECH_DEBT |
+| 9 | Окна G5/G6 | в ред. 1 краткий вывод ≠ §1 | Одно определение (раздел 1) |
+
+## История правок
+| Ред. | Дата | Что |
+|---|---|---|
+| 1 | 2026-11-23 | 16 узлов (62–77), `hazard: none`, c_n 6,4 и 10,2 |
+| 2 | 2026-11-23 | После gate и O-038: 20 узлов (62–81), hazard по типу, `any_of` и пути G5, `af_class` 5/6, графовые правки (62, 63, 67, 70), `informs`, `c_n` по целевым годам, критерии зонда, H13, якоря 1984/2005 |
+
+## Источники (доступ 2026-11-23)
+Лицензии: ADR-0009 — данные только PD/CC0/CC BY; здесь источники — указатели на даты, текст не копируется. Wikipedia (CC BY-SA) — только вторичное подтверждение.
+- S-A. NASA, F-8 DFBW: https://nasa.gov/centers/dryden/history/thisweek/E73-25554.html ; https://www.nasa.gov/wp-content/uploads/2021/09/120282main_fs-024-dfrc.pdf (PD). Дата 25.05.1972 — по выдаче; страницу не открывал.
+- S-B. Уфимцев, 1962, перевод 1971: https://archive.org/details/p-ya-ufimtsev.-method-of-edge-waves-in-the-physical-theory-of-diffraction ; ECHO 1: Air & Space Forces Magazine (по выдаче).
+- S-C. ASME Landmark, монокристальная лопатка P&W: https://www.asme.org/wwwasmeorg/media/resourcefiles/aboutasme/who%20we%20are/engineering%20history/landmarks/brochure-single-crystal-turbine-blade.pdf (не открыт). Годы 1974, 1982 — оценки.
+- S-D. F-14, борэпоксид: http://www.anft.net/f-14/f14-history-f14a-interavia.htm (вторичный).
+- S-E. F-16: https://www.af.mil/About-Us/Fact-Sheets/Display/Article/104505/f-16-fighting-falcon/ (PD); 02.02.1974 — Wikipedia.
+- S-F. NASA DFRC, DEEC: https://www.nasa.gov/centers/dryden/about/Organizations/Technology/Facts/TF-2004-03-DFRC.html (404; факты по выдаче).
+- S-G. AV-8B: сводка поиска; YAV-8B 9.11.1978 — Wikipedia. Первичного источника нет.
+- S-H. Have Blue: https://www.hmdb.org/m.asp?m=277077 (вторичный).
+- S-I. Code One, F-22 Milestones: https://www.codeonemagazine.com/f22_article.html?item_id=88 (открыт; 1990 даты; IOC 2005).
+- S-J. Dassault, Mirage 2000 (в строю 1984): https://www.dassault-aviation.com/en/defense/customer-support/operational-aircraft/mirage-2000/ (по выдаче, не открыт).
+- S-K. af.mil, F-22 (IOC декабрь 2005): https://www.af.mil/About-Us/Fact-Sheets/Display/Article/104506/f-22-raptor/ (PD; по выдаче, не открыт); 15.12.2005 — Lockheed Martin, globalsecurity.org.
+- S-L. APG-77, испытания ноябрь 1997 на Boeing 757: https://www.globalsecurity.org/military/systems/aircraft/f-22-testfly.htm ; secretprojects.co.uk (вторичный).
+- S-M. GE, CMC в LEAP (2016): https://www.sciencedaily.com/releases/2017/01/170103151742.htm ; https://www.geaerospace.com/news/press-releases/other-news-information/ge-aviation-reaches-new-milestones-advanced-manufacturing (по выдаче).
+- S-N. GE, XA100: https://www.geaerospace.com/news/press-releases/defense-engines/ge-begins-industrys-first-adaptive-cycle-engine-tests-arnold (по выдаче; 2021).
+
+## Не проверено
+- Открыта целиком одна страница (Code One, S-I); остальные факты — по сводкам поиска. Anchors 63, 64, 66, 72–75, 78–81 — `estimated: true`; 76 и 77 — по выдаче (Dassault, af.mil), не открыты.
+- Правило R-PS2m в тексте не читал (только ссылка LAYER_CONTRACT §4.4a): `proc_scale` — стартовые, не расчёт. Все числа разделов 2 и 4 — без источника.
+- Что `ProductClassTable.Build` принимает `af_class` 5, 6, ранги 6, 7, `gen` 5, 6; что `any_of` в APP допускается валидатором (в G3 `af_milled` есть); код не запускался.
+- Что L_P/`LpTDesign` не используется в FULL; `hz` в FULL не зависит от поколения — по critic и advocate, сам не читал код.
+- Что 78–81 разойдутся по годам при общем множителе G6 (раздел 6) — рассуждение, не расчёт.
+- Что механика ввода в строй (IOC-якорь) не ломает порядок открытий в Core: не проверялось.
