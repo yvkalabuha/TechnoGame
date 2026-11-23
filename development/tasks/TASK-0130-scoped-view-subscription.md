@@ -38,7 +38,7 @@ created: 2026-11-23
 - Клиент: `SimHost.PlayerActor`, подписка {играемый, WhyActor} синхронизируется в `Publish` на потоке симуляции (при смене сразу `RebuildView`, и на паузе, и в беге); `TechTree`, `AudioDirector` проверяют `IsPresent`.
 
 ## Разногласия
-Замечания Codex 1–3 (проба P8 на 200 акторах, тест SimHost без Godot) отклонены Orchestrator: DEBT-0074; SimHost тонкий, логика подписки вынесена в `ViewSubscriptionSync` и покрыта тестами.
+Замечания Codex 1–3 (проба P8 на 200 акторах, тест SimHost без Godot) отклонены Orchestrator: O-041, DEBT-0074; SimHost тонкий, логика подписки вынесена в `ViewSubscriptionSync` и покрыта тестами.
 
 ## Результат
 Реализовано ADR-0025 разделы 1–5 (Session: `ViewScope`, `SetViewSubscription`, `RebuildView`, `NodeList.IsPresent`, кэш блоков только подписанных; клиент: `SimHost` + `ViewSubscriptionSync`; `TestApiVersion` 15). Тесты: `tests/Singularity.Session.Tests/ViewSubscriptionTests.cs`, `TwoWorldsSubscribedViewsTests.cs`, `tests/Singularity.Client.Audio.Tests/ViewSubscriptionSyncTests.cs`. `verify.py` зелёный.
