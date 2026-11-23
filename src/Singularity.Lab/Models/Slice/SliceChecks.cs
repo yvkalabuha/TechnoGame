@@ -59,6 +59,7 @@ public static class SliceChecks
         ("slice: c5-stand — smoke (horizon 6, threshold 0,25): idle and restart run, two runs give the same bytes, no statistic row (#248)", () => C5Smoke(tmp)),
         ("slice: full run to 2030-12 — FULL, 1024 months, seed 1: status ok, months 1024, last lines row t = 1023, threads 1 = 2 (TASK-0121)", () => FullRun2030(tmp)),
         ("slice: H8 — a control layer (LK, LK0, LC0, LC, LP) past 384 months is rejected before any month runs; FULL is not (TASK-0121)", () => ControlHorizon(tmp)),
+        ("slice: G5/G6 — L_K, L_K0, L_P reject six-generation data before any month; actor_month has out_g/active_g of every generation, 4 on the current data (TASK-0131)", () => SixGenerations(tmp)),
         ("slice: BUDGET_RULE — NOW/A/B1/B2 parsed, other values rejected; NOW gives the main golden; A, B1, B2 change a preset budget, B1/B2 not before their first ceiling (TASK-0123)", () => BudgetRuleKey(tmp)),
         ("slice: supply_month — pools follow the budget of the same month, granted ≤ requested ≤ pool, output and limiters agree with lines and the ledger (TASK-0123)", () => SupplyMonth(tmp)),
     ];
@@ -248,6 +249,213 @@ public static class SliceChecks
         return last.Split(',')[1] == "1023" ? null : $"last lines row {last}";
     }
 
+
+    // TASK-0131 (train 2, H9/H15, O-038): six-generation data. A fixture copy of mods/core with an APP node of G5 and G6 and generations 5-6 of
+    // jet_fighter (the same edits as Core SixGenerationDataTests). (1) L_K, L_K0, L_P reject it before any month runs, L_C0/L_C/FULL do not, and the
+    // current data passes the guard; (2) actor_month of the calibration build has out_g1…g6, active_g1…g6 on it and stays the 4-generation table
+    // on the current data; (3) a G5/G6 design's output reaches its own columns (it was dropped before).
+    private static string? SixGenerations(string tmp)
+    {
+        if (!ReferenceEquals(SliceTables.ActorMonthFor(4), SliceTables.ActorMonth) || !ReferenceEquals(SliceTables.CalibrationFor(4), SliceTables.Calibration))
+            return "4 generations do not give the unchanged actor_month table";
+        string[] six = [.. SliceTables.ActorMonthFor(6).Columns];
+        string want = "t,actor,budget,proc_budget,out_g1,out_g2,out_g3,out_g4,out_g5,out_g6,active_g1,active_g2,active_g3,active_g4,active_g5,active_g6";
+        if (string.Join(",", six) != want)
+            return $"actor_month columns for 6 generations: {string.Join(",", six)}";
+
+        // (3) synthetic views: G5 in series with 2.5 units, G6 in prototype with 1 unit, G1 with 3.
+        static DesignView Dv(int d, DesignStage stage, int gen, long rateRaw) =>
+            new(d, stage, gen, gen, -1, -1, true, false, Fx6.FromRaw(rateRaw), Fx6.One, Fx6.One, Fx6.Zero, Fx6.One, Fx6.One, LineBind.None, true, []);
+        var av = new ActorView(0, PolicyProfile.Quality, [], 0, null, null, [], default, null!, default, NodeList.Create([]),
+            System.Collections.Immutable.ImmutableArray.Create(Dv(0, DesignStage.Series, 1, 3 * Fx6.Scale), Dv(1, DesignStage.Series, 5, 5 * Fx6.Scale / 2),
+                Dv(2, DesignStage.None, 6, Fx6.Scale), Dv(3, DesignStage.None, 0, 0)),
+            new PolicyDecisionView([], [], [], [], []));
+        var ai = new ActorInputsView(0, Fx6.FromInt(7), default, Fx6.FromInt(2), null!, default, [], null);
+        string row = string.Join(",", SliceObserver.ActorMonthCells(av, ai, 12, "USA", 6));
+        if (row != "12,USA,7000000,2000000,3,0,0,0,2,1,1,0,0,0,1,0")
+            return $"actor_month row with G5/G6 designs: {row}";
+        try
+        {
+            SliceObserver.ActorMonthCells(av, ai, 12, "USA", 4);
+            return "a G5 design in a 4-generation layout was dropped without an error";
+        }
+        catch (SliceFormatException) { }
+
+        // (1) the guard, on the current data and on the fixture.
+        GameData current = SliceData.Load(tmp);
+        if (SliceTables.Generations(current) != 4)
+            return $"current data has {SliceTables.Generations(current)} generations of {SliceTables.SliceProductClass}, the check expects 4";
+        LayerControl[] all = [LayerControl.Full, LayerControl.Lk, LayerControl.Lk0, LayerControl.Lc0, LayerControl.Lc, LayerControl.Lp];
+        foreach (LayerControl layer in all)
+        {
+            try { JetSliceModelFactory.CheckControlGenerations(layer, current); }
+            catch (ParamException e) { return $"{layer} rejected on the current data: {e.Message}"; }
+        }
+        string root = Path.Combine(tmp, "six-gen");
+        string? fixture = SixGenerationFixture(tmp, root);
+        if (fixture is not null)
+            return fixture;
+        GameData sixData = SliceData.Load(root);
+        if (SliceTables.Generations(sixData) != 6)
+            return $"fixture has {SliceTables.Generations(sixData)} generations";
+        foreach (LayerControl layer in all)
+        {
+            bool control = layer is LayerControl.Lk or LayerControl.Lk0 or LayerControl.Lp;
+            try
+            {
+                JetSliceModelFactory.CheckControlGenerations(layer, sixData);
+                if (control)
+                    return $"{layer} accepted six-generation data";
+            }
+            catch (ParamException e) when (control && e.Message.Contains("generations 1…4", StringComparison.Ordinal)) { }
+        }
+        // End to end: the run fails with the parameter error (the guard comes before the CONTROL_TABLES file is read: it does not exist).
+        foreach (string pars in new[] { """{"LAYER": "LK0", "detail": "lite"}""", """{"LAYER": "LK", "CONTROL_TABLES": "absent.json", "detail": "lite"}""",
+                     """{"LAYER": "LP", "CONTROL_TABLES": "absent.json", "detail": "lite"}""" })
+        {
+            var (r, _) = Run(root, Manifest("JetSlice", Ticks60, pars: pars), 1, 1, "six-guard");
+            if (r.Ok || r.Error?.Contains("ParamException", StringComparison.Ordinal) != true || r.Error.Contains("generations 1…4", StringComparison.Ordinal) != true)
+                return $"run {pars} on six-generation data: ok={r.Ok} {r.Error}";
+        }
+        // calib-print builds its session without the model factory: LK0 there meets the same guard (Codex finding on CalibPrint).
+        string printDir = Path.Combine(root, "six-print");
+        Directory.CreateDirectory(printDir);
+        string printManifest = Path.Combine(printDir, "m.json");
+        File.WriteAllText(printManifest, Manifest("JetSliceCalib", Ticks60, seeds: "[1]", pars: """{"LAYER": "LK0"}"""));
+        try
+        {
+            Smoke.CalibPrint.Run(printManifest, null, null, Path.Combine(printDir, "out"), 1, TextWriter.Null);
+            return "calib-print accepted LK0 on six-generation data";
+        }
+        catch (ParamException e) when (e.Message.Contains("generations 1…4", StringComparison.Ordinal)) { }
+        catch (Exception e) { return $"calib-print LK0 on six-generation data failed without the guard: {e.GetType().Name}: {e.Message}"; }
+        // lk-draws builds no model either: LK there meets the guard before CONTROL_TABLES is read (it does not exist; Codex finding on LkDraws).
+        string drawsManifest = Path.Combine(printDir, "lk.json");
+        File.WriteAllText(drawsManifest, Manifest("JetSlice", Ticks60, seeds: "[1]", pars: """{"LAYER": "LK", "CONTROL_TABLES": "absent.json"}"""));
+        try
+        {
+            Smoke.LkDraws.Run(drawsManifest, null, null, Path.Combine(printDir, "lk-out"), TextWriter.Null);
+            return "lk-draws accepted LK on six-generation data";
+        }
+        catch (ParamException e) when (e.Message.Contains("generations 1…4", StringComparison.Ordinal)) { }
+        catch (Exception e) { return $"lk-draws LK on six-generation data failed without the guard: {e.GetType().Name}: {e.Message}"; }
+        // (2) the calibration build on the fixture writes the 6-generation actor_month.
+        var (c, dir) = Run(root, Manifest("JetSliceCalib", Ticks60), 1, 1, "six-calib");
+        if (!c.Ok)
+            return $"JetSliceCalib on six-generation data: {c.Error}";
+        string[] lines = File.ReadAllLines(Path.Combine(dir, "actor_month.csv"));
+        if (lines[0] != "run," + want || lines.Length < 2 || lines.Skip(1).Any(l => l.Split(',').Length != 17))
+            return $"actor_month on six-generation data: '{lines[0]}', {lines.Length - 1} rows";
+        // (3) O-040: the fixture has a licensable PRC above 63 (eng_g5 needs PRC 72), so the world registers word 1 of the licence masks; the
+        // current data (licensable PRC ≤ 63) does not. The run above is the end-to-end proof that the wide mask runs.
+        if (!HasColumn(new SliceWorld(sixData, new SliceRunConfig { Seed = 1 }), "pol.lic.mask.1"))
+            return "six-generation fixture with PRC 72: no pol.lic.mask.1";
+        if (HasColumn(new SliceWorld(current, new SliceRunConfig { Seed = 1 }), "pol.lic.mask.1"))
+            return "current data: pol.lic.mask.1 is registered without a licensable PRC above 63";
+        return null;
+    }
+
+    private static bool HasColumn(SliceWorld w, string name) => w.Table.Columns.Any(c => c.Name == name);
+
+    // A repository-shaped copy (Singularity.sln marker + mods/core) of the current mods with the six-generation edits; null or the problem.
+    private static string? SixGenerationFixture(string tmp, string root)
+    {
+        string modYaml = SliceData.Files(tmp).FirstOrDefault(f => Path.GetFileName(f) == "mod.yaml") ?? "";
+        if (modYaml.Length == 0)
+            return "mod.yaml is not among the slice data files";
+        string src = Path.GetDirectoryName(modYaml)!, dst = Path.Combine(root, "mods", "core");
+        if (Directory.Exists(root))
+            Directory.Delete(root, recursive: true);
+        foreach (string f in Directory.GetFiles(src, "*", SearchOption.AllDirectories))
+        {
+            string to = Path.Combine(dst, Path.GetRelativePath(src, f));
+            Directory.CreateDirectory(Path.GetDirectoryName(to)!);
+            File.Copy(f, to);
+        }
+        File.WriteAllText(Path.Combine(root, "Singularity.sln"), "");
+        const string Engines = "requires_nodes: [s8.eng.turbofan_g4]}";
+        const string Airframes = "requires_nodes: [s8.eng.mach2_airframe_g4, s5.cmp.titanium_alloy]}";
+        const string Prc = "prc_set: [s5.prc.light_alloy_rolling, s8.prc.stressed_skin_assembly, s8.prc.swept_wing_fabrication, s8.prc.machined_integral_skins, s5.prc.titanium_reduction_forging]";
+        string nodes = Path.Combine(dst, "nodes.yaml"), classes = Path.Combine(dst, "product_classes.yaml");
+        File.WriteAllText(nodes, File.ReadAllText(nodes).TrimEnd() + """
+
+          - id: s8.app.jet_fighter_g5
+            number: 70
+            type: APP
+            gen: 5
+            discipline: aero
+            cluster: AERO
+            requires: [s8.app.jet_fighter_g4]
+            hazard: none
+            anchor: {year: 1990, source: "fixture", estimated: true}
+          - id: s8.app.jet_fighter_g6
+            number: 71
+            type: APP
+            gen: 6
+            discipline: aero
+            cluster: AERO
+            requires: [s8.app.jet_fighter_g5]
+            hazard: none
+            anchor: {year: 2010, source: "fixture", estimated: true}
+          - id: s5.prc.fixture_g5_refining
+            number: 72
+            type: PRC
+            gen: 0
+            discipline: chem
+            cluster: CHEM
+            tier: 3
+            capability_req:
+              purity: 3.5
+              quality_control: 3
+            requires: []
+            hazard: none
+            labour_p: 150
+            anchor: {year: 1945, before: true, source: "fixture", estimated: true}
+
+        """);
+        string text = File.ReadAllText(classes);
+        (string From, string To)[] edits =
+        [
+            (Engines, Engines + """
+
+                      - {id: eng_g5, rank: 5, eng_gen: 5, perf_mult: 2.8, prc_set: [s8.prc.jet_engine_assembly_test, s5.prc.fixture_g5_refining], requires_nodes: [s8.eng.turbofan_g4]}
+                      - {id: eng_g6, rank: 6, eng_gen: 6, perf_mult: 3.4, prc_set: [s8.prc.jet_engine_assembly_test, s5.prc.alloying_element_refining], requires_nodes: [s8.eng.turbofan_g4]}
+            """.TrimEnd()),
+            (Airframes, Airframes + $$"""
+
+                      - {id: af_g6, rank: 6, af_class: 5, perf_mult: 2.0, {{Prc}}, requires_nodes: [s8.eng.mach2_airframe_g4]}
+                      - {id: af_g7, rank: 7, af_class: 5, perf_mult: 2.2, {{Prc}}, requires_nodes: [s8.eng.mach2_airframe_g4]}
+            """.TrimEnd()),
+            ("      - {prc: s5.prc.alloying_element_refining, n_p: 1, labour_hours: 150, base_cost: 0.000018}", """
+                  - {prc: s5.prc.alloying_element_refining, n_p: 1, labour_hours: 150, base_cost: 0.000018}
+                  - {prc: s5.prc.fixture_g5_refining, n_p: 1, labour_hours: 150, base_cost: 0.000018}
+            """),
+            ("{rank: 4, proc_scale_pu: 0.827491}", """
+            {rank: 4, proc_scale_pu: 0.827491}
+                  - {rank: 5, proc_scale_pu: 1.2}
+                  - {rank: 6, proc_scale_pu: 1.2}
+            """),
+            ("proc_scale_af: 3.754003}", """
+            proc_scale_af: 3.754003}
+                  - {af_class: 5, h_first: 125920, h_floor: 31480, materials_floor: 0.002098, design_scale: 3.12, proc_scale_af: 3.754003}
+            """),
+            ("{gen: 4, app: s8.app.jet_fighter_g4, crew_req: 1, platform_min_rank: 5}", """
+            {gen: 4, app: s8.app.jet_fighter_g4, crew_req: 1, platform_min_rank: 5}
+                  - {gen: 5, app: s8.app.jet_fighter_g5, crew_req: 1, platform_min_rank: 6}
+                  - {gen: 6, app: s8.app.jet_fighter_g6, crew_req: 1, platform_min_rank: 7}
+            """),
+        ];
+        foreach (var (from, to) in edits)
+        {
+            int at = text.IndexOf(from, StringComparison.Ordinal);
+            if (at < 0 || text.IndexOf(from, at + 1, StringComparison.Ordinal) >= 0)
+                return $"fixture anchor '{from}' is not found exactly once in product_classes.yaml";
+            text = string.Concat(text.AsSpan(0, at), to, text.AsSpan(at + from.Length));
+        }
+        File.WriteAllText(classes, text);
+        return null;
+    }
+
     // H8 of slice-horizon-2030.md §2.2 (TASK-0121): the control layers are calibration stands of 1945-1977. 384 months (ticks 11688) is the last
     // accepted run of a control layer; one more month fails loudly in the model factory and in calib-print; FULL is never limited by it.
     private static string? ControlHorizon(string tmp)
@@ -378,7 +586,7 @@ public static class SliceChecks
             Dv(4, DesignStage.None, 2, 9 * Fx6.Scale, 900, 101),               // no stage: out
             Dv(5, DesignStage.Series, 1, 3 * Fx6.Scale, 150, 101, 102, 103));  // exactly n_service_min, all mastered: in
         var av = new ActorView(0, PolicyProfile.Quality, [], 2, new TechKey(2, 2, 2, Fx6.FromInt(300)), null, [], default,
-            new LicenceView(0, -1, -1, 0, 0, Fx6.Zero, [], false), default, nodes, designs, new PolicyDecisionView([], [], [], [], []));
+            new LicenceView(0, -1, -1, default, default, Fx6.Zero, [], false), default, nodes, designs, new PolicyDecisionView([], [], [], [], []));
         TechKey k = Smoke.CalibPrint.KeyR6(av, layout, 3);
         if (k != new TechKey(1, 2, 2, Fx6.FromInt(200)))
             return $"K_r6 {k}, expected (1, 2, 2, 200)";
@@ -852,7 +1060,7 @@ public static class SliceChecks
     {
         foreach (string bad in new[] { """{"FOO": 1}""", """{"START": "X"}""", """{"LAYER": "LK"}""", """{"GRID": "LO_MID"}""", """{"CHANNELS": ["B", "B"]}""",
                      """{"CONTROL_TABLES": "t.json"}""", """{"LAYER": "LC"}""", """{"LAYER": "LP"}""", """{"LAYER": "LC0", "CONTROL_TABLES": "t.json"}""",
-                     """{"X_SCALE": 0}""", """{"K_DIV": "x"}""" })
+                     """{"X_SCALE": 0}""", """{"K_DIV": "x"}""", """{"COST_MULT_G5": 0}""", """{"COST_MULT_G6": -1}""", """{"COST_MULT_G5": "x"}""" })
         {
             Manifest m = Lab.Manifest.Parse(Manifest("JetSlice", Ticks60, pars: bad), "/x/m.json");
             try
@@ -862,6 +1070,15 @@ public static class SliceChecks
             }
             catch (ParamException) { }
         }
+        // TASK-0131: COST_MULT_G5/G6 reach SliceRunConfig as given (calibration keys, allowed in JetSliceCalib); absent = null (KnowledgeParams default).
+        Manifest g = Lab.Manifest.Parse(Manifest("JetSliceCalib", Ticks60, pars: """{"COST_MULT_G5": 5.5, "COST_MULT_G6": 9}"""), "/x/m.json");
+        SliceRunConfig gc = SliceParameters.Parse(g.Points[0].CreateParamSet(), 1, 1, 1, calibration: true).Config;
+        if (gc.CostMultG5 != Fx6.FromRaw(5_500_000) || gc.CostMultG6 != Fx6.FromInt(9))
+            return $"COST_MULT_G5/G6 parsed as {gc.CostMultG5}/{gc.CostMultG6}";
+        Manifest g0 = Lab.Manifest.Parse(Manifest("JetSlice", Ticks60), "/x/m.json");
+        SliceRunConfig g0c = SliceParameters.Parse(g0.Points[0].CreateParamSet(), 1, 1, 1, calibration: false).Config;
+        if (g0c.CostMultG5 is not null || g0c.CostMultG6 is not null)
+            return "COST_MULT_G5/G6 set without the keys";
         return null;
     }
 

@@ -147,7 +147,7 @@ internal sealed class SliceWorld
             products: config.ProductAi ? new PolicyProductsAdapter(this) : null, designs: ProductsLayout.Designs,
             generations: ProductsLayout.Generations, derive: config.Derive, startLines: StartLines(pStart),
             events: Streams.Events, eventInputs: new PolicyEventsAdapter(this), disruptionExposure: scenario.Exposure,
-            budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId));
+            budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout) > LicenceMask.NarrowMaxNumber);   // O-040: the second word only for data whose licensable PRC need it
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs);
         Limits = new CommandLimits(scenario.ActorCount, ProductsLayout.SlotCount, ProductsLayout.Designs,
             [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)]);
@@ -259,6 +259,26 @@ internal sealed class SliceWorld
     public GameData Data { get; }
     public ScenarioData Scenario { get; }
     public SliceStreams Streams { get; }
+    /// <summary>
+    /// The largest node number a licence can carry: the PRC of the engine and hot-section alternatives (the mask of <see cref="PolicyEventsAdapter.Subject"/>).
+    /// Other nodes of the graph (any number, e.g. 180 in synthetic worlds) are not licensable, so they never decide the mask width. Above 127 the build fails.
+    /// </summary>
+    private static int MaxLicensableNumber(ProductsLayout l)
+    {
+        int max = 0;
+        foreach (int slot in (int[])[l.BaseSlot, l.AlloySlot])
+        {
+            for (int a = l.AltStart[slot]; a < l.AltStart[slot + 1]; a++)
+            {
+                foreach (int prc in l.PrcOf(a))
+                    max = Math.Max(max, prc);
+            }
+        }
+        if (max > LicenceMask.MaxNumber)
+            throw new InvalidOperationException($"A licensable PRC has node number {max}, above the licence mask capacity {LicenceMask.MaxNumber}.");
+        return max;
+    }
+
     public KnowledgeParams KnowledgeParameters { get; }
     public IndustryParams IndustryParameters { get; }
     public ProductsParams ProductsParameters { get; }
@@ -334,6 +354,10 @@ internal sealed class SliceWorld
                 throw new ArgumentException("h_max must be in [0; 1].", nameof(c));
             k = k with { HMax = hMax };
         }
+        if (c.CostMultG5 is { } g5)
+            k = k with { CostGenMultiplier = WithGenMultiplier(k.CostGenMultiplier, 5, g5, c) };
+        if (c.CostMultG6 is { } g6)
+            k = k with { CostGenMultiplier = WithGenMultiplier(k.CostGenMultiplier, 6, g6, c) };
         if (c.KappaQ10 is { } kappa)
         {
             if (kappa is < 0 or > 1024)
@@ -363,6 +387,15 @@ internal sealed class SliceWorld
         if (c.Layer == LayerControl.Lp && c.CapabilityTables is { } tables)
             p = p with { LpTDesign = tables.TDesign, LpRho = tables.Rho };
         return (k, i, p);
+    }
+
+    private static Fx6[] WithGenMultiplier(Fx6[] current, int gen, Fx6 value, SliceRunConfig c)
+    {
+        if (value <= Fx6.Zero)
+            throw new ArgumentException($"The c_n multiplier of generation {gen} must be positive.", nameof(c));
+        Fx6[] copy = [.. current];
+        copy[gen] = value;
+        return copy;
     }
 
     private static void ValidateCapabilityTables(CapabilityControlTables t)
@@ -574,6 +607,10 @@ internal sealed class SliceWorld
             for (int t = 0; t < c.XHalfByTier.Length; t++)
                 Add($"run.k.x_half.{t + 3}", c.XHalfByTier[t].Raw);
         }
+        if (c.CostMultG5 is { } g5)
+            Add("run.k.cost_mult_g5", g5.Raw);
+        if (c.CostMultG6 is { } g6)
+            Add("run.k.cost_mult_g6", g6.Raw);
         if (c.DeltaH is { } deltaH)
             Add("run.k.delta_h", deltaH.Raw);
         if (c.CM is { } cm)

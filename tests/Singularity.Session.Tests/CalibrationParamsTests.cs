@@ -1,6 +1,8 @@
 using System.Collections.Immutable;
 using System.Security.Cryptography;
+using Singularity.Core.Data;
 using Singularity.Core.Industry;
+using Singularity.Core.Knowledge;
 using Singularity.Kernel;
 
 namespace Singularity.Session.Tests;
@@ -83,6 +85,25 @@ public class CalibrationParamsTests
         // The run.* columns alone change LastHash, so the trajectory is compared without them.
         Assert.NotEqual(SimulationDigest(ViewSupport.Run(Base(), 150)), SimulationDigest(s));
         Assert.Contains(s.World.Table.Columns, c => c.Name.StartsWith("run.k.", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void CostMultG5AndG6_ChangeCostN_OnlyForTheseGenerations_AndAreInTheRunColumns()
+    {
+        var plain = new KnowledgeParams();
+        SliceWorld w = SliceTestData.Create(Base() with { CostMultG5 = F(5_000_000), CostMultG6 = F(8_000_000) }).World;
+        KnowledgeParams k = w.KnowledgeParameters;
+        Assert.Equal(F(5_000_000) * plain.CostByType[(int)NodeType.APP], k.CostN(NodeType.APP, 5));
+        Assert.Equal(F(8_000_000) * plain.CostByType[(int)NodeType.APP], k.CostN(NodeType.APP, 6));
+        Assert.NotEqual(plain.CostN(NodeType.APP, 5), k.CostN(NodeType.APP, 5));
+        for (int g = 0; g <= 4; g++)
+            Assert.Equal(plain.CostN(NodeType.APP, g), k.CostN(NodeType.APP, g));   // G0…G4 are never touched
+        Assert.Contains(w.Table.Columns, c => c.Name == "run.k.cost_mult_g5");
+        Assert.Contains(w.Table.Columns, c => c.Name == "run.k.cost_mult_g6");
+        Assert.Throws<ArgumentException>(() => SliceTestData.Create(Base() with { CostMultG5 = Fx6.Zero }));
+        // Only one of the two set: the other keeps its default.
+        KnowledgeParams only5 = SliceTestData.Create(Base() with { CostMultG5 = F(5_000_000) }).World.KnowledgeParameters;
+        Assert.Equal(plain.CostN(NodeType.APP, 6), only5.CostN(NodeType.APP, 6));
     }
 
     [Fact]

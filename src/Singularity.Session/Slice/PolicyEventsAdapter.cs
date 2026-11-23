@@ -19,7 +19,7 @@ internal sealed class PolicyEventsAdapter(SliceWorld world) : IPolicyEvents
             if (l.AltEngGen[world.Products.AltAt(sellerRow, d, l.BaseSlot)] != gen)
                 continue;
             // The mask is the PRC of the engine and of the hot section as of the decision (spec A43.1); no reference to the project is kept.
-            ulong mask = 0;
+            LicenceMask mask = default;
             foreach (int slot in (int[])[l.BaseSlot, l.AlloySlot])
             {
                 int alt = world.Products.AltAt(sellerRow, d, slot);

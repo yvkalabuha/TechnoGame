@@ -43,7 +43,7 @@ public class T6dTests
         LicenceSubject subject = ev.Subject(w.Scenario.ActorIndex("USA"), 1, 0)!.Value;
         Assert.Equal(20_730, LicenceRules.Price(subject.UnitCostFloor, 50, w.PolicyParameters.LicenceShare).Raw);
         // The mask of E1 (spec A43.1): the project of the G1 fleet (eng_g1 + hot_nicr_forged) → nodes 39, 44, 45, 49, 54.
-        ulong expected = 0;
+        LicenceMask expected = default;
         foreach (int n in (int[])[39, 44, 45, 49, 54])
             expected |= LicenceRules.Bit(n);
         Assert.Equal(expected, subject.Mask);

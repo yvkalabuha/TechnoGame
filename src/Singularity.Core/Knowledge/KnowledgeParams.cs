@@ -36,9 +36,10 @@ public sealed record KnowledgeParams
     public Fx6[] CostByType { get; init; } = [Fx6.One, F(1_500_000), Fx6.FromInt(3), F(1_500_000), Fx6.FromInt(2), Fx6.One];
 
     /// <summary>
-    /// Generation multiplier of <c>c_n</c>, index = gen: G0…G4 = 1.0/1.0/1.6/2.5/4.0 (§8.1, §3.5 A19).
+    /// Generation multiplier of <c>c_n</c>, index = gen: G0…G4 = 1.0/1.0/1.6/2.5/4.0 (§8.1, §3.5 A19). G5 and G6 are the first proposal of
+    /// TASK-0128 (6.4 and 10.2, the G2→G4 step ×1.6 continued) until its calibration sets them; G7 and later have none and throw.
     /// </summary>
-    public Fx6[] CostGenMultiplier { get; init; } = [Fx6.One, Fx6.One, F(1_600_000), F(2_500_000), Fx6.FromInt(4)];
+    public Fx6[] CostGenMultiplier { get; init; } = [Fx6.One, Fx6.One, F(1_600_000), F(2_500_000), Fx6.FromInt(4), F(6_400_000), F(10_200_000)];
 
     /// <summary><c>c_n = base(type)·mult(gen)</c>.</summary>
     public Fx6 CostN(NodeType type, int gen)

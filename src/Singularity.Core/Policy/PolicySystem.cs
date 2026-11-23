@@ -56,12 +56,13 @@ public sealed partial class PolicySystem : ITickSystem
     /// <param name="eventInputs">Reads of the licence and why_not rules (spec A43); without them the policy has no licences and no why_not triggers.</param>
     /// <param name="disruptionExposure"><c>exposure_a</c> by row (spec §8.1), default 1.</param>
     /// <param name="budgetRule"><c>BUDGET_RULE</c> presets by row (a measurement switch); null or <see cref="BudgetRule.Now"/> is the constant growth of main.</param>
+    /// <param name="wideLicenceMask">Registers word 1 of the licence masks (<c>pol.lic.mask.1</c>, <c>pol.lic.offer.1</c>, <c>pol.lic.q.mask.1</c>) for node numbers 64…127; off, a mask with such a node throws.</param>
     /// <param name="startLines">(row, design) of the start lines of the scenario (E1): their rate is <c>r_AI</c> from tick 0. The slot must hold a start line (stage С at load, so its first occupant, generation 1): the line is attributed to that occupant by <see cref="AiLine"/>.</param>
     public PolicySystem(Table table, PolicyParams parameters, ImmutableArray<int> actorNumber, ImmutableArray<Fx6> budget0,
         ImmutableArray<Fx6> growthPerYear, CounterRng ai, IPolicyInputs inputs, IndustryMailbox mailbox, int qpRequesterId,
         ImmutableArray<int> forcedProfile = default, int systemId = DefaultSystemId, IPolicyProducts? products = null, int designs = 0,
         int generations = 0, bool derive = false, ImmutableArray<(int Row, int Design)> startLines = default,
-        CounterRng? events = null, IPolicyEvents? eventInputs = null, ImmutableArray<Fx6> disruptionExposure = default, BudgetRulePlan? budgetRule = null)
+        CounterRng? events = null, IPolicyEvents? eventInputs = null, ImmutableArray<Fx6> disruptionExposure = default, BudgetRulePlan? budgetRule = null, bool wideLicenceMask = false)
     {
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(mailbox);
@@ -111,7 +112,7 @@ public sealed partial class PolicySystem : ITickSystem
             table.AddLong("pol.share.research"), table.AddLong("pol.share.capability"), table.AddLong("pol.share.effort"),
             table.AddLong("pol.share.procurement"), table.AddLong("pol.share.quality"),
         ];
-        AddEventColumns(table, events, eventInputs, disruptionExposure, actorNumber.Length);
+        AddEventColumns(table, events, eventInputs, disruptionExposure, actorNumber.Length, wideLicenceMask);
     }
 
     public int SystemId { get; }

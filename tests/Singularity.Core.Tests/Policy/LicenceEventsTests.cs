@@ -30,23 +30,44 @@ public class LicenceEventsTests
     }
 
     [Fact]
-    public void Mask_BitIsNodeNumberMinusOne_AndOnlyNodes1To63Fit()
+    public void Mask_Word0IsNodeNumberMinusOne_Word1IsNumberMinus64()
     {
-        Assert.Equal(1UL, LicenceRules.Bit(1));
-        Assert.Equal(1UL << 53, LicenceRules.Bit(54));
+        Assert.Equal(new LicenceMask(1UL, 0), LicenceRules.Bit(1));
+        Assert.Equal(new LicenceMask(1UL << 53, 0), LicenceRules.Bit(54));
+        Assert.Equal(new LicenceMask(1UL << 62, 0), LicenceRules.Bit(63));
+        Assert.Equal(new LicenceMask(0, 1UL), LicenceRules.Bit(64));
+        Assert.Equal(new LicenceMask(0, 1UL << 13), LicenceRules.Bit(77));
         Assert.True(LicenceRules.Has(LicenceRules.Bit(54) | LicenceRules.Bit(39), 39));
         Assert.False(LicenceRules.Has(LicenceRules.Bit(54), 44));
-        Assert.Throws<ArgumentOutOfRangeException>(() => LicenceRules.Bit(64));
+    }
+
+    [Fact]
+    public void Mask_Nodes64And77_AreHeldAndNotConfusedWithWord0()
+    {
+        LicenceMask m = LicenceRules.Bit(64) | LicenceRules.Bit(77) | LicenceRules.Bit(1);
+        Assert.True(LicenceRules.Has(m, 64));
+        Assert.True(LicenceRules.Has(m, 77));
+        Assert.True(LicenceRules.Has(m, 1));
+        Assert.False(LicenceRules.Has(m, 65));
+        Assert.False(LicenceRules.Has(m, 14));   // 77 − 63: a one-word mask would alias it
+    }
+
+    [Fact]
+    public void Mask_OutOfRange_IsLoud_ForBitAndHas()
+    {
         Assert.Throws<ArgumentOutOfRangeException>(() => LicenceRules.Bit(0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => LicenceRules.Bit(128));
+        Assert.Throws<ArgumentOutOfRangeException>(() => LicenceRules.Has(LicenceRules.Bit(54), 128));   // used to answer false
+        Assert.Throws<ArgumentOutOfRangeException>(() => LicenceRules.Has(LicenceRules.Bit(54), -1));
     }
 
     [Fact]
     public void Validator_NamesTheFirstFailedCheck_AndAcceptsAtTheBoundary()
     {
-        ulong m = LicenceRules.Bit(54);
+        LicenceMask m = LicenceRules.Bit(54);
         Assert.Equal(BadLicence.Self, LicenceRules.Validate(2, 2, 1, m, Price, 0, false, Price));
         Assert.Equal(BadLicence.Empty, LicenceRules.Validate(2, 0, 0, m, Price, 0, false, Price));
-        Assert.Equal(BadLicence.Empty, LicenceRules.Validate(2, 0, 1, 0, Price, 0, false, Price));
+        Assert.Equal(BadLicence.Empty, LicenceRules.Validate(2, 0, 1, default, Price, 0, false, Price));
         Assert.Equal(BadLicence.Empty, LicenceRules.Validate(2, 0, 1, m, Fx6.FromRaw(-1), 0, false, Price));
         Assert.Equal(BadLicence.Gen, LicenceRules.Validate(2, 0, 1, m, Price, 1, true, Price));
         Assert.Equal(BadLicence.None, LicenceRules.Validate(2, 0, 1, m, Price, 1, false, Price));   // a lapsed licence is replaced by the same generation
@@ -151,7 +172,7 @@ public class LicenceEventsTests
     {
         public int[] Gen = [1, 1, 0];
         public Func<int, IReadOnlyList<Link>> List = _ => [];
-        public ulong[] Mask = [LicenceRules.Bit(54), LicenceRules.Bit(39), 0];
+        public LicenceMask[] Mask = [LicenceRules.Bit(54), LicenceRules.Bit(39), default];
         public int EngineGen(int actorRow, long month) => Gen[actorRow];
         public LicenceSubject? Subject(int sellerRow, int gen, long month) => new LicenceSubject(Cost, Mask[sellerRow]);
         public IReadOnlyList<Link> WhyNot(int actorRow, long month) => List(actorRow);
@@ -186,17 +207,18 @@ public class LicenceEventsTests
         public readonly Prod Products = new();
         public readonly Ev Events = new();
         public readonly PolicySystem Policy;
+        public readonly Table Table;
         private readonly TickRunner _runner;
         private readonly TickCalendar _calendar = new(new CivilDate(1945, 9, 1));
 
-        public Rig(PolicyProfile buyer, ulong seed, Fx6? buyerBudget = null, long fleetUpkeep = 0, PolicyParams? parameters = null)
+        public Rig(PolicyProfile buyer, ulong seed, Fx6? buyerBudget = null, long fleetUpkeep = 0, PolicyParams? parameters = null, bool wide = false)
         {
             Products.FleetUpkeep = fleetUpkeep;
-            var table = new Table(3);
+            var table = Table = new Table(3);
             PolicyParams p = (parameters ?? new PolicyParams()) with { FvBudget = Fx6.FromInt(10) };
             Policy = new PolicySystem(table, p, [0, 1, 2], [Fx6.FromInt(100_000), Fx6.FromInt(100_000), buyerBudget ?? Fx6.FromInt(100_000)], [Fx6.Zero, Fx6.Zero, Fx6.Zero],
                 new CounterRng(1), new NoInputs(), new IndustryMailbox(3), 99, [(int)PolicyProfile.Mass, (int)PolicyProfile.Mass, (int)buyer],
-                products: Products, designs: Designs, generations: Probe.Generations, events: new CounterRng(seed), eventInputs: Events);
+                products: Products, designs: Designs, generations: Probe.Generations, events: new CounterRng(seed), eventInputs: Events, wideLicenceMask: wide);
             Policy.Initialize();
             _runner = new TickRunner(table, 1, [Policy], 1, 1, _calendar);
         }
@@ -211,6 +233,77 @@ public class LicenceEventsTests
                 _runner.RunTick();
             }
         }
+    }
+
+    [Fact]
+    public void WideMask_Nodes64And77_SurviveTheDeal_AndTheSnapshot()
+    {
+        ulong seed = SeedWhere(true, true);
+        var rig = new Rig(PolicyProfile.Mass, seed, wide: true);
+        rig.Events.Mask = [LicenceRules.Bit(77) | LicenceRules.Bit(54), LicenceRules.Bit(64) | LicenceRules.Bit(39), default];
+        rig.Month(0);
+        Assert.Equal(LicenceRules.Bit(64) | LicenceRules.Bit(39), rig.Policy.OfferMask(2));
+
+        // Snapshot between months 0 and 1: the deal is still queued (pol.lic.q.mask.1 holds node 77), not yet applied.
+        var queued = new MemoryStream();
+        TableSnapshot.Write(rig.Table, 1, 1, queued);
+        rig.Month(1);
+        LicenceMask expected = LicenceRules.Bit(77) | LicenceRules.Bit(54);
+        Assert.Equal(expected, rig.Policy.LicenceMask(2));
+        Assert.True(rig.Policy.LicenceMask(2).Has(77));
+
+        var other = new Rig(PolicyProfile.Mass, seed, wide: true);
+        queued.Position = 0;
+        TableSnapshot.Read(other.Table, 1, queued);
+        Assert.Equal(0, other.Policy.LicenceGen(2));
+        other.Policy.ApplyDeals(1, _ => Fx6.FromInt(1_000_000));   // the loaded queue is applied like the original's
+        Assert.Equal(expected, other.Policy.LicenceMask(2));
+        Assert.Equal(LicenceRules.Bit(64) | LicenceRules.Bit(39), other.Policy.OfferMask(2));
+
+        // Snapshot after the deal: word 1 of the held mask is saved too.
+        var applied = new MemoryStream();
+        TableSnapshot.Write(rig.Table, 1, 2, applied);
+        var third = new Rig(PolicyProfile.Mass, seed, wide: true);
+        applied.Position = 0;
+        TableSnapshot.Read(third.Table, 1, applied);
+        Assert.Equal(expected, third.Policy.LicenceMask(2));
+    }
+
+    [Fact]
+    public void MaskReadFromANarrowPolicy_KnowsItsWidth_HasThrowsAbove63()
+    {
+        var narrow = new Rig(PolicyProfile.Mass, 1);
+        LicenceMask m = narrow.Policy.LicenceMask(2);
+        Assert.Equal(63, m.Capacity);
+        Assert.False(LicenceRules.Has(m, 63));
+        Assert.Throws<ArgumentOutOfRangeException>(() => LicenceRules.Has(m, 64));   // used to answer false
+        Assert.Throws<ArgumentOutOfRangeException>(() => narrow.Policy.OfferMask(2).Has(77));
+        Assert.Equal(127, new Rig(PolicyProfile.Mass, 1, wide: true).Policy.LicenceMask(2).Capacity);
+        Assert.False(LicenceRules.Has(new Rig(PolicyProfile.Mass, 1, wide: true).Policy.LicenceMask(2), 64));
+    }
+
+    [Fact]
+    public void Licensable_FollowsTheCapacityOfTheMask_AndDoesNotThrowAboveIt()
+    {
+        var narrow = new Rig(PolicyProfile.Mass, 1);
+        var wide = new Rig(PolicyProfile.Mass, 1, wide: true);
+        Assert.Equal(63, narrow.Policy.LicenceCapacity);
+        Assert.Equal(127, wide.Policy.LicenceCapacity);
+        Assert.True(narrow.Policy.Licensable(63));
+        Assert.All((int[])[0, 64, 138, 500], n => Assert.False(narrow.Policy.Licensable(n)));   // synthetic worlds reach node 180 and more: no licence, no exception
+        Assert.True(wide.Policy.Licensable(64) && wide.Policy.Licensable(127));
+        Assert.All((int[])[0, 128, 138], n => Assert.False(wide.Policy.Licensable(n)));
+    }
+
+    [Fact]
+    public void NarrowPolicy_HasNoSecondWordColumns_AndRefusesANodeAbove63()
+    {
+        ulong seed = SeedWhere(true, true);
+        var narrow = new Rig(PolicyProfile.Mass, seed);
+        Assert.DoesNotContain(narrow.Table.Columns, c => c.Name.EndsWith(".mask.1", StringComparison.Ordinal) || c.Name.EndsWith(".offer.1", StringComparison.Ordinal));
+        Assert.Contains(new Rig(PolicyProfile.Mass, seed, wide: true).Table.Columns, c => c.Name == "pol.lic.mask.1");
+        narrow.Events.Mask = [LicenceRules.Bit(77), LicenceRules.Bit(39), default];
+        Assert.ThrowsAny<Exception>(() => narrow.Month(0));
     }
 
     [Fact]
@@ -269,13 +362,13 @@ public class LicenceEventsTests
         var none = new Rig(PolicyProfile.Mass, SeedWhere(false, false));
         none.Month(1);
         Assert.Equal(0, none.Policy.LicenceGen(2));
-        Assert.Equal(0UL, none.Policy.OfferMask(2));
+        Assert.Equal(default(LicenceMask), none.Policy.OfferMask(2));
         // g_s = g_b: no pair, so no draw and no offer even where the draw would succeed.
         var equal = new Rig(PolicyProfile.Mass, SeedWhere(true, true));
         equal.Events.Gen = [1, 1, 1];
         equal.Month(1);
         Assert.Equal(0, equal.Policy.LicenceGen(2));
-        Assert.Equal(0UL, equal.Policy.OfferMask(2));
+        Assert.Equal(default(LicenceMask), equal.Policy.OfferMask(2));
     }
 
     [Fact]
@@ -357,7 +450,7 @@ public class LicenceEventsTests
             var rig = new Rig(PolicyProfile.Mass, SeedWhere(true, true), parameters: p);
             rig.Month(1);
             Assert.Equal(0, rig.Policy.LicenceGen(2));
-            Assert.Equal(0UL, rig.Policy.OfferMask(2));
+            Assert.Equal(default(LicenceMask), rig.Policy.OfferMask(2));
         }
     }
 

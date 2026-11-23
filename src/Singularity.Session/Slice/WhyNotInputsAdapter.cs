@@ -22,7 +22,7 @@ internal sealed class WhyNotInputsAdapter(SliceWorld world) : IWhyNotInputs
     {
         int actor = world.IndustryLayout.SiteOwner[siteRow];
         int row = world.Graph.RowOf(processNumber);
-        return month % 12 != 0 && LicenceRules.Has(world.Policy.OfferMask(actor), processNumber) && row >= 0 && world.Knowledge.IsKnown(actor, row);
+        return month % 12 != 0 && world.Policy.Licensable(processNumber) && LicenceRules.Has(world.Policy.OfferMask(actor), processNumber) && row >= 0 && world.Knowledge.IsKnown(actor, row);
     }
 
     public Fx6 TrainingBudget(int actorRow, int design, long month) => world.ProductsInputs.TrainingBudget(actorRow, design, month);
