@@ -9,7 +9,7 @@ public sealed partial record SliceRunConfig
     /// <summary>
     /// SHA-256 of every field that decides the trajectory but is not (or not fully) a column of the table: the product AI and the arms of the
     /// rules (they select code paths and parameters), the manifest numbers («К», grid, tooling target) and the seed, scenario and start variant.
-    /// Left out on purpose: the execution options (Threads, ChunkSize, ViewMode, DailyTickProbe, HashCheckpoints, HashEveryTick), which never change the
+    /// Left out on purpose: the execution options (Threads, ChunkSize, ViewMode, ViewScope, DailyTickProbe, HashCheckpoints, HashEveryTick), which never change the
     /// result. A snapshot may be loaded at another thread count. The control tables of the layers L_K, L_C and L_P are not covered, so a snapshot is not taken of them.
     /// </summary>
     internal byte[] SnapshotFingerprint()

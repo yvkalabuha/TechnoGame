@@ -1,7 +1,7 @@
 ---
 id: TASK-0127
 title: "Open Codex findings after TASK-0125 landing (#432)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M05
 agent: test-engineer
@@ -13,6 +13,7 @@ related: [TASK-0125]
 approved_by: orchestrator
 approved_at: 2026-11-22
 approval_ref: "#432 (light)"
+review_ref: "reviewer: APPROVE 02dcf85 (5 rounds); codex: 3 returns, waived by #432, open → DEBT-0077; landed 07ea3a8"
 created: 2026-11-22
 ---
 
@@ -33,3 +34,30 @@ created: 2026-11-22
 ## Критерии приёмки
 - [ ] Каждое замечание закрыто: исправлено с тестом или отклонено с причиной.
 - [ ] reviewer APPROVE; второе ревью по правилу #432.
+
+## Ход работы
+- [high] «свежий массив» (NoMutableStaticsTests): `IsFreshArray` заменён. Раньше смотрелась только предыдущая инструкция по имени (`InitializeArray`, `stelem*`), без декларирующего типа. Теперь по эффектам стека идём назад от вызова `AsImmutableArray` до инструкции, создавшей верхний слот; массив свежий, только если это `newarr` или копирующий `ToArray` (`dup`, `stelem`, `InitializeArray` лишь действуют над массивом, созданным производителем). Ветвление или неизвестный эффект стека = не свежий. Добавлены мутанты `UnsafeMutant.WrapWritten`, `WrapStaticWritten`, `WrapLocalNew`, `WrapInitStatic` (метод `FakeHelpers.InitializeArray` с тем же именем возвращает чужой массив). Проверка: со старым `IsFreshArray` тест `TheUnsafeScan_SeesEachMutant_AndOnlyTheListedPairIsExempt` падает (мутант `WrapInitStatic`); с новым проходит. Существующие записи `Fresh*` не флагуются.
+- [medium] перекрытие (TwoWorldsOnOnePoolTests): добавлен счётчик перекрытия шагов двух миров (`Overlap`), утверждение `Overlapped >= Months / 2`. Проверка: если обернуть шаги в общий `lock`, 9 из 23 тестов падают («overlapped in 0 of 37 months»); без блокировки проходят. Дайджесты не менялись.
+- [reviewer] `Marshal` и `GCHandle` добавлены в `UnsafeClasses`; мутанты `Pin` (GCHandle.Alloc) и `Copy` (Marshal.Copy) утверждаются в тесте. Откат проверен только вместе с откатом finding 1 (одним прогоном), отдельно утверждения Marshal/GCHandle без добавления классов не гонялись.
+- [reviewer] текст причины для `ViewBuilder.Inputs` исправлен в `UnsafeUses` (причина живёт в тесте, не в src).
+
+- Круг 2 по замечаниям reviewer (CHANGES на b9c7a37):
+  1. [high] `IlScanner.Instruction` получил `Offset` и `Targets` (короткий и длинный переход, switch); цели обработчиков исключений берутся из `ExceptionHandlingClauses`. `IsFreshArray` возвращает false, если между производителем и вызовом (включительно) есть цель перехода. Мутанты `WrapCond` и `WrapSwitch`. Проверено откатом: с отключённой проверкой целей тест `TheUnsafeScan_SeesEachMutant_AndOnlyTheListedPairIsExempt` падает, с проверкой проходит.
+  2. [low] `ToArray` сопоставляется по `FullName` (`System.Linq.Enumerable`) и определению дженерика (`List<>`, `ReadOnlySpan<>`). Отдельного мутанта нет (проверка только чтением кода и существующими `FreshSpread`/`FreshCollection`).
+  3. [medium] `Overlap`: месяц считается один раз, когда мир вошёл в шаг при `_active == 2`; утверждение `Overlapped >= 1`, сообщение «overlapped in N of 37 months». Проверено: под общим lock падают тесты («overlapped in 0 of 37 months»), без него 23 из 23 проходят.
+
+- Круг 3 по Codex (после APPROVE reviewer; main влит в ветку):
+  1. [high] stores: добавлен проход вперёд с «меткой» массива (`OnlyFilledAndWrapped`): массив и его `dup` допустимы только как массив для `stelem`, для `RuntimeHelpers.InitializeArray` и как аргумент самого вызова; любой store (stsfld, stfld, stloc, starg, stind) или вызов, получающий его, делает массив не свежим. Мутант `WrapAssignStatic`; без прохода (`&& true`) тест падает, с ним проходит.
+  2. [high] `Enumerable.ToArray` убран из исключений; оставлены `newarr`, `List<T>.ToArray`, `ReadOnlySpan<T>.ToArray` (копия создаётся в BCL, пользовательский код не вызывается). Мутант `WrapEnumToArray`; с возвращённым исключением тест падает. Перенесено в явный список 24 метода с точными счётчиками (ProductsLayout.FromData 17, NodeTable.Build 18, IndustryLayout.Create 14, ScenarioData.RebuildWith 12, KnowledgeGraph.Create 9, ScenarioData.Build 6, ProductPresets.Variants 4, BudgetRulePlan.For 3, прочие 1-2; полный список в `UnsafeUses`). Причина общая и честная: источники на этих местах по одному не проверялись на пользовательский `ICollection<T>.CopyTo`; предложение: DEBT на аудит или замену на `ToImmutableArray` (simulation-engineer / developer).
+  3. [medium] хука без production-кода нет: существующий `OmitColumnInSnapshot` вызывается только при сохранении снимка, не в шаге. Счётчик оставлен, переименован в `EnteredWhileOtherInCall` (что он доказывает), предел записан ниже.
+  4. [medium] `WrapLocalNew` теперь пишет в локаль (`a[0] = 1`), ldloc гарантирован; проверено в Release (6 из 6).
+
+- Круг 4 по Codex на cf1c9af:
+  1. [high] записи для `Enumerable.ToArray` теперь специфичны для производителя: ключ `...AsImmutableArray(Enumerable.ToArray)`, производитель определяется обратным обходом (`ProducerIndex`) и полным именем `System.Linq.Enumerable.ToArray`. Обёртка любого другого массива в том же методе получает обычный ключ и падает. Мутант `UnsafeMutant.Mixed` (ToArray-обёртка и обёртка внешнего массива в одном методе); без исправления (производитель не распознаётся) тест падает, с ним проходит. Все 24 записи остались с точными счётчиками: каждая обёртка в этих методах действительно идёт прямо из `Enumerable.ToArray`. Для `PolicySystem.Decide`, `AiDesignCommands`, `CommandState.DesignCommands`, `ViewBuilder.Step` свой текст `SpreadReason` (путь тика/видов). Формулировку ревьюера «локальный int[] через Array.CopyTo» не взял: по коду источники там разные (`[.. alts]`, `Select`, списки), я её не подтвердил.
+
+- Круг 5 (reviewer CHANGES на b27fbf7): `IsEnumerableToArrayProducer` теперь применяет те же правила пути, что и `IsFreshArray`: нет цели перехода между производителем и вызовом, и `OnlyFilledAndWrapped` (результат не сохраняется и не передаётся дальше). Мутанты `MixedCond` (`f ? Enumerable.ToArray(e) : StaticArr`) и `ToArrayAssignStatic` получают обычный ключ и падают. Проверено откатом: без этих двух проверок тест падает, с ними проходит; 24 записи остались с теми же счётчиками.
+
+## Разногласия
+- Замечание 2 Codex на cf1c9af (счётчик перекрытия) отклонено Orchestrator с причиной: предел уже описан ниже, хука в production в этой задаче нет.
+- Codex finding 3 (круг 3): ложное перекрытие возможно, если поток A вытеснен между `Interlocked.Increment` и началом реальной работы шага. Без хука в production момент «внутри шага» наблюдать нельзя; счётчик доказывает только «B вошёл, пока A был внутри вызова `StepThroughMonth`». Остаётся предложением: внутренний колбэк в compute.
+- Доказательство перекрытия именно внутри фазы compute (Parallel.For) без хука в продукте невозможно; счётчик доказывает перекрытие целых вызовов `StepThroughMonth` (барьер на месяц). Предложение: если нужен детерминированный рандеву внутри compute, добавить в `ViewBuilder.Inputs` (internal) необязательный тестовый колбэк; в этой задаче он не добавлялся (запрет менять поведение Core/Session). Решение Orchestrator: не в этой задаче, остаётся предложением на отдельную задачу.

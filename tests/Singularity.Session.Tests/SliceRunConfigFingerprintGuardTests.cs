@@ -16,6 +16,7 @@ public class SliceRunConfigFingerprintGuardTests
         ["Threads"] = "execution only (L2): never changes the result",
         ["ChunkSize"] = "execution only (L2): never changes the result",
         ["ViewMode"] = "execution only: what the read views hold",
+        ["ViewScope"] = "execution only (ADR-0025): which actors the views carry the node blocks of",
         ["DailyTickProbe"] = "execution only: an empty daily system, the outcome is that of the flag off",
         ["HashCheckpoints"] = "execution only: when a hash is taken",
         ["HashEveryTick"] = "execution only: when a hash is taken",

@@ -30,7 +30,7 @@ internal static class IlScanner
         BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance |
         BindingFlags.Static | BindingFlags.DeclaredOnly;
 
-    public readonly record struct Instruction(OpCode OpCode, object? Operand);
+    public readonly record struct Instruction(OpCode OpCode, object? Operand, int Offset = 0, int[]? Targets = null);
 
     /// <summary>Instructions of a method body; operands of member/type tokens are resolved.</summary>
     public static IEnumerable<Instruction> Read(MethodBase method)
@@ -52,11 +52,16 @@ internal static class IlScanner
             pos++;
 
             object? operand = null;
+            int start = op.Size == 2 ? pos - 2 : pos - 1;
+            int[]? targets = null;
             switch (op.OperandType)
             {
                 case OperandType.InlineNone:
                     break;
                 case OperandType.ShortInlineBrTarget:
+                    targets = [pos + 1 + (sbyte)il[pos]];
+                    pos += 1;
+                    break;
                 case OperandType.ShortInlineI:
                 case OperandType.ShortInlineVar:
                     pos += 1;
@@ -64,8 +69,11 @@ internal static class IlScanner
                 case OperandType.InlineVar:
                     pos += 2;
                     break;
-                case OperandType.InlineI:
                 case OperandType.InlineBrTarget:
+                    targets = [pos + 4 + BitConverter.ToInt32(il, pos)];
+                    pos += 4;
+                    break;
+                case OperandType.InlineI:
                 case OperandType.InlineSig:
                 case OperandType.InlineString:
                 case OperandType.ShortInlineR:
@@ -77,6 +85,9 @@ internal static class IlScanner
                     break;
                 case OperandType.InlineSwitch:
                     int count = BitConverter.ToInt32(il, pos);
+                    targets = new int[count];
+                    for (int k = 0; k < count; k++)
+                        targets[k] = pos + 4 + 4 * count + BitConverter.ToInt32(il, pos + 4 + 4 * k);
                     pos += 4 + 4 * count;
                     break;
                 case OperandType.InlineMethod:
@@ -89,7 +100,7 @@ internal static class IlScanner
                 default:
                     throw Bad(method, pos);
             }
-            yield return new Instruction(op, operand);
+            yield return new Instruction(op, operand, start, targets);
         }
     }
 

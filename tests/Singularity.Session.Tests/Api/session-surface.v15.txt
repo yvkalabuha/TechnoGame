@@ -199,9 +199,9 @@ type Singularity.Session.LicenceRefusalView [struct]
   prop Room : Singularity.Kernel.Fx6 { get; init; }
   prop Seller : System.Int32 { get; init; }
 type Singularity.Session.LicenceView [sealed class]
-  ctor(System.Int32 Gen, System.Int32 Seller, System.Int32 Start, Singularity.Core.Policy.LicenceMask Mask, Singularity.Core.Policy.LicenceMask OfferMask, Singularity.Kernel.Fx6 Flow, System.Collections.Immutable.ImmutableArray`1[System.Int64] Refusals, System.Boolean Active)
+  ctor(System.Int32 Gen, System.Int32 Seller, System.Int32 Start, System.UInt64 Mask, System.UInt64 OfferMask, Singularity.Kernel.Fx6 Flow, System.Collections.Immutable.ImmutableArray`1[System.Int64] Refusals, System.Boolean Active)
   method <Clone>$() : Singularity.Session.LicenceView
-  method Deconstruct(System.Int32& Gen, System.Int32& Seller, System.Int32& Start, Singularity.Core.Policy.LicenceMask& Mask, Singularity.Core.Policy.LicenceMask& OfferMask, Singularity.Kernel.Fx6& Flow, System.Collections.Immutable.ImmutableArray`1[System.Int64]& Refusals, System.Boolean& Active) : System.Void
+  method Deconstruct(System.Int32& Gen, System.Int32& Seller, System.Int32& Start, System.UInt64& Mask, System.UInt64& OfferMask, Singularity.Kernel.Fx6& Flow, System.Collections.Immutable.ImmutableArray`1[System.Int64]& Refusals, System.Boolean& Active) : System.Void
   method Equals(Singularity.Session.LicenceView? other) : System.Boolean
   method Equals(System.Object? obj) : System.Boolean
   method GetHashCode() : System.Int32
@@ -209,8 +209,8 @@ type Singularity.Session.LicenceView [sealed class]
   prop Active : System.Boolean { get; init; }
   prop Flow : Singularity.Kernel.Fx6 { get; init; }
   prop Gen : System.Int32 { get; init; }
-  prop Mask : Singularity.Core.Policy.LicenceMask { get; init; }
-  prop OfferMask : Singularity.Core.Policy.LicenceMask { get; init; }
+  prop Mask : System.UInt64 { get; init; }
+  prop OfferMask : System.UInt64 { get; init; }
   prop Refusals : System.Collections.Immutable.ImmutableArray`1[System.Int64] { get; init; }
   prop Seller : System.Int32 { get; init; }
   prop Start : System.Int32 { get; init; }
@@ -264,6 +264,7 @@ type Singularity.Session.NodeList [struct]
   method GetEnumerator() : Singularity.Session.NodeList+Enumerator
   method GetHashCode() : System.Int32
   prop Count : System.Int32 { get; }
+  prop IsPresent : System.Boolean { get; }
   prop Item : Singularity.Session.NodeView { get; }
   prop Length : System.Int32 { get; }
 type Singularity.Session.NodeList+Enumerator [struct]
@@ -428,12 +429,15 @@ type Singularity.Session.SliceRunConfig [sealed class]
   prop Threads : System.Int32 { get; init; }
   prop ToolingTarget : Singularity.Core.Policy.ToolingTargetSpec { get; init; }
   prop ViewMode : Singularity.Session.SliceViewMode { get; init; }
+  prop ViewScope : Singularity.Session.ViewScope { get; init; }
   prop XHalfByTier : System.Collections.Immutable.ImmutableArray`1[Singularity.Kernel.Fx6] { get; init; }
 type Singularity.Session.SliceSession [sealed class]
   field TestApiVersion : System.Int32 = 15 static
   method Create(Singularity.Core.Data.GameData data, Singularity.Session.SliceRunConfig config) : Singularity.Session.SliceSession static
   method CurrentRequirement(System.Int32 actor) : System.Nullable`1[Singularity.Core.WhyNot.WhyNotTarget]
+  method RebuildView() : System.Void
   method Replay(Singularity.Core.Data.GameData data, Singularity.Session.SliceRunConfig config, System.String commandLog, System.Int64 untilTick) : Singularity.Session.SliceSession static
+  method SetViewSubscription(System.ReadOnlySpan`1[System.Int32] actors) : System.Void
   method Step(System.Int64 ticks) : System.Void
   method StepThroughMonth(System.Int64 month) : System.Void
   method StepTo(System.Int64 tick) : System.Void
@@ -511,3 +515,7 @@ type Singularity.Session.ToolingLedgerView [sealed class]
   prop Total : Singularity.Kernel.Fx6 { get; init; }
   prop TrainingBudget : Singularity.Kernel.Fx6 { get; init; }
   prop UnmetByCluster : System.Collections.Immutable.ImmutableArray`1[Singularity.Kernel.Fx6] { get; init; }
+type Singularity.Session.ViewScope [enum]
+  field All : Singularity.Session.ViewScope = 0 static
+  field Subscribed : Singularity.Session.ViewScope = 1 static
+  field value__ : System.Int32

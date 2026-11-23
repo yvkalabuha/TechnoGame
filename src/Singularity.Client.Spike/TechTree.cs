@@ -164,7 +164,7 @@ public sealed partial class TechTree : Control
         var s = _host.Snap;
         if (s == null || _actor < 0 || !Visible) return;
         if (s.WhyActor != _actor) return;
-        if (_modelDirty || !ReferenceEquals(s.View, _lastView))
+        if ((_modelDirty || !ReferenceEquals(s.View, _lastView)) && s.View.Actors[_actor].Nodes.IsPresent)   // not subscribed yet: keep the dirty flag, retry on the next snapshot
         {
             _modelDirty = false; _lastView = s.View;
             Rebuild(s);
