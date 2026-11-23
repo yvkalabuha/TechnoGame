@@ -200,7 +200,7 @@ public class NoMutableStaticsTests
             if (callee.Name == "AsImmutableArray" && IsFreshArray(body, index, targets))
                 return null;
             // The wrap of an Enumerable.ToArray result has its own key, so an entry for it never exempts a wrap of another array in the same method.
-            if (callee.Name == "AsImmutableArray" && IsEnumerableToArrayProducer(body, index))
+            if (callee.Name == "AsImmutableArray" && IsEnumerableToArrayProducer(body, index, targets))
                 return $"{callee.DeclaringType!.Name}.{callee.Name}(Enumerable.ToArray)";
             return $"{callee.DeclaringType!.Name}.{callee.Name}";
         }
@@ -254,10 +254,16 @@ public class NoMutableStaticsTests
     }
 
     // System.Linq.Enumerable.ToArray (any overload), by full name: the producer of the wrapped array in the listed build/load methods.
-    private static bool IsEnumerableToArrayProducer(List<Instruction> body, int callIndex)
+    private static bool IsEnumerableToArrayProducer(List<Instruction> body, int callIndex, HashSet<int> targets)
     {
         int i = ProducerIndex(body, callIndex);
-        return i >= 0 && body[i].Operand is MethodBase { Name: "ToArray", DeclaringType.FullName: "System.Linq.Enumerable" };
+        if (i < 0 || body[i].Operand is not MethodBase { Name: "ToArray", DeclaringType.FullName: "System.Linq.Enumerable" })
+            return false;
+        // The same path rules as for a fresh array: no join point between the producer and the call, and the result is not stored or passed on.
+        for (int j = i + 1; j <= callIndex; j++)
+            if (targets.Contains(body[j].Offset))
+                return false;
+        return OnlyFilledAndWrapped(body, i, callIndex);
     }
 
     private static bool OnlyFilledAndWrapped(List<Instruction> body, int producer, int callIndex)
@@ -410,6 +416,10 @@ public class NoMutableStaticsTests
         List<string> mixed = UnsafeViolations(UnsafeCalls([typeof(UnsafeMutant)]), toArrayOnly);
         Assert.DoesNotContain(mixed, f => f.Contains("Mixed -> ImmutableCollectionsMarshal.AsImmutableArray(Enumerable.ToArray)"));
         Assert.Contains(mixed, f => f.Contains("Mixed -> ImmutableCollectionsMarshal.AsImmutableArray x1: not allowed"));
+        // A ToArray that is joined with another path, or stored before the wrap, is not exempted by the ToArray key.
+        Assert.Contains(mixed, f => f.Contains("MixedCond -> ImmutableCollectionsMarshal.AsImmutableArray x1"));
+        Assert.Contains(mixed, f => f.Contains("ToArrayAssignStatic -> ImmutableCollectionsMarshal.AsImmutableArray x1"));
+        Assert.DoesNotContain(mixed, f => f.Contains("(Enumerable.ToArray)") && (f.Contains("MixedCond") || f.Contains("ToArrayAssignStatic")));
         var twice = new Dictionary<string, (int, string)> { ["Singularity.Architecture.Tests.UnsafeMutant.Twice -> ImmutableCollectionsMarshal.AsImmutableArray"] = (1, "x") };
         Assert.Contains(UnsafeViolations(UnsafeCalls([typeof(UnsafeMutant)]), twice), f => f.Contains("Twice") && f.Contains("count differs"));
     }
@@ -513,6 +523,8 @@ internal static class UnsafeMutant
     // One wrap of an Enumerable.ToArray result and one wrap of an external array in the same method.
     public static (ImmutableArray<int>, ImmutableArray<int>) Mixed(IEnumerable<int> e, int[] ext) =>
         (System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(System.Linq.Enumerable.ToArray(e)), System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(ext));
+    public static ImmutableArray<int> MixedCond(bool f, IEnumerable<int> e) => System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(f ? System.Linq.Enumerable.ToArray(e) : StaticArr);
+    public static ImmutableArray<int> ToArrayAssignStatic(IEnumerable<int> e) => System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(StaticBuf = System.Linq.Enumerable.ToArray(e));
     public static ImmutableArray<int> WrapCond(bool f, int n) => System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(f ? new int[n] : StaticArr);
     public static ImmutableArray<int> WrapSwitch(int k, int n) => System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(k switch { 0 => new int[n], 1 => new int[n + 1], _ => StaticArr });
     public static ImmutableArray<int> WrapLocalNew(int n) { var a = new int[n]; a[0] = 1; return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(a); }
