@@ -21,13 +21,13 @@ from tm_horizon_2030 import ACTORS, T_1978, analyse_run, year_of, t_sept  # noqa
 T_1990 = 12 * (1990 - 1945) - 8  # 1990-01
 MONTHS = 1024
 BIG3 = ["USA", "SUN", "FRA"]
-TARGETS = [  # node id, label, target window of the world-first year (slice-g5-g6-content.md rev 2 §6)
-    ("s8.app.jet_fighter_g5", "G5 APP (76)", (1980, 1985)),
-    ("s8.eng.aesa_sensor_fusion", "AESA (78)", (1995, 2000)),
-    ("s8.app.jet_fighter_g6", "G6 APP (77)", (2000, 2005)),
-    ("s5.cmp.ceramic_matrix_composite", "CMC (79)", (2008, 2015)),
-    ("s5.prc.cmc_fabrication", "CMC fab (80)", (2008, 2015)),
-    ("s8.eng.adaptive_cycle_engine", "adaptive (81)", (2015, 2022)),
+TARGETS = [  # node number as in node_times.node, label, target window of the world-first year (slice-g5-g6-content.md rev 2 §6)
+    ("76", "G5 APP (76)", (1980, 1985)),
+    ("78", "AESA (78)", (1995, 2000)),
+    ("77", "G6 APP (77)", (2000, 2005)),
+    ("79", "CMC (79)", (2008, 2015)),
+    ("80", "CMC fab (80)", (2008, 2015)),
+    ("81", "adaptive (81)", (2015, 2022)),
 ]
 
 
@@ -108,6 +108,8 @@ def analyse(mdir, pdir, point, expect_data_hash):
                 first[r["node"]] = min(first.get(r["node"], tk), tk)
         new_after_1978 = sum(1 for v in first.values() if v >= T_1978)
         fielded = {(r["actor"], int(r["gen"])): num(r["t_fielded"]) for r in gen}
+        req = {(r["actor"], int(r["gen"])): num(r["t_req"]) for r in gen}
+        unit = {(r["actor"], int(r["gen"])): num(r["t_first_unit"]) for r in gen}
         g5_by_2030 = sum(1 for a in ACTORS if fielded.get((a, 5)) is not None)
         g6_by_2030 = sum(1 for a in ACTORS if fielded.get((a, 6)) is not None)
         zero_y = {a: sum(1 for t in range(T_1978, MONTHS) if g[(s, a, t)] == 0) / 12 for a in ACTORS}
@@ -118,7 +120,7 @@ def analyse(mdir, pdir, point, expect_data_hash):
             if t4 is not None and t4 <= T_1990 + 11:  # G4 in service by 1990-12
                 after_g4[a] = sum(1 for t in range(t4, MONTHS) if g[(s, a, t)] == 0) / 12
         out.append(dict(seed=s, leader=leader, x=x, first=first, new_after_1978=new_after_1978, fielded=fielded,
-                        g5=g5_by_2030, g6=g6_by_2030, zero_y=zero_y, zero_share_90=zero_share_90, after_g4=after_g4,
+                        req=req, unit=unit, g5=g5_by_2030, g6=g6_by_2030, zero_y=zero_y, zero_share_90=zero_share_90, after_g4=after_g4,
                         g2030={a: g[(s, a, MONTHS - 1)] for a in ACTORS}))
     return out, validity, R
 
@@ -157,6 +159,10 @@ def report(out, validity, R, title):
     for a in ACTORS:
         p(f"G in 2030-12 {a}: {[o['g2030'][a] for o in out]}; first G5 fielded year: {fmt([yr(o['fielded'].get((a, 5))) for o in out], '{:.0f}')}; "
           f"G6: {fmt([yr(o['fielded'].get((a, 6))) for o in out], '{:.0f}')}; last new node {fmt([yr(o['x']['last_node'][a]) for o in out], '{:.0f}')}")
+    for gg in (4, 5, 6):
+        p(f"G{gg} t_req year / first unit year / fielded year per actor (median; seeds with a value): " + "; ".join(
+            f"{a} {fmt([yr(o['req'].get((a, gg))) for o in out], '{:.0f}')} / {fmt([yr(o['unit'].get((a, gg))) for o in out], '{:.0f}')} / "
+            f"{fmt([yr(o['fielded'].get((a, gg))) for o in out], '{:.0f}')} [{sum(1 for o in out if o['req'].get((a, gg)) is not None)}]" for a in ACTORS))
     p(f"leader in 2030-12 per seed: {[o['x']['lead_final'] for o in out]}")
 
 
