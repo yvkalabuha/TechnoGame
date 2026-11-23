@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0133-g5g6-l1l2",
+  "description": "TASK-0133, DEBT-0079: L1/L2 on the G5/G6 data at month 1019 (1020 months, 1945-09…2030-08, ticks 31046), seeds 1-2, threads 1 and 4; run twice into two directories for L1.",
+  "model": "JetSlice",
+  "ticks": 31046,
+  "chunk_size": 1,
+  "threads": [
+    1,
+    4
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 2
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "lite"
+  },
+  "series": [
+    {
+      "name": "cn_default"
+    }
+  ],
+  "meta": {
+    "preregistration": "docs/simulation/g5-g6-probe.md §3 (T7)"
+  }
+}
