@@ -16,7 +16,7 @@ namespace Singularity.Lab.Models.Slice;
 public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactory
 {
     /// <summary>The version of the Session surface this model was written against (SLICE_COMPOSITION §13.7).</summary>
-    public const int SurfaceVersion = 14;
+    public const int SurfaceVersion = 15;
 
     /// <summary>Horizon H of the slice, months (spec §2): the control tables have curve knots τ 0…2·H−1.</summary>
     public const int SliceHorizonMonths = 384;
@@ -34,6 +34,7 @@ public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactor
         SliceParameters p = SliceParameters.Parse(setup.Parameters, setup.Seed, setup.Threads, setup.ChunkSize, calibration);
         GameData data = SliceData.Load(setup.ManifestDirectory, setup.RecordedDataFiles ?? []);
         CheckControlHorizon(p.Config.Layer, setup.Ticks, data.Scenario(p.Config.ScenarioId));
+        CheckControlGenerations(p.Config.Layer, data);
         ControlTables? tables = null;
         if (p.ControlTablesPath is string rel)
         {
@@ -74,6 +75,25 @@ public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactor
         if (ticks > end)
             throw new ParamException($"LAYER = {LayerName(layer)} is a control layer calibrated to the 1945-1977 horizon ({SliceHorizonMonths} months, "
                 + $"ticks ≤ {end}); ticks = {ticks} runs past it. Use LAYER = FULL past month {SliceHorizonMonths - 1} (slice-horizon-2030.md H8).");
+    }
+
+    /// <summary>
+    /// TASK-0131, O-038 (slice-horizon-2030.md H9): L_K, L_K0 and L_P know generations 1…4 only (the L_K schedule tables, the L_K0 lags and
+    /// window middles, the L_P T_design/rho per generation, ControlTables.Generations). Data with a node or a design generation above 4 fails
+    /// here, before any table is read or any month runs, instead of failing deep in a schedule or, worse, quietly skipping the new generations.
+    /// </summary>
+    internal static void CheckControlGenerations(LayerControl layer, GameData data)
+    {
+        if (layer is not (LayerControl.Lk or LayerControl.Lk0 or LayerControl.Lp))
+            return;
+        int nodeGen = 0;
+        for (int r = 0; r < data.Nodes.Count; r++)
+            nodeGen = Math.Max(nodeGen, data.Nodes.Gen[r]);
+        int designGen = SliceTables.Generations(data);
+        if (nodeGen > ControlTables.Generations || designGen > ControlTables.Generations)
+            throw new ParamException($"LAYER = {LayerName(layer)} is a control layer of generations 1…{ControlTables.Generations}; the data has "
+                + $"nodes up to generation {nodeGen} and designs up to generation {designGen}. Use LAYER = FULL with G5/G6 data "
+                + "(O-038, slice-horizon-2030.md H9).");
     }
 
     private static string LayerName(LayerControl layer) => layer switch
@@ -210,7 +230,7 @@ public sealed class JetSliceModel : ISessionModel
         _p = p;
         _ticks = ticks;
         _calibration = calibration;
-        MetricTables = calibration ? SliceTables.Calibration : SliceTables.Full;
+        MetricTables = calibration ? SliceTables.CalibrationFor(SliceTables.Generations(data)) : SliceTables.Full;
     }
 
     public IReadOnlyList<MetricTableSpec> MetricTables { get; }

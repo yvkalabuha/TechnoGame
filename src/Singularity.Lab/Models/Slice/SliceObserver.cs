@@ -718,20 +718,37 @@ internal sealed class SliceObserver
 
     // ---------------------------------------------------------------- calibration months
 
-    private void CalibMonth(ActorView av, ActorInputsView ai, long t, int a)
+    private void CalibMonth(ActorView av, ActorInputsView ai, long t, int a) => Row("actor_month", ActorMonthCells(av, ai, t, _ids[a], _nG));
+
+    /// <summary>
+    /// One row of <c>actor_month</c> (§5) for <paramref name="generations"/> generations: columns as <see cref="SliceTables.ActorMonthFor"/>.
+    /// A design without a generation (Gen 0) adds nothing; a generation above the layout's is a format error (TASK-0131: until then designs of
+    /// generation &gt; 4 were dropped without a word).
+    /// </summary>
+    internal static string[] ActorMonthCells(ActorView av, ActorInputsView ai, long t, string actor, int generations)
     {
-        var outG = new long[4];
-        var active = new bool[4];
+        var outG = new long[generations];
+        var active = new bool[generations];
         foreach (DesignView d in av.Designs)
         {
-            if (d.Gen < 1 || d.Gen > 4)
+            if (d.Gen < 1)
                 continue;
+            if (d.Gen > generations)
+                throw new SliceFormatException($"Month {t} actor {actor} design {d.Design}: generation {d.Gen} is above the {generations} of the layout (§5 actor_month).");
             outG[d.Gen - 1] += d.Rate.Raw;
             active[d.Gen - 1] |= d.Stage == DesignStage.Series;
         }
-        Row("actor_month", I(t), _ids[a], F(ai.Budget), F(ai.ProcurementBudget),
-            I(outG[0] / Fx6.Scale), I(outG[1] / Fx6.Scale), I(outG[2] / Fx6.Scale), I(outG[3] / Fx6.Scale),
-            B(active[0]), B(active[1]), B(active[2]), B(active[3]));
+        var cells = new string[4 + 2 * generations];
+        cells[0] = I(t);
+        cells[1] = actor;
+        cells[2] = F(ai.Budget);
+        cells[3] = F(ai.ProcurementBudget);
+        for (int g = 0; g < generations; g++)
+        {
+            cells[4 + g] = I(outG[g] / Fx6.Scale);
+            cells[4 + generations + g] = B(active[g]);
+        }
+        return cells;
     }
 
     // ---------------------------------------------------------------- fleet_cmd

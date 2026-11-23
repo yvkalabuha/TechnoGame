@@ -59,6 +59,41 @@ public static class SliceTables
     public static readonly MetricTableSpec[] Full =
         [Summary, ActorYear, WhyNot, NodeTimes, GenTimes, Requirements, Events, PrcYear, A40, A40CMonths, ToolingLedger, Lines, FleetCmd, Licences, SupplyMonth];
 
+    /// <summary>
+    /// <c>actor_month</c> with <c>out_g{g}</c>, <c>active_g{g}</c> for g = 1…<paramref name="generations"/> (H15, TASK-0131): the generations of the
+    /// slice product class, as <c>gen_times</c>. Four generations give exactly <see cref="ActorMonth"/>, so the CSV of the current data is unchanged.
+    /// </summary>
+    public static MetricTableSpec ActorMonthFor(int generations)
+    {
+        if (generations < 1)
+            throw new ArgumentOutOfRangeException(nameof(generations), generations, "The slice has at least one generation.");
+        if (generations == 4)
+            return ActorMonth;
+        var columns = new List<string> { "t", "actor", "budget", "proc_budget" };
+        for (int g = 1; g <= generations; g++)
+            columns.Add("out_g" + g.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        for (int g = 1; g <= generations; g++)
+            columns.Add("active_g" + g.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        return new MetricTableSpec(ActorMonth.Name, columns);
+    }
+
+    /// <summary><see cref="Calibration"/> with <c>actor_month</c> for <paramref name="generations"/> generations (the same array at 4).</summary>
+    public static MetricTableSpec[] CalibrationFor(int generations) =>
+        generations == 4 ? Calibration : [.. Calibration.Select(t => t.Name == ActorMonth.Name ? ActorMonthFor(generations) : t)];
+
+    /// <summary>Generations of the slice product class (<c>jet_fighter</c>, SliceWorld.ProductClass) in the data: ProductsLayout.Generations.</summary>
+    public static int Generations(Singularity.Core.Data.GameData data)
+    {
+        var classes = data.ProductClasses;
+        int c = classes.ClassId.IndexOf(SliceProductClass);
+        if (c < 0)
+            throw new InvalidOperationException($"The data has no product class '{SliceProductClass}'.");
+        return classes.GenStart[c + 1] - classes.GenStart[c];
+    }
+
+    /// <summary>The product class of the slice (SliceWorld.ProductClass is internal to the Session).</summary>
+    public const string SliceProductClass = "jet_fighter";
+
     /// <summary><c>JetSliceCalib</c>: 8 tables (§5).</summary>
     public static readonly MetricTableSpec[] Calibration = [CalibSummary, NodeTimes, GenTimes, PrcMonth, ActorMonth, A40, A40CMonths, ToolingLedger];
 
