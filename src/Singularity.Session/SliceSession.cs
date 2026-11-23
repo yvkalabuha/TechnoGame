@@ -131,10 +131,26 @@ public sealed partial class SliceSession
             && _pending.Count(p => p.Command.Actor == command.Actor && p.Command is ComposeDesign or DeriveDesign or CancelDesign) >= CommandLimits.DesignSlots)
             return CommandVerdict.Refuse(CommandRefusal.TooManyDesignCommands, $"actor {command.Actor} already has {CommandLimits.DesignSlots} design commands queued");
 
+        if (command is RetireCohort { Acknowledged: false } retire && NeedsConfirmation(retire) is { } warning)
+            return warning;
+
         int at = _pending.FindIndex(p => p.Key > logged.Key);
         _pending.Insert(at < 0 ? _pending.Count : at, logged);
         RememberLocal(source, sourceId, localN);
         return CommandVerdict.Ok;
+    }
+
+    // #437: retiring the newest generation without a replacement is allowed, but only after a warning. A stale handle or a bad count is the layer's business.
+    private CommandVerdict? NeedsConfirmation(RetireCohort r)
+    {
+        if (_world.Config.ViewMode == SliceViewMode.Calibration || !_world.Products.Resolves(r.Actor, r.Design) || r.N < 1)
+            return null;
+        FleetForecast f = _world.Products.RetireForecast(r.Actor, r.Design.Slot, r.N, NextMonth());
+        return f.GenAfter < f.GenBefore
+            ? new CommandVerdict(CommandRefusal.NeedsConfirmation,
+                $"retiring {r.N} units of design {r.Design.Slot} lowers the best generation in service from {f.GenBefore} to {f.GenAfter}; send it again with Acknowledged to confirm",
+                f.GenBefore, f.GenAfter)
+            : null;
     }
 
     // The index is only looked up, never enumerated, and kept in methods of their own (the determinism rule is conservative).

@@ -202,7 +202,7 @@ public class T6dTests
         foreach (ulong seed in new ulong[] { 1, 2, 3, 7 })
         {
             SliceSession s = Create(seed, new SliceRunConfig { T6dOff = true });
-            foreach (var (_, month, hash) in Before.Where(b => b.Seed == seed))
+            foreach (var (_, month, hash) in Before.Where(b => b.Seed == seed && b.Month < 177))   // TASK-0129 (#431): the trajectory of the old build ends at month 176
             {
                 s.StepThroughMonth(month);
                 if (ColumnProjection.SlotReused(s))

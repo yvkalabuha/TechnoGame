@@ -42,7 +42,7 @@ internal static class ColumnProjection
     public static bool IsAddedSinceBaselineColumn(string name) =>
         name.EndsWith(".generation", StringComparison.Ordinal) || name.EndsWith(".parentGen", StringComparison.Ordinal)
         || name.StartsWith("prd.lp.g", StringComparison.Ordinal) && name.EndsWith(".gen", StringComparison.Ordinal)
-        || IsDesignRefGenColumn(name) || IsHorizonColumn(name)
+        || IsDesignRefGenColumn(name) || IsHorizonColumn(name) || IsReplCreditColumn(name)
         || name == "prd.rejected.StaleHandle" || name.StartsWith("prd.altReached.", StringComparison.Ordinal);
 
     // Only the new design-reference generation columns; the old pol.lic.gen, pol.lic.q.gen and pol.lic.bad.gen stay in projections.
@@ -74,6 +74,10 @@ internal static class ColumnProjection
             && int.TryParse(rest.AsSpan("cohort.".Length), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int year)
             && year is >= 1978 and <= 2030;
     }
+
+    /// <summary>The replacement credit of the fleet ageing (TASK-0129, #431): <c>prd.dN.replCredit</c>.</summary>
+    public static bool IsReplCreditColumn(string name) =>
+        name.StartsWith("prd.d", StringComparison.Ordinal) && name.EndsWith(".replCredit", StringComparison.Ordinal);
 
     /// <summary>
     /// A design slot has been retaken (generation ≥ 2): from then on the run is no longer the run of a build without slot reuse, so a

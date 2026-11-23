@@ -397,9 +397,10 @@ public class FleetRuleTests
     }
 
     [Fact]
-    public void Projection_ACohortThatReachesItsServiceLifeNextMonthIsNotCounted()
+    public void Projection_ACohortThatReachesItsServiceLifeNextMonthIsStillCounted()
     {
-        // Month 189 decides for 190: the 1946 cohort (midyear 10) is 180 months old then and is written off by step 0 before the commands.
+        // Month 189 decides for 190: the 1946 cohort (midyear 10) is 180 months old then. #431: it is not written off by age, so the AI may
+        // still take its units; the layer must not refuse what the projection allowed.
         var s = SliceTestData.Create(new SliceRunConfig { Seed = 7, ProfileCell = 0, ToolingTarget = ToolingTargetSpec.Parse("V0") });
         s.StepThroughMonth(188);
         var f = new Fixture { Session = s };
@@ -413,7 +414,7 @@ public class FleetRuleTests
         f.Design(2, DesignStage.Series, 2, 2, 10);
         IReadOnlyList<FleetCommand> cmds = f.Run(189);
         Assert.NotEmpty(cmds);
-        long alive = (long)((units * 2) / 1);   // the 1947 and 1948 cohorts only
+        long alive = (long)(units * 3);   // the 1946, 1947 and 1948 cohorts
         Assert.True(cmds.Sum(c => c.N) <= alive, $"commands {cmds.Sum(c => c.N)} above the {alive} units alive at month 190");
         s.StepThroughMonth(190);
         Assert.Equal(0, Enum.GetValues<CommandRejection>().Where(r => (int)r >= (int)CommandRejection.BadRetireSlot).Sum(r => f.Products.RejectionCount(Usa, r)));

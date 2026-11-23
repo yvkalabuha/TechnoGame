@@ -27,9 +27,15 @@ public enum CommandRefusal
 
     /// <summary>The handle named a project that no longer stood in its slot when the command was applied (ADR-0005 p. 3); the layer counts it as <c>StaleHandle</c> and leaves the new tenant untouched.</summary>
     StaleHandle,
+
+    /// <summary>
+    /// A <c>retire_cohort</c> would lower the best generation in service (#437) and the command did not carry <c>Acknowledged</c>: nothing was queued;
+    /// <see cref="CommandVerdict.BestGenBefore"/> and <see cref="CommandVerdict.BestGenAfter"/> say what changes. Not a refusal of capacity or money: the UI asks and sends again.
+    /// </summary>
+    NeedsConfirmation,
 }
 
-public readonly record struct CommandVerdict(CommandRefusal Reason, string Message)
+public readonly record struct CommandVerdict(CommandRefusal Reason, string Message, int BestGenBefore = 0, int BestGenAfter = 0)
 {
     public bool Accepted => Reason == CommandRefusal.None;
 

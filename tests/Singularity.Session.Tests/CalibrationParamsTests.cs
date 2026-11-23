@@ -12,7 +12,8 @@ public class CalibrationParamsTests
     // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
     // Re-recorded in TASK-0115: schema v11 (cmd.*.gen, pol.*.gen columns); the old columns are unchanged (projection tests).
     // Re-recorded in TASK-0121 (#423), reason: schema v12 (new columns prd.d*.cohort.1978…2030 and prd.d*.q.1: the cohort years to 2030, the second block of the q mask); the old columns are unchanged (HorizonTests projection at 48 points of the build before the change, GoldenProjectionAgainstMainTests), so only the new columns change the hash.
-    private const string MainSeed1Month149 = "a0b7ab02e5f089a2c7e344132eae6d298b8f2e1f3d3ab117cf7261841460869e";
+    // Re-recorded in TASK-0129 (fleet ageing, #431/#435-#437), reason: schema v13 (new column prd.d*.replCredit, in the hash from month 0); the old columns are unchanged to month 176 (projection tests: HorizonTests, T6dTests, FleetAblationTests, ToolingUnmetTests, GoldenProjectionAgainstMainTests), so only the new column changes these hashes.
+    private const string MainSeed1Month149 = "4e38785d9e7141948dcd980666aef35998fbfa2f6759badfde899597d6dac028";
 
     private static SliceRunConfig Base(ulong seed = 1, int threads = 2) => new() { Seed = seed, Threads = threads };
 

@@ -40,4 +40,35 @@ created: 2026-11-23
 ## Связанные документы
 `docs/game-design/notes/fleet-without-replacement.md`, `docs/game-design/FLEET_RETIREMENT.md`, `docs/reviews/fleet-without-replacement-deepseek.md`.
 
+## Ход работы
+- Кривая: таблица из 60 констант Fx6 + сдвиг (O-036) в `ProductsParams.AgeValue`; `f(60)=500000`, `f(120)=250000` точны. Таблица лежит в коде как `ReadOnlySpan<int>` (константные данные, не static-поле: архитектурный тест запрещает изменяемые static). В `DataHash` модов она не входит (это код, не данные мода) — отклонение от текста записки §3.
+- Колонка `prd.d{d}.replCredit` (Fx6 raw), `SchemaVersion` 12 -> 13. Обнуляется в `TakeSlot` и при переходе в `Withdrawn`.
+- Шаг 0 (`ExpendReplacement`): уходят самые старые перестарки в пределах кредита, кредит не выше числа целых единиц, пыль сметается. Начисление (`AccrueReplacement`) — в `Produce`, на живом состоянии шага (псевдоним проекта запущенного в этом шаге берётся из `MemoNext`). Чистые функции — в `FleetRules` (`ExpendCredit`, `Accrue`, `Replaces`, `Effective`).
+- Порог «в строю»: `FieldedMasteredOf` и `UnitsBuiltMasteredOf` считают по `n_eff` на месяце запроса; `UnitsBuiltMastered` получил параметр `month`.
+- ИИ: `AgeOut` убран (`FleetBook.ExpendCredit` — тот же шаг 0, что в Core); `Aged` без предела по сроку; перестарки списываются первыми (`RetireOverage`, до `u >= U_HI`, без условия линии и привязки к деньгам), `keep` считается по `n_eff` (`MaxRetire`, бинарный поиск; при отсутствии перестарков равен прежнему `Whole - keep`).
+- Команда: `RetireCohort.Acknowledged` (в журнале поле `"ack":true` пишется только при true — старые журналы читаются), вердикт `CommandRefusal.NeedsConfirmation` с `BestGenBefore/BestGenAfter` в `CommandVerdict`; проверка в `SliceSession.Submit` по `RetireForecast` (в нём новые поля `GenBefore/GenAfter`). Прогноз срока — `ProductsSystem.FieldedUntil`.
+- Эталоны: объяснение построчно ниже. Идентичность старых колонок с `main` до месяца 176 доказана проекционными тестами (Horizon, T6d, FleetAblation, ToolingUnmet, GoldenProjectionAgainstMain) — они ограничены месяцами < 177: после 177-го траектория отличается намеренно.
+
+## Разногласия
+- Записка §2.5 предлагает `retire_forecast` как запрос Session. Я НЕ добавлял публичных методов в `SliceSession`: любое изменение публичной поверхности требует `TestApiVersion` 15, а `Lab/Models/Slice/JetSliceModel.cs` (`SurfaceVersion = 14`) вне моей зоны и падает по сборке. Предупреждение уходит в вердикте `Submit`; запрос прогноза (`ProductsSystem.RetireForecast`, `FieldedUntil`) готов в Core, его выведет TASK-0130 (Session views) вместе с повышением версии.
+- ИИ-проекция не учитывает начисление кредита от выпуска текущего месяца (проекция и раньше не знала выпуска); в редком случае Core убирает перестарков больше, чем предполагал ИИ, и команда списания отклоняется слоем (счётчик отказов, состояние не меняется).
+- Перестарок в `RetireOverage`: ограничение числа — `wanted` (покрыть избыток содержания), а не «все перестарки»; записка не уточняет.
+
 ## Результат
+**Что сделано.** Парк без замены не списывается по возрасту (#431); ценность когорты = `2^(-m/60)` через таблицу (#436, O-036); порог «в строю» по `n_eff` (#435); замена по приходу через колонку `replCredit`; ИИ списывает перестарки первыми; игрок может списать новейшее поколение после предупреждения (#437). Потолок бюджета не вводился (#433).
+
+**Файлы.** Core: `Products/ProductsParams.cs`, `FleetRules.cs`, `FleetBook.cs`, `ProductsSystem.cs`, `ProductsSystem.Fleet.cs`; `Policy/PolicySystem.Fleet.cs`; `Commands/SliceCommand.cs`, `CommandValidator.cs`, `CommandCodec.cs`. Session: `SliceSession.cs` (Submit), `Slice/SliceWorld.cs` (SchemaVersion 13). Тесты: `Core.Tests/Products/FleetAgeingTests.cs` (новый), `Session.Tests/FleetAgeingRunTests.cs` (новый), `FleetPlayerCommandTests.cs`, правки старых тестов ниже.
+
+**Тесты (падают без правки: проверено откатом шага 0 к старому AgeOut и отключением проверки Submit).**
+- ALoneFleet_StopsCounting (50/100/300/2000 единиц -> m = 1/61/156/320): ПАДАЕТ без правки (проверено откатом).
+- Cohorts_PastServiceLife... (3 теста вместо старых «списывается в 178»): падают без правки (проверено).
+- RetiringTheWholeBestFleet_NeedsConfirmation: падает без правки (проверка Submit отключена — проверено).
+- TheFullHorizon (L1, L2 threads 1 vs 4 на 1020 месяцах, перестарки и кредит реально встречаются): падает без правки (проверено: нет перестарков).
+- AgeValue/Effective/ExpendCredit/Accrue/Replaces/MaxRetire/BookProjection/FieldedUntil/Slot-Withdrawn: используют новые функции, без правки не компилируются; откатом по поведению не проверялись (FieldedUntil и ArrivingUnits проходят и при откате шага 0: честно отмечено).
+- Codec ack, ARetirementThatKeepsTheBestGeneration: новые, без правки не компилируются.
+- Переписаны под #431: ProductsSystemTests.Cohorts_..., ProductsLpTests (2), ProductsInvariantTests (ожидание кохорты, `Withdrawals == 0`), FleetRuleTests.Projection_ACohort... (перестарок ещё считается), DailyTickProbeTests (окно сдвинуто на мес. 237: причина закрытия линии теперь в мес. 239).
+- Проекционные тесты ограничены месяцами < 177: HorizonTests, T6dTests, FleetAblationTests, ToolingUnmetTests (потеряно покрытие после 176-го; другого эталона старого кода нет).
+
+**Эталоны (перезаписаны один раз в этой ветке).** Причина всех строк одна: новая колонка `prd.d*.replCredit` входит в хэш с месяца 0 + SchemaVersion 13; старые колонки до месяца 176 не меняются (проекции выше). Строки: `a0b7ab02... -> 4e38785d...` (seed 1 YProd = Main = view/calibration/series-switch, месяц 149); F17b Admit seeds 1-5 (`35a18ce3->eb6de34c`, `b4f448d2->4810c301`, `01bf7318->8e140ae6`, `27ba55c5->bd9a913a`, `485aed7d->6bb0eb11`); F17b YProd seeds 2-5 (`176268f7->05984441`, `e4d91b3e->b7a7bffa`, `b8826fc7->227d65aa`, `fa8a0682->9ed730a5`); LinkedRun `0a9560b8->667265a0`; ProductAi `557aef80->e32429bd`; TwoWorlds digests seeds 1,2,3,4,5,7 (`dd295a0d->5e8262ef`, `f084e313->e98719bf`, `f6e47b9a->9eee14c0`, `418d215c->d6323f74`, `b20711e9->24fa7353`, `b898c0f5->9e754c20`); отпечаток схемы `633423dc->821599dc`. Сумма строк подтверждена тем, что YProd seed 1 (F17b) = Main seed 1.
+
+**Не сделано / вне зоны.** `src/Singularity.Lab/Models/Slice/SliceChecks.cs` (`Golden150 = a0b7ab02...` должен стать `4e38785d9e7141948dcd980666aef35998fbfa2f6759badfde899597d6dac028`) — Lab, зона simulation-engineer; без этого `verify.py` selftest падает на этой строке. Lab-тесты (`Singularity.Lab.Tests`) могут иметь свои эталоны, см. отчёт.

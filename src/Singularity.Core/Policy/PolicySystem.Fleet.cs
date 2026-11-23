@@ -113,7 +113,7 @@ public sealed partial class PolicySystem
         if (_prod!.Fleet(row, t) is not { } book)
             return null;
         int gFront = _prod.GFront(t);
-        book.AgeOut(t);
+        book.ExpendCredit(t);
         // B_base of the year reset comes from the AI's own shares (Shares(row)), not from a player's set_budget_shares override: for an actor
         // driven by the player with the AI on, the ceiling may differ from the one the layer sets (deviation 11 of TASK-0028).
         if (t % 12 == 0)
@@ -128,7 +128,7 @@ public sealed partial class PolicySystem
                     _ = kind == FleetCommandKind.Sell ? book.Sell(c.Design.Slot, c.N, t, gFront) : book.Retire(c.Design.Slot, c.N);
             }
         }
-        book.AgeOut(t + 1);
+        book.ExpendCredit(t + 1);
         Fx6 baseNext = sharesNext.Procurement * budgetNext;
         if ((t + 1) % 12 == 0)
             book.ResetYear(baseNext);
@@ -174,13 +174,16 @@ public sealed partial class PolicySystem
             return result;
         (FleetBook book, Fx6 baseNext, int line) = projection;
         int gFront = _prod!.GFront(t);
-        if (line < 0)
-            return result;
 
         var profile = (PolicyProfile)_profile.Current[row];
         Fx6 need = book.Need();
         Fx6 u = baseNext > Fx6.Zero ? need / baseNext : Fx6.Zero;
         if (u < _pp.FleetUHi[(int)profile])
+            return result;
+        Fx6 excess = need - FleetULo(row) * baseNext;
+        // The overage goes first, with no replacement and no line needed (#431, memo §2.6).
+        excess = RetireOverage(book, row, t, line, excess, designs, result);
+        if (line < 0)
             return result;
         _armed.Next[row] = _armed.Current[row] + 1;
         if (book.Bind[line] != LineBind.Money)
@@ -188,11 +191,10 @@ public sealed partial class PolicySystem
             _silentBind.Next[row] = _silentBind.Current[row] + 1;
             return result;
         }
-        Fx6 excess = need - FleetULo(row) * baseNext;
         var candidates = new List<int>();
         for (int d = 0; d < _designs; d++)
         {
-            if (d != line && book.Stage[d] == DesignStage.InService && !book.Excess[d] && LineCondition(book, line, d))
+            if (d != line && book.Stage[d] == DesignStage.InService && !book.Excess[d] && !book.RetireSlot[d] && LineCondition(book, line, d))
                 candidates.Add(d);
         }
         // κ ascending: perf_d·upkeep_e < perf_e·upkeep_d puts d first; a tie goes to the lower design_id (List.Sort is not stable, so the id is the key).
@@ -207,9 +209,9 @@ public sealed partial class PolicySystem
             if (excess <= Fx6.Zero)
                 break;
             long avail = book.Aged(d, t + 1, _pp.FleetAProt);
-            long keep = book.InDefK[d] ? book.Parameters.NServiceMin : 0;
+            int keep = book.InDefK[d] ? book.Parameters.NServiceMin : 0;
             long wanted = (excess.Raw + book.Upkeep[d].Raw - 1) / book.Upkeep[d].Raw;
-            long n = Math.Min(Math.Min(avail, book.Whole(d) - keep), wanted);
+            long n = book.MaxRetire(d, Math.Min(avail, wanted), t + 1, keep);
             if (n < 1)
                 continue;
             long s = _pp.FleetArm == FleetArm.NoSale ? 0 : book.SaleMax(d, n, t + 1, gFront);
@@ -232,6 +234,39 @@ public sealed partial class PolicySystem
             CountPair(row, genLine, book.Gen[d], s >= 1 ? 1 : 0, n - s >= 1 ? 1 : 0, s, n - s);
         }
         return result;
+    }
+
+    // Overage first (#431): units past the service life go oldest design-age first, as many as the excess upkeep asks, never taking n_eff of a
+    // project of Def(K) under n_service_min. One retire_cohort per project and month. Returns the excess left.
+    private Fx6 RetireOverage(FleetBook book, int row, long t, int line, Fx6 excess, PolicyDesign[] designs, FleetDecision result)
+    {
+        var order = new List<int>();
+        for (int d = 0; d < _designs; d++)
+        {
+            if (d != line && book.Stage[d] == DesignStage.InService && book.Aged(d, t + 1, book.Parameters.ServiceLife) > 0)
+                order.Add(d);
+        }
+        // The oldest overage cohort first (lowest cohort year with units); a tie goes to the lower design id.
+        order.Sort((a, b) =>
+        {
+            int c = book.OldestOverageYear(a, t + 1).CompareTo(book.OldestOverageYear(b, t + 1));
+            return c != 0 ? c : a.CompareTo(b);
+        });
+        foreach (int d in order)
+        {
+            if (excess <= Fx6.Zero)
+                break;
+            int keep = book.InDefK[d] ? book.Parameters.NServiceMin : 0;
+            long wanted = (excess.Raw + book.Upkeep[d].Raw - 1) / book.Upkeep[d].Raw;
+            long n = book.MaxRetire(d, Math.Min(book.Aged(d, t + 1, book.Parameters.ServiceLife), wanted), t + 1, keep);
+            if (n < 1)
+                continue;
+            if (book.Retire(d, n) is { } bad)
+                throw new PolicyInvariantException(t, row, $"the AI's retire_cohort of overage of design {d} would be refused: {bad}");
+            result.Commands.Add(new FleetCommand(FleetCommandKind.Retire, designs[d].HandleOf(d), n));
+            excess -= Fx6.FromInt(n) * book.Upkeep[d];
+        }
+        return excess;
     }
 
     // FLEET_LINE_COND (spec A42.4 п. 4).

@@ -22,7 +22,7 @@ public class FleetAblationTests
         foreach (ulong seed in new ulong[] { 7, 3 })
         {
             SliceSession s = SliceSession.Create(OffData, new SliceRunConfig { Seed = seed, FleetArm = FleetArm.NoRetire, T6dOff = true, SkipStartValidation = true, LineClose = LineCloseRule.Admit, ToolingTarget = ToolingTargetSpec.Parse("V0") });
-            foreach (long month in new long[] { 59, 149, 383 })
+            foreach (long month in new long[] { 59, 149 })   // TASK-0129 (#431): from month 177 the old write-off at the service life is gone, the T6c2 trajectory ends there
             {
                 s.StepThroughMonth(month);
                 if (ColumnProjection.SlotReused(s))

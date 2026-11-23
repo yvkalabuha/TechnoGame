@@ -83,7 +83,7 @@ public class DailyTickProbeTests
             Seed = 3, LicKnows = true, EffortShare = EffortShareArm.X0, DailyTickProbe = true, HashEveryTick = true,
         });
         Assert.True(s.World.DailyViewNeutral);
-        s.StepThroughMonth(219);
+        s.StepThroughMonth(237);   // TASK-0129: the AI closes a line with a reason in month 239 of this seed (it was in the 220s before the fleet ageing)
         int reused = 0;
         bool monthlyReasons = false;
         for (int day = 0; day < 75; day++)

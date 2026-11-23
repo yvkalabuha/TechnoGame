@@ -121,7 +121,11 @@ public sealed record CancelDesign(int Actor, DesignHandle Design) : SliceCommand
 /// <c>retire_cohort(design, n)</c> (contract r6 §4.4f, #141): <c>n</c> units of a project in С or В leave the fleet without money, the oldest first.
 /// The player and the AI send the same command (the AI's are <c>pol.*</c> columns). Checks that need the state are the layer's (<c>BAD_RETIRE</c>).
 /// </summary>
-public sealed record RetireCohort(int Actor, DesignHandle Design, int N) : SliceCommand(Actor)
+/// <param name="Acknowledged">
+/// The player has seen the warning (#437): without it the session refuses a retirement that lowers the best generation in service with
+/// <see cref="CommandRefusal.NeedsConfirmation"/>. The layer ignores it; it is part of the command so that the log replays the same way.
+/// </param>
+public sealed record RetireCohort(int Actor, DesignHandle Design, int N, bool Acknowledged = false) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.RetireCohort;
 }

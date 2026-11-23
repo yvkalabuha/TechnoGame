@@ -66,6 +66,88 @@ public static class FleetRules
         return sum;
     }
 
+    /// <summary>
+    /// Number of leading cohorts (the oldest) whose age at <paramref name="month"/> is at least the service life: the overage (#431).
+    /// <paramref name="m0"/> grows with the year, so the overage is always a prefix.
+    /// </summary>
+    public static int OverageCohorts(long month, ReadOnlySpan<int> m0, ProductsParams p)
+    {
+        int k = 0;
+        while (k < m0.Length && month - m0[k] >= p.ServiceLife)
+            k++;
+        return k;
+    }
+
+    /// <summary>
+    /// <c>n_eff = Σ count·f(m)</c> (#435): units weighed by the value of their age, <c>m = max(0, age − service_life)</c>; every product one Fx6 floor.
+    /// </summary>
+    public static Fx6 Effective(ReadOnlySpan<Fx6> counts, long month, ReadOnlySpan<int> m0, ProductsParams p)
+    {
+        Fx6 sum = Fx6.Zero;
+        for (int y = 0; y < counts.Length; y++)
+        {
+            if (counts[y] != Fx6.Zero)
+                sum += counts[y] * ProductsParams.AgeValue(month - m0[y] - p.ServiceLife);
+        }
+        return sum;
+    }
+
+    /// <summary>
+    /// Step 0 of the replacement (#431, memo §2.3): of the overage cohorts <c>min(whole overage units, ⌊credit⌋)</c> units leave, the oldest first,
+    /// the credit falls by that number, and the credit never exceeds the whole units left. The dust rule applies to what is left.
+    /// </summary>
+    public static void ExpendCredit(Span<Fx6> counts, ref Fx6 credit, long month, ReadOnlySpan<int> m0, ProductsParams p)
+    {
+        int over = OverageCohorts(month, m0, p);
+        long leave = Math.Min(Whole(counts[..over]), credit.Raw / Fx6.Scale);
+        if (leave > 0)
+        {
+            Span<Fx6> taken = stackalloc Fx6[over];
+            Take(counts[..over], Fx6.FromInt(leave), taken);
+            credit -= Fx6.FromInt(leave);
+            SweepDust(counts);
+        }
+        Fx6 whole = Fx6.FromInt(Whole(counts));
+        if (credit > whole)
+            credit = whole;
+    }
+
+    /// <summary>
+    /// The replacement credit of units that arrive (#431, memo §2.3): <paramref name="arrived"/> new units of project <paramref name="e"/> are
+    /// credited to the projects they replace (<see cref="Replaces"/>), the highest key <c>(gen, perf, slot)</c> first, each up to its room
+    /// <c>whole − credit</c>; what is left over is lost. <paramref name="whole"/> is whole units per slot; <paramref name="done"/> is scratch.
+    /// </summary>
+    public static void Accrue(Fx6 arrived, int e, ReadOnlySpan<int> gen, ReadOnlySpan<Fx6> perf, ReadOnlySpan<long> whole, Span<Fx6> credit,
+        Span<bool> done, ProductsParams p)
+    {
+        done.Clear();
+        Fx6 rest = arrived;
+        while (rest > Fx6.Zero)
+        {
+            int best = -1;
+            for (int d = 0; d < gen.Length; d++)
+            {
+                if (d == e || done[d] || whole[d] <= 0 || !Replaces(gen[e], perf[e], gen[d], perf[d], p))
+                    continue;
+                if (best < 0 || gen[d] > gen[best] || (gen[d] == gen[best] && perf[d] >= perf[best]))
+                    best = d;
+            }
+            if (best < 0)
+                return;
+            done[best] = true;
+            Fx6 room = Fx6.FromInt(whole[best]) - credit[best];
+            if (room <= Fx6.Zero)
+                continue;
+            Fx6 give = rest < room ? rest : room;
+            credit[best] += give;
+            rest -= give;
+        }
+    }
+
+    /// <summary>Project e replaces project d (memo §2.1): a higher generation, or the same one with <c>perf_e ≥ 1,05·perf_d</c>.</summary>
+    public static bool Replaces(int genE, Fx6 perfE, int genD, Fx6 perfD, ProductsParams p) =>
+        genE > genD || (genE == genD && perfE >= perfD * p.ReplacePerfRatio);
+
     /// <summary><c>⌊Σcount⌋</c> as an integer.</summary>
     public static long Whole(ReadOnlySpan<Fx6> counts) => Sum(counts).Raw / Fx6.Scale;
 

@@ -35,7 +35,8 @@ public class LinkedRunTests
     // Re-recorded in TASK-0099 (ADR-0005 p. 3), reason: schema v9 (new columns prd.d*.generation, parentGen, prd.lp.g*.gen, StaleHandle counter); the run ends before the first slot reuse, the old columns are unchanged (SlotReuseL2Tests.NoSlotIsReused_BeforeTheMonthOfAnyRewrittenGolden, projection tests).
     // Re-recorded in TASK-0115: schema v11 (cmd.*.gen, pol.*.gen columns); the run is 60 months, no slot is reused, the old columns are unchanged.
     // Re-recorded in TASK-0121 (#423), reason: schema v12 (new columns prd.d*.cohort.1978…2030 and prd.d*.q.1: the cohort years to 2030, the second block of the q mask); the old columns are unchanged (HorizonTests projection at 48 points of the build before the change, GoldenProjectionAgainstMainTests), so only the new columns change the hash.
-    private const string Golden60 = "0a9560b87d7717bf94ffdb590b02fd4f427ff05f7b826f382d88a9a7e2e5cad3";
+    // Re-recorded in TASK-0129 (fleet ageing, #431/#435-#437), reason: schema v13 (new column prd.d*.replCredit, in the hash from month 0); the old columns are unchanged to month 176 (projection tests: HorizonTests, T6dTests, FleetAblationTests, ToolingUnmetTests, GoldenProjectionAgainstMainTests), so only the new column changes these hashes.
+    private const string Golden60 = "667265a052542cb266336a9fee2b037648d95bac96fc115614bab315e8c0c9e1";
 
     private sealed class Run
     {
