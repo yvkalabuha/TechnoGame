@@ -1,7 +1,7 @@
 ---
 id: TASK-0128
 title: "G5/G6 content for the jet slice: nodes, alternatives, anchors (train 2, T-C)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M05
 agent: research-scientist
@@ -28,7 +28,7 @@ created: 2026-11-23
 3. Gate: critic + advocate + третий голос; затем утверждение владельцем. Данные в `mods/` пишет developer после утверждения (отдельная задача поезда 2).
 
 ## Критерии приёмки
-- [ ] Документ `docs/simulation/slice-g5-g6-content.md` с «Кратким выводом», таблицей узлов (id, тип, поколение, дисциплина, tier, предпосылки, якорь, источник) и списком правок Core.
+- [ ] Документ `docs/research/slice-g5-g6-content.md` (зона research-scientist) с «Кратким выводом», таблицей узлов (id, тип, поколение, дисциплина, tier, предпосылки, якорь, источник) и списком правок Core.
 - [ ] Каждый якорь с источником; каждое число помечено [Факт]/[Предп.]/[Предл.].
 - [ ] Ожидаемый эффект на гонку после 1970 года описан как гипотеза, без утверждений о балансе.
 - [ ] Gate пройден, разногласия записаны; владелец утвердил.

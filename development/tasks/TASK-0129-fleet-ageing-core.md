@@ -1,7 +1,7 @@
 ---
 id: TASK-0129
 title: "Fleet ageing without replacement in Core (#431, #435-#437)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M05
 agent: developer
