@@ -1,7 +1,7 @@
 ---
 id: TASK-0130
 title: "Scoped client view: node blocks only for subscribed actors (ADR-0025)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M05
 agent: developer
@@ -13,6 +13,7 @@ related: [ADR-0025, TASK-0124, TASK-0125]
 approved_by: owner
 approved_at: 2026-11-22
 approval_ref: "#434 (ADR-0025 rev 2 accepted)"
+review_ref: "reviewer: APPROVE c543717 + delta 0041317 (3 rounds); codex: 3 returns, waived by #432, open → DEBT-0074, DEBT-0078; landed 6fe565d"
 created: 2026-11-23
 ---
 
