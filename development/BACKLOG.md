@@ -144,7 +144,7 @@
 | [TASK-0126](../development/tasks/TASK-0126-task-0117-codex-remainder.md) | IN_PROGRESS | Open Codex findings after TASK-0117 landing (#432) | MS-M05 |
 | [TASK-0127](../development/tasks/TASK-0127-task-0125-codex-remainder.md) | IN_PROGRESS | Open Codex findings after TASK-0125 landing (#432) | MS-M05 |
 | [TASK-0128](../development/tasks/TASK-0128-g5-g6-content-design.md) | IN_PROGRESS | G5/G6 content for the jet slice: nodes, alternatives, anchors (train 2, T-C) | MS-M05 |
-| [TASK-0129](../development/tasks/TASK-0129-fleet-ageing-core.md) | APPROVED | Fleet ageing without replacement in Core (#431, #435-#437) | MS-M05 |
+| [TASK-0129](../development/tasks/TASK-0129-fleet-ageing-core.md) | IN_PROGRESS | Fleet ageing without replacement in Core (#431, #435-#437) | MS-M05 |
 | [TASK-0130](../development/tasks/TASK-0130-scoped-view-subscription.md) | IN_PROGRESS | Scoped client view: node blocks only for subscribed actors (ADR-0025) | MS-M05 |
 
 ## Гипотезы
