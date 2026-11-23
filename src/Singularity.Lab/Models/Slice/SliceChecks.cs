@@ -317,6 +317,18 @@ public static class SliceChecks
             if (r.Ok || r.Error?.Contains("ParamException", StringComparison.Ordinal) != true || r.Error.Contains("generations 1…4", StringComparison.Ordinal) != true)
                 return $"run {pars} on six-generation data: ok={r.Ok} {r.Error}";
         }
+        // calib-print builds its session without the model factory: LK0 there meets the same guard (Codex finding on CalibPrint).
+        string printDir = Path.Combine(root, "six-print");
+        Directory.CreateDirectory(printDir);
+        string printManifest = Path.Combine(printDir, "m.json");
+        File.WriteAllText(printManifest, Manifest("JetSliceCalib", Ticks60, seeds: "[1]", pars: """{"LAYER": "LK0"}"""));
+        try
+        {
+            Smoke.CalibPrint.Run(printManifest, null, null, Path.Combine(printDir, "out"), 1, TextWriter.Null);
+            return "calib-print accepted LK0 on six-generation data";
+        }
+        catch (ParamException e) when (e.Message.Contains("generations 1…4", StringComparison.Ordinal)) { }
+        catch (Exception e) { return $"calib-print LK0 on six-generation data failed without the guard: {e.GetType().Name}: {e.Message}"; }
         // (2) the calibration build on the fixture writes the 6-generation actor_month.
         var (c, dir) = Run(root, Manifest("JetSliceCalib", Ticks60), 1, 1, "six-calib");
         if (!c.Ok)

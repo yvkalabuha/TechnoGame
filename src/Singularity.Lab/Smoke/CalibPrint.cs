@@ -52,6 +52,9 @@ internal static class CalibPrint
                     throw new UsageException($"calib-print does not support FORCE or CONTROL_TABLES (point {p.Index}): the print would not run the matrix world.");
                 // H8 (TASK-0121): LK0 and LC0 need no CONTROL_TABLES, so the horizon of the control layers is checked here as in the model.
                 JetSliceModelFactory.CheckControlHorizon(sp.Config.Layer, m.Ticks, data.Scenario(sp.Config.ScenarioId));
+                // TASK-0131 (O-038, H9): LK0 needs no CONTROL_TABLES either, so the generation guard of the model runs here too (an early
+                // parameter error instead of a late failure inside KnowledgeSchedule.BuildLk0 on G5/G6 data).
+                JetSliceModelFactory.CheckControlGenerations(sp.Config.Layer, data);
                 work.Add((p, s, sp.Config));
             }
         }
