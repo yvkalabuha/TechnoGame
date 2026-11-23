@@ -354,6 +354,10 @@ internal sealed class SliceWorld
                 throw new ArgumentException("h_max must be in [0; 1].", nameof(c));
             k = k with { HMax = hMax };
         }
+        if (c.CostMultG5 is { } g5)
+            k = k with { CostGenMultiplier = WithGenMultiplier(k.CostGenMultiplier, 5, g5, c) };
+        if (c.CostMultG6 is { } g6)
+            k = k with { CostGenMultiplier = WithGenMultiplier(k.CostGenMultiplier, 6, g6, c) };
         if (c.KappaQ10 is { } kappa)
         {
             if (kappa is < 0 or > 1024)
@@ -383,6 +387,15 @@ internal sealed class SliceWorld
         if (c.Layer == LayerControl.Lp && c.CapabilityTables is { } tables)
             p = p with { LpTDesign = tables.TDesign, LpRho = tables.Rho };
         return (k, i, p);
+    }
+
+    private static Fx6[] WithGenMultiplier(Fx6[] current, int gen, Fx6 value, SliceRunConfig c)
+    {
+        if (value <= Fx6.Zero)
+            throw new ArgumentException($"The c_n multiplier of generation {gen} must be positive.", nameof(c));
+        Fx6[] copy = [.. current];
+        copy[gen] = value;
+        return copy;
     }
 
     private static void ValidateCapabilityTables(CapabilityControlTables t)
@@ -594,6 +607,10 @@ internal sealed class SliceWorld
             for (int t = 0; t < c.XHalfByTier.Length; t++)
                 Add($"run.k.x_half.{t + 3}", c.XHalfByTier[t].Raw);
         }
+        if (c.CostMultG5 is { } g5)
+            Add("run.k.cost_mult_g5", g5.Raw);
+        if (c.CostMultG6 is { } g6)
+            Add("run.k.cost_mult_g6", g6.Raw);
         if (c.DeltaH is { } deltaH)
             Add("run.k.delta_h", deltaH.Raw);
         if (c.CM is { } cm)

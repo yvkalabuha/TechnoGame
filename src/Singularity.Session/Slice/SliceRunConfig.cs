@@ -245,6 +245,12 @@ public sealed partial record SliceRunConfig
     /// <summary><c>h_max</c> (knowledge); null = §8.1. The grid axis <see cref="GridCell.HMax"/> scales this value.</summary>
     public Fx6? HMax { get; init; }
 
+    /// <summary>Multiplier of <c>c_n</c> for generation 5 nodes (TASK-0131); null = the default of <c>KnowledgeParams</c> (6.4). Must be positive. G0…G4 are not overridable.</summary>
+    public Fx6? CostMultG5 { get; init; }
+
+    /// <summary>Multiplier of <c>c_n</c> for generation 6 nodes (TASK-0131); null = the default of <c>KnowledgeParams</c> (10.2). Must be positive.</summary>
+    public Fx6? CostMultG6 { get; init; }
+
     /// <summary><c>κ</c> as q10 (0…1024) of the bureau requirement; null = §8.1 (512).</summary>
     public int? KappaQ10 { get; init; }
 
