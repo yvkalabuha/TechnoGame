@@ -846,6 +846,8 @@ public sealed partial class Main : Node3D
     }
 
     // A failed PNG write fails the run: a missing frame is not evidence.
+    // A write that throws (disk full, no directory) is a failed save, not a crash before the run returns exit 1.
+    Error TrySave(Image img, string path) { try { return img.SavePng(path); } catch (Exception ex) { _shotFailed = true; _shotLog += $"ERROR: save {path} threw {ex.GetType().Name}: {ex.Message}\n"; return Error.Failed; } }
     void CheckSave(Error e, string path) { if (e != Error.Ok) InstFail($"cannot save {path}: {e}"); }
 
     void SaveShot(string name, Rect2I? r = null, bool grey = false)
@@ -856,8 +858,8 @@ public sealed partial class Main : Node3D
         if (r is Rect2I rr) img = img.GetRegion(rr);
         else if (_largeSize.X > 0 ? (img.GetWidth() != _largeSize.X || img.GetHeight() != _largeSize.Y) : !SettingsLogic.IsBaseFrame(img.GetWidth(), img.GetHeight())) { InstFail($"frame {name} is {img.GetWidth()}x{img.GetHeight()}, a full frame must be a real {(_largeSize.X > 0 ? _largeSize.X + "x" + _largeSize.Y : "1920x1080")} render (window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, display {DisplayServer.ScreenGetSize().X}x{DisplayServer.ScreenGetSize().Y})"); return; }
         _savedShots.Add(name);
-        CheckSave(img.SavePng(Path.Combine(dir, name)), Path.Combine(dir, name));
-        if (grey) { string gp = Path.Combine(dir, name.Replace(".png", "_grey.png")); img.Convert(Image.Format.L8); CheckSave(img.SavePng(gp), gp); }   // A5: a greyscale frame next to the colour one
+        CheckSave(TrySave(img, Path.Combine(dir, name)), Path.Combine(dir, name));
+        if (grey) { string gp = Path.Combine(dir, name.Replace(".png", "_grey.png")); img.Convert(Image.Format.L8); CheckSave(TrySave(img, gp), gp); }   // A5: a greyscale frame next to the colour one
     }
 
     // Title screen on a cold start: the menu over the turning globe, no HUD (the loading label is hidden too).
@@ -993,7 +995,7 @@ public sealed partial class Main : Node3D
                 foreach (var (cap, id, num, sel) in new[] { ("turbine", "s7.fnd.turbine_heat_transfer", 0, true), ("jet_test", "s8.prc.jet_engine_assembly_test", 0, true), ("frontier", "", -1, false) })
                 {
                     Q(0.3, () => { int row = id != "" ? _tree.RowOfId(id) : _tree.FrontierRow; _capRow = row; if (row < 0) { if (sel) InstFail($"caption shot {cap}: node not found"); else _shotLog += $"caption {cap}{sfx}: no frontier node in this state (no «№N» tag to show), no frame\n"; return; } _tree.Select(sel ? row : -1); _tree.ShotZoom(2.4f, row); _capRow = row; });
-                    Q(0.8, () => { if (_capRow < 0) return; string t = _tree.ShotLabelText(_capRow); _shotLog += $"caption {cap}{sfx}: label '{t ?? "none"}'\n"; if (sel && t == null) InstFail($"caption {cap}: the selected node has no label"); SaveShot($"tree_caption_{cap}{sfx}.png"); });
+                    Q(0.8, () => { if (_capRow < 0) return; string t = _tree.ShotLabelText(_capRow); _shotLog += $"caption {cap}{sfx}: label '{t ?? "none"}'\n"; if (sel && t != Names.Node(id)) InstFail($"caption {cap}: expected the label '{Names.Node(id)}', drawn '{t ?? "none"}'"); SaveShot($"tree_caption_{cap}{sfx}.png"); });
                 }
                 Q(0.2, () => { _tree.Select(-1); _tree.ResetView(); _tree.Visible = false; });
             }
@@ -1421,8 +1423,13 @@ public sealed partial class Main : Node3D
     void InstFail(string msg)
     {
         _shotLog += "ERROR: " + msg + "\n";
-        string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
-        Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog);
+        _shotFailed = true;
+        try
+        {
+            string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
+            Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog);
+        }
+        catch (Exception ex) { GD.PrintErr("cannot write run-log.txt: " + ex.Message); }   // the run still exits 1
         GD.PrintErr(msg);
         GetTree().Quit(1); _shotStep = 18;
     }
@@ -1448,8 +1455,8 @@ public sealed partial class Main : Node3D
         var gr = _flaskProbe.GetGlobalRect();
         img = img.GetRegion(new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)).Intersection(new Rect2I(0, 0, img.GetWidth(), img.GetHeight())));
         string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
-        CheckSave(img.SavePng(Path.Combine(dir, name + ".png")), Path.Combine(dir, name + ".png"));
-        img.Convert(Image.Format.La8); CheckSave(img.SavePng(Path.Combine(dir, name + "_grey.png")), Path.Combine(dir, name + "_grey.png"));
+        CheckSave(TrySave(img, Path.Combine(dir, name + ".png")), Path.Combine(dir, name + ".png"));
+        img.Convert(Image.Format.La8); CheckSave(TrySave(img, Path.Combine(dir, name + "_grey.png")), Path.Combine(dir, name + "_grey.png"));
     }
     static readonly int[] InstYears = { 1950, 1985, 2030 };
     static readonly AreaId[] InstAreas = { AreaId.Finance, AreaId.Science, AreaId.Production };
@@ -1524,8 +1531,8 @@ public sealed partial class Main : Node3D
             void Save(Image im, Rect2 gr, string name)
             {
                 var c = im.GetRegion(new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)).Intersection(all));
-                CheckSave(c.SavePng(Path.Combine(dir, name + ".png")), Path.Combine(dir, name + ".png"));
-                c.Convert(Image.Format.La8); CheckSave(c.SavePng(Path.Combine(dir, name + "_grey.png")), Path.Combine(dir, name + "_grey.png"));
+                CheckSave(TrySave(c, Path.Combine(dir, name + ".png")), Path.Combine(dir, name + ".png"));
+                c.Convert(Image.Format.La8); CheckSave(TrySave(c, Path.Combine(dir, name + "_grey.png")), Path.Combine(dir, name + "_grey.png"));
             }
             string sfx = $"e{p % 3 + 1}_{pct}";
             if (p / 3 == 1)

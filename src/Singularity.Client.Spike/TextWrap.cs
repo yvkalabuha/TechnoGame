@@ -38,8 +38,8 @@ public static class TextWrap
         return res;
     }
 
-    /// <summary>A wrapped line wider than the paragraph width (a single character wider than the line is unavoidable and not an overflow).</summary>
-    public static bool Overflows(string line, float lineWidth, float maxW) => lineWidth > maxW + 0.5f && line.Length > 1;
+    /// <summary>A wrapped line wider than the paragraph width; a single glyph wider than the column counts too (the column is too narrow for the text).</summary>
+    public static bool Overflows(string line, float lineWidth, float maxW) => line.Length > 0 && lineWidth > maxW + 0.5f;
 
     // Length of the longest prefix of a long word that fits (at least one character, never half of a surrogate pair).
     static int Take(string rest, float maxW, Func<string, float> width)
@@ -60,8 +60,8 @@ public static class LabelGeometry
         return MathF.Sqrt(dx * dx + dy * dy);
     }
 
-    /// <summary>A name placed on a far ring: its box is more than `margin` du from the node edge (a near place is within the node radius plus 6 plus the text height).</summary>
-    public static bool IsApart(float distToBox, float nodeR, float margin = 10f) => distToBox > nodeR + margin;
+    /// <summary>A name on a far ring: the distance from the node centre to its box exceeds the node radius plus `margin` du (the near places are at most about 1.4 x (radius + 8) away, so margin 20 keeps them out).</summary>
+    public static bool IsApart(float distToBox, float nodeR, float margin = 20f) => distToBox > nodeR + margin;
 
     /// <summary>Per-point core of NeedsLeader (no allocation): is a node at (qx, qy) as near to the box as the label's own node at distance ownDist?</summary>
     public static bool OtherIsAsNear(float ownDist, float qx, float qy, float x, float y, float w, float h, float slack = 4f) => DistToRect(qx, qy, x, y, w, h) <= ownDist + slack;

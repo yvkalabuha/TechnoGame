@@ -1087,13 +1087,13 @@ public sealed partial class TechTree : Control
         }
     }
 
-    // Hover shows the technical id and number: ids never appear in the visible text.
+    // Hover shows the node name and number (ids never appear in the visible text).
     public override string _GetTooltip(Vector2 atPosition)
     {
         int hit = HitAt(atPosition, 12f);
         if (hit < 0) return "";
         var nodes = _host.Data.Nodes;
-        return $"{nodes.Id[hit]} · №{nodes.Number[hit]}";
+        return $"{Names.Node(nodes.Id[hit])} · №{nodes.Number[hit]}";   // the localized name, never the raw id
     }
 
     // ---------------- inset ----------------
