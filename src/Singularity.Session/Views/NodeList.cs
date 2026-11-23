@@ -80,6 +80,8 @@ public readonly struct NodeList : IReadOnlyList<NodeView>, IEquatable<NodeList>
     {
         if (ReferenceEquals(_block, other._block))
             return true;
+        if (IsPresent != other.IsPresent)
+            return false;   // "not subscribed" is not an empty list of nodes
         if (Count != other.Count)
             return false;
         for (int i = 0; i < Count; i++)
@@ -95,6 +97,7 @@ public readonly struct NodeList : IReadOnlyList<NodeView>, IEquatable<NodeList>
     public override int GetHashCode()
     {
         var h = new HashCode();
+        h.Add(IsPresent);
         h.Add(Count);
         for (int i = 0; i < Count; i += 61)
             h.Add(this[i]);

@@ -267,7 +267,8 @@ public class ViewSubscriptionTests
         s.RebuildView();
         Assert.Equal(s.Tick, s.View.Tick);
         Assert.Null(s.View.StateHash);
-        Assert.Null(s.View.Inputs);
+        Assert.NotNull(s.View.Inputs);               // the budget panel keeps what the last monthly step read; the record carries its own month
+        Assert.Equal(s.View.Month, s.View.Inputs!.Month);
         Assert.Null(s.View.Step);
         Assert.True(s.View.Actors[1].Nodes.IsPresent);
     }
@@ -291,5 +292,85 @@ public class ViewSubscriptionTests
             }
         }
         Assert.Empty(offenders);
+    }
+
+    [Fact]
+    public void NodeListEquality_AnAbsentListIsNotAnEmptyPresentOne()
+    {
+        NodeList empty = NodeList.Create([]);
+        Assert.True(empty.IsPresent);
+        Assert.False(default(NodeList).Equals(empty));
+        Assert.False(empty.Equals(default(NodeList)));
+        Assert.True(default(NodeList) != empty);
+        Assert.NotEqual(default(NodeList).GetHashCode(), empty.GetHashCode());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void L2_SubscribedHashes_EqualScopeAll_AcrossThreadsAndChunkSizes(bool everyTick)
+    {
+        // The matrix of HashScheduleTests, for Subscribed views with a subscription that changes: the hash of every day equals that of ViewScope.All.
+        List<string?> Days(SliceRunConfig config, bool changeSubscription)
+        {
+            SliceSession s = SliceTestData.Create(config);
+            var hashes = new List<string?>();
+            if (changeSubscription)
+            {
+                s.SetViewSubscription([1]);
+                s.RebuildView();
+            }
+            for (int day = 0; day < 65; day++)
+            {
+                if (changeSubscription && day == 30)
+                {
+                    s.SetViewSubscription([2, 4]);
+                    s.RebuildView();
+                }
+                s.Step(1);
+                hashes.Add(s.View.StateHash);
+            }
+            hashes.Add(s.LastHash);
+            return hashes;
+        }
+
+        SliceRunConfig Cfg(ViewScope scope, int threads, int chunk) =>
+            new() { Seed = 7, Threads = threads, ChunkSize = chunk, HashEveryTick = everyTick, DailyTickProbe = everyTick, ViewScope = scope };
+
+        List<string?> reference = Days(Cfg(ViewScope.All, 1, 1), false);
+        foreach (int threads in new[] { 1, 4, 8, 16 })
+        {
+            foreach (int chunk in new[] { 1, 8, 32 })
+            {
+                List<string?> got = Days(Cfg(ViewScope.Subscribed, threads, chunk), true);
+                Assert.Equal(reference.Count, got.Count);
+                for (int i = 0; i < got.Count; i++)
+                {
+                    if (reference[i] is null && got[i] is null)
+                        continue;   // a day that takes no hash in this mode (HashCheckpoints only); the last entry and every hashed day are compared
+                    HashAssert.Equal(reference[i], got[i], $"threads {threads}, chunk {chunk}, index {i}");
+                }
+            }
+        }
+        Assert.Contains(reference, h => h is not null);
+    }
+
+    [Fact]
+    public void CommandLogic_OfTheSession_DoesNotReadViews()
+    {
+        // ADR-0025 п. 10 for SliceSession.cs: Submit, the application of commands and their bookkeeping name no view; only the publication code does.
+        string text = File.ReadAllText(Path.Combine(SliceTestData.RepoRoot, "src", "Singularity.Session", "SliceSession.cs")).ReplaceLineEndings("\n");
+        string[] methods = ["public CommandVerdict Submit(", "private bool ApplyPending(", "private void ReconcileOutcomes(", "private void MarkStale(", "private static DesignHandle? HandleOf(", "private bool KnowsProcess("];
+        string[] words = ["_view", "SliceView", "ActorView", "NodeList", "NodeView", "ViewBuilder", "MonthInputsView", ".View", "_actorsMid", "_subscribed"];
+        foreach (string signature in methods)
+        {
+            int start = text.IndexOf(signature, StringComparison.Ordinal);
+            Assert.True(start >= 0, $"method not found: {signature}");
+            int end = new[] { "\n    }\n", "\n    };\n", "\n\n" }.Select(m => text.IndexOf(m, start, StringComparison.Ordinal)).Where(i => i > 0).Min();
+            string body = text[start..end];
+            Assert.True(body.Length > 80, $"scan of {signature} is vacuous");
+            string code = string.Join('\n', body.Split('\n').Where(l => !l.TrimStart().StartsWith("//", StringComparison.Ordinal)));
+            Assert.Empty(words.Where(w => code.Contains(w, StringComparison.Ordinal)).Select(w => $"{signature} names {w}"));
+        }
     }
 }

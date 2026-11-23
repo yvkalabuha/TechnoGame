@@ -58,8 +58,7 @@ public sealed class SimHost : IDisposable
     long _seq;
     SliceView _lastWhyView;
     int _lastWhyActor = -1;
-    // The actors whose node blocks the view carries (ADR-0025): the played one and the shown one. -1 = not set yet.
-    int _subPlayer = -1, _subShown = -1;
+    readonly ViewSubscriptionSync _sub = new();
     WhyNotTarget? _target; IReadOnlyList<Link> _links = Array.Empty<Link>(); string _whyErr = "";
     ImmutableArray<BudgetShares?> _shares;
     double _lastTickMs;
@@ -167,7 +166,7 @@ public sealed class SimHost : IDisposable
                     long n = (long)owed;
                     if (n > 0) { owed -= n; Advance(n); }
                 }
-                if (WhyActor != _lastWhyActor || WhyActor != _subShown || PlayerActor != _subPlayer) Publish();
+                if (WhyActor != _lastWhyActor || _sub.Stale(PlayerActor, WhyActor)) Publish();
                 Thread.Sleep(sp == 0 ? 20 : 8);
             }
         }
@@ -196,25 +195,9 @@ public sealed class SimHost : IDisposable
         Publish();
     }
 
-    // Simulation thread only. A change applies to the view at once (a full rebuild without a tick), also while paused (ADR-0025 п. 3).
-    // Returns the shown actor it subscribed (one read of WhyActor), which Publish uses too: the view and the why_not of a snapshot are about the same actor.
-    int SyncSubscription()
-    {
-        int player = PlayerActor, shown = WhyActor;
-        if (player == _subPlayer && shown == _subShown) return shown;
-        Span<int> set = stackalloc int[2];
-        int n = 0;
-        if (player >= 0) set[n++] = player;
-        if (shown >= 0 && shown != player) set[n++] = shown;
-        _session.SetViewSubscription(set[..n]);
-        _session.RebuildView();
-        _subPlayer = player; _subShown = shown;
-        return shown;
-    }
-
     void Publish()
     {
-        int wa = SyncSubscription();
+        int wa = _sub.Sync(_session, PlayerActor, WhyActor);
         SliceView v = _session.View;
         if (v.Inputs != null && !ReferenceEquals(v, _lastWhyView))
         {
