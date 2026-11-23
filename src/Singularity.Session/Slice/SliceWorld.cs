@@ -147,7 +147,7 @@ internal sealed class SliceWorld
             products: config.ProductAi ? new PolicyProductsAdapter(this) : null, designs: ProductsLayout.Designs,
             generations: ProductsLayout.Generations, derive: config.Derive, startLines: StartLines(pStart),
             events: Streams.Events, eventInputs: new PolicyEventsAdapter(this), disruptionExposure: scenario.Exposure,
-            budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: Graph.Number.Max() is >= 64 and <= LicenceMask.MaxNumber);   // O-040: a graph above 127 (synthetic worlds) keeps one word, nodes beyond it are not licensable
+            budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout) > LicenceMask.NarrowMaxNumber);   // O-040: the second word only for data whose licensable PRC need it
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs);
         Limits = new CommandLimits(scenario.ActorCount, ProductsLayout.SlotCount, ProductsLayout.Designs,
             [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)]);
@@ -259,6 +259,26 @@ internal sealed class SliceWorld
     public GameData Data { get; }
     public ScenarioData Scenario { get; }
     public SliceStreams Streams { get; }
+    /// <summary>
+    /// The largest node number a licence can carry: the PRC of the engine and hot-section alternatives (the mask of <see cref="PolicyEventsAdapter.Subject"/>).
+    /// Other nodes of the graph (any number, e.g. 180 in synthetic worlds) are not licensable, so they never decide the mask width. Above 127 the build fails.
+    /// </summary>
+    private static int MaxLicensableNumber(ProductsLayout l)
+    {
+        int max = 0;
+        foreach (int slot in (int[])[l.BaseSlot, l.AlloySlot])
+        {
+            for (int a = l.AltStart[slot]; a < l.AltStart[slot + 1]; a++)
+            {
+                foreach (int prc in l.PrcOf(a))
+                    max = Math.Max(max, prc);
+            }
+        }
+        if (max > LicenceMask.MaxNumber)
+            throw new InvalidOperationException($"A licensable PRC has node number {max}, above the licence mask capacity {LicenceMask.MaxNumber}.");
+        return max;
+    }
+
     public KnowledgeParams KnowledgeParameters { get; }
     public IndustryParams IndustryParameters { get; }
     public ProductsParams ProductsParameters { get; }

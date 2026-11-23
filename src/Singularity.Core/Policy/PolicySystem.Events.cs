@@ -27,7 +27,6 @@ public sealed partial class PolicySystem
 
     // Word 1 of the masks (nodes 64…127): registered only when the data has such nodes, so the schema of a 63-node slice is unchanged (H13).
     private LongColumn? _licMask1, _offerMask1, _qMask1;
-
     private void AddEventColumns(Table table, CounterRng? events, IPolicyEvents? inputs, ImmutableArray<Fx6> exposure, int rows, bool wideMask)
     {
         _events = events;
@@ -73,13 +72,12 @@ public sealed partial class PolicySystem
         _qPrice.Load(new long[n]);
         foreach (LongColumn c in _bad)
             c.Load(new long[n]);
-        _licMask1?.Load(new long[n]);
-        _offerMask1?.Load(new long[n]);
+        _licMask1?.Load(new long[n]);        _offerMask1?.Load(new long[n]);
         _qMask1?.Load(new long[n]);
     }
 
     // A mask is stored as two words; a mask with a node above 63 in a slice without the second word would be lost, so it throws.
-    private LicenceMask ReadMask(LongColumn lo, LongColumn? hi, int row) => new(unchecked((ulong)lo.Current[row]), hi is null ? 0 : unchecked((ulong)hi.Current[row]));
+    private LicenceMask ReadMask(LongColumn lo, LongColumn? hi, int row) => new(unchecked((ulong)lo.Current[row]), hi is null ? 0 : unchecked((ulong)hi.Current[row]), hi is null);
 
     private void WriteNextMask(LongColumn lo, LongColumn? hi, int row, LicenceMask m)
     {
@@ -98,7 +96,7 @@ public sealed partial class PolicySystem
     // ---- reads (state in force at the month being computed)
 
     /// <summary>Highest node number a licence mask of this policy holds: 63, or 127 with the second word (H13).</summary>
-    public int LicenceCapacity => _licMask1 is null ? 63 : Policy.LicenceMask.MaxNumber;
+    public int LicenceCapacity => _licMask1 is null ? Policy.LicenceMask.NarrowMaxNumber : Policy.LicenceMask.MaxNumber;
 
     /// <summary>
     /// Whether a licence can cover the node. A node above the capacity is not licensable (no licence, as before the second word existed); simulation
@@ -274,7 +272,10 @@ public sealed partial class PolicySystem
             return;
         long[] flow = new long[n];
         int[] gen = _licGen.Current.ToArray(), seller = _licSeller.Current.ToArray(), start = _licStart.Current.ToArray(), qSeller = _qSeller.Current.ToArray();
-        long[] mask = _licMask.Current.ToArray(), mask1 = _licMask1?.Current.ToArray() ?? [];
+        long[] mask = _licMask.Current.ToArray();
+        // Word 1 of the held masks: on the stack for any real actor count, so the wide mask adds no heap allocation to the monthly step.
+        Span<long> mask1 = _licMask1 is null ? [] : n <= 512 ? stackalloc long[n] : new long[n];
+        _licMask1?.Current.CopyTo(mask1);
         var bad = new long[_bad.Length][];
         for (int k = 0; k < bad.Length; k++)
             bad[k] = _bad[k].Current.ToArray();

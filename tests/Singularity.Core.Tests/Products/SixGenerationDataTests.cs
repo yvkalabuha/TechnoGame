@@ -53,12 +53,13 @@ public class SixGenerationDataTests : IDisposable
           - {id: eng_g6, rank: 6, eng_gen: 6, perf_mult: 3.4, prc_set: [s8.prc.jet_engine_assembly_test, s5.prc.alloying_element_refining], requires_nodes: [s8.eng.turbofan_g4]}");
         text = TestMods.ReplaceOnce(text, Airframes, Airframes + $@"
           - {{id: af_g6, rank: 6, af_class: 5, perf_mult: 2.0, {Prc}, requires_nodes: [s8.eng.mach2_airframe_g4]}}
-          - {{id: af_g7, rank: 7, af_class: 5, perf_mult: 2.2, {Prc}, requires_nodes: [s8.eng.mach2_airframe_g4]}}");
+          - {{id: af_g7, rank: 7, af_class: 6, perf_mult: 2.2, {Prc}, requires_nodes: [s8.eng.mach2_airframe_g4]}}");
         text = TestMods.ReplaceOnce(text, "{rank: 4, proc_scale_pu: 0.827491}", @"{rank: 4, proc_scale_pu: 0.827491}
       - {rank: 5, proc_scale_pu: 1.2}
       - {rank: 6, proc_scale_pu: 1.2}");
         text = TestMods.ReplaceOnce(text, "proc_scale_af: 3.754003}", @"proc_scale_af: 3.754003}
-      - {af_class: 5, h_first: 125920, h_floor: 31480, materials_floor: 0.002098, design_scale: 3.12, proc_scale_af: 3.754003}");
+      - {af_class: 5, h_first: 125920, h_floor: 31480, materials_floor: 0.002098, design_scale: 3.12, proc_scale_af: 3.754003}
+      - {af_class: 6, h_first: 150000, h_floor: 37500, materials_floor: 0.0025, design_scale: 3.5, proc_scale_af: 4.0}");
         return TestMods.ReplaceOnce(text, "{gen: 4, app: s8.app.jet_fighter_g4, crew_req: 1, platform_min_rank: 5}", @"{gen: 4, app: s8.app.jet_fighter_g4, crew_req: 1, platform_min_rank: 5}
       - {gen: 5, app: s8.app.jet_fighter_g5, crew_req: 1, platform_min_rank: 6}
       - {gen: 6, app: s8.app.jet_fighter_g6, crew_req: 1, platform_min_rank: 7}");
@@ -73,6 +74,7 @@ public class SixGenerationDataTests : IDisposable
         ProductsLayout l = ProductsLayout.FromData(six.Nodes, t, "jet_fighter", industry, ProductTestData.Bureaus, six.Scenario("jet_slice_1945").StartYear, ProductTestData.Years, six.Scenario("jet_slice_1945").MaxDesigns);
         Assert.Equal(6, l.Generations);
         Assert.Equal(5, l.AltAfClass[l.AltId.IndexOf("af_g6")]);
+        Assert.Equal(6, l.AltAfClass[l.AltId.IndexOf("af_g7")]);   // content rev 2: class 6 for the stealth airframe
         Assert.Equal(6, l.AltEngGen[l.AltId.IndexOf("eng_g6")]);
     }
 

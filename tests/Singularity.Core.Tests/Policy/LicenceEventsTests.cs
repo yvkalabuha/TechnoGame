@@ -243,19 +243,43 @@ public class LicenceEventsTests
         rig.Events.Mask = [LicenceRules.Bit(77) | LicenceRules.Bit(54), LicenceRules.Bit(64) | LicenceRules.Bit(39), default];
         rig.Month(0);
         Assert.Equal(LicenceRules.Bit(64) | LicenceRules.Bit(39), rig.Policy.OfferMask(2));
+
+        // Snapshot between months 0 and 1: the deal is still queued (pol.lic.q.mask.1 holds node 77), not yet applied.
+        var queued = new MemoryStream();
+        TableSnapshot.Write(rig.Table, 1, 1, queued);
         rig.Month(1);
         LicenceMask expected = LicenceRules.Bit(77) | LicenceRules.Bit(54);
         Assert.Equal(expected, rig.Policy.LicenceMask(2));
         Assert.True(rig.Policy.LicenceMask(2).Has(77));
 
-        // Save and load: the second word is a column of the table, so the snapshot carries it.
-        var stream = new MemoryStream();
-        TableSnapshot.Write(rig.Table, 1, 5, stream);
         var other = new Rig(PolicyProfile.Mass, seed, wide: true);
-        stream.Position = 0;
-        TableSnapshot.Read(other.Table, 1, stream);
+        queued.Position = 0;
+        TableSnapshot.Read(other.Table, 1, queued);
+        Assert.Equal(0, other.Policy.LicenceGen(2));
+        other.Policy.ApplyDeals(1, _ => Fx6.FromInt(1_000_000));   // the loaded queue is applied like the original's
         Assert.Equal(expected, other.Policy.LicenceMask(2));
         Assert.Equal(LicenceRules.Bit(64) | LicenceRules.Bit(39), other.Policy.OfferMask(2));
+
+        // Snapshot after the deal: word 1 of the held mask is saved too.
+        var applied = new MemoryStream();
+        TableSnapshot.Write(rig.Table, 1, 2, applied);
+        var third = new Rig(PolicyProfile.Mass, seed, wide: true);
+        applied.Position = 0;
+        TableSnapshot.Read(third.Table, 1, applied);
+        Assert.Equal(expected, third.Policy.LicenceMask(2));
+    }
+
+    [Fact]
+    public void MaskReadFromANarrowPolicy_KnowsItsWidth_HasThrowsAbove63()
+    {
+        var narrow = new Rig(PolicyProfile.Mass, 1);
+        LicenceMask m = narrow.Policy.LicenceMask(2);
+        Assert.Equal(63, m.Capacity);
+        Assert.False(LicenceRules.Has(m, 63));
+        Assert.Throws<ArgumentOutOfRangeException>(() => LicenceRules.Has(m, 64));   // used to answer false
+        Assert.Throws<ArgumentOutOfRangeException>(() => narrow.Policy.OfferMask(2).Has(77));
+        Assert.Equal(127, new Rig(PolicyProfile.Mass, 1, wide: true).Policy.LicenceMask(2).Capacity);
+        Assert.False(LicenceRules.Has(new Rig(PolicyProfile.Mass, 1, wide: true).Policy.LicenceMask(2), 64));
     }
 
     [Fact]

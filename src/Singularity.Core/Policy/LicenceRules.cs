@@ -29,7 +29,7 @@ public static class LicenceRules
     /// <summary>Bit of the process with node number <paramref name="processNumber"/> in a licence mask (1…127; anything else throws).</summary>
     public static LicenceMask Bit(int processNumber) => LicenceMask.Of(processNumber);
 
-    /// <summary>Whether the mask holds the node; a number outside 1…127 throws (it used to answer <c>false</c> silently, H13).</summary>
+    /// <summary>Whether the mask holds the node; a number above the capacity of the mask (63 for a mask read from a one-word policy, else 127) or below 1 throws (it used to answer <c>false</c> silently, H13).</summary>
     public static bool Has(LicenceMask mask, int processNumber) => mask.Has(processNumber);
 
     /// <summary><c>lic_price = ((unit_cost_floor·n_service_min)·lic_share)</c>, a floor at each product (spec A43.3; G1 of E1: 20 730 raw).</summary>
