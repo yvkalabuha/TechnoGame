@@ -68,7 +68,7 @@ public sealed partial class ProductsSystem : ITickSystem
     private readonly IntColumn[] _cancelled, _idleC, _built, _quotaBase, _soldY, _lineBind;
     private readonly LongColumn[] _work, _d0, _hidden, _open, _found, _hours, _lineE, _rate, _cost, _exp, _cohort;
     private readonly LongColumn[] _qMask;   // q[design, y] as a bit per cohort year, 62 years per block: [design * _qb + y / 62] (contract r13a §3.1, §9.1)
-    private readonly LongColumn[] _rateCmd, _dGate, _lossAcc, _retro, _lost, _inService0, _rejected, _retired, _sold;
+    private readonly LongColumn[] _rateCmd, _dGate, _lossAcc, _retro, _lost, _inService0, _rejected, _retired, _sold, _replCredit;
     private readonly LongColumn _need, _paid, _spent, _tbSpent, _saleIncome, _saleCap, _saleY, _extTotal;
 
     // Midyear month index of each cohort year (spec A32): age of cohort Y at month t is t − _m0[Y].
@@ -146,6 +146,7 @@ public sealed partial class ProductsSystem : ITickSystem
         _lineBind = new IntColumn[_d];
         _retired = new LongColumn[_d];
         _sold = new LongColumn[_d];
+        _replCredit = new LongColumn[_d];
         _alt = new IntColumn[_d * _s];
         _work = new LongColumn[_d];
         _d0 = new LongColumn[_d];
@@ -187,6 +188,7 @@ public sealed partial class ProductsSystem : ITickSystem
             _lineBind[d] = table.AddInt($"{n}.lineBind");
             _retired[d] = table.AddLong($"{n}.retired");
             _sold[d] = table.AddLong($"{n}.sold");
+            _replCredit[d] = table.AddLong($"{n}.replCredit");
             for (int s = 0; s < _s; s++)
                 _alt[d * _s + s] = table.AddInt($"{n}.alt.{s}");
             _work[d] = table.AddLong($"{n}.work");
@@ -864,7 +866,7 @@ public sealed partial class ProductsSystem : ITickSystem
         {
             ClearMoneyTrace(a);
             WriteQ(a, t, calendar, context.Tick);
-            Retire(a, t, calendar);
+            ExpendReplacement(a, t);
             if (_mode == ProductsMode.CanonicalLp)
                 StepCanonical(chunk, a, t, year - _l.StartYear);
             else
@@ -1072,18 +1074,47 @@ public sealed partial class ProductsSystem : ITickSystem
         _stage[slot].Next[a] = (int)DesignStage.Series;
     }
 
-    // Cohorts of calendar year Y are written off when t − m0(Y) ≥ service_life, m0(Y) = month index of July of Y (spec §3.5
-    // A32: a (design, year) cohort ages as a whole from mid-year; with the start 1945-09, 1945 → month 178, 1946 → 190).
-    private void Retire(int a, long t, TickCalendar calendar)
+    // Step 0 (#431, memo §2.3): a cohort no longer leaves at t − m0(Y) ≥ service_life, m0(Y) = month index of July of Y (spec §3.5 A32). Only
+    // the replacement credit that new units earned takes the oldest overage units off; the credit never exceeds the units left.
+    private void ExpendReplacement(int a, long t)
     {
-        for (int y = 0; y < _y; y++)
+        Span<Fx6> counts = stackalloc Fx6[_y];
+        for (int d = 0; d < _d; d++)
         {
-            long m0 = (long)(_l.StartYear + y - calendar.Start.Year) * 12 + (7 - calendar.Start.Month);
-            if (t - m0 < _p.ServiceLife)
+            long raw = _replCredit[d].Next[a];
+            if (raw == 0)
                 continue;
-            for (int d = 0; d < _d; d++)
-                _cohort[d * _y + y].Next[a] = 0;
+            for (int y = 0; y < _y; y++)
+                counts[y] = Fx6.FromRaw(_cohort[d * _y + y].Next[a]);
+            Fx6 credit = Fx6.FromRaw(raw);
+            FleetRules.ExpendCredit(counts, ref credit, t, _m0, _p);
+            StoreNext(a, d, counts);
+            _replCredit[d].Next[a] = credit.Raw;
         }
+    }
+
+    // The units that arrive in the month credit the projects they replace (memo §2.3), on the live state of the step.
+    private void AccrueReplacement(int a, int e, Fx6 r)
+    {
+        Span<int> gen = stackalloc int[_d];
+        Span<Fx6> perf = stackalloc Fx6[_d];
+        Span<long> whole = stackalloc long[_d];
+        Span<Fx6> credit = stackalloc Fx6[_d];
+        Span<bool> done = stackalloc bool[_d];
+        for (int d = 0; d < _d; d++)
+        {
+            whole[d] = d == e ? 0 : Whole(a, d);
+            credit[d] = Fx6.FromRaw(_replCredit[d].Next[a]);
+            if (whole[d] <= 0 && d != e)
+                continue;
+            // The live state of the step: a project launched in this very step has its alternatives in Next only.
+            int[] alts = MemoNext(a, d).Alts;
+            gen[d] = DesignRules.Gen(_l, _gp[d].Next[a], alts);
+            perf[d] = DesignRules.Perf(_l, alts);
+        }
+        FleetRules.Accrue(r, e, gen, perf, whole, credit, done, _p);
+        for (int d = 0; d < _d; d++)
+            _replCredit[d].Next[a] = credit[d].Raw;
     }
 
     // Step 1 (contract §4.4c): the first month the gate is open by the snapshot, d_gate := D_hidden of the snapshot (final).
@@ -1630,6 +1661,7 @@ public sealed partial class ProductsSystem : ITickSystem
         }
         _l.ReserveSkilled(_mailbox, chunk, a, d, clusterHours);
         LongColumn col = _cohort[d * _y + y];
+        AccrueReplacement(a, d, r);
         col.Next[a] = (Fx6.FromRaw(col.Next[a]) + r).Raw;
         _built[d].Next[a] = 1;
     }
@@ -1639,7 +1671,10 @@ public sealed partial class ProductsSystem : ITickSystem
         for (int d = 0; d < _d; d++)
         {
             if ((DesignStage)_stage[d].Next[a] == DesignStage.InService && Units(a, d) == Fx6.Zero)
+            {
                 _stage[d].Next[a] = (int)DesignStage.Withdrawn;
+                _replCredit[d].Next[a] = 0;
+            }
         }
     }
 
@@ -1672,7 +1707,7 @@ public sealed partial class ProductsSystem : ITickSystem
         foreach (IntColumn[] col in (IntColumn[][])[_gp, _gateOpened, _forced, _cancelled, _idleC, _built, _quotaBase, _soldY, _lineBind])
             col[d].Next[a] = 0;
         foreach (LongColumn[] col in (LongColumn[][])[_work, _d0, _hidden, _open, _found, _hours, _lineE, _rate, _rateCmd, _cost, _dGate,
-            _lossAcc, _retro, _lost, _inService0, _retired, _sold])
+            _lossAcc, _retro, _lost, _inService0, _retired, _sold, _replCredit])
             col[d].Next[a] = 0;
         for (int b = 0; b < _qb; b++)
             _qMask[d * _qb + b].Next[a] = 0;

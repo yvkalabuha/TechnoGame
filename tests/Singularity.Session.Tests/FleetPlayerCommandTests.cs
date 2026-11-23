@@ -90,4 +90,53 @@ public class FleetPlayerCommandTests
         Assert.Equal(w.Scenario.MasteredOf(sun).Length, masteredSun);
         Assert.Equal(0, w.Industry.MasteredRun(sun, w.IndustryLayout.RowOf(w.Data.Nodes.Number[w.Data.Nodes.IndexOf("s8.prc.jet_engine_assembly_test")])));
     }
+
+    // ---- TASK-0129 (#437): retiring the newest generation needs an acknowledgement
+
+    [Fact]
+    public void RetiringTheWholeBestFleet_NeedsConfirmation_AndQueuesNothing()
+    {
+        SliceSession s = Make();
+        s.StepThroughMonth(0);
+        DesignHandle h = s.HandleOf(Usa, 0);
+        int all = (int)(s.World.Products.InService(Usa, 0).Raw / Fx6.Scale);
+        FleetForecast f = s.World.Products.RetireForecast(Usa, 0, all, 1);
+        Assert.True(f.GenBefore >= 1 && f.GenAfter < f.GenBefore, $"forecast {f.GenBefore} -> {f.GenAfter}");
+
+        CommandVerdict v = s.Submit(SourceClass.Player, 0, 0, new RetireCohort(Usa, h, all));
+        Assert.Equal(CommandRefusal.NeedsConfirmation, v.Reason);
+        Assert.Equal(f.GenBefore, v.BestGenBefore);
+        Assert.Equal(f.GenAfter, v.BestGenAfter);
+        Assert.DoesNotContain("retire_cohort", s.CommandLog);
+
+        // The same local_n may be used again: the refused command did not count as sent.
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new RetireCohort(Usa, h, all, Acknowledged: true)).Accepted);
+        s.StepThroughMonth(1);
+        Assert.True(s.World.Products.Retired(Usa, 0) >= Fx6.FromInt(all));   // the dust of the last fraction goes with it
+        SliceSession replay = SliceSession.Replay(SliceTestData.Data, s.World.Config, s.CommandLog, s.Tick);
+        HashAssert.Equal(s.LastHash, replay.LastHash);
+    }
+
+    [Fact]
+    public void ARetirementThatKeepsTheBestGeneration_NeedsNoConfirmation()
+    {
+        SliceSession s = Make();
+        s.StepThroughMonth(0);
+        FleetForecast f = s.World.Products.RetireForecast(Usa, 0, 1, 1);
+        Assert.Equal(f.GenBefore, f.GenAfter);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new RetireCohort(Usa, s.HandleOf(Usa, 0), 1)).Accepted);
+    }
+
+    [Fact]
+    public void Codec_KeepsTheAcknowledgement_AndOldLogsWithoutItStillDecode()
+    {
+        var key = new CommandKey(5, SourceClass.Player, 0, 3);
+        var ack = new RetireCohort(1, new DesignHandle(2, 5), 30, true);
+        string line = CommandCodec.Encode(new LoggedCommand(key, ack));
+        Assert.Contains("\"ack\":true", line);
+        Assert.Equal(ack, CommandCodec.Decode(line).Command);
+        string plain = CommandCodec.Encode(new LoggedCommand(key, ack with { Acknowledged = false }));
+        Assert.DoesNotContain("ack", plain);
+        Assert.False(((RetireCohort)CommandCodec.Decode(plain).Command).Acknowledged);
+    }
 }

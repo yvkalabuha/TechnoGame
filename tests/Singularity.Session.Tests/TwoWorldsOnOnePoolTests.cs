@@ -43,9 +43,10 @@ public class TwoWorldsOnOnePoolTests
         });
 
     // Seed -> digest of the monthly hashes of that world run alone (recorded on the unmodified code, threads 2 and 4 agree).
+    // Re-recorded in TASK-0129 (fleet ageing, #431/#435-#437), reason: schema v13 (new column prd.d*.replCredit, in the hash from month 0); the old columns are unchanged to month 176 (projection tests: HorizonTests, T6dTests, FleetAblationTests, ToolingUnmetTests, GoldenProjectionAgainstMainTests), so only the new column changes these hashes.
     private static readonly Dictionary<ulong, string> Pinned = new()
     {
-        [1] = "dd295a0d3073990a038e9282357c47bf1b0d35e2e86d3d8ecc7f2170b70a9142", [2] = "f084e313a7f7b4ddbed5490d3672fc73827e1e7790a07c356f04cd7545d13591", [3] = "f6e47b9abb84a198ce7831e7e6470505f5836455610606f5a1984ce200c0d5a2", [4] = "418d215c5c100a381b004ef8acd7e4962d5ff15943328749e96758c24436c365", [5] = "b20711e98d563d6059d42f00ca562c6314822443b4940639382f38afba008e78", [7] = "b898c0f56e8e64ba9c960eca665d477737290175115843033e7c209ab86c06fa",
+        [1] = "5e8262ef05d892d271679e41917041753fdebefa8fe4dc4eeb37b30dbb253a40", [2] = "e98719bfee68ab7ad2878e43724e1efef690d34336bdef2a3072f89d2eb27854", [3] = "9eee14c0f1c779691de6a5e62c56f9be4ebfe974015d3775701e03f5acab11d6", [4] = "d6323f74ceab1651520af845ae401fca70f7f775cf2b800b03769c241909ea43", [5] = "24fa7353af5a65624083a5aa81fdcf28f4ebe82c3ca4d54d8555924f85f101c1", [7] = "9e754c20d9cc2186bbf61b73ba9a149b6f39e54057c379b8c344a01de2f999a2",
     };
 
     private static void AssertPinned(ulong seed, string[] actual, string what)

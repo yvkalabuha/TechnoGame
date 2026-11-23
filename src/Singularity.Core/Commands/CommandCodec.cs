@@ -65,6 +65,8 @@ public static class CommandCodec
                 break;
             case RetireCohort r:
                 Handle(sb, r.Design).Append(",\"n\":").Append(I(r.N));
+                if (r.Acknowledged)
+                    sb.Append(",\"ack\":true");
                 break;
             case SellCohort v:
                 Handle(sb, v.Design).Append(",\"n\":").Append(I(v.N));
@@ -100,7 +102,7 @@ public static class CommandCodec
             "start_series" => new StartSeries(actor, ReadHandle(r, "design"), ReadRaw(r.GetProperty("rate")), r.GetProperty("force").GetBoolean()),
             "close_line" => new CloseLine(actor, ReadHandle(r, "design")),
             "cancel_design" => new CancelDesign(actor, ReadHandle(r, "design")),
-            "retire_cohort" => new RetireCohort(actor, ReadHandle(r, "design"), r.GetProperty("n").GetInt32()),
+            "retire_cohort" => new RetireCohort(actor, ReadHandle(r, "design"), r.GetProperty("n").GetInt32(), r.TryGetProperty("ack", out JsonElement ack) && ack.GetBoolean()),
             "sell_cohort" => new SellCohort(actor, ReadHandle(r, "design"), r.GetProperty("n").GetInt32()),
             _ => throw new FormatException($"Unknown command kind '{kind}'."),
         };

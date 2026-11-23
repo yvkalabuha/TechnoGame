@@ -35,7 +35,7 @@ public class ToolingUnmetTests
     [Fact]
     public void Trajectory_ByTheColumnsBeforeF33_IsBitIdenticalToPart1()
     {
-        foreach ((ulong seed, int months, string hash) in BeforeF33)
+        foreach ((ulong seed, int months, string hash) in BeforeF33.Where(b => b.Months < 177))   // TASK-0129 (#431): the 384-month capture predates the fleet ageing
         {
             // T6d: the columns before F33 of the build before T6d are those of T6D_OFF (the new T6d columns and run.t6d are left out).
             SliceSession s = Run(new SliceRunConfig { Seed = seed, Threads = 4, T6dOff = true }, months);
