@@ -355,6 +355,7 @@ public sealed partial class TechTree : Control
         if (!_wrap.TryGet(s, maxW, fs, (int)kind, out var lines)) lines = WrapMiss(s, maxW, fs, kind, font);
         foreach (var line in lines)
         {
+            if (_recording) { float lw = font.GetStringSize(line, HorizontalAlignment.Left, -1, fs).X; if (TextWrap.Overflows(line, lw, maxW)) _paraBad.Add($"paragraph line '{line}' is {lw:F0} du, wider than its {maxW:F0} du"); }
             Record(font, new Vector2(p.X, y), line, fs, HorizontalAlignment.Left, -1);
             _cv.DrawString(font, new Vector2(p.X, y), line, HorizontalAlignment.Left, -1, fs, c); y += RailMetrics.Line14Du;
         }
@@ -375,6 +376,7 @@ public sealed partial class TechTree : Control
         _drawn.Add(new Rect2(x, p.Y - font.GetAscent(fs), sw, font.GetAscent(fs) + font.GetDescent(fs))); _drawnText.Add(s);
     }
 
+    readonly List<string> _paraBad = new();   // shot run: paragraph lines wider than their own width
     int _fitCuts;   // ellipsized strings drawn since the statement began (shot run check)
     public int ShotFitCuts => _fitCuts;
 
@@ -658,6 +660,8 @@ public sealed partial class TechTree : Control
         var lp = CalloutPoints();
         for (int k = 0; k + 1 < lp.Length; k++) AddSegment(occupied, lp[k], lp[k + 1], 5f);
         for (int k = 0; k + 1 < _path.Count; k++) { var ch = Channel(_path[k], _path[k + 1]); for (int j = 0; j + 1 < ch.Count; j++) AddSegment(occupied, ch[j], ch[j + 1], 3f); }
+        if (_labelText == null || _labelText.Length != nodes.Count) _labelText = new string[nodes.Count]; else Array.Clear(_labelText);
+        _calloutLabeled = false;
         var order = new List<int>();
         void Add(int i) { if (i >= 0 && !order.Contains(i)) order.Add(i); }
         Add(_selected); Add(_goal); Add(_root);
@@ -666,7 +670,7 @@ public sealed partial class TechTree : Control
         if (CurLod == Lod.Icons) foreach (int i in Enumerable.Range(0, nodes.Count).OrderBy(i => nodes.Number[i])) Add(i);
         var area = Area;
         var placed = new Dictionary<int, (Rect2 pad, Rect2 rc, string text, FontKind kind, float h)>();
-        bool Place(int i, string text, FontKind kind)
+        bool Place(int i, string text, FontKind kind, bool far = false)
         {
             var p = PosOf(i); float o = NR + 6;
             var sz = Ui.FontOf(kind).GetStringSize(text, HorizontalAlignment.Left, -1, 14);
@@ -678,6 +682,17 @@ public sealed partial class TechTree : Control
                 new Rect2(p + new Vector2(o + 2, o + 2), sz), new Rect2(p + new Vector2(-o - 2 - sz.X, o + 2), sz),
                 new Rect2(p + new Vector2(o + 2, -o - 2 - sz.Y), sz), new Rect2(p + new Vector2(-o - 2 - sz.X, -o - 2 - sz.Y), sz),
             };
+            if (far)   // the goal, the selected node and the root must be named: farther places on three rings, the leader line ties the name to the node
+            {
+                var all = new List<Rect2>(cands);
+                foreach (float rr in new[] { o + 28, o + 60, o + 100 })
+                    for (int k = 0; k < 8; k++)
+                    {
+                        var dv = new Vector2(Mathf.Cos(k * Mathf.Tau / 8), Mathf.Sin(k * Mathf.Tau / 8)) * rr;
+                        all.Add(new Rect2(p + dv - new Vector2(dv.X < -1 ? sz.X : dv.X > 1 ? 0 : sz.X * 0.5f, dv.Y < -1 ? sz.Y : dv.Y > 1 ? 0 : sz.Y * 0.5f), sz));
+                    }
+                cands = all.ToArray();
+            }
             foreach (var rc in cands)
             {
                 var pad = rc.Grow(2);
@@ -694,7 +709,7 @@ public sealed partial class TechTree : Control
         {
             if (!(_route[i] || i == _selected || i == _goal || i == _root || CurLod == Lod.Icons || (CurLod == Lod.Nodes && _state[i] == St.Frontier))) continue;   // the «nodes» level names the frontier
             if (placed.TryGetValue(i, out var tag)) occupied.Remove(tag.pad);
-            if (Place(i, Names.Node(nodes.Id[i]), FontKind.Text)) continue;
+            if (Place(i, Names.Node(nodes.Id[i]), FontKind.Text, i == _selected || i == _goal || i == _root)) continue;
             if (tag.text != null) { occupied.Add(tag.pad); placed[i] = tag; }
             else Place(i, "№" + nodes.Number[i], FontKind.Mono);
         }
@@ -702,12 +717,15 @@ public sealed partial class TechTree : Control
         {
             if (!placed.TryGetValue(i, out var pl)) continue;
             _labelRects.Add(pl.pad);
-            if (LabelNeedsLeader(i, pl.rc))
+            _labelText[i] = pl.text;
+            bool callout = i == (_selected >= 0 ? _selected : _goal);
+            if (callout) _calloutLabeled = true;
+            if (callout || LabelNeedsLeader(i, pl.rc))
             {
-                var own = PosOf(i); var near = own.Clamp(pl.rc.Position, pl.rc.End); var dir = (near - own).Normalized();
-                _cv.DrawLine(own + dir * NR, near, _route[i] ? Ui.Command : Ui.Ink2, 1.5f, true);   // another node is as near to this name as its own
+                var own = PosOf(i); var near = own.Clamp(pl.pad.Position, pl.pad.End); var dir = (near - own).Normalized();
+                _cv.DrawLine(own + dir * NR, near, _route[i] ? Ui.Command : Ui.Ink2, 1.5f, true);   // ends at the plate: the goal or selected node, or a node with a neighbour as near as it
             }
-            _cv.DrawRect(pl.pad, new Color(Ui.Paper, 0.92f));
+            _cv.DrawRect(pl.pad, Ui.Paper);
             var at = new Vector2(pl.rc.Position.X, pl.rc.Position.Y + pl.h * 0.8f);
             _cv.DrawStringOutline(Ui.FontOf(pl.kind), at, pl.text, HorizontalAlignment.Left, -1, 14, 5, Ui.Paper);   // paper halo keeps text off rings and lines
             Text(at, pl.text, 14, _route[i] ? Ui.Command : Ui.Ink2, pl.kind);
@@ -717,12 +735,13 @@ public sealed partial class TechTree : Control
     bool LabelNeedsLeader(int i, Rect2 rc)
     {
         var nodes = _host.Data.Nodes; var own = PosOf(i);
-        float d0 = LabelGeometry.DistToRect(own.X, own.Y, rc.Position.X, rc.Position.Y, rc.Size.X, rc.Size.Y);
+        float d0 = LabelGeometry.DistToRect(own.X, own.Y, rc.Position.X, rc.Position.Y, rc.Size.X, rc.Size.Y);   // same core as LabelGeometry.NeedsLeader
+        if (d0 > NR + 10) return true;   // a name set apart from its node
         for (int j = 0; j < nodes.Count; j++)
         {
             if (j == i) continue;
             var q = PosOf(j);
-            if (LabelGeometry.DistToRect(q.X, q.Y, rc.Position.X, rc.Position.Y, rc.Size.X, rc.Size.Y) <= d0 + 4f) return true;
+            if (LabelGeometry.OtherIsAsNear(d0, q.X, q.Y, rc.Position.X, rc.Position.Y, rc.Size.X, rc.Size.Y)) return true;
         }
         return false;
     }
@@ -743,8 +762,14 @@ public sealed partial class TechTree : Control
         return new[] { p + new Vector2(0, -NR - 2), new Vector2(p.X + 24, y), new Vector2(Math.Min(p.X + 24 + 44, Area.End.X + 6), y) };
     }
 
+    string[] _labelText; bool _calloutLabeled;
+    public string ShotLabelText(int row) => _labelText != null && row >= 0 && row < _labelText.Length ? _labelText[row] : null;
+    public int RowOfId(string id) { var n = _host.Data.Nodes; for (int i = 0; i < n.Count; i++) if (n.Id[i] == id) return i; return -1; }
+    public int RowOfNumber(int number) => _rowOfNumber.TryGetValue(number, out int r) ? r : -1;
+
     void DrawCallout()
     {
+        if (_calloutLabeled) return;   // the leader to the name plate replaces the shelf
         var pts = CalloutPoints();
         if (pts.Length == 0) return;
         _cv.DrawPolyline(pts, Ui.Ink, 1.2f, true);
@@ -846,6 +871,7 @@ public sealed partial class TechTree : Control
     public string ShotClippedText()
     {
         var bad = new List<string>();
+        bad.AddRange(_paraBad);
         if (_fitCuts > 0) bad.Add($"{_fitCuts} ellipsized string(s) in the statement");
         if (_mode == 1)
         {
@@ -914,7 +940,7 @@ public sealed partial class TechTree : Control
     void DrawStatement()
     {
         var nodes = _host.Data.Nodes; var rq = nodes.Requires;
-        _rowRects.Clear(); _fitCuts = 0; _drawn.Clear(); _drawnText.Clear(); _recording = true;
+        _rowRects.Clear(); _fitCuts = 0; _paraBad.Clear(); _drawn.Clear(); _drawnText.Clear(); _recording = true;
         var a = Area; float x0 = a.Position.X + 14, y = a.Position.Y + 8;
         Text(new Vector2(x0, y + 16), Loc.T("stmt.title"), 18, Ui.Ink, FontKind.Draft);
         string goal = _goal >= 0 ? Loc.T("stmt.goal", Names.Node(nodes.Id[_goal]), Loc.T(_state[_goal] == St.Known ? "state.known" : "state.unknown")) : Loc.T("stmt.nogoal");

@@ -875,6 +875,7 @@ public sealed partial class Main : Node3D
     // The window is a real 1920x1080 render (SaveShot asserts it); other window sizes are not evidence and are not shot.
     readonly List<(double Wait, Action Act)> _sizeQ = new(); int _sizeI;
 
+    int _capRow;
     Vector2I _largeSize;   // non-zero: the native-size run (map and tree frames at this window size)
     float _discClosed; Vector2 _panBefore;
 
@@ -986,6 +987,16 @@ public sealed partial class Main : Node3D
                 _shotLog += $"tree glyph probe {sfx}: {(probe == null ? "PASS" : "FAIL " + probe)}\n"; if (probe != null) { InstFail($"glyph probe {sfx}: {probe}"); return; }
                 SaveShot($"tree_zoom_icons_all{sfx}.png", null, scale == 100); _tree.ShotProbe = false; _tree.ResetView(); _tree.Visible = false;
             });
+            // Captions the art director asked to see (TASK-0126): the nodes are centred at the Nodes level, the named ones selected, node 2 left alone (its frontier tag).
+            {   // every scale and language: the coverage rule wants each 100 % frame at 125 % and 150 % too
+                Q(0.4, () => OpenTree(0));
+                foreach (var (cap, id, num, sel) in new[] { ("turbine", "s7.fnd.turbine_heat_transfer", 0, true), ("jet_test", "s8.prc.jet_engine_assembly_test", 0, true), ("frontier_tag", "", -1, false) })
+                {
+                    Q(0.3, () => { int row = id != "" ? _tree.RowOfId(id) : (_tree.FrontierRow >= 0 ? _tree.FrontierRow : _tree.GoalRow); _capRow = row; if (row < 0) { if (sel) InstFail($"caption shot {cap}: node not found"); else _shotLog += $"caption {cap}{sfx}: no frontier or goal node in this state, no frame\n"; return; } _tree.Select(sel ? row : -1); _tree.ShotZoom(2.4f, row); _capRow = row; });
+                    Q(0.8, () => { if (_capRow < 0) return; string t = _tree.ShotLabelText(_capRow); _shotLog += $"caption {cap}{sfx}: label '{t ?? "none"}'\n"; if (sel && t == null) InstFail($"caption {cap}: the selected node has no label"); SaveShot($"tree_caption_{cap}{sfx}.png"); });
+                }
+                Q(0.2, () => { _tree.Select(-1); _tree.ResetView(); _tree.Visible = false; });
+            }
             // The rail in its states: all normal, then an alarm on Finance and a warning "9+" on Production, narrow and wide (spec task-0117-rail-and-legend §4).
             Q(0.5, () => { SaveShot($"rail_narrow_normal{sfx}.png"); RunT6($"rail narrow normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });
             Q(0.5, () => { SaveShot($"rail_narrow_badges{sfx}.png"); RunT6($"rail narrow badges{sfx}", true); LogCheck(_rail.BadgeFitLog()); _pinBadges = Array.Empty<(AreaId, int, int)>(); ToggleRail(); });

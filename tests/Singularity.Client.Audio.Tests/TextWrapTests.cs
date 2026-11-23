@@ -54,5 +54,22 @@ public class TextWrapTests
     }
 
     [Fact]
+    public void ParagraphOverflow_IsMeasuredAgainstItsOwnWidth()
+    {
+        // 30 du narrower than the statement area: a line of 130 du in a 100 du paragraph overflows although it is inside the area
+        Assert.True(TextWrap.Overflows("aaaa bbbb", 130f, 100f));
+        Assert.False(TextWrap.Overflows("aaaa", 100.4f, 100f));
+        Assert.False(TextWrap.Overflows("W", 120f, 100f));   // one character wider than the line cannot be broken further
+        Assert.All(TextWrap.Lines("aa bb cc dd", 35, W), s => Assert.False(TextWrap.Overflows(s, W(s), 35)));
+    }
+
+    [Fact]
+    public void OtherIsAsNear_IsTheCoreOfNeedsLeader()
+    {
+        Assert.True(LabelGeometry.OtherIsAsNear(20f, 30, 0, 10, -5, 60, 10));
+        Assert.False(LabelGeometry.OtherIsAsNear(20f, 200, 0, 10, -5, 60, 10));
+    }
+
+    [Fact]
     public void OneCharacterWiderThanTheLineDoesNotLoop() => Assert.Equal(3, TextWrap.Lines("WWW", 3, W).Count);
 }

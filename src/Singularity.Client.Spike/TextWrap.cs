@@ -38,6 +38,9 @@ public static class TextWrap
         return res;
     }
 
+    /// <summary>A wrapped line wider than the paragraph width (a single character wider than the line is unavoidable and not an overflow).</summary>
+    public static bool Overflows(string line, float lineWidth, float maxW) => lineWidth > maxW + 0.5f && line.Length > 1;
+
     // Length of the longest prefix of a long word that fits (at least one character, never half of a surrogate pair).
     static int Take(string rest, float maxW, Func<string, float> width)
     {
@@ -57,11 +60,14 @@ public static class LabelGeometry
         return MathF.Sqrt(dx * dx + dy * dy);
     }
 
+    /// <summary>Per-point core of NeedsLeader (no allocation): is a node at (qx, qy) as near to the box as the label's own node at distance ownDist?</summary>
+    public static bool OtherIsAsNear(float ownDist, float qx, float qy, float x, float y, float w, float h, float slack = 4f) => DistToRect(qx, qy, x, y, w, h) <= ownDist + slack;
+
     /// <summary>True when some other node centre is within `slack` du of being as near to the label box as the own node.</summary>
     public static bool NeedsLeader(float ownX, float ownY, ReadOnlySpan<(float X, float Y)> others, float x, float y, float w, float h, float slack = 4f)
     {
         float own = DistToRect(ownX, ownY, x, y, w, h);
-        foreach (var o in others) if (DistToRect(o.X, o.Y, x, y, w, h) <= own + slack) return true;
+        foreach (var o in others) if (OtherIsAsNear(own, o.X, o.Y, x, y, w, h, slack)) return true;
         return false;
     }
 }
