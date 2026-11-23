@@ -23,8 +23,8 @@
 - TASK-0128 [IN_PROGRESS] G5/G6 content for the jet slice: nodes, alternatives, anchors (train 2, T-C) (research-scientist)
 - TASK-0129 [IN_PROGRESS] Fleet ageing without replacement in Core (#431, #435-#437) (developer)
 - TASK-0130 [IN_PROGRESS] Scoped client view: node blocks only for subscribed actors (ADR-0025) (developer)
+- TASK-0131 [IN_PROGRESS] Core changes for G5/G6 data: licence mask word 2, generation cost multipliers, control-layer guards (train 2, T-G) (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
-- TASK-0131 [APPROVED] Core changes for G5/G6 data: licence mask word 2, generation cost multipliers, control-layer guards (train 2, T-G) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
