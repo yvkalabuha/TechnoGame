@@ -322,7 +322,7 @@ public sealed partial class Main : Node3D
         layer.AddChild(_actorPanel);
         layer.MoveChild(_journal, -1);   // the journal slides over the foreign-power panel
 
-        _tree = new TechTree(_host) { Visible = false, Player = _player };
+        _tree = new TechTree(_host) { Visible = false, Player = _player, ShotRecord = _shots };
         _tree.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         _tree.OffsetTop = 44;
         _tree.Closed += () => _tree.Visible = false;
@@ -729,7 +729,7 @@ public sealed partial class Main : Node3D
             else if (_host.Ready && !_coldShot) FinishClient();
             else { _loading.Text = Loc.T(_host.Status); _loading.Visible = !_coldShot; }
         }
-        if (_helpBtn != null) { _helpBtn.Visible = !_tree.Visible && !_areaPanel.Visible; if (_tree.Visible || _areaPanel.Visible) _help.Visible = false; }   // never over an area panel; F1 still opens the help
+        if (_helpBtn != null) { _helpBtn.Visible = !_tree.Visible && !_areaPanel.Visible && _titleHidden.Count == 0; if (_tree.Visible || _areaPanel.Visible || _titleHidden.Count > 0) _help.Visible = false; }   // never over an area panel; F1 still opens the help
         if (_rail != null) LayoutClient();
         if (_shots && _tintsReady) ShotStep(delta);
         if (_bench) BenchStep(delta);
@@ -823,7 +823,32 @@ public sealed partial class Main : Node3D
         }
     }
 
+    // The scale really applied: the observed px/du must match the policy for the UI setting (a setting that did not take effect fails the run).
+    void CheckScaleApplied(string sfx, int scale)
+    {
+        var w = DisplayServer.WindowGetSize(); float obs = PxPerDu();
+        bool ok = SettingsLogic.ScaleApplied(obs, w.X, w.Y, scale);
+        _shotLog += $"scale applied {sfx}: observed {obs:F3} px/du, expected {SettingsLogic.PixelsPerDu(w.X, w.Y, scale):F3}: {(ok ? "PASS" : "FAIL")}\n";
+        if (!ok) InstFail($"scale {scale} % not applied at {sfx}: observed {obs:F3} px/du");
+    }
+
+    // Title screen as in the game: only the globe and the menu, the HUD hidden (restored on exit).
+    readonly List<(CanvasItem Node, bool Was)> _titleHidden = new();
+    void TitleScene(bool on)
+    {
+        if (on)
+        {
+            foreach (var ch in _hud.GetParent<CanvasLayer>().GetChildren())
+                if (ch is CanvasItem ci && ci != _overlay && ci != _mainMenu && ci != _newGame && ci != _settings && ci != _credits) { _titleHidden.Add((ci, ci.Visible)); ci.Visible = false; }
+            return;
+        }
+        foreach (var (n, was) in _titleHidden) n.Visible = was;
+        _titleHidden.Clear();
+    }
+
     // A failed PNG write fails the run: a missing frame is not evidence.
+    // A write that throws (disk full, no directory) is a failed save, not a crash before the run returns exit 1.
+    Error TrySave(Image img, string path) { try { return img.SavePng(path); } catch (Exception ex) { _shotFailed = true; _shotLog += $"ERROR: save {path} threw {ex.GetType().Name}: {ex.Message}\n"; return Error.Failed; } }
     void CheckSave(Error e, string path) { if (e != Error.Ok) InstFail($"cannot save {path}: {e}"); }
 
     void SaveShot(string name, Rect2I? r = null, bool grey = false)
@@ -834,8 +859,8 @@ public sealed partial class Main : Node3D
         if (r is Rect2I rr) img = img.GetRegion(rr);
         else if (_largeSize.X > 0 ? (img.GetWidth() != _largeSize.X || img.GetHeight() != _largeSize.Y) : !SettingsLogic.IsBaseFrame(img.GetWidth(), img.GetHeight())) { InstFail($"frame {name} is {img.GetWidth()}x{img.GetHeight()}, a full frame must be a real {(_largeSize.X > 0 ? _largeSize.X + "x" + _largeSize.Y : "1920x1080")} render (window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, display {DisplayServer.ScreenGetSize().X}x{DisplayServer.ScreenGetSize().Y})"); return; }
         _savedShots.Add(name);
-        CheckSave(img.SavePng(Path.Combine(dir, name)), Path.Combine(dir, name));
-        if (grey) { string gp = Path.Combine(dir, name.Replace(".png", "_grey.png")); img.Convert(Image.Format.L8); CheckSave(img.SavePng(gp), gp); }   // A5: a greyscale frame next to the colour one
+        CheckSave(TrySave(img, Path.Combine(dir, name)), Path.Combine(dir, name));
+        if (grey) { string gp = Path.Combine(dir, name.Replace(".png", "_grey.png")); img.Convert(Image.Format.L8); CheckSave(TrySave(img, gp), gp); }   // A5: a greyscale frame next to the colour one
     }
 
     // Title screen on a cold start: the menu over the turning globe, no HUD (the loading label is hidden too).
@@ -853,6 +878,7 @@ public sealed partial class Main : Node3D
     // The window is a real 1920x1080 render (SaveShot asserts it); other window sizes are not evidence and are not shot.
     readonly List<(double Wait, Action Act)> _sizeQ = new(); int _sizeI;
 
+    int _capRow;
     Vector2I _largeSize;   // non-zero: the native-size run (map and tree frames at this window size)
     float _discClosed; Vector2 _panBefore;
 
@@ -862,7 +888,7 @@ public sealed partial class Main : Node3D
         _sizeI = 0; _sizeQ.Clear();
         string sfx = $"_{_largeSize.X}x{_largeSize.Y}";
         void Q(double wait, Action act) => _sizeQ.Add((wait, act));
-        Q(0.5, () => { var cv = GetViewport().GetVisibleRect().Size; FitCheck(SettingsLogic.ScaleFloorOk(DisplayServer.WindowGetSize().X, DisplayServer.WindowGetSize().Y, 100)); _shotLog += $"large display {sfx}: asked {_largeSize.X}x{_largeSize.Y}, window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, screen {DisplayServer.ScreenGetSize().X}x{DisplayServer.ScreenGetSize().Y}, canvas {cv.X}x{cv.Y} du, content scale {GetWindow().ContentScaleMode} {GetWindow().ContentScaleAspect}\n"; _host.WhyActor = _player; ShowPower(_player, false); });
+        Q(0.5, () => { var cv = GetViewport().GetVisibleRect().Size; FitCheck(SettingsLogic.ScaleFloorOk(DisplayServer.WindowGetSize().X, DisplayServer.WindowGetSize().Y, 100)); CheckScaleApplied(sfx, 100); _shotLog += $"large display {sfx}: asked {_largeSize.X}x{_largeSize.Y}, window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, screen {DisplayServer.ScreenGetSize().X}x{DisplayServer.ScreenGetSize().Y}, canvas {cv.X}x{cv.Y} du, content scale {GetWindow().ContentScaleMode} {GetWindow().ContentScaleAspect}\n"; _host.WhyActor = _player; ShowPower(_player, false); });
         Q(1.5, () => { SaveShot($"map{sfx}.png"); OpenArea(AreaId.Finance); });
         Q(0.8, () => { SaveShot($"area_finance{sfx}.png"); CloseArea(); OpenTree(0); });
         Q(1.5, () =>
@@ -888,9 +914,9 @@ public sealed partial class Main : Node3D
             string sfx = "_1920x1080" + (scale == 150 ? "_s150" : scale == 125 ? "_s125" : "") + (lang == "en" ? "_en" : "");
             void Q(double wait, Action act) => _sizeQ.Add((wait, act));
             Q(0.1, () => { Settings.Current.UiScale = scale; Settings.Apply(Settings.Current, GetWindow(), false); Loc.SetLang(lang); });
-            Q(1.0, () => { var cv = GetViewport().GetVisibleRect().Size; _shotLog += $"size shots {sfx}: window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, canvas {cv.X}x{cv.Y} du, scale {scale} %, content scale {GetWindow().ContentScaleSize.X}x{GetWindow().ContentScaleSize.Y} {GetWindow().ContentScaleMode} {GetWindow().ContentScaleAspect}\n"; FitCheck(SettingsLogic.ScaleFloorOk(DisplayServer.WindowGetSize().X, DisplayServer.WindowGetSize().Y, scale)); _mainMenu.Open(true); });
-            Q(0.5, () => { SaveShot($"menu_ingame{sfx}.png"); _mainMenu.Close(); _mainMenu.Open(false); });
-            Q(0.5, () => { SaveShot($"main_menu{sfx}.png"); _mainMenu.Close(); _credits.Open(); });   // the title menu at every scale
+            Q(1.0, () => { var cv = GetViewport().GetVisibleRect().Size; _shotLog += $"size shots {sfx}: window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, canvas {cv.X}x{cv.Y} du, scale {scale} %, content scale {GetWindow().ContentScaleSize.X}x{GetWindow().ContentScaleSize.Y} {GetWindow().ContentScaleMode} {GetWindow().ContentScaleAspect}\n"; FitCheck(SettingsLogic.ScaleFloorOk(DisplayServer.WindowGetSize().X, DisplayServer.WindowGetSize().Y, scale)); CheckScaleApplied(sfx, scale); _mainMenu.Open(true); });
+            Q(0.5, () => { SaveShot($"menu_ingame{sfx}.png"); _mainMenu.Close(); TitleScene(true); _mainMenu.Open(false); });
+            Q(0.5, () => { SaveShot($"main_menu{sfx}.png"); _mainMenu.Close(); TitleScene(false); _credits.Open(); });   // the real title screen (no HUD) at every scale
 
             Q(0.6, () => { SaveShot($"credits{sfx}.png"); CheckCreditsLinks(sfx); _credits.ShotScroll(100000); });
             Q(0.4, () => { SaveShot($"credits_end{sfx}.png"); _credits.Visible = false; _newGame.Open(_host.Data.Scenario(Singularity.Session.SliceRunConfig.DefaultScenario), id => Ui.Tints[TintOfActor(id)]); });
@@ -964,6 +990,16 @@ public sealed partial class Main : Node3D
                 _shotLog += $"tree glyph probe {sfx}: {(probe == null ? "PASS" : "FAIL " + probe)}\n"; if (probe != null) { InstFail($"glyph probe {sfx}: {probe}"); return; }
                 SaveShot($"tree_zoom_icons_all{sfx}.png", null, scale == 100); _tree.ShotProbe = false; _tree.ResetView(); _tree.Visible = false;
             });
+            // Captions the art director asked to see (TASK-0126): the nodes are centred at the Nodes level, the named ones selected, a frontier node left alone (its number tag or name).
+            {   // every scale and language: the coverage rule wants each 100 % frame at 125 % and 150 % too
+                Q(0.4, () => OpenTree(0));
+                foreach (var (cap, id, num, sel) in new[] { ("turbine", "s7.fnd.turbine_heat_transfer", 0, true), ("jet_test", "s8.prc.jet_engine_assembly_test", 0, true), ("frontier", "", -1, false) })
+                {
+                    Q(0.3, () => { int row = id != "" ? _tree.RowOfId(id) : _tree.FrontierRow; _capRow = row; if (row < 0) { if (sel) InstFail($"caption shot {cap}: node not found"); else _shotLog += $"caption {cap}{sfx}: no frontier node in this state (no «№N» tag to show), no frame\n"; return; } _tree.Select(sel ? row : -1); _tree.ShotZoom(2.4f, row); _capRow = row; });
+                    Q(0.8, () => { if (_capRow < 0) return; string t = _tree.ShotLabelText(_capRow); _shotLog += $"caption {cap}{sfx}: label '{t ?? "none"}'\n"; if (sel && t != Names.Node(id)) InstFail($"caption {cap}: expected the label '{Names.Node(id)}', drawn '{t ?? "none"}'"); SaveShot($"tree_caption_{cap}{sfx}.png"); });
+                }
+                Q(0.2, () => { _tree.Select(-1); _tree.ResetView(); _tree.Visible = false; });
+            }
             // The rail in its states: all normal, then an alarm on Finance and a warning "9+" on Production, narrow and wide (spec task-0117-rail-and-legend §4).
             Q(0.5, () => { SaveShot($"rail_narrow_normal{sfx}.png"); RunT6($"rail narrow normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });
             Q(0.5, () => { SaveShot($"rail_narrow_badges{sfx}.png"); RunT6($"rail narrow badges{sfx}", true); LogCheck(_rail.BadgeFitLog()); _pinBadges = Array.Empty<(AreaId, int, int)>(); ToggleRail(); });
@@ -1381,15 +1417,22 @@ public sealed partial class Main : Node3D
     {
         CheckScaleCoverage(); if (_largeSize.X == 0) CheckIconInk();
         _shotLog += $"shot run result: {(_shotFailed ? "FAILED (a live check failed, exit 1)" : "OK (exit 0)")}\n";
-        Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog); GD.Print(_shotLog);
+        try { Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog); }
+        catch (Exception ex) { GD.PrintErr("cannot write run-log.txt: " + ex.Message); _shotFailed = true; }   // a lost log fails the run, it never skips Quit
+        GD.Print(_shotLog);
         GetTree().Quit(_shotFailed ? 1 : 0); _shotStep = 18;
     }
 
     void InstFail(string msg)
     {
         _shotLog += "ERROR: " + msg + "\n";
-        string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
-        Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog);
+        _shotFailed = true;
+        try
+        {
+            string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
+            Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog);
+        }
+        catch (Exception ex) { GD.PrintErr("cannot write run-log.txt: " + ex.Message); }   // the run still exits 1
         GD.PrintErr(msg);
         GetTree().Quit(1); _shotStep = 18;
     }
@@ -1415,7 +1458,8 @@ public sealed partial class Main : Node3D
         var gr = _flaskProbe.GetGlobalRect();
         img = img.GetRegion(new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)).Intersection(new Rect2I(0, 0, img.GetWidth(), img.GetHeight())));
         string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
-        img.SavePng(Path.Combine(dir, name + ".png")); img.Convert(Image.Format.La8); img.SavePng(Path.Combine(dir, name + "_grey.png"));
+        CheckSave(TrySave(img, Path.Combine(dir, name + ".png")), Path.Combine(dir, name + ".png"));
+        img.Convert(Image.Format.La8); CheckSave(TrySave(img, Path.Combine(dir, name + "_grey.png")), Path.Combine(dir, name + "_grey.png"));
     }
     static readonly int[] InstYears = { 1950, 1985, 2030 };
     static readonly AreaId[] InstAreas = { AreaId.Finance, AreaId.Science, AreaId.Production };
@@ -1490,8 +1534,8 @@ public sealed partial class Main : Node3D
             void Save(Image im, Rect2 gr, string name)
             {
                 var c = im.GetRegion(new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)).Intersection(all));
-                CheckSave(c.SavePng(Path.Combine(dir, name + ".png")), Path.Combine(dir, name + ".png"));
-                c.Convert(Image.Format.La8); CheckSave(c.SavePng(Path.Combine(dir, name + "_grey.png")), Path.Combine(dir, name + "_grey.png"));
+                CheckSave(TrySave(c, Path.Combine(dir, name + ".png")), Path.Combine(dir, name + ".png"));
+                c.Convert(Image.Format.La8); CheckSave(TrySave(c, Path.Combine(dir, name + "_grey.png")), Path.Combine(dir, name + "_grey.png"));
             }
             string sfx = $"e{p % 3 + 1}_{pct}";
             if (p / 3 == 1)

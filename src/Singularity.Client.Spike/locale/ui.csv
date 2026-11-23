@@ -246,7 +246,7 @@ credits.soon,Not in the game yet: the track is chosen for the future soundtrack 
 credits.back,Back,Назад
 menu.tomain,To the main menu,В главное меню
 menu.quit,Quit,Выход
-menu.reason.persist,Needs the save code (ADR-0013): not written yet,Нужен код сохранений (ADR-0013): его ещё нет
+menu.reason.persist,Saving is not available yet,Сохранение пока недоступно
 menu.reason.nosave,No saved game,Нет сохранений
 menu.reason.nogame,No game running,Нет игры
 ng.search,Search a power,Найти державу

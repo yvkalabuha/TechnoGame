@@ -27,6 +27,13 @@ public static class SettingsLogic
     /// <summary>A1 floor: the UI never renders below 1 px/du at 100 % (below the px/du of its setting at a larger scale).</summary>
     public static bool ScaleFloorOk(int width, int height, double uiScalePercent) => PixelsPerDu(width, height, uiScalePercent) >= uiScalePercent / 100.0 - 1e-9;
 
+    /// <summary>The scale really applied: physical px per du seen in the running client (window width / canvas width in du) matches the policy for this UI setting. Unlike ScaleFloorOk it fails when the setting did not take effect.</summary>
+    public static bool ScaleApplied(double observedPxPerDu, int width, int height, double uiScalePercent) =>
+        Math.Abs(observedPxPerDu - PixelsPerDu(width, height, uiScalePercent)) <= 0.005 * PixelsPerDu(width, height, uiScalePercent);
+
+    /// <summary>A2: a scale tick is at least 2 physical px wide at 100 % (1920x1080), that is 2 du.</summary>
+    public const float MinTickDu = 2f;
+
     /// <summary>Canvas size in du for a window size and a UI scale (the extra width or height of a wider or taller screen goes to the content).</summary>
     public static (double W, double H) CanvasSize(int width, int height, double uiScalePercent)
     {
