@@ -240,20 +240,22 @@ public sealed partial class PolicySystem
     // project of Def(K) under n_service_min. One retire_cohort per project and month. Returns the excess left.
     private Fx6 RetireOverage(FleetBook book, int row, long t, int line, Fx6 excess, PolicyDesign[] designs, FleetDecision result)
     {
-        var order = new List<int>();
+        Span<int> order = stackalloc int[_designs];
+        int count = 0;
         for (int d = 0; d < _designs; d++)
         {
             if (d != line && book.Stage[d] == DesignStage.InService && book.Aged(d, t + 1, book.Parameters.ServiceLife) > 0)
-                order.Add(d);
+                order[count++] = d;
         }
         // The oldest overage cohort first (lowest cohort year with units); a tie goes to the lower design id.
-        order.Sort((a, b) =>
+        order[..count].Sort((a, b) =>
         {
             int c = book.OldestOverageYear(a, t + 1).CompareTo(book.OldestOverageYear(b, t + 1));
             return c != 0 ? c : a.CompareTo(b);
         });
-        foreach (int d in order)
+        for (int i = 0; i < count; i++)
         {
+            int d = order[i];
             if (excess <= Fx6.Zero)
                 break;
             int keep = book.InDefK[d] ? book.Parameters.NServiceMin : 0;

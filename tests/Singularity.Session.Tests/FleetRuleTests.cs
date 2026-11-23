@@ -34,7 +34,7 @@ public class FleetRuleTests
             Int($"prd.d{d}.stage", (int)stage);
             // An occupied slot has been taken at least once (ADR-0005 p. 3): the AI's commands then carry a real handle.
             Int($"prd.d{d}.generation", Math.Max(1, Products.Generation(Usa, d)));
-            foreach (string col in new[] { "d0", "hidden", "found", "open", "dGate", "work", "retroPool", "lossAcc", "rate" })
+            foreach (string col in new[] { "d0", "hidden", "found", "open", "dGate", "work", "retroPool", "lossAcc", "rate", "replCredit" })
                 Long($"prd.d{d}.{col}", 0);
             Int($"prd.d{d}.forced", 0);
             Int($"prd.d{d}.idleC", 0);
@@ -96,10 +96,10 @@ public class FleetRuleTests
         }
     }
 
-    private static Fixture Start(FleetLineCond cond = FleetLineCond.Gen, FleetArm arm = FleetArm.Main, int cell = 0, int threads = 1, int chunk = 1)
+    private static Fixture Start(FleetLineCond cond = FleetLineCond.Gen, FleetArm arm = FleetArm.Main, int cell = 0, int threads = 1, int chunk = 1, long at = AtMonth)
     {
         var s = SliceTestData.Create(new SliceRunConfig { Seed = 7, ProfileCell = cell, FleetLineCond = cond, FleetArm = arm, Threads = threads, ChunkSize = chunk });
-        s.StepThroughMonth(AtMonth);
+        s.StepThroughMonth(at);
         var f = new Fixture { Session = s };
         // The natural state of USA is not the subject: drop its other designs and the AI's pending decisions.
         for (int d = 0; d < s.World.ProductsLayout.Designs; d++)
@@ -123,6 +123,73 @@ public class FleetRuleTests
         Fx6 baseNext = f.World.Policy.Shares(Usa).Procurement * budgetNext;
         double units = baseNext.Raw * 0.6 / 29;
         return [units * 0.2, units * 0.2, units * 0.2, units * 0.2, units * 0.2];
+    }
+
+    // ---- TASK-0129 (#431, memo §2.6): the overage goes first, with no line and no money condition
+
+    private const long LateMonth = 190;   // the fixture stops here; the AI decides in month 191 for 192, where cohorts 1945 and 1946 (ages 194 and 182) are past the service life of 180
+
+    private static double UnitsOfAHeavyPark(Fixture f)
+    {
+        Fx6 budgetNext = BudgetMath.Next(f.World.Policy.Budget(Usa), f.World.Scenario.GrowthPa[Usa]);
+        Fx6 baseNext = f.World.Policy.Shares(Usa).Procurement * budgetNext;
+        return baseNext.Raw * 0.6 / 29;
+    }
+
+    [Fact]
+    public void Overage_IsRetiredFirst_OldestCohortFirst_WithNoLineAtAll()
+    {
+        Fixture f = Start(at: LateMonth);
+        double u = UnitsOfAHeavyPark(f) * 0.1;
+        f.Design(0, DesignStage.InService, 1, 1, 0, u, u, u, u);   // overage: the 1946 cohort (age 181)
+        f.Design(1, DesignStage.InService, 1, 1, u, 0, u, u, u);   // overage: the 1945 cohort (age 193), the older one
+        IReadOnlyList<FleetCommand> cmds = f.Run(LateMonth + 1);        // no line: before #431 the rule returned without a command
+        Assert.Equal(2, cmds.Count);
+        Assert.Equal(new FleetCommand(FleetCommandKind.Retire, f.HandleOf(1), (long)u), cmds[0]);   // the older overage first
+        Assert.Equal(f.HandleOf(0), cmds[1].Design);
+        Assert.InRange(cmds[1].N, 1, (long)u);   // what the excess upkeep still asked for: the cap is «wanted», not all the overage
+        f.Session.StepThroughMonth(LateMonth + 2);
+        // Only the overage cohort left (what is below a whole unit stays), the rest of the parks is untouched.
+        Assert.True(f.Products.Cohort(Usa, 1, 1945) < Fx6.One);
+        Assert.True(f.Products.Cohort(Usa, 0, 1946) < Fx6.One);
+        Assert.True(f.Products.Cohort(Usa, 0, 1947) > Fx6.FromInt((long)u - 1));
+        Assert.True(f.Products.Cohort(Usa, 1, 1947) > Fx6.FromInt((long)u - 1));
+    }
+
+    [Fact]
+    public void Overage_IsRetiredEvenWhenTheLineIsNotBoundByMoney()
+    {
+        Fixture f = Start(at: LateMonth);
+        double u = UnitsOfAHeavyPark(f) * 0.1;
+        f.Design(0, DesignStage.InService, 1, 1, u, u, u, u, u);
+        f.Design(2, DesignStage.Series, 2, 2, 10);
+        f.Int("prd.d2.lineBind", (int)LineBind.Rate);   // the A42.4 rule stays silent for such a line; the overage rule does not need the money
+        IReadOnlyList<FleetCommand> cmds = f.Run(LateMonth + 1);
+        FleetCommand c = Assert.Single(cmds);
+        Assert.Equal(FleetCommandKind.Retire, c.Kind);
+        Assert.Equal(f.HandleOf(0), c.Design);
+        Assert.Equal((long)(2 * u), c.N);   // both overage cohorts, nothing of the younger ones
+    }
+
+    [Fact]
+    public void Overage_NeverTakesTheEffectiveUnitsOfAProjectInDefKUnderTheMinimum()
+    {
+        Fixture f = Start(at: LateMonth);
+        f.Design(0, DesignStage.InService, 1, 1, 40, 0, 0, 30);   // 40 overage units (m = 14 at month 192) and 30 younger: n_eff ≈ 64,8
+        f.Design(1, DesignStage.InService, 1, 1, 0, 0, 0, UnitsOfAHeavyPark(f));   // the load that arms the rule; no overage
+        f.Master(0);
+        Assert.True(f.Products.FieldedL(Usa, 0, LateMonth));
+        IReadOnlyList<FleetCommand> cmds = f.Run(LateMonth + 1);
+        FleetCommand c = Assert.Single(cmds, x => x.Design == f.HandleOf(0));
+        // The largest n with ⌊(40 − n)·f(12)⌋ + 30 ≥ 50, found here by the plain formula.
+        long expected = 0;
+        for (long n = 1; n <= 40; n++)
+        {
+            if ((Fx6.FromInt(40 - n) * ProductsParams.AgeValue(192 + 2 - 180)).Raw / Fx6.Scale + 30 >= 50)
+                expected = n;
+        }
+        Assert.True(expected is > 0 and < 40, $"the scenario must bind the minimum, expected {expected}");
+        Assert.Equal(expected, c.N);
     }
 
     [Fact]
