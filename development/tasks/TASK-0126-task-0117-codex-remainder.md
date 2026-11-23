@@ -1,7 +1,7 @@
 ---
 id: TASK-0126
 title: "Open Codex findings after TASK-0117 landing (#432)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M05
 agent: developer
@@ -13,6 +13,7 @@ related: [TASK-0117]
 approved_by: orchestrator
 approved_at: 2026-11-22
 approval_ref: "#432 (light)"
+review_ref: "reviewer: APPROVE cae497a (4 rounds); ui-art-director: PASS round 2 (docs/ui/reviews/task-0126-visual.md); codex: 3 returns, waived by #432 → TASK-0132, DEBT-0080; landed 37fe1f8"
 created: 2026-11-22
 ---
 

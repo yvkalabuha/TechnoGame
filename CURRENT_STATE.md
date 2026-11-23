@@ -18,7 +18,6 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0126 [IN_PROGRESS] Open Codex findings after TASK-0117 landing (#432) (developer)
 - TASK-0128 [IN_PROGRESS] G5/G6 content for the jet slice: nodes, alternatives, anchors (train 2, T-C) (research-scientist)
 - TASK-0129 [IN_PROGRESS] Fleet ageing without replacement in Core (#431, #435-#437) (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
