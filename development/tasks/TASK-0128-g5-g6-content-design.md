@@ -1,7 +1,7 @@
 ---
 id: TASK-0128
 title: "G5/G6 content for the jet slice: nodes, alternatives, anchors (train 2, T-C)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M05
 agent: research-scientist
