@@ -64,6 +64,13 @@ public class TextWrapTests
     }
 
     [Fact]
+    public void IsApart_OnlyBeyondTheNodeRadiusPlusMargin()
+    {
+        Assert.False(LabelGeometry.IsApart(16f, 10f));
+        Assert.True(LabelGeometry.IsApart(20.5f, 10f));
+    }
+
+    [Fact]
     public void OtherIsAsNear_IsTheCoreOfNeedsLeader()
     {
         Assert.True(LabelGeometry.OtherIsAsNear(20f, 30, 0, 10, -5, 60, 10));

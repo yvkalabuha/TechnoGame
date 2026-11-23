@@ -321,7 +321,7 @@ public sealed partial class Main : Node3D
         layer.AddChild(_actorPanel);
         layer.MoveChild(_journal, -1);   // the journal slides over the foreign-power panel
 
-        _tree = new TechTree(_host) { Visible = false, Player = _player };
+        _tree = new TechTree(_host) { Visible = false, Player = _player, ShotRecord = _shots };
         _tree.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         _tree.OffsetTop = 44;
         _tree.Closed += () => _tree.Visible = false;
@@ -987,12 +987,12 @@ public sealed partial class Main : Node3D
                 _shotLog += $"tree glyph probe {sfx}: {(probe == null ? "PASS" : "FAIL " + probe)}\n"; if (probe != null) { InstFail($"glyph probe {sfx}: {probe}"); return; }
                 SaveShot($"tree_zoom_icons_all{sfx}.png", null, scale == 100); _tree.ShotProbe = false; _tree.ResetView(); _tree.Visible = false;
             });
-            // Captions the art director asked to see (TASK-0126): the nodes are centred at the Nodes level, the named ones selected, node 2 left alone (its frontier tag).
+            // Captions the art director asked to see (TASK-0126): the nodes are centred at the Nodes level, the named ones selected, a frontier node left alone (its number tag or name).
             {   // every scale and language: the coverage rule wants each 100 % frame at 125 % and 150 % too
                 Q(0.4, () => OpenTree(0));
-                foreach (var (cap, id, num, sel) in new[] { ("turbine", "s7.fnd.turbine_heat_transfer", 0, true), ("jet_test", "s8.prc.jet_engine_assembly_test", 0, true), ("frontier_tag", "", -1, false) })
+                foreach (var (cap, id, num, sel) in new[] { ("turbine", "s7.fnd.turbine_heat_transfer", 0, true), ("jet_test", "s8.prc.jet_engine_assembly_test", 0, true), ("frontier", "", -1, false) })
                 {
-                    Q(0.3, () => { int row = id != "" ? _tree.RowOfId(id) : (_tree.FrontierRow >= 0 ? _tree.FrontierRow : _tree.GoalRow); _capRow = row; if (row < 0) { if (sel) InstFail($"caption shot {cap}: node not found"); else _shotLog += $"caption {cap}{sfx}: no frontier or goal node in this state, no frame\n"; return; } _tree.Select(sel ? row : -1); _tree.ShotZoom(2.4f, row); _capRow = row; });
+                    Q(0.3, () => { int row = id != "" ? _tree.RowOfId(id) : _tree.FrontierRow; _capRow = row; if (row < 0) { if (sel) InstFail($"caption shot {cap}: node not found"); else _shotLog += $"caption {cap}{sfx}: no frontier node in this state (no «№N» tag to show), no frame\n"; return; } _tree.Select(sel ? row : -1); _tree.ShotZoom(2.4f, row); _capRow = row; });
                     Q(0.8, () => { if (_capRow < 0) return; string t = _tree.ShotLabelText(_capRow); _shotLog += $"caption {cap}{sfx}: label '{t ?? "none"}'\n"; if (sel && t == null) InstFail($"caption {cap}: the selected node has no label"); SaveShot($"tree_caption_{cap}{sfx}.png"); });
                 }
                 Q(0.2, () => { _tree.Select(-1); _tree.ResetView(); _tree.Visible = false; });

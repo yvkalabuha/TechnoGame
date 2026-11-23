@@ -60,6 +60,9 @@ public static class LabelGeometry
         return MathF.Sqrt(dx * dx + dy * dy);
     }
 
+    /// <summary>A name placed on a far ring: its box is more than `margin` du from the node edge (a near place is within the node radius plus 6 plus the text height).</summary>
+    public static bool IsApart(float distToBox, float nodeR, float margin = 10f) => distToBox > nodeR + margin;
+
     /// <summary>Per-point core of NeedsLeader (no allocation): is a node at (qx, qy) as near to the box as the label's own node at distance ownDist?</summary>
     public static bool OtherIsAsNear(float ownDist, float qx, float qy, float x, float y, float w, float h, float slack = 4f) => DistToRect(qx, qy, x, y, w, h) <= ownDist + slack;
 
