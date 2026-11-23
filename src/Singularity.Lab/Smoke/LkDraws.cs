@@ -39,6 +39,9 @@ internal static class LkDraws
                     throw new UsageException($"lk-draws needs a point with LAYER = LK and CONTROL_TABLES (point {p.Index}).");
                 if (sp.Config.Start != StartVariant.Scenario)
                     throw new UsageException("lk-draws reads the scenario start only (START is not the default).");
+                // TASK-0131 (O-038, H9): L_K knows generations 1…4 only; lk-draws builds no model, so the guard of the factory runs here
+                // (an early parameter error instead of a late failure inside ControlTables.Load or KnowledgeSchedule.BuildLk on G5/G6 data).
+                JetSliceModelFactory.CheckControlGenerations(sp.Config.Layer, data);
                 ScenarioData sc = data.Scenario(sp.Config.ScenarioId);
                 ControlTables tables = ControlTables.Load(Path.GetFullPath(Path.Combine(m.BaseDirectory, sp.ControlTablesPath)), sc, data.Nodes,
                     JetSliceModelFactory.SliceHorizonMonths);

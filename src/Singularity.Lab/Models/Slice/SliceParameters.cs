@@ -16,7 +16,7 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
     /// <summary>Keys of §3 (ordinal order). <c>detail</c> is a key of <c>JetSlice</c> only.</summary>
     public static readonly string[] Keys =
     [
-        "A41_FORM", "ALPHA", "BUDGET_RULE", "C_M", "CHANNELS", "CONTROL_TABLES", "DELTA_H", "DERIV", "EFFORT_SHARE", "FIX_A", "FIX_E", "FIX_K", "FLEET_ARM", "FLEET_LINE_COND", "FORCE", "GRID", "H_MAX",
+        "A41_FORM", "ALPHA", "BUDGET_RULE", "C_M", "CHANNELS", "COST_MULT_G5", "COST_MULT_G6", "CONTROL_TABLES", "DELTA_H", "DERIV", "EFFORT_SHARE", "FIX_A", "FIX_E", "FIX_K", "FLEET_ARM", "FLEET_LINE_COND", "FORCE", "GRID", "H_MAX",
         "K_DIV", "KAPPA_Q10", "LAYER", "LIC_KNOWS", "LIC_OFF", "LINE_CLOSE", "POOL_ORDER", "PILOT_PROFILES", "PROFILE_CELL", "SALE_ARM", "START", "T6D_OFF",
         "TOOLING_H_HI", "TOOLING_H_HI_CONTROL", "TOOLING_H_LO", "TOOLING_M_LEAD", "TOOLING_RHO_MAX", "TOOLING_TARGET", "THETA_START", "X_SCALE", "detail",
     ];
@@ -140,6 +140,8 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
             HMax = Optional(p, "H_MAX"),
             KappaQ10 = p.Contains("KAPPA_Q10") ? checked((int)p.GetLong("KAPPA_Q10")) : null,
             Alpha = Optional(p, "ALPHA"),
+            CostMultG5 = Positive(p, "COST_MULT_G5"),
+            CostMultG6 = Positive(p, "COST_MULT_G6"),
             XHalfByTier = XHalf(p),
             DeltaH = Optional(p, "DELTA_H"),
             CM = Optional(p, "C_M"),
@@ -171,6 +173,16 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
     }
 
     private static Fx6? Optional(ParamSet p, string key) => p.Contains(key) ? Fx6.FromRaw(p.GetFx6Raw(key)) : null;
+
+    // COST_MULT_G5/G6 (TASK-0131): c_n multipliers of generations 5 and 6; the Session refuses a non-positive one with ArgumentException, the
+    // Lab refuses it earlier as a parameter error.
+    private static Fx6? Positive(ParamSet p, string key)
+    {
+        Fx6? v = Optional(p, key);
+        if (v is { } x && x <= Fx6.Zero)
+            throw new ParamException($"{key} must be positive.");
+        return v;
+    }
 
     // X_SCALE (calibration stage C1): X½ of tiers 3, 4, 5 times the factor, their ratio 1 : 4 : 12,5 kept; floor on the raw value.
     private static ImmutableArray<Fx6> XHalf(ParamSet p)

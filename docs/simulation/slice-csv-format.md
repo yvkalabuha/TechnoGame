@@ -4,6 +4,10 @@
 > Соглашения унаследованы от `exp0001-csv-format.md` и Lab (ADR-0008, `src/Singularity.Lab/RunExecutor.cs`, `MatrixRunner.cs`).
 > Модели `JetSlice` и `JetSliceCalib` — `src/Singularity.Lab/Models/Slice/` (T10 этап 2): читают только `SliceSession` и его views по имени свойств. Проверки — `Singularity.Lab selftest` (`SliceChecks`), малая матрица `lab/manifests/EXP-0002-t10-smoke.json`, серия `det` (`EXP-0002-det.json`).
 
+## Изменения v0.5 r16 (TASK-0131, Session v17)
+- §3: ключи калибровки `COST_MULT_G5`, `COST_MULT_G6` (`SliceRunConfig.CostMultG5/G6`); ≤ 0 — ошибка параметра Lab. Разрешены в `JetSliceCalib`.
+- `lk-draws` проверяет страж поколений (`LK` на данных G5/G6 — `ParamException`), как `calib-print` и фабрика модели.
+
 ## Изменения v0.5 r15 (TASK-0131, поезд 2, O-038; Session v15)
 - Модели читают поверхность Session v15 (`JetSliceModelFactory.SurfaceVersion` 14 → 15: `LicenceView.Mask/OfferMask` — `LicenceMask` из двух слов).
 - §5 `actor_month.csv`: колонки `out_g{g}`, `active_g{g}` строятся по числу поколений класса `jet_fighter` в данных (`ProductsLayout.Generations`, H15 заметки `slice-horizon-2030.md`), как `gen_times`. На текущих данных (G1–G4) таблица та же, байт в байт; на данных G5/G6 — `out_g1…out_g6`, `active_g1…active_g6`. Проект с поколением выше числа поколений раскладки — ошибка формата (раньше поколения > 4 молча отбрасывались).
@@ -167,6 +171,7 @@
 | `K_DIV` | число > 0 | `CostDivisor`: `c_n(тип, g) / k` (спец. §8.1, этап C3+C4) | 1 (значение 1 — как отсутствие ключа: колонки `run.k.c_n_div` нет, golden = main; прочие ключи «К» пишут `run.k.*`, если заданы, даже со значением §8.1) |
 | `THETA_START`, `H_MAX` | число в [0; 1] | `ThetaStart`, `HMax` (этап C3+C4) | значения §8.1 (0,6; 0,08) |
 | `KAPPA_Q10` | целое 0…1024 (`κ`·1024) | `KappaQ10` (этап C3+C4, фаза Б) | 512 |
+| `COST_MULT_G5`, `COST_MULT_G6` | число > 0 (r16, TASK-0131) | `CostMultG5`, `CostMultG6`: множитель `c_n` узлов поколения 5 / 6 (калибровка G5/G6; G0…G4 не переопределяются) | нет — значения `KnowledgeParams` (6,4; 10,2); заданный ключ пишет `run.k.cost_mult_g5`/`_g6` |
 | `ALPHA`, `X_SCALE` | число ≥ 0 / > 0 | `Alpha`; `XHalfByTier` = X½ tier 3/4/5 × `X_SCALE` (отношение 1 : 4 : 12,5) (этап C1) | 0,05; 1 |
 | `DELTA_H`, `C_M` | число в [0; 1] / > 0 | `DeltaH`, `CM` (этап C2) | 0,003; 0,1 |
 | `A41_FORM` | `SLOT`/`WHOLE` (r11, TASK-0058 шаг 5; контракт §4.4a r13, #245) | `PilotForm`: `SLOT` — замена `producible` → `superior` только в слотах срабатывания A41; `WHOLE` — весь состав `superior` (как хук HYP-0004) | `SLOT` (main) |

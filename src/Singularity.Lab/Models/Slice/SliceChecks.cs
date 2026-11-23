@@ -329,6 +329,16 @@ public static class SliceChecks
         }
         catch (ParamException e) when (e.Message.Contains("generations 1…4", StringComparison.Ordinal)) { }
         catch (Exception e) { return $"calib-print LK0 on six-generation data failed without the guard: {e.GetType().Name}: {e.Message}"; }
+        // lk-draws builds no model either: LK there meets the guard before CONTROL_TABLES is read (it does not exist; Codex finding on LkDraws).
+        string drawsManifest = Path.Combine(printDir, "lk.json");
+        File.WriteAllText(drawsManifest, Manifest("JetSlice", Ticks60, seeds: "[1]", pars: """{"LAYER": "LK", "CONTROL_TABLES": "absent.json"}"""));
+        try
+        {
+            Smoke.LkDraws.Run(drawsManifest, null, null, Path.Combine(printDir, "lk-out"), TextWriter.Null);
+            return "lk-draws accepted LK on six-generation data";
+        }
+        catch (ParamException e) when (e.Message.Contains("generations 1…4", StringComparison.Ordinal)) { }
+        catch (Exception e) { return $"lk-draws LK on six-generation data failed without the guard: {e.GetType().Name}: {e.Message}"; }
         // (2) the calibration build on the fixture writes the 6-generation actor_month.
         var (c, dir) = Run(root, Manifest("JetSliceCalib", Ticks60), 1, 1, "six-calib");
         if (!c.Ok)
@@ -336,8 +346,16 @@ public static class SliceChecks
         string[] lines = File.ReadAllLines(Path.Combine(dir, "actor_month.csv"));
         if (lines[0] != "run," + want || lines.Length < 2 || lines.Skip(1).Any(l => l.Split(',').Length != 17))
             return $"actor_month on six-generation data: '{lines[0]}', {lines.Length - 1} rows";
+        // (3) O-040: the fixture has a licensable PRC above 63 (eng_g5 needs PRC 72), so the world registers word 1 of the licence masks; the
+        // current data (licensable PRC ≤ 63) does not. The run above is the end-to-end proof that the wide mask runs.
+        if (!HasColumn(new SliceWorld(sixData, new SliceRunConfig { Seed = 1 }), "pol.lic.mask.1"))
+            return "six-generation fixture with PRC 72: no pol.lic.mask.1";
+        if (HasColumn(new SliceWorld(current, new SliceRunConfig { Seed = 1 }), "pol.lic.mask.1"))
+            return "current data: pol.lic.mask.1 is registered without a licensable PRC above 63";
         return null;
     }
+
+    private static bool HasColumn(SliceWorld w, string name) => w.Table.Columns.Any(c => c.Name == name);
 
     // A repository-shaped copy (Singularity.sln marker + mods/core) of the current mods with the six-generation edits; null or the problem.
     private static string? SixGenerationFixture(string tmp, string root)
@@ -379,6 +397,20 @@ public static class SliceChecks
             requires: [s8.app.jet_fighter_g5]
             hazard: none
             anchor: {year: 2010, source: "fixture", estimated: true}
+          - id: s5.prc.fixture_g5_refining
+            number: 72
+            type: PRC
+            gen: 0
+            discipline: chem
+            cluster: CHEM
+            tier: 3
+            capability_req:
+              purity: 3.5
+              quality_control: 3
+            requires: []
+            hazard: none
+            labour_p: 150
+            anchor: {year: 1945, before: true, source: "fixture", estimated: true}
 
         """);
         string text = File.ReadAllText(classes);
@@ -386,7 +418,7 @@ public static class SliceChecks
         [
             (Engines, Engines + """
 
-                      - {id: eng_g5, rank: 5, eng_gen: 5, perf_mult: 2.8, prc_set: [s8.prc.jet_engine_assembly_test, s5.prc.alloying_element_refining], requires_nodes: [s8.eng.turbofan_g4]}
+                      - {id: eng_g5, rank: 5, eng_gen: 5, perf_mult: 2.8, prc_set: [s8.prc.jet_engine_assembly_test, s5.prc.fixture_g5_refining], requires_nodes: [s8.eng.turbofan_g4]}
                       - {id: eng_g6, rank: 6, eng_gen: 6, perf_mult: 3.4, prc_set: [s8.prc.jet_engine_assembly_test, s5.prc.alloying_element_refining], requires_nodes: [s8.eng.turbofan_g4]}
             """.TrimEnd()),
             (Airframes, Airframes + $$"""
@@ -394,6 +426,10 @@ public static class SliceChecks
                       - {id: af_g6, rank: 6, af_class: 5, perf_mult: 2.0, {{Prc}}, requires_nodes: [s8.eng.mach2_airframe_g4]}
                       - {id: af_g7, rank: 7, af_class: 5, perf_mult: 2.2, {{Prc}}, requires_nodes: [s8.eng.mach2_airframe_g4]}
             """.TrimEnd()),
+            ("      - {prc: s5.prc.alloying_element_refining, n_p: 1, labour_hours: 150, base_cost: 0.000018}", """
+                  - {prc: s5.prc.alloying_element_refining, n_p: 1, labour_hours: 150, base_cost: 0.000018}
+                  - {prc: s5.prc.fixture_g5_refining, n_p: 1, labour_hours: 150, base_cost: 0.000018}
+            """),
             ("{rank: 4, proc_scale_pu: 0.827491}", """
             {rank: 4, proc_scale_pu: 0.827491}
                   - {rank: 5, proc_scale_pu: 1.2}
@@ -1024,7 +1060,7 @@ public static class SliceChecks
     {
         foreach (string bad in new[] { """{"FOO": 1}""", """{"START": "X"}""", """{"LAYER": "LK"}""", """{"GRID": "LO_MID"}""", """{"CHANNELS": ["B", "B"]}""",
                      """{"CONTROL_TABLES": "t.json"}""", """{"LAYER": "LC"}""", """{"LAYER": "LP"}""", """{"LAYER": "LC0", "CONTROL_TABLES": "t.json"}""",
-                     """{"X_SCALE": 0}""", """{"K_DIV": "x"}""" })
+                     """{"X_SCALE": 0}""", """{"K_DIV": "x"}""", """{"COST_MULT_G5": 0}""", """{"COST_MULT_G6": -1}""", """{"COST_MULT_G5": "x"}""" })
         {
             Manifest m = Lab.Manifest.Parse(Manifest("JetSlice", Ticks60, pars: bad), "/x/m.json");
             try
@@ -1034,6 +1070,15 @@ public static class SliceChecks
             }
             catch (ParamException) { }
         }
+        // TASK-0131: COST_MULT_G5/G6 reach SliceRunConfig as given (calibration keys, allowed in JetSliceCalib); absent = null (KnowledgeParams default).
+        Manifest g = Lab.Manifest.Parse(Manifest("JetSliceCalib", Ticks60, pars: """{"COST_MULT_G5": 5.5, "COST_MULT_G6": 9}"""), "/x/m.json");
+        SliceRunConfig gc = SliceParameters.Parse(g.Points[0].CreateParamSet(), 1, 1, 1, calibration: true).Config;
+        if (gc.CostMultG5 != Fx6.FromRaw(5_500_000) || gc.CostMultG6 != Fx6.FromInt(9))
+            return $"COST_MULT_G5/G6 parsed as {gc.CostMultG5}/{gc.CostMultG6}";
+        Manifest g0 = Lab.Manifest.Parse(Manifest("JetSlice", Ticks60), "/x/m.json");
+        SliceRunConfig g0c = SliceParameters.Parse(g0.Points[0].CreateParamSet(), 1, 1, 1, calibration: false).Config;
+        if (g0c.CostMultG5 is not null || g0c.CostMultG6 is not null)
+            return "COST_MULT_G5/G6 set without the keys";
         return null;
     }
 
