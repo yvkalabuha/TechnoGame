@@ -105,7 +105,7 @@ public class TwoWorldsOnOnePoolTests
         // The pinned digests alone would also pass if the two worlds never ran together. At least once a world entered its step while the
         // other was inside its own (the barrier releases them together and a step takes far longer than the release skew). This proves the
         // overlap of the whole step; the overlap inside the compute phase needs a production hook (see TASK-0127, Ход работы).
-        Assert.True(gate.Overlapped >= 1, $"overlapped in {gate.Overlapped} of {Months + 1} months; the test did not exercise the shared pool");
+        Assert.True(gate.EnteredWhileOtherInCall >= 1, $"entered while the other world was in its call in {gate.EnteredWhileOtherInCall} of {Months + 1} months; the test did not exercise the shared pool");
         AssertPinned(seedA, ha, $"A seed {seedA}, {threads} threads");
         AssertPinned(seedB, hb, $"B seed {seedB}, {threads} threads");
     }
@@ -115,7 +115,7 @@ public class TwoWorldsOnOnePoolTests
     {
         private int _active;
         private int _overlapped;
-        public int Overlapped => Volatile.Read(ref _overlapped);
+        public int EnteredWhileOtherInCall => Volatile.Read(ref _overlapped);
 
         // A month counts once: when this world entered while the other was inside its step.
         public void Step(Action step)

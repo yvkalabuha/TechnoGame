@@ -154,10 +154,37 @@ public class NoMutableStaticsTests
         "System.Runtime.CompilerServices.Unsafe",
     };
 
+    private const string EnumerableToArrayReason = "Enumerable.ToArray result wrapped at once (build/load or view-building path, no world storage or static); the exemption of ToArray was removed in TASK-0127 because a user ICollection<T>.CopyTo could keep the array, and the sources at these sites were NOT audited one by one (DEBT proposal: audit or replace with ToImmutableArray)";
+
     private static readonly Dictionary<string, (int Count, string Reason)> UnsafeUses = new(StringComparer.Ordinal)
     {
         ["Singularity.Kernel.Column`1.AppendCurrentTo -> MemoryMarshal.AsBytes"] = (1, "read-only byte view of the column's own current array, passed to IncrementalHash.AppendData (a ReadOnlySpan sink); no write"),
         ["Singularity.Core.Policy.ToolingPlan.Compute -> CollectionsMarshal.AsSpan"] = (2, "sorts in place the thread-bound scratch list t.Cells of the plan (DEBT-0070), cleared and refilled each call; no static or world storage"),
+        // Methods that wrap Enumerable.ToArray results; counts are exact, so a new use or a new callee in these methods fails.
+        ["Singularity.Core.Products.ProductsLayout.FromData -> ImmutableCollectionsMarshal.AsImmutableArray"] = (17, EnumerableToArrayReason),
+        ["Singularity.Core.Policy.BudgetRulePlan.For -> ImmutableCollectionsMarshal.AsImmutableArray"] = (3, EnumerableToArrayReason),
+        ["Singularity.Core.Policy.PolicySystem.AddEventColumns -> ImmutableCollectionsMarshal.AsImmutableArray"] = (1, EnumerableToArrayReason),
+        ["Singularity.Core.Policy.PolicySystem.AiDesignCommands -> ImmutableCollectionsMarshal.AsImmutableArray"] = (2, EnumerableToArrayReason),
+        ["Singularity.Core.Policy.PolicySystem.Decide -> ImmutableCollectionsMarshal.AsImmutableArray"] = (2, EnumerableToArrayReason),
+        ["Singularity.Core.Policy.PolicySystem..ctor -> ImmutableCollectionsMarshal.AsImmutableArray"] = (2, EnumerableToArrayReason),
+        ["Singularity.Core.Policy.ProductPresets.Variants -> ImmutableCollectionsMarshal.AsImmutableArray"] = (4, EnumerableToArrayReason),
+        ["Singularity.Core.Knowledge.KnowledgeGraph.Create -> ImmutableCollectionsMarshal.AsImmutableArray"] = (9, EnumerableToArrayReason),
+        ["Singularity.Core.Knowledge.KnowledgeStart.FromScenario -> ImmutableCollectionsMarshal.AsImmutableArray"] = (1, EnumerableToArrayReason),
+        ["Singularity.Core.Industry.IndustryLayout.Create -> ImmutableCollectionsMarshal.AsImmutableArray"] = (14, EnumerableToArrayReason),
+        ["Singularity.Core.Data.ModLoader.Load -> ImmutableCollectionsMarshal.AsImmutableArray"] = (1, EnumerableToArrayReason),
+        ["Singularity.Core.Data.NodeTable.Build -> ImmutableCollectionsMarshal.AsImmutableArray"] = (18, EnumerableToArrayReason),
+        ["Singularity.Core.Data.ScenarioData.Build -> ImmutableCollectionsMarshal.AsImmutableArray"] = (6, EnumerableToArrayReason),
+        ["Singularity.Core.Data.ScenarioData.Rebuild -> ImmutableCollectionsMarshal.AsImmutableArray"] = (1, EnumerableToArrayReason),
+        ["Singularity.Core.Data.ScenarioData.RebuildWith -> ImmutableCollectionsMarshal.AsImmutableArray"] = (12, EnumerableToArrayReason),
+        ["Singularity.Core.Commands.CommandState.DesignCommands -> ImmutableCollectionsMarshal.AsImmutableArray"] = (1, EnumerableToArrayReason),
+        ["Singularity.Session.SliceWorld.ApplyEffortShare -> ImmutableCollectionsMarshal.AsImmutableArray"] = (1, EnumerableToArrayReason),
+        ["Singularity.Session.SliceWorld.StartVectors -> ImmutableCollectionsMarshal.AsImmutableArray"] = (2, EnumerableToArrayReason),
+        ["Singularity.Session.SliceWorld..ctor -> ImmutableCollectionsMarshal.AsImmutableArray"] = (1, EnumerableToArrayReason),
+        ["Singularity.Session.ViewBuilder.Layout -> ImmutableCollectionsMarshal.AsImmutableArray"] = (1, EnumerableToArrayReason),
+        ["Singularity.Session.ViewBuilder.Design -> ImmutableCollectionsMarshal.AsImmutableArray"] = (1, EnumerableToArrayReason),
+        ["Singularity.Session.ViewBuilder.Decisions -> ImmutableCollectionsMarshal.AsImmutableArray"] = (1, EnumerableToArrayReason),
+        ["Singularity.Session.ViewBuilder.ActorInputs -> ImmutableCollectionsMarshal.AsImmutableArray"] = (1, EnumerableToArrayReason),
+        ["Singularity.Session.ViewBuilder.Step -> ImmutableCollectionsMarshal.AsImmutableArray"] = (1, EnumerableToArrayReason),
         // Only the single non-fresh AsImmutableArray of this method: another unsafe callee or a second call in it still fails.
         ["Singularity.Session.ViewBuilder.Inputs -> ImmutableCollectionsMarshal.AsImmutableArray"] = (1, "captured only by the Parallel.For lambda, which does not outlive the call; the local array rows is created here and nobody else holds it, no copy"),
     };
@@ -177,9 +204,13 @@ public class NoMutableStaticsTests
         return op is "cpblk" or "initblk" or "calli" ? "opcode " + op : null;
     }
 
-    // The array wrapped by the call at body[callIndex] is fresh only if the instruction that PRODUCED the top stack slot is a newarr or a copying
-    // ToArray. The producer is found by walking back with the stack effect of each instruction (a dup of a written array, an InitializeArray or a
-    // stelem do not make an array fresh: they only act on one that the producer made). Any branch or unknown stack effect means "not fresh".
+    // The array wrapped by the call at body[callIndex] is fresh only if (1) the instruction that PRODUCED the top stack slot is a newarr or a
+    // BCL-owned copy (List<T>.ToArray, ReadOnlySpan<T>.ToArray; Enumerable.ToArray is not: it may call a user CopyTo(array) that keeps the array),
+    // (2) no join point lies between the producer and the call (`f ? new int[n] : Static`, a switch expression, a handler), and (3) a forward
+    // walk with a taint stack shows that the array (and every dup of it) is used only as the array operand of a stelem, as the array of
+    // RuntimeHelpers.InitializeArray, and as the argument of this call: a store to a static, field, local, argument or address, or a call that
+    // receives it, makes it not fresh. The producer is found by walking back with the stack effect of each instruction. Any other branch or an
+    // unknown stack effect means "not fresh".
     private static bool IsFreshArray(List<Instruction> body, int callIndex, HashSet<int> targets)
     {
         int depth = 1; // 1 = top of the stack
@@ -196,25 +227,61 @@ public class NoMutableStaticsTests
                     depth = 1; // both slots are the value below
                     continue;
                 }
-                // A join point between the producer and the call (`f ? new int[n] : Static`, a switch expression, a handler) means another path
-                // may bring a different array to the call: not fresh.
                 for (int j = i + 1; j <= callIndex; j++)
                     if (targets.Contains(body[j].Offset))
                         return false;
-                return ins.OpCode == System.Reflection.Emit.OpCodes.Newarr || (ins.Operand is MethodBase m && IsCopyingToArray(m));
+                return (ins.OpCode == System.Reflection.Emit.OpCodes.Newarr || (ins.Operand is MethodBase m && IsCopyingToArray(m)))
+                    && OnlyFilledAndWrapped(body, i, callIndex);
             }
             depth = depth - push + pop;
         }
         return false;
     }
 
-    private static bool IsCopyingToArray(MethodBase m)
+    private static bool OnlyFilledAndWrapped(List<Instruction> body, int producer, int callIndex)
     {
-        if (m.Name != "ToArray" || m.DeclaringType is not { } t)
-            return false;
-        return t.FullName == "System.Linq.Enumerable"
-            || (t.IsGenericType && t.GetGenericTypeDefinition() is var d && (d == typeof(List<>) || d == typeof(ReadOnlySpan<>)));
+        var st = new List<bool> { true }; // taint stack from the producer on: true = the array or a dup of it
+        for (int j = producer + 1; j < callIndex; j++)
+        {
+            Instruction ins = body[j];
+            if (!StackEffect(ins, out int pop, out int push))
+                return false;
+            var popped = new bool[pop]; // [0] = top
+            for (int k = 0; k < pop; k++)
+            {
+                popped[k] = st.Count > 0 && st[^1];
+                if (st.Count > 0)
+                    st.RemoveAt(st.Count - 1);
+            }
+            if (ins.OpCode == System.Reflection.Emit.OpCodes.Dup)
+            {
+                st.Add(popped[0]);
+                st.Add(popped[0]);
+            }
+            else if (ins.OpCode.Name!.StartsWith("stelem", StringComparison.Ordinal))
+            {
+                if (popped[0]) // the array stored as an element of another array
+                    return false;
+            }
+            else if (ins.Operand is MethodBase { Name: "InitializeArray", DeclaringType.FullName: "System.Runtime.CompilerServices.RuntimeHelpers" })
+            {
+                if (popped[0])
+                    return false;
+            }
+            else
+            {
+                if (popped.Any(x => x))
+                    return false;
+                for (int k = 0; k < push; k++)
+                    st.Add(false);
+            }
+        }
+        return st.Count > 0 && st[^1] && st.Count(x => x) == 1;
     }
+
+    private static bool IsCopyingToArray(MethodBase m) =>
+        m.Name == "ToArray" && m.DeclaringType is { IsGenericType: true } t
+        && t.GetGenericTypeDefinition() is var d && (d == typeof(List<>) || d == typeof(ReadOnlySpan<>));
 
     private static bool StackEffect(Instruction ins, out int pop, out int push)
     {
@@ -303,6 +370,8 @@ public class NoMutableStaticsTests
         Assert.Contains(v, f => f.Contains("WrapWritten") && f.Contains("AsImmutableArray"));      // stelem into a caller-owned array
         Assert.Contains(v, f => f.Contains("WrapStaticWritten") && f.Contains("AsImmutableArray")); // stelem into a static array
         Assert.Contains(v, f => f.Contains("WrapInitStatic") && f.Contains("AsImmutableArray"));    // InitializeArray over a caller-owned array
+        Assert.Contains(v, f => f.Contains("WrapAssignStatic") && f.Contains("AsImmutableArray")); // the fresh array is also stored in a static
+        Assert.Contains(v, f => f.Contains("WrapEnumToArray") && f.Contains("AsImmutableArray")); // Enumerable.ToArray may run a user CopyTo
         Assert.Contains(v, f => f.Contains("WrapCond") && f.Contains("AsImmutableArray"));         // newarr on one branch, a static array on the other
         Assert.Contains(v, f => f.Contains("WrapSwitch") && f.Contains("AsImmutableArray"));
         Assert.Contains(v, f => f.Contains("WrapLocalNew") && f.Contains("AsImmutableArray"));      // newarr, then a local: the producer is the local, listing needed
@@ -410,9 +479,13 @@ internal static class UnsafeMutant
     // A write into an array the caller owns and a wrap of it: the array is NOT fresh although the pattern ends in stelem / InitializeArray.
     public static ImmutableArray<int> WrapWritten(int[] a) { a[0] = 1; return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(a); }
     public static ImmutableArray<int> WrapStaticWritten() { StaticArr[0] = 3; return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(StaticArr); }
+    private static int[]? StaticBuf;
+    // newarr; dup; stsfld; call: the same array is stored in a static and wrapped.
+    public static ImmutableArray<int> WrapAssignStatic(int n) => System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(StaticBuf = new int[n]);
+    public static ImmutableArray<int> WrapEnumToArray(IEnumerable<int> e) => System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(System.Linq.Enumerable.ToArray(e));
     public static ImmutableArray<int> WrapCond(bool f, int n) => System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(f ? new int[n] : StaticArr);
     public static ImmutableArray<int> WrapSwitch(int k, int n) => System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(k switch { 0 => new int[n], 1 => new int[n + 1], _ => StaticArr });
-    public static ImmutableArray<int> WrapLocalNew(int n) { var a = new int[n]; return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(a); }
+    public static ImmutableArray<int> WrapLocalNew(int n) { var a = new int[n]; a[0] = 1; return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(a); }
     public static ImmutableArray<int> WrapInitStatic() => System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(FakeHelpers.InitializeArray(StaticArr));
     public static IntPtr Pin(object o) => System.Runtime.InteropServices.GCHandle.Alloc(o, System.Runtime.InteropServices.GCHandleType.Pinned).AddrOfPinnedObject();
     public static void Copy(int[] a, IntPtr p) => System.Runtime.InteropServices.Marshal.Copy(a, 0, p, a.Length);
