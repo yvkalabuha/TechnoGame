@@ -50,7 +50,7 @@ public readonly struct LicenceMask : IEquatable<LicenceMask>
         return (Lo & bit.Lo) != 0 || (Hi & bit.Hi) != 0;
     }
 
-    public static LicenceMask operator |(LicenceMask a, LicenceMask b) => new(a.Lo | b.Lo, a.Hi | b.Hi, a._narrow && b._narrow);
+    public static LicenceMask operator |(LicenceMask a, LicenceMask b) => new(a.Lo | b.Lo, a.Hi | b.Hi, a._narrow || b._narrow);   // a narrow side keeps the result narrow, so a bit above 63 throws instead of being dropped
 
     public bool Equals(LicenceMask other) => Lo == other.Lo && Hi == other.Hi;
 

@@ -72,7 +72,8 @@ public sealed partial class PolicySystem
         _qPrice.Load(new long[n]);
         foreach (LongColumn c in _bad)
             c.Load(new long[n]);
-        _licMask1?.Load(new long[n]);        _offerMask1?.Load(new long[n]);
+        _licMask1?.Load(new long[n]);
+        _offerMask1?.Load(new long[n]);
         _qMask1?.Load(new long[n]);
     }
 
