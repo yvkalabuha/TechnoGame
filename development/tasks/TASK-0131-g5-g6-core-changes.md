@@ -1,7 +1,7 @@
 ---
 id: TASK-0131
 title: "Core changes for G5/G6 data: licence mask word 2, generation cost multipliers, control-layer guards (train 2, T-G)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M05
 agent: developer
