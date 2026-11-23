@@ -141,8 +141,8 @@
 | [TASK-0123](../development/tasks/TASK-0123-budget-rule-lab-measurement.md) | DONE | Lab measurement of budget rule variants: workforce, alloy and limiter columns, manifest, analysis | MS-M05 |
 | [TASK-0124](../development/tasks/TASK-0124-kernel-snapshot-continuity.md) | DONE | Kernel table snapshot and save-load-continue continuity test (A4) | MS-M1 |
 | [TASK-0125](../development/tasks/TASK-0125-no-mutable-statics-two-worlds.md) | DONE | No mutable static fields in Kernel, Core, Session; two worlds on one thread pool (A6) | MS-M1 |
-| [TASK-0126](../development/tasks/TASK-0126-task-0117-codex-remainder.md) | APPROVED | Open Codex findings after TASK-0117 landing (#432) | MS-M05 |
-| [TASK-0127](../development/tasks/TASK-0127-task-0125-codex-remainder.md) | APPROVED | Open Codex findings after TASK-0125 landing (#432) | MS-M05 |
+| [TASK-0126](../development/tasks/TASK-0126-task-0117-codex-remainder.md) | IN_PROGRESS | Open Codex findings after TASK-0117 landing (#432) | MS-M05 |
+| [TASK-0127](../development/tasks/TASK-0127-task-0125-codex-remainder.md) | IN_PROGRESS | Open Codex findings after TASK-0125 landing (#432) | MS-M05 |
 
 ## Гипотезы
 

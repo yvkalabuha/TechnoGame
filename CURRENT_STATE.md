@@ -18,9 +18,9 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
+- TASK-0126 [IN_PROGRESS] Open Codex findings after TASK-0117 landing (#432) (developer)
+- TASK-0127 [IN_PROGRESS] Open Codex findings after TASK-0125 landing (#432) (test-engineer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
-- TASK-0126 [APPROVED] Open Codex findings after TASK-0117 landing (#432) (developer)
-- TASK-0127 [APPROVED] Open Codex findings after TASK-0125 landing (#432) (test-engineer)
 <!-- registry:active:end -->
 
 ## Блокеры
