@@ -11,9 +11,9 @@ public class HorizonTests
     {
         string path = Path.Combine(SliceTestData.RepoRoot, "tests", "Singularity.Session.Tests", "Fixtures", "horizon-baseline.txt");
         string[][] rows = [.. File.ReadAllLines(path).Where(l => !l.StartsWith('#')).Select(l => l.Split(' '))];
-        Assert.Equal(48, rows.Length);
+        Assert.Equal(60, rows.Length);   // 48 points of TASK-0121 and 12 at month 176 (TASK-0129)
         // TASK-0129 (#431): from month 177 the fleet is no longer written off at the service life, so the trajectory differs from the pinned build by design;
-        // the identity of the old columns holds to month 176 (memo §2.9 item 12).
+        // the identity of the old columns holds to month 176 (memo §2.9 item 12), where the rows of TASK-0129 pin the last month before the change.
         foreach (var group in rows.Where(r => long.Parse(r[2]) < 177).GroupBy(r => (r[0], r[1])))
         {
             SliceSession s = SliceTestData.Create(HorizonConfigs.Config(group.Key.Item1, ulong.Parse(group.Key.Item2)));

@@ -49,6 +49,12 @@ created: 2026-11-23
 - Команда: `RetireCohort.Acknowledged` (в журнале поле `"ack":true` пишется только при true — старые журналы читаются), вердикт `CommandRefusal.NeedsConfirmation` с `BestGenBefore/BestGenAfter` в `CommandVerdict`; проверка в `SliceSession.Submit` по `RetireForecast` (в нём новые поля `GenBefore/GenAfter`). Прогноз срока — `ProductsSystem.FieldedUntil`.
 - Эталоны: объяснение построчно ниже. Идентичность старых колонок с `main` до месяца 176 доказана проекционными тестами (Horizon, T6d, FleetAblation, ToolingUnmet, GoldenProjectionAgainstMain) — они ограничены месяцами < 177: после 177-го траектория отличается намеренно.
 
+## Ревью, раунд 1 (CHANGES)
+- RetireOverage: 3 теста в `FleetRuleTests` (`Overage_*`): перестарок первыми и по возрасту кохорты без линии; при линии без привязки к деньгам; `keep` по `n_eff` для Def(K). Все 3 падают с отключённым RetireOverage (проверено). Заодно фикстура теперь обнуляет `replCredit` слота.
+- Проекция ИИ: за 1020 месяцев seed 3 слоем отклонено 109 retire (все BadRetireCount, USA), 0 sell; тест `FleetAgeingRunTests` проверяет sell == 0 и retire <= 220. Проекцию не менял (выпуск месяца ей и раньше неизвестен); отклонение записать как D2.
+- Месяц 176: 12 строк (4 конфигурации x 3 seed) сняты на 83567c4 (main до задачи) и добавлены в `horizon-baseline.txt`; `HorizonTests` проходит.
+- `new List<int>()` на пути решения ИИ заменён на stackalloc. Пункт 5 (gen/perf один раз за актор-месяц) не делал: Produce вызывается раз на линию, выигрыша нет.
+
 ## Разногласия
 - Записка §2.5 предлагает `retire_forecast` как запрос Session. Я НЕ добавлял публичных методов в `SliceSession`: любое изменение публичной поверхности требует `TestApiVersion` 15, а `Lab/Models/Slice/JetSliceModel.cs` (`SurfaceVersion = 14`) вне моей зоны и падает по сборке. Предупреждение уходит в вердикте `Submit`; запрос прогноза (`ProductsSystem.RetireForecast`, `FieldedUntil`) готов в Core, его выведет TASK-0130 (Session views) вместе с повышением версии.
 - ИИ-проекция не учитывает начисление кредита от выпуска текущего месяца (проекция и раньше не знала выпуска); в редком случае Core убирает перестарков больше, чем предполагал ИИ, и команда списания отклоняется слоем (счётчик отказов, состояние не меняется).
