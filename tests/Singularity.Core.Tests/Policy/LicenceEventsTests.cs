@@ -259,6 +259,19 @@ public class LicenceEventsTests
     }
 
     [Fact]
+    public void Licensable_FollowsTheCapacityOfTheMask_AndDoesNotThrowAboveIt()
+    {
+        var narrow = new Rig(PolicyProfile.Mass, 1);
+        var wide = new Rig(PolicyProfile.Mass, 1, wide: true);
+        Assert.Equal(63, narrow.Policy.LicenceCapacity);
+        Assert.Equal(127, wide.Policy.LicenceCapacity);
+        Assert.True(narrow.Policy.Licensable(63));
+        Assert.All((int[])[0, 64, 138, 500], n => Assert.False(narrow.Policy.Licensable(n)));   // synthetic worlds reach node 180 and more: no licence, no exception
+        Assert.True(wide.Policy.Licensable(64) && wide.Policy.Licensable(127));
+        Assert.All((int[])[0, 128, 138], n => Assert.False(wide.Policy.Licensable(n)));
+    }
+
+    [Fact]
     public void NarrowPolicy_HasNoSecondWordColumns_AndRefusesANodeAbove63()
     {
         ulong seed = SeedWhere(true, true);

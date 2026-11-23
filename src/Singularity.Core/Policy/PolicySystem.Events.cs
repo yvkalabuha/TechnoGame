@@ -97,6 +97,15 @@ public sealed partial class PolicySystem
 
     // ---- reads (state in force at the month being computed)
 
+    /// <summary>Highest node number a licence mask of this policy holds: 63, or 127 with the second word (H13).</summary>
+    public int LicenceCapacity => _licMask1 is null ? 63 : Policy.LicenceMask.MaxNumber;
+
+    /// <summary>
+    /// Whether a licence can cover the node. A node above the capacity is not licensable (no licence, as before the second word existed); simulation
+    /// code checks this before <see cref="LicenceRules.Has"/>, which stays loud for a number outside 1…127.
+    /// </summary>
+    public bool Licensable(int nodeNumber) => nodeNumber >= 1 && nodeNumber <= LicenceCapacity;
+
     /// <summary><c>lic_gen</c>: the engine generation of the buyer's licence, 0 without one (the licence may have lapsed: see the Session's <c>LicenceActive</c>).</summary>
     public int LicenceGen(int actorRow) => _licGen.Current[actorRow];
 
