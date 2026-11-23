@@ -23,11 +23,10 @@ created: 2026-11-22
 
 ## Описание
 Замечания из `tools/llm_worker/runs/review-TASK-0117-6883be22-codex.json`:
-/bin/bash: строка 4: {x[path]}:{x[line]}: команда не найдена
-- [high]  — The technology-tree clock draws its decade ticks at half the A2 minimum width.
-- [medium]  — The screenshot matrix can pass without verifying that the requested UI scale was applied.
-- [medium]  — The scaled main-menu screenshots capture the title menu over the live game HUD.
-- [medium]  — The screenshot run can report success after failing to save the flask probe frames.
+- [high] `src/Singularity.Client.Spike/TechTree.cs:488` — The technology-tree clock draws its decade ticks at half the A2 minimum width.
+- [medium] `src/Singularity.Client.Spike/Main.cs:890` — The screenshot matrix can pass without verifying that the requested UI scale was applied.
+- [medium] `src/Singularity.Client.Spike/Main.cs:892` — The scaled main-menu screenshots capture the title menu over the live game HUD.
+- [medium] `src/Singularity.Client.Spike/Main.cs:1417` — The screenshot run can report success after failing to save the flask probe frames.
 - Ревьюер (круги 9–13): `Para` не ловит слово шире строки на всех путях; арт-директор (круг 13): подписи «Теплообмен в турбине», «Сборка и испытание ТРД» стоят далеко от узлов; подпись «№2» без названия. Аллокации в `_Draw` — DEBT-0073.
 
 Каждое замечание: исправить или отклонить с причиной (в «Разногласия»). Высокие замечания по детерминизму и сохранению по #432 не переносятся — их в этом списке нет.

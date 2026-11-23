@@ -23,9 +23,8 @@ created: 2026-11-22
 
 ## Описание
 Замечания из `tools/llm_worker/runs/review-TASK-0125-265ec51e-codex.json`:
-/bin/bash: строка 4: {x[path]}:{x[line]}: команда не найдена
-- [high]  — The fresh-array exemption lets a writable static buffer pass both architecture scans.
-- [medium]  — The concurrent test can pass without overlapping the tick operations that use the shared buffer.
+- [high] `tests/Singularity.Architecture.Tests/NoMutableStaticsTests.cs:178` — The fresh-array exemption lets a writable static buffer pass both architecture scans.
+- [medium] `tests/Singularity.Session.Tests/TwoWorldsOnOnePoolTests.cs:116` — The concurrent test can pass without overlapping the tick operations that use the shared buffer.
 - Ревьюер (круг 7): добавить `Marshal` и `GCHandle` в запрещённые классы; поправить причину для `ViewBuilder.Inputs` («захвачен только лямбдой `Parallel.For`, не переживающей вызов»).
 - Классификация по #432: находка «свежий массив» касается полноты страж-теста, а не дефекта детерминизма в коде ядра; поэтому перенесена, а не исправлена до слияния.
 
