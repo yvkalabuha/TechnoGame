@@ -1416,7 +1416,9 @@ public sealed partial class Main : Node3D
     {
         CheckScaleCoverage(); if (_largeSize.X == 0) CheckIconInk();
         _shotLog += $"shot run result: {(_shotFailed ? "FAILED (a live check failed, exit 1)" : "OK (exit 0)")}\n";
-        Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog); GD.Print(_shotLog);
+        try { Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog); }
+        catch (Exception ex) { GD.PrintErr("cannot write run-log.txt: " + ex.Message); _shotFailed = true; }   // a lost log fails the run, it never skips Quit
+        GD.Print(_shotLog);
         GetTree().Quit(_shotFailed ? 1 : 0); _shotStep = 18;
     }
 
