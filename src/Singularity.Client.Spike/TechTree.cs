@@ -164,7 +164,7 @@ public sealed partial class TechTree : Control
         var s = _host.Snap;
         if (s == null || _actor < 0 || !Visible) return;
         if (s.WhyActor != _actor) return;
-        if (_modelDirty || !ReferenceEquals(s.View, _lastView))
+        if ((_modelDirty || !ReferenceEquals(s.View, _lastView)) && s.View.Actors[_actor].Nodes.IsPresent)   // not subscribed yet: keep the dirty flag, retry on the next snapshot
         {
             _modelDirty = false; _lastView = s.View;
             Rebuild(s);
@@ -184,7 +184,6 @@ public sealed partial class TechTree : Control
         int n = nodes.Count;
         if (_rowOfNumber.Count == 0) for (int i = 0; i < n; i++) _rowOfNumber[nodes.Number[i]] = i;
         var byNumber = s.View.Actors[_actor].Nodes;
-        if (!byNumber.IsPresent) return;   // the shown actor is subscribed in the same snapshot as WhyActor; a stale view waits for the next one
         _nv = new NodeView[n];
         foreach (var v in byNumber) _nv[_rowOfNumber[v.Number]] = v;
         var known = new bool[n];

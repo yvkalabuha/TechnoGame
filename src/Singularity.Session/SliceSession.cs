@@ -79,8 +79,9 @@ public sealed partial class SliceSession
     }
 
     /// <summary>
-    /// Publishes the current view again, built in full (not the F7a path) with the current subscription, without a tick: same tick, date, hash, month, inputs and step.
-    /// For a paused game after <see cref="SetViewSubscription"/>. Owner thread only. A no-op while <see cref="SkipViews"/> is set.
+    /// Publishes the current view again, built in full (not the F7a path) with the current subscription, without a tick. When the last tick published, the view keeps its
+    /// tick, hash, inputs and step; when later ticks ran without publishing, the view is built from the state now: current tick, no hash, no inputs, no step (it never claims
+    /// an older tick for newer state). For a paused game after <see cref="SetViewSubscription"/>. Owner thread only. A no-op while <see cref="SkipViews"/> is set.
     /// </summary>
     public void RebuildView()
     {
@@ -88,7 +89,8 @@ public sealed partial class SliceSession
         if (SkipViews)
             return;
         SliceView v = _view;
-        Volatile.Write(ref _view, ViewBuilder.Snapshot(_world, v.Tick, v.StateHash, v.Month, v.Inputs, v.Step, _subscribed));
+        bool current = v.Tick == Tick;
+        Volatile.Write(ref _view, ViewBuilder.Snapshot(_world, Tick, current ? v.StateHash : null, _month, current ? v.Inputs : null, current ? v.Step : null, _subscribed));
         _actorsMid = null;
         _subscriptionChanged = false;
     }

@@ -116,7 +116,8 @@ public class ViewSubscriptionTests
         SliceView after = s.View;
         Assert.NotSame(before, after);
         Assert.Equal([4], Subscribed(after));
-        Assert.Equal((before.Tick, before.Date, before.StateHash, before.Month), (after.Tick, after.Date, after.StateHash, after.Month));
+        Assert.Equal((before.Tick, before.Date, before.Month), (after.Tick, after.Date, after.Month));
+        HashAssert.Equal(before.StateHash, after.StateHash);
         Assert.Same(before.Inputs, after.Inputs);
         Assert.Same(before.Step, after.Step);
         Assert.Equal(tick, s.Tick);
@@ -162,7 +163,7 @@ public class ViewSubscriptionTests
         SliceSession sub = Make(ViewScope.Subscribed, everyTick: true);
         SliceSession skip = Make(ViewScope.Subscribed, everyTick: true);
         skip.SkipViews = true;
-        Assert.Equal(all.LastHash, sub.LastHash);
+        HashAssert.Equal(all.LastHash, sub.LastHash);
         for (int day = 0; day < 100; day++)
         {
             if (day % 13 == 0)
@@ -249,6 +250,44 @@ public class ViewSubscriptionTests
                 string code = line.TrimStart();
                 if (!code.StartsWith("//", StringComparison.Ordinal) && words.Any(w => code.Contains(w, StringComparison.Ordinal)))
                     offenders.Add($"{Path.GetFileName(file)}: {code}");
+            }
+        }
+        Assert.Empty(offenders);
+    }
+
+    [Fact]
+    public void RebuildAfterUnpublishedTicks_IsBuiltFromTheStateNow_NotLabelledWithTheOldTick()
+    {
+        SliceSession s = Make(ViewScope.Subscribed);
+        s.StepThroughMonth(3);
+        long published = s.View.Tick;
+        s.Step(2);                                   // mid-month days without commands publish nothing
+        Assert.Equal(published, s.View.Tick);
+        s.SetViewSubscription([1]);
+        s.RebuildView();
+        Assert.Equal(s.Tick, s.View.Tick);
+        Assert.Null(s.View.StateHash);
+        Assert.Null(s.View.Inputs);
+        Assert.Null(s.View.Step);
+        Assert.True(s.View.Actors[1].Nodes.IsPresent);
+    }
+
+    [Fact]
+    public void ClientReaders_OtherThanTheTreeAndTheAudio_DoNotReadTheNodesOfAnActor()
+    {
+        // ADR-0025 открытый вопрос: ActorPanel, SignalField and the rest never read ActorView.Nodes; only TechTree (shown actor) and AudioDirector (played actor) do.
+        string dir = Path.Combine(SliceTestData.RepoRoot, "src", "Singularity.Client.Spike");
+        var offenders = new List<string>();
+        foreach (string f in Directory.EnumerateFiles(dir, "*.cs").Order(StringComparer.Ordinal))
+        {
+            string name = Path.GetFileName(f);
+            if (name is "TechTree.cs" or "AudioDirector.cs")
+                continue;
+            foreach (string line in File.ReadLines(f))
+            {
+                string code = line.TrimStart();
+                if (!code.StartsWith("//", StringComparison.Ordinal) && code.Contains("Actors[", StringComparison.Ordinal) && code.Contains(".Nodes", StringComparison.Ordinal))
+                    offenders.Add($"{name}: {code}");
             }
         }
         Assert.Empty(offenders);

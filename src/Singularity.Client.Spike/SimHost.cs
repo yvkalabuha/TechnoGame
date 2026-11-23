@@ -167,7 +167,7 @@ public sealed class SimHost : IDisposable
                     long n = (long)owed;
                     if (n > 0) { owed -= n; Advance(n); }
                 }
-                if (WhyActor != _lastWhyActor || PlayerActor != _subPlayer) Publish();
+                if (WhyActor != _lastWhyActor || WhyActor != _subShown || PlayerActor != _subPlayer) Publish();
                 Thread.Sleep(sp == 0 ? 20 : 8);
             }
         }
@@ -197,10 +197,11 @@ public sealed class SimHost : IDisposable
     }
 
     // Simulation thread only. A change applies to the view at once (a full rebuild without a tick), also while paused (ADR-0025 п. 3).
-    void SyncSubscription()
+    // Returns the shown actor it subscribed (one read of WhyActor), which Publish uses too: the view and the why_not of a snapshot are about the same actor.
+    int SyncSubscription()
     {
         int player = PlayerActor, shown = WhyActor;
-        if (player == _subPlayer && shown == _subShown) return;
+        if (player == _subPlayer && shown == _subShown) return shown;
         Span<int> set = stackalloc int[2];
         int n = 0;
         if (player >= 0) set[n++] = player;
@@ -208,11 +209,12 @@ public sealed class SimHost : IDisposable
         _session.SetViewSubscription(set[..n]);
         _session.RebuildView();
         _subPlayer = player; _subShown = shown;
+        return shown;
     }
 
     void Publish()
     {
-        SyncSubscription();
+        int wa = SyncSubscription();
         SliceView v = _session.View;
         if (v.Inputs != null && !ReferenceEquals(v, _lastWhyView))
         {
@@ -220,7 +222,6 @@ public sealed class SimHost : IDisposable
             for (int i = 0; i < v.Inputs.Actors.Length; i++) b[v.Inputs.Actors[i].Actor] = v.Inputs.Actors[i].Shares;
             _shares = b.MoveToImmutable();
         }
-        int wa = WhyActor;
         if (!ReferenceEquals(v, _lastWhyView) || wa != _lastWhyActor)
         {
             try
