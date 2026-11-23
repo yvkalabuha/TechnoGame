@@ -25,7 +25,10 @@ public sealed partial class PolicySystem
     private LongColumn _licMask = null!, _offerMask = null!, _licFlow = null!, _qMask = null!, _qPrice = null!;
     private LongColumn[] _bad = [];
 
-    private void AddEventColumns(Table table, CounterRng? events, IPolicyEvents? inputs, ImmutableArray<Fx6> exposure, int rows)
+    // Word 1 of the masks (nodes 64…127): registered only when the data has such nodes, so the schema of a 63-node slice is unchanged (H13).
+    private LongColumn? _licMask1, _offerMask1, _qMask1;
+
+    private void AddEventColumns(Table table, CounterRng? events, IPolicyEvents? inputs, ImmutableArray<Fx6> exposure, int rows, bool wideMask)
     {
         _events = events;
         _ev = inputs;
@@ -46,6 +49,12 @@ public sealed partial class PolicySystem
         _qMask = table.AddLong("pol.lic.q.mask");
         _qPrice = table.AddLong("pol.lic.q.price");
         _bad = [table.AddLong("pol.lic.bad.self"), table.AddLong("pol.lic.bad.empty"), table.AddLong("pol.lic.bad.gen"), table.AddLong("pol.lic.bad.money")];
+        if (wideMask)
+        {
+            _licMask1 = table.AddLong("pol.lic.mask.1");
+            _offerMask1 = table.AddLong("pol.lic.offer.1");
+            _qMask1 = table.AddLong("pol.lic.q.mask.1");
+        }
     }
 
     private void InitializeEvents(int n)
@@ -64,6 +73,26 @@ public sealed partial class PolicySystem
         _qPrice.Load(new long[n]);
         foreach (LongColumn c in _bad)
             c.Load(new long[n]);
+        _licMask1?.Load(new long[n]);
+        _offerMask1?.Load(new long[n]);
+        _qMask1?.Load(new long[n]);
+    }
+
+    // A mask is stored as two words; a mask with a node above 63 in a slice without the second word would be lost, so it throws.
+    private LicenceMask ReadMask(LongColumn lo, LongColumn? hi, int row) => new(unchecked((ulong)lo.Current[row]), hi is null ? 0 : unchecked((ulong)hi.Current[row]));
+
+    private void WriteNextMask(LongColumn lo, LongColumn? hi, int row, LicenceMask m)
+    {
+        CheckWidth(m);
+        lo.Next[row] = unchecked((long)m.Lo);
+        if (hi is not null)
+            hi.Next[row] = unchecked((long)m.Hi);
+    }
+
+    private void CheckWidth(LicenceMask m)
+    {
+        if (_licMask1 is null && m.Hi != 0)
+            throw new InvalidOperationException("A licence mask holds a node above 63, but the policy was built without the second mask word.");
     }
 
     // ---- reads (state in force at the month being computed)
@@ -74,13 +103,13 @@ public sealed partial class PolicySystem
     public int LicenceSeller(int actorRow) => _licSeller.Current[actorRow];
 
     /// <summary><c>lic_mask</c>: PRC of the seller's engine and hot section as of the deal (bit <c>n − 1</c> for node <c>n</c>).</summary>
-    public ulong LicenceMask(int actorRow) => unchecked((ulong)_licMask.Current[actorRow]);
+    public LicenceMask LicenceMask(int actorRow) => ReadMask(_licMask, _licMask1, actorRow);
 
     /// <summary><c>lic_start</c>: the month the licence began to act, −1 without one.</summary>
     public int LicenceStart(int actorRow) => _licStart.Current[actorRow];
 
     /// <summary><c>offer_mask</c>: masks of the offers of the last yearly step that nobody took.</summary>
-    public ulong OfferMask(int actorRow) => unchecked((ulong)_offerMask.Current[actorRow]);
+    public LicenceMask OfferMask(int actorRow) => ReadMask(_offerMask, _offerMask1, actorRow);
 
     /// <summary><c>LicenceFlow(a, t)</c>: price received minus price paid by the deals applied at the start of month t; it is reset at the start of the next month (contract §3.1 r7).</summary>
     public Fx6 LicenceFlow(int actorRow) => Fx6.FromRaw(_licFlow.Current[actorRow]);
@@ -159,7 +188,7 @@ public sealed partial class PolicySystem
             return;
         var profile = (PolicyProfile)_profile.Current[row];
         int gBuyer = _ev.EngineGen(row, t), held = _licGen.Current[row];
-        ulong unaccepted = 0;
+        LicenceMask unaccepted = default;
         bool taken = false;
         Fx6 baseNext = sharesNext.Procurement * budgetNext;
         // The money left after the upkeep of the book of t+1 (A43.3 (б)): computed once, only if an offer exists.
@@ -193,7 +222,7 @@ public sealed partial class PolicySystem
             {
                 _qSeller.Next[row] = s;
                 _qGen.Next[row] = gSeller;
-                _qMask.Next[row] = unchecked((long)subject.Mask);
+                WriteNextMask(_qMask, _qMask1, row, subject.Mask);
                 _qPrice.Next[row] = price.Raw;
                 taken = true;
             }
@@ -202,7 +231,7 @@ public sealed partial class PolicySystem
                 unaccepted |= subject.Mask;
             }
         }
-        _offerMask.Next[row] = unchecked((long)unaccepted);
+        WriteNextMask(_offerMask, _offerMask1, row, unaccepted);
     }
 
     // P3 (A43.3 (а), A43.7): the first link of W cannot be closed by waiting — no estimate, or more than 60 months.
@@ -236,7 +265,7 @@ public sealed partial class PolicySystem
             return;
         long[] flow = new long[n];
         int[] gen = _licGen.Current.ToArray(), seller = _licSeller.Current.ToArray(), start = _licStart.Current.ToArray(), qSeller = _qSeller.Current.ToArray();
-        long[] mask = _licMask.Current.ToArray();
+        long[] mask = _licMask.Current.ToArray(), mask1 = _licMask1?.Current.ToArray() ?? [];
         var bad = new long[_bad.Length][];
         for (int k = 0; k < bad.Length; k++)
             bad[k] = _bad[k].Current.ToArray();
@@ -246,7 +275,7 @@ public sealed partial class PolicySystem
             if (s < 0)
                 continue;
             qSeller[b] = -1;
-            ulong dealMask = unchecked((ulong)_qMask.Current[b]);
+            LicenceMask dealMask = ReadMask(_qMask, _qMask1, b);
             Fx6 price = Fx6.FromRaw(_qPrice.Current[b]);
             int dealGen = _qGen.Current[b];
             // «Active» is the lapse rule of A43.4 on the snapshot of the month: the licence of the buyer in force, not just a non-zero column.
@@ -258,7 +287,9 @@ public sealed partial class PolicySystem
             }
             gen[b] = dealGen;
             seller[b] = s;
-            mask[b] = unchecked((long)dealMask);
+            mask[b] = unchecked((long)dealMask.Lo);
+            if (_licMask1 is not null)
+                mask1[b] = unchecked((long)dealMask.Hi);
             start[b] = checked((int)month);
             flow[b] -= price.Raw;
             flow[s] += price.Raw;
@@ -266,6 +297,7 @@ public sealed partial class PolicySystem
         _licGen.Load(gen);
         _licSeller.Load(seller);
         _licMask.Load(mask);
+        _licMask1?.Load(mask1);
         _licStart.Load(start);
         _licFlow.Load(flow);
         _qSeller.Load(qSeller);

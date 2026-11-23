@@ -45,8 +45,8 @@ internal sealed class KnowledgeInputsAdapter(SliceWorld world) : IKnowledgeInput
                 }
             }
         }
-        ulong mask = world.Policy.LicenceMask(actorRow);
-        for (int n = 1; n <= 63; n++)
+        LicenceMask mask = world.Policy.LicenceMask(actorRow);
+        for (int n = 1; n <= LicenceMask.MaxNumber; n++)
         {
             if (LicenceRules.Has(mask, n) && world.Graph.RowOf(n) is >= 0 and int row)
                 rows.Add(row);

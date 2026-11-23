@@ -37,4 +37,19 @@ created: 2026-11-23
 ## Связанные документы
 `docs/architecture/notes/slice-horizon-2030.md`, `docs/research/slice-g5-g6-content.md`, `docs/reviews/slice-g5-g6-content-*.md`.
 
+## Ход работы
+- 2026-11-23 developer: базовые хеши (все колонки, seeds 1–3, месяцы 387 и 1019, Main) сняты на 2590da6 до правок: `tests/Singularity.Session.Tests/Fixtures/train2-baseline.txt`, тест `Train2IdentityTests`.
+- Core/Session/tests сделаны (см. «Результат»). Lab (страж слоёв, CSV по поколениям, одна строка в `SliceChecks.cs:381`) не сделан: `src/Singularity.Lab/**` вне зоны записи developer. Нужен simulation-engineer.
+
 ## Результат
+**Статус: частично. Часть Core/Session/tests готова, часть Lab (п. 4 описания) заблокирована зоной записи.**
+
+Сделано:
+- `LicenceMask` (два слова, узлы 1…127), `LicenceRules.Bit/Has/Validate` на нём; `Has` вне 1…127 бросает исключение (раньше молча `false`).
+- `PolicySystem`: второе слово масок (`pol.lic.mask.1`, `pol.lic.offer.1`, `pol.lic.q.mask.1`) регистрируется только при `wideLicenceMask` (SliceWorld: максимальный номер узла > 63). На текущих данных (максимум 61) колонок нет, схема и хеши не меняются. Узел выше 63 в узкой политике — исключение.
+- `KnowledgeInputsAdapter`: цикл 1…127; `LicenceView.Mask/OfferMask` — `LicenceMask`; `TestApiVersion` 14 → 15 (+ `session-surface.v15.txt`).
+- `KnowledgeParams.CostGenMultiplier`: G5 = 6,4, G6 = 10,2 (первое предложение TASK-0128 до калибровки; G0…G4 не тронуты, G7 по-прежнему бросает).
+- Тест `ProductClassTable`/`ProductsLayout` на 6 поколениях (af_class 5, ранги планера 6–7, pu_ranks 5–6): загрузчик принимает без правок.
+- `SchemaVersion` не менялся, golden не перезаписывались.
+
+Не сделано (зона): страж L_K/L_K0/L_P при поколении > 4; CSV `out_g/active_g` до G6 (`SliceObserver.cs:708`, `SliceTables.cs:51`); тест `actor_month` с 6 поколениями; запись в DEBT о коллизии ключей H10; `SliceChecks.cs:381` (`new LicenceView(0, -1, -1, 0, 0, …)` → `default, default`): без неё Lab не собирается, поэтому `verify.py` красный.

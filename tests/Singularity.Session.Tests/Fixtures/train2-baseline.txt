@@ -1,0 +1,7 @@
+# TASK-0131 train 2: ColumnProjection.Hash over ALL columns, generated on the base commit 2590da6 by Train2IdentityTests.PrintRows: seed month hash (Main config, threads 4, chunk 2)
+1 387 27056530fa493459d2f066f84fa8e81ac7d29275a82ff62a9bd68a150dff2550
+1 1019 e47f9a2cd9c32e20c462a161b27e44e2ce7ec0b80a792a520278033a913bc31b
+2 387 6af4c0736c65c13dfd8e4c7e8565d6fff401ccdf0adda5aba4e5135964d44f26
+2 1019 d79e209bf92538a5016adbb6e854b03def5ccd6f32cd22717c1ffca4e2c55459
+3 387 4b8546fad83548ced39993ad545f20c9e9df09cbab23588ee190c04745bbc660
+3 1019 274f08f13867af62351c92826db881b8f2fcb4c1c8d0926d608b7aac1ef63252

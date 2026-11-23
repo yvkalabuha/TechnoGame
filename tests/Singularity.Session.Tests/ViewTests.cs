@@ -127,7 +127,7 @@ public sealed class ViewWalk
             && l.Refusals[2] == w.Policy.BadLicenceCount(a, BadLicence.Gen) && l.Refusals[3] == w.Policy.BadLicenceCount(a, BadLicence.Money), $"month {t} actor {a}: refusals");
         See("licence held", l.Gen > 0);
         See("licence bought this month", l.Start == t);
-        See("licence offer", l.OfferMask != 0);
+        See("licence offer", !l.OfferMask.IsEmpty);
         (int ds, int de) = w.Policy.Disruption(a);
         Check("licence", av.Disruption == new DisruptionView(ds, de), $"month {t} actor {a}: disruption");
         See("disruption", ds >= 0);
@@ -491,7 +491,7 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
         if (t == typeof(FleetCommand))
             return typeof(FleetCommand).GetProperties().All(p => p.SetMethod is null || p.SetMethod.ReturnParameter.GetRequiredCustomModifiers().Contains(typeof(IsExternalInit)))
                 && typeof(FleetCommand).IsValueType;
-        return t.IsPrimitive || t == typeof(string) || t == typeof(Fx6) || t.IsEnum || viewTypes.Contains(t) || t == typeof(BudgetShares) || t == typeof(CivilDate) || t == typeof(TechKey) || t == typeof(NodeList);   // NodeList: a readonly struct over arrays that are never written after the build
+        return t.IsPrimitive || t == typeof(string) || t == typeof(Fx6) || t.IsEnum || viewTypes.Contains(t) || t == typeof(BudgetShares) || t == typeof(CivilDate) || t == typeof(TechKey) || t == typeof(LicenceMask) || t == typeof(NodeList);   // NodeList: a readonly struct over arrays that are never written after the build
     }
 
     [Fact]

@@ -72,7 +72,7 @@ public class T6dPrint
                     lastStart[a] = w.Policy.LicenceStart(a);
                     r.Licences.Add($"{r.Ids[w.Policy.LicenceSeller(a)]}->{r.Ids[a]} gen {w.Policy.LicenceGen(a)} month {lastStart[a]} {r.Profiles[a]} price {-w.Policy.LicenceFlow(a).Raw}");
                 }
-                if (m == 0 && r.Ids[a] == "SUN" && w.Policy.OfferMask(a) != 0)
+                if (m == 0 && r.Ids[a] == "SUN" && w.Policy.OfferMask(a).IsEmpty is false)
                     r.FirstOfferToSun = 0;
                 if (w.Policy.QualityProgrammeActive(a) && w.Policy.QualityProgrammeStart(a) != lastQp[a])
                 {

@@ -78,7 +78,7 @@ public readonly record struct BureauView(int Bureau, int Design, long Granted, l
 public readonly record struct QualityView(bool Active, int Start, int TriggerCount, int TrainingTarget);
 
 /// <summary>The licence of the actor as buyer; <see cref="Refusals"/> counts <c>BAD_LICENCE</c> by reason: Self, Empty, Gen, Money.</summary>
-public sealed record LicenceView(int Gen, int Seller, int Start, ulong Mask, ulong OfferMask, Fx6 Flow, ImmutableArray<long> Refusals, bool Active);
+public sealed record LicenceView(int Gen, int Seller, int Start, LicenceMask Mask, LicenceMask OfferMask, Fx6 Flow, ImmutableArray<long> Refusals, bool Active);
 
 public readonly record struct DisruptionView(int Start, int End);
 
