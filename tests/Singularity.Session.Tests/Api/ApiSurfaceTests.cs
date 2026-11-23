@@ -28,9 +28,9 @@ public class ApiSurfaceTests
     }
 
     [Fact]
-    public void TestApiVersion_IsFourteen_AllPinnedFilesExist_AndTheCurrentOneCarriesIt()
+    public void TestApiVersion_IsFifteen_AllPinnedFilesExist_AndTheCurrentOneCarriesIt()
     {
-        Assert.Equal(14, SliceSession.TestApiVersion);
+        Assert.Equal(15, SliceSession.TestApiVersion);
         Assert.All(Enumerable.Range(1, SliceSession.TestApiVersion), v => Assert.True(File.Exists(FilePath(v)), $"no pinned surface file for v{v}"));   // v1 stays as the record of the surface before TASK-0047
         Assert.StartsWith("# TestApiVersion = 1\n", File.ReadAllText(FilePath(1)).ReplaceLineEndings("\n"));
         Assert.StartsWith($"# TestApiVersion = {SliceSession.TestApiVersion}\n", File.ReadAllText(FilePath(SliceSession.TestApiVersion)).ReplaceLineEndings("\n"));

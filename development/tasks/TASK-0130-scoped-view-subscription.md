@@ -33,4 +33,10 @@ created: 2026-11-23
 ## Связанные документы
 `docs/decisions/ADR-0025-view-snapshot-buffer-ring.md`, `docs/reviews/adr-0025-*.md`.
 
+## Ход работы
+- 2026-11-23: Session: `ViewScope` (All по умолчанию, Subscribed), `SetViewSubscription` (owner thread), `RebuildView` (полная сборка без тика, того же Tick/хеша/месяца), флаг смены подписки отключает путь F7a, `NodeBlockCache.Drop`, `NodeList.IsPresent`, исключение "actor not subscribed", `TestApiVersion` 15 + `session-surface.v15.txt`.
+- Клиент: `SimHost.PlayerActor`, подписка {играемый, WhyActor} синхронизируется в `Publish` на потоке симуляции (при смене сразу `RebuildView`, и на паузе, и в беге); `TechTree`, `AudioDirector` проверяют `IsPresent`.
+- Блокер: `JetSliceModel.SurfaceVersion = 14` (src/Singularity.Lab, вне зоны developer) сравнивается с `TestApiVersion` на этапе компиляции; сборка Lab падает (CS0162). Нужна правка одной константы на 15 (simulation-engineer или Orchestrator).
+
 ## Результат
+Реализовано ADR-0025 разделы 1–5. Файлы: Session (SliceSession.cs, Views/NodeList.cs, Views/ViewBuilder.cs, Slice/SliceRunConfig*.cs), клиент (SimHost, TechTree, AudioDirector, Main), тесты tests/Singularity.Session.Tests/ViewSubscriptionTests.cs, Api/session-surface.v15.txt и правки трёх существующих тестов. Проверка: тесты Session (486 пройдено), Kernel, Core, Client.Audio зелёные; verify.py красный на сборке Lab (см. выше). Кадры 1920x1080: shots-out/tech_tree_a.png (СССР, не играемый) и shots-out/tree_nolegend_1920x1080.png (США, играемый).

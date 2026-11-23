@@ -44,6 +44,7 @@ public sealed class SimHost : IDisposable
     volatile bool _stop;
     int _speed;
     int _whyActor;
+    int _playerActor = -1;
     volatile HostSnapshot _snap;
     volatile string _status = "status.loading";
     volatile string _fatal;
@@ -57,6 +58,8 @@ public sealed class SimHost : IDisposable
     long _seq;
     SliceView _lastWhyView;
     int _lastWhyActor = -1;
+    // The actors whose node blocks the view carries (ADR-0025): the played one and the shown one. -1 = not set yet.
+    int _subPlayer = -1, _subShown = -1;
     WhyNotTarget? _target; IReadOnlyList<Link> _links = Array.Empty<Link>(); string _whyErr = "";
     ImmutableArray<BudgetShares?> _shares;
     double _lastTickMs;
@@ -80,6 +83,8 @@ public sealed class SimHost : IDisposable
     public void Start() => _thread.Start();
 
     public int Speed { get => Volatile.Read(ref _speed); set => Volatile.Write(ref _speed, value); }
+    /// <summary>The actor the player plays; its nodes are always in the view (the audio reads them). Set once by the UI.</summary>
+    public int PlayerActor { get => Volatile.Read(ref _playerActor); set => Volatile.Write(ref _playerActor, value); }
     public int WhyActor { get => Volatile.Read(ref _whyActor); set { Volatile.Write(ref _whyActor, value); } }
 
     /// <summary>Queues a command of the player (source class Player, id 0). While paused it stays pending and applies at the first tick after unpause.</summary>
@@ -130,7 +135,7 @@ public sealed class SimHost : IDisposable
             string root = Environment.GetEnvironmentVariable("SINGULARITY_ROOT") ?? RepoRoot();
             Data = _preloaded ?? ModLoader.Load(Path.Combine(root, "mods", "core"));
             _status = "status.session";
-            _session = SliceSession.Create(Data, new SliceRunConfig { Seed = (ulong)_seed, HashCheckpoints = false });
+            _session = SliceSession.Create(Data, new SliceRunConfig { Seed = (ulong)_seed, HashCheckpoints = false, ViewScope = ViewScope.Subscribed });
             Layout = _session.Layout;
             StartHash = _session.LastHash;
             var arr = ImmutableArray.CreateBuilder<BudgetShares?>(Layout.ActorIds.Length);
@@ -162,7 +167,7 @@ public sealed class SimHost : IDisposable
                     long n = (long)owed;
                     if (n > 0) { owed -= n; Advance(n); }
                 }
-                if (WhyActor != _lastWhyActor) Publish();
+                if (WhyActor != _lastWhyActor || PlayerActor != _subPlayer) Publish();
                 Thread.Sleep(sp == 0 ? 20 : 8);
             }
         }
@@ -191,8 +196,23 @@ public sealed class SimHost : IDisposable
         Publish();
     }
 
+    // Simulation thread only. A change applies to the view at once (a full rebuild without a tick), also while paused (ADR-0025 п. 3).
+    void SyncSubscription()
+    {
+        int player = PlayerActor, shown = WhyActor;
+        if (player == _subPlayer && shown == _subShown) return;
+        Span<int> set = stackalloc int[2];
+        int n = 0;
+        if (player >= 0) set[n++] = player;
+        if (shown >= 0 && shown != player) set[n++] = shown;
+        _session.SetViewSubscription(set[..n]);
+        _session.RebuildView();
+        _subPlayer = player; _subShown = shown;
+    }
+
     void Publish()
     {
+        SyncSubscription();
         SliceView v = _session.View;
         if (v.Inputs != null && !ReferenceEquals(v, _lastWhyView))
         {

@@ -240,6 +240,7 @@ public sealed partial class AudioDirector : Node
     {
         if (Actor < 0 || Actor >= v.Actors.Length) return;
         var a = v.Actors[Actor];
+        if (!a.Nodes.IsPresent) return;   // the played actor is always subscribed (SimHost.PlayerActor)
         int known = 0, series = 0;
         foreach (var n in a.Nodes) if (n.Known) known++;
         foreach (var d in a.Designs) if (d.Stage == Singularity.Core.Products.DesignStage.Series) series++;

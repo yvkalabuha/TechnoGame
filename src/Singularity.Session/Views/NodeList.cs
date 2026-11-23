@@ -14,7 +14,11 @@ public readonly struct NodeList : IReadOnlyList<NodeView>, IEquatable<NodeList>
 
     internal NodeList(NodeBlock block) => _block = block;
 
-    internal bool HasBlock => _block is not null;
+    /// <summary>
+    /// False for an actor the view does not carry the nodes of (not subscribed, ADR-0025): no block, <see cref="Count"/> 0, the indexer throws.
+    /// An actor of the slice that is subscribed always has a present list, because the graph shape is common to all actors.
+    /// </summary>
+    public bool IsPresent => _block is not null;
 
     /// <summary>Identity of the block, for tests of the reuse (R2).</summary>
     internal object? BlockIdentity => _block;
@@ -28,7 +32,7 @@ public readonly struct NodeList : IReadOnlyList<NodeView>, IEquatable<NodeList>
     {
         get
         {
-            NodeBlock b = _block ?? throw new IndexOutOfRangeException();
+            NodeBlock b = _block ?? throw new InvalidOperationException("actor not subscribed");
             NodeShape sh = b.Shape;
             int p = sh.ProcessIndex[row];
             return new NodeView(sh.Numbers[row], Bit(b.Known, row), Bit(b.ByLicence, row), p < 0 ? null : b.Processes[p], b.KnownSince?[row]);
@@ -167,6 +171,7 @@ internal sealed class NodeBlock
 /// <summary>
 /// The node blocks of the last snapshot and the state they were read from: the month of the snapshot (<c>next</c>) and the version stamp of the columns
 /// (<see cref="SliceWorld.NodeStamp"/>). A snapshot of the same month and stamp takes the blocks as they are (R2, TASK-0103). Used by one thread.
+/// Holds the blocks of the subscribed actors only (ADR-0025).
 /// Invariant: the blocks also read <c>Knowledge.LastLicenceGrants</c>, which is not a column; it is rewritten only by the monthly merge, which changes the month of the key.
 /// </summary>
 internal sealed class NodeBlockCache
@@ -187,8 +192,11 @@ internal sealed class NodeBlockCache
     public bool TryGet(int actor, out NodeList list)
     {
         list = _blocks[actor];
-        return list.HasBlock;
+        return list.IsPresent;
     }
 
     public void Put(int actor, NodeList list) => _blocks[actor] = list;
+
+    /// <summary>The cache holds blocks of subscribed actors only (ADR-0025 п. 8).</summary>
+    public void Drop(int actor) => _blocks[actor] = default;
 }
