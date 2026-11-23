@@ -21,6 +21,7 @@
 - TASK-0128 [IN_PROGRESS] G5/G6 content for the jet slice: nodes, alternatives, anchors (train 2, T-C) (research-scientist)
 - TASK-0129 [IN_PROGRESS] Fleet ageing without replacement in Core (#431, #435-#437) (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
+- TASK-0133 [APPROVED] G5/G6 data in mods on the train-2 branch and calibration probe (O-038) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
