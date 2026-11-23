@@ -146,6 +146,7 @@
 | [TASK-0128](../development/tasks/TASK-0128-g5-g6-content-design.md) | IN_PROGRESS | G5/G6 content for the jet slice: nodes, alternatives, anchors (train 2, T-C) | MS-M05 |
 | [TASK-0129](../development/tasks/TASK-0129-fleet-ageing-core.md) | IN_PROGRESS | Fleet ageing without replacement in Core (#431, #435-#437) | MS-M05 |
 | [TASK-0130](../development/tasks/TASK-0130-scoped-view-subscription.md) | IN_PROGRESS | Scoped client view: node blocks only for subscribed actors (ADR-0025) | MS-M05 |
+| [TASK-0131](../development/tasks/TASK-0131-g5-g6-core-changes.md) | APPROVED | Core changes for G5/G6 data: licence mask word 2, generation cost multipliers, control-layer guards (train 2, T-G) | MS-M05 |
 
 ## Гипотезы
 
