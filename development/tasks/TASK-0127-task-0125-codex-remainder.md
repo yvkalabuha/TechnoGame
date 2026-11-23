@@ -40,5 +40,10 @@ created: 2026-11-22
 - [reviewer] `Marshal` и `GCHandle` добавлены в `UnsafeClasses`; мутанты `Pin` (GCHandle.Alloc) и `Copy` (Marshal.Copy) утверждаются в тесте. Откат проверен только вместе с откатом finding 1 (одним прогоном), отдельно утверждения Marshal/GCHandle без добавления классов не гонялись.
 - [reviewer] текст причины для `ViewBuilder.Inputs` исправлен в `UnsafeUses` (причина живёт в тесте, не в src).
 
+- Круг 2 по замечаниям reviewer (CHANGES на b9c7a37):
+  1. [high] `IlScanner.Instruction` получил `Offset` и `Targets` (короткий и длинный переход, switch); цели обработчиков исключений берутся из `ExceptionHandlingClauses`. `IsFreshArray` возвращает false, если между производителем и вызовом (включительно) есть цель перехода. Мутанты `WrapCond` и `WrapSwitch`. Проверено откатом: с отключённой проверкой целей тест `TheUnsafeScan_SeesEachMutant_AndOnlyTheListedPairIsExempt` падает, с проверкой проходит.
+  2. [low] `ToArray` сопоставляется по `FullName` (`System.Linq.Enumerable`) и определению дженерика (`List<>`, `ReadOnlySpan<>`). Отдельного мутанта нет (проверка только чтением кода и существующими `FreshSpread`/`FreshCollection`).
+  3. [medium] `Overlap`: месяц считается один раз, когда мир вошёл в шаг при `_active == 2`; утверждение `Overlapped >= 1`, сообщение «overlapped in N of 37 months». Проверено: под общим lock падают тесты («overlapped in 0 of 37 months»), без него 23 из 23 проходят.
+
 ## Разногласия
-- Доказательство перекрытия именно внутри фазы compute (Parallel.For) без хука в продукте невозможно; счётчик доказывает перекрытие целых вызовов `StepThroughMonth` (барьер на месяц). Предложение: если нужен детерминированный рандеву внутри compute, добавить в `ViewBuilder.Inputs` (internal) необязательный тестовый колбэк; в этой задаче он не добавлялся (запрет менять поведение Core/Session). Решение за Orchestrator.
+- Доказательство перекрытия именно внутри фазы compute (Parallel.For) без хука в продукте невозможно; счётчик доказывает перекрытие целых вызовов `StepThroughMonth` (барьер на месяц). Предложение: если нужен детерминированный рандеву внутри compute, добавить в `ViewBuilder.Inputs` (internal) необязательный тестовый колбэк; в этой задаче он не добавлялся (запрет менять поведение Core/Session). Решение Orchestrator: не в этой задаче, остаётся предложением на отдельную задачу.
