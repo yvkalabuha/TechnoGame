@@ -305,6 +305,106 @@ node-s8-app-jet_fighter_g4 =
     .short = Истребит. 4
     .anchor = F-15: первый полёт 27.07.1972
 
+node-s8-fnd-electronic_flight_control_theory =
+    .name = Теория электронного управления полётом
+    .short = Эл. управл.
+    .anchor = F-8 DFBW: первый полёт (25.05.1972)
+
+node-s8-fnd-edge_wave_diffraction =
+    .name = Теория дифракции на кромках
+    .short = Дифр. кромок
+    .anchor = Уфимцев: метод краевых волн (1962, оценка)
+
+node-s5-prn-single_crystal_growth =
+    .name = Рост монокристаллов
+    .short = Монокристалл
+    .anchor = оценка: 1974
+
+node-s5-prn-fibre_composite_laminate_design =
+    .name = Проектирование слоистых композитов
+    .short = Композиты
+    .anchor = F-14: борэпоксидные панели (1970)
+
+node-s8-prn-low_observable_shaping =
+    .name = Малозаметные формы
+    .short = Малозаметн.
+    .anchor = оценка: 1975
+
+node-s8-eng-fly_by_wire_relaxed_stability =
+    .name = Электродистанционное управление, ослабленная устойчивость
+    .short = ЭДСУ
+    .anchor = YF-16: первый полёт (02.02.1974)
+
+node-s8-eng-turbofan_g5 =
+    .name = ТРДД, поколение 5
+    .short = ТРДД 5
+    .anchor = F100 DEEC: цифровая автоматика (1981-83)
+
+node-s8-eng-composite_airframe =
+    .name = Композитный планер
+    .short = Комп. планер
+    .anchor = YAV-8B: первый полёт (09.11.1978)
+
+node-s8-eng-low_observable_airframe =
+    .name = Малозаметный планер
+    .short = Малозам. пл.
+    .anchor = Have Blue: первый полёт (01.12.1977)
+
+node-s8-eng-thrust_vectoring_supercruise_engine =
+    .name = Двигатель с вектором тяги и сверхзвуком без форсажа
+    .short = Вектор тяги
+    .anchor = YF-22: вектор тяги 15.11.1990, сверхзвук без форсажа 03.11.1990
+
+node-s8-cmp-turbine_blade_single_crystal =
+    .name = Монокристаллическая лопатка турбины
+    .short = Лопатка МК
+    .anchor = оценка: 1982
+
+node-s5-prc-single_crystal_casting =
+    .name = Литьё монокристаллов
+    .short = Литьё МК
+    .anchor = оценка: 1982
+
+node-s8-prc-composite_layup_cure =
+    .name = Выкладка и отверждение композитов
+    .short = Выкладка
+    .anchor = оценка: 1978
+
+node-s5-prc-low_observable_finishing =
+    .name = Малозаметное покрытие
+    .short = Покр. малоз.
+    .anchor = оценка: 1981
+
+node-s8-app-jet_fighter_g5 =
+    .name = Реактивный истребитель, поколение 5
+    .short = Истребит. 5
+    .anchor = Mirage 2000 в строю (1984)
+
+node-s8-app-jet_fighter_g6 =
+    .name = Реактивный истребитель, поколение 6
+    .short = Истребит. 6
+    .anchor = F-22: начальная готовность (12.2005)
+
+node-s8-eng-aesa_sensor_fusion =
+    .name = АФАР и слияние данных датчиков
+    .short = АФАР
+    .anchor = APG-77: лётные испытания (11.1997, оценка)
+
+node-s5-cmp-ceramic_matrix_composite =
+    .name = Керамоматричный композит (CMC)
+    .short = CMC
+    .anchor = GE: CMC-кожухи в LEAP (2016, оценка)
+
+node-s5-prc-cmc_fabrication =
+    .name = Изготовление CMC-деталей
+    .short = Изг. CMC
+    .anchor = оценка: 2016
+
+node-s8-eng-adaptive_cycle_engine =
+    .name = Двигатель адаптивного цикла
+    .short = Адаптивный
+    .anchor = GE XA100: испытания (2021, оценка)
+
 # Product classes and the scenario.
 
 pc-jet_fighter =
@@ -402,6 +502,38 @@ pc-jet_fighter-alt-afterburner-ab_none =
 pc-jet_fighter-alt-afterburner-ab_on =
     .name = С форсажем
     .short = С форсажем
+
+pc-jet_fighter-alt-engine-eng_g5 =
+    .name = ТРДД, поколение 5
+    .short = ТРДД 5
+
+pc-jet_fighter-alt-engine-eng_g6 =
+    .name = Двигатель с вектором тяги, поколение 6
+    .short = Вектор тяги
+
+pc-jet_fighter-alt-engine-eng_g6_adaptive =
+    .name = Двигатель адаптивного цикла
+    .short = Адаптивный
+
+pc-jet_fighter-alt-hot_section-hot_sc_sc =
+    .name = Монокристаллические лопатки
+    .short = Лопатки МК
+
+pc-jet_fighter-alt-hot_section-hot_sc_cmc =
+    .name = Горячая часть из керамокомпозита
+    .short = CMC-горяч.
+
+pc-jet_fighter-alt-airframe-af_fbw =
+    .name = Планер с ЭДСУ
+    .short = ЭДСУ
+
+pc-jet_fighter-alt-airframe-af_composite =
+    .name = Композитный планер
+    .short = Композит
+
+pc-jet_fighter-alt-airframe-af_lo_composite =
+    .name = Малозаметный композитный планер
+    .short = Малозам.
 
 scenario-jet_slice_1945 =
     .name = Реактивная авиация, 1945

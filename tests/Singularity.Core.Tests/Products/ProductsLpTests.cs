@@ -17,8 +17,8 @@ public class ProductsLpTests
 
     internal static ProductsParams LpParams => new()
     {
-        LpTDesign = [2, 4, 6, 8],
-        LpRho = [Fx6.FromInt(100), Fx6.FromInt(50), Fx6.FromInt(20), Fx6.FromInt(10)],
+        LpTDesign = [2, 4, 6, 8, 10, 12],
+        LpRho = [Fx6.FromInt(100), Fx6.FromInt(50), Fx6.FromInt(20), Fx6.FromInt(10), Fx6.FromInt(5), Fx6.FromInt(2)],
     };
 
     /// <summary>An L_P run whose AI also sends every full-model command; L_P must ignore them.</summary>

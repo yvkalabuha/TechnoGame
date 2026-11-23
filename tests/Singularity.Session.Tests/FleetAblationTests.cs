@@ -11,7 +11,7 @@ public class FleetAblationTests
     /// is reproduced on the <c>RHMS_OFF</c> data set (the D1 scenario, mod rhms_off), which is the data of T6c2.
     /// </summary>
     private static readonly Singularity.Core.Data.GameData OffData = Singularity.Core.Data.ModLoader.Load(
-        Path.Combine(SliceTestData.RepoRoot, "mods", "core"), Path.Combine(SliceTestData.RepoRoot, "mods", "rhms_off"));
+        Path.Combine(SliceTestData.RepoRoot, "tests", "Singularity.Session.Tests", "Fixtures", "core-g4"), Path.Combine(SliceTestData.RepoRoot, "mods", "rhms_off"));
 
     [Fact]
     public void NoRetire_ReproducesTheT6c2ColumnsBitForBit()

@@ -437,5 +437,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
     // Re-recorded in TASK-0115: schema v11 (cmd.*.gen, pol.*.gen columns); the run ends before the first slot reuse, the AI's handles are all current, the old columns are unchanged.
     // Re-recorded in TASK-0121 (#423), reason: schema v12 (new columns prd.d*.cohort.1978…2030 and prd.d*.q.1: the cohort years to 2030, the second block of the q mask); the old columns are unchanged (HorizonTests projection at 48 points of the build before the change, GoldenProjectionAgainstMainTests), so only the new columns change the hash.
     // Re-recorded in TASK-0129 (fleet ageing, #431/#435-#437), reason: schema v13 (new column prd.d*.replCredit, in the hash from month 0); the old columns are unchanged to month 176 (projection tests: HorizonTests, T6dTests, FleetAblationTests, ToolingUnmetTests, GoldenProjectionAgainstMainTests), so only the new column changes these hashes.
-    private const string Golden150 = "e32429bdd1dacca2c4f1f81e6064fac4f83b84eb8bdbebafa95c63ff880faf96";
+    // Re-recorded in TASK-0133 (train 2: G5/G6 data + fleet ageing): nodes 62-81 and the G5/G6 alternatives change every trajectory; reason and list in the task file.
+    private const string Golden150 = "0f682e218973fbf68053c6685f8c26ad8fe054239d716543cf23a8a4e3772e21";
+    // Earlier records:
 }

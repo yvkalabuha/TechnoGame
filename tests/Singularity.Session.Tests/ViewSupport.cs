@@ -79,6 +79,15 @@ internal static class ViewSupport
         return Convert.ToHexStringLower(hash.GetHashAndReset());
     }
 
+    /// <summary>Run on the 61-node data before TASK-0133 (control layers L_K, L_K0, L_P reject generations above 4).</summary>
+    public static SliceSession RunLegacy(SliceRunConfig config, int months)
+    {
+        SliceSession s = SliceTestData.CreateLegacy(config);
+        for (long t = 0; t < months; t++)
+            s.StepThroughMonth(t);
+        return s;
+    }
+
     public static SliceSession Run(SliceRunConfig config, int months)
     {
         SliceSession s = SliceTestData.Create(config);

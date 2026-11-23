@@ -36,7 +36,8 @@ public class LinkedRunTests
     // Re-recorded in TASK-0115: schema v11 (cmd.*.gen, pol.*.gen columns); the run is 60 months, no slot is reused, the old columns are unchanged.
     // Re-recorded in TASK-0121 (#423), reason: schema v12 (new columns prd.d*.cohort.1978…2030 and prd.d*.q.1: the cohort years to 2030, the second block of the q mask); the old columns are unchanged (HorizonTests projection at 48 points of the build before the change, GoldenProjectionAgainstMainTests), so only the new columns change the hash.
     // Re-recorded in TASK-0129 (fleet ageing, #431/#435-#437), reason: schema v13 (new column prd.d*.replCredit, in the hash from month 0); the old columns are unchanged to month 176 (projection tests: HorizonTests, T6dTests, FleetAblationTests, ToolingUnmetTests, GoldenProjectionAgainstMainTests), so only the new column changes these hashes.
-    private const string Golden60 = "667265a052542cb266336a9fee2b037648d95bac96fc115614bab315e8c0c9e1";
+    // Re-recorded in TASK-0133 (train 2: G5/G6 data + fleet ageing): nodes 62-81 and the G5/G6 alternatives change every trajectory; reason and list in the task file.
+    private const string Golden60 = "c3956dabe71e758b83574dfa6f60612e417fdb6b85ad795edc3de495193e385f";
 
     private sealed class Run
     {

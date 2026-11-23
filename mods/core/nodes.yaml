@@ -107,6 +107,8 @@ define:
       - {to: s8.eng.variable_geometry_inlet, weight: 0.6}
       - {to: s8.prc.machined_integral_skins, weight: 0.6}
       - {to: s8.eng.mach2_airframe_g4, weight: 0.3}
+      - {to: s8.eng.fly_by_wire_relaxed_stability, weight: 0.3}
+      - {to: s8.eng.aesa_sensor_fusion, weight: 0.3}
     anchor:
       year: 1947
       source: "S28"
@@ -904,3 +906,272 @@ define:
       year: 1972
       source: "S26"
       estimated: false
+  - id: s8.fnd.electronic_flight_control_theory
+    number: 62
+    type: FND
+    gen: 5
+    discipline: aero
+    cluster: AERO
+    requires: [s8.fnd.transonic_aerodynamics]
+    hazard: hz
+    informs:
+      - {to: s8.eng.fly_by_wire_relaxed_stability, weight: 0.6}
+      - {to: s8.eng.aesa_sensor_fusion, weight: 0.6}
+      - {to: s8.eng.low_observable_airframe, weight: 0.3}
+    anchor:
+      year: 1972
+      source: "G56-S-A"
+      estimated: false
+  - id: s8.fnd.edge_wave_diffraction
+    number: 63
+    type: FND
+    gen: 5
+    discipline: aero
+    cluster: AERO
+    requires: [s8.fnd.compressible_flow]
+    hazard: hz
+    informs:
+      - {to: s8.eng.low_observable_airframe, weight: 0.3}
+    anchor:
+      year: 1962
+      source: "G56-S-B"
+      estimated: true
+  - id: s5.prn.single_crystal_growth
+    number: 64
+    type: PRN
+    gen: 5
+    discipline: metal
+    cluster: MET
+    requires: [s5.prc.ds_casting]
+    hazard: hz
+    anchor:
+      year: 1974
+      source: "G56-S-C"
+      estimated: true
+  - id: s5.prn.fibre_composite_laminate_design
+    number: 65
+    type: PRN
+    gen: 5
+    discipline: chem
+    cluster: CHEM
+    requires: [s5.cmp.aluminium_alloy_sheet]
+    hazard: hz
+    anchor:
+      year: 1970
+      source: "G56-S-D"
+      estimated: false
+  - id: s8.prn.low_observable_shaping
+    number: 66
+    type: PRN
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    requires: [s8.fnd.edge_wave_diffraction]
+    hazard: hz
+    anchor:
+      year: 1975
+      source: "G56-S-B"
+      estimated: true
+  - id: s8.eng.fly_by_wire_relaxed_stability
+    number: 67
+    type: ENG
+    gen: 5
+    discipline: aero
+    cluster: AERO
+    requires: [s8.fnd.electronic_flight_control_theory, s8.eng.all_moving_tail]
+    hazard: none
+    anchor:
+      year: 1974
+      source: "G56-S-E"
+      estimated: false
+  - id: s8.eng.turbofan_g5
+    number: 68
+    type: ENG
+    gen: 5
+    discipline: prop
+    cluster: AERO
+    requires: [s8.eng.turbofan_g4, s8.fnd.electronic_flight_control_theory]
+    hazard: key
+    anchor:
+      year: 1981
+      source: "G56-S-F"
+      estimated: false
+  - id: s8.eng.composite_airframe
+    number: 69
+    type: ENG
+    gen: 5
+    discipline: aero
+    cluster: AERO
+    requires: [s5.prn.fibre_composite_laminate_design, s8.eng.mach2_airframe_g4]
+    hazard: none
+    anchor:
+      year: 1978
+      source: "G56-S-G"
+      estimated: false
+  - id: s8.eng.low_observable_airframe
+    number: 70
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    requires: [s8.prn.low_observable_shaping, s8.eng.fly_by_wire_relaxed_stability]
+    hazard: none
+    anchor:
+      year: 1977
+      source: "G56-S-H"
+      estimated: false
+  - id: s8.eng.thrust_vectoring_supercruise_engine
+    number: 71
+    type: ENG
+    gen: 6
+    discipline: prop
+    cluster: AERO
+    requires: [s8.eng.turbofan_g5, s8.cmp.turbine_blade_single_crystal]
+    hazard: key
+    anchor:
+      year: 1990
+      source: "G56-S-I"
+      estimated: false
+  - id: s8.cmp.turbine_blade_single_crystal
+    number: 72
+    type: CMP
+    gen: 5
+    discipline: prop
+    cluster: AERO
+    requires: [s5.prn.single_crystal_growth, s8.cmp.turbine_blade_cooled]
+    hazard: key
+    anchor:
+      year: 1982
+      source: "G56-S-C"
+      estimated: true
+  - id: s5.prc.single_crystal_casting
+    number: 73
+    type: PRC
+    gen: 5
+    discipline: metal
+    cluster: MET
+    tier: 5
+    capability_req:
+      precision: 5.5
+      purity: 5.5
+      quality_control: 5.5
+    requires: [s5.prn.single_crystal_growth, s5.prc.ds_casting]
+    hazard: key
+    labour_p: 5000
+    anchor:
+      year: 1982
+      source: "G56-S-C"
+      estimated: true
+  - id: s8.prc.composite_layup_cure
+    number: 74
+    type: PRC
+    gen: 5
+    discipline: aero
+    cluster: AERO
+    tier: 4
+    capability_req:
+      precision: 4.5
+      quality_control: 4.5
+    requires: [s5.prn.fibre_composite_laminate_design]
+    hazard: none
+    labour_p: 8000
+    anchor:
+      year: 1978
+      source: "G56-S-G"
+      estimated: true
+  - id: s5.prc.low_observable_finishing
+    number: 75
+    type: PRC
+    gen: 6
+    discipline: chem
+    cluster: CHEM
+    tier: 5
+    capability_req:
+      precision: 5
+      purity: 5.5
+      quality_control: 5.5
+    requires: [s8.prn.low_observable_shaping]
+    hazard: none
+    labour_p: 6000
+    anchor:
+      year: 1981
+      source: "G56-S-H"
+      estimated: true
+  - id: s8.app.jet_fighter_g5
+    number: 76
+    type: APP
+    gen: 5
+    discipline: aero
+    cluster: AERO
+    requires: [s8.eng.fly_by_wire_relaxed_stability, {any_of: [s8.eng.composite_airframe, s8.eng.turbofan_g5]}]
+    hazard: none
+    anchor:
+      year: 1984
+      source: "G56-S-J"
+      estimated: false
+  - id: s8.app.jet_fighter_g6
+    number: 77
+    type: APP
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    requires: [s8.eng.thrust_vectoring_supercruise_engine, s8.eng.low_observable_airframe, s8.eng.aesa_sensor_fusion]
+    hazard: none
+    anchor:
+      year: 2005
+      source: "G56-S-I"
+      estimated: false
+  - id: s8.eng.aesa_sensor_fusion
+    number: 78
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    requires: [s8.fnd.electronic_flight_control_theory]
+    hazard: none
+    anchor:
+      year: 1997
+      source: "G56-S-L"
+      estimated: true
+  - id: s5.cmp.ceramic_matrix_composite
+    number: 79
+    type: CMP
+    gen: 6
+    discipline: chem
+    cluster: CHEM
+    requires: [s8.cmp.turbine_blade_single_crystal, s5.prc.ceramic_shell_moulding]
+    hazard: key
+    anchor:
+      year: 2016
+      source: "G56-S-M"
+      estimated: true
+  - id: s5.prc.cmc_fabrication
+    number: 80
+    type: PRC
+    gen: 6
+    discipline: chem
+    cluster: CHEM
+    tier: 5
+    capability_req:
+      precision: 5.5
+      purity: 5.5
+      quality_control: 5.5
+    requires: [s5.cmp.ceramic_matrix_composite, s5.prc.ceramic_shell_moulding]
+    hazard: none
+    labour_p: 6500
+    anchor:
+      year: 2016
+      source: "G56-S-M"
+      estimated: true
+  - id: s8.eng.adaptive_cycle_engine
+    number: 81
+    type: ENG
+    gen: 6
+    discipline: prop
+    cluster: AERO
+    requires: [s8.eng.thrust_vectoring_supercruise_engine, s5.cmp.ceramic_matrix_composite]
+    hazard: key
+    anchor:
+      year: 2021
+      source: "G56-S-N"
+      estimated: true

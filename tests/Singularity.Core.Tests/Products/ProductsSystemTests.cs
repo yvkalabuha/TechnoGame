@@ -222,7 +222,7 @@ public class ProductsSystemTests
     [Fact]
     public void CanonicalLp_StartsAfterTDesign_WithRhoTimesBudget()
     {
-        var parameters = new ProductsParams { LpTDesign = [2, 2, 2, 2], LpRho = [Fx6.FromInt(100), Fx6.FromInt(50), Fx6.FromInt(20), Fx6.FromInt(10)] };
+        var parameters = new ProductsParams { LpTDesign = [2, 2, 2, 2, 2, 2], LpRho = [Fx6.FromInt(100), Fx6.FromInt(50), Fx6.FromInt(20), Fx6.FromInt(10), Fx6.FromInt(5), Fx6.FromInt(2)] };
         var h = new ProductsHarness(mode: ProductsMode.CanonicalLp, parameters: parameters)
         {
             Knows = (a, n) => a == Usa && ProbeKnows(2, n),
