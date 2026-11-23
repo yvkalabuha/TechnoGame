@@ -28,6 +28,16 @@ public class SettingsLogicTests
     [InlineData(1920, 1050, 150, false)]
     public void ScaleFloor_RejectsAClampedWindow(int w, int h, double ui, bool ok) => Assert.Equal(ok, SettingsLogic.ScaleFloorOk(w, h, ui));
 
+    [Theory]
+    [InlineData(1.0, 1920, 1080, 100, true)]
+    [InlineData(1.5, 1920, 1080, 150, true)]
+    [InlineData(1.0, 1920, 1080, 150, false)]   // the setting did not take effect: ScaleFloorOk alone would pass this
+    [InlineData(1.5, 1920, 1080, 100, false)]
+    public void ScaleApplied_ComparesTheObservedScaleWithTheSetting(double obs, int w, int h, double ui, bool ok) => Assert.Equal(ok, SettingsLogic.ScaleApplied(obs, w, h, ui));
+
+    [Fact]
+    public void ScaleTick_AtLeast2PhysicalPxAtBaseScale() => Assert.True(SettingsLogic.PixelsPerDu(1920, 1080, 100) * SettingsLogic.MinTickDu >= 2);
+
     [Fact]
     public void WhyNotMark_AtLeast16PhysicalPxAtBaseScale() => Assert.True(SettingsLogic.PixelsPerDu(1920, 1080, 100) * SettingsLogic.WhyNotMarkDu >= 16);
 

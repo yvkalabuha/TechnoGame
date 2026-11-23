@@ -31,5 +31,28 @@ public class TextWrapTests
     }
 
     [Fact]
+    public void AHardBreakEndsALineAndIsNeverMeasuredInAWord()
+    {
+        Assert.Equal(new[] { "aa", "bb", "cc" }, TextWrap.Lines("aa\nbb cc", 14, W));
+    }
+
+    [Fact]
+    public void AWordIsNotBrokenInsideASurrogatePair()
+    {
+        var l = TextWrap.Lines("\U0001F600\U0001F600\U0001F600", 7, W);
+        Assert.All(l, s => { Assert.False(char.IsHighSurrogate(s[^1])); Assert.False(char.IsLowSurrogate(s[0])); });
+        Assert.Equal(3, l.Count);
+    }
+
+    [Fact]
+    public void LeaderIsNeededOnlyWhenAnotherNodeIsAsNear()
+    {
+        var far = new (float, float)[] { (200, 0) };
+        var near = new (float, float)[] { (30, 0) };
+        Assert.False(LabelGeometry.NeedsLeader(0, 0, far, 10, -5, 60, 10));
+        Assert.True(LabelGeometry.NeedsLeader(0, 0, near, 10, -5, 60, 10));
+    }
+
+    [Fact]
     public void OneCharacterWiderThanTheLineDoesNotLoop() => Assert.Equal(3, TextWrap.Lines("WWW", 3, W).Count);
 }

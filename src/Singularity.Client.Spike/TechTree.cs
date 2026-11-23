@@ -485,7 +485,7 @@ public sealed partial class TechTree : Control
         {
             float a = Mathf.Tau * (y - 1910) / 190f - Mathf.Pi / 2;
             var d = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
-            _cv.DrawLine(c + d * r, c + d * (r + (y % 50 == 0 ? 6f : 3f)), Ui.Ink, 1f, true);
+            _cv.DrawLine(c + d * r, c + d * (r + (y % 50 == 0 ? 6f : 3f)), Ui.Ink, y % 50 == 0 ? SettingsLogic.MinTickDu + 1f : SettingsLogic.MinTickDu, true);   // A2: ticks >= 2 physical px
         }
         float frac = (_date.Year + (_date.Month - 1) / 12f + (_date.Day - 1) / 365f - 1910f) / 190f;
         float h = Mathf.Tau * frac - Mathf.Pi / 2;
@@ -702,11 +702,29 @@ public sealed partial class TechTree : Control
         {
             if (!placed.TryGetValue(i, out var pl)) continue;
             _labelRects.Add(pl.pad);
+            if (LabelNeedsLeader(i, pl.rc))
+            {
+                var own = PosOf(i); var near = own.Clamp(pl.rc.Position, pl.rc.End); var dir = (near - own).Normalized();
+                _cv.DrawLine(own + dir * NR, near, _route[i] ? Ui.Command : Ui.Ink2, 1.5f, true);   // another node is as near to this name as its own
+            }
             _cv.DrawRect(pl.pad, new Color(Ui.Paper, 0.92f));
             var at = new Vector2(pl.rc.Position.X, pl.rc.Position.Y + pl.h * 0.8f);
             _cv.DrawStringOutline(Ui.FontOf(pl.kind), at, pl.text, HorizontalAlignment.Left, -1, 14, 5, Ui.Paper);   // paper halo keeps text off rings and lines
             Text(at, pl.text, 14, _route[i] ? Ui.Command : Ui.Ink2, pl.kind);
         }
+    }
+
+    bool LabelNeedsLeader(int i, Rect2 rc)
+    {
+        var nodes = _host.Data.Nodes; var own = PosOf(i);
+        float d0 = LabelGeometry.DistToRect(own.X, own.Y, rc.Position.X, rc.Position.Y, rc.Size.X, rc.Size.Y);
+        for (int j = 0; j < nodes.Count; j++)
+        {
+            if (j == i) continue;
+            var q = PosOf(j);
+            if (LabelGeometry.DistToRect(q.X, q.Y, rc.Position.X, rc.Position.Y, rc.Size.X, rc.Size.Y) <= d0 + 4f) return true;
+        }
+        return false;
     }
 
     static void AddSegment(List<Rect2> into, Vector2 a, Vector2 b, float pad)
