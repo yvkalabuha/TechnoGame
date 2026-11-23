@@ -148,6 +148,8 @@ public class NoMutableStaticsTests
     {
         "System.Runtime.InteropServices.MemoryMarshal",
         "System.Runtime.InteropServices.CollectionsMarshal",
+        "System.Runtime.InteropServices.Marshal",
+        "System.Runtime.InteropServices.GCHandle",
         "System.Runtime.InteropServices.ImmutableCollectionsMarshal",
         "System.Runtime.CompilerServices.Unsafe",
     };
@@ -157,16 +159,16 @@ public class NoMutableStaticsTests
         ["Singularity.Kernel.Column`1.AppendCurrentTo -> MemoryMarshal.AsBytes"] = (1, "read-only byte view of the column's own current array, passed to IncrementalHash.AppendData (a ReadOnlySpan sink); no write"),
         ["Singularity.Core.Policy.ToolingPlan.Compute -> CollectionsMarshal.AsSpan"] = (2, "sorts in place the thread-bound scratch list t.Cells of the plan (DEBT-0070), cleared and refilled each call; no static or world storage"),
         // Only the single non-fresh AsImmutableArray of this method: another unsafe callee or a second call in it still fails.
-        ["Singularity.Session.ViewBuilder.Inputs -> ImmutableCollectionsMarshal.AsImmutableArray"] = (1, "wraps the local array rows that this method has just created and nobody else holds (not a static, not captured), no copy"),
+        ["Singularity.Session.ViewBuilder.Inputs -> ImmutableCollectionsMarshal.AsImmutableArray"] = (1, "captured only by the Parallel.For lambda, which does not outlive the call; the local array rows is created here and nobody else holds it, no copy"),
     };
 
-    private static string? UnsafeCallee(Instruction ins, Instruction? before)
+    private static string? UnsafeCallee(Instruction ins, List<Instruction> body, int index)
     {
         if (ins.Operand is MethodBase callee && callee.DeclaringType?.FullName is { } dt && UnsafeClasses.Contains(dt))
         {
             // The compiler lowers a collection expression for ImmutableArray to AsImmutableArray over an array it has just built (newarr/stelem,
             // a static-data InitializeArray, or a ToArray copy): no alias exists, so this exact shape is not a use.
-            if (callee.Name == "AsImmutableArray" && IsFreshArray(before))
+            if (callee.Name == "AsImmutableArray" && IsFreshArray(body, index))
                 return null;
             return $"{callee.DeclaringType!.Name}.{callee.Name}";
         }
@@ -175,9 +177,52 @@ public class NoMutableStaticsTests
         return op is "cpblk" or "initblk" or "calli" ? "opcode " + op : null;
     }
 
-    private static bool IsFreshArray(Instruction? before) =>
-        before is { } b && (b.OpCode == System.Reflection.Emit.OpCodes.Newarr || b.OpCode.Name!.StartsWith("stelem", StringComparison.Ordinal)
-            || (b.Operand is MethodBase m && (m.Name == "InitializeArray" || (m.Name == "ToArray" && m.DeclaringType?.Name is "List`1" or "Enumerable" or "ReadOnlySpan`1"))));
+    // The array wrapped by the call at body[callIndex] is fresh only if the instruction that PRODUCED the top stack slot is a newarr or a copying
+    // ToArray. The producer is found by walking back with the stack effect of each instruction (a dup of a written array, an InitializeArray or a
+    // stelem do not make an array fresh: they only act on one that the producer made). Any branch or unknown stack effect means "not fresh".
+    private static bool IsFreshArray(List<Instruction> body, int callIndex)
+    {
+        int depth = 1; // 1 = top of the stack
+        for (int i = callIndex - 1; i >= 0; i--)
+        {
+            Instruction ins = body[i];
+            if (ins.OpCode.FlowControl is not (System.Reflection.Emit.FlowControl.Next or System.Reflection.Emit.FlowControl.Call)
+                || !StackEffect(ins, out int pop, out int push))
+                return false;
+            if (depth <= push)
+            {
+                if (ins.OpCode == System.Reflection.Emit.OpCodes.Dup)
+                {
+                    depth = 1; // both slots are the value below
+                    continue;
+                }
+                return ins.OpCode == System.Reflection.Emit.OpCodes.Newarr
+                    || (ins.Operand is MethodBase m && m.Name == "ToArray" && m.DeclaringType?.Name is "List`1" or "Enumerable" or "ReadOnlySpan`1");
+            }
+            depth = depth - push + pop;
+        }
+        return false;
+    }
+
+    private static bool StackEffect(Instruction ins, out int pop, out int push)
+    {
+        pop = push = 0;
+        var op = ins.OpCode;
+        if (op.Name is "call" or "callvirt" or "newobj" && ins.Operand is MethodBase)
+        {
+            var m = (MethodBase)ins.Operand!;
+            bool ctor = op.Name == "newobj";
+            pop = m.GetParameters().Length + (!m.IsStatic && !ctor ? 1 : 0);
+            push = ctor || (m is MethodInfo mi && mi.ReturnType != typeof(void)) ? 1 : 0;
+            return true;
+        }
+        string a = op.StackBehaviourPop.ToString(), b = op.StackBehaviourPush.ToString();
+        if (a.StartsWith("Var", StringComparison.Ordinal) || b.StartsWith("Var", StringComparison.Ordinal))
+            return false;
+        pop = a.EndsWith('0') ? 0 : a.Split('_').Length;
+        push = b.EndsWith('0') ? 0 : b.Split('_').Length;
+        return true;
+    }
 
     // A pointer or a pinned local anywhere in the signature or the locals: the way unmanaged code reaches storage without the type system.
     private static bool HasPointer(MethodBase m) =>
@@ -195,11 +240,11 @@ public class NoMutableStaticsTests
                 string name = $"{type.FullName}.{method.Name}";
                 if (HasPointer(method))
                     found[name + " -> raw pointer (fixed or unsafe)"] = 1;
-                Instruction? prev = null;
-                foreach (Instruction ins in IlScanner.Read(method))
+                List<Instruction> body = [.. IlScanner.Read(method)];
+                for (int i = 0; i < body.Count; i++)
                 {
-                    string? what = UnsafeCallee(ins, prev);
-                    prev = ins;
+                    Instruction ins = body[i];
+                    string? what = UnsafeCallee(ins, body, i);
                     if (what is null)
                         continue;
                     string key = $"{name} -> {what}";
@@ -236,6 +281,12 @@ public class NoMutableStaticsTests
         Assert.Contains(v, f => f.Contains("SpanOfStatic") && f.Contains("CollectionsMarshal.AsSpan")); // a span over a static list
         Assert.Contains(v, f => f.Contains("Fixed") && f.Contains("raw pointer"));
         Assert.Contains(v, f => f.Contains("Raw") && f.Contains("raw pointer"));
+        Assert.Contains(v, f => f.Contains("WrapWritten") && f.Contains("AsImmutableArray"));      // stelem into a caller-owned array
+        Assert.Contains(v, f => f.Contains("WrapStaticWritten") && f.Contains("AsImmutableArray")); // stelem into a static array
+        Assert.Contains(v, f => f.Contains("WrapInitStatic") && f.Contains("AsImmutableArray"));    // InitializeArray over a caller-owned array
+        Assert.Contains(v, f => f.Contains("WrapLocalNew") && f.Contains("AsImmutableArray"));      // newarr, then a local: the producer is the local, listing needed
+        Assert.Contains(v, f => f.Contains("Pin") && f.Contains("GCHandle.Alloc"));
+        Assert.Contains(v, f => f.Contains("Copy") && f.Contains("Marshal.Copy"));
         Assert.DoesNotContain(v, f => f.Contains("Clean") || f.Contains("Fresh")); // collection expressions wrap a fresh array
         // An allow entry covers exactly its pair and its count: another callee in the same method, or a second call, still fails.
         var one = new Dictionary<string, (int, string)> { ["Singularity.Architecture.Tests.UnsafeMutant.Two -> ImmutableCollectionsMarshal.AsImmutableArray"] = (1, "x") };
@@ -316,6 +367,8 @@ internal class MutBase { public int Count = 1; }
 internal sealed class InheritedClass : MutBase { public readonly long Mask = 1; }
 internal sealed class GoodClass { public readonly long Mask = 1; public readonly ImmutableArray<int> Ids = [1]; }
 
+internal static class FakeHelpers { public static int[] InitializeArray(int[] a) => a; } // same method name as RuntimeHelpers.InitializeArray, returns the caller's array
+
 internal static class UnsafeMutant
 {
     public static ImmutableArray<int> Wrap(int[] a) => System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(a);
@@ -332,6 +385,14 @@ internal static class UnsafeMutant
     public static ImmutableArray<int> Two(int[] a, object o) { _ = System.Runtime.CompilerServices.Unsafe.As<string>(o); return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(a); }
     public static (ImmutableArray<int>, ImmutableArray<int>) Twice(int[] a, int[] b) => (System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(a), System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(b));
     public static int Clean(int x) => x + 1;
+    private static readonly int[] StaticArr = [1, 2];
+    // A write into an array the caller owns and a wrap of it: the array is NOT fresh although the pattern ends in stelem / InitializeArray.
+    public static ImmutableArray<int> WrapWritten(int[] a) { a[0] = 1; return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(a); }
+    public static ImmutableArray<int> WrapStaticWritten() { StaticArr[0] = 3; return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(StaticArr); }
+    public static ImmutableArray<int> WrapLocalNew(int n) { var a = new int[n]; return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(a); }
+    public static ImmutableArray<int> WrapInitStatic() => System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(FakeHelpers.InitializeArray(StaticArr));
+    public static IntPtr Pin(object o) => System.Runtime.InteropServices.GCHandle.Alloc(o, System.Runtime.InteropServices.GCHandleType.Pinned).AddrOfPinnedObject();
+    public static void Copy(int[] a, IntPtr p) => System.Runtime.InteropServices.Marshal.Copy(a, 0, p, a.Length);
     public static ImmutableArray<int> FreshCollection(int n) => [n, n + 1];
     public static ImmutableArray<int> FreshSpread(List<int> l) => [.. l];
 }

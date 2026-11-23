@@ -33,3 +33,12 @@ created: 2026-11-22
 ## Критерии приёмки
 - [ ] Каждое замечание закрыто: исправлено с тестом или отклонено с причиной.
 - [ ] reviewer APPROVE; второе ревью по правилу #432.
+
+## Ход работы
+- [high] «свежий массив» (NoMutableStaticsTests): `IsFreshArray` заменён. Раньше смотрелась только предыдущая инструкция по имени (`InitializeArray`, `stelem*`), без декларирующего типа. Теперь по эффектам стека идём назад от вызова `AsImmutableArray` до инструкции, создавшей верхний слот; массив свежий, только если это `newarr` или копирующий `ToArray` (`dup`, `stelem`, `InitializeArray` лишь действуют над массивом, созданным производителем). Ветвление или неизвестный эффект стека = не свежий. Добавлены мутанты `UnsafeMutant.WrapWritten`, `WrapStaticWritten`, `WrapLocalNew`, `WrapInitStatic` (метод `FakeHelpers.InitializeArray` с тем же именем возвращает чужой массив). Проверка: со старым `IsFreshArray` тест `TheUnsafeScan_SeesEachMutant_AndOnlyTheListedPairIsExempt` падает (мутант `WrapInitStatic`); с новым проходит. Существующие записи `Fresh*` не флагуются.
+- [medium] перекрытие (TwoWorldsOnOnePoolTests): добавлен счётчик перекрытия шагов двух миров (`Overlap`), утверждение `Overlapped >= Months / 2`. Проверка: если обернуть шаги в общий `lock`, 9 из 23 тестов падают («overlapped in 0 of 37 months»); без блокировки проходят. Дайджесты не менялись.
+- [reviewer] `Marshal` и `GCHandle` добавлены в `UnsafeClasses`; мутанты `Pin` (GCHandle.Alloc) и `Copy` (Marshal.Copy) утверждаются в тесте. Откат проверен только вместе с откатом finding 1 (одним прогоном), отдельно утверждения Marshal/GCHandle без добавления классов не гонялись.
+- [reviewer] текст причины для `ViewBuilder.Inputs` исправлен в `UnsafeUses` (причина живёт в тесте, не в src).
+
+## Разногласия
+- Доказательство перекрытия именно внутри фазы compute (Parallel.For) без хука в продукте невозможно; счётчик доказывает перекрытие целых вызовов `StepThroughMonth` (барьер на месяц). Предложение: если нужен детерминированный рандеву внутри compute, добавить в `ViewBuilder.Inputs` (internal) необязательный тестовый колбэк; в этой задаче он не добавлялся (запрет менять поведение Core/Session). Решение за Orchestrator.

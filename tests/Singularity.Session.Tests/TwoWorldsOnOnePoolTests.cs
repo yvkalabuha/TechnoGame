@@ -98,15 +98,38 @@ public class TwoWorldsOnOnePoolTests
         var hb = new string[Months + 1];
         // Both worlds run their Parallel.For on the same ThreadPool at once; a barrier per month keeps them overlapping.
         using var barrier = new Barrier(2);
-        Task ta = Task.Run(() => Run(seedA, threads, ha, barrier));
-        Task tb = Task.Run(() => Run(seedB, threads, hb, barrier));
+        var gate = new Overlap();
+        Task ta = Task.Run(() => Run(seedA, threads, ha, barrier, gate));
+        Task tb = Task.Run(() => Run(seedB, threads, hb, barrier, gate));
         await Task.WhenAll(ta, tb);
+        // The pinned digests alone would also pass if the two worlds never ran together. Both StepThroughMonth calls were in flight at the
+        // same moment in most months (the barrier releases them together and a step takes far longer than the release skew). This proves the
+        // overlap of the whole step; the overlap inside the compute phase needs a production hook (see TASK-0127, Ход работы).
+        Assert.True(gate.Overlapped >= Months / 2, $"the worlds overlapped in {gate.Overlapped} of {Months + 1} months only; the test did not exercise the shared pool");
         AssertPinned(seedA, ha, $"A seed {seedA}, {threads} threads");
         AssertPinned(seedB, hb, $"B seed {seedB}, {threads} threads");
     }
 
     // A session is created and stepped on one thread (ADR-0017 p. 7); its own Parallel.For still uses the shared pool.
-    private static void Run(ulong seed, int threads, string[] hashes, Barrier barrier)
+    private sealed class Overlap
+    {
+        private int _active;
+        private int _overlapped;
+        public int Overlapped => Volatile.Read(ref _overlapped);
+
+        // True when the other world was in its step at some moment of this one's step: seen on entry, or still there on exit.
+        public void Step(Action step)
+        {
+            bool met = Interlocked.Increment(ref _active) == 2;
+            step();
+            met |= Volatile.Read(ref _active) == 2;
+            Interlocked.Decrement(ref _active);
+            if (met)
+                Interlocked.Increment(ref _overlapped);
+        }
+    }
+
+    private static void Run(ulong seed, int threads, string[] hashes, Barrier barrier, Overlap gate)
     {
         try
         {
@@ -115,7 +138,8 @@ public class TwoWorldsOnOnePoolTests
             {
                 if (!barrier.SignalAndWait(TimeSpan.FromMinutes(2)))
                     throw new TimeoutException("the other world did not reach the month barrier");
-                s.StepThroughMonth(m);
+                long month = m;
+                gate.Step(() => s.StepThroughMonth(month));
                 hashes[m] = s.LastHash;
             }
         }
