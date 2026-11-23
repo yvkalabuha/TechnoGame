@@ -355,6 +355,35 @@ public class ViewSubscriptionTests
         Assert.Contains(reference, h => h is not null);
     }
 
+    // The body of the method whose signature starts at `start`: from the signature to the brace that closes it (counted; strings and comments are not special-cased,
+    // the scanned methods have no braces in them), or to the end of the line for an expression-bodied method.
+    private static string MethodBody(string text, int start)
+    {
+        int open = text.IndexOf('{', start), arrow = text.IndexOf("=>", start, StringComparison.Ordinal);
+        if (arrow >= 0 && (open < 0 || arrow < open))
+            return text[start..text.IndexOf(";\n", arrow, StringComparison.Ordinal)];
+        int depth = 0;
+        for (int i = open; i < text.Length; i++)
+        {
+            if (text[i] == '{')
+                depth++;
+            else if (text[i] == '}' && --depth == 0)
+                return text[start..(i + 1)];
+        }
+        throw new InvalidOperationException("unbalanced braces");
+    }
+
+    [Fact]
+    public void MethodBodyScanner_SeesPastABlankLine_AndStopsAtTheClosingBrace()
+    {
+        const string text = "void A()\n    {\n        if (x)\n        {\n            F();\n        }\n\n        _ = _view;\n    }\n\n    void B()\n    {\n        G();\n    }\n";
+        string a = MethodBody(text, 0);
+        Assert.Contains("_view", a);
+        Assert.DoesNotContain("G()", a);
+        Assert.Equal("void B()\n    {\n        G();\n    }", MethodBody(text, text.IndexOf("void B", StringComparison.Ordinal)));
+        Assert.Equal("int C() => 1", MethodBody("int C() => 1;\nint D() => 2;\n", 0));
+    }
+
     [Fact]
     public void CommandLogic_OfTheSession_DoesNotReadViews()
     {
@@ -366,8 +395,7 @@ public class ViewSubscriptionTests
         {
             int start = text.IndexOf(signature, StringComparison.Ordinal);
             Assert.True(start >= 0, $"method not found: {signature}");
-            int end = new[] { "\n    }\n", "\n    };\n", "\n\n" }.Select(m => text.IndexOf(m, start, StringComparison.Ordinal)).Where(i => i > 0).Min();
-            string body = text[start..end];
+            string body = MethodBody(text, start);
             Assert.True(body.Length > 80, $"scan of {signature} is vacuous");
             string code = string.Join('\n', body.Split('\n').Where(l => !l.TrimStart().StartsWith("//", StringComparison.Ordinal)));
             Assert.Empty(words.Where(w => code.Contains(w, StringComparison.Ordinal)).Select(w => $"{signature} names {w}"));
