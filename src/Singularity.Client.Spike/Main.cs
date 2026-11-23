@@ -281,6 +281,7 @@ public sealed partial class Main : Node3D
         }
         _viewed = _player;
         ApplySelection();
+        _host.PlayerActor = _player;
         _signal = new SignalField(_host, _player);
         _signal.SetAnchorsPreset(Control.LayoutPreset.TopWide);
         _signal.Debug = _debug;

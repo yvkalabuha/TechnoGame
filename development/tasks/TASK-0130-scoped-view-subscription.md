@@ -33,4 +33,17 @@ created: 2026-11-23
 ## Связанные документы
 `docs/decisions/ADR-0025-view-snapshot-buffer-ring.md`, `docs/reviews/adr-0025-*.md`.
 
+## Ход работы
+- 2026-11-23: Session: `ViewScope` (All по умолчанию, Subscribed), `SetViewSubscription` (owner thread), `RebuildView` (полная сборка без тика, того же Tick/хеша/месяца), флаг смены подписки отключает путь F7a, `NodeBlockCache.Drop`, `NodeList.IsPresent`, исключение "actor not subscribed", `TestApiVersion` 15 + `session-surface.v15.txt`.
+- Клиент: `SimHost.PlayerActor`, подписка {играемый, WhyActor} синхронизируется в `Publish` на потоке симуляции (при смене сразу `RebuildView`, и на паузе, и в беге); `TechTree`, `AudioDirector` проверяют `IsPresent`.
+
+## Разногласия
+Замечания Codex 1–3 (проба P8 на 200 акторах, тест SimHost без Godot) отклонены Orchestrator: O-041, DEBT-0074; SimHost тонкий, логика подписки вынесена в `ViewSubscriptionSync` и покрыта тестами.
+
 ## Результат
+Реализовано ADR-0025 разделы 1–5 (Session: `ViewScope`, `SetViewSubscription`, `RebuildView`, `NodeList.IsPresent`, кэш блоков только подписанных; клиент: `SimHost` + `ViewSubscriptionSync`; `TestApiVersion` 15). Тесты: `tests/Singularity.Session.Tests/ViewSubscriptionTests.cs`, `TwoWorldsSubscribedViewsTests.cs`, `tests/Singularity.Client.Audio.Tests/ViewSubscriptionSyncTests.cs`. `verify.py` зелёный.
+
+Кадры 1920x1080, 100 %, прогон `./run-globe-spike.sh --shots` (exit 0, после правок SimHost), каталог `shots-out/` рабочей копии (в git не входит):
+- `shots-out/tree_nolegend_1920x1080.png`: дерево знаний играемого актора (США, 1977-12-24), узлы из подписанного блока.
+- `shots-out/tech_tree_a.png`: дерево другого выбранного актора (СССР, 1946-07-14, середина месяца): подписка сменилась и вид пересобран без тика; узлы и цель показаны. Актор выбран тем же путём, что и при клике на карте (`ShowPower` затем `OpenTree`), а не переключателем дерева.
+Копии: `/tmp/claude-1000/-var-www-gameDev/c69b946c-6bbb-4630-b796-1ef4f3d98814/scratchpad/final_tree_played_USA_1920x1080.png`, `.../final_tree_other_actor_SUN_1920x1080.png`.

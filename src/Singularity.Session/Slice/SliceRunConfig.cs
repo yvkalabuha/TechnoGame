@@ -119,6 +119,16 @@ public enum EffortShareArm
     X4 = 4,
 }
 
+/// <summary>Which actors a view carries the node blocks (<see cref="ActorView.Nodes"/>) of (ADR-0025).</summary>
+public enum ViewScope
+{
+    /// <summary>Every actor.</summary>
+    All = 0,
+
+    /// <summary>Only the actors set by <see cref="SliceSession.SetViewSubscription"/>; the others have an absent <see cref="NodeList"/>.</summary>
+    Subscribed = 1,
+}
+
 /// <summary>Start variant of the scenario (spec §6.5).</summary>
 public enum StartVariant
 {
@@ -258,6 +268,9 @@ public sealed partial record SliceRunConfig
 
     /// <summary>Execution only (like <see cref="Threads"/>): what the read views hold. Not state, not hashed.</summary>
     public SliceViewMode ViewMode { get; init; }
+
+    /// <summary>Execution only (ADR-0025): which actors the read views carry the node blocks of. <see cref="ViewScope.All"/> by default (Lab, tests); the client subscribes. Not state, not hashed.</summary>
+    public ViewScope ViewScope { get; init; }
 
     /// <summary>
     /// Execution only (ADR-0016 T1a): adds an empty daily system, so every day copies the tables and every day takes a hash and a view snapshot.

@@ -16,13 +16,17 @@ namespace Singularity.Session;
 /// </summary>
 public sealed partial class SliceSession
 {
-    /// <summary>Version of the public surface of the session (ADR-0014 п. 6): raised with every change of the views or of <see cref="SliceRunConfig"/>; the surface test pins it. 14 (TASK-0122) adds <c>SliceRunConfig.BudgetRule</c> (a Lab measurement switch); 13 (TASK-0115) makes <c>DesignHandle(Slot, Generation)</c> mandatory: <c>Submit</c> takes commands about a design by handle, <c>WhyNotTarget.Design</c> takes a handle, <c>DesignView.Handle</c>; 12 (TASK-0113) renames <c>DesignView.Generation</c> to <c>SlotGeneration</c>; 11 (TASK-0103 R1) replaces <c>ActorView.Nodes</c> (an <c>ImmutableArray</c> of record-class <c>NodeView</c>) by the compact <c>NodeList</c> of record-struct <c>NodeView</c>; 10 (TASK-0099) adds <c>DesignView.Generation</c> (slot generation, ADR-0005 p. 3); 9 (TASK-0078, ADR-0017) adds <c>HashCheckpoints</c>/<c>HashEveryTick</c>, makes <c>SliceView.StateHash</c> nullable and <c>LastHash</c> lazy (owner thread only); 0 was the surface before the read views; 8 (TASK-0063) adds the execution-only <c>SliceRunConfig.DailyTickProbe</c>; 7 (TASK-0058 step 5) drops <c>PilotChoice</c>/<c>IntroChannel</c> (I-OC and A41 SLOT are the build; <c>PilotForm</c>, <c>PilotProfiles</c> stay as options) and adds <c>RequirementView.PilotSlots</c>; 6 added <c>PilotForm</c>/<c>PilotProfiles</c>; 5 adds <c>PilotChoice</c> (HYP-0004 sketch); 4 adds the «К» parameters and <c>CapabilityTables</c> (L_C/L_P) to <c>SliceRunConfig</c>; 3 adds <c>LicenceView.Active</c>; 2 adds the step traces, <c>t_known</c> and the Requirement variants (SLICE_COMPOSITION §13.7).</summary>
-    public const int TestApiVersion = 14;
+    /// <summary>Version of the public surface of the session (ADR-0014 п. 6): raised with every change of the views or of <see cref="SliceRunConfig"/>; the surface test pins it. 15 (TASK-0130, ADR-0025) adds <c>SliceRunConfig.ViewScope</c>, <c>SetViewSubscription</c>, <c>RebuildView</c> and <c>NodeList.IsPresent</c>; 14 (TASK-0122) adds <c>SliceRunConfig.BudgetRule</c> (a Lab measurement switch); 13 (TASK-0115) makes <c>DesignHandle(Slot, Generation)</c> mandatory: <c>Submit</c> takes commands about a design by handle, <c>WhyNotTarget.Design</c> takes a handle, <c>DesignView.Handle</c>; 12 (TASK-0113) renames <c>DesignView.Generation</c> to <c>SlotGeneration</c>; 11 (TASK-0103 R1) replaces <c>ActorView.Nodes</c> (an <c>ImmutableArray</c> of record-class <c>NodeView</c>) by the compact <c>NodeList</c> of record-struct <c>NodeView</c>; 10 (TASK-0099) adds <c>DesignView.Generation</c> (slot generation, ADR-0005 p. 3); 9 (TASK-0078, ADR-0017) adds <c>HashCheckpoints</c>/<c>HashEveryTick</c>, makes <c>SliceView.StateHash</c> nullable and <c>LastHash</c> lazy (owner thread only); 0 was the surface before the read views; 8 (TASK-0063) adds the execution-only <c>SliceRunConfig.DailyTickProbe</c>; 7 (TASK-0058 step 5) drops <c>PilotChoice</c>/<c>IntroChannel</c> (I-OC and A41 SLOT are the build; <c>PilotForm</c>, <c>PilotProfiles</c> stay as options) and adds <c>RequirementView.PilotSlots</c>; 6 added <c>PilotForm</c>/<c>PilotProfiles</c>; 5 adds <c>PilotChoice</c> (HYP-0004 sketch); 4 adds the «К» parameters and <c>CapabilityTables</c> (L_C/L_P) to <c>SliceRunConfig</c>; 3 adds <c>LicenceView.Active</c>; 2 adds the step traces, <c>t_known</c> and the Requirement variants (SLICE_COMPOSITION §13.7).</summary>
+    public const int TestApiVersion = 15;
 
     private SliceView _view = null!;
     private long _month = -1;
     // F7a: the actors of the current view with the close reasons cleared (what a fresh mid-month Snapshot gives); null = not built since the last snapshot.
     private ImmutableArray<ActorView>? _actorsMid;
+    // ADR-0025: the actors whose node blocks the views carry (null = all, ViewScope.All). A new array per change; owner thread only, an instance field.
+    private bool[]? _subscribed;
+    // A change applies by a full build: F7a would hand out the ActorViews of the old subscription.
+    private bool _subscriptionChanged;
 
     // Lazy hash (ADR-0017 п. 6-7): valid while the table version is unchanged. Only the owner thread computes it.
     private readonly int _ownerThread = Environment.CurrentManagedThreadId;
@@ -46,9 +50,49 @@ public sealed partial class SliceSession
     {
         _world = world;
         _knowsProcess = KnowsProcess;
+        _subscribed = world.Config.ViewScope == ViewScope.Subscribed ? new bool[world.Scenario.ActorCount] : null;
         _hash = ComputeHash();
         Layout = ViewBuilder.Layout(world);
-        _view = ViewBuilder.Snapshot(world, Tick, _hash, _month, null, null);
+        _view = ViewBuilder.Snapshot(world, Tick, _hash, _month, null, null, _subscribed);
+    }
+
+    /// <summary>
+    /// Sets the actors whose node blocks the next views carry (ADR-0025 п. 2-3); with <see cref="ViewScope.Subscribed"/> only. Owner thread only. Takes effect at the
+    /// next publication, or at once with <see cref="RebuildView"/>. Never touches the state, the hash or the RNG.
+    /// </summary>
+    public void SetViewSubscription(ReadOnlySpan<int> actors)
+    {
+        CheckOwner();
+        if (_subscribed is null)
+            throw new InvalidOperationException("ViewScope is All: every view carries every actor");
+        var next = new bool[_subscribed.Length];
+        foreach (int a in actors)
+        {
+            if ((uint)a >= (uint)next.Length)
+                throw new ArgumentOutOfRangeException(nameof(actors), a, $"actor must be in 0…{next.Length - 1}");
+            next[a] = true;
+        }
+        if (next.AsSpan().SequenceEqual(_subscribed))
+            return;
+        _subscribed = next;
+        _subscriptionChanged = true;
+    }
+
+    /// <summary>
+    /// Publishes the current view again, built in full (not the F7a path) with the current subscription, without a tick. When the last tick published, the view keeps its
+    /// tick, hash, inputs and step; when later ticks ran without publishing, the view is built from the state now: current tick, no hash, no step (it never claims an older tick for
+    /// newer state). The inputs stay: they carry their own month and record what the last monthly step read, so a panel keeps its budget until the next month. For a paused game after <see cref="SetViewSubscription"/>. Owner thread only. A no-op while <see cref="SkipViews"/> is set.
+    /// </summary>
+    public void RebuildView()
+    {
+        CheckOwner();
+        if (SkipViews)
+            return;
+        SliceView v = _view;
+        bool current = v.Tick == Tick;
+        Volatile.Write(ref _view, ViewBuilder.Snapshot(_world, Tick, current ? v.StateHash : null, _month, v.Inputs, current ? v.Step : null, _subscribed));
+        _actorsMid = null;
+        _subscriptionChanged = false;
     }
 
     /// <summary>The fixed shape of the world the rows of the views refer to.</summary>
@@ -405,7 +449,7 @@ public sealed partial class SliceSession
             // The state as loaded must hash to what the snapshot carries (ADR-0013 п. 8); a mismatch rolls back.
             if (hash != TableSnapshot.StoredStateHash(tableBytes))
                 throw new InvalidDataException("The loaded state does not hash to the state hash of the snapshot.");
-            view = ViewBuilder.Snapshot(_world, Tick, hash, month, null, null);
+            view = ViewBuilder.Snapshot(_world, Tick, hash, month, null, null, _subscribed);
         }
         catch
         {
@@ -430,6 +474,7 @@ public sealed partial class SliceSession
         _month = month;
         _hash = hash;
         _actorsMid = null;
+        _subscriptionChanged = false;
         Volatile.Write(ref _view, view);
     }
 
@@ -510,7 +555,7 @@ public sealed partial class SliceSession
                     _ = ViewBuilder.Step(_world, _month);
                 return;
             }
-            if (!monthly && !applied && _world.DailyViewNeutral)
+            if (!monthly && !applied && _world.DailyViewNeutral && !_subscriptionChanged)
             {
                 // F7a: no step, no command and only view-neutral systems ran, so the actors are those of the last view, up to the close reasons.
                 SliceView prev = _view;
@@ -520,8 +565,9 @@ public sealed partial class SliceSession
             }
             // The traces belong to the step that just ran; only a tick with a monthly step reads them (inputs is set exactly then).
             MonthStepView? step = inputs is null ? null : ViewBuilder.Step(_world, _month);
-            Volatile.Write(ref _view, ViewBuilder.Snapshot(_world, Tick, hash, _month, inputs, step));
+            Volatile.Write(ref _view, ViewBuilder.Snapshot(_world, Tick, hash, _month, inputs, step, _subscribed));
             _actorsMid = null;
+            _subscriptionChanged = false;
         }
     }
 

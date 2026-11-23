@@ -25,12 +25,13 @@ internal static class ViewBuilder
         w.IndustryParameters.MasteredYield, w.PolicyParameters.FvBudget);
 
     /// <summary>The post state of <paramref name="month"/> (−1 before the first step); read for the compute of <c>month + 1</c>.</summary>
-    public static SliceView Snapshot(SliceWorld w, long tick, string? hash, long month, MonthInputsView? inputs, MonthStepView? step)
+    /// <param name="subscribed">Actors whose node blocks the view carries (ADR-0025); null = all.</param>
+    public static SliceView Snapshot(SliceWorld w, long tick, string? hash, long month, MonthInputsView? inputs, MonthStepView? step, bool[]? subscribed = null)
     {
         var actors = ImmutableArray.CreateBuilder<ActorView>(w.Scenario.ActorCount);
         w.NodeBlocks.Begin(month + 1, w.NodeStamp(), w.Scenario.ActorCount, w.ReuseNodeBlocks);
         for (int a = 0; a < w.Scenario.ActorCount; a++)
-            actors.Add(Actor(w, a, month, step is not null));
+            actors.Add(Actor(w, a, month, step is not null, subscribed is null || subscribed[a]));
         return new SliceView(tick, w.Calendar.DateOf(tick), hash, month, actors.MoveToImmutable(), inputs, step);
     }
 
@@ -49,7 +50,7 @@ internal static class ViewBuilder
     }
 
     // `stepped`: the tick ran a monthly step, so the step traces are of month `month`; otherwise they belong to an earlier step and are not read (§13.7).
-    private static ActorView Actor(SliceWorld w, int a, long month, bool stepped)
+    private static ActorView Actor(SliceWorld w, int a, long month, bool stepped, bool withNodes)
     {
         long next = month + 1;
         bool full = w.Config.ViewMode == SliceViewMode.Full;
@@ -77,7 +78,14 @@ internal static class ViewBuilder
             new QualityView(w.Policy.QualityProgrammeActive(a), w.Policy.QualityProgrammeStart(a), w.Policy.QualityTriggerCount(a), w.Policy.TrainingTarget(a)),
             new LicenceView(w.Policy.LicenceGen(a), w.Policy.LicenceSeller(a), w.Policy.LicenceStart(a), w.Policy.LicenceMask(a), w.Policy.OfferMask(a),
                 w.Policy.LicenceFlow(a), refusals.MoveToImmutable(), w.LicenceActive(a)),
-            new DisruptionView(disStart, disEnd), Nodes(w, a, next), designs.MoveToImmutable(), Decisions(w, a, next, stepped));
+            new DisruptionView(disStart, disEnd), withNodes ? Nodes(w, a, next) : Unsubscribed(w, a), designs.MoveToImmutable(), Decisions(w, a, next, stepped));
+    }
+
+    // An actor the view does not carry the nodes of: no block, and the cache keeps none of it (ADR-0025).
+    private static NodeList Unsubscribed(SliceWorld w, int a)
+    {
+        w.NodeBlocks.Drop(a);
+        return default;
     }
 
     // One compact block per actor (R1). On a tick that wrote none of the columns the blocks read, the block of the last snapshot of the same month is

@@ -106,7 +106,8 @@ public class NodeBlockReuseTests
         Assert.Equal(views, list.ToArray());
         Assert.Equal(views[0], list[0]);
         Assert.True(list.Equals(NodeList.Create(views)));
-        Assert.Throws<IndexOutOfRangeException>(() => default(NodeList)[0]);
+        Assert.False(default(NodeList).IsPresent);
+        Assert.Throws<InvalidOperationException>(() => default(NodeList)[0]);
         Assert.Empty(default(NodeList));
     }
 }

@@ -44,6 +44,7 @@ public sealed class SimHost : IDisposable
     volatile bool _stop;
     int _speed;
     int _whyActor;
+    int _playerActor = -1;
     volatile HostSnapshot _snap;
     volatile string _status = "status.loading";
     volatile string _fatal;
@@ -57,6 +58,7 @@ public sealed class SimHost : IDisposable
     long _seq;
     SliceView _lastWhyView;
     int _lastWhyActor = -1;
+    readonly ViewSubscriptionSync _sub = new();
     WhyNotTarget? _target; IReadOnlyList<Link> _links = Array.Empty<Link>(); string _whyErr = "";
     ImmutableArray<BudgetShares?> _shares;
     double _lastTickMs;
@@ -80,6 +82,8 @@ public sealed class SimHost : IDisposable
     public void Start() => _thread.Start();
 
     public int Speed { get => Volatile.Read(ref _speed); set => Volatile.Write(ref _speed, value); }
+    /// <summary>The actor the player plays; its nodes are always in the view (the audio reads them). Set once by the UI.</summary>
+    public int PlayerActor { get => Volatile.Read(ref _playerActor); set => Volatile.Write(ref _playerActor, value); }
     public int WhyActor { get => Volatile.Read(ref _whyActor); set { Volatile.Write(ref _whyActor, value); } }
 
     /// <summary>Queues a command of the player (source class Player, id 0). While paused it stays pending and applies at the first tick after unpause.</summary>
@@ -130,7 +134,7 @@ public sealed class SimHost : IDisposable
             string root = Environment.GetEnvironmentVariable("SINGULARITY_ROOT") ?? RepoRoot();
             Data = _preloaded ?? ModLoader.Load(Path.Combine(root, "mods", "core"));
             _status = "status.session";
-            _session = SliceSession.Create(Data, new SliceRunConfig { Seed = (ulong)_seed, HashCheckpoints = false });
+            _session = SliceSession.Create(Data, new SliceRunConfig { Seed = (ulong)_seed, HashCheckpoints = false, ViewScope = ViewScope.Subscribed });
             Layout = _session.Layout;
             StartHash = _session.LastHash;
             var arr = ImmutableArray.CreateBuilder<BudgetShares?>(Layout.ActorIds.Length);
@@ -162,7 +166,7 @@ public sealed class SimHost : IDisposable
                     long n = (long)owed;
                     if (n > 0) { owed -= n; Advance(n); }
                 }
-                if (WhyActor != _lastWhyActor) Publish();
+                if (WhyActor != _lastWhyActor || _sub.Stale(PlayerActor, WhyActor)) Publish();
                 Thread.Sleep(sp == 0 ? 20 : 8);
             }
         }
@@ -193,6 +197,7 @@ public sealed class SimHost : IDisposable
 
     void Publish()
     {
+        int wa = _sub.Sync(_session, PlayerActor, WhyActor);
         SliceView v = _session.View;
         if (v.Inputs != null && !ReferenceEquals(v, _lastWhyView))
         {
@@ -200,7 +205,6 @@ public sealed class SimHost : IDisposable
             for (int i = 0; i < v.Inputs.Actors.Length; i++) b[v.Inputs.Actors[i].Actor] = v.Inputs.Actors[i].Shares;
             _shares = b.MoveToImmutable();
         }
-        int wa = WhyActor;
         if (!ReferenceEquals(v, _lastWhyView) || wa != _lastWhyActor)
         {
             try
