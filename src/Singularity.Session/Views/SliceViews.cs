@@ -51,7 +51,8 @@ public sealed record ActorView(
     ImmutableArray<DesignView> Designs,
     PolicyDecisionView Decisions,
     AlloyCoverage Alloy = default,
-    ImmutableArray<ResearchView> Research = default);
+    ImmutableArray<ResearchView> Research = default,
+    int UnknownNodes = 0);
 
 /// <summary>A research in progress (TASK-0119): a frontier node with accumulated progress. <see cref="Have"/> against <see cref="Need"/> is the scale of the why_not link;
 /// <see cref="Threshold"/> is a hazard node at its threshold, where its discovery is a draw, not certain.</summary>

@@ -58,9 +58,7 @@ public sealed class SimHost : IDisposable
     long _seq;
     SliceView _lastWhyView;
     int _lastWhyActor = -1;
-    readonly ViewSubscriptionSync _sub = new();
-    volatile bool _subscribeAll;   // shot runs: every actor carries its node block (the live measurement reads them all)
-    WhyNotTarget? _target; IReadOnlyList<Link> _links = Array.Empty<Link>(); string _whyErr = "";
+    readonly ViewSubscriptionSync _sub = new();    WhyNotTarget? _target; IReadOnlyList<Link> _links = Array.Empty<Link>(); string _whyErr = "";
     ImmutableArray<BudgetShares?> _shares;
     double _lastTickMs;
     string _jobError = "";
@@ -113,18 +111,6 @@ public sealed class SimHost : IDisposable
 
     /// <summary>Test hook: run <paramref name="ticks"/> ticks on the simulation thread regardless of tempo.</summary>
     public void StepTicks(long ticks) => _jobs.Enqueue(() => Advance(ticks));
-
-    /// <summary>Screenshot runs only: subscribes the view to every actor (node blocks included) and rebuilds it, so a measurement can read any power.</summary>
-    public void SubscribeAllForShots() => _jobs.Enqueue(() =>
-    {
-        var all = new int[Layout.ActorIds.Length];
-        for (int i = 0; i < all.Length; i++) all[i] = i;
-        _session.SetViewSubscription(all);
-        _session.RebuildView();
-        _subscribeAll = true;
-        Publish();
-    });
-
     /// <summary>Loads the mods (core) once, so that the menu can list the scenario before a session exists.</summary>
     public static GameData LoadData()
     {
@@ -178,7 +164,7 @@ public sealed class SimHost : IDisposable
                     long n = (long)owed;
                     if (n > 0) { owed -= n; Advance(n); }
                 }
-                if (WhyActor != _lastWhyActor || !_subscribeAll && _sub.Stale(PlayerActor, WhyActor)) Publish();
+                if (WhyActor != _lastWhyActor || _sub.Stale(PlayerActor, WhyActor)) Publish();
                 Thread.Sleep(sp == 0 ? 20 : 8);
             }
         }
@@ -209,7 +195,7 @@ public sealed class SimHost : IDisposable
 
     void Publish()
     {
-        int wa = _subscribeAll ? WhyActor : _sub.Sync(_session, PlayerActor, WhyActor);
+        int wa = _sub.Sync(_session, PlayerActor, WhyActor);
         SliceView v = _session.View;
         if (v.Inputs != null && !ReferenceEquals(v, _lastWhyView))
         {

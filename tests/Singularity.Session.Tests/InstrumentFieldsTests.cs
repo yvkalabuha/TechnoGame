@@ -100,6 +100,25 @@ public sealed class InstrumentFieldsTests
     }
 
     [Fact]
+    public void UnknownNodes_CountsTheNodesNotKnown_ForEveryActor_SubscribedOrNot()
+    {
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, ViewScope = ViewScope.Subscribed });
+        s.SetViewSubscription([1]);
+        s.RebuildView();
+        s.StepThroughMonth(0);
+        SliceWorld w = s.World;
+        for (int a = 0; a < w.Scenario.ActorCount; a++)
+        {
+            int unknown = 0;
+            for (int r = 0; r < w.Graph.Count; r++)
+                if (!w.Knowledge.IsKnown(a, r)) unknown++;
+            Assert.Equal(unknown, s.View.Actors[a].UnknownNodes);
+            Assert.True(unknown > 0);
+        }
+        Assert.False(s.View.Actors[0].Nodes.IsPresent);   // actor 0 is not subscribed, and still has its count
+    }
+
+    [Fact]
     public void Alloy_IsNotKnownBeforeTheFirstStep_AndAfterARestoreUntilTheNextStep()
     {
         SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
@@ -111,7 +130,7 @@ public sealed class InstrumentFieldsTests
         s.WriteSnapshot(m);
         SliceSession restored = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
         restored.LoadSnapshot(new MemoryStream(m.ToArray()));
-        Assert.Equal(s.LastHash, restored.LastHash);   // the snapshot really loaded
+        HashAssert.Equal(s.LastHash, restored.LastHash);   // the snapshot really loaded
         Assert.All(restored.View.Actors, a => { Assert.False(a.Alloy.Known); Assert.Equal(AlloyState.Unknown, a.Alloy.State); });
         restored.StepThroughMonth(10);
         Assert.All(restored.View.Actors, a => Assert.True(a.Alloy.Known));

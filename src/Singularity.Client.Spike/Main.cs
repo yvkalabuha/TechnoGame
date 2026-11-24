@@ -1214,7 +1214,7 @@ public sealed partial class Main : Node3D
             case 141 when _shotT >= 0.5: SaveProbe("flask_levels_100"); Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false); _shotStep = 142; _shotT = 0; break;
             case 142 when _shotT >= 0.6: SaveProbe("flask_levels_150"); Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _flaskProbe.QueueFree(); _shotStep = 143; _shotT = 0; break;
             // Science from a real session state: no fixture; a month at a time until the chain shows (at most about 12 s), then the live panel is checked against the snapshot
-            case 143 when _shotT >= 0.3: Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); InstrumentLogic.YearOverride = null; OpenArea(AreaId.Science); _signal.SetSpeed(0); _host.SubscribeAllForShots(); _liveMonths = 0; _liveFirst = -1; _liveHit = null; _liveEligible = null; _liveLastMonth = -2; _shotStep = 144; _shotT = 0; break;
+            case 143 when _shotT >= 0.3: Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); InstrumentLogic.YearOverride = null; OpenArea(AreaId.Science); _signal.SetSpeed(0); _liveMonths = 0; _liveFirst = -1; _liveHit = null; _liveEligible = null; _liveLastMonth = -2; _shotStep = 144; _shotT = 0; break;
             // Live Science: the simulation runs in steps of 30 ticks (about a month); in each step every power's why_not snapshot is read. At the first step where a power has a Knowledge link,
             // that power's Science panel is opened (the area panel pointed at it) and checked; the scan then goes on to 30 years for the shares per power. No power with a link in 30 years: the run fails.
             case 144 when _shotT >= 0.2:
@@ -1412,14 +1412,8 @@ public sealed partial class Main : Node3D
         return true;
     }
 
-    // A month is eligible for a power while the data still has a node it does not know; the run subscribes the view to every power, so a missing node list is a failure.
-    bool HasUnknownNodes(int actor)
-    {
-        var nodes = _host.Snap.View.Actors[actor].Nodes;
-        if (!nodes.IsPresent) { InstFail($"live science check failed: the view carries no node list for {_host.Layout.ActorIds[actor]}, eligible months cannot be told"); return true; }
-        for (int i = 0; i < nodes.Count; i++) if (!nodes[i].Known) return true;
-        return false;
-    }
+    // A month is eligible for a power while the data still has a node it does not know (the view's own count, for every power, subscribed or not).
+    bool HasUnknownNodes(int actor) => _host.Snap.View.Actors[actor].UnknownNodes > 0;
 
     void LogLiveShares()
     {
