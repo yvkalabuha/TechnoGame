@@ -135,6 +135,15 @@ public class TreeClarityTests
     }
 
     [Fact]
+    public void Estimated_historical_dates_have_their_own_words_and_the_goal_legend_says_double_frame()
+    {
+        var csv = UiCsv(); var keys = Keys();
+        foreach (var k in new[] { "ui.tree.anchor.est", "ui.tree.anchor.named.est", "ui.tree.anchor.tip.est" }) Assert.Contains(k, keys);
+        Assert.Contains(csv, l => l.StartsWith("legend.goal,") && l.Contains("Цель (двойная рамка)"));
+        Assert.Contains(csv, l => l.StartsWith("ui.tree.anchor.est,") && l.Contains("оценка"));
+    }
+
+    [Fact]
     public void Removed_dev_only_keys_stay_removed()
     {
         var keys = Keys();

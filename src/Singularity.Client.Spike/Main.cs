@@ -1035,7 +1035,7 @@ public sealed partial class Main : Node3D
                 break;
             case 7 when _shotT >= 1.5:
                 { string ev = _tree.ShotEvidenceCheck(); _shotLog += $"tree evidence (live session state, power {_host.Layout.ActorIds[Math.Max(_shotCand, 0)]}): root mark, unknown and frontier nodes: {(ev == null ? "PASS" : "FAIL " + ev)}\n"; if (ev != null) InstFail($"tree evidence: {ev}"); }
-                Shot("tech_tree_a.png"); _tree.ShotZoom(2.4f, _tree.FrontierRow >= 0 ? _tree.FrontierRow : _tree.GoalRow); _shotStep = 30; _shotT = 0; break;
+                SaveShot("tech_tree_a.png", null, true); _tree.ShotZoom(2.4f, _tree.FrontierRow >= 0 ? _tree.FrontierRow : _tree.GoalRow); _shotStep = 30; _shotT = 0; break;
             case 30 when _shotT >= 0.8:
                 Shot("tree_zoom_nodes.png");
                 { int row = _tree.FrontierRow >= 0 ? _tree.FrontierRow : _tree.GoalRow; _tree.ShotZoom(5.5f, row); if (row >= 0) _tree.Select(row); }

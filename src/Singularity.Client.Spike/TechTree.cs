@@ -595,8 +595,8 @@ public sealed partial class TechTree : Control
         float r = MarkRadius(type);
         if (i == _root) RootMark.Draw(_cv, p, Math.Max(TreeClarity.MarkDu, r * 2f), CvBasis);
         else DrawMark(TreeClarity.StateOf(st == St.Known, st == St.Frontier, _nv[i].Process is { Mastered: true }), type, p, line, i);
-        if (i == _goal) Shape(type, p, r + 4, Colors.Transparent, Ui.Command, false, 1.6f);
-        if (i == _selected) SelectedRing(p, r);
+        if (i == _goal) GoalFrame(type, p, r);
+        if (i == _selected) SelectedRing(p, r, i == _goal);
     }
 
     // The one drawing of a node mark: the planisphere and the legend both come through here (spec 2.1: legend 1:1 with the map).
@@ -608,10 +608,18 @@ public sealed partial class TechTree : Control
         if (icons && row >= 0) Glyph(row, type, p, r, mk.Filled ? Colors.White : line);
     }
 
-    void SelectedRing(Vector2 p, float r)
+    // The goal: a double frame that follows the node's own shape, in the route colour. The selected node: a double circle in ink. Different shape and colour, so the two stay apart in grey.
+    void GoalFrame(NodeType type, Vector2 p, float r)
     {
-        _cv.DrawArc(p, r + 4.5f, 0, Mathf.Tau, 32, Ui.Ink, 2f, true);
-        _cv.DrawArc(p, r + 2f, 0, Mathf.Tau, 32, Ui.Ink, 1.5f, true);
+        Shape(type, p, r + 2.5f, Colors.Transparent, Ui.Command, false, 1.6f);
+        Shape(type, p, r + 5f, Colors.Transparent, Ui.Command, false, 1.6f);
+    }
+
+    void SelectedRing(Vector2 p, float r, bool alsoGoal = false)
+    {
+        float o = alsoGoal ? 8f : 0f;   // outside the goal frame when the node is both
+        _cv.DrawArc(p, r + 4.5f + o, 0, Mathf.Tau, 32, Ui.Ink, 2f, true);
+        _cv.DrawArc(p, r + 2f + o, 0, Mathf.Tau, 32, Ui.Ink, 1.5f, true);
     }
 
     // One simple glyph per node type, drawn in a plate (Icons level). The primitives come from GlyphPrims (measured by the tests), built once at unit radius and scaled by the canvas transform.
@@ -705,6 +713,7 @@ public sealed partial class TechTree : Control
             {
                 var pad = rc.Grow(2);
                 if (!area.Encloses(pad) || (!ignoreOthers && occupied.Any(o => o.Intersects(pad)))) return false;
+                if (ignoreOthers && hard.Any(h => h.Intersects(pad))) return false;   // a forced plate may sit over nodes, never over a wedge name, a total or a count
                 // The leader of a named node must not run across a wedge name, a wedge total or a count tag (C5).
                 if (leaderCheck && NamedNode(i) && LeaderCrosses(p, pad, hard)) return false;
                 occupied.Add(pad);
@@ -714,17 +723,25 @@ public sealed partial class TechTree : Control
             foreach (var rc in cands) if (Try(rc)) return true;
             if (!far) return false;
             // The goal, the selected node and the root must be named: farther places on three rings (computed in place); the leader line ties the name to the node.
-            foreach (float ring in FarRings)
-                for (int k = 0; k < 8; k++)
-                {
-                    var dv = new Vector2(Mathf.Cos(k * Mathf.Tau / 8), Mathf.Sin(k * Mathf.Tau / 8)) * (o + ring);
-                    if (Try(new Rect2(p + dv - new Vector2(dv.X < -1 ? sz.X : dv.X > 1 ? 0 : sz.X * 0.5f, dv.Y < -1 ? sz.Y : dv.Y > 1 ? 0 : sz.Y * 0.5f), sz))) return true;
-                }
+            bool Far(bool ignore, bool leader)
+            {
+                foreach (float ring in FarRings)
+                    for (int k = 0; k < 8; k++)
+                    {
+                        var dv = new Vector2(Mathf.Cos(k * Mathf.Tau / 8), Mathf.Sin(k * Mathf.Tau / 8)) * (o + ring);
+                        if (Try(new Rect2(p + dv - new Vector2(dv.X < -1 ? sz.X : dv.X > 1 ? 0 : sz.X * 0.5f, dv.Y < -1 ? sz.Y : dv.Y > 1 ? 0 : sz.Y * 0.5f), sz), ignore, leader)) return true;
+                    }
+                return false;
+            }
+            if (Far(false, true)) return true;
             // The callout node must be named at any price (a leader that ends in nothing is a defect): the nearest place inside the area, over other marks if it has to be.
             if (force)
             {
+                // Same avoidance as above, in widening steps: over nodes allowed, over wedge names/totals/counts never; the leader may cross them only as the very last resort.
                 foreach (var rc in cands) if (Try(rc, true)) return true;
+                if (Far(true, true)) return true;
                 foreach (var rc in cands) if (Try(rc, true, false)) return true;
+                if (Far(true, false)) return true;
             }
             return false;
         }
@@ -869,22 +886,22 @@ public sealed partial class TechTree : Control
             Text(new Vector2(xr + 36, y), _lgText[19 + k], 14, Ui.Ink2);
         }
         // the goal: the same blue frame the map draws around it (DrawNode)
-        float gy = Y(6); var gm = new Vector2(xr + 14, gy - 5);
+        float gy = Y(6, 10); var gm = new Vector2(xr + 14, gy - 5);
         DrawMark(MarkState.Known, NodeType.ENG, gm, Ui.Ink2, -1, MarkR[(int)NodeType.ENG]);
-        Shape(NodeType.ENG, gm, MarkR[(int)NodeType.ENG] + 4, Colors.Transparent, Ui.Command, false, 1.6f);
+        GoalFrame(NodeType.ENG, gm, MarkR[(int)NodeType.ENG]);
         Text(new Vector2(xr + 36, gy), _lgText[24], 14, Ui.Ink2);
-        Head(xr, Y(7, 8), 3);
-        float ry = Y(8, 8);
+        Head(xr, Y(7, 16), 3);
+        float ry = Y(8, 16);
         _cv.DrawLine(new Vector2(xr + 2, ry - 5), new Vector2(xr + 26, ry - 5), Ui.Sheet, 6f); _cv.DrawLine(new Vector2(xr + 2, ry - 5), new Vector2(xr + 26, ry - 5), Ui.Command, 3f);
         Text(new Vector2(xr + 36, ry), _lgText[4], 14, Ui.Ink2);
-        ry = Y(9, 8);
+        ry = Y(9, 16);
         _cv.DrawLine(new Vector2(xr + 2, ry - 5), new Vector2(xr + 26, ry - 5), Ui.Ink, 1.6f);   // the links of the selected node, as the map draws them
         Text(new Vector2(xr + 36, ry), _lgText[25], 14, Ui.Ink2);
-        ry = Y(10, 8);
+        ry = Y(10, 16);
         RootMark.Draw(_cv, new Vector2(xr + 14, ry - 5), TreeClarity.MarkDu, CvBasis);
         Text(new Vector2(xr + 36, ry), _lgText[5], 14, Ui.Ink2);
         Para(new Vector2(xr + 36, ry + 19), _lgText[6], colW - 36, 14, Ui.Ink2);
-        Text(new Vector2(xr, Y(13, 6)), _lgText[7], 14, Ui.Ink2);
+        Text(new Vector2(xr, Y(13, 14)), _lgText[7], 14, Ui.Ink2);
     }
 
     /// <summary>For the shot run: the legend sheet touches neither the stamp nor the disc area (A9); empty when it is fine.</summary>
@@ -1199,8 +1216,9 @@ public sealed partial class TechTree : Control
             _inset.AddChild(nm);
             _inset.AddChild(Ui.Wrap($"№{nodes.Number[i]} · {Loc.T("ntype." + (int)nodes.Type[i])} · {Loc.T("ui.tree.gen", nodes.Gen[i])} · {Loc.T("disc." + (int)nodes.Discipline[i])} · {StateWord(i)}", 14, Ui.Ink2));
             string anchor = Names.NodeAnchor(nodes.Id[i]), before = nodes.AnchorBefore[i] ? Loc.T("inset.before") : "";
-            var anc = Ui.Wrap(anchor == "" ? Loc.T("ui.tree.anchor", nodes.AnchorYear[i], before) : Loc.T("ui.tree.anchor.named", nodes.AnchorYear[i], before, anchor), 14, Ui.Ink3);
-            anc.MouseFilter = MouseFilterEnum.Pass; anc.TooltipText = Loc.T("ui.tree.anchor.tip");
+            string est = nodes.AnchorEstimated[i] ? ".est" : "";   // the data flag: an estimated year is said to be one
+            var anc = Ui.Wrap(anchor == "" ? Loc.T("ui.tree.anchor" + est, nodes.AnchorYear[i], before) : Loc.T("ui.tree.anchor.named" + est, nodes.AnchorYear[i], before, anchor), 14, Ui.Ink3);
+            anc.MouseFilter = MouseFilterEnum.Pass; anc.TooltipText = Loc.T("ui.tree.anchor.tip" + est);
             _inset.AddChild(anc);
             BuildCard(i);
             var rq = nodes.Requires;
