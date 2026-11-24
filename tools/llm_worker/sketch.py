@@ -103,15 +103,29 @@ def _paths(obj):
     return found
 
 
-def _inside(path, ws):
+def _as_roots(roots):
+    return [roots] if isinstance(roots, (str, os.PathLike)) else list(roots)
+
+
+def run_roots(ws, brain_dir, ids):
+    """Folders a PATH_TOOLS call may touch: the work folder and the brain folder of each conversation of this run."""
+    return [str(ws)] + [str(Path(brain_dir) / cid) for cid in ids if UUID_RE.match(cid)]
+
+
+def _inside(path, roots):
+    """True when path (relative ones resolve against roots[0]) is, after realpath, inside one of roots."""
+    roots = _as_roots(roots)
     path = path.strip().strip('"')  # agy writes string args as JSON-quoted text
     if path.startswith("file://"):
         path = path[7:]
     if path.startswith("~"):
         return False
-    real = os.path.realpath(os.path.join(ws, path))
-    root = os.path.realpath(ws)
-    return real == root or real.startswith(root + os.sep)
+    real = os.path.realpath(os.path.join(roots[0], path))
+    for r in roots:
+        root = os.path.realpath(r)
+        if real == root or real.startswith(root + os.sep):
+            return True
+    return False
 
 
 def transcript_calls(brain_dir, ids):
@@ -136,21 +150,21 @@ def transcript_calls(brain_dir, ids):
     return calls if found else None
 
 
-def call_violations(calls, ws):
+def call_violations(calls, roots):
     """Transcript calls outside the allowlist; same rules as tool_violations."""
     bad = []
     for name, paths in calls:
         if name in PATH_TOOLS:
-            if not paths or not all(_inside(p, ws) for p in paths):
+            if not paths or not all(_inside(p, roots) for p in paths):
                 bad.append(f"{name}: {one_line(' '.join(paths), 80)}".rstrip(": "))
         elif name not in CONTROL_TOOLS and name not in TRANSCRIPT_TOOLS:
             bad.append(name)
     return list(dict.fromkeys(bad))
 
 
-def tool_violations(text, ws, args_verified=False):
+def tool_violations(text, roots, args_verified=False):
     """Tool calls outside the allowlist (anything not named here is a violation): generate_image, invoke_subagent,
-    finish/wait control calls, view_file/list_dir only inside the run's work folder ws. run_command is never allowed.
+    finish/wait control calls, path tools only inside roots (the work folder and this run's own conversation folders). run_command is never allowed.
     A call whose path cannot be read counts as a violation, unless args_verified (the transcript is checked instead)."""
     bad = []
     for line in text.splitlines():
@@ -164,7 +178,7 @@ def tool_violations(text, ws, args_verified=False):
             continue
         if name in PATH_TOOLS:
             paths = _paths(su)
-            if paths and all(_inside(p, ws) for p in paths):
+            if paths and all(_inside(p, roots) for p in paths):
                 continue
             if not paths and args_verified:  # arguments are checked in the transcript
                 continue
@@ -379,8 +393,9 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
     ids, result, tools = parse_stream(out)
     record.update(conversation_id=ids[0] if ids else None, conversation_ids=ids, tools=tools, exit_code=rc)
     calls = transcript_calls(brain_dir, ids)
-    bad_tools = tool_violations(out, ws_dir, args_verified=calls is not None)
-    bad_tools = list(dict.fromkeys(bad_tools + call_violations(calls or [], ws_dir)))
+    roots = run_roots(ws_dir, brain_dir, ids)
+    bad_tools = tool_violations(out, roots, args_verified=calls is not None)
+    bad_tools = list(dict.fromkeys(bad_tools + call_violations(calls or [], roots)))
     if bad_tools:
         record["agent_tool_violation"] = bad_tools
         write_pair(Path(runs_dir), record_stem(runs_dir, task, digest, started), record,

@@ -274,6 +274,34 @@ class SketchTest(unittest.TestCase):
         ev = self.stream_with({"tool_name": "read_file", "args": {"Path": '"/ws/1-a.png"'}})
         self.assertEqual(sketch.tool_violations(ev, "/ws"), [])
 
+    def test_own_conversation_folder_reads(self):
+        cid = "2232f59c-48f5-4dbb-87cf-15bc5eec721f"
+        other = "0af7a474-ce07-4bc4-9735-46858b750c5e"
+        with tempfile.TemporaryDirectory() as tmp:
+            ws, brain = Path(tmp) / "ws", Path(tmp) / "brain"
+            (brain / cid).mkdir(parents=True)
+            (brain / other).mkdir()
+            ws.mkdir()
+            (ws / "link").symlink_to(brain / other)
+            (brain / cid / "esc").symlink_to(brain / other)
+            roots = sketch.run_roots(ws, brain, [cid])
+
+            def bad(p):
+                return sketch.call_violations([("read_file", [p])], roots)
+            self.assertEqual(bad(str(brain / cid / "sketch_1.png")), [])
+            self.assertEqual(bad(f'"{brain / cid / "sketch_1.png"}"'), [])
+            self.assertTrue(bad(str(brain / other / "x.png")))
+            self.assertTrue(bad(str(brain)))
+            self.assertTrue(bad(str(brain / cid / ".." / other / "x.png")))
+            self.assertTrue(bad("../brain/" + other))
+            self.assertTrue(bad(str(ws / "link" / "x.png")))
+            self.assertTrue(bad(str(brain / cid / "esc" / "x.png")))
+            self.assertTrue(bad("~/.gemini/x.png"))
+            ev = self.stream_with({"tool_name": "read_file", "args": {"Path": str(brain / cid / "a.png")}})
+            self.assertEqual(sketch.tool_violations(ev, roots), [])
+            ev = self.stream_with({"tool_name": "read_file", "args": {"Path": str(brain / other / "a.png")}})
+            self.assertEqual(sketch.tool_violations(ev, roots), ["read_file: " + str(brain / other / "a.png")])
+
     def test_env_allowlist(self):
         env = {"HOME": "/h", "PATH": "/b", "LANG": "C", "LC_ALL": "C", "XDG_CONFIG_HOME": "/c", "TERM": "x", "USER": "u",
                "GEMINI_API_KEY": "k", "GITHUB_TOKEN": "t", "AWS_SECRET_ACCESS_KEY": "s", "OPENAI_API_KEY": "o"}
