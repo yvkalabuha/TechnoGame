@@ -105,6 +105,13 @@ def _example(schema, depth=0):
     return _EXAMPLE.get(t)
 
 
+def _text_of(content):
+    """Text of a message; for a multi-part message (text + image_url) only the text parts."""
+    if isinstance(content, list):
+        return "\n".join(p.get("text", "") for p in content if isinstance(p, dict) and p.get("type") == "text")
+    return str(content)
+
+
 def load_strict_key(path):
     """Key of a paid provider: only from `path`, mode exactly 0600, owned by this user, not a symlink."""
     try:
@@ -146,7 +153,7 @@ class OpenAICompatProvider:
         self.name = self.profile.name
         self.paid = self.profile.paid
         self.url = url or self.profile.url
-        if not self.paid and not _local_host(self.url):
+        if not self.paid and not self.profile.free_public and not _local_host(self.url):
             raise ValueError("a free profile may only talk to a loopback or private address "
                              "(a public host is a paid service: use a paid profile with the ledger)")
         self.model = model or self.profile.model
@@ -193,7 +200,7 @@ class OpenAICompatProvider:
                     f"('{schema_name}'):\n{json.dumps(schema, ensure_ascii=False)}\n"
                     f"Example of the shape (json): {json.dumps(_example(schema), ensure_ascii=False)}")
             msgs = [dict(m) for m in messages]
-            if msgs and msgs[0].get("role") == "system":
+            if msgs and msgs[0].get("role") == "system" and isinstance(msgs[0]["content"], str):
                 msgs[0]["content"] = f"{msgs[0]['content']}\n\n{note}"
             else:
                 msgs.insert(0, {"role": "system", "content": note})
@@ -205,11 +212,11 @@ class OpenAICompatProvider:
         """`on_raw(bytes)` gets the raw response body before it is parsed, so a paid answer is never lost."""
         if self.paid and self.guard is None:
             raise RuntimeError("paid provider without a spend guard")
-        if self.paid:
+        if self.paid or self.profile.free_public:
             # Everything that leaves the machine, retry prompts with check output included (ADR-0015 §8).
             # Raw contents, one line per newline: JSON escaping would blur the rules, and one long line would let
             # a single `gitleaks:allow` hide everything.
-            gitleaks.scan_text("\n".join(str(m.get("content", "")) for m in messages))
+            gitleaks.scan_text("\n".join(_text_of(m.get("content", "")) for m in messages))
         data = json.dumps(self.body(messages, schema, schema_name, max_tokens, seed)).encode()
         headers = {"Content-Type": "application/json"}
         if self._api_key:

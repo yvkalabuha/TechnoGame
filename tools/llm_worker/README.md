@@ -75,6 +75,18 @@ python3 -m tools.llm_worker gate --item <путь> --stance third [--profile dee
 - При повторе `usage` и статистика рассуждения в записи — сумма всех попыток (как в ledger); сырое тело пустой первой попытки — `thinking.first_attempt_raw`. `run --thinking on` пишет `thinking` в `round_N/*_response.json`.
 - `review`: лимит задачи по ledger — `max_usd_task` $0,50 (ключ задачи `TASK-NNNN`); $1,00 действует только для `gate:<ID>`. Номер `round` выбирается под `flock` (`runs/.review-<task>.lock`); старые записи без `round`/`created_at` упорядочиваются по mtime.
 
+## Gemini как второе мнение по кадрам (TASK-0135, #441)
+```bash
+python3 -m tools.llm_worker visual --task TASK-NNNN --frames shots-out/a.png shots-out/b.png \
+    [--criteria docs/ui/UI_DESIGN_SYSTEM.md#12] [--model <id>] [--dry-run]
+```
+- Профиль `gemini-flash` (OpenAI-совместимая точка Google), только бесплатный уровень: `paid=False`, денег в ledger нет. Ключ — только файл `~/.config/singularity/gemini-api-key` (0600, не симлинк, вне репозитория); без него команда отказывает (код 4) с подсказкой.
+- Имя модели по умолчанию (`gemini-2.5-flash`) **не подтверждено**: при первом запуске с ключом проверить `GET /v1beta/models` и записать дату в комментарий `config.py`. Лимиты `GEMINI_RPM=5`, `GEMINI_RPD=100` — осторожные оценки, сверить со страницей квот.
+- Счётчик запросов (в минуту и за сутки UTC) — `$XDG_DATA_HOME/singularity-llm/gemini-usage.json`; считается каждая HTTP-попытка, при превышении отказ (код 4). 429 — пауза и повтор, не больше `PROVIDER_RETRIES`.
+- Кадры только из `shots-out/` (PNG/JPEG, ≤ 7 MB каждый, ≤ 8 шт., ≤ 18 MB всего), уходят как data URI. gitleaks сканирует только текст запроса, не пиксели.
+- **Данные:** бесплатный уровень Google может использовать присланное для улучшения продуктов. Отправлять только игровые кадры, без личных данных и секретов.
+- Результат: `runs/visual-<task>-<hash8>-gemini.json` и `.md` рядом; невалидный ответ — `*-invalid.json`. Вердикт PASS/FAIL остаётся за ui-art-director; замечания Gemini идут в обзор задачи.
+
 ## После прогона (Pilot)
 - B1: `git log -p -1 llm/<task_id>` — результат на ветке `llm/...`, не в `main`.
   В `main` — только через reviewer, `zone_check` и коммит Pilot.

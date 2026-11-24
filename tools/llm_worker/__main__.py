@@ -1,14 +1,14 @@
-"""CLI: python3 -m tools.llm_worker {fill-hashes,submit,run,status,report,ledger,review,review-confirm,gate} ..."""
+"""CLI: python3 -m tools.llm_worker {fill-hashes,submit,run,status,report,ledger,review,review-confirm,gate,visual} ..."""
 
 import argparse
 import json
 import sys
 from pathlib import Path
 
-from . import config, report, review as review_mod
+from . import config, report, review as review_mod, visual as visual_mod
 from .contract import ContractError, fill_hashes, validate_contract
 from .ledger import Guard, Ledger, SpendRefused, load_prices
-from .provider import KeyFileError, OpenAICompatProvider
+from .provider import AuthError, KeyFileError, OpenAICompatProvider, ProviderError, ProviderUnavailable
 from .runner import Env, run_queue
 from .taskqueue import TaskQueue
 
@@ -66,6 +66,12 @@ def main(argv=None):
     p.add_argument("--profile", choices=["deepseek-flash", "deepseek-v4-pro"], default=review_mod.DEFAULT_PROFILE)
     p.add_argument("--dry-run", action="store_true", help="build and scan the input, print its size, send nothing")
     _thinking_flags(p, default="on")
+    p = sub.add_parser("visual", help="Gemini (free tier) as a second opinion on frames from shots-out/")
+    p.add_argument("--task", required=True)
+    p.add_argument("--frames", type=Path, nargs="+", required=True)
+    p.add_argument("--criteria", default=visual_mod.DEFAULT_CRITERIA)
+    p.add_argument("--model", default=None, help="default is unconfirmed: check GET /v1beta/models on the first run")
+    p.add_argument("--dry-run", action="store_true", help="load frames, scan the text, send nothing")
     sub.add_parser("status", help="list tasks and states")
     p = sub.add_parser("report", help="write reports/<date>.md")
     p.add_argument("--date")
@@ -126,6 +132,8 @@ def main(argv=None):
             return 5
         print(f"finding {a.finding}/{n}: {'confirmed' if a.confirmed else 'rejected'}")
         return 0
+    if a.cmd == "visual":
+        return _visual(a)
     if a.cmd in ("review", "gate"):
         return _review_gate(a)
     if a.cmd == "run":
@@ -167,6 +175,27 @@ def main(argv=None):
         print(report.write(a.queue, a.runs, a.reports, a.date, ledger=ledger, cap=cap))
         return 0
     return 2
+
+
+def _visual(a):
+    try:
+        path, md, rec = visual_mod.run_visual(a.task, a.frames, a.criteria, runs_dir=a.runs, model=a.model,
+                                              dry_run=a.dry_run)
+    except KeyFileError:
+        print(f"refused: {config.GEMINI_KEY_HINT}")
+        return 4
+    except visual_mod.VisualError as e:
+        print(f"refused: {e}" if e.code in ("rate_limit", "secret_detected", "sandbox_unavailable") else f"error: {e}")
+        return 4 if e.code in ("rate_limit", "secret_detected", "sandbox_unavailable") else 5
+    except (ProviderUnavailable, ProviderError, AuthError) as e:
+        print(f"error: {e}")
+        return 5
+    if a.dry_run:
+        print(f"dry-run: {len(rec['frames'])} frames, model {rec['model']}, hash {rec['input_hash'][:8]}")
+        return 0
+    res = rec["result"]
+    print(f"record: {path}\nsummary: {md}\nopinion {res['opinion']}: {review_mod.count_line(res['findings'])}")
+    return 0
 
 
 def _review_gate(a):
