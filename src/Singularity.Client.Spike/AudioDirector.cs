@@ -248,7 +248,7 @@ public sealed partial class AudioDirector : Node
         var a = v.Actors[Actor];
         if (!a.Nodes.IsPresent) return;   // the played actor is always subscribed (SimHost.PlayerActor)
         int known = 0, series = 0;
-        foreach (var n in a.Nodes) if (n.Known) known++;
+        foreach (var n in a.Nodes) if (WorldCues.IsOwnDiscovery(n.Known, n.ByLicence)) known++;
         foreach (var d in a.Designs) if (d.Stage == Singularity.Core.Products.DesignStage.Series) series++;
         if (_baseActor == Actor)
         {
@@ -261,13 +261,13 @@ public sealed partial class AudioDirector : Node
     }
 
     // ---------- audio demo (--shots): a scripted event sequence recorded from the Master bus ----------
+    // The demo plays each cue straight (TestCue, outside the planner), so the limits and the fuse cannot swallow the later ones.
     static readonly (double T, string Cue)[] Demo =
     {
-        (0.3, "order_ok"), (0.5, "queue_tick"), (1.0, "order_done"), (1.8, "signal_attention"), (2.6, "signal_alert"),
+        (0.3, "order_ok"), (0.9, "queue_tick"), (1.5, "order_done"), (2.3, "signal_attention"), (3.3, "signal_alert"),
         (4.2, "order_reject"), (4.9, "node_discovered"), (6.2, "breakthrough"), (7.7, "line_commissioned"),
-        (8.7, "war_declared"), (9.9, "launch_space"), (11.6, "launch_nuclear"), (13.4, "tempo_1"), (14.0, "tempo_3"),
-        (14.5, "pause"), (15.0, "unpause"),
-        (15.6, "order_done"), (15.75, "order_done"), (15.9, "order_done"), (16.05, "order_done"), (16.2, "order_done"),
+        (8.7, "war_declared"), (9.9, "launch_space"), (11.6, "launch_nuclear"),
+        (13.4, "tempo_1"), (13.8, "tempo_2"), (14.2, "tempo_3"), (14.7, "pause"), (15.2, "unpause"),
         (16.9, "signal_critical"),
     };
     public const double DemoSeconds = 19.0;
@@ -285,7 +285,7 @@ public sealed partial class AudioDirector : Node
     {
         if (_demoI < 0) return false;
         _demoT += dt;
-        while (_demoI < Demo.Length && _demoT >= Demo[_demoI].T) Cue(Demo[_demoI++].Cue);
+        while (_demoI < Demo.Length && _demoT >= Demo[_demoI].T) TestCue(Demo[_demoI++].Cue);
         return _demoT < DemoSeconds;
     }
 

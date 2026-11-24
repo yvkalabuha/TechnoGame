@@ -255,6 +255,9 @@ public sealed class OpenTickGate
 /// <summary>Which world cues fire for one view change: a breakthrough already says it, so a new line in the same frame stays silent and a node does not sound over a breakthrough.</summary>
 public static class WorldCues
 {
+    /// <summary>A known node counts as the player's own discovery unless it came by licence (the view marks no other passive source: diffusion and espionage look the same as research).</summary>
+    public static bool IsOwnDiscovery(bool known, bool byLicence) => known && !byLicence;
+
     public static (bool Breakthrough, bool Node, bool Line) Pick(bool fieldedUp, bool knownUp, bool seriesUp)
         => (fieldedUp, !fieldedUp && knownUp, !fieldedUp && seriesUp);
 }

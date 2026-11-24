@@ -348,7 +348,21 @@ public sealed partial class Main : Node3D
         layer.AddChild(_helpBtn);
     }
 
-    void OpenTree(int mode, bool fromKeyboard = false) { _audio?.OpenTick(3000 + mode * 64 + _viewed, fromKeyboard); _tree.ShowFor(_viewed, mode); }
+    // The tree can be hidden from many places (Esc, hotkey, its own button), so a tree that is not on screen always opens as a new object.
+    // A button activated from the keyboard reports Pressed after a key event, a mouse click after a mouse button.
+    void OpenTree(int mode, bool fromKeyboard = false)
+    {
+        if (!_tree.Visible) _audio?.OpenClosed(true);
+        _audio?.OpenTick(3000 + mode * 64 + _viewed, fromKeyboard || _lastInputKey);
+        _tree.ShowFor(_viewed, mode);
+    }
+
+    bool _lastInputKey;
+    public override void _Input(InputEvent e)
+    {
+        if (e is InputEventKey { Pressed: true }) _lastInputKey = true;
+        else if (e is InputEventMouseButton { Pressed: true }) _lastInputKey = false;
+    }
 
     // A foreign power opens in the right panel (read-only); the player's own power is the area panels on the left. Only one of them is open at a time
     // (one why_not target in the Session snapshot). On a click the globe turns to the power; the zoom is not touched.

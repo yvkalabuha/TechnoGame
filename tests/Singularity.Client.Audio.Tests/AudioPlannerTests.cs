@@ -394,6 +394,24 @@ public class OpenTickGateTests
 public class WorldCuesTests
 {
     [Fact]
+    public void Nodes_known_by_licence_are_not_the_players_own_discovery()
+    {
+        Assert.True(WorldCues.IsOwnDiscovery(true, false));
+        Assert.False(WorldCues.IsOwnDiscovery(true, true));
+        Assert.False(WorldCues.IsOwnDiscovery(false, false));
+    }
+
+    [Fact]
+    public void Fuse_is_one_rolling_minute_over_all_non_p0_cues_except_ui_tick()
+    {
+        var p = new AudioPlanner();
+        string[] ids = { "order_ok", "pause", "node_discovered", "breakthrough", "line_commissioned", "order_reject" };
+        for (int k = 0; k < ids.Length; k++) Assert.NotNull(p.Request(ids[k], k * 11.0));
+        Assert.Null(p.Request("order_done", 59.0));          // seventh in the same 60 s
+        Assert.NotNull(p.Request("order_done", 60.5));       // the first left the window
+    }
+
+    [Fact]
     public void A_breakthrough_silences_the_line_and_node_of_the_same_frame()
     {
         Assert.Equal((true, false, false), WorldCues.Pick(true, true, true));
