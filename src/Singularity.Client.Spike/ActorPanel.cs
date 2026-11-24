@@ -590,10 +590,10 @@ public sealed partial class ActorPanel : PanelContainer
             foreach (var l in s.Links)
             {
                 if (n++ >= 7) { lines.Add((Loc.T("why.more", s.Links.Count - 7), false)); break; }
-                string subj = l.Layer == WhyNotLayer.Knowledge ? Names.Node(_host.Data, l.SubjectId) : "№" + l.SubjectId;
+                string subj = l.Layer == WhyNotLayer.Knowledge ? ": " + Names.Node(_host.Data, l.SubjectId) : "";   // other layers have no player-facing name for a bare id: never «№N»
                 string eta = l.EtaMonths is int m ? Loc.T("why.eta", m) : "";
                 string lev = l.Levers.IsDefaultOrEmpty ? "" : Loc.T("why.levers", string.Join(", ", l.Levers.Select(x => Loc.TOr("lever." + x, x.ToString()))));
-                lines.Add(($"{Loc.TOr("layer." + l.Layer, l.Layer.ToString())} · {Loc.TOr("cause." + l.Cause, l.Cause.ToString())}: {subj} · {Loc.N(l.Have.ToDouble())}/{Loc.N(l.Need.ToDouble())}{eta}{lev}", n == 1));
+                lines.Add(($"{Loc.TOr("layer." + l.Layer, l.Layer.ToString())} · {Loc.TOr("cause." + l.Cause, l.Cause.ToString())}{subj} ·{Loc.T("why.have", Loc.N(l.Have.ToDouble()), Loc.N(l.Need.ToDouble()))}{eta}{lev}", n == 1));
             }
         }
         string sig = Loc.Lang + "|" + string.Join("\n", lines.Select(x => x.text));

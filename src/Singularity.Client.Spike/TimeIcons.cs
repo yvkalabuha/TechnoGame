@@ -103,7 +103,7 @@ public sealed partial class TimeControl : HBoxContainer
     readonly GaugeControl _meter = new();
     readonly PanelContainer _keyTip = new(); readonly Label _keyTipText = Ui.Lbl("", 14);
     IconButton _tipFor;
-    int _speed, _resume = 1;
+    int _speed, _resume = SpeedSteps.Default;
     public event Action<int> Changed;
     public int Selected => _speed;
 
@@ -152,27 +152,27 @@ public sealed partial class TimeControl : HBoxContainer
     /// <summary>Slower and faster move the tempo steps 1..3; while paused they only change the tempo that «continue» resumes at.</summary>
     public void Step(int d)
     {
-        if (_speed == 0) { _resume = Math.Clamp(_resume + d, 1, 3); Refresh(); return; }
-        Select(Math.Clamp(_speed + d, 1, 3), true);
+        if (_speed == 0) { _resume = Math.Clamp(_resume + d, 1, SpeedSteps.Max); Refresh(); return; }
+        Select(Math.Clamp(_speed + d, 1, SpeedSteps.Max), true);
     }
 
     public void TogglePause() => Select(_speed > 0 ? 0 : _resume, true);
 
     public void Select(int s, bool notify)
     {
-        _speed = Math.Clamp(s, 0, 3);
+        _speed = SpeedSteps.Clamp(s);
         if (_speed > 0) _resume = _speed;
         Refresh();
         if (notify) Changed?.Invoke(_speed);
     }
 
-    static readonly string[] Words = { "speed.pause", "speed.day", "speed.week", "speed.month" };
+    static readonly string[] Words = SpeedSteps.Words;
 
     void Refresh()
     {
         int level = _speed == 0 ? _resume : _speed;
         _pause.On = _speed == 0;
-        _slower.Disabled = level <= 1; _faster.Disabled = level >= 3;
+        _slower.Disabled = level <= 1; _faster.Disabled = level >= SpeedSteps.Max;
         // A disabled button cannot keep the keyboard focus: hand it to the pause button so that the keys never fall out of the group.
         IconButton held = _slower.Disabled && _slower.HasFocus() ? _slower : _faster.Disabled && _faster.HasFocus() ? _faster : null;
         if (held != null) { if (held.FocusedByMouse) _pause.FocusQuietly(); else _pause.FocusByKey(); }   // after a click, no ring and no key tip appear
@@ -182,7 +182,7 @@ public sealed partial class TimeControl : HBoxContainer
         // Tooltips name the remembered speed and say why a button is off (the key tip uses the same text).
         _pause.TooltipText = _speed == 0 ? Loc.T("tip.time.pause.on", Loc.T(Words[_resume])) : Loc.T("tip.time.pause.off");
         _slower.TooltipText = _slower.Disabled ? Loc.T("tip.time.slower.min", Loc.T(Words[1])) : Loc.T("tip.time.slower");
-        _faster.TooltipText = _faster.Disabled ? Loc.T("tip.time.faster.max", Loc.T(Words[3])) : Loc.T("tip.time.faster");
+        _faster.TooltipText = _faster.Disabled ? Loc.T("tip.time.faster.max", Loc.T(Words[SpeedSteps.Max])) : Loc.T("tip.time.faster");
         UpdateKeyTip();
         _pause.QueueRedraw(); _slower.QueueRedraw(); _faster.QueueRedraw(); _meter.QueueRedraw();
     }
