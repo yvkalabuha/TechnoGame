@@ -15,6 +15,9 @@ API_KEY_FILE_ENV = "LLM_WORKER_API_KEY_FILE"
 DEFAULT_API_KEY_FILE = "/home/user/.config/local-llm/key"
 # DeepSeek key (ADR-0015 §8): a 0600 file outside the repository, read from nowhere else.
 DEEPSEEK_KEY_FILE = str(Path.home() / ".config" / "singularity" / "deepseek-api-key")
+# Gemini key (TASK-0135, #441): the same rules, a different file.
+GEMINI_KEY_FILE = str(Path.home() / ".config" / "singularity" / "gemini-api-key")
+GEMINI_KEY_HINT = "put the key into ~/.config/singularity/gemini-api-key, mode 0600"
 
 
 
@@ -33,6 +36,7 @@ class Profile:
     key_file_env: str = API_KEY_FILE_ENV
     key_file: str = DEFAULT_API_KEY_FILE
     strict_key: bool = False  # key only from key_file, which must be 0600 and ours; no environment variable
+    free_public: bool = False  # free tier of a public host: may leave the machine, scanned by gitleaks, no money ledger
 
 
 # DeepSeek names, URL, JSON mode and thinking switch checked on api-docs.deepseek.com
@@ -49,7 +53,25 @@ PROFILES = {
     "deepseek-v4-pro": Profile("deepseek-v4-pro", "https://api.deepseek.com/chat/completions", "deepseek-v4-pro",
                             "json_object", {"thinking": {"type": "disabled"}}, send_seed=False, paid=True,
                             key_file=DEEPSEEK_KEY_FILE, strict_key=True),
+    # Gemini through Google's OpenAI-compatible endpoint (TASK-0135). Free tier only: paid=False, no money ledger.
+    # The model id is a parameter (--model). Default checked by GET /v1beta/models on 2026-11-24, together with
+    # gemini-4-argon, -carbon, -neon, gemini-flash-latest, gemini-2.5-flash and gemini-3.x-flash (a live run passed).
+    # Free-tier status depends on the Google project having no billing: the tool cannot see it (README).
+    # Free-tier data may be used by Google to improve its products: only game frames go there (README).
+    "gemini-flash": Profile("gemini-flash", "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+                            "gemini-4-hydrogen", "json_object", {}, send_seed=False, paid=False,
+                            key_file=GEMINI_KEY_FILE, strict_key=True, free_public=True),
 }
+
+# Gemini free-tier request limits, counted by the tool itself (visual.py). Defaults are conservative guesses:
+# to be confirmed against the quota page of the account on the first live run.
+GEMINI_RPM = 5
+GEMINI_RPD = 100
+GEMINI_USAGE_FILE = "gemini-usage.json"  # in LEDGER_DIR
+SHOTS_DIR = REPO_ROOT / "shots-out"
+MAX_FRAMES = 8
+MAX_FRAME_BYTES = 7 * 1024 * 1024
+MAX_REQUEST_BYTES = 18 * 1024 * 1024  # Google inline limit is 20 MB per request, base64 adds a third
 
 # Spend accounting (ADR-0015 §6). The ledger lives outside the repository.
 LEDGER_DIR = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share") / "singularity-llm"

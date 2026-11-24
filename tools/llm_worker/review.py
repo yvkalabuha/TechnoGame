@@ -176,8 +176,11 @@ def parse_answer(content, schema_path, kind):
     schema = json.loads(Path(schema_path).read_text(encoding="utf-8"))
     errors = ["not a JSON object"] if not isinstance(data, dict) else jsonschema_lite.validate(data, schema)
     if not errors:
-        verdict, findings = (data["verdict"], data["findings"]) if kind == "review" else (data["STATUS"], data["FINDINGS"])
-        if verdict in ("accept", "approve") and any(f["severity"] == "high" for f in findings):
+        if kind == "visual":
+            verdict, findings = data["opinion"], data["findings"]
+        else:
+            verdict, findings = (data["verdict"], data["findings"]) if kind == "review" else (data["STATUS"], data["FINDINGS"])
+        if verdict in ("accept", "approve", "pass") and any(f["severity"] == "high" for f in findings):
             errors = [f"{verdict} with a high finding is not allowed"]
     if errors:
         raise ReviewError("schema_invalid", "; ".join(errors[:5]))

@@ -1,7 +1,7 @@
 ---
 id: TASK-0135
 title: "Gemini visual second opinion in llm_worker (free tier, #441)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M05
 agent: developer
@@ -13,6 +13,7 @@ related: [TASK-0132]
 approved_by: owner
 approved_at: 2026-11-24
 approval_ref: "#441"
+review_ref: "reviewer: APPROVE 61ad9fe + deltas; codex: 3 returns, waived by #432 → DEBT-0081; live runs gemini-flash-latest, gemini-4-hydrogen; landed 14fafb0"
 created: 2026-11-24
 ---
 
@@ -36,3 +37,11 @@ Gemini смотрит те же кадры 1920x1080 при 100 %, что и ui-
 - [ ] Ревьюер APPROVE; второе ревью Codex (tools/**).
 
 ## Результат
+[Факт] Реализовано в `tools/llm_worker` (ветка worktree): команда `visual` (режимы `criteria` и `design`), профиль `gemini-flash` (`free_public`, ключ только из `~/.config/singularity/gemini-api-key`), `visual.py`, схемы `visual*.schema.json`, 36 тестов без сети в `tests/test_visual.py`, README. Модель по умолчанию `gemini-4-hydrogen`. Бесплатность зависит от проекта Google без биллинга; инструмент пишет расход токенов, цен не знает.
+
+Живые прогоны 2026-11-24 на кадрах TASK-0126 (записи `tools/llm_worker/runs/visual-TASK-0126-<hash>-gemini.*`, копии в `docs/ui/reviews/gemini-*-2026-11-24-*.md`):
+- критерии, `d26b368b`, gemini-flash-latest: mixed, 2 medium, 2 low;
+- дизайн, `08c33cd0`, flash: mixed;
+- дизайн, `fc36b812`, gemini-4-hydrogen: fail, 3 high, 5 medium, 3 low.
+
+Проверка: `verify.py --full` OK. Ревью reviewer APPROVE 61ad9fe; Codex-ревью вернуло код 1 (замечания учтены в этом коммите).
