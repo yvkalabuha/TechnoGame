@@ -6,14 +6,34 @@ namespace Singularity.Client.Audio.Tests;
 public class GlobeLookTests
 {
     [Theory]
-    [InlineData(null, GlobeLook.Current)]
-    [InlineData("", GlobeLook.Current)]
-    [InlineData("nonsense", GlobeLook.Current)]
+    [InlineData(null, GlobeLookLogic.Default)]
+    [InlineData("", GlobeLookLogic.Default)]
+    [InlineData("nonsense", GlobeLookLogic.Default)]
     [InlineData("a", GlobeLook.A)]
     [InlineData("A+", GlobeLook.APlus)]
     [InlineData("aplus", GlobeLook.APlus)]
     [InlineData("B", GlobeLook.B)]
-    public void Parse_MapsFlagValues_UnknownKeepsCurrent(string? s, GlobeLook want) => Assert.Equal(want, GlobeLookLogic.Parse(s!));
+    public void Parse_MapsFlagValues_UnknownGivesDefault(string? s, GlobeLook want) => Assert.Equal(want, GlobeLookLogic.Parse(s!));
+
+    [Fact]
+    public void Default_IsThePhysicalAtmosphere_Owner444() => Assert.Equal(GlobeLook.B, GlobeLookLogic.Default);
+
+    [Fact]
+    public void DeltaE_ZeroForSame_AndLargeForBlackWhite()
+    {
+        Assert.Equal(0.0, GlobeLookLogic.DeltaE(0.4, 0.5, 0.6, 0.4, 0.5, 0.6), 6);
+        Assert.InRange(GlobeLookLogic.DeltaE(0, 0, 0, 1, 1, 1), 99.0, 101.0);
+        Assert.True(GlobeLookLogic.DeltaE(0.80, 0.82, 0.85, 0.80, 0.82, 0.88) < GlobeLookLogic.DeltaE(0.80, 0.82, 0.85, 0.70, 0.82, 0.85));
+    }
+
+    [Fact]
+    public void AngleForLimbRatio_FindsTheLimbAndTheCentre()
+    {
+        Assert.Equal(System.Math.Acos(1 / 2.6) * 180 / System.Math.PI, GlobeLookLogic.AngleForLimbRatio(2.6, 1.0), 3);
+        Assert.Equal(0.0, GlobeLookLogic.AngleForLimbRatio(2.6, 0.0), 3);
+        var a = GlobeLookLogic.AngleForLimbRatio(2.6, 0.96);
+        Assert.InRange(a, 52, 55);   // tan(alpha) = 0.96 * tan(limb) = 0.4 gives about 53.5 degrees
+    }
 
     [Fact]
     public void Next_CyclesThroughAllFourAndBack()

@@ -49,7 +49,7 @@ void fragment() {
 		vec3 sc = (vec3(1.0) - exp(-od)) * sun * lightf;
 		col = sc / max(max(sc.r, max(sc.g, sc.b)), 1e-4);
 		a = clamp(max(sc.r, max(sc.g, sc.b)) * 0.95, 0.0, 0.9);
-		if (x < 0.0) a *= smoothstep(-0.04, 0.0, x) * 0.7;   // at most 4 % inside the disk
+		if (x < 0.0) { float k = smoothstep(-0.04, 0.0, x); a *= k * k * 0.5; }   // at most 4 % inside the disk, eased in so that fills stay readable
 	}
 	ALBEDO = col;
 	ALPHA = a;

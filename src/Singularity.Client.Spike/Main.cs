@@ -652,7 +652,7 @@ public sealed partial class Main : Node3D
             _debug = !_debug; _hud.Visible = _debug;
             if (_signal != null) { _signal.Debug = _debug; _actorPanel.Debug = _debug; }
         }
-        else if (e is InputEventKey f6 && f6.Pressed && !f6.Echo && f6.Keycode == Key.F6) ApplyGlobeLook(GlobeLookLogic.Next(_look));
+        else if (e is InputEventKey f6 && f6.Pressed && !f6.Echo && f6.Keycode == Key.F6 && _debug) ApplyGlobeLook(GlobeLookLogic.Next(_look));
         else if (e is InputEventKey f1 && f1.Pressed && f1.Keycode == Key.F1 && _help != null) _help.Visible = !_help.Visible;
         else if (e is InputEventKey key && key.Pressed && key.Keycode == Key.H)
         {

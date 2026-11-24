@@ -32,6 +32,7 @@ public sealed class SettingsData
     public int DeskInstruments = 2;      // layer 1, objects on the desk: 0 off, 1 weak, 2 normal (#404; drawn from a later task)
     public int OrganInstruments = 2;     // layer 2, instrument-style controls: 0 off (the plain «before» look), 1 weak (ink only), 2 normal (#404)
     public bool RailWide;                // area rail: false narrow (icon + letter), true wide (with names)
+    public int GlobeLook = (int)GlobeLookLogic.Default;   // 0 prior flat look, 1 matte, 2 matte + haze, 3 physical atmosphere (owner #444: the default)
 
     public SettingsData Clone()
     {
@@ -45,7 +46,7 @@ public sealed class SettingsData
 
     public void ResetVideo() { var d = new SettingsData(); WindowMode = d.WindowMode; Quality = d.Quality; Upscaler = d.Upscaler; UpscaleMode = d.UpscaleMode; Vsync = d.Vsync; FpsLimit = d.FpsLimit; UiScale = d.UiScale; }
     public void ResetSound() { var d = new SettingsData(); Volume = d.Volume; SoundInBackground = d.SoundInBackground; }
-    public void ResetGeneral() { var d = new SettingsData(); DateFormat = d.DateFormat; PauseOnAlarm = d.PauseOnAlarm; TipDelay = d.TipDelay; Animations = d.Animations; Textures = d.Textures; DeskInstruments = d.DeskInstruments; OrganInstruments = d.OrganInstruments; RailWide = d.RailWide; }
+    public void ResetGeneral() { var d = new SettingsData(); DateFormat = d.DateFormat; PauseOnAlarm = d.PauseOnAlarm; TipDelay = d.TipDelay; Animations = d.Animations; Textures = d.Textures; DeskInstruments = d.DeskInstruments; OrganInstruments = d.OrganInstruments; RailWide = d.RailWide; GlobeLook = d.GlobeLook; }
 }
 
 /// <summary>Current settings, `user://settings.cfg`, and their effect on the engine.</summary>
@@ -58,6 +59,8 @@ public static class Settings
     public static bool ReadOnly { get; set; }
     /// <summary>--window: a framed 1920x1080 window for tests (the game itself is fullscreen or borderless, #424).</summary>
     public static bool Framed { get; set; }
+    /// <summary>Set by the client: the globe look changed (the settings sheet previews it live).</summary>
+    public static Action<int> OnGlobeLook;
     static readonly string[] Months = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
     public static void Load()
@@ -87,6 +90,7 @@ public static class Settings
         s.DeskInstruments = Math.Clamp((int)cf.GetValue("general", "desk_instruments", s.DeskInstruments), 0, 2);
         s.OrganInstruments = Math.Clamp((int)cf.GetValue("general", "organ_instruments", s.OrganInstruments), 0, 2);
         s.RailWide = (bool)cf.GetValue("general", "rail_wide", s.RailWide);
+        s.GlobeLook = Math.Clamp((int)cf.GetValue("general", "globe_look", s.GlobeLook), 0, 3);
         Current = s;
     }
 
@@ -102,7 +106,7 @@ public static class Settings
         cf.SetValue("general", "lang", s.Lang); cf.SetValue("general", "date_format", s.DateFormat); cf.SetValue("general", "pause_on_alarm", s.PauseOnAlarm);
         cf.SetValue("general", "tip_delay", s.TipDelay); cf.SetValue("general", "animations", s.Animations);
         cf.SetValue("general", "textures", s.Textures); cf.SetValue("general", "rail_wide", s.RailWide);
-        cf.SetValue("general", "desk_instruments", s.DeskInstruments); cf.SetValue("general", "organ_instruments", s.OrganInstruments);
+        cf.SetValue("general", "desk_instruments", s.DeskInstruments); cf.SetValue("general", "organ_instruments", s.OrganInstruments); cf.SetValue("general", "globe_look", s.GlobeLook);
         cf.Save(Path);
     }
 
@@ -149,6 +153,7 @@ public static class Settings
         vp.Scaling3DScale = s.Upscaler == 0 ? 1f : (float)SettingsLogic.RenderScale(s.UpscaleMode);
         ProjectSettings.SetSetting("gui/timers/tooltip_delay_sec", SettingsData.TipDelays[s.TipDelay]);
         Loc.IsoNumbers = s.DateFormat == 1;
+        OnGlobeLook?.Invoke(s.GlobeLook);
         PaperSurface.SetPreset(s.Textures);
         InstrumentLogic.OrganLevel = s.OrganInstruments;
         AudioServer.SetBusVolumeDb(0, (float)(s.Volume[0] < 0.1 ? -80 : 20 * Math.Log10(s.Volume[0] / 100)));

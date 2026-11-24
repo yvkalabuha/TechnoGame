@@ -232,6 +232,7 @@ public sealed partial class SettingsSheet : Control
         Row("set.textures", Seg(new[] { "set.tex.off", "set.tex.weak", "set.tex.normal" }, _w.Textures, i => { _w.Textures = i; PaperSurface.SetPreset(i); }));
         Row("set.desk", Seg(new[] { "set.tex.off", "set.tex.weak", "set.tex.normal" }, _w.DeskInstruments, i => _w.DeskInstruments = i));
         Row("set.organs", Seg(new[] { "set.tex.off", "set.tex.weak", "set.tex.normal" }, _w.OrganInstruments, i => { _w.OrganInstruments = i; InstrumentLogic.OrganLevel = i; }));
+        Row("set.globelook", Seg(new[] { "set.gl.current", "set.gl.a", "set.gl.aplus", "set.gl.b" }, _w.GlobeLook, i => { _w.GlobeLook = i; Settings.OnGlobeLook?.Invoke(i); }));
         Row("set.railwide", Seg(new[] { "set.rail.narrow", "set.rail.wide" }, _w.RailWide ? 1 : 0, i => _w.RailWide = i == 1));
         Row("set.anim", Seg(new[] { "set.on", "set.reduce" }, _w.Animations ? 0 : 1, i => _w.Animations = i == 0), null, true);
         _body.AddChild(Ui.Wrap("set.lang.note", 14, Ui.Ink3));
@@ -240,13 +241,14 @@ public sealed partial class SettingsSheet : Control
     // ---------- actions ----------
     void ResetTab()
     {
-        switch (_tab) { case 0: _w.ResetVideo(); break; case 1: _w.ResetSound(); break; default: _w.ResetGeneral(); PaperSurface.SetPreset(_w.Textures); InstrumentLogic.OrganLevel = _w.OrganInstruments; break; }   // the texture preset previews live
+        switch (_tab) { case 0: _w.ResetVideo(); break; case 1: _w.ResetSound(); break; default: _w.ResetGeneral(); Settings.OnGlobeLook?.Invoke(_w.GlobeLook); PaperSurface.SetPreset(_w.Textures); InstrumentLogic.OrganLevel = _w.OrganInstruments; break; }   // the texture preset previews live
         Rebuild();
     }
 
     void Cancel()
     {
         if (Loc.Lang != _orig.Lang) Loc.SetLang(_orig.Lang);
+        Settings.OnGlobeLook?.Invoke(_orig.GlobeLook);
         PaperSurface.SetPreset(_orig.Textures);   // the preset previews live while the sheet is open
         InstrumentLogic.OrganLevel = _orig.OrganInstruments;
         if (_musicOrig is int m) MusicAmountSet?.Invoke(m);
