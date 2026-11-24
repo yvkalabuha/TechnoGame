@@ -290,7 +290,9 @@ public sealed partial class ActorPanel : PanelContainer
     AlloyCoverage? _shotAlloy;
     /// <summary>Caption of the alloy flask, for the run-time assertion.</summary>
     public string ShotAlloyCaption => _prodCap.Text;
-    public int ShotFlaskCount { get { int c = 0; foreach (var x in _sciCell) if (x.Visible) c++; return c; } }
+    public int ShotFlaskCount { get { int c = 0; foreach (var x in _sciCell) if (x.IsVisibleInTree()) c++; return c; } }   // in the tree: a hidden parent block shows nothing
+    /// <summary>Whether the alloy flask row is really on screen (visible in the tree), for the run-time assertion.</summary>
+    public bool ShotAlloyRowShown => _flaskProdRow.IsVisibleInTree() && _flaskProd.IsVisibleInTree();
     public float ShotCaptionWidth(string lang) => FlaskControl.WidestCaption(lang);
 
     /// <summary>Screenshot run: canvas centres of the blank part of a share row and of the caliper, for the real mouse events the shot sends.</summary>
@@ -500,7 +502,7 @@ public sealed partial class ActorPanel : PanelContainer
         _prodKnown = cov.Known;
         _flaskProdRow.Visible = _prodOn && _prodKnown;   // no step ran yet (or a restored snapshot): no row, never a false «enough»
         var fl = InstrumentLogic.AlloyFlask(cov);
-        _flaskProd.Word = fl.State == InstrumentLogic.AlloyState.NoSmelting ? "flask.none" : null;
+        _flaskProd.Word = fl.State == Singularity.Core.Products.AlloyState.NoSmelting ? "flask.none" : null;
         _flaskProd.Set(fl.Level, fl.Hatched);
         int pct = InstrumentLogic.FlaskPercent(fl.Level, fl.Hatched);
         _flaskProd.TooltipText = Loc.T(InstrumentLogic.AlloyTipKey(fl.State), pct);

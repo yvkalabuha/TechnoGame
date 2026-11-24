@@ -1214,7 +1214,7 @@ public sealed partial class Main : Node3D
             case 141 when _shotT >= 0.5: SaveProbe("flask_levels_100"); Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false); _shotStep = 142; _shotT = 0; break;
             case 142 when _shotT >= 0.6: SaveProbe("flask_levels_150"); Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _flaskProbe.QueueFree(); _shotStep = 143; _shotT = 0; break;
             // Science from a real session state: no fixture; a month at a time until the chain shows (at most about 12 s), then the live panel is checked against the snapshot
-            case 143 when _shotT >= 0.3: Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); InstrumentLogic.YearOverride = null; OpenArea(AreaId.Science); _signal.SetSpeed(0); _liveMonths = 0; _liveFirst = -1; _liveHit = null; _liveEligible = null; _liveLastMonth = -2; _shotStep = 144; _shotT = 0; break;
+            case 143 when _shotT >= 0.3: Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); InstrumentLogic.YearOverride = null; OpenArea(AreaId.Science); _signal.SetSpeed(0); _host.SubscribeAllForShots(); _liveMonths = 0; _liveFirst = -1; _liveHit = null; _liveEligible = null; _liveLastMonth = -2; _shotStep = 144; _shotT = 0; break;
             // Live Science: the simulation runs in steps of 30 ticks (about a month); in each step every power's why_not snapshot is read. At the first step where a power has a Knowledge link,
             // that power's Science panel is opened (the area panel pointed at it) and checked; the scan then goes on to 30 years for the shares per power. No power with a link in 30 years: the run fails.
             case 144 when _shotT >= 0.2:
@@ -1243,6 +1243,7 @@ public sealed partial class Main : Node3D
                 OpenArea(AreaId.Production); _host.WhyActor = _liveFirst; _areaPanel.ShowActor(_liveFirst); _shotStep = 147; _shotT = 0; break;
             }
             case 147 when _shotT >= 0.8 && _host.Snap.WhyActor == _liveFirst:
+                if (!_areaPanel.ShotAlloyRowShown) { InstFail("live production frame: the alloy flask row is not on screen"); break; }
                 SaveShot($"full_live_production_{_host.Layout.ActorIds[_liveFirst]}_{_host.Snap.Date.Year}.png", null, true);
                 CloseArea(); _host.WhyActor = _player; _shotStep = 146; _shotT = 0; break;
             case 146 when _shotT >= 0.2:
@@ -1253,12 +1254,13 @@ public sealed partial class Main : Node3D
                     // a live frame where the alloy is sufficient: the first power whose coverage reads «Normal»
                     _liveNormal = -1;
                     for (int a = 0; a < _host.Layout.ActorIds.Length && _liveNormal < 0; a++)
-                        if (InstrumentLogic.AlloyFlask(_host.Snap.View.Actors[a].Alloy).State == InstrumentLogic.AlloyState.Normal) _liveNormal = a;
+                        if (_host.Snap.View.Actors[a].Alloy.State == Singularity.Core.Products.AlloyState.Normal) _liveNormal = a;
                     if (_liveNormal >= 0) { OpenArea(AreaId.Production); _host.WhyActor = _liveNormal; _areaPanel.ShowActor(_liveNormal); _shotStep = 148; }
                     else { _shotLog += "live alloy: no power with sufficient alloy at the end of the scan\n"; _alloyI = 0; _shotStep = 149; }
                 }
                 _shotT = 0; break;
             case 148 when _shotT >= 0.8 && _host.Snap.WhyActor == _liveNormal:
+                if (!_areaPanel.ShotAlloyRowShown) { InstFail("live normal-alloy frame: the alloy flask row is not on screen"); break; }
                 SaveShot($"full_live_production_normal_{_host.Layout.ActorIds[_liveNormal]}_{_host.Snap.Date.Year}.png", null, true);
                 _shotLog += $"live alloy normal frame: actor {_host.Layout.ActorIds[_liveNormal]}, date {_host.Snap.Date}, caption \"{_areaPanel.ShotAlloyCaption}\"\n";
                 CloseArea(); _host.WhyActor = _player; _alloyI = 0; _shotStep = 149; _shotT = 0; break;
@@ -1269,8 +1271,11 @@ public sealed partial class Main : Node3D
             case 150 when _shotT >= 0.6:
             {
                 var fx = InstrumentLogic.AlloyFlask(ShotCoverage(_alloyI));
-                var want = new[] { InstrumentLogic.AlloyState.Shortage, InstrumentLogic.AlloyState.Disrupted, InstrumentLogic.AlloyState.NoSmelting, InstrumentLogic.AlloyState.Normal }[_alloyI];
+                var want = new[] { Singularity.Core.Products.AlloyState.Shortage, Singularity.Core.Products.AlloyState.Disrupted, Singularity.Core.Products.AlloyState.NoSmelting, Singularity.Core.Products.AlloyState.Normal }[_alloyI];
                 if (fx.State != want) { InstFail($"alloy fixture {_alloyI} reads {fx.State}, expected {want}"); break; }
+                string wantCap4 = Loc.T(InstrumentLogic.AlloyCaptionKey(want), InstrumentLogic.FlaskPercent(fx.Level, fx.Hatched));
+                if (!_areaPanel.ShotAlloyRowShown) { InstFail($"alloy frame {want}: the flask row is not on screen"); break; }
+                if (_areaPanel.ShotAlloyCaption != wantCap4) { InstFail($"alloy frame {want}: caption \"{_areaPanel.ShotAlloyCaption}\", expected \"{wantCap4}\""); break; }
                 SaveShot($"full_alloy_{want}_100.png", null, true);
                 _shotLog += $"alloy state frame {want}: caption \"{_areaPanel.ShotAlloyCaption}\"\n";
                 _areaPanel.ShotAlloy(null); CloseArea();
@@ -1407,11 +1412,11 @@ public sealed partial class Main : Node3D
         return true;
     }
 
-    // A month is eligible for a power while the data still has a node it does not know; a view without the node list counts as eligible.
+    // A month is eligible for a power while the data still has a node it does not know; the run subscribes the view to every power, so a missing node list is a failure.
     bool HasUnknownNodes(int actor)
     {
         var nodes = _host.Snap.View.Actors[actor].Nodes;
-        if (!nodes.IsPresent) return true;
+        if (!nodes.IsPresent) { InstFail($"live science check failed: the view carries no node list for {_host.Layout.ActorIds[actor]}, eligible months cannot be told"); return true; }
         for (int i = 0; i < nodes.Count; i++) if (!nodes[i].Known) return true;
         return false;
     }

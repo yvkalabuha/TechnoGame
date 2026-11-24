@@ -1,3 +1,4 @@
+using System.IO;
 using Singularity.Core.Commands;
 using Singularity.Core.Products;
 using Singularity.Kernel;
@@ -99,12 +100,41 @@ public sealed class InstrumentFieldsTests
     }
 
     [Fact]
-    public void Alloy_IsNotKnownBeforeTheFirstStep_AndAfterARestore()
+    public void Alloy_IsNotKnownBeforeTheFirstStep_AndAfterARestoreUntilTheNextStep()
     {
         SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
-        Assert.All(s.View.Actors, a => Assert.False(a.Alloy.Known));   // no step yet: nothing to show, never «enough»
-        s.StepThroughMonth(0);
+        Assert.All(s.View.Actors, a => { Assert.False(a.Alloy.Known); Assert.Equal(AlloyState.Unknown, a.Alloy.State); });   // no step yet: nothing to show, never «enough»
+        for (long t = 0; t < 10; t++)
+            s.StepThroughMonth(t);
         Assert.All(s.View.Actors, a => Assert.True(a.Alloy.Known));
+        using var m = new MemoryStream();
+        s.WriteSnapshot(m);
+        SliceSession restored = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
+        restored.LoadSnapshot(new MemoryStream(m.ToArray()));
+        Assert.Equal(s.LastHash, restored.LastHash);   // the snapshot really loaded
+        Assert.All(restored.View.Actors, a => { Assert.False(a.Alloy.Known); Assert.Equal(AlloyState.Unknown, a.Alloy.State); });
+        restored.StepThroughMonth(10);
+        Assert.All(restored.View.Actors, a => Assert.True(a.Alloy.Known));
+    }
+
+    [Fact]
+    public void AlloyState_IsDecidedFromTheStep7Trace_NotByTheReader()
+    {
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
+        SliceWorld w = s.World;
+        for (long t = 0; t < Months; t++)
+        {
+            s.StepThroughMonth(t);
+            for (int a = 0; a < w.Scenario.ActorCount; a++)
+            {
+                Fx6 supply = w.Products.LastAlloySupply(a), ask = w.Products.LastAlloyAsk(a), deficit = w.Policy.AlloyDeficit(a, t);
+                AlloyState expected = supply <= Fx6.Zero ? AlloyState.NoSmelting
+                    : ask > Fx6.Zero && supply < ask ? AlloyState.Shortage
+                    : deficit > Fx6.Zero ? AlloyState.Disrupted
+                    : AlloyState.Normal;
+                Assert.Equal(expected, s.View.Actors[a].Alloy.State);
+            }
+        }
     }
 
     [Fact]

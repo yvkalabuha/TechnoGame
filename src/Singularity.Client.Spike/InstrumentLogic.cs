@@ -61,23 +61,18 @@ public static class InstrumentLogic
     /// the two are not added. The level is what is left of the normal supply, 1 − deficit.</summary>
     public static double AlloyLevel(double deficitFraction) => Math.Clamp(1 - deficitFraction, 0, 1);
 
-    /// <summary>Which case a Production flask shows: Disrupted is the supply below normal (demand not measured), Shortage is the supply against a measured demand (the AlloyDeficit link), NoSmelting is no admitted melt.</summary>
-    public enum AlloyState { Normal, Disrupted, Shortage, NoSmelting }
-
     public readonly record struct AlloyFlaskView(double Level, bool Hatched, AlloyState State);
 
-    /// <summary>The Production flask. A why_not alloy link with Have below Need is a shortage (real supply against the planned demand); with Have at or above Need it is no shortage and the other rules apply.
-    /// No supply at all (supply 0: no admitted melt, or a full cut) is an empty hatched flask and wins over the shortage; otherwise the stock is what the policy disruption leaves, hatched while the disruption lasts.</summary>
-    public static AlloyFlaskView AlloyFlask(double supply, double deficitFraction, (double Have, double Need)? shortage)
+    /// <summary>The Production flask from the alloy state the Session decided (<see cref="AlloyCoverage.State"/>): this only maps the state to a level and a hatch.
+    /// Shortage is the supply against the asked need, Disrupted the supply against the normal one (the level is what the cut leaves), NoSmelting an empty hatched flask.</summary>
+    public static AlloyFlaskView AlloyFlask(AlloyCoverage c) => c.State switch
     {
-        if (supply <= 0) return new(0, true, AlloyState.NoSmelting);   // nothing to count against a need: «none», never «0 % of the need»
-        if (shortage is { } s && s.Have < s.Need) return new(FlaskLevel(s.Have, s.Need), true, AlloyState.Shortage);
-        return deficitFraction > 0 ? new(AlloyLevel(deficitFraction), true, AlloyState.Disrupted) : new(AlloyLevel(deficitFraction), false, AlloyState.Normal);
-    }
-
-    /// <summary>The Production flask from the one Session field of alloy coverage: supply under the largest need of a running line is a shortage, otherwise the disruption and the melt decide.</summary>
-    public static AlloyFlaskView AlloyFlask(AlloyCoverage c) =>
-        AlloyFlask(c.Supply.ToDouble(), c.DeficitFraction.ToDouble(), c.Need > Singularity.Kernel.Fx6.Zero ? (c.Supply.ToDouble(), c.Need.ToDouble()) : null);
+        AlloyState.Shortage => new(FlaskLevel(c.Supply.ToDouble(), c.Need.ToDouble()), true, AlloyState.Shortage),
+        AlloyState.NoSmelting => new(0, true, AlloyState.NoSmelting),
+        AlloyState.Disrupted => new(AlloyLevel(c.DeficitFraction.ToDouble()), true, AlloyState.Disrupted),
+        AlloyState.Normal => new(1, false, AlloyState.Normal),
+        _ => throw new InvalidOperationException("the view has no alloy data yet: the caller shows no flask"),
+    };
 
     /// <summary>Percent shown for a flask level, in the caption and in the tooltip alike: rounded, and a hatched (deficit) flask never reads 100 %.</summary>
     public static int FlaskPercent(double level, bool hatched)
