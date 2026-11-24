@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0134-mastery-nogate2",
+  "description": "TASK-0134 step 4 (g5-g6-probe.md §9.16): NGNF = candidate close + programme (no gate, no foresight); NGNC = foresight + programme (no gate, no candidate close: the limit of any soft close). HCAP_K 0.10, HCAP_MAX 1.5; same setup as TASK-0134-mastery-probe.json.",
+  "model": "JetSlice",
+  "ticks": 31168,
+  "chunk_size": 1,
+  "threads": [
+    1,
+    4
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 10
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full"
+  },
+  "series": [
+    {
+      "name": "NGNF",
+      "params": {
+        "MASTERY_RULES": "CLOSE+PROGRAMME",
+        "HCAP_K": 0.1,
+        "HCAP_MAX": 1.5
+      }
+    },
+    {
+      "name": "NGNC",
+      "params": {
+        "MASTERY_RULES": "FORESIGHT+PROGRAMME",
+        "HCAP_K": 0.1,
+        "HCAP_MAX": 1.5
+      }
+    }
+  ],
+  "meta": {
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r17",
+    "preregistration": "docs/simulation/g5-g6-probe.md §9.16"
+  }
+}
