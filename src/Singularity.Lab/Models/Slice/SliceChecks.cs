@@ -52,6 +52,8 @@ public static class SliceChecks
         ("slice: stage manifests stay valid after freezing; matrix --point/--seeds select one point (TASK-0055)", () => StageManifests(tmp)),
         ("slice: C3 distance — a tiny positive d_C3 is reported positive at full precision (TASK-0055 Codex)", C3DistanceExact),
         ("slice: design capacity — AI design commands, commands without a design and slots used are counted (TASK-0054)", () => DesignCapacity(tmp)),
+        ("slice: slot counts — a withdrawn slot is free, its reuse is a created design, 12 taken slots make a refused command an all-slots-used one (TASK-0118 1b, 1c)", SlotCountsCheck),
+        ("slice: cost_u100 — the first series of a generation, never a later one when its slot is retaken before 100 units (TASK-0118 1b)", CostU100FirstSeries),
         ("slice: calibration points — one point of each stage C1, C3+C4, C2 and the L_C/L_P layers run; K keys change the run (TASK-0055)", () => CalibrationPoints(tmp)),
         ("slice: switches — FORCE, START PERT/SYM, CHANNELS, GRID, FLEET_ARM, SALE_ARM, change the run (DEBT-0032, HYP-0004)", () => Switches(tmp)),
         ("slice: calib-print — 1 seed, 60 months, JetSliceCalib and JetSlice: hash = golden_hash, G_r6 ≤ G_L, first entry equal; FORCE/CONTROL_TABLES rejected (review M1, M2, M5)", () => CalibPrintSmoke(tmp)),
@@ -238,18 +240,24 @@ public static class SliceChecks
     private static string? FullRun2030(string tmp)
     {
         const long Ticks2030 = 31168;
-        var (a, da) = Run(tmp, Manifest("JetSlice", Ticks2030), 1, 1, "y2030-t1");
-        var (b, _) = Run(tmp, Manifest("JetSlice", Ticks2030), 1, 2, "y2030-t2");
-        if (!a.Ok || !b.Ok)
-            return $"status: {a.Error}{b.Error}";
-        if (a.GoldenHash != b.GoldenHash)
-            return $"threads 1 vs 2: {a.GoldenHash} vs {b.GoldenHash}";
-        using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(da, RunExecutor.RunJsonFile)));
-        string? months = doc.RootElement.GetProperty("model_info").GetProperty("months").GetString();
-        if (months != "1024")
-            return $"model_info.months {months}";
-        string last = File.ReadLines(Path.Combine(da, SliceTables.Lines.Name + ".csv")).Last();
-        return last.Split(',')[1] == "1023" ? null : $"last lines row {last}";
+        // TASK-0118 item 6 (Codex on TASK-0121): seeds 1, 2 and 3, not seed 1 only.
+        for (ulong seed = 1; seed <= 3; seed++)
+        {
+            var (a, da) = Run(tmp, Manifest("JetSlice", Ticks2030), seed, 1, $"y2030-s{seed}-t1");
+            var (b, _) = Run(tmp, Manifest("JetSlice", Ticks2030), seed, 2, $"y2030-s{seed}-t2");
+            if (!a.Ok || !b.Ok)
+                return $"seed {seed} status: {a.Error}{b.Error}";
+            if (a.GoldenHash != b.GoldenHash)
+                return $"seed {seed} threads 1 vs 2: {a.GoldenHash} vs {b.GoldenHash}";
+            using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(da, RunExecutor.RunJsonFile)));
+            string? months = doc.RootElement.GetProperty("model_info").GetProperty("months").GetString();
+            if (months != "1024")
+                return $"seed {seed} model_info.months {months}";
+            string last = File.ReadLines(Path.Combine(da, SliceTables.Lines.Name + ".csv")).Last();
+            if (last.Split(',')[1] != "1023")
+                return $"seed {seed} last lines row {last}";
+        }
+        return null;
     }
 
 
@@ -1237,6 +1245,52 @@ public static class SliceChecks
         if (cmds <= 0 || slots <= 0 || cap != 12)
             return $"design_commands {cmds}, design_slots_max {slots}, capacity {cap}";
         return slots < cap && Get("design_commands_without_design_all_slots_used") == 0 ? null : $"slots {slots} of {cap}";
+    }
+
+    private static string? SlotCountsCheck()
+    {
+        static (DesignStage, int)[] Slots(int n, DesignStage s, int gen = 1) => [.. Enumerable.Repeat((s, gen), n)];
+        // 12 taken slots, nothing new: a compose of that month met a full layer (the acceptance case of TASK-0054, T3).
+        var (c0, u0, f0) = SliceObserver.SlotCounts(Slots(12, DesignStage.InService), Slots(12, DesignStage.InService));
+        if (c0 != 0 || u0 != 12 || !f0)
+            return $"12 taken: created {c0}, used {u0}, full {f0}";
+        // 11 taken + 1 withdrawn, the withdrawn slot retaken (generation 1 → 2): one design created, the layer was not full.
+        (DesignStage, int)[] before = [.. Slots(11, DesignStage.Series), (DesignStage.Withdrawn, 1)];
+        (DesignStage, int)[] after = [.. Slots(11, DesignStage.Series), (DesignStage.Project, 2)];
+        var (c1, u1, f1) = SliceObserver.SlotCounts(before, after);
+        if (c1 != 1 || u1 != 12 || f1)
+            return $"reuse of a withdrawn slot: created {c1}, used {u1}, full {f1}";
+        // Withdrawn slots stay free: not used, not full.
+        var (c2, u2, f2) = SliceObserver.SlotCounts(Slots(12, DesignStage.Withdrawn), Slots(12, DesignStage.Withdrawn));
+        if (c2 != 0 || u2 != 0 || f2)
+            return $"withdrawn slots: created {c2}, used {u2}, full {f2}";
+        // A slot withdrawn and retaken inside one step (generation changes, stage stays taken) is a created design.
+        var (c3, _, _) = SliceObserver.SlotCounts([(DesignStage.InService, 1)], [(DesignStage.Series, 2)]);
+        return c3 == 1 ? null : $"retaken within a step: created {c3}";
+    }
+
+    private static string? CostU100FirstSeries()
+    {
+        var first = new int[1, 1];
+        var cum = new long[1, 1];
+        var cost = new long?[1, 1];
+        first[0, 0] = -1;
+        long Units(long n) => n * Fx6.Scale;
+        // Slot 0 is the first series of generation 1 and makes 60 units, then its slot is retaken; slot 1 makes 100 units later.
+        SliceObserver.FirstSeriesMonth(first, cum, cost, 0, 0, 0, DesignStage.Series, Units(30), 111);
+        SliceObserver.FirstSeriesMonth(first, cum, cost, 0, 0, 0, DesignStage.Series, Units(30), 111);
+        SliceObserver.SlotRetaken(first, cost, 0, 0, 1);
+        SliceObserver.FirstSeriesMonth(first, cum, cost, 0, 0, 1, DesignStage.Series, Units(100), 222);
+        if (cost[0, 0] is not null)
+            return $"cost_u100 {cost[0, 0]} from a later series";
+        // The ordinary case: the first series reaches 100 units.
+        var f2 = new int[1, 1] { { -1 } };
+        var c2 = new long[1, 1];
+        var k2 = new long?[1, 1];
+        SliceObserver.FirstSeriesMonth(f2, c2, k2, 0, 0, 3, DesignStage.Series, Units(60), 333);
+        SliceObserver.FirstSeriesMonth(f2, c2, k2, 0, 0, 4, DesignStage.Series, Units(100), 444);
+        SliceObserver.FirstSeriesMonth(f2, c2, k2, 0, 0, 3, DesignStage.Series, Units(40), 555);
+        return k2[0, 0] == 555 ? null : $"cost_u100 of the first series {k2[0, 0]}, want 555";
     }
 
     private static string? Golden(string tmp)

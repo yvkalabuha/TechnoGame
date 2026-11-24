@@ -49,6 +49,19 @@ created: 2026-11-19
 ## REVIEW
 
 ## Результат
+Коммиты на ветке worktree-agent-ab93c5fbf34a82db5. Хеши эталонов не менялись.
+- 1a CanonicalSlot свободного слота: исправлено (`ProductsSystem.CanonicalSlot`), тест `CatchUpFindingsTests.CanonicalSlot_IsAbsent_WhileTheSlotIsFree`.
+- 1b счётчики ёмкости Lab, `cost_u100`; 1c проверка Lab на 12 слотов; п. 6 самотест Lab на seeds 2 и 3: отложено, simulation-engineer (`src/Singularity.Lab/**`). Core-тест на 12 слотов добавлен (`TwelveTakenSlots_...`).
+- 2 устаревшая команда и родитель производного: уже закрыто TASK-0115 (`LiveParent`, дескриптор с поколением в `ProductsInputsAdapter`); добавлен Session-тест `CancelDesign_WithTheWrongGenerationOfAnOccupiedSlot_IsStale_NotACancel`.
+- 3a KnownSince в смешанном списке: исправлено (`NodeBlock.NoKnownSince`), тест в `NodeBlockReuseTests`.
+- 3b участок без владельца: исправлено (`IndustrySystem.AllocateEffort`, проверка мемо как uint), тест `SiteWithoutOwner_...`.
+- 3c граница кучи больших объектов: ProcessView 48 байт, граница с 1770 процессов, запас точки A (651) 2,7 раза; комментарий исправлен, тест фиксирует числа.
+- 4 вложенное чтение профиля: исправлено (стек до 32 элементов, выше свой массив), тест `Profile_OfMoreThanFourItems_...`; `TickPathAllocationTests` проходит.
+- 5a новизна и живой проект в П: принятое отступление по комментарию в коде (`InLiveProject`), не менялось.
+- 5b списание стартового парка: опровергнуто, принятое правило памяти актора; тест `RetiredStartFleet_...`.
+- 5c `ab_none` для актора без парка: дефект по C10, правка меняет траектории и эталоны; отложено на следующий поезд схемы, тест `AbNone_IsNeverNew` подготовлен (в коммит не включён).
+- 5d регресс-тест применения памяти в Create: добавлен (`CreateAppliesTheRemembered_Novelty_...`).
+- п. 6: граница индекса в `CohortMastered` добавлена; тест второго слова маски q добавлен.
 
 ## Дополнение 2026-11-19
 - TASK-0122, Codex круг 3, medium: тест T2 на сетке (`BudgetRuleTests.cs:233`) допускает отход доли на 1 raw и там, где представимый бюджет сохранил бы долю; сузить допуск до случаев пустого интервала (O-028).
