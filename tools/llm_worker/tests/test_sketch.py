@@ -43,6 +43,10 @@ class SketchTest(unittest.TestCase):
         m = mock.patch("tools.llm_worker.gitleaks.scan_text")
         self.scan = m.start()
         self.addCleanup(m.stop)
+        for p in (mock.patch.object(sketch, "AGY_WS_DIR", t / "agy-ws"),
+                  mock.patch.object(sketch, "scoped_deny_rules", lambda allowed, **kw: [f"read_file({a}-x)" for a in allowed])):
+            p.start()
+            self.addCleanup(p.stop)  # the real rule walk lists / and is covered in test_agy_review
         n = mock.patch("tools.llm_worker.sketch._now", return_value=1795518306.0)  # 2026-11-24T11:05:06Z, the 429 of QFIX
         self.now = n.start()
         self.addCleanup(n.stop)
@@ -50,6 +54,8 @@ class SketchTest(unittest.TestCase):
     def runner(self, stream=None, rc=0, image=True, err=""):
         def run(cmd, cwd, timeout):
             self.calls.append((cmd, cwd, timeout))
+            if "--settings" in cmd:  # the file lives only during the run
+                self.settings = json.loads(Path(cmd[cmd.index("--settings")+ 1]).read_text())
             if cmd[1] == "--version":
                 return 0, "agy 1.5.15\n", ""
             for cid in sketch.parse_stream(FIXTURE.read_text() if stream is None else stream)[0]:
@@ -205,7 +211,7 @@ class SketchTest(unittest.TestCase):
     def test_settings_allowlist_passed(self):
         self.go(runner=self.runner())
         cmd = self.calls[-1][0]
-        s = json.loads(cmd[cmd.index("--settings") + 1])
+        s = self.settings
         self.assertEqual(s["permissions"]["allow"], [])
         self.assertIn("command(*)", s["permissions"]["deny"])  # shell denied before the agent starts
         for rule in ("write_file(*)", "read_url(*)", "execute_url(*)", "mcp(*)"):

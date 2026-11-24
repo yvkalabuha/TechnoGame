@@ -48,11 +48,12 @@ def main(argv=None):
     p.add_argument("reservation_id", nargs="?")
     p.add_argument("usd", nargs="?")
     p.add_argument("--source", default="", help="reconcile: where the amount comes from (billing page, date)")
-    p = sub.add_parser("review", help="second review of base...head (Codex in bwrap, DeepSeek as fallback)")
+    p = sub.add_parser("review", help="second review of base...head (auto: Codex in bwrap, Sonnet 5.5 via agy when the Codex limit is out, DeepSeek last)")
     p.add_argument("--task", required=True)
     p.add_argument("--base", required=True)
     p.add_argument("--head", required=True)
-    p.add_argument("--provider", choices=["codex", "deepseek"], default="codex")
+    p.add_argument("--provider", choices=["auto", "codex", "agy-sonnet", "deepseek"], default="auto",
+                   help="auto remembers the Codex limit reset time; codex keeps Codex then DeepSeek")
     _thinking_flags(p, default="on")
     p = sub.add_parser("review-confirm", help="mark one finding of a review record as confirmed or rejected")
     p.add_argument("record", type=Path)
@@ -262,6 +263,9 @@ def _review_gate(a):
                                                     thinking=a.thinking == "on", effort=a.effort)
             res = rec["result"]
             print(f"record: {path}")
+            print(f"provider: {rec['provider']}" + (f" ({rec['model']})" if rec.get("model") else "")
+                  + (f", replaced codex: {rec['fallbacks'][0]['reason']}" if rec.get("fallbacks") else "")
+                  + (f", codex reset at {rec['codex_reset_at']}" if rec.get("codex_reset_at") else ""))
             for i, f in enumerate(res["findings"], 1):
                 print(f"  #{i} [{f['severity']}] {f['path']}:{f['line']} {f['claim']}")
             print(line)
