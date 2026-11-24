@@ -1,7 +1,7 @@
 ---
 id: TASK-0146
 title: "Second review fallback to Sonnet 5.5 through agy when the Codex limit is exhausted (#456)"
-status: IN_PROGRESS
+status: DONE
 level: light
 milestone: MS-M05
 agent: developer
@@ -13,6 +13,7 @@ related: [TASK-0141, TASK-0145]
 approved_by: orchestrator
 approved_at: 2026-11-24
 approval_ref: "owner decision #456 (chat 2026-11-24); light task approved by Orchestrator"
+review_ref: "reviewer: APPROVE (edfdf6f bwrap box, earlier rounds); codex: waived #432 after 3rd return (2dcd45ed), highs fixed; live agy-sonnet run f4966ef; residual risk DEBT-0093; landed 00c60f9"
 created: 2026-11-24
 ---
 

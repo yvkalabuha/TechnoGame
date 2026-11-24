@@ -19,7 +19,6 @@
 ## Активные задачи
 <!-- registry:active:start -->
 - TASK-0118 [IN_PROGRESS] Codex catch-up findings on landed core tasks (TASK-0099, 0103, 0107, 0110) (developer)
-- TASK-0146 [IN_PROGRESS] Second review fallback to Sonnet 5.5 through agy when the Codex limit is exhausted (#456) (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0140 [REVIEW] Sound audit: sounds that play at the wrong moment or irritate (owner feedback) (sound-director)
 - TASK-0144 [REVIEW] Muted sound character (#455): soften attack and low-pass all routine cues (sound-director)
