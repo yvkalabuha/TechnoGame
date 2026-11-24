@@ -238,6 +238,22 @@ public class AudioPlannerTests
     }
 
     [Fact]
+    public void Ui_tick_cap_drops_and_drops_inside_the_quiet_period_do_not_count()
+    {
+        var p = new AudioPlanner();
+        for (int k = 0; k < 12; k++) Assert.NotNull(p.Request("ui_tick", k * 0.3));
+        for (int k = 0; k < 6; k++) Assert.Null(p.Request("ui_tick", 4.0 + k * 0.3));   // over the cap: dropped, uncounted
+        Assert.NotNull(p.Request("order_ok", 6.0));                                      // no quiet period came of it
+        var q = new AudioPlanner();
+        for (int k = 0; k < 3; k++) Assert.NotNull(q.Request("breakthrough", k * 11.0));
+        for (int k = 0; k < 3; k++) Assert.Null(q.Request("breakthrough", 34.0 + k * 11.0));   // 3 cap drops (the last at 56): quiet until 86
+        Assert.Null(q.Request("breakthrough", 60.5));           // inside quiet: not counted, not extended
+        Assert.Null(q.Request("breakthrough", 70.0));
+        Assert.Null(q.Request("order_ok", 85.0));
+        Assert.NotNull(q.Request("order_ok", 87.0));            // the quiet period ended on schedule
+    }
+
+    [Fact]
     public void Interval_drops_do_not_count_toward_the_quiet_period()
     {
         var p = new AudioPlanner();
@@ -292,10 +308,19 @@ public class OrderSoundsTests
         var o = new OrderSounds();
         o.Accepted(10.0, 2);
         Assert.Null(o.Applied(10.3, 2));                  // applied at once: the ok was enough
-        o.Accepted(20.0, 0); o.Accepted(21.0, 0);         // a queue built on pause
-        Assert.Null(o.Applied(300.0, 0));                 // still paused
-        Assert.Equal("order_done", o.Applied(302.0, 1));  // unpaused, long after
-        Assert.Null(o.Applied(302.1, 1));                 // the rest of the queue is silent
+        o.Accepted(20.0, 2);
+        Assert.Equal("order_done", o.Applied(22.0, 2));   // noticeably later
+        Assert.Null(o.Applied(22.1, 2));                  // the rest stays silent
+    }
+
+    [Fact]
+    public void A_command_given_on_pause_is_silent_when_applied_after_unpause()
+    {
+        var o = new OrderSounds();
+        Assert.Equal("queue_tick", o.Accepted(1.0, 0));
+        Assert.Null(o.Applied(300.0, 1));
+        o.Accepted(310.0, 2); o.Accepted(311.0, 0);       // a later paused command also clears the pending accept time
+        Assert.Null(o.Applied(400.0, 1));
     }
 
     [Fact]
@@ -309,46 +334,37 @@ public class SpeedSoundsTests
     public void The_first_reading_is_a_baseline_not_an_unpause()
     {
         var s = new SpeedSounds();
-        Assert.Null(s.Observe(2, 0.0, double.NaN));
-        Assert.Equal("tempo_3", s.Observe(3, 5.0, double.NaN));
+        Assert.Null(s.Observe(2));
+        Assert.Equal("tempo_3", s.Observe(3));
         s.Rebase();
-        Assert.Null(s.Observe(1, 9.0, double.NaN));       // after a load
+        Assert.Null(s.Observe(1));       // after a load
     }
 
     [Fact]
     public void One_cue_per_change_by_the_new_speed()
     {
         var s = new SpeedSounds();
-        s.Observe(1, 0, double.NaN);
-        Assert.Equal("tempo_2", s.Observe(2, 1, double.NaN));
-        Assert.Equal("pause", s.Observe(0, 2, double.NaN));
-        Assert.Equal("unpause", s.Observe(3, 3, double.NaN));
-        Assert.Null(s.Observe(3, 4, double.NaN));
+        s.Observe(1);
+        Assert.Equal("tempo_2", s.Observe(2));
+        Assert.Equal("pause", s.Observe(0));
+        Assert.Equal("unpause", s.Observe(3));
+        Assert.Null(s.Observe(3));
     }
 
     [Fact]
     public void A_program_set_speed_such_as_the_game_menu_is_silent_once()
     {
         var s = new SpeedSounds();
-        s.Observe(2, 0, double.NaN);
+        s.Observe(2);
         s.Quiet(0);
-        Assert.Null(s.Observe(0, 1, double.NaN));           // menu opened
+        Assert.Null(s.Observe(0));           // menu opened
         s.Quiet(2);
-        Assert.Null(s.Observe(2, 5, double.NaN));           // menu closed
-        Assert.Equal("pause", s.Observe(0, 9, double.NaN)); // the player's own pause sounds again
+        Assert.Null(s.Observe(2));           // menu closed
+        Assert.Equal("pause", s.Observe(0)); // the player's own pause sounds again
         s.Quiet(0);                                         // already paused: nothing will change, no stale mute
-        Assert.Equal("unpause", s.Observe(1, 12, double.NaN));
+        Assert.Equal("unpause", s.Observe(1));
     }
 
-    [Fact]
-    public void A_pause_right_after_an_alarm_is_silent()
-    {
-        var s = new SpeedSounds();
-        s.Observe(2, 0, double.NaN);
-        Assert.Null(s.Observe(0, 10.4, 10.0));
-        Assert.Equal("unpause", s.Observe(1, 11, 10.0));
-        Assert.Equal("pause", s.Observe(0, 50, 10.0));
-    }
 }
 
 public class OpenTickGateTests
@@ -361,8 +377,17 @@ public class OpenTickGateTests
         Assert.False(g.Allow(1, false));    // same object again
         Assert.False(g.Allow(2, true));     // keyboard
         Assert.True(g.Allow(3, false));
-        g.Reset();
+        g.Closed(true);
         Assert.True(g.Allow(3, false));     // closed in between
+    }
+
+    [Fact]
+    public void Closing_nothing_does_not_make_the_same_object_new()
+    {
+        var g = new OpenTickGate();
+        Assert.True(g.Allow(7, false));
+        g.Closed(false);                    // CloseArea with the map: no panel was open
+        Assert.False(g.Allow(7, false));    // re-click of the same power stays silent
     }
 }
 

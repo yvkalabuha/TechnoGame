@@ -149,6 +149,8 @@ public sealed class AudioPlanner
         if (cue.MinGap > 0 && _lastCue.TryGetValue(cue.Id, out var lc) && now - lc < cue.MinGap) return null;
         if (_lastPlayed.TryGetValue(cls, out var lp) && now - lp < gap) return null;
 
+        if (!p0 && now < _quietUntil) return null;   // a quiet period drops everything, uncounted
+
         List<double>? plays = null;
         if (Limits.TryGetValue(cue.Id, out var lim))
         {
@@ -156,10 +158,9 @@ public sealed class AudioPlanner
             if (!_groupPlays.TryGetValue(gk, out plays)) _groupPlays[gk] = plays = new List<double>();
             int n = CountSince(plays, now);
             if (n > 0 && now - plays[n - 1] < lim.MinInterval) return null;
-            if (n >= lim.PerMinute) { if (!p0) CountDrop(now); return null; }
+            if (n >= lim.PerMinute) { if (InFuse(cue)) CountDrop(now); return null; }
         }
 
-        if (!p0 && now < _quietUntil) return null;
         if (InFuse(cue) && CountSince(_fusePlays, now) >= FusePerMinute) { CountDrop(now); return null; }
 
         _voices.RemoveAll(v => v.End <= now);
@@ -200,7 +201,8 @@ public sealed class OrderSounds
     public const double DoneAfter = 1.5;
     double _acceptedAt = double.NaN;
 
-    public string Accepted(double now, int speed) { _acceptedAt = now; return speed == 0 ? "queue_tick" : "order_ok"; }
+    // A command given on pause records no time: after unpause its application is not news, the queue_tick was enough.
+    public string Accepted(double now, int speed) { _acceptedAt = speed == 0 ? double.NaN : now; return speed == 0 ? "queue_tick" : "order_ok"; }
 
     public string? Applied(double now, int speed)
     {
@@ -210,10 +212,9 @@ public sealed class OrderSounds
     }
 }
 
-/// <summary>Speed changes (audit §2): the first reading after start or load is the baseline, not a click; an alarm that just sounded owns its automatic pause.</summary>
+/// <summary>Speed changes (audit §2): the first reading after start or load is the baseline, not a click; program-set changes (game menu) are silent.</summary>
 public sealed class SpeedSounds
 {
-    public const double AlarmQuiet = 1.0;
     static readonly string[] Tempo = { "", "tempo_1", "tempo_2", "tempo_3" };
     bool _init;
     int _last, _quiet = -1;
@@ -223,15 +224,14 @@ public sealed class SpeedSounds
     /// <summary>The program (not the player) is about to set <paramref name="target"/>, for example the game menu: that change stays silent.</summary>
     public void Quiet(int target) { if (!_init || target != _last) _quiet = target; }
 
-    /// <param name="lastAlarmAt">real time of the latest signal sound, NaN if none</param>
-    public string? Observe(int speed, double now, double lastAlarmAt)
+    public string? Observe(int speed)
     {
         if (!_init) { _init = true; _last = speed; return null; }
         if (speed == _last) return null;
         int prev = _last; _last = speed;
         bool quiet = _quiet == speed; _quiet = -1;
         if (quiet) return null;
-        if (speed == 0) return !double.IsNaN(lastAlarmAt) && now - lastAlarmAt < AlarmQuiet ? null : "pause";
+        if (speed == 0) return "pause";
         return prev == 0 ? "unpause" : Tempo[Math.Clamp(speed, 1, 3)];
     }
 }
@@ -248,7 +248,8 @@ public sealed class OpenTickGate
         return !fromKeyboard && !same;
     }
 
-    public void Reset() => _last = -1;
+    /// <summary>An object was closed; only a really open one makes its next opening new.</summary>
+    public void Closed(bool wasOpen) { if (wasOpen) _last = -1; }
 }
 
 /// <summary>Which world cues fire for one view change: a breakthrough already says it, so a new line in the same frame stays silent and a node does not sound over a breakthrough.</summary>

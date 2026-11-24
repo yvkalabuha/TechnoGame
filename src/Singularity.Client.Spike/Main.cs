@@ -289,7 +289,7 @@ public sealed partial class Main : Node3D
         _signal.SignalChanged += (key, on) => { if (_host.Snap != null) _journal.Add(Settings.Date(_host.Snap.Date), key, on); };
         _signal.MenuPressed += OpenGameMenu;
         _signal.SignalChanged += AlertMarker;
-        _settings.TestBus = bus => { if (bus == 5) _audio.Cue("signal_attention"); else _audio.Tick(); };
+        _settings.TestBus = bus => { if (bus == 5) _audio.TestCue("signal_attention"); else _audio.TestCue("ui_tick"); };
         _settings.MusicAmount = () => _audio.MusicAmount; _settings.MusicAmountSet = i => _audio.MusicAmount = i; _settings.ResetFatigue = _audio.ResetFatigue;
 
         _rail = new Rail { AnchorTop = 0, AnchorBottom = 1, AnchorLeft = 0, AnchorRight = 0, OffsetLeft = 0, OffsetBottom = 0 };
@@ -401,7 +401,7 @@ public sealed partial class Main : Node3D
     {
         _areaPanel?.CancelFocusWait();
         var closed = _area; bool focusInside = _areaPanel != null && _areaPanel.HasFocusInside();
-        _area = AreaId.Map; _rail?.Select(AreaId.Map); _audio?.OpenClosed();
+        _area = AreaId.Map; _rail?.Select(AreaId.Map); _audio?.OpenClosed(closed != AreaId.Map);
         if (_areaPanel != null) _areaPanel.Visible = false;
         if (_areaCard != null) _areaCard.Visible = false;
         if (focusInside && closed != AreaId.Map) _rail?.FocusArea(closed);   // Esc from the panel returns the focus to the button of that area

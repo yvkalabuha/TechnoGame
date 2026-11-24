@@ -21,7 +21,7 @@ public sealed partial class AudioDirector : Node
     readonly OrderSounds _orders = new();
     readonly SpeedSounds _speedSounds = new();
     readonly OpenTickGate _openGate = new();
-    double _lastAlarmAt = double.NaN; long _lastTick = -1;
+    long _lastTick = -1, _testVoice;
     readonly AmbientGate _gate = new();
     readonly Dictionary<string, AudioStream> _streams = new();
     readonly Dictionary<int, AudioStreamPlayer> _voices = new();
@@ -148,14 +148,20 @@ public sealed partial class AudioDirector : Node
     /// <summary>The program is about to set this speed (game menu open/close): no pause or tempo click for it.</summary>
     public void QuietSpeed(int target) => _speedSounds.Quiet(target);
 
-    /// <summary>Plain tick (settings test button).</summary>
-    public void Tick() => Cue("ui_tick");
+    /// <summary>Settings test button: plays the cue straight, outside the planner (no limits, nothing counted toward the fuse or quiet period).</summary>
+    public void TestCue(string id)
+    {
+        if (_muted) return;
+        var pl = Spawn(new Play(--_testVoice, AudioCatalog.Get(id), 0, 1, System.Array.Empty<int>()));
+        pl.Finished += pl.QueueFree;
+        pl.Play();
+    }
 
     /// <summary>Opening tick for a mouse action on object <paramref name="key"/>; silent from the keyboard and for the same object twice.</summary>
     public void OpenTick(int key, bool fromKeyboard) { if (_openGate.Allow(key, fromKeyboard)) Cue("ui_tick"); }
 
     /// <summary>The opened object was closed: opening it again sounds.</summary>
-    public void OpenClosed() => _openGate.Reset();
+    public void OpenClosed(bool wasOpen) => _openGate.Closed(wasOpen);
 
     /// <summary>Signal raised or cleared (from the signal field). A raised signal sounds once; clearing is visual only, there is no reminder.</summary>
     public void OnSignal(string key, bool raised)
@@ -164,7 +170,6 @@ public sealed partial class AudioDirector : Node
         if (key == "sig.fail") Cue("signal_critical");
         else if (key is "sig.alloy" or "sig.licence") Cue("signal_attention", 0, key);
         else return;
-        _lastAlarmAt = Now();
     }
 
     // ---------- per frame ----------
@@ -216,7 +221,7 @@ public sealed partial class AudioDirector : Node
         // A tick that went back is a loaded save: speed and world baselines start over, nothing sounds for it.
         if (s.Tick < _lastTick) { _speedSounds.Rebase(); _baseActor = -1; }
         _lastTick = s.Tick;
-        var speedCue = _speedSounds.Observe(sp, now, _lastAlarmAt);
+        var speedCue = _speedSounds.Observe(sp);
         if (speedCue != null) Cue(speedCue);
         if (s.CmdSeq != _lastCmdSeq)
         {
