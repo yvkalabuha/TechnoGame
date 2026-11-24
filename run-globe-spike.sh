@@ -4,7 +4,7 @@
 #        ./run-globe-spike.sh --window  a framed 1920x1080 window instead of fullscreen (tests only; other flags such as --lang en pass through)
 #        ./run-globe-spike.sh --shots  automatic run + screenshots into shots-out/ (git-ignored), silent (audio driver Dummy)
 #        ./run-globe-spike.sh --shots --only area_science_1920x1080,tree_*   only the named frames (comma list, * and ? masks)
-#        ./run-globe-spike.sh --time-shots   time-control frames, silent; --only works here too
+#        ./run-globe-spike.sh --shots --time-shots   time-control frames, silent; --only works here too
 #        ./run-globe-spike.sh --shots --audio-demo   also records the audio demo WAV (real audio driver, sound is heard)
 #        C# is rebuilt only when a .cs/.csproj file is newer than the last build stamp (FORCE_BUILD=1 to force)
 #        ./run-globe-spike.sh --bench  automatic benchmark + screenshots into bench-out/
@@ -41,11 +41,13 @@ fi
 
 STAMP=".godot/build-stamp"
 SRC_NAMES=( \( -name '*.cs' -o -name '*.csproj' -o -name '*.props' -o -name '*.targets' \) )
-if [[ "${FORCE_BUILD:-0}" == "1" || ! -f "$STAMP" ]] \
+# The stamp holds the list of source files: a deleted or renamed file changes it and forces a build.
+SRC_LIST="$( { find "$ROOT/src" "${SRC_NAMES[@]}" -not -path '*/.godot/*' -print; find "$ROOT" -maxdepth 1 \( -name 'Directory.Build.*' -o -name 'global.json' -o -name '*.props' \) -print; } | LC_ALL=C sort | sha256sum | cut -d' ' -f1)"
+if [[ "${FORCE_BUILD:-0}" == "1" || ! -f "$STAMP" || "$(cat "$STAMP" 2>/dev/null)" != "$SRC_LIST" ]] \
    || [[ -n "$(find "$ROOT/src" "${SRC_NAMES[@]}" -newer "$STAMP" -not -path '*/.godot/*' -print -quit)" ]] \
    || [[ -n "$(find "$ROOT" -maxdepth 1 \( -name 'Directory.Build.*' -o -name 'global.json' -o -name '*.props' \) -newer "$STAMP" -print -quit)" ]]; then
   echo "Building C# scripts..."
-  touch "$STAMP.new"   # taken before the build: a file saved during the build stays newer than the stamp
+  echo "$SRC_LIST" > "$STAMP.new"   # taken before the build: a file saved during the build stays newer than the stamp
   "$GODOT" --headless --path . --build-solutions --quit   # set -e: a failed build stops here and leaves the old stamp
   mv -f "$STAMP.new" "$STAMP"
 else
