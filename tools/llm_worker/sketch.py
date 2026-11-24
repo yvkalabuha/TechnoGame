@@ -36,7 +36,8 @@ ENV_PREFIXES = ("LC_", "XDG_")
 PROMPT_SUFFIXES = (".md", ".txt")
 ALLOWED_COMMANDS = ("ls", "file")
 SETTINGS = json.dumps({"permissions": {"allow": [f"command({c})" for c in ALLOWED_COMMANDS]}})
-FORBIDDEN_TOOLS = ("read_url_content", "open_browser_url", "call_mcp_tool")
+CONTROL_TOOLS = ("generate_image", "invoke_subagent", "finish", "wait", "wait_5_seconds")
+PATH_TOOLS = ("view_file", "list_dir")
 IMAGE_POLL_S = 15
 MAX_PROMPT_BYTES = 64 * 1024
 
@@ -57,7 +58,6 @@ def parse_stream(text):
     """(conversation_ids, result, tools) from NDJSON. conversation_ids: main first, then sub-agents in order.
     result is the final result dict or None. Lines that are not JSON objects are ignored."""
     ids, result, tools = [], None, []
-    self_calls = []
 
     def add(cid):
         if isinstance(cid, str) and UUID_RE.match(cid) and cid not in ids:
@@ -103,9 +103,35 @@ def _commands(obj):
     return found
 
 
-def tool_violations(text):
-    """Tool calls outside the allowlist: shell commands other than ls/file, browser_*, URL readers, MCP calls.
-    A run_command whose command line cannot be read counts as a violation."""
+def _paths(obj):
+    """Every string under a key that looks like a path, recursively."""
+    found = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if isinstance(v, str) and re.search(r"path|file|dir|uri|url", k, re.I):
+                found.append(v)
+            else:
+                found += _paths(v)
+    elif isinstance(obj, list):
+        for v in obj:
+            found += _paths(v)
+    return found
+
+
+def _inside(path, ws):
+    if path.startswith("file://"):
+        path = path[7:]
+    if path.startswith("~"):
+        return False
+    real = os.path.realpath(os.path.join(ws, path))
+    root = os.path.realpath(ws)
+    return real == root or real.startswith(root + os.sep)
+
+
+def tool_violations(text, ws):
+    """Tool calls outside the allowlist (anything not named here is a violation): generate_image, invoke_subagent,
+    finish/wait control calls, view_file/list_dir only inside the run's work folder ws, run_command only ls/file.
+    A call whose path or command line cannot be read counts as a violation."""
     bad = []
     for line in text.splitlines():
         try:
@@ -114,35 +140,44 @@ def tool_violations(text):
             continue
         su = ev.get("step_update") if isinstance(ev, dict) and ev.get("event") == "step_update" else None
         name = su.get("tool_name") if isinstance(su, dict) else None
-        if not isinstance(name, str):
+        if not isinstance(name, str) or name in CONTROL_TOOLS:
             continue
-        if name.startswith("browser_") or name in FORBIDDEN_TOOLS:
-            bad.append(name)
+        if name in PATH_TOOLS:
+            paths = _paths(su)
+            if paths and all(_inside(p, ws) for p in paths):
+                continue
+            bad.append(f"{name}: {one_line(' '.join(paths), 80)}".rstrip(": "))
         elif name == "run_command":
             cmds = _commands(su)
             ok = bool(cmds) and all(c.split()[:1] and c.split()[0] in ALLOWED_COMMANDS
                                     and not re.search(r"[;&|`$<>()]", c) for c in cmds)
             if not ok:
                 bad.append(f"run_command: {one_line(' '.join(cmds), 80)}".rstrip(": "))
+        else:
+            bad.append(name)
     return list(dict.fromkeys(bad))
 
 
-def quota_hit(err, result, out):
-    """True when stderr, the result (incl. the agent's final response) or the last events mention a quota error.
-    The init event is skipped: it lists tool names and settings, not outcomes."""
-    texts = [err or "", json.dumps(result or {})]
+def _strings(err, result, out):
+    """Texts that can describe a failure: stderr, result.response/error, text of the last 5 events (never init/usage)."""
+    texts = [err or ""]
+    texts += [result[k] for k in ("response", "error") if isinstance(result, dict) and isinstance(result.get(k), str)]
     tail = []
     for line in out.splitlines():
         try:
             ev = json.loads(line)
         except ValueError:
             continue
-        if isinstance(ev, dict) and ev.get("event") == "step_update":
-            tail.append(ev)
-    for ev in tail[-5:]:
-        su = ev.get("step_update") or {}
+        if isinstance(ev, dict) and ev.get("event") == "step_update" and isinstance(ev.get("step_update"), dict):
+            tail.append(ev["step_update"])
+    for su in tail[-5:]:
         texts += [su[k] for k in ("text_delta", "error", "message") if isinstance(su.get(k), str)]
-    return any(QUOTA_RE.search(t) for t in texts)
+    return texts
+
+
+def quota_hit(err, result, out):
+    """True when a failure text mentions a quota error. Call it on the error path only."""
+    return any(QUOTA_RE.search(t) for t in _strings(err, result, out))
 
 
 def find_model(text):
@@ -312,22 +347,25 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
                "--settings", SETTINGS]
         record["agy_version"] = agy_version(agy, runner)
         rc, out, err = runner(cmd, ws, timeout_s + 60)
+        ws_dir = ws
     record["started_at"] = datetime.fromtimestamp(started, timezone.utc).isoformat(timespec="seconds")
     record["date"] = record["started_at"][:10]
     ids, result, tools = parse_stream(out)
     record.update(conversation_id=ids[0] if ids else None, conversation_ids=ids, tools=tools, exit_code=rc)
-    bad_tools = tool_violations(out)
+    bad_tools = tool_violations(out, ws_dir)
     if bad_tools:
         record["agent_tool_violation"] = bad_tools
         write_pair(Path(runs_dir), f"sketch-{task}-{digest[:8]}", record,
                    lambda r: f"# Gemini sketches (agy): {r['task']}\n\nREFUSED: agent tool violation: {', '.join(r['agent_tool_violation'])}\n")
         raise SketchError("agent_tool_violation", ", ".join(bad_tools))
     answer = result.get("response") if result and isinstance(result.get("response"), str) else ""
-    if quota_hit(err, result, out):
-        raise SketchError("agy_quota", one_line(answer or err[-600:] or "quota error", 300))
-    if result is None or rc != 0:
+    if result is None or rc != 0 or result.get("status") != "SUCCESS":
+        if quota_hit(err, result, out):
+            raise SketchError("agy_quota", one_line(answer or err[-600:] or "quota error", 300))
         detail = one_line(answer or err or out, 300)
-        login = LOGIN_RE.search(err + json.dumps(result or {}))
+        login = any(LOGIN_RE.search(t) for t in _strings(err, result, "")) if result is not None or err else False
+        if result is not None:
+            record["status"] = result.get("status")
         raise SketchError("agy_not_logged_in" if login else "agy_failed", f"exit {rc}: {detail}")
     record["status"] = result.get("status")
     record["model"] = find_model(out) or f"agy {record.get('agy_version') or '?'} image-generator"
@@ -335,8 +373,6 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
     record["usage"] = {k: v for k, v in usage.items() if type(v) is int}
     guard.settle(None, {"prompt_tokens": usage.get("input_tokens"), "completion_tokens": usage.get("output_tokens"),
                         "completion_tokens_details": {"reasoning_tokens": usage.get("thinking_tokens")}})
-    if result.get("status") != "SUCCESS":
-        raise SketchError("agy_failed", f"status {result.get('status')}")
     found = collect_images(ids, started - 2, brain_dir)
     for _ in range(IMAGE_POLL_S):  # the file may land a moment after the result event
         if len(found) >= count:
@@ -344,6 +380,8 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
         sleep(1)
         found = collect_images(ids, started - 2, brain_dir)
     if not found:
+        if quota_hit(err, result, out):
+            raise SketchError("agy_quota", one_line(answer or err[-600:] or "quota error", 300))
         raise SketchError("no_images", f"no new image in the brain dirs of {', '.join(ids)}")
     out_dir = Path(shots_dir or config.SHOTS_DIR) / "sketches" / task
     out_dir.mkdir(parents=True, exist_ok=True)

@@ -193,6 +193,10 @@ class SketchTest(unittest.TestCase):
 
     def test_tool_violation_refused_and_recorded(self):
         for step in ({"tool_name": "browser_click_element"}, {"tool_name": "read_url_content"}, {"tool_name": "call_mcp_tool"},
+                     {"tool_name": "search_web"}, {"tool_name": "write_to_file"},
+                     {"tool_name": "view_file", "args": {"AbsolutePath": "/home/u/.config/gh/hosts.yml"}},
+                     {"tool_name": "view_file", "args": {"AbsolutePath": "~/.ssh/id_rsa"}},
+                     {"tool_name": "list_dir", "args": {"DirectoryPath": "../.."}}, {"tool_name": "view_file"},
                      {"tool_name": "run_command", "args": {"CommandLine": "curl http://x"}},
                      {"tool_name": "run_command", "args": {"CommandLine": "ls; cat .env"}}, {"tool_name": "run_command"}):
             with self.subTest(step=step), self.assertRaises(sketch.SketchError) as c:
@@ -201,14 +205,31 @@ class SketchTest(unittest.TestCase):
         self.assertTrue(list(self.runs.glob("sketch-*.json")))
         self.assertFalse((self.shots / "sketches").exists())
 
-    def test_allowed_commands_pass(self):
-        step = {"tool_name": "run_command", "args": {"CommandLine": "ls -la"}}
+    def test_allowed_tools_pass(self):
+        ws = self.root
+        for step in ({"tool_name": "generate_image"}, {"tool_name": "finish"}, {"tool_name": "wait"},
+                     {"tool_name": "view_file", "args": {"AbsolutePath": str(ws / "1-frame.png")}},
+                     {"tool_name": "list_dir", "args": {"DirectoryPath": str(ws)}},
+                     {"tool_name": "run_command", "args": {"CommandLine": "ls -la"}},
+                     {"tool_name": "run_command", "args": {"CommandLine": "file a.png"}}):
+            with self.subTest(step=step):
+                self.assertEqual(sketch.tool_violations(self.stream_with(step), str(ws)), [])
+
+    def test_view_file_in_workspace_passes_through_run(self):
+        step = {"tool_name": "view_file", "args": {"AbsolutePath": "1-frame.png"}}
         _, _, rec = self.go(runner=self.runner(stream=self.stream_with(step)))
         self.assertEqual(len(rec["files"]), 1)
-        self.assertEqual(sketch.tool_violations(self.stream_with({"tool_name": "run_command", "args": {"CommandLine": "file a.png"}})), [])
 
-    def test_init_event_tools_are_not_violations(self):
-        self.assertEqual(sketch.tool_violations(self.stream_with({"step_type": "agent_response"})), [])
+    def test_quota_words_in_successful_run_are_ignored(self):
+        stream = self.stream_with({"step_type": "agent_response", "text_delta": "quota 429"}, "Done, no quota problems (429 tokens)")
+        stream = stream.replace('"status": "SUCCESS"', '"status": "SUCCESS", "usage": {"input_tokens": 429}')
+        _, _, rec = self.go(runner=self.runner(stream=stream))
+        self.assertEqual(len(rec["files"]), 1)
+
+    def test_quota_with_success_and_no_image_is_quota(self):
+        with self.assertRaises(sketch.SketchError) as c:
+            self.go(runner=self.runner(stream=self.stream_with({"step_type": "agent_response"}, "ResourceExhausted"), image=False))
+        self.assertEqual(c.exception.code, "agy_quota")
 
     def test_env_allowlist(self):
         env = {"HOME": "/h", "PATH": "/b", "LANG": "C", "LC_ALL": "C", "XDG_CONFIG_HOME": "/c", "TERM": "x", "USER": "u",
