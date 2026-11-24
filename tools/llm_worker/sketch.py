@@ -15,6 +15,7 @@ import signal
 import subprocess
 import tempfile
 import time
+import zlib
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -34,12 +35,18 @@ QUOTA_RE = re.compile(r"RESOURCE_EXHAUSTED|ResourceExhausted|quota|\b429\b", re.
 ENV_NAMES = ("HOME", "PATH", "LANG", "TERM", "USER")
 ENV_PREFIXES = ("LC_", "XDG_")
 PROMPT_SUFFIXES = (".md", ".txt")
-SETTINGS = json.dumps({"permissions": {"allow": []}})  # the agent's shell stays off: no command is allowed
+# Evidence 2026-11-24 (agy 1.5.16): --settings takes {"permissions": {"allow"|"deny"|"ask": [rule]}}, rules look like
+# command(<prefix>), write_file(<path>), read_url(<domain>), mcp(<server>/<tool>); an unknown top-level key (disabledTools)
+# is rejected, and agy has no flag that lists tools to disable. A deny rule beats an allow rule; headless mode
+# auto-denies whatever is neither allowed nor denied. So the shell is denied up front here and checked again afterwards.
+DENY_RULES = ["command(*)", "write_file(*)", "read_url(*)", "execute_url(*)", "mcp(*)"]
+SETTINGS = json.dumps({"permissions": {"allow": [], "deny": DENY_RULES}})
 CONTROL_TOOLS = ("generate_image", "invoke_subagent", "finish", "wait", "wait_5_seconds")
 PATH_TOOLS = ("view_file", "read_file", "list_dir")
 TRANSCRIPT_TOOLS = ("send_message",)  # a sub-agent reporting to its parent; seen only in transcripts
 IMAGE_POLL_S = 15
 MAX_PROMPT_BYTES = 64 * 1024
+MIN_IMAGE_BYTES = 100
 
 
 class SketchError(VisualError):
@@ -129,16 +136,17 @@ def _inside(path, roots):
 
 
 def transcript_calls(brain_dir, ids):
-    """(tool name, path args) of every tool call in the conversations' transcripts, or None when none was found.
-    The result stream names a call but may not carry its arguments; the transcript does."""
-    calls, found = [], False
+    """(calls, missing): calls are (tool name, path args) of every tool call in the conversations' transcripts;
+    missing lists the ids whose transcript is absent or unreadable. The result stream names a call but may not
+    carry its arguments; the transcript does."""
+    calls, missing = [], []
     for cid in ids:
         f = Path(brain_dir) / cid / ".system_generated" / "logs" / "transcript.jsonl"
         try:
             lines = f.read_text(encoding="utf-8").splitlines()
-        except OSError:
+        except (OSError, ValueError):
+            missing.append(cid)
             continue
-        found = True
         for line in lines:
             try:
                 ev = json.loads(line)
@@ -147,7 +155,12 @@ def transcript_calls(brain_dir, ids):
             for call in (ev.get("tool_calls") or []) if isinstance(ev, dict) else []:
                 if isinstance(call, dict) and isinstance(call.get("name"), str):
                     calls.append((call["name"], _paths(call.get("args"))))
-    return calls if found else None
+    return calls, missing
+
+
+def verified_tools(calls):
+    """Path tools whose arguments the transcript actually holds."""
+    return frozenset(name for name, paths in calls if name in PATH_TOOLS and paths)
 
 
 def call_violations(calls, roots):
@@ -162,10 +175,11 @@ def call_violations(calls, roots):
     return list(dict.fromkeys(bad))
 
 
-def tool_violations(text, roots, args_verified=False):
+def tool_violations(text, roots, verified=frozenset()):
     """Tool calls outside the allowlist (anything not named here is a violation): generate_image, invoke_subagent,
     finish/wait control calls, path tools only inside roots (the work folder and this run's own conversation folders). run_command is never allowed.
-    A call whose path cannot be read counts as a violation, unless args_verified (the transcript is checked instead)."""
+    A call whose path cannot be read counts as a violation, unless the transcript holds arguments for a call of that
+    tool (verified: then call_violations checks them)."""
     bad = []
     for line in text.splitlines():
         try:
@@ -180,7 +194,7 @@ def tool_violations(text, roots, args_verified=False):
             paths = _paths(su)
             if paths and all(_inside(p, roots) for p in paths):
                 continue
-            if not paths and args_verified:  # arguments are checked in the transcript
+            if not paths and name in verified:  # arguments are checked in the transcript
                 continue
             bad.append(f"{name}: {one_line(' '.join(paths), 80)}".rstrip(": "))
         else:
@@ -223,8 +237,43 @@ def find_model(text):
     return None
 
 
+def image_complete(path):
+    """True when the file is a whole PNG, JPEG or WebP: magic bytes, internal structure and the closing marker."""
+    try:
+        data = Path(path).read_bytes()
+    except OSError:
+        return False
+    if len(data) < MIN_IMAGE_BYTES:
+        return False
+    if data.startswith(PNG):
+        pos, seen = len(PNG), []
+        while pos + 12 <= len(data):
+            n = int.from_bytes(data[pos:pos + 4], "big")
+            end = pos + 12 + n
+            if end > len(data) or zlib.crc32(data[pos + 4:pos + 8 + n]) != int.from_bytes(data[end - 4:end], "big"):
+                return False
+            seen.append(data[pos + 4:pos + 8])
+            pos = end
+        return pos == len(data) and seen[:1] == [b"IHDR"] and b"IDAT" in seen and seen[-1] == b"IEND"
+    if data.startswith(b"\xff\xd8\xff"):
+        if not data.endswith(b"\xff\xd9"):
+            return False
+        pos, sof = 2, False
+        while pos + 4 <= len(data) and data[pos] == 0xFF:
+            marker = data[pos + 1]
+            if marker == 0xDA:  # start of scan: entropy data follows, the closing marker was checked above
+                return sof
+            if 0xC0 <= marker <= 0xC2:
+                sof = True
+            pos += 2 + int.from_bytes(data[pos + 2:pos + 4], "big")
+        return False
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return int.from_bytes(data[4:8], "little") + 8 == len(data)
+    return False
+
+
 def collect_images(conversation_ids, since, brain_dir=BRAIN_DIR):
-    """Image files directly inside the conversations' brain dirs, modified at or after `since` (epoch seconds)."""
+    """Complete image files directly inside the conversations' brain dirs, modified at or after `since` (epoch seconds)."""
     out = []
     for cid in conversation_ids:
         if not UUID_RE.match(cid):
@@ -233,7 +282,7 @@ def collect_images(conversation_ids, since, brain_dir=BRAIN_DIR):
         if not d.is_dir():
             continue
         for p in sorted(d.iterdir()):
-            if p.is_file() and not p.is_symlink() and p.suffix.lower() in IMAGE_EXT and p.stat().st_mtime >= since:
+            if p.is_file() and not p.is_symlink() and p.suffix.lower() in IMAGE_EXT and p.stat().st_mtime >= since and image_complete(p):
                 out.append(p)
     return out
 
@@ -392,10 +441,10 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
     record["date"] = record["started_at"][:10]
     ids, result, tools = parse_stream(out)
     record.update(conversation_id=ids[0] if ids else None, conversation_ids=ids, tools=tools, exit_code=rc)
-    calls = transcript_calls(brain_dir, ids)
+    calls, missing = transcript_calls(brain_dir, ids)
     roots = run_roots(ws_dir, brain_dir, ids)
-    bad_tools = tool_violations(out, roots, args_verified=calls is not None)
-    bad_tools = list(dict.fromkeys(bad_tools + call_violations(calls or [], roots)))
+    bad_tools = tool_violations(out, roots, verified_tools(calls))  # fail closed: no transcript, no trust
+    bad_tools = list(dict.fromkeys(bad_tools + call_violations(calls, roots) + [f"transcript missing: {c}" for c in missing]))
     if bad_tools:
         record["agent_tool_violation"] = bad_tools
         write_pair(Path(runs_dir), record_stem(runs_dir, task, digest, started), record,
@@ -411,17 +460,21 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
             record["status"] = result.get("status")
         raise SketchError("agy_not_logged_in" if login else "agy_failed", f"exit {rc}: {detail}")
     record["status"] = result.get("status")
+    record["denied_actions"] = result.get("denied_actions") if isinstance(result.get("denied_actions"), list) else []
     record["model"] = find_model(out) or f"agy {record.get('agy_version') or '?'} image-generator"
     usage = result.get("usage") if isinstance(result.get("usage"), dict) else {}
     record["usage"] = {k: v for k, v in usage.items() if type(v) is int}
     guard.settle(None, {"prompt_tokens": usage.get("input_tokens"), "completion_tokens": usage.get("output_tokens"),
                         "completion_tokens_details": {"reasoning_tokens": usage.get("thinking_tokens")}})
     found = collect_images(ids, started - 2, brain_dir)
-    for _ in range(IMAGE_POLL_S):  # the file may land a moment after the result event
-        if len(found) >= count:
+    sizes, prev = [p.stat().st_size for p in found], None
+    for _ in range(IMAGE_POLL_S):  # the file may land a moment after the result event; its size must stop changing
+        if len(found) >= count and sizes == prev:
             break
         sleep(1)
+        prev = sizes
         found = collect_images(ids, started - 2, brain_dir)
+        sizes = [p.stat().st_size for p in found]
     if not found:
         if quota_hit(err, result, out):
             raise SketchError("agy_quota", one_line(answer or err[-600:] or "quota error", 300))

@@ -5,6 +5,7 @@ import os
 import subprocess
 import tempfile
 import unittest
+import zlib
 from pathlib import Path
 from unittest import mock
 
@@ -14,7 +15,16 @@ from tools.llm_worker.visual import RateGuard
 FIXTURE = Path(config.PACKAGE_DIR) / "fixtures" / "agy_sketch_stream.ndjson"
 MAIN = "79326e30-603b-445c-a531-fdd176a874ba"
 SUB = "41d22a1b-5ee2-4191-9a5d-926bf2ff1bb5"
-JPEG = b"\xff\xd8\xff\xe0" + b"x" * 40
+JPEG = (b"\xff\xd8" + b"\xff\xe0\x00\x10" + b"JFIF\0" + b"\0" * 9 + b"\xff\xc0\x00\x0b" + b"\x08\0\x10\0\x10\x01\x01\x11\0"
+        + b"\xff\xda\x00\x08" + b"\x01\x01\0\0\x3f\0" + b"d" * 60 + b"\xff\xd9")
+
+
+def png(idat=b"x" * 80, iend=True, bad_crc=False):
+    def chunk(kind, body):
+        crc = zlib.crc32(kind + body) ^ (1 if bad_crc else 0)
+        return len(body).to_bytes(4, "big") + kind + body + crc.to_bytes(4, "big")
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", b"\0\0\0\x01\0\0\0\x01\x08\x02\0\0\0") + chunk(b"IDAT", idat)
+            + (chunk(b"IEND", b"") if iend else b""))
 
 
 class SketchTest(unittest.TestCase):
@@ -39,6 +49,11 @@ class SketchTest(unittest.TestCase):
             self.calls.append((cmd, cwd, timeout))
             if cmd[1] == "--version":
                 return 0, "agy 1.5.15\n", ""
+            for cid in sketch.parse_stream(FIXTURE.read_text() if stream is None else stream)[0]:
+                tr = self.brain / cid / ".system_generated" / "logs" / "transcript.jsonl"
+                if not tr.exists():  # a live run always leaves one per conversation
+                    tr.parent.mkdir(parents=True, exist_ok=True)
+                    tr.write_text("")
             if image:
                 (self.brain / MAIN).mkdir(exist_ok=True)
                 (self.brain / MAIN / "sketch_1.jpg").write_bytes(JPEG)
@@ -189,6 +204,9 @@ class SketchTest(unittest.TestCase):
         cmd = self.calls[-1][0]
         s = json.loads(cmd[cmd.index("--settings") + 1])
         self.assertEqual(s["permissions"]["allow"], [])
+        self.assertIn("command(*)", s["permissions"]["deny"])  # shell denied before the agent starts
+        for rule in ("write_file(*)", "read_url(*)", "execute_url(*)", "mcp(*)"):
+            self.assertIn(rule, s["permissions"]["deny"])
         self.assertNotIn("--dangerously-skip-permissions", cmd)
 
     def test_tool_violation_refused_and_recorded(self):
@@ -368,7 +386,7 @@ class SketchTest(unittest.TestCase):
         (self.brain / MAIN).mkdir()
         _, _, rec = self.go(runner=self.runner(image=False), sleep=sleep)
         self.assertEqual([f["name"] for f in rec["files"]], ["late.jpg"])
-        self.assertEqual(len(sleeps), 2)
+        self.assertEqual(len(sleeps), 3)  # the third sleep confirms the size stopped changing
 
     def test_no_images_after_poll_gives_up(self):
         sleeps = []
@@ -401,6 +419,61 @@ class SketchTest(unittest.TestCase):
         path, md, rec = self.go(runner=self.runner(), dry_run=True, which=lambda n: "/bin/true")
         self.assertIsNone(path)
         self.assertEqual(self.calls, [])
+    def test_missing_transcript_of_any_id_is_refused(self):
+        def run(cmd, cwd, timeout):
+            out = self.runner()(cmd, cwd, timeout)
+            if cmd[1] != "--version":
+                (self.brain / SUB / ".system_generated" / "logs" / "transcript.jsonl").unlink()
+            return out
+        with self.assertRaises(sketch.SketchError) as c:
+            self.go(runner=run)
+        self.assertEqual(c.exception.code, "agent_tool_violation")
+        self.assertIn("transcript missing: " + SUB, str(c.exception))
+
+    def test_unreadable_transcript_is_missing(self):
+        d = self.brain / MAIN / ".system_generated" / "logs"
+        d.mkdir(parents=True)
+        (d / "transcript.jsonl").write_bytes(b"\xff\xfe not utf-8")
+        calls, missing = sketch.transcript_calls(self.brain, [MAIN])
+        self.assertEqual((calls, missing), ([], [MAIN]))
+
+    def test_path_tool_without_transcript_arguments_is_refused(self):
+        stream = (Path(config.PACKAGE_DIR) / "fixtures" / "agy_read_file_stream.ndjson").read_text()
+        def run(cmd, cwd, timeout):  # transcripts exist but hold no read_file call
+            out = self.runner(stream=stream)(cmd, cwd, timeout)
+            return out
+        with self.assertRaises(sketch.SketchError) as c:
+            self.go(runner=run)
+        self.assertEqual(c.exception.code, "agent_tool_violation")
+        self.assertIn("read_file", str(c.exception))
+        step = {"tool_name": "read_file"}
+        self.assertTrue(sketch.tool_violations(self.stream_with(step), "/ws", frozenset({"view_file"})))
+        self.assertEqual(sketch.tool_violations(self.stream_with(step), "/ws", frozenset({"read_file"})), [])
+
+    def test_incomplete_images_do_not_count(self):
+        d = self.brain / MAIN
+        d.mkdir()
+        cases = {"ok.png": png(), "ok.jpg": JPEG, "cut.png": png()[:-20], "noiend.png": png(iend=False),
+                 "badcrc.png": png(bad_crc=True), "cut.jpg": JPEG[:-2], "filler.jpg": b"\xff\xd8\xff\xe0" + b"x" * 200,
+                 "tiny.png": b"\x89PNG\r\n\x1a\n", "empty.webp": b"", "text.jpg": b"not an image" * 20}
+        for name, data in cases.items():
+            (d / name).write_bytes(data)
+        got = sorted(p.name for p in sketch.collect_images([MAIN], 0, self.brain))
+        self.assertEqual(got, ["ok.jpg", "ok.png"])
+
+    def test_growing_file_waits_until_size_is_stable(self):
+        (self.brain / MAIN).mkdir()
+        f = self.brain / MAIN / "a.png"
+        f.write_bytes(png(b"y" * 80))
+        sleeps = []
+
+        def sleep(s):
+            sleeps.append(s)
+            if len(sleeps) == 1:  # still being written: a second complete image replaces the first
+                f.write_bytes(png(b"z" * 300))
+        _, _, rec = self.go(runner=self.runner(image=False), sleep=sleep)
+        self.assertEqual(len(sleeps), 2)
+        self.assertEqual(rec["files"][0]["bytes"], len(png(b"z" * 300)))
 
 
 if __name__ == "__main__":
