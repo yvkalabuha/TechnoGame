@@ -1,7 +1,7 @@
 ---
 id: TASK-0149
 title: "Player levers: client legibility pass and pace (plain labels instead of numbers and G-codes, speeds 0/1/3/7/30, default 3 days/s)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M05
 agent: developer
@@ -39,9 +39,8 @@ docs/game-design/PLAYER_LEVERS_WAVE1.md §A3 (темп: скорости 0/1/3/7
 
 ## Результат
 
-**Сделано (developer, ветка worktree-agent-a1cdc2a3a744038e5):**
-- Скорости (#481): пауза/1/3/7/30 тиков в секунду, умолчание — 3 дня/с (`SpeedSteps.cs`, `SimHost`, `TimeIcons`, `GaugeControl`: четыре реальные полоски, пунктирный «резерв» убран; клавиши 1–4; звук темпа: 3 дня и неделя делят один тон). Ядро не тронуто.
-- Подписи: «№N» убраны с карты, из списка вида B, подсказок и причин «что мешает»; «G{n}» -> «{n}-е поколение»; «Проект N» (нумерация с 1) вместо «#N G1»; команды «закрыть линию проекта N»; «ПОЧЕМУ НЕ» -> «ЧТО МЕШАЕТ ПОЛУЧИТЬ» («есть X из Y»); «Черновик пуст» заменён текстом «Для приказа выбрано 0 из 3…», у серой кнопки причина, пояснение «Цель / Фокус освоения»; в карточке «Узел N из M в справочнике»; кнопка «Закрыть × (Esc)» в рамке 3 du.
-- Тесты: `tests/Singularity.Client.Audio.Tests/PaceAndLabelsTests.cs` (таблица скоростей, тоны, маски «№{n}»/«G{n}» в ui.csv); без правки ui.csv два теста красные (проверено).
-- Кадры 1920x1080 100 %: /tmp/claude-1000/shots149c (area_science, area_production, tree_caption_turbine, tree_legend_sel), /tmp/claude-1000/shots149t (time_*).
-- Не сделано: автопауза на событиях (#196) — в клиенте нет ленты поводов; сплав-колба без изменения; раскладка дерева не менялась.
+## Второе ревью Codex (review-TASK-0149-073dd6a1-codex.json) — отклонённые находки
+- #1 «игра стартует на паузе»: так было и до задачи (на main `_speed = 0` при старте); умолчание #481 — скорость, с которой продолжает «пуск» (`_resume = SpeedSteps.Default`).
+- #2 автопауза (#196): вынесена Orchestrator в TASK-0156 — в клиенте ещё нет ленты событий.
+- #5 визуальная приёмка: ui-art-director PASS, раунд 2 (`docs/ui/reviews/task-0149-visual.md`), мнение Gemini там же.
+- Повтор в review-TASK-0149-86fb84d2-codex.json: #1, #2, #3 — те же причины; #5 «10–20 часов не установлено» — замер длины партии назначен владельцем на сборку рычагов (#483), не этой задачей.

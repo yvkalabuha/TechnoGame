@@ -1,7 +1,7 @@
 ---
 id: TASK-0155
 title: "Data: constant 1990 US dollar display series and conversion from Core money unit"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M05
 agent: economy-analyst

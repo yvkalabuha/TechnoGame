@@ -1,7 +1,7 @@
 ---
 id: TASK-0148
 title: "Player levers: Lab probes P1-P3 (budget items matter, reserve dominance, goal strategies)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M05
 agent: simulation-engineer

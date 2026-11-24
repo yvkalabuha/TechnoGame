@@ -60,7 +60,7 @@ design.nocreate,Starting a series and creating designs are not wired in the clie
 licence.active,"Licence active: generation {0}, seller {1}, since month {2}, flow {3}","Лицензия активна: {0}-е поколение, продавец {1}, с месяца {2}, поток {3}"
 licence.none,No licence,Лицензии нет
 licence.refusals,"Licence refusals: {0} (own {1}, empty {2}, generation {3}, money {4})","Отказов по лицензии: {0} (свой {1}, пусто {2}, поколение {3}, деньги {4})"
-why.error,Could not find what blocks it.,Не удалось определить, что мешает.
+why.error,Could not find what blocks getting the goal.,Не удалось определить, что мешает получить цель.
 why.none,No new product to field: every known product is already fielded.,Новых изделий пока нет: все известные уже приняты на вооружение.
 why.goal,"Goal: yearly requirement, generation {0}.","Цель: годовое требование, поколение {0}."
 why.goalkind,Goal: {0} {1}.,Цель: {0} {1}.
@@ -353,16 +353,16 @@ flask.sci.tip,{0}: {1}% of the need ({2} of {3}),{0}: {1}% от потребно
 flask.sci.threshold,"{0}: everything needed is in place ({1} of {2}); the discovery itself still depends on chance, so the flask is hatched","{0}: всё нужное есть ({1} из {2}); само открытие зависит от случая, поэтому колба заштрихована"
 flask.sci.threshold.note,"{0}: the flask is 100 % ready and hatched: the discovery is a chance event, readiness does not guarantee it","{0}: колба заполнена на 100 % и заштрихована — это готовность; открытие остаётся случайным событием и не гарантировано"
 flask.sci.none,No research in progress,Нет хода исследования
-flask.alloy.cap.ok,Alloy: sufficient,Сплав: хватает
-flask.alloy.cap.deficit,Alloy: {0} % of what the lines ask for,Сплав: {0} % от запроса линий
-flask.alloy.cap.disrupted,Alloy: {0} % of the normal supply,Сплав: {0} % от обычного снабжения
-flask.alloy.cap.none,No alloy,Сплава нет
-flask.alloy.tip,Stock is {0}% of the normal supply,Запас — {0}% от обычного снабжения
+flask.alloy.cap.ok,Heat-resistant alloy: sufficient,Жаропрочный сплав: хватает
+flask.alloy.cap.deficit,Heat-resistant alloy: {0} % of what the lines ask for,Жаропрочный сплав: {0} % от запроса линий
+flask.alloy.cap.disrupted,Heat-resistant alloy: {0} % of the normal supply,Жаропрочный сплав: {0} % от обычного снабжения
+flask.alloy.cap.none,No heat-resistant alloy,Жаропрочного сплава нет
+flask.alloy.tip,Stock is {0}% of the normal supply. Without the alloy new engines cannot go into series.,Запас — {0}% от обычного снабжения. Без жаропрочного сплава новые двигатели не выйдут в серию.
 flask.deficit,low,мало
 flask.none,none,нет
-flask.alloy.deficit,Supply covers {0}% of the demand: a shortage (hatched),Снабжение покрывает {0}% потребности: дефицит (штриховка)
-flask.alloy.disrupted,Supply is {0}% of normal while the disruption lasts (hatched),Снабжение — {0}% от обычного, пока длится сбой (штриховка)
-flask.alloy.none,No alloy is being smelted (hatched),Сплав не выплавляется (штриховка)
+flask.alloy.deficit,Supply covers {0}% of the demand: a shortage (hatched). Without the alloy new engines cannot go into series.,Снабжение покрывает {0}% потребности: дефицит (штриховка). Без жаропрочного сплава новые двигатели не выйдут в серию.
+flask.alloy.disrupted,Supply is {0}% of normal while the disruption lasts (hatched). Without the alloy new engines cannot go into series.,Снабжение — {0}% от обычного, пока длится сбой (штриховка). Без жаропрочного сплава новые двигатели не выйдут в серию.
+flask.alloy.none,No alloy is being smelted (hatched). Without it new engines cannot go into series.,Сплав не выплавляется (штриховка). Без жаропрочного сплава новые двигатели не выйдут в серию.
 caliper.tip,Left and right arrows: 5 points; or drag the jaw,Стрелки влево и вправо: 5 пунктов; или тяните губку
 tip.area.locked,{0} · {1} · opens later (development stage {2}),{0} · {1} · откроется позже (этап разработки {2})
 tip.rail,Rail width: narrow or wide (\),Ширина рейки: узкая или широкая (\)
