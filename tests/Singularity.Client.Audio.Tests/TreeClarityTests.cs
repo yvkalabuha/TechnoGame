@@ -120,6 +120,21 @@ public class TreeClarityTests
     }
 
     [Fact]
+    public void Legend_has_rows_for_the_goal_frame_and_the_selected_links_the_map_draws()
+    {
+        var keys = Keys();
+        Assert.Contains("legend.goal", keys); Assert.Contains("legend.links", keys);
+    }
+
+    [Fact]
+    public void Root_outline_is_built_at_side_one_so_that_it_scales_without_a_cache()
+    {
+        var f = TreeClarity.RootFrame(1f);
+        Assert.All(f, p => Assert.InRange(Math.Abs(p.X), 0, 0.5001));
+        Assert.Contains(f, p => p.X == -0.5f && p.Y == -0.5f);
+    }
+
+    [Fact]
     public void Removed_dev_only_keys_stay_removed()
     {
         var keys = Keys();

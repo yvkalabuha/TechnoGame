@@ -146,7 +146,7 @@ state.unknown,unknown,неизвестно
 state.licence,by licence,по лицензии
 state.frontier,frontier,фронтир
 state.unavail,unavailable,недоступно
-legend.b,■ known   □ frontier   · unavailable   (generations 0–4)   ┃ blue: the longest chain,■ известно   □ фронтир   · недоступно   (поколения 0–4)   ┃ синий — самая длинная цепочка
+legend.b,"Squares: filled = known, outline = frontier, dot = unavailable   (generations 0–4)   ┃ blue: the longest chain","Квадраты: закрашен — известно, контур — фронтир, точка — недоступно   (поколения 0–4)   ┃ синий — самая длинная цепочка"
 stmt.title,GOAL STATEMENT,ВЕДОМОСТЬ ЦЕЛИ
 stmt.goal,goal: {0} (product {1}),цель: {0} (изделие {1})
 stmt.nogoal,no goal (no known product without a series),цели нет (нет известного изделия без серии)
@@ -388,3 +388,5 @@ ui.menu.load.why,Loading is not ready yet,Загрузка пока не гот�
 ui.menu.save.why.notready,Saving is not ready yet,Сохранение пока не готово
 ui.menu.save.why.nogame,No game started,Нет начатой игры
 menu.reason.nogame,No game running,Нет игры
+legend.goal,Goal (blue frame),Цель (синяя рамка)
+legend.links,Links of the selected node,Связи выбранного узла

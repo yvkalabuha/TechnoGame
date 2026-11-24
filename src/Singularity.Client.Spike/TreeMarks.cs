@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Godot;
 
 namespace Singularity.Client.Spike;
@@ -7,27 +6,27 @@ namespace Singularity.Client.Spike;
 /// Used on the planisphere, in the legend and in the goal panel, so one sign has one meaning (C2). Drawn with lines, no text.</summary>
 public static class RootMark
 {
-    static readonly Dictionary<float, (Vector2[] Poly, Vector2[] Loop)> Cache = new();
+    // One outline built at side 1 and scaled by the canvas transform: no cache that grows with the zoom.
+    static readonly Vector2[] Poly = Build(false), Loop = Build(true);
 
-    static (Vector2[] Poly, Vector2[] Loop) For(float side)
+    static Vector2[] Build(bool closed)
     {
-        if (Cache.TryGetValue(side, out var c)) return c;
-        var f = TreeClarity.RootFrame(side);
-        var poly = new Vector2[f.Length]; var loop = new Vector2[f.Length + 1];
-        for (int k = 0; k < f.Length; k++) loop[k] = poly[k] = new Vector2(f[k].X, f[k].Y);
-        loop[f.Length] = loop[0];
-        return Cache[side] = (poly, loop);
+        var f = TreeClarity.RootFrame(1f);
+        var a = new Vector2[closed ? f.Length + 1 : f.Length];
+        for (int k = 0; k < f.Length; k++) a[k] = new Vector2(f[k].X, f[k].Y);
+        if (closed) a[f.Length] = a[0];
+        return a;
     }
 
     /// <summary>basis: the transform the owner canvas item runs under (the clipped planisphere view shifts its origin).</summary>
     public static void Draw(CanvasItem ci, Vector2 centre, float side, Vector2 basis)
     {
-        var (poly, loop) = For(side);
-        ci.DrawSetTransform(centre + basis);
-        ci.DrawColoredPolygon(poly, Ui.Alarm);
-        ci.DrawPolyline(loop, Ui.Ink, 2f);
-        ci.DrawLine(new Vector2(0, -side * 0.30f), new Vector2(0, side * 0.08f), Colors.White, 2f);
-        ci.DrawRect(new Rect2(-1, side * 0.2f, 2, 2), Colors.White);
+        float k = 1f / side;   // line widths in du: the scale of the transform is divided out
+        ci.DrawSetTransform(centre + basis, 0, new Vector2(side, side));
+        ci.DrawColoredPolygon(Poly, Ui.Alarm);
+        ci.DrawPolyline(Loop, Ui.Ink, 2f * k);
+        ci.DrawLine(new Vector2(0, -0.30f), new Vector2(0, 0.08f), Colors.White, 2f * k);
+        ci.DrawRect(new Rect2(-k, 0.2f, 2f * k, 2f * k), Colors.White);
         ci.DrawSetTransform(basis);
     }
 }
