@@ -37,7 +37,9 @@ public sealed class ShotFilter
     {
         foreach (var p in _patterns)
         {
-            string tail = p[(p.LastIndexOfAny(new[] { '*', '?' }) + 1)..];
+            // A greyscale twin is named <frame>_grey: it belongs to the same combination as its colour frame.
+            string q = p.EndsWith("_grey", StringComparison.Ordinal) ? p[..^5] : p;
+            string tail = q[(q.LastIndexOfAny(new[] { '*', '?' }) + 1)..];
             if (tail.Length == 0 || sfx.EndsWith(tail, StringComparison.Ordinal) || tail.EndsWith(sfx, StringComparison.Ordinal)) return true;
         }
         return false;

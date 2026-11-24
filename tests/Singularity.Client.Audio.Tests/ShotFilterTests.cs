@@ -46,6 +46,15 @@ public class ShotFilterTests
     }
 
     [Fact]
+    public void GreyTwinKeepsItsCombination()
+    {
+        var f = new ShotFilter("area_science_1920x1080_grey");
+        Assert.True(f.WantsSuffix("_1920x1080"));
+        Assert.False(f.WantsSuffix("_1920x1080_en"));
+        Assert.True(f.Wants("area_science_1920x1080_grey.png"));
+    }
+
+    [Fact]
     public void AllExactOnlyWithoutWildcards()
     {
         Assert.True(new ShotFilter("a,b_grey.png").AllExact);
