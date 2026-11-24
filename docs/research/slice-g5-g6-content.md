@@ -1,10 +1,11 @@
-# Контент G5/G6 для среза «реактивная авиация» (TASK-0128, поезд 2, шаг T-C), ред. 2
+# Контент G5/G6 для среза «реактивная авиация» (TASK-0128, поезд 2, шаг T-C), ред. 3
 
-> research-scientist, 2026-11-23. Проект данных [Предл.] для повторного gate, не решение. `mods/` и `src/` не менялись. Ред. 2 — по трём рецензиям (`docs/reviews/slice-g5-g6-content-{critic,advocate,deepseek}.md`) и O-038 (`docs/decisions/ORCH_DECISIONS.md`).
+> research-scientist, 2026-11-23. Проект данных [Предл.] для повторного gate, не решение. `mods/` и `src/` не менялись. Ред. 3 (2026-11-24) — по решению владельца #457: промежуточные шаги исследования (раздел 8); 11 строк таблицы раздела 1 изменили `requires`. Ред. 2 — по трём рецензиям (`docs/reviews/slice-g5-g6-content-{critic,advocate,deepseek}.md`) и O-038 (`docs/decisions/ORCH_DECISIONS.md`).
 > Входы: `docs/architecture/notes/slice-horizon-2030.md` §3, §5; `docs/simulation/m-play-horizon-2030.md`; `docs/simulation/slice-jet-aviation.md` §1.3, §1.4, §2, §8.1; `mods/core/nodes.yaml`, `product_classes.yaml`; `docs/research/RR-0008-technology-space-architecture.md` §3–4 (грамматика `hazard`).
 > Документ RR-контента из записки (`RR-jet-slice-1970-2030-content.md`) в репозитории не найден: узлы составлены заново.
 
 ## Краткий вывод
+- [Предл., ред. 3, #457] +18 узлов-предшественников (82–99; всего 99): PRN 11, CMP 5, ENG 2, PRC 0 (новые процессы tier 5 не добавляются: освоение tier 5 — главный тормоз, зонд §4.3). Цепочки — раздел 8. Грубая оценка: граф один сдвигает открытие на 1–10 лет, до целей (особенно АФАР, CMC, адаптивный) не хватает 15–25 лет; нужен `c_n` и зонд.
 - [Предл.] 20 новых узлов (62–81): 2 FND, 3 PRN, 7 ENG, 2 CMP, 4 PRC, 2 APP. Было 61, станет 81. Номера 64–81 — второе слово лицензионной маски (≤127). G5: электронное управление, композиты, монокристалл, цифровая автоматика двигателя (1970–1984); G6: малозаметность, вектор тяги, АФАР (1962–2005); поздний хвост 1997–2021: АФАР, керамические композиты (CMC), адаптивный цикл.
 - [Предл.] Только существующие дисциплины и кластеры, PRC не выше tier 5; `elec` и tier 6 не нужны.
 - [Предл.] `hazard` по типу (RR-0008 §3–4): FND и PRN — `hz`; ENG-двигатели, CMP 72 и PRC 73 — `key`; APP — `none`. Контрольные слои Lab (L_K/L_K0/L_P) остаются на G1–G4 и отклоняют данные с `gen > 4` стражем (O-038); отсутствие покрытия — не довод против hazard.
@@ -21,23 +22,23 @@
 | 62 | s8.fnd.electronic_flight_control_theory | FND | 5 | aero | – | hz | transonic_aerodynamics | 1972 USA: F-8 DFBW, 25 мая [Факт] | S-A |
 | 63 | s8.fnd.edge_wave_diffraction | FND | 5 | aero | – | hz | compressible_flow | 1962 SUN: Уфимцев [Факт, вторичн.]; 1962/1964 не разрешено, est | S-B |
 | 64 | s5.prn.single_crystal_growth | PRN | 5 | metal | – | hz | ds_casting | 1974 USA, est | S-C |
-| 65 | s5.prn.fibre_composite_laminate_design | PRN | 5 | chem | – | hz | aluminium_alloy_sheet | 1970 USA: борэпоксид F-14 [Факт, вторичн.] | S-D |
-| 66 | s8.prn.low_observable_shaping | PRN | 6 | aero | – | hz | 63 | 1975 USA, est | S-B |
-| 67 | s8.eng.fly_by_wire_relaxed_stability | ENG | 5 | aero | – | none | 62 + all_moving_tail | 1974 USA: YF-16, 2 февр., аналоговая ЭДСУ [Факт, вторичн.] | S-E |
-| 68 | s8.eng.turbofan_g5 | ENG | 5 | prop | – | key | turbofan_g4 + 62 | 1981 USA: DEEC на F100, 1981–83 [Факт, вторичн.] | S-F |
+| 65 | s5.prn.fibre_composite_laminate_design | PRN | 5 | chem | – | hz | aluminium_alloy_sheet + 91 | 1970 USA: борэпоксид F-14 [Факт, вторичн.] | S-D |
+| 66 | s8.prn.low_observable_shaping | PRN | 6 | aero | – | hz | 63 + 93 | 1975 USA, est | S-B |
+| 67 | s8.eng.fly_by_wire_relaxed_stability | ENG | 5 | aero | – | none | 62 + all_moving_tail + 88 | 1974 USA: YF-16, 2 февр., аналоговая ЭДСУ [Факт, вторичн.] | S-E |
+| 68 | s8.eng.turbofan_g5 | ENG | 5 | prop | – | key | turbofan_g4 + 62 + 90 | 1981 USA: DEEC на F100, 1981–83 [Факт, вторичн.] | S-F |
 | 69 | s8.eng.composite_airframe | ENG | 5 | aero | – | none | 65 + mach2_airframe_g4 | 1978 USA: YAV-8B, 9 нояб. [Факт, вторичн.] | S-G |
 | 70 | s8.eng.low_observable_airframe | ENG | 6 | aero | – | none | 66 + 67 | 1977 USA: Have Blue, 1 дек. [Факт, вторичн.] | S-H |
-| 71 | s8.eng.thrust_vectoring_supercruise_engine | ENG | 6 | prop | – | key | 68 + 72 | 1990 USA: YF-22, вектор 15 нояб., сверхзвук без форсажа 3 нояб. [Факт] | S-I |
+| 71 | s8.eng.thrust_vectoring_supercruise_engine | ENG | 6 | prop | – | key | 68 + 72 + 92 | 1990 USA: YF-22, вектор 15 нояб., сверхзвук без форсажа 3 нояб. [Факт] | S-I |
 | 72 | s8.cmp.turbine_blade_single_crystal | CMP | 5 | prop | – | key | 64 + turbine_blade_cooled | 1982 USA, est | S-C |
 | 73 | s5.prc.single_crystal_casting | PRC | 5 | metal | 5 | key | 64 + ds_casting | 1982 USA, est | S-C |
 | 74 | s8.prc.composite_layup_cure | PRC | 5 | aero | 4 | none | 65 | 1978 USA, est | S-G |
 | 75 | s5.prc.low_observable_finishing | PRC | 6 | chem | 5 | none | 66 | 1981 USA, est | S-H |
-| 76 | s8.app.jet_fighter_g5 | APP | 5 | aero | – | none | 67 + (69 \| 68) | 1984 FRA: Mirage 2000 в строю [Факт, по выдаче] | S-J |
-| 77 | s8.app.jet_fighter_g6 | APP | 6 | aero | – | none | 71 + 70 + 78 | 2005 USA: F-22 IOC, дек. [Факт] | S-I, S-K |
-| 78 | s8.eng.aesa_sensor_fusion | ENG | 6 | aero | – | none | 62 | 1997 USA: лётные испытания APG-77, нояб., est | S-L |
-| 79 | s5.cmp.ceramic_matrix_composite | CMP | 6 | chem | – | key | 72 + ceramic_shell_moulding | 2016 USA: CMC-кожухи GE (LEAP), est | S-M |
-| 80 | s5.prc.cmc_fabrication | PRC | 6 | chem | 5 | none | 79 + ceramic_shell_moulding | 2016 USA, est | S-M |
-| 81 | s8.eng.adaptive_cycle_engine | ENG | 6 | prop | – | key | 71 + 79 | 2021 USA: испытания XA100, est | S-N |
+| 76 | s8.app.jet_fighter_g5 | APP | 5 | aero | – | none | 67 + 89 + (69 \| 68) | 1984 FRA: Mirage 2000 в строю [Факт, по выдаче] | S-J |
+| 77 | s8.app.jet_fighter_g6 | APP | 6 | aero | – | none | 71 + 70 + 78 + 94 | 2005 USA: F-22 IOC, дек. [Факт] | S-I, S-K |
+| 78 | s8.eng.aesa_sensor_fusion | ENG | 6 | aero | – | none | 85 + 87 | 1997 USA: лётные испытания APG-77, нояб., est | S-L |
+| 79 | s5.cmp.ceramic_matrix_composite | CMP | 6 | chem | – | key | 72 + ceramic_shell_moulding + 95 + 97 | 2016 USA: CMC-кожухи GE (LEAP), est | S-M |
+| 80 | s5.prc.cmc_fabrication | PRC | 6 | chem | 5 | none | 79 + ceramic_shell_moulding + 96 | 2016 USA, est | S-M |
+| 81 | s8.eng.adaptive_cycle_engine | ENG | 6 | prop | – | key | 71 + 79 + 99 | 2021 USA: испытания XA100, est | S-N |
 
 Заметки.
 - [Предл.] **Hazard по типу (п.1).** Грамматика RR-0008 §4: `hz` для FND/PRN, у APP только `none`, у ENG/CMP/PRC любой. По образцу G1–G4 (`key` у двигателей, горячих компонентов, трудных PRC) `key` получили 68, 71, 81, 72, 79, 73. Механика hazard не зависит от поколения [Факт, advocate: `KnowledgeMath.Hazard`, `KnowledgeRng.Hazard`], не проверено мной.
@@ -140,11 +141,98 @@
 | 8 | DeepSeek H10 (ключи L_K) | расширить ключи или исключить G5/G6 | Исключено стражем; долг — TECH_DEBT |
 | 9 | Окна G5/G6 | в ред. 1 краткий вывод ≠ §1 | Одно определение (раздел 1) |
 
+## 8. Ред. 3: цепочки промежуточных шагов (владелец, #457) [Предл.]
+Основание. [Факт, зонд g5-g6-probe §4.2] Мир открывает G5 APP в 1974–76 (цель 1980–85), АФАР (78) в 1968 (цель 1995–2000), G6 APP в 1980 (2000–05), CMC/изготовление (79/80) в 1978–80 (2008–15), адаптивный (81) в 1980–81 (2015–22). Множитель цены даёт мало (+41 % цены — 2 года). Решение #457: добавить исторические предшественники как узлы-предпосылки.
+
+Правила. [Предл.] (а) Дисциплины и кластеры прежние (`aero`, `prop`, `chem`, `metal`); радиоэлектроника и вычисления входят в `aero` (кластер AERO), отдельной дисциплины `elec`/`comp` нет — см. OPEN 1. (б) `gen` предшественника — поколение, где он применяется (5 — до 1980, 6 — позже; цена `CostGenMultiplier` 7,0/12,0, как для 62–81). (в) Порядок якорей: ни одна предпосылка не позже узла (проверено вручную по таблицам ниже, нарушений 0; скриптом не прогонялось). (г) Типы по грамматике hazard RR-0008: PRN — `hz`; CMP 84, 85 — `key`; 91, 95 — `none`; ENG 87, 94 — `none`. (д) Новых PRC нет. (е) Номера 82–99 укладываются во второе слово маски (≤127). (ж) `informs` — по правилу раздела 1 (0,6 прямые, 0,3 через шаг); список исходящих рёбер генерируется при записи `nodes.yaml`.
+
+### 8.1 Новые узлы (18)
+Колонки: `requires` — AND; источник — раздел «Источники ред. 3». Якорь [Факт] — по выдаче поиска (вторичные источники), [Предп.] est — оценка.
+
+| # | id | Тип | G | Дисц. | hazard | requires | Якорь: год, событие | Зачем игроку |
+|---|---|---|---|---|---|---|---|---|
+| 82 | s8.prn.phased_array_radar_pesa | PRN | 6 | aero | hz | – | 1975, SUN: первый полёт МиГ-31 с РЛС Заслон (ПФАР пассивная, в строю 1981) [Факт, вторичн., R-1] | Основа обоих путей к 78: без электронного сканирования АФАР не открыть |
+| 83 | s5.prn.gaas_wafer_growth | PRN | 6 | chem | hz | 8 solidification_science | 1965, GBR: Mullin и др., жидкостная герметизация (LEC) для GaAs [Факт, R-2] | Материальная ветка АФАР; общая основа с монокристаллом (64) — рост кристалла |
+| 84 | s5.cmp.gaas_mmic | CMP | 6 | chem | key | 83 | 1976, GBR: Pengelly, Turner (Plessey), первый GaAs MMIC [Факт, вторичн., R-3] | Электронная компонентная база; дорогой выбор «купить/освоить» |
+| 85 | s8.cmp.solid_state_tr_module | CMP | 6 | aero | key | 84 + 82 | 1988 USA: аппаратная фаза MIMIC DARPA (твердотельная ФАР с 1983) [Факт: 1983, 1988 — вторичн.; год узла est, R-4] | Главное «узкое горло» АФАР: модуль приём-передача на каждый элемент |
+| 86 | s8.prn.programmable_signal_processing | PRN | 5 | aero | hz | – | 1979 USA: APG-63 с программируемым процессором сигналов; источники расходятся (1973/1979) [Факт, противореч., R-5] | Вычислительная основа радара и авионики; связь «компьютинга» с воздухоплаванием |
+| 87 | s8.eng.digital_beamforming | ENG | 6 | aero | none | 86 + 82 | 1990 est; опытные цифровые решётки 1987 (MESAR), 1996 [Факт, вторичн., R-6] | Шаг от аналогового сканирования к цифровому формированию лучей: даёт подавление помех, мультизадачность |
+| 88 | s8.prn.relaxed_static_stability | PRN | 5 | aero | hz | 62 + all_moving_tail | 1974, USA: F-4 CCV (первый полёт в конфигурации CCV 29.04.1974; один вторичный источник; год est) [R-7] | Теория «нестабильной» аэродинамики: допуск на ЭДСУ как основу ловкости |
+| 89 | s8.cmp.digital_flight_control_computer | CMP | 5 | aero | key | 62 | 1976 est, USA: F-8 DFBW, фаза II, три ЭВМ IBM AP-101 (выбор 1972, контракт 1973 — блог; точный год полётов не подтверждён) [R-8] | Цифровой путь к G5 дешевле аналога, но требует надёжной вычислительной базы |
+| 90 | s8.prn.electronic_engine_control | PRN | 5 | prop | hz | turbojet_g3 | 1969, GBR/FRA: Olympus 593 (Concorde), аналоговая электроника, первый полёт 02.03.1969; «первый FADEC» оспаривается [Факт, R-9] | Предшественник DEEC (68, 1981): сначала электроника, потом цифра |
+| 91 | s5.cmp.carbon_fibre_epoxy | CMP | 5 | chem | none | – | 1963, GBR: Watt, Phillips, Johnson (RAE), углеродное волокно с высоким модулем (в 1966 описание в The Engineer) [Факт, вторичн., R-10] | Материал композитов: страна без химии волокна идёт к 65 только через покупку |
+| 92 | s8.prn.thrust_vectoring_nozzle | PRN | 6 | prop | hz | afterburner | 1989, USA: F-15 S/MTD, первый полёт с вектором тяги 16.05.1989 (2D-сопла в полёте 23.03.1990; самолёт 07.09.1988) [Факт, вторичн., R-11] | Предпосылка 71 (вектор тяги) |
+| 93 | s8.prn.rcs_computational_prediction | PRN | 6 | aero | hz | 63 | 1975, USA: программа Echo 1 (Lockheed, Overholser) [Факт, вторичн., R-12] | Расчёт радиолокационной заметности: без него стелс-форма (66) не делается |
+| 94 | s8.eng.integrated_avionics_architecture | ENG | 6 | aero | none | 89 + 86 | 1986 est, USA: Pave Pillar, затем Common Integrated Processor (дата 1986 не подтверждена) [R-13] | Слияние данных: часть цены G6 вместе с АФАР |
+| 95 | s5.cmp.silicon_carbide_fibre | CMP | 6 | chem | none | – | 1983, JPN: коммерческий Nicalon (Yajima 1975; даты производства 1982/1983 расходятся) [Факт, вторичн., R-14] | Армирование CMC; страна без химии покупает волокно |
+| 96 | s5.prn.matrix_infiltration_cvi | PRN | 6 | chem | hz | 95 | 1977, FRA: Naslain (Бордо), первый CMC методом CVI; коммерциализация SEP в 1980-х [Факт, вторичн., R-15] | Метод изготовления CMC (80): уход от дорогого процесса tier 5 |
+| 97 | s5.prn.environmental_barrier_coating | PRN | 6 | chem | hz | 95 | 2000 est, USA: NASA/GE/P&W, покрытие первого поколения 1995–2000, влага разрушает SiC (1990) [Факт, вторичн., R-16] | Без покрытия CMC в турбине не живёт: отдельная ставка |
+| 98 | s8.prn.variable_cycle_engine | PRN | 6 | prop | hz | turbofan_g5 | 1990, USA: YF120 на YF-22, первый полёт 29.09.1990 (двигатель запущен 1989) [Факт, вторичн., R-17] | Шаг к адаптивному циклу, параллельный вектору тяги |
+| 99 | s8.prn.adaptive_third_stream_fan | PRN | 6 | prop | hz | 98 | 2013, USA: GE ADVENT (контракт 2007, испытания ядра 02.2013, двигатель 26.11.2013) [Факт, вторичн., R-18] | Решающая теория адаптивного цикла (81) |
+
+Нумерация: id с префиксом (`s8.`, `s5.`) выбран по дисциплине (aero/prop — s8, chem/metal — s5) по образцу 62–81 [Предп.].
+
+### 8.2 Изменённые `requires` существующих узлов (11 строк таблицы раздела 1 уже исправлены)
+- 65 composite design: aluminium_alloy_sheet + **91**. 66 low-observable shaping: 63 + **93**. 67 FBW: 62 + all_moving_tail + **88**. 68 turbofan G5: turbofan_g4 + 62 + **90**. 71 вектор+supercruise: 68 + 72 + **92**.
+- 76 APP G5: 67 + **89** + (69 | 68). 77 APP G6: 71 + 70 + 78 + **94**.
+- 78 АФАР: было 62; стало **85 + 87** (62 снят: теория ЭДСУ не предпосылка радара; ребро informs 62→78 удаляется).
+- 79 CMC: 72 + ceramic_shell_moulding + **95 + 97**. 80 изготовление CMC: 79 + ceramic_shell_moulding + **96**. 81 адаптивный: 71 + 79 + **99** (98 входит через 99).
+- Существующие узлы переиспользованы: 8 solidification_science, 21 afterburner, 22 all_moving_tail, 23 turbojet_g3, 46 ceramic_shell_moulding, 62, 63, 68, 69, 72. [Предл.] Прочие связи не добавлялись.
+
+### 8.3 Узел → новые предпосылки → ожидаемый самый ранний год
+Глубина — длина длиннейшей цепочки узлов до целевого (включительно). «Ист. нижняя» — год якоря последней новой предпосылки (историческая граница). «Ожидаемый год в модели» — [Предп., эвристика, не расчёт]: зонд показал +2 года на +41 % цены; оцениваю +1…3 года на каждый добавленный последовательный узел; мир ищет узлы параллельно, поэтому считается глубина, а не число.
+| Узел | Новые предпосылки | Глубина до→после | Ист. нижняя | Зонд до | Ожидаемый год в модели [Предп.] | Цель |
+|---|---|---|---|---|---|---|
+| 76 APP G5 | 88, 89, 90, (91 через 65) | 3→4 | 1976 | 1974–76 | 1976–80 | 1980–85 |
+| 78 АФАР | 82, 83, 84, 85, 86, 87 | 2→5 (8→83→84→85→78) | 1990 | 1968 | 1974–82 | 1995–2000 |
+| 77 APP G6 | 92, 93, 94 (и всё от 78) | 5→7 | 2005 | 1980 | 1982–88 | 2000–05 |
+| 79 CMC | 95, 97 | 4→6 | 2000 | 1978 | 1980–86 | 2008–15 |
+| 80 изготовление CMC | 96 | 5→7 | 1983 | 1979–80 | 1981–88 | 2008–15 |
+| 81 адаптивный | 98, 99 | 6→8 | 2013 | 1981 | 1983–90 | 2015–22 |
+Вывод [Предп.]: цепочки добавляют 1–10 лет, но разрыв до целей остаётся 10–25 лет; граф не заменяет `c_n` и `CostGenMultiplier`. Критерий приёмки ред. 3 — повтор зонда: [Предл.] сдвиг G5 APP ≥ 3 года, АФАР ≥ 8 лет, при условии, что освоение tier 5 не меняется. Если нет — следующий рычаг (решение D1): ограничение «не раньше окна» (`not_before`) в Core, чего #457 не требует.
+
+### 8.4 Чем цепочка осмысленна как выбор [Предл.]
+- Для догоняющей страны: «аналог/покупка» против «своё». В АФАР три независимых ветви (PESA 82 — радио, GaAs 83–85 — материалы и компонентная база, 86–87 — вычисления); можно купить 84/85 и вести вычислительную, или наоборот. Цены знания узлов разные (gen 5 и 6).
+- G5: аналоговый путь (88, 90) дешёвый, цифровой (89) дороже и открывает путь к 94; композитный (91 → 65 → 69) остаётся альтернативой `any_of`.
+- CMC: 95 (волокно) и 96 (CVI) — материаловедческая ставка; 97 — отдельная ставка на долговечность. Без 97 CMC открывается, но по гипотезе hazard-механика карает ранний выбор [Предп., не проверено].
+- Риск: [Предп.] цепочка из 5 узлов gen 6 перед 78 может не раздробить годы открытия 79–81 (общий множитель); тогда нужен отдельный множитель узла (Core, D1, как в разделе 6).
+
+### 8.5 Чего не делает ред. 3 / ограничения
+- [Факт] Новых PRC нет: зонд §4.3 показал, что процессы tier 5 (52, 73, 75, 80) не осваиваются никем, и ввод в строй G5/G6 упирается туда, а не в знание. Ред. 3 решает вопрос раннего открытия; «в строю» решается отдельно (D1, simulation-engineer, economy-analyst).
+- [Предп.] Вычисления/электроника в `aero` — упрощение: у 86, 89, 94 «компьютерная» связь только через эти узлы; кросс-ссылок на дисциплину вычислений нет, потому что в срезе её нет. «Материалы»: связь через 8 (кристаллизация) и 46 (оболочки), других подходящих существующих узлов нет.
+- Годы якорей — из поисковых сводок (вторичные источники); первичные страницы не открывались. 85, 87, 88, 89, 94, 97 — `estimated: true`.
+
+## Источники ред. 3 (WebSearch, доступ 2026-11-24; страницы целиком не открыты; лицензия: цитируются только даты, текст не копируется — ADR-0009)
+- R-1 МиГ-31, Заслон: https://en.wikipedia.org/wiki/Zaslon ; https://www.globalsecurity.org/military/world/russia/mig-31.htm
+- R-2 Mullin, Straughan, Brickell 1965, J. Phys. Chem. Solids 26, 782: https://www.researchgate.net/publication/222143467_Bulk_growth_of_GaAs_An_overview
+- R-3 Pengelly, Turner 1976, Electronics Letters 12, 251: https://www.mwrf.com/semiconductor/recalling-early-gaas-mmic-developments ; https://www.microwavejournal.com/articles/37420-the-rfmicrowave-industry-in-the-uk-and-ireland-birthplace-of-radar-and-the-gaas-mmic
+- R-4 Delaney, From Vision to Reality (MIMIC): https://apps.dtic.mil/sti/tr/pdf/AD1033425.pdf ; Chang, Rise of Active-Element Phased-Array Radar: https://apps.dtic.mil/sti/tr/pdf/ADA257150.pdf (PD, правительственные)
+- R-5 APG-63: https://www.radartutorial.eu/19.kartei/08.airborne/karte030.en.html ; https://en.wikipedia.org/wiki/AN/APG-63_radar_family
+- R-6 цифровое формирование лучей: https://secwww.jhuapl.edu/techdigest/content/techdigest/pdf/V22-N04/22-04-Agrawal.pdf (по выдаче)
+- R-7 F-4 CCV: сводка поиска (один вторичный источник); SAE paper Bennett 1974 — не открыт
+- R-8 F-8 DFBW: https://ntrs.nasa.gov/citations/19740023337 ; https://ntrs.nasa.gov/api/citations/19750010176/downloads/19750010176.pdf (NASA, PD)
+- R-9 Olympus 593: https://www.heritageconcorde.com/concorde-olympus-593-mk610-engines ; https://www.sae.org/papers/olympus-593-concorde-maintaining-electronic-engine-control-680351
+- R-10 Углеродное волокно RAE: https://www.nature.com/articles/213690a0 ; https://www.nature.com/articles/215384a0
+- R-11 F-15 S/MTD: https://en.wikipedia.org/wiki/McDonnell_Douglas_F-15_STOL/MTD ; Air & Space (даты 1989/1990, по сводке)
+- R-12 Echo 1: https://en.wikipedia.org/wiki/Denys_Overholser ; https://www.airandspaceforces.com/article/1192stealth/
+- R-13 Pave Pillar, F-22 CIP: https://www.globalsecurity.org/military/systems/aircraft/f-22-avionics.htm
+- R-14 Nicalon: https://www.osti.gov/servlets/purl/2282963 (PD)
+- R-15 CVI, Naslain: сводка поиска (биография и обзоры); первичная статья Naslain, Langlais, Fedou 1989 не открыта
+- R-16 EBC: https://ntrs.nasa.gov/api/citations/20170004751/downloads/20170004751.pdf ; https://ntrs.nasa.gov/api/citations/20130010776/downloads/20130010776.pdf (NASA, PD)
+- R-17 YF120: https://flighttestmuseum.org/portfolio/lockheed-yf-22/ ; https://aviationweek.com/defense/going-flow-us-air-forces-new-adaptive-powerplants
+- R-18 ADVENT: https://www.flightglobal.com/archive/2013/02/general-electric-completes-advent-core-testing/ ; https://news.usni.org/2014/06/23/next-generation-engine-work-points-future-u-s-fighter-designs
+
+### Не проверено (ред. 3)
+- Ни одна страница не открыта целиком; все даты — из поисковых сводок. Расхождения источников: APG-63 (1973/1979), Nicalon (1982/1983), «первый FADEC» (Olympus 593), F-2/J/APG-1 (1995/2000/2002).- Ожидаемые годы раздела 8.3 — эвристика, не расчёт; влияние на гонку проверяет только прогон зонда.
+- Правила валидатора для узлов без `requires` (82, 86, 91, 95 — PRN/CMP с пустым списком) — у существующих FND/CMP (4, 31) такое есть; для PRN не проверялось.
+- Что 18 новых номеров не ломают порядок якорей в коде Core (проверка вручную, не скриптом).
+
 ## История правок
 | Ред. | Дата | Что |
 |---|---|---|
 | 1 | 2026-11-23 | 16 узлов (62–77), `hazard: none`, c_n 6,4 и 10,2 |
 | 2 | 2026-11-23 | После gate и O-038: 20 узлов (62–81), hazard по типу, `any_of` и пути G5, `af_class` 5/6, графовые правки (62, 63, 67, 70), `informs`, `c_n` по целевым годам, критерии зонда, H13, якоря 1984/2005 |
+| 3 | 2026-11-24 | #457: +18 узлов-предшественников (82–99), 11 правок `requires` в строках 65–81, раздел 8 |
 
 ## Источники (доступ 2026-11-23)
 Лицензии: ADR-0009 — данные только PD/CC0/CC BY; здесь источники — указатели на даты, текст не копируется. Wikipedia (CC BY-SA) — только вторичное подтверждение.
