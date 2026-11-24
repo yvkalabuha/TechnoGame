@@ -232,6 +232,48 @@ class SketchTest(unittest.TestCase):
             self.go(runner=self.runner(stream=self.stream_with({"step_type": "agent_response"}, "ResourceExhausted"), image=False))
         self.assertEqual(c.exception.code, "agy_quota")
 
+    RF_ID = "0af7a474-ce07-4bc4-9735-46858b750c5e"
+
+    def rf_runner(self, path_template, image=True):
+        """Stream of a live read_file refusal (arguments absent from the stream); the transcript is written into the brain dir."""
+        stream = (Path(config.PACKAGE_DIR) / "fixtures" / "agy_read_file_stream.ndjson").read_text()
+        tr = (Path(config.PACKAGE_DIR) / "fixtures" / "agy_read_file_transcript.jsonl").read_text()
+        inner = self.runner(stream=stream, image=image)
+
+        def run(cmd, cwd, timeout):
+            if cmd[1] != "--version":
+                d = self.brain / self.RF_ID / ".system_generated" / "logs"
+                d.mkdir(parents=True, exist_ok=True)
+                (d / "transcript.jsonl").write_text(tr.replace("{WS}", path_template.replace("{WS}", cwd)))
+                if image:
+                    (self.brain / self.RF_ID / "sketch_1.jpg").write_bytes(JPEG)
+            return inner(cmd, cwd, timeout)
+        return run
+
+    def test_read_file_inside_workspace_is_allowed(self):
+        _, _, rec = self.go(runner=self.rf_runner("{WS}"))
+        self.assertIn("read_file", rec["tools"])
+
+    def test_read_file_outside_workspace_is_refused(self):
+        with self.assertRaises(sketch.SketchError) as c:
+            self.go(runner=self.rf_runner("/home/u/.config"))
+        self.assertEqual(c.exception.code, "agent_tool_violation")
+        self.assertIn("read_file", str(c.exception))
+
+    def test_read_file_without_any_transcript_is_refused(self):
+        stream = (Path(config.PACKAGE_DIR) / "fixtures" / "agy_read_file_stream.ndjson").read_text()
+        with self.assertRaises(sketch.SketchError) as c:
+            self.go(runner=self.runner(stream=stream))
+        self.assertEqual(c.exception.code, "agent_tool_violation")
+
+    def test_transcript_run_command_is_refused(self):
+        calls = [("run_command", ["x"]), ("read_file", ['"/ws/a.png"']), ("send_message", [])]
+        self.assertEqual(sketch.call_violations(calls, "/ws"), ["run_command"])
+
+    def test_event_read_file_with_quoted_path(self):
+        ev = self.stream_with({"tool_name": "read_file", "args": {"Path": '"/ws/1-a.png"'}})
+        self.assertEqual(sketch.tool_violations(ev, "/ws"), [])
+
     def test_env_allowlist(self):
         env = {"HOME": "/h", "PATH": "/b", "LANG": "C", "LC_ALL": "C", "XDG_CONFIG_HOME": "/c", "TERM": "x", "USER": "u",
                "GEMINI_API_KEY": "k", "GITHUB_TOKEN": "t", "AWS_SECRET_ACCESS_KEY": "s", "OPENAI_API_KEY": "o"}
