@@ -209,6 +209,49 @@ class RunTest(unittest.TestCase):
         self.assertIn("checked: handled in b.py", fake.calls[0]["messages"][1]["content"])
         self.assertEqual(len(list(runs.glob("*.json"))) >= 3, True)
 
+    def _record(self, runs, name, rnd, claims, marks, reasons=None, raw_side=None):
+        runs.mkdir(exist_ok=True)
+        rec = {"kind": "review", "round": rnd, "result": {"findings": [
+            {"severity": "low", "path": "p.py", "line": i, "claim": c, "evidence": ""} for i, c in enumerate(claims, 1)]}}
+        (runs / name).write_text(json.dumps(rec))
+        side = {"confirmed": marks}
+        if reasons is not None:
+            side["reasons"] = reasons
+        (runs / (name + ".confirm.json")).write_text(raw_side if raw_side is not None else json.dumps(side))
+
+    def test_keeps_newest_rejections_by_round(self):
+        runs = self.tmp / "runs"
+        n = review.MAX_REJECTED
+        # the newest round has the alphabetically smallest name
+        self._record(runs, "review-TASK-0001-aaaa-codex.json", 2, [f"new{i}" for i in range(n)], {str(i): False for i in range(1, n + 1)})
+        self._record(runs, "review-TASK-0001-zzzz-codex.json", 1, ["old"], {"1": False})
+        got = review.rejected_findings(runs, "TASK-0001")
+        self.assertEqual(len(got), n)
+        self.assertNotIn("old", [g["claim"] for g in got])
+
+    def test_malformed_sidecar_skipped_with_warning(self):
+        runs = self.tmp / "runs"
+        logs = []
+        self._record(runs, "review-TASK-0001-aaaa-codex.json", 1, ["c"], {"1": False}, reasons=["not", "a dict"])
+        self._record(runs, "review-TASK-0001-bbbb-codex.json", 2, ["c"], {}, raw_side="{broken")
+        self._record(runs, "review-TASK-0001-cccc-codex.json", 3, ["ok"], {"1": False}, reasons={"1": "r"})
+        got = review.rejected_findings(runs, "TASK-0001", log=logs.append)
+        self.assertEqual([g["claim"] for g in got], ["ok"])
+        self.assertEqual(len(logs), 2)
+
+    def test_path_truncated_and_instruction_outside_data_block(self):
+        runs = self.tmp / "runs"
+        self._record(runs, "review-TASK-0001-aaaa-codex.json", 1, ["c"], {"1": False}, reasons={"1": "r"})
+        rec = json.loads((runs / "review-TASK-0001-aaaa-codex.json").read_text())
+        rec["result"]["findings"][0]["path"] = "x" * 5000
+        (runs / "review-TASK-0001-aaaa-codex.json").write_text(json.dumps(rec))
+        self.assertLessEqual(len(review.rejected_findings(runs, "TASK-0001")[0]["path"]), review.MAX_REJECTED_TEXT)
+        self.assertNotIn("Do not repeat", review.rejected_block(review.rejected_findings(runs, "TASK-0001")))
+        got = []
+        self.run_review("codex", codex_runner=lambda p, wt: (got.append(p) or json.dumps(GOOD), {}))
+        # (runs dir of run_review is the same one)
+        self.assertIn("Do not repeat", got[0].split("=== TASK")[0])
+
     def test_first_review_has_no_rejected_block(self):
         got = []
 

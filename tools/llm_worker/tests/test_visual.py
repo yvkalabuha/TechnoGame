@@ -168,10 +168,27 @@ class RunVisual(Base):
         other = self.tmp / "elsewhere"
         other.mkdir()
         (other / "d.png").write_bytes(PNG)
-        with mock.patch.object(config, "SHOTS_DIR", self.shots), mock.patch.object(config, "CLIENT_SHOTS_DIR", client):
+        with mock.patch.object(config, "SHOTS_DIR", self.shots), mock.patch.object(config, "CLIENT_SHOTS_DIR", client), \
+                mock.patch.object(config, "REPO_ROOT", self.tmp):
             self.assertEqual(visual.load_frames([client / "c.png", self.shots / "a.png"])[0][0], "c.png")
             with self.assertRaises(visual.VisualError):
                 visual.load_frames([other / "d.png"])
+
+    def test_symlinked_or_outside_client_root_refused(self):
+        real = self.tmp / "real"
+        real.mkdir()
+        (real / "e.png").write_bytes(PNG)
+        link = self.tmp / "linkroot"
+        link.symlink_to(real)
+        with mock.patch.object(config, "SHOTS_DIR", self.shots), mock.patch.object(config, "CLIENT_SHOTS_DIR", link), \
+                mock.patch.object(config, "REPO_ROOT", self.tmp):
+            with self.assertRaises(visual.VisualError):
+                visual.load_frames([link / "e.png"])
+        # a real client root outside the repository is refused too
+        with mock.patch.object(config, "SHOTS_DIR", self.shots), mock.patch.object(config, "CLIENT_SHOTS_DIR", real), \
+                mock.patch.object(config, "REPO_ROOT", self.tmp / "repo"):
+            with self.assertRaises(visual.VisualError):
+                visual.load_frames([real / "e.png"])
 
     def test_bad_task_id(self):
         with self.assertRaises(visual.VisualError):

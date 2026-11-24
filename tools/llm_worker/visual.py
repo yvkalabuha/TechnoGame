@@ -139,14 +139,24 @@ def image_size(data):
     return None
 
 
+def default_roots():
+    """Resolved frame roots. A root that is itself a symlink authorizes nothing; the client root must stay in the repository."""
+    roots = []
+    for r, inside_repo in ((Path(config.SHOTS_DIR), False), (Path(config.CLIENT_SHOTS_DIR), True)):
+        real = r.resolve()
+        if r.is_symlink() or (inside_repo and Path(config.REPO_ROOT).resolve() not in real.parents):
+            continue
+        roots.append(real)
+    return roots
+
+
 def load_frames(frames, shots_dir=None, allow_small=False):
     """[(name, mime, bytes)]. Only PNG or JPEG files inside shots_dir (symlinks resolved), size-limited."""
     if not frames:
         raise VisualError("bad_frame", "no frames")
     if len(frames) > config.MAX_FRAMES:
         raise VisualError("bad_frame", f"more than {config.MAX_FRAMES} frames")
-    roots = [Path(shots_dir).resolve()] if shots_dir else [Path(config.SHOTS_DIR).resolve(),
-                                                           Path(config.CLIENT_SHOTS_DIR).resolve()]
+    roots = [Path(shots_dir).resolve()] if shots_dir else default_roots()
     out = []
     for f in frames:
         p = Path(f).resolve()
