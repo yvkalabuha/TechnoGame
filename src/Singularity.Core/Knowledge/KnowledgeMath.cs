@@ -31,14 +31,14 @@ public static class KnowledgeMath
 
     /// <summary>
     /// Ahead-of-time multiplier of <c>c_money</c> (#458): <c>min(max, 1 + k·ahead^pow)</c>, <c>ahead</c> in years from <paramref name="month"/>
-    /// (index from 1945-09, the scenario calendar) to 1 January of <paramref name="anchorYear"/>. Exactly <c>1</c> when <c>k = 0</c> or the
+    /// (a run month index; <paramref name="originMonths"/> = months from 1945-01 to month 0, 8 for 1945-09) to 1 January of <paramref name="anchorYear"/>. Exactly <c>1</c> when <c>k = 0</c> or the
     /// anchor has passed. Integer power only (determinism, no Math.Pow).
     /// </summary>
-    public static Fx6 AheadMultiplier(Fx6 k, int pow, Fx6 max, int anchorYear, long month)
+    public static Fx6 AheadMultiplier(Fx6 k, int pow, Fx6 max, int anchorYear, long month, int originMonths)
     {
         if (k == Fx6.Zero)
             return Fx6.One;
-        long aheadMonths = 12L * (anchorYear - 1945) - 8 - month;
+        long aheadMonths = 12L * (anchorYear - 1945) - originMonths - month;
         if (aheadMonths <= 0)
             return Fx6.One;
         Fx6 years = Fx6.FromInt(checked((int)aheadMonths)) / Twelve;

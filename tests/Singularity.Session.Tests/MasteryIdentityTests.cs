@@ -10,7 +10,7 @@ namespace Singularity.Session.Tests;
 public class MasteryIdentityTests
 {
     [Fact]
-    public void Month387_WithoutTheNewColumns_EqualsTheBuildBeforeTheChange_Seeds1To3()
+    public void Month387_WithoutTheNewColumns_PinsTheRecordedBaseline_Seeds1To3()
     {
         string path = Path.Combine(SliceTestData.RepoRoot, "tests", "Singularity.Session.Tests", "Fixtures", "mastery-baseline.txt");
         string[][] rows = [.. File.ReadAllLines(path).Where(l => !l.StartsWith('#')).Select(l => l.Split(' '))];

@@ -143,16 +143,16 @@ public class KnowledgeAuditTests
     {
         Fx6 k = Fx6.FromRaw(100_000), max = Fx6.FromInt(3);
         // Month 388 = 1978-01 (12·33 − 8). Anchor 1988 is 10 years ahead: 1 + 0.1·10 = 2.
-        Assert.Equal(Fx6.FromInt(2), KnowledgeMath.AheadMultiplier(k, 1, max, 1988, 388));
-        Assert.Equal(Fx6.FromInt(11), KnowledgeMath.AheadMultiplier(k, 2, Fx6.FromInt(99), 1988, 388)); // 1 + 0.1·100
-        Assert.Equal(Fx6.One, KnowledgeMath.AheadMultiplier(Fx6.Zero, 1, max, 2100, 0));
-        Assert.Equal(Fx6.One, KnowledgeMath.AheadMultiplier(k, 1, max, 1978, 388));
-        Assert.Equal(Fx6.One, KnowledgeMath.AheadMultiplier(k, 1, max, 1970, 388));
-        Assert.Equal(max, KnowledgeMath.AheadMultiplier(k, 1, max, 2100, 388));
+        Assert.Equal(Fx6.FromInt(2), KnowledgeMath.AheadMultiplier(k, 1, max, 1988, 388, 8));
+        Assert.Equal(Fx6.FromInt(11), KnowledgeMath.AheadMultiplier(k, 2, Fx6.FromInt(99), 1988, 388, 8)); // 1 + 0.1·100
+        Assert.Equal(Fx6.One, KnowledgeMath.AheadMultiplier(Fx6.Zero, 1, max, 2100, 0, 8));
+        Assert.Equal(Fx6.One, KnowledgeMath.AheadMultiplier(k, 1, max, 1978, 388, 8));
+        Assert.Equal(Fx6.One, KnowledgeMath.AheadMultiplier(k, 1, max, 1970, 388, 8));
+        Assert.Equal(max, KnowledgeMath.AheadMultiplier(k, 1, max, 2100, 388, 8));
         Fx6 last = Fx6.One;
         for (long m = 1000; m >= 0; m -= 7)
         {
-            Fx6 x = KnowledgeMath.AheadMultiplier(k, 2, max, 2005, m);
+            Fx6 x = KnowledgeMath.AheadMultiplier(k, 2, max, 2005, m, 8);
             Assert.True(x >= last && x <= max);
             last = x;
         }

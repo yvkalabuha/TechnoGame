@@ -54,6 +54,9 @@ public sealed record KnowledgeParams
     /// <summary>Ceiling of the ahead-of-time multiplier, at least 1.</summary>
     public Fx6 AheadCostMax { get; init; } = Fx6.FromInt(10);
 
+    /// <summary>Months from 1945-01 to month 0 of the run (the scenario start; 8 = 1945-09): the calendar origin of the ahead-of-time cost. The session sets it from the scenario.</summary>
+    public int CalendarOriginMonths { get; init; } = 8;
+
     public void Validate()
     {
         if (AheadCostK < Fx6.Zero)

@@ -65,6 +65,7 @@ internal sealed class SliceWorld
         (kp, ip, pp) = ApplyCalibration(config, kp, ip, pp);
         (kp, ip, pp) = ApplyChannels(config.Channels, kp, ip, pp);
         (kp, ip) = ApplyGrid(config.Grid, kp, ip);
+        kp = kp with { CalendarOriginMonths = (scenario.StartYear - 1945) * 12 + scenario.StartMonth - 1 };
         // Hcap(t) and the mastery rules start with 1978-01 (hcap-growth.md §4): the run of 1945-1977 is the run without them.
         int from1978 = (1978 - scenario.StartYear) * 12 + 1 - scenario.StartMonth;
         ip = ip with { HcapGrowthOnset = from1978 };
