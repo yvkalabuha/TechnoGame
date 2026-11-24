@@ -1534,10 +1534,19 @@ public sealed partial class Main : Node3D
         }
     }
 
+    // A filtered run that saved nothing, or a pattern that matched no saved frame, fails: a typo must not pass as an empty success.
+    void CheckOnlyResult()
+    {
+        if (_only == null) return;
+        _shotLog += $"--only {_only.Describe}: {_savedShots.Count} frames saved, coverage checks skipped\n";
+        if (_savedShots.Count == 0) { _shotLog += "ERROR: --only saved 0 frames: FAIL\n"; _shotFailed = true; }
+        foreach (var p in _only.Unmatched(_savedShots)) { _shotLog += $"ERROR: --only pattern '{p}' matched no saved frame: FAIL\n"; _shotFailed = true; }
+    }
+
     void FinishShotRun(string dir)
     {
         if (_only == null) { CheckScaleCoverage(); if (_largeSize.X == 0) CheckIconInk(); }   // the coverage checks need the full set
-        else _shotLog += $"--only {_only.Describe}: {_savedShots.Count} frames saved, coverage checks skipped\n";
+        else CheckOnlyResult();
         _shotLog += $"shot run result: {(_shotFailed ? "FAILED (a live check failed, exit 1)" : "OK (exit 0)")}\n";
         try { Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog); }
         catch (Exception ex) { GD.PrintErr("cannot write run-log.txt: " + ex.Message); _shotFailed = true; }   // a lost log fails the run, it never skips Quit

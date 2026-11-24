@@ -36,6 +36,16 @@ public class ShotFilterTests
     }
 
     [Fact]
+    public void QuestionMarkInTailAndUnmatchedPatterns()
+    {
+        Assert.True(new ShotFilter("a_1920x1080_s1?5").WantsSuffix("_1920x1080_s125"));
+        Assert.False(new ShotFilter("a_1920x1080_s1?5_en").WantsSuffix("_1920x1080_s125"));
+        var f = new ShotFilter("map,typo*");
+        Assert.Equal(new[] { "typo*" }, f.Unmatched(new[] { "map.png" }));
+        Assert.Equal(new[] { "map", "typo*" }, f.Unmatched(System.Array.Empty<string>()));
+    }
+
+    [Fact]
     public void LegacyStageOnlyWhenAPatternIsUnsized()
     {
         Assert.False(new ShotFilter("area_science_1920x1080").WantsLegacyStage);

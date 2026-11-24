@@ -22,12 +22,19 @@ public sealed class ShotFilter
         return _patterns.Any(p => Glob(p, n));
     }
 
+    /// <summary>The patterns that matched none of the saved frames (a typo must fail the run, not pass with no frames).</summary>
+    public string[] Unmatched(System.Collections.Generic.IEnumerable<string> saved)
+    {
+        var names = saved.Select(n => n.EndsWith(".png") ? n[..^4] : n).ToArray();
+        return _patterns.Where(p => !names.Any(n => Glob(p, n))).ToArray();
+    }
+
     /// <summary>A size-matrix combination (suffix like _1920x1080_s125_en) is worth running when some pattern can end in it; a wildcard tail keeps it (conservative).</summary>
     public bool WantsSuffix(string sfx)
     {
         foreach (var p in _patterns)
         {
-            string tail = p[(p.LastIndexOf('*') + 1)..];
+            string tail = p[(p.LastIndexOfAny(new[] { '*', '?' }) + 1)..];
             if (tail.Length == 0 || sfx.EndsWith(tail, StringComparison.Ordinal) || tail.EndsWith(sfx, StringComparison.Ordinal)) return true;
         }
         return false;
