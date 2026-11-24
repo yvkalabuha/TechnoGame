@@ -1,12 +1,13 @@
 {
   "schema": 1,
   "experiment": "TASK-0134-mastery-probe",
-  "description": "TASK-0134 step 4: probe of Hcap(t) growth (#438) and production mastery (#439, #440) on the G5/G6 data, JetSlice FULL to 2030-12 (1024 months), seeds 1-10, threads 1. Series: ref (no growth, no rules), B0 (#438 only), B1 (+ gate, candidate close, foresight), B2 grid HCAP_K x HCAP_MAX (+ programme), B3 (programme without foresight). Analysis lab/analysis/mastery_probe.py.",
+  "description": "TASK-0134 step 4: probe of Hcap(t) growth (#438) and production mastery (#439, #440) on the G5/G6 data, JetSlice FULL to 2030-12 (1024 months), seeds 1-10, threads 1 and 4 (L2; threads 4 added after the pilot: a matrix with one thread count is never valid). Series: ref (no growth, no rules), B0 (#438 only), B1 (+ gate, candidate close, foresight), B2 grid HCAP_K x HCAP_MAX (+ programme), B3 (programme without foresight). Analysis lab/analysis/mastery_probe.py.",
   "model": "JetSlice",
   "ticks": 31168,
   "chunk_size": 1,
   "threads": [
-    1
+    1,
+    4
   ],
   "seeds": {
     "start": 1,
