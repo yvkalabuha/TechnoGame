@@ -21,7 +21,7 @@ public sealed partial class AudioDirector : Node
     readonly OrderSounds _orders = new();
     readonly SpeedSounds _speedSounds = new();
     readonly OpenTickGate _openGate = new();
-    long _lastTick = -1, _testVoice;
+    long _lastTick = -1; int _testVoice;
     readonly AmbientGate _gate = new();
     readonly Dictionary<string, AudioStream> _streams = new();
     readonly Dictionary<int, AudioStreamPlayer> _voices = new();
