@@ -175,17 +175,20 @@ public sealed class CbCultureRule : ICultureRule
         int d = DStar(s, site, r, month);
         if (d < 0)
             return new ProgrammeAssessment(ProgrammeFit.NotLabCeiling, -1, 0);
+        // Tooling and Saturation come first in the order of the limiters, so the programme cannot change them. Whatever else limits a process
+        // without output (LabCeiling, or Effort of the laboratory part with nobody to pay it) is judged on the snapshot WITH the programme input below.
         switch (Limiter0(s, site, r, d, month))
         {
             case LimiterKind.Tooling:
                 return new ProgrammeAssessment(ProgrammeFit.Tooling, -1, 0);
             case LimiterKind.Saturation:
                 return new ProgrammeAssessment(ProgrammeFit.Saturation, -1, 0);
-            case LimiterKind.LabCeiling:
-                break;
-            default:
+            case LimiterKind.None:
                 return new ProgrammeAssessment(ProgrammeFit.NotLabCeiling, -1, 0);
         }
+        // A process with output, or one that already has the nominal input of a project, gets nothing new from a programme.
+        if (s.V(site, r) > Fx6.Zero || s.GrowthNominal(site, r, month) >= vProg)
+            return new ProgrammeAssessment(ProgrammeFit.NotLabCeiling, -1, 0);
         var with = new ProgrammeSnapshot(s, r, vProg, domestic);
         IndustryLayout l = s.Layout;
         int c = l.ClusterIndex[r];

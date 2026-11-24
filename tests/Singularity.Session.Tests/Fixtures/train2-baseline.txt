@@ -2,8 +2,8 @@
 # Re-recorded in TASK-0134 (train 2: Hcap(t), mastery): months 1019 only; the rows of month 387 are unchanged and compared without the new columns (MasteryColumns).
 # Re-recorded in TASK-0133 (train 2): generated on the 61-node data of Fixtures/core-g4 with the fleet ageing of TASK-0129 merged (the base-commit hashes cannot hold at months 387 and 1019 after TASK-0129).
 1 387 0f6c79f4bff4b1d2bf88b87e37106595889a346006dda478c6b071118baadaf9
-1 1019 15147e8f9c953ccdd64e992e56dc784100ffda1e7d099c92ff01f8bc07a6b159
+1 1019 6db08ab33e244de6919b99b6a8b4f245c533d5a552a59dba07f891c3a58cbbfa
 2 387 454900a48a5f6d726553a80ef8077bf7ed283376043e7ef22f2b25e60106dd42
-2 1019 990a755be20b85153a4555d052dc67052ea416adfbfc75b236c6d22b160209c0
+2 1019 36559befc1f4aee2c1d6da71c023d30a98d4400edaf2e419b9fd463a83313dac
 3 387 dd5c0633ec5ecb98ba7fd9313fe2b1f20cf0f8125d36a17091f8e516e03076ba
-3 1019 d6a48508ca1bb92999d19579a93a15ba94f17daecd9342dc2eed5633984a268c
+3 1019 8454c7d2e2839aafec884a4f458c5994446622163990a967be9ff9ab4a2bb323

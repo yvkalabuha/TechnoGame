@@ -125,6 +125,32 @@ public class MasteryCoreTests
     }
 
     [Fact]
+    public void Assess_AProcessInTheLaboratoryPhase_WithHcapAboveRd_AndNoOutput_IsEligible_AndGetsMoneyUnderTheProgramme()
+    {
+        // H = 2 is below r_d − ΔL (3,5): the plain limiter is Effort (the laboratory part), not LabCeiling, and nobody pays it: no output, not planned.
+        IndustryLayout l = CbFake.MakeLayout([0], (10, Cluster.MET, Req(0, 4_000_000, 0)), (11, Cluster.CHEM, Req(0, 4_000_000, 0)));
+        var s = new CbFake(l);
+        for (int c = 0; c < 2; c++)
+            for (int d = 0; d < 3; d++)
+                s.Ms[s.Idx(0, c, d)] = D(6);
+        int a = s.P(10), other = s.P(11);
+        s.Vs[other] = D(10);
+        s.PlannedF[other] = true;
+        Assert.Equal(LimiterKind.Effort, CbCultureRule.Limiter0(s, 0, a, Pur, 0));
+        Assert.Equal(Fx6.Zero, Rule.EUseful(s, 0, a, 0));
+        ProgrammeAssessment r = Rule.Assess(s, 0, a, D(10), domestic: false, 0);
+        Assert.Equal(ProgrammeFit.Ok, r.Fit);
+        // The programme input as the layer gives it: planned and with the nominal volume. Now the process leads its cell and is paid.
+        s.PlannedF[a] = true;
+        s.Vgrow[a] = D(10);
+        s.ProgStart[a] = 5;
+        Fx6 eu = Rule.EUseful(s, 0, a, 0);
+        Assert.True(eu > Fx6.Zero);
+        EffortAllocation alloc = EffortAllocator.Allocate(Rule, s, 0, 0, s.Params.EFull * D(2), [-1, -1, -1]);
+        Assert.Equal(eu, alloc.E[a]);
+    }
+
+    [Fact]
     public void Assess_AbroadWithADonorIsFasterThanOnTheOwnPilotSite()
     {
         CbFake s = OneProcessAtTheLabCeiling(out int a);
