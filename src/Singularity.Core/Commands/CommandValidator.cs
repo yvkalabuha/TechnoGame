@@ -63,6 +63,9 @@ public enum CommandRefusal
 
     /// <summary>At application: the slot got its node from the player less than the reassignment period ago.</summary>
     PriorityTooSoon,
+
+    /// <summary>At application: the project cannot start (standing, running, before its window, above the cap of a small country).</summary>
+    BuildRefused,
 }
 
 public readonly record struct CommandVerdict(CommandRefusal Reason, string Message, int BestGenBefore = 0, int BestGenAfter = 0,
@@ -136,6 +139,12 @@ public static class CommandValidator
                 return limits.NodeNumbers.Contains(pn.Node)
                     ? CommandVerdict.Ok
                     : CommandVerdict.Refuse(CommandRefusal.BadNode, $"node {pn.Node} is not in the graph");
+            case BuildInstitute bi:
+                if (limits.InstituteSlots.IsDefaultOrEmpty)
+                    return CommandVerdict.Refuse(CommandRefusal.InstitutesOff, "this run has no institutes");
+                return (uint)bi.Actor < (uint)limits.InstituteSlots.Length && (uint)bi.Slot < (uint)limits.InstituteSlots[bi.Actor]
+                    ? CommandVerdict.Ok
+                    : CommandVerdict.Refuse(CommandRefusal.BadSlot, $"actor {bi.Actor} has no institute slot {bi.Slot}");
             case FundProgramme fp:
                 if (!limits.ReserveEnabled)
                     return CommandVerdict.Refuse(CommandRefusal.ReserveOff, "this run has no reserve account");

@@ -3,6 +3,7 @@ using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using Singularity.Core.Data;
 using Singularity.Core.Industry;
+using Singularity.Core.Institutes;
 using Singularity.Core.Policy;
 using Singularity.Core.Products;
 using Singularity.Kernel;
@@ -79,7 +80,25 @@ internal static class ViewBuilder
             new LicenceView(w.Policy.LicenceGen(a), w.Policy.LicenceSeller(a), w.Policy.LicenceStart(a), w.Policy.LicenceMask(a), w.Policy.OfferMask(a),
                 w.Policy.LicenceFlow(a), refusals.MoveToImmutable(), w.LicenceActive(a)),
             new DisruptionView(disStart, disEnd), withNodes ? Nodes(w, a, next) : Unsubscribed(w, a), designs.MoveToImmutable(), Decisions(w, a, next, stepped),
-            Alloy(w, a, month), Research(w, a), UnknownNodes(w, a));
+            Alloy(w, a, month), Research(w, a), UnknownNodes(w, a), Institutes(w, a));
+    }
+
+    private static ImmutableArray<InstituteView> Institutes(SliceWorld w, int a)
+    {
+        if (w.Institutes is not { } inst)
+            return [];
+        var list = ImmutableArray.CreateBuilder<InstituteView>(inst.Layout.SlotCount(a));
+        for (int k = 0; k < inst.Layout.SlotCount(a); k++)
+        {
+            var h = new InstituteHandle(a, k);
+            var levels = ImmutableArray.CreateBuilder<int>(inst.Layout.DisciplineNames.Length);
+            for (int d = 0; d < inst.Layout.DisciplineNames.Length; d++)
+                levels.Add(inst.Level(h, d));
+            long start = inst.BuildStart(h);
+            list.Add(new InstituteView(k, inst.Layout.IdOf(h), inst.Standing(h), inst.GoalNode(h), levels.MoveToImmutable(), start, inst.BuildMonths(h),
+                start >= 0 ? inst.BuildRate(h, start) : Fx6.Zero, inst.Layout.RefYear(h), inst.Layout.TotalLevels(h)));
+        }
+        return list.MoveToImmutable();
     }
 
     // Supply and ask are both from the step-7 trace of the same monthly step; nothing is recomputed from the post-step state. No trace (restored snapshot, before the first step) = not known.

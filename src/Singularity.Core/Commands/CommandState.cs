@@ -258,6 +258,8 @@ public sealed class CommandState
                 break;
             case SetPriorityNode pn:
                 return _institutes?.Apply(pn, consumedAtMonth) ?? CommandVerdict.Refuse(CommandRefusal.InstitutesOff, "this run has no institutes");
+            case BuildInstitute bi:
+                return _institutes?.ApplyBuild(bi, consumedAtMonth) ?? CommandVerdict.Refuse(CommandRefusal.InstitutesOff, "this run has no institutes");
             default:
                 throw new ArgumentOutOfRangeException(nameof(command), command.GetType(), "Unknown command type.");
         }

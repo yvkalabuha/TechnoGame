@@ -1,6 +1,7 @@
 # Research institutes standing in 1945 (research-institutes-priorities.md rev 4 §1.2; sources: §1.1 and docs/research/notes/institutes-sources-1945.md).
 # Only entries with a confirmed founding year are listed (Rolls-Royce Derby, CNES and the other unconfirmed rows wait for a source).
 # country = actor ID of the scenario; areas = discipline: level 1..4 [estimate, calibrated in Lab]. ref_year = the historical year (the price of a later project).
+# Rows with founded after the start of the scenario are build candidates (BuildInstitute); their levels are estimates, and for a small country (FRA, SWE) the sum of levels of a project is at most 3.
 # One institute = one priority slot (#485). Not part of the data hash of the nodes and scenarios (own hash, InstituteTable.Hash).
 kind: institute
 define:
@@ -26,3 +27,8 @@ define:
   - {id: swe_saab, country: SWE, founded: 1937, ref_year: 1937, areas: {aero: 3, mech: 3}, source: "en.wikipedia.org/wiki/Saab_AB, 2026-11-24"}
   - {id: swe_foa, country: SWE, founded: 1945, ref_year: 1945, areas: {chem: 3, mech: 1}, source: "en.wikipedia.org/wiki/Swedish_Defence_Research_Agency, 2026-11-24"}
   - {id: swe_flygmotor, country: SWE, founded: 1930, ref_year: 1930, areas: {mech: 2, prop: 1}, source: "en.wikipedia.org/wiki/Volvo_Aero, 2026-11-24"}
+  - {id: fra_onera, country: FRA, founded: 1946, ref_year: 1946, areas: {aero: 2, prop: 1}, source: "en.wikipedia.org/wiki/ONERA, 2026-11-24 (levels reduced to the small-country cap of 3; rev 4 §1.2 gives aero 3, prop 3)"}
+  - {id: sun_nii88, country: SUN, founded: 1946, ref_year: 1946, areas: {prop: 3}, source: "en.wikipedia.org/wiki/TsNIIMash, 2026-11-24"}
+  - {id: gbr_rre, country: GBR, founded: 1953, ref_year: 1953, areas: {mech: 2, metal: 1}, source: "wikidata.org/wiki/Q632106 (P571, CC0), 2026-11-24; levels estimated"}
+  - {id: usa_darpa, country: USA, founded: 1958, ref_year: 1958, areas: {mech: 2, metal: 1}, source: "en.wikipedia.org/wiki/DARPA, 2026-11-24; levels estimated"}
+  - {id: fra_cnes, country: FRA, founded: 1961, ref_year: 1961, areas: {aero: 2, prop: 1}, source: "wikidata.org/wiki/Q48756 (P571, CC0), 2026-11-24; levels estimated"}

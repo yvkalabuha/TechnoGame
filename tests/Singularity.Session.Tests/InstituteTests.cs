@@ -46,14 +46,14 @@ public class InstituteTests
         SliceSession s = Make(true);
         InstituteLayout l = s.World.Institutes!.Layout;
         string[] actors = [.. s.World.Scenario.ActorId];
-        Assert.Equal(6, l.SlotCount(actors.ToList().IndexOf("USA")));
-        Assert.Equal(6, l.SlotCount(actors.ToList().IndexOf("SUN")));
-        Assert.Equal(3, l.SlotCount(actors.ToList().IndexOf("GBR")));
-        Assert.Equal(3, l.SlotCount(actors.ToList().IndexOf("FRA")));
-        Assert.Equal(4, l.SlotCount(actors.ToList().IndexOf("SWE")));
+        Assert.Equal(6, l.StartingCount(actors.ToList().IndexOf("USA")));
+        Assert.Equal(6, l.StartingCount(actors.ToList().IndexOf("SUN")));
+        Assert.Equal(3, l.StartingCount(actors.ToList().IndexOf("GBR")));
+        Assert.Equal(3, l.StartingCount(actors.ToList().IndexOf("FRA")));
+        Assert.Equal(4, l.StartingCount(actors.ToList().IndexOf("SWE")));
         for (int a = 0; a < l.ActorCount; a++)
         {
-            for (int k = 0; k < l.SlotCount(a); k++)
+            for (int k = 0; k < l.StartingCount(a); k++)
             {
                 var h = new InstituteHandle(a, k);
                 int row = l.DataRow(h);
@@ -115,7 +115,7 @@ public class InstituteTests
     {
         SliceSession s = Make(true);
         int node = s.World.Graph.Number[Frontier(s, 0)[0]];
-        Assert.Equal(CommandRefusal.BadSlot, s.Submit(SourceClass.Player, 0, 0, new SetPriorityNode(0, 6, node)).Reason);
+        Assert.Equal(CommandRefusal.BadSlot, s.Submit(SourceClass.Player, 0, 0, new SetPriorityNode(0, s.World.Institutes!.Layout.SlotCount(0), node)).Reason);
         Assert.Equal(CommandRefusal.BadNode, s.Submit(SourceClass.Player, 0, 1, new SetPriorityNode(0, 0, 9999)).Reason);
         int known = -1;
         for (int r = 0; r < s.World.Graph.Count && known < 0; r++)
@@ -232,7 +232,7 @@ public class InstituteTests
         for (int a = 0; a < inst.Layout.ActorCount; a++)
         {
             var goals = new List<int>();
-            for (int k = 0; k < inst.Layout.SlotCount(a); k++)
+            for (int k = 0; k < inst.Layout.StartingCount(a); k++)
                 goals.Add(inst.GoalNode(new InstituteHandle(a, k)));
             Assert.All(goals, g => Assert.NotEqual(0, g));
             Assert.Equal(goals.Count, goals.Distinct().Count());
@@ -246,14 +246,14 @@ public class InstituteTests
         SliceSession s = Make(true);
         InstituteSystem inst = s.World.Institutes!;
         int d = inst.Layout.DisciplineNames.Length;
-        int Total(int a) => Enumerable.Range(0, inst.Layout.SlotCount(a)).Sum(k => Enumerable.Range(0, d).Sum(x => inst.Experience(new InstituteHandle(a, k), x)));
+        int Total(int a) => Enumerable.Range(0, inst.Layout.StartingCount(a)).Sum(k => Enumerable.Range(0, d).Sum(x => inst.Experience(new InstituteHandle(a, k), x)));
         int start = Total(0);
-        var levels = new int[inst.Layout.SlotCount(0) * d];
+        var levels = new int[inst.Layout.StartingCount(0) * d];
         int discovered0 = Enumerable.Range(0, s.World.Graph.Count).Count(r => s.World.Knowledge.IsKnown(0, r));
         for (long t = 0; t < 180; t++)
         {
             s.StepThroughMonth(t);
-            for (int k = 0; k < inst.Layout.SlotCount(0); k++)
+            for (int k = 0; k < inst.Layout.StartingCount(0); k++)
             {
                 for (int x = 0; x < d; x++)
                 {
@@ -278,10 +278,12 @@ public class InstituteTests
         {
             SliceSession s = Make(true, threads);
             int node = s.World.Graph.Number[Frontier(s, 0)[0]];
-            for (long t = 0; t < 30; t++)
+            for (long t = 0; t < 50; t++)
             {
                 if (t == 2)
                     Assert.True(s.Submit(SourceClass.Player, 0, 1, new SetPriorityNode(0, 2, node)).Accepted);
+                if (t == 3)
+                    Assert.True(s.Submit(SourceClass.Player, 0, 2, new BuildInstitute(Sun(s), CandidateSlot(s, Sun(s), "sun_nii88"))).Accepted);
                 s.StepThroughMonth(t);
             }
             log = s.CommandLog;
@@ -290,7 +292,8 @@ public class InstituteTests
         string h1 = Run(1, out string log), h2 = Run(4, out _);
         HashAssert.Equal(h1, h2, "L2: thread count changed the state");
         Assert.Contains("set_priority_node", log);
-        SliceSession replay = SliceSession.Replay(SliceTestData.Data, new SliceRunConfig { Seed = 7, Institutes = true }, log, Make(true).World.Calendar.TickOfMonth(29) + 1);
+        Assert.Contains("build_institute", log);
+        SliceSession replay = SliceSession.Replay(SliceTestData.Data, new SliceRunConfig { Seed = 7, Institutes = true }, log, Make(true).World.Calendar.TickOfMonth(49) + 1);
         HashAssert.Equal(h1, replay.LastHash, "L1: the replay differs");
     }
 
@@ -299,5 +302,144 @@ public class InstituteTests
     {
         Assert.NotEmpty(SliceTestData.Data.Institutes.Hash);
         Assert.Equal(0, SliceTestData.LegacyData.Institutes.Count);
+    }
+    private static int Actor(SliceSession s, string id) => s.World.Scenario.ActorIndex(id);
+
+    private static int Sun(SliceSession s) => Actor(s, "SUN");
+
+    private static int CandidateSlot(SliceSession s, int actor, string instituteId)
+    {
+        InstituteLayout l = s.World.Institutes!.Layout;
+        for (int k = 0; k < l.SlotCount(actor); k++)
+        {
+            if (l.IdOf(new InstituteHandle(actor, k)) == instituteId)
+                return k;
+        }
+        throw new InvalidOperationException(instituteId);
+    }
+
+    [Fact]
+    public void BuildMath_FollowsRev4()
+    {
+        Assert.Equal(42, InstituteMath.BuildMonths(3, P));   // 12 · (2 + 0.5 · 3)
+        Assert.Equal(60, InstituteMath.BuildMonths(6, P));
+        Assert.Equal(Fx6.One, InstituteMath.AheadMultiplier(0, P));
+        Assert.Equal(Fx6.FromInt(3), InstituteMath.AheadMultiplier(10, P));   // 1 + 0.02 · 100
+        Assert.Equal(Fx6.FromInt(3), InstituteMath.AheadMultiplier(25, P));   // the window ends at 10
+        Assert.Equal(Fx6.FromRaw(60_000), InstituteMath.BuildRate(4, 0, P));   // ONERA-like: 6 % of the research money a month of flow
+        Assert.Equal(Fx6.FromRaw(180_000), InstituteMath.BuildRate(4, 10, P));
+    }
+
+    [Fact]
+    public void SmallCountries_AreThoseWithAtMostATenthOfTheBudgetOfTheLargest()
+    {
+        InstituteLayout l = Make(true).World.Institutes!.Layout;
+        SliceSession s = Make(true);
+        Assert.True(l.IsSmallCountry(Actor(s, "FRA")) && l.IsSmallCountry(Actor(s, "SWE")));
+        Assert.False(l.IsSmallCountry(Actor(s, "USA")) || l.IsSmallCountry(Actor(s, "GBR")) || l.IsSmallCountry(Actor(s, "SUN")));
+        // The data fit the cap: no candidate of a small country has more than 3 levels.
+        foreach (string a in new[] { "FRA", "SWE" })
+        {
+            for (int k = 0; k < l.SlotCount(Actor(s, a)); k++)
+                Assert.True(l.TotalLevels(new InstituteHandle(Actor(s, a), k)) <= 3 || k < l.StartingCount(Actor(s, a)));
+        }
+    }
+
+    [Fact]
+    public void Build_IsRefusedBeforeTheWindow_OnceRunning_AndForAStandingInstitute()
+    {
+        SliceSession s = Make(true);
+        int usa = Actor(s, "USA"), sun = Sun(s);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new BuildInstitute(usa, CandidateSlot(s, usa, "usa_darpa"))).Accepted);   // the form is fine
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new BuildInstitute(sun, CandidateSlot(s, sun, "sun_nii88"))).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, 2, new BuildInstitute(sun, 0)).Accepted);
+        s.StepThroughMonth(0);
+        Assert.Contains(s.Outcomes, o => o.Contains("rejected: BuildRefused") && o.Contains("window opens in 1948"));
+        Assert.Contains(s.Outcomes, o => o.Contains("rejected: BuildRefused") && o.Contains("stands already"));
+        Assert.True(s.World.Institutes!.Building(new InstituteHandle(sun, CandidateSlot(s, sun, "sun_nii88"))));
+        Assert.True(s.Submit(SourceClass.Player, 0, 3, new BuildInstitute(sun, CandidateSlot(s, sun, "sun_nii88"))).Accepted);
+        s.StepThroughMonth(1);
+        Assert.Contains(s.Outcomes, o => o.Contains("rejected: BuildRefused") && o.Contains("runs already"));
+        Assert.Equal(CommandRefusal.BadSlot, s.Submit(SourceClass.Player, 0, 4, new BuildInstitute(sun, 99)).Reason);
+        Assert.Equal(CommandRefusal.InstitutesOff, Make(false).Submit(SourceClass.Player, 0, 0, new BuildInstitute(0, 0)).Reason);
+    }
+
+    [Fact]
+    public void Build_TakesMoneyWhileItRuns_ThenOpensWithItsLevelsAndAddsNetCapacity()
+    {
+        SliceSession s = Make(true);
+        int sun = Sun(s);
+        var h = new InstituteHandle(sun, CandidateSlot(s, sun, "sun_nii88"));
+        InstituteSystem inst = s.World.Institutes!;
+        int prop = inst.Layout.DisciplineNames.IndexOf("prop");
+        Assert.Equal(Fx6.One, inst.BudgetFactor(sun));
+        Assert.Equal(0, inst.Level(h, prop));
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new BuildInstitute(sun, h.Slot)).Accepted);
+        s.StepThroughMonth(0);
+        s.StepThroughMonth(1);
+        Fx6 running = inst.BudgetFactor(sun);   // 1 - 3 levels * 1.5 % * ahead multiplier of 1946 - 1945 = 1 year (1.02)
+        Assert.Equal(Fx6.One - InstituteMath.BuildRate(3, 1, P), running);
+        Assert.False(inst.Standing(h));
+        int months = inst.BuildMonths(h);
+        for (long t = 2; t < months - 1; t++)
+            s.StepThroughMonth(t);
+        Assert.False(inst.Standing(h));
+        s.StepThroughMonth(months - 1);
+        Assert.True(inst.Standing(h) && inst.BuiltByProject(h));
+        Assert.Equal(months - 1, inst.OpenedMonth(h));
+        Assert.Equal(3, inst.Level(h, prop));
+        Fx6 after = inst.BudgetFactor(sun);   // (1 - 3 * 0.4 %) * (1 + 3 * 0.8 %): the net gain is positive
+        Assert.Equal((Fx6.One - Fx6.FromRaw(12_000)) * (Fx6.One + Fx6.FromRaw(24_000)), after);
+        Assert.True(after > Fx6.One);
+        InstituteView v = s.View.Actors[sun].Institutes.Single(x => x.Id == "sun_nii88");
+        Assert.True(v.Standing);
+        Assert.Equal(3, v.Levels[prop]);
+        Assert.Equal(3, v.TotalLevels);
+        // The new institute is a slot: the AI gives it a goal within a month or two.
+        s.StepThroughMonth(months);
+        s.StepThroughMonth(months + 1);
+        Assert.NotEqual(0, inst.GoalNode(h));
+    }
+
+    [Fact]
+    public void Ai_BuildsTheHistoricalInstitutesAboutTheirYear_ByTheSameRules()
+    {
+        SliceSession s = Make(true);
+        InstituteSystem inst = s.World.Institutes!;
+        int usa = Actor(s, "USA"), fra = Actor(s, "FRA"), gbr = Actor(s, "GBR");
+        var darpa = new InstituteHandle(usa, CandidateSlot(s, usa, "usa_darpa"));
+        var onera = new InstituteHandle(fra, CandidateSlot(s, fra, "fra_onera"));
+        var rre = new InstituteHandle(gbr, CandidateSlot(s, gbr, "gbr_rre"));
+        for (long t = 0; t < 160; t++)
+        {
+            s.StepThroughMonth(t);
+            if (t == 30)
+            {
+                Assert.True(inst.Building(onera) || inst.Standing(onera));   // the project of a 1946 institute starts at once: it is late already
+                Assert.False(inst.Building(darpa) || inst.Standing(darpa));
+            }
+        }
+        long refMonth = inst.Layout.FirstMonthOf(1958);
+        Assert.True(inst.Standing(darpa));
+        Assert.InRange(inst.OpenedMonth(darpa), refMonth - 3, refMonth + 1);
+        Assert.True(inst.Standing(rre) && inst.OpenedMonth(rre) <= inst.Layout.FirstMonthOf(1953) + 1);
+        Assert.True(inst.Standing(onera));
+        Assert.Equal(inst.BuildMonths(onera) - 1, inst.OpenedMonth(onera));   // started in month 0
+        Assert.Equal(1, inst.Level(onera, inst.Layout.DisciplineNames.IndexOf("prop")));
+    }
+
+    [Fact]
+    public void Codec_RoundTripsBuildInstitute()
+    {
+        var logged = new LoggedCommand(new CommandKey(5, SourceClass.Player, 0, 3), new BuildInstitute(2, 6));
+        Assert.Equal(logged.Command, CommandCodec.Decode(CommandCodec.Encode(logged)).Command);
+    }
+
+    [Fact]
+    public void FlagOff_ViewHasNoInstitutes()
+    {
+        SliceSession s = Make(false);
+        s.StepThroughMonth(0);
+        Assert.True(s.View.Actors[0].Institutes.IsEmpty);
     }
 }

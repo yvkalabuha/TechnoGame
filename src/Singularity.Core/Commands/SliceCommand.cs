@@ -59,6 +59,7 @@ public enum CommandKind
     CancelMasteryProgramme = 10,
     FundProgramme = 11,
     SetPriorityNode = 12,
+    BuildInstitute = 13,
 }
 
 /// <summary>
@@ -177,6 +178,15 @@ public sealed record FundProgramme(int Actor, int Node, Fx6 Amount) : SliceComma
 public sealed record SetPriorityNode(int Actor, int Slot, int Node) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.SetPriorityNode;
+}
+
+/// <summary>
+/// <c>build_institute(slot)</c> (research-institutes-priorities §8, #491): starts the project of the candidate institute in <paramref name="Slot"/>. It takes a share of the research
+/// money while it runs and opens the institute (a slot, capacity, upkeep) after its months. Not before <c>ref_year − 10</c>; a small country builds at most 3 levels per project.
+/// </summary>
+public sealed record BuildInstitute(int Actor, int Slot) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.BuildInstitute;
 }
 
 /// <summary>An accepted command with its key: one line of <c>commands.log</c>.</summary>

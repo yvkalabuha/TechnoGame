@@ -20,20 +20,35 @@ public interface IInstituteInputs
 
     /// <summary>The node number of the order of the player for the slot, 0 = none (snapshot).</summary>
     int OrderNode(InstituteHandle slot);
+
+    /// <summary>The month the player started the project of the slot, −1 = none (snapshot).</summary>
+    long PlayerBuildMonth(InstituteHandle slot);
 }
 
-/// <summary>A broken institute invariant.</summary>
-public sealed class InstituteInvariantException(long month, int actorRow, string message)
-    : Exception($"institute invariant violated at month {month}, actor row {actorRow}: {message}");
+/// <summary>Why a project cannot start now.</summary>
+public enum BuildCheck
+{
+    Ok = 0,
+    AlreadyStanding,
+    AlreadyBuilding,
+
+    /// <summary>The window opens in <c>ref_year − window</c>.</summary>
+    TooEarly,
+
+    /// <summary>The project of a small country has more levels than the cap.</summary>
+    SmallCountryCap,
+}
 
 /// <summary>
-/// The institutes of the actors (research-institutes-priorities rev 4 §3, §4, §7). State per actor and slot, columns of the actors table grouped by slot:
-/// <c>inst.order.k</c> / <c>inst.stamp.k</c> (the node the player gave the slot and the month: written only by <see cref="Order"/> between ticks),
-/// <c>inst.ai.k</c> (the goal the AI chose), <c>inst.cur.k</c> (the goal seen last month, to credit its completion once) and
-/// <c>inst.exp.k.discipline</c> (experience; written only by this system). One writer per column.
-/// A slot works on its goal: the order of the player while that node is unknown, else the choice of the AI. A completed goal gives the institute one point of
-/// experience in the area of the node (also an off-profile institute, #488); the level follows the thresholds proportional to the nodes of the area.
-/// There are no losses of experience and no closing of institutes in v0.
+/// The institutes of the actors (research-institutes-priorities rev 4 §3, §4, §7, §8). State per actor and slot, columns of the actors table grouped by slot:
+/// <c>inst.order.k</c> / <c>inst.stamp.k</c> / <c>inst.build.k</c> (the orders of the player: written only by <see cref="InstituteOrders"/> between ticks),
+/// <c>inst.ai.k</c> (the goal the AI chose), <c>inst.abuild.k</c> (the start of a project the AI ordered), <c>inst.cur.k</c> (the goal seen last month, to credit
+/// its completion once), <c>inst.done.k</c> (month + 1 the institute opened, 1 for those standing at the start, 0 = not built) and
+/// <c>inst.exp.k.discipline</c> (experience); the last five are written only by this system. One writer per column.
+/// A slot works on its goal: the order of the player while that node is unknown, else the choice of the AI. A completed goal found by the own research gives
+/// the institute one point of experience in the area of the node (also an off-profile institute, #488). A project takes a share of the research money while it
+/// runs; a built institute adds capacity and takes upkeep (<see cref="BudgetFactor"/>); the institutes of 1945 are in the base money. No losses of experience
+/// and no closing of institutes in v0.
 /// </summary>
 public sealed class InstituteSystem : ITickSystem
 {
@@ -46,7 +61,7 @@ public sealed class InstituteSystem : ITickSystem
     private readonly InstituteParams _p;
     private readonly KnowledgeGraph _g;
     private readonly IInstituteInputs _inputs;
-    private readonly IntColumn[] _ai, _cur;
+    private readonly IntColumn[] _ai, _cur, _done, _abuild;
     private readonly IntColumn[][] _exp;
 
     public InstituteSystem(Table table, InstituteLayout layout, InstituteParams parameters, KnowledgeGraph graph,
@@ -65,18 +80,26 @@ public sealed class InstituteSystem : ITickSystem
         int d = layout.DisciplineNames.Length;
         _ai = new IntColumn[layout.MaxSlots];
         _cur = new IntColumn[layout.MaxSlots];
+        _done = new IntColumn[layout.MaxSlots];
+        _abuild = new IntColumn[layout.MaxSlots];
         _exp = new IntColumn[layout.MaxSlots][];
         for (int k = 0; k < layout.MaxSlots; k++)
         {
             _ai[k] = table.AddInt($"inst.ai.{k}");
             _cur[k] = table.AddInt($"inst.cur.{k}");
+            _abuild[k] = table.AddInt($"inst.abuild.{k}");
+            _done[k] = table.AddInt($"inst.done.{k}");
+            var standing = new int[layout.ActorCount];
+            for (int a = 0; a < layout.ActorCount; a++)
+                standing[a] = k < layout.StartingCount(a) ? 1 : 0;
+            _done[k].Load(standing);
             _exp[k] = new IntColumn[d];
             for (int disc = 0; disc < d; disc++)
             {
                 _exp[k][disc] = table.AddInt($"inst.exp.{k}.{layout.DisciplineNames[disc]}");
                 var column = new int[layout.ActorCount];
                 for (int a = 0; a < layout.ActorCount; a++)
-                    column[a] = k < layout.SlotCount(a) ? layout.StartExperience(new InstituteHandle(a, k), disc) : 0;
+                    column[a] = k < layout.StartingCount(a) ? layout.StartExperience(new InstituteHandle(a, k), disc) : 0;
                 _exp[k][disc].Load(column);
             }
         }
@@ -92,15 +115,87 @@ public sealed class InstituteSystem : ITickSystem
 
     // ---- reads of the snapshot
 
+    /// <summary>The institute stands (it stood at the start or its project is finished).</summary>
+    public bool Standing(InstituteHandle h) => _done[h.Slot].Current[h.Actor] != 0;
+
+    /// <summary>The institute was built by a project: its capacity and upkeep are in the budget factor.</summary>
+    public bool BuiltByProject(InstituteHandle h) => _done[h.Slot].Current[h.Actor] >= 2;
+
+    /// <summary>Month the project of the slot started (the player's order first, else the AI's), or −1.</summary>
+    public long BuildStart(InstituteHandle h)
+    {
+        long player = _inputs.PlayerBuildMonth(h);
+        return player >= 0 ? player : _abuild[h.Slot].Current[h.Actor] - 1L;
+    }
+
+    /// <summary>A project of the slot runs.</summary>
+    public bool Building(InstituteHandle h) => !Standing(h) && BuildStart(h) >= 0;
+
+    /// <summary>Month the institute opened (a project's last month), or −1 when it does not stand or stood at the start.</summary>
+    public long OpenedMonth(InstituteHandle h) => BuiltByProject(h) ? _done[h.Slot].Current[h.Actor] - 1L : -1;
+
+    /// <summary>Months the project of the slot takes.</summary>
+    public int BuildMonths(InstituteHandle h) => InstituteMath.BuildMonths(_l.TotalLevels(h), _p);
+
+    /// <summary>Share of the research money the running project takes per month; the price grows with the years ahead of the historical year.</summary>
+    public Fx6 BuildRate(InstituteHandle h, long startMonth) =>
+        InstituteMath.BuildRate(_l.TotalLevels(h), _l.RefYear(h) - _l.YearOf(startMonth), _p);
+
+    /// <summary>Whether a project of the slot may start in the month (§8): not standing or running, inside the window, within the cap of a small country.</summary>
+    public BuildCheck CanBuild(InstituteHandle h, long month)
+    {
+        if (Standing(h))
+            return BuildCheck.AlreadyStanding;
+        if (BuildStart(h) >= 0)
+            return BuildCheck.AlreadyBuilding;
+        if (_l.YearOf(month) < _l.RefYear(h) - _p.WindowYears)
+            return BuildCheck.TooEarly;
+        if (_l.IsSmallCountry(h.Actor) && _l.TotalLevels(h) > _p.SmallCountryLevelCap)
+            return BuildCheck.SmallCountryCap;
+        return BuildCheck.Ok;
+    }
+
+    /// <summary>
+    /// The factor on the research money of the actor: <c>(1 − running projects − upkeep of built institutes)·(1 + capacity of built institutes)</c>; exactly 1
+    /// without projects (the institutes of the start are in the base money).
+    /// </summary>
+    public Fx6 BudgetFactor(int actor)
+    {
+        Fx6 take = Fx6.Zero, give = Fx6.Zero;
+        bool any = false;
+        for (int k = 0; k < _l.SlotCount(actor); k++)
+        {
+            var h = new InstituteHandle(actor, k);
+            if (BuiltByProject(h))
+            {
+                int levels = _l.TotalLevels(h);
+                take += _p.UpkeepPerLevel * Fx6.FromInt(levels);
+                give += _p.CapacityPerLevel * Fx6.FromInt(levels);
+                any = true;
+            }
+            else if (Building(h))
+            {
+                take += BuildRate(h, BuildStart(h));
+                any = true;
+            }
+        }
+        if (!any)
+            return Fx6.One;
+        Fx6 keep = Fx6.One - take;
+        return keep > Fx6.Zero ? keep * (Fx6.One + give) : Fx6.Zero;
+    }
+
     /// <summary>Experience of the institute in the discipline.</summary>
     public int Experience(InstituteHandle h, int discipline) => _exp[h.Slot][discipline].Current[h.Actor];
 
     /// <summary>Level 0..4 of the institute in the discipline (0 = no bonus, the area is hidden in the card, #489).</summary>
     public int Level(InstituteHandle h, int discipline) => InstituteMath.LevelOf(Experience(h, discipline), _l.NodesIn[discipline], _p);
 
-    /// <summary>The node number the slot works on now (the order of the player while unknown, else the AI choice), or 0 when the slot is free.</summary>
+    /// <summary>The node number the slot works on now (the order of the player while unknown, else the AI choice), or 0 when the slot is free or not built.</summary>
     public int GoalNode(InstituteHandle h)
     {
+        if (!Standing(h))
+            return 0;
         int order = _inputs.OrderNode(h);
         if (order != 0 && !IsKnownNumber(h.Actor, order))
             return order;
@@ -151,9 +246,15 @@ public sealed class InstituteSystem : ITickSystem
             for (int k = 0; k < slots; k++)
             {
                 var h = new InstituteHandle(a, k);
+                if (!Standing(h))
+                {
+                    goal[k] = -1;   // not built: no goal, never free
+                    StepProject(h, t);
+                    continue;
+                }
                 goal[k] = GoalNode(h);
                 anyFree |= goal[k] == 0;
-                // A goal seen last month that is known now was completed: one point in its area.
+                // A goal seen last month that is known now was completed: one point in its area, if the own research found it.
                 int cur = _cur[k].Current[a];
                 if (cur != 0 && IsKnownNumber(a, cur) && _g.RowOf(cur) is >= 0 and int row && _inputs.DiscoveredByResearch(a, row) && _g.Discipline[row] is >= 0 and int disc)
                     _exp[k][disc].Next[a] = _exp[k][disc].Current[a] + 1;
@@ -162,11 +263,30 @@ public sealed class InstituteSystem : ITickSystem
                 PickForFreeSlots(a, t, slots, goal);
             for (int k = 0; k < slots; k++)
             {
-                _cur[k].Next[a] = goal[k];
-                if (goal[k] != 0 && goal[k] != GoalNode(new InstituteHandle(a, k)))
+                _cur[k].Next[a] = goal[k] > 0 ? goal[k] : 0;
+                if (goal[k] > 0 && goal[k] != GoalNode(new InstituteHandle(a, k)))
                     _ai[k].Next[a] = goal[k];
             }
         }
+    }
+
+    // A project that has run its months opens the institute with the experience of its levels; the AI starts the projects of the historical ones so that they
+    // open about the historical year (§7), by the same checks as the player.
+    private void StepProject(InstituteHandle h, long t)
+    {
+        long start = BuildStart(h);
+        int months = BuildMonths(h);
+        if (start >= 0)
+        {
+            if (t - start + 1 < months)
+                return;
+            _done[h.Slot].Next[h.Actor] = checked((int)t) + 1;
+            for (int d = 0; d < _l.DisciplineNames.Length; d++)
+                _exp[h.Slot][d].Next[h.Actor] = _l.StartExperience(h, d);
+            return;
+        }
+        if (CanBuild(h, t) == BuildCheck.Ok && t >= _l.FirstMonthOf(_l.RefYear(h)) - months)
+            _abuild[h.Slot].Next[h.Actor] = checked((int)t) + 1;
     }
 
     // The AI rule (§7): the heaviest frontier node that no slot works on goes to the free institute with the highest level in its area (ties: the lower slot).

@@ -40,6 +40,24 @@ public static class InstituteMath
         return result;
     }
 
+    /// <summary>Months a project of <paramref name="levels"/> takes: <c>12·(base + per_level·Σ)</c> rounded up.</summary>
+    public static int BuildMonths(int levels, InstituteParams p)
+    {
+        long raw = ((p.BuildYearsBase + p.BuildYearsPerLevel * Fx6.FromInt(levels)) * Fx6.FromInt(12)).Raw;
+        return checked((int)((raw + Fx6.Scale - 1) / Fx6.Scale));
+    }
+
+    /// <summary>Price multiplier of opening <paramref name="yearsAhead"/> before the historical year: <c>1 + k·y²</c>, y in [0, window].</summary>
+    public static Fx6 AheadMultiplier(int yearsAhead, InstituteParams p)
+    {
+        int y = yearsAhead < 0 ? 0 : yearsAhead > p.WindowYears ? p.WindowYears : yearsAhead;
+        return Fx6.One + p.AheadK * Fx6.FromInt(y * y);
+    }
+
+    /// <summary>Share of the research money a running project takes per month of its run (a flow share, not divided by the calendar).</summary>
+    public static Fx6 BuildRate(int levels, int yearsAhead, InstituteParams p) =>
+        p.BuildRatePerLevel * Fx6.FromInt(levels) * AheadMultiplier(yearsAhead, p);
+
     /// <summary>The highest level (0..4) whose threshold the experience reaches.</summary>
     public static int LevelOf(int experience, int nodesInArea, InstituteParams p)
     {

@@ -603,6 +603,8 @@ public sealed partial class SliceSession
                 v = FundVerdict(fund, month);
             if (v.Accepted && c.Command is SetPriorityNode priority)
                 v = PriorityVerdict(priority, month);
+            if (v.Accepted && c.Command is BuildInstitute build)
+                v = BuildVerdict(build, month);
             if (v.Accepted)
                 v = _world.Commands.Apply(c.Command, month);
             // The layer rejects a stale handle in its step and only counts it; the snapshot at the tick boundary is the one it reads first, so the outcome names it here.
@@ -617,10 +619,27 @@ public sealed partial class SliceSession
         return true;
     }
 
+    // build_institute: the window of the project, the cap of a small country and one project per slot (research-institutes-priorities §8).
+    private CommandVerdict BuildVerdict(BuildInstitute b, long month)
+    {
+        InstituteSystem institutes = _world.Institutes ?? throw new InvalidOperationException("The validator accepted build_institute without institutes.");
+        var h = new InstituteHandle(b.Actor, b.Slot);
+        return institutes.CanBuild(h, month) switch
+        {
+            BuildCheck.Ok => CommandVerdict.Ok,
+            BuildCheck.AlreadyStanding => CommandVerdict.Refuse(CommandRefusal.BuildRefused, "the institute stands already"),
+            BuildCheck.AlreadyBuilding => CommandVerdict.Refuse(CommandRefusal.BuildRefused, "the project of this institute runs already"),
+            BuildCheck.TooEarly => CommandVerdict.Refuse(CommandRefusal.BuildRefused, $"the window opens in {institutes.Layout.RefYear(h) - institutes.Parameters.WindowYears}"),
+            _ => CommandVerdict.Refuse(CommandRefusal.BuildRefused, $"a small country builds at most {institutes.Parameters.SmallCountryLevelCap} levels in one project"),
+        };
+    }
+
     // set_priority_node: the node must still be unknown and no other slot of the actor works on it; a slot the player has set may be changed once per period.
     private CommandVerdict PriorityVerdict(SetPriorityNode p, long month)
     {
         InstituteSystem institutes = _world.Institutes ?? throw new InvalidOperationException("The validator accepted set_priority_node without institutes.");
+        if (!institutes.Standing(new InstituteHandle(p.Actor, p.Slot)))
+            return CommandVerdict.Refuse(CommandRefusal.PriorityNotAvailable, $"the institute in slot {p.Slot} is not built");
         int row = _world.Graph.RowOf(p.Node);
         if (row < 0 || _world.Knowledge.IsKnown(p.Actor, row))
             return CommandVerdict.Refuse(CommandRefusal.PriorityNotAvailable, $"node {p.Node} is already known to actor {p.Actor}");

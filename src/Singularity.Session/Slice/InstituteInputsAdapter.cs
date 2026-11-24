@@ -16,5 +16,7 @@ internal sealed class InstituteInputsAdapter(SliceWorld world) : IInstituteInput
 
     public bool DiscoveredByResearch(int actorRow, int nodeRow) => world.Knowledge.DiscoveredByResearch(actorRow, nodeRow);
 
+    public long PlayerBuildMonth(InstituteHandle slot) => world.InstituteOrders!.BuildMonth(slot);
+
     public int OrderNode(InstituteHandle slot) => world.InstituteOrders!.OrderNode(slot);
 }
