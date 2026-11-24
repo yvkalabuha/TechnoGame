@@ -383,8 +383,9 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
     public ProductionProfile Profile(int site, ReadOnlySpan<PrcSetItem> prcSet, long month)
     {
         // A prc_set is a few processes (a design has ≤ 4 alternatives): the common case stays on the stack, no garbage per view row.
+        // A longer one gets its own array: KnowsProcess may re-enter Profile, so a shared buffer could be overwritten mid-fill.
         Span<ProfileItem> stack = stackalloc ProfileItem[4];
-        Span<ProfileItem> items = prcSet.Length <= 4 ? stack[..prcSet.Length] : IndustryMath.ItemsScratch(prcSet.Length);
+        Span<ProfileItem> items = prcSet.Length <= 4 ? stack[..prcSet.Length] : new ProfileItem[prcSet.Length];
         for (int i = 0; i < prcSet.Length; i++)
         {
             int r = _l.RowOf(prcSet[i].ProcessNumber);
@@ -544,8 +545,17 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
     // §4.1b: distribute D_a of the site's owner (a pure function of the snapshot), write proc_E of the site, return rest_a.
     private Fx6 AllocateEffort(int s, long t)
     {
-        EffortAllocation alloc = Allocation(_l.SiteOwner[s], t, s);
-        int k = _l.LocalSiteIndex(s);
+        int owner = _l.SiteOwner[s];
+        int k = owner >= 0 ? _l.LocalSiteIndex(s) : -1;
+        if (k < 0)
+        {
+            // A site without an owner has no budget to distribute: zero effort, no rest.
+            for (int r = 0; r < _n; r++)
+                _e[r].Next[s] = 0;
+            _lastRest[s] = Fx6.Zero;
+            return Fx6.Zero;
+        }
+        EffortAllocation alloc = Allocation(owner, t, s);
         for (int r = 0; r < _n; r++)
             _e[r].Next[s] = alloc.E[k * _n + r].Raw;
         _lastRest[s] = alloc.Rest;
@@ -555,7 +565,7 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
     // The result is valid until the next call on this thread (thread scratch) or the next MemoizeActor of the actor.
     private EffortAllocation Allocation(int actor, long t, int site = -1, bool memo = true)
     {
-        if (memo && actor < _allocMemo.Length)
+        if (memo && (uint)actor < (uint)_allocMemo.Length)
         {
             AllocMemo m = _allocMemo[actor];
             if (m.Version == _table.Version && m.Month == t)

@@ -39,7 +39,6 @@ public class NoMutableStaticsTests
         ["Singularity.Core.Policy.PolicySystem.t_decisions"] = (Kind.ThreadStatic, "DEBT-0070: ThreadStatic [Scratch] temporary of the policy decision"),
         ["Singularity.Core.Policy.ToolingPlan._temp"] = (Kind.ThreadStatic, "DEBT-0070: ThreadStatic temporary of the tooling plan"),
         ["Singularity.Core.Industry.EffortScratch._forThread"] = (Kind.ThreadStatic, "DEBT-0070: ThreadStatic arrays of the effort allocator, overwritten per call"),
-        ["Singularity.Core.Industry.IndustryMath.t_items"] = (Kind.ThreadStatic, "DEBT-0070: ThreadStatic [Scratch] items of one Profile call"),
         ["Singularity.Core.Industry.IndustryMath.t_sorted"] = (Kind.ThreadStatic, "DEBT-0070: ThreadStatic [Scratch] sorted copy of one Profile call"),
         // An instance field, one per world adapter; the book is refilled with the parameters of its own world (TASK-0103, CrossWorldScratchTests).
         ["Singularity.Session.PolicyProductsAdapter._book"] = (Kind.InstanceThreadLocal, "DEBT-0070: per-world ThreadLocal book, refilled per call"),
