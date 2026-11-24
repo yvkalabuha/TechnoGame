@@ -15,7 +15,12 @@ from helpers import FakeProvider
 from tools.llm_worker import __main__ as cli, config, provider as prov, visual
 from tools.llm_worker.provider import OpenAICompatProvider, ProviderUnavailable
 
-PNG = visual.PNG + b"fake-image-bytes"
+def png(w=1920, h=1080):
+    """A PNG signature and IHDR with the given size, then filler: enough for the size check."""
+    return visual.PNG + b"\x00\x00\x00\rIHDR" + w.to_bytes(4, "big") + h.to_bytes(4, "big") + b"fake-image-bytes"
+
+
+PNG = png()
 GOOD = {"opinion": "mixed", "summary": "Readable, but small text.",
         "findings": [{"criterion": "C3", "frame": "a.png", "location": "top bar", "severity": "medium",
                       "fix": "raise the font size | to 16"}]}
@@ -251,6 +256,61 @@ class RateAndRetry(Base):
     def test_other_free_profile_still_local_only(self):
         with self.assertRaises(ValueError):
             OpenAICompatProvider(profile=replace(config.PROFILES["llamacpp"]), url="https://example.com/v1", api_key="k")
+
+
+class Round3(Base):
+    def test_day_change_keeps_minute_window(self):
+        now = [86400 * 10 - 5.0]
+        g = visual.RateGuard(self.tmp / "u.json", rpm=2, rpd=100, clock=lambda: now[0])
+        g.before_attempt(b"", 1)
+        g.before_attempt(b"", 1)
+        now[0] += 10  # next UTC day, 10 s later
+        with self.assertRaises(visual.RateLimited):
+            g.before_attempt(b"", 1)
+
+    def test_settle_adds_daily_token_totals_and_new_day_resets(self):
+        now = [86400 * 10.0]
+        g = visual.RateGuard(self.tmp / "u.json", clock=lambda: now[0])
+        usage = {"prompt_tokens": 100, "completion_tokens": 20, "completion_tokens_details": {"reasoning_tokens": 7}}
+        for _ in range(2):
+            g.settle(g.before_attempt(b"", 1), usage)
+        st = json.loads((self.tmp / "u.json").read_text())
+        self.assertEqual(st["tokens"], {"prompt": 200, "completion": 40, "thinking": 14})
+        self.assertNotIn("usd", st)
+        now[0] += 86400
+        g.before_attempt(b"", 1)
+        self.assertEqual(json.loads((self.tmp / "u.json").read_text())["tokens"]["prompt"], 0)
+
+    def test_small_frame_refused_unless_allowed(self):
+        (self.shots / "s.png").write_bytes(png(1280, 720))
+        with self.assertRaises(visual.VisualError):
+            visual.load_frames([self.shots / "s.png"], self.shots)
+        self.assertEqual(len(visual.load_frames([self.shots / "s.png"], self.shots, allow_small=True)), 1)
+
+    def test_size_without_header_refused(self):
+        (self.shots / "n.png").write_bytes(visual.PNG + b"x")
+        with self.assertRaises(visual.VisualError):
+            visual.load_frames([self.shots / "n.png"], self.shots)
+
+    def test_jpeg_size_read(self):
+        jpg = b"\xff\xd8\xff\xe0\x00\x04ab\xff\xc0\x00\x0b\x08" + (1080).to_bytes(2, "big") + (1920).to_bytes(2, "big") + b"\x03\x00"
+        self.assertEqual(visual.image_size(jpg), (1920, 1080))
+
+    @mock.patch("tools.llm_worker.gitleaks.scan_text")
+    def test_unverified_findings_flagged_and_pair_written_with_hash(self, _scan):
+        bad = {**GOOD, "findings": [GOOD["findings"][0], {**GOOD["findings"][0], "criterion": "Z99", "frame": "zzz.png"}]}
+        fake = FakeProvider([bad])
+        path, md, rec = visual.run_visual("TASK-0126", self.frames, runs_dir=self.runs, shots_dir=self.shots,
+                                          make_provider=lambda: fake)
+        f = json.loads(path.read_text())["result"]["findings"]
+        self.assertNotIn("unverified", f[0])
+        self.assertEqual(f[1]["unverified"], ["criterion", "frame"])
+        text = md.read_text()
+        self.assertIn("unverified: criterion, frame", text)
+        digest = json.loads(path.read_text())["response_sha256"]
+        self.assertIn(digest, text)
+        self.assertEqual(rec["tokens"], {"prompt": 100, "completion": 10, "thinking": 0})
+        self.assertEqual(sorted(p.suffix for p in self.runs.iterdir()), [".json", ".md"])  # no temp files left
 
 
 class Review2(Base):

@@ -74,6 +74,7 @@ def main(argv=None):
     p.add_argument("--model", default=None, help="Gemini model id (default checked on 2026-11-24)")
     p.add_argument("--mode", choices=visual_mod.MODES, default="criteria",
                    help="criteria: findings against the criteria; design: also Gemini's own proposals")
+    p.add_argument("--allow-small", action="store_true", help="send frames smaller than 1920x1080")
     p.add_argument("--dry-run", action="store_true", help="load frames, scan the text, send nothing")
     sub.add_parser("status", help="list tasks and states")
     p = sub.add_parser("report", help="write reports/<date>.md")
@@ -183,7 +184,7 @@ def main(argv=None):
 def _visual(a):
     try:
         path, md, rec = visual_mod.run_visual(a.task, a.frames, a.criteria, runs_dir=a.runs, model=a.model,
-                                              dry_run=a.dry_run, mode=a.mode)
+                                              dry_run=a.dry_run, mode=a.mode, allow_small=a.allow_small)
     except KeyFileError:
         print(f"refused: {config.GEMINI_KEY_HINT}")
         return 4
@@ -200,7 +201,9 @@ def _visual(a):
         print(f"dry-run: {len(rec['frames'])} frames, model {rec['model']}, hash {rec['input_hash'][:8]}")
         return 0
     res = rec["result"]
+    tk = rec["tokens"]
     print(f"record: {path}\nsummary: {md}\nopinion {res['opinion']}: {review_mod.count_line(res['findings'])}")
+    print(f"tokens: prompt {tk['prompt']}, completion {tk['completion']}, thinking {tk['thinking']}")
     return 0
 
 
