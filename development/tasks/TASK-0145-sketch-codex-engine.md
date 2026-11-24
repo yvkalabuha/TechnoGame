@@ -24,6 +24,7 @@ created: 2026-11-24
 ## Факты [Факт: проба 2026-11-24 13:44]
 - В agy нет модели Codex (`agy models`: Gemini, Claude, GPT-OSS); генератор картинок agy один при любой модели, поэтому вызов «Codex через agy» квоту не добавляет.
 - Codex CLI 0.170.0 имеет встроенный инструмент `image_generation` (`codex features list`: stable, true) и `codex exec -i FILE` для референса.
+- Проба agy 13:45: у моделей группы Claude/GPT нет инструмента `generate_image`; рисует только подагент `image-generator`, и он упирается в ту же квоту картинок (429, «reset after 2h0m0s»). Лимиты, которые agy показывает по группам моделей, — это текст; у картинок своя квота.
 - Проба `codex exec --sandbox read-only --json PROMPT -i ref.png`: `turn.failed` «You've hit your usage limit … try again at 3:44 PM». Лимит Codex общий со вторым ревью (ADR-0015): эскизы его съедают.
 
 ## Описание
