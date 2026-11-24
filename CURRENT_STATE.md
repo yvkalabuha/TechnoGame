@@ -28,6 +28,7 @@
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0138 [APPROVED] Globe draws 1945 political borders and labels from the region map and owners, not modern Natural Earth countries (developer)
 - TASK-0139 [APPROVED] HUD time controls: centred pause and speed buttons, no speed text, speed gauge active frame alignment (developer)
+- TASK-0140 [APPROVED] Sound audit: sounds that play at the wrong moment or irritate (owner feedback) (sound-director)
 <!-- registry:active:end -->
 
 ## Блокеры
