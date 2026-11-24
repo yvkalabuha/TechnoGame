@@ -72,4 +72,7 @@ public static class GlobeLookLogic
         }
         return 0.5 * (lo + hi) * 180.0 / Math.PI;
     }
+
+    /// <summary>Screen radius of a view ray with impact parameter h (globe radius 1, camera at distance d), in disk radii; mirrors the formula of globe_atmosphere.gdshader.</summary>
+    public static double ProjectedRadiusRatio(double h, double d) => h / Math.Sqrt(d * d - h * h) * Math.Sqrt(d * d - 1.0);
 }

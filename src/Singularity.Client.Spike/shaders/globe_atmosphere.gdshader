@@ -52,7 +52,10 @@ void fragment() {
 		float ly = dot(col, vec3(0.2126, 0.7152, 0.0722));
 		col *= min(1.0, 0.65 / max(ly, 1e-4));
 		a = clamp(max(sc.r, max(sc.g, sc.b)) * 0.81, 0.0, 0.765);   // peak alpha 15 % below the first prototype
-		if (x < 0.0) { float k = smoothstep(-0.04, 0.0, x); a *= k * k * 0.3; }   // at most 4 % inside the disk, eased in, 0.6 of the first prototype (hue shift kept, less lightness lift)
+		// the inward limit is 4 % of the projected disk radius, not of the view-space distance: with perspective tan(alpha) = h / sqrt(d^2 - h^2) is proportional to the screen radius
+		float dc = length(c);
+		float xs = h / sqrt(max(dc * dc - h * h, 1e-4)) * sqrt(max(dc * dc - 1.0, 1e-4)) - 1.0;
+		if (xs < 0.0) { float k = smoothstep(-0.04, 0.0, xs); a *= k * k * 0.3; }   // at most 4 % inside the disk, eased in, 0.6 of the first prototype (hue shift kept, less lightness lift)
 	}
 	ALBEDO = col;
 	ALPHA = a;

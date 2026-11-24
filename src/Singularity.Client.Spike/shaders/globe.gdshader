@@ -93,7 +93,7 @@ void fragment() {
 		vec3 temp = mix(vec3(0.94, 0.97, 1.0), vec3(1.0, 0.99, 0.96), lit2);   // cooler on the shaded side
 		float limb = 1.0 - clamp(dot(nv, normalize(VIEW)), 0.0, 1.0);
 		if (id == 0) col *= mix(1.0, 0.9, limb * limb);                 // the sea is a little darker towards the limb
-		col *= lum * temp;
+		col *= mix(vec3(1.0), lum * temp, light_amount);                // light_amount 0 is the unlit control of the shot suite
 	}
 
 	// graticule 30 deg

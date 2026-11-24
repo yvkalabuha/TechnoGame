@@ -184,7 +184,7 @@ public sealed partial class Main : Node3D
     // ---------- client ----------
     void BuildMenus(CanvasLayer layer)
     {
-        _mainMenu = new MainMenu(); _newGame = new NewGameSheet(); _settings = new SettingsSheet { GlobeLookSet = v => ApplyGlobeLook((GlobeLook)v) }; _credits = new CreditsSheet();
+        _mainMenu = new MainMenu(); _newGame = new NewGameSheet(); _settings = new SettingsSheet { GlobeLookSet = v => ApplyGlobeLook((GlobeLook)v), GlobeLookActive = () => (int)_look }; _credits = new CreditsSheet();
         layer.AddChild(_mainMenu); layer.AddChild(_newGame); layer.AddChild(_settings); layer.AddChild(_credits);
         _mainMenu.Continue += CloseGameMenu;
         _mainMenu.NewGame += () => { _mainMenu.Close(); _pendingNewGame = true; };
@@ -1224,7 +1224,7 @@ public sealed partial class Main : Node3D
                 _shotT = 0; break;
             case 47 when _shotT >= 0.7:
                 Shot("alert_tint5_night.png");
-                _globeMat.SetShaderParameter("light_dir", new Vector3(0.7f, 0.35f, 0.6f)); _overlay.RemoveMarker("demo0"); _overlay.RemoveMarker("demo1"); _overlay.RemoveMarker("demo2");
+                SetGlobeLightDir(false, DayLightDir); _overlay.RemoveMarker("demo0"); _overlay.RemoveMarker("demo1"); _overlay.RemoveMarker("demo2");
                 _shotStep = 50; _shotT = 0; break;
             // menus: (title look is taken on a cold start), in-game look, EN, new game, settings, rollback, UI scale 150%
             case 50: _mainMenu.Open(true); _shotStep = 53; _shotT = 0; break;
@@ -1739,7 +1739,7 @@ public sealed partial class Main : Node3D
                 _shotLog += $"alert demo: tint {tint + 1} (asked {AlertTints[i] + 1}) on {c.Name}{(night ? " (night side)" : "")}\n";
             }
         }
-        _globeMat.SetShaderParameter("light_dir", night ? new Vector3(-0.7f, -0.35f, -0.6f) : new Vector3(0.7f, 0.35f, 0.6f));
+        SetGlobeLightDir(night, night ? -DayLightDir : DayLightDir);   // night: a fixed world light behind the globe, for every look
         _globeMat.SetShaderParameter("light_amount", 1f);
     }
 

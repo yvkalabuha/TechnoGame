@@ -36,6 +36,14 @@ public class GlobeLookTests
     }
 
     [Fact]
+    public void ProjectedRadiusRatio_IsOneAtTheLimb_AndBelowTheViewSpaceDistanceInside()
+    {
+        Assert.Equal(1.0, GlobeLookLogic.ProjectedRadiusRatio(1.0, 2.0), 9);
+        Assert.InRange(GlobeLookLogic.ProjectedRadiusRatio(0.96, 2.0), 0.945, 0.952);   // h = 0.96 is 0.948 R on screen at distance 2: the clamp must use this, not h
+        Assert.True(GlobeLookLogic.ProjectedRadiusRatio(0.5, 3.0) < GlobeLookLogic.ProjectedRadiusRatio(0.6, 3.0));
+    }
+
+    [Fact]
     public void Next_CyclesThroughAllFourAndBack()
     {
         var l = GlobeLook.Current; var seen = new System.Collections.Generic.List<GlobeLook>();

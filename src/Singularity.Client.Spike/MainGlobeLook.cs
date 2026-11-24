@@ -39,16 +39,23 @@ public sealed partial class Main
     void SetGlobeLight(bool world, float lon, float lat)
     {
         var d = GlobeLookLogic.Direction(lon, lat);
+        SetGlobeLightDir(world, world ? new Vector3(d.X, d.Y, d.Z) : DayLightDir);
+    }
+
+    // The prior look always reads light_dir; looks A, A+ and B read it only with light_world. Day returns to the default direction, so no look keeps a night light.
+    static readonly Vector3 DayLightDir = new(0.7f, 0.35f, 0.6f);
+    void SetGlobeLightDir(bool world, Vector3 dir)
+    {
         foreach (var m in new[] { _globeMat, _atmoMat })
         {
             m.SetShaderParameter("light_world", world);
-            if (world) m.SetShaderParameter("light_dir", new Vector3(d.X, d.Y, d.Z));
+            m.SetShaderParameter("light_dir", dir);
         }
     }
 
     // ---------- shots of the variants ----------
     readonly List<Func<double, bool>> _lookQ = new();
-    int _lookI; double _lookT; int _lookPerfLeft; readonly List<double> _lookDt = new(); double _lookGpu; int _lookGpuN;
+    int _lookI; int _lookPerfLeft; readonly List<double> _lookDt = new(); double _lookGpu; int _lookGpuN;
     readonly List<string> _lookLog = new();
 
     void BuildLookShots()
@@ -56,7 +63,7 @@ public sealed partial class Main
         void W(double sec, Action a) { double t = 0; _lookQ.Add(dt => { t += dt; if (t < sec) return false; a(); return true; }); }
         string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
         Directory.CreateDirectory(dir);
-        _lookQ.Add(_ => { _signal.SetSpeed(0); TitleScene(true); DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled); RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true); return true; });
+        _lookQ.Add(_ => { _signal.SetSpeed(0); TitleScene(true); DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled); Engine.MaxFps = 0; /* the benchmark is not capped */ RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true); return true; });
         foreach (var look in new[] { GlobeLook.Current, GlobeLook.A, GlobeLook.APlus, GlobeLook.B })
         {
             string n = GlobeLookLogic.Names[(int)look];
@@ -85,7 +92,7 @@ public sealed partial class Main
         W(0.0, () =>
         {
             var gpu = RenderingServer.GetVideoAdapterName();
-            File.WriteAllText(Path.Combine(dir, "frame_times.txt"), $"GPU: {gpu}\n1920x1080, vsync off, 300 frames of Europe by day, no HUD, 100 % UI scale\n" + string.Join("\n", _lookLog) + "\n");
+            File.WriteAllText(Path.Combine(dir, "frame_times.txt"), $"GPU: {gpu}\n1920x1080, vsync mode {DisplayServer.WindowGetVsyncMode()}, max_fps {Engine.MaxFps}, 300 frames of Europe by day, no HUD, 100 % UI scale\n" + string.Join("\n", _lookLog) + "\n");
             GetTree().Quit(_shotFailed ? 1 : 0);
         });
     }
@@ -95,7 +102,7 @@ public sealed partial class Main
     void BuildLimbTintCheck(Action<double, Action> W)
     {
         var cases = new[] { ("Russia", 60f, 60f), ("Brazil", -52f, -10f), ("Australia", 134f, -25f) };
-        double[] ratios = { 0.0, 0.96, 0.98, 0.99 };
+        double[] ratios = { 0.0, 0.95, 0.96, 0.98, 0.99 };   // centre, outside the 4 % band (must be 0), band edge, inside the band, info
         foreach (var (name, lon, lat) in cases)
         {
             var colA = new Color[ratios.Length]; var colB = new Color[ratios.Length]; var got = new float[ratios.Length]; bool inside = false;
@@ -127,9 +134,9 @@ public sealed partial class Main
             {
                 double De(int k) => GlobeLookLogic.DeltaE(colA[k].R, colA[k].G, colA[k].B, colB[k].R, colB[k].G, colB[k].B);
                 bool aimed = true; for (int k = 1; k < ratios.Length; k++) aimed &= Math.Abs(got[k] - ratios[k]) <= 0.01;
-                bool ok = inside && aimed && De(0) <= 1.0 && De(1) <= GlobeLookLogic.MaxLimbDeltaE && De(2) <= GlobeLookLogic.MaxInnerDeltaE;
-                _lookLog.Add(string.Format(CultureInfo.InvariantCulture, "tint check {0}: point inside country {1}, aimed within 0.01 R {2}; atmosphere share dE at centre {3:F2} (limit 1.0), 0.96 R {4:F2} (limit {5:F1}), 0.98 R {6:F2} (limit {7:F1}), 0.99 R {8:F2} (info); B at 0.96 R vs B at centre {9:F2} (light + volume, info): {10}",
-                    name, inside, aimed, De(0), De(1), GlobeLookLogic.MaxLimbDeltaE, De(2), GlobeLookLogic.MaxInnerDeltaE, De(3), GlobeLookLogic.DeltaE(colB[0].R, colB[0].G, colB[0].B, colB[1].R, colB[1].G, colB[1].B), ok ? "PASS" : "FAIL"));
+                bool ok = inside && aimed && De(0) <= 1.0 && De(1) <= 0.05 && De(2) <= GlobeLookLogic.MaxLimbDeltaE && De(3) <= GlobeLookLogic.MaxInnerDeltaE;
+                _lookLog.Add(string.Format(CultureInfo.InvariantCulture, "tint check {0}: point inside country {1}, aimed within 0.01 R {2}; atmosphere share dE at centre {3:F2} (limit 1.0), 0.95 R {4:F2} (limit 0.05), 0.96 R {5:F2} (limit {6:F1}), 0.98 R {7:F2} (limit {8:F1}), 0.99 R {9:F2} (info); B at 0.96 R vs B at centre {10:F2} (light + volume, info): {11}",
+                    name, inside, aimed, De(0), De(1), De(2), GlobeLookLogic.MaxLimbDeltaE, De(3), GlobeLookLogic.MaxInnerDeltaE, De(4), GlobeLookLogic.DeltaE(colB[0].R, colB[0].G, colB[0].B, colB[2].R, colB[2].G, colB[2].B), ok ? "PASS" : "FAIL"));
                 if (!ok) _shotFailed = true;
             });
         }

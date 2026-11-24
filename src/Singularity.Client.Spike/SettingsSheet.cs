@@ -22,7 +22,7 @@ public sealed partial class SettingsSheet : Control
     public event Action Closed;
     /// <summary>Plays a test sound on a bus (index in SettingsData.BusNames); null = no audio yet (no game), the button is disabled.</summary>
     public Action<int> TestBus;
-    public Action<int> GlobeLookSet;   // the globe look changed: live preview, reset, cancel, and after Apply (the saved setting then wins over --globe-look)
+    public Func<int> GlobeLookActive; public Action<int> GlobeLookSet;   // the globe look changed: live preview, reset, cancel, and after Apply (the saved setting then wins over --globe-look)
     public Func<int> MusicAmount; public Action<int> MusicAmountSet; public Action ResetFatigue;   // set once a game runs
     public event Action<SettingsData> Applied;
 
@@ -35,6 +35,7 @@ public sealed partial class SettingsSheet : Control
     readonly Label _dialogText = Ui.Lbl("", 16);
     readonly RollbackTimer _rb = new(15);
     SettingsData _w = new(), _orig = new(), _before;
+    int _lookAtOpen;
     int? _musicOrig;   // the music amount applies live; Cancel puts it back
     int _tab;
     int _soundFocus = 1;
@@ -104,6 +105,7 @@ public sealed partial class SettingsSheet : Control
 
     public void Open()
     {
+        _lookAtOpen = GlobeLookActive?.Invoke() ?? Settings.Current.GlobeLook;   // may differ from the saved one (--globe-look, F6)
         _musicOrig = MusicAmount?.Invoke(); _orig = Settings.Current.Clone(); _w = Settings.Current.Clone(); _tab = 0;
         Visible = true; SetDialog(false); _fit(Size);
         Rebuild();
@@ -249,7 +251,7 @@ public sealed partial class SettingsSheet : Control
     void Cancel()
     {
         if (Loc.Lang != _orig.Lang) Loc.SetLang(_orig.Lang);
-        GlobeLookSet?.Invoke(_orig.GlobeLook);
+        GlobeLookSet?.Invoke(_lookAtOpen);
         PaperSurface.SetPreset(_orig.Textures);   // the preset previews live while the sheet is open
         InstrumentLogic.OrganLevel = _orig.OrganInstruments;
         if (_musicOrig is int m) MusicAmountSet?.Invoke(m);
