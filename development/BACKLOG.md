@@ -158,6 +158,8 @@
 | [TASK-0140](../development/tasks/TASK-0140-sound-timing-audit.md) | REVIEW | Sound audit: sounds that play at the wrong moment or irritate (owner feedback) | MS-M05 |
 | [TASK-0141](../development/tasks/TASK-0141-gemini-agy-sketches.md) | DONE | Gemini design sketches through Antigravity CLI (agy) in llm_worker (#451) | MS-M05 |
 | [TASK-0142](../development/tasks/TASK-0142-globe-map-remainder.md) | PROPOSED | Globe map remainder after TASK-0138: hatch legend, occupation control line, small-state callouts, coast staircase | MS-M05 |
+| [TASK-0143](../development/tasks/TASK-0143-sketch-quota-subagents.md) | APPROVED | Gemini sketch runs: detect subagent quota errors, one image per subagent, no extra refinements | MS-M05 |
+| [TASK-0144](../development/tasks/TASK-0144-muted-sound-character.md) | APPROVED | Muted sound character (#455): soften attack and low-pass all routine cues | MS-M05 |
 
 ## Гипотезы
 
