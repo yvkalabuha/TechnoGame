@@ -42,7 +42,12 @@ const vec2 SZ = vec2(4096.0, 2048.0);
 int id_at(vec2 uv) {
 	ivec2 p = ivec2(clamp(uv, vec2(0.0), vec2(0.99999)) * SZ);
 	vec2 v = texelFetch(ids, p, 0).rg * 255.0 + 0.5;
-	return int(v.x) + 256 * int(v.y);
+	return int(v.x) + 256 * (int(v.y) & 127);
+}
+// 1 for land that carries a coast stroke: islet specks (a few texels) have the bit cleared on the CPU (CoastMask).
+float coast_land_at(vec2 uv) {
+	ivec2 p = ivec2(clamp(uv, vec2(0.0), vec2(0.99999)) * SZ);
+	return texelFetch(ids, p, 0).g * 255.0 + 0.5 >= 128.0 ? 1.0 : 0.0;
 }
 vec3 srgb_to_lin(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c)); }
 vec3 tint_of(int id) { return srgb_to_lin(texelFetch(region_lut, ivec2(id, 0), 0).rgb); }
@@ -137,8 +142,8 @@ void fragment() {
 	// Coast (G8): the contour of the bilinear land mask, so that the 4096 px raster gives a smooth line instead of a staircase.
 	vec2 tp = clamp(uv, vec2(0.0), vec2(0.99999)) * SZ - 0.5;
 	ivec2 t0 = ivec2(floor(tp)); vec2 tf = fract(tp);
-	float m00 = id_at((vec2(t0) + 0.5) / SZ) > 0 ? 1.0 : 0.0, m10 = id_at((vec2(t0 + ivec2(1, 0)) + 0.5) / SZ) > 0 ? 1.0 : 0.0;
-	float m01 = id_at((vec2(t0 + ivec2(0, 1)) + 0.5) / SZ) > 0 ? 1.0 : 0.0, m11 = id_at((vec2(t0 + ivec2(1, 1)) + 0.5) / SZ) > 0 ? 1.0 : 0.0;
+	float m00 = coast_land_at((vec2(t0) + 0.5) / SZ), m10 = coast_land_at((vec2(t0 + ivec2(1, 0)) + 0.5) / SZ);
+	float m01 = coast_land_at((vec2(t0 + ivec2(0, 1)) + 0.5) / SZ), m11 = coast_land_at((vec2(t0 + ivec2(1, 1)) + 0.5) / SZ);
 	float lm = mix(mix(m00, m10, tf.x), mix(m01, m11, tf.x), tf.y);
 	float lw = max(fwidth(lm), 1e-4);
 	coast = 1.0 - smoothstep(0.55 * border_px, 1.2 * border_px, abs(lm - 0.5) / lw);

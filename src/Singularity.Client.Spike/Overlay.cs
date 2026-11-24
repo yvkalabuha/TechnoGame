@@ -7,7 +7,7 @@ namespace Singularity.Client.Spike;
 /// Labels of the slice countries are bold with an ink underline.</summary>
 public sealed partial class Overlay : Control
 {
-    sealed class LabelState { public Country C; public Label Node; public bool On; public bool Slice, Emph, Callout, Framed; public Rect2 Rect; public Vector2 Anchor; public Color Frame; }
+    sealed class LabelState { public Country C; public Label Node; public bool On; public bool Slice, Emph, Callout, Framed; public Rect2 Rect; public float Area; public Vector2 Anchor; public Color Frame; }
 
     static readonly Color Ink = Ui.Ink;
     static readonly Color Paper = Ui.Paper;
@@ -50,10 +50,12 @@ public sealed partial class Overlay : Control
     Vector2 VpSize => GetViewportRect().Size;
     double _acc;
     public int VisibleLabels;
+    public float AreaOf(string code) { foreach (var s in _labels) if (s.C.Name == code) return s.Area; return -1f; }
     public bool IsShown(string code) { foreach (var s in _labels) if (s.C.Name == code) return s.Node.Visible; return false; }
     public bool LegendVisible;   // the key of the status hatching and the control line (C1, C2)
     string _legColony = "", _legOccupied = "", _legControl = "";
-    static readonly Color LegendColony = ToColor(GlobeData.Line(0)), LegendOcc = ToColor(GlobeData.Line(0, HatchLogic.LineScale(HatchKind.Occupied)));
+    static readonly Color LegendColony = ToColor(HatchLogic.Line(HatchLogic.ColonyFillTone, HatchLogic.LineScale(HatchKind.Colony))), LegendOcc = ToColor(HatchLogic.Line(HatchLogic.ControllerTone, HatchLogic.LineScale(HatchKind.Occupied)));
+    static readonly Color LegendFillColony = ToColor(HatchLogic.Line(HatchLogic.ColonyFillTone, 1f)), LegendFillOcc = ToColor(HatchLogic.Line(HatchLogic.OccupiedFillTone, 1f));
     static Color ToColor((byte R, byte G, byte B) c) => new(c.R / 255f, c.G / 255f, c.B / 255f);
     void RefreshLegend() { _legColony = Loc.T("legend.colony"); _legOccupied = Loc.T("legend.occupied"); _legControl = Loc.T("legend.control"); }
 
@@ -166,13 +168,13 @@ public sealed partial class Overlay : Control
         }
     }
 
-    static void HatchRect(CanvasItem c, Rect2 r, Color col, float step, bool down)
+    static void HatchRect(CanvasItem c, Rect2 r, Color col, float step, bool down, float width)
     {
         for (float a = r.Position.X - r.Size.Y; a < r.End.X; a += step)
         {
             float s0 = Mathf.Max(0, r.Position.X - a), s1 = Mathf.Min(r.Size.Y, r.End.X - a);
             if (s0 >= s1) continue;
-            c.DrawLine(down ? new Vector2(a + s0, r.Position.Y + s0) : new Vector2(a + s0, r.End.Y - s0), down ? new Vector2(a + s1, r.Position.Y + s1) : new Vector2(a + s1, r.End.Y - s1), col, 1f);
+            c.DrawLine(down ? new Vector2(a + s0, r.Position.Y + s0) : new Vector2(a + s0, r.End.Y - s0), down ? new Vector2(a + s1, r.Position.Y + s1) : new Vector2(a + s1, r.End.Y - s1), col, width);
         }
     }
 
@@ -186,10 +188,11 @@ public sealed partial class Overlay : Control
         DrawRect(panel, new Color(Ui.Sheet, 0.92f)); DrawRect(panel, Ink, false, 1f);
         float y = panel.Position.Y + pad, x = panel.Position.X + pad;
         var s1 = new Rect2(x, y + 3, sw, rowH - 6);
-        DrawRect(s1, ToColor((0xB6, 0xDE, 0xBF))); HatchRect(this, s1, new Color(LegendColony, 0.9f), 8f, false);
+        var hc = HatchLogic.Params(HatchKind.Colony); var ho = HatchLogic.Params(HatchKind.Occupied);
+        DrawRect(s1, LegendFillColony); HatchRect(this, s1, new Color(LegendColony, hc.Alpha), hc.Period, false, hc.Width);
         DrawString(font, new Vector2(x + sw + pad, y + 15), _legColony, HorizontalAlignment.Left, -1, 14, Ink);
         y += rowH; var s2 = new Rect2(x, y + 3, sw, rowH - 6);
-        DrawRect(s2, ToColor((0xB6, 0xDE, 0xBF))); HatchRect(this, s2, new Color(LegendOcc, 0.65f), 11f, true);
+        DrawRect(s2, LegendFillOcc); HatchRect(this, s2, new Color(LegendOcc, ho.Alpha), ho.Period, true, ho.Width);
         DrawString(font, new Vector2(x + sw + pad, y + 15), _legOccupied, HorizontalAlignment.Left, -1, 14, Ink);
         y += rowH;
         DrawLine(new Vector2(x, y + rowH * 0.5f), new Vector2(x + sw, y + rowH * 0.5f), Ink, 1.5f);
@@ -224,7 +227,7 @@ public sealed partial class Overlay : Control
                 float w = sz.X + 6f, h = sz.Y + 6f;
                 var mode = LabelPlacement.ModeFor(LabelPlacement.ScreenArea(s.C.BoxArea, gr, cs));
                 float px, py;
-                s.Callout = mode == LabelPlacement.PlateMode.Callout; s.Framed = mode == LabelPlacement.PlateMode.Framed && s.C.Id > 0; s.Anchor = sp;
+                s.Callout = mode == LabelPlacement.PlateMode.Callout; s.Framed = mode == LabelPlacement.PlateMode.Framed && s.C.Id > 0; s.Anchor = sp; s.Area = LabelPlacement.ScreenArea(s.C.BoxArea, gr, cs);
                 if (s.Callout)
                 {
                     LabelPlacement.CalloutCentre(sp.X, sp.Y, w, h, VpSize.X, out float ccx, out float ccy);

@@ -76,11 +76,13 @@ public sealed class GlobeData
     /// <summary>The stand-in of tint.N.line: the fill at 42 % in linear light (HatchLogic.Line).</summary>
     public static (byte, byte, byte) Line(int tone, float scale = 0.42f) => HatchLogic.Line(tone, scale);
 
-    /// <summary>The ID raster as RG8 bytes (low byte, high byte of the region number).</summary>
+    /// <summary>The ID raster as RG8 bytes (low byte, high byte of the region number, bit 7 of the high byte = coast-worthy land).</summary>
     public byte[] RegionIdBytes()
     {
         var b = new byte[RegionIds.Length * 2];
-        for (int i = 0; i < RegionIds.Length; i++) { b[2 * i] = (byte)(RegionIds[i] & 255); b[2 * i + 1] = (byte)(RegionIds[i] >> 8); }
+        var coast = CoastMask.Build(RegionIds, W, H);
+        // High byte: bits 0..6 = region number >> 8, bit 7 = land that carries a coast stroke (not an islet speck).
+        for (int i = 0; i < RegionIds.Length; i++) { b[2 * i] = (byte)(RegionIds[i] & 255); b[2 * i + 1] = (byte)((RegionIds[i] >> 8) | (coast[i] ? 128 : 0)); }
         return b;
     }
 

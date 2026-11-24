@@ -1,11 +1,15 @@
 using Singularity.Client.Spike;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Singularity.MapBuilder.Tests;
 
 // TASK-0142: pure label placement and hatch choice of the globe map.
 public class GlobeLabelHatchTests
 {
+    readonly ITestOutputHelper _out;
+    public GlobeLabelHatchTests(ITestOutputHelper o) => _out = o;
+
     const float Vw = 1920, Vh = 1080;
 
     [Fact]
@@ -65,5 +69,55 @@ public class GlobeLabelHatchTests
         Assert.True(HatchLogic.LineScale(HatchKind.Occupied) > HatchLogic.LineScale(HatchKind.Colony));
         var dark = HatchLogic.Line(9, HatchLogic.LineScale(HatchKind.Colony)); var light = HatchLogic.Line(9, HatchLogic.LineScale(HatchKind.Occupied));
         Assert.True(light.Item1 > dark.Item1 && light.Item2 > dark.Item2);
+    }
+
+    [Fact]
+    public void Islet_specks_carry_no_coast_stroke_but_real_land_does()
+    {
+        // 8x4 raster: a 2x2 islet (4 texels), a 4x2 island (8 texels) wrapping over the dateline, a 3x2 block (6) apart; minTexels 6.
+        var ids = new ushort[8 * 4];
+        void Set(int x, int y) => ids[y * 8 + x] = 1;
+        Set(3, 0); Set(4, 0);                                   // islet of 2 texels
+        Set(7, 2); Set(0, 2); Set(7, 3); Set(0, 3); Set(1, 3);  // 5 texels joined over the dateline
+        Set(2, 2); Set(3, 3);                                   // diagonal neighbours: 8-connected, 7 texels in all
+        var keep = CoastMask.Build(ids, 8, 4, 6);
+        Assert.False(keep[0 * 8 + 3]);
+        Assert.True(keep[2 * 8 + 7] && keep[3 * 8 + 1] && keep[3 * 8 + 3]);
+        Assert.Equal(0, System.Array.IndexOf(CoastMask.Build(new ushort[8], 8, 1), true) + 1);   // sea: nothing kept
+    }
+
+    // A1/A3 of the colony labels: ink on the plate (sheet at 85 % over the lit fill), worst tone at light 0.70; and tint.9 against the other tones at light 0.70 and 1.05.
+    [Fact]
+    public void Colony_label_contrast_and_tint9_delta_e_are_measured()
+    {
+        static double Srgb(double l) => l <= 0.0031308 ? l * 12.92 : 1.055 * System.Math.Pow(l, 1 / 2.4) - 0.055;
+        static double Lin(double c) => c <= 0.04045 ? c / 12.92 : System.Math.Pow((c + 0.055) / 1.055, 2.4);
+        var ink = ColorMath.FromHex(Palette.Ink); var sheet = ColorMath.FromHex(Palette.C.Sheet);
+        double worst = 1e9; int worstTone = -1;
+        for (int t = 0; t < CountryPalette.Hex.Length; t++)
+        {
+            var f = ColorMath.FromHex(CountryPalette.Hex[t]);
+            double Mix(double s, double fl) => Lin(0.85 * Srgb(s) + 0.15 * Srgb(fl * 0.70));
+            var plate = new ColorMath.Lin(Mix(sheet.R, f.R), Mix(sheet.G, f.G), Mix(sheet.B, f.B));
+            double c = ColorMath.Contrast(ink, plate);
+            if (c < worst) { worst = c; worstTone = t; }
+        }
+        _out.WriteLine($"colony label ink on plate, worst of 12 tones at light 0.70: {worst:F2}:1 (tone {worstTone + 1}); A3 needs 4.5");
+        Assert.True(worst >= 4.5);
+        foreach (double k in new[] { 0.70, 1.05 })
+        {
+            var t9 = ColorMath.Scale(ColorMath.FromHex(CountryPalette.Hex[8]), k, k, k);
+            string line = "";
+            double min = 1e9;
+            for (int o = 0; o < CountryPalette.Hex.Length; o++)
+            {
+                if (o == 8) continue;
+                var c = ColorMath.Scale(ColorMath.FromHex(CountryPalette.Hex[o]), k, k, k);
+                double de = ColorMath.DeltaE2000(t9, c);
+                line += $" {o + 1}:{de:F1}";
+                if (!CountryPalette.IsForbidden(8, o) && de < min) min = de;
+            }
+            _out.WriteLine($"tint.9 deltaE2000 at light {k:F2}:{line}; min over allowed neighbours {min:F1}");
+        }
     }
 }

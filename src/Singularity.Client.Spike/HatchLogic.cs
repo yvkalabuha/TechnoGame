@@ -14,6 +14,11 @@ public static class HatchLogic
     /// <summary>Share of the fill brightness kept by the hatch line (linear light): 0.42 is the tint.N.line stand-in; occupation is lighter.</summary>
     public static float LineScale(HatchKind k) => k == HatchKind.Occupied ? 0.62f : 0.42f;
 
+    /// <summary>Tones of the legend swatches, taken from the palette: a fixed power (USA) as controller, the stone tone as the owner under occupation.</summary>
+    public static int ColonyFillTone => CountryPalette.Fixed[0].Tone;
+    public static int OccupiedFillTone => CountryPalette.Stone;
+    public static int ControllerTone => CountryPalette.Fixed[2].Tone;
+
     /// <summary>The line colour of a tone: the fill scaled in linear light, as an sRGB byte triple.</summary>
     public static (byte R, byte G, byte B) Line(int tone, float scale)
     {
