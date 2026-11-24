@@ -152,6 +152,7 @@
 | [TASK-0134](../development/tasks/TASK-0134-hcap-growth-production-mastery.md) | IN_PROGRESS | Hcap growth and production mastery in Core: series gate, candidate close, foresight, mastery programme (#438-#440) | MS-M05 |
 | [TASK-0135](../development/tasks/TASK-0135-gemini-visual-review.md) | IN_PROGRESS | Gemini visual second opinion in llm_worker (free tier, #441) | MS-M05 |
 | [TASK-0136](../development/tasks/TASK-0136-tree-clarity-depth-pass.md) | IN_PROGRESS | Knowledge tree and menu clarity pass after Gemini design review: player text, legend grammar, node sizes, menu reasons, sheet depth | MS-M05 |
+| [TASK-0137](../development/tasks/TASK-0137-globe-volume-atmosphere-prototype.md) | APPROVED | Globe volume and limb atmosphere: Godot prototype of three variants for the owner (#426, #442) | MS-M05 |
 
 ## Гипотезы
 

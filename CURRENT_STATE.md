@@ -25,6 +25,7 @@
 - TASK-0135 [IN_PROGRESS] Gemini visual second opinion in llm_worker (free tier, #441) (developer)
 - TASK-0136 [IN_PROGRESS] Knowledge tree and menu clarity pass after Gemini design review: player text, legend grammar, node sizes, menu reasons, sheet depth (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
+- TASK-0137 [APPROVED] Globe volume and limb atmosphere: Godot prototype of three variants for the owner (#426, #442) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
