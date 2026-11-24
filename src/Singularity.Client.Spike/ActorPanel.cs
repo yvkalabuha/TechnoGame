@@ -36,7 +36,9 @@ public sealed partial class ActorPanel : PanelContainer
     readonly int[] _force = new int[5];
     int _sel;
     readonly FlaskControl[] _flaskSci = { new() { Ink = Ui.Violet }, new() { Ink = Ui.Violet }, new() { Ink = Ui.Violet } };
-    readonly HBoxContainer _flaskSciRow = new();
+    readonly FlaskControl _flaskProd = new() { Ink = Ui.Teal };
+    readonly HBoxContainer _flaskSciRow = new(), _flaskProdRow = new();
+    readonly Label _prodCap = Ui.Lbl("", 14, Ui.Ink2);
     readonly VBoxContainer _sciBox = new();   // caption line, then the flask row, then the empty note
     readonly VBoxContainer[] _sciCell = { new(), new(), new() };
     readonly Label[] _sciName = { Ui.Lbl("", 14, Ui.Ink2), Ui.Lbl("", 14, Ui.Ink2), Ui.Lbl("", 14, Ui.Ink2) };
@@ -185,7 +187,11 @@ public sealed partial class ActorPanel : PanelContainer
         _secBudget.AddChild(rr); _orderControls.Add(rr);
 
         _designsHead = Section("panel.designs", _secDesigns);
-        // alloy flask: waits for a Session alloy-coverage field (follow-up task)
+        _flaskProdRow.AddThemeConstantOverride("separation", 8);
+        _flaskProdRow.AddChild(_flaskProd);
+        _prodCap.AutowrapMode = TextServer.AutowrapMode.WordSmart; _prodCap.CustomMinimumSize = new Vector2(150, 0); _prodCap.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        _flaskProdRow.AddChild(_prodCap);
+        _secDesigns.AddChild(_flaskProdRow);
         _secDesigns.AddChild(_designs);
         _prodLater = Ui.Wrap("area.production.later", 14, Ui.Ink3); _secDesigns.AddChild(_prodLater);
         Section("panel.licence", _secLicence);
@@ -274,8 +280,14 @@ public sealed partial class ActorPanel : PanelContainer
     readonly Label _sciNone = Ui.Lbl("flask.sci.none", 14, Ui.Ink2);
 
     /// <summary>Screenshot run: the Science flasks show these (have, need) research links instead of the Session chain (the shot scenario has none); null clears it.</summary>
-    public void ShotResearch(IReadOnlyList<Link> links) { _shotLinks = links; _dirty = true; }
-    IReadOnlyList<Link> _shotLinks;
+    public void ShotResearch(IReadOnlyList<ResearchView> research) { _shotResearch = research; _dirty = true; }
+    IReadOnlyList<ResearchView> _shotResearch;
+
+    /// <summary>Screenshot run: the alloy flask shows this coverage instead of the Session field (the shot scenario never has a shortage); null clears it. The panel itself is the live one.</summary>
+    public void ShotAlloy(AlloyCoverage? coverage) { _shotAlloy = coverage; _dirty = true; }
+    AlloyCoverage? _shotAlloy;
+    /// <summary>Caption of the alloy flask, for the run-time assertion.</summary>
+    public string ShotAlloyCaption => _prodCap.Text;
     public int ShotFlaskCount { get { int c = 0; foreach (var x in _sciCell) if (x.Visible) c++; return c; } }
     public float ShotCaptionWidth(string lang) => FlaskControl.WidestCaption(lang);
 
@@ -422,7 +434,7 @@ public sealed partial class ActorPanel : PanelContainer
         FillDesigns(a);
         FillLicence(a);
         FillWhy(s);
-        FillFlasks(s);
+        FillFlasks(a);
     }
 
     static readonly StyleBoxFlat _nameOn = Ui.Box(Ui.Hover, Ui.Ink, 1, 4, Ui.R1), _nameOff = Ui.Box(Colors.Transparent, null, 0, 4, 0);   // shared, built once
@@ -465,20 +477,25 @@ public sealed partial class ActorPanel : PanelContainer
         for (int k = 0; k < 5; k++) { _sl[k].Visible = !organ; _gap[k].Visible = organ; }
         _calRow.Visible = InstrumentLogic.CaliperShown(level, _areaMode, Foreign);
         StyleNames();
-        _sciBox.Visible = level > 0 && _areaMode;
+        _sciBox.Visible = _flaskProdRow.Visible = level > 0 && _areaMode;
     }
 
-    // Science: the first links of the why_not chain as Have against Need (the same numbers as the text lines).
-    void FillFlasks(HostSnapshot s)
+    // Science: the research in progress and Production: the alloy coverage, both read from the Session view of the actor (TASK-0119); nothing is inferred from why_not.
+    void FillFlasks(ActorView a)
     {
         int n = 0;
-        IReadOnlyList<Link> links = _shotLinks ?? (s.WhyError == "" && s.Target != null ? s.Links : Array.Empty<Link>());
-        foreach (var f in InstrumentLogic.ResearchFlasks(links, _flaskSci.Length)) SetResearchFlask(n++, f);
+        IReadOnlyList<ResearchView> research = _shotResearch ?? (a.Research.IsDefault ? Array.Empty<ResearchView>() : a.Research);
+        foreach (var f in InstrumentLogic.ResearchFlasks(research, _flaskSci.Length)) SetResearchFlask(n++, f);
         for (int i = 0; i < _flaskSci.Length; i++) _sciCell[i].Visible = i < n;
         _flaskSciRow.Visible = n > 0;
         bool anyThr = false; for (int i = 0; i < n; i++) anyThr |= _sciThr[i];
         _sciThrNote.Visible = anyThr; _sciThrNote.Text = anyThr ? Loc.T("flask.sci.threshold.note") : "";
-        _sciNone.Visible = n == 0;   // no research chain on the current target: say so, never an empty row
+        _sciNone.Visible = n == 0;   // nothing in progress: say so, never an empty row
+        var fl = InstrumentLogic.AlloyFlask(_shotAlloy ?? a.Alloy);
+        _flaskProd.Set(fl.Level, fl.Hatched);
+        int pct = InstrumentLogic.FlaskPercent(fl.Level, fl.Hatched);
+        _flaskProd.TooltipText = Loc.T(InstrumentLogic.AlloyTipKey(fl.State), pct);
+        _prodCap.Text = Loc.T(InstrumentLogic.AlloyCaptionKey(fl.State), pct);
     }
 
     void FillResult(HostSnapshot s)

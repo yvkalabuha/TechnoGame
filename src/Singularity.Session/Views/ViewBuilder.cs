@@ -78,7 +78,24 @@ internal static class ViewBuilder
             new QualityView(w.Policy.QualityProgrammeActive(a), w.Policy.QualityProgrammeStart(a), w.Policy.QualityTriggerCount(a), w.Policy.TrainingTarget(a)),
             new LicenceView(w.Policy.LicenceGen(a), w.Policy.LicenceSeller(a), w.Policy.LicenceStart(a), w.Policy.LicenceMask(a), w.Policy.OfferMask(a),
                 w.Policy.LicenceFlow(a), refusals.MoveToImmutable(), w.LicenceActive(a)),
-            new DisruptionView(disStart, disEnd), withNodes ? Nodes(w, a, next) : Unsubscribed(w, a), designs.MoveToImmutable(), Decisions(w, a, next, stepped));
+            new DisruptionView(disStart, disEnd), withNodes ? Nodes(w, a, next) : Unsubscribed(w, a), designs.MoveToImmutable(), Decisions(w, a, next, stepped),
+            AlloyCoverage.Of(w.Products, w.ProductsLayout, w.Industry, w.Policy.AlloyDeficit(a, next), a, next), Research(w, a));
+    }
+
+    /// <summary>Most research entries a view carries per actor.</summary>
+    internal const int MaxResearch = 5;
+
+    private static ImmutableArray<ResearchView> Research(SliceWorld w, int a)
+    {
+        Span<int> rows = stackalloc int[MaxResearch];
+        int n = w.Knowledge.ResearchInProgress(a, rows);
+        var r = ImmutableArray.CreateBuilder<ResearchView>(n);
+        for (int i = 0; i < n; i++)
+        {
+            Fx6 have = w.Knowledge.Prog(a, rows[i]), need = w.Knowledge.NeedOf(rows[i]);
+            r.Add(new ResearchView(w.Graph.Number[rows[i]], have, need, w.Graph.IsHazard[rows[i]] && have >= need));
+        }
+        return r.MoveToImmutable();
     }
 
     // An actor the view does not carry the nodes of: no block, and the cache keeps none of it (ADR-0025).

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Singularity.Core.WhyNot;
+using Singularity.Core.Products;
+using Singularity.Session;
 
 namespace Singularity.Client.Spike;
 
@@ -36,17 +37,15 @@ public static class InstrumentLogic
     /// <summary>One research flask: a Knowledge link of the why_not chain as Have against Need; Threshold marks a hazard node at its threshold.</summary>
     public readonly record struct ResearchFlask(int Node, double Have, double Need, bool Threshold);
 
-    /// <summary>The flasks of the Science panel from the why_not links: Knowledge links only (product and capability blockers stay as text), in link order, at most <paramref name="max"/>.
-    /// One function for the live panel and the screenshot run.</summary>
-    public static List<ResearchFlask> ResearchFlasks(IReadOnlyList<Link> links, int max)
+    /// <summary>The flasks of the Science panel from the research in progress of the Session view (TASK-0119), in view order, at most <paramref name="max"/>.
+    /// One function for the live panel and the screenshot run; the panel reads nothing else.</summary>
+    public static List<ResearchFlask> ResearchFlasks(IReadOnlyList<ResearchView> research, int max)
     {
         var r = new List<ResearchFlask>();
-        foreach (var l in links)
+        foreach (var v in research)
         {
             if (r.Count >= max) break;
-            if (l.Layer != WhyNotLayer.Knowledge) continue;
-            double have = l.Have.ToDouble(), need = l.Need.ToDouble();
-            r.Add(new ResearchFlask(l.SubjectId, have, need, ThresholdReached(have, need)));
+            r.Add(new ResearchFlask(v.Node, v.Have.ToDouble(), v.Need.ToDouble(), v.Threshold));
         }
         return r;
     }
@@ -75,6 +74,10 @@ public static class InstrumentLogic
         if (supply <= 0) return new(0, true, AlloyState.NoSmelting);
         return deficitFraction > 0 ? new(AlloyLevel(deficitFraction), true, AlloyState.Disrupted) : new(AlloyLevel(deficitFraction), false, AlloyState.Normal);
     }
+
+    /// <summary>The Production flask from the one Session field of alloy coverage: supply under the largest need of a running line is a shortage, otherwise the disruption and the melt decide.</summary>
+    public static AlloyFlaskView AlloyFlask(AlloyCoverage c) =>
+        AlloyFlask(c.Supply.ToDouble(), c.DeficitFraction.ToDouble(), c.Need > Singularity.Kernel.Fx6.Zero ? (c.Supply.ToDouble(), c.Need.ToDouble()) : null);
 
     /// <summary>Percent shown for a flask level, in the caption and in the tooltip alike: rounded, and a hatched (deficit) flask never reads 100 %.</summary>
     public static int FlaskPercent(double level, bool hatched)

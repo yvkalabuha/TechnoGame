@@ -241,40 +241,57 @@ public class InstrumentTests
         Assert.Equal(expected, InstrumentLogic.ThresholdReached(have, need));
     }
 
-    static Link K(int node, double have, double need, WhyNotLayer layer = WhyNotLayer.Knowledge) =>
-        new(layer, WhyNotCause.MissingNode, node, Fx6.FromDouble(have), Fx6.FromDouble(need), ImmutableArray<Lever>.Empty, Fx6.Zero, null);
+    static Singularity.Session.ResearchView R(int node, double have, double need, bool thr = false) =>
+        new(node, Fx6.FromDouble(have), Fx6.FromDouble(need), thr);
 
     [Fact]
-    public void ResearchFlasks_EmptyLinksGiveNoFlask() => Assert.Empty(InstrumentLogic.ResearchFlasks(new Link[0], 3));
+    public void ResearchFlasks_EmptyViewGivesNoFlask() => Assert.Empty(InstrumentLogic.ResearchFlasks(new Singularity.Session.ResearchView[0], 3));
 
     [Fact]
-    public void ResearchFlasks_ThreeKnowledgeLinksGiveThree()
+    public void ResearchFlasks_ReadsTheViewFieldInOrder()
     {
-        var f = InstrumentLogic.ResearchFlasks(new[] { K(1, 0.5, 1), K(2, 0.25, 1), K(3, 0, 1) }, 3);
+        var f = InstrumentLogic.ResearchFlasks(new[] { R(1, 0.5, 1), R(2, 0.25, 1), R(3, 0, 1) }, 3);
         Assert.Equal(new[] { 1, 2, 3 }, f.ConvertAll(x => x.Node));
         Assert.Equal(0.5, f[0].Have);
-    }
-
-    [Fact]
-    public void ResearchFlasks_SkipsOtherLayers()
-    {
-        var f = InstrumentLogic.ResearchFlasks(new[] { K(9, 0, 1, WhyNotLayer.Product), K(4, 0.5, 1), K(8, 0, 1, WhyNotLayer.Capability) }, 3);
-        Assert.Equal(new[] { 4 }, f.ConvertAll(x => x.Node));
+        Assert.Equal(1, f[0].Need);
     }
 
     [Fact]
     public void ResearchFlasks_KeepsTheFirstMax()
     {
-        var f = InstrumentLogic.ResearchFlasks(new[] { K(1, 0, 1), K(2, 0, 1), K(3, 0, 1), K(4, 0, 1) }, 3);
+        var f = InstrumentLogic.ResearchFlasks(new[] { R(1, 0, 1), R(2, 0, 1), R(3, 0, 1), R(4, 0, 1) }, 3);
         Assert.Equal(new[] { 1, 2, 3 }, f.ConvertAll(x => x.Node));
     }
 
     [Fact]
-    public void ResearchFlasks_FlagsAThresholdLink()
+    public void ResearchFlasks_CarriesTheThresholdFlagOfTheView()
     {
-        var f = InstrumentLogic.ResearchFlasks(new[] { K(1, 0.25, 0.25), K(2, 0.125, 1) }, 3);
+        var f = InstrumentLogic.ResearchFlasks(new[] { R(1, 0.25, 0.25, true), R(2, 0.125, 1) }, 3);
         Assert.True(f[0].Threshold);
         Assert.False(f[1].Threshold);
+    }
+
+    static Singularity.Core.Products.AlloyCoverage Cov(double supply, double need, double deficit) =>
+        new(Fx6.FromDouble(supply), Fx6.FromDouble(need), Fx6.FromDouble(deficit));
+
+    [Fact]
+    public void AlloyFlask_Coverage_SupplyBelowTheNeedOfARunningLineIsAShortage()
+    {
+        var f = InstrumentLogic.AlloyFlask(Cov(40, 100, 0));
+        Assert.Equal(InstrumentLogic.AlloyState.Shortage, f.State);
+        Assert.Equal(0.4, f.Level, 6);
+        Assert.True(f.Hatched);
+    }
+
+    [Fact]
+    public void AlloyFlask_Coverage_EnoughSupplyIsNormal_NoMeltIsNoSmelting_CutIsDisrupted()
+    {
+        Assert.Equal(InstrumentLogic.AlloyState.Normal, InstrumentLogic.AlloyFlask(Cov(100, 100, 0)).State);
+        Assert.Equal(InstrumentLogic.AlloyState.Normal, InstrumentLogic.AlloyFlask(Cov(10, 0, 0)).State);   // no running line: nothing to be short of
+        Assert.Equal(InstrumentLogic.AlloyState.NoSmelting, InstrumentLogic.AlloyFlask(Cov(0, 0, 0)).State);
+        var d = InstrumentLogic.AlloyFlask(Cov(75, 50, 0.25));
+        Assert.Equal(InstrumentLogic.AlloyState.Disrupted, d.State);
+        Assert.Equal(0.75, d.Level, 6);
     }
 
     [Fact]

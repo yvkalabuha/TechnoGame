@@ -340,11 +340,11 @@ area.locked.note,The term is provisional. There are no figures or controls here 
 area.production.later,Supply priority and the choice of variants: in M1. Here are the design lines of the power.,Приоритет снабжения и выбор вариантов: в M1. Здесь линии изделий державы.
 area.finance.later,Taxes by region: M1; trade and embargo: M1–M2.,Налоги по регионам: M1; торговля и эмбарго: M1–M2.
 tip.area,{0} · {1},{0} · {1}
-flask.sci.cap,Progress of the first links of the chain,Ход первых звеньев цепи
+flask.sci.cap,Research in progress (the nearest to completion),Исследования в работе (ближайшие к завершению)
 flask.sci.tip,{0}: {1}% of the need ({2} of {3}),{0}: {1}% от потребности ({2} из {3})
 flask.sci.threshold,{0}: threshold reached ({1} of {2}); discovery is not certain (hatched),{0}: порог достигнут ({1} из {2}); открытие не гарантировано (штриховка)
 flask.sci.threshold.note,threshold reached: discovery not certain,порог достигнут: открытие не гарантировано
-flask.sci.none,No research in progress on the current target,Нет хода исследования по текущей цели
+flask.sci.none,No research in progress,Нет хода исследования
 flask.alloy.cap.ok,Alloy: sufficient,Сплав: хватает
 flask.alloy.cap.deficit,Alloy: {0} % of demand · low,Сплав: {0} % потребности · мало
 flask.alloy.cap.disrupted,Alloy supply: {0} % of normal,Снабжение сплавом: {0} % от обычного

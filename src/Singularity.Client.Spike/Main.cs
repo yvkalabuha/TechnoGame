@@ -1221,17 +1221,22 @@ public sealed partial class Main : Node3D
                 if (!ScanMonths(6)) break;
                 if (_liveFirst >= 0)
                 {
-                    _shotLog += $"live science: first Knowledge link: {_host.Layout.ActorIds[_liveFirst]} at step {_liveMonths} (date {_host.Snap.Date})\n";
-                    _host.WhyActor = _liveFirst; _areaPanel.ShowActor(_liveFirst); _shotStep = 145; _shotT = 0; break;
+                    _shotLog += $"live science: first research in progress: {_host.Layout.ActorIds[_liveFirst]} at step {_liveMonths} (date {_host.Snap.Date})\n";
+                    _areaPanel.ShowActor(_liveFirst); _shotStep = 145; _shotT = 0; break;
                 }
-                if (_liveMonths >= LiveMonthLimit) { LogLiveShares(); InstFail($"no live research chain in {_liveMonths} months for any power (date {_host.Snap.Date})"); }
+                if (_liveMonths >= LiveMonthLimit) { LogLiveShares(); InstFail($"no live research in progress in {_liveMonths} months for any power (date {_host.Snap.Date})"); }
                 _shotT = 0; break;
             case 145 when _shotT >= 0.8:
             {
-                int links = LiveKnowledgeLinks(), flasks = _areaPanel.ShotFlaskCount, want = Math.Min(links, 3);
-                _shotLog += $"live science: actor {_host.Layout.ActorIds[_liveFirst]}, knowledge links {links}, flasks shown {flasks}, date {_host.Snap.Date}\n";
-                if (links == 0) { InstFail("live science check failed: the snapshot lost its Knowledge links before the check"); break; }
-                if (flasks != want) { InstFail($"live science check failed: snapshot has {links} Knowledge links, the panel shows {flasks} flasks, expected {want}"); break; }
+                int links = LiveResearch(_liveFirst), flasks = _areaPanel.ShotFlaskCount, want = Math.Min(links, 3);
+                _shotLog += $"live science: actor {_host.Layout.ActorIds[_liveFirst]}, research in progress {links}, flasks shown {flasks}, date {_host.Snap.Date}\n";
+                if (links == 0) { InstFail("live science check failed: the view lost its research in progress before the check"); break; }
+                if (flasks != want) { InstFail($"live science check failed: the view has {links} researches in progress, the panel shows {flasks} flasks, expected {want}"); break; }
+                // the alloy flask reads the same view: its caption is what the view field gives
+                var cov = _host.Snap.View.Actors[_liveFirst].Alloy; var af = InstrumentLogic.AlloyFlask(cov);
+                string wantCap = Loc.T(InstrumentLogic.AlloyCaptionKey(af.State), InstrumentLogic.FlaskPercent(af.Level, af.Hatched));
+                _shotLog += $"live alloy: actor {_host.Layout.ActorIds[_liveFirst]}, supply {cov.Supply.ToDouble():F1}, need {cov.Need.ToDouble():F1}, deficit {cov.DeficitFraction.ToDouble():F2}, state {af.State}, caption \"{_areaPanel.ShotAlloyCaption}\"\n";
+                if (_areaPanel.ShotAlloyCaption != wantCap) { InstFail($"live alloy check failed: caption \"{_areaPanel.ShotAlloyCaption}\", the view field gives \"{wantCap}\""); break; }
                 var gr = _areaPanel.GetGlobalRect(); float k = PxPerDu();
                 SaveShot("flask_science_live.png", new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)));
                 CloseArea(); _host.WhyActor = _player; _shotStep = 146; _shotT = 0; break;
@@ -1351,11 +1356,7 @@ public sealed partial class Main : Node3D
             _host.StepTicks(30);
             if (!WaitFor(() => _host.Snap.Tick >= target, "a simulation step")) return false;
             for (int a = 0; a < na; a++)
-            {
-                _host.WhyActor = a;
-                if (!WaitFor(() => _host.Snap.WhyActor == a && _host.Snap.Tick >= target, "the why_not snapshot of a power")) return false;
-                if (LiveKnowledgeLinks() > 0) { _liveHit[a]++; if (_liveFirst < 0) _liveFirst = a; }
-            }
+                if (LiveResearch(a) > 0) { _liveHit[a]++; if (_liveFirst < 0) _liveFirst = a; }
             _liveMonths++;
             if (_liveFirst >= 0 && _shotStep == 144) return true;   // the first month with a link: stop here for the panel check
         }
@@ -1365,11 +1366,15 @@ public sealed partial class Main : Node3D
     void LogLiveShares()
     {
         for (int a = 0; a < _liveHit.Length; a++)
-            _shotLog += $"live science share: {_host.Layout.ActorIds[a]} has a Knowledge link in {_liveHit[a]} of {_liveMonths} steps ({100.0 * _liveHit[a] / Math.Max(_liveMonths, 1):F1} %)\n";
+        {
+            double share = 100.0 * _liveHit[a] / Math.Max(_liveMonths, 1);
+            _shotLog += $"live science share: {_host.Layout.ActorIds[a]} has research in progress in {_liveHit[a]} of {_liveMonths} steps ({share:F1} %)\n";
+            if (share < 80) InstFail($"live science share check failed: {_host.Layout.ActorIds[a]} shows research flasks in {share:F1} % of {_liveMonths} months, expected at least 80 %");
+        }
     }
 
-    // Knowledge links the panel would read: the same condition as the live path of the Science flasks.
-    int LiveKnowledgeLinks() => _host.Snap is { WhyError: "", Target: not null } sn ? Singularity.Client.Spike.InstrumentLogic.ResearchFlasks(sn.Links, int.MaxValue).Count : 0;
+    // Flasks the panel would read for an actor: the same field and function as the live path of the Science flasks.
+    int LiveResearch(int actor) => _host.Snap.View.Actors[actor].Research is { IsDefault: false } r ? InstrumentLogic.ResearchFlasks(r, int.MaxValue).Count : 0;
 
     // The shot run exits non-zero when any live check failed (T6, rail, tree, input). Palette validator failures that exist on main are listed below by exact name: reported, not failing.
     bool _shotFailed;
@@ -1580,7 +1585,7 @@ public sealed partial class Main : Node3D
         _instSkipShot = false;
         if (++_instI >= 18)
         {
-            _areaPanel.ShotResearch(null); InstrumentLogic.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); CloseArea();
+            _areaPanel.ShotResearch(null); _areaPanel.ShotAlloy(null); InstrumentLogic.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); CloseArea();
             return true;
         }
         int q = _instI % 9, era = q % 3;
@@ -1588,19 +1593,30 @@ public sealed partial class Main : Node3D
         InstrumentLogic.YearOverride = InstYears[era];
         OpenArea(InstAreas[q / 3]);
         // shot-only state: the scenario has no research chain
-        _areaPanel.ShotResearch(InstAreas[q / 3] == AreaId.Science ? new[] { ShotLink("s8.fnd.compressible_flow", 3, 4), ShotLink("s8.fnd.boundary_layer", 1, 5), ShotLink("s7.fnd.brayton_cycle", 5, 5) } : null);
+        _areaPanel.ShotResearch(InstAreas[q / 3] == AreaId.Science ? new[] { ShotResearchView("s8.fnd.compressible_flow", 3, 4), ShotResearchView("s8.fnd.boundary_layer", 1, 5), ShotResearchView("s7.fnd.brayton_cycle", 5, 5, true) } : null);
+        // the Production frames show the four alloy states by the era step; the live state is checked in the live run
+        _areaPanel.ShotAlloy(InstAreas[q / 3] == AreaId.Production ? ShotCoverage(_instI < 9 ? era : 3) : null);
         if (InstAreas[q / 3] == AreaId.Finance) _instPhase = 1;   // an unsent edit and the focus come from real input: pencil marker and focus frame show
         return false;
     }
 
-    // A why_not Knowledge link for the shot fixture: the panel reads links the same way as in play.
-    Link ShotLink(string id, long have, long need)
+    // A research entry for the shot fixture: the panel reads the same view type as in play.
+    Singularity.Session.ResearchView ShotResearchView(string id, long have, long need, bool threshold = false)
     {
         var n = _host.Data.Nodes;
         int number = -1;
         for (int i = 0; i < n.Count; i++) if (n.Id[i] == id) number = n.Number[i];
-        return new Link(WhyNotLayer.Knowledge, WhyNotCause.MissingNode, number, Singularity.Kernel.Fx6.FromInt(have), Singularity.Kernel.Fx6.FromInt(need), System.Collections.Immutable.ImmutableArray<Lever>.Empty, Singularity.Kernel.Fx6.Zero, null);
+        return new Singularity.Session.ResearchView(number, Singularity.Kernel.Fx6.FromInt(have), Singularity.Kernel.Fx6.FromInt(need), threshold);
     }
+
+    // Alloy coverage fixtures for the four states: 0 shortage, 1 disruption, 2 no melt, 3 sufficient.
+    static Singularity.Core.Products.AlloyCoverage ShotCoverage(int state) => state switch
+    {
+        0 => new(Singularity.Kernel.Fx6.FromInt(40), Singularity.Kernel.Fx6.FromInt(100), Singularity.Kernel.Fx6.Zero),
+        1 => new(Singularity.Kernel.Fx6.FromInt(75), Singularity.Kernel.Fx6.FromInt(50), Singularity.Kernel.Fx6.FromDouble(0.25)),
+        2 => new(Singularity.Kernel.Fx6.Zero, Singularity.Kernel.Fx6.Zero, Singularity.Kernel.Fx6.Zero),
+        _ => new(Singularity.Kernel.Fx6.FromInt(100), Singularity.Kernel.Fx6.FromInt(50), Singularity.Kernel.Fx6.Zero),
+    };
 
     static void PressKey(Key k, bool pressed = true, bool shift = false) => Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = pressed, ShiftPressed = shift });
 
