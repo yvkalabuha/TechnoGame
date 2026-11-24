@@ -298,6 +298,10 @@ public static class AudioBusPlan
         return Names.Where(n => !have.Contains(n)).ToArray();
     }
 
+    /// <summary>Effects to install on Master given how many it already has: none on a second start, so the limiter and the recorder exist once and the recorder is reused.</summary>
+    public static IReadOnlyList<BusEffect> MasterToInstall(int existingEffects) =>
+        existingEffects > 0 ? Array.Empty<BusEffect>() : Effects("Master");
+
     /// <summary>Effects of a bus. Only UI (P2, P3) is low-passed; Alert (P0, P1) is never filtered.</summary>
     public static IReadOnlyList<BusEffect> Effects(string bus) => bus switch
     {

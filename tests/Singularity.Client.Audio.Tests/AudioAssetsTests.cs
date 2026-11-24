@@ -65,6 +65,8 @@ public class AudioAssetsTests
         Assert.Equal(new[] { BusEffect.LowPass }, AudioBusPlan.Effects("UI"));
         foreach (var n in new[] { "Music", "Ambient", "Alert" }) Assert.Empty(AudioBusPlan.Effects(n));
         Assert.Equal(new[] { BusEffect.HardLimiter, BusEffect.Record }, AudioBusPlan.Effects("Master"));
+        Assert.Equal(new[] { BusEffect.HardLimiter, BusEffect.Record }, AudioBusPlan.MasterToInstall(0));
+        Assert.Empty(AudioBusPlan.MasterToInstall(2));   // second start: nothing added, the existing recorder is reused
         Assert.Equal(AudioBusPlan.Names, AudioBusPlan.ToCreate(new[] { "Master" }));
         Assert.Empty(AudioBusPlan.ToCreate(new[] { "Master", "Music", "Ambient", "UI", "Alert" }));
         Assert.Equal(new[] { "Alert" }, AudioBusPlan.ToCreate(new[] { "Music", "Ambient", "UI" }));

@@ -56,12 +56,9 @@ public sealed partial class AudioDirector : Node
                 if (fx == BusEffect.LowPass)
                     AudioServer.AddBusEffect(i, new AudioEffectLowPassFilter { CutoffHz = (float)AudioSettings.UiCutoffHz, Resonance = 0.5f });
         }
-        if (AudioServer.GetBusEffectCount(0) == 0)
-        {
-            AudioServer.AddBusEffect(0, new AudioEffectHardLimiter { CeilingDb = -1f });
-            AudioServer.AddBusEffect(0, new AudioEffectRecord());
-        }
-        AudioEffectRecord? rec = null;
+        foreach (var fx in AudioBusPlan.MasterToInstall(AudioServer.GetBusEffectCount(0)))
+            AudioServer.AddBusEffect(0, fx == BusEffect.HardLimiter ? new AudioEffectHardLimiter { CeilingDb = -1f } : new AudioEffectRecord());
+        AudioEffectRecord rec = null;
         for (int e = 0; e < AudioServer.GetBusEffectCount(0); e++) if (AudioServer.GetBusEffect(0, e) is AudioEffectRecord r) rec = r;
         _rec = rec!;
         LoadSettings();
