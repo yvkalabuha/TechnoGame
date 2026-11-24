@@ -5,7 +5,7 @@
 ## Краткий вывод
 - Все эталоны траекторий на текущих данных изменились по двум причинам этой ветки: **узлы 82–99** (промежуточные ступени G5/G6 ред. 3.1, решение владельца № 457, плюс правки `requires`/`informs` узлов 65–81) и **умолчания цены опережения** `k` 0,02, степень 2, потолок 10 (№ 465). Освоение производства (№ 452) и старение парка (#431) уже были в базе ветки и в прошлых эталонах — они причиной этой перезаписи не являются.
 - Тесты идентичности («старые колонки равны сборке до изменения») не удалены и не ослаблены по смыслу: они идут **нейтральным прогоном** — данные 61 узла (`Fixtures/core-g4`) с явным `AheadCostK = 0` (`SliceTestData.CreateLegacyNeutral`).
-- L1/L2 на новых эталонах: threads 1 = 4 [Факт, ниже]. `verify.py` после перезаписи: все наборы тестов и selftest зелёные, **кроме одного архитектурного теста**, который к эталонам не относится (раздел «Остаток»).
+- L1/L2 на новых эталонах: threads 1 = 4 [Факт, ниже]. `verify.py` после перезаписи: все наборы тестов и selftest зелёные (архитектурный тест исправлен в 4d37a33).
 
 ## Перезаписанные эталоны и причина
 | Где | Эталон | Причина |
@@ -28,6 +28,3 @@
 ## L1/L2 на новых эталонах [Факт]
 - `verify.py` (`nice -n 10`, голова `3eaa727`): зелёные Session 530/534 (4 пропущены), в том числе `LinkedRunTests.L1_TwoRuns_SameHash_AndMatchesGolden`, `ViewTests.Views_DoNotChangeTheHash_AndAreEqualAcrossThreads_L1`, `ProductAiSessionTests.WithTheAiOn_L2_ThreadsAndChunksGiveOneHashEveryMonth…`, `TwoWorldsOnOnePoolTests` (threads 1/2/4); Core 1133/1133 (в т. ч. `KnowledgeAuditTests` L2 3 и 8 потоков, 1020 мес., `k` > 0); Lab 213/213; selftest Lab OK (в т. ч. «full run to 2030-12 … threads 1 = 2»).
 - Матрицы зонда на 99 узлах с ценой `k` 0,02 / степень 2 / потолок 10 (траектория умолчаний № 465, `golden_hash` другой из-за колонок `run.k.*`): threads 1 = 4 у всех 10 seeds, 1024 мес. (g5-g6-probe.md §10.7).
-
-## Остаток (не эталон)
-- `Architecture.Tests.NoMutableStaticsTests.KernelCoreSession_UseNoUnsafeApi_ExceptListedMethodCalleePairs` падает: `KnowledgeGraph.Create → ImmutableCollectionsMarshal.AsImmutableArray(Enumerable.ToArray)` встречается 10 раз, в списке исключений — 9. Причина — новый массив `AnchorYear` в `KnowledgeGraph.Create` (developer `b8ff381`). Правка — счётчик 9 → 10 в `tests/Singularity.Architecture.Tests/NoMutableStaticsTests.cs` (зона developer) или запись массива без `ToArray`.

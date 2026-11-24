@@ -205,7 +205,7 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
     }
 
     // AHEAD_POW (TASK-0147, #458): integer exponent of the ahead-of-time cost, 1…4 (AHEAD_K ≥ 0, AHEAD_MAX ≥ 1 go through AtLeast). Absent = null
-    // (the defaults of KnowledgeParams: k 0 = off, pow 1, max 4); the Session refuses a bad value with ArgumentException, the Lab earlier.
+    // (the defaults of KnowledgeParams: k 0.02, pow 2, max 10, owner #465; k 0 = off); the Session refuses a bad value with ArgumentException, the Lab earlier.
     private static int? AheadPow(ParamSet p)
     {
         if (!p.Contains("AHEAD_POW"))
