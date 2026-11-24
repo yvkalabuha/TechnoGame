@@ -59,7 +59,7 @@ class LimitStateTest(unittest.TestCase):
 class BoxTest(unittest.TestCase):
     def wrap(self, writable, cwd="/work/x"):
         box = sketch.Box(Path("/h/brain"), Path("/h/conv"), writable, home=Path("/home/u"), bwrap="/usr/bin/bwrap")
-        return box.wrap(["/home/u/.local/bin/agy", "--version"], cwd)
+        return box.wrap(["/home/u/.local/bin/agy", "--settings", "/tmp/s/settings.json"], cwd)
 
     def pairs(self, argv, flag):
         return [tuple(argv[i + 1:i + 3]) for i, a in enumerate(argv) if a == flag]
@@ -78,7 +78,8 @@ class BoxTest(unittest.TestCase):
             self.assertNotIn(secret, everything)
         self.assertNotIn("--share-net", argv)
         self.assertNotIn("--unshare-net", argv)  # the model API needs the network
-        self.assertEqual(argv[-2:], ["/home/u/.local/bin/agy", "--version"])
+        self.assertIn(("/tmp/s/settings.json", "/tmp/s/settings.json"), self.pairs(argv, "--ro-bind"))  # rules file visible
+        self.assertEqual(argv[-3:], ["/home/u/.local/bin/agy", "--settings", "/tmp/s/settings.json"])
 
     def test_sketch_workdir_is_writable_and_missing_bwrap_refuses(self):
         self.assertIn(("/work/x", "/work/x"), self.pairs(self.wrap(True), "--bind"))

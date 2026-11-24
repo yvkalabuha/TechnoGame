@@ -430,6 +430,8 @@ class Box:
             a += ["--ro-bind-try", "/dev/null", f"{gem}/{name}"]
         a += ["--bind-try", f"{home}/.config/antigravity", f"{home}/.config/antigravity",
               "--bind-try", f"/run/user/{os.getuid()}/bus", f"/run/user/{os.getuid()}/bus"]
+        if "--settings" in cmd:  # the per-run rule file lives outside the Box
+            a += ["--ro-bind", cmd[cmd.index("--settings") + 1], cmd[cmd.index("--settings") + 1]]
         if cwd:
             a += ["--bind" if self.cwd_writable else "--ro-bind", str(cwd), str(cwd), "--chdir", str(cwd)]
         return a + ["--"] + list(cmd)
