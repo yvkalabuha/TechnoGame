@@ -683,7 +683,7 @@ public sealed partial class TechTree : Control
         occupied.Add(new Rect2(c - new Vector2(Unit * 0.7f, Unit * 0.7f), new Vector2(Unit * 1.4f, Unit * 1.4f)));
         for (int w = 0; w < 5; w++)   // wedge names
         {
-            occupied.Add(WedgeLabel(w).rect.Grow(2)); occupied.Add(_sumRects[w].Grow(2));
+            occupied.Add(WedgeLabel(w).rect.Grow(2)); occupied.Add(_sumRects[w].Grow(6));
         }
         occupied.AddRange(_countRects);   // the count tags of the cells are drawn first; labels keep off them
         // The route is an obstacle too, so that no label sits on it.
@@ -698,7 +698,7 @@ public sealed partial class TechTree : Control
         if (CurLod == Lod.Icons) foreach (int i in byNum) Add(i);
         var area = Area;
         var hard = _lbHard; hard.Clear();
-        for (int w = 0; w < 5; w++) { hard.Add(WedgeLabel(w).rect.Grow(2)); hard.Add(_sumRects[w].Grow(2)); }
+        for (int w = 0; w < 5; w++) { hard.Add(WedgeLabel(w).rect.Grow(2)); hard.Add(_sumRects[w].Grow(6)); }
         hard.AddRange(_countRects);
         var placed = _lbPlaced; placed.Clear();
         bool Place(int i, string text, FontKind kind, bool far = false, bool force = false)
@@ -844,8 +844,8 @@ public sealed partial class TechTree : Control
 
     // Cached legend content: localized texts (rebuilt when the language changes), colours and closed node outlines (built once).
     bool _lgDirty = true;
-    // Texts: 0 rings head, 1 states head, 2 disciplines head, 3 lines head, 4 route, 5 root, 6 why the root, 7 close; 8-12 disciplines; 13-18 ring names; 19-23 states, 24 goal, 25 links of the selected node.
-    readonly string[] _lgText = new string[26];
+    // Texts: 0 rings head, 1 states head, 2 disciplines head, 3 lines head, 4 route, 5 root, 6 why the root, 7 close; 8-12 disciplines; 13-18 ring names; 19-23 states, 24 goal, 25 links of the selected node, 26 the centre dial.
+    readonly string[] _lgText = new string[27];
     readonly LegendData.Discipline[] _lgDiscs = LegendData.Disciplines(Palette.C);
     Color[] _lgWash, _lgLine;
     bool _lgBuilt;
@@ -858,7 +858,7 @@ public sealed partial class TechTree : Control
         for (int k = 0; k < 5; k++) _lgText[8 + k] = Loc.T(_lgDiscs[k].NameKey);
         for (int k = 0; k < 6; k++) _lgText[13 + k] = (k + 1) + "  " + Loc.T(LegendData.Types[k].NameKey);
         for (int k = 0; k < 5; k++) _lgText[19 + k] = Loc.T(TreeClarity.LegendKey(TreeClarity.LegendStates[k]));
-        _lgText[24] = Loc.T("legend.goal"); _lgText[25] = Loc.T("legend.links");
+        _lgText[24] = Loc.T("legend.goal"); _lgText[25] = Loc.T("legend.links"); _lgText[26] = Loc.T("legend.dial");
         if (_lgBuilt) return;
         _lgBuilt = true;
         _lgWash = new Color[5]; _lgLine = new Color[5];
@@ -892,6 +892,7 @@ public sealed partial class TechTree : Control
             _cv.DrawCircle(mk, 8, _lgWash[k]); _cv.DrawArc(mk, 8, 0, Mathf.Tau, 24, _lgLine[k], 1.8f, true);
             Text(new Vector2(xl + 36, y), _lgText[8 + k], 14, Ui.Ink2);
         }
+        Para(new Vector2(xl, Y(13, 8)), _lgText[26], colW, 14, Ui.Ink2);   // the centre dial: a year clock
         // right: states, lines
         Head(xr, Y(0), 1);
         for (int k = 0; k < 5; k++)

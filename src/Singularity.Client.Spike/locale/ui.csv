@@ -161,7 +161,7 @@ stmt.overview,OVERVIEW OF {0} NODES: discipline × generation,ОБЗОР {0} У�
 inset.title,{0} · knowledge,{0} · знание
 inset.why,WHY NOT,ПОЧЕМУ НЕ
 inset.goal,Goal: {0} · steps to the blocker: {1},Цель: {0} · шагов до препятствия: {1}
-inset.eta," · ETA {0} mo. (a number, not an interval)"," · срок {0} мес. (число, не интервал)"
+inset.eta," · ETA: ≈ {0} mo."," · срок: ≈ {0} мес."
 inset.hint,The first link is the cheapest; the goal date is set by the longest chain (view B).,Первое звено — ближайшее по цене; дату цели задаёт самая длинная цепочка (вид B).
 inset.node,NODE,УЗЕЛ
 card.requires,REQUIRES,ЗАВИСИТ ОТ
@@ -395,6 +395,7 @@ ui.menu.save.why.notready,Saving is not ready yet,Сохранение пока 
 ui.menu.save.why.nogame,No game started,Нет начатой игры
 menu.reason.nogame,No game running,Нет игры
 legend.goal,"Goal (double frame, node shape)",Цель (двойная рамка по форме)
+legend.dial,"Centre: year clock 1910-2100, the hand shows today","В центре: часы лет 1910–2100, стрелка — сегодня"
 legend.links,Links of the selected node,Связи выбранного узла
 ui.tree.anchor.tip.est,"The year is an estimate (an orientation point in history), not a documented date","Год оценочный (ориентир по истории), а не документированная дата"
 ui.tree.anchor.est,Historical date (estimate): {0}{1},Историческая дата (оценка): {0}{1}
