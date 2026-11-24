@@ -28,11 +28,6 @@ public static class Ui
     public static readonly Color[] DiscLine = DiscInk.Select(i => InkLine[i]).ToArray(), DiscWash = DiscInk.Select(i => InkWash[i]).ToArray(), DiscText = DiscInk.Select(i => InkText[i]).ToArray();
     public static Color[] Tints => TintCache ??= Palette.C.Tints.Select(H).ToArray();
     static Color[] TintCache;
-    // Node-card blocks (UI_DESIGN_SYSTEM §17): their own muted tokens, none shared with a discipline ink. Neutral steel, terracotta, taupe, paper.
-    public static readonly Color AffLine = new("6B6F78"), AffWash = new("E4E5E6"), AffText = new("3F4249"),
-        RaiseLine = new("B5562F"), RaiseWash = new("F0DCCF"), RaiseText = new("7A3A1E"),
-        OpenLine = new("8A6F5E"), OpenWash = new("E9DFD7"), OpenText = new("5A4538"),
-        ReqLine = new("86837C"), ReqWash = new("EDEAE0"), ReqText = new("55575A");
 
     public static Font FontOf(FontKind k) => k switch { FontKind.Mono => Fonts.Mono, FontKind.Draft => Fonts.DraftBold, FontKind.Map => Fonts.Map, _ => Fonts.Text };
 
@@ -132,15 +127,16 @@ public sealed partial class Segment : HBoxContainer
     readonly string[] _items;
     readonly int _size;
     readonly bool _translate;
+    readonly float _minH;
     public event Action<int> Changed;
     public int Selected { get; private set; }
 
     /// <summary>Unavailable segment: cells are disabled (rule frame, ink-3 text).</summary>
     public bool Enabled { set { foreach (var c in _cells) { c.Disabled = !value; if (!value) { c.AddThemeStyleboxOverride("disabled", Ui.Box(Ui.Paper, Ui.Rule, 1, 8)); c.AddThemeColorOverride("font_disabled_color", Ui.Ink3); } } } }
 
-    public Segment(string[] items, int selected, int size = 14, bool translate = true, bool focusable = false)
+    public Segment(string[] items, int selected, int size = 14, bool translate = true, bool focusable = false, float minHeight = 0)
     {
-        _items = items; _size = Math.Max(size, Ui.MinSize); _translate = translate;
+        _minH = minHeight; _items = items; _size = Math.Max(size, Ui.MinSize); _translate = translate;
         AddThemeConstantOverride("separation", -1);
         _cells = new Button[items.Length];
         for (int i = 0; i < items.Length; i++)
@@ -164,7 +160,7 @@ public sealed partial class Segment : HBoxContainer
     {
         float w = 0;
         foreach (var it in _items) w = Math.Max(w, Fonts.Text.GetStringSize(_translate ? Loc.T(it) : it, HorizontalAlignment.Left, -1, _size).X);
-        foreach (var c in _cells) c.CustomMinimumSize = new Vector2(MathF.Ceiling(w) + 18, 0);
+        foreach (var c in _cells) c.CustomMinimumSize = new Vector2(MathF.Ceiling(w) + 18, _minH);
     }
 
     public void Select(int i, bool notify)

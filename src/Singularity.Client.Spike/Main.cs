@@ -25,13 +25,8 @@ public sealed partial class Main : Node3D
     Vector2 _pressPos; bool _pressed, _dragged;
     int _selected;
     bool _showHatch = true;
-    readonly List<ShaderMaterial> _factoryMats = new();
-    Node3D _chimney;
     readonly List<ShaderMaterial> _allObjMats = new();
-    Node3D _plane, _planeAnchor;
-    float _planeAngle;
     double _t;
-    string _factoryState = "";
     readonly Dictionary<string, long> _startup = new();
     readonly Stopwatch _sw = Stopwatch.StartNew();
 
@@ -507,82 +502,16 @@ public sealed partial class Main : Node3D
         return m;
     }
 
-    Node3D Anchor(float lon, float lat)
-    {
-        var p = GlobeData.ToSphere(lon, lat);
-        var north = (Vector3.Up - p * p.Y).Normalized();
-        var a = new Node3D();
-        AddChild(a);
-        a.LookAtFromPosition(p, p + north, p); // local +Y = surface normal
-        return a;
-    }
-
-    /// <summary>Loads a CC0 model, strips its materials, normalises its size and puts its base on the anchor.</summary>
-    Node3D PlaceModel(Node3D anchor, string res, float size, Vector3 offset, List<ShaderMaterial> mats = null)
-    {
-        Node3D root;
-        if (res.EndsWith(".obj"))
-        {
-            root = new Node3D();
-            root.AddChild(new MeshInstance3D { Mesh = GD.Load<Mesh>(res) });
-        }
-        else root = GD.Load<PackedScene>(res).Instantiate<Node3D>();
-        var box = Bounds(root);
-        float s = size / Math.Max(box.Size.X, Math.Max(box.Size.Y, box.Size.Z));
-        foreach (var mi in AllMeshes(root))
-        {
-            var m = NewObjMat(mi.Mesh.GetAabb());
-            mi.MaterialOverride = m;
-            mats?.Add(m);
-        }
-        root.Scale = Vector3.One * s;
-        root.Position = offset - new Vector3(box.GetCenter().X, box.Position.Y, box.GetCenter().Z) * s;
-        var holder = new Node3D { Position = Vector3.Zero };
-        anchor.AddChild(holder);
-        holder.AddChild(root);
-        holder.Position = Vector3.Zero;
-        return holder;
-    }
-
     static IEnumerable<MeshInstance3D> AllMeshes(Node n)
     {
         if (n is MeshInstance3D mi && mi.Mesh != null) yield return mi;
         foreach (var c in n.GetChildren()) foreach (var r in AllMeshes(c)) yield return r;
     }
 
-    static Aabb Bounds(Node3D root)
-    {
-        bool first = true; Aabb res = default;
-        foreach (var mi in AllMeshes(root))
-        {
-            var t = mi.Transform; Node p = mi.GetParent();
-            while (p != null && p != root && p is Node3D n3) { t = n3.Transform * t; p = p.GetParent(); }
-            var b = t * mi.Mesh.GetAabb();
-            res = first ? b : res.Merge(b); first = false;
-        }
-        return res;
-    }
-
+    // The demo factory, airfield (runway strip, hangar, circling plane) and water tower of the spike were removed (TASK-0136 F10): they were grey blocks on Germany that stood for nothing in the simulation.
     void BuildObjects()
     {
-        // The demo factory, aerodrome and the 300 benchmark buildings are spike scenery: only the benchmark run builds them (O-047).
-        if (!_bench) return;
-        // Factory site (Germany): building under construction, chimney appears when in service, water tower, tank.
-        var factory = Anchor(10.0f, 51.0f);
-        PlaceModel(factory, "res://assets/models/building-a.glb", 0.010f, Vector3.Zero, _factoryMats);
-        _chimney = PlaceModel(factory, "res://assets/models/chimney-large.glb", 0.012f, new Vector3(0.007f, 0, 0));
-        PlaceModel(factory, "res://assets/models/water-tower.glb", 0.010f, new Vector3(-0.008f, 0, 0.004f));
-
-        // Airfield (Germany, east): hangar + runway strip (primitive, not an asset) + the aircraft circling.
-        var air = Anchor(13.4f, 52.5f);
-        PlaceModel(air, "res://assets/models/building-t.glb", 0.007f, new Vector3(0.006f, 0, -0.004f));
-        var runwayBox = new BoxMesh { Size = new Vector3(0.030f, 0.0002f, 0.003f) };
-        var runway = new MeshInstance3D { Mesh = runwayBox, MaterialOverride = NewObjMat(runwayBox.GetAabb()) };
-        ((ShaderMaterial)runway.MaterialOverride).SetShaderParameter("base", new Color("9C9A93"));
-        air.AddChild(runway);
-        _planeAnchor = air;
-        _plane = PlaceModel(air, "res://assets/models/funky_aircraft_low.obj", 0.006f, Vector3.Zero);
-
+        if (!_bench) return;   // the 300 benchmark buildings are scenery of the benchmark run only (O-047)
         // 300 instances of one model on land (P6: instancing cost).
         var scene = GD.Load<PackedScene>("res://assets/models/building-j.glb").Instantiate<Node3D>();
         var mesh = AllMeshes(scene).First().Mesh;
@@ -773,7 +702,6 @@ public sealed partial class Main : Node3D
         FlyStep(delta);
         UpdateCamera();
         if (_audio != null) { _audio.Actor = _player; _audio.CameraMoved(new Vector2(_yaw + _pitch * 1.7f, _dist)); }
-        AnimateObjects();
         if (_debug)
         {
             string sel = _selected == 0 ? "-" : _data.Countries[_selected - 1].Name;
@@ -805,21 +733,6 @@ public sealed partial class Main : Node3D
         foreach (var d in AreaData.All) if (d.Id != AreaId.Map) _rail.SetBadge(d.Id, count[(int)d.Id], sev[(int)d.Id]);
     }
     (AreaId Id, int Count, int Sev)[] _pinBadges;
-
-    void AnimateObjects()
-    {
-        if (_plane == null) return;   // no demo scenery outside the benchmark run
-        // Loop: 8 s under construction (progress 0..1), then 4 s in service.
-        double c = _t % 12.0;
-        float progress = c < 8 ? (float)(c / 8.0) : 1f;
-        bool inService = c >= 8;
-        foreach (var m in _factoryMats) m.SetShaderParameter("progress", progress);
-        if (_chimney != null) _chimney.Visible = inService;
-        _factoryState = inService ? "in service" : $"under construction {(int)(progress * 100)}%";
-        _planeAngle += (float)(0.5 * GetProcessDeltaTime());
-        _plane.Position = new Vector3(Mathf.Cos(_planeAngle), 0, Mathf.Sin(_planeAngle)) * 0.02f + new Vector3(0, 0.008f, 0);
-        _plane.Rotation = new Vector3(0, -_planeAngle, 0);
-    }
 
     // ---------- screenshots (acceptance) ----------
     bool _coldShot; double _coldT; int _coldStep;
@@ -1078,6 +991,8 @@ public sealed partial class Main : Node3D
             Q(0.5, () =>
             {
                 string ov = _tree.ShotOverlap(); string fit = _tree.ShotLegendFit(); string sm = _tree.ShotSummaryCheck(true, out int nIn2);
+                string cl = _tree.ShotClarityCheck();
+                _shotLog += $"tree clarity (live session state) {sfx}: {(cl == null ? "PASS" : "FAIL " + cl)}\n"; if (cl != null) InstFail($"tree clarity {sfx}: {cl}");
                 if (ov != null) InstFail($"tree overlap {sfx}: {ov}"); else _shotLog += $"tree overlap {sfx}: none\n";
                 _shotLog += $"tree summaries (legend open) {sfx}: {(sm == null ? "PASS" : "FAIL " + sm)}\n"; if (sm != null) InstFail($"tree summaries open {sfx}: {sm}");
                 float d = _tree.DiscDiameter, px = d * scale / 100f;
@@ -1090,8 +1005,11 @@ public sealed partial class Main : Node3D
             Q(0.9, () =>
             {
                 string fit = _tree.ShotLegendFit(); bool sc = _tree.ShotPanelScrolls; string sm = _tree.ShotSummaryCheck(true, out int nIn3);
-                bool ok = fit == null && sc && sm == null;
-                _shotLog += $"tree legend + selected node {sfx}: {_tree.ShotPanelInfo}; panel clear of the sheet {(fit == null ? "yes" : fit)}, scrolls {sc}, summaries clear {(sm ?? "yes")}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail($"tree legend + selection {sfx}: {fit} {sc} {sm}");
+                string cl2 = _tree.ShotClarityCheck();
+                _shotLog += $"tree clarity, node selected (live session state) {sfx}: {(cl2 == null ? "PASS" : "FAIL " + cl2)}\n"; if (cl2 != null) InstFail($"tree clarity (selected) {sfx}: {cl2}");
+                // The panel scrolls inside only when its content is taller than the room above the sheet (the priorities block is gone, so a short card fits whole).
+                bool ok = fit == null && sm == null;
+                _shotLog += $"tree legend + selected node {sfx}: {_tree.ShotPanelInfo}; panel clear of the sheet {(fit == null ? "yes" : fit)}, scrolls {sc}, summaries clear {(sm ?? "yes")}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail($"tree legend + selection {sfx}: {fit} {sm}");
                 SaveShot($"tree_legend_sel{sfx}.png", null, scale == 100 && lang == "ru"); _tree.ToggleLegend(false); _tree.ResetView(); _tree.Visible = false; _journal.Visible = true;
             });
             Q(0.6, () => { SaveShot($"journal{sfx}.png"); _journal.Visible = false; });
@@ -1146,13 +1064,16 @@ public sealed partial class Main : Node3D
                 // Pick the first power that has a yearly requirement (a goal for the tree).
                 if (_shotT > 0.4)
                 {
-                    bool has = s.WhyActor == _shotCand && s.Target != null;
+                    // The capture must show a "why not" root: the first power whose why_not has a Knowledge link (the SUN case at the start of the game), independent of --power.
+                    bool has = s.WhyActor == _shotCand && s.Target != null && s.Links.Any(l => l.Layer == Singularity.Core.WhyNot.WhyNotLayer.Knowledge);
                     if (_shotCand >= 0) _shotLog += $"why_not actor {_host.Layout.ActorIds[_shotCand]}: target {(s.Target is { } tt ? tt.Kind + " " + tt.Id : "none")}, links {s.Links.Count}\n";
                     if (has || _shotCand >= _host.Layout.ActorIds.Length - 1) { ShowPower(Math.Max(_shotCand, 0), false); OpenTree(0); _shotStep = 7; _shotT = 0; }
                     else { _shotCand++; _host.WhyActor = _shotCand; _shotT = 0; }
                 }
                 break;
-            case 7 when _shotT >= 1.5: Shot("tech_tree_a.png"); _tree.ShotZoom(2.4f, _tree.FrontierRow >= 0 ? _tree.FrontierRow : _tree.GoalRow); _shotStep = 30; _shotT = 0; break;
+            case 7 when _shotT >= 1.5:
+                { string ev = _tree.ShotEvidenceCheck(); _shotLog += $"tree evidence (live session state, power {_host.Layout.ActorIds[Math.Max(_shotCand, 0)]}): root mark, unknown and frontier nodes: {(ev == null ? "PASS" : "FAIL " + ev)}\n"; if (ev != null) InstFail($"tree evidence: {ev}"); }
+                SaveShot("tech_tree_a.png", null, true); _tree.ShotZoom(2.4f, _tree.FrontierRow >= 0 ? _tree.FrontierRow : _tree.GoalRow); _shotStep = 30; _shotT = 0; break;
             case 30 when _shotT >= 0.8:
                 Shot("tree_zoom_nodes.png");
                 { int row = _tree.FrontierRow >= 0 ? _tree.FrontierRow : _tree.GoalRow; _tree.ShotZoom(5.5f, row); if (row >= 0) _tree.Select(row); }

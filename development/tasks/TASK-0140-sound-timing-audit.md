@@ -1,7 +1,7 @@
 ---
 id: TASK-0140
 title: "Sound audit: sounds that play at the wrong moment or irritate (owner feedback)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M05
 agent: sound-director
