@@ -21,12 +21,14 @@ public sealed partial class TechTree : Control
 {
     enum St { Known, Frontier, Unavailable }
 
-    const float NodeR = 6.5f;
+    static readonly Color EmbossLight = new("FFFFFA");
+    const float SubpanelButtonDu = 32;   // A10: a button is at least 32 du high
     const float ZoomRate = 14f;
     const float WedgeMargin = 0.14f;
 
     readonly SimHost _host;
     readonly VBoxContainer _inset = new();
+    readonly MarginContainer _insetPad = new();
     readonly PanelContainer _insetBox = new();
     readonly ScrollContainer _insetScroll;
     readonly Segment _viewSwitch;
@@ -39,7 +41,6 @@ public sealed partial class TechTree : Control
     List<int> _path = new();                         // root -> goal chain (route line)
     NodeView[] _nv; int[] _depth;
     readonly Dictionary<int, int> _rowOfNumber = new();
-    readonly Dictionary<int, int> _prio = new();     // mock priorities, row -> 0..3
     readonly List<int> _focus = new();               // SetEffortFocus draft, process numbers
     float[] _rad, _ang;                              // ring (1..6 plus jitter) and angle in degrees
     readonly List<(Rect2 rect, int row)> _rowRects = new();
@@ -54,21 +55,21 @@ public sealed partial class TechTree : Control
     public int Player { get; set; }
     public event Action Closed;
 
-    static readonly string[] Level = { "level.0", "level.1", "level.2", "level.3" };
-
     public TechTree(SimHost host)
     {
         _host = host; _cv = this;
         MouseFilter = MouseFilterEnum.Stop;
 
         var top = new HBoxContainer { Position = new Vector2(14, 8) };
-        top.AddThemeConstantOverride("separation", 14);
+        top.AddThemeConstantOverride("separation", 4);
         top.AddChild(Ui.Lbl("tree.path", 18, null, FontKind.Draft));
-        _viewSwitch = new Segment(new[] { "tree.a", "tree.b" }, 0);
+        top.AddChild(new Control { CustomMinimumSize = new Vector2(10, 0) });
+        _viewSwitch = new Segment(new[] { "tree.a", "tree.b" }, 0, minHeight: SubpanelButtonDu);
         _viewSwitch.Changed += i => { _mode = i; Redraw(); };
         top.AddChild(_viewSwitch);
-        top.AddChild(Ui.Btn("tree.reset", ResetView));
-        top.AddChild(Ui.Btn("tree.close", () => Closed?.Invoke()));
+        var reset = Ui.Btn("tree.reset", ResetView); reset.CustomMinimumSize = new Vector2(0, SubpanelButtonDu);
+        var close = Ui.Btn("tree.close", () => Closed?.Invoke()); close.CustomMinimumSize = new Vector2(0, SubpanelButtonDu);
+        top.AddChild(reset); top.AddChild(close);
         AddChild(_view);
         _view.Draw += PaintView;
         // The closed legend is a real button above the canvas (opaque sheet, 1 du ink border, 2 px focus ring): chart ink never shows through it.
@@ -84,13 +85,19 @@ public sealed partial class TechTree : Control
         AddChild(_legendBtn);
         AddChild(top);
 
-        _insetBox.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 1, 12));
+        _insetBox.AddThemeStyleboxOverride("panel", DepthBox.Make(Ui.Box(Ui.Sheet, Ui.Ink, 1, 12)));
         // Sized by its content (like the power panel): anchored top-right, no bottom anchor; the scroll appears only above the stamp.
         _insetBox.AnchorLeft = 0.6f; _insetBox.AnchorRight = 1; _insetBox.OffsetLeft = 0; _insetBox.OffsetTop = 6; _insetBox.OffsetRight = -6;
         var sc = _insetScroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        // A12: the scroll bar is 8 du wide, ink-2 grabber on a rule track.
+        var vbar = sc.GetVScrollBar(); vbar.CustomMinimumSize = new Vector2(8, 0);
+        vbar.AddThemeStyleboxOverride("scroll", Ui.Box(Ui.Rule, null, 0, 0, 0));
+        foreach (var gb in new[] { "grabber", "grabber_highlight", "grabber_pressed" }) vbar.AddThemeStyleboxOverride(gb, Ui.Box(Ui.Ink2, null, 0, 0, 0));
         _inset.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         _inset.AddThemeConstantOverride("separation", 6);
-        sc.AddChild(_inset); _insetBox.AddChild(sc);
+        // 12 du of room on the right so that the scroll bar never covers the frames of the cards (A9, A12).
+        _insetPad.AddThemeConstantOverride("margin_right", 12); _insetPad.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        _insetPad.AddChild(_inset); sc.AddChild(_insetPad); _insetBox.AddChild(sc);
         AddChild(_insetBox);
         Loc.Changed += Invalidate;
         TreeExiting += () => Loc.Changed -= Invalidate;
@@ -140,7 +147,7 @@ public sealed partial class TechTree : Control
     }
     public void SetMode(int mode) { _mode = mode; _viewSwitch.Select(mode, false); Redraw(); }
     /// <summary>Lowest edge of the goal panel: above the open legend sheet, else the bottom margin.</summary>
-    public float InsetLimit => LegendOpen ? Size.Y - 346 : Size.Y - 100;
+    public float InsetLimit => LegendOpen ? Size.Y - (6 + StampH + StampGap + LegendH + 14) : Size.Y - 100;
     public void Select(int row) { _selected = row; _insetDirty = true; Redraw(); }
 
     // ---------------- model ----------------
@@ -148,7 +155,7 @@ public sealed partial class TechTree : Control
     {
         // The goal panel yields to the open legend: its bottom stays 8 du above the sheet (the sheet top is Size.Y - 332) and the rest scrolls inside.
         float limit = InsetLimit;
-        _insetScroll.CustomMinimumSize = new Vector2(0, Math.Min(_inset.GetCombinedMinimumSize().Y, LegendOpen ? limit - _insetBox.GetThemeStylebox("panel").GetMinimumSize().Y : limit));
+        _insetScroll.CustomMinimumSize = new Vector2(0, Math.Min(_insetPad.GetCombinedMinimumSize().Y, LegendOpen ? limit - _insetBox.GetThemeStylebox("panel").GetMinimumSize().Y : limit));
         _legendBtn.Position = new Vector2(Area.Position.X + 10, Area.End.Y - 42); _legendBtn.Size = new Vector2(144, 32);
         _legendBtn.Visible = _mode == 0 && !LegendOpen;
         _view.Position = Area.Position; _view.Size = Area.Size;
@@ -393,9 +400,13 @@ public sealed partial class TechTree : Control
     void DrawStamp()
     {
         var r = new Rect2(Size.X - 6 - 360, Size.Y - 6 - 62, 360, 62);
-        _cv.DrawRect(r, Ui.Sheet); _cv.DrawRect(r, Ui.Ink, false, 2f);
-        _cv.DrawLine(r.Position + new Vector2(0, 26), r.Position + new Vector2(r.Size.X, 26), Ui.Ink, 1f);
-        Text(r.Position + new Vector2(10, 20), Loc.T("tree.stamp"), 16, Ui.Ink, FontKind.Draft);
+        _cv.DrawStyleBox(DepthBox.Plain, r);
+        _cv.DrawLine(r.Position + new Vector2(1, 26), r.Position + new Vector2(r.Size.X - DepthBox.Edge - 1, 26), Ui.Ink, 1f);
+        // Embossed title (VD 3.2): a light edge up-left, a dark one down-right, no gradient.
+        var title = Loc.T("tree.stamp"); var tp = r.Position + new Vector2(10, 20);
+        _cv.DrawString(Fonts.DraftBold, tp + new Vector2(-1, -1), title, HorizontalAlignment.Left, -1, 16, EmbossLight);
+        _cv.DrawString(Fonts.DraftBold, tp + new Vector2(1, 1), title, HorizontalAlignment.Left, -1, 16, Ui.Rule.Darkened(0.1f));
+        Text(tp, title, 16, Ui.Ink, FontKind.Draft);
         Text(r.Position + new Vector2(r.Size.X - 10 - 120, 20), Loc.T("tree.sheet", _mode == 0 ? "A" : "B"), 14, Ui.Ink2, FontKind.Draft, HorizontalAlignment.Right, 120);
         string who = _actor >= 0 ? Names.Actor(_host.Layout.ActorIds[_actor]) : "";
         Text(r.Position + new Vector2(10, 50), Fit(who, 190, 14), 14, Ui.Ink);
@@ -477,7 +488,6 @@ public sealed partial class TechTree : Control
 
         for (int i = 0; i < nodes.Count; i++) DrawNode(i);
         DrawLabels(c);
-        DrawCallout();
     }
 
     // Clock: 1910 → 2100 around the circle, the hand shows the session date; G1–G4 arcs and the P10–P90 interval have no data (not drawn).
@@ -497,10 +507,12 @@ public sealed partial class TechTree : Control
         _cv.DrawCircle(c, 2.5f, Ui.Ink);
     }
 
-    // Node radius grows a little with the zoom; icon plates are larger.
-    // The ring shrinks with the canvas; node marks keep their physical size (du scaled down to 0.7) so that clusters stay apart.
-    float NodeScale => Math.Clamp(BaseUnit / 60f, 0.7f, 1f);
-    float NR => CurLod switch { Lod.Overview => NodeR * NodeScale, Lod.Nodes => NodeR * 1.25f * NodeScale, _ => GlyphGeometry.IconsPlateMin + Math.Min(6f, (_zoom - PlanisphereMath.IconsFrom) * 2f) };
+    // Node mark size: every state is 16 du (TreeClarity.MarkDu), never scaled down with the canvas (A2); a little larger when zoomed in; icon plates are larger still.
+    // NR is the box half-size used for hits, label places and overlap checks; the mark itself is drawn at MarkRadius(type).
+    float NR => CurLod switch { Lod.Overview => 10f, Lod.Nodes => 12.5f, _ => GlyphGeometry.IconsPlateMin + Math.Min(6f, (_zoom - PlanisphereMath.IconsFrom) * 2f) };
+    static readonly float[] MarkR = BuildMarkR();
+    static float[] BuildMarkR() { var r = new float[6]; for (int k = 0; k < 6; k++) r[k] = GlyphGeometry.LegendRadius(LegendData.Types[k].Code); return r; }
+    float MarkRadius(NodeType t) => CurLod == Lod.Icons ? NR : MarkR[(int)t] * (CurLod == Lod.Nodes ? 1.25f : 1f);
 
     // Counts per (ring, wedge) cell and per wedge, filled once per draw into fields (no allocation); the wedge summaries are the always-visible counts.
     readonly int[,] _cellTot = new int[6, 5], _cellKn = new int[6, 5];
@@ -533,13 +545,13 @@ public sealed partial class TechTree : Control
                 float a0 = -90f + d * 72f + 72f * WedgeMargin * 0.5f, a1 = -90f + (d + 1) * 72f - 72f * WedgeMargin * 0.5f;
                 _cv.DrawArc(c, (t + 1) * u, Mathf.DegToRad(a0), Mathf.DegToRad(a1), 24, new Color(Ui.DiscWash[d], alpha), Math.Max(10f, u * 0.46f), true);
                 if (CurLod != Lod.Overview) continue;
-                var q = Polar(t + 1.5f, (a0 + a1) * 0.5f);
+                var q = Polar(t + 1.5f - (t == 4 ? 16f / u : 0f), (a0 + a1) * 0.5f);   // the process cell sits on the double circle: move the tag 16 du inward
                 string txt = kn[t, d] + "/" + tot[t, d];
                 var sz = Fonts.Mono.GetStringSize(txt, HorizontalAlignment.Left, -1, 14);
                 var rc = new Rect2(q - sz * 0.5f, sz);
                 if (!CountFits(rc.Grow(2))) continue;   // a tag that would sit on a node or another label is left out (A9)
                 _countRects.Add(rc.Grow(2));
-                _cv.DrawRect(rc.Grow(2), new Color(Ui.Paper, 0.85f));
+                _cv.DrawRect(rc.Grow(2), new Color(Ui.Sheet, 0.92f));
                 Text(new Vector2(rc.Position.X, rc.Position.Y + sz.Y * 0.8f), txt, 14, Ui.DiscText[d], FontKind.Mono);
             }
     }
@@ -578,23 +590,36 @@ public sealed partial class TechTree : Control
         var nodes = _host.Data.Nodes;
         var p = PosOf(i); var st = _state[i]; bool route = _route[i];
         int d = (int)nodes.Discipline[i];
-        var line = route ? Ui.Command : Ui.DiscLine[d];
+        var line = route ? Ui.Command : Ui.DiscText[d];   // A4: the dark text step of the ink holds 3:1 on the paper
         var type = nodes.Type[i];
-        float r = NR;
-        var lod = CurLod;
-        if (st == St.Unavailable && !route && lod != Lod.Icons) _cv.DrawCircle(p, lod == Lod.Overview ? 2.4f : 3.2f, Ui.DiscLine[d].Lerp(Ui.Paper, 0.45f));
-        else
-        {
-            bool mastered = _nv[i].Process is { Mastered: true };
-            Color fill = st == St.Known ? (mastered ? line : Ui.DiscWash[d]) : Ui.Sheet;
-            if (lod == Lod.Icons && st == St.Unavailable) fill = Ui.Paper;
-            Shape(type, p, r, fill, line, st != St.Known, 1.7f);
-            if (st == St.Unavailable && lod != Lod.Icons) _cv.DrawCircle(p, 1.8f, line);
-            if (lod == Lod.Icons) Glyph(i, type, p, r, st == St.Known && mastered ? Colors.White : (st == St.Unavailable ? Ui.Ink3 : Ui.DiscText[d]));
-        }
-        if (i == _goal) Shape(type, p, r + 4, Colors.Transparent, Ui.Command, false, 1.6f);
-        if (i == _selected) _cv.DrawArc(p, r + 6, 0, Mathf.Tau, 24, Ui.Ink, 2f, true);
-        if (i == _root) _cv.DrawRect(new Rect2(p + new Vector2(-r - 2 - SettingsLogic.WhyNotMarkDu, -r - SettingsLogic.WhyNotMarkDu), new Vector2(SettingsLogic.WhyNotMarkDu, SettingsLogic.WhyNotMarkDu)), Ui.Alarm);
+        float r = MarkRadius(type);
+        if (i == _root) RootMark.Draw(_cv, p, Math.Max(TreeClarity.MarkDu, r * 2f), CvBasis);
+        else DrawMark(TreeClarity.StateOf(st == St.Known, st == St.Frontier, _nv[i].Process is { Mastered: true }), type, p, line, i);
+        if (i == _goal) GoalFrame(type, p, r);
+        if (i == _selected) SelectedRing(p, r, i == _goal);
+    }
+
+    // The one drawing of a node mark: the planisphere and the legend both come through here (spec 2.1: legend 1:1 with the map).
+    void DrawMark(MarkState ms, NodeType type, Vector2 p, Color line, int row, float radius = 0)
+    {
+        var mk = TreeClarity.Mark(ms); float r = radius > 0 ? radius : MarkRadius(type); bool icons = CurLod == Lod.Icons;
+        if (mk.Backing) _cv.DrawCircle(p, r * (TreeClarity.BackingDu / TreeClarity.MarkDu), Ui.Sheet);
+        Shape(type, p, r, mk.Filled ? line : icons ? Ui.Sheet : Colors.Transparent, line, mk.Dashed, mk.StrokeDu);
+        if (icons && row >= 0) Glyph(row, type, p, r, mk.Filled ? Colors.White : line);
+    }
+
+    // The goal: a double frame that follows the node's own shape, in the route colour. The selected node: a double circle in ink. Different shape and colour, so the two stay apart in grey.
+    void GoalFrame(NodeType type, Vector2 p, float r)
+    {
+        Shape(type, p, r + 2.5f, Colors.Transparent, Ui.Command, false, 1.6f);
+        Shape(type, p, r + 5f, Colors.Transparent, Ui.Command, false, 1.6f);
+    }
+
+    void SelectedRing(Vector2 p, float r, bool alsoGoal = false)
+    {
+        float o = alsoGoal ? 8f : 0f;   // outside the goal frame when the node is both
+        _cv.DrawArc(p, r + 4.5f + o, 0, Mathf.Tau, 32, Ui.Ink, 2f, true);
+        _cv.DrawArc(p, r + 2f + o, 0, Mathf.Tau, 32, Ui.Ink, 1.5f, true);
     }
 
     // One simple glyph per node type, drawn in a plate (Icons level). The primitives come from GlyphPrims (measured by the tests), built once at unit radius and scaled by the canvas transform.
@@ -658,12 +683,9 @@ public sealed partial class TechTree : Control
             occupied.Add(WedgeLabel(w).rect.Grow(2)); occupied.Add(_sumRects[w].Grow(2));
         }
         occupied.AddRange(_countRects);   // the count tags of the cells are drawn first; labels keep off them
-        // The leader line and the route are obstacles too, so that no label sits on them.
-        var lp = CalloutPoints();
-        for (int k = 0; k + 1 < lp.Length; k++) AddSegment(occupied, lp[k], lp[k + 1], 5f);
+        // The route is an obstacle too, so that no label sits on it.
         for (int k = 0; k + 1 < _path.Count; k++) { var ch = Channel(_path[k], _path[k + 1]); for (int j = 0; j + 1 < ch.Count; j++) AddSegment(occupied, ch[j], ch[j + 1], 3f); }
         if (_labelText == null || _labelText.Length != nodes.Count) _labelText = new string[nodes.Count]; else Array.Clear(_labelText);
-        _calloutLabeled = false;
         var order = new List<int>();
         void Add(int i) { if (i >= 0 && !order.Contains(i)) order.Add(i); }
         Add(_selected); Add(_goal); Add(_root);
@@ -671,8 +693,11 @@ public sealed partial class TechTree : Control
         foreach (int i in Enumerable.Range(0, nodes.Count).Where(i => _state[i] == St.Frontier).OrderBy(i => nodes.Number[i])) Add(i);
         if (CurLod == Lod.Icons) foreach (int i in Enumerable.Range(0, nodes.Count).OrderBy(i => nodes.Number[i])) Add(i);
         var area = Area;
+        var hard = new List<Rect2>();
+        for (int w = 0; w < 5; w++) { hard.Add(WedgeLabel(w).rect.Grow(2)); hard.Add(_sumRects[w].Grow(2)); }
+        hard.AddRange(_countRects);
         var placed = new Dictionary<int, (Rect2 pad, Rect2 rc, string text, FontKind kind, float h)>();
-        bool Place(int i, string text, FontKind kind, bool far = false)
+        bool Place(int i, string text, FontKind kind, bool far = false, bool force = false)
         {
             var p = PosOf(i); float o = NR + 6;
             var sz = Ui.FontOf(kind).GetStringSize(text, HorizontalAlignment.Left, -1, 14);
@@ -684,10 +709,13 @@ public sealed partial class TechTree : Control
                 new Rect2(p + new Vector2(o + 2, o + 2), sz), new Rect2(p + new Vector2(-o - 2 - sz.X, o + 2), sz),
                 new Rect2(p + new Vector2(o + 2, -o - 2 - sz.Y), sz), new Rect2(p + new Vector2(-o - 2 - sz.X, -o - 2 - sz.Y), sz),
             };
-            bool Try(Rect2 rc)
+            bool Try(Rect2 rc, bool ignoreOthers = false, bool leaderCheck = true)
             {
                 var pad = rc.Grow(2);
-                if (!area.Encloses(pad) || occupied.Any(o => o.Intersects(pad))) return false;
+                if (!area.Encloses(pad) || (!ignoreOthers && occupied.Any(o => o.Intersects(pad)))) return false;
+                if (ignoreOthers && hard.Any(h => h.Intersects(pad))) return false;   // a forced plate may sit over nodes, never over a wedge name, a total or a count
+                // The leader of a named node must not run across a wedge name, a wedge total or a count tag (C5).
+                if (leaderCheck && NamedNode(i) && LeaderCrosses(p, pad, hard)) return false;
                 occupied.Add(pad);
                 placed[i] = (pad, rc, text, kind, sz.Y);
                 return true;
@@ -695,41 +723,68 @@ public sealed partial class TechTree : Control
             foreach (var rc in cands) if (Try(rc)) return true;
             if (!far) return false;
             // The goal, the selected node and the root must be named: farther places on three rings (computed in place); the leader line ties the name to the node.
-            foreach (float ring in FarRings)
-                for (int k = 0; k < 8; k++)
-                {
-                    var dv = new Vector2(Mathf.Cos(k * Mathf.Tau / 8), Mathf.Sin(k * Mathf.Tau / 8)) * (o + ring);
-                    if (Try(new Rect2(p + dv - new Vector2(dv.X < -1 ? sz.X : dv.X > 1 ? 0 : sz.X * 0.5f, dv.Y < -1 ? sz.Y : dv.Y > 1 ? 0 : sz.Y * 0.5f), sz))) return true;
-                }
+            bool Far(bool ignore, bool leader)
+            {
+                foreach (float ring in FarRings)
+                    for (int k = 0; k < 8; k++)
+                    {
+                        var dv = new Vector2(Mathf.Cos(k * Mathf.Tau / 8), Mathf.Sin(k * Mathf.Tau / 8)) * (o + ring);
+                        if (Try(new Rect2(p + dv - new Vector2(dv.X < -1 ? sz.X : dv.X > 1 ? 0 : sz.X * 0.5f, dv.Y < -1 ? sz.Y : dv.Y > 1 ? 0 : sz.Y * 0.5f), sz), ignore, leader)) return true;
+                    }
+                return false;
+            }
+            if (Far(false, true)) return true;
+            // The callout node must be named at any price (a leader that ends in nothing is a defect): the nearest place inside the area, over other marks if it has to be.
+            if (force)
+            {
+                // Same avoidance as above, in widening steps: over nodes allowed, over wedge names/totals/counts never; the leader may cross them only as the very last resort.
+                foreach (var rc in cands) if (Try(rc, true)) return true;
+                if (Far(true, true)) return true;
+                foreach (var rc in cands) if (Try(rc, true, false)) return true;
+                if (Far(true, false)) return true;
+            }
             return false;
         }
-        // Pass 1: the number tag of every frontier node (short, same in both languages); pass 2: names where there is room (a name replaces its own tag).
-        foreach (int i in order) if (_state[i] == St.Frontier) Place(i, "№" + nodes.Number[i], FontKind.Mono);
+        // Pass 0: the goal, the selected node and the root are named first, so that every lower-priority label yields to their plates (spec 2.5; TASK-0136 review).
+        int calloutNode = _selected >= 0 ? _selected : _goal;
+        foreach (int i in order) if (NamedNode(i)) Place(i, Names.Node(nodes.Id[i]), FontKind.Text, true, i == calloutNode);
+        // Pass 1: the number tag of every other frontier node (short, same in both languages); pass 2: names where there is room (a name replaces its own tag).
+        foreach (int i in order) if (_state[i] == St.Frontier && !placed.ContainsKey(i)) Place(i, "№" + nodes.Number[i], FontKind.Mono);
         foreach (int i in order)
         {
+            if (NamedNode(i) && placed.ContainsKey(i)) continue;
             if (!(_route[i] || i == _selected || i == _goal || i == _root || CurLod == Lod.Icons || (CurLod == Lod.Nodes && _state[i] == St.Frontier))) continue;   // the «nodes» level names the frontier
             if (placed.TryGetValue(i, out var tag)) occupied.Remove(tag.pad);
             if (Place(i, Names.Node(nodes.Id[i]), FontKind.Text, NamedNode(i))) continue;
             if (tag.text != null) { occupied.Add(tag.pad); placed[i] = tag; }
             else Place(i, "№" + nodes.Number[i], FontKind.Mono);
         }
-        foreach (int i in order)
+        // Drawn from the lowest priority to the highest, so that a named node's plate is always on top.
+        foreach (int i in order.OrderByDescending(i => LabelGeometry.Rank(NamedNode(i), _route[i], _state[i] == St.Frontier)))
         {
             if (!placed.TryGetValue(i, out var pl)) continue;
             _labelRects.Add(pl.pad);
             _labelText[i] = pl.text;
-            bool callout = i == (_selected >= 0 ? _selected : _goal);
-            if (callout) _calloutLabeled = true;
+            bool callout = i == calloutNode;
             if (callout || LabelNeedsLeader(i, pl.rc))
             {
                 var own = PosOf(i); var near = own.Clamp(pl.pad.Position, pl.pad.End); var dir = (near - own).Normalized();
                 _cv.DrawLine(own + dir * NR, near, _route[i] ? Ui.Command : Ui.Ink2, 1.5f, true);   // ends at the plate: the goal or selected node, or a node with a neighbour as near as it
             }
-            _cv.DrawRect(pl.pad, Ui.Paper);
+            _cv.DrawRect(pl.pad, Ui.Sheet);   // opaque plate (spec 2.3)
+            if (callout) _cv.DrawRect(pl.pad, Ui.Command, false, 1f);
             var at = new Vector2(pl.rc.Position.X, pl.rc.Position.Y + pl.h * 0.8f);
-            _cv.DrawStringOutline(Ui.FontOf(pl.kind), at, pl.text, HorizontalAlignment.Left, -1, 14, 5, Ui.Paper);   // paper halo keeps text off rings and lines
+            _cv.DrawStringOutline(Ui.FontOf(pl.kind), at, pl.text, HorizontalAlignment.Left, -1, 14, 5, Ui.Sheet);   // sheet halo keeps text off rings and lines
             Text(at, pl.text, 14, _route[i] ? Ui.Command : Ui.Ink2, pl.kind);
         }
+    }
+
+    // True when the straight leader from the node to the nearest point of the plate passes through one of the rectangles.
+    static bool LeaderCrosses(Vector2 own, Rect2 pad, List<Rect2> rects)
+    {
+        var near = own.Clamp(pad.Position, pad.End);
+        foreach (var r in rects) if (LabelGeometry.SegmentHitsRect(own.X, own.Y, near.X, near.Y, r.Position.X, r.Position.Y, r.Size.X, r.Size.Y)) return true;
+        return false;
     }
 
     static readonly float[] FarRings = { 28, 60, 100 };
@@ -755,28 +810,9 @@ public sealed partial class TechTree : Control
         for (int k = 0; k <= n; k++) { var q = a.Lerp(b, (float)k / n); into.Add(new Rect2(q - new Vector2(pad, pad), new Vector2(pad * 2, pad * 2))); }
     }
 
-    // Short callout with a shelf (§7.3) from the selected node, else from the goal; it does not run to the inset.
-    Vector2[] CalloutPoints()
-    {
-        int i = _selected >= 0 ? _selected : _goal;
-        if (i < 0) return Array.Empty<Vector2>();
-        var p = PosOf(i);
-        float y = Math.Max(Area.Position.Y + 8, p.Y - 30);
-        return new[] { p + new Vector2(0, -NR - 2), new Vector2(p.X + 24, y), new Vector2(Math.Min(p.X + 24 + 44, Area.End.X + 6), y) };
-    }
-
-    string[] _labelText; bool _calloutLabeled;
+    string[] _labelText;
     public string ShotLabelText(int row) => _labelText != null && row >= 0 && row < _labelText.Length ? _labelText[row] : null;
     public int RowOfId(string id) { var n = _host.Data.Nodes; for (int i = 0; i < n.Count; i++) if (n.Id[i] == id) return i; return -1; }
-
-    void DrawCallout()
-    {
-        if (_calloutLabeled) return;   // the leader to the name plate replaces the shelf
-        var pts = CalloutPoints();
-        if (pts.Length == 0) return;
-        _cv.DrawPolyline(pts, Ui.Ink, 1.2f, true);
-        _cv.DrawCircle(pts[2], 3f, Ui.Ink);
-    }
 
     // Legend (spec §8): a collapsed button at the lower left (key L), opened to a compact two-column sheet docked in the right column above the stamp.
     bool _legendOpen;
@@ -784,74 +820,88 @@ public sealed partial class TechTree : Control
     public bool LegendOpen => _legendOpen && _mode == 0;
     public bool CanLegend => _mode == 0;
     public void ToggleLegend(bool open) { _legendOpen = open; ClampPan(); Redraw(); }
-    const float LegendRow = 21, LegendPad = 12, LegendCol = 229, LegendGap = 16, LegendH = 256, StampH = 62, StampGap = 8;
+    const float LegendRow = 22, LegendPad = 12, LegendGap = 16, LegendW = 560, LegendH = 352, StampH = 62, StampGap = 8;
     /// <summary>The open legend sheet: right of the disc area, 8 du above the sheet stamp (spec §3).</summary>
-    public Rect2 LegendSheet { get { float x = Size.X * 0.6f + 8; return new Rect2(x, Size.Y - 6 - StampH - StampGap - LegendH, Math.Min(500, Size.X - x - 6), LegendH); } }
+    public Rect2 LegendSheet { get { float x = Size.X * 0.6f + 8; return new Rect2(x, Size.Y - 6 - StampH - StampGap - LegendH, Math.Min(LegendW, Size.X - x - 6), LegendH); } }
     Rect2 StampRect => new(Size.X - 6 - 360, Size.Y - 6 - StampH, 360, StampH);
 
     // Cached legend content: localized texts (rebuilt when the language changes), colours and closed node outlines (built once).
     bool _lgDirty = true;
-    readonly string[] _lgText = new string[19];
-    static readonly string[] LgNum = { "1", "2", "3", "4", "5", "6" };
+    // Texts: 0 rings head, 1 states head, 2 disciplines head, 3 lines head, 4 route, 5 root, 6 why the root, 7 close; 8-12 disciplines; 13-18 ring names; 19-23 states, 24 goal, 25 links of the selected node.
+    readonly string[] _lgText = new string[26];
     readonly LegendData.Discipline[] _lgDiscs = LegendData.Disciplines(Palette.C);
     Color[] _lgWash, _lgLine;
-    GlyphSet[] _lgPrims;
+    bool _lgBuilt;
 
     void BuildLegendCache()
     {
         _lgDirty = false;
-        string[] keys = { "legend.disc", "", "", "", "", "", "legend.lines", "legend.route", "legend.root", "legend.frontier", "legend.selected", "legend.glyphs", "legend.close" };
-        for (int k = 0; k < keys.Length; k++) if (keys[k] != "") _lgText[k] = Loc.T(keys[k]);
-        for (int k = 0; k < 5; k++) _lgText[1 + k] = Loc.T(_lgDiscs[k].NameKey);
-        for (int k = 0; k < 6; k++) _lgText[13 + k] = Loc.T(LegendData.Types[k].NameKey);
-        if (_lgPrims != null) return;
+        string[] keys = { "legend.rings", "legend.states", "legend.disc", "legend.lines", "legend.route", "legend.root", "legend.root.why", "legend.close" };
+        for (int k = 0; k < keys.Length; k++) _lgText[k] = Loc.T(keys[k]);
+        for (int k = 0; k < 5; k++) _lgText[8 + k] = Loc.T(_lgDiscs[k].NameKey);
+        for (int k = 0; k < 6; k++) _lgText[13 + k] = (k + 1) + "  " + Loc.T(LegendData.Types[k].NameKey);
+        for (int k = 0; k < 5; k++) _lgText[19 + k] = Loc.T(TreeClarity.LegendKey(TreeClarity.LegendStates[k]));
+        _lgText[24] = Loc.T("legend.goal"); _lgText[25] = Loc.T("legend.links");
+        if (_lgBuilt) return;
+        _lgBuilt = true;
         _lgWash = new Color[5]; _lgLine = new Color[5];
         for (int k = 0; k < 5; k++) { _lgWash[k] = new Color(_lgDiscs[k].WashHex); _lgLine[k] = new Color(_lgDiscs[k].LineHex); }
-        _lgPrims = new GlyphSet[6];
-        for (int k = 0; k < 6; k++) _lgPrims[k] = new GlyphSet(GlyphPrims.LegendSwatch(LegendData.Types[k].Code));
     }
 
-    static Rect2 LegendMarkRect(float xl, float rowY) { var (x, y, s) = SettingsLogic.WhyNotLegendMark(xl, rowY); return new Rect2(x, y, s, s); }
-
+    // Legend (spec 2.2): rings, states, disciplines, lines. The marks go through the same drawing as the nodes of the map.
     void DrawLegend()
     {
         if (!LegendOpen) return;   // closed: the real button _legendBtn stands in its place
-        if (_lgDirty || _lgPrims == null) BuildLegendCache();
+        if (_lgDirty || !_lgBuilt) BuildLegendCache();
         var r = LegendSheet;
-        _cv.DrawStyleBox(Ui.Box(Ui.Sheet, Ui.Ink, 1, 0, Ui.R3), r);
-        float xl = r.Position.X + LegendPad, xr = xl + LegendCol + LegendGap;
-        float Y(int row) => r.Position.Y + LegendPad + 15 + row * LegendRow;
-        void Head(float x, int row, int t) => Text(new Vector2(x, Y(row)), _lgText[t], 14, Ui.Ink2, FontKind.Draft);
-        // left column: disciplines, then lines
-        Head(xl, 0, 0);
-        for (int k = 0; k < 5; k++)
-        {
-            var mk = new Vector2(xl + 8, Y(1 + k) - 5);
-            _cv.DrawCircle(mk, 8, _lgWash[k]); _cv.DrawArc(mk, 8, 0, Mathf.Tau, 24, _lgLine[k], 1.8f, true);
-            Text(new Vector2(xl + 26, Y(1 + k)), _lgText[1 + k], 14, Ui.Ink2);
-        }
-        const int ly = 6;
-        Head(xl, ly, 6);
-        float y = Y(ly + 1); _cv.DrawLine(new Vector2(xl, y - 5), new Vector2(xl + 18, y - 5), Ui.Sheet, 6f); _cv.DrawLine(new Vector2(xl, y - 5), new Vector2(xl + 18, y - 5), Ui.Command, 3f);
-        Text(new Vector2(xl + 26, y), _lgText[7], 14, Ui.Ink2);
-        y = Y(ly + 2); _cv.DrawRect(LegendMarkRect(xl, y), Ui.Alarm);
-        Text(new Vector2(xl + 26, y), _lgText[8], 14, Ui.Ink2);
-        y = Y(ly + 3); for (int k = 0; k < 6; k++) _cv.DrawArc(new Vector2(xl + 9, y - 5), 8, k * Mathf.Tau / 6, k * Mathf.Tau / 6 + Mathf.Tau / 6 * 0.55f, 5, Ui.Ink2, 1.8f, true);
-        Text(new Vector2(xl + 26, y), _lgText[9], 14, Ui.Ink2);
-        y = Y(ly + 4); _cv.DrawArc(new Vector2(xl + 9, y - 5), 5, 0, Mathf.Tau, 16, Ui.Ink, 1.5f, true); _cv.DrawArc(new Vector2(xl + 9, y - 5), 9, 0, Mathf.Tau, 20, Ui.Ink, 1.5f, true);
-        Text(new Vector2(xl + 26, y), _lgText[10], 14, Ui.Ink2);
-        // right column: node types with the ring number first, then the close hint
-        Head(xr, 0, 11);
+        _cv.DrawStyleBox(DepthBox.Plain, r);
+        float colW = (r.Size.X - 2 * LegendPad - LegendGap - DepthBox.Edge) / 2;
+        float xl = r.Position.X + LegendPad, xr = xl + colW + LegendGap;
+        float Y(int row, float gap = 0) => r.Position.Y + LegendPad + 15 + row * LegendRow + gap;
+        void Head(float x, float y, int t) => Text(new Vector2(x, y), _lgText[t], 14, Ui.Ink2, FontKind.Draft);
+        // left: rings, disciplines
+        Head(xl, Y(0), 0);
         for (int k = 0; k < 6; k++)
         {
-            y = Y(1 + k);
-            var mk = new Vector2(xr + 30, y - 5);
-            Text(new Vector2(xr + 4, y), LgNum[k], 14, Ui.Ink, FontKind.Mono);
-            GlyphDraw.Draw(_cv, _lgPrims[k], mk, Ui.Ink2);
-            Text(new Vector2(xr + 46, y), LegendData.Types[k].Code, 14, Ui.Ink, FontKind.Mono);
-            Text(new Vector2(xr + 92, y), _lgText[13 + k], 14, Ui.Ink2);
+            float y = Y(1 + k); var mk = new Vector2(xl + 14, y - 5);
+            var tp = LegendData.Types[k].Code; float rr = GlyphGeometry.LegendRadius(tp);
+            Shape((NodeType)k, mk, rr, Colors.Transparent, Ui.Ink2, false, 2f);
+            Text(new Vector2(xl + 36, y), _lgText[13 + k], 14, Ui.Ink2);
         }
-        Text(new Vector2(xr, Y(8)), _lgText[12], 14, Ui.Ink3);
+        Head(xl, Y(7, 8), 2);
+        for (int k = 0; k < 5; k++)
+        {
+            float y = Y(8 + k, 8); var mk = new Vector2(xl + 14, y - 5);
+            _cv.DrawCircle(mk, 8, _lgWash[k]); _cv.DrawArc(mk, 8, 0, Mathf.Tau, 24, _lgLine[k], 1.8f, true);
+            Text(new Vector2(xl + 36, y), _lgText[8 + k], 14, Ui.Ink2);
+        }
+        // right: states, lines
+        Head(xr, Y(0), 1);
+        for (int k = 0; k < 5; k++)
+        {
+            var ms = TreeClarity.LegendStates[k]; float y = Y(1 + k); var mk = new Vector2(xr + 14, y - 5);
+            var line = Ui.Ink2;
+            DrawMark(ms == MarkState.Selected ? MarkState.Known : ms, NodeType.ENG, mk, line, -1, MarkR[(int)NodeType.ENG]);
+            if (ms == MarkState.Selected) SelectedRing(mk, MarkR[(int)NodeType.ENG]);
+            Text(new Vector2(xr + 36, y), _lgText[19 + k], 14, Ui.Ink2);
+        }
+        // the goal: the same blue frame the map draws around it (DrawNode)
+        float gy = Y(6, 10); var gm = new Vector2(xr + 14, gy - 5);
+        DrawMark(MarkState.Known, NodeType.ENG, gm, Ui.Ink2, -1, MarkR[(int)NodeType.ENG]);
+        GoalFrame(NodeType.ENG, gm, MarkR[(int)NodeType.ENG]);
+        Text(new Vector2(xr + 36, gy), _lgText[24], 14, Ui.Ink2);
+        Head(xr, Y(7, 16), 3);
+        float ry = Y(8, 16);
+        _cv.DrawLine(new Vector2(xr + 2, ry - 5), new Vector2(xr + 26, ry - 5), Ui.Sheet, 6f); _cv.DrawLine(new Vector2(xr + 2, ry - 5), new Vector2(xr + 26, ry - 5), Ui.Command, 3f);
+        Text(new Vector2(xr + 36, ry), _lgText[4], 14, Ui.Ink2);
+        ry = Y(9, 16);
+        _cv.DrawLine(new Vector2(xr + 2, ry - 5), new Vector2(xr + 26, ry - 5), Ui.Ink, 1.6f);   // the links of the selected node, as the map draws them
+        Text(new Vector2(xr + 36, ry), _lgText[25], 14, Ui.Ink2);
+        ry = Y(10, 16);
+        RootMark.Draw(_cv, new Vector2(xr + 14, ry - 5), TreeClarity.MarkDu, CvBasis);
+        Text(new Vector2(xr + 36, ry), _lgText[5], 14, Ui.Ink2);
+        Para(new Vector2(xr + 36, ry + 19), _lgText[6], colW - 36, 14, Ui.Ink2);
+        Text(new Vector2(xr, Y(13, 14)), _lgText[7], 14, Ui.Ink2);
     }
 
     /// <summary>For the shot run: the legend sheet touches neither the stamp nor the disc area (A9); empty when it is fine.</summary>
@@ -898,6 +948,61 @@ public sealed partial class TechTree : Control
             foreach (var c in n.GetChildren()) Walk(c);
         }
         Walk(_insetBox);
+        return bad.Count == 0 ? null : string.Join("; ", bad);
+    }
+    /// <summary>Shot run, on the live session state (TASK-0136): the goal panel holds no developer vocabulary and no priorities control, the "why not" root carries its mark, and the goal or selected node has its name plate. Null when clean.</summary>
+    public string ShotClarityCheck()
+    {
+        if (_state == null) return "the tree has no model";
+        var bad = new List<string>(); bool rootIcon = false;
+        void Walk(Node n)
+        {
+            if (n is Segment) bad.Add("a priorities-style segment control is in the goal panel");
+            if (n is RootMarkIcon) rootIcon = true;
+            string txt = n is Label l ? l.Text : n is RichTextLabel r ? r.GetParsedText() : null;
+            if (!string.IsNullOrEmpty(txt)) { if (Loc.Has(txt)) txt = Loc.T(txt); if (TreeClarity.Forbidden.IsMatch(txt)) bad.Add($"developer vocabulary in '{txt}'"); }
+            foreach (var c in n.GetChildren()) Walk(c);
+        }
+        Walk(_insetBox);
+        if (_root >= 0 && _insetBox.Visible && _whyShown && !rootIcon) bad.Add("the why-not root has no mark in the panel");
+        // The inspector scrolls when its content is taller than the room, and then its last card can be reached (a broken scroll hid cards while the frame looked fine).
+        float room = _insetScroll.Size.Y, content = _insetPad.GetCombinedMinimumSize().Y;
+        var vb = _insetScroll.GetVScrollBar(); double range = vb.MaxValue - vb.Page;
+        if (content > room + 1f)
+        {
+            if (range <= 0.5) bad.Add($"inspector content {content:F0} du does not fit {room:F0} du but the scroll range is {range:F1}");
+            else
+            {
+                int before = _insetScroll.ScrollVertical; _insetScroll.ScrollVertical = int.MaxValue;
+                if (_insetScroll.ScrollVertical + room < content - 2f) bad.Add($"inspector scrolled to the end shows {_insetScroll.ScrollVertical + room:F0} of {content:F0} du: the last card is out of reach");
+                _insetScroll.ScrollVertical = before;
+            }
+        }
+        float minH = float.MaxValue;   // A10: every button of the sub-panel is at least 32 du high as rendered
+        foreach (var top in GetChildren()) if (top is HBoxContainer h)
+            foreach (var b in h.GetChildren())
+            {
+                if (b is Segment sg) foreach (var cell in sg.GetChildren()) minH = Math.Min(minH, ((Control)cell).Size.Y);
+                else if (b is Button bt) minH = Math.Min(minH, bt.Size.Y);
+            }
+        if (minH < SubpanelButtonDu - 0.5f) bad.Add($"a sub-panel button is {minH:F1} du high, below {SubpanelButtonDu}");
+        int co = _selected >= 0 ? _selected : _goal;
+        if (co >= 0 && ShotLabelText(co) == null) bad.Add($"node {co} (goal or selected) has no name plate, its leader would end in nothing");
+        return bad.Count == 0 ? null : string.Join("; ", bad);
+    }
+    /// <summary>Shot run, SUN-like capture (TASK-0136): the frame must carry the evidence the grammar needs: a "why not" root (and its mark in the panel), unknown nodes and frontier nodes. Null when all are present.</summary>
+    public string ShotEvidenceCheck()
+    {
+        if (_state == null) return "the tree has no model";
+        var bad = new List<string>();
+        if (_root < 0) bad.Add("no why-not root in this state");
+        else if (!_whyShown) bad.Add("the why-not list is collapsed");
+        bool rootIcon = false;
+        void Walk(Node n) { if (n is RootMarkIcon) rootIcon = true; foreach (var c in n.GetChildren()) Walk(c); }
+        Walk(_insetBox);
+        if (_root >= 0 && !rootIcon) bad.Add("the root has no mark in the panel");
+        if (Array.IndexOf(_state, St.Unavailable) < 0) bad.Add("no unknown node");
+        if (Array.IndexOf(_state, St.Frontier) < 0) bad.Add("no frontier node");
         return bad.Count == 0 ? null : string.Join("; ", bad);
     }
     public string ShotPanelInfo => $"panel {PanelRect}, scroll max {_insetScroll.GetVScrollBar().MaxValue:F0} page {_insetScroll.GetVScrollBar().Page:F0}";
@@ -1010,7 +1115,7 @@ public sealed partial class TechTree : Control
         // overview: discipline x generation cells, one square per node
         Text(new Vector2(x0, y + 12), Loc.T("stmt.overview", nodes.Count), 14, Ui.Ink2, FontKind.Draft);
         y += 34;
-        for (int g = 0; g <= 4; g++) Text(new Vector2(x0 + 200 + g * 108 + 4, y), "G" + g, 14, Ui.Ink2, FontKind.Mono);
+        for (int g = 0; g <= 4; g++) Text(new Vector2(x0 + 200 + g * 108 + 4, y), g.ToString(), 14, Ui.Ink2, FontKind.Mono);
         y += 4;
         for (int d = 0; d < 5; d++)
         {
@@ -1109,9 +1214,12 @@ public sealed partial class TechTree : Control
             int i = _selected;
             var nm = Ui.Lbl(Names.Node(nodes.Id[i]), 18); nm.TooltipText = $"{nodes.Id[i]} · №{nodes.Number[i]}"; nm.MouseFilter = MouseFilterEnum.Pass;
             _inset.AddChild(nm);
-            _inset.AddChild(Ui.Wrap($"№{nodes.Number[i]} · {Loc.T("ntype." + (int)nodes.Type[i])} · G{nodes.Gen[i]} · {Loc.T("disc." + (int)nodes.Discipline[i])} · {StateWord(i)}", 14, Ui.Ink2));
+            _inset.AddChild(Ui.Wrap($"№{nodes.Number[i]} · {Loc.T("ntype." + (int)nodes.Type[i])} · {Loc.T("ui.tree.gen", nodes.Gen[i])} · {Loc.T("disc." + (int)nodes.Discipline[i])} · {StateWord(i)}", 14, Ui.Ink2));
             string anchor = Names.NodeAnchor(nodes.Id[i]), before = nodes.AnchorBefore[i] ? Loc.T("inset.before") : "";
-            _inset.AddChild(Ui.Wrap(anchor == "" ? Loc.T("inset.anchor.year", nodes.AnchorYear[i], before) : Loc.T("inset.anchor", nodes.AnchorYear[i], before, anchor), 14, Ui.Ink3));
+            string est = nodes.AnchorEstimated[i] ? ".est" : "";   // the data flag: an estimated year is said to be one
+            var anc = Ui.Wrap(anchor == "" ? Loc.T("ui.tree.anchor" + est, nodes.AnchorYear[i], before) : Loc.T("ui.tree.anchor.named" + est, nodes.AnchorYear[i], before, anchor), 14, Ui.Ink3);
+            anc.MouseFilter = MouseFilterEnum.Pass; anc.TooltipText = Loc.T("ui.tree.anchor.tip" + est);
+            _inset.AddChild(anc);
             BuildCard(i);
             var rq = nodes.Requires;
             var req = new List<string>();
@@ -1121,7 +1229,7 @@ public sealed partial class TechTree : Control
                 string one = string.Join(" | ", mem.Select(m => (_state[m] == St.Known ? "✓ " : "✗ ") + Names.Node(nodes.Id[m])));
                 req.Add(mem.Length > 1 ? "(" + one + ")" : one);
             }
-            _inset.AddChild(Block(Ui.ReqLine, Ui.ReqWash, Ui.ReqText, "card.requires", (req.Count == 0 ? new List<string> { "—" } : req).Select(r => (Control)Ui.Wrap(r, 14, Ui.Ink)).ToArray()));
+            _inset.AddChild(Block(CardIcon.Kind.Needs, "card.requires", (req.Count == 0 ? new List<string> { "—" } : req).Select(r => (Control)Ui.Wrap(r, 14, Ui.Ink)).ToArray()));
             if (_nv[i].Process is { } pv)
                 _inset.AddChild(Ui.Wrap(Loc.T("inset.process", Loc.N(pv.Yield.ToDouble()), Loc.T(pv.Mastered ? "yes" : "no"), Loc.T(pv.Admitted ? "yes" : "no")), 14, Ui.Ink2));
             if (nodes.Type[i] == NodeType.PRC && _state[i] == St.Known && _actor == Player)
@@ -1139,14 +1247,17 @@ public sealed partial class TechTree : Control
         _inset.AddChild(new HSeparator());
         bool whyOpen = _whyOpen || _selected < 0;   // collapsed while a node card is shown, so the card stays above the fold
         _inset.AddChild(Ui.Btn((whyOpen ? "▾ " : "▸ ") + Loc.T("inset.why"), () => { _whyOpen = !_whyOpen; _insetDirty = true; }));
+        _whyShown = whyOpen;
         if (whyOpen) BuildWhy(s, _host.Data);
 
         Sec("inset.focus");
         _inset.AddChild(Ui.Wrap(_focus.Count == 0 ? Loc.T("inset.focus.empty") : string.Join(" → ", _focus.Select(f => Names.Node(_host.Data, f))), 14, _focus.Count == 0 ? Ui.Ink2 : Ui.Ink));
         var send = Ui.Btn("inset.focus.send", () => { if (_actor == Player) _host.Submit(new SetEffortFocus(_actor, ImmutableArray.CreateRange(_focus)), "cmd.focus"); }, 14, _focus.Count > 0);
         send.Disabled = _focus.Count == 0 || _actor != Player;
+        send.CustomMinimumSize = new Vector2(0, SubpanelButtonDu);
+        if (!send.Disabled) send.AddThemeStyleboxOverride("normal", Ui.Box(Ui.Command, Ui.Ink, 2, 10));   // spec 2.9: the one enabled main button has a 2 du frame
         _inset.AddChild(send);
-        if (s.Last.Status != CmdStatus.None)
+        if (s.Last.Status != CmdStatus.None && TreeClarity.ShowsCommand(s.Last.LabelKey))
         {
             string what = Loc.T(s.Last.LabelKey, s.Last.LabelArg);
             string why = s.Last.Status == CmdStatus.Rejected ? Loc.TOr("refusal." + s.Last.Reason, s.Last.Reason) : s.Last.Status == CmdStatus.Error ? s.Last.Reason : "";
@@ -1154,27 +1265,9 @@ public sealed partial class TechTree : Control
             _inset.AddChild(s.Last.Status is CmdStatus.Rejected or CmdStatus.Error ? Ui.MarkedRow(Ui.Alarm, lab) : lab);
         }
 
-        _inset.AddChild(new HSeparator());
-        var hd = new HBoxContainer(); hd.AddThemeConstantOverride("separation", 10);
-        hd.AddChild(Ui.Head("inset.prio")); hd.AddChild(Ui.Mock());
-        _inset.AddChild(hd);
-        foreach (int i in Enumerable.Range(0, nodes.Count).Where(i => _state[i] == St.Frontier).OrderByDescending(i => _route[i]).ThenBy(i => nodes.Number[i]).Take(7))
-        {
-            int row = i;
-            var r = new HBoxContainer(); r.AddThemeConstantOverride("separation", 8);
-            r.AddChild(Ui.Num("№" + nodes.Number[i], 14, Ui.Ink3, 44));
-            var nm = Ui.Lbl(Names.Node(nodes.Id[i]), 14, _route[i] ? Ui.Command : Ui.Ink);
-            nm.CustomMinimumSize = new Vector2(250, 0); nm.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis; nm.TooltipText = $"{nodes.Id[i]} · №{nodes.Number[i]}"; nm.MouseFilter = MouseFilterEnum.Pass;
-            r.AddChild(nm);
-            var seg = new Segment(Level, _prio.TryGetValue(row, out int lv) ? lv : 1);
-            seg.Changed += k => _prio[row] = k;
-            r.AddChild(seg);
-            _inset.AddChild(r);
-        }
-        _inset.AddChild(Ui.Wrap("inset.prio.note", 14, Ui.Ink3));
     }
 
-    bool _whyOpen;
+    bool _whyOpen, _whyShown;
 
     void BuildWhy(HostSnapshot s, GameData data)
     {
@@ -1189,11 +1282,19 @@ public sealed partial class TechTree : Control
             {
                 string text = $"{Loc.TOr("cause." + l.Cause, l.Cause.ToString())}: {Names.Node(data, l.SubjectId)}" + (l.EtaMonths is int m ? Loc.T("inset.eta", m) : "");
                 var lab = Ui.Wrap(text);
-                _inset.AddChild(n++ == 0 ? Ui.MarkedRow(Ui.Alarm, lab) : lab);
+                _inset.AddChild(n++ == 0 ? RootRow(lab) : lab);
             }
             if (_root >= 0 && _goal >= 0) _inset.AddChild(Ui.Wrap("inset.hint", 14, Ui.Ink3));
         }
 
+    }
+
+    // The first link of "why not" is the root: it carries the same sign as the root on the map (C2).
+    static HBoxContainer RootRow(Control text)
+    {
+        var r = new HBoxContainer(); r.AddThemeConstantOverride("separation", 6);
+        r.AddChild(new RootMarkIcon()); r.AddChild(text);
+        return r;
     }
 
     // ---------------- node card ----------------
@@ -1229,13 +1330,21 @@ public sealed partial class TechTree : Control
         return sb;
     }
 
-    PanelContainer Block(Color line, Color wash, Color text, string headKey, params Control[] body)
+    // Card (spec 2.6): sheet, 1 du rule frame, a 3 du ink-2 bar on the left; the kind shows in the icon and the heading, not in a fill colour.
+    PanelContainer Block(CardIcon.Kind icon, string headKey, params Control[] body)
     {
-        var box = new PanelContainer(); box.AddThemeStyleboxOverride("panel", Plate(wash, line, 4));
+        var box = new PanelContainer(); box.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Rule, 1, 0, Ui.R1, 0));
+        var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 0);
+        row.AddChild(new ColorRect { Color = Ui.Ink2, CustomMinimumSize = new Vector2(3, 0) });
+        var pad = new MarginContainer(); pad.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        foreach (var side in new[] { "margin_left", "margin_right" }) pad.AddThemeConstantOverride(side, 10);
+        foreach (var side in new[] { "margin_top", "margin_bottom" }) pad.AddThemeConstantOverride(side, 6);
         var v = new VBoxContainer(); v.AddThemeConstantOverride("separation", 3);
-        v.AddChild(Ui.Lbl(headKey, 14, text, FontKind.Draft));
+        var head = new HBoxContainer(); head.AddThemeConstantOverride("separation", 6);
+        head.AddChild(new CardIcon(icon)); head.AddChild(Ui.Lbl(headKey, 14, Ui.Ink, FontKind.Draft));
+        v.AddChild(head);
         foreach (var c in body) v.AddChild(c);
-        box.AddChild(v);
+        pad.AddChild(v); row.AddChild(pad); box.AddChild(row);
         return box;
     }
 
@@ -1244,36 +1353,46 @@ public sealed partial class TechTree : Control
     {
         var nodes = _host.Data.Nodes;
         int t = (int)nodes.Type[i], d = (int)nodes.Discipline[i];
-        // 1. schematic: the picture, or a framed placeholder with the type label until the drawing exists
-        var frame = new PanelContainer { CustomMinimumSize = new Vector2(0, 120) };
+        // 1. schematic: the picture in a cut-out window (spec 2.7: a 6 du inner shadow top-left), or a framed placeholder with the type label until the drawing exists
         var tex = Schematic(i);
-        frame.AddThemeStyleboxOverride("panel", tex != null ? Plate(Ui.Sheet, Ui.Rule, 1) : Plate(Ui.DiscWash[d], Ui.DiscLine[d], 1));
-        if (tex != null) frame.AddChild(new TextureRect { Texture = tex, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, CustomMinimumSize = new Vector2(0, 130), Modulate = new Color(1, 1, 1, 0.6f) });
+        if (tex != null)
+        {
+            var window = new PanelContainer(); var wb = Ui.Box(Ui.Sheet.Darkened(0.18f), Ui.Rule, 1, 0, Ui.R1, 0);
+            wb.ContentMarginLeft = 6; wb.ContentMarginTop = 6; wb.ContentMarginRight = 1; wb.ContentMarginBottom = 1;
+            window.AddThemeStyleboxOverride("panel", wb);
+            var paper = new PanelContainer(); paper.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, null, 0, 0, 0, 0));
+            paper.AddChild(new TextureRect { Texture = tex, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, CustomMinimumSize = new Vector2(0, 124), Modulate = new Color(1, 1, 1, 0.6f) });
+            window.AddChild(paper);
+            _inset.AddChild(window);
+            _inset.AddChild(Ui.Lbl("ui.tree.schem.example", 14, Ui.Ink3));
+        }
         else
         {
+            var frame = new PanelContainer { CustomMinimumSize = new Vector2(0, 120) };
+            frame.AddThemeStyleboxOverride("panel", Plate(Ui.DiscWash[d], Ui.DiscLine[d], 1));
             var ph = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
             var l1 = Ui.Lbl(Loc.T("ntype." + t) + " · " + Loc.T("disc." + d), 18, Ui.DiscText[d], FontKind.Draft); l1.HorizontalAlignment = HorizontalAlignment.Center;
             var l2 = Ui.Lbl("card.noschem", 14, Ui.DiscText[d]); l2.HorizontalAlignment = HorizontalAlignment.Center;
             ph.AddChild(l1); ph.AddChild(l2); frame.AddChild(ph);
+            _inset.AddChild(frame);
         }
-        _inset.AddChild(frame);
 
         // 2. affects: layer and system (real data: type, cluster, discipline)
-        _inset.AddChild(Block(Ui.AffLine, Ui.AffWash, Ui.AffText, "card.affects",
+        _inset.AddChild(Block(CardIcon.Kind.Touches, "card.affects",
             Ui.Wrap(Loc.T("card.layer", Loc.T("ntype." + t), t + 1), 14, Ui.Ink),
             Ui.Wrap(Loc.T("card.system", Loc.T("cluster." + (int)nodes.Cluster[i]), Loc.T("disc." + d)), 14, Ui.Ink)));
 
-        // 3. parameter: real values where Core has them (process yield, capability tier); the gain itself has no data
+        // 3. parameter: only what Core has (process yield, capability tier); the gain per parameter is shown when the core provides it
         var pbody = new List<Control>();
-        if (_nv[i].Process is { } pv) pbody.Add(Ui.Wrap(Loc.T("card.param.yield", Loc.N(pv.Yield.ToDouble())), 14, Ui.Ink));
-        else if (nodes.Type[i] == NodeType.APP) pbody.Add(Ui.Wrap(Loc.T("card.param.app", nodes.Gen[i]), 14, Ui.Ink));
-        else pbody.Add(Ui.Wrap(Loc.T("card.param.none"), 14, Ui.Ink2));
-        if (nodes.Type[i] == NodeType.PRC)
-            pbody.Add(Ui.Wrap(Loc.T("card.param.cap", Loc.N(nodes.ReqPrecision[i].ToDouble()), Loc.N(nodes.ReqPurity[i].ToDouble()), Loc.N(nodes.ReqQualityControl[i].ToDouble()), nodes.Tier[i]), 14, Ui.Ink2));
-        var mock = new HBoxContainer(); mock.AddThemeConstantOverride("separation", 8);
-        mock.AddChild(Ui.Mock()); mock.AddChild(Ui.Wrap("card.param.api", 14, Ui.Ink3));
-        pbody.Add(mock);
-        _inset.AddChild(Block(Ui.RaiseLine, Ui.RaiseWash, Ui.RaiseText, "card.raises", pbody.ToArray()));
+        foreach (var pl in TreeClarity.ParamLines(_nv[i].Process != null, nodes.Type[i] == NodeType.APP, nodes.Type[i] == NodeType.PRC))
+            switch (pl)
+            {
+                case TreeClarity.ParamLine.Yield: pbody.Add(Ui.Wrap(Loc.T("card.param.yield", Loc.N(_nv[i].Process!.Value.Yield.ToDouble())), 14, Ui.Ink)); break;
+                case TreeClarity.ParamLine.ProductGeneration: pbody.Add(Ui.Wrap(Loc.T("card.param.app", nodes.Gen[i]), 14, Ui.Ink)); break;
+                case TreeClarity.ParamLine.KnowledgeStep: pbody.Add(Ui.Wrap(Loc.T("ui.tree.effects.knowledge"), 14, Ui.Ink2)); break;
+                default: pbody.Add(Ui.Wrap(Loc.T("card.param.cap", Loc.N(nodes.ReqPrecision[i].ToDouble()), Loc.N(nodes.ReqPurity[i].ToDouble()), Loc.N(nodes.ReqQualityControl[i].ToDouble()), nodes.Tier[i]), 14, Ui.Ink2)); break;
+            }
+        _inset.AddChild(Block(CardIcon.Kind.Raises, "card.raises", pbody.ToArray()));
 
         // 4. unlocks: the rows that list this node in requires
         var next = new List<Control>();
@@ -1282,7 +1401,7 @@ public sealed partial class TechTree : Control
             next.Add(Ui.Wrap((_state[x] == St.Known ? "● " : _state[x] == St.Frontier ? "◐ " : "○ ") + Names.Node(nodes.Id[x]) + $" · №{nodes.Number[x]}", 14, Ui.Ink));
         if (dep.Count > 6) next.Add(Ui.Wrap(Loc.T("card.more", dep.Count - 6), 14, Ui.Ink2));
         if (dep.Count == 0) next.Add(Ui.Wrap(Loc.T("card.end"), 14, Ui.Ink2));
-        _inset.AddChild(Block(Ui.OpenLine, Ui.OpenWash, Ui.OpenText, "card.unlocks", next.ToArray()));
+        _inset.AddChild(Block(CardIcon.Kind.Opens, "card.unlocks", next.ToArray()));
     }
 
     void Sec(string key) { _inset.AddChild(new HSeparator()); _inset.AddChild(Ui.Head(key)); }

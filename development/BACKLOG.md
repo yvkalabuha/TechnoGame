@@ -150,6 +150,19 @@
 | [TASK-0132](../development/tasks/TASK-0132-tree-keyboard-selection.md) | PROPOSED | Keyboard selection of technology tree nodes and keyboard tooltip (A6-A8) | MS-M05 |
 | [TASK-0133](../development/tasks/TASK-0133-g5-g6-data-probe.md) | IN_PROGRESS | G5/G6 data in mods on the train-2 branch and calibration probe (O-038) | MS-M05 |
 | [TASK-0134](../development/tasks/TASK-0134-hcap-growth-production-mastery.md) | IN_PROGRESS | Hcap growth and production mastery in Core: series gate, candidate close, foresight, mastery programme (#438-#440) | MS-M05 |
+| [TASK-0135](../development/tasks/TASK-0135-gemini-visual-review.md) | DONE | Gemini visual second opinion in llm_worker (free tier, #441) | MS-M05 |
+| [TASK-0136](../development/tasks/TASK-0136-tree-clarity-depth-pass.md) | DONE | Knowledge tree and menu clarity pass after Gemini design review: player text, legend grammar, node sizes, menu reasons, sheet depth | MS-M05 |
+| [TASK-0137](../development/tasks/TASK-0137-globe-volume-atmosphere-prototype.md) | DONE | Globe volume and limb atmosphere: Godot prototype of three variants for the owner (#426, #442) | MS-M05 |
+| [TASK-0138](../development/tasks/TASK-0138-globe-1945-borders.md) | DONE | Globe draws 1945 political borders and labels from the region map and owners, not modern Natural Earth countries | MS-M05 |
+| [TASK-0139](../development/tasks/TASK-0139-hud-time-controls.md) | DONE | HUD time controls: centred pause and speed buttons, no speed text, speed gauge active frame alignment | MS-M05 |
+| [TASK-0140](../development/tasks/TASK-0140-sound-timing-audit.md) | REVIEW | Sound audit: sounds that play at the wrong moment or irritate (owner feedback) | MS-M05 |
+| [TASK-0141](../development/tasks/TASK-0141-gemini-agy-sketches.md) | DONE | Gemini design sketches through Antigravity CLI (agy) in llm_worker (#451) | MS-M05 |
+| [TASK-0142](../development/tasks/TASK-0142-globe-map-remainder.md) | PROPOSED | Globe map remainder after TASK-0138: hatch legend, occupation control line, small-state callouts, coast staircase | MS-M05 |
+| [TASK-0143](../development/tasks/TASK-0143-sketch-quota-subagents.md) | IN_PROGRESS | Gemini sketch runs: detect subagent quota errors, one image per subagent, no extra refinements | MS-M05 |
+| [TASK-0144](../development/tasks/TASK-0144-muted-sound-character.md) | IN_PROGRESS | Muted sound character (#455): soften attack and low-pass all routine cues | MS-M05 |
+| [TASK-0145](../development/tasks/TASK-0145-sketch-codex-engine.md) | APPROVED | Sketches through Codex CLI image generation (llm_worker sketch --engine codex) | MS-M05 |
+| [TASK-0146](../development/tasks/TASK-0146-review-fallback-agy-sonnet.md) | IN_PROGRESS | Second review fallback to Sonnet 5.5 through agy when the Codex limit is exhausted (#456) | MS-M05 |
+| [TASK-0147](../development/tasks/TASK-0147-ahead-of-time-cost.md) | APPROVED | Ahead-of-time cost for knowledge nodes in Core (#458) and G5/G6 rev 3.1 data on the train-2 branch | MS-M05 |
 
 ## Гипотезы
 
@@ -203,6 +216,7 @@
 | [ADR-0023](../docs/decisions/ADR-0023-adr-0016-benchmark-rules-amendment.md) | ACCEPTED | Benchmark validity rules and split allocation limit (amendment to ADR-0016) |
 | [ADR-0024](../docs/decisions/ADR-0024-adr-0023-gc-pause-criterion.md) | PROPOSED | GC pause criterion instead of the gen2 counter (amendment to ADR-0023 p. 2.4) |
 | [ADR-0025](../docs/decisions/ADR-0025-view-snapshot-buffer-ring.md) | ACCEPTED | View snapshot: scoped client view |
+| [ADR-0026](../docs/decisions/ADR-0026-ai-generated-images.md) | ACCEPTED | AI-generated images as static illustrations (amendment to ADR-0009, #445) |
 
 ## Research Reports
 

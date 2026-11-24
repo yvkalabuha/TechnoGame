@@ -75,6 +75,38 @@ python3 -m tools.llm_worker gate --item <путь> --stance third [--profile dee
 - При повторе `usage` и статистика рассуждения в записи — сумма всех попыток (как в ledger); сырое тело пустой первой попытки — `thinking.first_attempt_raw`. `run --thinking on` пишет `thinking` в `round_N/*_response.json`.
 - `review`: лимит задачи по ledger — `max_usd_task` $0,50 (ключ задачи `TASK-NNNN`); $1,00 действует только для `gate:<ID>`. Номер `round` выбирается под `flock` (`runs/.review-<task>.lock`); старые записи без `round`/`created_at` упорядочиваются по mtime.
 
+## Gemini как второе мнение по кадрам (TASK-0135, #441)
+```bash
+python3 -m tools.llm_worker visual --task TASK-NNNN --frames shots-out/a.png shots-out/b.png \
+    [--criteria docs/ui/UI_DESIGN_SYSTEM.md#12] [--model <id>] [--dry-run]
+```
+- Профиль `gemini-flash` (OpenAI-совместимая точка Google), только бесплатный уровень: `paid=False`, денег в ledger нет. Ключ — только файл `~/.config/singularity/gemini-api-key` (0600, не симлинк, вне репозитория); без него команда отказывает (код 4) с подсказкой.
+- Лимиты `GEMINI_RPM=5`, `GEMINI_RPD=100` — осторожные оценки, сверить со страницей квот.
+- `--mode design` (по умолчанию `criteria`): в запрос добавляется `docs/ui/VISUAL_DIRECTION_V06.md`, ответ содержит ещё `proposals` (название, что менять, зачем, кадры, объём S/M/L, риск для критериев понятности); схема `schemas/visual-design.schema.json`.
+- Профили `free_public` недоступны в `run`; провайдер требует их собственный URL и счётчик (иначе ключ и контекст репозитория могли бы уйти на другой хост).
+- Счётчик суток сбрасывается в 00:00 UTC, у Google квота — в полночь по Тихоокеанскому времени: запас на границе суток. Нечитаемый файл счётчика — отказ, а не «ноль».
+- **Бесплатность не проверяется инструментом.** Бесплатный уровень действует, только если в проекте Google (откуда ключ) не включён биллинг; инструмент биллинг не видит и цен не знает. Поэтому каждый запуск пишет расход токенов (prompt / completion / thinking, как сообщил провайдер) в запись и в суточные итоги `gemini-usage.json`, и печатает их.
+- Кадры меньше 1920x1080 отклоняются (размер читается из заголовка), `--allow-small` снимает проверку. Находки с критерием, которого нет в разделе критериев, или с кадром, которого не отправляли, помечаются `unverified` в JSON и в `.md`. JSON и `.md` пишутся парой из одного ответа (временные файлы, затем переименование), в обоих `response_sha256`.
+- Модель по умолчанию `gemini-4-hydrogen` (в списке `GET /v1beta/models` 2026-11-24 вместе с gemini-4-argon, -carbon, -neon; живой прогон прошёл).
+- Счётчик запросов (в минуту и за сутки UTC) — `$XDG_DATA_HOME/singularity-llm/gemini-usage.json`; считается каждая HTTP-попытка, при превышении отказ (код 4). 429 — пауза и повтор, не больше `PROVIDER_RETRIES`.
+- Кадры только из `shots-out/` (PNG/JPEG, ≤ 7 MB каждый, ≤ 8 шт., ≤ 18 MB всего), уходят как data URI. gitleaks сканирует только текст запроса, не пиксели.
+- **Данные:** бесплатный уровень Google может использовать присланное для улучшения продуктов. Отправлять только игровые кадры, без личных данных и секретов.
+- Результат: `runs/visual-<task>-<hash8>-gemini.json` и `.md` рядом; невалидный ответ — `*-invalid.json`. Вердикт PASS/FAIL остаётся за ui-art-director; замечания Gemini идут в обзор задачи.
+
+## Эскизы Gemini через Antigravity CLI (TASK-0141, #451, ADR-0026)
+```bash
+python3 -m tools.llm_worker sketch --task TASK-NNNN --prompt-file <brief.md> [--ref shots-out/a.png ...] [--count 1..4] [--with-visual] [--dry-run]
+```
+- Вызывает `agy -p <prompt> --print-timeout <N>s --mode accept-edits --output-format stream-json` в пустой временной папке; `--dangerously-skip-permissions` не передаётся никогда, shell агента запрещён заранее (`--settings` с `permissions.deny`: `command(*)`, `write_file(*)`, `read_url(*)`, `execute_url(*)`, `mcp(*)`; флага отключения инструментов у agy нет, ключ `disabledTools` отвергается: «unknown setting»; замер 2026-11-24, agy 1.5.16), и дополнительно любой `run_command` в потоке — отказ; после прогона поток проверяется по allowlist инструментов (generate_image, invoke_subagent, finish/wait, view_file/read_file/list_dir внутри рабочей папки; аргументы вызовов берутся из transcript.jsonl brain-папок, т.к. поток их не содержит; send_message допустим только в transcript): иной вызов — `agent_tool_violation`; fail closed: нет читаемого transcript.jsonl хотя бы у одного id прогона, или поток называет `view_file`/`read_file`/`list_dir`, а в transcript нет их аргументов — отказ; эскиз засчитывается только как целая картинка (PNG: chunk-CRC и IEND, JPEG: SOF/SOS и EOI, WebP: размер RIFF; не меньше 100 байт) с неизменным размером между двумя опросами; запись прогона `sketch-<task>-<hash8>-<UTC время>[-N].json` не перезаписывает прежнюю; квота (RESOURCE_EXHAUSTED/quota/429) — `agy_quota` (код 4); окружение agy — allowlist без ключей; `--prompt-file`: только .md/.txt, без dot-путей и файлов, игнорируемых git. Нет `agy` (PATH или `~/.local/bin`) — отказ `agy_missing`; не залогинен — `agy_not_logged_in` (код 4).
+- Разбор NDJSON (`sketch.parse_stream`): `init`/`step_update`/`result`. **Замер 2026-11-24 (agy 1.5.15):** картинку рисует под-агент `image-generator` (событие `invoke_subagent` со своим `conversation_id`), но файл `<name>_<ts>.jpg` лёг в brain-папку **главного** разговора. Поэтому ищем во всех id из событий; копируются только файлы верхнего уровня brain-папки с mtime не раньше старта (минус 2 с). Фикстура реального прогона: `fixtures/agy_sketch_stream.ndjson`.
+- Копии — `shots-out/sketches/<task>/`; запись `runs/sketch-<task>-<hash8>.json` и `.md`: prompt, refs, conversation_id(s), файлы с sha256, токены, время, строки атрибуции для `mods/core/ATTRIBUTION.md` (одобряющий вписывается после решения ui-art-director; без одобрения в mods ничего не добавлять).
+- `--ref`: только из `shots-out/` (PNG/JPEG); копии кладутся в рабочую папку agy и называются в prompt абсолютными путями (агент должен открыть их файловым просмотром `view_file`). **Не проверено:** читает ли agy эти кадры (живой прогон с `--ref` не делался; смотреть в `tools` записи — `view_file`/`read_file`).
+- Счётчик `agy-usage.json` рядом с ledger (RateGuard): `AGY_RPM=2`, `AGY_RPD=20` — осторожные оценки; каждый запуск тратит подписку владельца.
+- `--with-visual`: перед эскизами выполняет `visual --mode design` на тех же `--ref` (API, бесплатный ключ).
+- Живое подтверждение (2026-11-24, Orchestrator): эскизы макетов Финансов и Производства в `shots-out/sketches/design-pass-2/`; картинку писал под-агент `image-generator` в brain-папку главного разговора.
+- Результат неполный (картинок меньше `--count`): запись помечена `partial`, код возврата 6.
+- Данные уходят в Google: только текст брифа и игровые кадры.
+
 ## После прогона (Pilot)
 - B1: `git log -p -1 llm/<task_id>` — результат на ветке `llm/...`, не в `main`.
   В `main` — только через reviewer, `zone_check` и коммит Pilot.

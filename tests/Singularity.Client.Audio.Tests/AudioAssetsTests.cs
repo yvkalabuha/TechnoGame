@@ -48,8 +48,7 @@ public class AudioAssetsTests
         var (rate, ch, seconds) = ReadOgg(Path.Combine(Assets(), "ui", file + ".ogg"));
         Assert.Equal(48000, rate); Assert.Equal(1, ch);
         var c = AudioCatalog.Get(cue);
-        // Seconds is the playback length: the file plus the extra clicks of a repeated cue.
-        Assert.InRange(seconds + (c.Repeats - 1) * Cue.RepeatGap, c.Seconds - 0.02, c.Seconds + 0.02);
+        Assert.InRange(seconds, c.Seconds - 0.02, c.Seconds + 0.02);
     }
 
     [Fact]

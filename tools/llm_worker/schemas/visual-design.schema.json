@@ -1,0 +1,123 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "opinion",
+    "summary",
+    "findings",
+    "proposals"
+  ],
+  "properties": {
+    "opinion": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail",
+        "mixed"
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "findings": {
+      "type": "array",
+      "maxItems": 60,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "criterion",
+          "frame",
+          "location",
+          "severity",
+          "fix"
+        ],
+        "properties": {
+          "criterion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20
+          },
+          "frame": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "fix": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        }
+      }
+    },
+    "proposals": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "change",
+          "why",
+          "frames",
+          "effort",
+          "clarity_risk"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "change": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "why": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "frames": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "maxLength": 300
+            }
+          },
+          "effort": {
+            "type": "string",
+            "enum": [
+              "S",
+              "M",
+              "L"
+            ]
+          },
+          "clarity_risk": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        }
+      }
+    }
+  }
+}

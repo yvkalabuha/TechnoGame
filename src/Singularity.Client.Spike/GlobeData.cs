@@ -1,161 +1,95 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text.Json;
+using System.Globalization;
 using Godot;
 
 namespace Singularity.Client.Spike;
 
-/// <summary>One Natural Earth admin-0 country: rings per polygon (outer first), id = index + 1 in the ID raster.</summary>
+/// <summary>One owner (polity) of the 1945 map; id = owner number of the owner raster (1..255).</summary>
 public sealed class Country
 {
     public int Id;
-    public string Name;
-    public List<List<Vector2[]>> Polygons = new();
-    public double BoxArea;
+    public string Name;      // polity code, for example "SUN"; the display name is Names.Country(code)
+    public double BoxArea;   // pixels of the owner on the raster: the label order
     public Vector2 LabelPoint;
-    public int Tint;
+    public int Tint;         // tone index 0..11 of CountryPalette
 }
 
-/// <summary>Loads Natural Earth data and rasterises an equirectangular ID map (spike: runs at startup, no caching).</summary>
+/// <summary>
+/// The globe data: region ID raster (R16, from geo/arcs.bin), owner raster for picking (R8) and the region look-up table that the shader reads
+/// (row 0: fill sRGB + hatch kind, row 1: hatch line sRGB + owner number). Built at startup from the map tables and the 1945 owners.
+/// </summary>
 public sealed class GlobeData
 {
-    public const int W = 4096, H = 2048;
+    public const int W = WorldMap.W, H = WorldMap.H;
+    public const int LutWidth = 512;
     public readonly List<Country> Countries = new();
-    public readonly byte[] Ids = new byte[W * H]; // 0 = sea, else country id (1..255)
+    public byte[] Ids = Array.Empty<byte>();            // owner number per pixel, 0 = sea or no owner
+    public ushort[] RegionIds = Array.Empty<ushort>();  // region number per pixel, 0 = sea
+    public byte[] RegionLut = Array.Empty<byte>();      // LutWidth x 2 RGBA8
+    public readonly List<Country> ColonyLabels = new();   // Id 0, Name "C_KEY": labels of the large colonial areas (locale polity.C_KEY)
+    public WorldMap Map;
+    public CountryPalette.Result Style;
 
-    public void Load(string path)
+    public void Load(string repoRoot)
     {
-        using var doc = JsonDocument.Parse(File.ReadAllBytes(path));
-        foreach (var f in doc.RootElement.GetProperty("features").EnumerateArray())
-        {
-            var c = new Country { Id = Countries.Count + 1, Name = f.GetProperty("properties").GetProperty("name").GetString() };
-            var g = f.GetProperty("geometry");
-            var coords = g.GetProperty("coordinates");
-            if (g.GetProperty("type").GetString() == "Polygon") c.Polygons.Add(ReadPolygon(coords));
-            else foreach (var p in coords.EnumerateArray()) c.Polygons.Add(ReadPolygon(p));
-            Countries.Add(c);
-        }
-        if (Countries.Count > 255) throw new InvalidOperationException("ID raster is 8-bit");
-    }
+        Map = WorldMap.Load(repoRoot);
+        RegionIds = Map.RasteriseRegions();
+        if (Map.Owners.Length > 255 || Map.RegionIds.Length >= LutWidth) throw new InvalidOperationException("owner raster is 8-bit and the region table is 512 wide");
+        Ids = Map.OwnerRaster(RegionIds);
+        Style = CountryPalette.Build(Map);
+        var area = new long[Map.Owners.Length + 1];
+        foreach (var o in Ids) area[o]++;
+        var anchors = Map.LabelAnchors(RegionIds);
+        for (int o = 1; o <= Map.Owners.Length; o++)
+            Countries.Add(new Country { Id = o, Name = Map.Owners[o - 1], BoxArea = area[o], LabelPoint = new Vector2(anchors[o].Lon, anchors[o].Lat), Tint = Style.OwnerTone[o] });
 
-    static List<Vector2[]> ReadPolygon(JsonElement rings)
-    {
-        var res = new List<Vector2[]>();
-        foreach (var r in rings.EnumerateArray())
-        {
-            var pts = new List<Vector2>();
-            foreach (var p in r.EnumerateArray()) pts.Add(new Vector2((float)p[0].GetDouble(), (float)p[1].GetDouble()));
-            res.Add(pts.ToArray());
-        }
-        return res;
-    }
+        var canchors = Map.ColonyAnchors(RegionIds);
+        var cg = Map.ColonyGroupOfRegion();
+        var carea = new long[WorldMap.ColonyGroups.Length + 1];
+        foreach (var rg in RegionIds) if (rg != 0) carea[cg[rg - 1]]++;
+        for (int k = 1; k <= WorldMap.ColonyGroups.Length; k++)
+            if (carea[k] > 0) ColonyLabels.Add(new Country { Id = 0, Name = "C_" + WorldMap.ColonyGroups[k - 1].Key, BoxArea = carea[k], LabelPoint = new Vector2(canchors[k].Lon, canchors[k].Lat) });
+        ColonyLabels.Sort((a, b) => b.BoxArea.CompareTo(a.BoxArea));
 
-    public void Rasterise()
-    {
-        foreach (var c in Countries)
-            foreach (var poly in c.Polygons) FillPolygon(poly, (byte)c.Id);
-    }
-
-    // Even-odd scanline fill over all rings of one polygon (holes included), pixel centres.
-    void FillPolygon(List<Vector2[]> rings, byte id)
-    {
-        float minY = float.MaxValue, maxY = float.MinValue;
-        foreach (var r in rings) foreach (var p in r) { minY = Math.Min(minY, p.Y); maxY = Math.Max(maxY, p.Y); }
-        int y0 = Math.Clamp((int)Math.Floor((90 - maxY) / 180f * H), 0, H - 1);
-        int y1 = Math.Clamp((int)Math.Ceiling((90 - minY) / 180f * H), 0, H - 1);
-        var xs = new List<float>[y1 - y0 + 1];
-        foreach (var r in rings)
+        RegionLut = new byte[LutWidth * 2 * 4];
+        for (int i = 0; i < Style.Regions.Length; i++)
         {
-            for (int i = 0; i < r.Length; i++)
-            {
-                var a = r[i]; var b = r[(i + 1) % r.Length];
-                if (a.Y == b.Y) continue;
-                for (int y = y0; y <= y1; y++)
-                {
-                    float lat = 90 - (y + 0.5f) * 180f / H;
-                    if ((a.Y <= lat) == (b.Y <= lat)) continue;
-                    float t = (lat - a.Y) / (b.Y - a.Y);
-                    (xs[y - y0] ??= new List<float>()).Add(a.X + t * (b.X - a.X));
-                }
-            }
-        }
-        for (int y = y0; y <= y1; y++)
-        {
-            var l = xs[y - y0];
-            if (l == null) continue;
-            l.Sort();
-            for (int k = 0; k + 1 < l.Count; k += 2)
-            {
-                int xa = Math.Clamp((int)Math.Ceiling((l[k] + 180) / 360f * W - 0.5f), 0, W - 1);
-                int xb = Math.Clamp((int)Math.Floor((l[k + 1] + 180) / 360f * W - 0.5f), 0, W - 1);
-                for (int x = xa; x <= xb; x++) Ids[y * W + x] = id;
-            }
+            var s = Style.Regions[i]; int id = i + 1;
+            Put(0, id, Fill(s.Tone), (byte)((int)s.Hatch * 85));
+            Put(1, id, Line(s.HatchTone), (byte)s.Owner);
         }
     }
 
-    /// <summary>Greedy colouring of the adjacency graph from the ID raster, 8 tints (stand-in for the palette validator).</summary>
-    public void AssignTints()
+    void Put(int row, int x, (byte R, byte G, byte B) c, byte a)
     {
-        int n = Countries.Count + 1;
-        var adj = new bool[n, n];
-        for (int y = 0; y < H - 1; y++)
-            for (int x = 0; x < W; x++)
-            {
-                int a = Ids[y * W + x];
-                int b = Ids[y * W + (x + 1) % W], c = Ids[(y + 1) * W + x];
-                if (a != 0 && b != 0 && a != b) adj[a, b] = adj[b, a] = true;
-                if (a != 0 && c != 0 && a != c) adj[a, c] = adj[c, a] = true;
-            }
-        var order = new List<Country>(Countries);
-        order.Sort((p, q) => q.BoxArea.CompareTo(p.BoxArea));
-        foreach (var c in Countries) c.Tint = -1;
-        foreach (var c in order)
-        {
-            var used = new bool[8];
-            for (int o = 1; o < n; o++) if (adj[c.Id, o] && Countries[o - 1].Tint >= 0) used[Countries[o - 1].Tint] = true;
-            int t = 0; while (t < 7 && used[t]) t++;
-            c.Tint = t;
-        }
+        int o = (row * LutWidth + x) * 4;
+        RegionLut[o] = c.R; RegionLut[o + 1] = c.G; RegionLut[o + 2] = c.B; RegionLut[o + 3] = a;
     }
 
-    public void ComputeBoxAreas()
+    static (byte, byte, byte) Fill(int tone)
     {
-        foreach (var c in Countries)
-            foreach (var poly in c.Polygons)
-            {
-                var r = poly[0]; float x0 = 1e9f, x1 = -1e9f, y0 = 1e9f, y1 = -1e9f;
-                foreach (var p in r) { x0 = Math.Min(x0, p.X); x1 = Math.Max(x1, p.X); y0 = Math.Min(y0, p.Y); y1 = Math.Max(y1, p.Y); }
-                c.BoxArea = Math.Max(c.BoxArea, (x1 - x0) * (y1 - y0));
-            }
+        int v = int.Parse(CountryPalette.Hex[tone], NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+        return ((byte)(v >> 16), (byte)(v >> 8), (byte)v);
     }
 
-    /// <summary>Interior point away from the border: grid candidates scored by min distance to ring vertices (approximates the pole of inaccessibility).</summary>
-    public void ComputeLabelPoint(Country c)
+    /// <summary>The stand-in of tint.N.line: the fill at 42 % in linear light, as an sRGB byte triple.</summary>
+    public static (byte, byte, byte) Line(int tone)
     {
-        List<Vector2[]> best = null; double bestArea = -1;
-        foreach (var poly in c.Polygons)
-        {
-            double a = 0; var r = poly[0];
-            for (int i = 0; i < r.Length; i++) { var p = r[i]; var q = r[(i + 1) % r.Length]; a += p.X * q.Y - q.X * p.Y; }
-            if (Math.Abs(a) > bestArea) { bestArea = Math.Abs(a); best = poly; }
-        }
-        float x0 = 1e9f, x1 = -1e9f, y0 = 1e9f, y1 = -1e9f;
-        foreach (var p in best[0]) { x0 = Math.Min(x0, p.X); x1 = Math.Max(x1, p.X); y0 = Math.Min(y0, p.Y); y1 = Math.Max(y1, p.Y); }
-        float step = Math.Max(0.5f, Math.Max(x1 - x0, y1 - y0) / 40f);
-        float bestD = -1; c.LabelPoint = new Vector2((x0 + x1) / 2, (y0 + y1) / 2);
-        var verts = new List<Vector2>();
-        foreach (var r in best) verts.AddRange(r);
-        for (float y = y0; y <= y1; y += step)
-            for (float x = x0; x <= x1; x += step)
-            {
-                if (IdAt(x, y) != c.Id) continue;
-                float d = float.MaxValue;
-                foreach (var v in verts) d = Math.Min(d, (v.X - x) * (v.X - x) + (v.Y - y) * (v.Y - y));
-                if (d > bestD) { bestD = d; c.LabelPoint = new Vector2(x, y); }
-            }
+        var (r, g, b) = Fill(tone);
+        static byte K(byte c) { var l = new Color(c / 255f, 0, 0).SrgbToLinear().R * 0.42f; return (byte)Math.Round(new Color(l, 0, 0).LinearToSrgb().R * 255f); }
+        return (K(r), K(g), K(b));
     }
 
+    /// <summary>The ID raster as RG8 bytes (low byte, high byte of the region number).</summary>
+    public byte[] RegionIdBytes()
+    {
+        var b = new byte[RegionIds.Length * 2];
+        for (int i = 0; i < RegionIds.Length; i++) { b[2 * i] = (byte)(RegionIds[i] & 255); b[2 * i + 1] = (byte)(RegionIds[i] >> 8); }
+        return b;
+    }
+
+    /// <summary>Owner number at lon/lat in degrees (0 = sea or no owner).</summary>
     public int IdAt(float lon, float lat)
     {
         int x = Math.Clamp((int)((lon + 180) / 360f * W), 0, W - 1);
