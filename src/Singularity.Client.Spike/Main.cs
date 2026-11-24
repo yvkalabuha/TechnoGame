@@ -203,14 +203,14 @@ public sealed partial class Main : Node3D
     void CloseGameMenu()
     {
         _mainMenu.Close(); GetViewport().GuiReleaseFocus();
-        if (_menuResume > 0) _signal.SetSpeed(_menuResume);
+        if (_menuResume > 0) { _audio?.QuietSpeed(_menuResume); _signal.SetSpeed(_menuResume); }
         _menuResume = -1;
     }
 
     void OpenGameMenu()
     {
         if (_menuResume >= 0) return;
-        _menuResume = _host.Speed; _signal.SetSpeed(0);
+        _menuResume = _host.Speed; _audio?.QuietSpeed(0); _signal.SetSpeed(0);
         _mainMenu.Open(true);
     }
 
@@ -284,7 +284,7 @@ public sealed partial class Main : Node3D
         _signal.SignalChanged += (key, on) => { if (_host.Snap != null) _journal.Add(Settings.Date(_host.Snap.Date), key, on); };
         _signal.MenuPressed += OpenGameMenu;
         _signal.SignalChanged += AlertMarker;
-        _settings.TestBus = bus => { if (bus == 5) _audio.Cue("signal_attention"); else _audio.Tick(); };
+        _settings.TestBus = bus => { if (bus == 5) _audio.TestCue("signal_attention"); else _audio.TestCue("ui_tick"); };
         _settings.MusicAmount = () => _audio.MusicAmount; _settings.MusicAmountSet = i => _audio.MusicAmount = i; _settings.ResetFatigue = _audio.ResetFatigue;
 
         _rail = new Rail { AnchorTop = 0, AnchorBottom = 1, AnchorLeft = 0, AnchorRight = 0, OffsetLeft = 0, OffsetBottom = 0 };
@@ -348,11 +348,26 @@ public sealed partial class Main : Node3D
         layer.AddChild(_helpBtn);
     }
 
-    void OpenTree(int mode) { _audio?.Tick(); _tree.ShowFor(_viewed, mode); }
+    // The tree can be hidden from many places (Esc, hotkey, its own button), so a tree that is not on screen always opens as a new object.
+    // A button activated from the keyboard reports Pressed after a key event, a mouse click after a mouse button.
+    void OpenTree(int mode, bool fromKeyboard = false)
+    {
+        if (!_tree.Visible) _audio?.OpenClosed(true);
+        _audio?.OpenTick(3000 + mode * 64 + _viewed, fromKeyboard || _lastInputKey);
+        _tree.ShowFor(_viewed, mode);
+    }
+
+    bool _lastInputKey;
+    public override void _Input(InputEvent e)
+    {
+        if (e is InputEventKey { Pressed: true }) _lastInputKey = true;
+        else if (e is InputEventMouseButton { Pressed: true }) _lastInputKey = false;
+    }
 
     // A foreign power opens in the right panel (read-only); the player's own power is the area panels on the left. Only one of them is open at a time
     // (one why_not target in the Session snapshot). On a click the globe turns to the power; the zoom is not touched.
-    void ShowPower(int i, bool turn)
+    // click: a mouse click on the globe, the only path that ticks (Esc, Back to own and new-game init turn the globe silently).
+    void ShowPower(int i, bool turn, bool click = false)
     {
         _viewed = i;
         _host.WhyActor = i;
@@ -360,7 +375,7 @@ public sealed partial class Main : Node3D
         else { CloseArea(); _actorPanel.ShowActor(i); }
         if (_tree.Visible) _tree.ShowFor(i, 0);
         if (!turn) return;
-        _audio?.Tick();
+        if (click) _audio?.OpenTick(2000 + i, false);
         FlyTo(i);
     }
 
@@ -384,7 +399,7 @@ public sealed partial class Main : Node3D
         if (id == AreaId.Map) { CloseArea(); Recenter(); return; }
         var def = AreaData.Of(id);
         if (_viewed != _player) ShowPower(_player, false);
-        _audio?.Tick();
+        _audio?.OpenTick((int)id, fromKeyboard);
         _area = id; _rail.Select(id);
         _host.WhyActor = _player;
         if (def.State == AreaState.Locked) { _areaPanel.Visible = false; _areaCard.ShowArea(def); }
@@ -396,7 +411,7 @@ public sealed partial class Main : Node3D
     {
         _areaPanel?.CancelFocusWait();
         var closed = _area; bool focusInside = _areaPanel != null && _areaPanel.HasFocusInside();
-        _area = AreaId.Map; _rail?.Select(AreaId.Map);
+        _area = AreaId.Map; _rail?.Select(AreaId.Map); _audio?.OpenClosed(closed != AreaId.Map);
         if (_areaPanel != null) _areaPanel.Visible = false;
         if (_areaCard != null) _areaCard.Visible = false;
         if (focusInside && closed != AreaId.Map) _rail?.FocusArea(closed);   // Esc from the panel returns the focus to the button of that area
@@ -408,7 +423,7 @@ public sealed partial class Main : Node3D
         _rail.SetWide(Settings.Current.RailWide); Recenter();
     }
 
-    void ToggleJournal() { _audio?.Tick(); _journal.Visible = !_journal.Visible; }
+    void ToggleJournal() { _journal.Visible = !_journal.Visible; }
 
     /// <summary>Signed offset of the middle of the free area from the screen centre: positive when a right panel takes room, negative for the rail and an area panel on the left.</summary>
     float PanelShift()
@@ -595,7 +610,7 @@ public sealed partial class Main : Node3D
         var def = code is >= Key.A and <= Key.Z ? AreaData.ByLetter((char)code) : null;
         if (def == null) return false;
         if (_tree.Visible) { if (def.Id == AreaId.Science) _tree.Visible = false; return true; }
-        if (def.Id == AreaId.Science && _area == AreaId.Science) OpenTree(0); else OpenArea(def.Id, true);
+        if (def.Id == AreaId.Science && _area == AreaId.Science) OpenTree(0, true); else OpenArea(def.Id, true);
         return true;
     }
 
@@ -622,7 +637,7 @@ public sealed partial class Main : Node3D
         if (_tintsReady && id != 0)
         {
             int a = Array.IndexOf(_actorCountry, id);
-            if (a >= 0) { ShowPower(a, true); return; }
+            if (a >= 0) { ShowPower(a, true, true); return; }
         }
         _selected = id;
         ApplySelection();
