@@ -3,26 +3,18 @@ using Godot;
 
 namespace Singularity.Client.Spike;
 
-/// <summary>The game-speed meter: four bars 10/14/18/22 high (pause, day/s, week/s, month/s; the fourth is the dashed reserve, #331). No text beside it (#443): the tooltip and the accessible name carry the rate with its unit.
+/// <summary>The game-speed meter: four bars 10/14/18/22 high (day/s, 3 days/s, week/s, month/s; none filled = pause, #481). No text beside it (#443): the tooltip and the accessible name carry the rate with its unit.
 /// Geometry is TimeGaugeGeometry; every edge is a whole-pixel fill, so the active frame stays symmetric around its bar. Only a tooltip reaches it; the keys stay with the buttons.</summary>
 public sealed partial class GaugeControl : Control
 {
     static readonly int[] Ink = { Ui.Teal, Ui.Olive, Ui.Plum, Ui.Sand };
     static readonly Color HatchColor = new(Palette.GaugeHatch);
-    public int Filled;               // speed step 0..3; 0 = pause, nothing filled and no frame
+    public int Filled;               // speed step 0..4; 0 = pause, nothing filled and no frame
 
     public GaugeControl()
     {
         MouseFilter = MouseFilterEnum.Pass; SizeFlagsVertical = SizeFlags.ShrinkCenter;
         CustomMinimumSize = new Vector2(TimeGaugeGeometry.Width, TimeGaugeGeometry.Height);
-    }
-
-    // A line of w du (whole pixels) on the pixel centres: the dashed rectangle runs half a stroke inside the bar rectangle.
-    void DrawDashedRect(Rect2 r, Color c, float w)
-    {
-        r = new Rect2(r.Position + new Vector2(w / 2, w / 2), r.Size - new Vector2(w, w));
-        DrawDashedLine(r.Position, new Vector2(r.End.X, r.Position.Y), c, w, 2f); DrawDashedLine(new Vector2(r.End.X, r.Position.Y), r.End, c, w, 2f);
-        DrawDashedLine(r.End, new Vector2(r.Position.X, r.End.Y), c, w, 2f); DrawDashedLine(new Vector2(r.Position.X, r.End.Y), r.Position, c, w, 2f);
     }
 
     void Hatch(Rect2 r, Color col)
@@ -50,7 +42,6 @@ public sealed partial class GaugeControl : Control
         {
             var p = TimeGaugeGeometry.BarPx(i, o.X, o.Y, s);
             var r = new Rect2((float)((p.X0 - o.X) / s), (float)((p.Y0 - o.Y) / s), (float)((p.X1 - p.X0) / s), (float)((p.Y1 - p.Y0) / s));
-            if (i == 3) { DrawDashedRect(r, Ui.Ink3, one); continue; }
             if (i < Filled) DrawRect(r, Ui.InkLine[Ink[i]]); else Hatch(r.Grow(-one), HatchColor);   // inside the outline: an antialiased line must not spill over the bar edge
             Outline(r, one, Ui.Ink);
             if (i == Filled - 1)

@@ -603,7 +603,7 @@ public sealed partial class Main : Node3D
         }
         else if (e is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape } && _tintsReady) OnEscape();
         else if (e is InputEventKey ak && ak.Pressed && !ak.Echo && _tintsReady && AreaKey(ak)) { }
-        else if (e is InputEventKey sk && sk.Pressed && !sk.Echo && _tintsReady && sk.Keycode is Key.Space or Key.P or Key.Bracketleft or Key.Bracketright or Key.Key1 or Key.Key2 or Key.Key3 or Key.L)
+        else if (e is InputEventKey sk && sk.Pressed && !sk.Echo && _tintsReady && sk.Keycode is Key.Space or Key.P or Key.Bracketleft or Key.Bracketright or Key.Key1 or Key.Key2 or Key.Key3 or Key.Key4 or Key.L)
         {
             if (sk.Keycode is Key.Space or Key.P) _signal.TogglePause();
             else if (sk.Keycode == Key.Bracketleft) _signal.StepSpeed(-1);
@@ -1137,7 +1137,7 @@ public sealed partial class Main : Node3D
                 _shotLog += $"session start: seed {_host.Seed} start_hash {_host.StartHash}\n";
                 RunValidator();
                 if (_only != null && _largeSize.X == 0 && !OnlyWantsLegacy) { ShowPower(_player, false); _signal.SetSpeed(1); BuildSizeShots(); _shotStep = 70; _shotT = 0; break; }   // --only names sized frames: skip the first stage
-                _signal.SetSpeed(3); ShowPower(_player, false); OpenArea(AreaId.Finance); _shotStep = 1; _shotT = 0; break;
+                _signal.SetSpeed(4); ShowPower(_player, false); OpenArea(AreaId.Finance); _shotStep = 1; _shotT = 0; break;
             case 1 when _shotT >= 3:
                 // Pause, move 10 points from procurement to R (as the sliders would) and send: the command must stay pending.
                 _shotLog += $"before: date {s.Date} tick {s.Tick} shares_in_force {Fmt(s.SharesInForce[0])} tick_ms {s.LastTickMs:F2}\n";
@@ -1148,7 +1148,7 @@ public sealed partial class Main : Node3D
             case 2 when _shotT >= 1.2:
                 _shotLog += $"paused: tick {s.Tick} (was {_shotTick}), pending {s.Pending}, last {s.Last.Status}\n";
                 Shot("globe_panel_pending.png");
-                _signal.SetSpeed(3); _shotStep = 3; _shotT = 0; break;
+                _signal.SetSpeed(4); _shotStep = 3; _shotT = 0; break;
             case 3 when _shotT >= 3:
                 _shotLog += $"after: date {s.Date} tick {s.Tick} shares_in_force {Fmt(s.SharesInForce[0])} last {s.Last.Status} pending {s.Pending} tick_ms {s.LastTickMs:F2}\n";
                 Shot("globe_panel.png"); Shot("signal_field.png", new Rect2I(0, 0, (int)vp.X, 52));
@@ -1244,8 +1244,8 @@ public sealed partial class Main : Node3D
             case 97 when _shotT >= 0.3: Shot("rail_press.png", new Rect2I(0, 0, 420, 360)); Mouse(_rail.ButtonCenter(AreaId.Science) + new Vector2(0, 600), null); _shotStep = 98; _shotT = 0; break;
             case 98 when _shotT >= 0.2: Mouse(_rail.ButtonCenter(AreaId.Science) + new Vector2(0, 600), false); CloseArea(); _shotStep = 40; _shotT = 0; break;
             // v0.5b: time icons in their states
-            case 40 when _shotT >= 0.5: Shot("time_day.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(2); _shotStep = 41; _shotT = 0; break;
-            case 41 when _shotT >= 0.4: Shot("time_week.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(3); _shotStep = 42; _shotT = 0; break;
+            case 40 when _shotT >= 0.5: Shot("time_day.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(3); _shotStep = 41; _shotT = 0; break;
+            case 41 when _shotT >= 0.4: Shot("time_week.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(4); _shotStep = 42; _shotT = 0; break;
             case 42 when _shotT >= 0.4: Shot("time_month.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(0); _shotStep = 43; _shotT = 0; break;
             case 43 when _shotT >= 0.4: Shot("time_pause.png", new Rect2I(0, 0, 620, 52)); _signal.SetSpeed(0); _alertI = 0; _instI = -1; _shotStep = 140; _shotT = 0; break;
             // layer-2 instruments in the area panels: caliper (Finance), flasks (Science, Production); every era at 100 % and 150 %, plus a greyscale copy of each
