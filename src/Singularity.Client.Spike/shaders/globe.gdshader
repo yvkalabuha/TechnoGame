@@ -33,6 +33,10 @@ uniform float sea_spec = 0.2;
 uniform vec3 rim_color : source_color = vec3(0.55, 0.72, 0.95);
 uniform float rim_amount = 0.3;
 
+uniform int look = 0;                     // 0 current, 1 A, 2 A+, 3 B
+uniform bool light_world = false;         // true: light_dir is a fixed world direction (sun by date stand-in, used for terminator and night frames)
+uniform vec3 cam_light = vec3(-0.5, 0.55, 0.7);   // view space: from the top left, a little in front
+
 const vec2 SZ = vec2(4096.0, 2048.0);
 
 int id_at(vec2 uv) {
@@ -61,22 +65,36 @@ void fragment() {
 		col = mix(col, line_of(tint_of(hatch_owner_id)), h * 0.9);
 	}
 
-	// Lighting on the fills only: borders, hatching and selection are drawn after it and are not shaded.
-	vec3 n_w = normalize((INV_VIEW_MATRIX * vec4(normalize(NORMAL), 0.0)).xyz);
-	vec3 l_w = normalize(light_dir);
-	float ndl = dot(n_w, l_w);
-	float lit = smoothstep(-0.3, 0.55, ndl);                       // wrapped Lambert: a wide soft terminator
-	vec3 shade = mix(night_tint * ambient, vec3(1.03), lit);
-	col = mix(col, col * shade, light_amount);
-	if (id == 0) {                                                  // ocean only: a faint specular glint
-		vec3 l_v = normalize((VIEW_MATRIX * vec4(l_w, 0.0)).xyz);
-		vec3 hv = normalize(l_v + normalize(VIEW));
-		float sp = pow(max(dot(normalize(NORMAL), hv), 0.0), 48.0) * smoothstep(0.0, 0.3, ndl);
-		col += vec3(1.0, 0.98, 0.92) * sp * sea_spec * light_amount;
+	if (look == 0) {
+		// Lighting on the fills only: borders, hatching and selection are drawn after it and are not shaded.
+		vec3 n_w = normalize((INV_VIEW_MATRIX * vec4(normalize(NORMAL), 0.0)).xyz);
+		vec3 l_w = normalize(light_dir);
+		float ndl = dot(n_w, l_w);
+		float lit = smoothstep(-0.3, 0.55, ndl);                       // wrapped Lambert: a wide soft terminator
+		vec3 shade = mix(night_tint * ambient, vec3(1.03), lit);
+		col = mix(col, col * shade, light_amount);
+		if (id == 0) {                                                  // ocean only: a faint specular glint
+			vec3 l_v = normalize((VIEW_MATRIX * vec4(l_w, 0.0)).xyz);
+			vec3 hv = normalize(l_v + normalize(VIEW));
+			float sp = pow(max(dot(normalize(NORMAL), hv), 0.0), 48.0) * smoothstep(0.0, 0.3, ndl);
+			col += vec3(1.0, 0.98, 0.92) * sp * sea_spec * light_amount;
+		}
+		float ndv0 = clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0);
+		float rim = pow(1.0 - ndv0, 3.0) * rim_amount * light_amount * (0.45 + 0.55 * lit);
+		col = mix(col, rim_color, clamp(rim, 0.0, 0.6));
+	} else {
+		// TASK-0137 looks (1 matte, 2 matte + strong limb haze, 3 physical haze): one key light, tied to the camera unless light_world is set.
+		// Lighting multiplies the fills only (every channel >= 0.70 after the cool tint, ceiling 1.05); the atmosphere is a separate shell drawn outside the disk (globe_atmosphere.gdshader).
+		vec3 nv = normalize(NORMAL);
+		vec3 lv = light_world ? normalize((VIEW_MATRIX * vec4(normalize(light_dir), 0.0)).xyz) : normalize(cam_light);
+		float nl = dot(nv, lv);
+		float lit2 = smoothstep(-0.22, 0.22, nl);                       // about 25 degrees of soft terminator
+		float lum = mix(0.70 / 0.94, 1.05, lit2);                       // the coolest channel (0.94) is still >= 0.70 at full night
+		vec3 temp = mix(vec3(0.94, 0.97, 1.0), vec3(1.0, 0.99, 0.96), lit2);   // cooler on the shaded side
+		float limb = 1.0 - clamp(dot(nv, normalize(VIEW)), 0.0, 1.0);
+		if (id == 0) col *= mix(1.0, 0.9, limb * limb);                 // the sea is a little darker towards the limb
+		col *= mix(vec3(1.0), lum * temp, light_amount);                // light_amount 0 is the unlit control of the shot suite
 	}
-	float ndv0 = clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0);
-	float rim = pow(1.0 - ndv0, 3.0) * rim_amount * light_amount * (0.45 + 0.55 * lit);
-	col = mix(col, rim_color, clamp(rim, 0.0, 0.6));
 
 	// graticule 30 deg
 	vec2 g = uv * vec2(12.0, 6.0);

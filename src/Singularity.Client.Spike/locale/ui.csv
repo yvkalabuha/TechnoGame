@@ -381,3 +381,8 @@ set.railwide,Area rail,Рейка областей
 set.rail.narrow,Narrow,Узкая
 set.rail.wide,Wide,Широкая
 set.musicamount,Music amount,Количество музыки
+set.globelook,Globe look,Вид глобуса
+set.gl.current,Prior,Прежний
+set.gl.a,Matte,Матовый
+set.gl.aplus,Matte + haze,Матовый + дымка
+set.gl.b,Atmosphere,Атмосфера

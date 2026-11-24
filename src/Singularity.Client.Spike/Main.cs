@@ -184,7 +184,7 @@ public sealed partial class Main : Node3D
     // ---------- client ----------
     void BuildMenus(CanvasLayer layer)
     {
-        _mainMenu = new MainMenu(); _newGame = new NewGameSheet(); _settings = new SettingsSheet(); _credits = new CreditsSheet();
+        _mainMenu = new MainMenu(); _newGame = new NewGameSheet(); _settings = new SettingsSheet { GlobeLookSet = v => ApplyGlobeLook((GlobeLook)v), GlobeLookActive = () => (int)_look }; _credits = new CreditsSheet();
         layer.AddChild(_mainMenu); layer.AddChild(_newGame); layer.AddChild(_settings); layer.AddChild(_credits);
         _mainMenu.Continue += CloseGameMenu;
         _mainMenu.NewGame += () => { _mainMenu.Close(); _pendingNewGame = true; };
@@ -493,6 +493,7 @@ public sealed partial class Main : Node3D
         var pl = Ui.Paper.SrgbToLinear();
         _globeMat.SetShaderParameter("paper", new Vector3(pl.R, pl.G, pl.B));
         AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = _globeMat });
+        SetupGlobeLook(OS.GetCmdlineUserArgs());
     }
 
     int TintOfActor(string actorId) =>
@@ -651,6 +652,7 @@ public sealed partial class Main : Node3D
             _debug = !_debug; _hud.Visible = _debug;
             if (_signal != null) { _signal.Debug = _debug; _actorPanel.Debug = _debug; }
         }
+        else if (e is InputEventKey f6 && f6.Pressed && !f6.Echo && f6.Keycode == Key.F6 && _debug) ApplyGlobeLook(GlobeLookLogic.Next(_look));
         else if (e is InputEventKey f1 && f1.Pressed && f1.Keycode == Key.F1 && _help != null) _help.Visible = !_help.Visible;
         else if (e is InputEventKey key && key.Pressed && key.Keycode == Key.H)
         {
@@ -1067,6 +1069,7 @@ public sealed partial class Main : Node3D
         void Shot(string name, Rect2I? r = null) => SaveShot(name, r);
         var s = _host.Snap;
         var vp = GetViewport().GetVisibleRect().Size;
+        if (OS.GetCmdlineUserArgs().Contains("--globe-look-shots")) { LookShotStep(dt); return; }
         if (ClickTest(dt, vp, Shot)) return;
         if (_largeSize.X > 0 && _shotStep == 0) { BuildLargeShots(); _shotStep = 70; _shotT = 0; }
         switch (_shotStep)
@@ -1221,7 +1224,7 @@ public sealed partial class Main : Node3D
                 _shotT = 0; break;
             case 47 when _shotT >= 0.7:
                 Shot("alert_tint5_night.png");
-                _globeMat.SetShaderParameter("light_dir", new Vector3(0.7f, 0.35f, 0.6f)); _overlay.RemoveMarker("demo0"); _overlay.RemoveMarker("demo1"); _overlay.RemoveMarker("demo2");
+                SetGlobeLightDir(false, DayLightDir); _overlay.RemoveMarker("demo0"); _overlay.RemoveMarker("demo1"); _overlay.RemoveMarker("demo2");
                 _shotStep = 50; _shotT = 0; break;
             // menus: (title look is taken on a cold start), in-game look, EN, new game, settings, rollback, UI scale 150%
             case 50: _mainMenu.Open(true); _shotStep = 53; _shotT = 0; break;
@@ -1736,8 +1739,8 @@ public sealed partial class Main : Node3D
                 _shotLog += $"alert demo: tint {tint + 1} (asked {AlertTints[i] + 1}) on {c.Name}{(night ? " (night side)" : "")}\n";
             }
         }
-        _globeMat.SetShaderParameter("light_dir", night ? new Vector3(-0.7f, -0.35f, -0.6f) : new Vector3(0.7f, 0.35f, 0.6f));
-        _globeMat.SetShaderParameter("light_amount", 1f);
+        SetGlobeLightDir(night, night ? -DayLightDir : DayLightDir);   // night: a fixed world light behind the globe, for every look
+        SetGlobeLightAmount(1f);
     }
 
     // Click test: for the USA, the USSR and France a click on the country, before and after rotating the globe. After the turn the country must be
@@ -1746,7 +1749,7 @@ public sealed partial class Main : Node3D
     bool ClickTest(double dt, Vector2 vp, Action<string, Rect2I?> shot)
     {
         if (_clickCase >= 6) return false;
-        if (_clickCase < 0) { _clickCase = 0; _clickT = 0; _clickPhase = 0; _globeMat.SetShaderParameter("light_amount", 0f); }
+        if (_clickCase < 0) { _clickCase = 0; _clickT = 0; _clickPhase = 0; SetGlobeLightAmount(0f); }
         _clickT += dt;
         var ids = _host.Layout.ActorIds.ToArray();
         string[] pick = { "USA", "SUN", "FRA" };
@@ -1758,7 +1761,7 @@ public sealed partial class Main : Node3D
         {
             _yaw = c.LabelPoint.X + (odd ? 28 : -25); _pitch = Mathf.Clamp(c.LabelPoint.Y + (odd ? -14 : 12), -80, 80); _dist = 2.6f; _flying = false; UpdateCamera();
             if (_clickT < 0.4) return true;
-            if (_clickCase == 0 && _lightShot == 0) { shot("globe_unlit.png", null); _globeMat.SetShaderParameter("light_amount", 1f); _lightShot = 1; _clickT = 0; return true; }
+            if (_clickCase == 0 && _lightShot == 0) { shot("globe_unlit.png", null); SetGlobeLightAmount(1f); _lightShot = 1; _clickT = 0; return true; }
             if (_clickCase == 0 && _lightShot == 1) { if (_clickT < 0.3) return true; shot("globe_lit.png", null); _lightShot = 2; }
             _clickPoint = _cam.UnprojectPosition(sph); _clickDist = _dist;
             Pick(_clickPoint); _clickPhase = 1; _clickT = 0;
