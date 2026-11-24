@@ -23,6 +23,9 @@ internal sealed class KnowledgeInputsAdapter(SliceWorld world) : IKnowledgeInput
         return world.ResearchWeight.Length == 0 || d < 0 ? prio : prio * world.ResearchWeight[d];
     }
 
+    public int PriorityGoals(int actorRow, long month, Span<int> nodeRows, Span<Fx6> multipliers) =>
+        world.Institutes?.Goals(actorRow, nodeRows, multipliers) ?? 0;
+
     public Fx6 J(int actorRow, int nodeRow, long month) =>
         KnowledgeRng.J(world.Streams.Know, month == 0 ? 0 : (int)((month - 1) / 12), actorRow, world.Graph.Number[nodeRow]);
 

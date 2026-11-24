@@ -8,6 +8,7 @@ using Singularity.Core.Industry;
 using Singularity.Core.Knowledge;
 using Singularity.Core.Policy;
 using Singularity.Core.Products;
+using Singularity.Core.Institutes;
 using Singularity.Core.Reserve;
 using Singularity.Core.WhyNot;
 using Singularity.Kernel;
@@ -158,13 +159,22 @@ internal sealed class SliceWorld
             budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout) > LicenceMask.NarrowMaxNumber);   // O-040: the second word only for data whose licensable PRC need it
         if (config.Reserve)
             Reserve = new ReserveSystem(Table, new ReserveParams(), new ReserveInputsAdapter(this));
+        InstituteOrders? orders = null;
+        if (config.Institutes)
+        {
+            var layout = InstituteLayout.FromData(data.Institutes, scenario, Graph, new InstituteParams());
+            orders = new InstituteOrders(Table, layout);
+            InstituteOrders = orders;
+            Institutes = new InstituteSystem(Table, layout, new InstituteParams(), Graph, new InstituteInputsAdapter(this));
+        }
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs,
             ImmutableArray.CreateRange(MasteryParams.ProgrammeProcesses(ProductsLayout).Select(k => ProductsLayout.ProcNumber[k])),
-            fundProgramme: config.Reserve);
+            fundProgramme: config.Reserve, institutes: orders);
         Limits = new CommandLimits(scenario.ActorCount, ProductsLayout.SlotCount, ProductsLayout.Designs,
             [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)])
         {
             ReserveEnabled = config.Reserve,
+            InstituteSlots = Institutes is null ? [] : Institutes.Layout.SlotCounts,
             NodeNumbers = ImmutableArray.CreateRange(Graph.Number.OrderBy(n => n)),
         };
         RegisterRunColumns();
@@ -175,6 +185,8 @@ internal sealed class SliceWorld
         Policy.Initialize();
         // The reserve runs last: it reads the same snapshot as the others and nothing reads its output within the step.
         var systems = new List<ITickSystem> { Knowledge, Industry, Products, Policy };
+        if (Institutes is not null)
+            systems.Add(Institutes);
         if (Reserve is not null)
             systems.Add(Reserve);
         if (config.DailyTickProbe)
@@ -261,7 +273,8 @@ internal sealed class SliceWorld
             default:
                 // L_C and L_P read t_known (SLICE_COMPOSITION §13.2); in every other mode the columns are absent and the hash is that of main.
                 return new KnowledgeSystem(Table, Graph, kStart, kp, inputs, Streams.Know, chunks, licenceTransfersKnowledge: Config.LicKnows,
-                    trackKnownSince: Config.Layer is LayerControl.Lc or LayerControl.Lp, fundProgrammes: Config.Reserve);
+                    trackKnownSince: Config.Layer is LayerControl.Lc or LayerControl.Lp, fundProgrammes: Config.Reserve,
+                    priorities: Config.Institutes ? new InstituteParams() : null);
         }
     }
 
@@ -348,6 +361,12 @@ internal sealed class SliceWorld
 
     /// <summary>The reserve account system; null when <see cref="SliceRunConfig.Reserve"/> is off.</summary>
     public ReserveSystem? Reserve { get; }
+
+    /// <summary>The institutes system; null when <see cref="SliceRunConfig.Institutes"/> is off.</summary>
+    public InstituteSystem? Institutes { get; }
+
+    /// <summary>The standing orders of the player to the institutes (the columns <c>set_priority_node</c> writes); null without institutes.</summary>
+    public InstituteOrders? InstituteOrders { get; }
     public WhyNotAnalyzer WhyNot { get; }
     public CommandLimits Limits { get; }
     public TickRunner Runner { get; }

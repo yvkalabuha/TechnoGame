@@ -51,6 +51,18 @@ public enum CommandRefusal
 
     /// <summary>At application: the reserve holds less than the amount, or the node is not in the frontier of the actor.</summary>
     ProgrammeNotFundable,
+
+    /// <summary>A command needs the institutes and the run has none.</summary>
+    InstitutesOff,
+
+    /// <summary>The actor has no institute in that slot.</summary>
+    BadSlot,
+
+    /// <summary>At application: the node is known already, or another slot of the actor works on it.</summary>
+    PriorityNotAvailable,
+
+    /// <summary>At application: the slot got its node from the player less than the reassignment period ago.</summary>
+    PriorityTooSoon,
 }
 
 public readonly record struct CommandVerdict(CommandRefusal Reason, string Message, int BestGenBefore = 0, int BestGenAfter = 0,
@@ -71,6 +83,9 @@ public sealed record CommandLimits(int ActorCount, int SlotCount, int Designs, I
 
     /// <summary>Node numbers of the knowledge graph (for <c>fund_programme</c>).</summary>
     public ImmutableArray<int> NodeNumbers { get; init; } = [];
+
+    /// <summary>Institutes per actor row (<c>set_priority_node</c>); empty = the run has no institutes.</summary>
+    public ImmutableArray<int> InstituteSlots { get; init; } = [];
 
     /// <summary><c>compose</c>/<c>derive</c>/<c>cancel</c> commands one actor can have in force in one month (SLICE_COMPOSITION §7.3, [Предп.] О-5).</summary>
     public const int DesignSlots = 4;
@@ -113,6 +128,14 @@ public static class CommandValidator
                 return s.Shares.IsValid
                     ? CommandVerdict.Ok
                     : CommandVerdict.Refuse(CommandRefusal.BadShares, $"shares must be non-negative and sum to exactly 1, got {s.Shares.Sum}");
+            case SetPriorityNode pn:
+                if (limits.InstituteSlots.IsDefaultOrEmpty)
+                    return CommandVerdict.Refuse(CommandRefusal.InstitutesOff, "this run has no institutes");
+                if ((uint)pn.Actor >= (uint)limits.InstituteSlots.Length || (uint)pn.Slot >= (uint)limits.InstituteSlots[pn.Actor])
+                    return CommandVerdict.Refuse(CommandRefusal.BadSlot, $"actor {pn.Actor} has no institute slot {pn.Slot}");
+                return limits.NodeNumbers.Contains(pn.Node)
+                    ? CommandVerdict.Ok
+                    : CommandVerdict.Refuse(CommandRefusal.BadNode, $"node {pn.Node} is not in the graph");
             case FundProgramme fp:
                 if (!limits.ReserveEnabled)
                     return CommandVerdict.Refuse(CommandRefusal.ReserveOff, "this run has no reserve account");

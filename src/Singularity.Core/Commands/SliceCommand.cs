@@ -58,6 +58,7 @@ public enum CommandKind
     StartMasteryProgramme = 9,
     CancelMasteryProgramme = 10,
     FundProgramme = 11,
+    SetPriorityNode = 12,
 }
 
 /// <summary>
@@ -166,6 +167,16 @@ public sealed record CancelMasteryProgramme(int Actor, int ProcessNumber) : Slic
 public sealed record FundProgramme(int Actor, int Node, Fx6 Amount) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.FundProgramme;
+}
+
+/// <summary>
+/// <c>set_priority_node(slot, node)</c> (research-institutes-priorities §4): the institute in <paramref name="Slot"/> of the actor works on the node first (money first, bonus of its
+/// level in the area). <paramref name="Slot"/> is the position of the institute among those of the actor (<see cref="Singularity.Core.Institutes.InstituteHandle"/>), <paramref name="Node"/> the node number of the data.
+/// A standing order: it stays until the node is known.
+/// </summary>
+public sealed record SetPriorityNode(int Actor, int Slot, int Node) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.SetPriorityNode;
 }
 
 /// <summary>An accepted command with its key: one line of <c>commands.log</c>.</summary>

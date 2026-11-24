@@ -198,6 +198,13 @@ public sealed partial record SliceRunConfig
     /// </summary>
     public bool Reserve { get; init; }
 
+    /// <summary>
+    /// Research priorities through institutes (TASK-0151, #484-#496): the institutes of the data stand in the table, <c>set_priority_node</c> gives a slot a goal
+    /// (money first, institute bonus), the AI picks goals by the same rules. Off = no institute columns, the old knowledge path, the hash and every golden of a
+    /// build without them.
+    /// </summary>
+    public bool Institutes { get; init; }
+
     /// <summary><c>BUDGET_RULE</c> (#430): <c>NOW</c> (constant growth) in main; <c>A</c>, <c>B1</c>, <c>B2</c> are measurement variants of slice-budget-convergence.md.</summary>
     public BudgetRule BudgetRule { get; init; } = BudgetRule.Now;
 

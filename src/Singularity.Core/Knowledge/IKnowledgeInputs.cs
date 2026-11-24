@@ -30,6 +30,13 @@ public interface IKnowledgeInputs
     ReadOnlySpan<int> LicensedEngines(int actorRow, long month);
 
     /// <summary>
+    /// The priority goals of the actor in month t (research-institutes-priorities §4): node rows in slot order with the speed multiplier of the institute
+    /// level in the area of each. Returns the count (at most the length of the spans); 0 = no priorities, the knowledge layer then runs its old path.
+    /// Used only by a system built with priority parameters.
+    /// </summary>
+    int PriorityGoals(int actorRow, long month, Span<int> nodeRows, Span<Fx6> multipliers) => 0;
+
+    /// <summary>
     /// The one-off programme of the actor in month t (the player's <c>fund_programme</c> paid from the reserve): node row and the amount, already
     /// cut to the reserve balance of the snapshot. False when there is none. Used only by a system built with programmes.
     /// </summary>

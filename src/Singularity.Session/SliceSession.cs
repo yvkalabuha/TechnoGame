@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Singularity.Core.Commands;
+using Singularity.Core.Institutes;
 using Singularity.Core.Products;
 using Singularity.Core.Data;
 using Singularity.Core.WhyNot;
@@ -600,6 +601,8 @@ public sealed partial class SliceSession
                 v = MasteryVerdict(start, month);
             if (v.Accepted && c.Command is FundProgramme fund)
                 v = FundVerdict(fund, month);
+            if (v.Accepted && c.Command is SetPriorityNode priority)
+                v = PriorityVerdict(priority, month);
             if (v.Accepted)
                 v = _world.Commands.Apply(c.Command, month);
             // The layer rejects a stale handle in its step and only counts it; the snapshot at the tick boundary is the one it reads first, so the outcome names it here.
@@ -612,6 +615,27 @@ public sealed partial class SliceSession
         _journal.AddRange(_pending);
         _pending.Clear();
         return true;
+    }
+
+    // set_priority_node: the node must still be unknown and no other slot of the actor works on it; a slot the player has set may be changed once per period.
+    private CommandVerdict PriorityVerdict(SetPriorityNode p, long month)
+    {
+        InstituteSystem institutes = _world.Institutes ?? throw new InvalidOperationException("The validator accepted set_priority_node without institutes.");
+        int row = _world.Graph.RowOf(p.Node);
+        if (row < 0 || _world.Knowledge.IsKnown(p.Actor, row))
+            return CommandVerdict.Refuse(CommandRefusal.PriorityNotAvailable, $"node {p.Node} is already known to actor {p.Actor}");
+        var slot = new InstituteHandle(p.Actor, p.Slot);
+        for (int k = 0; k < institutes.Layout.SlotCount(p.Actor); k++)
+        {
+            if (k != p.Slot && institutes.GoalNode(new InstituteHandle(p.Actor, k)) == p.Node)
+                return CommandVerdict.Refuse(CommandRefusal.PriorityNotAvailable, $"another institute already works on node {p.Node}");
+        }
+        int order = _world.InstituteOrders!.OrderNode(slot);
+        long ordered = _world.InstituteOrders!.OrderMonth(slot);
+        bool active = order != 0 && order != p.Node && !_world.Knowledge.IsKnown(p.Actor, _world.Graph.RowOf(order));
+        if (active && month - ordered < institutes.Parameters.ReassignMonths)
+            return CommandVerdict.Refuse(CommandRefusal.PriorityTooSoon, $"the slot got its node in month {ordered}; the next change is allowed in month {ordered + institutes.Parameters.ReassignMonths}");
+        return CommandVerdict.Ok;
     }
 
     // fund_programme needs the node in the frontier and the money in the reserve now; the layer repeats both on the snapshot of its step, so a late change costs nothing.

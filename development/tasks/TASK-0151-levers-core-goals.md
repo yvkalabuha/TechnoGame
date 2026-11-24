@@ -39,3 +39,10 @@ created: 2026-11-24
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
+Часть 1 из 2 (по заданию: институты + приоритеты, без стройки; ветка `task-0151-institutes`, от main + коммиты TASK-0150, т.к. 0150 ещё не на main). За флагом `SliceRunConfig.Institutes` (по умолчанию выкл.).
+- Данные: `mods/core/institutes.yaml` (22 института 1945, только с подтверждённым годом основания; Rolls-Royce Derby не внесён), тип `institute` в ModLoader, `InstituteTable` со своим хешем (не входит в `GameData.DataHash`, `CoreDataHash` не менялся).
+- Ядро: `Core/Institutes` (`InstituteSystem`: опыт, цели ИИ; `InstituteOrders`: приказы игрока колонками сущности; `InstituteLayout`/`InstituteHandle`; `InstituteMath`: κ_eff, пороги, бонус). `KnowledgeSystem`: группы цели, κ_eff, бонус +5 %/уровень только на целевой узел; без целей — старый код (`PriorityGoals` = 0).
+- Команда `SetPriorityNode(slot, node)` (кодек, валидатор, правило раз в 12 мес. на слот, узел занят/известен).
+- Отклонение от rev 4 §3: пороги уровней строго растут минимум на 1 (при N=6 правило даёт 1/2/3/3, уровень 3 и 4 неразличимы по опыту).
+- НЕ сделано (часть 2): BuildInstitute, стоимость/срок, окно −10 лет, cap малых стран, S_eff (мощность/содержание), ИИ-стройка исторических институтов, `Level` в видах, клиент.
+- Проверка: Session.Tests InstituteTests (12), ReserveTests, GoldenProjectionAgainstMain, SchemaTests, Command*; Core.Tests Data/Knowledge/Command (529); Architecture.Tests (147). Мутация: убрал max(1, ·) в KappaEff, тест KappaEff упал.
