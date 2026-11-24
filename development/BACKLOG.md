@@ -160,6 +160,7 @@
 | [TASK-0142](../development/tasks/TASK-0142-globe-map-remainder.md) | PROPOSED | Globe map remainder after TASK-0138: hatch legend, occupation control line, small-state callouts, coast staircase | MS-M05 |
 | [TASK-0143](../development/tasks/TASK-0143-sketch-quota-subagents.md) | IN_PROGRESS | Gemini sketch runs: detect subagent quota errors, one image per subagent, no extra refinements | MS-M05 |
 | [TASK-0144](../development/tasks/TASK-0144-muted-sound-character.md) | IN_PROGRESS | Muted sound character (#455): soften attack and low-pass all routine cues | MS-M05 |
+| [TASK-0145](../development/tasks/TASK-0145-sketch-codex-engine.md) | APPROVED | Sketches through Codex CLI image generation (llm_worker sketch --engine codex) | MS-M05 |
 
 ## Гипотезы
 
