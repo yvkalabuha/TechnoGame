@@ -207,7 +207,7 @@ public class WorldMapTests
         Assert.Equal(960 - 75, x3);                                                          // inside: untouched
     }
 
-    [Fact]
+    [GeoFact]
     public void Occupation_zones_are_told_apart_by_controller_number_not_by_tone()
     {
         // TASK-0142 G3: the line of control compares controller numbers; two controllers may share a tone (a joint administration takes its first member's tone).

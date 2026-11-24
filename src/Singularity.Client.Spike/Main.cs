@@ -332,7 +332,7 @@ public sealed partial class Main : Node3D
 
     // One run-time check on the live gameplay session (not only --map-frames): the actors of the running Session are mapped to countries of the 1945 map,
     // labels are placed, the map key is on screen and the occupation zones are drawn with their hatch.
-    bool _liveCheck, _liveFailed; double _liveCheckT, _quitAfter;
+    bool _liveCheck, _liveFailed, _liveRan; double _liveCheckT, _quitAfter;
     void LiveMapCheck()
     {
         int actors = _actorCountry.Length, mapped = _actorCountry.Count(c => c != 0), occ = 0;
@@ -340,7 +340,7 @@ public sealed partial class Main : Node3D
         // The occupation hatch must be on screen: hatching enabled in the material and a visible strength for the occupation kind.
         bool hatchOn = _showHatch && _globeMat.GetShaderParameter("hatch_occupied").AsVector3().Z > 0f;
         bool ok = _host.Ready && _host.Snap != null && actors > 0 && mapped > 0 && _overlay.VisibleLabels > 0 && _overlay.LegendPlaced && occ > 0 && hatchOn;
-        _liveFailed = !ok;
+        _liveFailed = !ok; _liveRan = true;
         GD.Print($"MAPCHECK live session: actors={actors} mapped={mapped} labels={_overlay.VisibleLabels} legend={(_overlay.LegendPlaced ? "on" : "off")} occupied_regions={occ} hatch={(hatchOn ? "on" : "off")}: " + (ok ? "PASS" : "FAIL"));
     }
 
@@ -758,7 +758,7 @@ public sealed partial class Main : Node3D
         if (_shots && _tintsReady) ShotStep(delta);
         if (_bench) BenchStep(delta);
         if (_mapFrames) MapFramesStep(delta);
-        if (_quitAfter > 0 && _t > _quitAfter) GetTree().Quit(_liveFailed ? 1 : 0);
+        if (_quitAfter > 0 && _t > _quitAfter) GetTree().Quit(_liveFailed || !_liveRan ? 1 : 0);   // a run that ended before the live check ran is a failure
         if (_liveCheck && (_liveCheckT += delta) > 2.0) { _liveCheck = false; LiveMapCheck(); }
         FlyStep(delta);
         UpdateCamera();
