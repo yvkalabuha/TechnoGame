@@ -1,11 +1,11 @@
-"""CLI: python3 -m tools.llm_worker {fill-hashes,submit,run,status,report,ledger,review,review-confirm,gate,visual} ..."""
+"""CLI: python3 -m tools.llm_worker {fill-hashes,submit,run,status,report,ledger,review,review-confirm,gate,visual,sketch} ..."""
 
 import argparse
 import json
 import sys
 from pathlib import Path
 
-from . import config, gitleaks, report, review as review_mod, visual as visual_mod
+from . import config, gitleaks, report, review as review_mod, sketch as sketch_mod, visual as visual_mod
 from .contract import ContractError, fill_hashes, validate_contract
 from .ledger import Guard, Ledger, SpendRefused, load_prices
 from .provider import AuthError, KeyFileError, OpenAICompatProvider, ProviderError, ProviderUnavailable
@@ -76,6 +76,15 @@ def main(argv=None):
                    help="criteria: findings against the criteria; design: also Gemini's own proposals")
     p.add_argument("--allow-small", action="store_true", help="send frames smaller than 1920x1080")
     p.add_argument("--dry-run", action="store_true", help="load frames, scan the text, send nothing")
+    p = sub.add_parser("sketch", help="Gemini design sketches (images) through the Antigravity CLI agy")
+    p.add_argument("--task", required=True)
+    p.add_argument("--prompt-file", type=Path, required=True, help="Markdown brief inside the repository")
+    p.add_argument("--ref", type=Path, action="append", default=[], help="reference frame from shots-out/ (repeatable)")
+    p.add_argument("--count", type=int, default=1)
+    p.add_argument("--timeout", type=int, default=sketch_mod.DEFAULT_TIMEOUT_S, help="seconds for agy")
+    p.add_argument("--with-visual", action="store_true", help="also run 'visual --mode design' on the --ref frames")
+    p.add_argument("--allow-small", action="store_true", help="with --with-visual: send frames below 1920x1080")
+    p.add_argument("--dry-run", action="store_true", help="check inputs, run nothing")
     sub.add_parser("status", help="list tasks and states")
     p = sub.add_parser("report", help="write reports/<date>.md")
     p.add_argument("--date")
@@ -92,6 +101,8 @@ def main(argv=None):
             print(f"{f}: {'ok' if not errors else '; '.join(errors)}")
             rc |= bool(errors)
         return rc
+    if a.cmd == "sketch":
+        return _sketch(a)
     queue = TaskQueue(a.queue)
     if a.cmd == "submit":
         rc = 0
@@ -205,6 +216,38 @@ def _visual(a):
     print(f"record: {path}\nsummary: {md}\nopinion {res['opinion']}: {review_mod.count_line(res['findings'])}")
     print(f"tokens: prompt {tk['prompt']}, completion {tk['completion']}, thinking {tk['thinking']}")
     return 0
+
+
+def _sketch(a):
+    rc = 0
+    if a.with_visual:
+        if not a.ref:
+            print("error: --with-visual needs --ref frames")
+            return 5
+        a_vis = argparse.Namespace(task=a.task, frames=a.ref, criteria=visual_mod.DEFAULT_CRITERIA, runs=a.runs, model=None,
+                                   dry_run=a.dry_run, mode="design", allow_small=a.allow_small)
+        rc = _visual(a_vis)
+    try:
+        path, md, rec = sketch_mod.run_sketch(a.task, a.prompt_file, a.ref, a.count, runs_dir=a.runs,
+                                              timeout_s=a.timeout, dry_run=a.dry_run)
+    except visual_mod.VisualError as e:
+        refused = e.code in ("rate_limit", "secret_detected", "sandbox_unavailable", "agy_missing", "agy_not_logged_in",
+                                    "agy_quota", "agent_tool_violation")
+        print(f"refused: {e}" if refused else f"error: {e}")
+        return 4 if refused else 5
+    if a.dry_run:
+        print(f"dry-run: {rec['count']} sketch(es), refs {len(rec['refs'])}, hash {rec['input_hash'][:8]}")
+        return rc
+    print(f"record: {path}\nsummary: {md}\nconversation: {rec['conversation_id']}")
+    for f in rec["files"]:
+        print(f"  {f['path']}")
+    if rec["partial"]:
+        print(f"warning: partial result, {len(rec['files'])} of {rec['requested']} images")
+        rc = rc or 6
+    print("attribution (add to mods/core/ATTRIBUTION.md after ui-art-director approves):")
+    for line in rec["attribution"]:
+        print(line)
+    return rc
 
 
 def _review_gate(a):

@@ -273,7 +273,7 @@ def mark_unverified(data, criteria, frame_names):
             f["unverified"] = bad
 
 
-def write_pair(runs_dir, stem, record):
+def write_pair(runs_dir, stem, record, summary=None):
     """JSON and Markdown from the same response: both go to temp files first, then are renamed together."""
     runs_dir.mkdir(parents=True, exist_ok=True)
     path, md = runs_dir / (stem + ".json"), runs_dir / (stem + ".md")
@@ -282,7 +282,7 @@ def write_pair(runs_dir, stem, record):
         fcntl.flock(lock, fcntl.LOCK_EX)
         tj, tm = path.with_suffix(".json.tmp"), md.with_suffix(".md.tmp")
         tj.write_text(json.dumps(record, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
-        tm.write_text(summary_md(record), encoding="utf-8")
+        tm.write_text((summary or summary_md)(record), encoding="utf-8")
         os.replace(tm, md)
         os.replace(tj, path)
     return path, md
