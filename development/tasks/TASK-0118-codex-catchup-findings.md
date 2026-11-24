@@ -1,7 +1,7 @@
 ---
 id: TASK-0118
 title: "Codex catch-up findings on landed core tasks (TASK-0099, 0103, 0107, 0110)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M05
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: [TASK-0099, TASK-0103, TASK-0107, TASK-0110, TASK-0113]
 approved_by: orchestrator
 approved_at: 2026-11-24
 approval_ref: "PLAN Фокус п.2 (after train 2); light task approved by Orchestrator"
+review_ref: "reviewer: APPROVE 8721899; codex: waived #432 after 3rd return (87218993), remainder DEBT-0094, ab_none per O-053; landed eea84f2"
 created: 2026-11-19
 ---
 
