@@ -32,7 +32,7 @@ public sealed partial class AudioDirector : Node
     double _musicFade, _ambFade;                                   // 0..1 fade-in progress of the players
     double _duckDb, _pauseDb;                                      // smoothed offsets of the Music and Ambient buses
     long _lastCmdSeq; CmdStatus _lastStatus; object _lastView;
-    int _baseActor = -1, _baseKnown, _baseFielded, _baseSeries;
+    int _baseActor = -1, _baseKnown, _baseLicensed, _baseFielded, _baseSeries;
     Vector2 _lastCam; bool _camInit;
     AudioEffectRecord _rec;
     bool _muted;                                                   // headless or no audio device: the logic still runs, nothing is played
@@ -148,11 +148,13 @@ public sealed partial class AudioDirector : Node
     /// <summary>The program is about to set this speed (game menu open/close): no pause or tempo click for it.</summary>
     public void QuietSpeed(int target) => _speedSounds.Quiet(target);
 
-    /// <summary>Settings test button: plays the cue straight, outside the planner (no limits, nothing counted toward the fuse or quiet period).</summary>
+    /// <summary>Settings test button and audio demo: plays the cue straight, outside the planner (no limits, nothing counted toward the fuse or quiet period), at its own pitch and with its ducking.</summary>
     public void TestCue(string id)
     {
         if (_muted) return;
-        var pl = Spawn(new Play(--_testVoice, AudioCatalog.Get(id), 0, 1, System.Array.Empty<int>()));
+        var cue = AudioCatalog.Get(id);
+        _planner.DuckFor(cue, Now());
+        var pl = Spawn(new Play(--_testVoice, cue, 0, AudioPlanner.PitchOf(cue), System.Array.Empty<int>()));
         pl.Finished += pl.QueueFree;
         pl.Play();
     }
@@ -226,14 +228,14 @@ public sealed partial class AudioDirector : Node
         if (s.CmdSeq != _lastCmdSeq)
         {
             _lastCmdSeq = s.CmdSeq;
-            if (s.Last.Status == CmdStatus.Pending) Cue(_orders.Accepted(now, sp));
+            if (s.Last.Status == CmdStatus.Pending) Cue(_orders.Accepted(now, sp, s.CmdSeq));
             else if (s.Last.Status is CmdStatus.Rejected or CmdStatus.Error) Cue("order_reject", 0, s.Last.Reason);
         }
         if (s.Last.Status != _lastStatus)
         {
             if (_lastStatus == CmdStatus.Pending && s.Last.Status == CmdStatus.Applied)
             {
-                var done = _orders.Applied(now, sp);
+                var done = _orders.Applied(now, sp, s.CmdSeq);
                 if (done != null) Cue(done);
             }
             _lastStatus = s.Last.Status;
@@ -247,17 +249,17 @@ public sealed partial class AudioDirector : Node
         if (Actor < 0 || Actor >= v.Actors.Length) return;
         var a = v.Actors[Actor];
         if (!a.Nodes.IsPresent) return;   // the played actor is always subscribed (SimHost.PlayerActor)
-        int known = 0, series = 0;
-        foreach (var n in a.Nodes) if (WorldCues.IsOwnDiscovery(n.Known, n.ByLicence)) known++;
+        int known = 0, licensed = 0, series = 0;
+        foreach (var n in a.Nodes) if (n.Known) { known++; if (n.ByLicence) licensed++; }
         foreach (var d in a.Designs) if (d.Stage == Singularity.Core.Products.DesignStage.Series) series++;
         if (_baseActor == Actor)
         {
-            var (bt, node, line) = WorldCues.Pick(a.FieldedGen > _baseFielded, known > _baseKnown, series > _baseSeries);
+            var (bt, node, line) = WorldCues.Pick(a.FieldedGen > _baseFielded, WorldCues.NodeGain(known, _baseKnown, licensed, _baseLicensed), series > _baseSeries);
             if (bt) Cue("breakthrough");
             if (node) Cue("node_discovered");
             if (line) Cue("line_commissioned");
         }
-        _baseActor = Actor; _baseKnown = known; _baseFielded = a.FieldedGen; _baseSeries = series;
+        _baseActor = Actor; _baseKnown = known; _baseLicensed = licensed; _baseFielded = a.FieldedGen; _baseSeries = series;
     }
 
     // ---------- audio demo (--shots): a scripted event sequence recorded from the Master bus ----------

@@ -177,13 +177,20 @@ public sealed class AudioPlanner
         if (InFuse(cue)) _fusePlays.Add(now);
         if (!p0) _limitDrops = 0;
         int id = ++_nextVoice;
-        _voices.Add(new Voice(id, cue.Prio, now + cue.Seconds, now));
-        if (Ducks(cue)) _duckUntil = Math.Max(_duckUntil, now + cue.Seconds + DuckTail);
         double gain = cue.GainDb + extraGainDb + AdaptDb(cue.Prio);
-        double pitch = cue.Semitones == 0 ? 1.0 : SemitoneRatio[cue.Semitones + 1];
+        double pitch = PitchOf(cue);
         if (cue.Jitter) { pitch *= 1 + (Next(1001) / 1000.0 * 0.06 - 0.03); gain += Next(1001) / 1000.0 * 3.0 - 1.5; }
+        // A lower pitch plays longer: the voice is held for the stretched length.
+        _voices.Add(new Voice(id, cue.Prio, now + cue.Seconds / pitch, now));
+        if (Ducks(cue)) _duckUntil = Math.Max(_duckUntil, now + cue.Seconds + DuckTail);
         return new Play(id, cue, gain, pitch, evicted);
     }
+
+    /// <summary>The fixed pitch of a cue (tempo clicks), before jitter.</summary>
+    public static double PitchOf(Cue cue) => cue.Semitones == 0 ? 1.0 : SemitoneRatio[cue.Semitones + 1];
+
+    /// <summary>Ducks the music for a cue played outside the planner (the audio demo).</summary>
+    public void DuckFor(Cue cue, double now) { if (Ducks(cue)) _duckUntil = Math.Max(_duckUntil, now + cue.Seconds + DuckTail); }
 
     static readonly double[] SemitoneRatio = { 0.943874, 1.0, 1.059463 };   // -1, 0, +1 semitone
 
@@ -200,13 +207,19 @@ public sealed class OrderSounds
 {
     public const double DoneAfter = 1.5;
     double _acceptedAt = double.NaN;
+    long _acceptedSeq = -1;
 
     // A command given on pause records no time: after unpause its application is not news, the queue_tick was enough.
-    public string Accepted(double now, int speed) { _acceptedAt = speed == 0 ? double.NaN : now; return speed == 0 ? "queue_tick" : "order_ok"; }
-
-    public string? Applied(double now, int speed)
+    public string Accepted(double now, int speed, long seq)
     {
-        if (speed == 0 || double.IsNaN(_acceptedAt) || now - _acceptedAt < DoneAfter) return null;
+        _acceptedAt = speed == 0 ? double.NaN : now; _acceptedSeq = seq;
+        return speed == 0 ? "queue_tick" : "order_ok";
+    }
+
+    /// <summary>Only the command whose accept time was recorded can be "done": another command's application does not borrow its time.</summary>
+    public string? Applied(double now, int speed, long seq)
+    {
+        if (seq != _acceptedSeq || speed == 0 || double.IsNaN(_acceptedAt) || now - _acceptedAt < DoneAfter) return null;
         _acceptedAt = double.NaN;   // the rest of a queue applied together stays silent
         return "order_done";
     }
@@ -255,8 +268,13 @@ public sealed class OpenTickGate
 /// <summary>Which world cues fire for one view change: a breakthrough already says it, so a new line in the same frame stays silent and a node does not sound over a breakthrough.</summary>
 public static class WorldCues
 {
-    /// <summary>A known node counts as the player's own discovery unless it came by licence (the view marks no other passive source: diffusion and espionage look the same as research).</summary>
-    public static bool IsOwnDiscovery(bool known, bool byLicence) => known && !byLicence;
+    /// <summary>
+    /// A new known node is the player's own discovery unless licences explain the growth. The licence flag is visible for one month only,
+    /// so the total is compared: a licensed node raises both counts when it appears, and the later flag drop changes only the licensed count.
+    /// Diffusion and espionage gains look like research in the view (no source field).
+    /// </summary>
+    public static bool NodeGain(int known, int baseKnown, int licensed, int baseLicensed)
+        => known - baseKnown > Math.Max(0, licensed - baseLicensed);
 
     public static (bool Breakthrough, bool Node, bool Line) Pick(bool fieldedUp, bool knownUp, bool seriesUp)
         => (fieldedUp, !fieldedUp && knownUp, !fieldedUp && seriesUp);

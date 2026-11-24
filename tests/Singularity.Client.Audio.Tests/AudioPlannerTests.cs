@@ -7,6 +7,8 @@ public class AudioPlannerTests
     [Fact]
     public void Same_class_within_the_window_plays_once()
     {
+        // order_ok and order_done share the class "order" (the window); "order_done" is only the name of their limit group.
+        Assert.Equal(AudioCatalog.Get("order_ok").Class, AudioCatalog.Get("order_done").Class);
         var p = new AudioPlanner();
         Assert.NotNull(p.Request("order_ok", 10.0));
         Assert.Null(p.Request("order_done", 10.2));       // same class "order", inside 400 ms
@@ -254,6 +256,28 @@ public class AudioPlannerTests
     }
 
     [Fact]
+    public void A_slowed_tempo_click_holds_its_voice_for_the_stretched_length()
+    {
+        var p = new AudioPlanner();
+        Assert.NotNull(p.Request("line_commissioned", 0.0));
+        Assert.NotNull(p.Request("breakthrough", 0.0));
+        Assert.NotNull(p.Request("tempo_1", 0.0));          // 0.25 s / 0.943874 = 0.265 s
+        Assert.Null(p.Request("ui_tick", 0.257));           // still three voices
+        Assert.NotNull(p.Request("ui_tick", 0.27));
+    }
+
+    [Fact]
+    public void Tempo_pitch_is_public_for_the_demo_and_ducking_can_be_started_outside_the_planner()
+    {
+        Assert.Equal(1.059463, AudioPlanner.PitchOf(AudioCatalog.Get("tempo_3")), 6);
+        var p = new AudioPlanner();
+        p.DuckFor(AudioCatalog.Get("order_ok"), 1.0);
+        Assert.Equal(0, p.DuckDb(1.1));
+        p.DuckFor(AudioCatalog.Get("war_declared"), 1.0);
+        Assert.Equal(-4, p.DuckDb(1.1));
+    }
+
+    [Fact]
     public void Interval_drops_do_not_count_toward_the_quiet_period()
     {
         var p = new AudioPlanner();
@@ -298,34 +322,43 @@ public class OrderSoundsTests
     public void Paused_gives_only_a_queue_tick_and_running_only_an_ok()
     {
         var o = new OrderSounds();
-        Assert.Equal("queue_tick", o.Accepted(1.0, 0));
-        Assert.Equal("order_ok", o.Accepted(2.0, 2));
+        Assert.Equal("queue_tick", o.Accepted(1.0, 0, 1));
+        Assert.Equal("order_ok", o.Accepted(2.0, 2, 2));
     }
 
     [Fact]
     public void Done_sounds_only_when_late_and_running_and_once_per_queue()
     {
         var o = new OrderSounds();
-        o.Accepted(10.0, 2);
-        Assert.Null(o.Applied(10.3, 2));                  // applied at once: the ok was enough
-        o.Accepted(20.0, 2);
-        Assert.Equal("order_done", o.Applied(22.0, 2));   // noticeably later
-        Assert.Null(o.Applied(22.1, 2));                  // the rest stays silent
+        o.Accepted(10.0, 2, 3);
+        Assert.Null(o.Applied(10.3, 2, 3));                  // applied at once: the ok was enough
+        o.Accepted(20.0, 2, 4);
+        Assert.Equal("order_done", o.Applied(22.0, 2, 4));   // noticeably later
+        Assert.Null(o.Applied(22.1, 2, 4));                  // the rest stays silent
     }
 
     [Fact]
     public void A_command_given_on_pause_is_silent_when_applied_after_unpause()
     {
         var o = new OrderSounds();
-        Assert.Equal("queue_tick", o.Accepted(1.0, 0));
-        Assert.Null(o.Applied(300.0, 1));
-        o.Accepted(310.0, 2); o.Accepted(311.0, 0);       // a later paused command also clears the pending accept time
-        Assert.Null(o.Applied(400.0, 1));
+        Assert.Equal("queue_tick", o.Accepted(1.0, 0, 5));
+        Assert.Null(o.Applied(300.0, 1, 5));
+        o.Accepted(310.0, 2, 6); o.Accepted(311.0, 0, 7);       // a later paused command also clears the pending accept time
+        Assert.Null(o.Applied(400.0, 1, 7));
     }
 
     [Fact]
     public void Done_without_an_accepted_order_is_silent()
-        => Assert.Null(new OrderSounds().Applied(5.0, 1));
+        => Assert.Null(new OrderSounds().Applied(5.0, 1, 1));
+
+    [Fact]
+    public void Another_commands_application_does_not_borrow_the_accept_time()
+    {
+        var o = new OrderSounds();
+        o.Accepted(10.0, 2, 1);
+        Assert.Null(o.Applied(20.0, 2, 2));               // command 2 was applied, command 1 was the one recorded
+        Assert.Equal("order_done", o.Applied(20.1, 2, 1));
+    }
 }
 
 public class SpeedSoundsTests
@@ -394,11 +427,13 @@ public class OpenTickGateTests
 public class WorldCuesTests
 {
     [Fact]
-    public void Nodes_known_by_licence_are_not_the_players_own_discovery()
+    public void Licensed_nodes_do_not_count_as_discoveries_even_after_the_flag_drops()
     {
-        Assert.True(WorldCues.IsOwnDiscovery(true, false));
-        Assert.False(WorldCues.IsOwnDiscovery(true, true));
-        Assert.False(WorldCues.IsOwnDiscovery(false, false));
+        Assert.False(WorldCues.NodeGain(5, 4, 1, 0));    // a licensed node appears: both counts grow
+        Assert.False(WorldCues.NodeGain(5, 5, 0, 1));    // a month later the flag is gone: total unchanged
+        Assert.True(WorldCues.NodeGain(5, 4, 0, 0));     // own research
+        Assert.True(WorldCues.NodeGain(5, 4, 0, 1));     // own research in the month the old licence flag drops
+        Assert.False(WorldCues.NodeGain(4, 5, 0, 0));
     }
 
     [Fact]

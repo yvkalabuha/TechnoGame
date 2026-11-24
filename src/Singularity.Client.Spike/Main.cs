@@ -366,7 +366,8 @@ public sealed partial class Main : Node3D
 
     // A foreign power opens in the right panel (read-only); the player's own power is the area panels on the left. Only one of them is open at a time
     // (one why_not target in the Session snapshot). On a click the globe turns to the power; the zoom is not touched.
-    void ShowPower(int i, bool turn)
+    // click: a mouse click on the globe, the only path that ticks (Esc, Back to own and new-game init turn the globe silently).
+    void ShowPower(int i, bool turn, bool click = false)
     {
         _viewed = i;
         _host.WhyActor = i;
@@ -374,7 +375,7 @@ public sealed partial class Main : Node3D
         else { CloseArea(); _actorPanel.ShowActor(i); }
         if (_tree.Visible) _tree.ShowFor(i, 0);
         if (!turn) return;
-        _audio?.OpenTick(2000 + i, false);
+        if (click) _audio?.OpenTick(2000 + i, false);
         FlyTo(i);
     }
 
@@ -636,7 +637,7 @@ public sealed partial class Main : Node3D
         if (_tintsReady && id != 0)
         {
             int a = Array.IndexOf(_actorCountry, id);
-            if (a >= 0) { ShowPower(a, true); return; }
+            if (a >= 0) { ShowPower(a, true, true); return; }
         }
         _selected = id;
         ApplySelection();
