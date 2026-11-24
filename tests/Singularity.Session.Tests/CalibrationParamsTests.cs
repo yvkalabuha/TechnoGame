@@ -14,7 +14,9 @@ public class CalibrationParamsTests
     // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
     // Re-recorded in TASK-0115: schema v11 (cmd.*.gen, pol.*.gen columns); the old columns are unchanged (projection tests).
     // Re-recorded in TASK-0121 (#423), reason: schema v12 (new columns prd.d*.cohort.1978…2030 and prd.d*.q.1: the cohort years to 2030, the second block of the q mask); the old columns are unchanged (HorizonTests projection at 48 points of the build before the change, GoldenProjectionAgainstMainTests), so only the new columns change the hash.
-    private const string MainSeed1Month149 = "a0b7ab02e5f089a2c7e344132eae6d298b8f2e1f3d3ab117cf7261841460869e";
+    // Re-recorded in TASK-0129 (fleet ageing, #431/#435-#437), reason: schema v13 (new column prd.d*.replCredit, in the hash from month 0); the old columns are unchanged to month 176 (projection tests: HorizonTests, T6dTests, FleetAblationTests, ToolingUnmetTests, GoldenProjectionAgainstMainTests), so only the new column changes these hashes.
+    // Re-recorded in TASK-0133 (train 2: G5/G6 data + fleet ageing): nodes 62-81 and the G5/G6 alternatives change every trajectory; reason and list in the task file.
+    private const string MainSeed1Month149 = "0dc571a6bffaef40e6922578270f39f48f7917e48a862c38af918ce5cceb78a1";
 
     private static SliceRunConfig Base(ulong seed = 1, int threads = 2) => new() { Seed = seed, Threads = threads };
 
@@ -154,7 +156,7 @@ public class CalibrationParamsTests
     public void CapabilityLayers_RunOnTheirTables_L1L2_AndDifferFromMain(LayerControl layer)
     {
         SliceRunConfig c = Base(1, 1) with { Layer = layer, CapabilityTables = Tables() };
-        SliceSession a = SliceTestData.Create(c), b = SliceTestData.Create(c with { Threads = 4, ChunkSize = 3 }), again = SliceTestData.Create(c);
+        SliceSession a = SliceTestData.CreateLegacy(c), b = SliceTestData.CreateLegacy(c with { Threads = 4, ChunkSize = 3 }), again = SliceTestData.CreateLegacy(c);
         for (long t = 0; t < 60; t++)
         {
             a.StepThroughMonth(t);
@@ -163,7 +165,7 @@ public class CalibrationParamsTests
             HashAssert.Equal(a.LastHash, b.LastHash);          // L2
             HashAssert.Equal(a.LastHash, again.LastHash);      // L1
         }
-        Assert.NotEqual(SimulationDigest(ViewSupport.Run(Base(1, 1), 60)), SimulationDigest(a));
+        Assert.NotEqual(SimulationDigest(ViewSupport.RunLegacy(Base(1, 1), 60)), SimulationDigest(a));
         Assert.Contains(a.World.Table.Columns, col => col.Name == "run.layer.capability");
         Assert.Contains(a.World.Table.Columns, col => col.Name == "run.layer");
     }

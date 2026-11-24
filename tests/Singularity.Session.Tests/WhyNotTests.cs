@@ -15,7 +15,8 @@ public class WhyNotTests
 {
     private const int Usa = 0;
 
-    private static SliceSession New(SliceRunConfig? config = null) => SliceTestData.Create(config);
+    // The scenarios of this file are built on the 61-node data (what the AI has asked for at month 0 is data-dependent).
+    private static SliceSession New(SliceRunConfig? config = null) => SliceTestData.CreateLegacy(config);
 
     private static void SetLong(SliceSession s, string name, int row, long value)
     {

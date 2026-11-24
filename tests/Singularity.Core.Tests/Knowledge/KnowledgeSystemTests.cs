@@ -192,10 +192,10 @@ public class KnowledgeSystemTests
     [Fact]
     public void SliceData_RunsTwoYears_Deterministic_AndThreadIndependent()
     {
-        string h1 = RunSlice(threads: 1, chunkSize: 1, months: 24);
-        Assert.Equal(h1, RunSlice(threads: 1, chunkSize: 1, months: 24));   // L1
-        Assert.Equal(h1, RunSlice(threads: 4, chunkSize: 1, months: 24));   // L2
-        Assert.Equal(h1, RunSlice(threads: 8, chunkSize: 2, months: 24));
+        string h1 = RunSlice(threads: 1, chunkSize: 1, months: 48);
+        Assert.Equal(h1, RunSlice(threads: 1, chunkSize: 1, months: 48));   // L1
+        Assert.Equal(h1, RunSlice(threads: 4, chunkSize: 1, months: 48));   // L2
+        Assert.Equal(h1, RunSlice(threads: 8, chunkSize: 2, months: 48));
     }
 
     [Fact]
@@ -203,8 +203,8 @@ public class KnowledgeSystemTests
     {
         var p = new KnowledgeParams();
         KnowledgeGraph g = KnowledgeGraph.FromData(Data.Nodes, Scenario.Disciplines, p);
-        Assert.Equal(61, g.Count);
-        Assert.Equal(20, g.IsHazard.Count(h => h)); // spec §1.3: 11 key + 9 hz
+        Assert.Equal(81, g.Count);
+        Assert.Equal(31, g.IsHazard.Count(h => h)); // spec §1.3: 11 key + 9 hz, plus 6 key + 5 hz of nodes 62-81 (TASK-0133)
         int app = g.RowOf(58);
         Assert.Equal(-1, g.Discipline[app]);
         Assert.Equal(Fx6.FromRaw(4_800_000), g.CostN[g.RowOf(19)]); // ENG G2: 3 × 1.6

@@ -19,7 +19,8 @@ public sealed class ObservablesWalk
 
     public ObservablesWalk(int cell)
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 5, ProfileCell = cell, Threads = 2, LicKnows = true });
+        // The walk looks for closes with reasons by month 200: tuned on the 61-node data (the G5/G6 data moves them past the walk).
+        SliceSession s = SliceTestData.CreateLegacy(new SliceRunConfig { Seed = 5, ProfileCell = cell, Threads = 2, LicKnows = true });
         SliceWorld w = s.World;
         for (long t = 0; t < Months; t++)
         {
@@ -272,7 +273,8 @@ public class ObservablesTests
     {
         foreach (LayerControl layer in new[] { LayerControl.Full, LayerControl.Lk0, LayerControl.Lc0 })
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 3, Layer = layer });
+            var cfg = new SliceRunConfig { Seed = 3, Layer = layer };
+            SliceSession s = layer == LayerControl.Lk0 ? SliceTestData.CreateLegacy(cfg) : SliceTestData.Create(cfg);   // L_K0 covers G1-G4 only
             s.StepThroughMonth(2);
             Assert.All(s.View.Actors, a => Assert.All(a.Nodes, n => Assert.Null(n.KnownSince)));
             Assert.DoesNotContain(s.World.Table.Columns, c => c.Name.StartsWith("know.since.", StringComparison.Ordinal));

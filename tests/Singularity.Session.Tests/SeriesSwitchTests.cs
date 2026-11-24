@@ -11,14 +11,16 @@ public class SeriesSwitchTests
     // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
     // Re-recorded in TASK-0115: schema v11 (cmd.*.gen, pol.*.gen columns); the old columns are unchanged (projection tests).
     // Re-recorded in TASK-0121 (#423), reason: schema v12 (new columns prd.d*.cohort.1978…2030 and prd.d*.q.1: the cohort years to 2030, the second block of the q mask); the old columns are unchanged (HorizonTests projection at 48 points of the build before the change, GoldenProjectionAgainstMainTests), so only the new columns change the hash.
-    private const string MainSeed1Month149 = "a0b7ab02e5f089a2c7e344132eae6d298b8f2e1f3d3ab117cf7261841460869e";
+    // Re-recorded in TASK-0129 (fleet ageing, #431/#435-#437), reason: schema v13 (new column prd.d*.replCredit, in the hash from month 0); the old columns are unchanged to month 176 (projection tests: HorizonTests, T6dTests, FleetAblationTests, ToolingUnmetTests, GoldenProjectionAgainstMainTests), so only the new column changes these hashes.
+    // Re-recorded in TASK-0133 (train 2: G5/G6 data + fleet ageing): nodes 62-81 and the G5/G6 alternatives change every trajectory; reason and list in the task file.
+    private const string MainSeed1Month149 = "0dc571a6bffaef40e6922578270f39f48f7917e48a862c38af918ce5cceb78a1";
 
     private static SliceRunConfig Base(ulong seed = 1) => new() { Seed = seed, Threads = 2 };
 
     // Synthetic moments of the full model (the real ones come from the calibration build, T12): clocks of G1…G4, a zero offset of every node.
     private static LkTables Tables(int clockShift = 0)
     {
-        SliceWorld w = SliceTestData.Create().World;
+        SliceWorld w = SliceTestData.CreateLegacy().World;   // L_K covers G1-G4 only: the 61-node data
         var t = new LkTables(w.Scenario.ActorCount, w.Graph.Number.Max());
         for (int a = 0; a < t.ActorCount; a++)
         {
@@ -48,7 +50,7 @@ public class SeriesSwitchTests
         HashAssert.Equal(MainSeed1Month149, Run(Base() with { ViewMode = SliceViewMode.Full }, 150).LastHash);
         Assert.DoesNotContain(s.World.Table.Columns, c => c.Name.StartsWith("run.layer", StringComparison.Ordinal) || c.Name is "run.grid" or "run.effort_share");
         Assert.Equal(SliceTestData.Create(Base()).World.SchemaFingerprint(), SliceTestData.Create(explicitDefaults).World.SchemaFingerprint());
-        Assert.Equal(12, SliceWorld.SchemaVersion);
+        Assert.Equal(13, SliceWorld.SchemaVersion);
     }
 
     [Fact]
@@ -73,8 +75,8 @@ public class SeriesSwitchTests
     [Fact]
     public void Layer_Lk_RunsTheScheduleOfTheTables_AndKeepsI5()
     {
-        SliceSession main = Run(Base(), 120);
-        SliceSession lk = SliceTestData.Create(Base() with { Layer = LayerControl.Lk, LkTables = Tables() });
+        SliceSession main = ViewSupport.RunLegacy(Base(), 120);
+        SliceSession lk = SliceTestData.CreateLegacy(Base() with { Layer = LayerControl.Lk, LkTables = Tables() });
         SliceWorld w = lk.World;
         bool[,] startKnown = new bool[w.Scenario.ActorCount, w.Graph.Count];
         for (int a = 0; a < w.Scenario.ActorCount; a++)
@@ -114,19 +116,19 @@ public class SeriesSwitchTests
     [Fact]
     public void Layer_Lk_TablesAreHashed_AndTheRunIsDeterministic()
     {
-        string H(LkTables t, int threads = 1) => Run(Base() with { Layer = LayerControl.Lk, LkTables = t, Threads = threads }, 60).LastHash;
+        string H(LkTables t, int threads = 1) => ViewSupport.RunLegacy(Base() with { Layer = LayerControl.Lk, LkTables = t, Threads = threads }, 60).LastHash;
         Assert.Equal(H(Tables()), H(Tables(), 4));
         Assert.NotEqual(H(Tables()), H(Tables(clockShift: 1)));
-        string fresh = SliceTestData.Create(Base() with { Layer = LayerControl.Lk, LkTables = Tables() }).LastHash;
-        HashAssert.Equal(fresh, SliceTestData.Create(Base() with { Layer = LayerControl.Lk, LkTables = Tables() }).LastHash);
-        HashAssert.NotEqual(fresh, SliceTestData.Create(Base() with { Layer = LayerControl.Lk, LkTables = Tables(1) }).LastHash);
+        string fresh = SliceTestData.CreateLegacy(Base() with { Layer = LayerControl.Lk, LkTables = Tables() }).LastHash;
+        HashAssert.Equal(fresh, SliceTestData.CreateLegacy(Base() with { Layer = LayerControl.Lk, LkTables = Tables() }).LastHash);
+        HashAssert.NotEqual(fresh, SliceTestData.CreateLegacy(Base() with { Layer = LayerControl.Lk, LkTables = Tables(1) }).LastHash);
     }
 
     [Fact]
     public void Layer_Lk0_OpensTheNodesAtTheWindowMiddles_AndKeepsI5()
     {
-        SliceSession main = Run(Base(), 100);
-        SliceSession lk0 = SliceTestData.Create(Base() with { Layer = LayerControl.Lk0 });
+        SliceSession main = ViewSupport.RunLegacy(Base(), 100);
+        SliceSession lk0 = SliceTestData.CreateLegacy(Base() with { Layer = LayerControl.Lk0 });
         SliceWorld w = lk0.World;
         int[] known = new int[400];
         for (long t = 0; t < 360; t++)
@@ -149,7 +151,7 @@ public class SeriesSwitchTests
         Assert.Equal(known[209], known[338]);
         Assert.True(known[341] > known[338], "no node opened at month 340");
         Assert.Contains(w.Table.Columns, c => c.Name == "run.layer");
-        Assert.NotEqual(ViewSupport.TrajectoryDigest(main), ViewSupport.TrajectoryDigest(Run(Base() with { Layer = LayerControl.Lk0 }, 100)));
+        Assert.NotEqual(ViewSupport.TrajectoryDigest(main), ViewSupport.TrajectoryDigest(ViewSupport.RunLegacy(Base() with { Layer = LayerControl.Lk0 }, 100)));
     }
 
     [Fact]
@@ -278,8 +280,8 @@ public class SeriesSwitchTests
     {
         foreach (LayerControl l in Enum.GetValues<LayerControl>().Where(l => l is not (LayerControl.Lc or LayerControl.Lp)))
         {
-            SliceRunConfig c = Base() with { Layer = l, LkTables = l == LayerControl.Lk ? new LkTables(5, SliceTestData.Create().World.Graph.Number.Max()) : null };
-            Assert.NotNull(SliceTestData.Create(c));
+            SliceRunConfig c = Base() with { Layer = l, LkTables = l == LayerControl.Lk ? new LkTables(5, SliceTestData.CreateLegacy().World.Graph.Number.Max()) : null };
+            Assert.NotNull(SliceTestData.CreateLegacy(c));
         }
     }
 

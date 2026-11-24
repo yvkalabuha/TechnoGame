@@ -17,7 +17,7 @@ public class IdMappingTests
             Assert.Equal(id.Split('.'), parsed.Segments);           // segments are the dotted parts
             Assert.Equal(id, FluentIds.NodeIdOf(key));              // and back
         }
-        Assert.Equal(61, seen.Count);
+        Assert.Equal(81, seen.Count);
     }
 
     [Fact]

@@ -79,8 +79,8 @@ public class KnowledgeAuditTests
     public void D6_SliceData_PermutedNodeAndActorStorage_SameResultsByStableIds()
     {
         var a = new SliceRun(nodePerm: null, actorPerm: null, threads: 1, chunkSize: 1);
-        var b = new SliceRun(nodePerm: Shuffle(61, 7), actorPerm: [3, 0, 4, 2, 1], threads: 4, chunkSize: 2);
-        var c = new SliceRun(nodePerm: Shuffle(61, 8), actorPerm: [4, 3, 2, 1, 0], threads: 3, chunkSize: 1);
+        var b = new SliceRun(nodePerm: Shuffle(81, 7), actorPerm: [3, 0, 4, 2, 1], threads: 4, chunkSize: 2);
+        var c = new SliceRun(nodePerm: Shuffle(81, 8), actorPerm: [4, 3, 2, 1, 0], threads: 3, chunkSize: 1);
         int discoveries = 0;
         for (long t = 0; t < 120; t++)
         {

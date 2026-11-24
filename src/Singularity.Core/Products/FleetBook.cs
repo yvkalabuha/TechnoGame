@@ -33,6 +33,7 @@ public sealed class FleetBook
         InDefK = new bool[designs];
         Retired = new Fx6[designs];
         Sold = new Fx6[designs];
+        ReplCredit = new Fx6[designs];
         QuotaBase = new int[designs];
         SoldY = new int[designs];
         SellSlot = new bool[designs];
@@ -54,6 +55,7 @@ public sealed class FleetBook
         Array.Clear(InDefK);
         Array.Clear(Retired);
         Array.Clear(Sold);
+        Array.Clear(ReplCredit);
         Array.Clear(QuotaBase);
         Array.Clear(SoldY);
         Array.Clear(SellSlot);
@@ -85,6 +87,9 @@ public sealed class FleetBook
 
     public Fx6[] Retired { get; }
     public Fx6[] Sold { get; }
+
+    /// <summary>Units per design whose replacement has arrived (#431); the overage leaves against it at step 0.</summary>
+    public Fx6[] ReplCredit { get; }
     public int[] QuotaBase { get; }
     public int[] SoldY { get; }
     public Fx6 SaleY { get; set; }
@@ -96,16 +101,49 @@ public sealed class FleetBook
     public bool[] SellSlot { get; }
     public bool[] RetireSlot { get; }
 
-    /// <summary>Cohort years are written off at <c>age ≥ service_life</c> (step 0): the cohorts of age at <paramref name="month"/> at the limit go.</summary>
-    public void AgeOut(long month)
+    /// <summary>Step 0 of <paramref name="month"/> (#431): the overage units that the replacement credit covers leave, the oldest first; the same rule as the layer's.</summary>
+    public void ExpendCredit(long month)
     {
-        for (int y = 0; y < _years; y++)
+        for (int d = 0; d < Designs; d++)
+            FleetRules.ExpendCredit(Counts[d], ref ReplCredit[d], month, _m0, _p);
+    }
+
+    /// <summary>Calendar-year index of the oldest cohort of the design with units at the service life or older; the layout length without one.</summary>
+    public int OldestOverageYear(int design, long month)
+    {
+        for (int y = 0; y < _years && month - _m0[y] >= _p.ServiceLife; y++)
         {
-            if (month - _m0[y] < _p.ServiceLife)
-                continue;
-            for (int d = 0; d < Designs; d++)
-                Counts[d][y] = Fx6.Zero;
+            if (Counts[design][y] > Fx6.Zero)
+                return y;
         }
+        return _years;
+    }
+
+    /// <summary><c>⌊n_eff⌋</c> of a design at <paramref name="month"/> (#435).</summary>
+    public long EffectiveWhole(int design, long month) => FleetRules.Effective(Counts[design], month, _m0, _p).Raw / Fx6.Scale;
+
+    /// <summary>
+    /// The most units, at most <paramref name="cap"/>, that <c>retire_cohort</c> may take (oldest first) while <c>⌊n_eff⌋</c> of the design stays at
+    /// <paramref name="keep"/> or above at <paramref name="month"/>; the effective count falls with every unit taken, so a binary search finds it.
+    /// </summary>
+    public long MaxRetire(int design, long cap, long month, int keep)
+    {
+        cap = Math.Min(cap, Whole(design));
+        long lo = 0, hi = cap;
+        Span<Fx6> work = stackalloc Fx6[_years];
+        Span<Fx6> taken = stackalloc Fx6[_years];
+        while (lo < hi)
+        {
+            long mid = lo + (hi - lo + 1) / 2;
+            Counts[design].CopyTo(work);
+            FleetRules.Take(work, Fx6.FromInt(mid), taken);
+            FleetRules.SweepDust(work);
+            if (FleetRules.Effective(work, month, _m0, _p).Raw / Fx6.Scale >= keep)
+                lo = mid;
+            else
+                hi = mid - 1;
+        }
+        return lo;
     }
 
     /// <summary>The start of a policy year (step 2a): the quota base from the cohorts as they are, the counters at 0, the ceiling from the base budget.</summary>
@@ -190,14 +228,14 @@ public sealed class FleetBook
         return FleetRules.SweepDust(Counts[design]);
     }
 
-    /// <summary><c>⌊Σ count_i⌋</c> over the cohorts of age ≥ <paramref name="minAge"/> at <paramref name="month"/> (and below the service life): <c>avail_d</c> of spec A42.4.</summary>
+    /// <summary><c>⌊Σ count_i⌋</c> over the cohorts of age ≥ <paramref name="minAge"/> at <paramref name="month"/>: <c>avail_d</c> of spec A42.4.</summary>
     public long Aged(int design, long month, int minAge)
     {
         Fx6 sum = Fx6.Zero;
         for (int y = 0; y < _years; y++)
         {
             long age = month - _m0[y];
-            if (age >= minAge && age < _p.ServiceLife)
+            if (age >= minAge)
                 sum += Counts[design][y];
         }
         return sum.Raw / Fx6.Scale;

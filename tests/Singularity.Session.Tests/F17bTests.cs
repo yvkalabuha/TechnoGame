@@ -84,25 +84,28 @@ public class F17bTests(ITestOutputHelper output)
     // Re-recorded in TASK-0099 (ADR-0005 p. 3), reason: schema v9 (new columns prd.d*.generation, parentGen, prd.lp.g*.gen, StaleHandle counter); the run ends before the first slot reuse, the old columns are unchanged (SlotReuseL2Tests.NoSlotIsReused_BeforeTheMonthOfAnyRewrittenGolden, projection tests).
     // Re-recorded in TASK-0115 (ADR-0005 p. 3, DEBT-0052), reason: schema v11 (new columns cmd.dsn.*.gen, cmd.flt.*.gen, cmd.series.*.gen, cmd.close.*.gen, pol.dsn.*.gen, pol.flt.*.gen, pol.start.*.gen, pol.close.*.gen); the run ends before the first slot reuse, so no handle is stale and the old columns are unchanged (projection tests T6dOff, FleetAblation, ToolingUnmet; SlotReuseL2Tests), only the new columns change the hash.
     // Re-recorded in TASK-0121 (#423), reason: schema v12 (new columns prd.d*.cohort.1978…2030 and prd.d*.q.1: the cohort years to 2030, the second block of the q mask); the old columns are unchanged (HorizonTests projection at 48 points of the build before the change, GoldenProjectionAgainstMainTests), so only the new columns change the hash.
+    // Re-recorded in TASK-0129 (fleet ageing, #431/#435-#437), reason: schema v13 (new column prd.d*.replCredit, in the hash from month 0); the old columns are unchanged to month 176 (projection tests: HorizonTests, T6dTests, FleetAblationTests, ToolingUnmetTests, GoldenProjectionAgainstMainTests), so only the new column changes these hashes.
     private static readonly string[] AdmitGolden =
     [
-        "35a18ce37f9de1ea73453cb6608a9247d070f13b6636f2ad3aa41808584b5dbd",
-        "b4f448d2ec2e58cb83f52e93ac4c7840dcefa0d11592c4c6bb430cd97af40a60",
-        "01bf731856af256b66872a43de8df024cc72a98b82e29721e41888303494f3ae",
-        "27ba55c577cf82a6f305510e1ef0d461cc5e2e1c8288083622e5ee4880b09274",
-        "485aed7dead41a520ac69d650bffa8c2e847272c260ff0520b159c100a3ffbb5",
+        "71d7aada103399fb53251901a3447a3be19a5806eb9f198fda11906f09319169",
+        "5d4014f03fe0c81908bb7a7fdd14ca8a918489e3456abd021b66e6f3bc09c9d5",
+        "e24a8c8078bc4532f9ef983c2f51ef9e33bd4f9680402dad9d446e3214ccfb03",
+        "6e1e130fe6e8c1f64e6853a59b7bfa5a42c13ee1372fe1f9b439562ae0830dbd",
+        "2407f9d1a3c79afc17374544743f98fc392ab01c45a68546d423af3940ce7a6c",
     ];
 
     // Recorded in F17b (TASK-0030); re-recorded in TASK-0033, reason: T6d (columns of the licence and the disruption, run.t6d, the events themselves; both arms), then «exposure to data» (the scenario hash is in the run columns); in TASK-0032: part 1 (A39 «V5 default», #163: the default tooling target is V5), part 2 («tool_unmet column», F33).
     // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (prd.altReached.*); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
     // Re-recorded in TASK-0115 (ADR-0005 p. 3, DEBT-0052), reason: schema v11 (new columns cmd.dsn.*.gen, cmd.flt.*.gen, cmd.series.*.gen, cmd.close.*.gen, pol.dsn.*.gen, pol.flt.*.gen, pol.start.*.gen, pol.close.*.gen); the run ends before the first slot reuse, so no handle is stale and the old columns are unchanged (projection tests T6dOff, FleetAblation, ToolingUnmet; SlotReuseL2Tests), only the new columns change the hash.
     // Re-recorded in TASK-0121 (#423), reason: schema v12 (new columns prd.d*.cohort.1978…2030 and prd.d*.q.1: the cohort years to 2030, the second block of the q mask); the old columns are unchanged (HorizonTests projection at 48 points of the build before the change, GoldenProjectionAgainstMainTests), so only the new columns change the hash.
+    // Re-recorded in TASK-0129 (fleet ageing, #431/#435-#437), reason: schema v13 (new column prd.d*.replCredit, in the hash from month 0); the old columns are unchanged to month 176 (projection tests: HorizonTests, T6dTests, FleetAblationTests, ToolingUnmetTests, GoldenProjectionAgainstMainTests), so only the new column changes these hashes.
+    // Re-recorded in TASK-0133 (train 2: G5/G6 data + fleet ageing): nodes 62-81 and the G5/G6 alternatives change every trajectory; reason and list in the task file.
     private static readonly string[] YProdGolden = [
-        "a0b7ab02e5f089a2c7e344132eae6d298b8f2e1f3d3ab117cf7261841460869e",
-        "176268f75949b996f0a412e6bf5744fcbd66ab80bc5ef4fa4cd240bb115f1790",
-        "e4d91b3e9de8d2eef18b0f6bfa6e6e1bc425e7e4801c2172fc3ff15e2687a86b",
-        "b8826fc74e189c01f3c7e48e61a633f3c0c716702f13b721dc9e4eb0ec950891",
-        "fa8a0682413a84bf1fe4657ef6b6a2e75586eb81b9c1528832b264f6a31198f9",
+        "0dc571a6bffaef40e6922578270f39f48f7917e48a862c38af918ce5cceb78a1",
+        "a1421a35fcede04a5cbb03688017d4363aa79adb1b621ad60737d9af37c5a119",
+        "047c736e08284c89f0596aa6d71e7e83b8ea9188833a304ca72507878acda228",
+        "3bfc0e78400610bb8e407b067b97f75c624b6031092cf2a7006594f6758202e0",
+        "0e404231a4a2093a6979f4bf9c970c17d42f4359e513a0b5456136aa4f38dabf",
     ];
 
     private static string HashOf(ulong seed, LineCloseRule rule)

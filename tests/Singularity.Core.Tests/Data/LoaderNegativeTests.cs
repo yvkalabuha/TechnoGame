@@ -77,7 +77,7 @@ public class LoaderNegativeTests : IDisposable
 
     [Fact]
     public void CapabilityReqOutsideTierRule() =>
-        AssertFails("nodes.yaml", "      precision: 5.5\n", "      precision: 6.5\n", "outside [tier - 1, tier + 0.5]");
+        AssertFails("nodes.yaml", "      precision: 5.5\n      quality_control: 5\n    requires: [s8.cmp.turbine_blade_cooled]", "      precision: 6.5\n      quality_control: 5\n    requires: [s8.cmp.turbine_blade_cooled]", "outside [tier - 1, tier + 0.5]");
 
     [Fact]
     public void MoreThanSixFractionalDigits() =>

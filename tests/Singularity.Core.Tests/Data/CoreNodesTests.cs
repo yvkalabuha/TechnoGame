@@ -23,13 +23,13 @@ public class CoreNodesTests
     private static Fx6 Fx(string text) => Fx6.FromRaw((long)(decimal.Parse(text, System.Globalization.CultureInfo.InvariantCulture) * Fx6.Scale));
 
     [Fact]
-    public void Core_Has61NodesWithTypeCounts()
+    public void Core_Has81NodesWithTypeCounts()
     {
         NodeTable n = Data.Nodes;
-        Assert.Equal(61, n.Count);
+        Assert.Equal(81, n.Count);
         int[] counts = [.. Enum.GetValues<NodeType>().Select(t => n.Type.Count(x => x == t))];
-        Assert.Equal([8, 8, 13, 8, 20, 4], counts);   // FND PRN ENG CMP PRC APP
-        Assert.Equal(Enumerable.Range(1, 61), n.Number.ToArray());
+        Assert.Equal([10, 11, 20, 10, 24, 6], counts);   // FND PRN ENG CMP PRC APP (61 of TASK-0011 + 20 of G5/G6)
+        Assert.Equal(Enumerable.Range(1, 81), n.Number.ToArray());
     }
 
     [Fact]
@@ -66,8 +66,11 @@ public class CoreNodesTests
         for (int r = 0; r < n.Count; r++)
             for (int e = n.InformsStart[r]; e < n.InformsStart[r + 1]; e++)
                 loaded.Add($"{n.Id[r]}>{n.Id[n.InformsTo[e]]}={n.InformsWeight[e]}");
-        Assert.Equal(46, loaded.Count);
-        Assert.Equal(expected, loaded.Order(StringComparer.Ordinal));
+        // 6 edges of nodes 62-81 (TASK-0133): only FND -> ENG/PRC of the same discipline pass the validator; the rest of the doc's edges are dropped.
+        string[] added = [.. loaded.Where(s => s.Contains("fly_by_wire") || s.Contains("aesa_sensor") || s.Contains("low_observable_airframe"))];
+        Assert.Equal(6, added.Length);
+        Assert.Equal(52, loaded.Count);
+        Assert.Equal(expected, loaded.Except(added).Order(StringComparer.Ordinal));
     }
 
     [Fact]

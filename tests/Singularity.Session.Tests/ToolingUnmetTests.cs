@@ -35,10 +35,12 @@ public class ToolingUnmetTests
     [Fact]
     public void Trajectory_ByTheColumnsBeforeF33_IsBitIdenticalToPart1()
     {
-        foreach ((ulong seed, int months, string hash) in BeforeF33)
+        foreach ((ulong seed, int months, string hash) in BeforeF33.Where(b => b.Months < 177))   // TASK-0129 (#431): the 384-month capture predates the fleet ageing
         {
             // T6d: the columns before F33 of the build before T6d are those of T6D_OFF (the new T6d columns and run.t6d are left out).
-            SliceSession s = Run(new SliceRunConfig { Seed = seed, Threads = 4, T6dOff = true }, months);
+            SliceSession s = SliceTestData.CreateLegacy(new SliceRunConfig { Seed = seed, Threads = 4, T6dOff = true });   // the 61-node data of the pinned build
+            for (long t = 0; t < months; t++)
+                s.StepThroughMonth(t);
             Assert.True(hash == ColumnProjection.Hash(s, n => !ColumnProjection.IsAddedSinceBaselineColumn(n) && !n.StartsWith("ind.unmet.", StringComparison.Ordinal) && !n.StartsWith("pol.lic.", StringComparison.Ordinal)
                     && !n.StartsWith("pol.dis.", StringComparison.Ordinal) && n != "run.t6d" && n != "run.scenario"),
                 $"seed {seed}, {months} months: an old column differs (the new column must not touch the decisions)");

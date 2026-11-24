@@ -12,7 +12,7 @@ public class DataHashTests : IDisposable
     // Re-recorded for «exposure to data» (TASK-0033): the actor field exposure (spec 8.1) is part of the scenario.
     // DataHash of mod core alone: nodes, product classes and scenarios. Same rule as above.
     // Re-recorded once for ADR-0018 §4 (TASK-0074): anchor.event left the data, text lives in mods/core/locale. Old value 6eba0cea…585bce.
-    private const string CoreDataHash = "7deed8f095d0e09084b4e8300af2ac46ce4fba537811e63acf6133497de95a53";
+    private const string CoreDataHash = "d9dce0a2a7d34ffb21a63bf23d17e33f7b683fbb4e1701e6f2e35a6584b7e796";
 
     private readonly TestMods _mods = new();
 

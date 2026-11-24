@@ -2,7 +2,7 @@ namespace Singularity.Session.Tests;
 
 /// <summary>
 /// TASK-0131 (train 2, T-G): the Core changes for G5/G6 (second licence word, generation cost multipliers, Lab guards) change nothing on the
-/// current data. The hashes over ALL columns at months 387 and 1019 (seeds 1-3, default AI run) are those of the build before the change.
+/// 61-node data of the build before TASK-0133 (Fixtures/core-g4). The hashes over ALL columns at months 387 and 1019 (seeds 1-3, default AI run) are those of the build before the change.
 /// </summary>
 public class Train2IdentityTests
 {
@@ -16,7 +16,7 @@ public class Train2IdentityTests
         Assert.Equal(6, rows.Length);
         foreach (var group in rows.GroupBy(r => r[0]))
         {
-            SliceSession s = SliceTestData.Create(HorizonConfigs.Config("Main", ulong.Parse(group.Key)));
+            SliceSession s = SliceTestData.CreateLegacy(HorizonConfigs.Config("Main", ulong.Parse(group.Key)));
             foreach (string[] r in group)
             {
                 s.StepThroughMonth(long.Parse(r[1]));
@@ -32,7 +32,7 @@ public class Train2IdentityTests
         var rows = new List<string>();
         for (ulong seed = 1; seed <= 3; seed++)
         {
-            SliceSession s = SliceTestData.Create(HorizonConfigs.Config("Main", seed));
+            SliceSession s = SliceTestData.CreateLegacy(HorizonConfigs.Config("Main", seed));
             foreach (int m in Months)
             {
                 s.StepThroughMonth(m);

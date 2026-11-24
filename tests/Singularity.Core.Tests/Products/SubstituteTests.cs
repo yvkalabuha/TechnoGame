@@ -330,10 +330,10 @@ public class SubstituteTests : IDisposable
     [InlineData("{id: comp_axial, rank: 2,", "{id: comp_axial, rank: 2, alloy_free: true,", "alloy_kg or alloy_free must be on every alternative of the alloy slot or on none")]
     [InlineData("{id: comp_axial, rank: 2,", "{id: comp_axial, rank: 0,", "rank 0 is for a substitute only")]
     [InlineData("{id: eng_g2, rank: 2, eng_gen: 2,", "{id: eng_g2, rank: 2, substitute: true, eng_gen: 2,", "substitute is not allowed in the engine (base) slot")]
-    [InlineData("hot_steel_g0, rank: 0,", "hot_steel_g0, rank: 5,", "a substitute must rank strictly below every non-substitute alternative")]
+    [InlineData("hot_steel_g0, rank: 0,", "hot_steel_g0, rank: 9,", "a substitute must rank strictly below every non-substitute alternative")]
     [InlineData("{id: eng_g2, rank: 2, eng_gen: 2,", "{id: eng_g2, rank: 2, max_eng_gen: 1, eng_gen: 2,", "max_eng_gen is not allowed in the engine (base) slot")]
     [InlineData("max_eng_gen: 1,", "max_eng_gen: 0,", "max_eng_gen must be at least 1")]
-    [InlineData("max_eng_gen: 1,", "max_eng_gen: 5,", "max_eng_gen must be in 1..4 (G_max)")]
+    [InlineData("max_eng_gen: 1,", "max_eng_gen: 7,", "max_eng_gen must be in 1..6 (G_max)")]
     [InlineData("upkeep_mult: 2.5,", "upkeep_mult: 0,", "upkeep_mult must be positive")]
     public void FieldRules_AreEnforced(string from, string to, string message) => Assert.Contains(message, LoadFail(from, to));
 
@@ -351,11 +351,13 @@ public class SubstituteTests : IDisposable
     {
         // alloy_kg removed from every alternative of the hot section, alloy_free kept on the substitute: the class has no alloy slot with alloy_kg.
         string dir = _mods.CopyCore((name, text) => name != "product_classes.yaml" ? text :
-            text.Replace("alloy_kg: 290, ", "").Replace("alloy_kg: 670, ", "").Replace("alloy_kg: 2120, ", "").Replace("alloy_kg: 2980, ", "")
+            text.Replace("alloy_kg: 290, ", "").Replace("alloy_kg: 670, ", "").Replace("alloy_kg: 2120, ", "").Replace("alloy_kg: 2980, ", "").Replace("alloy_kg: 3600, ", "").Replace("alloy_kg: 1800, ", "")
                 .Replace("{id: hot_nicr_forged, rank: 1,", "{id: hot_nicr_forged, rank: 1, alloy_free: true,")
                 .Replace("{id: hot_sa2_forged, rank: 2,", "{id: hot_sa2_forged, rank: 2, alloy_free: true,")
                 .Replace("{id: hot_vim_cast, rank: 3,", "{id: hot_vim_cast, rank: 3, alloy_free: true,")
-                .Replace("{id: hot_vim_ds_cooled, rank: 4,", "{id: hot_vim_ds_cooled, rank: 4, alloy_free: true,"));
+                .Replace("{id: hot_vim_ds_cooled, rank: 4,", "{id: hot_vim_ds_cooled, rank: 4, alloy_free: true,")
+                .Replace("{id: hot_sc_sc, rank: 5,", "{id: hot_sc_sc, rank: 5, alloy_free: true,")
+                .Replace("{id: hot_sc_cmc, rank: 6,", "{id: hot_sc_cmc, rank: 6, alloy_free: true,"));
         Assert.Contains("at least one alternative with alloy_kg", Assert.Throws<DataLoadException>(() => ModLoader.Load(dir)).Message);
     }
 

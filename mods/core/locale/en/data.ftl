@@ -305,6 +305,106 @@ node-s8-app-jet_fighter_g4 =
     .short = Fighter 4
     .anchor = F-15: first flight 27.07.1972
 
+node-s8-fnd-electronic_flight_control_theory =
+    .name = Electronic flight control theory
+    .short = E-control
+    .anchor = F-8 DFBW: first digital fly-by-wire flight (25.05.1972)
+
+node-s8-fnd-edge_wave_diffraction =
+    .name = Edge-wave diffraction theory
+    .short = Edge waves
+    .anchor = Ufimtsev: method of edge waves (1962, estimate)
+
+node-s5-prn-single_crystal_growth =
+    .name = Single-crystal growth
+    .short = Mono-crystal
+    .anchor = estimate 1974
+
+node-s5-prn-fibre_composite_laminate_design =
+    .name = Fibre composite laminate design
+    .short = Composites
+    .anchor = F-14: boron-epoxy surfaces (1970)
+
+node-s8-prn-low_observable_shaping =
+    .name = Low-observable shaping
+    .short = LO shaping
+    .anchor = estimate 1975
+
+node-s8-eng-fly_by_wire_relaxed_stability =
+    .name = Fly-by-wire, relaxed stability
+    .short = Fly-by-wire
+    .anchor = YF-16: first flight (02.02.1974)
+
+node-s8-eng-turbofan_g5 =
+    .name = Turbofan, gen 5
+    .short = Turbofan 5
+    .anchor = F100 DEEC: digital engine control (1981-83)
+
+node-s8-eng-composite_airframe =
+    .name = Composite airframe
+    .short = Comp. airf.
+    .anchor = YAV-8B: first flight (09.11.1978)
+
+node-s8-eng-low_observable_airframe =
+    .name = Low-observable airframe
+    .short = LO airframe
+    .anchor = Have Blue: first flight (01.12.1977)
+
+node-s8-eng-thrust_vectoring_supercruise_engine =
+    .name = Thrust-vectoring supercruise engine
+    .short = TVC engine
+    .anchor = YF-22: thrust vectoring 15.11.1990, supercruise 03.11.1990
+
+node-s8-cmp-turbine_blade_single_crystal =
+    .name = Single-crystal turbine blade
+    .short = SC blade
+    .anchor = estimate 1982
+
+node-s5-prc-single_crystal_casting =
+    .name = Single-crystal casting
+    .short = SC casting
+    .anchor = estimate 1982
+
+node-s8-prc-composite_layup_cure =
+    .name = Composite layup and cure
+    .short = Layup+cure
+    .anchor = estimate 1978
+
+node-s5-prc-low_observable_finishing =
+    .name = Low-observable finishing
+    .short = LO finish
+    .anchor = estimate 1981
+
+node-s8-app-jet_fighter_g5 =
+    .name = Jet fighter, gen 5
+    .short = Fighter 5
+    .anchor = Mirage 2000 in service (1984)
+
+node-s8-app-jet_fighter_g6 =
+    .name = Jet fighter, gen 6
+    .short = Fighter 6
+    .anchor = F-22: initial operational capability (12.2005)
+
+node-s8-eng-aesa_sensor_fusion =
+    .name = AESA radar and sensor fusion
+    .short = AESA
+    .anchor = APG-77: flight tests (11.1997, estimate)
+
+node-s5-cmp-ceramic_matrix_composite =
+    .name = Ceramic matrix composite
+    .short = CMC
+    .anchor = GE: CMC shrouds in LEAP (2016, estimate)
+
+node-s5-prc-cmc_fabrication =
+    .name = CMC fabrication
+    .short = CMC fab.
+    .anchor = estimate 2016
+
+node-s8-eng-adaptive_cycle_engine =
+    .name = Adaptive cycle engine
+    .short = Adaptive
+    .anchor = GE XA100: tests (2021, estimate)
+
 # Product classes and the scenario.
 
 pc-jet_fighter =
@@ -402,6 +502,38 @@ pc-jet_fighter-alt-afterburner-ab_none =
 pc-jet_fighter-alt-afterburner-ab_on =
     .name = Afterburner
     .short = Afterburner
+
+pc-jet_fighter-alt-engine-eng_g5 =
+    .name = Turbofan, gen 5
+    .short = Turbofan 5
+
+pc-jet_fighter-alt-engine-eng_g6 =
+    .name = Thrust-vectoring engine, gen 6
+    .short = TVC engine
+
+pc-jet_fighter-alt-engine-eng_g6_adaptive =
+    .name = Adaptive cycle engine
+    .short = Adaptive
+
+pc-jet_fighter-alt-hot_section-hot_sc_sc =
+    .name = Single-crystal blades
+    .short = SC blades
+
+pc-jet_fighter-alt-hot_section-hot_sc_cmc =
+    .name = Ceramic-composite hot section
+    .short = CMC hot
+
+pc-jet_fighter-alt-airframe-af_fbw =
+    .name = Fly-by-wire airframe
+    .short = FBW
+
+pc-jet_fighter-alt-airframe-af_composite =
+    .name = Composite airframe
+    .short = Composite
+
+pc-jet_fighter-alt-airframe-af_lo_composite =
+    .name = Low-observable composite airframe
+    .short = LO comp.
 
 scenario-jet_slice_1945 =
     .name = Jet aviation, 1945

@@ -23,7 +23,7 @@ public class IndustrySliceDeterminismTests
     public void L2_FullData_KnowledgeAndIndustryLinked_SameHashForThreadCountsAndChunkSizes()
     {
         var runs = new[] { new LinkedRun(1, 1), new LinkedRun(4, 1), new LinkedRun(8, 1), new LinkedRun(4, 3), new LinkedRun(3, 2) };
-        Assert.Equal(61, runs[0].Graph.Count);
+        Assert.Equal(81, runs[0].Graph.Count);
         for (long t = 0; t < 96; t++)
         {
             string? first = null;
