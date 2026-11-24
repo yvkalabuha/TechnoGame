@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0148-levers-p1",
+  "description": "TASK-0148 P1 (docs/simulation/levers-probes.md §3-4): one visible budget item of LEVER_ACTOR (USA, SUN, FRA) +10 p.p., -10 p.p. or 0, relative to the AI shares of each month; JetSlice FULL 1945-09..2000-12, seeds 1-10. Analysis lab/analysis/levers_probes.py.",
+  "model": "JetSlice",
+  "ticks": 20211,
+  "chunk_size": 1,
+  "threads": [
+    1
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 10
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full"
+  },
+  "series": [
+    {
+      "name": "base",
+      "params": {
+        "LEVER_DIAG": true
+      }
+    },
+    {
+      "name": "P1",
+      "sweep": {
+        "LEVER_ACTOR": [
+          "USA",
+          "SUN",
+          "FRA"
+        ],
+        "LEVER_SHIFT": [
+          "R+10",
+          "R-10",
+          "R0",
+          "C+10",
+          "C-10",
+          "C0",
+          "E+10",
+          "E-10",
+          "E0",
+          "P+10",
+          "P-10",
+          "P0"
+        ]
+      }
+    }
+  ],
+  "meta": {
+    "preregistration": "docs/simulation/levers-probes.md (commit d0f7765)",
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r18"
+  }
+}

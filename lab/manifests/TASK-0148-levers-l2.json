@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0148-levers-l2",
+  "description": "TASK-0148 validity (levers-probes.md §5): no lever keys vs LEVER_DIAG only (same golden), and one arm of each probe, threads 1 and 2 (L2).",
+  "model": "JetSlice",
+  "ticks": 20211,
+  "chunk_size": 1,
+  "threads": [
+    1,
+    2
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 2
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full"
+  },
+  "series": [
+    {
+      "name": "plain"
+    },
+    {
+      "name": "base",
+      "params": {
+        "LEVER_DIAG": true
+      }
+    },
+    {
+      "name": "P1-USA-R+10",
+      "params": {
+        "LEVER_ACTOR": "USA",
+        "LEVER_SHIFT": "R+10"
+      }
+    },
+    {
+      "name": "P2-SUN-r40-RES",
+      "params": {
+        "LEVER_ACTOR": "SUN",
+        "RESERVE": 0.4,
+        "RESERVE_SPEND": "RES"
+      }
+    },
+    {
+      "name": "ENG80",
+      "params": {
+        "LEVER_DIAG": true,
+        "DISC_WEIGHT": "prop:11.735484"
+      }
+    }
+  ],
+  "meta": {
+    "preregistration": "docs/simulation/levers-probes.md (commit d0f7765)",
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r18"
+  }
+}

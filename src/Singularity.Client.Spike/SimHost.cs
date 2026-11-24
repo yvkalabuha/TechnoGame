@@ -36,8 +36,7 @@ public sealed record HostSnapshot(
 /// </summary>
 public sealed class SimHost : IDisposable
 {
-    // Ticks are days (Calendar.DateOf = start day + tick). Tempo #269: slow 1 day/s, medium ~1 week/s, max ~1 month/s.
-    public static readonly double[] TicksPerSecond = { 0, 1, 7, 30 };
+    // Ticks are days (Calendar.DateOf = start day + tick). Steps and rates: SpeedSteps (#481).
 
     readonly ConcurrentQueue<Action> _jobs = new();
     readonly Thread _thread;
@@ -160,7 +159,7 @@ public sealed class SimHost : IDisposable
                 if (sp == 0) { owed = 0; }
                 else
                 {
-                    owed += dt * TicksPerSecond[sp];
+                    owed += dt * SpeedSteps.TicksPerSecond[SpeedSteps.Clamp(sp)];
                     long n = (long)owed;
                     if (n > 0) { owed -= n; Advance(n); }
                 }

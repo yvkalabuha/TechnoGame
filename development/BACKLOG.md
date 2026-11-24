@@ -163,17 +163,18 @@
 | [TASK-0145](../development/tasks/TASK-0145-sketch-codex-engine.md) | APPROVED | Sketches through Codex CLI image generation (llm_worker sketch --engine codex) | MS-M05 |
 | [TASK-0146](../development/tasks/TASK-0146-review-fallback-agy-sonnet.md) | DONE | Second review fallback to Sonnet 5.5 through agy when the Codex limit is exhausted (#456) | MS-M05 |
 | [TASK-0147](../development/tasks/TASK-0147-ahead-of-time-cost.md) | DONE | Ahead-of-time cost for knowledge nodes in Core (#458) and G5/G6 rev 3.1 data on the train-2 branch | MS-M05 |
-| [TASK-0148](../development/tasks/TASK-0148-levers-lab-probes.md) | IN_PROGRESS | Player levers: Lab probes P1-P3 (budget items matter, reserve dominance, goal strategies) | MS-M05 |
-| [TASK-0149](../development/tasks/TASK-0149-levers-legibility-pace.md) | REVIEW | Player levers: client legibility pass and pace (plain labels instead of numbers and G-codes, speeds 0/1/3/7/30, default 3 days/s) | MS-M05 |
+| [TASK-0148](../development/tasks/TASK-0148-levers-lab-probes.md) | DONE | Player levers: Lab probes P1-P3 (budget items matter, reserve dominance, goal strategies) | MS-M05 |
+| [TASK-0149](../development/tasks/TASK-0149-levers-legibility-pace.md) | DONE | Player levers: client legibility pass and pace (plain labels instead of numbers and G-codes, speeds 0/1/3/7/30, default 3 days/s) | MS-M05 |
 | [TASK-0150](../development/tasks/TASK-0150-levers-core-reserve.md) | APPROVED | Player levers core: budget reserve account with 10 %/year leak, shares at most 1, FundProgramme | MS-M05 |
-| [TASK-0151](../development/tasks/TASK-0151-levers-core-goals.md) | APPROVED | Player levers core: research priorities through institutes (slots, funding first x1.5, institute bonus, capacity, upkeep, building institutes) | MS-M05 |
+| [TASK-0151](../development/tasks/TASK-0151-levers-core-goals.md) | IN_PROGRESS | Player levers core: research priorities through institutes (slots, funding first x1.5, institute bonus, capacity, upkeep, building institutes) | MS-M05 |
 | [TASK-0152](../development/tasks/TASK-0152-levers-core-licence-market.md) | APPROVED | Player levers core: licence market (multi-licence state, seller catalogue, BuyLicence, AdoptLicensedDesign, AI price rule, selling own projects) | MS-M05 |
-| [TASK-0153](../development/tasks/TASK-0153-levers-core-ai-adviser.md) | APPROVED | Player levers core: AI adviser for the player country production (no AI opening or closing of player lines) | MS-M05 |
+| [TASK-0153](../development/tasks/TASK-0153-levers-core-ai-adviser.md) | IN_PROGRESS | Player levers core: AI adviser for the player country production (no AI opening or closing of player lines) | MS-M05 |
 | [TASK-0154](../development/tasks/TASK-0154-alliances-data.md) | REVIEW | Data: alliances and blocs by year 1945-2030 for the licence buyer circle | MS-M05 |
 | [TASK-0155](../development/tasks/TASK-0155-dollars-1990-series.md) | REVIEW | Data: constant 1990 US dollar display series and conversion from Core money unit | MS-M05 |
 | [TASK-0156](../development/tasks/TASK-0156-levers-client-windows.md) | APPROVED | Player levers client: research goals, budget in money with reserve, production line window, licence market window | MS-M05 |
-| [TASK-0157](../development/tasks/TASK-0157-node-effects-history.md) | APPROVED | Node content: effects in numbers and short history with sources for all 99 knowledge nodes (#486) | MS-M05 |
+| [TASK-0157](../development/tasks/TASK-0157-node-effects-history.md) | IN_PROGRESS | Node content: effects in numbers and short history with sources for all 99 knowledge nodes (#486) | MS-M05 |
 | [TASK-0158](../development/tasks/TASK-0158-silent-filtered-shots.md) | IN_PROGRESS | Client shot runs: silent by default and a frame filter (only the frames a task needs) | MS-M05 |
+| [TASK-0159](../development/tasks/TASK-0159-review-rejections-visual-dir.md) | IN_PROGRESS | llm_worker: Codex review sees earlier rejected findings; visual accepts frames from the client shots-out | MS-M05 |
 
 ## Гипотезы
 
