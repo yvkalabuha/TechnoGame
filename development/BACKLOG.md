@@ -170,7 +170,7 @@
 | [TASK-0152](../development/tasks/TASK-0152-levers-core-licence-market.md) | APPROVED | Player levers core: licence market (multi-licence state, seller catalogue, BuyLicence, AdoptLicensedDesign, AI price rule, selling own projects) | MS-M05 |
 | [TASK-0153](../development/tasks/TASK-0153-levers-core-ai-adviser.md) | APPROVED | Player levers core: AI adviser for the player country production (no AI opening or closing of player lines) | MS-M05 |
 | [TASK-0154](../development/tasks/TASK-0154-alliances-data.md) | IN_PROGRESS | Data: alliances and blocs by year 1945-2030 for the licence buyer circle | MS-M05 |
-| [TASK-0155](../development/tasks/TASK-0155-dollars-1990-series.md) | IN_PROGRESS | Data: constant 1990 US dollar display series and conversion from Core money unit | MS-M05 |
+| [TASK-0155](../development/tasks/TASK-0155-dollars-1990-series.md) | REVIEW | Data: constant 1990 US dollar display series and conversion from Core money unit | MS-M05 |
 | [TASK-0156](../development/tasks/TASK-0156-levers-client-windows.md) | APPROVED | Player levers client: research goals, budget in money with reserve, production line window, licence market window | MS-M05 |
 
 ## Гипотезы
