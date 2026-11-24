@@ -1,6 +1,8 @@
 """Second review fallback to Sonnet 5.5 through agy (#456, TASK-0146). No network, no real agy."""
 
 import json
+import os
+import time
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -57,8 +59,15 @@ class LimitStateTest(unittest.TestCase):
 
 
 class BoxTest(unittest.TestCase):
-    def wrap(self, writable, cwd="/work/x"):
-        box = sketch.Box(Path("/h/brain"), Path("/h/conv"), writable, home=Path("/home/u"), bwrap="/usr/bin/bwrap")
+    def setUp(self):
+        self.home = Path(tempfile.mkdtemp())
+        for rel in ("oauth_creds.json", "google_accounts.json", "settings.json", "config/mcp_config.json", "tmp/user/logs.json"):
+            p = self.home / ".gemini" / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text("secret")
+
+    def wrap(self, writable, cwd="/work/x", bus=None):
+        box = sketch.Box(Path("/h/brain"), Path("/h/conv"), writable, bus=bus, home=self.home, bwrap="/usr/bin/bwrap")
         return box.wrap(["/home/u/.local/bin/agy", "--settings", "/tmp/s/settings.json"], cwd)
 
     def pairs(self, argv, flag):
@@ -66,20 +75,53 @@ class BoxTest(unittest.TestCase):
 
     def test_mounts_only_what_agy_needs(self):
         argv = self.wrap(False)
+        gem, cli = f"{self.home}/.gemini", f"{self.home}/.gemini/antigravity-cli"
         self.assertEqual(argv[0], "/usr/bin/bwrap")
         self.assertIn("--clearenv", argv)
-        self.assertEqual(argv[argv.index("--tmpfs", argv.index("/tmp")) + 1], "/home/u")  # $HOME starts empty
+        self.assertEqual(argv[argv.index("--tmpfs", argv.index("/tmp")) + 1], str(self.home))  # $HOME starts empty
         self.assertIn(("/work/x", "/work/x"), self.pairs(argv, "--ro-bind"))  # the review copy is read-only
         self.assertNotIn(("/work/x", "/work/x"), self.pairs(argv, "--bind"))
-        self.assertIn(("/h/brain", "/home/u/.gemini/antigravity-cli/brain"), self.pairs(argv, "--bind"))  # private brain
-        self.assertIn(("/dev/null", "/home/u/.gemini/oauth_creds.json"), self.pairs(argv, "--ro-bind-try"))
+        self.assertIn(("/h/brain", f"{cli}/brain"), self.pairs(argv, "--bind"))  # private brain
+        self.assertIn((cli, cli), self.pairs(argv, "--ro-bind"))  # agy's own folder is never written
+        self.assertNotIn((cli, cli), self.pairs(argv, "--bind"))
+        tmpfs = {argv[i + 1] for i, a in enumerate(argv) if a == "--tmpfs"}
+        for name in ("log", "presence", "implicit", "cache"):
+            self.assertIn(f"{cli}/{name}", tmpfs)
+        masked = {d for s, d in self.pairs(argv, "--ro-bind") if s == "/dev/null"}
+        for name in ("oauth_creds.json", "google_accounts.json", "settings.json", "config/mcp_config.json", "tmp/user/logs.json"):
+            self.assertIn(f"{gem}/{name}", masked)
         everything = " ".join(argv)
         for secret in (".ssh", ".config/singularity", ".codex", ".gnupg", "gemini-api-key", "deepseek-api-key"):
             self.assertNotIn(secret, everything)
-        self.assertNotIn("--share-net", argv)
         self.assertNotIn("--unshare-net", argv)  # the model API needs the network
         self.assertIn(("/tmp/s/settings.json", "/tmp/s/settings.json"), self.pairs(argv, "--ro-bind"))  # rules file visible
         self.assertEqual(argv[-3:], ["/home/u/.local/bin/agy", "--settings", "/tmp/s/settings.json"])
+
+    def test_filtered_bus_replaces_the_real_one(self):
+        argv = self.wrap(False, bus=Path("/p/bus"))
+        self.assertIn(("/p/bus", f"/run/user/{os.getuid()}/bus"), self.pairs(argv, "--bind"))
+        self.assertNotIn(f"/run/user/{os.getuid()}/bus", [p[0] for p in self.pairs(argv, "--bind-try")])
+
+    def test_dbus_filter_starts_proxy_with_secrets_only_and_stops_it(self):
+        with tempfile.TemporaryDirectory() as d:
+            fake = Path(d) / "xdg-dbus-proxy"
+            fake.write_text("#!/usr/bin/env python3\nimport sys, time, pathlib\n"
+                            "pathlib.Path(sys.argv[2]).touch()\npathlib.Path(sys.argv[2] + '.args').write_text(' '.join(sys.argv[1:]))\n"
+                            "time.sleep(60)\n")
+            fake.chmod(0o755)
+            host = Path(d) / "hostbus"
+            host.touch()
+            with sketch.dbus_filter(Path(d) / "bus", which=lambda n: str(fake), host=str(host)) as bus:
+                self.assertEqual(bus, Path(d) / "bus")
+                for _ in range(50):
+                    if (Path(d) / "bus.args").exists():
+                        break
+                    time.sleep(0.1)
+                args = (Path(d) / "bus.args").read_text()
+            self.assertIn("--filter --talk=org.freedesktop.secrets", args)
+            self.assertNotIn("--own", args)
+            with sketch.dbus_filter(Path(d) / "x", which=lambda n: None, host=str(host)) as bus:
+                self.assertIsNone(bus)  # not installed: the real bus is shown, a known risk
 
     def test_sketch_workdir_is_writable_and_missing_bwrap_refuses(self):
         self.assertIn(("/work/x", "/work/x"), self.pairs(self.wrap(True), "--bind"))

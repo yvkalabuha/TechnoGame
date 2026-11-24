@@ -397,13 +397,15 @@ def safe_env(environ=None):
 @dataclasses.dataclass(frozen=True)
 class Box:
     """bubblewrap around agy (#456 round 2): the rules of agy cannot close paths that appear during a run, a mount
-    namespace can. Visible inside: system directories, the agy binary and ~/.gemini read-only (its OAuth files
-    masked), a private brain and conversations folder, ~/.config/antigravity and the D-Bus socket of the secret
-    service (agy keeps its login there; probed 2026-11-24), the working folder. Nothing else of $HOME exists.
+    namespace can. Visible inside: system directories, the agy binary and ~/.gemini read-only (OAuth, MCP and
+    settings files masked; log, presence, implicit and cache are throw-away tmpfs), a private brain and
+    conversations folder, ~/.config/antigravity and the D-Bus socket of the secret service (agy keeps its login
+    there; probed 2026-11-24; only org.freedesktop.secrets when xdg-dbus-proxy filters it), the working folder. Nothing else of $HOME exists.
     The network stays shared (model API). brain/conversations are host folders shown in place of agy's own."""
     brain: Path
     conversations: Path
     cwd_writable: bool = False
+    bus: Path | None = None  # filtered D-Bus socket (xdg-dbus-proxy) shown as the session bus; None: the real bus, if any
     home: Path = dataclasses.field(default_factory=Path.home)
     bwrap: str | None = None
 
@@ -424,17 +426,49 @@ class Box:
         a += ["--tmpfs", home]
         if os.path.isabs(cmd[0]):
             a += ["--ro-bind", os.path.realpath(cmd[0]), cmd[0]]
-        a += ["--ro-bind", gem, gem, "--bind", cli, cli, "--bind", str(self.brain), f"{cli}/brain",
+        a += ["--ro-bind", gem, gem, "--ro-bind", cli, cli, "--bind", str(self.brain), f"{cli}/brain",
               "--bind", str(self.conversations), f"{cli}/conversations"]
-        for name in ("oauth_creds.json", "google_accounts.json"):  # the old gemini-cli login: agy does not need it
-            a += ["--ro-bind-try", "/dev/null", f"{gem}/{name}"]
-        a += ["--bind-try", f"{home}/.config/antigravity", f"{home}/.config/antigravity",
-              "--bind-try", f"/run/user/{os.getuid()}/bus", f"/run/user/{os.getuid()}/bus"]
+        for name in ("log", "presence", "implicit", "cache"):  # agy writes here; nothing may persist
+            a += ["--tmpfs", f"{cli}/{name}"]
+        for name in ("oauth_creds.json", "google_accounts.json", "settings.json", "config/mcp_config.json",
+                     "tmp/user/logs.json"):  # logins, MCP servers and hooks agy does not need for a review
+            if os.path.isfile(f"{gem}/{name}"):
+                a += ["--ro-bind", "/dev/null", f"{gem}/{name}"]
+        bus = f"/run/user/{os.getuid()}/bus"
+        a += ["--bind-try", f"{home}/.config/antigravity", f"{home}/.config/antigravity"]
+        a += ["--bind", str(self.bus), bus] if self.bus else ["--bind-try", bus, bus]
         if "--settings" in cmd:  # the per-run rule file lives outside the Box
             a += ["--ro-bind", cmd[cmd.index("--settings") + 1], cmd[cmd.index("--settings") + 1]]
         if cwd:
             a += ["--bind" if self.cwd_writable else "--ro-bind", str(cwd), str(cwd), "--chdir", str(cwd)]
         return a + ["--"] + list(cmd)
+
+
+@contextlib.contextmanager
+def dbus_filter(sock, which=shutil.which, host=None):
+    """Start xdg-dbus-proxy so that the Box sees a session bus that only talks to the secret service (agy's login).
+    Yields the proxy socket, or None when the proxy is not installed or does not come up: then the real bus is
+    shown (a known risk, see TASK-0146)."""
+    exe = which("xdg-dbus-proxy")
+    host = host or f"/run/user/{os.getuid()}/bus"
+    if not exe or not os.path.exists(host):
+        yield None
+        return
+    p = subprocess.Popen([exe, f"unix:path={host}", str(sock), "--filter", "--talk=org.freedesktop.secrets"],
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         start_new_session=True)
+    try:
+        for _ in range(50):
+            if os.path.exists(sock):
+                break
+            time.sleep(0.1)
+        yield Path(sock) if os.path.exists(sock) else None
+    finally:
+        p.terminate()
+        try:
+            p.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            p.kill()
 
 
 @contextlib.contextmanager
@@ -445,7 +479,8 @@ def private_box(cwd_writable):
         brain, conv = Path(d) / "brain", Path(d) / "conversations"
         brain.mkdir()
         conv.mkdir()
-        yield Box(brain, conv, cwd_writable), brain
+        with dbus_filter(Path(d) / "bus") as bus:
+            yield Box(brain, conv, cwd_writable, bus=bus), brain
 
 
 def default_runner(cmd, cwd, timeout, stdin=None, box=None):
