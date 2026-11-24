@@ -2,7 +2,10 @@
 # Launch the Godot 3D globe spike (TASK-0067).
 # Usage: ./run-globe-spike.sh          interactive client prototype v0.4 (TASK-0069..0071; real Session on a background thread)
 #        ./run-globe-spike.sh --window  a framed 1920x1080 window instead of fullscreen (tests only; other flags such as --lang en pass through)
-#        ./run-globe-spike.sh --shots  automatic run + screenshots and an audio demo WAV into shots-out/ (git-ignored; copy key frames into docs/ui by hand)
+#        ./run-globe-spike.sh --shots  automatic run + screenshots into shots-out/ (git-ignored), silent (audio driver Dummy)
+#        ./run-globe-spike.sh --shots --only area_science_1920x1080,tree_*   only the named frames (comma list, * and ? masks)
+#        ./run-globe-spike.sh --shots --time-shots   time-control frames, silent; --only works here too
+#        ./run-globe-spike.sh --shots --audio-demo   also records the audio demo WAV (real audio driver, sound is heard)
 #        ./run-globe-spike.sh --bench  automatic benchmark + screenshots into bench-out/
 set -euo pipefail
 
@@ -38,10 +41,14 @@ fi
 echo "Building C# scripts..."
 "$GODOT" --headless --path . --build-solutions --quit
 
-if [[ "${1:-}" == "--shots" ]]; then
-  "$GODOT" --path . -- "$@"
+has_arg() { local w="$1" a; shift; for a in "$@"; do [[ "$a" == "$w" ]] && return 0; done; return 1; }
+AUDIO=(--audio-driver Dummy)
+if has_arg --audio-demo "$@"; then AUDIO=(); fi
+
+if has_arg --shots "$@" || has_arg --map-frames "$@"; then   # --time-shots is a sub-mode of --shots
+  "$GODOT" "${AUDIO[@]}" --path . -- "$@"
 elif [[ "${1:-}" == "--bench" ]]; then
-  "$GODOT" --path . -- --bench --out bench-out
+  "$GODOT" --audio-driver Dummy --path . -- --bench --out bench-out
   echo "Benchmark output: $PROJECT/bench-out"
 else
   echo "Controls: LMB drag = rotate, wheel = zoom, click a slice country = actor panel, Space pause, 1/2/3 tempo, T E F M I G J areas (Esc map), F3 debug, F1 help; Esc = game menu (Quit game); --lang en|ru"
