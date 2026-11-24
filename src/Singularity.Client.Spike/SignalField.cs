@@ -55,6 +55,8 @@ public sealed partial class SignalField : PanelContainer
     public Rect2 FreeRect => _spacer.GetGlobalRect();
     /// <summary>Screenshot runs: the year the gauge era follows instead of the game date.</summary>
     public bool Debug { set => _perf.Visible = value; }
+    public TimeControl Clock => _speed;
+    public Rect2 DateRect => _date.GetGlobalRect();
     public void SetSpeed(int s) { _speed.Select(s, false); _host.Speed = _speed.Selected; }
     public void StepSpeed(int d) => _speed.Step(d);
     public void TogglePause() => _speed.TogglePause();
@@ -71,7 +73,7 @@ public sealed partial class SignalField : PanelContainer
         row.AddThemeConstantOverride("separation", 10);
         AddChild(row);
 
-        _date.CustomMinimumSize = new Vector2(112, 0);
+        _date.CustomMinimumSize = new Vector2(114, 0); _date.VerticalAlignment = VerticalAlignment.Center;   // one axis with the time buttons
         _date.TooltipText = "tip.date"; _date.MouseFilter = MouseFilterEnum.Pass;
         row.AddChild(_date);
 
