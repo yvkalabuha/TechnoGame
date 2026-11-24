@@ -1,7 +1,7 @@
 ---
 id: TASK-0137
 title: "Globe volume and limb atmosphere: Godot prototype of three variants for the owner (#426, #442)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M05
 agent: developer
