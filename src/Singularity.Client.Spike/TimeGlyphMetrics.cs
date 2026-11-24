@@ -27,7 +27,8 @@ public static class TimeGlyphMetrics
         };
     }
 
-    /// <summary>The primitives of a glyph in button coordinates: what TimeControl draws and what the tests measure.</summary>
+    /// <summary>Stroke model of a glyph in button coordinates, for measuring (InkBox). TimeControl draws the same Shapes as pixel fills for straight edges and antialiased paths for slanted ones (IconButton.BuildParts),
+    /// so the box is a close bound: miters at the sharp tips reach about 1 du further.</summary>
     public static Prim[] Prims(int kind)
     {
         var shapes = Shapes(kind); var res = new Prim[shapes.Length];
@@ -61,13 +62,13 @@ public static class TimeGlyphMetrics
     }
 }
 
-/// <summary>Geometry of the four-step speed gauge in du inside its 60 x 32 box: bars 6 wide on a 14 step, heights 8/12/16/20, the group centred both ways; the active step wears a 2 du frame
+/// <summary>Geometry of the four-step speed gauge in du inside its 60 x 32 box: bars 6 wide on a 14 step, heights 10/14/18/22, the group centred both ways; the active step wears a 2 du frame
 /// 1 du outside its bar, so the frame is the bar grown by 3 on every side and is symmetric around the bar.</summary>
 public static class TimeGaugeGeometry
 {
     public const int Width = 60, Height = 32, BarW = 6, Step = 14, FrameGrow = 3, FrameStroke = 2, Bars = 4;
-    static readonly int[] Heights = { 8, 12, 16, 20 };
-    const int Left = 6, Bottom = 26;   // (60 - (3 * 14 + 6)) / 2 and (32 + 20) / 2
+    static readonly int[] Heights = { 10, 14, 18, 22 };
+    const int Left = 6, Bottom = 27;   // (60 - (3 * 14 + 6)) / 2 and (32 + 22) / 2
 
     public static (int X, int Y, int W, int H) Bar(int i) => (Left + i * Step, Bottom - Heights[i], BarW, Heights[i]);
 

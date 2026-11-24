@@ -54,13 +54,14 @@ public sealed partial class Main
         }
     }
 
-    void TimeFocusRing(TimeControl.Kind k)
+    void TimeFocusRing(TimeControl.Kind k, bool expect = true)
     {
         var img = GetViewport().GetTexture().GetImage(); var r = _signal.Clock.ButtonRect(k); int ox = (int)MathF.Round(r.Position.X), oy = (int)MathF.Round(r.Position.Y) + 16;
         float mid = (Lum(Ui.Ink) + Lum(img.GetPixel(ox - 8, oy))) / 2;
         bool ring = Lum(img.GetPixel(ox - 3, oy)) < mid && Lum(img.GetPixel(ox - 2, oy)) < mid && Lum(img.GetPixel(ox - 1, oy)) >= mid && Lum(img.GetPixel(ox + 33, oy)) < mid && Lum(img.GetPixel(ox + 34, oy)) < mid;
         float a = RelLum(Ui.Ink) + 0.05f, b = RelLum(img.GetPixel(ox - 8, oy)) + 0.05f; double ratio = Math.Max(a, b) / Math.Min(a, b);
-        TimeCheck(ring && ratio >= 3, $"focus ring of {k}: 2 du ink ring 1 du outside, contrast to the bar {ratio:F1}:1");
+        if (expect) TimeCheck(ring && ratio >= 3, $"focus ring of {k}: 2 du ink ring 1 du outside, contrast to the bar {ratio:F1}:1");
+        else TimeCheck(!ring, $"no focus ring on {k} after a mouse click (focus kept: {_signal.Clock.HasButtonFocus(k)})");
     }
 
     void BuildTimeShots()
@@ -88,20 +89,41 @@ public sealed partial class Main
         }
         W(0.3, () => TimeCheck(_host.Speed == 2 && _signal.Clock.Selected == 2, $"pressed-and-released-outside changed nothing (session speed {_host.Speed})"));
         // Keyboard: Tab-order focus on «faster», Enter raises the live session speed; Space pauses even with a button focused.
-        W(0.1, () => { _signal.Clock.FocusButton(TimeControl.Kind.Faster); });
-        W(0.4, () => { TimeFocusRing(TimeControl.Kind.Faster); Frames("focus", "_100", 640, 64); PressKey(Key.Enter); PressKey(Key.Enter, false); });
-        W(0.5, () => TimeCheck(_host.Speed == 3 && _signal.Clock.Selected == 3 && _host.Snap.Speed == 3, $"Enter on the focused faster button: session speed {_host.Speed}, snapshot {_host.Snap.Speed} (expected 3)"));
+        // The pointer leaves for the map in several moves, so that Godot drops the tooltip of the last hovered button (the synthetic jump left one at the old spot).
+        for (int i = 1; i <= 6; i++) { int k = i; W(0.15, () => { var p = new Vector2(200 + k * 150, 100 + k * 100); Input.ParseInputEvent(new InputEventMouseMotion { Position = p, GlobalPosition = p, Relative = new Vector2(150, 100) }); }); }
+        // Godot's own tooltip of the last hovered button stays where the synthetic pointer left it (no real pointer moves it away); a real pointer drops it on leaving, so the shot run hides it.
+        W(0.3, () => { HideStrayTooltip(GetTree().Root); });
+        W(0.1, () => _signal.Clock.FocusButton(TimeControl.Kind.Faster));   // the pointer is far away, outside the HUD
+        W(1.2, () =>
+        {
+            TimeFocusRing(TimeControl.Kind.Faster); var b = _signal.Clock.ButtonRect(TimeControl.Kind.Faster); var tip = _signal.Clock.KeyTipRect;
+            TimeCheck(tip.Size.X > 0 && tip.Position.Y >= b.End.Y && tip.Position.Y <= b.End.Y + 12 && Math.Abs(tip.Position.X - b.Position.X) <= 8, $"key tip of the focused faster button sits under it: tip {tip}, button {b}");
+            SaveShot("time_focus_100.png", null, true); SaveShot("time_focus_bar_100.png", new Rect2I(0, 0, 640, 112)); PressKey(Key.Enter); PressKey(Key.Enter, false);
+        });
+        W(0.5, () =>
+        {
+            TimeCheck(_host.Speed == 3 && _signal.Clock.Selected == 3 && _host.Snap.Speed == 3, $"Enter on the focused faster button: session speed {_host.Speed}, snapshot {_host.Snap.Speed} (expected 3)");
+            TimeCheck(_signal.Clock.HasButtonFocus(TimeControl.Kind.Pause), "faster became disabled at the top speed: the focus moved to pause");
+        });
         W(0.1, () => { PressKey(Key.Space); PressKey(Key.Space, false); });
-        W(0.4, () => TimeCheck(_host.Speed == 0 && _signal.Clock.HasButtonFocus(TimeControl.Kind.Faster) == false || _host.Speed == 0, $"Space with a button focused: session speed {_host.Speed} (expected 0)"));
+        W(0.4, () => TimeCheck(_host.Speed == 0, $"Space with a button focused: session speed {_host.Speed} (expected 0)"));
         W(0.1, () => { _signal.Clock.FocusButton(TimeControl.Kind.Slower); PressKey(Key.Enter); PressKey(Key.Enter, false); });
         W(0.4, () => TimeCheck(_signal.Clock.Selected == 0 && _host.Speed == 0, "Enter on slower while paused only changes the resume tempo (stays paused)"));
         W(0.1, () => _signal.SetSpeed(2));
-        // 150 %.
-        W(0.1, () => { Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false); });
-        foreach (int s in new[] { 1, 2, 3, 0 })
+        // A mouse click leaves the focus but no ring and no key tip; a second click resumes.
+        Vector2 pc = default;
+        W(0.3, () => { pc = _signal.Clock.ButtonRect(TimeControl.Kind.Pause).GetCenter(); Mouse(pc, null); Mouse(pc, true); Mouse(pc, false); });
+        W(0.5, () => { TimeFocusRing(TimeControl.Kind.Pause, false); TimeCheck(_signal.Clock.KeyTipRect.Size.X == 0 && !_signal.Clock.RingShown(TimeControl.Kind.Pause) && _host.Speed == 0, $"click on pause: paused (speed {_host.Speed}), no key tip"); Mouse(pc, true); Mouse(pc, false); });
+        W(0.4, () => { TimeCheck(_host.Speed == 2, $"second click resumes at the remembered speed (session speed {_host.Speed})"); Mouse(new Vector2(1100, 700), null); });
+        // 125 % and 150 %.
+        foreach (int pct in new[] { 125, 150 })
         {
-            W(0.6, () => _signal.SetSpeed(s));
-            W(0.5, () => Frames(names[s], "_150", 960, 96));
+            W(0.1, () => { Settings.Current.UiScale = pct; Settings.Apply(Settings.Current, GetWindow(), false); });
+            foreach (int s in new[] { 1, 2, 3, 0 })
+            {
+                W(0.6, () => _signal.SetSpeed(s));
+                W(0.5, () => Frames(names[s], $"_{pct}", pct * 640 / 100, pct * 64 / 100));
+            }
         }
         W(0.1, () => { Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); });
         W(0.6, () =>
@@ -110,6 +132,16 @@ public sealed partial class Main
             try { File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog); } catch (Exception ex) { GD.PrintErr("cannot write run-log.txt: " + ex.Message); _shotFailed = true; }
             GD.Print(_shotLog); GetTree().Quit(_shotFailed ? 1 : 0);
         });
+    }
+
+    // The embedded tooltip lives in a Window below the root (internal child); hide every visible popup window.
+    void HideStrayTooltip(Node n)
+    {
+        foreach (var c in n.GetChildren(true))
+        {
+            if (c is Window { Visible: true } w && c != GetTree().Root) { _shotLog += $"hid {c.GetType().Name} {c.Name} at {w.Position}\n"; w.Hide(); }
+            HideStrayTooltip(c);
+        }
     }
 
     void TimeShotStep(double dt)

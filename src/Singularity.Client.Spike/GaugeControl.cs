@@ -3,7 +3,7 @@ using Godot;
 
 namespace Singularity.Client.Spike;
 
-/// <summary>The game-speed meter: four bars 8/12/16/20 high (pause, day/s, week/s, month/s; the fourth is the dashed reserve, #331). No text beside it (#443): the tooltip and the accessible name carry the rate with its unit.
+/// <summary>The game-speed meter: four bars 10/14/18/22 high (pause, day/s, week/s, month/s; the fourth is the dashed reserve, #331). No text beside it (#443): the tooltip and the accessible name carry the rate with its unit.
 /// Geometry is TimeGaugeGeometry; every edge is a whole-pixel fill, so the active frame stays symmetric around its bar. Only a tooltip reaches it; the keys stay with the buttons.</summary>
 public sealed partial class GaugeControl : Control
 {
