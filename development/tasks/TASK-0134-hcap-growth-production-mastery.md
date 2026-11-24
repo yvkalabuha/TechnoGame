@@ -1,7 +1,7 @@
 ---
 id: TASK-0134
 title: "Hcap growth and production mastery in Core: series gate, candidate close, foresight, mastery programme (#438-#440)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M05
 agent: developer
