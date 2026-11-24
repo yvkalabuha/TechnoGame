@@ -1,7 +1,7 @@
 ---
 id: TASK-0158
 title: "Client shot runs: silent by default and a frame filter (only the frames a task needs)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M05
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: []
 approved_by: orchestrator
 approved_at: 2026-11-24
 approval_ref: "owner complaint 2026-11-24: sounds and long shot runs; light task"
+review_ref: "reviewer: APPROVE (b71c985); codex: waived after 3 returns (#432); landed; DEBT-0096"
 created: 2026-11-24
 ---
 
