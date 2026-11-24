@@ -26,6 +26,7 @@
 - TASK-0136 [IN_PROGRESS] Knowledge tree and menu clarity pass after Gemini design review: player text, legend grammar, node sizes, menu reasons, sheet depth (developer)
 - TASK-0137 [IN_PROGRESS] Globe volume and limb atmosphere: Godot prototype of three variants for the owner (#426, #442) (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
+- TASK-0138 [APPROVED] Globe draws 1945 political borders and labels from the region map and owners, not modern Natural Earth countries (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
