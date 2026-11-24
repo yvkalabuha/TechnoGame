@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0147-ahead-sens",
+  "description": "TASK-0147, owner decision #460: sensitivity of the ahead-of-time cost probe to research speed (docs/simulation/g5-g6-probe.md §10.5a). Data B (99 nodes); off and the k ladder of TASK-0147-ahead-probe.json, each at K_DIV 0.8 (knowledge 25% dearer) and 1.25 (20% cheaper). Analysis lab/analysis/ahead_probe.py --sens.",
+  "model": "JetSlice",
+  "ticks": 31168,
+  "chunk_size": 1,
+  "threads": [
+    1,
+    4
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 10
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full"
+  },
+  "series": [
+    {
+      "name": "off_s080",
+      "params": {
+        "K_DIV": 0.8
+      }
+    },
+    {
+      "name": "k02_s080",
+      "params": {
+        "AHEAD_K": 0.02,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 10,
+        "K_DIV": 0.8
+      }
+    },
+    {
+      "name": "k05_s080",
+      "params": {
+        "AHEAD_K": 0.05,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 10,
+        "K_DIV": 0.8
+      }
+    },
+    {
+      "name": "k12_s080",
+      "params": {
+        "AHEAD_K": 0.12,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 10,
+        "K_DIV": 0.8
+      }
+    },
+    {
+      "name": "off_s125",
+      "params": {
+        "K_DIV": 1.25
+      }
+    },
+    {
+      "name": "k02_s125",
+      "params": {
+        "AHEAD_K": 0.02,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 10,
+        "K_DIV": 1.25
+      }
+    },
+    {
+      "name": "k05_s125",
+      "params": {
+        "AHEAD_K": 0.05,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 10,
+        "K_DIV": 1.25
+      }
+    },
+    {
+      "name": "k12_s125",
+      "params": {
+        "AHEAD_K": 0.12,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 10,
+        "K_DIV": 1.25
+      }
+    }
+  ],
+  "meta": {
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r18",
+    "preregistration": "docs/simulation/g5-g6-probe.md §10.5a"
+  }
+}
