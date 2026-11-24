@@ -68,6 +68,8 @@ internal sealed class PolicyProductsAdapter(SliceWorld world) : IPolicyProducts
 
     public int GFront(long month) => world.Products.GFront(month - 1);
 
+    public int ProposalRefusals(int actorRow, int design, long month) => world.Commands.Refused(actorRow, design, month);
+
     public Fx6 CandidateValue(int actorRow, ReadOnlySpan<int> alts, Fx6 budget, long month) =>
         world.Products.CandidateValue(actorRow, alts, budget, month).Value;
 }

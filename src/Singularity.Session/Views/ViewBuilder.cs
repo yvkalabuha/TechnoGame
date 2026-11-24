@@ -196,7 +196,13 @@ internal static class ViewBuilder
         var repeats = ImmutableArray.CreateBuilder<int>(w.ProductsLayout.Generations);
         for (int g = 1; g <= w.ProductsLayout.Generations; g++)
             repeats.Add(pol.Repeats(a, g));
-        return new PolicyDecisionView(commands.ToImmutable(), starts.ToImmutable(), closes.ToImmutable(), [.. pol.AiFleetCommands(a, next)], repeats.MoveToImmutable());
+        var proposals = ImmutableArray.CreateBuilder<ProposalView>();
+        foreach (AdviserProposal p in pol.AdviserProposals(a, next))
+            proposals.Add(new ProposalView(p.Kind, p.Design, p.Handle, p.Rate, p.Reason));
+        return new PolicyDecisionView(commands.ToImmutable(), starts.ToImmutable(), closes.ToImmutable(), [.. pol.AiFleetCommands(a, next)], repeats.MoveToImmutable())
+        {
+            Proposals = proposals.ToImmutable(),
+        };
     }
 
     /// <summary>

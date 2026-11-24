@@ -57,6 +57,7 @@ public enum CommandKind
     SellCohort = 8,
     StartMasteryProgramme = 9,
     CancelMasteryProgramme = 10,
+    RefuseProposal = 11,
 }
 
 /// <summary>
@@ -108,6 +109,16 @@ public sealed record StartSeries(int Actor, DesignHandle Design, Fx6 Rate, bool 
 public sealed record CloseLine(int Actor, DesignHandle Design) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.CloseLine;
+}
+
+/// <summary>
+/// <c>refuse_proposal(design, close)</c> (TASK-0153, #479): the player refuses the adviser's proposal to open (or, with <paramref name="Close"/>, to close) the line of the
+/// design; the adviser stays silent about it for the refusal period. Accepting a proposal is an ordinary <see cref="StartSeries"/> or <see cref="CloseLine"/> with the proposal's handle.
+/// Valid only in a run with an adviser for the actor.
+/// </summary>
+public sealed record RefuseProposal(int Actor, DesignHandle Design, bool Close) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.RefuseProposal;
 }
 
 /// <summary>

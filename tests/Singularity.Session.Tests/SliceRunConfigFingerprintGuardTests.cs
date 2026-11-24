@@ -58,6 +58,11 @@ public class SliceRunConfigFingerprintGuardTests
             var a = (ImmutableArray<Fx6>)current!;
             return a.IsDefault ? ImmutableArray.Create(Fx6.One) : a.Add(Fx6.One);
         }
+        if (type == typeof(ImmutableArray<int>))
+        {
+            var a = (ImmutableArray<int>)current!;
+            return a.IsDefault ? ImmutableArray.Create(0) : a.Add(0);
+        }
         if (type == typeof(ImmutableArray<DisciplineWeight>))
         {
             var a = (ImmutableArray<DisciplineWeight>)current!;

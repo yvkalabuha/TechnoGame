@@ -82,4 +82,9 @@ public interface IPolicyProducts
 
     /// <summary><c>G_front</c> of the snapshot (contract §9.1, #146).</summary>
     int GFront(long month) => 0;
+
+    /// <summary>
+    /// The adviser's proposals of the design the player refused, consumed at <c>month</c>: bit 0 = open, bit 1 = close (TASK-0153). A build without an adviser says 0.
+    /// </summary>
+    int ProposalRefusals(int actorRow, int design, long month) => 0;
 }

@@ -679,23 +679,31 @@ public sealed partial class PolicySystem
         return false;
     }
 
+    private void PutInt(IntColumn c, int row, bool next, int v)
+    {
+        if (next)
+            c.Next[row] = v;
+        else
+            SetCurrent(c, row, v);
+    }
+
+    private void PutLong(LongColumn c, int row, bool next, long v)
+    {
+        if (next)
+            c.Next[row] = v;
+        else
+            SetCurrent(c, row, v);
+    }
+
     // next = true inside the compute (writes Next); false before tick 0 (loads Current).
     private void Commit(int row, Decisions dec, int stamp, bool next)
     {
-        void setInt(IntColumn c, int v)
-        {
-            if (next)
-                c.Next[row] = v;
-            else
-                SetCurrent(c, row, v);
-        }
-        void setLong(LongColumn c, long v)
-        {
-            if (next)
-                c.Next[row] = v;
-            else
-                SetCurrent(c, row, v);
-        }
+        void setInt(IntColumn c, int v) => PutInt(c, row, next, v);
+        void setLong(LongColumn c, long v) => PutLong(c, row, next, v);
+
+        // An adviser actor gets proposals instead of line decisions (TASK-0153).
+        if (IsAdviser(row))
+            Advise(row, dec, stamp, next);
 
         if (dec.Design.Count > DesignSlots)
             throw new PolicyInvariantException(stamp, row, $"{dec.Design.Count} design commands for {DesignSlots} slots");

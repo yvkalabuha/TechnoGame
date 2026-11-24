@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Singularity.Core.Commands;
 using Singularity.Core.Policy;
 using Singularity.Core.Products;
 using Singularity.Kernel;
@@ -95,7 +96,24 @@ public sealed record PolicyDecisionView(
     ImmutableArray<StartView> Starts,
     ImmutableArray<CloseView> Closes,
     ImmutableArray<FleetCommand> Fleet,
-    ImmutableArray<int> Repeats);
+    ImmutableArray<int> Repeats)
+{
+    /// <summary>
+    /// The adviser's proposals for the month <c>Month + 1</c> (TASK-0153): empty unless the actor is an adviser actor. Accept = the proposal's <see cref="ProposalView.Accept"/>
+    /// command, refuse = <see cref="ProposalView.Refuse"/>.
+    /// </summary>
+    public ImmutableArray<ProposalView> Proposals { get; init; } = [];
+}
+
+/// <summary>A proposal of the adviser. <see cref="Reason"/> is set for a close.</summary>
+public readonly record struct ProposalView(ProposalKind Kind, int Design, DesignHandle Handle, Fx6 Rate, LineCloseReason Reason)
+{
+    /// <summary>The command that accepts it (the player's own command: the AI never acts on a player line).</summary>
+    public SliceCommand Accept(int actor) => Kind == ProposalKind.Open ? new StartSeries(actor, Handle, Rate, false) : new CloseLine(actor, Handle);
+
+    /// <summary>The command that refuses it for the refusal period.</summary>
+    public SliceCommand Refuse(int actor) => new RefuseProposal(actor, Handle, Kind == ProposalKind.Close);
+}
 
 /// <summary><see cref="Handle"/> is the project a Derive or Cancel names (the generation the AI saw at its decision, ADR-0005 p. 3); <c>default</c> for a Compose.</summary>
 public sealed record DesignCommandView(DesignCommandKind Kind, int Target, ImmutableArray<int> Alts, DesignHandle Handle);
