@@ -250,6 +250,55 @@ class SketchTest(unittest.TestCase):
             self.go(runner=self.runner(stream=self.stream_with({"step_type": "agent_response"}, "ResourceExhausted"), image=False))
         self.assertEqual(c.exception.code, "agy_quota")
 
+    QFIX = Path(config.PACKAGE_DIR) / "fixtures" / "agy_subagent_quota_transcript.jsonl"
+
+    def quota_runner(self, image):
+        base = self.runner(image=image)
+
+        def run(cmd, cwd, timeout):
+            res = base(cmd, cwd, timeout)
+            if cmd[1] != "--version":
+                (self.brain / SUB / ".system_generated" / "logs" / "transcript.jsonl").write_text(self.QFIX.read_text())
+            return res
+        return run
+
+    def test_subagent_quota_without_images_is_quota_with_reset(self):
+        with self.assertRaises(sketch.SketchError) as c:
+            self.go(runner=self.quota_runner(image=False), count=2)
+        self.assertEqual(c.exception.code, "agy_quota")
+        self.assertIn("got 0 of 2", str(c.exception))
+        self.assertIn("reset in 4h40m37s", str(c.exception))
+
+    def test_subagent_quota_with_some_images_is_partial_quota(self):
+        _, md, rec = self.go(runner=self.quota_runner(image=True), count=2)
+        self.assertEqual(rec["stop_reason"], "agy_quota")
+        self.assertEqual(rec["quota"]["reset_seconds"], 4 * 3600 + 40 * 60 + 37)
+        self.assertTrue(rec["quota"]["reset_at"])
+        self.assertTrue(rec["partial"])
+        self.assertIn("got 1 of 2, reason: quota, reset in 4h40m37s", md.read_text())
+
+    def test_no_quota_record_when_all_images_arrive(self):
+        _, _, rec = self.go(runner=self.quota_runner(image=True), count=1)
+        self.assertNotIn("quota", rec)
+
+    def test_reset_parsing(self):
+        self.assertEqual(sketch.reset_seconds("quota will reset after 4h40m7s."), 16807)
+        self.assertEqual(sketch.reset_seconds("reset after 12m"), 720)
+        self.assertIsNone(sketch.reset_seconds("quota exceeded"))
+        self.assertEqual(sketch.format_reset(16807), "4h40m7s")
+
+    def test_prompt_one_call_per_subagent_sequential_by_default(self):
+        seq = sketch.build_prompt("brief", 2, [])
+        self.assertIn("exactly ONE call", seq)
+        self.assertIn("no refinements", seq)
+        self.assertIn("one after another", seq)
+        self.assertNotIn("in parallel", seq)
+        self.assertIn("in parallel", sketch.build_prompt("brief", 2, [], parallel=True))
+
+    def test_parallel_flag_reaches_agy_prompt(self):
+        self.go(runner=self.runner(), parallel=True)
+        self.assertIn("in parallel", self.calls[-1][0][2])
+
     RF_ID = "0af7a474-ce07-4bc4-9735-46858b750c5e"
 
     def rf_runner(self, path_template, image=True):

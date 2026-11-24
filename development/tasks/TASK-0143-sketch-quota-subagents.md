@@ -33,6 +33,9 @@ created: 2026-11-24
 3. По умолчанию подагенты по очереди (флаг `--parallel` для параллели).
 4. Вывод: «получено K из N, причина: квота, сброс через …».
 
+## Результат
+Пункты 1-4 сделаны в `tools/llm_worker/sketch.py`, `__main__.py` (флаг `--parallel`), README. 429 ищется в transcript.jsonl всех подагентов; при нехватке картинок запись получает `quota` (reset_seconds, reset_at) и `stop_reason: agy_quota`, вывод «got K of N, reason: quota, reset in ...», код 4; без картинок — отказ `agy_quota`. Промпт: один вызов generate_image на подагента, без уточнений, по очереди (по умолчанию). Тесты: `tools/llm_worker/tests/test_sketch.py`, фикстура `tools/llm_worker/fixtures/agy_subagent_quota_transcript.jsonl` (по форме реальных transcript 29c55f30 / 0412cc81, обезличена).
+
 ## Критерии приёмки
 - [ ] Unit-тесты: разбор 429 в transcript подагента, одна картинка на подагента, время сброса.
 - [ ] Ревьюер APPROVE; `verify.py --full`.

@@ -16,7 +16,7 @@ import subprocess
 import tempfile
 import time
 import zlib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from . import config, gitleaks
@@ -26,6 +26,7 @@ AGY_RPM = 2
 AGY_RPD = 20  # careful guess of the subscription's daily room, not a documented quota
 AGY_USAGE_FILE = "agy-usage.json"  # in LEDGER_DIR
 MAX_COUNT = 4
+RESET_RE = re.compile(r"reset after\s+(?:(\d+)h)?\s*(?:(\d+)m)?\s*(?:(\d+(?:\.\d+)?)s)?", re.I)
 DEFAULT_TIMEOUT_S = 400
 BRAIN_DIR = Path.home() / ".gemini" / "antigravity-cli" / "brain"
 IMAGE_EXT = (".jpg", ".jpeg", ".png", ".webp")
@@ -224,6 +225,51 @@ def quota_hit(err, result, out):
     return any(QUOTA_RE.search(t) for t in _strings(err, result, out))
 
 
+def reset_seconds(text):
+    """Seconds from 'quota will reset after 4h40m7s', or None when the text names no reset time."""
+    m = RESET_RE.search(text or "")
+    if not m or not any(m.groups()):
+        return None
+    h, mi, s = m.groups()
+    return int(h or 0) * 3600 + int(mi or 0) * 60 + int(float(s or 0))
+
+
+def format_reset(sec):
+    h, rest = divmod(sec, 3600)
+    return (f"{h}h" if h else "") + (f"{rest // 60}m" if rest // 60 else "") + (f"{rest % 60}s" if rest % 60 or not sec else "")
+
+
+def transcript_quota(brain_dir, ids):
+    """Quota errors (429 / RESOURCE_EXHAUSTED) of failed steps in any conversation transcript of the run, sub-agents
+    included: the main agent's stream does not show them (a sub-agent reports the 429 to its parent and stops).
+    Returns {"errors": n, "reset_seconds": longest announced reset or None}."""
+    n, resets = 0, []
+    for cid in ids:
+        f = Path(brain_dir) / cid / ".system_generated" / "logs" / "transcript.jsonl"
+        try:
+            lines = f.read_text(encoding="utf-8").splitlines()
+        except (OSError, ValueError):
+            continue
+        for line in lines:
+            try:
+                ev = json.loads(line)
+            except ValueError:
+                continue
+            err = ev.get("error") if isinstance(ev, dict) and ev.get("status") == "ERROR" else None
+            if isinstance(err, str) and QUOTA_RE.search(err):
+                n += 1
+                sec = reset_seconds(err)
+                if sec is not None:
+                    resets.append(sec)
+    return {"errors": n, "reset_seconds": max(resets) if resets else None}
+
+
+def quota_text(quota, got, count):
+    """One line: 'got K of N, reason: quota, reset in ...'."""
+    sec = quota.get("reset_seconds")
+    return f"got {got} of {count}, reason: quota, reset in {format_reset(sec) if sec is not None else 'unknown time'}"
+
+
 def find_model(text):
     """First string 'model' field in any event, or None (agy 1.5.15 stream events carry none)."""
     for line in text.splitlines():
@@ -310,12 +356,16 @@ def check_refs(refs, shots_dir=None):
     return out
 
 
-def build_prompt(text, count, ref_paths):
+def build_prompt(text, count, ref_paths, parallel=False):
     """The user's brief plus fixed instructions. Refs are copied to the workspace and named by absolute path."""
     parts = [text.strip(),
              "",
-             f"Generate exactly {count} distinct image(s) with the image generation tool, one tool call per image. "
-             "Do not write code or run commands. Reply with one short line per image."]
+             f"Generate exactly {count} distinct image(s), one per sub-agent. Each sub-agent makes exactly ONE call of the "
+             "image generation tool: no refinements, no second or "
+             "improved versions (_v2, _refined, _final), no retries, and on any error (quota included) it reports the error "
+             "and stops. Do not write code or run commands. Reply with one short line per image.",
+             "Start the sub-agents in parallel." if parallel else
+             "Run the sub-agents one after another: start the next only when the previous one has finished."]
     if ref_paths:
         parts += ["", "Reference frames of the current game UI (read each with the file viewer before drawing):"]
         parts += [f"- {p}" for p in ref_paths]
@@ -398,7 +448,7 @@ def attribution_line(rec, f):
 
 def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, shots_dir=None, root=config.REPO_ROOT,
                brain_dir=BRAIN_DIR, runner=None, which=shutil.which, timeout_s=DEFAULT_TIMEOUT_S, dry_run=False,
-               guard=None, clock=time.time, sleep=time.sleep):
+               guard=None, clock=time.time, sleep=time.sleep, parallel=False):
     """One agy run. Returns (json path or None, md path or None, record)."""
     if not TASK_RE.match(task):
         raise SketchError("bad_task", task)
@@ -431,7 +481,7 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
             dst = Path(ws) / f"{len(ws_refs) + 1}-{p.name}"  # same basenames must not collapse
             shutil.copyfile(p, dst)
             ws_refs.append(dst)
-        cmd = [agy, "-p", build_prompt(brief, count, ws_refs), "--print-timeout", f"{timeout_s}s",
+        cmd = [agy, "-p", build_prompt(brief, count, ws_refs, parallel), "--print-timeout", f"{timeout_s}s",
                "--mode", "accept-edits", "--output-format", "stream-json",
                "--settings", SETTINGS]
         record["agy_version"] = agy_version(agy, runner)
@@ -475,7 +525,15 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
         prev = sizes
         found = collect_images(ids, started - 2, brain_dir)
         sizes = [p.stat().st_size for p in found]
+    quota = transcript_quota(brain_dir, ids)
+    if len(found) < count and quota["errors"]:
+        record["quota"] = {**quota, "reset_at": (datetime.fromtimestamp(clock(), timezone.utc)
+                                                 + timedelta(seconds=quota["reset_seconds"])).isoformat(timespec="seconds")
+                           if quota["reset_seconds"] is not None else None}
+        record["stop_reason"] = "agy_quota"
     if not found:
+        if quota["errors"]:
+            raise SketchError("agy_quota", quota_text(quota, 0, count))
         if quota_hit(err, result, out):
             raise SketchError("agy_quota", one_line(answer or err[-600:] or "quota error", 300))
         raise SketchError("no_images", f"no new image in the brain dirs of {', '.join(ids)}")
@@ -507,6 +565,8 @@ def summary_md(rec):
              f"Prompt ({rec['prompt_file']}, sha256 {rec['prompt_sha256']}): {rec['prompt_brief']}", ""]
     if rec["refs"]:
         lines += [f"References: {', '.join(rec['refs'])}", ""]
+    if rec.get("quota"):
+        lines += [f"STOPPED BY QUOTA: {quota_text(rec['quota'], len(rec['files']), rec['requested'])}.", ""]
     lines += [f"- {f['name']} ({f['bytes']} bytes, sha256 {f['sha256'][:12]})" for f in rec["files"]]
     lines += ["", "Attribution lines for mods/core/ATTRIBUTION.md (fill the approver; add only approved files):", ""]
     return "\n".join(lines + rec["attribution"]) + "\n"
