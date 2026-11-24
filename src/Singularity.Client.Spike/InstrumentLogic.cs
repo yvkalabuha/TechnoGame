@@ -67,11 +67,11 @@ public static class InstrumentLogic
     public readonly record struct AlloyFlaskView(double Level, bool Hatched, AlloyState State);
 
     /// <summary>The Production flask. A why_not alloy link with Have below Need is a shortage (real supply against the planned demand); with Have at or above Need it is no shortage and the other rules apply.
-    /// No admitted melt (supply 0) is an empty hatched flask; otherwise the stock is what the policy disruption leaves, hatched while the disruption lasts.</summary>
+    /// No supply at all (supply 0: no admitted melt, or a full cut) is an empty hatched flask and wins over the shortage; otherwise the stock is what the policy disruption leaves, hatched while the disruption lasts.</summary>
     public static AlloyFlaskView AlloyFlask(double supply, double deficitFraction, (double Have, double Need)? shortage)
     {
+        if (supply <= 0) return new(0, true, AlloyState.NoSmelting);   // nothing to count against a need: «none», never «0 % of the need»
         if (shortage is { } s && s.Have < s.Need) return new(FlaskLevel(s.Have, s.Need), true, AlloyState.Shortage);
-        if (supply <= 0) return new(0, true, AlloyState.NoSmelting);
         return deficitFraction > 0 ? new(AlloyLevel(deficitFraction), true, AlloyState.Disrupted) : new(AlloyLevel(deficitFraction), false, AlloyState.Normal);
     }
 

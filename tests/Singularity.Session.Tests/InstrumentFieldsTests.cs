@@ -47,11 +47,10 @@ public sealed class InstrumentFieldsTests
     }
 
     [Fact]
-    public void Alloy_IsSupplyOfTheMonthAndTheLargestNeedOfARunningLine()
+    public void Alloy_IsSupplyOfTheMonthAndTheAlloyAskedInThatStep()
     {
         SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
         SliceWorld w = s.World;
-        ProductsLayout pl = w.ProductsLayout;
         bool needSeen = false;
         for (long t = 0; t < Months; t++)
         {
@@ -59,20 +58,42 @@ public sealed class InstrumentFieldsTests
             for (int a = 0; a < w.Scenario.ActorCount; a++)
             {
                 AlloyCoverage c = s.View.Actors[a].Alloy;
-                Assert.Equal(w.Industry.Alloy(a, t + 1).Supply, c.Supply);
-                Assert.Equal(w.Policy.AlloyDeficit(a, t + 1), c.DeficitFraction);
-                Fx6 need = Fx6.Zero;
-                for (int d = 0; d < pl.Designs; d++)
-                {
-                    int alt = w.Products.AltAt(a, d, pl.AlloySlot);
-                    if (w.Products.Stage(a, d) == DesignStage.Series && w.Products.Rate(a, d) > Fx6.Zero && alt >= 0 && !pl.AltAlloyFree[alt] && pl.AltAlloyKg[alt] > Fx6.Zero)
-                        need = Fx6.FromRaw(Math.Max(need.Raw, (pl.AltAlloyKg[alt] * w.Products.Rate(a, d)).Raw));
-                }
-                Assert.Equal(need, c.Need);
-                needSeen |= need > Fx6.Zero;
+                Assert.Equal(w.Industry.Alloy(a, t).Supply, c.Supply);
+                Assert.Equal(w.Policy.AlloyDeficit(a, t), c.DeficitFraction);
+                Assert.Equal(w.Products.LastAlloyAsk(a), c.Need);
+                needSeen |= c.Need > Fx6.Zero;
             }
         }
         Assert.True(needSeen, "no actor ran an alloy-using line in the walk: the test does not exercise the need");
+    }
+
+    [Fact]
+    public void ALineBoundByAlloy_ShowsNeedAboveSupply()
+    {
+        // The produced rate is already cut by the alloy; the need must come from the asked rate, so a line stopped for lack of alloy still counts.
+        int bound = 0;
+        foreach (int seed in new[] { 1, 2, 3, 4, 5, 6, 7, 8 })
+        {
+            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = (ulong)seed });
+            SliceWorld w = s.World;
+            for (long t = 0; t < 200; t++)
+            {
+                s.StepThroughMonth(t);
+                for (int a = 0; a < w.Scenario.ActorCount; a++)
+                {
+                    bool alloyBound = false;
+                    for (int d = 0; d < w.ProductsLayout.Designs; d++)
+                        alloyBound |= w.Products.Stage(a, d) == DesignStage.Series && w.Products.Bind(a, d) == LineBind.Alloy;
+                    if (!alloyBound)
+                        continue;
+                    bound++;
+                    AlloyCoverage c = s.View.Actors[a].Alloy;
+                    Assert.True(c.Need > c.Supply, $"seed {seed} month {t} actor {a}: a line is bound by alloy but need {c.Need} <= supply {c.Supply}");
+                    Assert.True(c.Ratio < Fx6.One);
+                }
+            }
+        }
+        Assert.True(bound > 0, "no line was bound by alloy in the walks: the test does not exercise the case");
     }
 
     [Theory]

@@ -44,6 +44,7 @@ public sealed partial class ActorPanel : PanelContainer
     readonly Label[] _sciName = { Ui.Lbl("", 14, Ui.Ink2), Ui.Lbl("", 14, Ui.Ink2), Ui.Lbl("", 14, Ui.Ink2) };
     readonly Label _sciThrNote = Ui.Lbl("", 14, Ui.Ink2);   // one «threshold reached» line under the flask row (hatched flasks)
     readonly bool[] _sciThr = new bool[3];
+    readonly string[] _sciFull = new string[3];
     int _instLevel = -1, _instYear = -1;
     readonly Label[] _slVal = new Label[5], _slForce = new Label[5];
     readonly Label _sum = Ui.Lbl("", 14, Ui.Ink2, FontKind.Mono);
@@ -215,7 +216,7 @@ public sealed partial class ActorPanel : PanelContainer
         {
             _sciName[i].CustomMinimumSize = new Vector2(112, 0); _flaskSci[i].SizeFlagsHorizontal = SizeFlags.ShrinkCenter; _sciName[i].TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
             // C1: the name wraps by words to at most two lines at the text size; only a longer name is trimmed (tooltip has the full one)
-            _sciName[i].AutowrapMode = TextServer.AutowrapMode.WordSmart; _sciName[i].MaxLinesVisible = 2; _sciName[i].CustomMinimumSize = new Vector2(112, 40);
+            _sciName[i].AutowrapMode = TextServer.AutowrapMode.Word; _sciName[i].MaxLinesVisible = 2; _sciName[i].CustomMinimumSize = new Vector2(112, 40);
             _sciName[i].HorizontalAlignment = HorizontalAlignment.Center; _sciName[i].MouseFilter = MouseFilterEnum.Pass;
             _sciCell[i].AddThemeConstantOverride("separation", 0);
             _sciCell[i].AddChild(_flaskSci[i]); _sciCell[i].AddChild(_sciName[i]);
@@ -454,12 +455,13 @@ public sealed partial class ActorPanel : PanelContainer
 
     void SetResearchFlask(int n, InstrumentLogic.ResearchFlask f)
     {
-        string name = Names.Node(_host.Data, f.Node);
+        string name = Names.Node(_host.Data, f.Node), label = Names.NodeShort(_host.Data, f.Node);   // the label is the short name (whole words in 112 du), the tooltip has the full one
         double have = f.Have, need = f.Need, lv = InstrumentLogic.FlaskLevel(have, need);
         bool thr = f.Threshold;   // a hazard node at its threshold: full, hatched, not discovered
         _flaskSci[n].Set(lv, false, thr);
-        _sciName[n].Text = name;
+        _sciName[n].Text = label;
         _sciThr[n] = thr;
+        _sciFull[n] = name;
         _flaskSci[n].TooltipText = _sciName[n].TooltipText = thr
             ? Loc.T("flask.sci.threshold", name, Loc.N(have), Loc.N(need))
             : Loc.T("flask.sci.tip", name, InstrumentLogic.FlaskPercent(lv, false), Loc.N(have), Loc.N(need));
@@ -488,10 +490,12 @@ public sealed partial class ActorPanel : PanelContainer
         foreach (var f in InstrumentLogic.ResearchFlasks(research, _flaskSci.Length)) SetResearchFlask(n++, f);
         for (int i = 0; i < _flaskSci.Length; i++) _sciCell[i].Visible = i < n;
         _flaskSciRow.Visible = n > 0;
-        bool anyThr = false; for (int i = 0; i < n; i++) anyThr |= _sciThr[i];
-        _sciThrNote.Visible = anyThr; _sciThrNote.Text = anyThr ? Loc.T("flask.sci.threshold.note") : "";
+        // the note names the flasks it is about, so it cannot be read as a general remark
+        string thrNames = ""; for (int i = 0; i < n; i++) if (_sciThr[i]) thrNames += (thrNames == "" ? "" : ", ") + _sciFull[i];
+        _sciThrNote.Visible = thrNames != ""; _sciThrNote.Text = thrNames != "" ? Loc.T("flask.sci.threshold.note", thrNames) : "";
         _sciNone.Visible = n == 0;   // nothing in progress: say so, never an empty row
         var fl = InstrumentLogic.AlloyFlask(_shotAlloy ?? a.Alloy);
+        _flaskProd.Word = fl.State == InstrumentLogic.AlloyState.NoSmelting ? "flask.none" : null;
         _flaskProd.Set(fl.Level, fl.Hatched);
         int pct = InstrumentLogic.FlaskPercent(fl.Level, fl.Hatched);
         _flaskProd.TooltipText = Loc.T(InstrumentLogic.AlloyTipKey(fl.State), pct);

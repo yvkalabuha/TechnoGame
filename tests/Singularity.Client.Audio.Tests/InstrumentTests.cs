@@ -271,6 +271,14 @@ public class InstrumentTests
         Assert.False(f[1].Threshold);
     }
 
+    [Fact]
+    public void AlloyFlask_NoSupplyWithAnAskIsNoSmelting_NotAZeroPercentShortage()
+    {
+        var f = InstrumentLogic.AlloyFlask(Cov(0, 100, 0));
+        Assert.Equal(InstrumentLogic.AlloyState.NoSmelting, f.State);
+        Assert.Equal(0, f.Level);
+    }
+
     static Singularity.Core.Products.AlloyCoverage Cov(double supply, double need, double deficit) =>
         new(Fx6.FromDouble(supply), Fx6.FromDouble(need), Fx6.FromDouble(deficit));
 

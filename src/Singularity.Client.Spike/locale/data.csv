@@ -254,3 +254,14 @@ polity.C_ITALIAN_LIBYA,Italian Libya,Итальянская Ливия
 polity.C_PHILIPPINES,Philippines,Филиппины
 polity.C_GREENLAND,Greenland,Гренландия
 polity.C_SOUTH_WEST_AFRICA,South West Africa,Юго-Западная Африка
+nodeshort.fnd.precipitation_hardening,Precipitation hardening,Дисперс. твердение
+nodeshort.fnd.transonic_aerodynamics,Transonic aerodynamics,Трансзвук. аэродинамика
+nodeshort.fnd.high_temperature_creep,High-temperature creep,Ползучесть при нагреве
+nodeshort.prn.bypass_engine,Bypass engine,Двухконтур. двигатель
+nodeshort.eng.all_moving_tail,All-moving tail,Поворотный стабилизатор
+nodeshort.eng.variable_geometry_inlet,Variable-geometry inlet,Регулир. заборник воздуха
+nodeshort.prc.titanium_reduction_forging,Titanium reduction and forging,Выплавка и ковка титана
+nodeshort.prc.ds_casting,Directional solidification casting,Направленное литьё
+nodeshort.prc.high_purity_nickel_refining,High-purity nickel refining,Очистка никеля
+nodeshort.prc.centrifugal_impeller_machining,Centrifugal impeller machining,Обработка крыльчатки
+nodeshort.prc.swept_wing_fabrication,Swept wing fabrication,Стреловидное крыло

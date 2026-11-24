@@ -85,6 +85,7 @@ public sealed partial class ProductsSystem : ITickSystem
     private readonly long[] _traceLeftStart;
     [Scratch]
     private readonly LineMoneyStep?[] _traceLines;
+    private readonly long[] _traceAlloyAsk;   // per (actor, design): alloy_kg · want of the last step 7
 
     public ProductsSystem(Table table, ProductsLayout layout, ProductsStart start, ProductsParams parameters,
         IProductsInputs inputs, IndustryMailbox mailbox, ProductsMode mode = ProductsMode.Full, int systemId = DefaultSystemId, int startMonth = 9)
@@ -128,6 +129,7 @@ public sealed partial class ProductsSystem : ITickSystem
         _moneyTraced = new bool[layout.SiteCount];
         _traceLeftStart = new long[layout.SiteCount];
         _traceLines = new LineMoneyStep?[layout.SiteCount * layout.Designs];
+        _traceAlloyAsk = new long[layout.SiteCount * layout.Designs];
         _bureauReq = new int[layout.DesignScale.Length];
         for (int k = 0; k < _bureauReq.Length; k++)
             _bureauReq[k] = parameters.BureauReq(layout.DesignScale[k]);
@@ -450,6 +452,18 @@ public sealed partial class ProductsSystem : ITickSystem
     /// the actor's own row (the adapter of <c>IProductsInputs.LineRate</c> calls it from step 7); elsewhere use <see cref="Stage"/>.
     /// </summary>
     public bool IsLineNow(int actor, int design) => (DesignStage)_stage[design].Next[actor] == DesignStage.Series;
+
+    /// <summary>
+    /// Diagnostics only: the alloy the admitted lines of the actor asked for in the last step 7 (sum of <c>alloy_kg · want</c> over the lines that use alloy), before the alloy and money limits.
+    /// The produced rate is already cut by the alloy, so it cannot show a shortage. Scratch outside the Table, not state, not saved or hashed.
+    /// </summary>
+    public Fx6 LastAlloyAsk(int actor)
+    {
+        Fx6 sum = Fx6.Zero;
+        for (int d = 0; d < _d; d++)
+            sum += Fx6.FromRaw(_traceAlloyAsk[actor * _d + d]);
+        return sum;
+    }
 
     /// <summary>The alternative in one slot of a design (<see cref="Alternatives"/> without the array).</summary>
     public int AltAt(int actor, int design, int slot) => _alt[design * _s + slot].Current[actor];
@@ -1732,7 +1746,10 @@ public sealed partial class ProductsSystem : ITickSystem
                     // Contract r6 §4.4d step 7: what bound the output; ties go to RATE, then ALLOY (money counts only when strictly the least).
                     bind = r == want ? LineBind.Rate : !free && r == alloyLeft / alloyKg ? LineBind.Alloy : LineBind.Money;
                     if (!free)
+                    {
                         alloyLeft -= r * alloyKg;
+                        _traceAlloyAsk[a * _d + d] = (want * alloyKg).Raw;
+                    }
                     Fx6 pay = r * cost;
                     Fx6 fromLeft = pay < left ? pay : left;
                     left -= fromLeft;
@@ -1761,6 +1778,7 @@ public sealed partial class ProductsSystem : ITickSystem
         _moneyTraced[a] = false;
         _traceLeftStart[a] = 0;
         Array.Clear(_traceLines, a * _d, _d);
+        Array.Clear(_traceAlloyAsk, a * _d, _d);
     }
 
     // report_output per process (units = r·n_p, labour_hours = units·labour_p, spec §3.2) and one skilled request per

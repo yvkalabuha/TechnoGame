@@ -79,7 +79,7 @@ internal static class ViewBuilder
             new LicenceView(w.Policy.LicenceGen(a), w.Policy.LicenceSeller(a), w.Policy.LicenceStart(a), w.Policy.LicenceMask(a), w.Policy.OfferMask(a),
                 w.Policy.LicenceFlow(a), refusals.MoveToImmutable(), w.LicenceActive(a)),
             new DisruptionView(disStart, disEnd), withNodes ? Nodes(w, a, next) : Unsubscribed(w, a), designs.MoveToImmutable(), Decisions(w, a, next, stepped),
-            AlloyCoverage.Of(w.Products, w.ProductsLayout, w.Industry, w.Policy.AlloyDeficit(a, next), a, next), Research(w, a));
+            AlloyCoverage.Of(w.Products, w.Industry, w.Policy.AlloyDeficit(a, Math.Max(month, 0)), a, Math.Max(month, 0)), Research(w, a));
     }
 
     /// <summary>Most research entries a view carries per actor.</summary>

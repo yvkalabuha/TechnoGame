@@ -186,12 +186,17 @@ public sealed class KnowledgeSystem : ITickSystem
     /// <summary>Need of a node on the progress scale: θ_start for a hazard node (where its discovery chance begins), 1 otherwise (the scale of <c>why_not</c> links).</summary>
     public Fx6 NeedOf(int nodeRow) => _g.IsHazard[nodeRow] ? _p.ThetaStart : Fx6.One;
 
+    /// <summary>Most rows <see cref="ResearchInProgress"/> takes (the buffer of shares is on the stack).</summary>
+    public const int MaxResearchRows = 64;
+
     /// <summary>
     /// Research in progress of the actor: frontier nodes with <c>prog &gt; 0</c>, the ones nearest to completion first (<c>prog / need</c> descending, ties by row).
-    /// Fills <paramref name="rows"/> with node rows and returns their count (at most its length). A pure read of the snapshot; allocates nothing on the heap.
+    /// Fills <paramref name="rows"/> with node rows and returns their count (at most its length, at most <see cref="MaxResearchRows"/>). A pure read of the snapshot; allocates nothing on the heap.
     /// </summary>
     public int ResearchInProgress(int actorRow, Span<int> rows)
     {
+        if (rows.Length > MaxResearchRows)
+            throw new ArgumentOutOfRangeException(nameof(rows), $"at most {MaxResearchRows} rows");
         int count = 0;
         Span<Fx6> share = stackalloc Fx6[rows.Length];
         for (int r = 0; r < _n && rows.Length > 0; r++)

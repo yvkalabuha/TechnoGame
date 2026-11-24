@@ -1239,12 +1239,29 @@ public sealed partial class Main : Node3D
                 if (_areaPanel.ShotAlloyCaption != wantCap) { InstFail($"live alloy check failed: caption \"{_areaPanel.ShotAlloyCaption}\", the view field gives \"{wantCap}\""); break; }
                 var gr = _areaPanel.GetGlobalRect(); float k = PxPerDu();
                 SaveShot("flask_science_live.png", new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)));
-                CloseArea(); _host.WhyActor = _player; _shotStep = 146; _shotT = 0; break;
+                SaveShot($"full_live_science_{_host.Layout.ActorIds[_liveFirst]}_{_host.Snap.Date.Year}.png", null, true);   // full 1920x1080 frame of the live game, with a grey twin
+                OpenArea(AreaId.Production); _areaPanel.ShowActor(_liveFirst); _shotStep = 147; _shotT = 0; break;
             }
+            case 147 when _shotT >= 0.8:
+                SaveShot($"full_live_production_{_host.Layout.ActorIds[_liveFirst]}_{_host.Snap.Date.Year}.png", null, true);
+                CloseArea(); _host.WhyActor = _player; _shotStep = 146; _shotT = 0; break;
             case 146 when _shotT >= 0.2:
                 if (!ScanMonths(60)) break;
-                if (_liveMonths >= LiveMonthLimit) { LogLiveShares(); _shotStep = 45; }
+                if (_liveMonths >= LiveMonthLimit)
+                {
+                    LogLiveShares();
+                    // a live frame where the alloy is sufficient: the first power whose coverage reads «Normal»
+                    _liveNormal = -1;
+                    for (int a = 0; a < _host.Layout.ActorIds.Length && _liveNormal < 0; a++)
+                        if (InstrumentLogic.AlloyFlask(_host.Snap.View.Actors[a].Alloy).State == InstrumentLogic.AlloyState.Normal) _liveNormal = a;
+                    if (_liveNormal >= 0) { OpenArea(AreaId.Production); _areaPanel.ShowActor(_liveNormal); _shotStep = 148; }
+                    else { _shotLog += "live alloy: no power with sufficient alloy at the end of the scan\n"; _shotStep = 45; }
+                }
                 _shotT = 0; break;
+            case 148 when _shotT >= 0.8:
+                SaveShot($"full_live_production_normal_{_host.Layout.ActorIds[_liveNormal]}_{_host.Snap.Date.Year}.png", null, true);
+                _shotLog += $"live alloy normal frame: actor {_host.Layout.ActorIds[_liveNormal]}, date {_host.Snap.Date}, caption \"{_areaPanel.ShotAlloyCaption}\"\n";
+                CloseArea(); _host.WhyActor = _player; _shotStep = 45; _shotT = 0; break;
             // alert plates on tints 1 and 5 (7 is not on the map): day side, then tint 5 on the night side
             case 45: AimAlert(_alertI, false); _shotStep = 46; _shotT = 0; break;
             case 46 when _shotT >= 0.7:
@@ -1336,6 +1353,7 @@ public sealed partial class Main : Node3D
 
     // A failed shot-run check: the error goes to the run log and the process exits non-zero.
     const int LiveMonthLimit = 360;
+    int _liveNormal = -1;
     int[] _liveHit; int _liveMonths, _liveFirst = -1;
 
     bool WaitFor(Func<bool> done, string what)
@@ -1593,9 +1611,9 @@ public sealed partial class Main : Node3D
         InstrumentLogic.YearOverride = InstYears[era];
         OpenArea(InstAreas[q / 3]);
         // shot-only state: the scenario has no research chain
-        _areaPanel.ShotResearch(InstAreas[q / 3] == AreaId.Science ? new[] { ShotResearchView("s8.fnd.compressible_flow", 3, 4), ShotResearchView("s8.fnd.boundary_layer", 1, 5), ShotResearchView("s7.fnd.brayton_cycle", 5, 5, true) } : null);
-        // the Production frames show the four alloy states by the era step; the live state is checked in the live run
-        _areaPanel.ShotAlloy(InstAreas[q / 3] == AreaId.Production ? ShotCoverage(_instI < 9 ? era : 3) : null);
+        _areaPanel.ShotResearch(InstAreas[q / 3] == AreaId.Science ? ShotScienceStep(era) : null);
+        // the Production frames show four alloy states: shortage, none, sufficient at 100 % and disruption, none, shortage at 150 % (the live frames show the real ones)
+        _areaPanel.ShotAlloy(InstAreas[q / 3] == AreaId.Production ? ShotCoverage((_instI < 9 ? new[] { 0, 2, 3 } : new[] { 1, 2, 0 })[era]) : null);
         if (InstAreas[q / 3] == AreaId.Finance) _instPhase = 1;   // an unsent edit and the focus come from real input: pencil marker and focus frame show
         return false;
     }
@@ -1608,6 +1626,14 @@ public sealed partial class Main : Node3D
         for (int i = 0; i < n.Count; i++) if (n.Id[i] == id) number = n.Number[i];
         return new Singularity.Session.ResearchView(number, Singularity.Kernel.Fx6.FromInt(have), Singularity.Kernel.Fx6.FromInt(need), threshold);
     }
+
+    // Science fixtures that differ by era step: early (two flasks just started), mid (three, one at its threshold), late (nothing in progress).
+    Singularity.Session.ResearchView[] ShotScienceStep(int era) => era switch
+    {
+        0 => new[] { ShotResearchView("s8.fnd.boundary_layer", 1, 8), ShotResearchView("s8.fnd.compressible_flow", 1, 5) },
+        1 => new[] { ShotResearchView("s8.fnd.transonic_aerodynamics", 3, 4), ShotResearchView("s5.fnd.high_temperature_creep", 1, 2), ShotResearchView("s7.fnd.brayton_cycle", 5, 5, true) },
+        _ => System.Array.Empty<Singularity.Session.ResearchView>(),
+    };
 
     // Alloy coverage fixtures for the four states: 0 shortage, 1 disruption, 2 no melt, 3 sufficient.
     static Singularity.Core.Products.AlloyCoverage ShotCoverage(int state) => state switch
