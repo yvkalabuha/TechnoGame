@@ -17,6 +17,13 @@ internal static class SliceTestData
 
     public static SliceSession CreateLegacy(SliceRunConfig? config = null) => SliceSession.Create(LegacyData, config ?? new SliceRunConfig { Seed = 7 });
 
+    /// <summary>
+    /// Legacy data with the ahead-of-time cost off (TASK-0147, O-052): the identity tests compare with builds that had no such cost, so they run with
+    /// the neutral setting k = 0 explicitly; the cost is on by default (owner decision #465) and cannot be identical to a build without it.
+    /// </summary>
+    public static SliceSession CreateLegacyNeutral(SliceRunConfig? config = null) =>
+        SliceSession.Create(LegacyData, (config ?? new SliceRunConfig { Seed = 7 }) with { AheadCostK = Singularity.Kernel.Fx6.Zero });
+
     public static SliceSession Create(SliceRunConfig? config = null) => SliceSession.Create(Data, config ?? new SliceRunConfig { Seed = 7 });
 
     private static string FindRepoRoot()

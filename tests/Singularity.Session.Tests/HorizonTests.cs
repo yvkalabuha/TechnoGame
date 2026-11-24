@@ -16,7 +16,7 @@ public class HorizonTests
         // the identity of the old columns holds to month 176 (memo §2.9 item 12), where the rows of TASK-0129 pin the last month before the change.
         foreach (var group in rows.Where(r => long.Parse(r[2]) < 177).GroupBy(r => (r[0], r[1])))
         {
-            SliceSession s = SliceTestData.CreateLegacy(HorizonConfigs.Config(group.Key.Item1, ulong.Parse(group.Key.Item2)));   // the 61-node data of the pinned build
+            SliceSession s = SliceTestData.CreateLegacyNeutral(HorizonConfigs.Config(group.Key.Item1, ulong.Parse(group.Key.Item2)));   // the 61-node data of the pinned build
             foreach (string[] r in group)
             {
                 s.StepThroughMonth(long.Parse(r[2]));

@@ -15,7 +15,9 @@ internal static class ColumnProjection
         using var h = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         foreach (Column c in s.World.Table.Columns)
         {
-            if (!include(c.Name))
+            // Columns of the parameters of TASK-0147 (run.k.ahead_*, run.k.disc_weight.*) exist only when a key is set; the identity tests set k = 0 explicitly,
+            // and these columns are not part of the build they compare with.
+            if (!include(c.Name) || c.Name.StartsWith("run.k.ahead_", StringComparison.Ordinal) || c.Name.StartsWith("run.k.disc_weight.", StringComparison.Ordinal))
                 continue;
             h.AppendData(Encoding.UTF8.GetBytes(c.Name));
             switch (c)

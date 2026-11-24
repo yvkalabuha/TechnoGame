@@ -38,7 +38,7 @@ public class ToolingUnmetTests
         foreach ((ulong seed, int months, string hash) in BeforeF33.Where(b => b.Months < 177))   // TASK-0129 (#431): the 384-month capture predates the fleet ageing
         {
             // T6d: the columns before F33 of the build before T6d are those of T6D_OFF (the new T6d columns and run.t6d are left out).
-            SliceSession s = SliceTestData.CreateLegacy(new SliceRunConfig { Seed = seed, Threads = 4, T6dOff = true });   // the 61-node data of the pinned build
+            SliceSession s = SliceTestData.CreateLegacyNeutral(new SliceRunConfig { Seed = seed, Threads = 4, T6dOff = true });   // the 61-node data of the pinned build
             for (long t = 0; t < months; t++)
                 s.StepThroughMonth(t);
             Assert.True(hash == ColumnProjection.Hash(s, n => !ColumnProjection.IsAddedSinceBaselineColumn(n) && !n.StartsWith("ind.unmet.", StringComparison.Ordinal) && !n.StartsWith("pol.lic.", StringComparison.Ordinal)

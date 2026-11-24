@@ -17,7 +17,7 @@ public class Train2IdentityTests
         Assert.Equal(6, rows.Length);
         foreach (var group in rows.GroupBy(r => r[0]))
         {
-            SliceSession s = SliceTestData.CreateLegacy(HorizonConfigs.Config("Main", ulong.Parse(group.Key)));
+            SliceSession s = SliceTestData.CreateLegacyNeutral(HorizonConfigs.Config("Main", ulong.Parse(group.Key)));
             foreach (string[] r in group)
             {
                 s.StepThroughMonth(long.Parse(r[1]));
@@ -35,7 +35,7 @@ public class Train2IdentityTests
         var rows = new List<string>();
         for (ulong seed = 1; seed <= 3; seed++)
         {
-            SliceSession s = SliceTestData.CreateLegacy(HorizonConfigs.Config("Main", seed));
+            SliceSession s = SliceTestData.CreateLegacyNeutral(HorizonConfigs.Config("Main", seed));
             foreach (int m in Months)
             {
                 s.StepThroughMonth(m);

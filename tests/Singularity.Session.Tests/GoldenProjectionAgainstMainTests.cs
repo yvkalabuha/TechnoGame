@@ -44,7 +44,7 @@ public class GoldenProjectionAgainstMainTests
             foreach (LineCloseRule rule in new[] { LineCloseRule.Admit, LineCloseRule.YProd })
             {
                 ToolingTargetSpec target = rule == LineCloseRule.Admit ? ToolingTargetSpec.Parse("V0") : new ToolingTargetSpec();
-                SliceSession s = SliceTestData.CreateLegacy(new SliceRunConfig { Seed = (ulong)i + 1, Threads = 2, LineClose = rule, ToolingTarget = target });
+                SliceSession s = SliceTestData.CreateLegacyNeutral(new SliceRunConfig { Seed = (ulong)i + 1, Threads = 2, LineClose = rule, ToolingTarget = target });
                 for (long t = 0; t < 150; t++)
                     s.StepThroughMonth(t);
                 string expected = rule == LineCloseRule.Admit ? AdmitOld[i] : YProdOld[i];
@@ -56,7 +56,7 @@ public class GoldenProjectionAgainstMainTests
     [Fact]
     public void ProductAiGolden_OldColumns_EqualTheBuildBeforeTheTask()
     {
-        SliceSession s = SliceTestData.CreateLegacy(new SliceRunConfig { Seed = 7, Threads = 1, ChunkSize = 1 });
+        SliceSession s = SliceTestData.CreateLegacyNeutral(new SliceRunConfig { Seed = 7, Threads = 1, ChunkSize = 1 });
         for (long t = 0; t < 150; t++)
             s.StepThroughMonth(t);
         Assert.True(AiSeed7Old == Old(s), "an old column of the ProductAiSession golden differs from the build before TASK-0115");
@@ -65,7 +65,7 @@ public class GoldenProjectionAgainstMainTests
     [Fact]
     public void LinkedRunGolden_OldColumns_EqualTheBuildBeforeTheTask()
     {
-        SliceSession s = SliceTestData.CreateLegacy(new SliceRunConfig { Seed = 7, ProductAi = false });
+        SliceSession s = SliceTestData.CreateLegacyNeutral(new SliceRunConfig { Seed = 7, ProductAi = false });
         var player = new PlayerScript(s);
         for (long t = 0; t < 60; t++)
         {

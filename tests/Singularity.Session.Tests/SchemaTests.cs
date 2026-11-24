@@ -9,7 +9,8 @@ public class SchemaTests
     private const int PinnedVersion = 14;
     // Re-recorded in TASK-0134 (train 2: Hcap(t), mastery): schema v14, the new columns listed above.
     // Re-recorded in TASK-0133 (train 2: G5/G6 data + fleet ageing): nodes 62-81 and the G5/G6 alternatives change the column sizes (81 nodes, six generations); SchemaVersion stays 13; reason and list in the task file.
-    private const string PinnedFingerprint = "39b1232a49b70e18e815489579046694f9b3f38718694a57818f658fa36fb241";
+    // Re-recorded in TASK-0147 (train 2): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465) change every trajectory on the current data; explanation: docs/simulation/golden-rerecord-train2.md.
+    private const string PinnedFingerprint = "dc14a3d98ab6eef5eabd35afefa000d6d32e1a9eedcf284c7973fdc4113839b1";
 
     [Fact]
     public void ColumnLayout_MatchesThePinnedSchemaVersion()
