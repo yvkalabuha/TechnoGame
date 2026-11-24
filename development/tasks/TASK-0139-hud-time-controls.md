@@ -30,3 +30,7 @@ created: 2026-11-24
 - [ ] ui-art-director PASS; ревьюер APPROVE.
 
 ## Результат
+Сделано (developer, ветка worktree-agent-a17c6a377f7d4cb9c): кнопки 32 du с зазором 4 du, глифы по целым координатам с оптическим сдвигом ±1 du у стрелок (центр масс по пикселям 16.00/16.19/15.81 ±0.5), пауза/стрелки рисуются целыми пикселями (прямые рёбра заливкой, косые с AA); шкала 60x32 du, группа центрирована, рамка активной ступени = столбик +3 du, штрих 2 du, симметрична; слова скорости убраны (подсказка и имя шкалы «Скорость: …», подсказка паузы по состоянию); фокус клавиатурой (кольцо 2 du снаружи, 15.7:1), Space = пауза, Enter на кнопке; фокус уходит на паузу, если кнопка стала недоступной. Одна ось у даты, кнопок и шкалы.
+Файлы: src/Singularity.Client.Spike/{TimeGlyphMetrics,TimeIcons,GaugeControl,SignalField,Main,MainTimeShots}.cs, locale/ui.csv, tests/Singularity.Client.Audio.Tests/TimeGlyphMetricsTests.cs.
+Проверка: `./run-globe-spike.sh --shots --shot-size 1920x1080 --shot-dir ../../shots-out/task-0139 --time-shots` (70 PASS, 0 FAIL: центры глифов, рамка по пикселям, ось, кольцо фокуса, Enter меняет скорость живой сессии, Space ставит паузу); кадры 100 %/150 % и серые в shots-out/task-0139/. Юнит-тесты TimeGlyphMetricsTests; тест центра масс падает без сдвига (проверено локально).
+Не проверено: PASS ui-art-director и ревью; 125 %; мнение Gemini (#450).

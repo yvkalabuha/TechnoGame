@@ -1070,6 +1070,7 @@ public sealed partial class Main : Node3D
         var s = _host.Snap;
         var vp = GetViewport().GetVisibleRect().Size;
         if (OS.GetCmdlineUserArgs().Contains("--globe-look-shots")) { LookShotStep(dt); return; }
+        if (OS.GetCmdlineUserArgs().Contains("--time-shots")) { TimeShotStep(dt); return; }
         if (ClickTest(dt, vp, Shot)) return;
         if (_largeSize.X > 0 && _shotStep == 0) { BuildLargeShots(); _shotStep = 70; _shotT = 0; }
         switch (_shotStep)

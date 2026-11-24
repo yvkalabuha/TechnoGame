@@ -3,24 +3,27 @@ using Godot;
 
 namespace Singularity.Client.Spike;
 
-/// <summary>The game-speed meter: four cells 7/11/15/19 high (pause, day/s, week/s, month/s; the fourth is the dashed reserve, #331). The same plain control at every organ level (O-008: the era-skinned gauge was not shipped);
-/// the value is read from the tempo word with its unit next to it, which TimeControl sets in full ink. Not interactive: the keys and tooltips stay with the buttons.</summary>
+/// <summary>The game-speed meter: four bars 8/12/16/20 high (pause, day/s, week/s, month/s; the fourth is the dashed reserve, #331). No text beside it (#443): the tooltip and the accessible name carry the rate with its unit.
+/// Geometry is TimeGaugeGeometry; every edge is a whole-pixel fill, so the active frame stays symmetric around its bar. Only a tooltip reaches it; the keys stay with the buttons.</summary>
 public sealed partial class GaugeControl : Control
 {
     static readonly int[] Ink = { Ui.Teal, Ui.Olive, Ui.Plum, Ui.Sand };
     static readonly Color HatchColor = new(Palette.GaugeHatch);
-    public int Filled;               // speed step 0..3
+    public int Filled;               // speed step 0..3; 0 = pause, nothing filled and no frame
 
-    public GaugeControl() { MouseFilter = MouseFilterEnum.Ignore; CustomMinimumSize = new Vector2(46, 28); }
+    public GaugeControl()
+    {
+        MouseFilter = MouseFilterEnum.Pass; SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        CustomMinimumSize = new Vector2(TimeGaugeGeometry.Width, TimeGaugeGeometry.Height);
+    }
 
+    // A 1 du line on whole pixels: the dashed rectangle runs on the pixel centres.
     void DrawDashedRect(Rect2 r, Color c)
     {
+        r = new Rect2(r.Position + new Vector2(0.5f, 0.5f), r.Size - Vector2.One);
         DrawDashedLine(r.Position, new Vector2(r.End.X, r.Position.Y), c, 1f, 2f); DrawDashedLine(new Vector2(r.End.X, r.Position.Y), r.End, c, 1f, 2f);
         DrawDashedLine(r.End, new Vector2(r.Position.X, r.End.Y), c, 1f, 2f); DrawDashedLine(new Vector2(r.Position.X, r.End.Y), r.Position, c, 1f, 2f);
     }
-
-    // «Before» (CLIENT_V05C_SPEC §2): four cells 7/11/15/19 high; filled in their own ink, the current one ringed, empty hatched at 45 degrees; the fourth is the dashed reserve.
-    static readonly float[] Heights = { 7, 11, 15, 19 };
 
     void Hatch(Rect2 r, Color col)
     {
@@ -31,15 +34,27 @@ public sealed partial class GaugeControl : Control
         }
     }
 
+    // A rectangle outline of stroke t inside r, as four fills (no half-pixel blur).
+    void Outline(Rect2 r, float t, Color c)
+    {
+        DrawRect(new Rect2(r.Position.X, r.Position.Y, r.Size.X, t), c); DrawRect(new Rect2(r.Position.X, r.End.Y - t, r.Size.X, t), c);
+        DrawRect(new Rect2(r.Position.X, r.Position.Y + t, t, r.Size.Y - 2 * t), c); DrawRect(new Rect2(r.End.X - t, r.Position.Y + t, t, r.Size.Y - 2 * t), c);
+    }
+
     public override void _Draw()
     {
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < TimeGaugeGeometry.Bars; i++)
         {
-            var r = new Rect2(4 + i * 10, Size.Y - 4 - Heights[i], 8, Heights[i]);
+            var (x, y, w, h) = TimeGaugeGeometry.Bar(i);
+            var r = new Rect2(x, y, w, h);
             if (i == 3) { DrawDashedRect(r, Ui.Ink3); continue; }
             if (i < Filled) DrawRect(r, Ui.InkLine[Ink[i]]); else Hatch(r, HatchColor);
-            DrawRect(r, Ui.Ink, false, 1f);
-            if (i == Filled - 1) DrawRect(r.Grow(2), Ui.Ink, false, 1.5f);
+            Outline(r, 1f, Ui.Ink);
+            if (i == Filled - 1)
+            {
+                var (fx, fy, fw, fh) = TimeGaugeGeometry.Frame(i);
+                Outline(new Rect2(fx, fy, fw, fh), TimeGaugeGeometry.FrameStroke, Ui.Ink);
+            }
         }
     }
 }
