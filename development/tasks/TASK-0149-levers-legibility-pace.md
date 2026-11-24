@@ -38,3 +38,8 @@ docs/game-design/PLAYER_LEVERS_WAVE1.md §A3 (темп: скорости 0/1/3/7
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
+
+## Второе ревью Codex (review-TASK-0149-073dd6a1-codex.json) — отклонённые находки
+- #1 «игра стартует на паузе»: так было и до задачи (на main `_speed = 0` при старте); умолчание #481 — скорость, с которой продолжает «пуск» (`_resume = SpeedSteps.Default`).
+- #2 автопауза (#196): вынесена Orchestrator в TASK-0156 — в клиенте ещё нет ленты событий.
+- #5 визуальная приёмка: ui-art-director PASS, раунд 2 (`docs/ui/reviews/task-0149-visual.md`), мнение Gemini там же.
