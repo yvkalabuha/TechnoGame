@@ -32,6 +32,8 @@ from pathlib import Path
 
 
 # Paths whose content verify.py builds or tests.
+# One review may walk the whole chain: Codex (up to 1800 s), agy (900 s + 60 s grace), then DeepSeek.
+REVIEW_TIMEOUT_S = 3600
 CODE_PATHS = ("src/", "tests/", "mods/", "tools/", "lab/", ".github/")
 
 
@@ -71,7 +73,7 @@ def second_review(root: Path, task: str, base: str, head: str, run: bool) -> tup
         print(f"land: second review of {task} {base[:8]}..{head[:8]} (ADR-0015), this takes minutes")
         r = subprocess.run([sys.executable, "-m", "tools.llm_worker", "review", "--task", task,
                             "--base", base, "--head", head], cwd=root, text=True,
-                           capture_output=True, timeout=1800)
+                           capture_output=True, timeout=REVIEW_TIMEOUT_S)
         print("\n".join((r.stdout + r.stderr).strip().splitlines()[-6:]))
         found = record()
     if not found:

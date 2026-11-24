@@ -67,8 +67,17 @@ def limited_until(now, state_dir=STATE_DIR):
     return at if at > now else None
 
 
-def clear(state_dir=STATE_DIR):
+def clear(before, state_dir=STATE_DIR):
+    """Remove the state only if it was recorded before `before` (the start of the run that succeeded): a limit that a
+    concurrent run recorded later must stay."""
+    p = Path(state_dir) / STATE_FILE
     try:
-        (Path(state_dir) / STATE_FILE).unlink()
+        recorded = datetime.fromisoformat(json.loads(p.read_text(encoding="utf-8"))["recorded_at"])
+        if recorded.tzinfo is not None and recorded >= before:
+            return
+    except (OSError, ValueError, KeyError, TypeError):
+        pass  # missing or unreadable: nothing worth keeping
+    try:
+        p.unlink()
     except OSError:
         pass

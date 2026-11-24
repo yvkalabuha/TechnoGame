@@ -7,6 +7,8 @@ events and copies the new images into shots-out/sketches/<task>/. A sketch is a 
 needs ui-art-director's approval before any of it goes into mods/core/."""
 
 import contextlib
+import dataclasses
+import functools
 import hashlib
 import json
 import os
@@ -21,6 +23,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import config, gitleaks
+from .sandbox import SYSTEM_LINKS, SYSTEM_RO, find_bwrap
 from .visual import PNG, RateGuard, TASK_RE, VisualError, write_pair
 
 AGY_RPM = 2
@@ -391,8 +394,62 @@ def safe_env(environ=None):
     return {k: v for k, v in environ.items() if k in ENV_NAMES or k.startswith(ENV_PREFIXES)}
 
 
-def default_runner(cmd, cwd, timeout, stdin=None):
+@dataclasses.dataclass(frozen=True)
+class Box:
+    """bubblewrap around agy (#456 round 2): the rules of agy cannot close paths that appear during a run, a mount
+    namespace can. Visible inside: system directories, the agy binary and ~/.gemini read-only (its OAuth files
+    masked), a private brain and conversations folder, ~/.config/antigravity and the D-Bus socket of the secret
+    service (agy keeps its login there; probed 2026-11-24), the working folder. Nothing else of $HOME exists.
+    The network stays shared (model API). brain/conversations are host folders shown in place of agy's own."""
+    brain: Path
+    conversations: Path
+    cwd_writable: bool = False
+    home: Path = dataclasses.field(default_factory=Path.home)
+    bwrap: str | None = None
+
+    def wrap(self, cmd, cwd):
+        bwrap = self.bwrap or find_bwrap()
+        if not bwrap:
+            raise SketchError("sandbox_unavailable", "bwrap not found: agy never runs unsandboxed")
+        home = str(self.home)
+        gem, cli = f"{home}/.gemini", f"{home}/.gemini/antigravity-cli"
+        a = [bwrap, "--die-with-parent", "--new-session", "--unshare-user", "--unshare-pid", "--unshare-ipc",
+             "--unshare-uts", "--unshare-cgroup-try", "--clearenv", "--setenv", "HOME", home,
+             "--setenv", "PATH", "/usr/bin:/bin", "--setenv", "LANG", os.environ.get("LANG", "C.UTF-8"),
+             "--setenv", "TERM", "dumb", "--dev", "/dev", "--proc", "/proc", "--tmpfs", "/tmp"]
+        for p in SYSTEM_LINKS:
+            a += ["--symlink", os.readlink(p), p] if os.path.islink(p) else ["--ro-bind-try", p, p]
+        for p in SYSTEM_RO:
+            a += ["--ro-bind-try", p, p]
+        a += ["--tmpfs", home]
+        if os.path.isabs(cmd[0]):
+            a += ["--ro-bind", os.path.realpath(cmd[0]), cmd[0]]
+        a += ["--ro-bind", gem, gem, "--bind", cli, cli, "--bind", str(self.brain), f"{cli}/brain",
+              "--bind", str(self.conversations), f"{cli}/conversations"]
+        for name in ("oauth_creds.json", "google_accounts.json"):  # the old gemini-cli login: agy does not need it
+            a += ["--ro-bind-try", "/dev/null", f"{gem}/{name}"]
+        a += ["--bind-try", f"{home}/.config/antigravity", f"{home}/.config/antigravity",
+              "--bind-try", f"/run/user/{os.getuid()}/bus", f"/run/user/{os.getuid()}/bus"]
+        if cwd:
+            a += ["--bind" if self.cwd_writable else "--ro-bind", str(cwd), str(cwd), "--chdir", str(cwd)]
+        return a + ["--"] + list(cmd)
+
+
+@contextlib.contextmanager
+def private_box(cwd_writable):
+    """A Box with fresh brain and conversations folders (host side); they are deleted afterwards. Yields (box, brain)."""
+    AGY_WS_DIR.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="agy-run-", dir=AGY_WS_DIR) as d:
+        brain, conv = Path(d) / "brain", Path(d) / "conversations"
+        brain.mkdir()
+        conv.mkdir()
+        yield Box(brain, conv, cwd_writable), brain
+
+
+def default_runner(cmd, cwd, timeout, stdin=None, box=None):
     # Own session: on timeout the whole process group (agy and what it started) is killed.
+    if box:
+        cmd = box.wrap(cmd, cwd)
     p = subprocess.Popen(cmd, cwd=cwd, env=safe_env(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                          stdin=subprocess.PIPE if stdin is not None else subprocess.DEVNULL, start_new_session=True)
     try:
@@ -459,10 +516,12 @@ def attribution_line(rec, f):
             "approved by: <ui-art-director, review ref>")
 
 
-def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, shots_dir=None, root=config.REPO_ROOT,
+def _run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, shots_dir=None, root=config.REPO_ROOT,
                brain_dir=BRAIN_DIR, runner=None, which=shutil.which, timeout_s=DEFAULT_TIMEOUT_S, dry_run=False,
-               guard=None, clock=time.time, sleep=time.sleep):
-    """One agy run. Returns (json path or None, md path or None, record)."""
+               guard=None, clock=time.time, sleep=time.sleep, inside_brain=None):
+    """One agy run. Returns (json path or None, md path or None, record). brain_dir: where this process finds the
+    brain folders; inside_brain: the same folder as agy and its tool calls name it (differs when a Box is used)."""
+    inside_brain = inside_brain or brain_dir
     if not TASK_RE.match(task):
         raise SketchError("bad_task", task)
     if not 1 <= count <= MAX_COUNT:
@@ -489,7 +548,7 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
     guard.before_attempt(len(brief), 0)  # a failed run stays counted: the subscription may have counted it
     started = clock()
     AGY_WS_DIR.mkdir(parents=True, exist_ok=True)  # a small folder of its own: the read scope lists its parents
-    with tempfile.TemporaryDirectory(prefix="agy-sketch-", dir=AGY_WS_DIR) as ws, settings_file([ws, brain_dir], [brain_dir]) as settings:
+    with tempfile.TemporaryDirectory(prefix="agy-sketch-", dir=AGY_WS_DIR) as ws, settings_file([ws, inside_brain], [inside_brain]) as settings:
         ws_refs = []
         for p in ref_paths:
             dst = Path(ws) / f"{len(ws_refs) + 1}-{p.name}"  # same basenames must not collapse
@@ -506,7 +565,7 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
     ids, result, tools = parse_stream(out)
     record.update(conversation_id=ids[0] if ids else None, conversation_ids=ids, tools=tools, exit_code=rc)
     calls, missing = transcript_calls(brain_dir, ids)
-    roots = run_roots(ws_dir, brain_dir, ids)
+    roots = run_roots(ws_dir, inside_brain, ids)
     bad_tools = tool_violations(out, roots, verified_tools(calls))  # fail closed: no transcript, no trust
     bad_tools = list(dict.fromkeys(bad_tools + call_violations(calls, roots) + [f"transcript missing: {c}" for c in missing]))
     if bad_tools:
@@ -561,6 +620,15 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
     record["attribution"] = [attribution_line(record, f) for f in record["files"]]
     path, md = write_pair(Path(runs_dir), record_stem(runs_dir, task, digest, started), record, summary_md)
     return path, md, record
+
+
+def run_sketch(*args, brain_dir=BRAIN_DIR, runner=None, **kw):
+    """_run_sketch inside a Box unless a runner is injected (tests)."""
+    if runner is not None:
+        return _run_sketch(*args, brain_dir=brain_dir, runner=runner, **kw)
+    with private_box(cwd_writable=True) as (box, private_brain):
+        return _run_sketch(*args, brain_dir=private_brain, inside_brain=brain_dir,
+                           runner=functools.partial(default_runner, box=box), **kw)
 
 
 def summary_md(rec):

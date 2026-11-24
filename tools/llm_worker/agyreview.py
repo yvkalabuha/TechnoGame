@@ -5,6 +5,7 @@
 the stream plus the transcripts are checked afterwards: any tool outside the allowlist, or a file path outside the
 worktree and this run's own brain folders, refuses the review. Keys are never read here."""
 
+import functools
 import json
 import shutil
 
@@ -61,26 +62,39 @@ def extract_answer(result):
 def run_agy(prompt, worktree, schema_file, model=MODEL, timeout_s=DEFAULT_TIMEOUT_S, brain_dir=None,
             runner=None, which=shutil.which):
     """(answer text, usage dict, model name). AgyLimit on a quota error, AgyViolation on a forbidden tool or path,
-    AgyFailed on anything else."""
-    from . import sketch  # sketch -> visual -> review -> agyreview: imported late to avoid a cycle
+    AgyFailed on anything else (also when another model than `model` answered). Runs inside a Box (bwrap) with a
+    private brain folder unless a runner is injected (tests)."""
+    from . import codex, sketch  # sketch -> visual -> review -> agyreview: imported late to avoid a cycle
 
-    brain_dir = brain_dir or sketch.BRAIN_DIR
-    runner = runner or sketch.default_runner
     try:
-        agy = sketch.find_agy(which)
-        # Reads are limited by rules, not only checked afterwards: the diff is untrusted and may carry injected instructions.
-        with sketch.settings_file([worktree, brain_dir], [brain_dir]) as settings:
-            rc, out, err = runner(command(agy, schema_file, model, timeout_s, settings), str(worktree), timeout_s + 60,
-                                  user_message(prompt))
+        if runner is not None:
+            return _run_agy(prompt, worktree, schema_file, model, timeout_s, brain_dir or sketch.BRAIN_DIR, None, runner, which)
+        with sketch.private_box(cwd_writable=False) as (box, private_brain):
+            return _run_agy(prompt, worktree, schema_file, model, timeout_s, private_brain, sketch.BRAIN_DIR,
+                            functools.partial(sketch.default_runner, box=box), which)
     except sketch.SketchError as e:
+        if e.code == "sandbox_unavailable":  # never a paid fallback for a missing sandbox, like Codex
+            raise codex.SandboxUnavailable(str(e)) from None
         raise AgyFailed(f"{e.code}: {e}") from None
     except OSError as e:  # the process could not start at all
         raise AgyFailed(f"agy could not start: {e}") from None
+
+
+def _run_agy(prompt, worktree, schema_file, model, timeout_s, brain_dir, inside_brain, runner, which):
+    """brain_dir: where this process finds the brain folders; inside_brain: how agy names that folder."""
+    from . import sketch
+
+    inside_brain = inside_brain or brain_dir
+    agy = sketch.find_agy(which)
+    # Reads are limited by rules as a second layer; the first one is the Box. The diff is untrusted data.
+    with sketch.settings_file([worktree, inside_brain], [inside_brain]) as settings:
+        rc, out, err = runner(command(agy, schema_file, model, timeout_s, settings), str(worktree), timeout_s + 60,
+                              user_message(prompt))
     ids, result, _ = sketch.parse_stream(out)
     if not ids and result is not None and result.get("status") == "SUCCESS":
         raise AgyViolation("no conversation id in the stream: the transcript cannot be checked")  # fail closed
     calls, missing = sketch.transcript_calls(brain_dir, ids)
-    roots = sketch.run_roots(worktree, brain_dir, ids)
+    roots = sketch.run_roots(worktree, inside_brain, ids)
     bad = sketch.tool_violations(out, roots, sketch.verified_tools(calls, REVIEW_PATH_TOOLS), REVIEW_CONTROL,
                                  REVIEW_PATH_TOOLS)
     bad += sketch.call_violations(calls, roots, REVIEW_CONTROL, REVIEW_PATH_TOOLS)
@@ -94,5 +108,8 @@ def run_agy(prompt, worktree, schema_file, model=MODEL, timeout_s=DEFAULT_TIMEOU
     answer = extract_answer(result)
     if not answer.strip():
         raise AgyFailed("agy returned an empty answer")
+    reported = init_model(out)
+    if reported != model:  # a review that names Sonnet must come from Sonnet
+        raise AgyFailed(f"model mismatch: asked {model}, the stream says {reported}")
     usage = result.get("usage") if isinstance(result.get("usage"), dict) else {}
-    return answer, {k: v for k, v in usage.items() if type(v) is int}, init_model(out) or model
+    return answer, {k: v for k, v in usage.items() if type(v) is int}, reported

@@ -55,6 +55,43 @@ class LimitStateTest(unittest.TestCase):
             self.assertIsNone(limitstate.limited_until(NOW, d))
 
 
+class BoxTest(unittest.TestCase):
+    def wrap(self, writable, cwd="/work/x"):
+        box = sketch.Box(Path("/h/brain"), Path("/h/conv"), writable, home=Path("/home/u"), bwrap="/usr/bin/bwrap")
+        return box.wrap(["/home/u/.local/bin/agy", "--version"], cwd)
+
+    def pairs(self, argv, flag):
+        return [tuple(argv[i + 1:i + 3]) for i, a in enumerate(argv) if a == flag]
+
+    def test_mounts_only_what_agy_needs(self):
+        argv = self.wrap(False)
+        self.assertEqual(argv[0], "/usr/bin/bwrap")
+        self.assertIn("--clearenv", argv)
+        self.assertEqual(argv[argv.index("--tmpfs", argv.index("/tmp")) + 1], "/home/u")  # $HOME starts empty
+        self.assertIn(("/work/x", "/work/x"), self.pairs(argv, "--ro-bind"))  # the review copy is read-only
+        self.assertNotIn(("/work/x", "/work/x"), self.pairs(argv, "--bind"))
+        self.assertIn(("/h/brain", "/home/u/.gemini/antigravity-cli/brain"), self.pairs(argv, "--bind"))  # private brain
+        self.assertIn(("/dev/null", "/home/u/.gemini/oauth_creds.json"), self.pairs(argv, "--ro-bind-try"))
+        everything = " ".join(argv)
+        for secret in (".ssh", ".config/singularity", ".codex", ".gnupg", "gemini-api-key", "deepseek-api-key"):
+            self.assertNotIn(secret, everything)
+        self.assertNotIn("--share-net", argv)
+        self.assertNotIn("--unshare-net", argv)  # the model API needs the network
+        self.assertEqual(argv[-2:], ["/home/u/.local/bin/agy", "--version"])
+
+    def test_sketch_workdir_is_writable_and_missing_bwrap_refuses(self):
+        self.assertIn(("/work/x", "/work/x"), self.pairs(self.wrap(True), "--bind"))
+        with mock.patch.object(sketch, "find_bwrap", return_value=None):
+            with self.assertRaises(sketch.SketchError) as cm:
+                sketch.Box(Path("/b"), Path("/c")).wrap(["/x/agy"], None)
+        self.assertEqual(cm.exception.code, "sandbox_unavailable")
+
+    def test_missing_sandbox_is_not_a_paid_fallback(self):
+        with mock.patch.object(sketch, "find_bwrap", return_value=None):
+            with self.assertRaises(codex.SandboxUnavailable):
+                agyreview.run_agy("p", "/tmp", "s.json", which=lambda n: "/bin/true")
+
+
 class ScopedRulesTest(unittest.TestCase):
     def test_everything_outside_the_allowed_folders_is_denied(self):
         with tempfile.TemporaryDirectory() as d:
@@ -191,6 +228,13 @@ class RunAgyTest(unittest.TestCase):
         self.assertLess(seen[0][0], 100_000)
         self.assertGreater(len(seen[0][1]), 900_000)
 
+    def test_other_model_than_asked_is_refused(self):
+        for bad in ("claude-sonnet-5-5-low", "gemini-3.8-flash-medium", None):
+            with self.subTest(reported=bad):
+                out = stream(model=bad) if bad else stream().replace('"init": {"model": "claude-sonnet-5-5-medium"}', '"init": {}')
+                with self.assertRaises(agyreview.AgyFailed):
+                    self.run_agy(out)
+
     def test_success_without_conversation_id_fails_closed(self):
         out = json.dumps({"event": "result", "result": {"status": "SUCCESS", "response": "x", "structured_output": GOOD}})
         runner = lambda cmd, cwd, t, stdin=None: (0, out, "")
@@ -259,6 +303,13 @@ class ChainTest(unittest.TestCase):
         review.run_review("TASK-0001", base, head, "agy-sonnet", root=repo.root, runs_dir=self.tmp / "r", attempts_dir=self.tmp / "a",
                           log=lambda m: None, state_dir=self.state, now=NOW, agy_runner=self.agy_ok(prompts))
         self.assertIn("+# read them in /work", prompts[0])  # data is never rewritten after its hash was taken
+
+    def test_success_does_not_erase_a_newer_limit(self):
+        limitstate.record_limit(NOW + timedelta(hours=1), NOW + timedelta(seconds=5), self.state)  # recorded after this run began
+        limitstate.clear(NOW, self.state)
+        self.assertIsNotNone(limitstate.limited_until(NOW, self.state))
+        limitstate.clear(NOW + timedelta(minutes=1), self.state)  # an older limit is cleared
+        self.assertIsNone(limitstate.limited_until(NOW, self.state))
 
     def test_cache_write_failure_does_not_stop_the_review(self):
         def limited(prompt, wt):

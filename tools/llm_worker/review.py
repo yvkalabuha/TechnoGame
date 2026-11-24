@@ -397,7 +397,7 @@ def run_review(task_id, base, head, provider_name="codex", root=config.REPO_ROOT
             if prov == "codex":
                 answer, usage = _run_codex(text, meta["head"], root, codex_runner, task_id, attempts_dir)
                 if provider_name == "auto":
-                    limitstate.clear(state_dir)  # Codex answered: the limit is over
+                    limitstate.clear(now, state_dir)  # Codex answered: the limit is over
             else:
                 holder = {}
                 answer, usage = _run_codex(text, meta["head"], root, _agy_runner(agy_runner, holder), task_id,
