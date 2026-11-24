@@ -27,6 +27,8 @@ internal static class MasteryChecks
             return new(MasteryRefusal.UnknownProcess);
         if (w.Products.ProgrammeStamp(actor, number) > 0)
             return new(MasteryRefusal.AlreadyActive);
+        if (w.ProductsInputs.CultureYield(actor, number, month) >= w.ProductsParameters.YProd)
+            return new(MasteryRefusal.AlreadyReady);
         if (w.Products.ProgrammeCount(actor) >= m.SMax)
             return new(MasteryRefusal.SlotsFull);
         // The donor is the one that makes «abroad» faster; the check of the mode is the same test the culture rule's catch-up uses.

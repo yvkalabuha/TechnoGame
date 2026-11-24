@@ -43,6 +43,9 @@ public enum MasteryRefusal
     OutOfScope,
     AlreadyActive,
 
+    /// <summary>The culture yield already reaches <c>y_start</c>: nothing to teach.</summary>
+    AlreadyReady,
+
     /// <summary>The limiter is not <c>LabCeiling</c>.</summary>
     LimiterNotLabCeiling,
 
