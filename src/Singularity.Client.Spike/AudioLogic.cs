@@ -228,7 +228,8 @@ public sealed class OrderSounds
 /// <summary>Speed changes (audit §2): the first reading after start or load is the baseline, not a click; program-set changes (game menu) are silent.</summary>
 public sealed class SpeedSounds
 {
-    static readonly string[] Tempo = { "", "tempo_1", "tempo_2", "tempo_3" };
+    // Five speed steps, three tempo clicks: 3 days and 1 week share the middle pitch.
+    static readonly string[] Tempo = { "", "tempo_1", "tempo_2", "tempo_2", "tempo_3" };
     bool _init;
     int _last, _quiet = -1;
 
@@ -245,7 +246,7 @@ public sealed class SpeedSounds
         bool quiet = _quiet == speed; _quiet = -1;
         if (quiet) return null;
         if (speed == 0) return "pause";
-        return prev == 0 ? "unpause" : Tempo[Math.Clamp(speed, 1, 3)];
+        return prev == 0 ? "unpause" : Tempo[Math.Clamp(speed, 1, SpeedSteps.Max)];
     }
 }
 
