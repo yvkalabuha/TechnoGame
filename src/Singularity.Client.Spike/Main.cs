@@ -73,6 +73,8 @@ public sealed partial class Main : Node3D
         _bench = args.Contains("--bench");
         _mapFrames = args.Contains("--map-frames");   // TASK-0138: globe-only frames of the 1945 political map (Europe, Africa, Asia, grey, limb)
         _shots = args.Contains("--shots");
+        _audioDemo = args.Contains("--audio-demo");
+        ParseOnly(args);
         Settings.ReadOnly = _shots || _bench || _mapFrames;
         Settings.Framed = args.Contains("--window");
         if (_shots || _bench || _mapFrames)
@@ -822,6 +824,19 @@ public sealed partial class Main : Node3D
     float PxPerDu() => DisplayServer.WindowGetSize().X / GetViewport().GetVisibleRect().Size.X;
 
     readonly HashSet<string> _savedShots = new();
+
+    // TASK-0158: --only a,b,c* shoots just the named frames (names without .png; * and ? are wildcards). Not set: the full set.
+    ShotFilter _only; bool _audioDemo;
+    void ParseOnly(string[] args)
+    {
+        int i = Array.IndexOf(args, "--only");
+        if (i < 0) return;
+        if (i + 1 >= args.Length || args[i + 1].StartsWith("--")) { GD.PrintErr("--only expects a comma list of frame names or globs, for example area_science_1920x1080"); GetTree().Quit(2); return; }
+        _only = new ShotFilter(args[i + 1]);
+    }
+    bool OnlyWants(string name) => _only == null || _only.Wants(name);
+    bool OnlyWantsSuffix(string sfx) => _only == null || _only.WantsSuffix(sfx);
+    bool OnlyWantsLegacy => _only == null || _only.WantsLegacyStage;
     static readonly System.Text.RegularExpressions.Regex SizedShot = new(@"^(.*)_1920x1080(?:_s(\d+))?(_en)?\.png$");
 
     // Category C: every screen of the matrix that is shot at 100 % is shot at 125 % and 150 % too (the same language); a missing one fails the run.
@@ -870,6 +885,7 @@ public sealed partial class Main : Node3D
 
     void SaveShot(string name, Rect2I? r = null, bool grey = false)
     {
+        if (!OnlyWants(name)) return;
         string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
         Directory.CreateDirectory(dir);
         var img = GetViewport().GetTexture().GetImage();
@@ -929,6 +945,7 @@ public sealed partial class Main : Node3D
         foreach (var (scale, lang) in combos)
         {
             string sfx = "_1920x1080" + (scale == 150 ? "_s150" : scale == 125 ? "_s125" : "") + (lang == "en" ? "_en" : "");
+            if (!OnlyWantsSuffix(sfx)) continue;
             void Q(double wait, Action act) => _sizeQ.Add((wait, act));
             Q(0.1, () => { Settings.Current.UiScale = scale; Settings.Apply(Settings.Current, GetWindow(), false); Loc.SetLang(lang); });
             Q(1.0, () => { var cv = GetViewport().GetVisibleRect().Size; _shotLog += $"size shots {sfx}: window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, canvas {cv.X}x{cv.Y} du, scale {scale} %, content scale {GetWindow().ContentScaleSize.X}x{GetWindow().ContentScaleSize.Y} {GetWindow().ContentScaleMode} {GetWindow().ContentScaleAspect}\n"; FitCheck(SettingsLogic.ScaleFloorOk(DisplayServer.WindowGetSize().X, DisplayServer.WindowGetSize().Y, scale)); CheckScaleApplied(sfx, scale); _mainMenu.Open(true); });
@@ -1098,6 +1115,7 @@ public sealed partial class Main : Node3D
             case 0:
                 _shotLog += $"session start: seed {_host.Seed} start_hash {_host.StartHash}\n";
                 RunValidator();
+                if (_only != null && _largeSize.X == 0 && !OnlyWantsLegacy) { ShowPower(_player, false); _signal.SetSpeed(1); BuildSizeShots(); _shotStep = 70; _shotT = 0; break; }   // --only names sized frames: skip the first stage
                 _signal.SetSpeed(3); ShowPower(_player, false); OpenArea(AreaId.Finance); _shotStep = 1; _shotT = 0; break;
             case 1 when _shotT >= 3:
                 // Pause, move 10 points from procurement to R (as the sliders would) and send: the command must stay pending.
@@ -1344,7 +1362,7 @@ public sealed partial class Main : Node3D
                 Shot("tree_legend.png"); _tree.ToggleLegend(false); _tree.ShotZoom(2.4f, _tree.FrontierRow >= 0 ? _tree.FrontierRow : _tree.GoalRow); _shotStep = 67; _shotT = 0; break;
             case 67 when _shotT >= 0.8:
                 Shot("tree_nodes_frontier_names.png"); _tree.ResetView(); _tree.Visible = false; _signal.SetSpeed(1); BuildSizeShots(); _shotStep = 70; _shotT = 0; break;
-            case 70 when _sizeI >= _sizeQ.Count: if (_largeSize.X > 0) FinishShotRun(dir); else { _shotStep = 16; _shotT = 0; } break;
+            case 70 when _sizeI >= _sizeQ.Count: if (_largeSize.X > 0 || !_audioDemo) FinishShotRun(dir); else { _shotStep = 16; _shotT = 0; } break;
             case 70 when _shotT >= _sizeQ[_sizeI].Wait: _sizeQ[_sizeI++].Act(); _shotT = 0; break;
             case 16 when _shotT >= 0.5:
                 _audio.StartDemo(); _shotStep = 17; _shotT = 0; break;
@@ -1518,7 +1536,8 @@ public sealed partial class Main : Node3D
 
     void FinishShotRun(string dir)
     {
-        CheckScaleCoverage(); if (_largeSize.X == 0) CheckIconInk();
+        if (_only == null) { CheckScaleCoverage(); if (_largeSize.X == 0) CheckIconInk(); }   // the coverage checks need the full set
+        else _shotLog += $"--only {_only.Describe}: {_savedShots.Count} frames saved, coverage checks skipped\n";
         _shotLog += $"shot run result: {(_shotFailed ? "FAILED (a live check failed, exit 1)" : "OK (exit 0)")}\n";
         try { Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog); }
         catch (Exception ex) { GD.PrintErr("cannot write run-log.txt: " + ex.Message); _shotFailed = true; }   // a lost log fails the run, it never skips Quit
