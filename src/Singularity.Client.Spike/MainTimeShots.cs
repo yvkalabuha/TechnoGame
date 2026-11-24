@@ -172,6 +172,7 @@ public sealed partial class Main
         W(0.1, () => { Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); });
         W(0.6, () =>
         {
+            CheckOnlyResult();
             _shotLog += $"time shot run result: {(_shotFailed ? "FAILED" : "OK")}\n";
             try { File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog); } catch (Exception ex) { GD.PrintErr("cannot write run-log.txt: " + ex.Message); _shotFailed = true; }
             GD.Print(_shotLog); GetTree().Quit(_shotFailed ? 1 : 0);

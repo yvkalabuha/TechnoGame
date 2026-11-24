@@ -173,7 +173,7 @@
 | [TASK-0155](../development/tasks/TASK-0155-dollars-1990-series.md) | REVIEW | Data: constant 1990 US dollar display series and conversion from Core money unit | MS-M05 |
 | [TASK-0156](../development/tasks/TASK-0156-levers-client-windows.md) | APPROVED | Player levers client: research goals, budget in money with reserve, production line window, licence market window | MS-M05 |
 | [TASK-0157](../development/tasks/TASK-0157-node-effects-history.md) | IN_PROGRESS | Node content: effects in numbers and short history with sources for all 99 knowledge nodes (#486) | MS-M05 |
-| [TASK-0158](../development/tasks/TASK-0158-silent-filtered-shots.md) | IN_PROGRESS | Client shot runs: silent by default and a frame filter (only the frames a task needs) | MS-M05 |
+| [TASK-0158](../development/tasks/TASK-0158-silent-filtered-shots.md) | DONE | Client shot runs: silent by default and a frame filter (only the frames a task needs) | MS-M05 |
 | [TASK-0159](../development/tasks/TASK-0159-review-rejections-visual-dir.md) | IN_PROGRESS | llm_worker: Codex review sees earlier rejected findings; visual accepts frames from the client shots-out | MS-M05 |
 
 ## Гипотезы

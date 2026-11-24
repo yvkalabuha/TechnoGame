@@ -73,6 +73,8 @@ public sealed partial class Main : Node3D
         _bench = args.Contains("--bench");
         _mapFrames = args.Contains("--map-frames");   // TASK-0138: globe-only frames of the 1945 political map (Europe, Africa, Asia, grey, limb)
         _shots = args.Contains("--shots");
+        _audioDemo = args.Contains("--audio-demo");
+        ParseOnly(args);
         Settings.ReadOnly = _shots || _bench || _mapFrames;
         Settings.Framed = args.Contains("--window");
         if (_shots || _bench || _mapFrames)
@@ -822,6 +824,19 @@ public sealed partial class Main : Node3D
     float PxPerDu() => DisplayServer.WindowGetSize().X / GetViewport().GetVisibleRect().Size.X;
 
     readonly HashSet<string> _savedShots = new();
+
+    // TASK-0158: --only a,b,c* shoots just the named frames (names without .png; * and ? are wildcards). Not set: the full set.
+    ShotFilter _only; bool _audioDemo;
+    void ParseOnly(string[] args)
+    {
+        int i = Array.IndexOf(args, "--only");
+        if (i < 0) return;
+        if (i + 1 >= args.Length || args[i + 1].StartsWith("--")) { GD.PrintErr("--only expects a comma list of frame names or globs, for example area_science_1920x1080"); GetTree().Quit(2); return; }
+        _only = new ShotFilter(args[i + 1]);
+    }
+    bool OnlyWants(string name) => _only == null || _only.Wants(name);
+    bool OnlyWantsSuffix(string sfx) => _only == null || _only.WantsSuffix(sfx);
+    bool OnlyWantsLegacy => _only == null || _only.WantsLegacyStage;
     static readonly System.Text.RegularExpressions.Regex SizedShot = new(@"^(.*)_1920x1080(?:_s(\d+))?(_en)?\.png$");
 
     // Category C: every screen of the matrix that is shot at 100 % is shot at 125 % and 150 % too (the same language); a missing one fails the run.
@@ -870,19 +885,40 @@ public sealed partial class Main : Node3D
 
     void SaveShot(string name, Rect2I? r = null, bool grey = false)
     {
+        string greyName = name.Replace(".png", "_grey.png");
+        bool wantColour = OnlyWants(name), wantGrey = grey && OnlyWants(greyName);
+        if (!wantColour && !wantGrey) return;
         string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
         Directory.CreateDirectory(dir);
         var img = GetViewport().GetTexture().GetImage();
         if (r is Rect2I rr) img = img.GetRegion(rr);
         else if (_largeSize.X > 0 ? (img.GetWidth() != _largeSize.X || img.GetHeight() != _largeSize.Y) : !SettingsLogic.IsBaseFrame(img.GetWidth(), img.GetHeight())) { InstFail($"frame {name} is {img.GetWidth()}x{img.GetHeight()}, a full frame must be a real {(_largeSize.X > 0 ? _largeSize.X + "x" + _largeSize.Y : "1920x1080")} render (window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, display {DisplayServer.ScreenGetSize().X}x{DisplayServer.ScreenGetSize().Y})"); return; }
-        _savedShots.Add(name);
-        CheckSave(TrySave(img, Path.Combine(dir, name)), Path.Combine(dir, name));
-        if (grey) { string gp = Path.Combine(dir, name.Replace(".png", "_grey.png")); img.Convert(Image.Format.L8); CheckSave(TrySave(img, gp), gp); }   // A5: a greyscale frame next to the colour one
+        if (wantColour) { _savedShots.Add(name); CheckSave(TrySave(img, Path.Combine(dir, name)), Path.Combine(dir, name)); }
+        if (wantGrey) { string gp = Path.Combine(dir, greyName); img.Convert(Image.Format.L8); _savedShots.Add(greyName); CheckSave(TrySave(img, gp), gp); }   // A5: a greyscale frame next to the colour one
+        StopIfOnlyDone(dir);
+    }
+
+    // A frame and its greyscale twin (instrument and probe frames): each file passes the --only filter on its own name.
+    void SaveFramePair(Image c, string dir, string name)
+    {
+        if (OnlyWants(name)) { _savedShots.Add(name); CheckSave(TrySave(c, Path.Combine(dir, name + ".png")), Path.Combine(dir, name + ".png")); }
+        if (OnlyWants(name + "_grey")) { c.Convert(Image.Format.La8); _savedShots.Add(name + "_grey"); CheckSave(TrySave(c, Path.Combine(dir, name + "_grey.png")), Path.Combine(dir, name + "_grey.png")); }
+        StopIfOnlyDone(dir);
+    }
+
+    // (An explicit --audio-demo keeps the run going to the demo step; --time-shots runs its linked checks to the end.)
+    // With exact (wildcard-free) patterns the run ends as soon as every one of them has its frame: nothing later can match.
+    bool _runDone;
+    void StopIfOnlyDone(string dir)
+    {
+        if (_only == null || _runDone || _audioDemo || OS.GetCmdlineUserArgs().Contains("--time-shots") || !_only.AllExact || _only.Unmatched(_savedShots).Length > 0) return;
+        FinishShotRun(dir);
     }
 
     // Title screen on a cold start: the menu over the turning globe, no HUD (the loading label is hidden too).
     void ColdTitleShots(double dt)
     {
+        if (_runDone) return;
         _coldT += dt; _yaw += (float)(4 * dt);
         if (_loading != null) _loading.Visible = false;
         if (_coldStep == 0 && _coldT >= 1.0) { SaveShot("main_menu.png"); Loc.SetLang("en"); _coldStep = 1; _coldT = 0; }
@@ -929,6 +965,7 @@ public sealed partial class Main : Node3D
         foreach (var (scale, lang) in combos)
         {
             string sfx = "_1920x1080" + (scale == 150 ? "_s150" : scale == 125 ? "_s125" : "") + (lang == "en" ? "_en" : "");
+            if (!OnlyWantsSuffix(sfx)) continue;
             void Q(double wait, Action act) => _sizeQ.Add((wait, act));
             Q(0.1, () => { Settings.Current.UiScale = scale; Settings.Apply(Settings.Current, GetWindow(), false); Loc.SetLang(lang); });
             Q(1.0, () => { var cv = GetViewport().GetVisibleRect().Size; _shotLog += $"size shots {sfx}: window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, canvas {cv.X}x{cv.Y} du, scale {scale} %, content scale {GetWindow().ContentScaleSize.X}x{GetWindow().ContentScaleSize.Y} {GetWindow().ContentScaleMode} {GetWindow().ContentScaleAspect}\n"; FitCheck(SettingsLogic.ScaleFloorOk(DisplayServer.WindowGetSize().X, DisplayServer.WindowGetSize().Y, scale)); CheckScaleApplied(sfx, scale); _mainMenu.Open(true); });
@@ -1084,6 +1121,7 @@ public sealed partial class Main : Node3D
     }
     void ShotStep(double dt)
     {
+        if (_runDone) return;
         _shotT += dt;
         string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
         void Shot(string name, Rect2I? r = null) => SaveShot(name, r);
@@ -1098,6 +1136,7 @@ public sealed partial class Main : Node3D
             case 0:
                 _shotLog += $"session start: seed {_host.Seed} start_hash {_host.StartHash}\n";
                 RunValidator();
+                if (_only != null && _largeSize.X == 0 && !OnlyWantsLegacy) { ShowPower(_player, false); _signal.SetSpeed(1); BuildSizeShots(); _shotStep = 70; _shotT = 0; break; }   // --only names sized frames: skip the first stage
                 _signal.SetSpeed(4); ShowPower(_player, false); OpenArea(AreaId.Finance); _shotStep = 1; _shotT = 0; break;
             case 1 when _shotT >= 3:
                 // Pause, move 10 points from procurement to R (as the sliders would) and send: the command must stay pending.
@@ -1344,7 +1383,7 @@ public sealed partial class Main : Node3D
                 Shot("tree_legend.png"); _tree.ToggleLegend(false); _tree.ShotZoom(2.4f, _tree.FrontierRow >= 0 ? _tree.FrontierRow : _tree.GoalRow); _shotStep = 67; _shotT = 0; break;
             case 67 when _shotT >= 0.8:
                 Shot("tree_nodes_frontier_names.png"); _tree.ResetView(); _tree.Visible = false; _signal.SetSpeed(1); BuildSizeShots(); _shotStep = 70; _shotT = 0; break;
-            case 70 when _sizeI >= _sizeQ.Count: if (_largeSize.X > 0) FinishShotRun(dir); else { _shotStep = 16; _shotT = 0; } break;
+            case 70 when _sizeI >= _sizeQ.Count: if (_largeSize.X > 0 || !_audioDemo) FinishShotRun(dir); else { _shotStep = 16; _shotT = 0; } break;
             case 70 when _shotT >= _sizeQ[_sizeI].Wait: _sizeQ[_sizeI++].Act(); _shotT = 0; break;
             case 16 when _shotT >= 0.5:
                 _audio.StartDemo(); _shotStep = 17; _shotT = 0; break;
@@ -1516,9 +1555,21 @@ public sealed partial class Main : Node3D
         }
     }
 
+    // A filtered run that saved nothing, or a pattern that matched no saved frame, fails: a typo must not pass as an empty success.
+    void CheckOnlyResult()
+    {
+        if (_only == null) return;
+        _shotLog += $"--only {_only.Describe}: {_savedShots.Count} frames saved, coverage checks skipped\n";
+        if (_savedShots.Count == 0) { _shotLog += "ERROR: --only saved 0 frames: FAIL\n"; _shotFailed = true; }
+        foreach (var p in _only.Unmatched(_savedShots)) { _shotLog += $"ERROR: --only pattern '{p}' matched no saved frame: FAIL\n"; _shotFailed = true; }
+    }
+
     void FinishShotRun(string dir)
     {
-        CheckScaleCoverage(); if (_largeSize.X == 0) CheckIconInk();
+        if (_runDone) return;
+        _runDone = true;
+        if (_only == null) { CheckScaleCoverage(); if (_largeSize.X == 0) CheckIconInk(); }   // the coverage checks need the full set
+        else CheckOnlyResult();
         _shotLog += $"shot run result: {(_shotFailed ? "FAILED (a live check failed, exit 1)" : "OK (exit 0)")}\n";
         try { Directory.CreateDirectory(dir); File.WriteAllText(Path.Combine(dir, "run-log.txt"), _shotLog); }
         catch (Exception ex) { GD.PrintErr("cannot write run-log.txt: " + ex.Message); _shotFailed = true; }   // a lost log fails the run, it never skips Quit
@@ -1561,8 +1612,7 @@ public sealed partial class Main : Node3D
         var gr = _flaskProbe.GetGlobalRect();
         img = img.GetRegion(new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)).Intersection(new Rect2I(0, 0, img.GetWidth(), img.GetHeight())));
         string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
-        CheckSave(TrySave(img, Path.Combine(dir, name + ".png")), Path.Combine(dir, name + ".png"));
-        img.Convert(Image.Format.La8); CheckSave(TrySave(img, Path.Combine(dir, name + "_grey.png")), Path.Combine(dir, name + "_grey.png"));
+        SaveFramePair(img, dir, name);
     }
     static readonly int[] InstYears = { 1950, 1985, 2030 };
     static readonly AreaId[] InstAreas = { AreaId.Finance, AreaId.Science, AreaId.Production };
@@ -1637,8 +1687,7 @@ public sealed partial class Main : Node3D
             void Save(Image im, Rect2 gr, string name)
             {
                 var c = im.GetRegion(new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)).Intersection(all));
-                CheckSave(TrySave(c, Path.Combine(dir, name + ".png")), Path.Combine(dir, name + ".png"));
-                c.Convert(Image.Format.La8); CheckSave(TrySave(c, Path.Combine(dir, name + "_grey.png")), Path.Combine(dir, name + "_grey.png"));
+                SaveFramePair(c, dir, name);
             }
             string sfx = $"e{p % 3 + 1}_{pct}";
             if (p / 3 == 1)

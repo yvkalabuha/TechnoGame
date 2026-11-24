@@ -23,7 +23,6 @@
 - TASK-0151 [IN_PROGRESS] Player levers core: research priorities through institutes (slots, funding first x1.5, institute bonus, capacity, upkeep, building institutes) (developer)
 - TASK-0153 [IN_PROGRESS] Player levers core: AI adviser for the player country production (no AI opening or closing of player lines) (developer)
 - TASK-0157 [IN_PROGRESS] Node content: effects in numbers and short history with sources for all 99 knowledge nodes (#486) (research-scientist)
-- TASK-0158 [IN_PROGRESS] Client shot runs: silent by default and a frame filter (only the frames a task needs) (developer)
 - TASK-0159 [IN_PROGRESS] llm_worker: Codex review sees earlier rejected findings; visual accepts frames from the client shots-out (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0154 [REVIEW] Data: alliances and blocs by year 1945-2030 for the licence buyer circle (research-scientist)
