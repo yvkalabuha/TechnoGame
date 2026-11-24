@@ -17,7 +17,7 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
     /// <summary>Keys of §3 (ordinal order). <c>detail</c> is a key of <c>JetSlice</c> only.</summary>
     public static readonly string[] Keys =
     [
-        "A41_FORM", "AHEAD_K", "AHEAD_MAX", "AHEAD_POW", "ALPHA", "BUDGET_RULE", "C_M", "CHANNELS", "COST_MULT_G5", "COST_MULT_G6", "CONTROL_TABLES", "DELTA_H", "DERIV", "EFFORT_SHARE", "FIX_A", "FIX_E", "FIX_K", "FLEET_ARM", "FLEET_LINE_COND", "FORCE", "GRID", "H_MAX",
+        "A41_FORM", "AHEAD_K", "AHEAD_MAX", "AHEAD_POW", "ALPHA", "BUDGET_RULE", "C_M", "CHANNELS", "COST_MULT_G5", "COST_MULT_G6", "CONTROL_TABLES", "DELTA_H", "DERIV", "DISC_WEIGHT", "EFFORT_SHARE", "FIX_A", "FIX_E", "FIX_K", "FLEET_ARM", "FLEET_LINE_COND", "FORCE", "GRID", "H_MAX",
         "HCAP_K", "HCAP_MAX", "K_DIV", "KAPPA_Q10", "LAYER", "LIC_KNOWS", "LIC_OFF", "LINE_CLOSE", "MASTERY_RULES", "POOL_ORDER", "PILOT_PROFILES", "PROFILE_CELL", "SALE_ARM", "START", "T6D_OFF",
         "TOOLING_H_HI", "TOOLING_H_HI_CONTROL", "TOOLING_H_LO", "TOOLING_M_LEAD", "TOOLING_RHO_MAX", "TOOLING_TARGET", "THETA_START", "UPKEEP_MULT", "X_PROG", "X_SCALE", "detail",
     ];
@@ -146,6 +146,7 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
             AheadCostK = AtLeast(p, "AHEAD_K", Fx6.Zero),
             AheadCostPow = AheadPow(p),
             AheadCostMax = AtLeast(p, "AHEAD_MAX", Fx6.One),
+            ResearchWeightByDiscipline = DiscWeight(p),
             HcapGrowthPerYear = AtLeast(p, "HCAP_K", Fx6.Zero),
             HcapGrowthMax = AtLeast(p, "HCAP_MAX", Fx6.Zero),
             MasteryXProg = XProg(p),
@@ -213,6 +214,37 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
         if (v is < 1 or > 4)
             throw new ParamException("AHEAD_POW must be an integer in 1…4.");
         return (int)v;
+    }
+
+    /// <summary>
+    /// DISC_WEIGHT (TASK-0147, §10.5b): per-discipline multiplier of the research priority weight, a string <c>"prop:1.15,metal:0.90"</c>. Names are
+    /// lower-case scenario disciplines, each at most once; a weight is a positive decimal with at most 6 fractional digits (exact in Fx6). Absent =
+    /// default (weight 1 everywhere, hash of main). An unknown discipline is refused by the Session when the world is built.
+    /// </summary>
+    internal static ImmutableArray<DisciplineWeight> DiscWeight(ParamSet p)
+    {
+        if (!p.Contains("DISC_WEIGHT"))
+            return default;
+        string v = p.GetString("DISC_WEIGHT");
+        var list = ImmutableArray.CreateBuilder<DisciplineWeight>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (string part in v.Split(','))
+        {
+            string[] kv = part.Split(':');
+            if (kv.Length != 2 || kv[0].Length == 0 || !kv[0].All(c => c is >= 'a' and <= 'z'))
+                throw new ParamException($"DISC_WEIGHT: '{part}' is not 'discipline:weight' (e.g. \"prop:1.15,metal:0.90\").");
+            if (!seen.Add(kv[0]))
+                throw new ParamException($"DISC_WEIGHT: discipline '{kv[0]}' given twice.");
+            if (!decimal.TryParse(kv[1], System.Globalization.NumberStyles.AllowDecimalPoint, System.Globalization.CultureInfo.InvariantCulture, out decimal w))
+                throw new ParamException($"DISC_WEIGHT: weight '{kv[1]}' of '{kv[0]}' is not a decimal number.");
+            decimal raw = w * 1_000_000m;
+            if (raw != decimal.Truncate(raw))
+                throw new ParamException($"DISC_WEIGHT: weight '{kv[1]}' has more than 6 fractional digits.");
+            if (raw <= 0 || raw > long.MaxValue / 2)
+                throw new ParamException($"DISC_WEIGHT: weight of '{kv[0]}' must be positive.");
+            list.Add(new DisciplineWeight(kv[0], Fx6.FromRaw((long)raw)));
+        }
+        return list.ToImmutable();
     }
 
     // X_PROG (TASK-0134, O-045): x_prog of the mastery programme in (0; 1].

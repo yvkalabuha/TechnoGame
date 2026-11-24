@@ -1001,7 +1001,9 @@ public static class SliceChecks
                      """{"X_SCALE": 0}""", """{"K_DIV": "x"}""", """{"COST_MULT_G5": 0}""", """{"COST_MULT_G6": -1}""", """{"COST_MULT_G5": "x"}""",
                      """{"HCAP_K": -0.1}""", """{"HCAP_MAX": -1}""", """{"X_PROG": 0}""", """{"X_PROG": 1.5}""", """{"UPKEEP_MULT": 0.9}""",
                      """{"MASTERY_RULES": "X"}""", """{"MASTERY_RULES": "GATE+GATE"}""", """{"MASTERY_RULES": ""}""", """{"MASTERY_RULES": "ALL+GATE"}""",
-                     """{"AHEAD_K": -0.1}""", """{"AHEAD_MAX": 0.9}""", """{"AHEAD_POW": 0}""", """{"AHEAD_POW": 5}""", """{"AHEAD_POW": 1.5}""", """{"AHEAD_POW": "x"}""" })
+                     """{"AHEAD_K": -0.1}""", """{"AHEAD_MAX": 0.9}""", """{"AHEAD_POW": 0}""", """{"AHEAD_POW": 5}""", """{"AHEAD_POW": 1.5}""", """{"AHEAD_POW": "x"}""",
+                     """{"DISC_WEIGHT": "prop"}""", """{"DISC_WEIGHT": "prop:0"}""", """{"DISC_WEIGHT": "prop:-1"}""", """{"DISC_WEIGHT": "prop:1.15,prop:0.9"}""",
+                     """{"DISC_WEIGHT": "Prop:1.1"}""", """{"DISC_WEIGHT": "prop:1.1234567"}""", """{"DISC_WEIGHT": "prop:x"}""", """{"DISC_WEIGHT": ""}""", """{"DISC_WEIGHT": 1.1}""" })
         {
             Manifest m = Lab.Manifest.Parse(Manifest("JetSlice", Ticks60, pars: bad), "/x/m.json");
             try
@@ -1038,6 +1040,13 @@ public static class SliceChecks
         SliceRunConfig ac = SliceParameters.Parse(ah.Points[0].CreateParamSet(), 1, 1, 1, calibration: true).Config;
         if (ac.AheadCostK != Fx6.FromRaw(20_000) || ac.AheadCostPow != 2 || ac.AheadCostMax != Fx6.FromInt(6))
             return $"ahead-of-time keys parsed as {ac.AheadCostK}/{ac.AheadCostPow}/{ac.AheadCostMax}";
+        // TASK-0147 (§10.5b): DISC_WEIGHT reaches SliceRunConfig as given, in the given order; absent = default (weights 1, hash of main).
+        if (!g0c.ResearchWeightByDiscipline.IsDefault)
+            return "DISC_WEIGHT set without the key";
+        Manifest dw = Lab.Manifest.Parse(Manifest("JetSliceCalib", Ticks60, pars: """{"DISC_WEIGHT": "prop:1.15,metal:0.90"}"""), "/x/m.json");
+        SliceRunConfig dwc = SliceParameters.Parse(dw.Points[0].CreateParamSet(), 1, 1, 1, calibration: true).Config;
+        if (!dwc.ResearchWeightByDiscipline.SequenceEqual([new DisciplineWeight("prop", Fx6.FromRaw(1_150_000)), new DisciplineWeight("metal", Fx6.FromRaw(900_000))]))
+            return $"DISC_WEIGHT parsed as {string.Join(',', dwc.ResearchWeightByDiscipline)}";
         foreach (var (text, want) in new[] { ("NONE", MasteryRules.None), ("ALL", MasteryRules.All), ("MAIN", MasteryRules.Main), ("PROGRAMME+FORESIGHT", MasteryRules.Programme | MasteryRules.Foresight),
                      ("GATE+CLOSE+FORESIGHT+PROGRAMME", MasteryRules.All) })
         {
