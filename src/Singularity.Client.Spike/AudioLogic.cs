@@ -30,13 +30,13 @@ public static class AudioCatalog
         new Cue("order_reject", Prio.P2, "reject", 0.19),
         new Cue("queue_tick", Prio.P3, "order", 0.08, Jitter: true),
         new Cue("order_done", Prio.P2, "order", 0.25),
-        new Cue("signal_attention", Prio.P1, "signal", 1.2),
+        new Cue("signal_attention", Prio.P1, "signal", 0.9),
         new Cue("signal_alert", Prio.P0, "signal", 1.5),
         new Cue("signal_critical", Prio.P0, "signal", 1.5, MinGap: 60),
         new Cue("signal_clear", Prio.P1, "signal", 1.2),   // not played by the client since TASK-0140 (the file still ships)
-        new Cue("node_discovered", Prio.P2, "discovery", 1.2),
-        new Cue("breakthrough", Prio.P1, "discovery", 1.15),
-        new Cue("line_commissioned", Prio.P1, "line", 2.0),
+        new Cue("node_discovered", Prio.P2, "discovery", 0.9),
+        new Cue("breakthrough", Prio.P1, "discovery", 1.0),
+        new Cue("line_commissioned", Prio.P1, "line", 1.5),
         new Cue("war_declared", Prio.P0, "war", 1.5),
         new Cue("launch_space", Prio.P1, "launch", 1.09),
         new Cue("launch_nuclear", Prio.P0, "launch", 1.8, MinGap: 5),
@@ -45,7 +45,7 @@ public static class AudioCatalog
         new Cue("tempo_3", Prio.P2, "tempo", 0.25, Source: "tempo", Semitones: 1),
         new Cue("pause", Prio.P2, "pause", 0.25),
         new Cue("unpause", Prio.P2, "pause", 0.25),
-        new Cue("ui_tick", Prio.P3, "tick", 0.08, Jitter: true),
+        new Cue("ui_tick", Prio.P3, "tick", 0.07, Jitter: true),
     };
 
     public static Cue Get(string id) => All.First(c => c.Id == id);
@@ -283,9 +283,40 @@ public static class WorldCues
 public enum Bus { Music, Ambient, UI, Alert }
 
 /// <summary>Slider values 0..1. Alerts can be turned down but not off (#298): the floor is 20% (-14 dB).</summary>
+/// <summary>Effects a bus carries.</summary>
+public enum BusEffect { LowPass, HardLimiter, Record }
+
+/// <summary>Pure plan of the bus layout (Godot-free): which buses to create and which effects each carries. Used so a second director start adds nothing.</summary>
+public static class AudioBusPlan
+{
+    public static readonly string[] Names = { "Music", "Ambient", "UI", "Alert" };
+
+    /// <summary>Buses of <see cref="Names"/> missing from <paramref name="existing"/>, in creation order.</summary>
+    public static IReadOnlyList<string> ToCreate(IEnumerable<string> existing)
+    {
+        var have = new HashSet<string>(existing, StringComparer.Ordinal);   // lookups only
+        return Names.Where(n => !have.Contains(n)).ToArray();
+    }
+
+    /// <summary>Effects to install on Master given how many it already has: none on a second start, so the limiter and the recorder exist once and the recorder is reused.</summary>
+    public static IReadOnlyList<BusEffect> MasterToInstall(int existingEffects) =>
+        existingEffects > 0 ? Array.Empty<BusEffect>() : Effects("Master");
+
+    /// <summary>Effects of a bus. Only UI (P2, P3) is low-passed; Alert (P0, P1) is never filtered.</summary>
+    public static IReadOnlyList<BusEffect> Effects(string bus) => bus switch
+    {
+        "UI" => new[] { BusEffect.LowPass },
+        "Master" => new[] { BusEffect.HardLimiter, BusEffect.Record },
+        _ => Array.Empty<BusEffect>(),
+    };
+}
+
 public static class AudioSettings
 {
     public const double AlertFloor = 0.2;
+
+    /// <summary>Low-pass cutoff of the UI bus (P2, P3): the muted character, owner decision #455. Alert (P0, P1) is never filtered.</summary>
+    public const double UiCutoffHz = 3200;
 
     public static double Clamp(Bus bus, double v)
     {

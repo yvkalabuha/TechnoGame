@@ -282,8 +282,8 @@
    "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
    "url": "https://freesound.org/people/jakebagger/sounds/499787/",
    "changes": {
-    "en": "Cut to length, filtered, volume evened out, pitch changed slightly (signal_clear only).",
-    "ru": "Обрезано, отфильтровано, громкость выровнена, высота слегка изменена (только signal_clear)."
+    "en": "Cut to length, filtered, volume evened out, pitch changed slightly (signal_clear only). Muted character (#455): extra low-pass, softer fade-in attack, trimmed tail (signal_attention only).",
+    "ru": "Обрезано, отфильтровано, громкость выровнена, высота слегка изменена (только signal_clear). Глухой характер (#455): доп. срез верхов, мягкая атака, укорочен хвост (только signal_attention)."
    },
    "files": [
     "assets/audio/ui/signal_attention.ogg",
@@ -300,8 +300,8 @@
    "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
    "url": "https://freesound.org/people/joedeshon/sounds/139062/",
    "changes": {
-    "en": "Cut to length, filtered, volume evened out, pitch changed slightly (pause and unpause only).",
-    "ru": "Обрезано, отфильтровано, громкость выровнена, высота слегка изменена (только pause и unpause)."
+    "en": "Cut to length, filtered, volume evened out, pitch changed slightly (pause and unpause only). Muted character (#455): extra low-pass, softer fade-in attack, trimmed tail.",
+    "ru": "Обрезано, отфильтровано, громкость выровнена, высота слегка изменена (только pause и unpause). Глухой характер (#455): доп. срез верхов, мягкая атака, укорочен хвост."
    },
    "files": [
     "assets/audio/ui/tempo.ogg",
@@ -334,8 +334,8 @@
    "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
    "url": "https://freesound.org/people/YleArkisto/sounds/271525/",
    "changes": {
-    "en": "A piece cut out automatically, filtered, volume evened out.",
-    "ru": "Кусок вырезан автоматически, отфильтрован, громкость выровнена."
+    "en": "A piece cut out automatically, filtered, volume evened out. Muted character (#455): extra low-pass, softer fade-in attack, trimmed tail.",
+    "ru": "Кусок вырезан автоматически, отфильтрован, громкость выровнена. Глухой характер (#455): доп. срез верхов, мягкая атака, укорочен хвост."
    },
    "files": [
     "assets/audio/ui/order_done.ogg"
@@ -350,8 +350,8 @@
    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
    "url": "https://freesound.org/people/I.fekry/sounds/470710/",
    "changes": {
-    "en": "Cut to length, filtered, volume evened out.",
-    "ru": "Обрезано, отфильтровано, громкость выровнена."
+    "en": "Cut to length, filtered, volume evened out. Muted character (#455): extra low-pass, softer fade-in attack, trimmed tail.",
+    "ru": "Обрезано, отфильтровано, громкость выровнена. Глухой характер (#455): доп. срез верхов, мягкая атака, укорочен хвост."
    },
    "files": [
     "assets/audio/ui/order_ok.ogg"
@@ -366,8 +366,8 @@
    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
    "url": "https://freesound.org/people/bassmosphere/sounds/384698/",
    "changes": {
-    "en": "Cut to length, filtered, volume evened out.",
-    "ru": "Обрезано, отфильтровано, громкость выровнена."
+    "en": "Cut to length, filtered, volume evened out. Muted character (#455): extra low-pass, softer fade-in attack, trimmed tail (order_reject, launch_space only).",
+    "ru": "Обрезано, отфильтровано, громкость выровнена. Глухой характер (#455): доп. срез верхов, мягкая атака, укорочен хвост (только order_reject, launch_space)."
    },
    "files": [
     "assets/audio/ui/order_reject.ogg",
@@ -384,8 +384,8 @@
    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
    "url": "https://freesound.org/people/moose13088/sounds/182889/",
    "changes": {
-    "en": "Cut to length, filtered, volume evened out.",
-    "ru": "Обрезано, отфильтровано, громкость выровнена."
+    "en": "Cut to length, filtered, volume evened out. Muted character (#455): extra low-pass, softer fade-in attack, trimmed tail.",
+    "ru": "Обрезано, отфильтровано, громкость выровнена. Глухой характер (#455): доп. срез верхов, мягкая атака, укорочен хвост."
    },
    "files": [
     "assets/audio/ui/queue_tick.ogg"
@@ -416,8 +416,8 @@
    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
    "url": "https://bigsoundbank.com/typewriter-bell-s2845.html",
    "changes": {
-    "en": "Cut to length, filtered, volume evened out.",
-    "ru": "Обрезано, отфильтровано, громкость выровнена."
+    "en": "Cut to length, filtered, volume evened out. Muted character (#455): extra low-pass, softer fade-in attack, trimmed tail.",
+    "ru": "Обрезано, отфильтровано, громкость выровнена. Глухой характер (#455): доп. срез верхов, мягкая атака, укорочен хвост."
    },
    "files": [
     "assets/audio/ui/node_discovered.ogg",
@@ -433,8 +433,8 @@
    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
    "url": "https://freesound.org/people/kentspublicdomain/sounds/477827/",
    "changes": {
-    "en": "Cut to length, filtered, volume evened out.",
-    "ru": "Обрезано, отфильтровано, громкость выровнена."
+    "en": "Cut to length, filtered, volume evened out. Muted character (#455): extra low-pass, softer fade-in attack, trimmed tail.",
+    "ru": "Обрезано, отфильтровано, громкость выровнена. Глухой характер (#455): доп. срез верхов, мягкая атака, укорочен хвост."
    },
    "files": [
     "assets/audio/ui/line_commissioned.ogg",
@@ -483,8 +483,8 @@
    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
    "url": "https://freesound.org/people/bevibeldesign/sounds/635156/",
    "changes": {
-    "en": "Cut to length, filtered, volume evened out.",
-    "ru": "Обрезано, отфильтровано, громкость выровнена."
+    "en": "Cut to length, filtered, volume evened out. Muted character (#455): extra low-pass, softer fade-in attack, trimmed tail.",
+    "ru": "Обрезано, отфильтровано, громкость выровнена. Глухой характер (#455): доп. срез верхов, мягкая атака, укорочен хвост."
    },
    "files": [
     "assets/audio/ui/ui_tick.ogg"
