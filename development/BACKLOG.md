@@ -150,7 +150,7 @@
 | [TASK-0132](../development/tasks/TASK-0132-tree-keyboard-selection.md) | PROPOSED | Keyboard selection of technology tree nodes and keyboard tooltip (A6-A8) | MS-M05 |
 | [TASK-0133](../development/tasks/TASK-0133-g5-g6-data-probe.md) | IN_PROGRESS | G5/G6 data in mods on the train-2 branch and calibration probe (O-038) | MS-M05 |
 | [TASK-0134](../development/tasks/TASK-0134-hcap-growth-production-mastery.md) | IN_PROGRESS | Hcap growth and production mastery in Core: series gate, candidate close, foresight, mastery programme (#438-#440) | MS-M05 |
-| [TASK-0135](../development/tasks/TASK-0135-gemini-visual-review.md) | APPROVED | Gemini visual second opinion in llm_worker (free tier, #441) | MS-M05 |
+| [TASK-0135](../development/tasks/TASK-0135-gemini-visual-review.md) | IN_PROGRESS | Gemini visual second opinion in llm_worker (free tier, #441) | MS-M05 |
 
 ## Гипотезы
 
