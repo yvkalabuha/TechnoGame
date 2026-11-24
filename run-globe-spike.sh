@@ -40,11 +40,14 @@ if ! "$GODOT" --headless --path . --import >"$IMPORT_LOG" 2>&1 || grep -qE "^(ER
 fi
 
 STAMP=".godot/build-stamp"
-if [[ "${FORCE_BUILD:-0}" == "1" || ! -f "$STAMP" ]] || [[ -n "$(find . \( -name '*.cs' -o -name '*.csproj' \) -newer "$STAMP" -not -path './.godot/*' -print -quit)" ]] \
-   || [[ -n "$(find "$ROOT/src" -path "$PROJECT" -prune -o \( -name '*.cs' -o -name '*.csproj' \) -newer "$STAMP" -print -quit)" ]]; then
+SRC_NAMES=( \( -name '*.cs' -o -name '*.csproj' -o -name '*.props' -o -name '*.targets' \) )
+if [[ "${FORCE_BUILD:-0}" == "1" || ! -f "$STAMP" ]] \
+   || [[ -n "$(find "$ROOT/src" "${SRC_NAMES[@]}" -newer "$STAMP" -not -path '*/.godot/*' -print -quit)" ]] \
+   || [[ -n "$(find "$ROOT" -maxdepth 1 \( -name 'Directory.Build.*' -o -name 'global.json' -o -name '*.props' \) -newer "$STAMP" -print -quit)" ]]; then
   echo "Building C# scripts..."
-  "$GODOT" --headless --path . --build-solutions --quit
-  touch "$STAMP"
+  touch "$STAMP.new"   # taken before the build: a file saved during the build stays newer than the stamp
+  "$GODOT" --headless --path . --build-solutions --quit   # set -e: a failed build stops here and leaves the old stamp
+  mv -f "$STAMP.new" "$STAMP"
 else
   echo "C# unchanged since the last build: skipping the build (FORCE_BUILD=1 to force)"
 fi
