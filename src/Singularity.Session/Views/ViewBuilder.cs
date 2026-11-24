@@ -78,7 +78,46 @@ internal static class ViewBuilder
             new QualityView(w.Policy.QualityProgrammeActive(a), w.Policy.QualityProgrammeStart(a), w.Policy.QualityTriggerCount(a), w.Policy.TrainingTarget(a)),
             new LicenceView(w.Policy.LicenceGen(a), w.Policy.LicenceSeller(a), w.Policy.LicenceStart(a), w.Policy.LicenceMask(a), w.Policy.OfferMask(a),
                 w.Policy.LicenceFlow(a), refusals.MoveToImmutable(), w.LicenceActive(a)),
-            new DisruptionView(disStart, disEnd), withNodes ? Nodes(w, a, next) : Unsubscribed(w, a), designs.MoveToImmutable(), Decisions(w, a, next, stepped));
+            new DisruptionView(disStart, disEnd), withNodes ? Nodes(w, a, next) : Unsubscribed(w, a), designs.MoveToImmutable(), Decisions(w, a, next, stepped),
+            Alloy(w, a, month), Research(w, a), UnknownNodes(w, a));
+    }
+
+    // Supply and ask are both from the step-7 trace of the same monthly step; nothing is recomputed from the post-step state. No trace (restored snapshot, before the first step) = not known.
+    private static AlloyCoverage Alloy(SliceWorld w, int a, long month) =>
+        w.Products.HasAlloyTrace(a)
+            ? new AlloyCoverage(w.Products.LastAlloySupply(a), w.Products.LastAlloyAsk(a), w.Policy.AlloyDeficit(a, month))
+            : default;
+
+    // Nodes the actor does not know yet, whether or not its node block is carried: a reader asks it for «is there anything left to research» without reading the nodes.
+    private static int UnknownNodes(SliceWorld w, int a)
+    {
+        int n = 0;
+        for (int r = 0; r < w.Graph.Count; r++)
+            if (!w.Knowledge.IsKnown(a, r))
+                n++;
+        return n;
+    }
+
+    /// <summary>Most research entries a view carries per actor.</summary>
+    internal const int MaxResearch = 5;
+
+    private static ImmutableArray<ResearchView> Research(SliceWorld w, int a)
+    {
+        Span<int> rows = stackalloc int[MaxResearch];
+        int n = w.Knowledge.ResearchInProgress(a, rows);
+        if (n == 0)
+            return ImmutableArray<ResearchView>.Empty;
+        // Entries are built on the stack; the published array is the cached one when nothing changed (progress moves once a month), so a rebuild between steps allocates nothing.
+        Span<ResearchView> fresh = stackalloc ResearchView[MaxResearch];
+        for (int i = 0; i < n; i++)
+        {
+            Fx6 have = w.Knowledge.Prog(a, rows[i]), need = w.Knowledge.NeedOf(rows[i]);
+            fresh[i] = new ResearchView(w.Graph.Number[rows[i]], have, need, w.Graph.IsHazard[rows[i]] && have >= need);
+        }
+        ImmutableArray<ResearchView> last = w.ResearchViews[a];
+        if (!last.IsDefault && last.AsSpan().SequenceEqual(fresh[..n]))
+            return last;
+        return w.ResearchViews[a] = ImmutableArray.Create(fresh[..n]);
     }
 
     // An actor the view does not carry the nodes of: no block, and the cache keeps none of it (ADR-0025).

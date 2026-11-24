@@ -12,7 +12,7 @@ public class SlotReuseL2Tests
     public void L2_ThroughTheFirstSlotReuse_SameHashAcrossThreadsAndChunkSizes()
     {
         (int Threads, int Chunk)[] cfg = [(1, 1), (4, 8), (8, 32), (3, 1)];
-        SliceSession[] runs = [.. cfg.Select(c => SliceTestData.Create(new SliceRunConfig { Seed = 1, Threads = c.Threads, ChunkSize = c.Chunk }))];
+        SliceSession[] runs = [.. cfg.Select(c => SliceTestData.CreateLegacy(new SliceRunConfig { Seed = 1, Threads = c.Threads, ChunkSize = c.Chunk }))];
         bool reused = false;
         for (long t = 0; t < Months; t++)
         {

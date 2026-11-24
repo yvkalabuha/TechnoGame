@@ -305,6 +305,196 @@ node-s8-app-jet_fighter_g4 =
     .short = Истребит. 4
     .anchor = F-15: первый полёт 27.07.1972
 
+node-s8-fnd-electronic_flight_control_theory =
+    .name = Теория электронного управления полётом
+    .short = Эл. управл.
+    .anchor = F-8 DFBW: первый полёт (25.05.1972)
+
+node-s8-fnd-edge_wave_diffraction =
+    .name = Теория дифракции на кромках
+    .short = Дифр. кромок
+    .anchor = Уфимцев: метод краевых волн (1962, оценка)
+
+node-s5-prn-single_crystal_growth =
+    .name = Рост монокристаллов
+    .short = Монокристалл
+    .anchor = оценка: 1974
+
+node-s5-prn-fibre_composite_laminate_design =
+    .name = Проектирование слоистых композитов
+    .short = Композиты
+    .anchor = F-14: борэпоксидные панели (1970)
+
+node-s8-prn-low_observable_shaping =
+    .name = Малозаметные формы
+    .short = Малозаметн.
+    .anchor = оценка: 1975
+
+node-s8-eng-fly_by_wire_relaxed_stability =
+    .name = Электродистанционное управление, ослабленная устойчивость
+    .short = ЭДСУ
+    .anchor = YF-16: первый полёт (02.02.1974)
+
+node-s8-eng-turbofan_g5 =
+    .name = ТРДД, поколение 5
+    .short = ТРДД 5
+    .anchor = F100 DEEC: цифровая автоматика (1981-83)
+
+node-s8-eng-composite_airframe =
+    .name = Композитный планер
+    .short = Комп. планер
+    .anchor = YAV-8B: первый полёт (09.11.1978)
+
+node-s8-eng-low_observable_airframe =
+    .name = Малозаметный планер
+    .short = Малозам. пл.
+    .anchor = Have Blue: первый полёт (01.12.1977)
+
+node-s8-eng-thrust_vectoring_supercruise_engine =
+    .name = Двигатель с вектором тяги и сверхзвуком без форсажа
+    .short = Вектор тяги
+    .anchor = YF-22: вектор тяги 15.11.1990, сверхзвук без форсажа 03.11.1990
+
+node-s8-cmp-turbine_blade_single_crystal =
+    .name = Монокристаллическая лопатка турбины
+    .short = Лопатка МК
+    .anchor = оценка: 1982
+
+node-s5-prc-single_crystal_casting =
+    .name = Литьё монокристаллов
+    .short = Литьё МК
+    .anchor = оценка: 1982
+
+node-s8-prc-composite_layup_cure =
+    .name = Выкладка и отверждение композитов
+    .short = Выкладка
+    .anchor = оценка: 1978
+
+node-s5-prc-low_observable_finishing =
+    .name = Малозаметное покрытие
+    .short = Покр. малоз.
+    .anchor = оценка: 1981
+
+node-s8-app-jet_fighter_g5 =
+    .name = Реактивный истребитель, поколение 5
+    .short = Истребит. 5
+    .anchor = Mirage 2000 в строю (1984)
+
+node-s8-app-jet_fighter_g6 =
+    .name = Реактивный истребитель, поколение 6
+    .short = Истребит. 6
+    .anchor = F-22: начальная готовность (12.2005)
+
+node-s8-eng-aesa_sensor_fusion =
+    .name = АФАР и слияние данных датчиков
+    .short = АФАР
+    .anchor = APG-77: лётные испытания (11.1997, оценка)
+
+node-s5-cmp-ceramic_matrix_composite =
+    .name = Керамоматричный композит (CMC)
+    .short = CMC
+    .anchor = GE: CMC-кожухи в LEAP (2016, оценка)
+
+node-s5-prc-cmc_fabrication =
+    .name = Изготовление CMC-деталей
+    .short = Изг. CMC
+    .anchor = оценка: 2016
+
+node-s8-eng-adaptive_cycle_engine =
+    .name = Двигатель адаптивного цикла
+    .short = Адаптивный
+    .anchor = GE XA100: испытания (2021, оценка)
+
+node-s8-prn-phased_array_radar_pesa =
+    .name = Пассивная ФАР
+    .short = ПФАР
+    .anchor = МиГ-31, РЛС «Заслон»: первый полёт (1975)
+
+node-s5-prn-gaas_wafer_growth =
+    .name = Рост арсенида галлия
+    .short = Рост GaAs
+    .anchor = Mullin и др.: выращивание GaAs методом LEC (1965)
+
+node-s5-cmp-gaas_mmic =
+    .name = Монолитные СВЧ-схемы на GaAs
+    .short = GaAs MMIC
+    .anchor = Plessey: первая GaAs MMIC (1976)
+
+node-s8-cmp-solid_state_tr_module =
+    .name = Твердотельный приёмопередающий модуль
+    .short = ППМ
+    .anchor = DARPA MIMIC: аппаратная фаза (1988, оценка)
+
+node-s8-prn-programmable_signal_processing =
+    .name = Программируемая обработка сигналов
+    .short = Обр. сигнала
+    .anchor = APG-63: программируемый процессор (1979, оценка)
+
+node-s8-eng-digital_beamforming =
+    .name = Цифровое формирование лучей
+    .short = Цифр. лучи
+    .anchor = Опытные цифровые решётки (1990, оценка)
+
+node-s8-prn-relaxed_static_stability =
+    .name = Ослабленная статическая устойчивость
+    .short = Неуст. план.
+    .anchor = Старт программы CCV (1972, оценка)
+
+node-s8-cmp-digital_flight_control_computer =
+    .name = Цифровой компьютер управления полётом
+    .short = Цифр. ЭВМ
+    .anchor = F-8 DFBW, фаза II: три ЭВМ AP-101 (1976, оценка)
+
+node-s8-prn-electronic_engine_control =
+    .name = Электронное управление двигателем
+    .short = Эл. упр. дв.
+    .anchor = Olympus 593 (Concorde): первый полёт (02.03.1969)
+
+node-s5-cmp-high_modulus_fibre =
+    .name = Высокомодульное волокно
+    .short = Волокно
+    .anchor = RAE: высокомодульное углеродное волокно (1963)
+
+node-s8-prn-thrust_vectoring_nozzle =
+    .name = Сопло с вектором тяги
+    .short = Сопло ВТ
+    .anchor = F-15 S/MTD: полёт с вектором тяги (16.05.1989)
+
+node-s8-prn-rcs_computational_prediction =
+    .name = Расчёт радиолокационной заметности
+    .short = Расчёт ЭПР
+    .anchor = Lockheed: программа Echo 1 (1975)
+
+node-s8-eng-integrated_avionics_architecture =
+    .name = Интегрированная архитектура авионики
+    .short = Авионика
+    .anchor = Pave Pillar (1986, оценка)
+
+node-s5-cmp-silicon_carbide_fibre =
+    .name = Волокно карбида кремния
+    .short = Вол. SiC
+    .anchor = Yajima: SiC-волокно из поликарбосилана (1975)
+
+node-s5-prn-matrix_infiltration_cvi =
+    .name = Химическое газофазное уплотнение матрицы
+    .short = CVI
+    .anchor = Naslain: первый CMC методом CVI (1977)
+
+node-s5-prn-environmental_barrier_coating =
+    .name = Барьерное покрытие от среды
+    .short = Покрытие
+    .anchor = NASA/GE/P&W: покрытие первого поколения (2000, оценка)
+
+node-s8-prn-variable_cycle_engine =
+    .name = Двигатель переменного цикла
+    .short = Перем. цикл
+    .anchor = YF120 на YF-22: первый полёт (29.09.1990)
+
+node-s8-prn-adaptive_third_stream_fan =
+    .name = Вентилятор третьего контура
+    .short = 3-й контур
+    .anchor = GE ADVENT: двигатель (26.11.2013)
+
 # Product classes and the scenario.
 
 pc-jet_fighter =
@@ -402,6 +592,38 @@ pc-jet_fighter-alt-afterburner-ab_none =
 pc-jet_fighter-alt-afterburner-ab_on =
     .name = С форсажем
     .short = С форсажем
+
+pc-jet_fighter-alt-engine-eng_g5 =
+    .name = ТРДД, поколение 5
+    .short = ТРДД 5
+
+pc-jet_fighter-alt-engine-eng_g6 =
+    .name = Двигатель с вектором тяги, поколение 6
+    .short = Вектор тяги
+
+pc-jet_fighter-alt-engine-eng_g6_adaptive =
+    .name = Двигатель адаптивного цикла
+    .short = Адаптивный
+
+pc-jet_fighter-alt-hot_section-hot_sc_sc =
+    .name = Монокристаллические лопатки
+    .short = Лопатки МК
+
+pc-jet_fighter-alt-hot_section-hot_sc_cmc =
+    .name = Горячая часть из керамокомпозита
+    .short = CMC-горяч.
+
+pc-jet_fighter-alt-airframe-af_fbw =
+    .name = Планер с ЭДСУ
+    .short = ЭДСУ
+
+pc-jet_fighter-alt-airframe-af_composite =
+    .name = Композитный планер
+    .short = Композит
+
+pc-jet_fighter-alt-airframe-af_lo_composite =
+    .name = Малозаметный композитный планер
+    .short = Малозам.
 
 scenario-jet_slice_1945 =
     .name = Реактивная авиация, 1945

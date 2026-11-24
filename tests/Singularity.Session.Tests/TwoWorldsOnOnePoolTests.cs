@@ -43,9 +43,13 @@ public class TwoWorldsOnOnePoolTests
         });
 
     // Seed -> digest of the monthly hashes of that world run alone (recorded on the unmodified code, threads 2 and 4 agree).
+    // Re-recorded in TASK-0129 (fleet ageing, #431/#435-#437), reason: schema v13 (new column prd.d*.replCredit, in the hash from month 0); the old columns are unchanged to month 176 (projection tests: HorizonTests, T6dTests, FleetAblationTests, ToolingUnmetTests, GoldenProjectionAgainstMainTests), so only the new column changes these hashes.
+// Re-recorded in TASK-0133 (train 2: G5/G6 data + fleet ageing): nodes 62-81 and the G5/G6 alternatives change every trajectory; reason and list in the task file.
+    // Re-recorded in TASK-0134 (train 2: Hcap(t), mastery), reason: schema v14 (new columns prd.prog.*, pol.prog.*, pol.below.*, cmd.prog.*, prd.rejected.BadProgramme, all zero before 1978-01); the old columns are unchanged to month 387 (MasteryIdentityTests, HorizonTests, GoldenProjectionAgainstMainTests), so only the new columns change this hash.
+    // Re-recorded in TASK-0147 (train 2): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465) change every trajectory on the current data; explanation: docs/simulation/golden-rerecord-train2.md.
     private static readonly Dictionary<ulong, string> Pinned = new()
     {
-        [1] = "dd295a0d3073990a038e9282357c47bf1b0d35e2e86d3d8ecc7f2170b70a9142", [2] = "f084e313a7f7b4ddbed5490d3672fc73827e1e7790a07c356f04cd7545d13591", [3] = "f6e47b9abb84a198ce7831e7e6470505f5836455610606f5a1984ce200c0d5a2", [4] = "418d215c5c100a381b004ef8acd7e4962d5ff15943328749e96758c24436c365", [5] = "b20711e98d563d6059d42f00ca562c6314822443b4940639382f38afba008e78", [7] = "b898c0f56e8e64ba9c960eca665d477737290175115843033e7c209ab86c06fa",
+        [1] = "7676ba2b8f3d1a8e884283073cca5bb65b0740800864aafc8511e13cae2e48ad", [2] = "98f851f0f81e2194369724ea0a7c3b513ef254d939d27d7ce42d1b5dda0fd4af", [3] = "4bf46aec111f3726498342c538e6827a268f6405c3099018beaff46a9ceca3ee", [4] = "38c794141894bbfc0a380fa4df12bd31ddb4901fd0f002fc45726de60aa9a9c3", [5] = "5c48c89e36bdcbe6f06672a200f34b0e7c318994a14194d8e0724496a5091890", [7] = "7d695dd6dd1f1f53664d1af9994414ebe46cde5b7950646c9a0e38bca344f287",
     };
 
     private static void AssertPinned(ulong seed, string[] actual, string what)

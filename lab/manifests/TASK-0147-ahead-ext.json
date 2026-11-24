@@ -1,0 +1,133 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0147-ahead-ext",
+  "description": "TASK-0147 §10.5c: on data B (99 nodes), AHEAD_K 0.12, AHEAD_POW 2: cap AHEAD_MAX 10/20/30 x per-discipline research weight skew (none; prop 1.15 + metal 0.90; mirror; aero 1.15 + metal 0.90). Analysis lab/analysis/ahead_ext.py.",
+  "model": "JetSlice",
+  "ticks": 31168,
+  "chunk_size": 1,
+  "threads": [
+    1,
+    4
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 10
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full"
+  },
+  "series": [
+    {
+      "name": "c10_ref",
+      "params": {
+        "AHEAD_K": 0.12,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 10
+      }
+    },
+    {
+      "name": "c10_pm",
+      "params": {
+        "AHEAD_K": 0.12,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 10,
+        "DISC_WEIGHT": "prop:1.15,metal:0.90"
+      }
+    },
+    {
+      "name": "c10_mp",
+      "params": {
+        "AHEAD_K": 0.12,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 10,
+        "DISC_WEIGHT": "prop:0.90,metal:1.15"
+      }
+    },
+    {
+      "name": "c10_am",
+      "params": {
+        "AHEAD_K": 0.12,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 10,
+        "DISC_WEIGHT": "aero:1.15,metal:0.90"
+      }
+    },
+    {
+      "name": "c20_ref",
+      "params": {
+        "AHEAD_K": 0.12,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 20
+      }
+    },
+    {
+      "name": "c20_pm",
+      "params": {
+        "AHEAD_K": 0.12,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 20,
+        "DISC_WEIGHT": "prop:1.15,metal:0.90"
+      }
+    },
+    {
+      "name": "c20_mp",
+      "params": {
+        "AHEAD_K": 0.12,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 20,
+        "DISC_WEIGHT": "prop:0.90,metal:1.15"
+      }
+    },
+    {
+      "name": "c20_am",
+      "params": {
+        "AHEAD_K": 0.12,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 20,
+        "DISC_WEIGHT": "aero:1.15,metal:0.90"
+      }
+    },
+    {
+      "name": "c30_ref",
+      "params": {
+        "AHEAD_K": 0.12,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 30
+      }
+    },
+    {
+      "name": "c30_pm",
+      "params": {
+        "AHEAD_K": 0.12,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 30,
+        "DISC_WEIGHT": "prop:1.15,metal:0.90"
+      }
+    },
+    {
+      "name": "c30_mp",
+      "params": {
+        "AHEAD_K": 0.12,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 30,
+        "DISC_WEIGHT": "prop:0.90,metal:1.15"
+      }
+    },
+    {
+      "name": "c30_am",
+      "params": {
+        "AHEAD_K": 0.12,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 30,
+        "DISC_WEIGHT": "aero:1.15,metal:0.90"
+      }
+    }
+  ],
+  "meta": {
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r19",
+    "preregistration": "docs/simulation/g5-g6-probe.md §10.5c"
+  }
+}

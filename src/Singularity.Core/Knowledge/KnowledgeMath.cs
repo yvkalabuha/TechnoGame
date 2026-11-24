@@ -29,6 +29,29 @@ public static class KnowledgeMath
         return num / den;
     }
 
+    /// <summary>
+    /// Ahead-of-time multiplier of <c>c_money</c> (#458): <c>min(max, 1 + k·ahead^pow)</c>, <c>ahead</c> in years from <paramref name="month"/>
+    /// (a run month index; <paramref name="originMonths"/> = months from 1945-01 to month 0, 8 for 1945-09) to 1 January of <paramref name="anchorYear"/>. Exactly <c>1</c> when <c>k = 0</c> or the
+    /// anchor has passed. Integer power only (determinism, no Math.Pow).
+    /// </summary>
+    public static Fx6 AheadMultiplier(Fx6 k, int pow, Fx6 max, int anchorYear, long month, int originMonths)
+    {
+        if (k == Fx6.Zero)
+            return Fx6.One;
+        long aheadMonths = 12L * (anchorYear - 1945) - originMonths - month;
+        if (aheadMonths <= 0)
+            return Fx6.One;
+        Fx6 years = Fx6.FromInt(checked((int)aheadMonths)) / Twelve;
+        Fx6 term = years;
+        for (int i = 1; i < pow; i++)
+            term *= years;
+        // The product is taken in 128 bits and compared with the room under the ceiling first, so a large k saturates instead of overflowing.
+        Int128 product = (Int128)k.Raw * term.Raw / Fx6.Scale;
+        if (product >= max.Raw - Fx6.One.Raw)
+            return max;
+        return Fx6.One + Fx6.FromRaw((long)product);
+    }
+
     /// <summary><c>h = (h_max·y)/(y + y_half)</c>, active only when <c>prog ≥ θ_start</c>.</summary>
     public static HazardStep Hazard(Fx6 prog, Fx6 thetaStart, Fx6 hMax, Fx6 yHalf)
     {

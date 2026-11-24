@@ -45,10 +45,10 @@ public class ProductDataTests : IDisposable
     }
 
     [Fact]
-    public void Class_HasTwentyCostRows_GearBearingForTheSteelSubstitute()
+    public void Class_HasTwentyFourCostRows_GearBearingForTheSteelSubstitute()
     {
         // D1: PRC 47 joins the class with the hot_steel_g0 substitute (labour 300 h, base_cost 37 raw).
-        Assert.Equal(20, Probe.ProcNumber.Length);
+        Assert.Equal(24, Probe.ProcNumber.Length);   // 20 + 4 of G5/G6
         int k47 = Probe.ProcIndex(47);
         Assert.True(k47 >= 0);
         Assert.Equal(Fx6.FromInt(300), Probe.ProcLabour[k47]);
@@ -90,7 +90,7 @@ public class ProductDataTests : IDisposable
     [Fact]
     public void PuScales_AreTheMonotoneEnvelope_R_PS2m()
     {
-        Assert.Equal([515_528, 515_528, 827_491, 827_491], Probe.ProcScalePu.Select(x => x.Raw));
+        Assert.Equal([515_528, 515_528, 827_491, 827_491, 1_330_000, 1_330_000, 2_140_000], Probe.ProcScalePu.Select(x => x.Raw));
         Assert.Equal(37, Probe.CRef);
         Assert.Equal(12, Scenario.MaxDesigns);
     }
@@ -153,9 +153,9 @@ public class ProductDataTests : IDisposable
     [InlineData("proc_scale_af: 1.253259", "proc_scale_af: 0", "proc_scale_af must be positive")]
     [InlineData("{af_class: 2,", "{af_class: 3,", "af_classes must be listed as 1, 2, ...")]
     [InlineData("{rank: 2, proc_scale_pu: 0.515528}", "{rank: 3, proc_scale_pu: 0.515528}", "pu_ranks must be listed as 1, 2, ...")]
-    [InlineData("{id: eng_g1, rank: 1, eng_gen: 1,", "{id: eng_g1, rank: 1, eng_gen: 5,", "eng_gen of an engine alternative must be in 1..4 (G_max)")]
-    [InlineData("{id: eng_g1, rank: 1, eng_gen: 1,", "{id: eng_g1, rank: 1, eng_gen: 0,", "eng_gen of an engine alternative must be in 1..4 (G_max)")]
-    [InlineData("{id: af_swept, rank: 2, af_class: 2,", "{id: af_swept, rank: 2, af_class: 9,", "af_class of an airframe alternative must be in 1..4")]
+    [InlineData("{id: eng_g1, rank: 1, eng_gen: 1,", "{id: eng_g1, rank: 1, eng_gen: 7,", "eng_gen of an engine alternative must be in 1..6 (G_max)")]
+    [InlineData("{id: eng_g1, rank: 1, eng_gen: 1,", "{id: eng_g1, rank: 1, eng_gen: 0,", "eng_gen of an engine alternative must be in 1..6 (G_max)")]
+    [InlineData("{id: af_swept, rank: 2, af_class: 2,", "{id: af_swept, rank: 2, af_class: 9,", "af_class of an airframe alternative must be in 1..6")]
     [InlineData("{id: comp_axial, rank: 2,", "{id: comp_axial, rank: 2, eng_gen: 2,", "eng_gen is only allowed in the engine (base) slot")]
     [InlineData("{id: ab_on, rank: 2,", "{id: ab_on, rank: 2, af_class: 1,", "af_class is only allowed in the airframe slot")]
     [InlineData("{id: hot_sa2_forged, rank: 2, alloy_kg: 670,", "{id: hot_sa2_forged, rank: 2,", "alloy_kg or alloy_free must be on every alternative of the alloy slot or on none")]

@@ -15,7 +15,7 @@ public static class SynthChecks
     [
         ("synth: generator — same spec → same overlay bytes, other seed → other bytes, the 24 grid points load with exact counts", () => Generator(tmp)),
         ("synth: clones keep the source columns; Clones has no edge between copies, CrossEdges only adds edges between copies", () => CloneColumns(tmp)),
-        ("synth: overlay of 5 actors × 61 nodes reproduces the core run (same StateHash after 12 months)", () => RoundTrip(tmp)),
+        ("synth: overlay of 5 actors × all core nodes reproduces the core run (same StateHash after 12 months)", () => RoundTrip(tmp)),
         ("synth: (24, 180, cross) 12 months — same StateHash at threads 1/4/8/16 and ChunkSize 1/8/32", () => ThreadInvariance(tmp)),
         ("synth: full scale (200, 2000) of both graphs passes the start checks of a session; (96, 500, cross) 3 months — same StateHash at t1 and t8", () => FullScale(tmp)),
     ];
@@ -123,7 +123,8 @@ public static class SynthChecks
 
     private static string? RoundTrip(string tmp)
     {
-        var spec = new SynthWorldSpec(5, 61, SynthGraph.Clones);
+        // TASK-0133: the node count is that of mods/core (61 before the G5/G6 data, 81 after): the overlay holds copy 0 only.
+        var spec = new SynthWorldSpec(5, ModLoader.Load(SynthWorldGenerator.FindCoreMod()).Nodes.Count, SynthGraph.Clones);
         // The overlay overrides the core scenario with the emitted copy: same id, so the scenario hash (a state column) must come out equal.
         SynthWorld w = SynthWorldGenerator.Build(spec, Dir(tmp, spec, "rt"), null, overrideCoreScenario: true);
         GameData core = ModLoader.Load(SynthWorldGenerator.FindCoreMod());

@@ -177,7 +177,7 @@ public class CoreScenarioTests
         Assert.Equal(["engine", "hot_section", "compressor", "airframe", "afterburner"], pc.SlotId.ToArray());
         Assert.Equal([true, false, false, false, false], pc.SlotIsBase.ToArray());
         Assert.Equal(["hot_section", "compressor", "afterburner", "airframe"], pc.LightenOrder.Select(s => pc.SlotId[s]));
-        Assert.Equal(18, pc.AltId.Length);   // 17 + the hot_steel_g0 substitute (D1)
+        Assert.Equal(26, pc.AltId.Length);   // 17 + the hot_steel_g0 substitute (D1) + 8 of G5/G6 (TASK-0133)
         Assert.Equal([false, false, false, true, false], pc.SlotIsAirframe.ToArray());
         Assert.Equal(Fx("1.45"), pc.AltPerfMult[pc.AlternativeIndex(0, "hot_section", "hot_vim_ds_cooled")]);
     }

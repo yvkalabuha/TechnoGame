@@ -88,6 +88,7 @@ public sealed class KnowledgeSystem : ITickSystem
             throw new ArgumentException("Start state does not match the graph.", nameof(start));
         if ((mode == KnowledgeMode.Full) != (schedule is null) || (schedule is not null && schedule.Value.Length != start.ActorCount * graph.Count))
             throw new ArgumentException("A schedule (one entry per actor and node) is needed exactly in the schedule modes.", nameof(schedule));
+        parameters.Validate();
         _g = graph;
         _start = start;
         _p = parameters;
@@ -182,11 +183,49 @@ public sealed class KnowledgeSystem : ITickSystem
 
     public Fx6 KInd(int actorRow, int discipline) => Fx6.FromRaw(_kind[discipline].Current[actorRow]);
 
+    /// <summary>Need of a node on the progress scale: θ_start for a hazard node (where its discovery chance begins), 1 otherwise (the scale of <c>why_not</c> links).</summary>
+    public Fx6 NeedOf(int nodeRow) => _g.IsHazard[nodeRow] ? _p.ThetaStart : Fx6.One;
+
+    /// <summary>Most rows <see cref="ResearchInProgress"/> takes (the buffer of shares is on the stack).</summary>
+    public const int MaxResearchRows = 64;
+
+    /// <summary>
+    /// Research in progress of the actor: frontier nodes with <c>prog &gt; 0</c>, the ones nearest to completion first (<c>prog / need</c> descending, ties by row).
+    /// Fills <paramref name="rows"/> with node rows and returns their count (at most its length, at most <see cref="MaxResearchRows"/>). A pure read of the snapshot; allocates nothing on the heap.
+    /// </summary>
+    public int ResearchInProgress(int actorRow, Span<int> rows)
+    {
+        if (rows.Length > MaxResearchRows)
+            throw new ArgumentOutOfRangeException(nameof(rows), $"at most {MaxResearchRows} rows");
+        int count = 0;
+        Span<Fx6> share = stackalloc Fx6[rows.Length];
+        for (int r = 0; r < _n && rows.Length > 0; r++)
+        {
+            Fx6 prog = Prog(actorRow, r);
+            if (prog <= Fx6.Zero || !InFrontier(actorRow, r))
+                continue;
+            Fx6 need = NeedOf(r);
+            Fx6 s = need > Fx6.Zero ? prog / need : Fx6.One;   // θ_start = 0 is a supported setting: a hazard node with progress is at its threshold
+            if (count == rows.Length && s <= share[count - 1])
+                continue;
+            int at = count < rows.Length ? count++ : count - 1;
+            while (at > 0 && s > share[at - 1])
+            {
+                share[at] = share[at - 1];
+                rows[at] = rows[at - 1];
+                at--;
+            }
+            share[at] = s;
+            rows[at] = r;
+        }
+        return count;
+    }
+
     /// <summary>The node is unknown and its requirements are known: it is in the actor's frontier (spec §3.1).</summary>
     public bool InFrontier(int actorRow, int nodeRow) => !IsKnown(actorRow, nodeRow) && RequiresKnown(actorRow, nodeRow);
 
     /// <summary><c>c_eff</c> of a node for the actor in the snapshot (spec §3.1); a pure function of the snapshot.</summary>
-    public Fx6 CEff(int actorRow, int nodeRow) => CEffOf(actorRow, nodeRow, KMix(actorRow, nodeRow));
+    public Fx6 CEff(int actorRow, int nodeRow, long month) => CEffOf(actorRow, nodeRow, KMix(actorRow, nodeRow), month);
 
     /// <summary>
     /// <c>Δprog</c> a frontier node gets in month <paramref name="month"/> at the current budget and weights (the speed <c>why_not</c>
@@ -208,7 +247,7 @@ public sealed class KnowledgeSystem : ITickSystem
         }
         if (wsum == Fx6.Zero)
             return Fx6.Zero;
-        return _inputs.ResearchBudget(actorRow, month) * (wn / wsum) / CEff(actorRow, nodeRow);
+        return _inputs.ResearchBudget(actorRow, month) * (wn / wsum) / CEff(actorRow, nodeRow, month);
     }
 
     // ---- diagnostics of the last step (tests, journals): scratch outside the Table, not state, not saved
@@ -326,7 +365,7 @@ public sealed class KnowledgeSystem : ITickSystem
             spent += alloc;
             int disc = _g.Discipline[r];
             Fx6 kmix = KMix(a, r);
-            Fx6 ceff = CEffOf(a, r, kmix);
+            Fx6 ceff = CEffOf(a, r, kmix, t);
             Fx6 dprog = alloc / ceff;
             Fx6 prog = Prog(a, r) + dprog;
             bool open;
@@ -418,8 +457,9 @@ public sealed class KnowledgeSystem : ITickSystem
         return disc < 0 ? Fx6.Zero : _g.Type[r] is NodeType.ENG or NodeType.PRC ? KD(a, disc) + KInd(a, disc) : KD(a, disc);
     }
 
-    private Fx6 CEffOf(int a, int r, Fx6 kmix) =>
-        KnowledgeMath.CEff(KnowledgeMath.CMoney(_g.CostN[r], _p.SRef), _p.KDiff, KnownElsewhere(a, r), _p.KK, kmix, _p.KRef, InformsSum(a, r));
+    // The ahead-of-time multiplier is a pure function of (node, month): a few integer operations, no table to refresh, nothing stored.
+    private Fx6 CEffOf(int a, int r, Fx6 kmix, long month) =>
+        KnowledgeMath.CEff(KnowledgeMath.CMoney(_g.CostN[r], _p.SRef) * KnowledgeMath.AheadMultiplier(_p.AheadCostK, _p.AheadCostPow, _p.AheadCostMax, _g.AnchorYear[r], month, _p.CalendarOriginMonths), _p.KDiff, KnownElsewhere(a, r), _p.KK, kmix, _p.KRef, InformsSum(a, r));
 
     private bool RequiresKnown(int a, int r)
     {

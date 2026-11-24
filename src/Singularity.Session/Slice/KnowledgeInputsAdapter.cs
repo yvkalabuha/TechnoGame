@@ -15,8 +15,13 @@ internal sealed class KnowledgeInputsAdapter(SliceWorld world) : IKnowledgeInput
 {
     public Fx6 ResearchBudget(int actorRow, long month) => world.SharesOf(actorRow).Research * world.Policy.Budget(actorRow);
 
-    public Fx6 Priority(int actorRow, int nodeRow, long month) =>
-        PolicyRules.Priority(world.Policy.Profile(actorRow), world.Graph.Type[nodeRow], world.Data.Nodes.Hazard[nodeRow]);
+    public Fx6 Priority(int actorRow, int nodeRow, long month)
+    {
+        Fx6 prio = PolicyRules.Priority(world.Policy.Profile(actorRow), world.Graph.Type[nodeRow], world.Data.Nodes.Hazard[nodeRow]);
+        // Per-discipline research weight (TASK-0147); empty by default, so the default config computes exactly the old value.
+        int d = world.Graph.Discipline[nodeRow];
+        return world.ResearchWeight.Length == 0 || d < 0 ? prio : prio * world.ResearchWeight[d];
+    }
 
     public Fx6 J(int actorRow, int nodeRow, long month) =>
         KnowledgeRng.J(world.Streams.Know, month == 0 ? 0 : (int)((month - 1) / 12), actorRow, world.Graph.Number[nodeRow]);

@@ -58,8 +58,7 @@ public sealed class SimHost : IDisposable
     long _seq;
     SliceView _lastWhyView;
     int _lastWhyActor = -1;
-    readonly ViewSubscriptionSync _sub = new();
-    WhyNotTarget? _target; IReadOnlyList<Link> _links = Array.Empty<Link>(); string _whyErr = "";
+    readonly ViewSubscriptionSync _sub = new();    WhyNotTarget? _target; IReadOnlyList<Link> _links = Array.Empty<Link>(); string _whyErr = "";
     ImmutableArray<BudgetShares?> _shares;
     double _lastTickMs;
     string _jobError = "";
@@ -112,7 +111,6 @@ public sealed class SimHost : IDisposable
 
     /// <summary>Test hook: run <paramref name="ticks"/> ticks on the simulation thread regardless of tempo.</summary>
     public void StepTicks(long ticks) => _jobs.Enqueue(() => Advance(ticks));
-
     /// <summary>Loads the mods (core) once, so that the menu can list the scenario before a session exists.</summary>
     public static GameData LoadData()
     {

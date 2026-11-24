@@ -5,7 +5,7 @@ render_mode unshaded, cull_back;
 // screen-space hatching, 30-degree graticule. No lighting, no glow.
 // ids: RG8, region number (low byte, high byte), 0 = sea. region_lut: 512x2 RGBA8 sRGB bytes read by region number:
 // row 0 = fill colour, A = hatch kind (0 none, 1 colony/mandate 45 deg, 2 occupied -45 deg, in steps of 1/3);
-// row 1 = hatch line colour, A = owner number (borders between owners are political, between regions of one owner faint).
+// row 1 = hatch line colour, A = owner number; row 2: R = controller number (0 when not occupied) (borders between owners are political, between regions of one owner faint).
 uniform sampler2D ids : filter_nearest, repeat_disable;
 uniform sampler2D region_lut : filter_nearest, repeat_disable;
 uniform vec3 sea_color : source_color = vec3(0.827, 0.882, 0.894);
@@ -16,6 +16,9 @@ uniform vec3 ink : source_color = vec3(0.114, 0.118, 0.125);
 uniform float border_px = 1.2;
 uniform int selected_id = 0;     // owner number
 uniform bool show_hatch = true;
+uniform vec3 hatch_colony = vec3(8.0, 1.0, 0.9);     // period px, width px, strength; set from HatchLogic.Params
+uniform float control_alpha = 0.8;                  // line of control, from HatchLogic.ControlAlpha
+uniform vec3 hatch_occupied = vec3(11.0, 1.0, 0.65);
 uniform float faint_border = 0.3;   // strength of the line between regions of one owner
 uniform sampler2D slice_lut : filter_nearest, repeat_disable, hint_default_black; // 256x1, R = 1 for the countries of the slice
 uniform float dim_others = 0.0;  // 0..1: pulls the tints of countries outside the slice towards paper
@@ -40,11 +43,17 @@ const vec2 SZ = vec2(4096.0, 2048.0);
 int id_at(vec2 uv) {
 	ivec2 p = ivec2(clamp(uv, vec2(0.0), vec2(0.99999)) * SZ);
 	vec2 v = texelFetch(ids, p, 0).rg * 255.0 + 0.5;
-	return int(v.x) + 256 * int(v.y);
+	return int(v.x) + 256 * (int(v.y) & 127);
+}
+// 1 for land that carries a coast stroke: islet specks (a few texels) have the bit cleared on the CPU (CoastMask).
+float coast_land_at(vec2 uv) {
+	ivec2 p = ivec2(clamp(uv, vec2(0.0), vec2(0.99999)) * SZ);
+	return texelFetch(ids, p, 0).g * 255.0 + 0.5 >= 128.0 ? 1.0 : 0.0;
 }
 vec3 srgb_to_lin(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c)); }
 vec3 tint_of(int id) { return srgb_to_lin(texelFetch(region_lut, ivec2(id, 0), 0).rgb); }
 vec3 hatch_line_of(int id) { return srgb_to_lin(texelFetch(region_lut, ivec2(id, 1), 0).rgb); }
+int controller_of(int id) { return int(texelFetch(region_lut, ivec2(id, 2), 0).r * 255.0 + 0.5); }   // row 2: controller number, so two zones of equal tone still differ
 int hatch_kind(int id) { return int(texelFetch(region_lut, ivec2(id, 0), 0).a * 3.0 + 0.5); }
 int owner_of(int id) { return id == 0 ? 0 : int(texelFetch(region_lut, ivec2(id, 1), 0).a * 255.0 + 0.5); }
 bool is_slice(int own) { return own != 0 && texelFetch(slice_lut, ivec2(own, 0), 0).r > 0.5; }
@@ -63,12 +72,13 @@ void fragment() {
 	int hk = id == 0 ? 0 : hatch_kind(id);
 	if (show_hatch && hk != 0) {
 		bool occ = hk == 2;
-		float period = occ ? 7.0 : 8.0, width = 1.0;
+		vec3 hp = occ ? hatch_occupied : hatch_colony;
+		float period = hp.x, width = hp.y;
 		vec2 q = FRAGCOORD.xy;
 		float s = ((occ ? q.x - q.y : q.x + q.y)) / 1.41421356;
 		float d = abs(fract(s / period) - 0.5) * period;
 		float h = 1.0 - smoothstep(width * 0.5 - 0.5, width * 0.5 + 0.5, d);
-		col = mix(col, hatch_line_of(id), h * (occ ? 0.7 : 0.9) * fade);
+		col = mix(col, hatch_line_of(id), h * hp.z * fade);
 	}
 
 	if (look == 0) {
@@ -116,21 +126,33 @@ void fragment() {
 	float k = border_px * 0.5, k2 = border_px * 1.1;
 	int nb[4] = int[4](id_at(uv + dx * k), id_at(uv - dx * k), id_at(uv + dy * k), id_at(uv - dy * k));
 	int nw[4] = int[4](id_at(uv + dx * k2), id_at(uv - dx * k2), id_at(uv + dy * k2), id_at(uv - dy * k2));
-	float coast = 0.0, faint = 0.0, power = 0.0; bool sl = false; bool sel_edge = false;
+	float coast = 0.0, faint = 0.0, power = 0.0, ctrl = 0.0; bool sl = false; bool sel_edge = false;
 	for (int i = 0; i < 4; i++) {
 		int o = owner_of(nb[i]);
 		if (o != own) {
-			if (nb[i] == 0 || id == 0) coast += 1.0;
 			if (is_slice(o) || is_slice(own)) sl = true;
 			if (o == selected_id) sel_edge = true;
-		} else if (nb[i] != id) faint += 1.0;
+		} else if (nb[i] != id) {
+			faint += 1.0;
+			// Line of control: neighbouring regions of one owner whose controller differs (occupied against free, or two occupiers); a colony beside its core has none.
+			if (id != 0 && controller_of(nb[i]) != controller_of(id)) ctrl += 1.0;
+		}
 		int ow = owner_of(nw[i]);
 		if (ow != own && nw[i] != 0 && id != 0) power += 1.0;
 	}
+	// Coast (G8): the contour of the bilinear land mask, so that the 4096 px raster gives a smooth line instead of a staircase.
+	vec2 tp = clamp(uv, vec2(0.0), vec2(0.99999)) * SZ - 0.5;
+	ivec2 t0 = ivec2(floor(tp)); vec2 tf = fract(tp);
+	float m00 = coast_land_at((vec2(t0) + 0.5) / SZ), m10 = coast_land_at((vec2(t0 + ivec2(1, 0)) + 0.5) / SZ);
+	float m01 = coast_land_at((vec2(t0 + ivec2(0, 1)) + 0.5) / SZ), m11 = coast_land_at((vec2(t0 + ivec2(1, 1)) + 0.5) / SZ);
+	float lm = mix(mix(m00, m10, tf.x), mix(m01, m11, tf.x), tf.y);
+	float lw = max(fwidth(lm), 1e-4);
+	coast = 1.0 - smoothstep(0.55 * border_px, 1.2 * border_px, abs(lm - 0.5) / lw);
 	vec3 bc = border_color; float a = 0.0;
 	if (faint > 0.0) { bc = mix(border_color, col, 0.35); a = min(faint * 0.25, 1.0) * faint_border; }
+	if (ctrl > 0.0) { bc = ink; a = min(ctrl * 0.5, 1.0) * control_alpha; }
 	if (power > 0.0) { bc = ink; a = min(power * 0.5, 1.0); }
-	if (coast > 0.0) { bc = coast_color; a = min(coast * 0.5 + 0.35, 1.0); }
+	if (coast > 0.0) { bc = coast_color; a = coast; }
 	if ((own == selected_id || sel_edge) && selected_id != 0 && power > 0.0) { bc = ink; a = 1.0; }
 	if (sl && power > 0.0) { bc = ink; a = 1.0; }
 	col = mix(col, bc, a * fade);

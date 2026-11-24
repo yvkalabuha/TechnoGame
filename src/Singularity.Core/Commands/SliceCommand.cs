@@ -55,6 +55,8 @@ public enum CommandKind
     CancelDesign = 6,
     RetireCohort = 7,
     SellCohort = 8,
+    StartMasteryProgramme = 9,
+    CancelMasteryProgramme = 10,
 }
 
 /// <summary>
@@ -121,7 +123,11 @@ public sealed record CancelDesign(int Actor, DesignHandle Design) : SliceCommand
 /// <c>retire_cohort(design, n)</c> (contract r6 §4.4f, #141): <c>n</c> units of a project in С or В leave the fleet without money, the oldest first.
 /// The player and the AI send the same command (the AI's are <c>pol.*</c> columns). Checks that need the state are the layer's (<c>BAD_RETIRE</c>).
 /// </summary>
-public sealed record RetireCohort(int Actor, DesignHandle Design, int N) : SliceCommand(Actor)
+/// <param name="Acknowledged">
+/// The player has seen the warning (#437): without it the session refuses a retirement that lowers the best generation in service with
+/// <see cref="CommandRefusal.NeedsConfirmation"/>. The layer ignores it; it is part of the command so that the log replays the same way.
+/// </param>
+public sealed record RetireCohort(int Actor, DesignHandle Design, int N, bool Acknowledged = false) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.RetireCohort;
 }
@@ -133,6 +139,22 @@ public sealed record RetireCohort(int Actor, DesignHandle Design, int N) : Slice
 public sealed record SellCohort(int Actor, DesignHandle Design, int N) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.SellCohort;
+}
+
+/// <summary>
+/// <c>start_mastery_programme(process, mode)</c> (TASK-0134, production-mastery.md §1a, §5; «Обучение персонала: процесс X»): <paramref name="Abroad"/> sends
+/// specialists to a country that has mastered the process (the existing catch-up), else the programme runs on the own pilot site. Checked at
+/// application by the same function the AI uses; a refusal carries a <c>why_not</c> code.
+/// </summary>
+public sealed record StartMasteryProgramme(int Actor, int ProcessNumber, bool Abroad) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.StartMasteryProgramme;
+}
+
+/// <summary><c>cancel_mastery_programme(process)</c>: frees the slot and the money of <c>D</c>; the input stops with the next month.</summary>
+public sealed record CancelMasteryProgramme(int Actor, int ProcessNumber) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.CancelMasteryProgramme;
 }
 
 /// <summary>An accepted command with its key: one line of <c>commands.log</c>.</summary>

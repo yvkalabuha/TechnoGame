@@ -108,6 +108,8 @@ public sealed partial class Main : Node3D
         if (langIdx >= 0 && langIdx + 1 < args.Length) Loc.SetLang(args[langIdx + 1]);
         Settings.Apply(Settings.Current, GetWindow(), !_shots && !_bench && !_mapFrames);
         _debug = args.Contains("--debug");
+        var qIdx = Array.IndexOf(args, "--quit-after");   // test runs: leave the game after N seconds (a live-session check needs a real run that ends)
+        if (qIdx >= 0 && qIdx + 1 < args.Length && double.TryParse(args[qIdx + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var qs)) _quitAfter = qs;
         var pwIdx = Array.IndexOf(args, "--power");
         if (pwIdx >= 0 && pwIdx + 1 < args.Length) _powerArg = args[pwIdx + 1];
         // --power ID is the service shortcut (ui-tester, --shots): it skips the menu and starts that power at once.
@@ -136,6 +138,9 @@ public sealed partial class Main : Node3D
         _overlay = new Overlay();
         layer.AddChild(_overlay);
         _overlay.Setup(_cam);
+        _overlay.InRegion = (c, lon, lat) => _data.InLabelRegion(c, lon, lat);
+        _overlay.LegendOpen = Settings.Current.MapLegendOpen;
+        _overlay.LegendToggled += open => { Settings.Current.MapLegendOpen = open; if (!_shots && !_mapFrames && !_bench) Settings.Save(); };
         foreach (var c in top) _overlay.AddLabel(c, false);
         foreach (var c in _data.ColonyLabels) if (Names.Country(c.Name) != null) _overlay.AddLabel(c, false, true);
         _hud = new Label { Position = new Vector2(12, 0), Visible = _debug };
@@ -322,6 +327,21 @@ public sealed partial class Main : Node3D
         _tintsReady = true;
         foreach (Control c in new Control[] { _mainMenu, _newGame, _settings, _credits }) layer.MoveChild(c, -1);   // menus stay above the panels
         ShowPower(_player, _startedFromMenu);   // the player's own power has no right panel: the map shows, the areas open from the rail
+        _liveCheckT = 0; _liveCheck = true;
+    }
+
+    // One run-time check on the live gameplay session (not only --map-frames): the actors of the running Session are mapped to countries of the 1945 map,
+    // labels are placed, the map key is on screen and the occupation zones are drawn with their hatch.
+    bool _liveCheck, _liveFailed, _liveRan; double _liveCheckT, _quitAfter;
+    void LiveMapCheck()
+    {
+        int actors = _actorCountry.Length, mapped = _actorCountry.Count(c => c != 0), occ = 0;
+        foreach (var s in _data.Style.Regions) if (s.Hatch == HatchKind.Occupied) occ++;
+        // The occupation hatch must be on screen: hatching enabled in the material and a visible strength for the occupation kind.
+        bool hatchOn = _showHatch && _globeMat.GetShaderParameter("hatch_occupied").AsVector3().Z > 0f;
+        bool ok = _host.Ready && _host.Snap != null && actors > 0 && mapped > 0 && _overlay.VisibleLabels > 0 && _overlay.LegendPlaced && occ > 0 && hatchOn;
+        _liveFailed = !ok; _liveRan = true;
+        GD.Print($"MAPCHECK live session: actors={actors} mapped={mapped} labels={_overlay.VisibleLabels} legend={(_overlay.LegendPlaced ? "on" : "off")} occupied_regions={occ} hatch={(hatchOn ? "on" : "off")}: " + (ok ? "PASS" : "FAIL"));
     }
 
     // Alerts of the player's own power are also plates on the globe: halo, outline, sign (#326). Stacked below each other at the country.
@@ -483,12 +503,16 @@ public sealed partial class Main : Node3D
 
         var img = Image.CreateFromData(GlobeData.W, GlobeData.H, false, Image.Format.Rg8, _data.RegionIdBytes());
         var idTex = ImageTexture.CreateFromImage(img);
-        var lutTex = ImageTexture.CreateFromImage(Image.CreateFromData(GlobeData.LutWidth, 2, false, Image.Format.Rgba8, _data.RegionLut));
+        var lutTex = ImageTexture.CreateFromImage(Image.CreateFromData(GlobeData.LutWidth, 3, false, Image.Format.Rgba8, _data.RegionLut));
 
         _globeMat = new ShaderMaterial { Shader = GD.Load<Shader>("res://shaders/globe.gdshader") };
         _globeMat.SetShaderParameter("ids", idTex);
         _globeMat.SetShaderParameter("region_lut", lutTex);   // sRGB bytes; the shader converts to linear light, so that the lit fills match the validator's model
         _globeMat.SetShaderParameter("sea_color", new Color(Palette.C.Sea));
+        var hc = HatchLogic.Params(HatchKind.Colony); var ho = HatchLogic.Params(HatchKind.Occupied);
+        _globeMat.SetShaderParameter("control_alpha", HatchLogic.ControlAlpha);
+        _globeMat.SetShaderParameter("hatch_colony", new Vector3(hc.Period, hc.Width, hc.Alpha));
+        _globeMat.SetShaderParameter("hatch_occupied", new Vector3(ho.Period, ho.Width, ho.Alpha));
         _globeMat.SetShaderParameter("grid_color", new Color(Palette.GlobeGrid));
         var pl = Ui.Paper.SrgbToLinear();
         _globeMat.SetShaderParameter("paper", new Vector3(pl.R, pl.G, pl.B));
@@ -582,7 +606,7 @@ public sealed partial class Main : Node3D
             if (sk.Keycode is Key.Space or Key.P) _signal.TogglePause();
             else if (sk.Keycode == Key.Bracketleft) _signal.StepSpeed(-1);
             else if (sk.Keycode == Key.Bracketright) _signal.StepSpeed(1);
-            else if (sk.Keycode == Key.L) { if (_tree.Visible && _tree.CanLegend) _tree.ToggleLegend(!_tree.LegendOpen); }
+            else if (sk.Keycode == Key.L) { if (_tree.Visible) { if (_tree.CanLegend) _tree.ToggleLegend(!_tree.LegendOpen); } else _overlay.ToggleLegend(); }
             else _signal.SetSpeed((int)(sk.Keycode - Key.Key1) + 1);
         }
         else if (e is InputEventKey f3 && f3.Pressed && f3.Keycode == Key.F3)
@@ -651,7 +675,7 @@ public sealed partial class Main : Node3D
         ("map1945_europe_1920x1080.png", 16, 49, 1.75f, true),
         ("map1945_africa_1920x1080.png", 20, 3, 2.25f, true),
         ("map1945_asia_1920x1080.png", 88, 38, 2.1f, true),
-        ("map1945_limb_1920x1080.png", 118, 38, 2.1f, false),   // Europe near the limb
+        ("map1945_limb_1920x1080.png", 118, 38, 2.1f, true),   // Europe near the limb
     };
 
     // The globe alone on the lit side: the five slice powers keep an ink contour and every tone stays at full strength.
@@ -668,6 +692,17 @@ public sealed partial class Main : Node3D
         bool ok = ix >= 0 && _data.Map.Rows[ix].Owner == "GBR" && _data.Style.Regions[ix].Hatch == HatchKind.Colony && _data.Style.Regions[ix].Tone == CountryPalette.Fixed[1].Tone;
         GD.Print("MAPCHECK british_india owner=GBR colony hatch: " + (ok ? "PASS" : "FAIL"));
         if (!ok) _shotFailed = true;
+        // Run-time check on the same state: occupation zones exist, are drawn with the occupation hatch and a lighter line than colonies (G7).
+        int occ = 0; bool occOk = true;
+        for (int i = 0; i < _data.Map.Rows.Length; i++)
+        {
+            var r = _data.Map.Rows[i];
+            if (r.Owner != "" && r.Controller != "" && r.Controller != r.Owner) { occ++; occOk &= _data.Style.Regions[i].Hatch == HatchKind.Occupied; }
+        }
+        occOk &= occ > 0 && HatchLogic.Params(HatchKind.Occupied).Period > HatchLogic.Params(HatchKind.Colony).Period;
+        GD.Print($"MAPCHECK occupation regions={occ} hatch Occupied, wider step: " + (occOk ? "PASS" : "FAIL"));
+        if (!occOk) _shotFailed = true;
+        _overlay.LegendVisible = true; _overlay.LegendOpen = true;
         _selected = 0; ApplySelection();
         _dist = 5f;
     }
@@ -679,6 +714,15 @@ public sealed partial class Main : Node3D
         var v = MapViews[_mapStep];
         if (_mapT < 0.3) { _yaw = v.Lon; _pitch = v.Lat; _dist = v.Dist; return; }
         if (_mapT < 1.2) return;
+        // G4 on the live state: the big names of the frame stay on the map.
+        if (v.Name.Contains("europe")) GD.Print($"MAPCHECK europe LBN screen area {_overlay.AreaOf("LBN"):F0} du2 (callout < {LabelPlacement.CalloutBelow}, frame < {LabelPlacement.FramedBelow})");
+        string need = v.Name.Contains("europe") ? "SWE" : v.Name.Contains("africa") ? "C_FRENCH_ALGERIA" : v.Name.Contains("asia") ? "THA" : null;
+        if (need != null)
+        {
+            bool shown = _overlay.IsShown(need);
+            GD.Print($"MAPCHECK {v.Name} label {need} shown: " + (shown ? "PASS" : "FAIL"));
+            if (!shown) _shotFailed = true;
+        }
         SaveShot(v.Name, null, v.Grey);
         _mapStep++; _mapT = 0;
     }
@@ -714,6 +758,8 @@ public sealed partial class Main : Node3D
         if (_shots && _tintsReady) ShotStep(delta);
         if (_bench) BenchStep(delta);
         if (_mapFrames) MapFramesStep(delta);
+        if (_quitAfter > 0 && _t > _quitAfter) GetTree().Quit(_liveFailed || !_liveRan ? 1 : 0);   // a run that ended before the live check ran is a failure
+        if (_liveCheck && (_liveCheckT += delta) > 2.0) { _liveCheck = false; LiveMapCheck(); }
         FlyStep(delta);
         UpdateCamera();
         if (_audio != null) { _audio.Actor = _player; _audio.CameraMoved(new Vector2(_yaw + _pitch * 1.7f, _dist)); }
@@ -735,6 +781,11 @@ public sealed partial class Main : Node3D
             c.AnchorLeft = c.AnchorRight = 0; c.OffsetLeft = left + 8; c.OffsetTop = top + 8; c.OffsetRight = left + 8 + c.CustomMinimumSize.X;
         }
         _journal.OffsetTop = top + 8;
+        // The map key: top left of the map area under the top bar; top right when an area panel holds the left; hidden over the tree and when both corners are taken.
+        _overlay.MapLeft = left; _overlay.MapTop = top;
+        _overlay.LegendLeftBusy = _area != AreaId.Map;
+        _overlay.LegendRightBusy = _actorPanel.Visible || _journal.Visible;
+        _overlay.LegendVisible = !_tree.Visible && _titleHidden.Count == 0;
         _helpBtn.OffsetLeft = left + 8; _helpBtn.OffsetRight = left + 44; _help.OffsetLeft = left + 8;
         // Badges: the active signals of an area, with the worst severity; locked areas never get one.
         var count = new int[AreaData.All.Length]; var sev = new int[AreaData.All.Length];
@@ -1163,32 +1214,91 @@ public sealed partial class Main : Node3D
             case 141 when _shotT >= 0.5: SaveProbe("flask_levels_100"); Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false); _shotStep = 142; _shotT = 0; break;
             case 142 when _shotT >= 0.6: SaveProbe("flask_levels_150"); Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _flaskProbe.QueueFree(); _shotStep = 143; _shotT = 0; break;
             // Science from a real session state: no fixture; a month at a time until the chain shows (at most about 12 s), then the live panel is checked against the snapshot
-            case 143 when _shotT >= 0.3: Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); InstrumentLogic.YearOverride = null; OpenArea(AreaId.Science); _signal.SetSpeed(0); _liveMonths = 0; _liveFirst = -1; _liveHit = null; _shotStep = 144; _shotT = 0; break;
+            case 143 when _shotT >= 0.3: Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); InstrumentLogic.YearOverride = null; OpenArea(AreaId.Science); _signal.SetSpeed(0); _liveMonths = 0; _liveFirst = -1; _liveHit = null; _liveEligible = null; _liveVisible = new int[_host.Layout.ActorIds.Length]; _liveLastMonth = -2; _shotStep = 144; _shotT = 0; break;
             // Live Science: the simulation runs in steps of 30 ticks (about a month); in each step every power's why_not snapshot is read. At the first step where a power has a Knowledge link,
             // that power's Science panel is opened (the area panel pointed at it) and checked; the scan then goes on to 30 years for the shares per power. No power with a link in 30 years: the run fails.
             case 144 when _shotT >= 0.2:
                 if (!ScanMonths(6)) break;
                 if (_liveFirst >= 0)
                 {
-                    _shotLog += $"live science: first Knowledge link: {_host.Layout.ActorIds[_liveFirst]} at step {_liveMonths} (date {_host.Snap.Date})\n";
+                    _shotLog += $"live science: first research in progress: {_host.Layout.ActorIds[_liveFirst]} at step {_liveMonths} (date {_host.Snap.Date})\n";
                     _host.WhyActor = _liveFirst; _areaPanel.ShowActor(_liveFirst); _shotStep = 145; _shotT = 0; break;
                 }
-                if (_liveMonths >= LiveMonthLimit) { LogLiveShares(); InstFail($"no live research chain in {_liveMonths} months for any power (date {_host.Snap.Date})"); }
+                if (_liveMonths >= LiveMonthLimit) { LogLiveShares(); InstFail($"no live research in progress in {_liveMonths} months for any power (date {_host.Snap.Date})"); }
                 _shotT = 0; break;
-            case 145 when _shotT >= 0.8:
+            case 145 when _shotT >= 0.8 && _host.Snap.WhyActor == _liveFirst:   // the panel has refreshed for this power
             {
-                int links = LiveKnowledgeLinks(), flasks = _areaPanel.ShotFlaskCount, want = Math.Min(links, 3);
-                _shotLog += $"live science: actor {_host.Layout.ActorIds[_liveFirst]}, knowledge links {links}, flasks shown {flasks}, date {_host.Snap.Date}\n";
-                if (links == 0) { InstFail("live science check failed: the snapshot lost its Knowledge links before the check"); break; }
-                if (flasks != want) { InstFail($"live science check failed: snapshot has {links} Knowledge links, the panel shows {flasks} flasks, expected {want}"); break; }
+                int links = LiveResearch(_liveFirst), flasks = _areaPanel.ShotFlaskCount, want = Math.Min(links, 3);
+                _shotLog += $"live science: actor {_host.Layout.ActorIds[_liveFirst]}, research in progress {links}, flasks shown {flasks}, date {_host.Snap.Date}\n";
+                if (links == 0) { InstFail("live science check failed: the view lost its research in progress before the check"); break; }
+                if (flasks != want) { InstFail($"live science check failed: the view has {links} researches in progress, the panel shows {flasks} flasks, expected {want}"); break; }
+                // the alloy flask reads the same view: its caption is what the view field gives
+                var cov = _host.Snap.View.Actors[_liveFirst].Alloy; var af = InstrumentLogic.AlloyFlask(cov);
+                string wantCap = Loc.T(InstrumentLogic.AlloyCaptionKey(af.State), InstrumentLogic.FlaskPercent(af.Level, af.Hatched));
+                _shotLog += $"live alloy: actor {_host.Layout.ActorIds[_liveFirst]}, supply {cov.Supply.ToDouble():F1}, need {cov.Need.ToDouble():F1}, deficit {cov.DeficitFraction.ToDouble():F2}, state {af.State}, caption \"{_areaPanel.ShotAlloyCaption}\"\n";
+                if (_areaPanel.ShotAlloyCaption != wantCap) { InstFail($"live alloy check failed: caption \"{_areaPanel.ShotAlloyCaption}\", the view field gives \"{wantCap}\""); break; }
                 var gr = _areaPanel.GetGlobalRect(); float k = PxPerDu();
                 SaveShot("flask_science_live.png", new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)));
-                CloseArea(); _host.WhyActor = _player; _shotStep = 146; _shotT = 0; break;
+                SaveShot($"full_live_science_{_host.Layout.ActorIds[_liveFirst]}_{_host.Snap.Date.Year}.png", null, true);   // full 1920x1080 frame of the live game, with a grey twin
+                OpenArea(AreaId.Production); _host.WhyActor = _liveFirst; _areaPanel.ShowActor(_liveFirst); _shotStep = 147; _shotT = 0; break;
             }
+            case 147 when _shotT >= 0.8 && _host.Snap.WhyActor == _liveFirst:
+                if (!_areaPanel.ShotAlloyRowShown) { InstFail("live production frame: the alloy flask row is not on screen"); break; }
+                SaveShot($"full_live_production_{_host.Layout.ActorIds[_liveFirst]}_{_host.Snap.Date.Year}.png", null, true);
+                CloseArea(); _host.WhyActor = _player; _shotStep = 146; _shotT = 0; break;
             case 146 when _shotT >= 0.2:
                 if (!ScanMonths(60)) break;
-                if (_liveMonths >= LiveMonthLimit) { LogLiveShares(); _shotStep = 45; }
+                _visA = 0; _shotStep = 151; _shotT = 0; break;
+            // After each scanned stretch every power's Science panel is opened and the flasks on screen are counted against the view's research field.
+            case 151 when _shotT >= 0.1:
+                if (_visA >= _host.Layout.ActorIds.Length)
+                {
+                    CloseArea(); _host.WhyActor = _player;
+                    if (_liveMonths >= LiveMonthLimit)
+                    {
+                        LogLiveShares();
+                        // a live frame where the alloy is sufficient: the first power whose coverage reads «Normal»
+                        _liveNormal = -1;
+                        for (int a = 0; a < _host.Layout.ActorIds.Length && _liveNormal < 0; a++)
+                            if (_host.Snap.View.Actors[a].Alloy.State == Singularity.Core.Products.AlloyState.Normal) _liveNormal = a;
+                        if (_liveNormal >= 0) { OpenArea(AreaId.Production); _host.WhyActor = _liveNormal; _areaPanel.ShowActor(_liveNormal); _shotStep = 148; }
+                        else { _shotLog += "live alloy: no power with sufficient alloy at the end of the scan\n"; _alloyI = 0; _shotStep = 149; }
+                    }
+                    else _shotStep = 146;
+                    _shotT = 0; break;
+                }
+                OpenArea(AreaId.Science); _host.WhyActor = _visA; _areaPanel.ShowActor(_visA); _shotStep = 152; _shotT = 0; break;
+            case 152 when _shotT >= 0.4 && _host.Snap.WhyActor == _visA:
+            {
+                int inView = LiveResearch(_visA), shown = _areaPanel.ShotFlaskCount, want = Math.Min(inView, 3);
+                _shotLog += $"live science visible: {_host.Layout.ActorIds[_visA]} month {_liveMonths}, research {inView}, flasks on screen {shown}\n";
+                if (shown != want) InstFail($"live science visibility check failed: {_host.Layout.ActorIds[_visA]} at month {_liveMonths} has {inView} researches in the view and {shown} flasks on screen, expected {want}");
+                else if (_liveVisible != null && inView > 0) _liveVisible[_visA]++;
+                _visA++; _shotStep = 151; _shotT = 0; break;
+            }
+            case 148 when _shotT >= 0.8 && _host.Snap.WhyActor == _liveNormal:
+                if (!_areaPanel.ShotAlloyRowShown) { InstFail("live normal-alloy frame: the alloy flask row is not on screen"); break; }
+                SaveShot($"full_live_production_normal_{_host.Layout.ActorIds[_liveNormal]}_{_host.Snap.Date.Year}.png", null, true);
+                _shotLog += $"live alloy normal frame: actor {_host.Layout.ActorIds[_liveNormal]}, date {_host.Snap.Date}, caption \"{_areaPanel.ShotAlloyCaption}\"\n";
+                CloseArea(); _host.WhyActor = _player; _alloyI = 0; _shotStep = 149; _shotT = 0; break;
+            // The four alloy states as full 1920x1080 frames at 100 %: the same panel and function as in play, fed with fixture coverage (0 shortage, 1 disruption, 2 none, 3 sufficient).
+            case 149 when _shotT >= 0.2:
+                Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false);
+                OpenArea(AreaId.Production); _areaPanel.ShotAlloy(ShotCoverage(_alloyI)); _shotStep = 150; _shotT = 0; break;
+            case 150 when _shotT >= 0.6:
+            {
+                var fx = InstrumentLogic.AlloyFlask(ShotCoverage(_alloyI));
+                var want = new[] { Singularity.Core.Products.AlloyState.Shortage, Singularity.Core.Products.AlloyState.Disrupted, Singularity.Core.Products.AlloyState.NoSmelting, Singularity.Core.Products.AlloyState.Normal }[_alloyI];
+                if (fx.State != want) { InstFail($"alloy fixture {_alloyI} reads {fx.State}, expected {want}"); break; }
+                string wantCap4 = Loc.T(InstrumentLogic.AlloyCaptionKey(want), InstrumentLogic.FlaskPercent(fx.Level, fx.Hatched));
+                if (!_areaPanel.ShotAlloyRowShown) { InstFail($"alloy frame {want}: the flask row is not on screen"); break; }
+                if (_areaPanel.ShotAlloyCaption != wantCap4) { InstFail($"alloy frame {want}: caption \"{_areaPanel.ShotAlloyCaption}\", expected \"{wantCap4}\""); break; }
+                SaveShot($"full_alloy_{want}_100.png", null, true);
+                _shotLog += $"alloy state frame {want}: caption \"{_areaPanel.ShotAlloyCaption}\"\n";
+                _areaPanel.ShotAlloy(null); CloseArea();
+                if (++_alloyI < 4) _shotStep = 149; else _shotStep = 45;
                 _shotT = 0; break;
+            }
             // alert plates on tints 1 and 5 (7 is not on the map): day side, then tint 5 on the night side
             case 45: AimAlert(_alertI, false); _shotStep = 46; _shotT = 0; break;
             case 46 when _shotT >= 0.7:
@@ -1280,7 +1390,8 @@ public sealed partial class Main : Node3D
 
     // A failed shot-run check: the error goes to the run log and the process exits non-zero.
     const int LiveMonthLimit = 360;
-    int[] _liveHit; int _liveMonths, _liveFirst = -1;
+    int _liveNormal = -1, _alloyI, _visA; int[] _liveVisible;
+    int[] _liveHit, _liveEligible; int _liveMonths, _liveFirst = -1; long _liveLastMonth = -2;
 
     bool WaitFor(Func<bool> done, string what)
     {
@@ -1293,17 +1404,24 @@ public sealed partial class Main : Node3D
     bool ScanMonths(int n)
     {
         int na = _host.Layout.ActorIds.Length;
-        _liveHit ??= new int[na];
+        _liveHit ??= new int[na]; _liveEligible ??= new int[na];
         for (int m = 0; m < n && _liveMonths < LiveMonthLimit; m++)
         {
-            long target = _host.Snap.Tick + 30;
-            _host.StepTicks(30);
+            // Step to the first day of the next civil month (months are 28-31 days), so every calendar month is sampled once.
+            var now = _host.Snap.Date;
+            var day = new DateTime(now.Year, now.Month, now.Day);
+            long days = (new DateTime(now.Year, now.Month, 1).AddMonths(1) - day).Days;
+            long target = _host.Snap.Tick + days;
+            _host.StepTicks(days);
             if (!WaitFor(() => _host.Snap.Tick >= target, "a simulation step")) return false;
+            long vm = _host.Snap.View.Month;
+            if (vm == _liveLastMonth) continue;   // the same monthly view again: not a new sample
+            _liveLastMonth = vm;
             for (int a = 0; a < na; a++)
             {
-                _host.WhyActor = a;
-                if (!WaitFor(() => _host.Snap.WhyActor == a && _host.Snap.Tick >= target, "the why_not snapshot of a power")) return false;
-                if (LiveKnowledgeLinks() > 0) { _liveHit[a]++; if (_liveFirst < 0) _liveFirst = a; }
+                if (!HasUnknownNodes(a)) continue;   // nothing left to research: the month is not eligible for this power
+                _liveEligible[a]++;
+                if (LiveResearch(a) > 0) { _liveHit[a]++; if (_liveFirst < 0) _liveFirst = a; }
             }
             _liveMonths++;
             if (_liveFirst >= 0 && _shotStep == 144) return true;   // the first month with a link: stop here for the panel check
@@ -1311,14 +1429,23 @@ public sealed partial class Main : Node3D
         return true;
     }
 
+    // A month is eligible for a power while the data still has a node it does not know (the view's own count, for every power, subscribed or not).
+    bool HasUnknownNodes(int actor) => _host.Snap.View.Actors[actor].UnknownNodes > 0;
+
     void LogLiveShares()
     {
         for (int a = 0; a < _liveHit.Length; a++)
-            _shotLog += $"live science share: {_host.Layout.ActorIds[a]} has a Knowledge link in {_liveHit[a]} of {_liveMonths} steps ({100.0 * _liveHit[a] / Math.Max(_liveMonths, 1):F1} %)\n";
+        {
+            double share = 100.0 * _liveHit[a] / Math.Max(_liveEligible[a], 1);
+            _shotLog += $"live science share: {_host.Layout.ActorIds[a]} has research in progress in {_liveHit[a]} of {_liveEligible[a]} eligible calendar months of {_liveMonths} ({share:F1} %)\n";
+            _shotLog += $"live science visible: {_host.Layout.ActorIds[a]} had its flasks on screen in {_liveVisible[a]} sampled months\n";
+            if (_liveVisible[a] == 0) InstFail($"live science visibility check failed: {_host.Layout.ActorIds[a]} never showed a flask on screen in the sampled months");
+            if (_liveEligible[a] == 0 || share < 80) InstFail($"live science share check failed: {_host.Layout.ActorIds[a]} shows research flasks in {share:F1} % of {_liveEligible[a]} eligible months, expected at least 80 %");
+        }
     }
 
-    // Knowledge links the panel would read: the same condition as the live path of the Science flasks.
-    int LiveKnowledgeLinks() => _host.Snap is { WhyError: "", Target: not null } sn ? Singularity.Client.Spike.InstrumentLogic.ResearchFlasks(sn.Links, int.MaxValue).Count : 0;
+    // Flasks the panel would read for an actor: the same field and function as the live path of the Science flasks.
+    int LiveResearch(int actor) => _host.Snap.View.Actors[actor].Research is { IsDefault: false } r ? InstrumentLogic.ResearchFlasks(r, int.MaxValue).Count : 0;
 
     // The shot run exits non-zero when any live check failed (T6, rail, tree, input). Palette validator failures that exist on main are listed below by exact name: reported, not failing.
     bool _shotFailed;
@@ -1529,7 +1656,7 @@ public sealed partial class Main : Node3D
         _instSkipShot = false;
         if (++_instI >= 18)
         {
-            _areaPanel.ShotResearch(null); InstrumentLogic.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); CloseArea();
+            _areaPanel.ShotResearch(null); _areaPanel.ShotAlloy(null); InstrumentLogic.YearOverride = null; Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); CloseArea();
             return true;
         }
         int q = _instI % 9, era = q % 3;
@@ -1537,19 +1664,38 @@ public sealed partial class Main : Node3D
         InstrumentLogic.YearOverride = InstYears[era];
         OpenArea(InstAreas[q / 3]);
         // shot-only state: the scenario has no research chain
-        _areaPanel.ShotResearch(InstAreas[q / 3] == AreaId.Science ? new[] { ShotLink("s8.fnd.compressible_flow", 3, 4), ShotLink("s8.fnd.boundary_layer", 1, 5), ShotLink("s7.fnd.brayton_cycle", 5, 5) } : null);
+        _areaPanel.ShotResearch(InstAreas[q / 3] == AreaId.Science ? ShotScienceStep(era) : null);
+        // the Production frames show four alloy states: shortage, none, sufficient at 100 % and disruption, none, shortage at 150 % (the live frames show the real ones)
+        _areaPanel.ShotAlloy(InstAreas[q / 3] == AreaId.Production ? ShotCoverage((_instI < 9 ? new[] { 0, 2, 3 } : new[] { 1, 2, 0 })[era]) : null);
         if (InstAreas[q / 3] == AreaId.Finance) _instPhase = 1;   // an unsent edit and the focus come from real input: pencil marker and focus frame show
         return false;
     }
 
-    // A why_not Knowledge link for the shot fixture: the panel reads links the same way as in play.
-    Link ShotLink(string id, long have, long need)
+    // A research entry for the shot fixture: the panel reads the same view type as in play.
+    Singularity.Session.ResearchView ShotResearchView(string id, long have, long need, bool threshold = false)
     {
         var n = _host.Data.Nodes;
         int number = -1;
         for (int i = 0; i < n.Count; i++) if (n.Id[i] == id) number = n.Number[i];
-        return new Link(WhyNotLayer.Knowledge, WhyNotCause.MissingNode, number, Singularity.Kernel.Fx6.FromInt(have), Singularity.Kernel.Fx6.FromInt(need), System.Collections.Immutable.ImmutableArray<Lever>.Empty, Singularity.Kernel.Fx6.Zero, null);
+        return new Singularity.Session.ResearchView(number, Singularity.Kernel.Fx6.FromInt(have), Singularity.Kernel.Fx6.FromInt(need), threshold);
     }
+
+    // Science fixtures that differ by era step: early (two flasks just started), mid (three, one at its threshold), late (nothing in progress).
+    Singularity.Session.ResearchView[] ShotScienceStep(int era) => era switch
+    {
+        0 => new[] { ShotResearchView("s8.fnd.boundary_layer", 1, 8), ShotResearchView("s8.fnd.compressible_flow", 1, 5) },
+        1 => new[] { ShotResearchView("s8.fnd.transonic_aerodynamics", 3, 4), ShotResearchView("s5.fnd.high_temperature_creep", 1, 2), ShotResearchView("s7.fnd.brayton_cycle", 5, 5, true) },
+        _ => System.Array.Empty<Singularity.Session.ResearchView>(),
+    };
+
+    // Alloy coverage fixtures for the four states: 0 shortage, 1 disruption, 2 no melt, 3 sufficient.
+    static Singularity.Core.Products.AlloyCoverage ShotCoverage(int state) => state switch
+    {
+        0 => new(Singularity.Kernel.Fx6.FromInt(40), Singularity.Kernel.Fx6.FromInt(100), Singularity.Kernel.Fx6.Zero),
+        1 => new(Singularity.Kernel.Fx6.FromInt(75), Singularity.Kernel.Fx6.FromInt(50), Singularity.Kernel.Fx6.FromDouble(0.25)),
+        2 => new(Singularity.Kernel.Fx6.Zero, Singularity.Kernel.Fx6.Zero, Singularity.Kernel.Fx6.Zero),
+        _ => new(Singularity.Kernel.Fx6.FromInt(100), Singularity.Kernel.Fx6.FromInt(50), Singularity.Kernel.Fx6.Zero),
+    };
 
     static void PressKey(Key k, bool pressed = true, bool shift = false) => Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = pressed, ShiftPressed = shift });
 

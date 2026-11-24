@@ -54,8 +54,10 @@ public enum UpkeepWord
 /// <param name="BelowKeep">The design is in <c>Def(K)</c> and the command leaves fewer than <c>keep</c> units (a warning; the command is allowed).</param>
 /// <param name="OldestRemaining">Months of service left of the oldest cohort that would go first, 0 without a fleet.</param>
 /// <param name="Sale">The sale quote; null for a retirement.</param>
+/// <param name="GenBefore">The best generation in service (<c>G</c>) now (#437).</param>
+/// <param name="GenAfter">...and after the command: the warning of a retirement is a fall of it.</param>
 public readonly record struct FleetForecast(Fx6 UpkeepDelta, Fx6 UBefore, Fx6 UAfter, UpkeepWord WordAfter, LineBind LineBind, bool FreedMoneyIsSpent,
-    bool FieldedBefore, bool FieldedAfter, bool InDefK, bool BelowKeep, int OldestRemaining, SaleQuote? Sale);
+    bool FieldedBefore, bool FieldedAfter, bool InDefK, bool BelowKeep, int OldestRemaining, SaleQuote? Sale, int GenBefore, int GenAfter);
 
 // Fleet part of the product layer (contract r6 §4.4f, §9.1; spec A42): the commands retire_cohort and sell_cohort, the policy year, the
 // leader key as pure functions of the snapshot, and the forecasts.
@@ -65,6 +67,9 @@ public sealed partial class ProductsSystem
 
     /// <summary>Units taken off by <c>retire_cohort</c> so far, dust included (contract r6 §3.1).</summary>
     public Fx6 Retired(int actor, int design) => Fx6.FromRaw(_retired[design].Current[actor]);
+
+    /// <summary>Units whose replacement has arrived: the overage leaves against them (#431).</summary>
+    public Fx6 ReplacementCredit(int actor, int design) => Fx6.FromRaw(_replCredit[design].Current[actor]);
 
     /// <summary>Units sold by <c>sell_cohort</c> so far, dust included.</summary>
     public Fx6 Sold(int actor, int design) => Fx6.FromRaw(_sold[design].Current[actor]);
@@ -116,11 +121,11 @@ public sealed partial class ProductsSystem
     }
 
     /// <summary><c>n_Q(d, t) = ⌊Σ_{y: q(d,y)} count(d, y)⌋</c>: whole units of the cohorts built while the design's processes were mastered (§9.1 r13a).</summary>
-    public long UnitsBuiltMastered(int actor, int design)
+    public long UnitsBuiltMastered(int actor, int design, long month)
     {
         Span<Fx6> counts = stackalloc Fx6[_y];
         CurrentCounts(actor, design, counts);
-        return UnitsBuiltMasteredOf(actor, design, counts);
+        return UnitsBuiltMasteredOf(actor, design, month, counts);
     }
 
     /// <summary>
@@ -143,11 +148,11 @@ public sealed partial class ProductsSystem
     // The rule of fielded_L on given cohort counts: the snapshot's counts for the metric and the decisions, the post-Take counts for the fleet forecast.
     private bool FieldedLOf(int actor, int design, long month, ReadOnlySpan<Fx6> counts) =>
         Stage(actor, design) != DesignStage.None
-        && (FieldedMasteredOf(actor, design, month, counts) || UnitsBuiltMasteredOf(actor, design, counts) >= _p.NServiceMin);
+        && (FieldedMasteredOf(actor, design, month, counts) || UnitsBuiltMasteredOf(actor, design, month, counts) >= _p.NServiceMin);
 
     private bool FieldedMasteredOf(int actor, int design, long month, ReadOnlySpan<Fx6> counts)
     {
-        if (Stage(actor, design) == DesignStage.None || FleetRules.Whole(counts) < _p.NServiceMin)
+        if (Stage(actor, design) == DesignStage.None || EffectiveWhole(counts, month) < _p.NServiceMin)
             return false;
         foreach (int p in PrcSet(actor, design))
         {
@@ -157,12 +162,15 @@ public sealed partial class ProductsSystem
         return true;
     }
 
-    private long UnitsBuiltMasteredOf(int actor, int design, ReadOnlySpan<Fx6> counts)
+    // ⌊n_eff⌋ (#435): the units in service weighed by the value of their age at the month; the test of «fielded» reads it, not the plain count.
+    private long EffectiveWhole(ReadOnlySpan<Fx6> counts, long month) => FleetRules.Effective(counts, month, _m0, _p).Raw / Fx6.Scale;
+
+    private long UnitsBuiltMasteredOf(int actor, int design, long month, ReadOnlySpan<Fx6> counts)
     {
         Span<Fx6> qualified = stackalloc Fx6[_y];
         for (int y = 0; y < _y; y++)
             qualified[y] = CohortMastered(actor, design, y) ? counts[y] : Fx6.Zero;
-        return FleetRules.Whole(qualified);
+        return EffectiveWhole(qualified, month);
     }
 
     /// <summary><c>G(a, t)</c>: the largest <c>gen(d)</c> over <c>fielded_L</c>, 0 without any.</summary>
@@ -305,8 +313,37 @@ public sealed partial class ProductsSystem
             }
         }
         SaleQuote? quote = sell ? Quote(actor, design, n, month) : null;
+        int genBefore = 0, genAfter = 0;
+        for (int d = 0; d < _d; d++)
+        {
+            if (FieldedL(actor, d, snapshot))
+                genBefore = Math.Max(genBefore, Gen(actor, d));
+            if (d == design ? stillFielded : FieldedL(actor, d, snapshot))
+                genAfter = Math.Max(genAfter, Gen(actor, d));
+        }
         return new FleetForecast(delta, u0, u1, WordOf(u1), bind, bind == LineBind.Money, wasFielded, stillFielded, inDef,
-            inDef && left < _p.NServiceMin, oldest, quote);
+            inDef && left < _p.NServiceMin, oldest, quote, genBefore, genAfter);
+    }
+
+    /// <summary>
+    /// The first month from <paramref name="month"/> in which the design is no longer in service by <c>n_eff</c> (#435), if nothing is bought, lost or
+    /// retired and the replacement credit does not grow; −1 if it stays within the longest horizon (1020 months) or is not in service now. A read for the
+    /// screen and the journal, not part of the tick.
+    /// </summary>
+    public long FieldedUntil(int actor, int design, long month)
+    {
+        long snapshot = month - 1;
+        if (!FieldedL(actor, design, snapshot))
+            return -1;
+        Fx6[] counts = Cohorts(actor, design);
+        Fx6 credit = Fx6.FromRaw(_replCredit[design].Current[actor]);
+        for (long t = month; t < month + 1020; t++)
+        {
+            FleetRules.ExpendCredit(counts, ref credit, t, _m0, _p);
+            if (!FieldedLOf(actor, design, t, counts))
+                return t;
+        }
+        return -1;
     }
 
     // ---- compute: steps 2a, 2d, 2e of the contract (r6 §4.4d)
@@ -385,6 +422,7 @@ public sealed partial class ProductsSystem
             book.Stage[d] = (DesignStage)(next ? _stage[d].Next[a] : _stage[d].Current[a]);
             book.Retired[d] = Fx6.FromRaw(next ? _retired[d].Next[a] : _retired[d].Current[a]);
             book.Sold[d] = Fx6.FromRaw(next ? _sold[d].Next[a] : _sold[d].Current[a]);
+            book.ReplCredit[d] = Fx6.FromRaw(next ? _replCredit[d].Next[a] : _replCredit[d].Current[a]);
             book.QuotaBase[d] = next ? _quotaBase[d].Next[a] : _quotaBase[d].Current[a];
             book.SoldY[d] = next ? _soldY[d].Next[a] : _soldY[d].Current[a];
             if (book.Stage[d] == DesignStage.None)

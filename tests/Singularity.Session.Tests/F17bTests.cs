@@ -84,25 +84,31 @@ public class F17bTests(ITestOutputHelper output)
     // Re-recorded in TASK-0099 (ADR-0005 p. 3), reason: schema v9 (new columns prd.d*.generation, parentGen, prd.lp.g*.gen, StaleHandle counter); the run ends before the first slot reuse, the old columns are unchanged (SlotReuseL2Tests.NoSlotIsReused_BeforeTheMonthOfAnyRewrittenGolden, projection tests).
     // Re-recorded in TASK-0115 (ADR-0005 p. 3, DEBT-0052), reason: schema v11 (new columns cmd.dsn.*.gen, cmd.flt.*.gen, cmd.series.*.gen, cmd.close.*.gen, pol.dsn.*.gen, pol.flt.*.gen, pol.start.*.gen, pol.close.*.gen); the run ends before the first slot reuse, so no handle is stale and the old columns are unchanged (projection tests T6dOff, FleetAblation, ToolingUnmet; SlotReuseL2Tests), only the new columns change the hash.
     // Re-recorded in TASK-0121 (#423), reason: schema v12 (new columns prd.d*.cohort.1978…2030 and prd.d*.q.1: the cohort years to 2030, the second block of the q mask); the old columns are unchanged (HorizonTests projection at 48 points of the build before the change, GoldenProjectionAgainstMainTests), so only the new columns change the hash.
+    // Re-recorded in TASK-0129 (fleet ageing, #431/#435-#437), reason: schema v13 (new column prd.d*.replCredit, in the hash from month 0); the old columns are unchanged to month 176 (projection tests: HorizonTests, T6dTests, FleetAblationTests, ToolingUnmetTests, GoldenProjectionAgainstMainTests), so only the new column changes these hashes.
+    // Re-recorded in TASK-0134 (train 2: Hcap(t), mastery), reason: schema v14 (new columns prd.prog.*, pol.prog.*, pol.below.*, cmd.prog.*, prd.rejected.BadProgramme, all zero before 1978-01); the old columns are unchanged to month 387 (MasteryIdentityTests, HorizonTests, GoldenProjectionAgainstMainTests), so only the new columns change this hash.
     private static readonly string[] AdmitGolden =
     [
-        "35a18ce37f9de1ea73453cb6608a9247d070f13b6636f2ad3aa41808584b5dbd",
-        "b4f448d2ec2e58cb83f52e93ac4c7840dcefa0d11592c4c6bb430cd97af40a60",
-        "01bf731856af256b66872a43de8df024cc72a98b82e29721e41888303494f3ae",
-        "27ba55c577cf82a6f305510e1ef0d461cc5e2e1c8288083622e5ee4880b09274",
-        "485aed7dead41a520ac69d650bffa8c2e847272c260ff0520b159c100a3ffbb5",
+        "d88c00c21b19839c58b3707e83970e1a6306c44abd96291661c8d461822a1e24",
+        "2723048fe59f28f1eeb675a203b928c80be778c080b297467ebf43a09c7be349",
+        "ed7c1e0f8b1c03fdd0565113c73e8dc7ac82d78198b887fafac8143148aae5c5",
+        "5c2ffdc423f606d5b9170172c0ba0e52a1c64784d11506282ab35758352eb824",
+        "d479890e57bbc4f9ec40a98b94de4e582cd98f2004800f40e7dbc3cba9de4b83",
     ];
 
     // Recorded in F17b (TASK-0030); re-recorded in TASK-0033, reason: T6d (columns of the licence and the disruption, run.t6d, the events themselves; both arms), then «exposure to data» (the scenario hash is in the run columns); in TASK-0032: part 1 (A39 «V5 default», #163: the default tooling target is V5), part 2 («tool_unmet column», F33).
     // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (prd.altReached.*); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
     // Re-recorded in TASK-0115 (ADR-0005 p. 3, DEBT-0052), reason: schema v11 (new columns cmd.dsn.*.gen, cmd.flt.*.gen, cmd.series.*.gen, cmd.close.*.gen, pol.dsn.*.gen, pol.flt.*.gen, pol.start.*.gen, pol.close.*.gen); the run ends before the first slot reuse, so no handle is stale and the old columns are unchanged (projection tests T6dOff, FleetAblation, ToolingUnmet; SlotReuseL2Tests), only the new columns change the hash.
     // Re-recorded in TASK-0121 (#423), reason: schema v12 (new columns prd.d*.cohort.1978…2030 and prd.d*.q.1: the cohort years to 2030, the second block of the q mask); the old columns are unchanged (HorizonTests projection at 48 points of the build before the change, GoldenProjectionAgainstMainTests), so only the new columns change the hash.
+    // Re-recorded in TASK-0129 (fleet ageing, #431/#435-#437), reason: schema v13 (new column prd.d*.replCredit, in the hash from month 0); the old columns are unchanged to month 176 (projection tests: HorizonTests, T6dTests, FleetAblationTests, ToolingUnmetTests, GoldenProjectionAgainstMainTests), so only the new column changes these hashes.
+    // Re-recorded in TASK-0133 (train 2: G5/G6 data + fleet ageing): nodes 62-81 and the G5/G6 alternatives change every trajectory; reason and list in the task file.
+    // Re-recorded in TASK-0134 (train 2: Hcap(t), mastery), reason: schema v14 (new columns prd.prog.*, pol.prog.*, pol.below.*, cmd.prog.*, prd.rejected.BadProgramme, all zero before 1978-01); the old columns are unchanged to month 387 (MasteryIdentityTests, HorizonTests, GoldenProjectionAgainstMainTests), so only the new columns change this hash.
+    // Re-recorded in TASK-0147 (train 2, schema train of the day): nodes 82-99 of the G5/G6 rev 3.1 chains and the ahead-of-time cost defaults (k 0.02, pow 2, max 10, #465) change every trajectory on the current data; the old columns stay identical on the 61-node data with k = 0 (identity tests, CreateLegacyNeutral); explanation: docs/simulation/golden-rerecord-train2.md.
     private static readonly string[] YProdGolden = [
-        "a0b7ab02e5f089a2c7e344132eae6d298b8f2e1f3d3ab117cf7261841460869e",
-        "176268f75949b996f0a412e6bf5744fcbd66ab80bc5ef4fa4cd240bb115f1790",
-        "e4d91b3e9de8d2eef18b0f6bfa6e6e1bc425e7e4801c2172fc3ff15e2687a86b",
-        "b8826fc74e189c01f3c7e48e61a633f3c0c716702f13b721dc9e4eb0ec950891",
-        "fa8a0682413a84bf1fe4657ef6b6a2e75586eb81b9c1528832b264f6a31198f9",
+        "7720220e04795975c4e9e8e7b11d50c51976106a68cb89f0464c416db3baa087",
+        "72f26b952b541355d508ce184a75f5760a3e793cbfeaa10c314383b37444fa6f",
+        "bc105f4a068424d605162b1e36f2b0c2bb269760010969e865b4176dbc7b7ed9",
+        "67831a2a45236e61bcb5337e42fcbdcf9adc4002fe79008787f1727833c9f407",
+        "d93fb1aeff06e533d72ee3f909fb1797517ee5efcc8e9e70cd1efbb0ce64b0fd",
     ];
 
     private static string HashOf(ulong seed, LineCloseRule rule)

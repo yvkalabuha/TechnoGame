@@ -1,7 +1,7 @@
 ---
 id: TASK-0143
 title: "Gemini sketch runs: detect subagent quota errors, one image per subagent, no extra refinements"
-status: IN_PROGRESS
+status: DONE
 level: light
 milestone: MS-M05
 agent: developer
@@ -13,6 +13,7 @@ related: [TASK-0141]
 approved_by: orchestrator
 approved_at: 2026-11-24
 approval_ref: "owner asked in chat 2026-11-24 to investigate fewer images; light task approved by Orchestrator"
+review_ref: "reviewer: APPROVE ab63291; codex: waived #432 after 3rd return (7f20bb65), remainder DEBT-0089; landed fbbc783"
 created: 2026-11-24
 ---
 
@@ -32,6 +33,9 @@ created: 2026-11-24
 2. Промпт: ровно один вызов `generate_image` на подагента, без уточнений и повторов; брать по одной картинке на подагента.
 3. По умолчанию подагенты по очереди (флаг `--parallel` для параллели).
 4. Вывод: «получено K из N, причина: квота, сброс через …».
+
+## Результат
+Пункты 1-4 сделаны в `tools/llm_worker/sketch.py`, `__main__.py` (флаг `--parallel`), README. 429 ищется в transcript.jsonl всех подагентов; при нехватке картинок запись получает `quota` (reset_seconds, reset_at) и `stop_reason: agy_quota`, вывод «got K of N, reason: quota, reset in ...», код 4; без картинок — отказ `agy_quota`. Промпт: один вызов generate_image на подагента, без уточнений, по очереди (по умолчанию). Тесты: `tools/llm_worker/tests/test_sketch.py`, фикстура `tools/llm_worker/fixtures/agy_subagent_quota_transcript.jsonl` (по форме реальных transcript 29c55f30 / 0412cc81, обезличена).
 
 ## Критерии приёмки
 - [ ] Unit-тесты: разбор 429 в transcript подагента, одна картинка на подагента, время сброса.

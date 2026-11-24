@@ -15,7 +15,9 @@ internal static class ColumnProjection
         using var h = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         foreach (Column c in s.World.Table.Columns)
         {
-            if (!include(c.Name))
+            // Columns of the parameters of TASK-0147 (run.k.ahead_*, run.k.disc_weight.*) exist only when a key is set; the identity tests set k = 0 explicitly,
+            // and these columns are not part of the build they compare with.
+            if (!include(c.Name) || c.Name.StartsWith("run.k.ahead_", StringComparison.Ordinal) || c.Name.StartsWith("run.k.disc_weight.", StringComparison.Ordinal))
                 continue;
             h.AppendData(Encoding.UTF8.GetBytes(c.Name));
             switch (c)
@@ -42,8 +44,17 @@ internal static class ColumnProjection
     public static bool IsAddedSinceBaselineColumn(string name) =>
         name.EndsWith(".generation", StringComparison.Ordinal) || name.EndsWith(".parentGen", StringComparison.Ordinal)
         || name.StartsWith("prd.lp.g", StringComparison.Ordinal) && name.EndsWith(".gen", StringComparison.Ordinal)
-        || IsDesignRefGenColumn(name) || IsHorizonColumn(name)
-        || name == "prd.rejected.StaleHandle" || name.StartsWith("prd.altReached.", StringComparison.Ordinal);
+        || IsDesignRefGenColumn(name) || IsHorizonColumn(name) || IsReplCreditColumn(name)
+        || name == "prd.rejected.StaleHandle" || name.StartsWith("prd.altReached.", StringComparison.Ordinal) || IsMasteryColumn(name);
+
+    /// <summary>
+    /// Columns added with the mastery programme and the mastery rules (TASK-0134, schema v14): the programme state, the AI's and the player's programme
+    /// commands, the months-below-y_prod counters and the rejection counter. Zero until 1978-01.
+    /// </summary>
+    public static bool IsMasteryColumn(string name) =>
+        name.StartsWith("prd.prog.", StringComparison.Ordinal) || name.StartsWith("pol.prog.", StringComparison.Ordinal)
+        || name.StartsWith("cmd.prog.", StringComparison.Ordinal) || name.StartsWith("pol.below.", StringComparison.Ordinal)
+        || name == "prd.rejected.BadProgramme";
 
     // Only the new design-reference generation columns; the old pol.lic.gen, pol.lic.q.gen and pol.lic.bad.gen stay in projections.
     public static bool IsDesignRefGenColumn(string name)
@@ -74,6 +85,10 @@ internal static class ColumnProjection
             && int.TryParse(rest.AsSpan("cohort.".Length), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int year)
             && year is >= 1978 and <= 2030;
     }
+
+    /// <summary>The replacement credit of the fleet ageing (TASK-0129, #431): <c>prd.dN.replCredit</c>.</summary>
+    public static bool IsReplCreditColumn(string name) =>
+        name.StartsWith("prd.d", StringComparison.Ordinal) && name.EndsWith(".replCredit", StringComparison.Ordinal);
 
     /// <summary>
     /// A design slot has been retaken (generation ≥ 2): from then on the run is no longer the run of a build without slot reuse, so a

@@ -33,7 +33,7 @@ public sealed partial class WhyNotAnalyzer
             if (DesignRules.Available(_pl, a, n => Knows(actor, n)))
                 engine = a;
         }
-        NodeClosure closure = Closure(actor);
+        NodeClosure closure = Closure(actor, month);
         for (int pass = 0; pass < 2; pass++)
         {
             int best = -1;
@@ -62,19 +62,19 @@ public sealed partial class WhyNotAnalyzer
 
     private void AddAltMissing(List<Link> links, int actor, int alt, long month)
     {
-        NodeClosure closure = Closure(actor);
+        NodeClosure closure = Closure(actor, month);
         AddNearestInClosure(links, actor, closure, ClosureOfAlt(actor, closure, alt), WhyNotCause.AltUnavailable, month);
     }
 
     // The closure machinery of spec §5.6 over the actor's snapshot (rows of the knowledge graph).
-    private NodeClosure Closure(int actor) => new(_kg.Count, r => _k.IsKnown(actor, r),
+    private NodeClosure Closure(int actor, long month) => new(_kg.Count, r => _k.IsKnown(actor, r),
         r =>
         {
             var groups = new int[_kg.Requires.GroupStart[r + 1] - _kg.Requires.GroupStart[r]][];
             for (int g = 0; g < groups.Length; g++)
                 groups[g] = [.. _kg.Requires.GroupMembers(_kg.Requires.GroupStart[r] + g).ToArray()];
             return groups;
-        }, r => Left(actor, r), r => _kg.Number[r]);
+        }, r => Left(actor, r, month), r => _kg.Number[r]);
 
     private bool[] ClosureOfAlt(int actor, NodeClosure closure, int alt)
     {
@@ -89,7 +89,7 @@ public sealed partial class WhyNotAnalyzer
         return closure.OfRequirements([.. groups], _pl.PrcOf(alt).ToArray().Select(p => _kg.RowOf(p)));
     }
 
-    private Fx6 Left(int actor, int row) => Max(Fx6.Zero, NeedOf(row) - _k.Prog(actor, row)) * _k.CEff(actor, row);
+    private Fx6 Left(int actor, int row, long month) => Max(Fx6.Zero, NeedOf(row) - _k.Prog(actor, row)) * _k.CEff(actor, row, month);
 
     /// <summary>
     /// «Ближайший недостающий узел по цене» (contract §6, spec §5.6 W1): among the nodes of the given closure that are on the actor's
@@ -110,7 +110,7 @@ public sealed partial class WhyNotAnalyzer
     // APP target: the closure of the node itself.
     private void AddNearestMissing(List<Link> links, int actor, int row, WhyNotCause cause, long month)
     {
-        NodeClosure closure = Closure(actor);
+        NodeClosure closure = Closure(actor, month);
         AddNearestInClosure(links, actor, closure, closure.OfNode(row), cause, month);
     }
 

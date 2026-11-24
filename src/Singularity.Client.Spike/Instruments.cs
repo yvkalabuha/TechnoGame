@@ -21,6 +21,9 @@ public sealed partial class FlaskControl : Control
     public int Ink = Ui.Teal;            // wash of the liquid
     public bool Deficit;                 // hatch the empty part and say so in words
     public bool Threshold;               // full, and the whole flask hatched: a hazard threshold is reached, the discovery is not certain
+    string _word;
+    /// <summary>Locale key of the word after the percent in a hatched flask; null = «low». «No alloy» says «none», not «low».</summary>
+    public string Word { get => _word; set { if (value == _word) return; _word = value; if (_level >= 0) { BuildText(); QueueRedraw(); } } }
     double _level = -1; string _txt = "", _lang = ""; int _lvl = -1;
     readonly Vector2[] _liq4 = new Vector2[4], _liq6 = new Vector2[6];   // reused by _Draw, no per-frame allocation
 
@@ -31,7 +34,7 @@ public sealed partial class FlaskControl : Control
     public static float WidestCaption(string lang)
     {
         float w = 0;
-        foreach (var t in new[] { "100 %", "99 % · " + Loc.In(lang, "flask.deficit") }) w = Math.Max(w, Fonts.Mono.GetStringSize(t, HorizontalAlignment.Left, -1, 14).X);
+        foreach (var t in new[] { "100 %", "99 % · " + Loc.In(lang, "flask.deficit"), "0 % · " + Loc.In(lang, "flask.none") }) w = Math.Max(w, Fonts.Mono.GetStringSize(t, HorizontalAlignment.Left, -1, 14).X);
         return w;
     }
 
@@ -59,7 +62,7 @@ public sealed partial class FlaskControl : Control
     void BuildText()
     {
         _lang = Loc.Lang;
-        _txt = InstrumentLogic.FlaskPercent(_level, Deficit).ToString(System.Globalization.CultureInfo.InvariantCulture) + " %" + (Deficit ? " · " + Loc.T("flask.deficit") : "");   // a reached threshold is said in the cell's note line, never here: the caption must fit the 100 du cell in both languages
+        _txt = InstrumentLogic.FlaskPercent(_level, Deficit).ToString(System.Globalization.CultureInfo.InvariantCulture) + " %" + (Deficit ? " · " + Loc.T(_word ?? "flask.deficit") : "");   // a reached threshold is said in the cell's note line, never here: the caption must fit the 100 du cell in both languages
     }
 
     static float HalfAt(float y) => y <= NeckBottom ? NeckHalf : NeckHalf + (y - NeckBottom) * Slope;

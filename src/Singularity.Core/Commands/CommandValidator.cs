@@ -27,9 +27,22 @@ public enum CommandRefusal
 
     /// <summary>The handle named a project that no longer stood in its slot when the command was applied (ADR-0005 p. 3); the layer counts it as <c>StaleHandle</c> and leaves the new tenant untouched.</summary>
     StaleHandle,
+
+    /// <summary>
+    /// A <c>retire_cohort</c> would lower the best generation in service (#437) and the command did not carry <c>Acknowledged</c>: nothing was queued;
+    /// <see cref="CommandVerdict.BestGenBefore"/> and <see cref="CommandVerdict.BestGenAfter"/> say what changes. Not a refusal of capacity or money: the UI asks and sends again.
+    /// </summary>
+    NeedsConfirmation,
+
+    /// <summary>A mastery programme command names a process that is not in the layout or has no programme (tier below 5).</summary>
+    BadProcess,
+
+    /// <summary>The mastery programme check refused the start; <see cref="CommandVerdict.Mastery"/> is the <c>why_not</c> code.</summary>
+    ProgrammeRefused,
 }
 
-public readonly record struct CommandVerdict(CommandRefusal Reason, string Message)
+public readonly record struct CommandVerdict(CommandRefusal Reason, string Message, int BestGenBefore = 0, int BestGenAfter = 0,
+    MasteryRefusal Mastery = MasteryRefusal.None, int MasteryDetail = 0)
 {
     public bool Accepted => Reason == CommandRefusal.None;
 
@@ -111,6 +124,10 @@ public static class CommandValidator
                 return HandleRefusal(v.Design, limits) ?? CommandVerdict.Ok;
             case CloseLine l:
                 return HandleRefusal(l.Design, limits) ?? CommandVerdict.Ok;
+            case StartMasteryProgramme sp:
+                return limits.ProcessNumbers.Contains(sp.ProcessNumber) ? CommandVerdict.Ok : CommandVerdict.Refuse(CommandRefusal.BadProcess, $"process {sp.ProcessNumber} is not in the layout");
+            case CancelMasteryProgramme cp:
+                return limits.ProcessNumbers.Contains(cp.ProcessNumber) ? CommandVerdict.Ok : CommandVerdict.Refuse(CommandRefusal.BadProcess, $"process {cp.ProcessNumber} is not in the layout");
             default:
                 throw new ArgumentOutOfRangeException(nameof(logged), c.GetType(), "Unknown command type.");
         }

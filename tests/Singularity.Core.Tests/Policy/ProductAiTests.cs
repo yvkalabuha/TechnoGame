@@ -608,7 +608,7 @@ public class ProductAiTests
             Assert.Equal(months[1], PolicyLiveness.LaunchMonth(p, Fx6.FromInt(d0), dRef, new PolicyParams().LaunchShare[(int)PolicyProfile.Adaptive]));
             Assert.Equal(months[2], PolicyLiveness.LaunchMonth(p, Fx6.FromInt(d0), dRef, new PolicyParams().LaunchShare[(int)PolicyProfile.Quality]));
         }
-        Assert.Equal(33, PolicyLiveness.LaunchMonthMax(p, new PolicyParams(), Probe));
+        Assert.Equal(37, PolicyLiveness.LaunchMonthMax(p, new PolicyParams(), Probe));
     }
 
     [Fact]

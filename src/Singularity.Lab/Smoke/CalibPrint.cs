@@ -190,8 +190,11 @@ internal static class CalibPrint
                 {
                     ActorView av = v.Actors[a];
                     TechKey kL = av.Key!.Value, kR = KeyR6(av, l, nServiceMin);
-                    // Checks of the rebuild against the Core key: T and N are one rule; fielded ⊆ fielded_L gives G_r6 ≤ G_L and P_r6 ≤ P_L.
-                    if (kR.T != kL.T || kR.N != kL.N || kR.G > kL.G || kR.P > kL.P || kL.G != av.FieldedGen)
+                    // Checks of the rebuild against the Core key: T and N are one rule. G_r6 ≤ G_L and P_r6 ≤ P_L (from fielded ⊆ fielded_L) no longer
+                    // hold since fleet ageing (#435, TASK-0129): Core counts ⌊n_eff⌋, weighed by age, and the view gives the plain InService the rebuild
+                    // reads, so an old fleet can be r6-fielded and not fielded_L (TASK-0134 probe, B0 seed 5). Such months are counted
+                    // (months_r6_gt_l of fielded_actor.csv), not refused.
+                    if (kR.T != kL.T || kR.N != kL.N || kL.G != av.FieldedGen)
                         throw new InvalidOperationException($"seed {seed} month {t} actor {l.ActorIds[a]}: K_L {kL} vs K_r6 {kR}, FieldedGen {av.FieldedGen}.");
                     kl[a] = kL;
                     kr[a] = kR;

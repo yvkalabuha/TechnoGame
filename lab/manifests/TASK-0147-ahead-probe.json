@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0147-ahead-probe",
+  "description": "TASK-0147 (#457, #458): 2x2 probe chains x ahead-of-time cost (docs/simulation/g5-g6-probe.md §10). The same manifest runs on the 99-node data of the branch (B) and, copied beside a repository-shaped copy of mods at b9c34b3, on the 81-node data (A). Series: cost off and three k points of the pre-registered ladder (AHEAD_POW 2, AHEAD_MAX 10). Mastery rules and Hcap are the build defaults (#452). Analysis lab/analysis/ahead_probe.py.",
+  "model": "JetSlice",
+  "ticks": 31168,
+  "chunk_size": 1,
+  "threads": [
+    1,
+    4
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 10
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full"
+  },
+  "series": [
+    {
+      "name": "off",
+      "params": {
+        "AHEAD_K": 0
+      }
+    },
+    {
+      "name": "k02",
+      "params": {
+        "AHEAD_K": 0.02,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 10
+      }
+    },
+    {
+      "name": "k05",
+      "params": {
+        "AHEAD_K": 0.05,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 10
+      }
+    },
+    {
+      "name": "k12",
+      "params": {
+        "AHEAD_K": 0.12,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 10
+      }
+    }
+  ],
+  "meta": {
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r18",
+    "preregistration": "docs/simulation/g5-g6-probe.md §10"
+  }
+}

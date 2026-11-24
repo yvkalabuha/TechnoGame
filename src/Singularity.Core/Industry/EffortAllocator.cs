@@ -8,7 +8,8 @@ namespace Singularity.Core.Industry;
 /// <c>rest_a</c> for the tooling step and the number of fill passes. With a scratch the array may be longer than <c>sites·P</c> and
 /// lives until the next use of the scratch.
 /// </summary>
-public readonly record struct EffortAllocation(Fx6[] E, Fx6 Rest, int Passes);
+/// <param name="Upkeep">Money of <c>D</c> the mastery programmes spent beyond their <c>E</c> (<c>(upkeep_mult − 1)·E</c>): grows nothing; <c>ΣE + Rest + Upkeep = D</c>.</param>
+public readonly record struct EffortAllocation(Fx6[] E, Fx6 Rest, int Passes, Fx6 Upkeep = default);
 
 /// <summary>
 /// Working buffers of <see cref="EffortAllocator"/>: filled and cleared by each call, never part of the state. One per thread or per
@@ -94,12 +95,18 @@ public static class EffortAllocator
 
         Fx6[] e = scratch.E;
         Fx6 left = budget;
+        // Step -1 (mastery programme, production-mastery.md §2 p. 5): the programme processes first, the oldest programme first, each up to
+        // E_useful; the upkeep beyond E is taken from D and grows nothing.
+        Fx6 upkeep = Fx6.Zero;
+        if (sites.Length > 0)
+            left = ProgrammeFirst(s, sites[0], l, month, euActor, e, left, ref upkeep);
         // Step 0 (player): focus processes first, in order.
         foreach (int r in focusRows)
         {
             if (r < 0)
                 continue;
-            Fx6 give = left < euActor[r] ? left : euActor[r];
+            Fx6 room = euActor[r] - e[r];
+            Fx6 give = left < room ? left : room;
             e[r] += give;
             left -= give;
         }
@@ -153,7 +160,44 @@ public static class EffortAllocator
                 continue;
             excess += SplitBySite(s, l, sites, r, e[r], eu, result, scratch.SiteShare);
         }
-        return new EffortAllocation(result, left + excess, passes);
+        return new EffortAllocation(result, left + excess, passes, upkeep);
+    }
+
+    // Programmes by (start, canonical position): repeated selection of the next one, no allocation (at most S_max programmes are active).
+    private static Fx6 ProgrammeFirst(ICultureSnapshot s, int home, IndustryLayout l, long month, Fx6[] euActor, Fx6[] e, Fx6 left, ref Fx6 upkeep)
+    {
+        long lastStart = 0;
+        int lastPos = -1;
+        while (left > Fx6.Zero)
+        {
+            int best = -1, bestPos = -1, pos = 0;
+            long bestStart = long.MaxValue;
+            foreach (int r in l.Order)
+            {
+                long start = s.ProgrammeStart(home, r, month);
+                bool after = start > lastStart || (start == lastStart && pos > lastPos);
+                if (start > 0 && after && start < bestStart)
+                {
+                    best = r;
+                    bestStart = start;
+                    bestPos = pos;
+                }
+                pos++;
+            }
+            if (best < 0)
+                break;
+            lastStart = bestStart;
+            lastPos = bestPos;
+            Fx6 give = left < euActor[best] ? left : euActor[best];
+            e[best] += give;
+            left -= give;
+            Fx6 waste = (s.Params.UpkeepMult - Fx6.One) * give;
+            if (waste > left)
+                waste = left;
+            left -= waste;
+            upkeep += waste;
+        }
+        return left;
     }
 
     // w_p = (((v_exp / (r_ref·labour_p))·gap_H)·mult_P) (R2-10, A37); v_exp summed and gap_H maximised over the actor's sites.

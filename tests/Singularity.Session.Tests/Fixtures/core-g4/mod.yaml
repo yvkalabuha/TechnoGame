@@ -1,0 +1,6 @@
+# Base game as a mod (ADR-0010). Files load in the listed order; the order is part of the data.
+id: core
+version: "0.1.0"
+name: "Singularity core data"
+dependencies: []
+files: [nodes.yaml, product_classes.yaml, scenario_1945.yaml]

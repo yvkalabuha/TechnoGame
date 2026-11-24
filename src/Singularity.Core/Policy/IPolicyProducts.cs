@@ -45,6 +45,9 @@ public interface IPolicyProducts
     /// <summary><c>yield_p</c> of the actor's site in month t, 0 when the process is unknown (spec §1.4).</summary>
     Fx6 AdmittedYield(int actorRow, int processNumber, long month);
 
+    /// <summary>The yield the culture allows without the experience ramp (see <c>IProductsInputs.CultureYield</c>); 0 when unknown.</summary>
+    Fx6 CultureYield(int actorRow, int processNumber, long month) => AdmittedYield(actorRow, processNumber, month);
+
     Fx6 AlloySupply(int actorRow, long month);
 
     /// <summary>Bureaus without a design in the snapshot.</summary>
@@ -58,6 +61,24 @@ public interface IPolicyProducts
     /// Null for a build without a fleet layer: the fleet rule is then silent.
     /// </summary>
     FleetBook? Fleet(int actorRow, long month) => null;
+
+    /// <summary>
+    /// Static foresight (production-mastery.md rev 2 p. 3): <c>Hcap(month + horizon) &gt; r_d</c> in every active dimension of the process at the actor's site.
+    /// A pure function of the snapshot. A build without mastery says yes.
+    /// </summary>
+    bool Masterable(int actorRow, int processNumber, long month, int horizon) => true;
+
+    /// <summary>The actor has a mastery programme on the process in the snapshot (TASK-0134).</summary>
+    bool ProgrammeActive(int actorRow, int processNumber) => false;
+
+    /// <summary>Mastery programmes of the actor in the snapshot.</summary>
+    int ProgrammeCount(int actorRow) => 0;
+
+    /// <summary>Another actor has mastered the process: the «abroad» mode of the programme has a donor (<c>world_lead</c>).</summary>
+    bool Donor(int actorRow, int processNumber) => false;
+
+    /// <summary>Whether a programme may start on the process now; the one pure function the command and the AI share.</summary>
+    ProgrammeVerdict ProgrammeVerdict(int actorRow, int processNumber, bool abroad, long month) => new(MasteryRefusal.OutOfScope);
 
     /// <summary><c>G_front</c> of the snapshot (contract §9.1, #146).</summary>
     int GFront(long month) => 0;

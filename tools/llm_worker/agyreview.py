@@ -111,9 +111,9 @@ def _run_agy(prompt, worktree, schema_file, model, timeout_s, brain_dir, inside_
         raise AgyViolation("no conversation id in the stream: the transcript cannot be checked")  # fail closed
     calls, missing = sketch.transcript_calls(brain_dir, ids)
     roots = sketch.run_roots(worktree, inside_brain, ids)
-    bad = sketch.tool_violations(out, roots, sketch.verified_tools(calls, REVIEW_PATH_TOOLS), REVIEW_CONTROL,
-                                 REVIEW_PATH_TOOLS)
-    bad += sketch.call_violations(calls, roots, REVIEW_CONTROL, REVIEW_PATH_TOOLS)
+    bad = sketch.tool_violations(out, roots, sketch.verified_tools(calls, REVIEW_PATH_TOOLS),
+                                 sketch.sent_messages(calls), REVIEW_CONTROL, REVIEW_PATH_TOOLS)
+    bad += sketch.call_violations(calls, roots, ids, REVIEW_CONTROL, REVIEW_PATH_TOOLS)
     bad += [f"transcript missing: {c}" for c in missing]  # fail closed: no transcript, no trust
     if bad:
         raise AgyViolation(", ".join(dict.fromkeys(bad)))

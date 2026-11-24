@@ -20,6 +20,14 @@ public static class Names
     /// <summary>Historical anchor event of a node. ADR-0018 moved it out of Core into mods/core/locale (.ftl); until the client migrates to Fluent (CSV key node-anchor.*), an empty string means "not shown".</summary>
     public static string NodeAnchor(string id) => Loc.TOr("node-anchor." + Short(id), "");
 
+    /// <summary>Short name for a narrow label (a flask cell): the locale key nodeshort.* when it exists, else the full name.</summary>
+    public static string NodeShort(GameData d, int number)
+    {
+        for (int i = 0; i < d.Nodes.Count; i++)
+            if (d.Nodes.Number[i] == number) return Loc.TOr("nodeshort." + Short(d.Nodes.Id[i]), Node(d.Nodes.Id[i]));
+        return "#" + number;
+    }
+
     public static string Node(GameData d, int number)
     {
         for (int i = 0; i < d.Nodes.Count; i++)

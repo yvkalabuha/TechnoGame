@@ -47,6 +47,9 @@ class SketchTest(unittest.TestCase):
                   mock.patch.object(sketch, "scoped_deny_rules", lambda allowed, **kw: [f"read_file({a}-x)" for a in allowed])):
             p.start()
             self.addCleanup(p.stop)  # the real rule walk lists / and is covered in test_agy_review
+        n = mock.patch("tools.llm_worker.sketch._now", return_value=1795518306.0)  # 2026-11-24T11:05:06Z, the 429 of QFIX
+        self.now = n.start()
+        self.addCleanup(n.stop)
 
     def runner(self, stream=None, rc=0, image=True, err=""):
         def run(cmd, cwd, timeout):
@@ -256,6 +259,200 @@ class SketchTest(unittest.TestCase):
             self.go(runner=self.runner(stream=self.stream_with({"step_type": "agent_response"}, "ResourceExhausted"), image=False))
         self.assertEqual(c.exception.code, "agy_quota")
 
+    QFIX = Path(config.PACKAGE_DIR) / "fixtures" / "agy_subagent_quota_transcript.jsonl"
+
+    def quota_runner(self, image):
+        base = self.runner(image=image)
+
+        def run(cmd, cwd, timeout):
+            res = base(cmd, cwd, timeout)
+            if cmd[1] != "--version":
+                (self.brain / SUB / ".system_generated" / "logs" / "transcript.jsonl").write_text(self.QFIX.read_text())
+            return res
+        return run
+
+    def test_subagent_quota_without_images_is_quota_with_reset(self):
+        with self.assertRaises(sketch.SketchError) as c:
+            self.go(runner=self.quota_runner(image=False), count=2)
+        self.assertEqual(c.exception.code, "agy_quota")
+        self.assertIn("got 0 of 2", str(c.exception))
+        self.assertIn("reset in 4h40m37s", str(c.exception))
+
+    def test_subagent_quota_with_some_images_is_partial_quota(self):
+        _, md, rec = self.go(runner=self.quota_runner(image=True), count=2)
+        self.assertEqual(rec["stop_reason"], "agy_quota")
+        self.assertEqual(rec["quota"]["reset_seconds"], 4 * 3600 + 40 * 60 + 37)
+        self.assertTrue(rec["quota"]["reset_at"])
+        self.assertTrue(rec["partial"])
+        self.assertIn("got 1 of 2, reason: quota, reset in 4h40m37s", md.read_text())
+
+    def test_failed_run_after_subagent_429_is_quota_not_failed(self):
+        base = self.quota_runner(image=False)
+
+        def run(cmd, cwd, timeout):
+            rc, out, err = base(cmd, cwd, timeout)
+            return (rc, out, err) if cmd[1] == "--version" else (1, out, "agy crashed")
+        with self.assertRaises(sketch.SketchError) as c:
+            self.go(runner=run, count=2)
+        self.assertEqual(c.exception.code, "agy_quota")
+        self.assertIn("reset in 4h40m37s", str(c.exception))
+
+    def test_reset_at_counts_from_error_time(self):
+        _, _, rec = self.go(runner=self.quota_runner(image=True), count=2)  # real clock: reset_at must not depend on it
+        self.assertEqual(rec["quota"]["reset_at"], "2026-11-24T15:45:43+00:00")  # 11:05:06 + 4h40m37s
+
+    OK_SUB = "5719f167-8ad9-402f-89e8-32c2a1b75a28"
+
+    def test_extra_images_of_one_subagent_do_not_hide_another_429(self):
+        stream = FIXTURE.read_text() + json.dumps({"event": "step_update", "step_update": {
+            "conversation_id": self.OK_SUB, "step_index": 0, "state": "DONE", "step_type": "x"}}) + "\n"
+        base = self.runner(stream=stream, image=False)
+
+        def run(cmd, cwd, timeout):
+            res = base(cmd, cwd, timeout)
+            if cmd[1] != "--version":
+                (self.brain / SUB / ".system_generated" / "logs" / "transcript.jsonl").write_text(self.QFIX.read_text())
+                (self.brain / self.OK_SUB).mkdir(exist_ok=True)
+                for i, name in enumerate(("a.jpg", "a_v2.jpg")):  # a sub-agent's refinement
+                    p = self.brain / self.OK_SUB / name
+                    p.write_bytes(JPEG)
+                    os.utime(p, (4102444800 - 10 + i, 4102444800 - 10 + i))
+            return res
+        _, _, rec = self.go(runner=run, count=3)
+        self.assertEqual([f["name"] for f in rec["files"]], ["a_v2.jpg"])  # the latest, one per sub-agent
+        self.assertEqual(rec["quota"]["subagents"], 1)
+        self.assertEqual(rec["quota"]["got"], 1)  # not 2 files
+        self.assertEqual(rec["stop_reason"], "agy_quota")
+        self.assertTrue(rec["partial"])
+
+    def test_parent_conversation_error_is_not_a_subagent_refusal(self):
+        base = self.runner(image=True)
+
+        def run(cmd, cwd, timeout):
+            res = base(cmd, cwd, timeout)
+            if cmd[1] != "--version":
+                (self.brain / MAIN / ".system_generated" / "logs" / "transcript.jsonl").write_text(self.QFIX.read_text())
+            return res
+        _, _, rec = self.go(runner=run, count=1)
+        self.assertNotIn("quota", rec)
+        self.assertFalse(rec["partial"])
+
+    def test_collect_images_one_per_subagent_dir(self):
+        for cid, names in ((MAIN, ["m.jpg"]), (SUB, ["s1.jpg", "s2.jpg"])):
+            (self.brain / cid).mkdir(exist_ok=True)
+            for i, n in enumerate(names):
+                p = self.brain / cid / n
+                p.write_bytes(JPEG)
+                os.utime(p, (1000 + i, 1000 + i))
+        got = [p.name for p in sketch.collect_images([MAIN, SUB], 0, self.brain)]
+        self.assertEqual(got, ["m.jpg", "s2.jpg"])
+
+    def test_naive_reset_time_is_utc(self):
+        q = {"got": 0, "requested": 1, "reset_at": "2026-11-24T15:45:43", "kind": "quota"}
+        self.assertIn("reset in 4h40m37s", sketch.quota_text(q))
+
+    def test_finished_images_kept_when_parent_fails_after_subagent_429(self):
+        base = self.quota_runner(image=True)
+
+        def run(cmd, cwd, timeout):
+            rc, out, err = base(cmd, cwd, timeout)
+            return (rc, out, err) if cmd[1] == "--version" else (1, out, "agy crashed")
+        _, _, rec = self.go(runner=run, count=2)
+        self.assertEqual(len(rec["files"]), 1)
+        self.assertEqual(rec["quota"]["got"], 1)
+
+    def test_zero_images_still_saves_reset_time(self):
+        with self.assertRaises(sketch.SketchError):
+            self.go(runner=self.quota_runner(image=False), count=2)
+        rec = json.loads(next(self.runs.glob("sketch-*.json")).read_text())
+        self.assertEqual(rec["quota"]["reset_at"], "2026-11-24T15:45:43+00:00")
+        self.assertEqual(rec["stop_reason"], "agy_quota")
+        self.assertEqual(rec["files"], [])
+        self.assertTrue(next(self.runs.glob("sketch-*.md")).exists())
+
+    def test_reset_in_counts_from_now(self):
+        self.now.return_value += 300
+        with self.assertRaises(sketch.SketchError) as c:
+            self.go(runner=self.quota_runner(image=False), count=2)
+        self.assertIn("reset in 4h35m37s", str(c.exception))
+
+    def test_cli_partial_by_quota_exits_4(self):
+        from tools.llm_worker import __main__ as cli
+        rec = {"conversation_id": MAIN, "files": [{"path": "a.jpg"}], "partial": True, "requested": 2, "attribution": [],
+               "quota": {"got": 1, "requested": 2, "reset_at": "2026-11-24T15:45:43+00:00"}}
+        a = mock.Mock(with_visual=False, dry_run=False, ref=[], count=2, runs=self.runs, timeout=1, parallel=False,
+                      task="TASK-0141", prompt_file=self.prompt)
+        with mock.patch.object(cli.sketch_mod, "run_sketch", return_value=(Path("r.json"), Path("r.md"), rec)):
+            self.assertEqual(cli._sketch(a), 4)
+
+    def test_send_message_only_to_conversations_of_this_run(self):
+        ids = [MAIN, SUB]
+        self.assertEqual(sketch.call_violations([("send_message", [MAIN])], "/ws", ids), [])
+        self.assertEqual(sketch.call_violations([("send_message", ["0af7a474-ce07-4bc4-9735-46858b750c5e"])], "/ws", ids),
+                         ["send_message: recipient 0af7a474-ce07-4bc4-9735-46858b750c5e"])
+        self.assertEqual(len(sketch.call_violations([("send_message", [])], "/ws", ids)), 1)
+        self.assertEqual(sketch.call_violations([("send_message", ["parent"])], "/ws", ids), [])
+
+    def test_send_message_in_stream_needs_transcript_recipient(self):
+        step = {"step_type": "tool", "tool_name": "send_message"}
+        self.assertEqual(sketch.tool_violations(self.stream_with(step), "/ws"), ["send_message"])
+        self.assertEqual(sketch.tool_violations(self.stream_with(step), "/ws", sent=1), [])
+        two = (self.stream_with(dict(step, step_index=1)) + self.stream_with(dict(step, step_index=2)))
+        self.assertEqual(sketch.tool_violations(two, "/ws", sent=1), ["send_message"])  # one call covers one step
+        self.assertEqual(sketch.tool_violations(two, "/ws", sent=2), [])
+
+    def test_send_message_to_foreign_recipient_refuses_the_run(self):
+        base = self.quota_runner(image=True)
+
+        def run(cmd, cwd, timeout):
+            res = base(cmd, cwd, timeout)
+            if cmd[1] != "--version":
+                tr = self.brain / SUB / ".system_generated" / "logs" / "transcript.jsonl"
+                tr.write_text(tr.read_text().replace(MAIN, "0af7a474-ce07-4bc4-9735-46858b750c5e"))
+            return res
+        with self.assertRaises(sketch.SketchError) as c:
+            self.go(runner=run, count=2)
+        self.assertEqual(c.exception.code, "agent_tool_violation")
+
+    def test_503_no_capacity_is_agy_capacity_without_reset_time(self):
+        cap = (Path(config.PACKAGE_DIR) / "fixtures" / "agy_subagent_capacity_transcript.jsonl").read_text()
+        base = self.runner(image=False)
+
+        def run(cmd, cwd, timeout):
+            res = base(cmd, cwd, timeout)
+            if cmd[1] != "--version":
+                (self.brain / SUB / ".system_generated" / "logs" / "transcript.jsonl").write_text(cap)
+            return res
+        with self.assertRaises(sketch.SketchError) as c:
+            self.go(runner=run, count=2)
+        self.assertEqual(c.exception.code, "agy_capacity")
+        self.assertIn("got 0 of 2, reason: server capacity, try later", str(c.exception))
+        rec = json.loads(next(self.runs.glob("sketch-*.json")).read_text())
+        self.assertEqual(rec["stop_reason"], "agy_capacity")
+        self.assertIsNone(rec["quota"]["reset_at"])
+
+    def test_no_quota_record_when_all_images_arrive(self):
+        _, _, rec = self.go(runner=self.runner(image=True), count=1)
+        self.assertNotIn("quota", rec)
+
+    def test_reset_parsing(self):
+        self.assertEqual(sketch.reset_seconds("quota will reset after 4h40m7s."), 16807)
+        self.assertEqual(sketch.reset_seconds("reset after 12m"), 720)
+        self.assertIsNone(sketch.reset_seconds("quota exceeded"))
+        self.assertEqual(sketch.format_reset(16807), "4h40m7s")
+
+    def test_prompt_one_call_per_subagent_sequential_by_default(self):
+        seq = sketch.build_prompt("brief", 2, [])
+        self.assertIn("exactly ONE call", seq)
+        self.assertIn("no refinements", seq)
+        self.assertIn("one after another", seq)
+        self.assertNotIn("in parallel", seq)
+        self.assertIn("in parallel", sketch.build_prompt("brief", 2, [], parallel=True))
+
+    def test_parallel_flag_reaches_agy_prompt(self):
+        self.go(runner=self.runner(), parallel=True)
+        self.assertIn("in parallel", self.calls[-1][0][2])
+
     RF_ID = "0af7a474-ce07-4bc4-9735-46858b750c5e"
 
     def rf_runner(self, path_template, image=True):
@@ -291,8 +488,8 @@ class SketchTest(unittest.TestCase):
         self.assertEqual(c.exception.code, "agent_tool_violation")
 
     def test_transcript_run_command_is_refused(self):
-        calls = [("run_command", ["x"]), ("read_file", ['"/ws/a.png"']), ("send_message", [])]
-        self.assertEqual(sketch.call_violations(calls, "/ws"), ["run_command"])
+        calls = [("run_command", ["x"]), ("read_file", ['"/ws/a.png"']), ("send_message", [MAIN])]
+        self.assertEqual(sketch.call_violations(calls, "/ws", [MAIN]), ["run_command"])
 
     def test_event_read_file_with_quoted_path(self):
         ev = self.stream_with({"tool_name": "read_file", "args": {"Path": '"/ws/1-a.png"'}})

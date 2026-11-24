@@ -44,15 +44,23 @@ internal sealed class TestMods : IDisposable
     /// airframe, whose <c>eng_gen</c> and class would exceed G_max = 3), so a test mod can delete the otherwise referenced node
     /// s8.app.jet_fighter_g4.
     /// </summary>
+    // Alternatives of generations 5 and 6 (TASK-0133 data) go with G4: they need the G4 knowledge chain.
+    private static readonly string[] DropIds = ["eng_g5", "eng_g6", "eng_g6_adaptive", "hot_sc_sc", "hot_sc_cmc", "af_fbw", "af_composite", "af_lo_composite"];
+
+    private static readonly string[] DropProcesses = ["single_crystal_casting", "composite_layup_cure", "low_observable_finishing", "cmc_fabrication"];
+
     public static (string Name, string Text) DropG4Class()
     {
         string[] lines = File.ReadAllLines(Path.Combine(CoreDir, "product_classes.yaml"));
         int from = Array.FindIndex(lines, l => l == "    slots:"), to = Array.FindIndex(lines, l => l.StartsWith("    # ---- Product-layer inputs", StringComparison.Ordinal));
         string[] slots = [.. lines[from..to].Where(l => !l.Contains("{id: eng_g4,", StringComparison.Ordinal) && !l.Contains("{id: af_mach2,", StringComparison.Ordinal)
+            && !DropIds.Any(id => l.Contains("{id: " + id + ",", StringComparison.Ordinal))
             && !l.TrimStart().StartsWith('#'))];
-        string[] rows = [.. lines.Where(l => l.TrimStart().StartsWith("- {gen: ", StringComparison.Ordinal) && !l.Contains("gen: 4", StringComparison.Ordinal))];
+        string[] rows = [.. lines.Where(l => l.TrimStart().StartsWith("- {gen: ", StringComparison.Ordinal) && !l.Contains("gen: 4", StringComparison.Ordinal) && !l.Contains("gen: 5", StringComparison.Ordinal) && !l.Contains("gen: 6", StringComparison.Ordinal))];
         Assert.Equal(3, rows.Length);
-        return ("classes.yaml", "kind: product_class\npatch:\n  - id: jet_fighter\n" + string.Join("\n", slots) + "\n    generations:\n" + string.Join("\n", rows) + "\n");
+        string[] procs = [.. lines.Where(l => l.TrimStart().StartsWith("- {prc: ", StringComparison.Ordinal) && !DropProcesses.Any(p => l.Contains(p, StringComparison.Ordinal)))];
+        return ("classes.yaml", "kind: product_class\npatch:\n  - id: jet_fighter\n" + string.Join("\n", slots) + "\n    processes:\n" + string.Join("\n", procs)
+            + "\n    generations:\n" + string.Join("\n", rows) + "\n");
     }
 
     /// <summary>Replaces exactly one occurrence, so a test cannot silently edit nothing.</summary>

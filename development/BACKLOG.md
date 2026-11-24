@@ -133,8 +133,8 @@
 | [TASK-0115](../development/tasks/TASK-0115-end-to-end-project-handle.md) | DONE | End-to-end project handle through Session, AI, UI and command log v2 (DEBT-0052) | MS-M1 |
 | [TASK-0116](../development/tasks/TASK-0116-ci-green.md) | DONE | CI green on all jobs: Lab tests off Linux, llm_worker pilot contracts | MS-M0 |
 | [TASK-0117](../development/tasks/TASK-0117-client-ui-scale-policy.md) | DONE | Client UI scale policy: text never below the A1 floor at 1280x720 | MS-M05 |
-| [TASK-0118](../development/tasks/TASK-0118-codex-catchup-findings.md) | PROPOSED | Codex catch-up findings on landed core tasks (TASK-0099, 0103, 0107, 0110) | MS-M05 |
-| [TASK-0119](../development/tasks/TASK-0119-instrument-view-fields.md) | PROPOSED | Instrument data fields in the Session view: alloy coverage, research progress | MS-M05 |
+| [TASK-0118](../development/tasks/TASK-0118-codex-catchup-findings.md) | APPROVED | Codex catch-up findings on landed core tasks (TASK-0099, 0103, 0107, 0110) | MS-M05 |
+| [TASK-0119](../development/tasks/TASK-0119-instrument-view-fields.md) | DONE | Instrument data fields in the Session view: alloy coverage, research progress | MS-M05 |
 | [TASK-0120](../development/tasks/TASK-0120-core-command-verdicts.md) | PROPOSED | Core emits a per-command verdict; commands keyed by handle | MS-M05 |
 | [TASK-0121](../development/tasks/TASK-0121-slice-horizon-2030-train-1.md) | DONE | Slice horizon to 2030, train 1: Years = 86, q mask in 62-bit blocks, horizon fixture | MS-M05 |
 | [TASK-0122](../development/tasks/TASK-0122-budget-rule-variants-switch.md) | DONE | Budget rule variants behind a run switch for the Lab measurement (NOW, A, B1, B2) | MS-M05 |
@@ -143,13 +143,13 @@
 | [TASK-0125](../development/tasks/TASK-0125-no-mutable-statics-two-worlds.md) | DONE | No mutable static fields in Kernel, Core, Session; two worlds on one thread pool (A6) | MS-M1 |
 | [TASK-0126](../development/tasks/TASK-0126-task-0117-codex-remainder.md) | DONE | Open Codex findings after TASK-0117 landing (#432) | MS-M05 |
 | [TASK-0127](../development/tasks/TASK-0127-task-0125-codex-remainder.md) | DONE | Open Codex findings after TASK-0125 landing (#432) | MS-M05 |
-| [TASK-0128](../development/tasks/TASK-0128-g5-g6-content-design.md) | IN_PROGRESS | G5/G6 content for the jet slice: nodes, alternatives, anchors (train 2, T-C) | MS-M05 |
-| [TASK-0129](../development/tasks/TASK-0129-fleet-ageing-core.md) | IN_PROGRESS | Fleet ageing without replacement in Core (#431, #435-#437) | MS-M05 |
+| [TASK-0128](../development/tasks/TASK-0128-g5-g6-content-design.md) | DONE | G5/G6 content for the jet slice: nodes, alternatives, anchors (train 2, T-C) | MS-M05 |
+| [TASK-0129](../development/tasks/TASK-0129-fleet-ageing-core.md) | DONE | Fleet ageing without replacement in Core (#431, #435-#437) | MS-M05 |
 | [TASK-0130](../development/tasks/TASK-0130-scoped-view-subscription.md) | DONE | Scoped client view: node blocks only for subscribed actors (ADR-0025) | MS-M05 |
 | [TASK-0131](../development/tasks/TASK-0131-g5-g6-core-changes.md) | DONE | Core changes for G5/G6 data: licence mask word 2, generation cost multipliers, control-layer guards (train 2, T-G) | MS-M05 |
 | [TASK-0132](../development/tasks/TASK-0132-tree-keyboard-selection.md) | PROPOSED | Keyboard selection of technology tree nodes and keyboard tooltip (A6-A8) | MS-M05 |
-| [TASK-0133](../development/tasks/TASK-0133-g5-g6-data-probe.md) | IN_PROGRESS | G5/G6 data in mods on the train-2 branch and calibration probe (O-038) | MS-M05 |
-| [TASK-0134](../development/tasks/TASK-0134-hcap-growth-production-mastery.md) | IN_PROGRESS | Hcap growth and production mastery in Core: series gate, candidate close, foresight, mastery programme (#438-#440) | MS-M05 |
+| [TASK-0133](../development/tasks/TASK-0133-g5-g6-data-probe.md) | DONE | G5/G6 data in mods on the train-2 branch and calibration probe (O-038) | MS-M05 |
+| [TASK-0134](../development/tasks/TASK-0134-hcap-growth-production-mastery.md) | DONE | Hcap growth and production mastery in Core: series gate, candidate close, foresight, mastery programme (#438-#440) | MS-M05 |
 | [TASK-0135](../development/tasks/TASK-0135-gemini-visual-review.md) | DONE | Gemini visual second opinion in llm_worker (free tier, #441) | MS-M05 |
 | [TASK-0136](../development/tasks/TASK-0136-tree-clarity-depth-pass.md) | DONE | Knowledge tree and menu clarity pass after Gemini design review: player text, legend grammar, node sizes, menu reasons, sheet depth | MS-M05 |
 | [TASK-0137](../development/tasks/TASK-0137-globe-volume-atmosphere-prototype.md) | DONE | Globe volume and limb atmosphere: Godot prototype of three variants for the owner (#426, #442) | MS-M05 |
@@ -157,12 +157,12 @@
 | [TASK-0139](../development/tasks/TASK-0139-hud-time-controls.md) | DONE | HUD time controls: centred pause and speed buttons, no speed text, speed gauge active frame alignment | MS-M05 |
 | [TASK-0140](../development/tasks/TASK-0140-sound-timing-audit.md) | REVIEW | Sound audit: sounds that play at the wrong moment or irritate (owner feedback) | MS-M05 |
 | [TASK-0141](../development/tasks/TASK-0141-gemini-agy-sketches.md) | DONE | Gemini design sketches through Antigravity CLI (agy) in llm_worker (#451) | MS-M05 |
-| [TASK-0142](../development/tasks/TASK-0142-globe-map-remainder.md) | IN_PROGRESS | Globe map remainder after TASK-0138: hatch legend, occupation control line, small-state callouts, coast staircase | MS-M05 |
-| [TASK-0143](../development/tasks/TASK-0143-sketch-quota-subagents.md) | IN_PROGRESS | Gemini sketch runs: detect subagent quota errors, one image per subagent, no extra refinements | MS-M05 |
+| [TASK-0142](../development/tasks/TASK-0142-globe-map-remainder.md) | DONE | Globe map remainder after TASK-0138: hatch legend, occupation control line, small-state callouts, coast staircase | MS-M05 |
+| [TASK-0143](../development/tasks/TASK-0143-sketch-quota-subagents.md) | DONE | Gemini sketch runs: detect subagent quota errors, one image per subagent, no extra refinements | MS-M05 |
 | [TASK-0144](../development/tasks/TASK-0144-muted-sound-character.md) | REVIEW | Muted sound character (#455): soften attack and low-pass all routine cues | MS-M05 |
 | [TASK-0145](../development/tasks/TASK-0145-sketch-codex-engine.md) | APPROVED | Sketches through Codex CLI image generation (llm_worker sketch --engine codex) | MS-M05 |
 | [TASK-0146](../development/tasks/TASK-0146-review-fallback-agy-sonnet.md) | IN_PROGRESS | Second review fallback to Sonnet 5.5 through agy when the Codex limit is exhausted (#456) | MS-M05 |
-| [TASK-0147](../development/tasks/TASK-0147-ahead-of-time-cost.md) | IN_PROGRESS | Ahead-of-time cost for knowledge nodes in Core (#458) and G5/G6 rev 3.1 data on the train-2 branch | MS-M05 |
+| [TASK-0147](../development/tasks/TASK-0147-ahead-of-time-cost.md) | DONE | Ahead-of-time cost for knowledge nodes in Core (#458) and G5/G6 rev 3.1 data on the train-2 branch | MS-M05 |
 
 ## Гипотезы
 

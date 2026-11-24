@@ -311,6 +311,17 @@ public sealed class IndustrySystem : ITickSystem, ICultureSnapshot
 
     bool ICultureSnapshot.WorldLead(int site, int processRow) => WorldLead(site, processRow);
 
+    long ICultureSnapshot.ProgrammeStart(int site, int processRow, long month) => _inputs.ProgrammeStart(site, processRow, month);
+
+    bool ICultureSnapshot.ProgrammeDomestic(int site, int processRow, long month) => _inputs.ProgrammeDomestic(site, processRow, month);
+
+    /// <summary>
+    /// What a mastery programme on the process would do to the cell (TASK-0134): limiter, who would lead the cell, the time to the requirement. A pure
+    /// function of the snapshot; <c>why_not</c> and the AI use it before a programme starts. Needs the C-B rule.
+    /// </summary>
+    public ProgrammeAssessment AssessProgramme(int site, int processRow, Fx6 vProg, bool domestic, long month) =>
+        _rule is CbCultureRule cb ? cb.Assess(this, site, processRow, vProg, domestic, month) : new ProgrammeAssessment(ProgrammeFit.NotLabCeiling, -1, 0);
+
     bool ICultureSnapshot.Knows(int site, int processRow, long month) => _inputs.KnowsProcess(site, processRow, month);
 
     bool ICultureSnapshot.Planned(int site, int processRow, long month) => _inputs.Planned(site, processRow, month);

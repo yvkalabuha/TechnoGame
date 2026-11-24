@@ -19,6 +19,9 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
     public Fx6 AdmittedYield(int siteRow, int processNumber, long month) =>
         KnowsNode(siteRow, processNumber) ? world.Industry.Yield(siteRow, world.IndustryLayout.RowOf(processNumber), month).Yield : Fx6.Zero;
 
+    public Fx6 CultureYield(int siteRow, int processNumber, long month) =>
+        KnowsNode(siteRow, processNumber) ? world.Industry.Yield(siteRow, world.IndustryLayout.RowOf(processNumber), month).CultureYield : Fx6.Zero;
+
     public ProductionProfile Profile(int siteRow, ReadOnlySpan<PrcSetItem> prcSet, long month) => world.Industry.Profile(siteRow, prcSet, month);
 
     public Fx6 AlloySupply(int siteRow, long month) => world.Industry.Alloy(siteRow, month).Supply;
@@ -142,6 +145,16 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
         return PolicySystem.Candidate(design, p.PlatformGen(actorRow, design), p.StageOMonth(actorRow, design),
             other, p.PlatformGen(actorRow, other), p.StageOMonth(actorRow, other)) == other;
     }
+
+    // The player's programme commands, then the AI's (key order: SourceClass.Ai is last).
+    public int ProgrammeCommands(int actorRow, long month, Span<ProgrammeCommand> into)
+    {
+        int n = world.Commands.ProgrammeCommands(actorRow, month, into);
+        return n + world.Policy.AiProgrammeCommands(actorRow, month, into[n..]);
+    }
+
+    public ProgrammeVerdict ProgrammeVerdict(int actorRow, int processNumber, bool abroad, long month) =>
+        MasteryChecks.Verdict(world, actorRow, processNumber, abroad, month);
 
     // Only the L_P control reads it (spec §6.1): t_known of the APP node of the generation.
     public long AppKnownSince(int actorRow, int gen, long month) =>

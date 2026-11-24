@@ -39,6 +39,8 @@ internal sealed class PolicyProductsAdapter(SliceWorld world) : IPolicyProducts
 
     public Fx6 AdmittedYield(int actorRow, int processNumber, long month) => world.ProductsInputs.AdmittedYield(actorRow, processNumber, month);
 
+    public Fx6 CultureYield(int actorRow, int processNumber, long month) => world.ProductsInputs.CultureYield(actorRow, processNumber, month);
+
     public Fx6 AlloySupply(int actorRow, long month) => world.Industry.Alloy(actorRow, month).Supply;
 
     public int FreeBureaus(int actorRow) => world.Products.FreeBureaus(actorRow);
@@ -48,6 +50,21 @@ internal sealed class PolicyProductsAdapter(SliceWorld world) : IPolicyProducts
     private readonly ThreadLocal<FleetBook?> _book = new();
 
     public FleetBook? Fleet(int actorRow, long month) => _book.Value = world.Products.SnapshotBook(actorRow, month, _book.Value);
+
+    public bool Masterable(int actorRow, int processNumber, long month, int horizon) => MasteryChecks.Masterable(world, actorRow, processNumber, month, horizon);
+
+    public bool ProgrammeActive(int actorRow, int processNumber) => world.Products.ProgrammeStamp(actorRow, processNumber) > 0;
+
+    public int ProgrammeCount(int actorRow) => world.Products.ProgrammeCount(actorRow);
+
+    public bool Donor(int actorRow, int processNumber)
+    {
+        int row = world.IndustryLayout.RowOf(processNumber);
+        return row >= 0 && world.Industry.WorldLead(actorRow, row);
+    }
+
+    public ProgrammeVerdict ProgrammeVerdict(int actorRow, int processNumber, bool abroad, long month) =>
+        MasteryChecks.Verdict(world, actorRow, processNumber, abroad, month);
 
     public int GFront(long month) => world.Products.GFront(month - 1);
 

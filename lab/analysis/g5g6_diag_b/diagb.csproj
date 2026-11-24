@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- TASK-0134 step (1) diagnosis B harness (docs/simulation/g5-g6-probe.md §8). Not in Singularity.sln: build by hand, outputs go to lab/results.
+       Reads IndustrySystem state (culture_H, tooling_M, Hcap, yield, ramp, proc_X, proc_v, proc_E, limiter) by reflection on SliceSession; read-only. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../src/Singularity.Lab/Singularity.Lab.csproj" />
+  </ItemGroup>
+</Project>
