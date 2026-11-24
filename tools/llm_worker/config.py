@@ -54,11 +54,11 @@ PROFILES = {
                             "json_object", {"thinking": {"type": "disabled"}}, send_seed=False, paid=True,
                             key_file=DEEPSEEK_KEY_FILE, strict_key=True),
     # Gemini through Google's OpenAI-compatible endpoint (TASK-0135). Free tier only: paid=False, no money ledger.
-    # The model id is a parameter (--model); this default is NOT confirmed: check it with GET /v1beta/models on the
-    # first live run with a key and write the date here (DeepSeek names above were checked the same way).
+    # The model id is a parameter (--model). Default checked by GET /v1beta/models on 2026-11-24;
+    # gemini-2.5-flash, gemini-3.x-flash also listed.
     # Free-tier data may be used by Google to improve its products: only game frames go there (README).
     "gemini-flash": Profile("gemini-flash", "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-                            "gemini-2.5-flash", "json_object", {}, send_seed=False, paid=False,
+                            "gemini-flash-latest", "json_object", {}, send_seed=False, paid=False,
                             key_file=GEMINI_KEY_FILE, strict_key=True, free_public=True),
 }
 

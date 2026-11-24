@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import config, report, review as review_mod, visual as visual_mod
+from . import config, gitleaks, report, review as review_mod, visual as visual_mod
 from .contract import ContractError, fill_hashes, validate_contract
 from .ledger import Guard, Ledger, SpendRefused, load_prices
 from .provider import AuthError, KeyFileError, OpenAICompatProvider, ProviderError, ProviderUnavailable
@@ -33,7 +33,8 @@ def main(argv=None):
     p = sub.add_parser("submit", help="validate and enqueue contracts")
     p.add_argument("contracts", type=Path, nargs="+")
     p = sub.add_parser("run", help="process the queue, then write the report")
-    p.add_argument("--profile", choices=sorted(config.PROFILES), default="llamacpp",
+    p.add_argument("--profile", choices=sorted(n for n, pr in config.PROFILES.items() if not pr.free_public),
+                   default="llamacpp",
                    help="provider profile; deepseek-* is paid and needs the ledger and paid_providers_ready")
     p.add_argument("--url", default=None)
     p.add_argument("--model", default=None)
@@ -70,7 +71,9 @@ def main(argv=None):
     p.add_argument("--task", required=True)
     p.add_argument("--frames", type=Path, nargs="+", required=True)
     p.add_argument("--criteria", default=visual_mod.DEFAULT_CRITERIA)
-    p.add_argument("--model", default=None, help="default is unconfirmed: check GET /v1beta/models on the first run")
+    p.add_argument("--model", default=None, help="Gemini model id (default checked on 2026-11-24)")
+    p.add_argument("--mode", choices=visual_mod.MODES, default="criteria",
+                   help="criteria: findings against the criteria; design: also Gemini's own proposals")
     p.add_argument("--dry-run", action="store_true", help="load frames, scan the text, send nothing")
     sub.add_parser("status", help="list tasks and states")
     p = sub.add_parser("report", help="write reports/<date>.md")
@@ -180,9 +183,12 @@ def main(argv=None):
 def _visual(a):
     try:
         path, md, rec = visual_mod.run_visual(a.task, a.frames, a.criteria, runs_dir=a.runs, model=a.model,
-                                              dry_run=a.dry_run)
+                                              dry_run=a.dry_run, mode=a.mode)
     except KeyFileError:
         print(f"refused: {config.GEMINI_KEY_HINT}")
+        return 4
+    except (gitleaks.SecretDetected, gitleaks.GitleaksUnavailable) as e:
+        print(f"refused: {e}")
         return 4
     except visual_mod.VisualError as e:
         print(f"refused: {e}" if e.code in ("rate_limit", "secret_detected", "sandbox_unavailable") else f"error: {e}")

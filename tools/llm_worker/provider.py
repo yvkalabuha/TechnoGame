@@ -153,6 +153,9 @@ class OpenAICompatProvider:
         self.name = self.profile.name
         self.paid = self.profile.paid
         self.url = url or self.profile.url
+        if self.profile.free_public and (self.url != self.profile.url or guard is None):
+            # The key and the request go to one fixed host, and every attempt is counted by a guard.
+            raise ValueError("a free_public profile needs its own url and a rate guard")
         if not self.paid and not self.profile.free_public and not _local_host(self.url):
             raise ValueError("a free profile may only talk to a loopback or private address "
                              "(a public host is a paid service: use a paid profile with the ledger)")

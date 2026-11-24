@@ -15,7 +15,16 @@ from pathlib import Path
 from . import config, gitleaks, review
 from .provider import KeyFileError, OpenAICompatProvider
 
-SCHEMA = config.PACKAGE_DIR / "schemas" / "visual.schema.json"
+SCHEMAS = {"criteria": config.PACKAGE_DIR / "schemas" / "visual.schema.json",
+           "design": config.PACKAGE_DIR / "schemas" / "visual-design.schema.json"}
+MODES = tuple(SCHEMAS)
+DIRECTION = "docs/ui/VISUAL_DIRECTION_V06.md"
+SYSTEM_DESIGN = (
+    "Also act as a design reviewer. The visual direction document below is the intended direction. Besides "
+    "findings, give your own proposals: each has a title, what to change, why, the frames it concerns, "
+    "an effort estimate (S, M or L) and the risk it carries for the clarity and accessibility criteria "
+    "(say 'none' when there is none). Proposals must keep the direction and must not weaken C1-C8, A1-A12."
+)
 TASK_RE = re.compile(r"\ATASK-\d{4}\Z")
 DEFAULT_CRITERIA = "docs/ui/UI_DESIGN_SYSTEM.md#12"
 PNG = b"\x89PNG\r\n\x1a\n"
@@ -57,12 +66,15 @@ class RateGuard:
             day = datetime.fromtimestamp(now, timezone.utc).strftime("%Y-%m-%d")
             try:
                 st = json.loads(self.path.read_text(encoding="utf-8"))
-                if st["day"] != day:
-                    raise KeyError
                 recent = [t for t in st["recent"] if now - t < 60]
-                count = int(st["count"])
-            except (OSError, ValueError, KeyError, TypeError):
+                count = int(st["count"]) if st["day"] == day else 0
+                if st["day"] != day:
+                    recent = []
+            except FileNotFoundError:
                 recent, count = [], 0
+            except (OSError, ValueError, KeyError, TypeError):
+                # An unreadable counter must not read as "zero requests": the quota could be burnt silently.
+                raise RateLimited("usage file unreadable") from None
             if count >= self.rpd:
                 raise RateLimited(f"{count} requests today, limit {self.rpd}")
             if len(recent) >= self.rpm:
@@ -80,6 +92,10 @@ class RateGuard:
         pass  # a 4xx / 429 attempt stays counted
 
 
+# Gemini thinking tokens count against max_tokens: 8000 cut the first live answer at 317 output tokens
+# (2026-11-24, gemini-flash-latest, 3 frames, ~7.7K thinking tokens). Free tier: no spend.
+VISUAL_MAX_TOKENS = 32768
+
 def load_frames(frames, shots_dir=None):
     """[(name, mime, bytes)]. Only PNG or JPEG files inside shots_dir (symlinks resolved), size-limited."""
     if not frames:
@@ -93,14 +109,15 @@ def load_frames(frames, shots_dir=None):
         if root not in p.parents:
             raise VisualError("bad_frame", f"{f}: only files under shots-out/ may be sent")
         try:
+            size = p.stat().st_size
+            if size > config.MAX_FRAME_BYTES:
+                raise VisualError("bad_frame", f"{f}: larger than {config.MAX_FRAME_BYTES} bytes")
             data = p.read_bytes()
         except OSError as e:
             raise VisualError("bad_frame", f"{f}: {e.strerror}") from None
         mime = "image/png" if data.startswith(PNG) else "image/jpeg" if data.startswith(b"\xff\xd8\xff") else None
         if mime is None:
             raise VisualError("bad_frame", f"{f}: not a PNG or JPEG")
-        if len(data) > config.MAX_FRAME_BYTES:
-            raise VisualError("bad_frame", f"{f}: larger than {config.MAX_FRAME_BYTES} bytes")
         total += len(data)
         out.append((p.name, mime, data))
     if total > config.MAX_REQUEST_BYTES:
@@ -123,33 +140,41 @@ def load_criteria(spec, root=config.REPO_ROOT):
     return m.group(0)
 
 
-def build_messages(task, criteria, frames):
+def build_messages(task, criteria, frames, direction=None):
     """OpenAI-style messages: one user message with the text and every frame as an image_url data URI."""
     parts = [{"type": "text", "text": f"Task: {task}\nFrames, in order: {', '.join(n for n, _, _ in frames)}\n\n"
                                       f"Criteria:\n{criteria}"}]
     for name, mime, data in frames:
         parts.append({"type": "text", "text": f"Frame {name}:"})
         parts.append({"type": "image_url", "image_url": {"url": f"data:{mime};base64,{base64.b64encode(data).decode()}"}})
-    return [{"role": "system", "content": SYSTEM}, {"role": "user", "content": parts}]
+    system = SYSTEM
+    if direction is not None:
+        system += "\n\n" + SYSTEM_DESIGN
+        parts[0]["text"] += f"\n\nVisual direction:\n{direction}"
+    return [{"role": "system", "content": system}, {"role": "user", "content": parts}]
 
 
 def run_visual(task, frames, criteria_spec=DEFAULT_CRITERIA, runs_dir=config.RUNS_DIR, shots_dir=None,
-               model=None, make_provider=None, dry_run=False, root=config.REPO_ROOT):
+               model=None, make_provider=None, dry_run=False, root=config.REPO_ROOT, mode="criteria"):
     """One request. Returns (json path or None, markdown path or None, record)."""
     if not TASK_RE.match(task):
         raise VisualError("bad_task", task)
+    if mode not in SCHEMAS:
+        raise VisualError("bad_mode", mode)
+    schema_path = SCHEMAS[mode]
     loaded = load_frames(frames, shots_dir)
     criteria = load_criteria(criteria_spec, root)
+    direction = load_criteria(DIRECTION, root) if mode == "design" else None
     try:
-        gitleaks.scan_text(SYSTEM + "\n" + criteria)
+        gitleaks.scan_text(SYSTEM + "\n" + SYSTEM_DESIGN + "\n" + criteria + "\n" + (direction or ""))
     except gitleaks.SecretDetected as e:
         raise VisualError("secret_detected", str(e)) from None
     except gitleaks.GitleaksUnavailable as e:
         raise VisualError("sandbox_unavailable", str(e)) from None
     profile = config.PROFILES["gemini-flash"]
     model = model or profile.model
-    digest = hashlib.sha256(b"\0".join([model.encode(), criteria.encode()] + [d for _, _, d in loaded])).hexdigest()
-    record = {"kind": "visual", "task": task, "provider": profile.name, "model": model, "criteria": criteria_spec,
+    digest = hashlib.sha256(b"\0".join([model.encode(), mode.encode(), criteria.encode(), (direction or "").encode()] + [d for _, _, d in loaded])).hexdigest()
+    record = {"kind": "visual", "task": task, "mode": mode, "provider": profile.name, "model": model, "criteria": criteria_spec,
               "frames": [{"name": n, "bytes": len(d)} for n, _, d in loaded], "input_hash": digest}
     if dry_run:
         return None, None, record
@@ -158,12 +183,17 @@ def run_visual(task, frames, criteria_spec=DEFAULT_CRITERIA, runs_dir=config.RUN
             guard = RateGuard(config.LEDGER_DIR / config.GEMINI_USAGE_FILE)
             return OpenAICompatProvider(profile=profile, model=model, guard=guard, timeout_s=300)
     provider = make_provider()  # KeyFileError here: nothing has been sent
-    schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
-    comp = provider.complete(build_messages(task, criteria, loaded), schema, "visual", 8000)
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    try:
+        comp = provider.complete(build_messages(task, criteria, loaded, direction), schema, "visual", VISUAL_MAX_TOKENS)
+    except gitleaks.SecretDetected as e:
+        raise VisualError("secret_detected", str(e)) from None
+    except gitleaks.GitleaksUnavailable as e:
+        raise VisualError("sandbox_unavailable", str(e)) from None
     stem = f"visual-{task}-{digest[:8]}-gemini"
     record["usage"] = comp.usage
     try:
-        data = review.parse_answer(comp.content, SCHEMA, "visual")
+        data = review.parse_answer(comp.content, schema_path, "visual")
     except review.ReviewError as e:
         review.write_run(runs_dir, stem + "-invalid.json", {**record, "error": str(e), "raw": comp.content})
         raise VisualError("schema_invalid", str(e)) from None
@@ -187,4 +217,9 @@ def summary_md(rec):
             lines.append("| " + " | ".join(cells) + " |")
     else:
         lines.append("No findings.")
+    if r.get("proposals"):
+        lines += ["", "## Proposals", ""]
+        for k, p in enumerate(r["proposals"], 1):
+            lines += [f"{k}. **{p['title']}** (effort {p['effort']}; frames: {', '.join(p['frames'])})",
+                      f"   - Change: {p['change']}", f"   - Why: {p['why']}", f"   - Risk to clarity: {p['clarity_risk']}"]
     return "\n".join(lines) + "\n"

@@ -58,6 +58,9 @@ class Base(unittest.TestCase):
         p.chmod(mode)
         return str(p)
 
+    def guard(self):
+        return visual.RateGuard(self.tmp / "g.json", rpm=100, rpd=100)
+
     def profile(self, key_file):
         return replace(config.PROFILES["gemini-flash"], key_file=key_file)
 
@@ -102,7 +105,7 @@ class FramesAndRequest(Base):
             visual.load_criteria("../../etc/passwd")
 
     def test_image_message_survives_json_object_body(self):
-        p = OpenAICompatProvider(profile=self.profile(self.key_file()))
+        p = OpenAICompatProvider(profile=self.profile(self.key_file()), guard=self.guard())
         msgs = visual.build_messages("TASK-0126", "c", visual.load_frames(self.frames, self.shots))
         body = p.body(msgs, {"type": "object", "properties": {}}, "visual", 100)
         self.assertEqual(body["messages"][1]["content"], msgs[1]["content"])
@@ -230,7 +233,7 @@ class RateAndRetry(Base):
             n.append(1)
             raise urllib.error.HTTPError("u", 429, "x", {}, None)
 
-        p = OpenAICompatProvider(profile=self.profile(self.key_file()), opener=opener, sleep=lambda s: None)
+        p = OpenAICompatProvider(profile=self.profile(self.key_file()), guard=self.guard(), opener=opener, sleep=lambda s: None)
         with self.assertRaises(ProviderUnavailable):
             p.complete([{"role": "user", "content": "hi"}], {"type": "object"}, "visual", 10)
         self.assertEqual(len(n), config.PROVIDER_RETRIES + 1)
@@ -238,7 +241,7 @@ class RateAndRetry(Base):
     def test_provider_scans_text_parts_of_image_messages(self):
         seen = []
         with mock.patch("tools.llm_worker.gitleaks.scan_text", side_effect=seen.append):
-            p = OpenAICompatProvider(profile=self.profile(self.key_file()),
+            p = OpenAICompatProvider(profile=self.profile(self.key_file()), guard=self.guard(),
                                      opener=lambda r, timeout: Resp(ok_body("{}")), sleep=lambda s: None)
             msgs = visual.build_messages("TASK-0126", "crit", visual.load_frames(self.frames, self.shots))
             p.complete(msgs, {"type": "object"}, "visual", 10)
@@ -248,6 +251,92 @@ class RateAndRetry(Base):
     def test_other_free_profile_still_local_only(self):
         with self.assertRaises(ValueError):
             OpenAICompatProvider(profile=replace(config.PROFILES["llamacpp"]), url="https://example.com/v1", api_key="k")
+
+
+class Review2(Base):
+    def test_free_public_needs_guard_and_own_url(self):
+        prof = self.profile(self.key_file())
+        with self.assertRaises(ValueError):
+            OpenAICompatProvider(profile=prof)  # no guard
+        with self.assertRaises(ValueError):
+            OpenAICompatProvider(profile=prof, guard=self.guard(), url="https://example.com/v1/chat")
+        OpenAICompatProvider(profile=prof, guard=self.guard())
+
+    def test_run_does_not_offer_free_public_profile(self):
+        err = io.StringIO()
+        with mock.patch("sys.stderr", err), self.assertRaises(SystemExit):
+            cli.main(["run", "--profile", "gemini-flash"])
+        self.assertIn("invalid choice", err.getvalue())
+
+    def test_corrupted_usage_file_refuses(self):
+        path = self.tmp / "u.json"
+        path.write_text("{not json", encoding="utf-8")
+        with self.assertRaises(visual.RateLimited):
+            visual.RateGuard(path).before_attempt(b"", 1)
+
+    def test_oversized_frame_refused_before_read(self):
+        (self.shots / "big.png").write_bytes(PNG + b"0" * 100)
+        with mock.patch.object(config, "MAX_FRAME_BYTES", 50), \
+                mock.patch.object(Path, "read_bytes", side_effect=AssertionError("read")):
+            with self.assertRaises(visual.VisualError):
+                visual.load_frames([self.shots / "big.png"], self.shots)
+
+    def test_secret_found_by_provider_scan_is_refused(self):
+        class Leaky:
+            def complete(self, *a, **k):
+                raise prov.gitleaks.SecretDetected([{"rule": "r", "line": 1}])
+
+        with mock.patch("tools.llm_worker.gitleaks.scan_text"):
+            with self.assertRaises(visual.VisualError) as cm:
+                visual.run_visual("TASK-0126", self.frames, runs_dir=self.runs, shots_dir=self.shots,
+                                  make_provider=Leaky)
+        self.assertEqual(cm.exception.code, "secret_detected")
+
+    def test_cli_maps_gitleaks_unavailable_to_refused(self):
+        with mock.patch.object(visual, "run_visual", side_effect=prov.gitleaks.GitleaksUnavailable("x")), \
+                redirect_stdout(io.StringIO()) as out:
+            rc = cli.main(["visual", "--task", "TASK-0126", "--frames", "a.png"])
+        self.assertEqual(rc, 4)
+        self.assertIn("refused", out.getvalue())
+
+
+DESIGN = {**GOOD, "proposals": [{"title": "Bigger top bar", "change": "font 16", "why": "C3", "frames": ["a.png"],
+                                 "effort": "S", "clarity_risk": "none"}]}
+
+
+class DesignMode(Base):
+    def run_with(self, content, mode):
+        fake = FakeProvider([content])
+        res = visual.run_visual("TASK-0126", self.frames, runs_dir=self.runs, shots_dir=self.shots,
+                                make_provider=lambda: fake, mode=mode)
+        return res, fake
+
+    @mock.patch("tools.llm_worker.gitleaks.scan_text")
+    def test_design_prompt_has_direction_and_proposals_are_written(self, _scan):
+        (path, md, rec), fake = self.run_with(DESIGN, "design")
+        user = fake.calls[0]["messages"][1]["content"][0]["text"]
+        self.assertIn("Visual direction:", user)
+        self.assertIn(visual.load_criteria(visual.DIRECTION)[:40], user)
+        self.assertIn("design reviewer", fake.calls[0]["messages"][0]["content"])
+        self.assertEqual(rec["mode"], "design")
+        self.assertIn("Bigger top bar", md.read_text())
+
+    @mock.patch("tools.llm_worker.gitleaks.scan_text")
+    def test_criteria_mode_is_default_without_direction(self, _scan):
+        (path, md, rec), fake = self.run_with(GOOD, "criteria")
+        self.assertNotIn("Visual direction:", fake.calls[0]["messages"][1]["content"][0]["text"])
+        self.assertEqual(rec["mode"], "criteria")
+
+    @mock.patch("tools.llm_worker.gitleaks.scan_text")
+    def test_design_answer_without_proposals_is_invalid(self, _scan):
+        with self.assertRaises(visual.VisualError):
+            self.run_with(GOOD, "design")
+
+    @mock.patch("tools.llm_worker.gitleaks.scan_text")
+    def test_modes_have_different_hashes(self, _scan):
+        a = visual.run_visual("TASK-0126", self.frames, shots_dir=self.shots, dry_run=True)[2]
+        b = visual.run_visual("TASK-0126", self.frames, shots_dir=self.shots, dry_run=True, mode="design")[2]
+        self.assertNotEqual(a["input_hash"], b["input_hash"])
 
 
 if __name__ == "__main__":
