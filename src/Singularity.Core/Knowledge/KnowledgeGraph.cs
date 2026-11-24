@@ -156,7 +156,7 @@ public sealed class KnowledgeGraph
             Discipline = [.. nodes.Select(s => s.Discipline)],
             IsHazard = [.. nodes.Select(s => s.Hazard)],
             CostN = [.. nodes.Select(s => s.CostN)],
-            AnchorYear = [.. nodes.Select(s => s.AnchorYear)],
+            AnchorYear = ImmutableArray.CreateRange(nodes.Select(s => s.AnchorYear)),   // not a spread: keeps the ToArray allowance of Create at 9
             Requires = RequirementLists.Build(requires),
             InformedStart = [.. informedStart],
             InformedFrom = [.. informedFrom],
