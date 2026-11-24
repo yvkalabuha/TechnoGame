@@ -22,10 +22,9 @@
 - TASK-0129 [IN_PROGRESS] Fleet ageing without replacement in Core (#431, #435-#437) (developer)
 - TASK-0133 [IN_PROGRESS] G5/G6 data in mods on the train-2 branch and calibration probe (O-038) (developer)
 - TASK-0134 [IN_PROGRESS] Hcap growth and production mastery in Core: series gate, candidate close, foresight, mastery programme (#438-#440) (developer)
-- TASK-0136 [IN_PROGRESS] Knowledge tree and menu clarity pass after Gemini design review: player text, legend grammar, node sizes, menu reasons, sheet depth (developer)
+- TASK-0140 [IN_PROGRESS] Sound audit: sounds that play at the wrong moment or irritate (owner feedback) (sound-director)
 - TASK-0141 [IN_PROGRESS] Gemini design sketches through Antigravity CLI (agy) in llm_worker (#451) (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
-- TASK-0140 [APPROVED] Sound audit: sounds that play at the wrong moment or irritate (owner feedback) (sound-director)
 <!-- registry:active:end -->
 
 ## Блокеры

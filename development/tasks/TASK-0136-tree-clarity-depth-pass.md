@@ -1,7 +1,7 @@
 ---
 id: TASK-0136
 title: "Knowledge tree and menu clarity pass after Gemini design review: player text, legend grammar, node sizes, menu reasons, sheet depth"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M05
 agent: developer
@@ -13,6 +13,7 @@ related: [TASK-0132, TASK-0126, TASK-0135]
 approved_by: owner
 approved_at: 2026-11-24
 approval_ref: "owner in chat 2026-11-24 («делай»); #417, #426"
+review_ref: "reviewer: APPROVE 370c093; ui-art-director: PASS round 2 0808ceb; codex: waived #432 after 3rd return (370c0936), remainder DEBT-0085; landed 360836a"
 created: 2026-11-24
 ---
 
