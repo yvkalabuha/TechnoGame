@@ -157,12 +157,12 @@
 | [TASK-0139](../development/tasks/TASK-0139-hud-time-controls.md) | DONE | HUD time controls: centred pause and speed buttons, no speed text, speed gauge active frame alignment | MS-M05 |
 | [TASK-0140](../development/tasks/TASK-0140-sound-timing-audit.md) | REVIEW | Sound audit: sounds that play at the wrong moment or irritate (owner feedback) | MS-M05 |
 | [TASK-0141](../development/tasks/TASK-0141-gemini-agy-sketches.md) | DONE | Gemini design sketches through Antigravity CLI (agy) in llm_worker (#451) | MS-M05 |
-| [TASK-0142](../development/tasks/TASK-0142-globe-map-remainder.md) | PROPOSED | Globe map remainder after TASK-0138: hatch legend, occupation control line, small-state callouts, coast staircase | MS-M05 |
+| [TASK-0142](../development/tasks/TASK-0142-globe-map-remainder.md) | IN_PROGRESS | Globe map remainder after TASK-0138: hatch legend, occupation control line, small-state callouts, coast staircase | MS-M05 |
 | [TASK-0143](../development/tasks/TASK-0143-sketch-quota-subagents.md) | IN_PROGRESS | Gemini sketch runs: detect subagent quota errors, one image per subagent, no extra refinements | MS-M05 |
 | [TASK-0144](../development/tasks/TASK-0144-muted-sound-character.md) | IN_PROGRESS | Muted sound character (#455): soften attack and low-pass all routine cues | MS-M05 |
 | [TASK-0145](../development/tasks/TASK-0145-sketch-codex-engine.md) | APPROVED | Sketches through Codex CLI image generation (llm_worker sketch --engine codex) | MS-M05 |
 | [TASK-0146](../development/tasks/TASK-0146-review-fallback-agy-sonnet.md) | IN_PROGRESS | Second review fallback to Sonnet 5.5 through agy when the Codex limit is exhausted (#456) | MS-M05 |
-| [TASK-0147](../development/tasks/TASK-0147-ahead-of-time-cost.md) | APPROVED | Ahead-of-time cost for knowledge nodes in Core (#458) and G5/G6 rev 3.1 data on the train-2 branch | MS-M05 |
+| [TASK-0147](../development/tasks/TASK-0147-ahead-of-time-cost.md) | IN_PROGRESS | Ahead-of-time cost for knowledge nodes in Core (#458) and G5/G6 rev 3.1 data on the train-2 branch | MS-M05 |
 
 ## Гипотезы
 

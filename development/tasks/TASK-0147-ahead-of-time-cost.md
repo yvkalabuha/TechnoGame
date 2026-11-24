@@ -1,7 +1,7 @@
 ---
 id: TASK-0147
 title: "Ahead-of-time cost for knowledge nodes in Core (#458) and G5/G6 rev 3.1 data on the train-2 branch"
-status: APPROVED
+status: IN_PROGRESS
 level: light
 milestone: MS-M05
 agent: developer
