@@ -254,3 +254,63 @@ polity.C_ITALIAN_LIBYA,Italian Libya,Итальянская Ливия
 polity.C_PHILIPPINES,Philippines,Филиппины
 polity.C_GREENLAND,Greenland,Гренландия
 polity.C_SOUTH_WEST_AFRICA,South West Africa,Юго-Западная Африка
+nodeshort.fnd.precipitation_hardening,Precipitation hardening,Дисперс. твердение
+nodeshort.fnd.transonic_aerodynamics,Transonic aerodynamics,Трансзвук. аэродинамика
+nodeshort.fnd.high_temperature_creep,High-temperature creep,Ползучесть при нагреве
+nodeshort.prn.bypass_engine,Bypass engine,Двухконтур. двигатель
+nodeshort.eng.all_moving_tail,All-moving tail,Поворотный стабилизатор
+nodeshort.eng.variable_geometry_inlet,Variable-geometry inlet,Регулир. заборник воздуха
+nodeshort.prc.titanium_reduction_forging,Titanium reduction and forging,Выплавка и ковка титана
+nodeshort.prc.ds_casting,Directional solidification casting,Направленное литьё
+nodeshort.prc.high_purity_nickel_refining,High-purity nickel refining,Очистка никеля
+nodeshort.prc.centrifugal_impeller_machining,Centrifugal impeller machining,Обработка крыльчатки
+nodeshort.prc.swept_wing_fabrication,Swept wing fabrication,Стреловидное крыло
+node.fnd.electronic_flight_control_theory,Electronic flight control theory,Теория электронного управления полётом
+node.fnd.edge_wave_diffraction,Edge-wave diffraction theory,Теория дифракции на кромках
+node.prn.single_crystal_growth,Single-crystal growth,Рост монокристаллов
+node.prn.fibre_composite_laminate_design,Fibre composite laminate design,Проектирование слоистых композитов
+node.prn.low_observable_shaping,Low-observable shaping,Малозаметные формы
+node.eng.fly_by_wire_relaxed_stability,"Fly-by-wire, relaxed stability","Электродистанционное управление, ослабленная устойчивость"
+node.eng.turbofan_g5,"Turbofan, gen 5","ТРДД, поколение 5"
+node.eng.composite_airframe,Composite airframe,Композитный планер
+node.eng.low_observable_airframe,Low-observable airframe,Малозаметный планер
+node.eng.thrust_vectoring_supercruise_engine,Thrust-vectoring supercruise engine,Двигатель с вектором тяги и сверхзвуком без форсажа
+node.cmp.turbine_blade_single_crystal,Single-crystal turbine blade,Монокристаллическая лопатка турбины
+node.prc.single_crystal_casting,Single-crystal casting,Литьё монокристаллов
+node.prc.composite_layup_cure,Composite layup and cure,Выкладка и отверждение композитов
+node.prc.low_observable_finishing,Low-observable finishing,Малозаметное покрытие
+node.app.jet_fighter_g5,"Jet fighter, gen 5","Реактивный истребитель, поколение 5"
+node.app.jet_fighter_g6,"Jet fighter, gen 6","Реактивный истребитель, поколение 6"
+node.eng.aesa_sensor_fusion,AESA radar and sensor fusion,АФАР и слияние данных датчиков
+node.cmp.ceramic_matrix_composite,Ceramic matrix composite,Керамоматричный композит (CMC)
+node.prc.cmc_fabrication,CMC fabrication,Изготовление CMC-деталей
+node.eng.adaptive_cycle_engine,Adaptive cycle engine,Двигатель адаптивного цикла
+node.prn.phased_array_radar_pesa,Passive phased-array radar,Пассивная ФАР
+node.prn.gaas_wafer_growth,Gallium arsenide crystal growth,Рост арсенида галлия
+node.cmp.gaas_mmic,GaAs monolithic microwave circuits,Монолитные СВЧ-схемы на GaAs
+node.cmp.solid_state_tr_module,Solid-state transmit/receive module,Твердотельный приёмопередающий модуль
+node.prn.programmable_signal_processing,Programmable signal processing,Программируемая обработка сигналов
+node.eng.digital_beamforming,Digital beamforming,Цифровое формирование лучей
+node.prn.relaxed_static_stability,Relaxed static stability,Ослабленная статическая устойчивость
+node.cmp.digital_flight_control_computer,Digital flight control computer,Цифровой компьютер управления полётом
+node.prn.electronic_engine_control,Electronic engine control,Электронное управление двигателем
+node.cmp.high_modulus_fibre,High-modulus fibre,Высокомодульное волокно
+node.prn.thrust_vectoring_nozzle,Thrust-vectoring nozzle,Сопло с вектором тяги
+node.prn.rcs_computational_prediction,Computational RCS prediction,Расчёт радиолокационной заметности
+node.eng.integrated_avionics_architecture,Integrated avionics architecture,Интегрированная архитектура авионики
+node.cmp.silicon_carbide_fibre,Silicon carbide fibre,Волокно карбида кремния
+node.prn.matrix_infiltration_cvi,Chemical vapour infiltration,Химическое газофазное уплотнение матрицы
+node.prn.environmental_barrier_coating,Environmental barrier coating,Барьерное покрытие от среды
+node.prn.variable_cycle_engine,Variable cycle engine,Двигатель переменного цикла
+node.prn.adaptive_third_stream_fan,Application,Применение
+nodeshort.prn.single_crystal_growth,Single-crystal growth,Монокристалл
+nodeshort.prn.fibre_composite_laminate_design,Fibre composite laminate design,Композиты
+nodeshort.eng.fly_by_wire_relaxed_stability,"Fly-by-wire, relaxed stability",ЭДСУ
+nodeshort.cmp.turbine_blade_single_crystal,Single-crystal turbine blade,Лопатка МК
+nodeshort.prc.single_crystal_casting,Single-crystal casting,Литьё МК
+nodeshort.cmp.ceramic_matrix_composite,Ceramic matrix composite,CMC
+nodeshort.cmp.solid_state_tr_module,T/R module,ППМ
+nodeshort.prn.programmable_signal_processing,Programmable signal processing,Обр. сигнала
+nodeshort.cmp.high_modulus_fibre,High-modulus fibre,Волокно
+nodeshort.prn.rcs_computational_prediction,Computational RCS prediction,Расчёт ЭПР
+nodeshort.eng.integrated_avionics_architecture,Integrated avionics architecture,Авионика

@@ -488,6 +488,9 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
         if (t == typeof(DesignHandle))
             return typeof(DesignHandle).GetProperties().All(p => p.SetMethod is null || p.SetMethod.ReturnParameter.GetRequiredCustomModifiers().Contains(typeof(IsExternalInit)))
                 && typeof(DesignHandle).IsValueType;
+        if (t == typeof(Singularity.Core.Products.AlloyCoverage))   // a readonly record struct of three Fx6 values
+            return typeof(Singularity.Core.Products.AlloyCoverage).GetProperties().All(p => p.SetMethod is null || p.SetMethod.ReturnParameter.GetRequiredCustomModifiers().Contains(typeof(IsExternalInit)))
+                && typeof(Singularity.Core.Products.AlloyCoverage).IsValueType;
         if (t == typeof(FleetCommand))
             return typeof(FleetCommand).GetProperties().All(p => p.SetMethod is null || p.SetMethod.ReturnParameter.GetRequiredCustomModifiers().Contains(typeof(IsExternalInit)))
                 && typeof(FleetCommand).IsValueType;

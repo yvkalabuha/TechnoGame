@@ -189,6 +189,10 @@ internal sealed class SliceWorld
     /// <summary>The node blocks of the last snapshot with the state they were read from (R2); owned by the thread that builds snapshots.</summary>
     internal NodeBlockCache NodeBlocks { get; } = new();
 
+    /// <summary>The last published research array per actor, handed out again while its content is unchanged (owner thread only).</summary>
+    internal ImmutableArray<ResearchView>[] ResearchViews => _researchViews ??= new ImmutableArray<ResearchView>[Scenario.ActorCount];
+    private ImmutableArray<ResearchView>[]? _researchViews;
+
     /// <summary>
     /// The sum of the versions of every column the node blocks may read: all of them but the command columns <c>cmd.*</c>, which only hold what the
     /// player asked for and are read by no view of nodes. Versions only grow, so an equal sum means no column changed (R2).

@@ -183,6 +183,44 @@ public sealed class KnowledgeSystem : ITickSystem
 
     public Fx6 KInd(int actorRow, int discipline) => Fx6.FromRaw(_kind[discipline].Current[actorRow]);
 
+    /// <summary>Need of a node on the progress scale: θ_start for a hazard node (where its discovery chance begins), 1 otherwise (the scale of <c>why_not</c> links).</summary>
+    public Fx6 NeedOf(int nodeRow) => _g.IsHazard[nodeRow] ? _p.ThetaStart : Fx6.One;
+
+    /// <summary>Most rows <see cref="ResearchInProgress"/> takes (the buffer of shares is on the stack).</summary>
+    public const int MaxResearchRows = 64;
+
+    /// <summary>
+    /// Research in progress of the actor: frontier nodes with <c>prog &gt; 0</c>, the ones nearest to completion first (<c>prog / need</c> descending, ties by row).
+    /// Fills <paramref name="rows"/> with node rows and returns their count (at most its length, at most <see cref="MaxResearchRows"/>). A pure read of the snapshot; allocates nothing on the heap.
+    /// </summary>
+    public int ResearchInProgress(int actorRow, Span<int> rows)
+    {
+        if (rows.Length > MaxResearchRows)
+            throw new ArgumentOutOfRangeException(nameof(rows), $"at most {MaxResearchRows} rows");
+        int count = 0;
+        Span<Fx6> share = stackalloc Fx6[rows.Length];
+        for (int r = 0; r < _n && rows.Length > 0; r++)
+        {
+            Fx6 prog = Prog(actorRow, r);
+            if (prog <= Fx6.Zero || !InFrontier(actorRow, r))
+                continue;
+            Fx6 need = NeedOf(r);
+            Fx6 s = need > Fx6.Zero ? prog / need : Fx6.One;   // θ_start = 0 is a supported setting: a hazard node with progress is at its threshold
+            if (count == rows.Length && s <= share[count - 1])
+                continue;
+            int at = count < rows.Length ? count++ : count - 1;
+            while (at > 0 && s > share[at - 1])
+            {
+                share[at] = share[at - 1];
+                rows[at] = rows[at - 1];
+                at--;
+            }
+            share[at] = s;
+            rows[at] = r;
+        }
+        return count;
+    }
+
     /// <summary>The node is unknown and its requirements are known: it is in the actor's frontier (spec §3.1).</summary>
     public bool InFrontier(int actorRow, int nodeRow) => !IsKnown(actorRow, nodeRow) && RequiresKnown(actorRow, nodeRow);
 

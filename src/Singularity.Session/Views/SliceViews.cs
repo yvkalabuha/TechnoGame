@@ -49,7 +49,14 @@ public sealed record ActorView(
     QualityView Quality, LicenceView Licence, DisruptionView Disruption,
     NodeList Nodes,
     ImmutableArray<DesignView> Designs,
-    PolicyDecisionView Decisions);
+    PolicyDecisionView Decisions,
+    AlloyCoverage Alloy = default,
+    ImmutableArray<ResearchView> Research = default,
+    int UnknownNodes = 0);
+
+/// <summary>A research in progress (TASK-0119): a frontier node with accumulated progress. <see cref="Have"/> against <see cref="Need"/> is the scale of the why_not link;
+/// <see cref="Threshold"/> is a hazard node at its threshold, where its discovery is a draw, not certain.</summary>
+public readonly record struct ResearchView(int Node, Fx6 Have, Fx6 Need, bool Threshold);
 
 /// <summary>
 /// A node of the knowledge graph; <see cref="Process"/> is set for the nodes that are capability processes (PRC). <see cref="KnownSince"/> is

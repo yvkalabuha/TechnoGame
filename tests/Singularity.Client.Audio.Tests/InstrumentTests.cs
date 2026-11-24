@@ -97,16 +97,16 @@ public class InstrumentTests
     [Fact]
     public void AlloyFlask_NoMeltIsEmptyHatchedAndNamedNoSmelting()
     {
-        var f = InstrumentLogic.AlloyFlask(0, 0, null);
-        Assert.Equal(0, f.Level); Assert.True(f.Hatched); Assert.Equal(InstrumentLogic.AlloyState.NoSmelting, f.State);
+        var f = InstrumentLogic.AlloyFlask(Cov(0, 0, 0));
+        Assert.Equal(0, f.Level); Assert.True(f.Hatched); Assert.Equal(Singularity.Core.Products.AlloyState.NoSmelting, f.State);
         Assert.Equal("flask.alloy.none", InstrumentLogic.AlloyTipKey(f.State));
     }
 
     [Fact]
     public void AlloyFlask_LinkWithHaveBelowNeedIsAShortage()
     {
-        var f = InstrumentLogic.AlloyFlask(40, 0, (40, 100));
-        Assert.Equal(0.4, f.Level, 9); Assert.True(f.Hatched); Assert.Equal(InstrumentLogic.AlloyState.Shortage, f.State);
+        var f = InstrumentLogic.AlloyFlask(Cov(40, 100, 0));
+        Assert.Equal(0.4, f.Level, 9); Assert.True(f.Hatched); Assert.Equal(Singularity.Core.Products.AlloyState.Shortage, f.State);
         Assert.Equal("flask.alloy.deficit", InstrumentLogic.AlloyTipKey(f.State));
     }
 
@@ -115,26 +115,26 @@ public class InstrumentTests
     [InlineData(120, 100)]
     public void AlloyFlask_LinkWithHaveAtOrAboveNeedIsNoShortage(double have, double need)
     {
-        var f = InstrumentLogic.AlloyFlask(have, 0, (have, need));
-        Assert.False(f.Hatched); Assert.Equal(InstrumentLogic.AlloyState.Normal, f.State); Assert.Equal(1.0, f.Level);
+        var f = InstrumentLogic.AlloyFlask(Cov(have, need, 0));
+        Assert.False(f.Hatched); Assert.Equal(Singularity.Core.Products.AlloyState.Normal, f.State); Assert.Equal(1.0, f.Level);
         Assert.Equal("flask.alloy.tip", InstrumentLogic.AlloyTipKey(f.State));
     }
 
     [Theory]
-    [InlineData(InstrumentLogic.AlloyState.Normal, "flask.alloy.cap.ok")]
-    [InlineData(InstrumentLogic.AlloyState.Shortage, "flask.alloy.cap.deficit")]
-    [InlineData(InstrumentLogic.AlloyState.Disrupted, "flask.alloy.cap.disrupted")]
-    [InlineData(InstrumentLogic.AlloyState.NoSmelting, "flask.alloy.cap.none")]
-    public void AlloyCaptionKey_NamesWhatEachStateMeasures(InstrumentLogic.AlloyState state, string key) => Assert.Equal(key, InstrumentLogic.AlloyCaptionKey(state));
+    [InlineData(Singularity.Core.Products.AlloyState.Normal, "flask.alloy.cap.ok")]
+    [InlineData(Singularity.Core.Products.AlloyState.Shortage, "flask.alloy.cap.deficit")]
+    [InlineData(Singularity.Core.Products.AlloyState.Disrupted, "flask.alloy.cap.disrupted")]
+    [InlineData(Singularity.Core.Products.AlloyState.NoSmelting, "flask.alloy.cap.none")]
+    public void AlloyCaptionKey_NamesWhatEachStateMeasures(Singularity.Core.Products.AlloyState state, string key) => Assert.Equal(key, InstrumentLogic.AlloyCaptionKey(state));
 
     [Fact]
     public void AlloyFlask_DisruptionIsNotAShortage_AndHealthyStockIsNormal()
     {
-        var d = InstrumentLogic.AlloyFlask(10, 0.25, null);
-        Assert.Equal(0.75, d.Level, 9); Assert.True(d.Hatched); Assert.Equal(InstrumentLogic.AlloyState.Disrupted, d.State);
+        var d = InstrumentLogic.AlloyFlask(Cov(10, 0, 0.25));
+        Assert.Equal(0.75, d.Level, 9); Assert.True(d.Hatched); Assert.Equal(Singularity.Core.Products.AlloyState.Disrupted, d.State);
         Assert.Equal("flask.alloy.disrupted", InstrumentLogic.AlloyTipKey(d.State));
-        var n = InstrumentLogic.AlloyFlask(10, 0, null);
-        Assert.Equal(1.0, n.Level); Assert.False(n.Hatched); Assert.Equal(InstrumentLogic.AlloyState.Normal, n.State);
+        var n = InstrumentLogic.AlloyFlask(Cov(10, 0, 0));
+        Assert.Equal(1.0, n.Level); Assert.False(n.Hatched); Assert.Equal(Singularity.Core.Products.AlloyState.Normal, n.State);
     }
 
     [Theory]
@@ -148,7 +148,7 @@ public class InstrumentTests
     [Fact]
     public void AlloyFlask_TinyDisruptionTooltipPercentIs99()
     {
-        var f = InstrumentLogic.AlloyFlask(10, 0.001, null);
+        var f = InstrumentLogic.AlloyFlask(Cov(10, 0, 0.001));
         Assert.Equal(99, InstrumentLogic.FlaskPercent(f.Level, f.Hatched));
     }
 
@@ -241,40 +241,78 @@ public class InstrumentTests
         Assert.Equal(expected, InstrumentLogic.ThresholdReached(have, need));
     }
 
-    static Link K(int node, double have, double need, WhyNotLayer layer = WhyNotLayer.Knowledge) =>
-        new(layer, WhyNotCause.MissingNode, node, Fx6.FromDouble(have), Fx6.FromDouble(need), ImmutableArray<Lever>.Empty, Fx6.Zero, null);
+    static Singularity.Session.ResearchView R(int node, double have, double need, bool thr = false) =>
+        new(node, Fx6.FromDouble(have), Fx6.FromDouble(need), thr);
 
     [Fact]
-    public void ResearchFlasks_EmptyLinksGiveNoFlask() => Assert.Empty(InstrumentLogic.ResearchFlasks(new Link[0], 3));
+    public void ResearchFlasks_EmptyViewGivesNoFlask() => Assert.Empty(InstrumentLogic.ResearchFlasks(new Singularity.Session.ResearchView[0], 3));
 
     [Fact]
-    public void ResearchFlasks_ThreeKnowledgeLinksGiveThree()
+    public void ResearchFlasks_ReadsTheViewFieldInOrder()
     {
-        var f = InstrumentLogic.ResearchFlasks(new[] { K(1, 0.5, 1), K(2, 0.25, 1), K(3, 0, 1) }, 3);
+        var f = InstrumentLogic.ResearchFlasks(new[] { R(1, 0.5, 1), R(2, 0.25, 1), R(3, 0, 1) }, 3);
         Assert.Equal(new[] { 1, 2, 3 }, f.ConvertAll(x => x.Node));
         Assert.Equal(0.5, f[0].Have);
-    }
-
-    [Fact]
-    public void ResearchFlasks_SkipsOtherLayers()
-    {
-        var f = InstrumentLogic.ResearchFlasks(new[] { K(9, 0, 1, WhyNotLayer.Product), K(4, 0.5, 1), K(8, 0, 1, WhyNotLayer.Capability) }, 3);
-        Assert.Equal(new[] { 4 }, f.ConvertAll(x => x.Node));
+        Assert.Equal(1, f[0].Need);
     }
 
     [Fact]
     public void ResearchFlasks_KeepsTheFirstMax()
     {
-        var f = InstrumentLogic.ResearchFlasks(new[] { K(1, 0, 1), K(2, 0, 1), K(3, 0, 1), K(4, 0, 1) }, 3);
+        var f = InstrumentLogic.ResearchFlasks(new[] { R(1, 0, 1), R(2, 0, 1), R(3, 0, 1), R(4, 0, 1) }, 3);
         Assert.Equal(new[] { 1, 2, 3 }, f.ConvertAll(x => x.Node));
     }
 
     [Fact]
-    public void ResearchFlasks_FlagsAThresholdLink()
+    public void ResearchFlasks_CarriesTheThresholdFlagOfTheView()
     {
-        var f = InstrumentLogic.ResearchFlasks(new[] { K(1, 0.25, 0.25), K(2, 0.125, 1) }, 3);
+        var f = InstrumentLogic.ResearchFlasks(new[] { R(1, 0.25, 0.25, true), R(2, 0.125, 1) }, 3);
         Assert.True(f[0].Threshold);
         Assert.False(f[1].Threshold);
+    }
+
+    [Fact]
+    public void AlloyFlaskOrNull_UnknownState_GivesNoFlask_AndKnownStatesGiveOne()
+    {
+        Assert.Null(InstrumentLogic.AlloyFlaskOrNull(default));   // start of the game or a restored snapshot: no trace, no flask, no exception
+        Assert.Null(InstrumentLogic.AlloyFlaskOrNull(new Singularity.Core.Products.AlloyCoverage(Fx6.FromInt(5), Fx6.FromInt(1), Fx6.Zero, false)));
+        Assert.Equal(Singularity.Core.Products.AlloyState.Normal, InstrumentLogic.AlloyFlaskOrNull(Cov(10, 1, 0))!.Value.State);
+        Assert.Equal(Singularity.Core.Products.AlloyState.NoSmelting, InstrumentLogic.AlloyFlaskOrNull(Cov(0, 0, 0))!.Value.State);
+    }
+
+    [Fact]
+    public void AlloyFlask_NoDataYetIsRefused_TheCallerShowsNoFlask() =>
+        Assert.Throws<InvalidOperationException>(() => InstrumentLogic.AlloyFlask(default));
+
+    [Fact]
+    public void AlloyFlask_NoSupplyWithAnAskIsNoSmelting_NotAZeroPercentShortage()
+    {
+        var f = InstrumentLogic.AlloyFlask(Cov(0, 100, 0));
+        Assert.Equal(Singularity.Core.Products.AlloyState.NoSmelting, f.State);
+        Assert.Equal(0, f.Level);
+    }
+
+    static Singularity.Core.Products.AlloyCoverage Cov(double supply, double need, double deficit) =>
+        new(Fx6.FromDouble(supply), Fx6.FromDouble(need), Fx6.FromDouble(deficit));
+
+    [Fact]
+    public void AlloyFlask_Coverage_SupplyBelowTheNeedOfARunningLineIsAShortage()
+    {
+        var f = InstrumentLogic.AlloyFlask(Cov(40, 100, 0));
+        Assert.Equal(Singularity.Core.Products.AlloyState.Shortage, f.State);
+        Assert.Equal(0.4, f.Level, 6);
+        Assert.True(f.Hatched);
+    }
+
+    [Fact]
+    public void AlloyFlask_Coverage_EnoughSupplyIsNormal_NoMeltIsNoSmelting_CutIsDisrupted()
+    {
+        Assert.Equal(Singularity.Core.Products.AlloyState.Normal, InstrumentLogic.AlloyFlask(Cov(100, 100, 0)).State);
+        Assert.Equal(Singularity.Core.Products.AlloyState.Normal, InstrumentLogic.AlloyFlask(Cov(10, 0, 0)).State);   // no running line: nothing to be short of
+        Assert.Equal(Singularity.Core.Products.AlloyState.NoSmelting, InstrumentLogic.AlloyFlask(Cov(0, 0, 0)).State);
+        var d = InstrumentLogic.AlloyFlask(Cov(75, 50, 0.25));
+        Assert.Equal(Singularity.Core.Products.AlloyState.Disrupted, d.State);
+        Assert.Equal(0.75, d.Level, 6);
     }
 
     [Fact]

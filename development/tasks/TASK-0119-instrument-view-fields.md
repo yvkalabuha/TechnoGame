@@ -47,3 +47,10 @@ created: 2026-11-19
 ## REVIEW
 
 ## Результат
+Сделано (пункты 1–4; C-1 не делался).
+- Ядро: `KnowledgeSystem.ResearchInProgress` (узлы границы с накоплением > 0, ближайшие к завершению первыми, без аллокаций в куче) и `KnowledgeSystem.NeedOf`; `AlloyCoverage` (Core/Products): снабжение месяца, наибольшая потребность действующей линии (серия, темп > 0, сплав нужен), доля сбоя политики.
+- Session v21: `ActorView.Alloy` (`AlloyCoverage`) и `ActorView.Research` (`ResearchView`: узел, накоплено, нужно, порог). Поля — необязательные параметры в конце, `new ActorView(...)` в Lab не ломается. Эталон поверхности `session-surface.v21.txt`; хэши и golden не менялись (вид не хэшируется).
+- Клиент: колбы «Наука» и ряд «Сплав» в «Производстве» читают только поля вида; `InstrumentLogic.ResearchFlasks(ResearchView)`, `AlloyFlask(AlloyCoverage)`; прогон кадров проверяет живую сессию (число колб, подпись сплава, доля месяцев не ниже 80 % по каждой стране).
+- Живой замер (360 шагов по месяцу, 1945–1975): USA, GBR, SUN, FRA, SWE — 360 из 360 (100 %); было 0 % у четырёх стран.
+- Тесты: InstrumentFieldsTests (поля против полного перебора по Core, 80 % у каждой страны за 120 месяцев, потребность сплава), InstrumentTests (колбы по полю, четыре состояния сплава), ApiSurface, ViewTests (whitelist). Не проверялось, падают ли тесты без правки (поля нет — тесты не компилируются).
+- Кадры: shots-out/flask_science_*, flask_production_* (100 % и 150 %, серые), flask_science_live.png.
