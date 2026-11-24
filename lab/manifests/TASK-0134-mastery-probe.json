@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0134-mastery-probe",
+  "description": "TASK-0134 step 4: probe of Hcap(t) growth (#438) and production mastery (#439, #440) on the G5/G6 data, JetSlice FULL to 2030-12 (1024 months), seeds 1-10, threads 1. Series: ref (no growth, no rules), B0 (#438 only), B1 (+ gate, candidate close, foresight), B2 grid HCAP_K x HCAP_MAX (+ programme), B3 (programme without foresight). Analysis lab/analysis/mastery_probe.py.",
+  "model": "JetSlice",
+  "ticks": 31168,
+  "chunk_size": 1,
+  "threads": [
+    1
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 10
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full"
+  },
+  "series": [
+    {
+      "name": "ref",
+      "params": {
+        "MASTERY_RULES": "NONE",
+        "HCAP_K": 0,
+        "HCAP_MAX": 0
+      }
+    },
+    {
+      "name": "B0",
+      "params": {
+        "MASTERY_RULES": "NONE"
+      }
+    },
+    {
+      "name": "B1",
+      "params": {
+        "MASTERY_RULES": "GATE+CLOSE+FORESIGHT"
+      }
+    },
+    {
+      "name": "B2_k05_m10",
+      "params": {
+        "MASTERY_RULES": "ALL",
+        "HCAP_K": 0.05,
+        "HCAP_MAX": 1
+      }
+    },
+    {
+      "name": "B2_k05_m15",
+      "params": {
+        "MASTERY_RULES": "ALL",
+        "HCAP_K": 0.05,
+        "HCAP_MAX": 1.5
+      }
+    },
+    {
+      "name": "B2_k10_m10",
+      "params": {
+        "MASTERY_RULES": "ALL",
+        "HCAP_K": 0.1,
+        "HCAP_MAX": 1
+      }
+    },
+    {
+      "name": "B2_k10_m15",
+      "params": {
+        "MASTERY_RULES": "ALL",
+        "HCAP_K": 0.1,
+        "HCAP_MAX": 1.5
+      }
+    },
+    {
+      "name": "B2_k20_m10",
+      "params": {
+        "MASTERY_RULES": "ALL",
+        "HCAP_K": 0.2,
+        "HCAP_MAX": 1
+      }
+    },
+    {
+      "name": "B2_k20_m15",
+      "params": {
+        "MASTERY_RULES": "ALL",
+        "HCAP_K": 0.2,
+        "HCAP_MAX": 1.5
+      }
+    },
+    {
+      "name": "B3",
+      "params": {
+        "MASTERY_RULES": "GATE+CLOSE+PROGRAMME"
+      }
+    }
+  ],
+  "meta": {
+    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.34 r1",
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r17",
+    "preregistration": "docs/simulation/g5-g6-probe.md §9"
+  }
+}
