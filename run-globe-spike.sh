@@ -6,7 +6,6 @@
 #        ./run-globe-spike.sh --shots --only area_science_1920x1080,tree_*   only the named frames (comma list, * and ? masks)
 #        ./run-globe-spike.sh --shots --time-shots   time-control frames, silent; --only works here too
 #        ./run-globe-spike.sh --shots --audio-demo   also records the audio demo WAV (real audio driver, sound is heard)
-#        C# is rebuilt only when a .cs/.csproj file is newer than the last build stamp (FORCE_BUILD=1 to force)
 #        ./run-globe-spike.sh --bench  automatic benchmark + screenshots into bench-out/
 set -euo pipefail
 
@@ -39,20 +38,8 @@ if ! "$GODOT" --headless --path . --import >"$IMPORT_LOG" 2>&1 || grep -qE "^(ER
   grep -E "ERROR" "$IMPORT_LOG" >&2 || tail -20 "$IMPORT_LOG" >&2
 fi
 
-STAMP=".godot/build-stamp"
-# The stamp holds the list of source files: a deleted or renamed file changes it and forces a build.
-# Every input file under src/ counts (code, project files, embedded data such as map packs), except build and shot output.
-SRC_LIST="$( { find "$ROOT/src" -type f -not -path '*/.godot/*' -not -path '*/bin/*' -not -path '*/obj/*' -not -path '*/shots-out/*' -not -path '*/bench-out/*' -not -path '*/assets/ui/*' -print; find "$ROOT" -maxdepth 1 \( -name 'Directory.Build.*' -o -name 'global.json' -o -name '*.props' \) -print; } | LC_ALL=C sort | sha256sum | cut -d' ' -f1)"
-if [[ "${FORCE_BUILD:-0}" == "1" || ! -f "$STAMP" || "$(cat "$STAMP" 2>/dev/null)" != "$SRC_LIST" ]] \
-   || [[ -n "$(find "$ROOT/src" -type f -newer "$STAMP" -not -path '*/.godot/*' -not -path '*/bin/*' -not -path '*/obj/*' -not -path '*/shots-out/*' -not -path '*/bench-out/*' -not -path '*/assets/ui/*' -print -quit)" ]] \
-   || [[ -n "$(find "$ROOT" -maxdepth 1 \( -name 'Directory.Build.*' -o -name 'global.json' -o -name '*.props' \) -newer "$STAMP" -print -quit)" ]]; then
-  echo "Building C# scripts..."
-  echo "$SRC_LIST" > "$STAMP.new"   # taken before the build: a file saved during the build stays newer than the stamp
-  "$GODOT" --headless --path . --build-solutions --quit   # set -e: a failed build stops here and leaves the old stamp
-  mv -f "$STAMP.new" "$STAMP"
-else
-  echo "C# unchanged since the last build: skipping the build (FORCE_BUILD=1 to force)"
-fi
+echo "Building C# scripts..."
+"$GODOT" --headless --path . --build-solutions --quit
 
 has_arg() { local w="$1" a; shift; for a in "$@"; do [[ "$a" == "$w" ]] && return 0; done; return 1; }
 AUDIO=(--audio-driver Dummy)
