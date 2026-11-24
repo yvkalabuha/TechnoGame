@@ -89,6 +89,8 @@ public sealed record LeverSpec(string? Actor, LeverItem? Item, LeverOp Op, Fx6 R
     /// P1: the AI shares with one item shifted. +10 takes 0,10 (at most what the other three have) from the other three visible items in
     /// proportion to their shares; −10 gives min(0,10, item) and 0 gives the whole item to the other three in proportion. Every part is floored;
     /// the rounding residue goes to procurement, or to research when procurement is the shifted item. Quality is kept as it is.
+    /// Under +10 the residue is ≤ 0 (the others give floored parts), so with an AI procurement share of 0 the sink would go negative:
+    /// &lt;see cref="Valid"/&gt; then throws and the run fails loudly instead of sending invalid shares.
     /// </summary>
     public static BudgetShares Shift(BudgetShares ai, LeverItem item, LeverOp op)
     {
