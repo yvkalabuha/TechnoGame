@@ -73,7 +73,7 @@ public sealed partial class SignalField : PanelContainer
         row.AddThemeConstantOverride("separation", 10);
         AddChild(row);
 
-        _date.CustomMinimumSize = new Vector2(112, 0); _date.VerticalAlignment = VerticalAlignment.Center;   // one axis with the time buttons
+        _date.CustomMinimumSize = new Vector2(114, 0); _date.VerticalAlignment = VerticalAlignment.Center;   // one axis with the time buttons
         _date.TooltipText = "tip.date"; _date.MouseFilter = MouseFilterEnum.Pass;
         row.AddChild(_date);
 

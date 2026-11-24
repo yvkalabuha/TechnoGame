@@ -13,13 +13,14 @@ public sealed partial class TimeControl : HBoxContainer
     {
         public Kind K; public bool On;
         // Whole-pixel parts of the glyph: axis-aligned edges are fills (an antialiased 2 du line would feather into the 2 du gaps), slanted edges are antialiased paths.
-        readonly Rect2[] _rects; readonly Vector2[][] _paths;
+        readonly Rect2[] _rects; readonly Vector2[][] _paths; readonly Vector2[][] _pathPx;   // _pathPx: scratch for the snapped points, so _Draw allocates nothing
         readonly StyleBoxFlat _filled = Ui.Box(Ui.Ink, Ui.Ink, 1, 0, Ui.R2);
         bool _mouseFocus;   // the focus came from a click: no ring, no key tip (A7 is for keyboard focus)
         public event Action<IconButton> KeyFocused; public event Action FocusLost;
         public IconButton(Kind k)
         {
             K = k; BuildParts((int)k, out _rects, out _paths);
+            _pathPx = new Vector2[_paths.Length][]; for (int i = 0; i < _paths.Length; i++) _pathPx[i] = new Vector2[_paths[i].Length];
             CustomMinimumSize = new Vector2(TimeGlyphMetrics.Button, TimeGlyphMetrics.Button); SizeFlagsVertical = SizeFlags.ShrinkCenter;
             FocusMode = FocusModeEnum.All; Text = ""; ClipContents = false;   // the focus ring is drawn outside the button
             AddThemeStyleboxOverride("normal", Ui.Box(Ui.Sheet, Ui.Ink, 1, 0, Ui.R2));
@@ -45,7 +46,7 @@ public sealed partial class TimeControl : HBoxContainer
         public override void _GuiInput(InputEvent e)
         {
             if (e is InputEventMouseButton { Pressed: true }) { _mouseFocus = true; FocusLost?.Invoke(); QueueRedraw(); }
-            else if (e is InputEventKey) { _mouseFocus = false; QueueRedraw(); }
+            else if (e is InputEventKey { Pressed: true }) { _mouseFocus = false; QueueRedraw(); if (HasFocus()) KeyFocused?.Invoke(this); }   // mouse to keyboard on the focused button: ring and key tip return
         }
 
         static void BuildParts(int kind, out Rect2[] rects, out Vector2[][] paths)
@@ -66,6 +67,9 @@ public sealed partial class TimeControl : HBoxContainer
             rects = rs.ToArray(); paths = ps.ToArray();
         }
 
+        // A glyph coordinate u (du in the button) as a local du on a whole physical pixel.
+        static float Px(float originPx, float u, float s) => (float)((TimeSnap.GlyphEdge(originPx, u, s) - originPx) / s);
+
         public override void _Draw()
         {
             // Pause pressed in = filled ink with a sheet sign; everything else is a line sign (2 du, miter, butt, no fill).
@@ -73,8 +77,18 @@ public sealed partial class TimeControl : HBoxContainer
             if (filled) DrawStyleBox(_filled, new Rect2(Vector2.Zero, Size));
             var c = Disabled ? Ui.Ink3 : filled ? Ui.Sheet : Ui.Ink;
             // Shapes in button coordinates: TimeGlyphMetrics (A2: ink >= 16 x 16 du, stroke >= 2 du)
-            foreach (var r in _rects) DrawRect(r, c);
-            foreach (var p in _paths) DrawPolyline(p, c, TimeGlyphMetrics.Stroke, true);
+            // Every edge is snapped to whole physical pixels at the current UI scale (TimeSnap), then drawn back in du.
+            var xf = GetViewport().GetFinalTransform() * GetGlobalTransformWithCanvas(); float s = xf.X.Length(); var o = xf.Origin;
+            foreach (var r in _rects)
+            {
+                float x0 = Px(o.X, r.Position.X, s), y0 = Px(o.Y, r.Position.Y, s), x1 = Px(o.X, r.End.X, s), y1 = Px(o.Y, r.End.Y, s);
+                DrawRect(new Rect2(x0, y0, x1 - x0, y1 - y0), c);
+            }
+            for (int i = 0; i < _paths.Length; i++)
+            {
+                for (int k = 0; k < _paths[i].Length; k++) _pathPx[i][k] = new Vector2(Px(o.X, _paths[i][k].X, s), Px(o.Y, _paths[i][k].Y, s));
+                DrawPolyline(_pathPx[i], c, TimeSnap.StrokePx(TimeGlyphMetrics.Stroke, s) / s, true);
+            }
             if (RingShown)
             {
                 // A6/A7: a 2 du ink ring 1 du outside the button; it lies on the paper of the bar, 3:1 and better.

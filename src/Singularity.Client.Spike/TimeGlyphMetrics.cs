@@ -62,6 +62,26 @@ public static class TimeGlyphMetrics
     }
 }
 
+/// <summary>Whole-physical-pixel snapping of the time group at any UI scale s (physical px per du). An edge is rounded once in absolute pixels, so it is never more than half a pixel (at most 0.5 du) from its du position;
+/// a glyph is snapped symmetrically around the rounded button centre, so a symmetric glyph has its centre of mass exactly on that centre.</summary>
+public static class TimeSnap
+{
+    static double R(double v) => Math.Round(v, MidpointRounding.AwayFromZero);
+
+    /// <summary>Absolute pixel of a du coordinate u measured from a control whose origin is at originPx.</summary>
+    public static double Edge(double originPx, double u, double s) => R(originPx + u * s);
+
+    /// <summary>Pixel of a glyph coordinate u (button du): mirrored around the rounded button centre.</summary>
+    public static double GlyphEdge(double originPx, double u, double s)
+    {
+        double mid = TimeGlyphMetrics.Button / 2.0, d = u - mid;
+        return Edge(originPx, mid, s) + Math.Sign(d) * R(Math.Abs(d) * s);
+    }
+
+    /// <summary>A stroke of du width in whole pixels (at least 1).</summary>
+    public static int StrokePx(double du, double s) => Math.Max(1, (int)R(du * s));
+}
+
 /// <summary>Geometry of the four-step speed gauge in du inside its 60 x 32 box: bars 6 wide on a 14 step, heights 10/14/18/22, the group centred both ways; the active step wears a 2 du frame
 /// 1 du outside its bar, so the frame is the bar grown by 3 on every side and is symmetric around the bar.</summary>
 public static class TimeGaugeGeometry
@@ -71,6 +91,20 @@ public static class TimeGaugeGeometry
     const int Left = 6, Bottom = 27;   // (60 - (3 * 14 + 6)) / 2 and (32 + 22) / 2
 
     public static (int X, int Y, int W, int H) Bar(int i) => (Left + i * Step, Bottom - Heights[i], BarW, Heights[i]);
+
+    /// <summary>Bar i in absolute pixels for a gauge whose corner is at (ox, oy): x0, y0 and the exclusive ends x1, y1.</summary>
+    public static (double X0, double Y0, double X1, double Y1) BarPx(int i, double ox, double oy, double s)
+    {
+        var b = Bar(i);
+        return (TimeSnap.Edge(ox, b.X, s), TimeSnap.Edge(oy, b.Y, s), TimeSnap.Edge(ox, b.X + b.W, s), TimeSnap.Edge(oy, b.Y + b.H, s));
+    }
+
+    /// <summary>Outer rectangle of the active frame of step i in pixels: the pixel bar grown by the same whole number of pixels on every side.</summary>
+    public static (double X0, double Y0, double X1, double Y1) FramePx(int i, double ox, double oy, double s)
+    {
+        var p = BarPx(i, ox, oy, s); int g = TimeSnap.StrokePx(FrameGrow, s);
+        return (p.X0 - g, p.Y0 - g, p.X1 + g, p.Y1 + g);
+    }
 
     /// <summary>Outer rectangle of the active frame of step i.</summary>
     public static (int X, int Y, int W, int H) Frame(int i)

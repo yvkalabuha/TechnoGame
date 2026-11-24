@@ -17,12 +17,12 @@ public sealed partial class GaugeControl : Control
         CustomMinimumSize = new Vector2(TimeGaugeGeometry.Width, TimeGaugeGeometry.Height);
     }
 
-    // A 1 du line on whole pixels: the dashed rectangle runs on the pixel centres.
-    void DrawDashedRect(Rect2 r, Color c)
+    // A line of w du (whole pixels) on the pixel centres: the dashed rectangle runs half a stroke inside the bar rectangle.
+    void DrawDashedRect(Rect2 r, Color c, float w)
     {
-        r = new Rect2(r.Position + new Vector2(0.5f, 0.5f), r.Size - Vector2.One);
-        DrawDashedLine(r.Position, new Vector2(r.End.X, r.Position.Y), c, 1f, 2f); DrawDashedLine(new Vector2(r.End.X, r.Position.Y), r.End, c, 1f, 2f);
-        DrawDashedLine(r.End, new Vector2(r.Position.X, r.End.Y), c, 1f, 2f); DrawDashedLine(new Vector2(r.Position.X, r.End.Y), r.Position, c, 1f, 2f);
+        r = new Rect2(r.Position + new Vector2(w / 2, w / 2), r.Size - new Vector2(w, w));
+        DrawDashedLine(r.Position, new Vector2(r.End.X, r.Position.Y), c, w, 2f); DrawDashedLine(new Vector2(r.End.X, r.Position.Y), r.End, c, w, 2f);
+        DrawDashedLine(r.End, new Vector2(r.Position.X, r.End.Y), c, w, 2f); DrawDashedLine(new Vector2(r.Position.X, r.End.Y), r.Position, c, w, 2f);
     }
 
     void Hatch(Rect2 r, Color col)
@@ -43,17 +43,20 @@ public sealed partial class GaugeControl : Control
 
     public override void _Draw()
     {
+        // Bars and frame are snapped to whole physical pixels at the current UI scale (TimeSnap, TimeGaugeGeometry), then drawn back in du.
+        var xf = GetViewport().GetFinalTransform() * GetGlobalTransformWithCanvas(); float s = xf.X.Length(); var o = xf.Origin;
+        float one = TimeSnap.StrokePx(1, s) / s;
         for (int i = 0; i < TimeGaugeGeometry.Bars; i++)
         {
-            var (x, y, w, h) = TimeGaugeGeometry.Bar(i);
-            var r = new Rect2(x, y, w, h);
-            if (i == 3) { DrawDashedRect(r, Ui.Ink3); continue; }
-            if (i < Filled) DrawRect(r, Ui.InkLine[Ink[i]]); else Hatch(r, HatchColor);
-            Outline(r, 1f, Ui.Ink);
+            var p = TimeGaugeGeometry.BarPx(i, o.X, o.Y, s);
+            var r = new Rect2((float)((p.X0 - o.X) / s), (float)((p.Y0 - o.Y) / s), (float)((p.X1 - p.X0) / s), (float)((p.Y1 - p.Y0) / s));
+            if (i == 3) { DrawDashedRect(r, Ui.Ink3, one); continue; }
+            if (i < Filled) DrawRect(r, Ui.InkLine[Ink[i]]); else Hatch(r.Grow(-one), HatchColor);   // inside the outline: an antialiased line must not spill over the bar edge
+            Outline(r, one, Ui.Ink);
             if (i == Filled - 1)
             {
-                var (fx, fy, fw, fh) = TimeGaugeGeometry.Frame(i);
-                Outline(new Rect2(fx, fy, fw, fh), TimeGaugeGeometry.FrameStroke, Ui.Ink);
+                var f = TimeGaugeGeometry.FramePx(i, o.X, o.Y, s);
+                Outline(new Rect2((float)((f.X0 - o.X) / s), (float)((f.Y0 - o.Y) / s), (float)((f.X1 - f.X0) / s), (float)((f.Y1 - f.Y0) / s)), TimeSnap.StrokePx(TimeGaugeGeometry.FrameStroke, s) / s, Ui.Ink);
             }
         }
     }
