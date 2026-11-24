@@ -1,3 +1,4 @@
+using Singularity.Kernel;
 using Singularity.Core.Policy;
 
 namespace Singularity.Session.Tests;
@@ -11,7 +12,7 @@ public class FleetAblationTests
     /// is reproduced on the <c>RHMS_OFF</c> data set (the D1 scenario, mod rhms_off), which is the data of T6c2.
     /// </summary>
     private static readonly Singularity.Core.Data.GameData OffData = Singularity.Core.Data.ModLoader.Load(
-        Path.Combine(SliceTestData.RepoRoot, "mods", "core"), Path.Combine(SliceTestData.RepoRoot, "mods", "rhms_off"));
+        Path.Combine(SliceTestData.RepoRoot, "tests", "Singularity.Session.Tests", "Fixtures", "core-g4"), Path.Combine(SliceTestData.RepoRoot, "mods", "rhms_off"));
 
     [Fact]
     public void NoRetire_ReproducesTheT6c2ColumnsBitForBit()
@@ -21,8 +22,8 @@ public class FleetAblationTests
         string[] baseline = File.ReadAllLines(Path.Combine(dir, "t6c2-baseline.txt"));
         foreach (ulong seed in new ulong[] { 7, 3 })
         {
-            SliceSession s = SliceSession.Create(OffData, new SliceRunConfig { Seed = seed, FleetArm = FleetArm.NoRetire, T6dOff = true, SkipStartValidation = true, LineClose = LineCloseRule.Admit, ToolingTarget = ToolingTargetSpec.Parse("V0") });
-            foreach (long month in new long[] { 59, 149, 383 })
+            SliceSession s = SliceSession.Create(OffData, new SliceRunConfig { AheadCostK = Fx6.Zero, Seed = seed, FleetArm = FleetArm.NoRetire, T6dOff = true, SkipStartValidation = true, LineClose = LineCloseRule.Admit, ToolingTarget = ToolingTargetSpec.Parse("V0") });
+            foreach (long month in new long[] { 59, 149 })   // TASK-0129 (#431): from month 177 the old write-off at the service life is gone, the T6c2 trajectory ends there
             {
                 s.StepThroughMonth(month);
                 if (ColumnProjection.SlotReused(s))

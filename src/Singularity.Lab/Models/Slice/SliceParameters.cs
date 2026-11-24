@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Collections.Immutable;
 using Singularity.Core.Industry;
 using Singularity.Core.Policy;
+using Singularity.Core.Products;
 using Singularity.Kernel;
 using Singularity.Session;
 
@@ -16,9 +17,9 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
     /// <summary>Keys of §3 (ordinal order). <c>detail</c> is a key of <c>JetSlice</c> only.</summary>
     public static readonly string[] Keys =
     [
-        "A41_FORM", "ALPHA", "BUDGET_RULE", "C_M", "CHANNELS", "COST_MULT_G5", "COST_MULT_G6", "CONTROL_TABLES", "DELTA_H", "DERIV", "EFFORT_SHARE", "FIX_A", "FIX_E", "FIX_K", "FLEET_ARM", "FLEET_LINE_COND", "FORCE", "GRID", "H_MAX",
-        "K_DIV", "KAPPA_Q10", "LAYER", "LIC_KNOWS", "LIC_OFF", "LINE_CLOSE", "POOL_ORDER", "PILOT_PROFILES", "PROFILE_CELL", "SALE_ARM", "START", "T6D_OFF",
-        "TOOLING_H_HI", "TOOLING_H_HI_CONTROL", "TOOLING_H_LO", "TOOLING_M_LEAD", "TOOLING_RHO_MAX", "TOOLING_TARGET", "THETA_START", "X_SCALE", "detail",
+        "A41_FORM", "AHEAD_K", "AHEAD_MAX", "AHEAD_POW", "ALPHA", "BUDGET_RULE", "C_M", "CHANNELS", "COST_MULT_G5", "COST_MULT_G6", "CONTROL_TABLES", "DELTA_H", "DERIV", "DISC_WEIGHT", "EFFORT_SHARE", "FIX_A", "FIX_E", "FIX_K", "FLEET_ARM", "FLEET_LINE_COND", "FORCE", "GRID", "H_MAX",
+        "HCAP_K", "HCAP_MAX", "K_DIV", "KAPPA_Q10", "LAYER", "LIC_KNOWS", "LIC_OFF", "LINE_CLOSE", "MASTERY_RULES", "POOL_ORDER", "PILOT_PROFILES", "PROFILE_CELL", "SALE_ARM", "START", "T6D_OFF",
+        "TOOLING_H_HI", "TOOLING_H_HI_CONTROL", "TOOLING_H_LO", "TOOLING_M_LEAD", "TOOLING_RHO_MAX", "TOOLING_TARGET", "THETA_START", "UPKEEP_MULT", "X_PROG", "X_SCALE", "detail",
     ];
 
     /// <summary>Substrings no column (and no parameter of runs.csv) of the calibration build may contain (spec §8.2 п. 2, format §5).</summary>
@@ -142,6 +143,15 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
             Alpha = Optional(p, "ALPHA"),
             CostMultG5 = Positive(p, "COST_MULT_G5"),
             CostMultG6 = Positive(p, "COST_MULT_G6"),
+            AheadCostK = AtLeast(p, "AHEAD_K", Fx6.Zero),
+            AheadCostPow = AheadPow(p),
+            AheadCostMax = AtLeast(p, "AHEAD_MAX", Fx6.One),
+            ResearchWeightByDiscipline = DiscWeight(p),
+            HcapGrowthPerYear = AtLeast(p, "HCAP_K", Fx6.Zero),
+            HcapGrowthMax = AtLeast(p, "HCAP_MAX", Fx6.Zero),
+            MasteryXProg = XProg(p),
+            MasteryUpkeepMult = AtLeast(p, "UPKEEP_MULT", Fx6.One),
+            MasteryRules = Enum(p, "MASTERY_RULES", "MAIN", ParseMasteryRules),
             XHalfByTier = XHalf(p),
             DeltaH = Optional(p, "DELTA_H"),
             CM = Optional(p, "C_M"),
@@ -182,6 +192,98 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
         if (v is { } x && x <= Fx6.Zero)
             throw new ParamException($"{key} must be positive.");
         return v;
+    }
+
+    // HCAP_K, HCAP_MAX (TASK-0134, #438): k and ΔHmax of Hcap(t), ≥ 0; UPKEEP_MULT: upkeep_mult of the mastery programme, ≥ 1. Absent = null
+    // (the defaults of IndustryParams); the Session refuses a bad value with ArgumentException, the Lab refuses it earlier as a parameter error.
+    private static Fx6? AtLeast(ParamSet p, string key, Fx6 min)
+    {
+        Fx6? v = Optional(p, key);
+        if (v is { } x && x < min)
+            throw new ParamException($"{key} must be at least {min}.");
+        return v;
+    }
+
+    // AHEAD_POW (TASK-0147, #458): integer exponent of the ahead-of-time cost, 1…4 (AHEAD_K ≥ 0, AHEAD_MAX ≥ 1 go through AtLeast). Absent = null
+    // (the defaults of KnowledgeParams: k 0.02, pow 2, max 10, owner #465; k 0 = off); the Session refuses a bad value with ArgumentException, the Lab earlier.
+    private static int? AheadPow(ParamSet p)
+    {
+        if (!p.Contains("AHEAD_POW"))
+            return null;
+        long v = p.GetLong("AHEAD_POW");
+        if (v is < 1 or > 4)
+            throw new ParamException("AHEAD_POW must be an integer in 1…4.");
+        return (int)v;
+    }
+
+    /// <summary>
+    /// DISC_WEIGHT (TASK-0147, §10.5b): per-discipline multiplier of the research priority weight, a string <c>"prop:1.15,metal:0.90"</c>. Names are
+    /// lower-case scenario disciplines, each at most once; a weight is a positive decimal with at most 6 fractional digits (exact in Fx6). Absent =
+    /// default (weight 1 everywhere, hash of main). An unknown discipline is refused by the Session when the world is built.
+    /// </summary>
+    internal static ImmutableArray<DisciplineWeight> DiscWeight(ParamSet p)
+    {
+        if (!p.Contains("DISC_WEIGHT"))
+            return default;
+        string v = p.GetString("DISC_WEIGHT");
+        var list = ImmutableArray.CreateBuilder<DisciplineWeight>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (string part in v.Split(','))
+        {
+            string[] kv = part.Split(':');
+            if (kv.Length != 2 || kv[0].Length == 0 || !kv[0].All(c => c is >= 'a' and <= 'z'))
+                throw new ParamException($"DISC_WEIGHT: '{part}' is not 'discipline:weight' (e.g. \"prop:1.15,metal:0.90\").");
+            if (!seen.Add(kv[0]))
+                throw new ParamException($"DISC_WEIGHT: discipline '{kv[0]}' given twice.");
+            if (!decimal.TryParse(kv[1], System.Globalization.NumberStyles.AllowDecimalPoint, System.Globalization.CultureInfo.InvariantCulture, out decimal w))
+                throw new ParamException($"DISC_WEIGHT: weight '{kv[1]}' of '{kv[0]}' is not a decimal number.");
+            decimal raw = w * 1_000_000m;
+            if (raw != decimal.Truncate(raw))
+                throw new ParamException($"DISC_WEIGHT: weight '{kv[1]}' has more than 6 fractional digits.");
+            if (raw <= 0 || raw > long.MaxValue / 2)
+                throw new ParamException($"DISC_WEIGHT: weight of '{kv[0]}' must be positive.");
+            list.Add(new DisciplineWeight(kv[0], Fx6.FromRaw((long)raw)));
+        }
+        return list.ToImmutable();
+    }
+
+    // X_PROG (TASK-0134, O-045): x_prog of the mastery programme in (0; 1].
+    private static Fx6? XProg(ParamSet p)
+    {
+        Fx6? v = Optional(p, "X_PROG");
+        if (v is { } x && (x <= Fx6.Zero || x > Fx6.One))
+            throw new ParamException("X_PROG must be in (0; 1].");
+        return v;
+    }
+
+    /// <summary>
+    /// MASTERY_RULES (TASK-0134): <c>MAIN</c> (default: <see cref="MasteryRules.Main"/> = FORESIGHT+PROGRAMME, owner decision #452), <c>ALL</c>, <c>NONE</c>, or parts joined by <c>+</c>: <c>GATE</c>, <c>CLOSE</c>, <c>FORESIGHT</c>,
+    /// <c>PROGRAMME</c> (arms B0-B3 of the probe, g5-g6-probe.md §9). A part given twice is an error.
+    /// </summary>
+    internal static MasteryRules ParseMasteryRules(string v)
+    {
+        if (v == "MAIN")
+            return MasteryRules.Main;
+        if (v == "ALL")
+            return MasteryRules.All;
+        if (v == "NONE")
+            return MasteryRules.None;
+        MasteryRules r = MasteryRules.None;
+        foreach (string part in v.Split('+'))
+        {
+            MasteryRules one = part switch
+            {
+                "GATE" => MasteryRules.Gate,
+                "CLOSE" => MasteryRules.CandidateClose,
+                "FORESIGHT" => MasteryRules.Foresight,
+                "PROGRAMME" => MasteryRules.Programme,
+                _ => throw new ArgumentException($"unknown part '{part}' of '{v}' (ALL, NONE or GATE+CLOSE+FORESIGHT+PROGRAMME)."),
+            };
+            if ((r & one) != 0)
+                throw new ArgumentException($"part '{part}' given twice in '{v}'.");
+            r |= one;
+        }
+        return r;
     }
 
     // X_SCALE (calibration stage C1): X½ of tiers 3, 4, 5 times the factor, their ratio 1 : 4 : 12,5 kept; floor on the raw value.

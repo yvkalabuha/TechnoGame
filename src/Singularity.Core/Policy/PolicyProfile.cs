@@ -118,6 +118,9 @@ public sealed record PolicyParams
     /// <summary><c>m_keep</c> (spec §3.5 A30): the margin above the admission threshold the tooling plan keeps on the MECH process <c>p*</c>.</summary>
     public Fx6 MKeep { get; init; } = F(750_000);
 
+    /// <summary>Production-mastery rules of the AI (TASK-0134): series gate, candidate close, foresight, programme; the same record as in <c>ProductsParams</c>.</summary>
+    public Products.MasteryParams Mastery { get; init; } = new();
+
     /// <summary>Length of a quality programme, months (spec A41).</summary>
     public int QpMonths { get; init; } = 84;
 
@@ -254,6 +257,7 @@ public sealed record PolicyParams
             throw new ArgumentException("Product-AI parameters are out of range (T_ab, k_P, y_prod, n_service_min, T_field, disruption).");
         if (FleetUHi.Length != 3 || FleetUHi.Any(u => u <= FleetUGap || u > Fx6.One) || FleetUGap < Fx6.Zero || FleetAProt < 0)
             throw new ArgumentException("Fleet rule: three U_HI in (gap; 1], gap and A_PROT non-negative (spec A42.8).");
+        Mastery.Validate();
         if (SharesByProfile.Length != 3)
             throw new ArgumentException("One share set per profile (P1, P2, P3) is required.");
         for (int i = 0; i < SharesByProfile.Length; i++)

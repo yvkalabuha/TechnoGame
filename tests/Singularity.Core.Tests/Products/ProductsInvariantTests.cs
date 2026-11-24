@@ -30,7 +30,7 @@ public class ProductsInvariantTests
             h.RunThroughMonth(t);
             check.After(t);
         }
-        // The runs are not trivial: the busy one designs, launches and produces; the default one writes off its fleets.
+        // The runs are not trivial: the busy one designs, launches and produces; the default one keeps its fleets past their service life.
         if (script == "busy")
         {
             Assert.True(check.Produced > Fx6.FromInt(1000), $"busy run produced only {check.Produced}");
@@ -38,7 +38,7 @@ public class ProductsInvariantTests
             Assert.True(check.FixRequests > 0, "no defect-fix team was ever requested");
         }
         if (script == "default")
-            Assert.True(check.Withdrawals >= 2, "start fleets of USA and GBR are never written off");
+            Assert.True(check.Withdrawals == 0, "start fleets of USA and GBR are written off by age although they only age (#431)");
         if (script == "blocked")
             Assert.True(check.BlockedSeriesMonths > 0, "the blocked run never had a series line without admission");
     }
@@ -222,9 +222,10 @@ public class ProductsInvariantTests
                         Fx6 c = p.Cohort(a, d, cy), before = _cohort[a, d, y];
                         Assert.True(c >= Fx6.Zero, $"{ad}: negative cohort {cy}");
                         long m0 = (long)(cy - start.Year) * 12 + (7 - start.Month); // A32: cohorts age from July
-                        bool retired = t - m0 >= pp.ServiceLife;
-                        Fx6 expected = retired ? Fx6.Zero : before + (cy == year ? rate : Fx6.Zero);
-                        Assert.True(expected == c, $"{ad}: cohort {cy} is {c}, expected {expected} (before {before}, rate {rate}, retired {retired})");
+                        // #431: a cohort is never written off by age; past its service life it only loses units to the replacement credit.
+                        bool overage = t - m0 >= pp.ServiceLife;
+                        Fx6 expected = before + (cy == year ? rate : Fx6.Zero);
+                        Assert.True(overage ? c <= expected : c == expected, $"{ad}: cohort {cy} is {c}, expected {(overage ? "at most " : "")}{expected} (before {before}, rate {rate}, overage {overage})");
                     }
                     Produced += rate;
 

@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0134-mastery-k2b-extra",
+  "description": "TASK-0134 step 4 rerun after the Assess fix: one extra point for K2b' (g5-g6-probe.md §9.10): branch B2 defaults (Hcap 0.10/1.0, all mastery rules) with UPKEEP_MULT 2.0 and X_PROG 0.7; same setup as TASK-0134-mastery-probe.json.",
+  "model": "JetSlice",
+  "ticks": 31168,
+  "chunk_size": 1,
+  "threads": [
+    1,
+    4
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 10
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full"
+  },
+  "series": [
+    {
+      "name": "B2_up20_x07",
+      "params": {
+        "MASTERY_RULES": "ALL",
+        "UPKEEP_MULT": 2,
+        "X_PROG": 0.7
+      }
+    }
+  ],
+  "meta": {
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r17",
+    "preregistration": "docs/simulation/g5-g6-probe.md §9.10"
+  }
+}

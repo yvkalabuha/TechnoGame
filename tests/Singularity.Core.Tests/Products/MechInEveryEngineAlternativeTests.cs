@@ -37,6 +37,6 @@ public class MechInEveryEngineAlternativeTests
             Assert.True(hasMech, $"{l.AltId[a]}: no MECH process in prc_set");
             checkedAlts++;
         }
-        Assert.Equal(7, checkedAlts);   // 5 hot-section + 2 compressor alternatives of the core mod
+        Assert.Equal(9, checkedAlts);   // 7 hot-section (5 + 2 of G5/G6) + 2 compressor alternatives of the core mod
     }
 }

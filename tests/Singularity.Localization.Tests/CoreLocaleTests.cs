@@ -26,9 +26,9 @@ public class CoreLocaleTests
     [Fact]
     public void Core_HasAllExpectedEntities_ForSlotAndScenario()
     {
-        // 61 nodes, 1 class + 5 slots + 18 alternatives, 1 scenario, 5 actors, 8 clusters, 5 disciplines, 6 types, 11 enum values.
+        // 81 nodes, 1 class + 5 slots + 26 alternatives, 1 scenario, 5 actors, 8 clusters, 5 disciplines, 6 types, 11 enum values.
         Assert.Equal(ExpectedKeys.MapCountries.Length, ExpectedKeys.MapCountries.Distinct().Count());
-        Assert.Equal(61 + 24 + 1 + 5 + ExpectedKeys.MapCountries.Length + 8 + 5 + 6 + 11, ExpectedKeys.Of(TestKit.Data).Count);
+        Assert.Equal(99 + 32 + 1 + 5 + ExpectedKeys.MapCountries.Length + 8 + 5 + 6 + 11, ExpectedKeys.Of(TestKit.Data).Count);
         Assert.True(Catalog.Has("ru", "-actor-SUN"));
         Assert.Equal("СССР", new Loc(Catalog, "ru").Name(new DataRef("actor-SUN")));
         Assert.Equal("USSR", new Loc(Catalog, "en").Name(new DataRef("actor-SUN")));

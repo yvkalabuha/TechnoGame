@@ -49,6 +49,33 @@ public sealed record IndustryParams
         return CM * Fx6.FromInt(1L << (k - 3));
     }
 
+    // ---- Hcap(t) (docs/simulation/notes/hcap-growth.md, #438) and the mastery programme (O-045)
+
+    /// <summary><c>k</c>: growth of <c>Hcap</c> per year after <see cref="HcapGrowthOnset"/> (rule A: linear with a limit); 0 = no growth. [Предп.] 0,10 until the probe of TASK-0134 step 4.</summary>
+    public Fx6 HcapGrowthPerYear { get; init; } = F(100_000);
+
+    /// <summary><c>ΔHmax</c>: the limit of the growth; 0 = no growth. 1,5 (owner decision #452, probe point NGNC).</summary>
+    public Fx6 HcapGrowthMax { get; init; } = F(1_500_000);
+
+    /// <summary>Month index the growth starts at (1978-01); set by the assembly from the scenario calendar. 388 for a start in 1945-09.</summary>
+    public int HcapGrowthOnset { get; init; } = 388;
+
+    /// <summary>
+    /// <c>upkeep_mult</c> of the programme (≥ 1): beyond its <c>E</c> a programme process takes <c>(mult − 1)·E</c> of <c>D</c> that grows nothing.
+    /// [Предп.] 1,5 until the probe.
+    /// </summary>
+    public Fx6 UpkeepMult { get; init; } = F(1_500_000);
+
+    /// <summary><c>Hcap0 + min(ΔHmax, k·max(0, m − m_on)/12)</c>: whole-number arithmetic, rounded down (hcap-growth.md §4).</summary>
+    public Fx6 HcapGrowth(long month)
+    {
+        long n = month - HcapGrowthOnset;
+        if (n <= 0 || HcapGrowthPerYear <= Fx6.Zero || HcapGrowthMax <= Fx6.Zero)
+            return Fx6.Zero;
+        long raw = HcapGrowthPerYear.Raw * n / 12;
+        return Fx6.FromRaw(Math.Min(HcapGrowthMax.Raw, raw));
+    }
+
     // ---- culture rule C-B (contract v2.4 §4.1, decisions #111, #115)
 
     /// <summary><c>r_ref</c>: mature-line rate, units of a process per month (reference line, spec §6.4).</summary>
@@ -129,6 +156,8 @@ public sealed record IndustryParams
     {
         if (ActNorm <= Fx6.Zero || Lambda0 < Fx6.Zero || Lambda0 > Fx6.One || Eps <= Fx6.Zero)
             throw new ArgumentException("act_norm and ε must be positive, λ0 in [0; 1].");
+        if (HcapGrowthPerYear < Fx6.Zero || HcapGrowthMax < Fx6.Zero || UpkeepMult < Fx6.One)
+            throw new ArgumentException("Hcap growth k and ΔHmax must not be negative, upkeep_mult at least 1.");
         if (CM <= Fx6.Zero)
             throw new ArgumentException("c_M must be positive.");
         if (RRef <= Fx6.Zero || KTr < Fx6.Zero || EFull < Fx6.Zero || DeltaL < Fx6.Zero || Ell < Fx6.Zero || Ell > Fx6.One)

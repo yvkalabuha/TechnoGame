@@ -67,6 +67,41 @@ public sealed record ProductsParams
 
     public int ServiceLife { get; init; } = 180;
 
+    /// <summary>
+    /// Months over the service life in which the value of a cohort halves (#436: 5 years). The curve is <see cref="AgeValue"/>; the table
+    /// below is built for this period, so it is a constant, not a parameter.
+    /// </summary>
+    public const int AgeHalfLife = 60;
+
+    // T[k] = round(2^(−k/60)·10^6), k = 0…59 (O-036): computed outside the game, rounded to nearest, so f(60) and f(120) are exact.
+    private static ReadOnlySpan<int> AgeTable =>
+    [
+        1000000, 988514, 977160, 965936, 954842, 943874, 933033, 922316, 911722, 901250,
+        890899, 880666, 870551, 860551, 850667, 840896, 831238, 821690, 812252, 802923,
+        793701, 784584, 775572, 766664, 757858, 749154, 740549, 732043, 723635, 715323,
+        707107, 698985, 690956, 683020, 675175, 667420, 659754, 652176, 644685, 637280,
+        629961, 622725, 615572, 608502, 601513, 594604, 587774, 581023, 574349, 567752,
+        561231, 554785, 548412, 542113, 535887, 529732, 523647, 517632, 511687, 505810,
+    ];
+
+    /// <summary>
+    /// Value of a cohort that is <paramref name="monthsOver"/> months past its service life (#436): <c>2^(−m/60)</c> as
+    /// <c>T[m mod 60] &gt;&gt; (m div 60)</c>, one table read and one shift, no float. 1 for <c>m ≤ 0</c>; never above 1, non-increasing in m.
+    /// </summary>
+    public static Fx6 AgeValue(long monthsOver)
+    {
+        if (monthsOver <= 0)
+            return Fx6.One;
+        long shift = monthsOver / AgeHalfLife;
+        return shift >= 31 ? Fx6.Zero : Fx6.FromRaw(AgeTable[(int)(monthsOver % AgeHalfLife)] >> (int)shift);
+    }
+
+    /// <summary>
+    /// A project of the same generation replaces another in the fleet accounting when its <c>perf</c> is at least this multiple of the
+    /// other's (O-037: 1,05, [Предп.] until calibrated): a guard against replacement by noise.
+    /// </summary>
+    public Fx6 ReplacePerfRatio { get; init; } = F(1_050_000);
+
     /// <summary><c>B0</c> of <c>bureau_req[g] = ⌊B0·design_scale[g]^κ⌋</c> engineers (spec §3.3, §3.5 A34; З).</summary>
     public int B0 { get; init; } = 500;
 
@@ -129,6 +164,9 @@ public sealed record ProductsParams
     /// <summary>Arm <c>SALE_CHI_OFF</c> (spec §6.10): no revenue ceiling.</summary>
     public bool SaleChiOff { get; init; }
 
+    /// <summary>Production-mastery rules (TASK-0134): the programme feeds <c>x_prog</c> of the nominal volume; off before <see cref="MasteryParams.FromMonth"/>.</summary>
+    public MasteryParams Mastery { get; init; } = new();
+
     /// <summary><c>φ_gen(gap)</c> (spec A42.2): <paramref name="gap"/> ≥ 1.</summary>
     public Fx6 PhiGen(int gap) => SalePhi[Math.Min(gap, SalePhi.Length) - 1];
 
@@ -149,6 +187,7 @@ public sealed record ProductsParams
             throw new ArgumentException("k_gate, a_acc, ρ_retro ≥ 0; t_test_min ≥ 0; τ_der in [0; 1]; 0 < q10_γ ≤ 1024; H_build, r_plan divisor ≥ 1.");
         if (B0 < 1 || KappaQ10 < 0 || KappaQ10 > DetMath.FracOne)
             throw new ArgumentException("B0 ≥ 1 and κ in [0; 1] (q10 0…1024).");
+        Mastery.Validate();
         if (LpTDesign.Length != LpRho.Length)
             throw new ArgumentException("L_P tables need one T_design and one ρ per generation.");
     }

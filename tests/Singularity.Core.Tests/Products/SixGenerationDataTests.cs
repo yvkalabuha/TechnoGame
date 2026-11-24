@@ -1,85 +1,56 @@
 using Singularity.Core.Data;
 using Singularity.Core.Knowledge;
 using Singularity.Core.Products;
-using Singularity.Core.Tests.Data;
 using Singularity.Kernel;
 
 namespace Singularity.Core.Tests.Products;
 
 /// <summary>
-/// TASK-0131 (train 2): the Core accepts data with six generations: product classes with generations 5-6, airframe class 5, airframe ranks 6-7,
-/// pu_ranks 5-6 (test fixture, not mod data), and the node cost of generations 5 and 6.
+/// TASK-0131 + TASK-0133 (train 2): the core mod itself carries six generations (81 nodes, G5/G6 alternatives, airframe class 6,
+/// the two-word licence mask) and the Core prices and lays them out.
 /// </summary>
-public class SixGenerationDataTests : IDisposable
+public class SixGenerationDataTests
 {
-    private readonly TestMods _mods = new();
+    private static GameData Core => ProductTestData.CoreData;
 
-    public void Dispose() => _mods.Dispose();
-
-    private const string Engines = "requires_nodes: [s8.eng.turbofan_g4]}";
-    private const string Airframes = "requires_nodes: [s8.eng.mach2_airframe_g4, s5.cmp.titanium_alloy]}";
-    private const string Prc = "prc_set: [s5.prc.light_alloy_rolling, s8.prc.stressed_skin_assembly, s8.prc.swept_wing_fabrication, s8.prc.machined_integral_skins, s5.prc.titanium_reduction_forging]";
-
-    private GameData LoadSix() => ModLoader.Load(_mods.CopyCore((name, text) => name switch
+    [Fact]
+    public void CoreMod_HasEightyOneNodes_AirframeClass6_AndGenerations5And6()
     {
-        "nodes.yaml" => text.TrimEnd() + @"
-  - id: s8.app.jet_fighter_g5
-    number: 70
-    type: APP
-    gen: 5
-    discipline: aero
-    cluster: AERO
-    requires: [s8.app.jet_fighter_g4]
-    hazard: none
-    anchor: {year: 1990, source: ""fixture"", estimated: true}
-  - id: s8.app.jet_fighter_g6
-    number: 71
-    type: APP
-    gen: 6
-    discipline: aero
-    cluster: AERO
-    requires: [s8.app.jet_fighter_g5]
-    hazard: none
-    anchor: {year: 2010, source: ""fixture"", estimated: true}
-",
-        "product_classes.yaml" => Edit(text),
-        _ => text,
-    }));
-
-    private static string Edit(string text)
-    {
-        text = TestMods.ReplaceOnce(text, Engines, Engines + @"
-          - {id: eng_g5, rank: 5, eng_gen: 5, perf_mult: 2.8, prc_set: [s8.prc.jet_engine_assembly_test, s5.prc.alloying_element_refining], requires_nodes: [s8.eng.turbofan_g4]}
-          - {id: eng_g6, rank: 6, eng_gen: 6, perf_mult: 3.4, prc_set: [s8.prc.jet_engine_assembly_test, s5.prc.alloying_element_refining], requires_nodes: [s8.eng.turbofan_g4]}");
-        text = TestMods.ReplaceOnce(text, Airframes, Airframes + $@"
-          - {{id: af_g6, rank: 6, af_class: 5, perf_mult: 2.0, {Prc}, requires_nodes: [s8.eng.mach2_airframe_g4]}}
-          - {{id: af_g7, rank: 7, af_class: 6, perf_mult: 2.2, {Prc}, requires_nodes: [s8.eng.mach2_airframe_g4]}}");
-        text = TestMods.ReplaceOnce(text, "{rank: 4, proc_scale_pu: 0.827491}", @"{rank: 4, proc_scale_pu: 0.827491}
-      - {rank: 5, proc_scale_pu: 1.2}
-      - {rank: 6, proc_scale_pu: 1.2}");
-        text = TestMods.ReplaceOnce(text, "proc_scale_af: 3.754003}", @"proc_scale_af: 3.754003}
-      - {af_class: 5, h_first: 125920, h_floor: 31480, materials_floor: 0.002098, design_scale: 3.12, proc_scale_af: 3.754003}
-      - {af_class: 6, h_first: 150000, h_floor: 37500, materials_floor: 0.0025, design_scale: 3.5, proc_scale_af: 4.0}");
-        return TestMods.ReplaceOnce(text, "{gen: 4, app: s8.app.jet_fighter_g4, crew_req: 1, platform_min_rank: 5}", @"{gen: 4, app: s8.app.jet_fighter_g4, crew_req: 1, platform_min_rank: 5}
-      - {gen: 5, app: s8.app.jet_fighter_g5, crew_req: 1, platform_min_rank: 6}
-      - {gen: 6, app: s8.app.jet_fighter_g6, crew_req: 1, platform_min_rank: 7}");
+        GameData d = Core;
+        Assert.Equal(99, d.Nodes.Count);
+        ProductsLayout l = ProductTestData.Probe;
+        Assert.Equal(6, l.Generations);
+        Assert.Equal(6, l.AltAfClass[l.AltId.IndexOf("af_lo_composite")]);
+        Assert.Equal(5, l.AltAfClass[l.AltId.IndexOf("af_composite")]);
+        Assert.Equal(6, l.AltEngGen[l.AltId.IndexOf("eng_g6")]);
+        Assert.Equal(6, l.AltEngGen[l.AltId.IndexOf("eng_g6_adaptive")]);
     }
 
     [Fact]
-    public void ProductClassTable_Accepts_Generations5And6_AfClass5_AirframeRanks6And7_PuRanks5And6()
+    public void LicensablePrcAbove63_NeedsTheWideMask()
     {
-        GameData six = LoadSix();
-        ProductClassTable t = six.ProductClasses;
-        IndustryLayoutFor(six, out var industry);
-        ProductsLayout l = ProductsLayout.FromData(six.Nodes, t, "jet_fighter", industry, ProductTestData.Bureaus, six.Scenario("jet_slice_1945").StartYear, ProductTestData.Years, six.Scenario("jet_slice_1945").MaxDesigns);
-        Assert.Equal(6, l.Generations);
-        Assert.Equal(5, l.AltAfClass[l.AltId.IndexOf("af_g6")]);
-        Assert.Equal(6, l.AltAfClass[l.AltId.IndexOf("af_g7")]);   // content rev 2: class 6 for the stealth airframe
-        Assert.Equal(6, l.AltEngGen[l.AltId.IndexOf("eng_g6")]);
+        NodeTable n = Core.Nodes;
+        int wide = 0;
+        for (int r = 0; r < n.Count; r++)
+            wide += n.Type[r] == NodeType.PRC && n.Number[r] > 63 ? 1 : 0;
+        Assert.Equal(4, wide);   // processes 73, 74, 75, 80
     }
 
-    private static void IndustryLayoutFor(GameData d, out Singularity.Core.Industry.IndustryLayout industry) =>
-        industry = Singularity.Core.Industry.IndustryLayout.FromData(d.Nodes, d.Scenario("jet_slice_1945"), ProductTestData.Categories, 64);
+    [Fact]
+    public void NewNodes_AnchorsNeverPrecedeTheirPrerequisites()
+    {
+        NodeTable n = Core.Nodes;
+        for (int r = 0; r < n.Count; r++)
+        {
+            if (n.Number[r] < 62)
+                continue;   // G1-G4 nodes carry "before" anchors (Brayton 1945 after gas_turbine 1937): the rule is for the new nodes
+            for (int g = n.Requires.GroupStart[r]; g < n.Requires.GroupStart[r + 1]; g++)
+            {
+                foreach (int parent in n.Requires.GroupMembers(g))
+                    Assert.True(n.AnchorYear[parent] <= n.AnchorYear[r], $"{n.Id[parent]} ({n.AnchorYear[parent]}) is anchored after {n.Id[r]} ({n.AnchorYear[r]})");
+            }
+        }
+    }
 
     [Fact]
     public void NodeCost_OfGenerations5And6_IsDefined_G7IsStillLoud()
@@ -91,11 +62,11 @@ public class SixGenerationDataTests : IDisposable
     }
 
     [Fact]
-    public void KnowledgeGraph_OfSixGenerationData_PricesTheNewNodes()
+    public void KnowledgeGraph_OfCoreData_PricesTheNewNodes()
     {
-        GameData six = LoadSix();
-        KnowledgeGraph g = KnowledgeGraph.FromData(six.Nodes, six.Scenario("jet_slice_1945").Disciplines, new KnowledgeParams());
-        Assert.True(g.RowOf(70) >= 0 && g.RowOf(71) >= 0);
-        Assert.Equal(new KnowledgeParams().CostN(NodeType.APP, 5), g.CostN[g.RowOf(70)]);
+        KnowledgeGraph g = KnowledgeGraph.FromData(Core.Nodes, Core.Scenario("jet_slice_1945").Disciplines, new KnowledgeParams());
+        Assert.Equal(99, g.Count);
+        Assert.Equal(new KnowledgeParams().CostN(NodeType.APP, 5), g.CostN[g.RowOf(76)]);
+        Assert.Equal(new KnowledgeParams().CostN(NodeType.APP, 6), g.CostN[g.RowOf(77)]);
     }
 }

@@ -17,8 +17,8 @@ public class ProductsLpTests
 
     internal static ProductsParams LpParams => new()
     {
-        LpTDesign = [2, 4, 6, 8],
-        LpRho = [Fx6.FromInt(100), Fx6.FromInt(50), Fx6.FromInt(20), Fx6.FromInt(10)],
+        LpTDesign = [2, 4, 6, 8, 10, 12],
+        LpRho = [Fx6.FromInt(100), Fx6.FromInt(50), Fx6.FromInt(20), Fx6.FromInt(10), Fx6.FromInt(5), Fx6.FromInt(2)],
     };
 
     /// <summary>An L_P run whose AI also sends every full-model command; L_P must ignore them.</summary>
@@ -210,14 +210,14 @@ public class ProductsLpTests
     }
 
     [Fact]
-    public void Lp_StartFleetsStillRetireAtServiceLife()
+    public void Lp_StartFleetsStayAtServiceLife_UntilAReplacementArrives()
     {
         var h = new ProductsHarness(mode: ProductsMode.CanonicalLp, parameters: LpParams);
         h.RunThroughMonth(177);
         Assert.Equal(Fx6.FromInt(100), h.Products.InService(Usa, G1Sup));
         h.RunThroughMonth(178);
-        Assert.Equal(Fx6.Zero, h.Products.InService(Usa, G1Sup));
-        Assert.Equal(DesignStage.Withdrawn, h.Products.Stage(Usa, G1Sup));
+        Assert.Equal(Fx6.FromInt(100), h.Products.InService(Usa, G1Sup));
+        Assert.Equal(DesignStage.InService, h.Products.Stage(Usa, G1Sup));
     }
 
     // ---- cohort aging across calendar years
@@ -246,7 +246,7 @@ public class ProductsLpTests
     }
 
     [Fact]
-    public void Cohorts_RetireWhole_AtServiceLifeFromJulyOfTheirYear()
+    public void Cohorts_PastServiceLife_StayWithoutAReplacement()
     {
         var h = new ProductsHarness
         {
@@ -258,16 +258,12 @@ public class ProductsLpTests
         long m45 = MonthOf(1945, 7), m46 = MonthOf(1946, 7);
         h.RunThroughMonth(m45 + life - 1);
         Assert.Equal(Fx6.FromInt(140), h.Products.Cohort(Usa, G1Sup, 1945));
-        h.RunThroughMonth(m45 + life);
-        // A32: whole-cohort aging from July (1945 → month 178, 1946 → 190); December units serve 175 months.
-        Assert.Equal(Fx6.Zero, h.Products.Cohort(Usa, G1Sup, 1945));
+        h.RunThroughMonth(m46 + life);
+        // A32: whole-cohort aging from July (1945 → month 178, 1946 → 190). #431: past it a cohort stays; no other project replaces it here.
+        Assert.Equal(Fx6.FromInt(140), h.Products.Cohort(Usa, G1Sup, 1945));
         Assert.Equal(Fx6.FromInt(120), h.Products.Cohort(Usa, G1Sup, 1946));
         Assert.Equal(DesignStage.InService, h.Products.Stage(Usa, G1Sup));
-        h.RunThroughMonth(m46 + life - 1);
-        Assert.Equal(Fx6.FromInt(120), h.Products.Cohort(Usa, G1Sup, 1946));
-        h.RunThroughMonth(m46 + life);
-        Assert.Equal(Fx6.Zero, h.Products.InService(Usa, G1Sup));
-        Assert.Equal(DesignStage.Withdrawn, h.Products.Stage(Usa, G1Sup));
+        Assert.Equal(Fx6.Zero, h.Products.ReplacementCredit(Usa, G1Sup));
     }
 
     [Fact]

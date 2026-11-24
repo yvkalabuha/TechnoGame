@@ -72,6 +72,12 @@ public interface ICultureSnapshot
 
     /// <summary><c>mult_P</c> of the actor's profile for the process (spec A37, DEBT-0019): 2 for the processes the doctrine favours, else 1; the last factor of the weight.</summary>
     Fx6 EffortMultiplier(int actor, int processRow, long month) => Fx6.One;
+
+    /// <summary>Stamp (month index + 1) the mastery programme of the process started in, 0 without one (TASK-0134, production-mastery.md §2).</summary>
+    long ProgrammeStart(int site, int processRow, long month) => 0;
+
+    /// <summary>The programme runs the process on the own pilot site: no catch-up from a world leader (the mode «свой опытный участок»).</summary>
+    bool ProgrammeDomestic(int site, int processRow, long month) => false;
 }
 
 /// <summary>

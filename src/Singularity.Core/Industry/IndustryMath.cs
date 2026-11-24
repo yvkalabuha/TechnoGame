@@ -27,6 +27,27 @@ public readonly record struct ProcessYield(int ActiveMask, Dims3 C, Dims3 G, int
 {
     public bool IsActive(int dim) => (ActiveMask & (1 << dim)) != 0;
 
+    /// <summary>
+    /// The yield the culture and tooling allow, without the ramp of experience (<c>Π g_d</c> over the active dimensions; a control gives its yield).
+    /// «Ready for the series» of the mastery rules is measured on it: experience <c>X</c> grows only with reported output, and the ramp alone holds a
+    /// process without output at λ0 = 0,3, below <c>y_start</c> = 0,5.
+    /// </summary>
+    public Fx6 CultureYield
+    {
+        get
+        {
+            if (IsControl)
+                return Yield;
+            Fx6 acc = Fx6.One;
+            for (int d = 0; d < Dims3.Count; d++)
+            {
+                if (IsActive(d))
+                    acc *= G[d];
+            }
+            return acc;
+        }
+    }
+
     public CapabilitySource Source(int dim) => (MSourceMask & (1 << dim)) != 0 ? CapabilitySource.M : CapabilitySource.H;
 
     /// <summary>A yield set directly by a control (L_C, L_C0): no dimensions, no ramp.</summary>

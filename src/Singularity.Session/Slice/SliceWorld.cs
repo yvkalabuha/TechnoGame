@@ -23,7 +23,7 @@ namespace Singularity.Session;
 internal sealed class SliceWorld
 {
     /// <summary>Version of the column schema (ADR-0013 п. 2); raised with every change of the table layout (pinned by a fingerprint test).</summary>
-    public const int SchemaVersion = 12;
+    public const int SchemaVersion = 14;
 
     // Layout constants of the slice (spec §1.4, §3.3, §2): engineer and skilled pools, bureaus, cohort years 1945…2030 (#423).
     public const int WorkforceCategories = 2;
@@ -65,6 +65,11 @@ internal sealed class SliceWorld
         (kp, ip, pp) = ApplyCalibration(config, kp, ip, pp);
         (kp, ip, pp) = ApplyChannels(config.Channels, kp, ip, pp);
         (kp, ip) = ApplyGrid(config.Grid, kp, ip);
+        kp = kp with { CalendarOriginMonths = (scenario.StartYear - 1945) * 12 + scenario.StartMonth - 1 };
+        // Hcap(t) and the mastery rules start with 1978-01 (hcap-growth.md §4): the run of 1945-1977 is the run without them.
+        int from1978 = (1978 - scenario.StartYear) * 12 + 1 - scenario.StartMonth;
+        ip = ip with { HcapGrowthOnset = from1978 };
+        pp = pp with { Mastery = pp.Mastery with { FromMonth = from1978, Rules = config.MasteryRules } };
         KnowledgeParameters = kp;
         IndustryParameters = ip;
         ProductsParameters = pp;
@@ -77,6 +82,7 @@ internal sealed class SliceWorld
             PilotForm = config.PilotForm,
             ToolingTarget = config.ToolingTarget,
             LicOff = config.LicOff, T6dOff = config.T6dOff,
+            Mastery = pp.Mastery,
         };
         config.ToolingTarget.Validate();
         if (!Enum.IsDefined(config.PilotForm) || !Enum.IsDefined(config.PilotProfiles))
@@ -93,6 +99,7 @@ internal sealed class SliceWorld
         PolicyParameters = ApplyEffortShare(config.EffortShare, policy with { FvBudget = policy.FvBudgetOf(great.Count > 0 ? [.. great] : [.. baseScenario.BudgetIndex]) });
 
         Graph = KnowledgeGraph.FromData(data.Nodes, scenario.Disciplines, kp);
+        ResearchWeight = ResearchWeightsOf(config.ResearchWeightByDiscipline, Graph);
         KnowledgeStart kStart = KnowledgeStart.FromScenario(scenario, Graph);
         // The product layout fixes how many requester ids the capability layer must hold (lines, bureaus, fix teams).
         IndustryLayout probe = IndustryLayout.FromData(data.Nodes, scenario, WorkforceCategories, 64);
@@ -148,7 +155,8 @@ internal sealed class SliceWorld
             generations: ProductsLayout.Generations, derive: config.Derive, startLines: StartLines(pStart),
             events: Streams.Events, eventInputs: new PolicyEventsAdapter(this), disruptionExposure: scenario.Exposure,
             budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout) > LicenceMask.NarrowMaxNumber);   // O-040: the second word only for data whose licensable PRC need it
-        Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs);
+        Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs,
+            ImmutableArray.CreateRange(MasteryParams.ProgrammeProcesses(ProductsLayout).Select(k => ProductsLayout.ProcNumber[k])));
         Limits = new CommandLimits(scenario.ActorCount, ProductsLayout.SlotCount, ProductsLayout.Designs,
             [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)]);
         RegisterRunColumns();
@@ -284,6 +292,30 @@ internal sealed class SliceWorld
     public ProductsParams ProductsParameters { get; }
     public PolicyParams PolicyParameters { get; }
     public KnowledgeGraph Graph { get; }
+
+    /// <summary>Research priority multiplier by discipline index of <see cref="Graph"/>; empty = all 1 (the default config).</summary>
+    internal Fx6[] ResearchWeight { get; } = [];
+
+    private static Fx6[] ResearchWeightsOf(ImmutableArray<DisciplineWeight> given, KnowledgeGraph graph)
+    {
+        if (given.IsDefault)
+            return [];
+        Fx6[] w = [.. graph.DisciplineNames.Select(_ => Fx6.One)];
+        bool[] seen = new bool[w.Length];
+        foreach (DisciplineWeight e in given)
+        {
+            int d = graph.DisciplineNames.IndexOf(e.Discipline);
+            if (d < 0)
+                throw new ArgumentException($"Research weight: unknown discipline '{e.Discipline}'.", nameof(given));
+            if (seen[d])
+                throw new ArgumentException($"Research weight: discipline '{e.Discipline}' is given twice.", nameof(given));
+            if (e.Weight <= Fx6.Zero)
+                throw new ArgumentException($"Research weight of '{e.Discipline}' must be positive.", nameof(given));
+            seen[d] = true;
+            w[d] = e.Weight;
+        }
+        return w;
+    }
     public IndustryLayout IndustryLayout { get; }
     public ProductsLayout ProductsLayout { get; }
     public Table Table { get; }
@@ -358,6 +390,37 @@ internal sealed class SliceWorld
             k = k with { CostGenMultiplier = WithGenMultiplier(k.CostGenMultiplier, 5, g5, c) };
         if (c.CostMultG6 is { } g6)
             k = k with { CostGenMultiplier = WithGenMultiplier(k.CostGenMultiplier, 6, g6, c) };
+        if (c.AheadCostK is { } ak)
+            k = k with { AheadCostK = ak };
+        if (c.AheadCostPow is { } ap)
+            k = k with { AheadCostPow = ap };
+        if (c.AheadCostMax is { } am)
+            k = k with { AheadCostMax = am };
+        k.Validate();
+        if (c.HcapGrowthPerYear is { } hk)
+        {
+            if (hk < Fx6.Zero)
+                throw new ArgumentException("The Hcap growth k must not be negative.", nameof(c));
+            i = i with { HcapGrowthPerYear = hk };
+        }
+        if (c.HcapGrowthMax is { } hmax)
+        {
+            if (hmax < Fx6.Zero)
+                throw new ArgumentException("The Hcap growth limit must not be negative.", nameof(c));
+            i = i with { HcapGrowthMax = hmax };
+        }
+        if (c.MasteryUpkeepMult is { } upkeep)
+        {
+            if (upkeep < Fx6.One)
+                throw new ArgumentException("upkeep_mult must be at least 1.", nameof(c));
+            i = i with { UpkeepMult = upkeep };
+        }
+        if (c.MasteryXProg is { } xProg)
+        {
+            if (xProg <= Fx6.Zero || xProg > Fx6.One)
+                throw new ArgumentException("x_prog must be in (0; 1].", nameof(c));
+            p = p with { Mastery = p.Mastery with { XProg = xProg } };
+        }
         if (c.KappaQ10 is { } kappa)
         {
             if (kappa is < 0 or > 1024)
@@ -583,6 +646,9 @@ internal sealed class SliceWorld
             Table.AddInt("run.budget_rule").Load([.. Enumerable.Repeat((int)Config.BudgetRule, rows)]);
         if (Config.Grid.Code != 0)
             Table.AddInt("run.grid").Load([.. Enumerable.Repeat(Config.Grid.Code, rows)]);
+        // The mastery arms are part of the state; Main adds nothing.
+        if (Config.MasteryRules != MasteryRules.Main)
+            Table.AddInt("run.mastery").Load([.. Enumerable.Repeat((int)Config.MasteryRules, rows)]);
         if (Config.EffortShare != EffortShareArm.X1)
             Table.AddInt("run.effort_share").Load([.. Enumerable.Repeat((int)Config.EffortShare, rows)]);
         Table.AddLong("run.scenario").Load(Fill(rows, BinaryPrimitives.ReadInt64LittleEndian(Convert.FromHexString(Scenario.Hash.AsSpan(0, 16)))));
@@ -611,6 +677,25 @@ internal sealed class SliceWorld
             Add("run.k.cost_mult_g5", g5.Raw);
         if (c.CostMultG6 is { } g6)
             Add("run.k.cost_mult_g6", g6.Raw);
+        if (c.AheadCostK is { } ak)
+            Add("run.k.ahead_k", ak.Raw);
+        if (c.AheadCostPow is { } ap)
+            Add("run.k.ahead_pow", ap);
+        if (c.AheadCostMax is { } am)
+            Add("run.k.ahead_max", am.Raw);
+        if (!c.ResearchWeightByDiscipline.IsDefault)
+        {
+            for (int d = 0; d < ResearchWeight.Length; d++)
+                Add($"run.k.disc_weight.{Graph.DisciplineNames[d]}", ResearchWeight[d].Raw);
+        }
+        if (c.HcapGrowthPerYear is { } hk)
+            Add("run.k.hcap_k", hk.Raw);
+        if (c.HcapGrowthMax is { } hmax)
+            Add("run.k.hcap_max", hmax.Raw);
+        if (c.MasteryXProg is { } xProg)
+            Add("run.k.x_prog", xProg.Raw);
+        if (c.MasteryUpkeepMult is { } upkeep)
+            Add("run.k.upkeep_mult", upkeep.Raw);
         if (c.DeltaH is { } deltaH)
             Add("run.k.delta_h", deltaH.Raw);
         if (c.CM is { } cm)

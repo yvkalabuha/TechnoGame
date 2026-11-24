@@ -103,7 +103,7 @@ public class WhyNotF25Tests
     [Fact]
     public void FraSeed7_Month348_FirstCapabilityLinkIsCultureHOfProcess54_QualityControl()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, T6dOff = true });
+        SliceSession s = SliceTestData.CreateLegacyNeutral(new SliceRunConfig { Seed = 7, T6dOff = true });   // the 61-node D1 world with the ahead-of-time cost off: the diagnosis state of the note above (TASK-0147, O-052)
         int fra = s.World.Scenario.ActorIndex("FRA");
         s.StepThroughMonth(347);
         WhyNotTarget? target = s.CurrentRequirement(fra);

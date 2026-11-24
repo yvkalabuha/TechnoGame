@@ -690,6 +690,7 @@ internal sealed class SliceObserver
                     LineCloseReason.YProd when role == Role.W => "YPROD",
                     LineCloseReason.LaunchAll => "REPLACE",
                     LineCloseReason.LaunchCandidate when role == Role.N => "REPLACE",
+                    LineCloseReason.CandidateBelow when role == Role.N => "CANDIDATE_BELOW",
                     _ => throw new SliceFormatException($"Month {t} actor {_ids[a]} design {d}: close {cv.Reason} of a line with role {role} (§4.12); "
                         + $"snapshot {string.Join(" ", sv.Designs.Select(x => $"{x.Design}:{x.Stage}/g{x.PlatformGen}/p{x.Parent}"))}; "
                         + $"step-7 lines {string.Join(" ", st.Money?.Lines.Select(l => l.Design.ToString(CultureInfo.InvariantCulture)) ?? [])}."),

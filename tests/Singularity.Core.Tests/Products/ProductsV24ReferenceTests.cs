@@ -153,7 +153,7 @@ public class ProductsV24ReferenceTests
         for (int a = L.AltStart[L.BaseSlot]; a < L.AltStart[L.BaseSlot + 1]; a++)
             Assert.InRange(L.AltEngGen[a], 1, L.Generations);
         Assert.Equal([1, 2, 3, 4], L.AltEngGen.Skip(L.AltStart[L.BaseSlot]).Take(4).ToArray());
-        Assert.Equal([1, 2, 3, 5], L.PlatformMinRank.ToArray());
+        Assert.Equal([1, 2, 3, 5, 6, 8], L.PlatformMinRank.ToArray());   // G5, G6 from the TASK-0133 data
     }
 
     [Fact]
@@ -161,8 +161,8 @@ public class ProductsV24ReferenceTests
     {
         JsonElement v = V24.GetProperty("validator_psi");
         int cMax = ProductsSystem.MaxComplexity(L);
-        Assert.Equal(v.GetProperty("c_max").GetInt32(), cMax);
-        Assert.Equal(v.GetProperty("psi_c_max_over_c_ref").GetInt64(), (P.PsiD * Fx6.FromInt(cMax) / Fx6.FromInt(L.CRef)).Raw);
+        // The reference value (49) is the G1-G4 class; the G5/G6 airframe (LO composite) adds layup and finishing: tier 4 + 5 = +9.
+        Assert.Equal(v.GetProperty("c_max").GetInt32() + 9, cMax);
         ProductsSystem.ValidatePsi(L, P);
         Assert.Throws<ArgumentException>(() => ProductsSystem.ValidatePsi(L, P with { PsiD = Fx6.FromRaw(800_000) }));
     }

@@ -88,6 +88,7 @@ public sealed class KnowledgeSystem : ITickSystem
             throw new ArgumentException("Start state does not match the graph.", nameof(start));
         if ((mode == KnowledgeMode.Full) != (schedule is null) || (schedule is not null && schedule.Value.Length != start.ActorCount * graph.Count))
             throw new ArgumentException("A schedule (one entry per actor and node) is needed exactly in the schedule modes.", nameof(schedule));
+        parameters.Validate();
         _g = graph;
         _start = start;
         _p = parameters;
@@ -186,7 +187,7 @@ public sealed class KnowledgeSystem : ITickSystem
     public bool InFrontier(int actorRow, int nodeRow) => !IsKnown(actorRow, nodeRow) && RequiresKnown(actorRow, nodeRow);
 
     /// <summary><c>c_eff</c> of a node for the actor in the snapshot (spec §3.1); a pure function of the snapshot.</summary>
-    public Fx6 CEff(int actorRow, int nodeRow) => CEffOf(actorRow, nodeRow, KMix(actorRow, nodeRow));
+    public Fx6 CEff(int actorRow, int nodeRow, long month) => CEffOf(actorRow, nodeRow, KMix(actorRow, nodeRow), month);
 
     /// <summary>
     /// <c>Δprog</c> a frontier node gets in month <paramref name="month"/> at the current budget and weights (the speed <c>why_not</c>
@@ -208,7 +209,7 @@ public sealed class KnowledgeSystem : ITickSystem
         }
         if (wsum == Fx6.Zero)
             return Fx6.Zero;
-        return _inputs.ResearchBudget(actorRow, month) * (wn / wsum) / CEff(actorRow, nodeRow);
+        return _inputs.ResearchBudget(actorRow, month) * (wn / wsum) / CEff(actorRow, nodeRow, month);
     }
 
     // ---- diagnostics of the last step (tests, journals): scratch outside the Table, not state, not saved
@@ -326,7 +327,7 @@ public sealed class KnowledgeSystem : ITickSystem
             spent += alloc;
             int disc = _g.Discipline[r];
             Fx6 kmix = KMix(a, r);
-            Fx6 ceff = CEffOf(a, r, kmix);
+            Fx6 ceff = CEffOf(a, r, kmix, t);
             Fx6 dprog = alloc / ceff;
             Fx6 prog = Prog(a, r) + dprog;
             bool open;
@@ -418,8 +419,9 @@ public sealed class KnowledgeSystem : ITickSystem
         return disc < 0 ? Fx6.Zero : _g.Type[r] is NodeType.ENG or NodeType.PRC ? KD(a, disc) + KInd(a, disc) : KD(a, disc);
     }
 
-    private Fx6 CEffOf(int a, int r, Fx6 kmix) =>
-        KnowledgeMath.CEff(KnowledgeMath.CMoney(_g.CostN[r], _p.SRef), _p.KDiff, KnownElsewhere(a, r), _p.KK, kmix, _p.KRef, InformsSum(a, r));
+    // The ahead-of-time multiplier is a pure function of (node, month): a few integer operations, no table to refresh, nothing stored.
+    private Fx6 CEffOf(int a, int r, Fx6 kmix, long month) =>
+        KnowledgeMath.CEff(KnowledgeMath.CMoney(_g.CostN[r], _p.SRef) * KnowledgeMath.AheadMultiplier(_p.AheadCostK, _p.AheadCostPow, _p.AheadCostMax, _g.AnchorYear[r], month, _p.CalendarOriginMonths), _p.KDiff, KnownElsewhere(a, r), _p.KK, kmix, _p.KRef, InformsSum(a, r));
 
     private bool RequiresKnown(int a, int r)
     {

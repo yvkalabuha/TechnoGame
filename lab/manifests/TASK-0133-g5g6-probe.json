@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0133-g5g6-probe",
+  "description": "TASK-0133 step 2, O-038: probe of the G5/G6 data (mods/core, 81 nodes) on JetSlice FULL to 2030-12 (1024 months, ticks 31168), seeds 1-10, threads 1 and 4 (L2). Series cn_default = Core c_n multipliers 6.4/10.2. Calibration points (COST_MULT_G5/G6) follow the ladder of docs/simulation/g5-g6-probe.md §2 in a separate manifest. The outcome feeds the owner's approval of the G5/G6 content (TASK-0128). Analysis lab/analysis/g5g6_probe.py.",
+  "model": "JetSlice",
+  "ticks": 31168,
+  "chunk_size": 1,
+  "threads": [
+    1,
+    4
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 10
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full"
+  },
+  "series": [
+    {
+      "name": "cn_default"
+    }
+  ],
+  "meta": {
+    "slice_spec": "docs/simulation/slice-jet-aviation.md v0.34 r1",
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r16",
+    "preregistration": "docs/simulation/g5-g6-probe.md §1-§3",
+    "baseline": "lab/manifests/TM-horizon-2030.json (61-node data, same params)"
+  }
+}

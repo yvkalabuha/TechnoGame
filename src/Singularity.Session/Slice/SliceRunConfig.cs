@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using Singularity.Core.Industry;
 using Singularity.Core.Knowledge;
 using Singularity.Core.Policy;
+using Singularity.Core.Products;
 using Singularity.Kernel;
 
 namespace Singularity.Session;
@@ -251,6 +252,30 @@ public sealed partial record SliceRunConfig
     /// <summary>Multiplier of <c>c_n</c> for generation 6 nodes (TASK-0131); null = the default of <c>KnowledgeParams</c> (10.2). Must be positive.</summary>
     public Fx6? CostMultG6 { get; init; }
 
+    /// <summary><c>k</c> of <c>Hcap(t)</c> (TASK-0134, #438): growth per year after 1978-01; null = the default of <c>IndustryParams</c>. 0 switches the growth off. Not negative.</summary>
+    public Fx6? HcapGrowthPerYear { get; init; }
+
+    /// <summary><c>ΔHmax</c> of <c>Hcap(t)</c>; null = the default of <c>IndustryParams</c>. 0 switches the growth off. Not negative.</summary>
+    public Fx6? HcapGrowthMax { get; init; }
+
+    /// <summary><c>k</c> of the ahead-of-time cost (TASK-0147, #458): multiplier <c>1 + k·ahead^pow</c> of a node's price, <c>ahead</c> in years before its anchor year; null = the default of <c>KnowledgeParams</c> (0.02; 0 = off, #465). Not negative.</summary>
+    public Fx6? AheadCostK { get; init; }
+
+    /// <summary>Integer exponent of the ahead-of-time cost, 1…4; null = the default (2).</summary>
+    public int? AheadCostPow { get; init; }
+
+    /// <summary>Ceiling of the ahead-of-time multiplier, at least 1; null = the default (10).</summary>
+    public Fx6? AheadCostMax { get; init; }
+
+    /// <summary><c>x_prog</c> of the mastery programme (O-045); null = the default (1). In (0; 1].</summary>
+    public Fx6? MasteryXProg { get; init; }
+
+    /// <summary><c>upkeep_mult</c> of the mastery programme; null = the default of <c>IndustryParams</c>. At least 1.</summary>
+    public Fx6? MasteryUpkeepMult { get; init; }
+
+    /// <summary>Parts of the mastery rules that run (arms B0-B3 of the probe); <see cref="MasteryRules.Main"/> in main (#452: foresight and programme).</summary>
+    public MasteryRules MasteryRules { get; init; } = MasteryRules.Main;
+
     /// <summary><c>κ</c> as q10 (0…1024) of the bureau requirement; null = §8.1 (512).</summary>
     public int? KappaQ10 { get; init; }
 
@@ -259,6 +284,13 @@ public sealed partial record SliceRunConfig
 
     /// <summary><c>X½</c> of tiers 3, 4, 5; default (unset) array = §8.1.</summary>
     public ImmutableArray<Fx6> XHalfByTier { get; init; }
+
+    /// <summary>
+    /// Per-discipline multiplier of the research priority weight (<c>prio</c>) of every ENG/PRC/CMP/... node of that discipline (TASK-0147); default
+    /// (unset) = 1 everywhere, no column and the hash of main. Names are scenario disciplines (aero, prop, metal, chem, mech), each at most once,
+    /// weights positive. APP nodes have no discipline and keep weight 1.
+    /// </summary>
+    public ImmutableArray<DisciplineWeight> ResearchWeightByDiscipline { get; init; }
 
     /// <summary><c>δ_H</c> (culture forgetting); null = §8.1.</summary>
     public Fx6? DeltaH { get; init; }
@@ -312,3 +344,6 @@ public sealed record SliceStreams(CounterRng Know, CounterRng Events, CounterRng
         new CounterRng(config.SeedOf(config.FixK)), new CounterRng(config.SeedOf(config.FixE)),
         new CounterRng(config.SeedOf(config.FixA)), new CounterRng(config.Seed));
 }
+
+/// <summary>One entry of <see cref="SliceRunConfig.ResearchWeightByDiscipline"/>.</summary>
+public readonly record struct DisciplineWeight(string Discipline, Fx6 Weight);

@@ -23,12 +23,16 @@ public sealed class CommandState
     private readonly IntColumn[][] _dAlt;
     private readonly IntColumn[] _sStamp, _sGen, _sForce, _cStamp, _cGen;
     private readonly LongColumn[] _sRate;
+    private readonly IntColumn[] _progCmd;
+    private readonly ImmutableArray<int> _progNumbers;
     private readonly IntColumn[] _fKind, _fDesign, _fGen, _fN, _fStamp;
 
     /// <param name="altSlots">Alternatives per design command: the slot count of the product class.</param>
     /// <param name="designs"><c>max_designs</c>.</param>
-    public CommandState(Table table, int altSlots, int designs)
+    /// <param name="programmeProcesses">Process numbers a mastery programme may run on (tier ≥ 5): one `cmd.prog.p{n}` column each.</param>
+    public CommandState(Table table, int altSlots, int designs, ImmutableArray<int> programmeProcesses = default)
     {
+        _progNumbers = programmeProcesses.IsDefault ? [] : programmeProcesses;
         _slots = CommandLimits.DesignSlots;
         _altSlots = altSlots;
         _sharesSet = table.AddInt("cmd.shares.set");
@@ -63,6 +67,9 @@ public sealed class CommandState
             _fN[k] = table.AddInt($"cmd.flt.{k}.n");
             _fStamp[k] = table.AddInt($"cmd.flt.{k}.stamp");
         }
+        _progCmd = new IntColumn[_progNumbers.Length];
+        for (int j = 0; j < _progCmd.Length; j++)
+            _progCmd[j] = table.AddInt($"cmd.prog.p{_progNumbers[j]}");
         _sStamp = new IntColumn[designs];
         _sForce = new IntColumn[designs];
         _cStamp = new IntColumn[designs];
@@ -121,6 +128,19 @@ public sealed class CommandState
                 list.Add((_fKind[k].Current[actor] == 1 ? CommandKind.SellCohort : CommandKind.RetireCohort, new DesignHandle(_fDesign[k].Current[actor], _fGen[k].Current[actor]), _fN[k].Current[actor]));
         }
         return list;
+    }
+
+    /// <summary>The mastery programme commands the month step <paramref name="month"/> consumes (the player's), written to <paramref name="into"/>; returns the count.</summary>
+    public int ProgrammeCommands(int actor, long month, Span<ProgrammeCommand> into)
+    {
+        int n = 0;
+        for (int j = 0; j < _progCmd.Length && n < into.Length; j++)
+        {
+            int v = _progCmd[j].Current[actor];
+            if (v >> 3 == Stamp(month) && (v & 3) is 1 or 2)
+                into[n++] = new ProgrammeCommand(_progNumbers[j], (v & 3) == 1, (v & 4) != 0);
+        }
+        return n;
     }
 
     /// <summary><c>start_series</c> consumed at <paramref name="month"/>: handle, rate and force, or null.</summary>
@@ -199,6 +219,15 @@ public sealed class CommandState
                     return Superseded(l.Design, _cGen[l.Design.Slot].Current[a]);
                 Set(_cStamp[l.Design.Slot], a, stamp);
                 Set(_cGen[l.Design.Slot], a, l.Design.Generation);
+                break;
+            case StartMasteryProgramme or CancelMasteryProgramme:
+                int number = command is StartMasteryProgramme sp ? sp.ProcessNumber : ((CancelMasteryProgramme)command).ProcessNumber;
+                int j = _progNumbers.IndexOf(number);
+                if (j < 0)
+                    return CommandVerdict.Refuse(CommandRefusal.BadProcess, $"process {number} has no programme (below tier {MasteryParams.MinTier})");
+                bool abroad = command is StartMasteryProgramme { Abroad: true };
+                // One entry per (actor, process, month): the later command in key order wins.
+                Set(_progCmd[j], a, (stamp << 3) | (abroad ? 4 : 0) | (command is StartMasteryProgramme ? 1 : 2));
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(command), command.GetType(), "Unknown command type.");

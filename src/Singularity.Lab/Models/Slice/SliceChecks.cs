@@ -19,7 +19,10 @@ public static class SliceChecks
     // Re-recorded in TASK-0110 (DEBT-0054), reason: schema v10 (new columns prd.altReached.*, novelty memory per actor); the old columns are unchanged per the projection tests in this branch (T6dOff, FleetAblation, ToolingUnmet), so only the new columns change the hash.
     // Re-recorded in TASK-0115: new columns cmd.*.gen / pol.*.gen and SchemaVersion 11; old columns unchanged per the projection tests.
     // Re-recorded in TASK-0121 (#423): schema v12, new columns prd.d*.cohort.1978…2030 and prd.d*.q.1.
-    private const string Golden150 = "a0b7ab02e5f089a2c7e344132eae6d298b8f2e1f3d3ab117cf7261841460869e";
+    // Re-recorded in TASK-0129 (fleet ageing, #431/#435-#437): new column prd.d*.replCredit, SchemaVersion 13.
+    // Re-recorded in TASK-0147 (train 2, O-052): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465)
+    // change every trajectory on the current data; equals Session MainSeed1Month149. Earlier: TASK-0134 (Hcap(t), mastery). docs/simulation/golden-rerecord-train2.md.
+    private const string Golden150 = "7720220e04795975c4e9e8e7b11d50c51976106a68cb89f0464c416db3baa087";
     private const long Ticks150 = 4564;   // 1945-09-01 → 1958-03-01: the tick of month 150, so month 149 is the last one run
     private const long Ticks60 = 1826;    // 1945-09-01 → 1950-09-01
 
@@ -59,7 +62,7 @@ public static class SliceChecks
         ("slice: c5-stand — smoke (horizon 6, threshold 0,25): idle and restart run, two runs give the same bytes, no statistic row (#248)", () => C5Smoke(tmp)),
         ("slice: full run to 2030-12 — FULL, 1024 months, seed 1: status ok, months 1024, last lines row t = 1023, threads 1 = 2 (TASK-0121)", () => FullRun2030(tmp)),
         ("slice: H8 — a control layer (LK, LK0, LC0, LC, LP) past 384 months is rejected before any month runs; FULL is not (TASK-0121)", () => ControlHorizon(tmp)),
-        ("slice: G5/G6 — L_K, L_K0, L_P reject six-generation data before any month; actor_month has out_g/active_g of every generation, 4 on the current data (TASK-0131)", () => SixGenerations(tmp)),
+        ("slice: G5/G6 — L_K, L_K0, L_P reject six-generation data before any month; actor_month has out_g/active_g of every generation, 6 on mods/core, 4 on the core-g4 data (TASK-0131, TASK-0133)", () => SixGenerations(tmp)),
         ("slice: BUDGET_RULE — NOW/A/B1/B2 parsed, other values rejected; NOW gives the main golden; A, B1, B2 change a preset budget, B1/B2 not before their first ceiling (TASK-0123)", () => BudgetRuleKey(tmp)),
         ("slice: supply_month — pools follow the budget of the same month, granted ≤ requested ≤ pool, output and limiters agree with lines and the ledger (TASK-0123)", () => SupplyMonth(tmp)),
     ];
@@ -250,9 +253,8 @@ public static class SliceChecks
     }
 
 
-    // TASK-0131 (train 2, H9/H15, O-038): six-generation data. A fixture copy of mods/core with an APP node of G5 and G6 and generations 5-6 of
-    // jet_fighter (the same edits as Core SixGenerationDataTests). (1) L_K, L_K0, L_P reject it before any month runs, L_C0/L_C/FULL do not, and the
-    // current data passes the guard; (2) actor_month of the calibration build has out_g1…g6, active_g1…g6 on it and stays the 4-generation table
+    // TASK-0131 (train 2, H9/H15, O-038): six-generation data; since TASK-0133 that is mods/core itself (G5/G6 nodes 62-81), and the 61-node data
+    // is the core-g4 fixture. (1) L_K, L_K0, L_P reject mods/core before any month runs, L_C0/L_C/FULL do not, and the core-g4 data passes the guard; (2) actor_month of the calibration build has out_g1…g6, active_g1…g6 on it and stays the 4-generation table
     // on the current data; (3) a G5/G6 design's output reaches its own columns (it was dropped before).
     private static string? SixGenerations(string tmp)
     {
@@ -281,29 +283,26 @@ public static class SliceChecks
         }
         catch (SliceFormatException) { }
 
-        // (1) the guard, on the current data and on the fixture.
+        // (1) the guard. TASK-0133: mods/core now holds the G5/G6 data (6 generations), the core-g4 fixture the 61-node data (4 generations).
         GameData current = SliceData.Load(tmp);
-        if (SliceTables.Generations(current) != 4)
-            return $"current data has {SliceTables.Generations(current)} generations of {SliceTables.SliceProductClass}, the check expects 4";
+        if (SliceTables.Generations(current) != 6)
+            return $"current data has {SliceTables.Generations(current)} generations of {SliceTables.SliceProductClass}, the check expects 6 (TASK-0133)";
+        string legacyRoot = LegacyRoot(tmp);
+        GameData legacy = SliceData.Load(legacyRoot);
+        if (SliceTables.Generations(legacy) != 4)
+            return $"core-g4 fixture has {SliceTables.Generations(legacy)} generations, the check expects 4";
         LayerControl[] all = [LayerControl.Full, LayerControl.Lk, LayerControl.Lk0, LayerControl.Lc0, LayerControl.Lc, LayerControl.Lp];
         foreach (LayerControl layer in all)
         {
-            try { JetSliceModelFactory.CheckControlGenerations(layer, current); }
-            catch (ParamException e) { return $"{layer} rejected on the current data: {e.Message}"; }
+            try { JetSliceModelFactory.CheckControlGenerations(layer, legacy); }
+            catch (ParamException e) { return $"{layer} rejected on the core-g4 data: {e.Message}"; }
         }
-        string root = Path.Combine(tmp, "six-gen");
-        string? fixture = SixGenerationFixture(tmp, root);
-        if (fixture is not null)
-            return fixture;
-        GameData sixData = SliceData.Load(root);
-        if (SliceTables.Generations(sixData) != 6)
-            return $"fixture has {SliceTables.Generations(sixData)} generations";
         foreach (LayerControl layer in all)
         {
             bool control = layer is LayerControl.Lk or LayerControl.Lk0 or LayerControl.Lp;
             try
             {
-                JetSliceModelFactory.CheckControlGenerations(layer, sixData);
+                JetSliceModelFactory.CheckControlGenerations(layer, current);
                 if (control)
                     return $"{layer} accepted six-generation data";
             }
@@ -313,12 +312,12 @@ public static class SliceChecks
         foreach (string pars in new[] { """{"LAYER": "LK0", "detail": "lite"}""", """{"LAYER": "LK", "CONTROL_TABLES": "absent.json", "detail": "lite"}""",
                      """{"LAYER": "LP", "CONTROL_TABLES": "absent.json", "detail": "lite"}""" })
         {
-            var (r, _) = Run(root, Manifest("JetSlice", Ticks60, pars: pars), 1, 1, "six-guard");
+            var (r, _) = Run(tmp, Manifest("JetSlice", Ticks60, pars: pars), 1, 1, "six-guard");
             if (r.Ok || r.Error?.Contains("ParamException", StringComparison.Ordinal) != true || r.Error.Contains("generations 1…4", StringComparison.Ordinal) != true)
                 return $"run {pars} on six-generation data: ok={r.Ok} {r.Error}";
         }
         // calib-print builds its session without the model factory: LK0 there meets the same guard (Codex finding on CalibPrint).
-        string printDir = Path.Combine(root, "six-print");
+        string printDir = Path.Combine(tmp, "six-print");
         Directory.CreateDirectory(printDir);
         string printManifest = Path.Combine(printDir, "m.json");
         File.WriteAllText(printManifest, Manifest("JetSliceCalib", Ticks60, seeds: "[1]", pars: """{"LAYER": "LK0"}"""));
@@ -339,122 +338,62 @@ public static class SliceChecks
         }
         catch (ParamException e) when (e.Message.Contains("generations 1…4", StringComparison.Ordinal)) { }
         catch (Exception e) { return $"lk-draws LK on six-generation data failed without the guard: {e.GetType().Name}: {e.Message}"; }
-        // (2) the calibration build on the fixture writes the 6-generation actor_month.
-        var (c, dir) = Run(root, Manifest("JetSliceCalib", Ticks60), 1, 1, "six-calib");
+        // (2) the calibration build writes the 6-generation actor_month on mods/core and the 4-generation one on the core-g4 data.
+        var (c, dir) = Run(tmp, Manifest("JetSliceCalib", Ticks60), 1, 1, "six-calib");
         if (!c.Ok)
             return $"JetSliceCalib on six-generation data: {c.Error}";
         string[] lines = File.ReadAllLines(Path.Combine(dir, "actor_month.csv"));
         if (lines[0] != "run," + want || lines.Length < 2 || lines.Skip(1).Any(l => l.Split(',').Length != 17))
             return $"actor_month on six-generation data: '{lines[0]}', {lines.Length - 1} rows";
-        // (3) O-040: the fixture has a licensable PRC above 63 (eng_g5 needs PRC 72), so the world registers word 1 of the licence masks; the
-        // current data (licensable PRC ≤ 63) does not. The run above is the end-to-end proof that the wide mask runs.
-        if (!HasColumn(new SliceWorld(sixData, new SliceRunConfig { Seed = 1 }), "pol.lic.mask.1"))
-            return "six-generation fixture with PRC 72: no pol.lic.mask.1";
-        if (HasColumn(new SliceWorld(current, new SliceRunConfig { Seed = 1 }), "pol.lic.mask.1"))
-            return "current data: pol.lic.mask.1 is registered without a licensable PRC above 63";
+        var (c4, dir4) = Run(legacyRoot, Manifest("JetSliceCalib", Ticks60), 1, 1, "four-calib");
+        if (!c4.Ok)
+            return $"JetSliceCalib on the core-g4 data: {c4.Error}";
+        string head4 = File.ReadLines(Path.Combine(dir4, "actor_month.csv")).First();
+        if (head4 != "run," + string.Join(",", SliceTables.ActorMonth.Columns))
+            return $"actor_month on the core-g4 data: '{head4}'";
+        // (3) O-040: mods/core has a licensable PRC above 63 (single_crystal_casting, 73), so the world registers word 1 of the licence masks; the
+        // core-g4 data (licensable PRC ≤ 63) does not. The run above is the end-to-end proof that the wide mask runs.
+        if (!HasColumn(new SliceWorld(current, new SliceRunConfig { Seed = 1 }), "pol.lic.mask.1"))
+            return "six-generation data: no pol.lic.mask.1";
+        if (HasColumn(new SliceWorld(legacy, new SliceRunConfig { Seed = 1 }), "pol.lic.mask.1"))
+            return "core-g4 data: pol.lic.mask.1 is registered without a licensable PRC above 63";
         return null;
     }
 
-    private static bool HasColumn(SliceWorld w, string name) => w.Table.Columns.Any(c => c.Name == name);
-
-    // A repository-shaped copy (Singularity.sln marker + mods/core) of the current mods with the six-generation edits; null or the problem.
-    private static string? SixGenerationFixture(string tmp, string root)
+    // TASK-0133 (O-038, DEBT-0075): the control layers L_K, L_K0, L_P stay on G1-G4 and reject the G5/G6 data of mods/core, so their checks run on
+    // the 61-node data before TASK-0133 (tests/Singularity.Session.Tests/Fixtures/core-g4, the Session's SliceTestData.LegacyData): a
+    // repository-shaped copy under tmp (Singularity.sln marker + mods/core), so SliceData.Load of a manifest there finds it first. Returns the root.
+    internal static string LegacyRoot(string tmp)
     {
-        string modYaml = SliceData.Files(tmp).FirstOrDefault(f => Path.GetFileName(f) == "mod.yaml") ?? "";
-        if (modYaml.Length == 0)
-            return "mod.yaml is not among the slice data files";
-        string src = Path.GetDirectoryName(modYaml)!, dst = Path.Combine(root, "mods", "core");
-        if (Directory.Exists(root))
-            Directory.Delete(root, recursive: true);
+        string root = Path.Combine(tmp, "legacy-g4");
+        string dst = Path.Combine(root, "mods", "core");
+        if (File.Exists(Path.Combine(root, "Singularity.sln")))
+            return root;
+        string? repo = null;
+        foreach (string start in new[] { tmp, AppContext.BaseDirectory })
+        {
+            for (var d = new DirectoryInfo(Path.GetFullPath(start)); d is not null && repo is null; d = d.Parent)
+            {
+                if (File.Exists(Path.Combine(d.FullName, "Singularity.sln")) && Directory.Exists(Path.Combine(d.FullName, LegacyFixture)))
+                    repo = d.FullName;
+            }
+        }
+        if (repo is null)
+            throw new InvalidOperationException($"{LegacyFixture} not found above {tmp} or {AppContext.BaseDirectory}.");
+        string src = Path.Combine(repo, LegacyFixture);
         foreach (string f in Directory.GetFiles(src, "*", SearchOption.AllDirectories))
         {
             string to = Path.Combine(dst, Path.GetRelativePath(src, f));
             Directory.CreateDirectory(Path.GetDirectoryName(to)!);
-            File.Copy(f, to);
+            File.Copy(f, to, overwrite: true);
         }
         File.WriteAllText(Path.Combine(root, "Singularity.sln"), "");
-        const string Engines = "requires_nodes: [s8.eng.turbofan_g4]}";
-        const string Airframes = "requires_nodes: [s8.eng.mach2_airframe_g4, s5.cmp.titanium_alloy]}";
-        const string Prc = "prc_set: [s5.prc.light_alloy_rolling, s8.prc.stressed_skin_assembly, s8.prc.swept_wing_fabrication, s8.prc.machined_integral_skins, s5.prc.titanium_reduction_forging]";
-        string nodes = Path.Combine(dst, "nodes.yaml"), classes = Path.Combine(dst, "product_classes.yaml");
-        File.WriteAllText(nodes, File.ReadAllText(nodes).TrimEnd() + """
-
-          - id: s8.app.jet_fighter_g5
-            number: 70
-            type: APP
-            gen: 5
-            discipline: aero
-            cluster: AERO
-            requires: [s8.app.jet_fighter_g4]
-            hazard: none
-            anchor: {year: 1990, source: "fixture", estimated: true}
-          - id: s8.app.jet_fighter_g6
-            number: 71
-            type: APP
-            gen: 6
-            discipline: aero
-            cluster: AERO
-            requires: [s8.app.jet_fighter_g5]
-            hazard: none
-            anchor: {year: 2010, source: "fixture", estimated: true}
-          - id: s5.prc.fixture_g5_refining
-            number: 72
-            type: PRC
-            gen: 0
-            discipline: chem
-            cluster: CHEM
-            tier: 3
-            capability_req:
-              purity: 3.5
-              quality_control: 3
-            requires: []
-            hazard: none
-            labour_p: 150
-            anchor: {year: 1945, before: true, source: "fixture", estimated: true}
-
-        """);
-        string text = File.ReadAllText(classes);
-        (string From, string To)[] edits =
-        [
-            (Engines, Engines + """
-
-                      - {id: eng_g5, rank: 5, eng_gen: 5, perf_mult: 2.8, prc_set: [s8.prc.jet_engine_assembly_test, s5.prc.fixture_g5_refining], requires_nodes: [s8.eng.turbofan_g4]}
-                      - {id: eng_g6, rank: 6, eng_gen: 6, perf_mult: 3.4, prc_set: [s8.prc.jet_engine_assembly_test, s5.prc.alloying_element_refining], requires_nodes: [s8.eng.turbofan_g4]}
-            """.TrimEnd()),
-            (Airframes, Airframes + $$"""
-
-                      - {id: af_g6, rank: 6, af_class: 5, perf_mult: 2.0, {{Prc}}, requires_nodes: [s8.eng.mach2_airframe_g4]}
-                      - {id: af_g7, rank: 7, af_class: 5, perf_mult: 2.2, {{Prc}}, requires_nodes: [s8.eng.mach2_airframe_g4]}
-            """.TrimEnd()),
-            ("      - {prc: s5.prc.alloying_element_refining, n_p: 1, labour_hours: 150, base_cost: 0.000018}", """
-                  - {prc: s5.prc.alloying_element_refining, n_p: 1, labour_hours: 150, base_cost: 0.000018}
-                  - {prc: s5.prc.fixture_g5_refining, n_p: 1, labour_hours: 150, base_cost: 0.000018}
-            """),
-            ("{rank: 4, proc_scale_pu: 0.827491}", """
-            {rank: 4, proc_scale_pu: 0.827491}
-                  - {rank: 5, proc_scale_pu: 1.2}
-                  - {rank: 6, proc_scale_pu: 1.2}
-            """),
-            ("proc_scale_af: 3.754003}", """
-            proc_scale_af: 3.754003}
-                  - {af_class: 5, h_first: 125920, h_floor: 31480, materials_floor: 0.002098, design_scale: 3.12, proc_scale_af: 3.754003}
-            """),
-            ("{gen: 4, app: s8.app.jet_fighter_g4, crew_req: 1, platform_min_rank: 5}", """
-            {gen: 4, app: s8.app.jet_fighter_g4, crew_req: 1, platform_min_rank: 5}
-                  - {gen: 5, app: s8.app.jet_fighter_g5, crew_req: 1, platform_min_rank: 6}
-                  - {gen: 6, app: s8.app.jet_fighter_g6, crew_req: 1, platform_min_rank: 7}
-            """),
-        ];
-        foreach (var (from, to) in edits)
-        {
-            int at = text.IndexOf(from, StringComparison.Ordinal);
-            if (at < 0 || text.IndexOf(from, at + 1, StringComparison.Ordinal) >= 0)
-                return $"fixture anchor '{from}' is not found exactly once in product_classes.yaml";
-            text = string.Concat(text.AsSpan(0, at), to, text.AsSpan(at + from.Length));
-        }
-        File.WriteAllText(classes, text);
-        return null;
+        return root;
     }
+
+    internal const string LegacyFixture = "tests/Singularity.Session.Tests/Fixtures/core-g4";
+
+    private static bool HasColumn(SliceWorld w, string name) => w.Table.Columns.Any(c => c.Name == name);
 
     // H8 of slice-horizon-2030.md §2.2 (TASK-0121): the control layers are calibration stands of 1945-1977. 384 months (ticks 11688) is the last
     // accepted run of a control layer; one more month fails loudly in the model factory and in calib-print; FULL is never limited by it.
@@ -673,6 +612,7 @@ public static class SliceChecks
     // #251: the draws exported by lk-draws are those of the run — the self-check of the corrected L_K check, here on synthetic tables, 150 months.
     private static string? LkDrawsExact(string tmp)
     {
+        tmp = LegacyRoot(tmp);   // L_K covers G1-G4 only (O-038)
         GameData data = SliceData.Load(tmp);
         File.WriteAllText(Path.Combine(tmp, "lkd-tables.json"), SyntheticControlTables(data, n => n % 7 == 0 ? null : n % 5));
         string json = Manifest("JetSliceCalib", Ticks150, seeds: "[3]", pars: """{"LAYER": "LK", "CONTROL_TABLES": "lkd-tables.json"}""");
@@ -1060,7 +1000,12 @@ public static class SliceChecks
     {
         foreach (string bad in new[] { """{"FOO": 1}""", """{"START": "X"}""", """{"LAYER": "LK"}""", """{"GRID": "LO_MID"}""", """{"CHANNELS": ["B", "B"]}""",
                      """{"CONTROL_TABLES": "t.json"}""", """{"LAYER": "LC"}""", """{"LAYER": "LP"}""", """{"LAYER": "LC0", "CONTROL_TABLES": "t.json"}""",
-                     """{"X_SCALE": 0}""", """{"K_DIV": "x"}""", """{"COST_MULT_G5": 0}""", """{"COST_MULT_G6": -1}""", """{"COST_MULT_G5": "x"}""" })
+                     """{"X_SCALE": 0}""", """{"K_DIV": "x"}""", """{"COST_MULT_G5": 0}""", """{"COST_MULT_G6": -1}""", """{"COST_MULT_G5": "x"}""",
+                     """{"HCAP_K": -0.1}""", """{"HCAP_MAX": -1}""", """{"X_PROG": 0}""", """{"X_PROG": 1.5}""", """{"UPKEEP_MULT": 0.9}""",
+                     """{"MASTERY_RULES": "X"}""", """{"MASTERY_RULES": "GATE+GATE"}""", """{"MASTERY_RULES": ""}""", """{"MASTERY_RULES": "ALL+GATE"}""",
+                     """{"AHEAD_K": -0.1}""", """{"AHEAD_MAX": 0.9}""", """{"AHEAD_POW": 0}""", """{"AHEAD_POW": 5}""", """{"AHEAD_POW": 1.5}""", """{"AHEAD_POW": "x"}""",
+                     """{"DISC_WEIGHT": "prop"}""", """{"DISC_WEIGHT": "prop:0"}""", """{"DISC_WEIGHT": "prop:-1"}""", """{"DISC_WEIGHT": "prop:1.15,prop:0.9"}""",
+                     """{"DISC_WEIGHT": "Prop:1.1"}""", """{"DISC_WEIGHT": "prop:1.1234567"}""", """{"DISC_WEIGHT": "prop:x"}""", """{"DISC_WEIGHT": ""}""", """{"DISC_WEIGHT": 1.1}""" })
         {
             Manifest m = Lab.Manifest.Parse(Manifest("JetSlice", Ticks60, pars: bad), "/x/m.json");
             try
@@ -1079,6 +1024,37 @@ public static class SliceChecks
         SliceRunConfig g0c = SliceParameters.Parse(g0.Points[0].CreateParamSet(), 1, 1, 1, calibration: false).Config;
         if (g0c.CostMultG5 is not null || g0c.CostMultG6 is not null)
             return "COST_MULT_G5/G6 set without the keys";
+        // TASK-0134: HCAP_K, HCAP_MAX, X_PROG, UPKEEP_MULT, MASTERY_RULES reach SliceRunConfig as given (allowed in JetSliceCalib, which calib-print
+        // runs); absent = null and MasteryRules.Main (the build's defaults, owner decision #452: FORESIGHT+PROGRAMME).
+        if (g0c.HcapGrowthPerYear is not null || g0c.HcapGrowthMax is not null || g0c.MasteryXProg is not null || g0c.MasteryUpkeepMult is not null
+            || g0c.MasteryRules != MasteryRules.Main)
+            return "mastery keys set without the keys";
+        Manifest h = Lab.Manifest.Parse(Manifest("JetSliceCalib", Ticks60,
+            pars: """{"HCAP_K": 0.05, "HCAP_MAX": 1.5, "X_PROG": 0.5, "UPKEEP_MULT": 2, "MASTERY_RULES": "GATE+CLOSE+PROGRAMME"}"""), "/x/m.json");
+        SliceRunConfig hc = SliceParameters.Parse(h.Points[0].CreateParamSet(), 1, 1, 1, calibration: true).Config;
+        if (hc.HcapGrowthPerYear != Fx6.FromRaw(50_000) || hc.HcapGrowthMax != Fx6.FromRaw(1_500_000) || hc.MasteryXProg != Fx6.FromRaw(500_000)
+            || hc.MasteryUpkeepMult != Fx6.FromInt(2) || hc.MasteryRules != (MasteryRules.Gate | MasteryRules.CandidateClose | MasteryRules.Programme))
+            return $"mastery keys parsed as {hc.HcapGrowthPerYear}/{hc.HcapGrowthMax}/{hc.MasteryXProg}/{hc.MasteryUpkeepMult}/{hc.MasteryRules}";
+        // TASK-0147 (#458): AHEAD_K, AHEAD_POW, AHEAD_MAX reach SliceRunConfig as given (allowed in JetSliceCalib); absent = null (KnowledgeParams: off).
+        if (g0c.AheadCostK is not null || g0c.AheadCostPow is not null || g0c.AheadCostMax is not null)
+            return "ahead-of-time keys set without the keys";
+        Manifest ah = Lab.Manifest.Parse(Manifest("JetSliceCalib", Ticks60, pars: """{"AHEAD_K": 0.02, "AHEAD_POW": 2, "AHEAD_MAX": 6}"""), "/x/m.json");
+        SliceRunConfig ac = SliceParameters.Parse(ah.Points[0].CreateParamSet(), 1, 1, 1, calibration: true).Config;
+        if (ac.AheadCostK != Fx6.FromRaw(20_000) || ac.AheadCostPow != 2 || ac.AheadCostMax != Fx6.FromInt(6))
+            return $"ahead-of-time keys parsed as {ac.AheadCostK}/{ac.AheadCostPow}/{ac.AheadCostMax}";
+        // TASK-0147 (§10.5b): DISC_WEIGHT reaches SliceRunConfig as given, in the given order; absent = default (weights 1, hash of main).
+        if (!g0c.ResearchWeightByDiscipline.IsDefault)
+            return "DISC_WEIGHT set without the key";
+        Manifest dw = Lab.Manifest.Parse(Manifest("JetSliceCalib", Ticks60, pars: """{"DISC_WEIGHT": "prop:1.15,metal:0.90"}"""), "/x/m.json");
+        SliceRunConfig dwc = SliceParameters.Parse(dw.Points[0].CreateParamSet(), 1, 1, 1, calibration: true).Config;
+        if (!dwc.ResearchWeightByDiscipline.SequenceEqual([new DisciplineWeight("prop", Fx6.FromRaw(1_150_000)), new DisciplineWeight("metal", Fx6.FromRaw(900_000))]))
+            return $"DISC_WEIGHT parsed as {string.Join(',', dwc.ResearchWeightByDiscipline)}";
+        foreach (var (text, want) in new[] { ("NONE", MasteryRules.None), ("ALL", MasteryRules.All), ("MAIN", MasteryRules.Main), ("PROGRAMME+FORESIGHT", MasteryRules.Programme | MasteryRules.Foresight),
+                     ("GATE+CLOSE+FORESIGHT+PROGRAMME", MasteryRules.All) })
+        {
+            if (SliceParameters.ParseMasteryRules(text) != want)
+                return $"MASTERY_RULES {text} parsed as {SliceParameters.ParseMasteryRules(text)}";
+        }
         return null;
     }
 
@@ -1107,6 +1083,7 @@ public static class SliceChecks
     // not canonical, has other actors, or a non-zero δ of an APP node is a parameter error.
     private static string? ControlTablesFile(string tmp)
     {
+        tmp = LegacyRoot(tmp);   // L_K covers G1-G4 only (O-038)
         GameData data = SliceData.Load(tmp);
         ScenarioData sc = data.Scenario(SliceRunConfig.DefaultScenario);
         string good = SyntheticControlTables(data, n => n % 7 == 0 ? null : n % 5);
@@ -1156,12 +1133,15 @@ public static class SliceChecks
 
     // TASK-0055: one point of each calibration stage (stage manifests EXP-0002-c1/c3c4/c2.json) and the L_C/L_P layers of the same CONTROL_TABLES file are executable;
     // each K key of the point moves the golden, the L_C/L_P run differs from main and from the other layer.
+    // TASK-0133: the C1…C2 points run on mods/core; L_C and L_P on the core-g4 data (L_P covers G1-G4 only, O-038), against a main run there.
     private static string? CalibrationPoints(string tmp)
     {
-        GameData data = SliceData.Load(tmp);
-        File.WriteAllText(Path.Combine(tmp, "tables.json"), SyntheticControlTables(data, n => n % 7 == 0 ? null : n % 5));
+        string legacy = LegacyRoot(tmp);
+        GameData data = SliceData.Load(legacy);
+        File.WriteAllText(Path.Combine(legacy, "tables.json"), SyntheticControlTables(data, n => n % 7 == 0 ? null : n % 5));
         string main = Run(tmp, Manifest("JetSliceCalib", Ticks60), 1, 1, "cal-main").Outcome.GoldenHash ?? "";
-        var seen = new HashSet<string> { main };
+        string legacyMain = Run(legacy, Manifest("JetSliceCalib", Ticks60), 1, 1, "cal-main-g4").Outcome.GoldenHash ?? "";
+        var seen = new HashSet<string> { main, legacyMain };
         foreach ((string name, string pars) in new[]
         {
             ("C1", """{"X_SCALE": 0.75, "ALPHA": 0.08}"""),
@@ -1172,7 +1152,8 @@ public static class SliceChecks
             ("L_P", """{"LAYER": "LP", "CONTROL_TABLES": "tables.json"}"""),
         })
         {
-            var (r, _) = Run(tmp, Manifest("JetSliceCalib", Ticks60, pars: pars), 1, 1, "cal-" + name.Replace('+', '_').Replace(' ', '_'));
+            string at = name is "L_C" or "L_P" ? legacy : tmp;
+            var (r, _) = Run(at, Manifest("JetSliceCalib", Ticks60, pars: pars), 1, 1, "cal-" + name.Replace('+', '_').Replace(' ', '_'));
             if (!r.Ok)
                 return $"{name}: {r.Error}";
             if (!seen.Add(r.GoldenHash ?? ""))

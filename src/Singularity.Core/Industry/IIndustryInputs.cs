@@ -64,6 +64,12 @@ public interface IIndustryInputs
     /// <summary><c>growth_nominal(site, p)</c> = <c>V_OC</c> (contract §4.1a r12, I-OC): the nominal of the owner's own lines in О and С on <c>home</c>; 0 where the channel is off.</summary>
     Fx6 GrowthNominal(int siteRow, int processRow, long month) => Fx6.Zero;
 
+    /// <summary>Stamp (month index + 1) the mastery programme of the process started in, 0 without one (TASK-0134). The programme feeds <see cref="GrowthNominal"/> and <see cref="Planned"/>.</summary>
+    long ProgrammeStart(int siteRow, int processRow, long month) => 0;
+
+    /// <summary>The programme of the process runs «at home»: no catch-up from a world leader.</summary>
+    bool ProgrammeDomestic(int siteRow, int processRow, long month) => false;
+
     /// <summary><c>mult_P</c> (spec A37): the weight factor of the doctrine for the process of the actor; an input without a doctrine says 1 explicitly.</summary>
     Fx6 EffortMultiplier(int actorRow, int processRow, long month);
 

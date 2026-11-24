@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0134-mastery-nogate",
+  "description": "TASK-0134 step 4 (g5-g6-probe.md §9.13): NG = mastery rules without the series-start gate (candidate close, foresight, programme); XP05 = all rules with X_PROG 0.5 (K2b' time); B0_m15 = no rules, the K2b' norm at the same ceiling. HCAP_K 0.10, HCAP_MAX 1.5 in all points; same setup as TASK-0134-mastery-probe.json.",
+  "model": "JetSlice",
+  "ticks": 31168,
+  "chunk_size": 1,
+  "threads": [
+    1,
+    4
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 10
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full"
+  },
+  "series": [
+    {
+      "name": "NG",
+      "params": {
+        "MASTERY_RULES": "CLOSE+FORESIGHT+PROGRAMME",
+        "HCAP_K": 0.1,
+        "HCAP_MAX": 1.5
+      }
+    },
+    {
+      "name": "XP05",
+      "params": {
+        "MASTERY_RULES": "ALL",
+        "HCAP_K": 0.1,
+        "HCAP_MAX": 1.5,
+        "X_PROG": 0.5
+      }
+    },
+    {
+      "name": "B0_m15",
+      "params": {
+        "MASTERY_RULES": "NONE",
+        "HCAP_K": 0.1,
+        "HCAP_MAX": 1.5
+      }
+    }
+  ],
+  "meta": {
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r17",
+    "preregistration": "docs/simulation/g5-g6-probe.md §9.13"
+  }
+}

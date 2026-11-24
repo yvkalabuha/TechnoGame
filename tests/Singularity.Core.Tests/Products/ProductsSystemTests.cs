@@ -207,22 +207,22 @@ public class ProductsSystemTests
     }
 
     [Fact]
-    public void Cohorts_AreWrittenOffAtServiceLife()
+    public void Cohorts_PastServiceLifeStayInService_WithoutAReplacement()
     {
-        // A32: cohort 1945 ages from July 1945 = month −2: written off at month 178 (1960-07); the design is then «снят».
-        // «снят» is final in the full model.
+        // A32: cohort 1945 ages from July 1945 = month −2: it reaches the service life at month 178 (1960-07). #431: with no replacement
+        // arriving it is not written off; it only ages (the value falls, see FleetAgeingTests).
         var h = new ProductsHarness(startLine: false);
         h.RunThroughMonth(177);
         Assert.Equal(Fx6.FromInt(100), h.Products.InService(Usa, G1Sup));
-        h.RunThroughMonth(178);
-        Assert.Equal(Fx6.Zero, h.Products.InService(Usa, G1Sup));
-        Assert.Equal(DesignStage.Withdrawn, h.Products.Stage(Usa, G1Sup));
+        h.RunThroughMonth(200);
+        Assert.Equal(Fx6.FromInt(100), h.Products.InService(Usa, G1Sup));
+        Assert.Equal(DesignStage.InService, h.Products.Stage(Usa, G1Sup));
     }
 
     [Fact]
     public void CanonicalLp_StartsAfterTDesign_WithRhoTimesBudget()
     {
-        var parameters = new ProductsParams { LpTDesign = [2, 2, 2, 2], LpRho = [Fx6.FromInt(100), Fx6.FromInt(50), Fx6.FromInt(20), Fx6.FromInt(10)] };
+        var parameters = new ProductsParams { LpTDesign = [2, 2, 2, 2, 2, 2], LpRho = [Fx6.FromInt(100), Fx6.FromInt(50), Fx6.FromInt(20), Fx6.FromInt(10), Fx6.FromInt(5), Fx6.FromInt(2)] };
         var h = new ProductsHarness(mode: ProductsMode.CanonicalLp, parameters: parameters)
         {
             Knows = (a, n) => a == Usa && ProbeKnows(2, n),
