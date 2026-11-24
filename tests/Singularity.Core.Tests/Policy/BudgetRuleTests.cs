@@ -187,6 +187,15 @@ public class BudgetRuleTests
         return (long)Int128.Max(0, bn.Raw - keep / f.Raw);
     }
 
+    // True when no integer result keeps the share direction and stays on the right side of s (from below: ceil(B*Fn/F) > floor(s*Fn); from above: ceil(s*Fn) > floor(B*Fn/F)).
+    private static bool IntervalEmpty(Fx6 b, Fx6 f, Fx6 fn, Fx6 s)
+    {
+        Int128 keep = (Int128)b.Raw * fn.Raw;
+        if (!AtOrAbove(b, f, s))
+            return (keep + f.Raw - 1) / f.Raw > (Int128)s.Raw * fn.Raw / Fx6.Scale;
+        return ((Int128)s.Raw * fn.Raw + Fx6.Scale - 1) / Fx6.Scale > keep / f.Raw;
+    }
+
     [Fact]
     public void T2_ExactIntervalCanBeEmpty_SoNoExactFixExists()
     {
@@ -230,12 +239,16 @@ public class BudgetRuleTests
                 for (long k = -5; k <= 5; k++)
                 {
                     Fx6 b = Fx6.FromRaw(s.Raw * fRaw / Fx6.Scale + k);
-                    worstGrid = System.Math.Max(worstGrid, AdverseRaw(b, f, BudgetMath.NextConverging(b, f, g, s, lambda), fn, s));
+                    long adverse = AdverseRaw(b, f, BudgetMath.NextConverging(b, f, g, s, lambda), fn, s);
+                    // A move against the share is allowed only where no integer both keeps the share and stays on its side of s.
+                    if (adverse > 0)
+                        Assert.True(IntervalEmpty(b, f, fn, s), $"{id}: B {b.Raw} F {f.Raw}: adverse {adverse} raw with a non-empty interval");
+                    worstGrid = System.Math.Max(worstGrid, adverse);
                 }
             }
         }
-        // Measured: 0 raw on the default scenario (4 actors, 1024 months); at most 1 raw on the grid, only where the interval above is empty
-        // and the clamp keeps the share at most s (one raw below the share-preserving level).
+        // Measured: 0 raw on the default scenario (4 actors, 1024 months); at most 1 raw on the grid, and only where the interval is empty
+        // (asserted per case above).
         Assert.Equal(0, worstRun);
         Assert.InRange(worstGrid, 0, 1);
     }

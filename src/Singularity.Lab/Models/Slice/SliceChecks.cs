@@ -1281,6 +1281,12 @@ public static class SliceChecks
         cap.Add(full, full);
         if (cap.Commands != 1 || cap.Unrealized != 1 || cap.UnrealizedFull != 1 || cap.FullMonths != 1 || cap.SlotsMax != 12)
             return $"12 taken slots, 1 compose: commands {cap.Commands}, without design {cap.Unrealized}, all slots used {cap.UnrealizedFull}, months {cap.FullMonths}, max {cap.SlotsMax}";
+        // Codex #3: all 12 taken when the compose met the layer, a slot withdrawn in the same step: the maximum still shows the full layer.
+        var oneWithdrawnAfter = Av(Enumerable.Range(0, 12).Select(d => Dv(d, d == 0 ? DesignStage.Withdrawn : DesignStage.InService, 1)), 0);
+        var refusedThenFreed = new SliceObserver.CapacityCounters();
+        refusedThenFreed.Add(full, oneWithdrawnAfter);
+        if (refusedThenFreed.UnrealizedFull != 1 || refusedThenFreed.SlotsMax != 12)
+            return $"refusal with a slot withdrawn in the step: all slots used {refusedThenFreed.UnrealizedFull}, design_slots_max {refusedThenFreed.SlotsMax}";
         var withdrawnOne = Av(Enumerable.Range(0, 12).Select(d => Dv(d, d == 11 ? DesignStage.Withdrawn : DesignStage.InService, 1)), 1);
         var afterReuse = Av(Enumerable.Range(0, 12).Select(d => d == 11 ? Dv(d, DesignStage.Project, 2) : Dv(d, DesignStage.InService, 1)), 0);
         var reuse = new SliceObserver.CapacityCounters();

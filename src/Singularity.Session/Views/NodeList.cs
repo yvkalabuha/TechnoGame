@@ -36,7 +36,7 @@ public readonly struct NodeList : IReadOnlyList<NodeView>, IEquatable<NodeList>
             NodeBlock b = _block ?? throw new InvalidOperationException("actor not subscribed");
             NodeShape sh = b.Shape;
             int p = sh.ProcessIndex[row];
-            return new NodeView(sh.Numbers[row], Bit(b.Known, row), Bit(b.ByLicence, row), p < 0 ? null : b.Processes[p], b.KnownSince is { } ks && ks[row] != NodeBlock.NoKnownSince ? ks[row] : null);
+            return new NodeView(sh.Numbers[row], Bit(b.Known, row), Bit(b.ByLicence, row), p < 0 ? null : b.Processes[p], b.KnownSince is { } ks && !Bit(b.NoKnownSince, row) ? ks[row] : null);
         }
     }
 
@@ -65,7 +65,12 @@ public readonly struct NodeList : IReadOnlyList<NodeView>, IEquatable<NodeList>
             if (nodes[i].Process is { } pv)
                 block.Processes[processIndex[i]] = pv;
             if (block.KnownSince is { } ks)
-                ks[i] = nodes[i].KnownSince ?? NodeBlock.NoKnownSince;
+            {
+                if (nodes[i].KnownSince is { } since0)
+                    ks[i] = since0;
+                else
+                    block.NoKnownSince[i >> 6] |= 1UL << (i & 63);
+            }
         }
         return new NodeList(block);
     }
@@ -151,9 +156,6 @@ internal sealed class NodeShape(int[] numbers, int[] processIndex, int[] layoutR
 /// <summary>The nodes of one actor. Written only while built, then shared (the reuse of an unchanged block hands out the same one).</summary>
 internal sealed class NodeBlock
 {
-    /// <summary>Marks a node without a <c>KnownSince</c> value in a block that tracks it for other nodes (a mixed list built by <c>NodeList.Create</c>).</summary>
-    internal const long NoKnownSince = long.MinValue;
-
     public NodeBlock(NodeShape shape, bool tracksKnownSince)
     {
         Shape = shape;
@@ -162,7 +164,11 @@ internal sealed class NodeBlock
         ByLicence = new ulong[words];
         Processes = new ProcessView[shape.ProcessCount];
         KnownSince = tracksKnownSince ? new long[shape.Numbers.Length] : null;
+        NoKnownSince = new ulong[tracksKnownSince ? words : 0];
     }
+
+    /// <summary>Bit set for a node without a <c>KnownSince</c> value in a block that tracks it for other nodes (a mixed list built by <c>NodeList.Create</c>); every value of <c>long</c> stays representable.</summary>
+    public ulong[] NoKnownSince { get; }
 
     public NodeShape Shape { get; }
 

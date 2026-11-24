@@ -1142,7 +1142,8 @@ internal sealed class SliceObserver
     /// Design capacity (contract-proposals T3): the compose/derive commands the AI decided in month t−1 (they are consumed by the compute of t)
     /// against the designs that are new in the post state of t (stage None → not None). A command without a new design was rejected by the
     /// layer for some code of <c>CommandRejection</c> (the code itself is not in the views); <c>DESIGN_CAPACITY</c> is the first check of the
-    /// layer's <c>Create</c> and can only happen when every slot is used, so <c>design_slots_max</c> &lt; Designs proves it never happened.
+    /// layer's <c>Create</c> and can only happen when every slot is used, so <c>design_slots_max</c> &lt; Designs proves it never happened
+    /// (<c>design_slots_max</c> is the maximum of the slots in use after a step and, when every slot was in use before it, of the capacity).
     /// </summary>
     private void Capacity(ActorView sv, ActorView av) => _cap.Add(sv, av);
 
@@ -1171,7 +1172,9 @@ internal sealed class SliceObserver
             UnrealizedFull += unrealized;
             FullMonths++;
         }
-        SlotsMax = Math.Max(SlotsMax, used);
+        // The slots a command met are those before the step: a full layer before it counts as capacity even if a slot is withdrawn in the
+        // same step (Codex #3, TASK-0118), so design_slots_max < Designs still proves that no DESIGN_CAPACITY refusal happened.
+        SlotsMax = Math.Max(SlotsMax, fullBefore ? av.Designs.Length : used);
         }
     }
 

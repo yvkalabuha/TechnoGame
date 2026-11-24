@@ -115,12 +115,13 @@ public class NodeBlockReuseTests
     [Fact]
     public void NodeList_MixedKnownSince_KeepsTheMissingValueMissing()
     {
-        NodeView[] views = [new(101, true, false, null, null), new(102, true, false, null, 5), new(103, false, false, null, 0), new(104, true, false, null, long.MinValue + 1)];
+        NodeView[] views = [new(101, true, false, null, null), new(102, true, false, null, 5), new(103, false, false, null, 0), new(104, true, false, null, long.MinValue), new(105, true, false, null, long.MaxValue)];
         NodeList list = NodeList.Create(views);
         Assert.Equal(views, list.ToArray());
         Assert.Null(list[0].KnownSince);
         Assert.Equal(5, list[1].KnownSince);
         Assert.Equal(0, list[2].KnownSince);
+        Assert.Equal(long.MinValue, list[3].KnownSince);   // no value of long is reserved as "missing"
     }
 
     // TASK-0103 (Codex): where the per-actor process array reaches the large-object heap (85 000 bytes): from this many processes on.
