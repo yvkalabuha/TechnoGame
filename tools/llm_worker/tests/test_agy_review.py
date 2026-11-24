@@ -13,6 +13,7 @@ from test_review import GOOD, make_repo
 from tools.llm_worker import agyreview, codex, config, limitstate, review, sketch
 from tools.llm_worker.review import ReviewError
 
+SCHEMA = config.PACKAGE_DIR / "schemas" / "review.schema.json"
 CID = "11111111-2222-3333-4444-555555555555"
 NOW = datetime(2026, 11, 24, 13, 50, tzinfo=timezone.utc)
 
@@ -89,7 +90,7 @@ class BoxTest(unittest.TestCase):
     def test_missing_sandbox_is_not_a_paid_fallback(self):
         with mock.patch.object(sketch, "find_bwrap", return_value=None):
             with self.assertRaises(codex.SandboxUnavailable):
-                agyreview.run_agy("p", "/tmp", "s.json", which=lambda n: "/bin/true")
+                agyreview.run_agy("p", "/tmp", SCHEMA, which=lambda n: "/bin/true")
 
 
 class ScopedRulesTest(unittest.TestCase):
@@ -213,7 +214,7 @@ class RunAgyTest(unittest.TestCase):
     def test_missing_transcript_fails_closed(self):
         runner = lambda cmd, cwd, t, stdin=None: (0, stream(), "")
         with self.assertRaises(agyreview.AgyViolation):
-            agyreview.run_agy("p", self.wt, "s.json", brain_dir=self.tmp / "nobrain", runner=runner, which=lambda n: "/bin/true")
+            agyreview.run_agy("p", self.wt, SCHEMA, brain_dir=self.tmp / "nobrain", runner=runner, which=lambda n: "/bin/true")
 
     def test_large_prompt_does_not_go_into_argv(self):
         big = "x" * 900_000
@@ -224,7 +225,7 @@ class RunAgyTest(unittest.TestCase):
             seen.append((sum(len(a) for a in cmd), stdin))
             return 0, stream(), ""
 
-        agyreview.run_agy(big, self.wt, "s.json", brain_dir=self.brain, runner=runner, which=lambda n: "/bin/true")
+        agyreview.run_agy(big, self.wt, SCHEMA, brain_dir=self.brain, runner=runner, which=lambda n: "/bin/true")
         self.assertLess(seen[0][0], 100_000)
         self.assertGreater(len(seen[0][1]), 900_000)
 
@@ -239,7 +240,7 @@ class RunAgyTest(unittest.TestCase):
         out = json.dumps({"event": "result", "result": {"status": "SUCCESS", "response": "x", "structured_output": GOOD}})
         runner = lambda cmd, cwd, t, stdin=None: (0, out, "")
         with self.assertRaises(agyreview.AgyViolation):
-            agyreview.run_agy("p", self.wt, "s.json", brain_dir=self.brain, runner=runner, which=lambda n: "/bin/true")
+            agyreview.run_agy("p", self.wt, SCHEMA, brain_dir=self.brain, runner=runner, which=lambda n: "/bin/true")
 
     def test_quota_and_failure(self):
         bad = stream(result={"conversation_id": CID, "status": "ERROR", "error": "RESOURCE_EXHAUSTED"})

@@ -8,6 +8,7 @@ worktree and this run's own brain folders, refuses the review. Keys are never re
 import functools
 import json
 import shutil
+from pathlib import Path
 
 MODEL = "claude-sonnet-5-5-medium"
 DEFAULT_TIMEOUT_S = 900
@@ -31,7 +32,12 @@ def command(agy, schema_file, model, timeout_s, settings):
     """The prompt goes through stdin (one stream-json user message): a review prompt can be up to 1 MB, far more
     than one command-line argument may hold (E2BIG at about 128 KB). Event format checked on agy 1.5.16."""
     return [agy, "--input-format", "stream-json", "--model", model, "--print-timeout", f"{timeout_s}s", "--mode", "plan",
-            "--output-format", "stream-json", "--json-schema", str(schema_file), "--settings", settings]
+            "--output-format", "stream-json", "--json-schema", schema_text(schema_file), "--settings", settings]
+
+
+def schema_text(schema_file):
+    """The schema as a JSON string: the path would not exist inside the Box."""
+    return json.dumps(json.loads(Path(schema_file).read_text(encoding="utf-8")), separators=(",", ":"))
 
 
 def user_message(prompt):
