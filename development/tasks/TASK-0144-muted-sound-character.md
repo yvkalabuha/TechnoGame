@@ -1,7 +1,7 @@
 ---
 id: TASK-0144
 title: "Muted sound character (#455): soften attack and low-pass all routine cues"
-status: IN_PROGRESS
+status: REVIEW
 level: light
 milestone: MS-M05
 agent: sound-director
