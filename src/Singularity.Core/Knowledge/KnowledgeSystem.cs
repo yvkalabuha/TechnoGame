@@ -58,6 +58,7 @@ public sealed class KnowledgeSystem : ITickSystem
     private readonly LongColumn[] _kd, _kind;
     private readonly LongColumn[]? _since;
     private readonly IntColumn[]? _fundN;
+    private readonly IntColumn[]? _disc;
     private readonly Singularity.Core.Institutes.InstituteParams? _prio;
 
     /// <summary>Most priority goals of one actor the step takes (one per institute slot).</summary>
@@ -130,6 +131,14 @@ public sealed class KnowledgeSystem : ITickSystem
             _since = new LongColumn[_n];
             foreach (int r in graph.Order)
                 _since[r] = table.AddLong($"know.since.{graph.Number[r]}");
+        }
+
+        // know.disc.N: the node was opened by the actor's own research, not granted by a licence (the institutes credit experience only for it); absent without priorities.
+        if (priorities is not null && mode == KnowledgeMode.Full)
+        {
+            _disc = new IntColumn[_n];
+            foreach (int r in graph.Order)
+                _disc[r] = table.AddInt($"know.disc.{graph.Number[r]}");
         }
 
         // know.fund.N: how many programmes the actor paid into the node (the `k` of the diminishing return); absent without the reserve.
@@ -370,6 +379,9 @@ public sealed class KnowledgeSystem : ITickSystem
         return Fx6.One;
     }
 
+    /// <summary>The node was opened by the research of the actor (not by a licence grant); false without priority parameters.</summary>
+    public bool DiscoveredByResearch(int actorRow, int nodeRow) => _disc is not null && _disc[nodeRow].Current[actorRow] != 0;
+
     /// <summary>Programmes the actor has paid into the node so far (0 without the reserve).</summary>
     public int ProgrammesOn(int actorRow, int nodeRow) => _fundN is null ? 0 : _fundN[nodeRow].Current[actorRow];
 
@@ -471,6 +483,8 @@ public sealed class KnowledgeSystem : ITickSystem
                 if (_since is not null)
                     _since[r].Next[a] = MonthOf(context);
                 (discovery ? _lastDiscoveries : _lastGrants).Add((_start.ActorNumber[a], _g.Number[r]));
+                if (discovery && _disc is not null)
+                    _disc[r].Next[a] = 1;
                 if (discovery && _g.Discipline[r] >= 0)
                     _openedCount[a * _d + _g.Discipline[r]]++;
             }
@@ -539,14 +553,14 @@ public sealed class KnowledgeSystem : ITickSystem
             if (!_trace[a * _n + r].InFrontier || (wsum == Fx6.Zero && !funded))
                 continue;
             Fx6 wn = wsum == Fx6.Zero ? Fx6.Zero : Fx6.FromRaw(_wraw[a * _n + r]) / wsum;
-            Fx6 alloc = goals == 0 ? s * wn : AllocOf(a, r, s, Fx6.FromRaw(_wraw[a * _n + r]), wsum, plan, goalRows);
+            Fx6 alloc = goals == 0 || wsum == Fx6.Zero ? s * wn : AllocOf(a, r, s, Fx6.FromRaw(_wraw[a * _n + r]), wsum, plan, goalRows);
             if (goals > 0 && spent + alloc > s)
                 alloc = s - spent;   // rounding of the shares must never spend above the budget (I4)
             spent += alloc;
             int disc = _g.Discipline[r];
             Fx6 kmix = KMix(a, r);
             Fx6 ceff = CEffOf(a, r, kmix, t);
-            Fx6 dprog = goals == 0 ? alloc / ceff : alloc * GoalMultiplier(r, goalRows, goalMult) / ceff;
+            Fx6 dprog = goals == 0 || wsum == Fx6.Zero ? alloc / ceff : alloc * GoalMultiplier(r, goalRows, goalMult) / ceff;
             Fx6 prog = Prog(a, r) + dprog;
             if (funded)
             {

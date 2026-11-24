@@ -14,5 +14,7 @@ internal sealed class InstituteInputsAdapter(SliceWorld world) : IInstituteInput
 
     public bool InFrontier(int actorRow, int nodeRow) => world.Knowledge.InFrontier(actorRow, nodeRow);
 
+    public bool DiscoveredByResearch(int actorRow, int nodeRow) => world.Knowledge.DiscoveredByResearch(actorRow, nodeRow);
+
     public int OrderNode(InstituteHandle slot) => world.InstituteOrders!.OrderNode(slot);
 }

@@ -166,7 +166,7 @@ public class InstituteTests
         SliceSession plain = Make(false);
         var budgets = Enumerable.Range(0, plain.World.Scenario.ActorCount).Select(a => plain.World.SharesOf(a).Research * plain.World.Policy.Budget(a)).ToArray();
         plain.StepThroughMonth(0);
-        int checkedNodes = 0;
+        int checkedNodes = 0, strictlyMore = 0;
         for (int actor = 0; actor < plain.World.Scenario.ActorCount; actor++)
         {
             int[] f = Frontier(plain, actor);
@@ -176,6 +176,7 @@ public class InstituteTests
                 Assert.True(with.Submit(SourceClass.Player, 0, 0, new SetPriorityNode(actor, 0, with.World.Graph.Number[f[i]])).Accepted);
                 with.StepThroughMonth(0);
                 KnowledgeNodeStep a = with.World.Knowledge.LastStep(actor, f[i]), b = plain.World.Knowledge.LastStep(actor, f[i]);
+                strictlyMore += a.Alloc > b.Alloc ? 1 : 0;
                 Assert.True(a.Alloc >= b.Alloc, $"actor {actor} node {f[i]}: money {a.Alloc} < {b.Alloc}");
                 Assert.True(with.World.Knowledge.Prog(actor, f[i]) >= plain.World.Knowledge.Prog(actor, f[i]), $"actor {actor} node {f[i]} slower");
                 Fx6 spent = Fx6.Zero;
@@ -186,6 +187,39 @@ public class InstituteTests
             }
         }
         Assert.True(checkedNodes >= 10);
+        Assert.True(strictlyMore > 0, "no case gave the priority node more money");
+    }
+
+    // The bonus of the institute is only for the goal node: a prerequisite on its path gets the money of the group but not the level multiplier.
+    [Fact]
+    public void PathNode_GetsTheGroupMoneyButNoLevelMultiplier()
+    {
+        SliceSession s = Make(true);
+        var g = s.World.Graph;
+        int goal = -1, path = -1;
+        for (int r = 0; r < g.Count && goal < 0; r++)
+        {
+            if (s.World.Knowledge.IsKnown(0, r) || s.World.Knowledge.InFrontier(0, r))
+                continue;
+            for (int gr = g.Requires.GroupStart[r]; gr < g.Requires.GroupStart[r + 1] && goal < 0; gr++)
+            {
+                foreach (int m in g.Requires.GroupMembers(gr))
+                {
+                    if (s.World.Knowledge.InFrontier(0, m))
+                    {
+                        goal = r;
+                        path = m;
+                        break;
+                    }
+                }
+            }
+        }
+        Assert.True(goal >= 0, "setup: no node behind a frontier node");
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new SetPriorityNode(0, 0, g.Number[goal])).Accepted);
+        s.StepThroughMonth(0);
+        KnowledgeNodeStep step = s.World.Knowledge.LastStep(0, path);
+        Assert.True(step.InFrontier && step.Alloc > Fx6.Zero);
+        Assert.Equal(step.Alloc / step.CEff, step.DProg);
     }
 
     [Fact]
@@ -232,6 +266,8 @@ public class InstituteTests
         int opened = Enumerable.Range(0, s.World.Graph.Count).Count(r => s.World.Knowledge.IsKnown(0, r)) - discovered0;
         int gained = Total(0) - start;
         Assert.True(gained > 0, "no goal was completed in 15 years");
+        int research = Enumerable.Range(0, s.World.Graph.Count).Count(r => s.World.Knowledge.DiscoveredByResearch(0, r));
+        Assert.True(gained <= research, $"{gained} points for {research} researched nodes");
         Assert.True(gained <= opened, $"{gained} points of experience for {opened} opened nodes");
     }
 

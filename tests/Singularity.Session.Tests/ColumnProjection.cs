@@ -48,7 +48,7 @@ internal static class ColumnProjection
         || name == "prd.rejected.StaleHandle" || name.StartsWith("prd.altReached.", StringComparison.Ordinal) || IsMasteryColumn(name);
 
     /// <summary>Columns of the institutes (TASK-0151): orders, AI goals, experience. Only in a run with <c>Institutes</c>.</summary>
-    public static bool IsInstituteColumn(string name) => name.StartsWith("inst.", StringComparison.Ordinal);
+    public static bool IsInstituteColumn(string name) => name.StartsWith("inst.", StringComparison.Ordinal) || name.StartsWith("know.disc.", StringComparison.Ordinal);
 
     /// <summary>Columns of the budget reserve (TASK-0150): the account, the programme slot of the commands and the programme counts per node. Only in a run with <c>Reserve</c>.</summary>
     public static bool IsReserveColumn(string name) =>

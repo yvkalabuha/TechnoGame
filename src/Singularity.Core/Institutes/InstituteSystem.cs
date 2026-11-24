@@ -15,6 +15,9 @@ public interface IInstituteInputs
     /// <summary>The node is unknown and its requirements are known (snapshot).</summary>
     bool InFrontier(int actorRow, int nodeRow);
 
+    /// <summary>The node was opened by the own research of the actor, not by a licence or a grant (snapshot).</summary>
+    bool DiscoveredByResearch(int actorRow, int nodeRow);
+
     /// <summary>The node number of the order of the player for the slot, 0 = none (snapshot).</summary>
     int OrderNode(InstituteHandle slot);
 }
@@ -152,7 +155,7 @@ public sealed class InstituteSystem : ITickSystem
                 anyFree |= goal[k] == 0;
                 // A goal seen last month that is known now was completed: one point in its area.
                 int cur = _cur[k].Current[a];
-                if (cur != 0 && IsKnownNumber(a, cur) && _g.RowOf(cur) is >= 0 and int row && _g.Discipline[row] is >= 0 and int disc)
+                if (cur != 0 && IsKnownNumber(a, cur) && _g.RowOf(cur) is >= 0 and int row && _inputs.DiscoveredByResearch(a, row) && _g.Discipline[row] is >= 0 and int disc)
                     _exp[k][disc].Next[a] = _exp[k][disc].Current[a] + 1;
             }
             if (anyFree)
