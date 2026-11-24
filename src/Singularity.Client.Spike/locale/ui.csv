@@ -86,8 +86,8 @@ cmd.close,close line #{0},закрыть линию №{0}
 cmd.cancel,cancel design #{0},снять проект №{0}
 cmd.focus,mastery focus,фокус освоения
 cmd.job,command,команда
-cmd.Pending,{0}: pending. Applies at the first tick after unpause.,{0}: ожидает. Применится на первом тике после снятия паузы.
-cmd.Applied,"{0}: accepted, applied at a tick.","{0}: принято, применено на тике."
+cmd.Pending,{0}: pending. Applies after unpause.,{0}: ожидает. Применится после снятия паузы.
+cmd.Applied,{0}: accepted.,{0}: принято.
 cmd.Rejected,{0}: refused — {1},{0}: отказ — {1}
 cmd.Error,{0}: error — {1},{0}: ошибка — {1}
 refusal.BadShares,shares do not sum to 100%,доли не дают 100%
@@ -100,16 +100,14 @@ tree.close,Close ×,Закрыть ×
 panel.foreign,◆ FOREIGN POWER · read only,◆ ЧУЖАЯ ДЕРЖАВА · только просмотр
 panel.shares.profile,Shares of the AI doctrine profile (not this country's data).,Доли доктрины ИИ-профиля (не данные этой державы).
 tree.reset,Reset view,Сбросить вид
-card.noschem,schematic: placeholder,схема: заглушка
+card.noschem,no schematic yet,схемы пока нет
 card.affects,AFFECTS,ЧТО ЗАТРАГИВАЕТ
 card.layer,Layer: {0} (ring {1}),Слой: {0} (кольцо {1})
 card.system,System: {0} · discipline {1},Система: {0} · дисциплина {1}
 card.raises,WHAT IT RAISES,ЧТО ПОВЫШАЕТ
 card.param.yield,Process yield now: {0},Выход процесса сейчас: {0}
-card.param.app,Opens the product of generation G{0},Открывает изделие поколения G{0}
-card.param.none,Knowledge step: it raises no parameter by itself; it unlocks what depends on it,"Ступень знания: сама параметр не повышает, открывает зависимые узлы"
+card.param.app,Opens the product of generation {0},Открывает изделие поколения {0}
 card.param.cap,"Needs capability: precision {0}, purity {1}, quality control {2} (tier {3})","Требует мощность: точность {0}, чистота {1}, контроль качества {2} (ранг {3})"
-card.param.api,"gain per parameter: no data in Core, needs API NodeEffects(node) -> (parameter, delta)","прирост параметра: данных нет в ядре, нужен API NodeEffects(node) -> (параметр, прирост)"
 card.unlocks,UNLOCKS NEXT,ЧТО ОТКРЫВАЕТ ДАЛЬШЕ
 card.more,and {0} more,и ещё {0}
 card.end,A terminal node: nothing depends on it yet,Конечный узел: от него пока ничего не зависит
@@ -148,7 +146,7 @@ state.unknown,unknown,неизвестно
 state.licence,by licence,по лицензии
 state.frontier,frontier,фронтир
 state.unavail,unavailable,недоступно
-legend.b,■ known   □ frontier   · unavailable   (G0–G4: generations)   ┃ blue: the longest chain,■ известно   □ фронтир   · недоступно   (G0–G4 — поколения)   ┃ синий — самая длинная цепочка
+legend.b,■ known   □ frontier   · unavailable   (generations 0–4)   ┃ blue: the longest chain,■ известно   □ фронтир   · недоступно   (поколения 0–4)   ┃ синий — самая длинная цепочка
 stmt.title,GOAL STATEMENT,ВЕДОМОСТЬ ЦЕЛИ
 stmt.goal,goal: {0} (product {1}),цель: {0} (изделие {1})
 stmt.nogoal,no goal (no known product without a series),цели нет (нет известного изделия без серии)
@@ -162,12 +160,10 @@ stmt.chain,The thick blue link is the longest chain from the “why not” root.
 stmt.overview,OVERVIEW OF {0} NODES: discipline × generation,ОБЗОР {0} УЗЛОВ: дисциплина × поколение
 inset.title,{0} · knowledge,{0} · знание
 inset.why,WHY NOT,ПОЧЕМУ НЕ
-inset.goal,Goal: {0} · dependency steps from the root: {1},Цель: {0} · ступеней зависимости от корня: {1}
+inset.goal,Goal: {0} · steps to the blocker: {1},Цель: {0} · шагов до препятствия: {1}
 inset.eta," · ETA {0} mo. (a number, not an interval)"," · срок {0} мес. (число, не интервал)"
 inset.hint,The first link is the cheapest; the goal date is set by the longest chain (view B).,Первое звено — ближайшее по цене; дату цели задаёт самая длинная цепочка (вид B).
 inset.node,NODE,УЗЕЛ
-inset.anchor,Anchor: {0}{1} · {2},Якорь: {0}{1} · {2}
-inset.anchor.year,Anchor: {0}{1},Якорь: {0}{1}
 card.requires,REQUIRES,ЗАВИСИТ ОТ
 inset.before, (before), (до)
 inset.requires,Requires: {0},Требует: {0}
@@ -177,8 +173,6 @@ inset.focus.add,Add to focus,В фокус освоения
 inset.focus.remove,Remove from focus,Убрать из фокуса
 inset.focus.empty,Draft is empty. Select a known process (□).,Черновик пуст. Выберите известный процесс (□).
 inset.focus.send,Give order: focus,Отдать приказ: фокус
-inset.prio,R&D PRIORITIES OVER THE FRONTIER,ПРИОРИТЕТЫ НИОКР ПО ФРОНТИРУ
-inset.prio.note,Priorities are not wired yet (the simulation has no such lever); P10–P90 ETAs and progress shares are mock too.,Приоритеты пока ни к чему не подключены (в симуляции нет такого рычага); сроки P10–P90 и доли прогресса — тоже макет.
 yes,yes,да
 no,no,нет
 bind.None,no line,нет линии
@@ -246,9 +240,6 @@ credits.soon,Not in the game yet: the track is chosen for the future soundtrack 
 credits.back,Back,Назад
 menu.tomain,To the main menu,В главное меню
 menu.quit,Quit,Выход
-menu.reason.persist,Saving is not available yet,Сохранение пока недоступно
-menu.reason.nosave,No saved game,Нет сохранений
-menu.reason.nogame,No game running,Нет игры
 ng.search,Search a power,Найти державу
 ng.none,No power matches,Нет подходящей державы
 ng.pick,Pick a power on the left: the card shows its starting figures from the scenario.,Выберите державу слева: в карточке стартовые цифры из сценария.
@@ -314,12 +305,9 @@ set.anim,Animations,Анимации
 set.lang.note,"The language applies at once, no restart needed.","Язык применяется сразу, без перезапуска."
 legend.btn,Legend,Легенда
 legend.disc,Disciplines (wedge),Дисциплины (клин)
-legend.glyphs,Node types · ring,Типы узлов · кольцо
 legend.lines,Lines,Линии
 legend.route,Route to goal,Маршрут к цели
 legend.root,Root of the “why not”,Корень «почему не»
-legend.frontier,Frontier (dashed),Фронтир (пунктир)
-legend.selected,Selected node,Выбранный узел
 legend.close,Esc or L closes,Esc или L закрывает
 area.map,Map,Карта
 area.science,Science,Наука
@@ -381,3 +369,22 @@ set.railwide,Area rail,Рейка областей
 set.rail.narrow,Narrow,Узкая
 set.rail.wide,Wide,Широкая
 set.musicamount,Music amount,Количество музыки
+ui.tree.effects.knowledge,"A knowledge step: it does not raise a parameter by itself, it opens dependent nodes.","Ступень знания: сама параметр не повышает, открывает зависимые узлы."
+ui.tree.schem.example,Schematic (example),Схема (пример)
+ui.tree.anchor,Historical date: {0}{1},Историческая дата: {0}{1}
+ui.tree.anchor.named,Historical date: {0}{1} · {2},Историческая дата: {0}{1} · {2}
+ui.tree.anchor.tip,The year when this step appeared in real history,"Год, когда этот шаг появился в реальной истории"
+ui.tree.gen,generation {0},поколение {0}
+legend.rings,Rings,Кольца
+legend.states,Node states,Состояния узла
+legend.root.why,the link the goal is blocked on first,"звено, на которое цель упирается в первую очередь"
+ui.tree.state.0,unknown,неизвестен
+ui.tree.state.1,can be opened now (dashed),можно открыть (пунктир)
+ui.tree.state.2,known,известен
+ui.tree.state.3,mastered (filled),освоен (залит)
+ui.tree.state.4,selected,выбран
+ui.menu.continue.why,No saved game,Нет сохранённой игры
+ui.menu.load.why,Loading is not ready yet,Загрузка пока не готова
+ui.menu.save.why.notready,Saving is not ready yet,Сохранение пока не готово
+ui.menu.save.why.nogame,No game started,Нет начатой игры
+menu.reason.nogame,No game running,Нет игры
