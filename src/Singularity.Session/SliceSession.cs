@@ -598,6 +598,8 @@ public sealed partial class SliceSession
             CommandVerdict v = CommandValidator.CheckState(c.Command, _knowsProcess);
             if (v.Accepted && c.Command is StartMasteryProgramme start)
                 v = MasteryVerdict(start, month);
+            if (v.Accepted && c.Command is FundProgramme fund)
+                v = FundVerdict(fund, month);
             if (v.Accepted)
                 v = _world.Commands.Apply(c.Command, month);
             // The layer rejects a stale handle in its step and only counts it; the snapshot at the tick boundary is the one it reads first, so the outcome names it here.
@@ -610,6 +612,20 @@ public sealed partial class SliceSession
         _journal.AddRange(_pending);
         _pending.Clear();
         return true;
+    }
+
+    // fund_programme needs the node in the frontier and the money in the reserve now; the layer repeats both on the snapshot of its step, so a late change costs nothing.
+    private CommandVerdict FundVerdict(FundProgramme f, long month)
+    {
+        int row = _world.Graph.RowOf(f.Node);
+        if (row < 0 || !_world.Knowledge.InFrontier(f.Actor, row))
+            return CommandVerdict.Refuse(CommandRefusal.ProgrammeNotFundable, $"node {f.Node} is not being researched by actor {f.Actor}");
+        if (_world.Knowledge.ProgrammeCapacity(f.Actor, row, month) <= Fx6.Zero)
+            return CommandVerdict.Refuse(CommandRefusal.ProgrammeNotFundable, $"node {f.Node} cannot take more progress this month");
+        Fx6 balance = _world.Reserve?.Balance(f.Actor) ?? Fx6.Zero;
+        return balance >= f.Amount
+            ? CommandVerdict.Ok
+            : CommandVerdict.Refuse(CommandRefusal.ProgrammeNotFundable, $"the reserve holds {balance}, the programme needs {f.Amount}");
     }
 
     // The player's programme start meets the check the AI and the layer use (production-mastery.md §1): the refusal names its why_not code.

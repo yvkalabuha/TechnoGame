@@ -8,6 +8,7 @@ using Singularity.Core.Industry;
 using Singularity.Core.Knowledge;
 using Singularity.Core.Policy;
 using Singularity.Core.Products;
+using Singularity.Core.Reserve;
 using Singularity.Core.WhyNot;
 using Singularity.Kernel;
 
@@ -155,17 +156,29 @@ internal sealed class SliceWorld
             generations: ProductsLayout.Generations, derive: config.Derive, startLines: StartLines(pStart),
             events: Streams.Events, eventInputs: new PolicyEventsAdapter(this), disruptionExposure: scenario.Exposure,
             budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout) > LicenceMask.NarrowMaxNumber);   // O-040: the second word only for data whose licensable PRC need it
+        if (config.Reserve)
+            Reserve = new ReserveSystem(Table, new ReserveParams(), new ReserveInputsAdapter(this));
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs,
-            ImmutableArray.CreateRange(MasteryParams.ProgrammeProcesses(ProductsLayout).Select(k => ProductsLayout.ProcNumber[k])));
+            ImmutableArray.CreateRange(MasteryParams.ProgrammeProcesses(ProductsLayout).Select(k => ProductsLayout.ProcNumber[k])),
+            fundProgramme: config.Reserve);
         Limits = new CommandLimits(scenario.ActorCount, ProductsLayout.SlotCount, ProductsLayout.Designs,
-            [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)]);
+            [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)])
+        {
+            ReserveEnabled = config.Reserve,
+            NodeNumbers = ImmutableArray.CreateRange(Graph.Number.OrderBy(n => n)),
+        };
         RegisterRunColumns();
         // why_not reads the three layers' snapshots only (contract §6); ProcessDevelopment is off in the EffortZero ablation (E_full = 0 makes it inert).
         WhyNot = new WhyNotAnalyzer(Graph, kp, Knowledge, Industry, Products, pp, new WhyNotInputsAdapter(this),
             new LeverRegistry(Enum.GetValues<Lever>().Where(l => l != Lever.ProcessDevelopment || !config.Channels.HasFlag(SliceChannels.EffortZero))));
 
         Policy.Initialize();
-        ITickSystem[] systems = config.DailyTickProbe ? [Knowledge, Industry, Products, Policy, new DailyProbeSystem()] : [Knowledge, Industry, Products, Policy];
+        // The reserve runs last: it reads the same snapshot as the others and nothing reads its output within the step.
+        var systems = new List<ITickSystem> { Knowledge, Industry, Products, Policy };
+        if (Reserve is not null)
+            systems.Add(Reserve);
+        if (config.DailyTickProbe)
+            systems.Add(new DailyProbeSystem());
         DailyViewNeutral = IsDailyViewNeutral(systems);
         Runner = new TickRunner(Table, config.Seed, systems, config.ChunkSize, config.Threads, Calendar);
     }
@@ -248,7 +261,7 @@ internal sealed class SliceWorld
             default:
                 // L_C and L_P read t_known (SLICE_COMPOSITION §13.2); in every other mode the columns are absent and the hash is that of main.
                 return new KnowledgeSystem(Table, Graph, kStart, kp, inputs, Streams.Know, chunks, licenceTransfersKnowledge: Config.LicKnows,
-                    trackKnownSince: Config.Layer is LayerControl.Lc or LayerControl.Lp);
+                    trackKnownSince: Config.Layer is LayerControl.Lc or LayerControl.Lp, fundProgrammes: Config.Reserve);
         }
     }
 
@@ -332,6 +345,9 @@ internal sealed class SliceWorld
     public ProductsSystem Products { get; }
     public PolicySystem Policy { get; }
     public CommandState Commands { get; }
+
+    /// <summary>The reserve account system; null when <see cref="SliceRunConfig.Reserve"/> is off.</summary>
+    public ReserveSystem? Reserve { get; }
     public WhyNotAnalyzer WhyNot { get; }
     public CommandLimits Limits { get; }
     public TickRunner Runner { get; }
