@@ -11,6 +11,7 @@ from pathlib import Path
 STATE_DIR = Path.home() / ".cache" / "singularity"
 STATE_FILE = "codex-limit.json"
 DEFAULT_COOLDOWN = timedelta(minutes=30)  # when the message names no reset time
+MAX_COOLDOWN = timedelta(hours=24)  # a longer wait in a message is not trusted
 AT_RE = re.compile(r"try again at (\d{1,2}):(\d{2})\s*([AP]M)", re.I)
 IN_RE = re.compile(r"try again in (?:(\d+)\s*h\w*)?\s*(?:(\d+)\s*m\w*)?", re.I)
 
@@ -18,6 +19,11 @@ IN_RE = re.compile(r"try again in (?:(\d+)\s*h\w*)?\s*(?:(\d+)\s*m\w*)?", re.I)
 def parse_reset(text, now):
     """Reset time (aware datetime) named by a Codex limit message, or None. `now` is aware; a clock time with no
     date means its next occurrence in now's time zone."""
+    at = _parse(text, now)
+    return min(at, now + MAX_COOLDOWN) if at else None
+
+
+def _parse(text, now):
     m = AT_RE.search(text or "")
     if m:
         hour = int(m.group(1)) % 12 + (12 if m.group(3).upper() == "PM" else 0)
@@ -33,7 +39,7 @@ def parse_reset(text, now):
 
 def record_limit(reset_at, now, state_dir=STATE_DIR):
     """Remember the limit; reset_at None falls back to a default cooldown. Returns the stored reset time."""
-    reset_at = reset_at or now + DEFAULT_COOLDOWN
+    reset_at = min(reset_at or now + DEFAULT_COOLDOWN, now + MAX_COOLDOWN)
     state_dir = Path(state_dir)
     state_dir.mkdir(parents=True, exist_ok=True)
     tmp = state_dir / (STATE_FILE + ".tmp")

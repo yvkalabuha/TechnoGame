@@ -6,6 +6,7 @@ agent's own shell commands stay denied. The agent saves images under ~/.gemini/a
 events and copies the new images into shots-out/sketches/<task>/. A sketch is a proposal, not an asset: ADR-0026
 needs ui-art-director's approval before any of it goes into mods/core/."""
 
+import contextlib
 import hashlib
 import json
 import os
@@ -26,6 +27,7 @@ AGY_RPM = 2
 AGY_RPD = 20  # careful guess of the subscription's daily room, not a documented quota
 AGY_USAGE_FILE = "agy-usage.json"  # in LEDGER_DIR
 MAX_COUNT = 4
+AGY_WS_DIR = config.WORKTREES_DIR.parent / "agy-ws"
 DEFAULT_TIMEOUT_S = 400
 BRAIN_DIR = Path.home() / ".gemini" / "antigravity-cli" / "brain"
 IMAGE_EXT = (".jpg", ".jpeg", ".png", ".webp")
@@ -40,7 +42,6 @@ PROMPT_SUFFIXES = (".md", ".txt")
 # is rejected, and agy has no flag that lists tools to disable. A deny rule beats an allow rule; headless mode
 # auto-denies whatever is neither allowed nor denied. So the shell is denied up front here and checked again afterwards.
 DENY_RULES = ["command(*)", "write_file(*)", "read_url(*)", "execute_url(*)", "mcp(*)"]
-SETTINGS = json.dumps({"permissions": {"allow": [], "deny": DENY_RULES}})
 CONTROL_TOOLS = ("generate_image", "invoke_subagent", "finish", "wait", "wait_5_seconds")
 PATH_TOOLS = ("view_file", "read_file", "list_dir")
 TRANSCRIPT_TOOLS = ("send_message",)  # a sub-agent reporting to its parent; seen only in transcripts
@@ -52,6 +53,55 @@ MIN_IMAGE_BYTES = 100
 class SketchError(VisualError):
     """code: bad_task, bad_prompt, bad_ref, bad_count, agy_missing, agy_not_logged_in, agy_failed, agy_timeout,
     no_images, secret_detected, sandbox_unavailable, rate_limit, agy_quota, agent_tool_violation."""
+
+
+# Evidence 2026-11-24: in --mode plan agy offers no list_dir, grep_search or find_by_name; view_file calls run as read_file.
+SCOPED_TOOLS = ("read_file", "view_file")
+RULE_BAD_CHARS = frozenset("()*?[]{}\n")
+MAX_DIR_ENTRIES = 3000
+
+
+def scoped_deny_rules(allowed, top="/"):
+    """Deny rules that leave only the `allowed` folders readable. Evidence 2026-11-24 (agy 1.5.16): a deny rule beats an
+    allow rule, and a path that no rule names is NOT auto-denied, so an allow-list cannot be written; instead every
+    sibling along the path from / to each allowed folder is denied (read_file(<path>/**), matched after ".." is
+    normalised). A name that cannot be written into a rule, or a folder too large to list, refuses the run."""
+    allowed = [os.path.realpath(p) for p in allowed if os.path.isdir(p)]
+    rules = []
+
+    def deny(p):
+        if RULE_BAD_CHARS & set(p):
+            raise SketchError("sandbox_unavailable", f"path cannot be written into an agy rule: {p!r}")
+        for t in SCOPED_TOOLS:
+            rules.append(f"{t}({p})")
+            if os.path.isdir(p) or os.path.islink(p):
+                rules.append(f"{t}({p}/**)")
+
+    def walk(d):
+        names = sorted(os.listdir(d))
+        if len(names) > MAX_DIR_ENTRIES:
+            raise SketchError("sandbox_unavailable", f"{d} has too many entries for an agy deny list")
+        for name in names:
+            p = os.path.join(d, name)
+            if any(a == p for a in allowed):
+                continue
+            if not os.path.islink(p) and any(a.startswith(p + os.sep) for a in allowed):
+                walk(p)  # an ancestor of an allowed folder: keep it, deny its other entries
+            else:
+                deny(p)
+
+    walk(top)
+    return rules
+
+
+@contextlib.contextmanager
+def settings_file(allowed):
+    """Path of a temporary --settings file: the fixed deny rules plus the per-run read scope. A file, not inline JSON:
+    the rule list is tens of KB, close to the limit of one argument."""
+    with tempfile.TemporaryDirectory(prefix="agy-settings-") as d:
+        p = Path(d) / "settings.json"
+        p.write_text(json.dumps({"permissions": {"allow": [], "deny": DENY_RULES + scoped_deny_rules(allowed)}}), encoding="utf-8")
+        yield str(p)
 
 
 def find_agy(which=shutil.which):
@@ -425,7 +475,8 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
     guard = guard or RateGuard(config.LEDGER_DIR / AGY_USAGE_FILE, rpm=AGY_RPM, rpd=AGY_RPD)
     guard.before_attempt(len(brief), 0)  # a failed run stays counted: the subscription may have counted it
     started = clock()
-    with tempfile.TemporaryDirectory(prefix="agy-sketch-") as ws:
+    AGY_WS_DIR.mkdir(parents=True, exist_ok=True)  # a small folder of its own: the read scope lists its parents
+    with tempfile.TemporaryDirectory(prefix="agy-sketch-", dir=AGY_WS_DIR) as ws, settings_file([ws, brain_dir]) as settings:
         ws_refs = []
         for p in ref_paths:
             dst = Path(ws) / f"{len(ws_refs) + 1}-{p.name}"  # same basenames must not collapse
@@ -433,7 +484,7 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
             ws_refs.append(dst)
         cmd = [agy, "-p", build_prompt(brief, count, ws_refs), "--print-timeout", f"{timeout_s}s",
                "--mode", "accept-edits", "--output-format", "stream-json",
-               "--settings", SETTINGS]
+               "--settings", settings]
         record["agy_version"] = agy_version(agy, runner)
         rc, out, err = runner(cmd, ws, timeout_s + 60)
         ws_dir = ws

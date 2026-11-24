@@ -10,7 +10,7 @@ from unittest import mock
 from helpers import FakeProvider
 from test_review import GOOD, make_repo
 
-from tools.llm_worker import agyreview, codex, config, limitstate, review
+from tools.llm_worker import agyreview, codex, config, limitstate, review, sketch
 from tools.llm_worker.review import ReviewError
 
 CID = "11111111-2222-3333-4444-555555555555"
@@ -37,6 +37,7 @@ class LimitStateTest(unittest.TestCase):
         self.assertEqual(limitstate.parse_reset("try again at 1:10 AM", now), now.replace(hour=1, minute=10) + timedelta(days=1))
         self.assertEqual(limitstate.parse_reset("try again in 2 hours 5 minutes", now), now + timedelta(hours=2, minutes=5))
         self.assertIsNone(limitstate.parse_reset("rate limited", now))
+        self.assertEqual(limitstate.parse_reset("try again in 100 hours", now), now + timedelta(hours=24))  # capped
 
     def test_state_until_reset_then_expired(self):
         with tempfile.TemporaryDirectory() as d:
@@ -44,11 +45,47 @@ class LimitStateTest(unittest.TestCase):
             at = NOW + timedelta(hours=2)
             limitstate.record_limit(at, NOW, d)
             self.assertEqual(limitstate.limited_until(NOW, d), at)
+            limitstate.record_limit(NOW + timedelta(days=30), NOW, d)  # a stored reset is capped too
+            self.assertEqual(limitstate.limited_until(NOW, d), NOW + limitstate.MAX_COOLDOWN)
+            limitstate.record_limit(at, NOW, d)
             self.assertIsNone(limitstate.limited_until(at + timedelta(seconds=1), d))
             limitstate.record_limit(None, NOW, d)  # no time in the message: default cooldown
             self.assertEqual(limitstate.limited_until(NOW, d), NOW + limitstate.DEFAULT_COOLDOWN)
             (Path(d) / limitstate.STATE_FILE).write_text("{broken")
             self.assertIsNone(limitstate.limited_until(NOW, d))
+
+
+class ScopedRulesTest(unittest.TestCase):
+    def test_everything_outside_the_allowed_folders_is_denied(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d).resolve()
+            (root / "home" / "u" / ".config").mkdir(parents=True)
+            (root / "home" / "u" / ".config" / "key").write_text("k")
+            (root / "home" / "u" / ".cache" / "wt" / "run1").mkdir(parents=True)
+            (root / "home" / "u" / ".cache" / "wt" / "other").mkdir()
+            (root / "home" / "u" / ".cache" / "brain" / "id1").mkdir(parents=True)
+            (root / "etc").mkdir()
+            (root / "home" / "u" / "note.txt").write_text("n")
+            rules = sketch.scoped_deny_rules([root / "home" / "u" / ".cache" / "wt" / "run1"], top=root)
+        denied = {r[len("read_file("):-1] for r in rules if r.startswith("read_file(")}
+        for sibling in (".config", ".config/**", "note.txt", ".cache/brain", ".cache/brain/**", ".cache/wt/other/**"):
+            self.assertIn(f"{root}/home/u/{sibling}", denied, sibling)
+        self.assertIn(f"{root}/etc/**", denied)
+        self.assertFalse([x for x in denied if x.startswith(f"{root}/home/u/.cache/wt/run1")])  # the allowed folder
+        self.assertNotIn(f"{root}/home/u/.cache/wt", denied)  # its ancestors stay listable, only siblings are denied
+        self.assertEqual(rules, [r for r in rules if r.startswith(("read_file(", "view_file("))])
+
+    def test_unwritable_name_and_huge_folder_refuse(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d).resolve()
+            (root / "run").mkdir()
+            (root / "bad(name)").mkdir()
+            with self.assertRaises(sketch.SketchError):
+                sketch.scoped_deny_rules([root / "run"], top=root)
+            (root / "bad(name)").rmdir()
+            with mock.patch.object(sketch, "MAX_DIR_ENTRIES", 0):
+                with self.assertRaises(sketch.SketchError):
+                    sketch.scoped_deny_rules([root / "run"], top=root)
 
 
 class RunAgyTest(unittest.TestCase):
@@ -57,6 +94,9 @@ class RunAgyTest(unittest.TestCase):
         self.wt = self.tmp / "wt"
         self.wt.mkdir()
         self.brain = self.tmp / "brain"
+        p = mock.patch.object(sketch, "scoped_deny_rules", lambda allowed: [])  # the real walk is tested below
+        p.start()
+        self.addCleanup(p.stop)
         (self.brain / CID / ".system_generated" / "logs").mkdir(parents=True)
 
     def run_agy(self, out, rc=0, err="", transcript=()):
@@ -65,7 +105,7 @@ class RunAgyTest(unittest.TestCase):
         seen = []
 
         def runner(cmd, cwd, timeout):
-            seen.append((cmd, cwd))
+            seen.append((cmd, cwd, json.loads(Path(cmd[cmd.index("--settings") + 1]).read_text())))
             return rc, out, err
 
         res = agyreview.run_agy("p", self.wt, config.PACKAGE_DIR / "schemas" / "review.schema.json",
@@ -73,14 +113,15 @@ class RunAgyTest(unittest.TestCase):
         return res, seen[0]
 
     def test_answer_parsed_and_command_is_locked_down(self):
-        (answer, usage, model), (cmd, cwd) = self.run_agy(
+        (answer, usage, model), (cmd, cwd, settings) = self.run_agy(
             stream([("read_file", {"Path": str(self.wt / "a.py")})]),
             transcript=[("read_file", {"Path": str(self.wt / "a.py")})])
         self.assertEqual(json.loads(answer), GOOD)
         self.assertEqual((usage["input_tokens"], model, cwd), (10, "claude-sonnet-5-5-medium", str(self.wt)))
         self.assertNotIn("--dangerously-skip-permissions", cmd)
-        deny = json.loads(cmd[cmd.index("--settings") + 1])["permissions"]["deny"]
-        self.assertEqual(set(deny), {"command(*)", "write_file(*)", "read_url(*)", "execute_url(*)", "mcp(*)"})
+        deny = settings["permissions"]["deny"]
+        self.assertTrue({"command(*)", "write_file(*)", "read_url(*)", "execute_url(*)", "mcp(*)"} <= set(deny))
+        self.assertEqual(settings["permissions"]["allow"], [])
         self.assertIn("claude-sonnet-5-5-medium", cmd)
 
     def test_forbidden_tool_or_path_is_refused(self):
@@ -174,6 +215,16 @@ class ChainTest(unittest.TestCase):
 
         def violating(prompt, wt):
             raise agyreview.AgyViolation("run_command")
+
+        for exc, code in ((agyreview.AgyFailed("boom"), "agy_failed"), (agyreview.AgyLimit("quota"), "agy_limit")):
+            fake3 = FakeProvider([GOOD])  # explicit agy-sonnet fails closed: DeepSeek (paid) is never called
+
+            def raising(prompt, wt, exc=exc):
+                raise exc
+
+            with self.assertRaises(ReviewError) as cm:
+                self.run_review("agy-sonnet", agy_runner=raising, make_provider=lambda: fake3)
+            self.assertEqual((cm.exception.code, fake3.calls), (code, []))
 
         fake2 = FakeProvider([GOOD])
         with self.assertRaises(ReviewError) as cm:

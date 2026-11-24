@@ -1,20 +1,17 @@
 """Second reviewer through the Antigravity CLI: Claude Sonnet 5.5 when the Codex limit is exhausted (#456).
 
 `agy -p` runs read-only in the clean review worktree: the shell, file writes, URLs and MCP are denied up front
-(sketch.SETTINGS), --dangerously-skip-permissions is never passed, the environment is the sketch allowlist, and
+(sketch.DENY_RULES plus a per-run read scope), --dangerously-skip-permissions is never passed, the environment is the sketch allowlist, and
 the stream plus the transcripts are checked afterwards: any tool outside the allowlist, or a file path outside the
 worktree and this run's own brain folders, refuses the review. Keys are never read here."""
 
 import json
 import shutil
-from pathlib import Path
-
-from . import sketch
 
 MODEL = "claude-sonnet-5-5-medium"
 DEFAULT_TIMEOUT_S = 900
 REVIEW_CONTROL = ("finish", "wait", "wait_5_seconds")  # no generate_image, no sub-agents
-REVIEW_PATH_TOOLS = sketch.PATH_TOOLS + ("grep_search", "find_by_name")
+REVIEW_PATH_TOOLS = ("view_file", "read_file", "list_dir", "grep_search", "find_by_name")
 
 
 class AgyLimit(RuntimeError):
@@ -29,9 +26,9 @@ class AgyViolation(RuntimeError):
     """The agent used a tool or path outside the allowlist."""
 
 
-def command(agy, prompt, schema_file, model, timeout_s):
+def command(agy, prompt, schema_file, model, timeout_s, settings):
     return [agy, "-p", prompt, "--model", model, "--print-timeout", f"{timeout_s}s", "--mode", "plan",
-            "--output-format", "stream-json", "--json-schema", str(schema_file), "--settings", sketch.SETTINGS]
+            "--output-format", "stream-json", "--json-schema", str(schema_file), "--settings", settings]
 
 
 def init_model(out):
@@ -55,14 +52,19 @@ def extract_answer(result):
     return resp if isinstance(resp, str) else ""
 
 
-def run_agy(prompt, worktree, schema_file, model=MODEL, timeout_s=DEFAULT_TIMEOUT_S, brain_dir=sketch.BRAIN_DIR,
+def run_agy(prompt, worktree, schema_file, model=MODEL, timeout_s=DEFAULT_TIMEOUT_S, brain_dir=None,
             runner=None, which=shutil.which):
     """(answer text, usage dict, model name). AgyLimit on a quota error, AgyViolation on a forbidden tool or path,
     AgyFailed on anything else."""
+    from . import sketch  # sketch -> visual -> review -> agyreview: imported late to avoid a cycle
+
+    brain_dir = brain_dir or sketch.BRAIN_DIR
     runner = runner or sketch.default_runner
     try:
         agy = sketch.find_agy(which)
-        rc, out, err = runner(command(agy, prompt, schema_file, model, timeout_s), str(worktree), timeout_s + 60)
+        # Reads are limited by rules, not only checked afterwards: the diff is untrusted and may carry injected instructions.
+        with sketch.settings_file([worktree, brain_dir]) as settings:
+            rc, out, err = runner(command(agy, prompt, schema_file, model, timeout_s, settings), str(worktree), timeout_s + 60)
     except sketch.SketchError as e:
         raise AgyFailed(f"{e.code}: {e}") from None
     ids, result, _ = sketch.parse_stream(out)
