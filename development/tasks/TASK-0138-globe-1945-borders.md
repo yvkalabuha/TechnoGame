@@ -1,7 +1,7 @@
 ---
 id: TASK-0138
 title: "Globe draws 1945 political borders and labels from the region map and owners, not modern Natural Earth countries"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M05
 agent: developer
@@ -13,6 +13,7 @@ related: [TASK-0137, TASK-0091, TASK-0095]
 approved_by: owner
 approved_at: 2026-11-24
 approval_ref: "owner in chat 2026-11-24 («границы современные, а не на 45 год»); ADR-0011"
+review_ref: "reviewer: APPROVE (802fc88); ui-art-director: PASS with remainder round 2 (a3cf58d, G4 fixed a3a2b02); codex waived O-049 (diff over input limit); landed 228fb00"
 created: 2026-11-24
 ---
 
