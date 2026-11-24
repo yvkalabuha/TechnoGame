@@ -79,7 +79,7 @@ internal sealed class SliceObserver
     // counters for run.json (format §4.9, §4.7)
     private long _closeIdleOtherReason, _wAfterNMonths, _closesWithoutLine, _linesWithoutMoney, _licResumes;
     // Design capacity (contract-proposals T3, TASK-0054): AI compose/derive commands, those that gave no new design, and the slots used.
-    private long _designCommands, _designUnrealized, _designUnrealizedFull, _designSlotsMax, _designSlotsFullMonths;
+    private readonly CapacityCounters _cap = new();
 
     private sealed class YearRow
     {
@@ -1144,8 +1144,15 @@ internal sealed class SliceObserver
     /// layer for some code of <c>CommandRejection</c> (the code itself is not in the views); <c>DESIGN_CAPACITY</c> is the first check of the
     /// layer's <c>Create</c> and can only happen when every slot is used, so <c>design_slots_max</c> &lt; Designs proves it never happened.
     /// </summary>
-    private void Capacity(ActorView sv, ActorView av)
+    private void Capacity(ActorView sv, ActorView av) => _cap.Add(sv, av);
+
+    /// <summary>The design-capacity counters of <see cref="Capacity"/> (model_info), a class of its own so a self-check can drive it with views.</summary>
+    internal sealed class CapacityCounters
     {
+        public long Commands, Unrealized, UnrealizedFull, SlotsMax, FullMonths;
+
+        public void Add(ActorView sv, ActorView av)
+        {
         long cmds = 0;
         foreach (DesignCommandView c in sv.Decisions.DesignCommands)
         {
@@ -1154,17 +1161,18 @@ internal sealed class SliceObserver
         }
         long created = 0, used = 0;
         bool fullBefore = true;
-        for (int d = 0; d < _nD; d++)   // no per-month arrays: the observer runs on the tick path of the allocation test
+        for (int d = 0; d < av.Designs.Length; d++)   // no per-month arrays: the observer runs on the tick path of the allocation test
             SlotStep(sv.Designs[d].Stage, sv.Designs[d].SlotGeneration, av.Designs[d].Stage, av.Designs[d].SlotGeneration, ref created, ref used, ref fullBefore);
-        _designCommands += cmds;
+        Commands += cmds;
         long unrealized = Math.Max(0, cmds - created);
-        _designUnrealized += unrealized;
+        Unrealized += unrealized;
         if (fullBefore)
         {
-            _designUnrealizedFull += unrealized;
-            _designSlotsFullMonths++;
+            UnrealizedFull += unrealized;
+            FullMonths++;
         }
-        _designSlotsMax = Math.Max(_designSlotsMax, used);
+        SlotsMax = Math.Max(SlotsMax, used);
+        }
     }
 
     /// <summary>A slot is free when it never held a design (<c>None</c>) or its design is withdrawn (<c>Withdrawn</c>, ADR-0005 p. 3).</summary>
@@ -1195,12 +1203,12 @@ internal sealed class SliceObserver
 
     public IEnumerable<KeyValuePair<string, string>> Counters() =>
     [
-        new("design_commands", I(_designCommands)),
-        new("design_commands_without_design", I(_designUnrealized)),
-        new("design_commands_without_design_all_slots_used", I(_designUnrealizedFull)),
-        new("design_slots_max", I(_designSlotsMax)),
+        new("design_commands", I(_cap.Commands)),
+        new("design_commands_without_design", I(_cap.Unrealized)),
+        new("design_commands_without_design_all_slots_used", I(_cap.UnrealizedFull)),
+        new("design_slots_max", I(_cap.SlotsMax)),
         new("design_slots_capacity", I(_nD)),
-        new("design_all_slots_used_actor_months", I(_designSlotsFullMonths)),
+        new("design_all_slots_used_actor_months", I(_cap.FullMonths)),
         new("a40_close_idle_ge_tab_other_reason", I(_closeIdleOtherReason)),
         new("w_after_n_actor_months", I(_wAfterNMonths)),
         new("closes_of_designs_not_lines", I(_closesWithoutLine)),

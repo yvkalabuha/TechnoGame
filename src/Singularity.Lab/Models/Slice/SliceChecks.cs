@@ -1266,7 +1266,27 @@ public static class SliceChecks
             return $"withdrawn slots: created {c2}, used {u2}, full {f2}";
         // A slot withdrawn and retaken inside one step (generation changes, stage stays taken) is a created design.
         var (c3, _, _) = SliceObserver.SlotCounts([(DesignStage.InService, 1)], [(DesignStage.Series, 2)]);
-        return c3 == 1 ? null : $"retaken within a step: created {c3}";
+        if (c3 != 1)
+            return $"retaken within a step: created {c3}";
+
+        // Codex #2 (TASK-0118): the refusal counters themselves. A compose decided while all 12 slots are taken and no design appears is a command
+        // without a design met by a full layer; after a withdrawn slot is retaken by the compose it is not a refusal.
+        static DesignView Dv(int d, DesignStage stage, int slotGen) =>
+            new(d, stage, 1, 1, -1, -1, true, false, Fx6.Zero, Fx6.One, Fx6.One, Fx6.Zero, Fx6.One, Fx6.One, LineBind.None, true, [], slotGen);
+        static ActorView Av(IEnumerable<DesignView> designs, int composes) =>
+            new(0, PolicyProfile.Quality, [], 0, null, null, [], default, null!, default, NodeList.Create([]), [.. designs],
+                new PolicyDecisionView([.. Enumerable.Repeat(new DesignCommandView(DesignCommandKind.Compose, 1, [], default), composes)], [], [], [], []));
+        var full = Av(Enumerable.Range(0, 12).Select(d => Dv(d, DesignStage.InService, 1)), 1);
+        var cap = new SliceObserver.CapacityCounters();
+        cap.Add(full, full);
+        if (cap.Commands != 1 || cap.Unrealized != 1 || cap.UnrealizedFull != 1 || cap.FullMonths != 1 || cap.SlotsMax != 12)
+            return $"12 taken slots, 1 compose: commands {cap.Commands}, without design {cap.Unrealized}, all slots used {cap.UnrealizedFull}, months {cap.FullMonths}, max {cap.SlotsMax}";
+        var withdrawnOne = Av(Enumerable.Range(0, 12).Select(d => Dv(d, d == 11 ? DesignStage.Withdrawn : DesignStage.InService, 1)), 1);
+        var afterReuse = Av(Enumerable.Range(0, 12).Select(d => d == 11 ? Dv(d, DesignStage.Project, 2) : Dv(d, DesignStage.InService, 1)), 0);
+        var reuse = new SliceObserver.CapacityCounters();
+        reuse.Add(withdrawnOne, afterReuse);
+        return reuse.Commands == 1 && reuse.Unrealized == 0 && reuse.UnrealizedFull == 0 && reuse.FullMonths == 0
+            ? null : $"reuse of a withdrawn slot: without design {reuse.Unrealized}, all slots used {reuse.UnrealizedFull}, months {reuse.FullMonths}";
     }
 
     private static string? CostU100FirstSeries()
