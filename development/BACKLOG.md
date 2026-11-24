@@ -156,7 +156,7 @@
 | [TASK-0138](../development/tasks/TASK-0138-globe-1945-borders.md) | IN_PROGRESS | Globe draws 1945 political borders and labels from the region map and owners, not modern Natural Earth countries | MS-M05 |
 | [TASK-0139](../development/tasks/TASK-0139-hud-time-controls.md) | APPROVED | HUD time controls: centred pause and speed buttons, no speed text, speed gauge active frame alignment | MS-M05 |
 | [TASK-0140](../development/tasks/TASK-0140-sound-timing-audit.md) | APPROVED | Sound audit: sounds that play at the wrong moment or irritate (owner feedback) | MS-M05 |
-| [TASK-0141](../development/tasks/TASK-0141-gemini-agy-sketches.md) | APPROVED | Gemini design sketches through Antigravity CLI (agy) in llm_worker (#451) | MS-M05 |
+| [TASK-0141](../development/tasks/TASK-0141-gemini-agy-sketches.md) | IN_PROGRESS | Gemini design sketches through Antigravity CLI (agy) in llm_worker (#451) | MS-M05 |
 
 ## Гипотезы
 
