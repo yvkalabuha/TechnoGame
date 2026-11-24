@@ -1,7 +1,7 @@
 ---
 id: TASK-0146
 title: "Second review fallback to Sonnet 5.5 through agy when the Codex limit is exhausted (#456)"
-status: APPROVED
+status: IN_PROGRESS
 level: light
 milestone: MS-M05
 agent: developer

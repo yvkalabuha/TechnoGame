@@ -24,10 +24,10 @@
 - TASK-0134 [IN_PROGRESS] Hcap growth and production mastery in Core: series gate, candidate close, foresight, mastery programme (#438-#440) (developer)
 - TASK-0143 [IN_PROGRESS] Gemini sketch runs: detect subagent quota errors, one image per subagent, no extra refinements (developer)
 - TASK-0144 [IN_PROGRESS] Muted sound character (#455): soften attack and low-pass all routine cues (sound-director)
+- TASK-0146 [IN_PROGRESS] Second review fallback to Sonnet 5.5 through agy when the Codex limit is exhausted (#456) (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0140 [REVIEW] Sound audit: sounds that play at the wrong moment or irritate (owner feedback) (sound-director)
 - TASK-0145 [APPROVED] Sketches through Codex CLI image generation (llm_worker sketch --engine codex) (developer)
-- TASK-0146 [APPROVED] Second review fallback to Sonnet 5.5 through agy when the Codex limit is exhausted (#456) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
