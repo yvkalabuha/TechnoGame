@@ -105,6 +105,14 @@ def _example(schema, depth=0):
     return _EXAMPLE.get(t)
 
 
+class _RefuseRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        return None  # the 3xx answer surfaces as HTTPError
+
+
+_NO_REDIRECT = urllib.request.build_opener(_RefuseRedirect)
+
+
 def _text_of(content):
     """Text of a message; for a multi-part message (text + image_url) only the text parts."""
     if isinstance(content, list):
@@ -176,6 +184,8 @@ class OpenAICompatProvider:
             raise ValueError(f"bad reasoning effort {effort!r}")
         self.thinking = thinking  # DeepSeek thinking mode
         self.effort = effort
+        if self.profile.free_public and opener is urllib.request.urlopen:
+            opener = _NO_REDIRECT.open  # the key goes to one host only: a 3xx is an error, never followed
         self._opener = opener
         self._sleep = sleep
 

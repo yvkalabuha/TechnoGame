@@ -146,7 +146,7 @@ def load_frames(frames, shots_dir=None, allow_small=False):
     if len(frames) > config.MAX_FRAMES:
         raise VisualError("bad_frame", f"more than {config.MAX_FRAMES} frames")
     root = Path(shots_dir or config.SHOTS_DIR).resolve()
-    out, total = [], 0
+    out = []
     for f in frames:
         p = Path(f).resolve()
         if root not in p.parents:
@@ -167,10 +167,7 @@ def load_frames(frames, shots_dir=None, allow_small=False):
         if not allow_small and (wh[0] < MIN_SIZE[0] or wh[1] < MIN_SIZE[1]):
             raise VisualError("bad_frame", f"{f}: {wh[0]}x{wh[1]} is smaller than {MIN_SIZE[0]}x{MIN_SIZE[1]} "
                                            "(use --allow-small to send it anyway)")
-        total += len(data)
         out.append((p.name, mime, data))
-    if total > config.MAX_REQUEST_BYTES:
-        raise VisualError("bad_frame", f"frames total {total} bytes, limit {config.MAX_REQUEST_BYTES}")
     return out
 
 
@@ -223,10 +220,16 @@ def run_visual(task, frames, criteria_spec=DEFAULT_CRITERIA, runs_dir=config.RUN
         raise VisualError("sandbox_unavailable", str(e)) from None
     profile = config.PROFILES["gemini-flash"]
     model = model or profile.model
-    digest = hashlib.sha256(b"\0".join([model.encode(), mode.encode(), criteria.encode(), (direction or "").encode()] + [d for _, _, d in loaded])).hexdigest()
+    digest = hashlib.sha256(b"\0".join([model.encode(), mode.encode(), criteria.encode(), (direction or "").encode()]
+                                    + [n.encode() + b"\0" + d for n, _, d in loaded])).hexdigest()
     record = {"kind": "visual", "task": task, "mode": mode, "provider": profile.name, "model": model, "criteria": criteria_spec,
               "frames": [{"name": n, "bytes": len(d), "size": "%dx%d" % image_size(d)} for n, _, d in loaded],
               "input_hash": digest}
+    messages = build_messages(task, criteria, loaded, direction)
+    size = len(json.dumps(messages).encode())  # base64 data URIs and text, as sent
+    record["request_bytes"] = size
+    if size > config.MAX_REQUEST_BYTES:
+        raise VisualError("bad_frame", f"encoded request is {size} bytes, limit {config.MAX_REQUEST_BYTES}")
     if dry_run:
         return None, None, record
     if make_provider is None:
@@ -236,7 +239,7 @@ def run_visual(task, frames, criteria_spec=DEFAULT_CRITERIA, runs_dir=config.RUN
     provider = make_provider()  # KeyFileError here: nothing has been sent
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     try:
-        comp = provider.complete(build_messages(task, criteria, loaded, direction), schema, "visual", VISUAL_MAX_TOKENS)
+        comp = provider.complete(messages, schema, "visual", VISUAL_MAX_TOKENS)
     except gitleaks.SecretDetected as e:
         raise VisualError("secret_detected", str(e)) from None
     except gitleaks.GitleaksUnavailable as e:
@@ -274,11 +277,14 @@ def write_pair(runs_dir, stem, record):
     """JSON and Markdown from the same response: both go to temp files first, then are renamed together."""
     runs_dir.mkdir(parents=True, exist_ok=True)
     path, md = runs_dir / (stem + ".json"), runs_dir / (stem + ".md")
-    tj, tm = path.with_suffix(".json.tmp"), md.with_suffix(".md.tmp")
-    tj.write_text(json.dumps(record, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
-    tm.write_text(summary_md(record), encoding="utf-8")
-    os.replace(tm, md)
-    os.replace(tj, path)
+    # Concurrent runs with the same input: one writer at a time, so the pair always comes from one response.
+    with open(runs_dir / ".visual.lock", "a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        tj, tm = path.with_suffix(".json.tmp"), md.with_suffix(".md.tmp")
+        tj.write_text(json.dumps(record, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
+        tm.write_text(summary_md(record), encoding="utf-8")
+        os.replace(tm, md)
+        os.replace(tj, path)
     return path, md
 
 

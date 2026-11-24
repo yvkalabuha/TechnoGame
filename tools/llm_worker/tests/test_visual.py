@@ -310,7 +310,74 @@ class Round3(Base):
         digest = json.loads(path.read_text())["response_sha256"]
         self.assertIn(digest, text)
         self.assertEqual(rec["tokens"], {"prompt": 100, "completion": 10, "thinking": 0})
-        self.assertEqual(sorted(p.suffix for p in self.runs.iterdir()), [".json", ".md"])  # no temp files left
+        self.assertEqual(sorted(p.suffix for p in self.runs.iterdir() if p.name != ".visual.lock"), [".json", ".md"])  # no temp files left
+
+
+class Round4(Base):
+    def test_limit_applies_to_encoded_request(self):
+        raw = sum(len(PNG) for _ in self.frames)
+        with mock.patch.object(config, "MAX_REQUEST_BYTES", raw + 10), mock.patch("tools.llm_worker.gitleaks.scan_text"):
+            with self.assertRaises(visual.VisualError) as cm:  # raw bytes fit, base64 does not
+                visual.run_visual("TASK-0126", self.frames, shots_dir=self.shots, dry_run=True)
+        self.assertIn("encoded request", str(cm.exception))
+
+    def test_frame_names_change_input_hash(self):
+        with mock.patch("tools.llm_worker.gitleaks.scan_text"):
+            a = visual.run_visual("TASK-0126", [self.shots / "a.png"], shots_dir=self.shots, dry_run=True)[2]
+            (self.shots / "c.png").write_bytes(PNG)
+            b = visual.run_visual("TASK-0126", [self.shots / "c.png"], shots_dir=self.shots, dry_run=True)[2]
+        self.assertNotEqual(a["input_hash"], b["input_hash"])
+
+    def test_concurrent_writes_leave_a_consistent_pair(self):
+        import threading
+        recs = []
+        for i in range(8):
+            r = {"task": "TASK-0126", "model": "m", "frames": [{"name": "a.png"}], "response_sha256": f"{i:064d}",
+                 "tokens": {"prompt": 1, "completion": 1, "thinking": 0},
+                 "result": {"opinion": "pass", "summary": "s", "findings": []}}
+            recs.append(r)
+        ths = [threading.Thread(target=visual.write_pair, args=(self.runs, "visual-x", r)) for r in recs]
+        for th in ths:
+            th.start()
+        for th in ths:
+            th.join()
+        digest = json.loads((self.runs / "visual-x.json").read_text())["response_sha256"]
+        self.assertIn(digest, (self.runs / "visual-x.md").read_text())
+        self.assertEqual(sorted(p.name for p in self.runs.iterdir() if p.suffix == ".tmp"), [])
+
+    def test_gemini_key_not_sent_to_a_redirect_target(self):
+        import http.server
+        import threading
+        seen = []
+
+        class Target(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):  # urllib turns a 302 of a POST into a GET and keeps the headers
+                seen.append(self.headers.get("Authorization"))
+                self.send_response(200)
+                self.end_headers()
+
+            def log_message(self, *a):
+                pass
+
+        target = http.server.HTTPServer(("127.0.0.1", 0), Target)
+
+        class Redirector(Target):
+            def do_POST(self):
+                self.send_response(302)
+                self.send_header("Location", f"http://127.0.0.1:{target.server_port}/x")
+                self.end_headers()
+
+        front = http.server.HTTPServer(("127.0.0.1", 0), Redirector)
+        for s in (target, front):
+            threading.Thread(target=s.serve_forever, daemon=True).start()
+            self.addCleanup(s.server_close)
+            self.addCleanup(s.shutdown)
+        url = f"http://127.0.0.1:{front.server_port}/chat"
+        prof = replace(self.profile(self.key_file()), url=url)
+        p = OpenAICompatProvider(profile=prof, guard=self.guard(), retries=0, sleep=lambda s: None)
+        with mock.patch("tools.llm_worker.gitleaks.scan_text"), self.assertRaises(prov.ProviderError):
+            p.complete([{"role": "user", "content": "hi"}], {"type": "object"}, "visual", 10)
+        self.assertEqual(seen, [])
 
 
 class Review2(Base):
