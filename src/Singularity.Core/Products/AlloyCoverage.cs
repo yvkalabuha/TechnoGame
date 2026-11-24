@@ -13,10 +13,9 @@ public readonly record struct AlloyCoverage(Fx6 Supply, Fx6 Need, Fx6 DeficitFra
     public Fx6 Ratio => Need <= Fx6.Zero || Supply >= Need ? Fx6.One : Supply / Need;
 
     /// <summary>
-    /// The need is the ask of the last step 7 (<see cref="ProductsSystem.LastAlloyAsk"/>), not the produced rate: the produced rate is already cut by the alloy,
-    /// so a line stopped for lack of alloy would drop out. <paramref name="month"/> is the month of that step; before the first step there is no ask and the need is 0.
-    /// A pure read, no heap allocation.
+    /// The coverage of the step of <paramref name="month"/>. The need is the ask of that step 7 (<see cref="ProductsSystem.LastAlloyAsk"/>, read by the caller: it is a scratch
+    /// trace), not the produced rate, which is already cut by the alloy, so a line stopped for lack of alloy would drop out. Before the first step the ask is 0.
     /// </summary>
-    public static AlloyCoverage Of(ProductsSystem p, IndustrySystem industry, Fx6 deficitFraction, int actor, long month) =>
-        new(industry.Alloy(actor, month).Supply, p.LastAlloyAsk(actor), deficitFraction);
+    public static AlloyCoverage Of(IndustrySystem industry, Fx6 ask, Fx6 deficitFraction, int actor, long month) =>
+        new(industry.Alloy(actor, month).Supply, ask, deficitFraction);
 }

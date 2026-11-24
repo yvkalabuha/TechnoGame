@@ -85,6 +85,7 @@ public sealed partial class ProductsSystem : ITickSystem
     private readonly long[] _traceLeftStart;
     [Scratch]
     private readonly LineMoneyStep?[] _traceLines;
+    [Scratch]
     private readonly long[] _traceAlloyAsk;   // per (actor, design): alloy_kg · want of the last step 7
 
     public ProductsSystem(Table table, ProductsLayout layout, ProductsStart start, ProductsParams parameters,
