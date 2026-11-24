@@ -906,12 +906,12 @@ public sealed partial class Main : Node3D
         StopIfOnlyDone(dir);
     }
 
-    // (An explicit --audio-demo keeps the run going to the demo step.)
+    // (An explicit --audio-demo keeps the run going to the demo step; --time-shots runs its linked checks to the end.)
     // With exact (wildcard-free) patterns the run ends as soon as every one of them has its frame: nothing later can match.
     bool _runDone;
     void StopIfOnlyDone(string dir)
     {
-        if (_only == null || _runDone || _audioDemo || !_only.AllExact || _only.Unmatched(_savedShots).Length > 0) return;
+        if (_only == null || _runDone || _audioDemo || OS.GetCmdlineUserArgs().Contains("--time-shots") || !_only.AllExact || _only.Unmatched(_savedShots).Length > 0) return;
         FinishShotRun(dir);
     }
 

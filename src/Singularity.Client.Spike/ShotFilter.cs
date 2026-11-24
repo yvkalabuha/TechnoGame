@@ -35,6 +35,7 @@ public sealed class ShotFilter
     /// <summary>A size-matrix combination (suffix like _1920x1080_s125_en) is worth running when some pattern can end in it; a wildcard tail keeps it (conservative).</summary>
     public bool WantsSuffix(string sfx)
     {
+        if (!AllExact) return true;   // a mask can match frames of any combination: no pruning
         foreach (var p in _patterns)
         {
             // A greyscale twin is named <frame>_grey: it belongs to the same combination as its colour frame.
