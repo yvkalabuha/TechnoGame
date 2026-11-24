@@ -154,7 +154,7 @@ public sealed class LeverScriptTests
         const int months = 14;
         (SliceSession plain, _) = Run(null, months);
         (SliceSession diag, LeverScript? d) = Run(new LeverSpec(null, null, LeverOp.Plus10, Fx6.Zero, ReserveSpend.None, Diag: true), months);
-        Assert.Equal(plain.LastHash, diag.LastHash);
+        HashAssert.Equal(plain.LastHash, diag.LastHash);
         Assert.Contains(d!.Counters(), kv => kv.Key == "alloc_1980_USA_prop" && long.Parse(kv.Value, System.Globalization.CultureInfo.InvariantCulture) > 0);
 
         (SliceSession shifted, LeverScript? l) = Run(new LeverSpec("SUN", LeverItem.Research, LeverOp.Plus10, Fx6.Zero, ReserveSpend.None, Diag: false), months);
@@ -167,7 +167,7 @@ public sealed class LeverScriptTests
             if (a != sun)
                 Assert.Equal(w.Policy.Shares(a), w.SharesOf(a));
         }
-        Assert.NotEqual(plain.LastHash, shifted.LastHash);
+        HashAssert.NotEqual(plain.LastHash, shifted.LastHash);
     }
 
     [Fact]
