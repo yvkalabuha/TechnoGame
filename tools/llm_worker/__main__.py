@@ -233,7 +233,7 @@ def _sketch(a):
                                               timeout_s=a.timeout, dry_run=a.dry_run, parallel=a.parallel)
     except visual_mod.VisualError as e:
         refused = e.code in ("rate_limit", "secret_detected", "sandbox_unavailable", "agy_missing", "agy_not_logged_in",
-                                    "agy_quota", "agent_tool_violation")
+                                    "agy_quota", "agy_capacity", "agent_tool_violation")
         print(f"refused: {e}" if refused else f"error: {e}")
         return 4 if refused else 5
     if a.dry_run:
@@ -245,9 +245,9 @@ def _sketch(a):
     if rec["partial"]:
         print(f"warning: partial result, {len(rec['files'])} of {rec['requested']} images")
         rc = rc or 6
-    if rec.get("quota"):
-        print(f"quota: {sketch_mod.quota_text(rec['quota'], len(rec['files']), rec['requested'])}")
-        rc = rc or 4
+    if rec.get("quota"):  # quota outranks the generic partial code
+        print(f"quota: {sketch_mod.quota_text(rec['quota'])}")
+        rc = 4 if rc in (0, 6) else rc  # keep a --with-visual failure code
     print("attribution (add to mods/core/ATTRIBUTION.md after ui-art-director approves):")
     for line in rec["attribution"]:
         print(line)
