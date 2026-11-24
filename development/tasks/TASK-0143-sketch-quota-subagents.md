@@ -1,7 +1,7 @@
 ---
 id: TASK-0143
 title: "Gemini sketch runs: detect subagent quota errors, one image per subagent, no extra refinements"
-status: IN_PROGRESS
+status: DONE
 level: light
 milestone: MS-M05
 agent: developer
@@ -13,6 +13,7 @@ related: [TASK-0141]
 approved_by: orchestrator
 approved_at: 2026-11-24
 approval_ref: "owner asked in chat 2026-11-24 to investigate fewer images; light task approved by Orchestrator"
+review_ref: "reviewer: APPROVE ab63291; codex: waived #432 after 3rd return (7f20bb65), remainder DEBT-0089; landed fbbc783"
 created: 2026-11-24
 ---
 
