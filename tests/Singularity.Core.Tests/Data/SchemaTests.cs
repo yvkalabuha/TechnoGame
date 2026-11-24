@@ -23,6 +23,7 @@ public class SchemaTests : IDisposable
         { "nodes.yaml", "node.schema.json" },
         { "product_classes.yaml", "product_class.schema.json" },
         { "scenario_1945.yaml", "scenario.schema.json" },
+        { "node_history.yaml", "node_history.schema.json" },
     };
 
     [Theory]

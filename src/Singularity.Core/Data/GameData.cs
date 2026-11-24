@@ -6,12 +6,13 @@ namespace Singularity.Core.Data;
 public sealed class GameData
 {
     internal GameData(ImmutableArray<ModManifest> mods, NodeTable nodes, ProductClassTable productClasses,
-        ImmutableArray<ScenarioData> scenarios)
+        ImmutableArray<ScenarioData> scenarios, NodeHistoryTable history)
     {
         Mods = mods;
         Nodes = nodes;
         ProductClasses = productClasses;
         Scenarios = scenarios;
+        History = history;
         using var w = new CanonicalWriter();
         w.Str("singularity-data/1");
         nodes.WriteCanonical(w);
@@ -26,6 +27,9 @@ public sealed class GameData
     public ImmutableArray<ModManifest> Mods { get; }
     public NodeTable Nodes { get; }
     public ProductClassTable ProductClasses { get; }
+
+    /// <summary>Display-only node history (#486); not part of <see cref="DataHash"/>, no simulation reads it.</summary>
+    public NodeHistoryTable History { get; }
 
     /// <summary>Scenarios ordered by ID.</summary>
     public ImmutableArray<ScenarioData> Scenarios { get; }

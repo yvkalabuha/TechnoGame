@@ -14,6 +14,7 @@ public static class ModLoader
     public const string NodeKind = "node";
     public const string ProductClassKind = "product_class";
     public const string ScenarioKind = "scenario";
+    public const string NodeHistoryKind = "node_history";
 
     /// <summary>
     /// Reserved sub-directory of a mod for localization (ADR-0018 §2). The loader never reads, lists or hashes it:
@@ -28,6 +29,7 @@ public static class ModLoader
         var nodes = new ObjectStore(NodeKind);
         var classes = new ObjectStore(ProductClassKind);
         var scenarios = new ObjectStore(ScenarioKind);
+        var history = new ObjectStore(NodeHistoryKind);
         foreach (ModManifest mod in mods)
         {
             CheckUnlistedFiles(mod);
@@ -38,7 +40,7 @@ public static class ModLoader
                 if (!File.Exists(path))
                     throw new DataLoadException($"{path}: file listed in {mod.Id}/mod.yaml does not exist");
                 YNode root = StrictYaml.Parse(File.ReadAllText(path), path);
-                ApplyFile(root, context, nodes, classes, scenarios);
+                ApplyFile(root, context, nodes, classes, scenarios, history);
             }
         }
 
@@ -46,10 +48,12 @@ public static class ModLoader
         ProductClassTable classTable = ProductClassTable.Build(classes.Objects(), nodeTable);
         ImmutableArray<ScenarioData> scenarioList =
             [.. scenarios.Objects().Select(o => ScenarioData.Build(o.Map, nodeTable, classTable))];
-        return new GameData(mods, nodeTable, classTable, scenarioList);
+        NodeHistoryTable historyTable = NodeHistoryTable.Build(history.Objects(), nodeTable);
+        return new GameData(mods, nodeTable, classTable, scenarioList, historyTable);
     }
 
-    private static void ApplyFile(YNode root, ModContext mod, ObjectStore nodes, ObjectStore classes, ObjectStore scenarios)
+    private static void ApplyFile(YNode root, ModContext mod, ObjectStore nodes, ObjectStore classes, ObjectStore scenarios,
+        ObjectStore history)
     {
         var file = new MapReader(root);
         YNode kindNode = file.Required("kind");
@@ -58,6 +62,7 @@ public static class ModLoader
             NodeKind => nodes,
             ProductClassKind => classes,
             ScenarioKind => scenarios,
+            NodeHistoryKind => history,
             var other => throw DataLoadException.At(kindNode, $"unknown kind '{other}'"),
         };
 

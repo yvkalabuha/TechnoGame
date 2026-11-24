@@ -376,13 +376,13 @@ node-s5-prc-low_observable_finishing =
     .anchor = оценка: 1981
 
 node-s8-app-jet_fighter_g5 =
-    .name = Реактивный истребитель, поколение 5
-    .short = Истребит. 5
+    .name = Реактивный истребитель 4+ (электродистанционное управление)
+    .short = Истребит. 4+
     .anchor = Mirage 2000 в строю (1984)
 
 node-s8-app-jet_fighter_g6 =
-    .name = Реактивный истребитель, поколение 6
-    .short = Истребит. 6
+    .name = Реактивный истребитель, малозаметный, класс F-22
+    .short = Класс F-22
     .anchor = F-22: начальная готовность (12.2005)
 
 node-s8-eng-aesa_sensor_fusion =

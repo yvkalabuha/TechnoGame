@@ -376,13 +376,13 @@ node-s5-prc-low_observable_finishing =
     .anchor = estimate 1981
 
 node-s8-app-jet_fighter_g5 =
-    .name = Jet fighter, gen 5
-    .short = Fighter 5
+    .name = Jet fighter 4+ (fly-by-wire)
+    .short = Fighter 4+
     .anchor = Mirage 2000 in service (1984)
 
 node-s8-app-jet_fighter_g6 =
-    .name = Jet fighter, gen 6
-    .short = Fighter 6
+    .name = Jet fighter, low-observable, F-22 class
+    .short = Stealth F-22
     .anchor = F-22: initial operational capability (12.2005)
 
 node-s8-eng-aesa_sensor_fusion =
