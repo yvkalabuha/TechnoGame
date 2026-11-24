@@ -1,7 +1,7 @@
 ---
 id: TASK-0118
 title: "Codex catch-up findings on landed core tasks (TASK-0099, 0103, 0107, 0110)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M05
 agent: developer         # ответственный агент
