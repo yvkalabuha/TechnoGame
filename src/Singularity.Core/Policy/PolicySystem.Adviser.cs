@@ -7,7 +7,7 @@ namespace Singularity.Core.Policy;
 public sealed partial class PolicySystem
 {
     private AdviserPlan? _adv;
-    private bool[] _advRow = [];
+    private System.Collections.Immutable.ImmutableArray<bool> _advRow = [];   // filled once; immutable, so it is no scratch
     // Proposal stamps (the month that sees it, like the start/close stamps), the project handle and the rate; refusals hold the first stamp a proposal may come back at.
     private IntColumn[] _advOpen = [], _advOpenGen = [], _advClose = [], _advCloseGen = [], _advCloseWhy = [], _advNoOpen = [], _advNoClose = [];
     private LongColumn[] _advRate = [];
@@ -21,13 +21,14 @@ public sealed partial class PolicySystem
         if (plan.RefuseYears < 1 || plan.MaxLines < 1)
             throw new ArgumentOutOfRangeException(nameof(plan), "An adviser needs a refusal period of at least a year and a line limit of at least 1.");
         _adv = plan;
-        _advRow = new bool[table.RowCount];
+        var rows = new bool[table.RowCount];
         foreach (int r in plan.Rows)
         {
-            if (r < 0 || r >= _advRow.Length)
+            if (r < 0 || r >= rows.Length)
                 throw new ArgumentOutOfRangeException(nameof(plan), r, "An adviser row names a row of the table.");
-            _advRow[r] = true;
+            rows[r] = true;
         }
+        _advRow = System.Collections.Immutable.ImmutableArray.Create(rows);
         _advOpen = new IntColumn[designs];
         _advOpenGen = new IntColumn[designs];
         _advClose = new IntColumn[designs];
@@ -53,7 +54,7 @@ public sealed partial class PolicySystem
     public AdviserPlan? Adviser => _adv;
 
     /// <summary>The AI only advises this actor.</summary>
-    public bool IsAdviser(int actor) => _advRow.Length != 0 && _advRow[actor];
+    public bool IsAdviser(int actor) => !_advRow.IsDefaultOrEmpty && _advRow[actor];
 
     /// <summary>
     /// Turns the line decisions of an adviser actor into proposals: reads the refusals of the month, keeps what is not refused, and empties the decision
@@ -104,7 +105,7 @@ public sealed partial class PolicySystem
     public IReadOnlyList<AdviserProposal> AdviserProposals(int actor, long month)
     {
         var list = new List<AdviserProposal>();
-        if (_adv is null || !_advRow[actor])
+        if (_adv is null || !IsAdviser(actor))
             return list;
         for (int d = 0; d < _advOpen.Length; d++)
         {

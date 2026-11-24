@@ -113,7 +113,7 @@ public sealed record CloseLine(int Actor, DesignHandle Design) : SliceCommand(Ac
 
 /// <summary>
 /// <c>refuse_proposal(design, close)</c> (TASK-0153, #479): the player refuses the adviser's proposal to open (or, with <paramref name="Close"/>, to close) the line of the
-/// design; the adviser stays silent about it for the refusal period. Accepting a proposal is an ordinary <see cref="StartSeries"/> or <see cref="CloseLine"/> with the proposal's handle.
+/// design; the adviser stays silent about it for the refusal period. The silence is kept per design slot, whatever the generation of the project in it (a new project in the slot is silenced too). Accepting a proposal is an ordinary <see cref="StartSeries"/> or <see cref="CloseLine"/> with the proposal's handle.
 /// Valid only in a run with an adviser for the actor.
 /// </summary>
 public sealed record RefuseProposal(int Actor, DesignHandle Design, bool Close) : SliceCommand(Actor)

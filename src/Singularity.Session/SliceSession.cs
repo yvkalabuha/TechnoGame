@@ -176,7 +176,7 @@ public sealed partial class SliceSession
             return CommandVerdict.Refuse(CommandRefusal.TooManyDesignCommands, $"actor {command.Actor} already has {CommandLimits.DesignSlots} design commands queued");
 
         if (command is StartSeries start && LineLimitReached(start))
-            return CommandVerdict.Refuse(CommandRefusal.LineLimit, $"actor {start.Actor} already runs the most lines allowed ({_world.Policy.Adviser!.MaxLines}); a third line is not supported yet");
+            return CommandVerdict.Refuse(CommandRefusal.LineLimit, $"actor {start.Actor} already runs the most lines allowed ({_world.Policy.Adviser!.MaxLines}); another line is not supported yet");
 
         if (command is RetireCohort { Acknowledged: false } retire && NeedsConfirmation(retire) is { } warning)
             return warning;

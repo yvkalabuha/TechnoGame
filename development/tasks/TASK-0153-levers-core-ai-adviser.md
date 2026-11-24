@@ -44,5 +44,6 @@ docs/game-design/economy/production-lines-and-licence-market.md разд. 1: И�
 - Команда `RefuseProposal(actor, handle, close)` (журнал, кодек, валидатор); принять = обычные `StartSeries`/`CloseLine` с handle предложения (`ProposalView.Accept/Refuse`).
 - Session: `PolicyDecisionView.Proposals`; предел линий (`AdviserMaxLines`, 2) проверяется в `Submit` (`CommandRefusal.LineLimit`); `TestApiVersion` 22, файл `session-surface.v22.txt`.
 - Тесты: `tests/Singularity.Session.Tests/AdviserTests.cs` (8): нейтральность (выкл = main: хэш, схема, отпечаток), ИИ не стартует/не закрывает/не проектирует для актора-игрока, предложение видно во View и совпадает со стартом ИИ, принять = старт серии, отказ молчит 11 месяцев и возвращается на 12-й (+ повтор по журналу), предел линий, кодек.
+- Отказ молчит по слоту проекта независимо от поколения (новый проект в том же слоте тоже молчит до конца срока).
 - Проверка: без `Advise` 4 из 8 тестов падают (проверено); Core.Tests 1147 прошли; Session.Tests 553 прошли, 4 пропущены.
 - Не проверено: Architecture.Tests и сборка Lab (Lab не собирается: `SurfaceVersion` в `src/Singularity.Lab/Models/Slice/JetSliceModel.cs` должна стать 22 — зона simulation-engineer); клиент не запускался; эталоны не перезаписывались.
