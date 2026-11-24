@@ -272,6 +272,15 @@ public class InstrumentTests
     }
 
     [Fact]
+    public void AlloyFlaskOrNull_UnknownState_GivesNoFlask_AndKnownStatesGiveOne()
+    {
+        Assert.Null(InstrumentLogic.AlloyFlaskOrNull(default));   // start of the game or a restored snapshot: no trace, no flask, no exception
+        Assert.Null(InstrumentLogic.AlloyFlaskOrNull(new Singularity.Core.Products.AlloyCoverage(Fx6.FromInt(5), Fx6.FromInt(1), Fx6.Zero, false)));
+        Assert.Equal(Singularity.Core.Products.AlloyState.Normal, InstrumentLogic.AlloyFlaskOrNull(Cov(10, 1, 0))!.Value.State);
+        Assert.Equal(Singularity.Core.Products.AlloyState.NoSmelting, InstrumentLogic.AlloyFlaskOrNull(Cov(0, 0, 0))!.Value.State);
+    }
+
+    [Fact]
     public void AlloyFlask_NoDataYetIsRefused_TheCallerShowsNoFlask() =>
         Assert.Throws<InvalidOperationException>(() => InstrumentLogic.AlloyFlask(default));
 

@@ -1214,7 +1214,7 @@ public sealed partial class Main : Node3D
             case 141 when _shotT >= 0.5: SaveProbe("flask_levels_100"); Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false); _shotStep = 142; _shotT = 0; break;
             case 142 when _shotT >= 0.6: SaveProbe("flask_levels_150"); Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _flaskProbe.QueueFree(); _shotStep = 143; _shotT = 0; break;
             // Science from a real session state: no fixture; a month at a time until the chain shows (at most about 12 s), then the live panel is checked against the snapshot
-            case 143 when _shotT >= 0.3: Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); InstrumentLogic.YearOverride = null; OpenArea(AreaId.Science); _signal.SetSpeed(0); _liveMonths = 0; _liveFirst = -1; _liveHit = null; _liveEligible = null; _liveLastMonth = -2; _shotStep = 144; _shotT = 0; break;
+            case 143 when _shotT >= 0.3: Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); InstrumentLogic.YearOverride = null; OpenArea(AreaId.Science); _signal.SetSpeed(0); _liveMonths = 0; _liveFirst = -1; _liveHit = null; _liveEligible = null; _liveVisible = new int[_host.Layout.ActorIds.Length]; _liveLastMonth = -2; _shotStep = 144; _shotT = 0; break;
             // Live Science: the simulation runs in steps of 30 ticks (about a month); in each step every power's why_not snapshot is read. At the first step where a power has a Knowledge link,
             // that power's Science panel is opened (the area panel pointed at it) and checked; the scan then goes on to 30 years for the shares per power. No power with a link in 30 years: the run fails.
             case 144 when _shotT >= 0.2:
@@ -1248,17 +1248,34 @@ public sealed partial class Main : Node3D
                 CloseArea(); _host.WhyActor = _player; _shotStep = 146; _shotT = 0; break;
             case 146 when _shotT >= 0.2:
                 if (!ScanMonths(60)) break;
-                if (_liveMonths >= LiveMonthLimit)
+                _visA = 0; _shotStep = 151; _shotT = 0; break;
+            // After each scanned stretch every power's Science panel is opened and the flasks on screen are counted against the view's research field.
+            case 151 when _shotT >= 0.1:
+                if (_visA >= _host.Layout.ActorIds.Length)
                 {
-                    LogLiveShares();
-                    // a live frame where the alloy is sufficient: the first power whose coverage reads «Normal»
-                    _liveNormal = -1;
-                    for (int a = 0; a < _host.Layout.ActorIds.Length && _liveNormal < 0; a++)
-                        if (_host.Snap.View.Actors[a].Alloy.State == Singularity.Core.Products.AlloyState.Normal) _liveNormal = a;
-                    if (_liveNormal >= 0) { OpenArea(AreaId.Production); _host.WhyActor = _liveNormal; _areaPanel.ShowActor(_liveNormal); _shotStep = 148; }
-                    else { _shotLog += "live alloy: no power with sufficient alloy at the end of the scan\n"; _alloyI = 0; _shotStep = 149; }
+                    CloseArea(); _host.WhyActor = _player;
+                    if (_liveMonths >= LiveMonthLimit)
+                    {
+                        LogLiveShares();
+                        // a live frame where the alloy is sufficient: the first power whose coverage reads «Normal»
+                        _liveNormal = -1;
+                        for (int a = 0; a < _host.Layout.ActorIds.Length && _liveNormal < 0; a++)
+                            if (_host.Snap.View.Actors[a].Alloy.State == Singularity.Core.Products.AlloyState.Normal) _liveNormal = a;
+                        if (_liveNormal >= 0) { OpenArea(AreaId.Production); _host.WhyActor = _liveNormal; _areaPanel.ShowActor(_liveNormal); _shotStep = 148; }
+                        else { _shotLog += "live alloy: no power with sufficient alloy at the end of the scan\n"; _alloyI = 0; _shotStep = 149; }
+                    }
+                    else _shotStep = 146;
+                    _shotT = 0; break;
                 }
-                _shotT = 0; break;
+                OpenArea(AreaId.Science); _host.WhyActor = _visA; _areaPanel.ShowActor(_visA); _shotStep = 152; _shotT = 0; break;
+            case 152 when _shotT >= 0.4 && _host.Snap.WhyActor == _visA:
+            {
+                int inView = LiveResearch(_visA), shown = _areaPanel.ShotFlaskCount, want = Math.Min(inView, 3);
+                _shotLog += $"live science visible: {_host.Layout.ActorIds[_visA]} month {_liveMonths}, research {inView}, flasks on screen {shown}\n";
+                if (shown != want) InstFail($"live science visibility check failed: {_host.Layout.ActorIds[_visA]} at month {_liveMonths} has {inView} researches in the view and {shown} flasks on screen, expected {want}");
+                else if (_liveVisible != null && inView > 0) _liveVisible[_visA]++;
+                _visA++; _shotStep = 151; _shotT = 0; break;
+            }
             case 148 when _shotT >= 0.8 && _host.Snap.WhyActor == _liveNormal:
                 if (!_areaPanel.ShotAlloyRowShown) { InstFail("live normal-alloy frame: the alloy flask row is not on screen"); break; }
                 SaveShot($"full_live_production_normal_{_host.Layout.ActorIds[_liveNormal]}_{_host.Snap.Date.Year}.png", null, true);
@@ -1373,7 +1390,7 @@ public sealed partial class Main : Node3D
 
     // A failed shot-run check: the error goes to the run log and the process exits non-zero.
     const int LiveMonthLimit = 360;
-    int _liveNormal = -1, _alloyI;
+    int _liveNormal = -1, _alloyI, _visA; int[] _liveVisible;
     int[] _liveHit, _liveEligible; int _liveMonths, _liveFirst = -1; long _liveLastMonth = -2;
 
     bool WaitFor(Func<bool> done, string what)
@@ -1421,6 +1438,8 @@ public sealed partial class Main : Node3D
         {
             double share = 100.0 * _liveHit[a] / Math.Max(_liveEligible[a], 1);
             _shotLog += $"live science share: {_host.Layout.ActorIds[a]} has research in progress in {_liveHit[a]} of {_liveEligible[a]} eligible calendar months of {_liveMonths} ({share:F1} %)\n";
+            _shotLog += $"live science visible: {_host.Layout.ActorIds[a]} had its flasks on screen in {_liveVisible[a]} sampled months\n";
+            if (_liveVisible[a] == 0) InstFail($"live science visibility check failed: {_host.Layout.ActorIds[a]} never showed a flask on screen in the sampled months");
             if (_liveEligible[a] == 0 || share < 80) InstFail($"live science share check failed: {_host.Layout.ActorIds[a]} shows research flasks in {share:F1} % of {_liveEligible[a]} eligible months, expected at least 80 %");
         }
     }

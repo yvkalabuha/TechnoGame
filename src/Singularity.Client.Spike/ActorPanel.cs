@@ -499,9 +499,11 @@ public sealed partial class ActorPanel : PanelContainer
         _sciThrNote.Visible = thrNames != ""; _sciThrNote.Text = thrNames != "" ? Loc.T("flask.sci.threshold.note", thrNames) : "";
         _sciNone.Visible = n == 0;   // nothing in progress: say so, never an empty row
         AlloyCoverage cov = _shotAlloy ?? a.Alloy;
-        _prodKnown = cov.Known;
-        _flaskProdRow.Visible = _prodOn && _prodKnown;   // no step ran yet (or a restored snapshot): no row, never a false «enough»
-        var fl = InstrumentLogic.AlloyFlask(cov);
+        // No step ran yet (or a restored snapshot): no row, never a false «enough»; the panel never hands an Unknown state to the mapper.
+        InstrumentLogic.AlloyFlaskView? shown = InstrumentLogic.AlloyFlaskOrNull(cov);
+        _prodKnown = shown != null;
+        _flaskProdRow.Visible = _prodOn && _prodKnown;
+        if (shown is not { } fl) return;
         _flaskProd.Word = fl.State == Singularity.Core.Products.AlloyState.NoSmelting ? "flask.none" : null;
         _flaskProd.Set(fl.Level, fl.Hatched);
         int pct = InstrumentLogic.FlaskPercent(fl.Level, fl.Hatched);

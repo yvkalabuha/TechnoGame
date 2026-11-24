@@ -74,6 +74,9 @@ public static class InstrumentLogic
         _ => throw new InvalidOperationException("the view has no alloy data yet: the caller shows no flask"),
     };
 
+    /// <summary>The flask for a coverage, or null when the view has no alloy data yet (<see cref="AlloyState.Unknown"/>: start of the game, a restored snapshot): the panel shows no row then.</summary>
+    public static AlloyFlaskView? AlloyFlaskOrNull(AlloyCoverage c) => c.State == AlloyState.Unknown ? null : AlloyFlask(c);
+
     /// <summary>Percent shown for a flask level, in the caption and in the tooltip alike: rounded, and a hatched (deficit) flask never reads 100 %.</summary>
     public static int FlaskPercent(double level, bool hatched)
     {
