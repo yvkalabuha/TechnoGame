@@ -295,20 +295,55 @@ class SketchTest(unittest.TestCase):
         _, _, rec = self.go(runner=self.quota_runner(image=True), count=2)  # real clock: reset_at must not depend on it
         self.assertEqual(rec["quota"]["reset_at"], "2026-11-24T15:45:43+00:00")  # 11:05:06 + 4h40m37s
 
+    OK_SUB = "5719f167-8ad9-402f-89e8-32c2a1b75a28"
+
     def test_extra_images_of_one_subagent_do_not_hide_another_429(self):
-        base = self.quota_runner(image=True)
+        stream = FIXTURE.read_text() + json.dumps({"event": "step_update", "step_update": {
+            "conversation_id": self.OK_SUB, "step_index": 0, "state": "DONE", "step_type": "x"}}) + "\n"
+        base = self.runner(stream=stream, image=False)
 
         def run(cmd, cwd, timeout):
             res = base(cmd, cwd, timeout)
             if cmd[1] != "--version":
-                (self.brain / MAIN / "sketch_1_v2.jpg").write_bytes(JPEG + b"")
+                (self.brain / SUB / ".system_generated" / "logs" / "transcript.jsonl").write_text(self.QFIX.read_text())
+                (self.brain / self.OK_SUB).mkdir(exist_ok=True)
+                for i, name in enumerate(("a.jpg", "a_v2.jpg")):  # a sub-agent's refinement
+                    p = self.brain / self.OK_SUB / name
+                    p.write_bytes(JPEG)
+                    os.utime(p, (4102444800 - 10 + i, 4102444800 - 10 + i))
             return res
-        _, _, rec = self.go(runner=run, count=2)
-        self.assertEqual(len(rec["files"]), 2)
+        _, _, rec = self.go(runner=run, count=3)
+        self.assertEqual([f["name"] for f in rec["files"]], ["a_v2.jpg"])  # the latest, one per sub-agent
         self.assertEqual(rec["quota"]["subagents"], 1)
-        self.assertEqual(rec["quota"]["got"], 1)
+        self.assertEqual(rec["quota"]["got"], 1)  # not 2 files
         self.assertEqual(rec["stop_reason"], "agy_quota")
         self.assertTrue(rec["partial"])
+
+    def test_parent_conversation_error_is_not_a_subagent_refusal(self):
+        base = self.runner(image=True)
+
+        def run(cmd, cwd, timeout):
+            res = base(cmd, cwd, timeout)
+            if cmd[1] != "--version":
+                (self.brain / MAIN / ".system_generated" / "logs" / "transcript.jsonl").write_text(self.QFIX.read_text())
+            return res
+        _, _, rec = self.go(runner=run, count=1)
+        self.assertNotIn("quota", rec)
+        self.assertFalse(rec["partial"])
+
+    def test_collect_images_one_per_subagent_dir(self):
+        for cid, names in ((MAIN, ["m.jpg"]), (SUB, ["s1.jpg", "s2.jpg"])):
+            (self.brain / cid).mkdir(exist_ok=True)
+            for i, n in enumerate(names):
+                p = self.brain / cid / n
+                p.write_bytes(JPEG)
+                os.utime(p, (1000 + i, 1000 + i))
+        got = [p.name for p in sketch.collect_images([MAIN, SUB], 0, self.brain)]
+        self.assertEqual(got, ["m.jpg", "s2.jpg"])
+
+    def test_naive_reset_time_is_utc(self):
+        q = {"got": 0, "requested": 1, "reset_at": "2026-11-24T15:45:43", "kind": "quota"}
+        self.assertIn("reset in 4h40m37s", sketch.quota_text(q))
 
     def test_finished_images_kept_when_parent_fails_after_subagent_429(self):
         base = self.quota_runner(image=True)
@@ -355,7 +390,10 @@ class SketchTest(unittest.TestCase):
     def test_send_message_in_stream_needs_transcript_recipient(self):
         step = {"step_type": "tool", "tool_name": "send_message"}
         self.assertEqual(sketch.tool_violations(self.stream_with(step), "/ws"), ["send_message"])
-        self.assertEqual(sketch.tool_violations(self.stream_with(step), "/ws", frozenset({"send_message"})), [])
+        self.assertEqual(sketch.tool_violations(self.stream_with(step), "/ws", sent=1), [])
+        two = (self.stream_with(dict(step, step_index=1)) + self.stream_with(dict(step, step_index=2)))
+        self.assertEqual(sketch.tool_violations(two, "/ws", sent=1), ["send_message"])  # one call covers one step
+        self.assertEqual(sketch.tool_violations(two, "/ws", sent=2), [])
 
     def test_send_message_to_foreign_recipient_refuses_the_run(self):
         base = self.quota_runner(image=True)

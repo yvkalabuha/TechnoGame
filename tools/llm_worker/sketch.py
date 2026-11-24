@@ -166,8 +166,13 @@ def transcript_calls(brain_dir, ids):
 
 
 def verified_tools(calls):
-    """Path tools and send_message whose arguments (path, recipient) the transcript actually holds."""
-    return frozenset(name for name, paths in calls if (name in PATH_TOOLS or name in TRANSCRIPT_TOOLS) and paths)
+    """Path tools whose arguments the transcript actually holds."""
+    return frozenset(name for name, paths in calls if name in PATH_TOOLS and paths)
+
+
+def sent_messages(calls):
+    """Number of send_message calls whose recipient the transcript holds (call_violations checks each one)."""
+    return sum(1 for name, paths in calls if name in TRANSCRIPT_TOOLS and paths)
 
 
 def call_violations(calls, roots, ids=()):
@@ -186,12 +191,13 @@ def call_violations(calls, roots, ids=()):
     return list(dict.fromkeys(bad))
 
 
-def tool_violations(text, roots, verified=frozenset()):
+def tool_violations(text, roots, verified=frozenset(), sent=0):
     """Tool calls outside the allowlist (anything not named here is a violation): generate_image, invoke_subagent,
     finish/wait control calls, path tools only inside roots (the work folder and this run's own conversation folders). run_command is never allowed.
     A call whose path cannot be read counts as a violation, unless the transcript holds arguments for a call of that
-    tool (verified: then call_violations checks them)."""
-    bad = []
+    tool (verified: then call_violations checks them). Every send_message step of the stream needs its own
+    transcript call with a recipient (sent counts them), not just one for the whole run."""
+    bad, messages = [], set()
     for line in text.splitlines():
         try:
             ev = json.loads(line)
@@ -202,8 +208,8 @@ def tool_violations(text, roots, verified=frozenset()):
         if not isinstance(name, str) or name in CONTROL_TOOLS:
             continue
         if name in TRANSCRIPT_TOOLS:
-            if name not in verified:  # the recipient is checked in the transcript; none there, no trust
-                bad.append(name)
+            idx = su.get("step_index")
+            messages.add((su.get("conversation_id"), idx) if idx is not None else ("noindex", len(messages)))
             continue
         if name in PATH_TOOLS:
             paths = _paths(su)
@@ -214,6 +220,8 @@ def tool_violations(text, roots, verified=frozenset()):
             bad.append(f"{name}: {one_line(' '.join(paths), 80)}".rstrip(": "))
         else:
             bad.append(name)
+    if len(messages) > sent:  # the recipient is checked in the transcript; no call there, no trust
+        bad.append("send_message")
     return list(dict.fromkeys(bad))
 
 
@@ -275,7 +283,7 @@ def transcript_quota(brain_dir, ids):
             if kind:
                 kinds.add(kind)
                 n += 1
-                if cid not in failed:
+                if cid != ids[0] and cid not in failed:  # an error of the parent is not a sub-agent's refusal
                     failed.append(cid)
                 sec = reset_seconds(err)
                 if sec is not None:
@@ -290,9 +298,10 @@ def transcript_quota(brain_dir, ids):
 
 def _parse_time(s):
     try:
-        return datetime.fromisoformat(s.replace("Z", "+00:00")) if isinstance(s, str) else None
+        t = datetime.fromisoformat(s.replace("Z", "+00:00")) if isinstance(s, str) else None
     except ValueError:
         return None
+    return t.replace(tzinfo=timezone.utc) if t is not None and t.tzinfo is None else t  # naive means UTC
 
 
 def _now():
@@ -361,19 +370,23 @@ def image_complete(path):
     return False
 
 
-def collect_images(conversation_ids, since, brain_dir=BRAIN_DIR):
-    """Complete image files directly inside the conversations' brain dirs, modified at or after `since` (epoch seconds)."""
-    out = []
+def collect_images(conversation_ids, since, brain_dir=BRAIN_DIR, main_limit=None):
+    """Complete image files in the conversations' brain dirs, modified at or after `since` (epoch seconds). One
+    image per sub-agent conversation: the latest one (a sub-agent's refinements are not sketches). The first id is the
+    parent: the image tool often saves a sub-agent's file there, so it keeps its latest `main_limit - sub-agent images`
+    files (all of them when main_limit is None)."""
+    per = []
     for cid in conversation_ids:
-        if not UUID_RE.match(cid):
-            continue
         d = Path(brain_dir) / cid
-        if not d.is_dir():
-            continue
-        for p in sorted(d.iterdir()):
-            if p.is_file() and not p.is_symlink() and p.suffix.lower() in IMAGE_EXT and p.stat().st_mtime >= since and image_complete(p):
-                out.append(p)
-    return out
+        files = [] if not UUID_RE.match(cid) or not d.is_dir() else sorted(
+            (p for p in d.iterdir() if p.is_file() and not p.is_symlink() and p.suffix.lower() in IMAGE_EXT
+             and p.stat().st_mtime >= since and image_complete(p)), key=lambda p: (p.stat().st_mtime, p.name))
+        per.append(files)
+    subs = [f[-1] for f in per[1:] if f]
+    main = per[0] if per else []
+    if main_limit is not None:
+        main = main[max(0, len(main) - max(0, main_limit - len(subs))):] if main_limit > len(subs) else []
+    return sorted(main + subs, key=lambda p: (p.stat().st_mtime, p.name))
 
 
 def check_refs(refs, shots_dir=None):
@@ -536,7 +549,7 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
     record.update(conversation_id=ids[0] if ids else None, conversation_ids=ids, tools=tools, exit_code=rc)
     calls, missing = transcript_calls(brain_dir, ids)
     roots = run_roots(ws_dir, brain_dir, ids)
-    bad_tools = tool_violations(out, roots, verified_tools(calls))  # fail closed: no transcript, no trust
+    bad_tools = tool_violations(out, roots, verified_tools(calls), sent_messages(calls))  # fail closed: no transcript, no trust
     bad_tools = list(dict.fromkeys(bad_tools + call_violations(calls, roots, ids) + [f"transcript missing: {c}" for c in missing]))
     if bad_tools:
         record["agent_tool_violation"] = bad_tools
@@ -564,24 +577,23 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
                         "completion_tokens_details": {"reasoning_tokens": usage.get("thinking_tokens")}})
     quota = transcript_quota(brain_dir, ids)
     expected = max(0, count - quota["subagents"])  # a sub-agent that got a 429 delivers nothing
-    found = collect_images(ids, started - 2, brain_dir)
+    found = collect_images(ids, started - 2, brain_dir, count)
     sizes, prev = [p.stat().st_size for p in found], None
     for _ in range(IMAGE_POLL_S):  # the file may land a moment after the result event; its size must stop changing
         if len(found) >= expected and sizes == prev:
             break
         sleep(1)
         prev = sizes
-        found = collect_images(ids, started - 2, brain_dir)
+        found = collect_images(ids, started - 2, brain_dir, count)
         sizes = [p.stat().st_size for p in found]
-    quota = transcript_quota(brain_dir, ids)
-    expected = max(0, count - quota["subagents"])
     record["files"], record["requested"] = [], count
-    if quota["errors"]:
-        # Extra images of one sub-agent (refinements) must not hide another sub-agent's 429: count per sub-agent.
+    if quota["errors"] and (quota["subagents"] or len(found) < count):
+        # Count per sub-agent: one image each, so extra versions of one cannot hide another's 429. A parent-only
+        # error with every image present is not a refusal.
         record["quota"] = {**quota, "got": min(len(found), expected), "requested": count}
         record["stop_reason"] = "agy_quota" if quota["kind"] == "quota" else "agy_capacity"
     if not found:
-        if quota["errors"]:
+        if record.get("quota"):
             record.update(partial=True, attribution=[])
             write_pair(Path(runs_dir), record_stem(runs_dir, task, digest, started), record, summary_md)
             raise SketchError(record["stop_reason"], quota_text(record["quota"]))
