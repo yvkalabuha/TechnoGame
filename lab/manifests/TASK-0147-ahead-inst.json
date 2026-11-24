@@ -1,0 +1,73 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0147-ahead-inst",
+  "description": "TASK-0147 §10.12, owner decision #464: institution-like asymmetry on data B (99 nodes). PROFILE_CELL 26 (USA, GBR, SUN all P3), 8 (USA P1), 24 (SUN P1); P1 vs P3 = research share x1.25 paid by capability, D and procurement. Cost k 0 and 0.05 (pow 2, cap 10). Analysis lab/analysis/ahead_inst.py.",
+  "model": "JetSlice",
+  "ticks": 31168,
+  "chunk_size": 1,
+  "threads": [
+    1,
+    4
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 10
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full"
+  },
+  "series": [
+    {
+      "name": "c26_k0",
+      "params": {
+        "PROFILE_CELL": 26
+      }
+    },
+    {
+      "name": "c8_k0",
+      "params": {
+        "PROFILE_CELL": 8
+      }
+    },
+    {
+      "name": "c24_k0",
+      "params": {
+        "PROFILE_CELL": 24
+      }
+    },
+    {
+      "name": "c26_k05",
+      "params": {
+        "PROFILE_CELL": 26,
+        "AHEAD_K": 0.05,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 10
+      }
+    },
+    {
+      "name": "c8_k05",
+      "params": {
+        "PROFILE_CELL": 8,
+        "AHEAD_K": 0.05,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 10
+      }
+    },
+    {
+      "name": "c24_k05",
+      "params": {
+        "PROFILE_CELL": 24,
+        "AHEAD_K": 0.05,
+        "AHEAD_POW": 2,
+        "AHEAD_MAX": 10
+      }
+    }
+  ],
+  "meta": {
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r19",
+    "preregistration": "docs/simulation/g5-g6-probe.md §10.12"
+  }
+}
