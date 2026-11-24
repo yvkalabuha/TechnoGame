@@ -25,12 +25,17 @@ public enum LeverOp
     Zero = 2,
 }
 
-/// <summary>Where the Lab reserve of P2 is spent: kept (a), on procurement (b, proxy of licences), on research (c, proxy of the programme).</summary>
+/// <summary>
+/// Where the Lab reserve of P2 is spent: kept (a), on procurement (b, proxy of licences), on research (c, proxy of the programme). The two
+/// direct values are the no-reserve controls of the same reallocation: the slot is paid into the item every month from month 0, no account.
+/// </summary>
 public enum ReserveSpend
 {
     None = 0,
     Procurement = 1,
     Research = 2,
+    ProcurementDirect = 3,
+    ResearchDirect = 4,
 }
 
 /// <summary>
@@ -118,6 +123,8 @@ public sealed record LeverSpec(string? Actor, LeverItem? Item, LeverOp Op, Fx6 R
     /// part of this month's budget paid out of the reserve) is added to the spend item; the rest — the AI quality share, the reserve and the
     /// rounding residue — sits in the Quality slot, which no system reads (A2), so that money is not used.
     /// </summary>
+    public static bool IsDirect(ReserveSpend s) => s is ReserveSpend.ProcurementDirect or ReserveSpend.ResearchDirect;
+
     public static BudgetShares Withhold(BudgetShares ai, Fx6 reserve, ReserveSpend spend, Fx6 spent)
     {
         if (reserve < Fx6.Zero || reserve > ReserveMax || spent < Fx6.Zero || spent > reserve)
@@ -125,9 +132,9 @@ public sealed record LeverSpec(string? Actor, LeverItem? Item, LeverOp Op, Fx6 R
         long keep = Fx6.Scale - reserve.Raw;
         long K(Fx6 x) => (long)((Int128)x.Raw * keep / Fx6.Scale);
         long r = K(ai.Research), c = K(ai.Capability), e = K(ai.Effort), p = K(ai.Procurement);
-        if (spend == ReserveSpend.Research)
+        if (spend is ReserveSpend.Research or ReserveSpend.ResearchDirect)
             r += spent.Raw;
-        else if (spend == ReserveSpend.Procurement)
+        else if (spend is ReserveSpend.Procurement or ReserveSpend.ProcurementDirect)
             p += spent.Raw;
         else if (spent > Fx6.Zero)
             throw new ArgumentException("RESERVE_SPEND = NONE spends nothing.", nameof(spent));
@@ -210,7 +217,7 @@ internal sealed class LeverScript
             if (_actor < 0)
                 throw new ParamException($"LEVER_ACTOR '{id}' is not an actor of the scenario ({string.Join(", ", _ids)}).");
         }
-        if (spec.Reserve > Fx6.Zero)
+        if (spec.Reserve > Fx6.Zero && !LeverSpec.IsDirect(spec.Spend))
             _ledger = new ReserveLedger(spec.Reserve, spec.Spend);
         _disc = s.World.Graph.DisciplineNames.Length;
         _alloc80 = new long[_ids.Length * _disc];
@@ -233,6 +240,10 @@ internal sealed class LeverScript
         {
             Fx6 spent = _ledger.Month(nextMonth, w.Policy.Budget(_actor));
             want = LeverSpec.Withhold(ai, _spec.Reserve, _spec.Spend, spent);
+        }
+        else if (LeverSpec.IsDirect(_spec.Spend))
+        {
+            want = LeverSpec.Withhold(ai, _spec.Reserve, _spec.Spend, _spec.Reserve);
         }
         if (_sent == want)
             return;

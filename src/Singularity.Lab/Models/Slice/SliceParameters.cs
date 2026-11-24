@@ -184,7 +184,7 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
 
     /// <summary>
     /// The player lever keys of TASK-0148 (levers-probes.md §3): LEVER_ACTOR (an actor id, checked against the scenario when the run starts) with
-    /// exactly one of LEVER_SHIFT (R/C/E/P then +10, -10 or 0) and RESERVE (a share in (0; 0,9]); RESERVE_SPEND (NONE, PROC, RES) only with
+    /// exactly one of LEVER_SHIFT (R/C/E/P then +10, -10 or 0) and RESERVE (a share in (0; 0,9]); RESERVE_SPEND (NONE, PROC, RES; PROC_DIRECT, RES_DIRECT = the same slot paid every month from month 0 with no account) only with
     /// RESERVE; LEVER_DIAG (bool) prints the research allocation by discipline. None given = null (no script, the run of main).
     /// </summary>
     internal static LeverSpec? ParseLevers(ParamSet p, bool calibration)
@@ -214,6 +214,8 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
             "NONE" => ReserveSpend.None,
             "PROC" => ReserveSpend.Procurement,
             "RES" => ReserveSpend.Research,
+            "PROC_DIRECT" => ReserveSpend.ProcurementDirect,
+            "RES_DIRECT" => ReserveSpend.ResearchDirect,
             _ => throw Bad("RESERVE_SPEND", v),
         });
         return new LeverSpec(actor, item, op, r, spend, p.GetBool("LEVER_DIAG", false), p.GetBool("LEVER_ETA", false));

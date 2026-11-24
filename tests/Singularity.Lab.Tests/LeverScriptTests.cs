@@ -112,6 +112,7 @@ public sealed class LeverScriptTests
             [("LEVER_ACTOR", S("USA")), ("RESERVE", new ParamValue(ParamKind.Number, "0"))],
             [("LEVER_ACTOR", S("USA")), ("RESERVE", new ParamValue(ParamKind.Number, "0.2")), ("RESERVE_SPEND", S("ALL"))],
             [("LEVER_ACTOR", S("USA")), ("LEVER_SHIFT", S("R+10")), ("RESERVE_SPEND", S("RES"))],
+            [("LEVER_ACTOR", S("USA")), ("LEVER_SHIFT", S("R+10")), ("RESERVE_SPEND", S("RES_DIRECT"))],
         ];
         foreach ((string, ParamValue)[] b in bad)
             Assert.Throws<ParamException>(() => SliceParameters.ParseLevers(Params(b), false));
@@ -182,6 +183,11 @@ public sealed class LeverScriptTests
         var c = l!.Counters().ToDictionary(kv => kv.Key, kv => long.Parse(kv.Value, System.Globalization.CultureInfo.InvariantCulture));
         Assert.Equal(c["reserve_accrued"] - c["reserve_leaked"] - c["reserve_spent"], c["reserve_end"]);
         Assert.True(c["reserve_spent"] > 0);
+
+        // The direct control pays the whole slot into research from month 0 and keeps no account.
+        (SliceSession d, LeverScript? ld) = Run(new LeverSpec("FRA", null, LeverOp.Plus10, F(400_000), ReserveSpend.ResearchDirect, Diag: false), 3);
+        Assert.Equal(LeverSpec.Withhold(d.World.Policy.Shares(fra), F(400_000), ReserveSpend.ResearchDirect, F(400_000)), d.World.SharesOf(fra));
+        Assert.DoesNotContain(ld!.Counters(), kv => kv.Key.StartsWith("reserve_", StringComparison.Ordinal));
     }
 
     [Fact]

@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "experiment": "TASK-0148-levers-p2",
-  "description": "TASK-0148 P2 (levers-probes.md §3-4): reserve r of LEVER_ACTOR (USA, SUN, FRA) withheld into the unread Quality slot, kept (NONE) or paid out from month 12 at most r per month to procurement (PROC) or research (RES); Lab ledger with a 10 %/year leak. JetSlice FULL 1945-09..2000-12, seeds 1-10.",
+  "description": "TASK-0148 P2 (levers-probes.md §3-4): reserve r of LEVER_ACTOR (USA, SUN, FRA) withheld into the unread Quality slot, kept (NONE) or paid out from month 12 at most r per month to procurement (PROC) or research (RES); Lab ledger with a 10 %/year leak. JetSlice FULL 1945-09..2000-12, seeds 1-10. PROC_DIRECT/RES_DIRECT (added after the pilot, before the series, levers-probes.md 'Отклонения'): the same slot paid into the item every month from month 0, no account = the no-reserve control of the same reallocation.",
   "model": "JetSlice",
   "ticks": 20211,
   "chunk_size": 1,
@@ -41,7 +41,9 @@
         "RESERVE_SPEND": [
           "NONE",
           "PROC",
-          "RES"
+          "RES",
+          "PROC_DIRECT",
+          "RES_DIRECT"
         ]
       }
     }

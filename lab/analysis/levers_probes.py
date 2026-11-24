@@ -307,8 +307,10 @@ def second_line(base):
     lim_before, lim_after = defaultdict(list), defaultdict(list)
     for sd_, x in sorted(base.items()):
         by = defaultdict(dict)  # (actor, t) -> {design: rate}
+        roles = {}
         for r in read(x["dir"], "lines"):
             by[(r["actor"], int(r["t"]))][r["design"] + ":" + r["g_p"]] = int(r["rate"]) / FX
+            roles[(r["actor"], int(r["t"]), r["design"] + ":" + r["g_p"])] = r["role"] + ("/close" if r["close"] == "1" else "")
         sm = x["sm"]
         for a in ACTORS:
             for t in range(7, MONTHS - 7):
@@ -335,7 +337,7 @@ def second_line(base):
                 for k in ("bind_money", "bind_alloy", "bind_rate", "wf_short"):
                     lim_before[k].append(statistics.mean(flag(u, k) for u in range(t - 6, t)))
                     lim_after[k].append(statistics.mean(flag(u, k) for u in range(t + 1, t + 7)))
-                rows_out.append((sd_, a, t, round(mb, 2), round(ma, 2)))
+                rows_out.append((sd_, a, t, round(mb, 2), round(ma, 2), roles.get((a, t + 1, d), "?")))
     if not rel:
         print("- no clean 1 -> 2 transitions (6 months of one line before, the line present 6 months after)")
         return
@@ -345,8 +347,12 @@ def second_line(base):
     print(f"- verdict: {'the second line slows the first (median < -10 %)' if statistics.median(rel) < -0.10 else 'no slow-down by the rule (median >= -10 %)'}")
     for k in ("bind_money", "bind_alloy", "bind_rate", "wf_short"):
         print(f"- share of months with {k}: before {statistics.mean(lim_before[k]):.2f}, after {statistics.mean(lim_after[k]):.2f}")
+    role_n = defaultdict(int)
+    for r in rows_out:
+        role_n[r[5]] += 1
+    print(f"- role of the old line in the month after the start (W = older of the pair, N = newer): {dict(role_n)}")
     for r in rows_out[:15]:
-        print(f"  - seed {r[0]} {r[1]} t {r[2]} ({year_dec(r[2]):.1f}): {r[3]} -> {r[4]} units/month")
+        print(f"  - seed {r[0]} {r[1]} t {r[2]} ({year_dec(r[2]):.1f}): {r[3]} -> {r[4]} units/month, role {r[5]}")
 
 
 # ---------------------------------------------------------------- P2
@@ -373,7 +379,7 @@ def report_p2(runs2, runs1, problems):
     print("\n### Ledger control: Lab account vs an exact replica of months 0..663 from supply_month.budget (month 664: its leak only)")
     bad = 0
     for arm, rs in sorted(runs2.items()):
-        if arm == "base":
+        if arm == "base" or arm.endswith("_DIRECT"):
             continue
         a, rr, spend = arm.split(":")
         r_raw = round(float(rr[1:]) * FX)
@@ -387,34 +393,63 @@ def report_p2(runs2, runs1, problems):
                 bad += 1
                 problems.append(f"ledger replica mismatch {arm} s{sd_}: {i} vs {rep}")
     print(f"- mismatches: {bad}")
-    dom = []
+    dom_lit, dom = [], []
     for a in LEVER_ACTORS:
         print(f"\n### {a}")
+        print("DOM1 = beats the pre-registered no-reserve set (base + 12 P1 arms); DOM = beats it with the *_DIRECT controls added "
+              "(the same reallocation without an account, a post-pilot addition)")
         print("| arm | " + " | ".join(m for m, _, _ in METRICS) + " | reserve end / accrued | licence money refusals |")
         print("|---" * (len(METRICS) + 3) + "|")
-        nores = {"base": base} | {k: v for k, v in runs1.items() if k.startswith(a + ":")}
-        best = {}
-        for m, _, _ in METRICS:
-            meds = {k: statistics.median(x["per"][a][m] for x in v.values()) for k, v in nores.items()}
-            pick = max if DIRECTION[m] == "hi" else min
-            best[m] = pick(meds.items(), key=lambda kv: kv[1])
-        print("| best no-reserve (arm) | " + " | ".join(f"{fmt(best[m][1])} ({best[m][0].split(':')[-1]})" for m, _, _ in METRICS) + " | | |")
+        pre = {"base": base} | {k: v for k, v in runs1.items() if k.startswith(a + ":")}
+        full = pre | {k: v for k, v in runs2.items() if k.startswith(a + ":") and k.endswith("_DIRECT")}
+
+        def best_of(pool):
+            out = {}
+            for m, _, _ in METRICS:
+                meds = {k: statistics.median(x["per"][a][m] for x in v.values()) for k, v in pool.items()}
+                pick = max if DIRECTION[m] == "hi" else min
+                out[m] = pick(meds.items(), key=lambda kv: kv[1])
+            return out
+        best1, best = best_of(pre), best_of(full)
+        print("| best pre-registered no-reserve (arm) | " + " | ".join(f"{fmt(best1[m][1])} ({best1[m][0].split(':', 1)[-1]})" for m, _, _ in METRICS) + " | | |")
+        print("| best with DIRECT controls (arm) | " + " | ".join(f"{fmt(best[m][1])} ({best[m][0].split(':', 1)[-1]})" for m, _, _ in METRICS) + " | | |")
         for arm in sorted(k for k in runs2 if k.startswith(a + ":")):
             rs = runs2[arm]
             e = effects(runs2, base, a, arm)
+            ledger = not arm.endswith("_DIRECT")
             cells = []
             for m, _, fl in METRICS:
                 med = statistics.median(x["per"][a][m] for x in rs.values())
                 s_star = noise(base, a, m, fl)[0]
-                beats = better(m, med, best[m][1]) and abs(med - best[m][1]) > s_star
-                if beats and float(arm.split(":")[1][1:]) >= 0.4:
-                    dom.append((arm, m, med, best[m]))
-                cells.append(f"{fmt(e[m][0])}{'*' if e[m][2] else ''}{' DOM' if beats else ''}")
-            ends = statistics.median(int(x["info"]["reserve_end"]) / max(1, int(x["info"]["reserve_accrued"])) for x in rs.values())
+                b1 = ledger and better(m, med, best1[m][1]) and abs(med - best1[m][1]) > s_star
+                b2 = ledger and better(m, med, best[m][1]) and abs(med - best[m][1]) > s_star
+                if float(arm.split(":")[1][1:]) >= 0.4:
+                    if b1:
+                        dom_lit.append((arm, m))
+                    if b2:
+                        dom.append((arm, m, med, best[m]))
+                cells.append(f"{fmt(e[m][0])}{'*' if e[m][2] else ''}{' DOM' if b2 else (' DOM1' if b1 else '')}")
+            if ledger:
+                ends = statistics.median(int(x["info"]["reserve_end"]) / max(1, int(x["info"]["reserve_accrued"])) for x in rs.values())
+                ends_s = f"{ends:.2f}"
+            else:
+                ends_s = "-"
             refusals = statistics.median(int(x["info"]["lever_licence_money_refusals"]) for x in rs.values())
-            print(f"| {arm.split(':', 1)[1]} | " + " | ".join(cells) + f" | {ends:.2f} | {refusals} |")
+            print(f"| {arm.split(':', 1)[1]} | " + " | ".join(cells) + f" | {ends_s} | {refusals} |")
+        print("\nReserve against its direct twin (same r and item; paired median, reserve - direct; * = > sigma*):")
+        for arm in sorted(k for k in runs2 if k.startswith(a + ":") and k.split(":")[2] in ("PROC", "RES")):
+            twin = arm + "_DIRECT"
+            if twin not in runs2:
+                continue
+            cells = []
+            for m, _, fl in METRICS:
+                d = [runs2[arm][s]["per"][a][m] - runs2[twin][s]["per"][a][m] for s in sorted(set(runs2[arm]) & set(runs2[twin]))]
+                med = statistics.median(d)
+                cells.append(f"{m} {fmt(med)}{'*' if abs(med) > noise(base, a, m, fl)[0] else ''}")
+            print(f"- {arm.split(':', 1)[1]}: " + ", ".join(cells))
     print("\n### Verdict (dominance = an arm with r >= 0.4 has a median better than the best no-reserve median by > sigma*)")
-    print(f"- {'RESERVE DOMINATES: ' + str(dom) if dom else 'no arm with r >= 0.4 dominates'}")
+    print(f"- pre-registered set (base + P1): {'DOMINATES ' + str(sorted(set(dom_lit))) if dom_lit else 'no dominance'}")
+    print(f"- with the DIRECT controls: {'RESERVE DOMINATES: ' + str(dom) if dom else 'no arm with r >= 0.4 dominates'}")
     base_ref = statistics.median(int(x["info"].get("lever_licence_money_refusals", 0)) for x in base.values()) if base else 0
     print(f"- licence money refusals in base (no lever, not counted): {base_ref}")
 
@@ -483,7 +518,8 @@ def report_p3(runs):
     for arm in ["NONE"] + arms:
         n = sum(1 for x in runs[arm].values() if any(l >= 15 and d == "prop" for a in ACTORS for l, d, _ in x["per"][a]["leads"]))
         mx = statistics.median(max([l for a in ACTORS for l, d, _ in x["per"][a]["leads"] if d == "prop"] or [-99]) for x in runs[arm].values())
-        print(f"- {arm}: {n}/{len(runs[arm])}; median over seeds of the largest prop lead {mx:.1f} years")
+        cnt = {a: statistics.median(sum(1 for l, d, _ in x["per"][a]["leads"] if l >= 15 and d == "prop") for x in runs[arm].values()) for a in ACTORS}
+        print(f"- {arm}: {n}/{len(runs[arm])}; median over seeds of the largest prop lead {mx:.1f} years; prop nodes >= 15 y ahead per actor (median) {cnt}")
     if "ENG80" in runs:
         cells = []
         for a in ACTORS:
