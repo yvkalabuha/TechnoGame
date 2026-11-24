@@ -1,7 +1,7 @@
 ---
 id: TASK-0132
 title: "Keyboard selection of technology tree nodes and keyboard tooltip (A6-A8)"
-status: PROPOSED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M05
 agent: developer
@@ -10,9 +10,9 @@ priority: medium
 needs_owner: false
 depends_on: [TASK-0126]
 related: [TASK-0126, TASK-0117]
-approved_by:
-approved_at:
-approval_ref:
+approved_by: orchestrator
+approved_at: 2026-11-24
+approval_ref: "PLAN Фокус п.5; prerequisite of design pass 2 (#453); light task approved by Orchestrator"
 created: 2026-11-23
 ---
 

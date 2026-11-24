@@ -19,6 +19,7 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
+- TASK-0132 [IN_PROGRESS] Keyboard selection of technology tree nodes and keyboard tooltip (A6-A8) (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0140 [REVIEW] Sound audit: sounds that play at the wrong moment or irritate (owner feedback) (sound-director)
 - TASK-0144 [REVIEW] Muted sound character (#455): soften attack and low-pass all routine cues (sound-director)
