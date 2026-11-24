@@ -108,7 +108,6 @@ define:
       - {to: s8.prc.machined_integral_skins, weight: 0.6}
       - {to: s8.eng.mach2_airframe_g4, weight: 0.3}
       - {to: s8.eng.fly_by_wire_relaxed_stability, weight: 0.3}
-      - {to: s8.eng.aesa_sensor_fusion, weight: 0.3}
     anchor:
       year: 1947
       source: "S28"
@@ -916,8 +915,8 @@ define:
     hazard: hz
     informs:
       - {to: s8.eng.fly_by_wire_relaxed_stability, weight: 0.6}
-      - {to: s8.eng.aesa_sensor_fusion, weight: 0.6}
       - {to: s8.eng.low_observable_airframe, weight: 0.3}
+      - {to: s8.eng.integrated_avionics_architecture, weight: 0.3}
     anchor:
       year: 1972
       source: "G56-S-A"
@@ -954,7 +953,7 @@ define:
     gen: 5
     discipline: chem
     cluster: CHEM
-    requires: [s5.cmp.aluminium_alloy_sheet]
+    requires: [s5.cmp.aluminium_alloy_sheet, s5.cmp.high_modulus_fibre]
     hazard: hz
     anchor:
       year: 1970
@@ -966,7 +965,7 @@ define:
     gen: 6
     discipline: aero
     cluster: AERO
-    requires: [s8.fnd.edge_wave_diffraction]
+    requires: [s8.fnd.edge_wave_diffraction, s8.prn.rcs_computational_prediction]
     hazard: hz
     anchor:
       year: 1975
@@ -978,7 +977,7 @@ define:
     gen: 5
     discipline: aero
     cluster: AERO
-    requires: [s8.fnd.electronic_flight_control_theory, s8.eng.all_moving_tail]
+    requires: [s8.fnd.electronic_flight_control_theory, s8.eng.all_moving_tail, s8.prn.relaxed_static_stability]
     hazard: none
     anchor:
       year: 1974
@@ -990,7 +989,7 @@ define:
     gen: 5
     discipline: prop
     cluster: AERO
-    requires: [s8.eng.turbofan_g4, s8.fnd.electronic_flight_control_theory]
+    requires: [s8.eng.turbofan_g4, s8.fnd.electronic_flight_control_theory, s8.prn.electronic_engine_control]
     hazard: key
     anchor:
       year: 1981
@@ -1026,7 +1025,7 @@ define:
     gen: 6
     discipline: prop
     cluster: AERO
-    requires: [s8.eng.turbofan_g5, s8.cmp.turbine_blade_single_crystal]
+    requires: [s8.eng.turbofan_g5, s8.cmp.turbine_blade_single_crystal, s8.prn.thrust_vectoring_nozzle]
     hazard: key
     anchor:
       year: 1990
@@ -1103,7 +1102,7 @@ define:
     gen: 5
     discipline: aero
     cluster: AERO
-    requires: [s8.eng.fly_by_wire_relaxed_stability, {any_of: [s8.eng.composite_airframe, s8.eng.turbofan_g5]}]
+    requires: [s8.eng.fly_by_wire_relaxed_stability, {any_of: [s8.eng.composite_airframe, s8.eng.turbofan_g5]}, {any_of: [s8.prn.electronic_engine_control, s8.cmp.digital_flight_control_computer]}]
     hazard: none
     anchor:
       year: 1984
@@ -1115,7 +1114,7 @@ define:
     gen: 6
     discipline: aero
     cluster: AERO
-    requires: [s8.eng.thrust_vectoring_supercruise_engine, s8.eng.low_observable_airframe, s8.eng.aesa_sensor_fusion]
+    requires: [s8.eng.thrust_vectoring_supercruise_engine, s8.eng.low_observable_airframe, s8.eng.aesa_sensor_fusion, s8.eng.integrated_avionics_architecture]
     hazard: none
     anchor:
       year: 2005
@@ -1127,7 +1126,7 @@ define:
     gen: 6
     discipline: aero
     cluster: AERO
-    requires: [s8.fnd.electronic_flight_control_theory]
+    requires: [s8.cmp.solid_state_tr_module]
     hazard: none
     anchor:
       year: 1997
@@ -1139,7 +1138,7 @@ define:
     gen: 6
     discipline: chem
     cluster: CHEM
-    requires: [s8.cmp.turbine_blade_single_crystal, s5.prc.ceramic_shell_moulding]
+    requires: [s8.cmp.turbine_blade_single_crystal, s5.prc.ceramic_shell_moulding, s5.cmp.silicon_carbide_fibre, s5.prn.environmental_barrier_coating]
     hazard: key
     anchor:
       year: 2016
@@ -1156,7 +1155,7 @@ define:
       precision: 5.5
       purity: 5.5
       quality_control: 5.5
-    requires: [s5.cmp.ceramic_matrix_composite, s5.prc.ceramic_shell_moulding]
+    requires: [s5.cmp.ceramic_matrix_composite, s5.prc.ceramic_shell_moulding, s5.prn.matrix_infiltration_cvi]
     hazard: none
     labour_p: 6500
     anchor:
@@ -1169,9 +1168,225 @@ define:
     gen: 6
     discipline: prop
     cluster: AERO
-    requires: [s8.eng.thrust_vectoring_supercruise_engine, s5.cmp.ceramic_matrix_composite]
+    requires: [s8.eng.thrust_vectoring_supercruise_engine, s5.cmp.ceramic_matrix_composite, s8.prn.adaptive_third_stream_fan]
     hazard: key
     anchor:
       year: 2021
       source: "G56-S-N"
       estimated: true
+  - id: s8.prn.phased_array_radar_pesa
+    number: 82
+    type: PRN
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    requires: []
+    hazard: hz
+    anchor:
+      year: 1975
+      source: "G56-R-1"
+      estimated: false
+  - id: s5.prn.gaas_wafer_growth
+    number: 83
+    type: PRN
+    gen: 6
+    discipline: chem
+    cluster: CHEM
+    requires: [s5.fnd.solidification_science]
+    hazard: hz
+    anchor:
+      year: 1965
+      source: "G56-R-2"
+      estimated: false
+  - id: s5.cmp.gaas_mmic
+    number: 84
+    type: CMP
+    gen: 6
+    discipline: chem
+    cluster: CHEM
+    requires: [s5.prn.gaas_wafer_growth]
+    hazard: key
+    anchor:
+      year: 1976
+      source: "G56-R-3"
+      estimated: false
+  - id: s8.cmp.solid_state_tr_module
+    number: 85
+    type: CMP
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    requires: [s5.cmp.gaas_mmic, s8.prn.phased_array_radar_pesa]
+    hazard: key
+    anchor:
+      year: 1988
+      source: "G56-R-4"
+      estimated: true
+  - id: s8.prn.programmable_signal_processing
+    number: 86
+    type: PRN
+    gen: 5
+    discipline: aero
+    cluster: AERO
+    requires: []
+    hazard: hz
+    anchor:
+      year: 1979
+      source: "G56-R-5"
+      estimated: true
+  - id: s8.eng.digital_beamforming
+    number: 87
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    requires: [s8.prn.programmable_signal_processing, s8.prn.phased_array_radar_pesa]
+    hazard: none
+    anchor:
+      year: 1990
+      source: "G56-R-6"
+      estimated: true
+  - id: s8.prn.relaxed_static_stability
+    number: 88
+    type: PRN
+    gen: 5
+    discipline: aero
+    cluster: AERO
+    requires: [s8.fnd.electronic_flight_control_theory, s8.eng.all_moving_tail]
+    hazard: hz
+    anchor:
+      year: 1972
+      source: "G56-R-7"
+      estimated: true
+  - id: s8.cmp.digital_flight_control_computer
+    number: 89
+    type: CMP
+    gen: 5
+    discipline: aero
+    cluster: AERO
+    requires: [s8.fnd.electronic_flight_control_theory]
+    hazard: key
+    anchor:
+      year: 1976
+      source: "G56-R-8"
+      estimated: true
+  - id: s8.prn.electronic_engine_control
+    number: 90
+    type: PRN
+    gen: 5
+    discipline: prop
+    cluster: AERO
+    requires: [s8.eng.turbojet_g3]
+    hazard: hz
+    anchor:
+      year: 1969
+      source: "G56-R-9"
+      estimated: false
+  - id: s5.cmp.high_modulus_fibre
+    number: 91
+    type: CMP
+    gen: 5
+    discipline: chem
+    cluster: CHEM
+    requires: []
+    hazard: none
+    anchor:
+      year: 1963
+      source: "G56-R-10"
+      estimated: false
+  - id: s8.prn.thrust_vectoring_nozzle
+    number: 92
+    type: PRN
+    gen: 6
+    discipline: prop
+    cluster: AERO
+    requires: [s8.eng.afterburner]
+    hazard: hz
+    anchor:
+      year: 1989
+      source: "G56-R-11"
+      estimated: false
+  - id: s8.prn.rcs_computational_prediction
+    number: 93
+    type: PRN
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    requires: [s8.fnd.edge_wave_diffraction]
+    hazard: hz
+    anchor:
+      year: 1975
+      source: "G56-R-12"
+      estimated: false
+  - id: s8.eng.integrated_avionics_architecture
+    number: 94
+    type: ENG
+    gen: 6
+    discipline: aero
+    cluster: AERO
+    requires: [s8.cmp.digital_flight_control_computer, s8.prn.programmable_signal_processing]
+    hazard: none
+    anchor:
+      year: 1986
+      source: "G56-R-13"
+      estimated: true
+  - id: s5.cmp.silicon_carbide_fibre
+    number: 95
+    type: CMP
+    gen: 6
+    discipline: chem
+    cluster: CHEM
+    requires: []
+    hazard: none
+    anchor:
+      year: 1975
+      source: "G56-R-14"
+      estimated: false
+  - id: s5.prn.matrix_infiltration_cvi
+    number: 96
+    type: PRN
+    gen: 6
+    discipline: chem
+    cluster: CHEM
+    requires: [s5.cmp.silicon_carbide_fibre]
+    hazard: hz
+    anchor:
+      year: 1977
+      source: "G56-R-15"
+      estimated: false
+  - id: s5.prn.environmental_barrier_coating
+    number: 97
+    type: PRN
+    gen: 6
+    discipline: chem
+    cluster: CHEM
+    requires: [s5.cmp.silicon_carbide_fibre]
+    hazard: hz
+    anchor:
+      year: 2000
+      source: "G56-R-16"
+      estimated: true
+  - id: s8.prn.variable_cycle_engine
+    number: 98
+    type: PRN
+    gen: 6
+    discipline: prop
+    cluster: AERO
+    requires: [s8.eng.turbofan_g5]
+    hazard: hz
+    anchor:
+      year: 1990
+      source: "G56-R-17"
+      estimated: false
+  - id: s8.prn.adaptive_third_stream_fan
+    number: 99
+    type: PRN
+    gen: 6
+    discipline: prop
+    cluster: AERO
+    requires: [s8.prn.variable_cycle_engine]
+    hazard: hz
+    anchor:
+      year: 2013
+      source: "G56-R-18"
+      estimated: false

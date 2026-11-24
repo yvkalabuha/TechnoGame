@@ -79,8 +79,8 @@ public class KnowledgeAuditTests
     public void D6_SliceData_PermutedNodeAndActorStorage_SameResultsByStableIds()
     {
         var a = new SliceRun(nodePerm: null, actorPerm: null, threads: 1, chunkSize: 1);
-        var b = new SliceRun(nodePerm: Shuffle(81, 7), actorPerm: [3, 0, 4, 2, 1], threads: 4, chunkSize: 2);
-        var c = new SliceRun(nodePerm: Shuffle(81, 8), actorPerm: [4, 3, 2, 1, 0], threads: 3, chunkSize: 1);
+        var b = new SliceRun(nodePerm: Shuffle(Data.Nodes.Count, 7), actorPerm: [3, 0, 4, 2, 1], threads: 4, chunkSize: 2);
+        var c = new SliceRun(nodePerm: Shuffle(Data.Nodes.Count, 8), actorPerm: [4, 3, 2, 1, 0], threads: 3, chunkSize: 1);
         int discoveries = 0;
         for (long t = 0; t < 120; t++)
         {
@@ -132,6 +132,100 @@ public class KnowledgeAuditTests
         HashAssert.NotEqual(StateHash.ComputeHex(x.Table, 1), StateHash.ComputeHex(y.Table, 1)); // the seed matters (hazard draws)
     }
 
+    // ---- ahead-of-time cost (#458)
+
+    private static readonly KnowledgeParams Ahead = new() { AheadCostK = Fx6.FromRaw(100_000), AheadCostPow = 2, AheadCostMax = Fx6.FromInt(5) };
+
+    [Fact]
+    public void Ahead_Multiplier_IsOneWhenOffOrPast_MonotoneAndCapped()
+    {
+        Fx6 k = Fx6.FromRaw(100_000), max = Fx6.FromInt(3);
+        // Month 388 = 1978-01 (12·33 − 8). Anchor 1988 is 10 years ahead: 1 + 0.1·10 = 2.
+        Assert.Equal(Fx6.FromInt(2), KnowledgeMath.AheadMultiplier(k, 1, max, 1988, 388));
+        Assert.Equal(Fx6.FromInt(11), KnowledgeMath.AheadMultiplier(k, 2, Fx6.FromInt(99), 1988, 388)); // 1 + 0.1·100
+        Assert.Equal(Fx6.One, KnowledgeMath.AheadMultiplier(Fx6.Zero, 1, max, 2100, 0));
+        Assert.Equal(Fx6.One, KnowledgeMath.AheadMultiplier(k, 1, max, 1978, 388));
+        Assert.Equal(Fx6.One, KnowledgeMath.AheadMultiplier(k, 1, max, 1970, 388));
+        Assert.Equal(max, KnowledgeMath.AheadMultiplier(k, 1, max, 2100, 388));
+        Fx6 last = Fx6.One;
+        for (long m = 1000; m >= 0; m -= 7)
+        {
+            Fx6 x = KnowledgeMath.AheadMultiplier(k, 2, max, 2005, m);
+            Assert.True(x >= last && x <= max);
+            last = x;
+        }
+    }
+
+    [Fact]
+    public void Ahead_Params_AreValidated()
+    {
+        Assert.Throws<ArgumentException>(() => new KnowledgeParams { AheadCostK = Fx6.FromRaw(-1) }.Validate());
+        Assert.Throws<ArgumentException>(() => new KnowledgeParams { AheadCostPow = 0 }.Validate());
+        Assert.Throws<ArgumentException>(() => new KnowledgeParams { AheadCostPow = 5 }.Validate());
+        Assert.Throws<ArgumentException>(() => new KnowledgeParams { AheadCostMax = Fx6.FromRaw(999_999) }.Validate());
+        new KnowledgeParams().Validate();
+    }
+
+    [Fact]
+    public void Ahead_KZero_IsIdenticalToDefault_MonthlyHashes()
+    {
+        var off = new SliceRun(null, null, 1, 1);
+        var zero = new SliceRun(null, null, 1, 1, 42, new KnowledgeParams { AheadCostK = Fx6.Zero, AheadCostPow = 3, AheadCostMax = Fx6.FromInt(9) });
+        for (long t = 0; t < 240; t++)
+        {
+            off.RunThroughMonth(t);
+            zero.RunThroughMonth(t);
+            HashAssert.Equal(StateHash.ComputeHex(off.Table, 1), StateHash.ComputeHex(zero.Table, 1));
+        }
+    }
+
+    [Fact]
+    public void Ahead_RaisesCEff_OfAnEarlyNode_AndNotOfAPastOne()
+    {
+        var off = new SliceRun(null, null, 1, 1);
+        var on = new SliceRun(null, null, 1, 1, 42, Ahead);
+        int ahead = 0;
+        for (int r = 0; r < off.Graph.Count; r++)
+        {
+            Fx6 a = off.System.CEff(0, r, 0), b = on.System.CEff(0, r, 0);
+            if (off.Graph.AnchorYear[r] > 1946)
+            {
+                Assert.True(b > a, $"node {off.Graph.Number[r]} is ahead of its anchor but not dearer");
+                ahead++;
+            }
+            Assert.Equal(a, on.System.CEff(0, r, 12L * (off.Graph.AnchorYear[r] - 1945)));
+        }
+        Assert.True(ahead > 50);
+    }
+
+    [Theory]
+    [InlineData(3, 1)]
+    [InlineData(8, 2)]
+    public void Ahead_L2_EveryMonthlyHash_EqualsSingleThread_Over1020Months(int threads, int chunkSize)
+    {
+        var single = new SliceRun(null, null, 1, 1, 42, Ahead);
+        var multi = new SliceRun(null, null, threads, chunkSize, 42, Ahead);
+        for (long t = 0; t < 1020; t++)
+        {
+            single.RunThroughMonth(t);
+            multi.RunThroughMonth(t);
+            HashAssert.Equal(StateHash.ComputeHex(single.Table, 1), StateHash.ComputeHex(multi.Table, 1));
+        }
+    }
+
+    [Fact]
+    public void Ahead_L1_SameSeedSameHash_AndTheCostChangesTheTrajectory()
+    {
+        string Run(KnowledgeParams? kp)
+        {
+            var r = new SliceRun(null, null, 4, 1, 42, kp);
+            r.RunThroughMonth(400);
+            return StateHash.ComputeHex(r.Table, 1);
+        }
+        Assert.Equal(Run(Ahead), Run(Ahead));
+        HashAssert.NotEqual(Run(null), Run(Ahead));
+    }
+
     private static void AssertSameByIds(SliceRun a, SliceRun b, long t)
     {
         for (int ra = 0; ra < a.Start.ActorCount; ra++)
@@ -166,9 +260,9 @@ public class KnowledgeAuditTests
     /// </summary>
     private sealed class SliceRun
     {
-        public SliceRun(int[]? nodePerm, int[]? actorPerm, int threads, int chunkSize, ulong seed = 42)
+        public SliceRun(int[]? nodePerm, int[]? actorPerm, int threads, int chunkSize, ulong seed = 42, KnowledgeParams? kp = null)
         {
-            var p = new KnowledgeParams();
+            var p = kp ?? new KnowledgeParams();
             KnowledgeGraph baseGraph = KnowledgeGraph.FromData(Data.Nodes, Scenario.Disciplines, p);
             KnowledgeStart baseStart = KnowledgeStart.FromScenario(Scenario, baseGraph);
             int n = baseGraph.Count, dc = baseGraph.DisciplineNames.Length;
@@ -219,7 +313,7 @@ public class KnowledgeAuditTests
             var informed = new List<(int, Fx6)>();
             for (int e = g.InformedStart[r]; e < g.InformedStart[r + 1]; e++)
                 informed.Add((g.Number[g.InformedFrom[e]], g.InformedWeight[e]));
-            return new KnowledgeNodeSpec(g.Number[r], g.Type[r], g.Gen[r], g.Discipline[r], g.IsHazard[r], g.CostN[r], groups, [.. informed]);
+            return new KnowledgeNodeSpec(g.Number[r], g.Type[r], g.Gen[r], g.Discipline[r], g.IsHazard[r], g.CostN[r], groups, [.. informed], g.AnchorYear[r]);
         }
     }
 

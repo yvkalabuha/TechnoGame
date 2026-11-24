@@ -258,6 +258,15 @@ public sealed partial record SliceRunConfig
     /// <summary><c>ΔHmax</c> of <c>Hcap(t)</c>; null = the default of <c>IndustryParams</c>. 0 switches the growth off. Not negative.</summary>
     public Fx6? HcapGrowthMax { get; init; }
 
+    /// <summary><c>k</c> of the ahead-of-time cost (TASK-0147, #458): multiplier <c>1 + k·ahead^pow</c> of a node's price, <c>ahead</c> in years before its anchor year; null = the default of <c>KnowledgeParams</c> (0 = off). Not negative.</summary>
+    public Fx6? AheadCostK { get; init; }
+
+    /// <summary>Integer exponent of the ahead-of-time cost, 1…4; null = the default (1).</summary>
+    public int? AheadCostPow { get; init; }
+
+    /// <summary>Ceiling of the ahead-of-time multiplier, at least 1; null = the default (4).</summary>
+    public Fx6? AheadCostMax { get; init; }
+
     /// <summary><c>x_prog</c> of the mastery programme (O-045); null = the default (1). In (0; 1].</summary>
     public Fx6? MasteryXProg { get; init; }
 

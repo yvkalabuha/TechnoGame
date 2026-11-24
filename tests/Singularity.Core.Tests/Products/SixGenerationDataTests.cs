@@ -17,7 +17,7 @@ public class SixGenerationDataTests
     public void CoreMod_HasEightyOneNodes_AirframeClass6_AndGenerations5And6()
     {
         GameData d = Core;
-        Assert.Equal(81, d.Nodes.Count);
+        Assert.Equal(99, d.Nodes.Count);
         ProductsLayout l = ProductTestData.Probe;
         Assert.Equal(6, l.Generations);
         Assert.Equal(6, l.AltAfClass[l.AltId.IndexOf("af_lo_composite")]);
@@ -65,7 +65,7 @@ public class SixGenerationDataTests
     public void KnowledgeGraph_OfCoreData_PricesTheNewNodes()
     {
         KnowledgeGraph g = KnowledgeGraph.FromData(Core.Nodes, Core.Scenario("jet_slice_1945").Disciplines, new KnowledgeParams());
-        Assert.Equal(81, g.Count);
+        Assert.Equal(99, g.Count);
         Assert.Equal(new KnowledgeParams().CostN(NodeType.APP, 5), g.CostN[g.RowOf(76)]);
         Assert.Equal(new KnowledgeParams().CostN(NodeType.APP, 6), g.CostN[g.RowOf(77)]);
     }

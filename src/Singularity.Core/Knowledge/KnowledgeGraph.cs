@@ -6,7 +6,7 @@ namespace Singularity.Core.Knowledge;
 
 /// <summary>One node for <see cref="KnowledgeGraph.Create"/>; requirements are groups of node numbers (AND of OR-groups).</summary>
 public sealed record KnowledgeNodeSpec(int Number, NodeType Type, int Gen, int Discipline, bool Hazard, Fx6 CostN,
-    int[][] Requires, (int From, Fx6 Weight)[]? InformedBy = null);
+    int[][] Requires, (int From, Fx6 Weight)[]? InformedBy = null, int AnchorYear = 0);
 
 /// <summary>
 /// What the knowledge layer needs from the node data, by storage row. <see cref="Number"/> is the
@@ -25,6 +25,9 @@ public sealed class KnowledgeGraph
     public required ImmutableArray<int> Discipline { get; init; }
     public required ImmutableArray<bool> IsHazard { get; init; }
     public required ImmutableArray<Fx6> CostN { get; init; }
+
+    /// <summary>Anchor year of the node (ahead-of-time cost); 0 = none, never ahead.</summary>
+    public required ImmutableArray<int> AnchorYear { get; init; }
     public required RequirementLists Requires { get; init; }
 
     /// <summary>Incoming informs edges of row r: <c>InformedStart[r]..InformedStart[r+1]</c>.</summary>
@@ -74,7 +77,7 @@ public sealed class KnowledgeGraph
                     groups[g][m] = nodes.Number[members[m]];
             }
             specs[r] = new KnowledgeNodeSpec(nodes.Number[r], nodes.Type[r], nodes.Gen[r], disc, nodes.Hazard[r] != Hazard.None,
-                p.CostN(nodes.Type[r], nodes.Gen[r]), groups, [.. informed[r]]);
+                p.CostN(nodes.Type[r], nodes.Gen[r]), groups, [.. informed[r]], nodes.AnchorYear[r]);
         }
         string[] names = new string[disciplines.Count];
         for (int d = 0; d < names.Length; d++)
@@ -153,6 +156,7 @@ public sealed class KnowledgeGraph
             Discipline = [.. nodes.Select(s => s.Discipline)],
             IsHazard = [.. nodes.Select(s => s.Hazard)],
             CostN = [.. nodes.Select(s => s.CostN)],
+            AnchorYear = [.. nodes.Select(s => s.AnchorYear)],
             Requires = RequirementLists.Build(requires),
             InformedStart = [.. informedStart],
             InformedFrom = [.. informedFrom],

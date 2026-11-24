@@ -405,6 +405,96 @@ node-s8-eng-adaptive_cycle_engine =
     .short = Adaptive
     .anchor = GE XA100: tests (2021, estimate)
 
+node-s8-prn-phased_array_radar_pesa =
+    .name = Passive phased-array radar
+    .short = PESA
+    .anchor = MiG-31, Zaslon radar: first flight (1975)
+
+node-s5-prn-gaas_wafer_growth =
+    .name = Gallium arsenide crystal growth
+    .short = GaAs growth
+    .anchor = Mullin et al.: GaAs bulk growth, LEC (1965)
+
+node-s5-cmp-gaas_mmic =
+    .name = GaAs monolithic microwave circuits
+    .short = GaAs MMIC
+    .anchor = Plessey: first GaAs MMIC (1976)
+
+node-s8-cmp-solid_state_tr_module =
+    .name = Solid-state transmit/receive module
+    .short = T/R module
+    .anchor = DARPA MIMIC: hardware phase (1988, estimate)
+
+node-s8-prn-programmable_signal_processing =
+    .name = Programmable signal processing
+    .short = Signal proc
+    .anchor = APG-63: programmable processor (1979, estimate)
+
+node-s8-eng-digital_beamforming =
+    .name = Digital beamforming
+    .short = Digital beam
+    .anchor = Experimental digital arrays (1990, estimate)
+
+node-s8-prn-relaxed_static_stability =
+    .name = Relaxed static stability
+    .short = Unstable af.
+    .anchor = CCV programme start (1972, estimate)
+
+node-s8-cmp-digital_flight_control_computer =
+    .name = Digital flight control computer
+    .short = Flight comp.
+    .anchor = F-8 DFBW phase II: three AP-101 computers (1976, estimate)
+
+node-s8-prn-electronic_engine_control =
+    .name = Electronic engine control
+    .short = Eng. control
+    .anchor = Olympus 593 (Concorde): first flight (02.03.1969)
+
+node-s5-cmp-high_modulus_fibre =
+    .name = High-modulus fibre
+    .short = Fibre
+    .anchor = RAE: high-modulus carbon fibre (1963)
+
+node-s8-prn-thrust_vectoring_nozzle =
+    .name = Thrust-vectoring nozzle
+    .short = TV nozzle
+    .anchor = F-15 S/MTD: first thrust-vectoring flight (16.05.1989)
+
+node-s8-prn-rcs_computational_prediction =
+    .name = Computational RCS prediction
+    .short = RCS calc.
+    .anchor = Lockheed: Echo 1 programme (1975)
+
+node-s8-eng-integrated_avionics_architecture =
+    .name = Integrated avionics architecture
+    .short = Avionics
+    .anchor = Pave Pillar (1986, estimate)
+
+node-s5-cmp-silicon_carbide_fibre =
+    .name = Silicon carbide fibre
+    .short = SiC fibre
+    .anchor = Yajima: SiC fibre from polycarbosilane (1975)
+
+node-s5-prn-matrix_infiltration_cvi =
+    .name = Chemical vapour infiltration
+    .short = CVI
+    .anchor = Naslain: first CMC by CVI (1977)
+
+node-s5-prn-environmental_barrier_coating =
+    .name = Environmental barrier coating
+    .short = EBC
+    .anchor = NASA/GE/P&W: first-generation coating (2000, estimate)
+
+node-s8-prn-variable_cycle_engine =
+    .name = Variable cycle engine
+    .short = Var. cycle
+    .anchor = YF120 on YF-22: first flight (29.09.1990)
+
+node-s8-prn-adaptive_third_stream_fan =
+    .name = Adaptive third-stream fan
+    .short = 3rd stream
+    .anchor = GE ADVENT: engine run (26.11.2013)
+
 # Product classes and the scenario.
 
 pc-jet_fighter =

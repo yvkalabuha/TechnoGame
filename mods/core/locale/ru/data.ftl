@@ -405,6 +405,96 @@ node-s8-eng-adaptive_cycle_engine =
     .short = Адаптивный
     .anchor = GE XA100: испытания (2021, оценка)
 
+node-s8-prn-phased_array_radar_pesa =
+    .name = Пассивная ФАР
+    .short = ПФАР
+    .anchor = МиГ-31, РЛС «Заслон»: первый полёт (1975)
+
+node-s5-prn-gaas_wafer_growth =
+    .name = Рост арсенида галлия
+    .short = Рост GaAs
+    .anchor = Mullin и др.: выращивание GaAs методом LEC (1965)
+
+node-s5-cmp-gaas_mmic =
+    .name = Монолитные СВЧ-схемы на GaAs
+    .short = GaAs MMIC
+    .anchor = Plessey: первая GaAs MMIC (1976)
+
+node-s8-cmp-solid_state_tr_module =
+    .name = Твердотельный приёмопередающий модуль
+    .short = ППМ
+    .anchor = DARPA MIMIC: аппаратная фаза (1988, оценка)
+
+node-s8-prn-programmable_signal_processing =
+    .name = Программируемая обработка сигналов
+    .short = Обр. сигнала
+    .anchor = APG-63: программируемый процессор (1979, оценка)
+
+node-s8-eng-digital_beamforming =
+    .name = Цифровое формирование лучей
+    .short = Цифр. лучи
+    .anchor = Опытные цифровые решётки (1990, оценка)
+
+node-s8-prn-relaxed_static_stability =
+    .name = Ослабленная статическая устойчивость
+    .short = Неуст. план.
+    .anchor = Старт программы CCV (1972, оценка)
+
+node-s8-cmp-digital_flight_control_computer =
+    .name = Цифровой компьютер управления полётом
+    .short = Цифр. ЭВМ
+    .anchor = F-8 DFBW, фаза II: три ЭВМ AP-101 (1976, оценка)
+
+node-s8-prn-electronic_engine_control =
+    .name = Электронное управление двигателем
+    .short = Эл. упр. дв.
+    .anchor = Olympus 593 (Concorde): первый полёт (02.03.1969)
+
+node-s5-cmp-high_modulus_fibre =
+    .name = Высокомодульное волокно
+    .short = Волокно
+    .anchor = RAE: высокомодульное углеродное волокно (1963)
+
+node-s8-prn-thrust_vectoring_nozzle =
+    .name = Сопло с вектором тяги
+    .short = Сопло ВТ
+    .anchor = F-15 S/MTD: полёт с вектором тяги (16.05.1989)
+
+node-s8-prn-rcs_computational_prediction =
+    .name = Расчёт радиолокационной заметности
+    .short = Расчёт ЭПР
+    .anchor = Lockheed: программа Echo 1 (1975)
+
+node-s8-eng-integrated_avionics_architecture =
+    .name = Интегрированная архитектура авионики
+    .short = Авионика
+    .anchor = Pave Pillar (1986, оценка)
+
+node-s5-cmp-silicon_carbide_fibre =
+    .name = Волокно карбида кремния
+    .short = Вол. SiC
+    .anchor = Yajima: SiC-волокно из поликарбосилана (1975)
+
+node-s5-prn-matrix_infiltration_cvi =
+    .name = Химическое газофазное уплотнение матрицы
+    .short = CVI
+    .anchor = Naslain: первый CMC методом CVI (1977)
+
+node-s5-prn-environmental_barrier_coating =
+    .name = Барьерное покрытие от среды
+    .short = Покрытие
+    .anchor = NASA/GE/P&W: покрытие первого поколения (2000, оценка)
+
+node-s8-prn-variable_cycle_engine =
+    .name = Двигатель переменного цикла
+    .short = Перем. цикл
+    .anchor = YF120 на YF-22: первый полёт (29.09.1990)
+
+node-s8-prn-adaptive_third_stream_fan =
+    .name = Вентилятор третьего контура
+    .short = 3-й контур
+    .anchor = GE ADVENT: двигатель (26.11.2013)
+
 # Product classes and the scenario.
 
 pc-jet_fighter =

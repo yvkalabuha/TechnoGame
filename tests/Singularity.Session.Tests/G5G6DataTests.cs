@@ -9,7 +9,7 @@ public class G5G6DataTests
     public void CoreMod_BuildsAWorldWith81Nodes_SixGenerations_AndTheWideLicenceMask()
     {
         SliceWorld w = SliceTestData.Create().World;
-        Assert.Equal(81, w.Graph.Count);
+        Assert.Equal(99, w.Graph.Count);
         Assert.Equal(6, w.ProductsLayout.Generations);
         // PRC 73 (single-crystal casting) and 80 (CMC) are licensable and above 63: the second mask word is registered.
         Assert.Equal(LicenceMask.MaxNumber, w.Policy.LicenceCapacity);

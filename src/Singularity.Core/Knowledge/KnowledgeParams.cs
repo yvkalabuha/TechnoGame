@@ -41,6 +41,29 @@ public sealed record KnowledgeParams
     /// </summary>
     public Fx6[] CostGenMultiplier { get; init; } = [Fx6.One, Fx6.One, F(1_600_000), F(2_500_000), Fx6.FromInt(4), F(6_400_000), F(10_200_000)];
 
+    /// <summary>
+    /// Ahead-of-time cost (owner decision #458): a node costs <c>1 + k·ahead^pow</c> times more (capped by <see cref="AheadCostMax"/>), where
+    /// <c>ahead</c> is the number of years from the month of the step to the node's anchor year (0 once the anchor has passed). 0 = off: the cost
+    /// is exactly the old one and no hash changes.
+    /// </summary>
+    public Fx6 AheadCostK { get; init; } = Fx6.Zero;
+
+    /// <summary>Integer exponent of the ahead-of-time cost, 1…4.</summary>
+    public int AheadCostPow { get; init; } = 1;
+
+    /// <summary>Ceiling of the ahead-of-time multiplier, at least 1.</summary>
+    public Fx6 AheadCostMax { get; init; } = Fx6.FromInt(4);
+
+    public void Validate()
+    {
+        if (AheadCostK < Fx6.Zero)
+            throw new ArgumentException("The ahead-of-time cost k must not be negative.");
+        if (AheadCostPow is < 1 or > 4)
+            throw new ArgumentException("The ahead-of-time cost exponent must be in 1…4.");
+        if (AheadCostMax < Fx6.One)
+            throw new ArgumentException("The ahead-of-time cost ceiling must be at least 1.");
+    }
+
     /// <summary><c>c_n = base(type)·mult(gen)</c>.</summary>
     public Fx6 CostN(NodeType type, int gen)
     {

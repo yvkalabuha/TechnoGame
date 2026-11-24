@@ -364,6 +364,13 @@ internal sealed class SliceWorld
             k = k with { CostGenMultiplier = WithGenMultiplier(k.CostGenMultiplier, 5, g5, c) };
         if (c.CostMultG6 is { } g6)
             k = k with { CostGenMultiplier = WithGenMultiplier(k.CostGenMultiplier, 6, g6, c) };
+        if (c.AheadCostK is { } ak)
+            k = k with { AheadCostK = ak };
+        if (c.AheadCostPow is { } ap)
+            k = k with { AheadCostPow = ap };
+        if (c.AheadCostMax is { } am)
+            k = k with { AheadCostMax = am };
+        k.Validate();
         if (c.HcapGrowthPerYear is { } hk)
         {
             if (hk < Fx6.Zero)
@@ -644,6 +651,12 @@ internal sealed class SliceWorld
             Add("run.k.cost_mult_g5", g5.Raw);
         if (c.CostMultG6 is { } g6)
             Add("run.k.cost_mult_g6", g6.Raw);
+        if (c.AheadCostK is { } ak)
+            Add("run.k.ahead_k", ak.Raw);
+        if (c.AheadCostPow is { } ap)
+            Add("run.k.ahead_pow", ap);
+        if (c.AheadCostMax is { } am)
+            Add("run.k.ahead_max", am.Raw);
         if (c.HcapGrowthPerYear is { } hk)
             Add("run.k.hcap_k", hk.Raw);
         if (c.HcapGrowthMax is { } hmax)
