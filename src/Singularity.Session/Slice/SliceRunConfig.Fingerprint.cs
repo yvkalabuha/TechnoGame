@@ -31,6 +31,7 @@ public sealed partial record SliceRunConfig
             Raw(CostDivisor), Raw(ThetaStart), Raw(HMax), KappaQ10?.ToString(CultureInfo.InvariantCulture) ?? "-", Raw(Alpha), Raw(CostMultG5), Raw(CostMultG6),
             Raw(AheadCostK), AheadCostPow?.ToString(CultureInfo.InvariantCulture) ?? "-", Raw(AheadCostMax), Raw(HcapGrowthPerYear), Raw(HcapGrowthMax), Raw(MasteryXProg), Raw(MasteryUpkeepMult), ((int)MasteryRules).ToString(CultureInfo.InvariantCulture),
             XHalfByTier.IsDefault ? "-" : string.Join(',', XHalfByTier.Select(x => x.Raw.ToString(CultureInfo.InvariantCulture))),
+            ResearchWeightByDiscipline.IsDefault ? "-" : string.Join(',', ResearchWeightByDiscipline.OrderBy(w => w.Discipline, StringComparer.Ordinal).Select(w => w.Discipline + ":" + w.Weight.Raw.ToString(CultureInfo.InvariantCulture))),
             Raw(DeltaH), Raw(CM), Grid.Code.ToString(CultureInfo.InvariantCulture), ((int)EffortShare).ToString(CultureInfo.InvariantCulture),
         ];
         // Length-prefixed fields written as UTF-16 code units, integers little-endian (the encoding of TableSnapshot.Fingerprint): no value can run into its neighbour.

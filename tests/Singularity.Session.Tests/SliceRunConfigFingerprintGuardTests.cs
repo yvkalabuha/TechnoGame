@@ -58,6 +58,12 @@ public class SliceRunConfigFingerprintGuardTests
             var a = (ImmutableArray<Fx6>)current!;
             return a.IsDefault ? ImmutableArray.Create(Fx6.One) : a.Add(Fx6.One);
         }
+        if (type == typeof(ImmutableArray<DisciplineWeight>))
+        {
+            var a = (ImmutableArray<DisciplineWeight>)current!;
+            var one = new DisciplineWeight("prop", Fx6.One);
+            return a.IsDefault ? ImmutableArray.Create(one) : a.Add(one);
+        }
         throw new InvalidOperationException($"the guard does not know how to change a {type.Name}: extend it (and the fingerprint) for the new field");
     }
 

@@ -98,6 +98,7 @@ internal sealed class SliceWorld
         PolicyParameters = ApplyEffortShare(config.EffortShare, policy with { FvBudget = policy.FvBudgetOf(great.Count > 0 ? [.. great] : [.. baseScenario.BudgetIndex]) });
 
         Graph = KnowledgeGraph.FromData(data.Nodes, scenario.Disciplines, kp);
+        ResearchWeight = ResearchWeightsOf(config.ResearchWeightByDiscipline, Graph);
         KnowledgeStart kStart = KnowledgeStart.FromScenario(scenario, Graph);
         // The product layout fixes how many requester ids the capability layer must hold (lines, bureaus, fix teams).
         IndustryLayout probe = IndustryLayout.FromData(data.Nodes, scenario, WorkforceCategories, 64);
@@ -290,6 +291,30 @@ internal sealed class SliceWorld
     public ProductsParams ProductsParameters { get; }
     public PolicyParams PolicyParameters { get; }
     public KnowledgeGraph Graph { get; }
+
+    /// <summary>Research priority multiplier by discipline index of <see cref="Graph"/>; empty = all 1 (the default config).</summary>
+    internal Fx6[] ResearchWeight { get; } = [];
+
+    private static Fx6[] ResearchWeightsOf(ImmutableArray<DisciplineWeight> given, KnowledgeGraph graph)
+    {
+        if (given.IsDefault)
+            return [];
+        Fx6[] w = [.. graph.DisciplineNames.Select(_ => Fx6.One)];
+        bool[] seen = new bool[w.Length];
+        foreach (DisciplineWeight e in given)
+        {
+            int d = graph.DisciplineNames.IndexOf(e.Discipline);
+            if (d < 0)
+                throw new ArgumentException($"Research weight: unknown discipline '{e.Discipline}'.", nameof(given));
+            if (seen[d])
+                throw new ArgumentException($"Research weight: discipline '{e.Discipline}' is given twice.", nameof(given));
+            if (e.Weight <= Fx6.Zero)
+                throw new ArgumentException($"Research weight of '{e.Discipline}' must be positive.", nameof(given));
+            seen[d] = true;
+            w[d] = e.Weight;
+        }
+        return w;
+    }
     public IndustryLayout IndustryLayout { get; }
     public ProductsLayout ProductsLayout { get; }
     public Table Table { get; }
@@ -657,6 +682,11 @@ internal sealed class SliceWorld
             Add("run.k.ahead_pow", ap);
         if (c.AheadCostMax is { } am)
             Add("run.k.ahead_max", am.Raw);
+        if (!c.ResearchWeightByDiscipline.IsDefault)
+        {
+            for (int d = 0; d < ResearchWeight.Length; d++)
+                Add($"run.k.disc_weight.{Graph.DisciplineNames[d]}", ResearchWeight[d].Raw);
+        }
         if (c.HcapGrowthPerYear is { } hk)
             Add("run.k.hcap_k", hk.Raw);
         if (c.HcapGrowthMax is { } hmax)

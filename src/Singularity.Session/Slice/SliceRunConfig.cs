@@ -285,6 +285,13 @@ public sealed partial record SliceRunConfig
     /// <summary><c>X½</c> of tiers 3, 4, 5; default (unset) array = §8.1.</summary>
     public ImmutableArray<Fx6> XHalfByTier { get; init; }
 
+    /// <summary>
+    /// Per-discipline multiplier of the research priority weight (<c>prio</c>) of every ENG/PRC/CMP/... node of that discipline (TASK-0147); default
+    /// (unset) = 1 everywhere, no column and the hash of main. Names are scenario disciplines (aero, prop, metal, chem, mech), each at most once,
+    /// weights positive. APP nodes have no discipline and keep weight 1.
+    /// </summary>
+    public ImmutableArray<DisciplineWeight> ResearchWeightByDiscipline { get; init; }
+
     /// <summary><c>δ_H</c> (culture forgetting); null = §8.1.</summary>
     public Fx6? DeltaH { get; init; }
 
@@ -337,3 +344,6 @@ public sealed record SliceStreams(CounterRng Know, CounterRng Events, CounterRng
         new CounterRng(config.SeedOf(config.FixK)), new CounterRng(config.SeedOf(config.FixE)),
         new CounterRng(config.SeedOf(config.FixA)), new CounterRng(config.Seed));
 }
+
+/// <summary>One entry of <see cref="SliceRunConfig.ResearchWeightByDiscipline"/>.</summary>
+public readonly record struct DisciplineWeight(string Discipline, Fx6 Weight);
