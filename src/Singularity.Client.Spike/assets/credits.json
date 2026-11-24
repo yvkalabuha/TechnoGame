@@ -282,8 +282,8 @@
    "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
    "url": "https://freesound.org/people/jakebagger/sounds/499787/",
    "changes": {
-    "en": "Cut to length, filtered, volume evened out, pitch changed slightly (signal_clear only). Muted character (#455): extra low-pass, softer fade-in attack, trimmed tail.",
-    "ru": "Обрезано, отфильтровано, громкость выровнена, высота слегка изменена (только signal_clear). Глухой характер (#455): доп. срез верхов, мягкая атака, укорочен хвост."
+    "en": "Cut to length, filtered, volume evened out, pitch changed slightly (signal_clear only). Muted character (#455): extra low-pass, softer fade-in attack, trimmed tail (signal_attention only).",
+    "ru": "Обрезано, отфильтровано, громкость выровнена, высота слегка изменена (только signal_clear). Глухой характер (#455): доп. срез верхов, мягкая атака, укорочен хвост (только signal_attention)."
    },
    "files": [
     "assets/audio/ui/signal_attention.ogg",
@@ -366,8 +366,8 @@
    "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
    "url": "https://freesound.org/people/bassmosphere/sounds/384698/",
    "changes": {
-    "en": "Cut to length, filtered, volume evened out. Muted character (#455): extra low-pass, softer fade-in attack, trimmed tail.",
-    "ru": "Обрезано, отфильтровано, громкость выровнена. Глухой характер (#455): доп. срез верхов, мягкая атака, укорочен хвост."
+    "en": "Cut to length, filtered, volume evened out. Muted character (#455): extra low-pass, softer fade-in attack, trimmed tail (order_reject, launch_space only).",
+    "ru": "Обрезано, отфильтровано, громкость выровнена. Глухой характер (#455): доп. срез верхов, мягкая атака, укорочен хвост (только order_reject, launch_space)."
    },
    "files": [
     "assets/audio/ui/order_reject.ogg",
