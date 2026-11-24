@@ -208,17 +208,64 @@ public sealed class WorldMap
     /// </summary>
     public (float Lon, float Lat)[] LabelAnchors(ushort[] regions)
     {
-        const int S = 4, w = W / S, h = H / S;
         var home = new bool[Owners.Length + 1];
         for (int i = 0; i < Rows.Length; i++) if (Rows[i].Status == "core" && RegionOwner[i] != 0) home[RegionOwner[i]] = true;
+        return Anchors(regions, Owners.Length, r => { int o = RegionOwner[r]; return o != 0 && (!home[o] || Rows[r].Status == "core") ? o : 0; });
+    }
+
+    /// <summary>Colonial areas that get a label of their own (1945 names, locale polity.C_KEY): all dependent regions of the owner whose id is one of the prefixes.</summary>
+    public static readonly (string Key, string Owner, string[] Prefixes)[] ColonyGroups =
+    {
+        ("BRITISH_INDIA", "GBR", new[] { "india", "pakistan", "bangladesh" }),
+        ("BURMA", "GBR", new[] { "myanmar" }),
+        ("BRITISH_MALAYA", "GBR", new[] { "malaysia", "singapore" }),
+        ("BRITISH_EAST_AFRICA", "GBR", new[] { "kenya", "uganda", "tanzania" }),
+        ("BRITISH_WEST_AFRICA", "GBR", new[] { "nigeria", "ghana", "sierra_leone", "gambia" }),
+        ("FRENCH_WEST_AFRICA", "FRA", new[] { "mauritania", "mali", "niger", "senegal", "burkina_faso", "ivory_coast", "guinea", "benin" }),
+        ("FRENCH_EQUATORIAL_AFRICA", "FRA", new[] { "chad", "gabon", "central_african_republic", "republic_of_the_congo" }),
+        ("FRENCH_ALGERIA", "FRA", new[] { "algeria" }),
+        ("FRENCH_MOROCCO", "FRA", new[] { "morocco" }),
+        ("FRENCH_INDOCHINA", "FRA", new[] { "vietnam", "laos", "cambodia" }),
+        ("FRENCH_MADAGASCAR", "FRA", new[] { "madagascar" }),
+        ("BELGIAN_CONGO", "BEL", new[] { "democratic_republic_of_the_congo" }),
+        ("DUTCH_EAST_INDIES", "NLD", new[] { "indonesia" }),
+        ("PORTUGUESE_ANGOLA", "PRT", new[] { "angola" }),
+        ("PORTUGUESE_MOZAMBIQUE", "PRT", new[] { "mozambique" }),
+        ("ITALIAN_LIBYA", "ITA", new[] { "libya" }),
+        ("PHILIPPINES", "USA", new[] { "philippines" }),
+        ("GREENLAND", "DNK", new[] { "greenland" }),
+        ("SOUTH_WEST_AFRICA", "ZAF", new[] { "namibia" }),
+    };
+
+    /// <summary>Group number (1-based, index into ColonyGroups) per region, 0 = none.</summary>
+    public int[] ColonyGroupOfRegion()
+    {
+        var g = new int[Rows.Length];
+        for (int i = 0; i < Rows.Length; i++)
+            for (int k = 0; k < ColonyGroups.Length; k++)
+            {
+                var (_, owner, prefixes) = ColonyGroups[k];
+                if (Rows[i].Owner != owner || !(Rows[i].Status is "colony" or "mandate" or "protectorate" or "leased")) continue;
+                if (prefixes.Any(p => RegionIds[i] == p || RegionIds[i].StartsWith(p + "_", StringComparison.Ordinal))) { g[i] = k + 1; break; }
+            }
+        return g;
+    }
+
+    public (float Lon, float Lat)[] ColonyAnchors(ushort[] regions)
+    {
+        var g = ColonyGroupOfRegion();
+        return Anchors(regions, ColonyGroups.Length, r => g[r]);
+    }
+
+    (float Lon, float Lat)[] Anchors(ushort[] regions, int classes, Func<int, int> classOf)
+    {
+        const int S = 4, w = W / S, h = H / S;
         var cls = new int[w * h];
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x++)
             {
                 int rg = regions[(y * S + S / 2) * W + x * S + S / 2];
-                if (rg == 0) continue;
-                int o = RegionOwner[rg - 1];
-                if (o != 0 && (!home[o] || Rows[rg - 1].Status == "core")) cls[y * w + x] = o;
+                if (rg != 0) cls[y * w + x] = classOf(rg - 1);
             }
         var d = new int[w * h];
         for (int y = 0; y < h; y++)
@@ -240,10 +287,10 @@ public sealed class WorldMap
                 int i = y * w + x;
                 d[i] = Math.Min(d[i], Math.Min(Math.Min(d[i + 1] + 3, d[i + w] + 3), Math.Min(d[i + w - 1] + 4, d[i + w + 1] + 4)));
             }
-        var best = new int[Owners.Length + 1]; var at = new int[Owners.Length + 1];
+        var best = new int[classes + 1]; var at = new int[classes + 1];
         for (int i = 0; i < w * h; i++) { int o = cls[i]; if (o != 0 && d[i] > best[o]) { best[o] = d[i]; at[o] = i; } }
-        var res = new (float, float)[Owners.Length + 1];
-        for (int o = 1; o <= Owners.Length; o++) res[o] = ((at[o] % w + 0.5f) * S / W * 360f - 180f, 90f - (at[o] / w + 0.5f) * S / H * 180f);
+        var res = new (float, float)[classes + 1];
+        for (int o = 1; o <= classes; o++) res[o] = ((at[o] % w + 0.5f) * S / W * 360f - 180f, 90f - (at[o] / w + 0.5f) * S / H * 180f);
         return res;
     }
 }

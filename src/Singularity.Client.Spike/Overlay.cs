@@ -60,7 +60,7 @@ public sealed partial class Overlay : Control
     }
 
     /// <summary>Adds the label of a country, or turns an existing one into a framed slice label.</summary>
-    public void AddLabel(Country c, bool slice)
+    public void AddLabel(Country c, bool slice, bool colony = false)
     {
         var s = _labels.Find(x => x.C == c);
         if (s == null)
@@ -68,7 +68,7 @@ public sealed partial class Overlay : Control
             var l = new Label { Visible = false, MouseFilter = MouseFilterEnum.Ignore };
             l.AddThemeFontOverride("font", Fonts.Map);
             l.AddThemeFontSizeOverride("font_size", 14);
-            l.AddThemeColorOverride("font_color", Ink);
+            l.AddThemeColorOverride("font_color", colony ? Ui.Ink2 : Ink);   // colony names in the second ink: they never compete with the powers
             // A plate under the word (C5): sheet at 85 %, so that the text reads on every tone and the hatching never runs through it.
             l.AddThemeStyleboxOverride("normal", new StyleBoxFlat { BgColor = new Color(Ui.Sheet, 0.85f), ContentMarginLeft = 3, ContentMarginRight = 3, ContentMarginTop = 0, ContentMarginBottom = 0 });
             AddChild(l);

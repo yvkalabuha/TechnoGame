@@ -142,6 +142,7 @@ public sealed partial class Main : Node3D
         layer.AddChild(_overlay);
         _overlay.Setup(_cam);
         foreach (var c in top) _overlay.AddLabel(c, false);
+        foreach (var c in _data.ColonyLabels) if (Names.Country(c.Name) != null) _overlay.AddLabel(c, false, true);
         _hud = new Label { Position = new Vector2(12, 0), Visible = _debug };
         _hud.AddThemeFontOverride("font", Fonts.Mono);
         _hud.AnchorTop = 1; _hud.AnchorBottom = 1; _hud.OffsetTop = -120; _hud.AddThemeFontSizeOverride("font_size", 14); _hud.OffsetBottom = -46;
@@ -563,6 +564,8 @@ public sealed partial class Main : Node3D
 
     void BuildObjects()
     {
+        // The demo factory, aerodrome and the 300 benchmark buildings are spike scenery: only the benchmark run builds them (O-047).
+        if (!_bench) return;
         // Factory site (Germany): building under construction, chimney appears when in service, water tower, tank.
         var factory = Anchor(10.0f, 51.0f);
         PlaceModel(factory, "res://assets/models/building-a.glb", 0.010f, Vector3.Zero, _factoryMats);
@@ -579,8 +582,7 @@ public sealed partial class Main : Node3D
         _planeAnchor = air;
         _plane = PlaceModel(air, "res://assets/models/funky_aircraft_low.obj", 0.006f, Vector3.Zero);
 
-        // 300 instances of one model on land (P6: instancing cost): a benchmark load, not part of the play world (O-047).
-        if (!_bench) return;
+        // 300 instances of one model on land (P6: instancing cost).
         var scene = GD.Load<PackedScene>("res://assets/models/building-j.glb").Instantiate<Node3D>();
         var mesh = AllMeshes(scene).First().Mesh;
         var mm = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, Mesh = mesh, InstanceCount = 300 };
@@ -714,6 +716,7 @@ public sealed partial class Main : Node3D
         _globeMat.SetShaderParameter("slice_lut", ImageTexture.CreateFromImage(Image.CreateFromData(256, 1, false, Image.Format.R8, lut)));
         _globeMat.SetShaderParameter("dim_others", 0f);
         foreach (var c in _data.Countries.Where(c => Names.Country(c.Name) != null)) _overlay.AddLabel(c, Names.CountryOfActor.ContainsValue(c.Name));
+        foreach (var c in _data.ColonyLabels) if (Names.Country(c.Name) != null) _overlay.AddLabel(c, false, true);
         _selected = 0; ApplySelection();
         _dist = 5f;
     }
@@ -798,6 +801,7 @@ public sealed partial class Main : Node3D
 
     void AnimateObjects()
     {
+        if (_plane == null) return;   // no demo scenery outside the benchmark run
         // Loop: 8 s under construction (progress 0..1), then 4 s in service.
         double c = _t % 12.0;
         float progress = c < 8 ? (float)(c / 8.0) : 1f;

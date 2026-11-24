@@ -27,6 +27,7 @@ public sealed class GlobeData
     public byte[] Ids = Array.Empty<byte>();            // owner number per pixel, 0 = sea or no owner
     public ushort[] RegionIds = Array.Empty<ushort>();  // region number per pixel, 0 = sea
     public byte[] RegionLut = Array.Empty<byte>();      // LutWidth x 2 RGBA8
+    public readonly List<Country> ColonyLabels = new();   // Id 0, Name "C_KEY": labels of the large colonial areas (locale polity.C_KEY)
     public WorldMap Map;
     public CountryPalette.Result Style;
 
@@ -42,6 +43,14 @@ public sealed class GlobeData
         var anchors = Map.LabelAnchors(RegionIds);
         for (int o = 1; o <= Map.Owners.Length; o++)
             Countries.Add(new Country { Id = o, Name = Map.Owners[o - 1], BoxArea = area[o], LabelPoint = new Vector2(anchors[o].Lon, anchors[o].Lat), Tint = Style.OwnerTone[o] });
+
+        var canchors = Map.ColonyAnchors(RegionIds);
+        var cg = Map.ColonyGroupOfRegion();
+        var carea = new long[WorldMap.ColonyGroups.Length + 1];
+        foreach (var rg in RegionIds) if (rg != 0) carea[cg[rg - 1]]++;
+        for (int k = 1; k <= WorldMap.ColonyGroups.Length; k++)
+            if (carea[k] > 0) ColonyLabels.Add(new Country { Id = 0, Name = "C_" + WorldMap.ColonyGroups[k - 1].Key, BoxArea = carea[k], LabelPoint = new Vector2(canchors[k].Lon, canchors[k].Lat) });
+        ColonyLabels.Sort((a, b) => b.BoxArea.CompareTo(a.BoxArea));
 
         RegionLut = new byte[LutWidth * 2 * 4];
         for (int i = 0; i < Style.Regions.Length; i++)
