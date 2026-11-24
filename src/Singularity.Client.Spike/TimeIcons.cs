@@ -3,7 +3,8 @@ using Godot;
 
 namespace Singularity.Client.Spike;
 
-/// <summary>Time group (UI_DESIGN_SYSTEM §17.8, spec §5): pause, slower, faster as 28x28 line icons with a 15 du glyph box, and a coloured four-cell tempo gauge (filled: 0 pause, 1 day/s, 2 week/s, 3 month/s) with the tempo word beside it. State reads without colour: fill and the number of ticks.</summary>
+/// <summary>Time group (UI_DESIGN_SYSTEM §17.8, TASK-0139): pause, slower, faster as 32 du line icons (4 du apart) and the four-step speed gauge. No speed text (owner #443): the value is the number of filled steps;
+/// its words with the unit live in the gauge tooltip and the accessible name. State reads without colour: fill, bar height and the frame of the active step.</summary>
 public sealed partial class TimeControl : HBoxContainer
 {
     public enum Kind { Pause, Slower, Faster }
@@ -11,54 +12,141 @@ public sealed partial class TimeControl : HBoxContainer
     sealed partial class IconButton : Button
     {
         public Kind K; public bool On;
-        readonly GlyphSet _prims;
+        // Whole-pixel parts of the glyph: axis-aligned edges are fills (an antialiased 2 du line would feather into the 2 du gaps), slanted edges are antialiased paths.
+        readonly Rect2[] _rects; readonly Vector2[][] _paths; readonly Vector2[][] _pathPx;   // _pathPx: scratch for the snapped points, so _Draw allocates nothing
+        readonly StyleBoxFlat _filled = Ui.Box(Ui.Ink, Ui.Ink, 1, 0, Ui.R2);
+        bool _mouseFocus;   // the focus came from a click: no ring, no key tip (A7 is for keyboard focus)
+        public event Action<IconButton> KeyFocused; public event Action FocusLost;
         public IconButton(Kind k)
         {
-            K = k; _prims = new GlyphSet(TimeGlyphMetrics.Prims((int)k)); CustomMinimumSize = new Vector2(28, 28); FocusMode = FocusModeEnum.None; Text = ""; ClipContents = true;
-            var normal = Ui.Box(Ui.Sheet, Ui.Ink, 1, 0, Ui.R2);
-            AddThemeStyleboxOverride("normal", normal);
+            K = k; BuildParts((int)k, out _rects, out _paths);
+            _pathPx = new Vector2[_paths.Length][]; for (int i = 0; i < _paths.Length; i++) _pathPx[i] = new Vector2[_paths[i].Length];
+            CustomMinimumSize = new Vector2(TimeGlyphMetrics.Button, TimeGlyphMetrics.Button); SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            FocusMode = FocusModeEnum.All; Text = ""; ClipContents = false;   // the focus ring is drawn outside the button
+            AddThemeStyleboxOverride("normal", Ui.Box(Ui.Sheet, Ui.Ink, 1, 0, Ui.R2));
             AddThemeStyleboxOverride("hover", Ui.Box(Ui.Hover, Ui.Ink, 1, 0, Ui.R2));
             AddThemeStyleboxOverride("pressed", Ui.Box(Ui.Hover, Ui.Ink, 2, 0, Ui.R2));
             AddThemeStyleboxOverride("disabled", Ui.Box(Ui.Paper, Ui.Rule, 1, 0, Ui.R2));
+            AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+            FocusEntered += () => Callable.From(NotifyFocus).CallDeferred();   // deferred: the click handler below has set the flag by then
+            FocusExited += () => { _mouseFocus = false; QueueRedraw(); FocusLost?.Invoke(); };
         }
+
+        /// <summary>Keyboard-style focus (also the shot-run and the hand-over from a disabled button): a ring and a key tip even if a click had focused the button before.</summary>
+        public void FocusByKey() { _mouseFocus = false; GrabFocus(); NotifyFocus(); }
+
+        /// <summary>Focus that a click gave: the focus moves on quietly (no ring, no key tip) when the click disabled this button.</summary>
+        public bool FocusedByMouse => HasFocus() && _mouseFocus;
+        public void FocusQuietly() { _mouseFocus = true; GrabFocus(); }
+
+        public bool RingShown => HasFocus() && !_mouseFocus;
+
+        void NotifyFocus() { if (RingShown) KeyFocused?.Invoke(this); QueueRedraw(); }
+
+        public override void _GuiInput(InputEvent e)
+        {
+            if (e is InputEventMouseButton { Pressed: true }) { _mouseFocus = true; FocusLost?.Invoke(); QueueRedraw(); }
+            else if (e is InputEventKey { Pressed: true }) { _mouseFocus = false; QueueRedraw(); if (HasFocus()) KeyFocused?.Invoke(this); }   // mouse to keyboard on the focused button: ring and key tip return
+        }
+
+        static void BuildParts(int kind, out Rect2[] rects, out Vector2[][] paths)
+        {
+            var rs = new System.Collections.Generic.List<Rect2>(); var ps = new System.Collections.Generic.List<Vector2[]>(); const float h = TimeGlyphMetrics.Stroke / 2f;
+            void Edge((double X, double Y) a, (double X, double Y) b)
+            {
+                float x0 = (float)Math.Min(a.X, b.X), x1 = (float)Math.Max(a.X, b.X), y0 = (float)Math.Min(a.Y, b.Y), y1 = (float)Math.Max(a.Y, b.Y);
+                rs.Add(a.X == b.X ? new Rect2(x0 - h, y0 - h, TimeGlyphMetrics.Stroke, y1 - y0 + 2 * h) : new Rect2(x0 - h, y0 - h, x1 - x0 + 2 * h, TimeGlyphMetrics.Stroke));
+            }
+            foreach (var poly in TimeGlyphMetrics.Shapes(kind))
+            {
+                bool slanted = poly[0].X != poly[1].X && poly[0].Y != poly[1].Y;
+                if (!slanted) { for (int i = 0; i + 1 < poly.Length; i++) Edge(poly[i], poly[i + 1]); continue; }
+                ps.Add(new[] { new Vector2((float)poly[0].X, (float)poly[0].Y), new Vector2((float)poly[1].X, (float)poly[1].Y), new Vector2((float)poly[2].X, (float)poly[2].Y) });   // base-top, tip, base-bottom
+                Edge(poly[2], poly[3]);   // the vertical base
+            }
+            rects = rs.ToArray(); paths = ps.ToArray();
+        }
+
+        // A glyph coordinate u (du in the button) as a local du on a whole physical pixel.
+        static float Px(float originPx, float u, float s) => (float)((TimeSnap.GlyphEdge(originPx, u, s) - originPx) / s);
 
         public override void _Draw()
         {
-            // Pause pressed in = filled ink with a sheet sign; everything else is a line sign (1.5 stroke, miter, butt, no fill).
+            // Pause pressed in = filled ink with a sheet sign; everything else is a line sign (2 du, miter, butt, no fill).
             bool filled = K == Kind.Pause && On;
-            if (filled) DrawStyleBox(Ui.Box(Ui.Ink, Ui.Ink, 1, 0, Ui.R2), new Rect2(Vector2.Zero, Size));
+            if (filled) DrawStyleBox(_filled, new Rect2(Vector2.Zero, Size));
             var c = Disabled ? Ui.Ink3 : filled ? Ui.Sheet : Ui.Ink;
-            GlyphDraw.Draw(this, _prims, Vector2.Zero, c);   // primitives in button coordinates: TimeGlyphMetrics (A2: ink >= 16 x 16 du, stroke >= 2 du)
+            // Shapes in button coordinates: TimeGlyphMetrics (A2: ink >= 16 x 16 du, stroke >= 2 du)
+            // Every edge is snapped to whole physical pixels at the current UI scale (TimeSnap), then drawn back in du.
+            var xf = GetViewport().GetFinalTransform() * GetGlobalTransformWithCanvas(); float s = xf.X.Length(); var o = xf.Origin;
+            foreach (var r in _rects)
+            {
+                float x0 = Px(o.X, r.Position.X, s), y0 = Px(o.Y, r.Position.Y, s), x1 = Px(o.X, r.End.X, s), y1 = Px(o.Y, r.End.Y, s);
+                DrawRect(new Rect2(x0, y0, x1 - x0, y1 - y0), c);
+            }
+            for (int i = 0; i < _paths.Length; i++)
+            {
+                for (int k = 0; k < _paths[i].Length; k++) _pathPx[i][k] = new Vector2(Px(o.X, _paths[i][k].X, s), Px(o.Y, _paths[i][k].Y, s));
+                DrawPolyline(_pathPx[i], c, TimeSnap.StrokePx(TimeGlyphMetrics.Stroke, s) / s, true);
+            }
+            if (RingShown)
+            {
+                // A6/A7: a 2 du ink ring 1 du outside the button; it lies on the paper of the bar, 3:1 and better.
+                float w = Size.X, h = Size.Y; var ink = Ui.Ink;
+                DrawRect(new Rect2(-3, -3, w + 6, 2), ink); DrawRect(new Rect2(-3, h + 1, w + 6, 2), ink);
+                DrawRect(new Rect2(-3, -1, 2, h + 2), ink); DrawRect(new Rect2(w + 1, -1, 2, h + 2), ink);
+            }
         }
     }
 
-    // The tempo meter is GaugeControl: four steps (0 pause, 1 day/s, 2 week/s, 3 month/s; the fourth is a dashed reserve, #331), with the tempo word and its unit beside it.
-    static readonly int[] GaugeInk = { Ui.Teal, Ui.Olive, Ui.Plum, Ui.Sand };
-
     readonly IconButton _pause = new(Kind.Pause), _slower = new(Kind.Slower), _faster = new(Kind.Faster);
     readonly GaugeControl _meter = new();
-    readonly Label _word = Ui.Lbl("speed.pause", 14, null, FontKind.Draft);
+    readonly PanelContainer _keyTip = new(); readonly Label _keyTipText = Ui.Lbl("", 14);
+    IconButton _tipFor;
     int _speed, _resume = 1;
     public event Action<int> Changed;
     public int Selected => _speed;
 
+    /// <summary>Screen rectangle of a button and of the gauge (shot-run checks of centring).</summary>
+    public Rect2 ButtonRect(Kind k) => (k == Kind.Pause ? _pause : k == Kind.Slower ? _slower : _faster).GetGlobalRect();
+    public Rect2 MeterRect => _meter.GetGlobalRect();
+    public void FocusButton(Kind k) => (k == Kind.Pause ? _pause : k == Kind.Slower ? _slower : _faster).FocusByKey();
+    /// <summary>Rectangle of the key tip while it shows (keyboard focus), else an empty rectangle.</summary>
+    public string KeyTipText => _keyTipText.Text;
+    public Rect2 KeyTipRect => _keyTip.Visible ? _keyTip.GetGlobalRect() : default;
+    public bool RingShown(Kind k) => (k == Kind.Pause ? _pause : k == Kind.Slower ? _slower : _faster).RingShown;
+    public bool HasButtonFocus(Kind k) => (k == Kind.Pause ? _pause : k == Kind.Slower ? _slower : _faster).HasFocus();
+
     public TimeControl()
     {
-        AddThemeConstantOverride("separation", 0);
-        _pause.TooltipText = "tip.time.pause"; _slower.TooltipText = "tip.time.slower"; _faster.TooltipText = "tip.time.faster";
+        AddThemeConstantOverride("separation", 8);
+        SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        // The mouse tooltip is Godot's; a keyboard-focused button has no pointer, so its tip is drawn here, next to the button (A7).
+        _keyTip.TopLevel = true; _keyTip.Visible = false; _keyTip.MouseFilter = MouseFilterEnum.Ignore; _keyTip.ZIndex = 20;
+        _keyTip.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Sheet, Ui.Ink, 1, 6));
+        _keyTip.AddChild(_keyTipText); AddChild(_keyTip);
+        foreach (var b in new[] { _pause, _slower, _faster }) { b.KeyFocused += ShowKeyTip; b.FocusLost += HideKeyTip; }
         _pause.Pressed += () => Select(_speed > 0 ? 0 : _resume, true);
         _slower.Pressed += () => Step(-1);
         _faster.Pressed += () => Step(1);
-        AddChild(_pause); AddChild(_slower); AddChild(_faster);
-        var gap = new Control { CustomMinimumSize = new Vector2(10, 0) };
-        AddChild(gap); AddChild(_meter);
-        _word.AddThemeFontSizeOverride("font_size", 14);   // draft.s 14 du: number and unit of the gauge never smaller (#417 C3, A1)
-        _word.CustomMinimumSize = new Vector2(124, 0);
-        _word.VerticalAlignment = VerticalAlignment.Center;
-        AddChild(_word);
+        var buttons = new HBoxContainer();
+        buttons.AddThemeConstantOverride("separation", TimeGlyphMetrics.Gap);
+        buttons.AddChild(_pause); buttons.AddChild(_slower); buttons.AddChild(_faster);
+        AddChild(buttons); AddChild(_meter);
         Select(0, false);
         Loc.Changed += Refresh;
         TreeExiting += () => Loc.Changed -= Refresh;
+    }
+
+    void ShowKeyTip(IconButton b) { _tipFor = b; UpdateKeyTip(); }
+    void HideKeyTip() { _tipFor = null; _keyTip.Visible = false; }
+
+    void UpdateKeyTip()
+    {
+        if (_tipFor == null || !_tipFor.IsInsideTree()) return;
+        // The key tip also names the exact speed, like the gauge tooltip.
+        _keyTipText.Text = _tipFor.TooltipText + "\n" + _meter.AccessibilityName; _keyTip.ResetSize(); _keyTip.Visible = true;
+        var r = _tipFor.GetGlobalRect(); _keyTip.GlobalPosition = new Vector2(r.Position.X, r.End.Y + 6);
     }
 
     /// <summary>Slower and faster move the tempo steps 1..3; while paused they only change the tempo that «continue» resumes at.</summary>
@@ -85,9 +173,17 @@ public sealed partial class TimeControl : HBoxContainer
         int level = _speed == 0 ? _resume : _speed;
         _pause.On = _speed == 0;
         _slower.Disabled = level <= 1; _faster.Disabled = level >= 3;
+        // A disabled button cannot keep the keyboard focus: hand it to the pause button so that the keys never fall out of the group.
+        IconButton held = _slower.Disabled && _slower.HasFocus() ? _slower : _faster.Disabled && _faster.HasFocus() ? _faster : null;
+        if (held != null) { if (held.FocusedByMouse) _pause.FocusQuietly(); else _pause.FocusByKey(); }   // after a click, no ring and no key tip appear
         _meter.Filled = _speed;
-        _word.Text = _speed == 0 ? Loc.T("speed.pause") : Loc.T(Words[_speed]);   // the real rate with its unit ("неделя/с"), full ink (O-008); never the step index
-        _word.AddThemeColorOverride("font_color", Ui.Ink);   // full-strength ink: the word carries the value (review TASK-0108)
+        string word = Loc.T(Words[_speed]);   // the real rate with its unit ("неделя/с") for the tooltip and the screen reader, never the step index (C3, C7; #443: no text beside the gauge)
+        _meter.TooltipText = Loc.T("time.gauge.tip", word); _meter.AccessibilityName = Loc.T("time.gauge.name", word);
+        // Tooltips name the remembered speed and say why a button is off (the key tip uses the same text).
+        _pause.TooltipText = _speed == 0 ? Loc.T("tip.time.pause.on", Loc.T(Words[_resume])) : Loc.T("tip.time.pause.off");
+        _slower.TooltipText = _slower.Disabled ? Loc.T("tip.time.slower.min", Loc.T(Words[1])) : Loc.T("tip.time.slower");
+        _faster.TooltipText = _faster.Disabled ? Loc.T("tip.time.faster.max", Loc.T(Words[3])) : Loc.T("tip.time.faster");
+        UpdateKeyTip();
         _pause.QueueRedraw(); _slower.QueueRedraw(); _faster.QueueRedraw(); _meter.QueueRedraw();
     }
 }

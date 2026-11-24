@@ -217,7 +217,12 @@ actor.short.GBR,GBR,ВБР
 actor.short.SUN,USSR,СССР
 actor.short.FRA,FRA,ФРА
 actor.short.SWE,SWE,ШВЕ
-tip.time.pause,"Pause or continue (Space, P)","Пауза или продолжить (Пробел, P)"
+tip.time.pause.on,"Paused. Continue at {0} (Space, P)","Пауза. Продолжить: {0} (Пробел, P)"
+tip.time.slower.min,"Already the slowest speed: {0}","Уже самая медленная скорость: {0}"
+tip.time.faster.max,"Already the fastest speed: {0}","Уже самая быстрая скорость: {0}"
+tip.time.pause.off,"Pause (Space, P)","Поставить на паузу (Пробел, P)"
+time.gauge.name,"Speed: {0}","Скорость: {0}"
+time.gauge.tip,"Game speed: {0}. Keys [ and ] or 1-3","Скорость игры: {0}. Клавиши [ и ] или 1–3"
 tip.time.slower,Slower (key [),Медленнее (клавиша [)
 tip.time.faster,Faster (key ]),Быстрее (клавиша ])
 tip.menu,Menu (Esc),Меню (Esc)
@@ -393,3 +398,8 @@ legend.links,Links of the selected node,Связи выбранного узла
 ui.tree.anchor.tip.est,"The year is an estimate (an orientation point in history), not a documented date","Год оценочный (ориентир по истории), а не документированная дата"
 ui.tree.anchor.est,Historical date (estimate): {0}{1},Историческая дата (оценка): {0}{1}
 ui.tree.anchor.named.est,Historical date (estimate): {0}{1} · {2},Историческая дата (оценка): {0}{1} · {2}
+set.globelook,Globe look,Вид глобуса
+set.gl.current,Prior,Прежний
+set.gl.a,Matte,Матовый
+set.gl.aplus,Matte + haze,Матовый + дымка
+set.gl.b,Atmosphere,Атмосфера

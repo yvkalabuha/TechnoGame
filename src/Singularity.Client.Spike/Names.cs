@@ -7,10 +7,10 @@ namespace Singularity.Client.Spike;
 /// actor.&lt;id&gt;): this class is the only reader, so the table can be swapped for the mods-side locale format.</summary>
 public static class Names
 {
-    // Slice actor ids (scenario_1945.yaml) -> Natural Earth country names.
+    // Slice actor ids (scenario_1945.yaml) -> polity codes of the 1945 map (scenarios/1945/polities.yaml).
     public static readonly Dictionary<string, string> CountryOfActor = new()
     {
-        ["USA"] = "United States of America", ["GBR"] = "United Kingdom", ["SUN"] = "Russia", ["FRA"] = "France", ["SWE"] = "Sweden",
+        ["USA"] = "USA", ["GBR"] = "GBR", ["SUN"] = "SUN", ["FRA"] = "FRA", ["SWE"] = "SWE",
     };
 
     public static string Actor(string id) => Loc.TOr("actor." + id, id);
@@ -27,8 +27,8 @@ public static class Names
         return "#" + number;
     }
 
-    /// <summary>Map label for a Natural Earth country, or null when the table has no name for it.</summary>
-    public static string Country(string neName) => Loc.Has("country." + neName) ? Loc.T("country." + neName) : null;
+    /// <summary>Map label of a polity of 1945 by its code (locale key polity.CODE), or null when the table has no name for it.</summary>
+    public static string Country(string polity) => Loc.Has("polity." + polity) ? Loc.T("polity." + polity) : null;
 
     /// <summary>"s8.prc.name" -> "prc.name".</summary>
     public static string Short(string id)

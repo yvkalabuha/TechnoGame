@@ -60,7 +60,7 @@ public sealed partial class Overlay : Control
     }
 
     /// <summary>Adds the label of a country, or turns an existing one into a framed slice label.</summary>
-    public void AddLabel(Country c, bool slice)
+    public void AddLabel(Country c, bool slice, bool colony = false)
     {
         var s = _labels.Find(x => x.C == c);
         if (s == null)
@@ -68,7 +68,9 @@ public sealed partial class Overlay : Control
             var l = new Label { Visible = false, MouseFilter = MouseFilterEnum.Ignore };
             l.AddThemeFontOverride("font", Fonts.Map);
             l.AddThemeFontSizeOverride("font_size", 14);
-            l.AddThemeColorOverride("font_color", Ink);
+            l.AddThemeColorOverride("font_color", Ink);   // colony names: same size and ink as the powers (A1); the hatching marks the status
+            // A plate under the word (C5): sheet at 85 %, so that the text reads on every tone and the hatching never runs through it.
+            l.AddThemeStyleboxOverride("normal", new StyleBoxFlat { BgColor = new Color(Ui.Sheet, 0.85f), ContentMarginLeft = 3, ContentMarginRight = 3, ContentMarginTop = 0, ContentMarginBottom = 0 });
             AddChild(l);
             _labels.Add(s = new LabelState { C = c, Node = l });
         }
@@ -161,7 +163,9 @@ public sealed partial class Overlay : Control
                 if (!s.On) { s.Node.Visible = false; continue; }
                 var sp = _cam.UnprojectPosition(p);
                 var sz = s.Node.GetCombinedMinimumSize();
-                var rect = new Rect2(sp - sz * 0.5f, sz).Grow(3f);
+                // Near the screen edge the plate moves inside the view with a margin; it is hidden only when its centre is off screen (A9).
+                if (!LabelPlacement.Place(sp.X, sp.Y, sz.X + 6f, sz.Y + 6f, VpSize.X, VpSize.Y, out float px, out float py)) { s.Node.Visible = false; continue; }
+                var rect = new Rect2(px, py, sz.X + 6f, sz.Y + 6f);
                 bool hit = false;
                 foreach (var o in placed) if (o.Intersects(rect)) { hit = true; break; }
                 if (hit) { s.Node.Visible = false; continue; }
