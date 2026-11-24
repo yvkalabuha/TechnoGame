@@ -31,6 +31,7 @@ public sealed class SettingsData
     public int Textures = 2;             // paper texture preset: 0 off, 1 weak, 2 normal (#360)
     public int DeskInstruments = 2;      // layer 1, objects on the desk: 0 off, 1 weak, 2 normal (#404; drawn from a later task)
     public int OrganInstruments = 2;     // layer 2, instrument-style controls: 0 off (the plain «before» look), 1 weak (ink only), 2 normal (#404)
+    public bool MapLegendOpen = true;    // key of the map marks: expanded on the first entry, then as the player left it (key L)
     public bool RailWide;                // area rail: false narrow (icon + letter), true wide (with names)
     public int GlobeLook = (int)GlobeLookLogic.Default;   // 0 prior flat look, 1 matte, 2 matte + haze, 3 physical atmosphere (owner #444: the default)
 
@@ -89,6 +90,7 @@ public static class Settings
         s.OrganInstruments = Math.Clamp((int)cf.GetValue("general", "organ_instruments", s.OrganInstruments), 0, 2);
         s.RailWide = (bool)cf.GetValue("general", "rail_wide", s.RailWide);
         s.GlobeLook = Math.Clamp((int)cf.GetValue("general", "globe_look", s.GlobeLook), 0, 3);
+        s.MapLegendOpen = (bool)cf.GetValue("general", "map_legend_open", s.MapLegendOpen);
         Current = s;
     }
 
@@ -104,7 +106,7 @@ public static class Settings
         cf.SetValue("general", "lang", s.Lang); cf.SetValue("general", "date_format", s.DateFormat); cf.SetValue("general", "pause_on_alarm", s.PauseOnAlarm);
         cf.SetValue("general", "tip_delay", s.TipDelay); cf.SetValue("general", "animations", s.Animations);
         cf.SetValue("general", "textures", s.Textures); cf.SetValue("general", "rail_wide", s.RailWide);
-        cf.SetValue("general", "desk_instruments", s.DeskInstruments); cf.SetValue("general", "organ_instruments", s.OrganInstruments); cf.SetValue("general", "globe_look", s.GlobeLook);
+        cf.SetValue("general", "desk_instruments", s.DeskInstruments); cf.SetValue("general", "organ_instruments", s.OrganInstruments); cf.SetValue("general", "globe_look", s.GlobeLook); cf.SetValue("general", "map_legend_open", s.MapLegendOpen);
         cf.Save(Path);
     }
 
