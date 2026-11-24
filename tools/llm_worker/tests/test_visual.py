@@ -161,6 +161,18 @@ class RunVisual(Base):
         self.assertEqual(res[2]["frames"][0]["name"], "a.png")
         self.assertFalse(called)
 
+    def test_client_shots_dir_accepted_other_path_refused(self):
+        client = self.tmp / "client-shots"
+        client.mkdir()
+        (client / "c.png").write_bytes(PNG)
+        other = self.tmp / "elsewhere"
+        other.mkdir()
+        (other / "d.png").write_bytes(PNG)
+        with mock.patch.object(config, "SHOTS_DIR", self.shots), mock.patch.object(config, "CLIENT_SHOTS_DIR", client):
+            self.assertEqual(visual.load_frames([client / "c.png", self.shots / "a.png"])[0][0], "c.png")
+            with self.assertRaises(visual.VisualError):
+                visual.load_frames([other / "d.png"])
+
     def test_bad_task_id(self):
         with self.assertRaises(visual.VisualError):
             visual.run_visual("../x", self.frames, shots_dir=self.shots)

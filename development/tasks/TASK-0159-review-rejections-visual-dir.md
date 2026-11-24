@@ -39,3 +39,8 @@ created: 2026-11-24
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
+- `review-confirm --rejected --reason "..."` пишет причину в sidecar `.confirm.json` (ключ `reasons`).
+- `run_review` (Codex, agy-sonnet, DeepSeek; `land.py` вызывает его) собирает отклонённые находки прежних записей задачи и добавляет в промпт блок PREVIOUSLY REJECTED FINDINGS с причинами и просьбой не повторять без новых доводов (до 20 штук, текст до 600 знаков).
+- `visual` принимает кадры из `shots-out/` и `src/Singularity.Client.Spike/shots-out/` (`config.CLIENT_SHOTS_DIR`); явный `shots_dir` по-прежнему единственный корень; чужой путь отклоняется.
+- Файлы: tools/llm_worker/{config,review,visual,__main__}.py, tests/test_review.py, tests/test_visual.py.
+- Проверка: `nice -n 10 python3 -m unittest discover tools/llm_worker/tests`: 486 тестов OK. Тесты на старом коде не гонялись.

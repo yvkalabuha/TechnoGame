@@ -188,6 +188,43 @@ class RunTest(unittest.TestCase):
         # the fallback prompt carries file contents, the Codex one did not
         self.assertIn("=== FILE tools/a.py", fake.calls[0]["messages"][1]["content"])
 
+    def test_repeat_review_gets_rejected_findings_with_reasons(self):
+        runs = self.tmp / "runs"
+        path, _, _ = self.run_review("deepseek", make_provider=lambda: FakeProvider([GOOD]))
+        review.mark_finding(path, 1, False, "checked: handled in b.py")
+        review.mark_finding(path, 2, True)
+        got = []
+
+        def runner(prompt, wt):
+            got.append(prompt)
+            return json.dumps(GOOD), {}
+
+        self.run_review("codex", codex_runner=runner)
+        self.assertIn("PREVIOUSLY REJECTED FINDINGS", got[0])
+        self.assertIn("checked: handled in b.py", got[0])
+        self.assertIn('"c"', got[0])
+        self.assertNotIn('"c2"', got[0])  # confirmed finding is not listed
+        fake = FakeProvider([GOOD])
+        self.run_review("deepseek", make_provider=lambda: fake)
+        self.assertIn("checked: handled in b.py", fake.calls[0]["messages"][1]["content"])
+        self.assertEqual(len(list(runs.glob("*.json"))) >= 3, True)
+
+    def test_first_review_has_no_rejected_block(self):
+        got = []
+
+        def runner(prompt, wt):
+            got.append(prompt)
+            return json.dumps(GOOD), {}
+
+        self.run_review("codex", codex_runner=runner)
+        self.assertNotIn("PREVIOUSLY REJECTED", got[0])
+
+    def test_reason_saved_in_sidecar(self):
+        path, _, _ = self.run_review("deepseek", make_provider=lambda: FakeProvider([GOOD]))
+        review.mark_finding(path, 1, False, "why")
+        side = json.loads(review.confirm_path(path).read_text())
+        self.assertEqual((side["confirmed"], side["reasons"]), ({"1": False}, {"1": "why"}))
+
     def test_codex_prompt_starts_with_instruction(self):
         got = []
 

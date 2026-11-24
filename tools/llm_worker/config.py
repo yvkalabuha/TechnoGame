@@ -69,6 +69,8 @@ GEMINI_RPM = 5
 GEMINI_RPD = 100
 GEMINI_USAGE_FILE = "gemini-usage.json"  # in LEDGER_DIR
 SHOTS_DIR = REPO_ROOT / "shots-out"
+# The client writes its frames here; `visual` accepts them next to SHOTS_DIR.
+CLIENT_SHOTS_DIR = REPO_ROOT / "src" / "Singularity.Client.Spike" / "shots-out"
 MAX_FRAMES = 8
 MAX_FRAME_BYTES = 7 * 1024 * 1024
 MAX_REQUEST_BYTES = 18 * 1024 * 1024  # Google inline limit is 20 MB per request, base64 adds a third

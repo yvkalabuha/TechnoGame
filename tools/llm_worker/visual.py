@@ -145,11 +145,12 @@ def load_frames(frames, shots_dir=None, allow_small=False):
         raise VisualError("bad_frame", "no frames")
     if len(frames) > config.MAX_FRAMES:
         raise VisualError("bad_frame", f"more than {config.MAX_FRAMES} frames")
-    root = Path(shots_dir or config.SHOTS_DIR).resolve()
+    roots = [Path(shots_dir).resolve()] if shots_dir else [Path(config.SHOTS_DIR).resolve(),
+                                                           Path(config.CLIENT_SHOTS_DIR).resolve()]
     out = []
     for f in frames:
         p = Path(f).resolve()
-        if root not in p.parents:
+        if not any(r in p.parents for r in roots):
             raise VisualError("bad_frame", f"{f}: only files under shots-out/ may be sent")
         try:
             size = p.stat().st_size
