@@ -1,7 +1,7 @@
 ---
 id: TASK-0143
 title: "Gemini sketch runs: detect subagent quota errors, one image per subagent, no extra refinements"
-status: APPROVED
+status: IN_PROGRESS
 level: light
 milestone: MS-M05
 agent: developer
