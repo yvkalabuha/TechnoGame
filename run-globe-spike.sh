@@ -40,11 +40,11 @@ if ! "$GODOT" --headless --path . --import >"$IMPORT_LOG" 2>&1 || grep -qE "^(ER
 fi
 
 STAMP=".godot/build-stamp"
-SRC_NAMES=( \( -name '*.cs' -o -name '*.csproj' -o -name '*.props' -o -name '*.targets' \) )
 # The stamp holds the list of source files: a deleted or renamed file changes it and forces a build.
-SRC_LIST="$( { find "$ROOT/src" "${SRC_NAMES[@]}" -not -path '*/.godot/*' -print; find "$ROOT" -maxdepth 1 \( -name 'Directory.Build.*' -o -name 'global.json' -o -name '*.props' \) -print; } | LC_ALL=C sort | sha256sum | cut -d' ' -f1)"
+# Every input file under src/ counts (code, project files, embedded data such as map packs), except build and shot output.
+SRC_LIST="$( { find "$ROOT/src" -type f -not -path '*/.godot/*' -not -path '*/bin/*' -not -path '*/obj/*' -not -path '*/shots-out/*' -not -path '*/bench-out/*' -not -path '*/assets/ui/*' -print; find "$ROOT" -maxdepth 1 \( -name 'Directory.Build.*' -o -name 'global.json' -o -name '*.props' \) -print; } | LC_ALL=C sort | sha256sum | cut -d' ' -f1)"
 if [[ "${FORCE_BUILD:-0}" == "1" || ! -f "$STAMP" || "$(cat "$STAMP" 2>/dev/null)" != "$SRC_LIST" ]] \
-   || [[ -n "$(find "$ROOT/src" "${SRC_NAMES[@]}" -newer "$STAMP" -not -path '*/.godot/*' -print -quit)" ]] \
+   || [[ -n "$(find "$ROOT/src" -type f -newer "$STAMP" -not -path '*/.godot/*' -not -path '*/bin/*' -not -path '*/obj/*' -not -path '*/shots-out/*' -not -path '*/bench-out/*' -not -path '*/assets/ui/*' -print -quit)" ]] \
    || [[ -n "$(find "$ROOT" -maxdepth 1 \( -name 'Directory.Build.*' -o -name 'global.json' -o -name '*.props' \) -newer "$STAMP" -print -quit)" ]]; then
   echo "Building C# scripts..."
   echo "$SRC_LIST" > "$STAMP.new"   # taken before the build: a file saved during the build stays newer than the stamp
@@ -58,7 +58,7 @@ has_arg() { local w="$1" a; shift; for a in "$@"; do [[ "$a" == "$w" ]] && retur
 AUDIO=(--audio-driver Dummy)
 if has_arg --audio-demo "$@"; then AUDIO=(); fi
 
-if has_arg --shots "$@" || has_arg --time-shots "$@" || has_arg --map-frames "$@"; then
+if has_arg --shots "$@" || has_arg --map-frames "$@"; then   # --time-shots is a sub-mode of --shots
   "$GODOT" "${AUDIO[@]}" --path . -- "$@"
 elif [[ "${1:-}" == "--bench" ]]; then
   "$GODOT" --audio-driver Dummy --path . -- --bench --out bench-out
