@@ -134,7 +134,7 @@
 | [TASK-0116](../development/tasks/TASK-0116-ci-green.md) | DONE | CI green on all jobs: Lab tests off Linux, llm_worker pilot contracts | MS-M0 |
 | [TASK-0117](../development/tasks/TASK-0117-client-ui-scale-policy.md) | DONE | Client UI scale policy: text never below the A1 floor at 1280x720 | MS-M05 |
 | [TASK-0118](../development/tasks/TASK-0118-codex-catchup-findings.md) | APPROVED | Codex catch-up findings on landed core tasks (TASK-0099, 0103, 0107, 0110) | MS-M05 |
-| [TASK-0119](../development/tasks/TASK-0119-instrument-view-fields.md) | IN_PROGRESS | Instrument data fields in the Session view: alloy coverage, research progress | MS-M05 |
+| [TASK-0119](../development/tasks/TASK-0119-instrument-view-fields.md) | DONE | Instrument data fields in the Session view: alloy coverage, research progress | MS-M05 |
 | [TASK-0120](../development/tasks/TASK-0120-core-command-verdicts.md) | PROPOSED | Core emits a per-command verdict; commands keyed by handle | MS-M05 |
 | [TASK-0121](../development/tasks/TASK-0121-slice-horizon-2030-train-1.md) | DONE | Slice horizon to 2030, train 1: Years = 86, q mask in 62-bit blocks, horizon fixture | MS-M05 |
 | [TASK-0122](../development/tasks/TASK-0122-budget-rule-variants-switch.md) | DONE | Budget rule variants behind a run switch for the Lab measurement (NOW, A, B1, B2) | MS-M05 |

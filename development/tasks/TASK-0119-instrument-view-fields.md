@@ -1,7 +1,7 @@
 ---
 id: TASK-0119
 title: "Instrument data fields in the Session view: alloy coverage, research progress"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M05
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: [TASK-0111]
 approved_by: orchestrator
 approved_at: 2026-11-24
 approval_ref: "PLAN Фокус п.2 (after train 2); light task approved by Orchestrator"
+review_ref: "reviewer: APPROVE (alloy fix re-review); ui-art-director: PASS task-0119-visual.md; codex: waived #432 after 3rd return (fac02a13), remainder DEBT-0092; landed c898dce"
 created: 2026-11-19
 ---
 
