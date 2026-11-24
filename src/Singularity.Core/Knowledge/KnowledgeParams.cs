@@ -43,16 +43,16 @@ public sealed record KnowledgeParams
 
     /// <summary>
     /// Ahead-of-time cost (owner decision #458): a node costs <c>1 + k·ahead^pow</c> times more (capped by <see cref="AheadCostMax"/>), where
-    /// <c>ahead</c> is the number of years from the month of the step to the node's anchor year (0 once the anchor has passed). 0 = off: the cost
-    /// is exactly the old one and no hash changes.
+    /// <c>ahead</c> is the number of years from the month of the step to the node's anchor year (0 once the anchor has passed). Defaults k 0.02, pow 2, max 10 (owner decision #465); k = 0 is off: the cost
+    /// is exactly the pre-#458 one.
     /// </summary>
-    public Fx6 AheadCostK { get; init; } = Fx6.Zero;
+    public Fx6 AheadCostK { get; init; } = F(20_000);
 
     /// <summary>Integer exponent of the ahead-of-time cost, 1…4.</summary>
-    public int AheadCostPow { get; init; } = 1;
+    public int AheadCostPow { get; init; } = 2;
 
     /// <summary>Ceiling of the ahead-of-time multiplier, at least 1.</summary>
-    public Fx6 AheadCostMax { get; init; } = Fx6.FromInt(4);
+    public Fx6 AheadCostMax { get; init; } = Fx6.FromInt(10);
 
     public void Validate()
     {

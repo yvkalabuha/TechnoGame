@@ -134,6 +134,8 @@ public class KnowledgeAuditTests
 
     // ---- ahead-of-time cost (#458)
 
+    private static readonly KnowledgeParams Off = new() { AheadCostK = Fx6.Zero };
+
     private static readonly KnowledgeParams Ahead = new() { AheadCostK = Fx6.FromRaw(100_000), AheadCostPow = 2, AheadCostMax = Fx6.FromInt(5) };
 
     [Fact]
@@ -164,12 +166,14 @@ public class KnowledgeAuditTests
         Assert.Throws<ArgumentException>(() => new KnowledgeParams { AheadCostPow = 5 }.Validate());
         Assert.Throws<ArgumentException>(() => new KnowledgeParams { AheadCostMax = Fx6.FromRaw(999_999) }.Validate());
         new KnowledgeParams().Validate();
+        var d = new KnowledgeParams(); // owner decision #465
+        Assert.Equal((20_000L, 2, 10_000_000L), (d.AheadCostK.Raw, d.AheadCostPow, d.AheadCostMax.Raw));
     }
 
     [Fact]
-    public void Ahead_KZero_IsIdenticalToDefault_MonthlyHashes()
+    public void Ahead_KZero_IsIdenticalWhateverPowAndMax_MonthlyHashes()
     {
-        var off = new SliceRun(null, null, 1, 1);
+        var off = new SliceRun(null, null, 1, 1, 42, Off);
         var zero = new SliceRun(null, null, 1, 1, 42, new KnowledgeParams { AheadCostK = Fx6.Zero, AheadCostPow = 3, AheadCostMax = Fx6.FromInt(9) });
         for (long t = 0; t < 240; t++)
         {
@@ -182,7 +186,7 @@ public class KnowledgeAuditTests
     [Fact]
     public void Ahead_RaisesCEff_OfAnEarlyNode_AndNotOfAPastOne()
     {
-        var off = new SliceRun(null, null, 1, 1);
+        var off = new SliceRun(null, null, 1, 1, 42, Off);
         var on = new SliceRun(null, null, 1, 1, 42, Ahead);
         int ahead = 0;
         for (int r = 0; r < off.Graph.Count; r++)
@@ -223,7 +227,7 @@ public class KnowledgeAuditTests
             return StateHash.ComputeHex(r.Table, 1);
         }
         Assert.Equal(Run(Ahead), Run(Ahead));
-        HashAssert.NotEqual(Run(null), Run(Ahead));
+        HashAssert.NotEqual(Run(Off), Run(Ahead));
     }
 
     private static void AssertSameByIds(SliceRun a, SliceRun b, long t)
