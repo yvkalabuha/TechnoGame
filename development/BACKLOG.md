@@ -162,6 +162,7 @@
 | [TASK-0144](../development/tasks/TASK-0144-muted-sound-character.md) | IN_PROGRESS | Muted sound character (#455): soften attack and low-pass all routine cues | MS-M05 |
 | [TASK-0145](../development/tasks/TASK-0145-sketch-codex-engine.md) | APPROVED | Sketches through Codex CLI image generation (llm_worker sketch --engine codex) | MS-M05 |
 | [TASK-0146](../development/tasks/TASK-0146-review-fallback-agy-sonnet.md) | IN_PROGRESS | Second review fallback to Sonnet 5.5 through agy when the Codex limit is exhausted (#456) | MS-M05 |
+| [TASK-0147](../development/tasks/TASK-0147-ahead-of-time-cost.md) | APPROVED | Ahead-of-time cost for knowledge nodes in Core (#458) and G5/G6 rev 3.1 data on the train-2 branch | MS-M05 |
 
 ## Гипотезы
 
