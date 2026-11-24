@@ -193,4 +193,17 @@ public class WorldMapTests
         Assert.True(hatch > 0 && line > hatch, "the border and coast lines must be mixed after the hatching");
         Assert.Contains("vec3 coast_color : source_color = vec3(0.13, 0.14, 0.15)", src);   // dark for every fill, L* <= 35
     }
+
+    [Fact]
+    public void Label_near_the_screen_edge_moves_inside_instead_of_vanishing()
+    {
+        // "French Algeria" sits 5 px from the top edge, "Thailand" 6 px from the bottom edge of a 1920x1080 frame.
+        Assert.True(LabelPlacement.Place(640, 5, 150, 20, 1920, 1080, out _, out float y1));
+        Assert.Equal(LabelPlacement.Margin, y1);
+        Assert.True(LabelPlacement.Place(570, 1074, 80, 20, 1920, 1080, out _, out float y2));
+        Assert.Equal(1080 - LabelPlacement.Margin - 20, y2);
+        Assert.False(LabelPlacement.Place(640, -30, 150, 20, 1920, 1080, out _, out _));   // centre off screen: hidden
+        Assert.True(LabelPlacement.Place(960, 540, 150, 20, 1920, 1080, out float x3, out _));
+        Assert.Equal(960 - 75, x3);                                                          // inside: untouched
+    }
 }

@@ -163,8 +163,10 @@ public sealed partial class Overlay : Control
                 if (!s.On) { s.Node.Visible = false; continue; }
                 var sp = _cam.UnprojectPosition(p);
                 var sz = s.Node.GetCombinedMinimumSize();
-                var rect = new Rect2(sp - sz * 0.5f, sz).Grow(3f);
-                bool hit = rect.Position.X < 8 || rect.Position.Y < 8 || rect.End.X > VpSize.X - 8 || rect.End.Y > VpSize.Y - 8;   // a label never sits on the screen edge (A9)
+                // Near the screen edge the plate moves inside the view with a margin; it is hidden only when its centre is off screen (A9).
+                if (!LabelPlacement.Place(sp.X, sp.Y, sz.X + 6f, sz.Y + 6f, VpSize.X, VpSize.Y, out float px, out float py)) { s.Node.Visible = false; continue; }
+                var rect = new Rect2(px, py, sz.X + 6f, sz.Y + 6f);
+                bool hit = false;
                 foreach (var o in placed) if (o.Intersects(rect)) { hit = true; break; }
                 if (hit) { s.Node.Visible = false; continue; }
                 placed.Add(rect);

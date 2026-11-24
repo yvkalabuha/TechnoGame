@@ -7,5 +7,6 @@
     <Compile Include="../../src/Singularity.Client.Spike/CountryPalette.cs" Link="CountryPalette.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/ContrastValidator.cs" Link="ContrastValidator.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/Palette.cs" Link="Palette.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/LabelPlacement.cs" Link="LabelPlacement.cs" />
   </ItemGroup>
 </Project>
