@@ -9,6 +9,7 @@ uniform bool light_world = false;
 uniform vec3 light_dir = vec3(0.7, 0.35, 0.6);
 uniform vec3 cam_light = vec3(-0.5, 0.55, 0.7);
 uniform float shell_r = 1.08;
+uniform float light_amount : hint_range(0.0, 1.0) = 1.0;   // 0: the unlit control of the shot suite, the haze no longer depends on the light
 
 void fragment() {
 	vec3 c = (VIEW_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz;   // globe centre in view space
@@ -18,7 +19,7 @@ void fragment() {
 	float h = length(p - c);
 	vec3 n = normalize(p - c);                                // limb direction from the centre
 	vec3 lv = light_world ? normalize((VIEW_MATRIX * vec4(normalize(light_dir), 0.0)).xyz) : normalize(cam_light);
-	float lit = dot(n, lv);
+	float lit = mix(0.6, dot(n, lv), light_amount);
 	float day = smoothstep(-0.35, 0.45, lit);
 	float x = h - 1.0;                                        // distance outside the limb, in globe radii
 	vec3 col = vec3(0.0);

@@ -35,7 +35,7 @@ public sealed partial class SettingsSheet : Control
     readonly Label _dialogText = Ui.Lbl("", 16);
     readonly RollbackTimer _rb = new(15);
     SettingsData _w = new(), _orig = new(), _before;
-    int _lookAtOpen;
+    int _lookAtOpen, _lookBefore;
     int? _musicOrig;   // the music amount applies live; Cancel puts it back
     int _tab;
     int _soundFocus = 1;
@@ -101,7 +101,7 @@ public sealed partial class SettingsSheet : Control
     // Screenshot hooks: show a tab or the rollback dialog without applying anything.
     public void Close() { Visible = false; SetDialog(false); }
     public void ShotTab(int tab) { _tab = tab; Rebuild(); }
-    public void ShotRollback() { _before = Settings.Current.Clone(); _rb.Start(); SetDialog(true); UpdateDialog(); }
+    public void ShotRollback() { _before = Settings.Current.Clone(); _lookBefore = _before.GlobeLook; _rb.Start(); SetDialog(true); UpdateDialog(); }
 
     public void Open()
     {
@@ -271,6 +271,7 @@ public sealed partial class SettingsSheet : Control
         var old = Settings.Current;
         bool confirm = _w.NeedsConfirm(old) && DisplayServer.GetName() != "headless";
         _before = old.Clone();
+        _lookBefore = GlobeLookActive?.Invoke() ?? old.GlobeLook;   // a rejected display change returns to the look that was active, not to the saved one
         Settings.Current = _w.Clone();
         Settings.Apply(Settings.Current, GetWindow());
         GlobeLookSet?.Invoke(Settings.Current.GlobeLook);
@@ -287,7 +288,7 @@ public sealed partial class SettingsSheet : Control
         _rb.Confirm(); SetDialog(false);
         Settings.Current = _before.Clone(); _w = _before.Clone();
         Settings.Apply(Settings.Current, GetWindow(), window);
-        GlobeLookSet?.Invoke(Settings.Current.GlobeLook);
+        GlobeLookSet?.Invoke(_lookBefore);
         Applied?.Invoke(Settings.Current);
         if (Loc.Lang != _w.Lang) Loc.SetLang(_w.Lang);
         Rebuild();

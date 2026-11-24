@@ -43,6 +43,9 @@ public sealed partial class Main
     }
 
     // The prior look always reads light_dir; looks A, A+ and B read it only with light_world. Day returns to the default direction, so no look keeps a night light.
+    // The unlit control of the shot suite switches the light off for the globe and for the atmosphere.
+    void SetGlobeLightAmount(float v) { _globeMat.SetShaderParameter("light_amount", v); _atmoMat.SetShaderParameter("light_amount", v); }
+
     static readonly Vector3 DayLightDir = new(0.7f, 0.35f, 0.6f);
     void SetGlobeLightDir(bool world, Vector3 dir)
     {
@@ -72,7 +75,7 @@ public sealed partial class Main
             W(0.7, () => SaveShot($"{n}_europe_day.png", null, true));
             W(0.1, () => SetGlobeLight(true, lon + 90, 12));     // sun to the right: the terminator crosses the disk
             W(0.5, () => SaveShot($"{n}_terminator.png", null, true));
-            W(0.1, () => SetGlobeLight(true, lon + 180, 0));     // sun behind the globe: the night side
+            W(0.1, () => { SetGlobeLight(true, lon + 180, -lat); NightCheck(n, lat, lon); });     // the antipode of the view centre: the whole visible cap is dark
             W(0.5, () => SaveShot($"{n}_night.png", null, true));
             W(0.1, () => { SetGlobeLight(false, 0, 0); TitleScene(false); });
             W(0.5, () => SaveShot($"{n}_europe_day_hud.png"));
@@ -95,6 +98,17 @@ public sealed partial class Main
             File.WriteAllText(Path.Combine(dir, "frame_times.txt"), $"GPU: {gpu}\n1920x1080, vsync mode {DisplayServer.WindowGetVsyncMode()}, max_fps {Engine.MaxFps}, 300 frames of Europe by day, no HUD, 100 % UI scale\n" + string.Join("\n", _lookLog) + "\n");
             GetTree().Quit(_shotFailed ? 1 : 0);
         });
+    }
+
+    // The night frame must show no sunlit terrain: the sun is at the antipode of the view axis, so the visible cap (up to acos(1/dist) from the axis) is at most this far above the dark threshold.
+    void NightCheck(string n, float lat, float lon)
+    {
+        var v = GlobeLookLogic.Direction(lon, lat); var s = GlobeLookLogic.Direction(lon + 180, -lat);
+        double gamma = Math.Acos(Math.Clamp(v.X * s.X + v.Y * s.Y + v.Z * s.Z, -1f, 1f)) * 180.0 / Math.PI;
+        double top = GlobeLookLogic.MaxLightDotOnVisibleCap(gamma, _dist);
+        bool ok = top <= -0.22;
+        _lookLog.Add(string.Format(CultureInfo.InvariantCulture, "night check {0}: sun {1:F1} deg from the view axis, brightest visible point N.L {2:F2} (must be <= -0.22, the full-dark threshold): {3}", n, gamma, top, ok ? "PASS" : "FAIL"));
+        if (!ok) _shotFailed = true;
     }
 
     // C5/A4: the atmosphere B may tint the disk only inside 4 % of the radius. For three countries one ground point is rendered at the disk centre and at 0.96, 0.98 and 0.99 R,

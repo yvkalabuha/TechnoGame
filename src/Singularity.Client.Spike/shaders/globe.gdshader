@@ -84,12 +84,12 @@ void fragment() {
 		col = mix(col, rim_color, clamp(rim, 0.0, 0.6));
 	} else {
 		// TASK-0137 looks (1 matte, 2 matte + strong limb haze, 3 physical haze): one key light, tied to the camera unless light_world is set.
-		// Lighting multiplies the fills only (floor 0.70, ceiling 1.05); the atmosphere is a separate shell drawn outside the disk (globe_atmosphere.gdshader).
+		// Lighting multiplies the fills only (every channel >= 0.70 after the cool tint, ceiling 1.05); the atmosphere is a separate shell drawn outside the disk (globe_atmosphere.gdshader).
 		vec3 nv = normalize(NORMAL);
 		vec3 lv = light_world ? normalize((VIEW_MATRIX * vec4(normalize(light_dir), 0.0)).xyz) : normalize(cam_light);
 		float nl = dot(nv, lv);
 		float lit2 = smoothstep(-0.22, 0.22, nl);                       // about 25 degrees of soft terminator
-		float lum = mix(0.70, 1.05, lit2);
+		float lum = mix(0.70 / 0.94, 1.05, lit2);                       // the coolest channel (0.94) is still >= 0.70 at full night
 		vec3 temp = mix(vec3(0.94, 0.97, 1.0), vec3(1.0, 0.99, 0.96), lit2);   // cooler on the shaded side
 		float limb = 1.0 - clamp(dot(nv, normalize(VIEW)), 0.0, 1.0);
 		if (id == 0) col *= mix(1.0, 0.9, limb * limb);                 // the sea is a little darker towards the limb

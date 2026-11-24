@@ -1740,7 +1740,7 @@ public sealed partial class Main : Node3D
             }
         }
         SetGlobeLightDir(night, night ? -DayLightDir : DayLightDir);   // night: a fixed world light behind the globe, for every look
-        _globeMat.SetShaderParameter("light_amount", 1f);
+        SetGlobeLightAmount(1f);
     }
 
     // Click test: for the USA, the USSR and France a click on the country, before and after rotating the globe. After the turn the country must be
@@ -1749,7 +1749,7 @@ public sealed partial class Main : Node3D
     bool ClickTest(double dt, Vector2 vp, Action<string, Rect2I?> shot)
     {
         if (_clickCase >= 6) return false;
-        if (_clickCase < 0) { _clickCase = 0; _clickT = 0; _clickPhase = 0; _globeMat.SetShaderParameter("light_amount", 0f); }
+        if (_clickCase < 0) { _clickCase = 0; _clickT = 0; _clickPhase = 0; SetGlobeLightAmount(0f); }
         _clickT += dt;
         var ids = _host.Layout.ActorIds.ToArray();
         string[] pick = { "USA", "SUN", "FRA" };
@@ -1761,7 +1761,7 @@ public sealed partial class Main : Node3D
         {
             _yaw = c.LabelPoint.X + (odd ? 28 : -25); _pitch = Mathf.Clamp(c.LabelPoint.Y + (odd ? -14 : 12), -80, 80); _dist = 2.6f; _flying = false; UpdateCamera();
             if (_clickT < 0.4) return true;
-            if (_clickCase == 0 && _lightShot == 0) { shot("globe_unlit.png", null); _globeMat.SetShaderParameter("light_amount", 1f); _lightShot = 1; _clickT = 0; return true; }
+            if (_clickCase == 0 && _lightShot == 0) { shot("globe_unlit.png", null); SetGlobeLightAmount(1f); _lightShot = 1; _clickT = 0; return true; }
             if (_clickCase == 0 && _lightShot == 1) { if (_clickT < 0.3) return true; shot("globe_lit.png", null); _lightShot = 2; }
             _clickPoint = _cam.UnprojectPosition(sph); _clickDist = _dist;
             Pick(_clickPoint); _clickPhase = 1; _clickT = 0;

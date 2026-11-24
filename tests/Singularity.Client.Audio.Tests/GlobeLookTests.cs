@@ -44,6 +44,14 @@ public class GlobeLookTests
     }
 
     [Fact]
+    public void MaxLightDotOnVisibleCap_AntipodeIsDark_EquatorSunOnA48DegViewIsNot()
+    {
+        Assert.True(GlobeLookLogic.MaxLightDotOnVisibleCap(180, 2.6) <= -0.22);
+        // the first night frame: view at lat 48, sun at the equator on the opposite meridian = 132 degrees from the axis, sunlit terrain remains
+        Assert.True(GlobeLookLogic.MaxLightDotOnVisibleCap(132, 2.6) > -0.22);
+    }
+
+    [Fact]
     public void Next_CyclesThroughAllFourAndBack()
     {
         var l = GlobeLook.Current; var seen = new System.Collections.Generic.List<GlobeLook>();

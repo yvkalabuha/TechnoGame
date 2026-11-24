@@ -75,4 +75,11 @@ public static class GlobeLookLogic
 
     /// <summary>Screen radius of a view ray with impact parameter h (globe radius 1, camera at distance d), in disk radii; mirrors the formula of globe_atmosphere.gdshader.</summary>
     public static double ProjectedRadiusRatio(double h, double d) => h / Math.Sqrt(d * d - h * h) * Math.Sqrt(d * d - 1.0);
+
+    /// <summary>Largest N.L over the visible cap of the globe: the light is gamma degrees from the view axis, the visible points are at most acos(1/dist) from it.</summary>
+    public static double MaxLightDotOnVisibleCap(double gammaDeg, double dist)
+    {
+        double cap = Math.Acos(1.0 / dist) * 180.0 / Math.PI;
+        return Math.Cos(Math.Max(0.0, gammaDeg - cap) * Math.PI / 180.0);
+    }
 }
