@@ -21,11 +21,7 @@ $G --path . -- --bench --out bench-out      # automatic benchmark + screenshots,
 ## Data and assets (see `LICENSES.md`)
 Area icons and pictures (SVG) have one source: `docs/ui/assets/area-icons/` and `area-pictures/`. `assets/ui/` is a git-ignored copy that
 `run-globe-spike.sh` makes before the Godot import (so after editing an SVG, run the script; opening the project in the editor without it needs `cp -r` of the two folders into `assets/ui/` by hand).
-Committed because small: `assets/data/ne_50m_admin_0_countries_min.json` (derived from Natural Earth),
-`assets/models/*` (6 Kenney glb, 1 OpenGameArt obj).
-Regenerate the data: download
-`https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson`,
-keep per feature `NAME`, `ISO_A3_EH`, geometry rounded to 3 decimals.
+Committed because small: `assets/models/*` (6 Kenney glb, 1 OpenGameArt obj).
 
 ## Runtime requirements
 Godot 4.7.2 mono is a .NET 8 host; the game assembly and Core/Kernel/Session are net10.0, so the **.NET 10 runtime must be installed next to Godot** (the host rolls forward, see below). `run-globe-spike.sh` puts `$HOME/.dotnet` on PATH, imports assets and builds first.

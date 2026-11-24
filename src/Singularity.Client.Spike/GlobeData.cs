@@ -35,8 +35,8 @@ public sealed class GlobeData
     {
         Map = WorldMap.Load(repoRoot);
         RegionIds = Map.RasteriseRegions();
-        Ids = Map.OwnerRaster(RegionIds);
         if (Map.Owners.Length > 255 || Map.RegionIds.Length >= LutWidth) throw new InvalidOperationException("owner raster is 8-bit and the region table is 512 wide");
+        Ids = Map.OwnerRaster(RegionIds);
         Style = CountryPalette.Build(Map);
         var area = new long[Map.Owners.Length + 1];
         foreach (var o in Ids) area[o]++;

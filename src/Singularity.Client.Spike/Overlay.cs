@@ -68,7 +68,7 @@ public sealed partial class Overlay : Control
             var l = new Label { Visible = false, MouseFilter = MouseFilterEnum.Ignore };
             l.AddThemeFontOverride("font", Fonts.Map);
             l.AddThemeFontSizeOverride("font_size", 14);
-            l.AddThemeColorOverride("font_color", colony ? Ui.Ink2 : Ink);   // colony names in the second ink: they never compete with the powers
+            l.AddThemeColorOverride("font_color", Ink);   // colony names: same size and ink as the powers (A1); the hatching marks the status
             // A plate under the word (C5): sheet at 85 %, so that the text reads on every tone and the hatching never runs through it.
             l.AddThemeStyleboxOverride("normal", new StyleBoxFlat { BgColor = new Color(Ui.Sheet, 0.85f), ContentMarginLeft = 3, ContentMarginRight = 3, ContentMarginTop = 0, ContentMarginBottom = 0 });
             AddChild(l);
@@ -164,7 +164,7 @@ public sealed partial class Overlay : Control
                 var sp = _cam.UnprojectPosition(p);
                 var sz = s.Node.GetCombinedMinimumSize();
                 var rect = new Rect2(sp - sz * 0.5f, sz).Grow(3f);
-                bool hit = false;
+                bool hit = rect.Position.X < 8 || rect.Position.Y < 8 || rect.End.X > VpSize.X - 8 || rect.End.Y > VpSize.Y - 8;   // a label never sits on the screen edge (A9)
                 foreach (var o in placed) if (o.Intersects(rect)) { hit = true; break; }
                 if (hit) { s.Node.Visible = false; continue; }
                 placed.Add(rect);

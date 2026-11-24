@@ -9,7 +9,7 @@ render_mode unshaded, cull_back;
 uniform sampler2D ids : filter_nearest, repeat_disable;
 uniform sampler2D region_lut : filter_nearest, repeat_disable;
 uniform vec3 sea_color : source_color = vec3(0.827, 0.882, 0.894);
-uniform vec3 coast_color : source_color = vec3(0.494, 0.588, 0.612);
+uniform vec3 coast_color : source_color = vec3(0.13, 0.14, 0.15);   // one dark coast stroke for all land, L* <= 35
 uniform vec3 border_color : source_color = vec3(0.243, 0.235, 0.22);
 uniform vec3 grid_color : source_color = vec3(0.62, 0.72, 0.75);
 uniform vec3 ink : source_color = vec3(0.114, 0.118, 0.125);
@@ -63,12 +63,12 @@ void fragment() {
 	int hk = id == 0 ? 0 : hatch_kind(id);
 	if (show_hatch && hk != 0) {
 		bool occ = hk == 2;
-		float period = occ ? 6.0 : 8.0, width = occ ? 1.5 : 1.0;
+		float period = occ ? 7.0 : 8.0, width = 1.0;
 		vec2 q = FRAGCOORD.xy;
 		float s = ((occ ? q.x - q.y : q.x + q.y)) / 1.41421356;
 		float d = abs(fract(s / period) - 0.5) * period;
 		float h = 1.0 - smoothstep(width * 0.5 - 0.5, width * 0.5 + 0.5, d);
-		col = mix(col, hatch_line_of(id), h * 0.9 * fade);
+		col = mix(col, hatch_line_of(id), h * (occ ? 0.7 : 0.9) * fade);
 	}
 
 	if (look == 0) {
@@ -109,28 +109,30 @@ void fragment() {
 	float grid = 1.0 - smoothstep(0.0, 1.0, min(gd.x, gd.y));
 	col = mix(col, grid_color, grid * 0.6);
 
-	// borders: neighbours half a screen pixel away; thickness stays constant in pixels.
-	// Political border = owner differs (the coast included); faint line = another region of the same owner.
+	// Three line weights, drawn over the hatching (A4, A5, C2). Neighbours are probed a fixed number of screen pixels away.
+	// 1. coast (land against sea): one dark stroke for all land, independent of the fill; 2. border between powers: thick ink;
+	// 3. line between regions of one owner: thin and faint.
 	vec2 dx = dFdx(uv), dy = dFdy(uv);
-	float k = border_px * 0.5;
+	float k = border_px * 0.5, k2 = border_px * 1.1;
 	int nb[4] = int[4](id_at(uv + dx * k), id_at(uv - dx * k), id_at(uv + dy * k), id_at(uv - dy * k));
-	float cnt = 0.0, coast = 0.0, faint = 0.0; bool sl = false; bool sel_edge = false;
+	int nw[4] = int[4](id_at(uv + dx * k2), id_at(uv - dx * k2), id_at(uv + dy * k2), id_at(uv - dy * k2));
+	float coast = 0.0, faint = 0.0, power = 0.0; bool sl = false; bool sel_edge = false;
 	for (int i = 0; i < 4; i++) {
 		int o = owner_of(nb[i]);
 		if (o != own) {
-			cnt += 1.0;
 			if (nb[i] == 0 || id == 0) coast += 1.0;
 			if (is_slice(o) || is_slice(own)) sl = true;
 			if (o == selected_id) sel_edge = true;
 		} else if (nb[i] != id) faint += 1.0;
+		int ow = owner_of(nw[i]);
+		if (ow != own && nw[i] != 0 && id != 0) power += 1.0;
 	}
-	float a = (min(cnt * 0.5, 1.0) + faint * 0.25 * faint_border) * fade;
-	bool is_coast = coast > cnt * 0.5;
-	vec3 bc = is_coast ? coast_color : border_color;
-	if (cnt == 0.0 && faint > 0.0) bc = mix(border_color, col, 0.35);
-	if ((own == selected_id || sel_edge) && selected_id != 0 && cnt > 0.0) { bc = ink; a = min(1.0, a * 1.6); }
-	// slice powers: a stronger ink contour so that they read against the sea and the other tints
-	if (sl) { bc = ink; a = min(1.0, a * 2.4); }
-	col = mix(col, bc, a);
+	vec3 bc = border_color; float a = 0.0;
+	if (faint > 0.0) { bc = mix(border_color, col, 0.35); a = min(faint * 0.25, 1.0) * faint_border; }
+	if (power > 0.0) { bc = ink; a = min(power * 0.5, 1.0); }
+	if (coast > 0.0) { bc = coast_color; a = min(coast * 0.5 + 0.35, 1.0); }
+	if ((own == selected_id || sel_edge) && selected_id != 0 && power > 0.0) { bc = ink; a = 1.0; }
+	if (sl && power > 0.0) { bc = ink; a = 1.0; }
+	col = mix(col, bc, a * fade);
 	ALBEDO = col;
 }

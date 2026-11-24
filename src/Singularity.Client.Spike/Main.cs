@@ -24,7 +24,7 @@ public sealed partial class Main : Node3D
     float _yaw = 10, _pitch = 35, _dist = 3.0f;
     Vector2 _pressPos; bool _pressed, _dragged;
     int _selected;
-    bool _hatchScreenSpace = true;
+    bool _showHatch = true;
     readonly List<ShaderMaterial> _factoryMats = new();
     Node3D _chimney;
     readonly List<ShaderMaterial> _allObjMats = new();
@@ -650,8 +650,8 @@ public sealed partial class Main : Node3D
         else if (e is InputEventKey f1 && f1.Pressed && f1.Keycode == Key.F1 && _help != null) _help.Visible = !_help.Visible;
         else if (e is InputEventKey key && key.Pressed && key.Keycode == Key.H)
         {
-            _hatchScreenSpace = !_hatchScreenSpace;   // H: the status hatching on or off
-            _globeMat.SetShaderParameter("show_hatch", _hatchScreenSpace);
+            _showHatch = !_showHatch;   // H: the status hatching on or off
+            _globeMat.SetShaderParameter("show_hatch", _showHatch);
         }
     }
 
@@ -723,6 +723,7 @@ public sealed partial class Main : Node3D
         int ix = Array.IndexOf(_data.Map.RegionIds, "india_maharashtra");
         bool ok = ix >= 0 && _data.Map.Rows[ix].Owner == "GBR" && _data.Style.Regions[ix].Hatch == HatchKind.Colony && _data.Style.Regions[ix].Tone == CountryPalette.Fixed[1].Tone;
         GD.Print("MAPCHECK british_india owner=GBR colony hatch: " + (ok ? "PASS" : "FAIL"));
+        if (!ok) _shotFailed = true;
         _selected = 0; ApplySelection();
         _dist = 5f;
     }

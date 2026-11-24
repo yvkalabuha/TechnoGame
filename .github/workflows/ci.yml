@@ -89,7 +89,7 @@ jobs:
         run: python3 tools/map/ensure_geo.py
       - name: MapBuilder tests
         env:
-          SINGULARITY_GEO_OPTIONAL: ${{ steps.geo.outcome == 'success' && '' || '1' }}
+          SINGULARITY_GEO_OPTIONAL: ${{ steps.geo.outcome != 'success' && '1' || '' }}
         run: dotnet test tests/Singularity.MapBuilder.Tests -c Release
       - name: Determinism (two builds byte-identical, equal to committed tables)
         if: steps.map-cache.outputs.cache-hit == 'true' || steps.map-fetch.outcome == 'success'

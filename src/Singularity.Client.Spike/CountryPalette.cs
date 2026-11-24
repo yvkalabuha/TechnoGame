@@ -17,14 +17,14 @@ public readonly record struct RegionStyle(int Tone, HatchKind Hatch, int HatchTo
 public static class CountryPalette
 {
     /// <summary>Base fills tint.1..tint.12 (index 0..11).</summary>
-    public static readonly string[] Hex = { "B6DEBF", "FCD2DB", "F9BBAC", "B1D6F5", "EBE0B2", "ABDED8", "D3CEEC", "F6D7BD", "F2CC85", "D0DBBE", "E2C6E6", "CEC2B5" };
+    public static readonly string[] Hex = { "B6DEBF", "FCD2DB", "F9BBAC", "B1D6F5", "EBE0B2", "ABDED8", "D3CEEC", "F6D7BD", "EDD49E", "D0DBBE", "E2C6E6", "CEC2B5" };
     public const int Stone = 11;
 
     /// <summary>The five powers of the slice keep their tone (USA green, GBR pink, SUN terracotta, FRA blue, SWE yellow).</summary>
     public static readonly (string Code, int Tone)[] Fixed = { ("USA", 0), ("GBR", 1), ("SUN", 2), ("FRA", 3), ("SWE", 4) };
 
     // Neighbours must not share these pairs (CVD or base delta E below the limit, spec 3.5); 0-based tone indices.
-    static readonly (int, int)[] Forbidden = { (0, 9), (6, 10), (7, 9), (3, 6) };
+    static readonly (int, int)[] Forbidden = { (0, 9), (6, 10), (7, 9), (3, 6), (4, 8) };
     public static bool IsForbidden(int a, int b) => a == b || Forbidden.Any(p => (p.Item1 == a && p.Item2 == b) || (p.Item1 == b && p.Item2 == a));
 
     static readonly double[,] Delta = BuildDelta();

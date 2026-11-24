@@ -2,6 +2,26 @@ using Singularity.Client.Spike;
 
 namespace Singularity.MapBuilder.Tests;
 
+/// <summary>A fact that is skipped (not passed) only where CI has no pinned map sources (SINGULARITY_GEO_OPTIONAL=1 and no arcs.bin).</summary>
+public sealed class GeoFactAttribute : FactAttribute
+{
+    public GeoFactAttribute()
+    {
+        if (Environment.GetEnvironmentVariable("SINGULARITY_GEO_OPTIONAL") != "1") return;
+        for (var d = new DirectoryInfo(AppContext.BaseDirectory); d != null; d = d.Parent)
+            if (File.Exists(Path.Combine(d.FullName, "Singularity.sln")))
+            {
+                if (!File.Exists(Path.Combine(d.FullName, "mods/core/map/geo/arcs.bin"))) Skip = "geo/arcs.bin absent (optional in this CI run)";
+                return;
+            }
+    }
+}
+
+public sealed class GeoTheoryAttribute : TheoryAttribute
+{
+    public GeoTheoryAttribute() { var f = new GeoFactAttribute(); Skip = f.Skip; }
+}
+
 /// <summary>TASK-0138: the client's 1945 world map (regions from arcs.bin, owners from owners.yaml, palette assignment).</summary>
 public class WorldMapTests
 {
@@ -48,11 +68,10 @@ public class WorldMapTests
         new object[] { 32.5, 15.6, null!, "SDN_AE", "colony" },
     };
 
-    [Theory]
+    [GeoTheory]
     [MemberData(nameof(Places))]
     public void Raster_pixel_agrees_with_owners_yaml(double lon, double lat, string? region, string owner, string? status)
     {
-        if (World.Value == null) return;
         var (map, raster) = Need();
         int id = RegionAt(map, raster, lon, lat);
         Assert.NotEqual(0, id);
@@ -63,10 +82,9 @@ public class WorldMapTests
         Assert.Equal(map.RegionOwner[id - 1], map.Owners.ToList().IndexOf(owner) + 1);
     }
 
-    [Fact]
+    [GeoFact]
     public void Every_region_has_pixels_or_is_tiny_and_every_owner_row_is_known()
     {
-        if (World.Value == null) return;
         var (map, raster) = Need();
         Assert.Equal(379, map.RegionIds.Length);
         var seen = new HashSet<int>(raster.Where(r => r != 0).Select(r => (int)r));
@@ -75,10 +93,9 @@ public class WorldMapTests
         Assert.All(map.Rows.Where(r => r.Owner != ""), r => Assert.Contains(map.Polities, p => p.Id == r.Owner));
     }
 
-    [Fact]
+    [GeoFact]
     public void Binding_mismatch_is_a_loud_error()
     {
-        if (World.Value == null) return;
         var tmp = Path.Combine(Path.GetTempPath(), "geo-binding-" + Guid.NewGuid().ToString("N"));
         try
         {
@@ -111,10 +128,9 @@ public class WorldMapTests
         finally { Directory.Delete(tmp, true); }
     }
 
-    [Fact]
+    [GeoFact]
     public void Palette_is_deterministic_fixes_the_five_powers_and_keeps_neighbours_apart()
     {
-        if (World.Value == null) return;
         var (map, _) = Need();
         var a = CountryPalette.Build(map); var b = CountryPalette.Build(map);
         Assert.Equal(a.CodeTone, b.CodeTone);
@@ -133,10 +149,9 @@ public class WorldMapTests
         Assert.True(a.CodeTone.Distinct().Count() >= 10, "tones used: " + a.CodeTone.Distinct().Count());
     }
 
-    [Fact]
+    [GeoFact]
     public void Status_is_drawn_by_hatch_and_not_by_colour_alone()
     {
-        if (World.Value == null) return;
         var (map, _) = Need();
         var st = CountryPalette.Build(map);
         int Ix(string id) => Array.IndexOf(map.RegionIds, id);
@@ -167,5 +182,15 @@ public class WorldMapTests
         for (int i = 0; i < CountryPalette.Hex.Length; i++)
             if (i != 3)   // FRA blue is fixed by the brief and is told apart by its ink contour
                 Assert.True(ColorMath.DeltaE2000(ColorMath.FromHex(CountryPalette.Hex[i]), sea) >= 9, "tone " + (i + 1) + " is too close to the sea");
+    }
+
+    [Fact]
+    public void Borders_are_drawn_above_the_hatching_and_coast_is_one_dark_stroke()
+    {
+        var src = File.ReadAllText(Path.Combine(RepoRoot(), "src/Singularity.Client.Spike/shaders/globe.gdshader"));
+        int hatch = src.IndexOf("col = mix(col, hatch_line_of", StringComparison.Ordinal);
+        int line = src.IndexOf("col = mix(col, bc, a * fade)", StringComparison.Ordinal);
+        Assert.True(hatch > 0 && line > hatch, "the border and coast lines must be mixed after the hatching");
+        Assert.Contains("vec3 coast_color : source_color = vec3(0.13, 0.14, 0.15)", src);   // dark for every fill, L* <= 35
     }
 }
