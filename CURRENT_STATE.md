@@ -31,6 +31,7 @@
 - TASK-0152 [APPROVED] Player levers core: licence market (multi-licence state, seller catalogue, BuyLicence, AdoptLicensedDesign, AI price rule, selling own projects) (developer)
 - TASK-0153 [APPROVED] Player levers core: AI adviser for the player country production (no AI opening or closing of player lines) (developer)
 - TASK-0156 [APPROVED] Player levers client: research goals, budget in money with reserve, production line window, licence market window (developer)
+- TASK-0157 [APPROVED] Node content: effects in numbers and short history with sources for all 99 knowledge nodes (#486) (research-scientist)
 <!-- registry:active:end -->
 
 ## Блокеры

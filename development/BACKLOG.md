@@ -172,6 +172,7 @@
 | [TASK-0154](../development/tasks/TASK-0154-alliances-data.md) | REVIEW | Data: alliances and blocs by year 1945-2030 for the licence buyer circle | MS-M05 |
 | [TASK-0155](../development/tasks/TASK-0155-dollars-1990-series.md) | REVIEW | Data: constant 1990 US dollar display series and conversion from Core money unit | MS-M05 |
 | [TASK-0156](../development/tasks/TASK-0156-levers-client-windows.md) | APPROVED | Player levers client: research goals, budget in money with reserve, production line window, licence market window | MS-M05 |
+| [TASK-0157](../development/tasks/TASK-0157-node-effects-history.md) | APPROVED | Node content: effects in numbers and short history with sources for all 99 knowledge nodes (#486) | MS-M05 |
 
 ## Гипотезы
 
