@@ -69,7 +69,7 @@ public sealed partial class TechTree : Control
         top.AddChild(_viewSwitch);
         var reset = Ui.Btn("tree.reset", ResetView); reset.CustomMinimumSize = new Vector2(0, SubpanelButtonDu);
         var close = Ui.Btn("tree.close", () => Closed?.Invoke()); close.CustomMinimumSize = new Vector2(0, SubpanelButtonDu);
-        close.AddThemeStyleboxOverride("normal", Ui.Box(Ui.Command, Ui.Ink, 2, 10));   // always in view, the one framed main button of the sheet
+        close.AddThemeStyleboxOverride("normal", Ui.Box(Ui.Sheet, Ui.Ink, 3, 10));   // a heavy 3 du frame: always in view, dark text stays legible
         top.AddChild(reset); top.AddChild(close);
         AddChild(_view);
         _view.Draw += PaintView;

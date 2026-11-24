@@ -150,9 +150,9 @@ public sealed partial class Main
         W(0.1, () => _signal.SetSpeed(1));
         Vector2 mk = default;
         W(0.3, () => { mk = _signal.Clock.ButtonRect(TimeControl.Kind.Faster).GetCenter(); Mouse(mk, null); Mouse(mk, true); Mouse(mk, false); });
-        W(0.5, () => TimeCheck(_host.Speed == 3 && _signal.Clock.HasButtonFocus(TimeControl.Kind.Faster) && !_signal.Clock.RingShown(TimeControl.Kind.Faster) && _signal.Clock.KeyTipRect.Size.X == 0, $"after a click faster has focus, no ring, no key tip (speed {_host.Speed})"));
+        W(0.5, () => TimeCheck(_host.Speed == 2 && _signal.Clock.HasButtonFocus(TimeControl.Kind.Faster) && !_signal.Clock.RingShown(TimeControl.Kind.Faster) && _signal.Clock.KeyTipRect.Size.X == 0, $"after a click faster has focus, no ring, no key tip (speed {_host.Speed})"));
         W(0.1, () => { PressKey(Key.Shift); PressKey(Key.Shift, false); });
-        W(0.5, () => { var tip = _signal.Clock.KeyTipRect; TimeCheck(_signal.Clock.RingShown(TimeControl.Kind.Faster) && tip.Size.X > 0 && _signal.Clock.KeyTipText.Contains(Loc.T("time.gauge.name", Loc.T("speed.week"))), $"mouse to keyboard on the focused faster button: ring {_signal.Clock.RingShown(TimeControl.Kind.Faster)}, key tip {tip.Size.X > 0}, text {_signal.Clock.KeyTipText.Replace('\n', '|')}"); Mouse(new Vector2(1100, 700), null); });
+        W(0.5, () => { var tip = _signal.Clock.KeyTipRect; TimeCheck(_signal.Clock.RingShown(TimeControl.Kind.Faster) && tip.Size.X > 0 && _signal.Clock.KeyTipText.Contains(Loc.T("time.gauge.name", Loc.T("speed.days3"))), $"mouse to keyboard on the focused faster button: ring {_signal.Clock.RingShown(TimeControl.Kind.Faster)}, key tip {tip.Size.X > 0}, text {_signal.Clock.KeyTipText.Replace('\n', '|')}"); Mouse(new Vector2(1100, 700), null); });
         W(0.1, () => _signal.SetSpeed(3));
         // A mouse click leaves the focus but no ring and no key tip; a second click resumes.
         Vector2 pc = default;
