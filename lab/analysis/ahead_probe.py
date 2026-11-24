@@ -8,6 +8,7 @@ years against the targets, the chain-only shifts C1/C2, the G2-G4 APP side shift
 Usage: python3 lab/analysis/ahead_probe.py --a MATRIX PRINT --b MATRIX PRINT [--json OUT]
 """
 import argparse
+import csv
 import json
 import os
 import sys
@@ -32,6 +33,51 @@ def first_years(out, node):
         t = o["first"].get(node)
         ys.append(year_of(t) if t is not None and t >= 0 else NEVER)
     return ys
+
+
+def provenance(mdir):
+    """Build and data identity of a matrix: one value per field over its ok runs, else a list of problems (Codex review, train 2)."""
+    vals, problems, dirty = {}, [], []
+    runs = [r for r in rows_csv(os.path.join(mdir, "runs.csv")) if r["status"] == "ok"]
+    for r in runs:
+        with open(os.path.join(mdir, "runs", r["run"], "run.json")) as f:
+            info = json.load(f)
+        mi = info.get("model_info", {})
+        rec = dict(model=info.get("model"), core_commit=info.get("core_commit"), build_commit=info.get("build_commit"),
+                   test_api_version=mi.get("test_api_version"), scenario_hash=mi.get("scenario_hash"), data_hash=mi.get("data_hash"))
+        if info.get("dirty") is not False:
+            dirty.append(r["run"])
+        for k, v in rec.items():
+            vals.setdefault(k, set()).add(v)
+    prov = {"dirty_runs": len(dirty)}
+    for k, s in vals.items():
+        if len(s) != 1:
+            problems.append(f"{k} differs within the matrix: {sorted(map(str, s))}")
+        prov[k] = sorted(map(str, s))[0]
+    return prov, problems
+
+
+def cross_check(provs, same_data, other_data, same_build=True):
+    """provs: name -> provenance. Every matrix must share the model, Session surface and scenario (and, with same_build, the core and build
+    commits); the names in each group of same_data must have one data_hash; the pairs of other_data must differ (the chains axis)."""
+    problems = []
+    keys = ["model", "test_api_version", "scenario_hash"] + (["core_commit", "build_commit"] if same_build else [])
+    for k in keys:
+        s = {n: p[k] for n, p in provs.items()}
+        if len(set(s.values())) != 1:
+            problems.append(f"{k} differs between matrices: {s}")
+    for group in same_data:
+        if len({provs[n]["data_hash"] for n in group}) != 1:
+            problems.append(f"data_hash differs between {group}: {[provs[n]['data_hash'] for n in group]}")
+    for a, b in other_data:
+        if provs[a]["data_hash"] == provs[b]["data_hash"]:
+            problems.append(f"{a} and {b} have the same data_hash (the chains axis needs two data sets)")
+    return problems
+
+
+def rows_csv(path):
+    with open(path, newline="") as f:
+        return list(csv.DictReader(f))
 
 
 def axis(mdir, pdir):
@@ -63,10 +109,11 @@ def main():
         allv += [f"{lab} {x}" for x in val]
         first = next(iter(res.values()))[0]["x"]
         print(f"{lab}: core_commit={first['core']} data_hash={dh} manifest_hash={first['manifest_hash']} points={list(res)} seeds={[o['seed'] for o in next(iter(res.values()))]}")
-    if data["A"]["off"][0]["x"]["data_hash"] == data["B"]["off"][0]["x"]["data_hash"]:
-        allv.append("A and B have the same data_hash")
-    if "S" in data and data["S"]["off_s080"][0]["x"]["data_hash"] != data["B"]["off"][0]["x"]["data_hash"]:
-        allv.append("S data_hash differs from B")
+    provs = {lab: provenance(m)[0] for lab, (m, _) in axes}
+    allv += [f"{lab} {x}" for lab, (m, _) in axes for x in provenance(m)[1]]
+    allv += cross_check(provs, same_data=[["B", "S"]] if "S" in provs else [], other_data=[("A", "B")])
+    # dirty = some tracked file differed from HEAD (any file, docs and lab/analysis included); build_commit and data_hash pin what ran, so it is printed, not fatal
+    print("dirty runs per matrix:", {lab: p["dirty_runs"] for lab, p in provs.items()})
     print("VALIDITY:", "OK" if not allv else "FAIL " + " | ".join(allv))
 
     summary = {}
