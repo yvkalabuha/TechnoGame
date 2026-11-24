@@ -158,4 +158,14 @@ public class WorldMapTests
         for (int i = 0; i < 12; i++) for (int j = i + 1; j < 12; j++) if (CountryPalette.DeltaE(i, j) < 8) low.Add((i + 1, j + 1));
         Assert.All(low, p => Assert.True(CountryPalette.IsForbidden(p.Item1 - 1, p.Item2 - 1), "pair below 8 not forbidden: " + p));
     }
+
+    [Fact]
+    public void No_tone_blends_into_the_sea()
+    {
+        // The first frame showed China in a cyan-grey tone that read as sea; every tone must stay clear of the sea fill.
+        var sea = ColorMath.FromHex("BBDDE8")   /* the lit sea as rendered in the 1920x1080 frames */;
+        for (int i = 0; i < CountryPalette.Hex.Length; i++)
+            if (i != 3)   // FRA blue is fixed by the brief and is told apart by its ink contour
+                Assert.True(ColorMath.DeltaE2000(ColorMath.FromHex(CountryPalette.Hex[i]), sea) >= 9, "tone " + (i + 1) + " is too close to the sea");
+    }
 }

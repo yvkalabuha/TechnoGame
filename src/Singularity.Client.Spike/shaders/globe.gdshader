@@ -124,7 +124,7 @@ void fragment() {
 			if (o == selected_id) sel_edge = true;
 		} else if (nb[i] != id) faint += 1.0;
 	}
-	float a = (cnt * 0.25 + faint * 0.25 * faint_border) * fade;
+	float a = (min(cnt * 0.5, 1.0) + faint * 0.25 * faint_border) * fade;
 	bool is_coast = coast > cnt * 0.5;
 	vec3 bc = is_coast ? coast_color : border_color;
 	if (cnt == 0.0 && faint > 0.0) bc = mix(border_color, col, 0.35);

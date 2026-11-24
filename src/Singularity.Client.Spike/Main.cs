@@ -719,6 +719,10 @@ public sealed partial class Main : Node3D
         _globeMat.SetShaderParameter("dim_others", 0f);
         foreach (var c in _data.Countries.Where(c => Names.Country(c.Name) != null)) _overlay.AddLabel(c, Names.CountryOfActor.ContainsValue(c.Name));
         foreach (var c in _data.ColonyLabels) if (Names.Country(c.Name) != null) _overlay.AddLabel(c, false, true);
+        // Run-time check on the loaded 1945 state: British India is drawn as a UK-owned colony (hatched, tone of the metropole).
+        int ix = Array.IndexOf(_data.Map.RegionIds, "india_maharashtra");
+        bool ok = ix >= 0 && _data.Map.Rows[ix].Owner == "GBR" && _data.Style.Regions[ix].Hatch == HatchKind.Colony && _data.Style.Regions[ix].Tone == CountryPalette.Fixed[1].Tone;
+        GD.Print("MAPCHECK british_india owner=GBR colony hatch: " + (ok ? "PASS" : "FAIL"));
         _selected = 0; ApplySelection();
         _dist = 5f;
     }
