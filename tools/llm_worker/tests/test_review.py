@@ -252,6 +252,22 @@ class RunTest(unittest.TestCase):
         # (runs dir of run_review is the same one)
         self.assertIn("Do not repeat", got[0].split("=== TASK")[0])
 
+    def test_repeated_rejection_without_reason_keeps_reason(self):
+        path, _, _ = self.run_review("deepseek", make_provider=lambda: FakeProvider([GOOD]))
+        review.mark_finding(path, 1, False, "why")
+        review.mark_finding(path, 1, False)
+        self.assertEqual(json.loads(review.confirm_path(path).read_text())["reasons"], {"1": "why"})
+
+    def test_rejected_block_never_exceeds_input_limit(self):
+        items = [{"path": "p:1", "claim": "c" * 200, "reason": f"r{i}" * 50} for i in range(10)]
+        parts = ["x" * 1000]
+        fence = review._fit_rejected(items, parts, 1000 + 2 + 1200, 10 ** 6)
+        self.assertLessEqual(len(parts[0]) + 2 + len(fence.encode()), 1000 + 2 + 1200)
+        self.assertIn("older rejected findings omitted", fence)
+        self.assertIn("r9", fence)  # newest kept
+        self.assertNotIn("r0r0", fence)  # oldest dropped
+        self.assertIsNone(review._fit_rejected(items, parts, 1000, 10 ** 6))
+
     def test_first_review_has_no_rejected_block(self):
         got = []
 

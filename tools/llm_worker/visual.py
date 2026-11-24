@@ -33,7 +33,7 @@ PNG = b"\x89PNG\r\n\x1a\n"
 SYSTEM = (
     "You are an independent reviewer of game UI screenshots (1920x1080, 100 % scale). Judge each frame against "
     "the criteria below (C1-C8 clarity, A1-A12 accessibility). Do not pass or fail the task: give your opinion "
-    "(pass, fail or mixed) and concrete findings. Each finding names the criterion id, the frame file name, "
+    "(pass, fail or mixed) and concrete findings. Each finding names the criterion id, the frame name exactly as given, "
     "the place on the frame, a severity and a fix. Report only what you can see; do not invent defects."
 )
 
@@ -144,10 +144,19 @@ def default_roots():
     roots = []
     for r, inside_repo in ((Path(config.SHOTS_DIR), False), (Path(config.CLIENT_SHOTS_DIR), True)):
         real = r.resolve()
-        if r.is_symlink() or (inside_repo and Path(config.REPO_ROOT).resolve() not in real.parents):
+        # a symlinked ancestor must not redirect the client root: it has to resolve to the expected place
+        if r.is_symlink() or (inside_repo and real != Path(config.REPO_ROOT).resolve() / config.CLIENT_SHOTS_REL):
             continue
         roots.append(real)
     return roots
+
+
+def frame_name(p):
+    """Repo-relative path, so frames of the two roots with the same file name stay distinct; the file name outside the repo."""
+    try:
+        return p.relative_to(Path(config.REPO_ROOT).resolve()).as_posix()
+    except ValueError:
+        return p.name
 
 
 def load_frames(frames, shots_dir=None, allow_small=False):
@@ -178,7 +187,7 @@ def load_frames(frames, shots_dir=None, allow_small=False):
         if not allow_small and (wh[0] < MIN_SIZE[0] or wh[1] < MIN_SIZE[1]):
             raise VisualError("bad_frame", f"{f}: {wh[0]}x{wh[1]} is smaller than {MIN_SIZE[0]}x{MIN_SIZE[1]} "
                                            "(use --allow-small to send it anyway)")
-        out.append((p.name, mime, data))
+        out.append((frame_name(p), mime, data))
     return out
 
 

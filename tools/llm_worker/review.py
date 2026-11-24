@@ -137,7 +137,9 @@ def build_review_input(task_id, base, head, root=config.REPO_ROOT, max_bytes=MAX
                 raise ReviewError("bad_input", f"required rule file missing in git: {rel}")
             parts.append(_fence(f"RULES {_q(rel)}", text))
     if rejected:
-        parts.append(_fence("PREVIOUSLY REJECTED FINDINGS", rejected_block(rejected)))
+        block = _fit_rejected(rejected, parts, max_bytes, max_work_bytes - extra if codex_mode else max_bytes)
+        if block:
+            parts.append(block)
     text = "\n\n".join(parts)
     if len(text.encode()) > max_bytes:
         raise ReviewError("input_too_large", f"{len(text.encode())} bytes > {max_bytes}")
@@ -275,7 +277,7 @@ def mark_finding(record_path, number, confirmed, reason=None):
     reasons = old_reasons
     if reason:
         reasons[str(number)] = reason
-    else:
+    elif confirmed:  # a repeated rejection without --reason keeps the earlier reason
         reasons.pop(str(number), None)
     body = {"confirmed": marks}
     if reasons:
@@ -319,6 +321,22 @@ def rejected_findings(runs_dir, task_id, log=print):
             log(f"warning: rejected findings of {rec_path.name} skipped ({type(e).__name__})")
     found.sort(key=lambda t: t[:3])
     return [t[3] for t in found[-MAX_REJECTED:]]
+
+
+def _fit_rejected(items, parts, max_bytes, work_room):
+    """The rejected-findings fence, or None. It must never push a fitting diff over the input limits:
+    the oldest items are dropped first and the number dropped is noted."""
+    room = min(max_bytes, work_room) - len("\n\n".join(parts).encode()) - 2
+    for start in range(len(items) + 1):
+        kept = items[start:]
+        body = rejected_block(kept)
+        if start:
+            body = f"({start} older rejected findings omitted for size)" + ("\n" + body if kept else "")
+        if kept or start:
+            fence = _fence("PREVIOUSLY REJECTED FINDINGS", body)
+            if len(fence.encode()) <= room:
+                return fence
+    return None
 
 
 def rejected_block(items):
