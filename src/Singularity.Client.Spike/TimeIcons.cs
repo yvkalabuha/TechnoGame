@@ -45,7 +45,7 @@ public sealed partial class TimeControl : HBoxContainer
 
         public override void _GuiInput(InputEvent e)
         {
-            if (e is InputEventMouseButton { Pressed: true }) { _mouseFocus = true; FocusLost?.Invoke(); QueueRedraw(); }
+            if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) { _mouseFocus = true; FocusLost?.Invoke(); QueueRedraw(); }
             else if (e is InputEventKey { Pressed: true }) { _mouseFocus = false; QueueRedraw(); if (HasFocus()) KeyFocused?.Invoke(this); }   // mouse to keyboard on the focused button: ring and key tip return
         }
 

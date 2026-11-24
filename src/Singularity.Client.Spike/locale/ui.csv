@@ -394,7 +394,7 @@ ui.menu.load.why,Loading is not ready yet,Загрузка пока не гот�
 ui.menu.save.why.notready,Saving is not ready yet,Сохранение пока не готово
 ui.menu.save.why.nogame,No game started,Нет начатой игры
 menu.reason.nogame,No game running,Нет игры
-legend.goal,Goal (double frame),Цель (двойная рамка)
+legend.goal,"Goal (double frame, node shape)",Цель (двойная рамка по форме)
 legend.links,Links of the selected node,Связи выбранного узла
 ui.tree.anchor.tip.est,"The year is an estimate (an orientation point in history), not a documented date","Год оценочный (ориентир по истории), а не документированная дата"
 ui.tree.anchor.est,Historical date (estimate): {0}{1},Историческая дата (оценка): {0}{1}

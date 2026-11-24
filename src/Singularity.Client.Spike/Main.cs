@@ -1017,6 +1017,27 @@ public sealed partial class Main : Node3D
                 }
                 Q(0.2, () => { _tree.Select(-1); _tree.ResetView(); _tree.Visible = false; });
             }
+            // Keyboard walk (TASK-0132, A6-A8) on the live session: real Tab key events reach the focused tree; the ring and the key tip show, Enter opens the node panel.
+            {
+                int kbRow = -1;
+                Q(0.4, () => OpenTree(0));
+                Q(0.3, () => { int row = _tree.FrontierRow >= 0 ? _tree.FrontierRow : _tree.GoalRow; _tree.Select(-1); _tree.ShotZoom(2.4f, row); _tree.GrabFocus(); PressKey(Key.Tab); PressKey(Key.Tab, false); });
+                Q(0.5, () =>
+                {
+                    kbRow = _tree.KeyFocusRow; string tip = _tree.KeyTipText;
+                    bool ok = kbRow >= 0 && tip != null && tip.Contains("№");
+                    _shotLog += $"tree keyboard{sfx}: Tab -> row {kbRow}, tip '{tip}': {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree keyboard: Tab did not put the ring and the key tip on a node");
+                    SaveShot($"tree_key_tip{sfx}.png", null, scale == 100);
+                    PressKey(Key.Enter); PressKey(Key.Enter, false);
+                });
+                Q(0.5, () =>
+                {
+                    bool ok = kbRow >= 0 && _tree.SelectedRow == kbRow;
+                    _shotLog += $"tree keyboard{sfx}: Enter -> selected row {_tree.SelectedRow}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree keyboard: Enter did not select the focused node");
+                    SaveShot($"tree_key_enter{sfx}.png");
+                    _tree.Select(-1); _tree.ResetView(); _tree.Visible = false;
+                });
+            }
             // The rail in its states: all normal, then an alarm on Finance and a warning "9+" on Production, narrow and wide (spec task-0117-rail-and-legend §4).
             Q(0.5, () => { SaveShot($"rail_narrow_normal{sfx}.png"); RunT6($"rail narrow normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });
             Q(0.5, () => { SaveShot($"rail_narrow_badges{sfx}.png"); RunT6($"rail narrow badges{sfx}", true); LogCheck(_rail.BadgeFitLog()); _pinBadges = Array.Empty<(AreaId, int, int)>(); ToggleRail(); });

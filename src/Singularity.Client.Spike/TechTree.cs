@@ -58,7 +58,8 @@ public sealed partial class TechTree : Control
     public TechTree(SimHost host)
     {
         _host = host; _cv = this;
-        MouseFilter = MouseFilterEnum.Stop;
+        MouseFilter = MouseFilterEnum.Stop; FocusMode = FocusModeEnum.All;   // keyboard walk over the nodes (TASK-0132)
+        FocusEntered += Redraw; FocusExited += Redraw;
 
         var top = new HBoxContainer { Position = new Vector2(14, 8) };
         top.AddThemeConstantOverride("separation", 4);
@@ -103,7 +104,7 @@ public sealed partial class TechTree : Control
         TreeExiting += () => Loc.Changed -= Invalidate;
     }
 
-    void Invalidate() { _insetDirty = true; _lgDirty = true; _legendBtn.Text = "L  " + Loc.T("legend.btn"); Redraw(); }
+    void Invalidate() { _kbTipFor = -1; _insetDirty = true; _lgDirty = true; _legendBtn.Text = "L  " + Loc.T("legend.btn"); Redraw(); }
     void Redraw() { QueueRedraw(); _view.QueueRedraw(); }
 
     public void ResetView() { _zoomTarget = 1f; _anchor = BaseCentre; _pan = Vector2.Zero; Redraw(); }
@@ -139,11 +140,12 @@ public sealed partial class TechTree : Control
         return "no view of the Icons level shows all six node types";
     }
     public int GoalRow => _goal;
+    public int SelectedRow => _selected;
     public int FrontierRow { get { for (int i = 0; _state != null && i < _state.Length; i++) if (_state[i] == St.Frontier && _route[i]) return i; return -1; } }
 
     public void ShowFor(int actor, int mode)
     {
-        _actor = actor; _modelDirty = true; _insetDirty = true; _mode = mode; _viewSwitch.Select(mode, false); _focus.Clear(); _selected = -1; Visible = true;
+        _actor = actor; _modelDirty = true; _insetDirty = true; _mode = mode; _viewSwitch.Select(mode, false); _focus.Clear(); _selected = -1; _kb = -1; _kbActive = false; Visible = true; CallDeferred(Control.MethodName.GrabFocus);   // Tab and the arrows work at once
     }
     public void SetMode(int mode) { _mode = mode; _viewSwitch.Select(mode, false); Redraw(); }
     /// <summary>Lowest edge of the goal panel: above the open legend sheet, else the bottom margin.</summary>
@@ -488,6 +490,7 @@ public sealed partial class TechTree : Control
 
         for (int i = 0; i < nodes.Count; i++) DrawNode(i);
         DrawLabels(c);
+        DrawKeyFocus();
     }
 
     // Clock: 1910 → 2100 around the circle, the hand shows the session date; G1–G4 arcs and the P10–P90 interval have no data (not drawn).
@@ -675,8 +678,8 @@ public sealed partial class TechTree : Control
     void DrawLabels(Vector2 c)
     {
         var nodes = _host.Data.Nodes;
-        var occupied = new List<Rect2>();
-        float hr = NR + 3; for (int i = 0; i < nodes.Count; i++) occupied.Add(new Rect2(PosOf(i) - new Vector2(hr, hr), new Vector2(hr * 2, hr * 2)));
+        var occupied = _lbOccupied; occupied.Clear();
+        for (int i = 0; i < nodes.Count; i++) { float hr = i == _selected ? SelKeepOut(i) : NR + 3; occupied.Add(new Rect2(PosOf(i) - new Vector2(hr, hr), new Vector2(hr * 2, hr * 2))); }   // the selected node keeps its ring (and the goal frame) clear
         occupied.Add(new Rect2(c - new Vector2(Unit * 0.7f, Unit * 0.7f), new Vector2(Unit * 1.4f, Unit * 1.4f)));
         for (int w = 0; w < 5; w++)   // wedge names
         {
@@ -686,29 +689,28 @@ public sealed partial class TechTree : Control
         // The route is an obstacle too, so that no label sits on it.
         for (int k = 0; k + 1 < _path.Count; k++) { var ch = Channel(_path[k], _path[k + 1]); for (int j = 0; j + 1 < ch.Count; j++) AddSegment(occupied, ch[j], ch[j + 1], 3f); }
         if (_labelText == null || _labelText.Length != nodes.Count) _labelText = new string[nodes.Count]; else Array.Clear(_labelText);
-        var order = new List<int>();
+        var order = _lbOrder; order.Clear();
         void Add(int i) { if (i >= 0 && !order.Contains(i)) order.Add(i); }
+        var byNum = RowsByNumber(nodes.Number);
         Add(_selected); Add(_goal); Add(_root);
-        foreach (int i in Enumerable.Range(0, nodes.Count).Where(i => _route[i] && _state[i] != St.Unavailable).OrderBy(i => nodes.Number[i])) Add(i);
-        foreach (int i in Enumerable.Range(0, nodes.Count).Where(i => _state[i] == St.Frontier).OrderBy(i => nodes.Number[i])) Add(i);
-        if (CurLod == Lod.Icons) foreach (int i in Enumerable.Range(0, nodes.Count).OrderBy(i => nodes.Number[i])) Add(i);
+        foreach (int i in byNum) if (_route[i] && _state[i] != St.Unavailable) Add(i);
+        foreach (int i in byNum) if (_state[i] == St.Frontier) Add(i);
+        if (CurLod == Lod.Icons) foreach (int i in byNum) Add(i);
         var area = Area;
-        var hard = new List<Rect2>();
+        var hard = _lbHard; hard.Clear();
         for (int w = 0; w < 5; w++) { hard.Add(WedgeLabel(w).rect.Grow(2)); hard.Add(_sumRects[w].Grow(2)); }
         hard.AddRange(_countRects);
-        var placed = new Dictionary<int, (Rect2 pad, Rect2 rc, string text, FontKind kind, float h)>();
+        var placed = _lbPlaced; placed.Clear();
         bool Place(int i, string text, FontKind kind, bool far = false, bool force = false)
         {
-            var p = PosOf(i); float o = NR + 6;
+            var p = PosOf(i); float o = i == _selected ? SelKeepOut(i) + 3 : NR + 6;
             var sz = Ui.FontOf(kind).GetStringSize(text, HorizontalAlignment.Left, -1, 14);
             // near places first, then farther ones (so that the goal and the selected node always find a free spot)
-            var cands = new[]
-            {
-                new Rect2(p + new Vector2(o, -sz.Y * 0.5f), sz), new Rect2(p + new Vector2(-o - sz.X, -sz.Y * 0.5f), sz),
-                new Rect2(p + new Vector2(-sz.X * 0.5f, o), sz), new Rect2(p + new Vector2(-sz.X * 0.5f, -o - sz.Y), sz),
-                new Rect2(p + new Vector2(o + 2, o + 2), sz), new Rect2(p + new Vector2(-o - 2 - sz.X, o + 2), sz),
-                new Rect2(p + new Vector2(o + 2, -o - 2 - sz.Y), sz), new Rect2(p + new Vector2(-o - 2 - sz.X, -o - 2 - sz.Y), sz),
-            };
+            var cands = _lbCands;
+            cands[0] = new Rect2(p + new Vector2(o, -sz.Y * 0.5f), sz); cands[1] = new Rect2(p + new Vector2(-o - sz.X, -sz.Y * 0.5f), sz);
+            cands[2] = new Rect2(p + new Vector2(-sz.X * 0.5f, o), sz); cands[3] = new Rect2(p + new Vector2(-sz.X * 0.5f, -o - sz.Y), sz);
+            cands[4] = new Rect2(p + new Vector2(o + 2, o + 2), sz); cands[5] = new Rect2(p + new Vector2(-o - 2 - sz.X, o + 2), sz);
+            cands[6] = new Rect2(p + new Vector2(o + 2, -o - 2 - sz.Y), sz); cands[7] = new Rect2(p + new Vector2(-o - 2 - sz.X, -o - 2 - sz.Y), sz);
             bool Try(Rect2 rc, bool ignoreOthers = false, bool leaderCheck = true)
             {
                 var pad = rc.Grow(2);
@@ -760,8 +762,10 @@ public sealed partial class TechTree : Control
             else Place(i, "№" + nodes.Number[i], FontKind.Mono);
         }
         // Drawn from the lowest priority to the highest, so that a named node's plate is always on top.
-        foreach (int i in order.OrderByDescending(i => LabelGeometry.Rank(NamedNode(i), _route[i], _state[i] == St.Frontier)))
+        for (int rank = 3; rank >= 0; rank--)
+        foreach (int i in order)
         {
+            if (LabelGeometry.Rank(NamedNode(i), _route[i], _state[i] == St.Frontier) != rank) continue;
             if (!placed.TryGetValue(i, out var pl)) continue;
             _labelRects.Add(pl.pad);
             _labelText[i] = pl.text;
@@ -788,6 +792,19 @@ public sealed partial class TechTree : Control
     }
 
     static readonly float[] FarRings = { 28, 60, 100 };
+    // Per-frame scratch of DrawLabels (reused, so a redraw allocates no lists).
+    readonly List<Rect2> _lbOccupied = new(), _lbHard = new(); readonly List<int> _lbOrder = new();
+    readonly Dictionary<int, (Rect2 pad, Rect2 rc, string text, FontKind kind, float h)> _lbPlaced = new();
+    readonly Rect2[] _lbCands = new Rect2[8];
+    int[] _byNumber;
+    int[] RowsByNumber(System.Collections.Immutable.ImmutableArray<int> num)
+    {
+        int n = num.Length;
+        if (_byNumber == null || _byNumber.Length != n) { _byNumber = new int[n]; for (int i = 0; i < n; i++) _byNumber[i] = i; Array.Sort(_byNumber, (a, b) => num[a].CompareTo(num[b])); }
+        return _byNumber;
+    }
+    /// <summary>Half-size of the box around the selected node that labels keep clear: outside its ring, and outside the goal frame when it is the goal as well (ring r + 12.5).</summary>
+    float SelKeepOut(int i) => Math.Max(NR + 3, MarkRadius(_host.Data.Nodes.Type[i]) + 15);
     bool NamedNode(int i) => i == _selected || i == _goal || i == _root;
 
     bool LabelNeedsLeader(int i, Rect2 rc)
@@ -1001,8 +1018,10 @@ public sealed partial class TechTree : Control
         void Walk(Node n) { if (n is RootMarkIcon) rootIcon = true; foreach (var c in n.GetChildren()) Walk(c); }
         Walk(_insetBox);
         if (_root >= 0 && !rootIcon) bad.Add("the root has no mark in the panel");
-        if (Array.IndexOf(_state, St.Unavailable) < 0) bad.Add("no unknown node");
-        if (Array.IndexOf(_state, St.Frontier) < 0) bad.Add("no frontier node");
+        bool unk = false, fr = false;   // counted in the visible area, not in the model
+        for (int i = 0; i < _state.Length; i++) { if (!Area.HasPoint(PosOf(i))) continue; unk |= _state[i] == St.Unavailable; fr |= _state[i] == St.Frontier; }
+        if (!unk) bad.Add("no unknown node in view");
+        if (!fr) bad.Add("no frontier node in view");
         return bad.Count == 0 ? null : string.Join("; ", bad);
     }
     public string ShotPanelInfo => $"panel {PanelRect}, scroll max {_insetScroll.GetVScrollBar().MaxValue:F0} page {_insetScroll.GetVScrollBar().Page:F0}";
@@ -1169,6 +1188,8 @@ public sealed partial class TechTree : Control
     // Wheel zooms about the cursor, a drag pans, a click without a drag selects a node.
     public override void _GuiInput(InputEvent e)
     {
+        if (e is InputEventMouseButton { Pressed: true } && _kbActive) { _kbActive = false; Redraw(); }   // a click ends the keyboard walk: no ring, no key tip
+        if (e is InputEventKey { Pressed: true } ke && _mode == 0 && KeyNav(ke.Keycode, ke.ShiftPressed, ke.CtrlPressed || ke.AltPressed || ke.MetaPressed)) { AcceptEvent(); return; }
         if (_mode == 0 && e is InputEventMouseButton { Pressed: true } w && Area.HasPoint(w.Position) && w.ButtonIndex is MouseButton.WheelUp or MouseButton.WheelDown)
         {
             _zoomTarget = PlanisphereMath.ClampZoom(_zoomTarget * (w.ButtonIndex == MouseButton.WheelUp ? 1.25f : 0.8f));
@@ -1190,6 +1211,60 @@ public sealed partial class TechTree : Control
             _dragged = true;
             _pan += mm.Relative; ClampPan(); Redraw();
         }
+    }
+
+    // ---- keyboard walk over the nodes (TASK-0132; A6-A8): Tab / Shift+Tab in number order, arrows to the nearest node, Enter opens the node panel; the key tip names the node ----
+    int _kb = -1; bool _kbActive;
+    string _kbTip; Vector2 _kbTipSize; int _kbTipFor = -1;
+    float[] _kbX, _kbY;
+    /// <summary>The node under the keyboard ring, or -1.</summary>
+    public int KeyFocusRow => _kbActive && HasFocus() ? _kb : -1;
+    public string KeyTipText => KeyFocusRow >= 0 ? _kbTip : null;
+
+    bool KbVisible(int i) => Area.Grow(-NR).HasPoint(PosOf(i));
+
+    /// <summary>Handles one key of the walk; true when the key was used (Tab past the last node is not used, so the focus moves on).</summary>
+    public bool KeyNav(Key key, bool shift, bool modified)
+    {
+        if (modified || _state == null) return false;
+        int n = _host.Data.Nodes.Count, next = -1;
+        switch (key)
+        {
+            case Key.Tab:
+                next = TreeKeyNav.Step(RowsByNumber(_host.Data.Nodes.Number), _kb, shift ? -1 : 1, KbVisible);
+                if (next < 0) { _kbActive = false; _kb = -1; Redraw(); return false; }
+                break;
+            case Key.Left or Key.Right or Key.Up or Key.Down:
+                if (_kb < 0 || !_kbActive) { next = _selected >= 0 && KbVisible(_selected) ? _selected : TreeKeyNav.Step(RowsByNumber(_host.Data.Nodes.Number), -1, 1, KbVisible); break; }
+                if (_kbX == null || _kbX.Length != n) { _kbX = new float[n]; _kbY = new float[n]; }
+                for (int i = 0; i < n; i++) { var p = PosOf(i); _kbX[i] = p.X; _kbY[i] = p.Y; }
+                next = TreeKeyNav.Direction(_kbX, _kbY, _kb, key == Key.Left ? -1 : key == Key.Right ? 1 : 0, key == Key.Up ? -1 : key == Key.Down ? 1 : 0, KbVisible);
+                if (next < 0) return true;   // the edge: the ring stays
+                break;
+            case Key.Enter or Key.KpEnter:
+                if (_kb < 0 || !_kbActive) return false;
+                Select(_kb); return true;
+            default: return false;
+        }
+        _kb = next; _kbActive = true; _kbTipFor = -1; Redraw();
+        return true;
+    }
+
+    // The ring (2.5 du ink on a 5.5 du sheet halo: 3:1 on paper, wash and plate alike) and the key tip are drawn after the labels, on top of everything.
+    void DrawKeyFocus()
+    {
+        int i = KeyFocusRow;
+        if (i < 0) return;
+        var nodes = _host.Data.Nodes; var p = PosOf(i); float r = MarkRadius(nodes.Type[i]) + (i == _selected ? (i == _goal ? 12.5f : 4.5f) : i == _goal ? 5f : 0f) + 5f;   // outside the selection ring and the goal frame
+        _cv.DrawArc(p, r, 0, Mathf.Tau, 40, Ui.Sheet, 5.5f, true);
+        _cv.DrawArc(p, r, 0, Mathf.Tau, 40, Ui.Ink, 2.5f, true);
+        if (_kbTipFor != i) { _kbTip = $"{Names.Node(nodes.Id[i])} · №{nodes.Number[i]}"; _kbTipSize = Fonts.Text.GetStringSize(_kbTip, HorizontalAlignment.Left, -1, 14); _kbTipFor = i; }
+        var sz = _kbTipSize + new Vector2(12, 8); var a = Area;
+        float x = p.X + r + 4; if (x + sz.X > a.End.X - 2) x = p.X - r - 4 - sz.X;
+        float y = Math.Clamp(p.Y - sz.Y * 0.5f, a.Position.Y + 2, a.End.Y - sz.Y - 2);
+        var rc = new Rect2(x, y, sz);
+        _cv.DrawRect(rc, Ui.Sheet); _cv.DrawRect(rc, Ui.Ink, false, 1f);
+        Text(new Vector2(x + 6, y + 4 + _kbTipSize.Y * 0.8f), _kbTip, 14, Ui.Ink);
     }
 
     // Hover shows the node name and number (ids never appear in the visible text).
