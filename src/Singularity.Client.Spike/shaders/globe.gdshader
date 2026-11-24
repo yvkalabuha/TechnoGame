@@ -134,8 +134,8 @@ void fragment() {
 			if (o == selected_id) sel_edge = true;
 		} else if (nb[i] != id) {
 			faint += 1.0;
-			// Line of control: neighbouring regions of one owner that differ in status or in controller (G3).
-			if (id != 0 && (hatch_kind(nb[i]) != hk || controller_of(nb[i]) != controller_of(id))) ctrl += 1.0;
+			// Line of control: neighbouring regions of one owner whose controller differs (occupied against free, or two occupiers); a colony beside its core has none.
+			if (id != 0 && controller_of(nb[i]) != controller_of(id)) ctrl += 1.0;
 		}
 		int ow = owner_of(nw[i]);
 		if (ow != own && nw[i] != 0 && id != 0) power += 1.0;

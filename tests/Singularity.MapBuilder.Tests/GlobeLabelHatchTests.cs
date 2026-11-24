@@ -27,7 +27,7 @@ public class GlobeLabelHatchTests
     public void A_moved_label_never_sits_over_another_territory_even_within_the_radius()
     {
         // The clamped point is 40 px from the anchor (inside the radius) but is another territory, and the own land is out of reach: with a region test the label is hidden, not misplaced.
-        static bool France(float x, float y) => y > 600;
+        static bool France(float x, float y) => false;   // the own land is not in the frame at all
         Assert.False(LabelPlacement.PlaceInRegion(700, -40, 150, 20, Vw, Vh, 300, 960, 540, 900, France, out _, out _));
         Assert.True(LabelPlacement.PlaceInRegion(700, -40, 150, 20, Vw, Vh, 300, 960, 540, 900, null, out _, out _));   // the radius rule alone would accept it
         // a plate that does not move needs no test
@@ -44,7 +44,18 @@ public class GlobeLabelHatchTests
         Assert.True(LabelPlacement.PlaceInRegion(940, -300, 80, 20, Vw, Vh, 120, 960, 540, 1190, Sweden, out float x, out float y));
         Assert.True(y >= 150 - 10 - 10 && y < 280, "the plate settles on the visible strip");
         Assert.Equal(940 - 40, x);
-        Assert.False(LabelPlacement.PlaceInRegion(300, -300, 80, 20, Vw, Vh, 120, 960, 540, 1190, Sweden, out _, out _));       // the clamped point is not on the region
+        Assert.True(LabelPlacement.PlaceInRegion(300, -300, 80, 20, Vw, Vh, 120, 960, 540, 1190, Sweden, out float x2, out _) && x2 > 870);   // the clamped point is not on the region: the label goes where the land is
+    }
+
+    [Fact]
+    public void Bent_territory_off_the_search_line_is_still_found()
+    {
+        // The anchor is above the frame; the visible land bends in at x 975..1150, y 20..180: nothing lies below the anchor, but a whole plate fits at the nearest grid point there.
+        static bool Bend(float x, float y) => x >= 975 && x <= 1150 && y >= 20 && y <= 180;
+        Assert.True(LabelPlacement.PlaceInRegion(940, -300, 80, 20, Vw, Vh, 120, 960, 540, 1190, Bend, out float x, out float y));
+        Assert.True(Bend(x, y) && Bend(x + 80, y) && Bend(x, y + 20) && Bend(x + 80, y + 20), "the whole plate is on the land");
+        // no land at all in the frame: hidden
+        Assert.False(LabelPlacement.PlaceInRegion(940, -300, 80, 20, Vw, Vh, 120, 960, 540, 1190, (px, py) => false, out _, out _));
     }
 
     [Fact]
@@ -87,6 +98,14 @@ public class GlobeLabelHatchTests
         Assert.True(LegendLayout.Place(1920, 64, 44, 240, true, false, out x, out y));
         Assert.Equal(1920 - 8 - 240, x);
         Assert.False(LegendLayout.Place(1920, 64, 44, 240, true, true, out _, out _));
+    }
+
+    [Fact]
+    public void Callout_near_the_top_edge_hangs_below_the_anchor()
+    {
+        LabelPlacement.CalloutCentre(500, 20, 100, 20, Vw, out float cx, out float cy);
+        Assert.True(cy > 20 && cy - 10 >= LabelPlacement.Margin);
+        Assert.True(LabelPlacement.Place(cx, cy, 100, 20, Vw, Vh, out _, out _));
     }
 
     [Fact]

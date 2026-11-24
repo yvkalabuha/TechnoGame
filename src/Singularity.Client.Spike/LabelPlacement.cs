@@ -52,6 +52,7 @@ public static class LabelPlacement
                         if (!onRegion(px, py) || !onRegion(System.Math.Clamp(px + ux * 12f, minX, maxX), System.Math.Clamp(py + uy * 12f, minY, maxY))) continue;
                         qx = px; qy = py; found = true;
                     }
+                if (!found) found = FitOnGrid(w, h, minX, maxX, minY, maxY, cx, cy, gcx, gcy, gr, onRegion, ref qx, ref qy);
                 if (!found) return false;
                 gx = qx - gcx; gy = qy - gcy;
                 if (gx * gx + gy * gy > gr * gr) return false;
@@ -59,6 +60,33 @@ public static class LabelPlacement
         }
         x = qx - w * 0.5f; y = qy - h * 0.5f;
         return true;
+    }
+
+    const float GridStep = 32f;
+
+    /// <summary>
+    /// Last resort of the search: every grid point of the safe rectangle on the globe disc; the nearest one to the anchor where the whole plate (centre and four corners)
+    /// lies on the region wins, else the nearest one whose centre does. A bent or detached visible part of the territory is found wherever it is.
+    /// </summary>
+    static bool FitOnGrid(float w, float h, float minX, float maxX, float minY, float maxY, float ax, float ay, float gcx, float gcy, float gr,
+        System.Func<float, float, bool> onRegion, ref float qx, ref float qy)
+    {
+        float bestFull = float.MaxValue, bestCentre = float.MaxValue, fx = 0, fy = 0, cx = 0, cy = 0;
+        float hw = w * 0.5f, hh = h * 0.5f;
+        for (float py = minY; py <= maxY + 0.01f; py += GridStep)
+            for (float px = minX; px <= maxX + 0.01f; px += GridStep)
+            {
+                float gx = px - gcx, gy = py - gcy;
+                if (gx * gx + gy * gy > gr * gr) continue;
+                float d = (px - ax) * (px - ax) + (py - ay) * (py - ay);
+                if (d >= bestCentre && d >= bestFull) continue;
+                if (!onRegion(px, py)) continue;
+                if (d < bestCentre) { bestCentre = d; cx = px; cy = py; }
+                if (d < bestFull && onRegion(px - hw, py - hh) && onRegion(px + hw, py - hh) && onRegion(px - hw, py + hh) && onRegion(px + hw, py + hh)) { bestFull = d; fx = px; fy = py; }
+            }
+        if (bestFull < float.MaxValue) { qx = fx; qy = fy; return true; }
+        if (bestCentre < float.MaxValue) { qx = cx; qy = cy; return true; }
+        return false;
     }
 
     public enum PlateMode { Plain, Framed, Callout }
@@ -86,5 +114,6 @@ public static class LabelPlacement
         cx = ax + gap + w * 0.5f;
         if (cx + w * 0.5f > vpW - Margin) cx = ax - gap - w * 0.5f;
         cy = ay - gap - h * 0.5f;
+        if (cy - h * 0.5f < Margin) cy = ay + gap + h * 0.5f;   // no room above (state near the top edge): hang below the anchor
     }
 }
