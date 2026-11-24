@@ -123,6 +123,21 @@ public class CoreLocaleTests
     }
 
     [Fact]
+    public void EveryNode_HasAHistoryInBothLanguages_AndG5G6AreLabelledForWhatTheyAre()
+    {
+        foreach (string id in TestKit.Data.Nodes.Id)
+        {
+            foreach (string lang in new[] { "en", "ru" })
+                Assert.True(new Loc(Catalog, lang).A(FluentIds.Node(id), Field.History).Length >= 40, $"{lang} {id}");
+        }
+        var ru = new Loc(Catalog, "ru");
+        Assert.Contains("4+ (электродистанционное управление)", ru.A(FluentIds.Node("s8.app.jet_fighter_g5"), Field.Name), StringComparison.Ordinal);
+        Assert.Contains("малозаметный, класс F-22", ru.A(FluentIds.Node("s8.app.jet_fighter_g6"), Field.Name), StringComparison.Ordinal);
+        Assert.Contains("перспектив", ru.A(FluentIds.Node("s8.app.jet_fighter_g6"), Field.History), StringComparison.Ordinal);
+        Assert.Contains("prospect", new Loc(Catalog, "en").A(FluentIds.Node("s8.app.jet_fighter_g6"), Field.History), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void EveryNode_HasAShortThatFitsTheSignalField()
     {
         foreach (string id in TestKit.Data.Nodes.Id)

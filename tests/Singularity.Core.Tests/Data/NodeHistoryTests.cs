@@ -18,7 +18,6 @@ public class NodeHistoryTests : IDisposable
         for (int r = 0; r < Data.Nodes.Count; r++)
         {
             Assert.True(h.Has[r], Data.Nodes.Id[r]);
-            Assert.True(h.TextRu[r].Length >= 40, Data.Nodes.Id[r]);
             int count = h.SourceStart[r + 1] - h.SourceStart[r];
             Assert.InRange(count, 1, NodeHistoryTable.MaxSources);
         }
@@ -44,19 +43,6 @@ public class NodeHistoryTests : IDisposable
         Assert.InRange(h.Epic.Count(e => e), 1, Data.Nodes.Count / 5);
         Assert.True(h.Epic[Data.Nodes.IndexOf("s8.eng.turbojet_g1")]);
         Assert.False(h.Epic[Data.Nodes.IndexOf("s8.eng.delta_wing_airframe")]);
-    }
-
-    [Fact]
-    public void Generations5And6_AreLabelledForWhatTheyAre()
-    {
-        NodeHistoryTable h = Data.History;
-        Assert.Contains("4+", h.TextRu[Data.Nodes.IndexOf("s8.app.jet_fighter_g5")], StringComparison.Ordinal);
-        string g6 = h.TextRu[Data.Nodes.IndexOf("s8.app.jet_fighter_g6")];
-        Assert.Contains("малозаметный, класс F-22", g6, StringComparison.Ordinal);
-        Assert.Contains("перспектив", g6, StringComparison.Ordinal);
-        string ru = File.ReadAllText(Path.Combine(TestMods.CoreDir, "locale", "ru", "data.ftl"));
-        Assert.Contains("4+ (электродистанционное управление)", ru, StringComparison.Ordinal);
-        Assert.Contains("малозаметный, класс F-22", ru, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -130,6 +116,13 @@ public class NodeHistoryTests : IDisposable
     {
         Assert.Throws<DataLoadException>(() => Load(t => t.Replace("license: other, use: paraphrase", "license: other, use: quote", StringComparison.Ordinal)));
         Assert.Throws<DataLoadException>(() => Load(t => t.Replace("sources:\n", "sources:\n      - {url: \"https://example.org/a\", accessed: \"2026-11-24\", check: opened, license: PD, use: paraphrase}\n      - {url: \"https://example.org/b\", accessed: \"2026-11-24\", check: opened, license: PD, use: paraphrase}\n      - {url: \"https://example.org/c\", accessed: \"2026-11-24\", check: opened, license: PD, use: paraphrase}\n", StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public void HistoryOfUnknownNode_IsADataError()
+    {
+        var e = Assert.Throws<DataLoadException>(() => Load(t => t.Replace("id: s7.fnd.brayton_cycle", "id: s7.fnd.nonexistent_node", StringComparison.Ordinal)));
+        Assert.Contains("unknown node 's7.fnd.nonexistent_node'", e.Message, StringComparison.Ordinal);
     }
 
     private GameData Load(Func<string, string> edit) =>

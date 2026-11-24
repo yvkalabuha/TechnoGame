@@ -14,7 +14,7 @@ public enum SourceLicense { Pd, Cc0, CcBy, Other }
 public enum SourceUse { Paraphrase, Quote }
 
 /// <summary>
-/// Display-only history of knowledge nodes (#486): epic flag, short RU text and sources, as arrays
+/// Display-only history of knowledge nodes (#486): epic flag and sources (the text itself is locale, attribute <c>.history</c>, ADR-0018), as arrays
 /// by node row (ADR-0005). No simulation code reads it, so it is NOT part of <see cref="GameData.DataHash"/>.
 /// Sources of row r: <c>SourceStart[r]..SourceStart[r+1]</c>, in data order.
 /// </summary>
@@ -24,7 +24,6 @@ public sealed class NodeHistoryTable
 
     public required ImmutableArray<bool> Has { get; init; }
     public required ImmutableArray<bool> Epic { get; init; }
-    public required ImmutableArray<string> TextRu { get; init; }
     public required ImmutableArray<int> SourceStart { get; init; }
     public required ImmutableArray<string> SourceUrl { get; init; }
     public required ImmutableArray<string> SourceAccessed { get; init; }
@@ -44,21 +43,16 @@ public sealed class NodeHistoryTable
         int n = nodes.Count;
         var has = new bool[n];
         var epic = new bool[n];
-        var text = new string[n];
         var sources = new List<(string Url, string Accessed, SourceCheck Check, SourceLicense License, SourceUse Use)>[n];
         foreach ((string id, YMap map) in objects)
         {
-            // A mod may delete a node without touching its history: the orphan text is display data and is skipped.
             int row = nodes.IndexOf(id);
             if (row < 0)
-                continue;
+                throw DataLoadException.At(map, $"node_history of unknown node '{id}'");
             var m = new MapReader(map);
             m.Str("id");
             has[row] = true;
             epic[row] = m.Bool("epic");
-            text[row] = m.Str("text_ru");
-            if (text[row].Trim().Length == 0)
-                throw DataLoadException.At(map, $"history text of '{id}' is empty");
             YSeq seq = m.Seq("sources");
             if (seq.Items.Count is < 1 or > MaxSources)
                 throw DataLoadException.At(seq, $"'{id}' needs 1..{MaxSources} sources, has {seq.Items.Count}");
@@ -88,7 +82,7 @@ public sealed class NodeHistoryTable
         }
         return new NodeHistoryTable
         {
-            Has = has.ToImmutableArray(), Epic = epic.ToImmutableArray(), TextRu = text.Select(t => t ?? "").ToImmutableArray(),
+            Has = has.ToImmutableArray(), Epic = epic.ToImmutableArray(),
             SourceStart = [.. start], SourceUrl = [.. url], SourceAccessed = [.. accessed],
             SourceCheck = [.. check], SourceLicense = [.. license], SourceUse = [.. use],
         };

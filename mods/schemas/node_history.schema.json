@@ -33,7 +33,6 @@
       "required": [
         "id",
         "epic",
-        "text_ru",
         "sources"
       ],
       "additionalProperties": false,
@@ -43,10 +42,6 @@
         },
         "epic": {
           "type": "boolean"
-        },
-        "text_ru": {
-          "type": "string",
-          "minLength": 1
         },
         "sources": {
           "type": "array",

@@ -53,7 +53,7 @@ public class ModOperationTests : IDisposable
     [Fact]
     public void Delete_RemovesUnreferencedNode()
     {
-        string a = _mods.Mod("a", DependsOnCore, ("nodes.yaml", "kind: node\ndelete: [s8.app.jet_fighter_g4]\n"), TestMods.DropG4Class());
+        string a = _mods.Mod("a", DependsOnCore, ("nodes.yaml", "kind: node\ndelete: [s8.app.jet_fighter_g4]\n"), TestMods.DropG4Class(), TestMods.DropG4History());
         GameData data = ModLoader.Load(TestMods.CoreDir, a);
         Assert.Equal(98, data.Nodes.Count);
         Assert.Equal(-1, data.Nodes.IndexOf("s8.app.jet_fighter_g4"));
@@ -108,7 +108,7 @@ public class ModOperationTests : IDisposable
     public void LoadOrder_DoesNotDependOnArgumentOrder()
     {
         string a = _mods.Mod("a", DependsOnCore, ("nodes.yaml", PatchTransonicKey));
-        string b = _mods.Mod("b", DependsOnCore, ("nodes.yaml", "kind: node\ndelete: [s8.app.jet_fighter_g4]\n"), TestMods.DropG4Class());
+        string b = _mods.Mod("b", DependsOnCore, ("nodes.yaml", "kind: node\ndelete: [s8.app.jet_fighter_g4]\n"), TestMods.DropG4Class(), TestMods.DropG4History());
         GameData x = ModLoader.Load(TestMods.CoreDir, a, b);
         GameData y = ModLoader.Load(b, a, TestMods.CoreDir);
         Assert.Equal(["core", "a", "b"], x.Mods.Select(m => m.Id));

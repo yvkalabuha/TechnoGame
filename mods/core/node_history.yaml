@@ -1,606 +1,507 @@
-# Display-only node history (TASK-0157, #486): epic flag, short RU text, sources. Not part of DataHash: no simulation reads it.
+# Display-only node history (TASK-0157, #486): epic flag and sources (the text is in locale, attribute .history). Not part of DataHash: no simulation reads it.
 # check: opened = the page was read and the facts compared; search-snippet = the URL came from a search result, text not read.
 # use: paraphrase = text is retold in our words; quote needs license PD, CC0 or CC-BY (ADR-0009).
 kind: node_history
 define:
   - id: s7.fnd.brayton_cycle
     epic: false
-    text_ru: "[Факт] Джордж Брейтон создал в 1872 году поршневой «Ready Motor» [патент и название подтверждены только фрагментом поиска; открытая страница ASME даёт лишь год 1872 для цикла] с изобарным подводом тепла (поршневой компрессор и поршневой расширитель). [Факт] Ту же схему с турбиной в качестве расширителя предложил англичанин Джон Барбер в 1791 году. [Факт] Цикл назван по Брейтону и служит основой расчёта газовых турбин: компрессор, камера сгорания, турбина. [Предп.] В игре знание «до 1945» задано правилом RULE-G0, а не датой публикации. [Не подтверждено страницей] Конкретные работы Уиттла и фон Охайна на этом цикле не показаны."
     sources:
       - {url: "https://www.asme.org/engineering-topics/articles/automotive/george-brayton", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.fnd.boundary_layer
     epic: false
-    text_ru: "[Факт] Людвиг Прандтль доложил о пограничном слое на III Международном математическом конгрессе в Гейдельберге в 1904 году; доклад вышел в трудах конгресса в 1905 году (с. 484-491). [Факт] Оригинал: «Über Flüssigkeitsbewegung bei sehr kleiner Reibung», Verhandlungen des III. Internationalen Mathematiker-Kongresses, Лейпциг, Teubner, 1905, с. 484-491. [Факт] Английский перевод «Motion of fluids with very little viscosity» (Дуайт Майнер) вышел как NACA TM-452, 1 марта 1928 года; запись есть в NASA NTRS. [Предп.] Вывод об объяснении трения и срыва потока следует из содержания работы, страница с текстом не открывалась."
     sources:
       - {url: "https://germanhistory-intersections.org/en/knowledge-and-education/ghis:document-202", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://ntrs.nasa.gov/api/citations/19930090813", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
   - id: s8.fnd.compressible_flow
     epic: false
-    text_ru: "[Факт] Якоб Аккерет опубликовал линеаризованную теорию сверхзвукового профиля (первая работа 1925 года по данным вузовского учебника; NASA указывает 1928 год как начало линейной теории). [Факт] Прандтль со студентом Теодором Мейером в 1908 году распространил теорию ударных волн на косые скачки. [Факт] Адольф Буземан в Гёттингенской группе Прандтля описал историю области в обзоре 1971 года «Compressible Flow in the Thirties». [Не подтверждено] Роль Лаваля, Маха и немецких институтов к 1945 году страницами не подтверждена."
     sources:
       - {url: "https://www.nasa.gov/history/SP-4219/Chapter3.html", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://eaglepubs.erau.edu/introductiontoaerospaceflightvehicles/chapter/supersonic-flight-vehicles/", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s5.fnd.precipitation_hardening
     epic: false
-    text_ru: "[Факт] Альфред Вильм открыл старение алюминиевых сплавов в интервале 1903-1911 годов; сплав Al-Cu-Mg-Mn он запатентовал в 1906 году как дуралюмин. [Факт] Механизм (зоны Гинье-Престона) обнаружили малоугловым рентгеновским рассеянием примерно через 20 лет после открытия. [Не подтверждено] Точный год объяснения (1938) страницей не подтверждён; даты открытия разных источников расходятся (1901, 1903, 1906)."
     sources:
       - {url: "https://nvlpubs.nist.gov/nistpubs/sp958-lide/html/014-015.html", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://www.britannica.com/biography/Alfred-Wilm", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s8.fnd.transonic_aerodynamics
     epic: false
-    text_ru: "[Факт] Рэй Райт из Langley предложил щелевую рабочую часть трубы, Вернон Уорд проверил её на малой трубе; статья Райта и Уорда вышла в 1948 году. [Факт] По NASA, щелевая секция впервые подтвердила работоспособность на 16-футовой трубе в 1947 году, а в декабре 1950 года труба стала 16-Foot Transonic Tunnel. [Факт] Ч. Йегер превысил скорость звука на X-1 в октябре 1947 года. [Факт] Конкурирующая кольцевая труба (1947) была разобрана после успеха щелевой; Collier Trophy 1951 дали Джону Стэку и коллегам за этот инструмент."
     sources:
       - {url: "https://nasa.gov/history/SP-4219/Chapter4.html", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://www.nasa.gov/history/8-foot-transonic-pressure-tunnel-building-640", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s5.fnd.high_temperature_creep
     epic: false
-    text_ru: "[Факт] Nimonic 80 создал Леонард Пфайл на заводе Inco-Mond в Бирмингеме в 1941 году; применён в Power Jets W.2B. [Факт] Nimonic 80A (около 1945) пошёл в лопатки Rolls-Royce Nene и de Havilland Ghost; затем Nimonic 90 (1945), 100 (1955), 105 (1960), 115 (1964). [Не подтверждено] Теория ползучести как таковая (модели 1950-60-х, Андраде 1910-х) страницами не подтверждена; все даты сплавов из вторичной копии справочной статьи."
     sources:
       - {url: "https://reference.org/facts/Nimonic/nXR65bjf", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s7.fnd.turbine_heat_transfer
     epic: false
-    text_ru: "[Факт] NACA Lewis с 1945 года изучала течение воздуха в полых лопатках; в 1948-1949 разработала ребристые лопатки и методы предсказания характеристик двигателя с охлаждением. [Факт] В 1950 году опытные охлаждаемые воздухом турбины испытали на двигателях GE I-40; водяное охлаждение (1950-1952) вызвало перепады температуры и поломки лопаток и было оставлено. [Факт] В 1960-70-е годы основным стало внутреннее конвективное воздушное охлаждение. [Предп.] Теплообменная теория (числа Нуссельта и др.) отдельно страницей не показана; игровая дата 1960 условна."
     sources:
       - {url: "https://nasa.gov/special-projects-laboratory-turbine-cooling", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
   - id: s5.fnd.solidification_science
     epic: false
-    text_ru: "[Факт] Идею концентрационного переохлаждения качественно высказали Раттер и Чалмерс для объяснения ячеистой структуры в олове, а количественную теорию дали Тиллер, Джексон, Раттер и Чалмерс в статье Acta Metallurgica 1:428-437 (1953). [Предп.] Связь с направленной и монокристальной отливкой лопаток по этим страницам не показана. Участие Маллинза в оригинальном тексте не подтверждено."
     sources:
       - {url: "https://garfield.library.upenn.edu/classics1979/A1979HZ20800001.pdf", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
       - {url: "https://www.nasonline.org/wp-content/uploads/2024/06/chalmers-bruce.pdf", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s8.prn.gas_turbine
     epic: true
-    text_ru: "[Факт] He 178 (конструктор по странице: фон Охайн) совершил первый турбореактивный полёт 27 августа 1939 года. [Факт] Gloster E.28/39 с реактивным двигателем Уиттла впервые взлетел 15 мая 1941 года над Крэнвеллом. [Не подтверждено] Названия HeS 3B и W.1, Росток-Мариенэ и пилот Варсиц открытой страницей не подтверждены. [Факт] Фон Охайн разработал двигатель независимо. [Не подтверждено] Патент Уиттла 1930 года и тупики (Campini) страницами не подтверждены; осевая и центробежная схемы не сверены."
     sources:
       - {url: "https://www.history.com/this-day-in-history/may-15/first-allied-jet-flies", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.britannica.com/technology/history-of-flight/The-jet-age", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s8.prn.swept_wing
     epic: false
-    text_ru: "[Факт] Адольф Буземан предложил стреловидное крыло для снижения волнового сопротивления на конгрессе Вольта в Риме; даты расходятся (NASA указывает 1934 год, другой источник 1935 год). [Факт] Роберт Джонс (NACA Langley) в 1945 году независимо пришёл к идее стреловидности позади конуса Маха. [Факт] Комитет Langley во главе с Теодорсеном рекомендовал не публиковать его отчёт; позднее опыты (труба 9 дюймов, свободное падение моделей Гилрута) подтвердили эффект. [Не подтверждено] Немецкие проекты Me 262 и P.1101 и конкурирующее тонкое прямое крыло страницами не подтверждены."
     sources:
       - {url: "https://www.nasa.gov/langley/hall-of-honor/robert-t-jones", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://books.nap.edu/read/1384/chapter/13", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s8.prn.afterburning
     epic: false
-    text_ru: "[Факт] Первый американский форсажный контур построила AERL для GE I-A в 1944 году; ранние опыты дали лишь номинальный прирост тяги из-за плохого горения. [Факт] В 1946 году большой форсаж успешно отработал на GE TG-180 в Altitude Wind Tunnel. [Факт] Westinghouse испытывала форсаж XJ34-WE-11 на F-80A; в отчёте от 20 января 1949 года описаны первые восемь полётов, работа до 35 000 футов. [Факт] Первым двигателем с форсажем назван Jumo 004E (Германия). [Не подтверждено] Британские Nene/Avon и «30-50 %» страницами не подтверждены."
     sources:
       - {url: "https://www.nasa.gov/special-projects-laboratory-turbojet-enhancements/", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://enginehistory.org/GasTurbines/ABs/AB04a/AB04a.shtml", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.prn.gamma_prime_alloy_design
     epic: false
-    text_ru: "[Факт] Гамма-штрих фаза Ni3(Al,Ti) упорядочена, когерентна с матрицей и является главным источником высокотемпературной прочности; её прочность малочувствительна к температуре до примерно 600 °C. [Факт] Лопатки турбин при более 1000 °C содержат значительную долю этой фазы. [Факт] Nimonic 80 содержит около 1,7 % Al и 20 % Cr, остальное никель. [Не подтверждено] Историческое «осознанное проектирование состава в 1950-х» и кобальтовые тупики страницами не подтверждены."
     sources:
       - {url: "https://www.phase-trans.msm.cam.ac.uk/2003/Superalloys/superalloys.html", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC11024552/table/tbl1", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s8.prn.area_rule
     epic: false
-    text_ru: "[Факт] Ричард Уиткомб (NACA Langley) сформулировал правило площадей в конце 1951 года; конфиденциальный меморандум NACA вышел в сентябре 1952 года по результатам трубных испытаний. [Факт] Идея: чтобы минимизировать трансзвуковое сопротивление, площадь сечений вдоль самолёта должна меняться как у гладкого тела. [Факт] Переделка F-102 по этому правилу, по оценке NASA, дала около 25 % прироста скорости; Collier Trophy за 1954 год. [Предп.] Тупик «только утонение крыла» не подтверждён."
     sources:
       - {url: "https://www.nasa.gov/langley/hall-of-honor/richard-t-whitcomb", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://www.airandspaceforces.com/article/0210whitcomb/", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s8.prn.multi_spool_compression
     epic: false
-    text_ru: "[Факт] В 1957 году NACA Lewis (RM E57I27) исследовала начало помпажа в двухвальном ТРД в высотной трубе: вращающийся срыв в наружном каскаде на малых оборотах приводит к помпажу на средних и требует перепуска воздуха между компрессорами. [Не подтверждено открытой страницей] Pratt & Whitney J57 (JT3C) считается первым двухвальным турбореактивным двигателем; первый запуск в январе 1950 года. [Факт] Rolls-Royce Olympus стал вторым двухвальным осевым ТРД, первый запуск в мае 1950 года. [Факт] P&W разделила компрессор на две части на отдельных валах с отдельными турбинами; схема устранила помпаж, а Olympus обошёлся без регулируемых направляющих аппаратов и перепуска. [Предп.] Вторая сторона истории (GE J79 с регулируемыми статорами) в этих страницах не показана."
     sources:
       - {url: "https://link.springer.com/chapter/10.1007/978-981-16-8028-1_10", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
       - {url: "https://ntrs.nasa.gov/citations/20050019238", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
   - id: s8.prn.bypass_engine
     epic: false
-    text_ru: "[Факт] Алан Гриффит предлагал двухконтурные схемы ещё в 1930-е годы. [Факт] Rolls-Royce Conway (RCo.12) назван Смитсоновским музеем первым серийным двухконтурным двигателем: разработку финансировали в 1952 году, первый запуск в 1953 году, госиспытание в 1955 году с рекордно низким удельным расходом топлива на тот момент. [Факт] Conway ставили на DC-8-40, Boeing 707-420, VC-10 и Victor; степень двухконтурности была малой (около 0,3 по одному источнику). [Не подтверждено] Даты JT3D и переход к G4 страницами не подтверждены; Pratt & Whitney позже обошла Conway коммерчески."
     sources:
       - {url: "https://airandspace.si.edu/collection-objects/rolls-royce-conway-rco12-mark-509-turbofan-engine/nasm_A19870225000", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.gracesguide.co.uk/Rolls-Royce_Engines:_Conway", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s8.prn.film_cooling
     epic: false
-    text_ru: "[Факт] В NACA Lewis обзор плёночного и пористого охлаждения лопаток составили Эккерт и Эсгар (RM E50K15, около 1950 года). [Факт] Сопоставление отверстий, канавок и щелей (Эккерт, Джексон, Франсиско) показало, что сплошная щель лучше. [Факт] В 1960-70-е годы основным стало внутреннее конвективное воздушное охлаждение. [Не подтверждено] Серийное применение плёночного охлаждения в 1960-е и прирост 100-200 К страницами не подтверждены."
     sources:
       - {url: "https://nasa.gov/special-projects-laboratory-turbine-cooling", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://ntrs.nasa.gov/api/citations/19770005116/downloads/19770005116.pdf", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s8.eng.turbojet_g1
     epic: true
-    text_ru: "Фрэнк Уиттл впервые запустил свой реактивный двигатель на стенде 12 апреля 1937 года, а британский Gloster E.28/39 с двигателем Power Jets W.1 взлетел 15 мая 1941 года. В Германии Ханс фон Охайн строил двигатели для Heinkel, и He 178 с его двигателем 27 августа 1939 года стал первым самолётом с турбореактивным двигателем. Серийный Me 262 с двумя осевыми Jumo 004 вступил в строй в 1944 году, но ресурс Jumo 004B был около 25 ч до переборки из-за дефицитных материалов. Конкурировали центробежная схема англичан и осевая немецкая. Для сценария 1945 года это стартовая точка: поколение уже в строю. [Факт]"
     sources:
       - {url: "https://www.airandspaceforces.com/article/0106engines/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Messerschmitt_Me_262", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Hans_von_Ohain", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.straight_wing_jet_airframe
     epic: false
-    text_ru: "Первые реактивные истребители союзников получили прямое крыло: Gloster Meteor впервые взлетел 5 марта 1943 года и вступил в строй 27 июля 1944 года (616-я эскадрилья), Lockheed XP-80 совершил первый полёт 8 января 1944 года и начал поступать в части в конце 1944 — 1945 годах. Такие машины были проще и дешевле стреловидных, но около скорости звука страдали от роста сопротивления. Это подтолкнуло к стреловидности после 1945 года. [Факт, даты по справочным страницам]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Gloster_Meteor", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Lockheed_P-80_Shooting_Star", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.turbojet_g2
     epic: false
-    text_ru: "Rolls-Royce Nene впервые запустили 27 октября 1944 года; его тяга около 22 кН. Британское правительство разрешило поставки в СССР в сентябре 1946 (10 двигателей) и марте 1947 (ещё 15), после чего Климов без лицензии скопировал его как РД-45, затем ВК-1 с тягой около 26,5 кН для МиГ-15. В США Pratt & Whitney выпускал Nene по лицензии как J42 для Grumman F9F Panther (первый полёт ноябрь 1947). Прогресс этого поколения шёл за счёт улучшения материалов и центробежного компрессора большего размера. [Факт; детали количества поставок в источнике противоречивы]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Rolls-Royce_Nene", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Klimov_VK-1", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.swept_wing_airframe
     epic: false
-    text_ru: "Адольф Буземан представил идею стреловидного крыла на конференции Вольта в Риме в 1935 году. В 1945 году Роберт Т. Джонс из NACA независимо получил теорию стреловидности (отчёт от 21 июня 1945). После войны американцы использовали захваченные немецкие данные, и North American F-86 Sabre с углом стреловидности 35° впервые поднялся в воздух 1 октября 1947 года. Messerschmitt P.1101 был готов примерно на 80 % при захвате и дал основу для Bell X-5. Стреловидность вела к проблемам с продольной устойчивостью на малых скоростях, их потом решали на ходу. [Факт]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Swept_wing", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/North_American_F-86_Sabre", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.afterburner
     epic: false
-    text_ru: "Форсаж проверяли ещё в 1941 году на моторно-реактивном Caproni Campini C.C.2 (полёт с дожиганием 11 апреля 1941). В Британии испытательные полёты с дожиганием выполнялись в конце 1944 года на Gloster Meteor I с двигателем Rolls-Royce W2/B23, наземные испытания на Power Jets W2/700 в середине 1945 года. NACA опубликовала теоретическую работу в январе 1947 года. Прирост тяги велик: у J57 около 10 200 фунтов тяги без форсажа и 16 000 с форсажем, примерно +57 % (расчёт по данным справки) ценой резкого роста расхода топлива. Дата серийного внедрения (около 1950-51 годов) источниками не подтверждена. [Факт; дата серийного применения [не подтверждено]]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Afterburner", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Pratt_%26_Whitney_J57", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.all_moving_tail
     epic: false
-    text_ru: "У Bell X-1 был горизонтальный стабилизатор с регулируемым углом установки, который рекомендовали Джон Стэк и Роберт Гилрут из NACA: у скорости звука ударная волна лишала руль высоты эффективности. 14 октября 1947 года Чак Йигер, у которого на M 0,94 не хватило хода руля высоты, управлял тангажом перестановкой стабилизатора и преодолел звуковой барьер. Строго «цельноповоротный» стабилизатор (стабилизатор-руль в одном элементе) появился позже: B-47 (1951) назван первым специальным реактивным бомбардировщиком с цельным стабилизатором, на F-86 его добавили после первых серий. [Факт; год F-86 в источнике не указан]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Bell_X-1", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Stabilator", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.turbojet_g3
     epic: false
-    text_ru: "Pratt & Whitney J57 впервые запустили в 1950 году; это первый в США двигатель класса 10 000 фунтов тяги, с тягой около 11 700 фунтов без форсажа и степенью повышения давления 11,5-12,5. Он ставился на B-52, F-100 и F-102. General Electric J79 (первый запуск 8 июня 1954) получил переменные направляющие лопатки компрессора и степень повышения давления около 13,5, его применяли на F-104 и F-4. Rolls-Royce Avon, первый осевой двигатель компании, запущен 25 марта 1947 года (12 ступеней компрессора). [Факт]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Pratt_%26_Whitney_J57", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/General_Electric_J79", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Rolls-Royce_Avon", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.area_ruled_airframe
     epic: false
-    text_ru: "Ричард Уиткомб (NACA Langley) понял правило площадей в 1951 году, меморандум NACA вышел в сентябре 1952 года. Convair YF-102 впервые взлетел 23-24 октября 1953 года и не смог выйти на сверхзвук (около M 0,98); переработанный фюзеляж позволил превысить скорость звука в 1954 году, а серийный F-102A летал с 1955 года. Уиткомб получил Collier Trophy за 1954 год. Независимо правило нашёл Отто Фрэнцль на Junkers в 1943-45 годах, но оно не было применено. Переделка задержала службу самолёта примерно на два года. [Факт]"
     sources:
       - {url: "https://www.airandspaceforces.com/article/0210whitcomb/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Area_rule", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Convair_F-102_Delta_Dagger", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.delta_wing_airframe
     epic: false
-    text_ru: "Александр Липпиш развивал дельтовидные формы в Германии в 1940-х годах, а после войны работал в США. Первым американским прототипом стал Convair XF-92A (первый полёт 1948). YF-102 имел дельтовидное крыло, а Dassault Mirage III с дельтой впервые взлетел 17 ноября 1956 года; его Mirage IIIA достиг M 2,2 в 1958 году. Достоинства: жёсткость и объём под топливо; недостатки: сопротивление на манёвре и высокая посадочная скорость. [Факт]"
     sources:
       - {url: "https://www.centennialofflight.net/essay/Evolution_of_Technology/delta_wing/Tech10.htm", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Dassault_Mirage_III", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.variable_geometry_inlet
     epic: false
-    text_ru: "McDonnell XF4H-1 (будущий F-4 Phantom II, первый полёт 27 мая 1958) имел входное устройство с одним неподвижным и одним подвижным клином, рассчитанное на давление между M 1,4 и 2,2. На Mirage III были подвижные полуконусы «souris», смещавшиеся вперёд с ростом числа Маха. На МиГ-21 конус имел три положения, а у МиГ-21ПФ положение конуса менялось непрерывно. У Concorde подвижные панели включаются выше M 1,3 и дают около 63 % тяги на крейсере. [Факт; источник по F-4 внутренне противоречив]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/McDonnell_Douglas_F-4_Phantom_II", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Mikoyan-Gurevich_MiG-21", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.heritageconcorde.com/air-in-take-system", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.air_cooled_turbine_blade
     epic: false
-    text_ru: "NASA Glenn описывает охлаждение турбин как приоритет конца 1940-х и 1950-х годов: в Special Projects Laboratory строили охлаждаемые лопатки и системы охлаждения. В начале 1970-х программа ВВС США финансировала лопатку с плёночным и конвективным охлаждением. Какой именно двигатель первым получил серийные охлаждаемые лопатки, источники не называют. Дата игры 1970 задана правилом RULE-MID. [Факт частично; время серийного внедрения [не подтверждено]]"
     sources:
       - {url: "https://www.nasa.gov/special-projects-laboratory/", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Turbine_blade", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.turbofan_g4
     epic: false
-    text_ru: "Rolls-Royce Conway стал первым двухконтурным турбореактивным двигателем в эксплуатации: прототип RCo.2 впервые запущен в июле 1952 года (10 000 фунтов), степень двухконтурности около 0,3. Pratt & Whitney TF30 назван первым серийным двухконтурным двигателем с форсажем, он впервые полетел в 1964 году; TF30-P-1 давал 8 500 фунтов без форсажа и 18 500 с форсажем. Двухконтурность снижала расход топлива за счёт воздуха, обходящего ядро. [Факт]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Rolls-Royce_Conway", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Pratt_%26_Whitney_TF30", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.mach2_airframe_g4
     epic: false
-    text_ru: "Первым самолётом, превысившим M 2, стал Douglas D-558-2 Skyrocket 20 ноября 1953 года с пилотом NACA Скоттом Кроссфилдом (M 2,005). Lockheed XF-104 впервые взлетел 4 марта 1954 года, а серийный F-104A вступил в строй в январе-феврале 1958 года как первый серийный самолёт на M 2. Mirage IIIA достиг M 2,2 24 октября 1958 года, МиГ-21 вошёл в строй в 1959 году. Рост скорости требовал тонких крыльев и новых материалов. Дата игры 1972 не совпадает с реальными датами. [Факт]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Douglas_D-558-2_Skyrocket", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Lockheed_F-104_Starfighter", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.cmp.heat_resistant_alloy
     epic: false
-    text_ru: "Никелевые жаропрочные сплавы серии Nimonic делали в Wiggin (подразделение Inco-Mond); сплав Nimonic 80 появился в 1941 году, и Power Jets W.2B использовал сплав 80. Германия из-за дефицита никеля, кобальта и молибдена применяла для горячих частей Jumo 004 алюминированную мягкую сталь и полые лопатки из сплава Cromadur с 12 % хрома, поэтому ресурс 004B был около 25 ч. Развитие шло от Nimonic 80 (1941) к 80A и 90 (1945), 100 (1955), 105 (1960). [Факт]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Nimonic", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Junkers_Jumo_004", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.cmp.aluminium_alloy_sheet
     epic: false
-    text_ru: "Альфред Вильм открыл старение алюминиево-медного сплава около 1901 года и к 1906 году довёл состав до практического; немецкий патент DE 244554 от 20 марта 1909 года. Сплав стал называться дюралюминием после покупки патента и выпуска на рынок. К 1930-м он стал основным материалом самолётов. Название компании-производителя в проверенных источниках не подтверждено. [Факт; точный год открытия в источниках различается]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Alfred_Wilm", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Duralumin", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.cmp.titanium_alloy
     epic: false
-    text_ru: "Вильгельм Кролл начал опыты по получению титана в 1930 году, к 1938-му получил около 50 фунтов металла; затем Горное бюро США развило его процесс. Армия США финансировала сплав Ti-6Al-4V. Douglas X-3 Stiletto (первый полёт 20 октября 1952 года) первым использовал титан в крупных элементах планера. Lockheed A-12 (первый полёт 25 апреля 1962) имел 93 % титана по массе конструкции, а SR-71 около 85 %. Год появления Ti-6Al-4V не подтверждён. [Факт; год сплава [не подтверждено]]"
     sources:
       - {url: "https://www.construction-physics.com/p/the-story-of-titanium", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Douglas_X-3_Stiletto", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Lockheed_SR-71_Blackbird", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.cmp.turbine_blade_forged
     epic: false
-    text_ru: "В британских двигателях первого поколения лопатки турбины делали из никелевых сплавов Nimonic, жаропрочнее обычной стали. Германия из-за нехватки сырья применяла полые лопатки из сплава Cromadur (12 % хрома) в Jumo 004. Способ изготовления (ковка и обработка) в проверенных источниках отдельно не описан. [Факт частично; технология изготовления [не подтверждено]]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Nimonic", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Junkers_Jumo_004", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.cmp.turbine_blade_cast
     epic: false
-    text_ru: "Литьё по выплавляемым моделям стало основным способом изготовления лопаток газотурбинных двигателей; направленная кристаллизация для столбчатых и монокристаллических структур разработана в 1960-70-х годах. Точный год внедрения литых лопаток в серийный двигатель в проверенных источниках не указан; дата игры 1960 задана правилом RULE-MID. [Факт частично; дата [не подтверждено]]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Turbine_blade", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Superalloy", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.cmp.turbine_blade_cooled
     epic: false
-    text_ru: "Лопатки с внутренними каналами и плёночным охлаждением применялись в двигателях с 1960-70-х: в начале 1970-х программа ВВС США финансировала лопатку с плёночным и конвективным охлаждением. NASA Glenn связывает развитие охлаждения с приоритетами 1940-50-х. Дата 1970 задана правилом RULE-MID. [Факт частично; дата первого серийного применения [не подтверждено]]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Turbine_blade", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.nasa.gov/special-projects-laboratory/", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
   - id: s8.cmp.axial_compressor_assembly
     epic: false
-    text_ru: "Осевой компрессор применили в Metrovick F.2 (первый запуск ноябрь 1941, 9 ступеней; первый полёт на Lancaster 29 июня 1943), BMW 003 (первый запуск август 1940, 7 ступеней) и Jumo 004 (8 ступеней). Rolls-Royce Avon был первым осевым двигателем компании (запуск 25 марта 1947 года, 12 ступеней). Осевая схема давала больший расход при меньшем диаметре, чем центробежная у Whittle и Nene, но сложнее в производстве. [Факт]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Metropolitan-Vickers_F.2", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/BMW_003", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Rolls-Royce_Avon", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.cmp.afterburner_unit
     epic: false
-    text_ru: "Форсажная камера как узел: топливные форсунки, стабилизаторы пламени и регулируемое сопло за турбиной. Первые лётные испытания дожигания в Британии выполнены в конце 1944 года на Gloster Meteor I с двигателем Rolls-Royce W2/B23. У J57 тяга выросла с 10 200 до 16 000 фунтов с форсажем. Год начала серийного выпуска в источниках не указан; дата 1951 задана правилом RULE-MID. [Факт частично; дата [не подтверждено]]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Afterburner", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Pratt_%26_Whitney_J57", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.prc.light_alloy_rolling
     epic: false
-    text_ru: "[Факт] Альфред Вильм (Германия) обнаружил, что закалённый сплав Al с 4 % Cu твердеет при комнатной температуре за несколько суток (1903 по Wikipedia; в другом источнике дата иная, спор о датах). Дюралюмин введён в 1909 г., патенты Вильма купила и вывела материал на рынок фирма Dürener Metallwerke. Листовой дюралюмин применяли в каркасах жёстких дирижаблей; Хуго Юнкерс попробовал его в самолёте J 3 в 1916 г., но работу прекратили до завершения машины. [Не подтверждено] год первого дирижабля с дюралюминием и год прокатки листа заводом: страницы не называют."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Duralumin", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.researchgate.net/publication/45705177_Alfred_Wilm_and_the_beginnings_of_Duralumin", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s5.prc.nicr_alloy_melt
     epic: false
-    text_ru: "[Факт] Никель-хромовые сплавы Nimonic разработала британская Mond Nickel (Wiggin, Бирмингем, позднее Inco, теперь торговая марка Special Metals). Nimonic 80 введён около 1941 г., 80A в 1944-45 гг., Nimonic 90 в 1945 г.; по одному слабому источнику Nimonic 75 появился в 1939 г. Сплав с гамма-штрих-фазой от Ti и Al применяли для лопаток турбин, Nimonic 80 использован в Power Jets W.2B. Хромоникелевые стали и аустенитные нержавеющие (1910-15 гг.) были более ранним, менее жаропрочным подходом. Исправлено: прежний текст о Nimonic 75 в 1941 г. и о W.1/Welland не подтвердился."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Nimonic", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.antonmetal.com/news/the-development-history-of-high-temperature-alloys-in-the-uk/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.prc.superalloy_melt_g2
     epic: false
-    text_ru: "[Факт] К 1929 г. нормой стал сплав 80Ni-20Cr с малыми добавками Ti и Al (первые гамма-штрих-выделения), в 1940-х сплавы Nimonic с гамма-штрих-фазой применили для лопаток. Около 1950 г. коммерциализирована вакуумная плавка, в 1950-х появилось вакуумное литьё лопаток. Для горячей секции это шаг от «Nimonic» к поколению литых суперсплавов. [Не подтверждено] даты Waspaloy (Pratt & Whitney) и Inconel X-750: ни одна открытая страница их не дала."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Superalloy", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.tms.org/superalloys/10.7449/2010/Superalloys_2010_13_50.pdf", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s5.prc.vacuum_induction_melt
     epic: false
-    text_ru: "[Факт] Вакуумную индукционную плавку разработали Heraeus Vacuumschmelze и Вильгельм Рон в Ханау около 1917 г., заявка на немецкий патент подана в январе 1918 г. (первый американский прототип 1920 г. Нортропа: без ссылки на источник). Сначала её применяли для кобальта и никеля; для суперсплавов вакуумная плавка стала коммерческой около 1950 г. Она убирает водород и азот и позволяет точно выдерживать Al и Ti. Прежний текст о фирме Cannon-Muskegon не подтверждён и удалён."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Vacuum_induction_melting", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Superalloy", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.prc.titanium_reduction_forging
     epic: false
-    text_ru: "[Факт] Вильгельм Кролль доложил магниетермический способ восстановления TiCl4 Электрохимическому обществу, его статья «The Production of Ductile Titanium» датирована 1940 г.; позднее в США он занимался цирконием в Albany Research Center. Способ Хантера (натрий) перестал быть коммерческим в 1990-х. Титан в авиации дал выигрыш в массе и жаростойкости. [Не подтверждено] патент 1940, первое промышленное производство DuPont в 1948 г. и роль Бюро горных дел США: открытая страница их не содержит, нужен источник (например, DOE/ARC-1999-060)."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Kroll_process", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.osti.gov/servlets/purl/900531", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s5.prc.ds_casting
     epic: false
-    text_ru: "[Факт] Лопатки с направленной кристаллизацией (столбчатые зёрна) повышают стойкость к ползучести и термической усталости. Впервые в серии они появились на двигателях J58 самолёта SR-71; исследования монокристалла начались в 1960-х в Pratt & Whitney и дошли до эксплуатации примерно через десятилетие. Барри Пирси нашёл, что изгиб формы под прямым углом сокращает число столбчатых кристаллов, Тони Джаймеи (P&W) использовал это для монокристалла. [Не подтверждено] «1969» как год серийного внедрения DS и имя Верснайдера: страницы их не называют."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Turbine_blade", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Directional_solidification", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://ntrs.nasa.gov/api/citations/19830022158/downloads/19830022158.pdf", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s5.prc.alloying_element_refining
     epic: false
-    text_ru: "[Факт] Алюминотермию (Hans Goldschmidt) открыл в 1893 г. и подал патент в 1895 г. (выдан в 1898 г.); с её помощью получают металлический хром из Cr2O3 и очищают некоторые руды. Этот способ давал хром и марганец для сплавов; для суперсплавов нужны ещё Co, Mo, W, Nb, Ti, Al. [Не подтверждено] что к 1945 г. очистка этих элементов вышла на заводской уровень в США: страница не говорит; запись остаётся обобщением."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Goldschmidt_process", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.prc.high_purity_nickel_refining
     epic: false
-    text_ru: "[Факт] Карбонильный процесс Людвига Монда (1890) очищает никель: окись углерода образует Ni(CO)4, который разлагается до никеля очень высокой чистоты за один проход. Метод применяла International Nickel Company (бассейн Садбери). Ядовитость карбонила делает его трудным для массового производства. [Не подтверждено] завод в Клайдахе и электролитический способ Хайбинета: открытые страницы их не называют."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Mond_process", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.britannica.com/technology/Mond-carbonyl-process", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s5.prc.ceramic_shell_moulding
     epic: false
-    text_ru: "[Факт] Литьё по выплавляемым моделям в зубоврачебной практике описал Ф. Филбрук в 1897 г., У. Таггарт (Чикаго) развил метод в 1907 г.; Вторая мировая война усилила спрос на точные детали из труднообрабатываемых сплавов. Кобальтовый сплав Vitallium создал Альберт Меррик для Austenal в 1932 г.; в годы войны сплав Haynes Stellite 21 предложили для турбонагнетателей, показав точное литьё на зубных протезах. Керамическая оболочка наращивается слоями суспензии на восковой модели. [Не подтверждено] кто и когда ввёл оболочку и дата 1960: страницы не дают."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Investment_casting", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Vitallium", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s6.prc.precision_gear_bearing
     epic: false
-    text_ru: "[Предп.] Шестерни после нарезки доводят шлифованием; точные шестерни и подшипники нужны редукторам и опорам вала турбины. [Не подтверждено] изобретатель шлифовки зубьев (Макс Маагс, 1913) и привязка к Rolls-Royce Dart: открытая страница о шлифовке (Wikipedia) их не называет и отсылает к книге Р. Вудбери «History of the Gear-Cutting Machine» (1958). История узла остаётся слабой."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Gear_grinding", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s6.prc.centrifugal_impeller_machining
     epic: false
-    text_ru: "[Факт] Двигатель Power Jets W.1 Фрэнка Уиттла впервые запущен 14 декабря 1940 г., Gloster E.28/39 впервые поднялся в воздух 15 мая 1941 г. (Крэнуэлл). Компрессор одноступенчатый центробежный с двусторонним рабочим колесом из сплава Hiduminium RR.59. Rolls-Royce Derwent пошёл в серию в 1944 г. и стал двигателем Meteor. [Не подтверждено] годы Welland и Goblin: открытые страницы их не называют."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Power_Jets_W.1", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://speedreaders.info/12176-fast-jets-history-reheat-development-derby/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s6.prc.precision_blade_forging
     epic: false
-    text_ru: "[Факт] Лопатки турбины Junkers Jumo 004 были полыми: их сгибали и сваривали из листа Cromadur (Krupp, примерно 70 % Fe, 18 % Mn, 12 % Cr) и охлаждали воздухом компрессора. Ресурс ранних двигателей 004B около 10-25 ч, капитальный ремонт каждые 30-50 ч; серия началась только в начале 1944 г., выпущено 5-8 тысяч двигателей. Ансельм Франц возглавил команду в 1939 г. и выбрал осевой компрессор. Британцы шли иным путём: лопатки из Nimonic."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Junkers_Jumo_004", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s6.prc.axial_compressor_machining
     epic: false
-    text_ru: "[Факт] Pratt & Whitney J57 первый раз запущен в январе 1950 г.; это двухвальный двигатель (два компрессора, две турбины). Степень сжатия военного J57-P-23 равна 11,5:1, гражданского JT3C-7 12,5:1; тяга J57-P-23 растёт с 11 700 до 17 200 фунтов силы с форсажем. Прежнее «около 12:1» исправлено. Осевой компрессор Jumo 004 (Франц) был в серии с 1944 г. [Не подтверждено] даты General Electric J35 и Allison: не проверялись."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Pratt_%26_Whitney_J57", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://airandspace.si.edu/collection-objects/pratt-whitney-j57-p-4-turbojet-engine/nasm_A19710059000", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s6.prc.investment_cast_blades
     epic: false
-    text_ru: "[Факт] Большинство лопаток турбин отливают по выплавляемым моделям; полые лопатки делают с керамическим стержнем, который растворяют, оставляя охлаждающие каналы. Ранние лопатки были из Nimonic в двигателях Уиттла, вакуумная индукционная плавка в 1950-х подняла температурный предел. Кобальтовый Vitallium (1932) применяли в турбонагнетателях. [Не подтверждено] «около 1960 г.» как год перехода на литые лопатки в серийных реактивных двигателях."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Turbine_blade", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Vitallium", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s6.prc.cooled_blade_drilling
     epic: false
-    text_ru: "[Факт] Б. Р. и Н. И. Лазаренко получили в 1943 г. задание защитить вольфрамовые контакты от эрозии и обнаружили, что в жидком диэлектрике эрозию можно контролировать: так появился электроискровой станок. Сегодня им сверлят ряды отверстий на передней и задней кромках лопаток; газ через отверстия позволяет работать при более высокой температуре. [Не подтверждено] время появления плёночного охлаждения и лазерного сверления (около 1970 г.): открытые страницы этого не содержат."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Electrical_discharge_machining", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Turbine_blade", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prc.stressed_skin_assembly
     epic: false
-    text_ru: "[Факт] Цельнометаллический Junkers J 1 (1915) имел металлическую обшивку на каркасе (полумонокок, не настоящий монокок). Dornier-Zeppelin Lindau D.I (1918) стал первым цельнометаллическим монококом в серии; алюминиевые монококи распространились только в середине 1930-х. Работа тонкостенных балок в полях растяжения описана в NACA TM-604 (часть I: общие теории). [Не подтверждено] автор Герберт Вагнер, год 1929/1931 и Boeing 247 (1933): страницы этого не называют."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Monocoque", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.abbottaerospace.com/downloads/naca-tm-604-flat-sheet-metal-girders-with-very-thin-metal-web-part-i/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prc.jet_engine_assembly_test
     epic: false
-    text_ru: "[Факт] Me 262 с реактивным двигателем впервые поднялся 18 июля 1942 г. (Фриц Вендель, Лайпхайм); опытное подразделение Erprobungskommando 262 образовано 19 апреля 1944 г. Двигатель Jumo 004A достиг межремонтного срока 50 ч к середине 1943 г., 004B требовал проверки турбины после 25 ч, предел колеса 35 ч. Первый боевой вылет Me 262 совершён 25 июля 1944 г. Полёт Me 262 с поршневым двигателем состоялся ещё 18 апреля 1941 г."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Messerschmitt_Me_262", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.defensemedianetwork.com/stories/the-messerschmitt-me-262-jet-fighter/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prc.swept_wing_fabrication
     epic: false
-    text_ru: "[Факт] Адольф Буземанн представил принцип независимости применительно к стреловидности на конгрессе Вольта в Риме в 1935 г. Роберт Т. Джонс (NACA) придумал стреловидное крыло в 1944 г., его доклад о тонком крыле датирован маем 1945 г., в открытой печати анализ вышел в 1946 г.; Джонс работал независимо. Прототип XP-86 впервые взлетел 1 октября 1947 г. Изготовление требует точных стыков лонжеронов и обшивки. [Не подтверждено] даты первых полётов B-47 и МиГ-15: открытые страницы их не дали."
     sources:
       - {url: "https://www.nationalacademies.org/read/11429/chapter/14", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://afhistory.org/october-1-1947-2/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Swept_wing", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prc.machined_integral_skins
     epic: false
-    text_ru: "[Факт] Рождение числового программного управления обычно связывают с Джоном Парсонсом и Фрэнком Стьюленом (Parsons Corp., Траверс-Сити, Мичиган); первые станки ЧПУ строились в 1940-50-х, на обычных станках с моторами и перфолентой. Они получили Национальную медаль за технологии в 1985 г. Цельнофрезерованные панели стали практичны с ЧПУ. [Не подтверждено] станок MIT 1952 г., участие ВВС и конкретные самолёты: открытая страница их не содержит, страница MIT вернула 403."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Numerical_control", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://archivesspace.mit.edu/repositories/2/resources/125", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s8.prc.afterburner_fabrication
     epic: false
-    text_ru: "[Факт] Лётные испытания форсажа Rolls-Royce W2/B23 на Gloster Meteor I проведены в конце 1944 г., наземные испытания Power Jets W2/700 в середине 1945 г. Самолёт Caproni Campini C.C.2 летал с работающим форсажем в апреле 1941 г. Американские работы 1948 г. привели к установке на Pirate, Starfire, Scorpion. J57-P-23 с форсажем даёт до 17 200 фунтов силы. [Не подтверждено] прежнее утверждение о первой серии на F-86D около 1949 г."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Afterburner", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Pratt_%26_Whitney_J57", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.app.jet_fighter_g1
     epic: true
-    text_ru: "[Факт] Gloster E.28/39 с двигателем Уиттла впервые взлетел 15 мая 1941 г., прототип Meteor DG206 (Майкл Донт) поднялся 5 марта 1943 г. Первые Meteor пришли в 616-ю эскадрилью в июле 1944 г. (Калмхед, 12 июля), первый боевой вылет против V-1 состоялся 27 июля 1944 г.; скорость F.1 около 671 км/ч. Me 262 впервые летал на реактивной тяге 18 июля 1942 г., подразделение Erprobungskommando с апреля 1944 г., первый бой 25 июля 1944 г. Прежнее «800-870 км/ч для всех» исправлено. [Не подтверждено] He 280 и точная скорость Me 262."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Gloster_Meteor", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Messerschmitt_Me_262", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.defensemedianetwork.com/stories/the-messerschmitt-me-262-jet-fighter/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.app.jet_fighter_g2
     epic: false
-    text_ru: "[Факт] Прототип XP-86 впервые взлетел 1 октября 1947 г. (Джордж Уэлч, Muroc). F-86 введён в ВВС США в 1949 г. (94-я эскадрилья, 1-е авиакрыло), основной истребитель в Корее 1950-53 гг., где встретил стреловидный МиГ-15; первоначальные счета 792:78 позднее пересмотрены. Рекорд скорости F-86A: 671 миль/ч (1080 км/ч) 15 сентября 1948 г. [Не подтверждено] даты МиГ-15 и F-84: страницы не проверялись."
     sources:
       - {url: "https://afhistory.org/october-1-1947-3/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/North_American_F-86_Sabre", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.app.jet_fighter_g3
     epic: true
-    text_ru: "[Факт] F-100 Super Sabre поднялся в воздух в 1953 г. (YF-100A, 25 мая 1953 г., Джордж Уэлч) и первым среди серийных самолётов ВВС США достиг сверхзвука в горизонтальном полёте; в строй вошёл 27 сентября 1954 г. (479-е авиакрыло), затем эксплуатация приостановлена после аварий до февраля 1955 г. F-100D взлетел 24 января 1956 г. (скорость 1437 км/ч в музее NASM). [Не подтверждено] даты F-102, F-104, МиГ-19, Mirage III и «до 2 М»: страницы не проверялись; прежние годы оставлены как [Предп.]."
     sources:
       - {url: "https://airandspace.si.edu/collection-objects/north-american-f-100d-super-sabre/nasm_A19781577000", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/North_American_F-100_Super_Sabre", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.app.jet_fighter_g4
     epic: false
-    text_ru: "[Факт] F-15 Eagle впервые летал 27 июля 1972 г., принят на вооружение 9 января 1976 г. (555-я истребительная эскадрилья), два двигателя Pratt & Whitney F100 с форсажем, импульсно-доплеровский радар Hughes APG-63 с обзором вниз. Позднее радары модернизированы до AESA. [Не подтверждено] даты F-14, F-16, МиГ-29, Су-27, ЭДСУ F-16: не проверялись."
     sources:
       - {url: "https://en.wikipedia.org/wiki/McDonnell_Douglas_F-15_Eagle", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.afnwc.af.mil/About-Us/Fact-Sheets/Article/2074655/f-15-eagle/", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s8.fnd.electronic_flight_control_theory
     epic: false
-    text_ru: "[Факт] F-8C DFBW (NASA 802) совершил первый полёт 25 мая 1972 года, пилот Гэри Крайер. [Факт] Система использовала вычислитель командного модуля «Аполлона» (около 38 тыс. слов памяти, из них 36 тыс. постоянной). [Факт] Резервом служил аналоговый комплект из трёх вычислителей. [Факт] По NASA, проект подтвердил принципы электродистанционного управления для военных и гражданских самолётов, а боковая ручка пошла на F-16. [Не подтверждено] Теоретическая часть (Найквист, Калман) и аналоговые Avro Arrow и Concorde страницами не подтверждены."
     sources:
       - {url: "https://www.nasa.gov/image-article/may-25-1972", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://www.nasa.gov/image-article/45th-anniversary-of-digital-fly-by-wire-first-flight", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s8.fnd.edge_wave_diffraction
     epic: false
-    text_ru: "[Факт] Пётр Уфимцев издал «Метод краевых волн в физической теории дифракции» в «Советском радио» (Москва, 1962). [Факт] Джозеф Келлер дал геометрическую теорию дифракции (JOSA 52:116-130, 1962). [Факт] Английский перевод книги Уфимцева выпущен Foreign Technology Division ВВС США в 1971 году (FTD-HC-23-259-71). [Факт] Физическая теория вносит поправку к физической оптике за счёт краевых токов. [Предп.] Применение к расчёту малозаметных форм подтверждено через Echo 1 (узел low_observable_shaping)."
     sources:
       - {url: "https://www.doi.org/10.1364/JOSA.52.000116", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://apps.dtic.mil/sti/pdfs/AD0733203.pdf", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s5.prn.single_crystal_growth
     epic: true
-    text_ru: "[Факт] По брошюре ASME, JT9D-7R4 (Boeing 747, DC-10, A300) около 1980 года стал первым коммерческим применением монокристальных деталей турбины. [Факт] Сплав PWA 1480 описан NASA как коммерческий; его выбирали для лопаток турбонасоса высокого давления главного двигателя Space Shuttle. [Не подтверждено] Что именно PWA 1480 стоял на JT9D, и прирост температуры 30-50 К страницами не подтверждены; предшествующие направленные отливки упомянуты без источника."
     sources:
       - {url: "https://tms.org/Meetings/Specialty/Superalloys2012/pdfs/GiameiPresentation.pdf", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
       - {url: "https://ntrs.nasa.gov/citations/19890011701", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
   - id: s5.prn.fibre_composite_laminate_design
     epic: false
-    text_ru: "[Факт] Первой серийной крупной военной деталью из борного волокна стали горизонтальные стабилизаторы F-14 (борная эпоксидка, Avco и Hamilton Standard); это был не углепластик. [Факт] RAE Фарнборо начал разработку высокомодульного углеволокна на основе ПАН в 1963 году; процесс запатентовало Министерство обороны, лицензия передана через NRDC Rolls-Royce, Morganite и Courtaulds. [Факт] Ранняя проблема: слабый межслойный сдвиг. [Факт] Крыло Fairey Delta E10/47 стало первой полётной первичной композитной конструкцией (1947), фюзеляж Spitfire из Aerolite сделан в 1940 году. [Не подтверждено] Классическая теория ламинатов «конец 1960-х» страницами не подтверждена."
     sources:
       - {url: "https://compositesworld.com/articles/boron-fiber-the-original-high-performance-fiber", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
       - {url: "https://www.cambridge.org/core/services/aop-cambridge-core/content/view/4195FFDC6823131E6EE8C1CBA20E0187/S0001924000024635a.pdf/the-first-fifty-years-of-composite-materials-in-aircraft-construction.pdf", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prn.low_observable_shaping
     epic: true
-    text_ru: "[Факт] Первый полёт Have Blue (HB1001) состоялся 1 декабря 1977 года, пилот Билл Парк, озеро Грум. [Факт] F-117A стал боеготовым в октябре 1983 года. [Факт] Расчёт отражённого сигнала вёл Денис Овершольцер программой Echo 1; в неё вставили теорию кромочной дифракции Уфимцева (перевод 1971). [Факт] Программа считала только в двух измерениях, поэтому форма получилась гранёной. [Факт] Echo 1 датирована 1975 годом (Air & Space Forces). [Не подтверждено] Только сравнение с радиопоглощающими покрытиями SR-71 страницами не подтверждены."
     sources:
       - {url: "https://www.darpa.mil/about/innovation-timeline/have-blue-stealth-technology", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://afhistory.org/1-dec-1977/", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s8.eng.fly_by_wire_relaxed_stability
     epic: false
-    text_ru: "NASA F-8 Digital Fly-By-Wire выполнил 25 мая 1972 года первый полностью цифровой полёт (лётчик Гэри Кригер) на вычислителе Apollo Guidance Computer, первоначально с аналоговой резервной системой. General Dynamics YF-16 впервые поднялся в воздух 2 февраля 1974 года (случайный подлёт при рулении 20 января); у него четырёхкратно резервированная ЭДСУ и намеренно сниженная статическая устойчивость, F-16 вошёл в строй в 1978 году. Concorde имел аналоговую ЭДСУ, Airbus A320 вошёл в эксплуатацию в 1988 году. [Факт]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/F-8_digital_fly-by-wire_project", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/General_Dynamics_F-16_Fighting_Falcon", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Fly-by-wire", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.turbofan_g5
     epic: false
-    text_ru: "Pratt & Whitney F100-PW-100 впервые полетел на F-15 27 июля 1972 года, форсажная тяга 23 930 фунтов, отношение тяги к весу 7,88. Модель PW-220 получила цифровой электронный регулятор (DEEC). F100 применяют на F-15 и F-16, по данным компании его налёт превысил 30 млн часов. Дата игры 1981 задана сценарием G56. [Факт]"
     sources:
       - {url: "https://app.prattwhitney.com/2022-07-19-Pratt-Whitney-F100-Engine-Celebrates-50-Years-of-Service-and-30-Million-Flight-Hours", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Pratt_%26_Whitney_F100", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.composite_airframe
     epic: false
-    text_ru: "McDonnell Douglas AV-8B Harrier II имеет около 26 % композитов по массе планера и экономит около 217 кг (480 фунтов) против металлической конструкции; прототип YAV-8B полетел 9 ноября 1978 года, серийный AV-8B 5 ноября 1981 года. B-2 Spirit (первый полёт 17 июля 1989) в основном состоит из углеграфитового композита. Первое применение композитов на F-14 проверить не удалось. [Факт; ранние применения [не подтверждено]]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/McDonnell_Douglas_AV-8B_Harrier_II", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Northrop_Grumman_B-2_Spirit", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.low_observable_airframe
     epic: true
-    text_ru: "Lockheed Have Blue вышел на лётные испытания в апреле 1977 года, а первый полёт F-117 состоялся в июне 1981 года. Форму рассчитывали по программе Echo 1 Дениса Овершолзера на основе работ Петра Уфимцева 1960-х годов; ВВС США перевели его статью в 1971 году. B-2 впервые полетел 17 июля 1989 года. Малая заметность изменила тактику авиации: машина невидима для радара на нужных дальностях. [Факт]"
     sources:
       - {url: "https://www.airandspaceforces.com/article/history-of-stealth-from-out-of-the-shadows/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Northrop_Grumman_B-2_Spirit", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.thrust_vectoring_supercruise_engine
     epic: false
-    text_ru: "Rockwell-MBB X-31 впервые полетел 11 октября 1990 года с тремя лопатками-дефлекторами на сопле двигателя GE F404, а на NASA Dryden испытания шли с 1992 года. Pratt & Whitney F119 прошёл наземные испытания EMD-версии с февраля 1993 года и впервые полетел на F-22 7 сентября 1997 года; плоское сопло отклоняется в тангаже на ±20°. F-22 держит сверхзвук без форсажа на M 1,5-1,8. Запрос на ATF выпущен в мае 1983 года. [Факт]"
     sources:
       - {url: "https://www.nasa.gov/aeronautics/nasa-aircraft/x-31-demonstrator/", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Pratt_%26_Whitney_F119", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Rockwell-MBB_X-31", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.cmp.turbine_blade_single_crystal
     epic: true
-    text_ru: "Исследования монокристаллических лопаток начались в 1960-х годах в Pratt & Whitney и заняли около десяти лет до внедрения. Метод направленной кристаллизации разработан в 1960-70-х; сплавы первого поколения (PWA 1480) 1980-х, второе и третье поколения содержат около 3 и 6 % рения. Первый серийный двигатель (около 1982 года, JT9D-7R4) мне подтвердить не удалось. Прирост рабочей температуры порядка десятков градусов сопоставим с заменой DS-лопаток. [Факт частично; первое серийное применение и конкретные цифры [не подтверждено]]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Superalloy", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Turbine_blade", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.prc.single_crystal_casting
     epic: false
-    text_ru: "[Факт] Монокристаллические лопатки (нет границ зёрен) создавались в Pratt & Whitney с 1960-х и дошли до эксплуатации примерно через десятилетие; Барри Пирси предложил изгиб формы для отбора одного зерна, Тони Джаймеи (P&W) положил начало монокристаллу. Первое поколение монокристаллических суперсплавов (PWA 1480, René N4, SRR99) относится к 1980-м. [Не подтверждено] двигатель JT9D-7R4 и 1982 г.: открытые страницы их не называют."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Single_crystal", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Superalloy", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Turbine_blade", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prc.composite_layup_cure
     epic: false
-    text_ru: "[Факт] Программа NASA ACEE (Aircraft Energy Efficiency) и исследования композитов в Langley шли в 1975-1986 гг. (название отчёта NTRS). [Предп.] Композитные хвостовые поверхности и вторичные конструкции появились на F-14 (1970), F-15, F/A-18, AV-8B, Boeing 757/767, но ни одна из открытых страниц этого не подтвердила, ссылка на отчёт NASA по таймауту не открылась. [Не подтверждено] доли композитов, тупик Rolls-Royce Hyfil."
     sources:
       - {url: "https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19870020179.pdf", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s5.prc.low_observable_finishing
     epic: false
-    text_ru: "[Факт] Lockheed построила два демонстратора Have Blue за свой счёт; первый полёт 1 декабря 1977 г. (Билл Парк), 88 полётов до 1979 г. Первый F-117 поднялся 18 июня 1981 г. (Хэл Фарли), начальная боеготовность в октябре 1983 г., публично признан 10 ноября 1988 г., снят в апреле 2008 г. Около тонны радиопоглощающего материала в листах приклеивали, швы закрывали шпаклёвкой. Концепцию граней обосновала команда Денниса Оверхользера. [Не подтверждено] работы Уфимцева 1962 г. (в поиске есть, но страницы не открыты) и состав покрытия."
     sources:
       - {url: "https://www.codeonemagazine.com/article.html?item_id=175", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Lockheed_F-117_Nighthawk", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.app.jet_fighter_g5
     epic: true
-    text_ru: "[Факт] Современное определение пятого поколения: малозаметность, радар с малой вероятностью перехвата, манёвренная схема, сверхзвуковой крейсерский режим без форсажа, объединение данных датчиков. Машины в строю на декабрь 2025 г.: F-22 (ВВС США, 2005), F-35 (КМП, 2015), J-20 (2017), Су-57 (2020), J-35 (2025). F-117A — ударный самолёт, не истребитель, и обычно в это поколение не включается. Игровой год 1984 соответствует демонстраторам и началу программы ATF, а не вводу в строй (см. заметку ниже). В игре узел подписан «4+ (электродистанционное управление)»: по общепринятому определению (малозаметность, сверхзвуковой крейсер без форсажа) первым пятым поколением в строю стал F-22 (2005); годы узла — ввод в строй у лидера в нашей истории, в игре возможно иначе."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Fifth-generation_fighter", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.codeonemagazine.com/article.html?item_id=175", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.app.jet_fighter_g6
     epic: false
-    text_ru: "[Факт] Шестое поколение пока не имеет принятого определения: более высокая малозаметность, дальность, оружие за пределами видимости, возможно командование беспилотными ведомыми. NGAD ВВС США начата в 2014 г., Boeing F-47 выбран в марте 2025 г., ввод ожидается в 2030-х; GCAP (Великобритания, Италия, Япония) начат в 2022 г.; по странице Wikipedia общий проект FCAS (NGF) прекращён в 2026 г. Игровой год 2005 не соответствует реальности (см. заметку ниже). В игре узел подписан «малозаметный, класс F-22» (в мире это 5-е поколение). Настоящее 6-е поколение (NGAD, GCAP) в строю не введено: это перспектива, в дереве пока не представлена."
     sources:
       - {url: "https://en.wikipedia.org/wiki/Sixth-generation_fighter", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.aesa_sensor_fusion
     epic: false
-    text_ru: "Японский радар J/APG-1 на Mitsubishi F-2 (первый полёт 7 октября 1995, в строю с 2000) считают первым боевым самолётным AESA; американский APG-63(V)2 на 18 F-15C вошёл в строй в 1999 году. F-22 с радаром APG-77 (1956 приёмопередающих модулей) вошёл в строй 15 декабря 2005 года. F-35 развивает слияние данных датчиков (APG-81, EW, DAS), и программное обеспечение слияния задержало программу. [Факт]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Mitsubishi_F-2", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.armadainternational.com/2022/05/airborne-aesa-fighter-radars/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Active_electronically_scanned_array", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.cmp.ceramic_matrix_composite
     epic: false
-    text_ru: "LEAP в 2016 году стал первым широко применяемым изделием с керамическим композитом: CMC-кожух турбины высокого давления работает до около 1300 °C (2400 °F), материал выдерживает на 300-400 °F больше металлов. Введён в эксплуатацию 2 августа 2016 года на A320neo. GE9X (первый полёт 13 марта 2018, сертификат FAA 25 сентября 2020) имеет 65 CMC-деталей, все статические, лопатки первой ступени остаются металлическими. [Факт]"
     sources:
       - {url: "https://www.ornl.gov/news/ceramic-matrix-composites-take-flight-leap-jet-engine/", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/GE9X", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/CFM_International_LEAP", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.prc.cmc_fabrication
     epic: false
-    text_ru: "[Факт] Керамические композиты General Electric (волокна SiC с покрытием, содержащим нитрид бора, в матрице SiC) разрабатываются более 30 лет с 1980-х (Ниска-юна, Нью-Йорк), при поддержке Минэнерго, Минобороны и NASA. Бандажи турбины высокого давления LEAP из CMC сертифицированы FAA и EASA в мае 2016 г.; LEAP стал первым широко применяемым изделием с CMC, рабочая температура до 2400 °F. Для GE9X запланированы пять деталей из CMC (в строю на 777X около 2020 г.). Исправлено: прежнее «камера GE9X в 2018+» заменено на данные страницы."
     sources:
       - {url: "https://www.ornl.gov/news/ceramic-matrix-composites-take-flight-leap-jet-engine/", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://bulletin.ceramics.org/article/ceramic-matrix-composites-taking-flight-at-ge-aviation/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.adaptive_cycle_engine
     epic: false
-    text_ru: "AFRL объявила программу ADVENT 26 марта 2007 года; за ней последовали AETD (2012) и Adaptive Engine Transition Program (AETP, 2016). GE XA100 начал испытания в декабре 2020 года, второй образец 26 августа 2021 года, а 25 марта 2022 года его впервые запустили в стенде ВВС; заявлены +10 % тяги и +25 % экономичности. Pratt & Whitney XA101 впервые запущен в 2021 году, но в 2023 году ВВС выбрали обновление ядра F135, а не адаптивный двигатель для F-35. Серийных адаптивных двигателей в строю нет. [Факт]"
     sources:
       - {url: "https://www.geaerospace.com/news/press-releases/defense-engines/ge-initiates-testing-second-xa100-adaptive-cycle-engine", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.airandspaceforces.com/article/the-latest-adaptive-cycle-engine-testing-is-a-significant-step-forward/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Pratt_%26_Whitney_XA101", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prn.phased_array_radar_pesa
     epic: false
-    text_ru: "[Факт] Радиолокатор Заслон (БРЛС-8Б) МиГ-31 называют первой серийной бортовой пассивной ФАР на истребителе; разработка 1975-1980 годов в институте Тихомирова, принят в 1981 году. [Предп.] Все эти сведения взяты из вторичных источников, первичных (НИИП, архивы) в поиске не нашлось. [Не подтверждено] Наземные ФАР 1960-х (AN/FPS-85) и преимущество перед механической антенной страницами не подтверждены."
     sources:
       - {url: "https://military-history.fandom.com/wiki/Zaslon_radar", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
       - {url: "https://www.secretprojects.co.uk/goto/post?id=581733", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s5.prn.gaas_wafer_growth
     epic: false
-    text_ru: "[Не подтверждено] Утверждение взято из фрагмента поиска; открытая запись NTRS 19870013853 оказалась другим документом (патент JPL «Total immersion crystal growth», Моррисон, 1987), в ней этого нет. Фрагмент: один отчёт NASA относит первую демонстрацию метода выращивания с жидким герметиком (LEC) к статье Метца и соавторов в J. Appl. Phys. 33 (1962) и первый рост кристаллов GaAs и InAs к Муллину с коллегами. [Предп.] Текст отчёта искажён распознаванием; точные даты роста GaAs и роль Plessey/RRE не подтверждены. [Не подтверждено] Применение подложек в СВЧ-модулях ФАР страницами не показано; обзор Муллина 2015 года описывает историю LEC."
     sources:
       - {url: "https://ntrs.nasa.gov/api/citations/19870013853/downloads/19870013853.pdf", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
       - {url: "https://link.springer.com/article/10.1007/BF02655412", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s5.cmp.gaas_mmic
     epic: false
-    text_ru: "Монолитные СВЧ-интегральные схемы первоначально делали на арсениде галлия с полевыми транзисторами MESFET, позднее перешли к HEMT и биполярным гетеротранзисторам. Программа DARPA MIMIC финансировала литейные заводы GaAs для приёмопередающих модулей; её годы указаны в источнике по-разному (1987-1995 и 1988-1999). Год первой MMIC (игровая дата 1976) не подтверждён. [Факт частично; дата [не подтверждено]]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Monolithic_microwave_integrated_circuit", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.microwaves101.com/encyclopedias/darpa-microwave-programs", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.cmp.solid_state_tr_module
     epic: false
-    text_ru: "Радар APG-77 на F-22 содержит 1956 твердотельных приёмопередающих модулей; ранняя схема использовала равное число отдельных передающих и приёмных модулей. Заменили ли они лампы бегущей волны, отдельным источником не проверено. Дата игры 1988 [не подтверждена]. [Факт частично]"
     sources:
       - {url: "https://www.armadainternational.com/2022/05/airborne-aesa-fighter-radars/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/AN/APG-77", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prn.programmable_signal_processing
     epic: false
-    text_ru: "[Факт] AN/UYS-1 Advanced Signal Processor назван первым программируемым процессором сигналов для высокоскоростной модульной обработки; контракт IBM выигран в 1973 году, ограниченное производство с 1979 года, полное с 1981, около 1700 единиц на флоте. [Факт] Он служит для обработки данных сонобуёв и входит в системы противолодочных платформ ВМС США, а не радиолокаторов. [Не подтверждено] Применение программируемых процессоров в бортовых РЛС страницами не показано; по игре узел относится к 1979 году, что совпадает с началом производства UYS-1."
     sources:
       - {url: "https://man.fas.org/dod-101/sys/ship/weaps/an-uys-1.htm", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://archive.ll.mit.edu/publications/journal/pdf/vol02_no1/2.1.4.arrayprocessor.pdf", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s8.eng.digital_beamforming
     epic: false
-    text_ru: "Теорию цифровых антенных решёток начали развивать в 1962 году в СССР (Владимир Варюхин), в 1957 году Мелтон и Бейли работали над аналоговой обработкой сигнала, а с 1960 года для пеленгации применяли быстрые компьютеры. Первую оперативную систему цифрового формирования диаграммы подтвердить не удалось; дата игры 1990 [не подтверждена]. [Факт частично]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Digital_antenna_array", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prn.relaxed_static_stability
     epic: false
-    text_ru: "[Факт] F-4 CCV (PACT) испытывал малую продольную устойчивость и короткий передний горизонтальный рулёж; в отчёте SAE 1974 года вывод: большой выигрыш в манёвренности, предсказания подтверждены в лётных испытаниях. [Факт] YF-4E с аналоговой электродистанционной системой без механического резерва летал 22 января 1973 года; программа закончилась 23 августа 1974 года. [Факт] YF-16 использовал малоустойчивую схему с цифровой ЭДСУ. [Не подтверждено] Дата первого полёта F-16 (1974) страницами этой проверки не подтверждена."
     sources:
       - {url: "https://saemobilus.sae.org/content/740861", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.afmc.af.mil/News/Article-Display/Article/3871219/flashback-nine-lives-of-a-phantom-ii/", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s8.cmp.digital_flight_control_computer
     epic: false
-    text_ru: "Вычислитель F-8 DFBW работал на Apollo Guidance Computer, с первым полностью цифровым полётом 25 мая 1972 года; самолёт назван первым цифровым ЭДСУ самолётом без механического дублирования. Для боевых самолётов важна четырёхкратная резервированная система F-16 (1978) и Airbus A320, вошедший в эксплуатацию в 1988 году. Год появления цифрового вычислителя на F/A-18 не проверен. [Факт частично]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/F-8_digital_fly-by-wire_project", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Fly-by-wire", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prn.electronic_engine_control
     epic: false
-    text_ru: "[Факт] DEEC для F100-PW-100 прошёл лётную оценку на F-15 (одноканальный цифровой регулятор с гидромеханическим резервом, полная власть); испытания шли около полутора лет (статьи 1982 и 1984 годов), проблемы первых двух этапов устранены к четвёртому. [Факт] Результат привёл к F100 EMD на F-15 и к программе HIDEC (совместное управление двигателем и самолётом). [Не подтверждено] Точные годы лётных испытаний, аналоговые регуляторы 1960-х и дата узла 1969 страницами не подтверждены (NTRS 19860015877 не открылся)."
     sources:
       - {url: "https://ntrs.nasa.gov/citations/19860015877", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://ntrs.nasa.gov/citations/19820054148", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
   - id: s5.cmp.high_modulus_fibre
     epic: false
-    text_ru: "В 1963 году У. Уотт, Л. Филлипс и У. Джонсон из Royal Aircraft Establishment в Фарнборо разработали процесс получения углеродного волокна высокой прочности из полиакрилонитрила; параллельно Акио Синдо в Японии в начале 1960-х получил волокно из ПАН. Rolls-Royce применил углепластик в вентиляторе RB211: лопатка разрушилась в испытании на попадание птицы в мае 1970 года, фирма оказалась неплатёжеспособной к январю 1971 года и была национализирована после введения внешнего управления 4 февраля 1971 года. [Факт]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Carbon_fibers", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Rolls-Royce_RB211", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prn.thrust_vectoring_nozzle
     epic: false
-    text_ru: "[Факт] F-15 S/MTD получил сопла с отклонением тяги по тангажу и передние горизонтальные плоскости в 1988 году; USAF оценивала их в 1989-1991 годах; первый этап испытаний по короткому взлёту завершён 31 января 1989 года. [Факт] По Flight International, производная от сопла P&W с этого самолёта устанавливается на F119 для F-22. [Факт] X-31 впервые полетел 11 октября 1990 года как исследовательская машина управления вектором тяги. [Не подтверждено] Ввод F-22 (2005) и роль Harrier страницами не подтверждены."
     sources:
       - {url: "https://flightglobal.com/turning-heads/15534.article", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
       - {url: "https://www.nasa.gov/sites/default/files/files/Flying_Beyond_the_Stall.pdf", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s8.prn.rcs_computational_prediction
     epic: false
-    text_ru: "[Факт] Echo 1 (1975) позволяла прогнозировать отражение формы; в том же году DARPA приняла инициативное предложение Lockheed. [Факт] Программа Echo 1 (Lockheed, автор Денис Овершольцер по результатам поиска; страница автора не называет) оценивала ЭПР проектов; ранние тесты показали ошибки в расчёте кромочной дифракции, и в программу ввели результаты Уфимцева. [Факт] Расчёт был двумерным и позволял гранёные формы, но не гладкие. [Не подтверждено] Роль Овершольцера и Уфимцева на открытой странице, и последующие методы моментов (B-2) страницами не подтверждены (PDF DARPA не читается)."
     sources:
       - {url: "https://www.airandspaceforces.com/article/1192stealth/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.darpa.mil/sites/default/files/StealthLayoutFINAL.pdf", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s8.eng.integrated_avionics_architecture
     epic: false
-    text_ru: "Авионику F-22 строили по архитектуре DoD «Pave Pillar» с технологиями программы VHSIC; два вычислителя Hughes CIP обрабатывают данные датчиков, по 10,5 млрд операций в секунду каждый. Стандарт шины MIL-STD-1553B выпущен в 1978 году как единый для трёх видов вооружённых сил. Концепция интегрированной модульной авионики, как считается, возникла в авионике истребителей четвёртого поколения. [Факт]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Lockheed_Martin_F-22_Raptor", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.milstd1553.com/resources-2/history-of-mil-std-1553/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Integrated_modular_avionics", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.cmp.silicon_carbide_fibre
     epic: false
-    text_ru: "Профессор Сэйси Яджима в Японии в 1975 году получил волокно карбида кремния из полимера поликарбосилана (процесс Яджимы); патент США 4 052 430 выдан 4 октября 1977 года. Nippon Carbon развила его в серийное волокно Nicalon; в статье инженера компании указан 1978 год, но контекст в выжимке усечён. Волокно стало основой композитов SiC/SiC для горячих частей двигателей. [Факт; год начала серийного выпуска [не подтверждён]]"
     sources:
       - {url: "https://en.wikipedia.org/wiki/Silicon_carbide_fibers", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.technagroup.it/ceramics_in_modern_technologies/view_articles/year_2020_volume_2/issue_no_2_august/development_of_continuous_silicon_carbide_fibers_nicalon_and_hi-nicalon_for_high_temperature_composite_applications", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.prn.matrix_infiltration_cvi
     epic: false
-    text_ru: "[Факт] Oak Ridge National Laboratory развил принудительное химическое осаждение из газа (FCVI) с градиентами температуры и давления для толстостенных керамических деталей; в 1994 году получены диски диаметром 24,6 см и толщиной 1,27 см. [Факт] Доклад Д. Стинтона в 1987 году описывал карбидокремниевые композиты с непрерывными волокнами, полученные CVI, и модели инфильтрации. [Не подтверждено] Начало разработок в 1960-70-е (Oak Ridge, SEP) и применение CMC в двигателях 2010-х страницами не подтверждены."
     sources:
       - {url: "https://www.osti.gov/biblio/6294496", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://www.osti.gov/servlets/purl/10162469", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s5.prn.environmental_barrier_coating
     epic: false
-    text_ru: "[Факт] NASA Glenn описывает эволюцию систем EBC для SiC/SiC через несколько поколений (Чжу, 2016); отдельная презентация 2017 года (Ли и др., Santa Fe) посвящена текущим испытаниям. [Не подтверждено открытыми страницами] Далее взято из фрагментов поиска: покрытие разрабатывал NASA Glenn с GE и P&W в 1990-е, опираясь на работы по муллитовым покрытиям на SiC. [Факт] Первое поколение EPM Gen I (BSAS/муллит+BSAS/Si, 1995-2000), второе UEET Gen II (RE2Si2O7 или RE2SiO5, 2000-2004); следующее направление на 2020-2025 годы с CMC 2400 °F и EBC 2700 °F. [Факт] Испытания шли на горелочной установке высокого давления NASA. [Не подтверждено] Серийное применение в 2010-е и температура 1300 °C страницами не подтверждены."
     sources:
       - {url: "https://ntrs.nasa.gov/api/citations/20160010286", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://ntrs.nasa.gov/citations/20180004253", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
   - id: s8.prn.variable_cycle_engine
     epic: false
-    text_ru: "[Факт] ВВС США выбрали P&W F119 вместо GE YF120 для ATF в августе 1991 года; по статье Defense ARJ, YF120 превосходил YF119 на высоких числах Маха, но считался более рискованным, а P&W набрала больше часов испытаний. [Факт] YF120 менял степень двухконтурности для разных режимов полёта. [Не подтверждено] Предшественники GE YJ101/GE21 в 1970-е и программы ADVENT/AETD годами страницами не подтверждены (страница музея ВВС не открылась; ADVENT с 2007 года подтверждён на странице GE у узла adaptive_third_stream_fan)."
     sources:
       - {url: "https://www.airandspaceforces.com/PDF/MagazineArchive/Documents/2012/September%202012/0912engines.pdf", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
       - {url: "https://www.nationalmuseum.af.mil/Visit/Museum-Exhibits/Fact-Sheets/Display/Article/195682/general-electric-yf120", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s8.prn.adaptive_third_stream_fan
     epic: false
-    text_ru: "[Факт] GE и ВВС США работают над адаптивным двигателем с 2007 года: сначала ADVENT, затем AETD. [Факт] Второй двигатель XA100 запущен 26 августа 2021 года в Эвендейле, последний прототип по AETP; первый двигатель испытывался с декабря 2020 года. [Не подтверждено открытой страницей] 22 декабря, этап 2 на AEDC и ноябрь 2023: GE начала испытания первого двигателя XA100 в Эвендейле 22 декабря 2020 года; второй двигатель: этап 1 с 26 августа 2021 года, этап 2 на стенде Arnold (AEDC) 25 марта (по пресс-релизу GE) с завершением основной вехи программы AETP. [Факт] Третий поток GE описывает как средство теплового управления; в ноябре 2023 года сообщили о третьем цикле испытаний. [Не подтверждено] Роль XA101 Pratt & Whitney, программы ADVENT/AETD и дата узла 2013 страницами не подтверждены; серийной установки на момент проверки не подтверждено."
     sources:
       - {url: "https://www.ge.com/news/press-releases/ge-initiates-testing-on-second-xa100-adaptive-cycle-engine", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.ge.com/news/reports/the-superjet-how-ges-adaptive-cycle-jet-engine-could-supercharge-military-aviation", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}

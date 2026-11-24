@@ -49,6 +49,9 @@ internal sealed class TestMods : IDisposable
 
     private static readonly string[] DropProcesses = ["single_crystal_casting", "composite_layup_cure", "low_observable_finishing", "cmc_fabrication"];
 
+    /// <summary>Deletes the history of the dropped G4 node: a history of an unknown node is a data error.</summary>
+    public static (string Name, string Text) DropG4History() => ("history.yaml", "kind: node_history\ndelete: [s8.app.jet_fighter_g4]\n");
+
     public static (string Name, string Text) DropG4Class()
     {
         string[] lines = File.ReadAllLines(Path.Combine(CoreDir, "product_classes.yaml"));
