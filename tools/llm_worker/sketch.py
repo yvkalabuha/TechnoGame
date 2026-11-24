@@ -11,6 +11,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import tempfile
 import time
@@ -29,12 +30,20 @@ BRAIN_DIR = Path.home() / ".gemini" / "antigravity-cli" / "brain"
 IMAGE_EXT = (".jpg", ".jpeg", ".png", ".webp")
 UUID_RE = re.compile(r"\A[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}\Z")
 LOGIN_RE = re.compile(r"log ?in|sign ?in|unauthenticated|not authenticated", re.I)
+QUOTA_RE = re.compile(r"RESOURCE_EXHAUSTED|ResourceExhausted|quota|\b429\b", re.I)
+ENV_NAMES = ("HOME", "PATH", "LANG", "TERM", "USER")
+ENV_PREFIXES = ("LC_", "XDG_")
+PROMPT_SUFFIXES = (".md", ".txt")
+ALLOWED_COMMANDS = ("ls", "file")
+SETTINGS = json.dumps({"permissions": {"allow": [f"command({c})" for c in ALLOWED_COMMANDS]}})
+FORBIDDEN_TOOLS = ("read_url_content", "open_browser_url", "call_mcp_tool")
+IMAGE_POLL_S = 15
 MAX_PROMPT_BYTES = 64 * 1024
 
 
 class SketchError(VisualError):
     """code: bad_task, bad_prompt, bad_ref, bad_count, agy_missing, agy_not_logged_in, agy_failed, agy_timeout,
-    no_images, secret_detected, sandbox_unavailable, rate_limit."""
+    no_images, secret_detected, sandbox_unavailable, rate_limit, agy_quota, agent_tool_violation."""
 
 
 def find_agy(which=shutil.which):
@@ -48,6 +57,7 @@ def parse_stream(text):
     """(conversation_ids, result, tools) from NDJSON. conversation_ids: main first, then sub-agents in order.
     result is the final result dict or None. Lines that are not JSON objects are ignored."""
     ids, result, tools = [], None, []
+    self_calls = []
 
     def add(cid):
         if isinstance(cid, str) and UUID_RE.match(cid) and cid not in ids:
@@ -76,6 +86,63 @@ def parse_stream(text):
             result = ev["result"]
             add(result.get("conversation_id"))
     return ids, result, tools
+
+
+def _commands(obj):
+    """Every string under a key that looks like a shell command line, recursively."""
+    found = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if isinstance(v, str) and re.search(r"command|cmdline", k, re.I):
+                found.append(v)
+            else:
+                found += _commands(v)
+    elif isinstance(obj, list):
+        for v in obj:
+            found += _commands(v)
+    return found
+
+
+def tool_violations(text):
+    """Tool calls outside the allowlist: shell commands other than ls/file, browser_*, URL readers, MCP calls.
+    A run_command whose command line cannot be read counts as a violation."""
+    bad = []
+    for line in text.splitlines():
+        try:
+            ev = json.loads(line)
+        except ValueError:
+            continue
+        su = ev.get("step_update") if isinstance(ev, dict) and ev.get("event") == "step_update" else None
+        name = su.get("tool_name") if isinstance(su, dict) else None
+        if not isinstance(name, str):
+            continue
+        if name.startswith("browser_") or name in FORBIDDEN_TOOLS:
+            bad.append(name)
+        elif name == "run_command":
+            cmds = _commands(su)
+            ok = bool(cmds) and all(c.split()[:1] and c.split()[0] in ALLOWED_COMMANDS
+                                    and not re.search(r"[;&|`$<>()]", c) for c in cmds)
+            if not ok:
+                bad.append(f"run_command: {one_line(' '.join(cmds), 80)}".rstrip(": "))
+    return list(dict.fromkeys(bad))
+
+
+def quota_hit(err, result, out):
+    """True when stderr, the result (incl. the agent's final response) or the last events mention a quota error.
+    The init event is skipped: it lists tool names and settings, not outcomes."""
+    texts = [err or "", json.dumps(result or {})]
+    tail = []
+    for line in out.splitlines():
+        try:
+            ev = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(ev, dict) and ev.get("event") == "step_update":
+            tail.append(ev)
+    for ev in tail[-5:]:
+        su = ev.get("step_update") or {}
+        texts += [su[k] for k in ("text_delta", "error", "message") if isinstance(su.get(k), str)]
+    return any(QUOTA_RE.search(t) for t in texts)
 
 
 def find_model(text):
@@ -141,12 +208,47 @@ def build_prompt(text, count, ref_paths):
     return "\n".join(parts)
 
 
+def safe_env(environ=None):
+    """Allowlisted environment for agy: no *_KEY, *_TOKEN or other secrets of the parent process."""
+    environ = os.environ if environ is None else environ
+    return {k: v for k, v in environ.items() if k in ENV_NAMES or k.startswith(ENV_PREFIXES)}
+
+
 def default_runner(cmd, cwd, timeout):
+    # Own session: on timeout the whole process group (agy and what it started) is killed.
+    p = subprocess.Popen(cmd, cwd=cwd, env=safe_env(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                         start_new_session=True)
     try:
-        p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout)
+        out, err = p.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
+        try:
+            os.killpg(p.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        p.communicate()
         raise SketchError("agy_timeout", f"no answer in {timeout} s") from None
-    return p.returncode, p.stdout, p.stderr
+    return p.returncode, out, err
+
+
+def check_prompt_file(prompt_file, root):
+    """Resolved prompt path: a .md/.txt file of the repository, no dot-path parts, not ignored by git."""
+    rootp = Path(root).resolve()
+    pf = Path(prompt_file).resolve()
+    bad = lambda why: SketchError("bad_prompt", f"{prompt_file}: {why}")
+    if rootp not in pf.parents or not pf.is_file() or pf.stat().st_size > MAX_PROMPT_BYTES:
+        raise bad(f"must be a file of the repository, up to {MAX_PROMPT_BYTES} bytes")
+    rel = pf.relative_to(rootp)
+    if any(part.startswith(".") for part in rel.parts):
+        raise bad("dot-files and dot-directories are not allowed")
+    if pf.suffix.lower() not in PROMPT_SUFFIXES:
+        raise bad("only .md and .txt files are allowed")
+    try:
+        ignored = subprocess.run(["git", "check-ignore", "-q", "--", str(pf)], cwd=rootp, capture_output=True).returncode
+    except OSError:
+        raise bad("git is not available to check the ignore rules") from None
+    if ignored != 1:  # 0 ignored, 128 not a repository: both refuse
+        raise bad("ignored by git or not in a git repository")
+    return pf
 
 
 def agy_version(agy, runner):
@@ -172,15 +274,13 @@ def attribution_line(rec, f):
 
 def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, shots_dir=None, root=config.REPO_ROOT,
                brain_dir=BRAIN_DIR, runner=None, which=shutil.which, timeout_s=DEFAULT_TIMEOUT_S, dry_run=False,
-               guard=None, clock=time.time):
+               guard=None, clock=time.time, sleep=time.sleep):
     """One agy run. Returns (json path or None, md path or None, record)."""
     if not TASK_RE.match(task):
         raise SketchError("bad_task", task)
     if not 1 <= count <= MAX_COUNT:
         raise SketchError("bad_count", f"1..{MAX_COUNT}")
-    pf = Path(prompt_file).resolve()
-    if Path(root).resolve() not in pf.parents or not pf.is_file() or pf.stat().st_size > MAX_PROMPT_BYTES:
-        raise SketchError("bad_prompt", f"{prompt_file}: must be a file of the repository, up to {MAX_PROMPT_BYTES} bytes")
+    pf = check_prompt_file(prompt_file, root)
     brief = pf.read_text(encoding="utf-8")
     ref_paths = check_refs(list(refs), shots_dir)
     try:
@@ -208,16 +308,27 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
             shutil.copyfile(p, dst)
             ws_refs.append(dst)
         cmd = [agy, "-p", build_prompt(brief, count, ws_refs), "--print-timeout", f"{timeout_s}s",
-               "--mode", "accept-edits", "--output-format", "stream-json"]
+               "--mode", "accept-edits", "--output-format", "stream-json",
+               "--settings", SETTINGS]
         record["agy_version"] = agy_version(agy, runner)
         rc, out, err = runner(cmd, ws, timeout_s + 60)
     record["started_at"] = datetime.fromtimestamp(started, timezone.utc).isoformat(timespec="seconds")
     record["date"] = record["started_at"][:10]
     ids, result, tools = parse_stream(out)
     record.update(conversation_id=ids[0] if ids else None, conversation_ids=ids, tools=tools, exit_code=rc)
+    bad_tools = tool_violations(out)
+    if bad_tools:
+        record["agent_tool_violation"] = bad_tools
+        write_pair(Path(runs_dir), f"sketch-{task}-{digest[:8]}", record,
+                   lambda r: f"# Gemini sketches (agy): {r['task']}\n\nREFUSED: agent tool violation: {', '.join(r['agent_tool_violation'])}\n")
+        raise SketchError("agent_tool_violation", ", ".join(bad_tools))
+    answer = result.get("response") if result and isinstance(result.get("response"), str) else ""
+    if quota_hit(err, result, out):
+        raise SketchError("agy_quota", one_line(answer or err[-600:] or "quota error", 300))
     if result is None or rc != 0:
-        detail = one_line(err or out, 300)
-        raise SketchError("agy_not_logged_in" if LOGIN_RE.search(err + out[-2000:]) else "agy_failed", f"exit {rc}: {detail}")
+        detail = one_line(answer or err or out, 300)
+        login = LOGIN_RE.search(err + json.dumps(result or {}))
+        raise SketchError("agy_not_logged_in" if login else "agy_failed", f"exit {rc}: {detail}")
     record["status"] = result.get("status")
     record["model"] = find_model(out) or f"agy {record.get('agy_version') or '?'} image-generator"
     usage = result.get("usage") if isinstance(result.get("usage"), dict) else {}
@@ -227,6 +338,11 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
     if result.get("status") != "SUCCESS":
         raise SketchError("agy_failed", f"status {result.get('status')}")
     found = collect_images(ids, started - 2, brain_dir)
+    for _ in range(IMAGE_POLL_S):  # the file may land a moment after the result event
+        if len(found) >= count:
+            break
+        sleep(1)
+        found = collect_images(ids, started - 2, brain_dir)
     if not found:
         raise SketchError("no_images", f"no new image in the brain dirs of {', '.join(ids)}")
     out_dir = Path(shots_dir or config.SHOTS_DIR) / "sketches" / task

@@ -231,7 +231,8 @@ def _sketch(a):
         path, md, rec = sketch_mod.run_sketch(a.task, a.prompt_file, a.ref, a.count, runs_dir=a.runs,
                                               timeout_s=a.timeout, dry_run=a.dry_run)
     except visual_mod.VisualError as e:
-        refused = e.code in ("rate_limit", "secret_detected", "sandbox_unavailable", "agy_missing", "agy_not_logged_in")
+        refused = e.code in ("rate_limit", "secret_detected", "sandbox_unavailable", "agy_missing", "agy_not_logged_in",
+                                    "agy_quota", "agent_tool_violation")
         print(f"refused: {e}" if refused else f"error: {e}")
         return 4 if refused else 5
     if a.dry_run:
