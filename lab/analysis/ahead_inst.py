@@ -72,6 +72,8 @@ def main():
     first = next(iter(I.values()))[0]["x"]
     print(f"core_commit={first['core']} data_hash={dh} manifest_hash={first['manifest_hash']}")
     print("VALIDITY:", "OK" if not allv else "FAIL " + " | ".join(allv))
+    if allv:
+        return 1  # no tables or recommendation from an invalid comparison
     print("\n| Point | " + " | ".join(f"{l} ({n}) {lo}-{hi}" for n, l, (lo, hi) in TARGETS) + " | G5 fielded USA/SUN/FRA [seeds] | leader 2030-12 | P1/P2 |")
     print("|---|" + "---|" * (len(TARGETS) + 3))
     for pt in ("off", "k02", "k05"):

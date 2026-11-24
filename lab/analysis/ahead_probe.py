@@ -75,6 +75,77 @@ def cross_check(provs, same_data, other_data, same_build=True):
     return problems
 
 
+RESEARCH_PAIRED = ("AHEAD_POW", "AHEAD_MAX")  # meaningful only when the cost is on in both arms
+
+
+def arm_params(mdir):
+    """Manifest params of each series of a matrix (run.json params of its ok runs); a series whose runs disagree is a problem."""
+    arms, problems = {}, []
+    for r in rows_csv(os.path.join(mdir, "runs.csv")):
+        if r["status"] != "ok":
+            continue
+        with open(os.path.join(mdir, "runs", r["run"], "run.json")) as f:
+            p = json.load(f).get("params", {})
+        if r["series"] in arms and arms[r["series"]] != p:
+            problems.append(f"series {r['series']}: runs with different params")
+        arms.setdefault(r["series"], p)
+    return arms, problems
+
+
+def _cost_on(p):
+    try:
+        return float(p.get("AHEAD_K", "nan")) > 0
+    except ValueError:
+        return False
+
+
+def compare_arms(p, q, varied):
+    """Keys (research and all other manifest params) in which two arms differ, except the factor under test. AHEAD_K absent = the build default
+    and compares equal only to absent; AHEAD_POW/AHEAD_MAX count only when both arms set AHEAD_K > 0 (they do nothing at k = 0)."""
+    diff = []
+    for k in sorted(set(p) | set(q)):
+        if k in varied:
+            continue
+        if k in RESEARCH_PAIRED and not (_cost_on(p) and _cost_on(q)):
+            continue
+        if p.get(k) != q.get(k):
+            diff.append(k)
+    return diff
+
+
+def research_check(arms):
+    """arms: axis -> series -> params. Within an axis, series with the same speed suffix ('_s080') may differ only in AHEAD_K; A and B points of the
+    same name in nothing (only the data differ); an S point 'X_sNNN' and B 'X' only in K_DIV (Codex review round 2, train 2)."""
+    problems = []
+
+    def pair(a, pa, b, pb, varied):
+        d = compare_arms(arms[a][pa], arms[b][pb], varied)
+        if d:
+            problems.append(f"{a}/{pa} vs {b}/{pb} differ in {d} (only {sorted(varied) or 'the data'} may differ)")
+
+    suffix = lambda n: n[n.index("_"):] if "_" in n else ""
+    for ax, pts in arms.items():
+        names = sorted(pts)
+        for i, x in enumerate(names):
+            for y in names[i + 1:]:
+                if suffix(x) == suffix(y):
+                    pair(ax, x, ax, y, {"AHEAD_K"})
+    if "A" in arms and "B" in arms:
+        for n in sorted(set(arms["A"]) | set(arms["B"])):
+            if n not in arms["A"] or n not in arms["B"]:
+                problems.append(f"point {n} is not in both A and B")
+            else:
+                pair("A", n, "B", n, set())
+    if "S" in arms and "B" in arms:
+        for n in sorted(arms["S"]):
+            base = n[:n.index("_")] if "_" in n else n
+            if base not in arms["B"]:
+                problems.append(f"S point {n} has no B point {base}")
+            else:
+                pair("S", n, "B", base, {"K_DIV"})
+    return problems
+
+
 def rows_csv(path):
     with open(path, newline="") as f:
         return list(csv.DictReader(f))
@@ -112,9 +183,20 @@ def main():
     provs = {lab: provenance(m)[0] for lab, (m, _) in axes}
     allv += [f"{lab} {x}" for lab, (m, _) in axes for x in provenance(m)[1]]
     allv += cross_check(provs, same_data=[["B", "S"]] if "S" in provs else [], other_data=[("A", "B")])
+    arms = {}
+    for lab, (m, _) in axes:
+        arms[lab], ap_problems = arm_params(m)
+        allv += [f"{lab} {x}" for x in ap_problems]
+    allv += research_check(arms)
     # dirty = some tracked file differed from HEAD (any file, docs and lab/analysis included); build_commit and data_hash pin what ran, so it is printed, not fatal
     print("dirty runs per matrix:", {lab: p["dirty_runs"] for lab, p in provs.items()})
     print("VALIDITY:", "OK" if not allv else "FAIL " + " | ".join(allv))
+    if allv:
+        # No tables, no recommendation and no machine-readable results from an invalid comparison: only a FAIL record.
+        if args.json:
+            with open(args.json, "w") as f:
+                json.dump({"validity": "FAIL", "problems": allv}, f, indent=1)
+        return 1
 
     summary = {}
     print("\n## World-first discovery year, median (min…max); never known = 2031")

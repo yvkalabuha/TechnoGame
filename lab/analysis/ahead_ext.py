@@ -60,6 +60,8 @@ def main():
     first = next(iter(E.values()))[0]["x"]
     print(f"core_commit={first['core']} data_hash={dh} manifest_hash={first['manifest_hash']}")
     print("VALIDITY:", "OK" if not allv else "FAIL " + " | ".join(allv))
+    if allv:
+        return 1  # no tables or recommendation from an invalid comparison
     S = {k: stats(v) for k, v in E.items()}
     off = stats(B["off"])
     print("\n| Point | " + " | ".join(f"{l} ({n})" for n, l, _ in NODES) + " | G3/G4 APP | hits / outside | P1/P2 | G5 fielded USA/SUN/FRA [seeds] | USA y G=0 |")
