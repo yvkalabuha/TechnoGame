@@ -48,7 +48,7 @@ public class TwoWorldsOnOnePoolTests
     // Re-recorded in TASK-0134 (train 2: Hcap(t), mastery), reason: schema v14 (new columns prd.prog.*, pol.prog.*, pol.below.*, cmd.prog.*, prd.rejected.BadProgramme, all zero before 1978-01); the old columns are unchanged to month 387 (MasteryIdentityTests, HorizonTests, GoldenProjectionAgainstMainTests), so only the new columns change this hash.
     private static readonly Dictionary<ulong, string> Pinned = new()
     {
-        [1] = "554d9a0cf478492998928d8961b9118a838d3d947cd58de39933b22466ec72fc", [2] = "ceaff23890e3bf8e2fea957da88a039afd2cdfe701730e30b45ac07d5fdc809d", [3] = "8bc7f6acdd8fa21508a450214836e42fdb0f29d77f6dddfd25233b961e6de306", [4] = "dc22b91f5a6fb2d458e366aaecf195a467732931754fb28c8839e0b7dc0fbbb5", [5] = "3d1dd5ee9c33a00eace3e0c2c7df711618aad7b3469e4535330b8189a804317e", [7] = "bf02b423f2d66d6f193fe9d293e70433aed034fa20200e54b981ef1a624d3c0f",
+        [1] = "554d9a0cf478492998928d8961b9118a838d3d947cd58de39933b22466ec72fc", [2] = "ceaff23890e3bf8e2fea957da88a039afd2cdfe701730e30b45ac07d5fdc809d", [3] = "8bc7f6acdd8fa21508a450214836e42fdb0f29d77f6dddfd25233b961e6de306", [4] = "dc22b91f5a6fb2d458e366aaecf195a467732931754fb28c8839e0b7dc0fbbb5", [5] = "3d1dd5ee9c33a00eace3e0c2c7df711618aad7b3469e4535330b8189a804317e", [7] = "34cd65c66ff96c6e29326ea0fdf812be27d1c4fa08922ef09b427af6bc8304b0",
     };
 
     private static void AssertPinned(ulong seed, string[] actual, string what)

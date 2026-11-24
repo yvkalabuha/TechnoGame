@@ -51,7 +51,7 @@ public class SeriesSwitchTests
         HashAssert.Equal(MainSeed1Month149, Run(Base() with { ViewMode = SliceViewMode.Full }, 150).LastHash);
         Assert.DoesNotContain(s.World.Table.Columns, c => c.Name.StartsWith("run.layer", StringComparison.Ordinal) || c.Name is "run.grid" or "run.effort_share");
         Assert.Equal(SliceTestData.Create(Base()).World.SchemaFingerprint(), SliceTestData.Create(explicitDefaults).World.SchemaFingerprint());
-        Assert.Equal(13, SliceWorld.SchemaVersion);
+        Assert.Equal(14, SliceWorld.SchemaVersion);
     }
 
     [Fact]

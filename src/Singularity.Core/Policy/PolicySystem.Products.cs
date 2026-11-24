@@ -42,7 +42,7 @@ public sealed partial class PolicySystem
     // Mastery rules (TASK-0134): months a line of tier ≥ 5 stayed below y_prod, per design; the AI's programme decisions per programme process
     // ((stamp << 3) | 4 for abroad | 1 start, 2 cancel; read where stamp is the month that consumes it).
     private IntColumn[] _below = [], _progCmd = [];
-    private int[] _progNumbers = [];
+    private System.Collections.Immutable.ImmutableArray<int> _progNumbers = [];
 
     // Traces of the last compute (SLICE_COMPOSITION §13.4, §13.6): scratch outside the table, a row is rewritten by its own compute; not state, not hashed.
     [Scratch]
@@ -96,7 +96,7 @@ public sealed partial class PolicySystem
         _below = new IntColumn[products is null ? 0 : designs];
         for (int d = 0; d < _below.Length; d++)
             _below[d] = table.AddInt($"pol.below.{d}");
-        _progNumbers = products is null ? [] : [.. MasteryParams.ProgrammeProcesses(products.Layout).Select(k => products.Layout.ProcNumber[k])];
+        _progNumbers = products is null ? [] : System.Collections.Immutable.ImmutableArray.CreateRange(MasteryParams.ProgrammeProcesses(products.Layout).Select(k => products.Layout.ProcNumber[k]));
         _progCmd = new IntColumn[_progNumbers.Length];
         for (int j = 0; j < _progCmd.Length; j++)
             _progCmd[j] = table.AddInt($"pol.prog.p{_progNumbers[j]}");

@@ -154,7 +154,7 @@ internal sealed class SliceWorld
             events: Streams.Events, eventInputs: new PolicyEventsAdapter(this), disruptionExposure: scenario.Exposure,
             budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout) > LicenceMask.NarrowMaxNumber);   // O-040: the second word only for data whose licensable PRC need it
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs,
-            [.. MasteryParams.ProgrammeProcesses(ProductsLayout).Select(k => ProductsLayout.ProcNumber[k])]);
+            ImmutableArray.CreateRange(MasteryParams.ProgrammeProcesses(ProductsLayout).Select(k => ProductsLayout.ProcNumber[k])));
         Limits = new CommandLimits(scenario.ActorCount, ProductsLayout.SlotCount, ProductsLayout.Designs,
             [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)]);
         RegisterRunColumns();

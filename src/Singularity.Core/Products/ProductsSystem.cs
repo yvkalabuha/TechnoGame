@@ -71,7 +71,7 @@ public sealed partial class ProductsSystem : ITickSystem
     private readonly LongColumn[] _rateCmd, _dGate, _lossAcc, _retro, _lost, _inService0, _rejected, _retired, _sold, _replCredit;
     // Mastery programme state per programme process (tier ≥ 5) and actor: ((start month + 1) << 1) | domestic, 0 = none (TASK-0134, prog_state).
     private readonly IntColumn[] _prog;
-    private readonly int[] _progOf, _progRows, _progNumbers;
+    private readonly System.Collections.Immutable.ImmutableArray<int> _progOf, _progNumbers;
     private readonly LongColumn _need, _paid, _spent, _tbSpent, _saleIncome, _saleCap, _saleY, _extTotal;
 
     // Midyear month index of each cohort year (spec A32): age of cohort Y at month t is t − _m0[Y].
@@ -237,16 +237,17 @@ public sealed partial class ProductsSystem : ITickSystem
         _rejected = new LongColumn[RejectionKinds];
         for (int r = 0; r < RejectionKinds; r++)
             _rejected[r] = table.AddLong($"prd.rejected.{(CommandRejection)r}");
-        _progRows = MasteryParams.ProgrammeProcesses(layout);
-        _progOf = new int[layout.ProcNumber.Length];
-        Array.Fill(_progOf, -1);
-        _progNumbers = [.. _progRows.Select(k => layout.ProcNumber[k])];
-        _prog = new IntColumn[_progRows.Length];
-        for (int j = 0; j < _progRows.Length; j++)
+        int[] progRows = MasteryParams.ProgrammeProcesses(layout);
+        var progOf = new int[layout.ProcNumber.Length];
+        Array.Fill(progOf, -1);
+        _prog = new IntColumn[progRows.Length];
+        for (int j = 0; j < progRows.Length; j++)
         {
-            _progOf[_progRows[j]] = j;
-            _prog[j] = table.AddInt($"prd.prog.p{layout.ProcNumber[_progRows[j]]}");
+            progOf[progRows[j]] = j;
+            _prog[j] = table.AddInt($"prd.prog.p{layout.ProcNumber[progRows[j]]}");
         }
+        _progOf = System.Collections.Immutable.ImmutableArray.Create(progOf);
+        _progNumbers = System.Collections.Immutable.ImmutableArray.CreateRange(progRows.Select(k => layout.ProcNumber[k]));
         _need = table.AddLong("prd.upkeepNeed");
         _paid = table.AddLong("prd.paidRatio");
         _spent = table.AddLong("prd.spent");
@@ -910,7 +911,7 @@ public sealed partial class ProductsSystem : ITickSystem
     }
 
     /// <summary>Process numbers with a programme column (tier ≥ 5), ascending.</summary>
-    public ReadOnlySpan<int> ProgrammeProcessNumbers => _progNumbers;
+    public ReadOnlySpan<int> ProgrammeProcessNumbers => _progNumbers.AsSpan();
 
     // ---- tick phases
 
