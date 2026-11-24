@@ -147,7 +147,7 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
             HcapGrowthMax = AtLeast(p, "HCAP_MAX", Fx6.Zero),
             MasteryXProg = XProg(p),
             MasteryUpkeepMult = AtLeast(p, "UPKEEP_MULT", Fx6.One),
-            MasteryRules = Enum(p, "MASTERY_RULES", "ALL", ParseMasteryRules),
+            MasteryRules = Enum(p, "MASTERY_RULES", "MAIN", ParseMasteryRules),
             XHalfByTier = XHalf(p),
             DeltaH = Optional(p, "DELTA_H"),
             CM = Optional(p, "C_M"),
@@ -210,11 +210,13 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
     }
 
     /// <summary>
-    /// MASTERY_RULES (TASK-0134): <c>ALL</c> (default, main), <c>NONE</c>, or parts joined by <c>+</c>: <c>GATE</c>, <c>CLOSE</c>, <c>FORESIGHT</c>,
+    /// MASTERY_RULES (TASK-0134): <c>MAIN</c> (default: <see cref="MasteryRules.Main"/> = FORESIGHT+PROGRAMME, owner decision #452), <c>ALL</c>, <c>NONE</c>, or parts joined by <c>+</c>: <c>GATE</c>, <c>CLOSE</c>, <c>FORESIGHT</c>,
     /// <c>PROGRAMME</c> (arms B0-B3 of the probe, g5-g6-probe.md §9). A part given twice is an error.
     /// </summary>
     internal static MasteryRules ParseMasteryRules(string v)
     {
+        if (v == "MAIN")
+            return MasteryRules.Main;
         if (v == "ALL")
             return MasteryRules.All;
         if (v == "NONE")

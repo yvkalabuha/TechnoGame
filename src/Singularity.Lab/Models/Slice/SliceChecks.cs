@@ -1020,9 +1020,9 @@ public static class SliceChecks
         if (g0c.CostMultG5 is not null || g0c.CostMultG6 is not null)
             return "COST_MULT_G5/G6 set without the keys";
         // TASK-0134: HCAP_K, HCAP_MAX, X_PROG, UPKEEP_MULT, MASTERY_RULES reach SliceRunConfig as given (allowed in JetSliceCalib, which calib-print
-        // runs); absent = null and MasteryRules.All (the build's defaults).
+        // runs); absent = null and MasteryRules.Main (the build's defaults, owner decision #452: FORESIGHT+PROGRAMME).
         if (g0c.HcapGrowthPerYear is not null || g0c.HcapGrowthMax is not null || g0c.MasteryXProg is not null || g0c.MasteryUpkeepMult is not null
-            || g0c.MasteryRules != MasteryRules.All)
+            || g0c.MasteryRules != MasteryRules.Main)
             return "mastery keys set without the keys";
         Manifest h = Lab.Manifest.Parse(Manifest("JetSliceCalib", Ticks60,
             pars: """{"HCAP_K": 0.05, "HCAP_MAX": 1.5, "X_PROG": 0.5, "UPKEEP_MULT": 2, "MASTERY_RULES": "GATE+CLOSE+PROGRAMME"}"""), "/x/m.json");
@@ -1030,7 +1030,7 @@ public static class SliceChecks
         if (hc.HcapGrowthPerYear != Fx6.FromRaw(50_000) || hc.HcapGrowthMax != Fx6.FromRaw(1_500_000) || hc.MasteryXProg != Fx6.FromRaw(500_000)
             || hc.MasteryUpkeepMult != Fx6.FromInt(2) || hc.MasteryRules != (MasteryRules.Gate | MasteryRules.CandidateClose | MasteryRules.Programme))
             return $"mastery keys parsed as {hc.HcapGrowthPerYear}/{hc.HcapGrowthMax}/{hc.MasteryXProg}/{hc.MasteryUpkeepMult}/{hc.MasteryRules}";
-        foreach (var (text, want) in new[] { ("NONE", MasteryRules.None), ("ALL", MasteryRules.All), ("PROGRAMME+FORESIGHT", MasteryRules.Programme | MasteryRules.Foresight),
+        foreach (var (text, want) in new[] { ("NONE", MasteryRules.None), ("ALL", MasteryRules.All), ("MAIN", MasteryRules.Main), ("PROGRAMME+FORESIGHT", MasteryRules.Programme | MasteryRules.Foresight),
                      ("GATE+CLOSE+FORESIGHT+PROGRAMME", MasteryRules.All) })
         {
             if (SliceParameters.ParseMasteryRules(text) != want)
