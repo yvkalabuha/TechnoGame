@@ -10,6 +10,7 @@
 | `fetch [--pin]` | скачивает источники из `sources.lock.yaml` в кеш (`tools/map/.cache` или `SINGULARITY_MAP_CACHE`), сверяет SHA-256 |
 | `bootstrap` | пишет `spec/10-merge-world`, `15-subdivide-world`, `ids/world`, `regions/world`; повторный запуск дописывает id только для кусков без якоря. Регионы: `isolate` (12-isolate.yaml) и `regions` разреза задают регион явно, остальное кластеризуется по странам (`world_region_unit_km2`) |
 | `build` | применяет `spec/`, проверяет (валидатор ADR §2.10), пишет `mods/core/map/{provinces,regions,adjacency,straits}.yaml` и `geo/{arcs.bin,manifest.json}` |
+| `python3 tools/map/ensure_geo.py` | не команда сборщика: следит, чтобы `geo/arcs.bin` (в git его нет) существовал и совпадал с `manifest.json`; иначе собирает из кеша (при пустом кеше сначала `fetch`) или останавливается с указанием, что делать. Вызывают `verify.py`, сборка клиента (`./play.sh`) и CI |
 | `verify` | сверяет `geo/manifest.json` с таблицами (`data_binding`) |
 | `find`, `at`, `overlap`, `dump` | вспомогательные запросы для ручной правки спецификации |
 

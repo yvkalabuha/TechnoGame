@@ -69,6 +69,8 @@ public sealed partial class Overlay : Control
             l.AddThemeFontOverride("font", Fonts.Map);
             l.AddThemeFontSizeOverride("font_size", 14);
             l.AddThemeColorOverride("font_color", Ink);
+            // A plate under the word (C5): sheet at 85 %, so that the text reads on every tone and the hatching never runs through it.
+            l.AddThemeStyleboxOverride("normal", new StyleBoxFlat { BgColor = new Color(Ui.Sheet, 0.85f), ContentMarginLeft = 3, ContentMarginRight = 3, ContentMarginTop = 0, ContentMarginBottom = 0 });
             AddChild(l);
             _labels.Add(s = new LabelState { C = c, Node = l });
         }

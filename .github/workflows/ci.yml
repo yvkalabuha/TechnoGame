@@ -69,8 +69,6 @@ jobs:
           dotnet-version: "10.0.x"
       - name: Package graph (no LGPL modules)
         run: bash tools/map/check_packages.sh
-      - name: MapBuilder tests
-        run: dotnet test tests/Singularity.MapBuilder.Tests -c Release
       - name: Cache pinned map sources
         id: map-cache
         uses: actions/cache@v4
@@ -82,6 +80,17 @@ jobs:
         if: steps.map-cache.outputs.cache-hit != 'true'
         continue-on-error: true
         run: dotnet run -c Release --project tools/map/MapBuilder -- fetch
+      - name: Build geo/arcs.bin (the client map tests read it, TASK-0138)
+        id: geo
+        if: steps.map-cache.outputs.cache-hit == 'true' || steps.map-fetch.outcome == 'success'
+        continue-on-error: true
+        env:
+          SINGULARITY_MAP_CACHE: ${{ github.workspace }}/tools/map/.cache
+        run: python3 tools/map/ensure_geo.py
+      - name: MapBuilder tests
+        env:
+          SINGULARITY_GEO_OPTIONAL: ${{ steps.geo.outcome == 'success' && '' || '1' }}
+        run: dotnet test tests/Singularity.MapBuilder.Tests -c Release
       - name: Determinism (two builds byte-identical, equal to committed tables)
         if: steps.map-cache.outputs.cache-hit == 'true' || steps.map-fetch.outcome == 'success'
         run: bash tools/map/check_determinism.sh
