@@ -26,9 +26,15 @@ class AgyViolation(RuntimeError):
     """The agent used a tool or path outside the allowlist."""
 
 
-def command(agy, prompt, schema_file, model, timeout_s, settings):
-    return [agy, "-p", prompt, "--model", model, "--print-timeout", f"{timeout_s}s", "--mode", "plan",
+def command(agy, schema_file, model, timeout_s, settings):
+    """The prompt goes through stdin (one stream-json user message): a review prompt can be up to 1 MB, far more
+    than one command-line argument may hold (E2BIG at about 128 KB). Event format checked on agy 1.5.16."""
+    return [agy, "--input-format", "stream-json", "--model", model, "--print-timeout", f"{timeout_s}s", "--mode", "plan",
             "--output-format", "stream-json", "--json-schema", str(schema_file), "--settings", settings]
+
+
+def user_message(prompt):
+    return json.dumps({"event": "user", "message": {"role": "user", "content": prompt}}, ensure_ascii=False) + "\n"
 
 
 def init_model(out):
@@ -64,10 +70,15 @@ def run_agy(prompt, worktree, schema_file, model=MODEL, timeout_s=DEFAULT_TIMEOU
         agy = sketch.find_agy(which)
         # Reads are limited by rules, not only checked afterwards: the diff is untrusted and may carry injected instructions.
         with sketch.settings_file([worktree, brain_dir], [brain_dir]) as settings:
-            rc, out, err = runner(command(agy, prompt, schema_file, model, timeout_s, settings), str(worktree), timeout_s + 60)
+            rc, out, err = runner(command(agy, schema_file, model, timeout_s, settings), str(worktree), timeout_s + 60,
+                                  user_message(prompt))
     except sketch.SketchError as e:
         raise AgyFailed(f"{e.code}: {e}") from None
+    except OSError as e:  # the process could not start at all
+        raise AgyFailed(f"agy could not start: {e}") from None
     ids, result, _ = sketch.parse_stream(out)
+    if not ids and result is not None and result.get("status") == "SUCCESS":
+        raise AgyViolation("no conversation id in the stream: the transcript cannot be checked")  # fail closed
     calls, missing = sketch.transcript_calls(brain_dir, ids)
     roots = sketch.run_roots(worktree, brain_dir, ids)
     bad = sketch.tool_violations(out, roots, sketch.verified_tools(calls, REVIEW_PATH_TOOLS), REVIEW_CONTROL,

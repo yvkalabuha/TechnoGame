@@ -65,7 +65,9 @@ def scoped_deny_rules(allowed, top="/", closed_children=()):
     """Deny rules that leave only the `allowed` folders readable. Evidence 2026-11-24 (agy 1.5.16): a deny rule beats an
     allow rule, and a path that no rule names is NOT auto-denied, so an allow-list cannot be written; instead every
     sibling along the path from / to each allowed folder is denied (read_file(<path>/**), matched after ".." is
-    normalised). closed_children: folders that stay allowed but whose existing subfolders are denied up front (brain
+    normalised). Residual risk: a folder created next to an allowed one while the run is going has no rule
+    (agy has no wildcard inside a path segment and permits unmatched reads in every mode, probed 2026-11-24); the
+    post-run audit then refuses the result, but the model has seen the file. closed_children: folders that stay allowed but whose existing subfolders are denied up front (brain
     folders of other conversations; this run's own one appears later). A name that cannot be written into a rule, or a folder too large to list, refuses the run."""
     allowed = [os.path.realpath(p) for p in allowed if os.path.isdir(p)]
     rules = []
@@ -389,12 +391,12 @@ def safe_env(environ=None):
     return {k: v for k, v in environ.items() if k in ENV_NAMES or k.startswith(ENV_PREFIXES)}
 
 
-def default_runner(cmd, cwd, timeout):
+def default_runner(cmd, cwd, timeout, stdin=None):
     # Own session: on timeout the whole process group (agy and what it started) is killed.
     p = subprocess.Popen(cmd, cwd=cwd, env=safe_env(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                         start_new_session=True)
+                         stdin=subprocess.PIPE if stdin is not None else subprocess.DEVNULL, start_new_session=True)
     try:
-        out, err = p.communicate(timeout=timeout)
+        out, err = p.communicate(stdin, timeout=timeout)
     except subprocess.TimeoutExpired:
         try:
             os.killpg(p.pid, signal.SIGKILL)

@@ -5,6 +5,7 @@ The state is one small JSON file under ~/.cache/singularity/. A missing, corrupt
 import json
 import os
 import re
+import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -42,12 +43,15 @@ def record_limit(reset_at, now, state_dir=STATE_DIR):
     reset_at = min(reset_at or now + DEFAULT_COOLDOWN, now + MAX_COOLDOWN)
     state_dir = Path(state_dir)
     state_dir.mkdir(parents=True, exist_ok=True)
-    tmp = state_dir / (STATE_FILE + ".tmp")
-    fd = os.open(tmp, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
-        json.dump({"reset_at": reset_at.astimezone(timezone.utc).isoformat(timespec="seconds"),
-                   "recorded_at": now.astimezone(timezone.utc).isoformat(timespec="seconds")}, f)
-    os.replace(tmp, state_dir / STATE_FILE)
+    fd, tmp = tempfile.mkstemp(dir=state_dir, prefix=STATE_FILE + ".")  # own file per writer, mode 0600
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump({"reset_at": reset_at.astimezone(timezone.utc).isoformat(timespec="seconds"),
+                       "recorded_at": now.astimezone(timezone.utc).isoformat(timespec="seconds")}, f)
+        os.replace(tmp, state_dir / STATE_FILE)  # atomic: a reader sees the old or the new file, never a mix
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
     return reset_at
 
 

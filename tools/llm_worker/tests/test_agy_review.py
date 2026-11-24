@@ -109,6 +109,20 @@ class ScopedRulesTest(unittest.TestCase):
                     sketch.scoped_deny_rules([root / "run"], top=root)
 
 
+class LimitCacheTest(unittest.TestCase):
+    def test_parallel_writers_leave_a_valid_file_and_no_temp_files(self):
+        import threading
+        with tempfile.TemporaryDirectory() as d:
+            ts = [threading.Thread(target=limitstate.record_limit, args=(NOW + timedelta(hours=1 + i % 3), NOW, d)) for i in range(40)]
+            for t in ts:
+                t.start()
+            for t in ts:
+                t.join()
+            self.assertIsNotNone(limitstate.limited_until(NOW, d))
+            self.assertEqual([p.name for p in Path(d).iterdir()], [limitstate.STATE_FILE])
+            self.assertEqual((Path(d) / limitstate.STATE_FILE).stat().st_mode & 0o777, 0o600)
+
+
 class RunAgyTest(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
@@ -125,8 +139,8 @@ class RunAgyTest(unittest.TestCase):
             "\n".join(json.dumps({"tool_calls": [{"name": n, "args": a}]}) for n, a in transcript))
         seen = []
 
-        def runner(cmd, cwd, timeout):
-            seen.append((cmd, cwd, json.loads(Path(cmd[cmd.index("--settings") + 1]).read_text())))
+        def runner(cmd, cwd, timeout, stdin=None):
+            seen.append((cmd, cwd, json.loads(Path(cmd[cmd.index("--settings") + 1]).read_text()), stdin))
             return rc, out, err
 
         res = agyreview.run_agy("p", self.wt, config.PACKAGE_DIR / "schemas" / "review.schema.json",
@@ -134,12 +148,14 @@ class RunAgyTest(unittest.TestCase):
         return res, seen[0]
 
     def test_answer_parsed_and_command_is_locked_down(self):
-        (answer, usage, model), (cmd, cwd, settings) = self.run_agy(
+        (answer, usage, model), (cmd, cwd, settings, stdin) = self.run_agy(
             stream([("read_file", {"Path": str(self.wt / "a.py")})]),
             transcript=[("read_file", {"Path": str(self.wt / "a.py")})])
         self.assertEqual(json.loads(answer), GOOD)
         self.assertEqual((usage["input_tokens"], model, cwd), (10, "claude-sonnet-5-5-medium", str(self.wt)))
         self.assertNotIn("--dangerously-skip-permissions", cmd)
+        self.assertNotIn("-p", cmd)
+        self.assertEqual(json.loads(stdin)["message"]["content"], "p")  # the prompt travels on stdin, not in argv
         deny = settings["permissions"]["deny"]
         self.assertTrue({"command(*)", "write_file(*)", "read_url(*)", "execute_url(*)", "mcp(*)"} <= set(deny))
         self.assertEqual(settings["permissions"]["allow"], [])
@@ -158,9 +174,28 @@ class RunAgyTest(unittest.TestCase):
             self.run_agy(stream([("view_file", {})]), transcript=[("view_file", {"AbsolutePath": "/etc/shadow"})])
 
     def test_missing_transcript_fails_closed(self):
-        runner = lambda cmd, cwd, t: (0, stream(), "")
+        runner = lambda cmd, cwd, t, stdin=None: (0, stream(), "")
         with self.assertRaises(agyreview.AgyViolation):
             agyreview.run_agy("p", self.wt, "s.json", brain_dir=self.tmp / "nobrain", runner=runner, which=lambda n: "/bin/true")
+
+    def test_large_prompt_does_not_go_into_argv(self):
+        big = "x" * 900_000
+        seen = []
+        (self.brain / CID / ".system_generated" / "logs" / "transcript.jsonl").write_text("")
+
+        def runner(cmd, cwd, timeout, stdin=None):
+            seen.append((sum(len(a) for a in cmd), stdin))
+            return 0, stream(), ""
+
+        agyreview.run_agy(big, self.wt, "s.json", brain_dir=self.brain, runner=runner, which=lambda n: "/bin/true")
+        self.assertLess(seen[0][0], 100_000)
+        self.assertGreater(len(seen[0][1]), 900_000)
+
+    def test_success_without_conversation_id_fails_closed(self):
+        out = json.dumps({"event": "result", "result": {"status": "SUCCESS", "response": "x", "structured_output": GOOD}})
+        runner = lambda cmd, cwd, t, stdin=None: (0, out, "")
+        with self.assertRaises(agyreview.AgyViolation):
+            agyreview.run_agy("p", self.wt, "s.json", brain_dir=self.brain, runner=runner, which=lambda n: "/bin/true")
 
     def test_quota_and_failure(self):
         bad = stream(result={"conversation_id": CID, "status": "ERROR", "error": "RESOURCE_EXHAUSTED"})
@@ -209,6 +244,29 @@ class ChainTest(unittest.TestCase):
         self.assertEqual(limitstate.limited_until(NOW, self.state), NOW + timedelta(hours=2))
         att = [json.loads(x) for x in (self.tmp / "attempts" / codex.ATTEMPTS).read_text().splitlines()]
         self.assertEqual([(a["outcome"], a.get("provider")) for a in att], [("codex_limit", None), ("ok", "agy-sonnet")])
+
+    def test_agy_prompt_names_worktree_without_touching_data(self):
+        prompts = []
+        _, _, rec = self.run_review("agy-sonnet", agy_runner=self.agy_ok(prompts))
+        p = prompts[0]
+        self.assertIn("read them in the current directory", p)
+        self.assertNotIn("/work", p)
+        self.assertIn("x = 2", p)  # the diff body is the same bytes the markers were hashed over
+
+    def test_agy_data_containing_adapter_phrase_is_unchanged(self):
+        repo, base, head = make_repo(changed={"tools/a.py": "# read them in /work\nx = 2\n"})
+        prompts = []
+        review.run_review("TASK-0001", base, head, "agy-sonnet", root=repo.root, runs_dir=self.tmp / "r", attempts_dir=self.tmp / "a",
+                          log=lambda m: None, state_dir=self.state, now=NOW, agy_runner=self.agy_ok(prompts))
+        self.assertIn("+# read them in /work", prompts[0])  # data is never rewritten after its hash was taken
+
+    def test_cache_write_failure_does_not_stop_the_review(self):
+        def limited(prompt, wt):
+            raise codex.CodexLimit("limit", NOW + timedelta(hours=2))
+
+        with mock.patch.object(limitstate, "record_limit", side_effect=OSError("disk full")):
+            _, _, rec = self.run_review("auto", codex_runner=limited, agy_runner=self.agy_ok())
+        self.assertEqual(rec["provider"], "agy-sonnet")
 
     def test_auto_skips_codex_until_reset_then_returns(self):
         limitstate.record_limit(NOW + timedelta(hours=1), NOW, self.state)
