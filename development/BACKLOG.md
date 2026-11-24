@@ -154,6 +154,7 @@
 | [TASK-0136](../development/tasks/TASK-0136-tree-clarity-depth-pass.md) | IN_PROGRESS | Knowledge tree and menu clarity pass after Gemini design review: player text, legend grammar, node sizes, menu reasons, sheet depth | MS-M05 |
 | [TASK-0137](../development/tasks/TASK-0137-globe-volume-atmosphere-prototype.md) | IN_PROGRESS | Globe volume and limb atmosphere: Godot prototype of three variants for the owner (#426, #442) | MS-M05 |
 | [TASK-0138](../development/tasks/TASK-0138-globe-1945-borders.md) | APPROVED | Globe draws 1945 political borders and labels from the region map and owners, not modern Natural Earth countries | MS-M05 |
+| [TASK-0139](../development/tasks/TASK-0139-hud-time-controls.md) | APPROVED | HUD time controls: centred pause and speed buttons, no speed text, speed gauge active frame alignment | MS-M05 |
 
 ## Гипотезы
 
