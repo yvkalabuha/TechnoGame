@@ -100,9 +100,7 @@ public sealed partial class TimeControl : HBoxContainer
     }
 
     readonly IconButton _pause = new(Kind.Pause), _slower = new(Kind.Slower), _faster = new(Kind.Faster);
-    readonly GaugeControl _meter = new();
-    readonly Label _word = Ui.Lbl("", 14, Ui.Ink2);   // current speed in words (art-director review: the gauge alone does not name it)
-    readonly PanelContainer _keyTip = new(); readonly Label _keyTipText = Ui.Lbl("", 14);
+    readonly GaugeControl _meter = new();    readonly PanelContainer _keyTip = new(); readonly Label _keyTipText = Ui.Lbl("", 14);
     IconButton _tipFor;
     int _speed, _resume = SpeedSteps.Default;
     public event Action<int> Changed;
@@ -133,8 +131,7 @@ public sealed partial class TimeControl : HBoxContainer
         var buttons = new HBoxContainer();
         buttons.AddThemeConstantOverride("separation", TimeGlyphMetrics.Gap);
         buttons.AddChild(_pause); buttons.AddChild(_slower); buttons.AddChild(_faster);
-        _word.CustomMinimumSize = new Vector2(100, 0); _word.SizeFlagsVertical = SizeFlags.ShrinkCenter; _word.MouseFilter = MouseFilterEnum.Ignore;
-        AddChild(buttons); AddChild(_meter); AddChild(_word);
+        AddChild(buttons); AddChild(_meter);
         Select(0, false);
         Loc.Changed += Refresh;
         TreeExiting += () => Loc.Changed -= Refresh;
@@ -178,9 +175,7 @@ public sealed partial class TimeControl : HBoxContainer
         // A disabled button cannot keep the keyboard focus: hand it to the pause button so that the keys never fall out of the group.
         IconButton held = _slower.Disabled && _slower.HasFocus() ? _slower : _faster.Disabled && _faster.HasFocus() ? _faster : null;
         if (held != null) { if (held.FocusedByMouse) _pause.FocusQuietly(); else _pause.FocusByKey(); }   // after a click, no ring and no key tip appear
-        _meter.Filled = _speed;
-        _word.Text = Loc.T(Words[_speed]);
-        string word = Loc.T(Words[_speed]);   // the real rate with its unit ("неделя/с") for the tooltip and the screen reader, never the step index (C3, C7; #443: no text beside the gauge)
+        _meter.Filled = _speed;        string word = Loc.T(Words[_speed]);   // the real rate with its unit ("неделя/с") for the tooltip and the screen reader, never the step index (C3, C7; #443: no text beside the gauge)
         _meter.TooltipText = Loc.T("time.gauge.tip", word); _meter.AccessibilityName = Loc.T("time.gauge.name", word);
         // Tooltips name the remembered speed and say why a button is off (the key tip uses the same text).
         _pause.TooltipText = _speed == 0 ? Loc.T("tip.time.pause.on", Loc.T(Words[_resume])) : Loc.T("tip.time.pause.off");
