@@ -158,24 +158,24 @@ def transcript_calls(brain_dir, ids):
     return calls, missing
 
 
-def verified_tools(calls):
+def verified_tools(calls, path_tools=PATH_TOOLS):
     """Path tools whose arguments the transcript actually holds."""
-    return frozenset(name for name, paths in calls if name in PATH_TOOLS and paths)
+    return frozenset(name for name, paths in calls if name in path_tools and paths)
 
 
-def call_violations(calls, roots):
+def call_violations(calls, roots, control=CONTROL_TOOLS, path_tools=PATH_TOOLS):
     """Transcript calls outside the allowlist; same rules as tool_violations."""
     bad = []
     for name, paths in calls:
-        if name in PATH_TOOLS:
+        if name in path_tools:
             if not paths or not all(_inside(p, roots) for p in paths):
                 bad.append(f"{name}: {one_line(' '.join(paths), 80)}".rstrip(": "))
-        elif name not in CONTROL_TOOLS and name not in TRANSCRIPT_TOOLS:
+        elif name not in control and name not in TRANSCRIPT_TOOLS:
             bad.append(name)
     return list(dict.fromkeys(bad))
 
 
-def tool_violations(text, roots, verified=frozenset()):
+def tool_violations(text, roots, verified=frozenset(), control=CONTROL_TOOLS, path_tools=PATH_TOOLS):
     """Tool calls outside the allowlist (anything not named here is a violation): generate_image, invoke_subagent,
     finish/wait control calls, path tools only inside roots (the work folder and this run's own conversation folders). run_command is never allowed.
     A call whose path cannot be read counts as a violation, unless the transcript holds arguments for a call of that
@@ -188,9 +188,9 @@ def tool_violations(text, roots, verified=frozenset()):
             continue
         su = ev.get("step_update") if isinstance(ev, dict) and ev.get("event") == "step_update" else None
         name = su.get("tool_name") if isinstance(su, dict) else None
-        if not isinstance(name, str) or name in CONTROL_TOOLS:
+        if not isinstance(name, str) or name in control:
             continue
-        if name in PATH_TOOLS:
+        if name in path_tools:
             paths = _paths(su)
             if paths and all(_inside(p, roots) for p in paths):
                 continue

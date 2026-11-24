@@ -14,7 +14,7 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import config, paths
+from . import config, limitstate, paths
 from .sandbox import SYSTEM_LINKS, SYSTEM_RO, SandboxUnavailable, find_bwrap
 from .worktree import git
 
@@ -26,7 +26,12 @@ ATTEMPTS = "codex_attempts.jsonl"
 
 
 class CodexLimit(RuntimeError):
-    """The subscription limit is reached: the review moves to DeepSeek."""
+    """The subscription limit is reached: the review moves to the next provider. reset_at: when the limit
+    resets (aware datetime) if the message named it."""
+
+    def __init__(self, msg, reset_at=None):
+        super().__init__(msg)
+        self.reset_at = reset_at
 
 
 class CodexFailed(RuntimeError):
@@ -182,19 +187,23 @@ def run_codex(prompt, worktree, schema_file, timeout=1800, home=None, bwrap=None
     if p.returncode != 0 or not text:
         if not text and BWRAP_RE.search(p.stderr):  # the sandbox itself failed: a paid fallback would not help
             raise SandboxUnavailable(f"bwrap failed: {p.stderr.strip()[-300:]}")
-        if LIMIT_RE.search(error_text(p.stdout) + p.stderr):
-            raise CodexLimit("codex_limit: subscription limit reached")
+        msg = error_text(p.stdout) + p.stderr
+        if LIMIT_RE.search(msg):
+            raise CodexLimit("codex_limit: subscription limit reached",
+                             limitstate.parse_reset(msg, datetime.now(timezone.utc).astimezone()))
         # stderr tail only: it carries no prompt text, and the answer is never echoed into the message.
         raise CodexFailed(f"codex exited {p.returncode}: {p.stderr.strip()[-400:]}")
     return text, usage
 
 
-def log_attempt(task, head, outcome, usage=None, directory=config.LEDGER_DIR):
+def log_attempt(task, head, outcome, usage=None, directory=config.LEDGER_DIR, provider="codex"):
     """Append-only attempt log next to the ledger (Codex costs no USD, so it is not a ledger entry)."""
     directory.mkdir(parents=True, exist_ok=True)
     usage = usage or {}
     rec = {"ts": datetime.now(timezone.utc).isoformat(timespec="seconds"), "task": task, "head": head[:12],
            "outcome": outcome, "input_tokens": usage.get("input_tokens"), "output_tokens": usage.get("output_tokens")}
+    if provider != "codex":
+        rec["provider"] = provider
     fd = os.open(directory / ATTEMPTS, os.O_CREAT | os.O_WRONLY | os.O_APPEND, 0o600)
     with os.fdopen(fd, "a", encoding="utf-8") as f:
         f.write(json.dumps(rec, sort_keys=True) + "\n")

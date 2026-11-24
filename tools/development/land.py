@@ -93,7 +93,11 @@ def second_review(root: Path, task: str, base: str, head: str, run: bool) -> tup
         if f["severity"] == "high" and not rejected:
             open_high.append(n)
     provider = rec.get("provider", "?")
-    line = (f"Second-Review: {provider} {res['verdict']}, {len(res.get('findings', []))} findings, "
+    model = f" ({rec['model']})" if rec.get("model") else ""
+    replaced = rec.get("fallbacks") or []
+    why = f", replacing codex: {replaced[0]['reason']}" if replaced and replaced[0].get("from") == "codex" else ""
+    print(f"land: second review by {provider}{model}{why}")
+    line = (f"Second-Review: {provider}{model} {res['verdict']}, {len(res.get('findings', []))} findings, "
             f"record {path.name}")
     if open_high:
         return False, f"open high findings {open_high} in {path.name}"
