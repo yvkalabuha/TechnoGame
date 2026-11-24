@@ -18,7 +18,10 @@ public sealed partial class AudioDirector : Node
 
     readonly SimHost _host;
     readonly AudioPlanner _planner = new();
-    readonly SignalReminder _reminder = new();
+    readonly OrderSounds _orders = new();
+    readonly SpeedSounds _speedSounds = new();
+    readonly OpenTickGate _openGate = new();
+    double _lastAlarmAt = double.NaN; long _lastTick = -1;
     readonly AmbientGate _gate = new();
     readonly Dictionary<string, AudioStream> _streams = new();
     readonly Dictionary<int, AudioStreamPlayer> _voices = new();
@@ -28,7 +31,7 @@ public sealed partial class AudioDirector : Node
     AudioStream[] _tracks;
     double _musicFade, _ambFade;                                   // 0..1 fade-in progress of the players
     double _duckDb, _pauseDb;                                      // smoothed offsets of the Music and Ambient buses
-    int _lastSpeed; long _lastCmdSeq; CmdStatus _lastStatus; object _lastView;
+    long _lastCmdSeq; CmdStatus _lastStatus; object _lastView;
     int _baseActor = -1, _baseKnown, _baseFielded, _baseSeries;
     Vector2 _lastCam; bool _camInit;
     AudioEffectRecord _rec;
@@ -123,9 +126,9 @@ public sealed partial class AudioDirector : Node
     }
 
     /// <summary>Asks for a sound; the planner may drop, fold or replace it by the fatigue rules.</summary>
-    public void Cue(string id, double extraGainDb = 0)
+    public void Cue(string id, double extraGainDb = 0, string key = null)
     {
-        var p = _planner.Request(id, Now(), extraGainDb);
+        var p = _planner.Request(id, Now(), extraGainDb, key);
         if (p == null || _muted) return;
         foreach (var v in p.Evicted) if (_voices.Remove(v, out var old)) { old.Stop(); old.QueueFree(); }
         var pl = Spawn(p);
@@ -133,13 +136,6 @@ public sealed partial class AudioDirector : Node
         pl.Finished += () => { _voices.Remove(voice); pl.QueueFree(); };
         _voices[voice] = pl;
         pl.Play();
-        // Repeated clicks of one file (tempo_2/3): later clicks start RepeatGap apart, they are not tracked as voices.
-        for (int r = 1; r < p.Cue.Repeats; r++)
-        {
-            var extra = Spawn(p);
-            extra.Finished += extra.QueueFree;
-            GetTree().CreateTimer(r * Singularity.Client.Spike.Cue.RepeatGap).Timeout += () => { if (IsInstanceValid(extra)) extra.Play(); };
-        }
     }
 
     AudioStreamPlayer Spawn(Play p)
@@ -149,23 +145,23 @@ public sealed partial class AudioDirector : Node
         return pl;
     }
 
+    /// <summary>Plain tick (settings test button).</summary>
     public void Tick() => Cue("ui_tick");
 
-    /// <summary>Signal raised or cleared (from the signal field). A raised signal sounds once; a quiet reminder follows after 60 s.</summary>
+    /// <summary>Opening tick for a mouse action on object <paramref name="key"/>; silent from the keyboard and for the same object twice.</summary>
+    public void OpenTick(int key, bool fromKeyboard) { if (_openGate.Allow(key, fromKeyboard)) Cue("ui_tick"); }
+
+    /// <summary>The opened object was closed: opening it again sounds.</summary>
+    public void OpenClosed() => _openGate.Reset();
+
+    /// <summary>Signal raised or cleared (from the signal field). A raised signal sounds once; clearing is visual only, there is no reminder.</summary>
     public void OnSignal(string key, bool raised)
     {
-        if (raised)
-        {
-            if (key == "sig.fail") Cue("signal_critical");
-            else if (key is "sig.alloy" or "sig.licence") Cue("signal_attention");
-            else return;
-            _reminder.Raise(key, Now());
-        }
-        else
-        {
-            _reminder.Clear(key);
-            if (key is "sig.alloy" or "sig.licence" or "sig.fail") Cue("signal_clear");
-        }
+        if (!raised) return;
+        if (key == "sig.fail") Cue("signal_critical");
+        else if (key is "sig.alloy" or "sig.licence") Cue("signal_attention", 0, key);
+        else return;
+        _lastAlarmAt = Now();
     }
 
     // ---------- per frame ----------
@@ -175,7 +171,6 @@ public sealed partial class AudioDirector : Node
         double now = Now();
         _planner.Touch(now);
         ObserveHost();
-        foreach (var k in _reminder.Due(now)) Cue("signal_attention", AudioPlanner.ReminderDb);
         ApplyBusVolumes(delta);
         if (_muted) return;
         RunMusic(now, delta);
@@ -214,22 +209,25 @@ public sealed partial class AudioDirector : Node
         var s = _host.Snap;
         if (s == null) return;
         int sp = _host.Speed;
-        if (sp != _lastSpeed)
-        {
-            if (sp == 0) Cue("pause");
-            else if (_lastSpeed == 0) Cue("unpause");
-            else Cue("tempo_" + sp);
-            _lastSpeed = sp;
-        }
+        double now = Now();
+        // A tick that went back is a loaded save: speed and world baselines start over, nothing sounds for it.
+        if (s.Tick < _lastTick) { _speedSounds.Rebase(); _baseActor = -1; }
+        _lastTick = s.Tick;
+        var speedCue = _speedSounds.Observe(sp, now, _lastAlarmAt);
+        if (speedCue != null) Cue(speedCue);
         if (s.CmdSeq != _lastCmdSeq)
         {
             _lastCmdSeq = s.CmdSeq;
-            if (s.Last.Status == CmdStatus.Pending) { Cue("order_ok"); if (sp == 0) Cue("queue_tick"); }
-            else if (s.Last.Status is CmdStatus.Rejected or CmdStatus.Error) Cue("order_reject");
+            if (s.Last.Status == CmdStatus.Pending) Cue(_orders.Accepted(now, sp));
+            else if (s.Last.Status is CmdStatus.Rejected or CmdStatus.Error) Cue("order_reject", 0, s.Last.Reason);
         }
         if (s.Last.Status != _lastStatus)
         {
-            if (_lastStatus == CmdStatus.Pending && s.Last.Status == CmdStatus.Applied) Cue("order_done");
+            if (_lastStatus == CmdStatus.Pending && s.Last.Status == CmdStatus.Applied)
+            {
+                var done = _orders.Applied(now, sp);
+                if (done != null) Cue(done);
+            }
             _lastStatus = s.Last.Status;
         }
         if (!ReferenceEquals(s.View, _lastView)) { _lastView = s.View; ObserveWorld(s.View); }
@@ -246,9 +244,10 @@ public sealed partial class AudioDirector : Node
         foreach (var d in a.Designs) if (d.Stage == Singularity.Core.Products.DesignStage.Series) series++;
         if (_baseActor == Actor)
         {
-            if (a.FieldedGen > _baseFielded) Cue("breakthrough");
-            else if (known > _baseKnown) Cue("node_discovered");
-            if (series > _baseSeries) Cue("line_commissioned");
+            var (bt, node, line) = WorldCues.Pick(a.FieldedGen > _baseFielded, known > _baseKnown, series > _baseSeries);
+            if (bt) Cue("breakthrough");
+            if (node) Cue("node_discovered");
+            if (line) Cue("line_commissioned");
         }
         _baseActor = Actor; _baseKnown = known; _baseFielded = a.FieldedGen; _baseSeries = series;
     }
@@ -257,8 +256,8 @@ public sealed partial class AudioDirector : Node
     static readonly (double T, string Cue)[] Demo =
     {
         (0.3, "order_ok"), (0.5, "queue_tick"), (1.0, "order_done"), (1.8, "signal_attention"), (2.6, "signal_alert"),
-        (3.5, "signal_clear"), (4.2, "order_reject"), (4.9, "node_discovered"), (6.2, "breakthrough"), (7.7, "line_commissioned"),
-        (8.7, "war_declared"), (9.9, "launch_space"), (11.6, "launch_nuclear"), (13.4, "tempo_1"), (13.7, "tempo_2"), (14.0, "tempo_3"),
+        (4.2, "order_reject"), (4.9, "node_discovered"), (6.2, "breakthrough"), (7.7, "line_commissioned"),
+        (8.7, "war_declared"), (9.9, "launch_space"), (11.6, "launch_nuclear"), (13.4, "tempo_1"), (14.0, "tempo_3"),
         (14.5, "pause"), (15.0, "unpause"),
         (15.6, "order_done"), (15.75, "order_done"), (15.9, "order_done"), (16.05, "order_done"), (16.2, "order_done"),
         (16.9, "signal_critical"),
