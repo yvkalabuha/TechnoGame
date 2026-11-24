@@ -24,6 +24,10 @@ class AgyFailed(RuntimeError):
     pass
 
 
+class AgyTimeout(RuntimeError):
+    """agy did not answer in time. Never a reason for a paid fallback: what it did meanwhile was audited first."""
+
+
 class AgyViolation(RuntimeError):
     """The agent used a tool or path outside the allowlist."""
 
@@ -93,9 +97,15 @@ def _run_agy(prompt, worktree, schema_file, model, timeout_s, brain_dir, inside_
     inside_brain = inside_brain or brain_dir
     agy = sketch.find_agy(which)
     # Reads are limited by rules as a second layer; the first one is the Box. The diff is untrusted data.
+    timed_out = False
     with sketch.settings_file([worktree, inside_brain], [inside_brain]) as settings:
-        rc, out, err = runner(command(agy, schema_file, model, timeout_s, settings), str(worktree), timeout_s + 60,
-                              user_message(prompt))
+        try:
+            rc, out, err = runner(command(agy, schema_file, model, timeout_s, settings), str(worktree), timeout_s + 60,
+                                  user_message(prompt))
+        except sketch.SketchError as e:
+            if e.code != "agy_timeout":
+                raise
+            rc, out, err, timed_out = None, getattr(e, "out", ""), getattr(e, "err", ""), True
     ids, result, _ = sketch.parse_stream(out)
     if not ids and result is not None and result.get("status") == "SUCCESS":
         raise AgyViolation("no conversation id in the stream: the transcript cannot be checked")  # fail closed
@@ -107,6 +117,8 @@ def _run_agy(prompt, worktree, schema_file, model, timeout_s, brain_dir, inside_
     bad += [f"transcript missing: {c}" for c in missing]  # fail closed: no transcript, no trust
     if bad:
         raise AgyViolation(", ".join(dict.fromkeys(bad)))
+    if timed_out:  # the audit above has run on whatever the stream held
+        raise AgyTimeout(f"agy gave no answer in {timeout_s + 60} s")
     if result is None or rc != 0 or result.get("status") != "SUCCESS":
         if sketch.quota_hit(err, result, out):
             raise AgyLimit(sketch.one_line(err[-300:] or "agy quota error", 300))

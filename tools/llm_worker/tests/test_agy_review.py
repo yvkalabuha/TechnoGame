@@ -2,6 +2,7 @@
 
 import json
 import os
+import subprocess
 import time
 import tempfile
 import unittest
@@ -120,8 +121,18 @@ class BoxTest(unittest.TestCase):
                 args = (Path(d) / "bus.args").read_text()
             self.assertIn("--filter --talk=org.freedesktop.secrets", args)
             self.assertNotIn("--own", args)
-            with sketch.dbus_filter(Path(d) / "x", which=lambda n: None, host=str(host)) as bus:
-                self.assertIsNone(bus)  # not installed: the real bus is shown, a known risk
+
+    def test_no_proxy_means_no_run_when_a_host_bus_exists(self):
+        with tempfile.TemporaryDirectory() as d:
+            host = Path(d) / "hostbus"
+            host.touch()
+            with self.assertRaises(sketch.SketchError) as cm:
+                with sketch.dbus_filter(Path(d) / "bus", which=lambda n: None, host=str(host)):
+                    pass
+            self.assertEqual(cm.exception.code, "sandbox_unavailable")
+            with sketch.dbus_filter(Path(d) / "bus", which=lambda n: None, host=str(Path(d) / "nobus")) as bus:
+                self.assertIsNone(bus)  # no host bus at all: nothing to expose
+        self.assertNotIn(f"/run/user/{os.getuid()}/bus", " ".join(self.wrap(False)))  # and none is mounted
 
     def test_sketch_workdir_is_writable_and_missing_bwrap_refuses(self):
         self.assertIn(("/work/x", "/work/x"), self.pairs(self.wrap(True), "--bind"))
@@ -191,6 +202,20 @@ class ScopedRulesTest(unittest.TestCase):
 
 
 class LimitCacheTest(unittest.TestCase):
+    def test_clear_and_record_exclude_each_other(self):
+        import threading
+        with tempfile.TemporaryDirectory() as d:
+            limitstate.record_limit(NOW + timedelta(hours=1), NOW - timedelta(minutes=5), d)
+            done = threading.Event()
+            t = threading.Thread(target=lambda: (limitstate.clear(NOW, d), done.set()))
+            with limitstate._locked(d):  # a concurrent writer holds the state
+                t.start()
+                self.assertFalse(done.wait(0.3))  # clear waits instead of reading a stale record
+                limitstate._write(NOW + timedelta(hours=2), NOW + timedelta(seconds=1), Path(d))  # the writer's fresh record
+            t.join(5)
+            self.assertTrue(done.is_set())
+            self.assertIsNotNone(limitstate.limited_until(NOW, d))  # the fresh limit survived the clear
+
     def test_parallel_writers_leave_a_valid_file_and_no_temp_files(self):
         import threading
         with tempfile.TemporaryDirectory() as d:
@@ -200,7 +225,7 @@ class LimitCacheTest(unittest.TestCase):
             for t in ts:
                 t.join()
             self.assertIsNotNone(limitstate.limited_until(NOW, d))
-            self.assertEqual([p.name for p in Path(d).iterdir()], [limitstate.STATE_FILE])
+            self.assertEqual(sorted(p.name for p in Path(d).iterdir()), sorted([limitstate.LOCK_FILE, limitstate.STATE_FILE]))
             self.assertEqual((Path(d) / limitstate.STATE_FILE).stat().st_mode & 0o777, 0o600)
 
 
@@ -271,6 +296,22 @@ class RunAgyTest(unittest.TestCase):
         agyreview.run_agy(big, self.wt, SCHEMA, brain_dir=self.brain, runner=runner, which=lambda n: "/bin/true")
         self.assertLess(seen[0][0], 100_000)
         self.assertGreater(len(seen[0][1]), 900_000)
+
+    def test_timeout_audits_the_stream_and_is_not_a_failure_to_fall_back_from(self):
+        (self.brain / CID / ".system_generated" / "logs" / "transcript.jsonl").write_text("")
+
+        def runner(timed_tools):
+            def run(cmd, cwd, timeout, stdin=None):
+                e = sketch.SketchError("agy_timeout", "no answer")
+                e.out, e.err = stream(timed_tools).rsplit("\n", 1)[0], ""  # no result event: it timed out
+                raise e
+            return run
+
+        with self.assertRaises(agyreview.AgyTimeout):  # clean stream: a timeout, never AgyFailed
+            agyreview.run_agy("p", self.wt, SCHEMA, brain_dir=self.brain, runner=runner([]), which=lambda n: "/bin/true")
+        with self.assertRaises(agyreview.AgyViolation):  # a forbidden tool before the timeout wins
+            agyreview.run_agy("p", self.wt, SCHEMA, brain_dir=self.brain, runner=runner([("run_command", {"CommandLine": "ls"})]),
+                              which=lambda n: "/bin/true")
 
     def test_other_model_than_asked_is_refused(self):
         for bad in ("claude-sonnet-5-5-low", "gemini-3.8-flash-medium", None):
@@ -375,6 +416,41 @@ class ChainTest(unittest.TestCase):
                                       agy_runner=lambda p, w: self.fail("agy must not run after the reset"))
         self.assertEqual(rec["provider"], "codex")
         self.assertIsNone(limitstate.limited_until(later, self.state))
+
+    def test_auto_other_codex_failure_does_not_reach_sonnet(self):
+        def failing(prompt, wt):
+            raise codex.CodexFailed("timeout")
+
+        fake = FakeProvider([GOOD])
+        _, _, rec = self.run_review("auto", codex_runner=failing, agy_runner=lambda p, w: self.fail("owner #456: usage limit only"),
+                                    make_provider=lambda: fake)
+        self.assertEqual((rec["provider"], rec["fallback"]), ("deepseek", "codex_failed"))
+
+    def test_agy_timeout_is_an_error_not_a_paid_fallback(self):
+        def timing_out(prompt, wt):
+            raise agyreview.AgyTimeout("slow")
+
+        def limited(prompt, wt):
+            raise codex.CodexLimit("limit")
+
+        fake = FakeProvider([GOOD])
+        with self.assertRaises(ReviewError) as cm:
+            self.run_review("auto", codex_runner=limited, agy_runner=timing_out, make_provider=lambda: fake)
+        self.assertEqual((cm.exception.code, fake.calls), ("agy_timeout", []))
+
+    def test_moving_ref_is_resolved_once_for_the_whole_chain(self):
+        subprocess.run(["git", "branch", "mine", self.head], cwd=self.repo.root, check=True)
+
+        def limited(prompt, wt):
+            subprocess.run(["git", "branch", "-f", "mine", self.base], cwd=self.repo.root, check=True)  # the ref moves
+            raise codex.CodexLimit("limit")
+
+        prompts = []
+        _, _, rec = review.run_review("TASK-0001", self.base, "mine", "auto", root=self.repo.root, runs_dir=self.tmp / "r",
+                                      attempts_dir=self.tmp / "a", log=lambda m: None, state_dir=self.state, now=NOW,
+                                      codex_runner=limited, agy_runner=self.agy_ok(prompts))
+        self.assertEqual(rec["head"], self.head)
+        self.assertIn("x = 2", prompts[0])  # the diff of the original head, not of the moved ref
 
     def test_agy_failure_falls_to_deepseek_and_violation_does_not(self):
         def limited(prompt, wt):

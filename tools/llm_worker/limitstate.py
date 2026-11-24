@@ -2,6 +2,8 @@
 
 The state is one small JSON file under ~/.cache/singularity/. A missing, corrupt or expired file means "no limit"."""
 
+import contextlib
+import fcntl
 import json
 import os
 import re
@@ -11,6 +13,7 @@ from pathlib import Path
 
 STATE_DIR = Path.home() / ".cache" / "singularity"
 STATE_FILE = "codex-limit.json"
+LOCK_FILE = "codex-limit.lock"
 DEFAULT_COOLDOWN = timedelta(minutes=30)  # when the message names no reset time
 MAX_COOLDOWN = timedelta(hours=24)  # a longer wait in a message is not trusted
 AT_RE = re.compile(r"try again at (\d{1,2}):(\d{2})\s*([AP]M)", re.I)
@@ -38,11 +41,30 @@ def _parse(text, now):
     return None
 
 
+@contextlib.contextmanager
+def _locked(state_dir):
+    """Exclusive lock for every read-modify-write of the state: clear can never delete a record a concurrent run
+    wrote between its read and its unlink."""
+    state_dir = Path(state_dir)
+    state_dir.mkdir(parents=True, exist_ok=True)
+    fd = os.open(state_dir / LOCK_FILE, os.O_CREAT | os.O_RDWR, 0o600)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        yield
+    finally:
+        os.close(fd)  # closing releases the lock
+
+
 def record_limit(reset_at, now, state_dir=STATE_DIR):
     """Remember the limit; reset_at None falls back to a default cooldown. Returns the stored reset time."""
     reset_at = min(reset_at or now + DEFAULT_COOLDOWN, now + MAX_COOLDOWN)
     state_dir = Path(state_dir)
-    state_dir.mkdir(parents=True, exist_ok=True)
+    with _locked(state_dir):
+        _write(reset_at, now, state_dir)
+    return reset_at
+
+
+def _write(reset_at, now, state_dir):
     fd, tmp = tempfile.mkstemp(dir=state_dir, prefix=STATE_FILE + ".")  # own file per writer, mode 0600
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
@@ -52,7 +74,6 @@ def record_limit(reset_at, now, state_dir=STATE_DIR):
     except BaseException:
         Path(tmp).unlink(missing_ok=True)
         raise
-    return reset_at
 
 
 def limited_until(now, state_dir=STATE_DIR):
@@ -71,13 +92,14 @@ def clear(before, state_dir=STATE_DIR):
     """Remove the state only if it was recorded before `before` (the start of the run that succeeded): a limit that a
     concurrent run recorded later must stay."""
     p = Path(state_dir) / STATE_FILE
-    try:
-        recorded = datetime.fromisoformat(json.loads(p.read_text(encoding="utf-8"))["recorded_at"])
-        if recorded.tzinfo is not None and recorded >= before:
-            return
-    except (OSError, ValueError, KeyError, TypeError):
-        pass  # missing or unreadable: nothing worth keeping
-    try:
-        p.unlink()
-    except OSError:
-        pass
+    with _locked(state_dir):
+        try:
+            recorded = datetime.fromisoformat(json.loads(p.read_text(encoding="utf-8"))["recorded_at"])
+            if recorded.tzinfo is not None and recorded >= before:
+                return
+        except (OSError, ValueError, KeyError, TypeError):
+            pass  # missing or unreadable: nothing worth keeping
+        try:
+            p.unlink()
+        except OSError:
+            pass

@@ -436,7 +436,8 @@ class Box:
                 a += ["--ro-bind", "/dev/null", f"{gem}/{name}"]
         bus = f"/run/user/{os.getuid()}/bus"
         a += ["--bind-try", f"{home}/.config/antigravity", f"{home}/.config/antigravity"]
-        a += ["--bind", str(self.bus), bus] if self.bus else ["--bind-try", bus, bus]
+        if self.bus:  # only the filtered socket; without one agy sees no session bus at all
+            a += ["--bind", str(self.bus), bus]
         if "--settings" in cmd:  # the per-run rule file lives outside the Box
             a += ["--ro-bind", cmd[cmd.index("--settings") + 1], cmd[cmd.index("--settings") + 1]]
         if cwd:
@@ -447,13 +448,15 @@ class Box:
 @contextlib.contextmanager
 def dbus_filter(sock, which=shutil.which, host=None):
     """Start xdg-dbus-proxy so that the Box sees a session bus that only talks to the secret service (agy's login).
-    Yields the proxy socket, or None when the proxy is not installed or does not come up: then the real bus is
-    shown (a known risk, see TASK-0146)."""
+    Yields the proxy socket, or None when the host has no session bus at all. A host bus with no working proxy
+    refuses the run: the unfiltered bus is never shown to agy."""
     exe = which("xdg-dbus-proxy")
     host = host or f"/run/user/{os.getuid()}/bus"
-    if not exe or not os.path.exists(host):
+    if not os.path.exists(host):
         yield None
         return
+    if not exe:
+        raise SketchError("sandbox_unavailable", "xdg-dbus-proxy is not installed: the session bus is never shown unfiltered")
     p = subprocess.Popen([exe, f"unix:path={host}", str(sock), "--filter", "--talk=org.freedesktop.secrets"],
                          stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                          start_new_session=True)
@@ -462,7 +465,9 @@ def dbus_filter(sock, which=shutil.which, host=None):
             if os.path.exists(sock):
                 break
             time.sleep(0.1)
-        yield Path(sock) if os.path.exists(sock) else None
+        if not os.path.exists(sock):
+            raise SketchError("sandbox_unavailable", "xdg-dbus-proxy did not create its socket")
+        yield Path(sock)
     finally:
         p.terminate()
         try:
@@ -496,8 +501,10 @@ def default_runner(cmd, cwd, timeout, stdin=None, box=None):
             os.killpg(p.pid, signal.SIGKILL)
         except ProcessLookupError:
             pass
-        p.communicate()
-        raise SketchError("agy_timeout", f"no answer in {timeout} s") from None
+        out, err = p.communicate()  # what agy wrote before the kill is still audited by the caller
+        e = SketchError("agy_timeout", f"no answer in {timeout} s")
+        e.out, e.err = out or "", err or ""
+        raise e from None
     return p.returncode, out, err
 
 
