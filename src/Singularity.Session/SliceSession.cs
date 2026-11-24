@@ -16,8 +16,8 @@ namespace Singularity.Session;
 /// </summary>
 public sealed partial class SliceSession
 {
-    /// <summary>Version of the public surface of the session (ADR-0014 п. 6): raised with every change of the views or of <see cref="SliceRunConfig"/>; the surface test pins it. 17 (TASK-0131) adds <c>SliceRunConfig.CostMultG5</c> and <c>CostMultG6</c> (c_n multipliers of generations 5 and 6, a calibration parameter); 16 (TASK-0131) makes <c>LicenceView.Mask</c> and <c>OfferMask</c> a two-word <c>LicenceMask</c> (nodes 1…127); 15 (TASK-0130, ADR-0025) adds <c>SliceRunConfig.ViewScope</c>, <c>SetViewSubscription</c>, <c>RebuildView</c> and <c>NodeList.IsPresent</c>; 14 (TASK-0122) adds <c>SliceRunConfig.BudgetRule</c> (a Lab measurement switch); 13 (TASK-0115) makes <c>DesignHandle(Slot, Generation)</c> mandatory: <c>Submit</c> takes commands about a design by handle, <c>WhyNotTarget.Design</c> takes a handle, <c>DesignView.Handle</c>; 12 (TASK-0113) renames <c>DesignView.Generation</c> to <c>SlotGeneration</c>; 11 (TASK-0103 R1) replaces <c>ActorView.Nodes</c> (an <c>ImmutableArray</c> of record-class <c>NodeView</c>) by the compact <c>NodeList</c> of record-struct <c>NodeView</c>; 10 (TASK-0099) adds <c>DesignView.Generation</c> (slot generation, ADR-0005 p. 3); 9 (TASK-0078, ADR-0017) adds <c>HashCheckpoints</c>/<c>HashEveryTick</c>, makes <c>SliceView.StateHash</c> nullable and <c>LastHash</c> lazy (owner thread only); 0 was the surface before the read views; 8 (TASK-0063) adds the execution-only <c>SliceRunConfig.DailyTickProbe</c>; 7 (TASK-0058 step 5) drops <c>PilotChoice</c>/<c>IntroChannel</c> (I-OC and A41 SLOT are the build; <c>PilotForm</c>, <c>PilotProfiles</c> stay as options) and adds <c>RequirementView.PilotSlots</c>; 6 added <c>PilotForm</c>/<c>PilotProfiles</c>; 5 adds <c>PilotChoice</c> (HYP-0004 sketch); 4 adds the «К» parameters and <c>CapabilityTables</c> (L_C/L_P) to <c>SliceRunConfig</c>; 3 adds <c>LicenceView.Active</c>; 2 adds the step traces, <c>t_known</c> and the Requirement variants (SLICE_COMPOSITION §13.7).</summary>
-    public const int TestApiVersion = 17;
+    /// <summary>Version of the public surface of the session (ADR-0014 п. 6): raised with every change of the views or of <see cref="SliceRunConfig"/>; the surface test pins it. 18 (TASK-0134) adds <c>SliceRunConfig.HcapGrowthPerYear</c>, <c>HcapGrowthMax</c>, <c>MasteryXProg</c>, <c>MasteryUpkeepMult</c>, <c>MasteryRules</c> and the commands <c>StartMasteryProgramme</c>/<c>CancelMasteryProgramme</c> (<c>CommandVerdict.Mastery</c> carries the <c>why_not</c> code); 17 (TASK-0131) adds <c>SliceRunConfig.CostMultG5</c> and <c>CostMultG6</c> (c_n multipliers of generations 5 and 6, a calibration parameter); 16 (TASK-0131) makes <c>LicenceView.Mask</c> and <c>OfferMask</c> a two-word <c>LicenceMask</c> (nodes 1…127); 15 (TASK-0130, ADR-0025) adds <c>SliceRunConfig.ViewScope</c>, <c>SetViewSubscription</c>, <c>RebuildView</c> and <c>NodeList.IsPresent</c>; 14 (TASK-0122) adds <c>SliceRunConfig.BudgetRule</c> (a Lab measurement switch); 13 (TASK-0115) makes <c>DesignHandle(Slot, Generation)</c> mandatory: <c>Submit</c> takes commands about a design by handle, <c>WhyNotTarget.Design</c> takes a handle, <c>DesignView.Handle</c>; 12 (TASK-0113) renames <c>DesignView.Generation</c> to <c>SlotGeneration</c>; 11 (TASK-0103 R1) replaces <c>ActorView.Nodes</c> (an <c>ImmutableArray</c> of record-class <c>NodeView</c>) by the compact <c>NodeList</c> of record-struct <c>NodeView</c>; 10 (TASK-0099) adds <c>DesignView.Generation</c> (slot generation, ADR-0005 p. 3); 9 (TASK-0078, ADR-0017) adds <c>HashCheckpoints</c>/<c>HashEveryTick</c>, makes <c>SliceView.StateHash</c> nullable and <c>LastHash</c> lazy (owner thread only); 0 was the surface before the read views; 8 (TASK-0063) adds the execution-only <c>SliceRunConfig.DailyTickProbe</c>; 7 (TASK-0058 step 5) drops <c>PilotChoice</c>/<c>IntroChannel</c> (I-OC and A41 SLOT are the build; <c>PilotForm</c>, <c>PilotProfiles</c> stay as options) and adds <c>RequirementView.PilotSlots</c>; 6 added <c>PilotForm</c>/<c>PilotProfiles</c>; 5 adds <c>PilotChoice</c> (HYP-0004 sketch); 4 adds the «К» parameters and <c>CapabilityTables</c> (L_C/L_P) to <c>SliceRunConfig</c>; 3 adds <c>LicenceView.Active</c>; 2 adds the step traces, <c>t_known</c> and the Requirement variants (SLICE_COMPOSITION §13.7).</summary>
+    public const int TestApiVersion = 18;
 
     private SliceView _view = null!;
     private long _month = -1;
@@ -596,6 +596,8 @@ public sealed partial class SliceSession
         foreach (LoggedCommand c in _pending)
         {
             CommandVerdict v = CommandValidator.CheckState(c.Command, _knowsProcess);
+            if (v.Accepted && c.Command is StartMasteryProgramme start)
+                v = MasteryVerdict(start, month);
             if (v.Accepted)
                 v = _world.Commands.Apply(c.Command, month);
             // The layer rejects a stale handle in its step and only counts it; the snapshot at the tick boundary is the one it reads first, so the outcome names it here.
@@ -608,6 +610,14 @@ public sealed partial class SliceSession
         _journal.AddRange(_pending);
         _pending.Clear();
         return true;
+    }
+
+    // The player's programme start meets the check the AI and the layer use (production-mastery.md §1): the refusal names its why_not code.
+    private CommandVerdict MasteryVerdict(StartMasteryProgramme start, long month)
+    {
+        ProgrammeVerdict v = MasteryChecks.Verdict(_world, start.Actor, start.ProcessNumber, start.Abroad, month);
+        return v.Accepted ? CommandVerdict.Ok
+            : new CommandVerdict(CommandRefusal.ProgrammeRefused, $"programme on process {start.ProcessNumber} refused: {v.Reason}", Mastery: v.Reason, MasteryDetail: v.Detail);
     }
 
     /// <summary>

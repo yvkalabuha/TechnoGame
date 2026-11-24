@@ -44,7 +44,15 @@ internal sealed class IndustryInputsAdapter(SliceWorld world) : IIndustryInputs
 
     public Fx6 W(int siteRow, int cluster, long month) => world.Scenario.W[siteRow];
 
-    public Fx6 Hcap(int siteRow, Dimension dim, long month) => world.Scenario.Hcap[siteRow];
+    // Hcap(t) (#438, hcap-growth.md §4): the scenario value plus a linear growth with a limit after 1978-01; a pure function of the month, no state.
+    // The programme is a state of the product layer, read like the nominal of its projects (TASK-0134).
+    public long ProgrammeStart(int siteRow, int processRow, long month) =>
+        world.Products.ProgrammeStamp(world.IndustryLayout.SiteOwner[siteRow], world.IndustryLayout.Number[processRow]);
+
+    public bool ProgrammeDomestic(int siteRow, int processRow, long month) =>
+        world.Products.ProgrammeDomestic(world.IndustryLayout.SiteOwner[siteRow], world.IndustryLayout.Number[processRow]);
+
+    public Fx6 Hcap(int siteRow, Dimension dim, long month) => world.Scenario.Hcap[siteRow] + world.IndustryParameters.HcapGrowth(month);
 
     // Spec A41: the programme is active and the engineers it asked for in the previous month were granted in full.
     public bool QualityProgramme(int siteRow, long month)

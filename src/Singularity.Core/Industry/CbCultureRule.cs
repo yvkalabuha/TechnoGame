@@ -110,7 +110,8 @@ public sealed class CbCultureRule : ICultureRule
             CbParts parts = Parts(s, site, r, d, TildeV(s, site, r, GrowthV(s, site, r, v, month), month), e);
             if (parts.T > drive)
                 drive = parts.T;
-            if (parts.T > catchUp && s.WorldLead(site, r))
+            // A programme «at home» (own pilot site) learns without the world leader.
+            if (parts.T > catchUp && s.WorldLead(site, r) && !s.ProgrammeDomestic(site, r, month))
                 catchUp = parts.T;
             Fx6 vKeep = p.RKeep * l.Labour[r];
             Fx6 mp = vKeep == Fx6.Zero ? Fx6.Zero : Min(Fx6.One, vt / vKeep);
@@ -162,6 +163,50 @@ public sealed class CbCultureRule : ICultureRule
         Fx6 t = Max(eV * gap, eL * gapL);
         Fx6 tHat = Max(cp * gap, p.Ell * gapL);
         return new CbParts(cp, gap, gapL, t, tHat);
+    }
+
+    /// <summary>
+    /// What a mastery programme with the nominal input <paramref name="vProg"/> on the process would do (TASK-0134): the limiter without it must be
+    /// <c>LabCeiling</c> (or <c>Saturation</c>: wait; <c>Tooling</c>: tooling first), the process must then lead the cell by the ordinary rule, and the time
+    /// to <c>r_d</c> is the gap over one forecast rate at full useful money (an upper estimate of the rate: <c>sat</c> falls as H grows).
+    /// </summary>
+    public ProgrammeAssessment Assess(ICultureSnapshot s, int site, int r, Fx6 vProg, bool domestic, long month)
+    {
+        int d = DStar(s, site, r, month);
+        if (d < 0)
+            return new ProgrammeAssessment(ProgrammeFit.NotLabCeiling, -1, 0);
+        switch (Limiter0(s, site, r, d, month))
+        {
+            case LimiterKind.Tooling:
+                return new ProgrammeAssessment(ProgrammeFit.Tooling, -1, 0);
+            case LimiterKind.Saturation:
+                return new ProgrammeAssessment(ProgrammeFit.Saturation, -1, 0);
+            case LimiterKind.LabCeiling:
+                break;
+            default:
+                return new ProgrammeAssessment(ProgrammeFit.NotLabCeiling, -1, 0);
+        }
+        var with = new ProgrammeSnapshot(s, r, vProg, domestic);
+        IndustryLayout l = s.Layout;
+        int c = l.ClusterIndex[r];
+        int dWith = DStar(with, site, r, month);
+        int lead = dWith < 0 ? -1 : Lead(with, site, c, dWith, month);
+        if (lead != r)
+            return new ProgrammeAssessment(ProgrammeFit.CellLed, lead, 0);
+        long eta = 0;
+        for (int dim = 0; dim < Dims3.Count; dim++)
+        {
+            Fx6 gap = l.Req[r][dim] - s.H(site, c, dim);
+            if (l.Req[r][dim] <= Fx6.Zero || gap <= Fx6.Zero)
+                continue;
+            Fx6 rate = CellStep(with, site, c, dim, month, r, s.Params.EFull, vProg).DHPlusCapped;
+            if (rate <= Fx6.Zero)
+                return new ProgrammeAssessment(ProgrammeFit.NoRate, r, 0);
+            long months = (gap.Raw + rate.Raw - 1) / rate.Raw;
+            if (months > eta)
+                eta = months;
+        }
+        return new ProgrammeAssessment(ProgrammeFit.Ok, r, (int)Math.Min(eta, int.MaxValue));
     }
 
     // ---- internal functions of §4.1a (pure functions of the snapshot)

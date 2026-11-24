@@ -11,6 +11,11 @@ internal sealed class CbFake : ICultureSnapshot
     public readonly Fx6[] Hs, Ms, Vs, Es, Vexp, Vgrow;
     public readonly bool[] Known, PlannedF, Lic, Lead;
     public readonly Fx6[] HcapByDim = [D(5), D(5), D(5)];
+    public readonly long[] ProgStart;
+    public readonly bool[] ProgDomestic;
+
+    /// <summary>Hcap by month; null = the constant <see cref="HcapByDim"/>.</summary>
+    public Func<long, Fx6>? HcapAt;
     public bool Qp;
     public Fx6 ActValue = Fx6.One, WValue = Fx6.One;
 
@@ -31,6 +36,8 @@ internal sealed class CbFake : ICultureSnapshot
         PlannedF = new bool[Vs.Length];
         Lic = new bool[Vs.Length];
         Lead = new bool[Vs.Length];
+        ProgStart = new long[Vs.Length];
+        ProgDomestic = new bool[Vs.Length];
         Array.Fill(Known, true);
         for (int i = 0; i < Hs.Length; i++)
         {
@@ -57,7 +64,11 @@ internal sealed class CbFake : ICultureSnapshot
 
     public Fx6 M(int site, int cluster, int dim) => Ms[Idx(site, cluster, dim)];
 
-    public Fx6 Hcap(int site, int dim, long month) => HcapByDim[dim];
+    public Fx6 Hcap(int site, int dim, long month) => HcapAt?.Invoke(month) ?? HcapByDim[dim];
+
+    public long ProgrammeStart(int site, int processRow, long month) => ProgStart[site * _n + processRow];
+
+    public bool ProgrammeDomestic(int site, int processRow, long month) => ProgDomestic[site * _n + processRow];
 
     public Fx6 Act(int site, int cluster) => ActValue;
 

@@ -55,6 +55,8 @@ public enum CommandKind
     CancelDesign = 6,
     RetireCohort = 7,
     SellCohort = 8,
+    StartMasteryProgramme = 9,
+    CancelMasteryProgramme = 10,
 }
 
 /// <summary>
@@ -137,6 +139,22 @@ public sealed record RetireCohort(int Actor, DesignHandle Design, int N, bool Ac
 public sealed record SellCohort(int Actor, DesignHandle Design, int N) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.SellCohort;
+}
+
+/// <summary>
+/// <c>start_mastery_programme(process, mode)</c> (TASK-0134, production-mastery.md §1a, §5; «Обучение персонала: процесс X»): <paramref name="Abroad"/> sends
+/// specialists to a country that has mastered the process (the existing catch-up), else the programme runs on the own pilot site. Checked at
+/// application by the same function the AI uses; a refusal carries a <c>why_not</c> code.
+/// </summary>
+public sealed record StartMasteryProgramme(int Actor, int ProcessNumber, bool Abroad) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.StartMasteryProgramme;
+}
+
+/// <summary><c>cancel_mastery_programme(process)</c>: frees the slot and the money of <c>D</c>; the input stops with the next month.</summary>
+public sealed record CancelMasteryProgramme(int Actor, int ProcessNumber) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.CancelMasteryProgramme;
 }
 
 /// <summary>An accepted command with its key: one line of <c>commands.log</c>.</summary>

@@ -12,7 +12,7 @@ namespace Singularity.Session.Tests;
 /// </summary>
 public class GoldenProjectionAgainstMainTests
 {
-    private static string Old(SliceSession s) => ColumnProjection.Hash(s, n => !ColumnProjection.IsDesignRefGenColumn(n) && !ColumnProjection.IsHorizonColumn(n) && !ColumnProjection.IsReplCreditColumn(n));
+    private static string Old(SliceSession s) => ColumnProjection.Hash(s, n => !ColumnProjection.IsDesignRefGenColumn(n) && !ColumnProjection.IsHorizonColumn(n) && !ColumnProjection.IsReplCreditColumn(n) && !ColumnProjection.IsMasteryColumn(n));
 
     // F17b runs of seeds 1…5 after month 149 (threads 2): ADMIT with tooling V0, YPROD with the default target.
     private static readonly string[] AdmitOld =

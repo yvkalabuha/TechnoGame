@@ -20,7 +20,7 @@ public class HorizonTests
             foreach (string[] r in group)
             {
                 s.StepThroughMonth(long.Parse(r[2]));
-                Assert.True(r[3] == ColumnProjection.Hash(s, n => !ColumnProjection.IsHorizonColumn(n) && !ColumnProjection.IsReplCreditColumn(n)),
+                Assert.True(r[3] == ColumnProjection.Hash(s, n => !ColumnProjection.IsHorizonColumn(n) && !ColumnProjection.IsReplCreditColumn(n) && !ColumnProjection.IsMasteryColumn(n)),
                     $"{r[0]} seed {r[1]} month {r[2]}: an old column differs from the build before the horizon change");
             }
         }

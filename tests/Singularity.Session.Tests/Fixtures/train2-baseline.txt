@@ -1,8 +1,9 @@
 # TASK-0131 train 2: ColumnProjection.Hash over ALL columns, generated on the base commit 2590da6 by Train2IdentityTests.PrintRows: seed month hash (Main config, threads 4, chunk 2)
+# Re-recorded in TASK-0134 (train 2: Hcap(t), mastery): months 1019 only; the rows of month 387 are unchanged and compared without the new columns (MasteryColumns).
 # Re-recorded in TASK-0133 (train 2): generated on the 61-node data of Fixtures/core-g4 with the fleet ageing of TASK-0129 merged (the base-commit hashes cannot hold at months 387 and 1019 after TASK-0129).
 1 387 0f6c79f4bff4b1d2bf88b87e37106595889a346006dda478c6b071118baadaf9
-1 1019 d1d1fec5d57e65a73a9a37e6ed03aa4278a8b5e72b7f51ae55eff9acd4a77d7d
+1 1019 15147e8f9c953ccdd64e992e56dc784100ffda1e7d099c92ff01f8bc07a6b159
 2 387 454900a48a5f6d726553a80ef8077bf7ed283376043e7ef22f2b25e60106dd42
-2 1019 7496cb11f8237503973604bcf8a8252d775505b5f8ee8d839ae900e402aa975e
+2 1019 07706eb08d4b89af29d1f62a0115e2ece8f1a33a10da3cc2067142c49e3a3514
 3 387 dd5c0633ec5ecb98ba7fd9313fe2b1f20cf0f8125d36a17091f8e516e03076ba
-3 1019 7e5deef2758a01fd6ba68183eb72d8c53367ddd9e68ec4276ac114eeb19f70cf
+3 1019 d6a48508ca1bb92999d19579a93a15ba94f17daecd9342dc2eed5633984a268c

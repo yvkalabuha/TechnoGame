@@ -43,7 +43,16 @@ internal static class ColumnProjection
         name.EndsWith(".generation", StringComparison.Ordinal) || name.EndsWith(".parentGen", StringComparison.Ordinal)
         || name.StartsWith("prd.lp.g", StringComparison.Ordinal) && name.EndsWith(".gen", StringComparison.Ordinal)
         || IsDesignRefGenColumn(name) || IsHorizonColumn(name) || IsReplCreditColumn(name)
-        || name == "prd.rejected.StaleHandle" || name.StartsWith("prd.altReached.", StringComparison.Ordinal);
+        || name == "prd.rejected.StaleHandle" || name.StartsWith("prd.altReached.", StringComparison.Ordinal) || IsMasteryColumn(name);
+
+    /// <summary>
+    /// Columns added with the mastery programme and the mastery rules (TASK-0134, schema v14): the programme state, the AI's and the player's programme
+    /// commands, the months-below-y_prod counters and the rejection counter. Zero until 1978-01.
+    /// </summary>
+    public static bool IsMasteryColumn(string name) =>
+        name.StartsWith("prd.prog.", StringComparison.Ordinal) || name.StartsWith("pol.prog.", StringComparison.Ordinal)
+        || name.StartsWith("cmd.prog.", StringComparison.Ordinal) || name.StartsWith("pol.below.", StringComparison.Ordinal)
+        || name == "prd.rejected.BadProgramme";
 
     // Only the new design-reference generation columns; the old pol.lic.gen, pol.lic.q.gen and pol.lic.bad.gen stay in projections.
     public static bool IsDesignRefGenColumn(string name)

@@ -11,6 +11,9 @@ public enum LineCloseReason
     YProd = 2,
     LaunchAll = 3,
     LaunchCandidate = 4,
+
+    /// <summary>Mastery rules (TASK-0134): the candidate line stayed below <c>y_prod</c> for <c>T_Ab</c> months.</summary>
+    CandidateBelow = 5,
 }
 
 /// <summary>A licence offer the AI wanted and could not pay (A43.3 (б)): the seller's row, its generation, the price and the room (<c>room &lt; price</c>).</summary>
@@ -35,6 +38,11 @@ public sealed partial class PolicySystem
     private IntColumn[] _dsnStamp = [], _dsnKind = [], _dsnTarget = [], _dsnGen = [], _startStamp = [], _startGen = [], _closeStamp = [], _closeGen = [], _line = [], _rep = [];
     private IntColumn[][] _dsnAlt = [];
     private LongColumn[] _startRate = [];
+
+    // Mastery rules (TASK-0134): months a line of tier ≥ 5 stayed below y_prod, per design; the AI's programme decisions per programme process
+    // ((stamp << 3) | 4 for abroad | 1 start, 2 cancel; read where stamp is the month that consumes it).
+    private IntColumn[] _below = [], _progCmd = [];
+    private int[] _progNumbers = [];
 
     // Traces of the last compute (SLICE_COMPOSITION §13.4, §13.6): scratch outside the table, a row is rewritten by its own compute; not state, not hashed.
     [Scratch]
@@ -85,6 +93,13 @@ public sealed partial class PolicySystem
             _closeGen[d] = table.AddInt($"pol.close.{d}.gen");
             _line[d] = table.AddInt($"pol.line.{d}");
         }
+        _below = new IntColumn[products is null ? 0 : designs];
+        for (int d = 0; d < _below.Length; d++)
+            _below[d] = table.AddInt($"pol.below.{d}");
+        _progNumbers = products is null ? [] : [.. MasteryParams.ProgrammeProcesses(products.Layout).Select(k => products.Layout.ProcNumber[k])];
+        _progCmd = new IntColumn[_progNumbers.Length];
+        for (int j = 0; j < _progCmd.Length; j++)
+            _progCmd[j] = table.AddInt($"pol.prog.p{_progNumbers[j]}");
         _rep = new IntColumn[generations];
         for (int g = 0; g < generations; g++)
             _rep[g] = table.AddInt($"pol.rep.g{g + 1}");
@@ -143,6 +158,25 @@ public sealed partial class PolicySystem
         return generation == (started == 0 ? 1 : started);
     }
 
+    /// <summary>
+    /// The AI's mastery programme commands for the month step <paramref name="month"/>, written to <paramref name="into"/>; returns the count
+    /// (TASK-0134). The AI only starts programmes; the layer ends them.
+    /// </summary>
+    public int AiProgrammeCommands(int actor, long month, Span<ProgrammeCommand> into)
+    {
+        int n = 0;
+        for (int j = 0; j < _progCmd.Length && n < into.Length; j++)
+        {
+            int v = _progCmd[j].Current[actor];
+            if (v >> 3 == Stamp(month) && (v & 3) is 1 or 2)
+                into[n++] = new ProgrammeCommand(_progNumbers[j], (v & 3) == 1, (v & 4) != 0);
+        }
+        return n;
+    }
+
+    // A programme start decided last month is consumed in this month's step and not yet in the snapshot.
+    private bool ProgrammePending(int row, int j, long t) => _progCmd[j].Current[row] >> 3 == Stamp(t);
+
     /// <summary>Times a <c>Requirement</c> for the generation was repeated after a project of it was given up (spec A40); at most 1.</summary>
     public int Repeats(int actor, int generation) => _rep[generation - 1].Current[actor];
 
@@ -172,10 +206,12 @@ public sealed partial class PolicySystem
         public PolicyDesign[] Designs = [];
         public bool[] GaveUpNow = [], CancelNow = [];
         public readonly List<int> Lines = [];
+        public readonly List<(int Index, bool Abroad)> Progs = [];
 
         public void Reset(int generations, int designs)
         {
             Design.Clear();
+            Progs.Clear();
             Starts.Clear();
             Closes.Clear();
             CloseReasons.Clear();
@@ -222,6 +258,7 @@ public sealed partial class PolicySystem
         for (int i = 0; i < dec.Closes.Count; i++)
             _closeReason[row * _designs + dec.Closes[i]] = dec.CloseReasons[i];
         ComputeLicence(row, t, dec.Designs, dec, sharesNext, budgetNext, why);
+        UpdateBelow(row, t, dec.Designs);
         Commit(row, dec, Stamp(t + 1), next: true);
     }
 
@@ -264,7 +301,27 @@ public sealed partial class PolicySystem
     public PresetVariants RequirementVariants(int actorRow, long month)
     {
         int g = NewestGeneration(actorRow, month);
-        return g == 0 ? new PresetVariants(0, 0, [], [], Fx6.Zero, null) : ProductPresets.Variants(_prod!, _pp, actorRow, g, month);
+        if (g == 0)
+            return new PresetVariants(0, 0, [], [], Fx6.Zero, null);
+        // The same foresight as Decide (production-mastery.md rev 2 p. 4): the Requirement the AI will not issue is not shown as one.
+        if (_pp.Mastery.On(month, MasteryRules.Foresight) && !GenerationLive(actorRow, g, month))
+        {
+            var alts = new int[_prod!.Layout.SlotCount];
+            if (ProductPresets.Compose((PolicyProfile)_profile.Current[actorRow], _prod, _pp, actorRow, g, month, alts) && ForesightFails(actorRow, DesignRules.PrcSet(_prod.Layout, alts), month))
+                return new PresetVariants(g, 0, [], [], Fx6.Zero, null);
+        }
+        return ProductPresets.Variants(_prod!, _pp, actorRow, g, month);
+    }
+
+    private bool GenerationLive(int row, int g, long t)
+    {
+        for (int d = 0; d < _designs; d++)
+        {
+            PolicyDesign x = _prod!.Design(row, d, t);
+            if (x.PlatformGen == g && Live(x.Stage))
+                return true;
+        }
+        return false;
     }
 
     private int NewestGeneration(int row, long t)
@@ -310,7 +367,7 @@ public sealed partial class PolicySystem
                 // A project given up (cancelled) is not live; the Requirement for its generation repeats once (A40).
                 bool repeatOk = !gaveUp || _rep[g - 1].Current[row] == 0;
                 var alts = new int[l.SlotCount];
-                if (!live && repeatOk && free > 0 && ProductPresets.Compose(profile, prod, _pp, row, g, t, alts))
+                if (!live && repeatOk && free > 0 && ProductPresets.Compose(profile, prod, _pp, row, g, t, alts) && !ForesightFails(row, DesignRules.PrcSet(l, alts), t))
                 {
                     dec.Design.Add(DesignCommand.Compose(g, [.. alts]));
                     // The repeat is counted when the Requirement is issued, even if the layer later rejects the command (no bureau, capacity): the
@@ -354,6 +411,9 @@ public sealed partial class PolicySystem
             // A launch decided last month is still pending in the snapshot: a launching project is not given up.
             if (StartPending(row, d, t, x))
                 continue;
+            // Hysteresis (production-mastery.md rev 2 p. 4): a tier ≥ 5 project the foresight still holds waits in Prototype for its processes.
+            if (HoldsForMastery(row, d, t))
+                continue;
             if (CancelPending(row, t, x.HandleOf(d)))
                 continue;
             dec.Design.Add(DesignCommand.Cancel(x.HandleOf(d)));
@@ -384,6 +444,14 @@ public sealed partial class PolicySystem
             throw new PolicyInvariantException(t, row, $"{lines.Count} lines of one AI actor (F17b allows two)");
         int candidate = lines.Count == 2 ? Candidate(designs, lines[0], lines[1]) : -1;
 
+        // Mastery (rev 2 p. 2): the candidate below y_prod for T_Ab months closes; the working line of the older generation stays.
+        if (candidate >= 0 && _pp.Mastery.On(t, MasteryRules.CandidateClose) && !dec.Closes.Contains(candidate)
+            && _below[candidate].Current[row] >= _pp.TAb && YMin(row, candidate, t) < _pp.YProd)
+        {
+            AddClose(dec, candidate, LineCloseReason.CandidateBelow);
+            candidate = -1;
+        }
+
         // F17b rule 2 comes BEFORE the launch (owner decision on review of TASK-0030): two lines and the candidate has y_prod in the snapshot ->
         // the working line closes and the candidate is the working one; a launch of the same month below y_prod then becomes the new candidate
         // (still at most two lines). One close per project and month.
@@ -410,7 +478,7 @@ public sealed partial class PolicySystem
                 // A project cancelled this month or whose cancel is still pending does not launch.
                 if (x.Stage != DesignStage.Prototype || !x.GateOpen || x.Hidden > launchLimit || cancelNow[d]
                     || CancelPending(row, t, x.HandleOf(d))
-                    || !prod.Admitted(row, d, t))
+                    || !prod.Admitted(row, d, t) || GateBlocks(row, d, t))
                     continue;
                 Fx6 procurement = Shares(row).Procurement * Budget(row);
                 dec.Starts.Add((d, PolicyRules.LineRate(procurement, x.UnitCostFloor)));
@@ -426,10 +494,130 @@ public sealed partial class PolicySystem
                 break;
             }
         }
+        DecideProgramme(row, t, profile, designs, dec);
         FleetDecision fleet = DecideFleet(row, t, designs, dec, sharesNext, budgetNext);
         dec.Fleet.AddRange(fleet.Commands);
         dec.IncomeExpected = fleet.IncomeExpected;
         return dec;
+    }
+
+    // ---- production mastery (TASK-0134, production-mastery.md rev 3, O-045)
+
+    private static bool IsMasteryProcess(ProductsLayout l, int number)
+    {
+        int k = l.ProcIndex(number);
+        return k >= 0 && l.ProcTier[k] >= MasteryParams.MinTier;
+    }
+
+    private static bool HasMasteryProcess(ProductsLayout l, int[] prc)
+    {
+        foreach (int n in prc)
+        {
+            if (IsMasteryProcess(l, n))
+                return true;
+        }
+        return false;
+    }
+
+    // Series gate: a tier ≥ 5 design starts only when y_min reaches y_start (= y_prod).
+    // y_min is the culture yield (without the experience ramp): output builds the ramp, and a process without output stays at λ0 = 0,3 < y_start.
+    private bool GateBlocks(int row, int d, long t)
+    {
+        if (!_pp.Mastery.On(t, MasteryRules.Gate) || !HasMasteryProcess(_prod!.Layout, _prod.PrcSet(row, d)))
+            return false;
+        foreach (int n in _prod.PrcSet(row, d))
+        {
+            if (_prod.CultureYield(row, n, t) < _pp.YProd)
+                return true;
+        }
+        return false;
+    }
+
+    // Static foresight: a tier ≥ 5 process without a programme must have Hcap(t + T_look) above its requirement; one failing process fails the project.
+    private bool ForesightFails(int row, int[] prc, long t)
+    {
+        if (!_pp.Mastery.On(t, MasteryRules.Foresight))
+            return false;
+        ProductsLayout l = _prod!.Layout;
+        foreach (int n in prc)
+        {
+            if (IsMasteryProcess(l, n) && !_prod.ProgrammeActive(row, n) && !_prod.Masterable(row, n, t, _pp.Mastery.TLook))
+                return true;
+        }
+        return false;
+    }
+
+    private bool HoldsForMastery(int row, int d, long t)
+    {
+        if (!_pp.Mastery.On(t, MasteryRules.Foresight))
+            return false;
+        int[] prc = _prod!.PrcSet(row, d);
+        return HasMasteryProcess(_prod.Layout, prc) && !ForesightFails(row, prc, t);
+    }
+
+    // Months below y_prod of the lines of tier ≥ 5; written only when it changes, so the columns of a run before 1978 stay zero.
+    private void UpdateBelow(int row, long t, PolicyDesign[] designs)
+    {
+        bool on = _pp.Mastery.On(t, MasteryRules.CandidateClose);
+        for (int d = 0; d < _below.Length; d++)
+        {
+            int cur = _below[d].Current[row], next = 0;
+            if (on && designs[d].Stage == DesignStage.Series && HasMasteryProcess(_prod!.Layout, _prod.PrcSet(row, d)) && YMin(row, d, t) < _pp.YProd)
+                next = cur + 1;
+            if (next != cur)
+                _below[d].Next[row] = next;
+        }
+    }
+
+    // The AI starts at most one programme a month, on a tier ≥ 5 process of the project of the newest generation (or of the Requirement while there is
+    // no project), by the same check as the command; «abroad» when another country has mastered the process, else on the own pilot site.
+    private void DecideProgramme(int row, long t, PolicyProfile profile, PolicyDesign[] designs, Decisions dec)
+    {
+        if (_progCmd.Length == 0 || !_pp.Mastery.On(t, MasteryRules.Programme))
+            return;
+        int free = _pp.Mastery.SMax - _prod!.ProgrammeCount(row);
+        for (int j = 0; j < _progCmd.Length; j++)
+            free -= ProgrammePending(row, j, t) ? 1 : 0;
+        int g = NewestGeneration(row, t);
+        if (free <= 0 || g == 0)
+            return;
+        ProductsLayout l = _prod.Layout;
+        bool live = false, hasProject = false;
+        for (int d = 0; d < _designs; d++)
+        {
+            if (designs[d].PlatformGen != g)
+                continue;
+            live |= Live(designs[d].Stage);
+            hasProject |= designs[d].Stage is DesignStage.Project or DesignStage.Prototype;
+        }
+        // Processes the programme could still run on: known, not yet ready, no programme. Nothing else is worth the Requirement preset below.
+        bool any = false;
+        for (int j = 0; j < _progCmd.Length && !any; j++)
+        {
+            int n = _progNumbers[j];
+            any = _prod.Knows(row, n, t) && !_prod.ProgrammeActive(row, n) && !ProgrammePending(row, j, t) && _prod.CultureYield(row, n, t) < _pp.YProd;
+        }
+        if (!any)
+            return;
+        Span<int> requirement = stackalloc int[l.SlotCount];
+        bool hasRequirement = !live && ProductPresets.Compose(profile, _prod, _pp, row, g, t, requirement);
+        for (int j = 0; j < _progCmd.Length; j++)
+        {
+            int n = _progNumbers[j];
+            bool wanted = false;
+            for (int s = 0; s < requirement.Length && hasRequirement && !wanted; s++)
+                wanted = l.PrcOf(requirement[s]).IndexOf(n) >= 0;
+            for (int d = 0; d < _designs && hasProject && !wanted; d++)
+                wanted = designs[d].PlatformGen == g && designs[d].Stage is DesignStage.Project or DesignStage.Prototype && _prod.PrcSet(row, d).AsSpan().IndexOf(n) >= 0;
+            if (!wanted || !_prod.Knows(row, n, t) || _prod.ProgrammeActive(row, n) || ProgrammePending(row, j, t) || _prod.CultureYield(row, n, t) >= _pp.YProd)
+                continue;
+            bool abroad = _prod.Donor(row, n);
+            if (_prod.ProgrammeVerdict(row, n, abroad, t).Reason == MasteryRefusal.None)
+            {
+                dec.Progs.Add((j, abroad));
+                return;
+            }
+        }
     }
 
     /// <summary>
@@ -545,6 +733,8 @@ public sealed partial class PolicySystem
             setInt(_fltGen[k], dec.Fleet[k].Design.Generation);
             setInt(_fltN[k], checked((int)dec.Fleet[k].N));
         }
+        foreach ((int j, bool abroad) in dec.Progs)
+            setInt(_progCmd[j], (stamp << 3) | (abroad ? 4 : 0) | 1);
         setLong(_incExp, dec.IncomeExpected.Raw);
         for (int g = 0; g < dec.Repeat.Length; g++)
         {

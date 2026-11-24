@@ -29,6 +29,7 @@ public sealed partial record SliceRunConfig
             ((int)t.PoolOrder).ToString(CultureInfo.InvariantCulture), Raw(t.KCap),
             SkipStartValidation.ToString(), ((int)Layer).ToString(CultureInfo.InvariantCulture),
             Raw(CostDivisor), Raw(ThetaStart), Raw(HMax), KappaQ10?.ToString(CultureInfo.InvariantCulture) ?? "-", Raw(Alpha), Raw(CostMultG5), Raw(CostMultG6),
+            Raw(HcapGrowthPerYear), Raw(HcapGrowthMax), Raw(MasteryXProg), Raw(MasteryUpkeepMult), ((int)MasteryRules).ToString(CultureInfo.InvariantCulture),
             XHalfByTier.IsDefault ? "-" : string.Join(',', XHalfByTier.Select(x => x.Raw.ToString(CultureInfo.InvariantCulture))),
             Raw(DeltaH), Raw(CM), Grid.Code.ToString(CultureInfo.InvariantCulture), ((int)EffortShare).ToString(CultureInfo.InvariantCulture),
         ];

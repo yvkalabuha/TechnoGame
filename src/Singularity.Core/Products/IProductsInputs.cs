@@ -97,6 +97,9 @@ public enum CommandRejection
 
     /// <summary>The command's handle <c>(slot, generation)</c> is stale: the design it named no longer exists (ADR-0005 p. 3).</summary>
     StaleHandle = 18,
+
+    /// <summary>A mastery programme command the layer could not apply: the check failed at application, no free slot, or the process has no programme column (TASK-0134).</summary>
+    BadProgramme = 19,
 }
 
 /// <summary>Kind of a fleet command (contract r6 §4.4f). Names leave room for <c>mothball_cohort</c> of the second wave.</summary>
@@ -127,6 +130,12 @@ public interface IProductsInputs
     /// runs output at, contract §4.2). Read by the «технологичный» variant rule (spec §1.4).
     /// </summary>
     Fx6 AdmittedYield(int siteRow, int processNumber, long month);
+
+    /// <summary>
+    /// The yield the culture and tooling allow without the experience ramp (<c>ProcessYield.CultureYield</c>), 0 when the owner does not know the process
+    /// (TASK-0134: «ready for the series» of the mastery rules). A layer without the split says the full yield.
+    /// </summary>
+    Fx6 CultureYield(int siteRow, int processNumber, long month) => AdmittedYield(siteRow, processNumber, month);
 
     /// <summary><c>production_profile(site, prc_set)</c> of month t (contract §5).</summary>
     ProductionProfile Profile(int siteRow, ReadOnlySpan<PrcSetItem> prcSet, long month);
@@ -187,6 +196,15 @@ public interface IProductsInputs
     /// left, on that line only; what is not spent is an unspent residue of the month.
     /// </summary>
     Fx6 TrainingBudget(int actorRow, int design, long month);
+
+    /// <summary>
+    /// The mastery programme commands in force at month t, the player's first, then the AI's, written to <paramref name="into"/>; returns the count
+    /// (TASK-0134). Allocates nothing.
+    /// </summary>
+    int ProgrammeCommands(int actorRow, long month, Span<ProgrammeCommand> into) => 0;
+
+    /// <summary>Whether a programme may start on the process now (<c>why_not</c> of the command): a pure function of the snapshot.</summary>
+    ProgrammeVerdict ProgrammeVerdict(int actorRow, int processNumber, bool abroad, long month) => new(MasteryRefusal.OutOfScope);
 
     /// <summary>L_P only: month index in whose merge the APP node of the generation became known to the actor, −1 if unknown.</summary>
     long AppKnownSince(int actorRow, int gen, long month);

@@ -69,6 +69,9 @@ public sealed partial class ProductsSystem : ITickSystem
     private readonly LongColumn[] _work, _d0, _hidden, _open, _found, _hours, _lineE, _rate, _cost, _exp, _cohort;
     private readonly LongColumn[] _qMask;   // q[design, y] as a bit per cohort year, 62 years per block: [design * _qb + y / 62] (contract r13a §3.1, §9.1)
     private readonly LongColumn[] _rateCmd, _dGate, _lossAcc, _retro, _lost, _inService0, _rejected, _retired, _sold, _replCredit;
+    // Mastery programme state per programme process (tier ≥ 5) and actor: ((start month + 1) << 1) | domestic, 0 = none (TASK-0134, prog_state).
+    private readonly IntColumn[] _prog;
+    private readonly int[] _progOf, _progRows, _progNumbers;
     private readonly LongColumn _need, _paid, _spent, _tbSpent, _saleIncome, _saleCap, _saleY, _extTotal;
 
     // Midyear month index of each cohort year (spec A32): age of cohort Y at month t is t − _m0[Y].
@@ -234,6 +237,16 @@ public sealed partial class ProductsSystem : ITickSystem
         _rejected = new LongColumn[RejectionKinds];
         for (int r = 0; r < RejectionKinds; r++)
             _rejected[r] = table.AddLong($"prd.rejected.{(CommandRejection)r}");
+        _progRows = MasteryParams.ProgrammeProcesses(layout);
+        _progOf = new int[layout.ProcNumber.Length];
+        Array.Fill(_progOf, -1);
+        _progNumbers = [.. _progRows.Select(k => layout.ProcNumber[k])];
+        _prog = new IntColumn[_progRows.Length];
+        for (int j = 0; j < _progRows.Length; j++)
+        {
+            _progOf[_progRows[j]] = j;
+            _prog[j] = table.AddInt($"prd.prog.p{layout.ProcNumber[_progRows[j]]}");
+        }
         _need = table.AddLong("prd.upkeepNeed");
         _paid = table.AddLong("prd.paidRatio");
         _spent = table.AddLong("prd.spent");
@@ -797,6 +810,8 @@ public sealed partial class ProductsSystem : ITickSystem
     /// </summary>
     public bool Planned(int actor, int processNumber)
     {
+        if (ProgrammeStamp(actor, processNumber) > 0)
+            return true;
         for (int d = 0; d < _d; d++)
         {
             if (Stage(actor, d) is (DesignStage.Project or DesignStage.Prototype or DesignStage.Series)
@@ -850,8 +865,52 @@ public sealed partial class ProductsSystem : ITickSystem
             if (Stage(actor, d) is (DesignStage.Prototype or DesignStage.Series) && PrcSet(actor, d).AsSpan().IndexOf(processNumber) >= 0)
                 sum += _l.RRef * _l.ProcN[k] * _l.ProcLabour[k];
         }
+        // The programme input is not added to the nominal of a project: the larger of the two (production-mastery.md §2 p. 3).
+        if (ProgrammeStamp(actor, processNumber) > 0)
+        {
+            Fx6 prog = ProgrammeNominal(processNumber);
+            if (prog > sum)
+                sum = prog;
+        }
         return sum;
     }
+
+    // ---- mastery programme (TASK-0134, production-mastery.md rev 3, O-045)
+
+    /// <summary><c>V_prog = x_prog·r_ref·n_p·labour_p</c>: the nominal volume a programme feeds into the culture of the process.</summary>
+    public Fx6 ProgrammeNominal(int processNumber)
+    {
+        int k = _l.ProcIndex(processNumber);
+        return k < 0 ? Fx6.Zero : _p.Mastery.XProg * _l.RRef * _l.ProcN[k] * _l.ProcLabour[k];
+    }
+
+    /// <summary>Stamp (start month + 1) of the programme of the actor on the process in the snapshot, 0 without one.</summary>
+    public long ProgrammeStamp(int actor, int processNumber)
+    {
+        int k = _l.ProcIndex(processNumber);
+        int j = k < 0 ? -1 : _progOf[k];
+        return j < 0 ? 0 : _prog[j].Current[actor] >> 1;
+    }
+
+    /// <summary>The programme runs «at home» (own pilot site): no catch-up from a world leader.</summary>
+    public bool ProgrammeDomestic(int actor, int processNumber)
+    {
+        int k = _l.ProcIndex(processNumber);
+        int j = k < 0 ? -1 : _progOf[k];
+        return j >= 0 && (_prog[j].Current[actor] & 1) != 0 && _prog[j].Current[actor] != 0;
+    }
+
+    /// <summary>Programmes of the actor in the snapshot.</summary>
+    public int ProgrammeCount(int actor)
+    {
+        int n = 0;
+        for (int j = 0; j < _prog.Length; j++)
+            n += _prog[j].Current[actor] != 0 ? 1 : 0;
+        return n;
+    }
+
+    /// <summary>Process numbers with a programme column (tier ≥ 5), ascending.</summary>
+    public ReadOnlySpan<int> ProgrammeProcessNumbers => _progNumbers;
 
     // ---- tick phases
 
@@ -949,6 +1008,7 @@ public sealed partial class ProductsSystem : ITickSystem
         AdvanceBureaus(a, t);
         BeginFleetMonth(a, t);
         ApplyDesignCommands(a, t, knows);
+        StepProgrammes(a, t);
         BureausRequestOrIdle(chunk, a);
         CloseLines(a, t);
         ApplyFleetCommands(a, t);
@@ -984,6 +1044,62 @@ public sealed partial class ProductsSystem : ITickSystem
         _spent.Next[a] = spent.Raw;
         _tbSpent.Next[a] = tbSpent.Raw;
     }
+
+    // The mastery programme of the actor (production-mastery.md §2): commands first (the check of the layer is the same pure function the sender used),
+    // then the end: «ready for the series» (yield of the process reaches y_start) or T_max = T_look months. The state is read from Next, written to Next.
+    private void StepProgrammes(int a, long t)
+    {
+        if (_prog.Length == 0)
+            return;
+        MasteryParams m = _p.Mastery;
+        if (!m.On(t, MasteryRules.Programme))
+        {
+            for (int j = 0; j < _prog.Length; j++)
+                _prog[j].Next[a] = 0;
+            return;
+        }
+        Span<ProgrammeCommand> cmds = stackalloc ProgrammeCommand[MaxProgrammeCommands];
+        int n = _inputs.ProgrammeCommands(a, t, cmds);
+        for (int i = 0; i < n; i++)
+        {
+            int k = _l.ProcIndex(cmds[i].ProcessNumber);
+            int j = k < 0 ? -1 : _progOf[k];
+            if (j < 0)
+            {
+                Reject(a, CommandRejection.BadProgramme);
+                continue;
+            }
+            if (!cmds[i].Start)
+            {
+                _prog[j].Next[a] = 0;
+                continue;
+            }
+            if (_prog[j].Next[a] != 0)
+                continue;
+            int active = 0;
+            for (int q = 0; q < _prog.Length; q++)
+                active += _prog[q].Next[a] != 0 ? 1 : 0;
+            if (active >= m.SMax || !_inputs.ProgrammeVerdict(a, cmds[i].ProcessNumber, cmds[i].Abroad, t).Accepted)
+            {
+                Reject(a, CommandRejection.BadProgramme);
+                continue;
+            }
+            _prog[j].Next[a] = (int)((t + 1) << 1) | (cmds[i].Abroad ? 0 : 1);
+        }
+        for (int j = 0; j < _prog.Length; j++)
+        {
+            int state = _prog[j].Next[a];
+            if (state == 0)
+                continue;
+            long start = (state >> 1) - 1;
+            bool ready = _inputs.CultureYield(a, _progNumbers[j], t) >= _p.YProd;
+            if (ready || t - start >= m.TLook)
+                _prog[j].Next[a] = 0;
+        }
+    }
+
+    // Programme commands one actor can have in force in a month: a start or a cancel per programme process, bounded.
+    private const int MaxProgrammeCommands = 16;
 
     // L_P (spec §6.1): canonical project of the newest due generation, output r = min(ρ[g]·procurement budget, alloy capacity).
     private void StepCanonical(int chunk, int a, long t, int y)

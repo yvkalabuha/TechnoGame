@@ -164,6 +164,9 @@ public sealed record ProductsParams
     /// <summary>Arm <c>SALE_CHI_OFF</c> (spec §6.10): no revenue ceiling.</summary>
     public bool SaleChiOff { get; init; }
 
+    /// <summary>Production-mastery rules (TASK-0134): the programme feeds <c>x_prog</c> of the nominal volume; off before <see cref="MasteryParams.FromMonth"/>.</summary>
+    public MasteryParams Mastery { get; init; } = new();
+
     /// <summary><c>φ_gen(gap)</c> (spec A42.2): <paramref name="gap"/> ≥ 1.</summary>
     public Fx6 PhiGen(int gap) => SalePhi[Math.Min(gap, SalePhi.Length) - 1];
 
@@ -184,6 +187,7 @@ public sealed record ProductsParams
             throw new ArgumentException("k_gate, a_acc, ρ_retro ≥ 0; t_test_min ≥ 0; τ_der in [0; 1]; 0 < q10_γ ≤ 1024; H_build, r_plan divisor ≥ 1.");
         if (B0 < 1 || KappaQ10 < 0 || KappaQ10 > DetMath.FracOne)
             throw new ArgumentException("B0 ≥ 1 and κ in [0; 1] (q10 0…1024).");
+        Mastery.Validate();
         if (LpTDesign.Length != LpRho.Length)
             throw new ArgumentException("L_P tables need one T_design and one ρ per generation.");
     }
