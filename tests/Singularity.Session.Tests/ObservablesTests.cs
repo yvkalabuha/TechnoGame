@@ -19,8 +19,8 @@ public sealed class ObservablesWalk
 
     public ObservablesWalk(int cell)
     {
-        // The walk looks for closes with reasons by month 200: tuned on the 61-node data (the G5/G6 data moves them past the walk).
-        SliceSession s = SliceTestData.CreateLegacy(new SliceRunConfig { Seed = 5, ProfileCell = cell, Threads = 2, LicKnows = true });
+        // The walk looks for closes with reasons by month 200: tuned on the 61-node data (the G5/G6 data moves them past the walk) with the ahead-of-time cost off (TASK-0147: with the default cost the events of the scan fall on other months).
+        SliceSession s = SliceTestData.CreateLegacyNeutral(new SliceRunConfig { Seed = 5, ProfileCell = cell, Threads = 2, LicKnows = true });
         SliceWorld w = s.World;
         for (long t = 0; t < Months; t++)
         {

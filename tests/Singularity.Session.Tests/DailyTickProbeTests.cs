@@ -81,6 +81,7 @@ public class DailyTickProbeTests
         SliceSession s = SliceSession.Create(SliceTestData.LegacyData, new SliceRunConfig   // month 239 is tuned on the 61-node data
         {
             Seed = 3, LicKnows = true, EffortShare = EffortShareArm.X0, DailyTickProbe = true, HashEveryTick = true,
+            AheadCostK = Fx6.Zero,   // TASK-0147: the scanned month is that of the data without the ahead-of-time cost (default k 0.02 moves it)
         });
         Assert.True(s.World.DailyViewNeutral);
         s.StepThroughMonth(237);   // TASK-0129: the AI closes a line with a reason in month 239 of this seed (it was in the 220s before the fleet ageing)
