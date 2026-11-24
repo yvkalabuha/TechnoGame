@@ -184,7 +184,7 @@ public sealed partial class Main : Node3D
     // ---------- client ----------
     void BuildMenus(CanvasLayer layer)
     {
-        _mainMenu = new MainMenu(); _newGame = new NewGameSheet(); _settings = new SettingsSheet(); _credits = new CreditsSheet();
+        _mainMenu = new MainMenu(); _newGame = new NewGameSheet(); _settings = new SettingsSheet { GlobeLookSet = v => ApplyGlobeLook((GlobeLook)v) }; _credits = new CreditsSheet();
         layer.AddChild(_mainMenu); layer.AddChild(_newGame); layer.AddChild(_settings); layer.AddChild(_credits);
         _mainMenu.Continue += CloseGameMenu;
         _mainMenu.NewGame += () => { _mainMenu.Close(); _pendingNewGame = true; };

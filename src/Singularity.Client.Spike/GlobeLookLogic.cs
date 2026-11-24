@@ -2,7 +2,7 @@ using System;
 
 namespace Singularity.Client.Spike;
 
-/// <summary>Globe look prototype (TASK-0137): which of the variants is shown. Current is the default until the owner picks one.</summary>
+/// <summary>Globe look (TASK-0137): which variant is shown. B (physical atmosphere) is the default, owner decision #444; Current is the prior flat look.</summary>
 public enum GlobeLook { Current = 0, A = 1, APlus = 2, B = 3 }
 
 public static class GlobeLookLogic
@@ -56,6 +56,9 @@ public static class GlobeLookLogic
 
     /// <summary>Largest tolerated ΔE (CIE76) of a fill under the atmosphere at 0.96 R against the same fill without it.</summary>
     public const double MaxLimbDeltaE = 2.0;
+
+    /// <summary>Largest tolerated atmosphere share at 0.98 R (halfway into the 4 % band, eased in): measured, then fixed with margin (art-director review of TASK-0137).</summary>
+    public const double MaxInnerDeltaE = 6.0;
 
     /// <summary>Angle in degrees between the view axis and a globe point whose screen distance from the disk centre is ratio * (disk radius), for a camera at distance dist (globe radius 1).</summary>
     public static double AngleForLimbRatio(double dist, double ratio)

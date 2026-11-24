@@ -39,7 +39,7 @@ void fragment() {
 		if (x < 0.0) a = 0.0;
 	} else {
 		// physical haze: exponential density, chord length through the shell, Rayleigh-like wavelength weights, reddened sunlight at the terminator
-		float H = 0.03;
+		float H = 0.0225;   // scale height: the outer glow is 25 % narrower than in the first prototype
 		float rho = exp(-max(x, 0.0) / H);
 		float chord = 2.0 * sqrt(max(shell_r * shell_r - h * h, 0.0));
 		vec3 beta = vec3(0.9, 2.0, 4.6);
@@ -48,8 +48,11 @@ void fragment() {
 		float lightf = mix(0.12, 1.0, day);
 		vec3 sc = (vec3(1.0) - exp(-od)) * sun * lightf;
 		col = sc / max(max(sc.r, max(sc.g, sc.b)), 1e-4);
-		a = clamp(max(sc.r, max(sc.g, sc.b)) * 0.95, 0.0, 0.9);
-		if (x < 0.0) { float k = smoothstep(-0.04, 0.0, x); a *= k * k * 0.5; }   // at most 4 % inside the disk, eased in so that fills stay readable
+		// the halo is never lighter than the sea fill (about 0.70 linear): in a grey frame it is not the lightest object
+		float ly = dot(col, vec3(0.2126, 0.7152, 0.0722));
+		col *= min(1.0, 0.65 / max(ly, 1e-4));
+		a = clamp(max(sc.r, max(sc.g, sc.b)) * 0.81, 0.0, 0.765);   // peak alpha 15 % below the first prototype
+		if (x < 0.0) { float k = smoothstep(-0.04, 0.0, x); a *= k * k * 0.3; }   // at most 4 % inside the disk, eased in, 0.6 of the first prototype (hue shift kept, less lightness lift)
 	}
 	ALBEDO = col;
 	ALPHA = a;

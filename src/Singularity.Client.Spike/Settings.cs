@@ -59,8 +59,6 @@ public static class Settings
     public static bool ReadOnly { get; set; }
     /// <summary>--window: a framed 1920x1080 window for tests (the game itself is fullscreen or borderless, #424).</summary>
     public static bool Framed { get; set; }
-    /// <summary>Set by the client: the globe look changed (the settings sheet previews it live).</summary>
-    public static Action<int> OnGlobeLook;
     static readonly string[] Months = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
     public static void Load()
@@ -153,7 +151,6 @@ public static class Settings
         vp.Scaling3DScale = s.Upscaler == 0 ? 1f : (float)SettingsLogic.RenderScale(s.UpscaleMode);
         ProjectSettings.SetSetting("gui/timers/tooltip_delay_sec", SettingsData.TipDelays[s.TipDelay]);
         Loc.IsoNumbers = s.DateFormat == 1;
-        OnGlobeLook?.Invoke(s.GlobeLook);
         PaperSurface.SetPreset(s.Textures);
         InstrumentLogic.OrganLevel = s.OrganInstruments;
         AudioServer.SetBusVolumeDb(0, (float)(s.Volume[0] < 0.1 ? -80 : 20 * Math.Log10(s.Volume[0] / 100)));
