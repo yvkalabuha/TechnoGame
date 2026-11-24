@@ -22,6 +22,7 @@
 - TASK-0129 [IN_PROGRESS] Fleet ageing without replacement in Core (#431, #435-#437) (developer)
 - TASK-0133 [IN_PROGRESS] G5/G6 data in mods on the train-2 branch and calibration probe (O-038) (developer)
 - TASK-0134 [IN_PROGRESS] Hcap growth and production mastery in Core: series gate, candidate close, foresight, mastery programme (#438-#440) (developer)
+- TASK-0142 [IN_PROGRESS] Globe map remainder after TASK-0138: hatch legend, occupation control line, small-state callouts, coast staircase (developer)
 - TASK-0143 [IN_PROGRESS] Gemini sketch runs: detect subagent quota errors, one image per subagent, no extra refinements (developer)
 - TASK-0144 [IN_PROGRESS] Muted sound character (#455): soften attack and low-pass all routine cues (sound-director)
 - TASK-0146 [IN_PROGRESS] Second review fallback to Sonnet 5.5 through agy when the Codex limit is exhausted (#456) (developer)
