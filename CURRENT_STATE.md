@@ -22,6 +22,7 @@
 - TASK-0129 [IN_PROGRESS] Fleet ageing without replacement in Core (#431, #435-#437) (developer)
 - TASK-0133 [IN_PROGRESS] G5/G6 data in mods on the train-2 branch and calibration probe (O-038) (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
+- TASK-0134 [APPROVED] Hcap growth and production mastery in Core: series gate, candidate close, foresight, mastery programme (#438-#440) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры

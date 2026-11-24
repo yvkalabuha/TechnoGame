@@ -149,6 +149,7 @@
 | [TASK-0131](../development/tasks/TASK-0131-g5-g6-core-changes.md) | DONE | Core changes for G5/G6 data: licence mask word 2, generation cost multipliers, control-layer guards (train 2, T-G) | MS-M05 |
 | [TASK-0132](../development/tasks/TASK-0132-tree-keyboard-selection.md) | PROPOSED | Keyboard selection of technology tree nodes and keyboard tooltip (A6-A8) | MS-M05 |
 | [TASK-0133](../development/tasks/TASK-0133-g5-g6-data-probe.md) | IN_PROGRESS | G5/G6 data in mods on the train-2 branch and calibration probe (O-038) | MS-M05 |
+| [TASK-0134](../development/tasks/TASK-0134-hcap-growth-production-mastery.md) | APPROVED | Hcap growth and production mastery in Core: series gate, candidate close, foresight, mastery programme (#438-#440) | MS-M05 |
 
 ## Гипотезы
 
