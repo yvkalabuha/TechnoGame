@@ -108,7 +108,7 @@ public sealed partial class Main
             W(0.1, () => _signal.SetSpeed(s));
             W(0.5, () => { string tag = $"100% {names[s]}"; TimeCentres(tag); TimeGauge(tag); Frames(names[s], "_100", 640, 64); });
         }
-        // Pressed state of each button by real mouse events (released outside, nothing acts), at speed 2 where all three are enabled.
+        // Pressed state of each button by real mouse events (released outside, nothing acts), at speed 3 (1 week/s) where all three are enabled.
         W(0.1, () => _signal.SetSpeed(3));
         foreach (var k in new[] { TimeControl.Kind.Pause, TimeControl.Kind.Slower, TimeControl.Kind.Faster })
         {

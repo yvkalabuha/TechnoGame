@@ -54,31 +54,33 @@ panel.designs,PRODUCTS AND LINES,ИЗДЕЛИЯ И ЛИНИИ
 panel.licence,LICENCE,ЛИЦЕНЗИЯ
 panel.why,WHAT BLOCKS IT,ЧТО МЕШАЕТ ПОЛУЧИТЬ
 design.line,Project {0} · generation {1} · {2} · unit cost {3} · readiness {4} · in service {5},Проект {0} · {1}-е поколение · {2} · себест. {3} · готовность {4} · в строю {5}
-design.series, · rate {0} · bound by {1}, · темп {0} · лимит {1}
+design.series, · output rate {0} · limited by: {1}, · скорость выпуска {0} · упирается в: {1}
 design.none,No designs. Creating designs is not wired in the client yet.,Проектов нет. Создание изделий в клиенте пока не подключено.
 design.nocreate,Starting a series and creating designs are not wired in the client yet.,Запуск серии и создание изделий в клиенте пока не подключены.
 licence.active,"Licence active: generation {0}, seller {1}, since month {2}, flow {3}","Лицензия активна: {0}-е поколение, продавец {1}, с месяца {2}, поток {3}"
 licence.none,No licence,Лицензии нет
 licence.refusals,"Licence refusals: {0} (own {1}, empty {2}, generation {3}, money {4})","Отказов по лицензии: {0} (свой {1}, пусто {2}, поколение {3}, деньги {4})"
-why.error,Could not build the “why not” chain.,Не удалось построить цепочку «почему не».
+why.error,Could not find what blocks it.,Не удалось определить, что мешает.
 why.none,No new product to field: every known product is already fielded.,Новых изделий пока нет: все известные уже приняты на вооружение.
 why.goal,"Goal: yearly requirement, generation {0}.","Цель: годовое требование, поколение {0}."
 why.goalkind,Goal: {0} {1}.,Цель: {0} {1}.
 why.links, links {0}, звеньев {0}
 why.more,… {0} more,… ещё {0}
-why.eta, · ETA {0} mo., · срок {0} мес.
-why.have, have {0} of {1}, есть {0} из {1}
-why.levers, · levers: {0}, · рычаги: {0}
+why.eta, Expected in about {0} mo., Хватит примерно через {0} мес.
+why.have, Have {0} of {1} units., Есть {0} из {1} ед.
+why.levers, What you can do: {0}., Что можно сделать: {0}.
+why.line,Blocks: {0}{1}.,Мешает: {0}{1}.
+why.root,Main blocker. ,Главная помеха. 
 layer.Knowledge,Knowledge,Знание
 layer.Capability,Capability,Мощности
 layer.Product,Product,Изделие
 layer.Economy,Economy,Экономика
 cause.MissingNode,missing node,нет узла
 cause.AltUnavailable,no alternative available,нет доступной альтернативы
-cause.CultureH,culture below requirement,культура ниже требуемой
-cause.ToolingM,tooling,оснастка
-cause.Engineers,engineers,инженеры
-cause.SkilledWorkforce,skilled workforce,квалифицированные кадры
+cause.CultureH,production culture is too low,низкая производственная культура
+cause.ToolingM,not enough tooling,не хватает оснастки
+cause.Engineers,not enough engineers,не хватает инженеров
+cause.SkilledWorkforce,not enough skilled workers,не хватает квалифицированных кадров
 cause.AlloyDeficit,alloy deficit,дефицит сплава
 cause.NotAffordable,not affordable,не по карману
 cause.Licence,licence,лицензия
@@ -158,10 +160,10 @@ stmt.g.goal,GOAL,ЦЕЛЬ
 stmt.g.front,FRONTIER ON THE ROUTE,ФРОНТИР НА ПУТИ
 stmt.g.wait,WAITING,ЖДУТ
 stmt.g.off,FRONTIER OFF THE ROUTE,ФРОНТИР ВНЕ ПУТИ
-stmt.chain,The thick blue link is the longest chain from the “why not” root.,Толстая синяя связь — самая длинная цепочка от корня «почему не».
+stmt.chain,The thick blue link is the longest chain from the root of “what blocks it”.,Толстая синяя связь — самая длинная цепочка от корня «что мешает».
 stmt.overview,OVERVIEW OF {0} NODES: discipline × generation,ОБЗОР {0} УЗЛОВ: дисциплина × поколение
 inset.title,{0} · knowledge,{0} · знание
-inset.why,WHAT BLOCKS GETTING: the goal,ЧТО МЕШАЕТ ПОЛУЧИТЬ
+inset.why,WHAT BLOCKS IT,ЧТО МЕШАЕТ ПОЛУЧИТЬ
 inset.goal,Goal: {0} · steps to the blocker: {1},Цель: {0} · шагов до препятствия: {1}
 inset.eta," · ETA {0} mo. (a number, not an interval)"," · срок {0} мес. (число, не интервал)"
 inset.hint,The first link is the cheapest; the goal date is set by the longest chain (view B).,Первое звено — ближайшее по цене; дату цели задаёт самая длинная цепочка (вид B).
@@ -174,14 +176,14 @@ inset.process,Process: yield {0} · mastered {1} · admitted {2},Процесс:
 inset.focus,MASTERY FOCUS (up to 3 known processes),ФОКУС ОСВОЕНИЯ (до 3 известных процессов)
 inset.focus.add,Add to focus,В фокус освоения
 inset.focus.remove,Remove from focus,Убрать из фокуса
-inset.focus.empty,"0 of 3 processes chosen for the order. Press a known process and “Add to focus”.","Для приказа выбрано 0 из 3 процессов. Нажмите известный процесс ■ и «В фокус освоения»."
+inset.focus.empty,"Pick a known process (a square on the map) and press “Add to focus”; up to 3.","Выберите известный процесс (на карте он — квадрат) и нажмите «В фокус освоения»; можно до 3 процессов."
 inset.focus.send,Give order: focus,Отдать приказ: фокус
-inset.focus.nothing,Nothing to order: no process is chosen.,Нечего отдавать: не выбран ни один процесс.
+inset.focus.nothing,"Nothing to order: 0 of 3 processes chosen.","Нечего отдавать: выбрано 0 из 3 процессов."
 inset.focus.help,"Goal is the product we work towards; it gives the route. Mastery focus is up to 3 known processes the institutes master deeper now.","Цель — изделие, к которому идём; даёт маршрут. Фокус освоения — до 3 известных процессов, которые институты осваивают глубже сейчас."
 yes,yes,да
 no,no,нет
 bind.None,no line,нет линии
-bind.Rate,rate,темп
+bind.Rate,line capacity,мощности линии
 bind.Alloy,alloy,сплав
 bind.Money,money,деньги
 lever.ResearchPriority,research priority,приоритет НИОКР
@@ -317,7 +319,7 @@ legend.btn,Legend,Легенда
 legend.disc,Disciplines (wedge),Дисциплины (клин)
 legend.lines,Lines,Линии
 legend.route,Route to goal,Маршрут к цели
-legend.root,Root of the “why not”,Корень «почему не»
+legend.root,Root of “what blocks it”,Корень «что мешает»
 legend.close,Esc or L closes,Esc или L закрывает
 area.map,Map,Карта
 area.science,Science,Наука
@@ -347,8 +349,8 @@ area.finance.later,Taxes by region: M1; trade and embargo: M1–M2.,Налоги
 tip.area,{0} · {1},{0} · {1}
 flask.sci.cap,Research in progress (the nearest to completion),Исследования в работе (ближайшие к завершению)
 flask.sci.tip,{0}: {1}% of the need ({2} of {3}),{0}: {1}% от потребности ({2} из {3})
-flask.sci.threshold,{0}: threshold reached ({1} of {2}); discovery is not certain (hatched),{0}: порог достигнут ({1} из {2}); открытие не гарантировано (штриховка)
-flask.sci.threshold.note,{0}: threshold reached (hatched flask); discovery is not certain,{0}: порог достигнут (штриховка); открытие не гарантировано
+flask.sci.threshold,"{0}: everything needed is in place ({1} of {2}); the discovery itself still depends on chance, so the flask is hatched","{0}: всё нужное есть ({1} из {2}); само открытие зависит от случая, поэтому колба заштрихована"
+flask.sci.threshold.note,"{0}: the flask is 100 % ready and hatched: the discovery is a chance event, readiness does not guarantee it","{0}: колба заполнена на 100 % и заштрихована — это готовность; открытие остаётся случайным событием и не гарантировано"
 flask.sci.none,No research in progress,Нет хода исследования
 flask.alloy.cap.ok,Alloy: sufficient,Сплав: хватает
 flask.alloy.cap.deficit,Alloy: {0} % of what the lines ask for,Сплав: {0} % от запроса линий
@@ -381,7 +383,7 @@ set.rail.narrow,Narrow,Узкая
 set.rail.wide,Wide,Широкая
 set.musicamount,Music amount,Количество музыки
 ui.tree.effects.knowledge,"A knowledge step: it does not raise a parameter by itself, it opens dependent nodes.","Ступень знания: сама параметр не повышает, открывает зависимые узлы."
-ui.tree.schem.example,Schematic (example),Схема (пример)
+ui.tree.schem.example,Illustration - not a drawing of the node,Иллюстрация — не чертёж узла
 ui.tree.anchor,Historical date: {0}{1},Историческая дата: {0}{1}
 ui.tree.anchor.named,Historical date: {0}{1} · {2},Историческая дата: {0}{1} · {2}
 ui.tree.anchor.tip,The year when this step appeared in real history,"Год, когда этот шаг появился в реальной истории"

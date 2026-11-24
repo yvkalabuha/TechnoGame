@@ -68,8 +68,11 @@ public sealed partial class TechTree : Control
         _viewSwitch.Changed += i => { _mode = i; Redraw(); };
         top.AddChild(_viewSwitch);
         var reset = Ui.Btn("tree.reset", ResetView); reset.CustomMinimumSize = new Vector2(0, SubpanelButtonDu);
-        var close = Ui.Btn("tree.close", () => Closed?.Invoke()); close.CustomMinimumSize = new Vector2(0, SubpanelButtonDu);
-        close.AddThemeStyleboxOverride("normal", Ui.Box(Ui.Sheet, Ui.Ink, 3, 10));   // a heavy 3 du frame: always in view, dark text stays legible
+        var close = Ui.Btn("tree.close", () => Closed?.Invoke(), focusable: true); close.CustomMinimumSize = new Vector2(0, SubpanelButtonDu);
+        // A heavy 3 du frame in every state, so that the button stays the most visible one; focus keeps the two-tone ring of CaptionButton (A6, A7).
+        close.AddThemeStyleboxOverride("normal", Ui.Box(Ui.Sheet, Ui.Ink, 3, 10));
+        close.AddThemeStyleboxOverride("hover", Ui.Box(Ui.Hover, Ui.Ink, 3, 10));
+        close.AddThemeStyleboxOverride("pressed", Ui.Box(Ui.Ink, Ui.Ink, 3, 10));
         top.AddChild(reset); top.AddChild(close);
         AddChild(_view);
         _view.Draw += PaintView;
@@ -1255,7 +1258,7 @@ public sealed partial class TechTree : Control
         send.CustomMinimumSize = new Vector2(0, SubpanelButtonDu);
         if (!send.Disabled) send.AddThemeStyleboxOverride("normal", Ui.Box(Ui.Command, Ui.Ink, 2, 10));   // spec 2.9: the one enabled main button has a 2 du frame
         _inset.AddChild(send);
-        if (_focus.Count == 0 && _actor == Player) _inset.AddChild(Ui.Wrap(Loc.T("inset.focus.nothing"), 14, Ui.Ink2));   // C4: a grey button says why
+        if (_focus.Count == 0 && _actor == Player) _inset.AddChild(Ui.Wrap(Loc.T("inset.focus.nothing"), 16, Ui.Ink));   // C4: a grey button says why, right under it, at a readable size
         if (s.Last.Status != CmdStatus.None && TreeClarity.ShowsCommand(s.Last.LabelKey))
         {
             string what = Loc.T(s.Last.LabelKey, s.Last.LabelArg);

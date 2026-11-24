@@ -216,8 +216,8 @@ public sealed partial class ActorPanel : PanelContainer
         for (int i = 0; i < _flaskSci.Length; i++)
         {
             _sciName[i].CustomMinimumSize = new Vector2(112, 0); _flaskSci[i].SizeFlagsHorizontal = SizeFlags.ShrinkCenter; _sciName[i].TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-            // C1: the name wraps by words to at most two lines at the text size; only a longer name is trimmed (tooltip has the full one)
-            _sciName[i].AutowrapMode = TextServer.AutowrapMode.Word; _sciName[i].MaxLinesVisible = 2; _sciName[i].CustomMinimumSize = new Vector2(112, 40);
+            // C1: the name wraps by words to at most three lines at the text size; only a longer name is trimmed (tooltip has the full one)
+            _sciName[i].AutowrapMode = TextServer.AutowrapMode.Word; _sciName[i].MaxLinesVisible = 3; _sciName[i].CustomMinimumSize = new Vector2(112, 58);
             _sciName[i].HorizontalAlignment = HorizontalAlignment.Center; _sciName[i].MouseFilter = MouseFilterEnum.Pass;
             _sciCell[i].AddThemeConstantOverride("separation", 0);
             _sciCell[i].AddChild(_flaskSci[i]); _sciCell[i].AddChild(_sciName[i]);
@@ -593,7 +593,9 @@ public sealed partial class ActorPanel : PanelContainer
                 string subj = l.Layer == WhyNotLayer.Knowledge ? ": " + Names.Node(_host.Data, l.SubjectId) : "";   // other layers have no player-facing name for a bare id: never «№N»
                 string eta = l.EtaMonths is int m ? Loc.T("why.eta", m) : "";
                 string lev = l.Levers.IsDefaultOrEmpty ? "" : Loc.T("why.levers", string.Join(", ", l.Levers.Select(x => Loc.TOr("lever." + x, x.ToString()))));
-                lines.Add(($"{Loc.TOr("layer." + l.Layer, l.Layer.ToString())} · {Loc.TOr("cause." + l.Cause, l.Cause.ToString())}{subj} ·{Loc.T("why.have", Loc.N(l.Have.ToDouble()), Loc.N(l.Need.ToDouble()))}{eta}{lev}", n == 1));
+                // A plain sentence: what blocks, how much is there, when it will be enough, what to do; the red square gets the words «Главная помеха» (C4, A5).
+                string text = string.Join(" ", new[] { (n == 1 ? Loc.T("why.root") : ""), Loc.T("why.line", Loc.TOr("cause." + l.Cause, l.Cause.ToString()), subj), Loc.T("why.have", Loc.N(l.Have.ToDouble()), Loc.N(l.Need.ToDouble())), eta, lev }.Select(x => x.Trim()).Where(x => x != ""));
+                lines.Add((text, n == 1));
             }
         }
         string sig = Loc.Lang + "|" + string.Join("\n", lines.Select(x => x.text));

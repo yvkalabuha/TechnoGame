@@ -48,7 +48,9 @@ public class PaceAndLabelsTests
     {
         var all = string.Join("\n", RuValues());
         Assert.Contains("ЧТО МЕШАЕТ ПОЛУЧИТЬ", all);
-        Assert.DoesNotContain("ПОЧЕМУ НЕ", all);
+        Assert.DoesNotContain("почему не", all, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("why not", string.Join("\n", RuValues()), StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Черновик", all);
+        Assert.DoesNotContain("лимит ", all);
     }
 }
