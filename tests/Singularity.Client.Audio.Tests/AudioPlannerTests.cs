@@ -137,7 +137,7 @@ public class AudioPlannerTests
     }
 
     [Fact]
-    public void Ui_tick_has_a_quarter_second_gap_and_the_fuse_caps_a_busy_minute()
+    public void Ui_tick_has_a_quarter_second_gap_and_its_own_cap_of_twelve_a_minute()
     {
         var p = new AudioPlanner();
         Assert.NotNull(p.Request("ui_tick", 0.0));
@@ -146,7 +146,7 @@ public class AudioPlannerTests
         var q = new AudioPlanner();
         int played = 0;
         for (int k = 0; k < 40; k++) if (q.Request("ui_tick", k * 0.3) != null) played++;   // 12 s of clicks every 0.3 s
-        Assert.Equal(6, played);                                                           // the global fuse (6 per minute) binds before the own cap of 12
+        Assert.Equal(12, played);                                                          // its own cap; the global fuse does not apply
     }
 
     [Fact]
@@ -223,6 +223,18 @@ public class AudioPlannerTests
         Assert.Null(p.Request("pause", 70.0));
         Assert.NotNull(p.Request("war_declared", 60.0));  // P0 is never silenced
         Assert.NotNull(p.Request("order_ok", 80.0));
+    }
+
+    [Fact]
+    public void Ui_tick_does_not_use_the_fuse_and_does_not_crowd_out_confirmations()
+    {
+        var p = new AudioPlanner();
+        for (int k = 0; k < 8; k++) p.Request("ui_tick", k * 0.3);       // eight ticks in 2.4 s
+        Assert.NotNull(p.Request("order_ok", 3.0));
+        Assert.NotNull(p.Request("pause", 4.0));
+        string[] ids = { "order_done", "breakthrough", "line_commissioned", "node_discovered" };
+        for (int k = 0; k < ids.Length; k++) Assert.NotNull(p.Request(ids[k], 10.0 + k * 11.0));   // six fuse slots in all
+        Assert.Null(p.Request("unpause", 55.0));                           // the fuse still binds the others
     }
 
     [Fact]
@@ -312,6 +324,20 @@ public class SpeedSoundsTests
         Assert.Equal("pause", s.Observe(0, 2, double.NaN));
         Assert.Equal("unpause", s.Observe(3, 3, double.NaN));
         Assert.Null(s.Observe(3, 4, double.NaN));
+    }
+
+    [Fact]
+    public void A_program_set_speed_such_as_the_game_menu_is_silent_once()
+    {
+        var s = new SpeedSounds();
+        s.Observe(2, 0, double.NaN);
+        s.Quiet(0);
+        Assert.Null(s.Observe(0, 1, double.NaN));           // menu opened
+        s.Quiet(2);
+        Assert.Null(s.Observe(2, 5, double.NaN));           // menu closed
+        Assert.Equal("pause", s.Observe(0, 9, double.NaN)); // the player's own pause sounds again
+        s.Quiet(0);                                         // already paused: nothing will change, no stale mute
+        Assert.Equal("unpause", s.Observe(1, 12, double.NaN));
     }
 
     [Fact]

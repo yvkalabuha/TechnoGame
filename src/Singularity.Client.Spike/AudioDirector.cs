@@ -145,6 +145,9 @@ public sealed partial class AudioDirector : Node
         return pl;
     }
 
+    /// <summary>The program is about to set this speed (game menu open/close): no pause or tempo click for it.</summary>
+    public void QuietSpeed(int target) => _speedSounds.Quiet(target);
+
     /// <summary>Plain tick (settings test button).</summary>
     public void Tick() => Cue("ui_tick");
 

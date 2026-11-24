@@ -125,6 +125,9 @@ public sealed class AudioPlanner
     /// <summary>Music and ambient dip only for P0 and a breakthrough (-4 dB), and 0.8 s after it; everything else does not duck.</summary>
     public double DuckDb(double now) => now < _duckUntil ? DuckDbValue : 0;
 
+    // ui_tick has its own gap and cap and must not crowd real confirmations out of the fuse.
+    static bool InFuse(Cue c) => c.Prio != Prio.P0 && c.Id != "ui_tick";
+
     static bool Ducks(Cue c) => c.Prio == Prio.P0 || c.Id == "breakthrough";
 
     static int CountSince(List<double> l, double now)
@@ -156,11 +159,8 @@ public sealed class AudioPlanner
             if (n >= lim.PerMinute) { if (!p0) CountDrop(now); return null; }
         }
 
-        if (!p0)
-        {
-            if (now < _quietUntil) return null;
-            if (CountSince(_fusePlays, now) >= FusePerMinute) { CountDrop(now); return null; }
-        }
+        if (!p0 && now < _quietUntil) return null;
+        if (InFuse(cue) && CountSince(_fusePlays, now) >= FusePerMinute) { CountDrop(now); return null; }
 
         _voices.RemoveAll(v => v.End <= now);
         var evicted = new List<int>();
@@ -173,7 +173,8 @@ public sealed class AudioPlanner
 
         _lastPlayed[cls] = now; _lastCue[cue.Id] = now;
         plays?.Add(now);
-        if (!p0) { _fusePlays.Add(now); _limitDrops = 0; }
+        if (InFuse(cue)) _fusePlays.Add(now);
+        if (!p0) _limitDrops = 0;
         int id = ++_nextVoice;
         _voices.Add(new Voice(id, cue.Prio, now + cue.Seconds, now));
         if (Ducks(cue)) _duckUntil = Math.Max(_duckUntil, now + cue.Seconds + DuckTail);
@@ -215,9 +216,12 @@ public sealed class SpeedSounds
     public const double AlarmQuiet = 1.0;
     static readonly string[] Tempo = { "", "tempo_1", "tempo_2", "tempo_3" };
     bool _init;
-    int _last;
+    int _last, _quiet = -1;
 
-    public void Rebase() => _init = false;
+    public void Rebase() { _init = false; _quiet = -1; }
+
+    /// <summary>The program (not the player) is about to set <paramref name="target"/>, for example the game menu: that change stays silent.</summary>
+    public void Quiet(int target) { if (!_init || target != _last) _quiet = target; }
 
     /// <param name="lastAlarmAt">real time of the latest signal sound, NaN if none</param>
     public string? Observe(int speed, double now, double lastAlarmAt)
@@ -225,6 +229,8 @@ public sealed class SpeedSounds
         if (!_init) { _init = true; _last = speed; return null; }
         if (speed == _last) return null;
         int prev = _last; _last = speed;
+        bool quiet = _quiet == speed; _quiet = -1;
+        if (quiet) return null;
         if (speed == 0) return !double.IsNaN(lastAlarmAt) && now - lastAlarmAt < AlarmQuiet ? null : "pause";
         return prev == 0 ? "unpause" : Tempo[Math.Clamp(speed, 1, 3)];
     }

@@ -208,14 +208,14 @@ public sealed partial class Main : Node3D
     void CloseGameMenu()
     {
         _mainMenu.Close(); GetViewport().GuiReleaseFocus();
-        if (_menuResume > 0) _signal.SetSpeed(_menuResume);
+        if (_menuResume > 0) { _audio?.QuietSpeed(_menuResume); _signal.SetSpeed(_menuResume); }
         _menuResume = -1;
     }
 
     void OpenGameMenu()
     {
         if (_menuResume >= 0) return;
-        _menuResume = _host.Speed; _signal.SetSpeed(0);
+        _menuResume = _host.Speed; _audio?.QuietSpeed(0); _signal.SetSpeed(0);
         _mainMenu.Open(true);
     }
 
