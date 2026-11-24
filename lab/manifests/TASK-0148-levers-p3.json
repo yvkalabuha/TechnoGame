@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0148-levers-p3",
+  "description": "TASK-0148 P3 (levers-probes.md §3-4): goal strategies as DISC_WEIGHT for ALL actors (the Lab approximation): prop (ENG), metal (MAT), both (EVEN) at s = 40 and 80 % of research money, weights w = s(1-phi)/(phi(1-s)) from the pilot base seed 1 (phi prop 0.2542, metal 0.1298, both 0.3771, median of actors, 1945-1980). JetSlice FULL 1945-09..2000-12, seeds 1-10. LEVER_ETA writes lever_eta.csv (forecast check of P3, an addition to the pre-registration made before the pilot).",
+  "model": "JetSlice",
+  "ticks": 20211,
+  "chunk_size": 1,
+  "threads": [
+    1
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 10
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full"
+  },
+  "series": [
+    {
+      "name": "NONE",
+      "params": {
+        "LEVER_DIAG": true,
+        "LEVER_ETA": true
+      }
+    },
+    {
+      "name": "ENG40",
+      "params": {
+        "LEVER_DIAG": true,
+        "DISC_WEIGHT": "prop:1.955914",
+        "LEVER_ETA": true
+      }
+    },
+    {
+      "name": "ENG80",
+      "params": {
+        "LEVER_DIAG": true,
+        "DISC_WEIGHT": "prop:11.735484",
+        "LEVER_ETA": true
+      }
+    },
+    {
+      "name": "MAT40",
+      "params": {
+        "LEVER_DIAG": true,
+        "DISC_WEIGHT": "metal:4.468546",
+        "LEVER_ETA": true
+      }
+    },
+    {
+      "name": "MAT80",
+      "params": {
+        "LEVER_DIAG": true,
+        "DISC_WEIGHT": "metal:26.811274",
+        "LEVER_ETA": true
+      }
+    },
+    {
+      "name": "EVEN40",
+      "params": {
+        "LEVER_DIAG": true,
+        "DISC_WEIGHT": "prop:1.101313,metal:1.101313",
+        "LEVER_ETA": true
+      }
+    },
+    {
+      "name": "EVEN80",
+      "params": {
+        "LEVER_DIAG": true,
+        "DISC_WEIGHT": "prop:6.607881,metal:6.607881",
+        "LEVER_ETA": true
+      }
+    }
+  ],
+  "meta": {
+    "preregistration": "docs/simulation/levers-probes.md (commit d0f7765)",
+    "csv_format": "docs/simulation/slice-csv-format.md v0.5 r18"
+  }
+}

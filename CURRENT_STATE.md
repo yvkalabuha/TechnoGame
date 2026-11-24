@@ -20,7 +20,6 @@
 ## Активные задачи
 <!-- registry:active:start -->
 - TASK-0132 [IN_PROGRESS] Keyboard selection of technology tree nodes and keyboard tooltip (A6-A8) (developer)
-- TASK-0148 [IN_PROGRESS] Player levers: Lab probes P1-P3 (budget items matter, reserve dominance, goal strategies) (simulation-engineer)
 - TASK-0151 [IN_PROGRESS] Player levers core: research priorities through institutes (slots, funding first x1.5, institute bonus, capacity, upkeep, building institutes) (developer)
 - TASK-0153 [IN_PROGRESS] Player levers core: AI adviser for the player country production (no AI opening or closing of player lines) (developer)
 - TASK-0157 [IN_PROGRESS] Node content: effects in numbers and short history with sources for all 99 knowledge nodes (#486) (research-scientist)
