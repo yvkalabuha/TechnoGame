@@ -34,8 +34,7 @@ QUOTA_RE = re.compile(r"RESOURCE_EXHAUSTED|ResourceExhausted|quota|\b429\b", re.
 ENV_NAMES = ("HOME", "PATH", "LANG", "TERM", "USER")
 ENV_PREFIXES = ("LC_", "XDG_")
 PROMPT_SUFFIXES = (".md", ".txt")
-ALLOWED_COMMANDS = ("ls", "file")
-SETTINGS = json.dumps({"permissions": {"allow": [f"command({c})" for c in ALLOWED_COMMANDS]}})
+SETTINGS = json.dumps({"permissions": {"allow": []}})  # the agent's shell stays off: no command is allowed
 CONTROL_TOOLS = ("generate_image", "invoke_subagent", "finish", "wait", "wait_5_seconds")
 PATH_TOOLS = ("view_file", "list_dir")
 IMAGE_POLL_S = 15
@@ -88,21 +87,6 @@ def parse_stream(text):
     return ids, result, tools
 
 
-def _commands(obj):
-    """Every string under a key that looks like a shell command line, recursively."""
-    found = []
-    if isinstance(obj, dict):
-        for k, v in obj.items():
-            if isinstance(v, str) and re.search(r"command|cmdline", k, re.I):
-                found.append(v)
-            else:
-                found += _commands(v)
-    elif isinstance(obj, list):
-        for v in obj:
-            found += _commands(v)
-    return found
-
-
 def _paths(obj):
     """Every string under a key that looks like a path, recursively."""
     found = []
@@ -130,8 +114,8 @@ def _inside(path, ws):
 
 def tool_violations(text, ws):
     """Tool calls outside the allowlist (anything not named here is a violation): generate_image, invoke_subagent,
-    finish/wait control calls, view_file/list_dir only inside the run's work folder ws, run_command only ls/file.
-    A call whose path or command line cannot be read counts as a violation."""
+    finish/wait control calls, view_file/list_dir only inside the run's work folder ws. run_command is never allowed.
+    A call whose path cannot be read counts as a violation."""
     bad = []
     for line in text.splitlines():
         try:
@@ -147,12 +131,6 @@ def tool_violations(text, ws):
             if paths and all(_inside(p, ws) for p in paths):
                 continue
             bad.append(f"{name}: {one_line(' '.join(paths), 80)}".rstrip(": "))
-        elif name == "run_command":
-            cmds = _commands(su)
-            ok = bool(cmds) and all(c.split()[:1] and c.split()[0] in ALLOWED_COMMANDS
-                                    and not re.search(r"[;&|`$<>()]", c) for c in cmds)
-            if not ok:
-                bad.append(f"run_command: {one_line(' '.join(cmds), 80)}".rstrip(": "))
         else:
             bad.append(name)
     return list(dict.fromkeys(bad))
@@ -265,6 +243,16 @@ def default_runner(cmd, cwd, timeout):
     return p.returncode, out, err
 
 
+def record_stem(runs_dir, task, digest, started):
+    """A record name unique per run (start time, then a counter): a retry never overwrites an earlier record."""
+    base = f"sketch-{task}-{digest[:8]}-{datetime.fromtimestamp(started, timezone.utc):%Y%m%dT%H%M%SZ}"
+    stem, k = base, 1
+    while (Path(runs_dir) / (stem + ".json")).exists():
+        stem = f"{base}-{k}"
+        k += 1
+    return stem
+
+
 def check_prompt_file(prompt_file, root):
     """Resolved prompt path: a .md/.txt file of the repository, no dot-path parts, not ignored by git."""
     rootp = Path(root).resolve()
@@ -355,7 +343,7 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
     bad_tools = tool_violations(out, ws_dir)
     if bad_tools:
         record["agent_tool_violation"] = bad_tools
-        write_pair(Path(runs_dir), f"sketch-{task}-{digest[:8]}", record,
+        write_pair(Path(runs_dir), record_stem(runs_dir, task, digest, started), record,
                    lambda r: f"# Gemini sketches (agy): {r['task']}\n\nREFUSED: agent tool violation: {', '.join(r['agent_tool_violation'])}\n")
         raise SketchError("agent_tool_violation", ", ".join(bad_tools))
     answer = result.get("response") if result and isinstance(result.get("response"), str) else ""
@@ -399,7 +387,7 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
                                 "sha256": hashlib.sha256(data).hexdigest(), "source": str(src)})
     record["partial"] = len(record["files"]) < count
     record["attribution"] = [attribution_line(record, f) for f in record["files"]]
-    path, md = write_pair(Path(runs_dir), f"sketch-{task}-{digest[:8]}", record, summary_md)
+    path, md = write_pair(Path(runs_dir), record_stem(runs_dir, task, digest, started), record, summary_md)
     return path, md, record
 
 

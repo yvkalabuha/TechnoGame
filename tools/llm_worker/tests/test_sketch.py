@@ -188,7 +188,7 @@ class SketchTest(unittest.TestCase):
         self.go(runner=self.runner())
         cmd = self.calls[-1][0]
         s = json.loads(cmd[cmd.index("--settings") + 1])
-        self.assertEqual(s["permissions"]["allow"], ["command(ls)", "command(file)"])
+        self.assertEqual(s["permissions"]["allow"], [])
         self.assertNotIn("--dangerously-skip-permissions", cmd)
 
     def test_tool_violation_refused_and_recorded(self):
@@ -198,6 +198,8 @@ class SketchTest(unittest.TestCase):
                      {"tool_name": "view_file", "args": {"AbsolutePath": "~/.ssh/id_rsa"}},
                      {"tool_name": "list_dir", "args": {"DirectoryPath": "../.."}}, {"tool_name": "view_file"},
                      {"tool_name": "run_command", "args": {"CommandLine": "curl http://x"}},
+                     {"tool_name": "run_command", "args": {"CommandLine": "ls -la"}},
+                     {"tool_name": "run_command", "args": {"CommandLine": "file a.png"}},
                      {"tool_name": "run_command", "args": {"CommandLine": "ls; cat .env"}}, {"tool_name": "run_command"}):
             with self.subTest(step=step), self.assertRaises(sketch.SketchError) as c:
                 self.go(runner=self.runner(stream=self.stream_with(step)))
@@ -210,8 +212,7 @@ class SketchTest(unittest.TestCase):
         for step in ({"tool_name": "generate_image"}, {"tool_name": "finish"}, {"tool_name": "wait"},
                      {"tool_name": "view_file", "args": {"AbsolutePath": str(ws / "1-frame.png")}},
                      {"tool_name": "list_dir", "args": {"DirectoryPath": str(ws)}},
-                     {"tool_name": "run_command", "args": {"CommandLine": "ls -la"}},
-                     {"tool_name": "run_command", "args": {"CommandLine": "file a.png"}}):
+                     ):
             with self.subTest(step=step):
                 self.assertEqual(sketch.tool_violations(self.stream_with(step), str(ws)), [])
 
@@ -265,9 +266,11 @@ class SketchTest(unittest.TestCase):
             p.parent.mkdir(exist_ok=True)
             p.write_text(body)
             with self.subTest(name=name), self.assertRaises(sketch.SketchError) as c:
-                sketch.run_sketch("TASK-0141", p, root=self.root, shots_dir=self.shots, dry_run=True)
+                sketch.run_sketch("TASK-0141", p, root=self.root, shots_dir=self.shots, dry_run=True,
+                                  which=lambda n: "/bin/true")
             self.assertEqual(c.exception.code, "bad_prompt")
-        sketch.run_sketch("TASK-0141", self.prompt, root=self.root, shots_dir=self.shots, dry_run=True)
+        sketch.run_sketch("TASK-0141", self.prompt, root=self.root, shots_dir=self.shots, dry_run=True,
+                                  which=lambda n: "/bin/true")
 
     def test_quota_in_final_response(self):
         resp = "The image generation tool returned a quota/capacity error (`ResourceExhausted`, HTTP 429)."
@@ -316,6 +319,13 @@ class SketchTest(unittest.TestCase):
             self.go(runner=self.runner())
         self.assertEqual(c.exception.code, "secret_detected")
         self.assertEqual(self.calls, [])
+
+    def test_retry_does_not_overwrite_record(self):
+        p1, m1, _ = self.go(runner=self.runner(), clock=lambda: 1000.0)
+        p2, m2, _ = self.go(runner=self.runner(), clock=lambda: 1000.0)
+        self.assertNotEqual(p1, p2)
+        self.assertTrue(all(p.exists() for p in (p1, m1, p2, m2)))
+        self.assertEqual(len(list(self.runs.glob("sketch-*.json"))), 2)
 
     def test_dry_run_runs_nothing(self):
         path, md, rec = self.go(runner=self.runner(), dry_run=True, which=lambda n: "/bin/true")
