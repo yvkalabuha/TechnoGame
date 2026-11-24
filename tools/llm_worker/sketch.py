@@ -16,7 +16,7 @@ import subprocess
 import tempfile
 import time
 import zlib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from . import config, gitleaks
@@ -26,6 +26,8 @@ AGY_RPM = 2
 AGY_RPD = 20  # careful guess of the subscription's daily room, not a documented quota
 AGY_USAGE_FILE = "agy-usage.json"  # in LEDGER_DIR
 MAX_COUNT = 4
+CAPACITY_RE = re.compile(r"HTTP 503|No capacity available|\bUnavailable\b", re.I)
+RESET_RE = re.compile(r"reset after\s+(?:(\d+)h)?\s*(?:(\d+)m)?\s*(?:(\d+(?:\.\d+)?)s)?", re.I)
 DEFAULT_TIMEOUT_S = 400
 BRAIN_DIR = Path.home() / ".gemini" / "antigravity-cli" / "brain"
 IMAGE_EXT = (".jpg", ".jpeg", ".png", ".webp")
@@ -43,7 +45,7 @@ DENY_RULES = ["command(*)", "write_file(*)", "read_url(*)", "execute_url(*)", "m
 SETTINGS = json.dumps({"permissions": {"allow": [], "deny": DENY_RULES}})
 CONTROL_TOOLS = ("generate_image", "invoke_subagent", "finish", "wait", "wait_5_seconds")
 PATH_TOOLS = ("view_file", "read_file", "list_dir")
-TRANSCRIPT_TOOLS = ("send_message",)  # a sub-agent reporting to its parent; seen only in transcripts
+TRANSCRIPT_TOOLS = ("send_message",)  # a sub-agent reporting to its parent; allowed only to this run's conversations
 IMAGE_POLL_S = 15
 MAX_PROMPT_BYTES = 64 * 1024
 MIN_IMAGE_BYTES = 100
@@ -154,7 +156,12 @@ def transcript_calls(brain_dir, ids):
                 continue
             for call in (ev.get("tool_calls") or []) if isinstance(ev, dict) else []:
                 if isinstance(call, dict) and isinstance(call.get("name"), str):
-                    calls.append((call["name"], _paths(call.get("args"))))
+                    args = call.get("args")
+                    paths = _paths(args)
+                    if call["name"] in TRANSCRIPT_TOOLS:  # for send_message the checked argument is the recipient
+                        paths = [v.strip().strip('"') for k, v in (args or {}).items()
+                                 if isinstance(v, str) and k.lower() == "recipient"] if isinstance(args, dict) else []
+                    calls.append((call["name"], paths))
     return calls, missing
 
 
@@ -163,24 +170,34 @@ def verified_tools(calls):
     return frozenset(name for name, paths in calls if name in PATH_TOOLS and paths)
 
 
-def call_violations(calls, roots):
-    """Transcript calls outside the allowlist; same rules as tool_violations."""
+def sent_messages(calls):
+    """Number of send_message calls whose recipient the transcript holds (call_violations checks each one)."""
+    return sum(1 for name, paths in calls if name in TRANSCRIPT_TOOLS and paths)
+
+
+def call_violations(calls, roots, ids=()):
+    """Transcript calls outside the allowlist; same rules as tool_violations. send_message is allowed only
+    to a conversation of this run (a sub-agent reporting to its parent)."""
     bad = []
     for name, paths in calls:
-        if name in PATH_TOOLS:
+        if name in TRANSCRIPT_TOOLS:
+            if not paths or not all(p in ids or p == "parent" for p in paths):  # "parent" is the sub-agent's alias for its caller
+                bad.append(f"{name}: recipient {one_line(' '.join(paths) or 'unknown', 80)}")
+        elif name in PATH_TOOLS:
             if not paths or not all(_inside(p, roots) for p in paths):
                 bad.append(f"{name}: {one_line(' '.join(paths), 80)}".rstrip(": "))
-        elif name not in CONTROL_TOOLS and name not in TRANSCRIPT_TOOLS:
+        elif name not in CONTROL_TOOLS:
             bad.append(name)
     return list(dict.fromkeys(bad))
 
 
-def tool_violations(text, roots, verified=frozenset()):
+def tool_violations(text, roots, verified=frozenset(), sent=0):
     """Tool calls outside the allowlist (anything not named here is a violation): generate_image, invoke_subagent,
     finish/wait control calls, path tools only inside roots (the work folder and this run's own conversation folders). run_command is never allowed.
     A call whose path cannot be read counts as a violation, unless the transcript holds arguments for a call of that
-    tool (verified: then call_violations checks them)."""
-    bad = []
+    tool (verified: then call_violations checks them). Every send_message step of the stream needs its own
+    transcript call with a recipient (sent counts them), not just one for the whole run."""
+    bad, messages = [], set()
     for line in text.splitlines():
         try:
             ev = json.loads(line)
@@ -189,6 +206,10 @@ def tool_violations(text, roots, verified=frozenset()):
         su = ev.get("step_update") if isinstance(ev, dict) and ev.get("event") == "step_update" else None
         name = su.get("tool_name") if isinstance(su, dict) else None
         if not isinstance(name, str) or name in CONTROL_TOOLS:
+            continue
+        if name in TRANSCRIPT_TOOLS:
+            idx = su.get("step_index")
+            messages.add((su.get("conversation_id"), idx) if idx is not None else ("noindex", len(messages)))
             continue
         if name in PATH_TOOLS:
             paths = _paths(su)
@@ -199,6 +220,8 @@ def tool_violations(text, roots, verified=frozenset()):
             bad.append(f"{name}: {one_line(' '.join(paths), 80)}".rstrip(": "))
         else:
             bad.append(name)
+    if len(messages) > sent:  # the recipient is checked in the transcript; no call there, no trust
+        bad.append("send_message")
     return list(dict.fromkeys(bad))
 
 
@@ -222,6 +245,81 @@ def _strings(err, result, out):
 def quota_hit(err, result, out):
     """True when a failure text mentions a quota error. Call it on the error path only."""
     return any(QUOTA_RE.search(t) for t in _strings(err, result, out))
+
+
+def reset_seconds(text):
+    """Seconds from 'quota will reset after 4h40m7s', or None when the text names no reset time."""
+    m = RESET_RE.search(text or "")
+    if not m or not any(m.groups()):
+        return None
+    h, mi, s = m.groups()
+    return int(h or 0) * 3600 + int(mi or 0) * 60 + int(float(s or 0))
+
+
+def format_reset(sec):
+    h, rest = divmod(sec, 3600)
+    return (f"{h}h" if h else "") + (f"{rest // 60}m" if rest // 60 else "") + (f"{rest % 60}s" if rest % 60 or not sec else "")
+
+
+def transcript_quota(brain_dir, ids):
+    """Quota errors (429 / RESOURCE_EXHAUSTED) of failed steps in any conversation transcript of the run, sub-agents
+    included: the main agent's stream does not show them (a sub-agent reports the 429 to its parent and stops).
+    Returns {"errors": n, "reset_seconds": longest announced reset or None}."""
+    n, resets, ends, failed, kinds = 0, [], [], [], set()
+    for cid in ids:
+        f = Path(brain_dir) / cid / ".system_generated" / "logs" / "transcript.jsonl"
+        try:
+            lines = f.read_text(encoding="utf-8").splitlines()
+        except (OSError, ValueError):
+            continue
+        for line in lines:
+            try:
+                ev = json.loads(line)
+            except ValueError:
+                continue
+            err = ev.get("error") if isinstance(ev, dict) and ev.get("status") == "ERROR" else None
+            kind = "quota" if isinstance(err, str) and QUOTA_RE.search(err) else \
+                "capacity" if isinstance(err, str) and CAPACITY_RE.search(err) else None
+            if kind:
+                kinds.add(kind)
+                n += 1
+                if cid != ids[0] and cid not in failed:  # an error of the parent is not a sub-agent's refusal
+                    failed.append(cid)
+                sec = reset_seconds(err)
+                if sec is not None:
+                    resets.append(sec)
+                    at = _parse_time(ev.get("created_at"))
+                    if at is not None:
+                        ends.append(at + timedelta(seconds=sec))  # counted from the error, not from the end of the run
+    return {"errors": n, "subagents": len(failed), "kind": "quota" if "quota" in kinds else "capacity" if kinds else None,
+            "reset_seconds": max(resets) if resets else None,
+            "reset_at": max(ends).isoformat(timespec="seconds") if ends else None}
+
+
+def _parse_time(s):
+    try:
+        t = datetime.fromisoformat(s.replace("Z", "+00:00")) if isinstance(s, str) else None
+    except ValueError:
+        return None
+    return t.replace(tzinfo=timezone.utc) if t is not None and t.tzinfo is None else t  # naive means UTC
+
+
+def _now():
+    return time.time()
+
+
+def quota_text(quota, now=None):
+    """One line: 'got K of N, reason: quota, reset in ...'. The time left counts from now to reset_at (the saved
+    absolute time), so a late report does not overstate it; without reset_at it falls back to the announced length."""
+    if quota.get("kind") == "capacity":
+        return f"got {quota['got']} of {quota['requested']}, reason: server capacity, try later"
+    end = _parse_time(quota.get("reset_at"))
+    if end is not None:
+        sec = max(0, int((end - datetime.fromtimestamp(_now() if now is None else now, timezone.utc)).total_seconds()))
+    else:
+        sec = quota.get("reset_seconds")
+    return (f"got {quota['got']} of {quota['requested']}, reason: quota, "
+            f"reset in {format_reset(sec) if sec is not None else 'unknown time'}")
 
 
 def find_model(text):
@@ -272,19 +370,23 @@ def image_complete(path):
     return False
 
 
-def collect_images(conversation_ids, since, brain_dir=BRAIN_DIR):
-    """Complete image files directly inside the conversations' brain dirs, modified at or after `since` (epoch seconds)."""
-    out = []
+def collect_images(conversation_ids, since, brain_dir=BRAIN_DIR, main_limit=None):
+    """Complete image files in the conversations' brain dirs, modified at or after `since` (epoch seconds). One
+    image per sub-agent conversation: the latest one (a sub-agent's refinements are not sketches). The first id is the
+    parent: the image tool often saves a sub-agent's file there, so it keeps its latest `main_limit - sub-agent images`
+    files (all of them when main_limit is None)."""
+    per = []
     for cid in conversation_ids:
-        if not UUID_RE.match(cid):
-            continue
         d = Path(brain_dir) / cid
-        if not d.is_dir():
-            continue
-        for p in sorted(d.iterdir()):
-            if p.is_file() and not p.is_symlink() and p.suffix.lower() in IMAGE_EXT and p.stat().st_mtime >= since and image_complete(p):
-                out.append(p)
-    return out
+        files = [] if not UUID_RE.match(cid) or not d.is_dir() else sorted(
+            (p for p in d.iterdir() if p.is_file() and not p.is_symlink() and p.suffix.lower() in IMAGE_EXT
+             and p.stat().st_mtime >= since and image_complete(p)), key=lambda p: (p.stat().st_mtime, p.name))
+        per.append(files)
+    subs = [f[-1] for f in per[1:] if f]
+    main = per[0] if per else []
+    if main_limit is not None:
+        main = main[max(0, len(main) - max(0, main_limit - len(subs))):] if main_limit > len(subs) else []
+    return sorted(main + subs, key=lambda p: (p.stat().st_mtime, p.name))
 
 
 def check_refs(refs, shots_dir=None):
@@ -310,12 +412,16 @@ def check_refs(refs, shots_dir=None):
     return out
 
 
-def build_prompt(text, count, ref_paths):
+def build_prompt(text, count, ref_paths, parallel=False):
     """The user's brief plus fixed instructions. Refs are copied to the workspace and named by absolute path."""
     parts = [text.strip(),
              "",
-             f"Generate exactly {count} distinct image(s) with the image generation tool, one tool call per image. "
-             "Do not write code or run commands. Reply with one short line per image."]
+             f"Generate exactly {count} distinct image(s), one per sub-agent. Each sub-agent makes exactly ONE call of the "
+             "image generation tool: no refinements, no second or "
+             "improved versions (_v2, _refined, _final), no retries, and on any error (quota included) it reports the error "
+             "and stops. Do not write code or run commands. Reply with one short line per image.",
+             "Start the sub-agents in parallel." if parallel else
+             "Run the sub-agents one after another: start the next only when the previous one has finished."]
     if ref_paths:
         parts += ["", "Reference frames of the current game UI (read each with the file viewer before drawing):"]
         parts += [f"- {p}" for p in ref_paths]
@@ -398,7 +504,7 @@ def attribution_line(rec, f):
 
 def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, shots_dir=None, root=config.REPO_ROOT,
                brain_dir=BRAIN_DIR, runner=None, which=shutil.which, timeout_s=DEFAULT_TIMEOUT_S, dry_run=False,
-               guard=None, clock=time.time, sleep=time.sleep):
+               guard=None, clock=time.time, sleep=time.sleep, parallel=False):
     """One agy run. Returns (json path or None, md path or None, record)."""
     if not TASK_RE.match(task):
         raise SketchError("bad_task", task)
@@ -431,7 +537,7 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
             dst = Path(ws) / f"{len(ws_refs) + 1}-{p.name}"  # same basenames must not collapse
             shutil.copyfile(p, dst)
             ws_refs.append(dst)
-        cmd = [agy, "-p", build_prompt(brief, count, ws_refs), "--print-timeout", f"{timeout_s}s",
+        cmd = [agy, "-p", build_prompt(brief, count, ws_refs, parallel), "--print-timeout", f"{timeout_s}s",
                "--mode", "accept-edits", "--output-format", "stream-json",
                "--settings", SETTINGS]
         record["agy_version"] = agy_version(agy, runner)
@@ -443,8 +549,8 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
     record.update(conversation_id=ids[0] if ids else None, conversation_ids=ids, tools=tools, exit_code=rc)
     calls, missing = transcript_calls(brain_dir, ids)
     roots = run_roots(ws_dir, brain_dir, ids)
-    bad_tools = tool_violations(out, roots, verified_tools(calls))  # fail closed: no transcript, no trust
-    bad_tools = list(dict.fromkeys(bad_tools + call_violations(calls, roots) + [f"transcript missing: {c}" for c in missing]))
+    bad_tools = tool_violations(out, roots, verified_tools(calls), sent_messages(calls))  # fail closed: no transcript, no trust
+    bad_tools = list(dict.fromkeys(bad_tools + call_violations(calls, roots, ids) + [f"transcript missing: {c}" for c in missing]))
     if bad_tools:
         record["agent_tool_violation"] = bad_tools
         write_pair(Path(runs_dir), record_stem(runs_dir, task, digest, started), record,
@@ -452,13 +558,16 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
         raise SketchError("agent_tool_violation", ", ".join(bad_tools))
     answer = result.get("response") if result and isinstance(result.get("response"), str) else ""
     if result is None or rc != 0 or result.get("status") != "SUCCESS":
-        if quota_hit(err, result, out):
-            raise SketchError("agy_quota", one_line(answer or err[-600:] or "quota error", 300))
-        detail = one_line(answer or err or out, 300)
-        login = any(LOGIN_RE.search(t) for t in _strings(err, result, "")) if result is not None or err else False
-        if result is not None:
-            record["status"] = result.get("status")
-        raise SketchError("agy_not_logged_in" if login else "agy_failed", f"exit {rc}: {detail}")
+        # A sub-agent's 429 may be the only trace of the cause; images of the other sub-agents are still kept below.
+        if not transcript_quota(brain_dir, ids)["errors"]:
+            if quota_hit(err, result, out):
+                raise SketchError("agy_quota", one_line(answer or err[-600:] or "quota error", 300))
+            detail = one_line(answer or err or out, 300)
+            login = any(LOGIN_RE.search(t) for t in _strings(err, result, "")) if result is not None or err else False
+            if result is not None:
+                record["status"] = result.get("status")
+            raise SketchError("agy_not_logged_in" if login else "agy_failed", f"exit {rc}: {detail}")
+    result = result or {}
     record["status"] = result.get("status")
     record["denied_actions"] = result.get("denied_actions") if isinstance(result.get("denied_actions"), list) else []
     record["model"] = find_model(out) or f"agy {record.get('agy_version') or '?'} image-generator"
@@ -466,23 +575,33 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
     record["usage"] = {k: v for k, v in usage.items() if type(v) is int}
     guard.settle(None, {"prompt_tokens": usage.get("input_tokens"), "completion_tokens": usage.get("output_tokens"),
                         "completion_tokens_details": {"reasoning_tokens": usage.get("thinking_tokens")}})
-    found = collect_images(ids, started - 2, brain_dir)
+    quota = transcript_quota(brain_dir, ids)
+    expected = max(0, count - quota["subagents"])  # a sub-agent that got a 429 delivers nothing
+    found = collect_images(ids, started - 2, brain_dir, count)
     sizes, prev = [p.stat().st_size for p in found], None
     for _ in range(IMAGE_POLL_S):  # the file may land a moment after the result event; its size must stop changing
-        if len(found) >= count and sizes == prev:
+        if len(found) >= expected and sizes == prev:
             break
         sleep(1)
         prev = sizes
-        found = collect_images(ids, started - 2, brain_dir)
+        found = collect_images(ids, started - 2, brain_dir, count)
         sizes = [p.stat().st_size for p in found]
+    record["files"], record["requested"] = [], count
+    if quota["errors"] and (quota["subagents"] or len(found) < count):
+        # Count per sub-agent: one image each, so extra versions of one cannot hide another's 429. A parent-only
+        # error with every image present is not a refusal.
+        record["quota"] = {**quota, "got": min(len(found), expected), "requested": count}
+        record["stop_reason"] = "agy_quota" if quota["kind"] == "quota" else "agy_capacity"
     if not found:
+        if record.get("quota"):
+            record.update(partial=True, attribution=[])
+            write_pair(Path(runs_dir), record_stem(runs_dir, task, digest, started), record, summary_md)
+            raise SketchError(record["stop_reason"], quota_text(record["quota"]))
         if quota_hit(err, result, out):
             raise SketchError("agy_quota", one_line(answer or err[-600:] or "quota error", 300))
         raise SketchError("no_images", f"no new image in the brain dirs of {', '.join(ids)}")
     out_dir = Path(shots_dir or config.SHOTS_DIR) / "sketches" / task
     out_dir.mkdir(parents=True, exist_ok=True)
-    record["files"] = []
-    record["requested"] = count
     for src in found:
         dst = out_dir / src.name
         k = 1
@@ -493,7 +612,9 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
         data = dst.read_bytes()
         record["files"].append({"name": dst.name, "path": str(dst), "bytes": len(data),
                                 "sha256": hashlib.sha256(data).hexdigest(), "source": str(src)})
-    record["partial"] = len(record["files"]) < count
+    record["partial"] = len(record["files"]) < count or bool(record.get("quota"))
+    if record.get("quota"):
+        record["quota"]["got"] = min(len(record["files"]), expected)
     record["attribution"] = [attribution_line(record, f) for f in record["files"]]
     path, md = write_pair(Path(runs_dir), record_stem(runs_dir, task, digest, started), record, summary_md)
     return path, md, record
@@ -507,6 +628,8 @@ def summary_md(rec):
              f"Prompt ({rec['prompt_file']}, sha256 {rec['prompt_sha256']}): {rec['prompt_brief']}", ""]
     if rec["refs"]:
         lines += [f"References: {', '.join(rec['refs'])}", ""]
+    if rec.get("quota"):
+        lines += [f"STOPPED BY QUOTA: {quota_text(rec['quota'])}.", ""]
     lines += [f"- {f['name']} ({f['bytes']} bytes, sha256 {f['sha256'][:12]})" for f in rec["files"]]
     lines += ["", "Attribution lines for mods/core/ATTRIBUTION.md (fill the approver; add only approved files):", ""]
     return "\n".join(lines + rec["attribution"]) + "\n"

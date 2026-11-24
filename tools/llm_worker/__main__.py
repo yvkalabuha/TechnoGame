@@ -82,6 +82,7 @@ def main(argv=None):
     p.add_argument("--ref", type=Path, action="append", default=[], help="reference frame from shots-out/ (repeatable)")
     p.add_argument("--count", type=int, default=1)
     p.add_argument("--timeout", type=int, default=sketch_mod.DEFAULT_TIMEOUT_S, help="seconds for agy")
+    p.add_argument("--parallel", action="store_true", help="run the image sub-agents at once (default: one after another)")
     p.add_argument("--with-visual", action="store_true", help="also run 'visual --mode design' on the --ref frames")
     p.add_argument("--allow-small", action="store_true", help="with --with-visual: send frames below 1920x1080")
     p.add_argument("--dry-run", action="store_true", help="check inputs, run nothing")
@@ -229,10 +230,10 @@ def _sketch(a):
         rc = _visual(a_vis)
     try:
         path, md, rec = sketch_mod.run_sketch(a.task, a.prompt_file, a.ref, a.count, runs_dir=a.runs,
-                                              timeout_s=a.timeout, dry_run=a.dry_run)
+                                              timeout_s=a.timeout, dry_run=a.dry_run, parallel=a.parallel)
     except visual_mod.VisualError as e:
         refused = e.code in ("rate_limit", "secret_detected", "sandbox_unavailable", "agy_missing", "agy_not_logged_in",
-                                    "agy_quota", "agent_tool_violation")
+                                    "agy_quota", "agy_capacity", "agent_tool_violation")
         print(f"refused: {e}" if refused else f"error: {e}")
         return 4 if refused else 5
     if a.dry_run:
@@ -244,6 +245,9 @@ def _sketch(a):
     if rec["partial"]:
         print(f"warning: partial result, {len(rec['files'])} of {rec['requested']} images")
         rc = rc or 6
+    if rec.get("quota"):  # quota outranks the generic partial code
+        print(f"quota: {sketch_mod.quota_text(rec['quota'])}")
+        rc = 4 if rc in (0, 6) else rc  # keep a --with-visual failure code
     print("attribution (add to mods/core/ATTRIBUTION.md after ui-art-director approves):")
     for line in rec["attribution"]:
         print(line)
