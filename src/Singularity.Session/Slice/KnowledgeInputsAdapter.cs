@@ -26,6 +26,19 @@ internal sealed class KnowledgeInputsAdapter(SliceWorld world) : IKnowledgeInput
     public Fx6 J(int actorRow, int nodeRow, long month) =>
         KnowledgeRng.J(world.Streams.Know, month == 0 ? 0 : (int)((month - 1) / 12), actorRow, world.Graph.Number[nodeRow]);
 
+    // The player's fund_programme of month t, cut to the reserve of the snapshot: the same value the reserve spends (one function in the knowledge layer).
+    public bool FundProgramme(int actorRow, long month, out int nodeRow, out Fx6 amount)
+    {
+        nodeRow = -1;
+        amount = Fx6.Zero;
+        if (world.Reserve is null || world.Commands.Fund(actorRow, month) is not { } f)
+            return false;
+        nodeRow = world.Graph.RowOf(f.Node);
+        Fx6 balance = world.Reserve.Balance(actorRow);
+        amount = f.Amount < balance ? f.Amount : balance;
+        return nodeRow >= 0;
+    }
+
     public Fx6 DisciplineVolume(int actorRow, int discipline, long month) => world.Industry.DisciplineVolume(actorRow, discipline);
 
     // lic_knows (spec §6.7): the merge of month t grants what the licence bought in compute t−1 names (it began to act in t): the ENG node of the seller's

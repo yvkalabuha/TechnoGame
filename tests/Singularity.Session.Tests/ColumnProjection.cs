@@ -47,6 +47,10 @@ internal static class ColumnProjection
         || IsDesignRefGenColumn(name) || IsHorizonColumn(name) || IsReplCreditColumn(name)
         || name == "prd.rejected.StaleHandle" || name.StartsWith("prd.altReached.", StringComparison.Ordinal) || IsMasteryColumn(name);
 
+    /// <summary>Columns of the budget reserve (TASK-0150): the account, the programme slot of the commands and the programme counts per node. Only in a run with <c>Reserve</c>.</summary>
+    public static bool IsReserveColumn(string name) =>
+        name == "res.balance" || name.StartsWith("cmd.fund.", StringComparison.Ordinal) || name.StartsWith("know.fund.", StringComparison.Ordinal);
+
     /// <summary>
     /// Columns added with the mastery programme and the mastery rules (TASK-0134, schema v14): the programme state, the AI's and the player's programme
     /// commands, the months-below-y_prod counters and the rejection counter. Zero until 1978-01.

@@ -57,6 +57,7 @@ public sealed class KnowledgeSystem : ITickSystem
     private readonly LongColumn[] _prog;
     private readonly LongColumn[] _kd, _kind;
     private readonly LongColumn[]? _since;
+    private readonly IntColumn[]? _fundN;
 
     // Scratch, rewritten every step; row a only by the chunk that owns it.
     [Scratch]
@@ -77,7 +78,7 @@ public sealed class KnowledgeSystem : ITickSystem
     public KnowledgeSystem(Table table, KnowledgeGraph graph, KnowledgeStart start, KnowledgeParams parameters,
         IKnowledgeInputs inputs, CounterRng know, int chunkCount, KnowledgeMode mode = KnowledgeMode.Full,
         ImmutableArray<long>? schedule = null, bool licenceTransfersKnowledge = false, int systemId = DefaultSystemId,
-        bool trackKnownSince = false, long startKnownSince = KnownSinceMarks.StartKnown)
+        bool trackKnownSince = false, long startKnownSince = KnownSinceMarks.StartKnown, bool fundProgrammes = false)
     {
         // The start value must lie below every month of the horizon (tau of the start section starts at the horizon, spec §6.1 v0.24 r2); −1 is the mark «unknown».
         if (trackKnownSince && startKnownSince > KnownSinceMarks.StartKnown)
@@ -122,6 +123,14 @@ public sealed class KnowledgeSystem : ITickSystem
             _since = new LongColumn[_n];
             foreach (int r in graph.Order)
                 _since[r] = table.AddLong($"know.since.{graph.Number[r]}");
+        }
+
+        // know.fund.N: how many programmes the actor paid into the node (the `k` of the diminishing return); absent without the reserve.
+        if (fundProgrammes && mode == KnowledgeMode.Full)
+        {
+            _fundN = new IntColumn[_n];
+            foreach (int r in graph.Order)
+                _fundN[r] = table.AddInt($"know.fund.{graph.Number[r]}");
         }
 
         var col = new int[_actors];
@@ -250,6 +259,33 @@ public sealed class KnowledgeSystem : ITickSystem
         return _inputs.ResearchBudget(actorRow, month) * (wn / wsum) / CEff(actorRow, nodeRow, month);
     }
 
+    /// <summary>Programmes the actor has paid into the node so far (0 without the reserve).</summary>
+    public int ProgrammesOn(int actorRow, int nodeRow) => _fundN is null ? 0 : _fundN[nodeRow].Current[actorRow];
+
+    /// <summary>
+    /// Progress a programme of <paramref name="amount"/> adds to a node now: <c>M / c_eff · 1/(1+k)</c>, the same <c>c_eff</c> (ahead-of-time multiplier
+    /// included) as the monthly money. A pure read of the snapshot; the preview and the step share it.
+    /// </summary>
+    public Fx6 ProgrammeGain(int actorRow, int nodeRow, long month, Fx6 amount) =>
+        Gain(amount, CEff(actorRow, nodeRow, month), ProgrammesOn(actorRow, nodeRow));
+
+    private static Fx6 Gain(Fx6 amount, Fx6 ceff, int k) => amount / ceff * (Fx6.One / Fx6.FromInt(1 + k));
+
+    /// <summary>
+    /// Reserve money the actor's programme takes in month t: the funded amount when its node is in the frontier, else zero (the money stays).
+    /// The reserve reads this, so what leaves the account is exactly what the node received.
+    /// </summary>
+    public Fx6 ProgrammeSpend(int actorRow, long month) => FundedAmount(actorRow, month, out _);
+
+    private Fx6 FundedAmount(int a, long t, out int row)
+    {
+        row = -1;
+        if (_fundN is null || !_inputs.FundProgramme(a, t, out int r, out Fx6 amount) || r < 0 || amount <= Fx6.Zero || !InFrontier(a, r))
+            return Fx6.Zero;
+        row = r;
+        return amount;
+    }
+
     // ---- diagnostics of the last step (tests, journals): scratch outside the Table, not state, not saved
     // or hashed, valid only right after a step of this system. Simulation code must not read them.
 
@@ -343,6 +379,7 @@ public sealed class KnowledgeSystem : ITickSystem
     {
         int actor = _start.ActorNumber[a];
         Fx6 s = _inputs.ResearchBudget(a, t);
+        Fx6 fundAmount = FundedAmount(a, t, out int fundRow);
         Fx6 wsum = Fx6.Zero;
         foreach (int r in _g.Order)
         {
@@ -358,9 +395,10 @@ public sealed class KnowledgeSystem : ITickSystem
         Fx6 spent = Fx6.Zero;
         foreach (int r in _g.Order)
         {
-            if (!_trace[a * _n + r].InFrontier || wsum == Fx6.Zero)
+            bool funded = r == fundRow;
+            if (!_trace[a * _n + r].InFrontier || (wsum == Fx6.Zero && !funded))
                 continue;
-            Fx6 wn = Fx6.FromRaw(_wraw[a * _n + r]) / wsum;
+            Fx6 wn = wsum == Fx6.Zero ? Fx6.Zero : Fx6.FromRaw(_wraw[a * _n + r]) / wsum;
             Fx6 alloc = s * wn;
             spent += alloc;
             int disc = _g.Discipline[r];
@@ -368,6 +406,16 @@ public sealed class KnowledgeSystem : ITickSystem
             Fx6 ceff = CEffOf(a, r, kmix, t);
             Fx6 dprog = alloc / ceff;
             Fx6 prog = Prog(a, r) + dprog;
+            if (funded)
+            {
+                // The programme adds to the node but does not carry a plain node above 1 by itself; a hazard node keeps its prog_cap below.
+                Fx6 ceiling = prog > Fx6.One ? prog : Fx6.One;
+                prog += Gain(fundAmount, ceff, _fundN![r].Current[a]);
+                if (!_g.IsHazard[r] && prog > ceiling)
+                    prog = ceiling;
+                dprog = prog - Prog(a, r);
+                _fundN[r].Next[a] = _fundN[r].Current[a] + 1;
+            }
             bool open;
             HazardStep hz = default;
             ulong u = 0;
