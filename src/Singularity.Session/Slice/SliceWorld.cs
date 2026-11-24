@@ -613,8 +613,8 @@ internal sealed class SliceWorld
             Table.AddInt("run.budget_rule").Load([.. Enumerable.Repeat((int)Config.BudgetRule, rows)]);
         if (Config.Grid.Code != 0)
             Table.AddInt("run.grid").Load([.. Enumerable.Repeat(Config.Grid.Code, rows)]);
-        // The mastery arms are part of the state; All adds nothing (main).
-        if (Config.MasteryRules != MasteryRules.All)
+        // The mastery arms are part of the state; Main adds nothing.
+        if (Config.MasteryRules != MasteryRules.Main)
             Table.AddInt("run.mastery").Load([.. Enumerable.Repeat((int)Config.MasteryRules, rows)]);
         if (Config.EffortShare != EffortShareArm.X1)
             Table.AddInt("run.effort_share").Load([.. Enumerable.Repeat((int)Config.EffortShare, rows)]);

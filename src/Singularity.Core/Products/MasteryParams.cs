@@ -21,6 +21,9 @@ public enum MasteryRules
     Programme = 8,
 
     All = Gate | CandidateClose | Foresight | Programme,
+
+    /// <summary>The rules of the main build (owner decision #452, probe point NGNC): foresight and programme; the gate and the candidate close stay as switches.</summary>
+    Main = Foresight | Programme,
 }
 
 /// <summary>
@@ -87,7 +90,7 @@ public sealed record MasteryParams
     /// <summary>First tier the rules and the programme apply to (G5 and G6 processes).</summary>
     public const int MinTier = 5;
 
-    public MasteryRules Rules { get; init; } = MasteryRules.All;
+    public MasteryRules Rules { get; init; } = MasteryRules.Main;
 
     /// <summary>First month index the rules act in; the assembly sets 1978-01. <see cref="int.MaxValue"/> = never (the default of a bare record).</summary>
     public int FromMonth { get; init; } = int.MaxValue;

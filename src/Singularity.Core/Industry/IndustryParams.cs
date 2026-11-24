@@ -54,8 +54,8 @@ public sealed record IndustryParams
     /// <summary><c>k</c>: growth of <c>Hcap</c> per year after <see cref="HcapGrowthOnset"/> (rule A: linear with a limit); 0 = no growth. [Предп.] 0,10 until the probe of TASK-0134 step 4.</summary>
     public Fx6 HcapGrowthPerYear { get; init; } = F(100_000);
 
-    /// <summary><c>ΔHmax</c>: the limit of the growth; 0 = no growth. [Предп.] 1,0 until the probe.</summary>
-    public Fx6 HcapGrowthMax { get; init; } = Fx6.One;
+    /// <summary><c>ΔHmax</c>: the limit of the growth; 0 = no growth. 1,5 (owner decision #452, probe point NGNC).</summary>
+    public Fx6 HcapGrowthMax { get; init; } = F(1_500_000);
 
     /// <summary>Month index the growth starts at (1978-01); set by the assembly from the scenario calendar. 388 for a start in 1945-09.</summary>
     public int HcapGrowthOnset { get; init; } = 388;

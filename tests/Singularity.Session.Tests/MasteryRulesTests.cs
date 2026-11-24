@@ -116,7 +116,7 @@ public class MasteryRulesTests
     [InlineData(2UL)]
     public void SeriesGate_NoSeriesStartsOnACultureYieldBelowYStart_AndTheOldBuildDoes(ulong seed)
     {
-        MasteryRun with = MasteryRun.Execute(Cfg(seed), 1020);
+        MasteryRun with = MasteryRun.Execute(Cfg(seed) with { MasteryRules = MasteryRules.All }, 1020);
         MasteryRun without = MasteryRun.Execute(Cfg(seed) with { MasteryRules = MasteryRules.None }, 1020);
         Assert.True(with.GateStarts > 0, "no series of a tier ≥ 5 design started after 1978: the gate is not exercised");
         Assert.Equal(0, with.GateViolations);
@@ -129,7 +129,7 @@ public class MasteryRulesTests
     public void CandidateLine_StaysBelowYProdForNoMoreThanTAbMonths_AndWithoutTheRuleItDoes(ulong seed)
     {
         int limit = SliceTestData.Create(Cfg(seed)).World.PolicyParameters.TAb + 2;   // the close is decided one month and applied the next
-        MasteryRun with = MasteryRun.Execute(Cfg(seed), 1020);
+        MasteryRun with = MasteryRun.Execute(Cfg(seed) with { MasteryRules = MasteryRules.All }, 1020);
         MasteryRun without = MasteryRun.Execute(Cfg(seed) with { MasteryRules = MasteryRules.All & ~MasteryRules.CandidateClose }, 1020);
         Assert.True(with.MaxMonthsBelow <= limit, $"a candidate line stayed below y_prod for {with.MaxMonthsBelow} months");
         Assert.True(without.MaxMonthsBelow > limit, $"without the close the longest stay was {without.MaxMonthsBelow} months: the test is vacuous");
@@ -139,7 +139,7 @@ public class MasteryRulesTests
     public void Programme_TakesAProcessToReadyForTheSeries_AndTheProgrammesAreTheOnlyDifference()
     {
         MasteryRun with = MasteryRun.Execute(Cfg(2), 1020);
-        MasteryRun without = MasteryRun.Execute(Cfg(2) with { MasteryRules = MasteryRules.All & ~MasteryRules.Programme }, 1020);
+        MasteryRun without = MasteryRun.Execute(Cfg(2) with { MasteryRules = MasteryRules.Main & ~MasteryRules.Programme }, 1020);
         Assert.True(with.ProgrammeStarts > 0);
         Assert.Equal(with.ProgrammeStarts, with.ProgrammeReady + with.ProgrammeTimeouts);
         Assert.True(with.ProgrammeReady > 0, "no programme reached «ready for the series» (culture yield ≥ y_start)");

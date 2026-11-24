@@ -264,8 +264,8 @@ public sealed partial record SliceRunConfig
     /// <summary><c>upkeep_mult</c> of the mastery programme; null = the default of <c>IndustryParams</c>. At least 1.</summary>
     public Fx6? MasteryUpkeepMult { get; init; }
 
-    /// <summary>Parts of the mastery rules that run (arms B0-B3 of the probe); <see cref="MasteryRules.All"/> in main.</summary>
-    public MasteryRules MasteryRules { get; init; } = MasteryRules.All;
+    /// <summary>Parts of the mastery rules that run (arms B0-B3 of the probe); <see cref="MasteryRules.Main"/> in main (#452: foresight and programme).</summary>
+    public MasteryRules MasteryRules { get; init; } = MasteryRules.Main;
 
     /// <summary><c>κ</c> as q10 (0…1024) of the bureau requirement; null = §8.1 (512).</summary>
     public int? KappaQ10 { get; init; }
