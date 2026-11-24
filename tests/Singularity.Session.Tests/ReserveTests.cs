@@ -115,6 +115,42 @@ public class ReserveTests
     }
 
     [Fact]
+    public void FundProgramme_NearTheCeiling_SpendsNoMoreThanItGives()
+    {
+        SliceSession a = Make(true), b = Make(true);
+        foreach (SliceSession s in new[] { a, b })
+        {
+            Assert.True(s.Submit(SourceClass.Player, 0, 0, SetHalf()).Accepted);
+            for (long t = 0; t < 12; t++)
+                s.StepThroughMonth(t);
+        }
+        int row = FrontierNode(a);
+        Fx6 cap = a.World.Knowledge.ProgrammeCapacity(0, row, 12);
+        Fx6 amount = cap * Fx6.FromInt(2);   // twice what the node can take
+        Assert.True(cap > Fx6.Zero && Balance(a) > amount, $"setup: cap {cap}, balance {Balance(a)}");
+        Assert.True(a.Submit(SourceClass.Player, 0, 1, new FundProgramme(0, a.World.Graph.Number[row], amount)).Accepted);
+        a.StepThroughMonth(12);
+        b.StepThroughMonth(12);
+        Fx6 leak = a.World.Reserve!.Parameters.LeakPerMonth;
+        Assert.InRange((Balance(b) - Balance(a)).Raw, (cap - cap * leak).Raw - 2, (cap - cap * leak).Raw + 2);   // only the capacity left the account
+        Assert.True(a.World.Knowledge.IsKnown(0, row) || a.World.Knowledge.Prog(0, row) <= Fx6.One);
+        Assert.True(a.World.Knowledge.IsKnown(0, row) || a.World.Knowledge.Prog(0, row) > b.World.Knowledge.Prog(0, row));
+    }
+
+    [Fact]
+    public void Validator_WithTheReserve_RefusesAShareOnTheQualityItem()
+    {
+        SliceSession s = Make(true);
+        Assert.Equal(CommandRefusal.BadShares, s.Submit(SourceClass.Player, 0, 0, new SetBudgetShares(0, Shares(150_000, 100_000, 50_000, 200_000, 10_000))).Reason);
+    }
+
+    [Fact]
+    public void MonthlyLeak_ComesFromTheYearlyRateInOnePlace()
+    {
+        Assert.Equal(Fx6.FromRaw(8_742), new Singularity.Core.Reserve.ReserveParams().LeakPerMonth);
+    }
+
+    [Fact]
     public void FundProgramme_IsRefusedWithoutReserveAndBeyondTheBalance()
     {
         Assert.Equal(CommandRefusal.ReserveOff, Make(false).Submit(SourceClass.Player, 0, 0, new FundProgramme(0, 1, Fx6.One)).Reason);

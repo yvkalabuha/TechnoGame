@@ -266,8 +266,25 @@ public sealed class KnowledgeSystem : ITickSystem
     /// Progress a programme of <paramref name="amount"/> adds to a node now: <c>M / c_eff · 1/(1+k)</c>, the same <c>c_eff</c> (ahead-of-time multiplier
     /// included) as the monthly money. A pure read of the snapshot; the preview and the step share it.
     /// </summary>
-    public Fx6 ProgrammeGain(int actorRow, int nodeRow, long month, Fx6 amount) =>
-        Gain(amount, CEff(actorRow, nodeRow, month), ProgrammesOn(actorRow, nodeRow));
+    public Fx6 ProgrammeGain(int actorRow, int nodeRow, long month, Fx6 amount)
+    {
+        Fx6 cap = ProgrammeCapacity(actorRow, nodeRow, month);
+        return Gain(amount < cap ? amount : cap, CEff(actorRow, nodeRow, month), ProgrammesOn(actorRow, nodeRow));
+    }
+
+    /// <summary>
+    /// The most money a programme can put into the node in month t: what the node still absorbs before its ceiling (1 for a plain node, <c>prog_cap</c> for a
+    /// hazard node, after this month's regular money) times <c>c_eff·(1+k)</c>. Zero outside the frontier or at the ceiling. A pure read of the snapshot.
+    /// </summary>
+    public Fx6 ProgrammeCapacity(int actorRow, int nodeRow, long month)
+    {
+        if (!InFrontier(actorRow, nodeRow))
+            return Fx6.Zero;
+        Fx6 basis = Prog(actorRow, nodeRow) + ProgressRate(actorRow, nodeRow, month);
+        Fx6 ceiling = _g.IsHazard[nodeRow] ? _p.ProgCap : basis > Fx6.One ? basis : Fx6.One;
+        Fx6 room = ceiling - basis;
+        return room > Fx6.Zero ? room * CEff(actorRow, nodeRow, month) * Fx6.FromInt(1 + ProgrammesOn(actorRow, nodeRow)) : Fx6.Zero;
+    }
 
     private static Fx6 Gain(Fx6 amount, Fx6 ceff, int k) => amount / ceff * (Fx6.One / Fx6.FromInt(1 + k));
 
@@ -282,8 +299,12 @@ public sealed class KnowledgeSystem : ITickSystem
         row = -1;
         if (_fundN is null || !_inputs.FundProgramme(a, t, out int r, out Fx6 amount) || r < 0 || amount <= Fx6.Zero || !InFrontier(a, r))
             return Fx6.Zero;
+        // Only what the node can absorb is spent: money that the ceiling would cut is not taken, and a node at its ceiling costs nothing (and does not count as a programme).
+        Fx6 cap = ProgrammeCapacity(a, r, t);
+        if (cap <= Fx6.Zero)
+            return Fx6.Zero;
         row = r;
-        return amount;
+        return amount < cap ? amount : cap;
     }
 
     // ---- diagnostics of the last step (tests, journals): scratch outside the Table, not state, not saved

@@ -5,11 +5,35 @@ namespace Singularity.Core.Reserve;
 /// <summary>Parameters of the budget reserve (owner decision #475).</summary>
 public sealed record ReserveParams
 {
+    /// <summary>Share of the balance lost in a year (#475, "К": calibrated later, then moved to the mod data). The month is only the call frequency.</summary>
+    public Fx6 LeakPerYear { get; init; } = Fx6.FromRaw(100_000);
+
     /// <summary>
-    /// Share of the balance lost each month: 1 − 0.9^(1/12), rounded to Fx6, so about 10 % a year (no Math.Pow in the core; ADR-0002).
-    /// A "К" constant: calibrated later, then moved to the mod data.
+    /// The monthly share that compounds to <see cref="LeakPerYear"/>: the smallest <c>m</c> with <c>(1 − m)^12 ≤ 1 − LeakPerYear</c>, found by integer bisection
+    /// (no Math.Pow or Exp in the core; ADR-0002). The one place the yearly rate becomes a monthly factor; 0.1 a year gives 0.008742.
     /// </summary>
-    public Fx6 LeakPerMonth { get; init; } = Fx6.FromRaw(8_742);
+    public Fx6 LeakPerMonth
+    {
+        get
+        {
+            if (LeakPerYear <= Fx6.Zero)
+                return Fx6.Zero;
+            Fx6 keep = Fx6.One - LeakPerYear;
+            long lo = 0, hi = Fx6.Scale;   // (1 − hi/Scale)^12 = 0 ≤ keep; the answer lies in (lo, hi]
+            while (hi - lo > 1)
+            {
+                long mid = lo + (hi - lo) / 2;
+                Fx6 f = Fx6.One - Fx6.FromRaw(mid), p = Fx6.One;
+                for (int i = 0; i < 12; i++)
+                    p *= f;
+                if (p <= keep)
+                    hi = mid;
+                else
+                    lo = mid;
+            }
+            return Fx6.FromRaw(hi);
+        }
+    }
 }
 
 /// <summary>A broken reserve invariant (PLAYER_LEVERS_WAVE1 §A2, production-lines-and-licence-market §4 I3, I4).</summary>
@@ -28,21 +52,24 @@ public interface IReserveInputs
 
 /// <summary>
 /// The budget reserve: one <c>res.balance</c> column (Fx6 raw) per actor. Monthly, after the layers that read the same snapshot:
-/// <c>R' = (R + inflow − spend)·(1 − leak)</c> (I3). The balance never goes below zero (I4). Own column; nothing else writes it.
+/// <c>R' = (R + inflow − spend)·(1 − leak)</c> (A2 of PLAYER_LEVERS_WAVE1: add, then leak). Part B I3 writes <c>R·(1 − λ/12) + inflow − spend</c>,
+/// the leak on the old balance only; the two differ by the leak of one month's flows (under 1 % of them) and A2 is the owner-facing text. The balance never goes below zero (I4). Own column; nothing else writes it.
 /// </summary>
 public sealed class ReserveSystem : ITickSystem
 {
     public const int DefaultSystemId = 500;
 
     private readonly ReserveParams _p;
+    private readonly Fx6 _leak;
     private readonly IReserveInputs _inputs;
     private readonly LongColumn _balance;
 
     public ReserveSystem(Table table, ReserveParams parameters, IReserveInputs inputs, int systemId = DefaultSystemId)
     {
-        if (parameters.LeakPerMonth < Fx6.Zero || parameters.LeakPerMonth >= Fx6.One)
-            throw new ArgumentOutOfRangeException(nameof(parameters), parameters.LeakPerMonth, "The monthly leak lies in [0, 1).");
+        if (parameters.LeakPerYear < Fx6.Zero || parameters.LeakPerYear >= Fx6.One)
+            throw new ArgumentOutOfRangeException(nameof(parameters), parameters.LeakPerYear, "The yearly leak lies in [0, 1).");
         _p = parameters;
+        _leak = parameters.LeakPerMonth;
         _inputs = inputs;
         _balance = table.AddLong("res.balance");
         SystemId = systemId;
@@ -58,7 +85,7 @@ public sealed class ReserveSystem : ITickSystem
     public Fx6 Balance(int actorRow) => Fx6.FromRaw(_balance.Current[actorRow]);
 
     /// <summary>What the next monthly step takes from the current balance as the leak (before the new inflow): a pure read for the views.</summary>
-    public Fx6 LeakOf(Fx6 balance) => balance * _p.LeakPerMonth;
+    public Fx6 LeakOf(Fx6 balance) => balance * _leak;
 
     public void Compute(in TickContext context, int chunk, int rowStart, int rowEnd)
     {
@@ -70,7 +97,7 @@ public sealed class ReserveSystem : ITickSystem
             if (spend > balance)
                 throw new ReserveInvariantException(t, a, $"spend {spend} exceeds the balance {balance} (I3)");
             Fx6 after = balance + _inputs.Inflow(a, t) - spend;
-            _balance.Next[a] = (after - after * _p.LeakPerMonth).Raw;
+            _balance.Next[a] = (after - after * _leak).Raw;
         }
     }
 
