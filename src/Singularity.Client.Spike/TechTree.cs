@@ -728,19 +728,22 @@ public sealed partial class TechTree : Control
             }
             return false;
         }
-        // Pass 1: the number tag of every frontier node (short, same in both languages); pass 2: names where there is room (a name replaces its own tag).
-        foreach (int i in order) if (_state[i] == St.Frontier) Place(i, "№" + nodes.Number[i], FontKind.Mono);
+        // Pass 0: the goal, the selected node and the root are named first, so that every lower-priority label yields to their plates (spec 2.5; TASK-0136 review).
+        int calloutNode = _selected >= 0 ? _selected : _goal;
+        foreach (int i in order) if (NamedNode(i)) Place(i, Names.Node(nodes.Id[i]), FontKind.Text, true, i == calloutNode);
+        // Pass 1: the number tag of every other frontier node (short, same in both languages); pass 2: names where there is room (a name replaces its own tag).
+        foreach (int i in order) if (_state[i] == St.Frontier && !placed.ContainsKey(i)) Place(i, "№" + nodes.Number[i], FontKind.Mono);
         foreach (int i in order)
         {
+            if (NamedNode(i) && placed.ContainsKey(i)) continue;
             if (!(_route[i] || i == _selected || i == _goal || i == _root || CurLod == Lod.Icons || (CurLod == Lod.Nodes && _state[i] == St.Frontier))) continue;   // the «nodes» level names the frontier
             if (placed.TryGetValue(i, out var tag)) occupied.Remove(tag.pad);
             if (Place(i, Names.Node(nodes.Id[i]), FontKind.Text, NamedNode(i))) continue;
             if (tag.text != null) { occupied.Add(tag.pad); placed[i] = tag; }
             else Place(i, "№" + nodes.Number[i], FontKind.Mono);
         }
-        int calloutNode = _selected >= 0 ? _selected : _goal;
-        if (calloutNode >= 0 && !placed.ContainsKey(calloutNode)) Place(calloutNode, Names.Node(nodes.Id[calloutNode]), FontKind.Text, true, true);
-        foreach (int i in order)
+        // Drawn from the lowest priority to the highest, so that a named node's plate is always on top.
+        foreach (int i in order.OrderByDescending(i => LabelGeometry.Rank(NamedNode(i), _route[i], _state[i] == St.Frontier)))
         {
             if (!placed.TryGetValue(i, out var pl)) continue;
             _labelRects.Add(pl.pad);
@@ -763,12 +766,7 @@ public sealed partial class TechTree : Control
     static bool LeaderCrosses(Vector2 own, Rect2 pad, List<Rect2> rects)
     {
         var near = own.Clamp(pad.Position, pad.End);
-        int n = Math.Max(2, (int)(own.DistanceTo(near) / 6f));
-        for (int k = 1; k < n; k++)
-        {
-            var q = own.Lerp(near, (float)k / n);
-            foreach (var r in rects) if (r.HasPoint(q)) return true;
-        }
+        foreach (var r in rects) if (LabelGeometry.SegmentHitsRect(own.X, own.Y, near.X, near.Y, r.Position.X, r.Position.Y, r.Size.X, r.Size.Y)) return true;
         return false;
     }
 
@@ -950,6 +948,19 @@ public sealed partial class TechTree : Control
         }
         Walk(_insetBox);
         if (_root >= 0 && _insetBox.Visible && _whyShown && !rootIcon) bad.Add("the why-not root has no mark in the panel");
+        // The inspector scrolls when its content is taller than the room, and then its last card can be reached (a broken scroll hid cards while the frame looked fine).
+        float room = _insetScroll.Size.Y, content = _insetPad.GetCombinedMinimumSize().Y;
+        var vb = _insetScroll.GetVScrollBar(); double range = vb.MaxValue - vb.Page;
+        if (content > room + 1f)
+        {
+            if (range <= 0.5) bad.Add($"inspector content {content:F0} du does not fit {room:F0} du but the scroll range is {range:F1}");
+            else
+            {
+                int before = _insetScroll.ScrollVertical; _insetScroll.ScrollVertical = int.MaxValue;
+                if (_insetScroll.ScrollVertical + room < content - 2f) bad.Add($"inspector scrolled to the end shows {_insetScroll.ScrollVertical + room:F0} of {content:F0} du: the last card is out of reach");
+                _insetScroll.ScrollVertical = before;
+            }
+        }
         float minH = float.MaxValue;   // A10: every button of the sub-panel is at least 32 du high as rendered
         foreach (var top in GetChildren()) if (top is HBoxContainer h)
             foreach (var b in h.GetChildren())
@@ -960,6 +971,21 @@ public sealed partial class TechTree : Control
         if (minH < SubpanelButtonDu - 0.5f) bad.Add($"a sub-panel button is {minH:F1} du high, below {SubpanelButtonDu}");
         int co = _selected >= 0 ? _selected : _goal;
         if (co >= 0 && ShotLabelText(co) == null) bad.Add($"node {co} (goal or selected) has no name plate, its leader would end in nothing");
+        return bad.Count == 0 ? null : string.Join("; ", bad);
+    }
+    /// <summary>Shot run, SUN-like capture (TASK-0136): the frame must carry the evidence the grammar needs: a "why not" root (and its mark in the panel), unknown nodes and frontier nodes. Null when all are present.</summary>
+    public string ShotEvidenceCheck()
+    {
+        if (_state == null) return "the tree has no model";
+        var bad = new List<string>();
+        if (_root < 0) bad.Add("no why-not root in this state");
+        else if (!_whyShown) bad.Add("the why-not list is collapsed");
+        bool rootIcon = false;
+        void Walk(Node n) { if (n is RootMarkIcon) rootIcon = true; foreach (var c in n.GetChildren()) Walk(c); }
+        Walk(_insetBox);
+        if (_root >= 0 && !rootIcon) bad.Add("the root has no mark in the panel");
+        if (Array.IndexOf(_state, St.Unavailable) < 0) bad.Add("no unknown node");
+        if (Array.IndexOf(_state, St.Frontier) < 0) bad.Add("no frontier node");
         return bad.Count == 0 ? null : string.Join("; ", bad);
     }
     public string ShotPanelInfo => $"panel {PanelRect}, scroll max {_insetScroll.GetVScrollBar().MaxValue:F0} page {_insetScroll.GetVScrollBar().Page:F0}";

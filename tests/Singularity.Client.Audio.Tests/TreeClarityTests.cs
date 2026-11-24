@@ -150,3 +150,23 @@ public class TreeClarityTests
                 Assert.True(ColorMath.Contrast(ColorMath.FromHex(hex), ColorMath.FromHex(bg, 0.94)) >= 4.5, $"{hex} on {bg} x0.94");
     }
 }
+
+public class LabelPriorityTests
+{
+    [Fact]
+    public void Named_nodes_rank_first_so_every_other_label_yields_and_they_draw_on_top()
+    {
+        int named = LabelGeometry.Rank(true, false, false);
+        Assert.True(named < LabelGeometry.Rank(false, true, true));   // even a route node that is also frontier
+        Assert.True(LabelGeometry.Rank(false, true, false) < LabelGeometry.Rank(false, false, true));
+        Assert.True(LabelGeometry.Rank(false, false, true) < LabelGeometry.Rank(false, false, false));
+    }
+
+    [Fact]
+    public void Leader_that_runs_through_a_box_is_detected_and_one_that_passes_beside_it_is_not()
+    {
+        Assert.True(LabelGeometry.SegmentHitsRect(0, 0, 100, 0, 40, -5, 20, 10));
+        Assert.False(LabelGeometry.SegmentHitsRect(0, 0, 100, 0, 40, 5, 20, 10));
+        Assert.False(LabelGeometry.SegmentHitsRect(0, 0, 100, 0, 150, -5, 20, 10));   // beyond the end
+    }
+}

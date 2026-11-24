@@ -1026,13 +1026,16 @@ public sealed partial class Main : Node3D
                 // Pick the first power that has a yearly requirement (a goal for the tree).
                 if (_shotT > 0.4)
                 {
-                    bool has = s.WhyActor == _shotCand && s.Target != null;
+                    // The capture must show a "why not" root: the first power whose why_not has a Knowledge link (the SUN case at the start of the game), independent of --power.
+                    bool has = s.WhyActor == _shotCand && s.Target != null && s.Links.Any(l => l.Layer == Singularity.Core.WhyNot.WhyNotLayer.Knowledge);
                     if (_shotCand >= 0) _shotLog += $"why_not actor {_host.Layout.ActorIds[_shotCand]}: target {(s.Target is { } tt ? tt.Kind + " " + tt.Id : "none")}, links {s.Links.Count}\n";
                     if (has || _shotCand >= _host.Layout.ActorIds.Length - 1) { ShowPower(Math.Max(_shotCand, 0), false); OpenTree(0); _shotStep = 7; _shotT = 0; }
                     else { _shotCand++; _host.WhyActor = _shotCand; _shotT = 0; }
                 }
                 break;
-            case 7 when _shotT >= 1.5: Shot("tech_tree_a.png"); _tree.ShotZoom(2.4f, _tree.FrontierRow >= 0 ? _tree.FrontierRow : _tree.GoalRow); _shotStep = 30; _shotT = 0; break;
+            case 7 when _shotT >= 1.5:
+                { string ev = _tree.ShotEvidenceCheck(); _shotLog += $"tree evidence (live session state, power {_host.Layout.ActorIds[Math.Max(_shotCand, 0)]}): root mark, unknown and frontier nodes: {(ev == null ? "PASS" : "FAIL " + ev)}\n"; if (ev != null) InstFail($"tree evidence: {ev}"); }
+                Shot("tech_tree_a.png"); _tree.ShotZoom(2.4f, _tree.FrontierRow >= 0 ? _tree.FrontierRow : _tree.GoalRow); _shotStep = 30; _shotT = 0; break;
             case 30 when _shotT >= 0.8:
                 Shot("tree_zoom_nodes.png");
                 { int row = _tree.FrontierRow >= 0 ? _tree.FrontierRow : _tree.GoalRow; _tree.ShotZoom(5.5f, row); if (row >= 0) _tree.Select(row); }
