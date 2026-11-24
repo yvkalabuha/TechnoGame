@@ -34,6 +34,10 @@ public sealed partial class TimeControl : HBoxContainer
         /// <summary>Keyboard-style focus (also the shot-run and the hand-over from a disabled button): a ring and a key tip even if a click had focused the button before.</summary>
         public void FocusByKey() { _mouseFocus = false; GrabFocus(); NotifyFocus(); }
 
+        /// <summary>Focus that a click gave: the focus moves on quietly (no ring, no key tip) when the click disabled this button.</summary>
+        public bool FocusedByMouse => HasFocus() && _mouseFocus;
+        public void FocusQuietly() { _mouseFocus = true; GrabFocus(); }
+
         public bool RingShown => HasFocus() && !_mouseFocus;
 
         void NotifyFocus() { if (RingShown) KeyFocused?.Invoke(this); QueueRedraw(); }
@@ -94,6 +98,7 @@ public sealed partial class TimeControl : HBoxContainer
     public Rect2 MeterRect => _meter.GetGlobalRect();
     public void FocusButton(Kind k) => (k == Kind.Pause ? _pause : k == Kind.Slower ? _slower : _faster).FocusByKey();
     /// <summary>Rectangle of the key tip while it shows (keyboard focus), else an empty rectangle.</summary>
+    public string KeyTipText => _keyTipText.Text;
     public Rect2 KeyTipRect => _keyTip.Visible ? _keyTip.GetGlobalRect() : default;
     public bool RingShown(Kind k) => (k == Kind.Pause ? _pause : k == Kind.Slower ? _slower : _faster).RingShown;
     public bool HasButtonFocus(Kind k) => (k == Kind.Pause ? _pause : k == Kind.Slower ? _slower : _faster).HasFocus();
@@ -125,7 +130,8 @@ public sealed partial class TimeControl : HBoxContainer
     void UpdateKeyTip()
     {
         if (_tipFor == null || !_tipFor.IsInsideTree()) return;
-        _keyTipText.Text = _tipFor.TooltipText; _keyTip.ResetSize(); _keyTip.Visible = true;
+        // The key tip also names the exact speed, like the gauge tooltip.
+        _keyTipText.Text = _tipFor.TooltipText + "\n" + _meter.AccessibilityName; _keyTip.ResetSize(); _keyTip.Visible = true;
         var r = _tipFor.GetGlobalRect(); _keyTip.GlobalPosition = new Vector2(r.Position.X, r.End.Y + 6);
     }
 
@@ -154,7 +160,8 @@ public sealed partial class TimeControl : HBoxContainer
         _pause.On = _speed == 0;
         _slower.Disabled = level <= 1; _faster.Disabled = level >= 3;
         // A disabled button cannot keep the keyboard focus: hand it to the pause button so that the keys never fall out of the group.
-        if ((_slower.Disabled && _slower.HasFocus()) || (_faster.Disabled && _faster.HasFocus())) _pause.FocusByKey();
+        IconButton held = _slower.Disabled && _slower.HasFocus() ? _slower : _faster.Disabled && _faster.HasFocus() ? _faster : null;
+        if (held != null) { if (held.FocusedByMouse) _pause.FocusQuietly(); else _pause.FocusByKey(); }   // after a click, no ring and no key tip appear
         _meter.Filled = _speed;
         string word = Loc.T(Words[_speed]);   // the real rate with its unit ("неделя/с") for the tooltip and the screen reader, never the step index (C3, C7; #443: no text beside the gauge)
         _meter.TooltipText = Loc.T("time.gauge.tip", word); _meter.AccessibilityName = Loc.T("time.gauge.name", word);

@@ -18,39 +18,44 @@ public sealed partial class Main
     void TimeCheck(bool ok, string text) => LogCheck($"time: {text}: {(ok ? "PASS" : "FAIL")}\n");
 
     // Optical centre of the ink of each button (mass weighted by the difference to the button fill), in du from the button corner; the border band of 4 du is left out.
-    void TimeCentres(string tag)
+    // s = UI scale (1, 1.25, 1.5): the pixel box is the du box times s; at a scale other than 1 a pixel is no longer a du, so the tolerance gains half a pixel.
+    void TimeCentres(string tag, float s = 1f)
     {
-        var img = GetViewport().GetTexture().GetImage(); var t = _signal.Clock;
+        var img = GetViewport().GetTexture().GetImage(); var t = _signal.Clock; float tol = s > 1f ? 1.5f / s : 0.5f;   // at another scale the layout is on fractions of a pixel: 1.5 px
         foreach (var k in new[] { TimeControl.Kind.Pause, TimeControl.Kind.Slower, TimeControl.Kind.Faster })
         {
-            var r = t.ButtonRect(k); int ox = (int)MathF.Round(r.Position.X), oy = (int)MathF.Round(r.Position.Y);
-            TimeCheck(r.Position == new Vector2(ox, oy) && r.Size == new Vector2(32, 32), $"{tag} {k} button on whole pixels, 32 x 32 (at {r.Position}, {r.Size})");
-            float bl = Lum(img.GetPixel(ox + 4, oy + 4)); double sw = 0, sx = 0, sy = 0;
-            for (int y = 4; y < 28; y++)
-                for (int x = 4; x < 28; x++) { double w = Math.Abs(Lum(img.GetPixel(ox + x, oy + y)) - bl); sw += w; sx += w * (x + 0.5); sy += w * (y + 0.5); }
-            double cx = sx / sw, cy = sy / sw;
-            TimeCheck(sw > 20 && Math.Abs(cx - 16) <= 0.5 && Math.Abs(cy - 16) <= 0.5, $"{tag} {k} glyph centre {cx:F2}, {cy:F2} (must be 16 +-0.5)");
+            var r = t.ButtonRect(k); int ox = (int)MathF.Round(r.Position.X * s), oy = (int)MathF.Round(r.Position.Y * s);
+            if (s == 1f) TimeCheck(r.Position == new Vector2(ox, oy) && r.Size == new Vector2(32, 32), $"{tag} {k} button on whole pixels, 32 x 32 (at {r.Position}, {r.Size})");
+            int lo = (int)MathF.Round(4 * s), hi = (int)MathF.Round(28 * s);
+            float bl = Lum(img.GetPixel(ox + lo, oy + lo)); double sw = 0, sx = 0, sy = 0;
+            for (int y = lo; y < hi; y++)
+                for (int x = lo; x < hi; x++) { double w = Math.Abs(Lum(img.GetPixel(ox + x, oy + y)) - bl); sw += w; sx += w * (x + 0.5); sy += w * (y + 0.5); }
+            double cx = (ox + sx / sw - r.Position.X * s) / s, cy = (oy + sy / sw - r.Position.Y * s) / s;   // from the true (fractional) button corner
+            TimeCheck(sw > 20 && Math.Abs(cx - 16) <= tol && Math.Abs(cy - 16) <= tol, $"{tag} {k} glyph centre {cx:F2}, {cy:F2} du (must be 16 +-{tol:F2})");
         }
         var m = t.MeterRect; var d = _signal.DateRect; var pr = t.ButtonRect(TimeControl.Kind.Pause);
         TimeCheck(Math.Abs(pr.GetCenter().Y - m.GetCenter().Y) <= 0.5 && Math.Abs(pr.GetCenter().Y - d.GetCenter().Y) <= 0.5, $"{tag} one axis: buttons {pr.GetCenter().Y}, gauge {m.GetCenter().Y}, date {d.GetCenter().Y}");
     }
 
-    // The frame of the active step is the bar grown by 3 du: the dark pixels around each bar must span exactly the expected rectangle, so the frame is symmetric and touches no neighbour.
-    void TimeGauge(string tag)
+    // The frame of the active step is the bar grown by 3 du: the dark pixels around each bar must span the expected rectangle (exactly at 100 %, within 1 px at other scales), so the frame is symmetric and touches no neighbour.
+    void TimeGauge(string tag, float s = 1f)
     {
-        var img = GetViewport().GetTexture().GetImage(); var m = _signal.Clock.MeterRect; int mx = (int)MathF.Round(m.Position.X), my = (int)MathF.Round(m.Position.Y);
-        TimeCheck(m.Position == new Vector2(mx, my) && m.Size == new Vector2(60, 32), $"{tag} gauge on whole pixels, 60 x 32 (at {m.Position}, {m.Size})");
-        float mid = (Lum(Ui.Ink) + Lum(img.GetPixel(mx + 1, my + 1))) / 2; int active = _signal.Clock.Selected - 1;
+        var img = GetViewport().GetTexture().GetImage(); var m = _signal.Clock.MeterRect; int mx = (int)MathF.Round(m.Position.X * s), my = (int)MathF.Round(m.Position.Y * s);
+        if (s == 1f) TimeCheck(m.Position == new Vector2(mx, my) && m.Size == new Vector2(60, 32), $"{tag} gauge on whole pixels, 60 x 32 (at {m.Position}, {m.Size})");
+        float mid = (Lum(Ui.Ink) + Lum(img.GetPixel(mx + 1, my + 1))) / 2; int active = _signal.Clock.Selected - 1; double ctol = s == 1f ? 0.5 : 1.0 / s;
+        int W2 = (int)MathF.Round(60 * s), H2 = (int)MathF.Round(32 * s);
         for (int i = 0; i < 3; i++)
         {
             var e = i == active ? TimeGaugeGeometry.Frame(i) : TimeGaugeGeometry.Bar(i); var b = TimeGaugeGeometry.Bar(i);
             int x0 = int.MaxValue, y0 = int.MaxValue, x1 = -1, y1 = -1;
-            for (int y = Math.Max(0, b.Y - 6); y < Math.Min(32, b.Y + b.H + 6); y++)
-                for (int x = Math.Max(0, b.X - 4); x < Math.Min(60, b.X + b.W + 4); x++)
+            for (int y = Math.Max(0, (int)MathF.Round((b.Y - 6) * s)); y < Math.Min(H2, (int)MathF.Round((b.Y + b.H + 6) * s)); y++)
+                for (int x = Math.Max(0, (int)MathF.Round((b.X - 4) * s)); x < Math.Min(W2, (int)MathF.Round((b.X + b.W + 4) * s)); x++)
                     if (Lum(img.GetPixel(mx + x, my + y)) < mid) { x0 = Math.Min(x0, x); y0 = Math.Min(y0, y); x1 = Math.Max(x1, x); y1 = Math.Max(y1, y); }
-            bool ok = x0 == e.X && y0 == e.Y && x1 == e.X + e.W - 1 && y1 == e.Y + e.H - 1;
-            double ccx = (x0 + x1 + 1) / 2.0 - (b.X + b.W / 2.0), ccy = (y0 + y1 + 1) / 2.0 - (b.Y + b.H / 2.0);
-            TimeCheck(ok && Math.Abs(ccx) <= 0.5 && Math.Abs(ccy) <= 0.5, $"{tag} step {i + 1} {(i == active ? "frame" : "bar, no frame")} ink box {x0},{y0}..{x1},{y1} expected {e.X},{e.Y}..{e.X + e.W - 1},{e.Y + e.H - 1}, offset from the bar centre {ccx:F1}, {ccy:F1}");
+            // Edges in du from the true gauge corner, compared with the geometry; one pixel of slack at a scale other than 1.
+            double l = (mx + x0) / s - m.Position.X, rt = (mx + x1 + 1) / s - m.Position.X, tp = (my + y0) / s - m.Position.Y, bt = (my + y1 + 1) / s - m.Position.Y, du = s == 1f ? 0.01 : 1.5 / s;
+            bool ok = x1 >= 0 && Math.Abs(l - e.X) <= du && Math.Abs(tp - e.Y) <= du && Math.Abs(rt - (e.X + e.W)) <= du && Math.Abs(bt - (e.Y + e.H)) <= du;
+            double ccx = (l + rt) / 2 - (b.X + b.W / 2.0), ccy = (tp + bt) / 2 - (b.Y + b.H / 2.0);
+            TimeCheck(ok && Math.Abs(ccx) <= ctol && Math.Abs(ccy) <= ctol, $"{tag} step {i + 1} {(i == active ? "frame" : "bar, no frame")} ink edges {l:F2},{tp:F2}..{rt:F2},{bt:F2} du, expected {e.X},{e.Y}..{e.X + e.W},{e.Y + e.H}, offset from the bar centre {ccx:F2}, {ccy:F2} du");
         }
     }
 
@@ -97,8 +102,8 @@ public sealed partial class Main
         W(1.2, () =>
         {
             TimeFocusRing(TimeControl.Kind.Faster); var b = _signal.Clock.ButtonRect(TimeControl.Kind.Faster); var tip = _signal.Clock.KeyTipRect;
-            TimeCheck(tip.Size.X > 0 && tip.Position.Y >= b.End.Y && tip.Position.Y <= b.End.Y + 12 && Math.Abs(tip.Position.X - b.Position.X) <= 8, $"key tip of the focused faster button sits under it: tip {tip}, button {b}");
-            SaveShot("time_focus_100.png", null, true); SaveShot("time_focus_bar_100.png", new Rect2I(0, 0, 640, 112)); PressKey(Key.Enter); PressKey(Key.Enter, false);
+            TimeCheck(tip.Size.X > 0 && _signal.Clock.KeyTipText.Contains(Loc.T("time.gauge.name", Loc.T("speed.week"))) && tip.Position.Y >= b.End.Y && tip.Position.Y <= b.End.Y + 12 && Math.Abs(tip.Position.X - b.Position.X) <= 8, $"key tip of the focused faster button sits under it and names the speed: tip {tip}, button {b}, text {_signal.Clock.KeyTipText.Replace('\n', '|')}");
+            SaveShot("time_focus_100.png", null, true); SaveShot("time_focus_bar_100.png", new Rect2I(0, 0, 640, 128)); PressKey(Key.Enter); PressKey(Key.Enter, false);
         });
         W(0.5, () =>
         {
@@ -109,6 +114,12 @@ public sealed partial class Main
         W(0.4, () => TimeCheck(_host.Speed == 0, $"Space with a button focused: session speed {_host.Speed} (expected 0)"));
         W(0.1, () => { _signal.Clock.FocusButton(TimeControl.Kind.Slower); PressKey(Key.Enter); PressKey(Key.Enter, false); });
         W(0.4, () => TimeCheck(_signal.Clock.Selected == 0 && _host.Speed == 0, "Enter on slower while paused only changes the resume tempo (stays paused)"));
+        W(0.1, () => _signal.SetSpeed(2));
+        // A click on «faster» that reaches the top speed disables it: the focus moves to pause quietly, with no ring and no key tip.
+        W(0.1, () => _signal.SetSpeed(2));
+        Vector2 fc = default;
+        W(0.3, () => { fc = _signal.Clock.ButtonRect(TimeControl.Kind.Faster).GetCenter(); Mouse(fc, null); Mouse(fc, true); Mouse(fc, false); });
+        W(0.5, () => TimeCheck(_host.Speed == 3 && _signal.Clock.HasButtonFocus(TimeControl.Kind.Pause) && !_signal.Clock.RingShown(TimeControl.Kind.Pause) && _signal.Clock.KeyTipRect.Size.X == 0, $"mouse click took faster to the limit: focus on pause without ring or key tip (speed {_host.Speed})"));
         W(0.1, () => _signal.SetSpeed(2));
         // A mouse click leaves the focus but no ring and no key tip; a second click resumes.
         Vector2 pc = default;
@@ -122,7 +133,7 @@ public sealed partial class Main
             foreach (int s in new[] { 1, 2, 3, 0 })
             {
                 W(0.6, () => _signal.SetSpeed(s));
-                W(0.5, () => Frames(names[s], $"_{pct}", pct * 640 / 100, pct * 64 / 100));
+                W(0.5, () => { string tag = $"{pct}% {names[s]}"; TimeCentres(tag, pct / 100f); TimeGauge(tag, pct / 100f); Frames(names[s], $"_{pct}", pct * 640 / 100, pct * 64 / 100); });
             }
         }
         W(0.1, () => { Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); });
