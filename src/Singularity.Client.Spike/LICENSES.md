@@ -2,7 +2,6 @@
 
 | File | Source | Licence |
 |---|---|---|
-| `assets/data/ne_50m_admin_0_countries_min.json` | Natural Earth 1:50m Admin 0 Countries (via github.com/nvkelso/natural-earth-vector), reduced to name + geometry | Public domain (naturalearthdata.com/about/terms-of-use) |
 | `assets/models/building-a.glb`, `building-d.glb`, `building-j.glb`, `building-t.glb`, `chimney-large.glb`, `water-tower.glb` | Kenney "City Kit Industrial" 2.0, downloaded from opengameart.org/content/city-kit-industrial (`kenney_city-kit-industrial_2.0.zip`) | CC0 (`assets/models/KENNEY_LICENSE.txt`) |
 | `assets/models/funky_aircraft_low.obj` | "Funky aircraft" by Savino, opengameart.org/content/funky-aircraft | CC0 (as listed on the page) |
 | `assets/fonts/GolosText.ttf`, `OFL-GolosText.txt` | Golos Text (variable), github.com/google/fonts `ofl/golostext/` (raw.githubusercontent.com/google/fonts/main/ofl/golostext/) | SIL OFL 1.1 (ADR-0009 owner decision #294); interface text |

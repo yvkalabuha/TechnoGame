@@ -153,10 +153,11 @@
 | [TASK-0135](../development/tasks/TASK-0135-gemini-visual-review.md) | DONE | Gemini visual second opinion in llm_worker (free tier, #441) | MS-M05 |
 | [TASK-0136](../development/tasks/TASK-0136-tree-clarity-depth-pass.md) | IN_PROGRESS | Knowledge tree and menu clarity pass after Gemini design review: player text, legend grammar, node sizes, menu reasons, sheet depth | MS-M05 |
 | [TASK-0137](../development/tasks/TASK-0137-globe-volume-atmosphere-prototype.md) | DONE | Globe volume and limb atmosphere: Godot prototype of three variants for the owner (#426, #442) | MS-M05 |
-| [TASK-0138](../development/tasks/TASK-0138-globe-1945-borders.md) | IN_PROGRESS | Globe draws 1945 political borders and labels from the region map and owners, not modern Natural Earth countries | MS-M05 |
-| [TASK-0139](../development/tasks/TASK-0139-hud-time-controls.md) | APPROVED | HUD time controls: centred pause and speed buttons, no speed text, speed gauge active frame alignment | MS-M05 |
+| [TASK-0138](../development/tasks/TASK-0138-globe-1945-borders.md) | DONE | Globe draws 1945 political borders and labels from the region map and owners, not modern Natural Earth countries | MS-M05 |
+| [TASK-0139](../development/tasks/TASK-0139-hud-time-controls.md) | IN_PROGRESS | HUD time controls: centred pause and speed buttons, no speed text, speed gauge active frame alignment | MS-M05 |
 | [TASK-0140](../development/tasks/TASK-0140-sound-timing-audit.md) | APPROVED | Sound audit: sounds that play at the wrong moment or irritate (owner feedback) | MS-M05 |
 | [TASK-0141](../development/tasks/TASK-0141-gemini-agy-sketches.md) | IN_PROGRESS | Gemini design sketches through Antigravity CLI (agy) in llm_worker (#451) | MS-M05 |
+| [TASK-0142](../development/tasks/TASK-0142-globe-map-remainder.md) | PROPOSED | Globe map remainder after TASK-0138: hatch legend, occupation control line, small-state callouts, coast staircase | MS-M05 |
 
 ## Гипотезы
 

@@ -1,7 +1,7 @@
 ---
 id: TASK-0138
 title: "Globe draws 1945 political borders and labels from the region map and owners, not modern Natural Earth countries"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M05
 agent: developer
@@ -13,6 +13,7 @@ related: [TASK-0137, TASK-0091, TASK-0095]
 approved_by: owner
 approved_at: 2026-11-24
 approval_ref: "owner in chat 2026-11-24 («границы современные, а не на 45 год»); ADR-0011"
+review_ref: "reviewer: APPROVE (802fc88); ui-art-director: PASS with remainder round 2 (a3cf58d, G4 fixed a3a2b02); codex waived O-049 (diff over input limit); landed 228fb00"
 created: 2026-11-24
 ---
 
@@ -36,3 +37,16 @@ created: 2026-11-24
 - [ ] ui-art-director PASS; ревьюер APPROVE; второе ревью по #432.
 
 ## Результат
+Сделано (ветка worktree-agent-aafc16ba0f6701bb7, [Факт] из запусков в сессии):
+- Глобус строится по регионам 1945: `WorldMap.cs` читает `geo/arcs.bin` (с проверкой `data_binding` и SHA-256, громкая ошибка с указанием `python3 tools/map/ensure_geo.py`), растеризует 379 регионов в ID-текстуру RG8 (4096x2048), владельцы из `owners.yaml`; 79 владельцев, растр владельцев R8 остаётся для выбора мышью.
+- Палитра 12 тонов и правило назначения: `CountryPalette.cs` (фиксированные USA, GBR, SUN, FRA, SWE; соседи различаются по графу смежности ядер; колония, мандат, протекторат, аренда = тон метрополии + штриховка 45°; оккупация = тон владельца + штриховка −45° цветом контролёра; совместная администрация = тон первого участника; без соседей и крайний случай = камень).
+- Шейдер `globe.gdshader`: интерфейс `ids` (RG8) + `region_lut` (512x2: заливка и тип штриховки; цвет линии штриховки и номер владельца); граница между владельцами сильная, между регионами одного владельца слабая; штриховка гаснет у края вместе с заливкой. Код атмосферы варианта В не тронут.
+- Подписи по державам EN/RU (`locale/data.csv`, ключи `polity.CODE`), плашка листа 85 %; точка подписи — самая глубокая точка домашних регионов державы.
+- O-047: 300 строений-эталонов строятся только под `--bench`.
+- `tools/map/ensure_geo.py`: собирает `arcs.bin` из кеша (при пустом кеше сначала fetch) или останавливается с инструкцией; вызывается из `verify.py` (шаг geo), из сборки клиента (цель MSBuild EnsureMapGeo, значит и `./play.sh`) и из CI (map-tooling).
+- Кадры 1920x1080 при 100 % (режим `./run-globe-spike.sh --map-frames --shot-dir DIR`; в git кадры не лежат: `shots-out/task-0138/` в worktree (git-ignored), снимаются командой выше): `map1945_europe_1920x1080.png`, `map1945_africa_1920x1080.png`, `map1945_asia_1920x1080.png` (+ `_grey.png` для каждого), `map1945_limb_1920x1080.png` (Дальний Восток у правого края). Кадры сняты с `--lang ru`; подписи колоний (19 групп, `WorldMap.ColonyGroups`, ключи `polity.C_*`) добавлены, демо-завод, аэродром и 300 строений строятся только под `--bench` (O-047).
+- Тесты (`tests/Singularity.MapBuilder.Tests/WorldMapTests.cs`, 83 теста в проекте проходят): 10 мест растра против `owners.yaml`, привязка (правка `regions.yaml` даёт ошибку), отсутствие `arcs.bin`, детерминизм палитры, соседние державы без общего тона, штриховка по статусу, запретные пары. До `ensure_geo` те же тесты падали с подсказкой (15 из 83), после сборки проходят.
+- `python3 tools/development/verify.py --map`: OK (geo, registry, hooks, build, test, selftest, map-packages, map-tests, map-determinism).
+
+Не проверено: путь fetch при пустом кеше на чистой машине (сеть не использовалась); play.sh с нуля без кеша; ΔE подписей и соседей в `ContrastValidator` при свете 0,70/1,05 (тесты проверяют только базовый ΔE и запретные пары); кадр у края при атмосфере В (TASK-0137 в другой ветке); ui-art-director и ревью не проводились.
+Отступления и открытое: легенда штриховки отсутствует; вторая обводка границы при отсутствии свободного тона не реализована; `dim_others` поставлен в 0 (тоны всех держав в полную силу, пять держав выделяет контур).

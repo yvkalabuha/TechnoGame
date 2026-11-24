@@ -24,7 +24,7 @@ public sealed partial class Main : Node3D
     float _yaw = 10, _pitch = 35, _dist = 3.0f;
     Vector2 _pressPos; bool _pressed, _dragged;
     int _selected;
-    bool _hatchScreenSpace = true;
+    bool _showHatch = true;
     readonly List<ShaderMaterial> _factoryMats = new();
     Node3D _chimney;
     readonly List<ShaderMaterial> _allObjMats = new();
@@ -76,10 +76,11 @@ public sealed partial class Main : Node3D
         _startup["engine_to_ready_ms"] = (long)Time.GetTicksMsec();
         var args = OS.GetCmdlineUserArgs();
         _bench = args.Contains("--bench");
+        _mapFrames = args.Contains("--map-frames");   // TASK-0138: globe-only frames of the 1945 political map (Europe, Africa, Asia, grey, limb)
         _shots = args.Contains("--shots");
-        Settings.ReadOnly = _shots || _bench;
+        Settings.ReadOnly = _shots || _bench || _mapFrames;
         Settings.Framed = args.Contains("--window");
-        if (_shots || _bench)
+        if (_shots || _bench || _mapFrames)
         {
             // Frames are a real 1920x1080 render: a borderless window of the base size, so that no window manager decoration can clamp it (#424).
             DisplayServer.WindowSetFlag(DisplayServer.WindowFlags.Borderless, true);
@@ -106,16 +107,16 @@ public sealed partial class Main : Node3D
 
         Fonts.Load();
         Loc.Load();
-        if (!_shots && !_bench) Settings.Load();   // screenshot runs use the defaults, so that they are reproducible
+        if (!_shots && !_bench && !_mapFrames) Settings.Load();   // screenshot runs use the defaults, so that they are reproducible
         Loc.SetLang(Settings.Current.Lang);
         var langIdx = Array.IndexOf(args, "--lang");
         if (langIdx >= 0 && langIdx + 1 < args.Length) Loc.SetLang(args[langIdx + 1]);
-        Settings.Apply(Settings.Current, GetWindow(), !_shots && !_bench);
+        Settings.Apply(Settings.Current, GetWindow(), !_shots && !_bench && !_mapFrames);
         _debug = args.Contains("--debug");
         var pwIdx = Array.IndexOf(args, "--power");
         if (pwIdx >= 0 && pwIdx + 1 < args.Length) _powerArg = args[pwIdx + 1];
         // --power ID is the service shortcut (ui-tester, --shots): it skips the menu and starts that power at once.
-        _titleMode = (!_shots && !_bench && pwIdx < 0) || s_openTitle;
+        _titleMode = (!_shots && !_bench && !_mapFrames && pwIdx < 0) || s_openTitle;
         s_openTitle = false;
 
         var sky = new Sky { SkyMaterial = new ShaderMaterial { Shader = GD.Load<Shader>("res://shaders/stars.gdshader") } };
@@ -123,19 +124,17 @@ public sealed partial class Main : Node3D
         AddChild(new WorldEnvironment { Environment = env });
 
         Mark("start");
-        string dataPath = ProjectSettings.GlobalizePath("res://assets/data/ne_50m_admin_0_countries_min.json");
-        _data.Load(dataPath); Mark("load_geojson_ms");
-        _data.ComputeBoxAreas(); _data.Rasterise(); Mark("rasterise_id_map_ms");
-        _data.AssignTints(); Mark("assign_tints_ms");
+        // The 1945 world: regions from geo/arcs.bin coloured by the owners of scenarios/1945 (TASK-0138). A missing or stale arcs.bin stops here with the fix.
+        try { _data.Load(System.Environment.GetEnvironmentVariable("SINGULARITY_ROOT") ?? SimHost.RepoRoot()); }
+        catch (Exception ex) when (ex is System.IO.IOException or System.IO.InvalidDataException) { GD.PrintErr("MAP DATA: " + ex.Message); GetTree().Quit(3); return; }
+        Mark("load_world_map_ms");
 
         BuildGlobe();
         _cam = new Camera3D { Fov = 35, Near = 0.004f, Far = 50 };
         AddChild(_cam);
         UpdateCamera();
 
-        var top = _data.Countries.Where(c => Names.Country(c.Name) != null).OrderByDescending(c => c.BoxArea).Take(30).ToList();
-        foreach (var c in top) _data.ComputeLabelPoint(c);
-        Mark("label_points_ms");
+        var top = _data.Countries.Where(c => Names.Country(c.Name) != null).OrderByDescending(c => c.BoxArea).ToList();
 
         var layer = new CanvasLayer();
         AddChild(layer);
@@ -143,6 +142,7 @@ public sealed partial class Main : Node3D
         layer.AddChild(_overlay);
         _overlay.Setup(_cam);
         foreach (var c in top) _overlay.AddLabel(c, false);
+        foreach (var c in _data.ColonyLabels) if (Names.Country(c.Name) != null) _overlay.AddLabel(c, false, true);
         _hud = new Label { Position = new Vector2(12, 0), Visible = _debug };
         _hud.AddThemeFontOverride("font", Fonts.Mono);
         _hud.AnchorTop = 1; _hud.AnchorBottom = 1; _hud.OffsetTop = -120; _hud.AddThemeFontSizeOverride("font_size", 14); _hud.OffsetBottom = -46;
@@ -153,12 +153,10 @@ public sealed partial class Main : Node3D
 
         BuildObjects();
         Mark("objects_ms");
-        // Demo "occupied" region (hatched in the owner's tint line colour), fixed for the spike.
-        _globeMat.SetShaderParameter("hatch_id", IdOf("Mongolia"));
-        _globeMat.SetShaderParameter("hatch_owner_id", IdOf("China"));
-        _selected = IdOf("Germany");
+        _selected = IdOf("DEU");
         ApplySelection();
-        if (_bench) { Directory.CreateDirectory(_outDir); }
+        if (_mapFrames) MapFramesSetup();
+        else if (_bench) { Directory.CreateDirectory(_outDir); }
         else
         {
             BuildMenus(layer);
@@ -237,7 +235,6 @@ public sealed partial class Main : Node3D
     {
         if (!Names.CountryOfActor.TryGetValue(actorId, out var cn)) return;
         var c = _data.Countries.First(x => x.Name == cn);
-        _data.ComputeLabelPoint(c);
         _selected = c.Id; ApplySelection();
         _tgtYaw = c.LabelPoint.X; _tgtPitch = Mathf.Clamp(c.LabelPoint.Y, -75f, 75f); _flying = true;
     }
@@ -265,12 +262,10 @@ public sealed partial class Main : Node3D
             {
                 var c = _data.Countries.First(x => x.Name == cn);
                 _actorCountry[i] = c.Id; lut[c.Id] = 255;
-                _data.ComputeLabelPoint(c);
                 _overlay.AddLabel(c, true);
             }
         _globeMat.SetShaderParameter("slice_lut", ImageTexture.CreateFromImage(Image.CreateFromData(256, 1, false, Image.Format.R8, lut)));
-        _globeMat.SetShaderParameter("dim_others", 0.6f);
-        _globeMat.SetShaderParameter("hatch_id", 0);   // the spike's demo hatching was a mock; the globe now shows the slice only
+        _globeMat.SetShaderParameter("dim_others", 0f);   // the tones of every power stay at full strength; the slice powers get an ink contour
 
         var layer = _hud.GetParent<CanvasLayer>();
         _player = Array.IndexOf(ids, _powerArg);
@@ -316,7 +311,7 @@ public sealed partial class Main : Node3D
         _actorPanel.AnchorLeft = 1; _actorPanel.AnchorRight = 1;
         _actorPanel.OffsetLeft = -540; _actorPanel.OffsetRight = -10; _actorPanel.OffsetTop = 56;
         _actorPanel.Closed += () => _actorPanel.Visible = false;
-        _actorPanel.TintOf = i => _actorCountry[i] != 0 ? Ui.Tints[_data.Countries[_actorCountry[i] - 1].Tint] : Ui.Paper;
+        _actorPanel.TintOf = i => _actorCountry[i] != 0 ? ToneColor(_data.Countries[_actorCountry[i] - 1].Tint) : Ui.Paper;
         _actorPanel.BackToOwn += () => ShowPower(_player, true);
         _actorPanel.OpenTree += () => OpenTree(0);
         layer.AddChild(_actorPanel);
@@ -476,18 +471,13 @@ public sealed partial class Main : Node3D
         var mesh = new ArrayMesh();
         mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arr);
 
-        var img = Image.CreateFromData(GlobeData.W, GlobeData.H, false, Image.Format.R8, _data.Ids);
+        var img = Image.CreateFromData(GlobeData.W, GlobeData.H, false, Image.Format.Rg8, _data.RegionIdBytes());
         var idTex = ImageTexture.CreateFromImage(img);
-        var lut = new byte[256];
-        foreach (var c in _data.Countries) lut[c.Id] = (byte)c.Tint;
-        var lutTex = ImageTexture.CreateFromImage(Image.CreateFromData(256, 1, false, Image.Format.R8, lut));
+        var lutTex = ImageTexture.CreateFromImage(Image.CreateFromData(GlobeData.LutWidth, 2, false, Image.Format.Rgba8, _data.RegionLut));
 
         _globeMat = new ShaderMaterial { Shader = GD.Load<Shader>("res://shaders/globe.gdshader") };
         _globeMat.SetShaderParameter("ids", idTex);
-        _globeMat.SetShaderParameter("tint_lut", lutTex);
-        // The shader works in linear light: the hex tokens of palette C are converted, so that the lit fills match the validator's model.
-        var tints = Palette.C.Tints.Select(h => { var c = new Color(h).SrgbToLinear(); return new Vector3(c.R, c.G, c.B); }).ToArray();
-        _globeMat.SetShaderParameter("tints", tints);
+        _globeMat.SetShaderParameter("region_lut", lutTex);   // sRGB bytes; the shader converts to linear light, so that the lit fills match the validator's model
         _globeMat.SetShaderParameter("sea_color", new Color(Palette.C.Sea));
         _globeMat.SetShaderParameter("grid_color", new Color(Palette.GlobeGrid));
         var pl = Ui.Paper.SrgbToLinear();
@@ -495,6 +485,8 @@ public sealed partial class Main : Node3D
         AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = _globeMat });
         SetupGlobeLook(OS.GetCmdlineUserArgs());
     }
+
+    static Color ToneColor(int tone) => new(CountryPalette.Hex[tone]);
 
     int TintOfActor(string actorId) =>
         Names.CountryOfActor.TryGetValue(actorId, out var cn) ? Math.Max(0, _data.Countries.First(c => c.Name == cn).Tint) : 0;
@@ -573,6 +565,8 @@ public sealed partial class Main : Node3D
 
     void BuildObjects()
     {
+        // The demo factory, aerodrome and the 300 benchmark buildings are spike scenery: only the benchmark run builds them (O-047).
+        if (!_bench) return;
         // Factory site (Germany): building under construction, chimney appears when in service, water tower, tank.
         var factory = Anchor(10.0f, 51.0f);
         PlaceModel(factory, "res://assets/models/building-a.glb", 0.010f, Vector3.Zero, _factoryMats);
@@ -620,7 +614,7 @@ public sealed partial class Main : Node3D
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (_bench || (_tree != null && _tree.Visible && e is InputEventMouse) || (_mainMenu != null && MenuOpen)) return;
+        if (_bench || _mapFrames || (_tree != null && _tree.Visible && e is InputEventMouse) || (_mainMenu != null && MenuOpen)) return;
         if (e is InputEventMouseButton mb)
         {
             if (mb.ButtonIndex == MouseButton.Left)
@@ -656,8 +650,8 @@ public sealed partial class Main : Node3D
         else if (e is InputEventKey f1 && f1.Pressed && f1.Keycode == Key.F1 && _help != null) _help.Visible = !_help.Visible;
         else if (e is InputEventKey key && key.Pressed && key.Keycode == Key.H)
         {
-            _hatchScreenSpace = !_hatchScreenSpace;
-            _globeMat.SetShaderParameter("hatch_in_screen_space", _hatchScreenSpace);
+            _showHatch = !_showHatch;   // H: the status hatching on or off
+            _globeMat.SetShaderParameter("show_hatch", _showHatch);
         }
     }
 
@@ -705,6 +699,46 @@ public sealed partial class Main : Node3D
         ApplySelection();
     }
 
+    // ---------- map frames (TASK-0138) ----------
+    bool _mapFrames; int _mapStep; double _mapT;
+    // name, lon, lat of the view centre, camera distance in globe radii, grey copy
+    static readonly (string Name, float Lon, float Lat, float Dist, bool Grey)[] MapViews =
+    {
+        ("map1945_europe_1920x1080.png", 16, 49, 1.75f, true),
+        ("map1945_africa_1920x1080.png", 20, 3, 2.25f, true),
+        ("map1945_asia_1920x1080.png", 88, 38, 2.1f, true),
+        ("map1945_limb_1920x1080.png", 118, 38, 2.1f, false),   // Europe near the limb
+    };
+
+    // The globe alone on the lit side: the five slice powers keep an ink contour and every tone stays at full strength.
+    void MapFramesSetup()
+    {
+        var lut = new byte[256];
+        foreach (var id in Names.CountryOfActor.Values) lut[_data.Countries.First(c => c.Name == id).Id] = 255;
+        _globeMat.SetShaderParameter("slice_lut", ImageTexture.CreateFromImage(Image.CreateFromData(256, 1, false, Image.Format.R8, lut)));
+        _globeMat.SetShaderParameter("dim_others", 0f);
+        foreach (var c in _data.Countries.Where(c => Names.Country(c.Name) != null)) _overlay.AddLabel(c, Names.CountryOfActor.ContainsValue(c.Name));
+        foreach (var c in _data.ColonyLabels) if (Names.Country(c.Name) != null) _overlay.AddLabel(c, false, true);
+        // Run-time check on the loaded 1945 state: British India is drawn as a UK-owned colony (hatched, tone of the metropole).
+        int ix = Array.IndexOf(_data.Map.RegionIds, "india_maharashtra");
+        bool ok = ix >= 0 && _data.Map.Rows[ix].Owner == "GBR" && _data.Style.Regions[ix].Hatch == HatchKind.Colony && _data.Style.Regions[ix].Tone == CountryPalette.Fixed[1].Tone;
+        GD.Print("MAPCHECK british_india owner=GBR colony hatch: " + (ok ? "PASS" : "FAIL"));
+        if (!ok) _shotFailed = true;
+        _selected = 0; ApplySelection();
+        _dist = 5f;
+    }
+
+    void MapFramesStep(double dt)
+    {
+        _mapT += dt;
+        if (_mapStep >= MapViews.Length) { GetTree().Quit(_shotFailed ? 1 : 0); return; }
+        var v = MapViews[_mapStep];
+        if (_mapT < 0.3) { _yaw = v.Lon; _pitch = v.Lat; _dist = v.Dist; return; }
+        if (_mapT < 1.2) return;
+        SaveShot(v.Name, null, v.Grey);
+        _mapStep++; _mapT = 0;
+    }
+
     // ---------- per-frame ----------
     public override void _Process(double delta)
     {
@@ -717,7 +751,7 @@ public sealed partial class Main : Node3D
             {
                 _pendingNewGame = false;
                 if (_dataTask.IsFaulted) { GD.PrintErr(_dataTask.Exception); _mainMenu.Open(false); }
-                else _newGame.Open(_dataTask.Result.Scenario(Singularity.Session.SliceRunConfig.DefaultScenario), id => Ui.Tints[TintOfActor(id)]);
+                else _newGame.Open(_dataTask.Result.Scenario(Singularity.Session.SliceRunConfig.DefaultScenario), id => ToneColor(TintOfActor(id)));
             }
         }
         if (_coldShot) ColdTitleShots(delta);
@@ -735,6 +769,7 @@ public sealed partial class Main : Node3D
         if (_rail != null) LayoutClient();
         if (_shots && _tintsReady) ShotStep(delta);
         if (_bench) BenchStep(delta);
+        if (_mapFrames) MapFramesStep(delta);
         FlyStep(delta);
         UpdateCamera();
         if (_audio != null) { _audio.Actor = _player; _audio.CameraMoved(new Vector2(_yaw + _pitch * 1.7f, _dist)); }
@@ -773,6 +808,7 @@ public sealed partial class Main : Node3D
 
     void AnimateObjects()
     {
+        if (_plane == null) return;   // no demo scenery outside the benchmark run
         // Loop: 8 s under construction (progress 0..1), then 4 s in service.
         double c = _t % 12.0;
         float progress = c < 8 ? (float)(c / 8.0) : 1f;
@@ -921,7 +957,7 @@ public sealed partial class Main : Node3D
             Q(0.5, () => { SaveShot($"main_menu{sfx}.png"); _mainMenu.Close(); TitleScene(false); _credits.Open(); });   // the real title screen (no HUD) at every scale
 
             Q(0.6, () => { SaveShot($"credits{sfx}.png"); CheckCreditsLinks(sfx); _credits.ShotScroll(100000); });
-            Q(0.4, () => { SaveShot($"credits_end{sfx}.png"); _credits.Visible = false; _newGame.Open(_host.Data.Scenario(Singularity.Session.SliceRunConfig.DefaultScenario), id => Ui.Tints[TintOfActor(id)]); });
+            Q(0.4, () => { SaveShot($"credits_end{sfx}.png"); _credits.Visible = false; _newGame.Open(_host.Data.Scenario(Singularity.Session.SliceRunConfig.DefaultScenario), id => ToneColor(TintOfActor(id))); });
             Q(0.5, () => { SaveShot($"new_game_empty{sfx}.png"); _newGame.Select("FRA"); });
             Q(0.6, () => { SaveShot($"new_game_selected{sfx}.png"); _newGame.Close(); _settings.Open(); });
             Q(0.5, () => { SaveShot($"settings_video{sfx}.png"); _settings.ShotTab(1); });
@@ -1231,7 +1267,7 @@ public sealed partial class Main : Node3D
             case 50: _mainMenu.Open(true); _shotStep = 53; _shotT = 0; break;
             case 53 when _shotT >= 0.4:
                 Shot("menu_ingame.png"); _mainMenu.Close();
-                _newGame.Open(_host.Data.Scenario(Singularity.Session.SliceRunConfig.DefaultScenario), id => Ui.Tints[TintOfActor(id)]);
+                _newGame.Open(_host.Data.Scenario(Singularity.Session.SliceRunConfig.DefaultScenario), id => ToneColor(TintOfActor(id)));
                 _shotStep = 54; _shotT = 0; break;
             case 54 when _shotT >= 0.5: Shot("new_game_empty.png"); _newGame.Select("FRA"); _shotStep = 55; _shotT = 0; break;
             case 55 when _shotT >= 0.6: Shot("new_game_selected.png"); Loc.SetLang("en"); _shotStep = 56; _shotT = 0; break;
@@ -1732,7 +1768,6 @@ public sealed partial class Main : Node3D
             while (tint > 0 && !_data.Countries.Any(x => x.Tint == tint)) tint--;
             var c = _data.Countries.Where(x => x.Tint == tint && Names.Country(x.Name) != null).OrderByDescending(x => x.BoxArea).FirstOrDefault()
                     ?? _data.Countries.Where(x => x.Tint == tint).OrderByDescending(x => x.BoxArea).First();
-            _data.ComputeLabelPoint(c);
             _overlay.SetMarker("demo" + i, c.LabelPoint, true, "sig.alloy");
             if (i == which)
             {
@@ -1808,8 +1843,8 @@ public sealed partial class Main : Node3D
     void EnterPhase(int p)
     {
         if (p == 1) { _yaw = 10; _pitch = 35; _dist = 4.2f; }
-        if (p == 3) { _yaw = 100; _pitch = 46; _dist = 1.6f; _selected = IdOf("China"); ApplySelection(); }
-        if (p == 4) { _yaw = 11.7f; _pitch = 51.8f; _dist = 1.08f; _selected = IdOf("Germany"); ApplySelection(); _t = 0; _shotDone = false; }
+        if (p == 3) { _yaw = 100; _pitch = 46; _dist = 1.6f; _selected = IdOf("ROC"); ApplySelection(); }
+        if (p == 4) { _yaw = 11.7f; _pitch = 51.8f; _dist = 1.08f; _selected = IdOf("DEU"); ApplySelection(); _t = 0; _shotDone = false; }
     }
 
     void Finish(string name)
