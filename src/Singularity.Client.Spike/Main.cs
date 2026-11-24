@@ -493,6 +493,7 @@ public sealed partial class Main : Node3D
         var pl = Ui.Paper.SrgbToLinear();
         _globeMat.SetShaderParameter("paper", new Vector3(pl.R, pl.G, pl.B));
         AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = _globeMat });
+        SetupGlobeLook(OS.GetCmdlineUserArgs());
     }
 
     int TintOfActor(string actorId) =>
@@ -651,6 +652,7 @@ public sealed partial class Main : Node3D
             _debug = !_debug; _hud.Visible = _debug;
             if (_signal != null) { _signal.Debug = _debug; _actorPanel.Debug = _debug; }
         }
+        else if (e is InputEventKey f6 && f6.Pressed && !f6.Echo && f6.Keycode == Key.F6) ApplyGlobeLook(GlobeLookLogic.Next(_look));
         else if (e is InputEventKey f1 && f1.Pressed && f1.Keycode == Key.F1 && _help != null) _help.Visible = !_help.Visible;
         else if (e is InputEventKey key && key.Pressed && key.Keycode == Key.H)
         {
@@ -1067,6 +1069,7 @@ public sealed partial class Main : Node3D
         void Shot(string name, Rect2I? r = null) => SaveShot(name, r);
         var s = _host.Snap;
         var vp = GetViewport().GetVisibleRect().Size;
+        if (OS.GetCmdlineUserArgs().Contains("--globe-look-shots")) { LookShotStep(dt); return; }
         if (ClickTest(dt, vp, Shot)) return;
         if (_largeSize.X > 0 && _shotStep == 0) { BuildLargeShots(); _shotStep = 70; _shotT = 0; }
         switch (_shotStep)
