@@ -789,7 +789,7 @@ def _run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, s
 
 def run_sketch(*args, brain_dir=BRAIN_DIR, runner=None, **kw):
     """_run_sketch inside a Box unless a runner is injected (tests)."""
-    if runner is not None:
+    if runner is not None or kw.get("dry_run"):  # a dry run checks inputs only and starts nothing: no Box needed
         return _run_sketch(*args, brain_dir=brain_dir, runner=runner, **kw)
     with private_box(cwd_writable=True) as (box, private_brain):
         return _run_sketch(*args, brain_dir=private_brain, inside_brain=brain_dir,
