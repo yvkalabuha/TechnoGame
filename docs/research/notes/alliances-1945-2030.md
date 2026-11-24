@@ -30,16 +30,16 @@ accessed: 2026-11-24
 |---|---|---|---|---|
 | nato | USA, GBR, FRA | 1949-04-04 | действует | [Факт-W] |
 | nato | SWE | 2024-03-07 | действует | [Факт-W] |
-| nato | CAN, DNK, NOR, ISL, ITA, BEL, NLD, LUX, PRT (основатели); TUR, GRC | 1949-04-04; TUR, GRC 1952-02-18 | действует | [Факт] |
-| nato | DEU (ФРГ) | 1955-05-09 | действует (единая DEU с 1990) | [Факт] |
+| nato | CAN, DNK, NOR, ISL, ITA, BEL, NLD, LUX, PRT (основатели); TUR, GRC | 1949-04-04; TUR, GRC 1952-02-18 | действует | [Факт], подтверждено: nato.int (opened), history.state.gov (opened) |
+| nato | DEU (ФРГ) | 1955-05-06 | действует (единая DEU с 1990) | [Факт], исправлено с 05-09: nato.int (opened) |
 | nato (особое) | FRA вышла из интегрированного командования | 1966-03-07 | вернулась 2009-04 (членство сохранялось) | [Факт] |
-| warsaw | SUN, POL, CSK, HUN, ROU, BGR, DDR | 1955-05-14 | 1991-07-01 (DDR до 1990-09-24) | [Факт-W] |
+| warsaw | SUN, POL, CSK, HUN, ROU, BGR, DDR | 1955-05-14 (в силе 1955-06-06) | 1991-07-01 (DDR до 1990-09-24) | [Факт-W]; подписание и вступление в силу: Avalon Project, текст договора (opened) |
 | warsaw | ALB | 1955-06-04 | 1968-09-13 | [Факт-W] |
-| sino_soviet | SUN, PRC (договор о дружбе, союзе и взаимной помощи, 1950-02-14) | 1950 | практически 1960 (раскол), договор прекращён 1980 | [Факт] |
-| anzus | USA, AUS, NZL | 1951-09-01 (в силе 1952) | действует (NZL приостановлена 1986) | [Факт: состав W, даты нет] |
-| seato | USA, GBR, FRA, AUS, NZL, PHL, THA, PAK | 1954-09-08 | 1977-06-30 | [Факт] |
-| cento | GBR, TUR, IRN, IRQ (до 1959), PAK; USA ассоциирована | 1955 | 1979 | [Факт] |
-| rio | USA + государства Латинской Америки | 1947-09-02 | действует | [Факт] |
+| sino_soviet | SUN, PRC (договор о дружбе, союзе и взаимной помощи, 1950-02-14) | 1950-02-14 | практически начало 1960-х (раскол), срок договора 30 лет (т.е. 1980) | [Факт]: подписан 14.02.1950 и срок 30 лет: МИД КНР (opened); Wilson Center blog (opened): раскол «с самого начала 1960-х»; дата прекращения 1979/1980 [Не подтверждено] |
+| anzus | USA, AUS, NZL | 1951 (день не подтверждён; в силе 1952: history.state.gov, opened) | действует (NZL приостановлена 1986) | [Факт: состав W, даты нет] |
+| seato | USA, GBR, FRA, AUS, NZL, PHL, THA, PAK (PAK вышел в 1973 по history.state.gov) | 1954-09-08 | 1977-06-30 | [Факт-W]: Wikidata Q277252 (opened) даёт оба дня; history.state.gov (opened): сентябрь 1954, 1977 |
+| cento | GBR, TUR, IRN, IRQ (до 1959), PAK; USA ассоциирована | 1955-02-24 | 1979-03-16 | [Факт-W]: Wikidata Q379850 (opened); выход Ирака в марте 1959 (день расходится) только search-snippet |
+| rio | USA + государства Латинской Америки | 1947-09-02 | действует (в силе 1948-12-03) | [Факт]: в силу 1948-12-03 encyclopedia.com (opened); день подписания 1947-09-02 только search-snippet; Wikidata Q1410645 даёт лишь год 1947 |
 | brussels_wu | GBR, FRA, BEL, NLD, LUX (Брюссельский 1948-03-17; WEU с 1954, DEU, ITA) | 1948 | 2011 | [Факт-W частично: DEU 1954–2011] |
 | dunkirk | GBR, FRA | 1947-03-04 | поглощён Брюсселем 1948 | [Факт] |
 | usa_japan | USA, JPN | 1951-09-08 (новый 1960-01-19) | действует | [Факт] |
@@ -51,7 +51,7 @@ accessed: 2026-11-24
 |---|---|---|---|---|
 | eec_eu | FRA (основатель EEC, договор Рима 1957-03-25, в силе 1958-01-01); GBR 1973-01-01 – 2020-01-31; SWE 1995-01-01 | см. | см. | [Факт] (даты GBR и SWE: EFTA в W подтверждает выход 1973 и 1995) |
 | efta | SWE 1960-05-03 – 1995-01-01; GBR 1960-05-03 – 1973-01-01 | | | [Факт-W] |
-| comecon | SUN + восточный блок | 1949-01 | 1991-06-28 | [Факт, W пусто] |
+| comecon | SUN + восточный блок | 1949-01-25 | 1991-06-28 | [Факт-W]: Wikidata Q191582 (opened) |
 
 Договоры «великой коалиции» (двусторонние, дружба): [Факт] англо-советский 1942-05-26 (на 20 лет), франко-советский 1944-12-10; СССР денонсировал оба в мае 1955 (источник: тексты договоров; не сверено через Wikidata).
 
@@ -84,7 +84,25 @@ friends:      # symmetric; year range inclusive
 - SUN: вне блока до 1950; sino_soviet 1950; comecon 1949; warsaw 1955–1991; друзья GBR/FRA до 1955 [Факт].
 - SWE: bloc=none 1945–2024-03-07, EFTA 1960–95, EEC/EU 1995+; PfP 1994 как дружеская связь с nato [Факт, PfP не сверено].
 
+## Проверка источников (шаг закрытия, 2026-11-24)
+Поле check: opened = страница открыта WebFetch и факт найден; search-snippet = только результат поиска.
+| Факт | URL | check |
+|---|---|---|
+| NATO 1949-04-04; GRC, TUR 1952-02-18; FRG 1955-05-06; Finland 2023-04-04; Sweden 2024-03-07 | https://www.nato.int/cps/en/natohq/topics_52044.htm | opened |
+| SEATO: сентябрь 1954, 1977, PAK вышел 1973 | https://history.state.gov/milestones/1953-1960/seato | opened |
+| ANZUS 1951, в силе 1952 | https://history.state.gov/milestones/1945-1952/anzus | opened |
+| SEATO 1954-09-08..1977-06-30 | https://www.wikidata.org/wiki/Special:EntityData/Q277252.json (CC0) | opened |
+| CENTO 1955-02-24..1979-03-16 | https://www.wikidata.org/wiki/Special:EntityData/Q379850.json (CC0) | opened |
+| COMECON 1949-01-25..1991-06-28 | https://www.wikidata.org/wiki/Special:EntityData/Q191582.json (CC0) | opened |
+| Rio: Wikidata лишь год 1947 | https://www.wikidata.org/wiki/Special:EntityData/Q1410645.json (CC0) | opened |
+| Rio в силе 1948-12-03 | https://www.encyclopedia.com/humanities/encyclopedias-almanacs-transcripts-and-maps/rio-treaty-1947 | opened (слабый, пересказ) |
+| Warsaw 1955-05-14, в силе 1955-06-06 | https://avalon.law.yale.edu/20th_century/warsaw.asp | opened |
+| SUN–PRC 1950-02-14, срок 30 лет | https://www.mfa.gov.cn/eng/zy/wjls/3604_665547/202405/t20240531_11367548.html | opened |
+| Раскол SUN–PRC с начала 1960-х | https://www.wilsoncenter.org/blog-post/sino-soviet-alliance-70-years-later | opened |
+| Rio 1947-09-02; выход Ирака март 1959 | результаты поиска (fandom, ebsco, iranicaonline и др.) | search-snippet |
+Не открылись: oas.org (403), globalsecurity.org (403), Britannica (403), cvce.eu (блок бота), state.gov (407), geoinfo.amu.edu.pl (отказ соединения).
+
 ## Не проверено
-- Даты SEATO, CENTO, Rio, sino_soviet, CMEA и всех двусторонних договоров не подтверждены через Wikidata (пустой результат запроса) — взяты из общеизвестных фактов, нужна сверка по первичным текстам перед загрузкой в mods/.
-- Период 2000–2030 (CSTO, AUKUS 2021, EU-выход GBR, расширение NATO 1999–2024 по странам) не перечислен подробно: вне 5 стран среза нужны только Финляндия 2023-04-04 и Швеция 2024-03-07 [Факт, Финляндия не запрашивалась].
+- Остаётся: день подписания Rio (1947-09-02: только search-snippet), день ANZUS (1951), день выхода Ирака из CENTO (март 1959, источники расходятся), прекращение советско-китайского договора 1979/1980, а также все двусторонние договоры (англо-советский 1942, франко-советский 1944, их денонсация 1955, USA–JPN, USA–KOR). Закрыто 2026-11-24: SEATO, CENTO, COMECON, Warsaw, NATO, Greece/Turkey, FRG, Rio (вступление в силу), договор 1950 (подпись, срок), Финляндия.
+- Период 2000–2030 (CSTO, AUKUS 2021, EU-выход GBR, расширение NATO 1999–2024 по странам) не перечислен подробно: вне 5 стран среза нужны только Финляндия 2023-04-04 и Швеция 2024-03-07 [Факт: nato.int, opened 2026-11-24].
 - Лицензия сайта nato.int и текстов договоров не изучалась.
