@@ -21,6 +21,7 @@
 <!-- registry:active:start -->
 - TASK-0132 [IN_PROGRESS] Keyboard selection of technology tree nodes and keyboard tooltip (A6-A8) (developer)
 - TASK-0148 [IN_PROGRESS] Player levers: Lab probes P1-P3 (budget items matter, reserve dominance, goal strategies) (simulation-engineer)
+- TASK-0158 [IN_PROGRESS] Client shot runs: silent by default and a frame filter (only the frames a task needs) (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0149 [REVIEW] Player levers: client legibility pass and pace (plain labels instead of numbers and G-codes, speeds 0/1/3/7/30, default 3 days/s) (developer)
 - TASK-0154 [REVIEW] Data: alliances and blocs by year 1945-2030 for the licence buyer circle (research-scientist)
