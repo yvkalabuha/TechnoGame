@@ -1,7 +1,7 @@
 ---
 id: TASK-0142
 title: "Globe map remainder after TASK-0138: hatch legend, occupation control line, small-state callouts, coast staircase"
-status: IN_PROGRESS
+status: DONE
 level: light
 milestone: MS-M05
 agent: developer
@@ -13,6 +13,7 @@ related: [TASK-0138]
 approved_by: orchestrator
 approved_at: 2026-11-24
 approval_ref: "O-049 remainder of TASK-0138; light task approved by Orchestrator"
+review_ref: "reviewer: APPROVE 385c209; ui-art-director: PASS (task-0142-visual.md); codex: waived #432 after 3rd return (4887e756), remainder DEBT-0090; landed 16e4e60"
 created: 2026-11-24
 ---
 
