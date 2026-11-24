@@ -66,6 +66,22 @@ public static class LabelGeometry
     /// <summary>Per-point core of NeedsLeader (no allocation): is a node at (qx, qy) as near to the box as the label's own node at distance ownDist?</summary>
     public static bool OtherIsAsNear(float ownDist, float qx, float qy, float x, float y, float w, float h, float slack = 4f) => DistToRect(qx, qy, x, y, w, h) <= ownDist + slack;
 
+    /// <summary>Placement priority of a tree label, lower is placed first and drawn last (on top): the goal, selected or root name 0, the route 1, the frontier 2, the rest 3.</summary>
+    public static int Rank(bool named, bool onRoute, bool frontier) => named ? 0 : onRoute ? 1 : frontier ? 2 : 3;
+
+    /// <summary>Does the segment a-b pass through the box (sampled every 6 du, ends excluded)?</summary>
+    public static bool SegmentHitsRect(float ax, float ay, float bx, float by, float x, float y, float w, float h)
+    {
+        float len = MathF.Sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay));
+        int n = Math.Max(2, (int)(len / 6f));
+        for (int k = 1; k < n; k++)
+        {
+            float f = (float)k / n, px = ax + (bx - ax) * f, py = ay + (by - ay) * f;
+            if (px >= x && px <= x + w && py >= y && py <= y + h) return true;
+        }
+        return false;
+    }
+
     /// <summary>True when some other node centre is within `slack` du of being as near to the label box as the own node.</summary>
     public static bool NeedsLeader(float ownX, float ownY, ReadOnlySpan<(float X, float Y)> others, float x, float y, float w, float h, float slack = 4f)
     {

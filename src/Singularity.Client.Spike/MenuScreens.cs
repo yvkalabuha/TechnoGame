@@ -83,9 +83,9 @@ public sealed partial class MainMenu : Control
     {
         SetAnchorsPreset(LayoutPreset.FullRect); Visible = false; MouseFilter = MouseFilterEnum.Ignore;
         AddChild(_dim);
-        _panel.AddThemeStyleboxOverride("panel", MenuUi.SheetBox());
+        _panel.AddThemeStyleboxOverride("panel", DepthBox.Make(Ui.Box(Ui.Sheet, Ui.Ink, 1, 16, Ui.R3, 16)));
         _panel.CustomMinimumSize = new Vector2(320, 0);
-        _box.AddThemeConstantOverride("separation", 6);
+        _box.AddThemeConstantOverride("separation", 14);
         _panel.AddChild(_box);
         AddChild(_panel);
     }
@@ -105,16 +105,20 @@ public sealed partial class MainMenu : Control
     {
         foreach (var c in _box.GetChildren()) { _box.RemoveChild(c); c.QueueFree(); }
         _keys.Clear();
-        _box.AddChild(Ui.Lbl("PROJECT SINGULARITY", 24, null, FontKind.Draft));
+        var head = new VBoxContainer(); head.AddThemeConstantOverride("separation", 6);
+        head.AddChild(Ui.Lbl("PROJECT SINGULARITY", 24, null, FontKind.Draft));
         var stripe = new HBoxContainer(); stripe.AddThemeConstantOverride("separation", 0);
         for (int i = 0; i < 5; i++) stripe.AddChild(new ColorRect { Color = Ui.InkLine[i], CustomMinimumSize = new Vector2(56, 4) });
-        _box.AddChild(stripe);
-        _box.AddChild(Ui.Lbl("v0.5b · client spike", 14, Ui.Ink3, FontKind.Mono));
-        _box.AddChild(new Control { CustomMinimumSize = new Vector2(0, 8) });
+        head.AddChild(stripe);
+        head.AddChild(Ui.Lbl("v0.5b · client spike", 14, Ui.Ink3, FontKind.Mono));
+        _box.AddChild(head);
 
         Button first = null;
-        void Item(string key, int ink, string hint, Key k, Action act, string reason = null)
+        // One block per item: the button and its reason 2 du below it; blocks are 14 du apart, so a reason sits nearer to its own button than to the next one.
+        void Item(string key, int ink, string hint, Key k, Action act, TreeClarity.MenuItem which)
         {
+            string reason = TreeClarity.MenuWhy(which, _inGame);
+            var block = new VBoxContainer(); block.AddThemeConstantOverride("separation", 2);
             var b = new Button { Text = key, Alignment = HorizontalAlignment.Left, FocusMode = FocusModeEnum.All, CustomMinimumSize = new Vector2(0, 36), Disabled = reason != null };
             b.AddThemeFontOverride("font", Fonts.Text); b.AddThemeFontSizeOverride("font_size", 16);
             StyleItem(b, ink);
@@ -124,29 +128,30 @@ public sealed partial class MainMenu : Control
             b.AddChild(h);
             if (reason == null) { b.Pressed += act; _keys.Add((k, act, b)); }
             else b.TooltipText = reason;
-            _box.AddChild(b);
-            if (reason != null) _box.AddChild(Ui.Wrap(reason, 14, Ui.Ink3));
+            block.AddChild(b);
+            if (reason != null) block.AddChild(Ui.Wrap(reason, 14, Ui.Ink3));
+            _box.AddChild(block);
             if (reason == null) first ??= b;
         }
         if (_inGame)
         {
-            Item("menu.continue", Ui.Teal, "Esc", Key.Escape, () => Continue?.Invoke());
-            Item("menu.load", Ui.Sand, "L", Key.L, null, "menu.reason.persist");
-            Item("menu.save", Ui.Violet, "S", Key.S, null, "menu.reason.persist");
-            Item("menu.settings", Ui.Slate, "O", Key.O, () => OpenSettings?.Invoke());
-            Item("menu.credits", Ui.Olive, "A", Key.A, () => OpenCredits?.Invoke());
-            Item("menu.tomain", Ui.Plum, "M", Key.M, () => ToMain?.Invoke());
-            Item("menu.quit", Ui.Plum, "Q", Key.Q, () => Quit?.Invoke());
+            Item("menu.continue", Ui.Teal, "Esc", Key.Escape, () => Continue?.Invoke(), TreeClarity.MenuItem.Continue);
+            Item("menu.load", Ui.Sand, "L", Key.L, null, TreeClarity.MenuItem.Load);
+            Item("menu.save", Ui.Violet, "S", Key.S, null, TreeClarity.MenuItem.Save);
+            Item("menu.settings", Ui.Slate, "O", Key.O, () => OpenSettings?.Invoke(), TreeClarity.MenuItem.Settings);
+            Item("menu.credits", Ui.Olive, "A", Key.A, () => OpenCredits?.Invoke(), TreeClarity.MenuItem.Credits);
+            Item("menu.tomain", Ui.Plum, "M", Key.M, () => ToMain?.Invoke(), TreeClarity.MenuItem.ToMain);
+            Item("menu.quit", Ui.Plum, "Q", Key.Q, () => Quit?.Invoke(), TreeClarity.MenuItem.Quit);
         }
         else
         {
-            Item("menu.continue", Ui.Teal, "C", Key.C, null, "menu.reason.nosave");
-            Item("menu.new", Ui.Olive, "N", Key.N, () => NewGame?.Invoke());
-            Item("menu.load", Ui.Sand, "L", Key.L, null, "menu.reason.persist");
-            Item("menu.save", Ui.Violet, "S", Key.S, null, "menu.reason.nogame");
-            Item("menu.settings", Ui.Slate, "O", Key.O, () => OpenSettings?.Invoke());
-            Item("menu.credits", Ui.Olive, "A", Key.A, () => OpenCredits?.Invoke());
-            Item("menu.quit", Ui.Plum, "Q", Key.Q, () => Quit?.Invoke());
+            Item("menu.continue", Ui.Teal, "C", Key.C, null, TreeClarity.MenuItem.Continue);
+            Item("menu.new", Ui.Olive, "N", Key.N, () => NewGame?.Invoke(), TreeClarity.MenuItem.NewGame);
+            Item("menu.load", Ui.Sand, "L", Key.L, null, TreeClarity.MenuItem.Load);
+            Item("menu.save", Ui.Violet, "S", Key.S, null, TreeClarity.MenuItem.Save);
+            Item("menu.settings", Ui.Slate, "O", Key.O, () => OpenSettings?.Invoke(), TreeClarity.MenuItem.Settings);
+            Item("menu.credits", Ui.Olive, "A", Key.A, () => OpenCredits?.Invoke(), TreeClarity.MenuItem.Credits);
+            Item("menu.quit", Ui.Plum, "Q", Key.Q, () => Quit?.Invoke(), TreeClarity.MenuItem.Quit);
         }
         if (first != null) first.CallDeferred(Control.MethodName.GrabFocus);
     }
