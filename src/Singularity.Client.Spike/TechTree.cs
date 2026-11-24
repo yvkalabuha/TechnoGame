@@ -1246,7 +1246,8 @@ public sealed partial class TechTree : Control
 
         _inset.AddChild(new HSeparator());
         bool whyOpen = _whyOpen || _selected < 0;   // collapsed while a node card is shown, so the card stays above the fold
-        _inset.AddChild(Ui.Btn((whyOpen ? "▾ " : "▸ ") + Loc.T("inset.why"), () => { _whyOpen = !_whyOpen; _insetDirty = true; }));
+        string whyHead = _goal >= 0 ? Loc.T("inset.why", Names.Node(nodes.Id[_goal])) : Loc.T("inset.why.nogoal");   // the heading names its goal (spec 2б.5)
+        _inset.AddChild(Ui.Btn((whyOpen ? "▾ " : "▸ ") + whyHead, () => { _whyOpen = !_whyOpen; _insetDirty = true; }));
         _whyShown = whyOpen;
         if (whyOpen) BuildWhy(s, _host.Data);
 
@@ -1282,7 +1283,7 @@ public sealed partial class TechTree : Control
             int n = 0;
             foreach (var l in s.Links.Where(l => l.Layer == WhyNotLayer.Knowledge).Take(4))
             {
-                string text = $"{Loc.TOr("cause." + l.Cause, l.Cause.ToString())}: {Names.Node(data, l.SubjectId)}" + (l.EtaMonths is int m ? Loc.T("inset.eta", m) : "");
+                string text = string.Join(" ", new[] { Loc.T("why.line", Loc.TOr("cause." + l.Cause, l.Cause.ToString()), ": " + Names.Node(data, l.SubjectId)), Loc.T("why.have", Loc.N(l.Have.ToDouble()), Loc.N(l.Need.ToDouble())), l.EtaMonths is int m ? Loc.T("why.eta", m) : "" }.Select(x => x.Trim()).Where(x => x != ""));
                 var lab = Ui.Wrap(text);
                 _inset.AddChild(n++ == 0 ? RootRow(lab) : lab);
             }

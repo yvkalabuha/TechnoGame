@@ -56,7 +56,7 @@ public sealed partial class Main
         var img = GetViewport().GetTexture().GetImage(); var m = _signal.Clock.MeterRect; int mx = (int)MathF.Round(m.Position.X * s), my = (int)MathF.Round(m.Position.Y * s);
         if (s == 1f) TimeCheck(m.Position == new Vector2(mx, my) && m.Size == new Vector2(60, 32), $"{tag} gauge on whole pixels, 60 x 32 (at {m.Position}, {m.Size})");
         float mid = (Lum(Ui.Ink) + Lum(img.GetPixel(mx + 1, my + 1))) / 2; int active = _signal.Clock.Selected - 1; int W2 = (int)MathF.Round(60 * s), H2 = (int)MathF.Round(32 * s);
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < TimeGaugeGeometry.Bars; i++)
         {
             var e = i == active ? TimeGaugeGeometry.Frame(i) : TimeGaugeGeometry.Bar(i); var b = TimeGaugeGeometry.Bar(i);
             int x0 = int.MaxValue, y0 = int.MaxValue, x1 = -1, y1 = -1;

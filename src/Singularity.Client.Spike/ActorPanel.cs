@@ -590,7 +590,10 @@ public sealed partial class ActorPanel : PanelContainer
             foreach (var l in s.Links)
             {
                 if (n++ >= 7) { lines.Add((Loc.T("why.more", s.Links.Count - 7), false)); break; }
-                string subj = l.Layer == WhyNotLayer.Knowledge ? ": " + Names.Node(_host.Data, l.SubjectId) : "";   // other layers have no player-facing name for a bare id: never «№N»
+                // The affected process keeps its plain name (a capability link names it in Process), so that two processes with one blocker differ; never a bare id.
+                int subjNode = l.Layer == WhyNotLayer.Knowledge ? l.SubjectId : l.Layer == WhyNotLayer.Capability ? l.Process : -1;
+                string subjName = subjNode >= 0 ? Names.Node(_host.Data, subjNode) : "";
+                string subj = subjName != "" && subjName[0] != '#' ? ": " + subjName : "";
                 string eta = l.EtaMonths is int m ? Loc.T("why.eta", m) : "";
                 string lev = l.Levers.IsDefaultOrEmpty ? "" : Loc.T("why.levers", string.Join(", ", l.Levers.Select(x => Loc.TOr("lever." + x, x.ToString()))));
                 // A plain sentence: what blocks, how much is there, when it will be enough, what to do; the red square gets the words «Главная помеха» (C4, A5).
