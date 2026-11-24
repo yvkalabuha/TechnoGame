@@ -3,22 +3,20 @@ render_mode unshaded, cull_back;
 
 // Surface A "Globe-sheet": flat tints from an ID raster, ink borders in screen pixels,
 // screen-space hatching, 30-degree graticule. No lighting, no glow.
+// ids: RG8, region number (low byte, high byte), 0 = sea. region_lut: 512x2 RGBA8 sRGB bytes read by region number:
+// row 0 = fill colour, A = hatch kind (0 none, 1 colony/mandate 45 deg, 2 occupied -45 deg, in steps of 1/3);
+// row 1 = hatch line colour, A = owner number (borders between owners are political, between regions of one owner faint).
 uniform sampler2D ids : filter_nearest, repeat_disable;
-uniform sampler2D tint_lut : filter_nearest, repeat_disable; // 256x1, R = tint index 0..7
-uniform vec3 tints[8];
+uniform sampler2D region_lut : filter_nearest, repeat_disable;
 uniform vec3 sea_color : source_color = vec3(0.827, 0.882, 0.894);
-uniform vec3 coast_color : source_color = vec3(0.494, 0.588, 0.612);
+uniform vec3 coast_color : source_color = vec3(0.13, 0.14, 0.15);   // one dark coast stroke for all land, L* <= 35
 uniform vec3 border_color : source_color = vec3(0.243, 0.235, 0.22);
 uniform vec3 grid_color : source_color = vec3(0.62, 0.72, 0.75);
 uniform vec3 ink : source_color = vec3(0.114, 0.118, 0.125);
 uniform float border_px = 1.2;
-uniform int selected_id = 0;
-uniform int hatch_id = 0;        // demo "occupied" country
-uniform int hatch_owner_id = 0;  // colour source for the hatch lines
-uniform float hatch_period = 6.0;
-uniform float hatch_width = 1.5;
-uniform bool hatch_in_screen_space = true;
+uniform int selected_id = 0;     // owner number
 uniform bool show_hatch = true;
+uniform float faint_border = 0.3;   // strength of the line between regions of one owner
 uniform sampler2D slice_lut : filter_nearest, repeat_disable, hint_default_black; // 256x1, R = 1 for the countries of the slice
 uniform float dim_others = 0.0;  // 0..1: pulls the tints of countries outside the slice towards paper
 uniform vec3 paper = vec3(0.949, 0.937, 0.902);
@@ -41,28 +39,36 @@ const vec2 SZ = vec2(4096.0, 2048.0);
 
 int id_at(vec2 uv) {
 	ivec2 p = ivec2(clamp(uv, vec2(0.0), vec2(0.99999)) * SZ);
-	return int(texelFetch(ids, p, 0).r * 255.0 + 0.5);
+	vec2 v = texelFetch(ids, p, 0).rg * 255.0 + 0.5;
+	return int(v.x) + 256 * int(v.y);
 }
-vec3 tint_of(int id) {
-	int t = int(texelFetch(tint_lut, ivec2(id, 0), 0).r * 255.0 + 0.5);
-	return tints[t];
-}
-bool is_slice(int i) { return i != 0 && texelFetch(slice_lut, ivec2(i, 0), 0).r > 0.5; }
-vec3 line_of(vec3 t) { return t * 0.42; } // stand-in for tint.N.line (L* 40-45)
+vec3 srgb_to_lin(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c)); }
+vec3 tint_of(int id) { return srgb_to_lin(texelFetch(region_lut, ivec2(id, 0), 0).rgb); }
+vec3 hatch_line_of(int id) { return srgb_to_lin(texelFetch(region_lut, ivec2(id, 1), 0).rgb); }
+int hatch_kind(int id) { return int(texelFetch(region_lut, ivec2(id, 0), 0).a * 3.0 + 0.5); }
+int owner_of(int id) { return id == 0 ? 0 : int(texelFetch(region_lut, ivec2(id, 1), 0).a * 255.0 + 0.5); }
+bool is_slice(int own) { return own != 0 && texelFetch(slice_lut, ivec2(own, 0), 0).r > 0.5; }
 
 void fragment() {
 	vec2 uv = UV;
 	int id = id_at(uv);
+	int own = owner_of(id);
+	float ndv = clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0);
+	float fade = smoothstep(0.0, 0.26, ndv); // alpha fades over the last ~15 deg at the limb
 	vec3 col = (id == 0) ? sea_color : tint_of(id);
-	if (id != 0 && texelFetch(slice_lut, ivec2(id, 0), 0).r < 0.5) col = mix(col, paper, dim_others);
-	if (id == selected_id && id != 0) col = mix(col, ink, 0.08);
+	if (own != 0 && texelFetch(slice_lut, ivec2(own, 0), 0).r < 0.5) col = mix(col, paper, dim_others);
+	if (own == selected_id && own != 0) col = mix(col, ink, 0.08);
 
-	if (show_hatch && id == hatch_id && id != 0) {
-		vec2 q = hatch_in_screen_space ? FRAGCOORD.xy : uv * SZ * 0.5;
-		float s = (q.x + q.y) / 1.41421356; // 45 degrees
-		float d = abs(fract(s / hatch_period) - 0.5) * hatch_period;
-		float h = 1.0 - smoothstep(hatch_width * 0.5 - 0.5, hatch_width * 0.5 + 0.5, d);
-		col = mix(col, line_of(tint_of(hatch_owner_id)), h * 0.9);
+	// Status hatching in screen pixels (A5): colony and mandate 45 deg, 1 px line every 8 px; occupation -45 deg, 1.5 px every 6 px, the controller's line colour.
+	int hk = id == 0 ? 0 : hatch_kind(id);
+	if (show_hatch && hk != 0) {
+		bool occ = hk == 2;
+		float period = occ ? 7.0 : 8.0, width = 1.0;
+		vec2 q = FRAGCOORD.xy;
+		float s = ((occ ? q.x - q.y : q.x + q.y)) / 1.41421356;
+		float d = abs(fract(s / period) - 0.5) * period;
+		float h = 1.0 - smoothstep(width * 0.5 - 0.5, width * 0.5 + 0.5, d);
+		col = mix(col, hatch_line_of(id), h * (occ ? 0.7 : 0.9) * fade);
 	}
 
 	if (look == 0) {
@@ -103,24 +109,30 @@ void fragment() {
 	float grid = 1.0 - smoothstep(0.0, 1.0, min(gd.x, gd.y));
 	col = mix(col, grid_color, grid * 0.6);
 
-	// borders: neighbours half a screen pixel away; thickness stays constant in pixels
+	// Three line weights, drawn over the hatching (A4, A5, C2). Neighbours are probed a fixed number of screen pixels away.
+	// 1. coast (land against sea): one dark stroke for all land, independent of the fill; 2. border between powers: thick ink;
+	// 3. line between regions of one owner: thin and faint.
 	vec2 dx = dFdx(uv), dy = dFdy(uv);
-	float k = border_px * 0.5;
-	int n0 = id_at(uv + dx * k), n1 = id_at(uv - dx * k), n2 = id_at(uv + dy * k), n3 = id_at(uv - dy * k);
-	float cnt = 0.0; float coast = 0.0;
-	if (n0 != id) { cnt += 1.0; if (n0 == 0 || id == 0) coast += 1.0; }
-	if (n1 != id) { cnt += 1.0; if (n1 == 0 || id == 0) coast += 1.0; }
-	if (n2 != id) { cnt += 1.0; if (n2 == 0 || id == 0) coast += 1.0; }
-	if (n3 != id) { cnt += 1.0; if (n3 == 0 || id == 0) coast += 1.0; }
-	float ndv = clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0);
-	float fade = smoothstep(0.0, 0.26, ndv); // alpha fades over the last ~15 deg at the limb
-	float a = cnt * 0.25 * fade;
-	bool is_coast = coast > cnt * 0.5;
-	vec3 bc = is_coast ? coast_color : border_color;
-	if (id == selected_id || n0 == selected_id) { if (selected_id != 0) { bc = ink; a = min(1.0, a * 1.6); } }
-	// slice countries: a stronger ink contour so that they read against the sea and the other tints
-	bool sl = (n0 != id && (is_slice(n0) || is_slice(id))) || (n1 != id && (is_slice(n1) || is_slice(id))) || (n2 != id && (is_slice(n2) || is_slice(id))) || (n3 != id && (is_slice(n3) || is_slice(id)));
-	if (sl) { bc = ink; a = min(1.0, a * 2.4); }
-	col = mix(col, bc, a);
+	float k = border_px * 0.5, k2 = border_px * 1.1;
+	int nb[4] = int[4](id_at(uv + dx * k), id_at(uv - dx * k), id_at(uv + dy * k), id_at(uv - dy * k));
+	int nw[4] = int[4](id_at(uv + dx * k2), id_at(uv - dx * k2), id_at(uv + dy * k2), id_at(uv - dy * k2));
+	float coast = 0.0, faint = 0.0, power = 0.0; bool sl = false; bool sel_edge = false;
+	for (int i = 0; i < 4; i++) {
+		int o = owner_of(nb[i]);
+		if (o != own) {
+			if (nb[i] == 0 || id == 0) coast += 1.0;
+			if (is_slice(o) || is_slice(own)) sl = true;
+			if (o == selected_id) sel_edge = true;
+		} else if (nb[i] != id) faint += 1.0;
+		int ow = owner_of(nw[i]);
+		if (ow != own && nw[i] != 0 && id != 0) power += 1.0;
+	}
+	vec3 bc = border_color; float a = 0.0;
+	if (faint > 0.0) { bc = mix(border_color, col, 0.35); a = min(faint * 0.25, 1.0) * faint_border; }
+	if (power > 0.0) { bc = ink; a = min(power * 0.5, 1.0); }
+	if (coast > 0.0) { bc = coast_color; a = min(coast * 0.5 + 0.35, 1.0); }
+	if ((own == selected_id || sel_edge) && selected_id != 0 && power > 0.0) { bc = ink; a = 1.0; }
+	if (sl && power > 0.0) { bc = ink; a = 1.0; }
+	col = mix(col, bc, a * fade);
 	ALBEDO = col;
 }

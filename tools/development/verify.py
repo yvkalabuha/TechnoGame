@@ -38,6 +38,7 @@ def steps(full: bool, with_map: bool) -> list[tuple[str, list[str]]]:
     dn = dotnet()
     py = sys.executable
     out: list[tuple[str, list[str]]] = [
+        ("geo", [py, "tools/map/ensure_geo.py"]),   # arcs.bin is generated (ADR-0011 section 5); the client and its tests read it
         ("registry", [py, "tools/development/registry.py", "check"]),
         ("hooks", [py, "tools/development/test_hooks.py"]),
         ("build", [dn, "build", "Singularity.sln", "-c", "Release", "-v", "q", "-nologo"]),

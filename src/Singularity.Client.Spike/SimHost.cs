@@ -120,7 +120,7 @@ public sealed class SimHost : IDisposable
         return ModLoader.Load(Path.Combine(root, "mods", "core"));
     }
 
-    static string RepoRoot()
+    public static string RepoRoot()
     {
         string dir = AppContext.BaseDirectory;
         while (dir != null && !File.Exists(Path.Combine(dir, "Singularity.sln"))) dir = Path.GetDirectoryName(dir);

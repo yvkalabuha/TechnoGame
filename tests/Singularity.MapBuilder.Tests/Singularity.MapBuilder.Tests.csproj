@@ -2,5 +2,11 @@
   <!-- Tests of tools/map (ADR-0011). Not part of Singularity.sln: the offline builder is separate from the game solution. -->
   <ItemGroup>
     <ProjectReference Include="../../tools/map/MapBuilder/MapBuilder.csproj" />
+    <!-- Godot-free client map logic (TASK-0138), compiled here as source links because the tests need geo/arcs.bin produced by this tool. -->
+    <Compile Include="../../src/Singularity.Client.Spike/WorldMap.cs" Link="WorldMap.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/CountryPalette.cs" Link="CountryPalette.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/ContrastValidator.cs" Link="ContrastValidator.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/Palette.cs" Link="Palette.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/LabelPlacement.cs" Link="LabelPlacement.cs" />
   </ItemGroup>
 </Project>

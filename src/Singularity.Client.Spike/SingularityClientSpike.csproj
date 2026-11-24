@@ -15,4 +15,8 @@
     <ProjectReference Include="..\Singularity.Core\Singularity.Core.csproj" />
     <ProjectReference Include="..\Singularity.Kernel\Singularity.Kernel.csproj" />
   </ItemGroup>
+  <!-- geo/arcs.bin is generated, not stored in git (ADR-0011 section 5): ./play.sh builds the client, so it gets the file here, or stops with the fix. -->
+  <Target Name="EnsureMapGeo" BeforeTargets="CoreCompile">
+    <Exec Command="python3 &quot;$(MSBuildThisFileDirectory)../../tools/map/ensure_geo.py&quot;" />
+  </Target>
 </Project>
