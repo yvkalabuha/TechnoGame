@@ -20,7 +20,7 @@ public static class SliceChecks
     // Re-recorded in TASK-0115: new columns cmd.*.gen / pol.*.gen and SchemaVersion 11; old columns unchanged per the projection tests.
     // Re-recorded in TASK-0121 (#423): schema v12, new columns prd.d*.cohort.1978…2030 and prd.d*.q.1.
     // Re-recorded in TASK-0129 (fleet ageing, #431/#435-#437): new column prd.d*.replCredit, SchemaVersion 13.
-    private const string Golden150 = "0dc571a6bffaef40e6922578270f39f48f7917e48a862c38af918ce5cceb78a1"; // Re-recorded in TASK-0133 (train 2: G5/G6 data + fleet ageing)
+    private const string Golden150 = "fade1e71bd8f1c769693a904b67beb549ec5c6d05481cafbcd4162b0740b85e6"; // Re-recorded in TASK-0134 (train 2: Hcap(t), mastery)
     private const long Ticks150 = 4564;   // 1945-09-01 → 1958-03-01: the tick of month 150, so month 149 is the last one run
     private const long Ticks60 = 1826;    // 1945-09-01 → 1950-09-01
 
@@ -998,7 +998,9 @@ public static class SliceChecks
     {
         foreach (string bad in new[] { """{"FOO": 1}""", """{"START": "X"}""", """{"LAYER": "LK"}""", """{"GRID": "LO_MID"}""", """{"CHANNELS": ["B", "B"]}""",
                      """{"CONTROL_TABLES": "t.json"}""", """{"LAYER": "LC"}""", """{"LAYER": "LP"}""", """{"LAYER": "LC0", "CONTROL_TABLES": "t.json"}""",
-                     """{"X_SCALE": 0}""", """{"K_DIV": "x"}""", """{"COST_MULT_G5": 0}""", """{"COST_MULT_G6": -1}""", """{"COST_MULT_G5": "x"}""" })
+                     """{"X_SCALE": 0}""", """{"K_DIV": "x"}""", """{"COST_MULT_G5": 0}""", """{"COST_MULT_G6": -1}""", """{"COST_MULT_G5": "x"}""",
+                     """{"HCAP_K": -0.1}""", """{"HCAP_MAX": -1}""", """{"X_PROG": 0}""", """{"X_PROG": 1.5}""", """{"UPKEEP_MULT": 0.9}""",
+                     """{"MASTERY_RULES": "X"}""", """{"MASTERY_RULES": "GATE+GATE"}""", """{"MASTERY_RULES": ""}""", """{"MASTERY_RULES": "ALL+GATE"}""" })
         {
             Manifest m = Lab.Manifest.Parse(Manifest("JetSlice", Ticks60, pars: bad), "/x/m.json");
             try
@@ -1017,6 +1019,23 @@ public static class SliceChecks
         SliceRunConfig g0c = SliceParameters.Parse(g0.Points[0].CreateParamSet(), 1, 1, 1, calibration: false).Config;
         if (g0c.CostMultG5 is not null || g0c.CostMultG6 is not null)
             return "COST_MULT_G5/G6 set without the keys";
+        // TASK-0134: HCAP_K, HCAP_MAX, X_PROG, UPKEEP_MULT, MASTERY_RULES reach SliceRunConfig as given (allowed in JetSliceCalib, which calib-print
+        // runs); absent = null and MasteryRules.All (the build's defaults).
+        if (g0c.HcapGrowthPerYear is not null || g0c.HcapGrowthMax is not null || g0c.MasteryXProg is not null || g0c.MasteryUpkeepMult is not null
+            || g0c.MasteryRules != MasteryRules.All)
+            return "mastery keys set without the keys";
+        Manifest h = Lab.Manifest.Parse(Manifest("JetSliceCalib", Ticks60,
+            pars: """{"HCAP_K": 0.05, "HCAP_MAX": 1.5, "X_PROG": 0.5, "UPKEEP_MULT": 2, "MASTERY_RULES": "GATE+CLOSE+PROGRAMME"}"""), "/x/m.json");
+        SliceRunConfig hc = SliceParameters.Parse(h.Points[0].CreateParamSet(), 1, 1, 1, calibration: true).Config;
+        if (hc.HcapGrowthPerYear != Fx6.FromRaw(50_000) || hc.HcapGrowthMax != Fx6.FromRaw(1_500_000) || hc.MasteryXProg != Fx6.FromRaw(500_000)
+            || hc.MasteryUpkeepMult != Fx6.FromInt(2) || hc.MasteryRules != (MasteryRules.Gate | MasteryRules.CandidateClose | MasteryRules.Programme))
+            return $"mastery keys parsed as {hc.HcapGrowthPerYear}/{hc.HcapGrowthMax}/{hc.MasteryXProg}/{hc.MasteryUpkeepMult}/{hc.MasteryRules}";
+        foreach (var (text, want) in new[] { ("NONE", MasteryRules.None), ("ALL", MasteryRules.All), ("PROGRAMME+FORESIGHT", MasteryRules.Programme | MasteryRules.Foresight),
+                     ("GATE+CLOSE+FORESIGHT+PROGRAMME", MasteryRules.All) })
+        {
+            if (SliceParameters.ParseMasteryRules(text) != want)
+                return $"MASTERY_RULES {text} parsed as {SliceParameters.ParseMasteryRules(text)}";
+        }
         return null;
     }
 

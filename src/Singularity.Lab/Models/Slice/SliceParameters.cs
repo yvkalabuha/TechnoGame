@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Collections.Immutable;
 using Singularity.Core.Industry;
 using Singularity.Core.Policy;
+using Singularity.Core.Products;
 using Singularity.Kernel;
 using Singularity.Session;
 
@@ -17,8 +18,8 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
     public static readonly string[] Keys =
     [
         "A41_FORM", "ALPHA", "BUDGET_RULE", "C_M", "CHANNELS", "COST_MULT_G5", "COST_MULT_G6", "CONTROL_TABLES", "DELTA_H", "DERIV", "EFFORT_SHARE", "FIX_A", "FIX_E", "FIX_K", "FLEET_ARM", "FLEET_LINE_COND", "FORCE", "GRID", "H_MAX",
-        "K_DIV", "KAPPA_Q10", "LAYER", "LIC_KNOWS", "LIC_OFF", "LINE_CLOSE", "POOL_ORDER", "PILOT_PROFILES", "PROFILE_CELL", "SALE_ARM", "START", "T6D_OFF",
-        "TOOLING_H_HI", "TOOLING_H_HI_CONTROL", "TOOLING_H_LO", "TOOLING_M_LEAD", "TOOLING_RHO_MAX", "TOOLING_TARGET", "THETA_START", "X_SCALE", "detail",
+        "HCAP_K", "HCAP_MAX", "K_DIV", "KAPPA_Q10", "LAYER", "LIC_KNOWS", "LIC_OFF", "LINE_CLOSE", "MASTERY_RULES", "POOL_ORDER", "PILOT_PROFILES", "PROFILE_CELL", "SALE_ARM", "START", "T6D_OFF",
+        "TOOLING_H_HI", "TOOLING_H_HI_CONTROL", "TOOLING_H_LO", "TOOLING_M_LEAD", "TOOLING_RHO_MAX", "TOOLING_TARGET", "THETA_START", "UPKEEP_MULT", "X_PROG", "X_SCALE", "detail",
     ];
 
     /// <summary>Substrings no column (and no parameter of runs.csv) of the calibration build may contain (spec §8.2 п. 2, format §5).</summary>
@@ -142,6 +143,11 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
             Alpha = Optional(p, "ALPHA"),
             CostMultG5 = Positive(p, "COST_MULT_G5"),
             CostMultG6 = Positive(p, "COST_MULT_G6"),
+            HcapGrowthPerYear = AtLeast(p, "HCAP_K", Fx6.Zero),
+            HcapGrowthMax = AtLeast(p, "HCAP_MAX", Fx6.Zero),
+            MasteryXProg = XProg(p),
+            MasteryUpkeepMult = AtLeast(p, "UPKEEP_MULT", Fx6.One),
+            MasteryRules = Enum(p, "MASTERY_RULES", "ALL", ParseMasteryRules),
             XHalfByTier = XHalf(p),
             DeltaH = Optional(p, "DELTA_H"),
             CM = Optional(p, "C_M"),
@@ -182,6 +188,53 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
         if (v is { } x && x <= Fx6.Zero)
             throw new ParamException($"{key} must be positive.");
         return v;
+    }
+
+    // HCAP_K, HCAP_MAX (TASK-0134, #438): k and ΔHmax of Hcap(t), ≥ 0; UPKEEP_MULT: upkeep_mult of the mastery programme, ≥ 1. Absent = null
+    // (the defaults of IndustryParams); the Session refuses a bad value with ArgumentException, the Lab refuses it earlier as a parameter error.
+    private static Fx6? AtLeast(ParamSet p, string key, Fx6 min)
+    {
+        Fx6? v = Optional(p, key);
+        if (v is { } x && x < min)
+            throw new ParamException($"{key} must be at least {min}.");
+        return v;
+    }
+
+    // X_PROG (TASK-0134, O-045): x_prog of the mastery programme in (0; 1].
+    private static Fx6? XProg(ParamSet p)
+    {
+        Fx6? v = Optional(p, "X_PROG");
+        if (v is { } x && (x <= Fx6.Zero || x > Fx6.One))
+            throw new ParamException("X_PROG must be in (0; 1].");
+        return v;
+    }
+
+    /// <summary>
+    /// MASTERY_RULES (TASK-0134): <c>ALL</c> (default, main), <c>NONE</c>, or parts joined by <c>+</c>: <c>GATE</c>, <c>CLOSE</c>, <c>FORESIGHT</c>,
+    /// <c>PROGRAMME</c> (arms B0-B3 of the probe, g5-g6-probe.md §9). A part given twice is an error.
+    /// </summary>
+    internal static MasteryRules ParseMasteryRules(string v)
+    {
+        if (v == "ALL")
+            return MasteryRules.All;
+        if (v == "NONE")
+            return MasteryRules.None;
+        MasteryRules r = MasteryRules.None;
+        foreach (string part in v.Split('+'))
+        {
+            MasteryRules one = part switch
+            {
+                "GATE" => MasteryRules.Gate,
+                "CLOSE" => MasteryRules.CandidateClose,
+                "FORESIGHT" => MasteryRules.Foresight,
+                "PROGRAMME" => MasteryRules.Programme,
+                _ => throw new ArgumentException($"unknown part '{part}' of '{v}' (ALL, NONE or GATE+CLOSE+FORESIGHT+PROGRAMME)."),
+            };
+            if ((r & one) != 0)
+                throw new ArgumentException($"part '{part}' given twice in '{v}'.");
+            r |= one;
+        }
+        return r;
     }
 
     // X_SCALE (calibration stage C1): X½ of tiers 3, 4, 5 times the factor, their ratio 1 : 4 : 12,5 kept; floor on the raw value.
