@@ -45,6 +45,18 @@ public static class NodeEffects
         }
     }
 
+    // Airframe alternatives of one af_class are peers (af_fbw trades some perf for stability), so the baseline is the
+    // nearest alternative of a lower class; other slots compare with the rank below.
+    private static Fx6 BaselinePerf(ProductClassTable pc, int slot, int alt)
+    {
+        for (int b = alt - 1; b >= pc.AltStart[slot]; b--)
+        {
+            if (!pc.SlotIsAirframe[slot] || pc.AltAfClass[b] < pc.AltAfClass[alt])
+                return pc.AltPerfMult[b];
+        }
+        return Fx6.Zero;
+    }
+
     private static void AddAlternative(ProductClassTable pc, int c, int s, int a, int nodeRow, List<NodeEffect> into)
     {
         RequirementLists req = pc.AltRequires;
@@ -55,11 +67,11 @@ public static class NodeEffects
             if (members.IndexOf(nodeRow) < 0)
                 continue;
             found = true;
-            shared = members.Length > 1;
+            shared |= members.Length > 1;
         }
         if (!found)
             return;
-        Fx6 previous = a > pc.AltStart[s] ? pc.AltPerfMult[a - 1] : Fx6.Zero;
+        Fx6 previous = BaselinePerf(pc, s, a);
         into.Add(new NodeEffect(NodeEffectKind.AlternativeUnlock, c, s, a, pc.AltPerfMult[a], previous, shared));
         if (pc.AltAlloyKg[a] > Fx6.Zero)
             into.Add(new NodeEffect(NodeEffectKind.AlloyNeed, c, s, a, pc.AltAlloyKg[a], Fx6.Zero, shared));

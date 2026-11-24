@@ -56,6 +56,30 @@ public class NodeHistoryTests : IDisposable
         Assert.Equal(pc.AltPerfMult[milled.AltRow], milled.Value);
         Assert.Equal(pc.AltPerfMult[milled.AltRow - 1], milled.Previous);
         Assert.True(milled.Value > milled.Previous);
+
+        // The any_of partner of delta_wing for af_milled is area_ruled_airframe, and only it.
+        int delta = Data.Nodes.IndexOf("s8.eng.delta_wing_airframe"), ruled = Data.Nodes.IndexOf("s8.eng.area_ruled_airframe");
+        bool partnerFound = false;
+        for (int g = pc.AltRequires.GroupStart[milled.AltRow]; g < pc.AltRequires.GroupStart[milled.AltRow + 1]; g++)
+        {
+            var members = pc.AltRequires.GroupMembers(g).ToArray();
+            if (members.Contains(delta))
+            {
+                Assert.Equal(new[] { delta, ruled }.Order().ToArray(), members);
+                partnerFound = true;
+            }
+        }
+        Assert.True(partnerFound);
+    }
+
+    [Fact]
+    public void SameAirframeClassPeers_AreNotReadAsADowngrade()
+    {
+        ProductClassTable pc = Data.ProductClasses;
+        var fx = new List<NodeEffect>();
+        NodeEffects.Derive(Data, Data.Nodes.IndexOf("s8.eng.fly_by_wire_relaxed_stability"), fx);
+        NodeEffect fbw = Assert.Single(fx, e => e.Kind == NodeEffectKind.AlternativeUnlock && pc.AltId[e.AltRow] == "af_fbw");
+        Assert.True(fbw.Value > fbw.Previous);   // compared with the last lower class, not with af_mach2 (same class, higher perf)
     }
 
     [Fact]
