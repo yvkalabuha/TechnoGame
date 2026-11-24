@@ -79,3 +79,18 @@ created: 2026-11-24
 
 ### Идемпотентность шин (round 2)
 Создание шин и эффектов вынесено в чистый `AudioBusPlan` (`ToCreate`, `Effects`); при повторном входе в игру новые шины, фильтр, лимитер и Record не добавляются, `_rec` берётся из существующего эффекта на Master. Тест `Bus_plan_filters_only_the_ui_bus_and_a_second_start_adds_nothing`.
+
+### Ревью звука
+Вердикт sound-director: FAIL (conditional): criterion §4 p.5 not met (alert 36.9 % vs node 35.8 %); fix node_discovered LP 2200–2500, breakthrough LP 3000, signal_attention LP 3200; war_declared/launch_nuclear accepted as distinct by timbre/rhythm; owner listening decides.
+
+Правки (round 3): офлайн-обработка заново из оригиналов (754b81b). Один 2-полюсный фильтр оказался недостаточным (его выход усиливался на +10…+12 дБ при выравнивании громкости вместе с шумом верхов), поэтому фильтры каскадом: node_discovered 2 x 2300 Гц, breakthrough 2 x 3000 Гц, signal_attention 4 x 3200 Гц (наклон выше 12 дБ/окт спеки). order_reject, рутина и P0 не менялись, high-shelf на P0 нет. Громкость в окне r2 ±2, пик ≤ −3 dBFS (измерено ниже).
+
+| Cue | Prio | доля энергии выше 4 кГц, % | LUFS (с добивкой тишиной) | пик, dBFS |
+|---|---|---|---|---|
+| node_discovered | P2 | 11.6 | -24.5 | -3.1 |
+| breakthrough | P1 | 17.3 | -21.1 | -5.9 |
+| signal_attention | P1 | 20.2 | -21.9 | -11.3 |
+| signal_alert | P0 | 36.9 | -17.4 | -6.4 |
+| signal_critical | P0 | 46.6 | -21.1 | -4 |
+
+Цель node_discovered ≤ 12 % и breakthrough/signal_attention ~20 % и меньше достигнута (signal_attention на пределе: 20.2 %). Критерий §4 п.5 (P0 минимум в 3 раза ярче) по-прежнему не выполняется формально: P0 36.9/46.6 % против P1 ≤ 20 %; сравнение с P2: order_reject 18.4 %. Решает прослушивание владельцем. Не проверено на слух.
