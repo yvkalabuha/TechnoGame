@@ -50,6 +50,7 @@ public sealed partial class AudioDirector : Node
             AudioServer.AddBus(); int i = AudioServer.BusCount - 1;
             AudioServer.SetBusName(i, n); AudioServer.SetBusSend(i, "Master");
         }
+        AudioServer.AddBusEffect(AudioServer.GetBusIndex("UI"), new AudioEffectLowPassFilter { CutoffHz = (float)AudioSettings.UiCutoffHz, Resonance = 0.5f });
         var lim = new AudioEffectHardLimiter { CeilingDb = -1f };
         AudioServer.AddBusEffect(0, lim);
         _rec = new AudioEffectRecord();

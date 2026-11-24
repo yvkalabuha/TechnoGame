@@ -52,6 +52,14 @@ public class AudioAssetsTests
     }
 
     [Fact]
+    public void Muted_character_only_the_ui_bus_is_filtered_and_the_cutoff_is_a_muted_one()
+    {
+        Assert.InRange(AudioSettings.UiCutoffHz, 2000, 4500);
+        Assert.All(AudioCatalog.All.Where(c => c.Prio == Prio.P0), c => Assert.Equal("Alert", c.Bus));
+        Assert.All(AudioCatalog.All.Where(c => c.Prio >= Prio.P2), c => Assert.Equal("UI", c.Bus));
+    }
+
+    [Fact]
     public void Music_and_ambient_files_exist()
     {
         foreach (var f in new[] { "music/irradiated_skies.ogg", "music/led_twilight.ogg", "ambient/pale_window.ogg" })
