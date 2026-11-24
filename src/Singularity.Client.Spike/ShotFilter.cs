@@ -13,6 +13,9 @@ public sealed class ShotFilter
     public ShotFilter(string list) =>
         _patterns = list.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(p => p.EndsWith(".png") ? p[..^4] : p).ToArray();
 
+    /// <summary>True when no pattern has a wildcard, so the set of wanted frames is known and the run can stop once all are saved.</summary>
+    public bool AllExact => _patterns.All(p => p.IndexOfAny(new[] { '*', '?' }) < 0);
+
     public string Describe => string.Join(",", _patterns);
 
     /// <summary>True when the frame (with or without .png) matches a pattern; * and ? are wildcards.</summary>

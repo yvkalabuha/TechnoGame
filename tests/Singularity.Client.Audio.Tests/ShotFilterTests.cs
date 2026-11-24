@@ -46,6 +46,14 @@ public class ShotFilterTests
     }
 
     [Fact]
+    public void AllExactOnlyWithoutWildcards()
+    {
+        Assert.True(new ShotFilter("a,b_grey.png").AllExact);
+        Assert.False(new ShotFilter("a,b*").AllExact);
+        Assert.False(new ShotFilter("a?").AllExact);
+    }
+
+    [Fact]
     public void LegacyStageOnlyWhenAPatternIsUnsized()
     {
         Assert.False(new ShotFilter("area_science_1920x1080").WantsLegacyStage);

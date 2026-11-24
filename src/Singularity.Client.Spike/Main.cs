@@ -885,20 +885,39 @@ public sealed partial class Main : Node3D
 
     void SaveShot(string name, Rect2I? r = null, bool grey = false)
     {
-        if (!OnlyWants(name)) return;
+        string greyName = name.Replace(".png", "_grey.png");
+        bool wantColour = OnlyWants(name), wantGrey = grey && OnlyWants(greyName);
+        if (!wantColour && !wantGrey) return;
         string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
         Directory.CreateDirectory(dir);
         var img = GetViewport().GetTexture().GetImage();
         if (r is Rect2I rr) img = img.GetRegion(rr);
         else if (_largeSize.X > 0 ? (img.GetWidth() != _largeSize.X || img.GetHeight() != _largeSize.Y) : !SettingsLogic.IsBaseFrame(img.GetWidth(), img.GetHeight())) { InstFail($"frame {name} is {img.GetWidth()}x{img.GetHeight()}, a full frame must be a real {(_largeSize.X > 0 ? _largeSize.X + "x" + _largeSize.Y : "1920x1080")} render (window {DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y}, display {DisplayServer.ScreenGetSize().X}x{DisplayServer.ScreenGetSize().Y})"); return; }
-        _savedShots.Add(name);
-        CheckSave(TrySave(img, Path.Combine(dir, name)), Path.Combine(dir, name));
-        if (grey) { string gp = Path.Combine(dir, name.Replace(".png", "_grey.png")); img.Convert(Image.Format.L8); CheckSave(TrySave(img, gp), gp); }   // A5: a greyscale frame next to the colour one
+        if (wantColour) { _savedShots.Add(name); CheckSave(TrySave(img, Path.Combine(dir, name)), Path.Combine(dir, name)); }
+        if (wantGrey) { string gp = Path.Combine(dir, greyName); img.Convert(Image.Format.L8); _savedShots.Add(greyName); CheckSave(TrySave(img, gp), gp); }   // A5: a greyscale frame next to the colour one
+        StopIfOnlyDone(dir);
+    }
+
+    // A frame and its greyscale twin (instrument and probe frames): each file passes the --only filter on its own name.
+    void SaveFramePair(Image c, string dir, string name)
+    {
+        if (OnlyWants(name)) { _savedShots.Add(name); CheckSave(TrySave(c, Path.Combine(dir, name + ".png")), Path.Combine(dir, name + ".png")); }
+        if (OnlyWants(name + "_grey")) { c.Convert(Image.Format.La8); _savedShots.Add(name + "_grey"); CheckSave(TrySave(c, Path.Combine(dir, name + "_grey.png")), Path.Combine(dir, name + "_grey.png")); }
+        StopIfOnlyDone(dir);
+    }
+
+    // With exact (wildcard-free) patterns the run ends as soon as every one of them has its frame: nothing later can match.
+    bool _runDone;
+    void StopIfOnlyDone(string dir)
+    {
+        if (_only == null || _runDone || !_only.AllExact || _only.Unmatched(_savedShots).Length > 0) return;
+        FinishShotRun(dir);
     }
 
     // Title screen on a cold start: the menu over the turning globe, no HUD (the loading label is hidden too).
     void ColdTitleShots(double dt)
     {
+        if (_runDone) return;
         _coldT += dt; _yaw += (float)(4 * dt);
         if (_loading != null) _loading.Visible = false;
         if (_coldStep == 0 && _coldT >= 1.0) { SaveShot("main_menu.png"); Loc.SetLang("en"); _coldStep = 1; _coldT = 0; }
@@ -1101,6 +1120,7 @@ public sealed partial class Main : Node3D
     }
     void ShotStep(double dt)
     {
+        if (_runDone) return;
         _shotT += dt;
         string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
         void Shot(string name, Rect2I? r = null) => SaveShot(name, r);
@@ -1545,6 +1565,8 @@ public sealed partial class Main : Node3D
 
     void FinishShotRun(string dir)
     {
+        if (_runDone) return;
+        _runDone = true;
         if (_only == null) { CheckScaleCoverage(); if (_largeSize.X == 0) CheckIconInk(); }   // the coverage checks need the full set
         else CheckOnlyResult();
         _shotLog += $"shot run result: {(_shotFailed ? "FAILED (a live check failed, exit 1)" : "OK (exit 0)")}\n";
@@ -1589,8 +1611,7 @@ public sealed partial class Main : Node3D
         var gr = _flaskProbe.GetGlobalRect();
         img = img.GetRegion(new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)).Intersection(new Rect2I(0, 0, img.GetWidth(), img.GetHeight())));
         string dir = Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), _shotDir));
-        CheckSave(TrySave(img, Path.Combine(dir, name + ".png")), Path.Combine(dir, name + ".png"));
-        img.Convert(Image.Format.La8); CheckSave(TrySave(img, Path.Combine(dir, name + "_grey.png")), Path.Combine(dir, name + "_grey.png"));
+        SaveFramePair(img, dir, name);
     }
     static readonly int[] InstYears = { 1950, 1985, 2030 };
     static readonly AreaId[] InstAreas = { AreaId.Finance, AreaId.Science, AreaId.Production };
@@ -1665,8 +1686,7 @@ public sealed partial class Main : Node3D
             void Save(Image im, Rect2 gr, string name)
             {
                 var c = im.GetRegion(new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)).Intersection(all));
-                CheckSave(TrySave(c, Path.Combine(dir, name + ".png")), Path.Combine(dir, name + ".png"));
-                c.Convert(Image.Format.La8); CheckSave(TrySave(c, Path.Combine(dir, name + "_grey.png")), Path.Combine(dir, name + "_grey.png"));
+                SaveFramePair(c, dir, name);
             }
             string sfx = $"e{p % 3 + 1}_{pct}";
             if (p / 3 == 1)
