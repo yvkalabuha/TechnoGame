@@ -23,18 +23,21 @@
     {
       "name": "c26_k0",
       "params": {
+        "AHEAD_K": 0,
         "PROFILE_CELL": 26
       }
     },
     {
       "name": "c8_k0",
       "params": {
+        "AHEAD_K": 0,
         "PROFILE_CELL": 8
       }
     },
     {
       "name": "c24_k0",
       "params": {
+        "AHEAD_K": 0,
         "PROFILE_CELL": 24
       }
     },

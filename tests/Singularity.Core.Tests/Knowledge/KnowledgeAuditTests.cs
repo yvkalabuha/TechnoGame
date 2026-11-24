@@ -159,6 +159,17 @@ public class KnowledgeAuditTests
     }
 
     [Fact]
+    public void Ahead_Multiplier_SaturatesAtTheCeiling_InsteadOfOverflowing()
+    {
+        Fx6 max = Fx6.FromInt(10);
+        // The largest k Fx6 holds, 85 years ahead (anchor 2030 at month 0 of 1945-01), power 4: k·ahead^4 does not fit in a long.
+        Assert.Equal(max, KnowledgeMath.AheadMultiplier(Fx6.FromRaw(long.MaxValue), 4, max, 2030, 0, 0));
+        Assert.Equal(Fx6.FromRaw(long.MaxValue), KnowledgeMath.AheadMultiplier(Fx6.FromRaw(long.MaxValue), 1, Fx6.FromRaw(long.MaxValue), 2030, 0, 0));
+        // Just under the ceiling the exact value is kept.
+        Assert.Equal(Fx6.FromInt(2), KnowledgeMath.AheadMultiplier(Fx6.FromRaw(100_000), 1, max, 1988, 388, 8));
+    }
+
+    [Fact]
     public void Ahead_Params_AreValidated()
     {
         Assert.Throws<ArgumentException>(() => new KnowledgeParams { AheadCostK = Fx6.FromRaw(-1) }.Validate());

@@ -23,6 +23,7 @@
     {
       "name": "off_s080",
       "params": {
+        "AHEAD_K": 0,
         "K_DIV": 0.8
       }
     },
@@ -56,6 +57,7 @@
     {
       "name": "off_s125",
       "params": {
+        "AHEAD_K": 0,
         "K_DIV": 1.25
       }
     },

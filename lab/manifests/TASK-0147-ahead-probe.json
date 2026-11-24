@@ -21,7 +21,10 @@
   },
   "series": [
     {
-      "name": "off"
+      "name": "off",
+      "params": {
+        "AHEAD_K": 0
+      }
     },
     {
       "name": "k02",

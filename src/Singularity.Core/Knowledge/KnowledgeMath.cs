@@ -45,8 +45,11 @@ public static class KnowledgeMath
         Fx6 term = years;
         for (int i = 1; i < pow; i++)
             term *= years;
-        Fx6 m = Fx6.One + k * term;
-        return m > max ? max : m;
+        // The product is taken in 128 bits and compared with the room under the ceiling first, so a large k saturates instead of overflowing.
+        Int128 product = (Int128)k.Raw * term.Raw / Fx6.Scale;
+        if (product >= max.Raw - Fx6.One.Raw)
+            return max;
+        return Fx6.One + Fx6.FromRaw((long)product);
     }
 
     /// <summary><c>h = (h_max·y)/(y + y_half)</c>, active only when <c>prog ≥ θ_start</c>.</summary>
