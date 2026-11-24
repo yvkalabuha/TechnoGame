@@ -1,7 +1,7 @@
 ---
 id: TASK-0119
 title: "Instrument data fields in the Session view: alloy coverage, research progress"
-status: PROPOSED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M05
 agent: developer         # ответственный агент
@@ -10,9 +10,9 @@ priority: low            # high | medium | low
 needs_owner: false       # true = ждёт решения владельца
 depends_on: [TASK-0111, TASK-0115]
 related: [TASK-0111]
-approved_by:             # owner | orchestrator (orchestrator — только level: light)
-approved_at:
-approval_ref:
+approved_by: orchestrator
+approved_at: 2026-11-24
+approval_ref: "PLAN Фокус п.2 (after train 2); light task approved by Orchestrator"
 created: 2026-11-19
 ---
 
