@@ -18,12 +18,7 @@
 
 ## Активные задачи
 <!-- registry:active:start -->
-- TASK-0128 [IN_PROGRESS] G5/G6 content for the jet slice: nodes, alternatives, anchors (train 2, T-C) (research-scientist)
-- TASK-0129 [IN_PROGRESS] Fleet ageing without replacement in Core (#431, #435-#437) (developer)
-- TASK-0133 [IN_PROGRESS] G5/G6 data in mods on the train-2 branch and calibration probe (O-038) (developer)
-- TASK-0134 [IN_PROGRESS] Hcap growth and production mastery in Core: series gate, candidate close, foresight, mastery programme (#438-#440) (developer)
 - TASK-0146 [IN_PROGRESS] Second review fallback to Sonnet 5.5 through agy when the Codex limit is exhausted (#456) (developer)
-- TASK-0147 [IN_PROGRESS] Ahead-of-time cost for knowledge nodes in Core (#458) and G5/G6 rev 3.1 data on the train-2 branch (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0140 [REVIEW] Sound audit: sounds that play at the wrong moment or irritate (owner feedback) (sound-director)
 - TASK-0144 [REVIEW] Muted sound character (#455): soften attack and low-pass all routine cues (sound-director)

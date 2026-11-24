@@ -1,7 +1,7 @@
 ---
 id: TASK-0128
 title: "G5/G6 content for the jet slice: nodes, alternatives, anchors (train 2, T-C)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M05
 agent: research-scientist
@@ -13,6 +13,7 @@ related: [TASK-0129, TASK-0118, TASK-0119]
 approved_by: owner
 approved_at: 2026-11-19
 approval_ref: "#423 (new data for later generations allowed); gate review before data commit"
+review_ref: "gate: critic + advocate + DeepSeek (docs/reviews/slice-g5-g6-content-rev3-gate.md), rev 3.1; owner #457 #458 #464 #465; data landed in train 2 88fa41b"
 created: 2026-11-23
 ---
 

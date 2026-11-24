@@ -1,7 +1,7 @@
 ---
 id: TASK-0147
 title: "Ahead-of-time cost for knowledge nodes in Core (#458) and G5/G6 rev 3.1 data on the train-2 branch"
-status: IN_PROGRESS
+status: DONE
 level: light
 milestone: MS-M05
 agent: developer
@@ -13,6 +13,7 @@ related: [TASK-0128, TASK-0133, TASK-0134]
 approved_by: orchestrator
 approved_at: 2026-11-24
 approval_ref: "owner decisions #457, #458 (chat 2026-11-24); light task inside approved decisions, approved by Orchestrator"
+review_ref: "reviewer: APPROVE train 2 (4d37a33); codex: waived #432 after 3rd return (f9ae0774), remainder DEBT-0091; landed 88fa41b"
 created: 2026-11-24
 ---
 

@@ -1,7 +1,7 @@
 ---
 id: TASK-0129
 title: "Fleet ageing without replacement in Core (#431, #435-#437)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M05
 agent: developer
@@ -13,6 +13,7 @@ related: [TASK-0128, TASK-0118]
 approved_by: owner
 approved_at: 2026-11-22
 approval_ref: "#431, #435, #436, #437 (mechanic approved by owner; code is light inside it)"
+review_ref: "reviewer: APPROVE train 2 (4d37a33); codex: waived #432 after 3rd return (f9ae0774), remainder DEBT-0091; landed 88fa41b"
 created: 2026-11-23
 ---
 

@@ -1,7 +1,7 @@
 ---
 id: TASK-0133
 title: "G5/G6 data in mods on the train-2 branch and calibration probe (O-038)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M05
 agent: developer
@@ -13,6 +13,7 @@ related: [TASK-0128, TASK-0129, TASK-0131]
 approved_by: orchestrator
 approved_at: 2026-11-23
 approval_ref: "O-038 (data on a branch, probe before owner approval)"
+review_ref: "reviewer: APPROVE train 2 (4d37a33); codex: waived #432 after 3rd return (f9ae0774), remainder DEBT-0091; landed 88fa41b"
 created: 2026-11-23
 ---
 
