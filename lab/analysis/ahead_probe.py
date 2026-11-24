@@ -1,0 +1,142 @@
+#!/usr/bin/env python3
+"""TASK-0147: 2x2 probe chains (A = 81 nodes, B = 99 nodes) x ahead-of-time cost (off, k02, k05, k12), docs/simulation/g5-g6-probe.md §10.
+
+Reads, for each data axis, the matrix directory and the calib-print directory of lab/manifests/TASK-0147-ahead-probe.json. Per point it
+reuses point_metrics of mastery_probe.py (same definitions as §9: P1, P2, years in service, leader) and prints the world-first discovery
+years against the targets, the chain-only shifts C1/C2, the G2-G4 APP side shift S2 and the selection of k by the rule of §10.4.
+
+Usage: python3 lab/analysis/ahead_probe.py --a MATRIX PRINT --b MATRIX PRINT [--json OUT]
+"""
+import argparse
+import json
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from g5g6_probe import fmt, med  # noqa: E402
+from mastery_probe import point_metrics, series_names  # noqa: E402
+from tm_horizon_2030 import ACTORS, year_of  # noqa: E402
+
+TARGETS = [("76", "G5 APP", (1980, 1985)), ("78", "AESA", (1995, 2000)), ("77", "G6 APP", (2000, 2005)),
+           ("79", "CMC", (2008, 2015)), ("81", "adaptive", (2015, 2022))]
+PRINT_ONLY = [("80", "CMC fab", (2008, 2015))]
+SIDE = [("59", "G2 APP"), ("60", "G3 APP"), ("61", "G4 APP")]
+NEVER = 2031
+K_POINTS = ["k02", "k05", "k12"]
+
+
+def first_years(out, node):
+    """World-first year per seed; a node never known by 2030 counts as NEVER (§10.3 D)."""
+    ys = []
+    for o in out:
+        t = o["first"].get(node)
+        ys.append(year_of(t) if t is not None and t >= 0 else NEVER)
+    return ys
+
+
+def axis(mdir, pdir):
+    names = series_names(mdir)
+    res, val = {}, []
+    for p in sorted(names):
+        out, v, _ = point_metrics(mdir, pdir, p, None)
+        res[names[p]] = out
+        val += [f"{names[p]}: {x}" for x in v]
+    dh = sorted({o["x"]["data_hash"] for out in res.values() for o in out})
+    if len(dh) != 1:
+        val.append(f"data_hash {dh}")
+    return res, val, dh
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--a", nargs=2, required=True, metavar=("MATRIX", "PRINT"))
+    ap.add_argument("--b", nargs=2, required=True, metavar=("MATRIX", "PRINT"))
+    ap.add_argument("--json")
+    args = ap.parse_args()
+    data = {}
+    allv = []
+    for lab, (m, p) in (("A", args.a), ("B", args.b)):
+        res, val, dh = axis(m, p)
+        data[lab] = res
+        allv += [f"{lab} {x}" for x in val]
+        first = next(iter(res.values()))[0]["x"]
+        print(f"{lab}: core_commit={first['core']} data_hash={dh} manifest_hash={first['manifest_hash']} points={list(res)} seeds={[o['seed'] for o in next(iter(res.values()))]}")
+    if data["A"]["off"][0]["x"]["data_hash"] == data["B"]["off"][0]["x"]["data_hash"]:
+        allv.append("A and B have the same data_hash")
+    print("VALIDITY:", "OK" if not allv else "FAIL " + " | ".join(allv))
+
+    summary = {}
+    print("\n## World-first discovery year, median (min…max); never known = 2031")
+    print("| Data / point | " + " | ".join(f"{l} ({n}) {lo}–{hi}" for n, l, (lo, hi) in TARGETS + PRINT_ONLY) + " | hits | years outside |")
+    print("|---|" + "---|" * (len(TARGETS) + len(PRINT_ONLY) + 2))
+    for d in ("A", "B"):
+        for pt, out in data[d].items():
+            cells, hits, outside, meds = [], 0, 0, {}
+            for n, l, (lo, hi) in TARGETS + PRINT_ONLY:
+                ys = first_years(out, n)
+                m = med(ys)
+                meds[n] = m
+                never = sum(1 for y in ys if y == NEVER)
+                cells.append(f"{fmt(ys, '{:.0f}')}" + (f" [never {never}]" if never else ""))
+                if (n, l, (lo, hi)) in TARGETS:
+                    hits += lo <= m <= hi
+                    outside += max(0, lo - m, m - hi)
+            side = {n: med(first_years(out, n)) for n, _ in SIDE}
+            summary[f"{d}/{pt}"] = dict(meds=meds, hits=hits, outside=outside, side=side,
+                                        g5=med([o["g5"] for o in out]), g4=med([o["g4_great"] for o in out]))
+            print(f"| {d}/{pt} | " + " | ".join(cells) + f" | {hits}/5 | {outside:.1f} |")
+
+    print("\n## C1/C2 chain-only shift (B/off - A/off), and chain shift at each k")
+    for pt in ["off"] + K_POINTS:
+        a, b = summary[f"A/{pt}"]["meds"], summary[f"B/{pt}"]["meds"]
+        print(f"- {pt}: G5 APP {b['76'] - a['76']:+.1f} y, AESA {b['78'] - a['78']:+.1f} y" +
+              (f" -> C1 {'yes' if b['76'] - a['76'] >= 3 else 'NO'}, C2 {'yes' if b['78'] - a['78'] >= 8 else 'NO'}" if pt == "off" else ""))
+
+    print("\n## S2: world-first year of G2-G4 APP (median) and shift against off of the same data")
+    for d in ("A", "B"):
+        for pt in data[d]:
+            s, s0 = summary[f"{d}/{pt}"]["side"], summary[f"{d}/off"]["side"]
+            print(f"- {d}/{pt}: " + ", ".join(f"{l} {s[n]:.0f} ({s[n] - s0[n]:+.1f})" for n, l in SIDE))
+
+    print("\n## P1/P2, leader, in service (as §9.17)")
+    for d in ("A", "B"):
+        for pt, out in data[d].items():
+            n = len(out)
+            g5 = [o["g5"] for o in out]
+            g4 = [o["g4_great"] for o in out]
+            yr = lambda t: None if t is None else year_of(t)
+            per = []
+            for a in ("USA", "SUN", "FRA", "GBR", "SWE"):
+                f4 = [yr(o["fielded"].get((a, 4))) for o in out]
+                f5 = [yr(o["fielded"].get((a, 5))) for o in out]
+                c4 = sum(1 for v in f4 if v is not None)
+                c5 = sum(1 for v in f5 if v is not None)
+                per.append(f"{a} G4 {fmt(f4, '{:.0f}')}[{c4}] G5 {fmt(f5, '{:.0f}')}[{c5}]")
+            lead = {}
+            for o in out:
+                lead[o["x"]["lead_final"]] = lead.get(o["x"]["lead_final"], 0) + 1
+            usa0 = [o["zero_y"]["USA"] for o in out]
+            ins5 = {a: [o["in_service"][(a, 5)] for o in out] for a in ("USA", "SUN", "FRA")}
+            print(f"- {d}/{pt}: P1 G5 countries {fmt(g5, '{:.0f}')} [{sum(1 for x in g5 if x >= 2)}/{n}] {'yes' if med(g5) >= 2 else 'NO'}; "
+                  f"P2 G4 of 4 great {fmt(g4, '{:.0f}')} [{sum(1 for x in g4 if x >= 3)}/{n}] {'yes' if med(g4) >= 3 else 'NO'}; "
+                  f"leader 2030-12 {dict(sorted(lead.items(), key=lambda kv: -kv[1]))}; USA years G=0 1978-2030 {fmt(usa0, '{:.1f}')}; "
+                  f"years G>=5 in service " + ", ".join(f"{a} {fmt(v, '{:.1f}')}" for a, v in ins5.items()))
+            print("    " + " | ".join(per))
+
+    print("\n## Selection of k (§10.4) on B")
+    s0 = summary["B/off"]["side"]["61"]
+    elig = []
+    for pt in K_POINTS:
+        s = summary[f"B/{pt}"]
+        ok = s["g5"] >= 2 and s["g4"] >= 3 and s["side"]["61"] - s0 <= 5
+        print(f"- {pt}: P1 {s['g5']} P2 {s['g4']} G4 APP shift {s['side']['61'] - s0:+.1f} -> {'eligible' if ok else 'not eligible'}; hits {s['hits']}/5; outside {s['outside']:.1f} y")
+        if ok:
+            elig.append((-s["hits"], s["outside"], K_POINTS.index(pt), pt))
+    print("RECOMMENDED:", sorted(elig)[0][3] if elig else "none (needs-decision)")
+    if args.json:
+        json.dump(summary, open(args.json, "w"), indent=1)
+    return 0 if not allv else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

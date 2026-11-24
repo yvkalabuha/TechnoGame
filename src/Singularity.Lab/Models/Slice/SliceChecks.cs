@@ -1000,7 +1000,8 @@ public static class SliceChecks
                      """{"CONTROL_TABLES": "t.json"}""", """{"LAYER": "LC"}""", """{"LAYER": "LP"}""", """{"LAYER": "LC0", "CONTROL_TABLES": "t.json"}""",
                      """{"X_SCALE": 0}""", """{"K_DIV": "x"}""", """{"COST_MULT_G5": 0}""", """{"COST_MULT_G6": -1}""", """{"COST_MULT_G5": "x"}""",
                      """{"HCAP_K": -0.1}""", """{"HCAP_MAX": -1}""", """{"X_PROG": 0}""", """{"X_PROG": 1.5}""", """{"UPKEEP_MULT": 0.9}""",
-                     """{"MASTERY_RULES": "X"}""", """{"MASTERY_RULES": "GATE+GATE"}""", """{"MASTERY_RULES": ""}""", """{"MASTERY_RULES": "ALL+GATE"}""" })
+                     """{"MASTERY_RULES": "X"}""", """{"MASTERY_RULES": "GATE+GATE"}""", """{"MASTERY_RULES": ""}""", """{"MASTERY_RULES": "ALL+GATE"}""",
+                     """{"AHEAD_K": -0.1}""", """{"AHEAD_MAX": 0.9}""", """{"AHEAD_POW": 0}""", """{"AHEAD_POW": 5}""", """{"AHEAD_POW": 1.5}""", """{"AHEAD_POW": "x"}""" })
         {
             Manifest m = Lab.Manifest.Parse(Manifest("JetSlice", Ticks60, pars: bad), "/x/m.json");
             try
@@ -1030,6 +1031,13 @@ public static class SliceChecks
         if (hc.HcapGrowthPerYear != Fx6.FromRaw(50_000) || hc.HcapGrowthMax != Fx6.FromRaw(1_500_000) || hc.MasteryXProg != Fx6.FromRaw(500_000)
             || hc.MasteryUpkeepMult != Fx6.FromInt(2) || hc.MasteryRules != (MasteryRules.Gate | MasteryRules.CandidateClose | MasteryRules.Programme))
             return $"mastery keys parsed as {hc.HcapGrowthPerYear}/{hc.HcapGrowthMax}/{hc.MasteryXProg}/{hc.MasteryUpkeepMult}/{hc.MasteryRules}";
+        // TASK-0147 (#458): AHEAD_K, AHEAD_POW, AHEAD_MAX reach SliceRunConfig as given (allowed in JetSliceCalib); absent = null (KnowledgeParams: off).
+        if (g0c.AheadCostK is not null || g0c.AheadCostPow is not null || g0c.AheadCostMax is not null)
+            return "ahead-of-time keys set without the keys";
+        Manifest ah = Lab.Manifest.Parse(Manifest("JetSliceCalib", Ticks60, pars: """{"AHEAD_K": 0.02, "AHEAD_POW": 2, "AHEAD_MAX": 6}"""), "/x/m.json");
+        SliceRunConfig ac = SliceParameters.Parse(ah.Points[0].CreateParamSet(), 1, 1, 1, calibration: true).Config;
+        if (ac.AheadCostK != Fx6.FromRaw(20_000) || ac.AheadCostPow != 2 || ac.AheadCostMax != Fx6.FromInt(6))
+            return $"ahead-of-time keys parsed as {ac.AheadCostK}/{ac.AheadCostPow}/{ac.AheadCostMax}";
         foreach (var (text, want) in new[] { ("NONE", MasteryRules.None), ("ALL", MasteryRules.All), ("MAIN", MasteryRules.Main), ("PROGRAMME+FORESIGHT", MasteryRules.Programme | MasteryRules.Foresight),
                      ("GATE+CLOSE+FORESIGHT+PROGRAMME", MasteryRules.All) })
         {
