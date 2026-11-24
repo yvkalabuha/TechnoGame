@@ -605,7 +605,7 @@ public sealed partial class SliceSession
             // The layer rejects a stale handle in its step and only counts it; the snapshot at the tick boundary is the one it reads first, so the outcome names it here.
             if (v.Accepted && HandleOf(c.Command) is { } h && !_world.Products.Resolves(c.Command.Actor, h))
                 v = CommandVerdict.Refuse(CommandRefusal.StaleHandle, $"design {h.Slot} generation {h.Generation} no longer stands in its slot");
-            if (v.Accepted && HandleOf(c.Command) is not null)
+            if (v.Accepted && (HandleOf(c.Command) is not null || c.Command is FundProgramme))
                 _tracked.Add((_outcomes.Count, c.Command));
             _outcomes.Add(c.Key, v);
         }
@@ -622,6 +622,8 @@ public sealed partial class SliceSession
             return CommandVerdict.Refuse(CommandRefusal.ProgrammeNotFundable, $"node {f.Node} is not being researched by actor {f.Actor}");
         if (_world.Knowledge.ProgrammeCapacity(f.Actor, row, month) <= Fx6.Zero)
             return CommandVerdict.Refuse(CommandRefusal.ProgrammeNotFundable, $"node {f.Node} cannot take more progress this month");
+        if (_world.Knowledge.ProgrammeGain(f.Actor, row, month, f.Amount) <= Fx6.Zero)
+            return CommandVerdict.Refuse(CommandRefusal.ProgrammeNotFundable, $"the amount {f.Amount} is too small to move node {f.Node}");
         Fx6 balance = _world.Reserve?.Balance(f.Actor) ?? Fx6.Zero;
         return balance >= f.Amount
             ? CommandVerdict.Ok
@@ -649,6 +651,9 @@ public sealed partial class SliceSession
         _ended.Clear();
         foreach ((int outcome, SliceCommand command) in _tracked)
         {
+            // A budget change or a discovery after the verdict can change what the programme may take: ask again on the snapshot the step reads.
+            if (command is FundProgramme fund && FundVerdict(fund, _world.Calendar.MonthIndex(Tick)) is { Accepted: false } late)
+                _outcomes.Replace(outcome, late);
             if (command is not (DeriveDesign or CancelDesign))
                 continue;
             DesignHandle h = HandleOf(command)!.Value;

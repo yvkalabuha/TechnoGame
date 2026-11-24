@@ -165,6 +165,7 @@ internal sealed class SliceWorld
             [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)])
         {
             ReserveEnabled = config.Reserve,
+            FundEnabled = config.Reserve && config.Layer is not (LayerControl.Lk or LayerControl.Lk0),
             NodeNumbers = ImmutableArray.CreateRange(Graph.Number.OrderBy(n => n)),
         };
         RegisterRunColumns();

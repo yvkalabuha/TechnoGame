@@ -52,8 +52,7 @@ public interface IReserveInputs
 
 /// <summary>
 /// The budget reserve: one <c>res.balance</c> column (Fx6 raw) per actor. Monthly, after the layers that read the same snapshot:
-/// <c>R' = (R + inflow − spend)·(1 − leak)</c> (A2 of PLAYER_LEVERS_WAVE1: add, then leak). Part B I3 writes <c>R·(1 − λ/12) + inflow − spend</c>,
-/// the leak on the old balance only; the two differ by the leak of one month's flows (under 1 % of them) and A2 is the owner-facing text. The balance never goes below zero (I4). Own column; nothing else writes it.
+/// <c>R' = R·(1 − leak) + inflow − spend</c> (part B I3): the opening balance leaks, this month's flows do not, so a first deposit keeps its whole value. The balance never goes below zero (I4). Own column; nothing else writes it.
 /// </summary>
 public sealed class ReserveSystem : ITickSystem
 {
@@ -96,8 +95,7 @@ public sealed class ReserveSystem : ITickSystem
             Fx6 spend = _inputs.Spend(a, t);
             if (spend > balance)
                 throw new ReserveInvariantException(t, a, $"spend {spend} exceeds the balance {balance} (I3)");
-            Fx6 after = balance + _inputs.Inflow(a, t) - spend;
-            _balance.Next[a] = (after - after * _leak).Raw;
+            _balance.Next[a] = (balance - balance * _leak + _inputs.Inflow(a, t) - spend).Raw;
         }
     }
 

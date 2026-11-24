@@ -273,16 +273,16 @@ public sealed class KnowledgeSystem : ITickSystem
     }
 
     /// <summary>
-    /// The most money a programme can put into the node in month t: what the node still absorbs before its ceiling (1 for a plain node, <c>prog_cap</c> for a
-    /// hazard node, after this month's regular money) times <c>c_eff·(1+k)</c>. Zero outside the frontier or at the ceiling. A pure read of the snapshot.
+    /// The most money a programme can put into the node in month t: what the node still absorbs before its ceiling (1 for every node, a
+    /// hazard node alike, after this month's regular money) times <c>c_eff·(1+k)</c>. Zero outside the frontier or at the ceiling. A pure read of the snapshot.
     /// </summary>
     public Fx6 ProgrammeCapacity(int actorRow, int nodeRow, long month)
     {
         if (!InFrontier(actorRow, nodeRow))
             return Fx6.Zero;
         Fx6 basis = Prog(actorRow, nodeRow) + ProgressRate(actorRow, nodeRow, month);
-        Fx6 ceiling = _g.IsHazard[nodeRow] ? _p.ProgCap : basis > Fx6.One ? basis : Fx6.One;
-        Fx6 room = ceiling - basis;
+        // The design ceiling of a programme is 1 for every node (a hazard node too: its chance to open grows with the regular money, not with a purchase).
+        Fx6 room = basis > Fx6.One ? Fx6.Zero : Fx6.One - basis;
         return room > Fx6.Zero ? room * CEff(actorRow, nodeRow, month) * Fx6.FromInt(1 + ProgrammesOn(actorRow, nodeRow)) : Fx6.Zero;
     }
 
@@ -303,8 +303,12 @@ public sealed class KnowledgeSystem : ITickSystem
         Fx6 cap = ProgrammeCapacity(a, r, t);
         if (cap <= Fx6.Zero)
             return Fx6.Zero;
+        Fx6 spend = amount < cap ? amount : cap;
+        // A programme whose gain floors to zero would take money for nothing (and count as one): it does not run.
+        if (Gain(spend, CEff(a, r, t), ProgrammesOn(a, r)) <= Fx6.Zero)
+            return Fx6.Zero;
         row = r;
-        return amount < cap ? amount : cap;
+        return spend;
     }
 
     // ---- diagnostics of the last step (tests, journals): scratch outside the Table, not state, not saved
@@ -429,10 +433,10 @@ public sealed class KnowledgeSystem : ITickSystem
             Fx6 prog = Prog(a, r) + dprog;
             if (funded)
             {
-                // The programme adds to the node but does not carry a plain node above 1 by itself; a hazard node keeps its prog_cap below.
+                // The programme never carries a node above 1 by itself (the spend was cut to the room under 1 already; this is the same bound for the floor).
                 Fx6 ceiling = prog > Fx6.One ? prog : Fx6.One;
                 prog += Gain(fundAmount, ceff, _fundN![r].Current[a]);
-                if (!_g.IsHazard[r] && prog > ceiling)
+                if (prog > ceiling)
                     prog = ceiling;
                 dprog = prog - Prog(a, r);
                 _fundN[r].Next[a] = _fundN[r].Current[a] + 1;

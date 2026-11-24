@@ -38,8 +38,16 @@ public class ReserveTests
         {
             off.StepThroughMonth(t);
             on.StepThroughMonth(t);
+            if (t % 6 == 5)
+                HashAssert.Equal(ColumnProjection.Hash(off, _ => true), ColumnProjection.Hash(on, n => !ColumnProjection.IsReserveColumn(n)), $"an old column moved by month {t}");
         }
-        HashAssert.Equal(ColumnProjection.Hash(off, _ => true), ColumnProjection.Hash(on, n => !ColumnProjection.IsReserveColumn(n)), "an old column moved");
+        // The run with the flag off is the run of main: the default config and Reserve = false share one fingerprint and the very same hash.
+        SliceSession main = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
+        for (long t = 0; t < 36; t++)
+            main.StepThroughMonth(t);
+        HashAssert.Equal(main.LastHash, off.LastHash, "Reserve = false is not the run of main");
+        Assert.Equal(new SliceRunConfig { Seed = 7 }.SnapshotFingerprint(), new SliceRunConfig { Seed = 7, Reserve = false }.SnapshotFingerprint());
+        Assert.NotEqual(new SliceRunConfig { Seed = 7 }.SnapshotFingerprint(), new SliceRunConfig { Seed = 7, Reserve = true }.SnapshotFingerprint());
         for (int a = 0; a < on.World.Table.RowCount; a++)
             Assert.Equal(Fx6.Zero, on.World.Reserve!.Balance(a));
         Assert.DoesNotContain(off.World.Table.Columns, c => ColumnProjection.IsReserveColumn(c.Name));
@@ -63,14 +71,15 @@ public class ReserveTests
         Assert.True(s.Submit(SourceClass.Player, 0, 0, SetHalf()).Accepted);
         Fx6 leak = s.World.Reserve!.Parameters.LeakPerMonth;
         s.StepThroughMonth(0);
+        // A first deposit does not leak in its month (I3 order): the account holds exactly the remainder of the opening budget.
+        Assert.Equal(Fx6.FromRaw(500_000) * s.World.BudgetAtStart[0], Balance(s));
         for (long t = 1; t < 24; t++)
         {
             Fx6 before = Balance(s);
             Fx6 inflow = s.World.SharesOf(0).Reserve * s.World.Policy.Budget(0);
             Assert.Equal(Fx6.FromRaw(500_000), s.World.SharesOf(0).Reserve);
             s.StepThroughMonth(t);
-            Fx6 after = before + inflow;
-            Assert.Equal(after - after * leak, Balance(s));   // I3, exact
+            Assert.Equal(before - before * leak + inflow, Balance(s));   // I3, exact
             Assert.True(Balance(s) > Fx6.Zero);
         }
         // About 10 % a year: twelve months of leak keep 0.9 of a sum within a rounding of the constant.
@@ -104,10 +113,8 @@ public class ReserveTests
         Assert.Equal(gain, a.World.Knowledge.Prog(0, row) - b.World.Knowledge.Prog(0, row));
         Assert.Equal(1, a.World.Knowledge.ProgrammesOn(0, row));
         Assert.Equal(0, b.World.Knowledge.ProgrammesOn(0, row));
-        // I3: what left is exactly the amount (before the leak of the month).
-        Fx6 leak = a.World.Reserve!.Parameters.LeakPerMonth;
-        Assert.True(Balance(b) - Balance(a) > Fx6.Zero);
-        Assert.InRange((Balance(b) - Balance(a)).Raw, (amount - amount * leak).Raw - 2, (amount - amount * leak).Raw + 2);
+        // I3: what left is exactly the amount (the spend of the month does not leak).
+        Assert.InRange((Balance(b) - Balance(a)).Raw, amount.Raw - 2, amount.Raw + 2);
 
         // Second programme on the same node: diminishing return 1/(1+k), k = 1.
         Fx6 half = a.World.Knowledge.ProgrammeGain(0, row, month + 1, amount);
@@ -131,8 +138,7 @@ public class ReserveTests
         Assert.True(a.Submit(SourceClass.Player, 0, 1, new FundProgramme(0, a.World.Graph.Number[row], amount)).Accepted);
         a.StepThroughMonth(12);
         b.StepThroughMonth(12);
-        Fx6 leak = a.World.Reserve!.Parameters.LeakPerMonth;
-        Assert.InRange((Balance(b) - Balance(a)).Raw, (cap - cap * leak).Raw - 2, (cap - cap * leak).Raw + 2);   // only the capacity left the account
+        Assert.InRange((Balance(b) - Balance(a)).Raw, cap.Raw - 2, cap.Raw + 2);   // only the capacity left the account
         Assert.True(a.World.Knowledge.IsKnown(0, row) || a.World.Knowledge.Prog(0, row) <= Fx6.One);
         Assert.True(a.World.Knowledge.IsKnown(0, row) || a.World.Knowledge.Prog(0, row) > b.World.Knowledge.Prog(0, row));
     }
@@ -142,6 +148,55 @@ public class ReserveTests
     {
         SliceSession s = Make(true);
         Assert.Equal(CommandRefusal.BadShares, s.Submit(SourceClass.Player, 0, 0, new SetBudgetShares(0, Shares(150_000, 100_000, 50_000, 200_000, 10_000))).Reason);
+    }
+
+    [Fact]
+    public void Validator_OutOfRangeShares_AreRefusedNotThrown()
+    {
+        foreach (bool reserve in new[] { false, true })
+        {
+            SliceSession s = Make(reserve);
+            long big = long.MaxValue / 2;
+            Assert.Equal(CommandRefusal.BadShares, s.Submit(SourceClass.Player, 0, 0, new SetBudgetShares(0, Shares(big, big, big, big, big))).Reason);
+            Assert.Equal(CommandRefusal.BadShares, s.Submit(SourceClass.Player, 0, 1, new SetBudgetShares(0, Shares(long.MinValue, long.MaxValue, 0, 0, 0))).Reason);
+        }
+    }
+
+    [Fact]
+    public void FundProgramme_TooSmallToMoveTheNode_TakesNothingAndIsRefused()
+    {
+        SliceSession s = Make(true);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, SetHalf()).Accepted);
+        for (long t = 0; t < 12; t++)
+            s.StepThroughMonth(t);
+        int row = FrontierNode(s);
+        Assert.Equal(Fx6.Zero, s.World.Knowledge.ProgrammeGain(0, row, 12, Fx6.FromRaw(1)));
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new FundProgramme(0, s.World.Graph.Number[row], Fx6.FromRaw(1))).Accepted);
+        s.StepThroughMonth(12);
+        Assert.Contains(s.Outcomes, o => o.Contains("rejected: ProgrammeNotFundable") && o.Contains("too small"));
+        Assert.Equal(0, s.World.Knowledge.ProgrammesOn(0, row));
+    }
+
+    [Fact]
+    public void FundProgramme_IsRefusedWhereKnowledgeIsAScheduleAndNeverCrossesOne()
+    {
+        SliceSession sched = SliceTestData.CreateLegacy(new SliceRunConfig { Seed = 7, Reserve = true, Layer = LayerControl.Lk0 });
+        Assert.Equal(CommandRefusal.ReserveOff, sched.Submit(SourceClass.Player, 0, 0, new FundProgramme(0, 1, Fx6.One)).Reason);
+        // Every frontier node of every actor, plain or hazard: the capacity leaves the node at or below 1.
+        SliceSession s = Make(true);
+        for (long t = 0; t < 6; t++)
+            s.StepThroughMonth(t);
+        for (int a = 0; a < s.World.Table.RowCount; a++)
+        {
+            for (int r = 0; r < s.World.Graph.Count; r++)
+            {
+                if (!s.World.Knowledge.InFrontier(a, r))
+                    continue;
+                Fx6 cap = s.World.Knowledge.ProgrammeCapacity(a, r, 6);
+                Fx6 basis = s.World.Knowledge.Prog(a, r) + s.World.Knowledge.ProgressRate(a, r, 6);
+                Assert.True(basis + s.World.Knowledge.ProgrammeGain(a, r, 6, cap) <= (basis > Fx6.One ? basis : Fx6.One), $"actor {a} node {r}");
+            }
+        }
     }
 
     [Fact]
