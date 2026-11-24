@@ -51,11 +51,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--a", nargs=2, required=True, metavar=("MATRIX", "PRINT"))
     ap.add_argument("--b", nargs=2, required=True, metavar=("MATRIX", "PRINT"))
+    ap.add_argument("--s", nargs=2, metavar=("MATRIX", "PRINT"), help="sensitivity matrix (§10.5a, TASK-0147-ahead-sens.json)")
     ap.add_argument("--json")
     args = ap.parse_args()
     data = {}
     allv = []
-    for lab, (m, p) in (("A", args.a), ("B", args.b)):
+    axes = [("A", args.a), ("B", args.b)] + ([("S", args.s)] if args.s else [])
+    for lab, (m, p) in axes:
         res, val, dh = axis(m, p)
         data[lab] = res
         allv += [f"{lab} {x}" for x in val]
@@ -63,13 +65,15 @@ def main():
         print(f"{lab}: core_commit={first['core']} data_hash={dh} manifest_hash={first['manifest_hash']} points={list(res)} seeds={[o['seed'] for o in next(iter(res.values()))]}")
     if data["A"]["off"][0]["x"]["data_hash"] == data["B"]["off"][0]["x"]["data_hash"]:
         allv.append("A and B have the same data_hash")
+    if "S" in data and data["S"]["off_s080"][0]["x"]["data_hash"] != data["B"]["off"][0]["x"]["data_hash"]:
+        allv.append("S data_hash differs from B")
     print("VALIDITY:", "OK" if not allv else "FAIL " + " | ".join(allv))
 
     summary = {}
     print("\n## World-first discovery year, median (min…max); never known = 2031")
     print("| Data / point | " + " | ".join(f"{l} ({n}) {lo}–{hi}" for n, l, (lo, hi) in TARGETS + PRINT_ONLY) + " | hits | years outside |")
     print("|---|" + "---|" * (len(TARGETS) + len(PRINT_ONLY) + 2))
-    for d in ("A", "B"):
+    for d in data:
         for pt, out in data[d].items():
             cells, hits, outside, meds = [], 0, 0, {}
             for n, l, (lo, hi) in TARGETS + PRINT_ONLY:
@@ -93,13 +97,16 @@ def main():
               (f" -> C1 {'yes' if b['76'] - a['76'] >= 3 else 'NO'}, C2 {'yes' if b['78'] - a['78'] >= 8 else 'NO'}" if pt == "off" else ""))
 
     print("\n## S2: world-first year of G2-G4 APP (median) and shift against off of the same data")
-    for d in ("A", "B"):
+    def off_of(d, pt):
+        return f"{d}/off" + (pt[pt.index("_"):] if "_" in pt else "")
+
+    for d in data:
         for pt in data[d]:
-            s, s0 = summary[f"{d}/{pt}"]["side"], summary[f"{d}/off"]["side"]
+            s, s0 = summary[f"{d}/{pt}"]["side"], summary[off_of(d, pt)]["side"]
             print(f"- {d}/{pt}: " + ", ".join(f"{l} {s[n]:.0f} ({s[n] - s0[n]:+.1f})" for n, l in SIDE))
 
     print("\n## P1/P2, leader, in service (as §9.17)")
-    for d in ("A", "B"):
+    for d in data:
         for pt, out in data[d].items():
             n = len(out)
             g5 = [o["g5"] for o in out]
@@ -122,6 +129,8 @@ def main():
                   f"leader 2030-12 {dict(sorted(lead.items(), key=lambda kv: -kv[1]))}; USA years G=0 1978-2030 {fmt(usa0, '{:.1f}')}; "
                   f"years G>=5 in service " + ", ".join(f"{a} {fmt(v, '{:.1f}')}" for a, v in ins5.items()))
             print("    " + " | ".join(per))
+            summary[f"{d}/{pt}"]["g5_year"] = {a: med([yr(o["fielded"].get((a, 5))) for o in out]) for a in ("USA", "SUN", "FRA")}
+            summary[f"{d}/{pt}"]["g5_count"] = {a: sum(1 for o in out if o["fielded"].get((a, 5)) is not None) for a in ("USA", "SUN", "FRA")}
 
     print("\n## Selection of k (§10.4) on B")
     s0 = summary["B/off"]["side"]["61"]
@@ -132,7 +141,39 @@ def main():
         print(f"- {pt}: P1 {s['g5']} P2 {s['g4']} G4 APP shift {s['side']['61'] - s0:+.1f} -> {'eligible' if ok else 'not eligible'}; hits {s['hits']}/5; outside {s['outside']:.1f} y")
         if ok:
             elig.append((-s["hits"], s["outside"], K_POINTS.index(pt), pt))
-    print("RECOMMENDED:", sorted(elig)[0][3] if elig else "none (needs-decision)")
+    rec = sorted(elig)[0][3] if elig else None
+    print("RECOMMENDED (§10.4):", rec or "none (needs-decision)")
+    if args.s:
+        speeds = {"x1": ("B", ""), "x0.8": ("S", "_s080"), "x1.25": ("S", "_s125")}
+
+        def at(pt, sp):
+            d, suf = speeds[sp]
+            return summary[f"{d}/{pt}{suf}"], summary[f"{d}/off{suf}"]
+
+        print("\n## §10.5a sensitivity: median shift against speed x1 of the same point (discovery 76/78/77/79/81; G5 fielded year USA/SUN/FRA [seeds])")
+        for pt in ["off"] + K_POINTS:
+            base = summary[f"B/{pt}"]
+            for sp in ("x0.8", "x1.25"):
+                s, _ = at(pt, sp)
+                dd = ", ".join(f"{n} {s['meds'][n]:.0f} ({s['meds'][n] - base['meds'][n]:+.1f})" for n, _, _ in TARGETS)
+                g5 = ", ".join(f"{a} {s['g5_year'][a] if s['g5_year'][a] is None else round(s['g5_year'][a])}[{s['g5_count'][a]}]"
+                               + ("" if s["g5_year"][a] is None or base["g5_year"][a] is None else f" ({s['g5_year'][a] - base['g5_year'][a]:+.1f})")
+                               for a in ("USA", "SUN", "FRA"))
+                print(f"- {pt} {sp}: {dd}; hits {s['hits']}/5, outside {s['outside']:.1f}; P1 {s['g5']} P2 {s['g4']}; G5 fielded {g5}")
+        stat = {}
+        for sp in speeds:
+            best = max(at(pt, sp)[0]["hits"] for pt in K_POINTS)
+            for pt in K_POINTS:
+                s, s0 = at(pt, sp)
+                ok = s["g5"] >= 2 and s["g4"] >= 3 and s["side"]["61"] - s0["side"]["61"] <= 5
+                stat[(pt, sp)] = (ok, s["hits"], s["outside"], best)
+                print(f"- eligibility {pt} {sp}: {'eligible' if ok else 'not eligible'}; hits {s['hits']} (best {best}); outside {s['outside']:.1f}")
+        robust = rec is not None and all(stat[(rec, sp)][0] and stat[(rec, sp)][1] >= stat[(rec, sp)][3] - 1 for sp in ("x0.8", "x1.25"))
+        print("ROBUST (§10.5a):", "yes" if robust else "no")
+        if not robust:
+            cand = [(-min(stat[(pt, sp)][1] for sp in speeds), max(stat[(pt, sp)][2] for sp in speeds), K_POINTS.index(pt), pt)
+                    for pt in K_POINTS if all(stat[(pt, sp)][0] for sp in speeds)]
+            print("RECOMMENDED (§10.5a maximin):", sorted(cand)[0][3] if cand else "none (needs-decision)")
     if args.json:
         json.dump(summary, open(args.json, "w"), indent=1)
     return 0 if not allv else 1
