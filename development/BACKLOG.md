@@ -164,7 +164,7 @@
 | [TASK-0146](../development/tasks/TASK-0146-review-fallback-agy-sonnet.md) | DONE | Second review fallback to Sonnet 5.5 through agy when the Codex limit is exhausted (#456) | MS-M05 |
 | [TASK-0147](../development/tasks/TASK-0147-ahead-of-time-cost.md) | DONE | Ahead-of-time cost for knowledge nodes in Core (#458) and G5/G6 rev 3.1 data on the train-2 branch | MS-M05 |
 | [TASK-0148](../development/tasks/TASK-0148-levers-lab-probes.md) | IN_PROGRESS | Player levers: Lab probes P1-P3 (budget items matter, reserve dominance, goal strategies) | MS-M05 |
-| [TASK-0149](../development/tasks/TASK-0149-levers-legibility-pace.md) | REVIEW | Player levers: client legibility pass and pace (plain labels instead of numbers and G-codes, speeds 0/1/3/7/30, default 3 days/s) | MS-M05 |
+| [TASK-0149](../development/tasks/TASK-0149-levers-legibility-pace.md) | DONE | Player levers: client legibility pass and pace (plain labels instead of numbers and G-codes, speeds 0/1/3/7/30, default 3 days/s) | MS-M05 |
 | [TASK-0150](../development/tasks/TASK-0150-levers-core-reserve.md) | APPROVED | Player levers core: budget reserve account with 10 %/year leak, shares at most 1, FundProgramme | MS-M05 |
 | [TASK-0151](../development/tasks/TASK-0151-levers-core-goals.md) | APPROVED | Player levers core: research priorities through institutes (slots, funding first x1.5, institute bonus, capacity, upkeep, building institutes) | MS-M05 |
 | [TASK-0152](../development/tasks/TASK-0152-levers-core-licence-market.md) | APPROVED | Player levers core: licence market (multi-licence state, seller catalogue, BuyLicence, AdoptLicensedDesign, AI price rule, selling own projects) | MS-M05 |

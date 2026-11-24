@@ -24,7 +24,6 @@
 - TASK-0158 [IN_PROGRESS] Client shot runs: silent by default and a frame filter (only the frames a task needs) (developer)
 - TASK-0159 [IN_PROGRESS] llm_worker: Codex review sees earlier rejected findings; visual accepts frames from the client shots-out (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
-- TASK-0149 [REVIEW] Player levers: client legibility pass and pace (plain labels instead of numbers and G-codes, speeds 0/1/3/7/30, default 3 days/s) (developer)
 - TASK-0154 [REVIEW] Data: alliances and blocs by year 1945-2030 for the licence buyer circle (research-scientist)
 - TASK-0155 [REVIEW] Data: constant 1990 US dollar display series and conversion from Core money unit (economy-analyst)
 - TASK-0145 [APPROVED] Sketches through Codex CLI image generation (llm_worker sketch --engine codex) (developer)
