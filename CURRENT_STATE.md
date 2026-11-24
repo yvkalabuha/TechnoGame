@@ -27,6 +27,7 @@
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0140 [REVIEW] Sound audit: sounds that play at the wrong moment or irritate (owner feedback) (sound-director)
 - TASK-0145 [APPROVED] Sketches through Codex CLI image generation (llm_worker sketch --engine codex) (developer)
+- TASK-0146 [APPROVED] Second review fallback to Sonnet 5.5 through agy when the Codex limit is exhausted (#456) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
