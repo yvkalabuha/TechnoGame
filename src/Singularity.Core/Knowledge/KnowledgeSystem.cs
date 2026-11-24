@@ -204,7 +204,8 @@ public sealed class KnowledgeSystem : ITickSystem
             Fx6 prog = Prog(actorRow, r);
             if (prog <= Fx6.Zero || !InFrontier(actorRow, r))
                 continue;
-            Fx6 s = prog / NeedOf(r);
+            Fx6 need = NeedOf(r);
+            Fx6 s = need > Fx6.Zero ? prog / need : Fx6.One;   // θ_start = 0 is a supported setting: a hazard node with progress is at its threshold
             if (count == rows.Length && s <= share[count - 1])
                 continue;
             int at = count < rows.Length ? count++ : count - 1;

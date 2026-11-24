@@ -45,6 +45,7 @@ public sealed partial class ActorPanel : PanelContainer
     readonly Label _sciThrNote = Ui.Lbl("", 14, Ui.Ink2);   // one «threshold reached» line under the flask row (hatched flasks)
     readonly bool[] _sciThr = new bool[3];
     readonly string[] _sciFull = new string[3];
+    bool _prodOn, _prodKnown;   // the Production flask row: instrument layer on in an area panel, and the view has an alloy trace
     int _instLevel = -1, _instYear = -1;
     readonly Label[] _slVal = new Label[5], _slForce = new Label[5];
     readonly Label _sum = Ui.Lbl("", 14, Ui.Ink2, FontKind.Mono);
@@ -479,7 +480,8 @@ public sealed partial class ActorPanel : PanelContainer
         for (int k = 0; k < 5; k++) { _sl[k].Visible = !organ; _gap[k].Visible = organ; }
         _calRow.Visible = InstrumentLogic.CaliperShown(level, _areaMode, Foreign);
         StyleNames();
-        _sciBox.Visible = _flaskProdRow.Visible = level > 0 && _areaMode;
+        _sciBox.Visible = _prodOn = level > 0 && _areaMode;
+        _flaskProdRow.Visible = _prodOn && _prodKnown;
     }
 
     // Science: the research in progress and Production: the alloy coverage, both read from the Session view of the actor (TASK-0119); nothing is inferred from why_not.
@@ -494,7 +496,10 @@ public sealed partial class ActorPanel : PanelContainer
         string thrNames = ""; for (int i = 0; i < n; i++) if (_sciThr[i]) thrNames += (thrNames == "" ? "" : ", ") + _sciFull[i];
         _sciThrNote.Visible = thrNames != ""; _sciThrNote.Text = thrNames != "" ? Loc.T("flask.sci.threshold.note", thrNames) : "";
         _sciNone.Visible = n == 0;   // nothing in progress: say so, never an empty row
-        var fl = InstrumentLogic.AlloyFlask(_shotAlloy ?? a.Alloy);
+        AlloyCoverage cov = _shotAlloy ?? a.Alloy;
+        _prodKnown = cov.Known;
+        _flaskProdRow.Visible = _prodOn && _prodKnown;   // no step ran yet (or a restored snapshot): no row, never a false «enough»
+        var fl = InstrumentLogic.AlloyFlask(cov);
         _flaskProd.Word = fl.State == InstrumentLogic.AlloyState.NoSmelting ? "flask.none" : null;
         _flaskProd.Set(fl.Level, fl.Hatched);
         int pct = InstrumentLogic.FlaskPercent(fl.Level, fl.Hatched);

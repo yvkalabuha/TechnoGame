@@ -1,3 +1,4 @@
+using Singularity.Core.Commands;
 using Singularity.Core.Products;
 using Singularity.Kernel;
 
@@ -58,7 +59,8 @@ public sealed class InstrumentFieldsTests
             for (int a = 0; a < w.Scenario.ActorCount; a++)
             {
                 AlloyCoverage c = s.View.Actors[a].Alloy;
-                Assert.Equal(w.Industry.Alloy(a, t).Supply, c.Supply);
+                Assert.True(c.Known);
+                Assert.Equal(w.Products.LastAlloySupply(a), c.Supply);   // the supply of the step itself, not recomputed from the post-step state
                 Assert.Equal(w.Policy.AlloyDeficit(a, t), c.DeficitFraction);
                 Assert.Equal(w.Products.LastAlloyAsk(a), c.Need);
                 needSeen |= c.Need > Fx6.Zero;
@@ -94,6 +96,24 @@ public sealed class InstrumentFieldsTests
             }
         }
         Assert.True(bound > 0, "no line was bound by alloy in the walks: the test does not exercise the case");
+    }
+
+    [Fact]
+    public void Alloy_IsNotKnownBeforeTheFirstStep_AndAfterARestore()
+    {
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
+        Assert.All(s.View.Actors, a => Assert.False(a.Alloy.Known));   // no step yet: nothing to show, never «enough»
+        s.StepThroughMonth(0);
+        Assert.All(s.View.Actors, a => Assert.True(a.Alloy.Known));
+    }
+
+    [Fact]
+    public void Research_WithAZeroHazardThreshold_DoesNotDivideByZero()
+    {
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, ThetaStart = Fx6.Zero });
+        for (long t = 0; t < 60; t++)
+            s.StepThroughMonth(t);   // the view of every month builds the research list
+        Assert.All(s.View.Actors, a => Assert.All(a.Research, r => Assert.True(r.Need >= Fx6.Zero)));
     }
 
     [Theory]

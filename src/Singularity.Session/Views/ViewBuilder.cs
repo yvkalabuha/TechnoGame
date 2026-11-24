@@ -79,8 +79,14 @@ internal static class ViewBuilder
             new LicenceView(w.Policy.LicenceGen(a), w.Policy.LicenceSeller(a), w.Policy.LicenceStart(a), w.Policy.LicenceMask(a), w.Policy.OfferMask(a),
                 w.Policy.LicenceFlow(a), refusals.MoveToImmutable(), w.LicenceActive(a)),
             new DisruptionView(disStart, disEnd), withNodes ? Nodes(w, a, next) : Unsubscribed(w, a), designs.MoveToImmutable(), Decisions(w, a, next, stepped),
-            AlloyCoverage.Of(w.Industry, w.Products.LastAlloyAsk(a), w.Policy.AlloyDeficit(a, Math.Max(month, 0)), a, Math.Max(month, 0)), Research(w, a));
+            Alloy(w, a, month), Research(w, a));
     }
+
+    // Supply and ask are both from the step-7 trace of the same monthly step; nothing is recomputed from the post-step state. No trace (restored snapshot, before the first step) = not known.
+    private static AlloyCoverage Alloy(SliceWorld w, int a, long month) =>
+        w.Products.HasAlloyTrace(a)
+            ? new AlloyCoverage(w.Products.LastAlloySupply(a), w.Products.LastAlloyAsk(a), w.Policy.AlloyDeficit(a, month))
+            : default;
 
     /// <summary>Most research entries a view carries per actor.</summary>
     internal const int MaxResearch = 5;
@@ -89,13 +95,19 @@ internal static class ViewBuilder
     {
         Span<int> rows = stackalloc int[MaxResearch];
         int n = w.Knowledge.ResearchInProgress(a, rows);
-        var r = ImmutableArray.CreateBuilder<ResearchView>(n);
+        if (n == 0)
+            return ImmutableArray<ResearchView>.Empty;
+        // Entries are built on the stack; the published array is the cached one when nothing changed (progress moves once a month), so a rebuild between steps allocates nothing.
+        Span<ResearchView> fresh = stackalloc ResearchView[MaxResearch];
         for (int i = 0; i < n; i++)
         {
             Fx6 have = w.Knowledge.Prog(a, rows[i]), need = w.Knowledge.NeedOf(rows[i]);
-            r.Add(new ResearchView(w.Graph.Number[rows[i]], have, need, w.Graph.IsHazard[rows[i]] && have >= need));
+            fresh[i] = new ResearchView(w.Graph.Number[rows[i]], have, need, w.Graph.IsHazard[rows[i]] && have >= need);
         }
-        return r.MoveToImmutable();
+        ImmutableArray<ResearchView> last = w.ResearchViews[a];
+        if (!last.IsDefault && last.AsSpan().SequenceEqual(fresh[..n]))
+            return last;
+        return w.ResearchViews[a] = ImmutableArray.Create(fresh[..n]);
     }
 
     // An actor the view does not carry the nodes of: no block, and the cache keeps none of it (ADR-0025).

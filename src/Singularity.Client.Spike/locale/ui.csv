@@ -346,8 +346,8 @@ flask.sci.threshold,{0}: threshold reached ({1} of {2}); discovery is not certai
 flask.sci.threshold.note,{0}: threshold reached (hatched flask); discovery is not certain,{0}: порог достигнут (штриховка); открытие не гарантировано
 flask.sci.none,No research in progress,Нет хода исследования
 flask.alloy.cap.ok,Alloy: sufficient,Сплав: хватает
-flask.alloy.cap.deficit,Alloy: share of what the lines ask for,Сплав: доля от запроса линий
-flask.alloy.cap.disrupted,Alloy: share of the normal supply,Сплав: доля от обычного снабжения
+flask.alloy.cap.deficit,Alloy: {0} % of what the lines ask for,Сплав: {0} % от запроса линий
+flask.alloy.cap.disrupted,Alloy: {0} % of the normal supply,Сплав: {0} % от обычного снабжения
 flask.alloy.cap.none,No alloy,Сплава нет
 flask.alloy.tip,Stock is {0}% of the normal supply,Запас — {0}% от обычного снабжения
 flask.deficit,low,мало

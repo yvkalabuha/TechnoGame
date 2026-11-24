@@ -86,7 +86,12 @@ public sealed partial class ProductsSystem : ITickSystem
     [Scratch]
     private readonly LineMoneyStep?[] _traceLines;
     [Scratch]
-    private readonly long[] _traceAlloyAsk;   // per (actor, design): alloy_kg · want of the last step 7
+    private readonly long[] _traceAlloyAsk;   // per (actor, design): alloy_kg · want of the last step 7, saturated at _askCap
+    [Scratch]
+    private readonly long[] _traceAlloySupply;   // per actor: the alloy supply the last step 7 started from
+    [Scratch]
+    private readonly bool[] _traceAlloyHas;   // per actor: step 7 ran since the start (a restored snapshot has no trace)
+    private readonly long _askCap;
 
     public ProductsSystem(Table table, ProductsLayout layout, ProductsStart start, ProductsParams parameters,
         IProductsInputs inputs, IndustryMailbox mailbox, ProductsMode mode = ProductsMode.Full, int systemId = DefaultSystemId, int startMonth = 9)
@@ -131,6 +136,9 @@ public sealed partial class ProductsSystem : ITickSystem
         _traceLeftStart = new long[layout.SiteCount];
         _traceLines = new LineMoneyStep?[layout.SiteCount * layout.Designs];
         _traceAlloyAsk = new long[layout.SiteCount * layout.Designs];
+        _traceAlloySupply = new long[layout.SiteCount];
+        _traceAlloyHas = new bool[layout.SiteCount];
+        _askCap = long.MaxValue / (layout.Designs + 1);   // a sum of capped asks cannot overflow
         _bureauReq = new int[layout.DesignScale.Length];
         for (int k = 0; k < _bureauReq.Length; k++)
             _bureauReq[k] = parameters.BureauReq(layout.DesignScale[k]);
@@ -1715,6 +1723,8 @@ public sealed partial class ProductsSystem : ITickSystem
     private void Purchases(int chunk, int a, long t, int y, ref Fx6 left, ref Fx6 spent, ref Fx6 tbSpentSum)
     {
         Fx6 alloyLeft = _inputs.AlloySupply(a, t);
+        _traceAlloySupply[a] = alloyLeft.Raw;
+        _traceAlloyHas[a] = true;
         _moneyTraced[a] = true;
         _traceLeftStart[a] = left.Raw;
         for (int d = 0; d < _d; d++)
@@ -1749,7 +1759,8 @@ public sealed partial class ProductsSystem : ITickSystem
                     if (!free)
                     {
                         alloyLeft -= r * alloyKg;
-                        _traceAlloyAsk[a * _d + d] = (want * alloyKg).Raw;
+                        // The rate asked is not bounded by validation (a command takes any non-negative rate), so the product saturates instead of throwing.
+                        _traceAlloyAsk[a * _d + d] = ProductsMath.AlloyAskRaw(want, alloyKg, _askCap);
                     }
                     Fx6 pay = r * cost;
                     Fx6 fromLeft = pay < left ? pay : left;
@@ -1780,7 +1791,15 @@ public sealed partial class ProductsSystem : ITickSystem
         _traceLeftStart[a] = 0;
         Array.Clear(_traceLines, a * _d, _d);
         Array.Clear(_traceAlloyAsk, a * _d, _d);
+        _traceAlloySupply[a] = 0;
+        _traceAlloyHas[a] = false;
     }
+
+    /// <summary>Diagnostics only: whether step 7 has run for the actor in this session (false right after a restored snapshot, until the next monthly step).</summary>
+    public bool HasAlloyTrace(int actor) => _traceAlloyHas[actor];
+
+    /// <summary>Diagnostics only: the alloy supply the last step 7 of the actor started from, the one <see cref="LastAlloyAsk"/> was asked against.</summary>
+    public Fx6 LastAlloySupply(int actor) => Fx6.FromRaw(_traceAlloySupply[actor]);
 
     // report_output per process (units = r·n_p, labour_hours = units·labour_p, spec §3.2) and one skilled request per
     // (line, cluster) with n = ⌈Σ v_p / h_pm⌉ (spec §3.5 A26); the units join the cohort of the calendar year.

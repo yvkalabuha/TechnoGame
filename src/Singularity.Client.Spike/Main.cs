@@ -1214,7 +1214,7 @@ public sealed partial class Main : Node3D
             case 141 when _shotT >= 0.5: SaveProbe("flask_levels_100"); Settings.Current.UiScale = 150; Settings.Apply(Settings.Current, GetWindow(), false); _shotStep = 142; _shotT = 0; break;
             case 142 when _shotT >= 0.6: SaveProbe("flask_levels_150"); Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); _flaskProbe.QueueFree(); _shotStep = 143; _shotT = 0; break;
             // Science from a real session state: no fixture; a month at a time until the chain shows (at most about 12 s), then the live panel is checked against the snapshot
-            case 143 when _shotT >= 0.3: Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); InstrumentLogic.YearOverride = null; OpenArea(AreaId.Science); _signal.SetSpeed(0); _liveMonths = 0; _liveFirst = -1; _liveHit = null; _shotStep = 144; _shotT = 0; break;
+            case 143 when _shotT >= 0.3: Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false); InstrumentLogic.YearOverride = null; OpenArea(AreaId.Science); _signal.SetSpeed(0); _liveMonths = 0; _liveFirst = -1; _liveHit = null; _liveEligible = null; _liveLastMonth = -2; _shotStep = 144; _shotT = 0; break;
             // Live Science: the simulation runs in steps of 30 ticks (about a month); in each step every power's why_not snapshot is read. At the first step where a power has a Knowledge link,
             // that power's Science panel is opened (the area panel pointed at it) and checked; the scan then goes on to 30 years for the shares per power. No power with a link in 30 years: the run fails.
             case 144 when _shotT >= 0.2:
@@ -1222,11 +1222,11 @@ public sealed partial class Main : Node3D
                 if (_liveFirst >= 0)
                 {
                     _shotLog += $"live science: first research in progress: {_host.Layout.ActorIds[_liveFirst]} at step {_liveMonths} (date {_host.Snap.Date})\n";
-                    _areaPanel.ShowActor(_liveFirst); _shotStep = 145; _shotT = 0; break;
+                    _host.WhyActor = _liveFirst; _areaPanel.ShowActor(_liveFirst); _shotStep = 145; _shotT = 0; break;
                 }
                 if (_liveMonths >= LiveMonthLimit) { LogLiveShares(); InstFail($"no live research in progress in {_liveMonths} months for any power (date {_host.Snap.Date})"); }
                 _shotT = 0; break;
-            case 145 when _shotT >= 0.8:
+            case 145 when _shotT >= 0.8 && _host.Snap.WhyActor == _liveFirst:   // the panel has refreshed for this power
             {
                 int links = LiveResearch(_liveFirst), flasks = _areaPanel.ShotFlaskCount, want = Math.Min(links, 3);
                 _shotLog += $"live science: actor {_host.Layout.ActorIds[_liveFirst]}, research in progress {links}, flasks shown {flasks}, date {_host.Snap.Date}\n";
@@ -1240,9 +1240,9 @@ public sealed partial class Main : Node3D
                 var gr = _areaPanel.GetGlobalRect(); float k = PxPerDu();
                 SaveShot("flask_science_live.png", new Rect2I((int)(gr.Position.X * k), (int)(gr.Position.Y * k), (int)(gr.Size.X * k), (int)(gr.Size.Y * k)));
                 SaveShot($"full_live_science_{_host.Layout.ActorIds[_liveFirst]}_{_host.Snap.Date.Year}.png", null, true);   // full 1920x1080 frame of the live game, with a grey twin
-                OpenArea(AreaId.Production); _areaPanel.ShowActor(_liveFirst); _shotStep = 147; _shotT = 0; break;
+                OpenArea(AreaId.Production); _host.WhyActor = _liveFirst; _areaPanel.ShowActor(_liveFirst); _shotStep = 147; _shotT = 0; break;
             }
-            case 147 when _shotT >= 0.8:
+            case 147 when _shotT >= 0.8 && _host.Snap.WhyActor == _liveFirst:
                 SaveShot($"full_live_production_{_host.Layout.ActorIds[_liveFirst]}_{_host.Snap.Date.Year}.png", null, true);
                 CloseArea(); _host.WhyActor = _player; _shotStep = 146; _shotT = 0; break;
             case 146 when _shotT >= 0.2:
@@ -1254,14 +1254,29 @@ public sealed partial class Main : Node3D
                     _liveNormal = -1;
                     for (int a = 0; a < _host.Layout.ActorIds.Length && _liveNormal < 0; a++)
                         if (InstrumentLogic.AlloyFlask(_host.Snap.View.Actors[a].Alloy).State == InstrumentLogic.AlloyState.Normal) _liveNormal = a;
-                    if (_liveNormal >= 0) { OpenArea(AreaId.Production); _areaPanel.ShowActor(_liveNormal); _shotStep = 148; }
-                    else { _shotLog += "live alloy: no power with sufficient alloy at the end of the scan\n"; _shotStep = 45; }
+                    if (_liveNormal >= 0) { OpenArea(AreaId.Production); _host.WhyActor = _liveNormal; _areaPanel.ShowActor(_liveNormal); _shotStep = 148; }
+                    else { _shotLog += "live alloy: no power with sufficient alloy at the end of the scan\n"; _alloyI = 0; _shotStep = 149; }
                 }
                 _shotT = 0; break;
-            case 148 when _shotT >= 0.8:
+            case 148 when _shotT >= 0.8 && _host.Snap.WhyActor == _liveNormal:
                 SaveShot($"full_live_production_normal_{_host.Layout.ActorIds[_liveNormal]}_{_host.Snap.Date.Year}.png", null, true);
                 _shotLog += $"live alloy normal frame: actor {_host.Layout.ActorIds[_liveNormal]}, date {_host.Snap.Date}, caption \"{_areaPanel.ShotAlloyCaption}\"\n";
-                CloseArea(); _host.WhyActor = _player; _shotStep = 45; _shotT = 0; break;
+                CloseArea(); _host.WhyActor = _player; _alloyI = 0; _shotStep = 149; _shotT = 0; break;
+            // The four alloy states as full 1920x1080 frames at 100 %: the same panel and function as in play, fed with fixture coverage (0 shortage, 1 disruption, 2 none, 3 sufficient).
+            case 149 when _shotT >= 0.2:
+                Settings.Current.UiScale = 100; Settings.Apply(Settings.Current, GetWindow(), false);
+                OpenArea(AreaId.Production); _areaPanel.ShotAlloy(ShotCoverage(_alloyI)); _shotStep = 150; _shotT = 0; break;
+            case 150 when _shotT >= 0.6:
+            {
+                var fx = InstrumentLogic.AlloyFlask(ShotCoverage(_alloyI));
+                var want = new[] { InstrumentLogic.AlloyState.Shortage, InstrumentLogic.AlloyState.Disrupted, InstrumentLogic.AlloyState.NoSmelting, InstrumentLogic.AlloyState.Normal }[_alloyI];
+                if (fx.State != want) { InstFail($"alloy fixture {_alloyI} reads {fx.State}, expected {want}"); break; }
+                SaveShot($"full_alloy_{want}_100.png", null, true);
+                _shotLog += $"alloy state frame {want}: caption \"{_areaPanel.ShotAlloyCaption}\"\n";
+                _areaPanel.ShotAlloy(null); CloseArea();
+                if (++_alloyI < 4) _shotStep = 149; else _shotStep = 45;
+                _shotT = 0; break;
+            }
             // alert plates on tints 1 and 5 (7 is not on the map): day side, then tint 5 on the night side
             case 45: AimAlert(_alertI, false); _shotStep = 46; _shotT = 0; break;
             case 46 when _shotT >= 0.7:
@@ -1353,8 +1368,8 @@ public sealed partial class Main : Node3D
 
     // A failed shot-run check: the error goes to the run log and the process exits non-zero.
     const int LiveMonthLimit = 360;
-    int _liveNormal = -1;
-    int[] _liveHit; int _liveMonths, _liveFirst = -1;
+    int _liveNormal = -1, _alloyI;
+    int[] _liveHit, _liveEligible; int _liveMonths, _liveFirst = -1; long _liveLastMonth = -2;
 
     bool WaitFor(Func<bool> done, string what)
     {
@@ -1367,27 +1382,47 @@ public sealed partial class Main : Node3D
     bool ScanMonths(int n)
     {
         int na = _host.Layout.ActorIds.Length;
-        _liveHit ??= new int[na];
+        _liveHit ??= new int[na]; _liveEligible ??= new int[na];
         for (int m = 0; m < n && _liveMonths < LiveMonthLimit; m++)
         {
-            long target = _host.Snap.Tick + 30;
-            _host.StepTicks(30);
+            // Step to the first day of the next civil month (months are 28-31 days), so every calendar month is sampled once.
+            var now = _host.Snap.Date;
+            var day = new DateTime(now.Year, now.Month, now.Day);
+            long days = (new DateTime(now.Year, now.Month, 1).AddMonths(1) - day).Days;
+            long target = _host.Snap.Tick + days;
+            _host.StepTicks(days);
             if (!WaitFor(() => _host.Snap.Tick >= target, "a simulation step")) return false;
+            long vm = _host.Snap.View.Month;
+            if (vm == _liveLastMonth) continue;   // the same monthly view again: not a new sample
+            _liveLastMonth = vm;
             for (int a = 0; a < na; a++)
+            {
+                if (!HasUnknownNodes(a)) continue;   // nothing left to research: the month is not eligible for this power
+                _liveEligible[a]++;
                 if (LiveResearch(a) > 0) { _liveHit[a]++; if (_liveFirst < 0) _liveFirst = a; }
+            }
             _liveMonths++;
             if (_liveFirst >= 0 && _shotStep == 144) return true;   // the first month with a link: stop here for the panel check
         }
         return true;
     }
 
+    // A month is eligible for a power while the data still has a node it does not know; a view without the node list counts as eligible.
+    bool HasUnknownNodes(int actor)
+    {
+        var nodes = _host.Snap.View.Actors[actor].Nodes;
+        if (!nodes.IsPresent) return true;
+        for (int i = 0; i < nodes.Count; i++) if (!nodes[i].Known) return true;
+        return false;
+    }
+
     void LogLiveShares()
     {
         for (int a = 0; a < _liveHit.Length; a++)
         {
-            double share = 100.0 * _liveHit[a] / Math.Max(_liveMonths, 1);
-            _shotLog += $"live science share: {_host.Layout.ActorIds[a]} has research in progress in {_liveHit[a]} of {_liveMonths} steps ({share:F1} %)\n";
-            if (share < 80) InstFail($"live science share check failed: {_host.Layout.ActorIds[a]} shows research flasks in {share:F1} % of {_liveMonths} months, expected at least 80 %");
+            double share = 100.0 * _liveHit[a] / Math.Max(_liveEligible[a], 1);
+            _shotLog += $"live science share: {_host.Layout.ActorIds[a]} has research in progress in {_liveHit[a]} of {_liveEligible[a]} eligible calendar months of {_liveMonths} ({share:F1} %)\n";
+            if (_liveEligible[a] == 0 || share < 80) InstFail($"live science share check failed: {_host.Layout.ActorIds[a]} shows research flasks in {share:F1} % of {_liveEligible[a]} eligible months, expected at least 80 %");
         }
     }
 

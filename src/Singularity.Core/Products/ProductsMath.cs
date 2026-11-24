@@ -15,6 +15,12 @@ public readonly record struct CostCard(Fx6 HFirst, Fx6 HFloor, Fx6 WageKh, Fx6 M
 /// </summary>
 public static class ProductsMath
 {
+    /// <summary>
+    /// <c>alloy_kg · want</c> in raw Fx6 units, saturated at <paramref name="cap"/>. The rate asked is not bounded by validation (a command takes any non-negative rate),
+    /// and the trace of the alloy ask must not abort a step for a valid input.
+    /// </summary>
+    public static long AlloyAskRaw(Fx6 want, Fx6 alloyKg, long cap) => (long)Int128.Min((Int128)want.Raw * alloyKg.Raw / Fx6.Scale, cap);
+
     private static readonly Int128 WageScale = (Int128)Fx6.Scale * 1000;
 
     /// <summary><c>assembly_hours(E) = h_floor + (h_first − h_floor)·PowFrac(1 + E, −q10_b)</c> (contract §4.4).</summary>
