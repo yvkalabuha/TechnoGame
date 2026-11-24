@@ -157,8 +157,9 @@ public class CatchUpFindingsTests
             h.RunThroughMonth(t);
         Assert.Equal(DesignStage.Project, p.Stage(Gbr, 2));
         Assert.Equal(Fx6.Zero, p.Novelty(Gbr, [.. AIds.Select(id => Alt(Probe, id))]));
-        // A has novelty 0 (it reached О before), so its D0 is that of an experienced design: less than a design of 5 new alternatives.
-        Assert.True(p.InitialDefects(Gbr, 2) < p.InitialDefects(Gbr, 1) || p.InitialDefects(Gbr, 2) == Fx6.Zero);
+        // A reached О before, so its novelty is 0 and D0 = d0·novelty·... = 0; B (slot 1) had new alternatives and a positive D0.
+        Assert.Equal(Fx6.Zero, p.InitialDefects(Gbr, 2));
+        Assert.True(p.InitialDefects(Gbr, 1) > Fx6.Zero);
     }
 
     // C10: a fully written-off start fleet stays remembered, so the novelty of its alternatives does not come back before any slot is reused.
