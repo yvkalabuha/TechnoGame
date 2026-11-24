@@ -51,7 +51,7 @@ internal sealed class SliceObserver
     private long?[,] _tReq = null!, _tFirstUnit = null!, _tFielded = null!;
     private long?[,] _costU100 = null!;
     private int[,] _slotGen = null!;            // [a, d] generation of the design slot last seen (ADR-0005 p. 3)
-    private int[,] _firstSeries = null!;        // design of the first series of a generation, −2 = a series at the start, −1 = none yet
+    private int[,] _firstSeries = null!;        // design of the first series of a generation, −2 = a series at the start, −1 = none yet, −3 = ended before 100 units
     private long[,] _cum = null!;               // cumulative output of that series, raw
     private long?[,] _tLaunch = null!;          // [a, d] first month in С (post), −1 at the start
     private long?[,] _forcedSent = null!;       // [a, d] month after whose step the harness sent start_series with force (FORCE arms)
@@ -79,7 +79,7 @@ internal sealed class SliceObserver
     // counters for run.json (format §4.9, §4.7)
     private long _closeIdleOtherReason, _wAfterNMonths, _closesWithoutLine, _linesWithoutMoney, _licResumes;
     // Design capacity (contract-proposals T3, TASK-0054): AI compose/derive commands, those that gave no new design, and the slots used.
-    private long _designCommands, _designUnrealized, _designUnrealizedFull, _designSlotsMax, _designSlotsFullMonths;
+    private readonly CapacityCounters _cap = new();
 
     private sealed class YearRow
     {
@@ -546,14 +546,7 @@ internal sealed class SliceObserver
                 _slotGen[a, d.Design] = d.SlotGeneration;
                 _tLaunch[a, d.Design] = null;
                 _forcedSent[a, d.Design] = null;
-                for (int g = 0; g < _nG; g++)
-                {
-                    if (_firstSeries[a, g] == d.Design && _costU100[a, g] is null)
-                    {
-                        _firstSeries[a, g] = -1;
-                        _cum[a, g] = 0;
-                    }
-                }
+                SlotRetaken(_firstSeries, _costU100, a, d.Design, _nG);
             }
             if (d.Stage == DesignStage.Series && _tLaunch[a, d.Design] is null)
                 _tLaunch[a, d.Design] = t;
@@ -562,14 +555,36 @@ internal sealed class SliceObserver
             int gi = d.Gen - 1;
             if (_tFirstUnit[a, gi] is null && d.InService > Fx6.Zero)
                 _tFirstUnit[a, gi] = t;
-            if (_firstSeries[a, gi] == -1 && d.Stage == DesignStage.Series)
-                _firstSeries[a, gi] = d.Design;
-            if (_firstSeries[a, gi] == d.Design && _costU100[a, gi] is null)
-            {
-                _cum[a, gi] = checked(_cum[a, gi] + d.Rate.Raw);
-                if (_cum[a, gi] >= Units100)
-                    _costU100[a, gi] = d.UnitCost.Raw;
-            }
+            FirstSeriesMonth(_firstSeries, _cum, _costU100, a, gi, d.Design, d.Stage, d.Rate.Raw, d.UnitCost.Raw);
+        }
+    }
+
+    internal const int FirstSeriesEnded = -3;
+
+    /// <summary>
+    /// The slot of the first series of a generation was retaken by a new design (TASK-0118, Codex 1b): the first series ended before 100 units, so
+    /// <c>cost_u100</c> of that generation stays empty. Before, the measurement restarted and the next series of the generation — a later one —
+    /// gave the value.
+    /// </summary>
+    internal static void SlotRetaken(int[,] firstSeries, long?[,] costU100, int a, int slot, int nG)
+    {
+        for (int g = 0; g < nG; g++)
+        {
+            if (firstSeries[a, g] == slot && costU100[a, g] is null)
+                firstSeries[a, g] = FirstSeriesEnded;
+        }
+    }
+
+    /// <summary><c>cost_u100</c> (format §4.5): the unit cost at the month the first series of the generation reaches 100 units.</summary>
+    internal static void FirstSeriesMonth(int[,] firstSeries, long[,] cum, long?[,] costU100, int a, int gi, int design, DesignStage stage, long rateRaw, long unitCostRaw)
+    {
+        if (firstSeries[a, gi] == -1 && stage == DesignStage.Series)
+            firstSeries[a, gi] = design;
+        if (firstSeries[a, gi] == design && costU100[a, gi] is null)
+        {
+            cum[a, gi] = checked(cum[a, gi] + rateRaw);
+            if (cum[a, gi] >= Units100)
+                costU100[a, gi] = unitCostRaw;
         }
     }
 
@@ -1127,43 +1142,76 @@ internal sealed class SliceObserver
     /// Design capacity (contract-proposals T3): the compose/derive commands the AI decided in month t−1 (they are consumed by the compute of t)
     /// against the designs that are new in the post state of t (stage None → not None). A command without a new design was rejected by the
     /// layer for some code of <c>CommandRejection</c> (the code itself is not in the views); <c>DESIGN_CAPACITY</c> is the first check of the
-    /// layer's <c>Create</c> and can only happen when every slot is used, so <c>design_slots_max</c> &lt; Designs proves it never happened.
+    /// layer's <c>Create</c> and can only happen when every slot is used, so <c>design_slots_max</c> &lt; Designs proves it never happened
+    /// (<c>design_slots_max</c> is the maximum of the slots in use after a step and, when every slot was in use before it, of the capacity).
     /// </summary>
-    private void Capacity(ActorView sv, ActorView av)
+    private void Capacity(ActorView sv, ActorView av) => _cap.Add(sv, av);
+
+    /// <summary>The design-capacity counters of <see cref="Capacity"/> (model_info), a class of its own so a self-check can drive it with views.</summary>
+    internal sealed class CapacityCounters
     {
-        long cmds = 0, created = 0, used = 0;
+        public long Commands, Unrealized, UnrealizedFull, SlotsMax, FullMonths;
+
+        public void Add(ActorView sv, ActorView av)
+        {
+        long cmds = 0;
         foreach (DesignCommandView c in sv.Decisions.DesignCommands)
         {
             if (c.Kind is DesignCommandKind.Compose or DesignCommandKind.Derive)
                 cmds++;
         }
-        for (int d = 0; d < _nD; d++)
-        {
-            if (sv.Designs[d].Stage == DesignStage.None && av.Designs[d].Stage != DesignStage.None)
-                created++;
-            if (av.Designs[d].Stage != DesignStage.None)
-                used++;
-        }
-        bool fullBefore = sv.Designs.All(x => x.Stage != DesignStage.None);
-        _designCommands += cmds;
+        long created = 0, used = 0;
+        bool fullBefore = true;
+        for (int d = 0; d < av.Designs.Length; d++)   // no per-month arrays: the observer runs on the tick path of the allocation test
+            SlotStep(sv.Designs[d].Stage, sv.Designs[d].SlotGeneration, av.Designs[d].Stage, av.Designs[d].SlotGeneration, ref created, ref used, ref fullBefore);
+        Commands += cmds;
         long unrealized = Math.Max(0, cmds - created);
-        _designUnrealized += unrealized;
+        Unrealized += unrealized;
         if (fullBefore)
         {
-            _designUnrealizedFull += unrealized;
-            _designSlotsFullMonths++;
+            UnrealizedFull += unrealized;
+            FullMonths++;
         }
-        _designSlotsMax = Math.Max(_designSlotsMax, used);
+        // The slots a command met are those before the step: a full layer before it counts as capacity even if a slot is withdrawn in the
+        // same step (Codex #3, TASK-0118), so design_slots_max < Designs still proves that no DESIGN_CAPACITY refusal happened.
+        SlotsMax = Math.Max(SlotsMax, fullBefore ? av.Designs.Length : used);
+        }
+    }
+
+    /// <summary>A slot is free when it never held a design (<c>None</c>) or its design is withdrawn (<c>Withdrawn</c>, ADR-0005 p. 3).</summary>
+    internal static bool FreeSlot(DesignStage s) => s is DesignStage.None or DesignStage.Withdrawn;
+
+    /// <summary>
+    /// Designs created in the month (a free slot taken, or a slot whose generation changed: withdrawn and retaken), slots in use after it, and
+    /// whether every slot was in use before it (TASK-0118, Codex 1b: a reuse of a withdrawn slot was counted as a refusal and withdrawn slots as taken).
+    /// </summary>
+    internal static (long Created, long Used, bool FullBefore) SlotCounts((DesignStage Stage, int Gen)[] before, (DesignStage Stage, int Gen)[] after)
+    {
+        long created = 0, used = 0;
+        bool full = true;
+        for (int d = 0; d < after.Length; d++)
+            SlotStep(before[d].Stage, before[d].Gen, after[d].Stage, after[d].Gen, ref created, ref used, ref full);
+        return (created, used, full);
+    }
+
+    private static void SlotStep(DesignStage before, int genBefore, DesignStage after, int genAfter, ref long created, ref long used, ref bool full)
+    {
+        bool wasFree = FreeSlot(before), isFree = FreeSlot(after);
+        if (!isFree && (wasFree || genAfter != genBefore))
+            created++;
+        if (!isFree)
+            used++;
+        full &= !wasFree;
     }
 
     public IEnumerable<KeyValuePair<string, string>> Counters() =>
     [
-        new("design_commands", I(_designCommands)),
-        new("design_commands_without_design", I(_designUnrealized)),
-        new("design_commands_without_design_all_slots_used", I(_designUnrealizedFull)),
-        new("design_slots_max", I(_designSlotsMax)),
+        new("design_commands", I(_cap.Commands)),
+        new("design_commands_without_design", I(_cap.Unrealized)),
+        new("design_commands_without_design_all_slots_used", I(_cap.UnrealizedFull)),
+        new("design_slots_max", I(_cap.SlotsMax)),
         new("design_slots_capacity", I(_nD)),
-        new("design_all_slots_used_actor_months", I(_designSlotsFullMonths)),
+        new("design_all_slots_used_actor_months", I(_cap.FullMonths)),
         new("a40_close_idle_ge_tab_other_reason", I(_closeIdleOtherReason)),
         new("w_after_n_actor_months", I(_wAfterNMonths)),
         new("closes_of_designs_not_lines", I(_closesWithoutLine)),

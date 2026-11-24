@@ -377,6 +377,19 @@ public class ProductAiSessionTests(ITestOutputHelper output)
         Assert.Equal(1, s.World.Products.RejectionCount(0, CommandRejection.BadCancel));     // slot 0 is a fleet in В/С, not a project in П or О
     }
 
+    // TASK-0099 (Codex, closed by TASK-0115): the generation of the handle reaches the product layer, so a stale handle of an occupied slot cancels nothing.
+    [Fact]
+    public void CancelDesign_WithTheWrongGenerationOfAnOccupiedSlot_IsStale_NotACancel()
+    {
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 3, ProductAi = false });
+        DesignHandle fleet = s.HandleOf(0, 0);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new CancelDesign(0, new DesignHandle(fleet.Slot, fleet.Generation + 1))).Accepted);
+        s.StepThroughMonth(0);
+        Assert.Equal(1, s.World.Products.RejectionCount(0, CommandRejection.StaleHandle));
+        Assert.Equal(0, s.World.Products.RejectionCount(0, CommandRejection.BadCancel));   // the layer never looked at the stage: the handle was stale
+        Assert.True(s.World.Products.Resolves(0, fleet));
+    }
+
     [Fact]
     public void WithTheAiOn_L2_ThreadsAndChunksGiveOneHashEveryMonth_AndAnAiRunHasAFixedGolden()
     {

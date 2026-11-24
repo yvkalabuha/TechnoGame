@@ -30,7 +30,13 @@ public class IndustrySystemTests
         public long Avail = 10;
         public long KnownAt;
 
-        public bool KnowsProcess(int siteRow, int processRow, long month) => AllKnown && processRow != UnknownProcessRow;
+        public Action<int>? OnKnows;
+
+        public bool KnowsProcess(int siteRow, int processRow, long month)
+        {
+            OnKnows?.Invoke(processRow);
+            return AllKnown && processRow != UnknownProcessRow;
+        }
 
         public Fx6 W(int siteRow, int cluster, long month) => Fx6.One;
 
@@ -86,7 +92,7 @@ public class IndustrySystemTests
 
     private sealed class Rig
     {
-        public Rig(IndustryMode mode = IndustryMode.Full, ImmutableArray<CapabilityCurve> curves = default, IndustryParams? p = null, int threads = 1)
+        public Rig(IndustryMode mode = IndustryMode.Full, ImmutableArray<CapabilityCurve> curves = default, IndustryParams? p = null, int threads = 1, int[]? owners = null)
         {
             Layout = IndustryLayout.Create([Cluster.MET, Cluster.CHEM, Cluster.MECH],
             [
@@ -95,7 +101,7 @@ public class IndustrySystemTests
                 new IndustryProcessSpec(41, Cluster.MET, 0, 5, new Dims3(Fx6.Zero, D(5), F(4_500_000))),
                 new IndustryProcessSpec(7, Cluster.CHEM, 1, 3, new Dims3(D(3), D(3), F(2_500_000))),
                 new IndustryProcessSpec(48, Cluster.MECH, 2, 4, new Dims3(D(4), Fx6.Zero, F(3_500_000))),
-            ], [0, 0, 1], workforceCategories: 2, skilledCategory: 1, requesters: 6, alloyGrades: IndustryLayout.SliceAlloyGrades);
+            ], owners ?? [0, 0, 1], workforceCategories: 2, skilledCategory: 1, requesters: 6, alloyGrades: IndustryLayout.SliceAlloyGrades);
             Start = new IndustryStart(Layout);
             for (int s = 0; s < 3; s++)
             {
@@ -487,5 +493,39 @@ public class IndustrySystemTests
         int melt = l.RowOf(39); // nicr_alloy_melt: mastered by USA, tier 4 → 3·800
         Assert.Equal(D(2400), st.X[usa * l.ProcessCount + melt]);
         Assert.Equal(Fx6.Zero, st.X[sc.ActorIndex("SWE") * l.ProcessCount + melt]);
+    }
+
+    // TASK-0103 (Codex): a site without an owner is left out of every actor's site list; its effort is zero and the step does not crash.
+    [Fact]
+    public void SiteWithoutOwner_GetsZeroEffort_AndTheStepRuns()
+    {
+        var rig = new Rig(owners: [0, 0, -1]);
+        rig.RunThroughMonth(3);
+        Assert.Equal(Fx6.Zero, rig.System.LastRest(2));
+        for (int r = 0; r < rig.Layout.ProcessCount; r++)
+            Assert.Equal(Fx6.Zero, rig.System.ProcE(2, r));
+    }
+
+    // TASK-0107 (Codex): a prc_set of more than four items used a per-thread buffer, so a nested Profile called from KnowsProcess overwrote the
+    // items the outer call had already filled.
+    [Fact]
+    public void Profile_OfMoreThanFourItems_IsNotCorrupted_ByANestedProfileCall()
+    {
+        PrcSetItem[] outer = [new(39, D(1), D(1)), new(40, D(2), D(3)), new(41, D(1), D(2)), new(7, D(3), D(1)), new(48, D(1), D(5))];
+        PrcSetItem[] inner = [new(48, D(9), D(9)), new(7, D(8), D(8)), new(41, D(7), D(7)), new(40, D(6), D(6)), new(39, D(5), D(5))];
+        var plain = new Rig();
+        ProductionProfile expected = plain.System.Profile(0, outer, 1);
+
+        var rig = new Rig();
+        bool nested = false;
+        rig.In.OnKnows = row =>
+        {
+            if (nested || row != rig.Row(7))
+                return;
+            nested = true;
+            rig.System.Profile(0, inner, 1);
+            nested = false;
+        };
+        Assert.Equal(expected, rig.System.Profile(0, outer, 1));
     }
 }

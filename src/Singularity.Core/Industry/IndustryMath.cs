@@ -147,11 +147,8 @@ public static class IndustryMath
         return new ProcessYield(active, new Dims3(c[0], c[1], c[2]), new Dims3(g[0], g[1], g[2]), mSource, xh, ramp, acc * ramp, qp);
     }
 
-    // Two buffers of the thread: the items a site builds and the sorted copy Profile makes of them. Pure temporaries, overwritten before every read.
-    [Scratch, ThreadStatic] private static ProfileItem[]? t_items, t_sorted;
-
-    /// <summary>The thread's buffer for the items of one <c>Industry.Profile</c> call (<paramref name="n"/> long); the caller fills all of it.</summary>
-    internal static Span<ProfileItem> ItemsScratch(int n) => Scratch(ref t_items, n);
+    // The sorted copy Profile makes of the items. A pure temporary, overwritten before every read; nothing is called while it is in use.
+    [Scratch, ThreadStatic] private static ProfileItem[]? t_sorted;
 
     private static Span<ProfileItem> Scratch(ref ProfileItem[]? buffer, int n)
     {

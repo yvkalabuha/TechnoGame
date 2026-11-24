@@ -375,7 +375,7 @@ public sealed partial class ProductsSystem : ITickSystem
     /// <c>q(d, y)</c> of the cohort of year index <paramref name="yearIndex"/>: it was built while every process of the <c>prc_set</c> was mastered in the
     /// last month of its output (contract r13a §9.1). State; written by <see cref="Compute"/> from the snapshot.
     /// </summary>
-    public bool CohortMastered(int actor, int design, int yearIndex) => (_qMask[design * _qb + yearIndex / ProductsLayout.MaskBits].Current[actor] >> yearIndex % ProductsLayout.MaskBits & 1) != 0;
+    public bool CohortMastered(int actor, int design, int yearIndex) => (uint)yearIndex < (uint)_y && (_qMask[design * _qb + yearIndex / ProductsLayout.MaskBits].Current[actor] >> yearIndex % ProductsLayout.MaskBits & 1) != 0;
 
     // Month t writes q(d, year(t−1)) for every line with rate(t−1) > 0 from the snapshot of t−1 (mastered_run is visible from t+1, §4.0).
     private void WriteQ(int a, long t, TickCalendar calendar, long tick)
@@ -700,10 +700,10 @@ public sealed partial class ProductsSystem : ITickSystem
 
     /// <summary>
     /// The canonical L_P project slot of generation <paramref name="gen"/>, −1 before it exists and −1 once the slot was freed and
-    /// retaken (its handle is stale: the canonical design no longer exists).
+    /// retaken (its handle is stale: the canonical design no longer exists), and also while the slot is free (withdrawn, not yet retaken).
     /// </summary>
     public int CanonicalSlot(int actor, int gen) =>
-        _lpSlot[gen - 1].Current[actor] is var slot and >= 0 && _lpGen[gen - 1].Current[actor] == _gen[slot].Current[actor] ? slot : -1;
+        _lpSlot[gen - 1].Current[actor] is var slot and >= 0 && HandleHolds(_stage[slot].Current[actor], _gen[slot].Current[actor], _lpGen[gen - 1].Current[actor]) ? slot : -1;
 
     /// <summary>Generation of a design slot (ADR-0005 p. 3): +1 each time the slot is taken; a handle is the pair (slot, generation).</summary>
     public int Generation(int actor, int slot) => _gen[slot].Current[actor];

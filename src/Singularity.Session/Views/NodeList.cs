@@ -5,8 +5,9 @@ namespace Singularity.Session;
 /// <summary>
 /// The nodes of the knowledge graph as one actor sees them, in graph row order. A compact block instead of one object per node (TASK-0103 R1):
 /// bit masks for <c>Known</c> and <c>ByLicence</c>, one <see cref="ProcessView"/> per process node, <c>KnownSince</c> only where it is tracked. A
-/// <see cref="NodeView"/> is assembled by the indexer and is a value, so reading allocates nothing. Immutable once published; every array is below
-/// the large-object limit, and the node numbers are shared by all actors.
+/// <see cref="NodeView"/> is assembled by the indexer and is a value, so reading allocates nothing. Immutable once published; the node numbers are
+/// shared by all actors. The process array is 48 bytes per process, so it stays below the large-object limit (85 000 bytes) up to 1 770 processes
+/// (point A has 651, about 37 % of that); a larger graph moves it to the large-object heap (TASK-0118; the GC measurement is planned for M1).
 /// </summary>
 public readonly struct NodeList : IReadOnlyList<NodeView>, IEquatable<NodeList>
 {
@@ -35,7 +36,7 @@ public readonly struct NodeList : IReadOnlyList<NodeView>, IEquatable<NodeList>
             NodeBlock b = _block ?? throw new InvalidOperationException("actor not subscribed");
             NodeShape sh = b.Shape;
             int p = sh.ProcessIndex[row];
-            return new NodeView(sh.Numbers[row], Bit(b.Known, row), Bit(b.ByLicence, row), p < 0 ? null : b.Processes[p], b.KnownSince?[row]);
+            return new NodeView(sh.Numbers[row], Bit(b.Known, row), Bit(b.ByLicence, row), p < 0 ? null : b.Processes[p], b.KnownSince is { } ks && !Bit(b.NoKnownSince, row) ? ks[row] : null);
         }
     }
 
@@ -64,7 +65,12 @@ public readonly struct NodeList : IReadOnlyList<NodeView>, IEquatable<NodeList>
             if (nodes[i].Process is { } pv)
                 block.Processes[processIndex[i]] = pv;
             if (block.KnownSince is { } ks)
-                ks[i] = nodes[i].KnownSince ?? 0;
+            {
+                if (nodes[i].KnownSince is { } since0)
+                    ks[i] = since0;
+                else
+                    block.NoKnownSince[i >> 6] |= 1UL << (i & 63);
+            }
         }
         return new NodeList(block);
     }
@@ -158,7 +164,11 @@ internal sealed class NodeBlock
         ByLicence = new ulong[words];
         Processes = new ProcessView[shape.ProcessCount];
         KnownSince = tracksKnownSince ? new long[shape.Numbers.Length] : null;
+        NoKnownSince = new ulong[tracksKnownSince ? words : 0];
     }
+
+    /// <summary>Bit set for a node without a <c>KnownSince</c> value in a block that tracks it for other nodes (a mixed list built by <c>NodeList.Create</c>); every value of <c>long</c> stays representable.</summary>
+    public ulong[] NoKnownSince { get; }
 
     public NodeShape Shape { get; }
 

@@ -342,12 +342,20 @@ public static class BudgetMath
             long ceil = checked((long)((targetNext + scale - 1) / scale));
             if (next.Raw < ceil)
                 next = Fx6.FromRaw(ceil);
+            // Above s the share must also not rise: not above the share-preserving level floor(B·Fn/F), unless s forbids it (empty interval).
+            long keep = checked((long)((Int128)budget.Raw * frontierNext.Raw / frontier.Raw));
+            if (next.Raw > keep && keep >= ceil)
+                next = Fx6.FromRaw(keep);
         }
         else
         {
             long floor = checked((long)(targetNext / scale));
             if (next.Raw > floor)
                 next = Fx6.FromRaw(floor);
+            // Below s the share must also not fall: not below the share-preserving level ceil(B·Fn/F), unless s forbids it (empty interval).
+            long keep = checked((long)(((Int128)budget.Raw * frontierNext.Raw + frontier.Raw - 1) / frontier.Raw));
+            if (next.Raw < keep && keep <= floor)
+                next = Fx6.FromRaw(keep);
         }
         return next.Raw < 1 ? Fx6.FromRaw(1) : next;
     }

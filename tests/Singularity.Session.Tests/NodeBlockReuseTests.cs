@@ -110,4 +110,29 @@ public class NodeBlockReuseTests
         Assert.Throws<InvalidOperationException>(() => default(NodeList)[0]);
         Assert.Empty(default(NodeList));
     }
+
+    // TASK-0103 (Codex): a node without a known-since month stays without one in a list where other nodes have it.
+    [Fact]
+    public void NodeList_MixedKnownSince_KeepsTheMissingValueMissing()
+    {
+        NodeView[] views = [new(101, true, false, null, null), new(102, true, false, null, 5), new(103, false, false, null, 0), new(104, true, false, null, long.MinValue), new(105, true, false, null, long.MaxValue)];
+        NodeList list = NodeList.Create(views);
+        Assert.Equal(views, list.ToArray());
+        Assert.Null(list[0].KnownSince);
+        Assert.Equal(5, list[1].KnownSince);
+        Assert.Equal(0, list[2].KnownSince);
+        Assert.Equal(long.MinValue, list[3].KnownSince);   // no value of long is reserved as "missing"
+    }
+
+    // TASK-0103 (Codex): where the per-actor process array reaches the large-object heap (85 000 bytes): from this many processes on.
+    [Fact]
+    public void ProcessArray_LeavesTheSmallObjectHeap_AboveTheDocumentedProcessCount()
+    {
+        const int limit = 85_000, pointA = 651;
+        int size = System.Runtime.CompilerServices.Unsafe.SizeOf<ProcessView>();
+        int maxBelow = (limit - 1) / size;   // the array header adds a few bytes: this is the bound to within one element
+        Assert.Equal(48, size);
+        Assert.Equal(1_770, maxBelow);
+        Assert.True(pointA * 2 < maxBelow, "point A has a margin of more than two times before the large-object heap");
+    }
 }
