@@ -1,7 +1,7 @@
 ---
 id: TASK-0139
 title: "HUD time controls: centred pause and speed buttons, no speed text, speed gauge active frame alignment"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M05
 agent: developer
