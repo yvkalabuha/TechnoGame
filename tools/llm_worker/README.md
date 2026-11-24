@@ -93,6 +93,18 @@ python3 -m tools.llm_worker visual --task TASK-NNNN --frames shots-out/a.png sho
 - **Данные:** бесплатный уровень Google может использовать присланное для улучшения продуктов. Отправлять только игровые кадры, без личных данных и секретов.
 - Результат: `runs/visual-<task>-<hash8>-gemini.json` и `.md` рядом; невалидный ответ — `*-invalid.json`. Вердикт PASS/FAIL остаётся за ui-art-director; замечания Gemini идут в обзор задачи.
 
+## Эскизы Gemini через Antigravity CLI (TASK-0141, #451, ADR-0026)
+```bash
+python3 -m tools.llm_worker sketch --task TASK-NNNN --prompt-file <brief.md> [--ref shots-out/a.png ...] [--count 1..4] [--with-visual] [--dry-run]
+```
+- Вызывает `agy -p <prompt> --print-timeout <N>s --mode accept-edits --output-format stream-json` в пустой временной папке; `--dangerously-skip-permissions` не передаётся никогда, shell агента запрещён. Нет `agy` (PATH или `~/.local/bin`) — отказ `agy_missing`; не залогинен — `agy_not_logged_in` (код 4).
+- Разбор NDJSON (`sketch.parse_stream`): `init`/`step_update`/`result`. **Замер 2026-11-24 (agy 1.5.15):** картинку рисует под-агент `image-generator` (событие `invoke_subagent` со своим `conversation_id`), но файл `<name>_<ts>.jpg` лёг в brain-папку **главного** разговора. Поэтому ищем во всех id из событий; копируются только файлы верхнего уровня brain-папки с mtime не раньше старта (минус 2 с). Фикстура реального прогона: `fixtures/agy_sketch_stream.ndjson`.
+- Копии — `shots-out/sketches/<task>/`; запись `runs/sketch-<task>-<hash8>.json` и `.md`: prompt, refs, conversation_id(s), файлы с sha256, токены, время, строки атрибуции для `mods/core/ATTRIBUTION.md` (одобряющий вписывается после решения ui-art-director; без одобрения в mods ничего не добавлять).
+- `--ref`: только из `shots-out/` (PNG/JPEG); копии кладутся в рабочую папку agy и называются в prompt абсолютными путями (агент должен открыть их файловым просмотром `view_file`). **Не проверено:** читает ли agy эти кадры (живой прогон с `--ref` не делался; смотреть в `tools` записи — `view_file`/`read_file`).
+- Счётчик `agy-usage.json` рядом с ledger (RateGuard): `AGY_RPM=2`, `AGY_RPD=20` — осторожные оценки; каждый запуск тратит подписку владельца.
+- `--with-visual`: перед эскизами выполняет `visual --mode design` на тех же `--ref` (API, бесплатный ключ).
+- Данные уходят в Google: только текст брифа и игровые кадры.
+
 ## После прогона (Pilot)
 - B1: `git log -p -1 llm/<task_id>` — результат на ветке `llm/...`, не в `main`.
   В `main` — только через reviewer, `zone_check` и коммит Pilot.
