@@ -416,16 +416,19 @@ public sealed partial class TechTree : Control
     }
 
     // Channel route of an edge between rings: radial out of the source, an arc along the channel (half-integer radius), radial into the target.
-    List<Vector2> Channel(int m, int i)
+    // The returned array comes from a pool by length and is valid until the next call of the same length (every caller uses it at once), so a redraw allocates no route buffers.
+    readonly Vector2[][] _chPool = new Vector2[128][];
+    Vector2[] Channel(int m, int i)
     {
         int ringI = (int)Mathf.Round(_rad[i]);
         float rc = ringI < 6 ? ringI + 0.5f : 5.78f;               // 5.5 is the double circle itself
         if (_rad[i] > _rad[m] + 0.3f) rc = ringI == 6 ? 5.78f : ringI - 0.5f;
-        var pts = new List<Vector2> { PosOf(m), Polar(rc, _ang[m]) };
         float a0 = _ang[m], a1 = a0 + Mathf.PosMod(_ang[i] - a0 + 180f, 360f) - 180f;   // the short way round
-        int steps = Math.Max(1, (int)(Math.Abs(a1 - a0) / 4f));
-        for (int k = 1; k <= steps; k++) pts.Add(Polar(rc, a0 + (a1 - a0) * k / steps));
-        pts.Add(PosOf(i));
+        int steps = Math.Max(1, (int)(Math.Abs(a1 - a0) / 4f)), n = steps + 3;
+        var pts = _chPool[n] ??= new Vector2[n];
+        pts[0] = PosOf(m); pts[1] = Polar(rc, _ang[m]);
+        for (int k = 1; k <= steps; k++) pts[k + 1] = Polar(rc, a0 + (a1 - a0) * k / steps);
+        pts[n - 1] = PosOf(i);
         return pts;
     }
 
@@ -481,12 +484,12 @@ public sealed partial class TechTree : Control
                     {
                         bool onRoute = _route[i] && _route[m];
                         bool toSel = _selected >= 0 && (i == _selected || m == _selected);
-                        if (pass == 0 && !onRoute && !toSel) _cv.DrawPolyline(Channel(m, i).ToArray(), new Color(Ui.Rule, 0.7f), 1f, true);
-                        else if (pass == 1 && toSel && !onRoute) _cv.DrawPolyline(Channel(m, i).ToArray(), Ui.Ink, 1.6f, true);
-                        else if (pass == 2 && onRoute) _cv.DrawPolyline(Channel(m, i).ToArray(), Ui.Command, 2.2f, true);
+                        if (pass == 0 && !onRoute && !toSel) _cv.DrawPolyline(Channel(m, i), new Color(Ui.Rule, 0.7f), 1f, true);
+                        else if (pass == 1 && toSel && !onRoute) _cv.DrawPolyline(Channel(m, i), Ui.Ink, 1.6f, true);
+                        else if (pass == 2 && onRoute) _cv.DrawPolyline(Channel(m, i), Ui.Command, 2.2f, true);
                     }
         // the continuous route from the root of «why not» to the goal
-        for (int k = 0; k + 1 < _path.Count; k++) _cv.DrawPolyline(Channel(_path[k], _path[k + 1]).ToArray(), Ui.Command, 3.4f, true);
+        for (int k = 0; k + 1 < _path.Count; k++) _cv.DrawPolyline(Channel(_path[k], _path[k + 1]), Ui.Command, 3.4f, true);
 
         for (int i = 0; i < nodes.Count; i++) DrawNode(i);
         DrawLabels(c);
@@ -687,7 +690,7 @@ public sealed partial class TechTree : Control
         }
         occupied.AddRange(_countRects);   // the count tags of the cells are drawn first; labels keep off them
         // The route is an obstacle too, so that no label sits on it.
-        for (int k = 0; k + 1 < _path.Count; k++) { var ch = Channel(_path[k], _path[k + 1]); for (int j = 0; j + 1 < ch.Count; j++) AddSegment(occupied, ch[j], ch[j + 1], 3f); }
+        for (int k = 0; k + 1 < _path.Count; k++) { var ch = Channel(_path[k], _path[k + 1]); for (int j = 0; j + 1 < ch.Length; j++) AddSegment(occupied, ch[j], ch[j + 1], 3f); }
         if (_labelText == null || _labelText.Length != nodes.Count) _labelText = new string[nodes.Count]; else Array.Clear(_labelText);
         var order = _lbOrder; order.Clear();
         void Add(int i) { if (i >= 0 && !order.Contains(i)) order.Add(i); }
@@ -804,7 +807,15 @@ public sealed partial class TechTree : Control
         return _byNumber;
     }
     /// <summary>Half-size of the box around the selected node that labels keep clear: outside its ring, and outside the goal frame when it is the goal as well (ring r + 12.5).</summary>
-    float SelKeepOut(int i) => Math.Max(NR + 3, MarkRadius(_host.Data.Nodes.Type[i]) + 15);
+    float SelKeepOut(int i) => Math.Max(NR + 3, Reach(i) + 6);
+    /// <summary>How far the drawing of a node reaches from its centre: the real corners of its outline, its goal frame and its selection ring (not just the mark radius).</summary>
+    float Reach(int i)
+    {
+        var t = _host.Data.Nodes.Type[i]; float r = MarkRadius(t), e = GlyphGeometry.Extent(t.ToString(), r);
+        if (i == _goal) e = Math.Max(e, GlyphGeometry.Extent(t.ToString(), r + 5f));
+        if (i == _selected) e = Math.Max(e, r + 4.5f + (i == _goal ? 8f : 0f) + 1f);
+        return e;
+    }
     bool NamedNode(int i) => i == _selected || i == _goal || i == _root;
 
     bool LabelNeedsLeader(int i, Rect2 rc)
@@ -1256,7 +1267,7 @@ public sealed partial class TechTree : Control
     {
         int i = KeyFocusRow;
         if (i < 0) return;
-        var nodes = _host.Data.Nodes; var p = PosOf(i); float r = MarkRadius(nodes.Type[i]) + (i == _selected ? (i == _goal ? 12.5f : 4.5f) : i == _goal ? 5f : 0f) + 5f;   // outside the selection ring and the goal frame
+        var nodes = _host.Data.Nodes; var p = PosOf(i); float r = Reach(i) + 5f;   // outside the corners, the goal frame and the selection ring
         _cv.DrawArc(p, r, 0, Mathf.Tau, 40, Ui.Sheet, 5.5f, true);
         _cv.DrawArc(p, r, 0, Mathf.Tau, 40, Ui.Ink, 2.5f, true);
         if (_kbTipFor != i) { _kbTip = $"{Names.Node(nodes.Id[i])} · №{nodes.Number[i]}"; _kbTipSize = Fonts.Text.GetStringSize(_kbTip, HorizontalAlignment.Left, -1, 14); _kbTipFor = i; }
