@@ -86,6 +86,15 @@ public sealed class GlobeData
         return b;
     }
 
+    /// <summary>Owner number at lon/lat in degrees, 0 for sea, no owner or a dependent territory: a label of the owner may settle only on its own core land (France is not Algeria).</summary>
+    public int CoreOwnerAt(float lon, float lat)
+    {
+        int x = Math.Clamp((int)((lon + 180) / 360f * W), 0, W - 1);
+        int y = Math.Clamp((int)((90 - lat) / 180f * H), 0, H - 1);
+        int r = RegionIds[y * W + x];
+        return r == 0 || Style.Regions[r - 1].Hatch == HatchKind.Colony ? 0 : Ids[y * W + x];
+    }
+
     /// <summary>Owner number at lon/lat in degrees (0 = sea or no owner).</summary>
     public int IdAt(float lon, float lat)
     {

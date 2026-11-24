@@ -136,6 +136,7 @@ public sealed partial class Main : Node3D
         _overlay = new Overlay();
         layer.AddChild(_overlay);
         _overlay.Setup(_cam);
+        _overlay.OwnerAt = (lon, lat) => _data.CoreOwnerAt(lon, lat);
         foreach (var c in top) _overlay.AddLabel(c, false);
         foreach (var c in _data.ColonyLabels) if (Names.Country(c.Name) != null) _overlay.AddLabel(c, false, true);
         _hud = new Label { Position = new Vector2(12, 0), Visible = _debug };
@@ -490,6 +491,7 @@ public sealed partial class Main : Node3D
         _globeMat.SetShaderParameter("region_lut", lutTex);   // sRGB bytes; the shader converts to linear light, so that the lit fills match the validator's model
         _globeMat.SetShaderParameter("sea_color", new Color(Palette.C.Sea));
         var hc = HatchLogic.Params(HatchKind.Colony); var ho = HatchLogic.Params(HatchKind.Occupied);
+        _globeMat.SetShaderParameter("control_alpha", HatchLogic.ControlAlpha);
         _globeMat.SetShaderParameter("hatch_colony", new Vector3(hc.Period, hc.Width, hc.Alpha));
         _globeMat.SetShaderParameter("hatch_occupied", new Vector3(ho.Period, ho.Width, ho.Alpha));
         _globeMat.SetShaderParameter("grid_color", new Color(Palette.GlobeGrid));
@@ -695,7 +697,7 @@ public sealed partial class Main : Node3D
         if (_mapT < 1.2) return;
         // G4 on the live state: the big names of the frame stay on the map.
         if (v.Name.Contains("europe")) GD.Print($"MAPCHECK europe LBN screen area {_overlay.AreaOf("LBN"):F0} du2 (callout < {LabelPlacement.CalloutBelow}, frame < {LabelPlacement.FramedBelow})");
-        string need = v.Name.Contains("africa") ? "C_FRENCH_ALGERIA" : v.Name.Contains("asia") ? "THA" : null;
+        string need = v.Name.Contains("europe") ? "SWE" : v.Name.Contains("africa") ? "C_FRENCH_ALGERIA" : v.Name.Contains("asia") ? "THA" : null;
         if (need != null)
         {
             bool shown = _overlay.IsShown(need);

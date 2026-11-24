@@ -404,5 +404,5 @@ set.gl.a,Matte,Матовый
 set.gl.aplus,Matte + haze,Матовый + дымка
 set.gl.b,Atmosphere,Атмосфера
 legend.colony,Colony or mandate,Колония или мандат
-legend.occupied,Occupation zone,Зона оккупации
+legend.occupied,Occupation hatch,Оккупация (штриховка)
 legend.control,Line of control,Линия контроля

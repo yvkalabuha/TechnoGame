@@ -17,17 +17,29 @@ public class GlobeLabelHatchTests
     {
         // "French Algeria": the anchor is 40 px above the frame, the visible part of the region is hundreds of px deep.
         Assert.False(LabelPlacement.Place(700, -40, 150, 20, Vw, Vh, out _, out _));   // the old rule hid it
-        Assert.True(LabelPlacement.PlaceInRegion(700, -40, 150, 20, Vw, Vh, 300, 960, 540, 900, out float x, out float y));
+        Assert.True(LabelPlacement.PlaceInRegion(700, -40, 150, 20, Vw, Vh, 300, 960, 540, 900, null, out float x, out float y));
         Assert.Equal(LabelPlacement.Margin, y);
         Assert.Equal(700 - 75, x);
     }
 
     [Fact]
+    public void Long_strip_with_a_far_anchor_keeps_its_label_where_the_region_is_visible()
+    {
+        // "Sweden" on the Europe frame: the anchor is far above the frame, the radius disc of the area is too small, but the top edge of the frame is still Sweden.
+        static bool Sweden(float x, float y) => x > 870 && x < 1010 && y >= 150 && y < 280;   // the strip starts 150 px below the top edge
+        Assert.False(LabelPlacement.PlaceInRegion(940, -300, 80, 20, Vw, Vh, 120, 960, 540, 1190, null, out _, out _));        // the radius rule alone hides it
+        Assert.True(LabelPlacement.PlaceInRegion(940, -300, 80, 20, Vw, Vh, 120, 960, 540, 1190, Sweden, out float x, out float y));
+        Assert.True(y >= 150 - 10 - 10 && y < 280, "the plate settles on the visible strip");
+        Assert.Equal(940 - 40, x);
+        Assert.False(LabelPlacement.PlaceInRegion(300, -300, 80, 20, Vw, Vh, 120, 960, 540, 1190, Sweden, out _, out _));       // the clamped point is not on the region
+    }
+
+    [Fact]
     public void Label_is_hidden_when_the_visible_part_of_the_region_is_too_small_or_off_the_globe()
     {
-        Assert.False(LabelPlacement.PlaceInRegion(700, -400, 150, 20, Vw, Vh, 300, 960, 540, 900, out _, out _));   // the region barely touches the frame
-        Assert.False(LabelPlacement.PlaceInRegion(20, 540, 150, 20, Vw, Vh, 300, 960, 540, 600, out _, out _));      // the clamped plate would lie in space
-        Assert.False(LabelPlacement.PlaceInRegion(960, 540, 3000, 20, Vw, Vh, 900, 960, 540, 900, out _, out _));    // the plate is wider than the frame
+        Assert.False(LabelPlacement.PlaceInRegion(700, -400, 150, 20, Vw, Vh, 300, 960, 540, 900, null, out _, out _));   // the region barely touches the frame
+        Assert.False(LabelPlacement.PlaceInRegion(20, 540, 150, 20, Vw, Vh, 300, 960, 540, 600, null, out _, out _));      // the clamped plate would lie in space
+        Assert.False(LabelPlacement.PlaceInRegion(960, 540, 3000, 20, Vw, Vh, 900, 960, 540, 900, null, out _, out _));    // the plate is wider than the frame
     }
 
     [Fact]

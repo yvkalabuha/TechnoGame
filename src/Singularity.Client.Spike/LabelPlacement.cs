@@ -4,6 +4,8 @@ namespace Singularity.Client.Spike;
 public static class LabelPlacement
 {
     public const float Margin = 8f;
+    const int ProbeSteps = 40;
+    const float ProbeStep = 8f;
 
     /// <summary>
     /// Plate centred on (cx, cy) with size (w, h). Returns false (hide) only when its centre lies outside the visible area,
@@ -22,16 +24,39 @@ public static class LabelPlacement
     /// <summary>
     /// Plate for a region whose anchor may lie outside the frame (G4): the plate centre is moved to the nearest point of the safe rectangle
     /// (Margin from every edge) and stays on the label when that point is still inside the region (distance to the anchor within regionR)
-    /// and on the globe disc (centre gcx, gcy, radius gr). Hidden only when the visible part of the region cannot hold the plate.
+    /// and on the globe disc (centre gcx, gcy, radius gr). The centre counts as inside the region when <paramref name="onRegion"/> says that the point
+    /// of the globe under it belongs to the region (a long strip such as Sweden has a far anchor but a large visible part), or else by the radius.
+    /// Hidden only when the visible part of the region cannot hold the plate.
     /// </summary>
-    public static bool PlaceInRegion(float cx, float cy, float w, float h, float vpW, float vpH, float regionR, float gcx, float gcy, float gr, out float x, out float y)
+    public static bool PlaceInRegion(float cx, float cy, float w, float h, float vpW, float vpH, float regionR, float gcx, float gcy, float gr, System.Func<float, float, bool>? onRegion, out float x, out float y)
     {
         x = cx - w * 0.5f; y = cy - h * 0.5f;
         float minX = Margin + w * 0.5f, maxX = vpW - Margin - w * 0.5f, minY = Margin + h * 0.5f, maxY = vpH - Margin - h * 0.5f;
         if (maxX < minX || maxY < minY) return false;
         float qx = System.Math.Clamp(cx, minX, maxX), qy = System.Math.Clamp(cy, minY, maxY);
         float dx = qx - cx, dy = qy - cy, gx = qx - gcx, gy = qy - gcy;
-        if (dx * dx + dy * dy > regionR * regionR || gx * gx + gy * gy > gr * gr) return false;
+        if (gx * gx + gy * gy > gr * gr) return false;
+        if (dx * dx + dy * dy > regionR * regionR)
+        {
+            if (onRegion == null) return false;
+            // Walk inward from the clamped point (the way the anchor lies off the frame, then the same way on) with lateral probes, until the plate centre
+            // and a point a little further in are on the region.
+            float len = System.MathF.Sqrt(dx * dx + dy * dy);
+            if (len < 1e-3f) return false;
+            float ux = dx / len, uy = dy / len, vx = -uy, vy = ux;   // inward direction and its normal
+            bool found = false;
+            for (int k = 0; k <= ProbeSteps && !found; k++)
+                for (int l = 0; l < 7 && !found; l++)
+                {
+                    float lat = ((l + 1) / 2) * ProbeStep * ((l & 1) == 1 ? 1 : -1), along = k * ProbeStep;
+                    float px = System.Math.Clamp(qx + ux * along + vx * lat, minX, maxX), py = System.Math.Clamp(qy + uy * along + vy * lat, minY, maxY);
+                    if (!onRegion(px, py) || !onRegion(System.Math.Clamp(px + ux * 12f, minX, maxX), System.Math.Clamp(py + uy * 12f, minY, maxY))) continue;
+                    qx = px; qy = py; found = true;
+                }
+            if (!found) return false;
+            gx = qx - gcx; gy = qy - gcy;
+            if (gx * gx + gy * gy > gr * gr) return false;
+        }
         x = qx - w * 0.5f; y = qy - h * 0.5f;
         return true;
     }

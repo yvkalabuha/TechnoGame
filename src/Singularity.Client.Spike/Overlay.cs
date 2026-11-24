@@ -52,6 +52,19 @@ public sealed partial class Overlay : Control
     public int VisibleLabels;
     public float AreaOf(string code) { foreach (var s in _labels) if (s.C.Name == code) return s.Area; return -1f; }
     public bool IsShown(string code) { foreach (var s in _labels) if (s.C.Name == code) return s.Node.Visible; return false; }
+    public System.Func<float, float, int> OwnerAt;   // core owner number at lon/lat (GlobeData.CoreOwnerAt); lets a label settle on the visible part of a long region
+    System.Func<float, float, bool> _onRegion;
+    int _regionOwner;
+    bool OnRegion(float sx, float sy)
+    {
+        if (OwnerAt == null || _regionOwner <= 0) return false;
+        var o = _cam.ProjectRayOrigin(new Vector2(sx, sy)); var d = _cam.ProjectRayNormal(new Vector2(sx, sy));
+        float b = o.Dot(d), disc = b * b - (o.LengthSquared() - 1f);
+        if (disc < 0f) return false;
+        var hit = o + d * (-b - Mathf.Sqrt(disc));
+        var ll = GlobeData.ToLonLat(hit);
+        return OwnerAt(ll.X, ll.Y) == _regionOwner;
+    }
     public bool LegendVisible;   // the key of the status hatching and the control line (C1, C2)
     string _legColony = "", _legOccupied = "", _legControl = "";
     static readonly Color LegendColony = ToColor(HatchLogic.Line(HatchLogic.ColonyFillTone, HatchLogic.LineScale(HatchKind.Colony))), LegendOcc = ToColor(HatchLogic.Line(HatchLogic.ControllerTone, HatchLogic.LineScale(HatchKind.Occupied)));
@@ -64,6 +77,7 @@ public sealed partial class Overlay : Control
         _cam = cam;
         MouseFilter = MouseFilterEnum.Ignore;
         RefreshLegend();
+        _onRegion = OnRegion;
         Loc.Changed += Relabel;
         TreeExiting += () => Loc.Changed -= Relabel;
     }
@@ -178,13 +192,21 @@ public sealed partial class Overlay : Control
         }
     }
 
+    const float LegendSw = 36f, LegendRowH = 22f, LegendPad = 10f;
+    Rect2 LegendRect(float textWidth) => new(16, 16, LegendSw + textWidth + 3 * LegendPad, 3 * LegendRowH + 2 * LegendPad);
+    float LegendTextWidth()
+    {
+        var font = Fonts.Map;
+        return Mathf.Max(font.GetStringSize(_legColony, HorizontalAlignment.Left, -1, 14).X, Mathf.Max(font.GetStringSize(_legOccupied, HorizontalAlignment.Left, -1, 14).X, font.GetStringSize(_legControl, HorizontalAlignment.Left, -1, 14).X));
+    }
+
     // Key of the map marks, bottom left: a swatch and a word per row; drawn from cached strings, no allocation.
     void DrawLegend()
     {
         const float sw = 36f, rowH = 22f, pad = 10f;
         var font = Fonts.Map;
         float tw = Mathf.Max(font.GetStringSize(_legColony, HorizontalAlignment.Left, -1, 14).X, Mathf.Max(font.GetStringSize(_legOccupied, HorizontalAlignment.Left, -1, 14).X, font.GetStringSize(_legControl, HorizontalAlignment.Left, -1, 14).X));
-        var panel = new Rect2(16, VpSize.Y - 16 - (3 * rowH + 2 * pad), sw + tw + 3 * pad, 3 * rowH + 2 * pad);
+        var panel = LegendRect(tw);
         DrawRect(panel, new Color(Ui.Sheet, 0.92f)); DrawRect(panel, Ink, false, 1f);
         float y = panel.Position.Y + pad, x = panel.Position.X + pad;
         var s1 = new Rect2(x, y + 3, sw, rowH - 6);
@@ -195,7 +217,8 @@ public sealed partial class Overlay : Control
         DrawRect(s2, LegendFillOcc); HatchRect(this, s2, new Color(LegendOcc, ho.Alpha), ho.Period, true, ho.Width);
         DrawString(font, new Vector2(x + sw + pad, y + 15), _legOccupied, HorizontalAlignment.Left, -1, 14, Ink);
         y += rowH;
-        DrawLine(new Vector2(x, y + rowH * 0.5f), new Vector2(x + sw, y + rowH * 0.5f), Ink, 1.5f);
+        var s3 = new Rect2(x, y + 3, sw, rowH - 6);
+        DrawRect(s3, LegendFillColony); DrawLine(new Vector2(x, y + rowH * 0.5f), new Vector2(x + sw, y + rowH * 0.5f), new Color(Ink, HatchLogic.ControlAlpha), HatchLogic.ControlWidth);
         DrawString(font, new Vector2(x + sw + pad, y + 15), _legControl, HorizontalAlignment.Left, -1, 14, Ink);
     }
 
@@ -209,6 +232,7 @@ public sealed partial class Overlay : Control
     void UpdateLabels()
     {
         var placed = new List<Rect2>();
+        if (LegendVisible) placed.Add(LegendRect(LegendTextWidth()).Grow(4f));   // labels keep clear of the key
         VisibleLabels = 0;
         float gr = GlobeRadiusPx(_dist);
         var gc = VpSize * 0.5f;
@@ -227,13 +251,14 @@ public sealed partial class Overlay : Control
                 float w = sz.X + 6f, h = sz.Y + 6f;
                 var mode = LabelPlacement.ModeFor(LabelPlacement.ScreenArea(s.C.BoxArea, gr, cs));
                 float px, py;
+                _regionOwner = s.C.Id;
                 s.Callout = mode == LabelPlacement.PlateMode.Callout; s.Framed = mode == LabelPlacement.PlateMode.Framed && s.C.Id > 0; s.Anchor = sp; s.Area = LabelPlacement.ScreenArea(s.C.BoxArea, gr, cs);
                 if (s.Callout)
                 {
                     LabelPlacement.CalloutCentre(sp.X, sp.Y, w, h, VpSize.X, out float ccx, out float ccy);
                     if (!LabelPlacement.Place(ccx, ccy, w, h, VpSize.X, VpSize.Y, out px, out py)) { s.Node.Visible = false; continue; }
                 }
-                else if (!LabelPlacement.PlaceInRegion(sp.X, sp.Y, w, h, VpSize.X, VpSize.Y, LabelPlacement.RegionRadius(s.C.BoxArea, gr), gc.X, gc.Y, gr * 0.97f, out px, out py)) { s.Node.Visible = false; continue; }
+                else if (!LabelPlacement.PlaceInRegion(sp.X, sp.Y, w, h, VpSize.X, VpSize.Y, LabelPlacement.RegionRadius(s.C.BoxArea, gr), gc.X, gc.Y, gr * 0.97f, _onRegion, out px, out py)) { s.Node.Visible = false; continue; }
                 var rect = new Rect2(px, py, w, h);
                 s.Rect = rect;
                 bool hit = false;

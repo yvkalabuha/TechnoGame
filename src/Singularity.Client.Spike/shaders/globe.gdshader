@@ -17,6 +17,7 @@ uniform float border_px = 1.2;
 uniform int selected_id = 0;     // owner number
 uniform bool show_hatch = true;
 uniform vec3 hatch_colony = vec3(8.0, 1.0, 0.9);     // period px, width px, strength; set from HatchLogic.Params
+uniform float control_alpha = 0.8;                  // line of control, from HatchLogic.ControlAlpha
 uniform vec3 hatch_occupied = vec3(11.0, 1.0, 0.65);
 uniform float faint_border = 0.3;   // strength of the line between regions of one owner
 uniform sampler2D slice_lut : filter_nearest, repeat_disable, hint_default_black; // 256x1, R = 1 for the countries of the slice
@@ -149,7 +150,7 @@ void fragment() {
 	coast = 1.0 - smoothstep(0.55 * border_px, 1.2 * border_px, abs(lm - 0.5) / lw);
 	vec3 bc = border_color; float a = 0.0;
 	if (faint > 0.0) { bc = mix(border_color, col, 0.35); a = min(faint * 0.25, 1.0) * faint_border; }
-	if (ctrl > 0.0) { bc = ink; a = min(ctrl * 0.5, 1.0) * 0.8; }
+	if (ctrl > 0.0) { bc = ink; a = min(ctrl * 0.5, 1.0) * control_alpha; }
 	if (power > 0.0) { bc = ink; a = min(power * 0.5, 1.0); }
 	if (coast > 0.0) { bc = coast_color; a = coast; }
 	if ((own == selected_id || sel_edge) && selected_id != 0 && power > 0.0) { bc = ink; a = 1.0; }

@@ -11,6 +11,9 @@ public static class HatchLogic
         _ => (8f, 0f, 0f),
     };
 
+    /// <summary>Line of control: width in px and strength of the ink line over the fill (the shader and the legend sample read the same numbers).</summary>
+    public const float ControlWidth = 1.2f, ControlAlpha = 0.8f;
+
     /// <summary>Share of the fill brightness kept by the hatch line (linear light): 0.42 is the tint.N.line stand-in; occupation is lighter.</summary>
     public static float LineScale(HatchKind k) => k == HatchKind.Occupied ? 0.62f : 0.42f;
 
