@@ -150,9 +150,12 @@
 | [TASK-0132](../development/tasks/TASK-0132-tree-keyboard-selection.md) | PROPOSED | Keyboard selection of technology tree nodes and keyboard tooltip (A6-A8) | MS-M05 |
 | [TASK-0133](../development/tasks/TASK-0133-g5-g6-data-probe.md) | IN_PROGRESS | G5/G6 data in mods on the train-2 branch and calibration probe (O-038) | MS-M05 |
 | [TASK-0134](../development/tasks/TASK-0134-hcap-growth-production-mastery.md) | IN_PROGRESS | Hcap growth and production mastery in Core: series gate, candidate close, foresight, mastery programme (#438-#440) | MS-M05 |
-| [TASK-0135](../development/tasks/TASK-0135-gemini-visual-review.md) | IN_PROGRESS | Gemini visual second opinion in llm_worker (free tier, #441) | MS-M05 |
+| [TASK-0135](../development/tasks/TASK-0135-gemini-visual-review.md) | DONE | Gemini visual second opinion in llm_worker (free tier, #441) | MS-M05 |
 | [TASK-0136](../development/tasks/TASK-0136-tree-clarity-depth-pass.md) | IN_PROGRESS | Knowledge tree and menu clarity pass after Gemini design review: player text, legend grammar, node sizes, menu reasons, sheet depth | MS-M05 |
-| [TASK-0137](../development/tasks/TASK-0137-globe-volume-atmosphere-prototype.md) | APPROVED | Globe volume and limb atmosphere: Godot prototype of three variants for the owner (#426, #442) | MS-M05 |
+| [TASK-0137](../development/tasks/TASK-0137-globe-volume-atmosphere-prototype.md) | IN_PROGRESS | Globe volume and limb atmosphere: Godot prototype of three variants for the owner (#426, #442) | MS-M05 |
+| [TASK-0138](../development/tasks/TASK-0138-globe-1945-borders.md) | IN_PROGRESS | Globe draws 1945 political borders and labels from the region map and owners, not modern Natural Earth countries | MS-M05 |
+| [TASK-0139](../development/tasks/TASK-0139-hud-time-controls.md) | APPROVED | HUD time controls: centred pause and speed buttons, no speed text, speed gauge active frame alignment | MS-M05 |
+| [TASK-0140](../development/tasks/TASK-0140-sound-timing-audit.md) | APPROVED | Sound audit: sounds that play at the wrong moment or irritate (owner feedback) | MS-M05 |
 
 ## Гипотезы
 
@@ -206,6 +209,7 @@
 | [ADR-0023](../docs/decisions/ADR-0023-adr-0016-benchmark-rules-amendment.md) | ACCEPTED | Benchmark validity rules and split allocation limit (amendment to ADR-0016) |
 | [ADR-0024](../docs/decisions/ADR-0024-adr-0023-gc-pause-criterion.md) | PROPOSED | GC pause criterion instead of the gen2 counter (amendment to ADR-0023 p. 2.4) |
 | [ADR-0025](../docs/decisions/ADR-0025-view-snapshot-buffer-ring.md) | ACCEPTED | View snapshot: scoped client view |
+| [ADR-0026](../docs/decisions/ADR-0026-ai-generated-images.md) | ACCEPTED | AI-generated images as static illustrations (amendment to ADR-0009, #445) |
 
 ## Research Reports
 

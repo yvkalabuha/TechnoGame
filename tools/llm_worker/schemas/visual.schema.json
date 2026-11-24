@@ -1,0 +1,68 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "opinion",
+    "summary",
+    "findings"
+  ],
+  "properties": {
+    "opinion": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail",
+        "mixed"
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "findings": {
+      "type": "array",
+      "maxItems": 60,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "criterion",
+          "frame",
+          "location",
+          "severity",
+          "fix"
+        ],
+        "properties": {
+          "criterion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20
+          },
+          "frame": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "fix": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        }
+      }
+    }
+  }
+}
