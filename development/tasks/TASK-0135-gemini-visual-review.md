@@ -1,7 +1,7 @@
 ---
 id: TASK-0135
 title: "Gemini visual second opinion in llm_worker (free tier, #441)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M05
 agent: developer
@@ -13,6 +13,7 @@ related: [TASK-0132]
 approved_by: owner
 approved_at: 2026-11-24
 approval_ref: "#441"
+review_ref: "reviewer: APPROVE 61ad9fe + deltas; codex: 3 returns, waived by #432 → DEBT-0081; live runs gemini-flash-latest, gemini-4-hydrogen; landed 14fafb0"
 created: 2026-11-24
 ---
 
