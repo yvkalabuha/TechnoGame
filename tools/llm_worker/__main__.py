@@ -240,6 +240,9 @@ def _sketch(a):
     print(f"record: {path}\nsummary: {md}\nconversation: {rec['conversation_id']}")
     for f in rec["files"]:
         print(f"  {f['path']}")
+    if rec["partial"]:
+        print(f"warning: partial result, {len(rec['files'])} of {rec['requested']} images")
+        rc = rc or 6
     print("attribution (add to mods/core/ATTRIBUTION.md after ui-art-director approves):")
     for line in rec["attribution"]:
         print(line)

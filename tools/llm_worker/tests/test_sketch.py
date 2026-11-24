@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tools.llm_worker import config, sketch
 from tools.llm_worker.visual import RateGuard
@@ -26,6 +27,9 @@ class SketchTest(unittest.TestCase):
         self.calls = []
         self.guard = RateGuard(t / "usage.json", rpm=5, rpd=20)
         self.addCleanup(self.tmp.cleanup)
+        m = mock.patch("tools.llm_worker.gitleaks.scan_text")
+        m.start()
+        self.addCleanup(m.stop)
 
     def runner(self, stream=None, rc=0, image=True, err=""):
         def run(cmd, cwd, timeout):
@@ -84,6 +88,37 @@ class SketchTest(unittest.TestCase):
         _, _, rec = self.go(runner=self.runner())
         self.assertEqual(rec["files"][0]["name"], "sketch_1-1.jpg")
 
+    def test_partial_result_is_marked(self):
+        _, md, rec = self.go(runner=self.runner(), count=3)
+        self.assertTrue(rec["partial"])
+        self.assertEqual((rec["requested"], len(rec["files"])), (3, 1))
+        self.assertIn("PARTIAL", md.read_text())
+
+    def test_complete_result_not_partial(self):
+        self.assertFalse(self.go(runner=self.runner(), count=1)[2]["partial"])
+
+    def test_same_basename_refs_do_not_collapse(self):
+        a, b = self.shots / "a", self.shots / "b"
+        a.mkdir(), b.mkdir()
+        for d in (a, b):
+            (d / "f.png").write_bytes(b"\x89PNG\r\n\x1a\n" + b"0" * 20)
+        self.go(runner=self.runner(), refs=[a / "f.png", b / "f.png"])
+        cmd = self.calls[-1][0]
+        self.assertIn("1-f.png", cmd[2])
+        self.assertIn("2-f.png", cmd[2])
+
+    def test_attribution_has_model_and_prompt(self):
+        _, _, rec = self.go(runner=self.runner())
+        line = rec["attribution"][0]
+        self.assertIn("image-generator", rec["model"])
+        self.assertIn(rec["prompt_sha256"], line)
+        self.assertIn("brief.md", line)
+        self.assertEqual(rec["prompt"], "Draw a paper desk sketch.")
+
+    def test_model_from_events(self):
+        ev = '{"event":"step_update","step_update":{"model":"gemini-x"}}\n'
+        self.assertEqual(sketch.find_model(ev), "gemini-x")
+
     def test_no_images(self):
         with self.assertRaises(sketch.SketchError) as c:
             self.go(runner=self.runner(image=False))
@@ -118,6 +153,8 @@ class SketchTest(unittest.TestCase):
         _, _, rec = self.go(runner=self.runner(), refs=[ref])
         cmd, cwd, _ = self.calls[-1]
         self.assertIn(cwd, cmd[2])
+        self.assertNotIn(self.root, Path(cwd).parents)
+        self.assertNotIn(str(config.REPO_ROOT), cwd)
         self.assertIn("frame.png", cmd[2])
         self.assertEqual(rec["refs"], ["frame.png"])
 

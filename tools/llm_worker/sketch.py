@@ -28,7 +28,7 @@ DEFAULT_TIMEOUT_S = 400
 BRAIN_DIR = Path.home() / ".gemini" / "antigravity-cli" / "brain"
 IMAGE_EXT = (".jpg", ".jpeg", ".png", ".webp")
 UUID_RE = re.compile(r"\A[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}\Z")
-LOGIN_RE = re.compile(r"log ?in|sign ?in|unauthenticated|not authenticated|credentials", re.I)
+LOGIN_RE = re.compile(r"log ?in|sign ?in|unauthenticated|not authenticated", re.I)
 MAX_PROMPT_BYTES = 64 * 1024
 
 
@@ -76,6 +76,19 @@ def parse_stream(text):
             result = ev["result"]
             add(result.get("conversation_id"))
     return ids, result, tools
+
+
+def find_model(text):
+    """First string 'model' field in any event, or None (agy 1.5.15 stream events carry none)."""
+    for line in text.splitlines():
+        try:
+            ev = json.loads(line)
+        except ValueError:
+            continue
+        for d in (ev, ev.get("step_update"), ev.get("result")) if isinstance(ev, dict) else ():
+            if isinstance(d, dict) and isinstance(d.get("model"), str) and d["model"]:
+                return d["model"]
+    return None
 
 
 def collect_images(conversation_ids, since, brain_dir=BRAIN_DIR):
@@ -151,8 +164,9 @@ def one_line(s, n=300):
 
 def attribution_line(rec, f):
     """One line for mods/core/ATTRIBUTION.md; written only after ui-art-director approves the picture (ADR-0026 4)."""
-    return (f"- {f['name']}: AI-generated sketch, Gemini via Antigravity CLI {rec.get('agy_version') or 'agy'}, "
-            f"{rec['date']}, prompt sha256 {rec['prompt_sha256'][:12]} ({rec['task']}): \"{one_line(rec['prompt_brief'])}\"; "
+    return (f"- {f['name']}: AI-generated sketch, model {rec['model']}, Antigravity CLI {rec.get('agy_version') or 'agy'}, "
+            f"{rec['date']}, prompt {rec['prompt_file']} (sha256 {rec['prompt_sha256']}, full text in the run record) "
+            f"({rec['task']}): \"{one_line(rec['prompt_brief'])}\"; "
             "approved by: <ui-art-director, review ref>")
 
 
@@ -180,7 +194,7 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
     digest = hashlib.sha256(b"\0".join([brief.encode(), str(count).encode()]
                                        + [p.name.encode() + b"\0" + p.read_bytes() for p in ref_paths])).hexdigest()
     record = {"kind": "sketch", "task": task, "provider": "gemini-agy", "prompt_file": str(pf.relative_to(Path(root).resolve())),
-              "prompt_sha256": hashlib.sha256(brief.encode()).hexdigest(), "prompt_brief": one_line(brief, 600),
+              "prompt_sha256": hashlib.sha256(brief.encode()).hexdigest(), "prompt_brief": one_line(brief, 600), "prompt": brief,
               "count": count, "refs": [p.name for p in ref_paths], "input_hash": digest}
     if dry_run:
         return None, None, record
@@ -190,7 +204,7 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
     with tempfile.TemporaryDirectory(prefix="agy-sketch-") as ws:
         ws_refs = []
         for p in ref_paths:
-            dst = Path(ws) / p.name
+            dst = Path(ws) / f"{len(ws_refs) + 1}-{p.name}"  # same basenames must not collapse
             shutil.copyfile(p, dst)
             ws_refs.append(dst)
         cmd = [agy, "-p", build_prompt(brief, count, ws_refs), "--print-timeout", f"{timeout_s}s",
@@ -205,6 +219,7 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
         detail = one_line(err or out, 300)
         raise SketchError("agy_not_logged_in" if LOGIN_RE.search(err + out[-2000:]) else "agy_failed", f"exit {rc}: {detail}")
     record["status"] = result.get("status")
+    record["model"] = find_model(out) or f"agy {record.get('agy_version') or '?'} image-generator"
     usage = result.get("usage") if isinstance(result.get("usage"), dict) else {}
     record["usage"] = {k: v for k, v in usage.items() if type(v) is int}
     guard.settle(None, {"prompt_tokens": usage.get("input_tokens"), "completion_tokens": usage.get("output_tokens"),
@@ -217,6 +232,7 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
     out_dir = Path(shots_dir or config.SHOTS_DIR) / "sketches" / task
     out_dir.mkdir(parents=True, exist_ok=True)
     record["files"] = []
+    record["requested"] = count
     for src in found:
         dst = out_dir / src.name
         k = 1
@@ -227,6 +243,7 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
         data = dst.read_bytes()
         record["files"].append({"name": dst.name, "path": str(dst), "bytes": len(data),
                                 "sha256": hashlib.sha256(data).hexdigest(), "source": str(src)})
+    record["partial"] = len(record["files"]) < count
     record["attribution"] = [attribution_line(record, f) for f in record["files"]]
     path, md = write_pair(Path(runs_dir), f"sketch-{task}-{digest[:8]}", record, summary_md)
     return path, md, record
@@ -234,7 +251,8 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
 
 def summary_md(rec):
     lines = [f"# Gemini sketches (agy): {rec['task']}", "",
-             f"Conversation {rec['conversation_id']}, started {rec['started_at']}, agy {rec.get('agy_version') or 'unknown'}.",
+             f"Model {rec['model']}. Images {len(rec['files'])} of {rec['requested']} requested"
+             f"{' (PARTIAL)' if rec['partial'] else ''}. Conversation {rec['conversation_id']}, started {rec['started_at']}, agy {rec.get('agy_version') or 'unknown'}.",
              "Sketches are proposals: ADR-0026 needs ui-art-director's approval before use in the game.", "",
              f"Prompt ({rec['prompt_file']}, sha256 {rec['prompt_sha256']}): {rec['prompt_brief']}", ""]
     if rec["refs"]:
