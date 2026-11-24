@@ -45,16 +45,25 @@ public sealed partial class AudioDirector : Node
     public override void _Ready()
     {
         // Buses are created in code (no layout file to keep in sync).
-        foreach (var n in new[] { "Music", "Ambient", "UI", "Alert" })
+        // The director is recreated on every game entry while the AudioServer keeps its buses: create each bus and effect once.
+        var existing = new List<string>();
+        for (int b = 0; b < AudioServer.BusCount; b++) existing.Add(AudioServer.GetBusName(b));
+        foreach (var n in AudioBusPlan.ToCreate(existing))
         {
             AudioServer.AddBus(); int i = AudioServer.BusCount - 1;
             AudioServer.SetBusName(i, n); AudioServer.SetBusSend(i, "Master");
+            foreach (var fx in AudioBusPlan.Effects(n))
+                if (fx == BusEffect.LowPass)
+                    AudioServer.AddBusEffect(i, new AudioEffectLowPassFilter { CutoffHz = (float)AudioSettings.UiCutoffHz, Resonance = 0.5f });
         }
-        AudioServer.AddBusEffect(AudioServer.GetBusIndex("UI"), new AudioEffectLowPassFilter { CutoffHz = (float)AudioSettings.UiCutoffHz, Resonance = 0.5f });
-        var lim = new AudioEffectHardLimiter { CeilingDb = -1f };
-        AudioServer.AddBusEffect(0, lim);
-        _rec = new AudioEffectRecord();
-        AudioServer.AddBusEffect(0, _rec);
+        if (AudioServer.GetBusEffectCount(0) == 0)
+        {
+            AudioServer.AddBusEffect(0, new AudioEffectHardLimiter { CeilingDb = -1f });
+            AudioServer.AddBusEffect(0, new AudioEffectRecord());
+        }
+        AudioEffectRecord? rec = null;
+        for (int e = 0; e < AudioServer.GetBusEffectCount(0); e++) if (AudioServer.GetBusEffect(0, e) is AudioEffectRecord r) rec = r;
+        _rec = rec!;
         LoadSettings();
 
         _tracks = new AudioStream[MusicFiles.Length];

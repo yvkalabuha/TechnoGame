@@ -52,3 +52,30 @@ created: 2026-11-24
 | breakthrough | P1 | 4000 | -20 → -21 | -5.7 → -5.4 | +6.9 | 1.00 | -22..-18 |
 | line_commissioned | P1 | 3500 | -28 → -23.7 | -18.7 → -14.1 | +4.6 | 1.50 | -22..-18 |
 | launch_space | P1 | 4500 | -20.8 → -21.9 | -4.6 → -8.2 | -0.6 | 1.09 | -22..-18 |
+
+### Спектр P0 против рутины (спека §4 п. 5), ffmpeg highpass 4 кГц + astats, файлы после обработки
+| Cue | Prio | доля энергии выше 4 кГц, % |
+|---|---|---|
+| signal_critical | P0 | 46.6 |
+| signal_alert | P0 | 36.9 |
+| war_declared | P0 | 12.5 |
+| launch_nuclear | P0 | 4.2 |
+| signal_clear | P1 | 60.5 |
+| breakthrough | P1 | 43.3 |
+| signal_attention | P1 | 31.8 |
+| launch_space | P1 | 1.6 |
+| line_commissioned | P1 | 0.1 |
+| node_discovered | P2/3 | 35.8 |
+| order_reject | P2/3 | 18.4 |
+| order_done | P2/3 | 11.2 |
+| queue_tick | P2/3 | 6.9 |
+| tempo | P2/3 | 6.3 |
+| pause | P2/3 | 6 |
+| unpause | P2/3 | 5.9 |
+| ui_tick | P2/3 | 5.5 |
+| order_ok | P2/3 | 0.2 |
+
+Вывод [Факт]: критерий «у P0 доля выше 4 кГц минимум в 3 раза больше любого рутинного cue» НЕ выполняется: signal_alert 36.9 % против node_discovered 35.8 % (P2), signal_critical 46.6 %. war_declared (12.5 %) и launch_nuclear (4.2 %) ниже order_reject. Различимость P0 держится на атаке, тембре и шине Alert (без фильтра), не на спектре; решает прослушивание владельцем. Предл.: поднять яркость P0 high-shelf или сильнее срезать node_discovered.
+
+### Идемпотентность шин (round 2)
+Создание шин и эффектов вынесено в чистый `AudioBusPlan` (`ToCreate`, `Effects`); при повторном входе в игру новые шины, фильтр, лимитер и Record не добавляются, `_rec` берётся из существующего эффекта на Master. Тест `Bus_plan_filters_only_the_ui_bus_and_a_second_start_adds_nothing`.

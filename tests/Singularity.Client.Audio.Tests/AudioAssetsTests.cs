@@ -60,6 +60,17 @@ public class AudioAssetsTests
     }
 
     [Fact]
+    public void Bus_plan_filters_only_the_ui_bus_and_a_second_start_adds_nothing()
+    {
+        Assert.Equal(new[] { BusEffect.LowPass }, AudioBusPlan.Effects("UI"));
+        foreach (var n in new[] { "Music", "Ambient", "Alert" }) Assert.Empty(AudioBusPlan.Effects(n));
+        Assert.Equal(new[] { BusEffect.HardLimiter, BusEffect.Record }, AudioBusPlan.Effects("Master"));
+        Assert.Equal(AudioBusPlan.Names, AudioBusPlan.ToCreate(new[] { "Master" }));
+        Assert.Empty(AudioBusPlan.ToCreate(new[] { "Master", "Music", "Ambient", "UI", "Alert" }));
+        Assert.Equal(new[] { "Alert" }, AudioBusPlan.ToCreate(new[] { "Music", "Ambient", "UI" }));
+    }
+
+    [Fact]
     public void Music_and_ambient_files_exist()
     {
         foreach (var f in new[] { "music/irradiated_skies.ogg", "music/led_twilight.ogg", "ambient/pale_window.ogg" })

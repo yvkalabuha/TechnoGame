@@ -283,6 +283,30 @@ public static class WorldCues
 public enum Bus { Music, Ambient, UI, Alert }
 
 /// <summary>Slider values 0..1. Alerts can be turned down but not off (#298): the floor is 20% (-14 dB).</summary>
+/// <summary>Effects a bus carries.</summary>
+public enum BusEffect { LowPass, HardLimiter, Record }
+
+/// <summary>Pure plan of the bus layout (Godot-free): which buses to create and which effects each carries. Used so a second director start adds nothing.</summary>
+public static class AudioBusPlan
+{
+    public static readonly string[] Names = { "Music", "Ambient", "UI", "Alert" };
+
+    /// <summary>Buses of <see cref="Names"/> missing from <paramref name="existing"/>, in creation order.</summary>
+    public static IReadOnlyList<string> ToCreate(IEnumerable<string> existing)
+    {
+        var have = new HashSet<string>(existing, StringComparer.Ordinal);   // lookups only
+        return Names.Where(n => !have.Contains(n)).ToArray();
+    }
+
+    /// <summary>Effects of a bus. Only UI (P2, P3) is low-passed; Alert (P0, P1) is never filtered.</summary>
+    public static IReadOnlyList<BusEffect> Effects(string bus) => bus switch
+    {
+        "UI" => new[] { BusEffect.LowPass },
+        "Master" => new[] { BusEffect.HardLimiter, BusEffect.Record },
+        _ => Array.Empty<BusEffect>(),
+    };
+}
+
 public static class AudioSettings
 {
     public const double AlertFloor = 0.2;
