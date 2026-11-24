@@ -170,12 +170,29 @@ public class KnowledgeAuditTests
     }
 
     [Fact]
+    public void Ahead_MaxAllowedCeiling_DoesNotOverflowCEff_OnAnyShippedNode()
+    {
+        var extreme = new KnowledgeParams { AheadCostK = Fx6.FromRaw(long.MaxValue), AheadCostPow = 4, AheadCostMax = Fx6.FromInt(KnowledgeParams.MaxAheadCostMax) };
+        extreme.Validate();
+        var run = new SliceRun(null, null, 1, 1, 42, extreme);
+        var off = new SliceRun(null, null, 1, 1, 42, Off);
+        for (int r = 0; r < run.Graph.Count; r++)
+        {
+            // Month 0 is the farthest from every anchor: the multiplier is at the ceiling for every node anchored after 1945.
+            Fx6 dear = run.System.CEff(0, r, 0), cheap = off.System.CEff(0, r, 0);
+            Assert.True(dear >= cheap && dear <= cheap * Fx6.FromInt(KnowledgeParams.MaxAheadCostMax) + Fx6.FromRaw(1_000), $"node {run.Graph.Number[r]}");
+        }
+    }
+
+    [Fact]
     public void Ahead_Params_AreValidated()
     {
         Assert.Throws<ArgumentException>(() => new KnowledgeParams { AheadCostK = Fx6.FromRaw(-1) }.Validate());
         Assert.Throws<ArgumentException>(() => new KnowledgeParams { AheadCostPow = 0 }.Validate());
         Assert.Throws<ArgumentException>(() => new KnowledgeParams { AheadCostPow = 5 }.Validate());
         Assert.Throws<ArgumentException>(() => new KnowledgeParams { AheadCostMax = Fx6.FromRaw(999_999) }.Validate());
+        Assert.Throws<ArgumentException>(() => new KnowledgeParams { AheadCostMax = Fx6.FromRaw(1_000_000_001) }.Validate());
+        new KnowledgeParams { AheadCostMax = Fx6.FromInt(1000) }.Validate();
         new KnowledgeParams().Validate();
         var d = new KnowledgeParams(); // owner decision #465
         Assert.Equal((20_000L, 2, 10_000_000L), (d.AheadCostK.Raw, d.AheadCostPow, d.AheadCostMax.Raw));

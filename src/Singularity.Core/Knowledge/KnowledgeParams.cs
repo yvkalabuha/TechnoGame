@@ -57,14 +57,17 @@ public sealed record KnowledgeParams
     /// <summary>Months from 1945-01 to month 0 of the run (the scenario start; 8 = 1945-09): the calendar origin of the ahead-of-time cost. The session sets it from the scenario.</summary>
     public int CalendarOriginMonths { get; init; } = 8;
 
+    /// <summary>Upper bound of <see cref="AheadCostMax"/>: with the dearest shipped c_money (about 40) the product stays far below the Fx6 range.</summary>
+    public const int MaxAheadCostMax = 1000;
+
     public void Validate()
     {
         if (AheadCostK < Fx6.Zero)
             throw new ArgumentException("The ahead-of-time cost k must not be negative.");
         if (AheadCostPow is < 1 or > 4)
             throw new ArgumentException("The ahead-of-time cost exponent must be in 1…4.");
-        if (AheadCostMax < Fx6.One)
-            throw new ArgumentException("The ahead-of-time cost ceiling must be at least 1.");
+        if (AheadCostMax < Fx6.One || AheadCostMax > Fx6.FromInt(MaxAheadCostMax))
+            throw new ArgumentException($"The ahead-of-time cost ceiling must be in 1…{MaxAheadCostMax}: a larger one could overflow c_eff.");
     }
 
     /// <summary><c>c_n = base(type)·mult(gen)</c>.</summary>
