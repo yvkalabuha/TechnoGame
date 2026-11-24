@@ -44,7 +44,7 @@ class SketchTest(unittest.TestCase):
         self.scan = m.start()
         self.addCleanup(m.stop)
         for p in (mock.patch.object(sketch, "AGY_WS_DIR", t / "agy-ws"),
-                  mock.patch.object(sketch, "scoped_deny_rules", lambda allowed: [f"read_file({a}-x)" for a in allowed])):
+                  mock.patch.object(sketch, "scoped_deny_rules", lambda allowed, **kw: [f"read_file({a}-x)" for a in allowed])):
             p.start()
             self.addCleanup(p.stop)  # the real rule walk lists / and is covered in test_agy_review
 

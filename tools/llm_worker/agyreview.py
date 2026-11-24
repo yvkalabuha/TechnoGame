@@ -63,7 +63,7 @@ def run_agy(prompt, worktree, schema_file, model=MODEL, timeout_s=DEFAULT_TIMEOU
     try:
         agy = sketch.find_agy(which)
         # Reads are limited by rules, not only checked afterwards: the diff is untrusted and may carry injected instructions.
-        with sketch.settings_file([worktree, brain_dir]) as settings:
+        with sketch.settings_file([worktree, brain_dir], [brain_dir]) as settings:
             rc, out, err = runner(command(agy, prompt, schema_file, model, timeout_s, settings), str(worktree), timeout_s + 60)
     except sketch.SketchError as e:
         raise AgyFailed(f"{e.code}: {e}") from None

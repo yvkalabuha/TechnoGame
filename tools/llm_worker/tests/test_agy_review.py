@@ -73,7 +73,28 @@ class ScopedRulesTest(unittest.TestCase):
         self.assertIn(f"{root}/etc/**", denied)
         self.assertFalse([x for x in denied if x.startswith(f"{root}/home/u/.cache/wt/run1")])  # the allowed folder
         self.assertNotIn(f"{root}/home/u/.cache/wt", denied)  # its ancestors stay listable, only siblings are denied
-        self.assertEqual(rules, [r for r in rules if r.startswith(("read_file(", "view_file("))])
+        self.assertEqual(rules, [r for r in rules if r.startswith(tuple(t + "(" for t in sketch.SCOPED_TOOLS))])
+
+    def test_other_conversations_in_brain_are_denied_own_stays_open(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d).resolve()
+            (root / "wt" / "run").mkdir(parents=True)
+            (root / "brain" / "old-conv").mkdir(parents=True)
+            rules = sketch.scoped_deny_rules([root / "wt" / "run", root / "brain"], top=root, closed_children=[root / "brain"])
+        denied = {r[len("read_file("):-1] for r in rules if r.startswith("read_file(")}
+        self.assertIn(f"{root}/brain/old-conv/**", denied)
+        self.assertNotIn(f"{root}/brain", denied)  # a conversation created later is not named by any rule
+        for tool in ("list_dir", "grep_search", "find_by_name"):
+            self.assertIn(f"{tool}({root}/brain/old-conv/**)", rules)
+
+    def test_unlistable_folder_refuses(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d).resolve()
+            (root / "run").mkdir()
+            with mock.patch("os.listdir", side_effect=PermissionError(13, "Permission denied")):
+                with self.assertRaises(sketch.SketchError) as cm:
+                    sketch.scoped_deny_rules([root / "run"], top=root)
+        self.assertEqual(cm.exception.code, "sandbox_unavailable")
 
     def test_unwritable_name_and_huge_folder_refuse(self):
         with tempfile.TemporaryDirectory() as d:
@@ -94,7 +115,7 @@ class RunAgyTest(unittest.TestCase):
         self.wt = self.tmp / "wt"
         self.wt.mkdir()
         self.brain = self.tmp / "brain"
-        p = mock.patch.object(sketch, "scoped_deny_rules", lambda allowed: [])  # the real walk is tested below
+        p = mock.patch.object(sketch, "scoped_deny_rules", lambda allowed, **kw: [])  # the real walk is tested below
         p.start()
         self.addCleanup(p.stop)
         (self.brain / CID / ".system_generated" / "logs").mkdir(parents=True)

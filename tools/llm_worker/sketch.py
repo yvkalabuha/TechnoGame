@@ -55,17 +55,18 @@ class SketchError(VisualError):
     no_images, secret_detected, sandbox_unavailable, rate_limit, agy_quota, agent_tool_violation."""
 
 
-# Evidence 2026-11-24: in --mode plan agy offers no list_dir, grep_search or find_by_name; view_file calls run as read_file.
-SCOPED_TOOLS = ("read_file", "view_file")
+# In --mode plan agy offers only read_file (view_file runs as it); the other modes may offer the rest.
+SCOPED_TOOLS = ("read_file", "view_file", "list_dir", "grep_search", "find_by_name")
 RULE_BAD_CHARS = frozenset("()*?[]{}\n")
 MAX_DIR_ENTRIES = 3000
 
 
-def scoped_deny_rules(allowed, top="/"):
+def scoped_deny_rules(allowed, top="/", closed_children=()):
     """Deny rules that leave only the `allowed` folders readable. Evidence 2026-11-24 (agy 1.5.16): a deny rule beats an
     allow rule, and a path that no rule names is NOT auto-denied, so an allow-list cannot be written; instead every
     sibling along the path from / to each allowed folder is denied (read_file(<path>/**), matched after ".." is
-    normalised). A name that cannot be written into a rule, or a folder too large to list, refuses the run."""
+    normalised). closed_children: folders that stay allowed but whose existing subfolders are denied up front (brain
+    folders of other conversations; this run's own one appears later). A name that cannot be written into a rule, or a folder too large to list, refuses the run."""
     allowed = [os.path.realpath(p) for p in allowed if os.path.isdir(p)]
     rules = []
 
@@ -77,8 +78,14 @@ def scoped_deny_rules(allowed, top="/"):
             if os.path.isdir(p) or os.path.islink(p):
                 rules.append(f"{t}({p}/**)")
 
+    def listing(d):
+        try:
+            return sorted(os.listdir(d))
+        except OSError as e:  # fail closed: an unreadable folder cannot be proven to hold nothing sensitive
+            raise SketchError("sandbox_unavailable", f"cannot list {d} for an agy deny list: {e.strerror}") from None
+
     def walk(d):
-        names = sorted(os.listdir(d))
+        names = listing(d)
         if len(names) > MAX_DIR_ENTRIES:
             raise SketchError("sandbox_unavailable", f"{d} has too many entries for an agy deny list")
         for name in names:
@@ -91,16 +98,20 @@ def scoped_deny_rules(allowed, top="/"):
                 deny(p)
 
     walk(top)
+    for c in closed_children:
+        c = os.path.realpath(c)
+        for name in listing(c) if os.path.isdir(c) else ():
+            deny(os.path.join(c, name))
     return rules
 
 
 @contextlib.contextmanager
-def settings_file(allowed):
+def settings_file(allowed, closed_children=()):
     """Path of a temporary --settings file: the fixed deny rules plus the per-run read scope. A file, not inline JSON:
     the rule list is tens of KB, close to the limit of one argument."""
     with tempfile.TemporaryDirectory(prefix="agy-settings-") as d:
         p = Path(d) / "settings.json"
-        p.write_text(json.dumps({"permissions": {"allow": [], "deny": DENY_RULES + scoped_deny_rules(allowed)}}), encoding="utf-8")
+        p.write_text(json.dumps({"permissions": {"allow": [], "deny": DENY_RULES + scoped_deny_rules(allowed, closed_children=closed_children)}}), encoding="utf-8")
         yield str(p)
 
 
@@ -476,7 +487,7 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
     guard.before_attempt(len(brief), 0)  # a failed run stays counted: the subscription may have counted it
     started = clock()
     AGY_WS_DIR.mkdir(parents=True, exist_ok=True)  # a small folder of its own: the read scope lists its parents
-    with tempfile.TemporaryDirectory(prefix="agy-sketch-", dir=AGY_WS_DIR) as ws, settings_file([ws, brain_dir]) as settings:
+    with tempfile.TemporaryDirectory(prefix="agy-sketch-", dir=AGY_WS_DIR) as ws, settings_file([ws, brain_dir], [brain_dir]) as settings:
         ws_refs = []
         for p in ref_paths:
             dst = Path(ws) / f"{len(ws_refs) + 1}-{p.name}"  # same basenames must not collapse
