@@ -10,12 +10,14 @@ import re
 from _common import block, read_input
 
 RUN = re.compile(r"run-globe-spike\.sh\b")
+QUOTED = re.compile(r"'[^']*'|\"(?:[^\"\\\\]|\\\\.)*\"", re.S)
 SHOT_FLAGS = re.compile(r"(^|\s)--(shots|time-shots|map-frames)(\s|$)")
 
 
 def main() -> None:
     data = read_input()
     cmd = ((data.get("tool_input") or {}).get("command") or "")
+    cmd = QUOTED.sub("''", cmd)   # text inside quotes (commit messages, echo) is not a launch
     if not RUN.search(cmd) or not SHOT_FLAGS.search(cmd):
         return
     if re.search(r"(^|\s)--only(\s|=)", cmd) or re.search(r"(^|[\s;&(])SHOTS_FULL=1\s", cmd):
