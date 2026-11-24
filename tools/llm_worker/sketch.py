@@ -243,7 +243,7 @@ def transcript_quota(brain_dir, ids):
     """Quota errors (429 / RESOURCE_EXHAUSTED) of failed steps in any conversation transcript of the run, sub-agents
     included: the main agent's stream does not show them (a sub-agent reports the 429 to its parent and stops).
     Returns {"errors": n, "reset_seconds": longest announced reset or None}."""
-    n, resets = 0, []
+    n, resets, ends = 0, [], []
     for cid in ids:
         f = Path(brain_dir) / cid / ".system_generated" / "logs" / "transcript.jsonl"
         try:
@@ -261,7 +261,18 @@ def transcript_quota(brain_dir, ids):
                 sec = reset_seconds(err)
                 if sec is not None:
                     resets.append(sec)
-    return {"errors": n, "reset_seconds": max(resets) if resets else None}
+                    at = _parse_time(ev.get("created_at"))
+                    if at is not None:
+                        ends.append(at + timedelta(seconds=sec))  # counted from the error, not from the end of the run
+    return {"errors": n, "reset_seconds": max(resets) if resets else None,
+            "reset_at": max(ends).isoformat(timespec="seconds") if ends else None}
+
+
+def _parse_time(s):
+    try:
+        return datetime.fromisoformat(s.replace("Z", "+00:00")) if isinstance(s, str) else None
+    except ValueError:
+        return None
 
 
 def quota_text(quota, got, count):
@@ -502,6 +513,9 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
         raise SketchError("agent_tool_violation", ", ".join(bad_tools))
     answer = result.get("response") if result and isinstance(result.get("response"), str) else ""
     if result is None or rc != 0 or result.get("status") != "SUCCESS":
+        sub_quota = transcript_quota(brain_dir, ids)  # a sub-agent's 429 may be the only trace of the cause
+        if sub_quota["errors"]:
+            raise SketchError("agy_quota", quota_text(sub_quota, 0, count))
         if quota_hit(err, result, out):
             raise SketchError("agy_quota", one_line(answer or err[-600:] or "quota error", 300))
         detail = one_line(answer or err or out, 300)
@@ -527,9 +541,7 @@ def run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, sh
         sizes = [p.stat().st_size for p in found]
     quota = transcript_quota(brain_dir, ids)
     if len(found) < count and quota["errors"]:
-        record["quota"] = {**quota, "reset_at": (datetime.fromtimestamp(clock(), timezone.utc)
-                                                 + timedelta(seconds=quota["reset_seconds"])).isoformat(timespec="seconds")
-                           if quota["reset_seconds"] is not None else None}
+        record["quota"] = quota
         record["stop_reason"] = "agy_quota"
     if not found:
         if quota["errors"]:

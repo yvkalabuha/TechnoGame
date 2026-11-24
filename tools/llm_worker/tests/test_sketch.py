@@ -277,6 +277,21 @@ class SketchTest(unittest.TestCase):
         self.assertTrue(rec["partial"])
         self.assertIn("got 1 of 2, reason: quota, reset in 4h40m37s", md.read_text())
 
+    def test_failed_run_after_subagent_429_is_quota_not_failed(self):
+        base = self.quota_runner(image=False)
+
+        def run(cmd, cwd, timeout):
+            rc, out, err = base(cmd, cwd, timeout)
+            return (rc, out, err) if cmd[1] == "--version" else (1, out, "agy crashed")
+        with self.assertRaises(sketch.SketchError) as c:
+            self.go(runner=run, count=2)
+        self.assertEqual(c.exception.code, "agy_quota")
+        self.assertIn("reset in 4h40m37s", str(c.exception))
+
+    def test_reset_at_counts_from_error_time(self):
+        _, _, rec = self.go(runner=self.quota_runner(image=True), count=2)  # real clock: reset_at must not depend on it
+        self.assertEqual(rec["quota"]["reset_at"], "2026-11-24T15:45:43+00:00")  # 11:05:06 + 4h40m37s
+
     def test_no_quota_record_when_all_images_arrive(self):
         _, _, rec = self.go(runner=self.quota_runner(image=True), count=1)
         self.assertNotIn("quota", rec)

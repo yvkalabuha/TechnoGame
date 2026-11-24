@@ -247,7 +247,7 @@ def _sketch(a):
         rc = rc or 6
     if rec.get("quota"):
         print(f"quota: {sketch_mod.quota_text(rec['quota'], len(rec['files']), rec['requested'])}")
-        rc = 4
+        rc = rc or 4
     print("attribution (add to mods/core/ATTRIBUTION.md after ui-art-director approves):")
     for line in rec["attribution"]:
         print(line)
