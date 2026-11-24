@@ -206,4 +206,25 @@ public class WorldMapTests
         Assert.True(LabelPlacement.Place(960, 540, 150, 20, 1920, 1080, out float x3, out _));
         Assert.Equal(960 - 75, x3);                                                          // inside: untouched
     }
+
+    [Fact]
+    public void Occupation_zones_are_told_apart_by_controller_number_not_by_tone()
+    {
+        // TASK-0142 G3: the line of control compares controller numbers; two controllers may share a tone (a joint administration takes its first member's tone).
+        var (m, _) = Need();
+        var st = CountryPalette.Build(m);
+        var seen = new System.Collections.Generic.Dictionary<int, string>();
+        int occupied = 0;
+        for (int i = 0; i < m.Rows.Length; i++)
+        {
+            var s = st.Regions[i];
+            if (s.Hatch != HatchKind.Occupied) { Assert.Equal(0, s.Controller); continue; }
+            occupied++;
+            Assert.True(s.Controller >= 1 && s.Controller <= st.Controllers.Length);
+            Assert.Equal(st.Controllers[s.Controller - 1], m.Rows[i].Controller);
+            if (seen.TryGetValue(s.Controller, out var code)) Assert.Equal(code, m.Rows[i].Controller); else seen[s.Controller] = m.Rows[i].Controller;
+        }
+        Assert.True(occupied > 0);
+        Assert.Equal(st.Controllers.Length, new System.Collections.Generic.HashSet<string>(st.Controllers).Count);   // one number per controller code
+    }
 }

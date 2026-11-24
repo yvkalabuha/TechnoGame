@@ -10,6 +10,7 @@ public sealed class Country
 {
     public int Id;
     public string Name;      // polity code, for example "SUN"; the display name is Names.Country(code)
+    public int Group;        // colony label: colony group number (1..), else 0
     public double BoxArea;   // pixels of the owner on the raster: the label order
     public Vector2 LabelPoint;
     public int Tint;         // tone index 0..11 of CountryPalette
@@ -26,8 +27,9 @@ public sealed class GlobeData
     public readonly List<Country> Countries = new();
     public byte[] Ids = Array.Empty<byte>();            // owner number per pixel, 0 = sea or no owner
     public ushort[] RegionIds = Array.Empty<ushort>();  // region number per pixel, 0 = sea
-    public byte[] RegionLut = Array.Empty<byte>();      // LutWidth x 2 RGBA8
+    public byte[] RegionLut = Array.Empty<byte>();      // LutWidth x 3 RGBA8
     public readonly List<Country> ColonyLabels = new();   // Id 0, Name "C_KEY": labels of the large colonial areas (locale polity.C_KEY)
+    int[] _colonyGroup = Array.Empty<int>();
     public WorldMap Map;
     public CountryPalette.Result Style;
 
@@ -45,19 +47,21 @@ public sealed class GlobeData
             Countries.Add(new Country { Id = o, Name = Map.Owners[o - 1], BoxArea = area[o], LabelPoint = new Vector2(anchors[o].Lon, anchors[o].Lat), Tint = Style.OwnerTone[o] });
 
         var canchors = Map.ColonyAnchors(RegionIds);
-        var cg = Map.ColonyGroupOfRegion();
+        var cg = _colonyGroup = Map.ColonyGroupOfRegion();
         var carea = new long[WorldMap.ColonyGroups.Length + 1];
         foreach (var rg in RegionIds) if (rg != 0) carea[cg[rg - 1]]++;
         for (int k = 1; k <= WorldMap.ColonyGroups.Length; k++)
-            if (carea[k] > 0) ColonyLabels.Add(new Country { Id = 0, Name = "C_" + WorldMap.ColonyGroups[k - 1].Key, BoxArea = carea[k], LabelPoint = new Vector2(canchors[k].Lon, canchors[k].Lat) });
+            if (carea[k] > 0) ColonyLabels.Add(new Country { Id = 0, Name = "C_" + WorldMap.ColonyGroups[k - 1].Key, BoxArea = carea[k], LabelPoint = new Vector2(canchors[k].Lon, canchors[k].Lat), Group = k });
         ColonyLabels.Sort((a, b) => b.BoxArea.CompareTo(a.BoxArea));
 
-        RegionLut = new byte[LutWidth * 2 * 4];
+        if (Style.Controllers.Length > 255) throw new InvalidOperationException("controller number is 8-bit in the region table");
+        RegionLut = new byte[LutWidth * 3 * 4];
         for (int i = 0; i < Style.Regions.Length; i++)
         {
             var s = Style.Regions[i]; int id = i + 1;
             Put(0, id, Fill(s.Tone), (byte)((int)s.Hatch * 85));
             Put(1, id, Line(s.HatchTone, HatchLogic.LineScale(s.Hatch)), (byte)s.Owner);
+            Put(2, id, ((byte)s.Controller, 0, 0), 255);   // row 2: controller number in R (the line of control must not depend on the tone)
         }
     }
 
@@ -86,13 +90,15 @@ public sealed class GlobeData
         return b;
     }
 
-    /// <summary>Owner number at lon/lat in degrees, 0 for sea, no owner or a dependent territory: a label of the owner may settle only on its own core land (France is not Algeria).</summary>
-    public int CoreOwnerAt(float lon, float lat)
+    /// <summary>True when the point of the globe belongs to the land a label names: the non-dependent land of an owner (country labels) or the colony group (colony labels).</summary>
+    public bool InLabelRegion(Country c, float lon, float lat)
     {
         int x = Math.Clamp((int)((lon + 180) / 360f * W), 0, W - 1);
         int y = Math.Clamp((int)((90 - lat) / 180f * H), 0, H - 1);
         int r = RegionIds[y * W + x];
-        return r == 0 || Style.Regions[r - 1].Hatch == HatchKind.Colony ? 0 : Ids[y * W + x];
+        if (r == 0) return false;
+        if (c.Id == 0) return c.Group > 0 && _colonyGroup[r - 1] == c.Group;
+        return !CountryPalette.IsDependent(Map.Rows[r - 1].Status) && Ids[y * W + x] == c.Id;   // an occupied colony (Libya under Britain) is not Italy's own land
     }
 
     /// <summary>Owner number at lon/lat in degrees (0 = sea or no owner).</summary>

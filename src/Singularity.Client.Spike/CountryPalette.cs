@@ -8,7 +8,8 @@ namespace Singularity.Client.Spike;
 public enum HatchKind : byte { None = 0, Colony = 1, Occupied = 2 }
 
 /// <summary>Fill tone, hatch and owner of one region as the globe shader reads them.</summary>
-public readonly record struct RegionStyle(int Tone, HatchKind Hatch, int HatchTone, int Owner);
+/// <summary>Controller is the number (1..) of the controlling polity in <see cref="CountryPalette.Result.Controllers"/>, 0 when the region is not occupied; it differs between zones even when their tones are equal.</summary>
+public readonly record struct RegionStyle(int Tone, HatchKind Hatch, int HatchTone, int Owner, int Controller = 0);
 
 /// <summary>
 /// The 12-tone country palette and its assignment rule (docs/ui/specs/task-0138-country-palette.md sections 2-4).
@@ -87,7 +88,7 @@ public static class CountryPalette
     public static bool IsDependent(string status) => status is "colony" or "mandate" or "protectorate" or "leased";
 
     /// <summary>Tone per owner number (index 0 unused) and style per region.</summary>
-    public sealed record Result(int[] OwnerTone, RegionStyle[] Regions, int[] CodeTone, string[] Codes);
+    public sealed record Result(int[] OwnerTone, RegionStyle[] Regions, int[] CodeTone, string[] Codes, string[] Controllers);
 
     public static Result Build(WorldMap map)
     {
@@ -114,13 +115,20 @@ public static class CountryPalette
         var ownerTone = new int[map.Owners.Length + 1];
         for (int o = 1; o <= map.Owners.Length; o++) ownerTone[o] = ToneOf(map.Owners[o - 1]);
         var reg = new RegionStyle[map.Rows.Length];
+        var controllers = new List<string>();   // polity codes of the occupiers in order of first use (rows are ordered)
         for (int i = 0; i < reg.Length; i++)
         {
             var r = map.Rows[i];
             int t = ToneOf(r.Owner);
             var hk = HatchLogic.Choose(r.Owner, r.Controller, IsDependent(r.Status));
-            reg[i] = new RegionStyle(t, hk, hk == HatchKind.Occupied ? ToneOf(r.Controller) : t, map.RegionOwner[i]);
+            int ctrl = 0;
+            if (hk == HatchKind.Occupied)
+            {
+                ctrl = controllers.IndexOf(r.Controller) + 1;
+                if (ctrl == 0) { controllers.Add(r.Controller); ctrl = controllers.Count; }
+            }
+            reg[i] = new RegionStyle(t, hk, hk == HatchKind.Occupied ? ToneOf(r.Controller) : t, map.RegionOwner[i], ctrl);
         }
-        return new Result(ownerTone, reg, tone, codes.ToArray());
+        return new Result(ownerTone, reg, tone, codes.ToArray(), controllers.ToArray());
     }
 }

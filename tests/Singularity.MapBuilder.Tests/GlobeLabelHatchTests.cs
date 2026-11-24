@@ -15,11 +15,24 @@ public class GlobeLabelHatchTests
     [Fact]
     public void Big_region_with_anchor_off_screen_keeps_its_label_inside_the_frame()
     {
-        // "French Algeria": the anchor is 40 px above the frame, the visible part of the region is hundreds of px deep.
+        // "French Algeria": the anchor is 40 px above the frame, the region is under the top edge of the frame.
+        static bool Algeria(float x, float y) => y < 400;
         Assert.False(LabelPlacement.Place(700, -40, 150, 20, Vw, Vh, out _, out _));   // the old rule hid it
-        Assert.True(LabelPlacement.PlaceInRegion(700, -40, 150, 20, Vw, Vh, 300, 960, 540, 900, null, out float x, out float y));
+        Assert.True(LabelPlacement.PlaceInRegion(700, -40, 150, 20, Vw, Vh, 300, 960, 540, 900, Algeria, out float x, out float y));
         Assert.Equal(LabelPlacement.Margin, y);
         Assert.Equal(700 - 75, x);
+    }
+
+    [Fact]
+    public void A_moved_label_never_sits_over_another_territory_even_within_the_radius()
+    {
+        // The clamped point is 40 px from the anchor (inside the radius) but is another territory, and the own land is out of reach: with a region test the label is hidden, not misplaced.
+        static bool France(float x, float y) => y > 600;
+        Assert.False(LabelPlacement.PlaceInRegion(700, -40, 150, 20, Vw, Vh, 300, 960, 540, 900, France, out _, out _));
+        Assert.True(LabelPlacement.PlaceInRegion(700, -40, 150, 20, Vw, Vh, 300, 960, 540, 900, null, out _, out _));   // the radius rule alone would accept it
+        // a plate that does not move needs no test
+        Assert.True(LabelPlacement.PlaceInRegion(960, 540, 150, 20, Vw, Vh, 300, 960, 540, 900, France, out float x, out _));
+        Assert.Equal(960 - 75, x);
     }
 
     [Fact]
@@ -49,9 +62,12 @@ public class GlobeLabelHatchTests
         Assert.Equal(LabelPlacement.PlateMode.Framed, LabelPlacement.ModeFor(64f));
         Assert.Equal(LabelPlacement.PlateMode.Framed, LabelPlacement.ModeFor(399f));
         Assert.Equal(LabelPlacement.PlateMode.Plain, LabelPlacement.ModeFor(400f));
-        float near = LabelPlacement.ScreenArea(500, 1000, 1f), far = LabelPlacement.ScreenArea(500, 400, 1f);
-        Assert.True(near > far * 6);                                                    // zooming in grows the area quadratically
-        Assert.Equal(0f, LabelPlacement.ScreenArea(500, 1000, -0.2f));                  // behind the limb
+        // 500 raster px at 100 px per degree on both axes; the same region foreshortened to half on the latitude axis (limb, high latitude) has half the area
+        float full = LabelPlacement.ScreenArea(500, 100, 0, 0, 100), half = LabelPlacement.ScreenArea(500, 100, 0, 0, 50);
+        Assert.Equal(500f * (360f / 4096f) * (360f / 4096f) * 10000f, full, 1);
+        Assert.Equal(full / 2, half, 1);
+        Assert.Equal(0f, LabelPlacement.ScreenArea(500, 100, 50, 200, 100), 1);          // collapsed axes: no area
+        Assert.True(LabelPlacement.RegionRadius(full) > LabelPlacement.RegionRadius(half));
     }
 
     [Fact]
@@ -61,6 +77,16 @@ public class GlobeLabelHatchTests
         Assert.True(cx > 500 + 50 && cy < 500 - 10);
         LabelPlacement.CalloutCentre(1890, 500, 100, 20, Vw, out cx, out _);
         Assert.True(cx < 1890 - 50);
+    }
+
+    [Fact]
+    public void Legend_goes_top_left_then_top_right_and_hides_when_both_are_taken()
+    {
+        Assert.True(LegendLayout.Place(1920, 64, 44, 240, false, false, out float x, out float y));
+        Assert.Equal((64 + 8, 44 + 8), (x, y));
+        Assert.True(LegendLayout.Place(1920, 64, 44, 240, true, false, out x, out y));
+        Assert.Equal(1920 - 8 - 240, x);
+        Assert.False(LegendLayout.Place(1920, 64, 44, 240, true, true, out _, out _));
     }
 
     [Fact]

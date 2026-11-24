@@ -406,3 +406,4 @@ set.gl.b,Atmosphere,Атмосфера
 legend.colony,Colony or mandate,Колония или мандат
 legend.occupied,Occupation hatch,Оккупация (штриховка)
 legend.control,Line of control,Линия контроля
+tip.legend,Map key: hatching and lines (L),Легенда карты: штриховки и линии (L)

@@ -5,7 +5,7 @@ render_mode unshaded, cull_back;
 // screen-space hatching, 30-degree graticule. No lighting, no glow.
 // ids: RG8, region number (low byte, high byte), 0 = sea. region_lut: 512x2 RGBA8 sRGB bytes read by region number:
 // row 0 = fill colour, A = hatch kind (0 none, 1 colony/mandate 45 deg, 2 occupied -45 deg, in steps of 1/3);
-// row 1 = hatch line colour, A = owner number (borders between owners are political, between regions of one owner faint).
+// row 1 = hatch line colour, A = owner number; row 2: R = controller number (0 when not occupied) (borders between owners are political, between regions of one owner faint).
 uniform sampler2D ids : filter_nearest, repeat_disable;
 uniform sampler2D region_lut : filter_nearest, repeat_disable;
 uniform vec3 sea_color : source_color = vec3(0.827, 0.882, 0.894);
@@ -53,7 +53,7 @@ float coast_land_at(vec2 uv) {
 vec3 srgb_to_lin(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c)); }
 vec3 tint_of(int id) { return srgb_to_lin(texelFetch(region_lut, ivec2(id, 0), 0).rgb); }
 vec3 hatch_line_of(int id) { return srgb_to_lin(texelFetch(region_lut, ivec2(id, 1), 0).rgb); }
-vec3 hatch_key(int id) { return texelFetch(region_lut, ivec2(id, 1), 0).rgb; }
+int controller_of(int id) { return int(texelFetch(region_lut, ivec2(id, 2), 0).r * 255.0 + 0.5); }   // row 2: controller number, so two zones of equal tone still differ
 int hatch_kind(int id) { return int(texelFetch(region_lut, ivec2(id, 0), 0).a * 3.0 + 0.5); }
 int owner_of(int id) { return id == 0 ? 0 : int(texelFetch(region_lut, ivec2(id, 1), 0).a * 255.0 + 0.5); }
 bool is_slice(int own) { return own != 0 && texelFetch(slice_lut, ivec2(own, 0), 0).r > 0.5; }
@@ -135,7 +135,7 @@ void fragment() {
 		} else if (nb[i] != id) {
 			faint += 1.0;
 			// Line of control: neighbouring regions of one owner that differ in status or in controller (G3).
-			if (id != 0 && (hatch_kind(nb[i]) != hk || (hk != 0 && hatch_key(nb[i]) != hatch_key(id)))) ctrl += 1.0;
+			if (id != 0 && (hatch_kind(nb[i]) != hk || controller_of(nb[i]) != controller_of(id))) ctrl += 1.0;
 		}
 		int ow = owner_of(nw[i]);
 		if (ow != own && nw[i] != 0 && id != 0) power += 1.0;

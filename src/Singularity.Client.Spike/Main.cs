@@ -108,6 +108,8 @@ public sealed partial class Main : Node3D
         if (langIdx >= 0 && langIdx + 1 < args.Length) Loc.SetLang(args[langIdx + 1]);
         Settings.Apply(Settings.Current, GetWindow(), !_shots && !_bench && !_mapFrames);
         _debug = args.Contains("--debug");
+        var qIdx = Array.IndexOf(args, "--quit-after");   // test runs: leave the game after N seconds (a live-session check needs a real run that ends)
+        if (qIdx >= 0 && qIdx + 1 < args.Length && double.TryParse(args[qIdx + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var qs)) _quitAfter = qs;
         var pwIdx = Array.IndexOf(args, "--power");
         if (pwIdx >= 0 && pwIdx + 1 < args.Length) _powerArg = args[pwIdx + 1];
         // --power ID is the service shortcut (ui-tester, --shots): it skips the menu and starts that power at once.
@@ -136,7 +138,9 @@ public sealed partial class Main : Node3D
         _overlay = new Overlay();
         layer.AddChild(_overlay);
         _overlay.Setup(_cam);
-        _overlay.OwnerAt = (lon, lat) => _data.CoreOwnerAt(lon, lat);
+        _overlay.InRegion = (c, lon, lat) => _data.InLabelRegion(c, lon, lat);
+        _overlay.LegendOpen = Settings.Current.MapLegendOpen;
+        _overlay.LegendToggled += open => { Settings.Current.MapLegendOpen = open; if (!_shots && !_mapFrames && !_bench) Settings.Save(); };
         foreach (var c in top) _overlay.AddLabel(c, false);
         foreach (var c in _data.ColonyLabels) if (Names.Country(c.Name) != null) _overlay.AddLabel(c, false, true);
         _hud = new Label { Position = new Vector2(12, 0), Visible = _debug };
@@ -323,6 +327,18 @@ public sealed partial class Main : Node3D
         _tintsReady = true;
         foreach (Control c in new Control[] { _mainMenu, _newGame, _settings, _credits }) layer.MoveChild(c, -1);   // menus stay above the panels
         ShowPower(_player, _startedFromMenu);   // the player's own power has no right panel: the map shows, the areas open from the rail
+        _liveCheckT = 0; _liveCheck = true;
+    }
+
+    // One run-time check on the live gameplay session (not only --map-frames): the actors of the running Session are mapped to countries of the 1945 map,
+    // labels are placed, the map key is on screen and the occupation zones are drawn with their hatch.
+    bool _liveCheck; double _liveCheckT, _quitAfter;
+    void LiveMapCheck()
+    {
+        int actors = _actorCountry.Length, mapped = _actorCountry.Count(c => c != 0), occ = 0;
+        foreach (var s in _data.Style.Regions) if (s.Hatch == HatchKind.Occupied) occ++;
+        bool ok = _host.Ready && _host.Snap != null && actors > 0 && mapped > 0 && _overlay.VisibleLabels > 0 && _overlay.LegendPlaced && occ > 0;
+        GD.Print($"MAPCHECK live session: actors={actors} mapped={mapped} labels={_overlay.VisibleLabels} legend={(_overlay.LegendPlaced ? "on" : "off")} occupied_regions={occ}: " + (ok ? "PASS" : "FAIL"));
     }
 
     // Alerts of the player's own power are also plates on the globe: halo, outline, sign (#326). Stacked below each other at the country.
@@ -484,7 +500,7 @@ public sealed partial class Main : Node3D
 
         var img = Image.CreateFromData(GlobeData.W, GlobeData.H, false, Image.Format.Rg8, _data.RegionIdBytes());
         var idTex = ImageTexture.CreateFromImage(img);
-        var lutTex = ImageTexture.CreateFromImage(Image.CreateFromData(GlobeData.LutWidth, 2, false, Image.Format.Rgba8, _data.RegionLut));
+        var lutTex = ImageTexture.CreateFromImage(Image.CreateFromData(GlobeData.LutWidth, 3, false, Image.Format.Rgba8, _data.RegionLut));
 
         _globeMat = new ShaderMaterial { Shader = GD.Load<Shader>("res://shaders/globe.gdshader") };
         _globeMat.SetShaderParameter("ids", idTex);
@@ -587,7 +603,7 @@ public sealed partial class Main : Node3D
             if (sk.Keycode is Key.Space or Key.P) _signal.TogglePause();
             else if (sk.Keycode == Key.Bracketleft) _signal.StepSpeed(-1);
             else if (sk.Keycode == Key.Bracketright) _signal.StepSpeed(1);
-            else if (sk.Keycode == Key.L) { if (_tree.Visible && _tree.CanLegend) _tree.ToggleLegend(!_tree.LegendOpen); }
+            else if (sk.Keycode == Key.L) { if (_tree.Visible) { if (_tree.CanLegend) _tree.ToggleLegend(!_tree.LegendOpen); } else _overlay.ToggleLegend(); }
             else _signal.SetSpeed((int)(sk.Keycode - Key.Key1) + 1);
         }
         else if (e is InputEventKey f3 && f3.Pressed && f3.Keycode == Key.F3)
@@ -656,7 +672,7 @@ public sealed partial class Main : Node3D
         ("map1945_europe_1920x1080.png", 16, 49, 1.75f, true),
         ("map1945_africa_1920x1080.png", 20, 3, 2.25f, true),
         ("map1945_asia_1920x1080.png", 88, 38, 2.1f, true),
-        ("map1945_limb_1920x1080.png", 118, 38, 2.1f, false),   // Europe near the limb
+        ("map1945_limb_1920x1080.png", 118, 38, 2.1f, true),   // Europe near the limb
     };
 
     // The globe alone on the lit side: the five slice powers keep an ink contour and every tone stays at full strength.
@@ -683,7 +699,7 @@ public sealed partial class Main : Node3D
         occOk &= occ > 0 && HatchLogic.Params(HatchKind.Occupied).Period > HatchLogic.Params(HatchKind.Colony).Period;
         GD.Print($"MAPCHECK occupation regions={occ} hatch Occupied, wider step: " + (occOk ? "PASS" : "FAIL"));
         if (!occOk) _shotFailed = true;
-        _overlay.LegendVisible = true;
+        _overlay.LegendVisible = true; _overlay.LegendOpen = true;
         _selected = 0; ApplySelection();
         _dist = 5f;
     }
@@ -739,6 +755,8 @@ public sealed partial class Main : Node3D
         if (_shots && _tintsReady) ShotStep(delta);
         if (_bench) BenchStep(delta);
         if (_mapFrames) MapFramesStep(delta);
+        if (_quitAfter > 0 && _t > _quitAfter) GetTree().Quit(0);
+        if (_liveCheck && (_liveCheckT += delta) > 2.0) { _liveCheck = false; LiveMapCheck(); }
         FlyStep(delta);
         UpdateCamera();
         if (_audio != null) { _audio.Actor = _player; _audio.CameraMoved(new Vector2(_yaw + _pitch * 1.7f, _dist)); }
@@ -760,6 +778,11 @@ public sealed partial class Main : Node3D
             c.AnchorLeft = c.AnchorRight = 0; c.OffsetLeft = left + 8; c.OffsetTop = top + 8; c.OffsetRight = left + 8 + c.CustomMinimumSize.X;
         }
         _journal.OffsetTop = top + 8;
+        // The map key: top left of the map area under the top bar; top right when an area panel holds the left; hidden over the tree and when both corners are taken.
+        _overlay.MapLeft = left; _overlay.MapTop = top;
+        _overlay.LegendLeftBusy = _area != AreaId.Map;
+        _overlay.LegendRightBusy = _actorPanel.Visible || _journal.Visible;
+        _overlay.LegendVisible = !_tree.Visible && _titleHidden.Count == 0;
         _helpBtn.OffsetLeft = left + 8; _helpBtn.OffsetRight = left + 44; _help.OffsetLeft = left + 8;
         // Badges: the active signals of an area, with the worst severity; locked areas never get one.
         var count = new int[AreaData.All.Length]; var sev = new int[AreaData.All.Length];
