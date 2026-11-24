@@ -57,7 +57,7 @@ public sealed class GlobeData
         {
             var s = Style.Regions[i]; int id = i + 1;
             Put(0, id, Fill(s.Tone), (byte)((int)s.Hatch * 85));
-            Put(1, id, Line(s.HatchTone), (byte)s.Owner);
+            Put(1, id, Line(s.HatchTone, HatchLogic.LineScale(s.Hatch)), (byte)s.Owner);
         }
     }
 
@@ -73,13 +73,8 @@ public sealed class GlobeData
         return ((byte)(v >> 16), (byte)(v >> 8), (byte)v);
     }
 
-    /// <summary>The stand-in of tint.N.line: the fill at 42 % in linear light, as an sRGB byte triple.</summary>
-    public static (byte, byte, byte) Line(int tone)
-    {
-        var (r, g, b) = Fill(tone);
-        static byte K(byte c) { var l = new Color(c / 255f, 0, 0).SrgbToLinear().R * 0.42f; return (byte)Math.Round(new Color(l, 0, 0).LinearToSrgb().R * 255f); }
-        return (K(r), K(g), K(b));
-    }
+    /// <summary>The stand-in of tint.N.line: the fill at 42 % in linear light (HatchLogic.Line).</summary>
+    public static (byte, byte, byte) Line(int tone, float scale = 0.42f) => HatchLogic.Line(tone, scale);
 
     /// <summary>The ID raster as RG8 bytes (low byte, high byte of the region number).</summary>
     public byte[] RegionIdBytes()

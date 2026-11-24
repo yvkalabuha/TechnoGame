@@ -403,3 +403,6 @@ set.gl.current,Prior,Прежний
 set.gl.a,Matte,Матовый
 set.gl.aplus,Matte + haze,Матовый + дымка
 set.gl.b,Atmosphere,Атмосфера
+legend.colony,Colony or mandate,Колония или мандат
+legend.occupied,Occupation zone,Зона оккупации
+legend.control,Line of control,Линия контроля

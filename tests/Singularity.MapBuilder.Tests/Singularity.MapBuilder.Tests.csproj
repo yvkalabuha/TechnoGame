@@ -8,5 +8,6 @@
     <Compile Include="../../src/Singularity.Client.Spike/ContrastValidator.cs" Link="ContrastValidator.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/Palette.cs" Link="Palette.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/LabelPlacement.cs" Link="LabelPlacement.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/HatchLogic.cs" Link="HatchLogic.cs" />
   </ItemGroup>
 </Project>

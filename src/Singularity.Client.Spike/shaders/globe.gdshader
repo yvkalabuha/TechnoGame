@@ -16,6 +16,8 @@ uniform vec3 ink : source_color = vec3(0.114, 0.118, 0.125);
 uniform float border_px = 1.2;
 uniform int selected_id = 0;     // owner number
 uniform bool show_hatch = true;
+uniform vec3 hatch_colony = vec3(8.0, 1.0, 0.9);     // period px, width px, strength; set from HatchLogic.Params
+uniform vec3 hatch_occupied = vec3(11.0, 1.0, 0.65);
 uniform float faint_border = 0.3;   // strength of the line between regions of one owner
 uniform sampler2D slice_lut : filter_nearest, repeat_disable, hint_default_black; // 256x1, R = 1 for the countries of the slice
 uniform float dim_others = 0.0;  // 0..1: pulls the tints of countries outside the slice towards paper
@@ -45,6 +47,7 @@ int id_at(vec2 uv) {
 vec3 srgb_to_lin(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c)); }
 vec3 tint_of(int id) { return srgb_to_lin(texelFetch(region_lut, ivec2(id, 0), 0).rgb); }
 vec3 hatch_line_of(int id) { return srgb_to_lin(texelFetch(region_lut, ivec2(id, 1), 0).rgb); }
+vec3 hatch_key(int id) { return texelFetch(region_lut, ivec2(id, 1), 0).rgb; }
 int hatch_kind(int id) { return int(texelFetch(region_lut, ivec2(id, 0), 0).a * 3.0 + 0.5); }
 int owner_of(int id) { return id == 0 ? 0 : int(texelFetch(region_lut, ivec2(id, 1), 0).a * 255.0 + 0.5); }
 bool is_slice(int own) { return own != 0 && texelFetch(slice_lut, ivec2(own, 0), 0).r > 0.5; }
@@ -63,12 +66,13 @@ void fragment() {
 	int hk = id == 0 ? 0 : hatch_kind(id);
 	if (show_hatch && hk != 0) {
 		bool occ = hk == 2;
-		float period = occ ? 7.0 : 8.0, width = 1.0;
+		vec3 hp = occ ? hatch_occupied : hatch_colony;
+		float period = hp.x, width = hp.y;
 		vec2 q = FRAGCOORD.xy;
 		float s = ((occ ? q.x - q.y : q.x + q.y)) / 1.41421356;
 		float d = abs(fract(s / period) - 0.5) * period;
 		float h = 1.0 - smoothstep(width * 0.5 - 0.5, width * 0.5 + 0.5, d);
-		col = mix(col, hatch_line_of(id), h * (occ ? 0.7 : 0.9) * fade);
+		col = mix(col, hatch_line_of(id), h * hp.z * fade);
 	}
 
 	if (look == 0) {
@@ -116,21 +120,33 @@ void fragment() {
 	float k = border_px * 0.5, k2 = border_px * 1.1;
 	int nb[4] = int[4](id_at(uv + dx * k), id_at(uv - dx * k), id_at(uv + dy * k), id_at(uv - dy * k));
 	int nw[4] = int[4](id_at(uv + dx * k2), id_at(uv - dx * k2), id_at(uv + dy * k2), id_at(uv - dy * k2));
-	float coast = 0.0, faint = 0.0, power = 0.0; bool sl = false; bool sel_edge = false;
+	float coast = 0.0, faint = 0.0, power = 0.0, ctrl = 0.0; bool sl = false; bool sel_edge = false;
 	for (int i = 0; i < 4; i++) {
 		int o = owner_of(nb[i]);
 		if (o != own) {
-			if (nb[i] == 0 || id == 0) coast += 1.0;
 			if (is_slice(o) || is_slice(own)) sl = true;
 			if (o == selected_id) sel_edge = true;
-		} else if (nb[i] != id) faint += 1.0;
+		} else if (nb[i] != id) {
+			faint += 1.0;
+			// Line of control: neighbouring regions of one owner that differ in status or in controller (G3).
+			if (id != 0 && (hatch_kind(nb[i]) != hk || (hk != 0 && hatch_key(nb[i]) != hatch_key(id)))) ctrl += 1.0;
+		}
 		int ow = owner_of(nw[i]);
 		if (ow != own && nw[i] != 0 && id != 0) power += 1.0;
 	}
+	// Coast (G8): the contour of the bilinear land mask, so that the 4096 px raster gives a smooth line instead of a staircase.
+	vec2 tp = clamp(uv, vec2(0.0), vec2(0.99999)) * SZ - 0.5;
+	ivec2 t0 = ivec2(floor(tp)); vec2 tf = fract(tp);
+	float m00 = id_at((vec2(t0) + 0.5) / SZ) > 0 ? 1.0 : 0.0, m10 = id_at((vec2(t0 + ivec2(1, 0)) + 0.5) / SZ) > 0 ? 1.0 : 0.0;
+	float m01 = id_at((vec2(t0 + ivec2(0, 1)) + 0.5) / SZ) > 0 ? 1.0 : 0.0, m11 = id_at((vec2(t0 + ivec2(1, 1)) + 0.5) / SZ) > 0 ? 1.0 : 0.0;
+	float lm = mix(mix(m00, m10, tf.x), mix(m01, m11, tf.x), tf.y);
+	float lw = max(fwidth(lm), 1e-4);
+	coast = 1.0 - smoothstep(0.55 * border_px, 1.2 * border_px, abs(lm - 0.5) / lw);
 	vec3 bc = border_color; float a = 0.0;
 	if (faint > 0.0) { bc = mix(border_color, col, 0.35); a = min(faint * 0.25, 1.0) * faint_border; }
+	if (ctrl > 0.0) { bc = ink; a = min(ctrl * 0.5, 1.0) * 0.8; }
 	if (power > 0.0) { bc = ink; a = min(power * 0.5, 1.0); }
-	if (coast > 0.0) { bc = coast_color; a = min(coast * 0.5 + 0.35, 1.0); }
+	if (coast > 0.0) { bc = coast_color; a = coast; }
 	if ((own == selected_id || sel_edge) && selected_id != 0 && power > 0.0) { bc = ink; a = 1.0; }
 	if (sl && power > 0.0) { bc = ink; a = 1.0; }
 	col = mix(col, bc, a * fade);

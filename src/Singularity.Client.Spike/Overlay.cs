@@ -7,7 +7,7 @@ namespace Singularity.Client.Spike;
 /// Labels of the slice countries are bold with an ink underline.</summary>
 public sealed partial class Overlay : Control
 {
-    sealed class LabelState { public Country C; public Label Node; public bool On; public bool Slice, Emph; }
+    sealed class LabelState { public Country C; public Label Node; public bool On; public bool Slice, Emph, Callout, Framed; public Rect2 Rect; public Vector2 Anchor; public Color Frame; }
 
     static readonly Color Ink = Ui.Ink;
     static readonly Color Paper = Ui.Paper;
@@ -50,11 +50,18 @@ public sealed partial class Overlay : Control
     Vector2 VpSize => GetViewportRect().Size;
     double _acc;
     public int VisibleLabels;
+    public bool IsShown(string code) { foreach (var s in _labels) if (s.C.Name == code) return s.Node.Visible; return false; }
+    public bool LegendVisible;   // the key of the status hatching and the control line (C1, C2)
+    string _legColony = "", _legOccupied = "", _legControl = "";
+    static readonly Color LegendColony = ToColor(GlobeData.Line(0)), LegendOcc = ToColor(GlobeData.Line(0, HatchLogic.LineScale(HatchKind.Occupied)));
+    static Color ToColor((byte R, byte G, byte B) c) => new(c.R / 255f, c.G / 255f, c.B / 255f);
+    void RefreshLegend() { _legColony = Loc.T("legend.colony"); _legOccupied = Loc.T("legend.occupied"); _legControl = Loc.T("legend.control"); }
 
     public void Setup(Camera3D cam)
     {
         _cam = cam;
         MouseFilter = MouseFilterEnum.Ignore;
+        RefreshLegend();
         Loc.Changed += Relabel;
         TreeExiting += () => Loc.Changed -= Relabel;
     }
@@ -75,6 +82,7 @@ public sealed partial class Overlay : Control
             _labels.Add(s = new LabelState { C = c, Node = l });
         }
         s.Slice = slice;
+        s.Frame = c.Id > 0 ? ToColor(GlobeData.Line(c.Tint)) : Ink;
         s.Node.AddThemeColorOverride("font_outline_color", Paper); s.Node.AddThemeConstantOverride("outline_size", 4);
         StyleLabel(s);
         s.Node.Text = Names.Country(c.Name) ?? c.Name;
@@ -109,7 +117,7 @@ public sealed partial class Overlay : Control
         }
     }
 
-    void Relabel() { foreach (var s in _labels) s.Node.Text = Names.Country(s.C.Name) ?? s.C.Name; }
+    void Relabel() { RefreshLegend(); foreach (var s in _labels) s.Node.Text = Names.Country(s.C.Name) ?? s.C.Name; }
 
     public float GlobeRadiusPx(float dist)
     {
@@ -129,7 +137,9 @@ public sealed partial class Overlay : Control
     {
         if (_dist < 1.01f) return;   // camera distance not known before the first frame
         DrawUnderlines();
+        DrawCallouts();
         DrawMarkers();
+        if (LegendVisible) DrawLegend();
         var c = VpSize * 0.5f;
         float r = GlobeRadiusPx(_dist);
         DrawArc(c, r, 0, Mathf.Tau, 180, Limb, 1.5f, true);         // thin pale limb line against the dark sky, no glow
@@ -139,6 +149,51 @@ public sealed partial class Overlay : Control
             var d = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
             DrawLine(c + d * (r + 5f), c + d * (r + 5f + len), Limb, 1f, true);
         }
+    }
+
+    // Small states (G5): a leader line with a dot at the region, and a frame in the line tone round plates of states under 400 du^2.
+    void DrawCallouts()
+    {
+        foreach (var s in _labels)
+        {
+            if (!s.Node.Visible) continue;
+            if (s.Framed) DrawRect(s.Rect, s.Frame, false, 1.5f);
+            if (!s.Callout) continue;
+            var to = new Vector2(s.Rect.Position.X < s.Anchor.X ? s.Rect.End.X : s.Rect.Position.X, s.Rect.GetCenter().Y);
+            DrawLine(s.Anchor, to, Paper, 4f, true); DrawLine(s.Anchor, to, Ink, 1.5f, true);
+            DrawCircle(s.Anchor, 4.5f, Paper); DrawCircle(s.Anchor, 3f, Ink);
+            DrawRect(s.Rect, Ink, false, 1f);
+        }
+    }
+
+    static void HatchRect(CanvasItem c, Rect2 r, Color col, float step, bool down)
+    {
+        for (float a = r.Position.X - r.Size.Y; a < r.End.X; a += step)
+        {
+            float s0 = Mathf.Max(0, r.Position.X - a), s1 = Mathf.Min(r.Size.Y, r.End.X - a);
+            if (s0 >= s1) continue;
+            c.DrawLine(down ? new Vector2(a + s0, r.Position.Y + s0) : new Vector2(a + s0, r.End.Y - s0), down ? new Vector2(a + s1, r.Position.Y + s1) : new Vector2(a + s1, r.End.Y - s1), col, 1f);
+        }
+    }
+
+    // Key of the map marks, bottom left: a swatch and a word per row; drawn from cached strings, no allocation.
+    void DrawLegend()
+    {
+        const float sw = 36f, rowH = 22f, pad = 10f;
+        var font = Fonts.Map;
+        float tw = Mathf.Max(font.GetStringSize(_legColony, HorizontalAlignment.Left, -1, 14).X, Mathf.Max(font.GetStringSize(_legOccupied, HorizontalAlignment.Left, -1, 14).X, font.GetStringSize(_legControl, HorizontalAlignment.Left, -1, 14).X));
+        var panel = new Rect2(16, VpSize.Y - 16 - (3 * rowH + 2 * pad), sw + tw + 3 * pad, 3 * rowH + 2 * pad);
+        DrawRect(panel, new Color(Ui.Sheet, 0.92f)); DrawRect(panel, Ink, false, 1f);
+        float y = panel.Position.Y + pad, x = panel.Position.X + pad;
+        var s1 = new Rect2(x, y + 3, sw, rowH - 6);
+        DrawRect(s1, ToColor((0xB6, 0xDE, 0xBF))); HatchRect(this, s1, new Color(LegendColony, 0.9f), 8f, false);
+        DrawString(font, new Vector2(x + sw + pad, y + 15), _legColony, HorizontalAlignment.Left, -1, 14, Ink);
+        y += rowH; var s2 = new Rect2(x, y + 3, sw, rowH - 6);
+        DrawRect(s2, ToColor((0xB6, 0xDE, 0xBF))); HatchRect(this, s2, new Color(LegendOcc, 0.65f), 11f, true);
+        DrawString(font, new Vector2(x + sw + pad, y + 15), _legOccupied, HorizontalAlignment.Left, -1, 14, Ink);
+        y += rowH;
+        DrawLine(new Vector2(x, y + rowH * 0.5f), new Vector2(x + sw, y + rowH * 0.5f), Ink, 1.5f);
+        DrawString(font, new Vector2(x + sw + pad, y + 15), _legControl, HorizontalAlignment.Left, -1, 14, Ink);
     }
 
     // Visible when the surface normal vs. view ray cos > 0.4; once shown stays until cos < 0.3.
@@ -152,6 +207,8 @@ public sealed partial class Overlay : Control
     {
         var placed = new List<Rect2>();
         VisibleLabels = 0;
+        float gr = GlobeRadiusPx(_dist);
+        var gc = VpSize * 0.5f;
         // Slice countries first, so that they win overlaps.
         foreach (var pass in new[] { true, false })
             foreach (var s in _labels)
@@ -163,9 +220,19 @@ public sealed partial class Overlay : Control
                 if (!s.On) { s.Node.Visible = false; continue; }
                 var sp = _cam.UnprojectPosition(p);
                 var sz = s.Node.GetCombinedMinimumSize();
-                // Near the screen edge the plate moves inside the view with a margin; it is hidden only when its centre is off screen (A9).
-                if (!LabelPlacement.Place(sp.X, sp.Y, sz.X + 6f, sz.Y + 6f, VpSize.X, VpSize.Y, out float px, out float py)) { s.Node.Visible = false; continue; }
-                var rect = new Rect2(px, py, sz.X + 6f, sz.Y + 6f);
+                // The plate moves inside the visible part of its region (margin 8 px, G4); it is hidden only when that part cannot hold it.
+                float w = sz.X + 6f, h = sz.Y + 6f;
+                var mode = LabelPlacement.ModeFor(LabelPlacement.ScreenArea(s.C.BoxArea, gr, cs));
+                float px, py;
+                s.Callout = mode == LabelPlacement.PlateMode.Callout; s.Framed = mode == LabelPlacement.PlateMode.Framed && s.C.Id > 0; s.Anchor = sp;
+                if (s.Callout)
+                {
+                    LabelPlacement.CalloutCentre(sp.X, sp.Y, w, h, VpSize.X, out float ccx, out float ccy);
+                    if (!LabelPlacement.Place(ccx, ccy, w, h, VpSize.X, VpSize.Y, out px, out py)) { s.Node.Visible = false; continue; }
+                }
+                else if (!LabelPlacement.PlaceInRegion(sp.X, sp.Y, w, h, VpSize.X, VpSize.Y, LabelPlacement.RegionRadius(s.C.BoxArea, gr), gc.X, gc.Y, gr * 0.97f, out px, out py)) { s.Node.Visible = false; continue; }
+                var rect = new Rect2(px, py, w, h);
+                s.Rect = rect;
                 bool hit = false;
                 foreach (var o in placed) if (o.Intersects(rect)) { hit = true; break; }
                 if (hit) { s.Node.Visible = false; continue; }

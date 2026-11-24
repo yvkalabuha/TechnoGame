@@ -118,9 +118,8 @@ public static class CountryPalette
         {
             var r = map.Rows[i];
             int t = ToneOf(r.Owner);
-            if (r.Owner != "" && r.Controller != r.Owner && r.Controller != "") reg[i] = new RegionStyle(t, HatchKind.Occupied, ToneOf(r.Controller), map.RegionOwner[i]);
-            else if (IsDependent(r.Status)) reg[i] = new RegionStyle(t, HatchKind.Colony, t, map.RegionOwner[i]);
-            else reg[i] = new RegionStyle(t, HatchKind.None, t, map.RegionOwner[i]);
+            var hk = HatchLogic.Choose(r.Owner, r.Controller, IsDependent(r.Status));
+            reg[i] = new RegionStyle(t, hk, hk == HatchKind.Occupied ? ToneOf(r.Controller) : t, map.RegionOwner[i]);
         }
         return new Result(ownerTone, reg, tone, codes.ToArray());
     }

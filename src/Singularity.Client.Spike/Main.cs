@@ -489,6 +489,9 @@ public sealed partial class Main : Node3D
         _globeMat.SetShaderParameter("ids", idTex);
         _globeMat.SetShaderParameter("region_lut", lutTex);   // sRGB bytes; the shader converts to linear light, so that the lit fills match the validator's model
         _globeMat.SetShaderParameter("sea_color", new Color(Palette.C.Sea));
+        var hc = HatchLogic.Params(HatchKind.Colony); var ho = HatchLogic.Params(HatchKind.Occupied);
+        _globeMat.SetShaderParameter("hatch_colony", new Vector3(hc.Period, hc.Width, hc.Alpha));
+        _globeMat.SetShaderParameter("hatch_occupied", new Vector3(ho.Period, ho.Width, ho.Alpha));
         _globeMat.SetShaderParameter("grid_color", new Color(Palette.GlobeGrid));
         var pl = Ui.Paper.SrgbToLinear();
         _globeMat.SetShaderParameter("paper", new Vector3(pl.R, pl.G, pl.B));
@@ -668,6 +671,17 @@ public sealed partial class Main : Node3D
         bool ok = ix >= 0 && _data.Map.Rows[ix].Owner == "GBR" && _data.Style.Regions[ix].Hatch == HatchKind.Colony && _data.Style.Regions[ix].Tone == CountryPalette.Fixed[1].Tone;
         GD.Print("MAPCHECK british_india owner=GBR colony hatch: " + (ok ? "PASS" : "FAIL"));
         if (!ok) _shotFailed = true;
+        // Run-time check on the same state: occupation zones exist, are drawn with the occupation hatch and a lighter line than colonies (G7).
+        int occ = 0; bool occOk = true;
+        for (int i = 0; i < _data.Map.Rows.Length; i++)
+        {
+            var r = _data.Map.Rows[i];
+            if (r.Owner != "" && r.Controller != "" && r.Controller != r.Owner) { occ++; occOk &= _data.Style.Regions[i].Hatch == HatchKind.Occupied; }
+        }
+        occOk &= occ > 0 && HatchLogic.Params(HatchKind.Occupied).Period > HatchLogic.Params(HatchKind.Colony).Period;
+        GD.Print($"MAPCHECK occupation regions={occ} hatch Occupied, wider step: " + (occOk ? "PASS" : "FAIL"));
+        if (!occOk) _shotFailed = true;
+        _overlay.LegendVisible = true;
         _selected = 0; ApplySelection();
         _dist = 5f;
     }
@@ -679,6 +693,14 @@ public sealed partial class Main : Node3D
         var v = MapViews[_mapStep];
         if (_mapT < 0.3) { _yaw = v.Lon; _pitch = v.Lat; _dist = v.Dist; return; }
         if (_mapT < 1.2) return;
+        // G4 on the live state: the big names of the frame stay on the map.
+        string need = v.Name.Contains("africa") ? "C_FRENCH_ALGERIA" : v.Name.Contains("asia") ? "THA" : null;
+        if (need != null)
+        {
+            bool shown = _overlay.IsShown(need);
+            GD.Print($"MAPCHECK {v.Name} label {need} shown: " + (shown ? "PASS" : "FAIL"));
+            if (!shown) _shotFailed = true;
+        }
         SaveShot(v.Name, null, v.Grey);
         _mapStep++; _mapT = 0;
     }
