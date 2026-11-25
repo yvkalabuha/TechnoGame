@@ -363,9 +363,9 @@ public static class SliceChecks
             return $"actor_month on the core-g4 data: '{head4}'";
         // (3) O-040: mods/core has a licensable PRC above 63 (single_crystal_casting, 73), so the world registers word 1 of the licence masks; the
         // core-g4 data (licensable PRC ≤ 63) does not. The run above is the end-to-end proof that the wide mask runs.
-        if (!HasColumn(new SliceWorld(current, new SliceRunConfig { Seed = 1 }), "pol.lic.mask.1"))
+        if (!HasColumn(new SliceWorld(current, SliceRunConfig.Legacy with { Seed = 1 }), "pol.lic.mask.1"))
             return "six-generation data: no pol.lic.mask.1";
-        if (HasColumn(new SliceWorld(legacy, new SliceRunConfig { Seed = 1 }), "pol.lic.mask.1"))
+        if (HasColumn(new SliceWorld(legacy, SliceRunConfig.Legacy with { Seed = 1 }), "pol.lic.mask.1"))
             return "core-g4 data: pol.lic.mask.1 is registered without a licensable PRC above 63";
         return null;
     }

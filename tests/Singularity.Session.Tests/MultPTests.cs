@@ -8,7 +8,7 @@ namespace Singularity.Session.Tests;
 public class MultPTests
 {
     private static SliceSession Run(int cell, bool t6dOff = false) =>
-        SliceTestData.Create(new SliceRunConfig { Seed = 7, ProfileCell = cell, T6dOff = t6dOff });
+        SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, ProfileCell = cell, T6dOff = t6dOff });
 
     // Cell 9u + 3g + s: USA, GBR, SUN profiles. USA is P1 in cell 0, P2 in cell 9, P3 in cell 18.
     private const int UsaP1 = 0, UsaP2 = 9, UsaP3 = 18;

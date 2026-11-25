@@ -54,7 +54,7 @@ public sealed class ParallelViewInputsTests : IDisposable
     // Runs the months with commands in several of them; returns the dump of the view of every month and the final hash.
     private static (string Views, string Hash) Run(SynthWorld w, int threads, int chunk)
     {
-        var s = SliceSession.Create(w.Data, new SliceRunConfig { Seed = 3, ScenarioId = w.ScenarioId, Threads = threads, ChunkSize = chunk });
+        var s = SliceSession.Create(w.Data, SliceRunConfig.Legacy with { Seed = 3, ScenarioId = w.ScenarioId, Threads = threads, ChunkSize = chunk });
         var sb = new StringBuilder();
         int local = 0;
         for (int m = 0; m < Months; m++)

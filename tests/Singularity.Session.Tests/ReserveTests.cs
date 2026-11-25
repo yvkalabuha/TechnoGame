@@ -8,7 +8,7 @@ namespace Singularity.Session.Tests;
 public class ReserveTests
 {
     private static SliceSession Make(bool reserve, int threads = 1) =>
-        SliceTestData.Create(new SliceRunConfig { Seed = 7, Reserve = reserve, Threads = threads });
+        SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Reserve = reserve, Threads = threads });
 
     private static BudgetShares Shares(long r, long c, long d, long p, long q) =>
         new(Fx6.FromRaw(r), Fx6.FromRaw(c), Fx6.FromRaw(d), Fx6.FromRaw(p), Fx6.FromRaw(q));
@@ -42,12 +42,12 @@ public class ReserveTests
                 HashAssert.Equal(ColumnProjection.Hash(off, _ => true), ColumnProjection.Hash(on, n => !ColumnProjection.IsReserveColumn(n)), $"an old column moved by month {t}");
         }
         // The run with the flag off is the run of main: the default config and Reserve = false share one fingerprint and the very same hash.
-        SliceSession main = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
+        SliceSession main = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7 });
         for (long t = 0; t < 36; t++)
             main.StepThroughMonth(t);
         HashAssert.Equal(main.LastHash, off.LastHash, "Reserve = false is not the run of main");
-        Assert.Equal(new SliceRunConfig { Seed = 7 }.SnapshotFingerprint(), new SliceRunConfig { Seed = 7, Reserve = false }.SnapshotFingerprint());
-        Assert.NotEqual(new SliceRunConfig { Seed = 7 }.SnapshotFingerprint(), new SliceRunConfig { Seed = 7, Reserve = true }.SnapshotFingerprint());
+        Assert.Equal((SliceRunConfig.Legacy with { Seed = 7 }).SnapshotFingerprint(), (SliceRunConfig.Legacy with { Seed = 7, Reserve = false }).SnapshotFingerprint());
+        Assert.NotEqual((SliceRunConfig.Legacy with { Seed = 7 }).SnapshotFingerprint(), (SliceRunConfig.Legacy with { Seed = 7, Reserve = true }).SnapshotFingerprint());
         for (int a = 0; a < on.World.Table.RowCount; a++)
             Assert.Equal(Fx6.Zero, on.World.Reserve!.Balance(a));
         Assert.DoesNotContain(off.World.Table.Columns, c => ColumnProjection.IsReserveColumn(c.Name));
@@ -205,7 +205,7 @@ public class ReserveTests
     [Fact]
     public void FundProgramme_IsRefusedWhereKnowledgeIsAScheduleAndNeverCrossesOne()
     {
-        SliceSession sched = SliceTestData.CreateLegacy(new SliceRunConfig { Seed = 7, Reserve = true, Layer = LayerControl.Lk0 });
+        SliceSession sched = SliceTestData.CreateLegacy(SliceRunConfig.Legacy with { Seed = 7, Reserve = true, Layer = LayerControl.Lk0 });
         Assert.Equal(CommandRefusal.ReserveOff, sched.Submit(SourceClass.Player, 0, 0, new FundProgramme(0, 1, Fx6.One)).Reason);
         // Every frontier node of every actor, plain or hazard: the capacity leaves the node at or below 1.
         SliceSession s = Make(true);
@@ -313,7 +313,7 @@ public class ReserveTests
         string h1 = Run(1, out string log), h2 = Run(2, out _);
         HashAssert.Equal(h1, h2, "L2: thread count changed the state");
         Assert.Contains("fund_programme", log);
-        SliceSession replay = SliceSession.Replay(SliceTestData.Data, new SliceRunConfig { Seed = 7, Reserve = true }, log, Make(true).World.Calendar.TickOfMonth(23) + 1);
+        SliceSession replay = SliceSession.Replay(SliceTestData.Data, SliceRunConfig.Legacy with { Seed = 7, Reserve = true }, log, Make(true).World.Calendar.TickOfMonth(23) + 1);
         HashAssert.Equal(h1, replay.LastHash, "L1: the replay differs");
     }
 

@@ -22,7 +22,7 @@ public class CalibrationParamsTests
     // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront; old columns unchanged (ColumnProjection hash not changed).
     private const string MainSeed1Month149 = "3d466f77ddd6d0733636475d5286224d52958103507ba5b29e71381d18c82f68";
 
-    private static SliceRunConfig Base(ulong seed = 1, int threads = 2) => new() { Seed = seed, Threads = threads };
+    private static SliceRunConfig Base(ulong seed = 1, int threads = 2) => SliceRunConfig.Legacy with { Seed = seed, Threads = threads };
 
     private static Fx6 F(long raw) => Fx6.FromRaw(raw);
 

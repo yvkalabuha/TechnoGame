@@ -21,7 +21,7 @@ public class ViewSubscriptionTests
     [Fact]
     public void DefaultScopeIsAll_EveryActorHasNodes_AndSubscribingIsRefused()
     {
-        Assert.Equal(ViewScope.All, new SliceRunConfig().ViewScope);
+        Assert.Equal(ViewScope.All, SliceRunConfig.Legacy.ViewScope);
         SliceSession s = Make(ViewScope.All);
         Assert.All(s.View.Actors, a => Assert.True(a.Nodes.IsPresent && a.Nodes.Count > 0));
         Assert.Throws<InvalidOperationException>(() => s.SetViewSubscription([0]));

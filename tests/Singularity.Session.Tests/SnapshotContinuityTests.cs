@@ -11,7 +11,7 @@ public class SnapshotContinuityTests
 {
     private const long Months = 40;
 
-    private static SliceRunConfig Cfg(ulong seed, int threads) => new() { Seed = seed, Threads = threads, ChunkSize = 1 };
+    private static SliceRunConfig Cfg(ulong seed, int threads) => SliceRunConfig.Legacy with { Seed = seed, Threads = threads, ChunkSize = 1 };
 
     private static byte[] Save(SliceSession s)
     {
@@ -119,7 +119,7 @@ public class SnapshotContinuityTests
     [Fact]
     public void Load_IsRefused_WhenTheDestinationHasAPendingCommandAtTickZero()
     {
-        var cfg = new SliceRunConfig { Seed = 7, ProductAi = false };
+        var cfg = SliceRunConfig.Legacy with { Seed = 7, ProductAi = false };
         SliceSession source = SliceTestData.Create(cfg);
         source.StepThroughMonth(1);
         byte[] snap = Save(source);
@@ -135,7 +135,7 @@ public class SnapshotContinuityTests
     [Fact]
     public void Journal_IsRestored_AndLocalNStaysMonotonic()
     {
-        SliceSession a = SliceTestData.Create(new SliceRunConfig { Seed = 7, ProductAi = false });
+        SliceSession a = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, ProductAi = false });
         var player = new PlayerScript(a);
         for (long m = 0; m < 24; m++)
         {
@@ -143,7 +143,7 @@ public class SnapshotContinuityTests
             a.StepThroughMonth(m);
         }
         Assert.True(player.Accepted > 0, "the script must have issued commands");
-        SliceSession b = Load(new SliceRunConfig { Seed = 7, ProductAi = false }, Save(a));
+        SliceSession b = Load(SliceRunConfig.Legacy with { Seed = 7, ProductAi = false }, Save(a));
         Assert.Equal(a.CommandLog, b.CommandLog);
         HashAssert.Equal(a.LastHash, b.LastHash, "hash after the load");
         for (long m = 24; m < 30; m++)
@@ -161,7 +161,7 @@ public class SnapshotContinuityTests
 
     // ---- pending queue (ADR-0013 p. 5) ----
 
-    private static readonly SliceRunConfig PlayerCfg = new() { Seed = 7, ProductAi = false };
+    private static readonly SliceRunConfig PlayerCfg = SliceRunConfig.Legacy with { Seed = 7, ProductAi = false };
 
     /// <summary>
     /// A session after a few months of play, stopped right after the script issued commands of the month <paramref name="month"/>: they are
@@ -263,7 +263,7 @@ public class SnapshotContinuityTests
     {
         SliceSession a = SliceTestData.Create(Cfg(1, 1));
         a.StepThroughMonth(5);
-        SliceSession b = Load(new SliceRunConfig { Seed = 1, Threads = 4, ChunkSize = 2 }, Save(a));
+        SliceSession b = Load(SliceRunConfig.Legacy with { Seed = 1, Threads = 4, ChunkSize = 2 }, Save(a));
         a.StepThroughMonth(6);
         b.StepThroughMonth(6);
         HashAssert.Equal(a.LastHash, b.LastHash, "month 6");

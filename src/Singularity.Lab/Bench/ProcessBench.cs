@@ -83,7 +83,9 @@ public static class ProcessBench
         j.WriteString("gc_events", gcEvents);
     }
 
-    public static SliceRunConfig Config(SynthWorld w, ulong seed, int threads, int chunk, bool daily, RunSwitches sw) => new()
+    // TASK-0176: the bench stays on the build it was frozen with (#355 series): the levers of wave 1 off. The licence market of TASK-0171 also refuses
+    // a synthetic world with more than 64 catalogues (PolicySystem.AddMarketColumns), so it cannot run at bench scale yet.
+    public static SliceRunConfig Config(SynthWorld w, ulong seed, int threads, int chunk, bool daily, RunSwitches sw) => SliceRunConfig.Legacy with
     {
         Seed = seed,
         ScenarioId = w.ScenarioId,
