@@ -116,6 +116,26 @@ class CodexSketchTest(unittest.TestCase):
         self.assertEqual(c.exception.code, "codex_quota")
         self.assertIsNotNone(limitstate.limited_until(datetime.now(timezone.utc) - timedelta(days=2), self.state))
 
+    def test_limit_state_is_written_while_lock_is_held(self):
+        import fcntl
+        lock = self.home / "land.lock"
+        seen = []
+        real = limitstate.record_limit
+
+        def spy(*a, **k):
+            fd = os.open(lock, os.O_RDWR)
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                seen.append("free")
+            except OSError:
+                seen.append("held")
+            finally:
+                os.close(fd)
+            return real(*a, **k)
+        with mock.patch.object(limitstate, "record_limit", spy), self.assertRaises(sketch.SketchError):
+            self.go(self.runner(LIMIT, rc=1), land_lock=lock)
+        self.assertEqual(seen, ["held"])
+
     def test_remembered_limit_blocks_without_call(self):
         now = datetime.now(timezone.utc)
         limitstate.record_limit(now + timedelta(hours=1), now, self.state)
@@ -264,6 +284,15 @@ class EngineTest(unittest.TestCase):
         r, c = self.call("auto", quota)
         self.assertEqual(r[2]["engine"], "codex")
         self.assertEqual(c[0]["code"], "agy_quota")
+
+    def test_auto_falls_back_on_real_rate_limited(self):
+        from tools.llm_worker.visual import RateLimited
+
+        def limited(*a, **k):
+            raise RateLimited("20 requests today, limit 20")
+        r, c = self.call("auto", limited)
+        self.assertEqual((r[2]["engine"], c[0]["code"]), ("codex", "rate_limit"))
+        self.assertEqual(len(c), 1)
 
     def test_auto_does_not_fall_back_on_other_errors(self):
         def bad(*a, **k):

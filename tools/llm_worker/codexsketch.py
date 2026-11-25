@@ -26,7 +26,7 @@ from . import codex, config, gitleaks, limitstate
 from .sandbox import SandboxUnavailable
 from .sketch import (SketchError, attribution_line, check_prompt_file, check_refs, image_complete, one_line, record_stem, summary_md,
                      IMAGE_EXT, run_sketch as run_gemini)
-from .visual import write_pair, TASK_RE
+from .visual import write_pair, TASK_RE, VisualError
 
 ENGINES = ("auto", "gemini", "agy", "codex")  # agy: alias of gemini
 DEFAULT_DAILY_CAP = 4
@@ -201,80 +201,84 @@ def run_codex_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_D
     chome = codex_home(home)
     version = codex_version(real) if runner is None else None
     runner = runner or default_runner
-    with tempfile.TemporaryDirectory(prefix="codex-sketch-") as ws:
-        ws_refs = []
-        for p in ref_paths:
-            dst = Path(ws) / f"{len(ws_refs) + 1}-{p.name}"
-            shutil.copyfile(p, dst)
-            ws_refs.append(dst.name)
-        env = {k: environ[k] for k in codex.ENV_KEEP if k in environ}
-        env["HOME"] = str(home or Path.home())
-        env["PATH"] = f"{node_dir}:{env.get('PATH', '/usr/bin:/bin')}"
-        try:
-            argv = codex.bwrap_argv(ws, None, exe, home=home, bwrap=bwrap) + command(str(real), [f"/work/{n}" for n in ws_refs])
-        except SandboxUnavailable as e:
-            raise SketchError("sandbox_unavailable", str(e)) from None
-        with land_guard(land_lock):  # the last check before launch; held until Codex exits
+    guard = contextlib.ExitStack()
+    try:
+        with tempfile.TemporaryDirectory(prefix="codex-sketch-") as ws:
+            ws_refs = []
+            for p in ref_paths:
+                dst = Path(ws) / f"{len(ws_refs) + 1}-{p.name}"
+                shutil.copyfile(p, dst)
+                ws_refs.append(dst.name)
+            env = {k: environ[k] for k in codex.ENV_KEEP if k in environ}
+            env["HOME"] = str(home or Path.home())
+            env["PATH"] = f"{node_dir}:{env.get('PATH', '/usr/bin:/bin')}"
+            try:
+                argv = codex.bwrap_argv(ws, None, exe, home=home, bwrap=bwrap) + command(str(real), [f"/work/{n}" for n in ws_refs])
+            except SandboxUnavailable as e:
+                raise SketchError("sandbox_unavailable", str(e)) from None
+            guard.enter_context(land_guard(land_lock))  # the last check before launch; held until the result is saved
             reserve_attempt(ledger_dir, datetime.fromtimestamp(clock(), timezone.utc), daily_cap, task, digest)
             rc, out, err = runner(argv, build_prompt(brief, ws_refs), timeout_s, env)
-    thread, paths, blobs, model, shell = parse_run(out)
-    record.update(started_at=datetime.fromtimestamp(started, timezone.utc).isoformat(timespec="seconds"), exit_code=rc,
-                  conversation_id=thread, codex_version=version)
-    record["date"] = record["started_at"][:10]
-    stem = f"{record_stem(runs_dir, task, digest, started)}-{uuid.uuid4().hex[:8]}"  # unique even for concurrent runs
-    if shell:
-        record["agent_tool_violation"] = shell
-        write_pair(Path(runs_dir), stem, record,
-                   lambda r: f"# Codex sketches: {r['task']}\n\nREFUSED: agent tool violation: {', '.join(r['agent_tool_violation'])}\n")
-        raise SketchError("agent_tool_violation", ", ".join(shell))
-    images = []  # (name, bytes)
-    gen = chome / "generated_images"
-    for s in paths:  # only files Codex saved itself, never an arbitrary path from an event
-        p = Path(os.path.realpath(s))
-        if gen in p.parents and p.suffix.lower() in IMAGE_EXT and image_complete(p):
-            images.append((p.name, p.read_bytes()))
-    if not images and thread and Path(os.path.realpath(gen / thread)).parent == gen and (gen / thread).is_dir():
-        for p in sorted((gen / thread).iterdir()):
-            if p.is_file() and not p.is_symlink() and p.suffix.lower() in IMAGE_EXT and image_complete(p):
+        thread, paths, blobs, model, shell = parse_run(out)
+        record.update(started_at=datetime.fromtimestamp(started, timezone.utc).isoformat(timespec="seconds"), exit_code=rc,
+                      conversation_id=thread, codex_version=version)
+        record["date"] = record["started_at"][:10]
+        stem = f"{record_stem(runs_dir, task, digest, started)}-{uuid.uuid4().hex[:8]}"  # unique even for concurrent runs
+        if shell:
+            record["agent_tool_violation"] = shell
+            write_pair(Path(runs_dir), stem, record,
+                       lambda r: f"# Codex sketches: {r['task']}\n\nREFUSED: agent tool violation: {', '.join(r['agent_tool_violation'])}\n")
+            raise SketchError("agent_tool_violation", ", ".join(shell))
+        images = []  # (name, bytes)
+        gen = chome / "generated_images"
+        for s in paths:  # only files Codex saved itself, never an arbitrary path from an event
+            p = Path(os.path.realpath(s))
+            if gen in p.parents and p.suffix.lower() in IMAGE_EXT and image_complete(p):
                 images.append((p.name, p.read_bytes()))
-    for i, b in enumerate(blobs):
-        data = decode_blob(b)
-        ext = ".png" if data.startswith(b"\x89PNG") else ".jpg" if data.startswith(b"\xff\xd8") else ".webp"
-        with tempfile.NamedTemporaryFile(suffix=ext) as t:
-            t.write(data)
-            t.flush()
-            if image_complete(t.name):
-                images.append((f"codex_{thread or 'run'}_{i + 1}{ext}"[:80], data))
-    images = images[-1:]  # one image per call
-    if not images:
-        msg = codex.error_text(out) + err
-        if codex.LIMIT_RE.search(msg):
-            reset = limitstate.record_limit(limitstate.parse_reset(msg, now), now, state_dir)
-            raise SketchError("codex_quota", f"Codex usage limit, reset at {reset.isoformat(timespec='minutes')}")
-        if rc != 0:
-            raise SketchError("codex_failed", f"exit {rc}: {one_line(err[-400:] or msg, 300)}")
-        raise SketchError("no_images", "Codex answered without an image")
-    record["model"] = model or "codex image_generation"
-    record["files"], record["requested"] = [], 1
-    out_dir = Path(shots_dir or config.SHOTS_DIR) / "sketches" / task
-    out_dir.mkdir(parents=True, exist_ok=True)
-    name, data = images[0]
-    dst = out_dir / name
-    k = 1
-    while True:  # exclusive create: a concurrent run cannot take the same name
-        try:
-            with open(dst, "xb") as fh:
-                fh.write(data)
-            break
-        except FileExistsError:
-            dst = out_dir / f"{Path(name).stem}-{k}{Path(name).suffix}"
-            k += 1
-    record["files"].append({"name": dst.name, "path": str(dst), "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(),
-                            "source": "codex generated_images"})
-    record["partial"] = False
-    record["attribution"] = [attribution_line(record, f) for f in record["files"]]
-    path, md = write_pair(Path(runs_dir), stem, record, summary_md)
-    return path, md, record
+        if not images and thread and Path(os.path.realpath(gen / thread)).parent == gen and (gen / thread).is_dir():
+            for p in sorted((gen / thread).iterdir()):
+                if p.is_file() and not p.is_symlink() and p.suffix.lower() in IMAGE_EXT and image_complete(p):
+                    images.append((p.name, p.read_bytes()))
+        for i, b in enumerate(blobs):
+            data = decode_blob(b)
+            ext = ".png" if data.startswith(b"\x89PNG") else ".jpg" if data.startswith(b"\xff\xd8") else ".webp"
+            with tempfile.NamedTemporaryFile(suffix=ext) as t:
+                t.write(data)
+                t.flush()
+                if image_complete(t.name):
+                    images.append((f"codex_{thread or 'run'}_{i + 1}{ext}"[:80], data))
+        images = images[-1:]  # one image per call
+        if not images:
+            msg = codex.error_text(out) + err
+            if codex.LIMIT_RE.search(msg):
+                reset = limitstate.record_limit(limitstate.parse_reset(msg, now), now, state_dir)
+                raise SketchError("codex_quota", f"Codex usage limit, reset at {reset.isoformat(timespec='minutes')}")
+            if rc != 0:
+                raise SketchError("codex_failed", f"exit {rc}: {one_line(err[-400:] or msg, 300)}")
+            raise SketchError("no_images", "Codex answered without an image")
+        record["model"] = model or "codex image_generation"
+        record["files"], record["requested"] = [], 1
+        out_dir = Path(shots_dir or config.SHOTS_DIR) / "sketches" / task
+        out_dir.mkdir(parents=True, exist_ok=True)
+        name, data = images[0]
+        dst = out_dir / name
+        k = 1
+        while True:  # exclusive create: a concurrent run cannot take the same name
+            try:
+                with open(dst, "xb") as fh:
+                    fh.write(data)
+                break
+            except FileExistsError:
+                dst = out_dir / f"{Path(name).stem}-{k}{Path(name).suffix}"
+                k += 1
+        record["files"].append({"name": dst.name, "path": str(dst), "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(),
+                                "source": "codex generated_images"})
+        record["partial"] = False
+        record["attribution"] = [attribution_line(record, f) for f in record["files"]]
+        path, md = write_pair(Path(runs_dir), stem, record, summary_md)
+        return path, md, record
+    finally:
+        guard.close()
 
 
 def run_engine(engine, task, prompt_file, refs=(), count=1, codex_kw=None, **kw):
@@ -290,7 +294,7 @@ def run_engine(engine, task, prompt_file, refs=(), count=1, codex_kw=None, **kw)
         return run_codex_sketch(task, prompt_file, refs, count, **codex_kw)
     try:
         return run_gemini(task, prompt_file, refs, count, **kw)
-    except SketchError as e:
+    except VisualError as e:  # SketchError and the RateLimited of the local guard
         if engine == "gemini" or e.code not in FALLBACK_CODES or count != 1:
             raise
         return run_codex_sketch(task, prompt_file, refs, count, fallback={"from": "gemini", "code": e.code, "reason": one_line(str(e), 200)},
