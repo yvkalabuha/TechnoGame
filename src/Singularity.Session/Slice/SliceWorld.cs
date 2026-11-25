@@ -8,6 +8,7 @@ using Singularity.Core.Industry;
 using Singularity.Core.Knowledge;
 using Singularity.Core.Policy;
 using Singularity.Core.Products;
+using Singularity.Core.Intelligence;
 using Singularity.Core.Reserve;
 using Singularity.Core.WhyNot;
 using Singularity.Kernel;
@@ -162,16 +163,25 @@ internal sealed class SliceWorld
             products: config.ProductAi ? new PolicyProductsAdapter(this) : null, designs: ProductsLayout.Designs,
             generations: ProductsLayout.Generations, derive: config.Derive, startLines: StartLines(pStart),
             events: Streams.Events, eventInputs: new PolicyEventsAdapter(this), disruptionExposure: scenario.Exposure,
-            budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout, config.LicenceMarket) > LicenceMask.NarrowMaxNumber);   // O-040: the second word only for data whose licensable PRC need it
+            budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout, config.LicenceMarket) > LicenceMask.NarrowMaxNumber,
+            securityPreset: config.Intelligence ? (data.Intelligence?.Params.PresetNormal ?? Fx6.Zero) : Fx6.Zero);   // O-040: the second word only for data whose licensable PRC need it
         if (config.Reserve)
             Reserve = new ReserveSystem(Table, new ReserveParams(), new ReserveInputsAdapter(this));
+        if (config.Intelligence)
+        {
+            IntelligenceData intel = data.Intelligence ?? throw new InvalidOperationException("Intelligence is on but the data has no `intelligence` object.");
+            IntelParams = intel.Params;
+            Intel = new IntelSystem(Table, intel.Params, new IntelInputsAdapter(this), Streams.Events, scenario.ActorId);
+            IntelDataHash = intel.Hash;
+        }
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs,
             ImmutableArray.CreateRange(MasteryParams.ProgrammeProcesses(ProductsLayout).Select(k => ProductsLayout.ProcNumber[k])),
-            fundProgramme: config.Reserve);
+            fundProgramme: config.Reserve, intelligence: config.Intelligence);
         Limits = new CommandLimits(scenario.ActorCount, ProductsLayout.SlotCount, ProductsLayout.Designs,
             [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)])
         {
             ReserveEnabled = config.Reserve,
+            IntelEnabled = config.Intelligence,
             FundEnabled = config.Reserve && config.Layer is not (LayerControl.Lk or LayerControl.Lk0),
             NodeNumbers = ImmutableArray.CreateRange(Graph.Number.OrderBy(n => n)),
         };
@@ -185,6 +195,8 @@ internal sealed class SliceWorld
         var systems = new List<ITickSystem> { Knowledge, Industry, Products, Policy };
         if (Reserve is not null)
             systems.Add(Reserve);
+        if (Intel is not null)
+            systems.Add(Intel);
         if (config.DailyTickProbe)
             systems.Add(new DailyProbeSystem());
         DailyViewNeutral = IsDailyViewNeutral(systems);
@@ -356,13 +368,29 @@ internal sealed class SliceWorld
 
     /// <summary>The reserve account system; null when <see cref="SliceRunConfig.Reserve"/> is off.</summary>
     public ReserveSystem? Reserve { get; }
+
+    /// <summary>The intelligence system; null when <see cref="SliceRunConfig.Intelligence"/> is off.</summary>
+    public IntelSystem? Intel { get; }
+
+    private IntelParams? IntelParams { get; }
+
+    /// <summary>Hash of the intelligence parameters ("" without intelligence): part of the identity of a snapshot, as they are outside the data hash.</summary>
+    internal string IntelDataHash { get; } = "";
     public WhyNotAnalyzer WhyNot { get; }
     public CommandLimits Limits { get; }
     public TickRunner Runner { get; }
     public ImmutableArray<Fx6> BudgetAtStart { get; }
 
     /// <summary>Shares in force: the player's <c>set_budget_shares</c> if one was applied, else the AI profile's.</summary>
-    public BudgetShares SharesOf(int actor) => Commands.SharesOverride(actor) ?? Policy.Shares(actor);
+    public BudgetShares SharesOf(int actor) =>
+        Commands.SharesOverride(actor) ?? (IntelParams is null ? Policy.Shares(actor) : WithSecurity(Policy.Shares(actor), IntelParams.PresetNormal));
+
+    /// <summary>
+    /// The AI's split with the seventh item: the "normal" preset is taken first from the quality item (it has no reader in the core), the rest from procurement.
+    /// The sum stays 1, so the AI invariants and the reserve (which the AI feeds nothing) are those of a run without intelligence. [Предп., O-NNN: economy-analyst
+    /// decides the source of the item, INTELLIGENCE.md OPEN 3.]
+    /// </summary>
+    private static BudgetShares WithSecurity(BudgetShares s, Fx6 security) => s.WithSecurity(security);
 
     /// <summary>Procurement budget of the month in force: <c>share_P·budget_a</c> (spec §3.3, §3.4); one definition for the product layer and <c>why_not</c>.</summary>
     /// <summary>
@@ -667,6 +695,12 @@ internal sealed class SliceWorld
         // Only a run on the RHMS_OFF data set carries this column, so every other hash is that of a build without the switch.
         if (Config.SkipStartValidation)
             Table.AddInt("run.skip_s2").Load([.. Enumerable.Repeat(1, rows)]);
+        // Intelligence is part of the state: the flag and the hash of its parameters (they are outside the data hash).
+        if (Config.Intelligence)
+        {
+            Table.AddInt("run.intel").Load([.. Enumerable.Repeat(1, rows)]);
+            Table.AddLong("run.intel.data").Load(Fill(rows, BitConverter.ToInt64(Convert.FromHexString(IntelDataHash)[..8])));
+        }
         Table.AddInt("run.cell").Load([.. Enumerable.Repeat(Config.ProfileCell ?? -1, rows)]);
         Table.AddInt("run.ai").Load([.. Enumerable.Repeat((Config.ProductAi ? 1 : 0) | (Config.Derive ? 2 : 0), rows)]);
         // T6D_OFF / LIC_OFF / lic_knows are part of the state, so a switch cannot give the hash of main.

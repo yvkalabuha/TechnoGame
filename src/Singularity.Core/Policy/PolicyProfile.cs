@@ -81,12 +81,31 @@ public enum PilotProfileSet
 }
 
 /// <summary>Budget split of an actor: research, capability, process development (D), procurement, quality programme (spec §3.4).</summary>
-public readonly record struct BudgetShares(Fx6 Research, Fx6 Capability, Fx6 Effort, Fx6 Procurement, Fx6 Quality)
+public readonly record struct BudgetShares(Fx6 Research, Fx6 Capability, Fx6 Effort, Fx6 Procurement, Fx6 Quality, Fx6 Security = default)
 {
-    public Fx6 Sum => Research + Capability + Effort + Procurement + Quality;
+    /// <summary>
+    /// The sum of every item. <c>Security</c> is the seventh item of the owner decision #260 (intelligence, TASK-0160): zero in a run without intelligence, so the sums of
+    /// such a run are the old ones.
+    /// </summary>
+    public Fx6 Sum => Research + Capability + Effort + Procurement + Quality + Security;
 
     /// <summary>Every share is non-negative and the sum is exactly 1 in <see cref="Fx6"/> (the <c>set_budget_shares</c> validator).</summary>
     public bool IsValid => InRange && Sum == Fx6.One;
+
+    /// <summary>
+    /// The split with the seventh item taken out for the AI (TASK-0160): the preset is paid first from the quality item (it has no reader in the core), the rest from
+    /// procurement; clamped to what both hold, so no share goes negative. Zero security returns the split unchanged. The sum stays what it was.
+    /// </summary>
+    public BudgetShares WithSecurity(Fx6 security)
+    {
+        if (security <= Fx6.Zero)
+            return this;
+        Fx6 room = Quality + Procurement;
+        if (security > room)
+            security = room;
+        Fx6 fromQuality = security < Quality ? security : Quality;
+        return this with { Quality = Quality - fromQuality, Procurement = Procurement - (security - fromQuality), Security = Security + security };
+    }
 
     /// <summary>What the five items leave: the share that goes to the reserve account (zero when the sum is 1).</summary>
     public Fx6 Reserve => Fx6.One - Sum;
@@ -95,7 +114,7 @@ public readonly record struct BudgetShares(Fx6 Research, Fx6 Capability, Fx6 Eff
     public bool IsValidWithReserve => InRange && Sum <= Fx6.One;
 
     /// <summary>Every share lies in [0, 1]; checked before any sum so that an absurd value is a refusal, not an overflow.</summary>
-    public bool InRange => Within(Research) && Within(Capability) && Within(Effort) && Within(Procurement) && Within(Quality);
+    public bool InRange => Within(Research) && Within(Capability) && Within(Effort) && Within(Procurement) && Within(Quality) && Within(Security);
 
     private static bool Within(Fx6 v) => v >= Fx6.Zero && v <= Fx6.One;
 }

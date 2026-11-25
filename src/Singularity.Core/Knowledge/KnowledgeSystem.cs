@@ -230,6 +230,15 @@ public sealed class KnowledgeSystem : ITickSystem
         return count;
     }
 
+    /// <summary>Number of nodes the actor knows (a read of the snapshot).</summary>
+    public int KnownCount(int actorRow)
+    {
+        int n = 0;
+        for (int r = 0; r < _n; r++)
+            n += IsKnown(actorRow, r) ? 1 : 0;
+        return n;
+    }
+
     /// <summary>The node is unknown and its requirements are known: it is in the actor's frontier (spec §3.1).</summary>
     public bool InFrontier(int actorRow, int nodeRow) => !IsKnown(actorRow, nodeRow) && RequiresKnown(actorRow, nodeRow);
 
@@ -532,7 +541,7 @@ public sealed class KnowledgeSystem : ITickSystem
 
     // The ahead-of-time multiplier is a pure function of (node, month): a few integer operations, no table to refresh, nothing stored.
     private Fx6 CEffOf(int a, int r, Fx6 kmix, long month) =>
-        KnowledgeMath.CEff(KnowledgeMath.CMoney(_g.CostN[r], _p.SRef) * KnowledgeMath.AheadMultiplier(_p.AheadCostK, _p.AheadCostPow, _p.AheadCostMax, _g.AnchorYear[r], month, _p.CalendarOriginMonths), _p.KDiff, KnownElsewhere(a, r), _p.KK, kmix, _p.KRef, InformsSum(a, r));
+        KnowledgeMath.CEff(KnowledgeMath.CMoney(_g.CostN[r], _p.SRef) * KnowledgeMath.AheadMultiplier(_p.AheadCostK, _p.AheadCostPow, _p.AheadCostMax, _g.AnchorYear[r], month, _p.CalendarOriginMonths), _p.KDiff, KnownElsewhere(a, r), _p.KK, kmix, _p.KRef, InformsSum(a, r), _inputs.StealShare(a, r, month));
 
     private bool RequiresKnown(int a, int r)
     {

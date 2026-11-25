@@ -61,6 +61,12 @@ public enum CommandRefusal
 
     /// <summary>At application: the reserve holds less than the amount, or the node is not in the frontier of the actor.</summary>
     ProgrammeNotFundable,
+
+    /// <summary>A security share or a target plan in a run without intelligence.</summary>
+    IntelOff,
+
+    /// <summary>The target plan is malformed: more than three targets, a repeat, the actor itself, an unknown actor or an unknown mode.</summary>
+    BadTargets,
 }
 
 public readonly record struct CommandVerdict(CommandRefusal Reason, string Message, int BestGenBefore = 0, int BestGenAfter = 0,
@@ -82,6 +88,9 @@ public sealed record CommandLimits(int ActorCount, int SlotCount, int Designs, I
     /// <summary>Programmes can run: the reserve is on and the knowledge layer is the full model (a schedule has no progress to fund).</summary>
     public bool FundEnabled { get; init; }
 
+    /// <summary>The run has intelligence (TASK-0160): the security share and a target plan are accepted.</summary>
+    public bool IntelEnabled { get; init; }
+
     /// <summary>Node numbers of the knowledge graph (for <c>fund_programme</c>).</summary>
     public ImmutableArray<int> NodeNumbers { get; init; } = [];
 
@@ -100,6 +109,27 @@ public sealed record CommandLimits(int ActorCount, int SlotCount, int Designs, I
 /// </summary>
 public static class CommandValidator
 {
+    // At most three distinct targets other than the actor, each a known actor with a real mode; null when the plan is well formed.
+    private static string? TargetsRefusal(SetBudgetShares s, CommandLimits limits)
+    {
+        if (s.Targets.Length > Singularity.Core.Intelligence.IntelParams.MaxTargets)
+            return $"at most {Singularity.Core.Intelligence.IntelParams.MaxTargets} targets";
+        for (int i = 0; i < s.Targets.Length; i++)
+        {
+            Singularity.Core.Intelligence.IntelTarget t = s.Targets[i];
+            if (t.Target < 0 || t.Target >= limits.ActorCount || t.Target == s.Actor)
+                return $"target {t.Target} is not another actor";
+            if (t.Mode is not (Singularity.Core.Intelligence.IntelMode.Observe or Singularity.Core.Intelligence.IntelMode.Steal or Singularity.Core.Intelligence.IntelMode.FalseTrails))
+                return $"mode {(int)t.Mode} of target {t.Target} is not observe, steal or false trails";
+            for (int j = 0; j < i; j++)
+            {
+                if (s.Targets[j].Target == t.Target)
+                    return $"target {t.Target} is named twice";
+            }
+        }
+        return null;
+    }
+
     public static CommandVerdict CheckForm(in LoggedCommand logged, CommandLimits limits)
     {
         SliceCommand c = logged.Command;
@@ -114,6 +144,10 @@ public static class CommandValidator
         switch (c)
         {
             case SetBudgetShares s:
+                if (!limits.IntelEnabled && (s.Shares.Security != Singularity.Kernel.Fx6.Zero || !s.Targets.IsDefault))
+                    return CommandVerdict.Refuse(CommandRefusal.IntelOff, "this run has no intelligence: no security share and no targets");
+                if (!s.Targets.IsDefault && TargetsRefusal(s, limits) is { } bad)
+                    return CommandVerdict.Refuse(CommandRefusal.BadTargets, bad);
                 if (limits.ReserveEnabled)
                 {
                     // The quality item has no reader in the core: with the reserve its share is kept in the reserve (SliceWorld.ReserveShare), so it stays valid.

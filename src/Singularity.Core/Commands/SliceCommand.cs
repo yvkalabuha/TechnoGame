@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Singularity.Core.Intelligence;
 using Singularity.Core.Policy;
 using Singularity.Core.Products;
 using Singularity.Kernel;
@@ -71,8 +72,12 @@ public abstract record SliceCommand(int Actor)
     public abstract CommandKind Kind { get; }
 }
 
-/// <summary><c>set_budget_shares</c>: R / capability / D / procurement / QP; sums to exactly 1 (validated at Submit).</summary>
-public sealed record SetBudgetShares(int Actor, BudgetShares Shares) : SliceCommand(Actor)
+/// <summary>
+/// <c>set_budget_shares</c>: R / capability / D / procurement / QP and, in a run with intelligence, the seventh item security; sums to exactly 1 (validated at Submit).
+/// <paramref name="Targets"/> (intelligence only, TASK-0160): at most three targets with a mode; <c>default</c> keeps the plan in force (the AI plan, or the last one the
+/// player set), an empty array sets "no targets". It travels with the shares so the command set has no new family (ADR-0027 draft).
+/// </summary>
+public sealed record SetBudgetShares(int Actor, BudgetShares Shares, ImmutableArray<IntelTarget> Targets = default) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.SetBudgetShares;
 }

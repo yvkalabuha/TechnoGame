@@ -480,7 +480,7 @@ public sealed partial class PolicySystem
                     || CancelPending(row, t, x.HandleOf(d))
                     || !prod.Admitted(row, d, t) || GateBlocks(row, d, t))
                     continue;
-                Fx6 procurement = Shares(row).Procurement * Budget(row);
+                Fx6 procurement = PlannedProcurement(Shares(row)) * Budget(row);
                 dec.Starts.Add((d, PolicyRules.LineRate(procurement, x.UnitCostFloor)));
                 // F17b (A41): below y_prod only the candidate is replaced and the working line stays; at y_prod (or with ADMIT) every other line closes.
                 bool all = !yprod || YMin(row, d, t) >= _pp.YProd;

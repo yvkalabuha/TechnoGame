@@ -39,6 +39,9 @@ internal sealed class KnowledgeInputsAdapter(SliceWorld world) : IKnowledgeInput
         return nodeRow >= 0;
     }
 
+    // The theft channel of the intelligence layer; zero (and no read) in a run without it, so c_eff is the old value.
+    public Fx6 StealShare(int actorRow, int nodeRow, long month) => world.Intel?.StealShare(actorRow, nodeRow) ?? Fx6.Zero;
+
     public Fx6 DisciplineVolume(int actorRow, int discipline, long month) => world.Industry.DisciplineVolume(actorRow, discipline);
 
     // lic_knows (spec §6.7): the merge of month t grants what the licence bought in compute t−1 names (it began to act in t): the ENG node of the seller's

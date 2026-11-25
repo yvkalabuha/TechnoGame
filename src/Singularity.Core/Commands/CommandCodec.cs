@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using Singularity.Core.Intelligence;
 using Singularity.Core.Policy;
 using Singularity.Core.Products;
 using Singularity.Kernel;
@@ -40,6 +41,19 @@ public static class CommandCodec
                 Raw(sb, s.Shares.Effort).Append(',');
                 Raw(sb, s.Shares.Procurement).Append(',');
                 Raw(sb, s.Shares.Quality).Append(']');
+                // Optional keys: a run without intelligence writes exactly the old line.
+                if (s.Shares.Security != Fx6.Zero)
+                {
+                    sb.Append(",\"security\":");
+                    Raw(sb, s.Shares.Security);
+                }
+                if (!s.Targets.IsDefault)
+                {
+                    sb.Append(",\"targets\":[");
+                    for (int i = 0; i < s.Targets.Length; i++)
+                        sb.Append(i > 0 ? "," : "").Append('[').Append(I(s.Targets[i].Target)).Append(',').Append(I((int)s.Targets[i].Mode)).Append(']');
+                    sb.Append(']');
+                }
                 break;
             case SetEffortFocus f:
                 sb.Append(",\"processes\":");
@@ -112,7 +126,7 @@ public static class CommandCodec
         string kind = r.GetProperty("kind").GetString() ?? "";
         SliceCommand command = kind switch
         {
-            "set_budget_shares" => ReadShares(actor, r.GetProperty("shares")),
+            "set_budget_shares" => ReadShares(actor, r),
             "set_effort_focus" => new SetEffortFocus(actor, ReadInts(r.GetProperty("processes"))),
             "compose_design" => new ComposeDesign(actor, r.GetProperty("generation").GetInt32(), ReadInts(r.GetProperty("alts"))),
             "derive_design" => new DeriveDesign(actor, ReadHandle(r, "parent"), ReadInts(r.GetProperty("alts"))),
@@ -219,11 +233,20 @@ public static class CommandCodec
     private static Fx6 ReadRaw(JsonElement e) =>
         Fx6.FromRaw(long.Parse(e.GetString() ?? throw new FormatException("Fx6 value must be a string."), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture));
 
-    private static SetBudgetShares ReadShares(int actor, JsonElement e)
+    private static SetBudgetShares ReadShares(int actor, JsonElement r)
     {
-        Fx6[] v = [.. e.EnumerateArray().Select(ReadRaw)];
+        Fx6[] v = [.. r.GetProperty("shares").EnumerateArray().Select(ReadRaw)];
         if (v.Length != 5)
             throw new FormatException("shares needs 5 values.");
-        return new SetBudgetShares(actor, new BudgetShares(v[0], v[1], v[2], v[3], v[4]));
+        Fx6 security = r.TryGetProperty("security", out JsonElement sec) ? ReadRaw(sec) : Fx6.Zero;
+        ImmutableArray<IntelTarget> targets = default;
+        if (r.TryGetProperty("targets", out JsonElement tg))
+        {
+            var b = ImmutableArray.CreateBuilder<IntelTarget>();
+            foreach (JsonElement pair in tg.EnumerateArray())
+                b.Add(new IntelTarget(pair[0].GetInt32(), (IntelMode)pair[1].GetInt32()));
+            targets = b.ToImmutable();
+        }
+        return new SetBudgetShares(actor, new BudgetShares(v[0], v[1], v[2], v[3], v[4], security), targets);
     }
 }
