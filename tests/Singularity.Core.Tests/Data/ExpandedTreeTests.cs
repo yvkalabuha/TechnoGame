@@ -59,6 +59,19 @@ public class ExpandedTreeTests : IDisposable
     }
 
     [Fact]
+    public void StartKnowledgeRoots_HaveNoRequirements_SoEveryCountryCanOpenThem()
+    {
+        // O-095: semiconductor physics, astrodynamics and fission are known by all five countries but are not nodes; their roots stay open.
+        NodeTable n = Data.Nodes;
+        foreach (string id in new[] { "s9.prn.point_contact_transistor", "s11.prc.gaseous_diffusion_enrichment", "s11.eng.fission_weapon_g1" })
+        {
+            int r = n.IndexOf(id);
+            Assert.True(r >= 0, id);
+            Assert.Equal(n.Requires.GroupStart[r], n.Requires.GroupStart[r + 1]);
+        }
+    }
+
+    [Fact]
     public void SpaceDirection_IsMainForNineNodes_AndSecondaryForTwo()
     {
         NodeTable n = Data.Nodes;
