@@ -1,7 +1,7 @@
 ---
 id: TASK-0145
 title: "Sketches through Codex CLI image generation (llm_worker sketch --engine codex)"
-status: APPROVED
+status: IN_PROGRESS
 level: light
 milestone: MS-M05
 agent: developer

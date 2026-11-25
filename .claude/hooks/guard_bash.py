@@ -11,6 +11,8 @@ import re
 from _common import block, read_input
 
 FORBIDDEN = re.compile(r"[;&|<>`]|\$\(")
+# A leading "nice -n N" (lower CPU priority, owner rule 2026-11-24) is allowed in front of any allowed command.
+NICE = re.compile(r"^nice\s+(-n\s*)?-?\d+\s+")
 
 
 def main() -> None:
@@ -20,6 +22,7 @@ def main() -> None:
     args = ap.parse_args()
     data = read_input()
     cmd = ((data.get("tool_input") or {}).get("command") or "").strip()
+    cmd = NICE.sub("", cmd, count=1)
     if FORBIDDEN.search(cmd):
         block(f"Blocked: {args.agent} may not use shell operators (; & | < > ` $()).")
     if not any(cmd == p or cmd.startswith(p + " ") for p in args.allow):

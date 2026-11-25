@@ -16,7 +16,7 @@ namespace Singularity.Lab.Models.Slice;
 public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactory
 {
     /// <summary>The version of the Session surface this model was written against (SLICE_COMPOSITION §13.7).</summary>
-    public const int SurfaceVersion = 21;
+    public const int SurfaceVersion = 22;
 
     /// <summary>Horizon H of the slice, months (spec §2): the control tables have curve knots τ 0…2·H−1.</summary>
     public const int SliceHorizonMonths = 384;
@@ -230,7 +230,8 @@ public sealed class JetSliceModel : ISessionModel
         _p = p;
         _ticks = ticks;
         _calibration = calibration;
-        MetricTables = calibration ? SliceTables.CalibrationFor(SliceTables.Generations(data)) : SliceTables.Full;
+        MetricTables = calibration ? SliceTables.CalibrationFor(SliceTables.Generations(data))
+            : p.Levers is { Eta: true } ? [.. SliceTables.Full, LeverSpec.EtaTable] : SliceTables.Full;
     }
 
     public IReadOnlyList<MetricTableSpec> MetricTables { get; }
@@ -245,6 +246,9 @@ public sealed class JetSliceModel : ISessionModel
         while (calendar.TickOfMonth(months) < _ticks)
             months++;
         ForceProxy? force = _p.ForceDivisor > 0 ? new ForceProxy(s, _p.ForceDivisor) : null;
+        // TASK-0148: the scripted player levers; absent (null) for every manifest without LEVER_*/RESERVE* keys, so those runs are unchanged.
+        LeverScript? levers = _p.Levers is { Active: true } spec ? new LeverScript(s, spec, sink, MetricTables.Count - 1) : null;
+        levers?.Issue(0);
         observer.Start(s.View);
         int logSeen = 0;
         for (long t = 0; t < months; t++)
@@ -255,6 +259,11 @@ public sealed class JetSliceModel : ISessionModel
             observer.BeforeStep(t);
             s.Step(1);
             observer.Month(snapshot, s.View, t);
+            if (levers is not null)
+            {
+                levers.Observe(t);
+                levers.Issue(t + 1);
+            }
             if (force is not null)
             {
                 int before = force.Sent;
@@ -277,6 +286,8 @@ public sealed class JetSliceModel : ISessionModel
         if (force is not null)
             info.Add(new("force_sent", force.Sent.ToString(CultureInfo.InvariantCulture)));
         info.AddRange(observer.Counters());
+        if (levers is not null)
+            info.AddRange(levers.Counters());
         return new SessionRunResult(s.LastHash, s.Tick, info);
     }
 

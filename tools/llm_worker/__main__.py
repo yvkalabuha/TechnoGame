@@ -61,6 +61,7 @@ def main(argv=None):
     g = p.add_mutually_exclusive_group(required=True)
     g.add_argument("--confirmed", action="store_true")
     g.add_argument("--rejected", action="store_true")
+    p.add_argument("--reason", help="why the finding is rejected; later reviews of the task see it")
     p = sub.add_parser("gate", help="DeepSeek as the third voice of a gate")
     p.add_argument("--item", required=True, help="repository-relative path of the document")
     p.add_argument("--stance", choices=["third"], required=True)
@@ -143,7 +144,7 @@ def main(argv=None):
         return 0
     if a.cmd == "review-confirm":
         try:
-            n = review_mod.mark_finding(a.record, a.finding, a.confirmed)
+            n = review_mod.mark_finding(a.record, a.finding, a.confirmed, a.reason)
         except review_mod.ReviewError as e:
             print(f"error: {e}")
             return 5

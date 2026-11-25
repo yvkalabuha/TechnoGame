@@ -1,7 +1,7 @@
 ---
 id: TASK-0149
 title: "Player levers: client legibility pass and pace (plain labels instead of numbers and G-codes, speeds 0/1/3/7/30, default 3 days/s)"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M05
 agent: developer
@@ -13,6 +13,7 @@ related: [TASK-0148, TASK-0156]
 approved_by: owner
 approved_at: 2026-11-24
 approval_ref: "#482 (designs approved), #470-#481"
+review_ref: "reviewer: APPROVE (round 2, 86fb84d); ui-art-director: PASS round 2 (docs/ui/reviews/task-0149-visual.md); codex accept e3834d9 with 4 findings -> DEBT-0095; landed 1d94d91"
 created: 2026-11-24
 ---
 
@@ -38,3 +39,9 @@ docs/game-design/PLAYER_LEVERS_WAVE1.md §A3 (темп: скорости 0/1/3/7
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
+
+## Второе ревью Codex (review-TASK-0149-073dd6a1-codex.json) — отклонённые находки
+- #1 «игра стартует на паузе»: так было и до задачи (на main `_speed = 0` при старте); умолчание #481 — скорость, с которой продолжает «пуск» (`_resume = SpeedSteps.Default`).
+- #2 автопауза (#196): вынесена Orchestrator в TASK-0156 — в клиенте ещё нет ленты событий.
+- #5 визуальная приёмка: ui-art-director PASS, раунд 2 (`docs/ui/reviews/task-0149-visual.md`), мнение Gemini там же.
+- Повтор в review-TASK-0149-86fb84d2-codex.json: #1, #2, #3 — те же причины; #5 «10–20 часов не установлено» — замер длины партии назначен владельцем на сборку рычагов (#483), не этой задачей.

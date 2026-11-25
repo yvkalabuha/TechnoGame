@@ -161,6 +161,58 @@ class RunVisual(Base):
         self.assertEqual(res[2]["frames"][0]["name"], "a.png")
         self.assertFalse(called)
 
+    def test_client_shots_dir_accepted_other_path_refused(self):
+        client = self.tmp / config.CLIENT_SHOTS_REL
+        client.mkdir(parents=True)
+        (client / "c.png").write_bytes(PNG)
+        other = self.tmp / "elsewhere"
+        other.mkdir()
+        (other / "d.png").write_bytes(PNG)
+        with mock.patch.object(config, "SHOTS_DIR", self.shots), mock.patch.object(config, "CLIENT_SHOTS_DIR", client), \
+                mock.patch.object(config, "REPO_ROOT", self.tmp):
+            self.assertTrue(visual.load_frames([client / "c.png", self.shots / "a.png"])[0][0].endswith("c.png"))
+            with self.assertRaises(visual.VisualError):
+                visual.load_frames([other / "d.png"])
+
+    def test_symlinked_or_outside_client_root_refused(self):
+        real = self.tmp / "real"
+        real.mkdir()
+        (real / "e.png").write_bytes(PNG)
+        link = self.tmp / "linkroot"
+        link.symlink_to(real)
+        with mock.patch.object(config, "SHOTS_DIR", self.shots), mock.patch.object(config, "CLIENT_SHOTS_DIR", link), \
+                mock.patch.object(config, "REPO_ROOT", self.tmp):
+            with self.assertRaises(visual.VisualError):
+                visual.load_frames([link / "e.png"])
+        # a client root that is not the expected place inside the repository is refused too
+        with mock.patch.object(config, "SHOTS_DIR", self.shots), mock.patch.object(config, "CLIENT_SHOTS_DIR", real), \
+                mock.patch.object(config, "REPO_ROOT", self.tmp / "repo"):
+            with self.assertRaises(visual.VisualError):
+                visual.load_frames([real / "e.png"])
+
+    def test_ancestor_symlink_of_client_root_refused(self):
+        repo = self.tmp / "repo"
+        elsewhere = self.tmp / "other"
+        (elsewhere / "Singularity.Client.Spike" / "shots-out").mkdir(parents=True)
+        (elsewhere / "Singularity.Client.Spike" / "shots-out" / "f.png").write_bytes(PNG)
+        repo.mkdir()
+        (repo / "src").symlink_to(elsewhere)  # src -> a directory that is not the expected one
+        (self.tmp / "real-expected").mkdir()
+        client = repo / config.CLIENT_SHOTS_REL
+        with mock.patch.object(config, "SHOTS_DIR", self.shots), mock.patch.object(config, "CLIENT_SHOTS_DIR", client), \
+                mock.patch.object(config, "REPO_ROOT", repo):
+            with self.assertRaises(visual.VisualError):
+                visual.load_frames([client / "f.png"])
+
+    def test_frame_reported_by_repo_relative_path(self):
+        repo = self.tmp / "repo"
+        d = repo / config.CLIENT_SHOTS_REL
+        d.mkdir(parents=True)
+        (d / "c.png").write_bytes(PNG)
+        with mock.patch.object(config, "SHOTS_DIR", self.shots), mock.patch.object(config, "CLIENT_SHOTS_DIR", d), \
+                mock.patch.object(config, "REPO_ROOT", repo):
+            self.assertEqual(visual.load_frames([d / "c.png"])[0][0], "src/Singularity.Client.Spike/shots-out/c.png")
+
     def test_bad_task_id(self):
         with self.assertRaises(visual.VisualError):
             visual.run_visual("../x", self.frames, shots_dir=self.shots)
