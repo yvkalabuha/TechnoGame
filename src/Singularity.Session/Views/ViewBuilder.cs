@@ -124,6 +124,8 @@ internal static class ViewBuilder
         Span<int> goals = stackalloc int[InstituteSystem.MaxSlotsLimit];
         Span<bool> builds = stackalloc bool[InstituteSystem.MaxSlotsLimit];
         bool advise = w.Config.PlayerActor == a;
+        // A scheduled knowledge run refuses every priority order (PriorityNoEffect): propose builds only.
+        bool scheduled = w.Config.Layer is LayerControl.Lk or LayerControl.Lk0;
         if (advise)
             inst.Propose(a, month, goals, builds);
         for (int k = 0; k < inst.Layout.SlotCount(a); k++)
@@ -135,7 +137,7 @@ internal static class ViewBuilder
             long start = inst.BuildStart(h);
             list.Add(new InstituteView(k, inst.Layout.IdOf(h), inst.Standing(h), HiddenFromPlayer(w, a) ? 0 : inst.GoalNode(h), levels.MoveToImmutable(), start, inst.BuildMonths(h),
                 start >= 0 ? inst.BuildRate(h, start) : Fx6.Zero, inst.Layout.RefYear(h), inst.Layout.TotalLevels(h),
-                advise ? goals[k] : 0, advise && builds[k]));
+                advise && !scheduled ? goals[k] : 0, advise && builds[k]));
         }
         return list.MoveToImmutable();
     }
