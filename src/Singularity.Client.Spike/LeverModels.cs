@@ -246,6 +246,13 @@ public static class InstitutesWindowModel
         "InstitutesOff" => "refusal.InstitutesOff",
         "ReserveOff" => "refusal.ReserveOff",
         "BadShares" => "refusal.BadShares",
+        "LineLimit" => "refusal.LineLimit",
+        "NoProposal" => "refusal.NoProposal",
+        "StaleHandle" => "refusal.StaleHandle",
+        "LicenceRefused" => "refusal.LicenceRefused",
+        "LicenceNotAllowed" => "refusal.LicenceNotAllowed",
+        "BadOffer" => "refusal.BadOffer",
+        "NeedsConfirmation" => "refusal.NeedsConfirmation",
         _ => null,
     };
 }

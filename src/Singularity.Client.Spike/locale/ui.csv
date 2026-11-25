@@ -516,3 +516,85 @@ why.inst.standing,the institute already stands,институт уже пост�
 why.inst.cap,a small country builds at most {0} levels in one project,малая страна строит не больше {0} уровней за проект
 refusal.generic,the order was refused,приказ отклонён
 refusal.error,the order could not be sent,приказ не удалось отправить
+lever.tab.lines,Lines,Линии
+lever.tab.market,Licence market,Рынок лицензий
+lever.lines.title,Production lines,Производственные линии
+lever.market.title,Licence market,Рынок лицензий
+lever.open.lines,Production lines (O),Производственные линии (O)
+lever.open.market,Licence market (X),Рынок лицензий (X)
+lines.count,Series lines running: {0} of {1},Серийных линий работает: {0} из {1}
+why.line.limit,another line is not supported yet: at most {0} lines run at once,ещё одна линия пока не поддерживается: одновременно работает не больше {0}
+lines.adviser,ADVICE OF THE ADVISER,СОВЕТ СОВЕТНИКА
+lines.adviser.none,No advice. The adviser will say when a line is worth opening.,"Предложений нет. Советник скажет, когда линию стоит открыть."
+lines.prop.open,"Advice: open the line of project {0} (generation {1}), {2} machines a month","Совет: открыть линию проекта {0} ({1}-е поколение), {2} шт./мес."
+lines.prop.close,Advice: close the line of project {0} (generation {1}),Совет: закрыть линию проекта {0} ({1}-е поколение)
+lines.prop.cost,Price of the decision: about {0} a month {1},Цена решения: около {0} в месяц {1}
+lines.accept,Accept,Принять
+lines.refuse,Refuse (for {0} months),Отказать (на {0} мес.)
+line.reason.open,Reason: the project is ready for series,Причина: проект готов к серии
+line.reason.None,Reason: the adviser rule of line replacement,Причина: правило советника о замене линий
+line.reason.A40C,Reason: by the rule of line replacement the old line is closed,Причина: по правилу замены линий старая линия закрывается
+line.reason.YProd,Reason: the new series has reached its production mastery and replaces this line,Причина: новая серия достигла освоения выпуска и заменяет эту линию
+line.reason.LaunchAll,"Reason: a new series has been launched, the old lines close","Причина: запущена новая серия, старые линии закрываются"
+line.reason.LaunchCandidate,Reason: a new series is being launched in place of this one,Причина: на смену этой линии запускается новая серия
+line.reason.CandidateBelow,Reason: the adviser rule of line replacement (candidate below),Причина: правило советника о замене линий
+lines.list,LINES AND PROJECTS,ЛИНИИ И ПРОЕКТЫ
+lines.licensed,"by licence, seller: {0}","по лицензии, продавец: {0}"
+lines.later,Ordering a project and starting a series by hand are not wired in the client yet: lines open on the advice of the adviser.,Заказ проекта и запуск серии вручную в клиенте пока не подключены: линии открываются по совету советника.
+design.cancel.q,Cancel project {0}? The work of the design office on it is lost.,Снять проект {0}? Работа бюро над ним пропадёт.
+mkt.off,The licence market is not on in this run.,В этой игре рынка лицензий нет.
+mkt.notyours,The market is not open to your power: you can only look.,Рынок не открыт для вашей державы: можно только смотреть.
+mkt.notyours.short,the market is not open to your power,рынок не открыт для вашей державы
+mkt.income,Licence income this year: {0} of the yearly cap {1} {2},Доход от лицензий в этом году: {0} из годового предела {1} {2}
+mkt.lastrefusal,"Last refused deal: seller {0}, generation {1}: {2}","Последняя отклонённая сделка: продавец {0}, {1}-е поколение: {2}"
+mkt.offers,OFFERS OF SELLERS,ПРЕДЛОЖЕНИЯ ПРОДАВЦОВ
+mkt.offers.none,Nobody sells to you now. A seller appears when another country starts a series of a generation above yours.,"Сейчас вам никто не продаёт. Продавец появится, когда другая страна начнёт серийный выпуск поколения выше вашего."
+mkt.cmp.same,equal to the reference price,равна справочной цене
+mkt.cmp.up,▲ {0} % above the reference price,▲ на {0} % дороже справочной
+mkt.cmp.down,▼ {0} % below the reference price,▼ на {0} % дешевле справочной
+mkt.world,world average {0},средняя мировая {0}
+mkt.world.few,few offers: no world average,мало предложений: средней мировой нет
+mkt.offer,{0} · generation {1} · price {2} · reference {3} · {4} · {5} · buyers: {6},{0} · {1}-е поколение · цена {2} · справочная {3} · {4} · {5} · круг покупателей: {6}
+mkt.card,"Licence of {0}, generation {1}","Лицензия: {0}, {1}-е поколение"
+mkt.card.gives,A licence is the right to build the seller's project as a whole. Knowledge is not passed on: nodes do not open for you.,Лицензия — право выпускать проект продавца целиком. Знания не передаются: узлы вам не откроются.
+mkt.card.price,Price: {0}; reference price {1} {2},Цена: {0}; справочная {1} {2}
+mkt.card.after,On the reserve account: {0}; after the purchase {1},На счёте резерва: {0}; после покупки останется {1}
+mkt.confirm,Buy the licence? It cannot be cancelled. {0} {1} will be paid at the start of next month.,Купить лицензию? Отменить нельзя. {0} {1} будет списано с начала следующего месяца.
+mkt.buy,Buy,Купить
+mkt.held,YOUR LICENCES,ВАШИ ЛИЦЕНЗИИ
+mkt.held.none,You hold no licences.,У вас нет лицензий.
+mkt.held.row,"{0}, generation {1}","{0}, {1}-е поколение"
+mkt.own,YOUR OFFERS,ВАШИ ПРЕДЛОЖЕНИЯ
+mkt.own.none,You sell nothing: only a project you developed and build in series can be sold.,"Вы ничего не продаёте: продать можно только проект, который вы разработали и выпускаете серийно."
+mkt.own.row,"Generation {0}: reference price {1}, your price {2} (×{3}), buyers: {4}","{0}-е поколение: справочная цена {1}, ваша цена {2} (×{3}), круг покупателей: {4}"
+mkt.own.mult,Price multiplier ×{0} (from ×{1} to ×{2}),Множитель цены ×{0} (от ×{1} до ×{2})
+mkt.offer.send,Put on sale,Выставить
+mkt.own.warn,The buyer gets the right to build and may catch up with you in numbers; you keep your knowledge.,Покупатель получит право выпускать и может догнать вас по числу машин; ваши знания остаются при вас.
+licence.circle.Default,by default,по умолчанию
+licence.circle.Nobody,nobody,никому
+licence.circle.Bloc,bloc,блок
+licence.circle.Friends,friends,друзья
+licence.circle.All,everyone,все
+licence.bad.Self,this is your own licence,это ваша собственная лицензия
+licence.bad.Empty,the seller has no serial project of this generation,у продавца нет серийного проекта этого поколения
+licence.bad.Gen,you already hold a licence of this generation or a newer one,у вас уже есть лицензия этого или более нового поколения
+licence.bad.Money,not enough money: the price is above what you can pay now,"не хватает денег: цена выше того, что вы можете заплатить сейчас"
+licence.bad.Circle,"you are outside the seller's circle of buyers, or the catalogue is closed",вы вне круга покупателей продавца либо каталог закрыт
+licence.bad.Capacity,no free project slot for the licensed project,нет свободного слота проекта для лицензионной модели
+licence.bad.Cap,the seller's licence income of the year would pass its cap,годовой доход продавца от лицензий превысил бы предел
+licence.bad.Price,the seller raised the price above the ceiling,продавец поднял цену выше допустимой
+licence.offer.BadGen,this generation is not in the game,такого поколения в игре нет
+licence.offer.NoOwnProject,only your own serial project can be sold,продать можно только собственный серийный проект
+licence.offer.BadMultiplier,the multiplier must be from ×0.5 to ×2,"множитель должен быть от ×0,5 до ×2"
+refusal.LineLimit,another line is not supported yet: the most lines allowed are running,ещё одна линия пока не поддерживается: работает наибольшее число линий
+refusal.NoProposal,the adviser made no such proposal this month,советник не делал такого предложения в этом месяце
+refusal.StaleHandle,the project is no longer in its slot,проекта уже нет в этом слоте
+refusal.LicenceRefused,the deal would be refused now,сделка сейчас была бы отклонена
+refusal.LicenceNotAllowed,the licence market is not open to your power,рынок лицензий не открыт для вашей державы
+refusal.BadOffer,"the offer is not taken: wrong generation, not your own serial project, or the multiplier out of range","предложение не принято: не то поколение, не ваш серийный проект или множитель вне границ"
+refusal.NeedsConfirmation,the order needs a confirmation,приказ требует подтверждения
+cmd.lineopen,open a line,открыть линию
+cmd.lineclose,close a line on advice,закрыть линию по совету
+cmd.refuse,refuse advice of project {0},отказ от совета по проекту {0}
+cmd.buy,buy a licence (generation {0}),покупка лицензии ({0}-е поколение)
+cmd.offer,offer a licence (generation {0}),предложение лицензии ({0}-е поколение)

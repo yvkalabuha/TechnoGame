@@ -195,6 +195,8 @@ public sealed partial class ActorPanel : PanelContainer
         _pen = new PencilMarker(_cal); _calVal.AddChild(_pen);
         _calRow.AddChild(_calName); _calRow.AddChild(_cal); _calRow.AddChild(_calVal); _calRow.AddChild(new Control { CustomMinimumSize = new Vector2(84, 0) });
         _secBudget.AddChild(_calRow);
+        var lm = Ui.Btn("lever.open.market", () => OpenWindow?.Invoke(3), focusable: true);
+        lm.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; _secBudget.AddChild(lm); _orderControls.Add(lm);
         var lb = Ui.Btn("lever.open.budget", () => OpenWindow?.Invoke(0), focusable: true);
         lb.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; _secBudget.AddChild(lb); _orderControls.Add(lb);   // the window with money in dollars, the reserve and the price before the click
         var ar = new HBoxContainer();
@@ -214,6 +216,8 @@ public sealed partial class ActorPanel : PanelContainer
         _secDesigns.AddChild(_flaskProdRow);
         _secDesigns.AddChild(_designs);
         _prodLater = Ui.Wrap("area.production.later", 14, Ui.Ink3); _secDesigns.AddChild(_prodLater);
+        var linesBtn = Ui.Btn("lever.open.lines", () => OpenWindow?.Invoke(2), focusable: true);
+        linesBtn.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; _secDesigns.AddChild(linesBtn); _orderControls.Add(linesBtn);
         Section("panel.licence", _secLicence);
         if (areaMode)
         {

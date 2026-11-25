@@ -16,7 +16,8 @@ namespace Singularity.Client.Spike;
 public sealed partial class LeverWindow : PanelContainer
 {
     public const int TabBudget = 0, TabInstitutes = 1;
-    static readonly string[] TabKeys = { "lever.tab.budget", "lever.tab.inst" };
+    static readonly string[] TabKeys = { "lever.tab.budget", "lever.tab.inst", "lever.tab.lines", "lever.tab.market" };
+    static readonly string[] TitleKeys = { "lever.budget.title", "lever.inst.title", "lever.lines.title", "lever.market.title" };
     /// <summary>F3: the Session text of a refusal is shown under the plain words.</summary>
     public bool Debug { get; set; }
 
@@ -26,7 +27,7 @@ public sealed partial class LeverWindow : PanelContainer
     public event Action Opened;
 
     readonly Label _title = Ui.Lbl("", 24, null, FontKind.Draft);
-    readonly CaptionButton[] _tabBtn = new CaptionButton[2];
+    readonly CaptionButton[] _tabBtn = new CaptionButton[4];
     readonly VBoxContainer _budgetBox = new(), _instBox = new(), _instBody = new();
     readonly Prose _moneyHelp = Ui.Wrap("lever.money.help", 14, Ui.Ink2);
     readonly Prose _footer = Ui.Wrap("", 14, Ui.Ink2), _result = Ui.Wrap("", 14, Ui.Ink2), _paused = Ui.Wrap("lever.paused", 14, Ui.Ink2);
@@ -78,7 +79,7 @@ public sealed partial class LeverWindow : PanelContainer
         var head = new HBoxContainer(); head.AddThemeConstantOverride("separation", 12);
         _title.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         head.AddChild(_title);
-        for (int i = 0; i < 2; i++)
+        for (int i = 0; i < TabKeys.Length; i++)
         {
             int k = i;
             _tabBtn[i] = Ui.Btn(TabKeys[i], () => ShowTab(k), focusable: true);
@@ -108,6 +109,7 @@ public sealed partial class LeverWindow : PanelContainer
         var pad = new MarginContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill }; pad.AddThemeConstantOverride("margin_right", 14);
         var stack = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         stack.AddChild(_budgetBox); stack.AddChild(_instBox);
+        InitLinesAndMarket(stack);
         pad.AddChild(stack); scroll.AddChild(pad);
         root.AddChild(scroll); _scroll = scroll;
 
@@ -136,10 +138,10 @@ public sealed partial class LeverWindow : PanelContainer
         bool wasOpen = Visible;
         _tab = tab;
         Visible = true;
-        _budgetBox.Visible = tab == TabBudget; _instBox.Visible = tab == TabInstitutes;
-        _title.Text = tab == TabBudget ? "lever.budget.title" : "lever.inst.title";
+        _budgetBox.Visible = tab == TabBudget; _instBox.Visible = tab == TabInstitutes; _lineBox.Visible = tab == TabLines; _marketBox.Visible = tab == TabMarket;
+        _title.Text = TitleKeys[tab];
         _apply.Visible = _reset.Visible = tab == TabBudget;
-        _seen = -1; _sigInst = "";
+        _seen = -1; _sigInst = ""; _sigLines = ""; _sigMarket = ""; _confirmLine = null; _confirmBuy = null;
         _edited = false; _sent = null;
         Refresh();
         if (!wasOpen) Opened?.Invoke();
@@ -392,13 +394,15 @@ public sealed partial class LeverWindow : PanelContainer
         if (!_host.Ready) return;
         var s = _host.Snap;
         _seen = s.Seq;
-        for (int i = 0; i < 2; i++) _tabBtn[i].Text = (i == _tab ? "■ " : "□ ") + Loc.T(TabKeys[i]);   // the open tab is marked by a shape, not only a fill
+        for (int i = 0; i < TabKeys.Length; i++) _tabBtn[i].Text = (i == _tab ? "■ " : "□ ") + Loc.T(TabKeys[i]);   // the open tab is marked by a shape, not only a fill
         UpdateBudget();
         if (_tab == TabInstitutes) { FillInstitutes(); _footer.Text = ""; _apply.Visible = _reset.Visible = false; }
+        else if (_tab == TabLines) { FillLines(); _footer.Text = ""; _apply.Visible = _reset.Visible = false; }
+        else if (_tab == TabMarket) { FillMarket(); _footer.Text = ""; _apply.Visible = _reset.Visible = false; }
         ShowResult(s);
     }
 
-    static readonly string[] OwnCommands = { "cmd.budget", "cmd.priority", "cmd.build", "cmd.adviser" };
+    static readonly string[] OwnCommands = { "cmd.budget", "cmd.priority", "cmd.build", "cmd.adviser", "cmd.lineopen", "cmd.lineclose", "cmd.refuse", "cmd.close", "cmd.cancel", "cmd.buy", "cmd.offer" };
 
     // The last order of this window in words; a refusal says why in plain words (C4), the English Session text only under F3.
     void ShowResult(HostSnapshot s)
@@ -426,7 +430,7 @@ public sealed partial class LeverWindow : PanelContainer
         var im = BuildInstitutes(v);
         if (!im.Enabled) return "institute model disabled on a live state of a run with institutes";
         if (im.Standing.IsEmpty && im.Candidates.IsEmpty) return "institute model empty on a live state";
-        return null;
+        return LiveCheckLinesMarket(v);
     }
 
     /// <summary>Shot run: true when the budget tab shows real numbers (a frame of «нет данных» is not evidence).</summary>

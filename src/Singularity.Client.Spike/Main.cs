@@ -651,6 +651,8 @@ public sealed partial class Main : Node3D
         if (k.Keycode == Key.Quoteleft || k.PhysicalKeycode == Key.Quoteleft) { ToggleJournal(); return true; }
         if (k.Keycode == Key.B || k.PhysicalKeycode == Key.B) { OpenLever(LeverWindow.TabBudget, true); return true; }
         if (k.Keycode == Key.N || k.PhysicalKeycode == Key.N) { OpenLever(LeverWindow.TabInstitutes, true); return true; }
+        if (k.Keycode == Key.O || k.PhysicalKeycode == Key.O) { OpenLever(LeverWindow.TabLines, true); return true; }
+        if (k.Keycode == Key.X || k.PhysicalKeycode == Key.X) { OpenLever(LeverWindow.TabMarket, true); return true; }
         var code = k.Keycode is >= Key.A and <= Key.Z ? k.Keycode : k.PhysicalKeycode;   // a non-Latin layout reports the physical Latin key
         var def = code is >= Key.A and <= Key.Z ? AreaData.ByLetter((char)code) : null;
         if (def == null) return false;
@@ -1032,7 +1034,11 @@ public sealed partial class Main : Node3D
                 Q(0.6, () => { LeverFrame("lever_budget_limit" + sfx, _levers.BudgetHasData); _levers.ShotReset(); _levers.ShotOpen(LeverWindow.TabInstitutes); });
                 Q(0.8, () => { LeverFrame("lever_inst" + sfx, _levers.LiveCheck() == null); _levers.ShotPick(); });
                 Q(0.6, () => { LeverFrame("lever_inst_pick" + sfx, _levers.LiveCheck() == null); if (!_levers.ShotCandidate()) InstFail("lever_inst_build: no institute can be built in this state"); });
-                Q(0.8, () => { LeverFrame("lever_inst_build" + sfx, _levers.LiveCheck() == null); _levers.Close(); OpenArea(AreaId.Production); });
+                Q(0.8, () => { LeverFrame("lever_inst_build" + sfx, _levers.LiveCheck() == null); _levers.ShotOpen(LeverWindow.TabLines); });
+                Q(0.8, () => { LeverFrame("lever_lines" + sfx, _levers.LiveCheck() == null); bool real = _levers.ShotProposal(); _shotLog += $"lever_lines_proposal: the advice is {(real ? "real (live state)" : "a FIXTURE: the adviser has no advice in this state")}\n"; });
+                Q(0.6, () => { LeverFrame("lever_lines_proposal" + sfx, _levers.LiveCheck() == null); _levers.ShotClear(); _levers.ShotOpen(LeverWindow.TabMarket); });
+                Q(0.8, () => { LeverFrame("lever_market" + sfx, _levers.LiveCheck() == null); bool real = _levers.ShotBuy(); _shotLog += $"lever_market_buy: the offer is {(real ? "real (live state)" : "a FIXTURE: the catalogue is empty in this state")}\n"; });
+                Q(0.6, () => { LeverFrame("lever_market_buy" + sfx, _levers.LiveCheck() == null); _levers.ShotClear(); _levers.Close(); OpenArea(AreaId.Production); });
                 Q(0.8, () => { bool real = _areaPanel.ShotSeriesConfirm(); _shotLog += $"panel_production_close_confirm: series line is {(real ? "real (live state)" : "a FIXTURE line: the player has no series line in this state")}\n"; });
                 Q(0.6, () => { SaveShot($"panel_production_close_confirm{sfx}.png", null, true); _areaPanel.ShotClearConfirm(); CloseArea(); });
             }
