@@ -498,4 +498,13 @@ public class LeverModelTests
             foreach (string fill in new[] { Palette.C.Paper, Palette.C.Sheet })
                 Assert.True(ColorMath.Contrast(ColorMath.FromHex(Palette.WarnMark), ColorMath.FromHex(fill, k)) >= 3.0, $"warn mark on {fill} x{k}");
     }
+
+    [Fact]
+    public void OfferSendReason_NamesWhyPutOnSaleIsInactive()
+    {
+        Assert.Equal("", MarketWindowModel.SendReasonKey(true, true));
+        Assert.Equal("mkt.offer.unchanged", MarketWindowModel.SendReasonKey(false, true));
+        Assert.Equal("mkt.notyours.short", MarketWindowModel.SendReasonKey(true, false));
+        Assert.Equal("mkt.notyours.short", MarketWindowModel.SendReasonKey(false, false));
+    }
 }

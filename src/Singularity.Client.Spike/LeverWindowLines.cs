@@ -249,7 +249,9 @@ public sealed partial class LeverWindow
             }
             col.AddChild(r2);
             bool changed = Math.Abs(em - o.M) > 1e-9 || ec != o.Circle;
-            col.AddChild(Act("mkt.offer.send", () => { _host.Submit(new OfferLicence(Player, gen, Fx6.FromRaw((long)Math.Round(em * 1_000_000)), ec), "cmd.offer", gen); }, true, changed && m.External));
+            string sendWhy = MarketWindowModel.SendReasonKey(changed, m.External);
+            col.AddChild(Act("mkt.offer.send", () => { _host.Submit(new OfferLicence(Player, gen, Fx6.FromRaw((long)Math.Round(em * 1_000_000)), ec), "cmd.offer", gen); }, true, sendWhy == ""));
+            if (sendWhy != "") col.AddChild(Ui.Wrap(Loc.T("inst.build.cant", Loc.T(sendWhy)), 14, Ui.Ink));   // a grey button says why (C4)
             col.AddChild(Ui.Wrap("mkt.own.warn", 14, Ui.Ink2));
             _marketBody.AddChild(Card(col));
         }

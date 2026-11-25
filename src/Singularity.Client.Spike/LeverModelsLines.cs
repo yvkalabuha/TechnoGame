@@ -94,6 +94,9 @@ public static class MarketWindowModel
     public static string ReasonKey(OfferRow o, bool external) =>
         CanBuy(o, external) ? "" : o.RefusalKey != "" ? o.RefusalKey : "mkt.notyours.short";
 
+    /// <summary>Why «Выставить» is inactive (empty = it can be pressed): the market is closed to the power, or the multiplier and the circle are as they already stand.</summary>
+    public static string SendReasonKey(bool changed, bool external) => !external ? "mkt.notyours.short" : !changed ? "mkt.offer.unchanged" : "";
+
     /// <summary>The offer the card opens on: the first one that can be bought, else the first; -1 without offers.</summary>
     public static int DefaultOffer(ImmutableArray<OfferRow> offers, bool external)
     {

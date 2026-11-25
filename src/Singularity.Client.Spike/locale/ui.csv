@@ -613,3 +613,4 @@ lines.col.bind,Limited by,Упирается в
 lines.cell.project,"Project {0}, generation {1}","Проект {0}, {1}-е поколение"
 lines.cell.fleet,{0} pcs,{0} шт.
 lines.cell.rate,{0} pcs/month,{0} шт./мес.
+mkt.offer.unchanged,"the multiplier and the circle of buyers are as they already stand: change one of them","множитель и круг покупателей уже такие, как есть: измените что-нибудь одно"
