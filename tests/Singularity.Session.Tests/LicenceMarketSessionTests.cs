@@ -118,6 +118,42 @@ public class LicenceMarketSessionTests
     }
 
     [Fact]
+    public void BuyLicence_WithTheReserveOn_PaysFromTheReserveOfThePlayer_AndLeavesTheProcurementAlone()
+    {
+        var half = new BudgetShares(Fx6.FromRaw(150_000), Fx6.FromRaw(100_000), Fx6.FromRaw(50_000), Fx6.FromRaw(200_000), Fx6.Zero);
+        var tried = new List<string>();
+        for (int buyer = 0; buyer < SliceTestData.Data.Scenario("jet_slice_1945").ActorCount; buyer++)
+        {
+            SliceSession s = SliceTestData.Create(Config(buyer) with { Reserve = true });
+            s.Submit(SourceClass.Player, buyer, 1, new SetBudgetShares(buyer, half));
+            s.StepThroughMonth(24);
+            PolicySystem pol = s.World.Policy;
+            for (int seller = 0; seller < s.World.Scenario.ActorCount; seller++)
+            {
+                for (int gen = 1; gen <= s.World.ProductsLayout.Generations; gen++)
+                {
+                    BadLicence r = pol.Offer(seller, gen, 25) is null ? BadLicence.Empty : pol.CheckBuy(buyer, seller, gen, 25, s.World.LicenceFunds(buyer, 25), out _);
+                    if (r != BadLicence.None)
+                    {
+                        if (r != BadLicence.Empty)
+                            tried.Add($"{buyer}<-{seller} g{gen} {r}");
+                        continue;
+                    }
+                    Fx6 price = pol.Offer(seller, gen, 25)!.Value.Price;
+                    Fx6 before = s.World.Reserve!.Balance(buyer);
+                    Assert.True(s.Submit(SourceClass.Player, buyer, 2, new BuyLicence(buyer, seller, gen)).Accepted);
+                    s.StepThroughMonth(25);
+                    Assert.Single(pol.Licences(buyer));
+                    Assert.Equal(Fx6.Zero, s.World.ProcurementBudget(buyer) - s.World.ProcurementBase(buyer));   // the fee is not in the procurement item
+                    Assert.True(s.World.Reserve.Balance(buyer) <= before - price + s.World.ReserveShare(buyer) * pol.Budget(buyer) + Fx6.One, "the reserve did not pay the fee");
+                    return;
+                }
+            }
+        }
+        throw new InvalidOperationException("no affordable licence from the reserve: " + string.Join("; ", tried));
+    }
+
+    [Fact]
     public void FlagOff_TheWorldIsTheWorldOfMain_WhateverTheMarketFieldsSay()
     {
         // The market fields without the flag change nothing in the state (no column, no rule): the hash is the plain run's.

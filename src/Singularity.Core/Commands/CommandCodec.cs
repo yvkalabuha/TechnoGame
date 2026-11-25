@@ -84,6 +84,10 @@ public static class CommandCodec
                 sb.Append(",\"gen\":").Append(I(o.Gen)).Append(",\"m\":");
                 Raw(sb, o.M).Append(",\"circle\":").Append(I((int)o.Circle));
                 break;
+            case FundProgramme fp:
+                sb.Append(",\"node\":").Append(I(fp.Node)).Append(",\"amount\":");
+                Raw(sb, fp.Amount);
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(logged), c.GetType(), "Unknown command type.");
         }
@@ -121,6 +125,7 @@ public static class CommandCodec
             "cancel_mastery_programme" => new CancelMasteryProgramme(actor, r.GetProperty("process").GetInt32()),
             "buy_licence" => new BuyLicence(actor, r.GetProperty("seller").GetInt32(), r.GetProperty("gen").GetInt32()),
             "offer_licence" => new OfferLicence(actor, r.GetProperty("gen").GetInt32(), ReadRaw(r.GetProperty("m")), (SaleCircle)r.GetProperty("circle").GetInt32()),
+            "fund_programme" => new FundProgramme(actor, r.GetProperty("node").GetInt32(), ReadRaw(r.GetProperty("amount"))),
             _ => throw new FormatException($"Unknown command kind '{kind}'."),
         };
         return new LoggedCommand(key, command);
@@ -176,6 +181,7 @@ public static class CommandCodec
         CommandKind.CancelMasteryProgramme => "cancel_mastery_programme",
         CommandKind.BuyLicence => "buy_licence",
         CommandKind.OfferLicence => "offer_licence",
+        CommandKind.FundProgramme => "fund_programme",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
 

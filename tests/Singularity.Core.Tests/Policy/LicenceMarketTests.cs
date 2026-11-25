@@ -230,6 +230,21 @@ public class LicenceMarketTests
         Assert.Equal(BadLicence.Cap, tight.Policy.CheckBuy(2, 0, 2, 0, tight.Funds(2), out _));
     }
 
+    [Fact]
+    public void Buy_Cap_CountsTheDealsOfTheSameMonth_TwoAiBuyersEachUnderTheCapAndTogetherOverIt()
+    {
+        // The player's catalogue is open to all; the cap allows 20 000 a year and one licence costs 15 000, so the second buyer of the month must meet Cap.
+        var rig = new Rig(PolicyProfile.Mass, external: [0], seller: PolicyProfile.Mass, tune: p => p with { IncomeCapShare = Fx6.FromRaw(16_667) });
+        rig.Events.Gen = [2, 0, 0];
+        rig.Events.OwnProject = [true, false, false];
+        Assert.Equal(OfferRefusal.None, rig.Policy.SetOffer(0, 2, Fx6.One, SaleCircle.All, 0));
+        rig.Month(1);
+        int held = rig.Policy.Licences(1).Count + rig.Policy.Licences(2).Count;
+        Assert.Equal(1, held);
+        Assert.Equal(1L, rig.Policy.BadLicenceCount(1, BadLicence.Cap) + rig.Policy.BadLicenceCount(2, BadLicence.Cap));
+        Assert.Equal(Ref, rig.Policy.LicenceIncome(0, 1));
+    }
+
     // ---- the catalogue
 
     [Fact]

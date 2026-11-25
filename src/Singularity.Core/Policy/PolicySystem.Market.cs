@@ -36,6 +36,14 @@ public sealed partial class PolicySystem
 {
     public const int MarketSlots = 8;
 
+    /// <summary>Most actors the market supports (the world price keeps one price per seller on the stack).</summary>
+    public const int MaxWorldPriceActors = 64;
+
+    // Buffers of ApplyDeals, kept between months (one policy, one thread, between ticks): a month with a deal allocates nothing.
+    [Scratch] private long[] _dFlow = [], _dIncome = [];
+    [Scratch] private int[] _dQueue = [], _dLastBad = [], _dLastSeller = [], _dLastGen = [], _dLastMonth = [], _dIncomeYear = [];
+    [Scratch] private long[][] _dBad = [];
+
     private IntColumn[] _mkSeller = [], _mkGen = [], _mkStart = [], _catCircle = [];
     private LongColumn[] _mkMask = [], _mkMask1 = [], _catM = [];
     private IntColumn? _incYear, _lastBad, _lastBadSeller, _lastBadGen, _lastBadMonth;
@@ -48,6 +56,8 @@ public sealed partial class PolicySystem
         if (generations < 1)
             throw new ArgumentException("The licence market needs the product layout (generations).", nameof(generations));
         _marketGens = generations;
+        if (rows > MaxWorldPriceActors)
+            throw new ArgumentException($"The world price reads at most {MaxWorldPriceActors} catalogues.", nameof(rows));
         _external = new bool[rows];
         foreach (int r in _p.LicenceExternalRows)
         {
@@ -188,7 +198,7 @@ public sealed partial class PolicySystem
     /// <summary>The world average of a generation with the number of AI catalogues behind it (the average is null below the threshold; the screen then shows the reference).</summary>
     public (Fx6? Average, int Sellers) WorldPrice(int gen, long month)
     {
-        Span<Fx6> prices = stackalloc Fx6[Math.Min(_actorNumber.Length, 64)];
+        Span<Fx6> prices = stackalloc Fx6[MaxWorldPriceActors];
         int n = 0;
         for (int s = 0; s < _actorNumber.Length && n < prices.Length; s++)
         {
@@ -214,9 +224,10 @@ public sealed partial class PolicySystem
 
     /// <summary>
     /// The refusal a purchase would meet now (what the screen shows before the button is pressed, and what <see cref="ApplyDeals"/> decides): the same
-    /// function. <paramref name="funds"/> is what the buyer may spend (the procurement base now, the reserve once it exists).
+    /// function. <paramref name="funds"/> is what the buyer may spend (the reserve of the player, else the procurement base). <paramref name="incomeSoFar"/> is the
+    /// income the seller has already booked this year including the deals applied earlier in the same month; null reads the stored one.
     /// </summary>
-    public BadLicence CheckBuy(int buyer, int seller, int gen, long month, Fx6 funds, out Fx6 price)
+    public BadLicence CheckBuy(int buyer, int seller, int gen, long month, Fx6 funds, out Fx6 price, Fx6? incomeSoFar = null)
     {
         LicenceOffer? offer = seller == buyer ? null : Offer(seller, gen, month);
         price = offer?.Price ?? Fx6.Zero;
@@ -226,7 +237,7 @@ public sealed partial class PolicySystem
         Fx6 limit = IsExternal(buyer) ? funds : AiLimit(funds);
         bool hasSlot = (_ev?.HasFreeDesignSlot(buyer) ?? true) && FreeLicenceSlot(buyer) >= 0;
         bool overCap = IsExternal(seller) && offer is not null
-            && LicenceIncome(seller, month) + price > _p.IncomeCapShare * Fx6.FromInt(12) * Budget(seller);
+            && (incomeSoFar ?? LicenceIncome(seller, month)) + price > _p.IncomeCapShare * Fx6.FromInt(12) * Budget(seller);
         return LicenceRules.ValidateMarket(buyer, seller, gen, offer is not null, held, price, funds, limit, inCircle, hasSlot, overCap);
     }
 
@@ -236,6 +247,8 @@ public sealed partial class PolicySystem
         Fx6 stock = funds * Fx6.FromInt(_p.AiStockMonths), keep = funds * (Fx6.One - _p.AiKeepShare);
         return stock < keep ? stock : keep;
     }
+
+    private static T[] Fit<T>(ref T[] buffer, int n) => buffer is not null && buffer.Length == n ? buffer : buffer = new T[n];
 
     private int FreeLicenceSlot(int buyer)
     {
@@ -337,15 +350,26 @@ public sealed partial class PolicySystem
         }
         if (!queued && !flowing)
             return;
-        long[] flow = new long[n];
-        int[] qSeller = _qSeller.Current.ToArray();
+        long[] flow = Fit(ref _dFlow, n), income = Fit(ref _dIncome, n);
+        int[] qSeller = Fit(ref _dQueue, n), lastBad = Fit(ref _dLastBad, n), lastSeller = Fit(ref _dLastSeller, n), lastGen = Fit(ref _dLastGen, n),
+            lastMonth = Fit(ref _dLastMonth, n), incomeYear = Fit(ref _dIncomeYear, n);
+        Array.Clear(flow);
+        _qSeller.Current.CopyTo(qSeller);
+        _lastBad!.Current.CopyTo(lastBad);
+        _lastBadSeller!.Current.CopyTo(lastSeller);
+        _lastBadGen!.Current.CopyTo(lastGen);
+        _lastBadMonth!.Current.CopyTo(lastMonth);
+        _incAmt!.Current.CopyTo(income);
+        _incYear!.Current.CopyTo(incomeYear);
         int year = YearOf(month);
-        var bad = new long[_bad.Length][];
+        if (_dBad.Length != _bad.Length)
+            _dBad = new long[_bad.Length][];
+        long[][] bad = _dBad;
         for (int k = 0; k < bad.Length; k++)
-            bad[k] = _bad[k].Current.ToArray();
-        int[] lastBad = _lastBad!.Current.ToArray(), lastSeller = _lastBadSeller!.Current.ToArray(), lastGen = _lastBadGen!.Current.ToArray(), lastMonth = _lastBadMonth!.Current.ToArray();
-        long[] income = _incAmt!.Current.ToArray();
-        int[] incomeYear = _incYear!.Current.ToArray();
+        {
+            bad[k] = Fit(ref bad[k], n);
+            _bad[k].Current.CopyTo(bad[k]);
+        }
         // The aggregate is written last from the records; the records themselves are copied only when a deal goes through.
         for (int b = 0; b < n; b++)
         {
@@ -354,7 +378,8 @@ public sealed partial class PolicySystem
                 continue;
             qSeller[b] = -1;
             int gen = _qGen.Current[b];
-            BadLicence reason = CheckBuy(b, s, gen, month, funds(b), out Fx6 price);
+            Fx6 soFar = incomeYear[s] == year ? Fx6.FromRaw(income[s]) : Fx6.Zero;   // the deals of this month applied before this one count against the cap
+            BadLicence reason = CheckBuy(b, s, gen, month, funds(b), out Fx6 price, soFar);
             if (reason != BadLicence.None)
             {
                 bad[(int)reason - 1][b]++;
