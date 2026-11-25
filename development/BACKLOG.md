@@ -171,7 +171,7 @@
 | [TASK-0153](../development/tasks/TASK-0153-levers-core-ai-adviser.md) | DONE | Player levers core: AI adviser for the player country production (no AI opening or closing of player lines) | MS-M05 |
 | [TASK-0154](../development/tasks/TASK-0154-alliances-data.md) | DONE | Data: alliances and blocs by year 1945-2030 for the licence buyer circle | MS-M05 |
 | [TASK-0155](../development/tasks/TASK-0155-dollars-1990-series.md) | DONE | Data: constant 1990 US dollar display series and conversion from Core money unit | MS-M05 |
-| [TASK-0156](../development/tasks/TASK-0156-levers-client-windows.md) | APPROVED | Player levers client: research goals, budget in money with reserve, production line window, licence market window | MS-M05 |
+| [TASK-0156](../development/tasks/TASK-0156-levers-client-windows.md) | IN_PROGRESS | Player levers client: research goals, budget in money with reserve, production line window, licence market window | MS-M05 |
 | [TASK-0157](../development/tasks/TASK-0157-node-effects-history.md) | DONE | Node content: effects in numbers and short history with sources for all 99 knowledge nodes (#486) | MS-M05 |
 | [TASK-0158](../development/tasks/TASK-0158-silent-filtered-shots.md) | DONE | Client shot runs: silent by default and a frame filter (only the frames a task needs) | MS-M05 |
 | [TASK-0159](../development/tasks/TASK-0159-review-rejections-visual-dir.md) | DONE | llm_worker: Codex review sees earlier rejected findings; visual accepts frames from the client shots-out | MS-M05 |
@@ -188,7 +188,7 @@
 | [TASK-0170](../development/tasks/TASK-0170-alliances-friend-pairs.md) | DONE | Data: friend pairs FRA-SUN 1945-1955 and GBR-FRA from 1947 in alliances.yaml, checked against treaty texts | MS-M0 |
 | [TASK-0171](../development/tasks/TASK-0171-levers-flags-on-golden-batch.md) | APPROVED | Golden batch: turn on Reserve, Institutes, LicenceMarket, Adviser, Intelligence by default; re-record goldens once with explanation | MS-M0 |
 | [TASK-0172](../development/tasks/TASK-0172-zaf-core-regions.md) | DONE | Data: South Africa regions status core of ZAF (O-076), checked per region | MS-M0 |
-| [TASK-0173](../development/tasks/TASK-0173-lab-p7-institutes-early-build.md) | APPROVED | Lab: P-7 build-everything-early does not dominate (years of key nodes) and project limit check, before flags on | MS-M0 |
+| [TASK-0173](../development/tasks/TASK-0173-lab-p7-institutes-early-build.md) | IN_PROGRESS | Lab: P-7 build-everything-early does not dominate (years of key nodes) and project limit check, before flags on | MS-M0 |
 
 ## Гипотезы
 

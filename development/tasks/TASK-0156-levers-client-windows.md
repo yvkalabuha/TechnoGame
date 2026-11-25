@@ -1,7 +1,7 @@
 ---
 id: TASK-0156
 title: "Player levers client: research goals, budget in money with reserve, production line window, licence market window"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M05
 agent: developer

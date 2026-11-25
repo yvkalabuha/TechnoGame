@@ -1,7 +1,7 @@
 ---
 id: TASK-0173
 title: "Lab: P-7 build-everything-early does not dominate (years of key nodes) and project limit check, before flags on"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: simulation-engineer         # ответственный агент
