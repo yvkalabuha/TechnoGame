@@ -52,7 +52,7 @@
 | 67 | s8.eng.fly_by_wire_relaxed_stability | 1974 | s8.fnd.electronic_flight_control_theory, s8.eng.all_moving_tail, s8.prn.relaxed_static_stability | 1972 | нет |
 | 68 | s8.eng.turbofan_g5 | 1981 | s8.eng.turbofan_g4, s8.fnd.electronic_flight_control_theory, s8.prn.electronic_engine_control | 1972 | нет |
 | 69 | s8.eng.composite_airframe | 1978 | s5.prn.fibre_composite_laminate_design, s8.eng.mach2_airframe_g4 | 1972 | нет |
-| 70 | s8.eng.low_observable_airframe | 1977 | s8.prn.low_observable_shaping, s8.eng.fly_by_wire_relaxed_stability | 1975 | нет |
+| 70 | `s8.eng.low_observable_airframe` | 1977 | `s8.prn.low_observable_shaping` + `s8.eng.fly_by_wire_relaxed_stability` | 1975 | нет |
 | 71 | s8.eng.thrust_vectoring_supercruise_engine | 1990 | s8.eng.turbofan_g5, s8.cmp.turbine_blade_single_crystal, s8.prn.thrust_vectoring_nozzle | 1989 | нет |
 | 72 | s8.cmp.turbine_blade_single_crystal | 1982 | s5.prn.single_crystal_growth, s8.cmp.turbine_blade_cooled | 1974 | нет |
 | 73 | s5.prc.single_crystal_casting | 1982 | s5.prn.single_crystal_growth, s5.prc.ds_casting | 1974 | нет |
