@@ -1,7 +1,7 @@
 ---
 id: TASK-0169
 title: "Red CI: sketch validates task id and count before opening the sandbox Box"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: []
 approved_by: orchestrator # owner | orchestrator (orchestrator — только level: light)
 approved_at: 2026-11-25
 approval_ref: red CI on main (orchestration §2)
+review_ref: "orchestrator read the diff; second review agy-sonnet accept 2 low; merge e951b0c"
 created: 2026-11-25
 ---
 
