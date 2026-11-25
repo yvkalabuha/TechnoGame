@@ -147,7 +147,7 @@
 | [TASK-0129](../development/tasks/TASK-0129-fleet-ageing-core.md) | DONE | Fleet ageing without replacement in Core (#431, #435-#437) | MS-M05 |
 | [TASK-0130](../development/tasks/TASK-0130-scoped-view-subscription.md) | DONE | Scoped client view: node blocks only for subscribed actors (ADR-0025) | MS-M05 |
 | [TASK-0131](../development/tasks/TASK-0131-g5-g6-core-changes.md) | DONE | Core changes for G5/G6 data: licence mask word 2, generation cost multipliers, control-layer guards (train 2, T-G) | MS-M05 |
-| [TASK-0132](../development/tasks/TASK-0132-tree-keyboard-selection.md) | IN_PROGRESS | Keyboard selection of technology tree nodes and keyboard tooltip (A6-A8) | MS-M05 |
+| [TASK-0132](../development/tasks/TASK-0132-tree-keyboard-selection.md) | DEFERRED | Keyboard selection of technology tree nodes and keyboard tooltip (A6-A8) | MS-M05 |
 | [TASK-0133](../development/tasks/TASK-0133-g5-g6-data-probe.md) | DONE | G5/G6 data in mods on the train-2 branch and calibration probe (O-038) | MS-M05 |
 | [TASK-0134](../development/tasks/TASK-0134-hcap-growth-production-mastery.md) | DONE | Hcap growth and production mastery in Core: series gate, candidate close, foresight, mastery programme (#438-#440) | MS-M05 |
 | [TASK-0135](../development/tasks/TASK-0135-gemini-visual-review.md) | DONE | Gemini visual second opinion in llm_worker (free tier, #441) | MS-M05 |
@@ -171,7 +171,7 @@
 | [TASK-0153](../development/tasks/TASK-0153-levers-core-ai-adviser.md) | DONE | Player levers core: AI adviser for the player country production (no AI opening or closing of player lines) | MS-M05 |
 | [TASK-0154](../development/tasks/TASK-0154-alliances-data.md) | DONE | Data: alliances and blocs by year 1945-2030 for the licence buyer circle | MS-M05 |
 | [TASK-0155](../development/tasks/TASK-0155-dollars-1990-series.md) | DONE | Data: constant 1990 US dollar display series and conversion from Core money unit | MS-M05 |
-| [TASK-0156](../development/tasks/TASK-0156-levers-client-windows.md) | REVIEW | Player levers client: research goals, budget in money with reserve, production line window, licence market window | MS-M05 |
+| [TASK-0156](../development/tasks/TASK-0156-levers-client-windows.md) | DEFERRED | Player levers client: research goals, budget in money with reserve, production line window, licence market window | MS-M05 |
 | [TASK-0157](../development/tasks/TASK-0157-node-effects-history.md) | DONE | Node content: effects in numbers and short history with sources for all 99 knowledge nodes (#486) | MS-M05 |
 | [TASK-0158](../development/tasks/TASK-0158-silent-filtered-shots.md) | DONE | Client shot runs: silent by default and a frame filter (only the frames a task needs) | MS-M05 |
 | [TASK-0159](../development/tasks/TASK-0159-review-rejections-visual-dir.md) | DONE | llm_worker: Codex review sees earlier rejected findings; visual accepts frames from the client shots-out | MS-M05 |
