@@ -7,86 +7,112 @@ using Singularity.Kernel;
 
 namespace Singularity.Session.Tests;
 
-/// <summary>The licence market in a running slice (TASK-0152): commands, the deal queue, AdoptLicensedDesign, replay, and the neutrality of the flag off.</summary>
+/// <summary>The licence market in a running slice (TASK-0152): commands, the deal queue paid from the reserve, AdoptLicensedDesign, production access, replay, threads, and the neutrality of the flag off.</summary>
 public class LicenceMarketSessionTests
 {
     private static AllianceTable Alliances => AllianceTable.Load(Path.Combine(SliceTestData.RepoRoot, "mods", "core", "scenarios", "1945", "alliances.yaml"));
 
-    private static SliceRunConfig Config(int player, ulong seed = 7) => new()
+    private static SliceRunConfig Config(int player, ulong seed = 7, int threads = 1, bool reserve = true) => new()
     {
-        Seed = seed, LicenceMarket = true, LicenceExternalActors = [player], Alliances = Alliances,
+        Seed = seed, Threads = threads, Reserve = reserve, LicenceMarket = true, LicenceExternalActors = [player], Alliances = Alliances,
     };
 
-    // A buyer, seller and generation the market lets through at the start (the player buys from an AI whose catalogue is open to everybody).
+    // Half of the budget goes to the reserve: the player has money for a licence after two years.
+    private static readonly BudgetShares Half = new(Fx6.FromRaw(150_000), Fx6.FromRaw(100_000), Fx6.FromRaw(50_000), Fx6.FromRaw(200_000), Fx6.Zero);
+
+    private static SliceSession Prepared(int buyer, int threads = 1)
+    {
+        SliceSession s = SliceTestData.Create(Config(buyer, threads: threads));
+        Assert.True(s.Submit(SourceClass.Player, buyer, 1, new SetBudgetShares(buyer, Half)).Accepted);
+        s.StepThroughMonth(24);
+        return s;
+    }
+
+    // A buyer, seller and generation the market lets through after two years of saving (the player buys from an AI whose catalogue is open to everybody).
     private static (int Buyer, int Seller, int Gen) FindDeal(out SliceSession session)
     {
         var all = new List<string>();
         for (int buyer = 0; buyer < SliceTestData.Data.Scenario("jet_slice_1945").ActorCount; buyer++)
         {
-            session = SliceTestData.Create(Config(buyer));
-            session.StepThroughMonth(0);
+            session = Prepared(buyer);
             PolicySystem pol = session.World.Policy;
             for (int seller = 0; seller < session.World.Scenario.ActorCount; seller++)
             {
                 for (int gen = 1; gen <= session.World.ProductsLayout.Generations; gen++)
                 {
-                    if (pol.Offer(seller, gen, 1) is null)
+                    if (pol.Offer(seller, gen, 25) is null)
                         continue;
-                    BadLicence r = pol.CheckBuy(buyer, seller, gen, 1, session.World.ProcurementBase(buyer), out _);
+                    BadLicence r = pol.CheckBuy(buyer, seller, gen, 25, session.World.LicenceFunds(buyer, 25), out _);
                     all.Add($"{buyer}<-{seller} g{gen}: {r}");
                     if (r == BadLicence.None)
                         return (buyer, seller, gen);
                 }
             }
         }
-        throw new InvalidOperationException("no open deal at the start: " + string.Join("; ", all));
+        throw new InvalidOperationException("no open deal after two years: " + string.Join("; ", all));
+    }
+
+    private static List<int> MaskedUnknown(SliceSession s, int buyer)
+    {
+        var list = new List<int>();
+        LicenceMask mask = s.World.Policy.LicenceMask(buyer);
+        for (int n = 1; n <= s.World.Policy.LicenceCapacity; n++)
+        {
+            if (s.World.Policy.Licensable(n) && mask.Has(n) && s.World.IndustryLayout.RowOf(n) >= 0 && !s.World.Knowledge.IsKnown(buyer, s.World.Graph.RowOf(n)))
+                list.Add(n);
+        }
+        return list;
     }
 
     [Fact]
-    public void BuyLicence_PaysThroughTheQueue_CreatesALicensedProject_AndReplaysTheSame()
+    public void BuyLicence_PaysFromTheReserve_CreatesALicensedProject_GrantsProduction_AndReplaysTheSame()
     {
         (int buyer, int seller, int gen) = FindDeal(out SliceSession s);
-        Fx6 funds = s.World.ProcurementBase(buyer);
-        Fx6 price = s.World.Policy.Offer(seller, gen, 1)!.Value.Price;
-        CommandVerdict v = s.Submit(SourceClass.Player, buyer, 1, new BuyLicence(buyer, seller, gen));
+        PolicySystem pol = s.World.Policy;
+        Fx6 price = pol.Offer(seller, gen, 25)!.Value.Price;
+        Fx6 reserveBefore = s.World.Reserve!.Balance(buyer);
+        CommandVerdict v = s.Submit(SourceClass.Player, buyer, 2, new BuyLicence(buyer, seller, gen));
         Assert.True(v.Accepted, v.Message);
-        s.StepThroughMonth(1);
+        s.StepThroughMonth(25);
         Assert.Contains("accepted", s.Outcomes[^1], StringComparison.Ordinal);
-        Assert.Contains(s.World.Policy.Licences(buyer), r => r.Seller == seller && r.Gen == gen);
-        Assert.Equal(-price, s.World.Policy.LicenceFlow(buyer));
-        Assert.True(funds + s.World.Policy.LicenceFlow(buyer) >= Fx6.Zero);
+        Assert.Contains(pol.Licences(buyer), r => r.Seller == seller && r.Gen == gen);
+        Assert.Equal(-price, pol.LicenceFlow(buyer));
+        Assert.Equal(Fx6.Zero, s.World.ProcurementBudget(buyer) - s.World.ProcurementBase(buyer));   // the fee is not in the procurement item
+        Assert.True(s.World.Reserve.Balance(buyer) <= reserveBefore - price + s.World.ReserveShare(buyer) * pol.Budget(buyer) + Fx6.One, "the reserve did not pay the fee");
         // The licence is a project of the buyer: stage О, from the seller's own project, with its own gate month.
-        s.StepThroughMonth(2);
+        s.StepThroughMonth(26);
         ActorView a = s.View.Actors[buyer];
         DesignView? licensed = a.Designs.FirstOrDefault(d => d.LicensedFrom == seller);
         Assert.NotNull(licensed);
         Assert.Equal(DesignStage.Prototype, licensed.Stage);
         Assert.True(licensed.Handle.Generation >= 1);
-        Assert.Equal(1, licensed.StageOMonth);
+        Assert.Equal(25, licensed.StageOMonth);
         Assert.Contains(a.Market!.Held, h => h.Seller == seller && h.Gen == gen);
-        // The seller's catalogue never lists the bought project (#477).
-        Assert.Null(s.World.Policy.Offer(buyer, gen, 2));   // the buyer has no own serial project of that generation: the licensed one is not for sale
+        Assert.Null(pol.Offer(buyer, gen, 26));   // the licensed project is not for sale (#477)
+        // LP-1 (#158): production right without knowledge. A masked process the buyer has not researched is producible, a research-only check is not.
+        List<int> unknown = MaskedUnknown(s, buyer);
+        Assert.NotEmpty(unknown);
+        Assert.All(unknown, n => Assert.True(s.World.IndustryInputs.KnowsProcess(buyer, s.World.IndustryLayout.RowOf(n), 26), $"process {n} stays unusable after the licence"));
+        Assert.All(unknown, n => Assert.False(s.World.Knowledge.IsKnown(buyer, s.World.Graph.RowOf(n)), "the licence must not teach the node"));
 
-        string log = s.CommandLog;
-        SliceSession replay = SliceSession.Replay(SliceTestData.Data, Config(buyer), log, s.Tick);
+        SliceSession replay = SliceSession.Replay(SliceTestData.Data, Config(buyer), s.CommandLog, s.Tick);
         HashAssert.Equal(s.LastHash, replay.LastHash);
     }
 
     [Fact]
-    public void BuyLicence_Refusals_AreNamedImmediately()
+    public void BuyLicence_Refusals_AreNamedWhenTheCommandIsApplied()
     {
         (int buyer, int seller, int gen) = FindDeal(out SliceSession s);
-        CommandVerdict self = s.Submit(SourceClass.Player, buyer, 1, new BuyLicence(buyer, buyer, gen));
-        s.StepThroughMonth(1);
+        Assert.True(s.Submit(SourceClass.Player, buyer, 2, new BuyLicence(buyer, buyer, gen)).Accepted);   // the form is fine
+        s.StepThroughMonth(25);
         Assert.Contains("Self", s.Outcomes[^1]);
-        s.Submit(SourceClass.Player, buyer, 2, new BuyLicence(buyer, seller, 99));
-        s.StepThroughMonth(2);
+        s.Submit(SourceClass.Player, buyer, 3, new BuyLicence(buyer, seller, 99));
+        s.StepThroughMonth(26);
         Assert.Contains("Empty", s.Outcomes[^1]);
-        Assert.True(self.Accepted);   // the form is fine; the state check names the reason when the command is applied
     }
 
     [Fact]
-    public void LicenceCommands_AreRefusedForAnActorOutsideExternalControl_OrWithTheMarketOff()
+    public void LicenceCommands_AreRefusedForAnActorOutsideExternalControl_WithTheMarketOff_AndWithoutTheReserve()
     {
         SliceSession s = SliceTestData.Create(Config(0));
         s.StepThroughMonth(0);
@@ -98,6 +124,20 @@ public class LicenceMarketSessionTests
         off.Submit(SourceClass.Player, 0, 1, new OfferLicence(0, 1, Fx6.One, SaleCircle.All));
         off.StepThroughMonth(1);
         Assert.Contains("LicenceNotAllowed", off.Outcomes[^1]);
+        // O-055: the fee is paid from the reserve, so a run without one has no market for the player.
+        SliceSession noReserve = SliceTestData.Create(Config(0, reserve: false));
+        noReserve.StepThroughMonth(0);
+        noReserve.Submit(SourceClass.Player, 0, 1, new BuyLicence(0, 1, 1));
+        noReserve.Submit(SourceClass.Player, 0, 2, new OfferLicence(0, 1, Fx6.One, SaleCircle.All));
+        noReserve.StepThroughMonth(1);
+        Assert.Equal(2, noReserve.Outcomes.Count(o => o.Contains("ReserveOff", StringComparison.Ordinal)));
+        Assert.Equal(Fx6.Zero, noReserve.World.LicenceFunds(0, 2));
+    }
+
+    [Fact]
+    public void LicenceMarket_IsRefusedWithTheCanonicalProductLayer_SoNoFeeIsEverPaidWithoutAProject()
+    {
+        Assert.Throws<ArgumentException>(() => SliceTestData.CreateLegacy(new SliceRunConfig { Seed = 7, Layer = LayerControl.Lp, LicenceMarket = true }));
     }
 
     [Fact]
@@ -118,39 +158,28 @@ public class LicenceMarketSessionTests
     }
 
     [Fact]
-    public void BuyLicence_WithTheReserveOn_PaysFromTheReserveOfThePlayer_AndLeavesTheProcurementAlone()
+    public void MarketRun_GivesTheSameStateHashesOnOneAndOnFourThreads()
     {
-        var half = new BudgetShares(Fx6.FromRaw(150_000), Fx6.FromRaw(100_000), Fx6.FromRaw(50_000), Fx6.FromRaw(200_000), Fx6.Zero);
-        var tried = new List<string>();
-        for (int buyer = 0; buyer < SliceTestData.Data.Scenario("jet_slice_1945").ActorCount; buyer++)
+        // L2 (ADR-0002): the same scripted market run, AI deals and the player's deal, on 1 and on 4 threads, month by month.
+        (int buyer, int seller, int gen) = FindDeal(out SliceSession probe);
+        Assert.NotNull(probe);
+        var hashes = new List<string>[2];
+        int i = 0;
+        foreach (int threads in new[] { 1, 4 })
         {
-            SliceSession s = SliceTestData.Create(Config(buyer) with { Reserve = true });
-            s.Submit(SourceClass.Player, buyer, 1, new SetBudgetShares(buyer, half));
-            s.StepThroughMonth(24);
-            PolicySystem pol = s.World.Policy;
-            for (int seller = 0; seller < s.World.Scenario.ActorCount; seller++)
+            SliceSession s = Prepared(buyer, threads);
+            s.Submit(SourceClass.Player, buyer, 2, new BuyLicence(buyer, seller, gen));
+            hashes[i] = [];
+            for (long m = 25; m < 72; m++)
             {
-                for (int gen = 1; gen <= s.World.ProductsLayout.Generations; gen++)
-                {
-                    BadLicence r = pol.Offer(seller, gen, 25) is null ? BadLicence.Empty : pol.CheckBuy(buyer, seller, gen, 25, s.World.LicenceFunds(buyer, 25), out _);
-                    if (r != BadLicence.None)
-                    {
-                        if (r != BadLicence.Empty)
-                            tried.Add($"{buyer}<-{seller} g{gen} {r}");
-                        continue;
-                    }
-                    Fx6 price = pol.Offer(seller, gen, 25)!.Value.Price;
-                    Fx6 before = s.World.Reserve!.Balance(buyer);
-                    Assert.True(s.Submit(SourceClass.Player, buyer, 2, new BuyLicence(buyer, seller, gen)).Accepted);
-                    s.StepThroughMonth(25);
-                    Assert.Single(pol.Licences(buyer));
-                    Assert.Equal(Fx6.Zero, s.World.ProcurementBudget(buyer) - s.World.ProcurementBase(buyer));   // the fee is not in the procurement item
-                    Assert.True(s.World.Reserve.Balance(buyer) <= before - price + s.World.ReserveShare(buyer) * pol.Budget(buyer) + Fx6.One, "the reserve did not pay the fee");
-                    return;
-                }
+                s.StepThroughMonth(m);
+                hashes[i].Add(s.LastHash);
             }
+            Assert.NotEmpty(s.World.Policy.Licences(buyer));
+            i++;
         }
-        throw new InvalidOperationException("no affordable licence from the reserve: " + string.Join("; ", tried));
+        for (int m = 0; m < hashes[0].Count; m++)
+            HashAssert.Equal(hashes[0][m], hashes[1][m], $"month {25 + m}: 1 thread and 4 threads differ");
     }
 
     [Fact]

@@ -49,7 +49,7 @@ public sealed partial class PolicySystem
         _qPrice = table.AddLong("pol.lic.q.price");
         _bad = [table.AddLong("pol.lic.bad.self"), table.AddLong("pol.lic.bad.empty"), table.AddLong("pol.lic.bad.gen"), table.AddLong("pol.lic.bad.money")];
         if (_p.LicenceMarket)
-            _bad = [.. _bad, table.AddLong("pol.lic.bad.circle"), table.AddLong("pol.lic.bad.capacity"), table.AddLong("pol.lic.bad.cap")];
+            _bad = [.. _bad, table.AddLong("pol.lic.bad.circle"), table.AddLong("pol.lic.bad.capacity"), table.AddLong("pol.lic.bad.cap"), table.AddLong("pol.lic.bad.price")];
         if (wideMask)
         {
             _licMask1 = table.AddLong("pol.lic.mask.1");

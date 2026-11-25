@@ -634,6 +634,8 @@ public sealed partial class SliceSession
         PolicySystem policy = _world.Policy;
         if (!policy.MarketOn || !policy.IsExternal(command.Actor))
             return CommandVerdict.Refuse(CommandRefusal.LicenceNotAllowed, $"actor {command.Actor} is not under external control of a run with the licence market");
+        if (_world.Reserve is null)
+            return CommandVerdict.Refuse(CommandRefusal.ReserveOff, "the licence market of the player pays and earns through the reserve (O-055): the run has none");
         if (command is OfferLicence o)
         {
             OfferRefusal refusal = policy.SetOffer(o.Actor, o.Gen, o.M, o.Circle, month);

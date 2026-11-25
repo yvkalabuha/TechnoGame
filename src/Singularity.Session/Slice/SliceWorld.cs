@@ -40,6 +40,9 @@ internal sealed class SliceWorld
     {
         if (!Enum.IsDefined(config.Layer))
             throw new InvalidOperationException($"Layer control {(int)config.Layer} is not defined.");
+        // The canonical L_P product layer has no AdoptLicensedDesign step: a paid licence would never become a project.
+        if (config.LicenceMarket && config.Layer == LayerControl.Lp)
+            throw new ArgumentException("The licence market needs the full product layer (not Layer = Lp).", nameof(config));
         if ((config.Layer == LayerControl.Lk) != (config.LkTables is not null))
             throw new ArgumentException("LkTables are needed exactly with Layer = Lk.", nameof(config));
         if ((config.Layer is LayerControl.Lc or LayerControl.Lp) != (config.CapabilityTables is not null))
@@ -375,13 +378,23 @@ internal sealed class SliceWorld
     /// With the reserve and the licence market on, the licence fee of an externally controlled actor is paid from and into its reserve (O-055); everybody else, and every
     /// run without the market, keeps the flow in the procurement item as before (the AI has no reserve).
     /// </summary>
+    /// <summary>
+    /// The actor may produce the process by a licence of the market without having researched it (#158: a production right, no knowledge); false without the market.
+    /// Only the industry reads it: designs are still composed from researched nodes.
+    /// </summary>
+    public bool ProductionLicensed(int actor, int processNumber) =>
+        Config.LicenceMarket && Policy.Licensable(processNumber) && LicenceActive(actor) && LicenceRules.Has(Policy.LicenceMask(actor), processNumber);
+
     public bool FlowViaReserve(int actor) => Reserve is not null && Config.LicenceMarket && Policy.IsExternal(actor);
 
     /// <summary>
     /// What the actor may pay for a licence at the start of <paramref name="month"/>: the reserve after its leak and after the programmes funded this month (so the
     /// reserve invariant holds whatever the order of the commands), else the procurement base of the shares in force.
     /// </summary>
-    public Fx6 LicenceFunds(int actor, long month) => FlowViaReserve(actor) ? Reserve!.Spendable(actor) - Knowledge.ProgrammeSpend(actor, month) : ProcurementBase(actor);
+    public Fx6 LicenceFunds(int actor, long month) =>
+        FlowViaReserve(actor) ? Reserve!.Spendable(actor) - Knowledge.ProgrammeSpend(actor, month)
+        : Config.LicenceMarket && Policy.IsExternal(actor) ? Fx6.Zero   // without the reserve the market is closed to the player (O-055)
+        : ProcurementBase(actor);
 
     /// <summary><c>ProcurementBase(a, t) = share_P·budget_a(t)</c>: the procurement item without licence flows and sale revenue (contract r6 §5).</summary>
     public Fx6 ProcurementBase(int actor) => SharesOf(actor).Procurement * Policy.Budget(actor);

@@ -245,6 +245,43 @@ public class LicenceMarketTests
         Assert.Equal(Ref, rig.Policy.LicenceIncome(0, 1));
     }
 
+    [Fact]
+    public void AiDeal_IsRefusedAtSettlement_WhenTheSellerRaisedThePriceAboveTheCeilingAfterTheDecision()
+    {
+        // Month 0: the AI buyer decides at m = 1.5 (the ceiling). Before the deal is settled the player's offer goes to m = 2, which the funds still cover.
+        var rig = new Rig(PolicyProfile.Mass, external: [0], buyerBudget: Fx6.FromInt(200_000));
+        rig.Events.OwnProject[1] = false;
+        Assert.Equal(OfferRefusal.None, rig.Policy.SetOffer(0, 2, Fx6.FromRaw(1_500_000), SaleCircle.All, 0));
+        rig.Month(0);
+        Assert.Equal(OfferRefusal.None, rig.Policy.SetOffer(0, 2, Fx6.FromInt(2), SaleCircle.All, 1));
+        rig.Month(1);
+        Assert.Empty(rig.Policy.Licences(2));
+        Assert.Equal(1L, rig.Policy.BadLicenceCount(2, BadLicence.Price));
+        Assert.Equal(Fx6.Zero, rig.Policy.LicenceFlow(0));
+    }
+
+    [Fact]
+    public void Licence_LapsesWhenTheBuyersOwnEnginePassesIt_AndTheSlotAndTheMaskAreFreed()
+    {
+        var rig = new Rig(PolicyProfile.Adaptive, external: [2]);
+        rig.Events.Gen = [4, 2, 0];
+        rig.Month(0);
+        rig.Buy(2, 0, 4, 0);
+        rig.Buy(2, 1, 2, 1);
+        Assert.Equal(2, rig.Policy.Licences(2).Count);
+        rig.Events.Gen[2] = 3;   // the buyer's own engine passes G2 but not G4
+        rig.Month(3);
+        LicenceRecord left = Assert.Single(rig.Policy.Licences(2));
+        Assert.Equal(4, left.Gen);
+        Assert.Equal(4, rig.Policy.LicenceGen(2));
+        rig.Events.Gen[2] = 5;   // now G4 too
+        rig.Month(4);
+        Assert.Empty(rig.Policy.Licences(2));
+        Assert.Equal(0, rig.Policy.LicenceGen(2));
+        Assert.Equal(-1, rig.Policy.LicenceSeller(2));
+        Assert.True(rig.Policy.LicenceMask(2).IsEmpty);
+    }
+
     // ---- the catalogue
 
     [Fact]

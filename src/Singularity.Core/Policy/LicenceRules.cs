@@ -27,6 +27,9 @@ public enum BadLicence
 
     /// <summary>Market only: the seller's licence income of the year would pass the yearly cap (O-062).</summary>
     Cap = 7,
+
+    /// <summary>Market only: an AI buyer's deal reached settlement above its ceiling <c>k × ref</c> (the seller raised the price after the decision).</summary>
+    Price = 8,
 }
 
 /// <summary>Why the AI buyer does not take an offer of the market (the first failed rule of licence-prices.md §4); an observation.</summary>

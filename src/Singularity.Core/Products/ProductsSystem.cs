@@ -1410,7 +1410,7 @@ public sealed partial class ProductsSystem : ITickSystem
         return -1;
     }
 
-    /// <summary>The seller row of a project that came with a licence, −1 for an own project (and always without the market).</summary>
+    /// <summary>The seller row of a project that came with a licence or descends from one (derive keeps it), −1 for an own project (and always without the market).</summary>
     public int LicensedFrom(int actor, int design) => _licFrom is null ? -1 : _licFrom[design].Current[actor] - 1;
 
     /// <summary>A project slot of the actor stands free in the snapshot (stage None or «снят»).</summary>
@@ -1551,6 +1551,9 @@ public sealed partial class ProductsSystem : ITickSystem
             work = work * Fx6.FromInt(changed) / Fx6.FromInt(slots);
         Fx6 d0 = ProductsMath.InitialDefects(_p.D0Factor, novelty, complexity, exp, _p.EB);
         TakeSlot(a, d);
+        // A derivative of a licensed project keeps the lineage: it is never an own design, so it never enters a catalogue (#477).
+        if (_licFrom is not null && parent >= 0)
+            _licFrom[d].Next[a] = _licFrom[parent].Next[a];
         SetAlts(a, d, alts);
         _stage[d].Next[a] = (int)DesignStage.Project;
         _bureauOf[d].Next[a] = bureau;

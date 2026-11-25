@@ -240,7 +240,9 @@ public sealed partial class PolicySystem
         bool hasSlot = (_ev?.HasFreeDesignSlot(buyer) ?? true) && FreeLicenceSlot(buyer) >= 0;
         bool overCap = IsExternal(seller) && offer is not null
             && (incomeSoFar ?? LicenceIncome(seller, month)) + price > _p.IncomeCapShare * Fx6.FromInt(12) * Budget(seller);
-        return LicenceRules.ValidateMarket(buyer, seller, gen, offer is not null, held, price, funds, limit, inCircle, hasSlot, overCap);
+        BadLicence verdict = LicenceRules.ValidateMarket(buyer, seller, gen, offer is not null, held, price, funds, limit, inCircle, hasSlot, overCap);
+        // The AI decided on the price of last month: a seller that raised it since cannot pass the ceiling k × ref at settlement.
+        return verdict == BadLicence.None && !IsExternal(buyer) && price > offer!.Value.Reference * _p.AiPriceK ? BadLicence.Price : verdict;
     }
 
     // L (months of the stock) and the share the AI keeps in the month of the payment: the lower bound wins.
@@ -341,8 +343,38 @@ public sealed partial class PolicySystem
 
     // ---- the application at the start of month t+1 (the same entry as the legacy deals)
 
+    // A record lapses by itself when the buyer's own engine passes its generation (A43.4, the same rule as LicenceActive); the slot is free again and the
+    // legacy aggregate drops its mask. Runs at the start of every month, before the deals.
+    private void LapseRecords(long month)
+    {
+        for (int b = 0; b < _actorNumber.Length; b++)
+        {
+            bool changed = false;
+            int own = -1;
+            for (int k = 0; k < _mkSeller.Length; k++)
+            {
+                if (_mkSeller[k].Current[b] < 0)
+                    continue;
+                if (own < 0)
+                    own = _ev?.EngineGen(b, month) ?? 0;
+                if (own <= _mkGen[k].Current[b])
+                    continue;
+                SetCurrent(_mkSeller[k], b, -1);
+                SetCurrent(_mkGen[k], b, 0);
+                SetCurrent(_mkStart[k], b, -1);
+                SetCurrent(_mkMask[k], b, 0);
+                if (_mkMask1.Length > 0)
+                    SetCurrent(_mkMask1[k], b, 0);
+                changed = true;
+            }
+            if (changed)
+                RefreshAggregate(b);
+        }
+    }
+
     private void ApplyMarketDeals(long month, Func<int, Fx6> funds)
     {
+        LapseRecords(month);
         int n = _actorNumber.Length;
         bool queued = false, flowing = false;
         for (int b = 0; b < n; b++)
@@ -426,6 +458,7 @@ public sealed partial class PolicySystem
     {
         int best = -1;
         ulong lo = 0, hi = 0;
+        // (no record left: the aggregate is the state of a country without a licence)
         for (int k = 0; k < _mkSeller.Length; k++)
         {
             if (_mkSeller[k].Current[b] < 0)
@@ -436,9 +469,9 @@ public sealed partial class PolicySystem
             if (best < 0 || _mkGen[k].Current[b] > _mkGen[best].Current[b])
                 best = k;
         }
-        SetCurrent(_licGen, b, _mkGen[best].Current[b]);
-        SetCurrent(_licSeller, b, _mkSeller[best].Current[b]);
-        SetCurrent(_licStart, b, _mkStart[best].Current[b]);
+        SetCurrent(_licGen, b, best < 0 ? 0 : _mkGen[best].Current[b]);
+        SetCurrent(_licSeller, b, best < 0 ? -1 : _mkSeller[best].Current[b]);
+        SetCurrent(_licStart, b, best < 0 ? -1 : _mkStart[best].Current[b]);
         SetCurrent(_licMask, b, unchecked((long)lo));
         if (_licMask1 is not null)
             SetCurrent(_licMask1, b, unchecked((long)hi));
