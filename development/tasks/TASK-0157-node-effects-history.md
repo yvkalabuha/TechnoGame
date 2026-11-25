@@ -1,7 +1,7 @@
 ---
 id: TASK-0157
 title: "Node content: effects in numbers and short history with sources for all 99 knowledge nodes (#486)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M05
 agent: research-scientist
@@ -13,6 +13,7 @@ related: [TASK-0156, TASK-0151]
 approved_by: owner
 approved_at: 2026-11-24
 approval_ref: "#486"
+review_ref: "reviewer: APPROVE; codex: waived after 3 returns (#432); landed c9faa57; DEBT-0101"
 created: 2026-11-24
 ---
 
