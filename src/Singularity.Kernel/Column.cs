@@ -38,6 +38,15 @@ public abstract class Column
     /// <summary>Opens <c>Next</c> (copy-on-write) now; the scheduler calls it single-threaded before a system's compute (ADR-0029 п. 5).</summary>
     internal abstract void OpenNext();
 
+    private int _declared;
+
+    /// <summary>True while the system that listed this column in WrittenColumns computes; set by the runner, cleared by <see cref="Close"/> too.</summary>
+    internal bool Declared
+    {
+        get => Volatile.Read(ref _declared) != 0;
+        set => Volatile.Write(ref _declared, value ? 1 : 0);
+    }
+
     /// <summary>Full-copy test mode: copies <c>Current</c> to <c>Next</c> and opens the column.</summary>
     internal abstract void CopyCurrentToNext();
 
@@ -66,6 +75,9 @@ public abstract class Column<T> : Column where T : unmanaged
     private T[] _current;
     private T[] _next;
     private bool _open;   // fast-path flag: true only when no trace is active
+    /// <summary>Test diagnostic: how many times Next was filled from Current by an opening (not by full-copy mode).</summary>
+    internal int CopyCount { get; private set; }
+
     private bool _copied;  // Next holds the copy of Current (guarded by _openLock / sequential phases)
     private readonly object _openLock = new();
 
@@ -117,7 +129,9 @@ public abstract class Column<T> : Column where T : unmanaged
         if (parent.RowCount == 0)
             return Span<T>.Empty;
         // Opening here would happen on a worker thread: the system must list the column in WrittenColumns (ADR-0029 п. 5).
-        if (Owner.InCompute && !Volatile.Read(ref _copied))
+        if (context.Chunk >= 0 && context.Chunk != chunk)
+            throw new ArgumentException($"Column '{Name}': chunk {chunk} is not the chunk {context.Chunk} this callback computes.", nameof(chunk));
+        if (Owner.InCompute && !Declared)
             throw new InvalidOperationException($"Column '{Name}': not opened before compute; list it in ITickSystem.WrittenColumns.");
         long start = (long)chunk * context.ChunkSize;
         if (chunk < 0 || start >= parent.RowCount)
@@ -142,6 +156,7 @@ public abstract class Column<T> : Column where T : unmanaged
             {
                 _current.CopyTo(_next, 0);
                 _copied = true;
+                CopyCount++;
             }
             // With a trace on, _open stays false so every Next access is recorded.
             if (Owner?.Trace is null)
@@ -169,6 +184,7 @@ public abstract class Column<T> : Column where T : unmanaged
 
     internal override void Close()
     {
+        Declared = false;
         _copied = false;
         Volatile.Write(ref _open, false);
     }

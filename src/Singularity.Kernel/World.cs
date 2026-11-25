@@ -69,6 +69,16 @@ public sealed class World
         return i < 0 ? throw new KeyNotFoundException($"Table '{name}' is not registered.") : _tables[i];
     }
 
+    // Checked before a table is built: a rejected call must leave no child attached to a parent.
+    private void CheckOpen()
+    {
+        foreach (Table t in _tables)
+        {
+            if (t.Locked)
+                throw new InvalidOperationException("The world is run by a TickRunner: no tables can be added.");
+        }
+    }
+
     private void CheckParent(Table parent)
     {
         ArgumentNullException.ThrowIfNull(parent);
@@ -80,14 +90,16 @@ public sealed class World
     private void CheckName(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        // A dot would make "table.column" ambiguous in the one-writer trace.
+        if (name.Contains('.'))
+            throw new ArgumentException("A table name must not contain '.'.", nameof(name));
+        CheckOpen();
         if (_names.Contains(name))
             throw new ArgumentException($"Table '{name}' is already registered.", nameof(name));
     }
 
     private Table Register(string name, Table table)
     {
-        if (_tables.Count > 0 && _tables[0].Locked)
-            throw new InvalidOperationException("The world is run by a TickRunner: no tables can be added.");
         _names.Add(name);
         _tables.Add(table);
         return table;

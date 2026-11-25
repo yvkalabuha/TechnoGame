@@ -5,8 +5,9 @@ namespace Singularity.Kernel;
 /// <summary>What a system sees during one phase of a tick.</summary>
 public readonly struct TickContext
 {
-    public TickContext(Table table, CounterRng rng, long tick, TickCalendar? calendar = null, int chunkSize = 0)
+    public TickContext(Table table, CounterRng rng, long tick, TickCalendar? calendar = null, int chunkSize = 0, int chunk = -1)
     {
+        Chunk = chunk;
         ChunkSize = chunkSize;
         Table = table;
         Rng = rng;
@@ -17,6 +18,9 @@ public readonly struct TickContext
     /// <summary>The chunk table of the run (the parent of child tables).</summary>
     public Table Table { get; }
     public CounterRng Rng { get; }
+
+    /// <summary>The chunk of this Compute callback (-1 outside compute or in a hand-built context); <c>NextRange</c> accepts only this chunk.</summary>
+    public int Chunk { get; }
 
     /// <summary>Rows of the chunk table per chunk (0 when the context was built by hand); <c>NextRange</c> needs it.</summary>
     public int ChunkSize { get; }
@@ -117,11 +121,16 @@ public sealed class TickRunner
     /// <summary>Runs every table of the world; chunks follow <paramref name="chunkTable"/>.</summary>
     public TickRunner(World world, Table chunkTable, ulong seed, IReadOnlyList<ITickSystem> systems, int chunkSize, int maxThreads,
         TickCalendar? calendar = null)
-        : this(chunkTable, world.Tables.Where(t => !ReferenceEquals(t, chunkTable)).Prepend(chunkTable).ToArray(),
-            seed, systems, chunkSize, maxThreads, calendar)
+        : this(chunkTable, Ordered(world, chunkTable), seed, systems, chunkSize, maxThreads, calendar)
+    {
+    }
+
+    // Checked before the private constructor locks any table: a rejected call must leave the world open.
+    private static Table[] Ordered(World world, Table chunkTable)
     {
         if (!world.Tables.Contains(chunkTable))
             throw new ArgumentException("The chunk table is not in the world.", nameof(chunkTable));
+        return world.Tables.Where(t => !ReferenceEquals(t, chunkTable)).Prepend(chunkTable).ToArray();
     }
 
     private static Table[] Flatten(Table root)
@@ -265,7 +274,10 @@ public sealed class TickRunner
                     SetTraceSystem(system.SystemId);
                     IReadOnlyList<Column> written = system.WrittenColumns;
                     for (int c = 0; c < written.Count; c++)
+                    {
                         written[c].OpenNext();
+                        written[c].Declared = true;
+                    }
                     SetCompute(true);
                     if (_parallel.MaxDegreeOfParallelism == 1)
                     {
@@ -296,6 +308,8 @@ public sealed class TickRunner
                         }
                     }
                     SetCompute(false);
+                    for (int c = 0; c < written.Count; c++)
+                        written[c].Declared = false;
                 }
 
                 for (int s = 0; s < _systems.Length; s++)
@@ -367,7 +381,8 @@ public sealed class TickRunner
         long end = Math.Min(start + _chunkSize, context.Table.RowCount);
         try
         {
-            system.Compute(context, chunk, (int)start, (int)end);
+            var chunkContext = new TickContext(context.Table, context.Rng, context.Tick, context.Calendar, context.ChunkSize, chunk);
+            system.Compute(chunkContext, chunk, (int)start, (int)end);
         }
         catch (Exception e)
         {

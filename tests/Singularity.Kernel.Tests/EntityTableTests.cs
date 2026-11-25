@@ -375,4 +375,80 @@ public class EntityTableTests
         Assert.True(baseline != Hash("a", 2));
         Assert.True(baseline == Hash("a", 1));
     }
+
+    [Fact]
+    public void NextRange_OfAnotherChunk_Throws()
+    {
+        Toy t = Build(8, 2, false);
+        var sys = new DelegateSystem((ctx, c) => t.Val.NextRange(ctx, (c + 1) % 4), null, t.Val);
+        Assert.IsType<ArgumentException>(Assert.Throws<TickComputeException>(new TickRunner(t.World, t.Actors, 1, [sys], 2, 4).RunTick).InnerException);
+    }
+
+    [Fact]
+    public void UndeclaredChildColumn_Throws_EvenIfAlreadyCopied()
+    {
+        // Full-copy mode copies every column; an earlier system's declaration copies it too: neither lets a later system skip its own list.
+        foreach (bool fullCopy in new[] { true, false })
+        {
+            Toy t = Build(8, 2, false);
+            t.Actors.FullCopyMode = fullCopy;
+            var first = new DelegateSystem((_, _) => { }, null, t.Val);
+            var second = new ToySystem(t, declare: false);
+            var runner = new TickRunner(t.World, t.Actors, 1, [first, second], 2, 1);
+            Assert.Contains("WrittenColumns", Assert.Throws<TickComputeException>(runner.RunTick).InnerException!.Message);
+        }
+    }
+
+    [Fact]
+    public void RejectedConstructionOrRegistration_LeavesWorldOpenAndConsistent()
+    {
+        var world = new World();
+        Table a = world.AddTable("a", 1);
+        Table b = world.AddTable("b", 1);
+        Table foreign = new World().AddTable("f", 1);
+        Assert.Throws<ArgumentException>(() => new TickRunner(world, foreign, 1, [], 1, 1));
+        world.AddTable("still_open", 1);
+        _ = new TickRunner(a, 1, [], 1, 1); // legacy runner over a locks the world
+        Assert.Throws<InvalidOperationException>(() => world.AddChildTable("c", b, 1));
+        Assert.Empty(b.Children);
+    }
+
+    [Fact]
+    public void TableNameWithDot_IsRejected()
+    {
+        Assert.Throws<ArgumentException>(() => new World().AddTable("a.b", 1));
+    }
+
+    private sealed class EightChunks(LongColumn col, Table child, int[] copiesSeen) : ITickSystem
+    {
+        public int SystemId => 5;
+        public IReadOnlyList<Column> WrittenColumns { get; } = [col];
+        public void Compute(in TickContext ctx, int chunk, int rowStart, int rowEnd)
+        {
+            copiesSeen[chunk] = col.CopyCount; // already opened, once, before any chunk ran
+            Span<long> r = col.NextRange(ctx, chunk);
+            for (int i = 0; i < r.Length; i++)
+                r[i] = child.OffsetOf(rowStart) + i + 1;
+        }
+        public void Merge(in TickContext ctx, int chunkCount) { }
+        public void Post(in TickContext ctx) { }
+    }
+
+    [Fact]
+    public void CoW_ChildColumnWrittenByEightChunks_IsOpenedOnceBeforeCompute()
+    {
+        var world = new World();
+        Table p = world.AddTable("p", 8);
+        Table c = world.AddChildTable("c", p, 3);
+        LongColumn col = c.AddLong("x");
+        var seen = new int[8];
+        var runner = new TickRunner(world, p, 1, [new EightChunks(col, c, seen)], 1, 8);
+        for (int day = 1; day <= 3; day++)
+        {
+            runner.RunTick();
+            Assert.All(seen, n => Assert.Equal(day, n));
+            Assert.Equal(Enumerable.Range(1, 24).Select(i => (long)i), col.Current.ToArray());
+            Assert.Equal(day, col.CopyCount);
+        }
+    }
 }
