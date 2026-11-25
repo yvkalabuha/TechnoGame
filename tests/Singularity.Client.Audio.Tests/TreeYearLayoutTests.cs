@@ -62,7 +62,9 @@ public class TreeYearLayoutTests
         Assert.Equal(5, all.Distinct().Count());
         // distinct directions: no two kinds share the same set of line normals
         Assert.Equal(5, all.Select(k => string.Join(";", TreeYearLayout.HatchNormals(k))).Distinct().Count());
-        Assert.True(TreeYearLayout.HatchAlpha >= 0.5f && TreeYearLayout.HatchSpacing <= 6f);
+        // quieter than a data line, still visible in grey; the overview is the strongest because the sectors are told apart there
+        Assert.InRange(TreeYearLayout.HatchAlphaAt(2), 0.2f, 0.3f); Assert.True(TreeYearLayout.HatchAlphaAt(1) >= TreeYearLayout.HatchAlphaAt(2) && TreeYearLayout.HatchAlphaAt(1) <= 0.3f);
+        Assert.True(TreeYearLayout.HatchSpacing <= 6f);
     }
 
     static (float[] r, float[] a) Place(int[] year, int[] sector, int[] number, int sectors, float margin = 0.08f, float gap = 0.3f)

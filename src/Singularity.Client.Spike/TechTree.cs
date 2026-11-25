@@ -511,13 +511,14 @@ public sealed partial class TechTree : Control
                     {
                         bool onRoute = _route[i] && _route[m];
                         bool toSel = _selected >= 0 && (i == _selected || m == _selected);
-                        if (pass == 0 && !onRoute && !toSel) _cv.DrawPolyline(Channel(m, i), new Color(Ui.Rule, 0.7f), 1f, true);
-                        else if (pass == 1 && toSel && !onRoute) _cv.DrawPolyline(Channel(m, i), Ui.Ink, 1.6f, true);
-                        else if (pass == 2 && onRoute) _cv.DrawPolyline(Channel(m, i), Ui.Command, 2.2f, true);
+                        // every link rides on a 2 du paper halo, so the hatch under it never buries it
+                        if (pass == 0 && !onRoute && !toSel) { var ch = Channel(m, i); _cv.DrawPolyline(ch, new Color(Ui.Paper, 0.85f), 5f, true); _cv.DrawPolyline(ch, new Color(Ui.Rule, 0.9f), 1f, true); }
+                        else if (pass == 1 && toSel && !onRoute) { var ch = Channel(m, i); _cv.DrawPolyline(ch, Ui.Paper, 5.6f, true); _cv.DrawPolyline(ch, Ui.Ink, 1.6f, true); }
+                        else if (pass == 2 && onRoute) { var ch = Channel(m, i); _cv.DrawPolyline(ch, Ui.Paper, 6.2f, true); _cv.DrawPolyline(ch, Ui.Command, 2.2f, true); }
                     }
         // the continuous route from the root of «why not» to the goal
         // A5: the route is a wide band with a dashed light centre (a double dashed line); the links of the selected node are a thin solid line, so the two differ in grey too.
-        for (int k = 0; k + 1 < _path.Count; k++) _cv.DrawPolyline(Channel(_path[k], _path[k + 1]), Ui.Command, 5f, true);
+        for (int k = 0; k + 1 < _path.Count; k++) { var ch = Channel(_path[k], _path[k + 1]); _cv.DrawPolyline(ch, Ui.Paper, 9f, true); _cv.DrawPolyline(ch, Ui.Command, 5f, true); }
         for (int k = 0; k + 1 < _path.Count; k++) { var ch = Channel(_path[k], _path[k + 1]); for (int j = 0; j + 1 < ch.Length; j++) _cv.DrawDashedLine(ch[j], ch[j + 1], Ui.Sheet, 1.8f, 5f, true); }
 
         for (int i = 0; i < nodes.Count; i++) DrawNode(i);
@@ -539,7 +540,7 @@ public sealed partial class TechTree : Control
             float s0 = TreeYearLayout.SectorStart(d, _nSec), s1 = s0 + w;
             float a0 = Mathf.DegToRad(s0 + w * WedgeMargin * 0.5f), a1 = Mathf.DegToRad(s1 - w * WedgeMargin * 0.5f);
             _cv.DrawArc(c, (rIn + rOut) * 0.5f, a0, a1, TreeYearLayout.ArcPoints(rOut, w), new Color(Ui.DiscWash[d % Ui.DiscWash.Length], alpha), rOut - rIn);
-            DrawHatch(c, rIn, rOut, a0, a1, TreeYearLayout.HatchOf(d), new Color(Ui.DiscText[d % Ui.DiscText.Length], TreeYearLayout.HatchAlpha));
+            DrawHatch(c, rIn, rOut, a0, a1, TreeYearLayout.HatchOf(d), new Color(Ui.DiscText[d % Ui.DiscText.Length], TreeYearLayout.HatchAlphaAt(Step)));
             float b = Mathf.DegToRad(s0);
             _cv.DrawLine(c + new Vector2(Mathf.Cos(b), Mathf.Sin(b)) * rIn, c + new Vector2(Mathf.Cos(b), Mathf.Sin(b)) * (6.5f * u), GridColor, 1f, true);
         }
@@ -882,7 +883,7 @@ public sealed partial class TechTree : Control
         Add(_hover);
         foreach (int i in byNum) if (_state[i] == St.Frontier) Add(i);   // priority: selected > goal > openable > known
         foreach (int i in byNum) if (_state[i] == St.Known || Step >= ZoomSteps.Icons) Add(i);
-        var area = Area;
+        var area = new Rect2(Area.Position, new Vector2(Area.Size.X, Math.Max(40f, _zoomBar.Position.Y - 40f - Area.Position.Y)));   // names stay 40 du above the zoom panel, across the whole width
         var hard = _lbHard; hard.Clear();
         for (int w = 0; w < _nSec; w++) { hard.Add(WedgeLabel(w).rect.Grow(2)); hard.Add(_sumRects[w].Grow(6)); }
         hard.AddRange(_countRects);
@@ -963,7 +964,7 @@ public sealed partial class TechTree : Control
             if (callout || LabelNeedsLeader(i, pl.rc))
             {
                 var own = PosOf(i); var near = own.Clamp(pl.pad.Position, pl.pad.End); var dir = (near - own).Normalized();
-                _cv.DrawLine(own + dir * NR, near, _route[i] ? Ui.Command : Ui.Ink2, 1.5f, true);   // ends at the plate: the goal or selected node, or a node with a neighbour as near as it
+                if (own.DistanceTo(near) > NR + 8f) _cv.DrawLine(own + dir * NR, near, _route[i] ? Ui.Command : Ui.Ink2, 1.5f, true);   // no stub when the plate stands next to the mark; ends at the plate: the goal or selected node, or a node with a neighbour as near as it
             }
             _cv.DrawRect(pl.pad, Ui.Sheet);   // opaque plate (spec 2.3)
             if (callout) _cv.DrawRect(pl.pad, Ui.Command, false, 1f);

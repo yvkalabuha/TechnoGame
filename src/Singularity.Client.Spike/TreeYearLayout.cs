@@ -13,8 +13,9 @@ public static class TreeYearLayout
     public const int FirstYear = 1945, EdgeYear = 2040, RootsFrom = 1900;
     /// <summary>Radius of year 1945, the width of the roots band below it, and the edge of the disc (2040), in base units.</summary>
     public const float Inner = 2.0f, RootsBand = 1.2f, Edge = 6.3f;
-    /// <summary>Hatch line spacing in du and its opacity (stronger than a wash, A5).</summary>
-    public const float HatchSpacing = 6f, HatchAlpha = 0.5f;
+    /// <summary>Hatch line spacing in du; opacity by zoom step: quiet enough not to bury the links (owner 2026-11-25), still distinct in greyscale (A5).</summary>
+    public const float HatchSpacing = 6f;
+    public static float HatchAlphaAt(int step) => step <= 1 ? 0.3f : 0.22f;
     public const int MaxSectors = 8;
     /// <summary>Opacity of the grid ink (rings, sector lines) over the paper: keeps the grid at 1.6:1 or less (a unit test holds it).</summary>
     public const float GridAlpha = 0.75f;
