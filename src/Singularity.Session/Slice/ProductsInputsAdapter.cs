@@ -115,7 +115,7 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
         if (!world.Policy.AiLine(actorRow, design, world.Products.Generation(actorRow, design)))
             return null;
         BudgetShares shares = world.SharesOf(actorRow);
-        Fx6 budget = shares.Procurement * world.Policy.Budget(actorRow);
+        Fx6 budget = world.ProcurementBase(actorRow);
         if (world.Policy.TrainingTarget(actorRow) == design)
             budget += shares.Capability * world.Policy.Budget(actorRow);
         // Spec A42.5: the expected sale revenue of the month joins the base; PURCHASE_CAP keeps the upkeep at U_LO.
@@ -125,7 +125,7 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
             if (world.Products.Stage(actorRow, d) is DesignStage.Series or DesignStage.InService)
                 need += Fx6.FromInt(world.Products.InService(actorRow, d).Raw / Fx6.Scale) * world.Products.Upkeep(actorRow, d);
         }
-        Fx6 rate = world.Policy.AiLineRate(actorRow, budget, shares.Procurement * world.Policy.Budget(actorRow),
+        Fx6 rate = world.Policy.AiLineRate(actorRow, budget, world.ProcurementBase(actorRow),
             world.Products.UnitCostFloor(actorRow, design), need, world.Products.Upkeep(actorRow, design));
         // Spec A41 F17b: with two lines the working one (smaller g_p, a tie to the smaller id) runs at min(r_AI, r_keep), the rest of the money goes to the candidate.
         return IsWorkingOfPair(actorRow, design) && world.IndustryParameters.RKeep < rate ? world.IndustryParameters.RKeep : rate;

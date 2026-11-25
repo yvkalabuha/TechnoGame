@@ -59,6 +59,40 @@ public sealed partial class KnowledgeSystem
     /// <summary>A hazard node at its progress cap: it left its slot (O-092).</summary>
     public bool Released(int actorRow, int nodeRow) => _g.IsHazard[nodeRow] && Prog(actorRow, nodeRow) >= _p.ProgCap;
 
+    /// <summary>
+    /// <c>R = 1 + Σ bonus</c> of the research_speed nodes the actor knows, weighted like the overlap level (main direction 0.5, the rest share 0.5, O-090): a node without
+    /// directions list counts for every direction. Bonuses add up, the sum stops at <see cref="SlotParams.ResearchSpeedCap"/>. Exactly 1 while the data has no such node.
+    /// </summary>
+    public Fx6 ResearchFactor(int a, int nodeRow)
+    {
+        if (_g.SpeedNodes.IsEmpty)
+            return Fx6.One;
+        var dirs = _g.Directions[nodeRow];
+        Fx6 allBonus = Fx6.Zero;
+        Span<Fx6> perDir = stackalloc Fx6[dirs.Length];
+        perDir.Clear();
+        foreach (int s in _g.SpeedNodes)
+        {
+            if (!IsKnown(a, s))
+                continue;
+            var covers = _g.SpeedDirections[s];
+            if (covers.IsEmpty)
+            {
+                allBonus += _g.SpeedBonus[s];
+                continue;
+            }
+            for (int i = 0; i < dirs.Length; i++)
+                perDir[i] += covers.Contains(dirs[i]) ? _g.SpeedBonus[s] : Fx6.Zero;
+        }
+        Fx6 sum = allBonus;
+        for (int i = 0; i < dirs.Length; i++)
+            sum += SlotMath.DirectionWeight(i, dirs.Length, _slots!.MainWeight) * perDir[i];
+        return Fx6.One + (sum > _slots!.ResearchSpeedCap ? _slots.ResearchSpeedCap : sum);
+    }
+
+    /// <summary><c>T_eff</c> of the node for the actor in month t: the months at speed 1 (the quote of a card).</summary>
+    public Fx6 EffectiveMonths(int actorRow, int nodeRow, long month) => TimeEff(actorRow, nodeRow, month);
+
     // T_eff of the node for the actor: T_n with the discount of the price (diffusion or theft, the larger).
     private Fx6 TimeEff(int a, int r, long t)
     {
@@ -67,19 +101,68 @@ public sealed partial class KnowledgeSystem
         return SlotMath.EffectiveMonths(_tn[r], steal > diffusion ? steal : diffusion);
     }
 
-    // The asks of the working slots; returns the sum. Same numbers for the step and for the why_not read.
-    private Fx6 PlanSlots(int a, long t, ReadOnlySpan<SlotWork> work, Span<Fx6> speed, Span<Fx6> teff, Span<Fx6> ask)
+    // The asks of the working slots on the research money; returns their sum. Same numbers for the step, the why_not read and the reserve.
+    // A focus bought from the reserve (O-088) moves its surcharge over the plain ask to the reserve, as far as the reserve can pay it (`reserveAsk` = what the
+    // reserve is asked for before the coverage u; the rest of the surcharge stays on the research money).
+    private Fx6 PlanSlots(int a, long t, ReadOnlySpan<SlotWork> work, Span<Fx6> speed, Span<Fx6> teff, Span<Fx6> ask, out Fx6 reserveAsk)
     {
-        Fx6 total = Fx6.Zero;
+        Span<Fx6> surcharge = stackalloc Fx6[work.Length];
+        Fx6 wanted = Fx6.Zero;
         for (int i = 0; i < work.Length; i++)
         {
             int r = work[i].NodeRow;
-            speed[i] = SlotMath.Speed(_slots!, work[i].InstituteMultiplier, work[i].Focus);
+            Fx6 research = ResearchFactor(a, r);
+            speed[i] = SlotMath.Speed(_slots!, work[i].InstituteMultiplier, work[i].Focus, research);
             teff[i] = TimeEff(a, r, t);
-            ask[i] = SlotMath.Rate(_slots!, CEffOf(a, r, KMix(a, r), t), speed[i], work[i].Focus, teff[i]);
+            Fx6 c = CEffOf(a, r, KMix(a, r), t);
+            ask[i] = SlotMath.Rate(_slots!, c, speed[i], work[i].Focus, teff[i]);
+            surcharge[i] = Fx6.Zero;
+            if (work[i].FromReserve && work[i].Focus > 0)
+            {
+                Fx6 plain = SlotMath.Rate(_slots!, c, SlotMath.Speed(_slots!, work[i].InstituteMultiplier, 0, research), 0, teff[i]);
+                surcharge[i] = ask[i] > plain ? ask[i] - plain : Fx6.Zero;
+                wanted += surcharge[i];
+            }
+        }
+        Fx6 share = Fx6.Zero;
+        reserveAsk = Fx6.Zero;
+        if (wanted > Fx6.Zero)
+        {
+            Fx6 available = _inputs.ReserveAvailable(a, t);
+            Fx6 paid = available < wanted ? available : wanted;
+            share = paid / wanted;
+            reserveAsk = paid;
+        }
+        Fx6 total = Fx6.Zero;
+        for (int i = 0; i < work.Length; i++)
+        {
+            ask[i] -= surcharge[i] * share;
             total += ask[i];
         }
         return total;
+    }
+
+    /// <summary>The money the player's focus takes from the reserve in month t (O-088): the surcharges it can pay, times the coverage. A pure read of the snapshot.</summary>
+    private Fx6 SlotReserveSpend(int a, long t)
+    {
+        Span<SlotWork> work = stackalloc SlotWork[InstituteSystem.MaxSlotsLimit];
+        int n = _inputs.SlotWork(a, t, work);
+        Span<Fx6> speed = stackalloc Fx6[n], teff = stackalloc Fx6[n], ask = stackalloc Fx6[n];
+        Fx6 total = PlanSlots(a, t, work[..n], speed, teff, ask, out Fx6 reserveAsk);
+        return reserveAsk * SlotMath.Coverage(_inputs.ResearchBudget(a, t), total);
+    }
+
+    /// <summary>
+    /// The coverage <c>u</c> the actor's slots would have in month t if one more slot worked on <paramref name="extra"/> (the check before a start the money does not cover, §1.2).
+    /// </summary>
+    public Fx6 CoverageWith(int a, long t, SlotWork extra)
+    {
+        Span<SlotWork> work = stackalloc SlotWork[InstituteSystem.MaxSlotsLimit + 1];
+        int n = _inputs.SlotWork(a, t, work[..InstituteSystem.MaxSlotsLimit]);
+        work[n++] = extra;
+        Span<Fx6> speed = stackalloc Fx6[n], teff = stackalloc Fx6[n], ask = stackalloc Fx6[n];
+        Fx6 total = PlanSlots(a, t, work[..n], speed, teff, ask, out _);
+        return SlotMath.Coverage(_inputs.ResearchBudget(a, t), total);
     }
 
     private Fx6 SlotProgressRate(int a, int nodeRow, long t)
@@ -87,7 +170,7 @@ public sealed partial class KnowledgeSystem
         Span<SlotWork> work = stackalloc SlotWork[Singularity.Core.Institutes.InstituteSystem.MaxSlotsLimit];
         int n = _inputs.SlotWork(a, t, work);
         Span<Fx6> speed = stackalloc Fx6[n], teff = stackalloc Fx6[n], ask = stackalloc Fx6[n];
-        Fx6 total = PlanSlots(a, t, work[..n], speed, teff, ask);
+        Fx6 total = PlanSlots(a, t, work[..n], speed, teff, ask, out _);
         Fx6 u = SlotMath.Coverage(_inputs.ResearchBudget(a, t), total);
         for (int i = 0; i < n; i++)
         {
@@ -109,7 +192,7 @@ public sealed partial class KnowledgeSystem
         Span<SlotWork> work = stackalloc SlotWork[InstituteSystem.MaxSlotsLimit];
         int n = _inputs.SlotWork(a, t, work);
         Span<Fx6> speed = stackalloc Fx6[n], teff = stackalloc Fx6[n], ask = stackalloc Fx6[n];
-        Fx6 total = PlanSlots(a, t, work[..n], speed, teff, ask);
+        Fx6 total = PlanSlots(a, t, work[..n], speed, teff, ask, out _);
         Fx6 u = SlotMath.Coverage(s, total);
 
         for (int k = 0; k < _slotCount; k++)

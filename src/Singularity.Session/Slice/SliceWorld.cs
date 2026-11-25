@@ -486,7 +486,13 @@ internal sealed class SliceWorld
         : ProcurementBase(actor);
 
     /// <summary><c>ProcurementBase(a, t) = share_P·budget_a(t)</c>: the procurement item without licence flows and sale revenue (contract r6 §5).</summary>
-    public Fx6 ProcurementBase(int actor) => SharesOf(actor).Procurement * Policy.Budget(actor);
+    public Fx6 ProcurementBase(int actor) => SharesOf(actor).Procurement * Policy.Budget(actor) + SurplusToBudget(actor);
+
+    /// <summary>
+    /// Slot model (O-089b): the research money the institutes did not ask last month returns to the common budget, which is spent where the budget is spent on a flow: the procurement
+    /// item (not the reserve, so that idle institutes cannot save science money). Zero without the slot model.
+    /// </summary>
+    public Fx6 SurplusToBudget(int actor) => SlotsOn ? Knowledge.ReturnedToBudget(actor) : Fx6.Zero;
 
     /// <summary>
     /// <c>LicenceFlow(a, t)</c>: buyer pays, seller receives the licence price (spec A41). Licences are the events of T6d, which does not exist

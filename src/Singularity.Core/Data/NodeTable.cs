@@ -31,6 +31,14 @@ public sealed partial class NodeTable
     /// <summary>Directions of row r (numbers of <see cref="Directions.Ids"/>, the main one first): <c>DirectionStart[r]..DirectionStart[r+1]</c>. Not part of the data hash yet.</summary>
     public required ImmutableArray<int> DirectionStart { get; init; }
     public required ImmutableArray<int> Direction { get; init; }
+
+    /// <summary>Largest research_speed bonus of one node (SCIENCE_SLOTS §6).</summary>
+    public static readonly Fx6 MaxSpeedBonus = Fx6.FromRaw(80_000);
+
+    /// <summary>research_speed bonus of row r (0 = none) and its directions <c>SpeedDirStart[r]..SpeedDirStart[r+1]</c> (empty = every direction).</summary>
+    public required ImmutableArray<Fx6> SpeedBonus { get; init; }
+    public required ImmutableArray<int> SpeedDirStart { get; init; }
+    public required ImmutableArray<int> SpeedDir { get; init; }
     public required RequirementLists Requires { get; init; }
 
     /// <summary>informs edges of row r: <c>InformsStart[r]..InformsStart[r+1]</c>, targets ascending.</summary>
@@ -119,8 +127,19 @@ public sealed partial class NodeTable
             directionStart.Add(directions.Count);
         }
 
+        var speedStart = new List<int> { 0 };
+        var speedDirs = new List<int>();
+        foreach (RawNode node in raw)
+        {
+            speedDirs.AddRange(node.SpeedDirs);
+            speedStart.Add(speedDirs.Count);
+        }
+
         var table = new NodeTable
         {
+            SpeedBonus = [.. raw.Select(r => r.SpeedBonus)],
+            SpeedDirStart = speedStart.ToImmutableArray(),
+            SpeedDir = speedDirs.ToImmutableArray(),
             Id = [.. raw.Select(r => r.Id)],
             Number = [.. raw.Select(r => r.Number)],
             Type = [.. raw.Select(r => r.Type)],

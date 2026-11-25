@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using Singularity.Core.Commands;
 using Singularity.Core.Institutes;
+using Singularity.Core.Knowledge;
 using Singularity.Core.Policy;
 using Singularity.Core.Products;
 using Singularity.Core.Data;
@@ -652,7 +653,7 @@ public sealed partial class SliceSession
                     v0 = PriorityVerdict(priority, month);
                 if (v0.Accepted && command is BuildInstitute build)
                     v0 = BuildVerdict(build, month);
-                if (v0.Accepted && command is AssignNode or Unassign or ReorderQueue or SetFocus)
+                if (v0.Accepted && command is AssignNode or Unassign or ReorderQueue or SetFocus or ApplyQueues)
                     v0 = SlotVerdict(command, month);
                 verdicts[i] = !v0.Accepted ? v0 : command is BuyLicence or OfferLicence ? LicenceVerdict(command, month) : _world.Commands.Apply(command, month);
             }
@@ -699,6 +700,47 @@ public sealed partial class SliceSession
         return CommandVerdict.Ok;
     }
 
+    // §1.2: a node that would start at once (a free institute, the node in the frontier) is held back for confirmation when the money would cover less than 60 % of the asks.
+    private bool StartIsUnderfunded(InstituteSystem institutes, AssignNode a, long month, out Fx6 coverage)
+    {
+        coverage = Fx6.One;
+        int row = _world.Graph.RowOf(a.Node);
+        var h = new InstituteHandle(a.Actor, a.Slot);
+        if (row < 0 || !_world.Knowledge.InFrontier(a.Actor, row) || _world.Knowledge.Released(a.Actor, row))
+            return false;
+        var node = new int[institutes.Layout.SlotCount(a.Actor)];
+        institutes.Resolve(a.Actor, month, node, new byte[node.Length]);
+        if (node[a.Slot] != 0 || node.Contains(a.Node))
+            return false;
+        coverage = _world.Knowledge.CoverageWith(a.Actor, month, new SlotWork(a.Slot, row, institutes.InstituteMultiplier(h, row), 0));
+        return coverage < institutes.SlotParameters.UnderfundedBelow;
+    }
+
+    private long NextStepMonth => _world.Calendar.MonthIndex(_world.Calendar.NextDue(Cadence.Monthly, Tick));
+
+    /// <summary>
+    /// <c>FitInstitutes(node)</c> (SCIENCE_SLOTS §12): every institute of the actor against the node: overlap level, speed, months, what it works on now. Empty without the slot model or for an unknown node.
+    /// A pure read of the snapshot.
+    /// </summary>
+    public ImmutableArray<InstituteFitView> FitInstitutes(int actor, int nodeNumber) =>
+        _world.SlotsOn && _world.Graph.RowOf(nodeNumber) is >= 0 and int row ? SlotPlanner.Fit(_world, actor, row, NextStepMonth) : [];
+
+    /// <summary><c>FocusQuote(node, institute)</c>: months, money per month and the price of the rest of the node at focus 0, 1 and 2. Empty as <see cref="FitInstitutes"/>.</summary>
+    public ImmutableArray<FocusQuoteView> FocusQuote(int actor, int nodeNumber, int slot) =>
+        _world.SlotsOn && _world.Graph.RowOf(nodeNumber) is >= 0 and int row && (uint)slot < (uint)_world.Institutes!.Layout.SlotCount(actor) ? SlotPlanner.Focus(_world, actor, row, slot, NextStepMonth) : [];
+
+    /// <summary><c>PathToGoal(node)</c>: the unknown nodes on the way, their months and prices, and the time of the whole way (a range). Null without the slot model or for an unknown node.</summary>
+    public PathView? PathToGoal(int actor, int nodeNumber) =>
+        _world.SlotsOn && _world.Graph.RowOf(nodeNumber) is >= 0 and int row ? SlotPlanner.Path(_world, actor, row, NextStepMonth) : null;
+
+    /// <summary><c>PathToGoal(product)</c>: the way to the generation of the product (its APP node).</summary>
+    public PathView? PathToGeneration(int actor, int generation) =>
+        generation >= 1 && generation <= _world.ProductsLayout.Generations ? PathToGoal(actor, _world.ProductsLayout.GenApp[generation - 1]) : null;
+
+    /// <summary><c>SuggestQueues(goal)</c>: a layout of the path over the standing institutes, to send as <c>ApplyQueues</c> after the player confirms it (§4.3). Empty without the slot model.</summary>
+    public ImmutableArray<QueuePlan> SuggestQueues(int actor, int goalNodeNumber) =>
+        _world.SlotsOn && _world.Graph.RowOf(goalNodeNumber) is >= 0 and int row ? SlotPlanner.Suggest(_world, actor, row, NextStepMonth) : [];
+
     // build_institute: the window of the project, the cap of a small country and one project per slot (research-institutes-priorities §8).
     private CommandVerdict BuildVerdict(BuildInstitute b, long month)
     {
@@ -727,6 +769,8 @@ public sealed partial class SliceSession
             if (row < 0 || _world.Knowledge.IsKnown(a.Actor, row))
                 return CommandVerdict.Refuse(CommandRefusal.NodeKnown, $"node {a.Node} is already known to actor {a.Actor}");
         }
+        if (command is AssignNode { Acknowledged: false } start && StartIsUnderfunded(institutes, start, month, out Fx6 coverage))
+            return CommandVerdict.Refuse(CommandRefusal.NeedsConfirmation, $"after the start the money covers {coverage.Raw * 100 / Fx6.Scale} % of what the institutes ask: send the command with Acknowledged to start anyway");
         if (command is SetFocus f && f.Level > 0 && !institutes.Standing(new InstituteHandle(f.Actor, f.Slot)))
             return CommandVerdict.Refuse(CommandRefusal.NoActiveNode, $"the institute in slot {f.Slot} is not built");
         return CommandVerdict.Ok;

@@ -13,6 +13,10 @@ public sealed partial class NodeTable
         public required YSeq Requires;
         public YSeq? Informs;
         public int[] Directions = [];
+
+        /// <summary>research_speed effect (#562): bonus to the research speed of the directions (empty = all), 0 = none.</summary>
+        public Fx6 SpeedBonus;
+        public int[] SpeedDirs = [];
         public int Number, Gen, Tier, AnchorYear;
         public NodeType Type;
         public Discipline Discipline;
@@ -42,11 +46,36 @@ public sealed partial class NodeTable
             n.Cluster = m.Enum("cluster", DataNames.Clusters);
             n.Hazard = m.Enum("hazard", DataNames.Hazards);
             n.Directions = Core.Data.Directions.ReadForNode(m.Optional("directions"), n.Id);
+            if (m.Optional("research_speed") is { } rs)
+                ReadResearchSpeed(rs, n);
             n.Informs = m.Optional("informs") is {} inf ? Scalars.Seq(inf) : null;
             ReadCapability(m, n);
             ReadAnchor(m.Required("anchor"), n);
             m.End();
             return n;
+        }
+
+        // research_speed: {bonus: 0.05, directions: [comp, elec]}; without directions the bonus counts for every direction. bonus in (0; 0.08] (SCIENCE_SLOTS §6).
+        private static void ReadResearchSpeed(YNode node, RawNode n)
+        {
+            var r = new MapReader(Scalars.Map(node));
+            n.SpeedBonus = Scalars.Fixed(r.Required("bonus"));
+            if (n.SpeedBonus <= Fx6.Zero || n.SpeedBonus > MaxSpeedBonus)
+                throw DataLoadException.At(node, $"'{n.Id}': research_speed bonus must be in (0; 0.08]");
+            if (r.Optional("directions") is { } dirs)
+            {
+                YSeq seq = Scalars.Seq(dirs);
+                var ids = new List<int>();
+                foreach (YNode item in seq.Items)
+                {
+                    int d = Core.Data.Directions.Ids.IndexOf(Scalars.Str(item));
+                    if (d < 0 || ids.Contains(d))
+                        throw DataLoadException.At(item, $"'{n.Id}': unknown or repeated direction in research_speed");
+                    ids.Add(d);
+                }
+                n.SpeedDirs = [.. ids];
+            }
+            r.End();
         }
 
         private static void ReadCapability(MapReader m, RawNode n)

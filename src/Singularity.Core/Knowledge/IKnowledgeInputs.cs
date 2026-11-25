@@ -10,7 +10,7 @@ namespace Singularity.Core.Knowledge;
 /// actor chunks). Implementations read Table columns; they never see this month's compute output.
 /// </summary>
 /// <summary>One working institute slot of a month in the slot model: the node row, the institute multiplier `m_inst` and the focus level 0..2.</summary>
-public readonly record struct SlotWork(int Slot, int NodeRow, Fx6 InstituteMultiplier, int Focus);
+public readonly record struct SlotWork(int Slot, int NodeRow, Fx6 InstituteMultiplier, int Focus, bool FromReserve = false);
 
 public interface IKnowledgeInputs
 {
@@ -19,6 +19,9 @@ public interface IKnowledgeInputs
     /// A pure function of the snapshot, the same as the institutes decide for the next one. Used only by a system built with slot parameters.
     /// </summary>
     int SlotWork(int actorRow, long month, Span<SlotWork> work) => 0;
+
+    /// <summary>Reserve money the actor can spend on focus in month t (slot model, O-088); 0 without the reserve.</summary>
+    Fx6 ReserveAvailable(int actorRow, long month) => Fx6.Zero;
 
     /// <summary><c>S_a(t) = share_R·budget_a(t)</c> (spec §3.1, §3.4).</summary>
     Fx6 ResearchBudget(int actorRow, long month);

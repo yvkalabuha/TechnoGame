@@ -48,6 +48,8 @@ internal sealed class InstituteInputsAdapter(SliceWorld world) : IInstituteInput
         return o.FocusNode(slot);
     }
 
+    public bool FocusFromReserve(InstituteHandle slot) => world.SlotOrders!.FocusFromReserve(slot);
+
     public int SlotProgress(int actorRow, int slot, out Fx6 added) => world.Knowledge.SlotProgress(actorRow, slot, out added);
 
     public Fx6 Progress(int actorRow, int nodeRow) => world.Knowledge.Prog(actorRow, nodeRow);
@@ -80,23 +82,34 @@ internal sealed class InstituteInputsAdapter(SliceWorld world) : IInstituteInput
         const byte level = 1;   // only g*: the rule never reads a second tier (ai-institute-goals.md §2 item 4, PATH)
         for (int g = 1; g <= l.Generations; g++)
         {
-            int marked = 0;
-            marked += Seed(actorRow, l.GenApp[g - 1], level, tier, stack);
-            int need = g - 1 < 1 ? 1 : g - 1;
-            int engine = Fitting(actorRow, l, l.BaseSlot, g, -1, need, out bool engineOk);
-            if (!engineOk && engine >= 0)
-                marked += SeedAlt(actorRow, l, engine, level, tier, stack);
-            for (int s = 0; s < l.SlotCount; s++)
+            if (MarkGeneration(actorRow, l, g, level, tier, stack) > 0)
             {
-                if (s == l.BaseSlot)
-                    continue;
-                int alt = Fitting(actorRow, l, s, g, engine, need, out bool ok);
-                if (!ok && alt >= 0)
-                    marked += SeedAlt(actorRow, l, alt, level, tier, stack);
-            }
-            if (marked > 0)
+                // The slot model also uses the generation after (the fallback tier 2 of the AI, SCIENCE_SLOTS §8); the shares model reads tier 1 only.
+                if (world.SlotsOn && g < l.Generations)
+                    MarkGeneration(actorRow, l, g + 1, 2, tier, stack);
                 return;
+            }
         }
+    }
+
+    // The requirement closure of what the actor lacks for generation g (its APP node, the engine, each slot without a fitting available alternative), marked with the level.
+    private int MarkGeneration(int actorRow, ProductsLayout l, int g, byte level, Span<byte> tier, Span<int> stack)
+    {
+        int marked = 0;
+        marked += Seed(actorRow, l.GenApp[g - 1], level, tier, stack);
+        int need = g - 1 < 1 ? 1 : g - 1;
+        int engine = Fitting(actorRow, l, l.BaseSlot, g, -1, need, out bool engineOk);
+        if (!engineOk && engine >= 0)
+            marked += SeedAlt(actorRow, l, engine, level, tier, stack);
+        for (int s = 0; s < l.SlotCount; s++)
+        {
+            if (s == l.BaseSlot)
+                continue;
+            int alt = Fitting(actorRow, l, s, g, engine, need, out bool ok);
+            if (!ok && alt >= 0)
+                marked += SeedAlt(actorRow, l, alt, level, tier, stack);
+        }
+        return marked;
     }
 
     // The lowest-rank available alternative of the slot that fits generation g (ok = true), else the lowest-rank fitting one (ok = false); -1 = none fits.

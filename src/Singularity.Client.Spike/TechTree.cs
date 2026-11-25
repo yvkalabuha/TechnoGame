@@ -1825,6 +1825,7 @@ public sealed partial class TechTree : Control
                 Singularity.Core.Data.NodeEffectKind.Generation => Loc.T("fx.gen", Loc.N(e.Value.ToDouble())),
                 Singularity.Core.Data.NodeEffectKind.Informs => Loc.T("fx.informs", Names.Node(nodes.Id[e.Node])),
                 Singularity.Core.Data.NodeEffectKind.RequiredFor => Loc.T("fx.required", Names.Node(nodes.Id[e.Node])),
+                Singularity.Core.Data.NodeEffectKind.ResearchSpeed => Loc.T("fx.speed", Loc.N(e.Value.ToDouble() * 100)),
                 _ => Loc.T("fx.path", Names.Node(nodes.Id[e.Node])),
             };
             if (!parts.Contains(s)) parts.Add(s);

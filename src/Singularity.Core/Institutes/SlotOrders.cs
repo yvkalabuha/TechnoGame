@@ -162,6 +162,32 @@ public sealed class SlotOrders
         return CommandVerdict.Ok;
     }
 
+    /// <summary><c>apply_queues</c>: the lists of the named institutes are replaced; a node stands once in the plan and in no list of an institute outside it.</summary>
+    public CommandVerdict Apply(ApplyQueues c)
+    {
+        var seen = new List<int>();
+        foreach (QueuePlan p in c.Plan)
+        {
+            if (CheckSlot(c.Actor, p.Slot) is { Accepted: false } bad)
+                return bad;
+            if (p.Nodes.Length > Length)
+                return CommandVerdict.Refuse(CommandRefusal.QueueFull, $"the list of slot {p.Slot} holds {_p.QueueLength} queued and the active node");
+            foreach (int n in p.Nodes)
+            {
+                if (_probe.IsKnown(c.Actor, n))
+                    return CommandVerdict.Refuse(CommandRefusal.NodeKnown, $"node {n} is known already");
+                if (seen.Contains(n))
+                    return CommandVerdict.Refuse(CommandRefusal.NodeTaken, $"node {n} stands twice in the plan");
+                if (Holds(c.Actor, n, out int where) && !c.Plan.Any(q => q.Slot == where))
+                    return CommandVerdict.Refuse(CommandRefusal.NodeTaken, $"node {n} stands in the list of slot {where}, which the plan leaves alone");
+                seen.Add(n);
+            }
+        }
+        foreach (QueuePlan p in c.Plan)
+            Write(new InstituteHandle(c.Actor, p.Slot), p.Nodes.AsSpan());
+        return CommandVerdict.Ok;
+    }
+
     /// <summary><c>set_priority_node</c> of the slot model: the node becomes the active one of the slot, the node it replaces leaves the list.</summary>
     public CommandVerdict Apply(SetPriorityNode c, long month)
     {

@@ -53,7 +53,7 @@ public sealed class InstituteLayout
 
     public ImmutableArray<int> DirNodesIn { get; }
 
-    /// <summary>Level 0..4 of the institute in the direction when it stands at the start or opens (levels of the data above 4 count as 4).</summary>
+    /// <summary>Level 0..5 of the institute in the direction when it stands at the start or opens.</summary>
     public int StartDirLevel(InstituteHandle h, int direction) => _startDirLevel[(h.Actor * MaxSlots + h.Slot) * DirectionNames.Length + direction];
 
     /// <summary>Calendar year and month (1..12) of month index 0.</summary>
@@ -170,7 +170,7 @@ public sealed class InstituteLayout
                 if (dirData)
                 {
                     for (int j = 0; j < table.DirectionCount(row); j++)
-                        startDirLevel[at + table.DirectionAt(row, j)] = Math.Min(table.DirectionLevel(row, j), InstituteTable.MaxLevel);
+                        startDirLevel[at + table.DirectionAt(row, j)] = Math.Min(table.DirectionLevel(row, j), InstituteMath.MaxDirectionLevel);
                 }
                 else
                 {

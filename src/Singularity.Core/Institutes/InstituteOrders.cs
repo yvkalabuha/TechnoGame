@@ -46,6 +46,17 @@ public sealed class InstituteOrders
         return CommandVerdict.Ok;
     }
 
+    /// <summary>Stops the player's project of the slot: no stamp, no more payments (the progress stays, nothing is returned).</summary>
+    public CommandVerdict ApplyCancel(CancelBuild command)
+    {
+        if ((uint)command.Slot >= (uint)_l.SlotCount(command.Actor))
+            return CommandVerdict.Refuse(CommandRefusal.BadSlot, $"actor {command.Actor} has no institute slot {command.Slot}");
+        if (_build[command.Slot].Current[command.Actor] == 0)
+            return CommandVerdict.Refuse(CommandRefusal.BuildRefused, "no project of the player runs in this slot");
+        Set(_build[command.Slot], command.Actor, 0);
+        return CommandVerdict.Ok;
+    }
+
     /// <summary>Writes the order of the command; the slot must exist (checked by the validator).</summary>
     public CommandVerdict Apply(SetPriorityNode command, long month)
     {

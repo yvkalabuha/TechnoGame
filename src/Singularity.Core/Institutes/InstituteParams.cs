@@ -21,6 +21,9 @@ public sealed record InstituteParams
     /// <summary>Experience thresholds of levels 1..4 as percent of the nodes of the area (q = 0.08; 0.20; 0.35; 0.50).</summary>
     public ImmutableArray<int> ThresholdPercent { get; init; } = [8, 20, 35, 50];
 
+    /// <summary>Experience threshold of level 5 (directions of the slot model, data levels 1..5), percent of the nodes of the direction.</summary>
+    public int Level5Percent { get; init; } = 65;
+
     /// <summary>A slot taken by the player may be given another node at most once in this many months (rev 4 §4 item 3).</summary>
     public int ReassignMonths { get; init; } = 12;
 

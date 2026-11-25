@@ -329,6 +329,10 @@ public sealed class CommandState
                 Set(_fundAmount!, a, fp.Amount.Raw);
                 Set(_fundStamp, a, stamp);
                 break;
+            case CancelBuild cb:
+                return _institutes?.ApplyCancel(cb) ?? CommandVerdict.Refuse(CommandRefusal.InstitutesOff, "this run has no institutes");
+            case ApplyQueues aq:
+                return _slotOrders?.Apply(aq) ?? CommandVerdict.Refuse(CommandRefusal.SlotsOff, "this run has no slot science model");
             case AssignNode an:
                 return _slotOrders?.Apply(an) ?? CommandVerdict.Refuse(CommandRefusal.SlotsOff, "this run has no slot science model");
             case Unassign un:

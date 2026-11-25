@@ -97,6 +97,15 @@ public sealed partial class NodeTable
             w.Int(DirectionCount(r));
             for (int k = 0; k < DirectionCount(r); k++)
                 w.Int(DirectionAt(r, k));
+            // Only a node with the effect writes it, so a data set without research_speed keeps its hash.
+            if (SpeedBonus[r] != Fx6.Zero)
+            {
+                w.Str("research_speed");
+                w.Fixed(SpeedBonus[r]);
+                w.Int(SpeedDirStart[r + 1] - SpeedDirStart[r]);
+                for (int k = SpeedDirStart[r]; k < SpeedDirStart[r + 1]; k++)
+                    w.Int(SpeedDir[k]);
+            }
         }
     }
 }

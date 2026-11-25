@@ -56,6 +56,25 @@ public class SlotMathTests
     }
 
     [Fact]
+    public void DirectionLevels_ReachFive_WhileTheAreaLevelsOfTheSharesModelStayAtFour()
+    {
+        var p = new InstituteParams();
+        Assert.True(InstituteMath.Threshold(5, 40, p) > InstituteMath.Threshold(4, 40, p));
+        Assert.Equal(5, InstituteMath.DirectionLevelOf(1000, 40, p));
+        Assert.Equal(4, InstituteMath.DirectionLevelOf(InstituteMath.Threshold(5, 40, p) - 1, 40, p));
+        Assert.Equal(4, InstituteMath.LevelOf(1000, 40, p));   // the old rule is untouched (S11)
+    }
+
+    [Fact]
+    public void Speed_WithResearchBonus_IsStillCut_AtTheCap()
+    {
+        Assert.Equal(F(1.2 * 1.25), SlotMath.Speed(P, F(1.2), 1, Fx6.One));
+        Assert.Equal(F(1.0 * 1.0 * 1.25), SlotMath.Speed(P, Fx6.One, 0, F(1.25)));
+        Assert.Equal(F(1.25 * 1.5 * 1.25), SlotMath.Speed(P, F(1.25), 2, F(1.25)));   // the largest the data gives (level 5, focus 2, R cap) stays under 2.5
+        Assert.Equal(P.SpeedCap, SlotMath.Speed(P, F(1.5), 2, F(1.25)));          // a value of the data above that is cut (#568)
+    }
+
+    [Fact]
     public void Coverage_IsOneWhenTheMoneySuffices_AndTheSameShareForEverySlot()
     {
         Assert.Equal(Fx6.One, SlotMath.Coverage(Fx6.FromInt(10), Fx6.FromInt(8)));

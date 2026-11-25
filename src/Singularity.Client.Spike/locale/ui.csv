@@ -446,6 +446,7 @@ fx.gen,"opens product generation {0}","открывает поколение и�
 fx.informs,"eases research of: {0}","облегчает изучение: {0}"
 fx.required,"required for: {0}","нужен для: {0}"
 fx.path,"one of the ways to: {0}","один из путей к: {0}"
+fx.speed,"speeds up research by {0} %","ускоряет исследования на {0} %"
 fx.more,"{0} more","ещё {0}"
 inset.why.node,"What blocks «{0}»:","Что мешает узлу «{0}»:"
 inset.why.node.free,"Nothing blocks it: all requirements are known, it can be opened.","Ничего не мешает: все требования известны, узел можно открыть."

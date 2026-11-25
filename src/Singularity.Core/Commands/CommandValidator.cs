@@ -227,6 +227,25 @@ public static class CommandValidator
                 return limits.NodeNumbers.Contains(pn.Node)
                     ? CommandVerdict.Ok
                     : CommandVerdict.Refuse(CommandRefusal.BadNode, $"node {pn.Node} is not in the graph");
+            case CancelBuild cbd:
+                if (limits.InstituteSlots.IsDefaultOrEmpty)
+                    return CommandVerdict.Refuse(CommandRefusal.InstitutesOff, "this run has no institutes");
+                return (uint)cbd.Actor < (uint)limits.InstituteSlots.Length && (uint)cbd.Slot < (uint)limits.InstituteSlots[cbd.Actor]
+                    ? CommandVerdict.Ok
+                    : CommandVerdict.Refuse(CommandRefusal.BadSlot, $"actor {cbd.Actor} has no institute slot {cbd.Slot}");
+            case ApplyQueues aqs:
+                if (!limits.SlotsEnabled)
+                    return CommandVerdict.Refuse(CommandRefusal.SlotsOff, "this run has no slot science model");
+                if (aqs.Plan.IsDefault)
+                    return CommandVerdict.Refuse(CommandRefusal.NotInList, "the plan is empty");
+                foreach (QueuePlan qp in aqs.Plan)
+                {
+                    if ((uint)aqs.Actor >= (uint)limits.InstituteSlots.Length || (uint)qp.Slot >= (uint)limits.InstituteSlots[aqs.Actor])
+                        return CommandVerdict.Refuse(CommandRefusal.BadSlot, $"actor {aqs.Actor} has no institute slot {qp.Slot}");
+                    if (qp.Nodes.IsDefault || qp.Nodes.Any(n => !limits.NodeNumbers.Contains(n)))
+                        return CommandVerdict.Refuse(CommandRefusal.BadNode, "the plan names a node that is not in the graph");
+                }
+                return CommandVerdict.Ok;
             case AssignNode or Unassign or ReorderQueue or SetFocus:
                 if (!limits.SlotsEnabled)
                     return CommandVerdict.Refuse(CommandRefusal.SlotsOff, "this run has no slot science model");
