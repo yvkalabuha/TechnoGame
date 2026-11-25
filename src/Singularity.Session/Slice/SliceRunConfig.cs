@@ -205,6 +205,12 @@ public sealed partial record SliceRunConfig
     /// </summary>
     public bool Institutes { get; init; }
 
+    /// <summary>
+    /// The actor the player controls (−1 = none). With institutes the AI neither sets the priorities nor starts the projects of this actor: it only proposes
+    /// (<c>InstituteView.ProposedGoal</c>, <c>ProposesBuild</c>), O-067. The client sets it; Lab runs leave it −1.
+    /// </summary>
+    public int PlayerActor { get; init; } = -1;
+
     /// <summary><c>BUDGET_RULE</c> (#430): <c>NOW</c> (constant growth) in main; <c>A</c>, <c>B1</c>, <c>B2</c> are measurement variants of slice-budget-convergence.md.</summary>
     public BudgetRule BudgetRule { get; init; } = BudgetRule.Now;
 

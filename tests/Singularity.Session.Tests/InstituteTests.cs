@@ -377,8 +377,8 @@ public class InstituteTests
         Assert.True(s.Submit(SourceClass.Player, 0, 0, new BuildInstitute(sun, h.Slot)).Accepted);
         s.StepThroughMonth(0);
         s.StepThroughMonth(1);
-        Fx6 running = inst.BudgetFactor(sun);   // 1 - 3 levels * 1.5 % * ahead multiplier of 1946 - 1945 = 1 year (1.02)
-        Assert.Equal(Fx6.One - InstituteMath.BuildRate(3, 1, P), running);
+        Fx6 running = inst.BudgetFactor(sun);   // 1 - 3 levels * 1.5 %: the project opens in 1949, after its historical year 1946, so the price is not raised
+        Assert.Equal(Fx6.One - InstituteMath.BuildRate(3, 0, P), running);
         Assert.False(inst.Standing(h));
         int months = inst.BuildMonths(h);
         for (long t = 2; t < months - 1; t++)
@@ -424,7 +424,7 @@ public class InstituteTests
         Assert.InRange(inst.OpenedMonth(darpa), refMonth - 3, refMonth + 1);
         Assert.True(inst.Standing(rre) && inst.OpenedMonth(rre) <= inst.Layout.FirstMonthOf(1953) + 1);
         Assert.True(inst.Standing(onera));
-        Assert.Equal(inst.BuildMonths(onera) - 1, inst.OpenedMonth(onera));   // started in month 0
+        Assert.Equal(inst.BuildMonths(onera), inst.OpenedMonth(onera));   // seen from month 1: its start, paid from there
         Assert.Equal(1, inst.Level(onera, inst.Layout.DisciplineNames.IndexOf("prop")));
     }
 
@@ -441,5 +441,50 @@ public class InstituteTests
         SliceSession s = Make(false);
         s.StepThroughMonth(0);
         Assert.True(s.View.Actors[0].Institutes.IsEmpty);
+    }
+    // O-067: the price counts the years from the opening of the project to the historical year.
+    [Fact]
+    public void Build_PriceGrowsWithTheYearsBetweenTheOpeningAndTheHistoricalYear()
+    {
+        SliceSession s = Make(true);
+        int usa = Actor(s, "USA");
+        var h = new InstituteHandle(usa, CandidateSlot(s, usa, "usa_darpa"));
+        InstituteSystem inst = s.World.Institutes!;
+        for (long t = 0; t < 28; t++)
+            s.StepThroughMonth(t);   // 1948-01: the window of a 1958 institute opens
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new BuildInstitute(usa, h.Slot)).Accepted);
+        s.StepThroughMonth(28);
+        Assert.True(inst.Building(h));
+        long opening = 28 + inst.BuildMonths(h) - 1;
+        int years = 1958 - inst.Layout.YearOf(opening);
+        Assert.True(years > 3);
+        Assert.Equal(Fx6.One - InstituteMath.BuildRate(3, years, P), inst.BudgetFactor(usa));
+        Assert.Equal(InstituteMath.BuildRate(3, years, P), inst.BuildRate(h, 28));
+    }
+
+    // O-067: the AI does not touch the actor of the player; it proposes in the view.
+    [Fact]
+    public void PlayerActor_GetsProposalsButNoAiGoalsOrProjects()
+    {
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = 3 });
+        InstituteSystem inst = s.World.Institutes!;
+        int player = 3, other = (player + 1) % s.World.Scenario.ActorCount;
+        string playerId = s.World.Scenario.ActorId[player];
+        var candidates = Enumerable.Range(inst.Layout.StartingCount(player), inst.Layout.SlotCount(player) - inst.Layout.StartingCount(player)).ToArray();
+        for (long t = 0; t < 40; t++)
+            s.StepThroughMonth(t);
+        for (int k = 0; k < inst.Layout.SlotCount(player); k++)
+            Assert.Equal(0, inst.GoalNode(new InstituteHandle(player, k)));
+        Assert.All(candidates, k => Assert.False(inst.Building(new InstituteHandle(player, k)) || inst.Standing(new InstituteHandle(player, k)), playerId));
+        Assert.Contains(Enumerable.Range(0, inst.Layout.SlotCount(other)), k => inst.GoalNode(new InstituteHandle(other, k)) != 0);
+        var view = s.View.Actors[player].Institutes;
+        Assert.Contains(view, v => v.ProposedGoal != 0);
+        Assert.True(view.Any(v => v.ProposesBuild) == (candidates.Length > 0 && candidates.Any(k => view[k].ProposesBuild)));
+        Assert.All(s.View.Actors[other].Institutes, v => Assert.False(v.ProposesBuild || v.ProposedGoal != 0));
+        // A command of the player works as before.
+        int node = s.World.Graph.Number[Frontier(s, player)[0]];
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new SetPriorityNode(player, 0, node)).Accepted);
+        s.StepThroughMonth(40);
+        Assert.Equal(node, inst.GoalNode(new InstituteHandle(player, 0)));
     }
 }

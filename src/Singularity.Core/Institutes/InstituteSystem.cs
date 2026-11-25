@@ -23,6 +23,9 @@ public interface IInstituteInputs
 
     /// <summary>The month the player started the project of the slot, −1 = none (snapshot).</summary>
     long PlayerBuildMonth(InstituteHandle slot);
+
+    /// <summary>The actor is the one the player controls: the AI neither sets its goals nor starts its projects, it only proposes (O-067, #479).</summary>
+    bool PlayerControlled(int actorRow);
 }
 
 /// <summary>Why a project cannot start now.</summary>
@@ -137,9 +140,12 @@ public sealed class InstituteSystem : ITickSystem
     /// <summary>Months the project of the slot takes.</summary>
     public int BuildMonths(InstituteHandle h) => InstituteMath.BuildMonths(_l.TotalLevels(h), _p);
 
-    /// <summary>Share of the research money the running project takes per month; the price grows with the years ahead of the historical year.</summary>
+    /// <summary>
+    /// Share of the research money the running project takes per month; the price grows with the years from the opening year of the project to the historical year
+    /// (opening on time = ×1, O-067).
+    /// </summary>
     public Fx6 BuildRate(InstituteHandle h, long startMonth) =>
-        InstituteMath.BuildRate(_l.TotalLevels(h), _l.RefYear(h) - _l.YearOf(startMonth), _p);
+        InstituteMath.BuildRate(_l.TotalLevels(h), _l.RefYear(h) - _l.YearOf(startMonth + BuildMonths(h) - 1), _p);
 
     /// <summary>Whether a project of the slot may start in the month (§8): not standing or running, inside the window, within the cap of a small country.</summary>
     public BuildCheck CanBuild(InstituteHandle h, long month)
@@ -242,6 +248,7 @@ public sealed class InstituteSystem : ITickSystem
         for (int a = rowStart; a < rowEnd; a++)
         {
             int slots = _l.SlotCount(a);
+            bool player = _inputs.PlayerControlled(a);
             bool anyFree = false;
             for (int k = 0; k < slots; k++)
             {
@@ -249,7 +256,7 @@ public sealed class InstituteSystem : ITickSystem
                 if (!Standing(h))
                 {
                     goal[k] = -1;   // not built: no goal, never free
-                    StepProject(h, t);
+                    StepProject(h, t, player);
                     continue;
                 }
                 goal[k] = GoalNode(h);
@@ -259,7 +266,7 @@ public sealed class InstituteSystem : ITickSystem
                 if (cur != 0 && IsKnownNumber(a, cur) && _g.RowOf(cur) is >= 0 and int row && _inputs.DiscoveredByResearch(a, row) && _g.Discipline[row] is >= 0 and int disc)
                     _exp[k][disc].Next[a] = _exp[k][disc].Current[a] + 1;
             }
-            if (anyFree)
+            if (anyFree && !player)
                 PickForFreeSlots(a, t, slots, goal);
             for (int k = 0; k < slots; k++)
             {
@@ -272,7 +279,7 @@ public sealed class InstituteSystem : ITickSystem
 
     // A project that has run its months opens the institute with the experience of its levels; the AI starts the projects of the historical ones so that they
     // open about the historical year (§7), by the same checks as the player.
-    private void StepProject(InstituteHandle h, long t)
+    private void StepProject(InstituteHandle h, long t, bool player)
     {
         long start = BuildStart(h);
         int months = BuildMonths(h);
@@ -285,8 +292,32 @@ public sealed class InstituteSystem : ITickSystem
                 _exp[h.Slot][d].Next[h.Actor] = _l.StartExperience(h, d);
             return;
         }
-        if (CanBuild(h, t) == BuildCheck.Ok && t >= _l.FirstMonthOf(_l.RefYear(h)) - months)
-            _abuild[h.Slot].Next[h.Actor] = checked((int)t) + 1;
+        // The project is seen (and pays) from the next month, so that month is its start: the stamp is start + 1.
+        if (!player && AiWouldStart(h, t))
+            _abuild[h.Slot].Next[h.Actor] = checked((int)t) + 2;
+    }
+
+    // The AI rule (§7): the project of a historical candidate starts so that the institute opens about its historical year.
+    private bool AiWouldStart(InstituteHandle h, long t) =>
+        CanBuild(h, t) == BuildCheck.Ok && t + 1 >= _l.FirstMonthOf(_l.RefYear(h)) - BuildMonths(h);
+
+    /// <summary>
+    /// What the AI would do for the actor in the month, as a proposal for the player (the adviser, #479): the goal for each free standing slot (0 = none) in
+    /// <paramref name="goals"/> and, per slot, whether it would start the project now in <paramref name="startsProject"/>. A pure read; writes nothing.
+    /// </summary>
+    public void Propose(int actor, long month, Span<int> goals, Span<bool> startsProject)
+    {
+        int slots = _l.SlotCount(actor);
+        Span<int> work = stackalloc int[MaxSlotsLimit];
+        for (int k = 0; k < slots; k++)
+        {
+            var h = new InstituteHandle(actor, k);
+            work[k] = Standing(h) ? GoalNode(h) : -1;
+            startsProject[k] = !Standing(h) && AiWouldStart(h, month);
+        }
+        PickForFreeSlots(actor, month, slots, work);
+        for (int k = 0; k < slots; k++)
+            goals[k] = work[k] > 0 && GoalNode(new InstituteHandle(actor, k)) == 0 ? work[k] : 0;
     }
 
     // The AI rule (§7): the heaviest frontier node that no slot works on goes to the free institute with the highest level in its area (ties: the lower slot).

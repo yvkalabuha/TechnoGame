@@ -80,14 +80,19 @@ internal static class ViewBuilder
             new LicenceView(w.Policy.LicenceGen(a), w.Policy.LicenceSeller(a), w.Policy.LicenceStart(a), w.Policy.LicenceMask(a), w.Policy.OfferMask(a),
                 w.Policy.LicenceFlow(a), refusals.MoveToImmutable(), w.LicenceActive(a)),
             new DisruptionView(disStart, disEnd), withNodes ? Nodes(w, a, next) : Unsubscribed(w, a), designs.MoveToImmutable(), Decisions(w, a, next, stepped),
-            Alloy(w, a, month), Research(w, a), UnknownNodes(w, a), Institutes(w, a));
+            Alloy(w, a, month), Research(w, a), UnknownNodes(w, a), Institutes(w, a, next));
     }
 
-    private static ImmutableArray<InstituteView> Institutes(SliceWorld w, int a)
+    private static ImmutableArray<InstituteView> Institutes(SliceWorld w, int a, long month)
     {
         if (w.Institutes is not { } inst)
             return [];
         var list = ImmutableArray.CreateBuilder<InstituteView>(inst.Layout.SlotCount(a));
+        Span<int> goals = stackalloc int[InstituteSystem.MaxSlotsLimit];
+        Span<bool> builds = stackalloc bool[InstituteSystem.MaxSlotsLimit];
+        bool advise = w.Config.PlayerActor == a;
+        if (advise)
+            inst.Propose(a, month, goals, builds);
         for (int k = 0; k < inst.Layout.SlotCount(a); k++)
         {
             var h = new InstituteHandle(a, k);
@@ -96,7 +101,8 @@ internal static class ViewBuilder
                 levels.Add(inst.Level(h, d));
             long start = inst.BuildStart(h);
             list.Add(new InstituteView(k, inst.Layout.IdOf(h), inst.Standing(h), inst.GoalNode(h), levels.MoveToImmutable(), start, inst.BuildMonths(h),
-                start >= 0 ? inst.BuildRate(h, start) : Fx6.Zero, inst.Layout.RefYear(h), inst.Layout.TotalLevels(h)));
+                start >= 0 ? inst.BuildRate(h, start) : Fx6.Zero, inst.Layout.RefYear(h), inst.Layout.TotalLevels(h),
+                advise ? goals[k] : 0, advise && builds[k]));
         }
         return list.MoveToImmutable();
     }
