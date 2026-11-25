@@ -27,6 +27,31 @@ public static class StateHash
         return hash.GetHashAndReset();
     }
 
+    /// <summary>
+    /// World hash: header int32 schema_version, int32 table count; then per table in creation order int32 n_rows and its columns as above.
+    /// Names are not hashed (the schema version stands for the layout).
+    /// </summary>
+    public static byte[] Compute(World world, int schemaVersion)
+    {
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        Span<byte> word = stackalloc byte[sizeof(int)];
+        BinaryPrimitives.WriteInt32LittleEndian(word, schemaVersion);
+        hash.AppendData(word);
+        BinaryPrimitives.WriteInt32LittleEndian(word, world.Tables.Count);
+        hash.AppendData(word);
+        foreach (Table table in world.Tables)
+        {
+            BinaryPrimitives.WriteInt32LittleEndian(word, table.RowCount);
+            hash.AppendData(word);
+            for (int i = 0; i < table.Columns.Count; i++)
+                table.Columns[i].AppendCurrentTo(hash);
+        }
+        return hash.GetHashAndReset();
+    }
+
+    public static string ComputeHex(World world, int schemaVersion) =>
+        Convert.ToHexStringLower(Compute(world, schemaVersion));
+
     public static string ComputeHex(Table table, int schemaVersion) =>
         Convert.ToHexStringLower(Compute(table, schemaVersion));
 }

@@ -5,16 +5,21 @@ namespace Singularity.Kernel;
 /// <summary>What a system sees during one phase of a tick.</summary>
 public readonly struct TickContext
 {
-    public TickContext(Table table, CounterRng rng, long tick, TickCalendar? calendar = null)
+    public TickContext(Table table, CounterRng rng, long tick, TickCalendar? calendar = null, int chunkSize = 0)
     {
+        ChunkSize = chunkSize;
         Table = table;
         Rng = rng;
         Tick = tick;
         Calendar = calendar;
     }
 
+    /// <summary>The chunk table of the run (the parent of child tables).</summary>
     public Table Table { get; }
     public CounterRng Rng { get; }
+
+    /// <summary>Rows of the chunk table per chunk (0 when the context was built by hand); <c>NextRange</c> needs it.</summary>
+    public int ChunkSize { get; }
 
     /// <summary>
     /// Index of the state held in <c>Current</c>. Compute and Merge of the step t → t+1 see t;
@@ -56,6 +61,12 @@ public interface ITickSystem
     /// runner with a <see cref="TickCalendar"/> whose start is aligned with the cadence (ADR-0004).
     /// </summary>
     Cadence Cadence => Cadence.Daily;
+
+    /// <summary>
+    /// Columns this system writes through <c>Next</c> or <c>NextRange</c>. The runner opens them (copy-on-write) single-threaded before
+    /// its compute, so no chunk opens a column in parallel (ADR-0029 п. 5). Empty by default: columns then open on first touch.
+    /// </summary>
+    IReadOnlyList<Column> WrittenColumns => Array.Empty<Column>();
 }
 
 /// <summary>
@@ -73,6 +84,8 @@ public interface ITickSystem
 public sealed class TickRunner
 {
     private readonly Table _table;
+    private readonly Table[] _tables;   // chunk table first, then the rest in creation order
+    private readonly Table[] _childTables;
     private readonly CounterRng _rng;
     private readonly ITickSystem[] _systems;
     private readonly int _chunkSize;
@@ -88,7 +101,33 @@ public sealed class TickRunner
 
     public TickRunner(Table table, ulong seed, IReadOnlyList<ITickSystem> systems, int chunkSize, int maxThreads,
         TickCalendar? calendar = null)
+        : this(table, Flatten(table), seed, systems, chunkSize, maxThreads, calendar)
     {
+    }
+
+    /// <summary>Runs every table of the world; chunks follow <paramref name="chunkTable"/>.</summary>
+    public TickRunner(World world, Table chunkTable, ulong seed, IReadOnlyList<ITickSystem> systems, int chunkSize, int maxThreads,
+        TickCalendar? calendar = null)
+        : this(chunkTable, world.Tables.Where(t => !ReferenceEquals(t, chunkTable)).Prepend(chunkTable).ToArray(),
+            seed, systems, chunkSize, maxThreads, calendar)
+    {
+        if (!world.Tables.Contains(chunkTable))
+            throw new ArgumentException("The chunk table is not in the world.", nameof(chunkTable));
+    }
+
+    private static Table[] Flatten(Table root)
+    {
+        var all = new List<Table> { root };
+        for (int i = 0; i < all.Count; i++)
+            all.AddRange(all[i].Children);
+        return all.ToArray();
+    }
+
+    private TickRunner(Table table, Table[] tables, ulong seed, IReadOnlyList<ITickSystem> systems, int chunkSize, int maxThreads,
+        TickCalendar? calendar)
+    {
+        _tables = tables;
+        _childTables = tables.Where(t => t.Parent is not null).ToArray();
         ArgumentOutOfRangeException.ThrowIfLessThan(chunkSize, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(maxThreads, 1);
         _table = table;
@@ -182,11 +221,12 @@ public sealed class TickRunner
         _table.RunActive = true;
         try
         {
-            var context = new TickContext(_table, _rng, Tick, _calendar);
+            var context = new TickContext(_table, _rng, Tick, _calendar, _chunkSize);
             for (int s = 0; s < _systems.Length; s++)
                 _due[s] = _nextDue[s] == Tick;
 
-            _table.BeginTick();
+            for (int t = 0; t < _tables.Length; t++)
+                _tables[t].BeginTick();
             bool completed = false;
             try
             {
@@ -197,6 +237,10 @@ public sealed class TickRunner
                     ITickSystem system = _systems[s];
                     if (_table.Trace is not null)
                         _table.TraceSystemId = system.SystemId;
+                    IReadOnlyList<Column> written = system.WrittenColumns;
+                    for (int c = 0; c < written.Count; c++)
+                        written[c].OpenNext();
+                    SetCompute(true);
                     if (_parallel.MaxDegreeOfParallelism == 1)
                     {
                         for (int chunk = 0; chunk < ChunkCount; chunk++)
@@ -225,6 +269,7 @@ public sealed class TickRunner
                                 ExceptionDispatchInfo.Capture(failure).Throw();
                         }
                     }
+                    SetCompute(false);
                 }
 
                 for (int s = 0; s < _systems.Length; s++)
@@ -236,17 +281,19 @@ public sealed class TickRunner
                     _systems[s].Merge(context, ChunkCount);
                 }
 
-                _table.Swap();
+                for (int t = 0; t < _tables.Length; t++)
+                    _tables[t].Swap();
                 completed = true;
             }
             finally
             {
-                _table.EndTick(completed);
+                for (int t = 0; t < _tables.Length; t++)
+                    _tables[t].EndTick(completed);
             }
             Tick++;
             UpdateNextDue();
 
-            var postContext = new TickContext(_table, _rng, Tick, _calendar);
+            var postContext = new TickContext(_table, _rng, Tick, _calendar, _chunkSize);
             for (int s = 0; s < _systems.Length; s++)
             {
                 if (_due[s])
@@ -257,6 +304,12 @@ public sealed class TickRunner
         {
             _table.RunActive = false;
         }
+    }
+
+    private void SetCompute(bool on)
+    {
+        for (int t = 0; t < _childTables.Length; t++)
+            _childTables[t].InCompute = on;
     }
 
     // After a tick at which systems ran: their next due tick is the first due tick from the new Tick on.

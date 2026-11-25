@@ -14,6 +14,66 @@ public sealed class Table
         RowCount = rowCount;
     }
 
+    // Child table (ADR-0029 п. 5): rows grouped by parent row; offsets has parent.RowCount + 1 entries.
+    internal Table(Table parent, int[] offsets, string name) : this(offsets[^1])
+    {
+        Parent = parent;
+        Offsets = offsets;
+        TraceName = name;
+        Generation = AddInt("generation");
+        parent._children.Add(this);
+    }
+
+    private readonly List<Table> _children = new();
+    private bool _inCompute;
+    private ColumnWriteTrace? _trace;
+    private bool _fullCopyMode;
+
+    /// <summary>Parent table of a child table, null for a root table.</summary>
+    public Table? Parent { get; }
+
+    /// <summary>Child tables of this table, in creation order.</summary>
+    public IReadOnlyList<Table> Children => _children;
+
+    /// <summary>Child tables: first child row of every parent row, plus the end (parent.RowCount + 1 entries). Null for a root table.</summary>
+    internal int[]? Offsets { get; }
+
+    /// <summary>Prefix of column names in the write trace (the table name for a child table), null for a root table.</summary>
+    internal string? TraceName { get; }
+
+    /// <summary>
+    /// Slot generation of a child table (first column, hashed): a handle is live while it equals the generation of its row.
+    /// Whoever closes and reopens a slot writes it (one writer, like any column). Null for a root table.
+    /// </summary>
+    public IntColumn? Generation { get; }
+
+    /// <summary>First child row of a parent row; the row's slots are [OffsetOf(p), OffsetOf(p + 1)).</summary>
+    public int OffsetOf(int parentRow)
+    {
+        if (Offsets is null)
+            throw new InvalidOperationException("Not a child table.");
+        return Offsets[parentRow];
+    }
+
+    /// <summary>The handle of a child row as it is now (its current generation).</summary>
+    public RowHandle HandleOf(int row)
+    {
+        if (Generation is null)
+            throw new InvalidOperationException("Not a child table.");
+        return new RowHandle(row, Generation.Current[row]);
+    }
+
+    /// <summary>True if the row exists and its generation equals the handle's: a stale handle (slot reopened) is not live.</summary>
+    public bool IsLive(RowHandle handle) =>
+        Generation is not null && (uint)handle.Row < (uint)RowCount && Generation.Current[handle.Row] == handle.Generation;
+
+    /// <summary>True while the runner computes chunks: <c>Column.Next</c> of a child table throws, use <c>NextRange</c> (ADR-0029 п. 5).</summary>
+    internal bool InCompute
+    {
+        get => Volatile.Read(ref _inCompute);
+        set => Volatile.Write(ref _inCompute, value);
+    }
+
     private bool _inTick;
     private long _version;
 
@@ -38,13 +98,27 @@ public sealed class Table
     /// Test switch: copy every column at the start of each non-empty tick (the pre-ADR-0017 behaviour) instead of copy-on-write.
     /// The state and its hash must not depend on it.
     /// </summary>
-    public bool FullCopyMode { get; set; }
+    public bool FullCopyMode
+    {
+        get => Parent?.FullCopyMode ?? _fullCopyMode;
+        set => _fullCopyMode = value;
+    }
 
-    /// <summary>Test-only one-writer trace (ADR-0006); null (off) by default. Set it before the first tick.</summary>
-    public ColumnWriteTrace? Trace { get; set; }
+    /// <summary>Test-only one-writer trace (ADR-0006); null (off) by default. Set it before the first tick. A child table uses its parent's.</summary>
+    public ColumnWriteTrace? Trace
+    {
+        get => Parent?.Trace ?? _trace;
+        set => _trace = value;
+    }
+
+    private int _traceSystemId;
 
     /// <summary>Id of the system whose phase is running; set by <see cref="TickRunner"/> only while <see cref="Trace"/> is on.</summary>
-    internal int TraceSystemId { get; set; }
+    internal int TraceSystemId
+    {
+        get => Parent?.TraceSystemId ?? _traceSystemId;
+        set => _traceSystemId = value;
+    }
 
     internal void BumpVersion() => _version++;
 
@@ -61,6 +135,7 @@ public sealed class Table
     internal void EndTick(bool completed)
     {
         Volatile.Write(ref _inTick, false);
+        InCompute = false;
         if (completed)
             return;
         for (int i = 0; i < _columns.Count; i++)
