@@ -26,5 +26,8 @@ started without asking; work without questions; when nothing can move without an
    a client batch permission. Then ask ALL queued questions with AskUserQuestion (4 per call, as many calls as needed, critical
    first, plain Russian per orchestration §7), record the answers, and resume the loop.
 
+## Drift check (owner #529)
+After every 5 finished items: re-read docs/vision/NORTH_STAR.md, the "Фокус" of development/PLAN.md, the latest handoff and the last 15 owner decisions; compare with what is running; write any drift (forgotten owner wish, work outside the focus) into the handoff and fix the queue.
+
 ## Report while running
 Short status after each finished item (what landed, what was found). No questions in the status.
