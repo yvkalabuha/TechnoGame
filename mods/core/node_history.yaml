@@ -11,7 +11,6 @@ define:
       - {url: "https://www.asme.org/engineering-topics/articles/automotive/george-brayton", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.fnd.boundary_layer
     epic: false
-    unconfirmed: true
     sources:
       - {url: "https://germanhistory-intersections.org/en/knowledge-and-education/ghis:document-202", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://ntrs.nasa.gov/api/citations/19930090813", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
@@ -39,7 +38,6 @@ define:
       - {url: "https://reference.org/facts/Nimonic/nXR65bjf", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s7.fnd.turbine_heat_transfer
     epic: false
-    unconfirmed: true
     sources:
       - {url: "https://nasa.gov/special-projects-laboratory-turbine-cooling", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
   - id: s5.fnd.solidification_science
@@ -225,7 +223,6 @@ define:
       - {url: "https://www.researchgate.net/publication/45705177_Alfred_Wilm_and_the_beginnings_of_Duralumin", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s5.prc.nicr_alloy_melt
     epic: false
-    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Nimonic", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.antonmetal.com/news/the-development-history-of-high-temperature-alloys-in-the-uk/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
@@ -367,7 +364,6 @@ define:
       - {url: "https://www.nasa.gov/image-article/45th-anniversary-of-digital-fly-by-wire-first-flight", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s8.fnd.edge_wave_diffraction
     epic: false
-    unconfirmed: true
     sources:
       - {url: "https://www.doi.org/10.1364/JOSA.52.000116", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://apps.dtic.mil/sti/pdfs/AD0733203.pdf", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
@@ -516,7 +512,6 @@ define:
       - {url: "https://www.afmc.af.mil/News/Article-Display/Article/3871219/flashback-nine-lives-of-a-phantom-ii/", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s8.cmp.digital_flight_control_computer
     epic: false
-    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/F-8_digital_fly-by-wire_project", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Fly-by-wire", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
