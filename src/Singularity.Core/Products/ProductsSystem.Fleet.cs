@@ -377,7 +377,8 @@ public sealed partial class ProductsSystem
         book.SaleY = Fx6.FromRaw(_saleY.Next[a]);
         book.SaleCap = Fx6.FromRaw(_saleCap.Next[a]);
         // G_front is a function of the snapshot (contract r6 §4.4f): the same value for every sale of the month.
-        int gFront = commands.Any(c => c.Kind == FleetCommandKind.Sell) ? GFront(t - 1) : 0;
+        // The AI's sales carry the G_front their decision priced (FL7); the others use the snapshot's.
+        int gFront = commands.Any(c => c.Kind == FleetCommandKind.Sell && c.PricedGFront < 0) ? GFront(t - 1) : 0;
         foreach (FleetCommandKind kind in (FleetCommandKind[])[FleetCommandKind.Sell, FleetCommandKind.Retire])
         {
             foreach (FleetCommand c in commands)
@@ -387,7 +388,7 @@ public sealed partial class ProductsSystem
                 CommandRejection? rejected = !IsCurrent(a, c.Design)
                     ? CommandRejection.StaleHandle
                     : kind == FleetCommandKind.Sell
-                    ? book.Sell(c.Design.Slot, c.N, t, gFront)
+                    ? book.Sell(c.Design.Slot, c.N, t, c.PricedGFront >= 0 ? c.PricedGFront : gFront)
                     : book.Retire(c.Design.Slot, c.N);
                 if (rejected is { } reason)
                     Reject(a, reason);

@@ -203,6 +203,7 @@ public sealed partial class PolicySystem
         public bool[] Repeat = [];
         public readonly List<FleetCommand> Fleet = [];
         public Fx6 IncomeExpected;
+        public int GFront;
         public PolicyDesign[] Designs = [];
         public bool[] GaveUpNow = [], CancelNow = [];
         public readonly List<int> Lines = [];
@@ -218,6 +219,7 @@ public sealed partial class PolicySystem
             Fleet.Clear();
             Lines.Clear();
             IncomeExpected = Fx6.Zero;
+            GFront = 0;
             if (Repeat.Length != generations)
             {
                 Repeat = new bool[generations];
@@ -501,6 +503,7 @@ public sealed partial class PolicySystem
         FleetDecision fleet = DecideFleet(row, t, designs, dec, sharesNext, budgetNext);
         dec.Fleet.AddRange(fleet.Commands);
         dec.IncomeExpected = fleet.IncomeExpected;
+        dec.GFront = fleet.GFront;
         return dec;
     }
 
@@ -747,6 +750,7 @@ public sealed partial class PolicySystem
         foreach ((int j, bool abroad) in dec.Progs)
             setInt(_progCmd[j], (stamp << 3) | (abroad ? 4 : 0) | 1);
         setLong(_incExp, dec.IncomeExpected.Raw);
+        setInt(_fltGFront, dec.GFront);
         for (int g = 0; g < dec.Repeat.Length; g++)
         {
             if (dec.Repeat[g])
