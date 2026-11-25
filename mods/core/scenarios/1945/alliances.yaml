@@ -1,0 +1,19 @@
+# Blocs and friends of the licence buyer circle (TASK-0152, O-056); yearly intervals, inclusive, expanded by code.
+# Only rows verified in docs/research/notes/alliances-1945-2030.md (Wikidata CC0 or a primary treaty text, accessed 2026-11-24).
+# Facts: treaty dates (not copyrightable); cross-check: Wikidata CC0. Slice actors only (USA, GBR, SUN, FRA, SWE).
+# A country has at most one bloc in a year (the loader refuses overlaps). Unverified rows (Brussels Pact, Dunkirk, FRA-SUN 1944,
+# UKUSA, Sweden's explicit friends list) are not loaded: see the note, "Не проверено".
+schema: 1
+blocs:
+  - id: nato
+    members:
+      - {actor: USA, from: 1949}
+      - {actor: GBR, from: 1949}
+      - {actor: FRA, from: 1949}
+      - {actor: SWE, from: 2024}
+  - id: warsaw
+    members:
+      - {actor: SUN, from: 1955, to: 1991}
+friends:
+  # Anglo-Soviet treaty of 26 May 1942, denounced in 1955 (only the year is established).
+  - {a: GBR, b: SUN, from: 1945, to: 1955}

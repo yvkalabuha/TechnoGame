@@ -112,7 +112,7 @@ public sealed partial class PolicySystem : ITickSystem
             table.AddLong("pol.share.research"), table.AddLong("pol.share.capability"), table.AddLong("pol.share.effort"),
             table.AddLong("pol.share.procurement"), table.AddLong("pol.share.quality"),
         ];
-        AddEventColumns(table, events, eventInputs, disruptionExposure, actorNumber.Length, wideLicenceMask);
+        AddEventColumns(table, events, eventInputs, disruptionExposure, actorNumber.Length, wideLicenceMask, generations);
     }
 
     public int SystemId { get; }

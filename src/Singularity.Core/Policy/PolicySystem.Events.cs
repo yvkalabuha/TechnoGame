@@ -27,7 +27,7 @@ public sealed partial class PolicySystem
 
     // Word 1 of the masks (nodes 64…127): registered only when the data has such nodes, so the schema of a 63-node slice is unchanged (H13).
     private LongColumn? _licMask1, _offerMask1, _qMask1;
-    private void AddEventColumns(Table table, CounterRng? events, IPolicyEvents? inputs, ImmutableArray<Fx6> exposure, int rows, bool wideMask)
+    private void AddEventColumns(Table table, CounterRng? events, IPolicyEvents? inputs, ImmutableArray<Fx6> exposure, int rows, bool wideMask, int generations)
     {
         _events = events;
         _ev = inputs;
@@ -48,12 +48,16 @@ public sealed partial class PolicySystem
         _qMask = table.AddLong("pol.lic.q.mask");
         _qPrice = table.AddLong("pol.lic.q.price");
         _bad = [table.AddLong("pol.lic.bad.self"), table.AddLong("pol.lic.bad.empty"), table.AddLong("pol.lic.bad.gen"), table.AddLong("pol.lic.bad.money")];
+        if (_p.LicenceMarket)
+            _bad = [.. _bad, table.AddLong("pol.lic.bad.circle"), table.AddLong("pol.lic.bad.capacity"), table.AddLong("pol.lic.bad.cap")];
         if (wideMask)
         {
             _licMask1 = table.AddLong("pol.lic.mask.1");
             _offerMask1 = table.AddLong("pol.lic.offer.1");
             _qMask1 = table.AddLong("pol.lic.q.mask.1");
         }
+        if (_p.LicenceMarket)
+            AddMarketColumns(table, rows, wideMask, generations);
     }
 
     private void InitializeEvents(int n)
@@ -75,6 +79,8 @@ public sealed partial class PolicySystem
         _licMask1?.Load(new long[n]);
         _offerMask1?.Load(new long[n]);
         _qMask1?.Load(new long[n]);
+        if (_p.LicenceMarket)
+            InitializeMarket(n);
     }
 
     // A mask is stored as two words; a mask with a node above 63 in a slice without the second word would be lost, so it throws.
@@ -194,6 +200,11 @@ public sealed partial class PolicySystem
     {
         if (_p.T6dOff || _p.LicOff || _events is null || _ev is null || _prod is null || t % 12 != 0)
             return;
+        if (_p.LicenceMarket)
+        {
+            ComputeMarketBuy(row, t, w, designs, dec, sharesNext, budgetNext);
+            return;
+        }
         var profile = (PolicyProfile)_profile.Current[row];
         int gBuyer = _ev.EngineGen(row, t), held = _licGen.Current[row];
         LicenceMask unaccepted = default;
@@ -262,6 +273,11 @@ public sealed partial class PolicySystem
     public void ApplyDeals(long month, Func<int, Fx6> procurementBase)
     {
         ArgumentNullException.ThrowIfNull(procurementBase);
+        if (_p.LicenceMarket)
+        {
+            ApplyMarketDeals(month, procurementBase);
+            return;
+        }
         int n = _actorNumber.Length;
         bool queued = false, flowing = false;
         for (int b = 0; b < n; b++)

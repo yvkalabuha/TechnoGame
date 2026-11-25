@@ -24,6 +24,12 @@ public interface IPolicyEvents
     /// <summary><c>W(a, t) = why_not(a, τ(a), t)</c> (A43.7): <c>τ</c> is the current requirement, <c>Requirement(1)</c> if no APP is known, none (empty list) if the newest one is fielded.</summary>
     IReadOnlyList<Link> WhyNot(int actorRow, long month);
 
+    /// <summary>
+    /// Months until the actor reaches the engine generation itself (the largest estimate over the links of its requirement), 0 when nothing stands in the way,
+    /// null without an estimate. The AI does not buy what it reaches within a year (O-062). A build without the market says null.
+    /// </summary>
+    int? OwnEtaMonths(int actorRow, int gen, long month) => null;
+
     /// <summary><c>why_not(a, Design(d), t)</c>.</summary>
     IReadOnlyList<Link> WhyNotDesign(int actorRow, DesignHandle design, long month);
 }
