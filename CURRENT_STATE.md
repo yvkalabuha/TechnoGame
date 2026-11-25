@@ -33,6 +33,7 @@
 - TASK-0179 [REVIEW] Lab: licence market calibration, what AI buys and why, prices and availability within tolerance (#553) (simulation-engineer)
 - TASK-0185 [REVIEW] Lab pilot: node time T_n, frontier width, starting institutes and ceiling for the slot model (#561, #564) (simulation-engineer)
 - TASK-0191 [APPROVED] Tooling: llm_worker research — DeepSeek checks claims against fetched source pages (#577) (developer)
+- TASK-0192 [APPROVED] Tech map stage 1: node choice card, institute strip, queue, path to goal — Gemini design, then client (#561, #578) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
