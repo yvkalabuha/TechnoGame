@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "experiment": "TASK-0187-core",
-  "description": "TASK-0187 (docs/simulation/slot-model-pilot.md, section «Ядро TASK-0187»): the slot science model of the core (SliceRunConfig.ScienceSlots, on with LEVERS = ON) against the shares model with the same levers (SLOTS = false); all five actors AI; series PLAYER: GBR played by the institute script (INST_PLAYER, assign_node from the adviser) with INST_PROBE. Liveness counters slot_* of SlotProbe in model_info. JetSlice FULL 1945-09..2030-12.",
+  "description": "TASK-0187 (docs/simulation/slot-model-pilot.md, section «Ядро TASK-0187»): the slot science model of the core (SliceRunConfig.ScienceSlots, on with LEVERS = ON) against the shares model with the same levers (SLOTS = false); all five actors AI. Liveness counters slot_* of SlotProbe in model_info. JetSlice FULL 1945-09..2030-12. Player script: TASK-0187-player.json.",
   "model": "JetSlice",
   "ticks": 31168,
   "chunk_size": 1,
@@ -28,13 +28,6 @@
       "name": "SHARES",
       "params": {
         "SLOTS": false
-      }
-    },
-    {
-      "name": "PLAYER",
-      "params": {
-        "INST_PLAYER": "GBR",
-        "INST_PROBE": true
       }
     }
   ],
