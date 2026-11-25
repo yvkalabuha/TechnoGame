@@ -111,6 +111,19 @@ public static class CommandCodec
             case BuildInstitute bi:
                 sb.Append(",\"slot\":").Append(I(bi.Slot));
                 break;
+            case AssignNode an:
+                sb.Append(",\"slot\":").Append(I(an.Slot)).Append(",\"node\":").Append(I(an.Node));
+                break;
+            case Unassign un:
+                sb.Append(",\"slot\":").Append(I(un.Slot)).Append(",\"node\":").Append(I(un.Node));
+                break;
+            case ReorderQueue rq:
+                sb.Append(",\"slot\":").Append(I(rq.Slot)).Append(",\"order\":");
+                Ints(sb, rq.Order);
+                break;
+            case SetFocus sf:
+                sb.Append(",\"slot\":").Append(I(sf.Slot)).Append(",\"level\":").Append(I(sf.Level)).Append(",\"reserve\":").Append(sf.FromReserve ? "true" : "false");
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(logged), c.GetType(), "Unknown command type.");
         }
@@ -152,6 +165,10 @@ public static class CommandCodec
             "fund_programme" => new FundProgramme(actor, r.GetProperty("node").GetInt32(), ReadRaw(r.GetProperty("amount"))),
             "set_priority_node" => new SetPriorityNode(actor, r.GetProperty("slot").GetInt32(), r.GetProperty("node").GetInt32()),
             "build_institute" => new BuildInstitute(actor, r.GetProperty("slot").GetInt32()),
+            "assign_node" => new AssignNode(actor, r.GetProperty("slot").GetInt32(), r.GetProperty("node").GetInt32()),
+            "unassign" => new Unassign(actor, r.GetProperty("slot").GetInt32(), r.GetProperty("node").GetInt32()),
+            "reorder_queue" => new ReorderQueue(actor, r.GetProperty("slot").GetInt32(), ReadInts(r.GetProperty("order"))),
+            "set_focus" => new SetFocus(actor, r.GetProperty("slot").GetInt32(), r.GetProperty("level").GetInt32(), r.GetProperty("reserve").GetBoolean()),
             _ => throw new FormatException($"Unknown command kind '{kind}'."),
         };
         return new LoggedCommand(key, command);
@@ -211,6 +228,10 @@ public static class CommandCodec
         CommandKind.FundProgramme => "fund_programme",
         CommandKind.SetPriorityNode => "set_priority_node",
         CommandKind.BuildInstitute => "build_institute",
+        CommandKind.AssignNode => "assign_node",
+        CommandKind.Unassign => "unassign",
+        CommandKind.ReorderQueue => "reorder_queue",
+        CommandKind.SetFocus => "set_focus",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
 

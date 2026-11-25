@@ -49,9 +49,11 @@ public class TwoWorldsOnOnePoolTests
     // Re-recorded in TASK-0147 (train 2): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465) change every trajectory on the current data; explanation: docs/simulation/golden-rerecord-train2.md.
     // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
     // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront (the G_front a fleet sale was priced at); the old columns are unchanged (projection tests), so only the new column changes these digests.
+    // Re-recorded in TASK-0171 (the one golden batch of 2026-11-26): the five levers of wave 1 are on by default (reserve, institutes, licence market, adviser, intelligence), the AI institutes pick goals on the path to the next product generation (PATH, #559) and the AI buys licences by the market setting M2 (#560), so every trajectory of a default config moves; the old behaviour stays in SliceRunConfig.Legacy (projection and identity tests use it).
+    // Re-recorded in TASK-0187 (the golden batch of the slot science model): the default config runs the slot model and FRA starts with 2 institutes (O-094); one batch, threads 1/2/4 agree.
     private static readonly Dictionary<ulong, string> Pinned = new()
     {
-        [1] = "364c79c71f58f3095d07d99248fc4d310297fab2b46b540d2456f529663d862b", [2] = "b5dbb54d5e4f9137caf6fae9775770399a6c55bdc867eec12e5306cc40907077", [3] = "36a28b34b8e8fd2adaca9ec239ccebd897e9a4347e086cf1813a26fc01c5536a", [4] = "d75449d1bd1b6263e72deb4f40395963e4cc076f74fd0aecc808822b29624d34", [5] = "6e0f8992b5f5b9cb6c8d04679cbc250825292326b96dbc941e869c20b01d66d2", [7] = "bef7d4f662bf51d4e61f4ce60fafe5bacbf106f8c224b9dc44d81ef57907891e",
+        [1] = "8dd5b24c1d9c1077656c38cab0ac15200dd07bcba5e268cef872f1a5a560e289", [2] = "3d5f7b8a2900865598f356ec1137df61681e410bc8d32c8a4d81e2f82f234b73", [3] = "5f4df2a25d3ddf3ade8ea47d183a7ed4f092926fd904e418924902369707c5b2", [4] = "bf0b42f1a50ffb58399c1ebe7de1444981be4e32c245d65589f41aa091a113a3", [5] = "0c673d2e8d3bb7a7ad300bfd2993dd7f9cc12129ba9317256956912a54131e31", [7] = "2f3be0e3add9fc1ed38f2b9b0c6132b093d0260409a9c698b560d87b621fbfca",
     };
 
     private static void AssertPinned(ulong seed, string[] actual, string what)

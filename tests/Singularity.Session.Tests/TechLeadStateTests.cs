@@ -9,7 +9,7 @@ public class TechLeadStateTests
     [Fact]
     public void QColumn_IsInStateHash_AndNonTrivialAfterRun()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 1, Threads = 1 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 1, Threads = 1 });
         for (long t = 0; t < 60; t++)
             s.StepThroughMonth(t);
         Table table = s.World.Table;
@@ -33,7 +33,7 @@ public class TechLeadStateTests
     {
         foreach (ulong seed in new ulong[] { 1, 2, 3, 4, 5 })
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 1, ViewMode = SliceViewMode.Full });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 1, ViewMode = SliceViewMode.Full });
             for (long t = 0; t < 200; t++)
             {
                 s.StepThroughMonth(t);

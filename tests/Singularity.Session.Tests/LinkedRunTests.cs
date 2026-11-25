@@ -41,7 +41,10 @@ public class LinkedRunTests
     // Re-recorded in TASK-0147 (train 2): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465) change every trajectory on the current data; explanation: docs/simulation/golden-rerecord-train2.md.
     // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
     // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront; old columns unchanged (ColumnProjection hash not changed).
-    private const string Golden60 = "45b7f1182ba6924a1a67f87a8133024c1cf05847e1f81d4363589dc9dc4e145c";
+    // Re-recorded in TASK-0171 (the one golden batch of 2026-11-26): the five levers of wave 1 are on by default (reserve, institutes, licence market, adviser, intelligence), the AI institutes pick goals on the path to the next product generation (PATH, #559) and the AI buys licences by the market setting M2 (#560), so every trajectory of a default config moves; the old behaviour stays in SliceRunConfig.Legacy (projection and identity tests use it).
+    // Re-recorded in TASK-0187 (the golden batch of the slot science model): a default config runs the slot model (SliceRunConfig.ScienceSlots, #561–#576) and FRA starts with 2 institutes (CEA founded 1945-10, O-094);
+    // the shares model stays under ScienceSlots = false and Legacy (their goldens are unchanged, S11).
+    private const string Golden60 = "6e2d9df565a2f695faed0b99c008195d94e69788325e20b5906a8aa076a8bdd3";
 
     private sealed class Run
     {

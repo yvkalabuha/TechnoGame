@@ -243,7 +243,7 @@ public sealed partial class Main : Node3D
 
     void BuildClient(CanvasLayer layer, int seed, GameData data)
     {
-        _host = new SimHost(seed, data);
+        _host = new SimHost(seed, data, _powerArg);
         _host.Start();
         _loading = Ui.Lbl("ui.loading", 18);
         _loading.Position = new Vector2(20, 60);

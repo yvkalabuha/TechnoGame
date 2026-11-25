@@ -23,8 +23,10 @@ public sealed class ViewWalk
         // Seed 1, and the A40 stress arm without effort money for the cancel (TASK-0058: with I-OC the main run gives no project up).
         SliceRunConfig[] configs =
         [
+            SliceRunConfig.Legacy with { Seed = 1, Threads = 2, LicKnows = true },
+            SliceRunConfig.Legacy with { Seed = 3, Threads = 2, LicKnows = true, EffortShare = EffortShareArm.X0 },
+            // The build's defaults (the five levers of wave 1 on): the views match Core there too.
             new() { Seed = 1, Threads = 2, LicKnows = true },
-            new() { Seed = 3, Threads = 2, LicKnows = true, EffortShare = EffortShareArm.X0 },
         ];
         foreach (SliceRunConfig config in configs)
         {
@@ -109,7 +111,8 @@ public sealed class ViewWalk
         Check("actor", av.KD.Length == w.Graph.DisciplineNames.Length && Enumerable.Range(0, av.KD.Length).All(d => av.KD[d] == w.Knowledge.KD(a, d)), $"month {t} actor {a}: KD");
         Check("actor", av.FieldedGen == w.Products.FieldedGen(a, next), $"month {t} actor {a}: fielded gen");
         Check("actor", av.Key == w.Products.KeyOf(a, next), $"month {t} actor {a}: key");
-        bool yearStart = t % 12 == 0;
+        // The slot model carries the fleet value (the air power index MPI, #565) every month; the shares model at the start of a year.
+        bool yearStart = t % 12 == 0 || w.SlotsOn;
         Check("actor", av.FleetValue.HasValue == yearStart, $"month {t} actor {a}: fleet value presence");
         if (yearStart)
             Check("actor", av.FleetValue == w.Products.MaxFleetValue(a, Fx6.One, w.PolicyParameters.FvBudget, next), $"month {t} actor {a}: fleet value");
@@ -522,7 +525,9 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
         // Re-recorded in TASK-0147 (train 2): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465) change every trajectory on the current data; explanation: docs/simulation/golden-rerecord-train2.md.
         // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
         // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront; old columns unchanged (ColumnProjection hash not changed).
-        HashAssert.Equal("3d466f77ddd6d0733636475d5286224d52958103507ba5b29e71381d18c82f68", a.LastHash);
+        // Re-recorded in TASK-0171 (the one golden batch of 2026-11-26): the five levers of wave 1 are on by default (reserve, institutes, licence market, adviser, intelligence), the AI institutes pick goals on the path to the next product generation (PATH, #559) and the AI buys licences by the market setting M2 (#560), so every trajectory of a default config moves; the old behaviour stays in SliceRunConfig.Legacy (projection and identity tests use it).
+                // Re-recorded in TASK-0187 (the golden batch of the slot science model): the default config runs the slot model (ScienceSlots) and FRA starts with 2 institutes (O-094); the shares model stays under ScienceSlots = false and Legacy.
+        HashAssert.Equal("ead3591b3d34226bd339f0dc8993e1193216494263746c0dfca261bdda72b0f0", a.LastHash);
     }
 
     [Fact]

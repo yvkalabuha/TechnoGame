@@ -260,8 +260,14 @@ public sealed record PolicyParams
     public Fx6 SellerMQuality { get; init; } = F(1_300_000);
     public Fx6 SellerMMass { get; init; } = F(800_000);
 
-    /// <summary><c>k</c>: the AI buys at a price not above <c>k × ref</c> (O-062: 1.5).</summary>
-    public Fx6 AiPriceK { get; init; } = F(1_500_000);
+    /// <summary><c>k</c>: the AI buys at a price not above <c>k × ref</c> (O-062: 1.5; 1.2 from #560, so an AI does not pay a seller of the quality profile, m = 1.3).</summary>
+    public Fx6 AiPriceK { get; init; } = F(1_200_000);
+
+    /// <summary>The AI buys at most this many generations above its own engine generation (#560, M2: 1); 0 = no limit.</summary>
+    public int AiMaxGenJump { get; init; } = 1;
+
+    /// <summary>An AI buyer buys only from its bloc and friends, whatever the seller's circle (#560, M2). The player may still buy from any open catalogue.</summary>
+    public bool AiBuyFromFriendsOnly { get; init; } = true;
 
     /// <summary><c>L</c> in months of the buyer's procurement: the AI buys at a price not above it (O-062: 6).</summary>
     public int AiStockMonths { get; init; } = 6;
@@ -332,6 +338,8 @@ public sealed record PolicyParams
         if (FleetUHi.Length != 3 || FleetUHi.Any(u => u <= FleetUGap || u > Fx6.One) || FleetUGap < Fx6.Zero || FleetAProt < 0)
             throw new ArgumentException("Fleet rule: three U_HI in (gap; 1], gap and A_PROT non-negative (spec A42.8).");
         Mastery.Validate();
+        if (AiMaxGenJump < 0 || AiPriceK < Fx6.Zero)
+            throw new ArgumentException("Licence market AI parameters: the generation jump and the price factor must not be negative.");
         if (SharesByProfile.Length != 3)
             throw new ArgumentException("One share set per profile (P1, P2, P3) is required.");
         for (int i = 0; i < SharesByProfile.Length; i++)

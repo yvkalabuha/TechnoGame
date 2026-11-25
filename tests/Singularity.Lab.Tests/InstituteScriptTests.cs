@@ -89,8 +89,8 @@ public sealed class InstituteScriptTests
     private static (SliceSession S, InstituteScript? I) Run(InstituteSpec? spec, int months, Rows? sink = null)
     {
         GameData data = SliceData.Load(AppContext.BaseDirectory);
-        int? player = spec?.Player is { } id ? data.Scenario(new SliceRunConfig().ScenarioId).ActorId.IndexOf(id) : null;
-        SliceSession s = SliceSession.Create(data, new SliceRunConfig { Seed = 1, Threads = 1, ChunkSize = 1, Institutes = true, PlayerActor = player });
+        int? player = spec?.Player is { } id ? data.Scenario(SliceRunConfig.Legacy.ScenarioId).ActorId.IndexOf(id) : null;
+        SliceSession s = SliceSession.Create(data, SliceRunConfig.Legacy with { Seed = 1, Threads = 1, ChunkSize = 1, Institutes = true, PlayerActor = player });
         var calendar = new TickCalendar(s.Date);
         InstituteScript? i = spec is null ? null : new InstituteScript(s, spec, sink, sink is null ? -1 : 0, sink is null ? -1 : 1);
         i?.Issue(0);
@@ -126,11 +126,10 @@ public sealed class InstituteScriptTests
         Assert.Equal(0, e!.Refused);
         (SliceSession hist, _) = Run(new InstituteSpec("GBR", InstituteBuild.Hist, Goals: true, Fx6.One, Probe: false), 2);
         Assert.Equal(-1, hist.World.Institutes!.BuildStart(Slot(hist, "GBR", "gbr_rre")));
-        // The player took the adviser's goals: every standing slot of GBR works on a node.
+        // The player took the adviser's goals (the path rule, #559, proposes only nodes of the path, so a slot may have none): some standing slot of GBR works on a node.
         InstituteSystem inst = early.World.Institutes!;
         int gbr = early.Layout.ActorIds.IndexOf("GBR");
-        for (int k = 0; k < inst.Layout.StartingCount(gbr); k++)
-            Assert.NotEqual(0, inst.GoalNode(new InstituteHandle(gbr, k)));
+        Assert.Contains(Enumerable.Range(0, inst.Layout.StartingCount(gbr)), k => inst.GoalNode(new InstituteHandle(gbr, k)) != 0);
     }
 
     [Fact]

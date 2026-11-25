@@ -19,6 +19,7 @@ public class OverloadTests
         public long PlayerBuildMonth(InstituteHandle s) => s == slot ? 0 : -1;
         public bool PlayerControlled(int actorRow) => true;
         public Fx6 BuildFunding(int actorRow) => Fx6.One;
+        public void GoalPath(int actorRow, long month, Span<byte> tier) { }
     }
 
     // Runs the project of the first candidate slot of a country for a few months; returns the paid progress (raw) and the system.

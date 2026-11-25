@@ -17,7 +17,7 @@ public class D2StartRuleTests(ITestOutputHelper output)
 
     private static GameData OffData { get; } = ModLoader.Load(Path.Combine(SliceTestData.RepoRoot, "mods", "core"), Path.Combine(SliceTestData.RepoRoot, "mods", "rhms_off"));
 
-    private static SliceRunConfig Off(ulong seed) => new() { Seed = seed, SkipStartValidation = true };
+    private static SliceRunConfig Off(ulong seed) => SliceRunConfig.Legacy with { Seed = seed, SkipStartValidation = true };
 
     // ---- data
 
@@ -92,7 +92,7 @@ public class D2StartRuleTests(ITestOutputHelper output)
     public void S2_RhmsOffData_ViolatesByDesign_AndTheSessionRefusesItUnlessSkipped()
     {
         Assert.NotEmpty(Check(OffData));
-        DataLoadException e = Assert.Throws<DataLoadException>(() => SliceSession.Create(OffData, new SliceRunConfig { Seed = 1 }));
+        DataLoadException e = Assert.Throws<DataLoadException>(() => SliceSession.Create(OffData, SliceRunConfig.Legacy with { Seed = 1 }));
         Assert.Contains("S-2", e.Message);
         SliceSession s = SliceSession.Create(OffData, Off(1));
         s.StepThroughMonth(0);
@@ -156,7 +156,7 @@ public class D2StartRuleTests(ITestOutputHelper output)
             Assert.True(v.WeakestG < Fx6.One);
             output.WriteLine($"{v.Actor} {v.ProcessId}: {v.Yield} {v.WeakestDimension} g {v.WeakestG}");
         }
-        DataLoadException e = Assert.Throws<DataLoadException>(() => SliceSession.Create(data, new SliceRunConfig { Seed = 1 }));
+        DataLoadException e = Assert.Throws<DataLoadException>(() => SliceSession.Create(data, SliceRunConfig.Legacy with { Seed = 1 }));
         Assert.Contains("4 mastered process", e.Message);
         Assert.Contains("SUN", e.Message);
     }
@@ -169,14 +169,14 @@ public class D2StartRuleTests(ITestOutputHelper output)
         Assert.Equal(("USA", 39), (v.Actor, v.ProcessNumber));
         Assert.Equal(Dimension.Purity, v.WeakestDimension);
         Assert.True(v.Yield < StartYieldValidator.MinYield);
-        Assert.Throws<DataLoadException>(() => SliceSession.Create(data, new SliceRunConfig { Seed = 1 }));
+        Assert.Throws<DataLoadException>(() => SliceSession.Create(data, SliceRunConfig.Legacy with { Seed = 1 }));
     }
 
     [Fact]
     public void S2_StartPert_ScalingTheCultureDoesNotTripTheValidator()
     {
         // The validator reads the scenario as authored (before START_PERT scales the estimated fields).
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 3, Start = StartVariant.Perturbed });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3, Start = StartVariant.Perturbed });
         s.StepThroughMonth(0);
     }
 
@@ -187,7 +187,7 @@ public class D2StartRuleTests(ITestOutputHelper output)
     {
         foreach (ulong seed in new ulong[] { 1, 2, 3, 4, 5 })
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed });
             SliceWorld w = s.World;
             foreach (string id in Pair)
             {
@@ -227,8 +227,8 @@ public class D2StartRuleTests(ITestOutputHelper output)
     [Fact]
     public void Switch_DefaultIsV5_ExplicitV5GivesTheSameTrajectory_V0IsTheAblationArm()
     {
-        Assert.Equal(ToolingTarget.V5, new SliceRunConfig().ToolingTarget.Variant);
-        var c = new SliceRunConfig { Seed = 1 };
+        Assert.Equal(ToolingTarget.V5, SliceRunConfig.Legacy.ToolingTarget.Variant);
+        var c = SliceRunConfig.Legacy with { Seed = 1 };
         Assert.Equal(HashAfter(c, 36), HashAfter(c with { ToolingTarget = ToolingTargetSpec.Parse("V5") }, 36));
         Assert.NotEqual(HashAfter(c, 36), HashAfter(c with { ToolingTarget = ToolingTargetSpec.Parse("V0") }, 36));
     }
@@ -236,7 +236,7 @@ public class D2StartRuleTests(ITestOutputHelper output)
     [Fact]
     public void Switch_OtherArmsChangeTheTrajectory_AndAreDeterministicAcrossThreads()
     {
-        var c = new SliceRunConfig { Seed = 1 };
+        var c = SliceRunConfig.Legacy with { Seed = 1 };
         string v0 = HashAfter(c, 60);
         foreach (string arm in new[] { "V1", "V2", "V3", "V3b", "V4", "VINF" })
         {
@@ -250,16 +250,16 @@ public class D2StartRuleTests(ITestOutputHelper output)
     [Fact]
     public void Switch_NumbersAreInTheHash()
     {
-        var c = new SliceRunConfig { Seed = 1, ToolingTarget = ToolingTargetSpec.Parse("V4") };
+        var c = SliceRunConfig.Legacy with { Seed = 1, ToolingTarget = ToolingTargetSpec.Parse("V4") };
         Assert.NotEqual(HashAfter(c, 2), HashAfter(c with { ToolingTarget = c.ToolingTarget with { MLead = Fx6.FromRaw(100_000) } }, 2));
     }
 
     [Fact]
     public void Switch_BadManifestIsRefusedByTheSession()
     {
-        var bad = new SliceRunConfig { Seed = 1, ToolingTarget = ToolingTargetSpec.Parse("V4") with { MLead = Fx6.Zero } };
+        var bad = SliceRunConfig.Legacy with { Seed = 1, ToolingTarget = ToolingTargetSpec.Parse("V4") with { MLead = Fx6.Zero } };
         Assert.Throws<ArgumentException>(() => SliceTestData.Create(bad));
-        Assert.Throws<ArgumentException>(() => SliceTestData.Create(new SliceRunConfig { Seed = 1, ToolingTarget = new ToolingTargetSpec { Variant = (ToolingTarget)42 } }));
+        Assert.Throws<ArgumentException>(() => SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 1, ToolingTarget = new ToolingTargetSpec { Variant = (ToolingTarget)42 } }));
     }
 
     // ---- print (F32 and the acceptance print of TASK-0029); runs only with SINGULARITY_D2_PRINT=1
@@ -274,7 +274,7 @@ public class D2StartRuleTests(ITestOutputHelper output)
             lines.Add($"== {name}: first fielded month (G>=1) USA/GBR/SUN/FRA/SWE; G_front by 48-month windows (months with G_front>=1/>=2/max); mean yield of 49 and 54 (USA,GBR) by windows");
             for (ulong seed = 1; seed <= 20; seed++)
             {
-                SliceSession s = SliceSession.Create(data, new SliceRunConfig { Seed = seed, SkipStartValidation = skip });
+                SliceSession s = SliceSession.Create(data, SliceRunConfig.Legacy with { Seed = seed, SkipStartValidation = skip });
                 SliceWorld w = s.World;
                 int actors = w.Scenario.ActorCount;
                 var first = Enumerable.Repeat(-1, actors).ToArray();

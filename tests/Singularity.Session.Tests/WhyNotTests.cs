@@ -121,7 +121,7 @@ public class WhyNotTests
         static CapabilityCurve Flat() => new([0, 767], [Fx6.FromRaw(500_000), Fx6.FromRaw(500_000)], [Fx6.FromRaw(1_500_000), Fx6.FromRaw(1_500_000)]);
         var tables = new CapabilityControlTables([Flat(), Flat(), Flat()], [24, 36, 40, 60],
             [Fx6.FromRaw(100_000), Fx6.FromRaw(40_000), Fx6.FromRaw(20_000), Fx6.FromRaw(1_000)]);
-        SliceSession lc = New(new SliceRunConfig { Layer = LayerControl.Lc, CapabilityTables = tables });
+        SliceSession lc = New(SliceRunConfig.Legacy with { Layer = LayerControl.Lc, CapabilityTables = tables });
         KnowEverything(lc, Usa);
         Assert.DoesNotContain(lc.WhyNot(Usa, WhyNotTarget.Requirement(2)), l => l.Layer == WhyNotLayer.Capability);
 
@@ -397,7 +397,7 @@ public class WhyNotTests
     [Fact]
     public void Levers_FollowTheBuild_ProcessDevelopmentOffTheEffortZeroAblation()
     {
-        SliceSession s = New(new SliceRunConfig { Seed = 7, Channels = SliceChannels.EffortZero });
+        SliceSession s = New(SliceRunConfig.Legacy with { Seed = 7, Channels = SliceChannels.EffortZero });
         var all = new List<Link>();
         for (int a = 0; a < s.World.Scenario.ActorCount; a++)
         {
@@ -427,7 +427,7 @@ public class WhyNotTests
     {
         string Run(int threads, int chunk, bool probe)
         {
-            SliceSession s = New(new SliceRunConfig { Seed = 11, Threads = threads, ChunkSize = chunk });
+            SliceSession s = New(SliceRunConfig.Legacy with { Seed = 11, Threads = threads, ChunkSize = chunk });
             var sb = new System.Text.StringBuilder();
             for (int m = 0; m < 3; m++)
             {

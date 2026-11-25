@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Security.Cryptography;
 
@@ -35,12 +36,14 @@ public sealed partial record SliceRunConfig
             Raw(DeltaH), Raw(CM), Grid.Code.ToString(CultureInfo.InvariantCulture), ((int)EffortShare).ToString(CultureInfo.InvariantCulture),
             .. Reserve ? (string[])["reserve"] : [],
             .. Institutes ? (string[])["institutes", (PlayerActor ?? -1).ToString(CultureInfo.InvariantCulture)] : [],
+            .. Institutes && ScienceSlots ? (string[])["slots"] : [],
             .. Intelligence ? (string[])["intelligence"] : [],
         ];
         fields = [.. fields, LicenceMarket.ToString(), string.Join(',', LicenceExternalActors.IsDefault ? [] : LicenceExternalActors), Alliances?.Identity ?? "-"];
         // The adviser decides the trajectory but exists only when on: nothing is added for an off run, so its fingerprint stays what it was.
-        if (!AdviserActors.IsDefaultOrEmpty || AdviserRefuseYears != 1 || AdviserMaxLines != 2)
-            fields = [.. fields, "adviser", AdviserActors.IsDefault ? "-" : string.Join(',', AdviserActors), AdviserRefuseYears.ToString(CultureInfo.InvariantCulture), AdviserMaxLines.ToString(CultureInfo.InvariantCulture)];
+        ImmutableArray<int> adviser = EffectiveAdviserActors;
+        if (!adviser.IsDefaultOrEmpty || AdviserRefuseYears != 1 || AdviserMaxLines != 2)
+            fields = [.. fields, "adviser", adviser.IsDefault ? "-" : string.Join(',', adviser), AdviserRefuseYears.ToString(CultureInfo.InvariantCulture), AdviserMaxLines.ToString(CultureInfo.InvariantCulture)];
         // Length-prefixed fields written as UTF-16 code units, integers little-endian (the encoding of TableSnapshot.Fingerprint): no value can run into its neighbour.
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         foreach (string field in fields)

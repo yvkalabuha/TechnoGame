@@ -11,7 +11,7 @@ public class OneWriterPerColumnTests
 
     private static string RunSlice(ColumnWriteTrace? trace)
     {
-        SliceSession s = SliceSession.Create(SliceTestData.Data, new SliceRunConfig { Seed = 7, DailyTickProbe = true });
+        SliceSession s = SliceSession.Create(SliceTestData.Data, SliceRunConfig.Legacy with { Seed = 7, DailyTickProbe = true });
         if (trace is not null) s.World.Table.Trace = trace;
         var script = new PlayerScript(s);
         for (long month = 0; month < 6; month++)
@@ -33,7 +33,7 @@ public class OneWriterPerColumnTests
     [Fact]
     public void M0Slice_WithCommandsAndProbe_EveryColumnHasAtMostOneWriter()
     {
-        SliceSession s = SliceSession.Create(SliceTestData.Data, new SliceRunConfig { Seed = 7, DailyTickProbe = true });
+        SliceSession s = SliceSession.Create(SliceTestData.Data, SliceRunConfig.Legacy with { Seed = 7, DailyTickProbe = true });
         var trace = new ColumnWriteTrace();
         s.World.Table.Trace = trace;
         var script = new PlayerScript(s);

@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0179-licm-holdout",
+  "description": "TASK-0179: LIC_MARKET only (institutes off) with the market probe; market constants vary between matrices through the LM_* environment of the sandbox build (licence-market-calibration.md §2). Holdout seeds 11-20.",
+  "model": "JetSlice",
+  "ticks": 20211,
+  "chunk_size": 1,
+  "threads": [
+    1
+  ],
+  "seeds": {
+    "start": 11,
+    "count": 10
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full"
+  },
+  "series": [
+    {
+      "name": "LICM",
+      "params": {
+        "LIC_MARKET": true,
+        "LIC_PROBE": true
+      }
+    }
+  ],
+  "meta": {
+    "note": "docs/simulation/licence-market-calibration.md",
+    "baseline": "LEGACY"
+  }
+}

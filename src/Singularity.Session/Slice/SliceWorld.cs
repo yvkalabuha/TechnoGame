@@ -40,6 +40,9 @@ internal sealed class SliceWorld
 
     public SliceWorld(GameData data, SliceRunConfig config)
     {
+        // The table the market runs on goes into the config before anything reads it, so the fingerprint carries its identity (editing alliances.yaml changes it).
+        if (config.LicenceMarket && config.Alliances is null && data.AlliancesOf(data.Scenario(config.ScenarioId)) is { } scenarioAlliances)
+            config = config with { Alliances = scenarioAlliances };
         if (!Enum.IsDefined(config.Layer))
             throw new InvalidOperationException($"Layer control {(int)config.Layer} is not defined.");
         // The canonical L_P product layer has no AdoptLicensedDesign step: a paid licence would never become a project.
@@ -134,7 +137,10 @@ internal sealed class SliceWorld
         Calendar = new TickCalendar(new CivilDate(scenario.StartYear, scenario.StartMonth, 1));
         int chunks = TickRunner.ChunkCountFor(Table.RowCount, config.ChunkSize);
 
-        Knowledge = NewKnowledge(kStart, kp, chunks);
+        // The slot science model needs the institutes, the full knowledge layer and no other control of knowledge.
+        SlotsOn = config.Institutes && config.ScienceSlots && config.Layer is not (LayerControl.Lk or LayerControl.Lk0);
+        InstituteLayout? layout0 = config.Institutes ? InstituteLayout.FromData(data.Institutes, scenario, Graph, new InstituteParams()) : null;
+        Knowledge = NewKnowledge(kStart, kp, chunks, layout0);
         ICultureRule rule = config.Channels.HasFlag(SliceChannels.CultureR0) ? new V23CultureRule() : new CbCultureRule();
         IndustryInputs = new IndustryInputsAdapter(this);
         Industry = new IndustrySystem(Table, IndustryLayout, iStart, ip, IndustryInputs, chunks, rule,
@@ -166,7 +172,7 @@ internal sealed class SliceWorld
             events: Streams.Events, eventInputs: new PolicyEventsAdapter(this), disruptionExposure: scenario.Exposure,
             budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout, config.LicenceMarket) > LicenceMask.NarrowMaxNumber,
             securityPreset: config.Intelligence ? (data.Intelligence?.Params.PresetNormal ?? Fx6.Zero) : Fx6.Zero,   // O-040: the second word only for data whose licensable PRC need it
-            adviser: config.AdviserActors.IsDefaultOrEmpty ? null : new AdviserPlan(config.AdviserActors, config.AdviserRefuseYears, config.AdviserMaxLines));
+            adviser: config.EffectiveAdviserActors.IsDefaultOrEmpty ? null : new AdviserPlan(config.EffectiveAdviserActors, config.AdviserRefuseYears, config.AdviserMaxLines));
         if (config.Reserve)
             Reserve = new ReserveSystem(Table, new ReserveParams(), new ReserveInputsAdapter(this));
         if (config.Intelligence)
@@ -179,14 +185,16 @@ internal sealed class SliceWorld
         InstituteOrders? orders = null;
         if (config.Institutes)
         {
-            var layout = InstituteLayout.FromData(data.Institutes, scenario, Graph, new InstituteParams());
+            InstituteLayout layout = layout0!;
             orders = new InstituteOrders(Table, layout);
             InstituteOrders = orders;
-            Institutes = new InstituteSystem(Table, layout, new InstituteParams(), Graph, new InstituteInputsAdapter(this));
+            Institutes = new InstituteSystem(Table, layout, new InstituteParams(), Graph, new InstituteInputsAdapter(this), slots: SlotsOn ? new SlotParams() : null);
+            if (SlotsOn)
+                SlotOrders = new SlotOrders(Table, layout, new SlotParams(), new SlotOrderProbe(this));
         }
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs,
             ImmutableArray.CreateRange(MasteryParams.ProgrammeProcesses(ProductsLayout).Select(k => ProductsLayout.ProcNumber[k])),
-            adviserActors: Policy.Adviser?.Rows ?? default, fundProgramme: config.Reserve, intelligence: config.Intelligence, institutes: orders);
+            adviserActors: Policy.Adviser?.Rows ?? default, fundProgramme: config.Reserve, intelligence: config.Intelligence, institutes: orders, slotOrders: SlotOrders);
         Limits = new CommandLimits(scenario.ActorCount, ProductsLayout.SlotCount, ProductsLayout.Designs,
             [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)])
         {
@@ -195,6 +203,7 @@ internal sealed class SliceWorld
             ScheduledKnowledge = config.Layer is LayerControl.Lk or LayerControl.Lk0,
             IntelEnabled = config.Intelligence,
             FundEnabled = config.Reserve && config.Layer is not (LayerControl.Lk or LayerControl.Lk0),
+            SlotsEnabled = SlotsOn,
             NodeNumbers = ImmutableArray.CreateRange(Graph.Number.OrderBy(n => n)),
         };
         RegisterRunColumns();
@@ -278,7 +287,7 @@ internal sealed class SliceWorld
         systems.All(x => x.Cadence is Cadence.Monthly or Cadence.Yearly || x is DailyProbeSystem);
 
     // L_K and L_K0 replace the knowledge model by a schedule; the other layers read `known` as before.
-    private KnowledgeSystem NewKnowledge(KnowledgeStart kStart, KnowledgeParams kp, int chunks)
+    private KnowledgeSystem NewKnowledge(KnowledgeStart kStart, KnowledgeParams kp, int chunks, InstituteLayout? layout)
     {
         var inputs = new KnowledgeInputsAdapter(this);
         switch (Config.Layer)
@@ -295,8 +304,8 @@ internal sealed class SliceWorld
             default:
                 // L_C and L_P read t_known (SLICE_COMPOSITION §13.2); in every other mode the columns are absent and the hash is that of main.
                 return new KnowledgeSystem(Table, Graph, kStart, kp, inputs, Streams.Know, chunks, licenceTransfersKnowledge: Config.LicKnows,
-                    trackKnownSince: Config.Layer is LayerControl.Lc or LayerControl.Lp, fundProgrammes: Config.Reserve,
-                    priorities: Config.Institutes ? new InstituteParams() : null);
+                    trackKnownSince: Config.Layer is LayerControl.Lc or LayerControl.Lp, fundProgrammes: Config.Reserve && !SlotsOn,
+                    priorities: Config.Institutes ? new InstituteParams() : null, slots: SlotsOn ? new SlotParams() : null, slotCount: SlotsOn ? layout!.MaxSlots : 0);
         }
     }
 
@@ -389,6 +398,38 @@ internal sealed class SliceWorld
 
     /// <summary>The standing orders of the player to the institutes (the columns <c>set_priority_node</c> writes); null without institutes.</summary>
     public InstituteOrders? InstituteOrders { get; }
+
+    /// <summary>The slot science model runs (see <see cref="SliceRunConfig.ScienceSlots"/>).</summary>
+    public bool SlotsOn { get; }
+
+    /// <summary>The player's lists and focus of the slot model; null without it.</summary>
+    public SlotOrders? SlotOrders { get; }
+
+    /// <summary>
+    /// Air power index MPI of the actor (#565): the fleet value of its best design at the common budget (<see cref="ProductsSystem.MaxFleetValue"/>); a pure read of the
+    /// snapshot, defined every month.
+    /// </summary>
+    public Fx6 AirPower(int actor, long month) => Products.MaxFleetValue(actor, Fx6.One, PolicyParameters.FvBudget, month);
+
+    /// <summary>
+    /// Own air power over the best of the others (#565): 1 when nobody has any, a large number when only the actor has. Parity ≥ 1, superiority ≥ 1.5, dominance ≥ 2.
+    /// </summary>
+    public Fx6 AirPowerRatio(int actor, long month)
+    {
+        Fx6 own = AirPower(actor, month);
+        Fx6 best = Fx6.Zero;
+        for (int b = 0; b < Table.RowCount; b++)
+        {
+            if (b == actor)
+                continue;
+            Fx6 v = AirPower(b, month);
+            if (v > best)
+                best = v;
+        }
+        if (best == Fx6.Zero)
+            return own == Fx6.Zero ? Fx6.One : Fx6.FromInt(100);
+        return own / best;
+    }
     /// <summary>The intelligence system; null when <see cref="SliceRunConfig.Intelligence"/> is off.</summary>
     public IntelSystem? Intel { get; }
 
@@ -727,6 +768,8 @@ internal sealed class SliceWorld
             Table.AddLong("run.inst.data").Load(Fill(rows, BitConverter.ToInt64(Convert.FromHexString(Data.Institutes.Hash)[..8])));
             // The controlled actor changes whose institutes the AI runs, so it is part of the state identity from the first hash.
             Table.AddInt("run.inst.player").Load([.. Enumerable.Repeat(Config.PlayerActor ?? -1, rows)]);
+            if (SlotsOn)
+                Table.AddInt("run.slots").Load([.. Enumerable.Repeat(1, rows)]);
         }
         Table.AddInt("run.cell").Load([.. Enumerable.Repeat(Config.ProfileCell ?? -1, rows)]);
         Table.AddInt("run.ai").Load([.. Enumerable.Repeat((Config.ProductAi ? 1 : 0) | (Config.Derive ? 2 : 0), rows)]);

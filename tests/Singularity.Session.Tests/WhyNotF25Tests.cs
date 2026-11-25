@@ -31,7 +31,7 @@ public class WhyNotF25Tests
     // Every cell of the actor is strong and every node known, then one cell is set to (H, M): the links of the requirement of G2 are those of that cell.
     private static (SliceSession S, int Process, Dimension Dim, int Cluster, Fx6 Req) Fixture(Func<Fx6, (Fx6 H, Fx6 M)> cell)
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7 });
         const int usa = 0;
         foreach (Column col in s.World.Table.Columns)
         {
@@ -103,7 +103,7 @@ public class WhyNotF25Tests
     [Fact]
     public void FraSeed7_Month348_FirstCapabilityLinkIsCultureHOfProcess54_QualityControl()
     {
-        SliceSession s = SliceTestData.CreateLegacyNeutral(new SliceRunConfig { Seed = 7, T6dOff = true });   // the 61-node D1 world with the ahead-of-time cost off: the diagnosis state of the note above (TASK-0147, O-052)
+        SliceSession s = SliceTestData.CreateLegacyNeutral(SliceRunConfig.Legacy with { Seed = 7, T6dOff = true });   // the 61-node D1 world with the ahead-of-time cost off: the diagnosis state of the note above (TASK-0147, O-052)
         int fra = s.World.Scenario.ActorIndex("FRA");
         s.StepThroughMonth(347);
         WhyNotTarget? target = s.CurrentRequirement(fra);
