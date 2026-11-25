@@ -5,7 +5,6 @@ agyreview); agy opens them with its file viewer. --dangerously-skip-permissions 
 URLs and MCP are denied, the stream and the transcripts are audited afterwards. Keys are never read here."""
 
 import functools
-import re
 import shutil
 import tempfile
 from pathlib import Path
@@ -16,14 +15,10 @@ MODEL = "gemini-4-neon-high"  # the model of the 3D comparison (#544); list: `ag
 DEFAULT_TIMEOUT_S = 900
 AGY_RPM = 2
 AGY_RPD = 20  # careful guess of the subscription's daily room, like sketch.AGY_RPD; shared agy-usage.json
-OVERLOAD_RE = re.compile(r"\b503\b|overload|No capacity|UNAVAILABLE|capacity", re.I)
 EXT = {"image/png": ".png", "image/jpeg": ".jpg"}
 
 
-class AgyOverloaded(agyreview.AgyFailed):
-    """Server capacity error: the attempt is not counted against the daily limit."""
-
-
+AgyOverloaded = agyreview.AgyOverloaded  # not counted against the daily limit
 def workspace_files(frames):
     """[(name, mime, bytes)] -> [(file name inside the workspace, frame name)]: neutral names, no path tricks."""
     return [(f"frame{i:02d}{EXT[mime]}", name) for i, (name, mime, _) in enumerate(frames, 1)]
@@ -43,7 +38,7 @@ def build_prompt(system, task, criteria, files, ws, direction=None):
 def run(prompt, frames, schema_file, model=MODEL, timeout_s=DEFAULT_TIMEOUT_S, runner=None, brain_dir=None,
         which=shutil.which, ws_parent=None):
     """(answer text, usage dict, model name). prompt is a function of the workspace path. Errors as agyreview.run_agy,
-    plus AgyOverloaded for a capacity error."""
+    AgyOverloaded is a capacity error."""
     from . import sketch
     from .sandbox import SandboxUnavailable
 
@@ -66,9 +61,5 @@ def run(prompt, frames, schema_file, model=MODEL, timeout_s=DEFAULT_TIMEOUT_S, r
             if e.code == "sandbox_unavailable":
                 raise SandboxUnavailable(str(e)) from None
             raise agyreview.AgyFailed(f"{e.code}: {e}") from None
-        except agyreview.AgyFailed as e:
-            if OVERLOAD_RE.search(str(e)) and not isinstance(e, AgyOverloaded):
-                raise AgyOverloaded(str(e)) from None
-            raise
         except OSError as e:
             raise agyreview.AgyFailed(f"agy could not start: {e}") from None

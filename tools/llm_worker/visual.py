@@ -76,6 +76,11 @@ class RateGuard:
         self.path, self.rpm, self.rpd, self.clock = Path(path), rpm, rpd, clock
 
     def before_attempt(self, request_bytes, max_tokens):
+        self.admit()
+        return "free"
+
+    def admit(self):
+        """Counts one attempt or refuses; returns the clock value stored in the minute window (the stamp for refund)."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
         fd = os.open(self.path.with_suffix(".lock"), os.O_CREAT | os.O_WRONLY, 0o600)
         with os.fdopen(fd, "w") as lock:
@@ -99,7 +104,7 @@ class RateGuard:
                 raise RateLimited(f"{len(recent)} requests in the last minute, limit {self.rpm}")
             recent.append(now)
             self._save({"day": day, "count": count + 1, "recent": recent, "tokens": tokens})
-        return "free"
+        return now
 
     def _save(self, st):
         tmp = self.path.with_suffix(".tmp")
@@ -312,8 +317,7 @@ def _run_agy(record, task, loaded, criteria, direction, model, schema_path, runs
         return None, None, record
     guard = guard or RateGuard(config.LEDGER_DIR / sketch.AGY_USAGE_FILE, rpm=agyvisual.AGY_RPM, rpd=agyvisual.AGY_RPD)
     system = SYSTEM + ("\n\n" + SYSTEM_DESIGN if direction is not None else "")
-    stamp = guard.clock()
-    guard.before_attempt(0, 0)
+    stamp = guard.admit()
     try:
         answer, usage, reported = agyvisual.run(
             lambda ws, files: agyvisual.build_prompt(system, task, criteria, files, ws, direction), loaded, schema_path,

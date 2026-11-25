@@ -99,11 +99,17 @@ class AgyVisualTest(Base):
         with self.assertRaises(visual.VisualError) as c:
             self.run_it(Fake(stream(status="ERROR"), rc=1, err="503 No capacity available"), guard=guard)
         self.assertEqual(c.exception.code, "agy_capacity")
-        self.assertEqual(json.loads((self.tmp / "agy.json").read_text())["count"], 0)
+        st = json.loads((self.tmp / "agy.json").read_text())
+        self.assertEqual((st["count"], st["recent"]), (0, []))
         with self.assertRaises(visual.VisualError) as c:
             self.run_it(Fake(stream(status="ERROR"), rc=1, err="boom"), guard=guard)
         self.assertEqual(c.exception.code, "agy_failed")
-        self.assertEqual(json.loads((self.tmp / "agy.json").read_text())["count"], 1)
+        st = json.loads((self.tmp / "agy.json").read_text())
+        self.assertEqual((st["count"], len(st["recent"])), (1, 1))
+        # "capacity" in stdout alone is not an overload
+        with self.assertRaises(visual.VisualError) as c:
+            self.run_it(Fake(stream(status="ERROR").replace('"x"', '"no capacity talk"'), rc=1, err="boom"), guard=guard)
+        self.assertEqual(c.exception.code, "agy_failed")
 
     def test_quota_text_is_agy_quota(self):
         with self.assertRaises(visual.VisualError) as c:

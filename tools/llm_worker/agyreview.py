@@ -7,11 +7,13 @@ worktree and this run's own brain folders, refuses the review. Keys are never re
 
 import functools
 import json
+import re
 import shutil
 from pathlib import Path
 
 MODEL = "claude-sonnet-5-5-medium"
 DEFAULT_TIMEOUT_S = 900
+OVERLOAD_RE = re.compile(r"\b503\b|overload|No capacity|UNAVAILABLE", re.I)
 REVIEW_CONTROL = ("finish", "wait", "wait_5_seconds")  # no generate_image, no sub-agents
 REVIEW_PATH_TOOLS = ("view_file", "read_file", "list_dir", "grep_search", "find_by_name")
 
@@ -22,6 +24,10 @@ class AgyLimit(RuntimeError):
 
 class AgyFailed(RuntimeError):
     pass
+
+
+class AgyOverloaded(AgyFailed):
+    """Server capacity error (503, overload) in stderr or the result status; no quota was used."""
 
 
 class AgyTimeout(RuntimeError):
@@ -122,6 +128,8 @@ def _run_agy(prompt, worktree, schema_file, model, timeout_s, brain_dir, inside_
     if result is None or rc != 0 or result.get("status") != "SUCCESS":
         if sketch.quota_hit(err, result, out):
             raise AgyLimit(sketch.one_line(err[-300:] or "agy quota error", 300))
+        if OVERLOAD_RE.search(err or "") or (result and OVERLOAD_RE.search(str(result.get("status")))):
+            raise AgyOverloaded(f"agy exited {rc}: {sketch.one_line(err or out, 300)}")
         raise AgyFailed(f"agy exited {rc}: {sketch.one_line(err or out, 300)}")
     answer = extract_answer(result)
     if not answer.strip():
