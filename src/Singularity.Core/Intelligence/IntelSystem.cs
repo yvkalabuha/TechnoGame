@@ -39,8 +39,8 @@ public sealed class IntelSystem : ITickSystem
         _in = inputs;
         _events = events;
         _rows = table.RowCount;
-        if (_rows > (1 << 16))
-            throw new ArgumentOutOfRangeException(nameof(table), _rows, "The exposure key holds 16 bits per actor.");
+        if (_rows > (1 << 15))
+            throw new ArgumentOutOfRangeException(nameof(table), _rows, "The exposure key o·2^16 + t must fit int32: at most 2^15 actors.");
         _growthM = IntelMath.PerMonth(parameters.GrowthPerYear);
         _decayM = IntelMath.PerMonth(parameters.DecayPerYear);
         _matM = IntelMath.PerMonth(parameters.MaturityPerYear);

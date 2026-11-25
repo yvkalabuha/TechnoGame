@@ -383,6 +383,11 @@ internal sealed class SliceWorld
     /// </summary>
     private static BudgetShares WithSecurity(BudgetShares s, Fx6 security)
     {
+        // Never a negative share: an item the AI cannot pay from quality and procurement is clamped (the data presets keep this unreachable).
+        System.Diagnostics.Debug.Assert(security <= s.Quality + s.Procurement, "the AI cannot pay the security item");
+        Fx6 room = s.Quality + s.Procurement;
+        if (security > room)
+            security = room;
         Fx6 fromQuality = security < s.Quality ? security : s.Quality;
         return s with { Quality = s.Quality - fromQuality, Procurement = s.Procurement - (security - fromQuality), Security = security };
     }

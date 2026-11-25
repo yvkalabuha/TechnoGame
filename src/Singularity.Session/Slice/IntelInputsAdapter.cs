@@ -10,13 +10,7 @@ internal sealed class IntelInputsAdapter(SliceWorld world) : IIntelInputs
 
     public bool PlayerPlan(int actorRow, int slot, out int target, out IntelMode mode) => world.Commands.PlayerPlan(actorRow, slot, out target, out mode);
 
-    public int KnownCount(int actorRow)
-    {
-        int n = 0;
-        for (int r = 0; r < world.Graph.Count; r++)
-            n += world.Knowledge.IsKnown(actorRow, r) ? 1 : 0;
-        return n;
-    }
+    public int KnownCount(int actorRow) => world.Knowledge.KnownCount(actorRow);
 
     public bool Knows(int actorRow, int nodeRow) => world.Knowledge.IsKnown(actorRow, nodeRow);
 }
