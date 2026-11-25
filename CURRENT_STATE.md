@@ -24,7 +24,6 @@
 - TASK-0161 [IN_PROGRESS] Design pass 2 B: knowledge tree by year rings and direction sectors, 6 zoom steps, icons, node menu, prominent close (#473) (developer)
 - TASK-0163 [IN_PROGRESS] Globe country names: no plate, size by country extent with a minimum, hide when not fitting until zoomed (#523) (developer)
 - TASK-0166 [IN_PROGRESS] M1: verify 1945 owners of 379 regions against sources (T-M1-10) (research-scientist)
-- TASK-0168 [IN_PROGRESS] Terrain M1: download sources, bake per-province terrain and rivers, 1945 corrections (#528, #533-#536) (developer)
 - TASK-0178 [IN_PROGRESS] Gate: AI institute goals on the path to the next aircraft generation, Lab measurement with kappa 1.5 (#552) (simulation-engineer)
 - TASK-0179 [IN_PROGRESS] Lab: licence market calibration, what AI buys and why, prices and availability within tolerance (#553) (simulation-engineer)
 - TASK-0180 [IN_PROGRESS] Data: real prerequisites for early G5/G6 knowledge nodes, restore G2-G4 pace (#555) (developer)

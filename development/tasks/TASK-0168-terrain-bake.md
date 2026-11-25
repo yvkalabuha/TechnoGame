@@ -1,7 +1,7 @@
 ---
 id: TASK-0168
 title: "Terrain M1: download sources, bake per-province terrain and rivers, 1945 corrections (#528, #533-#536)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M1
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: []
 approved_by: owner
 approved_at: 2026-11-25
 approval_ref: "#528, #533-#536"
+review_ref: "reviewer: APPROVE (f459d31, 4 rounds); codex: 3 returns, waived by #432, leftovers DEBT-0108; merge 6402e5f"
 created: 2026-11-25
 ---
 
