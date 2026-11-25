@@ -57,6 +57,8 @@ public enum CommandKind
     SellCohort = 8,
     StartMasteryProgramme = 9,
     CancelMasteryProgramme = 10,
+    BuyLicence = 11,
+    OfferLicence = 12,
 }
 
 /// <summary>
@@ -155,6 +157,24 @@ public sealed record StartMasteryProgramme(int Actor, int ProcessNumber, bool Ab
 public sealed record CancelMasteryProgramme(int Actor, int ProcessNumber) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.CancelMasteryProgramme;
+}
+
+/// <summary>
+/// <c>buy_licence(seller, gen)</c> (TASK-0152, the licence market): the seller's own serial project of that engine generation, at the seller's asking price. The deal is
+/// checked now (<see cref="CommandRefusal.LicenceRefused"/> names the reason) and queued; it is validated again and paid when the month begins.
+/// </summary>
+public sealed record BuyLicence(int Actor, int Seller, int Gen) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.BuyLicence;
+}
+
+/// <summary>
+/// <c>offer_licence(gen, m, circle)</c>: the multiplier of the asking price (<c>m × reference</c>, <c>m</c> in [0,5; 2]) and who may buy, for the actor's own serial project of
+/// the generation. Standing until changed.
+/// </summary>
+public sealed record OfferLicence(int Actor, int Gen, Fx6 M, SaleCircle Circle) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.OfferLicence;
 }
 
 /// <summary>An accepted command with its key: one line of <c>commands.log</c>.</summary>

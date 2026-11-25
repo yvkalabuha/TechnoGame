@@ -77,6 +77,13 @@ public static class CommandCodec
             case CancelMasteryProgramme q:
                 sb.Append(",\"process\":").Append(I(q.ProcessNumber));
                 break;
+            case BuyLicence b:
+                sb.Append(",\"seller\":").Append(I(b.Seller)).Append(",\"gen\":").Append(I(b.Gen));
+                break;
+            case OfferLicence o:
+                sb.Append(",\"gen\":").Append(I(o.Gen)).Append(",\"m\":");
+                Raw(sb, o.M).Append(",\"circle\":").Append(I((int)o.Circle));
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(logged), c.GetType(), "Unknown command type.");
         }
@@ -112,6 +119,8 @@ public static class CommandCodec
             "sell_cohort" => new SellCohort(actor, ReadHandle(r, "design"), r.GetProperty("n").GetInt32()),
             "start_mastery_programme" => new StartMasteryProgramme(actor, r.GetProperty("process").GetInt32(), r.GetProperty("abroad").GetBoolean()),
             "cancel_mastery_programme" => new CancelMasteryProgramme(actor, r.GetProperty("process").GetInt32()),
+            "buy_licence" => new BuyLicence(actor, r.GetProperty("seller").GetInt32(), r.GetProperty("gen").GetInt32()),
+            "offer_licence" => new OfferLicence(actor, r.GetProperty("gen").GetInt32(), ReadRaw(r.GetProperty("m")), (SaleCircle)r.GetProperty("circle").GetInt32()),
             _ => throw new FormatException($"Unknown command kind '{kind}'."),
         };
         return new LoggedCommand(key, command);
@@ -165,6 +174,8 @@ public static class CommandCodec
         CommandKind.SellCohort => "sell_cohort",
         CommandKind.StartMasteryProgramme => "start_mastery_programme",
         CommandKind.CancelMasteryProgramme => "cancel_mastery_programme",
+        CommandKind.BuyLicence => "buy_licence",
+        CommandKind.OfferLicence => "offer_licence",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
 

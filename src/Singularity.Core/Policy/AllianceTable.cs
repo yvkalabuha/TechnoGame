@@ -22,7 +22,8 @@ public sealed class AllianceTable
     }
 
     /// <summary>No blocs and no friends: the circles Bloc and Friends are empty.</summary>
-    public static AllianceTable Empty { get; } = new([], [], "empty");
+    // A new instance per call: the architecture test keeps static fields to values, and a table is cheap to make.
+    public static AllianceTable Empty => new([], [], "empty");
 
     /// <summary>Canonical text of the rows, for the fingerprint of a run.</summary>
     public string Identity { get; }

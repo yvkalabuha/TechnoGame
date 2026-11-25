@@ -19,7 +19,6 @@ public class LicenceMarketTests
 
     private sealed class Prod : IPolicyProducts
     {
-        public bool SlotFree = true;
         public ProductsLayout Layout => Probe;
         public Fx6 DRef => Fx6.FromInt(740);
         public PolicyDesign Design(int actorRow, int design, long month) => default;
@@ -30,7 +29,6 @@ public class LicenceMarketTests
         public Fx6 AlloySupply(int actorRow, long month) => Fx6.Zero;
         public int FreeBureaus(int actorRow) => 0;
         public Fx6 CandidateValue(int actorRow, ReadOnlySpan<int> alts, Fx6 budget, long month) => Fx6.One;
-        public bool HasFreeDesignSlot(int actorRow) => SlotFree;
     }
 
     private sealed class Ev : IPolicyEvents
@@ -38,6 +36,8 @@ public class LicenceMarketTests
         public int[] Gen = [2, 2, 0];
         public bool[] OwnProject = [true, true, false];   // false: the seller's serial project is a bought one, which the catalogue never lists
         public int? Eta;
+        public bool SlotFree = true;
+        public bool HasFreeDesignSlot(int actorRow) => SlotFree;
         public int EngineGen(int actorRow, long month) => Gen[actorRow];
         public LicenceSubject? Subject(int sellerRow, int gen, long month) => OwnProject[sellerRow] && gen <= Gen[sellerRow] ? new LicenceSubject(Cost, LicenceRules.Bit(54)) : null;
         public IReadOnlyList<Link> WhyNot(int actorRow, long month) => [new Link(WhyNotLayer.Knowledge, WhyNotCause.MissingNode, 58, Fx6.Zero, Fx6.One, [], Fx6.Zero, null)];
@@ -201,7 +201,7 @@ public class LicenceMarketTests
     {
         var rig = new Rig(PolicyProfile.Adaptive);
         rig.Month(0);
-        rig.Products.SlotFree = false;
+        rig.Events.SlotFree = false;
         rig.Buy(2, 0, 2, 0);
         Assert.Equal(1L, rig.Policy.BadLicenceCount(2, BadLicence.Capacity));
         Assert.Equal(Fx6.Zero, rig.Policy.LicenceFlow(2));

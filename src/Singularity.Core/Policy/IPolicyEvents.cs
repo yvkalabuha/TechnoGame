@@ -30,6 +30,9 @@ public interface IPolicyEvents
     /// </summary>
     int? OwnEtaMonths(int actorRow, int gen, long month) => null;
 
+    /// <summary>A project slot of the actor stands free in the snapshot: a licence needs one before it is paid (TASK-0152).</summary>
+    bool HasFreeDesignSlot(int actorRow) => true;
+
     /// <summary><c>why_not(a, Design(d), t)</c>.</summary>
     IReadOnlyList<Link> WhyNotDesign(int actorRow, DesignHandle design, long month);
 }

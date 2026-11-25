@@ -80,9 +80,6 @@ public interface IPolicyProducts
     /// <summary>Whether a programme may start on the process now; the one pure function the command and the AI share.</summary>
     ProgrammeVerdict ProgrammeVerdict(int actorRow, int processNumber, bool abroad, long month) => new(MasteryRefusal.OutOfScope);
 
-    /// <summary>A project slot of the actor stands free in the snapshot (a licence needs one before it is paid, TASK-0152).</summary>
-    bool HasFreeDesignSlot(int actorRow) => true;
-
     /// <summary><c>G_front</c> of the snapshot (contract §9.1, #146).</summary>
     int GFront(long month) => 0;
 }

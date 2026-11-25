@@ -72,6 +72,7 @@ internal sealed class SliceWorld
         pp = pp with { Mastery = pp.Mastery with { FromMonth = from1978, Rules = config.MasteryRules } };
         KnowledgeParameters = kp;
         IndustryParameters = ip;
+        pp = pp with { LicenceMarket = config.LicenceMarket };
         ProductsParameters = pp;
         pp = ApplySaleArm(config.SaleArm, pp);
         PolicyParams policy = new()
@@ -82,6 +83,9 @@ internal sealed class SliceWorld
             PilotForm = config.PilotForm,
             ToolingTarget = config.ToolingTarget,
             LicOff = config.LicOff, T6dOff = config.T6dOff,
+            LicenceMarket = config.LicenceMarket, LicenceExternalRows = config.LicenceExternalActors.IsDefault ? [] : config.LicenceExternalActors,
+            MarketActorIds = config.LicenceMarket ? scenario.ActorId : [], MarketStartYear = scenario.StartYear, MarketStartMonth = scenario.StartMonth,
+            Alliances = config.Alliances ?? AllianceTable.Empty,
             Mastery = pp.Mastery,
         };
         config.ToolingTarget.Validate();
@@ -615,6 +619,9 @@ internal sealed class SliceWorld
         Table.AddInt("run.ai").Load([.. Enumerable.Repeat((Config.ProductAi ? 1 : 0) | (Config.Derive ? 2 : 0), rows)]);
         // T6D_OFF / LIC_OFF / lic_knows are part of the state, so a switch cannot give the hash of main.
         Table.AddInt("run.t6d").Load([.. Enumerable.Repeat((Config.LicOff ? 1 : 0) | (Config.T6dOff ? 2 : 0) | (Config.LicKnows ? 4 : 0), rows)]);
+        // The market is part of the state, so a run with it cannot give the hash of main; a run without it adds nothing.
+        if (Config.LicenceMarket)
+            Table.AddInt("run.market").Load([.. Enumerable.Repeat(1, rows)]);
         Table.AddInt("run.channels").Load([.. Enumerable.Repeat((int)Config.Channels, rows)]);
         // Bit 12 = LINE_CLOSE YPROD (F17b) of a run with the product AI; it is clear for ADMIT and for a player-script run, so their hashes are those of the build before F17b.
         int lineCloseBit = Config.ProductAi && Config.LineClose == LineCloseRule.YProd ? 1 << 12 : 0;

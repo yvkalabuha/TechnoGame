@@ -16,6 +16,8 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
 {
     public bool Knows(int actorRow, int nodeNumber, long month) => KnowsNode(actorRow, nodeNumber);
 
+    public int NewLicences(int actorRow, long month, Span<(int Seller, int Gen)> into) => world.Policy.NewLicences(actorRow, month, into);
+
     public Fx6 AdmittedYield(int siteRow, int processNumber, long month) =>
         KnowsNode(siteRow, processNumber) ? world.Industry.Yield(siteRow, world.IndustryLayout.RowOf(processNumber), month).Yield : Fx6.Zero;
 

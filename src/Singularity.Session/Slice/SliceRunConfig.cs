@@ -213,6 +213,18 @@ public sealed partial record SliceRunConfig
     /// <summary><c>lic_knows</c> (spec §6.7, #47): a bought licence also makes known the seller's engine and the PRC of its mask with their closure. Diagnostic; off in main.</summary>
     public bool LicKnows { get; init; }
 
+    /// <summary>
+    /// The licence market (TASK-0152; production-lines-and-licence-market.md §2): several licences per country keyed (seller, gen), a permanent catalogue,
+    /// <c>BuyLicence</c> / <c>OfferLicence</c>, AI buying by the rules of O-062. Off in main: with it off the world, the columns and the hash are those of main.
+    /// </summary>
+    public bool LicenceMarket { get; init; }
+
+    /// <summary>Actor rows whose licences move only by commands (the player's); the AI buys nothing for them and sells at m = 1. Empty = every actor is AI.</summary>
+    public ImmutableArray<int> LicenceExternalActors { get; init; } = [];
+
+    /// <summary>Blocs and friends by year for the buyer circle (O-056), loaded from <c>mods/core/scenarios/1945/alliances.yaml</c> by the host; null = none.</summary>
+    public AllianceTable? Alliances { get; init; }
+
     /// <summary>Sensitivity arm of the sale terms (spec §6.10).</summary>
     public SaleArm SaleArm { get; init; } = SaleArm.None;
 

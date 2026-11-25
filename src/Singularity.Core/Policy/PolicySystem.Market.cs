@@ -183,7 +183,10 @@ public sealed partial class PolicySystem
     /// <c>WorldAvg(gen, t)</c> (licence-prices.md §5): the mean asking price over the catalogues of the AI sellers, null with fewer than <c>ThinMarketSellers</c>.
     /// A pure function of the catalogues; the catalogue of an externally controlled seller is left out, so a player cannot move it.
     /// </summary>
-    public Fx6? WorldAverage(int gen, long month)
+    public Fx6? WorldAverage(int gen, long month) => WorldPrice(gen, month).Average;
+
+    /// <summary>The world average of a generation with the number of AI catalogues behind it (the average is null below the threshold; the screen then shows the reference).</summary>
+    public (Fx6? Average, int Sellers) WorldPrice(int gen, long month)
     {
         Span<Fx6> prices = stackalloc Fx6[Math.Min(_actorNumber.Length, 64)];
         int n = 0;
@@ -193,8 +196,11 @@ public sealed partial class PolicySystem
                 continue;
             prices[n++] = o.Price;
         }
-        return LicenceRules.WorldAverage(prices[..n], _p.ThinMarketSellers);
+        return (LicenceRules.WorldAverage(prices[..n], _p.ThinMarketSellers), n);
     }
+
+    /// <summary>Yearly cap of the licence income of an externally controlled seller (O-062).</summary>
+    public Fx6 IncomeCap(int actorRow) => _p.IncomeCapShare * Fx6.FromInt(12) * Budget(actorRow);
 
     private bool KeyHeld(int buyer, int seller, int gen)
     {
@@ -218,7 +224,7 @@ public sealed partial class PolicySystem
         bool inCircle = offer is { } o && o.Circle != SaleCircle.Nobody && _p.Alliances.InCircle(_p.MarketActorIds[seller], _p.MarketActorIds[buyer], year, o.Circle);
         bool held = KeyHeld(buyer, seller, gen) || gen >= 1 && gen <= (_ev?.EngineGen(buyer, month) ?? 0);
         Fx6 limit = IsExternal(buyer) ? funds : AiLimit(funds);
-        bool hasSlot = (_prod?.HasFreeDesignSlot(buyer) ?? true) && FreeLicenceSlot(buyer) >= 0;
+        bool hasSlot = (_ev?.HasFreeDesignSlot(buyer) ?? true) && FreeLicenceSlot(buyer) >= 0;
         bool overCap = IsExternal(seller) && offer is not null
             && LicenceIncome(seller, month) + price > _p.IncomeCapShare * Fx6.FromInt(12) * Budget(seller);
         return LicenceRules.ValidateMarket(buyer, seller, gen, offer is not null, held, price, funds, limit, inCircle, hasSlot, overCap);

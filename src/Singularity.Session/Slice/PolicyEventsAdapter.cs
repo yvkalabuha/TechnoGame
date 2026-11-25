@@ -14,8 +14,8 @@ internal sealed class PolicyEventsAdapter(SliceWorld world) : IPolicyEvents
         ProductsLayout l = world.ProductsLayout;
         for (int d = l.Designs - 1; d >= 0; d--)
         {
-            if (world.Products.Stage(sellerRow, d) is not (DesignStage.Series or DesignStage.InService))
-                continue;
+            if (world.Products.Stage(sellerRow, d) is not (DesignStage.Series or DesignStage.InService) || world.Products.LicensedFrom(sellerRow, d) >= 0)
+                continue;   // a bought project is never the subject of a licence (#477)
             if (l.AltEngGen[world.Products.AltAt(sellerRow, d, l.BaseSlot)] != gen)
                 continue;
             // The mask is the PRC of the engine and of the hot section as of the decision (spec A43.1); no reference to the project is kept.
@@ -46,6 +46,22 @@ internal sealed class PolicyEventsAdapter(SliceWorld world) : IPolicyEvents
         WhyNotTarget? target = any ? world.WhyNot.CurrentRequirement(actorRow, month) : WhyNotTarget.Requirement(1);
         return target is { } t ? world.WhyNot.WhyNot(actorRow, t, month) : [];
     }
+
+    // The longest estimate over the links of the requirement of the generation; any link without an estimate means "never by itself".
+    public int? OwnEtaMonths(int actorRow, int gen, long month)
+    {
+        IReadOnlyList<Link> links = world.WhyNot.WhyNot(actorRow, WhyNotTarget.Requirement(gen), month);
+        int worst = 0;
+        foreach (Link l in links)
+        {
+            if (l.EtaMonths is not { } eta)
+                return null;
+            worst = Math.Max(worst, eta);
+        }
+        return worst;
+    }
+
+    public bool HasFreeDesignSlot(int actorRow) => world.Products.HasFreeSlot(actorRow);
 
     public IReadOnlyList<Link> WhyNotDesign(int actorRow, DesignHandle design, long month) =>
         world.WhyNot.WhyNot(actorRow, WhyNotTarget.Design(design), month);
