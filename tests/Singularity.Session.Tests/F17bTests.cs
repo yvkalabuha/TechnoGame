@@ -86,13 +86,14 @@ public class F17bTests(ITestOutputHelper output)
     // Re-recorded in TASK-0121 (#423), reason: schema v12 (new columns prd.d*.cohort.1978…2030 and prd.d*.q.1: the cohort years to 2030, the second block of the q mask); the old columns are unchanged (HorizonTests projection at 48 points of the build before the change, GoldenProjectionAgainstMainTests), so only the new columns change the hash.
     // Re-recorded in TASK-0129 (fleet ageing, #431/#435-#437), reason: schema v13 (new column prd.d*.replCredit, in the hash from month 0); the old columns are unchanged to month 176 (projection tests: HorizonTests, T6dTests, FleetAblationTests, ToolingUnmetTests, GoldenProjectionAgainstMainTests), so only the new column changes these hashes.
     // Re-recorded in TASK-0134 (train 2: Hcap(t), mastery), reason: schema v14 (new columns prd.prog.*, pol.prog.*, pol.below.*, cmd.prog.*, prd.rejected.BadProgramme, all zero before 1978-01); the old columns are unchanged to month 387 (MasteryIdentityTests, HorizonTests, GoldenProjectionAgainstMainTests), so only the new columns change this hash.
+    // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
     private static readonly string[] AdmitGolden =
     [
-        "d88c00c21b19839c58b3707e83970e1a6306c44abd96291661c8d461822a1e24",
-        "2723048fe59f28f1eeb675a203b928c80be778c080b297467ebf43a09c7be349",
-        "ed7c1e0f8b1c03fdd0565113c73e8dc7ac82d78198b887fafac8143148aae5c5",
-        "5c2ffdc423f606d5b9170172c0ba0e52a1c64784d11506282ab35758352eb824",
-        "d479890e57bbc4f9ec40a98b94de4e582cd98f2004800f40e7dbc3cba9de4b83",
+        "31061a51cc52b4cc44bf16a763afef11656c9ff0b74481154ec37220be29dba4",
+        "217c3e5dfe088d49635b061bf7c1dea7cd23fa34bfb2d6e6b57aa292587bc3be",
+        "3b2d99ede03b9d1faf85c03eba1722fb56dc78698535df06b73d14d8d6dfbf83",
+        "8d2cf38ca35a5bb1dea333f4301aa8781832d51a3668b4c6257b07b616076b7c",
+        "f7329378b882e2dc26555ba91453c948fb1f2bcc4245a672ca47ab9bf31d7a23",
     ];
 
     // Recorded in F17b (TASK-0030); re-recorded in TASK-0033, reason: T6d (columns of the licence and the disruption, run.t6d, the events themselves; both arms), then «exposure to data» (the scenario hash is in the run columns); in TASK-0032: part 1 (A39 «V5 default», #163: the default tooling target is V5), part 2 («tool_unmet column», F33).
@@ -103,12 +104,13 @@ public class F17bTests(ITestOutputHelper output)
     // Re-recorded in TASK-0133 (train 2: G5/G6 data + fleet ageing): nodes 62-81 and the G5/G6 alternatives change every trajectory; reason and list in the task file.
     // Re-recorded in TASK-0134 (train 2: Hcap(t), mastery), reason: schema v14 (new columns prd.prog.*, pol.prog.*, pol.below.*, cmd.prog.*, prd.rejected.BadProgramme, all zero before 1978-01); the old columns are unchanged to month 387 (MasteryIdentityTests, HorizonTests, GoldenProjectionAgainstMainTests), so only the new columns change this hash.
     // Re-recorded in TASK-0147 (train 2, schema train of the day): nodes 82-99 of the G5/G6 rev 3.1 chains and the ahead-of-time cost defaults (k 0.02, pow 2, max 10, #465) change every trajectory on the current data; the old columns stay identical on the 61-node data with k = 0 (identity tests, CreateLegacyNeutral); explanation: docs/simulation/golden-rerecord-train2.md.
+    // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
     private static readonly string[] YProdGolden = [
-        "7720220e04795975c4e9e8e7b11d50c51976106a68cb89f0464c416db3baa087",
-        "72f26b952b541355d508ce184a75f5760a3e793cbfeaa10c314383b37444fa6f",
-        "bc105f4a068424d605162b1e36f2b0c2bb269760010969e865b4176dbc7b7ed9",
-        "67831a2a45236e61bcb5337e42fcbdcf9adc4002fe79008787f1727833c9f407",
-        "d93fb1aeff06e533d72ee3f909fb1797517ee5efcc8e9e70cd1efbb0ce64b0fd",
+        "0cad8c130fe67ddb543eaa26be65be37d3257e5358a4d49ba1cb52c1f72fc5dd",
+        "55b7ecf56c7b717d71bcd188c5c6ef01ea5e8247a4968d0a8552699d3e5a732a",
+        "f638423cf8588ecab305935178b1dc825c020b31cc9a1d90d5dbb6cb31f0f099",
+        "f8d196ee4c480ad5d54b128cf1fad7fcb84620b171491f08ddea56a85d715bb8",
+        "a948b6da13f90c762243baf2bd2e233a0db5ed77aad23ab19535fe493af0476c",
     ];
 
     private static string HashOf(ulong seed, LineCloseRule rule)
