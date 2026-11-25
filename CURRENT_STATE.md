@@ -20,7 +20,6 @@
 ## Активные задачи
 <!-- registry:active:start -->
 - TASK-0132 [IN_PROGRESS] Keyboard selection of technology tree nodes and keyboard tooltip (A6-A8) (developer)
-- TASK-0145 [IN_PROGRESS] Sketches through Codex CLI image generation (llm_worker sketch --engine codex) (developer)
 - TASK-0151 [IN_PROGRESS] Player levers core: research priorities through institutes (slots, funding first x1.5, institute bonus, capacity, upkeep, building institutes) (developer)
 - TASK-0152 [IN_PROGRESS] Player levers core: licence market (multi-licence state, seller catalogue, BuyLicence, AdoptLicensedDesign, AI price rule, selling own projects) (developer)
 - TASK-0153 [IN_PROGRESS] Player levers core: AI adviser for the player country production (no AI opening or closing of player lines) (developer)

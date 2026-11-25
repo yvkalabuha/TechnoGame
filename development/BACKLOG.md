@@ -160,7 +160,7 @@
 | [TASK-0142](../development/tasks/TASK-0142-globe-map-remainder.md) | DONE | Globe map remainder after TASK-0138: hatch legend, occupation control line, small-state callouts, coast staircase | MS-M05 |
 | [TASK-0143](../development/tasks/TASK-0143-sketch-quota-subagents.md) | DONE | Gemini sketch runs: detect subagent quota errors, one image per subagent, no extra refinements | MS-M05 |
 | [TASK-0144](../development/tasks/TASK-0144-muted-sound-character.md) | DONE | Muted sound character (#455): soften attack and low-pass all routine cues | MS-M05 |
-| [TASK-0145](../development/tasks/TASK-0145-sketch-codex-engine.md) | IN_PROGRESS | Sketches through Codex CLI image generation (llm_worker sketch --engine codex) | MS-M05 |
+| [TASK-0145](../development/tasks/TASK-0145-sketch-codex-engine.md) | DONE | Sketches through Codex CLI image generation (llm_worker sketch --engine codex) | MS-M05 |
 | [TASK-0146](../development/tasks/TASK-0146-review-fallback-agy-sonnet.md) | DONE | Second review fallback to Sonnet 5.5 through agy when the Codex limit is exhausted (#456) | MS-M05 |
 | [TASK-0147](../development/tasks/TASK-0147-ahead-of-time-cost.md) | DONE | Ahead-of-time cost for knowledge nodes in Core (#458) and G5/G6 rev 3.1 data on the train-2 branch | MS-M05 |
 | [TASK-0148](../development/tasks/TASK-0148-levers-lab-probes.md) | DONE | Player levers: Lab probes P1-P3 (budget items matter, reserve dominance, goal strategies) | MS-M05 |
