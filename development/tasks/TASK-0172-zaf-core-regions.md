@@ -1,7 +1,7 @@
 ---
 id: TASK-0172
 title: "Data: South Africa regions status core of ZAF (O-076), checked per region"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: []
 approved_by: orchestrator # owner | orchestrator (orchestrator — только level: light)
 approved_at: 2026-11-25
 approval_ref: O-076
+review_ref: "reviewer: APPROVE (both regions = 9 SA provinces); merge via land.py --map"
 created: 2026-11-25
 ---
 
