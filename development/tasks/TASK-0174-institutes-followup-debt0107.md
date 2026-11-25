@@ -1,7 +1,7 @@
 ---
 id: TASK-0174
 title: "Institutes follow-up: iterative group walk (deep graph), built institute capacity by level, cooldown on same goal, no build charge after completion"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M0
 agent: developer         # ответственный агент
@@ -46,3 +46,8 @@ created: 2026-11-25
 
 ## Результат
 <!-- Заполняет исполнитель: что сделано, файлы, коммит. -->
+
+## Codex р.2 (36675b75)
+- #2 исправлено (тест проверяет, что повтор применён).
+- #1 отклонено: допуск n·1e-6 относится к сумме PlanOf/I4, не к формуле KappaEff; reviewer: постоянный допуск 3e-6 верен для одной формулы. Тест суммы — DEBT-0107.
+- #3 отклонено: циклы ограничены числом месяцев (900), зависания нет — DEBT-0107.
