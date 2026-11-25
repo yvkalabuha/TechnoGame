@@ -1,7 +1,7 @@
 ---
 id: TASK-0159
 title: "llm_worker: Codex review sees earlier rejected findings; visual accepts frames from the client shots-out"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M05
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: []
 approved_by: owner
 approved_at: 2026-11-24
 approval_ref: "owner answer 2026-11-24 (hooks and tools fixes)"
+review_ref: "reviewer: APPROVE; codex accept ccd9843 with 3 findings -> DEBT-0098; landed d2d7590"
 created: 2026-11-24
 ---
 
@@ -39,3 +40,8 @@ created: 2026-11-24
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
+- `review-confirm --rejected --reason "..."` пишет причину в sidecar `.confirm.json` (ключ `reasons`).
+- `run_review` (Codex, agy-sonnet, DeepSeek; `land.py` вызывает его) собирает отклонённые находки прежних записей задачи и добавляет в промпт блок PREVIOUSLY REJECTED FINDINGS с причинами и просьбой не повторять без новых доводов (до 20 штук, текст до 600 знаков).
+- `visual` принимает кадры из `shots-out/` и `src/Singularity.Client.Spike/shots-out/` (`config.CLIENT_SHOTS_DIR`); явный `shots_dir` по-прежнему единственный корень; чужой путь отклоняется.
+- Файлы: tools/llm_worker/{config,review,visual,__main__}.py, tests/test_review.py, tests/test_visual.py.
+- Проверка: `nice -n 10 python3 -m unittest discover tools/llm_worker/tests`: 486 тестов OK. Тесты на старом коде не гонялись.
