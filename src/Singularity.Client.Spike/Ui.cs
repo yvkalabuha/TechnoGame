@@ -113,7 +113,7 @@ public static class Ui
         foreach (var n in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color" })
             b.CaptionColor(n, command ? Colors.White : Ink);
         b.CaptionColor("font_pressed_color", Paper);
-        b.CaptionColor("font_disabled_color", Ink3);
+        b.CaptionColor("font_disabled_color", H(Palette.DisabledText));   // 4.5:1 on paper and on the paper texture (DEBT-0095, test DisabledButtonText)
     }
 
     public static ColorRect VRule() => new() { Color = Ink, CustomMinimumSize = new Vector2(2, 26), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };

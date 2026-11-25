@@ -47,3 +47,9 @@ docs/game-design/PLAYER_LEVERS_WAVE1.md и docs/game-design/economy/production-l
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
+Часть 1 из 2 (ветка worktree-agent-a6b87971094bb2d05). [Факт] Сделано:
+- Остаток TASK-0149 / DEBT-0095: кавычки в `ui.csv` (две обрезанные строки) + тест всех строк таблиц; подсказки сплава больше не говорят, что без сплава не выйдет ни один двигатель; блокер «предел поколения двигателя» называет узел для изучения (`WhyLines.SubjectNode`); красный квадрат «Главная помеха:» с подписью, без повтора «Мешает»; в строке изделия «себестоимость машины» в $1990, «готовность» в %, «в строю … шт.», «выпуск … шт./мес.»; «в M1» убрано; «Закрыть линию» с подтверждением (что теряется — по economy-analyst); цвет текста неактивной кнопки = ink-2 (≥ 4,5:1, тест); «Что можно сделать» — кнопка «Выбрать цель (институты)»; автопауза по сигналам alloy/refusal/licence (`AutoPauseLogic`).
+- K = 0,64828 с источником BEA в `src/Singularity.Client.Spike/data/dollars_1990.json`, читает `MoneyFormat` (O-079); 1 индекс/мес = 389,03 млн $1990.
+- Окна «Бюджет и резерв» (B) и «Цели науки / институты» (N): `LeverWindow.cs`, модели `LeverModels.cs`, конфиг клиентской партии `ClientRun.cs` (PlayerActor, Reserve, Institutes, LicenceMarket, Adviser только для клиента; умолчания ядра не тронуты).
+- Тесты: `tests/Singularity.Client.Audio.Tests/LeverModelTests.cs` (+ вся сборка 438 ок), `Singularity.Localization.Tests` 133 ок. Клиент собран (`dotnet build src/Singularity.Client.Spike`), игра не запускалась.
+- Не сделано в части 1: окна «Линия производства» и «Рынок лицензий», эмблемы институтов, кадры и PASS ui-art-director, ревью reviewer.

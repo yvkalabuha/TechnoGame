@@ -1,0 +1,256 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using Singularity.Client.Spike;
+using Singularity.Core.Commands;
+using Singularity.Core.Data;
+using Singularity.Core.Policy;
+using Singularity.Kernel;
+using Singularity.Session;
+using Xunit;
+
+namespace Singularity.Client.Audio.Tests;
+
+/// <summary>TASK-0156 part 1: the display scale of money, the pure models of the budget and institute windows, the locale tables.</summary>
+public class LeverModelTests
+{
+    static string Root()
+    {
+        string? d = AppContext.BaseDirectory;
+        while (d != null && !File.Exists(Path.Combine(d, "Singularity.sln"))) d = Path.GetDirectoryName(d);
+        return d ?? throw new InvalidOperationException("repo root not found");
+    }
+
+    static MoneyFormat.Scale Scale() => MoneyFormat.Parse(File.ReadAllText(Path.Combine(Root(), "src", "Singularity.Client.Spike", "data", "dollars_1990.json")));
+    static string Nbsp => ((char)160).ToString();
+
+    [Fact]
+    public void K_IsInTheDataWithItsSource_AndMatchesTheDeflatorRatio()
+    {
+        var s = Scale();
+        Assert.Equal(0.64828, s.K);
+        Assert.Contains("BEA", s.Source);
+        Assert.Equal(59.305 / 91.481, s.K, 4);
+        Assert.Equal(389.04, s.Million1990PerIndex, 1);   // dollars-1990.md and budget-money-display.md §1
+    }
+
+    [Fact]
+    public void Format_FollowsTheThresholdsOfTheDesignDocument()
+    {
+        Assert.Equal("$850" + Nbsp + "млн", MoneyFormat.Format(850, true, true));
+        Assert.Equal("$30,6" + Nbsp + "млрд", MoneyFormat.Format(30_600, true, true));
+        Assert.Equal("$30.6" + Nbsp + "B", MoneyFormat.Format(30_600, false, false));
+        Assert.Equal("$31" + Nbsp + "млрд", MoneyFormat.Format(31_000, true, true).Replace(",0", ""));
+        Assert.Equal("$150" + Nbsp + "млрд", MoneyFormat.Format(150_400, true, true));
+        Assert.Equal("$1,5" + Nbsp + "трлн", MoneyFormat.Format(1_458_000, true, true));
+        Assert.Equal("$1" + Nbsp + "млрд", MoneyFormat.Format(999.6, true, true).Replace("1,0", "1"));
+    }
+
+    [Fact]
+    public void Format_RoundsBeforeChoosingTheUnit()
+    {
+        // 999.6 million is 1 000 million after rounding, so it reads in billions and never as «$1000 млн»
+        Assert.DoesNotContain("1000", MoneyFormat.Format(999.6, true, true));
+        Assert.StartsWith("$1,0", MoneyFormat.Format(999.6, true, true));
+        Assert.Equal("$0" + Nbsp + "млн", MoneyFormat.Format(0.2, true, true));
+    }
+
+    [Fact]
+    public void UsaBudget1945_IsAboutFourPointSevenBillionAYear()
+    {
+        // budget-money-display.md §1: one index a month = 389 million 1990 dollars; USA 1945 ≈ 1 index
+        double m = MoneyFormat.Million1990PerYear(1.0, Scale());
+        Assert.InRange(m, 4_600, 4_750);
+    }
+
+    static string Fmt(double m) => MoneyFormat.Format(m, true, true);
+
+    static BudgetShares Shares(int r, int cap, int eff, int proc, int q) =>
+        new(Fx6.FromRaw(r * 10_000L), Fx6.FromRaw(cap * 10_000L), Fx6.FromRaw(eff * 10_000L), Fx6.FromRaw(proc * 10_000L), Fx6.FromRaw(q * 10_000L));
+
+    static ActorInputsView Inputs(BudgetShares s, double budget, ReserveView? reserve) =>
+        new(0, Fx6.FromRaw((long)(budget * 1_000_000)), s, Fx6.Zero, default!, default, default, null, reserve);
+
+    [Fact]
+    public void Budget_NoInputs_IsNoData_NotZero()
+    {
+        var m = BudgetWindowModel.Build(null!, null, false, Scale(), Fmt);
+        Assert.False(m.HasData);
+        Assert.Equal("why.budget.nodata", m.ApplyDisabledKey);
+    }
+
+    [Fact]
+    public void Budget_Rows_CarryPercentAndMoney_AndTheRestIsTheReserve()
+    {
+        var inp = Inputs(Shares(28, 15, 10, 42, 5), 1.0, new ReserveView(Fx6.FromRaw(2_000_000), Fx6.Zero, Fx6.FromRaw(16_000)));
+        var m = BudgetWindowModel.Build(inp, new[] { 28, 10, 30 }, false, Scale(), Fmt);
+        Assert.True(m.HasData);
+        Assert.Equal(20, m.OtherPct);        // tooling and quality: shown as one grey line
+        Assert.Equal(12, m.ReservePct);      // 100 - 20 - 68
+        Assert.Equal(3, m.Rows.Length);
+        Assert.Equal(-12, m.Rows[BudgetWindowModel.Procurement].DeltaPp);
+        Assert.True(m.Changed);
+        Assert.Equal("", m.ApplyDisabledKey);
+        Assert.Equal(m.TotalYearMillion * 0.28, m.Rows[0].YearMillion, 6);
+        Assert.Equal(3, m.Forecast.Length);
+        Assert.True(m.ReserveOn);
+    }
+
+    [Fact]
+    public void Budget_Unchanged_DisablesApply_WithAReason()
+    {
+        var inp = Inputs(Shares(28, 15, 10, 42, 5), 1.0, null);
+        var m = BudgetWindowModel.Build(inp, null, false, Scale(), Fmt);
+        Assert.False(m.Changed);
+        Assert.Equal("why.budget.nochange", m.ApplyDisabledKey);
+        Assert.False(m.ReserveOn);
+        Assert.Equal(0, m.ReservePct);
+    }
+
+    [Fact]
+    public void Budget_Limit_StopsAtOneHundredPercentWithTheHiddenItems()
+    {
+        var s = Shares(28, 15, 10, 42, 5);
+        Assert.Equal(28, BudgetWindowModel.MaxFor(s, new[] { 28, 10, 42 }, 0));   // 100 - 20 hidden - 10 - 42
+        var m = BudgetWindowModel.Build(Inputs(s, 1.0, null), new[] { 28, 10, 42 }, false, Scale(), Fmt);
+        Assert.True(m.Rows[0].AtLimit);
+        Assert.Equal(0, m.ReservePct);
+    }
+
+    [Fact]
+    public void Budget_ToShares_KeepsTheHiddenItemsExactly()
+    {
+        var s = new BudgetShares(Fx6.FromRaw(280_000), Fx6.FromRaw(153_333), Fx6.FromRaw(100_000), Fx6.FromRaw(420_000), Fx6.FromRaw(46_667));
+        var n = BudgetWindowModel.ToShares(s, new[] { 30, 10, 40 });
+        Assert.Equal(s.Capability, n.Capability);
+        Assert.Equal(s.Quality, n.Quality);
+        Assert.Equal(300_000, n.Research.Raw);
+        Assert.True(n.IsValidWithReserve);
+    }
+
+    [Fact]
+    public void Budget_EffortBelowTheThreshold_WarnsInAWordNotOnlyColour()
+    {
+        var m = BudgetWindowModel.Build(Inputs(Shares(28, 15, 10, 42, 5), 1.0, null), new[] { 28, 5, 42 }, false, Scale(), Fmt);
+        Assert.True(m.EffortStop);
+        Assert.True(m.Rows[BudgetWindowModel.Mastery].Stop);
+        Assert.False(m.Rows[BudgetWindowModel.Science].Stop);
+    }
+
+    [Fact]
+    public void Budget_ForeignPower_IsViewOnly()
+    {
+        var m = BudgetWindowModel.Build(Inputs(Shares(28, 15, 10, 42, 5), 1.0, null), new[] { 30, 10, 40 }, true, Scale(), Fmt);
+        Assert.False(m.Editable);
+        Assert.Equal("why.budget.foreign", m.ApplyDisabledKey);
+    }
+
+    [Theory]
+    [InlineData("sig.alloy", true, 3, true, true)]
+    [InlineData("sig.alloy", false, 3, true, false)]   // a signal going off pauses nothing
+    [InlineData("sig.refusal", true, 0, true, false)]   // already paused
+    [InlineData("sig.refusal", true, 2, false, false)]  // switched off
+    [InlineData("sig.war", true, 2, true, false)]        // not an event of this list
+    public void AutoPause_OnlyForANewEventOfARunningGame(string key, bool on, int speed, bool enabled, bool expected) =>
+        Assert.Equal(expected, AutoPauseLogic.ShouldPause(key, on, speed, enabled));
+
+    [Fact]
+    public void DisabledButtonText_HasFourPointFiveToOneOnPaperAndOnTheTexture()
+    {
+        // DEBT-0095 / TASK-0149 remainder: the text of a grey button (the focus order button) must read. The paper texture darkens the paper up to about 6 %.
+        var text = ColorMath.FromHex(Palette.DisabledText);
+        foreach (double k in new[] { 1.0, 0.94 })
+        {
+            Assert.True(ColorMath.Contrast(text, ColorMath.FromHex(Palette.C.Paper, k)) >= 4.5, $"paper x{k}");
+            Assert.True(ColorMath.Contrast(text, ColorMath.FromHex(Palette.C.Sheet, k)) >= 4.5, $"sheet x{k}");
+        }
+    }
+
+    [Fact]
+    public void EngineGenerationLimit_NamesTheNodeToStudy()
+    {
+        var ll = new Singularity.Core.WhyNot.Link(Singularity.Core.WhyNot.WhyNotLayer.Product, Singularity.Core.WhyNot.WhyNotCause.EngineGenLimit, 42, Fx6.One, Fx6.One, default, Fx6.Zero, null, Slot: 1);
+        Assert.Equal(42, WhyLines.SubjectNode(ll));
+        var kn = new Singularity.Core.WhyNot.Link(Singularity.Core.WhyNot.WhyNotLayer.Knowledge, Singularity.Core.WhyNot.WhyNotCause.MissingNode, 7, Fx6.One, Fx6.One, default, Fx6.Zero, null);
+        Assert.Equal(7, WhyLines.SubjectNode(kn));
+    }
+
+    // The run-time check of the rule «fixture and live path share one function» (TASK-0111): a real session, the real view.
+    [Fact]
+    public void RealSession_FeedsBothModels_AndTheFirstGoalOrderIsAccepted()
+    {
+        GameData data = ModLoader.Load(Path.Combine(Root(), "mods", "core"));
+        int usa = data.Scenarios[0].ActorIndex("USA");
+        var cfg = ClientRun.Config(data, Root(), 7, "USA");
+        Assert.Equal(usa, cfg.PlayerActor);
+        var s = SliceSession.Create(data, cfg);
+        for (long t = 0; t < 14; t++) s.StepThroughMonth(t);
+        var scale = Scale();
+        ActorView a = s.View.Actors.First(x => x.Actor == usa);
+        ActorInputsView inp = s.View.Inputs!.Actors.First(x => x.Actor == usa);
+
+        BudgetModel b = BudgetWindowModel.Build(inp, null, false, scale, Fmt);
+        Assert.True(b.HasData);
+        Assert.True(b.ReserveOn);
+        Assert.True(b.TotalYearMillion > 1_000, "the USA budget is billions of 1990 dollars a year");
+
+        double research = inp.Budget.ToDouble() * inp.Shares.Research.ToDouble();
+        var m = InstitutesWindowModel.Build(a, 1946, s.View.Month, research, scale, n => "node" + n, n => 0);
+        Assert.True(m.Enabled);
+        Assert.NotEmpty(m.Standing);
+        foreach (var c in m.Candidates.Where(c => c.State == InstituteState.Candidate))
+        {
+            Assert.True(c.CostTotalMillion > 0, c.Id);
+            Assert.True(c.BuildMonths >= 24, c.Id);
+            Assert.True(c.CostPerYearMillion > 0, c.Id);
+        }
+        var row = m.Standing.FirstOrDefault(r => r.Options.Length > 0);
+        if (row != null)
+        {
+            var v = s.Submit(Singularity.Core.Commands.SourceClass.Player, 0, 1, new SetPriorityNode(usa, row.Slot, row.Options[0].Node));
+            Assert.True(v.Accepted, v.Message);
+        }
+    }
+
+    // DEBT-0095: a comma inside a field needs quotes, else the Russian text is cut at the comma (two messages were).
+    [Theory]
+    [InlineData("ui.csv")]
+    [InlineData("data.csv")]
+    public void LocaleTables_EveryRowHasKeyEnAndRu(string name)
+    {
+        string text = File.ReadAllText(Path.Combine(Root(), "src", "Singularity.Client.Spike", "locale", name), Encoding.UTF8);
+        var rows = Parse(text);
+        foreach (var r in rows.Skip(1))
+        {
+            if (r.Count == 1 && r[0] == "") continue;
+            Assert.True(r.Count == 3, $"{name}: key '{r[0]}' has {r.Count} fields (a comma without quotes?)");
+        }
+    }
+
+    [Fact]
+    public void LocaleTables_HaveTheKeysOfTheNewWindows()
+    {
+        var rows = Parse(File.ReadAllText(Path.Combine(Root(), "src", "Singularity.Client.Spike", "locale", "ui.csv"), Encoding.UTF8));
+        var keys = rows.Select(r => r[0]).ToHashSet();
+        foreach (var k in new[] { "why.budget.nochange", "why.inst.early", "why.inst.building", "refusal.PriorityTooSoon", "refusal.BuildRefused", "lever.budget.title", "lever.inst.title" })
+            Assert.Contains(k, keys);
+    }
+
+    static List<List<string>> Parse(string text)
+    {
+        var rows = new List<List<string>>(); var row = new List<string>(); var sb = new StringBuilder(); bool q = false;
+        for (int i = 0; i < text.Length; i++)
+        {
+            char c = text[i];
+            if (q) { if (c == '"') { if (i + 1 < text.Length && text[i + 1] == '"') { sb.Append('"'); i++; } else q = false; } else sb.Append(c); }
+            else if (c == '"') q = true;
+            else if (c == ',') { row.Add(sb.ToString()); sb.Clear(); }
+            else if (c == '\n') { row.Add(sb.ToString()); sb.Clear(); rows.Add(row); row = new List<string>(); }
+            else if (c != '\r') sb.Append(c);
+        }
+        if (sb.Length > 0 || row.Count > 0) { row.Add(sb.ToString()); rows.Add(row); }
+        return rows;
+    }
+}

@@ -314,3 +314,30 @@ nodeshort.prn.programmable_signal_processing,Programmable signal processing,Об
 nodeshort.cmp.high_modulus_fibre,High-modulus fibre,Волокно
 nodeshort.prn.rcs_computational_prediction,Computational RCS prediction,Расчёт ЭПР
 nodeshort.eng.integrated_avionics_architecture,Integrated avionics architecture,Авионика
+institute.usa_naca,NACA (National Advisory Committee for Aeronautics),NACA (Национальный консультативный комитет по аэронавтике)
+institute.usa_wright_field,Wright Field,Райт-Филд (авиационный центр ВВС)
+institute.usa_ge_research,GE Research,Исследовательская лаборатория General Electric
+institute.usa_westinghouse_agt,Westinghouse Aviation Gas Turbine Division,Отдел авиационных газовых турбин Westinghouse
+institute.usa_nrl,Naval Research Laboratory,Научно-исследовательская лаборатория ВМС США
+institute.usa_galcit_jpl,GALCIT and JPL (rocket research),GALCIT и JPL (ракетные исследования)
+institute.gbr_rae,Royal Aircraft Establishment,Королевское авиационное исследовательское учреждение (RAE)
+institute.gbr_power_jets_ngte,Power Jets and the gas turbine establishment,Power Jets и газотурбинный институт
+institute.gbr_npl,National Physical Laboratory,Национальная физическая лаборатория
+institute.sun_tsagi,TsAGI (Central Aerohydrodynamic Institute),ЦАГИ (Центральный аэрогидродинамический институт)
+institute.sun_ciam,TsIAM (Central Institute of Aviation Motors),ЦИАМ (Центральный институт авиационного моторостроения)
+institute.sun_viam,VIAM (All-Russian Institute of Aviation Materials),ВИАМ (Всесоюзный институт авиационных материалов)
+institute.sun_rnii,RNII (Reactive Scientific Research Institute),РНИИ (Реактивный научно-исследовательский институт)
+institute.sun_lii,LII (Flight Research Institute),ЛИИ (Лётно-исследовательский институт)
+institute.sun_icp,Institute of Chemical Physics,Институт химической физики
+institute.fra_stae,STAé (Technical Service of Aeronautics),STAé (Техническая служба аэронавтики)
+institute.fra_cnrs,CNRS (National Centre for Scientific Research),CNRS (Национальный центр научных исследований)
+institute.fra_cea,CEA (Atomic Energy Commission),CEA (Комиссариат по атомной энергии)
+institute.swe_ffa,FFA (Aeronautical Research Institute),FFA (Институт авиационных исследований)
+institute.swe_saab,Saab research,Исследовательский отдел Saab
+institute.swe_foa,FOA (Defence Research Establishment),FOA (Институт оборонных исследований)
+institute.swe_flygmotor,Flygmotor (aircraft engines),Flygmotor (авиационные двигатели)
+institute.fra_onera,ONERA (aerospace research office),ONERA (Национальное бюро аэрокосмических исследований)
+institute.sun_nii,Soviet research institute (NII),Советский НИИ
+institute.gbr_rre,Rolls-Royce research,Исследовательский отдел Rolls-Royce
+institute.usa_darpa,DARPA (Advanced Research Projects Agency),DARPA (Агентство перспективных исследовательских проектов)
+institute.fra_cnes,CNES (space agency),CNES (космическое агентство)
