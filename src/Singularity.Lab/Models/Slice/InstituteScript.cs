@@ -224,7 +224,7 @@ internal sealed class InstituteScript
                     take += (_inst.Parameters.UpkeepPerLevel * Fx6.FromInt(l.TotalLevels(h))).Raw;
                 if (!_inst.Building(h))
                     continue;
-                Fx6 rate = _inst.BuildRate(h, _inst.BuildStart(h));
+                Fx6 rate = _inst.BuildRate(h, month);
                 take += rate.Raw;
                 running++;
                 _paid[a * _slots + k] += (rate * money).Raw;
