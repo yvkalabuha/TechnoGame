@@ -33,6 +33,7 @@ docs/game-design/PLAYER_LEVERS_WAVE1.md и docs/game-design/economy/production-l
 - Gemini (запись visual-TASK-0149-81d8eda3): сплав — свой значок (слиток/полоса запаса), не колба; «себест.» полностью и с единицами, «готовность» в %, «скорость выпуска» в ед./мес.; убрать «в M1» из карточки производства.
 
 ## Критерии приёмки
+- [ ] Коэффициент долларов 1990 K = 0,64828 с источником (BEA NIPA, PD; `docs/game-design/economy/dollars-1990.md`) лежит в данных и читается `MoneyFormat` (O-079)
 - [ ] Кадры 1920x1080 100 %, ui-art-director PASS
 - [ ] reviewer APPROVE
 - [ ] Партия владельца на сборке (#474)

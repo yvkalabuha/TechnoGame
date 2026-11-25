@@ -169,8 +169,8 @@
 | [TASK-0151](../development/tasks/TASK-0151-levers-core-goals.md) | IN_PROGRESS | Player levers core: research priorities through institutes (slots, funding first x1.5, institute bonus, capacity, upkeep, building institutes) | MS-M05 |
 | [TASK-0152](../development/tasks/TASK-0152-levers-core-licence-market.md) | DONE | Player levers core: licence market (multi-licence state, seller catalogue, BuyLicence, AdoptLicensedDesign, AI price rule, selling own projects) | MS-M05 |
 | [TASK-0153](../development/tasks/TASK-0153-levers-core-ai-adviser.md) | IN_PROGRESS | Player levers core: AI adviser for the player country production (no AI opening or closing of player lines) | MS-M05 |
-| [TASK-0154](../development/tasks/TASK-0154-alliances-data.md) | REVIEW | Data: alliances and blocs by year 1945-2030 for the licence buyer circle | MS-M05 |
-| [TASK-0155](../development/tasks/TASK-0155-dollars-1990-series.md) | REVIEW | Data: constant 1990 US dollar display series and conversion from Core money unit | MS-M05 |
+| [TASK-0154](../development/tasks/TASK-0154-alliances-data.md) | DONE | Data: alliances and blocs by year 1945-2030 for the licence buyer circle | MS-M05 |
+| [TASK-0155](../development/tasks/TASK-0155-dollars-1990-series.md) | DONE | Data: constant 1990 US dollar display series and conversion from Core money unit | MS-M05 |
 | [TASK-0156](../development/tasks/TASK-0156-levers-client-windows.md) | APPROVED | Player levers client: research goals, budget in money with reserve, production line window, licence market window | MS-M05 |
 | [TASK-0157](../development/tasks/TASK-0157-node-effects-history.md) | DONE | Node content: effects in numbers and short history with sources for all 99 knowledge nodes (#486) | MS-M05 |
 | [TASK-0158](../development/tasks/TASK-0158-silent-filtered-shots.md) | DONE | Client shot runs: silent by default and a frame filter (only the frames a task needs) | MS-M05 |
@@ -185,6 +185,7 @@
 | [TASK-0167](../development/tasks/TASK-0167-political-map-palette.md) | APPROVED | Globe colours by political-map traditions (#527): fixed tones for great powers, colony = metropolis tint | MS-M05 |
 | [TASK-0168](../development/tasks/TASK-0168-terrain-bake.md) | IN_PROGRESS | Terrain M1: download sources, bake per-province terrain and rivers, 1945 corrections (#528, #533-#536) | MS-M1 |
 | [TASK-0169](../development/tasks/TASK-0169-red-ci-sketch-order.md) | IN_PROGRESS | Red CI: sketch validates task id and count before opening the sandbox Box | MS-M0 |
+| [TASK-0170](../development/tasks/TASK-0170-alliances-friend-pairs.md) | APPROVED | Data: friend pairs FRA-SUN 1945-1955 and GBR-FRA from 1947 in alliances.yaml, checked against treaty texts | MS-M0 |
 
 ## Гипотезы
 
