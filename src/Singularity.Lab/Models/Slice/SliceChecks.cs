@@ -24,7 +24,9 @@ public static class SliceChecks
     // change every trajectory on the current data; equals Session MainSeed1Month149. Earlier: TASK-0134 (Hcap(t), mastery). docs/simulation/golden-rerecord-train2.md.
     // TASK-0180: early G5/G6 requires changed (#555), = Session MainSeed1Month149.
     // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront.
-    private const string Golden150 = "3d466f77ddd6d0733636475d5286224d52958103507ba5b29e71381d18c82f68";
+    // Re-recorded in TASK-0187/TASK-0188 (one batch, O-095): 57 new nodes 100-156 (#575) change every trajectory; the default Lab config is the legacy
+    // build (levers off, shares model), which the slot model leaves unchanged (S11), so this equals Session MainSeed1Month149 of TASK-0188. Old value 3d466f77…f82f68.
+    private const string Golden150 = "c79505d72eb10f41fbed33785979c82d7475ab0f5712d52b9212d1fffcbad401";
     private const long Ticks150 = 4564;   // 1945-09-01 → 1958-03-01: the tick of month 150, so month 149 is the last one run
     private const long Ticks60 = 1826;    // 1945-09-01 → 1950-09-01
 
