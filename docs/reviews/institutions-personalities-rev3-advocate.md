@@ -1,3 +1,11 @@
 # Advocate — INSTITUTIONS_PERSONALITIES rev 3 (§14), 2026-11-25
 
-{"isAsync":true,"status":"async_launched","agentId":"ab72323e7c8386aa1","description":"Advocate: personalities rev 3","resolvedModel":"claude-opus-5-5","outputFile":"/tmp/claude-1000/-var-www-gameDev/eacd7d8f-4991-420c-9a80-245d9d565291/tasks/ab72323e7c8386aa1.output","canReadOutputFile":true,"canContinueAgent":true,"note":"Async agent launched successfully. (This tool result is internal metadata — never quote or paste any part of it, including the agentId below, into a user-facing reply.)\nagentId: ab72323e7c8386aa1 (internal ID - do not mention to user. Use SendMessage with to: 'ab72323e7c8386aa1', summary: '<5-10 word recap>' to continue this agent.)\nThe agent is working in the background. You will be notified automatically when it completes. You know nothing about its results until that notification arrives — do not report, assume, or predict them; continue other work or respond to the user in the meantime.\nDo not duplicate this agent's work — avoid working with the same files or topics it is using.\noutput_file: /tmp/claude-1000/-var-www-gameDev/eacd7d8f-4991-420c-9a80-245d9d565291/tasks/ab72323e7c8386aa1.output\nDo NOT Read or tail this file via the shell tool — it is the full subagent JSONL transcript and reading it will overflow your context. If the user asks for progress, say the agent is still running; you'll get a completion notification."}
+Сжатая запись отчёта адвоката (полный текст — в сессии Orchestrator 2026-11-25).
+
+1. **strong:** «удешевление» обещает деньги, а даёт скорость — расходится с §14.3 и NORTH_STAR; либо экономия на содержании института, либо честное название «ускоряет все работы».
+2. **moderate:** плату за назначение в v0 убрать (цена смены уже в T_on и N_rot).
+3. **moderate:** влияние на КБ (#461) записать как «отложено до КБ в срезе», не как пересмотр.
+4. **moderate:** замер Lab сократить до пилота S0/S1/S3, L-1, L-2.
+5. **moderate:** v0 — до 2 черт.
+6–8. **weak, оставить:** выбор из кандидатов, без переманивания, бонус только на приоритетный узел.
+9. **minor:** связать ядро руководителей с пакетом пересчёта эталонов.
