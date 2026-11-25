@@ -133,7 +133,7 @@ internal static class ViewBuilder
             for (int d = 0; d < inst.Layout.DisciplineNames.Length; d++)
                 levels.Add(inst.Level(h, d));
             long start = inst.BuildStart(h);
-            list.Add(new InstituteView(k, inst.Layout.IdOf(h), inst.Standing(h), inst.GoalNode(h), levels.MoveToImmutable(), start, inst.BuildMonths(h),
+            list.Add(new InstituteView(k, inst.Layout.IdOf(h), inst.Standing(h), HiddenFromPlayer(w, a) ? 0 : inst.GoalNode(h), levels.MoveToImmutable(), start, inst.BuildMonths(h),
                 start >= 0 ? inst.BuildRate(h, start) : Fx6.Zero, inst.Layout.RefYear(h), inst.Layout.TotalLevels(h),
                 advise ? goals[k] : 0, advise && builds[k]));
         }

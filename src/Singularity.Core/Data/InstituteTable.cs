@@ -106,7 +106,8 @@ public sealed class InstituteTable
             YMap areas = Scalars.Map(m.Required("areas"));
             if (areas.Entries.Count == 0)
                 throw DataLoadException.At(areas, $"institute '{key}' has no area");
-            foreach (KeyValuePair<string, YNode> e in areas.Entries)
+            // Canonical order (by discipline ID): the key order in the file must not change the hash.
+            foreach (KeyValuePair<string, YNode> e in areas.Entries.OrderBy(x => x.Key, StringComparer.Ordinal))
             {
                 int l = Scalars.Int(e.Value);
                 if (l is < 1 or > MaxLevel)

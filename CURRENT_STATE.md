@@ -29,7 +29,8 @@
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0156 [APPROVED] Player levers client: research goals, budget in money with reserve, production line window, licence market window (developer)
 - TASK-0167 [APPROVED] Globe colours by political-map traditions (#527): fixed tones for great powers, colony = metropolis tint (developer)
-- TASK-0170 [APPROVED] Data: friend pairs FRA-SUN 1945-1955 and GBR-FRA from 1947 in alliances.yaml, checked against treaty texts (research-scientist)
+- TASK-0171 [APPROVED] Golden batch: turn on Reserve, Institutes, LicenceMarket, Adviser, Intelligence by default; re-record goldens once with explanation (developer)
+- TASK-0173 [APPROVED] Lab: P-7 build-everything-early does not dominate (years of key nodes) and project limit check, before flags on (simulation-engineer)
 <!-- registry:active:end -->
 
 ## Блокеры

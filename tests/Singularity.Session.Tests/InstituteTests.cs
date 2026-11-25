@@ -462,6 +462,28 @@ public class InstituteTests
         Assert.Equal(InstituteMath.BuildRate(3, years, P), inst.BuildRate(h, 28));
     }
 
+    // Codex round 2: a run whose knowledge is a schedule refuses priority orders; the player does not see the goals of the others.
+    [Fact]
+    public void ScheduledKnowledge_RefusesPriorityOrders()
+    {
+        var limits = new CommandLimits(3, 1, 1, []) { InstituteSlots = [2, 2, 2], NodeNumbers = [47], ScheduledKnowledge = true };
+        var logged = new LoggedCommand(new CommandKey(5, SourceClass.Player, 0, 3), new SetPriorityNode(2, 1, 47));
+        Assert.Equal(CommandRefusal.PriorityNoEffect, CommandValidator.CheckForm(logged, limits).Reason);
+        Assert.True(CommandValidator.CheckForm(logged, limits with { ScheduledKnowledge = false }).Accepted);
+    }
+
+    [Fact]
+    public void PlayerView_HidesTheGoalsOfOtherActors_WithIntelligence()
+    {
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, Intelligence = true, PlayerActor = 3 });
+        InstituteSystem inst = s.World.Institutes!;
+        int other = (3 + 1) % s.World.Scenario.ActorCount;
+        for (long t = 0; t < 40; t++)
+            s.StepThroughMonth(t);
+        Assert.Contains(Enumerable.Range(0, inst.Layout.SlotCount(other)), k => inst.GoalNode(new InstituteHandle(other, k)) != 0);
+        Assert.All(s.View.Actors[other].Institutes, v => Assert.Equal(0, v.Goal));
+    }
+
     // O-067: the AI does not touch the actor of the player; it proposes in the view.
     [Fact]
     public void PlayerActor_GetsProposalsButNoAiGoalsOrProjects()

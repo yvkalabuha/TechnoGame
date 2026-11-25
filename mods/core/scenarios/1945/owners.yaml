@@ -339,8 +339,8 @@ defaults:
   - {region: solomon_islands, owner: GBR, controller: GBR, status: protectorate, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: somalia, owner: ITA, controller: GBR, status: colony, confidence: M, source: "owners-1945-world.md: K1, K6"}
   - {region: somaliland, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
-  - {region: south_africa_free_state, owner: ZAF, controller: ZAF, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
-  - {region: south_africa_northern_cape, owner: ZAF, controller: ZAF, status: colony, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: south_africa_free_state, owner: ZAF, controller: ZAF, status: core, confidence: H, source: "owners-1945-world.md: K2"}
+  - {region: south_africa_northern_cape, owner: ZAF, controller: ZAF, status: core, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: south_georgia_and_the_islands, owner: GBR, controller: GBR, status: colony, confidence: H, source: "owners-1945-world.md: K1"}
   - {region: spain, owner: ESP, controller: ESP, status: core, confidence: H, source: "owners-1945-world.md: K2"}
   - {region: spratly_is, owner: null, controller: JPN, status: unclaimed, confidence: L, source: "owners-1945-world.md: K3; #401: no owner (terra nullius), Japanese garrison until repatriation"}

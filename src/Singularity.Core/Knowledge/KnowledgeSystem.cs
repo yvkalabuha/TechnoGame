@@ -297,6 +297,8 @@ public sealed class KnowledgeSystem : ITickSystem
     {
         Span<long> w = _n <= 512 ? stackalloc long[_n] : new long[_n]; // heap only above 512 nodes: callers include view building (WhyNot), so no shared scratch
         w.Clear();
+        Span<sbyte> group = _n <= 512 ? stackalloc sbyte[_n] : new sbyte[_n];
+        BuildGroups(a, goalRows, group);
         Fx6 wsum = Fx6.Zero;
         foreach (int r in _g.Order)
         {
@@ -309,32 +311,30 @@ public sealed class KnowledgeSystem : ITickSystem
         if (wsum == Fx6.Zero)
             return Fx6.Zero;
         Fx6 s = _inputs.ResearchBudget(a, t);
-        PriorityPlan plan = PlanOf(a, s, wsum, goalRows, w);
-        Fx6 alloc = AllocOf(a, nodeRow, s, Fx6.FromRaw(w[nodeRow]), wsum, plan, goalRows);
+        PriorityPlan plan = PlanOf(a, s, wsum, group, w);
+        Fx6 alloc = AllocOf(nodeRow, s, Fx6.FromRaw(w[nodeRow]), wsum, plan, group);
         return alloc * GoalMultiplier(nodeRow, goalRows, goalMult) / CEff(a, nodeRow, t);
     }
 
     /// <summary>What the priority groups of an actor change in one month: the common multiplier and the money left for the others.</summary>
     private readonly record struct PriorityPlan(Fx6 Kappa, Fx6 OthersPool, Fx6 OthersWeight);
 
-    // Group of a node: the first goal whose path (the unknown requirements of the goal in the frontier) holds it, or −1.
-    private int GroupOf(int a, int r, ReadOnlySpan<int> goalRows)
+    // Fills group[r] with the first goal whose path (the unknown requirements of the goal in the frontier) holds r, or −1.
+    // One walk per goal with a visited mark (a node already grouped is not walked again: its requirements belong to the same or an earlier goal).
+    private void BuildGroups(int a, ReadOnlySpan<int> goalRows, Span<sbyte> group)
     {
+        group.Fill(-1);
         for (int j = 0; j < goalRows.Length; j++)
-        {
-            if (goalRows[j] == r || OnPath(a, goalRows[j], r))
-                return j;
-        }
-        return -1;
+            MarkPath(a, goalRows[j], (sbyte)j, group);
     }
 
-    // target lies among the unknown requirements of from (an alternative group with a known member is satisfied and not walked).
-    private bool OnPath(int a, int from, int target)
+    private void MarkPath(int a, int from, sbyte j, Span<sbyte> group)
     {
-        if (from == target)
-            return true;
+        if (group[from] >= 0)
+            return;
+        group[from] = j;
         if (IsKnown(a, from))
-            return false;
+            return;
         RequirementLists req = _g.Requires;
         for (int g = req.GroupStart[from]; g < req.GroupStart[from + 1]; g++)
         {
@@ -344,36 +344,32 @@ public sealed class KnowledgeSystem : ITickSystem
             if (satisfied)
                 continue;
             foreach (int m in req.GroupMembers(g))
-            {
-                if (OnPath(a, m, target))
-                    return true;
-            }
+                MarkPath(a, m, j, group);
         }
-        return false;
     }
 
-    private PriorityPlan PlanOf(int a, Fx6 s, Fx6 wsum, ReadOnlySpan<int> goalRows, ReadOnlySpan<long> w)
+    private PriorityPlan PlanOf(int a, Fx6 s, Fx6 wsum, ReadOnlySpan<sbyte> group, ReadOnlySpan<long> w)
     {
         Fx6 groupW = Fx6.Zero;
         foreach (int r in _g.Order)
         {
-            if (InFrontier(a, r) && GroupOf(a, r, goalRows) >= 0)
+            if (InFrontier(a, r) && group[r] >= 0)
                 groupW += Fx6.FromRaw(w[r]);
         }
         Fx6 kappa = Singularity.Core.Institutes.InstituteMath.KappaEff(wsum, groupW, _prio!);
         Fx6 spent = Fx6.Zero;
         foreach (int r in _g.Order)
         {
-            if (InFrontier(a, r) && GroupOf(a, r, goalRows) >= 0)
+            if (InFrontier(a, r) && group[r] >= 0)
                 spent += s * (Fx6.FromRaw(w[r]) / wsum) * kappa;
         }
         return new PriorityPlan(kappa, s - spent, wsum - groupW);
     }
 
     // Money of a frontier node: a group node gets kappa times its usual share; the others share what is left in the ratio of their weights.
-    private Fx6 AllocOf(int a, int r, Fx6 s, Fx6 w, Fx6 wsum, in PriorityPlan plan, ReadOnlySpan<int> goalRows)
+    private Fx6 AllocOf(int r, Fx6 s, Fx6 w, Fx6 wsum, in PriorityPlan plan, ReadOnlySpan<sbyte> group)
     {
-        if (GroupOf(a, r, goalRows) >= 0)
+        if (group[r] >= 0)
             return s * (w / wsum) * plan.Kappa;
         return plan.OthersWeight > Fx6.Zero ? plan.OthersPool * (w / plan.OthersWeight) : Fx6.Zero;
     }
@@ -558,7 +554,10 @@ public sealed class KnowledgeSystem : ITickSystem
         int goals = _prio is null ? 0 : _inputs.PriorityGoals(a, t, goalRows, goalMult);
         goalRows = goalRows[..goals];
         goalMult = goalMult[..goals];
-        PriorityPlan plan = goals == 0 || wsum == Fx6.Zero ? default : PlanOf(a, s, wsum, goalRows, new ReadOnlySpan<long>(_wraw, a * _n, _n));
+        Span<sbyte> group = _n <= 512 ? stackalloc sbyte[_n] : new sbyte[_n];
+        if (goals > 0)
+            BuildGroups(a, goalRows, group);
+        PriorityPlan plan = goals == 0 || wsum == Fx6.Zero ? default : PlanOf(a, s, wsum, group, new ReadOnlySpan<long>(_wraw, a * _n, _n));
 
         Fx6 spent = Fx6.Zero;
         foreach (int r in _g.Order)
@@ -567,7 +566,7 @@ public sealed class KnowledgeSystem : ITickSystem
             if (!_trace[a * _n + r].InFrontier || (wsum == Fx6.Zero && !funded))
                 continue;
             Fx6 wn = wsum == Fx6.Zero ? Fx6.Zero : Fx6.FromRaw(_wraw[a * _n + r]) / wsum;
-            Fx6 alloc = goals == 0 || wsum == Fx6.Zero ? s * wn : AllocOf(a, r, s, Fx6.FromRaw(_wraw[a * _n + r]), wsum, plan, goalRows);
+            Fx6 alloc = goals == 0 || wsum == Fx6.Zero ? s * wn : AllocOf(r, s, Fx6.FromRaw(_wraw[a * _n + r]), wsum, plan, group);
             if (goals > 0 && spent + alloc > s)
                 alloc = s - spent;   // rounding of the shares must never spend above the budget (I4)
             spent += alloc;

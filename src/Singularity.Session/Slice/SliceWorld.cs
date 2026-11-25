@@ -192,6 +192,7 @@ internal sealed class SliceWorld
         {
             ReserveEnabled = config.Reserve,
             InstituteSlots = Institutes is null ? [] : Institutes.Layout.SlotCounts,
+            ScheduledKnowledge = config.Layer is LayerControl.Lk or LayerControl.Lk0,
             IntelEnabled = config.Intelligence,
             FundEnabled = config.Reserve && config.Layer is not (LayerControl.Lk or LayerControl.Lk0),
             NodeNumbers = ImmutableArray.CreateRange(Graph.Number.OrderBy(n => n)),

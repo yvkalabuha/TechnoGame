@@ -13,8 +13,10 @@ public static class InstituteMath
     {
         if (groupWeight <= Fx6.Zero || wsum <= Fx6.Zero)
             return Fx6.One;
-        Fx6 cap = (Fx6.One - p.Rho) * wsum / groupWeight;
-        Fx6 k = cap < p.Kappa ? cap : p.Kappa;
+        Fx6 share = (Fx6.One - p.Rho) * wsum;
+        // The quotient can leave the Fx6 range with a tiny group weight; above kappa the cap does not bind, so decide in Int128 first.
+        Int128 quotient = (Int128)share.Raw * Fx6.Scale / groupWeight.Raw;
+        Fx6 k = quotient >= p.Kappa.Raw ? p.Kappa : share / groupWeight;
         return k > Fx6.One ? k : Fx6.One;
     }
 

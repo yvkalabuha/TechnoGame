@@ -90,6 +90,9 @@ public enum CommandRefusal
 
     /// <summary>At application: the project cannot start (standing, running, before its window, above the cap of a small country).</summary>
     BuildRefused,
+
+    /// <summary>A priority order in a run whose knowledge is a schedule (L_K, L_K0): the order cannot change research.</summary>
+    PriorityNoEffect,
 }
 
 public readonly record struct CommandVerdict(CommandRefusal Reason, string Message, int BestGenBefore = 0, int BestGenAfter = 0,
@@ -119,6 +122,9 @@ public sealed record CommandLimits(int ActorCount, int SlotCount, int Designs, I
 
     /// <summary>Institutes per actor row (<c>set_priority_node</c>); empty = the run has no institutes.</summary>
     public ImmutableArray<int> InstituteSlots { get; init; } = [];
+
+    /// <summary>Knowledge is a schedule (L_K, L_K0): priority orders are refused.</summary>
+    public bool ScheduledKnowledge { get; init; }
 
     /// <summary><c>compose</c>/<c>derive</c>/<c>cancel</c> commands one actor can have in force in one month (SLICE_COMPOSITION §7.3, [Предп.] О-5).</summary>
     public const int DesignSlots = 4;
@@ -187,6 +193,8 @@ public static class CommandValidator
             case SetPriorityNode pn:
                 if (limits.InstituteSlots.IsDefaultOrEmpty)
                     return CommandVerdict.Refuse(CommandRefusal.InstitutesOff, "this run has no institutes");
+                if (limits.ScheduledKnowledge)
+                    return CommandVerdict.Refuse(CommandRefusal.PriorityNoEffect, "knowledge follows a schedule in this run: a priority cannot change research");
                 if ((uint)pn.Actor >= (uint)limits.InstituteSlots.Length || (uint)pn.Slot >= (uint)limits.InstituteSlots[pn.Actor])
                     return CommandVerdict.Refuse(CommandRefusal.BadSlot, $"actor {pn.Actor} has no institute slot {pn.Slot}");
                 return limits.NodeNumbers.Contains(pn.Node)

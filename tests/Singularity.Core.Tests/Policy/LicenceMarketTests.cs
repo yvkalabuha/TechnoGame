@@ -442,6 +442,21 @@ public class LicenceMarketTests
     }
 
     [Fact]
+    public void Alliances_RealFile_FrancoSovietAndDunkirkFriends()
+    {
+        AllianceTable t = AllianceTable.Load(Path.Combine(Singularity.Core.Tests.Data.TestMods.CoreDir, "scenarios", "1945", "alliances.yaml"));
+        Assert.Equal("", t.BlocOf("SUN", 1954));
+        Assert.Equal("warsaw", t.BlocOf("SUN", 1955));
+        Assert.True(t.AreFriends("FRA", "SUN", 1950));
+        Assert.True(t.AreFriends("SUN", "FRA", 1955));
+        Assert.False(t.AreFriends("FRA", "SUN", 1956));
+        Assert.False(t.AreFriends("GBR", "FRA", 1946));
+        Assert.True(t.AreFriends("GBR", "FRA", 1947));
+        Assert.True(t.AreFriends("FRA", "GBR", 1997));
+        Assert.False(t.AreFriends("GBR", "FRA", 1998));
+    }
+
+    [Fact]
     public void Alliances_RealFile_LoadsAndAnswersByYear()
     {
         AllianceTable t = AllianceTable.Load(Path.Combine(Singularity.Core.Tests.Data.TestMods.CoreDir, "scenarios", "1945", "alliances.yaml"));
