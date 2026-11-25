@@ -165,7 +165,7 @@
 | [TASK-0147](../development/tasks/TASK-0147-ahead-of-time-cost.md) | DONE | Ahead-of-time cost for knowledge nodes in Core (#458) and G5/G6 rev 3.1 data on the train-2 branch | MS-M05 |
 | [TASK-0148](../development/tasks/TASK-0148-levers-lab-probes.md) | DONE | Player levers: Lab probes P1-P3 (budget items matter, reserve dominance, goal strategies) | MS-M05 |
 | [TASK-0149](../development/tasks/TASK-0149-levers-legibility-pace.md) | DONE | Player levers: client legibility pass and pace (plain labels instead of numbers and G-codes, speeds 0/1/3/7/30, default 3 days/s) | MS-M05 |
-| [TASK-0150](../development/tasks/TASK-0150-levers-core-reserve.md) | APPROVED | Player levers core: budget reserve account with 10 %/year leak, shares at most 1, FundProgramme | MS-M05 |
+| [TASK-0150](../development/tasks/TASK-0150-levers-core-reserve.md) | DONE | Player levers core: budget reserve account with 10 %/year leak, shares at most 1, FundProgramme | MS-M05 |
 | [TASK-0151](../development/tasks/TASK-0151-levers-core-goals.md) | IN_PROGRESS | Player levers core: research priorities through institutes (slots, funding first x1.5, institute bonus, capacity, upkeep, building institutes) | MS-M05 |
 | [TASK-0152](../development/tasks/TASK-0152-levers-core-licence-market.md) | IN_PROGRESS | Player levers core: licence market (multi-licence state, seller catalogue, BuyLicence, AdoptLicensedDesign, AI price rule, selling own projects) | MS-M05 |
 | [TASK-0153](../development/tasks/TASK-0153-levers-core-ai-adviser.md) | IN_PROGRESS | Player levers core: AI adviser for the player country production (no AI opening or closing of player lines) | MS-M05 |
@@ -175,8 +175,9 @@
 | [TASK-0157](../development/tasks/TASK-0157-node-effects-history.md) | IN_PROGRESS | Node content: effects in numbers and short history with sources for all 99 knowledge nodes (#486) | MS-M05 |
 | [TASK-0158](../development/tasks/TASK-0158-silent-filtered-shots.md) | DONE | Client shot runs: silent by default and a frame filter (only the frames a task needs) | MS-M05 |
 | [TASK-0159](../development/tasks/TASK-0159-review-rejections-visual-dir.md) | DONE | llm_worker: Codex review sees earlier rejected findings; visual accepts frames from the client shots-out | MS-M05 |
-| [TASK-0160](../development/tasks/TASK-0160-intelligence-v1-core.md) | APPROVED | Intelligence v1 core: security budget share, targets and modes, theft channel in CEff, counterintelligence, disinformation, confidence of estimates (#515) | MS-M05 |
+| [TASK-0160](../development/tasks/TASK-0160-intelligence-v1-core.md) | IN_PROGRESS | Intelligence v1 core: security budget share, targets and modes, theft channel in CEff, counterintelligence, disinformation, confidence of estimates (#515) | MS-M05 |
 | [TASK-0161](../development/tasks/TASK-0161-tree-year-rings.md) | IN_PROGRESS | Design pass 2 B: knowledge tree by year rings and direction sectors, 6 zoom steps, icons, node menu, prominent close (#473) | MS-M05 |
+| [TASK-0162](../development/tasks/TASK-0162-k0-kernel-primitives.md) | IN_PROGRESS | K0: Kernel primitives for the daily tick (DaySlice, Apportion, DayRate) per ADR-0027 §5 | MS-M1 |
 
 ## Гипотезы
 
@@ -231,9 +232,9 @@
 | [ADR-0024](../docs/decisions/ADR-0024-adr-0023-gc-pause-criterion.md) | PROPOSED | GC pause criterion instead of the gen2 counter (amendment to ADR-0023 p. 2.4) |
 | [ADR-0025](../docs/decisions/ADR-0025-view-snapshot-buffer-ring.md) | ACCEPTED | View snapshot: scoped client view |
 | [ADR-0026](../docs/decisions/ADR-0026-ai-generated-images.md) | ACCEPTED | AI-generated images as static illustrations (amendment to ADR-0009, #445) |
-| [ADR-0027](../docs/decisions/ADR-0027-daily-tick-228.md) | PROPOSED | Daily tick (#228): closable conditions of ADR-0019, decay and growth on Rate, parallel work with the player levers batch |
-| [ADR-0028](../docs/decisions/ADR-0028-m1-tick-budget.md) | PROPOSED | M1 tick budget: split revision after EXP-0007, one K_d definition, K4 thresholds for the 5-7 s speed floor, measurement ladder with pre-registered outcomes |
-| [ADR-0029](../docs/decisions/ADR-0029-entity-tables.md) | PROPOSED | Entity tables on the move to ADR-0020: which entities leave the actors table, child tables with parent-aligned chunks |
+| [ADR-0027](../docs/decisions/ADR-0027-daily-tick-228.md) | ACCEPTED | Daily tick (#228): closable conditions of ADR-0019, decay and growth on Rate, parallel work with the player levers batch |
+| [ADR-0028](../docs/decisions/ADR-0028-m1-tick-budget.md) | ACCEPTED | M1 tick budget: split revision after EXP-0007, one K_d definition, K4 thresholds for the 5-7 s speed floor, measurement ladder with pre-registered outcomes |
+| [ADR-0029](../docs/decisions/ADR-0029-entity-tables.md) | ACCEPTED | Entity tables on the move to ADR-0020: which entities leave the actors table, child tables with parent-aligned chunks |
 
 ## Research Reports
 

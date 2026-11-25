@@ -1,14 +1,14 @@
 ---
 id: ADR-0028
 title: "M1 tick budget: split revision after EXP-0007, one K_d definition, K4 thresholds for the 5-7 s speed floor, measurement ladder with pre-registered outcomes"
-status: PROPOSED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
+status: ACCEPTED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
 date: 2026-11-25
 supersedes:              # пусто намеренно: замена частичная, см. «Частично заменяет»
 superseded_by:
 related: [ADR-0027, ADR-0029, ADR-0016, ADR-0017, ADR-0019, ADR-0020, ADR-0022, ADR-0023, ADR-0025, MS-M1, EXP-0007]
-approved_by:
-approved_at:
-approval_ref:            # учтены #503, #504, #512, #513, #514; сам ADR ещё не утверждён
+approved_by: owner
+approved_at: 2026-11-25
+approval_ref: "#517"
 ---
 
 # ADR-0028 — Бюджет тика M1: пересмотр раздела после EXP-0007, одно определение `K_d`, пороги K4 под пол скорости 5–7 с, лестница замеров с заранее записанными исходами
