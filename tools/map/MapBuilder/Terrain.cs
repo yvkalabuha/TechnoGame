@@ -18,6 +18,16 @@ internal sealed class TerrainParams
     public int DesertPm { get; set; } = 500;
     public int ForestPm { get; set; } = 400;
     public int SteppePm { get; set; } = 400;
+    public List<NoDataCover> NoData { get; set; } = new();   // cover of provinces that lie outside every WorldCover tile
+}
+
+internal sealed class NoDataCover
+{
+    public string Province { get; set; } = "";
+    public Dictionary<string, int> Cover { get; set; } = new();   // permille by class name, sums to 1000
+    public string Note { get; set; } = "";
+    public string Source { get; set; } = "";
+    public string Accessed { get; set; } = "";
 }
 
 internal sealed class Correction
@@ -55,8 +65,8 @@ internal sealed class TerrainRow
 /// <summary>Terrain of every province from GMTED2010, ESA WorldCover and GLWD v2 (TASK-0168, #528): integer zonal statistics, then the 1945 corrections.</summary>
 internal static class Terrain
 {
-    public static readonly string[] CoverNames = { "forest", "swamp", "steppe", "farm", "desert", "tundra", "ice", "water" };
-    public const int Forest = 0, Swamp = 1, Steppe = 2, Farm = 3, Desert = 4, Tundra = 5, Ice = 6, Water = 7;
+    public static readonly string[] CoverNames = { "forest", "swamp", "steppe", "farm", "desert", "tundra", "ice", "water", "urban" };
+    public const int Forest = 0, Swamp = 1, Steppe = 2, Farm = 3, Desert = 4, Tundra = 5, Ice = 6, Water = 7, Urban = 8;
 
     /// <summary>Row-wise visit of the cells of a province.</summary>
     private static void Visit(List<Raster.Span> spans, IGrid[] grids, Action<int, int, int[][]> onRow)
@@ -95,17 +105,18 @@ internal static class Terrain
         });
     }
 
-    /// <summary>Wetland area from GLWD v2: relative wetland area per cell counted where the dominant class is a vegetated wetland (8..32).</summary>
-    public static void Wetland(Geometry shape, IGrid pct, IGrid main, long[] rowW, RawStats st)
+    /// <summary>Wetland area from GLWD v2: a cell counts fully where one vegetated wetland class (8..32) covers at least half of it (the main_class_50pct layer).
+    /// Mixed cells without such a class are left out, so wetland is slightly under-counted there; area_pct mixes in open water and rice, so it is only the validity mask.</summary>
+    public static void Wetland(Geometry shape, IGrid pct, IGrid main50, long[] rowW, RawStats st)
     {
-        Visit(SpansOrPoint(shape, pct.PerDeg), new[] { pct, main }, (y, n, b) =>
+        Visit(SpansOrPoint(shape, pct.PerDeg), new[] { pct, main50 }, (y, n, b) =>
         {
             long w = rowW[y];
             for (int i = 0; i < n; i++)
             {
-                if (b[0][i] == Raster.NoData || b[1][i] == Raster.NoData) continue;
+                if (b[0][i] == Raster.NoData) continue;
                 st.WetW += w;
-                if (b[1][i] is >= 8 and <= 32) st.WetPctSum += Math.Min(100, b[0][i]) * w;
+                if (b[1][i] is >= 8 and <= 32) st.WetPctSum += 100 * w;
             }
         });
     }
@@ -126,7 +137,8 @@ internal static class Terrain
                     10 => Forest,
                     95 or 90 => Swamp,
                     20 or 30 => arctic ? Tundra : Steppe,
-                    40 or 50 => Farm,
+                    40 => Farm,
+                    50 => Urban,
                     60 => arctic ? Tundra : Desert,
                     70 => Ice,
                     80 => Water,
@@ -197,6 +209,23 @@ internal static class Terrain
         return "plain";
     }
 
+    /// <summary>Provinces without any WorldCover cell take their cover from the documented list in spec/terrain.yaml; a province without data and without an entry fails the bake.</summary>
+    public static void ApplyNoData(IEnumerable<TerrainRow> rows, IReadOnlyList<NoDataCover> list)
+    {
+        foreach (var e in list)
+            if (e.Source.Length == 0 || e.Accessed.Length == 0 || e.Cover.Values.Sum() != 1000) throw new InvalidDataException($"no_data {e.Province}: source, access date and shares summing to 1000 are required");
+        foreach (var row in rows.Where(r => r.Cover.Sum() == 0))
+        {
+            var e = list.FirstOrDefault(x => x.Province == row.Id) ?? throw new InvalidDataException($"{row.Id}: no land cover data and no no_data entry in spec/terrain.yaml");
+            foreach (var (name, pm) in e.Cover.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+            {
+                int k = Array.IndexOf(CoverNames, name);
+                if (k < 0) throw new InvalidDataException($"no_data {e.Province}: unknown class '{name}'");
+                row.Cover[k] = pm;
+            }
+        }
+    }
+
     /// <summary>Applies the 1945 corrections: moves km2 of a province from one cover class to another. Returns warnings (a correction that did not fit).</summary>
     public static List<string> ApplyCorrections(IEnumerable<TerrainRow> rows, IReadOnlyDictionary<string, long> areaKm2, IEnumerable<Correction> list)
     {
@@ -220,7 +249,7 @@ internal static class Terrain
     {
         var sb = new StringBuilder("# Generated by tools/map 'terrain' (TASK-0168). Do not edit: rebuild with 'MapBuilder terrain'.\n");
         sb.Append("# elev_m: mean elevation, rugged_m: mean std-dev of elevation inside 1 km cells (GMTED2010). Shares are permille:\n");
-        sb.Append("# mountains and hills of land with elevation data; forest..water of the province area (WorldCover, GLWD wetlands, 1945 corrections) and sum to 1000.\n");
+        sb.Append("# mountains and hills of land with elevation data; forest..urban of the province area (WorldCover, GLWD wetlands, 1945 corrections) and sum to 1000.\n");
         sb.Append("terrain:\n");
         foreach (var r in rows.OrderBy(x => x.Id, StringComparer.Ordinal))
         {
@@ -244,7 +273,8 @@ internal static class Terrain
         var wc = Src("worldcover_2021");
         var wcDir = TerrainSources.Dir(o.Cache, wc.Id);
         var wcTiles = TerrainSources.Tiles(lk, o.Cache, wc.Grid!);
-        var agg = TerrainSources.CogAggregate(wcDir, wcTiles, wc.Level);
+        var wcShas = TerrainSources.CogShas(wcDir, wcTiles, wc.Level);
+        var agg = TerrainSources.AggregateSha(wcShas);
         if (agg != wc.Sha256) throw new InvalidDataException($"SHA-256 mismatch for {wc.Id}: lock {wc.Sha256}, got {agg}");
         Console.WriteLine($"sources verified in {sw.Elapsed.TotalSeconds:F0} s");
 
@@ -260,11 +290,11 @@ internal static class Terrain
         var meaE = Src("gmted_mea30"); var stdE = Src("gmted_std30");
         using var meanM = new TiffMosaic(meaE.Files.Select(f => TerrainSources.FilePath(o.Cache, meaE, f)), 120);
         using var stdM = new TiffMosaic(stdE.Files.Select(f => TerrainSources.FilePath(o.Cache, stdE, f)), 120);
-        var gl = TerrainSources.ExtractZipMembers(o.Cache, Src("glwd_v2"), new[] { "GLWD_v2_0_area_pct.tif", "GLWD_v2_0_main_class.tif" });
+        var gl = TerrainSources.ExtractZipMembers(o.Cache, Src("glwd_v2"), new[] { "GLWD_v2_0_area_pct.tif", "GLWD_v2_0_main_class_50pct.tif" });
         using var pctM = new TiffMosaic(new[] { gl[0] }, 240);
         using var mainM = new TiffMosaic(new[] { gl[1] }, 240);
         mean = meanM; std = stdM; pct = pctM; main = mainM;
-        var cover = new CogGrid(wcDir, wc.Level);
+        var cover = new CogGrid(wcDir, wc.Level, wcShas);
         long[] w120 = Raster.RowWeights(120), w240 = Raster.RowWeights(240), wCover = Raster.RowWeights(cover.PerDeg);
 
         var rows = new List<TerrainRow>();
@@ -277,11 +307,12 @@ internal static class Terrain
             rows.Add(Finish(piece.Id, st));
             if (rows.Count % 250 == 0) Console.WriteLine($"{rows.Count}/{r.Pieces.Count} provinces, {sw.Elapsed.TotalSeconds:F0} s");
         }
+        ApplyNoData(rows, prm.NoData);
         foreach (var w in ApplyCorrections(rows, r.Pieces.ToDictionary(p => p.Id, p => p.AreaKm2, StringComparer.Ordinal), corrections)) Console.WriteLine("warning: " + w);
         foreach (var row in rows)
         {
             row.Class = Classify(row, prm);
-            if (row.Cover.Sum() != 1000) Console.WriteLine($"warning: {row.Id}: no land cover data (shares sum to {row.Cover.Sum()})");
+            if (row.Cover.Sum() != 1000) throw new InvalidDataException($"{row.Id}: cover shares sum to {row.Cover.Sum()}, not 1000");
         }
         File.WriteAllBytes(Path.Combine(o.OutDir, "terrain.yaml"), Write(rows));
         foreach (var g in rows.GroupBy(x => x.Class).OrderBy(g => g.Key, StringComparer.Ordinal)) Console.WriteLine($"class {g.Key}: {g.Count()}");

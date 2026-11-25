@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.Security.Cryptography;
 using NetTopologySuite.Geometries;
 
 namespace Singularity.MapBuilder;
@@ -173,20 +174,29 @@ internal sealed class CogGrid : IGrid
     private readonly string dir;
     private readonly int level;
     private readonly Lru<string, byte[]?> cache = new(40);
+    private readonly Dictionary<string, string> pinned;
     public int PerDeg { get; }
 
-    public CogGrid(string dir, int level) { this.dir = dir; this.level = level; PerDeg = level / 3; }
+    /// <param name="pinned">tile name and the SHA-256 of its decoded bytes (the lock); other tiles in the cache are ignored</param>
+    public CogGrid(string dir, int level, IEnumerable<(string Name, string Sha)> pinned)
+    {
+        this.dir = dir; this.level = level; PerDeg = level / 3;
+        this.pinned = pinned.ToDictionary(p => p.Name, p => p.Sha, StringComparer.Ordinal);
+    }
 
     public static string TileName(int lat0, int lon0) => $"{(lat0 < 0 ? 'S' : 'N')}{Math.Abs(lat0):00}{(lon0 < 0 ? 'W' : 'E')}{Math.Abs(lon0):000}";
     public static string TilePath(string dir, string tile, int level) => Path.Combine(dir, $"{tile}.l{level}.gz");
 
     private byte[]? Load(string tile)
     {
+        if (!pinned.TryGetValue(tile, out var sha)) return null;
         var path = TilePath(dir, tile, level);
         if (!File.Exists(path)) return null;
         using var z = new GZipStream(File.OpenRead(path), CompressionMode.Decompress);
         var raw = new byte[level * level];
         z.ReadExactly(raw);
+        if (!string.Equals(Convert.ToHexString(SHA256.HashData(raw)), sha, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException($"{path}: the bytes differ from the pinned SHA-256");
         return raw;
     }
 

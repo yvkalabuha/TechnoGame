@@ -13,3 +13,7 @@ tundra_pm: 500
 desert_pm: 500
 forest_pm: 400
 steppe_pm: 400
+# Provinces outside every WorldCover tile (uninhabited islands): cover in permille, the bake fails for a province without data and without an entry here.
+no_data:
+  - {province: norway.bouvet_island, cover: {ice: 930, desert: 70}, note: "93 percent of the island is covered by glaciers, the rest is bare rock (ice-free Nyroysa)", source: "https://en.wikipedia.org/wiki/Bouvet_Island", accessed: 2026-11-25}
+  - {province: norfolk_island.norfolk_island, cover: {forest: 160, steppe: 840}, note: "forest = Norfolk Island National Park 6.50 km2 of 41 km2 of the province (Mount Pitt and Phillip Island); the rest is pasture and grass [Предп.]", source: "https://en.wikipedia.org/wiki/Norfolk_Island_National_Park", accessed: 2026-11-25}

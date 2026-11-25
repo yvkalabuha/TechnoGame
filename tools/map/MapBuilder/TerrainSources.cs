@@ -167,9 +167,12 @@ internal static class TerrainSources
     }
 
     /// <summary>SHA-256 over the decoded overview bytes of every tile (the pin of a cog-overview source).</summary>
-    public static string CogAggregate(string dir, List<string> tiles, int level)
+    public static string CogAggregate(string dir, List<string> tiles, int level) => AggregateSha(CogShas(dir, tiles, level));
+
+    /// <summary>SHA-256 of the decoded bytes of every pinned tile; CogGrid checks the bytes it reads against these.</summary>
+    public static List<(string Name, string Sha)> CogShas(string dir, List<string> tiles, int level)
     {
-        var shas = new List<(string, string)>();
+        var shas = new List<(string Name, string Sha)>();
         var raw = new byte[level * level];
         foreach (var t in tiles)
         {
@@ -179,7 +182,7 @@ internal static class TerrainSources
             z.ReadExactly(raw);
             shas.Add((t, Convert.ToHexString(SHA256.HashData(raw)).ToLowerInvariant()));
         }
-        return AggregateSha(shas);
+        return shas;
     }
 
     /// <summary>Reads the overview IFD of one WorldCover COG by range requests and stores its pixels as a gzip of raw bytes.</summary>
@@ -217,7 +220,7 @@ internal static class TerrainSources
         File.Move(tmp, path, true);
     }
 
-    /// <summary>GLWD v2: extracts the named members of the zip into the cache once and returns their paths.</summary>
+    /// <summary>GLWD v2: extracts the named members of the zip into the cache and returns their paths.</summary>
     public static string[] ExtractZipMembers(string cache, SourceEntry e, string[] members)
     {
         var zipPath = FilePath(cache, e, e.Files[0]);
@@ -229,12 +232,10 @@ internal static class TerrainSources
         {
             var entry = zip.Entries.FirstOrDefault(x => x.Name == m) ?? throw new InvalidDataException($"{e.Id}: {m} is not in the archive");
             var dest = Path.Combine(outDir, m);
-            if (!File.Exists(dest) || new FileInfo(dest).Length != entry.Length)
-            {
-                var tmp = dest + ".part";
-                entry.ExtractToFile(tmp, true);
-                File.Move(tmp, dest, true);
-            }
+            // Always extracted again from the archive whose SHA-256 was just checked: a stale file of the same length is never trusted.
+            var tmp = dest + ".part";
+            entry.ExtractToFile(tmp, true);
+            File.Move(tmp, dest, true);
             res.Add(dest);
         }
         return res.ToArray();

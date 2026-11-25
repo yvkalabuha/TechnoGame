@@ -89,15 +89,19 @@ internal static class Rivers
             {
                 var a = arc.V[i - 1]; var b = arc.V[i];
                 double len = Sph.DistKm(a.Lon / 1e6, a.Lat / 1e6, b.Lon / 1e6, b.Lat / 1e6);
-                double mx = (a.Lon + b.Lon) / 2e6, my = (a.Lat + b.Lat) / 2e6;
                 total[key] = total.GetValueOrDefault(key) + len;
-                var env = new Envelope(mx, mx, my, my); env.ExpandBy(tolDeg);
-                int best = int.MaxValue;
-                foreach (var s in tree.Query(env))
-                    if (SegDist2(mx, my, s.A, s.B) <= tolDeg * tolDeg) best = Math.Min(best, s.Rank);
-                if (best != int.MaxValue)
+                // A long segment is tested piece by piece (about 1.5 km each), so only the part within the buffer counts as overlap.
+                int pieces = Math.Max(1, (int)Math.Ceiling(len / PieceKm));
+                for (int k = 0; k < pieces; k++)
                 {
-                    near[key] = near.GetValueOrDefault(key) + len;
+                    double t = (k + 0.5) / pieces;
+                    double mx = (a.Lon + (b.Lon - a.Lon) * t) / 1e6, my = (a.Lat + (b.Lat - a.Lat) * t) / 1e6;
+                    var env = new Envelope(mx, mx, my, my); env.ExpandBy(tolDeg);
+                    int best = int.MaxValue;
+                    foreach (var s in tree.Query(env))
+                        if (SegDist2(mx, my, s.A, s.B) <= tolDeg * tolDeg) best = Math.Min(best, s.Rank);
+                    if (best == int.MaxValue) continue;
+                    near[key] = near.GetValueOrDefault(key) + len / pieces;
                     rank[key] = Math.Min(rank.GetValueOrDefault(key, int.MaxValue), best);
                 }
             }
@@ -107,6 +111,8 @@ internal static class Rivers
             if (r.Adjacency.ContainsKey(k) && n >= spec.BorderMinKm && n * 100 >= total[k] * spec.BorderMinSharePct) res[k] = rank[k];
         return res;
     }
+
+    private const double PieceKm = 1.5;
 
     // Natural Earth lines and admin-1 borders differ by a few km, so a river that runs along a border still counts for both banks.
     private const double BankTolDeg = 3000 / 111000.0;
@@ -127,8 +133,10 @@ internal static class Rivers
         bank.ExpandBy(BankTolDeg);
         var res = new List<string>();
         if (line.IsEmpty) throw new InvalidDataException($"navigable river '{e.River}': nothing inside the bbox");
+        // The strip around the river is intersected with each province: buffering the line is safe, buffering a province shape is not.
+        var strip = line.Buffer(BankTolDeg);
         foreach (var p in r.Pieces)
-            if (p.Shape.EnvelopeInternal.Intersects(bank) && p.Shape.Buffer(BankTolDeg).Intersection(line).Length > 0.02) res.Add(p.Id);
+            if (p.Shape.EnvelopeInternal.Intersects(bank) && p.Shape.Intersection(strip).Area > BankTolDeg * 0.02) res.Add(p.Id);
         return res.OrderBy(x => x, StringComparer.Ordinal).ToList();
     }
 

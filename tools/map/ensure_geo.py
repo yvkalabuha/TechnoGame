@@ -48,11 +48,12 @@ def main() -> int:
     env = dict(os.environ, SINGULARITY_MAP_CACHE=str(cache), DOTNET_CLI_UI_LANGUAGE="en")
     proj = ["--project", str(ROOT / "tools" / "map" / "MapBuilder")]
     print(f"ensure_geo: building geo/arcs.bin (cache {cache}); about one minute", flush=True)
-    if not cache.is_dir() or not any(cache.iterdir()):
-        print("ensure_geo: the cache is empty, fetching the pinned sources (network)", flush=True)
-        r = subprocess.run([dotnet(), "run", "-c", "Release", *proj, "--", "fetch", "--cache", str(cache)], cwd=ROOT, env=env)
-        if r.returncode != 0:
-            sys.exit(f"ensure_geo: fetch failed. Put the pinned sources into {cache} (see tools/map/README.md, command 'fetch') and run this script again.")
+    # 'fetch' skips files already in the cache and checks their SHA-256, so it is cheap on a complete cache
+    # and downloads only what is missing (for example ne_rivers in a cache made before TASK-0168).
+    print("ensure_geo: fetching the missing pinned sources, if any (network only for files not in the cache)", flush=True)
+    r = subprocess.run([dotnet(), "run", "-c", "Release", *proj, "--", "fetch", "--cache", str(cache)], cwd=ROOT, env=env)
+    if r.returncode != 0:
+        sys.exit(f"ensure_geo: fetch failed. Put the pinned sources into {cache} (see tools/map/README.md, command 'fetch') and run this script again.")
     with tempfile.TemporaryDirectory() as tmp:
         r = subprocess.run([dotnet(), "run", "-c", "Release", *proj, "--", "build", "--cache", str(cache), "--out", tmp],
                            cwd=ROOT, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

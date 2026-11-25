@@ -281,16 +281,69 @@ public class TerrainTests
         var shape = Rect(10, 40, 12, 42);
         var cover = new ConstGrid(10, (x, y) => (x + y) % 2 == 0 ? 10 : 30);   // half forest, half grass
         var pct = new ConstGrid(10, (x, y) => 60);
-        var cls = new ConstGrid(10, (x, y) => 16);
+        // main_class_50pct: a vegetated wetland class in half of the cells; the other half has no class covering half of the cell
+        var cls = new ConstGrid(10, (x, y) => (x + y) % 2 == 0 ? 16 : Raster.NoData);
         var st = new RawStats();
         Terrain.Wetland(shape, pct, cls, Raster.RowWeights(10), st);
         Terrain.CoverShares(shape, cover, Raster.RowWeights(10), p, st);
         var r = Terrain.Finish("x.y", st);
-        Assert.Equal(600, r.Cover[Terrain.Swamp]);
+        Assert.Equal(500, r.Cover[Terrain.Swamp]);
         Assert.Equal(0, r.Cover[Terrain.Forest]);
-        Assert.Equal(400, r.Cover[Terrain.Steppe]);
+        Assert.Equal(500, r.Cover[Terrain.Steppe]);
         Assert.Equal(1000, r.Cover.Sum());
         Assert.Equal("swamp", Terrain.Classify(r, p));
+    }
+
+    [Fact]
+    public void Cog_grid_reads_only_pinned_tiles_and_checks_their_bytes()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "cog-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            const int level = 30;
+            var raw = new byte[level * level]; Array.Fill(raw, (byte)10);
+            void Put(string tile) { using var z = new System.IO.Compression.GZipStream(File.Create(CogGrid.TilePath(dir, tile, level)), System.IO.Compression.CompressionLevel.Fastest); z.Write(raw); }
+            Put("N42E009"); Put("N42E012");
+            string sha = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(raw));
+            var dst = new int[10];
+            // y of a row at 44.5 N; x0 at 9 E (10 cells per degree)
+            int y = (int)((90 - 44.5) * 10), x0 = (9 + 180) * 10;
+            new CogGrid(dir, level, new[] { ("N42E009", sha) }).ReadRow(y, x0, x0 + 10, dst);
+            Assert.All(dst, v => Assert.Equal(10, v));
+            // the tile N42E012 is in the cache but not in the lock: never read
+            int x1 = (12 + 180) * 10;
+            new CogGrid(dir, level, new[] { ("N42E009", sha) }).ReadRow(y, x1, x1 + 10, dst);
+            Assert.All(dst, v => Assert.Equal(Raster.NoData, v));
+            // a pinned tile whose bytes differ from the lock is a loud error
+            Assert.Throws<InvalidDataException>(() => new CogGrid(dir, level, new[] { ("N42E009", new string('0', 64)) }).ReadRow(y, x0, x0 + 10, dst));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void Built_up_land_is_urban_and_not_farm()
+    {
+        var shape = Rect(10, 40, 12, 42);
+        var cover = new ConstGrid(10, (x, y) => x % 2 == 0 ? 50 : 40);   // half built-up, half cropland
+        var st = new RawStats();
+        Terrain.CoverShares(shape, cover, Raster.RowWeights(10), new TerrainParams(), st);
+        var r = Terrain.Finish("x.y", st);
+        Assert.Equal(500, r.Cover[Terrain.Urban]);
+        Assert.Equal(500, r.Cover[Terrain.Farm]);
+    }
+
+    [Fact]
+    public void Province_without_cover_data_needs_a_documented_entry()
+    {
+        var row = new TerrainRow { Id = "a.isle" };
+        Assert.Throws<InvalidDataException>(() => Terrain.ApplyNoData(new[] { row }, new List<NoDataCover>()));
+        var e = new NoDataCover { Province = "a.isle", Cover = new() { ["ice"] = 900, ["desert"] = 100 }, Source = "x", Accessed = "2026-11-25" };
+        Terrain.ApplyNoData(new[] { row }, new[] { e });
+        Assert.Equal(900, row.Cover[Terrain.Ice]);
+        Assert.Equal(1000, row.Cover.Sum());
+        var bad = new NoDataCover { Province = "a.isle", Cover = new() { ["ice"] = 900 }, Source = "x", Accessed = "2026-11-25" };
+        Assert.Throws<InvalidDataException>(() => Terrain.ApplyNoData(new[] { row }, new[] { bad }));
     }
 
     [Fact]
@@ -336,15 +389,13 @@ public class TerrainTests
         var provinces = File.ReadAllLines(Path.Combine(map, "provinces.yaml")).Where(l => l.StartsWith("  - {id: ")).Select(l => l[9..l.IndexOf(',')]).ToList();
         var rows = File.ReadAllLines(Path.Combine(map, "terrain.yaml")).Where(l => l.StartsWith("  - {id: ")).ToList();
         Assert.Equal(provinces, rows.Select(l => l[9..l.IndexOf(',')]).ToList());
-        string[] cover = { "forest", "swamp", "steppe", "farm", "desert", "tundra", "ice", "water" };
+        string[] cover = Terrain.CoverNames;
         var classes = new HashSet<string> { "mountains", "hills", "swamp", "tundra", "desert", "forest", "steppe", "plain" };
         int FieldOf(string l, string name) => int.Parse(l.Split(name + ": ")[1].Split(new[] { ',', '}' })[0]);
         foreach (var l in rows)
         {
             Assert.Contains(l.Split("class: ")[1].Split(',')[0], classes);
-            // Two uninhabited islands lie outside every WorldCover tile: no cover data, the bake warns about them.
-            bool noData = l.Contains("{id: norfolk_island.norfolk_island,") || l.Contains("{id: norway.bouvet_island,");
-            Assert.Equal(noData ? 0 : 1000, cover.Sum(c => FieldOf(l, c)));
+            Assert.Equal(1000, cover.Sum(c => FieldOf(l, c)));
             Assert.InRange(FieldOf(l, "mountains") + FieldOf(l, "hills"), 0, 1000);
         }
     }
@@ -357,6 +408,8 @@ public class TerrainTests
         string Class(string id) => rows[id].Split("class: ")[1].Split(',')[0];
         Assert.Equal("mountains", Class("austria_british_zone.tirol_british_zone"));
         Assert.Equal("desert", Class("niger_agadez.agadez_1"));
+        Assert.Equal("tundra", Class("norway.bouvet_island"));
+        Assert.Contains("urban: 1000", rows["vatican.vatican"]);
         Assert.Equal("forest", Class("russia_irkutsk.irkutsk_1"));
     }
 
