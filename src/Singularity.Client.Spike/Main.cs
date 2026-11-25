@@ -245,6 +245,7 @@ public sealed partial class Main : Node3D
 
     void BuildClient(CanvasLayer layer, int seed, GameData data)
     {
+        data = ClientRun.DataOrLoad(data, SimHost.LoadData);
         // the id the client really plays: an unknown --power falls back to USA here and in FinishClient, so the session config and the UI name the same power
         var actorIds = data.Scenarios[0].ActorId;
         if (!actorIds.Contains(_powerArg)) _powerArg = actorIds.Contains("USA") ? "USA" : actorIds[0];

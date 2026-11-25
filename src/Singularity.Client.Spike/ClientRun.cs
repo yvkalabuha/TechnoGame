@@ -11,6 +11,9 @@ namespace Singularity.Client.Spike;
 /// Godot-free so that a test builds exactly the session the player gets.</summary>
 public static class ClientRun
 {
+    /// <summary>The scenario data of a client start: a start without the title screen (shots, bench) has none yet, so it is loaded here.</summary>
+    public static GameData DataOrLoad(GameData data, System.Func<GameData> load) => data ?? load();
+
     /// <param name="root">Repository root (the mods and the alliances table live under it).</param>
     /// <param name="playerActorId">Actor id of the power the player plays, null = none (menu, benchmarks).</param>
     public static SliceRunConfig Config(GameData data, string root, ulong seed, string playerActorId)

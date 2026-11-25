@@ -190,7 +190,7 @@ public class LeverModelTests
         Assert.Equal(10, BudgetWindowModel.MaxFor(s, new[] { 28, 10, 42 }, 1));   // 100 - 19.6 hidden - 28.4 - 42
     }
 
-    // The price of a project is the call of the core at its opening month (item TASK-0175 will replace it with the core quote).
+    // The price of a project in the window is the BuildRate of the view.
     [Fact]
     public void InstituteQuote_EqualsTheCoreRateOfTheStartedProject_ForAProjectOpeningBeforeItsHistoricalYear()
     {
@@ -208,13 +208,15 @@ public class LeverModelTests
             && InstitutesWindowModel.CheckBuild(i, ctx, month + InstitutesWindowModel.StartLag, p) == Singularity.Core.Institutes.BuildCheck.Ok
             && i.RefYear > InstitutesWindowModel.YearOf(ctx, month + 60));
         Assert.NotNull(pick);   // a candidate that opens years before its historical year
-        Fx6 quoted = InstitutesWindowModel.QuoteRate(ctx, pick!.TotalLevels, pick.RefYear, month + InstitutesWindowModel.StartLag, p);
+        // a candidate shows the price of the view (core quote), not a client copy
+        var cand = InstitutesWindowModel.Build(a, month, 1.0, scale, ctx, n => "n", n => 0).Candidates.First(c => c.Slot == pick!.Slot);
+        Assert.Equal(InstituteState.Candidate, cand.State);
+        Assert.Equal((int)((pick!.BuildRate.Raw + 500) / 1000), cand.RateTenthPercent);
         Assert.True(s.Submit(Singularity.Core.Commands.SourceClass.Player, 0, 1, new BuildInstitute(usa, pick.Slot)).Accepted);
         for (long t1 = 40; t1 < 43; t1++) s.StepThroughMonth(t1);
         var started = s.View.Actors.First(x => x.Actor == usa).Institutes.First(i => i.Slot == pick.Slot);
         Assert.True(started.BuildStart >= 0);
         Assert.Equal(month + InstitutesWindowModel.StartLag, started.BuildStart);
-        Assert.Equal(started.BuildRate, quoted);   // the core's own BuildRate of the started project
         Assert.True(started.BuildRate.Raw > p.BuildRatePerLevel.Raw * pick.TotalLevels, "the project opens ahead of its year: the price is above the base rate");
         // and the model shows the view's own rate for a running project
         var research = 1.0;
@@ -222,6 +224,18 @@ public class LeverModelTests
             .Candidates.First(c => c.Slot == pick.Slot);
         Assert.Equal(InstituteState.Building, run.State);
         Assert.Equal((int)((started.BuildRate.Raw + 500) / 1000), run.RateTenthPercent);
+    }
+
+    [Fact]
+    public void DataOrLoad_LoadsOnlyWhenThereIsNoData()   // the shot/bench start passes null to BuildClient
+    {
+        int calls = 0;
+        GameData loaded = null!;
+        Assert.Null(Record.Exception(() => ClientRun.DataOrLoad(null!, () => { calls++; return loaded; })));
+        Assert.Equal(1, calls);
+        GameData data = ModLoader.Load(Path.Combine(Root(), "mods", "core"));
+        Assert.Same(data, ClientRun.DataOrLoad(data, () => { calls++; return null!; }));
+        Assert.Equal(1, calls);
     }
 
     [Theory]

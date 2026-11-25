@@ -145,11 +145,6 @@ public static class InstitutesWindowModel
     /// <summary>The order of the core to start a project is applied in the month after the one the player sees (verified against the project start in the view, test InstituteQuote).</summary>
     public const int StartLag = 1;
 
-    /// <summary>Share of research money a project takes per month: the same call as InstituteSystem.BuildRate, at the month the institute opens (start + months - 1).
-    /// TODO(TASK-0175): switch to the core quote of the view when the price rule changes; do not extend this client copy.</summary>
-    public static Fx6 QuoteRate(InstituteContext c, int totalLevels, int refYear, long startMonth, InstituteParams p) =>
-        InstituteMath.BuildRate(totalLevels, refYear - YearOf(c, startMonth + InstituteMath.BuildMonths(totalLevels, p) - 1), p);
-
     /// <summary>The check of the core (InstituteSystem.CanBuild) on what the view carries; the month is the one the order will be checked in.</summary>
     public static BuildCheck CheckBuild(InstituteView i, InstituteContext c, long month, InstituteParams p)
     {
@@ -219,8 +214,8 @@ public static class InstitutesWindowModel
             {
                 bool building = inst.BuildStart >= 0;
                 int months = building ? inst.BuildMonths : InstituteMath.BuildMonths(inst.TotalLevels, p);
-                // a running project: the share of the view; a candidate: the quote of the core function at its opening month (TODO(TASK-0175): the core quote)
-                Fx6 rate = building ? inst.BuildRate : QuoteRate(ctx, inst.TotalLevels, inst.RefYear, month + StartLag, p);
+                // the share of the view: for a candidate it is the core's price if started now (TASK-0175)
+                Fx6 rate = inst.BuildRate;
                 int ahead = building ? Math.Max(0, inst.RefYear - YearOf(ctx, inst.BuildStart + inst.BuildMonths - 1)) : Math.Max(0, inst.RefYear - YearOf(ctx, month + StartLag + months - 1));
                 double perMonth = MoneyFormat.Million1990(rate.ToDouble() * researchIdxMonth, scale);
                 BuildCheck chk = CheckBuild(inst, ctx, month + StartLag, p);
