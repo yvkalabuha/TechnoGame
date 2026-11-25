@@ -1,7 +1,7 @@
 ---
 id: TASK-0153
 title: "Player levers core: AI adviser for the player country production (no AI opening or closing of player lines)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M05
 agent: developer
@@ -13,6 +13,7 @@ related: [TASK-0148, TASK-0156]
 approved_by: owner
 approved_at: 2026-11-24
 approval_ref: "#482 (designs approved), #470-#481"
+review_ref: "reviewer: APPROVE (after merge, v25); codex 2 rounds closed; second review agy-sonnet accept 2 medium 3 low -> DEBT-0105; merge 7ed4860"
 created: 2026-11-24
 ---
 
