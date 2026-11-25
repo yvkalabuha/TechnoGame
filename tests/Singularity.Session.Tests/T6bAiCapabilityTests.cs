@@ -13,7 +13,7 @@ public class T6bAiCapabilityTests(ITestOutputHelper output)
     [Fact]
     public void Run384Months_ScriptedPlayer_ProductionDoesNotCollapse_PerActorPrint()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 3, ProductAi = false });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3, ProductAi = false });
         var player = new PlayerScript(s);
         SliceWorld w = s.World;
         int actors = w.Scenario.ActorCount;
@@ -53,7 +53,7 @@ public class T6bAiCapabilityTests(ITestOutputHelper output)
     [Fact]
     public void A30_KeepsTheTopMechProcessAdmitted_ForTheFirst120Months_WithNoPlayer()
     {
-        var s = SliceTestData.Create(new SliceRunConfig { Seed = 5 });
+        var s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 5 });
         SliceWorld w = s.World;
         IndustryLayout l = w.IndustryLayout;
         int mech = l.Clusters.IndexOf(Cluster.MECH);
@@ -91,7 +91,7 @@ public class T6bAiCapabilityTests(ITestOutputHelper output)
     [Fact]
     public void TheToolingPlan_IsTheSameInEveryCallOfTheMonth_AndMStaysUnderTheCap()
     {
-        var s = SliceTestData.Create(new SliceRunConfig { Seed = 2 });
+        var s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 2 });
         var player = new PlayerScript(s);
         SliceWorld w = s.World;
         IndustryLayout l = w.IndustryLayout;
@@ -129,7 +129,7 @@ public class T6bAiCapabilityTests(ITestOutputHelper output)
     [Fact]
     public void QualityProgramme_P1ActsFromMonth1_WhenTheGrantIsFull_AndEndsAfter84Months()
     {
-        var s = SliceTestData.Create(new SliceRunConfig { Seed = 1, ProfileCell = PolicyRules.CellOf(PolicyProfile.Quality, PolicyProfile.Mass, PolicyProfile.Adaptive) });
+        var s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 1, ProfileCell = PolicyRules.CellOf(PolicyProfile.Quality, PolicyProfile.Mass, PolicyProfile.Adaptive) });
         SliceWorld w = s.World;
         int usa = w.Scenario.ActorIndex("USA"), gbr = w.Scenario.ActorIndex("GBR");
         Assert.True(w.Policy.QualityProgrammeActive(usa));
@@ -150,7 +150,7 @@ public class T6bAiCapabilityTests(ITestOutputHelper output)
     {
         // USA is P1 in this cell: the only doctrine with a training target before the why_not triggers (T6d).
         // LINE_CLOSE = ADMIT: the scripted player starts its own series beside the AI's lines, which F17b's two-line invariant (a rule of the pure AI) does not cover.
-        var s = SliceTestData.Create(new SliceRunConfig { Seed = 4, ProfileCell = 0, LineClose = LineCloseRule.Admit });
+        var s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 4, ProfileCell = 0, LineClose = LineCloseRule.Admit });
         var player = new PlayerScript(s);
         SliceWorld w = s.World;
         var adapter = new ProductsInputsAdapter(w);
@@ -193,7 +193,7 @@ public class T6bAiCapabilityTests(ITestOutputHelper output)
     [Fact]
     public void WhyNotToolingRate_FollowsThePlan_AndTheEconomyLinkBudgetIncludesTrainingMoney()
     {
-        var s = SliceTestData.Create(new SliceRunConfig { Seed = 3 });
+        var s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3 });
         var player = new PlayerScript(s);
         SliceWorld w = s.World;
         var inputs = new WhyNotInputsAdapter(w);

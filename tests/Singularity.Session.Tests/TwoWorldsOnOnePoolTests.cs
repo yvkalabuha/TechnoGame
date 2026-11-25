@@ -47,9 +47,10 @@ public class TwoWorldsOnOnePoolTests
 // Re-recorded in TASK-0133 (train 2: G5/G6 data + fleet ageing): nodes 62-81 and the G5/G6 alternatives change every trajectory; reason and list in the task file.
     // Re-recorded in TASK-0134 (train 2: Hcap(t), mastery), reason: schema v14 (new columns prd.prog.*, pol.prog.*, pol.below.*, cmd.prog.*, prd.rejected.BadProgramme, all zero before 1978-01); the old columns are unchanged to month 387 (MasteryIdentityTests, HorizonTests, GoldenProjectionAgainstMainTests), so only the new columns change this hash.
     // Re-recorded in TASK-0147 (train 2): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465) change every trajectory on the current data; explanation: docs/simulation/golden-rerecord-train2.md.
+    // Re-recorded in TASK-0171 (levers batch): Reserve, Institutes, LicenceMarket, Intelligence are on in the default config; the new columns and the new AI paths change every trajectory; explanation: TASK-0171 "Результат".
     private static readonly Dictionary<ulong, string> Pinned = new()
     {
-        [1] = "7676ba2b8f3d1a8e884283073cca5bb65b0740800864aafc8511e13cae2e48ad", [2] = "98f851f0f81e2194369724ea0a7c3b513ef254d939d27d7ce42d1b5dda0fd4af", [3] = "4bf46aec111f3726498342c538e6827a268f6405c3099018beaff46a9ceca3ee", [4] = "38c794141894bbfc0a380fa4df12bd31ddb4901fd0f002fc45726de60aa9a9c3", [5] = "5c48c89e36bdcbe6f06672a200f34b0e7c318994a14194d8e0724496a5091890", [7] = "7d695dd6dd1f1f53664d1af9994414ebe46cde5b7950646c9a0e38bca344f287",
+        [1] = "8f59bea442c28b96649a1e03b62042f2b062afb9073eae95300bce63eec1fc9d", [2] = "94e6251afde562f2d2518ebab99492425a6babd163d293867e42067faded32cd", [3] = "d033cd483f885aa1970692bad9334455cf54edebbb5b1aff97f9c4dcdb3d4583", [4] = "70b04f8b25d74b35095c31912e9c0d0b876ee27151f3bce7c937be6534e44b26", [5] = "b29081bdbce140712c8ba3d840387358c390c631c45fed9feef92949a72ddcf1", [7] = "40463ff15970707be1985a26ac46f76c0c362a7c5d6fa0217864d88ad7649115",
     };
 
     private static void AssertPinned(ulong seed, string[] actual, string what)

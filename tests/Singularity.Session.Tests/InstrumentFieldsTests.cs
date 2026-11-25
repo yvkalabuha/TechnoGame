@@ -13,7 +13,7 @@ public sealed class InstrumentFieldsTests
     [Fact]
     public void Research_IsTheFrontierWithProgress_NearestToCompletionFirst_AndEveryActorHasSomeInTheWalk()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7 });
         SliceWorld w = s.World;
         int actors = w.Scenario.ActorCount;
         var months = new int[actors];
@@ -51,7 +51,7 @@ public sealed class InstrumentFieldsTests
     [Fact]
     public void Alloy_IsSupplyOfTheMonthAndTheAlloyAskedInThatStep()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7 });
         SliceWorld w = s.World;
         bool needSeen = false;
         for (long t = 0; t < Months; t++)
@@ -77,7 +77,7 @@ public sealed class InstrumentFieldsTests
         int bound = 0;
         foreach (int seed in new[] { 1, 2, 3, 4, 5, 6, 7, 8 })
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = (ulong)seed });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = (ulong)seed });
             SliceWorld w = s.World;
             for (long t = 0; t < 200; t++)
             {
@@ -102,7 +102,7 @@ public sealed class InstrumentFieldsTests
     [Fact]
     public void UnknownNodes_CountsTheNodesNotKnown_ForEveryActor_SubscribedOrNot()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, ViewScope = ViewScope.Subscribed });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, ViewScope = ViewScope.Subscribed });
         s.SetViewSubscription([1]);
         s.RebuildView();
         s.StepThroughMonth(0);
@@ -121,14 +121,14 @@ public sealed class InstrumentFieldsTests
     [Fact]
     public void Alloy_IsNotKnownBeforeTheFirstStep_AndAfterARestoreUntilTheNextStep()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7 });
         Assert.All(s.View.Actors, a => { Assert.False(a.Alloy.Known); Assert.Equal(AlloyState.Unknown, a.Alloy.State); });   // no step yet: nothing to show, never «enough»
         for (long t = 0; t < 10; t++)
             s.StepThroughMonth(t);
         Assert.All(s.View.Actors, a => Assert.True(a.Alloy.Known));
         using var m = new MemoryStream();
         s.WriteSnapshot(m);
-        SliceSession restored = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
+        SliceSession restored = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7 });
         restored.LoadSnapshot(new MemoryStream(m.ToArray()));
         HashAssert.Equal(s.LastHash, restored.LastHash);   // the snapshot really loaded
         Assert.All(restored.View.Actors, a => { Assert.False(a.Alloy.Known); Assert.Equal(AlloyState.Unknown, a.Alloy.State); });
@@ -139,7 +139,7 @@ public sealed class InstrumentFieldsTests
     [Fact]
     public void AlloyState_IsDecidedFromTheStep7Trace_NotByTheReader()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7 });
         SliceWorld w = s.World;
         for (long t = 0; t < Months; t++)
         {
@@ -159,7 +159,7 @@ public sealed class InstrumentFieldsTests
     [Fact]
     public void Research_WithAZeroHazardThreshold_DoesNotDivideByZero()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, ThetaStart = Fx6.Zero });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, ThetaStart = Fx6.Zero });
         for (long t = 0; t < 60; t++)
             s.StepThroughMonth(t);   // the view of every month builds the research list
         Assert.All(s.View.Actors, a => Assert.All(a.Research, r => Assert.True(r.Need >= Fx6.Zero)));

@@ -13,10 +13,10 @@ public class FleetRunTests(ITestOutputHelper output)
 {
     private const int Seeds = 20;
 
-    private static readonly Lazy<FleetRunStats[]> Main = new(() => Runs(new SliceRunConfig()));
-    private static readonly Lazy<FleetRunStats[]> NoRetire = new(() => Runs(new SliceRunConfig { FleetArm = FleetArm.NoRetire }));
-    private static readonly Lazy<FleetRunStats[]> NoSale = new(() => Runs(new SliceRunConfig { FleetArm = FleetArm.NoSale }));
-    private static readonly Lazy<FleetRunStats[]> PurchaseCap = new(() => Runs(new SliceRunConfig { FleetArm = FleetArm.PurchaseCap }));
+    private static readonly Lazy<FleetRunStats[]> Main = new(() => Runs(SliceRunConfig.Legacy));
+    private static readonly Lazy<FleetRunStats[]> NoRetire = new(() => Runs(SliceRunConfig.Legacy with { FleetArm = FleetArm.NoRetire }));
+    private static readonly Lazy<FleetRunStats[]> NoSale = new(() => Runs(SliceRunConfig.Legacy with { FleetArm = FleetArm.NoSale }));
+    private static readonly Lazy<FleetRunStats[]> PurchaseCap = new(() => Runs(SliceRunConfig.Legacy with { FleetArm = FleetArm.PurchaseCap }));
 
     private static FleetRunStats[] Runs(SliceRunConfig template)
     {

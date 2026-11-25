@@ -9,7 +9,7 @@ public class FleetPlayerCommandTests
 {
     private const int Usa = 0;
 
-    private static SliceSession Make() => SliceTestData.Create(new SliceRunConfig { Seed = 11, ProductAi = false });
+    private static SliceSession Make() => SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 11, ProductAi = false });
 
     [Fact]
     public void Codec_RoundTrips_BothCommands()

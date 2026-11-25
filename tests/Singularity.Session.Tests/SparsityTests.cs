@@ -21,7 +21,7 @@ public class SparsityTests(ITestOutputHelper output)
 
     private static SliceSession Warm(ulong seed)
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed });
         for (long t = 0; t < WarmMonths; t++)
             s.StepThroughMonth(t);
         return s;

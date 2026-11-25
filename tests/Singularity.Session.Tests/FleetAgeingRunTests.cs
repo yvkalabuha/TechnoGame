@@ -10,7 +10,7 @@ public class FleetAgeingRunTests(Xunit.Abstractions.ITestOutputHelper output)
 
     private static (string Hash, long Credit, long Overage, long Retire, long Sell) Run(int threads, int chunkSize)
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 3, Threads = threads, ChunkSize = chunkSize });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3, Threads = threads, ChunkSize = chunkSize });
         long credit = 0, overage = 0;
         for (long t = 0; t < Months; t++)
         {

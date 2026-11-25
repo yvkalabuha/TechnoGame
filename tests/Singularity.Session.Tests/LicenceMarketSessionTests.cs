@@ -12,7 +12,7 @@ public class LicenceMarketSessionTests
 {
     private static AllianceTable Alliances => AllianceTable.Load(Path.Combine(SliceTestData.RepoRoot, "mods", "core", "scenarios", "1945", "alliances.yaml"));
 
-    private static SliceRunConfig Config(int player, ulong seed = 7, int threads = 1, bool reserve = true) => new()
+    private static SliceRunConfig Config(int player, ulong seed = 7, int threads = 1, bool reserve = true) => SliceRunConfig.Legacy with
     {
         Seed = seed, Threads = threads, Reserve = reserve, LicenceMarket = true, LicenceExternalActors = [player], Alliances = Alliances,
     };
@@ -128,7 +128,8 @@ public class LicenceMarketSessionTests
     [Fact]
     public void LicenceMarket_WithoutTheAlliancesTable_IsRefused_NotSilentlyEmpty()
     {
-        Assert.Throws<ArgumentException>(() => SliceTestData.Create(new SliceRunConfig { Seed = 7, LicenceMarket = true }));
+        // The core data carries its blocs (GameData.Alliances); the old 61-node fixture has none.
+        Assert.Throws<ArgumentException>(() => SliceTestData.CreateLegacy(SliceRunConfig.Legacy with { Seed = 7, LicenceMarket = true }));
     }
 
     [Fact]
@@ -172,7 +173,7 @@ public class LicenceMarketSessionTests
         s.Submit(SourceClass.Player, 1, 1, new BuyLicence(1, 0, 1));   // actor 1 is an AI
         s.StepThroughMonth(1);
         Assert.Contains("LicenceNotAllowed", s.Outcomes[^1]);
-        SliceSession off = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
+        SliceSession off = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7 });
         off.StepThroughMonth(0);
         off.Submit(SourceClass.Player, 0, 1, new OfferLicence(0, 1, Fx6.One, SaleCircle.All));
         off.StepThroughMonth(1);
@@ -190,7 +191,7 @@ public class LicenceMarketSessionTests
     [Fact]
     public void LicenceMarket_IsRefusedWithTheCanonicalProductLayer_SoNoFeeIsEverPaidWithoutAProject()
     {
-        Assert.Throws<ArgumentException>(() => SliceTestData.CreateLegacy(new SliceRunConfig { Seed = 7, Layer = LayerControl.Lp, LicenceMarket = true }));
+        Assert.Throws<ArgumentException>(() => SliceTestData.CreateLegacy(SliceRunConfig.Legacy with { Seed = 7, Layer = LayerControl.Lp, LicenceMarket = true }));
     }
 
     [Fact]
@@ -239,8 +240,8 @@ public class LicenceMarketSessionTests
     public void FlagOff_TheWorldIsTheWorldOfMain_WhateverTheMarketFieldsSay()
     {
         // The market fields without the flag change nothing in the state (no column, no rule): the hash is the plain run's.
-        SliceSession plain = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
-        SliceSession withFields = SliceTestData.Create(new SliceRunConfig { Seed = 7, LicenceExternalActors = [0], Alliances = Alliances });
+        SliceSession plain = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7 });
+        SliceSession withFields = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, LicenceExternalActors = [0], Alliances = Alliances });
         plain.StepThroughMonth(36);
         withFields.StepThroughMonth(36);
         HashAssert.Equal(plain.LastHash, withFields.LastHash);
@@ -250,7 +251,7 @@ public class LicenceMarketSessionTests
     [Fact]
     public void FlagOn_AiMarketRuns_ForTwentyYears_WithNoInvariantBroken()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 3, LicenceMarket = true, Alliances = Alliances });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3, LicenceMarket = true, Alliances = Alliances });
         for (long m = 0; m < 240; m++)
             s.StepThroughMonth(m);
         Assert.False(string.IsNullOrEmpty(s.LastHash));

@@ -5,7 +5,7 @@ namespace Singularity.Session.Tests;
 /// <summary>TASK-0103 review: per-thread scratch must not carry the parameters of one world into another run on the same thread.</summary>
 public class CrossWorldScratchTests
 {
-    private static SliceSession Make(SaleArm arm) => SliceTestData.Create(new SliceRunConfig { Seed = 1, SaleArm = arm, HashEveryTick = true });
+    private static SliceSession Make(SaleArm arm) => SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 1, SaleArm = arm, HashEveryTick = true });
 
     [Fact]
     public void TwoWorldsWithDifferentSaleArm_RunAlternatelyOnOneThread_GiveTheHashesOfTheirOwnRuns()

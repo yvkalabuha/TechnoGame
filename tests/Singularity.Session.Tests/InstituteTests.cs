@@ -10,7 +10,7 @@ namespace Singularity.Session.Tests;
 public class InstituteTests
 {
     private static SliceSession Make(bool institutes, int threads = 1) =>
-        SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = institutes, Threads = threads });
+        SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = institutes, Threads = threads });
 
     private static readonly InstituteParams P = new();
 
@@ -302,7 +302,7 @@ public class InstituteTests
         HashAssert.Equal(h1, h2, "L2: thread count changed the state");
         Assert.Contains("set_priority_node", log);
         Assert.Contains("build_institute", log);
-        SliceSession replay = SliceSession.Replay(SliceTestData.Data, new SliceRunConfig { Seed = 7, Institutes = true }, log, Make(true).World.Calendar.TickOfMonth(59) + 1);
+        SliceSession replay = SliceSession.Replay(SliceTestData.Data, SliceRunConfig.Legacy with { Seed = 7, Institutes = true }, log, Make(true).World.Calendar.TickOfMonth(59) + 1);
         HashAssert.Equal(h1, replay.LastHash, "L1: the replay differs");
     }
 
@@ -310,7 +310,7 @@ public class InstituteTests
     [Fact]
     public void SystemIds_InstitutesAndIntelligenceDiffer()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, Intelligence = true });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = true, Intelligence = true });
         Assert.NotEqual(s.World.Intel!.SystemId, s.World.Institutes!.SystemId);
     }
 
@@ -553,7 +553,7 @@ public class InstituteTests
     [Fact]
     public void PlayerView_HidesTheGoalsOfOtherActors_WithIntelligence()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, Intelligence = true, PlayerActor = 3 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = true, Intelligence = true, PlayerActor = 3 });
         InstituteSystem inst = s.World.Institutes!;
         int other = (3 + 1) % s.World.Scenario.ActorCount;
         for (long t = 0; t < 40; t++)
@@ -566,7 +566,7 @@ public class InstituteTests
     [Fact]
     public void PlayerActor_GetsProposalsButNoAiGoalsOrProjects()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = 3 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = true, PlayerActor = 3 });
         InstituteSystem inst = s.World.Institutes!;
         int player = 3, other = (player + 1) % s.World.Scenario.ActorCount;
         string playerId = s.World.Scenario.ActorId[player];
@@ -619,7 +619,7 @@ public class InstituteTests
     [Fact]
     public void Snapshot_OfAnotherInstituteDataSet_IsRefused()
     {
-        var config = new SliceRunConfig { Seed = 7, Institutes = true };
+        var config = SliceRunConfig.Legacy with { Seed = 7, Institutes = true };
         SliceSession a = SliceSession.Create(SliceTestData.Data, config);
         for (long m = 0; m < 3; m++)
             a.StepThroughMonth(m);
@@ -633,7 +633,7 @@ public class InstituteTests
     [Fact]
     public void Build_WithoutResearchMoney_DoesNotFinish_AndStretchesWithAPartialShare()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = Sun(Make(true)) });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = true, PlayerActor = Sun(Make(true)) });
         int sun = Sun(s);
         var h = new InstituteHandle(sun, CandidateSlot(s, sun, "sun_nii88"));
         InstituteSystem inst = s.World.Institutes!;
@@ -660,7 +660,7 @@ public class InstituteTests
     [Fact]
     public void StretchedProject_PaysThePriceOfItsExpectedOpeningYear_AndFollowsTheFunding()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = Actor(Make(true), "USA") });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = true, PlayerActor = Actor(Make(true), "USA") });
         int usa = Actor(s, "USA");
         var h = new InstituteHandle(usa, CandidateSlot(s, usa, "usa_darpa"));
         InstituteSystem inst = s.World.Institutes!;
@@ -688,7 +688,7 @@ public class InstituteTests
     [Fact]
     public void StretchedProject_RunsToItsHistoricalYear_AndPaysTheBaseRateEveryMonth()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = Actor(Make(true), "USA") });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = true, PlayerActor = Actor(Make(true), "USA") });
         int usa = Actor(s, "USA");
         var h = new InstituteHandle(usa, CandidateSlot(s, usa, "usa_darpa"));
         InstituteSystem inst = s.World.Institutes!;
@@ -724,7 +724,7 @@ public class InstituteTests
     [Fact]
     public void ProjectWithoutFunding_PaysThePriceOfOpeningOnTime()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = Actor(Make(true), "USA") });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = true, PlayerActor = Actor(Make(true), "USA") });
         int usa = Actor(s, "USA");
         var h = new InstituteHandle(usa, CandidateSlot(s, usa, "usa_darpa"));
         InstituteSystem inst = s.World.Institutes!;
@@ -787,8 +787,8 @@ public class InstituteTests
     [Fact]
     public void InitialHash_DiffersByTheControlledActor()
     {
-        string h3 = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = 3 }).LastHash;
-        string h4 = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = 4 }).LastHash;
+        string h3 = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = true, PlayerActor = 3 }).LastHash;
+        string h4 = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = true, PlayerActor = 4 }).LastHash;
         Assert.NotEqual(h3, h4);
     }
 }

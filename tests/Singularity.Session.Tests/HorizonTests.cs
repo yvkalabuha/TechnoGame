@@ -29,7 +29,7 @@ public class HorizonTests
     [Fact]
     public void HorizonColumns_AreExactlyTheNewOnes()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 1 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 1 });
         int designs = SliceTestData.Data.Scenario(SliceRunConfig.DefaultScenario).MaxDesigns;
         Assert.Equal(86, SliceWorld.Years);
         string[] names = [.. ColumnProjection.Names(s).Where(ColumnProjection.IsHorizonColumn)];
@@ -40,7 +40,7 @@ public class HorizonTests
     [Fact]
     public void CohortYears_BeyondLayout_FailsLoudly()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 1, Threads = 4, ChunkSize = 2 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 1, Threads = 4, ChunkSize = 2 });
         s.StepThroughMonth(1023);   // December 2030 (month 0 is 1945-09) is still inside
         var e = Assert.Throws<TickComputeException>(() => s.StepThroughMonth(1024));
         Assert.Contains("outside the cohort years", e.Message);
@@ -65,7 +65,7 @@ public class HorizonTests
         again.StepThroughMonth(1019);
         Assert.Equal(fin[0], ColumnProjection.Hash(again, _ => true));
         // L2: one thread gives the same hashes at months 387 and 1019.
-        SliceSession one = SliceTestData.Create(new SliceRunConfig { Seed = 1, Threads = 1, ChunkSize = 2 });
+        SliceSession one = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 1, Threads = 1, ChunkSize = 2 });
         one.StepThroughMonth(387);
         Assert.Equal(at387[0], ColumnProjection.Hash(one, _ => true));
         one.StepThroughMonth(1019);

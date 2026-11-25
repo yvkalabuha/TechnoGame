@@ -32,7 +32,7 @@ public class T6dPrint
 
     private static Run Execute(ulong seed, bool licOff)
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, LicOff = licOff, Threads = 4, ChunkSize = 2 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, LicOff = licOff, Threads = 4, ChunkSize = 2 });
         SliceWorld w = s.World;
         int n = w.Scenario.ActorCount;
         var r = new Run
