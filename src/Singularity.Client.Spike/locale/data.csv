@@ -235,6 +235,9 @@ polity.YUG,Yugoslavia,Югославия
 polity.ZAF,South Africa,Южная Африка
 polity.SDN_AE,Anglo-Egyptian Sudan,Англо-египетский Судан
 polity.NHEB,New Hebrides,Новые Гебриды
+polity_short.SDN_AE,Anglo-Egypt. Sudan,Англо-егип. Судан
+polity_short.C_FRENCH_INDOCHINA,Indochina,Индокитай
+polity_short.C_PORTUGUESE_MOZAMBIQUE,Mozambique,Мозамбик
 polity.C_BRITISH_INDIA,British India,Британская Индия
 polity.C_BURMA,Burma,Бирма
 polity.C_BRITISH_MALAYA,British Malaya,Британская Малайя

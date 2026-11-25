@@ -7,7 +7,7 @@ namespace Singularity.Client.Spike;
 /// Labels of the slice countries are bold with an ink underline.</summary>
 public sealed partial class Overlay : Control
 {
-    sealed class LabelState { public Country C; public Label Node; public bool On; public bool Slice, Emph, Callout, Framed; public Rect2 Rect; public float Area; public Vector2 Anchor; public Color Frame; }
+    sealed class LabelState { public Country C; public Label Node; public bool On; public bool Slice, Emph, Callout; public Rect2 Rect; public float Area; public Vector2 Anchor; public int Size = 14; public float TextW; }
 
     static readonly Color Ink = Ui.Ink;
     static readonly Color Paper = Ui.Paper;
@@ -50,15 +50,34 @@ public sealed partial class Overlay : Control
     Vector2 VpSize => GetViewportRect().Size;
     double _acc;
     public int VisibleLabels;
+    public double MaxUpdateMs;   // slowest UpdateLabels pass, printed by the map-frames run (the fit search is the cost)
     public float AreaOf(string code) { foreach (var s in _labels) if (s.C.Name == code) return s.Area; return -1f; }
     public bool IsShown(string code) { foreach (var s in _labels) if (s.C.Name == code) return s.Node.Visible; return false; }
     public System.Func<Country, float, float, bool> InRegion;   // does the point at lon/lat belong to the land the label names (GlobeData.InLabelRegion)
     System.Func<float, float, bool> _onRegion;
     Country _regionOf;
+    Vector3 _camPos; Basis _cb; float _aspect, _tanHalf;
+    // The label pass costs milliseconds (fit search): it runs only when the view, the key or the label set changed.
+    Transform3D _lastXf; Vector2 _lastVp, _lastLeg; bool _lastLegOpen; int _lastLabelCount = -1, _lastSel = -2, _lastPlayer = -2;
+    bool LabelsDirty()
+    {
+        var xf = _cam.GlobalTransform;
+        if (xf == _lastXf && VpSize == _lastVp && _legPos == _lastLeg && LegendOpen == _lastLegOpen && _labels.Count == _lastLabelCount && _selId == _lastSel && _playerId == _lastPlayer) return false;
+        _lastXf = xf; _lastVp = VpSize; _lastLeg = _legPos; _lastLegOpen = LegendOpen; _lastLabelCount = _labels.Count; _lastSel = _selId; _lastPlayer = _playerId;
+        return true;
+    }
+    void CacheCamera()
+    {
+        _camPos = _cam.GlobalPosition; _cb = _cam.GlobalTransform.Basis.Orthonormalized();
+        _tanHalf = Mathf.Tan(Mathf.DegToRad(_cam.Fov) * 0.5f); _aspect = VpSize.X / VpSize.Y;
+    }
     bool OnRegion(float sx, float sy)
     {
         if (InRegion == null || _regionOf == null) return false;
-        var o = _cam.ProjectRayOrigin(new Vector2(sx, sy)); var d = _cam.ProjectRayNormal(new Vector2(sx, sy));
+        // The camera ray in managed math (no engine call per probe): the fit search tests hundreds of points per pass.
+        float nx = (sx / VpSize.X * 2f - 1f) * _aspect * _tanHalf, ny = (1f - sy / VpSize.Y * 2f) * _tanHalf;
+        var d = (_cb.X * nx + _cb.Y * ny - _cb.Z).Normalized();
+        var o = _camPos;
         float b = o.Dot(d), disc = b * b - (o.LengthSquared() - 1f);
         if (disc < 0f) return false;
         var hit = o + d * (-b - Mathf.Sqrt(disc));
@@ -86,8 +105,8 @@ public sealed partial class Overlay : Control
         _legBtn.Size = new Vector2(BtnW, BtnH);
     }
     string _legColony = "", _legOccupied = "", _legControl = "";
-    static readonly Color LegendColony = ToColor(HatchLogic.Line(HatchLogic.ColonyFillTone, HatchLogic.LineScale(HatchKind.Colony))), LegendOcc = ToColor(HatchLogic.Line(HatchLogic.ControllerTone, HatchLogic.LineScale(HatchKind.Occupied)));
-    static readonly Color LegendFillColony = ToColor(HatchLogic.Line(HatchLogic.ColonyFillTone, 1f)), LegendFillOcc = ToColor(HatchLogic.Line(HatchLogic.OccupiedFillTone, 1f));
+    static readonly Color LegendColony = ToColor(HatchLogic.Line(HatchLogic.ColonyFillTone, HatchLogic.LineScale(HatchKind.Colony))), LegendOcc = new Color(0.22f, 0.22f, 0.24f);   // occupation swatch: a neutral hatch, no country's tone (the controller's tone differs per zone)
+    static readonly Color LegendFillColony = ToColor(CountryPalette.ColonyFill(HatchLogic.ColonyFillTone)), LegendFillOcc = new Color(0.86f, 0.86f, 0.85f);
     static Color ToColor((byte R, byte G, byte B) c) => new(c.R / 255f, c.G / 255f, c.B / 255f);
     void RefreshLegend() { _legColony = Loc.T("legend.colony"); _legOccupied = Loc.T("legend.occupied"); _legControl = Loc.T("legend.control"); }
 
@@ -114,14 +133,13 @@ public sealed partial class Overlay : Control
             l.AddThemeFontOverride("font", Fonts.Map);
             l.AddThemeFontSizeOverride("font_size", 14);
             l.AddThemeColorOverride("font_color", Ink);   // colony names: same size and ink as the powers (A1); the hatching marks the status
-            // A plate under the word (C5): sheet at 85 %, so that the text reads on every tone and the hatching never runs through it.
-            l.AddThemeStyleboxOverride("normal", new StyleBoxFlat { BgColor = new Color(Ui.Sheet, 0.85f), ContentMarginLeft = 3, ContentMarginRight = 3, ContentMarginTop = 0, ContentMarginBottom = 0 });
+            // No plate (#523): legibility comes from a 2 px halo in the country's own tone, set below.
             AddChild(l);
             _labels.Add(s = new LabelState { C = c, Node = l });
         }
         s.Slice = slice;
-        s.Frame = c.Id > 0 ? ToColor(GlobeData.Line(c.Tint)) : Ink;
-        s.Node.AddThemeColorOverride("font_outline_color", Paper); s.Node.AddThemeConstantOverride("outline_size", 4);
+        var halo = c.Id > 0 ? ToColor(HatchLogic.Line(c.Tint, 1f)) : ToColor(CountryPalette.ColonyFill(c.Tint));   // tone of the land under the word, so that the hatching does not run through the letters
+        s.Node.AddThemeColorOverride("font_outline_color", new Color(halo, 0.85f)); s.Node.AddThemeConstantOverride("outline_size", 2);
         StyleLabel(s);
         s.Node.Text = Names.Country(c.Name) ?? c.Name;
     }
@@ -148,14 +166,14 @@ public sealed partial class Overlay : Control
         {
             if (!s.Emph || !s.Node.Visible) continue;
             var font = Fonts.MapBold;
-            float w = font.GetStringSize(s.Node.Text, HorizontalAlignment.Left, -1, 14).X;
-            float y = s.Node.Position.Y + font.GetAscent(14) + 3f;
+            float w = s.TextW;
+            float y = s.Node.Position.Y + font.GetAscent(s.Size) + 3f;
             var a = new Vector2(s.Node.Position.X, y); var b = new Vector2(s.Node.Position.X + w, y);
             DrawLine(a, b, Paper, 4f); DrawLine(a, b, Ink, 1.5f);
         }
     }
 
-    void Relabel() { RefreshLegend(); foreach (var s in _labels) s.Node.Text = Names.Country(s.C.Name) ?? s.C.Name; }
+    void Relabel() { RefreshLegend(); foreach (var s in _labels) s.Node.Text = Names.Country(s.C.Name) ?? s.C.Name; _lastLabelCount = -1; }   // a new language: lay the names out again
 
     public float GlobeRadiusPx(float dist)
     {
@@ -169,7 +187,7 @@ public sealed partial class Overlay : Control
         LayoutLegend();
         QueueRedraw();
         _acc += delta;
-        if (_acc >= 1.0 / 15.0) { _acc = 0; UpdateLabels(); }
+        if (_acc >= 1.0 / 15.0) { _acc = 0; if (LabelsDirty()) UpdateLabels(); }
     }
 
     public override void _Draw()
@@ -190,18 +208,16 @@ public sealed partial class Overlay : Control
         }
     }
 
-    // Small states (G5): a leader line with a dot at the region, and a frame in the line tone round plates of states under 400 du^2.
+    // Small states (G5, #523): a leader line with a dot at the region; the word has no plate, only the halo.
     void DrawCallouts()
     {
         foreach (var s in _labels)
         {
             if (!s.Node.Visible) continue;
-            if (s.Framed) DrawRect(s.Rect, s.Frame, false, 1.5f);
             if (!s.Callout) continue;
             var to = new Vector2(s.Rect.Position.X < s.Anchor.X ? s.Rect.End.X : s.Rect.Position.X, s.Rect.GetCenter().Y);
             DrawLine(s.Anchor, to, Paper, 4f, true); DrawLine(s.Anchor, to, Ink, 1.5f, true);
             DrawCircle(s.Anchor, 4.5f, Paper); DrawCircle(s.Anchor, 3f, Ink);
-            DrawRect(s.Rect, Ink, false, 1f);
         }
     }
 
@@ -259,8 +275,8 @@ public sealed partial class Overlay : Control
         var placed = new List<Rect2>();
         if (_legPlaced) placed.Add(LegendRect(LegendTextWidth()).Grow(4f));   // labels keep clear of the key
         VisibleLabels = 0;
-        float gr = GlobeRadiusPx(_dist);
-        var gc = VpSize * 0.5f;
+        long t0 = (long)Time.GetTicksUsec();
+        CacheCamera();
         // Slice countries first, so that they win overlaps.
         foreach (var pass in new[] { true, false })
             foreach (var s in _labels)
@@ -271,32 +287,67 @@ public sealed partial class Overlay : Control
                 s.On = s.On ? cs > 0.3f : cs > 0.4f;
                 if (!s.On) { s.Node.Visible = false; continue; }
                 var sp = _cam.UnprojectPosition(p);
-                var sz = s.Node.GetCombinedMinimumSize();
-                // The plate moves inside the visible part of its region (margin 8 px, G4); it is hidden only when that part cannot hold it.
-                float w = sz.X + 6f, h = sz.Y + 6f;
-                // Real projected area of the region from the local projection at its point (not the silhouette radius): decides plate, frame or callout (G5).
+                // Real projected area of the region from the local projection at its point: decides size, leader line or hiding (#523).
                 var ex = _cam.UnprojectPosition(GlobeData.ToSphere(s.C.LabelPoint.X + 1f, s.C.LabelPoint.Y)) - sp;
                 var ey = _cam.UnprojectPosition(GlobeData.ToSphere(s.C.LabelPoint.X, s.C.LabelPoint.Y + 1f)) - sp;
                 float area = LabelPlacement.ScreenArea(s.C.BoxArea, ex.X, ex.Y, ey.X, ey.Y);
+                if (area < LabelPlacement.HiddenBelow) { s.Node.Visible = false; continue; }   // too small to name at this zoom: shown when the player zooms in
                 var mode = LabelPlacement.ModeFor(area);
-                float px, py;
+                s.Callout = mode == LabelPlacement.PlateMode.Callout; s.Anchor = sp; s.Area = area;
+                var font = s.Emph ? Fonts.MapBold : Fonts.Map;
+                var text = s.Node.Text;
+                float w = 0, h = 0, px = 0, py = 0;
+                int size = s.Callout ? (int)LabelPlacement.NominalFont : LabelPlacement.FontSizeFor(area);
                 _regionOf = s.C;
-                s.Callout = mode == LabelPlacement.PlateMode.Callout; s.Framed = mode == LabelPlacement.PlateMode.Framed && s.C.Id > 0; s.Anchor = sp; s.Area = area;
                 if (s.Callout)
                 {
+                    s.TextW = font.GetStringSize(text, HorizontalAlignment.Left, -1, size).X;
+                    w = s.TextW + 4f; h = font.GetHeight(size) + 2f;
                     LabelPlacement.CalloutCentre(sp.X, sp.Y, w, h, VpSize.X, out float ccx, out float ccy);
                     if (!LabelPlacement.Place(ccx, ccy, w, h, VpSize.X, VpSize.Y, out px, out py)) { s.Node.Visible = false; continue; }
                 }
-                else if (!LabelPlacement.PlaceInRegion(sp.X, sp.Y, w, h, VpSize.X, VpSize.Y, LabelPlacement.RegionRadius(area), gc.X, gc.Y, gr * 0.97f, _onRegion, out px, out py)) { s.Node.Visible = false; continue; }
+                else
+                {
+                    // The word is as large as the inscribed text rectangle allows (down to the minimum size) and stays inside its own country, else it is hidden until zoomed in.
+                    // A long unit name has an optional short form (locale polity_short.CODE) that is tried after the full one at every size.
+                    float fit = LabelPlacement.FitScale(s.Node.Visible), step = Mathf.Clamp(Mathf.Sqrt(area) / 10f, 4f, 24f);
+                    string shortName = Names.CountryShort(s.C.Name), chosen = null;
+                    int pref = size;
+                    for (int v = 0; v < 2 && chosen == null; v++)
+                    {
+                        var variant = v == 0 ? (Names.Country(s.C.Name) ?? s.C.Name) : shortName;
+                        if (variant == null) break;
+                        for (int sz = pref; sz > 0; sz = LabelPlacement.NextSize(sz))
+                        {
+                            float tw = font.GetStringSize(variant, HorizontalAlignment.Left, -1, sz).X, bw = tw + 4f, bh = font.GetHeight(sz) + 2f;
+                            if (!LabelPlacement.MayFit(area, bw * fit, bh * fit)) continue;
+                            if (LabelPlacement.FindSpot(sp.X, sp.Y, bw, bh, fit, 4f, VpSize.X * 0.5f, VpSize.Y * 0.5f, GlobeRadiusPx(_dist) * 0.97f, VpSize.X, VpSize.Y, step, _onRegion, out float cx, out float cy))
+                            { chosen = variant; size = sz; s.TextW = tw; w = bw; h = bh; px = cx - w * 0.5f; py = cy - h * 0.5f; break; }
+                        }
+                    }
+                    if (chosen == null)
+                    {
+                        if (s.C.Id <= 0 || area < LabelPlacement.CalloutFallbackFrom) { s.Node.Visible = false; continue; }
+                        // Too narrow for the word on its own land: the full name on a leader line into the open (a country named at a wider view is not dropped).
+                        s.Callout = true; size = (int)LabelPlacement.NominalFont; chosen = Names.Country(s.C.Name) ?? s.C.Name;
+                        s.TextW = font.GetStringSize(chosen, HorizontalAlignment.Left, -1, size).X;
+                        w = s.TextW + 4f; h = font.GetHeight(size) + 2f;
+                        LabelPlacement.CalloutCentre(sp.X, sp.Y, w, h, VpSize.X, out float fcx, out float fcy);
+                        if (!LabelPlacement.Place(fcx, fcy, w, h, VpSize.X, VpSize.Y, out px, out py)) { s.Node.Visible = false; continue; }
+                    }
+                    if (s.Node.Text != chosen) s.Node.Text = chosen;
+                }
+                if (size != s.Size) { s.Size = size; s.Node.AddThemeFontSizeOverride("font_size", size); }
                 var rect = new Rect2(px, py, w, h);
                 s.Rect = rect;
                 bool hit = false;
                 foreach (var o in placed) if (o.Intersects(rect)) { hit = true; break; }
                 if (hit) { s.Node.Visible = false; continue; }
                 placed.Add(rect);
-                s.Node.Position = rect.Position + new Vector2(3, 3);
+                s.Node.Position = rect.Position + new Vector2(2, 1);
                 s.Node.Visible = true;
                 VisibleLabels++;
             }
+        MaxUpdateMs = System.Math.Max(MaxUpdateMs, ((long)Time.GetTicksUsec() - t0) / 1000.0);
     }
 }

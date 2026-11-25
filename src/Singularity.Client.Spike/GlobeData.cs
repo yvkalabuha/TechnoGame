@@ -30,6 +30,8 @@ public sealed class GlobeData
     public byte[] RegionLut = Array.Empty<byte>();      // LutWidth x 3 RGBA8
     public readonly List<Country> ColonyLabels = new();   // Id 0, Name "C_KEY": labels of the large colonial areas (locale polity.C_KEY)
     int[] _colonyGroup = Array.Empty<int>();
+    bool[] _hasOwnLand = Array.Empty<bool>();   // owner without home land that has dependent land outside every named colony group
+    bool[] _hasHome = Array.Empty<bool>();   // owner has land that is not dependent; one that has none (Anglo-Egyptian Sudan) is labelled on its dependent land
     public WorldMap Map;
     public CountryPalette.Result Style;
 
@@ -39,6 +41,8 @@ public sealed class GlobeData
         RegionIds = Map.RasteriseRegions();
         if (Map.Owners.Length > 255 || Map.RegionIds.Length >= LutWidth) throw new InvalidOperationException("owner raster is 8-bit and the region table is 512 wide");
         Ids = Map.OwnerRaster(RegionIds);
+        _hasHome = new bool[Map.Owners.Length + 1];
+        for (int i = 0; i < Map.Rows.Length; i++) if (Map.RegionOwner[i] != 0 && !CountryPalette.IsDependent(Map.Rows[i].Status)) _hasHome[Map.RegionOwner[i]] = true;
         Style = CountryPalette.Build(Map);
         var area = new long[Map.Owners.Length + 1];
         foreach (var o in Ids) area[o]++;
@@ -48,10 +52,12 @@ public sealed class GlobeData
 
         var canchors = Map.ColonyAnchors(RegionIds);
         var cg = _colonyGroup = Map.ColonyGroupOfRegion();
+        _hasOwnLand = new bool[Map.Owners.Length + 1];
+        for (int i = 0; i < Map.Rows.Length; i++) if (Map.RegionOwner[i] != 0 && cg[i] == 0 && CountryPalette.IsDependent(Map.Rows[i].Status)) _hasOwnLand[Map.RegionOwner[i]] = true;
         var carea = new long[WorldMap.ColonyGroups.Length + 1];
         foreach (var rg in RegionIds) if (rg != 0) carea[cg[rg - 1]]++;
         for (int k = 1; k <= WorldMap.ColonyGroups.Length; k++)
-            if (carea[k] > 0) ColonyLabels.Add(new Country { Id = 0, Name = "C_" + WorldMap.ColonyGroups[k - 1].Key, BoxArea = carea[k], LabelPoint = new Vector2(canchors[k].Lon, canchors[k].Lat), Group = k });
+            if (carea[k] > 0) ColonyLabels.Add(new Country { Id = 0, Name = "C_" + WorldMap.ColonyGroups[k - 1].Key, BoxArea = carea[k], LabelPoint = new Vector2(canchors[k].Lon, canchors[k].Lat), Group = k, Tint = Style.CodeTone[Math.Max(0, Array.IndexOf(Style.Codes, WorldMap.ColonyGroups[k - 1].Owner))] });
         ColonyLabels.Sort((a, b) => b.BoxArea.CompareTo(a.BoxArea));
 
         if (Style.Controllers.Length > 255) throw new InvalidOperationException("controller number is 8-bit in the region table");
@@ -59,7 +65,7 @@ public sealed class GlobeData
         for (int i = 0; i < Style.Regions.Length; i++)
         {
             var s = Style.Regions[i]; int id = i + 1;
-            Put(0, id, Fill(s.Tone), (byte)((int)s.Hatch * 85));
+            Put(0, id, s.Hatch == HatchKind.Colony ? CountryPalette.ColonyFill(s.Tone) : Fill(s.Tone), (byte)((int)s.Hatch * 85));
             Put(1, id, Line(s.HatchTone, HatchLogic.LineScale(s.Hatch)), (byte)s.Owner);
             Put(2, id, ((byte)s.Controller, 0, 0), 255);   // row 2: controller number in R (the line of control must not depend on the tone)
         }
@@ -98,7 +104,7 @@ public sealed class GlobeData
         int r = RegionIds[y * W + x];
         if (r == 0) return false;
         if (c.Id == 0) return c.Group > 0 && _colonyGroup[r - 1] == c.Group;
-        return !CountryPalette.IsDependent(Map.Rows[r - 1].Status) && Ids[y * W + x] == c.Id;   // an occupied colony (Libya under Britain) is not Italy's own land
+        return (!CountryPalette.IsDependent(Map.Rows[r - 1].Status) || (!_hasHome[c.Id] && (_colonyGroup[r - 1] == 0 || !_hasOwnLand[c.Id]))) && Ids[y * W + x] == c.Id;   // an occupied colony (Libya under Britain) is not Italy's own land
     }
 
     /// <summary>Owner number at lon/lat in degrees (0 = sea or no owner).</summary>

@@ -210,7 +210,16 @@ public sealed class WorldMap
     {
         var home = new bool[Owners.Length + 1];
         for (int i = 0; i < Rows.Length; i++) if (Rows[i].Status == "core" && RegionOwner[i] != 0) home[RegionOwner[i]] = true;
-        return Anchors(regions, Owners.Length, r => { int o = RegionOwner[r]; return o != 0 && (!home[o] || Rows[r].Status == "core") ? o : 0; });
+        // An owner without home regions is anchored on its own dependent land, not on a colony group that has a name of its own (South West Africa is not South Africa).
+        var group = ColonyGroupOfRegion();
+        var own = new bool[Owners.Length + 1];
+        for (int i = 0; i < Rows.Length; i++) if (RegionOwner[i] != 0 && !home[RegionOwner[i]] && group[i] == 0) own[RegionOwner[i]] = true;
+        return Anchors(regions, Owners.Length, r =>
+        {
+            int o = RegionOwner[r];
+            if (o == 0) return 0;
+            return home[o] ? (Rows[r].Status == "core" ? o : 0) : (!own[o] || group[r] == 0 ? o : 0);
+        });
     }
 
     /// <summary>Colonial areas that get a label of their own (1945 names, locale polity.C_KEY): all dependent regions of the owner whose id is one of the prefixes.</summary>
