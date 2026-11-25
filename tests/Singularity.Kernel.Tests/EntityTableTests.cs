@@ -34,11 +34,15 @@ public class EntityTableTests
     private sealed class ToySystem : ITickSystem
     {
         private readonly Toy _t;
-        private readonly bool _declare;
-        public ToySystem(Toy t, bool declare = true) { _t = t; _declare = declare; }
+        private readonly Column[] _written;
+        public ToySystem(Toy t, bool declare = true)
+        {
+            _t = t;
+            _written = declare ? [t.Score, t.Val] : [];
+        }
         public int SystemId => SystemIdValue;
 
-        public IReadOnlyList<Column> WrittenColumns => _declare ? [_t.Score, _t.Val] : Array.Empty<Column>();
+        public IReadOnlyList<Column> WrittenColumns => _written;
 
         public void Compute(in TickContext ctx, int chunk, int rowStart, int rowEnd)
         {
@@ -55,15 +59,15 @@ public class EntityTableTests
         public void Post(in TickContext context) { }
     }
 
-    private static List<string> Run(int threads, int chunkSize, int capacity, bool variable, bool declare = true)
+    private static List<string> Run(int threads, int chunkSize, int capacity, bool variable)
     {
         Toy t = Build(50, capacity, variable);
-        var runner = new TickRunner(t.World, t.Actors, 77, [new ToySystem(t, declare)], chunkSize, threads);
+        var runner = new TickRunner(t.World, t.Actors, 77, [new ToySystem(t)], chunkSize, threads);
         var hashes = new List<string>();
         for (int d = 0; d < 6; d++)
         {
             runner.RunTick();
-            hashes.Add(StateHash.ComputeHex(t.World, 1));
+            hashes.Add(StateHash.ComputeHex(t.World));
         }
         return hashes;
     }
@@ -80,7 +84,6 @@ public class EntityTableTests
             foreach (int chunkSize in new[] { 1, 8, 32 })
             {
                 Assert.Equal(reference, Run(threads, chunkSize, capacity, variable));
-                Assert.Equal(reference, Run(threads, chunkSize, capacity, variable, declare: false));
             }
     }
 
@@ -121,6 +124,7 @@ public class EntityTableTests
     private sealed class RangeProbe(LongColumn col, Table child, List<(int, int)> seen) : ITickSystem
     {
         public int SystemId => 1;
+        public IReadOnlyList<Column> WrittenColumns { get; } = [col];
         public void Compute(in TickContext ctx, int chunk, int rowStart, int rowEnd)
         {
             Span<long> r = col.NextRange(ctx, chunk);
@@ -143,9 +147,10 @@ public class EntityTableTests
         Assert.Equal(0, col.NextRange(ctx, 0).Length);
     }
 
-    private sealed class DelegateSystem(Action<TickContext, int> compute, Action<TickContext>? merge = null) : ITickSystem
+    private sealed class DelegateSystem(Action<TickContext, int> compute, Action<TickContext>? merge = null, params Column[] written) : ITickSystem
     {
         public int SystemId => 2;
+        public IReadOnlyList<Column> WrittenColumns { get; } = written;
         public void Compute(in TickContext ctx, int chunk, int rowStart, int rowEnd) => compute(ctx, chunk);
         public void Merge(in TickContext ctx, int chunkCount) => merge?.Invoke(ctx);
         public void Post(in TickContext context) { }
@@ -215,7 +220,7 @@ public class EntityTableTests
         Toy t = Build(4, 2, false);
         LongColumn same = t.Actors.AddLong("val"); // same short name in two tables must not collide
         t.Actors.Trace = new ColumnWriteTrace();
-        var a = new DelegateSystem((ctx, c) => t.Val.NextRange(ctx, c));
+        var a = new DelegateSystem((ctx, c) => t.Val.NextRange(ctx, c), null, t.Val);
         new TickRunner(t.World, t.Actors, 1, [a], 2, 1).RunTick();
         Assert.Contains((2, "designs.val"), t.Actors.Trace.Pairs);
         Assert.DoesNotContain((2, "val"), t.Actors.Trace.Pairs);
@@ -255,9 +260,119 @@ public class EntityTableTests
     public void WorldHash_CoversChildTables()
     {
         Toy t = Build(4, 2, false);
-        string before = StateHash.ComputeHex(t.World, 1);
+        string before = StateHash.ComputeHex(t.World);
         t.Val.Load(Enumerable.Range(1, 8).Select(i => (long)i).ToArray());
-        string after = StateHash.ComputeHex(t.World, 1);
+        string after = StateHash.ComputeHex(t.World);
         Assert.True(before != after);
+    }
+
+    [Fact]
+    public void UndeclaredChildColumn_InCompute_Throws_NotOpenedOnAWorker()
+    {
+        Toy t = Build(8, 2, false);
+        var runner = new TickRunner(t.World, t.Actors, 1, [new ToySystem(t, declare: false)], 2, 4);
+        TickComputeException e = Assert.Throws<TickComputeException>(runner.RunTick);
+        Assert.Contains("WrittenColumns", e.InnerException!.Message);
+    }
+
+    private sealed class ChunkSys(Table chunk, LongColumn col, List<int> counts) : ITickSystem
+    {
+        public int SystemId => 3;
+        public Table? ChunkTable => chunk;
+        public IReadOnlyList<Column> WrittenColumns { get; } = [col];
+        public void Compute(in TickContext ctx, int c, int rowStart, int rowEnd) => col.NextRange(ctx, c).Fill(c + 1);
+        public void Merge(in TickContext ctx, int chunkCount) => counts.Add(chunkCount);
+        public void Post(in TickContext ctx) { }
+    }
+
+    [Fact]
+    public void EachSystem_HasItsOwnChunkTable()
+    {
+        var world = new World();
+        Table a = world.AddTable("a", 10);
+        Table b = world.AddTable("b", 3);
+        Table bc = world.AddChildTable("bc", b, 2);
+        LongColumn col = bc.AddLong("x");
+        var counts = new List<int>();
+        var runner = new TickRunner(world, a, 1, [new ChunkSys(b, col, counts)], 2, 4);
+        runner.RunTick();
+        Assert.Equal([2], counts); // 3 rows of b in chunks of 2, not 10 rows of a
+        Assert.Equal([1L, 1, 1, 1, 2, 2], col.Current.ToArray());
+        var other = new World();
+        Assert.Throws<ArgumentException>(() =>
+            new TickRunner(other, other.AddTable("o", 1), 1, [new ChunkSys(b, col, counts)], 2, 1));
+    }
+
+    [Fact]
+    public void FailedRegistration_LeavesNoGhostChild_AndWorldIsFixedAfterARunner()
+    {
+        var world = new World();
+        Table p = world.AddTable("p", 2);
+        world.AddChildTable("c", p, 1);
+        Assert.Throws<ArgumentException>(() => world.AddChildTable("c", p, 1));
+        Assert.Throws<ArgumentException>(() => world.AddChildTable("c", p, new[] { 1, 1 }));
+        Assert.Single(p.Children);
+        new TickRunner(world, p, 1, [], 1, 1);
+        Assert.Throws<InvalidOperationException>(() => world.AddTable("late", 1));
+        Assert.Throws<InvalidOperationException>(() => world.AddChildTable("late", p, 1));
+    }
+
+    private sealed class PostSnap(Table other, bool[] refused) : ITickSystem
+    {
+        public int SystemId => 4;
+        public void Compute(in TickContext ctx, int chunk, int rowStart, int rowEnd) { }
+        public void Merge(in TickContext ctx, int chunkCount) { }
+        public void Post(in TickContext ctx)
+        {
+            try { TableSnapshot.Write(other, 1, 1, new MemoryStream()); }
+            catch (InvalidOperationException) { refused[0] = true; }
+        }
+    }
+
+    [Fact]
+    public void Post_CannotSnapshotSecondaryTable_DuringTheTick()
+    {
+        var world = new World();
+        Table a = world.AddTable("a", 2);
+        Table b = world.AddTable("b", 2);
+        b.AddLong("x");
+        var refused = new bool[1];
+        new TickRunner(world, a, 1, [new PostSnap(b, refused)], 1, 1).RunTick();
+        Assert.True(refused[0]);
+        TableSnapshot.Write(b, 1, 1, new MemoryStream()); // allowed again once the tick is over
+    }
+
+    private sealed class MergeToucher(int id, LongColumn col) : ITickSystem
+    {
+        public int SystemId => id;
+        public void Compute(in TickContext ctx, int chunk, int rowStart, int rowEnd) { }
+        public void Merge(in TickContext ctx, int chunkCount) => col.Next[0]++;
+        public void Post(in TickContext ctx) { }
+    }
+
+    [Fact]
+    public void Trace_CoversSecondaryRootTables()
+    {
+        var world = new World { Trace = new ColumnWriteTrace() };
+        Table a = world.AddTable("a", 1);
+        Table b = world.AddTable("b", 1);
+        LongColumn col = b.AddLong("x");
+        new TickRunner(world, a, 1, [new MergeToucher(10, col), new MergeToucher(11, col)], 1, 1).RunTick();
+        Assert.Equal([("b.x", new[] { 10, 11 })], world.Trace!.Violations().Select(v => (v.Column, v.SystemIds)));
+    }
+
+    [Fact]
+    public void WorldHash_DependsOnTableNamesAndSchemaVersion_SingleTableHashUnchanged()
+    {
+        static string Hash(string name, int version)
+        {
+            var w = new World();
+            w.AddTable(name, 2, version).AddLong("x");
+            return StateHash.ComputeHex(w);
+        }
+        string baseline = Hash("a", 1);
+        Assert.True(baseline != Hash("b", 1));
+        Assert.True(baseline != Hash("a", 2));
+        Assert.True(baseline == Hash("a", 1));
     }
 }

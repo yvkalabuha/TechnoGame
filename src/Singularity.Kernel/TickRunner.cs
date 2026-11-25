@@ -64,9 +64,16 @@ public interface ITickSystem
 
     /// <summary>
     /// Columns this system writes through <c>Next</c> or <c>NextRange</c>. The runner opens them (copy-on-write) single-threaded before
-    /// its compute, so no chunk opens a column in parallel (ADR-0029 п. 5). Empty by default: columns then open on first touch.
+    /// its compute, so no chunk opens a column in parallel (ADR-0029 п. 5). `NextRange` of a child column that is not listed throws in compute.
+    /// Called every tick: return a cached array or list, never a new one (no allocation on the tick path). Empty by default.
     /// </summary>
     IReadOnlyList<Column> WrittenColumns => Array.Empty<Column>();
+
+    /// <summary>
+    /// The table whose rows are split into chunks for this system; null means the runner's primary table. It must belong to the same
+    /// world. <see cref="TickContext.Table"/> and the chunk count of <see cref="Merge"/> follow it (ADR-0020 п. 1).
+    /// </summary>
+    Table? ChunkTable => null;
 }
 
 /// <summary>
@@ -86,6 +93,8 @@ public sealed class TickRunner
     private readonly Table _table;
     private readonly Table[] _tables;   // chunk table first, then the rest in creation order
     private readonly Table[] _childTables;
+    private readonly Table[] _chunkTables;  // per system: its chunk table (ADR-0020 п. 1)
+    private readonly int[] _chunkCounts;
     private readonly CounterRng _rng;
     private readonly ITickSystem[] _systems;
     private readonly int _chunkSize;
@@ -150,7 +159,22 @@ public sealed class TickRunner
         _chunkSize = chunkSize;
         _parallel = new ParallelOptions { MaxDegreeOfParallelism = maxThreads };
         ChunkCount = ChunkCountFor(table.RowCount, chunkSize);
-        _failures = new TickComputeException?[ChunkCount];
+        _chunkTables = new Table[_systems.Length];
+        _chunkCounts = new int[_systems.Length];
+        int maxChunks = ChunkCount;
+        for (int s = 0; s < _systems.Length; s++)
+        {
+            Table chunkTable = _systems[s].ChunkTable ?? table;
+            if (Array.IndexOf(tables, chunkTable) < 0)
+                throw new ArgumentException($"System {_systems[s].SystemId}: its chunk table is not in the world.", nameof(systems));
+            _chunkTables[s] = chunkTable;
+            _chunkCounts[s] = ChunkCountFor(chunkTable.RowCount, chunkSize);
+            maxChunks = Math.Max(maxChunks, _chunkCounts[s]);
+        }
+        // The set of tables is fixed from here on: a table added later would be hashed but never ticked.
+        foreach (Table t in tables)
+            t.Locked = true;
+        _failures = new TickComputeException?[maxChunks];
     }
 
     /// <summary>
@@ -218,10 +242,11 @@ public sealed class TickRunner
 
         LastTickRan = true;
         // The flag spans the whole tick, post included: no snapshot is loaded or taken and no restore happens while the state is not settled.
-        _table.RunActive = true;
+        // Every table of the world: a Post callback must not load or take a snapshot of a secondary table either.
+        for (int t = 0; t < _tables.Length; t++)
+            _tables[t].RunActive = true;
         try
         {
-            var context = new TickContext(_table, _rng, Tick, _calendar, _chunkSize);
             for (int s = 0; s < _systems.Length; s++)
                 _due[s] = _nextDue[s] == Tick;
 
@@ -235,15 +260,16 @@ public sealed class TickRunner
                     if (!_due[s])
                         continue;
                     ITickSystem system = _systems[s];
-                    if (_table.Trace is not null)
-                        _table.TraceSystemId = system.SystemId;
+                    var context = new TickContext(_chunkTables[s], _rng, Tick, _calendar, _chunkSize);
+                    int chunkCount = _chunkCounts[s];
+                    SetTraceSystem(system.SystemId);
                     IReadOnlyList<Column> written = system.WrittenColumns;
                     for (int c = 0; c < written.Count; c++)
                         written[c].OpenNext();
                     SetCompute(true);
                     if (_parallel.MaxDegreeOfParallelism == 1)
                     {
-                        for (int chunk = 0; chunk < ChunkCount; chunk++)
+                        for (int chunk = 0; chunk < chunkCount; chunk++)
                             ComputeChunk(system, context, chunk);
                     }
                     else
@@ -252,7 +278,7 @@ public sealed class TickRunner
                         // no shared writes. Failures are recorded, not thrown: every chunk runs, so the set of
                         // failed chunks, and with it the reported lowest one, does not depend on scheduling.
                         Array.Clear(_failures);
-                        Parallel.For(0, ChunkCount, _parallel, chunk =>
+                        Parallel.For(0, chunkCount, _parallel, chunk =>
                         {
                             try
                             {
@@ -263,7 +289,7 @@ public sealed class TickRunner
                                 _failures[chunk] = e;
                             }
                         });
-                        for (int chunk = 0; chunk < ChunkCount; chunk++)
+                        for (int chunk = 0; chunk < chunkCount; chunk++)
                         {
                             if (_failures[chunk] is { } failure)
                                 ExceptionDispatchInfo.Capture(failure).Throw();
@@ -276,9 +302,8 @@ public sealed class TickRunner
                 {
                     if (!_due[s])
                         continue;
-                    if (_table.Trace is not null)
-                        _table.TraceSystemId = _systems[s].SystemId;
-                    _systems[s].Merge(context, ChunkCount);
+                    SetTraceSystem(_systems[s].SystemId);
+                    _systems[s].Merge(new TickContext(_chunkTables[s], _rng, Tick, _calendar, _chunkSize), _chunkCounts[s]);
                 }
 
                 for (int t = 0; t < _tables.Length; t++)
@@ -293,16 +318,26 @@ public sealed class TickRunner
             Tick++;
             UpdateNextDue();
 
-            var postContext = new TickContext(_table, _rng, Tick, _calendar, _chunkSize);
             for (int s = 0; s < _systems.Length; s++)
             {
                 if (_due[s])
-                    _systems[s].Post(postContext);
+                    _systems[s].Post(new TickContext(_chunkTables[s], _rng, Tick, _calendar, _chunkSize));
             }
         }
         finally
         {
-            _table.RunActive = false;
+            for (int t = 0; t < _tables.Length; t++)
+                _tables[t].RunActive = false;
+        }
+    }
+
+    // Root tables keep their own system id for the one-writer trace (children follow their parent); tracing is per table.
+    private void SetTraceSystem(int systemId)
+    {
+        for (int t = 0; t < _tables.Length; t++)
+        {
+            if (_tables[t].Parent is null && _tables[t].Trace is not null)
+                _tables[t].TraceSystemId = systemId;
         }
     }
 
@@ -329,7 +364,7 @@ public sealed class TickRunner
     {
         // 64-bit bounds: chunk * chunkSize can exceed int when chunkSize is huge.
         long start = (long)chunk * _chunkSize;
-        long end = Math.Min(start + _chunkSize, _table.RowCount);
+        long end = Math.Min(start + _chunkSize, context.Table.RowCount);
         try
         {
             system.Compute(context, chunk, (int)start, (int)end);

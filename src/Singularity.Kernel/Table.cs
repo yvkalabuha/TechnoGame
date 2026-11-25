@@ -17,6 +17,8 @@ public sealed class Table
     // Child table (ADR-0029 п. 5): rows grouped by parent row; offsets has parent.RowCount + 1 entries.
     internal Table(Table parent, int[] offsets, string name) : this(offsets[^1])
     {
+        if (parent.Locked)
+            throw new InvalidOperationException("The parent table is already run by a TickRunner: no child tables can be added.");
         Parent = parent;
         Offsets = offsets;
         TraceName = name;
@@ -25,6 +27,12 @@ public sealed class Table
     }
 
     private readonly List<Table> _children = new();
+
+    /// <summary>Set by a <see cref="TickRunner"/> built over the table: the set of tables is fixed from then on.</summary>
+    internal bool Locked { get; set; }
+
+    /// <summary>Version of this table's column layout; part of the world hash header (ADR-0020 п. 7). Set before the first tick.</summary>
+    public int SchemaVersion { get; set; } = 1;
     private bool _inCompute;
     private ColumnWriteTrace? _trace;
     private bool _fullCopyMode;
@@ -39,7 +47,7 @@ public sealed class Table
     internal int[]? Offsets { get; }
 
     /// <summary>Prefix of column names in the write trace (the table name for a child table), null for a root table.</summary>
-    internal string? TraceName { get; }
+    internal string? TraceName { get; set; }
 
     /// <summary>
     /// Slot generation of a child table (first column, hashed): a handle is live while it equals the generation of its row.

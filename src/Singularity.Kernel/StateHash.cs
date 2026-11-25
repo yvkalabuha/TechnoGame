@@ -28,29 +28,36 @@ public static class StateHash
     }
 
     /// <summary>
-    /// World hash: header int32 schema_version, int32 table count; then per table in creation order int32 n_rows and its columns as above.
-    /// Names are not hashed (the schema version stands for the layout).
+    /// World hash (ADR-0020 п. 7), all little-endian: int32 table_count; then per table in creation order: name (int32 UTF-8 length, bytes),
+    /// int32 <see cref="Table.SchemaVersion"/>, int32 n_rows, int32 n_cols, columns in registration order. The single-table hash above is unchanged.
     /// </summary>
-    public static byte[] Compute(World world, int schemaVersion)
+    public static byte[] Compute(World world)
     {
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         Span<byte> word = stackalloc byte[sizeof(int)];
-        BinaryPrimitives.WriteInt32LittleEndian(word, schemaVersion);
-        hash.AppendData(word);
-        BinaryPrimitives.WriteInt32LittleEndian(word, world.Tables.Count);
-        hash.AppendData(word);
-        foreach (Table table in world.Tables)
+        AppendInt(hash, word, world.Tables.Count);
+        for (int t = 0; t < world.Tables.Count; t++)
         {
-            BinaryPrimitives.WriteInt32LittleEndian(word, table.RowCount);
-            hash.AppendData(word);
+            Table table = world.Tables[t];
+            byte[] name = System.Text.Encoding.UTF8.GetBytes(world.Names[t]);
+            AppendInt(hash, word, name.Length);
+            hash.AppendData(name);
+            AppendInt(hash, word, table.SchemaVersion);
+            AppendInt(hash, word, table.RowCount);
+            AppendInt(hash, word, table.Columns.Count);
             for (int i = 0; i < table.Columns.Count; i++)
                 table.Columns[i].AppendCurrentTo(hash);
         }
         return hash.GetHashAndReset();
     }
 
-    public static string ComputeHex(World world, int schemaVersion) =>
-        Convert.ToHexStringLower(Compute(world, schemaVersion));
+    public static string ComputeHex(World world) => Convert.ToHexStringLower(Compute(world));
+
+    private static void AppendInt(IncrementalHash hash, Span<byte> word, int value)
+    {
+        BinaryPrimitives.WriteInt32LittleEndian(word, value);
+        hash.AppendData(word);
+    }
 
     public static string ComputeHex(Table table, int schemaVersion) =>
         Convert.ToHexStringLower(Compute(table, schemaVersion));

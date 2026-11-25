@@ -116,6 +116,9 @@ public abstract class Column<T> : Column where T : unmanaged
             throw new InvalidOperationException("The context has no chunk size.");
         if (parent.RowCount == 0)
             return Span<T>.Empty;
+        // Opening here would happen on a worker thread: the system must list the column in WrittenColumns (ADR-0029 п. 5).
+        if (Owner.InCompute && !Volatile.Read(ref _copied))
+            throw new InvalidOperationException($"Column '{Name}': not opened before compute; list it in ITickSystem.WrittenColumns.");
         long start = (long)chunk * context.ChunkSize;
         if (chunk < 0 || start >= parent.RowCount)
             throw new ArgumentOutOfRangeException(nameof(chunk));
