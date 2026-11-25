@@ -276,10 +276,10 @@ public sealed partial class Overlay : Control
         return p.Normalized().Dot(v);
     }
 
-    bool BlockedByForeignLand(float sx, float sy)
+    bool BlockedByLand(float sx, float sy)
     {
         if (InRegion == null || IsLand == null || !ScreenToLonLat(sx, sy, out float lon, out float lat)) return false;
-        return IsLand(lon, lat) && !InRegion(_regionOf, lon, lat);
+        return IsLand(lon, lat);   // a leader word hangs in open water: no land at all under it, the own country included (Ireland)
     }
     public System.Func<float, float, bool> IsLand;   // GlobeData.IsLandAt
     System.Func<float, float, bool> _blocked;
@@ -287,11 +287,12 @@ public sealed partial class Overlay : Control
     // Leader label: free water or own land only, clear of the other labels; hidden when no direction is free (#523: it appears when the player zooms in).
     bool PlaceLeaderLabel(LabelState s, Vector2 anchor, float w, float h, float area, List<LabelPlacement.Box> placed, out float px, out float py)
     {
-        _blocked ??= BlockedByForeignLand;
+        _blocked ??= BlockedByLand;
         px = py = 0;
         if (!LabelPlacement.PlaceLeader(anchor.X, anchor.Y, w, h, VpSize.X, VpSize.Y, VpSize.X * 0.5f, VpSize.Y * 0.5f, GlobeRadiusPx(_dist) * LabelPlacement.LimbKeep,
                 LabelPlacement.RegionRadius(area), placed, _blocked, out float cx, out float cy)) return false;
         px = cx - w * 0.5f; py = cy - h * 0.5f;
+        LabelPlacement.LineBoxes(anchor.X, anchor.Y, cx, cy, w * 0.5f, h * 0.5f, placed);
         return true;
     }
 

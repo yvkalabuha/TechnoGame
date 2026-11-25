@@ -47,6 +47,34 @@ public class LeaderPlacementTests
         Assert.True(LabelPlacement.InsideDisc(cx, cy, 50, 9, 960, 540, 5000));
     }
 
+    [Fact] public void Size_search_never_goes_below_the_12_px_floor()
+    {
+        for (int s = 28; s > 0; s = LabelPlacement.NextSize(s)) Assert.True(s >= (int)LabelPlacement.MinFont);
+        Assert.Equal(0, LabelPlacement.NextSize(12));
+    }
+
+    [Fact] public void Anchor_near_the_bottom_edge_hides_the_leader()
+    {
+        Assert.False(LabelPlacement.PlaceLeader(900, Vh - 3, 80, 18, Vw, Vh, 960, 540, 5000, 10, None, Free, out _, out _));   // Panama: no leader off the frame
+        Assert.True(LabelPlacement.PlaceLeader(900, Vh - 40, 80, 18, Vw, Vh, 960, 540, 5000, 10, None, Free, out _, out float cy));
+        Assert.True(cy + 9 <= Vh - LabelPlacement.Margin);
+    }
+
+    [Fact] public void A_leader_line_blocks_later_labels()
+    {
+        var placed = new List<LabelPlacement.Box>();
+        LabelPlacement.LineBoxes(100, 100, 160, 60, 30, 9, placed);
+        Assert.True(placed.Count > 2);
+        Assert.Contains(placed, b => b.Intersects(new LabelPlacement.Box(120, 80, 4, 4)));   // a word across the line is rejected
+    }
+
+    [Fact] public void A_thin_gap_under_the_word_fails_the_fit()
+    {
+        // a 4 px strip of sea in the middle of a 100 px word (British West Africa between two lands)
+        Assert.False(LabelPlacement.FitsInside(500, 500, 100, 16, (x, y) => System.MathF.Abs(x - 525) > 2));
+        Assert.True(LabelPlacement.FitsInside(500, 500, 100, 16, (x, y) => true));
+    }
+
     [Fact] public void One_size_scale_for_every_label_by_own_area()
     {
         int prev = 0;

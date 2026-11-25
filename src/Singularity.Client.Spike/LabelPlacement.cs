@@ -133,9 +133,12 @@ public static class LabelPlacement
     /// <summary>The text box centred on (cx, cy) lies inside the region: centre, four corners and four edge midpoints are on its land.</summary>
     public static bool FitsInside(float cx, float cy, float w, float h, System.Func<float, float, bool> onRegion)
     {
+        // 5 x 3 probes: a thin gap or a notch of the coast under the word (Italy, British West Africa) is caught between the corners.
         float hw = w * 0.5f, hh = h * 0.5f;
-        return onRegion(cx, cy) && onRegion(cx - hw, cy - hh) && onRegion(cx + hw, cy - hh) && onRegion(cx - hw, cy + hh) && onRegion(cx + hw, cy + hh)
-            && onRegion(cx, cy - hh) && onRegion(cx, cy + hh) && onRegion(cx - hw, cy) && onRegion(cx + hw, cy);
+        for (int j = -1; j <= 1; j++)
+            for (int i = -2; i <= 2; i++)
+                if (!onRegion(cx + i * 0.5f * hw, cy + j * hh)) return false;
+        return true;
     }
 
     /// <summary>All four corners of the box centred on (cx, cy) with half sizes (hw, hh) lie within radius r of (gcx, gcy).</summary>
@@ -197,6 +200,7 @@ public static class LabelPlacement
         System.Collections.Generic.IReadOnlyList<Box> placed, System.Func<float, float, bool> blocked, out float cx, out float cy)
     {
         cx = cy = 0;
+        if (ax < Margin || ax > vpW - Margin || ay < Margin || ay > vpH - Margin) return false;   // the leader would run off the frame (Panama at the bottom edge)
         float hw = w * 0.5f, hh = h * 0.5f, baseL = System.MathF.Max(LeaderGap, regionR + 4f);
         foreach (float k in LengthSteps)
             foreach (var (ux, uy) in Dirs)
@@ -214,7 +218,16 @@ public static class LabelPlacement
         return false;
     }
 
-    // Nine probes (centre, corners, edge midpoints) plus the middles of the quarters: a coarse cover test without allocation.
+    /// <summary>Thin boxes along the leader line from the anchor to the text box, so that no later label is laid across the line.</summary>
+    public static void LineBoxes(float ax, float ay, float cx, float cy, float hw, float hh, System.Collections.Generic.List<Box> into)
+    {
+        float tx = System.Math.Clamp(ax, cx - hw, cx + hw), ty = System.Math.Clamp(ay, cy - hh, cy + hh);
+        float len = System.MathF.Sqrt((tx - ax) * (tx - ax) + (ty - ay) * (ty - ay));
+        int n = (int)(len / 6f) + 1;
+        for (int i = 0; i <= n; i++) { float t = i / (float)n; into.Add(new Box(ax + (tx - ax) * t - 3f, ay + (ty - ay) * t - 3f, 6f, 6f)); }
+    }
+
+    // Probes over the whole box: a coarse cover test without allocation.
     static bool AnyBlocked(float cx, float cy, float hw, float hh, System.Func<float, float, bool> blocked)
     {
         for (int j = -2; j <= 2; j++)

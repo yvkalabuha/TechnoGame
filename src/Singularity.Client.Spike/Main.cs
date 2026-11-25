@@ -725,11 +725,12 @@ public sealed partial class Main : Node3D
         if (_mapT < 1.2) return;
         // G4 on the live state: the big names of the frame stay on the map.
         if (v.Name.Contains("europe")) GD.Print($"MAPCHECK europe LBN screen area {_overlay.AreaOf("LBN"):F0} du2 (callout < {LabelPlacement.CalloutBelow})");
-        string need = v.Name.Contains("europe") ? "FRA" : v.Name.Contains("africa") ? "C_FRENCH_ALGERIA" : v.Name.Contains("asia") ? "THA" : null;
+        string need = v.Name.Contains("europe") ? "FRA" : v.Name.Contains("africa") ? "C_FRENCH_ALGERIA" : v.Name.Contains("asia") ? "THA" : v.Name.Contains("namerica") ? "C_GREENLAND" : null;
         if (need != null)
         {
             bool shown = _overlay.IsShown(need);
             GD.Print($"MAPCHECK {v.Name} label {need} shown: " + (shown ? "PASS" : "FAIL"));
+            _shotLog += $"MAPCHECK {v.Name} label {need} shown: {(shown ? "PASS" : "FAIL")}\n";   // the run log carries it, not only stdout
             if (!shown) _shotFailed = true;
         }
         string[] list = v.Name.Contains("europe_north") ? new[] { "GBR", "IRL", "SWE", "NOR", "DNK", "FIN", "ISL" }
