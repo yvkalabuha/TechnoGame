@@ -227,7 +227,7 @@ def smooth(t):
 
 # ---------------------------------------------------------------- aircraft
 def build(p, mats):
-    """Builds the aircraft as one object at the origin (nose at x=0 pointing -x... flipped below)."""
+    """Builds the aircraft as one mesh: nose at x=0, tail at x=L (build_design mirrors x so the nose faces +x)."""
     L, R = p["L"], p["R"]
     nr = p["noz_r"]
     twin = p["engines"] == 2
@@ -536,7 +536,7 @@ def build_design(engine, airframe, afterburner, engines=None):
     if mats[0] is None:
         mats = list(make_materials())
     ob = build(p, mats)
-    # nose at x=0 pointing -x after a flip: views expect the nose towards -x? keep nose at +x
+    # mirror x: the nose faces +x, which the VIEWS cameras expect (nose up in top view, left in side view)
     ob.scale.x = -1.0
     bpy.context.view_layer.update()
     return ob, p
