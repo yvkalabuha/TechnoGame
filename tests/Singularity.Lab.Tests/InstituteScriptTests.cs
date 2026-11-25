@@ -89,8 +89,8 @@ public sealed class InstituteScriptTests
     private static (SliceSession S, InstituteScript? I) Run(InstituteSpec? spec, int months, Rows? sink = null)
     {
         GameData data = SliceData.Load(AppContext.BaseDirectory);
-        int? player = spec?.Player is { } id ? data.Scenario(new SliceRunConfig().ScenarioId).ActorId.IndexOf(id) : null;
-        SliceSession s = SliceSession.Create(data, new SliceRunConfig { Seed = 1, Threads = 1, ChunkSize = 1, Institutes = true, PlayerActor = player });
+        int? player = spec?.Player is { } id ? data.Scenario(SliceRunConfig.Legacy.ScenarioId).ActorId.IndexOf(id) : null;
+        SliceSession s = SliceSession.Create(data, SliceRunConfig.Legacy with { Seed = 1, Threads = 1, ChunkSize = 1, Institutes = true, PlayerActor = player });
         var calendar = new TickCalendar(s.Date);
         InstituteScript? i = spec is null ? null : new InstituteScript(s, spec, sink, sink is null ? -1 : 0, sink is null ? -1 : 1);
         i?.Issue(0);

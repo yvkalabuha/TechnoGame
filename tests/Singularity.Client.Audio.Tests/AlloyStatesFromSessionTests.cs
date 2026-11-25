@@ -26,7 +26,7 @@ public class AlloyStatesFromSessionTests
         var seen = new Dictionary<AlloyState, int>();
         foreach (ulong seed in new ulong[] { 1, 2, 3, 4, 5, 6, 7, 8 })
         {
-            var s = SliceSession.Create(data, new SliceRunConfig { Seed = seed });
+            var s = SliceSession.Create(data, SliceRunConfig.Legacy with { Seed = seed });
             for (long t = 0; t < 200; t++)
             {
                 s.StepThroughMonth(t);

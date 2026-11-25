@@ -44,7 +44,7 @@ internal sealed class FleetRunStats
 
     public static FleetRunStats Run(ulong seed, SliceRunConfig? template = null)
     {
-        SliceRunConfig config = (template ?? new SliceRunConfig()) with { Seed = seed, Threads = 4, ChunkSize = 2 };
+        SliceRunConfig config = (template ?? SliceRunConfig.Legacy) with { Seed = seed, Threads = 4, ChunkSize = 2 };
         var stats = new FleetRunStats { Seed = seed, Config = config };
         stats.Execute();
         return stats;

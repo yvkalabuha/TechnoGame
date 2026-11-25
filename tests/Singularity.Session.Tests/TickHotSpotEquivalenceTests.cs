@@ -19,7 +19,7 @@ public class TickHotSpotEquivalenceTests
     [InlineData(7UL)]
     public void F1_RowOfTables_EqualLinearScans(ulong seed)
     {
-        SliceWorld w = SliceTestData.Create(new SliceRunConfig { Seed = seed }).World;
+        SliceWorld w = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed }).World;
         KnowledgeGraph g = w.Graph;
         IndustryLayout l = w.IndustryLayout;
         for (int n = 0; n <= KnowledgeRng.MaxNodeNumber + 1; n++)
@@ -34,7 +34,7 @@ public class TickHotSpotEquivalenceTests
     [InlineData(7UL)]
     public void F2_F3_F5_EachMonth_FastPathsEqualTheOldOnes(ulong seed)
     {
-        SliceSession session = SliceTestData.Create(new SliceRunConfig { Seed = seed });
+        SliceSession session = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed });
         SliceWorld w = session.World;
         IndustryLayout l = w.IndustryLayout;
         ICultureSnapshot snap = w.Industry;

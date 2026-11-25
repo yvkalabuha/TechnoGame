@@ -8,7 +8,7 @@ namespace Singularity.Session.Tests;
 
 public class CommandTests
 {
-    private static SliceSession Make() => SliceTestData.Create(new SliceRunConfig { Seed = 3 });
+    private static SliceSession Make() => SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3 });
 
     // Form-only handle for tests that never read the design back: generation 1 is the first taking of a slot.
     private static DesignHandle H(int slot) => new(slot, 1);
@@ -191,7 +191,7 @@ public class CommandTests
     [Fact]
     public void Replay_OfTheLog_GivesTheSameHash_Tick_AndDate()
     {
-        var config = new SliceRunConfig { Seed = 11, ProductAi = false };
+        var config = SliceRunConfig.Legacy with { Seed = 11, ProductAi = false };
         SliceSession original = SliceSession.Create(SliceTestData.Data, config);
         var player = new PlayerScript(original);
         for (long m = 0; m < 48; m++)

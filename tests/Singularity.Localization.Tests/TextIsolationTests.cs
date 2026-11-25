@@ -30,7 +30,7 @@ public class TextIsolationTests : IDisposable
 
     static string StateHashAfterTicks(GameData data)
     {
-        SliceSession s = SliceSession.Create(data, new SliceRunConfig { Seed = 7 });
+        SliceSession s = SliceSession.Create(data, SliceRunConfig.Legacy with { Seed = 7 });
         s.StepThroughMonth(3);
         return s.LastHash + "@" + s.Tick;
     }

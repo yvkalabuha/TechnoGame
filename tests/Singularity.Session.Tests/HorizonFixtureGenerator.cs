@@ -11,10 +11,10 @@ internal static class HorizonConfigs
     // NoAi = the scripted-player path (ProductAi = false); the others run the AI (default).
     public static SliceRunConfig Config(string name, ulong seed) => name switch
     {
-        "Main" => new SliceRunConfig { Seed = seed, Threads = 4, ChunkSize = 2 },
-        "NoAi" => new SliceRunConfig { Seed = seed, Threads = 4, ChunkSize = 2, ProductAi = false },
-        "T6dOff" => new SliceRunConfig { Seed = seed, Threads = 4, ChunkSize = 2, T6dOff = true },
-        "NoRetire" => new SliceRunConfig { Seed = seed, Threads = 4, ChunkSize = 2, FleetArm = FleetArm.NoRetire },
+        "Main" => SliceRunConfig.Legacy with { Seed = seed, Threads = 4, ChunkSize = 2 },
+        "NoAi" => SliceRunConfig.Legacy with { Seed = seed, Threads = 4, ChunkSize = 2, ProductAi = false },
+        "T6dOff" => SliceRunConfig.Legacy with { Seed = seed, Threads = 4, ChunkSize = 2, T6dOff = true },
+        "NoRetire" => SliceRunConfig.Legacy with { Seed = seed, Threads = 4, ChunkSize = 2, FleetArm = FleetArm.NoRetire },
         _ => throw new ArgumentException(name),
     };
 }

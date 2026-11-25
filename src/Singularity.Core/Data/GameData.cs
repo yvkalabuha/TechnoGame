@@ -1,3 +1,4 @@
+using Singularity.Core.Policy;
 using System.Collections.Immutable;
 
 namespace Singularity.Core.Data;
@@ -6,8 +7,9 @@ namespace Singularity.Core.Data;
 public sealed class GameData
 {
     internal GameData(ImmutableArray<ModManifest> mods, NodeTable nodes, ProductClassTable productClasses,
-        ImmutableArray<ScenarioData> scenarios, NodeHistoryTable history, ImmutableArray<string> warnings, InstituteTable institutes, IntelligenceData? intelligence = null)
+        ImmutableArray<ScenarioData> scenarios, NodeHistoryTable history, ImmutableArray<string> warnings, InstituteTable institutes, IntelligenceData? intelligence = null, AllianceTable? alliances = null)
     {
+        Alliances = alliances;
         Institutes = institutes;
         Intelligence = intelligence;
         Mods = mods;
@@ -44,6 +46,9 @@ public sealed class GameData
 
     /// <summary>The intelligence parameters, or null when no mod defines them. Outside <see cref="DataHash"/> (see <see cref="IntelligenceData"/>).</summary>
     public IntelligenceData? Intelligence { get; }
+
+    /// <summary>Blocs and friends of the loaded mods, or null when no mod has them. Outside <see cref="DataHash"/>; the licence market reads them when the run config gives none.</summary>
+    public Singularity.Core.Policy.AllianceTable? Alliances { get; }
 
     /// <summary>SHA-256 (hex) of the canonical form of all loaded tables (L1 data identity).</summary>
     public string DataHash { get; }

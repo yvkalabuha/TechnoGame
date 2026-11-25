@@ -1,3 +1,4 @@
+using Singularity.Core.Policy;
 using System.Collections.Immutable;
 using Singularity.Core.Data.Yaml;
 
@@ -34,8 +35,10 @@ public static class ModLoader
         var institutes = new ObjectStore(InstituteKind);
         var intelligence = new ObjectStore(IntelligenceKind);
         var history = new ObjectStore(NodeHistoryKind);
+        AllianceTable? alliances = null;
         foreach (ModManifest mod in mods)
         {
+            alliances = LoadAlliances(mod.Directory) ?? alliances;
             CheckUnlistedFiles(mod);
             var context = new ModContext(mod.Id, TransitiveDependencies(mod, mods));
             foreach (string file in mod.Files)
@@ -58,7 +61,17 @@ public static class ModLoader
         var warnings = new List<string>();
         NodeHistoryTable historyTable = NodeHistoryTable.Build(history.Objects(), nodeTable, nodes.IsDeleted, warnings);
         return new GameData(mods, nodeTable, classTable, scenarioList, historyTable, warnings.ToImmutableArray(), InstituteTable.Build(institutes.Objects()),
-            intel.Count == 1 ? IntelligenceData.Build(intel[0].Map) : null);
+            intel.Count == 1 ? IntelligenceData.Build(intel[0].Map) : null, alliances);
+    }
+
+    /// <summary>The blocs file of a mod (<c>scenarios/&lt;dir&gt;/alliances.yaml</c>, the last directory by name wins); null when the mod has none.</summary>
+    private static AllianceTable? LoadAlliances(string modDirectory)
+    {
+        string scenarios = Path.Combine(modDirectory, "scenarios");
+        if (!Directory.Exists(scenarios))
+            return null;
+        string[] files = [.. Directory.GetDirectories(scenarios).Select(d => Path.Combine(d, "alliances.yaml")).Where(File.Exists).Order(StringComparer.Ordinal)];
+        return files.Length == 0 ? null : AllianceTable.Load(files[^1]);
     }
 
     private static void ApplyFile(YNode root, ModContext mod, ObjectStore nodes, ObjectStore classes, ObjectStore scenarios,

@@ -17,7 +17,7 @@ public class SeriesSwitchTests
     // Re-recorded in TASK-0147 (train 2): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465) change every trajectory on the current data; explanation: docs/simulation/golden-rerecord-train2.md.
     private const string MainSeed1Month149 = "7720220e04795975c4e9e8e7b11d50c51976106a68cb89f0464c416db3baa087";
 
-    private static SliceRunConfig Base(ulong seed = 1) => new() { Seed = seed, Threads = 2 };
+    private static SliceRunConfig Base(ulong seed = 1) => SliceRunConfig.Legacy with { Seed = seed, Threads = 2 };
 
     // Synthetic moments of the full model (the real ones come from the calibration build, T12): clocks of G1…G4, a zero offset of every node.
     private static LkTables Tables(int clockShift = 0)

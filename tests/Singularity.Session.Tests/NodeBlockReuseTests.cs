@@ -24,8 +24,8 @@ public class NodeBlockReuseTests
     [InlineData(7UL)]
     public void EveryTick_ReusedBlocksEqualAFullRebuild_AndAreReusedOnCommandTicks(ulong seed)
     {
-        SliceSession reuse = SliceTestData.Create(new SliceRunConfig { Seed = seed });
-        SliceSession fresh = SliceTestData.Create(new SliceRunConfig { Seed = seed });
+        SliceSession reuse = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed });
+        SliceSession fresh = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed });
         fresh.World.ReuseNodeBlocks = false;
         int local = 0, shared = 0, compared = 0;
         var last = new object?[reuse.View.Actors.Length];
@@ -63,7 +63,7 @@ public class NodeBlockReuseTests
     [Fact]
     public void ColumnLoad_BetweenSnapshotsOfTheSameMonth_RebuildsTheBlock()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 1 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 1 });
         s.StepThroughMonth(2);
         SliceWorld w = s.World;
         ActorView before = ViewBuilder.Snapshot(w, s.Tick, null, 2, null, null).Actors[0];
