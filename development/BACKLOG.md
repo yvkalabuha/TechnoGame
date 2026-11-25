@@ -182,7 +182,7 @@
 | [TASK-0164](../development/tasks/TASK-0164-m0-slice-tag.md) | DONE | M1: tag the M0 slice where EXP-0002 goldens still match (K6, T-M1-02) | MS-M1 |
 | [TASK-0165](../development/tasks/TASK-0165-kernel-entity-tables.md) | DONE | M1: Kernel entity tables mechanism (ADR-0029, T-M1-03), no golden change | MS-M1 |
 | [TASK-0166](../development/tasks/TASK-0166-owners-1945-check.md) | IN_PROGRESS | M1: verify 1945 owners of 379 regions against sources (T-M1-10) | MS-M1 |
-| [TASK-0167](../development/tasks/TASK-0167-political-map-palette.md) | APPROVED | Globe colours by political-map traditions (#527): fixed tones for great powers, colony = metropolis tint | MS-M05 |
+| [TASK-0167](../development/tasks/TASK-0167-political-map-palette.md) | IN_PROGRESS | Globe colours by political-map traditions (#527): fixed tones for great powers, colony = metropolis tint | MS-M05 |
 | [TASK-0168](../development/tasks/TASK-0168-terrain-bake.md) | DONE | Terrain M1: download sources, bake per-province terrain and rivers, 1945 corrections (#528, #533-#536) | MS-M1 |
 | [TASK-0169](../development/tasks/TASK-0169-red-ci-sketch-order.md) | DONE | Red CI: sketch validates task id and count before opening the sandbox Box | MS-M0 |
 | [TASK-0170](../development/tasks/TASK-0170-alliances-friend-pairs.md) | DONE | Data: friend pairs FRA-SUN 1945-1955 and GBR-FRA from 1947 in alliances.yaml, checked against treaty texts | MS-M0 |
@@ -196,6 +196,9 @@
 | [TASK-0178](../development/tasks/TASK-0178-gate-ai-institute-goals-on-the-path-to-the-next-ai.md) | IN_PROGRESS | Gate: AI institute goals on the path to the next aircraft generation, Lab measurement with kappa 1.5 (#552) | MS-M0 |
 | [TASK-0179](../development/tasks/TASK-0179-lab-licence-market-calibration-what-ai-buys-and-wh.md) | IN_PROGRESS | Lab: licence market calibration, what AI buys and why, prices and availability within tolerance (#553) | MS-M0 |
 | [TASK-0180](../development/tasks/TASK-0180-data-real-prerequisites-for-early-g5-g6-knowledge-.md) | IN_PROGRESS | Data: real prerequisites for early G5/G6 knowledge nodes, restore G2-G4 pace (#555) | MS-M0 |
+| [TASK-0181](../development/tasks/TASK-0181-3d-fighters-g1-g6-v2-by-gemini-544-557-slot-kits-p.md) | IN_PROGRESS | 3D fighters G1-G6 v2 by Gemini (#544, #557): slot kits, paper-style sheet, art director acceptance | MS-M0 |
+| [TASK-0182](../development/tasks/TASK-0182-fix-ai-fleet-sale-booked-at-a-different-g-front-th.md) | IN_PROGRESS | Fix: AI fleet sale booked at a different G_front than the decision priced (FL7 seed 10) | MS-M0 |
+| [TASK-0183](../development/tasks/TASK-0183-pace-tuning-g3-g4-after-owner-play-session-ahead-c.md) | PROPOSED | Pace tuning G3-G4 after owner play session: ahead cost on on-time nodes, epoch budget weighting (#558) | MS-M0 |
 
 ## Гипотезы
 
