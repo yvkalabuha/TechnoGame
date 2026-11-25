@@ -147,8 +147,8 @@ public class ProductAiSessionTests(ITestOutputHelper output)
         string[] ids = [];
         for (ulong seed = 1; seed <= 20; seed++)
         {
-            Observed o = Observe(new SliceRunConfig { Seed = seed, Threads = 4, ChunkSize = 2 }, 384);
-            ids = [.. SliceTestData.Create(new SliceRunConfig { Seed = seed }).World.Scenario.ActorId];
+            Observed o = Observe(SliceRunConfig.Legacy with { Seed = seed, Threads = 4, ChunkSize = 2 }, 384);
+            ids = [.. SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed }).World.Scenario.ActorId];
             Assert.Equal(0, o.Forced);                                   // the AI never forces a series
             Assert.Equal(0, o.MultiLine);                                // F17b: at most two lines per actor
             Assert.Equal(0, o.BadClose);                                 // invariants (6) and (11)
@@ -185,8 +185,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
         int fired = 0;
         foreach (ulong seed in new ulong[] { 1, 2, 3, 4, 5 })
         {
-            Observed o = Observe(new SliceRunConfig
-            {
+            Observed o = Observe(SliceRunConfig.Legacy with {
                 Seed = seed, Threads = 2, EffortShare = EffortShareArm.X0, Channels = SliceChannels.Sigma | SliceChannels.KCatch,
             }, 384);
             output.WriteLine($"seed {seed}: branch О {o.OFirings} (processes {o.OProcesses}, defects {o.ODefects})");
@@ -203,8 +202,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
         int fired = 0;
         foreach (ulong seed in new ulong[] { 1, 2, 3 })
         {
-            var config = new SliceRunConfig
-            {
+            var config = SliceRunConfig.Legacy with {
                 Seed = seed, Threads = 2, Channels = SliceChannels.Alpha | SliceChannels.Sigma | SliceChannels.KCatch,
             };
             SliceSession s = SliceTestData.Create(config);
@@ -234,7 +232,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
         int bounded = 0, above = 0;
         foreach (ulong seed in new ulong[] { 1, 2, 3 })
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed });
             SliceWorld w = s.World;
             var il = w.IndustryLayout;
             Fx6 cap = DetMath.MulCeil(w.IndustryParameters.Ell, w.IndustryParameters.EFull);
@@ -274,7 +272,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
     {
         foreach ((ulong seed, int divisor) in new[] { (1UL, 1), (2UL, 4) })
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed });
             var proxy = new ForceProxy(s, divisor);
             SliceWorld w = s.World;
             for (long t = 0; t < 240; t++)
@@ -310,7 +308,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
         {
             foreach (bool flag in new[] { false, true })
             {
-                SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Derive = flag });
+                SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Derive = flag });
                 SliceWorld w = s.World;
                 int derived = 0;
                 for (long t = 0; t < 384; t++)
@@ -338,7 +336,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
         int switches = 0, held = 0;
         foreach (ulong seed in new ulong[] { 1, 2, 3, 4, 5, 6 })
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, ProductAi = false });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, ProductAi = false });
             var player = new PlayerScript(s);
             for (long t = 0; t < 384; t++)
             {
@@ -360,7 +358,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
     [Fact]
     public void CancelDesign_IsAPlayerCommand_JournalledByTheCodec_RefusedOutOfRange_BadCancelForAFleet_StaleHandleForAnEmptySlot()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 3, ProductAi = false });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3, ProductAi = false });
         Assert.False(s.Submit(SourceClass.Player, 0, 0, new CancelDesign(0, new DesignHandle(99, 1))).Accepted);
         Assert.Equal(CommandRefusal.BadDesign, s.Submit(SourceClass.Player, 0, 1, new CancelDesign(0, new DesignHandle(-1, 1))).Reason);
         Assert.Equal(CommandRefusal.BadHandle, s.Submit(SourceClass.Player, 0, 2, new CancelDesign(0, new DesignHandle(4, 0))).Reason);
@@ -381,7 +379,7 @@ public class ProductAiSessionTests(ITestOutputHelper output)
     [Fact]
     public void CancelDesign_WithTheWrongGenerationOfAnOccupiedSlot_IsStale_NotACancel()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 3, ProductAi = false });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3, ProductAi = false });
         DesignHandle fleet = s.HandleOf(0, 0);
         Assert.True(s.Submit(SourceClass.Player, 0, 0, new CancelDesign(0, new DesignHandle(fleet.Slot, fleet.Generation + 1))).Accepted);
         s.StepThroughMonth(0);
@@ -395,9 +393,9 @@ public class ProductAiSessionTests(ITestOutputHelper output)
     {
         var runs = new[]
         {
-            SliceTestData.Create(new SliceRunConfig { Seed = 7, Threads = 1, ChunkSize = 1 }),
-            SliceTestData.Create(new SliceRunConfig { Seed = 7, Threads = 4, ChunkSize = 1 }),
-            SliceTestData.Create(new SliceRunConfig { Seed = 7, Threads = 8, ChunkSize = 3 }),
+            SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Threads = 1, ChunkSize = 1 }),
+            SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Threads = 4, ChunkSize = 1 }),
+            SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Threads = 8, ChunkSize = 3 }),
         };
         for (long t = 0; t < 150; t++)
         {
@@ -415,8 +413,8 @@ public class ProductAiSessionTests(ITestOutputHelper output)
     {
         for (ulong seed = 1; seed <= 20; seed++)
         {
-            SliceSession a = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 1, ChunkSize = 1 });
-            SliceSession b = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 8, ChunkSize = 2 });
+            SliceSession a = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 1, ChunkSize = 1 });
+            SliceSession b = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 8, ChunkSize = 2 });
             for (long t = 0; t < 60; t++)
             {
                 a.StepThroughMonth(t);
@@ -424,9 +422,9 @@ public class ProductAiSessionTests(ITestOutputHelper output)
                 HashAssert.Equal(a.LastHash, b.LastHash, $"seed {seed}, month {t}: hash differs");
             }
         }
-        SliceSession x = SliceTestData.Create(new SliceRunConfig { Seed = 3, Threads = 1 });
-        SliceSession y = SliceTestData.Create(new SliceRunConfig { Seed = 3, Threads = 8, ChunkSize = 1 });
-        SliceSession z = SliceTestData.Create(new SliceRunConfig { Seed = 3, Threads = 1 });
+        SliceSession x = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3, Threads = 1 });
+        SliceSession y = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3, Threads = 8, ChunkSize = 1 });
+        SliceSession z = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3, Threads = 1 });
         for (long t = 0; t < 384; t++)
         {
             x.StepThroughMonth(t);

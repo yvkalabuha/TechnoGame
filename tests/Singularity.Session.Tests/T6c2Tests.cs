@@ -75,7 +75,7 @@ public class T6c2Tests(ITestOutputHelper output)
     [InlineData(false)]
     public void E1_Tick0_TheLineProducesAtRAi_ForTheAiAndForThePlayerScriptRun(bool productAi)
     {
-        SliceSession s = New(new SliceRunConfig { Seed = 3, ProductAi = productAi });
+        SliceSession s = New(SliceRunConfig.Legacy with { Seed = 3, ProductAi = productAi });
         SliceWorld w = s.World;
         int usa = Actor(s, "USA");
         // r_AI(0) = ⌊B_proc(0)/unit_cost_floor⌋ by the shares chosen in the initialisation phase.
@@ -91,7 +91,7 @@ public class T6c2Tests(ITestOutputHelper output)
     [Fact]
     public void E1_NoRequirementForG1_WhileTheFleetLineLives_AndNoStartRequirementCommand()
     {
-        SliceSession s = New(new SliceRunConfig { Seed = 5 });
+        SliceSession s = New(SliceRunConfig.Legacy with { Seed = 5 });
         SliceWorld w = s.World;
         for (long t = 0; t < 60; t++)
         {
@@ -207,7 +207,7 @@ public class T6c2Tests(ITestOutputHelper output)
             string file = Path.Combine(dir, "scenario_1945.yaml");
             File.WriteAllText(file, File.ReadAllText(file).Replace("count: 100, cohort_year: 1945", "count: 100000, cohort_year: 1945"));
             var data = Singularity.Core.Data.ModLoader.Load(dir);
-            var ex = Assert.Throws<LivenessException>(() => SliceSession.Create(data, new SliceRunConfig { Seed = 1 }));
+            var ex = Assert.Throws<LivenessException>(() => SliceSession.Create(data, SliceRunConfig.Legacy with { Seed = 1 }));
             Assert.Equal("L-C3a", ex.Code);
         }
         finally
@@ -271,7 +271,7 @@ public class T6c2Tests(ITestOutputHelper output)
         }
         for (ulong seed = 1; seed <= seeds; seed++)
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 4, ChunkSize = 2 });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 4, ChunkSize = 2 });
             SliceWorld w = s.World;
             int n = w.Scenario.ActorCount, designs = w.ProductsLayout.Designs;
             ids = [.. w.Scenario.ActorId];

@@ -38,7 +38,7 @@ public class ToolingUnmetTests
         foreach ((ulong seed, int months, string hash) in BeforeF33.Where(b => b.Months < 177))   // TASK-0129 (#431): the 384-month capture predates the fleet ageing
         {
             // T6d: the columns before F33 of the build before T6d are those of T6D_OFF (the new T6d columns and run.t6d are left out).
-            SliceSession s = SliceTestData.CreateLegacyNeutral(new SliceRunConfig { Seed = seed, Threads = 4, T6dOff = true });   // the 61-node data of the pinned build
+            SliceSession s = SliceTestData.CreateLegacyNeutral(SliceRunConfig.Legacy with { Seed = seed, Threads = 4, T6dOff = true });   // the 61-node data of the pinned build
             for (long t = 0; t < months; t++)
                 s.StepThroughMonth(t);
             Assert.True(hash == ColumnProjection.Hash(s, n => !ColumnProjection.IsAddedSinceBaselineColumn(n) && !n.StartsWith("ind.unmet.", StringComparison.Ordinal) && !n.StartsWith("pol.lic.", StringComparison.Ordinal)
@@ -50,7 +50,7 @@ public class ToolingUnmetTests
     [Fact]
     public void Column_IsPartOfTheStateHash_NonNegative_AndPositiveWherePoolRunsOut()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 41, Threads = 4 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 41, Threads = 4 });
         var cols = s.World.Table.Columns.Where(c => c.Name.StartsWith("ind.unmet.", StringComparison.Ordinal)).Cast<LongColumn>().ToArray();
         Assert.Equal(s.World.IndustryLayout.Clusters.Length * 3, cols.Length);
         bool positive = false;
@@ -65,13 +65,13 @@ public class ToolingUnmetTests
         }
         Assert.True(positive, "the pool never ran out in 150 months of seed 41: the column is never written");
         string withColumn = s.LastHash;
-        HashAssert.Equal(withColumn, Run(new SliceRunConfig { Seed = 41, Threads = 1 }, 150).LastHash);   // L1/L2 on the new column
+        HashAssert.Equal(withColumn, Run(SliceRunConfig.Legacy with { Seed = 41, Threads = 1 }, 150).LastHash);   // L1/L2 on the new column
     }
 
     [Fact]
     public void Column_UnderVInf_IsZeroOutsideMech_PassOneOnlyTouchesMech()
     {
-        SliceSession s = Run(new SliceRunConfig { Seed = 41, ToolingTarget = ToolingTargetSpec.Parse("VINF") }, 120);
+        SliceSession s = Run(SliceRunConfig.Legacy with { Seed = 41, ToolingTarget = ToolingTargetSpec.Parse("VINF") }, 120);
         // VINF pass 2 is notional money, not a pool shortfall; only pass 1 (A30, MECH cells) can fall short.
         foreach (Column c in s.World.Table.Columns.Where(c => c.Name.StartsWith("ind.unmet.", StringComparison.Ordinal)))
             Assert.All(((LongColumn)c).Current.ToArray(), v => Assert.True(v >= 0 && (v == 0 || c.Name.Contains(".MECH.", StringComparison.Ordinal))));
@@ -80,7 +80,7 @@ public class ToolingUnmetTests
     [Fact]
     public void WhyNot_PoolExhaustedLinks_CarryTheFieldsOfToolingM_AndTheSortOrderIsThatOfToolingM()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 41, Threads = 4 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 41, Threads = 4 });
         int exhausted = 0;
         for (long t = 0; t < 240; t++)
         {
@@ -119,7 +119,7 @@ public class ToolingUnmetTests
     [Fact]
     public void KCap_ScalesTheCapabilityPool_AndIsPartOfTheHash_PoolOrderToo()
     {
-        var cfg = new SliceRunConfig { Seed = 41, Threads = 1 };
+        var cfg = SliceRunConfig.Legacy with { Seed = 41, Threads = 1 };
         SliceSession half = SliceTestData.Create(cfg with { ToolingTarget = new ToolingTargetSpec { KCap = Fx6.FromRaw(500_000) } });
         SliceSession whole = SliceTestData.Create(cfg);
         Fx6 b = whole.World.SharesOf(0).Capability * whole.World.Policy.Budget(0);
@@ -138,9 +138,9 @@ public class ToolingUnmetTests
     public void PoolOrder_EveryValue_L1ThreadsOneFourEight_SeedSixtyOne(PoolOrder order)
     {
         var spec = new ToolingTargetSpec { PoolOrder = order };
-        string h1 = Run(new SliceRunConfig { Seed = 61, Threads = 1, ToolingTarget = spec }, 60).LastHash;
-        HashAssert.Equal(h1, Run(new SliceRunConfig { Seed = 61, Threads = 4, ToolingTarget = spec }, 60).LastHash);
-        HashAssert.Equal(h1, Run(new SliceRunConfig { Seed = 61, Threads = 8, ToolingTarget = spec }, 60).LastHash);
+        string h1 = Run(SliceRunConfig.Legacy with { Seed = 61, Threads = 1, ToolingTarget = spec }, 60).LastHash;
+        HashAssert.Equal(h1, Run(SliceRunConfig.Legacy with { Seed = 61, Threads = 4, ToolingTarget = spec }, 60).LastHash);
+        HashAssert.Equal(h1, Run(SliceRunConfig.Legacy with { Seed = 61, Threads = 8, ToolingTarget = spec }, 60).LastHash);
     }
 
     [Theory]
@@ -150,14 +150,14 @@ public class ToolingUnmetTests
     [InlineData(PoolOrder.Sev, 0)]
     public void QueuePlace_OfTheFirstCluster_FollowsPoolOrder(PoolOrder order, int expected)
     {
-        var inputs = new WhyNotInputsAdapter(SliceTestData.Create(new SliceRunConfig { Seed = 1, ToolingTarget = new ToolingTargetSpec { PoolOrder = order } }).World);
+        var inputs = new WhyNotInputsAdapter(SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 1, ToolingTarget = new ToolingTargetSpec { PoolOrder = order } }).World);
         Assert.Equal(expected, inputs.PoolQueuePlace(0));
     }
 
     [Fact]
     public void Manifest_BadPoolOrderOrKCap_FailsTheRun()
     {
-        Assert.Throws<ArgumentException>(() => SliceTestData.Create(new SliceRunConfig { Seed = 1, ToolingTarget = new ToolingTargetSpec { KCap = Fx6.Zero } }));
-        Assert.Throws<ArgumentException>(() => SliceTestData.Create(new SliceRunConfig { Seed = 1, ToolingTarget = new ToolingTargetSpec { PoolOrder = (PoolOrder)7 } }));
+        Assert.Throws<ArgumentException>(() => SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 1, ToolingTarget = new ToolingTargetSpec { KCap = Fx6.Zero } }));
+        Assert.Throws<ArgumentException>(() => SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 1, ToolingTarget = new ToolingTargetSpec { PoolOrder = (PoolOrder)7 } }));
     }
 }

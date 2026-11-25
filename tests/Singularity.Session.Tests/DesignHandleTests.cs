@@ -14,7 +14,7 @@ public class DesignHandleTests
 {
     private const int Usa = 0;
 
-    private static SliceSession Make() => SliceTestData.Create(new SliceRunConfig { Seed = 3, ProductAi = false });
+    private static SliceSession Make() => SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3, ProductAi = false });
 
     private static int _local;
 
@@ -171,7 +171,7 @@ public class DesignHandleTests
     {
         List<string> Run(int th, int chunk)
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 3, ProductAi = false, Threads = th, ChunkSize = chunk });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3, ProductAi = false, Threads = th, ChunkSize = chunk });
             _local = 0;
             (_, DesignHandle old) = ReusedSlot(s);
             Send(s, new CancelDesign(Usa, old));

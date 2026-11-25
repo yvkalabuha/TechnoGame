@@ -12,7 +12,7 @@ public class SlotReuseL2Tests
     public void L2_ThroughTheFirstSlotReuse_SameHashAcrossThreadsAndChunkSizes()
     {
         (int Threads, int Chunk)[] cfg = [(1, 1), (4, 8), (8, 32), (3, 1)];
-        SliceSession[] runs = [.. cfg.Select(c => SliceTestData.CreateLegacy(new SliceRunConfig { Seed = 1, Threads = c.Threads, ChunkSize = c.Chunk }))];
+        SliceSession[] runs = [.. cfg.Select(c => SliceTestData.CreateLegacy(SliceRunConfig.Legacy with { Seed = 1, Threads = c.Threads, ChunkSize = c.Chunk }))];
         bool reused = false;
         for (long t = 0; t < Months; t++)
         {
@@ -40,17 +40,17 @@ public class SlotReuseL2Tests
         {
             foreach (LineCloseRule rule in new[] { LineCloseRule.Admit, LineCloseRule.YProd })
             {
-                SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2, LineClose = rule });
+                SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 2, LineClose = rule });
                 for (long t = 0; t < 150; t++)
                     s.StepThroughMonth(t);
                 Assert.False(ColumnProjection.SlotReused(s), $"F17b seed {seed} {rule}");
             }
         }
-        SliceSession ai = SliceTestData.Create(new SliceRunConfig { Seed = 7, Threads = 1, ChunkSize = 1 });
+        SliceSession ai = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Threads = 1, ChunkSize = 1 });
         for (long t = 0; t < 150; t++)
             ai.StepThroughMonth(t);
         Assert.False(ColumnProjection.SlotReused(ai), "ProductAiSession golden, seed 7");
-        SliceSession linked = SliceTestData.Create(new SliceRunConfig { Seed = 7, ProductAi = false });
+        SliceSession linked = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, ProductAi = false });
         var player = new PlayerScript(linked);
         for (long t = 0; t < 60; t++)
         {

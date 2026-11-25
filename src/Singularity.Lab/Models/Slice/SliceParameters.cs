@@ -19,7 +19,7 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
     public static readonly string[] Keys =
     [
         "A41_FORM", "AHEAD_K", "AHEAD_MAX", "AHEAD_POW", "ALPHA", "BUDGET_RULE", "C_M", "CHANNELS", "COST_MULT_G5", "COST_MULT_G6", "CONTROL_TABLES", "DELTA_H", "DERIV", "DISC_WEIGHT", "EFFORT_SHARE", "FIX_A", "FIX_E", "FIX_K", "FLEET_ARM", "FLEET_LINE_COND", "FORCE", "GRID", "H_MAX",
-        "HCAP_K", "HCAP_MAX", "INST_BUILD", "INST_FUND", "INST_GOALS", "INST_PLAYER", "INST_PROBE", "INSTITUTES", "K_DIV", "KAPPA_Q10", "LAYER", "LEVER_ACTOR", "LEVER_DIAG", "LEVER_ETA", "LEVER_SHIFT", "LIC_KNOWS", "LIC_OFF", "LINE_CLOSE", "MASTERY_RULES", "POOL_ORDER", "PILOT_PROFILES", "PROFILE_CELL", "RESERVE", "RESERVE_SPEND", "SALE_ARM", "START", "T6D_OFF",
+        "HCAP_K", "HCAP_MAX", "INST_BUILD", "INST_FUND", "INST_GOALS", "INST_PLAYER", "INST_PROBE", "INSTITUTES", "INTEL", "K_DIV", "KAPPA_Q10", "LAYER", "LEVER_ACTOR", "LEVER_DIAG", "LEVER_ETA", "LEVER_SHIFT", "LEVERS", "LIC_KNOWS", "LIC_MARKET", "LIC_OFF", "LINE_CLOSE", "MASTERY_RULES", "POOL_ORDER", "PILOT_PROFILES", "PROFILE_CELL", "RESERVE", "RESERVE_ACCT", "RESERVE_SPEND", "SALE_ARM", "START", "T6D_OFF",
         "TOOLING_H_HI", "TOOLING_H_HI_CONTROL", "TOOLING_H_LO", "TOOLING_M_LEAD", "TOOLING_RHO_MAX", "TOOLING_TARGET", "THETA_START", "UPKEEP_MULT", "X_PROG", "X_SCALE", "detail",
     ];
 
@@ -180,7 +180,23 @@ public sealed record SliceParameters(SliceRunConfig Config, int ForceDivisor, bo
             "lite" => false,
             _ => throw Bad("detail", v),
         });
-        config = config with { Institutes = p.GetBool("INSTITUTES", false) };
+        // The levers of wave 1 (TASK-0171 turned them on in main; TASK-0176): LEVERS = LEGACY (default: all off, the build of every manifest before
+        // TASK-0171, so their goldens stay) or ON (the defaults of SliceRunConfig, the game). INSTITUTES, LIC_MARKET, INTEL, RESERVE_ACCT override one flag.
+        // The adviser needs a player (none in Lab unless INST_PLAYER), so it is not a key.
+        bool on = Enum(p, "LEVERS", "LEGACY", v => v switch
+        {
+            "LEGACY" => false,
+            "ON" => true,
+            _ => throw Bad("LEVERS", v),
+        });
+        config = config with
+        {
+            Institutes = p.GetBool("INSTITUTES", on),
+            LicenceMarket = p.GetBool("LIC_MARKET", on),
+            Intelligence = p.GetBool("INTEL", on),
+            Reserve = p.GetBool("RESERVE_ACCT", on),
+            AdviserForPlayer = on,
+        };
         InstituteSpec? inst = ParseInstitutes(p, calibration, config.Institutes);
         LeverSpec? levers = ParseLevers(p, calibration);
         if (inst is { Fund: var fund } && fund < Fx6.One && levers?.Actor is not null)
