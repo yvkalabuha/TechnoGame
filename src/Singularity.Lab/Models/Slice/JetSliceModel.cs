@@ -242,6 +242,8 @@ public sealed class JetSliceModel : ISessionModel
             : p.Levers is { Eta: true } ? [.. SliceTables.Full, LeverSpec.EtaTable] : SliceTables.Full;
         if (p.Institutes is { Probe: true })
             MetricTables = [.. MetricTables, InstituteSpec.GoalTable, InstituteSpec.BuildTable];
+        if (p.MarketProbe)
+            MetricTables = [.. MetricTables, MarketProbe.Table];
     }
 
     public IReadOnlyList<MetricTableSpec> MetricTables { get; }
@@ -266,6 +268,7 @@ public sealed class JetSliceModel : ISessionModel
             ? new InstituteScript(s, ispec, sink, probe ? MetricTables.Count - 2 : -1, probe ? MetricTables.Count - 1 : -1)
             : null;
         inst?.Issue(0);
+        MarketProbe? market = _p.MarketProbe ? new MarketProbe(s, sink, MetricTables.Count - 1) : null;
         observer.Start(s.View);
         int logSeen = 0;
         for (long t = 0; t < months; t++)
@@ -277,6 +280,7 @@ public sealed class JetSliceModel : ISessionModel
             inst?.BeforeStep(t);
             s.Step(1);
             observer.Month(snapshot, s.View, t);
+            market?.Observe(snapshot, s.View, t);
             if (levers is not null)
             {
                 levers.Observe(t);
