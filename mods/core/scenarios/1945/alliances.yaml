@@ -1,8 +1,8 @@
 # Blocs and friends of the licence buyer circle (TASK-0152, O-056); yearly intervals, inclusive, expanded by code.
 # Only rows verified in docs/research/notes/alliances-1945-2030.md (Wikidata CC0 or a primary treaty text, accessed 2026-11-24).
 # Facts: treaty dates (not copyrightable); cross-check: Wikidata CC0. Slice actors only (USA, GBR, SUN, FRA, SWE).
-# A country has at most one bloc in a year (the loader refuses overlaps). Unverified rows (Brussels Pact, Dunkirk, FRA-SUN 1944,
-# UKUSA, Sweden's explicit friends list) are not loaded: see the note, "Не проверено".
+# A country has at most one bloc in a year (the loader refuses overlaps). Dunkirk and FRA-SUN 1944 are loaded since TASK-0170
+# (sources in the note, section TASK-0170). Unverified rows (Brussels Pact, UKUSA, Sweden's explicit friends list) are not loaded.
 schema: 1
 blocs:
   - id: nato
