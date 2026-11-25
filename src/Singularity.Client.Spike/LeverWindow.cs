@@ -181,7 +181,7 @@ public sealed partial class LeverWindow : PanelContainer
             row.AddChild(top);
             var ctl = new HBoxContainer(); ctl.AddThemeConstantOverride("separation", 8);
             var minus = Ui.Btn("−", () => Nudge(k, -1), focusable: true); minus.CustomMinimumSize = new Vector2(32, 32); _minus[i] = minus;
-            _sl[i] = new HSlider { MinValue = 0, MaxValue = 100, Step = 1, CustomMinimumSize = new Vector2(360, 32), SizeFlagsVertical = SizeFlags.ShrinkCenter };
+            _sl[i] = new LeverSlider { MinValue = 0, MaxValue = 100, Step = 1, CustomMinimumSize = new Vector2(360, 32), SizeFlagsVertical = SizeFlags.ShrinkCenter };
             ActorPanel.StyleSlider(_sl[i]);
             _sl[i].ValueChanged += v => OnSlider(k, (int)v);
             var plus = Ui.Btn("+", () => Nudge(k, 1), focusable: true); plus.CustomMinimumSize = new Vector2(32, 32); _plus[i] = plus;
