@@ -25,7 +25,7 @@ public static class MenuUi
     }
 
     /// <summary>Focus ring: a second frame in ink, no fill (§17.7).</summary>
-    public static void FocusRing(Control c) => c.AddThemeStyleboxOverride("focus", new StyleBoxFlat { DrawCenter = false, BorderColor = Ui.Ink, AntiAliasing = true }.With2(s => { s.SetBorderWidthAll(2); s.SetCornerRadiusAll(4); }));
+    public static void FocusRing(Control c) => c.AddThemeStyleboxOverride("focus", Ui.FocusBox());
 
     /// <summary>Sheet centred in its parent, never larger than the parent minus a margin (so that nothing is cropped at 1280x720 and 150% UI scale).</summary>
     public static void Fit(Control sheet, Vector2 parent, Vector2 design)

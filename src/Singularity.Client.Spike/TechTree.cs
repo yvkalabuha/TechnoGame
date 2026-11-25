@@ -25,7 +25,7 @@ public sealed partial class TechTree : Control
     const float SubpanelButtonDu = 32;   // A10: a button is at least 32 du high
     const float CloseW = 190, CloseH = 40;   // #473: the close button is 40 du high
     const float ZoomRate = 14f;
-    const float WedgeMargin = 0.1f;
+    const float WedgeMargin = 0.12f;
 
     readonly SimHost _host;
     readonly VBoxContainer _inset = new();
@@ -75,7 +75,7 @@ public sealed partial class TechTree : Control
         _viewSwitch = new Segment(new[] { "tree.a", "tree.b" }, 0, minHeight: SubpanelButtonDu, focusable: true);
         _viewSwitch.Changed += i => { _mode = i; Redraw(); };
         foreach (var cell in _viewSwitch.GetChildren())   // A7: the focus of a tab is a 3 px ultramarine ring 3 du off the frame, not the ink frame of the selected tab
-            if (cell is Button tb) tb.AddThemeStyleboxOverride("focus", new StyleBoxFlat { DrawCenter = false, BorderColor = Ui.Command, AntiAliasing = true, ExpandMarginLeft = 6, ExpandMarginRight = 6, ExpandMarginTop = 6, ExpandMarginBottom = 6 }.With2(s => { s.SetBorderWidthAll(3); s.SetCornerRadiusAll(6); }));
+            if (cell is Button tb) tb.AddThemeStyleboxOverride("focus", Ui.FocusBox());
         top.AddChild(_viewSwitch);
         // «Close» (#473): 40 du high in the top-right corner of the sheet, always in view; a heavy 3 du frame in every state keeps it the most visible button,
         // focus keeps the two-tone ring of CaptionButton (A6, A7). Esc does the same.
@@ -90,6 +90,7 @@ public sealed partial class TechTree : Control
         _stepLbl = Ui.Lbl("", 14, Ui.Ink); _stepLbl.CustomMinimumSize = new Vector2(120, SubpanelButtonDu); _stepLbl.VerticalAlignment = VerticalAlignment.Center;
         _zoomBar.AddThemeConstantOverride("separation", 4);
         foreach (Control zc in new Control[] { _zoomOut, _zoomIn, _fit, _stepLbl }) _zoomBar.AddChild(zc);
+        foreach (var zb in new[] { _zoomOut, _zoomIn, _fit }) zb.AddThemeStyleboxOverride("focus", Ui.FocusBox());
         AddChild(_view);
         _view.Draw += PaintView;
         // The closed legend is a real button above the canvas (opaque sheet, 1 du ink border, 2 px focus ring): chart ink never shows through it.
@@ -587,12 +588,11 @@ public sealed partial class TechTree : Control
     {
         _cv.DrawArc(c, TreeYearLayout.Inner * u, 0, Mathf.Tau, TreeYearLayout.ArcPoints(TreeYearLayout.Inner * u, 360f), GridColor, 1f, true);
         _cv.DrawArc(c, (TreeYearLayout.Inner - TreeYearLayout.RootsBand) * u, 0, Mathf.Tau, TreeYearLayout.ArcPoints((TreeYearLayout.Inner - TreeYearLayout.RootsBand) * u, 360f), GridColor, 1f, true);
-        YearPlate(c.X, c.Y - TreeYearLayout.Inner * u, "1945");
         for (int k = 0; k < TreeYearLayout.RingYears.Length; k++)
         {
             int ry = TreeYearLayout.RingYears[k]; float r = TreeYearLayout.RadiusOf(ry) * u;
             _cv.DrawArc(c, r, 0, Mathf.Tau, TreeYearLayout.ArcPoints(r, 360f), GridColor, TreeYearLayout.IsLandmark(ry) ? 2f : 1f, true);
-            YearPlate(c.X, c.Y - r, RingText[k]);
+            if (ry >= 1960) YearPlate(c.X, c.Y - r, RingText[k]);   // the inner decades would lie on the crowded centre; 1950 stands on a gap bisector below
             if (ry is 1950 or 1980 or 2010)   // also on two other bisectors of the gaps between sectors, where no node ever stands (art director)
                 for (int g = 1; g <= 2; g++)
                 {
@@ -639,6 +639,7 @@ public sealed partial class TechTree : Control
                 var rc = new Rect2(c + dir * dist - sz * 0.5f, sz);
                 bool free = Area.Encloses(rc);
                 for (int i = 0; free && i < _rad.Length; i++) if (NodeBox(i).Grow(2).Intersects(rc)) free = false;
+                foreach (var pl in _plates) if (free && pl.Grow(2).Intersects(rc)) free = false;
                 if (!free) continue;
                 if (off > 0) _cv.DrawLine(c + dir * r, c + dir * (dist - (sz.Y * 0.5f)), Ui.Ink, 1.2f, true);
                 _cv.DrawRect(rc, Ui.Sheet); _cv.DrawRect(rc, Ui.Ink, false, 1f);
@@ -714,10 +715,10 @@ public sealed partial class TechTree : Control
 
     // Node mark size: every state is 16 du (TreeClarity.MarkDu), never scaled down with the canvas (A2); a little larger when zoomed in; icon plates are larger still.
     // NR is the box half-size used for hits, label places and overlap checks; the mark itself is drawn at MarkRadius(type).
-    float NR => CurLod switch { Lod.Overview => 10f, Lod.Nodes => 12.5f, _ => GlyphGeometry.IconsPlateMin + Math.Min(6f, (_zoom - PlanisphereMath.IconsFrom) * 2f) };
+    float NR => CurLod switch { Lod.Overview => 8f, Lod.Nodes => 12.5f, _ => GlyphGeometry.IconsPlateMin + Math.Min(6f, (_zoom - PlanisphereMath.IconsFrom) * 2f) };
     static readonly float[] MarkR = BuildMarkR();
     static float[] BuildMarkR() { var r = new float[6]; for (int k = 0; k < 6; k++) r[k] = GlyphGeometry.LegendRadius(LegendData.Types[k].Code); return r; }
-    float MarkRadius(NodeType t) => CurLod == Lod.Icons ? NR : MarkR[(int)t] * (CurLod == Lod.Nodes ? 1.25f : 1f);
+    float MarkRadius(NodeType t) => CurLod == Lod.Icons ? NR : MarkR[(int)t] * (CurLod == Lod.Nodes ? 1.25f : CurLod == Lod.Overview ? 0.65f : 1f);   // overview: 10 du marks, so that the crowded centre keeps a gap
 
     // Counts per sector, filled once per draw into fields (no allocation); the sector summaries are the always-visible counts.
     readonly int[] _wTot = new int[TreeYearLayout.MaxSectors], _wKn = new int[TreeYearLayout.MaxSectors], _sumShown = { -1, -1, -1, -1, -1, -1, -1, -1 };
@@ -866,6 +867,8 @@ public sealed partial class TechTree : Control
         occupied.AddRange(_countRects);   // the count tags of the cells are drawn first; labels keep off them
         if (_nowRect.Size.X > 0f) occupied.Add(_nowRect.Grow(2));
         foreach (var pl in _plates) occupied.Add(pl.Grow(2));   // decade years: names keep off them
+        var barKeepOut = new Rect2(_zoomBar.Position - new Vector2(0, 40), _zoomBar.Size + new Vector2(40, 40));   // 40 du above the zoom buttons and the step label
+        occupied.Add(barKeepOut); occupied.Add(new Rect2(_legendBtn.Position - new Vector2(0, 6), _legendBtn.Size + new Vector2(6, 12)));
         if (Step >= ZoomSteps.Effects) for (int i = 0; i < nodes.Count; i++) if (Area.Grow(40).HasPoint(PosOf(i))) { occupied.Add(YearRect(i).Grow(1)); }
         // The route is an obstacle too, so that no label sits on it.
         for (int k = 0; k + 1 < _path.Count; k++) { var ch = Channel(_path[k], _path[k + 1]); for (int j = 0; j + 1 < ch.Length; j++) AddSegment(occupied, ch[j], ch[j + 1], 3f); }
@@ -883,6 +886,7 @@ public sealed partial class TechTree : Control
         var hard = _lbHard; hard.Clear();
         for (int w = 0; w < _nSec; w++) { hard.Add(WedgeLabel(w).rect.Grow(2)); hard.Add(_sumRects[w].Grow(6)); }
         hard.AddRange(_countRects);
+        hard.Add(barKeepOut);
         if (_nowRect.Size.X > 0f) hard.Add(_nowRect.Grow(2));
         var placed = _lbPlaced; placed.Clear();
         bool Place(int i, string text, FontKind kind, bool far = false, bool force = false)
@@ -898,11 +902,11 @@ public sealed partial class TechTree : Control
             if (Step >= ZoomSteps.Effects) (cands[0], cands[3]) = (cands[3], cands[0]);   // name above the mark, the year stands on its right
             bool Try(Rect2 rc, bool ignoreOthers = false, bool leaderCheck = true)
             {
-                var pad = rc.Grow(2);
+                var pad = rc.Grow(3);   // 3 du each side: at least 6 du between two names
                 if (!area.Encloses(pad))   // pushed inside the window edge rather than dropped
                 {
                     float nx = Math.Clamp(rc.Position.X, area.Position.X + 4, Math.Max(area.Position.X + 4, area.End.X - rc.Size.X - 4)), ny = Math.Clamp(rc.Position.Y, area.Position.Y + 4, Math.Max(area.Position.Y + 4, area.End.Y - rc.Size.Y - 4));
-                    rc = new Rect2(nx, ny, rc.Size); pad = rc.Grow(2);
+                    rc = new Rect2(nx, ny, rc.Size); pad = rc.Grow(3);
                 }
                 if (!area.Encloses(pad) || (!ignoreOthers && occupied.Any(o => o.Intersects(pad)))) return false;
                 if (ignoreOthers && hard.Any(h => h.Intersects(pad))) return false;   // a forced plate may sit over nodes, never over a wedge name, a total or a count
@@ -1608,7 +1612,7 @@ public sealed partial class TechTree : Control
             var head = new Rect2(r.Position, new Vector2(r.Size.X, MenuRowH));
             if (!on) HatchRect(ci, head, 8f, new Color(Ui.Ink3, 0.45f));   // disabled: hatched, the reason follows in words
             ci.DrawRect(r, on ? Ui.Ink : Ui.Ink3, false, on && hot ? 2f : 1f);
-            if (on && hot) ci.DrawRect(r.Grow(-2), Ui.Ink, false, 2f);
+            if (on && hot) ci.DrawRect(r.Grow(-1), Ui.Focus, false, 3f);   // the one focus style (Ui.FocusBox)
             float ty = r.Position.Y + MenuRowH * 0.5f + 5;
             if (!on) ci.DrawStringOutline(Fonts.Text, new Vector2(r.Position.X + 10, ty), _menuLabel[k], HorizontalAlignment.Left, -1, 14, 5, Ui.Sheet);
             Text(new Vector2(r.Position.X + 10, ty), _menuLabel[k], 14, on ? Ui.Ink : Ui.Ink2);
