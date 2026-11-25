@@ -291,9 +291,10 @@ public sealed partial class Overlay : Control
                 else
                 {
                     // The word stays inside its own country: it must fit by area, and the box at the chosen spot must lie wholly on the land.
-                    if (!LabelPlacement.MayFit(area, w, h)) { s.Node.Visible = false; continue; }
+                    float fs = LabelPlacement.FitScale(s.Node.Visible), fw = w * fs, fh = h * fs;
+                    if (!LabelPlacement.MayFit(area, fw, fh)) { s.Node.Visible = false; continue; }
                     if (!LabelPlacement.PlaceInRegion(sp.X, sp.Y, w, h, VpSize.X, VpSize.Y, LabelPlacement.RegionRadius(area), gc.X, gc.Y, gr * 0.97f, _onRegion, out px, out py)
-                        || !LabelPlacement.FitsInside(px + w * 0.5f, py + h * 0.5f, w, h, _onRegion)) { s.Node.Visible = false; continue; }
+                        || !LabelPlacement.FitsInside(px + w * 0.5f, py + h * 0.5f, fw, fh, _onRegion)) { s.Node.Visible = false; continue; }
                 }
                 var rect = new Rect2(px, py, w, h);
                 s.Rect = rect;

@@ -117,6 +117,9 @@ public static class LabelPlacement
         return System.MathF.Round(System.Math.Clamp(want, MinFont, MaxFont));
     }
 
+    /// <summary>Hysteresis (#523): a hidden name must fit with 10 % to spare to appear, a shown one stays until it fails with 10 % taken off.</summary>
+    public static float FitScale(bool wasShown) => wasShown ? 0.9f : 1.1f;
+
     /// <summary>Cheap pre-test: a text box of w x h can only sit in a region whose projected area is clearly larger than the box.</summary>
     public static bool MayFit(float screenAreaDu2, float w, float h) => w * h <= 0.6f * screenAreaDu2;
 

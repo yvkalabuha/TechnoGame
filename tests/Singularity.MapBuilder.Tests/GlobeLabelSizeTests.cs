@@ -26,6 +26,14 @@ public class GlobeLabelSizeTests
         Assert.False(LabelPlacement.MayFit(1_000f, 100f, 16f));
     }
 
+    [Fact] public void Hysteresis_scale_keeps_shown_names_and_delays_hidden_ones()
+    {
+        Assert.True(LabelPlacement.FitScale(true) < 1f && LabelPlacement.FitScale(false) > 1f);
+        float area = 10_000f;   // box area 6000 fits at 0.9 (4860) and at 1.0, not at 1.1 (7260)
+        Assert.True(LabelPlacement.MayFit(area, 100f * LabelPlacement.FitScale(true), 60f * LabelPlacement.FitScale(true)));
+        Assert.False(LabelPlacement.MayFit(area, 100f * LabelPlacement.FitScale(false), 60f * LabelPlacement.FitScale(false)));
+    }
+
     [Fact] public void Fit_needs_every_probe_on_the_land()
     {
         System.Func<float, float, bool> land = (x, y) => x >= 0 && x <= 100 && y >= 0 && y <= 40;
