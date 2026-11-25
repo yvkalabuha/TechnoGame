@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "experiment": "levers-558-inst",
+  "description": "levers-558: AI institute goal rule (INST_GoalRule etc. via the sandbox environment), institutes alone, kappa 1.5 unless INST_Kappa; against LEGACY on the #558 baseline.",
+  "model": "JetSlice",
+  "ticks": 20211,
+  "chunk_size": 1,
+  "threads": [
+    1
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 10
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full"
+  },
+  "series": [
+    {
+      "name": "LEGACY",
+      "params": {}
+    },
+    {
+      "name": "INST",
+      "params": {
+        "INSTITUTES": true
+      }
+    }
+  ],
+  "meta": {
+    "note": "docs/simulation/levers-on-baseline-558.md",
+    "baseline": "LEGACY",
+    "sandbox_patch": "lab/patches/levers-558.sandbox.diff",
+    "sandbox_patch_sha256": "03010c837f68a32458acc44699e45ba4f6eecfa40c95fe197863ee1c27592c0e"
+  }
+}
