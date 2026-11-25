@@ -115,6 +115,16 @@ public static partial class DetMath
         return Rate.FromRaw(low);
     }
 
+    /// <summary>
+    /// One daily step of a decaying or growing stock (ADR-0027 p. 6, O-069). Decay: <c>x − r·x</c>.
+    /// Growth (negative r): <c>x + (−r)·x</c>. Both floor the change magnitude, so the stock error
+    /// always goes toward slower change. Callers use this, never <c>x −= r.MulFloor(x)</c> directly.
+    /// </summary>
+    public static Fx6 ApplyDayRate(Fx6 stock, Rate rate) =>
+        rate.Raw >= 0
+            ? stock - rate.MulFloor(stock)
+            : stock + Rate.FromRaw(checked(-rate.Raw)).MulFloor(stock);
+
     private static Int128 FloorDiv(Int128 n, Int128 d)
     {
         Int128 q = n / d;

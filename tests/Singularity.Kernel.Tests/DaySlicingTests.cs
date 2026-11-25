@@ -199,7 +199,7 @@ public class DaySlicingTests
         Rate r = DetMath.DayRate(Fx6.FromRaw(d), y);
         Fx6 x = Fx6.FromRaw(x0);
         for (int i = 0; i < y; i++)
-            x -= r.MulFloor(x);
+            x = DetMath.ApplyDayRate(x, r);
 
         BigInteger exact = (BigInteger)x0 * (S - d) / S;
         BigInteger error = (BigInteger)x.Raw - exact;
@@ -208,6 +208,8 @@ public class DaySlicingTests
         Assert.True(BigInteger.Abs(error) <= tolerance, $"d={d} y={y} x0={x0} error={error}");
         if (d > 0)
             Assert.True(error >= -2, $"decay ran faster than asked: {error}"); // exact is itself floored
+        else
+            Assert.True(error <= 0, $"growth ran faster than asked: {error}");
     }
 
     [Fact]
