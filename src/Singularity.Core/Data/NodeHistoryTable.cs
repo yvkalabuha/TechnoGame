@@ -41,7 +41,7 @@ public sealed class NodeHistoryTable
     private static readonly ImmutableArray<(string Name, SourceUse Value)> Uses =
         [("paraphrase", Data.SourceUse.Paraphrase), ("quote", Data.SourceUse.Quote)];
 
-    internal static NodeHistoryTable Build(List<(string Id, YMap Map)> objects, NodeTable nodes)
+    internal static NodeHistoryTable Build(List<(string Id, YMap Map)> objects, NodeTable nodes, Func<string, bool> isDeleted, List<string> warnings)
     {
         int n = nodes.Count;
         var has = new bool[n];
@@ -52,7 +52,14 @@ public sealed class NodeHistoryTable
         {
             int row = nodes.IndexOf(id);
             if (row < 0)
-                throw DataLoadException.At(map, $"node_history of unknown node '{id}'");
+            {
+                // A mod may delete a node it did not create: its inherited history is display data and is skipped, loudly.
+                // An ID that was never a node is a data error.
+                if (!isDeleted(id))
+                    throw DataLoadException.At(map, $"node_history of unknown node '{id}'");
+                warnings.Add($"{map.Where}: history of deleted node '{id}' is skipped");
+                continue;
+            }
             var m = new MapReader(map);
             m.Str("id");
             has[row] = true;

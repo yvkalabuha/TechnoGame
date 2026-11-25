@@ -442,7 +442,7 @@ node-s8-prc-composite_layup_cure =
     .name = Composite layup and cure
     .short = Layup+cure
     .anchor = estimate 1978
-    .history = The NASA ACEE (Aircraft Energy Efficiency) programme and composite research at Langley ran in 1975-1986 (the title of an NTRS report).
+    .history = Modern laminated composites began with fibreglass: DuPont developed a resin to bind glass fibre into a composite in 1936, and Cyanamid made the first ancestor of modern polyester resins in 1942. Roger Bacon created high-performance carbon fibre at Union Carbide in 1958, and in 1963 the British Royal Aircraft Establishment brought it to high strength. Layers of resin-impregnated fibre (prepreg) are laid up in a mould and cured: in an autoclave, with a vacuum bag or under pressure. The NASA ACEE (Aircraft Energy Efficiency) programme and composite research at Langley in 1975-1986 prepared such structures for aircraft.
 
 node-s5-prc-low_observable_finishing =
     .name = Low-observable finishing

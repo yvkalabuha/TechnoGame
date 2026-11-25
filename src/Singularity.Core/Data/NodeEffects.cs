@@ -29,10 +29,12 @@ public enum NodeEffectKind
 
 /// <summary>
 /// One effect of a node, with the data address it was read from (never a hand-written number).
-/// <see cref="Together"/>: the node is one of several requirements (other groups, or an any_of group), so a card says
-/// "needed for ..., together with ..." and not "opens". <see cref="Node"/>: the other node of Informs and RequiredFor, else -1.
+/// <see cref="Together"/>: other requirement groups must hold as well (mandatory co-requirements, see
+/// <see cref="NodeEffects.Requirements"/>), so a card says "needed for ..., together with ..." and not "opens"; any_of partners
+/// are alternatives, not co-requirements. <see cref="Node"/>: the other node of Informs and RequiredFor, else -1.
+/// <see cref="MinRank"/>: of a Generation effect, the minimum airframe rank that must also be available.
 /// </summary>
-public readonly record struct NodeEffect(NodeEffectKind Kind, int ClassRow, int SlotRow, int AltRow, Fx6 Value, Fx6 Previous, bool Together, int Node = -1);
+public readonly record struct NodeEffect(NodeEffectKind Kind, int ClassRow, int SlotRow, int AltRow, Fx6 Value, Fx6 Previous, bool Together, int Node = -1, int MinRank = 0);
 
 /// <summary>Derives node effects from the loaded tables (NODE_EFFECTS_SCHEMA §4): the numbers live only in the data files.</summary>
 public static class NodeEffects
@@ -58,7 +60,8 @@ public static class NodeEffects
             for (int g = pc.GenStart[c]; g < pc.GenStart[c + 1]; g++)
             {
                 if (pc.GenApp[g] == nodeRow)
-                    into.Add(new NodeEffect(NodeEffectKind.Generation, c, -1, -1, Fx6.FromInt(g - pc.GenStart[c] + 1), Fx6.Zero, false));
+                    into.Add(new NodeEffect(NodeEffectKind.Generation, c, -1, -1, Fx6.FromInt(g - pc.GenStart[c] + 1), Fx6.Zero,
+                        pc.GenPlatformMinRank[g] > 1, MinRank: pc.GenPlatformMinRank[g]));
             }
         }
 
@@ -72,28 +75,33 @@ public static class NodeEffects
                 ReadOnlySpan<int> members = n.Requires.GroupMembers(g);
                 if (members.IndexOf(nodeRow) >= 0)
                     into.Add(new NodeEffect(NodeEffectKind.RequiredFor, -1, -1, -1, Fx6.Zero, Fx6.Zero,
-                        members.Length > 1 || n.Requires.GroupStart[o + 1] - n.Requires.GroupStart[o] > 1, o));
+                        n.Requires.GroupStart[o + 1] - n.Requires.GroupStart[o] > 1, o));
             }
         }
     }
 
     /// <summary>
-    /// Appends the other nodes the alternative of <paramref name="effect"/> needs besides <paramref name="nodeRow"/>
-    /// (members of every requirement group, any_of partners included), ascending.
+    /// Splits the other requirements of the alternative of <paramref name="effect"/> (seen from <paramref name="nodeRow"/>):
+    /// <paramref name="alternatives"/> are the other members of the node's own any_of group (any one of them is enough, the node
+    /// itself is not needed), <paramref name="coRequired"/> are the members of the other groups (all of them are needed too).
+    /// Both are appended ascending.
     /// </summary>
-    public static void CoRequirements(GameData data, in NodeEffect effect, int nodeRow, List<int> into)
+    public static void Requirements(GameData data, in NodeEffect effect, int nodeRow, List<int> alternatives, List<int> coRequired)
     {
         RequirementLists req = data.ProductClasses.AltRequires;
-        int start = into.Count;
+        int altStart = alternatives.Count, coStart = coRequired.Count;
         for (int g = req.GroupStart[effect.AltRow]; g < req.GroupStart[effect.AltRow + 1]; g++)
         {
-            foreach (int member in req.GroupMembers(g))
+            ReadOnlySpan<int> members = req.GroupMembers(g);
+            List<int> target = members.IndexOf(nodeRow) >= 0 ? alternatives : coRequired;
+            foreach (int member in members)
             {
                 if (member != nodeRow)
-                    into.Add(member);
+                    target.Add(member);
             }
         }
-        into.Sort(start, into.Count - start, null);
+        alternatives.Sort(altStart, alternatives.Count - altStart, null);
+        coRequired.Sort(coStart, coRequired.Count - coStart, null);
     }
 
     // The alternative is compared with the best lower-rank alternative of the same airframe class (af_fbw trades perf for
@@ -130,15 +138,9 @@ public static class NodeEffects
     private static void AddAlternative(ProductClassTable pc, int c, int s, int a, int nodeRow, List<NodeEffect> into)
     {
         RequirementLists req = pc.AltRequires;
-        bool found = false, together = req.GroupStart[a + 1] - req.GroupStart[a] > 1;
+        bool found = false, together = req.GroupStart[a + 1] - req.GroupStart[a] > 1;   // a second group is a mandatory co-requirement
         for (int g = req.GroupStart[a]; g < req.GroupStart[a + 1]; g++)
-        {
-            ReadOnlySpan<int> members = req.GroupMembers(g);
-            if (members.IndexOf(nodeRow) < 0)
-                continue;
-            found = true;
-            together |= members.Length > 1;
-        }
+            found |= req.GroupMembers(g).IndexOf(nodeRow) >= 0;
         if (!found)
             return;
         into.Add(new NodeEffect(NodeEffectKind.AlternativeUnlock, c, s, a, pc.AltPerfMult[a], BaselinePerf(pc, s, a), together));

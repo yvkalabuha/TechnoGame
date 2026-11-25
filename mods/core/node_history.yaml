@@ -388,6 +388,8 @@ define:
   - id: s8.prc.composite_layup_cure
     epic: false
     sources:
+      - {url: "https://en.wikipedia.org/wiki/Fiberglass", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+      - {url: "https://en.wikipedia.org/wiki/Carbon_fibers", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
       - {url: "https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19870020179.pdf", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s5.prc.low_observable_finishing
     epic: false

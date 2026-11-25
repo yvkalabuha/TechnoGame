@@ -48,8 +48,9 @@ public static class ModLoader
         ProductClassTable classTable = ProductClassTable.Build(classes.Objects(), nodeTable);
         ImmutableArray<ScenarioData> scenarioList =
             [.. scenarios.Objects().Select(o => ScenarioData.Build(o.Map, nodeTable, classTable))];
-        NodeHistoryTable historyTable = NodeHistoryTable.Build(history.Objects(), nodeTable);
-        return new GameData(mods, nodeTable, classTable, scenarioList, historyTable);
+        var warnings = new List<string>();
+        NodeHistoryTable historyTable = NodeHistoryTable.Build(history.Objects(), nodeTable, nodes.IsDeleted, warnings);
+        return new GameData(mods, nodeTable, classTable, scenarioList, historyTable, warnings.ToImmutableArray());
     }
 
     private static void ApplyFile(YNode root, ModContext mod, ObjectStore nodes, ObjectStore classes, ObjectStore scenarios,

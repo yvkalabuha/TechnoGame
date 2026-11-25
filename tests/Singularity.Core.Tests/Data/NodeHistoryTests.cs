@@ -62,22 +62,39 @@ public class NodeHistoryTests : IDisposable
         NodeEffects.Derive(Data, delta, fx);
         ProductClassTable pc = Data.ProductClasses;
         NodeEffect milled = Assert.Single(fx, e => e.Kind == NodeEffectKind.AlternativeUnlock && pc.AltId[e.AltRow] == "af_milled");
-        Assert.True(milled.Together);
+        Assert.False(milled.Together);   // knowing one of the two any_of nodes is enough
         Assert.Equal(pc.AltPerfMult[milled.AltRow], milled.Value);
         Assert.Equal(pc.AltPerfMult[milled.AltRow - 1], milled.Previous);
         Assert.True(milled.Value > milled.Previous);
 
-        // The only other requirement of af_milled is the any_of partner area_ruled_airframe.
-        var others = new List<int>();
-        NodeEffects.CoRequirements(Data, milled, delta, others);
-        Assert.Equal([ruled], others);
+        // The any_of partner is an alternative path, not a co-requirement.
+        var alternatives = new List<int>();
+        var coRequired = new List<int>();
+        NodeEffects.Requirements(Data, milled, delta, alternatives, coRequired);
+        Assert.Equal([ruled], alternatives);
+        Assert.Empty(coRequired);
 
-        // af_titanium needs the titanium alloy too: the node is one requirement of several, never a plain "opens".
+        // af_titanium additionally needs the titanium alloy: a mandatory co-requirement, so "together with", never a plain "opens".
         NodeEffect titanium = Assert.Single(fx, e => e.Kind == NodeEffectKind.AlternativeUnlock && pc.AltId[e.AltRow] == "af_titanium");
         Assert.True(titanium.Together);
-        others.Clear();
-        NodeEffects.CoRequirements(Data, titanium, delta, others);
-        Assert.Contains(Data.Nodes.IndexOf("s5.cmp.titanium_alloy"), others);
+        alternatives.Clear();
+        NodeEffects.Requirements(Data, titanium, delta, alternatives, coRequired);
+        Assert.Equal([ruled], alternatives);
+        Assert.Equal([Data.Nodes.IndexOf("s5.cmp.titanium_alloy")], coRequired);
+    }
+
+    [Fact]
+    public void GenerationEffect_CarriesTheAirframeRankThatGatesIt()
+    {
+        ProductClassTable pc = Data.ProductClasses;
+        var fx = new List<NodeEffect>();
+        NodeEffects.Derive(Data, Data.Nodes.IndexOf("s8.app.jet_fighter_g6"), fx);
+        NodeEffect g6 = Assert.Single(fx, e => e.Kind == NodeEffectKind.Generation);
+        Assert.Equal(Fx6.FromInt(6), g6.Value);
+        int g = pc.GenStart[g6.ClassRow] + 5;
+        Assert.Equal(pc.GenPlatformMinRank[g], g6.MinRank);
+        Assert.True(g6.MinRank > 1);
+        Assert.True(g6.Together);   // the APP node alone does not give the generation: an airframe of that rank is needed too
     }
 
     [Fact]
@@ -176,6 +193,16 @@ public class NodeHistoryTests : IDisposable
     {
         Assert.Throws<DataLoadException>(() => Load(t => t.Replace("license: other, use: paraphrase", "license: other, use: quote", StringComparison.Ordinal)));
         Assert.Throws<DataLoadException>(() => Load(t => t.Replace("sources:\n", "sources:\n      - {url: \"https://example.org/a\", accessed: \"2026-11-24\", check: opened, license: PD, use: paraphrase}\n      - {url: \"https://example.org/b\", accessed: \"2026-11-24\", check: opened, license: PD, use: paraphrase}\n      - {url: \"https://example.org/c\", accessed: \"2026-11-24\", check: opened, license: PD, use: paraphrase}\n", StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public void ModThatDeletesACoreNode_LoadsWithAWarning_NotAnError()
+    {
+        string mod = _mods.Mod("a", "[{id: core, min: \"0.1.0\"}]", ("nodes.yaml", "kind: node\ndelete: [s8.app.jet_fighter_g4]\n"), TestMods.DropG4Class());
+        GameData data = ModLoader.Load(TestMods.CoreDir, mod);
+        Assert.Equal(-1, data.Nodes.IndexOf("s8.app.jet_fighter_g4"));
+        Assert.Contains(data.Warnings, w => w.Contains("s8.app.jet_fighter_g4", StringComparison.Ordinal));
+        Assert.Empty(Data.Warnings);
     }
 
     [Fact]

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json.Nodes;
 using LateApexEarlySpeed.Json.Schema;
+using Singularity.Core.Data;
 using Singularity.Core.Data.Yaml;
 
 namespace Singularity.Core.Tests.Data;
@@ -46,6 +47,16 @@ public class SchemaTests : IDisposable
     {
         string dir = _mods.CopyCore((name, text) => name == file ? TestMods.ReplaceOnce(text, from, to) : text);
         Assert.False(Validate(Path.Combine(dir, file), schema).Valid);
+    }
+
+    [Fact]
+    public void NodeHistoryPatch_IsAcceptedByTheSchemaAndByTheLoader()
+    {
+        string a = _mods.Mod("a", "[{id: core, min: \"0.1.0\"}]", ("h.yaml", "kind: node_history\npatch:\n  - {id: s8.eng.delta_wing_airframe, epic: true}\n"));
+        (bool valid, string error) = Validate(Path.Combine(a, "h.yaml"), "node_history.schema.json");
+        Assert.True(valid, error);
+        GameData data = ModLoader.Load(TestMods.CoreDir, a);
+        Assert.True(data.History.Epic[data.Nodes.IndexOf("s8.eng.delta_wing_airframe")]);
     }
 
     private static (bool Valid, string Error) Validate(string yamlPath, string schemaFile)
