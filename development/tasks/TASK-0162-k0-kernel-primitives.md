@@ -1,7 +1,7 @@
 ---
 id: TASK-0162
 title: "K0: Kernel primitives for the daily tick (DaySlice, Apportion, DayRate) per ADR-0027 §5"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M1
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: []
 approved_by: owner
 approved_at: 2026-11-25
 approval_ref: "#516 (ADR-0027), #520"
+review_ref: "reviewer: APPROVE (af96601, sign-safe O-078); codex 4 returns; second review agy-sonnet accept 2 low (codex limit), merge a701087"
 created: 2026-11-25
 ---
 
