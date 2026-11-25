@@ -26,14 +26,14 @@
 - TASK-0171 [IN_PROGRESS] Golden batch: turn on Reserve, Institutes, LicenceMarket, Adviser, Intelligence by default; re-record goldens once with explanation (developer)
 - TASK-0187 [IN_PROGRESS] Core: slot science model (one institute = one node, queue 5, focus, directions, research_speed) — golden batch (#576) (developer)
 - TASK-0188 [IN_PROGRESS] Research + data: expand knowledge tree (computing, materials, rocketry, space, electronics, nuclear) with directions (#575) (research-scientist)
+- TASK-0191 [IN_PROGRESS] Tooling: llm_worker research — DeepSeek checks claims against fetched source pages (#577) (developer)
+- TASK-0192 [IN_PROGRESS] Tech map stage 1: node choice card, institute strip, queue, path to goal — Gemini design, then client (#561, #578) (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0161 [REVIEW] Design pass 2 B: knowledge tree by year rings and direction sectors, 6 zoom steps, icons, node menu, prominent close (#473) (developer)
 - TASK-0176 [REVIEW] Lab: recalibrate institute parameters so 1945-1977 history is within tolerance with all levers on (A16, #549) (simulation-engineer)
 - TASK-0178 [REVIEW] Gate: AI institute goals on the path to the next aircraft generation, Lab measurement with kappa 1.5 (#552) (simulation-engineer)
 - TASK-0179 [REVIEW] Lab: licence market calibration, what AI buys and why, prices and availability within tolerance (#553) (simulation-engineer)
 - TASK-0185 [REVIEW] Lab pilot: node time T_n, frontier width, starting institutes and ceiling for the slot model (#561, #564) (simulation-engineer)
-- TASK-0191 [APPROVED] Tooling: llm_worker research — DeepSeek checks claims against fetched source pages (#577) (developer)
-- TASK-0192 [APPROVED] Tech map stage 1: node choice card, institute strip, queue, path to goal — Gemini design, then client (#561, #578) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры

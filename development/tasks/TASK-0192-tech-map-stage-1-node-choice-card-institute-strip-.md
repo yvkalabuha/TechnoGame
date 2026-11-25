@@ -1,7 +1,7 @@
 ---
 id: TASK-0192
 title: "Tech map stage 1: node choice card, institute strip, queue, path to goal — Gemini design, then client (#561, #578)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: developer
