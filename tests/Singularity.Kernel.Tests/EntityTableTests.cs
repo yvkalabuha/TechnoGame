@@ -257,6 +257,7 @@ public class EntityTableTests
         Toy t = Build(4, 2, false);
         string before = StateHash.ComputeHex(t.World, 1);
         t.Val.Load(Enumerable.Range(1, 8).Select(i => (long)i).ToArray());
-        Assert.NotEqual(before, StateHash.ComputeHex(t.World, 1));
+        string after = StateHash.ComputeHex(t.World, 1);
+        Assert.True(before != after);
     }
 }
