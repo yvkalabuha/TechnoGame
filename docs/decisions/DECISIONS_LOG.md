@@ -661,3 +661,5 @@ Design by ui-art-director with game-designer (information architecture); the own
 | 518 | 2026-11-25 | ADR-0029 (entity tables) ACCEPTED: designs, licences, institutes in own tables; moved in one batch with the daily tick so goldens change once | владелец (ответ на вопрос 2026-11-25) |
 | 519 | 2026-11-25 | Japan occupation mark 1945-1952: flags of the USA and the UK on the grey plate | владелец (ответ на вопрос 2026-11-25) |
 | 520 | 2026-11-25 | Start both now: the K0 Kernel primitives task (ADR-0027) and the intelligence core (TASK-0160), accepting a heavier machine load | владелец (ответ на вопрос 2026-11-25) |
+| 521 | 2026-11-25 | M1 resources: stocks and extraction by region plus trade in raw materials between countries (prices, deliveries, embargo) are in M1; M1 about a month longer (resolves the #499 vs MS-M1 "trade outside M1" conflict) | владелец (ответ на вопрос 2026-11-25) |
+| 522 | 2026-11-25 | The broad list of scripted ownership events (#328), all of it up to 2026, is in M1 (#420 deferral lifted after the M-play verdict) | владелец (ответ на вопрос 2026-11-25) |
