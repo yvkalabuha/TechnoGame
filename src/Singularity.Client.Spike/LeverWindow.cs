@@ -31,6 +31,7 @@ public sealed partial class LeverWindow : PanelContainer
     readonly Label _resultWord = Ui.Lbl("", 14, Ui.Ink);
     CaptionButton _apply, _reset, _close;
     int _tab = TabBudget;
+    ScrollContainer _scroll;
     long _seen = -1;
 
     // budget tab
@@ -106,7 +107,7 @@ public sealed partial class LeverWindow : PanelContainer
         var stack = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         stack.AddChild(_budgetBox); stack.AddChild(_instBox);
         pad.AddChild(stack); scroll.AddChild(pad);
-        root.AddChild(scroll);
+        root.AddChild(scroll); _scroll = scroll;
 
         root.AddChild(new HSeparator());
         var rr = new HBoxContainer(); rr.AddThemeConstantOverride("separation", 6);
@@ -420,6 +421,24 @@ public sealed partial class LeverWindow : PanelContainer
         if (!im.Enabled) return "institute model disabled on a live state of a run with institutes";
         if (im.Standing.IsEmpty && im.Candidates.IsEmpty) return "institute model empty on a live state";
         return null;
+    }
+
+    /// <summary>Shot run: true when the budget tab shows real numbers (a frame of «нет данных» is not evidence).</summary>
+    public bool BudgetHasData => _bm != null && _bm.HasData;
+    /// <summary>Shot run: the same path as a player moving slider i (the 100 % limit applies).</summary>
+    public void ShotEdit(int i, int v) { OnSlider(i, v); }
+    public void ShotReset() => ResetEdit();
+    /// <summary>Shot run: opens the goal list of the first institute that stands; false when none does.</summary>
+    public bool ShotPick() { if (_im == null || _im.Standing.IsEmpty) return false; _expandSlot = _im.Standing[0].Slot; _sigInst = ""; Refresh(); return true; }
+    /// <summary>Shot run: selects the first institute that can be built and scrolls to its card; false when there is none.</summary>
+    public bool ShotCandidate()
+    {
+        _expandSlot = -1;
+        var c = _im?.Candidates.FirstOrDefault(x => x.State == InstituteState.Candidate);
+        if (c == null) return false;
+        _selCand = c.Slot; _sigInst = ""; Refresh();
+        _scroll.CallDeferred(Control.MethodName.Set, "scroll_vertical", 100000);
+        return true;
     }
 
     /// <summary>Shot run: the window as a player opens it, without a click.</summary>

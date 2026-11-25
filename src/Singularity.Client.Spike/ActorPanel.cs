@@ -58,7 +58,20 @@ public sealed partial class ActorPanel : PanelContainer
     bool _edited, _awaiting; long _sentSeq;
     int _actor = -1; bool _dirty = true; SliceView _lastView; CmdResult _lastCmd; HostSnapshot _lastSnap;
     string _sigDesigns = "", _sigLicence = "", _sigWhy = "";
-    DesignHandle? _confirmClose;   // the line whose closing waits for a yes
+    DesignHandle? _confirmClose;
+    (string Text, DesignHandle Handle)? _shotSeries;   // shot run only: a fixture line when the live state has no series line
+    /// <summary>Shot run: asks to close the first series line of the player; without one a fixture line stands in. Returns true when the line is real.</summary>
+    public bool ShotSeriesConfirm()
+    {
+        var a = _host.Snap.View.Actors.FirstOrDefault(x => x.Actor == _actor);
+        var d = a == null ? default : a.Designs.FirstOrDefault(x => x.Stage == DesignStage.Series);
+        bool real = d != null && d.Stage == DesignStage.Series;
+        if (!real) _shotSeries = (Loc.T("design.line", 1, 3, Loc.T("stage.3"), LeverWindow.Money(0.001), "80", "12"), new DesignHandle(0, 1));
+        _confirmClose = real ? d.Handle : _shotSeries!.Value.Handle;
+        _sigDesigns = ""; _dirty = true;
+        return real;
+    }
+    public void ShotClearConfirm() { _confirmClose = null; _shotSeries = null; _sigDesigns = ""; _dirty = true; }   // the line whose closing waits for a yes
     public event Action OpenTree;
     /// <summary>A lever button asks for a lever window: 0 budget and reserve, 1 science goals and institutes.</summary>
     public event Action<int> OpenWindow;
@@ -548,6 +561,7 @@ public sealed partial class ActorPanel : PanelContainer
                 + (d.Stage is DesignStage.Series ? Loc.T("design.series", Loc.N(d.Rate.ToDouble()), Loc.T("bind." + d.Bind)) : "");
             rows.Add((line, d.Stage == DesignStage.Series ? "close" : d.Stage is DesignStage.Project or DesignStage.Prototype ? "cancel" : "", d.Handle));
         }
+        if (_shotSeries is { } fx) rows.Add((fx.Text, "close", fx.Handle));
         string sig = Loc.Lang + "|" + _confirmClose + "|" + string.Join("\n", rows.Select(r => r.text + r.action + r.design.Generation));
         if (sig == _sigDesigns) return;
         _sigDesigns = sig;

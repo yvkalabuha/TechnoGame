@@ -958,6 +958,15 @@ public sealed partial class Main : Node3D
     readonly List<(double Wait, Action Act)> _sizeQ = new(); int _sizeI;
 
     int _capRow;
+    // One lever frame: the live-state assertion first (a frame of an empty window must fail the run), then the colour and grey files.
+    void LeverFrame(string name, bool live)
+    {
+        string why = _levers.LiveCheck();
+        _shotLog += $"{name}: live state {(live && why == null ? "PASS" : "FAIL " + why)}\n";
+        if (!live || why != null) InstFail($"{name}: the window shows no live data {why}");
+        SaveShot(name + ".png", null, true);
+    }
+
     Vector2I _largeSize;   // non-zero: the native-size run (map and tree frames at this window size)
     float _discClosed; Vector2 _panBefore;
 
@@ -1011,6 +1020,19 @@ public sealed partial class Main : Node3D
             Q(0.6, () => { SaveShot($"area_forces{sfx}.png"); OpenArea(AreaId.Science); });
             Q(0.8, () => { SaveShot($"area_science{sfx}.png"); OpenArea(AreaId.Production); });
             Q(0.8, () => { SaveShot($"area_production{sfx}.png"); CloseArea(); if (Settings.Current.RailWide) ToggleRail(); _pinBadges = Array.Empty<(AreaId, int, int)>(); });
+            // TASK-0156: the lever windows on the live session (RU, 100 %), each with a greyscale twin; every frame asserts that it shows real numbers, not «нет данных».
+            if (scale == 100 && lang == "ru")
+            {
+                Q(0.4, () => { _levers.ShotOpen(LeverWindow.TabBudget); });
+                Q(0.8, () => { LeverFrame("lever_budget" + sfx, _levers.BudgetHasData); _levers.ShotEdit(1, 5); });
+                Q(0.6, () => { LeverFrame("lever_budget_stop" + sfx, _levers.BudgetHasData); _levers.ShotReset(); _levers.ShotEdit(2, 100); });
+                Q(0.6, () => { LeverFrame("lever_budget_limit" + sfx, _levers.BudgetHasData); _levers.ShotReset(); _levers.ShotOpen(LeverWindow.TabInstitutes); });
+                Q(0.8, () => { LeverFrame("lever_inst" + sfx, _levers.LiveCheck() == null); _levers.ShotPick(); });
+                Q(0.6, () => { LeverFrame("lever_inst_pick" + sfx, _levers.LiveCheck() == null); if (!_levers.ShotCandidate()) InstFail("lever_inst_build: no institute can be built in this state"); });
+                Q(0.8, () => { LeverFrame("lever_inst_build" + sfx, _levers.LiveCheck() == null); _levers.Close(); OpenArea(AreaId.Production); });
+                Q(0.8, () => { bool real = _areaPanel.ShotSeriesConfirm(); _shotLog += $"panel_production_close_confirm: series line is {(real ? "real (live state)" : "a FIXTURE line: the player has no series line in this state")}\n"; });
+                Q(0.6, () => { SaveShot($"panel_production_close_confirm{sfx}.png", null, true); _areaPanel.ShotClearConfirm(); CloseArea(); });
+            }
             // Level 0 keyboard check through the real route only: the Finance hotkey opens the panel and moves the focus into it, Tab and an arrow key move a share slider, Space still pauses, Esc returns to the rail button.
             if (scale == 100 && lang == "ru")
             {
