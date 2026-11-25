@@ -1,7 +1,7 @@
 ---
 id: TASK-0176
 title: "Lab: recalibrate institute parameters so 1945-1977 history is within tolerance with all levers on (A16, #549)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: simulation-engineer
