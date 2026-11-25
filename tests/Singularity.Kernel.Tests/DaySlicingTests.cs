@@ -150,10 +150,19 @@ public class DaySlicingTests
     [InlineData(0L, 365, 0L)]
     [InlineData(1_000_000L, 365, 9007199254740992L)]
     [InlineData(500_000L, 1, 4503599627370496L)]
-    [InlineData(100_000L, 365, 2599633430587L)]
-    [InlineData(100_000L, 366, 2592531629303L)]
-    [InlineData(-50_000L, 365, -1204087954837L)]
-    [InlineData(-50_000L, 366, -1200797877752L)]
+    // Yearly rates of the ADR-0003 inventory (δ_H 3.54 %, δ_X 4.70 %, δ_M 5.84 %, δ_E 26.2 %) and growth 2 %, 5 %.
+    [InlineData(35400L, 365, 889368187814L)]
+    [InlineData(35400L, 366, 886938339731L)]
+    [InlineData(47000L, 365, 1187894135105L)]
+    [InlineData(47000L, 366, 1184648736159L)]
+    [InlineData(58400L, 365, 1484824780266L)]
+    [InlineData(58400L, 366, 1480768215451L)]
+    [InlineData(262000L, 365, 7494114379910L)]
+    [InlineData(262000L, 366, 7473647154693L)]
+    [InlineData(-20000L, 365, -488687803922L)]
+    [InlineData(-20000L, 366, -487352555221L)]
+    [InlineData(-50000L, 365, -1204087954837L)]
+    [InlineData(-50000L, 366, -1200797877752L)]
     public void DayRate_GoldenVectors(long d, int y, long expectedRaw) =>
         Assert.Equal(expectedRaw, DetMath.DayRate(Fx6.FromRaw(d), y).Raw);
 
@@ -185,7 +194,8 @@ public class DaySlicingTests
     public static IEnumerable<object[]> StockCases()
     {
         long[] deltas = [1_000, 100_000, 500_000, -20_000, -50_000];
-        long[] stocks = [1_000, 123_456, 10_000_000_000, 999_999_999_999_999];
+        // 7_480 and 18_426 are where the 5 % / 2 % growth loses the most raw (1.02·Y, found by scan).
+        long[] stocks = [1_000, 7_480, 18_426, 123_456, 10_000_000_000, 999_999_999_999_999];
         foreach (long d in deltas)
             foreach (int y in Lengths)
                 foreach (long x in stocks)
@@ -203,11 +213,11 @@ public class DaySlicingTests
 
         BigInteger exact = (BigInteger)x0 * (S - d) / S;
         BigInteger error = (BigInteger)x.Raw - exact;
-        // Y raw of floor error plus the rate error: 1 Q53 unit per step on a stock up to x0·(1+g).
-        BigInteger tolerance = y + (BigInteger)y * y * 2 * x0 / Rate.One + 2;
+        // Floor losses (< 1 raw a day) are amplified by later growth: Y·(1+|δ|); plus 1 Q53 unit of rate error per step.
+        BigInteger tolerance = (BigInteger)y * (S + BigInteger.Abs(d)) / S + 1 + (BigInteger)y * y * 2 * x0 / Rate.One;
         Assert.True(BigInteger.Abs(error) <= tolerance, $"d={d} y={y} x0={x0} error={error}");
         if (d > 0)
-            Assert.True(error >= -2, $"decay ran faster than asked: {error}"); // exact is itself floored
+            Assert.True(error >= 0, $"decay ran faster than asked: {error}");
         else
             Assert.True(error <= 0, $"growth ran faster than asked: {error}");
     }
@@ -221,10 +231,25 @@ public class DaySlicingTests
         Assert.Equal(1, r.MulFloor(Fx6.FromRaw(limit + 1)).Raw);
     }
 
+    [Theory]
+    [InlineData(-9_000_000_000_000_000_000L, 366)]
+    [InlineData(long.MinValue, 366)]
+    public void DayRate_HugeRepresentableGrowth_DoesNotOverflow(long d, int y)
+    {
+        // S − d overflows long here; the daily rate itself is far below 100 %.
+        long r = DetMath.DayRate(Fx6.FromRaw(d), y).Raw;
+        Assert.True(r < 0 && r > -Rate.One);
+        BigInteger left = BigInteger.Pow(Rate.One - r, y) * S;
+        BigInteger right = (S - (BigInteger)d) * (BigInteger.One << (53 * y));
+        Assert.True(left <= right);
+        Assert.True(BigInteger.Pow(Rate.One - (r - 1), y) * S > right);
+    }
+
     [Fact]
     public void DayRate_RejectsBadArguments()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => DetMath.DayRate(Fx6.One, 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DetMath.DayRate(Fx6.One, 367));
         Assert.Throws<ArgumentOutOfRangeException>(() => DetMath.DayRate(Fx6.FromRaw(S + 1), 12));
         Assert.Throws<ArgumentOutOfRangeException>(() => DetMath.DayRate(Fx6.FromRaw(-10 * S), 1));
     }

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Numerics;
 
 namespace Singularity.Kernel;
@@ -5,6 +6,9 @@ namespace Singularity.Kernel;
 // Day slicing and daily rates (ADR-0027 p. 5 K0; ADR-0019 p. 5-8, 12; ADR-0003 rev 3 p. 4).
 public static partial class DetMath
 {
+    /// <summary>Longest calendar year in days; DayRate and ApplyDayRate are specified for Y up to this.</summary>
+    public const int MaxYearLength = 366;
+
     /// <summary>
     /// Slice <paramref name="k"/> (1..Y) of an annual amount: <c>floor(F·k/Y) − floor(F·(k−1)/Y)</c>.
     /// The Y slices of a constant F sum to F exactly; there is no remainder state (ADR-0019 p. 5).
@@ -69,8 +73,8 @@ public static partial class DetMath
     /// <exception cref="ArgumentOutOfRangeException">When Y &lt; 1, δ &gt; 1, or growth per day exceeds 100 %.</exception>
     public static Rate DayRate(Fx6 annual, int y)
     {
-        if (y < 1)
-            throw new ArgumentOutOfRangeException(nameof(y), y, "The period length must be positive.");
+        if (y < 1 || y > MaxYearLength)
+            throw new ArgumentOutOfRangeException(nameof(y), y, "The period length must be in 1..366.");
         long d = annual.Raw;
         if (d > Fx6.Scale)
             throw new ArgumentOutOfRangeException(nameof(annual), annual, "A decay rate above 100 % is not allowed.");
@@ -79,7 +83,8 @@ public static partial class DetMath
 
         BigInteger one = Rate.One;
         BigInteger oneToY = BigInteger.One << (Rate.FracBits * y);
-        BigInteger target = (BigInteger)(Fx6.Scale - d) * oneToY;
+        // BigInteger subtraction: S − d overflows long for a huge growth rate.
+        BigInteger target = (new BigInteger(Fx6.Scale) - d) * oneToY;
 
         // (Q − r)^Y · 10^6 against (10^6 − d) · Q^Y; the left side falls as r rises.
         bool AtLeastTarget(long r) => BigInteger.Pow(one - r, y) * Fx6.Scale >= target;
@@ -119,11 +124,18 @@ public static partial class DetMath
     /// One daily step of a decaying or growing stock (ADR-0027 p. 6, O-069). Decay: <c>x − r·x</c>.
     /// Growth (negative r): <c>x + (−r)·x</c>. Both floor the change magnitude, so the stock error
     /// always goes toward slower change. Callers use this, never <c>x −= r.MulFloor(x)</c> directly.
+    /// Precondition: <c>stock ≥ 0</c> (a negative stock would floor away from slower change).
+    /// Error over Y steps from a constant annual δ: decay ends at or above <c>x·(1−δ)</c>; growth ends at or
+    /// below it, and the floor losses are amplified by the growth that follows, so the bound is
+    /// <c>Y·(1+|δ|)</c> raw (not Y), plus the DayRate quantization.
     /// </summary>
-    public static Fx6 ApplyDayRate(Fx6 stock, Rate rate) =>
-        rate.Raw >= 0
+    public static Fx6 ApplyDayRate(Fx6 stock, Rate rate)
+    {
+        Debug.Assert(stock.Raw >= 0, "ApplyDayRate needs a non-negative stock.");
+        return rate.Raw >= 0
             ? stock - rate.MulFloor(stock)
             : stock + Rate.FromRaw(checked(-rate.Raw)).MulFloor(stock);
+    }
 
     private static Int128 FloorDiv(Int128 n, Int128 d)
     {
