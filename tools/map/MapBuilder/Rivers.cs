@@ -108,6 +108,9 @@ internal static class Rivers
         return res;
     }
 
+    // Natural Earth lines and admin-1 borders differ by a few km, so a river that runs along a border still counts for both banks.
+    private const double BankTolDeg = 3000 / 111000.0;
+
     /// <summary>Provinces crossed by the river (optionally only inside the bbox), sorted by id.</summary>
     public static List<string> Along(BuildResult r, List<RiverLine> rivers, NavigableEntry e)
     {
@@ -120,10 +123,12 @@ internal static class Rivers
             var box = Sph.Gf.ToGeometry(new Envelope(e.Bbox[1], e.Bbox[3], e.Bbox[0], e.Bbox[2]));
             line = line.Intersection(box);
         }
+        var bank = line.EnvelopeInternal.Copy();
+        bank.ExpandBy(BankTolDeg);
         var res = new List<string>();
         if (line.IsEmpty) throw new InvalidDataException($"navigable river '{e.River}': nothing inside the bbox");
         foreach (var p in r.Pieces)
-            if (p.Shape.EnvelopeInternal.Intersects(line.EnvelopeInternal) && p.Shape.Intersection(line).Length > 0.02) res.Add(p.Id);
+            if (p.Shape.EnvelopeInternal.Intersects(bank) && p.Shape.Buffer(BankTolDeg).Intersection(line).Length > 0.02) res.Add(p.Id);
         return res.OrderBy(x => x, StringComparer.Ordinal).ToList();
     }
 

@@ -392,6 +392,21 @@ public class TerrainTests
         Assert.InRange(nav.Count, 5, 80);
         foreach (var l in nav)
             foreach (var id in l.Split("provinces: [")[1].TrimEnd('}', ']').Split(", ")) Assert.Contains(id, provinces);
+        // Known places: a river along a border counts for both banks, the delta branches reach Cairo.
+        string Along(string river) => nav.Single(l => l.StartsWith("  - {river: " + river + ","));
+        Assert.Contains("vienna.wien", Along("Danube"));
+        Assert.Contains("minnesota_3", Along("Mississippi"));
+        Assert.Contains("wisconsin_1", Along("Mississippi"));
+        Assert.Contains("egypt_matruh.al_qahirah", Along("Nile"));
+        Assert.DoesNotContain(nav, l => l.StartsWith("  - {river: St. Lawrence,"));
+    }
+
+    [Fact]
+    public void Lake_Tharthar_was_a_dry_depression_in_1945()
+    {
+        var line = File.ReadAllLines(Path.Combine(RepoRoot(), "tools", "map", "spec", "terrain_1945.yaml")).Single(l => l.Contains("{id: tharthar,"));
+        Assert.Contains("from: water, to: desert", line);
+        Assert.Contains("1956", line);
     }
 
     [Fact]

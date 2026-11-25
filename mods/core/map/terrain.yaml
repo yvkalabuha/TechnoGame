@@ -1337,7 +1337,7 @@ terrain:
   - {id: iran_kerman.sistan_and_baluchestan_2, class: desert, elev_m: 796, rugged_m: 18, mountains: 8, hills: 151, forest: 0, swamp: 18, steppe: 0, farm: 0, desert: 979, tundra: 0, ice: 0, water: 3}
   - {id: iran_kerman.south_khorasan, class: desert, elev_m: 1279, rugged_m: 14, mountains: 6, hills: 88, forest: 0, swamp: 7, steppe: 0, farm: 11, desert: 982, tundra: 0, ice: 0, water: 0}
   - {id: iran_kerman.yazd, class: desert, elev_m: 1230, rugged_m: 13, mountains: 11, hills: 82, forest: 0, swamp: 133, steppe: 0, farm: 0, desert: 867, tundra: 0, ice: 0, water: 0}
-  - {id: iraq.al_anbar, class: desert, elev_m: 401, rugged_m: 3, mountains: 0, hills: 0, forest: 0, swamp: 15, steppe: 0, farm: 10, desert: 948, tundra: 0, ice: 0, water: 27}
+  - {id: iraq.al_anbar, class: desert, elev_m: 401, rugged_m: 3, mountains: 0, hills: 0, forest: 0, swamp: 15, steppe: 0, farm: 10, desert: 975, tundra: 0, ice: 0, water: 0}
   - {id: iraq.al_basrah, class: swamp, elev_m: 45, rugged_m: 2, mountains: 0, hills: 0, forest: 0, swamp: 384, steppe: 0, farm: 0, desert: 551, tundra: 0, ice: 0, water: 65}
   - {id: iraq.al_muthannia, class: desert, elev_m: 210, rugged_m: 2, mountains: 0, hills: 0, forest: 0, swamp: 31, steppe: 0, farm: 4, desert: 964, tundra: 0, ice: 0, water: 1}
   - {id: iraq.al_q_disiyyah, class: swamp, elev_m: 19, rugged_m: 2, mountains: 0, hills: 0, forest: 0, swamp: 434, steppe: 0, farm: 167, desert: 393, tundra: 0, ice: 0, water: 6}

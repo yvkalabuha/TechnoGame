@@ -65,7 +65,6 @@ internal static class TerrainSources
             }
             catch (Exception e) when (e is HttpRequestException or IOException or TaskCanceledException && attempt < 8)
             {
-                if (attempt >= 8) throw;
                 await Task.Delay(TimeSpan.FromSeconds(2 * (attempt + 1)));
             }
         }
