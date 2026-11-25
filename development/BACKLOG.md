@@ -195,9 +195,9 @@
 | [TASK-0177](../development/tasks/TASK-0177-data-mongolia-1945-as-an-independent-country-mng-o.md) | DONE | Data: Mongolia 1945 as an independent country (MNG owner and controller), #550 | MS-M0 |
 | [TASK-0178](../development/tasks/TASK-0178-gate-ai-institute-goals-on-the-path-to-the-next-ai.md) | IN_PROGRESS | Gate: AI institute goals on the path to the next aircraft generation, Lab measurement with kappa 1.5 (#552) | MS-M0 |
 | [TASK-0179](../development/tasks/TASK-0179-lab-licence-market-calibration-what-ai-buys-and-wh.md) | IN_PROGRESS | Lab: licence market calibration, what AI buys and why, prices and availability within tolerance (#553) | MS-M0 |
-| [TASK-0180](../development/tasks/TASK-0180-data-real-prerequisites-for-early-g5-g6-knowledge-.md) | IN_PROGRESS | Data: real prerequisites for early G5/G6 knowledge nodes, restore G2-G4 pace (#555) | MS-M0 |
+| [TASK-0180](../development/tasks/TASK-0180-data-real-prerequisites-for-early-g5-g6-knowledge-.md) | DONE | Data: real prerequisites for early G5/G6 knowledge nodes, restore G2-G4 pace (#555) | MS-M0 |
 | [TASK-0181](../development/tasks/TASK-0181-3d-fighters-g1-g6-v2-by-gemini-544-557-slot-kits-p.md) | DONE | 3D fighters G1-G6 v2 by Gemini (#544, #557): slot kits, paper-style sheet, art director acceptance | MS-M0 |
-| [TASK-0182](../development/tasks/TASK-0182-fix-ai-fleet-sale-booked-at-a-different-g-front-th.md) | IN_PROGRESS | Fix: AI fleet sale booked at a different G_front than the decision priced (FL7 seed 10) | MS-M0 |
+| [TASK-0182](../development/tasks/TASK-0182-fix-ai-fleet-sale-booked-at-a-different-g-front-th.md) | DONE | Fix: AI fleet sale booked at a different G_front than the decision priced (FL7 seed 10) | MS-M0 |
 | [TASK-0183](../development/tasks/TASK-0183-pace-tuning-g3-g4-after-owner-play-session-ahead-c.md) | PROPOSED | Pace tuning G3-G4 after owner play session: ahead cost on on-time nodes, epoch budget weighting (#558) | MS-M0 |
 
 ## Гипотезы
