@@ -86,8 +86,18 @@ public readonly record struct BudgetShares(Fx6 Research, Fx6 Capability, Fx6 Eff
     public Fx6 Sum => Research + Capability + Effort + Procurement + Quality;
 
     /// <summary>Every share is non-negative and the sum is exactly 1 in <see cref="Fx6"/> (the <c>set_budget_shares</c> validator).</summary>
-    public bool IsValid => Research >= Fx6.Zero && Capability >= Fx6.Zero && Effort >= Fx6.Zero
-        && Procurement >= Fx6.Zero && Quality >= Fx6.Zero && Sum == Fx6.One;
+    public bool IsValid => InRange && Sum == Fx6.One;
+
+    /// <summary>What the five items leave: the share that goes to the reserve account (zero when the sum is 1).</summary>
+    public Fx6 Reserve => Fx6.One - Sum;
+
+    /// <summary>Every share is non-negative and the sum is at most 1: the remainder is the reserve (the validator when the reserve is on).</summary>
+    public bool IsValidWithReserve => InRange && Sum <= Fx6.One;
+
+    /// <summary>Every share lies in [0, 1]; checked before any sum so that an absurd value is a refusal, not an overflow.</summary>
+    public bool InRange => Within(Research) && Within(Capability) && Within(Effort) && Within(Procurement) && Within(Quality);
+
+    private static bool Within(Fx6 v) => v >= Fx6.Zero && v <= Fx6.One;
 }
 
 /// <summary>

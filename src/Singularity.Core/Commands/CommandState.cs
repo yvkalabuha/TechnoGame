@@ -26,11 +26,14 @@ public sealed class CommandState
     private readonly IntColumn[] _progCmd;
     private readonly ImmutableArray<int> _progNumbers;
     private readonly IntColumn[] _fKind, _fDesign, _fGen, _fN, _fStamp;
+    private readonly IntColumn? _fundStamp, _fundNode;
+    private readonly LongColumn? _fundAmount;
 
     /// <param name="altSlots">Alternatives per design command: the slot count of the product class.</param>
     /// <param name="designs"><c>max_designs</c>.</param>
+    /// <param name="fundProgramme">The run has the reserve: adds the one-off slot <c>cmd.fund.*</c> (absent otherwise, so the table of other runs is unchanged).</param>
     /// <param name="programmeProcesses">Process numbers a mastery programme may run on (tier ≥ 5): one `cmd.prog.p{n}` column each.</param>
-    public CommandState(Table table, int altSlots, int designs, ImmutableArray<int> programmeProcesses = default)
+    public CommandState(Table table, int altSlots, int designs, ImmutableArray<int> programmeProcesses = default, bool fundProgramme = false)
     {
         _progNumbers = programmeProcesses.IsDefault ? [] : programmeProcesses;
         _slots = CommandLimits.DesignSlots;
@@ -70,6 +73,12 @@ public sealed class CommandState
         _progCmd = new IntColumn[_progNumbers.Length];
         for (int j = 0; j < _progCmd.Length; j++)
             _progCmd[j] = table.AddInt($"cmd.prog.p{_progNumbers[j]}");
+        if (fundProgramme)
+        {
+            _fundStamp = table.AddInt("cmd.fund.stamp");
+            _fundNode = table.AddInt("cmd.fund.node");
+            _fundAmount = table.AddLong("cmd.fund.amount");
+        }
         _sStamp = new IntColumn[designs];
         _sForce = new IntColumn[designs];
         _cStamp = new IntColumn[designs];
@@ -142,6 +151,12 @@ public sealed class CommandState
         }
         return n;
     }
+
+    /// <summary>The <c>fund_programme</c> the month step consumes: node number and amount, or null.</summary>
+    public (int Node, Fx6 Amount)? Fund(int actor, long month) =>
+        _fundStamp is not null && _fundStamp.Current[actor] == Stamp(month)
+            ? (_fundNode!.Current[actor], Fx6.FromRaw(_fundAmount!.Current[actor]))
+            : null;
 
     /// <summary><c>start_series</c> consumed at <paramref name="month"/>: handle, rate and force, or null.</summary>
     public (DesignHandle Design, Fx6 Rate, bool Force)? Series(int actor, int design, long month) =>
@@ -228,6 +243,15 @@ public sealed class CommandState
                 bool abroad = command is StartMasteryProgramme { Abroad: true };
                 // One entry per (actor, process, month): the later command in key order wins.
                 Set(_progCmd[j], a, (stamp << 3) | (abroad ? 4 : 0) | (command is StartMasteryProgramme ? 1 : 2));
+                break;
+            case FundProgramme fp:
+                if (_fundStamp is null)
+                    return CommandVerdict.Refuse(CommandRefusal.ReserveOff, "this run has no reserve account");
+                if (_fundStamp.Current[a] == stamp)
+                    return CommandVerdict.Refuse(CommandRefusal.SlotOverflow, $"actor {a} already funds a programme in month {consumedAtMonth}");
+                Set(_fundNode!, a, fp.Node);
+                Set(_fundAmount!, a, fp.Amount.Raw);
+                Set(_fundStamp, a, stamp);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(command), command.GetType(), "Unknown command type.");

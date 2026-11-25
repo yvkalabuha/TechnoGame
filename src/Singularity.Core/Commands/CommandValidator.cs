@@ -39,6 +39,18 @@ public enum CommandRefusal
 
     /// <summary>The mastery programme check refused the start; <see cref="CommandVerdict.Mastery"/> is the <c>why_not</c> code.</summary>
     ProgrammeRefused,
+
+    /// <summary>A command needs the reserve account and the run has none (<see cref="CommandLimits.ReserveEnabled"/> is false).</summary>
+    ReserveOff,
+
+    /// <summary>A programme names a node that is not in the graph.</summary>
+    BadNode,
+
+    /// <summary>A programme amount must be positive.</summary>
+    BadAmount,
+
+    /// <summary>At application: the reserve holds less than the amount, or the node is not in the frontier of the actor.</summary>
+    ProgrammeNotFundable,
 }
 
 public readonly record struct CommandVerdict(CommandRefusal Reason, string Message, int BestGenBefore = 0, int BestGenAfter = 0,
@@ -54,6 +66,15 @@ public readonly record struct CommandVerdict(CommandRefusal Reason, string Messa
 /// <summary>Sizes a command is checked against, from the layouts of the world (no state).</summary>
 public sealed record CommandLimits(int ActorCount, int SlotCount, int Designs, ImmutableArray<int> ProcessNumbers)
 {
+    /// <summary>The run has the reserve account: budget shares may sum to less than 1 and <c>fund_programme</c> is accepted.</summary>
+    public bool ReserveEnabled { get; init; }
+
+    /// <summary>Programmes can run: the reserve is on and the knowledge layer is the full model (a schedule has no progress to fund).</summary>
+    public bool FundEnabled { get; init; }
+
+    /// <summary>Node numbers of the knowledge graph (for <c>fund_programme</c>).</summary>
+    public ImmutableArray<int> NodeNumbers { get; init; } = [];
+
     /// <summary><c>compose</c>/<c>derive</c>/<c>cancel</c> commands one actor can have in force in one month (SLICE_COMPOSITION §7.3, [Предп.] О-5).</summary>
     public const int DesignSlots = 4;
 
@@ -83,9 +104,24 @@ public static class CommandValidator
         switch (c)
         {
             case SetBudgetShares s:
+                if (limits.ReserveEnabled)
+                {
+                    // The quality item has no reader in the core: with the reserve its share is kept in the reserve (SliceWorld.ReserveShare), so it stays valid.
+                    return s.Shares.IsValidWithReserve
+                        ? CommandVerdict.Ok
+                        : CommandVerdict.Refuse(CommandRefusal.BadShares, $"shares must each lie in [0, 1] and sum to at most 1, got [{s.Shares.Research.Raw}, {s.Shares.Capability.Raw}, {s.Shares.Effort.Raw}, {s.Shares.Procurement.Raw}, {s.Shares.Quality.Raw}] (raw)");
+                }
                 return s.Shares.IsValid
                     ? CommandVerdict.Ok
-                    : CommandVerdict.Refuse(CommandRefusal.BadShares, $"shares must be non-negative and sum to exactly 1, got {s.Shares.Sum}");
+                    : CommandVerdict.Refuse(CommandRefusal.BadShares, $"shares must each lie in [0, 1] and sum to exactly 1, got [{s.Shares.Research.Raw}, {s.Shares.Capability.Raw}, {s.Shares.Effort.Raw}, {s.Shares.Procurement.Raw}, {s.Shares.Quality.Raw}] (raw)");
+            case FundProgramme fp:
+                if (!limits.ReserveEnabled || !limits.FundEnabled)
+                    return CommandVerdict.Refuse(CommandRefusal.ReserveOff, "this run cannot fund programmes (no reserve account, or the knowledge layer is a schedule)");
+                if (!limits.NodeNumbers.Contains(fp.Node))
+                    return CommandVerdict.Refuse(CommandRefusal.BadNode, $"node {fp.Node} is not in the graph");
+                return fp.Amount > Singularity.Kernel.Fx6.Zero
+                    ? CommandVerdict.Ok
+                    : CommandVerdict.Refuse(CommandRefusal.BadAmount, "the programme amount must be positive");
             case SetEffortFocus f:
                 if (f.Processes.IsDefault || f.Processes.Length > 3)
                     return CommandVerdict.Refuse(CommandRefusal.FocusTooMany, "effort_focus holds at most 3 processes");
