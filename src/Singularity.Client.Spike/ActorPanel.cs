@@ -195,10 +195,6 @@ public sealed partial class ActorPanel : PanelContainer
         _pen = new PencilMarker(_cal); _calVal.AddChild(_pen);
         _calRow.AddChild(_calName); _calRow.AddChild(_cal); _calRow.AddChild(_calVal); _calRow.AddChild(new Control { CustomMinimumSize = new Vector2(84, 0) });
         _secBudget.AddChild(_calRow);
-        var lm = Ui.Btn("lever.open.market", () => OpenWindow?.Invoke(3), focusable: true);
-        lm.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; _secBudget.AddChild(lm); _orderControls.Add(lm);
-        var lb = Ui.Btn("lever.open.budget", () => OpenWindow?.Invoke(0), focusable: true);
-        lb.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; _secBudget.AddChild(lb); _orderControls.Add(lb);   // the window with money in dollars, the reserve and the price before the click
         var ar = new HBoxContainer();
         ar.AddThemeConstantOverride("separation", 10);
         _apply = Ui.Btn("ui.apply", Apply, focusable: true);   // a control that changes game state is reachable by keyboard (A6)
@@ -207,6 +203,11 @@ public sealed partial class ActorPanel : PanelContainer
         var rr = new HBoxContainer(); rr.AddThemeConstantOverride("separation", 6);
         rr.AddChild(_resultMark); rr.AddChild(_result);
         _secBudget.AddChild(rr); _orderControls.Add(rr);
+        // After Apply, so that Tab from the caliper reaches Apply first (A6).
+        var lm = Ui.Btn("lever.open.market", () => OpenWindow?.Invoke(3), focusable: true);
+        lm.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; _secBudget.AddChild(lm); _orderControls.Add(lm);
+        var lb = Ui.Btn("lever.open.budget", () => OpenWindow?.Invoke(0), focusable: true);
+        lb.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; _secBudget.AddChild(lb); _orderControls.Add(lb);   // the window with money in dollars, the reserve and the price before the click
 
         _designsHead = Section("panel.designs", _secDesigns);
         _flaskProdRow.AddThemeConstantOverride("separation", 8);
