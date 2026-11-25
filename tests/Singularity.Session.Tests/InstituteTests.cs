@@ -1,4 +1,5 @@
 using Singularity.Core.Commands;
+using Singularity.Core.Data;
 using Singularity.Core.Institutes;
 using Singularity.Core.Knowledge;
 using Singularity.Kernel;
@@ -104,8 +105,8 @@ public class InstituteTests
                 Fx6 wsum = Fx6.FromInt(w), group = Fx6.FromInt(g);
                 Fx6 k = InstituteMath.KappaEff(wsum, group, P);
                 Assert.True(k >= Fx6.One && k <= P.Kappa);
-                if (k > Fx6.One)
-                    Assert.True(Fx6.One - k * group / wsum >= P.Rho - Fx6.FromRaw(2), $"w {w} g {g} kappa {k}");
+                if (k > Fx6.One)   // n = w shares, each rounded by at most 1e-6
+                    Assert.True(Fx6.One - k * group / wsum >= P.Rho - Fx6.FromRaw(w), $"w {w} g {g} kappa {k}");
             }
         }
     }
@@ -278,14 +279,22 @@ public class InstituteTests
         {
             SliceSession s = Make(true, threads);
             int node = s.World.Graph.Number[Frontier(s, 0)[0]];
-            for (long t = 0; t < 50; t++)
+            int usa = Actor(s, "USA");
+            var darpa = new InstituteHandle(usa, CandidateSlot(s, usa, "usa_darpa"));   // the AI starts it only near 1958: the player's order is the one that runs
+            for (long t = 0; t < 60; t++)
             {
                 if (t == 2)
                     Assert.True(s.Submit(SourceClass.Player, 0, 1, new SetPriorityNode(0, 2, node)).Accepted);
-                if (t == 3)
-                    Assert.True(s.Submit(SourceClass.Player, 0, 2, new BuildInstitute(Sun(s), CandidateSlot(s, Sun(s), "sun_nii88"))).Accepted);
+                if (t == 29)
+                    Assert.True(s.Submit(SourceClass.Player, 0, 2, new BuildInstitute(usa, darpa.Slot)).Accepted);
                 s.StepThroughMonth(t);
+                if (t == 30)
+                {
+                    Assert.True(s.World.Institutes!.Building(darpa), "the player's project did not start");
+                    Assert.Equal(29, s.World.InstituteOrders!.BuildMonth(darpa));
+                }
             }
+            Assert.DoesNotContain(s.Outcomes, o => o.Contains("rejected: BuildRefused"));
             log = s.CommandLog;
             return s.LastHash;
         }
@@ -293,8 +302,76 @@ public class InstituteTests
         HashAssert.Equal(h1, h2, "L2: thread count changed the state");
         Assert.Contains("set_priority_node", log);
         Assert.Contains("build_institute", log);
-        SliceSession replay = SliceSession.Replay(SliceTestData.Data, new SliceRunConfig { Seed = 7, Institutes = true }, log, Make(true).World.Calendar.TickOfMonth(49) + 1);
+        SliceSession replay = SliceSession.Replay(SliceTestData.Data, new SliceRunConfig { Seed = 7, Institutes = true }, log, Make(true).World.Calendar.TickOfMonth(59) + 1);
         HashAssert.Equal(h1, replay.LastHash, "L1: the replay differs");
+    }
+
+    // Codex round 5 #4: the two systems must not share a diagnostic identity.
+    [Fact]
+    public void SystemIds_InstitutesAndIntelligenceDiffer()
+    {
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, Intelligence = true });
+        Assert.NotEqual(s.World.Intel!.SystemId, s.World.Institutes!.SystemId);
+    }
+
+    // Codex merge #2: capacity and upkeep follow the current levels of a built institute.
+    [Fact]
+    public void BuiltInstitute_BudgetFactorFollowsLevelsFromExperience()
+    {
+        SliceSession s = Make(true);
+        int sun = Sun(s);
+        var h = new InstituteHandle(sun, CandidateSlot(s, sun, "sun_nii88"));
+        InstituteSystem inst = s.World.Institutes!;
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new BuildInstitute(sun, h.Slot)).Accepted);
+        long t = 0;
+        while (!inst.BuiltByProject(h))
+            s.StepThroughMonth(t++);
+        Fx6 atOpening = inst.BudgetFactor(sun);
+        int Levels() => Enumerable.Range(0, inst.Layout.DisciplineNames.Length).Sum(d => inst.Level(h, d));
+        Assert.Equal(3, Levels());
+        // Run on until the institute gains a level by experience (in any area); the factor must then move with it.
+        for (; t < 900 && Levels() == 3; t++)
+            s.StepThroughMonth(t);
+        int levels = Levels();
+        Assert.True(levels > 3, "the institute did not gain a level in the run");
+        Assert.Equal((Fx6.One - P.UpkeepPerLevel * Fx6.FromInt(levels)) * (Fx6.One + P.CapacityPerLevel * Fx6.FromInt(levels)), inst.BudgetFactor(sun));
+        Assert.NotEqual(atOpening, inst.BudgetFactor(sun));
+    }
+
+    // Codex merge #3: the same goal again is not a change and keeps the period of the slot.
+    [Fact]
+    public void Order_SameGoalAgain_DoesNotRestartTheReassignPeriod()
+    {
+        SliceSession s = Make(true);
+        s.StepThroughMonth(0);
+        s.StepThroughMonth(1);
+        int node = FreeNode(s);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new SetPriorityNode(0, 2, node)).Accepted);
+        s.StepThroughMonth(2);
+        long ordered = s.World.InstituteOrders!.OrderMonth(new InstituteHandle(0, 2));
+        for (long t = 3; t < 8; t++)
+            s.StepThroughMonth(t);
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new SetPriorityNode(0, 2, node)).Accepted);
+        s.StepThroughMonth(8);
+        Assert.Equal(ordered, s.World.InstituteOrders.OrderMonth(new InstituteHandle(0, 2)));
+    }
+
+    // Codex merge #4: a built institute shows no construction charge.
+    [Fact]
+    public void BuiltInstitute_ViewShowsNoBuildRate()
+    {
+        SliceSession s = Make(true);
+        int sun = Sun(s);
+        var h = new InstituteHandle(sun, CandidateSlot(s, sun, "sun_nii88"));
+        InstituteSystem inst = s.World.Institutes!;
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new BuildInstitute(sun, h.Slot)).Accepted);
+        long t = 0;
+        s.StepThroughMonth(t++);
+        s.StepThroughMonth(t++);
+        Assert.True(s.View.Actors[sun].Institutes.Single(x => x.Id == "sun_nii88").BuildRate > Fx6.Zero);
+        while (!inst.Standing(h))
+            s.StepThroughMonth(t++);
+        Assert.Equal(Fx6.Zero, s.View.Actors[sun].Institutes.Single(x => x.Id == "sun_nii88").BuildRate);
     }
 
     [Fact]

@@ -2,6 +2,7 @@ using Singularity.Core.Data;
 using Singularity.Core.Data.Yaml;
 using Singularity.Core.Institutes;
 using Singularity.Core.Knowledge;
+using Singularity.Core.Tests.Data;
 using Singularity.Kernel;
 
 namespace Singularity.Core.Tests.Knowledge;
@@ -60,6 +61,25 @@ public class PriorityGraphTests
         Assert.True(work.IsCompletedSuccessfully, "the walk over shared prerequisites did not finish");
     }
 
+    // Codex round 5 #1: the walk of the group path must not use the call stack (a mod graph may be a chain of any depth).
+    [Fact]
+    public void DeepChain_GoalAtTheTop_WalkDoesNotOverflowTheStack()
+    {
+        const int depth = 20_000;
+        var specs = new List<KnowledgeNodeSpec> { new(1, NodeType.FND, 1, 0, false, Fx6.FromInt(1_000_000), []) };
+        for (int i = 2; i <= depth; i++)
+            specs.Add(new(i, NodeType.FND, 1, 0, false, Fx6.FromInt(1_000_000), [[i - 1]]));
+        KnowledgeGraph g = KnowledgeGraph.Create(specs, ["prop"]);
+        var sys = new KnowledgeSystem(new Table(1), g, new KnowledgeStart([0], specs.Count, 1), new KnowledgeParams(), new Inputs { GoalRow = g.RowOf(depth) },
+            new CounterRng(1), 1, priorities: new InstituteParams());
+        Fx6 rate = Fx6.Zero;
+        // A small stack: a recursive walk over 20 000 levels cannot fit into it.
+        var thread = new Thread(() => rate = sys.ProgressRate(0, g.RowOf(1), 4), 256 * 1024);
+        thread.Start();
+        thread.Join();
+        Assert.True(rate > Fx6.Zero);
+    }
+
     [Fact]
     public void KappaEff_TinyGroupWeightDoesNotOverflow_AndGivesTheCap()
     {
@@ -72,6 +92,23 @@ public class PriorityGraphTests
     {
         string yaml = $"id: x\ncountry: SUN\nfounded: 1940\nref_year: 1945\nsource: s\nareas:\n{areas}\n";
         return InstituteTable.Build([("x", (YMap)StrictYaml.Parse(yaml, "t.yaml"))]);
+    }
+
+    // Codex round 5 #2: the table is shared by scenarios; a country outside the scenario must not break the layout of the others.
+    [Fact]
+    public void Layout_CountryOutsideTheScenario_IsSkipped()
+    {
+        GameData data = ModLoader.Load(TestMods.CoreDir);
+        ScenarioData scenario = data.Scenario("jet_slice_1945");
+        var p = new KnowledgeParams();
+        KnowledgeGraph g = KnowledgeGraph.FromData(data.Nodes, scenario.Disciplines, p);
+        string Row(string country) => $"id: x\ncountry: {country}\nfounded: 1940\nref_year: 1945\nsource: s\nareas:\n  {g.DisciplineNames[0]}: 2\n";
+        var table = InstituteTable.Build([
+            ("a", (YMap)StrictYaml.Parse(Row("SUN").Replace("id: x", "id: a"), "a.yaml")),
+            ("b", (YMap)StrictYaml.Parse(Row("ZZZ").Replace("id: x", "id: b"), "b.yaml"))]);
+        InstituteLayout l = InstituteLayout.FromData(table, scenario, g, new InstituteParams());
+        Assert.Equal(1, l.StartingCount(scenario.ActorIndex("SUN")));
+        Assert.Equal(0, l.SlotCount(scenario.ActorIndex("USA")));
     }
 
     [Fact]

@@ -58,7 +58,7 @@ public enum BuildCheck
 /// </summary>
 public sealed class InstituteSystem : ITickSystem
 {
-    public const int DefaultSystemId = 600;
+    public const int DefaultSystemId = 700;   // not 600: the intelligence system has it, and the write trace tells systems apart by this id
 
     /// <summary>Most slots one actor may have (the stack buffers of the step).</summary>
     public const int MaxSlotsLimit = 16;
@@ -179,7 +179,7 @@ public sealed class InstituteSystem : ITickSystem
             var h = new InstituteHandle(actor, k);
             if (BuiltByProject(h))
             {
-                int levels = _l.TotalLevels(h);
+                int levels = BuiltLevels(h);
                 take += _p.UpkeepPerLevel * Fx6.FromInt(levels);
                 give += _p.CapacityPerLevel * Fx6.FromInt(levels);
                 any = true;
@@ -194,6 +194,15 @@ public sealed class InstituteSystem : ITickSystem
             return Fx6.One;
         Fx6 keep = Fx6.One - take;
         return keep > Fx6.Zero ? keep * (Fx6.One + give) : Fx6.Zero;
+    }
+
+    /// <summary>Sum of the current levels of a built institute (they grow with experience; at the opening they equal the levels of the data).</summary>
+    private int BuiltLevels(InstituteHandle h)
+    {
+        int sum = 0;
+        for (int d = 0; d < _l.DisciplineNames.Length; d++)
+            sum += Level(h, d);
+        return sum;
     }
 
     /// <summary>Experience of the institute in the discipline.</summary>

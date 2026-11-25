@@ -107,7 +107,7 @@ public sealed class InstituteLayout
         {
             int a = scenario.ActorIndex(table.Country(i));
             if (a < 0)
-                throw new ArgumentException($"Institute '{table.Id(i)}': country {table.Country(i)} is not an actor of the scenario.", nameof(table));
+                continue;   // the table is shared by scenarios: a country outside this one has no slots here
             (table.Founded(i) <= scenario.StartYear ? standing : candidates)[a].Add(i);   // table rows are in ID order
         }
         int max = 0;
