@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "experiment": "TASK-0178-kdiv",
+  "description": "TASK-0178 (docs/simulation/ai-institute-goals.md): institutes with kappa 1.5 and the goal rule of the sandbox environment, research cost divisor K_DIV lowered for the institutes series only (a one-constant recalibration probe), against LEGACY.",
+  "model": "JetSlice",
+  "ticks": 20211,
+  "chunk_size": 1,
+  "threads": [
+    1
+  ],
+  "seeds": {
+    "start": 1,
+    "count": 10
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full"
+  },
+  "series": [
+    {
+      "name": "LEGACY",
+      "params": {}
+    },
+    {
+      "name": "INST_K085",
+      "params": {
+        "INSTITUTES": true,
+        "K_DIV": 0.85
+      }
+    },
+    {
+      "name": "INST_K080",
+      "params": {
+        "INSTITUTES": true,
+        "K_DIV": 0.8
+      }
+    },
+    {
+      "name": "INST_K075",
+      "params": {
+        "INSTITUTES": true,
+        "K_DIV": 0.75
+      }
+    },
+    {
+      "name": "INST_K070",
+      "params": {
+        "INSTITUTES": true,
+        "K_DIV": 0.7
+      }
+    }
+  ],
+  "meta": {
+    "note": "docs/simulation/ai-institute-goals.md",
+    "baseline": "LEGACY"
+  }
+}
