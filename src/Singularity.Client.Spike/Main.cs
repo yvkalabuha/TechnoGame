@@ -678,6 +678,7 @@ public sealed partial class Main : Node3D
         ("map1945_africa_1920x1080.png", 20, 3, 2.25f, true),
         ("map1945_asia_1920x1080.png", 88, 38, 2.1f, true),
         ("map1945_limb_1920x1080.png", 118, 38, 2.1f, true),   // Europe near the limb
+        ("map1945_world_1920x1080.png", 20, 20, 3.2f, true),
         ("map1945_africa_west_1920x1080.png", 2, 10, 1.55f, true),
         ("map1945_europe_north_1920x1080.png", 12, 58, 1.5f, true),
     };

@@ -19,7 +19,8 @@ public static class CountryPalette
 {
     /// <summary>Base fills tint.1..tint.12 (index 0..11).</summary>
     public static readonly string[] Hex = { "B6DEBF", "FCD2DB", "F9BBAC", "B1D6F5", "EBE0B2", "ABDED8", "D3CEEC", "F6D7BD", "EDD49E", "D0DBBE", "E2C6E6", "CEC2B5" };
-    public const int Stone = 11;
+    public const int Stone = 11, Turquoise = 5;
+    static IEnumerable<int> Open => Enumerable.Range(0, Hex.Length).Where(t => t != Stone && t != Turquoise);
 
     /// <summary>
     /// Atlas traditions (docs/ui/specs/political-map-palette.md section 2). The first five entries keep their place (HatchLogic and the slice read them by index):
@@ -77,14 +78,15 @@ public static class CountryPalette
         {
             var nb = neighbours[i].Where(j => tone[j] >= 0).Select(j => tone[j]).ToList();
             int pick = -1;
-            if (neighbours[i].Count == 0) pick = Stone;
+            // Stone is DEU's alone (fixed), turquoise (5) is PRT's and its colonies': the greedy pass never hands them out.
+            if (neighbours[i].Count == 0) pick = Best(Open.ToList(), nb, used);
             else
-                foreach (var tier in new[] { Enumerable.Range(5, 6), Enumerable.Range(0, 5) })
+                foreach (var tier in new[] { Enumerable.Range(6, 5), Enumerable.Range(0, 5) })
                 {
                     var ok = tier.Where(t => !nb.Any(o => IsForbidden(t, o))).ToList();
                     if (ok.Count > 0) { pick = Best(ok, nb, used); break; }
                 }
-            if (pick < 0) pick = Best(Enumerable.Range(0, Hex.Length).ToList(), nb, used);
+            if (pick < 0) pick = Best(Open.ToList(), nb, used);
             tone[i] = pick; used[pick]++;
         }
         return tone;

@@ -105,8 +105,8 @@ public sealed partial class Overlay : Control
         _legBtn.Size = new Vector2(BtnW, BtnH);
     }
     string _legColony = "", _legOccupied = "", _legControl = "";
-    static readonly Color LegendColony = ToColor(HatchLogic.Line(HatchLogic.ColonyFillTone, HatchLogic.LineScale(HatchKind.Colony))), LegendOcc = ToColor(HatchLogic.Line(HatchLogic.ControllerTone, HatchLogic.LineScale(HatchKind.Occupied)));
-    static readonly Color LegendFillColony = ToColor(CountryPalette.ColonyFill(HatchLogic.ColonyFillTone)), LegendFillOcc = ToColor(HatchLogic.Line(HatchLogic.OccupiedFillTone, 1f));
+    static readonly Color LegendColony = ToColor(HatchLogic.Line(HatchLogic.ColonyFillTone, HatchLogic.LineScale(HatchKind.Colony))), LegendOcc = new Color(0.22f, 0.22f, 0.24f);   // occupation swatch: a neutral hatch, no country's tone (the controller's tone differs per zone)
+    static readonly Color LegendFillColony = ToColor(CountryPalette.ColonyFill(HatchLogic.ColonyFillTone)), LegendFillOcc = new Color(0.86f, 0.86f, 0.85f);
     static Color ToColor((byte R, byte G, byte B) c) => new(c.R / 255f, c.G / 255f, c.B / 255f);
     void RefreshLegend() { _legColony = Loc.T("legend.colony"); _legOccupied = Loc.T("legend.occupied"); _legControl = Loc.T("legend.control"); }
 
@@ -173,7 +173,7 @@ public sealed partial class Overlay : Control
         }
     }
 
-    void Relabel() { RefreshLegend(); foreach (var s in _labels) s.Node.Text = Names.Country(s.C.Name) ?? s.C.Name; }
+    void Relabel() { RefreshLegend(); foreach (var s in _labels) s.Node.Text = Names.Country(s.C.Name) ?? s.C.Name; _lastLabelCount = -1; }   // a new language: lay the names out again
 
     public float GlobeRadiusPx(float dist)
     {
@@ -309,16 +309,24 @@ public sealed partial class Overlay : Control
                 else
                 {
                     // The word is as large as the inscribed text rectangle allows (down to the minimum size) and stays inside its own country, else it is hidden until zoomed in.
+                    // A long unit name has an optional short form (locale polity_short.CODE) that is tried after the full one at every size.
                     float fit = LabelPlacement.FitScale(s.Node.Visible), step = Mathf.Clamp(Mathf.Sqrt(area) / 10f, 4f, 24f);
-                    bool found = false;
-                    for (; size > 0 && !found; size = LabelPlacement.NextSize(size))
+                    string shortName = Names.CountryShort(s.C.Name), chosen = null;
+                    int pref = size;
+                    for (int v = 0; v < 2 && chosen == null; v++)
                     {
-                        s.TextW = font.GetStringSize(text, HorizontalAlignment.Left, -1, size).X;
-                        w = s.TextW + 4f; h = font.GetHeight(size) + 2f;
-                        if (!LabelPlacement.MayFit(area, w * fit, h * fit)) continue;
-                        if (LabelPlacement.FindSpot(sp.X, sp.Y, w, h, fit, VpSize.X, VpSize.Y, step, _onRegion, out float cx, out float cy)) { found = true; px = cx - w * 0.5f; py = cy - h * 0.5f; break; }
+                        var variant = v == 0 ? (Names.Country(s.C.Name) ?? s.C.Name) : shortName;
+                        if (variant == null) break;
+                        for (int sz = pref; sz > 0; sz = LabelPlacement.NextSize(sz))
+                        {
+                            float tw = font.GetStringSize(variant, HorizontalAlignment.Left, -1, sz).X, bw = tw + 4f, bh = font.GetHeight(sz) + 2f;
+                            if (!LabelPlacement.MayFit(area, bw * fit, bh * fit)) continue;
+                            if (LabelPlacement.FindSpot(sp.X, sp.Y, bw, bh, fit, 4f, VpSize.X * 0.5f, VpSize.Y * 0.5f, GlobeRadiusPx(_dist) * 0.97f, VpSize.X, VpSize.Y, step, _onRegion, out float cx, out float cy))
+                            { chosen = variant; size = sz; s.TextW = tw; w = bw; h = bh; px = cx - w * 0.5f; py = cy - h * 0.5f; break; }
+                        }
                     }
-                    if (!found) { s.Node.Visible = false; continue; }
+                    if (chosen == null) { s.Node.Visible = false; continue; }
+                    if (s.Node.Text != chosen) s.Node.Text = chosen;
                 }
                 if (size != s.Size) { s.Size = size; s.Node.AddThemeFontSizeOverride("font_size", size); }
                 var rect = new Rect2(px, py, w, h);

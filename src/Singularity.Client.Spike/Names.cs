@@ -38,6 +38,9 @@ public static class Names
     /// <summary>Map label of a polity of 1945 by its code (locale key polity.CODE), or null when the table has no name for it.</summary>
     public static string Country(string polity) => Loc.Has("polity." + polity) ? Loc.T("polity." + polity) : null;
 
+    /// <summary>Optional short form of a long unit name (locale key polity_short.CODE), or null.</summary>
+    public static string CountryShort(string polity) => Loc.Has("polity_short." + polity) ? Loc.T("polity_short." + polity) : null;
+
     /// <summary>"s8.prc.name" -> "prc.name".</summary>
     public static string Short(string id)
     {

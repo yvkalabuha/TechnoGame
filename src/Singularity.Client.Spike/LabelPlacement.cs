@@ -136,6 +136,13 @@ public static class LabelPlacement
             && onRegion(cx, cy - hh) && onRegion(cx, cy + hh) && onRegion(cx - hw, cy) && onRegion(cx + hw, cy);
     }
 
+    /// <summary>All four corners of the box centred on (cx, cy) with half sizes (hw, hh) lie within radius r of (gcx, gcy).</summary>
+    public static bool InsideDisc(float cx, float cy, float hw, float hh, float gcx, float gcy, float r)
+    {
+        float dx = System.MathF.Abs(cx - gcx) + hw, dy = System.MathF.Abs(cy - gcy) + hh;
+        return dx * dx + dy * dy <= r * r;
+    }
+
     const int SearchR = 6;
     static readonly (int I, int J)[] Offsets = BuildOffsets();
     static (int, int)[] BuildOffsets()
@@ -150,7 +157,7 @@ public static class LabelPlacement
     /// Inscribed text rectangle (#523): the grid point nearest to the anchor where a box of fit x (w, h) lies wholly on the region. The anchor is first clamped into the safe
     /// rectangle (Margin from every edge for the true box w x h), so a region partly off the frame is searched where it is visible. No allocation.
     /// </summary>
-    public static bool FindSpot(float ax, float ay, float w, float h, float fit, float vpW, float vpH, float step, System.Func<float, float, bool> onRegion, out float cx, out float cy)
+    public static bool FindSpot(float ax, float ay, float w, float h, float fit, float pad, float gcx, float gcy, float limbR, float vpW, float vpH, float step, System.Func<float, float, bool> onRegion, out float cx, out float cy)
     {
         cx = cy = 0;
         float minX = Margin + w * 0.5f, maxX = vpW - Margin - w * 0.5f, minY = Margin + h * 0.5f, maxY = vpH - Margin - h * 0.5f;
@@ -160,7 +167,8 @@ public static class LabelPlacement
         {
             float px = sx + i * step, py = sy + j * step;
             if (px < minX || px > maxX || py < minY || py > maxY) continue;
-            if (!FitsInside(px, py, w * fit, h * fit, onRegion)) continue;
+            if (!InsideDisc(px, py, w * 0.5f, h * 0.5f, gcx, gcy, limbR)) continue;   // the word keeps off the limb, where the land is foreshortened to a sliver
+            if (!FitsInside(px, py, w * fit + pad, h * fit + pad, onRegion)) continue;   // pad: the coast stroke is drawn over the edge of the land
             cx = px; cy = py; return true;
         }
         return false;
