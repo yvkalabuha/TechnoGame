@@ -1,7 +1,7 @@
 ---
 id: TASK-0180
 title: "Data: real prerequisites for early G5/G6 knowledge nodes, restore G2-G4 pace (#555)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: developer

@@ -27,12 +27,12 @@
 - TASK-0168 [IN_PROGRESS] Terrain M1: download sources, bake per-province terrain and rivers, 1945 corrections (#528, #533-#536) (developer)
 - TASK-0178 [IN_PROGRESS] Gate: AI institute goals on the path to the next aircraft generation, Lab measurement with kappa 1.5 (#552) (simulation-engineer)
 - TASK-0179 [IN_PROGRESS] Lab: licence market calibration, what AI buys and why, prices and availability within tolerance (#553) (simulation-engineer)
+- TASK-0180 [IN_PROGRESS] Data: real prerequisites for early G5/G6 knowledge nodes, restore G2-G4 pace (#555) (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0156 [REVIEW] Player levers client: research goals, budget in money with reserve, production line window, licence market window (developer)
 - TASK-0176 [REVIEW] Lab: recalibrate institute parameters so 1945-1977 history is within tolerance with all levers on (A16, #549) (simulation-engineer)
 - TASK-0171 [BLOCKED] Golden batch: turn on Reserve, Institutes, LicenceMarket, Adviser, Intelligence by default; re-record goldens once with explanation (developer)
 - TASK-0167 [APPROVED] Globe colours by political-map traditions (#527): fixed tones for great powers, colony = metropolis tint (developer)
-- TASK-0180 [APPROVED] Data: real prerequisites for early G5/G6 knowledge nodes, restore G2-G4 pace (#555) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры
