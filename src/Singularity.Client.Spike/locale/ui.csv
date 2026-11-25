@@ -53,14 +53,14 @@ stage.5,retired,снят
 panel.designs,PRODUCTS AND LINES,ИЗДЕЛИЯ И ЛИНИИ
 panel.licence,LICENCE,ЛИЦЕНЗИЯ
 panel.why,WHAT BLOCKS IT,ЧТО МЕШАЕТ ПОЛУЧИТЬ
-design.line,Project {0} · generation {1} · {2} · unit cost {3} · readiness {4} · in service {5},Проект {0} · {1}-е поколение · {2} · себест. {3} · готовность {4} · в строю {5}
-design.series, · output rate {0} · limited by: {1}, · скорость выпуска {0} · упирается в: {1}
+design.line,Project {0} · generation {1} · {2} · cost per machine {3} · readiness {4} % · in service {5} pcs,Проект {0} · {1}-е поколение · {2} · себестоимость машины {3} · готовность {4} % · в строю {5} шт.
+design.series, · output {0} pcs/mo · limited by: {1}, · выпуск {0} шт./мес. · упирается в: {1}
 design.none,No designs. Creating designs is not wired in the client yet.,Проектов нет. Создание изделий в клиенте пока не подключено.
 design.nocreate,Starting a series and creating designs are not wired in the client yet.,Запуск серии и создание изделий в клиенте пока не подключены.
 licence.active,"Licence active: generation {0}, seller {1}, since month {2}, flow {3}","Лицензия активна: {0}-е поколение, продавец {1}, с месяца {2}, поток {3}"
 licence.none,No licence,Лицензии нет
 licence.refusals,"Licence refusals: {0} (own {1}, empty {2}, generation {3}, money {4})","Отказов по лицензии: {0} (свой {1}, пусто {2}, поколение {3}, деньги {4})"
-why.error,Could not find what blocks getting the goal.,Не удалось определить, что мешает получить цель.
+why.error,Could not find what blocks getting the goal.,"Не удалось определить, что мешает получить цель."
 why.none,No new product to field: every known product is already fielded.,Новых изделий пока нет: все известные уже приняты на вооружение.
 why.goal,"Goal: yearly requirement, generation {0}.","Цель: годовое требование, поколение {0}."
 why.goalkind,Goal: {0} {1}.,Цель: {0} {1}.
@@ -345,8 +345,8 @@ area.locked,Area is locked,Область заперта
 area.locked.when,Appears in {0}.,Появится в {0}.
 area.locked.cap,Opens later,Откроется позже
 area.locked.note,The term is provisional. There are no figures or controls here until the mechanic exists.,"Срок ориентировочный. Чисел и управления здесь нет, пока нет механики."
-area.production.later,Supply priority and the choice of variants: in M1. Here are the design lines of the power.,Приоритет снабжения и выбор вариантов: в M1. Здесь линии изделий державы.
-area.finance.later,Taxes by region: M1; trade and embargo: M1–M2.,Налоги по регионам: M1; торговля и эмбарго: M1–M2.
+area.production.later,Supply priority and the choice of variants will come later. Here are the design lines of the power.,Приоритет снабжения и выбор вариантов появятся позже. Здесь линии изделий державы.
+area.finance.later,"Taxes by region, trade and embargo will come later.","Налоги по регионам, торговля и эмбарго появятся позже."
 tip.area,{0} · {1},{0} · {1}
 flask.sci.cap,Research in progress (the nearest to completion),Исследования в работе (ближайшие к завершению)
 flask.sci.tip,{0}: {1}% of the need ({2} of {3}),{0}: {1}% от потребности ({2} из {3})
@@ -357,12 +357,12 @@ flask.alloy.cap.ok,Heat-resistant alloy: sufficient,Жаропрочный сп�
 flask.alloy.cap.deficit,Heat-resistant alloy: {0} % of what the lines ask for,Жаропрочный сплав: {0} % от запроса линий
 flask.alloy.cap.disrupted,Heat-resistant alloy: {0} % of the normal supply,Жаропрочный сплав: {0} % от обычного снабжения
 flask.alloy.cap.none,No heat-resistant alloy,Жаропрочного сплава нет
-flask.alloy.tip,Stock is {0}% of the normal supply. Without the alloy new engines cannot go into series.,Запас — {0}% от обычного снабжения. Без жаропрочного сплава новые двигатели не выйдут в серию.
+flask.alloy.tip,Stock is {0}% of the normal supply. The new engine generations need the heat-resistant alloy; the first steel engines do not.,Запас — {0}% от обычного снабжения. Новым поколениям двигателей нужен жаропрочный сплав; первые стальные двигатели без него выходят.
 flask.deficit,low,мало
 flask.none,none,нет
-flask.alloy.deficit,Supply covers {0}% of the demand: a shortage (hatched). Without the alloy new engines cannot go into series.,Снабжение покрывает {0}% потребности: дефицит (штриховка). Без жаропрочного сплава новые двигатели не выйдут в серию.
-flask.alloy.disrupted,Supply is {0}% of normal while the disruption lasts (hatched). Without the alloy new engines cannot go into series.,Снабжение — {0}% от обычного, пока длится сбой (штриховка). Без жаропрочного сплава новые двигатели не выйдут в серию.
-flask.alloy.none,No alloy is being smelted (hatched). Without it new engines cannot go into series.,Сплав не выплавляется (штриховка). Без жаропрочного сплава новые двигатели не выйдут в серию.
+flask.alloy.deficit,Supply covers {0}% of the demand: a shortage (hatched). The heat-resistant alloy is needed for the new engine generations; the first steel engines do not need it.,Снабжение покрывает {0}% потребности: дефицит (штриховка). Жаропрочный сплав нужен для новых поколений двигателей; первые стальные двигатели без него выходят.
+flask.alloy.disrupted,Supply is {0}% of normal while the disruption lasts (hatched). The heat-resistant alloy is needed for the new engine generations; the first steel engines do not need it.,"Снабжение — {0}% от обычного, пока длится сбой (штриховка). Жаропрочный сплав нужен для новых поколений двигателей; первые стальные двигатели без него выходят."
+flask.alloy.none,No alloy is being smelted (hatched). The new engine generations need it; the first steel engines do not.,Сплав не выплавляется (штриховка). Новым поколениям двигателей он нужен; первые стальные двигатели без него выходят.
 caliper.tip,Left and right arrows: 5 points; or drag the jaw,Стрелки влево и вправо: 5 пунктов; или тяните губку
 tip.area.locked,{0} · {1} · opens later (development stage {2}),{0} · {1} · откроется позже (этап разработки {2})
 tip.rail,Rail width: narrow or wide (\),Ширина рейки: узкая или широкая (\)
@@ -416,3 +416,185 @@ legend.colony,Colony or mandate,Колония или мандат
 legend.occupied,Occupation hatch,Оккупация (штриховка)
 legend.control,Line of control,Линия контроля
 tip.legend,Map key: hatching and lines (L),Легенда карты: штриховки и линии (L)
+why.line.root,Main blocker: {0}{1}.,Главная помеха: {0}{1}.
+why.line.next,Blocks: {0}{1}.,Мешает: {0}{1}.
+why.engine,Study the node «{0}» to lift the limit of the engine generation,"Изучите узел «{0}», чтобы снять предел поколения двигателя"
+design.close.q,"Close the line of project {0}? Output stops. The experience of the process fades by about 0.4 % a month (half is left after 14 years), the «mastered» count resets, mastery must be confirmed again (6 months of steady output). Money is not returned.","Закрыть линию проекта {0}? Выпуск остановится. Накопленный опыт процесса забывается примерно на 0,4 % в месяц (через 14 лет остаётся половина), освоение сбрасывается и его придётся подтверждать заново (6 месяцев стабильного выпуска). Деньги не возвращаются."
+design.close.yes,Close the line,Закрыть линию
+design.close.no,Keep,Оставить
+why.do,What you can do:,Что можно сделать:
+why.do.priority,Choose a goal (institutes),Выбрать цель (институты)
+why.do.budget,Change the budget,Изменить бюджет
+why.do.tree,Open the knowledge tree,Открыть дерево знаний
+lever.close,× Close (Esc),× Закрыть (Esc)
+lever.open.budget,Budget and reserve (B),Бюджет и резерв (B)
+lever.open.inst,Science goals and institutes (N),Цели науки и институты (N)
+lever.tab.budget,Budget,Бюджет
+lever.tab.inst,Institutes,Институты
+lever.budget.title,Budget of the state,Бюджет державы
+lever.inst.title,Science goals and institutes,Цели науки и институты
+lever.paused,Game paused while this window is open,"Игра на паузе, пока окно открыто"
+lever.money.suffix,(in 1990 prices),(в ценах 1990)
+lever.money.help,"Constant dollars: inflation removed, sums of different years are comparable","Постоянные доллары: инфляцию убрали, суммы разных лет сравнимы"
+lever.money.help.btn,What does «in 1990 prices» mean?,Что значит «в ценах 1990»?
+bud.total,Budget of air programmes: {0} a year,Бюджет авиационных программ: {0} в год
+bud.science,Science,Наука
+bud.mastery,Mastery of technologies,Освоение технологий
+bud.procurement,Procurement,Закупки
+bud.other,"Other, not adjustable in this version","Прочее, не настраивается"
+bud.reserve,Reserve (what is left),Резерв (остаток)
+bud.science.fx,Faster new knowledge. Pays for the projects of institutes.,Быстрее новые знания. Из неё платятся проекты институтов.
+bud.mastery.fx,Turns knowledge into series production. Below {0} % it stops.,Превращает знания в серийный выпуск. Ниже {0} % останавливается.
+bud.procurement.fx,Machines for the forces and the lines.,Машины для войск и линий.
+bud.other.fx,Tooling and quality: their shares stay as they are.,Оснастка и качество: их доли остаются как есть.
+bud.row,{0} % · {1} a year,{0} % · {1} в год
+bud.delta,{0} pp · {1} a year,{0} п. п. · {1} в год
+bud.stop,Attention: below {0} % mastery of processes stops. The series of the 3rd generation will come 5–17 years later.,Внимание: ниже {0} % освоение процессов останавливается. Серия 3-го поколения выйдет на 5–17 лет позже.
+bud.stop.word,stop,стоп
+bud.limit,No more: all 100 % are distributed. Reduce another item first.,Больше нельзя: все 100 % распределены. Сначала уменьшите другую статью.
+bud.reserve.left,Reserve: {0} % = {1} a year goes to the account,Резерв: {0} % = {1} в год уходит на счёт
+bud.footer,Takes effect from next month: {0},Вступит в силу со следующего месяца: {0}
+bud.footer.none,No changes,Изменений нет
+bud.apply,Apply,Применить
+bud.reset,Reset,Сбросить
+bud.pp,{0} {1} pp,{0} {1} п. п.
+why.budget.nodata,No data for this month yet,Данных за этот месяц ещё нет
+why.budget.nochange,Nothing changed,Ничего не изменено
+why.budget.foreign,Foreign power: view only,Чужая держава: только просмотр
+res.title,RESERVE,РЕЗЕРВ
+res.balance,On the account: {0},На счёте: {0}
+res.leak,Loses about 10 % a year: {0} will go in a year with no spending,Теряет около 10 % в год: за год уйдёт {0} при нуле трат
+res.forecast,"If not spent: in 1 year {0}, in 3 years {1}, in 5 years {2}","Если не тратить: через 1 год {0}, через 3 года {1}, через 5 лет {2}"
+res.pays,The reserve pays for: one-off programmes on research goals and licences,Резерв платит за: разовые программы по целям науки и лицензии
+res.empty,"The reserve is empty. To fill it, reduce another item.","Резерв пуст. Чтобы пополнять его, уменьшите другую статью."
+res.shrink,"Attention: the reserve is shrinking, the leak is larger than the inflow.","Внимание: резерв уменьшается, утечка больше притока."
+res.off,The reserve is not on in this run.,В этой игре резерва нет.
+inst.head.inst,Institute,Институт
+inst.slots,"Priority slots: {0}, busy {1}","Слотов приоритета: {0}, занято {1}"
+inst.noinst,There are no institutes in this run.,В этой игре институтов нет.
+inst.free,Free,Свободен
+inst.founded,founded {0},основан {0}
+inst.levels,Areas: {0},Области: {0}
+inst.goal,Goal: «{0}»,Цель: «{0}»
+inst.goal.fx,Bonus +{0} % to speed in this area · {1} units of research left,Бонус +{0} % к скорости в этой области · осталось {1} ед. исследования
+inst.pick,Choose a goal for «{0}»,Выберите цель для «{0}»
+inst.opt,"«{0}»: +{1} % to speed, {2} units left","«{0}»: +{1} % к скорости, осталось {2} ед."
+inst.opt.threshold,"«{0}»: +{1} % to speed, {2} units left; the discovery itself is a chance event","«{0}»: +{1} % к скорости, осталось {2} ед.; само открытие — случайное событие"
+inst.opt.none,No research in progress to choose from.,"Нет исследований в работе, из которых можно выбрать."
+inst.opt.price,"Money goes to this goal first, so the rest of science gets less money while it is open; no date is promised. The goal can be changed once in {0} months.","Деньги идут на эту цель в первую очередь, поэтому остальной науке достаётся меньше, пока цель открыта; срок не обещается. Цель можно менять раз в {0} мес."
+inst.adviser,The adviser proposes: «{0}»,Советник предлагает: «{0}»
+inst.adviser.take,Take the proposal,Принять предложение
+inst.adviser.build,The adviser proposes to build this institute,Советник предлагает построить этот институт
+inst.building,Under construction: {0} months left of {1},Строится: ещё {0} мес. из {1}
+inst.build.head,BUILD AN INSTITUTE,ПОСТРОИТЬ ИНСТИТУТ
+inst.build.none,Nothing to build: every institute of the list stands or is being built.,Строить больше нечего: все институты из списка уже есть или строятся.
+inst.build.gives,"What it gives: +1 priority slot, research capacity +{0} % per level, upkeep {1} % of the science money a year per level","Что даёт: +1 слот приоритета, мощность науки +{0} % за уровень, содержание {1} % денег на науку в год за уровень"
+inst.build.price,"Price: {0} a year for {1} months, {2} in total {3}","Цена: {0} в год в течение {1} мес., всего {2} {3}"
+inst.build.share,While it is built it takes {0} % of the science money every month,"Пока строится, забирает {0} % денег на науку каждый месяц"
+inst.build.ahead,{0} years before the historical year ({1}): price ×{2},На {0} лет раньше исторического года ({1}): цена ×{2}
+inst.build.start,Start construction,Начать строительство
+inst.build.cant,Reason: {0},Причина: {0}
+why.inst.building,the project of this institute is already running,проект этого института уже идёт
+why.inst.early,too early: construction opens in {0},рано: стройка откроется в {0} году
+cmd.priority,research goal,цель исследования
+cmd.build,build institute,строительство института
+cmd.adviser,proposal of the adviser,предложение советника
+refusal.PriorityNotAvailable,"the goal is already known, another institute works on it, or this institute is not built","цель уже изучена, над ней работает другой институт или этот институт не построен"
+refusal.PriorityTooSoon,a goal of a slot can change once in 12 months,цель слота можно менять раз в 12 месяцев
+refusal.BuildRefused,"construction cannot start now: the institute stands or is being built, the window of 10 years before its historical year is not open, or a small country builds at most 3 levels in a project","стройка сейчас невозможна: институт уже есть или строится, окно за 10 лет до его исторического года не открылось, либо малая страна строит не больше 3 уровней за проект"
+refusal.InstitutesOff,there are no institutes in this run,в этой игре институтов нет
+refusal.ReserveOff,there is no reserve in this run,в этой игре резерва нет
+refusal.ProgrammeNotFundable,"the reserve cannot pay this, or the goal cannot take more now",резерв не может это оплатить или цель сейчас не принимает больше
+sig.autopause,Paused: {0},Пауза: {0}
+bud.pp.unit,pp,п. п.
+inst.pick.change,Change the goal,Сменить цель
+inst.pick.short,Choose a goal,Выбрать цель
+lever.refused.word,Refused:,Отказ:
+inst.opt.nobonus,"«{0}»: this institute has no level in the area, so no speed bonus, only the priority of money; {1} units left","«{0}»: у этого института нет уровня в этой области — бонуса к скорости не будет, только приоритет денег; осталось {1} ед."
+inst.opt.better,The adviser suggests «{0}»: it has a level in this area.,Совет: «{0}» — у него есть уровень в этой области.
+why.inst.standing,the institute already stands,институт уже построен
+why.inst.cap,a small country builds at most {0} levels in one project,малая страна строит не больше {0} уровней за проект
+refusal.generic,the order was refused,приказ отклонён
+refusal.error,the order could not be sent,приказ не удалось отправить
+lever.tab.lines,Lines,Линии
+lever.tab.market,Licence market,Рынок лицензий
+lever.lines.title,Production lines,Производственные линии
+lever.market.title,Licence market,Рынок лицензий
+lever.open.lines,Production lines (O),Производственные линии (O)
+lever.open.market,Licence market (X),Рынок лицензий (X)
+lines.count,Series lines running: {0} of {1},Серийных линий работает: {0} из {1}
+why.line.limit,another line is not supported yet: at most {0} lines run at once,ещё одна линия пока не поддерживается: одновременно работает не больше {0}
+lines.adviser,ADVICE OF THE ADVISER,СОВЕТ СОВЕТНИКА
+lines.adviser.none,No advice. The adviser will say when a line is worth opening.,"Предложений нет. Советник скажет, когда линию стоит открыть."
+lines.prop.open,"Advice: open the line of project {0} (generation {1}), {2} machines a month","Совет: открыть линию проекта {0} ({1}-е поколение), {2} шт./мес."
+lines.prop.close,Advice: close the line of project {0} (generation {1}),Совет: закрыть линию проекта {0} ({1}-е поколение)
+lines.prop.cost,Price of the decision: about {0} a month {1},Цена решения: около {0} в месяц {1}
+lines.accept,Accept,Принять
+lines.refuse,Refuse (for {0} months),Отказать (на {0} мес.)
+line.reason.open,Reason: the project is ready for series,Причина: проект готов к серии
+line.reason.None,Reason: the adviser rule of line replacement,Причина: правило советника о замене линий
+line.reason.A40C,Reason: by the rule of line replacement the old line is closed,Причина: по правилу замены линий старая линия закрывается
+line.reason.YProd,Reason: the new series has reached its production mastery and replaces this line,Причина: новая серия достигла освоения выпуска и заменяет эту линию
+line.reason.LaunchAll,"Reason: a new series has been launched, the old lines close","Причина: запущена новая серия, старые линии закрываются"
+line.reason.LaunchCandidate,Reason: a new series is being launched in place of this one,Причина: на смену этой линии запускается новая серия
+line.reason.CandidateBelow,Reason: the adviser rule of line replacement (candidate below),Причина: правило советника о замене линий
+lines.list,LINES AND PROJECTS,ЛИНИИ И ПРОЕКТЫ
+lines.licensed,"by licence, seller: {0}","по лицензии, продавец: {0}"
+lines.later,Ordering a project and starting a series by hand are not wired in the client yet: lines open on the advice of the adviser.,Заказ проекта и запуск серии вручную в клиенте пока не подключены: линии открываются по совету советника.
+design.cancel.q,Cancel project {0}? The work of the design office on it is lost.,Снять проект {0}? Работа бюро над ним пропадёт.
+mkt.off,The licence market is not on in this run.,В этой игре рынка лицензий нет.
+mkt.notyours,The market is not open to your power: you can only look.,Рынок не открыт для вашей державы: можно только смотреть.
+mkt.notyours.short,the market is not open to your power,рынок не открыт для вашей державы
+mkt.income,Licence income this year: {0} of the yearly cap {1} {2},Доход от лицензий в этом году: {0} из годового предела {1} {2}
+mkt.lastrefusal,"Last refused deal: seller {0}, generation {1}: {2}","Последняя отклонённая сделка: продавец {0}, {1}-е поколение: {2}"
+mkt.offers,OFFERS OF SELLERS,ПРЕДЛОЖЕНИЯ ПРОДАВЦОВ
+mkt.offers.none,Nobody sells to you now. A seller appears when another country starts a series of a generation above yours.,"Сейчас вам никто не продаёт. Продавец появится, когда другая страна начнёт серийный выпуск поколения выше вашего."
+mkt.cmp.same,equal to the reference price,равна справочной цене
+mkt.cmp.up,▲ {0} % above the reference price,▲ на {0} % дороже справочной
+mkt.cmp.down,▼ {0} % below the reference price,▼ на {0} % дешевле справочной
+mkt.world,world average {0},средняя мировая {0}
+mkt.world.few,few offers: no world average,мало предложений: средней мировой нет
+mkt.offer,{0} · generation {1} · price {2} · reference {3} · {4} · {5} · buyers: {6},{0} · {1}-е поколение · цена {2} · справочная {3} · {4} · {5} · круг покупателей: {6}
+mkt.card,"Licence of {0}, generation {1}","Лицензия: {0}, {1}-е поколение"
+mkt.card.gives,A licence is the right to build the seller's project as a whole. Knowledge is not passed on: nodes do not open for you.,Лицензия — право выпускать проект продавца целиком. Знания не передаются: узлы вам не откроются.
+mkt.card.price,Price: {0}; reference price {1} {2},Цена: {0}; справочная {1} {2}
+mkt.card.after,On the reserve account: {0}; after the purchase {1},На счёте резерва: {0}; после покупки останется {1}
+mkt.confirm,Buy the licence? It cannot be cancelled. {0} {1} will be paid at the start of next month.,Купить лицензию? Отменить нельзя. {0} {1} будет списано с начала следующего месяца.
+mkt.buy,Buy,Купить
+mkt.held,YOUR LICENCES,ВАШИ ЛИЦЕНЗИИ
+mkt.held.none,You hold no licences.,У вас нет лицензий.
+mkt.held.row,"{0}, generation {1}","{0}, {1}-е поколение"
+mkt.own,YOUR OFFERS,ВАШИ ПРЕДЛОЖЕНИЯ
+mkt.own.none,You sell nothing: only a project you developed and build in series can be sold.,"Вы ничего не продаёте: продать можно только проект, который вы разработали и выпускаете серийно."
+mkt.own.row,"Generation {0}: reference price {1}, your price {2} (×{3}), buyers: {4}","{0}-е поколение: справочная цена {1}, ваша цена {2} (×{3}), круг покупателей: {4}"
+mkt.own.mult,Price multiplier ×{0} (from ×{1} to ×{2}),Множитель цены ×{0} (от ×{1} до ×{2})
+mkt.offer.send,Put on sale,Выставить
+mkt.own.warn,The buyer gets the right to build and may catch up with you in numbers; you keep your knowledge.,Покупатель получит право выпускать и может догнать вас по числу машин; ваши знания остаются при вас.
+licence.circle.Default,by default,по умолчанию
+licence.circle.Nobody,nobody,никому
+licence.circle.Bloc,bloc,блок
+licence.circle.Friends,friends,друзья
+licence.circle.All,everyone,все
+licence.bad.Self,this is your own licence,это ваша собственная лицензия
+licence.bad.Empty,the seller has no serial project of this generation,у продавца нет серийного проекта этого поколения
+licence.bad.Gen,you already hold a licence of this generation or a newer one,у вас уже есть лицензия этого или более нового поколения
+licence.bad.Money,not enough money: the price is above what you can pay now,"не хватает денег: цена выше того, что вы можете заплатить сейчас"
+licence.bad.Circle,"you are outside the seller's circle of buyers, or the catalogue is closed",вы вне круга покупателей продавца либо каталог закрыт
+licence.bad.Capacity,no free project slot for the licensed project,нет свободного слота проекта для лицензионной модели
+licence.bad.Cap,the seller's licence income of the year would pass its cap,годовой доход продавца от лицензий превысил бы предел
+licence.bad.Price,the seller raised the price above the ceiling,продавец поднял цену выше допустимой
+licence.offer.BadGen,this generation is not in the game,такого поколения в игре нет
+licence.offer.NoOwnProject,only your own serial project can be sold,продать можно только собственный серийный проект
+licence.offer.BadMultiplier,the multiplier must be from ×0.5 to ×2,"множитель должен быть от ×0,5 до ×2"
+refusal.LineLimit,another line is not supported yet: the most lines allowed are running,ещё одна линия пока не поддерживается: работает наибольшее число линий
+refusal.NoProposal,the adviser made no such proposal this month,советник не делал такого предложения в этом месяце
+refusal.StaleHandle,the project is no longer in its slot,проекта уже нет в этом слоте
+refusal.LicenceRefused,the deal would be refused now,сделка сейчас была бы отклонена
+refusal.LicenceNotAllowed,the licence market is not open to your power,рынок лицензий не открыт для вашей державы
+refusal.BadOffer,"the offer is not taken: wrong generation, not your own serial project, or the multiplier out of range","предложение не принято: не то поколение, не ваш серийный проект или множитель вне границ"
+refusal.NeedsConfirmation,the order needs a confirmation,приказ требует подтверждения
+cmd.lineopen,open a line,открыть линию
+cmd.lineclose,close a line on advice,закрыть линию по совету
+cmd.refuse,refuse advice of project {0},отказ от совета по проекту {0}
+cmd.buy,buy a licence (generation {0}),покупка лицензии ({0}-е поколение)
+cmd.offer,offer a licence (generation {0}),предложение лицензии ({0}-е поколение)

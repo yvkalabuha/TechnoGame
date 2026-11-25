@@ -1,0 +1,17 @@
+{
+  "_comment": "Display scale of money (O-079, TASK-0156, TASK-0155). Not part of the world state or any golden. Version it with the data.",
+  "version": 1,
+  "k_1990_per_2011": 0.64828,
+  "deflator_2011": 91.481,
+  "deflator_1990": 59.305,
+  "deflator_1950": 12.195,
+  "k_formula": "deflator_1990 / deflator_2011 = 59.305 / 91.481",
+  "million_usd_1950_per_index_month": 80,
+  "index_note": "One budget index per month = 80 million 1950 dollars (R-$, decision #78, estimate 60-110) = 80 * deflator_2011/deflator_1950 * K million 1990 dollars (about 389).",
+  "source": "BEA NIPA table 1.1.4 via FRED series A191RD3A086NBEA (GDP deflator, index 2017=100), public domain (US government work)",
+  "source_url": "https://fred.stlouisfed.org/data/A191RD3A086NBEA.txt",
+  "accessed": "2026-11-24",
+  "licence": "PD (ADR-0009)",
+  "doc": "docs/game-design/economy/dollars-1990.md",
+  "effort_stop_percent": 10
+}

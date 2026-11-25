@@ -35,6 +35,8 @@ public sealed partial class Main : Node3D
     SignalField _signal;
     ActorPanel _actorPanel;
     TechTree _tree;
+    LeverWindow _levers;
+    int _leverResume;   // tempo before a lever window paused the game (O-060)
     AudioDirector _audio;
     // v0.5c: left rail of areas, area panels (live: the real ActorPanel in area mode; locked: a card), journal of signals
     Rail _rail; ActorPanel _areaPanel; AreaCard _areaCard; JournalPanel _journal;
@@ -243,7 +245,10 @@ public sealed partial class Main : Node3D
 
     void BuildClient(CanvasLayer layer, int seed, GameData data)
     {
-        _host = new SimHost(seed, data);
+        // the id the client really plays: an unknown --power falls back to USA here and in FinishClient, so the session config and the UI name the same power
+        var actorIds = data.Scenarios[0].ActorId;
+        if (!actorIds.Contains(_powerArg)) _powerArg = actorIds.Contains("USA") ? "USA" : actorIds[0];
+        _host = new SimHost(seed, data, _powerArg);
         _host.Start();
         _loading = Ui.Lbl("ui.loading", 18);
         _loading.Position = new Vector2(20, 60);
@@ -291,6 +296,7 @@ public sealed partial class Main : Node3D
         _signal.SignalChanged += (key, on) => { if (_host.Snap != null) _journal.Add(Settings.Date(_host.Snap.Date), key, on); };
         _signal.MenuPressed += OpenGameMenu;
         _signal.SignalChanged += AlertMarker;
+        _signal.SignalChanged += (key, on) => { if (AutoPauseLogic.ShouldPause(key, on, _host.Speed, true)) _signal.SetSpeed(0); };   // #196, #481: an alarm stops a running game
         _settings.TestBus = bus => { if (bus == 5) _audio.TestCue("signal_attention"); else _audio.TestCue("ui_tick"); };
         _settings.MusicAmount = () => _audio.MusicAmount; _settings.MusicAmountSet = i => _audio.MusicAmount = i; _settings.ResetFatigue = _audio.ResetFatigue;
 
@@ -324,6 +330,13 @@ public sealed partial class Main : Node3D
         _tree.OffsetTop = 44;
         _tree.Closed += () => _tree.Visible = false;
         layer.AddChild(_tree);
+        MoneyFormat.Load(ProjectSettings.GlobalizePath("res://data/dollars_1990.json"));
+        _levers = new LeverWindow(_host) { Player = _player };
+        _levers.Opened += () => { _leverResume = _host.Speed; if (_leverResume > 0) _signal.SetSpeed(0); };   // O-060: a decision is made on a stopped clock
+        _levers.Closed += () => { if (_leverResume > 0 && _host.Speed == 0) _signal.SetSpeed(_leverResume); _leverResume = 0; };
+        layer.AddChild(_levers);
+        _areaPanel.OpenWindow += OpenLever;
+        _actorPanel.OpenWindow += OpenLever;
         BuildHelp(layer);
         _loading.Visible = false;
         _tintsReady = true;
@@ -331,6 +344,7 @@ public sealed partial class Main : Node3D
         ShowPower(_player, _startedFromMenu);   // the player's own power has no right panel: the map shows, the areas open from the rail
         _liveCheckT = 0; _liveCheck = true;
     }
+
 
     // One run-time check on the live gameplay session (not only --map-frames): the actors of the running Session are mapped to countries of the 1945 map,
     // labels are placed, the map key is on screen and the occupation zones are drawn with their hatch.
@@ -342,7 +356,10 @@ public sealed partial class Main : Node3D
         // The occupation hatch must be on screen: hatching enabled in the material and a visible strength for the occupation kind.
         bool hatchOn = _showHatch && _globeMat.GetShaderParameter("hatch_occupied").AsVector3().Z > 0f;
         bool ok = _host.Ready && _host.Snap != null && actors > 0 && mapped > 0 && _overlay.VisibleLabels > 0 && _overlay.LegendPlaced && occ > 0 && hatchOn;
+        string lever = _levers.LiveCheck();   // the lever windows read the same live view through the same pure models
+        ok &= lever == null;
         _liveFailed = !ok; _liveRan = true;
+        if (lever != null) GD.Print("LEVERCHECK live session: FAIL " + lever);
         GD.Print($"MAPCHECK live session: actors={actors} mapped={mapped} labels={_overlay.VisibleLabels} legend={(_overlay.LegendPlaced ? "on" : "off")} occupied_regions={occ} hatch={(hatchOn ? "on" : "off")}: " + (ok ? "PASS" : "FAIL"));
     }
 
@@ -584,7 +601,7 @@ public sealed partial class Main : Node3D
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (_bench || _mapFrames || (_tree != null && _tree.Visible && e is InputEventMouse) || (_mainMenu != null && MenuOpen)) return;
+        if (_bench || _mapFrames || (_tree != null && _tree.Visible && e is InputEventMouse) || (_levers != null && _levers.Visible && e is InputEventMouse) || (_mainMenu != null && MenuOpen)) return;
         if (e is InputEventMouseButton mb)
         {
             if (mb.ButtonIndex == MouseButton.Left)
@@ -614,7 +631,7 @@ public sealed partial class Main : Node3D
         else if (e is InputEventKey f3 && f3.Pressed && f3.Keycode == Key.F3)
         {
             _debug = !_debug; _hud.Visible = _debug;
-            if (_signal != null) { _signal.Debug = _debug; _actorPanel.Debug = _debug; }
+            if (_signal != null) { _signal.Debug = _debug; _actorPanel.Debug = _debug; _levers.Debug = _debug; }
         }
         else if (e is InputEventKey f6 && f6.Pressed && !f6.Echo && f6.Keycode == Key.F6 && _debug) ApplyGlobeLook(GlobeLookLogic.Next(_look));
         else if (e is InputEventKey f1 && f1.Pressed && f1.Keycode == Key.F1 && _help != null) _help.Visible = !_help.Visible;
@@ -632,6 +649,10 @@ public sealed partial class Main : Node3D
         if (k.CtrlPressed || k.AltPressed || k.MetaPressed) return false;
         if (k.Keycode == Key.Backslash || k.PhysicalKeycode == Key.Backslash) { ToggleRail(); return true; }
         if (k.Keycode == Key.Quoteleft || k.PhysicalKeycode == Key.Quoteleft) { ToggleJournal(); return true; }
+        if (k.Keycode == Key.B || k.PhysicalKeycode == Key.B) { OpenLever(LeverWindow.TabBudget, true); return true; }
+        if (k.Keycode == Key.N || k.PhysicalKeycode == Key.N) { OpenLever(LeverWindow.TabInstitutes, true); return true; }
+        if (k.Keycode == Key.O || k.PhysicalKeycode == Key.O) { OpenLever(LeverWindow.TabLines, true); return true; }
+        if (k.Keycode == Key.X || k.PhysicalKeycode == Key.X) { OpenLever(LeverWindow.TabMarket, true); return true; }
         var code = k.Keycode is >= Key.A and <= Key.Z ? k.Keycode : k.PhysicalKeycode;   // a non-Latin layout reports the physical Latin key
         var def = code is >= Key.A and <= Key.Z ? AreaData.ByLetter((char)code) : null;
         if (def == null) return false;
@@ -640,9 +661,19 @@ public sealed partial class Main : Node3D
         return true;
     }
 
+    // The lever windows (budget, institutes): the same key closes an open tab; a window opens only for the player's own power.
+    void OpenLever(int tab) => OpenLever(tab, false);
+    void OpenLever(int tab, bool toggle)
+    {
+        if (_levers == null || _titleMode || MenuOpen) return;
+        if (toggle && _levers.Visible && _levers.Tab == tab) { _levers.Close(); return; }
+        _levers.ShowTab(tab);
+    }
+
     // Esc: closes the legend, the tree, the journal, the open area (back to the map); a foreign power returns to the player's own; otherwise the game menu.
     void OnEscape()
     {
+        if (_levers.Visible) { _levers.Close(); return; }
         if (_tree.Visible) { if (_tree.LegendOpen) _tree.ToggleLegend(false); else _tree.Visible = false; }
         else if (_help.Visible) _help.Visible = false;
         else if (_journal.Visible) _journal.Visible = false;
@@ -932,6 +963,15 @@ public sealed partial class Main : Node3D
     readonly List<(double Wait, Action Act)> _sizeQ = new(); int _sizeI;
 
     int _capRow;
+    // One lever frame: the live-state assertion first (a frame of an empty window must fail the run), then the colour and grey files.
+    void LeverFrame(string name, bool live)
+    {
+        string why = _levers.LiveCheck();
+        _shotLog += $"{name}: live state {(live && why == null ? "PASS" : "FAIL " + why)}\n";
+        if (!live || why != null) InstFail($"{name}: the window shows no live data {why}");
+        SaveShot(name + ".png", null, true);
+    }
+
     Vector2I _largeSize;   // non-zero: the native-size run (map and tree frames at this window size)
     float _discClosed; Vector2 _panBefore;
 
@@ -985,6 +1025,23 @@ public sealed partial class Main : Node3D
             Q(0.6, () => { SaveShot($"area_forces{sfx}.png"); OpenArea(AreaId.Science); });
             Q(0.8, () => { SaveShot($"area_science{sfx}.png"); OpenArea(AreaId.Production); });
             Q(0.8, () => { SaveShot($"area_production{sfx}.png"); CloseArea(); if (Settings.Current.RailWide) ToggleRail(); _pinBadges = Array.Empty<(AreaId, int, int)>(); });
+            // TASK-0156: the lever windows on the live session (RU, 100 %), each with a greyscale twin; every frame asserts that it shows real numbers, not «нет данных».
+            if (scale == 100 && lang == "ru")
+            {
+                Q(0.4, () => { _levers.ShotOpen(LeverWindow.TabBudget); });
+                Q(0.8, () => { LeverFrame("lever_budget" + sfx, _levers.BudgetHasData); _levers.ShotEdit(1, 5); });
+                Q(0.6, () => { LeverFrame("lever_budget_stop" + sfx, _levers.BudgetHasData); _levers.ShotReset(); _levers.ShotEdit(2, 100); });
+                Q(0.6, () => { LeverFrame("lever_budget_limit" + sfx, _levers.BudgetHasData); _levers.ShotReset(); _levers.ShotOpen(LeverWindow.TabInstitutes); });
+                Q(0.8, () => { LeverFrame("lever_inst" + sfx, _levers.LiveCheck() == null); _levers.ShotPick(); });
+                Q(0.6, () => { LeverFrame("lever_inst_pick" + sfx, _levers.LiveCheck() == null); if (!_levers.ShotCandidate()) InstFail("lever_inst_build: no institute can be built in this state"); });
+                Q(0.8, () => { LeverFrame("lever_inst_build" + sfx, _levers.LiveCheck() == null); _levers.ShotOpen(LeverWindow.TabLines); });
+                Q(0.8, () => { LeverFrame("lever_lines" + sfx, _levers.LiveCheck() == null); bool real = _levers.ShotProposal(); _shotLog += $"lever_lines_proposal: the advice is {(real ? "real (live state)" : "a FIXTURE: the adviser has no advice in this state")}\n"; });
+                Q(0.6, () => { LeverFrame("lever_lines_proposal" + sfx, _levers.LiveCheck() == null); _levers.ShotClear(); _levers.ShotOpen(LeverWindow.TabMarket); });
+                Q(0.8, () => { LeverFrame("lever_market" + sfx, _levers.LiveCheck() == null); bool real = _levers.ShotBuy(); _shotLog += $"lever_market_buy: the offer is {(real ? "real (live state)" : "a FIXTURE: the catalogue is empty in this state")}\n"; });
+                Q(0.6, () => { LeverFrame("lever_market_buy" + sfx, _levers.LiveCheck() == null); _levers.ShotClear(); _levers.Close(); OpenArea(AreaId.Production); });
+                Q(0.8, () => { bool real = _areaPanel.ShotSeriesConfirm(); _shotLog += $"panel_production_close_confirm: series line is {(real ? "real (live state)" : "a FIXTURE line: the player has no series line in this state")}\n"; });
+                Q(0.6, () => { SaveShot($"panel_production_close_confirm{sfx}.png", null, true); _areaPanel.ShotClearConfirm(); CloseArea(); });
+            }
             // Level 0 keyboard check through the real route only: the Finance hotkey opens the panel and moves the focus into it, Tab and an arrow key move a share slider, Space still pauses, Esc returns to the rail button.
             if (scale == 100 && lang == "ru")
             {

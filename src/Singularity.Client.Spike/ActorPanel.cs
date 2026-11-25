@@ -58,7 +58,23 @@ public sealed partial class ActorPanel : PanelContainer
     bool _edited, _awaiting; long _sentSeq;
     int _actor = -1; bool _dirty = true; SliceView _lastView; CmdResult _lastCmd; HostSnapshot _lastSnap;
     string _sigDesigns = "", _sigLicence = "", _sigWhy = "";
+    DesignHandle? _confirmClose;
+    (string Text, DesignHandle Handle)? _shotSeries;   // shot run only: a fixture line when the live state has no series line
+    /// <summary>Shot run: asks to close the first series line of the player; without one a fixture line stands in. Returns true when the line is real.</summary>
+    public bool ShotSeriesConfirm()
+    {
+        var a = _host.Snap.View.Actors.FirstOrDefault(x => x.Actor == _actor);
+        var d = a == null ? default : a.Designs.FirstOrDefault(x => x.Stage == DesignStage.Series);
+        bool real = d != null && d.Stage == DesignStage.Series;
+        if (!real) _shotSeries = (Loc.T("design.line", 1, 3, Loc.T("stage.3"), LeverWindow.Money(0.001), "80", "12"), new DesignHandle(0, 1));
+        _confirmClose = real ? d.Handle : _shotSeries!.Value.Handle;
+        _sigDesigns = ""; _dirty = true;
+        return real;
+    }
+    public void ShotClearConfirm() { _confirmClose = null; _shotSeries = null; _sigDesigns = ""; _dirty = true; }   // the line whose closing waits for a yes
     public event Action OpenTree;
+    /// <summary>A lever button asks for a lever window: 0 budget and reserve, 1 science goals and institutes.</summary>
+    public event Action<int> OpenWindow;
     public event Action Closed;
 
     public int Actor => _actor;
@@ -179,6 +195,10 @@ public sealed partial class ActorPanel : PanelContainer
         _pen = new PencilMarker(_cal); _calVal.AddChild(_pen);
         _calRow.AddChild(_calName); _calRow.AddChild(_cal); _calRow.AddChild(_calVal); _calRow.AddChild(new Control { CustomMinimumSize = new Vector2(84, 0) });
         _secBudget.AddChild(_calRow);
+        var lm = Ui.Btn("lever.open.market", () => OpenWindow?.Invoke(3), focusable: true);
+        lm.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; _secBudget.AddChild(lm); _orderControls.Add(lm);
+        var lb = Ui.Btn("lever.open.budget", () => OpenWindow?.Invoke(0), focusable: true);
+        lb.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; _secBudget.AddChild(lb); _orderControls.Add(lb);   // the window with money in dollars, the reserve and the price before the click
         var ar = new HBoxContainer();
         ar.AddThemeConstantOverride("separation", 10);
         _apply = Ui.Btn("ui.apply", Apply, focusable: true);   // a control that changes game state is reachable by keyboard (A6)
@@ -196,6 +216,8 @@ public sealed partial class ActorPanel : PanelContainer
         _secDesigns.AddChild(_flaskProdRow);
         _secDesigns.AddChild(_designs);
         _prodLater = Ui.Wrap("area.production.later", 14, Ui.Ink3); _secDesigns.AddChild(_prodLater);
+        var linesBtn = Ui.Btn("lever.open.lines", () => OpenWindow?.Invoke(2), focusable: true);
+        linesBtn.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; _secDesigns.AddChild(linesBtn); _orderControls.Add(linesBtn);
         Section("panel.licence", _secLicence);
         if (areaMode)
         {
@@ -211,6 +233,8 @@ public sealed partial class ActorPanel : PanelContainer
         if (!areaMode) _secLicence.AddChild(_finLaterBox);
         Section("panel.why", _secWhy);
         _treeBtn = Ui.Btn("ui.tree", () => OpenTree?.Invoke(), focusable: true); _treeBtn.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; _secWhy.AddChild(_treeBtn);
+        var instBtn = Ui.Btn("lever.open.inst", () => OpenWindow?.Invoke(1), focusable: true);
+        instBtn.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; _secWhy.AddChild(instBtn); _orderControls.Add(instBtn);
         // The caption has its own line, the row holds only the flask cells (3 x 112 du + gaps + insets + scroll bar < 420 du), so the panel keeps its width.
         _flaskSciRow.AddThemeConstantOverride("separation", 8);
         for (int i = 0; i < _flaskSci.Length; i++)
@@ -537,11 +561,12 @@ public sealed partial class ActorPanel : PanelContainer
         foreach (var d in a.Designs)
         {
             if (d.Stage == DesignStage.None) continue;
-            string line = Loc.T("design.line", d.Design + 1, d.Gen, Loc.T("stage." + (int)d.Stage), Loc.N(d.UnitCost.ToDouble()), Loc.N(d.Readiness.ToDouble()), Loc.N(d.InService.ToDouble(), 0))
+            string line = Loc.T("design.line", d.Design + 1, d.Gen, Loc.T("stage." + (int)d.Stage), LeverWindow.Money(d.UnitCost.ToDouble()), Loc.N(d.Readiness.ToDouble() * 100, 0), Loc.N(d.InService.ToDouble(), 0))
                 + (d.Stage is DesignStage.Series ? Loc.T("design.series", Loc.N(d.Rate.ToDouble()), Loc.T("bind." + d.Bind)) : "");
             rows.Add((line, d.Stage == DesignStage.Series ? "close" : d.Stage is DesignStage.Project or DesignStage.Prototype ? "cancel" : "", d.Handle));
         }
-        string sig = Loc.Lang + "|" + string.Join("\n", rows.Select(r => r.text + r.action + r.design.Generation));
+        if (_shotSeries is { } fx) rows.Add((fx.Text, "close", fx.Handle));
+        string sig = Loc.Lang + "|" + _confirmClose + "|" + string.Join("\n", rows.Select(r => r.text + r.action + r.design.Generation));
         if (sig == _sigDesigns) return;
         _sigDesigns = sig;
         Clear(_designs);
@@ -552,7 +577,22 @@ public sealed partial class ActorPanel : PanelContainer
             var r = new HBoxContainer();
             r.AddChild(Ui.Wrap(text));
             Button act = null;
-            if (!Foreign && action == "close") act = Ui.Btn("ui.closeline", () => _host.Submit(new CloseLine(_actor, design), "cmd.close", design.Slot + 1), focusable: true);
+            if (!Foreign && action == "close" && _confirmClose == design)
+            {
+                // Closing a line loses the mastery of the process: ask first, with what is lost in words (economy-analyst, budget-money-display.md §6). Focus starts on the safe button.
+                var q = new VBoxContainer(); q.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+                q.AddChild(Ui.Wrap(Loc.T("design.close.q", design.Slot + 1), 14, Ui.Ink));
+                var br = new HBoxContainer(); br.AddThemeConstantOverride("separation", 8);
+                var keep = Ui.Btn("design.close.no", () => { _confirmClose = null; _sigDesigns = ""; _dirty = true; }, focusable: true);
+                br.AddChild(keep);
+                br.AddChild(Ui.Btn("design.close.yes", () => { _confirmClose = null; _sigDesigns = ""; _dirty = true; _host.Submit(new CloseLine(_actor, design), "cmd.close", design.Slot + 1); }, focusable: true));
+                q.AddChild(br);
+                _designs.AddChild(r);
+                _designs.AddChild(Ui.MarkedRow(Ui.Warn, q));
+                keep.CallDeferred(Control.MethodName.GrabFocus);
+                continue;
+            }
+            if (!Foreign && action == "close") act = Ui.Btn("ui.closeline", () => { _confirmClose = design; _sigDesigns = ""; _dirty = true; }, focusable: true);
             else if (!Foreign && action == "cancel") act = Ui.Btn("ui.cancel", () => _host.Submit(new CancelDesign(_actor, design), "cmd.cancel", design.Slot + 1), focusable: true);
             if (act != null) { act.SizeFlagsVertical = SizeFlags.ShrinkBegin; r.AddChild(act); }
             _designs.AddChild(r);
@@ -579,29 +619,32 @@ public sealed partial class ActorPanel : PanelContainer
 
     void FillWhy(HostSnapshot s)
     {
-        var lines = new List<(string text, bool root)>();
-        if (s.WhyError != "") lines.Add((Debug ? s.WhyError : Loc.T("why.error"), true));
-        else if (s.Target is not { } t) lines.Add((Loc.T("why.none"), false));
+        var lines = new List<(string text, bool root, bool goalButton)>();
+        if (s.WhyError != "") lines.Add((Debug ? s.WhyError : Loc.T("why.error"), true, false));
+        else if (s.Target is not { } t) lines.Add((Loc.T("why.none"), false, false));
         else
         {
             string goal = t.Kind == WhyNotTargetKind.Requirement ? Loc.T("why.goal", t.Id) : Loc.T("why.goalkind", t.Kind.ToString(), t.Id);
-            lines.Add((goal + (Debug ? Loc.T("why.links", s.Links.Count) : ""), false));
+            lines.Add((goal + (Debug ? Loc.T("why.links", s.Links.Count) : ""), false, false));
             int n = 0;
             foreach (var l in s.Links)
             {
-                if (n++ >= 7) { lines.Add((Loc.T("why.more", s.Links.Count - 7), false)); break; }
-                // The affected process keeps its plain name (a capability link names it in Process), so that two processes with one blocker differ; never a bare id.
-                int subjNode = l.Layer == WhyNotLayer.Knowledge ? l.SubjectId : l.Layer == WhyNotLayer.Capability ? l.Process : -1;
+                if (n++ >= 7) { lines.Add((Loc.T("why.more", s.Links.Count - 7), false, false)); break; }
+                // The affected process keeps its plain name, so that two processes with one blocker differ; never a bare id. A limit of the engine generation names the node to study.
+                int subjNode = WhyLines.SubjectNode(l);
                 string subjName = subjNode >= 0 ? Names.Node(_host.Data, subjNode) : "";
                 string subj = subjName != "" && subjName[0] != '#' ? ": " + subjName : "";
                 string eta = l.EtaMonths is int m ? Loc.T("why.eta", m) : "";
-                string lev = l.Levers.IsDefaultOrEmpty ? "" : Loc.T("why.levers", string.Join(", ", l.Levers.Select(x => Loc.TOr("lever." + x, x.ToString()))));
-                // A plain sentence: what blocks, how much is there, when it will be enough, what to do; the red square gets the words «Главная помеха» (C4, A5).
-                string text = string.Join(" ", new[] { (n == 1 ? Loc.T("why.root") : ""), Loc.T("why.line", Loc.TOr("cause." + l.Cause, l.Cause.ToString()), subj), Loc.T("why.have", Loc.N(l.Have.ToDouble()), Loc.N(l.Need.ToDouble())), eta, lev }.Select(x => x.Trim()).Where(x => x != ""));
-                lines.Add((text, n == 1));
+                bool goalBtn = !Foreign && !l.Levers.IsDefaultOrEmpty && l.Levers.Contains(Lever.ResearchPriority);
+                var rest = l.Levers.IsDefaultOrEmpty ? Array.Empty<Lever>() : l.Levers.Where(x => !(goalBtn && x == Lever.ResearchPriority)).ToArray();
+                string lev = rest.Length == 0 ? "" : Loc.T("why.levers", string.Join(", ", rest.Select(x => Loc.TOr("lever." + x, x.ToString()))));
+                string engine = l.Cause == WhyNotCause.EngineGenLimit && subjName != "" && subjName[0] != '#' ? Loc.T("why.engine", subjName) + "." : "";
+                // One sentence per fact; the red square of the main blocker is followed by its own words «Главная помеха:» and the sentence does not repeat «Мешает».
+                string text = string.Join(" ", new[] { Loc.T(n == 1 ? "why.line.root" : "why.line", Loc.TOr("cause." + l.Cause, l.Cause.ToString()), subj), Loc.T("why.have", Loc.N(l.Have.ToDouble()), Loc.N(l.Need.ToDouble())), eta, engine, lev }.Select(x => x.Trim()).Where(x => x != ""));
+                lines.Add((text, n == 1, goalBtn));
             }
         }
-        string sig = Loc.Lang + "|" + string.Join("\n", lines.Select(x => x.text));
+        string sig = Loc.Lang + "|" + Foreign + "|" + string.Join("\n", lines.Select(x => x.text + x.goalButton));
         if (sig == _sigWhy) return;
         _sigWhy = sig;
         Clear(_why);
@@ -610,6 +653,12 @@ public sealed partial class ActorPanel : PanelContainer
             bool first = lines[i].root;
             var lab = Ui.Wrap(lines[i].text, 14, i == 0 && !first ? Ui.Ink2 : Ui.Ink);
             _why.AddChild(first ? Ui.MarkedRow(Ui.Alarm, lab) : lab);
+            if (lines[i].goalButton)
+            {
+                var b = Ui.Btn("why.do.priority", () => OpenWindow?.Invoke(1), focusable: true);
+                b.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+                _why.AddChild(b);
+            }
         }
     }
 }

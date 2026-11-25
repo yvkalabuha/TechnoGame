@@ -12,7 +12,7 @@ public static class Palette
     /// <summary>Empty-cell hatch of the speed meter: an opaque ink, 3:1 on the paper at the worst texture multiplier (A4; the old 45 % alpha of Ink did not reach it).</summary>
     public const string GaugeHatch = Ink2;
 
-    public const string Ink = "1D1E20", Ink2 = "55575A", Ink3 = "64625C", Rule = "BDB59F", Border = "3E3C38", GlobeGrid = "A9C4CC", Limb = "A9B8CC";
+    public const string Ink = "1D1E20", Ink2 = "55575A", Ink3 = "64625C", DisabledText = Ink2, Rule = "BDB59F", Border = "3E3C38", GlobeGrid = "A9C4CC", Limb = "A9B8CC";
 
     // Instrument tokens (UI_INSTRUMENTS §2, #404). Desk is the table under the panels; desk-line and desk-hatch are the quiet layer-1 strokes (not drawn yet, validated now).
     // Layer 2 (the controls) draws in Ink, Ink2 and the six inks above.
