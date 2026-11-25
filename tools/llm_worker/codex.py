@@ -128,8 +128,10 @@ def bwrap_argv(worktree, schema_file, codex_exe, home=None, bwrap=None, codex_ho
         a += ["--ro-bind", str(p), str(p)]
     if codex_home.is_dir():
         a += ["--bind", str(codex_home), str(codex_home)]
-    a += ["--ro-bind", str(worktree), "/work", "--ro-bind", str(schema_file), "/schema.json", "--chdir", "/work"]
-    return a
+    a += ["--ro-bind", str(worktree), "/work"]
+    if schema_file is not None:  # image sketches have no output schema
+        a += ["--ro-bind", str(schema_file), "/schema.json"]
+    return a + ["--chdir", "/work"]
 
 
 def command(codex_exe):
