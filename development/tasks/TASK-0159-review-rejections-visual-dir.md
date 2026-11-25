@@ -1,7 +1,7 @@
 ---
 id: TASK-0159
 title: "llm_worker: Codex review sees earlier rejected findings; visual accepts frames from the client shots-out"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light             # light | gate | gate+research
 milestone: MS-M05
 agent: developer         # ответственный агент
@@ -13,6 +13,7 @@ related: []
 approved_by: owner
 approved_at: 2026-11-24
 approval_ref: "owner answer 2026-11-24 (hooks and tools fixes)"
+review_ref: "reviewer: APPROVE; codex accept ccd9843 with 3 findings -> DEBT-0098; landed d2d7590"
 created: 2026-11-24
 ---
 
