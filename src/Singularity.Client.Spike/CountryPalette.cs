@@ -21,8 +21,26 @@ public static class CountryPalette
     public static readonly string[] Hex = { "B6DEBF", "FCD2DB", "F9BBAC", "B1D6F5", "EBE0B2", "ABDED8", "D3CEEC", "F6D7BD", "EDD49E", "D0DBBE", "E2C6E6", "CEC2B5" };
     public const int Stone = 11;
 
-    /// <summary>The five powers of the slice keep their tone (USA green, GBR pink, SUN terracotta, FRA blue, SWE yellow).</summary>
-    public static readonly (string Code, int Tone)[] Fixed = { ("USA", 0), ("GBR", 1), ("SUN", 2), ("FRA", 3), ("SWE", 4) };
+    /// <summary>
+    /// Atlas traditions (docs/ui/specs/political-map-palette.md section 2). The first five entries keep their place (HatchLogic and the slice read them by index):
+    /// USA green, GBR pink, SUN terracotta, FRA blue, SWE yellow; the dominions share the pink of GBR (no hatch: they are core land).
+    /// </summary>
+    public static readonly (string Code, int Tone)[] Fixed =
+    {
+        ("USA", 0), ("GBR", 1), ("SUN", 2), ("FRA", 3), ("SWE", 4),
+        ("CAN", 1), ("AUS", 1), ("NZL", 1), ("ZAF", 1),
+        ("PRT", 5), ("JPN", 7), ("NLD", 7), ("ROC", 8), ("ESP", 8), ("ITA", 9), ("BEL", 10), ("DEU", 11),
+    };
+
+    /// <summary>Colony fill: the metropole tone mixed with white by 18 %, the 45 degree hatch carries the status. The stone tone has no colonies in 1945 and stays unmixed (it would fall under the land-none delta).</summary>
+    public const float ColonyLighten = 0.18f;
+    public static (byte R, byte G, byte B) ColonyFill(int tone)
+    {
+        int v = int.Parse(Hex[tone], System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture);
+        float k = tone == Stone ? 0f : ColonyLighten;
+        static byte M(int c, float k) => (byte)Math.Round(c + (255 - c) * k);
+        return (M((v >> 16) & 255, k), M((v >> 8) & 255, k), M(v & 255, k));
+    }
 
     // Neighbours must not share these pairs (CVD or base delta E below the limit, spec 3.5); 0-based tone indices.
     static readonly (int, int)[] Forbidden = { (0, 9), (6, 10), (7, 9), (3, 6), (4, 8) };

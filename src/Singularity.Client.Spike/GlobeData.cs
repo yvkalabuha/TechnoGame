@@ -51,7 +51,7 @@ public sealed class GlobeData
         var carea = new long[WorldMap.ColonyGroups.Length + 1];
         foreach (var rg in RegionIds) if (rg != 0) carea[cg[rg - 1]]++;
         for (int k = 1; k <= WorldMap.ColonyGroups.Length; k++)
-            if (carea[k] > 0) ColonyLabels.Add(new Country { Id = 0, Name = "C_" + WorldMap.ColonyGroups[k - 1].Key, BoxArea = carea[k], LabelPoint = new Vector2(canchors[k].Lon, canchors[k].Lat), Group = k });
+            if (carea[k] > 0) ColonyLabels.Add(new Country { Id = 0, Name = "C_" + WorldMap.ColonyGroups[k - 1].Key, BoxArea = carea[k], LabelPoint = new Vector2(canchors[k].Lon, canchors[k].Lat), Group = k, Tint = Style.CodeTone[Math.Max(0, Array.IndexOf(Style.Codes, WorldMap.ColonyGroups[k - 1].Owner))] });
         ColonyLabels.Sort((a, b) => b.BoxArea.CompareTo(a.BoxArea));
 
         if (Style.Controllers.Length > 255) throw new InvalidOperationException("controller number is 8-bit in the region table");
@@ -59,7 +59,7 @@ public sealed class GlobeData
         for (int i = 0; i < Style.Regions.Length; i++)
         {
             var s = Style.Regions[i]; int id = i + 1;
-            Put(0, id, Fill(s.Tone), (byte)((int)s.Hatch * 85));
+            Put(0, id, s.Hatch == HatchKind.Colony ? CountryPalette.ColonyFill(s.Tone) : Fill(s.Tone), (byte)((int)s.Hatch * 85));
             Put(1, id, Line(s.HatchTone, HatchLogic.LineScale(s.Hatch)), (byte)s.Owner);
             Put(2, id, ((byte)s.Controller, 0, 0), 255);   // row 2: controller number in R (the line of control must not depend on the tone)
         }

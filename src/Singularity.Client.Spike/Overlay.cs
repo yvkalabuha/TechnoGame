@@ -106,7 +106,7 @@ public sealed partial class Overlay : Control
     }
     string _legColony = "", _legOccupied = "", _legControl = "";
     static readonly Color LegendColony = ToColor(HatchLogic.Line(HatchLogic.ColonyFillTone, HatchLogic.LineScale(HatchKind.Colony))), LegendOcc = ToColor(HatchLogic.Line(HatchLogic.ControllerTone, HatchLogic.LineScale(HatchKind.Occupied)));
-    static readonly Color LegendFillColony = ToColor(HatchLogic.Line(HatchLogic.ColonyFillTone, 1f)), LegendFillOcc = ToColor(HatchLogic.Line(HatchLogic.OccupiedFillTone, 1f));
+    static readonly Color LegendFillColony = ToColor(CountryPalette.ColonyFill(HatchLogic.ColonyFillTone)), LegendFillOcc = ToColor(HatchLogic.Line(HatchLogic.OccupiedFillTone, 1f));
     static Color ToColor((byte R, byte G, byte B) c) => new(c.R / 255f, c.G / 255f, c.B / 255f);
     void RefreshLegend() { _legColony = Loc.T("legend.colony"); _legOccupied = Loc.T("legend.occupied"); _legControl = Loc.T("legend.control"); }
 
@@ -138,7 +138,7 @@ public sealed partial class Overlay : Control
             _labels.Add(s = new LabelState { C = c, Node = l });
         }
         s.Slice = slice;
-        var halo = c.Id > 0 ? ToColor(HatchLogic.Line(c.Tint, 1f)) : LegendFillColony;   // tone of the land under the word, so that the hatching does not run through the letters
+        var halo = c.Id > 0 ? ToColor(HatchLogic.Line(c.Tint, 1f)) : ToColor(CountryPalette.ColonyFill(c.Tint));   // tone of the land under the word, so that the hatching does not run through the letters
         s.Node.AddThemeColorOverride("font_outline_color", new Color(halo, 0.85f)); s.Node.AddThemeConstantOverride("outline_size", 2);
         StyleLabel(s);
         s.Node.Text = Names.Country(c.Name) ?? c.Name;
