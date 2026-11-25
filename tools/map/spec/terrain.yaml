@@ -1,0 +1,19 @@
+# Thresholds of the terrain bake (TASK-0168, #528). [Предп.]: tuned on known provinces (Alps, Netherlands, Sahara, Siberia), not calibrated against a reference.
+# A 1 km cell is mountains when its elevation std-dev (GMTED2010 std-dev layer) or its mean elevation passes the first two limits, hills from the third.
+mountain_std_m: 100
+mountain_elev_m: 3000
+hills_std_m: 35
+# Grass and bare ground north or south of this latitude count as tundra.
+arctic_lat_deg: 66
+# Class of a province, checked in this order, in permille of the province (mountains + hills for hills).
+mountains_pm: 450
+hills_pm: 500
+swamp_pm: 250
+tundra_pm: 500
+desert_pm: 500
+forest_pm: 400
+steppe_pm: 400
+# Provinces outside every WorldCover tile (uninhabited islands): cover in permille, the bake fails for a province without data and without an entry here.
+no_data:
+  - {province: norway.bouvet_island, cover: {ice: 930, desert: 70}, note: "93 percent of the island is covered by glaciers, the rest is bare rock (ice-free Nyroysa)", source: "https://en.wikipedia.org/wiki/Bouvet_Island", accessed: 2026-11-25}
+  - {province: norfolk_island.norfolk_island, cover: {forest: 160, steppe: 840}, note: "forest = Norfolk Island National Park 6.50 km2 of 41 km2 of the province (Mount Pitt and Phillip Island); the rest is pasture and grass [Предп.]", source: "https://en.wikipedia.org/wiki/Norfolk_Island_National_Park", accessed: 2026-11-25}

@@ -1,0 +1,15 @@
+# Rivers (TASK-0168, #534). Border rivers come from Natural Earth rank 1-4 lines near province borders (parameters below);
+# navigable stretches are a hand list. bbox = [min_lat, min_lon, max_lat, max_lon] limits a river to one stretch.
+# St. Lawrence is not listed: the Natural Earth line covers only the Ontario stretch (lon -75.8..-74.7), the Montreal-sea stretch is not in the data.
+# Source of every entry: the cited page; access date 2026-11-25. The stretch limits are [Предп.] checked against the cited page only.
+border_max_rank: 4
+border_tol_m: 3000
+border_min_share_pct: 50
+border_min_km: 5
+navigable:
+  - {river: Danube, note: "2,415 km of the Danube are navigable", source: "https://en.wikipedia.org/wiki/Danube", accessed: 2026-11-25}
+  - {river: Amazonas, bbox: [-4.0, -74.0, 0.5, -48.0], note: "navigable for ocean steamers to Manaus, 1,500 km from the mouth; the box is [Предп.] mouth to Manaus and a little upstream", source: "https://en.wikipedia.org/wiki/Amazon_River", accessed: 2026-11-25}
+  - {river: Nile, bbox: [22.0, 30.0, 31.7, 33.5], note: "northern stretches (Egypt) are navigable; the box is [Предп.] the Egyptian Nile to the High Dam", source: "https://en.wikipedia.org/wiki/Nile", accessed: 2026-11-25}
+  - {river: Mississippi, bbox: [29.0, -95.0, 45.0, -88.5], note: "navigable channel from Minneapolis to the sea; the box is [Предп.]", source: "https://en.wikipedia.org/wiki/Mississippi_River", accessed: 2026-11-25}
+  - {river: Damietta Branch, note: "Nile delta branch, Egypt; navigable stretches of the Nile are in the north", source: "https://en.wikipedia.org/wiki/Nile", accessed: 2026-11-25}
+  - {river: Rosetta Branch, note: "Nile delta branch, Egypt; navigable stretches of the Nile are in the north", source: "https://en.wikipedia.org/wiki/Nile", accessed: 2026-11-25}

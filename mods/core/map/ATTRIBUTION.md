@@ -11,3 +11,9 @@ Natural Earth data is public domain. OpenHistoricalMap objects without a licence
 - Surveying and Mapping Authority of the Republic of Slovenia, CC-BY-4.0: way/198567349, way/198746646; snapshot ohm:relation/2851104@v65, https://www.openhistoricalmap.org
 - Administrative units municipalities from Kartverket (Norwegian Mapping Authority), CC-BY-4.0: way/199460293, way/199460294, way/199460295, way/199460296, way/199460297, way/199460298, way/199460299, way/199460300, way/199460301, way/199460302, way/199460303, way/199460304; snapshot ohm:relation/2855285@v12, https://www.openhistoricalmap.org
 - Administrative units municipalities from Kartverket (Norwegian Mapping Authority), CC-BY-4.0: way/199460291, way/199460293, way/199460294, way/199460295, way/199460296, way/199460297, way/199460298, way/199460299, way/199460300, way/199460301, way/199460302, way/199460303, way/199460304, way/199460305, way/199460306, way/199460307, way/199460308, way/199460309, way/199460311, way/199460313, way/199460314, way/199460315, way/199460319, way/199460321, way/199460322, way/199460323, way/199460324, way/199460325, way/199460326, way/199460328, way/199460329, way/199460330, way/199460332, way/200885447, way/200885467; snapshot ohm:relation/2959045@v9, https://www.openhistoricalmap.org
+
+## Terrain (terrain.yaml, derived statistics)
+
+- ESA WorldCover 2021 v200, CC BY 4.0: Zanaga et al., https://doi.org/10.5281/zenodo.7254221
+- Global Lakes and Wetlands Database v2.0, CC BY 4.0: Lehner et al., https://doi.org/10.6084/m9.figshare.28519994.v1
+- GMTED2010 (USGS EROS) and Natural Earth rivers are public domain.

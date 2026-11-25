@@ -21,6 +21,8 @@ internal sealed class BuildResult
     public Geometry[] Simplified = Array.Empty<Geometry>();
     public List<bool> Coastal = new();
     public SortedDictionary<(string, string), double> Adjacency = new(new PairComparer());
+    public SortedDictionary<(string, string), int> BorderRivers = new(new PairComparer());   // adjacent pair -> Natural Earth rank of the river on the border
+    public List<(string River, List<string> Provinces)> Navigable = new();
     public List<(string A, string B)> Straits = new();
     public List<string> Errors = new(), Warnings = new(), Info = new();
     public SourceLock Lock = new();
@@ -44,6 +46,7 @@ internal static class Builder
 {
     public const string NeAdmin1 = "ne_admin1";
     public const string NeUnits = "ne_map_units";
+    public const string NeRivers = "ne_rivers";
 
     public static BuildResult Build(BuildOptions o)
     {
@@ -120,6 +123,15 @@ internal static class Builder
             len[k] = len.GetValueOrDefault(k) + a.LengthKm;
         }
         foreach (var kv in len) if (kv.Value >= 1.0) res.Adjacency[kv.Key] = kv.Value;
+        var riverSpecPath = Path.Combine(o.Root, "spec", "rivers.yaml");
+        var riverSpec = File.Exists(riverSpecPath) ? SpecSet.Read<RiverSpec>(riverSpecPath) : new RiverSpec();
+        var rivers = Rivers.Load(Sources.ReadVerified(res.Lock, o.Cache, NeRivers));
+        res.BorderRivers = Rivers.BorderRivers(res, rivers, riverSpec);
+        foreach (var n in riverSpec.Navigable.OrderBy(n => n.River, StringComparer.Ordinal))
+        {
+            if (n.Source.Length == 0 || n.Accessed.Length == 0) res.Errors.Add($"rivers: navigable '{n.River}' has no source or access date");
+            else res.Navigable.Add((n.River, Rivers.Along(res, rivers, n)));
+        }
         foreach (var s in res.Spec.Straits)
             res.Straits.Add(string.CompareOrdinal(s.A, s.B) < 0 ? (s.A, s.B) : (s.B, s.A));
         res.Straits = res.Straits.OrderBy(s => s, new PairComparer()).ToList();
