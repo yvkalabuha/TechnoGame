@@ -29,7 +29,8 @@ internal static class Cli
             switch (args[0])
             {
                 case "fetch":
-                    await Sources.FetchAsync(Sources.Load(Path.Combine(root, "sources.lock.yaml")), o.Cache, args.Contains("--pin"));
+                    if (args.Contains("--terrain")) await TerrainSources.FetchAsync(Sources.Load(Path.Combine(root, "sources.lock.yaml")), o.Cache, args.Contains("--pin"));
+                    else await Sources.FetchAsync(Sources.Load(Path.Combine(root, "sources.lock.yaml")), o.Cache, args.Contains("--pin"));
                     return 0;
                 case "find":
                     return Find(o, args[1]);
@@ -43,6 +44,8 @@ internal static class Cli
                     return At(o, args.Skip(1).TakeWhile(a => !a.StartsWith("--")).Select(a => a.Split(',').Select(x => double.Parse(x, System.Globalization.CultureInfo.InvariantCulture)).ToArray()).ToList());
                 case "dump":
                     return Dump(o);
+                case "terrain":
+                    return Terrain.Run(o);
                 case "bootstrap":
                     return DoBootstrap(o);
                 case "build":

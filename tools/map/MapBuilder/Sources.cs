@@ -9,13 +9,22 @@ namespace Singularity.MapBuilder;
 internal sealed class SourceEntry
 {
     public string Id { get; set; } = "";
-    public string Kind { get; set; } = "";       // ne | ohm
+    public string Kind { get; set; } = "";       // ne | ohm | raster | cog-overview (the last two only for 'terrain', TASK-0168)
     public string Url { get; set; } = "";
     public string? Query { get; set; }           // ohm: pinned Overpass query (with [date:...])
     public string Sha256 { get; set; } = "";
     public string License { get; set; } = "";
     public string Retrieved { get; set; } = "";
     public string? Note { get; set; }
+    public List<RasterFile> Files { get; set; } = new();   // raster: pinned files; the url holds {name} and {dir}
+    public string? Grid { get; set; }                       // cog-overview: id of the tile grid source
+    public int Level { get; set; }                          // cog-overview: width in pixels of the overview used for each 3x3 degree tile
+}
+
+internal sealed class RasterFile
+{
+    public string Name { get; set; } = "";
+    public string Sha256 { get; set; } = "";
 }
 
 internal sealed class SourceLock
@@ -36,13 +45,15 @@ internal static class Sources
 
     public static string Sha(byte[] data) => Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant();
 
-    /// <summary>Downloads missing entries into the cache. A hash mismatch is a loud error unless <paramref name="pin"/> is set (then the hash is printed).</summary>
+    public static bool IsTerrain(SourceEntry e) => e.Kind is "raster" or "cog-overview";
+
+    /// <summary>Downloads missing entries into the cache. A hash mismatch is a loud error unless <paramref name="pin"/> is set (then the hash is printed). Terrain rasters are skipped (see TerrainSources).</summary>
     public static async Task FetchAsync(SourceLock lk, string cache, bool pin)
     {
         Directory.CreateDirectory(cache);
         using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
         http.DefaultRequestHeaders.UserAgent.ParseAdd("singularity-map-builder/1 (offline data build)");
-        foreach (var e in lk.Sources)
+        foreach (var e in lk.Sources.Where(e => !IsTerrain(e)))
         {
             var path = CachePath(cache, e);
             byte[] data;
