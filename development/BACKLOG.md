@@ -189,6 +189,7 @@
 | [TASK-0171](../development/tasks/TASK-0171-levers-flags-on-golden-batch.md) | APPROVED | Golden batch: turn on Reserve, Institutes, LicenceMarket, Adviser, Intelligence by default; re-record goldens once with explanation | MS-M0 |
 | [TASK-0172](../development/tasks/TASK-0172-zaf-core-regions.md) | DONE | Data: South Africa regions status core of ZAF (O-076), checked per region | MS-M0 |
 | [TASK-0173](../development/tasks/TASK-0173-lab-p7-institutes-early-build.md) | IN_PROGRESS | Lab: P-7 build-everything-early does not dominate (years of key nodes) and project limit check, before flags on | MS-M0 |
+| [TASK-0174](../development/tasks/TASK-0174-institutes-followup-debt0107.md) | APPROVED | Institutes follow-up: iterative group walk (deep graph), built institute capacity by level, cooldown on same goal, no build charge after completion | MS-M0 |
 
 ## Гипотезы
 
