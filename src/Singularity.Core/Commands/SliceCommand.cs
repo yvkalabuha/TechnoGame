@@ -64,6 +64,10 @@ public enum CommandKind
     RefuseProposal = 14,
     SetPriorityNode = 15,
     BuildInstitute = 16,
+    AssignNode = 17,
+    Unassign = 18,
+    ReorderQueue = 19,
+    SetFocus = 20,
 }
 
 /// <summary>
@@ -223,6 +227,35 @@ public sealed record SetPriorityNode(int Actor, int Slot, int Node) : SliceComma
 public sealed record BuildInstitute(int Actor, int Slot) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.BuildInstitute;
+}
+
+/// <summary>
+/// <c>assign_node(slot, node)</c> (slot model, SCIENCE_SLOTS §12): the node goes to the list of the institute in <paramref name="Slot"/>: the active place when the list is empty, else
+/// the end of the queue (at most 5). A node stands in one list of an actor.
+/// </summary>
+public sealed record AssignNode(int Actor, int Slot, int Node) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.AssignNode;
+}
+
+/// <summary><c>unassign(slot, node)</c>: the node leaves the list of the slot; the active node leaving is a replacement (its progress stays with the node, the focus ends).</summary>
+public sealed record Unassign(int Actor, int Slot, int Node) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.Unassign;
+}
+
+/// <summary><c>reorder_queue(slot, order)</c>: the queued nodes of the slot in a new order (a permutation of the list's nodes).</summary>
+public sealed record ReorderQueue(int Actor, int Slot, ImmutableArray<int> Order) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.ReorderQueue;
+}
+
+/// <summary>
+/// <c>set_focus(slot, level, fromReserve)</c> (O-088, the slot model's paid acceleration, also called BuyFocus): level 0 off, 1 and 2 faster and dearer for the node the slot works on.
+/// </summary>
+public sealed record SetFocus(int Actor, int Slot, int Level, bool FromReserve) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.SetFocus;
 }
 
 /// <summary>An accepted command with its key: one line of <c>commands.log</c>.</summary>

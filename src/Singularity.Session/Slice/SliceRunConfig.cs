@@ -198,7 +198,7 @@ public sealed partial record SliceRunConfig
         : default;
 
     /// <summary>All five levers of wave 1 off: the build before TASK-0150..0160 (the hash and every old golden). Tests that pin old behaviour start from it.</summary>
-    public static SliceRunConfig Legacy => new() { Reserve = false, Institutes = false, Intelligence = false, LicenceMarket = false, AdviserForPlayer = false };
+    public static SliceRunConfig Legacy => new() { Reserve = false, Institutes = false, Intelligence = false, LicenceMarket = false, AdviserForPlayer = false, ScienceSlots = false };
 
     /// <summary>How long a refused proposal stays silent, in years (a yearly norm; the policy turns it into months).</summary>
     public int AdviserRefuseYears { get; init; } = 1;
@@ -230,6 +230,13 @@ public sealed partial record SliceRunConfig
     /// build without them.
     /// </summary>
     public bool Institutes { get; init; } = true;
+
+    /// <summary>
+    /// The slot science model (TASK-0187, SCIENCE_SLOTS.md, #561–#576): research only in institutes, one node per institute with a queue, focus, directions and the speed
+    /// of an institute paid in money. On in main; needs <see cref="Institutes"/>, the full knowledge layer (not L_K / L_K0) and no other run of the layer controls
+    /// that replace knowledge. Off = the shares model: the table, the hash and every golden are those of the build before it (S11); <see cref="Legacy"/> has it off.
+    /// </summary>
+    public bool ScienceSlots { get; init; } = true;
 
     /// <summary>
     /// Intelligence v1 (#515, TASK-0160): the seventh budget item security, up to three targets with a mode, networks with exposure, counter-intelligence, the theft

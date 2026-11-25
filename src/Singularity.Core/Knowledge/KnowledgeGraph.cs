@@ -6,7 +6,7 @@ namespace Singularity.Core.Knowledge;
 
 /// <summary>One node for <see cref="KnowledgeGraph.Create"/>; requirements are groups of node numbers (AND of OR-groups).</summary>
 public sealed record KnowledgeNodeSpec(int Number, NodeType Type, int Gen, int Discipline, bool Hazard, Fx6 CostN,
-    int[][] Requires, (int From, Fx6 Weight)[]? InformedBy = null, int AnchorYear = 0);
+    int[][] Requires, (int From, Fx6 Weight)[]? InformedBy = null, int AnchorYear = 0, int[]? Directions = null);
 
 /// <summary>
 /// What the knowledge layer needs from the node data, by storage row. <see cref="Number"/> is the
@@ -28,6 +28,12 @@ public sealed class KnowledgeGraph
 
     /// <summary>Anchor year of the node (ahead-of-time cost); 0 = none, never ahead.</summary>
     public required ImmutableArray<int> AnchorYear { get; init; }
+
+    /// <summary>
+    /// Directions of the node (slot model, #571): 0–4 indices into <see cref="DisciplineNames"/>, the first is the main one. The data has none yet, so a node
+    /// carries its discipline as the one direction (an APP node none); a spec with <c>Directions</c> overrides it.
+    /// </summary>
+    public required ImmutableArray<ImmutableArray<int>> Directions { get; init; }
     public required RequirementLists Requires { get; init; }
 
     /// <summary>Incoming informs edges of row r: <c>InformedStart[r]..InformedStart[r+1]</c>.</summary>
@@ -157,6 +163,7 @@ public sealed class KnowledgeGraph
             IsHazard = [.. nodes.Select(s => s.Hazard)],
             CostN = [.. nodes.Select(s => s.CostN)],
             AnchorYear = ImmutableArray.CreateRange(nodes.Select(s => s.AnchorYear)),   // not a spread: keeps the ToArray allowance of Create at 9
+            Directions = ImmutableArray.CreateRange(nodes.Select(s => s.Directions is { } d ? ImmutableArray.Create(d) : s.Discipline >= 0 ? ImmutableArray.Create(s.Discipline) : ImmutableArray<int>.Empty)),
             Requires = RequirementLists.Build(requires),
             InformedStart = [.. informedStart],
             InformedFrom = [.. informedFrom],

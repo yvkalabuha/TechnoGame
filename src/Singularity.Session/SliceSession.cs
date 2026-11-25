@@ -652,6 +652,8 @@ public sealed partial class SliceSession
                     v0 = PriorityVerdict(priority, month);
                 if (v0.Accepted && command is BuildInstitute build)
                     v0 = BuildVerdict(build, month);
+                if (v0.Accepted && command is AssignNode or Unassign or ReorderQueue or SetFocus)
+                    v0 = SlotVerdict(command, month);
                 verdicts[i] = !v0.Accepted ? v0 : command is BuyLicence or OfferLicence ? LicenceVerdict(command, month) : _world.Commands.Apply(command, month);
             }
         }
@@ -708,8 +710,26 @@ public sealed partial class SliceSession
             BuildCheck.AlreadyStanding => CommandVerdict.Refuse(CommandRefusal.BuildRefused, "the institute stands already"),
             BuildCheck.AlreadyBuilding => CommandVerdict.Refuse(CommandRefusal.BuildRefused, "the project of this institute runs already"),
             BuildCheck.TooEarly => CommandVerdict.Refuse(CommandRefusal.BuildRefused, $"the window opens in {institutes.Layout.RefYear(h) - institutes.Parameters.WindowYears}"),
+            BuildCheck.UpkeepCeiling => CommandVerdict.Refuse(CommandRefusal.BuildRefused, "the upkeep of the institutes would pass its share of the research money (#574)"),
             _ => CommandVerdict.Refuse(CommandRefusal.BuildRefused, $"a small country builds at most {institutes.Parameters.SmallCountryLevelCap} levels in one project"),
         };
+    }
+
+    // Slot model: the node must still be unknown; a node of another institute's list is refused by the list itself (NodeTaken).
+    private CommandVerdict SlotVerdict(SliceCommand command, long month)
+    {
+        InstituteSystem institutes = _world.Institutes ?? throw new InvalidOperationException("The validator accepted a slot command without institutes.");
+        if (command is AssignNode a)
+        {
+            if (!institutes.Standing(new InstituteHandle(a.Actor, a.Slot)))
+                return CommandVerdict.Refuse(CommandRefusal.PriorityNotAvailable, $"the institute in slot {a.Slot} is not built");
+            int row = _world.Graph.RowOf(a.Node);
+            if (row < 0 || _world.Knowledge.IsKnown(a.Actor, row))
+                return CommandVerdict.Refuse(CommandRefusal.NodeKnown, $"node {a.Node} is already known to actor {a.Actor}");
+        }
+        if (command is SetFocus f && f.Level > 0 && !institutes.Standing(new InstituteHandle(f.Actor, f.Slot)))
+            return CommandVerdict.Refuse(CommandRefusal.NoActiveNode, $"the institute in slot {f.Slot} is not built");
+        return CommandVerdict.Ok;
     }
 
     // set_priority_node: the node must still be unknown and no other slot of the actor works on it; a slot the player has set may be changed once per period.
@@ -722,6 +742,19 @@ public sealed partial class SliceSession
         if (row < 0 || _world.Knowledge.IsKnown(p.Actor, row))
             return CommandVerdict.Refuse(CommandRefusal.PriorityNotAvailable, $"node {p.Node} is already known to actor {p.Actor}");
         var slot = new InstituteHandle(p.Actor, p.Slot);
+        if (_world.SlotsOn)
+        {
+            // The slot model: the node becomes the active one of the slot; another institute that works on it keeps it.
+            Span<int> work = stackalloc int[institutes.Layout.SlotCount(p.Actor)];
+            Span<byte> focus = stackalloc byte[work.Length];
+            institutes.Resolve(p.Actor, month, work, focus);
+            for (int k = 0; k < work.Length; k++)
+            {
+                if (k != p.Slot && work[k] == p.Node)
+                    return CommandVerdict.Refuse(CommandRefusal.PriorityNotAvailable, $"another institute already works on node {p.Node}");
+            }
+            return CommandVerdict.Ok;
+        }
         for (int k = 0; k < institutes.Layout.SlotCount(p.Actor); k++)
         {
             if (k != p.Slot && institutes.GoalNode(new InstituteHandle(p.Actor, k)) == p.Node)

@@ -9,8 +9,17 @@ namespace Singularity.Core.Knowledge;
 /// effects, same answer on every call, safe to call from several threads (compute runs in parallel over
 /// actor chunks). Implementations read Table columns; they never see this month's compute output.
 /// </summary>
+/// <summary>One working institute slot of a month in the slot model: the node row, the institute multiplier `m_inst` and the focus level 0..2.</summary>
+public readonly record struct SlotWork(int Slot, int NodeRow, Fx6 InstituteMultiplier, int Focus);
+
 public interface IKnowledgeInputs
 {
+    /// <summary>
+    /// Slot model: the working slots of the actor in month t, one entry per slot that has a node (at most the length of <paramref name="work"/>); returns the count.
+    /// A pure function of the snapshot, the same as the institutes decide for the next one. Used only by a system built with slot parameters.
+    /// </summary>
+    int SlotWork(int actorRow, long month, Span<SlotWork> work) => 0;
+
     /// <summary><c>S_a(t) = share_R·budget_a(t)</c> (spec §3.1, §3.4).</summary>
     Fx6 ResearchBudget(int actorRow, long month);
 

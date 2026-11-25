@@ -36,6 +36,41 @@ public interface IInstituteInputs
     /// <paramref name="tier"/> has one entry per node row and is zeroed by the caller.
     /// </summary>
     void GoalPath(int actorRow, long month, Span<byte> tier);
+
+    // ---- slot model (SCIENCE_SLOTS.md); defaults keep the old model's inputs unchanged
+
+    /// <summary>Entry <paramref name="index"/> (0 = the active one, 1..5 the queue) of the player's list of the slot: a node number, 0 = empty (snapshot).</summary>
+    int QueueEntry(InstituteHandle slot, int index) => 0;
+
+    /// <summary>The focus the player bought for the slot: the level 0..2 and the node number it was bought for (0 = none); the month it was set, −1 = never.</summary>
+    int FocusOrder(InstituteHandle slot, out int level, out long month)
+    {
+        level = 0;
+        month = -1;
+        return 0;
+    }
+
+    /// <summary>The node number the slot worked on in the last step and the progress it added (0 = none).</summary>
+    int SlotProgress(int actorRow, int slot, out Fx6 added)
+    {
+        added = Fx6.Zero;
+        return 0;
+    }
+
+    /// <summary>Progress of the node for the actor (snapshot).</summary>
+    Fx6 Progress(int actorRow, int nodeRow) => Fx6.Zero;
+
+    /// <summary>A hazard node at its progress cap, which left its slot (O-092).</summary>
+    bool Released(int actorRow, int nodeRow) => false;
+
+    /// <summary>Own air power over the best rival's (#565); 1 when there is none to compare.</summary>
+    Fx6 AirPowerRatio(int actorRow, long month) => Fx6.One;
+
+    /// <summary>Share of the research money the slots left unused in the last step (returned to the budget).</summary>
+    Fx6 SurplusShare(int actorRow) => Fx6.Zero;
+
+    /// <summary><c>T_n</c> of the node in months.</summary>
+    Fx6 NodeMonths(int nodeRow) => Fx6.One;
 }
 
 /// <summary>Why a project cannot start now.</summary>
@@ -50,6 +85,9 @@ public enum BuildCheck
 
     /// <summary>The project of a small country has more levels than the cap.</summary>
     SmallCountryCap,
+
+    /// <summary>Slot model (#574): the upkeep of the institutes, this one included, would pass its share of the research money.</summary>
+    UpkeepCeiling,
 }
 
 /// <summary>
@@ -63,7 +101,7 @@ public enum BuildCheck
 /// runs; a built institute adds capacity and takes upkeep (<see cref="BudgetFactor"/>); the institutes of 1945 are in the base money. No losses of experience
 /// and no closing of institutes in v0.
 /// </summary>
-public sealed class InstituteSystem : ITickSystem
+public sealed partial class InstituteSystem : ITickSystem
 {
     public const int DefaultSystemId = 700;   // not 600: the intelligence system has it, and the write trace tells systems apart by this id
 
@@ -78,9 +116,11 @@ public sealed class InstituteSystem : ITickSystem
     private readonly IntColumn[][] _exp;
 
     public InstituteSystem(Table table, InstituteLayout layout, InstituteParams parameters, KnowledgeGraph graph,
-        IInstituteInputs inputs, int systemId = DefaultSystemId)
+        IInstituteInputs inputs, int systemId = DefaultSystemId, SlotParams? slots = null)
     {
         parameters.Validate();
+        slots?.Validate();
+        _slots = slots;
         if (layout.MaxSlots > MaxSlotsLimit)
             throw new ArgumentException($"At most {MaxSlotsLimit} institutes per actor, the data has {layout.MaxSlots}.", nameof(layout));
         if (table.RowCount != layout.ActorCount)
@@ -118,6 +158,8 @@ public sealed class InstituteSystem : ITickSystem
                 _exp[k][disc].Load(column);
             }
         }
+        if (slots is not null)
+            InitSlots(table);
     }
 
     public int SystemId { get; }
@@ -184,6 +226,8 @@ public sealed class InstituteSystem : ITickSystem
             return BuildCheck.TooEarly;
         if (_l.IsSmallCountry(h.Actor) && _l.TotalLevels(h) > _p.SmallCountryLevelCap)
             return BuildCheck.SmallCountryCap;
+        if (_slots is not null && UpkeepAfter(h) > _slots.UpkeepCeilingShare)
+            return BuildCheck.UpkeepCeiling;
         return BuildCheck.Ok;
     }
 
@@ -287,6 +331,11 @@ public sealed class InstituteSystem : ITickSystem
     public void Compute(in TickContext context, int chunk, int rowStart, int rowEnd)
     {
         long t = (context.Calendar ?? throw new InvalidOperationException("The institutes are monthly and need a runner calendar.")).MonthIndex(context.Tick);
+        if (_slots is not null)
+        {
+            ComputeSlots(t, rowStart, rowEnd);
+            return;
+        }
         Span<int> goal = stackalloc int[MaxSlotsLimit];
         for (int a = rowStart; a < rowEnd; a++)
         {
