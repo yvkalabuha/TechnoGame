@@ -126,11 +126,10 @@ public sealed class InstituteScriptTests
         Assert.Equal(0, e!.Refused);
         (SliceSession hist, _) = Run(new InstituteSpec("GBR", InstituteBuild.Hist, Goals: true, Fx6.One, Probe: false), 2);
         Assert.Equal(-1, hist.World.Institutes!.BuildStart(Slot(hist, "GBR", "gbr_rre")));
-        // The player took the adviser's goals: every standing slot of GBR works on a node.
+        // The player took the adviser's goals (the path rule, #559, proposes only nodes of the path, so a slot may have none): some standing slot of GBR works on a node.
         InstituteSystem inst = early.World.Institutes!;
         int gbr = early.Layout.ActorIds.IndexOf("GBR");
-        for (int k = 0; k < inst.Layout.StartingCount(gbr); k++)
-            Assert.NotEqual(0, inst.GoalNode(new InstituteHandle(gbr, k)));
+        Assert.Contains(Enumerable.Range(0, inst.Layout.StartingCount(gbr)), k => inst.GoalNode(new InstituteHandle(gbr, k)) != 0);
     }
 
     [Fact]

@@ -62,19 +62,28 @@ public class LicenceMarketTests
         private readonly TickCalendar _calendar = new(new CivilDate(1945, 9, 1));
 
         public Rig(PolicyProfile buyer, int[]? external = null, PolicyProfile seller = PolicyProfile.Adaptive, Fx6? buyerBudget = null, AllianceTable? alliances = null, Action<PolicyParams>? _ = null,
-            Func<PolicyParams, PolicyParams>? tune = null)
+            Func<PolicyParams, PolicyParams>? tune = null, bool m2 = false, int actors = 3)
         {
-            var table = new Table(3);
+            var table = new Table(actors);
             PolicyParams p = new PolicyParams
             {
-                FvBudget = Fx6.FromInt(10), LicenceMarket = true, LicenceExternalRows = [.. external ?? [2]],
-                MarketActorIds = ["AAA", "BBB", "CCC"], Alliances = alliances ?? AllianceTable.Empty, MarketStartYear = 1945, MarketStartMonth = 9,
+                FvBudget = Fx6.FromInt(10), LicenceMarket = true, LicenceExternalRows = [.. external ?? [actors - 1]],
+                MarketActorIds = actors == 3 ? ["AAA", "BBB", "CCC"] : [.. Enumerable.Range(0, actors).Select(i => $"A{i}")], Alliances = alliances ?? AllianceTable.Empty,
+                MarketStartYear = 1945, MarketStartMonth = 9,
             };
+            // The tests of the buying rules pin the rules of O-062 (k = 1.5, any generation, any circle); the M2 tests (#560) take the build's values.
+            if (!m2)
+                p = p with { AiPriceK = Fx6.FromRaw(1_500_000), AiMaxGenJump = 0, AiBuyFromFriendsOnly = false };
             p = tune?.Invoke(p) ?? p;
-            Policy = new PolicySystem(table, p, [0, 1, 2], [Fx6.FromInt(100_000), Fx6.FromInt(100_000), buyerBudget ?? Fx6.FromInt(100_000)], [Fx6.Zero, Fx6.Zero, Fx6.Zero],
-                new CounterRng(1), new NoInputs(), new IndustryMailbox(3), 99, [(int)seller, (int)seller, (int)buyer],
+            Policy = new PolicySystem(table, p, [.. Enumerable.Range(0, actors)], [.. Enumerable.Repeat(Fx6.FromInt(100_000), actors - 1), buyerBudget ?? Fx6.FromInt(100_000)], [.. Enumerable.Repeat(Fx6.Zero, actors)],
+                new CounterRng(1), new NoInputs(), new IndustryMailbox(actors), 99, [.. Enumerable.Repeat((int)seller, actors - 1), (int)buyer],
                 products: Products, designs: Designs, generations: Probe.Generations, events: new CounterRng(5), eventInputs: Events);
             Policy.Initialize();
+            if (actors != 3)
+            {
+                Events.Gen = [.. Enumerable.Repeat(2, actors - 1), 0];
+                Events.OwnProject = [.. Enumerable.Repeat(true, actors - 1), false];
+            }
             _runner = new TickRunner(table, 1, [Policy], 1, 1, _calendar);
         }
 
@@ -427,6 +436,68 @@ public class LicenceMarketTests
         rig.Month(1);
         Assert.Single(rig.Policy.Licences(2));   // with k = 1.5 the same offer is refused (see the test above)
         Assert.Equal(Ref * Fx6.FromRaw(1_600_000), -rig.Policy.LicenceFlow(2));
+    }
+
+    // ---- M2 (#560): the AI buys only from its bloc and friends, at most one generation above its own engine, at k = 1.2
+
+    private static readonly AllianceTable FriendsCA = AllianceTable.Parse("schema: 1\nblocs: []\nfriends:\n  - {a: AAA, b: CCC, from: 1945, to: 2000}\n", "t.yaml");
+
+    private static Rig M2Rig(AllianceTable alliances, Func<PolicyParams, PolicyParams>? tune = null)
+    {
+        var rig = new Rig(PolicyProfile.Mass, external: [0], alliances: alliances, tune: tune, m2: true);
+        rig.Events.OwnProject[1] = false;
+        rig.Events.Gen = [6, 2, 2];   // the buyer's engine does not advance
+        return rig;
+    }
+
+    [Fact]
+    public void M2_AiBuysOnlyFromItsBlocAndFriends()
+    {
+        var strangers = M2Rig(AllianceTable.Empty);
+        strangers.Month(1);
+        Assert.Empty(strangers.Policy.Licences(2));
+        var friends = M2Rig(FriendsCA);
+        friends.Month(1);
+        Assert.Single(friends.Policy.Licences(2));
+        // The switch is the only difference: with it off the open catalogue of a stranger sells.
+        var open = M2Rig(AllianceTable.Empty, p => p with { AiBuyFromFriendsOnly = false });
+        Assert.Equal(OfferRefusal.None, open.Policy.SetOffer(0, 3, Fx6.One, SaleCircle.All, 0));   // a player's catalogue is for friends unless he opens it
+        open.Month(1);
+        Assert.Single(open.Policy.Licences(2));
+    }
+
+    [Fact]
+    public void M2_AiBuysAtMostOneGenerationAboveItsOwnEngine()
+    {
+        var jump = M2Rig(FriendsCA);
+        jump.Month(1);
+        Assert.Equal(3, Assert.Single(jump.Policy.Licences(2)).Gen);   // the seller's engine is generation 6, the buyer's 2
+        var any = M2Rig(FriendsCA, p => p with { AiMaxGenJump = 0 });
+        any.Month(1);
+        Assert.Equal(6, Assert.Single(any.Policy.Licences(2)).Gen);
+    }
+
+    [Fact]
+    public void M2_AiPaysAtMostOnePointTwoTimesTheReference()
+    {
+        foreach ((long raw, int held) in ((long, int)[])[(1_200_000, 1), (1_300_000, 0)])
+        {
+            var rig = M2Rig(FriendsCA);
+            Assert.Equal(OfferRefusal.None, rig.Policy.SetOffer(0, 3, Fx6.FromRaw(raw), SaleCircle.All, 0));
+            rig.Month(1);
+            Assert.Equal(held, rig.Policy.Licences(2).Count);
+        }
+    }
+
+    [Fact]
+    public void WorldAverage_IsTheSameWithMoreThanSixtyFourActors()
+    {
+        // 70 AI sellers of the same price: the world price is that price (a running sum), where the fixed buffer used to refuse the world.
+        var rig = new Rig(PolicyProfile.Adaptive, actors: 70);
+        rig.Month(0);
+        (Fx6? average, int sellers) = rig.Policy.WorldPrice(2, 0);
+        Assert.Equal(69, sellers);
+        Assert.Equal(Ref, average);
     }
 
     // ---- the pure rules and the data

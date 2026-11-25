@@ -25,6 +25,18 @@ public class InstituteTests
         return [.. rows];
     }
 
+    // A slot of actor 0 the AI gave a goal (stored in inst.ai.k); fails when there is none.
+    private static int AiGoalSlot(SliceSession s)
+    {
+        InstituteSystem inst = s.World.Institutes!;
+        for (int k = 0; k < inst.Layout.StartingCount(0); k++)
+        {
+            if (s.World.Table.GetInt($"inst.ai.{k}").Current[0] != 0)
+                return k;
+        }
+        throw new InvalidOperationException("the AI gave no goal to any slot of actor 0");
+    }
+
     // A frontier node of actor 0 that no slot works on (the AI fills the free slots after the first month).
     private static int FreeNode(SliceSession s)
     {
@@ -224,21 +236,25 @@ public class InstituteTests
     }
 
     [Fact]
-    public void Goals_FromTheAi_FillEverySlotWithDistinctFrontierNodes()
+    public void Goals_FromTheAi_AreDistinctUnknownNodesOnThePath_AndSomeSlotHasOne()
     {
+        // The path rule (#559) leaves a slot without a goal when no node of the path is in the frontier, so not every slot has one.
         SliceSession s = Make(true);
         s.StepThroughMonth(0);
         s.StepThroughMonth(1);
         InstituteSystem inst = s.World.Institutes!;
+        int withGoal = 0;
         for (int a = 0; a < inst.Layout.ActorCount; a++)
         {
             var goals = new List<int>();
             for (int k = 0; k < inst.Layout.StartingCount(a); k++)
                 goals.Add(inst.GoalNode(new InstituteHandle(a, k)));
-            Assert.All(goals, g => Assert.NotEqual(0, g));
+            goals.RemoveAll(g => g == 0);
+            withGoal += goals.Count;
             Assert.Equal(goals.Count, goals.Distinct().Count());
             Assert.All(goals, g => Assert.False(s.World.Knowledge.IsKnown(a, s.World.Graph.RowOf(g))));
         }
+        Assert.True(withGoal > 0);
     }
 
     [Fact]
@@ -318,7 +334,8 @@ public class InstituteTests
     [Fact]
     public void BuiltInstitute_BudgetFactorFollowsLevelsFromExperience()
     {
-        SliceSession s = Make(true);
+        // SUN is the player's actor, so the goals of the new institute come from orders: the path rule of the AI gives a new slot a goal only now and then.
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = true, PlayerActor = SliceTestData.Data.Scenario(SliceRunConfig.DefaultScenario).ActorIndex("SUN") });
         int sun = Sun(s);
         var h = new InstituteHandle(sun, CandidateSlot(s, sun, "sun_nii88"));
         InstituteSystem inst = s.World.Institutes!;
@@ -326,12 +343,30 @@ public class InstituteTests
         long t = 0;
         while (!inst.BuiltByProject(h))
             s.StepThroughMonth(t++);
+        int cmd = 1;
+        void OrderGoal()
+        {
+            if (inst.GoalNode(h) != 0)
+                return;
+            foreach (int r in Frontier(s, sun))
+            {
+                int number = s.World.Graph.Number[r];
+                bool taken = false;
+                for (int k = 0; k < inst.Layout.SlotCount(sun); k++)
+                    taken |= inst.GoalNode(new InstituteHandle(sun, k)) == number;
+                if (!taken && s.Submit(SourceClass.Player, 0, cmd++, new SetPriorityNode(sun, h.Slot, number)).Accepted)
+                    return;
+            }
+        }
         Fx6 atOpening = inst.BudgetFactor(sun, 0);
         int Levels() => Enumerable.Range(0, inst.Layout.DisciplineNames.Length).Sum(d => inst.Level(h, d));
         Assert.Equal(3, Levels());
         // Run on until the institute gains a level by experience (in any area); the factor must then move with it.
         for (; t < 900 && Levels() == 3; t++)
+        {
+            OrderGoal();
             s.StepThroughMonth(t);
+        }
         int levels = Levels();
         Assert.True(levels > 3, "the institute did not gain a level in the run");
         Assert.Equal((Fx6.One - P.UpkeepPerLevel * Fx6.FromInt(levels)) * (Fx6.One + P.CapacityPerLevel * Fx6.FromInt(levels)), inst.BudgetFactor(sun, 0));
@@ -473,10 +508,11 @@ public class InstituteTests
         Assert.True(v.Standing);
         Assert.Equal(3, v.Levels[prop]);
         Assert.Equal(3, v.TotalLevels);
-        // The new institute is a slot: the AI gives it a goal within a month or two.
+        // The new institute is a slot like the others: a goal it has is an unknown node (the path rule may leave it without one).
         s.StepThroughMonth(months);
         s.StepThroughMonth(months + 1);
-        Assert.NotEqual(0, inst.GoalNode(h));
+        int goal = inst.GoalNode(h);
+        Assert.True(goal == 0 || !s.World.Knowledge.IsKnown(sun, s.World.Graph.RowOf(goal)));
     }
 
     [Fact]
@@ -762,14 +798,15 @@ public class InstituteTests
         SliceSession s = Make(true);
         s.StepThroughMonth(0);
         s.StepThroughMonth(1);
-        var h = new InstituteHandle(0, 0);
         InstituteSystem inst = s.World.Institutes!;
+        int slot = AiGoalSlot(s);   // the path rule leaves some slots without a goal: take one that has it
+        var h = new InstituteHandle(0, slot);
         Assert.NotEqual(0, inst.GoalNode(h));
         int order = FreeNode(s);
-        Assert.True(s.Submit(SourceClass.Player, 0, 0, new SetPriorityNode(0, 0, order)).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new SetPriorityNode(0, slot, order)).Accepted);
         s.StepThroughMonth(2);
         Assert.Equal(order, inst.GoalNode(h));
-        Assert.Equal(0, s.World.Table.GetInt("inst.ai.0").Current[0]);
+        Assert.Equal(0, s.World.Table.GetInt($"inst.ai.{slot}").Current[0]);
     }
 
     [Fact]
@@ -778,10 +815,10 @@ public class InstituteTests
         SliceSession s = Make(true);
         s.StepThroughMonth(0);
         // The goals were picked in month 0 but act from month 1: nothing was worked on yet, so nothing can be credited.
-        Assert.NotEqual(0, s.World.Table.GetInt("inst.ai.0").Current[0]);
-        Assert.Equal(0, s.World.Table.GetInt("inst.cur.0").Current[0]);
+        int slot = AiGoalSlot(s);
+        Assert.Equal(0, s.World.Table.GetInt($"inst.cur.{slot}").Current[0]);
         s.StepThroughMonth(1);
-        Assert.NotEqual(0, s.World.Table.GetInt("inst.cur.0").Current[0]);
+        Assert.NotEqual(0, s.World.Table.GetInt($"inst.cur.{slot}").Current[0]);
     }
 
     [Fact]
