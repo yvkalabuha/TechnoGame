@@ -121,20 +121,23 @@ public static partial class DetMath
     }
 
     /// <summary>
-    /// One daily step of a decaying or growing stock (ADR-0027 p. 6, O-069). Decay: <c>x − r·x</c>.
-    /// Growth (negative r): <c>x + (−r)·x</c>. Both floor the change magnitude, so the stock error
-    /// always goes toward slower change. Callers use this, never <c>x −= r.MulFloor(x)</c> directly.
-    /// Precondition: <c>stock ≥ 0</c> (a negative stock would floor away from slower change).
-    /// Error over Y steps from a constant annual δ: decay ends at or above <c>x·(1−δ)</c>; growth ends at or
-    /// below it, and the floor losses are amplified by the growth that follows, so the bound is
-    /// <c>Y·(1+|δ|)</c> raw (not Y), plus the DayRate quantization.
+    /// One daily step of a decaying or growing stock (ADR-0027 p. 6, O-069, owner #532). Decay:
+    /// <c>x − |r|·x</c>; growth (negative r): <c>x + |r|·x</c>. The change is the floor of the running
+    /// sum of exact products: the sub-raw part (Q53, in 0..2^53−1) stays in <paramref name="remainder"/>,
+    /// a caller-owned column of the same row, and is added to the next step. So floor losses never
+    /// accumulate: over Y steps from a constant annual δ the stock is within Y raw of
+    /// <c>x·(1−δ)</c> plus the DayRate quantization, on the slower-change side for decay and growth.
+    /// Callers use this, never <c>x −= r.MulFloor(x)</c> directly. Start with remainder 0.
+    /// Precondition: <c>stock ≥ 0</c>.
     /// </summary>
-    public static Fx6 ApplyDayRate(Fx6 stock, Rate rate)
+    public static Fx6 ApplyDayRate(Fx6 stock, Rate rate, ref long remainder)
     {
         Debug.Assert(stock.Raw >= 0, "ApplyDayRate needs a non-negative stock.");
-        return rate.Raw >= 0
-            ? stock - rate.MulFloor(stock)
-            : stock + Rate.FromRaw(checked(-rate.Raw)).MulFloor(stock);
+        Debug.Assert(remainder >= 0 && remainder < Rate.One, "remainder must be in 0..2^53-1.");
+        Int128 total = (Int128)stock.Raw * (rate.Raw >= 0 ? rate.Raw : -(Int128)rate.Raw) + remainder;
+        remainder = (long)(total & (Rate.One - 1));
+        long change = checked((long)(total >> Rate.FracBits));
+        return rate.Raw >= 0 ? stock - Fx6.FromRaw(change) : stock + Fx6.FromRaw(change);
     }
 
     private static Int128 FloorDiv(Int128 n, Int128 d)

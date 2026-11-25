@@ -194,7 +194,7 @@ public class DaySlicingTests
     public static IEnumerable<object[]> StockCases()
     {
         long[] deltas = [1_000, 100_000, 500_000, -20_000, -50_000];
-        // 7_480 and 18_426 are where the 5 % / 2 % growth loses the most raw (1.02·Y, found by scan).
+        // 7_480 and 18_426 were the worst cases of the old floor-per-day step (1.02·Y, found by scan).
         long[] stocks = [1_000, 7_480, 18_426, 123_456, 10_000_000_000, 999_999_999_999_999];
         foreach (long d in deltas)
             foreach (int y in Lengths)
@@ -208,18 +208,34 @@ public class DaySlicingTests
     {
         Rate r = DetMath.DayRate(Fx6.FromRaw(d), y);
         Fx6 x = Fx6.FromRaw(x0);
+        long rem = 0;
         for (int i = 0; i < y; i++)
-            x = DetMath.ApplyDayRate(x, r);
+        {
+            x = DetMath.ApplyDayRate(x, r, ref rem);
+            Assert.InRange(rem, 0, Rate.One - 1);
+        }
 
         BigInteger exact = (BigInteger)x0 * (S - d) / S;
         BigInteger error = (BigInteger)x.Raw - exact;
-        // Floor losses (< 1 raw a day) are amplified by later growth: Y·(1+|δ|); plus 1 Q53 unit of rate error per step.
-        BigInteger tolerance = (BigInteger)y * (S + BigInteger.Abs(d)) / S + 1 + (BigInteger)y * y * 2 * x0 / Rate.One;
+        // Strict ADR-0027 bound: Y raw plus 1 Q53 unit of rate error per step (the remainder carries the floor).
+        BigInteger tolerance = y + 1 + (BigInteger)y * y * 2 * x0 / Rate.One;
         Assert.True(BigInteger.Abs(error) <= tolerance, $"d={d} y={y} x0={x0} error={error}");
         if (d > 0)
             Assert.True(error >= 0, $"decay ran faster than asked: {error}");
         else
             Assert.True(error <= 0, $"growth ran faster than asked: {error}");
+    }
+
+    [Fact]
+    public void ApplyDayRate_CarriesTheRemainder_SoATinyStockStillMoves()
+    {
+        // 5 % growth on 1000 raw: 0.13 raw a day, so a floor-per-day step never moves it; the carried one does.
+        Rate r = DetMath.DayRate(Fx6.FromRaw(-50_000), 365);
+        Fx6 x = Fx6.FromRaw(1_000);
+        long rem = 0;
+        for (int i = 0; i < 365; i++)
+            x = DetMath.ApplyDayRate(x, r, ref rem);
+        Assert.InRange(x.Raw, 1_049, 1_050);
     }
 
     [Fact]
