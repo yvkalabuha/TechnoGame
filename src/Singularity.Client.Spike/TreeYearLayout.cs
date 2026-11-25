@@ -75,6 +75,8 @@ public static class TreeYearLayout
 
     /// <summary>Slots across the usable arc of a sector that the greedy placement tries.</summary>
     const int Slots = 48;
+    const int LaneYear = 1950; const float LaneStep = 0.2f;
+    static readonly int[] LaneOffsets = { 0, 1, -1, 2, -2 };
 
     /// <summary>
     /// Places the nodes: radius from the year, angle inside the sector. Nodes of a sector go in the order (year, number); each takes the first free slot of the sector arc
@@ -95,21 +97,28 @@ public static class TreeYearLayout
         {
             int i = order[k];
             if (k > 0 && s[order[k - 1]] != s[i]) sectorFrom = k;
-            float r = RadiusOf(y[i]);
-            radius[i] = r;
+            float r0 = RadiusOf(y[i]), bestR = r0;
             float a0 = SectorStart(s[i], sectors) + w * margin, span = w * (1f - 2f * margin);
             int pref = ((num[i] * 5 + 3) % Slots + Slots) % Slots, best = pref; float bestD = -1f;
-            for (int t = 0; t < Slots; t++)
+            // The crowded roots and the 1940s may step onto a neighbouring sub-ring (0.2 unit apart) when their own ring has no free place; other years stay on their ring.
+            int lanes = y[i] <= LaneYear ? LaneOffsets.Length : 1;
+            bool found = false;
+            for (int ln = 0; ln < lanes && !found; ln++)
             {
-                int slot = (pref + t) % Slots;
-                float ang = a0 + span * (slot + 0.5f) / Slots, rad = ang * MathF.PI / 180f;
-                float x = r * MathF.Cos(rad), yy = r * MathF.Sin(rad), nearest = float.MaxValue;
-                for (int j = sectorFrom; j < k; j++) nearest = Math.Min(nearest, MathF.Sqrt((x - px[order[j]]) * (x - px[order[j]]) + (yy - py[order[j]]) * (yy - py[order[j]])));
-                if (nearest >= minGap) { best = slot; bestD = float.MaxValue; break; }
-                if (nearest > bestD) { bestD = nearest; best = slot; }
+                float r = Math.Max(r0 + LaneOffsets[ln] * LaneStep, Inner - RootsBand);
+                for (int t = 0; t < Slots; t++)
+                {
+                    int slot = (pref + t) % Slots;
+                    float ang = a0 + span * (slot + 0.5f) / Slots, rad = ang * MathF.PI / 180f;
+                    float x = r * MathF.Cos(rad), yy = r * MathF.Sin(rad), nearest = float.MaxValue;
+                    for (int j = sectorFrom; j < k; j++) nearest = Math.Min(nearest, MathF.Sqrt((x - px[order[j]]) * (x - px[order[j]]) + (yy - py[order[j]]) * (yy - py[order[j]])));
+                    if (nearest >= minGap) { best = slot; bestR = r; found = true; break; }
+                    if (nearest > bestD) { bestD = nearest; best = slot; bestR = r; }
+                }
             }
+            radius[i] = bestR;
             float angle0 = a0 + span * (best + 0.5f) / Slots, rr = angle0 * MathF.PI / 180f;
-            angle[i] = angle0; px[i] = r * MathF.Cos(rr); py[i] = r * MathF.Sin(rr);
+            angle[i] = angle0; px[i] = bestR * MathF.Cos(rr); py[i] = bestR * MathF.Sin(rr);
         }
     }
 }

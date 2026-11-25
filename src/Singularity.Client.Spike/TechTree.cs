@@ -25,7 +25,7 @@ public sealed partial class TechTree : Control
     const float SubpanelButtonDu = 32;   // A10: a button is at least 32 du high
     const float CloseW = 190, CloseH = 40;   // #473: the close button is 40 du high
     const float ZoomRate = 14f;
-    const float WedgeMargin = 0.08f;
+    const float WedgeMargin = 0.1f;
 
     readonly SimHost _host;
     readonly VBoxContainer _inset = new();
@@ -48,7 +48,7 @@ public sealed partial class TechTree : Control
     string[] _yearText; float[] _yearW;              // «1953», «≈1953» per node (step 5), built once per model
     Rect2 _nowRect; string _hdrText, _nowText; int _hdrKn = -1, _hdrTot = -1, _nowYear = -1;
     readonly Button _closeBtn, _zoomIn, _zoomOut, _fit; readonly Label _stepLbl; readonly HBoxContainer _zoomBar = new();
-    int _stepShown = -1;
+    int _stepShown = -1, _hover = -1;
     readonly List<(Rect2 rect, int row)> _rowRects = new();
     List<int>[] _dep;                                // dependants: row -> rows that list it in requires
     // Zoom and pan of the planisphere (PlanisphereMath). The drawing is clipped to the view control; _cv is the item being painted.
@@ -74,6 +74,8 @@ public sealed partial class TechTree : Control
         top.AddChild(new Control { CustomMinimumSize = new Vector2(10, 0) });
         _viewSwitch = new Segment(new[] { "tree.a", "tree.b" }, 0, minHeight: SubpanelButtonDu, focusable: true);
         _viewSwitch.Changed += i => { _mode = i; Redraw(); };
+        foreach (var cell in _viewSwitch.GetChildren())   // A7: the focus of a tab is a 3 px ultramarine ring 3 du off the frame, not the ink frame of the selected tab
+            if (cell is Button tb) tb.AddThemeStyleboxOverride("focus", new StyleBoxFlat { DrawCenter = false, BorderColor = Ui.Command, AntiAliasing = true, ExpandMarginLeft = 6, ExpandMarginRight = 6, ExpandMarginTop = 6, ExpandMarginBottom = 6 }.With2(s => { s.SetBorderWidthAll(3); s.SetCornerRadiusAll(6); }));
         top.AddChild(_viewSwitch);
         // «Close» (#473): 40 du high in the top-right corner of the sheet, always in view; a heavy 3 du frame in every state keeps it the most visible button,
         // focus keeps the two-tone ring of CaptionButton (A6, A7). Esc does the same.
@@ -126,7 +128,7 @@ public sealed partial class TechTree : Control
         TreeExiting += () => Loc.Changed -= Invalidate;
     }
 
-    void Invalidate() { _kbTipFor = -1; _stepShown = -1; _nowYear = -1; _noData = null; _hdrKn = -1; _edgeKey = -2; _zoomOut.TooltipText = Loc.T("tree.zoom.out"); _zoomIn.TooltipText = Loc.T("tree.zoom.in"); CloseMenu(); _insetDirty = true; _lgDirty = true; _legendBtn.Text = "L  " + Loc.T("legend.btn"); Redraw(); }
+    void Invalidate() { _kbTipFor = -1; _stepShown = -1; _nowYear = -1; _hdrKn = -1; _edgeKey = -2; _zoomOut.TooltipText = Loc.T("tree.zoom.out"); _zoomIn.TooltipText = Loc.T("tree.zoom.in"); CloseMenu(); _insetDirty = true; _lgDirty = true; _legendBtn.Text = "L  " + Loc.T("legend.btn"); Redraw(); }
     void Redraw() { QueueRedraw(); _view.QueueRedraw(); }
 
     public void ResetView() { _zoomTarget = 1f; _anchor = BaseCentre; _pan = Vector2.Zero; Redraw(); }
@@ -482,9 +484,8 @@ public sealed partial class TechTree : Control
 
     void DrawPlanisphere()
     {
-        _countRects.Clear(); _labelRects.Clear();
+        _countRects.Clear(); _labelRects.Clear(); _plates.Clear();
         CountCells();
-        if (_noData == null) { _noData = Loc.T("tree.effects.none"); _noDataW = Fonts.Text.GetStringSize(_noData, HorizontalAlignment.Left, -1, 14).X + 2; }
         var c = Centre; float u = Unit;
         DrawSectors(c, u);
         DrawDecades(c, u);
@@ -592,7 +593,12 @@ public sealed partial class TechTree : Control
             int ry = TreeYearLayout.RingYears[k]; float r = TreeYearLayout.RadiusOf(ry) * u;
             _cv.DrawArc(c, r, 0, Mathf.Tau, TreeYearLayout.ArcPoints(r, 360f), GridColor, TreeYearLayout.IsLandmark(ry) ? 2f : 1f, true);
             YearPlate(c.X, c.Y - r, RingText[k]);
-            if (ry is 1950 or 1980 or 2010) { YearPlate(c.X + r, c.Y, RingText[k]); YearPlate(c.X - r, c.Y, RingText[k]); }   // also at 3 and 9 o'clock (art director)
+            if (ry is 1950 or 1980 or 2010)   // also on two other bisectors of the gaps between sectors, where no node ever stands (art director)
+                for (int g = 1; g <= 2; g++)
+                {
+                    float ga = Mathf.DegToRad(TreeYearLayout.SectorStart(g * _nSec / 3 == 0 ? 1 : g * _nSec / 3, _nSec));
+                    YearPlate(c.X + Mathf.Cos(ga) * r, c.Y + Mathf.Sin(ga) * r, RingText[k]);
+                }
         }
         // the centre: the roots band lies around it, 1900-1945
         if (u * (TreeYearLayout.Inner - TreeYearLayout.RootsBand) > 40f)
@@ -605,11 +611,13 @@ public sealed partial class TechTree : Control
     }
 
     // A year on a paper plate centred at a point of a ring (drawn before the nodes, so a node always stays above it).
+    readonly List<Rect2> _plates = new();
     void YearPlate(float x, float y, string text)
     {
         if (!Area.Grow(20).HasPoint(new Vector2(x, y))) return;
         var sz = Fonts.Mono.GetStringSize(text, HorizontalAlignment.Left, -1, 14);
         var pl = new Rect2(x - sz.X * 0.5f - 3, y - sz.Y * 0.5f - 1, sz.X + 6, sz.Y + 2);
+        _plates.Add(pl);
         _cv.DrawRect(pl, new Color(Ui.Sheet, 0.92f));
         Text(new Vector2(pl.Position.X + 3, pl.Position.Y + 1 + sz.Y * 0.8f), text, 14, Ui.Ink2, FontKind.Mono);
     }
@@ -640,11 +648,9 @@ public sealed partial class TechTree : Control
             }
     }
 
-    // At step 5 a node shows its year to the right of the mark («≈» when the year is estimated) and, under it, its effect chips: until TASK-0157 gives the core data the line says there is none (C3).
-    // Node names go above the mark and keep off both (DrawLabels reads these rectangles).
-    string _noData; float _noDataW;
+    // At step 5 a node shows its year to the right of the mark («≈» when the year is estimated) and, under it, its effect chips when the core has them (TASK-0157).
+    // «No data» is said in the node panel and the hover tip, not on every node of the map. Node names go above the mark and keep off the year (DrawLabels reads the rectangle).
     Rect2 YearRect(int i) { var p = PosOf(i); return new Rect2(p.X + NR + 4, p.Y - 9, _yearW[i] + 2, 18); }
-    Rect2 NoDataRect(int i) { var p = PosOf(i); return new Rect2(p.X - _noDataW * 0.5f, p.Y + NR + 3, _noDataW, 18); }
     void DrawYearAndChips(int i)
     {
         var p = PosOf(i);
@@ -654,12 +660,6 @@ public sealed partial class TechTree : Control
         Text(new Vector2(yr.Position.X, p.Y + 5), _yearText[i], 14, Ui.Ink2, FontKind.Mono);
         var chips = EffectChips(i);
         float y = p.Y + NR + 16;
-        if (chips.Count == 0)
-        {
-            var nd = NoDataRect(i);
-            _cv.DrawStringOutline(Fonts.Text, new Vector2(nd.Position.X, y), _noData, HorizontalAlignment.Left, -1, 14, 5, Ui.Sheet);
-            Text(new Vector2(nd.Position.X, y), _noData, 14, Ui.Ink2);
-        }
         for (int k = 0; k < chips.Count && k < 3; k++) Text(new Vector2(p.X - 40, y + 18 * k), chips[k], 14, Ui.Ink, FontKind.Mono);
     }
 
@@ -707,7 +707,7 @@ public sealed partial class TechTree : Control
         for (int i = 0; i < _rad.Length; i++)
         {
             if (NodeBox(i).Intersects(rc)) return true;
-            if (Step >= ZoomSteps.Effects && (YearRect(i).Intersects(rc) || NoDataRect(i).Intersects(rc))) return true;
+            if (Step >= ZoomSteps.Effects && YearRect(i).Intersects(rc)) return true;
         }
         return false;
     }
@@ -865,7 +865,8 @@ public sealed partial class TechTree : Control
         }
         occupied.AddRange(_countRects);   // the count tags of the cells are drawn first; labels keep off them
         if (_nowRect.Size.X > 0f) occupied.Add(_nowRect.Grow(2));
-        if (Step >= ZoomSteps.Effects) for (int i = 0; i < nodes.Count; i++) if (Area.Grow(40).HasPoint(PosOf(i))) { occupied.Add(YearRect(i).Grow(1)); occupied.Add(NoDataRect(i).Grow(1)); }
+        foreach (var pl in _plates) occupied.Add(pl.Grow(2));   // decade years: names keep off them
+        if (Step >= ZoomSteps.Effects) for (int i = 0; i < nodes.Count; i++) if (Area.Grow(40).HasPoint(PosOf(i))) { occupied.Add(YearRect(i).Grow(1)); }
         // The route is an obstacle too, so that no label sits on it.
         for (int k = 0; k + 1 < _path.Count; k++) { var ch = Channel(_path[k], _path[k + 1]); for (int j = 0; j + 1 < ch.Length; j++) AddSegment(occupied, ch[j], ch[j + 1], 3f); }
         if (_labelText == null || _labelText.Length != nodes.Count) _labelText = new string[nodes.Count]; else Array.Clear(_labelText);
@@ -875,7 +876,9 @@ public sealed partial class TechTree : Control
         Add(_selected); Add(_goal); Add(_root);
         foreach (int i in byNum) if (_route[i] && _state[i] != St.Unavailable) Add(i);
         foreach (int i in byNum) if (_state[i] == St.Frontier) Add(i);
-        if (Step >= ZoomSteps.Names) foreach (int i in byNum) Add(i);
+        Add(_hover);
+        foreach (int i in byNum) if (_state[i] == St.Frontier) Add(i);   // priority: selected > goal > openable > known
+        foreach (int i in byNum) if (_state[i] == St.Known || Step >= ZoomSteps.Icons) Add(i);
         var area = Area;
         var hard = _lbHard; hard.Clear();
         for (int w = 0; w < _nSec; w++) { hard.Add(WedgeLabel(w).rect.Grow(2)); hard.Add(_sumRects[w].Grow(6)); }
@@ -896,6 +899,11 @@ public sealed partial class TechTree : Control
             bool Try(Rect2 rc, bool ignoreOthers = false, bool leaderCheck = true)
             {
                 var pad = rc.Grow(2);
+                if (!area.Encloses(pad))   // pushed inside the window edge rather than dropped
+                {
+                    float nx = Math.Clamp(rc.Position.X, area.Position.X + 4, Math.Max(area.Position.X + 4, area.End.X - rc.Size.X - 4)), ny = Math.Clamp(rc.Position.Y, area.Position.Y + 4, Math.Max(area.Position.Y + 4, area.End.Y - rc.Size.Y - 4));
+                    rc = new Rect2(nx, ny, rc.Size); pad = rc.Grow(2);
+                }
                 if (!area.Encloses(pad) || (!ignoreOthers && occupied.Any(o => o.Intersects(pad)))) return false;
                 if (ignoreOthers && hard.Any(h => h.Intersects(pad))) return false;   // a forced plate may sit over nodes, never over a wedge name, a total or a count
                 // The leader of a named node must not run across a wedge name, a wedge total or a count tag (C5).
@@ -936,7 +944,7 @@ public sealed partial class TechTree : Control
         foreach (int i in order)
         {
             if (NamedNode(i) && placed.ContainsKey(i)) continue;
-            if (!(_route[i] || i == _selected || i == _goal || i == _root || Step >= ZoomSteps.Names || (CurLod == Lod.Nodes && _state[i] == St.Frontier))) continue;   // the «nodes» level names the frontier
+            if (!(_route[i] || i == _selected || i == _goal || i == _root || i == _hover || (Step >= ZoomSteps.Names && (_state[i] != St.Unavailable || Step >= ZoomSteps.Icons)) || (CurLod == Lod.Nodes && _state[i] == St.Frontier))) continue;   // the «nodes» level names the frontier
             Place(i, Names.Node(nodes.Id[i]), FontKind.Text, NamedNode(i));
         }
         // Drawn from the lowest priority to the highest, so that a named node's plate is always on top.
@@ -1076,6 +1084,7 @@ public sealed partial class TechTree : Control
             float y = Y(1 + k); var mk = new Vector2(xl + 14, y - 5);
             var tp = LegendData.Types[k].Code; float rr = GlyphGeometry.LegendRadius(tp);
             Shape((NodeType)k, mk, rr, Colors.Transparent, Ui.Ink2, false, 2f);
+            Glyph(-1, (NodeType)k, mk, rr, Ui.Ink2);   // the icon the map shows inside this shape from step 4 (the hourglass of a process included)
             Text(new Vector2(xl + 36, y), _lgText[13 + k], 14, Ui.Ink2);
         }
         Head(xl, Y(7, 8), 2);
@@ -1382,7 +1391,12 @@ public sealed partial class TechTree : Control
     // Wheel zooms about the cursor, a drag pans, a click without a drag selects a node.
     public override void _GuiInput(InputEvent e)
     {
-        if (e is InputEventMouseMotion m0) _mouse = m0.Position;
+        if (e is InputEventMouseMotion m0)
+        {
+            _mouse = m0.Position;
+            int hv = _mode == 0 && Area.HasPoint(m0.Position) ? HitAt(m0.Position, 12f) : -1;
+            if (hv != _hover) { _hover = hv; Redraw(); }
+        }
         if (e is InputEventMouseButton { Pressed: true } && _kbActive) { _kbActive = false; Redraw(); }   // a click ends the keyboard walk: no ring, no key tip
         if (e is InputEventKey { Pressed: true } ke && _mode == 0 && KeyNav(ke.Keycode, ke.ShiftPressed, ke.CtrlPressed || ke.AltPressed || ke.MetaPressed)) { AcceptEvent(); return; }
         if (_mode == 0 && e is InputEventMouseButton { Pressed: true } w && Area.HasPoint(w.Position) && w.ButtonIndex is MouseButton.WheelUp or MouseButton.WheelDown)
@@ -1486,7 +1500,7 @@ public sealed partial class TechTree : Control
         int hit = HitAt(atPosition, 12f);
         if (hit < 0) return "";
         var nodes = _host.Data.Nodes;
-        return Names.Node(nodes.Id[hit]);   // the localized name, never the raw id or a number
+        return Names.Node(nodes.Id[hit]) + "\n" + Loc.T("tree.effects.none");   // the localized name, never the raw id or a number
     }
 
     // ---------------- node menu (#473) ----------------
@@ -1627,7 +1641,7 @@ public sealed partial class TechTree : Control
     public void ShotCloseMenu() => CloseMenu();
     /// <summary>Shot run: the keyboard focus on the zoom-in button, and on the first view tab (frames that prove a visible focus on controls other than nodes, A7).</summary>
     public void ShotFocusZoomIn() => _zoomIn.GrabFocus();
-    public bool ShotFocusTab() { if (_viewSwitch.GetChildCount() == 0 || _viewSwitch.GetChild(0) is not Control c || c.FocusMode == FocusModeEnum.None) return false; c.GrabFocus(); return true; }
+    public bool ShotFocusTab(int k = 0) { if (_viewSwitch.GetChildCount() <= k || _viewSwitch.GetChild(k) is not Control c || c.FocusMode == FocusModeEnum.None) return false; c.GrabFocus(); return true; }
     /// <summary>Shot run (#473): the close button is 40 du high and fully inside the sheet, clear of the goal panel; the zoom bar sits inside the map; null when fine.</summary>
     public string ShotChromeCheck()
     {
@@ -1837,6 +1851,7 @@ public sealed partial class TechTree : Control
                 case TreeClarity.ParamLine.KnowledgeStep: pbody.Add(Ui.Wrap(Loc.T("ui.tree.effects.knowledge"), 14, Ui.Ink2)); break;
                 default: pbody.Add(Ui.Wrap(Loc.T("card.param.cap", Loc.N(nodes.ReqPrecision[i].ToDouble()), Loc.N(nodes.ReqPurity[i].ToDouble()), Loc.N(nodes.ReqQualityControl[i].ToDouble()), nodes.Tier[i]), 14, Ui.Ink2)); break;
             }
+        pbody.Add(Ui.Wrap(Loc.T("tree.effects.none"), 14, Ui.Ink2));   // numeric effects: TASK-0157; said here once, not on every node of the map
         _inset.AddChild(Block(CardIcon.Kind.Raises, "card.raises", pbody.ToArray()));
 
         // 4. unlocks: the rows that list this node in requires

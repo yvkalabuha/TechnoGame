@@ -1104,8 +1104,8 @@ public sealed partial class Main : Node3D
                     SaveShot($"tree_year_focus{sfx}.png", null, scale == 100);
                     _tree.ShotFocusZoomIn();
                 });
-                Q(0.4, () => { SaveShot($"tree_year_focus_plus{sfx}.png", null, scale == 100); bool ok = _tree.ShotFocusTab(); _shotLog += $"tree focus on a tab {sfx}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree view tab is not focusable"); });
-                Q(0.4, () => { SaveShot($"tree_year_focus_tab{sfx}.png", null, scale == 100); _tree.Select(-1); _tree.ResetView(); _tree.Visible = false; });
+                Q(0.4, () => { SaveShot($"tree_year_focus_plus{sfx}.png", null, scale == 100); bool ok = _tree.ShotFocusTab(1); _shotLog += $"tree focus on a tab {sfx}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree view tab is not focusable"); });
+                Q(0.4, () => { SaveShot($"tree_year_focus_tab_b{sfx}.png", null, scale == 100); _tree.Select(-1); _tree.ResetView(); _tree.Visible = false; });
             }
             // The rail in its states: all normal, then an alarm on Finance and a warning "9+" on Production, narrow and wide (spec task-0117-rail-and-legend §4).
             Q(0.5, () => { SaveShot($"rail_narrow_normal{sfx}.png"); RunT6($"rail narrow normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });

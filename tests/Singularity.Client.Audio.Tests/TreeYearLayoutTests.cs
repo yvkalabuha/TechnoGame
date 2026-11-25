@@ -99,6 +99,31 @@ public class TreeYearLayoutTests
     }
 
     [Fact]
+    public void ACrowdedRootsYearSpreadsOverSubRingsKeepingTheGap()
+    {
+        int n = 14; var year = Enumerable.Repeat(1942, n).ToArray(); var sec = new int[n]; var num = Enumerable.Range(1, n).ToArray();
+        var (r, a) = Place(year, sec, num, 5, 0.1f, 0.3f);
+        float r0 = TreeYearLayout.RadiusOf(1942);
+        for (int i = 0; i < n; i++)
+        {
+            Assert.InRange(r[i], r0 - 0.41f, r0 + 0.41f);   // at most two sub-rings either side
+            for (int j = i + 1; j < n; j++)
+            {
+                double xi = r[i] * Math.Cos(a[i] * Math.PI / 180), yi = r[i] * Math.Sin(a[i] * Math.PI / 180), xj = r[j] * Math.Cos(a[j] * Math.PI / 180), yj = r[j] * Math.Sin(a[j] * Math.PI / 180);
+                Assert.True(Math.Sqrt((xi - xj) * (xi - xj) + (yi - yj) * (yi - yj)) >= 0.3 - 1e-4, $"nodes {i} and {j} touch");
+            }
+        }
+    }
+
+    [Fact]
+    public void YearsAfter1950NeverLeaveTheirRing()
+    {
+        int n = 30; var year = Enumerable.Repeat(1960, n).ToArray(); var sec = new int[n]; var num = Enumerable.Range(1, n).ToArray();
+        var (r, _) = Place(year, sec, num, 5);
+        Assert.All(r, x => Assert.Equal(TreeYearLayout.RadiusOf(1960), x, 4));
+    }
+
+    [Fact]
     public void PlaceIsDeterministicAndIgnoresTheInputOrder()
     {
         var year = new[] { 1950, 1950, 1951, 1960 }; var sec = new[] { 1, 1, 1, 1 }; var num = new[] { 9, 3, 5, 1 };
