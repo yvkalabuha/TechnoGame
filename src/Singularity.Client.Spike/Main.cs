@@ -819,7 +819,7 @@ public sealed partial class Main : Node3D
         _overlay.MapLeft = left; _overlay.MapTop = top;
         _overlay.LegendLeftBusy = _area != AreaId.Map;
         _overlay.LegendRightBusy = _actorPanel.Visible || _journal.Visible;
-        _overlay.LegendVisible = !_tree.Visible && _titleHidden.Count == 0;
+        _overlay.LegendVisible = !LeverText.LegendHidden(_tree.Visible, _titleHidden.Count != 0, _levers != null && _levers.Visible);
         _helpBtn.OffsetLeft = left + 8; _helpBtn.OffsetRight = left + 44; _help.OffsetLeft = left + 8;
         // Badges: the active signals of an area, with the worst severity; locked areas never get one.
         var count = new int[AreaData.All.Length]; var sev = new int[AreaData.All.Length];
@@ -965,6 +965,16 @@ public sealed partial class Main : Node3D
 
     int _capRow;
     // One lever frame: the live-state assertion first (a frame of an empty window must fail the run), then the colour and grey files.
+    // A7: a frame with the keyboard focus on a control of the open lever window (the ring must be visible on the frame); a control that is absent fails the run, never a silent skip.
+    void FocusOn(string what)
+    {
+        string got = _levers.ShotFocus(what);
+        _shotLog += $"lever_focus_{what}: focus on {(got == "" ? "NOTHING" : got)}\n";
+        if (got == "") InstFail($"lever_focus_{what}: no focusable control in this state");
+    }
+
+    void FocusSave(string what, string sfx) => SaveShot($"lever_focus_{what}{sfx}.png", null, true);
+
     void LeverFrame(string name, bool live)
     {
         string why = _levers.LiveCheck();
@@ -1030,15 +1040,22 @@ public sealed partial class Main : Node3D
             if (scale == 100 && lang == "ru")
             {
                 Q(0.4, () => { _levers.ShotOpen(LeverWindow.TabBudget); });
-                Q(0.8, () => { LeverFrame("lever_budget" + sfx, _levers.BudgetHasData); _levers.ShotEdit(1, 5); });
+                Q(0.8, () => { LeverFrame("lever_budget" + sfx, _levers.BudgetHasData); FocusOn("slider"); });
+                Q(0.3, () => { FocusSave("slider", sfx); FocusOn("plus"); });
+                Q(0.3, () => { FocusSave("plus", sfx); FocusOn("tab"); });
+                Q(0.3, () => { FocusSave("tab", sfx); _levers.ShotEdit(1, 5); });
                 Q(0.6, () => { LeverFrame("lever_budget_stop" + sfx, _levers.BudgetHasData); _levers.ShotReset(); _levers.ShotEdit(2, 100); });
                 Q(0.6, () => { LeverFrame("lever_budget_limit" + sfx, _levers.BudgetHasData); _levers.ShotReset(); _levers.ShotOpen(LeverWindow.TabInstitutes); });
-                Q(0.8, () => { LeverFrame("lever_inst" + sfx, _levers.LiveCheck() == null); _levers.ShotPick(); });
+                Q(0.8, () => { LeverFrame("lever_inst" + sfx, _levers.LiveCheck() == null); FocusOn("pick"); });
+                Q(0.3, () => { FocusSave("pick", sfx); _levers.ShotPick(); });
                 Q(0.6, () => { LeverFrame("lever_inst_pick" + sfx, _levers.LiveCheck() == null); if (!_levers.ShotCandidate()) InstFail("lever_inst_build: no institute can be built in this state"); });
                 Q(0.8, () => { LeverFrame("lever_inst_build" + sfx, _levers.LiveCheck() == null); _levers.ShotOpen(LeverWindow.TabLines); });
                 Q(0.8, () => { LeverFrame("lever_lines" + sfx, _levers.LiveCheck() == null); bool real = _levers.ShotProposal(); _shotLog += $"lever_lines_proposal: the advice is {(real ? "real (live state)" : "a FIXTURE: the adviser has no advice in this state")}\n"; });
-                Q(0.6, () => { LeverFrame("lever_lines_proposal" + sfx, _levers.LiveCheck() == null); _levers.ShotClear(); _levers.ShotOpen(LeverWindow.TabMarket); });
-                Q(0.8, () => { LeverFrame("lever_market" + sfx, _levers.LiveCheck() == null); bool real = _levers.ShotBuy(); _shotLog += $"lever_market_buy: the offer is {(real ? "real (live state)" : "a FIXTURE: the catalogue is empty in this state")}\n"; });
+                Q(0.6, () => { LeverFrame("lever_lines_proposal" + sfx, _levers.LiveCheck() == null); FocusOn("accept"); });
+                Q(0.3, () => { FocusSave("accept", sfx); _levers.ShotClear(); bool real = _levers.ShotConfirmLine(); _shotLog += $"lever_lines_confirm: the series line is {(real ? "real (live state)" : "a FIXTURE line: the player has no series line in this state")}\n"; });
+                Q(0.6, () => { LeverFrame("lever_lines_confirm" + sfx, _levers.LiveCheck() == null); _levers.ShotClear(); _levers.ShotOpen(LeverWindow.TabMarket); });
+                Q(0.8, () => { LeverFrame("lever_market" + sfx, _levers.LiveCheck() == null); FocusOn("buy"); });
+                Q(0.3, () => { FocusSave("buy", sfx); bool real = _levers.ShotBuy(); _shotLog += $"lever_market_buy: the offer is {(real ? "real (live state)" : "a FIXTURE: the catalogue is empty in this state")}\n"; });
                 Q(0.6, () => { LeverFrame("lever_market_buy" + sfx, _levers.LiveCheck() == null); _levers.ShotClear(); _levers.Close(); OpenArea(AreaId.Production); });
                 Q(0.8, () => { bool real = _areaPanel.ShotSeriesConfirm(); _shotLog += $"panel_production_close_confirm: series line is {(real ? "real (live state)" : "a FIXTURE line: the player has no series line in this state")}\n"; });
                 Q(0.6, () => { SaveShot($"panel_production_close_confirm{sfx}.png", null, true); _areaPanel.ShotClearConfirm(); CloseArea(); });

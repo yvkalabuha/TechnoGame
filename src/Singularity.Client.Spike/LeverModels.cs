@@ -59,6 +59,20 @@ public static class BudgetWindowModel
         return (int)Math.Clamp((Whole - others) / Pct1, 0, 100);
     }
 
+    /// <summary>The one line «no more: 100 % distributed» (shown once under the items, not under each slider): some item stands at its limit and the reserve holds nothing.</summary>
+    public static bool ShowLimitNote(BudgetModel m) => m.HasData && m.ReservePct == 0 && m.Rows.Any(r => r.AtLimit);
+
+    /// <summary>A «+» at the limit and a «−» at zero are dimmed like every inactive button (and leave the Tab order); the slider keeps the keyboard.</summary>
+    public static bool PlusEnabled(BudgetRow r, bool editable) => editable && !r.AtLimit;
+    public static bool MinusEnabled(BudgetRow r, bool editable) => editable && r.Pct > 0;
+
+    /// <summary>«п. п.» is explained once, when a change is on screen.</summary>
+    public static bool ShowPpNote(BudgetModel m) => m.HasData && m.Rows.Any(r => r.DeltaPp != 0);
+
+    /// <summary>Footer when nothing can be applied: «Изменений нет» alone for «nothing changed» (the reason would only repeat it), the reason after it for any other cause.</summary>
+    public static string FooterNone(string noChangeWord, string reasonKey, string reasonWord) =>
+        reasonKey == "" || reasonKey == "why.budget.nochange" ? noChangeWord : LeverText.Join(noChangeWord, reasonWord);
+
     /// <param name="inputs">Inputs of the actor in the last monthly step; null before the first step (no data).</param>
     /// <param name="edit">The percents being edited (science, mastery, procurement); null = the shares in force.</param>
     public static BudgetModel Build(ActorInputsView inputs, int[] edit, bool foreign, MoneyFormat.Scale scale, Func<double, string> fmt)

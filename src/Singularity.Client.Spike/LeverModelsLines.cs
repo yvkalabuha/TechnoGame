@@ -22,6 +22,25 @@ public sealed record LinesModel(ImmutableArray<LineRow> Lines, ImmutableArray<Pr
 
 public static class LinesWindowModel
 {
+    /// <summary>Column headers of the line table (locale keys): what the machine is called, its stage, cost, readiness, fleet, output and what limits it.</summary>
+    public static readonly string[] ColumnKeys = { "lines.col.project", "lines.col.stage", "lines.col.cost", "lines.col.ready", "lines.col.fleet", "lines.col.rate", "lines.col.bind" };
+
+    /// <summary>The cells of a line in the order of <see cref="ColumnKeys"/>; a column that does not apply to the stage (output and limit before a series) is «—».</summary>
+    public static string[] Cells(LineRow l, System.Func<string, object[], string> t, System.Func<double, int, string> n)
+    {
+        bool series = l.StageNo == (int)DesignStage.Series;
+        return new[]
+        {
+            t("lines.cell.project", new object[] { l.Design + 1, l.Gen }),
+            t("stage." + l.StageNo, System.Array.Empty<object>()),
+            l.UnitCost,
+            l.ReadinessPct + " %",
+            t("lines.cell.fleet", new object[] { n(l.InService, 0) }),
+            series ? t("lines.cell.rate", new object[] { n(l.Rate, 1) }) : "—",
+            series ? t(l.BindKey, System.Array.Empty<object>()) : "—",
+        };
+    }
+
     /// <summary>The lines of the actor as the window shows them; a project without a stage (an empty slot) is not a row.</summary>
     public static LinesModel Build(ImmutableArray<DesignView> designs, ImmutableArray<ProposalView> proposals, int maxLines,
         MoneyFormat.Scale scale, Func<double, string> fmt, Func<int, string> sellerName)
@@ -52,7 +71,7 @@ public static class LinesWindowModel
 }
 
 public sealed record OfferRow(int Seller, string SellerName, int Gen, string Price, string Reference, int PremiumPct, string WorldPrice, bool FewOffers, SaleCircle Circle,
-    string RefusalKey, bool CanBuy, string ReserveAfter);
+    string RefusalKey, bool CanBuy, string ReserveAfter, double ReserveAfterMillion, bool ReserveSame);
 public sealed record OwnRow(int Gen, string Reference, double M, string Price, SaleCircle Circle);
 public sealed record HeldRow(int Seller, string SellerName, int Gen, int StartMonth);
 
@@ -68,6 +87,20 @@ public static class MarketWindowModel
     /// <summary>Locale key of why a deal is refused now (the reason is the core's own BadLicence); empty = the deal goes.</summary>
     public static string RefusalKey(BadLicence r) => r == BadLicence.None ? "" : "licence.bad." + r;
 
+    /// <summary>One rule for the button and for the reason under it: a deal is open when the core's own check on the live view says so and the market is open to the power.</summary>
+    public static bool CanBuy(OfferRow o, bool external) => o.CanBuy && external;
+
+    /// <summary>The «Причина» line: only while the Buy button is inactive (never under an active button), always the core's own reason from the view.</summary>
+    public static string ReasonKey(OfferRow o, bool external) =>
+        CanBuy(o, external) ? "" : o.RefusalKey != "" ? o.RefusalKey : "mkt.notyours.short";
+
+    /// <summary>The offer the card opens on: the first one that can be bought, else the first; -1 without offers.</summary>
+    public static int DefaultOffer(ImmutableArray<OfferRow> offers, bool external)
+    {
+        for (int i = 0; i < offers.Length; i++) if (CanBuy(offers[i], external)) return i;
+        return offers.IsEmpty ? -1 : 0;
+    }
+
     public static string OfferRefusalKey(OfferRefusal r) => r == OfferRefusal.None ? "" : "licence.offer." + r;
 
     public static MarketModel Build(LicenceMarketView m, ReserveView? reserve, MoneyFormat.Scale scale, Func<double, string> fmt, Func<int, string> sellerName)
@@ -80,9 +113,11 @@ public static class MarketWindowModel
         {
             var wp = m.WorldPrices.FirstOrDefault(w => w.Gen == o.Gen);
             bool few = wp.Average is null;   // fewer than two sellers: only the reference price is shown (#478)
-            string after = reserve is null ? "" : fmt(MoneyFormat.Million1990(balance - o.Price.ToDouble(), scale));
+            double afterM = MoneyFormat.Million1990(balance - o.Price.ToDouble(), scale);
+            string after = reserve is null ? "" : fmt(afterM);
+            bool same = reserve is not null && after == fmt(MoneyFormat.Million1990(balance, scale));   // the price vanishes in the rounding of the balance
             offers.Add(new OfferRow(o.Seller, sellerName(o.Seller), o.Gen, Money(o.Price), Money(o.Reference), (int)Math.Round((o.M.ToDouble() - 1) * 100),
-                few ? "" : Money(wp.Average.Value), few, o.Circle, RefusalKey(o.Refusal), o.Refusal == BadLicence.None, after));
+                few ? "" : Money(wp.Average.Value), few, o.Circle, RefusalKey(o.Refusal), o.Refusal == BadLicence.None, after, afterM, same));
         }
         var own = m.Own.Select(o => new OwnRow(o.Gen, Money(o.Reference), o.M.ToDouble(), Money(o.Price), o.Circle)).ToImmutableArray();
         var held = m.Held.Select(h => new HeldRow(h.Seller, sellerName(h.Seller), h.Gen, h.Start)).ToImmutableArray();

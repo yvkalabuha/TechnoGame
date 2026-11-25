@@ -24,6 +24,8 @@ public sealed partial class LeverWindow
     readonly Dictionary<int, double> _ownM = new();   // lookup only, never enumerated
     readonly Dictionary<int, SaleCircle> _ownC = new();
     LinesModel _lm; MarketModel _mm;
+    CaptionButton _acceptBtn;
+    LineRow _shotLine;   // shot run only: a fixture line when the live state has no line to close (logged)
     ProposalView? _shotProposal; CatalogueLineView? _shotOffer;   // shot run only: fixture stand-ins when the live state has none (logged)
 
     /// <summary>Most lines the adviser actor may run at once: the one setting of the run (SliceRunConfig.AdviserMaxLines, wave 1: two).</summary>
@@ -58,12 +60,21 @@ public sealed partial class LeverWindow
 
     // ---- lines ----
 
+    static readonly int[] ColumnWidths = { 190, 100, 150, 100, 90, 110, 140 };
+    static Control Cell(string text, int col, bool header)
+    {
+        var l = Ui.Wrap(text, 14, header ? Ui.Ink2 : Ui.Ink);
+        l.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; l.CustomMinimumSize = new Vector2(ColumnWidths[col], 0);
+        return l;
+    }
+
     LinesModel BuildLines(SliceView v)
     {
         var a = MyActor(v);
         var props = a?.Decisions?.Proposals ?? ImmutableArray<ProposalView>.Empty;
         if (_shotProposal is { } sp) props = props.Add(sp);
-        return LinesWindowModel.Build(a?.Designs ?? default, props, MaxLines, MoneyFormat.Current, MoneyMillion, SellerName);
+        var m = LinesWindowModel.Build(a?.Designs ?? default, props, MaxLines, MoneyFormat.Current, MoneyMillion, SellerName);
+        return _shotLine == null ? m : m with { Lines = m.Lines.Add(_shotLine) };
     }
 
     void FillLines()
@@ -76,7 +87,8 @@ public sealed partial class LeverWindow
         _sigLines = sig;
         foreach (var c in _lineBody.GetChildren()) { _lineBody.RemoveChild(c); c.QueueFree(); }
         _lineBody.AddChild(Ui.Lbl(Loc.T("lines.count", m.SeriesLines, m.MaxLines), 16, Ui.Ink2, FontKind.Draft));
-        if (m.AtLimit) _lineBody.AddChild(Ui.MarkedRow(Ui.Warn, Ui.Wrap(Loc.T("why.line.limit", m.MaxLines), 14)));
+        _acceptBtn = null; _firstRefuse = null;
+        if (m.AtLimit) _lineBody.AddChild(Ui.MarkedRow(Ui.Warn, Ui.Wrap(Loc.T("why.line.limit", m.MaxLines), 14), true));
         // adviser strip
         _lineBody.AddChild(Ui.Head("lines.adviser"));
         if (m.Proposals.IsEmpty) _lineBody.AddChild(Ui.Wrap("lines.adviser.none", 14, Ui.Ink2));
@@ -90,8 +102,11 @@ public sealed partial class LeverWindow
             if (!open) col.AddChild(Ui.Wrap(Loc.T("design.close.q", p.Design + 1), 14, Ui.Ink2));
             var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 10);
             var src = p.Source; string kind = open ? "cmd.lineopen" : "cmd.lineclose"; int d = p.Design + 1;
-            row.AddChild(Act("lines.accept", () => _host.Submit(src.Accept(Player), kind, d), true, p.AcceptDisabledKey == ""));
-            row.AddChild(Act(Loc.T("lines.refuse", RefuseMonths), () => _host.Submit(src.Refuse(Player), "cmd.refuse", d)));
+            var acc = Act("lines.accept", () => _host.Submit(src.Accept(Player), kind, d), true, p.AcceptDisabledKey == "");
+            _acceptBtn ??= acc;
+            row.AddChild(acc);
+            var refuse = Act(Loc.T("lines.refuse", RefuseMonths), () => _host.Submit(src.Refuse(Player), "cmd.refuse", d)); _firstRefuse ??= refuse;
+            row.AddChild(refuse);
             col.AddChild(row);
             if (p.AcceptDisabledKey != "") col.AddChild(Ui.Wrap(Loc.T("inst.build.cant", Loc.T(p.AcceptDisabledKey, p.AcceptDisabledArg)), 16, Ui.Ink));
             _lineBody.AddChild(Card(col, true));
@@ -100,13 +115,21 @@ public sealed partial class LeverWindow
         _lineBody.AddChild(new HSeparator());
         _lineBody.AddChild(Ui.Head("lines.list"));
         if (m.Lines.IsEmpty) _lineBody.AddChild(Ui.Wrap("design.none", 14, Ui.Ink2));
+        if (!m.Lines.IsEmpty)
+        {
+            // one table: a header row, then a row per line (scannable columns instead of one long sentence, C1)
+            var head = new HBoxContainer(); head.AddThemeConstantOverride("separation", 8);
+            for (int c = 0; c < LinesWindowModel.ColumnKeys.Length; c++) head.AddChild(Cell(Loc.T(LinesWindowModel.ColumnKeys[c]), c, true));
+            _lineBody.AddChild(head);
+        }
         foreach (var l in m.Lines)
         {
             var col = Col();
-            string text = Loc.T("design.line", l.Design + 1, l.Gen, Loc.T("stage." + l.StageNo), l.UnitCost, l.ReadinessPct, Loc.N(l.InService, 0))
-                + (l.StageNo == (int)DesignStage.Series ? Loc.T("design.series", Loc.N(l.Rate, 1), Loc.T(l.BindKey)) : "")
-                + (l.LicensedFrom != "" ? " · " + Loc.T("lines.licensed", l.LicensedFrom) : "");
-            col.AddChild(Ui.Wrap(text, 14, Ui.Ink));
+            var cells = LinesWindowModel.Cells(l, (k, a) => Loc.T(k, a), Loc.N);
+            var rowBox = new HBoxContainer(); rowBox.AddThemeConstantOverride("separation", 8);
+            for (int c = 0; c < cells.Length; c++) rowBox.AddChild(Cell(cells[c], c, false));
+            col.AddChild(rowBox);
+            if (l.LicensedFrom != "") col.AddChild(Ui.Wrap(Loc.T("lines.licensed", l.LicensedFrom), 14, Ui.Ink2));
             var h = l.Handle; int dn = l.Design + 1;
             if (_confirmLine == h)
             {
@@ -153,22 +176,22 @@ public sealed partial class LeverWindow
         _sigMarket = sig;
         foreach (var c in _marketBody.GetChildren()) { _marketBody.RemoveChild(c); c.QueueFree(); }
         if (!m.Enabled) { _marketBody.AddChild(Ui.Wrap("mkt.off", 16)); return; }
-        if (!m.External) _marketBody.AddChild(Ui.MarkedRow(Ui.Warn, Ui.Wrap("mkt.notyours", 14)));
+        if (!m.External) _marketBody.AddChild(Ui.MarkedRow(Ui.Warn, Ui.Wrap("mkt.notyours", 14), true));
         if (m.ReserveBalance != "") _marketBody.AddChild(Ui.Lbl(Loc.T("res.balance", m.ReserveBalance), 16, null, FontKind.Draft));
         _marketBody.AddChild(Ui.Wrap(Loc.T("mkt.income", m.IncomeYear, m.IncomeCap, Loc.T("lever.money.suffix")), 14, Ui.Ink2));
-        if (m.LastRefusalKey != "") _marketBody.AddChild(Ui.MarkedRow(Ui.Warn, Ui.Wrap(Loc.T("mkt.lastrefusal", m.LastRefusalSeller, m.LastRefusalGen, Loc.T(m.LastRefusalKey)), 14)));
+        if (m.LastRefusalKey != "") _marketBody.AddChild(Ui.MarkedRow(Ui.Warn, Ui.Wrap(Loc.T("mkt.lastrefusal", m.LastRefusalSeller, m.LastRefusalGen, Loc.T(m.LastRefusalKey)), 14), true));
         // offers of the sellers
         _marketBody.AddChild(Ui.Head("mkt.offers"));
         if (m.Offers.IsEmpty) _marketBody.AddChild(Ui.Wrap("mkt.offers.none", 14, Ui.Ink2));
-        if (_selOffer < 0 || _selOffer >= m.Offers.Length) _selOffer = m.Offers.IsEmpty ? -1 : 0;
+        _buyBtn = null; _firstOffer = null;
+        if (_selOffer < 0 || _selOffer >= m.Offers.Length) _selOffer = MarketWindowModel.DefaultOffer(m.Offers, m.External);
         for (int i = 0; i < m.Offers.Length; i++)
         {
             var o = m.Offers[i]; int k = i;
             string cmp = o.PremiumPct == 0 ? Loc.T("mkt.cmp.same") : Loc.T(o.PremiumPct > 0 ? "mkt.cmp.up" : "mkt.cmp.down", Math.Abs(o.PremiumPct));
             string world = o.FewOffers ? Loc.T("mkt.world.few") : Loc.T("mkt.world", o.WorldPrice);
-            var b = Ui.Btn((i == _selOffer ? "■ " : "□ ") + Loc.T("mkt.offer", o.SellerName, o.Gen, o.Price, o.Reference, cmp, world, CircleWord(o.Circle)), () => { _selOffer = k; _confirmBuy = null; _sigMarket = ""; Refresh(); }, focusable: true);
-            b.CustomMinimumSize = new Vector2(0, 32); b.Alignment = HorizontalAlignment.Left; b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            _marketBody.AddChild(b);
+            var ob = ListButton((i == _selOffer ? "■ " : "□ ") + Loc.T("mkt.offer", o.SellerName, o.Gen, o.Price, o.Reference, cmp, world, CircleWord(o.Circle)), () => { _selOffer = k; _confirmBuy = null; _sigMarket = ""; Refresh(); });
+            _firstOffer ??= ob; _marketBody.AddChild(ob);
         }
         if (_selOffer >= 0)
         {
@@ -176,19 +199,24 @@ public sealed partial class LeverWindow
             col.AddChild(Ui.Lbl(Loc.T("mkt.card", o.SellerName, o.Gen), 16, null, FontKind.Draft));
             col.AddChild(Ui.Wrap(Loc.T("mkt.card.gives"), 14));
             col.AddChild(Ui.Wrap(Loc.T("mkt.card.price", o.Price, o.Reference, Loc.T("lever.money.suffix")), 14, Ui.Ink));
-            if (o.ReserveAfter != "") col.AddChild(Ui.Wrap(Loc.T("mkt.card.after", m.ReserveBalance, o.ReserveAfter), 14));
-            bool can = o.CanBuy && m.External; int seller = o.Seller, gen = o.Gen;
-            if (_confirmBuy is { } cb && cb.Seller == seller && cb.Gen == gen)
+            if (o.ReserveAfter != "") col.AddChild(Ui.Wrap(o.ReserveSame ? Loc.T("mkt.card.after.same", m.ReserveBalance, Loc.N(o.ReserveAfterMillion, 0)) : Loc.T("mkt.card.after", m.ReserveBalance, o.ReserveAfter), 14));
+            bool can = MarketWindowModel.CanBuy(o, m.External); int seller = o.Seller, gen = o.Gen;
+            // the confirmation opens only for a deal the core allows
+            if (can && _confirmBuy is { } cb && cb.Seller == seller && cb.Gen == gen)
             {
-                col.AddChild(Ui.MarkedRow(Ui.Warn, Ui.Wrap(Loc.T("mkt.confirm", o.Price, Loc.T("lever.money.suffix")), 14)));
+                col.AddChild(Ui.MarkedRow(Ui.Warn, Ui.Wrap(Loc.T("mkt.confirm", o.Price, Loc.T("lever.money.suffix")), 14), true));
                 var br = new HBoxContainer(); br.AddThemeConstantOverride("separation", 8);
                 var no = Act("design.close.no", () => { _confirmBuy = null; _sigMarket = ""; Refresh(); }); br.AddChild(no);
                 br.AddChild(Act("mkt.buy", () => { _confirmBuy = null; _sigMarket = ""; _host.Submit(new BuyLicence(Player, seller, gen), "cmd.buy", gen); Refresh(); }, true));
                 col.AddChild(br);
                 no.CallDeferred(Control.MethodName.GrabFocus);
             }
-            else col.AddChild(Act("mkt.buy", () => { _confirmBuy = (seller, gen); _sigMarket = ""; Refresh(); }, true, can));
-            if (!can) col.AddChild(Ui.Wrap(Loc.T("inst.build.cant", o.RefusalKey != "" ? Loc.T(o.RefusalKey) : Loc.T("mkt.notyours.short")), 16, Ui.Ink));
+            else
+            {
+                _buyBtn = Act("mkt.buy", () => { _confirmBuy = (seller, gen); _sigMarket = ""; Refresh(); }, true, can);                col.AddChild(_buyBtn);
+            }
+            string why = MarketWindowModel.ReasonKey(o, m.External);   // only under an inactive button
+            if (why != "") col.AddChild(Ui.Wrap(Loc.T("inst.build.cant", Loc.T(why)), 16, Ui.Ink));
             _marketBody.AddChild(Card(col, true));
         }
         // what the power holds
@@ -213,6 +241,7 @@ public sealed partial class LeverWindow
             r1.AddChild(Act("+", () => { _ownM[gen] = MarketWindowModel.StepM(em, 1); _sigMarket = ""; Refresh(); }));
             col.AddChild(r1);
             var r2 = new HBoxContainer(); r2.AddThemeConstantOverride("separation", 6);
+            r2.AddChild(Ui.Lbl("mkt.own.circle", 14, Ui.Ink2));
             foreach (SaleCircle c in new[] { SaleCircle.Default, SaleCircle.Nobody, SaleCircle.Bloc, SaleCircle.Friends, SaleCircle.All })
             {
                 SaleCircle cv = c;
@@ -245,11 +274,27 @@ public sealed partial class LeverWindow
         if (!real && a?.Market != null)
             _shotOffer = new CatalogueLineView(a.Actor == 0 ? 1 : 0, 2, Fx6.FromRaw(300_000), Fx6.FromRaw(1_300_000), Fx6.FromRaw(390_000), SaleCircle.All, BadLicence.None);
         _sigMarket = ""; Refresh();
-        if (_mm != null && _mm.Offers.Length > 0) { _selOffer = 0; var o = _mm.Offers[0]; _confirmBuy = (o.Seller, o.Gen); _sigMarket = ""; Refresh(); }
+        if (_mm != null && _mm.Offers.Length > 0)
+        {
+            _selOffer = MarketWindowModel.DefaultOffer(_mm.Offers, _mm.External); var o = _mm.Offers[_selOffer];
+            _confirmBuy = (o.Seller, o.Gen); _sigMarket = ""; Refresh();   // the card opens the confirmation only when the deal is allowed
+        }
         return real;
     }
 
-    public void ShotClear() { _shotProposal = null; _shotOffer = null; _confirmBuy = null; _confirmLine = null; _sigLines = _sigMarket = ""; }
+    /// <summary>Shot run: asks to close the first series line; a fixture line stands in when the player has none. Returns true when the line is real.</summary>
+    public bool ShotConfirmLine()
+    {
+        var a = MyActor(_host.Snap.View);
+        var d = a?.Designs.FirstOrDefault(x => x.Stage == DesignStage.Series);
+        bool real = d != null;
+        if (!real) _shotLine = new LineRow(0, new DesignHandle(0, 1), 3, (int)DesignStage.Series, MoneyMillion(1.2), 80, 12, 4, "bind.Money", "", true, false);
+        _confirmLine = real ? d.Handle : _shotLine.Handle; _confirmCancel = false;
+        _sigLines = ""; Refresh();
+        return real;
+    }
+
+    public void ShotClear() { _shotProposal = null; _shotOffer = null; _shotLine = null; _confirmBuy = null; _confirmLine = null; _sigLines = _sigMarket = ""; }
 
     /// <summary>Live assertion for the two tabs: the models run on the real view and agree with it (every refusal word has a key; Enabled follows the run).</summary>
     string LiveCheckLinesMarket(SliceView v)

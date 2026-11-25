@@ -338,4 +338,144 @@ public class LeverModelTests
         if (sb.Length > 0 || row.Count > 0) { row.Add(sb.ToString()); rows.Add(row); }
         return rows;
     }
+
+    // ---- ui-art-director round 1 (TASK-0156) ----
+
+    [Fact]
+    public void LeverText_JoinSkipsEmptyParts_NoDoubleOrTrailingSeparator()
+    {
+        Assert.Equal("a · c", LeverText.Join("a", "", "c"));
+        Assert.Equal("основан 1990", LeverText.Join("основан 1990", ""));   // an institute without levels (DARPA): no trailing « · »
+        Assert.Equal("", LeverText.Join("", " "));
+    }
+
+    [Fact]
+    public void MarkNumbers_KeepsTheDecimalSeparatorOutOfTheMonoFace()
+    {
+        Assert.Equal("$[code]19[/code],[code]3[/code] млрд", LeverText.MarkNumbers("$19,3 млрд"));
+        Assert.Equal("[code]97%[/code] [lb]x]", LeverText.MarkNumbers("97% [x]"));
+    }
+
+    [Theory]
+    [InlineData("cmd.budget", 0, true)]
+    [InlineData("cmd.budget", 3, false)]
+    [InlineData("cmd.buy", 3, true)]
+    [InlineData("cmd.buy", 1, false)]
+    [InlineData("cmd.priority", 1, true)]
+    [InlineData("cmd.close", 2, true)]
+    [InlineData("cmd.close", 0, false)]
+    public void TheLastOrderIsToldOnlyOnItsOwnTab(string key, int tab, bool shown) => Assert.Equal(shown, LeverText.ResultBelongsToTab(key, tab));
+
+    [Fact]
+    public void MapLegend_IsHiddenWhileTheLeverWindowIsOpen()
+    {
+        Assert.True(LeverText.LegendHidden(false, false, true));
+        Assert.False(LeverText.LegendHidden(false, false, false));
+    }
+
+    static OfferRow Offer(bool canBuy, string refusal = "") =>
+        new(1, "S", 2, "$6 млн", "$8 млн", -20, "", true, Singularity.Core.Policy.SaleCircle.All, refusal, canBuy, "$19,3 млрд", 19_294, true);
+
+    [Fact]
+    public void MarketReason_ShowsOnlyWhileBuyIsInactive_AndNamesTheCoreReason()
+    {
+        Assert.Equal("", MarketWindowModel.ReasonKey(Offer(true), true));                              // an active button has no reason under it
+        Assert.Equal("licence.bad.Gen", MarketWindowModel.ReasonKey(Offer(false, "licence.bad.Gen"), true));
+        Assert.Equal("mkt.notyours.short", MarketWindowModel.ReasonKey(Offer(true), false));            // an open deal in a closed market
+        Assert.False(MarketWindowModel.CanBuy(Offer(true), false));
+    }
+
+    [Fact]
+    public void DefaultOffer_PrefersADealThatCanBeBought()
+    {
+        var offers = System.Collections.Immutable.ImmutableArray.Create(Offer(false, "licence.bad.Gen"), Offer(true));
+        Assert.Equal(1, MarketWindowModel.DefaultOffer(offers, true));
+        Assert.Equal(0, MarketWindowModel.DefaultOffer(offers, false));
+        Assert.Equal(-1, MarketWindowModel.DefaultOffer(System.Collections.Immutable.ImmutableArray<OfferRow>.Empty, true));
+    }
+
+    [Fact]
+    public void MarketOffer_OnALivePlayer_ReasonAgreesWithTheHeldLicences()
+    {
+        // the live Session view: a refusal "you already have it" must go with a licence or an own engine of that generation; with no licences held the text must not claim a licence
+        GameData data = ModLoader.Load(Path.Combine(Root(), "mods", "core"));
+        var s = SliceSession.Create(data, ClientRun.Config(data, Root(), 7, "USA"));
+        for (long t0 = 0; t0 < 40; t0++) s.StepThroughMonth(t0);
+        var a = s.View.Actors.First(x => x.Actor == data.Scenarios[0].ActorIndex("USA"));
+        var m = MarketWindowModel.Build(a.Market, s.View.Inputs?.Actors.First(x => x.Actor == a.Actor).Reserve, Scale(), x => x.ToString("F1", System.Globalization.CultureInfo.InvariantCulture), i => "S" + i);
+        Assert.True(m.Enabled);
+        foreach (var o in m.Offers)
+        {
+            Assert.Equal(o.CanBuy && m.External, MarketWindowModel.ReasonKey(o, m.External) == "");
+            if (o.RefusalKey == "licence.bad.Gen") Assert.Equal("licence.bad.Gen", MarketWindowModel.ReasonKey(o, m.External));
+        }
+        Assert.Contains("двигатель", Loc_RuGenText());   // not «licence» only
+    }
+
+    // the reason text of the core's Gen refusal covers an own engine too (PolicySystem.Market: KeyHeld || Covered || engine gen), so it may not say «licence» only
+    static string Loc_RuGenText()
+    {
+        foreach (var line in File.ReadLines(Path.Combine(Root(), "src", "Singularity.Client.Spike", "locale", "ui.csv")))
+            if (line.StartsWith("licence.bad.Gen,")) return line;
+        return "";
+    }
+
+    [Fact]
+    public void ReserveSame_WhenThePriceVanishesInTheRoundingOfTheBalance()
+    {
+        var scale = Scale();
+        var mk = new LicenceMarketView(System.Collections.Immutable.ImmutableArray<LicenceHeldView>.Empty, System.Collections.Immutable.ImmutableArray<CatalogueLineView>.Empty,
+            System.Collections.Immutable.ImmutableArray.Create(new CatalogueLineView(1, 1, Fx6.FromRaw(20_000), Fx6.One, Fx6.FromRaw(20_000), Singularity.Core.Policy.SaleCircle.All, Singularity.Core.Policy.BadLicence.None)),
+            System.Collections.Immutable.ImmutableArray<WorldPriceView>.Empty, Singularity.Core.Policy.BadLicence.None, 0, 0, 0, Fx6.Zero, Fx6.FromInt(1), true);
+        var big = MarketWindowModel.Build(mk, new ReserveView(Fx6.FromInt(50), Fx6.Zero, Fx6.Zero), scale, x => ((long)(x / 1000)).ToString(), i => "S");
+        Assert.True(big.Offers[0].ReserveSame);   // a few million off tens of billions: «почти не изменится»
+        var small = MarketWindowModel.Build(mk, new ReserveView(Fx6.FromRaw(30_000), Fx6.Zero, Fx6.Zero), scale, x => ((long)x).ToString(), i => "S");
+        Assert.False(small.Offers[0].ReserveSame);
+    }
+
+    [Fact]
+    public void BudgetNotes_OneLimitLine_PlusDimmedAtTheLimit_FooterWithoutRepeat()
+    {
+        var row = new BudgetRow("science", 11, 11, 11, 0, "", 0, "", true, false);
+        Assert.False(BudgetWindowModel.PlusEnabled(row, true));
+        Assert.True(BudgetWindowModel.MinusEnabled(row, true));
+        Assert.False(BudgetWindowModel.MinusEnabled(row with { Pct = 0 }, true));
+        Assert.False(BudgetWindowModel.PlusEnabled(row with { AtLimit = false }, false));
+        Assert.Equal("Изменений нет", BudgetWindowModel.FooterNone("Изменений нет", "why.budget.nochange", "Ничего не изменено"));
+        Assert.Equal("Изменений нет · Чужая держава", BudgetWindowModel.FooterNone("Изменений нет", "why.budget.foreign", "Чужая держава"));
+    }
+
+    [Fact]
+    public void LineCells_AreUnitedColumns_AndAnOpenProjectHasNoOutput()
+    {
+        var series = new LineRow(0, new Singularity.Core.Products.DesignHandle(0, 1), 3, (int)Singularity.Core.Products.DesignStage.Series, "$1 млн", 97, 12, 4.5, "bind.Money", "", true, false);
+        string[] c = LinesWindowModel.Cells(series, (k, a) => a.Length == 0 ? k : k + ":" + string.Join(",", a), (v, d) => v.ToString("F" + d, System.Globalization.CultureInfo.InvariantCulture));
+        Assert.Equal(LinesWindowModel.ColumnKeys.Length, c.Length);
+        Assert.Equal("97 %", c[3]);
+        Assert.Equal("lines.cell.rate:4.5", c[5]);
+        Assert.Equal("bind.Money", c[6]);
+        var proj = LinesWindowModel.Cells(series with { StageNo = (int)Singularity.Core.Products.DesignStage.Project }, (k, a) => k, (v, d) => "");
+        Assert.Equal("—", proj[5]); Assert.Equal("—", proj[6]);
+    }
+
+    [Fact]
+    public void InactiveAndSubtitleText_Reads_ThreeToOneFocusRing_OnEveryFill()
+    {
+        // A7 / DEBT-0095: numbers, not an eye estimate. The measured pixels of a disabled button in a frame: 6.5:1 (55575A on F8F3E3).
+        foreach (double k in new[] { 1.0, 0.94 })   // the texture darkens the paper by up to about 6 %
+            foreach (string fill in new[] { Palette.C.Paper, Palette.C.Sheet })
+            {
+                var bg = ColorMath.FromHex(fill, k);
+                Assert.True(ColorMath.Contrast(ColorMath.FromHex(Palette.DisabledText), bg) >= 4.5, $"disabled text on {fill} x{k}");
+                Assert.True(ColorMath.Contrast(ColorMath.FromHex(Palette.Ink2), bg) >= 4.5, $"ink-2 subtitle on {fill} x{k}");
+                Assert.True(ColorMath.Contrast(ColorMath.FromHex(Palette.Ink3), bg) >= 4.5, $"ink-3 caption on {fill} x{k}");
+            }
+        // the two-tone ring: one of its two rings (ink outside, paper inside) reads 3:1 on every fill a button can have
+        foreach (string fill in new[] { Palette.C.Paper, Palette.C.Sheet, Palette.C.Command })
+        {
+            var bg = ColorMath.FromHex(fill);
+            double best = System.Math.Max(ColorMath.Contrast(ColorMath.FromHex(Palette.Ink), bg), ColorMath.Contrast(ColorMath.FromHex(Palette.C.Paper), bg));
+            Assert.True(best >= 3.0, $"focus ring on {fill}: {best:F2}");
+        }
+    }
 }

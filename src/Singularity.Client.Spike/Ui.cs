@@ -69,11 +69,19 @@ public static class Ui
     public static Prose Wrap(string text, int size = 14, Color? color = null) => new(text, Math.Max(size, MinSize), color ?? Ink);
 
     /// <summary>Row with a small square marker (colour only here: the rule is «colour = deviation») and ink text.</summary>
-    public static HBoxContainer MarkedRow(Color marker, Control text)
+    public static HBoxContainer MarkedRow(Color marker, Control text, bool triangle = false)
     {
         var r = new HBoxContainer();
         r.AddThemeConstantOverride("separation", 6);
-        var m = new ColorRect { Color = marker, CustomMinimumSize = new Vector2(9, 9), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
+        // a warning of the lever windows adds a shape (▲): it differs from the ■ of a chosen item in a greyscale frame too (A5)
+        Control m;
+        if (triangle)
+        {
+            var t = new Label { Text = "▲", SizeFlagsVertical = Control.SizeFlags.ShrinkBegin };
+            t.AddThemeColorOverride("font_color", marker); t.AddThemeFontSizeOverride("font_size", 14);
+            m = t;
+        }
+        else m = new ColorRect { Color = marker, CustomMinimumSize = new Vector2(9, 9), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
         r.AddChild(m); r.AddChild(text);
         return r;
     }
@@ -190,7 +198,6 @@ public sealed partial class Segment : HBoxContainer
 /// The text may be a localization key; it is translated here and again when the language changes.</summary>
 public sealed partial class Prose : RichTextLabel
 {
-    static readonly Regex Number = new(@"\d+(?:[.,]\d+)?%?", RegexOptions.Compiled);
     string _raw = "";
 
     public Prose(string text, int size, Color color)
@@ -220,7 +227,7 @@ public sealed partial class Prose : RichTextLabel
     void Refresh()
     {
         string s = Loc.Has(_raw) ? Loc.T(_raw) : _raw;
-        base.Text = Number.Replace(s.Replace("[", "[lb]"), m => "[code]" + m.Value + "[/code]");
+        base.Text = LeverText.MarkNumbers(s);
     }
 }
 
@@ -263,6 +270,8 @@ public sealed partial class CaptionButton : Button
         _cap.OffsetLeft = sb.GetContentMargin(Side.Left); _cap.OffsetRight = -sb.GetContentMargin(Side.Right);
         _cap.OffsetTop = sb.GetContentMargin(Side.Top); _cap.OffsetBottom = -sb.GetContentMargin(Side.Bottom);
         _cap.Text = Text;
+        _cap.HorizontalAlignment = Alignment;   // a list button is left-aligned and wraps (A9)
+        _cap.AutowrapMode = AutowrapMode;
         _cap.AddThemeFontOverride("font", GetThemeFont("font"));
         _cap.AddThemeFontSizeOverride("font_size", GetThemeFontSize("font_size"));
         _cap.AddThemeColorOverride("font_color", GetDrawMode() switch

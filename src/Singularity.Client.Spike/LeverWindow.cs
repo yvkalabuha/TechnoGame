@@ -43,7 +43,11 @@ public sealed partial class LeverWindow : PanelContainer
     int[] _sent;
     bool _edited;
     readonly HSlider[] _sl = new HSlider[3];
-    readonly Label[] _name = new Label[3], _val = new Label[3], _money = new Label[3], _delta = new Label[3], _stopWord = new Label[3], _limit = new Label[3];
+    readonly CaptionButton[] _minus = new CaptionButton[3], _plus = new CaptionButton[3];
+    readonly Prose _limitNote = Ui.Wrap("bud.limit", 14, Ui.Ink), _ppNote = Ui.Wrap("bud.pp.note", 14, Ui.Ink2);
+    Control _limitRow, _shrinkRow;
+    CaptionButton _firstPick, _buyBtn, _firstOffer, _firstRefuse;
+    readonly Label[] _name = new Label[3], _val = new Label[3], _money = new Label[3], _delta = new Label[3], _stopWord = new Label[3];
     readonly Prose[] _fx = new Prose[3];
     readonly Label _total = Ui.Lbl("", 18, null, FontKind.Draft), _other = Ui.Lbl("", 14), _reserveLeft = Ui.Lbl("", 14);
     readonly Prose _stopWarn = Ui.Wrap("", 14, Ui.Ink), _resNote = Ui.Wrap("", 14, Ui.Ink2);
@@ -77,8 +81,12 @@ public sealed partial class LeverWindow : PanelContainer
         AddChild(root);
 
         var head = new HBoxContainer(); head.AddThemeConstantOverride("separation", 12);
-        _title.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        _title.SizeFlagsHorizontal = SizeFlags.ShrinkBegin; _title.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         head.AddChild(_title);
+        var help = Ui.Btn("?", () => _moneyHelp.Visible = !_moneyHelp.Visible, focusable: true);   // a square next to the title, not stretched over two rows
+        help.CustomMinimumSize = new Vector2(32, 32); help.SizeFlagsVertical = SizeFlags.ShrinkCenter; help.TooltipText = "lever.money.help.btn";
+        head.AddChild(help);
+        head.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
         for (int i = 0; i < TabKeys.Length; i++)
         {
             int k = i;
@@ -90,14 +98,9 @@ public sealed partial class LeverWindow : PanelContainer
         _close.CustomMinimumSize = new Vector2(112, 40);
         head.AddChild(_close);
         root.AddChild(head);
-        var sub = new HBoxContainer(); sub.AddThemeConstantOverride("separation", 10);
+        var sub = new HBoxContainer(); sub.AddThemeConstantOverride("separation", 16);
         sub.AddChild(Ui.Lbl("lever.money.suffix", 14, Ui.Ink2));
-        var help = Ui.Btn("?", () => _moneyHelp.Visible = !_moneyHelp.Visible, focusable: true);
-        help.CustomMinimumSize = new Vector2(32, 32); help.TooltipText = "lever.money.help.btn";
-        sub.AddChild(help);
-        sub.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
-        sub.AddChild(_paused);
-        _paused.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
+        sub.AddChild(_paused);   // one line, after the unit note
         root.AddChild(sub);
         _moneyHelp.Visible = false; root.AddChild(_moneyHelp);
         root.AddChild(new HSeparator());
@@ -177,27 +180,30 @@ public sealed partial class LeverWindow : PanelContainer
             top.AddChild(_name[i]); top.AddChild(_fx[i]);
             row.AddChild(top);
             var ctl = new HBoxContainer(); ctl.AddThemeConstantOverride("separation", 8);
-            var minus = Ui.Btn("−", () => Nudge(k, -1), focusable: true); minus.CustomMinimumSize = new Vector2(32, 32);
+            var minus = Ui.Btn("−", () => Nudge(k, -1), focusable: true); minus.CustomMinimumSize = new Vector2(32, 32); _minus[i] = minus;
             _sl[i] = new HSlider { MinValue = 0, MaxValue = 100, Step = 1, CustomMinimumSize = new Vector2(360, 32), SizeFlagsVertical = SizeFlags.ShrinkCenter };
             ActorPanel.StyleSlider(_sl[i]);
             _sl[i].ValueChanged += v => OnSlider(k, (int)v);
-            var plus = Ui.Btn("+", () => Nudge(k, 1), focusable: true); plus.CustomMinimumSize = new Vector2(32, 32);
+            var plus = Ui.Btn("+", () => Nudge(k, 1), focusable: true); plus.CustomMinimumSize = new Vector2(32, 32); _plus[i] = plus;
             _val[i] = Ui.Num("", 18, null, 64); _money[i] = Ui.Num("", 18, null, 150); _delta[i] = Ui.Lbl("", 14, Ui.Ink2);
             _stopWord[i] = Ui.Lbl("bud.stop.word", 14, Ui.Ink, FontKind.Draft); _stopWord[i].Visible = false;
             ctl.AddChild(minus); ctl.AddChild(_sl[i]); ctl.AddChild(plus); ctl.AddChild(_val[i]); ctl.AddChild(_money[i]); ctl.AddChild(_stopWord[i]); ctl.AddChild(_delta[i]);
             row.AddChild(ctl);
-            _limit[i] = Ui.Lbl("bud.limit", 14, Ui.Ink); _limit[i].Visible = false;   // a stopped handle says why (C4)
-            row.AddChild(_limit[i]);
             _budgetBox.AddChild(row);
         }
+        _limitRow = Ui.MarkedRow(Ui.Warn, _limitNote, true); _limitRow.Visible = false;   // one line for all three items: a stopped handle says why (C4)
+        _budgetBox.AddChild(_limitRow);
         _stopRow.Visible = false; _budgetBox.AddChild(_stopRow);
         var grey = new HBoxContainer(); grey.AddThemeConstantOverride("separation", 10);
         grey.AddChild(_other);
         _budgetBox.AddChild(grey);
+        _budgetBox.AddChild(_ppNote);
         _budgetBox.AddChild(_reserveLeft);
         _budgetBox.AddChild(new HSeparator());
         _budgetBox.AddChild(Ui.Head("res.title"));
-        _budgetBox.AddChild(_resBalance); _budgetBox.AddChild(_resLeak); _budgetBox.AddChild(_resForecast); _budgetBox.AddChild(_resPays); _budgetBox.AddChild(_resNote);
+        _budgetBox.AddChild(_resBalance); _budgetBox.AddChild(_resLeak); _budgetBox.AddChild(_resForecast); _budgetBox.AddChild(_resPays);
+        _shrinkRow = Ui.MarkedRow(Ui.Warn, _resNote, true);   // a warning is a full-contrast line with a marker, not a quiet grey one (C5)
+        _budgetBox.AddChild(_shrinkRow);
     }
 
     void OnSlider(int i, int v)
@@ -238,17 +244,20 @@ public sealed partial class LeverWindow : PanelContainer
         for (int i = 0; i < 3; i++)
         {
             _sl[i].Editable = data; _sl[i].Visible = true;
-            if (!data) { _val[i].Text = "—"; _money[i].Text = "—"; _delta[i].Text = ""; continue; }
+            if (!data) { _val[i].Text = "—"; _money[i].Text = "—"; _delta[i].Text = ""; _minus[i].Disabled = _plus[i].Disabled = true; continue; }
             var r = _bm.Rows[i];
             _sl[i].SetValueNoSignal(r.Pct);
             _val[i].Text = r.Pct + " %";
             _money[i].Text = r.Money;
             _delta[i].Text = r.DeltaPp == 0 ? "" : Loc.T("bud.delta", (r.DeltaPp > 0 ? "+" : "") + r.DeltaPp, (r.DeltaPp > 0 ? "+" : "") + r.DeltaMoney);
             _stopWord[i].Visible = r.Stop;
-            _limit[i].Visible = r.AtLimit && _bm.ReservePct == 0;
+            _minus[i].Disabled = !BudgetWindowModel.MinusEnabled(r, _bm.Editable);
+            _plus[i].Disabled = !BudgetWindowModel.PlusEnabled(r, _bm.Editable);
             _fx[i].Text = i == BudgetWindowModel.Mastery ? Loc.T("bud.mastery.fx", _bm.EffortStopPercent) : Loc.T("bud." + BudgetWindowModel.Keys[i] + ".fx");
         }
         _building = false;
+        _limitRow.Visible = BudgetWindowModel.ShowLimitNote(_bm);
+        _ppNote.Visible = BudgetWindowModel.ShowPpNote(_bm);
         _total.Text = data ? Loc.T("bud.total", _bm.TotalMoney) : Loc.T("why.budget.nodata");
         _other.Text = data ? Loc.T("bud.other") + ": " + _bm.OtherPct + " % · " + _bm.OtherMoney + " — " + Loc.T("bud.other.fx") : "";
         _reserveLeft.Text = data && _bm.ReserveOn ? Loc.T("bud.reserve.left", _bm.ReservePct, _bm.ReserveYearMoney) : "";
@@ -260,6 +269,7 @@ public sealed partial class LeverWindow : PanelContainer
         _resLeak.Text = on ? Loc.T("res.leak", _bm.LeakYearMoney) : "";
         _resForecast.Text = on ? Loc.T("res.forecast", _bm.Forecast[0], _bm.Forecast[1], _bm.Forecast[2]) : "";
         _resNote.Text = !data ? "" : !on ? Loc.T("res.off") : _bm.ReserveEmpty ? Loc.T("res.empty") : _bm.ReserveShrinks ? Loc.T("res.shrink") : "";
+        _shrinkRow.Visible = _resNote.Text != "";
         _resPays.Visible = on;
         // footer and the Apply button: a grey button says why, right beside it (C4)
         string changes = "";
@@ -267,7 +277,7 @@ public sealed partial class LeverWindow : PanelContainer
         bool pendingSame = _sent != null && _pct.SequenceEqual(_sent);
         bool can = data && _bm.Changed && !pendingSame && _bm.Editable;
         _apply.Disabled = !can;
-        _footer.Text = !data ? Loc.T(_bm.ApplyDisabledKey) : can ? Loc.T("bud.footer", changes) : Loc.T("bud.footer.none") + (_bm.ApplyDisabledKey != "" ? " · " + Loc.T(_bm.ApplyDisabledKey) : "");
+        _footer.Text = !data ? Loc.T(_bm.ApplyDisabledKey) : can ? Loc.T("bud.footer", changes) : BudgetWindowModel.FooterNone(Loc.T("bud.footer.none"), _bm.ApplyDisabledKey, _bm.ApplyDisabledKey == "" ? "" : Loc.T(_bm.ApplyDisabledKey));
         _reset.Disabled = !(_edited || _sent != null);
     }
 
@@ -290,7 +300,7 @@ public sealed partial class LeverWindow : PanelContainer
         return InstitutesWindowModel.Build(a, v.Month, research, MoneyFormat.Current, ctx, n => Names.Node(_host.Data, n), Discipline);
     }
 
-    string LevelsText(ImmutableArray<(int Discipline, int Level)> lv) => string.Join(" · ", lv.Select(x => Loc.T("disc." + x.Discipline) + " " + x.Level));
+    string LevelsText(ImmutableArray<(int Discipline, int Level)> lv) => LeverText.Join(lv.Select(x => Loc.T("disc." + x.Discipline) + " " + x.Level).ToArray());
 
     static string InstName(string id) => Loc.TOr("institute." + id, id);
 
@@ -306,7 +316,7 @@ public sealed partial class LeverWindow : PanelContainer
         _instBody.AddThemeConstantOverride("separation", 8);
         if (!m.Enabled) { _instBody.AddChild(Ui.Wrap("inst.noinst", 16)); return; }
         _instBody.AddChild(Ui.Lbl(Loc.T("inst.slots", m.SlotsTotal, m.SlotsBusy), 16, Ui.Ink2, FontKind.Draft));
-        Control firstFocus = null;
+        Control firstFocus = null; _firstPick = null;
         foreach (var r in m.Standing)
         {
             var box = new PanelContainer(); box.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, Ui.Rule, 1, 10, Ui.R2, 8));
@@ -314,7 +324,7 @@ public sealed partial class LeverWindow : PanelContainer
             var h = new HBoxContainer(); h.AddThemeConstantOverride("separation", 12);
             var nm = Ui.Lbl(InstName(r.Id), 16, null, FontKind.Draft); nm.CustomMinimumSize = new Vector2(520, 0); nm.AutowrapMode = TextServer.AutowrapMode.WordSmart;
             h.AddChild(nm);
-            h.AddChild(Ui.Wrap(Loc.T("inst.founded", r.RefYear) + " · " + LevelsText(r.Levels), 14, Ui.Ink2));
+            h.AddChild(Ui.Wrap(LeverText.Join(Loc.T("inst.founded", r.RefYear), LevelsText(r.Levels)), 14, Ui.Ink2));
             col.AddChild(h);
             if (r.State == InstituteState.Goal)
             {
@@ -334,7 +344,7 @@ public sealed partial class LeverWindow : PanelContainer
             bool open = _expandSlot == s;
             var pick = Ui.Btn((open ? "▾ " : "▸ ") + Loc.T(r.State == InstituteState.Goal ? "inst.pick.change" : "inst.pick.short"), () => { _expandSlot = open ? -1 : s; _sigInst = ""; }, focusable: true);
             pick.CustomMinimumSize = new Vector2(0, 32); pick.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
-            firstFocus ??= pick;
+            firstFocus ??= pick; _firstPick ??= pick;
             col.AddChild(pick);
             if (open)
             {
@@ -346,12 +356,11 @@ public sealed partial class LeverWindow : PanelContainer
                     string t = o.BonusPct == 0
                         ? Loc.T("inst.opt.nobonus", o.Name, Loc.N(o.Remaining, 1)) + (o.BetterInstituteId != "" ? " " + Loc.T("inst.opt.better", InstName(o.BetterInstituteId)) : "")
                         : Loc.T(o.Threshold ? "inst.opt.threshold" : "inst.opt", o.Name, o.BonusPct, Loc.N(o.Remaining, 1));
-                    var ob = Ui.Btn((cur ? "■ " : "□ ") + t, () => { _host.Submit(new SetPriorityNode(Player, s, node), "cmd.priority"); _expandSlot = -1; _sigInst = ""; }, focusable: true);
-                    ob.CustomMinimumSize = new Vector2(0, 32); ob.Alignment = HorizontalAlignment.Left; ob.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-                    col.AddChild(ob);
+                    col.AddChild(ListButton((cur ? "■ " : "□ ") + t, () => { _host.Submit(new SetPriorityNode(Player, s, node), "cmd.priority"); _expandSlot = -1; _sigInst = ""; }));
                 }
-                col.AddChild(Ui.Wrap(Loc.T("inst.opt.price", InstituteParamsMonths()), 14, Ui.Ink2));
             }
+            // the price of a goal for the rest of science stands next to the button, not only inside the open list (O-082: no number, no promise of a date)
+            col.AddChild(Ui.Wrap(Loc.T("inst.opt.price", InstituteParamsMonths()) + " " + Loc.T("inst.price.note"), 14, Ui.Ink2));
             box.AddChild(col); _instBody.AddChild(box);
         }
         _instBody.AddChild(new HSeparator());
@@ -361,10 +370,8 @@ public sealed partial class LeverWindow : PanelContainer
         foreach (var c in m.Candidates)
         {
             int cs = c.Slot; bool sel = cs == _selCand;
-            string line = InstName(c.Id) + " · " + Loc.T("inst.founded", c.RefYear) + " · " + LevelsText(c.Levels) + (c.State == InstituteState.Building ? " · " + Loc.T("inst.building", c.MonthsLeft, c.BuildMonths) : "") + (c.ProposesBuild ? " · " + Loc.T("inst.adviser.build") : "");
-            var b = Ui.Btn((sel ? "■ " : "□ ") + line, () => { _selCand = cs; _sigInst = ""; }, focusable: true);
-            b.CustomMinimumSize = new Vector2(0, 32); b.Alignment = HorizontalAlignment.Left; b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            _instBody.AddChild(b);
+            string line = LeverText.Join(InstName(c.Id), Loc.T("inst.founded", c.RefYear), LevelsText(c.Levels), c.State == InstituteState.Building ? Loc.T("inst.building", c.MonthsLeft, c.BuildMonths) : "", c.ProposesBuild ? Loc.T("inst.adviser.build") : "");
+            _instBody.AddChild(ListButton((sel ? "■ " : "□ ") + line, () => { _selCand = cs; _sigInst = ""; }));
         }
         var cand = m.Candidates.First(c => c.Slot == _selCand);
         var card = new PanelContainer(); card.AddThemeStyleboxOverride("panel", Ui.Box(Ui.Paper, Ui.Ink, 1, 10, Ui.R2, 8));
@@ -374,7 +381,7 @@ public sealed partial class LeverWindow : PanelContainer
         cc.AddChild(Ui.Wrap(Loc.T("inst.build.gives", Loc.N(p.CapacityPerLevel.ToDouble() * 100, 1), Loc.N(p.UpkeepPerLevel.ToDouble() * 100, 1)), 14));
         cc.AddChild(Ui.Wrap(Loc.T("inst.build.price", MoneyMillion(cand.CostPerYearMillion), cand.BuildMonths, MoneyMillion(cand.CostTotalMillion), Loc.T("lever.money.suffix")), 14, Ui.Ink));
         cc.AddChild(Ui.Wrap(Loc.T("inst.build.share", Loc.N(cand.RateTenthPercent / 10.0, 1)), 14));
-        if (cand.AheadYears > 0) cc.AddChild(Ui.MarkedRow(Ui.Warn, Ui.Wrap(Loc.T("inst.build.ahead", cand.AheadYears, cand.RefYear, Loc.N(cand.AheadMultiplier, 2)), 14)));
+        if (cand.AheadYears > 0) cc.AddChild(Ui.MarkedRow(Ui.Warn, Ui.Wrap(Loc.T("inst.build.ahead", cand.AheadYears, cand.RefYear, Loc.N(cand.AheadMultiplier, 2)), 14), true));
         bool can = cand.BuildDisabledKey == "";
         int candSlot = cand.Slot;
         var start = Ui.Btn("inst.build.start", () => _host.Submit(new BuildInstitute(Player, candSlot), "cmd.build"), 14, can, true);
@@ -383,6 +390,15 @@ public sealed partial class LeverWindow : PanelContainer
         if (!can) cc.AddChild(Ui.Wrap(Loc.T("inst.build.cant", Loc.T(cand.BuildDisabledKey, cand.BuildDisabledArg)), 16, Ui.Ink));
         card.AddChild(cc); _instBody.AddChild(card);
         firstFocus?.CallDeferred(Control.MethodName.GrabFocus);
+    }
+
+    /// <summary>A choice in a list: the text wraps inside the window and stays left-aligned (A9), the box is a full-width focusable button.</summary>
+    static CaptionButton ListButton(string text, Action onPress)
+    {
+        var b = Ui.Btn(text, onPress, focusable: true);
+        b.CustomMinimumSize = new Vector2(0, 32); b.Alignment = HorizontalAlignment.Left; b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        b.AutowrapMode = TextServer.AutowrapMode.WordSmart; b.ClipText = false;
+        return b;
     }
 
     static int InstituteParamsMonths() => InstitutesWindowModel.ReassignMonths;
@@ -402,13 +418,11 @@ public sealed partial class LeverWindow : PanelContainer
         ShowResult(s);
     }
 
-    static readonly string[] OwnCommands = { "cmd.budget", "cmd.priority", "cmd.build", "cmd.adviser", "cmd.lineopen", "cmd.lineclose", "cmd.refuse", "cmd.close", "cmd.cancel", "cmd.buy", "cmd.offer" };
-
     // The last order of this window in words; a refusal says why in plain words (C4), the English Session text only under F3.
     void ShowResult(HostSnapshot s)
     {
         var r = s.Last;
-        bool mine = r.Status != CmdStatus.None && Array.IndexOf(OwnCommands, r.LabelKey) >= 0;
+        bool mine = r.Status != CmdStatus.None && LeverText.ResultBelongsToTab(r.LabelKey, _tab);   // told only on the tab it belongs to (C1)
         _resultMark.Visible = mine && r.Status is CmdStatus.Rejected or CmdStatus.Error;
         _resultWord.Text = _resultMark.Visible ? Loc.T("lever.refused.word") : "";
         if (!mine) { _result.Text = ""; return; }
@@ -449,6 +463,26 @@ public sealed partial class LeverWindow : PanelContainer
         _selCand = c.Slot; _sigInst = ""; Refresh();
         _scroll.CallDeferred(Control.MethodName.Set, "scroll_vertical", 100000);
         return true;
+    }
+
+    /// <summary>Shot run (A7): puts the keyboard focus on a control and tells whether it exists in this state. what: slider, plus, tab, pick, buy, accept.</summary>
+    public string ShotFocus(string what)
+    {
+        static bool Usable(Control c) => c != null && c.IsVisibleInTree() && c is not BaseButton { Disabled: true };
+        // an inactive control cannot take the focus: the nearest active one of the same kind stands in, and the name of what got it is returned
+        Control c = what switch
+        {
+            "slider" => _sl[0],
+            "plus" => _plus.FirstOrDefault(Usable),
+            "tab" => _tabBtn[_tab],
+            "pick" => _firstPick,
+            "buy" => Usable(_buyBtn) ? _buyBtn : _firstOffer,
+            "accept" => Usable(_acceptBtn) ? _acceptBtn : _firstRefuse,
+            _ => null,
+        };
+        if (!Usable(c)) return "";
+        c.GrabFocus();
+        return c == _buyBtn || c == _acceptBtn || c == _firstPick || c == _tabBtn[_tab] || c == _sl[0] ? what : what + " (stand-in: " + c.GetType().Name + " " + (c as Button)?.Text + ")";
     }
 
     /// <summary>Shot run: the window as a player opens it, without a click.</summary>

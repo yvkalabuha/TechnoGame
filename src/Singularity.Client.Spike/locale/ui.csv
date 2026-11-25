@@ -451,7 +451,7 @@ bud.row,{0} % · {1} a year,{0} % · {1} в год
 bud.delta,{0} pp · {1} a year,{0} п. п. · {1} в год
 bud.stop,Attention: below {0} % mastery of processes stops. The series of the 3rd generation will come 5–17 years later.,Внимание: ниже {0} % освоение процессов останавливается. Серия 3-го поколения выйдет на 5–17 лет позже.
 bud.stop.word,stop,стоп
-bud.limit,No more: all 100 % are distributed. Reduce another item first.,Больше нельзя: все 100 % распределены. Сначала уменьшите другую статью.
+bud.limit,No more: together with the other items the budget is already 100 %. Reduce another item first.,Больше нельзя: вместе с остальными статьями бюджет уже 100 %. Сначала уменьшите другую статью.
 bud.reserve.left,Reserve: {0} % = {1} a year goes to the account,Резерв: {0} % = {1} в год уходит на счёт
 bud.footer,Takes effect from next month: {0},Вступит в силу со следующего месяца: {0}
 bud.footer.none,No changes,Изменений нет
@@ -472,7 +472,7 @@ res.off,The reserve is not on in this run.,В этой игре резерва �
 inst.head.inst,Institute,Институт
 inst.slots,"Priority slots: {0}, busy {1}","Слотов приоритета: {0}, занято {1}"
 inst.noinst,There are no institutes in this run.,В этой игре институтов нет.
-inst.free,Free,Свободен
+inst.free,No goal: the institute is free,Цели нет: институт свободен
 inst.founded,founded {0},основан {0}
 inst.levels,Areas: {0},Области: {0}
 inst.goal,Goal: «{0}»,Цель: «{0}»
@@ -577,7 +577,7 @@ licence.circle.Friends,friends,друзья
 licence.circle.All,everyone,все
 licence.bad.Self,this is your own licence,это ваша собственная лицензия
 licence.bad.Empty,the seller has no serial project of this generation,у продавца нет серийного проекта этого поколения
-licence.bad.Gen,you already hold a licence of this generation or a newer one,у вас уже есть лицензия этого или более нового поколения
+licence.bad.Gen,"you already have this generation or a newer one (a licence or an engine of your own)","у вас уже есть это или более новое поколение (лицензия или собственный двигатель)"
 licence.bad.Money,not enough money: the price is above what you can pay now,"не хватает денег: цена выше того, что вы можете заплатить сейчас"
 licence.bad.Circle,"you are outside the seller's circle of buyers, or the catalogue is closed",вы вне круга покупателей продавца либо каталог закрыт
 licence.bad.Capacity,no free project slot for the licensed project,нет свободного слота проекта для лицензионной модели
@@ -598,3 +598,17 @@ cmd.lineclose,close a line on advice,закрыть линию по совету
 cmd.refuse,refuse advice of project {0},отказ от совета по проекту {0}
 cmd.buy,buy a licence (generation {0}),покупка лицензии ({0}-е поколение)
 cmd.offer,offer a licence (generation {0}),предложение лицензии ({0}-е поколение)
+bud.pp.note,"pp = percentage points: by how many points of the budget the share changed","п. п. — процентные пункты: на сколько пунктов бюджета изменилась доля"
+inst.price.note,"The price of a goal for the rest of science has no number: the game does not estimate it. Known: the money goes to the goal first, the rest of science gets less while it is open.","Цена цели для остальной науки числом не оценивается: игра такой оценки не даёт. Известно: деньги идут на цель первой, остальной науке достаётся меньше, пока цель открыта."
+mkt.card.after.same,"On the reserve account: {0}; after the purchase almost unchanged ({1} million)","На счёте резерва: {0}; после покупки почти не изменится ({1} млн)"
+mkt.own.circle,Buyers:,Круг покупателей:
+lines.col.project,Project,Проект
+lines.col.stage,Stage,Стадия
+lines.col.cost,Cost of a machine,Себестоимость машины
+lines.col.ready,Readiness,Готовность
+lines.col.fleet,In service,В строю
+lines.col.rate,Output,Выпуск
+lines.col.bind,Limited by,Упирается в
+lines.cell.project,"Project {0}, generation {1}","Проект {0}, {1}-е поколение"
+lines.cell.fleet,{0} pcs,{0} шт.
+lines.cell.rate,{0} pcs/month,{0} шт./мес.
