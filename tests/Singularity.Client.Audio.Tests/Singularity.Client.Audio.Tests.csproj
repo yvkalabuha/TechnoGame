@@ -14,6 +14,7 @@
     <Compile Include="../../src/Singularity.Client.Spike/GlyphPrims.cs" Link="GlyphPrims.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/TextWrap.cs" Link="TextWrap.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/TreeKeyNav.cs" Link="TreeKeyNav.cs" />
+    <Compile Include="../../src/Singularity.Client.Spike/LegendLayout.cs" Link="LegendLayout.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/SettingsLogic.cs" Link="SettingsLogic.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/InstrumentLogic.cs" Link="InstrumentLogic.cs" />
     <Compile Include="../../src/Singularity.Client.Spike/ContrastValidator.cs" Link="ContrastValidator.cs" />

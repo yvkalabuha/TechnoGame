@@ -155,7 +155,7 @@ public sealed partial class TechTree : Control
     }
     public void SetMode(int mode) { _mode = mode; _viewSwitch.Select(mode, false); Redraw(); }
     /// <summary>Lowest edge of the goal panel: above the open legend sheet, else the bottom margin.</summary>
-    public float InsetLimit => LegendOpen ? Size.Y - (6 + StampH + StampGap + LegendH + 14) : Size.Y - 100;
+    public float InsetLimit => LegendOpen ? Size.Y - (6 + StampH + StampGap + LegendHNow + 14) : Size.Y - 100;
     public void Select(int row) { _selected = row; _insetDirty = true; Redraw(); }
 
     // ---------------- model ----------------
@@ -850,9 +850,20 @@ public sealed partial class TechTree : Control
     public bool LegendOpen => _legendOpen && _mode == 0;
     public bool CanLegend => _mode == 0;
     public void ToggleLegend(bool open) { _legendOpen = open; ClampPan(); Redraw(); }
-    const float LegendRow = 22, LegendPad = 12, LegendGap = 16, LegendW = 640, LegendH = 424, StampH = 62, StampGap = 8;
+    const float LegendRow = 22, LegendPad = 12, LegendGap = 16, LegendW = 640, StampH = 62, StampGap = 8;
     /// <summary>The open legend sheet: right of the disc area, 8 du above the sheet stamp (spec §3).</summary>
-    public Rect2 LegendSheet { get { float x = Size.X * 0.6f + 8; return new Rect2(x, Size.Y - 6 - StampH - StampGap - LegendH, Math.Min(LegendW, Size.X - x - 6), LegendH); } }
+    public Rect2 LegendSheet { get { float x = Size.X * 0.6f + 8, h = LegendHNow; return new Rect2(x, Size.Y - 6 - StampH - StampGap - h, Math.Min(LegendW, Size.X - x - 6), h); } }
+    // The sheet is as tall as its wrapped texts need (the longest RU/EN strings included): LegendLayout.TreeLegendHeight, recomputed on a language or width change.
+    float _legendH = 352f, _legendHW = -1;
+    float LegendHNow { get { if (_legendHW != Size.X || _lgDirty) ComputeLegendH(); return _legendH; } }
+    void ComputeLegendH()
+    {
+        if (_lgDirty || !_lgBuilt) BuildLegendCache();
+        _legendHW = Size.X;
+        float x = Size.X * 0.6f + 8, w = Math.Min(LegendW, Size.X - x - 6), colW = (w - 2 * LegendPad - LegendGap - DepthBox.Edge) / 2;
+        int N(string s, float mw) => TextWrap.Lines(s, mw, t => Fonts.Text.GetStringSize(t, HorizontalAlignment.Left, -1, Ui.MinSize).X).Count;
+        _legendH = LegendLayout.TreeLegendHeight(N(_lgText[6], colW - 36), N(_lgText[27], colW - 36), N(_lgText[28], colW), N(_lgText[26], colW), LegendRow, LegendPad, RailMetrics.Line14Du).Height;
+    }
     Rect2 StampRect => new(Size.X - 6 - 360, Size.Y - 6 - StampH, 360, StampH);
 
     // Cached legend content: localized texts (rebuilt when the language changes), colours and closed node outlines (built once).
@@ -865,7 +876,7 @@ public sealed partial class TechTree : Control
 
     void BuildLegendCache()
     {
-        _lgDirty = false;
+        _lgDirty = false; _legendHW = -1;
         string[] keys = { "legend.rings", "legend.states", "legend.disc", "legend.lines", "legend.route", "legend.root", "legend.root.why", "legend.close" };
         for (int k = 0; k < keys.Length; k++) _lgText[k] = Loc.T(keys[k]);
         for (int k = 0; k < 5; k++) _lgText[8 + k] = Loc.T(_lgDiscs[k].NameKey);
@@ -935,8 +946,8 @@ public sealed partial class TechTree : Control
         float ky = ry + 19 + Para(new Vector2(xr + 36, ry + 19), _lgText[6], colW - 36, 14, Ui.Ink2) + 12;
         _cv.DrawArc(new Vector2(xr + 14, ky - 5), 9f, 0, Mathf.Tau, 24, Ui.Sheet, 5.5f, true); _cv.DrawArc(new Vector2(xr + 14, ky - 5), 9f, 0, Mathf.Tau, 24, Ui.Ink, 2.5f, true);
         ky += Para(new Vector2(xr + 36, ky), _lgText[27], colW - 36, 14, Ui.Ink2) + 8;
-        Para(new Vector2(xr, ky), _lgText[28], colW, 14, Ui.Ink2);
-        Text(new Vector2(xr, r.End.Y - 25), _lgText[7], 14, Ui.Ink2);
+        ky += Para(new Vector2(xr, ky), _lgText[28], colW, 14, Ui.Ink2) + 14;
+        Text(new Vector2(xr, ky), _lgText[7], 14, Ui.Ink2);
     }
 
     /// <summary>For the shot run: the legend sheet touches neither the stamp nor the disc area (A9); empty when it is fine.</summary>
@@ -1325,16 +1336,6 @@ public sealed partial class TechTree : Control
             _inset.AddChild(Block(CardIcon.Kind.Needs, "card.requires", (req.Count == 0 ? new List<string> { "—" } : req).Select(r => (Control)Ui.Wrap(r, 14, Ui.Ink)).ToArray()));
             if (_nv[i].Process is { } pv)
                 _inset.AddChild(Ui.Wrap(Loc.T("inset.process", Loc.N(pv.Yield.ToDouble()), Loc.T(pv.Mastered ? "yes" : "no"), Loc.T(pv.Admitted ? "yes" : "no")), 14, Ui.Ink2));
-            if (nodes.Type[i] == NodeType.PRC && _state[i] == St.Known && _actor == Player)
-            {
-                int num = nodes.Number[i];
-                bool inF = _focus.Contains(num);
-                _inset.AddChild(Ui.Btn(inF ? "inset.focus.remove" : "inset.focus.add", () =>
-                {
-                    if (inF) _focus.Remove(num); else if (_focus.Count < 3) _focus.Add(num);
-                    _insetDirty = true;
-                }));
-            }
         }
 
         _inset.AddChild(new HSeparator());
@@ -1346,6 +1347,16 @@ public sealed partial class TechTree : Control
 
         Sec("inset.focus");
         _inset.AddChild(Ui.Wrap(Loc.T("inset.focus.help"), 14, Ui.Ink2));
+        // The «add» button is always here, so that the hint below names a button the player can see; it works for a known process only, and says why when it does not.
+        bool canAdd = _actor == Player && _selected >= 0 && nodes.Type[_selected] == NodeType.PRC && _state[_selected] == St.Known;
+        int selNum = _selected >= 0 ? nodes.Number[_selected] : -1; bool inFocus = canAdd && _focus.Contains(selNum);
+        _inset.AddChild(Ui.Btn(inFocus ? "inset.focus.remove" : "inset.focus.add", () =>
+        {
+            if (!canAdd) return;
+            if (inFocus) _focus.Remove(selNum); else if (_focus.Count < 3) _focus.Add(selNum);
+            _insetDirty = true;
+        }));
+        if (!canAdd && _actor == Player) _inset.AddChild(Ui.Wrap(Loc.T("inset.focus.addwhy"), 16, Ui.Ink));   // C4: a grey button says why
         _inset.AddChild(Ui.Wrap(_focus.Count == 0 ? Loc.T("inset.focus.empty") : string.Join(" → ", _focus.Select(f => Names.Node(_host.Data, f))), 14, _focus.Count == 0 ? Ui.Ink2 : Ui.Ink));
         var send = Ui.Btn("inset.focus.send", () => { if (_actor == Player) _host.Submit(new SetEffortFocus(_actor, ImmutableArray.CreateRange(_focus)), "cmd.focus"); }, 14, _focus.Count > 0);
         send.Disabled = _focus.Count == 0 || _actor != Player;

@@ -1104,6 +1104,22 @@ public sealed partial class Main : Node3D
                 });
                 Q(1.6, () => { SaveShot($"tree_sun_summary{sfx}.png", null, scale == 100); _tree.Select(_tree.GoalRow >= 0 ? _tree.GoalRow : _tree.FrontierRow); });
                 Q(0.8, () => { SaveShot($"tree_sun_why{sfx}.png", null, scale == 100); _tree.Select(-1); _tree.ResetView(); _tree.Visible = false; });
+                // A goal with a real obstacle: the first power whose first Knowledge link carries a term (EtaMonths), so that «срок: ≈ N мес.» is on the frame. Probes powers one by one (set, then read after the snapshot refreshed).
+                bool etaDone = false;
+                for (int k = 0; k < 12; k++)
+                {
+                    int pk = k;
+                    Q(0.1, () => { if (etaDone || pk >= _host.Layout.ActorIds.Length) return; ShowPower(pk, false); OpenTree(0); _tree.Select(-1); });
+                    Q(0.7, () =>
+                    {
+                        if (etaDone || pk >= _host.Layout.ActorIds.Length) return;
+                        var sn = _host.Snap; if (sn == null || sn.WhyActor != pk || !sn.Links.Any(l => l.Layer == Singularity.Core.WhyNot.WhyNotLayer.Knowledge && l.EtaMonths is not null)) return;
+                        var eta = sn.Links.First(l => l.Layer == Singularity.Core.WhyNot.WhyNotLayer.Knowledge && l.EtaMonths is not null);
+                        etaDone = true; _shotLog += $"tree why term{sfx}: power {_host.Layout.ActorIds[pk]}, term {eta.EtaMonths} months: frame saved\n";
+                        SaveShot($"tree_why_eta{sfx}.png", null, scale == 100);
+                    });
+                }
+                Q(0.2, () => { if (!etaDone) _shotLog += $"tree why term{sfx}: no power has a Knowledge obstacle with a term in this state; no frame\n"; _tree.Select(-1); _tree.ResetView(); _tree.Visible = false; });
             }
             // The rail in its states: all normal, then an alarm on Finance and a warning "9+" on Production, narrow and wide (spec task-0117-rail-and-legend §4).
             Q(0.5, () => { SaveShot($"rail_narrow_normal{sfx}.png"); RunT6($"rail narrow normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using Singularity.Client.Spike;
 using Xunit;
 
 namespace Singularity.Client.Audio.Tests;
@@ -25,6 +26,32 @@ public class TreeWordsTests
         Assert.Contains("«" + add + "»", hint);
         Assert.Contains("«" + send + "»", hint);
     }
+
+    [Fact]
+    public void TheFocusHintOnlyNamesButtonsTheInspectorAlwaysShows()
+    {
+        // The two names are the two buttons of the focus section (add is always drawn there, disabled with a reason when nothing fits).
+        Assert.Contains("inset.focus.addwhy,", string.Join("\n", Lines()));
+        Assert.Contains("«В фокус освоения»", Row("inset.focus.empty"));
+        Assert.Equal("В фокус освоения", Row("inset.focus.add").Split(',').Last());
+    }
+
+    [Theory]
+    [InlineData(1, 1, 1, 1)]
+    [InlineData(3, 2, 3, 2)]
+    [InlineData(6, 4, 5, 4)]
+    public void TheLegendCloseLineStandsBelowTheLastParagraphForAnyLineCount(int root, int focus, int counts, int dial)
+    {
+        var (h, close) = LegendLayout.TreeLegendHeight(root, focus, counts, dial);
+        float countsBottom = 12 + 15 + 10 * 22 + 16 + 19 + root * 18 + 12 + focus * 18 + 8 + counts * 18;
+        Assert.True(close >= countsBottom + 14 - 0.01f, "close line overlaps the counters line");
+        Assert.True(h >= close + 12 - 0.01f, "sheet ends above the close line");
+        Assert.True(h >= 352f);
+    }
+
+    [Fact]
+    public void ALongerTextMakesATallerSheet() =>
+        Assert.True(LegendLayout.TreeLegendHeight(2, 2, 4, 2).Height > LegendLayout.TreeLegendHeight(2, 2, 1, 2).Height);
 
     [Theory]
     [InlineData("card.next.known")]
