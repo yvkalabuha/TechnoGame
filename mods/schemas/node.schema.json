@@ -36,6 +36,14 @@
         "labour_p": { "description": "Hours per process execution (PRC only; LAYER_CONTRACT §4.1).", "type": "number", "exclusiveMinimum": 0 },
         "requires": { "$ref": "common.schema.json#/$defs/requirement" },
         "hazard": { "enum": ["none", "hz", "key"] },
+        "directions": {
+          "description": "2..4 distinct directions, the main one first (O-091).",
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "enum": ["aero", "prop", "met", "mat", "chem", "struct", "mfg", "elec", "sens", "ctrl", "nuc", "ord", "space"] }
+        },
         "informs": {
           "type": "array",
           "items": {

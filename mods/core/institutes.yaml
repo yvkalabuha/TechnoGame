@@ -2,33 +2,34 @@
 # Only entries with a confirmed founding year are listed (Rolls-Royce Derby and the other unconfirmed rows wait for a source; fra_cnes has a wikidata P571 date).
 # country = actor ID of the scenario; areas = discipline: level 1..4 [estimate, calibrated in Lab]. ref_year = the historical year (the price of a later project).
 # Rows with founded after the start of the scenario are build candidates (BuildInstitute); their levels are estimates, and for a small country (FRA, SWE) the sum of levels of a project is at most 3.
+# directions = direction: level 1..5 (13 directions, docs/research/notes/directions-nodes-institutes.md, O-091); read but not used by the core yet.
 # One institute = one priority slot (#485). Not part of the data hash of the nodes and scenarios (own hash, InstituteTable.Hash).
 kind: institute
 define:
-  - {id: usa_naca, country: USA, founded: 1915, ref_year: 1915, areas: {aero: 4, prop: 3, mech: 2}, source: "en.wikipedia.org/wiki/National_Advisory_Committee_for_Aeronautics, 2026-11-24"}
-  - {id: usa_wright_field, country: USA, founded: 1917, ref_year: 1917, areas: {prop: 3, aero: 3, metal: 2}, source: "en.wikipedia.org/wiki/Wright_Field, 2026-11-24"}
-  - {id: usa_ge_research, country: USA, founded: 1900, ref_year: 1900, areas: {prop: 3, metal: 3, mech: 2}, source: "en.wikipedia.org/wiki/GE_Research, 2026-11-24"}
-  - {id: usa_westinghouse_agt, country: USA, founded: 1945, ref_year: 1945, areas: {mech: 3, prop: 2}, source: "en.wikipedia.org/wiki/Westinghouse_Aviation_Gas_Turbine_Division, 2026-11-24"}
-  - {id: usa_nrl, country: USA, founded: 1923, ref_year: 1923, areas: {metal: 3, chem: 3}, source: "en.wikipedia.org/wiki/United_States_Naval_Research_Laboratory, 2026-11-24"}
-  - {id: usa_galcit_jpl, country: USA, founded: 1936, ref_year: 1936, areas: {aero: 3, chem: 3, prop: 2}, source: "en.wikipedia.org/wiki/Jet_Propulsion_Laboratory, 2026-11-24"}
-  - {id: gbr_rae, country: GBR, founded: 1905, ref_year: 1905, areas: {aero: 4, prop: 3, mech: 2}, source: "en.wikipedia.org/wiki/Royal_Aircraft_Establishment, 2026-11-24"}
-  - {id: gbr_power_jets_ngte, country: GBR, founded: 1936, ref_year: 1936, areas: {prop: 4, metal: 2}, source: "en.wikipedia.org/wiki/Power_Jets, 2026-11-24"}
-  - {id: gbr_npl, country: GBR, founded: 1900, ref_year: 1900, areas: {aero: 3, mech: 3, metal: 2}, source: "en.wikipedia.org/wiki/National_Physical_Laboratory_(United_Kingdom), 2026-11-24"}
-  - {id: sun_tsagi, country: SUN, founded: 1918, ref_year: 1918, areas: {aero: 4, mech: 3}, source: "en.wikipedia.org/wiki/Central_Aerohydrodynamic_Institute, 2026-11-24"}
-  - {id: sun_ciam, country: SUN, founded: 1930, ref_year: 1930, areas: {prop: 3, mech: 2}, source: "en.wikipedia.org/wiki/Central_Institute_of_Aviation_Motors, 2026-11-24"}
-  - {id: sun_viam, country: SUN, founded: 1932, ref_year: 1932, areas: {metal: 4, chem: 3}, source: "wikidata.org/wiki/Q4127502 (P571, CC0), 2026-11-24"}
-  - {id: sun_rnii, country: SUN, founded: 1933, ref_year: 1933, areas: {prop: 3, aero: 2}, source: "en.wikipedia.org/wiki/Keldysh_Research_Center, 2026-11-24"}
-  - {id: sun_lii, country: SUN, founded: 1941, ref_year: 1941, areas: {aero: 3, mech: 2}, source: "en.wikipedia.org/wiki/Gromov_Flight_Research_Institute, 2026-11-24"}
-  - {id: sun_icp, country: SUN, founded: 1931, ref_year: 1931, areas: {chem: 4, metal: 2}, source: "en.wikipedia.org/wiki/Semenov_Institute_of_Chemical_Physics, 2026-11-24"}
-  - {id: fra_stae, country: FRA, founded: 1916, ref_year: 1916, areas: {aero: 2, prop: 2}, source: "fr.wikipedia.org/wiki/Service_technique_de_l'aéronautique, 2026-11-24"}
-  - {id: fra_cnrs, country: FRA, founded: 1939, ref_year: 1939, areas: {chem: 3, metal: 2, mech: 2}, source: "en.wikipedia.org/wiki/French_National_Centre_for_Scientific_Research, 2026-11-24"}
-  - {id: fra_cea, country: FRA, founded: 1945, ref_year: 1945, areas: {chem: 2, metal: 2}, source: "en.wikipedia.org/wiki/French_Alternative_Energies_and_Atomic_Energy_Commission, 2026-11-24"}
-  - {id: swe_ffa, country: SWE, founded: 1940, ref_year: 1940, areas: {aero: 3, mech: 2}, source: "en.wikipedia.org/wiki/Swedish_Defence_Research_Agency, 2026-11-24"}
-  - {id: swe_saab, country: SWE, founded: 1937, ref_year: 1937, areas: {aero: 3, mech: 3}, source: "en.wikipedia.org/wiki/Saab_AB, 2026-11-24"}
-  - {id: swe_foa, country: SWE, founded: 1945, ref_year: 1945, areas: {chem: 3, mech: 1}, source: "en.wikipedia.org/wiki/Swedish_Defence_Research_Agency, 2026-11-24"}
-  - {id: swe_flygmotor, country: SWE, founded: 1930, ref_year: 1930, areas: {mech: 2, prop: 1}, source: "en.wikipedia.org/wiki/Volvo_Aero, 2026-11-24"}
-  - {id: fra_onera, country: FRA, founded: 1946, ref_year: 1946, areas: {aero: 2, prop: 1}, source: "en.wikipedia.org/wiki/ONERA, 2026-11-24 (levels reduced to the small-country cap of 3; rev 4 §1.2 gives aero 3, prop 3)"}
-  - {id: sun_nii88, country: SUN, founded: 1946, ref_year: 1946, areas: {prop: 3}, source: "en.wikipedia.org/wiki/TsNIIMash, 2026-11-24"}
-  - {id: gbr_rre, country: GBR, founded: 1953, ref_year: 1953, areas: {mech: 2, metal: 1}, source: "wikidata.org/wiki/Q632106 (P571, CC0), 2026-11-24; levels estimated"}
-  - {id: usa_darpa, country: USA, founded: 1958, ref_year: 1958, areas: {mech: 2, metal: 1}, source: "en.wikipedia.org/wiki/DARPA, 2026-11-24; levels estimated"}
-  - {id: fra_cnes, country: FRA, founded: 1961, ref_year: 1961, areas: {aero: 2, prop: 1}, source: "wikidata.org/wiki/Q48756 (P571, CC0), 2026-11-24; levels estimated"}
+  - {id: usa_naca, country: USA, founded: 1915, ref_year: 1915, areas: {aero: 4, prop: 3, mech: 2}, directions: {aero: 4, prop: 3, struct: 2}, source: "en.wikipedia.org/wiki/National_Advisory_Committee_for_Aeronautics, 2026-11-24"}
+  - {id: usa_wright_field, country: USA, founded: 1917, ref_year: 1917, areas: {prop: 3, aero: 3, metal: 2}, directions: {prop: 3, aero: 3, met: 2, ctrl: 1}, source: "en.wikipedia.org/wiki/Wright_Field, 2026-11-24"}
+  - {id: usa_ge_research, country: USA, founded: 1900, ref_year: 1900, areas: {prop: 3, metal: 3, mech: 2}, directions: {prop: 3, met: 3, elec: 2}, source: "en.wikipedia.org/wiki/GE_Research, 2026-11-24"}
+  - {id: usa_westinghouse_agt, country: USA, founded: 1945, ref_year: 1945, areas: {mech: 3, prop: 2}, directions: {prop: 3, mfg: 2, met: 1}, source: "en.wikipedia.org/wiki/Westinghouse_Aviation_Gas_Turbine_Division, 2026-11-24"}
+  - {id: usa_nrl, country: USA, founded: 1923, ref_year: 1923, areas: {metal: 3, chem: 3}, directions: {sens: 4, chem: 3, met: 3, elec: 2}, source: "en.wikipedia.org/wiki/United_States_Naval_Research_Laboratory, 2026-11-24"}
+  - {id: usa_galcit_jpl, country: USA, founded: 1936, ref_year: 1936, areas: {aero: 3, chem: 3, prop: 2}, directions: {prop: 3, aero: 3, chem: 3, ord: 2}, source: "en.wikipedia.org/wiki/Jet_Propulsion_Laboratory, 2026-11-24"}
+  - {id: gbr_rae, country: GBR, founded: 1905, ref_year: 1905, areas: {aero: 4, prop: 3, mech: 2}, directions: {aero: 4, prop: 3, struct: 3, ctrl: 1}, source: "en.wikipedia.org/wiki/Royal_Aircraft_Establishment, 2026-11-24"}
+  - {id: gbr_power_jets_ngte, country: GBR, founded: 1936, ref_year: 1936, areas: {prop: 4, metal: 2}, directions: {prop: 4, met: 2, aero: 2}, source: "en.wikipedia.org/wiki/Power_Jets, 2026-11-24"}
+  - {id: gbr_npl, country: GBR, founded: 1900, ref_year: 1900, areas: {aero: 3, mech: 3, metal: 2}, directions: {aero: 3, met: 2, mfg: 2, elec: 1}, source: "en.wikipedia.org/wiki/National_Physical_Laboratory_(United_Kingdom), 2026-11-24"}
+  - {id: sun_tsagi, country: SUN, founded: 1918, ref_year: 1918, areas: {aero: 4, mech: 3}, directions: {aero: 4, struct: 3, prop: 1}, source: "en.wikipedia.org/wiki/Central_Aerohydrodynamic_Institute, 2026-11-24"}
+  - {id: sun_ciam, country: SUN, founded: 1930, ref_year: 1930, areas: {prop: 3, mech: 2}, directions: {prop: 3, mfg: 2, chem: 2}, source: "en.wikipedia.org/wiki/Central_Institute_of_Aviation_Motors, 2026-11-24"}
+  - {id: sun_viam, country: SUN, founded: 1932, ref_year: 1932, areas: {metal: 4, chem: 3}, directions: {met: 4, mat: 3, chem: 3}, source: "wikidata.org/wiki/Q4127502 (P571, CC0), 2026-11-24"}
+  - {id: sun_rnii, country: SUN, founded: 1933, ref_year: 1933, areas: {prop: 3, aero: 2}, directions: {prop: 3, ord: 3, aero: 2, chem: 2}, source: "en.wikipedia.org/wiki/Keldysh_Research_Center, 2026-11-24"}
+  - {id: sun_lii, country: SUN, founded: 1941, ref_year: 1941, areas: {aero: 3, mech: 2}, directions: {aero: 3, ctrl: 2, struct: 2}, source: "en.wikipedia.org/wiki/Gromov_Flight_Research_Institute, 2026-11-24"}
+  - {id: sun_icp, country: SUN, founded: 1931, ref_year: 1931, areas: {chem: 4, metal: 2}, directions: {chem: 4, nuc: 2, met: 1}, source: "en.wikipedia.org/wiki/Semenov_Institute_of_Chemical_Physics, 2026-11-24"}
+  - {id: fra_stae, country: FRA, founded: 1916, ref_year: 1916, areas: {aero: 2, prop: 2}, directions: {aero: 2, prop: 2, struct: 1}, source: "fr.wikipedia.org/wiki/Service_technique_de_l'aéronautique, 2026-11-24"}
+  - {id: fra_cnrs, country: FRA, founded: 1939, ref_year: 1939, areas: {chem: 3, metal: 2, mech: 2}, directions: {chem: 3, met: 2, nuc: 1}, source: "en.wikipedia.org/wiki/French_National_Centre_for_Scientific_Research, 2026-11-24"}
+  - {id: fra_cea, country: FRA, founded: 1945, ref_year: 1945, areas: {chem: 2, metal: 2}, directions: {nuc: 3, chem: 2, met: 2}, source: "en.wikipedia.org/wiki/French_Alternative_Energies_and_Atomic_Energy_Commission, 2026-11-24"}
+  - {id: swe_ffa, country: SWE, founded: 1940, ref_year: 1940, areas: {aero: 3, mech: 2}, directions: {aero: 3, struct: 2, prop: 1}, source: "en.wikipedia.org/wiki/Swedish_Defence_Research_Agency, 2026-11-24"}
+  - {id: swe_saab, country: SWE, founded: 1937, ref_year: 1937, areas: {aero: 3, mech: 3}, directions: {aero: 3, struct: 2, mfg: 2, ord: 1}, source: "en.wikipedia.org/wiki/Saab_AB, 2026-11-24"}
+  - {id: swe_foa, country: SWE, founded: 1945, ref_year: 1945, areas: {chem: 3, mech: 1}, directions: {chem: 3, ord: 2, nuc: 1}, source: "en.wikipedia.org/wiki/Swedish_Defence_Research_Agency, 2026-11-24"}
+  - {id: swe_flygmotor, country: SWE, founded: 1930, ref_year: 1930, areas: {mech: 2, prop: 1}, directions: {prop: 2, mfg: 2, met: 1}, source: "en.wikipedia.org/wiki/Volvo_Aero, 2026-11-24"}
+  - {id: fra_onera, country: FRA, founded: 1946, ref_year: 1946, areas: {aero: 2, prop: 1}, directions: {aero: 2, prop: 1, struct: 1}, source: "en.wikipedia.org/wiki/ONERA, 2026-11-24 (levels reduced to the small-country cap of 3; rev 4 §1.2 gives aero 3, prop 3)"}
+  - {id: sun_nii88, country: SUN, founded: 1946, ref_year: 1946, areas: {prop: 3}, directions: {prop: 3, ord: 2, ctrl: 1}, source: "en.wikipedia.org/wiki/TsNIIMash, 2026-11-24"}
+  - {id: gbr_rre, country: GBR, founded: 1953, ref_year: 1953, areas: {mech: 2, metal: 1}, directions: {sens: 3, elec: 2, mat: 1}, source: "wikidata.org/wiki/Q632106 (P571, CC0), 2026-11-24; levels estimated"}
+  - {id: usa_darpa, country: USA, founded: 1958, ref_year: 1958, areas: {mech: 2, metal: 1}, directions: {ctrl: 2, elec: 2, mat: 1}, source: "en.wikipedia.org/wiki/DARPA, 2026-11-24; levels estimated"}
+  - {id: fra_cnes, country: FRA, founded: 1961, ref_year: 1961, areas: {aero: 2, prop: 1}, directions: {prop: 2, aero: 1, ctrl: 1}, source: "wikidata.org/wiki/Q48756 (P571, CC0), 2026-11-24; levels estimated"}
