@@ -22,7 +22,8 @@ public static class SliceChecks
     // Re-recorded in TASK-0129 (fleet ageing, #431/#435-#437): new column prd.d*.replCredit, SchemaVersion 13.
     // Re-recorded in TASK-0147 (train 2, O-052): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465)
     // change every trajectory on the current data; equals Session MainSeed1Month149. Earlier: TASK-0134 (Hcap(t), mastery). docs/simulation/golden-rerecord-train2.md.
-    private const string Golden150 = "7720220e04795975c4e9e8e7b11d50c51976106a68cb89f0464c416db3baa087";
+    // TASK-0180: early G5/G6 requires changed (#555), = Session MainSeed1Month149.
+    private const string Golden150 = "0cad8c130fe67ddb543eaa26be65be37d3257e5358a4d49ba1cb52c1f72fc5dd";
     private const long Ticks150 = 4564;   // 1945-09-01 → 1958-03-01: the tick of month 150, so month 149 is the last one run
     private const long Ticks60 = 1826;    // 1945-09-01 → 1950-09-01
 
