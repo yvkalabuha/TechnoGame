@@ -130,8 +130,8 @@ public static class SynthChecks
         GameData core = ModLoader.Load(SynthWorldGenerator.FindCoreMod());
         if (w.Data.Scenario(w.ScenarioId).Hash != core.Scenario(w.ScenarioId).Hash)
             return "the emitted scenario has another scenario_hash than the core one";
-        string h0 = Run(core, new SliceRunConfig { Seed = 1 }, Months);
-        string h1 = Run(w.Data, new SliceRunConfig { Seed = 1, ScenarioId = w.ScenarioId }, Months);
+        string h0 = Run(core, SliceRunConfig.Legacy with { Seed = 1 }, Months);
+        string h1 = Run(w.Data, SliceRunConfig.Legacy with { Seed = 1, ScenarioId = w.ScenarioId }, Months);
         return h0 == h1 ? null : $"core {h0[..12]} vs overlay {h1[..12]}";
     }
 
@@ -139,7 +139,7 @@ public static class SynthChecks
     {
         var spec = new SynthWorldSpec(24, 180, SynthGraph.CrossEdges);
         SynthWorld w = SynthWorldGenerator.Build(spec, Dir(tmp, spec, "thr"));
-        var cfg = new SliceRunConfig { Seed = 3, ScenarioId = w.ScenarioId };
+        var cfg = SliceRunConfig.Legacy with { Seed = 3, ScenarioId = w.ScenarioId };
         string h = Run(w.Data, cfg with { Threads = 1, ChunkSize = 8 }, Months);
         foreach ((int t, int c) in (ValueTuple<int, int>[])[(4, 8), (8, 8), (16, 8), (8, 1), (8, 32)])
         {
@@ -159,13 +159,13 @@ public static class SynthChecks
         {
             var spec = new SynthWorldSpec(200, 2000, g);
             SynthWorld w = SynthWorldGenerator.Build(spec, Dir(tmp, spec, "full"));
-            SliceSession s = SliceSession.Create(w.Data, new SliceRunConfig { Seed = 1, ScenarioId = w.ScenarioId, Threads = 8, ChunkSize = 8 });
+            SliceSession s = SliceSession.Create(w.Data, SliceRunConfig.Legacy with { Seed = 1, ScenarioId = w.ScenarioId, Threads = 8, ChunkSize = 8 });
             if (s.Layout is null)
                 return $"{spec.Name}: no layout";
         }
         var mid = new SynthWorldSpec(96, 500, SynthGraph.CrossEdges);
         SynthWorld m = SynthWorldGenerator.Build(mid, Dir(tmp, mid, "mid"));
-        var cfg = new SliceRunConfig { Seed = 1, ScenarioId = m.ScenarioId, ChunkSize = 8 };
+        var cfg = SliceRunConfig.Legacy with { Seed = 1, ScenarioId = m.ScenarioId, ChunkSize = 8 };
         string h1 = Run(m.Data, cfg with { Threads = 1 }, 3);
         string h8 = Run(m.Data, cfg with { Threads = 8 }, 3);
         return h1 == h8 ? null : $"t1 {h1[..12]} vs t8 {h8[..12]}";

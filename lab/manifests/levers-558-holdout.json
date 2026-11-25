@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "experiment": "levers-558-holdout",
+  "description": "levers-558: held-out seeds 11-20 for the final pick: LEGACY, rule alone, market alone, all levers on; settings from the environment.",
+  "model": "JetSlice",
+  "ticks": 20211,
+  "chunk_size": 1,
+  "threads": [
+    1
+  ],
+  "seeds": {
+    "start": 11,
+    "count": 10
+  },
+  "params": {
+    "LINE_CLOSE": "YPROD",
+    "TOOLING_TARGET": "V5",
+    "POOL_ORDER": "CAN",
+    "detail": "full"
+  },
+  "series": [
+    {
+      "name": "LEGACY",
+      "params": {}
+    },
+    {
+      "name": "INST",
+      "params": {
+        "INSTITUTES": true
+      }
+    },
+    {
+      "name": "LICM",
+      "params": {
+        "LIC_MARKET": true,
+        "LIC_PROBE": true
+      }
+    },
+    {
+      "name": "ON",
+      "params": {
+        "LEVERS": "ON",
+        "LIC_PROBE": true
+      }
+    }
+  ],
+  "meta": {
+    "note": "docs/simulation/levers-on-baseline-558.md",
+    "baseline": "LEGACY",
+    "sandbox_patch": "lab/patches/levers-558.sandbox.diff",
+    "sandbox_patch_sha256": "03010c837f68a32458acc44699e45ba4f6eecfa40c95fe197863ee1c27592c0e"
+  }
+}

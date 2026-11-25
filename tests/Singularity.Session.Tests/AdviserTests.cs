@@ -14,7 +14,7 @@ public class AdviserTests
 {
     private const int Horizon = 400;
 
-    private static SliceRunConfig Base => new() { Seed = 1, Threads = 2 };
+    private static SliceRunConfig Base => SliceRunConfig.Legacy with { Seed = 1, Threads = 2 };
 
     private sealed record Found(int Actor, int Design, long Month, Fx6 Rate, List<(long Month, int Actor, DesignCommand Command)> Designs)
     {

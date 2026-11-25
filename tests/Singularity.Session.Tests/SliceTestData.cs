@@ -15,14 +15,14 @@ internal static class SliceTestData
     /// </summary>
     public static readonly GameData LegacyData = ModLoader.Load(Path.Combine(RepoRoot, "tests", "Singularity.Session.Tests", "Fixtures", "core-g4"));
 
-    public static SliceSession CreateLegacy(SliceRunConfig? config = null) => SliceSession.Create(LegacyData, config ?? new SliceRunConfig { Seed = 7 });
+    public static SliceSession CreateLegacy(SliceRunConfig? config = null) => SliceSession.Create(LegacyData, config ?? SliceRunConfig.Legacy with { Seed = 7 });
 
     /// <summary>
     /// Legacy data with the ahead-of-time cost off (TASK-0147, O-052): the identity tests compare with builds that had no such cost, so they run with
     /// the neutral setting k = 0 explicitly; the cost is on by default (owner decision #465) and cannot be identical to a build without it.
     /// </summary>
     public static SliceSession CreateLegacyNeutral(SliceRunConfig? config = null) =>
-        SliceSession.Create(LegacyData, (config ?? new SliceRunConfig { Seed = 7 }) with { AheadCostK = Singularity.Kernel.Fx6.Zero });
+        SliceSession.Create(LegacyData, (config ?? SliceRunConfig.Legacy with { Seed = 7 }) with { AheadCostK = Singularity.Kernel.Fx6.Zero });
 
     public static SliceSession Create(SliceRunConfig? config = null) => SliceSession.Create(Data, config ?? new SliceRunConfig { Seed = 7 });
 

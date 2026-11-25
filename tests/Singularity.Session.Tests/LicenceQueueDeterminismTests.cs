@@ -49,7 +49,7 @@ public class LicenceQueueDeterminismTests
     {
         for (ulong seed = 1; seed <= 12; seed++)
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed });
             for (long m = 0; m < Months; m++)
             {
                 s.StepThroughMonth(m);
@@ -77,7 +77,7 @@ public class LicenceQueueDeterminismTests
     public void RestoringTheColumnsAtATickBoundaryWithAQueuedDeal_GivesTheSameMonthlyHashesAsTheUninterruptedRun(int threads)
     {
         (ulong seed, long month) = FindQueued();
-        var cfg = new SliceRunConfig { Seed = seed, Threads = threads };
+        var cfg = SliceRunConfig.Legacy with { Seed = seed, Threads = threads };
 
         SliceSession whole = SliceTestData.Create(cfg);
         Run(whole, 0, (int)month + 1);
@@ -103,7 +103,7 @@ public class LicenceQueueDeterminismTests
     public void WithoutTheQueueColumns_TheRestoredRunDiverges_SoTheQueueIsStateAndTheTestIsSensitive()
     {
         (ulong seed, long month) = FindQueued();
-        var cfg = new SliceRunConfig { Seed = seed };
+        var cfg = SliceRunConfig.Legacy with { Seed = seed };
         SliceSession whole = SliceTestData.Create(cfg);
         Run(whole, 0, (int)month + 1);
         var snap = Snapshot(whole.World.Table);
@@ -121,8 +121,8 @@ public class LicenceQueueDeterminismTests
     {
         (ulong seed, long month) = FindQueued();
         int n = (int)month + 1 + After;
-        List<string> one = Run(SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 1 }), 0, n);
-        List<string> four = Run(SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 4 }), 0, n);
+        List<string> one = Run(SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 1 }), 0, n);
+        List<string> four = Run(SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 4 }), 0, n);
         Assert.Equal(one, four);
     }
 }

@@ -13,7 +13,7 @@ public sealed class ViewInputsFailureTests
     {
         // Own copy of the data: the scenario is mutated below and the shared one is used by tests running in parallel.
         GameData data = ModLoader.Load(Path.Combine(SliceTestData.RepoRoot, "mods", "core"));
-        SliceSession s = SliceSession.Create(data, new SliceRunConfig { Seed = 7, Threads = threads });
+        SliceSession s = SliceSession.Create(data, SliceRunConfig.Legacy with { Seed = 7, Threads = threads });
         SliceWorld w = s.World;
         FieldInfo field = typeof(ScenarioData).GetField("<ActorId>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!;
         field.SetValue(w.Scenario, w.Scenario.ActorId.AddRange(ImmutableArray.Create("P1", "P2", "P3", "P4", "P5", "P6")));

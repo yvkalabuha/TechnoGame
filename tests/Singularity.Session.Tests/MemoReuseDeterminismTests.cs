@@ -66,7 +66,7 @@ public class MemoReuseDeterminismTests
         {
             foreach (bool on in new[] { true, false })
             {
-                SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 3, Threads = t, ChunkSize = c });
+                SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 3, Threads = t, ChunkSize = c });
                 s.World.MemoizeInputs = on;
                 s.World.ReuseNodeBlocks = on;
                 runs.Add((s, on, 0, 0));
@@ -93,8 +93,8 @@ public class MemoReuseDeterminismTests
     [Fact]
     public void Views_WithReuse_EqualFullRebuild_AcrossFullCopyMode_CommandOnlyTicks_AndLoad()
     {
-        SliceSession reuse = SliceTestData.Create(new SliceRunConfig { Seed = 5 });
-        SliceSession fresh = SliceTestData.Create(new SliceRunConfig { Seed = 5 });
+        SliceSession reuse = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 5 });
+        SliceSession fresh = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 5 });
         fresh.World.ReuseNodeBlocks = false;
         reuse.World.Table.FullCopyMode = true;      // reuse run in full-copy mode: versions bump for every column, blocks must still equal
         int local = 0, player = 0, local2 = 0, player2 = 0;
@@ -113,8 +113,8 @@ public class MemoReuseDeterminismTests
                 reuse.World.Table.FullCopyMode = false;
         }
         // Rewind (save/load path): restore columns of an earlier tick into the reuse session and into a fresh-rebuild twin.
-        SliceSession a = SliceTestData.Create(new SliceRunConfig { Seed = 5 });
-        SliceSession b = SliceTestData.Create(new SliceRunConfig { Seed = 5 });
+        SliceSession a = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 5 });
+        SliceSession b = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 5 });
         b.World.ReuseNodeBlocks = false;
         a.StepThroughMonth(3); b.StepThroughMonth(3);
         var longs = new Dictionary<string, long[]>();
@@ -174,8 +174,8 @@ public class MemoReuseDeterminismTests
     [Fact]
     public void Memo_NeverServesAStaleValue_AfterAnyColumnWrite()
     {
-        SliceSession memo = SliceTestData.Create(new SliceRunConfig { Seed = 2 });
-        SliceSession oracle = SliceTestData.Create(new SliceRunConfig { Seed = 2 });
+        SliceSession memo = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 2 });
+        SliceSession oracle = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 2 });
         oracle.World.MemoizeInputs = false;
         memo.StepThroughMonth(5); oracle.StepThroughMonth(5);
         long month = 6;
