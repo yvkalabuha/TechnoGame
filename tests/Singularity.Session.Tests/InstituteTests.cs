@@ -62,7 +62,7 @@ public class InstituteTests
         Assert.Equal(6, l.StartingCount(actors.ToList().IndexOf("USA")));
         Assert.Equal(6, l.StartingCount(actors.ToList().IndexOf("SUN")));
         Assert.Equal(3, l.StartingCount(actors.ToList().IndexOf("GBR")));
-        Assert.Equal(3, l.StartingCount(actors.ToList().IndexOf("FRA")));
+        Assert.Equal(2, l.StartingCount(actors.ToList().IndexOf("FRA")));   // CEA was founded in 1945-10, after the start (O-094): a candidate
         Assert.Equal(4, l.StartingCount(actors.ToList().IndexOf("SWE")));
         for (int a = 0; a < l.ActorCount; a++)
         {

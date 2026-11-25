@@ -111,7 +111,8 @@ public sealed class ViewWalk
         Check("actor", av.KD.Length == w.Graph.DisciplineNames.Length && Enumerable.Range(0, av.KD.Length).All(d => av.KD[d] == w.Knowledge.KD(a, d)), $"month {t} actor {a}: KD");
         Check("actor", av.FieldedGen == w.Products.FieldedGen(a, next), $"month {t} actor {a}: fielded gen");
         Check("actor", av.Key == w.Products.KeyOf(a, next), $"month {t} actor {a}: key");
-        bool yearStart = t % 12 == 0;
+        // The slot model carries the fleet value (the air power index MPI, #565) every month; the shares model at the start of a year.
+        bool yearStart = t % 12 == 0 || w.SlotsOn;
         Check("actor", av.FleetValue.HasValue == yearStart, $"month {t} actor {a}: fleet value presence");
         if (yearStart)
             Check("actor", av.FleetValue == w.Products.MaxFleetValue(a, Fx6.One, w.PolicyParameters.FvBudget, next), $"month {t} actor {a}: fleet value");
@@ -525,7 +526,8 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
         // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
         // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront; old columns unchanged (ColumnProjection hash not changed).
         // Re-recorded in TASK-0171 (the one golden batch of 2026-11-26): the five levers of wave 1 are on by default (reserve, institutes, licence market, adviser, intelligence), the AI institutes pick goals on the path to the next product generation (PATH, #559) and the AI buys licences by the market setting M2 (#560), so every trajectory of a default config moves; the old behaviour stays in SliceRunConfig.Legacy (projection and identity tests use it).
-        HashAssert.Equal("57008f914dc307840985249a52ed6664418ddc78b3af8b3eaf6c5df8b9e84f73", a.LastHash);
+                // Re-recorded in TASK-0187 (the golden batch of the slot science model): the default config runs the slot model (ScienceSlots) and FRA starts with 2 institutes (O-094); the shares model stays under ScienceSlots = false and Legacy.
+        HashAssert.Equal("ead3591b3d34226bd339f0dc8993e1193216494263746c0dfca261bdda72b0f0", a.LastHash);
     }
 
     [Fact]

@@ -46,9 +46,6 @@ public sealed record SlotParams
     /// <summary>Upkeep of the built institutes may take at most this share of the research money (#574).</summary>
     public Fx6 UpkeepCeilingShare { get; init; } = F(250_000);
 
-    /// <summary>The player must confirm a node when, after starting it, less than this share of the money the slots ask is there.</summary>
-    public Fx6 UnderfundedBelow { get; init; } = F(600_000);
-
     /// <summary>AI focus: level 1 below this air-power ratio, level 2 below <see cref="AiFocusRatio2"/> (#565, SCIENCE_SLOTS §8).</summary>
     public Fx6 AiFocusRatio1 { get; init; } = Fx6.One;
 

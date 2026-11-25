@@ -57,7 +57,7 @@ public class GoalPathAdapterTests
     [Fact]
     public void AiInstitutesTakeOnlyTierOneNodesOfTheSnapshotOfThePickMonth()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, ScienceSlots = false });   // the PATH pick of the shares model; the slot model has its own tests
         int actors = s.World.Scenario.ActorCount;
         byte[][] tiers = [.. Enumerable.Range(0, actors).Select(a => Path(s, a))];   // the snapshot the picks of month 0 read
         s.StepThroughMonth(0);
@@ -80,7 +80,7 @@ public class GoalPathAdapterTests
     [Fact]
     public void ASlotIsFreeOnlyWhenNoFreeTierOneNodeIsInTheFrontier()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, ScienceSlots = false });
         var inst = s.World.Institutes!;
         int freeSlots = 0;
         for (int a = 0; a < s.World.Scenario.ActorCount; a++)

@@ -50,9 +50,10 @@ public class TwoWorldsOnOnePoolTests
     // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
     // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront (the G_front a fleet sale was priced at); the old columns are unchanged (projection tests), so only the new column changes these digests.
     // Re-recorded in TASK-0171 (the one golden batch of 2026-11-26): the five levers of wave 1 are on by default (reserve, institutes, licence market, adviser, intelligence), the AI institutes pick goals on the path to the next product generation (PATH, #559) and the AI buys licences by the market setting M2 (#560), so every trajectory of a default config moves; the old behaviour stays in SliceRunConfig.Legacy (projection and identity tests use it).
+    // Re-recorded in TASK-0187 (the golden batch of the slot science model): the default config runs the slot model and FRA starts with 2 institutes (O-094); one batch, threads 1/2/4 agree.
     private static readonly Dictionary<ulong, string> Pinned = new()
     {
-        [1] = "05007965224303fbaa95eef7758859c6df03f62deb9fd2acc0bd3636ab1739a5", [2] = "4f459371b503daba9159ac447b250dfbeba5caa030e6291df9571143e4610612", [3] = "6ff2993d917f1f52a5a2887d5e51aa3910cf642c10cfc866b94048444ec0956e", [4] = "376699d540a94f6b9476f939f96edf571d4351932f29ab252a45d8c8325c21f9", [5] = "8e426354c67cbd793616b7feae70087bac4777b4db070069e08ea65175c4030e", [7] = "18373d147767eb80ff3f02b66845adb758c0ab220d4d02add48f102f67f0c210",
+        [1] = "8dd5b24c1d9c1077656c38cab0ac15200dd07bcba5e268cef872f1a5a560e289", [2] = "3d5f7b8a2900865598f356ec1137df61681e410bc8d32c8a4d81e2f82f234b73", [3] = "5f4df2a25d3ddf3ade8ea47d183a7ed4f092926fd904e418924902369707c5b2", [4] = "bf0b42f1a50ffb58399c1ebe7de1444981be4e32c245d65589f41aa091a113a3", [5] = "0c673d2e8d3bb7a7ad300bfd2993dd7f9cc12129ba9317256956912a54131e31", [7] = "2f3be0e3add9fc1ed38f2b9b0c6132b093d0260409a9c698b560d87b621fbfca",
     };
 
     private static void AssertPinned(ulong seed, string[] actual, string what)

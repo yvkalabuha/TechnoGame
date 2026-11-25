@@ -158,7 +158,7 @@ internal static class ViewBuilder
                 levels.Add(inst.Level(h, d));
             long start = inst.BuildStart(h);
             int active = 0, focus = 0;
-            ImmutableArray<int> queue = default, dirLevels = default;
+            ImmutableArray<int> queue = [], dirLevels = [];
             Fx6 progress = Fx6.Zero, monthsLeft = Fx6.Zero;
             if (inst.SlotsOn && inst.Standing(h) && !HiddenFromPlayer(w, a))
             {

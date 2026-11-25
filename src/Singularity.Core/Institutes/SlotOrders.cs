@@ -156,8 +156,8 @@ public sealed class SlotOrders
         {
             if (list[..n].IndexOf(c.Order[i]) < 0 || c.Order.IndexOf(c.Order[i]) != i)
                 return CommandVerdict.Refuse(CommandRefusal.NotInList, $"node {c.Order[i]} is not in the list of slot {c.Slot} or repeats");
-            list[i] = c.Order[i];
         }
+        c.Order.CopyTo(list);
         Write(h, list[..n]);
         return CommandVerdict.Ok;
     }
