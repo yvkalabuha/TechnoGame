@@ -31,6 +31,24 @@ public class TreeKeyNavTests
     }
 
     [Fact]
+    public void AKeyboardZoomKeepsAFocusedNodeInViewByAnchoringOnIt()
+    {
+        // Area 0,44 960x1000; a focused node near the right edge: the zoom must stay fixed on it, not on the centre.
+        var (x, y) = TreeKeyNav.ZoomAnchor(true, 900, 300, 0, 44, 960, 1000, 12);
+        Assert.Equal((900f, 300f), (x, y));
+        // a focus that is already out of view, or none, falls back to the centre
+        Assert.Equal((480f, 544f), TreeKeyNav.ZoomAnchor(true, 2000, 300, 0, 44, 960, 1000, 12));
+        Assert.Equal((480f, 544f), TreeKeyNav.ZoomAnchor(false, 900, 300, 0, 44, 960, 1000, 12));
+    }
+
+    [Fact]
+    public void AFocusAtTheEdgeIsNotInView()
+    {
+        Assert.False(TreeKeyNav.Inside(955, 300, 0, 44, 960, 1000, 12));
+        Assert.True(TreeKeyNav.Inside(500, 300, 0, 44, 960, 1000, 12));
+    }
+
+    [Fact]
     public void ASegmentThatClipsOnlyACornerIsAHit()
     {
         // Box (10,10)-(20,20); x+y=24 cuts its corner with a chord (10,14)-(14,10): the old 6 du sampling stepped over it.

@@ -74,8 +74,28 @@ public static class TreeYearLayout
         return Math.Clamp((int)MathF.Ceiling(len / chord), 8, 1024);
     }
 
+    /// <summary>
+    /// The ring band a node belongs to: radii (lo, hi] between the two rings that enclose radius <paramref name="r0"/> (the 1945 circle, the decade rings, the edge).
+    /// A node sits on the ring of its year or between two rings and must not be moved across one, or it would read as another decade.
+    /// </summary>
+    public static (float Lo, float Hi) RingBand(float r0)
+    {
+        const float eps = 1e-4f;
+        float prev = Inner - RootsBand;
+        if (Inner >= r0 - eps) return (prev, Inner);
+        prev = Inner;
+        foreach (int y in RingYears)
+        {
+            float r = RadiusOf(y);
+            if (r >= r0 - eps) return (prev, r);
+            prev = r;
+        }
+        return (prev, Edge);
+    }
+
     /// <summary>Slots across the usable arc of a sector that the greedy placement tries.</summary>
     const int Slots = 48;
+    const float BandPad = 0.03f;
     const int LaneYear = 1950; const float LaneStep = 0.2f;
     static readonly int[] LaneOffsets = { 0, 1, -1, 2, -2 };
 
@@ -103,10 +123,13 @@ public static class TreeYearLayout
             int pref = ((num[i] * 5 + 3) % Slots + Slots) % Slots, best = pref; float bestD = -1f;
             // The crowded roots and the 1940s may step onto a neighbouring sub-ring (0.2 unit apart) when their own ring has no free place; other years stay on their ring.
             int lanes = y[i] <= LaneYear ? LaneOffsets.Length : 1;
-            bool found = false;
+            bool found = false; float lastR = float.NaN;
             for (int ln = 0; ln < lanes && !found; ln++)
             {
-                float r = Math.Max(r0 + LaneOffsets[ln] * LaneStep, Inner - RootsBand);
+                var (bandLo, bandHi) = RingBand(r0);
+                float r = Math.Clamp(r0 + LaneOffsets[ln] * LaneStep, Math.Min(r0, bandLo + BandPad), bandHi);   // a lane never crosses a ring
+                if (ln > 0 && r == lastR) continue;
+                lastR = r;
                 for (int t = 0; t < Slots; t++)
                 {
                     int slot = (pref + t) % Slots;

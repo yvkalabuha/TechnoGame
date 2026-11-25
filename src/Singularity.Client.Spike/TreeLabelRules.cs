@@ -29,6 +29,9 @@ public static class TreeLabelRules
     /// <summary>True when the plate does not touch the obstacle.</summary>
     public static bool Clear(LabelBox plate, LabelBox obstacle) => !plate.Intersects(obstacle);
 
+    /// <summary>The shot-run glyph probe records a glyph only for a real node row: the legend draws samples with row -1, which have no node box.</summary>
+    public static bool RecordsGlyph(bool probeOn, int row) => probeOn && row >= 0;
+
     /// <summary>A node name is drawn only when the icon of its node is fully visible in the window: a name whose icon is cut off by the edge would hang alone.</summary>
     public static bool IconVisible(float cx, float cy, float half, LabelBox area) => area.Encloses(new LabelBox(cx - half, cy - half, half * 2, half * 2));
 

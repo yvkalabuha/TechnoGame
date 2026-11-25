@@ -853,7 +853,7 @@ public sealed partial class TechTree : Control
         int k = (int)t; float rg = r * GlyphGeometry.NodeGlyphShare;
         _ngSets[k] ??= new GlyphSet(GlyphPrims.NodeGlyph(t.ToString(), 1f));
         GlyphDraw.Draw(_cv, _ngSets[k], p, c, rg, CvBasis);
-        if (ShotProbe)
+        if (TreeLabelRules.RecordsGlyph(ShotProbe, row))   // the legend draws glyphs with row -1: no node box to record
         {
             var (x0, y0, x1, y1) = GlyphPrims.Ink(GlyphPrims.NodeGlyph(t.ToString(), rg));
             ShotGlyphs.Add((row, new Rect2(p.X + x0, p.Y + y0, x1 - x0, y1 - y0), NodeBox(row)));
@@ -1492,7 +1492,16 @@ public sealed partial class TechTree : Control
     public int KeyFocusRow => _kbActive && HasFocus() ? _kb : -1;
     public string KeyTipText => KeyFocusRow >= 0 ? _kbTip : null;
 
-    bool KbVisible(int i) => Area.Grow(-NR).HasPoint(PosOf(i));
+    bool KbVisible(int i) { var p = PosOf(i); var a = Area; return TreeKeyNav.Inside(p.X, p.Y, a.Position.X, a.Position.Y, a.Size.X, a.Size.Y, NR); }
+    /// <summary>The ring of the keyboard focus, only while that node is in view (a zoom or a pan can take it out; then Enter and the menu key must not act on it).</summary>
+    bool KbFocusLive => _kbActive && _kb >= 0 && KbVisible(_kb);
+    /// <summary>Keyboard zoom: keeps the focused node where it is on screen (the anchor), so that it stays in view.</summary>
+    void KeyZoom(int dir)
+    {
+        var a = Area; var p = _kbActive && _kb >= 0 ? PosOf(_kb) : a.GetCenter();
+        var (ax, ay) = TreeKeyNav.ZoomAnchor(_kbActive && _kb >= 0, p.X, p.Y, a.Position.X, a.Position.Y, a.Size.X, a.Size.Y, NR);
+        _zoomTarget = PlanisphereMath.ClampZoom(ZoomSteps.Next(_zoomTarget, dir)); _anchor = new Vector2(ax, ay); Redraw();
+    }
 
     /// <summary>Handles one key of the walk; true when the key was used (Tab past the last node is not used, so the focus moves on).</summary>
     public bool KeyNav(Key key, bool shift, bool modified)
@@ -1513,14 +1522,14 @@ public sealed partial class TechTree : Control
                 if (next < 0) return true;   // the edge: the ring stays
                 break;
             case Key.Enter or Key.KpEnter:
-                if (_kb < 0 || !_kbActive) return false;
+                if (!KbFocusLive) { _kbActive = false; Redraw(); return false; }   // the focus left the view: Enter does not act on a node nobody can see
                 Select(_kb); return true;
-            case Key.Equal or Key.Plus or Key.KpAdd: ZoomBy(1); return true;
-            case Key.Minus or Key.KpSubtract: ZoomBy(-1); return true;
+            case Key.Equal or Key.Plus or Key.KpAdd: KeyZoom(1); return true;
+            case Key.Minus or Key.KpSubtract: KeyZoom(-1); return true;
             case Key.Key0 or Key.Kp0: ResetView(); return true;
             case Key.Menu or Key.F10 when key == Key.Menu || shift:   // the menu of the node under the keyboard ring, else of the selected one
-                int mrow = _kbActive && _kb >= 0 ? _kb : _selected;
-                if (mrow < 0) return false;
+                int mrow = KbFocusLive ? _kb : _selected;
+                if (mrow < 0 || !KbVisible(mrow)) return false;
                 Select(mrow); OpenMenu(mrow, PosOf(mrow)); return true;
             default: return false;
         }

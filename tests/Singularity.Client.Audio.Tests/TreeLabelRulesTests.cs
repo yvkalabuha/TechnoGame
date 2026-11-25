@@ -41,6 +41,14 @@ public class TreeLabelRulesTests
     }
 
     [Fact]
+    public void TheGlyphProbeSkipsLegendSamplesWithoutANodeRow()
+    {
+        Assert.False(TreeLabelRules.RecordsGlyph(true, -1));   // the legend sample: NodeBox(-1) would index the position arrays out of range
+        Assert.True(TreeLabelRules.RecordsGlyph(true, 0));
+        Assert.False(TreeLabelRules.RecordsGlyph(false, 5));
+    }
+
+    [Fact]
     public void TheNowPlateHasAFourDuFieldOnEverySide()
     {
         var (w, h) = TreeLabelRules.NowPlateSize(100, 16);

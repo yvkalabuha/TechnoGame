@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Singularity.Client.Spike;
 using Xunit;
@@ -7,6 +8,35 @@ namespace Singularity.Client.Audio.Tests;
 
 public class TreeYearLayoutTests
 {
+    [Fact]
+    public void CrowdedNodesNeverCrossTheRingOfTheirDecade()
+    {
+        // Many nodes of one sector in 1944, 1947 and 1950: the lane search used to push 1947 beyond the 1950 ring and 1944 beyond the 1945 ring.
+        var years = new List<int>();
+        for (int k = 0; k < 40; k++) { years.Add(1944); years.Add(1947); years.Add(1950); }
+        int n = years.Count; var sector = new int[n]; var num = Enumerable.Range(1, n).ToArray();
+        var rad = new float[n]; var ang = new float[n];
+        TreeYearLayout.Place(years.ToArray(), sector, num, 5, 0.1f, 0.3f, rad, ang);
+        for (int i = 0; i < n; i++)
+        {
+            var (lo, hi) = TreeYearLayout.RingBand(TreeYearLayout.RadiusOf(years[i]));
+            Assert.True(rad[i] <= hi + 1e-4f && rad[i] >= lo - 1e-4f, $"year {years[i]} node {i}: radius {rad[i]} outside its band {lo}..{hi}");
+        }
+        Assert.True(rad.Where((_, i) => years[i] == 1947).Max() <= TreeYearLayout.RadiusOf(1950) + 1e-4f);
+        Assert.True(rad.Where((_, i) => years[i] == 1944).Max() <= TreeYearLayout.Inner + 1e-4f);
+    }
+
+    [Fact]
+    public void RingBandsAreTheGapsBetweenConsecutiveRings()
+    {
+        var (lo, hi) = TreeYearLayout.RingBand(TreeYearLayout.RadiusOf(1947));
+        Assert.Equal(TreeYearLayout.Inner, lo, 4); Assert.Equal(TreeYearLayout.RadiusOf(1950), hi, 4);
+        (lo, hi) = TreeYearLayout.RingBand(TreeYearLayout.RadiusOf(1950));   // a node of the ring year belongs to the decade that ends on it
+        Assert.Equal(TreeYearLayout.Inner, lo, 4); Assert.Equal(TreeYearLayout.RadiusOf(1950), hi, 4);
+        (lo, hi) = TreeYearLayout.RingBand(TreeYearLayout.RadiusOf(2035));
+        Assert.Equal(TreeYearLayout.RadiusOf(2030), lo, 4); Assert.Equal(TreeYearLayout.Edge, hi, 4);
+    }
+
     [Fact]
     public void RadiusGrowsWithTheYearAndIsClampedAtTheEnds()
     {

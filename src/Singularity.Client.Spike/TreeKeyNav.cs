@@ -14,6 +14,14 @@ public static class TreeKeyNav
         return -1;
     }
 
+    /// <summary>True when the point lies inside the rectangle shrunk by <paramref name="margin"/> on every side (a node counts as in view only then).</summary>
+    public static bool Inside(float x, float y, float ax, float ay, float aw, float ah, float margin) =>
+        x >= ax + margin && x <= ax + aw - margin && y >= ay + margin && y <= ay + ah - margin;
+
+    /// <summary>The point a keyboard zoom keeps fixed: the focused node when it is in view (so that it stays where it is), else the centre of the area.</summary>
+    public static (float X, float Y) ZoomAnchor(bool focusActive, float fx, float fy, float ax, float ay, float aw, float ah, float margin) =>
+        focusActive && Inside(fx, fy, ax, ay, aw, ah, margin) ? (fx, fy) : (ax + aw * 0.5f, ay + ah * 0.5f);
+
     /// <summary>The nearest `ok` node in the direction (dx, dy): it must lie ahead (a cone of about 63 degrees) and a sideways offset costs twice as much as a forward one. -1 when none.</summary>
     public static int Direction(ReadOnlySpan<float> xs, ReadOnlySpan<float> ys, int cur, float dx, float dy, Func<int, bool> ok)
     {
