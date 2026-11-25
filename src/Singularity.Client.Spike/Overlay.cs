@@ -325,7 +325,16 @@ public sealed partial class Overlay : Control
                             { chosen = variant; size = sz; s.TextW = tw; w = bw; h = bh; px = cx - w * 0.5f; py = cy - h * 0.5f; break; }
                         }
                     }
-                    if (chosen == null) { s.Node.Visible = false; continue; }
+                    if (chosen == null)
+                    {
+                        if (s.C.Id <= 0 || area < LabelPlacement.CalloutFallbackFrom) { s.Node.Visible = false; continue; }
+                        // Too narrow for the word on its own land: the full name on a leader line into the open (a country named at a wider view is not dropped).
+                        s.Callout = true; size = (int)LabelPlacement.NominalFont; chosen = Names.Country(s.C.Name) ?? s.C.Name;
+                        s.TextW = font.GetStringSize(chosen, HorizontalAlignment.Left, -1, size).X;
+                        w = s.TextW + 4f; h = font.GetHeight(size) + 2f;
+                        LabelPlacement.CalloutCentre(sp.X, sp.Y, w, h, VpSize.X, out float fcx, out float fcy);
+                        if (!LabelPlacement.Place(fcx, fcy, w, h, VpSize.X, VpSize.Y, out px, out py)) { s.Node.Visible = false; continue; }
+                    }
                     if (s.Node.Text != chosen) s.Node.Text = chosen;
                 }
                 if (size != s.Size) { s.Size = size; s.Node.AddThemeFontSizeOverride("font_size", size); }

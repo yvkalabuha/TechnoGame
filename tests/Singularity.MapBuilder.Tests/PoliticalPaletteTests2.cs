@@ -22,6 +22,8 @@ public class PaletteReserveTests
             {
                 if (codes[i] != "DEU") Assert.NotEqual(CountryPalette.Stone, t[i]);
                 if (codes[i] != "PRT") Assert.NotEqual(CountryPalette.Turquoise, t[i]);
+                if (codes[i] != "SUN") Assert.NotEqual(2, t[i]);   // terracotta is SUN's (none of these codes is SUN)
+                if (codes[i] != "FRA") Assert.NotEqual(3, t[i]);   // blue is FRA's
             }
         }
     }

@@ -92,6 +92,8 @@ public static class LabelPlacement
     public enum PlateMode { Plain, Callout }
     /// <summary>Screen area in du^2: under CalloutBelow the word hangs on a leader line, under HiddenBelow there is no label at all (it appears when the player zooms in).</summary>
     public const float CalloutBelow = 400f, HiddenBelow = 16f;
+    /// <summary>A country whose word does not fit on its land hangs on a leader line from this screen area up (Denmark); below it the name waits for a zoom.</summary>
+    public const float CalloutFallbackFrom = 60f;
     public const float MinFont = 12f, NominalFont = 14f;
 
     const float DegPerRasterPx = 360f / 4096f;

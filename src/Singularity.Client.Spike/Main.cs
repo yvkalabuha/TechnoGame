@@ -679,6 +679,8 @@ public sealed partial class Main : Node3D
         ("map1945_asia_1920x1080.png", 88, 38, 2.1f, true),
         ("map1945_limb_1920x1080.png", 118, 38, 2.1f, true),   // Europe near the limb
         ("map1945_world_1920x1080.png", 20, 20, 3.2f, true),
+        ("map1945_namerica_1920x1080.png", -98, 42, 2.4f, true),
+        ("map1945_oceania_india_1920x1080.png", 105, -2, 3.0f, true),
         ("map1945_africa_west_1920x1080.png", 2, 10, 1.55f, true),
         ("map1945_europe_north_1920x1080.png", 12, 58, 1.5f, true),
     };
@@ -730,6 +732,8 @@ public sealed partial class Main : Node3D
             if (!shown) _shotFailed = true;
         }
         string[] list = v.Name.Contains("europe_north") ? new[] { "GBR", "IRL", "SWE", "NOR", "DNK", "FIN", "ISL" }
+            : v.Name.Contains("namerica") ? new[] { "USA", "CAN", "MEX", "C_GREENLAND" }
+            : v.Name.Contains("oceania") ? new[] { "AUS", "NZL", "C_BRITISH_INDIA", "C_DUTCH_EAST_INDIES", "C_BURMA", "C_BRITISH_MALAYA", "C_PHILIPPINES" }
             : v.Name.Contains("europe") ? new[] { "GBR", "SWE", "NOR", "CSK", "AUT", "HUN", "BGR", "IRL", "PRT", "FRA", "ESP", "POL", "DEU", "ITA", "ROU", "YUG", "GRC", "TUR" }
             : v.Name.Contains("africa_west") ? new[] { "C_FRENCH_WEST_AFRICA", "C_BRITISH_WEST_AFRICA", "C_FRENCH_ALGERIA", "C_FRENCH_MOROCCO", "C_FRENCH_EQUATORIAL_AFRICA", "LBR" }
             : v.Name.Contains("africa") ? new[] { "C_FRENCH_WEST_AFRICA", "C_FRENCH_EQUATORIAL_AFRICA", "SDN_AE", "C_BRITISH_WEST_AFRICA", "C_BRITISH_EAST_AFRICA", "C_PORTUGUESE_ANGOLA", "C_PORTUGUESE_MOZAMBIQUE", "C_SOUTH_WEST_AFRICA", "ZAF", "C_BELGIAN_CONGO", "ETH", "EGY" }

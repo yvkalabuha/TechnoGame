@@ -20,6 +20,11 @@ public class GlobeLabelSizeTests
         Assert.Equal(new[] { 28, 21, 17, 14, 13, 12 }, seen.ToArray());
     }
 
+    [Fact] public void Callout_fallback_sits_between_the_hidden_and_the_callout_limits()
+    {
+        Assert.InRange(LabelPlacement.CalloutFallbackFrom, LabelPlacement.HiddenBelow, LabelPlacement.CalloutBelow);
+    }
+
     [Fact] public void Mode_and_pre_test()
     {
         Assert.Equal(LabelPlacement.PlateMode.Callout, LabelPlacement.ModeFor(399f));
