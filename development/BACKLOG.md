@@ -193,8 +193,8 @@
 | [TASK-0175](../development/tasks/TASK-0175-institutes-stretched-price.md) | DONE | Institutes: stretched project pays the price of its actual opening year; overload safety rule speed x min(1, 1/sum shares) | MS-M0 |
 | [TASK-0176](../development/tasks/TASK-0176-lab-recalibrate-institute-parameters-so-1945-1977-.md) | REVIEW | Lab: recalibrate institute parameters so 1945-1977 history is within tolerance with all levers on (A16, #549) | MS-M0 |
 | [TASK-0177](../development/tasks/TASK-0177-data-mongolia-1945-as-an-independent-country-mng-o.md) | DONE | Data: Mongolia 1945 as an independent country (MNG owner and controller), #550 | MS-M0 |
-| [TASK-0178](../development/tasks/TASK-0178-gate-ai-institute-goals-on-the-path-to-the-next-ai.md) | APPROVED | Gate: AI institute goals on the path to the next aircraft generation, Lab measurement with kappa 1.5 (#552) | MS-M0 |
-| [TASK-0179](../development/tasks/TASK-0179-lab-licence-market-calibration-what-ai-buys-and-wh.md) | APPROVED | Lab: licence market calibration, what AI buys and why, prices and availability within tolerance (#553) | MS-M0 |
+| [TASK-0178](../development/tasks/TASK-0178-gate-ai-institute-goals-on-the-path-to-the-next-ai.md) | IN_PROGRESS | Gate: AI institute goals on the path to the next aircraft generation, Lab measurement with kappa 1.5 (#552) | MS-M0 |
+| [TASK-0179](../development/tasks/TASK-0179-lab-licence-market-calibration-what-ai-buys-and-wh.md) | IN_PROGRESS | Lab: licence market calibration, what AI buys and why, prices and availability within tolerance (#553) | MS-M0 |
 
 ## Гипотезы
 

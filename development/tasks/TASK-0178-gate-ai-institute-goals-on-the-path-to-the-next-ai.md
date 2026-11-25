@@ -1,7 +1,7 @@
 ---
 id: TASK-0178
 title: "Gate: AI institute goals on the path to the next aircraft generation, Lab measurement with kappa 1.5 (#552)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M0
 agent: simulation-engineer
