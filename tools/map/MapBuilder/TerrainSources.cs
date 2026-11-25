@@ -52,7 +52,14 @@ internal static class TerrainSources
                 if (have > 0) req.Headers.Range = new RangeHeaderValue(have, null);
                 using var resp = await http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts.Token);
                 if (resp.StatusCode == HttpStatusCode.NotFound) return false;
-                if (resp.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable) { File.Move(part, path); return true; }
+                if (resp.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable)
+                {
+                    // The server's total length is in "Content-Range: bytes */N". Only a part of exactly that length is complete; anything else starts again.
+                    long? total = resp.Content.Headers.ContentRange?.Length;
+                    if (total == have) { File.Move(part, path); return true; }
+                    File.Delete(part);
+                    continue;
+                }
                 resp.EnsureSuccessStatusCode();
                 bool append = resp.StatusCode == HttpStatusCode.PartialContent;
                 await using (var fs = new FileStream(part, append ? FileMode.Append : FileMode.Create, FileAccess.Write))
@@ -117,7 +124,16 @@ internal static class TerrainSources
                     foreach (var (n, s) in shas.OrderBy(x => x.Name, StringComparer.Ordinal)) Console.WriteLine($"{e.Id}\t{n}\t{s}");
                     Console.WriteLine($"{e.Id}\t*\t{AggregateSha(shas)}");
                 }
-                else Verify(e, shas);
+                else
+                {
+                    // A file that fails its pin is removed, so the next fetch downloads it again instead of skipping it.
+                    foreach (var f in e.Files)
+                    {
+                        var a = shas.FirstOrDefault(x => x.Name == f.Name);
+                        if (a.Name != null && a.Sha != f.Sha256) { File.Delete(FilePath(cache, e, f)); Console.WriteLine($"{e.Id}: {f.Name}: SHA-256 differs from the lock, file deleted; fetch again"); }
+                    }
+                    Verify(e, shas);
+                }
             }
             else await FetchCogAsync(http, lk, e, cache, pin);
         }

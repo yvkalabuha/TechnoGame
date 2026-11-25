@@ -107,7 +107,7 @@ sources:
   - id: gmted_mea30
     kind: raster
     url: https://edcintl.cr.usgs.gov/downloads/sciweb1/shared/topo/downloads/GMTED/Global_tiles_GMTED/300darcsec/mea/{dir}/{name}
-    sha256: d399e4db782dbcd2aa962d54172c832c4a6c6742a089e7a352adc0aaca4be4f4
+    sha256: 71264da5a932b1706bdf210c7a2ced48b27e68bcf651735e4f2ca2153bdc6978
     license: public-domain
     retrieved: 2026-11-25
     note: "GMTED2010 mean elevation, 30 arc-second tiles (USGS EROS, public domain: https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits)"
@@ -124,6 +124,18 @@ sources:
       - {name: 50S090E_20101117_gmted_mea300.tif, sha256: e8fb2a07ee528a6414e3e9556b1bac7058c2d66e20be6e2366112bbf8858195d}
       - {name: 50S120E_20101117_gmted_mea300.tif, sha256: f83982bbf220eeab8fffa5eb7f48f43ec8d362749dfa3fa84ff8620aa855ab2c}
       - {name: 50S150E_20101117_gmted_mea300.tif, sha256: 15130b0fa8f9e3a0b7f4ed9cde73be1a52a398473edd193a2214e8cfc205f663}
+      - {name: 70S180W_20101117_gmted_mea300.tif, sha256: 563b1008c825c67d5ae1d79f1e3e9bd8ee6ee1b293024f7750f0d8709cc4a6ca}
+      - {name: 70S150W_20101117_gmted_mea300.tif, sha256: d2ce152eabb31a3242e7d6149ecb47d11f44f57e329bf2458783a0c8173b89b1}
+      - {name: 70S120W_20101117_gmted_mea300.tif, sha256: 4ec4b7c9ad329d33b0f70510001954fa3f3cfd3a8ec76d8bdc27c3c58ee49779}
+      - {name: 70S090W_20101117_gmted_mea300.tif, sha256: b4377984650ac5e64978530c30456dcb88b7602f1667b46e449ace4625d56d33}
+      - {name: 70S060W_20101117_gmted_mea300.tif, sha256: 5cf22104cd0b770e27d1af80aa8c9a2b866c0006104cd28f8e66eea5cb98bbca}
+      - {name: 70S030W_20101117_gmted_mea300.tif, sha256: 9d0aefd969fb57a10063c9cb0faf39fc812f0d425fe7ca3acb33853f0f6f65e5}
+      - {name: 70S000E_20101117_gmted_mea300.tif, sha256: 6e745c41006e6a740370f86b49a6a5c586d4e61744a2031ede1698393ebb01ec}
+      - {name: 70S030E_20101117_gmted_mea300.tif, sha256: a243b1f1bce17e76b1e2ddf0fca1cf0b20359d5cb1e09fdf8c4fd62b921020b1}
+      - {name: 70S060E_20101117_gmted_mea300.tif, sha256: 6e3d2f15af8f9fead57bf90fea4d5f16335d45393f73a24ab0529e6d8b899e78}
+      - {name: 70S090E_20101117_gmted_mea300.tif, sha256: b4eaffabfebe8adb2be2d0c52f8042b1f83a31256557e1d5a05de55bf69afae3}
+      - {name: 70S120E_20101117_gmted_mea300.tif, sha256: 509e993a2843e31e1a9254b9549baabe63675fc4fb7d39948508b8afecf997ca}
+      - {name: 70S150E_20101117_gmted_mea300.tif, sha256: cde312c6a9806ffc022615e74b7d28369bcc5c9c011bded4df19a68e682e2ce2}
       - {name: 30S180W_20101117_gmted_mea300.tif, sha256: 325d612bb48fe27ca8ae968c6995ab48a8348dd2e7d28a3aa971c5494e04dfa2}
       - {name: 30S150W_20101117_gmted_mea300.tif, sha256: 03640654f146f1aa2e7e1e3654e3e08f9add147b7fa78a97f08f99d0476c64ba}
       - {name: 30S120W_20101117_gmted_mea300.tif, sha256: e44582f9ee8a3e7c93441f2ab138c9d42405c8f77414921887f0ea578a12ee46}
@@ -199,7 +211,7 @@ sources:
   - id: gmted_std30
     kind: raster
     url: https://edcintl.cr.usgs.gov/downloads/sciweb1/shared/topo/downloads/GMTED/Global_tiles_GMTED/300darcsec/std/{dir}/{name}
-    sha256: b49d82db191c800e930c184365986a82ce44be9cc82bd14329fbd1fec40865b6
+    sha256: 9b4acb93087c371ffdfebae3c8324c3333646fcbd964916fcf3870a860caff2e
     license: public-domain
     retrieved: 2026-11-25
     note: "GMTED2010 standard deviation of elevation, 30 arc-second tiles (USGS EROS, public domain)"
@@ -216,6 +228,18 @@ sources:
       - {name: 50S090E_20101117_gmted_std300.tif, sha256: 2bd9582768c3e498a0dd37217a4cdf13baa334faffe87a80bfe4c0e0baf78498}
       - {name: 50S120E_20101117_gmted_std300.tif, sha256: 6a153b7e3de9d7058d46eddf6a5f07e6181e3219c739d7842b201147bd5a0801}
       - {name: 50S150E_20101117_gmted_std300.tif, sha256: 36f41406ed643f44afe27cf48b5d62d642c3d1b4914a8f5c169e8f4c3b791b50}
+      - {name: 70S180W_20101117_gmted_std300.tif, sha256: 2c8c5dcbb5883228ae949bec942049052369826362d8b629c2c2fa7b886aedb4}
+      - {name: 70S150W_20101117_gmted_std300.tif, sha256: aa66a4a513698c67ce12cb56757c90cadefe51aaef5ff49f72112f329b4a6b9c}
+      - {name: 70S120W_20101117_gmted_std300.tif, sha256: 7cee939412b670cdf3f93eb9dc92febb5c9b50133ef6f48ec81fc2d2586cf1f3}
+      - {name: 70S090W_20101117_gmted_std300.tif, sha256: 20ca7b9da44cca1ed91c583810350384e12438c2f5a513c07d98b949fb9240b2}
+      - {name: 70S060W_20101117_gmted_std300.tif, sha256: 87b1dbeca88196b46220132bb9b4582d55029d4b2abcdf3f0d5907e8ec35493b}
+      - {name: 70S030W_20101117_gmted_std300.tif, sha256: d9ab48055935ae58791d1a579d45979bbe2856ed66f45902983cf2d983bafe0f}
+      - {name: 70S000E_20101117_gmted_std300.tif, sha256: 346a818ced62a9ce8bbf37afbdf2bde92c95910418c9dec3a2bc80cc44e4122f}
+      - {name: 70S030E_20101117_gmted_std300.tif, sha256: 249fba7e554380a65471e283e0116839cebfecb38cb7306dba25d67c9dc8c9a7}
+      - {name: 70S060E_20101117_gmted_std300.tif, sha256: 9857f830c56cff2bbce0c817a1c9963fda059a10711023d4a27eed067552e521}
+      - {name: 70S090E_20101117_gmted_std300.tif, sha256: d903b4e2261bd681a8216d9e9c7129f75a10eb46d43147e8bc44e03643b9008d}
+      - {name: 70S120E_20101117_gmted_std300.tif, sha256: e9af4fa627ac8843cd8a801538c4f147929fcb3dff106cfbcb629b2c3191800f}
+      - {name: 70S150E_20101117_gmted_std300.tif, sha256: 24ad119044d5ed1f5a7746bc4d86bdc1e97695d6e6fabef9506b64280c0aa8c5}
       - {name: 30S180W_20101117_gmted_std300.tif, sha256: beb98014cc11349cbdf33c91733dd6c7428556ac95e04177dea0539e601764ca}
       - {name: 30S150W_20101117_gmted_std300.tif, sha256: bcb6d63dc299239ab67696af86235854f4a2bc2903e295e229ad2ea7fe888bf8}
       - {name: 30S120W_20101117_gmted_std300.tif, sha256: dce3146f8b1d15ae0e493cdc75019df751aed266417140feb4ecec5ae6ab0b67}

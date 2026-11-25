@@ -20,7 +20,7 @@ internal static class Cli
         var o = new BuildOptions
         {
             Root = root,
-            Cache = Path.GetFullPath(Opt("--cache", Environment.GetEnvironmentVariable("SINGULARITY_MAP_CACHE") ?? DefaultCache(root, args))),
+            Cache = Path.GetFullPath(Opt("--cache", Environment.GetEnvironmentVariable("SINGULARITY_MAP_CACHE") ?? DefaultCache())),
             OutDir = Path.GetFullPath(Opt("--out", Path.Combine(repo, "mods", "core", "map"))),
             ScenarioDir = Path.GetFullPath(Opt("--scenario", Path.Combine(repo, "mods", "core", "scenarios", "1945"))),
         };
@@ -62,13 +62,10 @@ internal static class Cli
         }
     }
 
-    /// <summary>The shared cache ~/.cache/singularity/map when it exists or when the command needs the terrain rasters (about 4 GB, never inside the repository); else tools/map/.cache.</summary>
-    private static string DefaultCache(string root, string[] args)
-    {
-        var shared = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cache", "singularity", "map");
-        bool terrain = args[0] == "terrain" || args.Contains("--terrain");
-        return terrain || Directory.Exists(shared) ? shared : Path.Combine(root, ".cache");
-    }
+    /// <summary>One cache for every command (fetch, fetch --terrain, build, terrain): ~/.cache/singularity/map, never inside the repository.
+    /// Override with SINGULARITY_MAP_CACHE or --cache.</summary>
+    private static string DefaultCache()
+        => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cache", "singularity", "map");
 
     private static string FindRoot()
     {

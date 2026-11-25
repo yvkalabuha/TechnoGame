@@ -67,19 +67,22 @@ internal static class Rivers
     /// <summary>Rank (1 = largest) of the river that follows the border of every adjacent pair; pairs without a border river are absent.</summary>
     public static SortedDictionary<(string, string), int> BorderRivers(BuildResult r, List<RiverLine> rivers, RiverSpec spec)
     {
-        var tree = new STRtree<(Coordinate A, Coordinate B, int Rank)>();
+        var tree = new STRtree<(Coordinate A, Coordinate B, int Rank, int River)>();
+        var ranks = new List<int>();   // rank by river feature number
         foreach (var rv in rivers.Where(x => !x.Lake && x.Rank <= spec.BorderMaxRank))
+        {
+            int id = ranks.Count; ranks.Add(rv.Rank);
             foreach (var part in rv.Parts)
                 for (int i = 1; i < part.Length; i++)
                 {
                     var env = new Envelope(part[i - 1], part[i]);
-                    tree.Insert(env, (part[i - 1], part[i], rv.Rank));
+                    tree.Insert(env, (part[i - 1], part[i], rv.Rank, id));
                 }
+        }
         tree.Build();
         double tolDeg = spec.BorderTolM / 111000.0;
         var total = new Dictionary<(string, string), double>();
-        var near = new Dictionary<(string, string), double>();
-        var rank = new Dictionary<(string, string), int>();
+        var near = new Dictionary<((string, string) Pair, int River), double>();   // border length followed by each river feature
         foreach (var arc in r.Full.Arcs)
         {
             if (arc.Left < 0 || arc.Right < 0 || arc.Left == arc.Right) continue;
@@ -97,18 +100,18 @@ internal static class Rivers
                     double t = (k + 0.5) / pieces;
                     double mx = (a.Lon + (b.Lon - a.Lon) * t) / 1e6, my = (a.Lat + (b.Lat - a.Lat) * t) / 1e6;
                     var env = new Envelope(mx, mx, my, my); env.ExpandBy(tolDeg);
-                    int best = int.MaxValue;
+                    var seen = new List<int>();
                     foreach (var s in tree.Query(env))
-                        if (SegDist2(mx, my, s.A, s.B) <= tolDeg * tolDeg) best = Math.Min(best, s.Rank);
-                    if (best == int.MaxValue) continue;
-                    near[key] = near.GetValueOrDefault(key) + len / pieces;
-                    rank[key] = Math.Min(rank.GetValueOrDefault(key, int.MaxValue), best);
+                        if (!seen.Contains(s.River) && SegDist2(mx, my, s.A, s.B) <= tolDeg * tolDeg) seen.Add(s.River);
+                    foreach (int id in seen) near[(key, id)] = near.GetValueOrDefault((key, id)) + len / pieces;
                 }
             }
         }
         var res = new SortedDictionary<(string, string), int>(new PairComparer());
-        foreach (var (k, n) in near)
-            if (r.Adjacency.ContainsKey(k) && n >= spec.BorderMinKm && n * 100 >= total[k] * spec.BorderMinSharePct) res[k] = rank[k];
+        // A pair gets the rank of the best river that itself follows the border far enough; rivers that only cross it do not count.
+        foreach (var ((k, id), n) in near)
+            if (r.Adjacency.ContainsKey(k) && n >= spec.BorderMinKm && n * 100 >= total[k] * spec.BorderMinSharePct)
+                res[k] = Math.Min(res.GetValueOrDefault(k, int.MaxValue), ranks[id]);
         return res;
     }
 

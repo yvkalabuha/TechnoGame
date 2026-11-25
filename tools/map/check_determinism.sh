@@ -4,7 +4,7 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
-cache="${SINGULARITY_MAP_CACHE:-$here/.cache}"
+cache="${SINGULARITY_MAP_CACHE:-$HOME/.cache/singularity/map}"
 for i in 1 2; do
   if ! dotnet run -c Release --project "$here/MapBuilder" -- build --cache "$cache" --out "$tmp/out$i" --render "$tmp/render$i.png" > "$tmp/log$i.txt" 2>&1; then
     echo "build $i failed:" >&2; tail -n 40 "$tmp/log$i.txt" >&2; exit 1

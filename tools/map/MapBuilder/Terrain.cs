@@ -24,7 +24,9 @@ internal sealed class TerrainParams
 internal sealed class NoDataCover
 {
     public string Province { get; set; } = "";
-    public Dictionary<string, int> Cover { get; set; } = new();   // permille by class name, sums to 1000
+    public Dictionary<string, int> Cover { get; set; } = new();   // permille by class name, sums to 1000 (empty: cover has data)
+    public int? ElevM { get; set; }       // mean elevation for a province without GMTED cells
+    public int? RuggedM { get; set; }
     public string Note { get; set; } = "";
     public string Source { get; set; } = "";
     public string Accessed { get; set; } = "";
@@ -60,6 +62,7 @@ internal sealed class TerrainRow
     public int Mountains, Hills;
     public readonly int[] Cover = new int[Terrain.CoverNames.Length];
     public string Class = "plain";
+    public bool NoElev;   // no GMTED cell inside the province: elevation fields are not measured
 }
 
 /// <summary>Terrain of every province from GMTED2010, ESA WorldCover and GLWD v2 (TASK-0168, #528): integer zonal statistics, then the 1945 corrections.</summary>
@@ -105,8 +108,9 @@ internal static class Terrain
         });
     }
 
-    /// <summary>Wetland area from GLWD v2: a cell counts fully where one vegetated wetland class (8..32) covers at least half of it (the main_class_50pct layer).
-    /// Mixed cells without such a class are left out, so wetland is slightly under-counted there; area_pct mixes in open water and rice, so it is only the validity mask.</summary>
+    /// <summary>Wetland area from GLWD v2: a cell counts where one vegetated wetland class (8..32) covers at least half of it (the main_class_50pct layer),
+    /// weighted by the area_pct of the cell, so a 51 % wet cell adds about 51 %. area_pct also holds open water and rice, so a cell is an upper bound;
+    /// mixed cells without a class reaching half are left out, which under-counts a little.</summary>
     public static void Wetland(Geometry shape, IGrid pct, IGrid main50, long[] rowW, RawStats st)
     {
         Visit(SpansOrPoint(shape, pct.PerDeg), new[] { pct, main50 }, (y, n, b) =>
@@ -116,7 +120,7 @@ internal static class Terrain
             {
                 if (b[0][i] == Raster.NoData) continue;
                 st.WetW += w;
-                if (b[1][i] is >= 8 and <= 32) st.WetPctSum += 100 * w;
+                if (b[1][i] is >= 8 and <= 32) st.WetPctSum += Math.Clamp(b[0][i], 0, 100) * w;
             }
         });
     }
@@ -175,6 +179,7 @@ internal static class Terrain
     public static TerrainRow Finish(string id, RawStats st)
     {
         var row = new TerrainRow { Id = id };
+        row.NoElev = st.ElevW == 0;
         row.Elev = (int)DivRound(st.ElevSum, st.ElevW);
         row.Rugged = (int)DivRound(st.StdSum, st.ElevW);
         row.Mountains = (int)Pm(st.MountW, st.ElevW);
@@ -213,15 +218,26 @@ internal static class Terrain
     public static void ApplyNoData(IEnumerable<TerrainRow> rows, IReadOnlyList<NoDataCover> list)
     {
         foreach (var e in list)
-            if (e.Source.Length == 0 || e.Accessed.Length == 0 || e.Cover.Values.Sum() != 1000) throw new InvalidDataException($"no_data {e.Province}: source, access date and shares summing to 1000 are required");
-        foreach (var row in rows.Where(r => r.Cover.Sum() == 0))
+            if (e.Source.Length == 0 || e.Accessed.Length == 0 || (e.Cover.Count > 0 && e.Cover.Values.Sum() != 1000))
+                throw new InvalidDataException($"no_data {e.Province}: source, access date and cover shares summing to 1000 are required");
+        foreach (var row in rows.Where(r => r.Cover.Sum() == 0 || r.NoElev))
         {
-            var e = list.FirstOrDefault(x => x.Province == row.Id) ?? throw new InvalidDataException($"{row.Id}: no land cover data and no no_data entry in spec/terrain.yaml");
-            foreach (var (name, pm) in e.Cover.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+            var e = list.FirstOrDefault(x => x.Province == row.Id) ?? throw new InvalidDataException($"{row.Id}: no land cover or elevation data and no no_data entry in spec/terrain.yaml");
+            if (row.Cover.Sum() == 0)
             {
-                int k = Array.IndexOf(CoverNames, name);
-                if (k < 0) throw new InvalidDataException($"no_data {e.Province}: unknown class '{name}'");
-                row.Cover[k] = pm;
+                if (e.Cover.Count == 0) throw new InvalidDataException($"no_data {row.Id}: the province has no land cover data, the entry needs cover");
+                foreach (var (name, pm) in e.Cover.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+                {
+                    int k = Array.IndexOf(CoverNames, name);
+                    if (k < 0) throw new InvalidDataException($"no_data {e.Province}: unknown class '{name}'");
+                    row.Cover[k] = pm;
+                }
+            }
+            if (row.NoElev)
+            {
+                if (e.ElevM is null) throw new InvalidDataException($"no_data {row.Id}: the province has no elevation data, the entry needs elev_m");
+                row.Elev = e.ElevM.Value; row.Rugged = e.RuggedM ?? 0;
+                row.NoElev = false;
             }
         }
     }

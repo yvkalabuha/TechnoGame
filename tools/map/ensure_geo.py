@@ -44,7 +44,7 @@ def main() -> int:
     if ok():
         return 0
     shared = Path.home() / ".cache" / "singularity" / "map"
-    cache = Path(os.environ.get("SINGULARITY_MAP_CACHE") or (shared if shared.is_dir() else ROOT / "tools" / "map" / ".cache"))
+    cache = Path(os.environ.get("SINGULARITY_MAP_CACHE") or shared)
     env = dict(os.environ, SINGULARITY_MAP_CACHE=str(cache), DOTNET_CLI_UI_LANGUAGE="en")
     proj = ["--project", str(ROOT / "tools" / "map" / "MapBuilder")]
     print(f"ensure_geo: building geo/arcs.bin (cache {cache}); about one minute", flush=True)

@@ -287,9 +287,10 @@ public class TerrainTests
         Terrain.Wetland(shape, pct, cls, Raster.RowWeights(10), st);
         Terrain.CoverShares(shape, cover, Raster.RowWeights(10), p, st);
         var r = Terrain.Finish("x.y", st);
-        Assert.Equal(500, r.Cover[Terrain.Swamp]);
-        Assert.Equal(0, r.Cover[Terrain.Forest]);
-        Assert.Equal(500, r.Cover[Terrain.Steppe]);
+        // half of the cells, each 60 % wet: 300 permille, taken from the forest (500) first
+        Assert.InRange(r.Cover[Terrain.Swamp], 295, 305);
+        Assert.Equal(500 - r.Cover[Terrain.Swamp], r.Cover[Terrain.Forest]);
+        Assert.InRange(r.Cover[Terrain.Steppe], 495, 505);
         Assert.Equal(1000, r.Cover.Sum());
         Assert.Equal("swamp", Terrain.Classify(r, p));
     }
@@ -319,6 +320,31 @@ public class TerrainTests
             Assert.Throws<InvalidDataException>(() => new CogGrid(dir, level, new[] { ("N42E009", new string('0', 64)) }).ReadRow(y, x0, x0 + 10, dst));
         }
         finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void Province_without_elevation_needs_an_entry_and_is_never_written_as_zero()
+    {
+        var shape = Rect(10, 40, 12, 42);
+        var none = new ConstGrid(10, (x, y) => Raster.NoData);
+        var st = new RawStats();
+        Terrain.Relief(shape, none, none, Raster.RowWeights(10), new TerrainParams(), st);
+        var row = Terrain.Finish("a.isle", st);
+        row.Cover[Terrain.Steppe] = 1000;
+        Assert.True(row.NoElev);
+        Assert.Throws<InvalidDataException>(() => Terrain.ApplyNoData(new[] { row }, new List<NoDataCover>()));
+        var e = new NoDataCover { Province = "a.isle", ElevM = 120, RuggedM = 30, Source = "x", Accessed = "2026-11-25" };
+        Terrain.ApplyNoData(new[] { row }, new[] { e });
+        Assert.False(row.NoElev);
+        Assert.Equal(120, row.Elev);
+    }
+
+    [Fact]
+    public void Committed_terrain_has_elevation_for_the_far_south()
+    {
+        var map = Path.Combine(RepoRoot(), "mods", "core", "map");
+        var l = File.ReadAllLines(Path.Combine(map, "terrain.yaml")).Single(x => x.Contains("{id: argentina_santa_cruz.tierra_del_fuego,"));
+        Assert.DoesNotContain("elev_m: 0,", l);   // needs the GMTED 70S tiles
     }
 
     [Fact]
