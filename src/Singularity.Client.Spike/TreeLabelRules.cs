@@ -50,6 +50,10 @@ public static class TreeLabelRules
         return true;
     }
 
+    /// <summary>Plate of the node counter at the top left of the map: the text (baseline at areaY + 20, x at areaX + 14) plus <see cref="PlateField"/> on every side.</summary>
+    public static LabelBox CounterPlate(float areaX, float areaY, float textW, float textH) =>
+        new(areaX + 14 - PlateField, areaY + 20 - textH * 0.8f - PlateField, textW + 2 * PlateField, textH + 2 * PlateField);
+
     /// <summary>The plate of the "now" label for a text of the given size: the text plus <see cref="PlateField"/> on every side.</summary>
     public static (float W, float H) NowPlateSize(float textW, float textH) => (textW + 2 * PlateField + 2, textH + 2 * PlateField);
 }

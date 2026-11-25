@@ -49,6 +49,16 @@ public class TreeLabelRulesTests
     }
 
     [Fact]
+    public void TheCounterPlateHoldsItsTextWithAFourDuField()
+    {
+        var p = TreeLabelRules.CounterPlate(0, 44, 140, 18);
+        float textL = 14, textR = 14 + 140, baseline = 44 + 20, top = baseline - 18 * 0.8f, bottom = top + 18;
+        Assert.True(p.X <= textL - 4 + 0.01f && p.Right >= textR + 4 - 0.01f);
+        Assert.True(p.Y <= top - 4 + 0.01f && p.Bottom >= bottom + 4 - 0.01f);
+        Assert.True(Area.Encloses(p));   // inside the map window, so it is never clipped
+    }
+
+    [Fact]
     public void TheNowPlateHasAFourDuFieldOnEverySide()
     {
         var (w, h) = TreeLabelRules.NowPlateSize(100, 16);
