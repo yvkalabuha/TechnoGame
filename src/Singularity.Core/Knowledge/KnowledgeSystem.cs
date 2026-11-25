@@ -554,7 +554,8 @@ public sealed class KnowledgeSystem : ITickSystem
         int goals = _prio is null ? 0 : _inputs.PriorityGoals(a, t, goalRows, goalMult);
         goalRows = goalRows[..goals];
         goalMult = goalMult[..goals];
-        Span<sbyte> group = _n <= 512 ? stackalloc sbyte[_n] : new sbyte[_n];
+        // No goals = no group buffer: the old path allocates nothing (tick-path allocation test, point A has > 512 nodes).
+        Span<sbyte> group = goals == 0 ? default : _n <= 512 ? stackalloc sbyte[_n] : new sbyte[_n];
         if (goals > 0)
             BuildGroups(a, goalRows, group);
         PriorityPlan plan = goals == 0 || wsum == Fx6.Zero ? default : PlanOf(a, s, wsum, group, new ReadOnlySpan<long>(_wraw, a * _n, _n));
