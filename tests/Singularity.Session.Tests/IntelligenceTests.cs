@@ -51,6 +51,7 @@ public class IntelligenceTests
             s.StepThroughMonth(t);
         // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
         HashAssert.Equal("e2868ee75c0d7d493f95dbe3d9a69850c7b3bba6d04ef7ed981d584416ead4bb", ColumnProjection.Hash(s, _ => true));
+        // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront; old columns unchanged (ColumnProjection hash not changed).
         HashAssert.Equal("6c5d83b7e1750e2338143e375520fe1ed5fb289ef7534adfc8d37364428e5b24", s.LastHash);
     }
 

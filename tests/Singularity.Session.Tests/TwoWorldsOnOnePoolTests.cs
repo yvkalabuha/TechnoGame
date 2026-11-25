@@ -47,8 +47,8 @@ public class TwoWorldsOnOnePoolTests
 // Re-recorded in TASK-0133 (train 2: G5/G6 data + fleet ageing): nodes 62-81 and the G5/G6 alternatives change every trajectory; reason and list in the task file.
     // Re-recorded in TASK-0134 (train 2: Hcap(t), mastery), reason: schema v14 (new columns prd.prog.*, pol.prog.*, pol.below.*, cmd.prog.*, prd.rejected.BadProgramme, all zero before 1978-01); the old columns are unchanged to month 387 (MasteryIdentityTests, HorizonTests, GoldenProjectionAgainstMainTests), so only the new columns change this hash.
     // Re-recorded in TASK-0147 (train 2): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465) change every trajectory on the current data; explanation: docs/simulation/golden-rerecord-train2.md.
-    // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront (the G_front a fleet sale was priced at); the old columns are unchanged (projection tests), so only the new column changes these digests.
     // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
+    // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront (the G_front a fleet sale was priced at); the old columns are unchanged (projection tests), so only the new column changes these digests.
     private static readonly Dictionary<ulong, string> Pinned = new()
     {
         [1] = "364c79c71f58f3095d07d99248fc4d310297fab2b46b540d2456f529663d862b", [2] = "b5dbb54d5e4f9137caf6fae9775770399a6c55bdc867eec12e5306cc40907077", [3] = "36a28b34b8e8fd2adaca9ec239ccebd897e9a4347e086cf1813a26fc01c5536a", [4] = "d75449d1bd1b6263e72deb4f40395963e4cc076f74fd0aecc808822b29624d34", [5] = "6e0f8992b5f5b9cb6c8d04679cbc250825292326b96dbc941e869c20b01d66d2", [7] = "bef7d4f662bf51d4e61f4ce60fafe5bacbf106f8c224b9dc44d81ef57907891e",
