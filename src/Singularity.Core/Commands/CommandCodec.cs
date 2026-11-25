@@ -113,6 +113,23 @@ public static class CommandCodec
                 break;
             case AssignNode an:
                 sb.Append(",\"slot\":").Append(I(an.Slot)).Append(",\"node\":").Append(I(an.Node));
+                if (an.Acknowledged)
+                    sb.Append(",\"ack\":true");
+                break;
+            case CancelBuild cb:
+                sb.Append(",\"slot\":").Append(I(cb.Slot));
+                break;
+            case ApplyQueues aq:
+                sb.Append(",\"plan\":[");
+                for (int i = 0; i < aq.Plan.Length; i++)
+                {
+                    if (i > 0)
+                        sb.Append(',');
+                    sb.Append("{\"slot\":").Append(I(aq.Plan[i].Slot)).Append(",\"nodes\":");
+                    Ints(sb, aq.Plan[i].Nodes);
+                    sb.Append('}');
+                }
+                sb.Append(']');
                 break;
             case Unassign un:
                 sb.Append(",\"slot\":").Append(I(un.Slot)).Append(",\"node\":").Append(I(un.Node));
@@ -165,7 +182,9 @@ public static class CommandCodec
             "fund_programme" => new FundProgramme(actor, r.GetProperty("node").GetInt32(), ReadRaw(r.GetProperty("amount"))),
             "set_priority_node" => new SetPriorityNode(actor, r.GetProperty("slot").GetInt32(), r.GetProperty("node").GetInt32()),
             "build_institute" => new BuildInstitute(actor, r.GetProperty("slot").GetInt32()),
-            "assign_node" => new AssignNode(actor, r.GetProperty("slot").GetInt32(), r.GetProperty("node").GetInt32()),
+            "assign_node" => new AssignNode(actor, r.GetProperty("slot").GetInt32(), r.GetProperty("node").GetInt32(), r.TryGetProperty("ack", out JsonElement ackA) && ackA.GetBoolean()),
+            "cancel_build" => new CancelBuild(actor, r.GetProperty("slot").GetInt32()),
+            "apply_queues" => new ApplyQueues(actor, [.. r.GetProperty("plan").EnumerateArray().Select(p => new QueuePlan(p.GetProperty("slot").GetInt32(), ReadInts(p.GetProperty("nodes"))))]),
             "unassign" => new Unassign(actor, r.GetProperty("slot").GetInt32(), r.GetProperty("node").GetInt32()),
             "reorder_queue" => new ReorderQueue(actor, r.GetProperty("slot").GetInt32(), ReadInts(r.GetProperty("order"))),
             "set_focus" => new SetFocus(actor, r.GetProperty("slot").GetInt32(), r.GetProperty("level").GetInt32(), r.GetProperty("reserve").GetBoolean()),
@@ -229,6 +248,8 @@ public static class CommandCodec
         CommandKind.SetPriorityNode => "set_priority_node",
         CommandKind.BuildInstitute => "build_institute",
         CommandKind.AssignNode => "assign_node",
+        CommandKind.CancelBuild => "cancel_build",
+        CommandKind.ApplyQueues => "apply_queues",
         CommandKind.Unassign => "unassign",
         CommandKind.ReorderQueue => "reorder_queue",
         CommandKind.SetFocus => "set_focus",

@@ -15,7 +15,7 @@ public class GoalPathAdapterTests
     [Fact]
     public void Path_MarksOnlyUnknownNodesAndBothMembersOfAnAnyOfGroup()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7 });
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, ScienceSlots = false });   // the shares model marks tier 1 only; the slot model adds tier 2 (see the test below)
         KnowledgeGraph g = s.World.Graph;
         bool sawAnyOf = false;
         // Walk the run until some actor has an unsatisfied any_of group on its path (the early path has none).

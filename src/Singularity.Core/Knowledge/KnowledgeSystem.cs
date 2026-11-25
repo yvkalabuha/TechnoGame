@@ -442,7 +442,7 @@ public sealed partial class KnowledgeSystem : ITickSystem
     /// Reserve money the actor's programme takes in month t: the funded amount when its node is in the frontier, else zero (the money stays).
     /// The reserve reads this, so what leaves the account is exactly what the node received.
     /// </summary>
-    public Fx6 ProgrammeSpend(int actorRow, long month) => FundedAmount(actorRow, month, out _);
+    public Fx6 ProgrammeSpend(int actorRow, long month) => _slots is not null ? SlotReserveSpend(actorRow, month) : FundedAmount(actorRow, month, out _);
 
     private Fx6 FundedAmount(int a, long t, out int row)
     {

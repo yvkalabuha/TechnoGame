@@ -68,6 +68,8 @@ public enum CommandKind
     Unassign = 18,
     ReorderQueue = 19,
     SetFocus = 20,
+    CancelBuild = 21,
+    ApplyQueues = 22,
 }
 
 /// <summary>
@@ -233,7 +235,8 @@ public sealed record BuildInstitute(int Actor, int Slot) : SliceCommand(Actor)
 /// <c>assign_node(slot, node)</c> (slot model, SCIENCE_SLOTS §12): the node goes to the list of the institute in <paramref name="Slot"/>: the active place when the list is empty, else
 /// the end of the queue (at most 5). A node stands in one list of an actor.
 /// </summary>
-public sealed record AssignNode(int Actor, int Slot, int Node) : SliceCommand(Actor)
+/// <paramref name="Acknowledged"/>: the player confirms a start that the money will not cover (less than 60 % of what the slots ask, §1.2); without it the command is answered <c>NeedsConfirmation</c>.
+public sealed record AssignNode(int Actor, int Slot, int Node, bool Acknowledged = false) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.AssignNode;
 }
@@ -256,6 +259,27 @@ public sealed record ReorderQueue(int Actor, int Slot, ImmutableArray<int> Order
 public sealed record SetFocus(int Actor, int Slot, int Level, bool FromReserve) : SliceCommand(Actor)
 {
     public override CommandKind Kind => CommandKind.SetFocus;
+}
+
+/// <summary>
+/// <c>cancel_build(slot)</c> (O-090): the running project of the institute stops and takes no more money; what it was paid stays spent and is not returned
+/// (a later <c>build_institute</c> continues from it).
+/// </summary>
+public sealed record CancelBuild(int Actor, int Slot) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.CancelBuild;
+}
+
+/// <summary>The list of one institute in an <see cref="ApplyQueues"/> plan: the active node first, then the queue.</summary>
+public readonly record struct QueuePlan(int Slot, ImmutableArray<int> Nodes);
+
+/// <summary>
+/// <c>apply_queues(plan)</c> (§4.3, #562): the player's lists of several institutes replaced at once by a plan the game proposed (<c>SuggestQueues</c>) and the player confirmed or edited.
+/// A node stands once in the plan; the institutes not in the plan keep their lists.
+/// </summary>
+public sealed record ApplyQueues(int Actor, ImmutableArray<QueuePlan> Plan) : SliceCommand(Actor)
+{
+    public override CommandKind Kind => CommandKind.ApplyQueues;
 }
 
 /// <summary>An accepted command with its key: one line of <c>commands.log</c>.</summary>

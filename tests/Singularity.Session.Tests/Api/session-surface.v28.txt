@@ -212,6 +212,17 @@ type Singularity.Session.ExposureReportView [struct]
   prop Outcome : Singularity.Core.Intelligence.ExposureOutcome { get; init; }
   prop RiskPerYear : Singularity.Kernel.Fx6 { get; init; }
   prop Target : System.Int32 { get; init; }
+type Singularity.Session.FocusQuoteView [struct]
+  ctor(System.Int32 Level, Singularity.Kernel.Fx6 Months, Singularity.Kernel.Fx6 FlowPerMonth, Singularity.Kernel.Fx6 Price)
+  method Deconstruct(System.Int32& Level, Singularity.Kernel.Fx6& Months, Singularity.Kernel.Fx6& FlowPerMonth, Singularity.Kernel.Fx6& Price) : System.Void
+  method Equals(Singularity.Session.FocusQuoteView other) : System.Boolean
+  method Equals(System.Object obj) : System.Boolean
+  method GetHashCode() : System.Int32
+  method ToString() : System.String
+  prop FlowPerMonth : Singularity.Kernel.Fx6 { get; init; }
+  prop Level : System.Int32 { get; init; }
+  prop Months : Singularity.Kernel.Fx6 { get; init; }
+  prop Price : Singularity.Kernel.Fx6 { get; init; }
 type Singularity.Session.ForceProxy [sealed class]
   ctor(Singularity.Session.SliceSession session, System.Int32 rateDivisor)
   method Issue(System.Int64 month) : System.Void
@@ -247,6 +258,21 @@ type Singularity.Session.HiddenEventView [struct]
   prop Kind : Singularity.Session.HiddenEventKind { get; init; }
   prop Seller : System.Int32 { get; init; }
   prop StartMonth : System.Int32 { get; init; }
+type Singularity.Session.InstituteFitView [struct]
+  ctor(System.Int32 Slot, System.String InstituteId, System.Boolean Standing, Singularity.Kernel.Fx6 Overlap, Singularity.Kernel.Fx6 Speed, Singularity.Kernel.Fx6 Months, System.Int32 WorkingNode, System.Boolean NoOverlap)
+  method Deconstruct(System.Int32& Slot, System.String& InstituteId, System.Boolean& Standing, Singularity.Kernel.Fx6& Overlap, Singularity.Kernel.Fx6& Speed, Singularity.Kernel.Fx6& Months, System.Int32& WorkingNode, System.Boolean& NoOverlap) : System.Void
+  method Equals(Singularity.Session.InstituteFitView other) : System.Boolean
+  method Equals(System.Object obj) : System.Boolean
+  method GetHashCode() : System.Int32
+  method ToString() : System.String
+  prop InstituteId : System.String { get; init; }
+  prop Months : Singularity.Kernel.Fx6 { get; init; }
+  prop NoOverlap : System.Boolean { get; init; }
+  prop Overlap : Singularity.Kernel.Fx6 { get; init; }
+  prop Slot : System.Int32 { get; init; }
+  prop Speed : Singularity.Kernel.Fx6 { get; init; }
+  prop Standing : System.Boolean { get; init; }
+  prop WorkingNode : System.Int32 { get; init; }
 type Singularity.Session.InstituteView [sealed class]
   ctor(System.Int32 Slot, System.String Id, System.Boolean Standing, System.Int32 Goal, System.Collections.Immutable.ImmutableArray`1[System.Int32] Levels, System.Int64 BuildStart, System.Int32 BuildMonths, Singularity.Kernel.Fx6 BuildRate, System.Int32 RefYear, System.Int32 TotalLevels, System.Int32 ProposedGoal, System.Boolean ProposesBuild, System.Int32 Active, System.Collections.Immutable.ImmutableArray`1[System.Int32] Queue, System.Int32 FocusLevel, Singularity.Kernel.Fx6 ActiveProgress, Singularity.Kernel.Fx6 MonthsLeft, System.Collections.Immutable.ImmutableArray`1[System.Int32] DirLevels)
   method <Clone>$() : Singularity.Session.InstituteView
@@ -442,6 +468,29 @@ type Singularity.Session.NodeView [struct]
   prop KnownSince : System.Nullable`1[System.Int64] { get; init; }
   prop Number : System.Int32 { get; init; }
   prop Process : System.Nullable`1[Singularity.Session.ProcessView] { get; init; }
+type Singularity.Session.PathNodeView [struct]
+  ctor(System.Int32 Node, Singularity.Kernel.Fx6 Months, Singularity.Kernel.Fx6 Price, System.Boolean InFrontier)
+  method Deconstruct(System.Int32& Node, Singularity.Kernel.Fx6& Months, Singularity.Kernel.Fx6& Price, System.Boolean& InFrontier) : System.Void
+  method Equals(Singularity.Session.PathNodeView other) : System.Boolean
+  method Equals(System.Object obj) : System.Boolean
+  method GetHashCode() : System.Int32
+  method ToString() : System.String
+  prop InFrontier : System.Boolean { get; init; }
+  prop Months : Singularity.Kernel.Fx6 { get; init; }
+  prop Node : System.Int32 { get; init; }
+  prop Price : Singularity.Kernel.Fx6 { get; init; }
+type Singularity.Session.PathView [sealed class]
+  ctor(System.Collections.Immutable.ImmutableArray`1[Singularity.Session.PathNodeView] Nodes, Singularity.Kernel.Fx6 MonthsMin, Singularity.Kernel.Fx6 MonthsMax, System.Int32 LongestChainEnd)
+  method <Clone>$() : Singularity.Session.PathView
+  method Deconstruct(System.Collections.Immutable.ImmutableArray`1[Singularity.Session.PathNodeView]& Nodes, Singularity.Kernel.Fx6& MonthsMin, Singularity.Kernel.Fx6& MonthsMax, System.Int32& LongestChainEnd) : System.Void
+  method Equals(Singularity.Session.PathView? other) : System.Boolean
+  method Equals(System.Object? obj) : System.Boolean
+  method GetHashCode() : System.Int32
+  method ToString() : System.String
+  prop LongestChainEnd : System.Int32 { get; init; }
+  prop MonthsMax : Singularity.Kernel.Fx6 { get; init; }
+  prop MonthsMin : Singularity.Kernel.Fx6 { get; init; }
+  prop Nodes : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.PathNodeView] { get; init; }
 type Singularity.Session.PolicyDecisionView [sealed class]
   ctor(System.Collections.Immutable.ImmutableArray`1[Singularity.Session.DesignCommandView] DesignCommands, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.StartView] Starts, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.CloseView] Closes, System.Collections.Immutable.ImmutableArray`1[Singularity.Core.Products.FleetCommand] Fleet, System.Collections.Immutable.ImmutableArray`1[System.Int32] Repeats)
   method <Clone>$() : Singularity.Session.PolicyDecisionView
@@ -653,6 +702,10 @@ type Singularity.Session.SliceSession [sealed class]
   field TestApiVersion : System.Int32 = 28 static
   method Create(Singularity.Core.Data.GameData data, Singularity.Session.SliceRunConfig config) : Singularity.Session.SliceSession static
   method CurrentRequirement(System.Int32 actor) : System.Nullable`1[Singularity.Core.WhyNot.WhyNotTarget]
+  method FitInstitutes(System.Int32 actor, System.Int32 nodeNumber) : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.InstituteFitView]
+  method FocusQuote(System.Int32 actor, System.Int32 nodeNumber, System.Int32 slot) : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.FocusQuoteView]
+  method PathToGeneration(System.Int32 actor, System.Int32 generation) : Singularity.Session.PathView?
+  method PathToGoal(System.Int32 actor, System.Int32 nodeNumber) : Singularity.Session.PathView?
   method RebuildView() : System.Void
   method Replay(Singularity.Core.Data.GameData data, Singularity.Session.SliceRunConfig config, System.String commandLog, System.Int64 untilTick) : Singularity.Session.SliceSession static
   method SetViewSubscription(System.ReadOnlySpan`1[System.Int32] actors) : System.Void
@@ -660,6 +713,7 @@ type Singularity.Session.SliceSession [sealed class]
   method StepThroughMonth(System.Int64 month) : System.Void
   method StepTo(System.Int64 tick) : System.Void
   method Submit(Singularity.Core.Commands.SourceClass source, System.Int32 sourceId, System.Int32 localN, Singularity.Core.Commands.SliceCommand command) : Singularity.Core.Commands.CommandVerdict
+  method SuggestQueues(System.Int32 actor, System.Int32 goalNodeNumber) : System.Collections.Immutable.ImmutableArray`1[Singularity.Core.Commands.QueuePlan]
   method WhyNot(System.Int32 actor, Singularity.Core.WhyNot.WhyNotTarget target) : System.Collections.Generic.IReadOnlyList`1[Singularity.Core.WhyNot.Link]
   prop CommandLog : System.String { get; }
   prop Date : Singularity.Kernel.CivilDate { get; }
@@ -702,15 +756,16 @@ type Singularity.Session.SliceViewMode [enum]
   field Full : Singularity.Session.SliceViewMode = 0 static
   field value__ : System.Int32
 type Singularity.Session.SlotScienceView [sealed class]
-  ctor(System.Int32 InstituteCount, System.Int32 FreeInstituteCount, Singularity.Kernel.Fx6 Coverage, Singularity.Kernel.Fx6 ReturnedToBudget, Singularity.Kernel.Fx6 Mpi, Singularity.Kernel.Fx6 MpiRatio, Singularity.Kernel.Fx6 SpeedCap)
+  ctor(System.Int32 InstituteCount, System.Int32 FreeInstituteCount, Singularity.Kernel.Fx6 Coverage, Singularity.Kernel.Fx6 ReturnedToBudget, Singularity.Kernel.Fx6 Mpi, Singularity.Kernel.Fx6 MpiRatio, Singularity.Kernel.Fx6 SpeedCap, System.Int64 FreeNoticeMonth)
   method <Clone>$() : Singularity.Session.SlotScienceView
-  method Deconstruct(System.Int32& InstituteCount, System.Int32& FreeInstituteCount, Singularity.Kernel.Fx6& Coverage, Singularity.Kernel.Fx6& ReturnedToBudget, Singularity.Kernel.Fx6& Mpi, Singularity.Kernel.Fx6& MpiRatio, Singularity.Kernel.Fx6& SpeedCap) : System.Void
+  method Deconstruct(System.Int32& InstituteCount, System.Int32& FreeInstituteCount, Singularity.Kernel.Fx6& Coverage, Singularity.Kernel.Fx6& ReturnedToBudget, Singularity.Kernel.Fx6& Mpi, Singularity.Kernel.Fx6& MpiRatio, Singularity.Kernel.Fx6& SpeedCap, System.Int64& FreeNoticeMonth) : System.Void
   method Equals(Singularity.Session.SlotScienceView? other) : System.Boolean
   method Equals(System.Object? obj) : System.Boolean
   method GetHashCode() : System.Int32
   method ToString() : System.String
   prop Coverage : Singularity.Kernel.Fx6 { get; init; }
   prop FreeInstituteCount : System.Int32 { get; init; }
+  prop FreeNoticeMonth : System.Int64 { get; init; }
   prop InstituteCount : System.Int32 { get; init; }
   prop Mpi : Singularity.Kernel.Fx6 { get; init; }
   prop MpiRatio : Singularity.Kernel.Fx6 { get; init; }

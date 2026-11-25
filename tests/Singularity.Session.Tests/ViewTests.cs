@@ -74,6 +74,9 @@ public sealed class ViewWalk
     private sealed record Before(Fx6[] Budget, BudgetShares[] Shares, DesignStage[][] Stage, int[][] Idle, Fx6[][] Hidden, Fx6[] Deficit, Fx6[] AlloySupply,
         GiveUpClass?[][] GiveUp, int[][] ArgP, Fx6[][] YMin)
     {
+        /// <summary>Research money the institutes returned in the step before (the slot model's addition to the procurement item of this step).</summary>
+        public Fx6[] Surplus { get; } = new Fx6[Budget.Length];
+
         public static Before Take(SliceWorld w, long t)
         {
             int n = w.Scenario.ActorCount, dn = w.ProductsLayout.Designs;
@@ -81,6 +84,7 @@ public sealed class ViewWalk
             for (int a = 0; a < n; a++)
             {
                 b.Budget[a] = w.Policy.Budget(a);
+                b.Surplus[a] = w.SurplusToBudget(a);
                 b.Shares[a] = w.SharesOf(a);
                 b.Deficit[a] = w.Policy.AlloyDeficit(a, t);
                 b.AlloySupply[a] = w.Industry.Alloy(a, t).Supply;
@@ -251,8 +255,8 @@ public sealed class ViewWalk
         See("tooling unmet", tl.UnmetByCluster.Any(u => u > Fx6.Zero));
         See("tooling training budget", tl.TrainingBudget > Fx6.Zero);
         See("deal month", w.Policy.LicenceStart(a) == t);
-        // The view carries share_P·budget of the step plus the licence flow of the deals; strict equality, no disjunction.
-        Check("inputs", iv.ProcurementBudget == iv.Shares.Procurement * iv.Budget + w.Policy.LicenceFlow(a), $"month {t} actor {a}: procurement budget = base + licence flow");
+        // The view carries share_P·budget of the step plus the research money the institutes returned (slot model) plus the licence flow of the deals; strict equality, no disjunction.
+        Check("inputs", iv.ProcurementBudget == iv.Shares.Procurement * iv.Budget + before.Surplus[a] + w.Policy.LicenceFlow(a), $"month {t} actor {a}: procurement budget = base + licence flow");
         See("licence month", w.Policy.LicenceStart(a) == t);
 
         if (afterDeal)
@@ -527,7 +531,7 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
         // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront; old columns unchanged (ColumnProjection hash not changed).
         // Re-recorded in TASK-0171 (the one golden batch of 2026-11-26): the five levers of wave 1 are on by default (reserve, institutes, licence market, adviser, intelligence), the AI institutes pick goals on the path to the next product generation (PATH, #559) and the AI buys licences by the market setting M2 (#560), so every trajectory of a default config moves; the old behaviour stays in SliceRunConfig.Legacy (projection and identity tests use it).
                 // Re-recorded in TASK-0187 (the golden batch of the slot science model): the default config runs the slot model (ScienceSlots) and FRA starts with 2 institutes (O-094); the shares model stays under ScienceSlots = false and Legacy.
-        HashAssert.Equal("ead3591b3d34226bd339f0dc8993e1193216494263746c0dfca261bdda72b0f0", a.LastHash);
+        HashAssert.Equal("9665ed574df11e00fd8f19487afd577008907d7c3a130d019140bfa85a89f8f4", a.LastHash);
     }
 
     [Fact]

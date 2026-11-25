@@ -16,11 +16,14 @@ public sealed partial class InstituteSystem
     private IntColumn[] _act = [], _aif = [], _aifn = [];
     private LongColumn[][] _xf = [];
     private IntColumn[][] _dx = [];
+    private IntColumn? _busy, _notice;
 
     private void InitSlots(Table table)
     {
         int d = _l.DirectionNames.Length;
         _dx = new IntColumn[_l.MaxSlots][];
+        _busy = table.AddInt("inst.busy");
+        _notice = table.AddInt("inst.notice");
         _act = new IntColumn[_l.MaxSlots];
         _aif = new IntColumn[_l.MaxSlots];
         _aifn = new IntColumn[_l.MaxSlots];
@@ -100,8 +103,8 @@ public sealed partial class InstituteSystem
     /// <summary>Experience of the institute in the direction (slot model).</summary>
     public int DirExperience(InstituteHandle h, int direction) => _dx[h.Slot][direction].Current[h.Actor];
 
-    /// <summary>Level 0..4 of the institute in the direction (slot model; the directions of the data, or the disciplines).</summary>
-    public int DirLevel(InstituteHandle h, int direction) => InstituteMath.LevelOf(DirExperience(h, direction), _l.DirNodesIn[direction], _p);
+    /// <summary>Level 0..5 of the institute in the direction (slot model; the directions of the data, or the disciplines).</summary>
+    public int DirLevel(InstituteHandle h, int direction) => InstituteMath.DirectionLevelOf(DirExperience(h, direction), _l.DirNodesIn[direction], _p);
 
     // ---- the decision of the month
 
@@ -222,11 +225,11 @@ public sealed partial class InstituteSystem
         {
             int best = -1;
             Fx6 bestWeight = Fx6.Zero;
-            for (int pass = 0; pass < 2 && best < 0; pass++)
+            for (int pass = 0; pass < 3 && best < 0; pass++)
             {
                 foreach (int r in _g.Order)
                 {
-                    if ((pass == 0 && tier[r] != 1) || !_inputs.InFrontier(a, r) || _inputs.Released(a, r) || Taken(node, _g.Number[r]))
+                    if ((pass == 0 && tier[r] != 1) || (pass == 1 && tier[r] != 2) || !_inputs.InFrontier(a, r) || _inputs.Released(a, r) || Taken(node, _g.Number[r]))
                         continue;
                     Fx6 w = _inputs.Priority(a, r, t);
                     if (w > bestWeight)
@@ -270,7 +273,8 @@ public sealed partial class InstituteSystem
             if (node[k] <= 0)
                 continue;
             int row = _g.RowOf(node[k]);
-            work[n++] = new SlotWork(k, row, InstituteMultiplier(new InstituteHandle(a, k), row), focus[k]);
+            var h = new InstituteHandle(a, k);
+            work[n++] = new SlotWork(k, row, InstituteMultiplier(h, row), focus[k], focus[k] > 0 && _inputs.PlayerControlled(a) && _inputs.FocusFromReserve(h));
         }
         return n;
     }
@@ -298,9 +302,64 @@ public sealed partial class InstituteSystem
                     _act[k].Next[a] = node[k];
                 Credit(a, k, h);
             }
+            bool anyFree = false, allBusy = true;
+            for (int k = 0; k < slots; k++)
+            {
+                anyFree |= node[k] == 0;
+                allBusy &= node[k] != 0;
+            }
+            int busy = allBusy ? _busy!.Current[a] + 1 : 0;
+            if (_busy!.Current[a] != busy)
+                _busy.Next[a] = busy;
+            if (player && anyFree && FreeNoticeDue(a, t, node[..slots]))
+                _notice!.Next[a] = checked((int)t) + 1;
             if (!player)
                 StepAiFocus(a, t, slots, node[..slots]);
         }
+    }
+
+    // S12: the player is told about a free institute at most once a year (the first time at the start of the run), and only when the frontier has a node it could take.
+    private bool FreeNoticeDue(int a, long t, ReadOnlySpan<int> node)
+    {
+        int last = _notice!.Current[a];
+        if (last != 0 && t - (last - 1) < 12)
+            return false;
+        foreach (int r in _g.Order)
+        {
+            if (_inputs.InFrontier(a, r) && !_inputs.Released(a, r) && !Taken(node, _g.Number[r]))
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>Month of the last notice «an institute is free» for the player's actor (−1 = none yet); at most one a year (S12).</summary>
+    public long FreeNoticeMonth(int actor) => _notice!.Current[actor] - 1L;
+
+    /// <summary>Months in a row all built institutes of the actor had a node (the AI's building rule reads it).</summary>
+    public int BusyMonths(int actor) => _busy!.Current[actor];
+
+    // AI general building rule (SCIENCE_SLOTS §8): all institutes busy for a year, more nodes on the path than slots, the upkeep after the project at most 15 % of the
+    // research money, nothing else under way, and the first buildable candidate by slot order.
+    private bool AiGeneralBuild(InstituteHandle h, long t)
+    {
+        int a = h.Actor;
+        if (_busy!.Current[a] < 12 || CanBuild(h, t) != BuildCheck.Ok || UpkeepAfter(h) > _slots!.AiBuildUpkeepShare)
+            return false;
+        for (int k = 0; k < _l.SlotCount(a); k++)
+        {
+            var o = new InstituteHandle(a, k);
+            if (Building(o) || (k < h.Slot && !Standing(o) && CanBuild(o, t) == BuildCheck.Ok))
+                return false;
+        }
+        Span<byte> tier = _g.Count <= 512 ? stackalloc byte[_g.Count] : new byte[_g.Count];
+        tier.Clear();
+        _inputs.GoalPath(a, t, tier);
+        int onPath = 0, standing = 0;
+        foreach (int r in _g.Order)
+            onPath += tier[r] is 1 or 2 && _inputs.InFrontier(a, r) ? 1 : 0;
+        for (int k = 0; k < _l.SlotCount(a); k++)
+            standing += Standing(new InstituteHandle(a, k)) ? 1 : 0;
+        return onPath > standing;
     }
 
     // Experience in proportion to the progress the slot made last month (up to the node's first full unit), split over the node's directions by weight.

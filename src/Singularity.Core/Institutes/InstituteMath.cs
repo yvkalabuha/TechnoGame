@@ -24,7 +24,7 @@ public static class InstituteMath
     public static Fx6 LevelMultiplier(int level, InstituteParams p) => Fx6.One + p.LevelBonus * Fx6.FromInt(level);
 
     /// <summary>
-    /// Experience at which the area reaches <paramref name="level"/> (1..4): <c>ceil(q·N)</c> of the nodes of the area, forced to rise by at least 1 per level
+    /// Experience at which the area reaches <paramref name="level"/> (1..4; 5 only for the directions of the slot model): <c>ceil(q·N)</c> of the nodes of the area, forced to rise by at least 1 per level
     /// so that a small area (N = 6) still has four distinct levels (the rule of rev 4 gives 1/2/3/3 there; the start experience would read as a higher level).
     /// </summary>
     public static int Threshold(int level, int nodesInArea, InstituteParams p)
@@ -35,7 +35,7 @@ public static class InstituteMath
         int result = 0;
         for (int l = 1; l <= level; l++)
         {
-            int raw = (p.ThresholdPercent[l - 1] * nodesInArea + 99) / 100;
+            int raw = ((l <= 4 ? p.ThresholdPercent[l - 1] : p.Level5Percent) * nodesInArea + 99) / 100;
             result = raw > previous ? raw : previous + 1;
             previous = result;
         }
@@ -65,6 +65,18 @@ public static class InstituteMath
     /// reaches 100 % (TASK-0173: at most 13.4 %), but without the rule a larger list of candidates would run projects at full speed on money that is not there.
     /// </summary>
     public static Fx6 OverloadScale(Fx6 take) => take > Fx6.One ? Fx6.One / take : Fx6.One;
+
+    /// <summary>The highest level (0..5) whose threshold the experience reaches: the levels of the directions of the slot model (data levels 1..5).</summary>
+    public static int DirectionLevelOf(int experience, int nodesInDirection, InstituteParams p)
+    {
+        int level = 0;
+        while (level < MaxDirectionLevel && experience >= Threshold(level + 1, nodesInDirection, p))
+            level++;
+        return level;
+    }
+
+    /// <summary>Highest level of a direction (#571 data: 1..5).</summary>
+    public const int MaxDirectionLevel = 5;
 
     /// <summary>The highest level (0..4) whose threshold the experience reaches.</summary>
     public static int LevelOf(int experience, int nodesInArea, InstituteParams p)

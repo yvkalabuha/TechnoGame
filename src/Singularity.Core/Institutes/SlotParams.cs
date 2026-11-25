@@ -43,8 +43,17 @@ public sealed record SlotParams
     /// <summary>Weight of the main direction of a node in the overlap level and in the experience (O-092); the rest share <c>1 − MainWeight</c>.</summary>
     public Fx6 MainWeight { get; init; } = F(500_000);
 
+    /// <summary>A start after which less than this share of the money the slots ask is there needs the player's confirmation (§1.2).</summary>
+    public Fx6 UnderfundedBelow { get; init; } = F(600_000);
+
+    /// <summary>Most the research_speed bonuses add to <c>R - 1</c> (#568; 0.25).</summary>
+    public Fx6 ResearchSpeedCap { get; init; } = F(250_000);
+
     /// <summary>Upkeep of the built institutes may take at most this share of the research money (#574).</summary>
     public Fx6 UpkeepCeilingShare { get; init; } = F(250_000);
+
+    /// <summary>The AI starts a project of its own accord only if the upkeep of all institutes after it stays within this share of the research money (§8).</summary>
+    public Fx6 AiBuildUpkeepShare { get; init; } = F(150_000);
 
     /// <summary>AI focus: level 1 below this air-power ratio, level 2 below <see cref="AiFocusRatio2"/> (#565, SCIENCE_SLOTS §8).</summary>
     public Fx6 AiFocusRatio1 { get; init; } = Fx6.One;

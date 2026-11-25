@@ -44,6 +44,16 @@
           "uniqueItems": true,
           "items": { "enum": ["aero", "prop", "met", "mat", "chem", "struct", "mfg", "elec", "sens", "ctrl", "nuc", "ord", "space"] }
         },
+        "research_speed": {
+          "description": "A knowledge effect: bonus to the research speed of the directions (all when none are given); bonuses add up (#562, #568).",
+          "type": "object",
+          "required": ["bonus"],
+          "additionalProperties": false,
+          "properties": {
+            "bonus": { "type": "number", "exclusiveMinimum": 0, "maximum": 0.08 },
+            "directions": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["aero", "prop", "met", "mat", "chem", "struct", "mfg", "elec", "sens", "ctrl", "nuc", "ord"] } }
+          }
+        },
         "informs": {
           "type": "array",
           "items": {

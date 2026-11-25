@@ -37,10 +37,10 @@ public static class SlotMath
     public static Fx6 DirectionWeight(int index, int count, Fx6 mainWeight) =>
         count <= 1 ? Fx6.One : index == 0 ? mainWeight : (Fx6.One - mainWeight) / Fx6.FromInt(count - 1);
 
-    /// <summary><c>M = min(cap, m_inst · s)</c> (the research_speed factor R is 1 until the data has such nodes).</summary>
-    public static Fx6 Speed(SlotParams p, Fx6 instituteMultiplier, int focus)
+    /// <summary><c>M = min(cap, m_inst · s · R)</c>; <paramref name="research"/> is <c>R = 1 + Σ bonus</c> of the research_speed nodes (1 without them).</summary>
+    public static Fx6 Speed(SlotParams p, Fx6 instituteMultiplier, int focus, Fx6 research = default)
     {
-        Fx6 m = instituteMultiplier * p.FocusSpeed[focus];
+        Fx6 m = instituteMultiplier * p.FocusSpeed[focus] * (research == Fx6.Zero ? Fx6.One : research);
         return m > p.SpeedCap ? p.SpeedCap : m;
     }
 

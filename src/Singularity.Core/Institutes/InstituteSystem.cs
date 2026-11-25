@@ -50,6 +50,9 @@ public interface IInstituteInputs
         return 0;
     }
 
+    /// <summary>The player pays the focus of the slot from the reserve.</summary>
+    bool FocusFromReserve(InstituteHandle slot) => false;
+
     /// <summary>The node number the slot worked on in the last step and the progress it added (0 = none).</summary>
     int SlotProgress(int actorRow, int slot, out Fx6 added)
     {
@@ -409,7 +412,7 @@ public sealed partial class InstituteSystem : ITickSystem
 
     // The AI rule (§7): the project of a historical candidate starts so that the institute opens about its historical year.
     private bool AiWouldStart(InstituteHandle h, long t) =>
-        CanBuild(h, t) == BuildCheck.Ok && t + 1 >= _l.FirstMonthOf(_l.RefYear(h)) - BuildMonths(h);
+        CanBuild(h, t) == BuildCheck.Ok && (t + 1 >= _l.FirstMonthOf(_l.RefYear(h)) - BuildMonths(h) || (_slots is not null && AiGeneralBuild(h, t)));
 
     /// <summary>
     /// What the AI would do for the actor in the month, as a proposal for the player (the adviser, #479): the goal for each free standing slot (0 = none) in

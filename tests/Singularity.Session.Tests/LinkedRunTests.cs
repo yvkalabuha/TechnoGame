@@ -44,7 +44,7 @@ public class LinkedRunTests
     // Re-recorded in TASK-0171 (the one golden batch of 2026-11-26): the five levers of wave 1 are on by default (reserve, institutes, licence market, adviser, intelligence), the AI institutes pick goals on the path to the next product generation (PATH, #559) and the AI buys licences by the market setting M2 (#560), so every trajectory of a default config moves; the old behaviour stays in SliceRunConfig.Legacy (projection and identity tests use it).
     // Re-recorded in TASK-0187 (the golden batch of the slot science model): a default config runs the slot model (SliceRunConfig.ScienceSlots, #561–#576) and FRA starts with 2 institutes (CEA founded 1945-10, O-094);
     // the shares model stays under ScienceSlots = false and Legacy (their goldens are unchanged, S11).
-    private const string Golden60 = "6e2d9df565a2f695faed0b99c008195d94e69788325e20b5906a8aa076a8bdd3";
+    private const string Golden60 = "764b3f10e0d7ae6e28ce7e800f4c962bcf04a81f281ac22ced398bb5a6268375";
 
     private sealed class Run
     {

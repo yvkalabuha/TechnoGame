@@ -50,7 +50,7 @@ public class TreeReviewFixesTests
 
     [Theory]
     [InlineData("fx.alt")] [InlineData("fx.alloy")] [InlineData("fx.process")] [InlineData("fx.mastery")] [InlineData("fx.gen")]
-    [InlineData("fx.informs")] [InlineData("fx.required")] [InlineData("fx.path")] [InlineData("fx.more")]
+    [InlineData("fx.informs")] [InlineData("fx.required")] [InlineData("fx.path")] [InlineData("fx.speed")] [InlineData("fx.more")]
     [InlineData("tree.effects.line")] [InlineData("inset.why.node")] [InlineData("inset.why.node.free")]
     public void TheNewLinesExistInRussian(string key)
     {
