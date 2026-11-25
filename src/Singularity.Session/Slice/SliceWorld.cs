@@ -722,7 +722,11 @@ internal sealed class SliceWorld
         }
         // Institutes: the flag is in the config fingerprint; their data hash is outside the data hash.
         if (Config.Institutes)
+        {
             Table.AddLong("run.inst.data").Load(Fill(rows, BitConverter.ToInt64(Convert.FromHexString(Data.Institutes.Hash)[..8])));
+            // The controlled actor changes whose institutes the AI runs, so it is part of the state identity from the first hash.
+            Table.AddInt("run.inst.player").Load([.. Enumerable.Repeat(Config.PlayerActor ?? -1, rows)]);
+        }
         Table.AddInt("run.cell").Load([.. Enumerable.Repeat(Config.ProfileCell ?? -1, rows)]);
         Table.AddInt("run.ai").Load([.. Enumerable.Repeat((Config.ProductAi ? 1 : 0) | (Config.Derive ? 2 : 0), rows)]);
         // T6D_OFF / LIC_OFF / lic_knows are part of the state, so a switch cannot give the hash of main.

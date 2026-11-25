@@ -529,4 +529,57 @@ public class InstituteTests
         SliceSession other = SliceSession.Create(DataWithOtherInstitutes(), config);
         Assert.ThrowsAny<Exception>(() => other.LoadSnapshot(new MemoryStream(snap.ToArray())));
     }
+
+    [Fact]
+    public void Build_WithoutResearchMoney_DoesNotFinish_AndStretchesWithAPartialShare()
+    {
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = Sun(Make(true)) });
+        int sun = Sun(s);
+        var h = new InstituteHandle(sun, CandidateSlot(s, sun, "sun_nii88"));
+        InstituteSystem inst = s.World.Institutes!;
+        int months = inst.BuildMonths(h);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new Singularity.Core.Commands.SetBudgetShares(sun,
+            new Singularity.Core.Policy.BudgetShares(Fx6.Zero, Fx6.FromRaw(250_000), Fx6.FromRaw(250_000), Fx6.FromRaw(250_000), Fx6.FromRaw(250_000)))).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new BuildInstitute(sun, h.Slot)).Accepted);
+        for (long t = 0; t < months + 6; t++)
+            s.StepThroughMonth(t);
+        Assert.False(inst.Standing(h));
+        Assert.True(inst.Building(h));
+    }
+
+    [Fact]
+    public void PlayerOrder_DropsTheStoredAiGoal_SoItCannotReturnAndDuplicate()
+    {
+        SliceSession s = Make(true);
+        s.StepThroughMonth(0);
+        s.StepThroughMonth(1);
+        var h = new InstituteHandle(0, 0);
+        InstituteSystem inst = s.World.Institutes!;
+        Assert.NotEqual(0, inst.GoalNode(h));
+        int order = FreeNode(s);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new SetPriorityNode(0, 0, order)).Accepted);
+        s.StepThroughMonth(2);
+        Assert.Equal(order, inst.GoalNode(h));
+        Assert.Equal(0, s.World.Table.GetInt("inst.ai.0").Current[0]);
+    }
+
+    [Fact]
+    public void NewAiGoal_IsNotCreditedForADiscoveryMadeBeforeItActed()
+    {
+        SliceSession s = Make(true);
+        s.StepThroughMonth(0);
+        // The goals were picked in month 0 but act from month 1: nothing was worked on yet, so nothing can be credited.
+        Assert.NotEqual(0, s.World.Table.GetInt("inst.ai.0").Current[0]);
+        Assert.Equal(0, s.World.Table.GetInt("inst.cur.0").Current[0]);
+        s.StepThroughMonth(1);
+        Assert.NotEqual(0, s.World.Table.GetInt("inst.cur.0").Current[0]);
+    }
+
+    [Fact]
+    public void InitialHash_DiffersByTheControlledActor()
+    {
+        string h3 = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = 3 }).LastHash;
+        string h4 = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = 4 }).LastHash;
+        Assert.NotEqual(h3, h4);
+    }
 }

@@ -26,6 +26,9 @@ public interface IInstituteInputs
 
     /// <summary>The actor is the one the player controls: the AI neither sets its goals nor starts its projects, it only proposes (O-067, #479).</summary>
     bool PlayerControlled(int actorRow);
+
+    /// <summary>The share of the planned research money the actor really funds, 0..1 (snapshot): a project advances by this part of a month, so a project without money does not finish.</summary>
+    Fx6 BuildFunding(int actorRow);
 }
 
 /// <summary>Why a project cannot start now.</summary>
@@ -47,7 +50,7 @@ public enum BuildCheck
 /// <c>inst.order.k</c> / <c>inst.stamp.k</c> / <c>inst.build.k</c> (the orders of the player: written only by <see cref="InstituteOrders"/> between ticks),
 /// <c>inst.ai.k</c> (the goal the AI chose), <c>inst.abuild.k</c> (the start of a project the AI ordered), <c>inst.cur.k</c> (the goal seen last month, to credit
 /// its completion once), <c>inst.done.k</c> (month + 1 the institute opened, 1 for those standing at the start, 0 = not built) and
-/// <c>inst.exp.k.discipline</c> (experience); the last five are written only by this system. One writer per column.
+/// <c>inst.prog.k</c> (raw Fx6 months of a running project paid so far) and <c>inst.exp.k.discipline</c> (experience); the last six are written only by this system. One writer per column.
 /// A slot works on its goal: the order of the player while that node is unknown, else the choice of the AI. A completed goal found by the own research gives
 /// the institute one point of experience in the area of the node (also an off-profile institute, #488). A project takes a share of the research money while it
 /// runs; a built institute adds capacity and takes upkeep (<see cref="BudgetFactor"/>); the institutes of 1945 are in the base money. No losses of experience
@@ -64,7 +67,7 @@ public sealed class InstituteSystem : ITickSystem
     private readonly InstituteParams _p;
     private readonly KnowledgeGraph _g;
     private readonly IInstituteInputs _inputs;
-    private readonly IntColumn[] _ai, _cur, _done, _abuild;
+    private readonly IntColumn[] _ai, _cur, _done, _abuild, _prog;
     private readonly IntColumn[][] _exp;
 
     public InstituteSystem(Table table, InstituteLayout layout, InstituteParams parameters, KnowledgeGraph graph,
@@ -85,12 +88,14 @@ public sealed class InstituteSystem : ITickSystem
         _cur = new IntColumn[layout.MaxSlots];
         _done = new IntColumn[layout.MaxSlots];
         _abuild = new IntColumn[layout.MaxSlots];
+        _prog = new IntColumn[layout.MaxSlots];
         _exp = new IntColumn[layout.MaxSlots][];
         for (int k = 0; k < layout.MaxSlots; k++)
         {
             _ai[k] = table.AddInt($"inst.ai.{k}");
             _cur[k] = table.AddInt($"inst.cur.{k}");
             _abuild[k] = table.AddInt($"inst.abuild.{k}");
+            _prog[k] = table.AddInt($"inst.prog.{k}");
             _done[k] = table.AddInt($"inst.done.{k}");
             var standing = new int[layout.ActorCount];
             for (int a = 0; a < layout.ActorCount; a++)
@@ -270,9 +275,14 @@ public sealed class InstituteSystem : ITickSystem
                 PickForFreeSlots(a, t, slots, goal);
             for (int k = 0; k < slots; k++)
             {
-                _cur[k].Next[a] = goal[k] > 0 ? goal[k] : 0;
-                if (goal[k] > 0 && goal[k] != GoalNode(new InstituteHandle(a, k)))
+                var h = new InstituteHandle(a, k);
+                int working = GoalNode(h);
+                // Credit only a goal the slot worked on during this tick (the one of the snapshot); a goal picked now acts from the next tick.
+                _cur[k].Next[a] = working;
+                if (goal[k] > 0 && goal[k] != working)
                     _ai[k].Next[a] = goal[k];
+                else if (working != 0 && working != _ai[k].Current[a] && _ai[k].Current[a] != 0)
+                    _ai[k].Next[a] = 0;   // a player order took the slot: the old AI choice must not come back and duplicate another slot's goal
             }
         }
     }
@@ -285,8 +295,14 @@ public sealed class InstituteSystem : ITickSystem
         int months = BuildMonths(h);
         if (start >= 0)
         {
-            if (t - start + 1 < months)
+            // A month advances the project by the funded part of it; no money, no progress (the term stretches, rev 4 §8).
+            long paid = _prog[h.Slot].Current[h.Actor] + _inputs.BuildFunding(h.Actor).Raw;
+            if (paid < months * (long)Fx6.One.Raw)
+            {
+                _prog[h.Slot].Next[h.Actor] = checked((int)paid);
                 return;
+            }
+            _prog[h.Slot].Next[h.Actor] = 0;
             _done[h.Slot].Next[h.Actor] = checked((int)t) + 1;
             for (int d = 0; d < _l.DisciplineNames.Length; d++)
                 _exp[h.Slot][d].Next[h.Actor] = _l.StartExperience(h, d);

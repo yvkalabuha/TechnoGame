@@ -18,6 +18,17 @@ internal sealed class InstituteInputsAdapter(SliceWorld world) : IInstituteInput
 
     public bool PlayerControlled(int actorRow) => world.Config.PlayerActor == actorRow;
 
+    // The player's research share against the one of the AI profile (the money the project's rate was priced on); the AI is always fully funded.
+    public Fx6 BuildFunding(int actorRow)
+    {
+        if (world.Commands.SharesOverride(actorRow) is not { } s)
+            return Fx6.One;
+        Fx6 plan = world.Policy.Shares(actorRow).Research;
+        if (plan <= Fx6.Zero)
+            return s.Research > Fx6.Zero ? Fx6.One : Fx6.Zero;
+        return s.Research >= plan ? Fx6.One : s.Research / plan;
+    }
+
     public long PlayerBuildMonth(InstituteHandle slot) => world.InstituteOrders!.BuildMonth(slot);
 
     public int OrderNode(InstituteHandle slot) => world.InstituteOrders!.OrderNode(slot);
