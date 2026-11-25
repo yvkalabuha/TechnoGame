@@ -911,7 +911,7 @@ define:
     gen: 5
     discipline: aero
     cluster: AERO
-    requires: [s8.fnd.transonic_aerodynamics]
+    requires: [s8.fnd.transonic_aerodynamics, s8.eng.variable_geometry_inlet]
     hazard: hz
     informs:
       - {to: s8.eng.fly_by_wire_relaxed_stability, weight: 0.6}
@@ -927,7 +927,7 @@ define:
     gen: 5
     discipline: aero
     cluster: AERO
-    requires: [s8.fnd.compressible_flow]
+    requires: [s8.fnd.compressible_flow, s8.eng.delta_wing_airframe]
     hazard: hz
     informs:
       - {to: s8.eng.low_observable_airframe, weight: 0.3}
@@ -1180,7 +1180,7 @@ define:
     gen: 6
     discipline: aero
     cluster: AERO
-    requires: []
+    requires: [s8.fnd.edge_wave_diffraction]
     hazard: hz
     anchor:
       year: 1975
@@ -1192,7 +1192,7 @@ define:
     gen: 6
     discipline: chem
     cluster: CHEM
-    requires: [s5.fnd.solidification_science]
+    requires: [s5.fnd.solidification_science, s7.fnd.turbine_heat_transfer]
     hazard: hz
     anchor:
       year: 1965
@@ -1228,7 +1228,7 @@ define:
     gen: 5
     discipline: aero
     cluster: AERO
-    requires: []
+    requires: [s8.prn.electronic_engine_control]
     hazard: hz
     anchor:
       year: 1979
@@ -1276,7 +1276,7 @@ define:
     gen: 5
     discipline: prop
     cluster: AERO
-    requires: [s8.eng.turbojet_g3]
+    requires: [s8.eng.turbojet_g3, s8.eng.variable_geometry_inlet, s8.eng.turbofan_g4]
     hazard: hz
     anchor:
       year: 1969
@@ -1288,7 +1288,7 @@ define:
     gen: 5
     discipline: chem
     cluster: CHEM
-    requires: []
+    requires: [s5.fnd.solidification_science]
     hazard: none
     anchor:
       year: 1963
@@ -1300,7 +1300,7 @@ define:
     gen: 6
     discipline: prop
     cluster: AERO
-    requires: [s8.eng.afterburner]
+    requires: [s8.eng.afterburner, s8.cmp.digital_flight_control_computer]
     hazard: hz
     anchor:
       year: 1989
@@ -1336,7 +1336,7 @@ define:
     gen: 6
     discipline: chem
     cluster: CHEM
-    requires: []
+    requires: [s5.cmp.high_modulus_fibre]
     hazard: none
     anchor:
       year: 1975
@@ -1360,7 +1360,7 @@ define:
     gen: 6
     discipline: chem
     cluster: CHEM
-    requires: [s5.cmp.silicon_carbide_fibre]
+    requires: [s5.cmp.silicon_carbide_fibre, s8.eng.thrust_vectoring_supercruise_engine]
     hazard: hz
     anchor:
       year: 2000
@@ -1384,7 +1384,7 @@ define:
     gen: 6
     discipline: prop
     cluster: AERO
-    requires: [s8.prn.variable_cycle_engine]
+    requires: [s8.prn.variable_cycle_engine, s8.eng.aesa_sensor_fusion]
     hazard: hz
     anchor:
       year: 2013

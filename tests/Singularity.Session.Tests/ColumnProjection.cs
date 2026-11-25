@@ -17,7 +17,8 @@ internal static class ColumnProjection
         {
             // Columns of the parameters of TASK-0147 (run.k.ahead_*, run.k.disc_weight.*) exist only when a key is set; the identity tests set k = 0 explicitly,
             // and these columns are not part of the build they compare with.
-            if (!include(c.Name) || c.Name.StartsWith("run.k.ahead_", StringComparison.Ordinal) || c.Name.StartsWith("run.k.disc_weight.", StringComparison.Ordinal))
+            if (!include(c.Name) || c.Name.StartsWith("run.k.ahead_", StringComparison.Ordinal) || c.Name.StartsWith("run.k.disc_weight.", StringComparison.Ordinal)
+                || c.Name == "pol.flt.gFront")   // TASK-0182: written with the AI's fleet decisions, not part of the builds the identity tests compare with
                 continue;
             h.AppendData(Encoding.UTF8.GetBytes(c.Name));
             switch (c)
@@ -39,13 +40,14 @@ internal static class ColumnProjection
     /// Columns added with the slot generation (ADR-0005 p. 3, TASK-0099): <c>prd.dN.generation</c>, <c>prd.dN.parentGen</c>, <c>prd.lp.gN.gen</c>
     /// and the <c>StaleHandle</c> rejection counter; with the novelty memory (TASK-0110, DEBT-0054): <c>prd.altReached.N</c>; and with the end-to-end
     /// design handle (TASK-0115): the <c>.gen</c> column beside every design reference of <c>cmd.*</c> and <c>pol.*</c>; and with the horizon to 2030 (TASK-0121): <see cref="IsHorizonColumn"/>.
+    /// With the sale priced at the decision's G_front (TASK-0182): `pol.flt.gFront`.
     /// Projections onto "the old columns" leave them out.
     /// </summary>
     public static bool IsAddedSinceBaselineColumn(string name) =>
         name.EndsWith(".generation", StringComparison.Ordinal) || name.EndsWith(".parentGen", StringComparison.Ordinal)
         || name.StartsWith("prd.lp.g", StringComparison.Ordinal) && name.EndsWith(".gen", StringComparison.Ordinal)
         || IsDesignRefGenColumn(name) || IsHorizonColumn(name) || IsReplCreditColumn(name)
-        || name == "prd.rejected.StaleHandle" || name.StartsWith("prd.altReached.", StringComparison.Ordinal) || IsMasteryColumn(name);
+        || name == "prd.rejected.StaleHandle" || name == "pol.flt.gFront" || name.StartsWith("prd.altReached.", StringComparison.Ordinal) || IsMasteryColumn(name);
 
     /// <summary>Columns of the institutes (TASK-0151): orders, AI goals, experience. Only in a run with <c>Institutes</c>.</summary>
     public static bool IsInstituteColumn(string name) => name.StartsWith("inst.", StringComparison.Ordinal) || name.StartsWith("know.disc.", StringComparison.Ordinal);
