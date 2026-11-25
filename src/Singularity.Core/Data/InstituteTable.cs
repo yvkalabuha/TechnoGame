@@ -16,10 +16,15 @@ public sealed class InstituteTable
     private readonly ImmutableArray<int> _founded, _refYear, _areaStart;
     private readonly ImmutableArray<string> _areaDiscipline;
     private readonly ImmutableArray<int> _areaLevel;
+    private readonly ImmutableArray<int> _dirStart, _dirId, _dirLevel;
 
     private InstituteTable(ImmutableArray<string> id, ImmutableArray<string> country, ImmutableArray<int> founded, ImmutableArray<int> refYear,
-        ImmutableArray<int> areaStart, ImmutableArray<string> areaDiscipline, ImmutableArray<int> areaLevel)
+        ImmutableArray<int> areaStart, ImmutableArray<string> areaDiscipline, ImmutableArray<int> areaLevel,
+        ImmutableArray<int> dirStart, ImmutableArray<int> dirId, ImmutableArray<int> dirLevel)
     {
+        _dirStart = dirStart;
+        _dirId = dirId;
+        _dirLevel = dirLevel;
         _id = id;
         _country = country;
         _founded = founded;
@@ -66,6 +71,13 @@ public sealed class InstituteTable
 
     public int AreaLevel(int row, int k) => _areaLevel[_areaStart[row] + k];
 
+    /// <summary>Directions of the institute (numbers of <see cref="Directions.Ids"/>, ascending) with levels 1..5; empty when the mod gives none. Not part of <see cref="Hash"/> yet.</summary>
+    public int DirectionCount(int row) => _dirStart[row + 1] - _dirStart[row];
+
+    public int DirectionAt(int row, int k) => _dirId[_dirStart[row] + k];
+
+    public int DirectionLevel(int row, int k) => _dirLevel[_dirStart[row] + k];
+
     /// <summary>The level of the institute in a discipline, 0 when the area is not listed.</summary>
     public int LevelOf(int row, string discipline)
     {
@@ -86,6 +98,10 @@ public sealed class InstituteTable
         var areaStart = ImmutableArray.CreateBuilder<int>();
         var disc = ImmutableArray.CreateBuilder<string>();
         var level = ImmutableArray.CreateBuilder<int>();
+        var dirStart = ImmutableArray.CreateBuilder<int>();
+        var dirId = ImmutableArray.CreateBuilder<int>();
+        var dirLevel = ImmutableArray.CreateBuilder<int>();
+        dirStart.Add(0);
         areaStart.Add(0);
         // Objects arrive sorted by ID, so the rows (and the slots of an actor) are in ID order.
         foreach ((string key, YMap map) in objects)
@@ -116,8 +132,15 @@ public sealed class InstituteTable
                 level.Add(l);
             }
             areaStart.Add(disc.Count);
+            foreach ((int d, int l) in Directions.ReadLevels(m.Optional("directions"), key))
+            {
+                dirId.Add(d);
+                dirLevel.Add(l);
+            }
+            dirStart.Add(dirId.Count);
             m.End();
         }
-        return new InstituteTable(id.ToImmutable(), country.ToImmutable(), founded.ToImmutable(), refYear.ToImmutable(), areaStart.ToImmutable(), disc.ToImmutable(), level.ToImmutable());
+        return new InstituteTable(id.ToImmutable(), country.ToImmutable(), founded.ToImmutable(), refYear.ToImmutable(), areaStart.ToImmutable(), disc.ToImmutable(), level.ToImmutable(),
+            dirStart.ToImmutable(), dirId.ToImmutable(), dirLevel.ToImmutable());
     }
 }

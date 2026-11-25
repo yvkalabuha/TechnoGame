@@ -27,7 +27,7 @@
 - TASK-0171 [IN_PROGRESS] Golden batch: turn on Reserve, Institutes, LicenceMarket, Adviser, Intelligence by default; re-record goldens once with explanation (developer)
 - TASK-0187 [IN_PROGRESS] Core: slot science model (one institute = one node, queue 5, focus, directions, research_speed) — golden batch (#576) (developer)
 - TASK-0188 [IN_PROGRESS] Research + data: expand knowledge tree (computing, materials, rocketry, space, electronics, nuclear) with directions (#575) (research-scientist)
-- TASK-0189 [IN_PROGRESS] Data: node and institute directions into mods (12 directions, O-091) (developer)
+- TASK-0190 [IN_PROGRESS] Tooling: Gemini visual review through agy (subscription) instead of the AI Studio key (developer)
 - TASK-0111 [REVIEW] UI instruments: Flask, Caliper, Pencil controls and E1 gauge legibility at 100% (UI_INSTRUMENTS §8 steps 3-5, DEBT-0059) (developer)
 - TASK-0156 [REVIEW] Player levers client: research goals, budget in money with reserve, production line window, licence market window (developer)
 - TASK-0161 [REVIEW] Design pass 2 B: knowledge tree by year rings and direction sectors, 6 zoom steps, icons, node menu, prominent close (#473) (developer)
@@ -35,7 +35,7 @@
 - TASK-0178 [REVIEW] Gate: AI institute goals on the path to the next aircraft generation, Lab measurement with kappa 1.5 (#552) (simulation-engineer)
 - TASK-0179 [REVIEW] Lab: licence market calibration, what AI buys and why, prices and availability within tolerance (#553) (simulation-engineer)
 - TASK-0185 [REVIEW] Lab pilot: node time T_n, frontier width, starting institutes and ceiling for the slot model (#561, #564) (simulation-engineer)
-- TASK-0190 [APPROVED] Tooling: Gemini visual review through agy (subscription) instead of the AI Studio key (developer)
+- TASK-0191 [APPROVED] Tooling: llm_worker research — DeepSeek checks claims against fetched source pages (#577) (developer)
 <!-- registry:active:end -->
 
 ## Блокеры

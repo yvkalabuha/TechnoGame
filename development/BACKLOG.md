@@ -204,8 +204,9 @@
 | [TASK-0186](../development/tasks/TASK-0186-design-slot-science-model-manual-node-choice-queue.md) | DONE | Design: slot science model (manual node choice, queue, focus, research_speed, AI) for gate (#561-#568) | MS-M0 |
 | [TASK-0187](../development/tasks/TASK-0187-core-slot-science-model-one-institute-one-node-que.md) | IN_PROGRESS | Core: slot science model (one institute = one node, queue 5, focus, directions, research_speed) — golden batch (#576) | MS-M0 |
 | [TASK-0188](../development/tasks/TASK-0188-research-data-expand-knowledge-tree-computing-mate.md) | IN_PROGRESS | Research + data: expand knowledge tree (computing, materials, rocketry, space, electronics, nuclear) with directions (#575) | MS-M0 |
-| [TASK-0189](../development/tasks/TASK-0189-data-node-and-institute-directions-into-mods-12-di.md) | IN_PROGRESS | Data: node and institute directions into mods (12 directions, O-091) | MS-M0 |
-| [TASK-0190](../development/tasks/TASK-0190-tooling-gemini-visual-review-through-agy-subscript.md) | APPROVED | Tooling: Gemini visual review through agy (subscription) instead of the AI Studio key | MS-M0 |
+| [TASK-0189](../development/tasks/TASK-0189-data-node-and-institute-directions-into-mods-12-di.md) | DONE | Data: node and institute directions into mods (12 directions, O-091) | MS-M0 |
+| [TASK-0190](../development/tasks/TASK-0190-tooling-gemini-visual-review-through-agy-subscript.md) | IN_PROGRESS | Tooling: Gemini visual review through agy (subscription) instead of the AI Studio key | MS-M0 |
+| [TASK-0191](../development/tasks/TASK-0191-tooling-llm-worker-research-deepseek-checks-claims.md) | APPROVED | Tooling: llm_worker research — DeepSeek checks claims against fetched source pages (#577) | MS-M0 |
 
 ## Гипотезы
 
