@@ -139,7 +139,7 @@ public class TreeClarityTests
     {
         var csv = UiCsv(); var keys = Keys();
         foreach (var k in new[] { "ui.tree.anchor.est", "ui.tree.anchor.named.est", "ui.tree.anchor.tip.est" }) Assert.Contains(k, keys);
-        Assert.Contains(csv, l => l.StartsWith("legend.goal,") && l.Contains("Цель (двойная рамка)"));
+        Assert.Contains(csv, l => l.StartsWith("legend.goal,") && l.Contains("Цель (двойная рамка по форме)"));
         Assert.Contains(csv, l => l.StartsWith("ui.tree.anchor.est,") && l.Contains("оценка"));
     }
 

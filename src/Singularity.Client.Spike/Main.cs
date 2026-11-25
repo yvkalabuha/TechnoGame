@@ -643,7 +643,7 @@ public sealed partial class Main : Node3D
     // Esc: closes the legend, the tree, the journal, the open area (back to the map); a foreign power returns to the player's own; otherwise the game menu.
     void OnEscape()
     {
-        if (_tree.Visible) { if (_tree.LegendOpen) _tree.ToggleLegend(false); else _tree.Visible = false; }
+        if (_tree.Visible) _tree.Visible = false;   // the legend is open by default, so Esc closes the whole tree (#473)
         else if (_help.Visible) _help.Visible = false;
         else if (_journal.Visible) _journal.Visible = false;
         else if (_area != AreaId.Map) { CloseArea(); Recenter(); }
@@ -1053,6 +1053,57 @@ public sealed partial class Main : Node3D
                     Q(0.8, () => { if (_capRow < 0) return; string t = _tree.ShotLabelText(_capRow); _shotLog += $"caption {cap}{sfx}: label '{t ?? "none"}'\n"; if (sel && t != Names.Node(id)) InstFail($"caption {cap}: expected the label '{Names.Node(id)}', drawn '{t ?? "none"}'"); SaveShot($"tree_caption_{cap}{sfx}.png"); });
                 }
                 Q(0.2, () => { _tree.Select(-1); _tree.ResetView(); _tree.Visible = false; });
+            }
+            // Keyboard walk (TASK-0132, A6-A8) on the live session: real Tab key events reach the focused tree; the ring and the key tip show, Enter opens the node panel.
+            {
+                int kbRow = -1;
+                Q(0.4, () => OpenTree(0));
+                Q(0.3, () => { int row = _tree.FrontierRow >= 0 ? _tree.FrontierRow : _tree.GoalRow; _tree.Select(-1); _tree.ShotZoom(2.4f, row); _tree.GrabFocus(); PressKey(Key.Tab); PressKey(Key.Tab, false); });
+                Q(0.5, () =>
+                {
+                    kbRow = _tree.KeyFocusRow; string tip = _tree.KeyTipText;
+                    bool ok = kbRow >= 0 && tip != null && tip.Contains("№");
+                    _shotLog += $"tree keyboard{sfx}: Tab -> row {kbRow}, tip '{tip}': {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree keyboard: Tab did not put the ring and the key tip on a node");
+                    SaveShot($"tree_key_tip{sfx}.png", null, scale == 100);
+                    PressKey(Key.Enter); PressKey(Key.Enter, false);
+                });
+                Q(0.5, () =>
+                {
+                    bool ok = kbRow >= 0 && _tree.SelectedRow == kbRow;
+                    _shotLog += $"tree keyboard{sfx}: Enter -> selected row {_tree.SelectedRow}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree keyboard: Enter did not select the focused node");
+                    SaveShot($"tree_key_enter{sfx}.png");
+                    _tree.Select(-1); _tree.ResetView(); _tree.Visible = false;
+                });
+            }
+            // Year rings (TASK-0161, #473): radius = year, sectors = disciplines; the six zoom steps, the node menu with a hatched item, the keyboard ring; on the live session state.
+            {
+                int yrRow = -1;
+                int PickRow() => _tree.ShotPickRow();
+                Q(0.4, () => { OpenTree(0); _tree.ToggleLegend(true); _tree.Select(-1); _tree.ResetView(); });
+                Q(0.9, () =>
+                {
+                    string chrome = _tree.ShotChromeCheck(); bool ok = chrome == null && _tree.ShotStep == 1;
+                    _shotLog += $"tree year rings overview {sfx}: step {_tree.ShotStep} of 6, {(chrome ?? "close button 40 du, zoom bar and legend in place")}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail($"tree year rings overview {sfx}: {chrome}");
+                    SaveShot($"tree_year_overview{sfx}.png", null, scale == 100);
+                    yrRow = PickRow(); _tree.Select(yrRow); _tree.ShotZoom(ZoomSteps.Scales[2], yrRow);
+                });
+                Q(0.8, () => { bool ok = _tree.ShotStep == 3; _shotLog += $"tree year rings step 3 {sfx}: step {_tree.ShotStep}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree step 3"); SaveShot($"tree_year_step3{sfx}.png", null, scale == 100); _tree.ShotZoom(ZoomSteps.Scales[4], yrRow); });
+                Q(0.8, () => { bool ok = _tree.ShotStep == 5; _shotLog += $"tree year rings step 5 {sfx}: step {_tree.ShotStep}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree step 5"); SaveShot($"tree_year_step5{sfx}.png", null, scale == 100); _tree.ShotZoom(ZoomSteps.Scales[5], yrRow); });
+                Q(0.8, () => { bool ok = _tree.ShotStep == 6; _shotLog += $"tree year rings step 6 {sfx}: step {_tree.ShotStep}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree step 6"); SaveShot($"tree_year_step6{sfx}.png", null, scale == 100); _tree.ShotZoom(ZoomSteps.Scales[2], yrRow); });
+                Q(0.5, () =>
+                {
+                    string rows = _tree.ShotOpenMenu(yrRow);
+                    bool ok = rows != null && rows.Contains("hatched: ") && _tree.ShotMenuOpen;
+                    _shotLog += $"tree node menu {sfx}: {rows ?? "did not open"}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail($"tree node menu {sfx}: {rows}");
+                });
+                Q(0.5, () => { SaveShot($"tree_year_menu{sfx}.png", null, scale == 100); _tree.ShotCloseMenu(); _tree.Select(-1); _tree.ShotZoom(ZoomSteps.Scales[1], yrRow); _tree.GrabFocus(); PressKey(Key.Tab); PressKey(Key.Tab, false); });
+                Q(0.6, () =>
+                {
+                    bool ok = _tree.KeyFocusRow >= 0 && !_tree.ShotMenuOpen;
+                    _shotLog += $"tree year rings keyboard {sfx}: Tab -> row {_tree.KeyFocusRow}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree year rings: Tab did not put the ring on a node");
+                    SaveShot($"tree_year_focus{sfx}.png", null, scale == 100);
+                    _tree.Select(-1); _tree.ResetView(); _tree.Visible = false;
+                });
             }
             // The rail in its states: all normal, then an alarm on Finance and a warning "9+" on Production, narrow and wide (spec task-0117-rail-and-legend §4).
             Q(0.5, () => { SaveShot($"rail_narrow_normal{sfx}.png"); RunT6($"rail narrow normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });
