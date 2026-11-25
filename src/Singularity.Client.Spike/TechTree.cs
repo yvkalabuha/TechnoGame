@@ -145,6 +145,8 @@ public sealed partial class TechTree : Control
     }
     public int GoalRow => _goal;
     public int SelectedRow => _selected;
+    /// <summary>Shot run: the zoom, to prove that a key walk does not move the camera (A8; the pan is ShotPan).</summary>
+    public float ShotZoomNow => _zoom;
     public int FrontierRow { get { for (int i = 0; _state != null && i < _state.Length; i++) if (_state[i] == St.Frontier && _route[i]) return i; return -1; } }
 
     public void ShowFor(int actor, int mode)
@@ -848,7 +850,7 @@ public sealed partial class TechTree : Control
     public bool LegendOpen => _legendOpen && _mode == 0;
     public bool CanLegend => _mode == 0;
     public void ToggleLegend(bool open) { _legendOpen = open; ClampPan(); Redraw(); }
-    const float LegendRow = 22, LegendPad = 12, LegendGap = 16, LegendW = 560, LegendH = 352, StampH = 62, StampGap = 8;
+    const float LegendRow = 22, LegendPad = 12, LegendGap = 16, LegendW = 640, LegendH = 424, StampH = 62, StampGap = 8;
     /// <summary>The open legend sheet: right of the disc area, 8 du above the sheet stamp (spec §3).</summary>
     public Rect2 LegendSheet { get { float x = Size.X * 0.6f + 8; return new Rect2(x, Size.Y - 6 - StampH - StampGap - LegendH, Math.Min(LegendW, Size.X - x - 6), LegendH); } }
     Rect2 StampRect => new(Size.X - 6 - 360, Size.Y - 6 - StampH, 360, StampH);
@@ -856,7 +858,7 @@ public sealed partial class TechTree : Control
     // Cached legend content: localized texts (rebuilt when the language changes), colours and closed node outlines (built once).
     bool _lgDirty = true;
     // Texts: 0 rings head, 1 states head, 2 disciplines head, 3 lines head, 4 route, 5 root, 6 why the root, 7 close; 8-12 disciplines; 13-18 ring names; 19-23 states, 24 goal, 25 links of the selected node, 26 the centre dial.
-    readonly string[] _lgText = new string[27];
+    readonly string[] _lgText = new string[29];
     readonly LegendData.Discipline[] _lgDiscs = LegendData.Disciplines(Palette.C);
     Color[] _lgWash, _lgLine;
     bool _lgBuilt;
@@ -869,7 +871,7 @@ public sealed partial class TechTree : Control
         for (int k = 0; k < 5; k++) _lgText[8 + k] = Loc.T(_lgDiscs[k].NameKey);
         for (int k = 0; k < 6; k++) _lgText[13 + k] = (k + 1) + "  " + Loc.T(LegendData.Types[k].NameKey);
         for (int k = 0; k < 5; k++) _lgText[19 + k] = Loc.T(TreeClarity.LegendKey(TreeClarity.LegendStates[k]));
-        _lgText[24] = Loc.T("legend.goal"); _lgText[25] = Loc.T("legend.links"); _lgText[26] = Loc.T("legend.dial");
+        _lgText[24] = Loc.T("legend.goal"); _lgText[25] = Loc.T("legend.links"); _lgText[26] = Loc.T("legend.dial"); _lgText[27] = Loc.T("legend.keyfocus"); _lgText[28] = Loc.T("legend.counts");
         if (_lgBuilt) return;
         _lgBuilt = true;
         _lgWash = new Color[5]; _lgLine = new Color[5];
@@ -929,8 +931,12 @@ public sealed partial class TechTree : Control
         ry = Y(10, 16);
         RootMark.Draw(_cv, new Vector2(xr + 14, ry - 5), TreeClarity.MarkDu, CvBasis);
         Text(new Vector2(xr + 36, ry), _lgText[5], 14, Ui.Ink2);
-        Para(new Vector2(xr + 36, ry + 19), _lgText[6], colW - 36, 14, Ui.Ink2);
-        Text(new Vector2(xr, Y(13, 14)), _lgText[7], 14, Ui.Ink2);
+        // Keyboard focus (a second cue besides the thickness of the ring: the name tip) and the counters at the wedges.
+        float ky = ry + 19 + Para(new Vector2(xr + 36, ry + 19), _lgText[6], colW - 36, 14, Ui.Ink2) + 12;
+        _cv.DrawArc(new Vector2(xr + 14, ky - 5), 9f, 0, Mathf.Tau, 24, Ui.Sheet, 5.5f, true); _cv.DrawArc(new Vector2(xr + 14, ky - 5), 9f, 0, Mathf.Tau, 24, Ui.Ink, 2.5f, true);
+        ky += Para(new Vector2(xr + 36, ky), _lgText[27], colW - 36, 14, Ui.Ink2) + 8;
+        Para(new Vector2(xr, ky), _lgText[28], colW, 14, Ui.Ink2);
+        Text(new Vector2(xr, r.End.Y - 25), _lgText[7], 14, Ui.Ink2);
     }
 
     /// <summary>For the shot run: the legend sheet touches neither the stamp nor the disc area (A9); empty when it is fine.</summary>
@@ -1488,7 +1494,7 @@ public sealed partial class TechTree : Control
         var next = new List<Control>();
         var dep = _dep[i].OrderBy(x => nodes.Number[x]).ToList();
         foreach (int x in dep.Take(6))
-            next.Add(Ui.Wrap((_state[x] == St.Known ? "● " : _state[x] == St.Frontier ? "◐ " : "○ ") + Names.Node(nodes.Id[x]), 14, Ui.Ink));
+            next.Add(Ui.Wrap(Loc.T(_state[x] == St.Known ? "card.next.known" : _state[x] == St.Frontier ? "card.next.open" : "card.next.closed", Names.Node(nodes.Id[x])), 14, Ui.Ink));   // words, not marks: the same words as the legend of states
         if (dep.Count > 6) next.Add(Ui.Wrap(Loc.T("card.more", dep.Count - 6), 14, Ui.Ink2));
         if (dep.Count == 0) next.Add(Ui.Wrap(Loc.T("card.end"), 14, Ui.Ink2));
         _inset.AddChild(Block(CardIcon.Kind.Opens, "card.unlocks", next.ToArray()));

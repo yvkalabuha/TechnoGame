@@ -177,7 +177,7 @@ inset.process,Process: yield {0} · mastered {1} · admitted {2},Процесс:
 inset.focus,MASTERY FOCUS (up to 3 known processes),ФОКУС ОСВОЕНИЯ (до 3 известных процессов)
 inset.focus.add,Add to focus,В фокус освоения
 inset.focus.remove,Remove from focus,Убрать из фокуса
-inset.focus.empty,"Pick a known process (a square on the map) and press “Add to focus”; up to 3.","Выберите известный процесс (на карте он — квадрат) и нажмите «В фокус освоения»; можно до 3 процессов."
+inset.focus.empty,"Pick a known process (a square on the map), press “Add to focus”, then “Give order: focus”; up to 3.","Выберите известный процесс (на карте он — квадрат), нажмите «В фокус освоения», затем «Отдать приказ: фокус»; можно до 3 процессов."
 inset.focus.send,Give order: focus,Отдать приказ: фокус
 inset.focus.nothing,"Nothing to order: 0 of 3 processes chosen.","Нечего отдавать: выбрано 0 из 3 процессов."
 inset.focus.help,"Goal is the product we work towards; it gives the route. Mastery focus is up to 3 known processes the institutes master deeper now.","Цель — изделие, к которому идём; даёт маршрут. Фокус освоения — до 3 известных процессов, которые институты осваивают глубже сейчас."
@@ -321,6 +321,11 @@ legend.disc,Disciplines (wedge),Дисциплины (клин)
 legend.lines,Lines,Линии
 legend.route,Route to goal,Маршрут к цели
 legend.root,Root of “what blocks it”,Корень «что мешает»
+legend.keyfocus,"Keyboard focus: black ring and the name tip “Name · №N”","Фокус с клавиатуры: чёрное кольцо и подпись «Название · №N»"
+legend.counts,"6/28 at a wedge: known / all nodes of the direction","6/28 у клина: освоено / всего узлов направления"
+card.next.known,{0} — known,{0} — известен
+card.next.open,{0} — can be opened,{0} — можно открыть
+card.next.closed,{0} — not yet open,{0} — пока закрыт
 legend.close,Esc or L closes,Esc или L закрывает
 area.map,Map,Карта
 area.science,Science,Наука

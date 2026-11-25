@@ -1072,8 +1072,38 @@ public sealed partial class Main : Node3D
                     bool ok = kbRow >= 0 && _tree.SelectedRow == kbRow;
                     _shotLog += $"tree keyboard{sfx}: Enter -> selected row {_tree.SelectedRow}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree keyboard: Enter did not select the focused node");
                     SaveShot($"tree_key_enter{sfx}.png");
+                });
+                // A6 protocol, steps 3-5: an arrow moves the ring to a neighbour (the camera does not move), Shift+Tab walks back, Esc closes the tree.
+                int afterTab = -1; Vector2 panBefore = default; float zoomBefore = 0;
+                Q(0.3, () => { _tree.Select(-1); panBefore = _tree.ShotPan; zoomBefore = _tree.ShotZoomNow; PressKey(Key.Right); PressKey(Key.Right, false); });
+                Q(0.5, () =>
+                {
+                    afterTab = _tree.KeyFocusRow; bool moved = afterTab >= 0 && afterTab != kbRow, still = _tree.ShotPan == panBefore && Mathf.IsEqualApprox(_tree.ShotZoomNow, zoomBefore);
+                    _shotLog += $"tree keyboard{sfx}: Right arrow -> row {afterTab} (was {kbRow}), camera unchanged {still}: {(moved && still ? "PASS" : "FAIL")}\n"; if (!(moved && still)) InstFail("tree keyboard: the arrow did not move the ring to a neighbour or moved the camera");
+                    SaveShot($"tree_key_arrow{sfx}.png", null, scale == 100);
+                    PressKey(Key.Tab, true, true); PressKey(Key.Tab, false, true);
+                });
+                Q(0.4, () =>
+                {
+                    int back = _tree.KeyFocusRow; bool ok = back >= 0 && back != afterTab;
+                    _shotLog += $"tree keyboard{sfx}: Shift+Tab -> row {back}: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree keyboard: Shift+Tab did not move the ring back");
+                    PressKey(Key.Escape); PressKey(Key.Escape, false);
+                });
+                Q(0.4, () =>
+                {
+                    bool ok = !_tree.Visible;
+                    _shotLog += $"tree keyboard{sfx}: Esc -> tree closed: {(ok ? "PASS" : "FAIL")}\n"; if (!ok) InstFail("tree keyboard: Esc did not close the tree");
                     _tree.Select(-1); _tree.ResetView(); _tree.Visible = false;
                 });
+                // The SUN case of the original claim: «1/3» beside «№6» and the goal card with the term line («срок: ≈ N мес.») and the opened-next words.
+                Q(0.4, () =>
+                {
+                    int sun = Array.IndexOf(_host.Layout.ActorIds.ToArray(), "SUN");
+                    if (sun < 0) { InstFail("tree sun frame: power SUN not found"); return; }
+                    ShowPower(sun, false); OpenTree(0); _tree.Select(-1);
+                });
+                Q(1.6, () => { SaveShot($"tree_sun_summary{sfx}.png", null, scale == 100); _tree.Select(_tree.GoalRow >= 0 ? _tree.GoalRow : _tree.FrontierRow); });
+                Q(0.8, () => { SaveShot($"tree_sun_why{sfx}.png", null, scale == 100); _tree.Select(-1); _tree.ResetView(); _tree.Visible = false; });
             }
             // The rail in its states: all normal, then an alarm on Finance and a warning "9+" on Production, narrow and wide (spec task-0117-rail-and-legend §4).
             Q(0.5, () => { SaveShot($"rail_narrow_normal{sfx}.png"); RunT6($"rail narrow normal{sfx}", true); _pinBadges = new[] { (AreaId.Finance, 1, 2), (AreaId.Production, 10, 1) }; });
