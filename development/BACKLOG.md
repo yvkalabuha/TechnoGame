@@ -199,7 +199,7 @@
 | [TASK-0181](../development/tasks/TASK-0181-3d-fighters-g1-g6-v2-by-gemini-544-557-slot-kits-p.md) | DONE | 3D fighters G1-G6 v2 by Gemini (#544, #557): slot kits, paper-style sheet, art director acceptance | MS-M0 |
 | [TASK-0182](../development/tasks/TASK-0182-fix-ai-fleet-sale-booked-at-a-different-g-front-th.md) | DONE | Fix: AI fleet sale booked at a different G_front than the decision priced (FL7 seed 10) | MS-M0 |
 | [TASK-0183](../development/tasks/TASK-0183-pace-tuning-g3-g4-after-owner-play-session-ahead-c.md) | PROPOSED | Pace tuning G3-G4 after owner play session: ahead cost on on-time nodes, epoch budget weighting (#558) | MS-M0 |
-| [TASK-0184](../development/tasks/TASK-0184-data-owners-1945-corrections-from-task-0166-check-.md) | IN_PROGRESS | Data: owners 1945 corrections from TASK-0166 check (Brunei, Ogaden, confidence marks; Tibet/Taiwan/Danzig wait for owner) | MS-M1 |
+| [TASK-0184](../development/tasks/TASK-0184-data-owners-1945-corrections-from-task-0166-check-.md) | DONE | Data: owners 1945 corrections from TASK-0166 check (Brunei, Ogaden, confidence marks; Tibet/Taiwan/Danzig wait for owner) | MS-M1 |
 
 ## Гипотезы
 

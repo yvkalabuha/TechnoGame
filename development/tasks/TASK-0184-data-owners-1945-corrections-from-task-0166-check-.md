@@ -1,7 +1,7 @@
 ---
 id: TASK-0184
 title: "Data: owners 1945 corrections from TASK-0166 check (Brunei, Ogaden, confidence marks; Tibet/Taiwan/Danzig wait for owner)"
-status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M1
 agent: developer
@@ -13,6 +13,7 @@ related: [TASK-0166]
 approved_by: orchestrator
 approved_at: 2026-11-25
 approval_ref: "O-086"
+review_ref: "reviewer: APPROVE (3 low fixed by orchestrator); land verify OK; merge e3435e2"
 created: 2026-11-25
 ---
 
