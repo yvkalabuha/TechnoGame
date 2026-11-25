@@ -1,14 +1,14 @@
 ---
 id: ADR-0029
 title: "Entity tables on the move to ADR-0020: which entities leave the actors table, child tables with parent-aligned chunks"
-status: PROPOSED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
+status: ACCEPTED         # PROPOSED | ACCEPTED | SUPERSEDED | DEPRECATED | REJECTED
 date: 2026-11-25
 supersedes:              # пусто намеренно: дополняет ADR-0005 п. 1, частично заменяет ADR-0020 п. 2 (см. ниже)
 superseded_by:
 related: [ADR-0027, ADR-0028, ADR-0005, ADR-0013, ADR-0014, ADR-0017, ADR-0019, ADR-0020, ADR-0021, MS-M1, TASK-0090, TASK-0151, TASK-0152]
-approved_by:
-approved_at:
-approval_ref:
+approved_by: owner
+approved_at: 2026-11-25
+approval_ref: "#518"
 ---
 
 # ADR-0029 — Таблицы сущностей при переходе на ADR-0020: что уходит из таблицы акторов, дочерние таблицы с чанками по родителю

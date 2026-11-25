@@ -71,6 +71,20 @@ def checks(root) -> list[str]:
     return out
 
 
+def north_star(root) -> list[str]:
+    """Owner #529: the short project idea and the automatic checkpoint, so compaction does not lose the thread."""
+    out: list[str] = []
+    try:
+        ns = (root / "docs" / "vision" / "NORTH_STAR.md").read_text(encoding="utf-8").splitlines()
+        out += ["North star (docs/vision/NORTH_STAR.md):"] + [l for l in ns if l.startswith("- ")]
+    except OSError:
+        pass
+    cp = root / "development" / "handoff" / "auto-checkpoint.md"
+    if cp.exists():
+        out.append("Auto-checkpoint written before the last compaction: development/handoff/auto-checkpoint.md — read it first when continuing work.")
+    return out
+
+
 def main() -> None:
     data = read_input()
     root = project_dir(data)
@@ -93,6 +107,7 @@ def main() -> None:
     if active:
         rows = [l for l in active.group(1).splitlines() if l.strip()]
         lines += ["Active tasks:"] + rows[:MAX_ACTIVE]
+    lines += north_star(root)
     print("\n".join(lines))
 
 

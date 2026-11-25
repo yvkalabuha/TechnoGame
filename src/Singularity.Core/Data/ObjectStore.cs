@@ -35,6 +35,9 @@ internal sealed class ObjectStore(string kind)
         _entries.Add(id, entry);
     }
 
+    /// <summary>True when the ID was defined and then deleted (a tombstone), as opposed to never defined.</summary>
+    public bool IsDeleted(string id) => _entries.TryGetValue(id, out Entry? e) && e.Map is null;
+
     public void Override(YMap map, string id, ModContext mod) => Touch(map, id, mod, "override").Map = map;
 
     public void Patch(YMap patch, string id, ModContext mod)

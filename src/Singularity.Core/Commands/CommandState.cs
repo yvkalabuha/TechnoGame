@@ -23,18 +23,25 @@ public sealed class CommandState
     private readonly IntColumn[][] _dAlt;
     private readonly IntColumn[] _sStamp, _sGen, _sForce, _cStamp, _cGen;
     private readonly LongColumn[] _sRate;
+    // refuse_proposal per design and kind (open, close); only in a run with an adviser. The generation is the project the refusal named.
+    private readonly IntColumn[] _rOpenStamp = [], _rOpenGen = [], _rCloseStamp = [], _rCloseGen = [];
+    private readonly ImmutableArray<int> _adviserActors;
     private readonly IntColumn[] _progCmd;
     private readonly ImmutableArray<int> _progNumbers;
     private readonly IntColumn[] _fKind, _fDesign, _fGen, _fN, _fStamp;
     private readonly IntColumn? _fundStamp, _fundNode;
+    private readonly LongColumn? _security;
+    private readonly IntColumn? _planSet;
+    private readonly IntColumn[] _planTarget = [], _planMode = [];
     private readonly LongColumn? _fundAmount;
     private readonly Singularity.Core.Institutes.InstituteOrders? _institutes;
 
     /// <param name="altSlots">Alternatives per design command: the slot count of the product class.</param>
     /// <param name="designs"><c>max_designs</c>.</param>
     /// <param name="fundProgramme">The run has the reserve: adds the one-off slot <c>cmd.fund.*</c> (absent otherwise, so the table of other runs is unchanged).</param>
+    /// <param name="intelligence">The run has intelligence: adds the security share and the target plan to the standing settings <c>cmd.shares.*</c> (absent otherwise).</param>
     /// <param name="programmeProcesses">Process numbers a mastery programme may run on (tier ≥ 5): one `cmd.prog.p{n}` column each.</param>
-    public CommandState(Table table, int altSlots, int designs, ImmutableArray<int> programmeProcesses = default, bool fundProgramme = false,
+    public CommandState(Table table, int altSlots, int designs, ImmutableArray<int> programmeProcesses = default, ImmutableArray<int> adviserActors = default, bool fundProgramme = false, bool intelligence = false,
         Singularity.Core.Institutes.InstituteOrders? institutes = null)
     {
         _institutes = institutes;
@@ -44,6 +51,14 @@ public sealed class CommandState
         _sharesSet = table.AddInt("cmd.shares.set");
         _shares = [table.AddLong("cmd.shares.research"), table.AddLong("cmd.shares.capability"), table.AddLong("cmd.shares.effort"),
             table.AddLong("cmd.shares.procurement"), table.AddLong("cmd.shares.quality")];
+        if (intelligence)
+        {
+            // The seventh share and the plan (target + 1 and mode per slot) live in the family of the shares; `plan` = 1 once the player set a plan.
+            _security = table.AddLong("cmd.shares.security");
+            _planSet = table.AddInt("cmd.shares.plan");
+            _planTarget = [table.AddInt("cmd.shares.tgt.0"), table.AddInt("cmd.shares.tgt.1"), table.AddInt("cmd.shares.tgt.2")];
+            _planMode = [table.AddInt("cmd.shares.mode.0"), table.AddInt("cmd.shares.mode.1"), table.AddInt("cmd.shares.mode.2")];
+        }
         _focus = [table.AddInt("cmd.focus.0"), table.AddInt("cmd.focus.1"), table.AddInt("cmd.focus.2")];
         _dKind = new IntColumn[_slots];
         _dTarget = new IntColumn[_slots];
@@ -97,6 +112,30 @@ public sealed class CommandState
             _cStamp[d] = table.AddInt($"cmd.close.{d}.stamp");
             _cGen[d] = table.AddInt($"cmd.close.{d}.gen");
         }
+        _adviserActors = adviserActors.IsDefault ? [] : adviserActors;
+        if (_adviserActors.IsEmpty)
+            return;
+        _rOpenStamp = new IntColumn[designs];
+        _rOpenGen = new IntColumn[designs];
+        _rCloseStamp = new IntColumn[designs];
+        _rCloseGen = new IntColumn[designs];
+        for (int d = 0; d < designs; d++)
+        {
+            _rOpenStamp[d] = table.AddInt($"cmd.refuse.{d}.open.stamp");
+            _rOpenGen[d] = table.AddInt($"cmd.refuse.{d}.open.gen");
+            _rCloseStamp[d] = table.AddInt($"cmd.refuse.{d}.close.stamp");
+            _rCloseGen[d] = table.AddInt($"cmd.refuse.{d}.close.gen");
+        }
+    }
+
+    /// <summary>
+    /// <c>refuse_proposal</c> consumed at <paramref name="month"/>: the slot generation of the project whose open (or close) proposal was refused, 0 = none.
+    /// Always 0 in a run without an adviser.
+    /// </summary>
+    public int RefusedGen(int actor, int design, bool close, long month)
+    {
+        IntColumn[] stamp = close ? _rCloseStamp : _rOpenStamp;
+        return stamp.Length == 0 || stamp[design].Current[actor] != Stamp(month) ? 0 : (close ? _rCloseGen : _rOpenGen)[design].Current[actor];
     }
 
     // ---- readers (snapshot: what is in force at the month step being computed)
@@ -105,7 +144,19 @@ public sealed class CommandState
     public BudgetShares? SharesOverride(int actor) => _sharesSet.Current[actor] == 0
         ? null
         : new BudgetShares(Fx6.FromRaw(_shares[0].Current[actor]), Fx6.FromRaw(_shares[1].Current[actor]), Fx6.FromRaw(_shares[2].Current[actor]),
-            Fx6.FromRaw(_shares[3].Current[actor]), Fx6.FromRaw(_shares[4].Current[actor]));
+            Fx6.FromRaw(_shares[3].Current[actor]), Fx6.FromRaw(_shares[4].Current[actor]), _security is null ? Fx6.Zero : Fx6.FromRaw(_security.Current[actor]));
+
+    /// <summary>The plan the player set for the slot: false when there is none (the AI plan applies) or in a run without intelligence; an empty slot has target −1.</summary>
+    public bool PlayerPlan(int actor, int slot, out int target, out Singularity.Core.Intelligence.IntelMode mode)
+    {
+        target = -1;
+        mode = Singularity.Core.Intelligence.IntelMode.None;
+        if (_planSet is null || _planSet.Current[actor] == 0)
+            return false;
+        target = _planTarget[slot].Current[actor] - 1;
+        mode = (Singularity.Core.Intelligence.IntelMode)_planMode[slot].Current[actor];
+        return true;
+    }
 
     /// <summary>Process number of the k-th focus priority, −1 = empty.</summary>
     public int Focus(int actor, int k) => _focus[k].Current[actor] - 1;
@@ -190,6 +241,19 @@ public sealed class CommandState
                 Set(_shares[2], a, s.Shares.Effort.Raw);
                 Set(_shares[3], a, s.Shares.Procurement.Raw);
                 Set(_shares[4], a, s.Shares.Quality.Raw);
+                if (_security is not null)
+                {
+                    Set(_security, a, s.Shares.Security.Raw);
+                    if (!s.Targets.IsDefault)
+                    {
+                        Set(_planSet!, a, 1);
+                        for (int k = 0; k < _planTarget.Length; k++)
+                        {
+                            Set(_planTarget[k], a, k < s.Targets.Length ? s.Targets[k].Target + 1 : 0);
+                            Set(_planMode[k], a, k < s.Targets.Length ? (int)s.Targets[k].Mode : 0);
+                        }
+                    }
+                }
                 break;
             case SetEffortFocus f:
                 for (int k = 0; k < _focus.Length; k++)
@@ -237,6 +301,13 @@ public sealed class CommandState
                     return Superseded(l.Design, _cGen[l.Design.Slot].Current[a]);
                 Set(_cStamp[l.Design.Slot], a, stamp);
                 Set(_cGen[l.Design.Slot], a, l.Design.Generation);
+                break;
+            case RefuseProposal rp:
+                if (!_adviserActors.Contains(a))
+                    return CommandVerdict.Refuse(CommandRefusal.NoAdviser, $"actor {a} has no adviser: there is no proposal to refuse");
+                // One entry per (actor, design, kind, month): the stamp keeps only this month's refusal.
+                Set(rp.Close ? _rCloseStamp[rp.Design.Slot] : _rOpenStamp[rp.Design.Slot], a, stamp);
+                Set(rp.Close ? _rCloseGen[rp.Design.Slot] : _rOpenGen[rp.Design.Slot], a, rp.Design.Generation);
                 break;
             case StartMasteryProgramme or CancelMasteryProgramme:
                 int number = command is StartMasteryProgramme sp ? sp.ProcessNumber : ((CancelMasteryProgramme)command).ProcessNumber;

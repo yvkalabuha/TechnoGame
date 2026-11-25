@@ -16,11 +16,13 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
 {
     public bool Knows(int actorRow, int nodeNumber, long month) => KnowsNode(actorRow, nodeNumber);
 
+    public int NewLicences(int actorRow, long month, Span<(int Seller, int Gen)> into) => world.Policy.NewLicences(actorRow, month, into);
+
     public Fx6 AdmittedYield(int siteRow, int processNumber, long month) =>
-        KnowsNode(siteRow, processNumber) ? world.Industry.Yield(siteRow, world.IndustryLayout.RowOf(processNumber), month).Yield : Fx6.Zero;
+        KnowsNode(siteRow, processNumber) || world.ProductionLicensed(siteRow, processNumber) ? world.Industry.Yield(siteRow, world.IndustryLayout.RowOf(processNumber), month).Yield : Fx6.Zero;
 
     public Fx6 CultureYield(int siteRow, int processNumber, long month) =>
-        KnowsNode(siteRow, processNumber) ? world.Industry.Yield(siteRow, world.IndustryLayout.RowOf(processNumber), month).CultureYield : Fx6.Zero;
+        KnowsNode(siteRow, processNumber) || world.ProductionLicensed(siteRow, processNumber) ? world.Industry.Yield(siteRow, world.IndustryLayout.RowOf(processNumber), month).CultureYield : Fx6.Zero;
 
     public ProductionProfile Profile(int siteRow, ReadOnlySpan<PrcSetItem> prcSet, long month) => world.Industry.Profile(siteRow, prcSet, month);
 
@@ -103,8 +105,13 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
 
     // Spec A41: a line the AI launched runs at r_AI = ⌊B_proc(t)/unit_cost_floor⌋, recomputed from the budget of the month; the training series adds
     // the capability item (B_proc + B_cap). A line started by a command keeps the rate of that command.
+    public bool PlayerRateCommands(int actorRow) => world.Policy.IsAdviser(actorRow);
+
     public Fx6? LineRate(int actorRow, int design, long month)
     {
+        // The player's start on the line of an advised actor takes the rate from the AI at once (the policy drops the AI flag from the next month).
+        if (world.Policy.IsAdviser(actorRow) && world.Commands.Series(actorRow, design, month) is { } series && world.Products.Resolves(actorRow, series.Design))
+            return null;
         if (!world.Policy.AiLine(actorRow, design, world.Products.Generation(actorRow, design)))
             return null;
         BudgetShares shares = world.SharesOf(actorRow);

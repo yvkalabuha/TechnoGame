@@ -16,7 +16,7 @@ namespace Singularity.Lab.Models.Slice;
 public sealed class JetSliceModelFactory(bool calibration) : ISessionModelFactory
 {
     /// <summary>The version of the Session surface this model was written against (SLICE_COMPOSITION §13.7).</summary>
-    public const int SurfaceVersion = 22;
+    public const int SurfaceVersion = 25;
 
     /// <summary>Horizon H of the slice, months (spec §2): the control tables have curve knots τ 0…2·H−1.</summary>
     public const int SliceHorizonMonths = 384;

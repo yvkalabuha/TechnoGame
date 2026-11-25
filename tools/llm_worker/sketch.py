@@ -660,7 +660,8 @@ def one_line(s, n=300):
 
 def attribution_line(rec, f):
     """One line for mods/core/ATTRIBUTION.md; written only after ui-art-director approves the picture (ADR-0026 4)."""
-    return (f"- {f['name']}: AI-generated sketch, model {rec['model']}, Antigravity CLI {rec.get('agy_version') or 'agy'}, "
+    tool = f"Codex CLI {rec.get('codex_version') or 'codex'}" if rec.get("engine") == "codex" else f"Antigravity CLI {rec.get('agy_version') or 'agy'}"
+    return (f"- {f['name']}: AI-generated sketch, model {rec['model']}, {tool}, "
             f"{rec['date']}, prompt {rec['prompt_file']} (sha256 {rec['prompt_sha256']}, full text in the run record) "
             f"({rec['task']}): \"{one_line(rec['prompt_brief'])}\"; "
             "approved by: <ui-art-director, review ref>")
@@ -672,10 +673,7 @@ def _run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, s
     """One agy run. Returns (json path or None, md path or None, record). brain_dir: where this process finds the
     brain folders; inside_brain: the same folder as agy and its tool calls name it (differs when a Box is used)."""
     inside_brain = inside_brain or brain_dir
-    if not TASK_RE.match(task):
-        raise SketchError("bad_task", task)
-    if not 1 <= count <= MAX_COUNT:
-        raise SketchError("bad_count", f"1..{MAX_COUNT}")
+    _check_task_count(task, count)
     pf = check_prompt_file(prompt_file, root)
     brief = pf.read_text(encoding="utf-8")
     ref_paths = check_refs(list(refs), shots_dir)
@@ -689,7 +687,7 @@ def _run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, s
     agy = find_agy(which)
     digest = hashlib.sha256(b"\0".join([brief.encode(), str(count).encode()]
                                        + [p.name.encode() + b"\0" + p.read_bytes() for p in ref_paths])).hexdigest()
-    record = {"kind": "sketch", "task": task, "provider": "gemini-agy", "prompt_file": str(pf.relative_to(Path(root).resolve())),
+    record = {"kind": "sketch", "task": task, "provider": "gemini-agy", "engine": "gemini", "prompt_file": str(pf.relative_to(Path(root).resolve())),
               "prompt_sha256": hashlib.sha256(brief.encode()).hexdigest(), "prompt_brief": one_line(brief, 600), "prompt": brief,
               "count": count, "refs": [p.name for p in ref_paths], "input_hash": digest}
     if dry_run:
@@ -787,8 +785,17 @@ def _run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, s
     return path, md, record
 
 
+def _check_task_count(task, count):
+    """Cheap input checks; run_sketch calls them before it opens a Box (no sandbox tools needed to refuse)."""
+    if not TASK_RE.match(task):
+        raise SketchError("bad_task", task)
+    if not 1 <= count <= MAX_COUNT:
+        raise SketchError("bad_count", f"1..{MAX_COUNT}")
+
+
 def run_sketch(*args, brain_dir=BRAIN_DIR, runner=None, **kw):
     """_run_sketch inside a Box unless a runner is injected (tests)."""
+    _check_task_count(args[0] if args else kw.get("task", ""), args[3] if len(args) > 3 else kw.get("count", 1))
     if runner is not None or kw.get("dry_run"):  # a dry run checks inputs only and starts nothing: no Box needed
         return _run_sketch(*args, brain_dir=brain_dir, runner=runner, **kw)
     with private_box(cwd_writable=True) as (box, private_brain):
@@ -797,9 +804,12 @@ def run_sketch(*args, brain_dir=BRAIN_DIR, runner=None, **kw):
 
 
 def summary_md(rec):
-    lines = [f"# Gemini sketches (agy): {rec['task']}", "",
+    codex = rec.get("engine") == "codex"
+    lines = [f"# {'Codex' if codex else 'Gemini'} sketches ({'codex' if codex else 'agy'}): {rec['task']}", "",
              f"Model {rec['model']}. Images {len(rec['files'])} of {rec['requested']} requested"
-             f"{' (PARTIAL)' if rec['partial'] else ''}. Conversation {rec['conversation_id']}, started {rec['started_at']}, agy {rec.get('agy_version') or 'unknown'}.",
+             f"{' (PARTIAL)' if rec['partial'] else ''}. Conversation {rec['conversation_id']}, started {rec['started_at']}, "
+             f"{'codex ' + str(rec.get('codex_version') or 'unknown') if codex else 'agy ' + str(rec.get('agy_version') or 'unknown')}.",
+             *([f"Fallback: {rec['fallback']['from']} failed ({rec['fallback']['code']}), Codex used."] if rec.get("fallback") else []),
              "Sketches are proposals: ADR-0026 needs ui-art-director's approval before use in the game.", "",
              f"Prompt ({rec['prompt_file']}, sha256 {rec['prompt_sha256']}): {rec['prompt_brief']}", ""]
     if rec["refs"]:

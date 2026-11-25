@@ -117,7 +117,7 @@ public sealed partial class PolicySystem
         // B_base of the year reset comes from the AI's own shares (Shares(row)), not from a player's set_budget_shares override: for an actor
         // driven by the player with the AI on, the ceiling may differ from the one the layer sets (deviation 11 of TASK-0028).
         if (t % 12 == 0)
-            book.ResetYear(Shares(row).Procurement * Budget(row));
+            book.ResetYear(PlannedProcurement(Shares(row)) * Budget(row));
         book.NewMonth();
         IReadOnlyList<FleetCommand> pending = AiFleetCommands(row, t);
         foreach (FleetCommandKind kind in (ReadOnlySpan<FleetCommandKind>)[FleetCommandKind.Sell, FleetCommandKind.Retire])
@@ -129,7 +129,7 @@ public sealed partial class PolicySystem
             }
         }
         book.ExpendCredit(t + 1);
-        Fx6 baseNext = sharesNext.Procurement * budgetNext;
+        Fx6 baseNext = PlannedProcurement(sharesNext) * budgetNext;
         if ((t + 1) % 12 == 0)
             book.ResetYear(baseNext);
         book.NewMonth();
@@ -145,10 +145,14 @@ public sealed partial class PolicySystem
             if (StartPending(row, d, t, designs[d]))
                 series[d] = true;
         }
-        foreach (int d in dec.Closes)
-            series[d] = false;
-        foreach ((int d, _) in dec.Starts)
-            series[d] = true;
+        // The AI's line decisions of an adviser actor are proposals only: until the player accepts one it changes nothing, the fleet rule included.
+        if (!IsAdviser(row))
+        {
+            foreach (int d in dec.Closes)
+                series[d] = false;
+            foreach ((int d, _) in dec.Starts)
+                series[d] = true;
+        }
         // A project that is, or is about to be, a line is never a candidate: the stage on the book is С. One that has just closed is left out for this month.
         int line = -1;
         for (int d = 0; d < _designs; d++)

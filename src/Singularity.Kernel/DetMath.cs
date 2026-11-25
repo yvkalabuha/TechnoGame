@@ -6,7 +6,7 @@ namespace Singularity.Kernel;
 /// platform. Math.Pow/Exp/Log are not, which is why they are banned in world state.
 /// None of these methods contains a*b+c, so FMA contraction cannot change their results.
 /// </summary>
-public static class DetMath
+public static partial class DetMath
 {
     /// <summary>Exponent scale of <see cref="PowFrac"/>: q10 = y * 1024 (ADR-0012).</summary>
     public const int FracOne = 1024;

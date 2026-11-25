@@ -1,7 +1,7 @@
 ---
 id: TASK-0154
 title: "Data: alliances and blocs by year 1945-2030 for the licence buyer circle"
-status: REVIEW         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: DONE         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: gate
 milestone: MS-M05
 agent: research-scientist
@@ -13,6 +13,7 @@ related: [TASK-0148, TASK-0156]
 approved_by: owner
 approved_at: 2026-11-24
 approval_ref: "#482 (designs approved), #470-#481"
+review_ref: "reviewer: APPROVE (data matches note and history for 5 slice countries); follow-up TASK-0170"
 created: 2026-11-24
 ---
 

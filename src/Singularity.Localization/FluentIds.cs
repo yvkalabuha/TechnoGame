@@ -98,7 +98,7 @@ public static class FluentIds
     /// <summary>Attributes allowed for a kind (ADR-0018 §1 table). Empty: the entity has a value only.</summary>
     public static IReadOnlyList<string> AllowedAttributes(KeyKind kind) => kind switch
     {
-        KeyKind.Node => ["name", "short", "desc", "anchor"],
+        KeyKind.Node => ["name", "short", "desc", "anchor", "history"],
         KeyKind.ProductClass => ["name", "short", "desc"],
         KeyKind.Slot or KeyKind.Alternative => ["name", "short"],
         KeyKind.Scenario => ["name", "desc"],

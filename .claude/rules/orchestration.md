@@ -47,3 +47,9 @@ Source: `docs/reviews/project-review-2026-11-19.md`. Current plan: `development/
 ## 8. State hygiene
 - At each phase end and before a handoff: update `CURRENT_STATE.md` "Сводка", `development/PLAN.md` "Фокус" and, when a milestone changes, `development/ROADMAP.md`.
 - `docs/architecture/ARCHITECTURE.md` lists ADR statuses: update it when an ADR changes status.
+
+## 9. Autonomy and capacity (owner, 2026-11-25)
+- Work at full capacity without asking: skill `/autopilot`. Agents start on their own while `tools/development/capacity.py` shows free slots; docs-only agents do not count.
+- The game client starts only with the owner's permission: hook `.claude/hooks/guard_shots.py` needs a live permit from `tools/development/client_permit.py grant`, granted only after the owner allows a shot batch; one `--only` batch per task.
+- Tests run in batches: module tests once per change set; the hook `.claude/hooks/guard_load.py` refuses test and build runs while the CPU is full.
+- Questions to the owner are collected in `development/OPEN_QUESTIONS.md` and asked all at once when nothing can move without them (stop condition of `/autopilot`).
