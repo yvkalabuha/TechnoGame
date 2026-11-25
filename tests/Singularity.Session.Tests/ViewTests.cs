@@ -23,8 +23,10 @@ public sealed class ViewWalk
         // Seed 1, and the A40 stress arm without effort money for the cancel (TASK-0058: with I-OC the main run gives no project up).
         SliceRunConfig[] configs =
         [
+            SliceRunConfig.Legacy with { Seed = 1, Threads = 2, LicKnows = true },
+            SliceRunConfig.Legacy with { Seed = 3, Threads = 2, LicKnows = true, EffortShare = EffortShareArm.X0 },
+            // The build's defaults (the five levers of wave 1 on): the views match Core there too.
             new() { Seed = 1, Threads = 2, LicKnows = true },
-            new() { Seed = 3, Threads = 2, LicKnows = true, EffortShare = EffortShareArm.X0 },
         ];
         foreach (SliceRunConfig config in configs)
         {
@@ -522,7 +524,8 @@ public class ViewTests(ViewWalk walk) : IClassFixture<ViewWalk>
         // Re-recorded in TASK-0147 (train 2): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465) change every trajectory on the current data; explanation: docs/simulation/golden-rerecord-train2.md.
         // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
         // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront; old columns unchanged (ColumnProjection hash not changed).
-        HashAssert.Equal("3d466f77ddd6d0733636475d5286224d52958103507ba5b29e71381d18c82f68", a.LastHash);
+        // Re-recorded in TASK-0171 (the one golden batch of 2026-11-26): the five levers of wave 1 are on by default (reserve, institutes, licence market, adviser, intelligence), the AI institutes pick goals on the path to the next product generation (PATH, #559) and the AI buys licences by the market setting M2 (#560), so every trajectory of a default config moves; the old behaviour stays in SliceRunConfig.Legacy (projection and identity tests use it).
+        HashAssert.Equal("57008f914dc307840985249a52ed6664418ddc78b3af8b3eaf6c5df8b9e84f73", a.LastHash);
     }
 
     [Fact]

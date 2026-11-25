@@ -29,6 +29,13 @@ public interface IInstituteInputs
 
     /// <summary>The share of the planned research money the actor really funds, 0..1 (snapshot): a project advances by this part of a month, so a project without money does not finish.</summary>
     Fx6 BuildFunding(int actorRow);
+
+    /// <summary>
+    /// The path of the actor to the next generation of the product (ai-institute-goals.md §2), a pure function of the snapshot: per node row,
+    /// 1 = unknown and needed for the next generation g* the actor cannot yet compose, 0 = not (g*+1 is not computed: the PATH rule does not use it).
+    /// <paramref name="tier"/> has one entry per node row and is zeroed by the caller.
+    /// </summary>
+    void GoalPath(int actorRow, long month, Span<byte> tier);
 }
 
 /// <summary>Why a project cannot start now.</summary>
@@ -369,9 +376,13 @@ public sealed class InstituteSystem : ITickSystem
             goals[k] = work[k] > 0 && GoalNode(new InstituteHandle(actor, k)) == 0 ? work[k] : 0;
     }
 
-    // The AI rule (§7): the heaviest frontier node that no slot works on goes to the free institute with the highest level in its area (ties: the lower slot).
+    // The AI rule (§7 with the path rule PATH of ai-institute-goals.md §2, #559): of the frontier nodes on the path to the next product generation, the heaviest
+    // that no slot works on goes to the free institute with the highest level in its area (ties: the lower slot). No node of the path in the frontier: the slot has no goal.
     private void PickForFreeSlots(int a, long t, int slots, Span<int> goal)
     {
+        Span<byte> tier = _g.Count <= 512 ? stackalloc byte[_g.Count] : new byte[_g.Count];   // heap only above 512 nodes, as in KnowledgeSystem
+        tier.Clear();
+        _inputs.GoalPath(a, t, tier);
         while (true)
         {
             bool free = false;
@@ -383,7 +394,7 @@ public sealed class InstituteSystem : ITickSystem
             Fx6 bestWeight = Fx6.Zero;
             foreach (int r in _g.Order)
             {
-                if (!_inputs.InFrontier(a, r) || IsTaken(goal, slots, _g.Number[r]))
+                if (tier[r] != 1 || !_inputs.InFrontier(a, r) || IsTaken(goal, slots, _g.Number[r]))
                     continue;
                 Fx6 w = _inputs.Priority(a, r, t);
                 if (w > bestWeight)

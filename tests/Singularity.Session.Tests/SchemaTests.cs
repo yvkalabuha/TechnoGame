@@ -16,7 +16,7 @@ public class SchemaTests
     [Fact]
     public void ColumnLayout_MatchesThePinnedSchemaVersion()
     {
-        SliceWorld w = SliceTestData.Create(new SliceRunConfig { ToolingTarget = ToolingTargetSpec.Parse("V0") }).World;   // V0 adds no run.tooling columns
+        SliceWorld w = SliceTestData.Create(SliceRunConfig.Legacy with { ToolingTarget = ToolingTargetSpec.Parse("V0") }).World;   // V0 adds no run.tooling columns
         Assert.True(PinnedFingerprint == w.SchemaFingerprint(),
             $"column layout changed (fingerprint {w.SchemaFingerprint()}): raise SliceWorld.SchemaVersion (now {SliceWorld.SchemaVersion}) and re-pin");
         Assert.Equal(PinnedVersion, SliceWorld.SchemaVersion);
@@ -36,10 +36,10 @@ public class SchemaTests
     public void RunConfig_IsPartOfTheState()
     {
         string h(SliceRunConfig c) => SliceTestData.Create(c).LastHash;
-        string main = h(new SliceRunConfig { Seed = 5 });
-        Assert.NotEqual(main, h(new SliceRunConfig { Seed = 5, FixE = true }));
-        Assert.NotEqual(main, h(new SliceRunConfig { Seed = 5, Channels = SliceChannels.Sigma }));
-        Assert.NotEqual(main, h(new SliceRunConfig { Seed = 5, Start = StartVariant.Symmetric }));
-        Assert.Equal(main, h(new SliceRunConfig { Seed = 5, Threads = 8, ChunkSize = 3 }));   // execution options are not state
+        string main = h(SliceRunConfig.Legacy with { Seed = 5 });
+        Assert.NotEqual(main, h(SliceRunConfig.Legacy with { Seed = 5, FixE = true }));
+        Assert.NotEqual(main, h(SliceRunConfig.Legacy with { Seed = 5, Channels = SliceChannels.Sigma }));
+        Assert.NotEqual(main, h(SliceRunConfig.Legacy with { Seed = 5, Start = StartVariant.Symmetric }));
+        Assert.Equal(main, h(SliceRunConfig.Legacy with { Seed = 5, Threads = 8, ChunkSize = 3 }));   // execution options are not state
     }
 }

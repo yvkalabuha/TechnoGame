@@ -19,7 +19,7 @@ public class SeriesSwitchTests
     // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront; old columns unchanged (ColumnProjection hash not changed).
     private const string MainSeed1Month149 = "3d466f77ddd6d0733636475d5286224d52958103507ba5b29e71381d18c82f68";
 
-    private static SliceRunConfig Base(ulong seed = 1) => new() { Seed = seed, Threads = 2 };
+    private static SliceRunConfig Base(ulong seed = 1) => SliceRunConfig.Legacy with { Seed = seed, Threads = 2 };
 
     // Synthetic moments of the full model (the real ones come from the calibration build, T12): clocks of G1…G4, a zero offset of every node.
     private static LkTables Tables(int clockShift = 0)

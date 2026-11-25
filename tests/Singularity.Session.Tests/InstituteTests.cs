@@ -10,7 +10,7 @@ namespace Singularity.Session.Tests;
 public class InstituteTests
 {
     private static SliceSession Make(bool institutes, int threads = 1) =>
-        SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = institutes, Threads = threads });
+        SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = institutes, Threads = threads });
 
     private static readonly InstituteParams P = new();
 
@@ -23,6 +23,18 @@ public class InstituteTests
                 rows.Add(r);
         }
         return [.. rows];
+    }
+
+    // A slot of actor 0 the AI gave a goal (stored in inst.ai.k); fails when there is none.
+    private static int AiGoalSlot(SliceSession s)
+    {
+        InstituteSystem inst = s.World.Institutes!;
+        for (int k = 0; k < inst.Layout.StartingCount(0); k++)
+        {
+            if (s.World.Table.GetInt($"inst.ai.{k}").Current[0] != 0)
+                return k;
+        }
+        throw new InvalidOperationException("the AI gave no goal to any slot of actor 0");
     }
 
     // A frontier node of actor 0 that no slot works on (the AI fills the free slots after the first month).
@@ -224,21 +236,25 @@ public class InstituteTests
     }
 
     [Fact]
-    public void Goals_FromTheAi_FillEverySlotWithDistinctFrontierNodes()
+    public void Goals_FromTheAi_AreDistinctUnknownNodesOnThePath_AndSomeSlotHasOne()
     {
+        // The path rule (#559) leaves a slot without a goal when no node of the path is in the frontier, so not every slot has one.
         SliceSession s = Make(true);
         s.StepThroughMonth(0);
         s.StepThroughMonth(1);
         InstituteSystem inst = s.World.Institutes!;
+        int withGoal = 0;
         for (int a = 0; a < inst.Layout.ActorCount; a++)
         {
             var goals = new List<int>();
             for (int k = 0; k < inst.Layout.StartingCount(a); k++)
                 goals.Add(inst.GoalNode(new InstituteHandle(a, k)));
-            Assert.All(goals, g => Assert.NotEqual(0, g));
+            goals.RemoveAll(g => g == 0);
+            withGoal += goals.Count;
             Assert.Equal(goals.Count, goals.Distinct().Count());
             Assert.All(goals, g => Assert.False(s.World.Knowledge.IsKnown(a, s.World.Graph.RowOf(g))));
         }
+        Assert.True(withGoal > 0);
     }
 
     [Fact]
@@ -302,7 +318,7 @@ public class InstituteTests
         HashAssert.Equal(h1, h2, "L2: thread count changed the state");
         Assert.Contains("set_priority_node", log);
         Assert.Contains("build_institute", log);
-        SliceSession replay = SliceSession.Replay(SliceTestData.Data, new SliceRunConfig { Seed = 7, Institutes = true }, log, Make(true).World.Calendar.TickOfMonth(59) + 1);
+        SliceSession replay = SliceSession.Replay(SliceTestData.Data, SliceRunConfig.Legacy with { Seed = 7, Institutes = true }, log, Make(true).World.Calendar.TickOfMonth(59) + 1);
         HashAssert.Equal(h1, replay.LastHash, "L1: the replay differs");
     }
 
@@ -310,7 +326,7 @@ public class InstituteTests
     [Fact]
     public void SystemIds_InstitutesAndIntelligenceDiffer()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, Intelligence = true });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = true, Intelligence = true });
         Assert.NotEqual(s.World.Intel!.SystemId, s.World.Institutes!.SystemId);
     }
 
@@ -318,7 +334,8 @@ public class InstituteTests
     [Fact]
     public void BuiltInstitute_BudgetFactorFollowsLevelsFromExperience()
     {
-        SliceSession s = Make(true);
+        // SUN is the player's actor, so the goals of the new institute come from orders: the path rule of the AI gives a new slot a goal only now and then.
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = true, PlayerActor = SliceTestData.Data.Scenario(SliceRunConfig.DefaultScenario).ActorIndex("SUN") });
         int sun = Sun(s);
         var h = new InstituteHandle(sun, CandidateSlot(s, sun, "sun_nii88"));
         InstituteSystem inst = s.World.Institutes!;
@@ -326,12 +343,30 @@ public class InstituteTests
         long t = 0;
         while (!inst.BuiltByProject(h))
             s.StepThroughMonth(t++);
+        int cmd = 1;
+        void OrderGoal()
+        {
+            if (inst.GoalNode(h) != 0)
+                return;
+            foreach (int r in Frontier(s, sun))
+            {
+                int number = s.World.Graph.Number[r];
+                bool taken = false;
+                for (int k = 0; k < inst.Layout.SlotCount(sun); k++)
+                    taken |= inst.GoalNode(new InstituteHandle(sun, k)) == number;
+                if (!taken && s.Submit(SourceClass.Player, 0, cmd++, new SetPriorityNode(sun, h.Slot, number)).Accepted)
+                    return;
+            }
+        }
         Fx6 atOpening = inst.BudgetFactor(sun, 0);
         int Levels() => Enumerable.Range(0, inst.Layout.DisciplineNames.Length).Sum(d => inst.Level(h, d));
         Assert.Equal(3, Levels());
         // Run on until the institute gains a level by experience (in any area); the factor must then move with it.
         for (; t < 900 && Levels() == 3; t++)
+        {
+            OrderGoal();
             s.StepThroughMonth(t);
+        }
         int levels = Levels();
         Assert.True(levels > 3, "the institute did not gain a level in the run");
         Assert.Equal((Fx6.One - P.UpkeepPerLevel * Fx6.FromInt(levels)) * (Fx6.One + P.CapacityPerLevel * Fx6.FromInt(levels)), inst.BudgetFactor(sun, 0));
@@ -473,10 +508,11 @@ public class InstituteTests
         Assert.True(v.Standing);
         Assert.Equal(3, v.Levels[prop]);
         Assert.Equal(3, v.TotalLevels);
-        // The new institute is a slot: the AI gives it a goal within a month or two.
+        // The new institute is a slot like the others: a goal it has is an unknown node (the path rule may leave it without one).
         s.StepThroughMonth(months);
         s.StepThroughMonth(months + 1);
-        Assert.NotEqual(0, inst.GoalNode(h));
+        int goal = inst.GoalNode(h);
+        Assert.True(goal == 0 || !s.World.Knowledge.IsKnown(sun, s.World.Graph.RowOf(goal)));
     }
 
     [Fact]
@@ -553,7 +589,7 @@ public class InstituteTests
     [Fact]
     public void PlayerView_HidesTheGoalsOfOtherActors_WithIntelligence()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, Intelligence = true, PlayerActor = 3 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = true, Intelligence = true, PlayerActor = 3 });
         InstituteSystem inst = s.World.Institutes!;
         int other = (3 + 1) % s.World.Scenario.ActorCount;
         for (long t = 0; t < 40; t++)
@@ -566,7 +602,7 @@ public class InstituteTests
     [Fact]
     public void PlayerActor_GetsProposalsButNoAiGoalsOrProjects()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = 3 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = true, PlayerActor = 3 });
         InstituteSystem inst = s.World.Institutes!;
         int player = 3, other = (player + 1) % s.World.Scenario.ActorCount;
         string playerId = s.World.Scenario.ActorId[player];
@@ -619,7 +655,7 @@ public class InstituteTests
     [Fact]
     public void Snapshot_OfAnotherInstituteDataSet_IsRefused()
     {
-        var config = new SliceRunConfig { Seed = 7, Institutes = true };
+        var config = SliceRunConfig.Legacy with { Seed = 7, Institutes = true };
         SliceSession a = SliceSession.Create(SliceTestData.Data, config);
         for (long m = 0; m < 3; m++)
             a.StepThroughMonth(m);
@@ -633,7 +669,7 @@ public class InstituteTests
     [Fact]
     public void Build_WithoutResearchMoney_DoesNotFinish_AndStretchesWithAPartialShare()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = Sun(Make(true)) });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = true, PlayerActor = Sun(Make(true)) });
         int sun = Sun(s);
         var h = new InstituteHandle(sun, CandidateSlot(s, sun, "sun_nii88"));
         InstituteSystem inst = s.World.Institutes!;
@@ -660,7 +696,7 @@ public class InstituteTests
     [Fact]
     public void StretchedProject_PaysThePriceOfItsExpectedOpeningYear_AndFollowsTheFunding()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = Actor(Make(true), "USA") });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = true, PlayerActor = Actor(Make(true), "USA") });
         int usa = Actor(s, "USA");
         var h = new InstituteHandle(usa, CandidateSlot(s, usa, "usa_darpa"));
         InstituteSystem inst = s.World.Institutes!;
@@ -688,7 +724,7 @@ public class InstituteTests
     [Fact]
     public void StretchedProject_RunsToItsHistoricalYear_AndPaysTheBaseRateEveryMonth()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = Actor(Make(true), "USA") });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = true, PlayerActor = Actor(Make(true), "USA") });
         int usa = Actor(s, "USA");
         var h = new InstituteHandle(usa, CandidateSlot(s, usa, "usa_darpa"));
         InstituteSystem inst = s.World.Institutes!;
@@ -724,7 +760,7 @@ public class InstituteTests
     [Fact]
     public void ProjectWithoutFunding_PaysThePriceOfOpeningOnTime()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = Actor(Make(true), "USA") });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = true, PlayerActor = Actor(Make(true), "USA") });
         int usa = Actor(s, "USA");
         var h = new InstituteHandle(usa, CandidateSlot(s, usa, "usa_darpa"));
         InstituteSystem inst = s.World.Institutes!;
@@ -762,14 +798,15 @@ public class InstituteTests
         SliceSession s = Make(true);
         s.StepThroughMonth(0);
         s.StepThroughMonth(1);
-        var h = new InstituteHandle(0, 0);
         InstituteSystem inst = s.World.Institutes!;
+        int slot = AiGoalSlot(s);   // the path rule leaves some slots without a goal: take one that has it
+        var h = new InstituteHandle(0, slot);
         Assert.NotEqual(0, inst.GoalNode(h));
         int order = FreeNode(s);
-        Assert.True(s.Submit(SourceClass.Player, 0, 0, new SetPriorityNode(0, 0, order)).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new SetPriorityNode(0, slot, order)).Accepted);
         s.StepThroughMonth(2);
         Assert.Equal(order, inst.GoalNode(h));
-        Assert.Equal(0, s.World.Table.GetInt("inst.ai.0").Current[0]);
+        Assert.Equal(0, s.World.Table.GetInt($"inst.ai.{slot}").Current[0]);
     }
 
     [Fact]
@@ -778,17 +815,17 @@ public class InstituteTests
         SliceSession s = Make(true);
         s.StepThroughMonth(0);
         // The goals were picked in month 0 but act from month 1: nothing was worked on yet, so nothing can be credited.
-        Assert.NotEqual(0, s.World.Table.GetInt("inst.ai.0").Current[0]);
-        Assert.Equal(0, s.World.Table.GetInt("inst.cur.0").Current[0]);
+        int slot = AiGoalSlot(s);
+        Assert.Equal(0, s.World.Table.GetInt($"inst.cur.{slot}").Current[0]);
         s.StepThroughMonth(1);
-        Assert.NotEqual(0, s.World.Table.GetInt("inst.cur.0").Current[0]);
+        Assert.NotEqual(0, s.World.Table.GetInt($"inst.cur.{slot}").Current[0]);
     }
 
     [Fact]
     public void InitialHash_DiffersByTheControlledActor()
     {
-        string h3 = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = 3 }).LastHash;
-        string h4 = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = 4 }).LastHash;
+        string h3 = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = true, PlayerActor = 3 }).LastHash;
+        string h4 = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 7, Institutes = true, PlayerActor = 4 }).LastHash;
         Assert.NotEqual(h3, h4);
     }
 }

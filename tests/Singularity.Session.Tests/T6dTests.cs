@@ -12,7 +12,7 @@ namespace Singularity.Session.Tests;
 public class T6dTests
 {
     private static SliceSession Create(ulong seed, SliceRunConfig? template = null) =>
-        SliceTestData.Create((template ?? new SliceRunConfig()) with { Seed = seed });
+        SliceTestData.Create((template ?? SliceRunConfig.Legacy) with { Seed = seed });
 
     private static int Actor(SliceSession s, string id) => s.World.Scenario.ActorIndex(id);
 
@@ -157,7 +157,7 @@ public class T6dTests
     {
         foreach (ulong seed in new ulong[] { 1, 2, 3, 4, 5 })
         {
-            SliceSession main = Create(seed), off = Create(seed, new SliceRunConfig { LicOff = true });
+            SliceSession main = Create(seed), off = Create(seed, SliceRunConfig.Legacy with { LicOff = true });
             int fra = Actor(main, "FRA");
             string[] cols = [.. main.World.Table.Columns.Where(c => c.Name.StartsWith("ind.H.", StringComparison.Ordinal)).Select(c => c.Name)];
             for (int m = 0; m < 384; m++)
@@ -201,7 +201,7 @@ public class T6dTests
     {
         foreach (ulong seed in new ulong[] { 1, 2, 3, 7 })
         {
-            SliceSession s = SliceTestData.CreateLegacyNeutral(new SliceRunConfig { T6dOff = true, Seed = seed });   // the 61-node data of the pinned build
+            SliceSession s = SliceTestData.CreateLegacyNeutral(SliceRunConfig.Legacy with { T6dOff = true, Seed = seed });   // the 61-node data of the pinned build
             foreach (var (_, month, hash) in Before.Where(b => b.Seed == seed && b.Month < 177))   // TASK-0129 (#431): the trajectory of the old build ends at month 176
             {
                 s.StepThroughMonth(month);
@@ -215,7 +215,7 @@ public class T6dTests
     [Fact]
     public void T6dOff_HasNoLicenceNoDisruptionAndNoFlow_AndLicOffKeepsTheDisruptions()
     {
-        SliceSession off = Create(2, new SliceRunConfig { T6dOff = true }), lic = Create(2, new SliceRunConfig { LicOff = true });
+        SliceSession off = Create(2, SliceRunConfig.Legacy with { T6dOff = true }), lic = Create(2, SliceRunConfig.Legacy with { LicOff = true });
         int n = off.World.Scenario.ActorCount;
         bool disrupted = false;
         for (int m = 0; m < 384; m++)
@@ -242,7 +242,7 @@ public class T6dTests
     {
         for (ulong seed = 1; seed <= 40; seed++)
         {
-            SliceSession s = Create(seed, new SliceRunConfig { LicKnows = true });
+            SliceSession s = Create(seed, SliceRunConfig.Legacy with { LicKnows = true });
             SliceWorld w = s.World;
             int sun = Actor(s, "SUN");
             bool Knows(int node) => w.Knowledge.IsKnown(sun, w.Graph.RowOf(node));

@@ -37,9 +37,6 @@ public sealed partial class PolicySystem
 {
     public const int MarketSlots = 8;
 
-    /// <summary>Most actors the market supports (the world price keeps one price per seller on the stack).</summary>
-    public const int MaxWorldPriceActors = 64;
-
     // Buffers of ApplyDeals, kept between months (one policy, one thread, between ticks): a month with a deal allocates nothing.
     [Scratch] private long[] _dFlow = [], _dIncome = [];
     [Scratch] private int[] _dQueue = [], _dLastBad = [], _dLastSeller = [], _dLastGen = [], _dLastMonth = [], _dIncomeYear = [];
@@ -57,8 +54,6 @@ public sealed partial class PolicySystem
         if (generations < 1)
             throw new ArgumentException("The licence market needs the product layout (generations).", nameof(generations));
         _marketGens = generations;
-        if (rows > MaxWorldPriceActors)
-            throw new ArgumentException($"The world price reads at most {MaxWorldPriceActors} catalogues.", nameof(rows));
         var external = new bool[rows];
         foreach (int r in _p.LicenceExternalRows)
         {
@@ -200,15 +195,17 @@ public sealed partial class PolicySystem
     /// <summary>The world average of a generation with the number of AI catalogues behind it (the average is null below the threshold; the screen then shows the reference).</summary>
     public (Fx6? Average, int Sellers) WorldPrice(int gen, long month)
     {
-        Span<Fx6> prices = stackalloc Fx6[MaxWorldPriceActors];
+        // A running sum in actor order: the same result as LicenceRules.WorldAverage over the prices, with no limit on the number of actors.
+        Fx6 sum = Fx6.Zero;
         int n = 0;
-        for (int s = 0; s < _actorNumber.Length && n < prices.Length; s++)
+        for (int s = 0; s < _actorNumber.Length; s++)
         {
             if (IsExternal(s) || Offer(s, gen, month) is not { } o || o.Circle == SaleCircle.Nobody)
                 continue;
-            prices[n++] = o.Price;
+            sum += o.Price;
+            n++;
         }
-        return (LicenceRules.WorldAverage(prices[..n], _p.ThinMarketSellers), n);
+        return (n < _p.ThinMarketSellers || n == 0 ? null : sum / Fx6.FromInt(n), n);
     }
 
     /// <summary>Yearly cap of the licence income of an externally controlled seller (O-062).</summary>
@@ -331,15 +328,18 @@ public sealed partial class PolicySystem
         Fx6 baseNext = sharesNext.Procurement * budgetNext;
         Fx6 limit = AiLimit(baseNext);
         Fx6? room = null;   // the money left after the upkeep of the book of t+1, computed once and only if an offer survives the rules
+        int top = _p.AiMaxGenJump > 0 ? Math.Min(_marketGens, gBuyer + _p.AiMaxGenJump) : _marketGens;   // M2: no jump over more than one generation of the own engine
         for (int s = 0; s < _actorNumber.Length; s++)
         {
             if (s == row)
                 continue;
-            for (int gen = Math.Min(_marketGens, _ev.EngineGen(s, t)); gen > gBuyer; gen--)
+            for (int gen = Math.Min(top, _ev.EngineGen(s, t)); gen > gBuyer; gen--)
             {
                 if (Offer(s, gen, t) is not { } o || KeyHeld(row, s, gen) || Covered(row, gen))
                     continue;
                 if (o.Circle == SaleCircle.Nobody || !_p.Alliances.InCircle(_p.MarketActorIds[s], _p.MarketActorIds[row], year, o.Circle))
+                    continue;
+                if (_p.AiBuyFromFriendsOnly && !_p.Alliances.InCircle(_p.MarketActorIds[s], _p.MarketActorIds[row], year, SaleCircle.Friends))
                     continue;
                 if (profile == PolicyProfile.Quality || profile != PolicyProfile.Mass && !LicenceWanted(w))
                     continue;

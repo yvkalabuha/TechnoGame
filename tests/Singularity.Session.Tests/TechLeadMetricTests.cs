@@ -16,7 +16,7 @@ public class TechLeadMetricTests(Xunit.Abstractions.ITestOutputHelper output)
         int entries = 0, superOnly = 0;
         foreach (ulong seed in Seeds)
         {
-            SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = 2 });
+            SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = 2 });
             SliceWorld w = s.World;
             int n = w.Scenario.ActorCount, designs = w.ProductsLayout.Designs;
             var firstL = new long[n, designs];
@@ -57,7 +57,7 @@ public class TechLeadMetricTests(Xunit.Abstractions.ITestOutputHelper output)
     // The leadership text of a run: key (G, T, N, P), fielded_L set and G_front of every actor and month.
     private static string LeadershipDigest(ulong seed, int threads, int months)
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = seed, Threads = threads, ChunkSize = threads == 1 ? 1 : 2 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = seed, Threads = threads, ChunkSize = threads == 1 ? 1 : 2 });
         SliceWorld w = s.World;
         var sb = new StringBuilder();
         for (long t = 0; t < months; t++)
@@ -88,7 +88,7 @@ public class TechLeadMetricTests(Xunit.Abstractions.ITestOutputHelper output)
     [Fact]
     public void ScenarioFleet_HasQAtT0_ExactlyWhereTheProcessesAreMastered()
     {
-        SliceWorld w = SliceTestData.Create(new SliceRunConfig { Seed = 1 }).World;
+        SliceWorld w = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 1 }).World;
         int withQ = 0, withoutQ = 0;
         for (int a = 0; a < w.Scenario.ActorCount; a++)
         {
@@ -113,7 +113,7 @@ public class TechLeadMetricTests(Xunit.Abstractions.ITestOutputHelper output)
     [Fact]
     public void RetireForecast_FieldedAfter_CountsOnlyUnitsOfCohortsWithQ()
     {
-        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 1 });
+        SliceSession s = SliceTestData.Create(SliceRunConfig.Legacy with { Seed = 1 });
         SliceWorld w = s.World;
         s.StepThroughMonth(100);                                            // the empty design slots get alternatives, as in FleetRuleTests
         const int usa = 0;
