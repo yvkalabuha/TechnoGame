@@ -717,8 +717,8 @@ public sealed partial class Main : Node3D
         if (_mapT < 0.3) { _yaw = v.Lon; _pitch = v.Lat; _dist = v.Dist; return; }
         if (_mapT < 1.2) return;
         // G4 on the live state: the big names of the frame stay on the map.
-        if (v.Name.Contains("europe")) GD.Print($"MAPCHECK europe LBN screen area {_overlay.AreaOf("LBN"):F0} du2 (callout < {LabelPlacement.CalloutBelow}, frame < {LabelPlacement.FramedBelow})");
-        string need = v.Name.Contains("europe") ? "SWE" : v.Name.Contains("africa") ? "C_FRENCH_ALGERIA" : v.Name.Contains("asia") ? "THA" : null;
+        if (v.Name.Contains("europe")) GD.Print($"MAPCHECK europe LBN screen area {_overlay.AreaOf("LBN"):F0} du2 (callout < {LabelPlacement.CalloutBelow})");
+        string need = v.Name.Contains("europe") ? "FRA" : v.Name.Contains("africa") ? "C_FRENCH_ALGERIA" : v.Name.Contains("asia") ? "THA" : null;
         if (need != null)
         {
             bool shown = _overlay.IsShown(need);

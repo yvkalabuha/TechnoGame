@@ -89,8 +89,10 @@ public static class LabelPlacement
         return false;
     }
 
-    public enum PlateMode { Plain, Framed, Callout }
-    public const float FramedBelow = 400f, CalloutBelow = 64f;   // du^2 on screen (spec task-0138-country-palette 3.7)
+    public enum PlateMode { Plain, Callout }
+    /// <summary>Screen area in du^2: under CalloutBelow the word hangs on a leader line, under HiddenBelow there is no label at all (it appears when the player zooms in).</summary>
+    public const float CalloutBelow = 400f, HiddenBelow = 16f;
+    public const float MinFont = 12f, MaxFont = 18f, NominalFont = 14f;
 
     const float DegPerRasterPx = 360f / 4096f;
 
@@ -104,8 +106,27 @@ public static class LabelPlacement
     /// <summary>Radius in px of a disc of the same screen area, a little shrunk so that a long thin region does not claim too much.</summary>
     public static float RegionRadius(float screenArea) => 0.8f * System.MathF.Sqrt(screenArea / 3.14159265f);
 
-    /// <summary>Under 64 du^2 the word hangs on a leader line, under 400 du^2 the plate gets a frame in the line tone, else it sits on the region.</summary>
-    public static PlateMode ModeFor(float screenAreaDu2) => screenAreaDu2 < CalloutBelow ? PlateMode.Callout : screenAreaDu2 < FramedBelow ? PlateMode.Framed : PlateMode.Plain;
+    /// <summary>Small regions get a leader line, the rest carry the word on the land (no plate in either case, #523).</summary>
+    public static PlateMode ModeFor(float screenAreaDu2) => screenAreaDu2 < CalloutBelow ? PlateMode.Callout : PlateMode.Plain;
+
+    /// <summary>Font size from the projected extent of the region: the word should span about 85 % of sqrt(area), clamped to [MinFont, MaxFont], whole px.</summary>
+    public static float FontSizeFor(float screenAreaDu2, float textWidthAtNominal)
+    {
+        if (screenAreaDu2 <= 0f || textWidthAtNominal <= 0f) return MinFont;
+        float want = NominalFont * 0.85f * System.MathF.Sqrt(screenAreaDu2) / textWidthAtNominal;
+        return System.MathF.Round(System.Math.Clamp(want, MinFont, MaxFont));
+    }
+
+    /// <summary>Cheap pre-test: a text box of w x h can only sit in a region whose projected area is clearly larger than the box.</summary>
+    public static bool MayFit(float screenAreaDu2, float w, float h) => w * h <= 0.6f * screenAreaDu2;
+
+    /// <summary>The text box centred on (cx, cy) lies inside the region: centre, four corners and four edge midpoints are on its land.</summary>
+    public static bool FitsInside(float cx, float cy, float w, float h, System.Func<float, float, bool> onRegion)
+    {
+        float hw = w * 0.5f, hh = h * 0.5f;
+        return onRegion(cx, cy) && onRegion(cx - hw, cy - hh) && onRegion(cx + hw, cy - hh) && onRegion(cx - hw, cy + hh) && onRegion(cx + hw, cy + hh)
+            && onRegion(cx, cy - hh) && onRegion(cx, cy + hh) && onRegion(cx - hw, cy) && onRegion(cx + hw, cy);
+    }
 
     /// <summary>Centre of a callout plate: up and to the right of the anchor, to the left when the right side would leave the frame.</summary>
     public static void CalloutCentre(float ax, float ay, float w, float h, float vpW, out float cx, out float cy)

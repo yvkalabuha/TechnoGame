@@ -7,7 +7,7 @@ namespace Singularity.Client.Spike;
 /// Labels of the slice countries are bold with an ink underline.</summary>
 public sealed partial class Overlay : Control
 {
-    sealed class LabelState { public Country C; public Label Node; public bool On; public bool Slice, Emph, Callout, Framed; public Rect2 Rect; public float Area; public Vector2 Anchor; public Color Frame; }
+    sealed class LabelState { public Country C; public Label Node; public bool On; public bool Slice, Emph, Callout; public Rect2 Rect; public float Area; public Vector2 Anchor; public int Size = 14; public float TextW; }
 
     static readonly Color Ink = Ui.Ink;
     static readonly Color Paper = Ui.Paper;
@@ -114,13 +114,11 @@ public sealed partial class Overlay : Control
             l.AddThemeFontOverride("font", Fonts.Map);
             l.AddThemeFontSizeOverride("font_size", 14);
             l.AddThemeColorOverride("font_color", Ink);   // colony names: same size and ink as the powers (A1); the hatching marks the status
-            // A plate under the word (C5): sheet at 85 %, so that the text reads on every tone and the hatching never runs through it.
-            l.AddThemeStyleboxOverride("normal", new StyleBoxFlat { BgColor = new Color(Ui.Sheet, 0.85f), ContentMarginLeft = 3, ContentMarginRight = 3, ContentMarginTop = 0, ContentMarginBottom = 0 });
+            // No plate (#523): legibility comes from the paper-coloured halo set below.
             AddChild(l);
             _labels.Add(s = new LabelState { C = c, Node = l });
         }
         s.Slice = slice;
-        s.Frame = c.Id > 0 ? ToColor(GlobeData.Line(c.Tint)) : Ink;
         s.Node.AddThemeColorOverride("font_outline_color", Paper); s.Node.AddThemeConstantOverride("outline_size", 4);
         StyleLabel(s);
         s.Node.Text = Names.Country(c.Name) ?? c.Name;
@@ -148,8 +146,8 @@ public sealed partial class Overlay : Control
         {
             if (!s.Emph || !s.Node.Visible) continue;
             var font = Fonts.MapBold;
-            float w = font.GetStringSize(s.Node.Text, HorizontalAlignment.Left, -1, 14).X;
-            float y = s.Node.Position.Y + font.GetAscent(14) + 3f;
+            float w = s.TextW;
+            float y = s.Node.Position.Y + font.GetAscent(s.Size) + 3f;
             var a = new Vector2(s.Node.Position.X, y); var b = new Vector2(s.Node.Position.X + w, y);
             DrawLine(a, b, Paper, 4f); DrawLine(a, b, Ink, 1.5f);
         }
@@ -190,18 +188,16 @@ public sealed partial class Overlay : Control
         }
     }
 
-    // Small states (G5): a leader line with a dot at the region, and a frame in the line tone round plates of states under 400 du^2.
+    // Small states (G5, #523): a leader line with a dot at the region; the word has no plate, only the halo.
     void DrawCallouts()
     {
         foreach (var s in _labels)
         {
             if (!s.Node.Visible) continue;
-            if (s.Framed) DrawRect(s.Rect, s.Frame, false, 1.5f);
             if (!s.Callout) continue;
             var to = new Vector2(s.Rect.Position.X < s.Anchor.X ? s.Rect.End.X : s.Rect.Position.X, s.Rect.GetCenter().Y);
             DrawLine(s.Anchor, to, Paper, 4f, true); DrawLine(s.Anchor, to, Ink, 1.5f, true);
             DrawCircle(s.Anchor, 4.5f, Paper); DrawCircle(s.Anchor, 3f, Ink);
-            DrawRect(s.Rect, Ink, false, 1f);
         }
     }
 
@@ -271,30 +267,41 @@ public sealed partial class Overlay : Control
                 s.On = s.On ? cs > 0.3f : cs > 0.4f;
                 if (!s.On) { s.Node.Visible = false; continue; }
                 var sp = _cam.UnprojectPosition(p);
-                var sz = s.Node.GetCombinedMinimumSize();
-                // The plate moves inside the visible part of its region (margin 8 px, G4); it is hidden only when that part cannot hold it.
-                float w = sz.X + 6f, h = sz.Y + 6f;
-                // Real projected area of the region from the local projection at its point (not the silhouette radius): decides plate, frame or callout (G5).
+                // Real projected area of the region from the local projection at its point: decides size, leader line or hiding (#523).
                 var ex = _cam.UnprojectPosition(GlobeData.ToSphere(s.C.LabelPoint.X + 1f, s.C.LabelPoint.Y)) - sp;
                 var ey = _cam.UnprojectPosition(GlobeData.ToSphere(s.C.LabelPoint.X, s.C.LabelPoint.Y + 1f)) - sp;
                 float area = LabelPlacement.ScreenArea(s.C.BoxArea, ex.X, ex.Y, ey.X, ey.Y);
+                if (area < LabelPlacement.HiddenBelow) { s.Node.Visible = false; continue; }   // too small to name at this zoom: shown when the player zooms in
                 var mode = LabelPlacement.ModeFor(area);
+                s.Callout = mode == LabelPlacement.PlateMode.Callout; s.Anchor = sp; s.Area = area;
+                var font = s.Emph ? Fonts.MapBold : Fonts.Map;
+                var text = s.Node.Text;
+                int size = s.Callout ? (int)LabelPlacement.NominalFont
+                    : (int)LabelPlacement.FontSizeFor(area, font.GetStringSize(text, HorizontalAlignment.Left, -1, (int)LabelPlacement.NominalFont).X);
+                if (size != s.Size) { s.Size = size; s.Node.AddThemeFontSizeOverride("font_size", size); }
+                s.TextW = font.GetStringSize(text, HorizontalAlignment.Left, -1, size).X;
+                float w = s.TextW + 4f, h = font.GetHeight(size) + 2f;
                 float px, py;
                 _regionOf = s.C;
-                s.Callout = mode == LabelPlacement.PlateMode.Callout; s.Framed = mode == LabelPlacement.PlateMode.Framed && s.C.Id > 0; s.Anchor = sp; s.Area = area;
                 if (s.Callout)
                 {
                     LabelPlacement.CalloutCentre(sp.X, sp.Y, w, h, VpSize.X, out float ccx, out float ccy);
                     if (!LabelPlacement.Place(ccx, ccy, w, h, VpSize.X, VpSize.Y, out px, out py)) { s.Node.Visible = false; continue; }
                 }
-                else if (!LabelPlacement.PlaceInRegion(sp.X, sp.Y, w, h, VpSize.X, VpSize.Y, LabelPlacement.RegionRadius(area), gc.X, gc.Y, gr * 0.97f, _onRegion, out px, out py)) { s.Node.Visible = false; continue; }
+                else
+                {
+                    // The word stays inside its own country: it must fit by area, and the box at the chosen spot must lie wholly on the land.
+                    if (!LabelPlacement.MayFit(area, w, h)) { s.Node.Visible = false; continue; }
+                    if (!LabelPlacement.PlaceInRegion(sp.X, sp.Y, w, h, VpSize.X, VpSize.Y, LabelPlacement.RegionRadius(area), gc.X, gc.Y, gr * 0.97f, _onRegion, out px, out py)
+                        || !LabelPlacement.FitsInside(px + w * 0.5f, py + h * 0.5f, w, h, _onRegion)) { s.Node.Visible = false; continue; }
+                }
                 var rect = new Rect2(px, py, w, h);
                 s.Rect = rect;
                 bool hit = false;
                 foreach (var o in placed) if (o.Intersects(rect)) { hit = true; break; }
                 if (hit) { s.Node.Visible = false; continue; }
                 placed.Add(rect);
-                s.Node.Position = rect.Position + new Vector2(3, 3);
+                s.Node.Position = rect.Position + new Vector2(2, 1);
                 s.Node.Visible = true;
                 VisibleLabels++;
             }
