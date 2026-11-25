@@ -240,7 +240,7 @@ public class DaySlicingTests
     }
 
     [Fact]
-    public void DayRate_TinyStockDoesNotChange()
+    public void MulFloor_TinyStockDoesNotChange()
     {
         Rate r = DetMath.DayRate(Fx6.FromRaw(100_000), 365);
         long limit = Rate.One / r.Raw; // x < 1/r gives a zero change
@@ -249,22 +249,43 @@ public class DaySlicingTests
     }
 
     [Theory]
-    [InlineData(-1_000_001L, 366)]
-    [InlineData(-128_746_338L, 12)] // growth ×130: the Y-raw bound of ApplyDayRate no longer holds
-    [InlineData(-9_000_000_000_000_000_000L, 366)]
-    [InlineData(long.MinValue, 366)]
-    public void DayRate_RefusesAnnualGrowthAbove100Percent(long d, int y) =>
+    [InlineData(-1_000_000L, 1)] // 100 % in one step
+    [InlineData(-2_000_000L, 1)]
+    [InlineData(-1_000_000L, 0)]
+    public void DayRate_RefusesGrowthOf100PercentOrMorePerStep(long d, int y) =>
         Assert.Throws<ArgumentOutOfRangeException>(() => DetMath.DayRate(Fx6.FromRaw(d), y));
 
     [Theory]
-    [InlineData(-1_000_000L, 12)]
-    [InlineData(-1_000_000L, 366)]
-    [InlineData(-1_000_000L, 1)]
-    public void DayRate_AcceptsExactly100PercentGrowth(long d, int y)
+    [InlineData(-2_000_000L, 12)] // 200 % a year is about 9.6 % a step
+    [InlineData(-128_746_338L, 12)]
+    [InlineData(-1_000_000L, 2)]
+    [InlineData(-9_000_000_000_000L, 366)]
+    public void DayRate_AcceptsGrowthBelow100PercentPerStep(long d, int y)
     {
         long r = DetMath.DayRate(Fx6.FromRaw(d), y).Raw;
-        Assert.InRange(r, -Rate.One, -1);
+        Assert.InRange(r, -Rate.One + 1, -1);
         Assert.True(BigInteger.Pow(Rate.One - r, y) * S <= (S - (BigInteger)d) * (BigInteger.One << (53 * y)));
+    }
+
+    [Fact]
+    public void ApplyDayRate_ZeroRateKeepsTheVisibleStockAndRemainder()
+    {
+        Rate g = DetMath.DayRate(Fx6.FromRaw(-50_000), 365);
+        long rem = 0;
+        Fx6 x = DetMath.ApplyDayRate(Fx6.FromRaw(1_000), g, ref rem);
+        Assert.True(rem > 0);
+        long before = rem;
+        Fx6 same = DetMath.ApplyDayRate(x, Rate.Zero, ref rem);
+        Assert.Equal(x, same);
+        Assert.Equal(before, rem);
+    }
+
+    [Fact]
+    public void Apportion_RejectsOverlappingSpans()
+    {
+        long[] buf = [1, 1, 1, 0];
+        Assert.Throws<ArgumentException>(() =>
+            DetMath.Apportion(Fx6.FromRaw(10), buf.AsSpan(0, 3), System.Runtime.InteropServices.MemoryMarshal.Cast<long, Fx6>(buf.AsSpan(1, 3))));
     }
 
     [Fact]

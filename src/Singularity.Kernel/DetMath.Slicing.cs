@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Numerics;
+using System.Runtime.InteropServices;
 
 namespace Singularity.Kernel;
 
@@ -31,13 +32,16 @@ public static partial class DetMath
     /// exactly, for any sign of F; the remainder goes by index order. W = 0 gives all zero parts
     /// (F stays with the source). Writes into <paramref name="parts"/>: no allocation.
     /// </summary>
-    /// <exception cref="ArgumentException">When the spans differ in length.</exception>
+    /// <exception cref="ArgumentException">When the spans differ in length or overlap.</exception>
     /// <exception cref="ArgumentOutOfRangeException">When a weight is negative.</exception>
     /// <exception cref="OverflowException">When the weights sum beyond long.</exception>
     public static void Apportion(Fx6 total, ReadOnlySpan<long> weights, Span<Fx6> parts)
     {
         if (parts.Length != weights.Length)
             throw new ArgumentException("parts and weights must have the same length.", nameof(parts));
+        // Writing parts while weights are still unread would break the exact sum.
+        if (MemoryMarshal.Cast<Fx6, long>(parts).Overlaps(weights))
+            throw new ArgumentException("parts must not overlap weights.", nameof(parts));
         long sum = 0;
         foreach (long w in weights)
         {
@@ -70,7 +74,7 @@ public static partial class DetMath
     /// to be called at load, not on the tick. The error always favours slower change: for decay r is
     /// the largest Q53 value with <c>(1 − r)^Y ≥ 1 − δ</c>; for growth the smallest with <c>≤</c>.
     /// </summary>
-    /// <exception cref="ArgumentOutOfRangeException">When Y is outside 1..366, δ &gt; 100 % (decay) or δ &lt; −100 % (growth above 100 % a year).</exception>
+    /// <exception cref="ArgumentOutOfRangeException">When Y is outside 1..366, δ &gt; 100 % (decay) or the growth per step would be 100 % or more.</exception>
     public static Rate DayRate(Fx6 annual, int y)
     {
         if (y < 1 || y > MaxYearLength)
@@ -78,8 +82,6 @@ public static partial class DetMath
         long d = annual.Raw;
         if (d > Fx6.Scale)
             throw new ArgumentOutOfRangeException(nameof(annual), annual, "A decay rate above 100 % is not allowed.");
-        if (d < -Fx6.Scale)
-            throw new ArgumentOutOfRangeException(nameof(annual), annual, "Annual growth above 100 % is not allowed (stock error bound of ApplyDayRate).");
         if (d == 0)
             return Rate.Zero;
 
@@ -107,7 +109,7 @@ public static partial class DetMath
         }
 
         // Growth: smallest r in [−Q, 0] whose left side stays at or below the target.
-        long low = -Rate.One, high = 0; // the answer is within [−Q, 0] for annual growth ≤ 100 %
+        long low = -Rate.One, high = 0;
         while (low < high)
         {
             long mid = low + ((high - low) >> 1);
@@ -117,6 +119,9 @@ public static partial class DetMath
                 low = mid + 1;
         }
 
+        // r = −Q means a step of 100 % or more (O-069): no valid daily rate.
+        if (low == -Rate.One)
+            throw new ArgumentOutOfRangeException(nameof(annual), annual, "Growth of 100 % or more per step is not allowed.");
         return Rate.FromRaw(low);
     }
 
@@ -128,7 +133,7 @@ public static partial class DetMath
     /// the exact rate. Then x is rounded the slower way: up for decay (<c>remainder ≤ 0</c>), down for
     /// growth (<c>remainder ≥ 0</c>). Hence after Y steps from a constant annual δ the stock is on the slow
     /// side of <c>x₀·(1−δ)</c> and within Y raw of it plus the DayRate quantization (about 4·Y·x₀/2^53 raw),
-    /// provided the rate came from <see cref="DayRate"/> (annual growth ≤ 100 %, Y ≤ 366).
+    /// provided the rate came from <see cref="DayRate"/> (Y ≤ 366, growth below 100 % a step).
     /// Callers use this, never <c>x −= r.MulFloor(x)</c>. The remainder is written only when the step
     /// succeeds. Preconditions: <c>stock ≥ 0</c>, <c>|remainder| &lt; 2^53</c>, <c>V ≥ 0</c>, <c>|r| ≤ 2^53</c>.
     /// </summary>
@@ -136,6 +141,8 @@ public static partial class DetMath
     {
         Debug.Assert(stock.Raw >= 0, "ApplyDayRate needs a non-negative stock.");
         Debug.Assert(remainder > -Rate.One && remainder < Rate.One, "remainder must be within ±2^53.");
+        if (rate.Raw == 0)
+            return stock; // a zero rate must not round the hidden part up into the visible stock
         Int128 v = ((Int128)stock.Raw << Rate.FracBits) + remainder;
         Debug.Assert(v >= 0, "The hidden value must not be negative.");
         bool growth = rate.Raw < 0;
