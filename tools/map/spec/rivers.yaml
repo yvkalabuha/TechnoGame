@@ -1,0 +1,8 @@
+# Rivers (TASK-0168, #534). Border rivers come from Natural Earth rank 1-4 lines near province borders (parameters below);
+# navigable stretches are a hand list. bbox = [min_lat, min_lon, max_lat, max_lon] limits a river to one stretch.
+# Source of every entry: the cited page; access date 2026-11-25. The stretch limits are [Предп.] checked against the cited page only.
+border_max_rank: 4
+border_tol_m: 3000
+border_min_share_pct: 50
+border_min_km: 5
+navigable: []

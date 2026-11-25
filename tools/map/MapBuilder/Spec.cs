@@ -161,7 +161,7 @@ internal sealed class SpecSet
         foreach (var f in Directory.GetFiles(dir, "*.yaml").OrderBy(p => Path.GetFileName(p), StringComparer.Ordinal))
         {
             var name = Path.GetFileName(f);
-            if (name is "area.yaml" or "straits.yaml" or "territories.yaml" or "great_powers.yaml") continue;
+            if (name is "area.yaml" or "straits.yaml" or "territories.yaml" or "great_powers.yaml" or "rivers.yaml" or "terrain.yaml" or "terrain_1945.yaml") continue;
             foreach (var r in Read<RuleFile>(f).Rules) s.Rules.Add((name, r));
         }
         foreach (var f in Sorted(Path.Combine(dir, "ids"))) s.Ids.AddRange(Read<IdFile>(f).Ids);
