@@ -24,6 +24,9 @@ public sealed class NodeHistoryTable
 
     public required ImmutableArray<bool> Has { get; init; }
     public required ImmutableArray<bool> Epic { get; init; }
+
+    /// <summary>The history holds facts the research could not confirm (the card shows a mark with a tooltip).</summary>
+    public required ImmutableArray<bool> Unconfirmed { get; init; }
     public required ImmutableArray<int> SourceStart { get; init; }
     public required ImmutableArray<string> SourceUrl { get; init; }
     public required ImmutableArray<string> SourceAccessed { get; init; }
@@ -43,6 +46,7 @@ public sealed class NodeHistoryTable
         int n = nodes.Count;
         var has = new bool[n];
         var epic = new bool[n];
+        var unconfirmed = new bool[n];
         var sources = new List<(string Url, string Accessed, SourceCheck Check, SourceLicense License, SourceUse Use)>[n];
         foreach ((string id, YMap map) in objects)
         {
@@ -53,6 +57,7 @@ public sealed class NodeHistoryTable
             m.Str("id");
             has[row] = true;
             epic[row] = m.Bool("epic");
+            unconfirmed[row] = m.Optional("unconfirmed") is {} u && Scalars.Bool(u);
             YSeq seq = m.Seq("sources");
             if (seq.Items.Count is < 1 or > MaxSources)
                 throw DataLoadException.At(seq, $"'{id}' needs 1..{MaxSources} sources, has {seq.Items.Count}");
@@ -82,7 +87,7 @@ public sealed class NodeHistoryTable
         }
         return new NodeHistoryTable
         {
-            Has = has.ToImmutableArray(), Epic = epic.ToImmutableArray(),
+            Has = has.ToImmutableArray(), Epic = epic.ToImmutableArray(), Unconfirmed = unconfirmed.ToImmutableArray(),
             SourceStart = [.. start], SourceUrl = [.. url], SourceAccessed = [.. accessed],
             SourceCheck = [.. check], SourceLicense = [.. license], SourceUse = [.. use],
         };

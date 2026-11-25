@@ -138,6 +138,23 @@ public class CoreLocaleTests
     }
 
     [Fact]
+    public void NodeHistory_IsCleanProse_NoResearchMarks()
+    {
+        string[] marks = ["Не подтверждено", "не подтвержд", "Not confirmed", "not confirmed", "[Факт", "[Предп", "[Fact", "[Assumption"];
+        foreach (string id in TestKit.Data.Nodes.Id)
+        {
+            foreach (string lang in new[] { "en", "ru" })
+            {
+                string text = new Loc(Catalog, lang).A(FluentIds.Node(id), Field.History);
+                Assert.DoesNotContain('[', text);
+                Assert.DoesNotContain(']', text);
+                foreach (string mark in marks)
+                    Assert.False(text.Contains(mark, StringComparison.Ordinal), $"{lang} {id}: '{mark}'");
+            }
+        }
+    }
+
+    [Fact]
     public void EveryNode_HasAShortThatFitsTheSignalField()
     {
         foreach (string id in TestKit.Data.Nodes.Id)

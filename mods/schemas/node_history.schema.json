@@ -88,6 +88,9 @@
               }
             }
           }
+        },
+        "unconfirmed": {
+          "type": "boolean"
         }
       }
     }

@@ -37,6 +37,15 @@ public class NodeHistoryTests : IDisposable
     }
 
     [Fact]
+    public void Unconfirmed_IsSetOnlyWhereResearchLeftOpenFacts()
+    {
+        NodeHistoryTable h = Data.History;
+        Assert.True(h.Unconfirmed[Data.Nodes.IndexOf("s5.prn.gaas_wafer_growth")]);
+        Assert.False(h.Unconfirmed[Data.Nodes.IndexOf("s8.eng.delta_wing_airframe")]);
+        Assert.InRange(h.Unconfirmed.Count(u => u), 1, Data.Nodes.Count - 1);
+    }
+
+    [Fact]
     public void EpicNodes_AreFewAndKnown()
     {
         NodeHistoryTable h = Data.History;

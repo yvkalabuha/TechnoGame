@@ -1,24 +1,29 @@
 # Display-only node history (TASK-0157, #486): epic flag and sources (the text is in locale, attribute .history). Not part of DataHash: no simulation reads it.
+# unconfirmed: true = the history contains facts the research could not confirm (card shows a small mark with a tooltip).
 # check: opened = the page was read and the facts compared; search-snippet = the URL came from a search result, text not read.
 # use: paraphrase = text is retold in our words; quote needs license PD, CC0 or CC-BY (ADR-0009).
 kind: node_history
 define:
   - id: s7.fnd.brayton_cycle
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://www.asme.org/engineering-topics/articles/automotive/george-brayton", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.fnd.boundary_layer
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://germanhistory-intersections.org/en/knowledge-and-education/ghis:document-202", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://ntrs.nasa.gov/api/citations/19930090813", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
   - id: s8.fnd.compressible_flow
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://www.nasa.gov/history/SP-4219/Chapter3.html", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://eaglepubs.erau.edu/introductiontoaerospaceflightvehicles/chapter/supersonic-flight-vehicles/", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s5.fnd.precipitation_hardening
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://nvlpubs.nist.gov/nistpubs/sp958-lide/html/014-015.html", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://www.britannica.com/biography/Alfred-Wilm", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
@@ -29,54 +34,65 @@ define:
       - {url: "https://www.nasa.gov/history/8-foot-transonic-pressure-tunnel-building-640", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s5.fnd.high_temperature_creep
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://reference.org/facts/Nimonic/nXR65bjf", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s7.fnd.turbine_heat_transfer
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://nasa.gov/special-projects-laboratory-turbine-cooling", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
   - id: s5.fnd.solidification_science
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://garfield.library.upenn.edu/classics1979/A1979HZ20800001.pdf", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
       - {url: "https://www.nasonline.org/wp-content/uploads/2024/06/chalmers-bruce.pdf", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s8.prn.gas_turbine
     epic: true
+    unconfirmed: true
     sources:
       - {url: "https://www.history.com/this-day-in-history/may-15/first-allied-jet-flies", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.britannica.com/technology/history-of-flight/The-jet-age", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s8.prn.swept_wing
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://www.nasa.gov/langley/hall-of-honor/robert-t-jones", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://books.nap.edu/read/1384/chapter/13", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s8.prn.afterburning
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://www.nasa.gov/special-projects-laboratory-turbojet-enhancements/", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://enginehistory.org/GasTurbines/ABs/AB04a/AB04a.shtml", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.prn.gamma_prime_alloy_design
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://www.phase-trans.msm.cam.ac.uk/2003/Superalloys/superalloys.html", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC11024552/table/tbl1", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s8.prn.area_rule
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://www.nasa.gov/langley/hall-of-honor/richard-t-whitcomb", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://www.airandspaceforces.com/article/0210whitcomb/", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s8.prn.multi_spool_compression
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://link.springer.com/chapter/10.1007/978-981-16-8028-1_10", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
       - {url: "https://ntrs.nasa.gov/citations/20050019238", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
   - id: s8.prn.bypass_engine
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://airandspace.si.edu/collection-objects/rolls-royce-conway-rco12-mark-509-turbofan-engine/nasm_A19870225000", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.gracesguide.co.uk/Rolls-Royce_Engines:_Conway", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s8.prn.film_cooling
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://nasa.gov/special-projects-laboratory-turbine-cooling", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://ntrs.nasa.gov/api/citations/19770005116/downloads/19770005116.pdf", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
@@ -93,6 +109,7 @@ define:
       - {url: "https://en.wikipedia.org/wiki/Lockheed_P-80_Shooting_Star", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.turbojet_g2
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Rolls-Royce_Nene", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Klimov_VK-1", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
@@ -103,6 +120,7 @@ define:
       - {url: "https://en.wikipedia.org/wiki/North_American_F-86_Sabre", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.afterburner
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Afterburner", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Pratt_%26_Whitney_J57", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
@@ -130,12 +148,14 @@ define:
       - {url: "https://en.wikipedia.org/wiki/Dassault_Mirage_III", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.variable_geometry_inlet
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/McDonnell_Douglas_F-4_Phantom_II", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Mikoyan-Gurevich_MiG-21", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.heritageconcorde.com/air-in-take-system", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.air_cooled_turbine_blade
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://www.nasa.gov/special-projects-laboratory/", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Turbine_blade", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
@@ -156,27 +176,32 @@ define:
       - {url: "https://en.wikipedia.org/wiki/Junkers_Jumo_004", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.cmp.aluminium_alloy_sheet
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Alfred_Wilm", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Duralumin", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.cmp.titanium_alloy
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://www.construction-physics.com/p/the-story-of-titanium", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Douglas_X-3_Stiletto", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Lockheed_SR-71_Blackbird", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.cmp.turbine_blade_forged
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Nimonic", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Junkers_Jumo_004", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.cmp.turbine_blade_cast
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Turbine_blade", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Superalloy", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.cmp.turbine_blade_cooled
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Turbine_blade", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.nasa.gov/special-projects-laboratory/", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
@@ -188,60 +213,72 @@ define:
       - {url: "https://en.wikipedia.org/wiki/Rolls-Royce_Avon", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.cmp.afterburner_unit
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Afterburner", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Pratt_%26_Whitney_J57", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.prc.light_alloy_rolling
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Duralumin", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.researchgate.net/publication/45705177_Alfred_Wilm_and_the_beginnings_of_Duralumin", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s5.prc.nicr_alloy_melt
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Nimonic", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.antonmetal.com/news/the-development-history-of-high-temperature-alloys-in-the-uk/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.prc.superalloy_melt_g2
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Superalloy", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.tms.org/superalloys/10.7449/2010/Superalloys_2010_13_50.pdf", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s5.prc.vacuum_induction_melt
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Vacuum_induction_melting", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Superalloy", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.prc.titanium_reduction_forging
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Kroll_process", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.osti.gov/servlets/purl/900531", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s5.prc.ds_casting
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Turbine_blade", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Directional_solidification", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://ntrs.nasa.gov/api/citations/19830022158/downloads/19830022158.pdf", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s5.prc.alloying_element_refining
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Goldschmidt_process", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.prc.high_purity_nickel_refining
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Mond_process", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.britannica.com/technology/Mond-carbonyl-process", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s5.prc.ceramic_shell_moulding
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Investment_casting", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Vitallium", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s6.prc.precision_gear_bearing
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Gear_grinding", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s6.prc.centrifugal_impeller_machining
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Power_Jets_W.1", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://speedreaders.info/12176-fast-jets-history-reheat-development-derby/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
@@ -251,21 +288,25 @@ define:
       - {url: "https://en.wikipedia.org/wiki/Junkers_Jumo_004", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s6.prc.axial_compressor_machining
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Pratt_%26_Whitney_J57", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://airandspace.si.edu/collection-objects/pratt-whitney-j57-p-4-turbojet-engine/nasm_A19710059000", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s6.prc.investment_cast_blades
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Turbine_blade", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Vitallium", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s6.prc.cooled_blade_drilling
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Electrical_discharge_machining", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Turbine_blade", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prc.stressed_skin_assembly
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Monocoque", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.abbottaerospace.com/downloads/naca-tm-604-flat-sheet-metal-girders-with-very-thin-metal-web-part-i/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
@@ -276,63 +317,75 @@ define:
       - {url: "https://www.defensemedianetwork.com/stories/the-messerschmitt-me-262-jet-fighter/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prc.swept_wing_fabrication
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://www.nationalacademies.org/read/11429/chapter/14", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://afhistory.org/october-1-1947-2/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Swept_wing", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prc.machined_integral_skins
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Numerical_control", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://archivesspace.mit.edu/repositories/2/resources/125", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s8.prc.afterburner_fabrication
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Afterburner", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Pratt_%26_Whitney_J57", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.app.jet_fighter_g1
     epic: true
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Gloster_Meteor", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Messerschmitt_Me_262", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.defensemedianetwork.com/stories/the-messerschmitt-me-262-jet-fighter/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.app.jet_fighter_g2
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://afhistory.org/october-1-1947-3/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/North_American_F-86_Sabre", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.app.jet_fighter_g3
     epic: true
+    unconfirmed: true
     sources:
       - {url: "https://airandspace.si.edu/collection-objects/north-american-f-100d-super-sabre/nasm_A19781577000", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/North_American_F-100_Super_Sabre", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.app.jet_fighter_g4
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/McDonnell_Douglas_F-15_Eagle", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.afnwc.af.mil/About-Us/Fact-Sheets/Article/2074655/f-15-eagle/", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s8.fnd.electronic_flight_control_theory
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://www.nasa.gov/image-article/may-25-1972", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://www.nasa.gov/image-article/45th-anniversary-of-digital-fly-by-wire-first-flight", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s8.fnd.edge_wave_diffraction
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://www.doi.org/10.1364/JOSA.52.000116", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://apps.dtic.mil/sti/pdfs/AD0733203.pdf", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s5.prn.single_crystal_growth
     epic: true
+    unconfirmed: true
     sources:
       - {url: "https://tms.org/Meetings/Specialty/Superalloys2012/pdfs/GiameiPresentation.pdf", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
       - {url: "https://ntrs.nasa.gov/citations/19890011701", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
   - id: s5.prn.fibre_composite_laminate_design
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://compositesworld.com/articles/boron-fiber-the-original-high-performance-fiber", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
       - {url: "https://www.cambridge.org/core/services/aop-cambridge-core/content/view/4195FFDC6823131E6EE8C1CBA20E0187/S0001924000024635a.pdf/the-first-fifty-years-of-composite-materials-in-aircraft-construction.pdf", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prn.low_observable_shaping
     epic: true
+    unconfirmed: true
     sources:
       - {url: "https://www.darpa.mil/about/innovation-timeline/have-blue-stealth-technology", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://afhistory.org/1-dec-1977/", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
@@ -349,6 +402,7 @@ define:
       - {url: "https://en.wikipedia.org/wiki/Pratt_%26_Whitney_F100", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.eng.composite_airframe
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/McDonnell_Douglas_AV-8B_Harrier_II", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Northrop_Grumman_B-2_Spirit", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
@@ -365,21 +419,25 @@ define:
       - {url: "https://en.wikipedia.org/wiki/Rockwell-MBB_X-31", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.cmp.turbine_blade_single_crystal
     epic: true
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Superalloy", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Turbine_blade", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.prc.single_crystal_casting
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Single_crystal", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Superalloy", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Turbine_blade", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prc.composite_layup_cure
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19870020179.pdf", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s5.prc.low_observable_finishing
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://www.codeonemagazine.com/article.html?item_id=175", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Lockheed_F-117_Nighthawk", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
@@ -417,45 +475,54 @@ define:
       - {url: "https://en.wikipedia.org/wiki/Pratt_%26_Whitney_XA101", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prn.phased_array_radar_pesa
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://military-history.fandom.com/wiki/Zaslon_radar", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
       - {url: "https://www.secretprojects.co.uk/goto/post?id=581733", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s5.prn.gaas_wafer_growth
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://ntrs.nasa.gov/api/citations/19870013853/downloads/19870013853.pdf", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
       - {url: "https://link.springer.com/article/10.1007/BF02655412", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s5.cmp.gaas_mmic
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Monolithic_microwave_integrated_circuit", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.microwaves101.com/encyclopedias/darpa-microwave-programs", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.cmp.solid_state_tr_module
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://www.armadainternational.com/2022/05/airborne-aesa-fighter-radars/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/AN/APG-77", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prn.programmable_signal_processing
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://man.fas.org/dod-101/sys/ship/weaps/an-uys-1.htm", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://archive.ll.mit.edu/publications/journal/pdf/vol02_no1/2.1.4.arrayprocessor.pdf", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
   - id: s8.eng.digital_beamforming
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Digital_antenna_array", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prn.relaxed_static_stability
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://saemobilus.sae.org/content/740861", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.afmc.af.mil/News/Article-Display/Article/3871219/flashback-nine-lives-of-a-phantom-ii/", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s8.cmp.digital_flight_control_computer
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/F-8_digital_fly-by-wire_project", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://en.wikipedia.org/wiki/Fly-by-wire", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prn.electronic_engine_control
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://ntrs.nasa.gov/citations/19860015877", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://ntrs.nasa.gov/citations/19820054148", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
@@ -466,11 +533,13 @@ define:
       - {url: "https://en.wikipedia.org/wiki/Rolls-Royce_RB211", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s8.prn.thrust_vectoring_nozzle
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://flightglobal.com/turning-heads/15534.article", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
       - {url: "https://www.nasa.gov/sites/default/files/files/Flying_Beyond_the_Stall.pdf", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s8.prn.rcs_computational_prediction
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://www.airandspaceforces.com/article/1192stealth/", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.darpa.mil/sites/default/files/StealthLayoutFINAL.pdf", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
@@ -482,26 +551,31 @@ define:
       - {url: "https://en.wikipedia.org/wiki/Integrated_modular_avionics", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.cmp.silicon_carbide_fibre
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://en.wikipedia.org/wiki/Silicon_carbide_fibers", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.technagroup.it/ceramics_in_modern_technologies/view_articles/year_2020_volume_2/issue_no_2_august/development_of_continuous_silicon_carbide_fibers_nicalon_and_hi-nicalon_for_high_temperature_composite_applications", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
   - id: s5.prn.matrix_infiltration_cvi
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://www.osti.gov/biblio/6294496", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://www.osti.gov/servlets/purl/10162469", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s5.prn.environmental_barrier_coating
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://ntrs.nasa.gov/api/citations/20160010286", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
       - {url: "https://ntrs.nasa.gov/citations/20180004253", accessed: "2026-11-24", check: opened, license: PD, use: paraphrase}
   - id: s8.prn.variable_cycle_engine
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://www.airandspaceforces.com/PDF/MagazineArchive/Documents/2012/September%202012/0912engines.pdf", accessed: "2026-11-24", check: search-snippet, license: other, use: paraphrase}
       - {url: "https://www.nationalmuseum.af.mil/Visit/Museum-Exhibits/Fact-Sheets/Display/Article/195682/general-electric-yf120", accessed: "2026-11-24", check: search-snippet, license: PD, use: paraphrase}
   - id: s8.prn.adaptive_third_stream_fan
     epic: false
+    unconfirmed: true
     sources:
       - {url: "https://www.ge.com/news/press-releases/ge-initiates-testing-on-second-xa100-adaptive-cycle-engine", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.ge.com/news/reports/the-superjet-how-ges-adaptive-cycle-jet-engine-could-supercharge-military-aviation", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
