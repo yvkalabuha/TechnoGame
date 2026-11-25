@@ -109,6 +109,11 @@ public class PriorityGraphTests
         InstituteLayout l = InstituteLayout.FromData(table, scenario, g, new InstituteParams());
         Assert.Equal(1, l.StartingCount(scenario.ActorIndex("SUN")));
         Assert.Equal(0, l.SlotCount(scenario.ActorIndex("USA")));
+        // Codex TASK-0174 #1: nothing standing at the start (founded after it) still loads, as candidates.
+        var later = InstituteTable.Build([("c", (YMap)StrictYaml.Parse(Row("SUN").Replace("id: x", "id: c").Replace("founded: 1940", "founded: 1950").Replace("ref_year: 1945", "ref_year: 1950"), "c.yaml"))]);
+        InstituteLayout l2 = InstituteLayout.FromData(later, scenario, g, new InstituteParams());
+        Assert.Equal(0, l2.StartingCount(scenario.ActorIndex("SUN")));
+        Assert.Equal(1, l2.SlotCount(scenario.ActorIndex("SUN")));
     }
 
     [Fact]

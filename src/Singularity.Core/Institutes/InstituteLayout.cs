@@ -113,8 +113,7 @@ public sealed class InstituteLayout
         int max = 0;
         for (int a = 0; a < actors; a++)
             max = Math.Max(max, standing[a].Count + candidates[a].Count);
-        if (standing.All(l => l.Count == 0))
-            throw new ArgumentException("No institute stands at the start of the scenario.", nameof(table));
+        // A shared table may have no institute standing at this scenario's start: the scenario still loads (only candidates, or no slots).
         var slotCount = new int[actors];
         var startingCount = new int[actors];
         var rows = new int[actors * max];
