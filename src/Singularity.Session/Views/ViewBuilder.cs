@@ -79,7 +79,38 @@ internal static class ViewBuilder
             new LicenceView(w.Policy.LicenceGen(a), w.Policy.LicenceSeller(a), w.Policy.LicenceStart(a), w.Policy.LicenceMask(a), w.Policy.OfferMask(a),
                 w.Policy.LicenceFlow(a), refusals.MoveToImmutable(), w.LicenceActive(a)),
             new DisruptionView(disStart, disEnd), withNodes ? Nodes(w, a, next) : Unsubscribed(w, a), designs.MoveToImmutable(), Decisions(w, a, next, stepped),
-            Alloy(w, a, month), Research(w, a), UnknownNodes(w, a));
+            Alloy(w, a, month), Research(w, a), UnknownNodes(w, a), w.Policy.MarketOn ? Market(w, a, next) : null);
+    }
+
+    // The market as the actor sees it at the month of the next step: pure reads of the policy, built only when the market is on.
+    private static LicenceMarketView Market(SliceWorld w, int a, long month)
+    {
+        PolicySystem pol = w.Policy;
+        Fx6 funds = w.LicenceFunds(a, month);
+        var held = ImmutableArray.CreateBuilder<LicenceHeldView>();
+        foreach (LicenceRecord r in pol.Licences(a))
+            held.Add(new LicenceHeldView(r.Seller, r.Gen, r.Start));
+        var own = ImmutableArray.CreateBuilder<CatalogueLineView>();
+        var offers = ImmutableArray.CreateBuilder<CatalogueLineView>();
+        int gens = w.ProductsLayout.Generations;
+        var world = ImmutableArray.CreateBuilder<WorldPriceView>(gens);
+        for (int g = 1; g <= gens; g++)
+        {
+            (Fx6? average, int sellers) = pol.WorldPrice(g, month);
+            world.Add(new WorldPriceView(g, average, sellers));
+            for (int s = 0; s < w.Scenario.ActorCount; s++)
+            {
+                if (pol.Offer(s, g, month) is not { } o)
+                    continue;
+                if (s == a)
+                    own.Add(new CatalogueLineView(s, g, o.Reference, o.M, o.Price, o.Circle, BadLicence.None));
+                else
+                    offers.Add(new CatalogueLineView(s, g, o.Reference, o.M, o.Price, o.Circle, pol.CheckBuy(a, s, g, month, funds, out _)));
+            }
+        }
+        (BadLicence reason, int seller, int gen, int lastMonth) = pol.LastRefusal(a);
+        return new LicenceMarketView(held.ToImmutable(), own.ToImmutable(), offers.ToImmutable(), world.MoveToImmutable(), reason, seller, gen, lastMonth,
+            pol.LicenceIncome(a, month), pol.IsExternal(a) ? pol.IncomeCap(a) : Fx6.Zero, pol.IsExternal(a));
     }
 
     // Supply and ask are both from the step-7 trace of the same monthly step; nothing is recomputed from the post-step state. No trace (restored snapshot, before the first step) = not known.
@@ -175,7 +206,7 @@ internal static class ViewBuilder
         return new DesignView(d, stage, p.PlatformGen(a, d), exists ? p.Gen(a, d) : 0, p.LiveParent(a, d), p.StageOMonth(a, d),
             p.BuiltAny(a, d), p.Cancelled(a, d), p.Rate(a, d), p.UnitCost(a, d), exists ? p.UnitCostFloor(a, d) : Fx6.Zero,
             p.InService(a, d), exists ? p.Readiness(a, d, next) : Fx6.Zero, exists ? p.Perf(a, d) : Fx6.Zero, p.Bind(a, d), w.Policy.AiLine(a, d, p.Generation(a, d)),
-            [.. p.PrcSet(a, d)], p.Generation(a, d));
+            [.. p.PrcSet(a, d)], p.Generation(a, d), p.LicensedFrom(a, d));
     }
 
     private static PolicyDecisionView Decisions(SliceWorld w, int a, long next, bool stepped)

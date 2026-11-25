@@ -66,6 +66,8 @@ public sealed partial class ProductsSystem : ITickSystem
 
     private readonly IntColumn[] _stage, _bureauOf, _alt, _bureauDesign, _gp, _parent, _stageO, _gateOpened, _forced, _lpSlot, _gen, _parentGen, _lpGen, _altReached;
     private readonly IntColumn[] _cancelled, _idleC, _built, _quotaBase, _soldY, _lineBind;
+    // Licence market only (TASK-0152): the seller row + 1 of a project that came with a licence, 0 = the actor's own; absent when the market is off.
+    private readonly IntColumn[]? _licFrom;
     private readonly LongColumn[] _work, _d0, _hidden, _open, _found, _hours, _lineE, _rate, _cost, _exp, _cohort;
     private readonly LongColumn[] _qMask;   // q[design, y] as a bit per cohort year, 62 years per block: [design * _qb + y / 62] (contract r13a §3.1, §9.1)
     private readonly LongColumn[] _rateCmd, _dGate, _lossAcc, _retro, _lost, _inService0, _rejected, _retired, _sold, _replCredit;
@@ -158,6 +160,7 @@ public sealed partial class ProductsSystem : ITickSystem
         _quotaBase = new IntColumn[_d];
         _soldY = new IntColumn[_d];
         _lineBind = new IntColumn[_d];
+        _licFrom = parameters.LicenceMarket ? new IntColumn[_d] : null;
         _retired = new LongColumn[_d];
         _sold = new LongColumn[_d];
         _replCredit = new LongColumn[_d];
@@ -200,6 +203,8 @@ public sealed partial class ProductsSystem : ITickSystem
             _quotaBase[d] = table.AddInt($"{n}.quotaBase");
             _soldY[d] = table.AddInt($"{n}.soldY");
             _lineBind[d] = table.AddInt($"{n}.lineBind");
+            if (_licFrom is not null)
+                _licFrom[d] = table.AddInt($"{n}.licFrom");
             _retired[d] = table.AddLong($"{n}.retired");
             _sold[d] = table.AddLong($"{n}.sold");
             _replCredit[d] = table.AddLong($"{n}.replCredit");
@@ -290,6 +295,11 @@ public sealed partial class ProductsSystem : ITickSystem
             for (int a = 0; a < rows; a++)
                 ints[a] = start.Stage[a * _d + d] is DesignStage.InService or DesignStage.Series ? 1 : 0;
             _built[d].Load(ints);
+            if (_licFrom is not null)
+            {
+                Array.Clear(ints);
+                _licFrom[d].Load(ints);
+            }
             Array.Fill(ints, -1);
             _bureauOf[d].Load(ints);
             _parent[d].Load(ints);
@@ -1031,6 +1041,7 @@ public sealed partial class ProductsSystem : ITickSystem
         OpenGates(a, t);
         AdvanceBureaus(a, t);
         BeginFleetMonth(a, t);
+        AdoptLicences(a, t);
         ApplyDesignCommands(a, t, knows);
         StepProgrammes(a, t);
         BureausRequestOrIdle(chunk, a);
@@ -1339,6 +1350,80 @@ public sealed partial class ProductsSystem : ITickSystem
         return Fx6.FromInt(fresh) / Fx6.FromInt(_l.SlotCount);
     }
 
+    // AdoptLicensedDesign (TASK-0152, #158): a licence that begins in this month becomes a project of the buyer in stage О, without bureau work,
+    // with the alternatives of the seller's own serial project and its own gate count from this month. The slot was checked free when the deal was paid
+    // and this step runs the adoption before any design command, so the slot is still there; if it is not (or the seller's project is gone) the step
+    // counts the rejection and the project is not made. The buyer's knowledge does not change: the licence mask admits the processes (Industry).
+    private void AdoptLicences(int a, long t)
+    {
+        if (_licFrom is null)
+            return;
+        Span<(int Seller, int Gen)> licences = stackalloc (int, int)[8];
+        int n = _inputs.NewLicences(a, t, licences);
+        Span<int> alts = stackalloc int[_s];
+        for (int i = 0; i < n; i++)
+        {
+            (int seller, int gen) = licences[i];
+            int src = SerialOwnDesign(seller, gen);
+            if (src < 0)
+            {
+                Reject(a, CommandRejection.SlotUnavailable);
+                continue;
+            }
+            int d = FreeSlot(a);
+            if (d < 0)
+            {
+                Reject(a, CommandRejection.DesignCapacity);
+                continue;
+            }
+            for (int s = 0; s < _s; s++)
+                alts[s] = _alt[src * _s + s].Current[seller];
+            TakeSlot(a, d);
+            SetAlts(a, d, alts);
+            _stage[d].Next[a] = (int)DesignStage.Prototype;
+            _gp[d].Next[a] = _gp[src].Current[seller];
+            _stageO[d].Next[a] = checked((int)t);
+            _licFrom[d].Next[a] = seller + 1;
+            int complexity = DesignRules.Complexity(_l, DesignRules.PrcSet(_l, alts));
+            Fx6 d0 = ProductsMath.InitialDefects(_p.D0Factor, FreshShare(alts, a, next: true), complexity, Fx6.Zero, _p.EB);
+            Set(_d0, d, a, d0);
+            Set(_hidden, d, a, d0);
+            for (int s = 0; s < _s; s++)
+                _altReached[alts[s]].Next[a] = 1;
+            Set(_dGate, d, a, ProductsMath.PreliminaryGate(_p.KGate, _dRef, d0, _p.TTestMin, _p.TestRate, _p.LambdaD, _p.BetaQ10));
+        }
+    }
+
+    /// <summary>
+    /// The slot of the seller's own serial project (stage С or В, never a licensed one) whose engine has the generation, the newest slot first; −1 if none.
+    /// The subject of a catalogue line and of an adoption (#477: a bought project is not sold on).
+    /// </summary>
+    public int SerialOwnDesign(int seller, int gen)
+    {
+        for (int d = _d - 1; d >= 0; d--)
+        {
+            if ((DesignStage)_stage[d].Current[seller] is not (DesignStage.Series or DesignStage.InService) || LicensedFrom(seller, d) >= 0)
+                continue;
+            if (_l.AltEngGen[_alt[d * _s + _l.BaseSlot].Current[seller]] == gen)
+                return d;
+        }
+        return -1;
+    }
+
+    /// <summary>The seller row of a project that came with a licence or descends from one (derive keeps it), −1 for an own project (and always without the market).</summary>
+    public int LicensedFrom(int actor, int design) => _licFrom is null ? -1 : _licFrom[design].Current[actor] - 1;
+
+    /// <summary>A project slot of the actor stands free in the snapshot (stage None or «снят»).</summary>
+    public bool HasFreeSlot(int actor)
+    {
+        for (int d = 0; d < _d; d++)
+        {
+            if ((DesignStage)_stage[d].Current[actor] is DesignStage.None or DesignStage.Withdrawn)
+                return true;
+        }
+        return false;
+    }
+
     // compose_design / derive in command order (contract §4.4a); an invalid command is rejected with its reason and changes nothing.
     private void ApplyDesignCommands(int a, long t, Func<int, bool> knows)
     {
@@ -1466,6 +1551,9 @@ public sealed partial class ProductsSystem : ITickSystem
             work = work * Fx6.FromInt(changed) / Fx6.FromInt(slots);
         Fx6 d0 = ProductsMath.InitialDefects(_p.D0Factor, novelty, complexity, exp, _p.EB);
         TakeSlot(a, d);
+        // A derivative of a licensed project keeps the lineage: it is never an own design, so it never enters a catalogue (#477).
+        if (_licFrom is not null && parent >= 0)
+            _licFrom[d].Next[a] = _licFrom[parent].Next[a];
         SetAlts(a, d, alts);
         _stage[d].Next[a] = (int)DesignStage.Project;
         _bureauOf[d].Next[a] = bureau;
@@ -1861,6 +1949,8 @@ public sealed partial class ProductsSystem : ITickSystem
             col[d].Next[a] = -1;
         foreach (IntColumn[] col in (IntColumn[][])[_gp, _gateOpened, _forced, _cancelled, _idleC, _built, _quotaBase, _soldY, _lineBind])
             col[d].Next[a] = 0;
+        if (_licFrom is not null)
+            _licFrom[d].Next[a] = 0;
         foreach (LongColumn[] col in (LongColumn[][])[_work, _d0, _hidden, _open, _found, _hours, _lineE, _rate, _rateCmd, _cost, _dGate,
             _lossAcc, _retro, _lost, _inService0, _retired, _sold, _replCredit])
             col[d].Next[a] = 0;

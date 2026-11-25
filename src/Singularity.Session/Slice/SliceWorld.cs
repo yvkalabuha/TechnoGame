@@ -40,6 +40,9 @@ internal sealed class SliceWorld
     {
         if (!Enum.IsDefined(config.Layer))
             throw new InvalidOperationException($"Layer control {(int)config.Layer} is not defined.");
+        // The canonical L_P product layer has no AdoptLicensedDesign step: a paid licence would never become a project.
+        if (config.LicenceMarket && config.Layer == LayerControl.Lp)
+            throw new ArgumentException("The licence market needs the full product layer (not Layer = Lp).", nameof(config));
         if ((config.Layer == LayerControl.Lk) != (config.LkTables is not null))
             throw new ArgumentException("LkTables are needed exactly with Layer = Lk.", nameof(config));
         if ((config.Layer is LayerControl.Lc or LayerControl.Lp) != (config.CapabilityTables is not null))
@@ -73,6 +76,7 @@ internal sealed class SliceWorld
         pp = pp with { Mastery = pp.Mastery with { FromMonth = from1978, Rules = config.MasteryRules } };
         KnowledgeParameters = kp;
         IndustryParameters = ip;
+        pp = pp with { LicenceMarket = config.LicenceMarket };
         ProductsParameters = pp;
         pp = ApplySaleArm(config.SaleArm, pp);
         PolicyParams policy = new()
@@ -83,6 +87,9 @@ internal sealed class SliceWorld
             PilotForm = config.PilotForm,
             ToolingTarget = config.ToolingTarget,
             LicOff = config.LicOff, T6dOff = config.T6dOff,
+            LicenceMarket = config.LicenceMarket, LicenceExternalRows = config.LicenceExternalActors.IsDefault ? [] : config.LicenceExternalActors,
+            MarketActorIds = config.LicenceMarket ? scenario.ActorId : [], MarketStartYear = scenario.StartYear, MarketStartMonth = scenario.StartMonth,
+            Alliances = config.LicenceMarket ? config.Alliances ?? throw new ArgumentException("The licence market needs the alliances table (AllianceTable.Load of scenarios/<id>/alliances.yaml): without it the Bloc and Friends circles are silently empty.", nameof(config)) : AllianceTable.Empty,
             Mastery = pp.Mastery,
         };
         config.ToolingTarget.Validate();
@@ -155,7 +162,7 @@ internal sealed class SliceWorld
             products: config.ProductAi ? new PolicyProductsAdapter(this) : null, designs: ProductsLayout.Designs,
             generations: ProductsLayout.Generations, derive: config.Derive, startLines: StartLines(pStart),
             events: Streams.Events, eventInputs: new PolicyEventsAdapter(this), disruptionExposure: scenario.Exposure,
-            budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout) > LicenceMask.NarrowMaxNumber);   // O-040: the second word only for data whose licensable PRC need it
+            budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout, config.LicenceMarket) > LicenceMask.NarrowMaxNumber);   // O-040: the second word only for data whose licensable PRC need it
         if (config.Reserve)
             Reserve = new ReserveSystem(Table, new ReserveParams(), new ReserveInputsAdapter(this));
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs,
@@ -289,10 +296,10 @@ internal sealed class SliceWorld
     /// The largest node number a licence can carry: the PRC of the engine and hot-section alternatives (the mask of <see cref="PolicyEventsAdapter.Subject"/>).
     /// Other nodes of the graph (any number, e.g. 180 in synthetic worlds) are not licensable, so they never decide the mask width. Above 127 the build fails.
     /// </summary>
-    private static int MaxLicensableNumber(ProductsLayout l)
+    private static int MaxLicensableNumber(ProductsLayout l, bool wholeProject)
     {
         int max = 0;
-        foreach (int slot in (int[])[l.BaseSlot, l.AlloySlot])
+        foreach (int slot in wholeProject ? Enumerable.Range(0, l.SlotCount) : (int[])[l.BaseSlot, l.AlloySlot])
         {
             for (int a = l.AltStart[slot]; a < l.AltStart[slot + 1]; a++)
             {
@@ -365,7 +372,29 @@ internal sealed class SliceWorld
     /// </summary>
     public Fx6 ReserveShare(int actor) => Commands.SharesOverride(actor) is { } s ? s.Reserve + s.Quality : Fx6.Zero;
 
-    public Fx6 ProcurementBudget(int actor) => ProcurementBase(actor) + LicenceFlow(actor);
+    public Fx6 ProcurementBudget(int actor) => ProcurementBase(actor) + (FlowViaReserve(actor) ? Fx6.Zero : LicenceFlow(actor));
+
+    /// <summary>
+    /// With the reserve and the licence market on, the licence fee of an externally controlled actor is paid from and into its reserve (O-055); everybody else, and every
+    /// run without the market, keeps the flow in the procurement item as before (the AI has no reserve).
+    /// </summary>
+    /// <summary>
+    /// The actor may produce the process by a licence of the market without having researched it (#158: a production right, no knowledge); false without the market.
+    /// Only the industry reads it: designs are still composed from researched nodes.
+    /// </summary>
+    public bool ProductionLicensed(int actor, int processNumber) =>
+        Config.LicenceMarket && Policy.Licensable(processNumber) && LicenceActive(actor) && LicenceRules.Has(Policy.LicenceMask(actor), processNumber);
+
+    public bool FlowViaReserve(int actor) => Reserve is not null && Config.LicenceMarket && Policy.IsExternal(actor);
+
+    /// <summary>
+    /// What the actor may pay for a licence at the start of <paramref name="month"/>: the reserve after its leak and after the programmes funded this month (so the
+    /// reserve invariant holds whatever the order of the commands), else the procurement base of the shares in force.
+    /// </summary>
+    public Fx6 LicenceFunds(int actor, long month) =>
+        FlowViaReserve(actor) ? Reserve!.Spendable(actor) - Knowledge.ProgrammeSpend(actor, month)
+        : Config.LicenceMarket && Policy.IsExternal(actor) ? Fx6.Zero   // without the reserve the market is closed to the player (O-055)
+        : ProcurementBase(actor);
 
     /// <summary><c>ProcurementBase(a, t) = share_P·budget_a(t)</c>: the procurement item without licence flows and sale revenue (contract r6 §5).</summary>
     public Fx6 ProcurementBase(int actor) => SharesOf(actor).Procurement * Policy.Budget(actor);
@@ -383,6 +412,9 @@ internal sealed class SliceWorld
         for (int d = 0; d < ProductsLayout.Designs; d++)
         {
             if (Products.Stage(actor, d) is not (DesignStage.Series or DesignStage.InService))
+                continue;
+            // With the market a licensed project (or a derivative of one) is not the buyer's own engine: it must neither lapse its own licences nor raise g_a.
+            if (Products.LicensedFrom(actor, d) >= 0)
                 continue;
             g = Math.Max(g, ProductsLayout.AltEngGen[Products.AltAt(actor, d, ProductsLayout.BaseSlot)]);
         }
@@ -639,6 +671,9 @@ internal sealed class SliceWorld
         Table.AddInt("run.ai").Load([.. Enumerable.Repeat((Config.ProductAi ? 1 : 0) | (Config.Derive ? 2 : 0), rows)]);
         // T6D_OFF / LIC_OFF / lic_knows are part of the state, so a switch cannot give the hash of main.
         Table.AddInt("run.t6d").Load([.. Enumerable.Repeat((Config.LicOff ? 1 : 0) | (Config.T6dOff ? 2 : 0) | (Config.LicKnows ? 4 : 0), rows)]);
+        // The market is part of the state, so a run with it cannot give the hash of main; a run without it adds nothing.
+        if (Config.LicenceMarket)
+            Table.AddInt("run.market").Load([.. Enumerable.Repeat(1, rows)]);
         Table.AddInt("run.channels").Load([.. Enumerable.Repeat((int)Config.Channels, rows)]);
         // Bit 12 = LINE_CLOSE YPROD (F17b) of a run with the product AI; it is clear for ADMIT and for a player-script run, so their hashes are those of the build before F17b.
         int lineCloseBit = Config.ProductAi && Config.LineClose == LineCloseRule.YProd ? 1 << 12 : 0;

@@ -52,7 +52,8 @@ public sealed record ActorView(
     PolicyDecisionView Decisions,
     AlloyCoverage Alloy = default,
     ImmutableArray<ResearchView> Research = default,
-    int UnknownNodes = 0);
+    int UnknownNodes = 0,
+    LicenceMarketView? Market = null);
 
 /// <summary>A research in progress (TASK-0119): a frontier node with accumulated progress. <see cref="Have"/> against <see cref="Need"/> is the scale of the why_not link;
 /// <see cref="Threshold"/> is a hazard node at its threshold, where its discovery is a draw, not certain.</summary>
@@ -75,7 +76,7 @@ public sealed record DesignView(
     int Design, DesignStage Stage, int PlatformGen, int Gen, int Parent, int StageOMonth,
     bool BuiltAny, bool Cancelled, Fx6 Rate, Fx6 UnitCost, Fx6 UnitCostFloor,
     Fx6 InService, Fx6 Readiness, Fx6 Perf, LineBind Bind, bool AiLine,
-    ImmutableArray<int> PrcSet, int SlotGeneration = 0)
+    ImmutableArray<int> PrcSet, int SlotGeneration = 0, int LicensedFrom = -1)
 {
     /// <summary>The handle UI and clients put into commands about this project: never computed on the client side (ADR-0005 p. 3).</summary>
     public DesignHandle Handle => new(Design, SlotGeneration);
@@ -88,6 +89,26 @@ public readonly record struct QualityView(bool Active, int Start, int TriggerCou
 public sealed record LicenceView(int Gen, int Seller, int Start, LicenceMask Mask, LicenceMask OfferMask, Fx6 Flow, ImmutableArray<long> Refusals, bool Active);
 
 public readonly record struct DisruptionView(int Start, int End);
+
+/// <summary>A licence the actor holds (key (Seller, Gen)); <see cref="Start"/> is the month it began.</summary>
+public readonly record struct LicenceHeldView(int Seller, int Gen, int Start);
+
+/// <summary>
+/// A line of a catalogue: the seller's own serial project of the generation, the reference price, the multiplier, the asking price (core units) and the circle.
+/// <see cref="Refusal"/> is what the buyer of the view would meet now (None = the deal goes), the reason to show before the button is pressed.
+/// </summary>
+public readonly record struct CatalogueLineView(int Seller, int Gen, Fx6 Reference, Fx6 M, Fx6 Price, SaleCircle Circle, BadLicence Refusal);
+
+/// <summary>World price of a generation: the average of the AI catalogues, null while fewer than two sellers (then only the reference is shown, «мало предложений»).</summary>
+public readonly record struct WorldPriceView(int Gen, Fx6? Average, int Sellers);
+
+/// <summary>
+/// The licence market as the actor sees it (TASK-0152; null in a run without the market): the licences held, the own catalogue, the lines of the other sellers
+/// with the refusal now, the world prices, the last refused deal, the licence income of the year against its cap.
+/// </summary>
+public sealed record LicenceMarketView(
+    ImmutableArray<LicenceHeldView> Held, ImmutableArray<CatalogueLineView> Own, ImmutableArray<CatalogueLineView> Offers, ImmutableArray<WorldPriceView> WorldPrices,
+    BadLicence LastRefusal, int LastRefusalSeller, int LastRefusalGen, int LastRefusalMonth, Fx6 IncomeThisYear, Fx6 IncomeCap, bool External);
 
 /// <summary>The AI decisions of compute <c>Month</c>; they act from <c>Month + 1</c>.</summary>
 public sealed record PolicyDecisionView(

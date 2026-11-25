@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Singularity.Core.Policy;
 using Singularity.Core.Products;
 
 namespace Singularity.Core.Commands;
@@ -40,6 +41,15 @@ public enum CommandRefusal
     /// <summary>The mastery programme check refused the start; <see cref="CommandVerdict.Mastery"/> is the <c>why_not</c> code.</summary>
     ProgrammeRefused,
 
+    /// <summary>A licence command of an actor that is not under external control, or with the market off.</summary>
+    LicenceNotAllowed,
+
+    /// <summary><c>buy_licence</c> would be refused now: <see cref="CommandVerdict.Licence"/> is the reason (Self, Empty, Gen, Money, Circle, Capacity, Cap).</summary>
+    LicenceRefused,
+
+    /// <summary><c>offer_licence</c> was refused: <see cref="CommandVerdict.Offer"/> is the reason.</summary>
+    BadOffer,
+
     /// <summary>A command needs the reserve account and the run has none (<see cref="CommandLimits.ReserveEnabled"/> is false).</summary>
     ReserveOff,
 
@@ -54,7 +64,7 @@ public enum CommandRefusal
 }
 
 public readonly record struct CommandVerdict(CommandRefusal Reason, string Message, int BestGenBefore = 0, int BestGenAfter = 0,
-    MasteryRefusal Mastery = MasteryRefusal.None, int MasteryDetail = 0)
+    MasteryRefusal Mastery = MasteryRefusal.None, int MasteryDetail = 0, BadLicence Licence = BadLicence.None, OfferRefusal Offer = OfferRefusal.None)
 {
     public bool Accepted => Reason == CommandRefusal.None;
 
@@ -164,6 +174,14 @@ public static class CommandValidator
                 return limits.ProcessNumbers.Contains(sp.ProcessNumber) ? CommandVerdict.Ok : CommandVerdict.Refuse(CommandRefusal.BadProcess, $"process {sp.ProcessNumber} is not in the layout");
             case CancelMasteryProgramme cp:
                 return limits.ProcessNumbers.Contains(cp.ProcessNumber) ? CommandVerdict.Ok : CommandVerdict.Refuse(CommandRefusal.BadProcess, $"process {cp.ProcessNumber} is not in the layout");
+            case BuyLicence b:
+                return b.Gen < 1 || b.Seller < 0 || b.Seller >= limits.ActorCount
+                    ? CommandVerdict.Refuse(CommandRefusal.UnknownActor, $"buy_licence names seller {b.Seller} generation {b.Gen}")
+                    : CommandVerdict.Ok;
+            case OfferLicence o:
+                return o.Gen < 1 || o.M <= Kernel.Fx6.Zero || !Enum.IsDefined(o.Circle)
+                    ? CommandVerdict.Refuse(CommandRefusal.BadOffer, "offer_licence needs generation ≥ 1, a positive multiplier and a defined circle")
+                    : CommandVerdict.Ok;
             default:
                 throw new ArgumentOutOfRangeException(nameof(logged), c.GetType(), "Unknown command type.");
         }

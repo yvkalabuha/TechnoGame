@@ -16,11 +16,13 @@ internal sealed class ProductsInputsAdapter(SliceWorld world) : IProductsInputs
 {
     public bool Knows(int actorRow, int nodeNumber, long month) => KnowsNode(actorRow, nodeNumber);
 
+    public int NewLicences(int actorRow, long month, Span<(int Seller, int Gen)> into) => world.Policy.NewLicences(actorRow, month, into);
+
     public Fx6 AdmittedYield(int siteRow, int processNumber, long month) =>
-        KnowsNode(siteRow, processNumber) ? world.Industry.Yield(siteRow, world.IndustryLayout.RowOf(processNumber), month).Yield : Fx6.Zero;
+        KnowsNode(siteRow, processNumber) || world.ProductionLicensed(siteRow, processNumber) ? world.Industry.Yield(siteRow, world.IndustryLayout.RowOf(processNumber), month).Yield : Fx6.Zero;
 
     public Fx6 CultureYield(int siteRow, int processNumber, long month) =>
-        KnowsNode(siteRow, processNumber) ? world.Industry.Yield(siteRow, world.IndustryLayout.RowOf(processNumber), month).CultureYield : Fx6.Zero;
+        KnowsNode(siteRow, processNumber) || world.ProductionLicensed(siteRow, processNumber) ? world.Industry.Yield(siteRow, world.IndustryLayout.RowOf(processNumber), month).CultureYield : Fx6.Zero;
 
     public ProductionProfile Profile(int siteRow, ReadOnlySpan<PrcSetItem> prcSet, long month) => world.Industry.Profile(siteRow, prcSet, month);
 

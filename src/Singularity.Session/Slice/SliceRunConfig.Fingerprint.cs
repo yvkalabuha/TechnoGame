@@ -35,6 +35,7 @@ public sealed partial record SliceRunConfig
             Raw(DeltaH), Raw(CM), Grid.Code.ToString(CultureInfo.InvariantCulture), ((int)EffortShare).ToString(CultureInfo.InvariantCulture),
             .. Reserve ? (string[])["reserve"] : [],
         ];
+        fields = [.. fields, LicenceMarket.ToString(), string.Join(',', LicenceExternalActors.IsDefault ? [] : LicenceExternalActors), Alliances?.Identity ?? "-"];
         // Length-prefixed fields written as UTF-16 code units, integers little-endian (the encoding of TableSnapshot.Fingerprint): no value can run into its neighbour.
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         foreach (string field in fields)
