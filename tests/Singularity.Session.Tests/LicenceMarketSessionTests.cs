@@ -69,7 +69,7 @@ public class LicenceMarketSessionTests
 
         string log = s.CommandLog;
         SliceSession replay = SliceSession.Replay(SliceTestData.Data, Config(buyer), log, s.Tick);
-        Assert.Equal(s.LastHash, replay.LastHash);
+        HashAssert.Equal(s.LastHash, replay.LastHash);
     }
 
     [Fact]
@@ -161,7 +161,7 @@ public class LicenceMarketSessionTests
         SliceSession withFields = SliceTestData.Create(new SliceRunConfig { Seed = 7, LicenceExternalActors = [0], Alliances = Alliances });
         plain.StepThroughMonth(36);
         withFields.StepThroughMonth(36);
-        Assert.Equal(plain.LastHash, withFields.LastHash);
+        HashAssert.Equal(plain.LastHash, withFields.LastHash);
         Assert.DoesNotContain(plain.World.Table.Columns, c => c.Name.StartsWith("pol.lm.", StringComparison.Ordinal) || c.Name.StartsWith("pol.cat.", StringComparison.Ordinal));
     }
 

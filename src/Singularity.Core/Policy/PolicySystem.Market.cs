@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Singularity.Kernel;
 
 namespace Singularity.Core.Policy;
@@ -48,7 +49,7 @@ public sealed partial class PolicySystem
     private LongColumn[] _mkMask = [], _mkMask1 = [], _catM = [];
     private IntColumn? _incYear, _lastBad, _lastBadSeller, _lastBadGen, _lastBadMonth;
     private LongColumn? _incAmt;
-    private bool[] _external = [];
+    private ImmutableArray<bool> _external = [];
     private int _marketGens;
 
     private void AddMarketColumns(Table table, int rows, bool wide, int generations)
@@ -58,13 +59,14 @@ public sealed partial class PolicySystem
         _marketGens = generations;
         if (rows > MaxWorldPriceActors)
             throw new ArgumentException($"The world price reads at most {MaxWorldPriceActors} catalogues.", nameof(rows));
-        _external = new bool[rows];
+        var external = new bool[rows];
         foreach (int r in _p.LicenceExternalRows)
         {
             if (r < 0 || r >= rows)
                 throw new ArgumentOutOfRangeException(nameof(_p), r, "An external licence row is outside the table.");
-            _external[r] = true;
+            external[r] = true;
         }
+        _external = ImmutableArray.CreateRange(external);   // filled once, never written again
         if (_p.MarketActorIds.Length != rows)
             throw new ArgumentException("The licence market needs one actor id per row.", nameof(_p));
         _mkSeller = new IntColumn[MarketSlots];
