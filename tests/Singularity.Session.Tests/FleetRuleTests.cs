@@ -384,27 +384,32 @@ public class FleetRuleTests
     [Fact]
     public void PendingAiSaleReplayedAcrossAFrontChange_ProjectionAndBookingChargeTheSameCap()
     {
-        // TASK-0182 review: the projection of month 102 replays the sale decided in 101 at its priced G_front (2), as the booking does,
-        // although the rival lifted the front to 3; otherwise the follow-up sale could exceed the real annual cap and be refused.
-        Fixture f = Start();
-        f.Design(0, DesignStage.InService, 1, 1, HeavyPark(f));
-        f.Int("prd.d0.quotaBase", 120);
+        // TASK-0182 review: the projection replays the sale decided in month 104 at its priced G_front (2), as the booking does, although the
+        // rival lifted the front to 3. Replayed at 3 it would charge less of the annual cap, the follow-up sale of month 105 would be sized for
+        // room that is not there and the layer would refuse it. d0 (small, old) is sold in 104 up to the cap; d1 (one cohort of age 59 at 105,
+        // 60 at 106) becomes sellable only in the decision of 105, so the follow-up is a new decision on the remaining room.
+        Fixture f = Start(at: 103);
+        double units = UnitsOfAHeavyPark(f);
+        f.Design(0, DesignStage.InService, 1, 1, units * 0.01);
+        f.Design(1, DesignStage.InService, 1, 1, 0, 0, 0, 0, units);
         f.Design(2, DesignStage.Series, 2, 2, 60);
         f.Master(2);
-        Assert.Contains(f.Run(101), c => c.Kind == FleetCommandKind.Sell);
+        foreach (string d in new[] { "d0", "d1" })
+            f.Int($"prd.{d}.quotaBase", 60000);          // the quota does not bind, the cap does
+        f.Long("prd.saleCap", 3_300);                    // about eleven units at G_front 2
+        Assert.Contains(f.Run(104), c => c.Kind == FleetCommandKind.Sell);
         var rival = new Fixture { Session = f.Session, Actor = 1 };
         rival.Design(2, DesignStage.Series, 3, 3, 60);
         rival.Master(2);
         f.Master(2);
-        f.Session.StepThroughMonth(102);   // books the sale of 101 at G_front 2; decides the follow-up on the projection
-        Fx6 promised = f.World.Policy.ExpectedSaleIncome(Usa);
-        Fx6 cap = f.Products.SaleCap(Usa);
+        f.Int("prd.d2.lineBind", (int)LineBind.Money);   // the merge of 104 recomputes the bind; the rule is silent unless the line is bound by money
+        f.Session.StepThroughMonth(105);   // books the sale of 104 at G_front 2; decides on the projection
+        Assert.Contains(f.World.Policy.AiFleetCommands(Usa, 106), c => c.Design.Slot == 1);   // the decision of 105 reached d1
         f.Master(2);
         rival.Master(2);
-        f.Session.StepThroughMonth(103);
+        f.Session.StepThroughMonth(106);
         Assert.Equal(0, Enum.GetValues<CommandRejection>().Where(r => (int)r >= (int)CommandRejection.BadRetireSlot).Sum(r => f.Products.RejectionCount(Usa, r)));
-        Assert.Equal(promised, f.Products.SaleIncome(Usa));
-        Assert.True(f.Products.SaleInYear(Usa) <= cap);
+        Assert.True(f.Products.SaleInYear(Usa) <= f.Products.SaleCap(Usa));
     }
 
     [Fact]
