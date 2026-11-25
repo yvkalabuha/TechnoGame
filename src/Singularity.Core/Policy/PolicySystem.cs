@@ -62,7 +62,8 @@ public sealed partial class PolicySystem : ITickSystem
         ImmutableArray<Fx6> growthPerYear, CounterRng ai, IPolicyInputs inputs, IndustryMailbox mailbox, int qpRequesterId,
         ImmutableArray<int> forcedProfile = default, int systemId = DefaultSystemId, IPolicyProducts? products = null, int designs = 0,
         int generations = 0, bool derive = false, ImmutableArray<(int Row, int Design)> startLines = default,
-        CounterRng? events = null, IPolicyEvents? eventInputs = null, ImmutableArray<Fx6> disruptionExposure = default, BudgetRulePlan? budgetRule = null, bool wideLicenceMask = false, Fx6 securityPreset = default)
+        CounterRng? events = null, IPolicyEvents? eventInputs = null, ImmutableArray<Fx6> disruptionExposure = default, BudgetRulePlan? budgetRule = null, bool wideLicenceMask = false, Fx6 securityPreset = default,
+        AdviserPlan? adviser = null)
     {
         _securityPreset = securityPreset;
         ArgumentNullException.ThrowIfNull(inputs);
@@ -101,6 +102,7 @@ public sealed partial class PolicySystem : ITickSystem
         _qpEngineers = [.. budget0.Select(b => (parameters.QpEngineerShare.Raw * parameters.EngineerBase(b)) / Fx6.Scale)];
         SystemId = systemId;
         AddProductColumns(table, products, designs, generations, derive, parameters);
+        AddAdviserColumns(table, adviser, designs);
         _profile = table.AddInt("pol.profile");
         _round = table.AddInt("pol.round");
         _budget = table.AddLong("pol.budget");

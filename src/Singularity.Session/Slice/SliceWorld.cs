@@ -164,7 +164,8 @@ internal sealed class SliceWorld
             generations: ProductsLayout.Generations, derive: config.Derive, startLines: StartLines(pStart),
             events: Streams.Events, eventInputs: new PolicyEventsAdapter(this), disruptionExposure: scenario.Exposure,
             budgetRule: BudgetRulePlan.For(config.BudgetRule, scenario.ActorId), wideLicenceMask: MaxLicensableNumber(ProductsLayout, config.LicenceMarket) > LicenceMask.NarrowMaxNumber,
-            securityPreset: config.Intelligence ? (data.Intelligence?.Params.PresetNormal ?? Fx6.Zero) : Fx6.Zero);   // O-040: the second word only for data whose licensable PRC need it
+            securityPreset: config.Intelligence ? (data.Intelligence?.Params.PresetNormal ?? Fx6.Zero) : Fx6.Zero,   // O-040: the second word only for data whose licensable PRC need it
+            adviser: config.AdviserActors.IsDefaultOrEmpty ? null : new AdviserPlan(config.AdviserActors, config.AdviserRefuseYears, config.AdviserMaxLines));
         if (config.Reserve)
             Reserve = new ReserveSystem(Table, new ReserveParams(), new ReserveInputsAdapter(this));
         if (config.Intelligence)
@@ -176,7 +177,7 @@ internal sealed class SliceWorld
         }
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs,
             ImmutableArray.CreateRange(MasteryParams.ProgrammeProcesses(ProductsLayout).Select(k => ProductsLayout.ProcNumber[k])),
-            fundProgramme: config.Reserve, intelligence: config.Intelligence);
+            adviserActors: Policy.Adviser?.Rows ?? default, fundProgramme: config.Reserve, intelligence: config.Intelligence);
         Limits = new CommandLimits(scenario.ActorCount, ProductsLayout.SlotCount, ProductsLayout.Designs,
             [.. IndustryLayout.Order.Select(r => IndustryLayout.Number[r]).OrderBy(n => n)])
         {

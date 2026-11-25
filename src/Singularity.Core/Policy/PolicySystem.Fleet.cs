@@ -145,10 +145,14 @@ public sealed partial class PolicySystem
             if (StartPending(row, d, t, designs[d]))
                 series[d] = true;
         }
-        foreach (int d in dec.Closes)
-            series[d] = false;
-        foreach ((int d, _) in dec.Starts)
-            series[d] = true;
+        // The AI's line decisions of an adviser actor are proposals only: until the player accepts one it changes nothing, the fleet rule included.
+        if (!IsAdviser(row))
+        {
+            foreach (int d in dec.Closes)
+                series[d] = false;
+            foreach ((int d, _) in dec.Starts)
+                series[d] = true;
+        }
         // A project that is, or is about to be, a line is never a candidate: the stage on the book is С. One that has just closed is left out for this month.
         int line = -1;
         for (int d = 0; d < _designs; d++)

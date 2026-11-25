@@ -180,6 +180,18 @@ public sealed partial record SliceRunConfig
     /// </summary>
     public bool ProductAi { get; init; } = true;
 
+    /// <summary>
+    /// Actors (rows) the player controls and whose line decisions the AI only proposes (TASK-0153, #479). Empty = off: the AI leads every actor, as before.
+    /// Needs <see cref="ProductAi"/>.
+    /// </summary>
+    public System.Collections.Immutable.ImmutableArray<int> AdviserActors { get; init; }
+
+    /// <summary>How long a refused proposal stays silent, in years (a yearly norm; the policy turns it into months).</summary>
+    public int AdviserRefuseYears { get; init; } = 1;
+
+    /// <summary>The most lines an adviser actor may run at once (levers doc 1.2: 2 in wave 1).</summary>
+    public int AdviserMaxLines { get; init; } = 2;
+
     /// <summary>Arm <c>DERIV</c> (spec §6.8): once a year the AI also derives a design from its newest root project. Diagnostic; off in main.</summary>
     public bool Derive { get; init; }
 

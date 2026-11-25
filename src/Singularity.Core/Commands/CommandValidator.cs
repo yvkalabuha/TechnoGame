@@ -67,6 +67,15 @@ public enum CommandRefusal
 
     /// <summary>The target plan is malformed: more than three targets, a repeat, the actor itself, an unknown actor or an unknown mode.</summary>
     BadTargets,
+
+    /// <summary>A proposal command came to a run without an adviser for the actor (TASK-0153).</summary>
+    NoAdviser,
+
+    /// <summary>The adviser's line limit: the actor already has the most lines (running or commanded) and the design is not one of them (levers doc 1.2).</summary>
+    LineLimit,
+
+    /// <summary>A <c>refuse_proposal</c> names a project the adviser made no such proposal for in the month (TASK-0153).</summary>
+    NoProposal,
 }
 
 public readonly record struct CommandVerdict(CommandRefusal Reason, string Message, int BestGenBefore = 0, int BestGenAfter = 0,
@@ -204,6 +213,8 @@ public static class CommandValidator
                 return HandleRefusal(v.Design, limits) ?? CommandVerdict.Ok;
             case CloseLine l:
                 return HandleRefusal(l.Design, limits) ?? CommandVerdict.Ok;
+            case RefuseProposal rp:
+                return HandleRefusal(rp.Design, limits) ?? CommandVerdict.Ok;
             case StartMasteryProgramme sp:
                 return limits.ProcessNumbers.Contains(sp.ProcessNumber) ? CommandVerdict.Ok : CommandVerdict.Refuse(CommandRefusal.BadProcess, $"process {sp.ProcessNumber} is not in the layout");
             case CancelMasteryProgramme cp:
