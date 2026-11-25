@@ -24,7 +24,9 @@ The commit message is used as given: put the attribution trailer into -m.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
+import os
 import subprocess
 import sys
 import time
@@ -34,6 +36,8 @@ from pathlib import Path
 # Paths whose content verify.py builds or tests.
 # One review may walk the whole chain: Codex (up to 1800 s), agy (900 s + 60 s grace), then DeepSeek.
 REVIEW_TIMEOUT_S = 3600
+LAND_LOCK = Path.home() / ".cache" / "singularity" / "land.lock"  # flock file, see main()
+LAND_WAIT_S = 900  # how long a landing waits for a running Codex sketch
 CODE_PATHS = ("src/", "tests/", "mods/", "tools/", "lab/", ".github/")
 
 
@@ -125,6 +129,31 @@ def insert_trailer(message: str, line: str) -> str:
 
 
 def main() -> int:
+    """Hold an exclusive flock on LAND_LOCK for the whole landing. The kernel drops it when the process dies, so a
+    dead landing never leaves a stale lock and nothing is ever deleted. Codex sketches hold it shared while they run
+    (tools/llm_worker/codexsketch.py), so a landing waits for a running sketch and a sketch never starts mid-landing."""
+    LAND_LOCK.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(LAND_LOCK, os.O_CREAT | os.O_RDWR, 0o600)
+    deadline = time.monotonic() + LAND_WAIT_S
+    while True:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except OSError:
+            if time.monotonic() >= deadline:
+                print(f"land: another landing or a Codex sketch holds {LAND_LOCK}; try again later")
+                os.close(fd)
+                return 4
+            time.sleep(1)
+    os.ftruncate(fd, 0)
+    os.write(fd, str(os.getpid()).encode())  # information only
+    try:
+        return run()
+    finally:
+        os.close(fd)  # releases the lock
+
+
+def run() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("branch")
     ap.add_argument("-m", "--message", required=True)
