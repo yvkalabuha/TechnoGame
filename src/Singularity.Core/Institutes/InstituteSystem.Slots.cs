@@ -15,10 +15,12 @@ public sealed partial class InstituteSystem
     private readonly SlotParams? _slots;
     private IntColumn[] _act = [], _aif = [], _aifn = [];
     private LongColumn[][] _xf = [];
+    private IntColumn[][] _dx = [];
 
     private void InitSlots(Table table)
     {
-        int d = _l.DisciplineNames.Length;
+        int d = _l.DirectionNames.Length;
+        _dx = new IntColumn[_l.MaxSlots][];
         _act = new IntColumn[_l.MaxSlots];
         _aif = new IntColumn[_l.MaxSlots];
         _aifn = new IntColumn[_l.MaxSlots];
@@ -29,8 +31,16 @@ public sealed partial class InstituteSystem
             _aif[k] = table.AddInt($"inst.aif.{k}");
             _aifn[k] = table.AddInt($"inst.aifn.{k}");
             _xf[k] = new LongColumn[d];
-            for (int disc = 0; disc < d; disc++)
-                _xf[k][disc] = table.AddLong($"inst.xf.{k}.{_l.DisciplineNames[disc]}");
+            _dx[k] = new IntColumn[d];
+            for (int dir = 0; dir < d; dir++)
+            {
+                _xf[k][dir] = table.AddLong($"inst.xf.{k}.{_l.DirectionNames[dir]}");
+                _dx[k][dir] = table.AddInt($"inst.dx.{k}.{_l.DirectionNames[dir]}");
+                var column = new int[_l.ActorCount];
+                for (int a = 0; a < _l.ActorCount; a++)
+                    column[a] = k < _l.StartingCount(a) ? StartDirExperience(new InstituteHandle(a, k), dir) : 0;
+                _dx[k][dir].Load(column);
+            }
         }
     }
 
@@ -68,7 +78,7 @@ public sealed partial class InstituteSystem
         var dirs = _g.Directions[nodeRow];
         Span<int> levels = stackalloc int[dirs.Length];
         for (int i = 0; i < dirs.Length; i++)
-            levels[i] = Level(h, dirs[i]);
+            levels[i] = DirLevel(h, dirs[i]);
         return SlotMath.OverlapLevel(levels, _slots!.MainWeight);
     }
 
@@ -79,10 +89,19 @@ public sealed partial class InstituteSystem
     public int DirectionCount(InstituteHandle h)
     {
         int n = 0;
-        for (int d = 0; d < _l.DisciplineNames.Length; d++)
-            n += Level(h, d) > 0 ? 1 : 0;
+        for (int d = 0; d < _l.DirectionNames.Length; d++)
+            n += DirLevel(h, d) > 0 ? 1 : 0;
         return n;
     }
+
+    // Experience in the direction at which the institute has its level of the data.
+    private int StartDirExperience(InstituteHandle h, int direction) => InstituteMath.Threshold(_l.StartDirLevel(h, direction), _l.DirNodesIn[direction], _p);
+
+    /// <summary>Experience of the institute in the direction (slot model).</summary>
+    public int DirExperience(InstituteHandle h, int direction) => _dx[h.Slot][direction].Current[h.Actor];
+
+    /// <summary>Level 0..4 of the institute in the direction (slot model; the directions of the data, or the disciplines).</summary>
+    public int DirLevel(InstituteHandle h, int direction) => InstituteMath.LevelOf(DirExperience(h, direction), _l.DirNodesIn[direction], _p);
 
     // ---- the decision of the month
 
@@ -303,14 +322,14 @@ public sealed partial class InstituteSystem
         for (int i = 0; i < dirs.Length; i++)
         {
             int d = dirs[i];
-            if (full && Level(h, d) == 0)
+            if (full && DirLevel(h, d) == 0)
                 continue;
             Fx6 add = credit * SlotMath.DirectionWeight(i, dirs.Length, _slots.MainWeight);
             long frac = _xf[k][d].Current[a] + add.Raw;
             int whole = (int)(frac / Fx6.One.Raw);
             _xf[k][d].Next[a] = frac - whole * (long)Fx6.One.Raw;
             if (whole > 0)
-                _exp[k][d].Next[a] = _exp[k][d].Current[a] + whole;
+                _dx[k][d].Next[a] = _dx[k][d].Current[a] + whole;
         }
     }
 

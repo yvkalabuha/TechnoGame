@@ -75,14 +75,31 @@ internal static class ViewBuilder
             designs.Add(Design(w, a, d, next));
         return new ActorView(a, w.Policy.Profile(a), kd.MoveToImmutable(), w.Products.FieldedGen(a, next),
             full ? w.Products.KeyOf(a, next) : null,
-            full && month >= 0 && month % 12 == 0 ? w.Products.MaxFleetValue(a, Fx6.One, w.PolicyParameters.FvBudget, next) : null,
+            full && month >= 0 && (month % 12 == 0 || w.SlotsOn) ? w.Products.MaxFleetValue(a, Fx6.One, w.PolicyParameters.FvBudget, next) : null,
             bureaus.MoveToImmutable(),
             new QualityView(w.Policy.QualityProgrammeActive(a), w.Policy.QualityProgrammeStart(a), w.Policy.QualityTriggerCount(a), w.Policy.TrainingTarget(a)),
             LicenceOf(w, a, refusals.MoveToImmutable()),
             new DisruptionView(disStart, disEnd), withNodes && !HiddenFromPlayer(w, a) ? Nodes(w, a, next) : Unsubscribed(w, a), designs.MoveToImmutable(), Decisions(w, a, next, stepped),
             Alloy(w, a, month), Research(w, a), HiddenFromPlayer(w, a) ? Math.Min(1, UnknownNodes(w, a)) : UnknownNodes(w, a),
             w.Policy.MarketOn && !HiddenFromPlayer(w, a) ? Market(w, a, next) : null,
-            Institutes(w, a, next));
+            Institutes(w, a, next), Slots(w, a, next));
+    }
+
+    // The slot model's numbers of the actor: what the institutes did in the last step (columns) and the air power of the month.
+    private static SlotScienceView? Slots(SliceWorld w, int a, long month)
+    {
+        if (!w.SlotsOn || w.Institutes is not { } inst)
+            return null;
+        Span<int> node = stackalloc int[inst.Layout.SlotCount(a)];
+        Span<byte> focus = stackalloc byte[node.Length];
+        inst.Resolve(a, month, node, focus);
+        int standing = 0, free = 0;
+        for (int k = 0; k < node.Length; k++)
+        {
+            standing += node[k] >= 0 ? 1 : 0;
+            free += node[k] == 0 ? 1 : 0;
+        }
+        return new SlotScienceView(standing, free, w.Knowledge.Coverage(a), w.Knowledge.ReturnedToBudget(a), w.AirPower(a, month), w.AirPowerRatio(a, month), inst.SlotParameters.SpeedCap);
     }
 
     // The market as the actor sees it at the month of the next step: pure reads of the policy, built only when the market is on.
@@ -128,6 +145,11 @@ internal static class ViewBuilder
         bool scheduled = w.Config.Layer is LayerControl.Lk or LayerControl.Lk0;
         if (advise)
             inst.Propose(a, month, goals, builds);
+        Span<int> slotNode = stackalloc int[inst.Layout.SlotCount(a)];
+        Span<byte> slotFocus = stackalloc byte[slotNode.Length];
+        Span<int> entries = stackalloc int[inst.SlotsOn ? inst.ListLength : 0];
+        if (inst.SlotsOn)
+            inst.Resolve(a, month, slotNode, slotFocus);
         for (int k = 0; k < inst.Layout.SlotCount(a); k++)
         {
             var h = new InstituteHandle(a, k);
@@ -135,10 +157,36 @@ internal static class ViewBuilder
             for (int d = 0; d < inst.Layout.DisciplineNames.Length; d++)
                 levels.Add(inst.Level(h, d));
             long start = inst.BuildStart(h);
+            int active = 0, focus = 0;
+            ImmutableArray<int> queue = default, dirLevels = default;
+            Fx6 progress = Fx6.Zero, monthsLeft = Fx6.Zero;
+            if (inst.SlotsOn && inst.Standing(h) && !HiddenFromPlayer(w, a))
+            {
+                active = slotNode[k];
+                focus = slotFocus[k];
+                int n = w.SlotOrders!.Entries(h, entries);
+                var q = ImmutableArray.CreateBuilder<int>(n);
+                for (int j = 0; j < n; j++)
+                {
+                    if (entries[j] != active)
+                        q.Add(entries[j]);
+                }
+                queue = q.ToImmutable();
+                var dl = ImmutableArray.CreateBuilder<int>(inst.Layout.DirectionNames.Length);
+                for (int d = 0; d < inst.Layout.DirectionNames.Length; d++)
+                    dl.Add(inst.DirLevel(h, d));
+                dirLevels = dl.MoveToImmutable();
+                if (active > 0 && w.Graph.RowOf(active) is >= 0 and int row)
+                {
+                    progress = w.Knowledge.Prog(a, row);
+                    Fx6 rate = w.Knowledge.ProgressRate(a, row, month);
+                    monthsLeft = rate > Fx6.Zero && progress < Fx6.One ? (Fx6.One - progress) / rate : Fx6.Zero;
+                }
+            }
             // A candidate shows the price it would pay if started now (progress 0).
             list.Add(new InstituteView(k, inst.Layout.IdOf(h), inst.Standing(h), HiddenFromPlayer(w, a) ? 0 : inst.GoalNode(h), levels.MoveToImmutable(), start, inst.BuildMonths(h),
                 inst.Standing(h) ? Fx6.Zero : inst.BuildRate(h, month), inst.Layout.RefYear(h), inst.Layout.TotalLevels(h),
-                advise && !scheduled ? goals[k] : 0, advise && builds[k]));
+                advise && !scheduled ? goals[k] : 0, advise && builds[k], active, queue, focus, progress, monthsLeft, dirLevels));
         }
         return list.MoveToImmutable();
     }

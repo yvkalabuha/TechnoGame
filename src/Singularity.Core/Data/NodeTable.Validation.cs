@@ -94,6 +94,9 @@ public sealed partial class NodeTable
             w.Bool(AnchorBefore[r]);
             w.Str(AnchorSource[r]);
             w.Bool(AnchorEstimated[r]);
+            w.Int(DirectionCount(r));
+            for (int k = 0; k < DirectionCount(r); k++)
+                w.Int(DirectionAt(r, k));
         }
     }
 }

@@ -34,6 +34,9 @@ public sealed class KnowledgeGraph
     /// carries its discipline as the one direction (an APP node none); a spec with <c>Directions</c> overrides it.
     /// </summary>
     public required ImmutableArray<ImmutableArray<int>> Directions { get; init; }
+
+    /// <summary>The names the indices of <see cref="Directions"/> refer to: the directions of the data (<c>Directions.Ids</c>), or the disciplines when the data has none.</summary>
+    public required ImmutableArray<string> DirectionNames { get; init; }
     public required RequirementLists Requires { get; init; }
 
     /// <summary>Incoming informs edges of row r: <c>InformedStart[r]..InformedStart[r+1]</c>.</summary>
@@ -57,6 +60,8 @@ public sealed class KnowledgeGraph
     public static KnowledgeGraph FromData(NodeTable nodes, IReadOnlyList<Discipline> disciplines, KnowledgeParams p)
     {
         var specs = new KnowledgeNodeSpec[nodes.Count];
+        // The slot model reads directions when the data has them (any node with a direction list); otherwise a node carries its discipline.
+        bool hasDirections = nodes.Direction.Length > 0;
         var informed = new List<(int From, Fx6 Weight)>[nodes.Count];
         for (int r = 0; r < nodes.Count; r++)
             informed[r] = new();
@@ -82,17 +87,24 @@ public sealed class KnowledgeGraph
                 for (int m = 0; m < members.Length; m++)
                     groups[g][m] = nodes.Number[members[m]];
             }
+            int[]? dirs = null;
+            if (hasDirections)
+            {
+                dirs = new int[nodes.DirectionCount(r)];
+                for (int k = 0; k < dirs.Length; k++)
+                    dirs[k] = nodes.DirectionAt(r, k);
+            }
             specs[r] = new KnowledgeNodeSpec(nodes.Number[r], nodes.Type[r], nodes.Gen[r], disc, nodes.Hazard[r] != Hazard.None,
-                p.CostN(nodes.Type[r], nodes.Gen[r]), groups, [.. informed[r]], nodes.AnchorYear[r]);
+                p.CostN(nodes.Type[r], nodes.Gen[r]), groups, [.. informed[r]], nodes.AnchorYear[r], dirs);
         }
         string[] names = new string[disciplines.Count];
         for (int d = 0; d < names.Length; d++)
             names[d] = DataNames.NameOf(DataNames.Disciplines, disciplines[d]);
-        return Create(specs, names);
+        return Create(specs, names, hasDirections ? Singularity.Core.Data.Directions.Ids : null);
     }
 
     /// <summary>Graph from explicit nodes in any storage order (tests, the reference fixture).</summary>
-    public static KnowledgeGraph Create(IReadOnlyList<KnowledgeNodeSpec> nodes, IReadOnlyList<string> disciplineNames)
+    public static KnowledgeGraph Create(IReadOnlyList<KnowledgeNodeSpec> nodes, IReadOnlyList<string> disciplineNames, IReadOnlyList<string>? directionNames = null)
     {
         int n = nodes.Count;
         int[] numbers = new int[n];
@@ -169,6 +181,7 @@ public sealed class KnowledgeGraph
             InformedFrom = [.. informedFrom],
             InformedWeight = [.. informedWeight],
             DisciplineNames = [.. disciplineNames],
+            DirectionNames = [.. directionNames ?? disciplineNames],
             Order = [.. order],
         };
     }

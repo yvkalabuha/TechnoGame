@@ -395,6 +395,11 @@ public sealed partial class InstituteSystem : ITickSystem
             _done[h.Slot].Next[h.Actor] = checked((int)t) + 1;
             for (int d = 0; d < _l.DisciplineNames.Length; d++)
                 _exp[h.Slot][d].Next[h.Actor] = _l.StartExperience(h, d);
+            if (_slots is not null)
+            {
+                for (int d = 0; d < _l.DirectionNames.Length; d++)
+                    _dx[h.Slot][d].Next[h.Actor] = StartDirExperience(h, d);
+            }
             return;
         }
         // The project is seen (and pays) from the next month, so that month is its start: the stamp is start + 1.
@@ -414,6 +419,21 @@ public sealed partial class InstituteSystem : ITickSystem
     {
         int slots = _l.SlotCount(actor);
         Span<int> work = stackalloc int[MaxSlotsLimit];
+        if (_slots is not null)
+        {
+            // Slot model: what the slots work on now; the AI would give each free one the node of its rule.
+            Span<byte> focus = stackalloc byte[slots];
+            Resolve(actor, month, work[..slots], focus);
+            Span<int> pick = stackalloc int[slots];
+            work[..slots].CopyTo(pick);
+            PickForFree(actor, month, pick);
+            for (int k = 0; k < slots; k++)
+            {
+                startsProject[k] = !Standing(new InstituteHandle(actor, k)) && AiWouldStart(new InstituteHandle(actor, k), month);
+                goals[k] = work[k] == 0 && pick[k] > 0 ? pick[k] : 0;
+            }
+            return;
+        }
         for (int k = 0; k < slots; k++)
         {
             var h = new InstituteHandle(actor, k);
