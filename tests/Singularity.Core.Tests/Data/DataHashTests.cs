@@ -13,7 +13,8 @@ public class DataHashTests : IDisposable
     // DataHash of mod core alone: nodes, product classes and scenarios. Same rule as above.
     // Re-recorded once for ADR-0018 §4 (TASK-0074): anchor.event left the data, text lives in mods/core/locale. Old value 6eba0cea…585bce.
     // Re-recorded in TASK-0147 (train 2): nodes 82-99 and the rev 3.1 requires/informs of nodes 65-81 change the core data.
-    private const string CoreDataHash = "95965fa655dbcf149d58c0be13d14ff3be84c2b6d1dec3a5515f88fd060e180e";
+    // Re-recorded in TASK-0180 (#555): real prerequisites (requires) of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99), no new nodes.
+    private const string CoreDataHash = "68a3defd1ce5231cda1eacb221e17fc9e12e15a8b82645bc6d016a6cac159030";
 
     private readonly TestMods _mods = new();
 

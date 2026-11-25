@@ -47,9 +47,10 @@ public class TwoWorldsOnOnePoolTests
 // Re-recorded in TASK-0133 (train 2: G5/G6 data + fleet ageing): nodes 62-81 and the G5/G6 alternatives change every trajectory; reason and list in the task file.
     // Re-recorded in TASK-0134 (train 2: Hcap(t), mastery), reason: schema v14 (new columns prd.prog.*, pol.prog.*, pol.below.*, cmd.prog.*, prd.rejected.BadProgramme, all zero before 1978-01); the old columns are unchanged to month 387 (MasteryIdentityTests, HorizonTests, GoldenProjectionAgainstMainTests), so only the new columns change this hash.
     // Re-recorded in TASK-0147 (train 2): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465) change every trajectory on the current data; explanation: docs/simulation/golden-rerecord-train2.md.
+    // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
     private static readonly Dictionary<ulong, string> Pinned = new()
     {
-        [1] = "7676ba2b8f3d1a8e884283073cca5bb65b0740800864aafc8511e13cae2e48ad", [2] = "98f851f0f81e2194369724ea0a7c3b513ef254d939d27d7ce42d1b5dda0fd4af", [3] = "4bf46aec111f3726498342c538e6827a268f6405c3099018beaff46a9ceca3ee", [4] = "38c794141894bbfc0a380fa4df12bd31ddb4901fd0f002fc45726de60aa9a9c3", [5] = "5c48c89e36bdcbe6f06672a200f34b0e7c318994a14194d8e0724496a5091890", [7] = "7d695dd6dd1f1f53664d1af9994414ebe46cde5b7950646c9a0e38bca344f287",
+        [1] = "31461519cfaa41b77077cec2f517d1513dd09ef59334e6d5b036ab42162f0161", [2] = "9b1db3974f38499aa4aaf231b3ca2f2bf11fb9f9a60a6a7ba3a332ae883bc769", [3] = "aa19c5a14fa671767789fcce0f696ced36f378c7007d7f1e029c88fbed02762a", [4] = "b8ed396fd183f39058ee905353a48bfd9c41e0e4ba014bdbd9a5e1486c2a7cef", [5] = "6327c7e209ab8808b30404a0f4302f756055a0335c1fda0b90a4ab8ddad2853c", [7] = "1ad20f1f3fb3f2f57b25a4046202501ca661d88fc126e933fe7dd2fee7323cd9",
     };
 
     private static void AssertPinned(ulong seed, string[] actual, string what)
