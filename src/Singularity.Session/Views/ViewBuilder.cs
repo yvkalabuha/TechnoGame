@@ -135,8 +135,9 @@ internal static class ViewBuilder
             for (int d = 0; d < inst.Layout.DisciplineNames.Length; d++)
                 levels.Add(inst.Level(h, d));
             long start = inst.BuildStart(h);
+            // A candidate shows the price it would pay if started now (progress 0).
             list.Add(new InstituteView(k, inst.Layout.IdOf(h), inst.Standing(h), HiddenFromPlayer(w, a) ? 0 : inst.GoalNode(h), levels.MoveToImmutable(), start, inst.BuildMonths(h),
-                inst.Building(h) ? inst.BuildRate(h, month) : Fx6.Zero, inst.Layout.RefYear(h), inst.Layout.TotalLevels(h),
+                inst.Standing(h) ? Fx6.Zero : inst.BuildRate(h, month), inst.Layout.RefYear(h), inst.Layout.TotalLevels(h),
                 advise && !scheduled ? goals[k] : 0, advise && builds[k]));
         }
         return list.MoveToImmutable();

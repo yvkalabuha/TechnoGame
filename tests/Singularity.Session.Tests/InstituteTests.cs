@@ -684,6 +684,42 @@ public class InstituteTests
         Assert.True(inst.BuildRate(h, 30) > InstituteMath.BuildRate(3, 0, P));
     }
 
+    // A project without any research money never opens: it pays the price of the historical year (x1) and the year of an absurd month does not overflow.
+    [Fact]
+    public void ProjectWithoutFunding_PaysThePriceOfOpeningOnTime()
+    {
+        SliceSession s = SliceTestData.Create(new SliceRunConfig { Seed = 7, Institutes = true, PlayerActor = Actor(Make(true), "USA") });
+        int usa = Actor(s, "USA");
+        var h = new InstituteHandle(usa, CandidateSlot(s, usa, "usa_darpa"));
+        InstituteSystem inst = s.World.Institutes!;
+        for (long t = 0; t < 28; t++)
+            s.StepThroughMonth(t);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new SetBudgetShares(usa, new Singularity.Core.Policy.BudgetShares(Fx6.Zero, Fx6.One, Fx6.Zero, Fx6.Zero, Fx6.Zero))).Accepted);
+        Assert.True(s.Submit(SourceClass.Player, 0, 1, new BuildInstitute(usa, h.Slot)).Accepted);
+        s.StepThroughMonth(28);
+        Assert.True(inst.Building(h));
+        Assert.Equal(InstituteMath.BuildRate(3, 0, P), inst.BuildRate(h, 29));
+        Assert.Equal(InstituteMath.BuildRate(3, 0, P), s.View.Actors[usa].Institutes.Single(x => x.Slot == h.Slot).BuildRate);
+    }
+
+    // The window shows the price of a candidate before the click: the same the core charges once the project starts in that month.
+    [Fact]
+    public void Candidate_ShowsThePriceTheCoreChargesOnceStarted()
+    {
+        SliceSession s = Make(true);
+        int usa = Actor(s, "USA");
+        var h = new InstituteHandle(usa, CandidateSlot(s, usa, "usa_darpa"));
+        InstituteSystem inst = s.World.Institutes!;
+        for (long t = 0; t < 28; t++)
+            s.StepThroughMonth(t);
+        Fx6 shown = s.View.Actors[usa].Institutes.Single(x => x.Slot == h.Slot).BuildRate;
+        Assert.True(shown > InstituteMath.BuildRate(3, 0, P), "an early candidate costs more than one on time");
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, new BuildInstitute(usa, h.Slot)).Accepted);
+        s.StepThroughMonth(28);
+        Assert.Equal(Fx6.One - shown, inst.BudgetFactor(usa, 28));
+        Assert.Equal(shown, s.View.Actors[usa].Institutes.Single(x => x.Slot == h.Slot).BuildRate);
+    }
+
     [Fact]
     public void PlayerOrder_DropsTheStoredAiGoal_SoItCannotReturnAndDuplicate()
     {

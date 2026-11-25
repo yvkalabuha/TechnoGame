@@ -161,7 +161,7 @@ public sealed class InstituteSystem : ITickSystem
         Fx6 funding = _inputs.BuildFunding(h.Actor);
         long left = BuildMonths(h) * (long)Fx6.One.Raw - _prog[h.Slot].Current[h.Actor];
         if (funding <= Fx6.Zero)
-            return long.MaxValue / 4;
+            return _l.FirstMonthOf(_l.RefYear(h));   // never opens: the price of opening on time (x1), no overflow of the year
         long steps = (left + funding.Raw - 1) / funding.Raw;
         return month + (steps < 1 ? 1 : steps) - 1;
     }
@@ -182,7 +182,8 @@ public sealed class InstituteSystem : ITickSystem
 
     /// <summary>
     /// The factor on the research money of the actor: <c>(1 − running projects − upkeep of built institutes)·(1 + capacity of built institutes)</c>; exactly 1
-    /// without projects (the institutes of the start are in the base money).    /// </summary>
+    /// without projects (the institutes of the start are in the base money).
+    /// </summary>
     public Fx6 BudgetFactor(int actor, long month)
     {
         Fx6 take = Take(actor, month, out Fx6 give, out bool any);
