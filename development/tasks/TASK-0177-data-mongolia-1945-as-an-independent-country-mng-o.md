@@ -41,4 +41,4 @@ created: 2026-11-25
 - [ ] Детерминизм L1/L2 — если затронуты src/
 
 ## Результат
-<!-- Заполняет исполнитель: что сделано, файлы, коммит. -->
+Регионы mongolia_govi_altay и mongolia_mn_govi: owner MNG, controller MNG (owners.yaml). Других регионов Внешней Монголии нет (regions.yaml: только эти два); china_inner_mongol не тронут. Добавлен тест (Ulaanbaatar -> MNG core) в WorldMapTests; без правки данных он падает (проверено). MapBuilder.Tests: 101/101. Штриховка Occupied включается только при owner != controller, поэтому для MNG её нет. Записка docs/research/owners-1945-world.md (строки mongolia_*) вне зоны developer: правку вернул Оркестратору. Событие mongolia_recognised (C34) в tools/map/spec/events/world.yaml оставлено, оно CI-проверка границ.
