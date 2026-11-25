@@ -478,7 +478,7 @@ node-s5-prc-cmc_fabrication =
     .name = CMC fabrication
     .short = CMC fab.
     .anchor = estimate 2016
-    .history = General Electric's ceramic composites (SiC fibres with a coating containing boron nitride, in an SiC matrix) have been developed for more than 30 years since the 1980s (Niskayuna, New York), with support from the Department of Energy, the Department of Defense and NASA. The LEAP high-pressure turbine shrouds of CMC were certified by the FAA and EASA in May 2016; the LEAP became the first widely used product with CMC, with an operating temperature up to 2,400 °F. Five CMC parts are planned for the GE9X (in service on the 777X around 2020).
+    .history = General Electric's ceramic composites (SiC fibres with a coating containing boron nitride, in an SiC matrix) have been developed for more than 30 years since the 1980s (Niskayuna, New York), with support from the Department of Energy, the Department of Defense and NASA. The LEAP high-pressure turbine shrouds of CMC were certified by the FAA and EASA in May 2016; the LEAP became the first widely used product with CMC, with an operating temperature up to 2,400 °F. Five CMC parts are planned for the GE9X.
 
 node-s8-eng-adaptive_cycle_engine =
     .name = Adaptive cycle engine

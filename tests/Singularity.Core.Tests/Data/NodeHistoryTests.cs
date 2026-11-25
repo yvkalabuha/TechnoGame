@@ -55,32 +55,73 @@ public class NodeHistoryTests : IDisposable
     }
 
     [Fact]
-    public void DeltaWing_HasDerivedEffects_TogetherWithAreaRuled()
+    public void DeltaWing_HasDerivedEffects_WithPartnerPathAndMandatoryProcesses()
     {
         var fx = new List<NodeEffect>();
         int delta = Data.Nodes.IndexOf("s8.eng.delta_wing_airframe"), ruled = Data.Nodes.IndexOf("s8.eng.area_ruled_airframe");
         NodeEffects.Derive(Data, delta, fx);
         ProductClassTable pc = Data.ProductClasses;
         NodeEffect milled = Assert.Single(fx, e => e.Kind == NodeEffectKind.AlternativeUnlock && pc.AltId[e.AltRow] == "af_milled");
-        Assert.False(milled.Together);   // knowing one of the two any_of nodes is enough
         Assert.Equal(pc.AltPerfMult[milled.AltRow], milled.Value);
         Assert.Equal(pc.AltPerfMult[milled.AltRow - 1], milled.Previous);
         Assert.True(milled.Value > milled.Previous);
 
-        // The any_of partner is an alternative path, not a co-requirement.
+        // The any_of partner is an alternative path; the manufacturing processes of af_milled are mandatory co-requirements:
+        // knowing the node alone does not make the variant available (DesignRules.Available checks both lists).
         var alternatives = new List<int>();
         var coRequired = new List<int>();
-        NodeEffects.Requirements(Data, milled, delta, alternatives, coRequired);
+        var processes = new List<int>();
+        NodeEffects.Requirements(Data, milled, delta, alternatives, coRequired, processes);
         Assert.Equal([ruled], alternatives);
         Assert.Empty(coRequired);
+        Assert.Contains(Data.Nodes.IndexOf("s8.prc.machined_integral_skins"), processes);
+        Assert.Equal(pc.PrcSet(milled.AltRow).Length, processes.Count);
+        Assert.True(milled.Together);
 
-        // af_titanium additionally needs the titanium alloy: a mandatory co-requirement, so "together with", never a plain "opens".
+        // af_titanium additionally needs the titanium alloy node.
         NodeEffect titanium = Assert.Single(fx, e => e.Kind == NodeEffectKind.AlternativeUnlock && pc.AltId[e.AltRow] == "af_titanium");
-        Assert.True(titanium.Together);
         alternatives.Clear();
-        NodeEffects.Requirements(Data, titanium, delta, alternatives, coRequired);
+        processes.Clear();
+        NodeEffects.Requirements(Data, titanium, delta, alternatives, coRequired, processes);
         Assert.Equal([ruled], alternatives);
         Assert.Equal([Data.Nodes.IndexOf("s5.cmp.titanium_alloy")], coRequired);
+        Assert.True(titanium.Together);
+    }
+
+    [Fact]
+    public void Together_IsExactlyOtherGroupsOrProcesses_ForEveryAlternative()
+    {
+        var fx = new List<NodeEffect>();
+        var alternatives = new List<int>();
+        var coRequired = new List<int>();
+        var processes = new List<int>();
+        for (int r = 0; r < Data.Nodes.Count; r++)
+        {
+            fx.Clear();
+            NodeEffects.Derive(Data, r, fx);
+            foreach (NodeEffect e in fx.Where(e => e.Kind == NodeEffectKind.AlternativeUnlock))
+            {
+                alternatives.Clear();
+                coRequired.Clear();
+                processes.Clear();
+                NodeEffects.Requirements(Data, e, r, alternatives, coRequired, processes);
+                Assert.Equal(coRequired.Count > 0 || processes.Count > 0, e.Together);
+            }
+        }
+    }
+
+    [Fact]
+    public void AnyOfMember_IsAnAlternativePath_NotAMandatoryPrerequisite()
+    {
+        NodeTable n = Data.Nodes;
+        int mach2 = n.IndexOf("s8.eng.mach2_airframe_g4");
+        var fx = new List<NodeEffect>();
+        NodeEffects.Derive(Data, n.IndexOf("s8.eng.delta_wing_airframe"), fx);
+        Assert.Contains(fx, e => e.Kind == NodeEffectKind.AlternativePathFor && e.Node == mach2);
+        Assert.DoesNotContain(fx, e => e.Kind == NodeEffectKind.RequiredFor && e.Node == mach2);
+        fx.Clear();
+        NodeEffects.Derive(Data, n.IndexOf("s8.fnd.boundary_layer"), fx);
+        Assert.Contains(fx, e => e.Kind == NodeEffectKind.RequiredFor && e.Node == n.IndexOf("s8.fnd.compressible_flow"));
     }
 
     [Fact]
@@ -95,15 +136,6 @@ public class NodeHistoryTests : IDisposable
         Assert.Equal(pc.GenPlatformMinRank[g], g6.MinRank);
         Assert.True(g6.MinRank > 1);
         Assert.True(g6.Together);   // the APP node alone does not give the generation: an airframe of that rank is needed too
-    }
-
-    [Fact]
-    public void SoleRequirement_IsNotTogether()
-    {
-        var fx = new List<NodeEffect>();
-        NodeEffects.Derive(Data, Data.Nodes.IndexOf("s8.eng.straight_wing_jet_airframe"), fx);
-        NodeEffect straight = Assert.Single(fx, e => e.Kind == NodeEffectKind.AlternativeUnlock && Data.ProductClasses.AltId[e.AltRow] == "af_straight");
-        Assert.False(straight.Together);
     }
 
     [Fact]
@@ -199,10 +231,10 @@ public class NodeHistoryTests : IDisposable
     public void ModThatDeletesACoreNode_LoadsWithAWarning_NotAnError()
     {
         string mod = _mods.Mod("a", "[{id: core, min: \"0.1.0\"}]", ("nodes.yaml", "kind: node\ndelete: [s8.app.jet_fighter_g4]\n"), TestMods.DropG4Class());
-        GameData data = ModLoader.Load(TestMods.CoreDir, mod);
-        Assert.Equal(-1, data.Nodes.IndexOf("s8.app.jet_fighter_g4"));
-        Assert.Contains(data.Warnings, w => w.Contains("s8.app.jet_fighter_g4", StringComparison.Ordinal));
-        Assert.Empty(Data.Warnings);
+        GameData modded = ModLoader.Load(TestMods.CoreDir, mod);
+        Assert.Equal(-1, modded.Nodes.IndexOf("s8.app.jet_fighter_g4"));
+        Assert.Contains(modded.Warnings, w => w.Contains("s8.app.jet_fighter_g4", StringComparison.Ordinal));
+        Assert.Empty(Data.Warnings);   // the unmodified core has nothing to warn about
     }
 
     [Fact]

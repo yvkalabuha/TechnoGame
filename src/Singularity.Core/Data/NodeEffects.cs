@@ -23,15 +23,18 @@ public enum NodeEffectKind
     /// <summary>The node informs another node (cheaper research); Node = the target, Value = the edge weight.</summary>
     Informs,
 
-    /// <summary>The node is required to learn another node; Node = that node.</summary>
+    /// <summary>The node is a mandatory requirement to learn another node; Node = that node.</summary>
     RequiredFor,
+
+    /// <summary>The node is one of several alternative ways (an any_of group) to the requirement of another node; Node = that node.</summary>
+    AlternativePathFor,
 }
 
 /// <summary>
 /// One effect of a node, with the data address it was read from (never a hand-written number).
-/// <see cref="Together"/>: other requirement groups must hold as well (mandatory co-requirements, see
-/// <see cref="NodeEffects.Requirements"/>), so a card says "needed for ..., together with ..." and not "opens"; any_of partners
-/// are alternatives, not co-requirements. <see cref="Node"/>: the other node of Informs and RequiredFor, else -1.
+/// <see cref="Together"/>: other requirement groups or manufacturing processes must be known as well (mandatory co-requirements,
+/// see <see cref="NodeEffects.Requirements"/>), so a card says "needed for ..., together with ..." and not "opens"; any_of
+/// partners are alternatives, not co-requirements. <see cref="Node"/>: the other node of Informs and RequiredFor, else -1.
 /// <see cref="MinRank"/>: of a Generation effect, the minimum airframe rank that must also be available.
 /// </summary>
 public readonly record struct NodeEffect(NodeEffectKind Kind, int ClassRow, int SlotRow, int AltRow, Fx6 Value, Fx6 Previous, bool Together, int Node = -1, int MinRank = 0);
@@ -74,8 +77,8 @@ public static class NodeEffects
             {
                 ReadOnlySpan<int> members = n.Requires.GroupMembers(g);
                 if (members.IndexOf(nodeRow) >= 0)
-                    into.Add(new NodeEffect(NodeEffectKind.RequiredFor, -1, -1, -1, Fx6.Zero, Fx6.Zero,
-                        n.Requires.GroupStart[o + 1] - n.Requires.GroupStart[o] > 1, o));
+                    into.Add(new NodeEffect(members.Length > 1 ? NodeEffectKind.AlternativePathFor : NodeEffectKind.RequiredFor, -1, -1, -1,
+                        Fx6.Zero, Fx6.Zero, n.Requires.GroupStart[o + 1] - n.Requires.GroupStart[o] > 1, o));
             }
         }
     }
@@ -83,13 +86,20 @@ public static class NodeEffects
     /// <summary>
     /// Splits the other requirements of the alternative of <paramref name="effect"/> (seen from <paramref name="nodeRow"/>):
     /// <paramref name="alternatives"/> are the other members of the node's own any_of group (any one of them is enough, the node
-    /// itself is not needed), <paramref name="coRequired"/> are the members of the other groups (all of them are needed too).
-    /// Both are appended ascending.
+    /// itself is not needed), <paramref name="coRequired"/> are the members of the other groups (all of them are needed too),
+    /// <paramref name="processes"/> are the manufacturing processes of the alternative (all must be known too, DesignRules.Available).
+    /// All are appended ascending.
     /// </summary>
-    public static void Requirements(GameData data, in NodeEffect effect, int nodeRow, List<int> alternatives, List<int> coRequired)
+    public static void Requirements(GameData data, in NodeEffect effect, int nodeRow, List<int> alternatives, List<int> coRequired, List<int> processes)
     {
         RequirementLists req = data.ProductClasses.AltRequires;
-        int altStart = alternatives.Count, coStart = coRequired.Count;
+        int altStart = alternatives.Count, coStart = coRequired.Count, procStart = processes.Count;
+        foreach (int p in data.ProductClasses.PrcSet(effect.AltRow))
+        {
+            if (p != nodeRow)
+                processes.Add(p);
+        }
+        processes.Sort(procStart, processes.Count - procStart, null);
         for (int g = req.GroupStart[effect.AltRow]; g < req.GroupStart[effect.AltRow + 1]; g++)
         {
             ReadOnlySpan<int> members = req.GroupMembers(g);
@@ -138,7 +148,8 @@ public static class NodeEffects
     private static void AddAlternative(ProductClassTable pc, int c, int s, int a, int nodeRow, List<NodeEffect> into)
     {
         RequirementLists req = pc.AltRequires;
-        bool found = false, together = req.GroupStart[a + 1] - req.GroupStart[a] > 1;   // a second group is a mandatory co-requirement
+        // A second requirement group or any manufacturing process is a mandatory co-requirement.
+        bool found = false, together = req.GroupStart[a + 1] - req.GroupStart[a] > 1 || pc.PrcSet(a).Length > 0;
         for (int g = req.GroupStart[a]; g < req.GroupStart[a + 1]; g++)
             found |= req.GroupMembers(g).IndexOf(nodeRow) >= 0;
         if (!found)
