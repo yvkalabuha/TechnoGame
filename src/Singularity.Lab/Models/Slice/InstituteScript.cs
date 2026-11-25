@@ -184,8 +184,10 @@ internal sealed class InstituteScript
             for (int k = 0; k < slots; k++)
             {
                 // Slot model (TASK-0187): the adviser's node goes into the list of the free slot (assign_node), the shares model keeps set_priority_node.
+                // The script confirms a start the money covers badly (Acknowledged, §1.2) as the AI would: without it a short country is held back at
+                // apply time, which Submit does not report (TASK-0187 part 2: GBR idled 19.6 % of its slot-months 1945-1990 in 3 seeds).
                 if (goals[k] != 0)
-                    Submit(_inst.SlotsOn ? new AssignNode(_player, k, goals[k]) : new SetPriorityNode(_player, k, goals[k]), nextMonth);
+                    Submit(_inst.SlotsOn ? new AssignNode(_player, k, goals[k], Acknowledged: true) : new SetPriorityNode(_player, k, goals[k]), nextMonth);
             }
         }
         if (_spec.Fund < Fx6.One)
