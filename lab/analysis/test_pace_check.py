@@ -45,6 +45,41 @@ class PaceCheckTest(unittest.TestCase):
         self.assertEqual(res["verdict"], "WARN")
         self.assertTrue(any("in-window share" in x for r in res["rows"] for x in r["reasons"]))
 
+    def _shares(self, b_in, c_in, n=100):
+        b = self.side("b")
+        c = self.side("c")
+        b["n"] = c["n"] = n
+        for g in (2, 3, 4):
+            b["gens"][g]["in_window"] = b_in
+            c["gens"][g]["in_window"] = c_in
+        return pc.compare(b, c, self.cfg)
+
+    def test_window_share_drop_threshold_5pp(self):   # O-085: warn only when the drop is > 5 percentage points
+        self.assertEqual(self._shares(85, 80)["verdict"], "PASS")    # -5 pp
+        self.assertEqual(self._shares(85, 79)["verdict"], "WARN")    # -6 pp
+        self.assertEqual(self._shares(85, 99)["verdict"], "PASS")    # a rise never warns
+        self.assertEqual(self.cfg["warn_window_share_drop_pp"], 5)
+
+    def test_median_inf_when_more_than_half_censored(self):
+        root = os.path.join(self.tmp.name, "inf")
+        d, t = pc.synthetic(root)
+        nt, gt = [], []
+        for i in range(5):
+            rid = "p0-s%d-t1" % i
+            for g, node in ((2, 59), (3, 60), (4, 61)):
+                nt.append([rid, "USA", node, "" if i < 3 else 100, "", "", "", 0])
+                gt.append([rid, "USA", g, 0, "" if i < 3 else 300, "", ""])
+        pc._write_dir(d, nt, gt, 5)
+        s = pc.summarize(d, t, self.cfg)
+        self.assertEqual(s["gens"][4]["app_usa"], pc.INF)
+        self.assertEqual(s["gens"][4]["censored"]["unit"], 3)
+        self.assertEqual(pc.month_label(s["gens"][4]["unit"], s["gens"][4]["censored"]["unit"], s["n"]), "inf (3/5 never)")
+
+    def test_untracked_files_mark_dirty(self):
+        self.assertTrue(pc.is_dirty("?? src/Singularity.Core/New.cs\n"))
+        self.assertTrue(pc.is_dirty(" M mods/core/nodes.yaml\n"))
+        self.assertFalse(pc.is_dirty(""))
+
     def test_censored_median_against_finite_warns(self):
         b = self.side("b")
         c = self.side("c")
@@ -72,6 +107,7 @@ class PaceCheckTest(unittest.TestCase):
         cfg = pc.pace_config(pc.read_json(man))
         self.assertEqual(cfg["windows"], {2: (16, 87), 3: (100, 195), 4: (256, 363)})
         self.assertEqual(cfg["warn_median_shift_months"], 24)
+        self.assertEqual(cfg["warn_window_share_drop_pp"], 5)
 
     def test_selftest(self):
         pc.selftest()

@@ -6,7 +6,8 @@ their defaults, calibration seeds 10001-10100) on the current tree and on a base
 then prints per generation G2..G4:
   - APP known month: node_times.t_known of the APP node of gen g, USA and any actor, median over seeds;
   - first unit: gen_times.t_first_unit of any actor, median and the share of seeds inside the C4 window (months from 1945-09);
-  - deltas current - base and a verdict: WARN if a median moves by more than 24 months or an in-window share drops, else PASS.
+  - deltas current - base and a verdict: WARN if a median moves by more than 24 months or an in-window share drops by more than
+    5 percentage points (O-085; meta.pace.warn_window_share_drop_pp), else PASS.
 Medians are lower medians with never-known / never-built counted as +inf ("inf" = more than half censored at the horizon).
 APP node numbers are read from each tree's mods/core/nodes.yaml (type APP, gen g).
 
@@ -30,11 +31,12 @@ import subprocess
 import sys
 import tempfile
 import time
+from fractions import Fraction
 from collections import defaultdict
 
 INF = math.inf
 DEFAULT_PACE = {"gens": [2, 3, 4], "windows": {"2": [16, 87], "3": [100, 195], "4": [256, 363]}, "usa_actor": "USA",
-                "warn_median_shift_months": 24, "warn_on_window_share_drop": True}
+                "warn_median_shift_months": 24, "warn_window_share_drop_pp": 5}
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
@@ -149,10 +151,11 @@ def compare(base, cur, cfg):
             row["d_" + key] = d
             if d is not None and abs(d) > lim:
                 row["reasons"].append("%s moved %s months" % (key, fmt_delta(d)))
-        sb = b["in_window"] / base["n"] if base["n"] else 0.0
-        sc = c["in_window"] / cur["n"] if cur["n"] else 0.0
+        fb = Fraction(b["in_window"], base["n"]) if base["n"] else Fraction(0)
+        fc = Fraction(c["in_window"], cur["n"]) if cur["n"] else Fraction(0)
+        sb, sc = float(fb), float(fc)
         row["share_base"], row["share_cur"] = sb, sc
-        if cfg["warn_on_window_share_drop"] and sc < sb:
+        if (fb - fc) * 100 > Fraction(str(cfg["warn_window_share_drop_pp"])):   # exact: a 5 pp drop of 100 seeds is not > 5
             row["reasons"].append("in-window share %.2f -> %.2f" % (sb, sc))
         row["verdict"] = "WARN" if row["reasons"] else "PASS"
         rows.append(row)
@@ -197,8 +200,8 @@ def render(res, cfg, base_label, cur_label, base, cur, extra=None):
     lines += ["", "| G | verdict | reasons |", "|---|---|---|"]
     for r in res["rows"]:
         lines.append("| G%d | %s | %s |" % (r["gen"], r["verdict"], "; ".join(r["reasons"]) or "-"))
-    lines += ["", "VERDICT: %s (WARN: a median moved > %d months or an in-window share dropped)" % (
-        res["verdict"], cfg["warn_median_shift_months"])]
+    lines += ["", "VERDICT: %s (WARN: a median moved > %d months or an in-window share dropped by > %s pp)" % (
+        res["verdict"], cfg["warn_median_shift_months"], cfg["warn_window_share_drop_pp"])]
     return "\n".join(lines) + "\n"
 
 
@@ -232,8 +235,13 @@ def dotnet():
     return found or os.path.expanduser("~/.dotnet/dotnet")
 
 
-def build_lab(tree):
-    sh(["nice", "-n", "10", dotnet(), "build", os.path.join(tree, "src", "Singularity.Lab"), "-c", "Release", "--nologo", "-v", "q"])
+def build_lab(tree, env=None, revision=None):
+    """Build the Lab of TREE. For a base archive: its own env (GIT_CEILING_DIRECTORIES) and SourceRevisionId = the base sha, so
+    the binary's build_commit names the base and not the HEAD of an enclosing checkout."""
+    cmd = ["nice", "-n", "10", dotnet(), "build", os.path.join(tree, "src", "Singularity.Lab"), "-c", "Release", "--nologo", "-v", "q"]
+    if revision:
+        cmd.append("-p:SourceRevisionId=" + revision)
+    sh(cmd, env=env)
     rel = os.path.join(tree, "src", "Singularity.Lab", "bin", "Release")
     for fw in sorted(os.listdir(rel), reverse=True):
         dll = os.path.join(rel, fw, "Singularity.Lab.dll")
@@ -259,7 +267,12 @@ def side_info(out, matrix):
     first = sorted(os.listdir(os.path.join(out, "runs")))[0]
     rj = read_json(os.path.join(out, "runs", first, "run.json"))
     return {"data_hash": rj.get("data_hash"), "core_commit": rj.get("core_commit"), "dirty": rj.get("dirty"),
-            "golden_set_hash": matrix.get("golden_set_hash")}
+            "build_commit": rj.get("build_commit"), "golden_set_hash": matrix.get("golden_set_hash")}
+
+
+def is_dirty(porcelain):
+    """Any change in src/, mods/ or lab/manifests counts, untracked files included (the SDK compiles every *.cs; mods are data)."""
+    return any(line.strip() for line in porcelain.splitlines())
 
 
 def git(*args):
@@ -301,7 +314,7 @@ def main_run(a):
     root = os.path.abspath(a.out)
     sha = git("rev-parse", "--verify", a.base + "^{commit}")
     head = git("rev-parse", "HEAD")
-    dirty = bool(git("status", "--porcelain", "--untracked-files=no", "--", "src", "mods", "lab/manifests"))
+    dirty = is_dirty(git("status", "--porcelain", "--untracked-files=all", "--", "src", "mods", "lab/manifests"))
     print("pace-check: base %s, current tree %s (HEAD %s%s), seeds %s, jobs %d" % (
         sha[:10], REPO, head[:10], ", dirty" if dirty else "", a.seeds or "all", a.jobs), flush=True)
 
@@ -319,7 +332,7 @@ def main_run(a):
         bmatrix = read_json(os.path.join(bout, "matrix.json"))
     else:
         print("base: build and run", flush=True)
-        bdll = build_lab(btree)
+        bdll = build_lab(btree, benv, sha)
         if os.path.exists(stamp):
             os.remove(stamp)
         bmatrix = run_matrix(bdll, bman, bout, a.jobs, a.seeds, benv)
@@ -327,17 +340,22 @@ def main_run(a):
 
     print("current: build and run", flush=True)
     cdll = build_lab(REPO)
+    bi = side_info(bout, bmatrix)
+    if bi["build_commit"] != sha:
+        raise RuntimeError("base build_commit %s != base %s (stale build? run without --reuse-base)" % (bi["build_commit"], sha))
     cout = os.path.join(root, "current", "run")
     cmatrix = run_matrix(cdll, manifest_path, cout, a.jobs, a.seeds)
 
     cfg_base = summarize(bout, btree, cfg)
     cfg_cur = summarize(cout, REPO, cfg)
     res = compare(cfg_base, cfg_cur, cfg)
-    bi, ci = side_info(bout, bmatrix), side_info(cout, cmatrix)
+    ci = side_info(cout, cmatrix)
     extra = {"manifest": "%s (sha256 %s)" % (os.path.relpath(manifest_path, REPO), mhash[:16]),
-             "base": "%s, data_hash %s, golden_set_hash %s" % (sha[:10], (bi["data_hash"] or "-")[:16], (bi["golden_set_hash"] or "-")[:16]),
-             "current": "HEAD %s%s, data_hash %s, golden_set_hash %s" % (head[:10], " + uncommitted changes" if dirty else "",
-                                                                         (ci["data_hash"] or "-")[:16], (ci["golden_set_hash"] or "-")[:16]),
+             "base": "%s (build_commit %s), data_hash %s, golden_set_hash %s" % (sha[:10], (bi["build_commit"] or "-")[:10],
+                                                                         (bi["data_hash"] or "-")[:16], (bi["golden_set_hash"] or "-")[:16]),
+             "current": "HEAD %s%s (build_commit %s), data_hash %s, golden_set_hash %s" % (
+                 head[:10], " + uncommitted changes" if dirty else "", (ci["build_commit"] or "-")[:10],
+                 (ci["data_hash"] or "-")[:16], (ci["golden_set_hash"] or "-")[:16]),
              "elapsed": "%.0f s" % (time.time() - t_start)}
     text = render(res, cfg, sha[:10], "current tree", cfg_base, cfg_cur, extra)
     print(text)
@@ -458,7 +476,7 @@ def main():
             verdict = main_run(a)
         else:
             ap.error("--base, --analyze or --selftest")
-    except (RuntimeError, ValueError, subprocess.CalledProcessError) as e:
+    except (RuntimeError, ValueError, OSError, subprocess.CalledProcessError) as e:
         sys.stderr.write("pace-check failed: %s\n" % e)
         return 1
     return 3 if a.strict and verdict == "WARN" else 0

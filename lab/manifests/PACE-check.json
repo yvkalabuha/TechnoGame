@@ -46,7 +46,7 @@
       },
       "usa_actor": "USA",
       "warn_median_shift_months": 24,
-      "warn_on_window_share_drop": true
+      "warn_window_share_drop_pp": 5
     }
   }
 }
