@@ -352,7 +352,8 @@ public class LeverModelTests
     [Fact]
     public void MarkNumbers_KeepsTheDecimalSeparatorOutOfTheMonoFace()
     {
-        Assert.Equal("$[code]19[/code],[code]3[/code] млрд", LeverText.MarkNumbers("$19,3 млрд"));
+        Assert.Equal("$19,3 млрд", LeverText.MarkNumbers("$19,3 млрд"));   // a decimal stays in the proportional face: no hole before the comma
+        Assert.Equal("$[code]12[/code] млрд, [code]5[/code] шт.", LeverText.MarkNumbers("$12 млрд, 5 шт."));
         Assert.Equal("[code]97%[/code] [lb]x]", LeverText.MarkNumbers("97% [x]"));
     }
 
@@ -477,5 +478,24 @@ public class LeverModelTests
             double best = System.Math.Max(ColorMath.Contrast(ColorMath.FromHex(Palette.Ink), bg), ColorMath.Contrast(ColorMath.FromHex(Palette.C.Paper), bg));
             Assert.True(best >= 3.0, $"focus ring on {fill}: {best:F2}");
         }
+    }
+
+    [Fact]
+    public void GroupThousands_AndFreshResult()
+    {
+        Assert.Equal("19\u00A0253", LeverText.GroupThousands(19253, "\u00A0"));
+        Assert.Equal("6", LeverText.GroupThousands(6, ","));
+        Assert.Equal("1,000,000", LeverText.GroupThousands(1_000_000, ","));
+        Assert.False(LeverText.ResultIsFresh(5, 5));   // a «shares: accepted» left from earlier play is not shown
+        Assert.True(LeverText.ResultIsFresh(6, 5));
+    }
+
+    [Fact]
+    public void WarnMark_HasThreeToOneOnPaperAndSheet_UnlikeThePlateColour()
+    {
+        // frame measure (tools/ui/frame_contrast.py): the plate orange D9860F was 2.55:1 on the paper; the triangle uses WarnMark
+        foreach (double k in new[] { 1.0, 0.94 })
+            foreach (string fill in new[] { Palette.C.Paper, Palette.C.Sheet })
+                Assert.True(ColorMath.Contrast(ColorMath.FromHex(Palette.WarnMark), ColorMath.FromHex(fill, k)) >= 3.0, $"warn mark on {fill} x{k}");
     }
 }

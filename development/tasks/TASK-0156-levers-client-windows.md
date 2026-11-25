@@ -54,3 +54,18 @@ docs/game-design/PLAYER_LEVERS_WAVE1.md и docs/game-design/economy/production-l
 - Окна «Бюджет и резерв» (B) и «Цели науки / институты» (N): `LeverWindow.cs`, модели `LeverModels.cs`, конфиг клиентской партии `ClientRun.cs` (PlayerActor, Reserve, Institutes, LicenceMarket, Adviser только для клиента; умолчания ядра не тронуты).
 - Тесты: `tests/Singularity.Client.Audio.Tests/LeverModelTests.cs` (+ вся сборка 438 ок), `Singularity.Localization.Tests` 133 ок. Клиент собран (`dotnet build src/Singularity.Client.Spike`), игра не запускалась.
 - Не сделано в части 1: окна «Линия производства» и «Рынок лицензий», эмблемы институтов, кадры и PASS ui-art-director, ревью reviewer.
+
+## Контраст по пикселям кадров (ui-art-director, раунд 2, п. 1)
+[Факт] `python3 -I tools/ui/frame_contrast.py` читает кадры `/var/www/gameDev/shots-out/TASK-0156-r2/*_1920x1080.png`, берёт пиксель чернил (дальше всего от фона по яркости) и фон (медиана области) внутри контрола, считает WCAG.
+
+| кадр | контрол | чернила | фон | отношение | нужно |
+|---|---|---|---|---|---|
+| lever_budget | Сбросить (неактивна) | #55575A | #EEE9DA | 5,97 | 4,5 |
+| lever_budget | Применить (неактивна) | #55575A | #F3EEDF | 6,25 | 4,5 |
+| lever_budget | «+» (неактивна) | #55575A | #F3EEDF | 6,25 | 3,0 |
+| lever_market_buy | Купить (неактивна) | #55575A | #EFEADB | 6,03 | 4,5 |
+| lever_market_buy | Выставить (неактивна) | #55575A | #F0EBDC | 6,08 | 4,5 |
+| lever_budget | ▲ (оранжевый D9860F) | #D9860F | #F5F2EA | **2,55 — ниже 3,0** | 3,0 |
+| lever_budget | ▲ резерв | #D9860F | #F7F4EB | **2,59 — ниже 3,0** | 3,0 |
+
+Вывод: текст неактивных кнопок 5,97–6,25 (≥ 4,5), впечатление «серый» — от тонкого начертания, не от цвета; замер art director по тексту не подтверждается. Оранжевый ▲ действительно ниже 3:1: теперь маркер предупреждения `Palette.WarnMark` = B35F00 (≈ 4,1 на бумаге; тест `WarnMark_HasThreeToOneOnPaperAndSheet...`, текст — `InactiveAndSubtitleText...`). Таблица выше — по кадрам до правки маркера; после следующей партии скрипт надо прогнать снова (кадры lever_budget, lever_market_buy).

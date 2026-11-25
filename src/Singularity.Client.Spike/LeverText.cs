@@ -20,11 +20,24 @@ public static class LeverText
         return sb.ToString();
     }
 
-    static readonly Regex Digits = new(@"\d+%?", RegexOptions.Compiled);
+    // whole numbers only: a decimal like 1,3 stays in the proportional face, where a narrow "1" does not leave a hole before the comma
+    static readonly Regex Digits = new(@"(?<![\d.,])(?>\d+)%?(?![.,]\d)", RegexOptions.Compiled);
 
-    /// <summary>BBCode for a prose: runs of digits (with a percent sign) get the mono face, the decimal comma or point stays in the text face so that "19,3" does not fall apart into "19 , 3".</summary>
+    /// <summary>BBCode for a prose: whole numbers (with a percent sign) get the mono face; a decimal number such as "19,3" stays in the text face.</summary>
     public static string MarkNumbers(string s) =>
         Digits.Replace(s.Replace("[", "[lb]"), m => "[code]" + m.Value + "[/code]");
+
+    /// <summary>Whole million with the thousands grouped by <paramref name="sep"/>: 19253 → "19 253" (no-break space in Russian).</summary>
+    public static string GroupThousands(long n, string sep)
+    {
+        string s = System.Math.Abs(n).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var sb = new StringBuilder();
+        for (int i = 0; i < s.Length; i++) { if (i > 0 && (s.Length - i) % 3 == 0) sb.Append(sep); sb.Append(s[i]); }
+        return (n < 0 ? "-" : "") + sb;
+    }
+
+    /// <summary>The result line of the last order is shown only for an order given while this window was open (a leftover «принято» from an earlier session of play is not news).</summary>
+    public static bool ResultIsFresh(long cmdSeq, long seqWhenOpened) => cmdSeq > seqWhenOpened;
 
     // Tabs of the window: 0 budget, 1 institutes, 2 lines, 3 market.
     static readonly string[][] TabCommands =

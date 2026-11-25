@@ -36,7 +36,7 @@ public sealed partial class LeverWindow : PanelContainer
     CaptionButton _apply, _reset, _close;
     int _tab = TabBudget;
     ScrollContainer _scroll;
-    long _seen = -1;
+    long _seen = -1, _cmdSeqAtOpen;
 
     // budget tab
     readonly int[] _pct = new int[3];
@@ -146,6 +146,7 @@ public sealed partial class LeverWindow : PanelContainer
         _apply.Visible = _reset.Visible = tab == TabBudget;
         _seen = -1; _sigInst = ""; _sigLines = ""; _sigMarket = ""; _confirmLine = null; _confirmBuy = null;
         _edited = false; _sent = null;
+        if (!wasOpen && _host.Ready) _cmdSeqAtOpen = _host.Snap.CmdSeq;
         Refresh();
         if (!wasOpen) Opened?.Invoke();
         (tab == TabBudget ? (Control)_sl[0] : _tabBtn[tab]).CallDeferred(Control.MethodName.GrabFocus);
@@ -181,7 +182,7 @@ public sealed partial class LeverWindow : PanelContainer
             row.AddChild(top);
             var ctl = new HBoxContainer(); ctl.AddThemeConstantOverride("separation", 8);
             var minus = Ui.Btn("−", () => Nudge(k, -1), focusable: true); minus.CustomMinimumSize = new Vector2(32, 32); _minus[i] = minus;
-            _sl[i] = new LeverSlider { MinValue = 0, MaxValue = 100, Step = 1, CustomMinimumSize = new Vector2(360, 32), SizeFlagsVertical = SizeFlags.ShrinkCenter };
+            _sl[i] = new LeverSlider { MinValue = 0, MaxValue = 100, Step = 1, CustomMinimumSize = new Vector2(360, 36), SizeFlagsVertical = SizeFlags.ShrinkCenter };
             ActorPanel.StyleSlider(_sl[i]);
             _sl[i].ValueChanged += v => OnSlider(k, (int)v);
             var plus = Ui.Btn("+", () => Nudge(k, 1), focusable: true); plus.CustomMinimumSize = new Vector2(32, 32); _plus[i] = plus;
@@ -316,6 +317,7 @@ public sealed partial class LeverWindow : PanelContainer
         _instBody.AddThemeConstantOverride("separation", 8);
         if (!m.Enabled) { _instBody.AddChild(Ui.Wrap("inst.noinst", 16)); return; }
         _instBody.AddChild(Ui.Lbl(Loc.T("inst.slots", m.SlotsTotal, m.SlotsBusy), 16, Ui.Ink2, FontKind.Draft));
+        _instBody.AddChild(Ui.Wrap("inst.price.note", 14, Ui.Ink2));   // once for the whole list (O-082)
         Control firstFocus = null; _firstPick = null;
         foreach (var r in m.Standing)
         {
@@ -360,7 +362,7 @@ public sealed partial class LeverWindow : PanelContainer
                 }
             }
             // the price of a goal for the rest of science stands next to the button, not only inside the open list (O-082: no number, no promise of a date)
-            col.AddChild(Ui.Wrap(Loc.T("inst.opt.price", InstituteParamsMonths()) + " " + Loc.T("inst.price.note"), 14, Ui.Ink2));
+            col.AddChild(Ui.Wrap(Loc.T("inst.opt.short", InstituteParamsMonths()), 14, Ui.Ink2));
             box.AddChild(col); _instBody.AddChild(box);
         }
         _instBody.AddChild(new HSeparator());
@@ -387,7 +389,7 @@ public sealed partial class LeverWindow : PanelContainer
         var start = Ui.Btn("inst.build.start", () => _host.Submit(new BuildInstitute(Player, candSlot), "cmd.build"), 14, can, true);
         start.Disabled = !can; start.CustomMinimumSize = new Vector2(0, 40); start.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         cc.AddChild(start);
-        if (!can) cc.AddChild(Ui.Wrap(Loc.T("inst.build.cant", Loc.T(cand.BuildDisabledKey, cand.BuildDisabledArg)), 16, Ui.Ink));
+        if (!can) cc.AddChild(Ui.Wrap(Loc.T("inst.build.cant", Loc.T(cand.BuildDisabledKey, cand.BuildDisabledArg)), 14, Ui.Ink));
         card.AddChild(cc); _instBody.AddChild(card);
         firstFocus?.CallDeferred(Control.MethodName.GrabFocus);
     }
@@ -422,7 +424,7 @@ public sealed partial class LeverWindow : PanelContainer
     void ShowResult(HostSnapshot s)
     {
         var r = s.Last;
-        bool mine = r.Status != CmdStatus.None && LeverText.ResultBelongsToTab(r.LabelKey, _tab);   // told only on the tab it belongs to (C1)
+        bool mine = r.Status != CmdStatus.None && LeverText.ResultBelongsToTab(r.LabelKey, _tab) && LeverText.ResultIsFresh(s.CmdSeq, _cmdSeqAtOpen);   // told only on the tab it belongs to (C1)
         _resultMark.Visible = mine && r.Status is CmdStatus.Rejected or CmdStatus.Error;
         _resultWord.Text = _resultMark.Visible ? Loc.T("lever.refused.word") : "";
         if (!mine) { _result.Text = ""; return; }

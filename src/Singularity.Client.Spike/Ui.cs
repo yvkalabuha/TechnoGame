@@ -15,7 +15,7 @@ public static class Ui
     static Color H(string hex) => new(hex);
     public static readonly Color Paper = H(Palette.C.Paper), Sheet = H(Palette.C.Sheet), Hover = H(Palette.C.Hover), Ink = H(Palette.Ink),
         Ink2 = H(Palette.Ink2), Ink3 = H(Palette.Ink3), Rule = H(Palette.Rule), Normal = new("86837C"), Border = H(Palette.Border),
-        Alarm = H(Palette.C.Alarm), Warn = H(Palette.C.Warn), Command = H(Palette.C.Command), Seq2 = new("C2CDD3");
+        Alarm = H(Palette.C.Alarm), Warn = H(Palette.C.Warn), WarnMark = H(Palette.WarnMark), Command = H(Palette.C.Command), Seq2 = new("C2CDD3");
 
     // Radius scale (§17.7): 0 data, 2 keys and plates, 4 buttons and fields, 6 panels and sheets.
     public const float R1 = 2, R2 = 4, R3 = 6;
@@ -75,10 +75,10 @@ public static class Ui
         r.AddThemeConstantOverride("separation", 6);
         // a warning of the lever windows adds a shape (▲): it differs from the ■ of a chosen item in a greyscale frame too (A5)
         Control m;
-        if (triangle)
+        if (triangle || marker == Warn)   // every warning carries the same shape
         {
             var t = new Label { Text = "▲", SizeFlagsVertical = Control.SizeFlags.ShrinkBegin };
-            t.AddThemeColorOverride("font_color", marker); t.AddThemeFontSizeOverride("font_size", 14);
+            t.AddThemeColorOverride("font_color", marker == Warn ? WarnMark : marker); t.AddThemeFontSizeOverride("font_size", 14);
             m = t;
         }
         else m = new ColorRect { Color = marker, CustomMinimumSize = new Vector2(9, 9), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };

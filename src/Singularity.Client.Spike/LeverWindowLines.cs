@@ -108,7 +108,7 @@ public sealed partial class LeverWindow
             var refuse = Act(Loc.T("lines.refuse", RefuseMonths), () => _host.Submit(src.Refuse(Player), "cmd.refuse", d)); _firstRefuse ??= refuse;
             row.AddChild(refuse);
             col.AddChild(row);
-            if (p.AcceptDisabledKey != "") col.AddChild(Ui.Wrap(Loc.T("inst.build.cant", Loc.T(p.AcceptDisabledKey, p.AcceptDisabledArg)), 16, Ui.Ink));
+            if (p.AcceptDisabledKey != "") col.AddChild(Ui.Wrap(Loc.T("inst.build.cant", Loc.T(p.AcceptDisabledKey, p.AcceptDisabledArg)), 14, Ui.Ink));
             _lineBody.AddChild(Card(col, true));
         }
         // the lines of the power
@@ -199,7 +199,7 @@ public sealed partial class LeverWindow
             col.AddChild(Ui.Lbl(Loc.T("mkt.card", o.SellerName, o.Gen), 16, null, FontKind.Draft));
             col.AddChild(Ui.Wrap(Loc.T("mkt.card.gives"), 14));
             col.AddChild(Ui.Wrap(Loc.T("mkt.card.price", o.Price, o.Reference, Loc.T("lever.money.suffix")), 14, Ui.Ink));
-            if (o.ReserveAfter != "") col.AddChild(Ui.Wrap(o.ReserveSame ? Loc.T("mkt.card.after.same", m.ReserveBalance, Loc.N(o.ReserveAfterMillion, 0)) : Loc.T("mkt.card.after", m.ReserveBalance, o.ReserveAfter), 14));
+            if (o.ReserveAfter != "") col.AddChild(Ui.Wrap(o.ReserveSame ? Loc.T("mkt.card.after.same", m.ReserveBalance, LeverText.GroupThousands((long)Math.Round(o.ReserveAfterMillion), Loc.Lang == "ru" ? "\u00A0" : ",")) : Loc.T("mkt.card.after", m.ReserveBalance, o.ReserveAfter), 14));
             bool can = MarketWindowModel.CanBuy(o, m.External); int seller = o.Seller, gen = o.Gen;
             // the confirmation opens only for a deal the core allows
             if (can && _confirmBuy is { } cb && cb.Seller == seller && cb.Gen == gen)
@@ -216,7 +216,7 @@ public sealed partial class LeverWindow
                 _buyBtn = Act("mkt.buy", () => { _confirmBuy = (seller, gen); _sigMarket = ""; Refresh(); }, true, can);                col.AddChild(_buyBtn);
             }
             string why = MarketWindowModel.ReasonKey(o, m.External);   // only under an inactive button
-            if (why != "") col.AddChild(Ui.Wrap(Loc.T("inst.build.cant", Loc.T(why)), 16, Ui.Ink));
+            if (why != "") col.AddChild(Ui.Wrap(Loc.T("inst.build.cant", Loc.T(why)), 14, Ui.Ink));
             _marketBody.AddChild(Card(col, true));
         }
         // what the power holds

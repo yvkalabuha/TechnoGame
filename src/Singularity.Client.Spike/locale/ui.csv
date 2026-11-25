@@ -599,8 +599,9 @@ cmd.refuse,refuse advice of project {0},отказ от совета по про
 cmd.buy,buy a licence (generation {0}),покупка лицензии ({0}-е поколение)
 cmd.offer,offer a licence (generation {0}),предложение лицензии ({0}-е поколение)
 bud.pp.note,"pp = percentage points: by how many points of the budget the share changed","п. п. — процентные пункты: на сколько пунктов бюджета изменилась доля"
-inst.price.note,"The price of a goal for the rest of science has no number: the game does not estimate it. Known: the money goes to the goal first, the rest of science gets less while it is open.","Цена цели для остальной науки числом не оценивается: игра такой оценки не даёт. Известно: деньги идут на цель первой, остальной науке достаётся меньше, пока цель открыта."
-mkt.card.after.same,"On the reserve account: {0}; after the purchase almost unchanged ({1} million)","На счёте резерва: {0}; после покупки почти не изменится ({1} млн)"
+inst.price.note,"Price of a goal for the rest of science: the money goes to the goal first, so the rest of science gets less while it is open. The game gives no number for it and promises no date.","Цена цели для остальной науки: деньги идут на цель первой, поэтому остальной науке достаётся меньше, пока цель открыта. Числа для этого игра не даёт и срок не обещает."
+inst.opt.short,The goal can be changed once in {0} months.,Цель можно менять раз в {0} мес.
+mkt.card.after.same,"On the reserve account: {0}; after the purchase almost unchanged (${1} million)","На счёте резерва: {0}; после покупки почти не изменится (${1} млн)"
 mkt.own.circle,Buyers:,Круг покупателей:
 lines.col.project,Project,Проект
 lines.col.stage,Stage,Стадия
