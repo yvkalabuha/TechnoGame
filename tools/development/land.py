@@ -129,10 +129,29 @@ def insert_trailer(message: str, line: str) -> str:
 def main() -> int:
     """Hold LAND_LOCK (our pid) for the whole landing: Codex sketches do not start while it exists."""
     LAND_LOCK.parent.mkdir(parents=True, exist_ok=True)
-    LAND_LOCK.write_text(str(os.getpid()), encoding="utf-8")
+    for _ in range(2):
+        try:  # O_EXCL: two landings cannot both take the lock
+            fd = os.open(LAND_LOCK, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            break
+        except FileExistsError:
+            try:
+                other = int(LAND_LOCK.read_text(encoding="utf-8").strip())
+                os.kill(other, 0)
+            except PermissionError:
+                other = -1
+            except (OSError, ValueError):
+                LAND_LOCK.unlink(missing_ok=True)  # stale: dead pid or garbage
+                continue
+            print(f"land: another landing is running (pid {other}); lock {LAND_LOCK}")
+            return 4
+    else:
+        print(f"land: cannot take {LAND_LOCK}")
+        return 4
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(str(os.getpid()))
     try:
         return run()
-    finally:
+    finally:  # only our own lock is removed
         try:
             if LAND_LOCK.read_text(encoding="utf-8").strip() == str(os.getpid()):
                 LAND_LOCK.unlink()

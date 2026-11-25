@@ -43,6 +43,7 @@ class CodexSketchTest(unittest.TestCase):
         self.calls = []
         type(self)._real_bwrap = staticmethod(codex.bwrap_argv)  # before the mock below hides it
         for p in (mock.patch("tools.llm_worker.gitleaks.scan_text"),
+                  mock.patch.object(codexsketch, "LAND_LOCK", t / "no-land.lock"),  # never the real lock of a running land.py
                   mock.patch.object(codex, "bwrap_argv", lambda *a, **k: ["bwrap"]),
                   mock.patch.object(codex, "codex_mounts", lambda exe, home=None: (Path(exe), [], Path("/usr/bin")))):
             p.start()
@@ -143,6 +144,23 @@ class CodexSketchTest(unittest.TestCase):
             self.go(self.runner(out), daily_cap=2)
         self.assertEqual((c.exception.code, len(self.calls)), ("codex_daily_cap", n))
 
+    def test_cap_reservation_is_atomic_under_threads(self):
+        import threading
+        results = []
+
+        def take():
+            try:
+                codexsketch.reserve_attempt(self.ledger, "2026-11-25", 3, "TASK-0145", "d")
+                results.append(True)
+            except sketch.SketchError:
+                results.append(False)
+        ts = [threading.Thread(target=take) for _ in range(8)]
+        for t in ts:
+            t.start()
+        for t in ts:
+            t.join()
+        self.assertEqual(results.count(True), 3)
+
     def test_command_is_sandboxed_and_clean(self):
         out = stream(ev(type="thread.started", thread_id=THREAD))
         self.go(self.runner(out, save=png()))
@@ -230,6 +248,12 @@ class EngineTest(unittest.TestCase):
         def quota(*a, **k):
             raise sketch.SketchError("agy_quota", "x")
         r, c = self.call("auto", quota, count=2)
+        self.assertEqual((r.code, c), ("agy_quota", []))
+
+    def test_agy_is_alias_of_gemini(self):
+        def quota(*a, **k):
+            raise sketch.SketchError("agy_quota", "x")
+        r, c = self.call("agy", quota)
         self.assertEqual((r.code, c), ("agy_quota", []))
 
     def test_codex_engine_skips_gemini(self):

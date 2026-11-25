@@ -8,6 +8,7 @@ under ~/.codex/generated_images/<thread_id>/ (path also named by the image event
 A sketch is a proposal: ADR-0026 needs ui-art-director's approval before use in mods/core/."""
 
 import base64
+import fcntl
 import hashlib
 import json
 import os
@@ -25,7 +26,7 @@ from .sketch import (SketchError, attribution_line, check_prompt_file, check_ref
                      IMAGE_EXT, run_sketch as run_gemini)
 from .visual import write_pair, TASK_RE
 
-ENGINES = ("auto", "gemini", "codex")
+ENGINES = ("auto", "gemini", "agy", "codex")  # agy: alias of gemini
 DEFAULT_DAILY_CAP = 4
 DEFAULT_TIMEOUT_S = 600
 ATTEMPT_PROVIDER = "codex-sketch"
@@ -94,6 +95,20 @@ def default_runner(argv, prompt, timeout, env):
     except OSError as e:
         raise SketchError("sandbox_unavailable", f"bwrap failed to start: {e}") from None
     return p.returncode, p.stdout, p.stderr
+
+
+def reserve_attempt(directory, day, cap, task, digest):
+    """Check the daily cap and log the attempt under one flock: two runs cannot both take the last slot."""
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+    fd = os.open(directory / "codex_attempts.lock", os.O_CREAT | os.O_RDWR, 0o600)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        if daily_attempts(directory, day) >= cap:
+            raise SketchError("codex_daily_cap", f"{cap} Codex sketch attempts today (--codex-daily-cap)")
+        codex.log_attempt(task, digest, "started", directory=directory, provider=ATTEMPT_PROVIDER)
+    finally:
+        os.close(fd)
 
 
 def daily_attempts(directory, day):
@@ -173,8 +188,6 @@ def run_codex_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_D
     if land_running(land_lock):
         raise SketchError("land_in_progress", "land.py is running: the second review needs the Codex limit")
     day = datetime.fromtimestamp(clock(), timezone.utc).strftime("%Y-%m-%d")
-    if daily_attempts(ledger_dir, day) >= daily_cap:
-        raise SketchError("codex_daily_cap", f"{daily_cap} Codex sketch attempts today (--codex-daily-cap)")
     try:
         exe = find()
         real, _, node_dir = codex.codex_mounts(exe, home)
@@ -197,7 +210,7 @@ def run_codex_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_D
             argv = codex.bwrap_argv(ws, None, exe, home=home, bwrap=bwrap) + command(str(real), [f"/work/{n}" for n in ws_refs])
         except SandboxUnavailable as e:
             raise SketchError("sandbox_unavailable", str(e)) from None
-        codex.log_attempt(task, digest, "started", directory=ledger_dir, provider=ATTEMPT_PROVIDER)
+        reserve_attempt(ledger_dir, day, daily_cap, task, digest)
         rc, out, err = runner(argv, build_prompt(brief, ws_refs), timeout_s, env)
     thread, paths, blobs, model, shell = parse_run(out)
     record.update(started_at=datetime.fromtimestamp(started, timezone.utc).isoformat(timespec="seconds"), exit_code=rc,
@@ -258,6 +271,7 @@ def run_engine(engine, task, prompt_file, refs=(), count=1, codex_kw=None, **kw)
     """engine gemini | codex | auto. auto: Gemini first; Codex only when Gemini is out of quota and one image was asked."""
     if engine not in ENGINES:
         raise SketchError("bad_engine", engine)
+    engine = "gemini" if engine == "agy" else engine
     codex_kw = dict(codex_kw or {})
     for k in ("runs_dir", "shots_dir", "root", "dry_run"):
         if k in kw:
