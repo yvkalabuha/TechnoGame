@@ -40,6 +40,9 @@ internal sealed class SliceWorld
 
     public SliceWorld(GameData data, SliceRunConfig config)
     {
+        // The table the market runs on goes into the config before anything reads it, so the fingerprint carries its identity (editing alliances.yaml changes it).
+        if (config.LicenceMarket && config.Alliances is null && data.AlliancesOf(data.Scenario(config.ScenarioId)) is { } scenarioAlliances)
+            config = config with { Alliances = scenarioAlliances };
         if (!Enum.IsDefined(config.Layer))
             throw new InvalidOperationException($"Layer control {(int)config.Layer} is not defined.");
         // The canonical L_P product layer has no AdoptLicensedDesign step: a paid licence would never become a project.
@@ -91,7 +94,7 @@ internal sealed class SliceWorld
             LicOff = config.LicOff, T6dOff = config.T6dOff,
             LicenceMarket = config.LicenceMarket, LicenceExternalRows = config.LicenceExternalActors.IsDefault ? [] : config.LicenceExternalActors,
             MarketActorIds = config.LicenceMarket ? scenario.ActorId : [], MarketStartYear = scenario.StartYear, MarketStartMonth = scenario.StartMonth,
-            Alliances = config.LicenceMarket ? config.Alliances ?? data.Alliances ?? throw new ArgumentException("The licence market needs the alliances table (AllianceTable.Load of scenarios/<id>/alliances.yaml): without it the Bloc and Friends circles are silently empty.", nameof(config)) : AllianceTable.Empty,
+            Alliances = config.LicenceMarket ? config.Alliances ?? throw new ArgumentException("The licence market needs the alliances table (AllianceTable.Load of scenarios/<id>/alliances.yaml): without it the Bloc and Friends circles are silently empty.", nameof(config)) : AllianceTable.Empty,
             Mastery = pp.Mastery,
         };
         config.ToolingTarget.Validate();

@@ -7,9 +7,9 @@ namespace Singularity.Core.Data;
 public sealed class GameData
 {
     internal GameData(ImmutableArray<ModManifest> mods, NodeTable nodes, ProductClassTable productClasses,
-        ImmutableArray<ScenarioData> scenarios, NodeHistoryTable history, ImmutableArray<string> warnings, InstituteTable institutes, IntelligenceData? intelligence = null, AllianceTable? alliances = null)
+        ImmutableArray<ScenarioData> scenarios, NodeHistoryTable history, ImmutableArray<string> warnings, InstituteTable institutes, IntelligenceData? intelligence = null, ImmutableArray<(string Directory, AllianceTable Table)> alliances = default)
     {
-        Alliances = alliances;
+        _alliances = alliances.IsDefault ? [] : alliances;
         Institutes = institutes;
         Intelligence = intelligence;
         Mods = mods;
@@ -47,8 +47,23 @@ public sealed class GameData
     /// <summary>The intelligence parameters, or null when no mod defines them. Outside <see cref="DataHash"/> (see <see cref="IntelligenceData"/>).</summary>
     public IntelligenceData? Intelligence { get; }
 
-    /// <summary>Blocs and friends of the loaded mods, or null when no mod has them. Outside <see cref="DataHash"/>; the licence market reads them when the run config gives none.</summary>
-    public Singularity.Core.Policy.AllianceTable? Alliances { get; }
+    private readonly ImmutableArray<(string Directory, AllianceTable Table)> _alliances;
+
+    /// <summary>
+    /// Blocs and friends of a scenario: the file <c>scenarios/&lt;start year&gt;/alliances.yaml</c> of the last mod that has one for that directory; null when there is none.
+    /// Outside <see cref="DataHash"/>: a run takes the table into its fingerprint (<c>SliceRunConfig.Alliances</c>), so editing the file changes the identity of a run.
+    /// </summary>
+    public AllianceTable? AlliancesOf(ScenarioData scenario)
+    {
+        string directory = scenario.StartYear.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        AllianceTable? found = null;
+        foreach ((string d, AllianceTable table) in _alliances)
+        {
+            if (d == directory)
+                found = table;
+        }
+        return found;
+    }
 
     /// <summary>SHA-256 (hex) of the canonical form of all loaded tables (L1 data identity).</summary>
     public string DataHash { get; }

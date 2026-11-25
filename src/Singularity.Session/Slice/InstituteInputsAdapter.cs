@@ -45,14 +45,14 @@ internal sealed class InstituteInputsAdapter(SliceWorld world) : IInstituteInput
         ProductsLayout l = world.ProductsLayout;
         KnowledgeGraph kg = world.Graph;
         Span<int> stack = kg.Count <= 512 ? stackalloc int[kg.Count] : new int[kg.Count];   // heap only above 512 nodes
-        byte level = 1;
-        for (int g = 1; g <= l.Generations && level <= 2; g++)
+        const byte level = 1;   // only g*: the rule never reads a second tier (ai-institute-goals.md §2 item 4, PATH)
+        for (int g = 1; g <= l.Generations; g++)
         {
             int marked = 0;
             marked += Seed(actorRow, l.GenApp[g - 1], level, tier, stack);
             int need = g - 1 < 1 ? 1 : g - 1;
             int engine = Fitting(actorRow, l, l.BaseSlot, g, -1, need, out bool engineOk);
-            if (!engineOk)
+            if (!engineOk && engine >= 0)
                 marked += SeedAlt(actorRow, l, engine, level, tier, stack);
             for (int s = 0; s < l.SlotCount; s++)
             {
@@ -63,7 +63,7 @@ internal sealed class InstituteInputsAdapter(SliceWorld world) : IInstituteInput
                     marked += SeedAlt(actorRow, l, alt, level, tier, stack);
             }
             if (marked > 0)
-                level++;
+                return;
         }
     }
 

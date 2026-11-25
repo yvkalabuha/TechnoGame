@@ -128,7 +128,7 @@ public class LicenceMarketSessionTests
     [Fact]
     public void LicenceMarket_WithoutTheAlliancesTable_IsRefused_NotSilentlyEmpty()
     {
-        // The core data carries its blocs (GameData.Alliances); the old 61-node fixture has none.
+        // The core data carries its blocs (GameData.AlliancesOf); the old 61-node fixture has none.
         Assert.Throws<ArgumentException>(() => SliceTestData.CreateLegacy(SliceRunConfig.Legacy with { Seed = 7, LicenceMarket = true }));
     }
 

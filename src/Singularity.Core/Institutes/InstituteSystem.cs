@@ -32,7 +32,7 @@ public interface IInstituteInputs
 
     /// <summary>
     /// The path of the actor to the next generation of the product (ai-institute-goals.md §2), a pure function of the snapshot: per node row,
-    /// 1 = unknown and needed for the next generation g* the actor cannot yet compose, 2 = the same for g*+1 (not already 1), 0 = neither.
+    /// 1 = unknown and needed for the next generation g* the actor cannot yet compose, 0 = not (g*+1 is not computed: the PATH rule does not use it).
     /// <paramref name="tier"/> has one entry per node row and is zeroed by the caller.
     /// </summary>
     void GoalPath(int actorRow, long month, Span<byte> tier);
