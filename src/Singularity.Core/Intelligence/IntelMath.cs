@@ -62,10 +62,11 @@ public static class IntelMath
     /// <summary><c>s_steal = min(s_max, σ·N·A)</c>: the discount of the theft channel on a node cost.</summary>
     public static Fx6 StealShare(IntelParams p, Fx6 n, Fx6 a) => Min(p.SMax, p.Sigma * n * a);
 
-    /// <summary>Yearly exposure hazard: <c>clamp(a0·N·act·(1 + g·ci_eff), 0, cap)</c>.</summary>
-    public static Fx6 HazardPerYear(IntelParams p, Fx6 n, Fx6 act, Fx6 ciEffOfTarget)
+    /// <summary>Yearly exposure hazard: <c>clamp(a0·N·A·act·(1 + g·ci_eff), 0, cap)</c>.</summary>
+    public static Fx6 HazardPerYear(IntelParams p, Fx6 n, Fx6 a, Fx6 act, Fx6 ciEffOfTarget)
     {
-        Fx6 h = p.HazardBasePerYear * n * act * (Fx6.One + p.CiHazardGain * ciEffOfTarget);
+        // The exposure follows the effectiveness N·A of the network (INTELLIGENCE.md §3): a young, immature network is hard to see.
+        Fx6 h = p.HazardBasePerYear * (n * a) * act * (Fx6.One + p.CiHazardGain * ciEffOfTarget);
         return Min(h, p.HazardCapPerYear);
     }
 

@@ -14,6 +14,12 @@ public enum IntelMode
 /// <summary>One of the (at most three) targets of an actor: the target's actor row and the mode against it.</summary>
 public readonly record struct IntelTarget(int Target, IntelMode Mode);
 
+/// <summary>What became of an exposed network: lost (size and maturity cut) or turned by the target (hidden from its owner).</summary>
+public enum ExposureOutcome { Lost = 1, Turned = 2 }
+
+/// <summary>The last exposure of a network: the month, the yearly risk the network had (the figure of the post-event report, #367) and the outcome.</summary>
+public readonly record struct ExposureRecord(long Month, Fx6 RiskPerYear, ExposureOutcome Outcome);
+
 /// <summary>The risk of exposure of a network in words (#367): the number is shown only after an event.</summary>
 public enum RiskWord { Low = 0, Noticeable = 1, High = 2 }
 
@@ -111,6 +117,15 @@ public sealed record IntelParams
 
     public required Fx6 PresetNormal { get; init; }
     public required Fx6 PresetStrong { get; init; }
+
+    /// <summary>Chance that an exposed network is turned by the target instead of being lost (#364, INTELLIGENCE.md §3).</summary>
+    public required Fx6 TurnOnExposure { get; init; }
+
+    /// <summary>Yearly chance that a turned network is found out (the monthly 0.05 of the design, as a norm).</summary>
+    public required Fx6 TurnDetectPerYear { get; init; }
+
+    /// <summary><c>sens</c> of the hidden licence event: <c>intel_conf = conf·sens</c> (EVENTS_POLITICS.md §10).</summary>
+    public required Fx6 SensLicence { get; init; }
 
     /// <summary>Most targets an actor may have (#214).</summary>
     public const int MaxTargets = 3;

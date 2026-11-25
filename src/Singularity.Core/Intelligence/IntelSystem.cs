@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Singularity.Kernel;
 
 namespace Singularity.Core.Intelligence;
@@ -21,26 +22,45 @@ public sealed class IntelSystem : ITickSystem
 {
     public const int DefaultSystemId = 600;
 
-    /// <summary>The RNG system of the exposure draw (ADR-0021 stream <c>intel.expose</c>), on the events stream; key <c>(month, 7, o·2^16 + t, 0)</c>.</summary>
+    /// <summary>The RNG system of the exposure draw (ADR-0021 stream <c>intel.expose</c>), on the events stream; key <c>(month, 7, <see cref="IntelRng.NetworkKey"/>, 0)</c>.</summary>
     public const int SystemExpose = 7;
+
+    /// <summary>The RNG system of the turn draws (<c>intel.turn</c>): turned on exposure (n = 0), found out (n = 1).</summary>
+    public const int SystemTurn = 8;
 
     private readonly IntelParams _p;
     private readonly IIntelInputs _in;
     private readonly CounterRng _events;
     private readonly int _rows;
     private readonly LongColumn[] _n, _a, _trace;
-    private readonly IntColumn[] _lost;
+    private readonly IntColumn[] _lost, _turned, _xMonth, _xKind;
+    private readonly LongColumn[] _xRisk;
+    private readonly ImmutableArray<int> _key;
     private readonly IntColumn[] _aiTarget, _aiMode;
     private readonly Fx6 _growthM, _decayM, _matM, _traceDecayM;
 
-    public IntelSystem(Table table, IntelParams parameters, IIntelInputs inputs, CounterRng events, int systemId = DefaultSystemId)
+    public IntelSystem(Table table, IntelParams parameters, IIntelInputs inputs, CounterRng events, ImmutableArray<string> actorIds, int systemId = DefaultSystemId)
     {
         _p = parameters;
         _in = inputs;
         _events = events;
         _rows = table.RowCount;
-        if (_rows > (1 << 15))
-            throw new ArgumentOutOfRangeException(nameof(table), _rows, "The exposure key o·2^16 + t must fit int32: at most 2^15 actors.");
+        if (actorIds.Length != _rows)
+            throw new ArgumentException("One stable actor id per row is required.", nameof(actorIds));
+        var keys = new int[_rows * _rows];
+        for (int o = 0; o < _rows; o++)
+        {
+            for (int t = 0; t < _rows; t++)
+                keys[o * _rows + t] = IntelRng.NetworkKey(actorIds[o], actorIds[t]);
+        }
+        _key = ImmutableArray.Create(keys);
+        int[] sorted = [.. keys];
+        Array.Sort(sorted);
+        for (int i = 1; i < sorted.Length; i++)
+        {
+            if (sorted[i] == sorted[i - 1])
+                throw new ArgumentException("Two networks share one RNG key: actor ids must give distinct keys.", nameof(actorIds));
+        }
         _growthM = IntelMath.PerMonth(parameters.GrowthPerYear);
         _decayM = IntelMath.PerMonth(parameters.DecayPerYear);
         _matM = IntelMath.PerMonth(parameters.MaturityPerYear);
@@ -49,12 +69,21 @@ public sealed class IntelSystem : ITickSystem
         _a = new LongColumn[_rows];
         _trace = new LongColumn[_rows];
         _lost = new IntColumn[_rows];
+        _turned = new IntColumn[_rows];
+        _xMonth = new IntColumn[_rows];
+        _xKind = new IntColumn[_rows];
+        _xRisk = new LongColumn[_rows];
         for (int t = 0; t < _rows; t++)
         {
             _n[t] = table.AddLong($"int.n.{t}");
             _a[t] = table.AddLong($"int.a.{t}");
             _trace[t] = table.AddLong($"int.tr.{t}");
             _lost[t] = table.AddInt($"int.lost.{t}");
+            _turned[t] = table.AddInt($"int.turn.{t}");
+            // The last exposure of the network (the post-event report, #367): month + 1 (0 = never), the yearly risk it had, and the outcome.
+            _xMonth[t] = table.AddInt($"int.xm.{t}");
+            _xRisk[t] = table.AddLong($"int.xr.{t}");
+            _xKind[t] = table.AddInt($"int.xk.{t}");
         }
         _aiTarget = new IntColumn[IntelParams.MaxTargets];
         _aiMode = new IntColumn[IntelParams.MaxTargets];
@@ -82,6 +111,13 @@ public sealed class IntelSystem : ITickSystem
 
     /// <summary>How many times the network of <c>o</c> in <c>t</c> was exposed.</summary>
     public int Lost(int o, int t) => _lost[t].Current[o];
+
+    /// <summary>The network of <c>o</c> in <c>t</c> was turned: <c>t</c> controls it (hidden from <c>o</c>).</summary>
+    public bool Turned(int o, int t) => _turned[t].Current[o] != 0;
+
+    /// <summary>The last exposure of the network of <c>o</c> in <c>t</c>: month, the yearly risk it had, the outcome; null if it was never exposed.</summary>
+    public ExposureRecord? LastExposure(int o, int t) =>
+        _xMonth[t].Current[o] == 0 ? null : new ExposureRecord(_xMonth[t].Current[o] - 1, Fx6.FromRaw(_xRisk[t].Current[o]), (ExposureOutcome)_xKind[t].Current[o]);
 
     /// <summary>The plan of the actor in force: the player's when set, else the AI's. False for an empty slot.</summary>
     public bool Plan(int actorRow, int slot, out int target, out IntelMode mode)
@@ -125,7 +161,7 @@ public sealed class IntelSystem : ITickSystem
         Fx6 best = Fx6.Zero;
         for (int k = 0; k < IntelParams.MaxTargets; k++)
         {
-            if (!Plan(actorRow, k, out int t, out IntelMode m) || m != IntelMode.Steal || !_in.Knows(t, nodeRow))
+            if (!Plan(actorRow, k, out int t, out IntelMode m) || m != IntelMode.Steal || Turned(actorRow, t) || !_in.Knows(t, nodeRow))
                 continue;
             Fx6 s = IntelMath.StealShare(_p, Network(actorRow, t), Maturity(actorRow, t));
             if (s > best)
@@ -136,7 +172,7 @@ public sealed class IntelSystem : ITickSystem
 
     /// <summary>The yearly exposure hazard of the network now (the number behind the risk word).</summary>
     public Fx6 HazardPerYear(int o, int t) =>
-        IntelMath.HazardPerYear(_p, Network(o, t), IntelMath.Act(_p, ModeAgainst(o, t)), CiEff(t));
+        Turned(o, t) ? Fx6.Zero : IntelMath.HazardPerYear(_p, Network(o, t), Maturity(o, t), IntelMath.Act(_p, ModeAgainst(o, t)), CiEff(t));
 
     public RiskWord Risk(int o, int t)
     {
@@ -193,6 +229,9 @@ public sealed class IntelSystem : ITickSystem
                 bias = _p.BiasMax * Fx6.FromInt(c) / Fx6.FromInt(s);
             }
         }
+        // A turned network feeds the estimate with what the target wants seen: a bias nobody flags (the owner does not know).
+        if (Turned(o, t) && bias < _p.BiasMax)
+            bias = _p.BiasMax;
         Fx6 conf = IntelMath.Confidence(Maturity(o, t), used);
         if (used == 0 || conf < _p.ConfVisible)
             return new IntelEstimate(false, 0, 0, conf, used, distorted);
@@ -220,31 +259,52 @@ public sealed class IntelSystem : ITickSystem
         Fx6 netShare = _in.SecurityShare(o) * (Fx6.One - _p.CiShare);
         Fx6 perTarget = targets == 0 ? Fx6.Zero : netShare / Fx6.FromInt(targets);
         Fx6 full = IntelMath.Sat(perTarget / _p.NetShareRef);
+        Fx6 detectM = IntelMath.MonthlyFromYearly(_p.TurnDetectPerYear);
         for (int t = 0; t < _rows; t++)
         {
             if (t == o)
                 continue;
             Fx6 n = Network(o, t), a = Maturity(o, t), tr = Trace(o, t);
+            bool turned = Turned(o, t);
             IntelMode mode = ModeAgainst(o, t);
             Fx6 ci = CiEff(t);
             Fx6 nStar = mode == IntelMode.None ? Fx6.Zero : full * (Fx6.One - _p.CiGrowthCut * ci);
             Fx6 n2 = n + (nStar > n ? _growthM : _decayM) * (nStar - n);
             Fx6 a2 = a + _matM * (n - a);
             Fx6 tr2 = tr - tr * _traceDecayM;
-            bool exposed = false;
-            if (mode != IntelMode.None && n > Fx6.Zero)
+            int key = _key[o * _rows + t];
+            bool exposed = false, found = false;
+            Fx6 risk = Fx6.Zero;
+            if (turned)
             {
-                Fx6 hm = IntelMath.MonthlyFromYearly(IntelMath.HazardPerYear(_p, n, IntelMath.Act(_p, mode), ci));
+                // A turned network is run by the target: no exposure draw, but it can be found out.
+                risk = _p.TurnDetectPerYear;
+                found = CounterRng.Chance(IntelRng.Turn(_events, month, key, 1), detectM);
+            }
+            else if (mode != IntelMode.None && n > Fx6.Zero)
+            {
+                risk = IntelMath.HazardPerYear(_p, n, a, IntelMath.Act(_p, mode), ci);
+                Fx6 hm = IntelMath.MonthlyFromYearly(risk);
                 tr2 += hm;
-                exposed = CounterRng.Chance(_events.NextU64(month, SystemExpose, o * (1 << 16) + t, 0), hm);
+                exposed = CounterRng.Chance(IntelRng.Expose(_events, month, key), hm);
             }
-            if (exposed)
+            bool turnNow = exposed && CounterRng.Chance(IntelRng.Turn(_events, month, key, 0), _p.TurnOnExposure);
+            if (exposed || found)
             {
-                n2 *= _p.LossKeepN;
-                a2 *= _p.LossKeepA;
-                tr2 = Fx6.Zero;
                 _lost[t].Next[o] = _lost[t].Current[o] + 1;
+                _xMonth[t].Next[o] = (int)month + 1;
+                _xRisk[t].Next[o] = risk.Raw;
+                tr2 = Fx6.Zero;
+                if (turnNow)
+                    _xKind[t].Next[o] = (int)ExposureOutcome.Turned;
+                else
+                {
+                    n2 *= _p.LossKeepN;
+                    a2 *= _p.LossKeepA;
+                    _xKind[t].Next[o] = (int)ExposureOutcome.Lost;
+                }
             }
+            _turned[t].Next[o] = turnNow || (turned && !found) ? 1 : 0;
             _n[t].Next[o] = n2.Raw;
             _a[t].Next[o] = a2.Raw;
             _trace[t].Next[o] = tr2.Raw;

@@ -323,6 +323,9 @@ public sealed partial class SliceSession
         for (int i = 0; i < data.Length; i++)
             System.Buffers.Binary.BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(sizeof(int) + i * sizeof(char)), data[i]);
         hash.AppendData(bytes);
+        // The intelligence parameters are outside the data hash: a snapshot must not resume under other ones (only a run with intelligence adds them).
+        if (_world.IntelDataHash.Length > 0)
+            hash.AppendData(System.Text.Encoding.UTF8.GetBytes("intel:" + _world.IntelDataHash));
         return hash.GetHashAndReset();
     }
 

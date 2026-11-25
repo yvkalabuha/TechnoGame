@@ -281,21 +281,37 @@ internal static class ViewBuilder
                 continue;
             IntelEstimate e = intel.Estimate(a, t);
             targets.Add(new IntelTargetView(t, mode, intel.NetworkOf(a, t), intel.Risk(a, t), intel.TraceOf(a, t), e.Visible,
-                e.Visible ? e.Low - mine : 0, e.Visible ? e.High - mine : 0, e.Confidence, e.Sources, e.Distorted, e.Visible ? w.LicenceActive(t) : null));
+                e.Visible ? e.Low - mine : 0, e.Visible ? e.High - mine : 0, e.Confidence, e.Sources, e.Distorted, HiddenEvents(w, intel, t, e)));
         }
         int lost = 0, caught = 0;
         TraceWord foreign = TraceWord.None;
+        var exposures = ImmutableArray.CreateBuilder<ExposureReportView>();
+        var caughtAt = ImmutableArray.CreateBuilder<CaughtView>();
         for (int o = 0; o < rows; o++)
         {
-            if (o != a)
-            {
-                caught += intel.Lost(o, a);
-                TraceWord tw = intel.TraceOf(o, a);
-                foreign = tw > foreign ? tw : foreign;
-            }
-            lost += o == a ? 0 : intel.Lost(a, o);
+            if (o == a)
+                continue;
+            caught += intel.Lost(o, a);
+            TraceWord tw = intel.TraceOf(o, a);
+            foreign = tw > foreign ? tw : foreign;
+            lost += intel.Lost(a, o);
+            if (intel.LastExposure(o, a) is { } theirs)
+                caughtAt.Add(new CaughtView(o, theirs.Month, theirs.Outcome));
+            // A turned network is not reported to its owner; one found out later is (the record then says Lost).
+            if (intel.LastExposure(a, o) is { Outcome: ExposureOutcome.Lost } own)
+                exposures.Add(new ExposureReportView(o, own.Month, own.RiskPerYear, own.Outcome));
         }
-        return new IntelView(w.SharesOf(a).Security, intel.SecurityWordOf(w.SharesOf(a).Security), targets.ToImmutable(), lost, caught, foreign);
+        return new IntelView(w.SharesOf(a).Security, intel.SecurityWordOf(w.SharesOf(a).Security), targets.ToImmutable(), lost, caught, foreign,
+            exposures.ToImmutable(), caughtAt.ToImmutable());
+    }
+
+    // Hidden events of a target through intelligence (#508): only above the visibility of the layer, each with intel_conf·sens of its own.
+    private static ImmutableArray<HiddenEventView> HiddenEvents(SliceWorld w, IntelSystem intel, int target, IntelEstimate e)
+    {
+        Fx6 conf = e.Confidence * intel.Parameters.SensLicence;
+        if (!e.Visible || conf < intel.Parameters.ConfVisible || !w.LicenceActive(target))
+            return [];
+        return [new HiddenEventView(HiddenEventKind.Licence, w.Policy.LicenceSeller(target), w.Policy.LicenceGen(target), w.Policy.LicenceStart(target), conf)];
     }
 
     // The variants of the yearly Requirement; FV is not read in the calibration mode (spec §8.2 п. 2). Initialize writes only pol.* columns,

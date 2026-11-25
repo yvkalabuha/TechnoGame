@@ -163,7 +163,7 @@ internal sealed class SliceWorld
         {
             IntelligenceData intel = data.Intelligence ?? throw new InvalidOperationException("Intelligence is on but the data has no `intelligence` object.");
             IntelParams = intel.Params;
-            Intel = new IntelSystem(Table, intel.Params, new IntelInputsAdapter(this), Streams.Events);
+            Intel = new IntelSystem(Table, intel.Params, new IntelInputsAdapter(this), Streams.Events, scenario.ActorId);
             IntelDataHash = intel.Hash;
         }
         Commands = new CommandState(Table, ProductsLayout.SlotCount, ProductsLayout.Designs,
@@ -366,7 +366,8 @@ internal sealed class SliceWorld
 
     private IntelParams? IntelParams { get; }
 
-    private string IntelDataHash { get; } = "";
+    /// <summary>Hash of the intelligence parameters ("" without intelligence): part of the identity of a snapshot, as they are outside the data hash.</summary>
+    internal string IntelDataHash { get; } = "";
     public WhyNotAnalyzer WhyNot { get; }
     public CommandLimits Limits { get; }
     public TickRunner Runner { get; }

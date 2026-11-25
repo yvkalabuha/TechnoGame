@@ -127,16 +127,30 @@ public sealed record ActorInputsView(
 /// <param name="NetworksLost">Networks of this actor that were exposed so far.</param>
 /// <param name="NetworksCaught">Foreign networks caught against this actor so far (the use of counter-intelligence).</param>
 /// <param name="ForeignTrace">The strongest trace of a foreign network in this actor, in words.</param>
-public sealed record IntelView(Fx6 Security, SecurityWord Preset, ImmutableArray<IntelTargetView> Targets, int NetworksLost, int NetworksCaught, TraceWord ForeignTrace);
+/// <param name="Exposures">The post-event report of this actor's own lost networks, one per target (#367): month, the yearly risk the network had ("the risk was about 4 % a year"), outcome. A turned network is not here: its owner does not know.</param>
+/// <param name="CaughtAtMe">The last foreign network caught against this actor, per foreign actor: who, when, lost or turned.</param>
+public sealed record IntelView(Fx6 Security, SecurityWord Preset, ImmutableArray<IntelTargetView> Targets, int NetworksLost, int NetworksCaught, TraceWord ForeignTrace,
+    ImmutableArray<ExposureReportView> Exposures, ImmutableArray<CaughtView> CaughtAtMe);
+
+/// <summary>An exposed network of the actor: its target, the month, the yearly risk it had at that month and the outcome (always <see cref="ExposureOutcome.Lost"/> in a view).</summary>
+public readonly record struct ExposureReportView(int Target, long Month, Fx6 RiskPerYear, ExposureOutcome Outcome);
+
+/// <summary>A foreign network caught in this actor: the owner, the month and what was done with it.</summary>
+public readonly record struct CaughtView(int Foreign, long Month, ExposureOutcome Outcome);
+
+/// <summary>A hidden event of the target seen only through intelligence (#508, EVENTS_POLITICS.md §10): the licence deal in force. <c>Confidence = intel_conf·sens</c>, shown at 0.3 and above.</summary>
+public readonly record struct HiddenEventView(HiddenEventKind Kind, int Seller, int Gen, int StartMonth, Fx6 Confidence);
+
+public enum HiddenEventKind { Licence = 1 }
 
 /// <summary>
 /// One target card. <c>LeadLow</c> and <c>LeadHigh</c> are the range of "nodes the target knows minus nodes the actor knows" (positive: the target is ahead), valid
 /// when <c>EstimateVisible</c>; the exact value is never in a view. <c>Confidence</c> is the figure of the help text (#260), derived from the sources.
-/// <c>Distorted</c> = the target's false trails corrupted the sources ("data distorted"). <c>LicenceSeen</c> = a hidden event of the target seen through
-/// intelligence (#508): its licence deal is in force; null while the estimate layer is not visible.
+/// <c>Distorted</c> = the target's false trails corrupted the sources ("data distorted"). <c>HiddenEvents</c> = hidden events of the target seen through intelligence,
+/// each with its own confidence (empty while the layer is not visible).
 /// </summary>
 public readonly record struct IntelTargetView(int Target, IntelMode Mode, NetworkWord Network, RiskWord Risk, TraceWord Trace, bool EstimateVisible,
-    int LeadLow, int LeadHigh, Fx6 Confidence, int Sources, bool Distorted, bool? LicenceSeen);
+    int LeadLow, int LeadHigh, Fx6 Confidence, int Sources, bool Distorted, ImmutableArray<HiddenEventView> HiddenEvents);
 
 /// <summary>
 /// The reserve account of an actor (null when the run has none): the balance, what the five items leave into it this month, and what the next step takes

@@ -83,6 +83,16 @@ type Singularity.Session.CapabilityView [struct]
   method ToString() : System.String
   prop AlloyDeficit : Singularity.Kernel.Fx6 { get; init; }
   prop AlloySupply : Singularity.Kernel.Fx6 { get; init; }
+type Singularity.Session.CaughtView [struct]
+  ctor(System.Int32 Foreign, System.Int64 Month, Singularity.Core.Intelligence.ExposureOutcome Outcome)
+  method Deconstruct(System.Int32& Foreign, System.Int64& Month, Singularity.Core.Intelligence.ExposureOutcome& Outcome) : System.Void
+  method Equals(Singularity.Session.CaughtView other) : System.Boolean
+  method Equals(System.Object obj) : System.Boolean
+  method GetHashCode() : System.Int32
+  method ToString() : System.String
+  prop Foreign : System.Int32 { get; init; }
+  prop Month : System.Int64 { get; init; }
+  prop Outcome : Singularity.Core.Intelligence.ExposureOutcome { get; init; }
 type Singularity.Session.CloseView [struct]
   ctor(System.Int32 Design, Singularity.Core.Policy.LineCloseReason Reason, Singularity.Core.Products.DesignHandle Handle)
   method Deconstruct(System.Int32& Design, Singularity.Core.Policy.LineCloseReason& Reason, Singularity.Core.Products.DesignHandle& Handle) : System.Void
@@ -173,6 +183,17 @@ type Singularity.Session.EffortShareArm [enum]
   field X2 : Singularity.Session.EffortShareArm = 3 static
   field X4 : Singularity.Session.EffortShareArm = 4 static
   field value__ : System.Int32
+type Singularity.Session.ExposureReportView [struct]
+  ctor(System.Int32 Target, System.Int64 Month, Singularity.Kernel.Fx6 RiskPerYear, Singularity.Core.Intelligence.ExposureOutcome Outcome)
+  method Deconstruct(System.Int32& Target, System.Int64& Month, Singularity.Kernel.Fx6& RiskPerYear, Singularity.Core.Intelligence.ExposureOutcome& Outcome) : System.Void
+  method Equals(Singularity.Session.ExposureReportView other) : System.Boolean
+  method Equals(System.Object obj) : System.Boolean
+  method GetHashCode() : System.Int32
+  method ToString() : System.String
+  prop Month : System.Int64 { get; init; }
+  prop Outcome : Singularity.Core.Intelligence.ExposureOutcome { get; init; }
+  prop RiskPerYear : Singularity.Kernel.Fx6 { get; init; }
+  prop Target : System.Int32 { get; init; }
 type Singularity.Session.ForceProxy [sealed class]
   ctor(Singularity.Session.SliceSession session, System.Int32 rateDivisor)
   method Issue(System.Int64 month) : System.Void
@@ -193,9 +214,24 @@ type Singularity.Session.GridStep [enum]
   field Lo : Singularity.Session.GridStep = 1 static
   field Mid : Singularity.Session.GridStep = 0 static
   field value__ : System.Int32
+type Singularity.Session.HiddenEventKind [enum]
+  field Licence : Singularity.Session.HiddenEventKind = 1 static
+  field value__ : System.Int32
+type Singularity.Session.HiddenEventView [struct]
+  ctor(Singularity.Session.HiddenEventKind Kind, System.Int32 Seller, System.Int32 Gen, System.Int32 StartMonth, Singularity.Kernel.Fx6 Confidence)
+  method Deconstruct(Singularity.Session.HiddenEventKind& Kind, System.Int32& Seller, System.Int32& Gen, System.Int32& StartMonth, Singularity.Kernel.Fx6& Confidence) : System.Void
+  method Equals(Singularity.Session.HiddenEventView other) : System.Boolean
+  method Equals(System.Object obj) : System.Boolean
+  method GetHashCode() : System.Int32
+  method ToString() : System.String
+  prop Confidence : Singularity.Kernel.Fx6 { get; init; }
+  prop Gen : System.Int32 { get; init; }
+  prop Kind : Singularity.Session.HiddenEventKind { get; init; }
+  prop Seller : System.Int32 { get; init; }
+  prop StartMonth : System.Int32 { get; init; }
 type Singularity.Session.IntelTargetView [struct]
-  ctor(System.Int32 Target, Singularity.Core.Intelligence.IntelMode Mode, Singularity.Core.Intelligence.NetworkWord Network, Singularity.Core.Intelligence.RiskWord Risk, Singularity.Core.Intelligence.TraceWord Trace, System.Boolean EstimateVisible, System.Int32 LeadLow, System.Int32 LeadHigh, Singularity.Kernel.Fx6 Confidence, System.Int32 Sources, System.Boolean Distorted, System.Nullable`1[System.Boolean] LicenceSeen)
-  method Deconstruct(System.Int32& Target, Singularity.Core.Intelligence.IntelMode& Mode, Singularity.Core.Intelligence.NetworkWord& Network, Singularity.Core.Intelligence.RiskWord& Risk, Singularity.Core.Intelligence.TraceWord& Trace, System.Boolean& EstimateVisible, System.Int32& LeadLow, System.Int32& LeadHigh, Singularity.Kernel.Fx6& Confidence, System.Int32& Sources, System.Boolean& Distorted, System.Nullable`1[System.Boolean]&? LicenceSeen) : System.Void
+  ctor(System.Int32 Target, Singularity.Core.Intelligence.IntelMode Mode, Singularity.Core.Intelligence.NetworkWord Network, Singularity.Core.Intelligence.RiskWord Risk, Singularity.Core.Intelligence.TraceWord Trace, System.Boolean EstimateVisible, System.Int32 LeadLow, System.Int32 LeadHigh, Singularity.Kernel.Fx6 Confidence, System.Int32 Sources, System.Boolean Distorted, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.HiddenEventView] HiddenEvents)
+  method Deconstruct(System.Int32& Target, Singularity.Core.Intelligence.IntelMode& Mode, Singularity.Core.Intelligence.NetworkWord& Network, Singularity.Core.Intelligence.RiskWord& Risk, Singularity.Core.Intelligence.TraceWord& Trace, System.Boolean& EstimateVisible, System.Int32& LeadLow, System.Int32& LeadHigh, Singularity.Kernel.Fx6& Confidence, System.Int32& Sources, System.Boolean& Distorted, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.HiddenEventView]& HiddenEvents) : System.Void
   method Equals(Singularity.Session.IntelTargetView other) : System.Boolean
   method Equals(System.Object obj) : System.Boolean
   method GetHashCode() : System.Int32
@@ -203,9 +239,9 @@ type Singularity.Session.IntelTargetView [struct]
   prop Confidence : Singularity.Kernel.Fx6 { get; init; }
   prop Distorted : System.Boolean { get; init; }
   prop EstimateVisible : System.Boolean { get; init; }
+  prop HiddenEvents : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.HiddenEventView] { get; init; }
   prop LeadHigh : System.Int32 { get; init; }
   prop LeadLow : System.Int32 { get; init; }
-  prop LicenceSeen : System.Nullable`1[System.Boolean] { get; init; }
   prop Mode : Singularity.Core.Intelligence.IntelMode { get; init; }
   prop Network : Singularity.Core.Intelligence.NetworkWord { get; init; }
   prop Risk : Singularity.Core.Intelligence.RiskWord { get; init; }
@@ -213,13 +249,15 @@ type Singularity.Session.IntelTargetView [struct]
   prop Target : System.Int32 { get; init; }
   prop Trace : Singularity.Core.Intelligence.TraceWord { get; init; }
 type Singularity.Session.IntelView [sealed class]
-  ctor(Singularity.Kernel.Fx6 Security, Singularity.Core.Intelligence.SecurityWord Preset, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.IntelTargetView] Targets, System.Int32 NetworksLost, System.Int32 NetworksCaught, Singularity.Core.Intelligence.TraceWord ForeignTrace)
+  ctor(Singularity.Kernel.Fx6 Security, Singularity.Core.Intelligence.SecurityWord Preset, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.IntelTargetView] Targets, System.Int32 NetworksLost, System.Int32 NetworksCaught, Singularity.Core.Intelligence.TraceWord ForeignTrace, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.ExposureReportView] Exposures, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.CaughtView] CaughtAtMe)
   method <Clone>$() : Singularity.Session.IntelView
-  method Deconstruct(Singularity.Kernel.Fx6& Security, Singularity.Core.Intelligence.SecurityWord& Preset, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.IntelTargetView]& Targets, System.Int32& NetworksLost, System.Int32& NetworksCaught, Singularity.Core.Intelligence.TraceWord& ForeignTrace) : System.Void
+  method Deconstruct(Singularity.Kernel.Fx6& Security, Singularity.Core.Intelligence.SecurityWord& Preset, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.IntelTargetView]& Targets, System.Int32& NetworksLost, System.Int32& NetworksCaught, Singularity.Core.Intelligence.TraceWord& ForeignTrace, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.ExposureReportView]& Exposures, System.Collections.Immutable.ImmutableArray`1[Singularity.Session.CaughtView]& CaughtAtMe) : System.Void
   method Equals(Singularity.Session.IntelView? other) : System.Boolean
   method Equals(System.Object? obj) : System.Boolean
   method GetHashCode() : System.Int32
   method ToString() : System.String
+  prop CaughtAtMe : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.CaughtView] { get; init; }
+  prop Exposures : System.Collections.Immutable.ImmutableArray`1[Singularity.Session.ExposureReportView] { get; init; }
   prop ForeignTrace : Singularity.Core.Intelligence.TraceWord { get; init; }
   prop NetworksCaught : System.Int32 { get; init; }
   prop NetworksLost : System.Int32 { get; init; }

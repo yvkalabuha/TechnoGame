@@ -189,15 +189,18 @@ public class IntelligenceTests
     }
 
     [Fact]
-    public void Exposure_FollowsTheDrawOfTheNetwork_AndIsTheSameOnEveryThreadCount()
+    public void Exposure_FollowsTheDrawOfTheNetworkKeyedByActorIds_AndIsTheSameOnEveryThreadCount()
     {
         SliceSession s = Make();
         CounterRng events = s.World.Streams.Events;
+        IntelParams p = Intel(s).Parameters;
+        var ids = s.World.Scenario.ActorId;
         int exposures = 0;
-        for (long m = 0; m < 144; m++)
+        for (long m = 0; m < 240; m++)
         {
             int rows = s.World.Table.RowCount;
             var expected = new bool[rows, rows];
+            var risk = new Fx6[rows, rows];
             var before = new int[rows, rows];
             for (int o = 0; o < rows; o++)
             {
@@ -206,8 +209,18 @@ public class IntelligenceTests
                     if (o == t)
                         continue;
                     before[o, t] = Intel(s).Lost(o, t);
-                    Fx6 hm = IntelMath.MonthlyFromYearly(Intel(s).HazardPerYear(o, t));
-                    expected[o, t] = hm > Fx6.Zero && CounterRng.Chance(events.NextU64(m, IntelSystem.SystemExpose, o * (1 << 16) + t, 0), hm);
+                    int key = IntelRng.NetworkKey(ids[o], ids[t]);   // the stable ids, not the rows
+                    if (Intel(s).Turned(o, t))
+                    {
+                        risk[o, t] = p.TurnDetectPerYear;
+                        expected[o, t] = CounterRng.Chance(events.NextU64(m, IntelSystem.SystemTurn, key, 1), IntelMath.MonthlyFromYearly(p.TurnDetectPerYear));
+                    }
+                    else
+                    {
+                        risk[o, t] = Intel(s).HazardPerYear(o, t);
+                        Fx6 hm = IntelMath.MonthlyFromYearly(risk[o, t]);
+                        expected[o, t] = hm > Fx6.Zero && CounterRng.Chance(events.NextU64(m, IntelSystem.SystemExpose, key, 0), hm);
+                    }
                 }
             }
             s.StepThroughMonth(m);
@@ -218,15 +231,20 @@ public class IntelligenceTests
                     if (o == t)
                         continue;
                     Assert.Equal(expected[o, t] ? 1 : 0, Intel(s).Lost(o, t) - before[o, t]);
-                    exposures += expected[o, t] ? 1 : 0;
+                    if (!expected[o, t])
+                        continue;
+                    exposures++;
+                    // The post-event report keeps the month and the risk the network had before the event (#367).
+                    ExposureRecord rec = Intel(s).LastExposure(o, t)!.Value;
+                    Assert.Equal((m, risk[o, t]), (rec.Month, rec.RiskPerYear));
                 }
             }
         }
-        Assert.True(exposures > 0, "no network was exposed in twelve years: the test would prove nothing");
+        Assert.True(exposures > 0, "no network was exposed in twenty years: the test would prove nothing");
 
-        // L2: the thread count and the chunking change nothing (state hash and the exposure counts).
+        // L2: the thread count and the chunking change nothing (state hash).
         SliceSession one = Make(threads: 1, chunk: 1), many = Make(threads: 4, chunk: 2);
-        for (long m = 0; m < 144; m++)
+        for (long m = 0; m < 240; m++)
         {
             one.StepThroughMonth(m);
             many.StepThroughMonth(m);
@@ -236,27 +254,142 @@ public class IntelligenceTests
     }
 
     [Fact]
-    public void Exposure_NeverRaisesTheYearlyRiskAboveTheCap_AndLossesAreTheDataFractions()
+    public void NetworkKey_IsAPinnedFunctionOfTheTwoActorIds()
     {
-        SliceSession s = Make();
-        IntelParams p = Intel(s).Parameters;
-        Assert.True(s.Submit(SourceClass.Player, 0, 0, Plan(s, Usa, 30_000, T(Gbr, IntelMode.Steal))).Accepted);
-        for (long m = 0; m < 120; m++)
+        Assert.Equal(IntelRng.NetworkKey("USA", "SUN"), IntelRng.NetworkKey("USA", "SUN"));
+        Assert.NotEqual(IntelRng.NetworkKey("USA", "SUN"), IntelRng.NetworkKey("SUN", "USA"));
+        Assert.Equal(1048665604, IntelRng.NetworkKey("USA", "SUN"));   // pinned: a change of the function re-keys every exposure
+        
+        var ids = SliceTestData.Data.Scenario("jet_slice_1945").ActorId;
+        var keys = ids.SelectMany(o => ids.Where(t => t != o).Select(t => IntelRng.NetworkKey(o, t))).ToArray();
+        Assert.Equal(keys.Length, keys.Distinct().Count());
+    }
+
+    [Fact]
+    public void Hazard_FollowsMaturity_AYoungNetworkIsHardToSee()
+    {
+        IntelParams p = SliceTestData.Data.Intelligence!.Params;
+        Assert.Equal(Fx6.Zero, IntelMath.HazardPerYear(p, Fx6.One, Fx6.Zero, Fx6.One, Fx6.Zero));
+        Fx6 young = IntelMath.HazardPerYear(p, Fx6.One, Fx6.FromRaw(200_000), Fx6.One, Fx6.Zero), mature = IntelMath.HazardPerYear(p, Fx6.One, Fx6.FromRaw(800_000), Fx6.One, Fx6.Zero);
+        Assert.True(young > Fx6.Zero && young < mature);
+        Assert.Equal(p.HazardCapPerYear, IntelMath.HazardPerYear(p with { HazardBasePerYear = Fx6.One }, Fx6.One, Fx6.One, Fx6.One, Fx6.One));
+    }
+
+    // The core mod with some intelligence values replaced.
+    private static Singularity.Core.Data.GameData DataWith(params (string From, string To)[] replacements)
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "singularity-intel-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        string core = Path.Combine(SliceTestData.RepoRoot, "mods", "core");
+        foreach (string f in Directory.GetFiles(core, "*.yaml"))
         {
-            for (int o = 0; o < s.World.Table.RowCount; o++)
+            string text = File.ReadAllText(f);
+            if (Path.GetFileName(f) == "intelligence.yaml")
             {
-                for (int t = 0; t < s.World.Table.RowCount; t++)
+                foreach ((string from, string to) in replacements)
                 {
-                    if (o != t)
-                        Assert.True(Intel(s).HazardPerYear(o, t) <= p.HazardCapPerYear);
+                    Assert.Contains(from, text);
+                    text = text.Replace(from, to);
                 }
             }
-            int lostBefore = Intel(s).Lost(Usa, Gbr);
+            File.WriteAllText(Path.Combine(dir, Path.GetFileName(f)), text);
+        }
+        try
+        {
+            return Singularity.Core.Data.ModLoader.Load(dir);
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
+    [Fact]
+    public void Turned_AnExposedNetworkCanBeTurned_ItStealsNothing_AndIsFoundOutLater()
+    {
+        // Every exposure turns the network; the draws are the real ones.
+        var config = new SliceRunConfig { Seed = 7, Intelligence = true };
+        SliceSession s = SliceSession.Create(DataWith(("turn_on_exposure: 0.30", "turn_on_exposure: 1.00"), ("hazard_base_per_year: 0.20", "hazard_base_per_year: 1.00")), config);
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, Plan(s, Sun, 30_000, T(Usa, IntelMode.Steal))).Accepted);
+        bool sawTurned = false, sawFoundOut = false;
+        long turnedAt = -1, foundAt = -1;
+        for (long m = 0; m < 240; m++)
+        {
+            bool wasTurned = Intel(s).Turned(Sun, Usa);
+            int lost = Intel(s).Lost(Sun, Usa);
             s.StepThroughMonth(m);
-            if (Intel(s).Lost(Usa, Gbr) > lostBefore)
+            // The view of a step shows the state before it: the events of month m-1 are in the inputs of month m.
+            if (turnedAt == m - 1 && turnedAt >= 0)
+            {
+                Assert.Contains(s.View.Inputs!.Actors[Usa].Intel!.CaughtAtMe, c => c.Foreign == Sun && c.Outcome == ExposureOutcome.Turned);   // the victim is told
+                Assert.DoesNotContain(s.View.Inputs!.Actors[Sun].Intel!.Exposures, e => e.Target == Usa && e.Month == turnedAt);              // the owner is not
+            }
+            if (foundAt == m - 1 && foundAt >= 0)
+                Assert.Contains(s.View.Inputs!.Actors[Sun].Intel!.Exposures, e => e.Target == Usa && e.Month == foundAt && e.RiskPerYear == Intel(s).Parameters.TurnDetectPerYear);
+            bool turned = Intel(s).Turned(Sun, Usa);
+            if (turned)
+            {
+                sawTurned = true;
+                for (int r = 0; r < s.World.Graph.Count; r++)
+                    Assert.Equal(Fx6.Zero, Intel(s).StealShare(Sun, r));   // a turned network steals nothing
+                if (!wasTurned)
                 {
-                Assert.True(Intel(s).Network(Usa, Gbr) <= p.LossKeepN && Intel(s).Maturity(Usa, Gbr) <= p.LossKeepA, "an exposed network keeps at most the data fractions of a full one");
-                Assert.Equal(Fx6.Zero, Intel(s).Trace(Usa, Gbr));
+                    Assert.Equal(ExposureOutcome.Turned, Intel(s).LastExposure(Sun, Usa)!.Value.Outcome);
+                    turnedAt = m;
+                }
+            }
+            if (wasTurned && !turned)
+            {
+                sawFoundOut = true;
+                foundAt = m;
+                Assert.Equal(lost + 1, Intel(s).Lost(Sun, Usa));
+                Assert.Equal(ExposureOutcome.Lost, Intel(s).LastExposure(Sun, Usa)!.Value.Outcome);
+            }
+        }
+        Assert.True(sawTurned && sawFoundOut, $"turned {sawTurned}, found out {sawFoundOut}");
+    }
+
+    [Fact]
+    public void Loader_RefusesATheftCeilingOfOne_WhichCouldZeroCEff()
+    {
+        Assert.Throws<Singularity.Core.Data.DataLoadException>(() => DataWith(("s_max: 0.70", "s_max: 1.00")));
+        Assert.Throws<Singularity.Core.Data.DataLoadException>(() => DataWith(("s_max: 0.70", "s_max: 1.50")));
+    }
+
+    [Fact]
+    public void Snapshot_OfAnotherIntelligenceParameterSet_IsRefused()
+    {
+        var config = new SliceRunConfig { Seed = 7, Intelligence = true };
+        SliceSession a = SliceSession.Create(SliceTestData.Data, config);
+        for (long m = 0; m < 3; m++)
+            a.StepThroughMonth(m);
+        var snap = new MemoryStream();
+        a.WriteSnapshot(snap);
+        SliceSession same = SliceSession.Create(SliceTestData.Data, config);
+        same.LoadSnapshot(new MemoryStream(snap.ToArray()));   // the same parameters load
+        SliceSession other = SliceSession.Create(DataWith(("sigma: 1.50", "sigma: 0.00")), config);
+        Assert.ThrowsAny<Exception>(() => other.LoadSnapshot(new MemoryStream(snap.ToArray())));
+    }
+
+    [Fact]
+    public void HiddenEvents_AreShownOnlyThroughAVisibleEstimate_WithTheirOwnConfidence()
+    {
+        SliceSession s = Make();
+        Assert.True(s.Submit(SourceClass.Player, 0, 0, Plan(s, Gbr, 30_000, T(Usa, IntelMode.Observe), T(Sun, IntelMode.Observe))).Accepted);
+        IntelParams p = Intel(s).Parameters;
+        for (long m = 0; m < 180; m++)
+        {
+            s.StepThroughMonth(m);
+            foreach (IntelTargetView card in s.View.Inputs!.Actors[Gbr].Intel!.Targets)
+            {
+                if (!card.EstimateVisible)
+                    Assert.Empty(card.HiddenEvents);
+                foreach (HiddenEventView h in card.HiddenEvents)
+                {
+                    Assert.True(h.Confidence >= p.ConfVisible);
+                    Assert.Equal(card.Confidence * p.SensLicence, h.Confidence);
+                    Assert.True(s.World.LicenceActive(card.Target));
+                }
             }
         }
     }
