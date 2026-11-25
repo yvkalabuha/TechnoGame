@@ -245,6 +245,9 @@ public sealed partial class Main : Node3D
 
     void BuildClient(CanvasLayer layer, int seed, GameData data)
     {
+        // the id the client really plays: an unknown --power falls back to USA here and in FinishClient, so the session config and the UI name the same power
+        var actorIds = data.Scenarios[0].ActorId;
+        if (!actorIds.Contains(_powerArg)) _powerArg = actorIds.Contains("USA") ? "USA" : actorIds[0];
         _host = new SimHost(seed, data, _powerArg);
         _host.Start();
         _loading = Ui.Lbl("ui.loading", 18);
@@ -628,7 +631,7 @@ public sealed partial class Main : Node3D
         else if (e is InputEventKey f3 && f3.Pressed && f3.Keycode == Key.F3)
         {
             _debug = !_debug; _hud.Visible = _debug;
-            if (_signal != null) { _signal.Debug = _debug; _actorPanel.Debug = _debug; }
+            if (_signal != null) { _signal.Debug = _debug; _actorPanel.Debug = _debug; _levers.Debug = _debug; }
         }
         else if (e is InputEventKey f6 && f6.Pressed && !f6.Echo && f6.Keycode == Key.F6 && _debug) ApplyGlobeLook(GlobeLookLogic.Next(_look));
         else if (e is InputEventKey f1 && f1.Pressed && f1.Keycode == Key.F1 && _help != null) _help.Visible = !_help.Visible;

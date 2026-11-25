@@ -16,6 +16,9 @@ namespace Singularity.Client.Spike;
 public sealed partial class LeverWindow : PanelContainer
 {
     public const int TabBudget = 0, TabInstitutes = 1;
+    static readonly string[] TabKeys = { "lever.tab.budget", "lever.tab.inst" };
+    /// <summary>F3: the Session text of a refusal is shown under the plain words.</summary>
+    public bool Debug { get; set; }
 
     readonly SimHost _host;
     public int Player { get; set; }
@@ -75,11 +78,10 @@ public sealed partial class LeverWindow : PanelContainer
         var head = new HBoxContainer(); head.AddThemeConstantOverride("separation", 12);
         _title.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         head.AddChild(_title);
-        string[] tabKeys = { "lever.tab.budget", "lever.tab.inst" };
         for (int i = 0; i < 2; i++)
         {
             int k = i;
-            _tabBtn[i] = Ui.Btn(tabKeys[i], () => ShowTab(k), focusable: true);
+            _tabBtn[i] = Ui.Btn(TabKeys[i], () => ShowTab(k), focusable: true);
             _tabBtn[i].CustomMinimumSize = new Vector2(0, 40);
             head.AddChild(_tabBtn[i]);
         }
@@ -281,7 +283,9 @@ public sealed partial class LeverWindow : PanelContainer
         var a = v.Actors.FirstOrDefault(x => x.Actor == Player);
         var inp = v.Inputs?.Actors.FirstOrDefault(x => x.Actor == Player);
         double research = inp == null ? 0 : inp.Budget.ToDouble() * inp.Shares.Research.ToDouble();
-        return InstitutesWindowModel.Build(a, v.Date.Year, v.Month, research, MoneyFormat.Current, n => Names.Node(_host.Data, n), Discipline);
+        var sc = _host.Data.Scenarios[0];
+        var ctx = new InstituteContext(sc.StartYear, sc.StartMonth, InstitutesWindowModel.IsSmallCountry(sc, Player));
+        return InstitutesWindowModel.Build(a, v.Month, research, MoneyFormat.Current, ctx, n => Names.Node(_host.Data, n), Discipline);
     }
 
     string LevelsText(ImmutableArray<(int Discipline, int Level)> lv) => string.Join(" · ", lv.Select(x => Loc.T("disc." + x.Discipline) + " " + x.Level));
@@ -337,7 +341,9 @@ public sealed partial class LeverWindow : PanelContainer
                 foreach (var o in r.Options)
                 {
                     int node = o.Node; bool cur = o.Node == r.GoalNode;
-                    string t = Loc.T(o.Threshold ? "inst.opt.threshold" : "inst.opt", o.Name, o.BonusPct, Loc.N(o.Remaining, 1));
+                    string t = o.BonusPct == 0
+                        ? Loc.T("inst.opt.nobonus", o.Name, Loc.N(o.Remaining, 1)) + (o.BetterInstituteId != "" ? " " + Loc.T("inst.opt.better", InstName(o.BetterInstituteId)) : "")
+                        : Loc.T(o.Threshold ? "inst.opt.threshold" : "inst.opt", o.Name, o.BonusPct, Loc.N(o.Remaining, 1));
                     var ob = Ui.Btn((cur ? "■ " : "□ ") + t, () => { _host.Submit(new SetPriorityNode(Player, s, node), "cmd.priority"); _expandSlot = -1; _sigInst = ""; }, focusable: true);
                     ob.CustomMinimumSize = new Vector2(0, 32); ob.Alignment = HorizontalAlignment.Left; ob.SizeFlagsHorizontal = SizeFlags.ExpandFill;
                     col.AddChild(ob);
@@ -386,8 +392,7 @@ public sealed partial class LeverWindow : PanelContainer
         if (!_host.Ready) return;
         var s = _host.Snap;
         _seen = s.Seq;
-        string[] tabKeys = { "lever.tab.budget", "lever.tab.inst" };
-        for (int i = 0; i < 2; i++) _tabBtn[i].Text = (i == _tab ? "■ " : "□ ") + Loc.T(tabKeys[i]);   // the open tab is marked by a shape, not only a fill
+        for (int i = 0; i < 2; i++) _tabBtn[i].Text = (i == _tab ? "■ " : "□ ") + Loc.T(TabKeys[i]);   // the open tab is marked by a shape, not only a fill
         UpdateBudget();
         if (_tab == TabInstitutes) { FillInstitutes(); _footer.Text = ""; _apply.Visible = _reset.Visible = false; }
         ShowResult(s);
@@ -404,8 +409,9 @@ public sealed partial class LeverWindow : PanelContainer
         _resultWord.Text = _resultMark.Visible ? Loc.T("lever.refused.word") : "";
         if (!mine) { _result.Text = ""; return; }
         string what = Loc.T(r.LabelKey, r.LabelArg);
-        string why = r.Status == CmdStatus.Rejected ? Loc.TOr(InstitutesWindowModel.RefusalKey(r.Reason) ?? "refusal." + r.Reason, r.Reason) : r.Status == CmdStatus.Error ? r.Reason : "";
-        _result.Text = Loc.T("cmd." + r.Status, what, why);
+        // plain words always; the code and the English Session text of a refusal only under F3
+        string why = r.Status == CmdStatus.Rejected ? Loc.TOr(InstitutesWindowModel.RefusalKey(r.Reason) ?? "refusal." + r.Reason, Loc.T("refusal.generic")) : r.Status == CmdStatus.Error ? Loc.T("refusal.error") : "";
+        _result.Text = Loc.T("cmd." + r.Status, what, why) + (Debug && r.Reason != "" ? "\n" + r.Reason + (r.Message != "" ? ": " + r.Message : "") : "");
     }
 
     /// <summary>Run-time assertion on a real session state (ui.md, TASK-0111): the same models the window draws, over the live view; null = consistent.</summary>

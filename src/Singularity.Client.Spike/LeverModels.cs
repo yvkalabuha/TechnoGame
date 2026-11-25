@@ -38,15 +38,24 @@ public static class BudgetWindowModel
     /// <summary>The visible shares in force as whole percents (science, mastery, procurement).</summary>
     public static int[] InForcePct(BudgetShares s) => new[] { PctOf(s.Research), PctOf(s.Effort), PctOf(s.Procurement) };
 
-    /// <summary>The command for the edited percents: the hidden items (tooling, quality, security) stay exactly as in force, so the player never changes what the window does not show.</summary>
+    static Fx6[] Visible(BudgetShares s) => new[] { s.Research, s.Effort, s.Procurement };
+
+    /// <summary>Raw share of item k for the edited percents: an item whose percent did not change keeps its exact value in force (a share of 28.4 % is not rounded to 28 % by a click elsewhere).</summary>
+    static long RawOf(BudgetShares inForce, int[] pct, int k)
+    {
+        Fx6 f = Visible(inForce)[k];
+        return pct[k] == PctOf(f) ? f.Raw : pct[k] * Pct1;
+    }
+
+    /// <summary>The command for the edited percents: the hidden items (tooling, quality, security) and every unchanged item stay exactly as in force, so the player never changes what the window does not show or did not touch.</summary>
     public static BudgetShares ToShares(BudgetShares inForce, int[] pct) =>
-        new(Fx6.FromRaw(pct[Science] * Pct1), inForce.Capability, Fx6.FromRaw(pct[Mastery] * Pct1), Fx6.FromRaw(pct[Procurement] * Pct1), inForce.Quality, inForce.Security);
+        new(Fx6.FromRaw(RawOf(inForce, pct, Science)), inForce.Capability, Fx6.FromRaw(RawOf(inForce, pct, Mastery)), Fx6.FromRaw(RawOf(inForce, pct, Procurement)), inForce.Quality, inForce.Security);
 
     /// <summary>Largest percent of item <paramref name="i"/> given the others: the sum with the hidden items may not pass 100 %.</summary>
     public static int MaxFor(BudgetShares inForce, int[] pct, int i)
     {
         long others = Hidden(inForce);
-        for (int k = 0; k < pct.Length; k++) if (k != i) others += pct[k] * Pct1;
+        for (int k = 0; k < pct.Length; k++) if (k != i) others += RawOf(inForce, pct, k);
         return (int)Math.Clamp((Whole - others) / Pct1, 0, 100);
     }
 
@@ -93,8 +102,8 @@ public static class BudgetWindowModel
     }
 }
 
-/// <summary>One research goal the player can give to an institute: a node of the frontier with what it still needs and what this institute adds in its area.</summary>
-public sealed record GoalOption(int Node, string Name, int Discipline, double Remaining, bool Threshold, int BonusPct);
+/// <summary>One research goal the player can give to an institute: a node of the frontier with what it still needs and what this institute adds in its area (O-082: a bonus of 0 comes with the standing institute that does have a level there).</summary>
+public sealed record GoalOption(int Node, string Name, int Discipline, double Remaining, bool Threshold, int BonusPct, string BetterInstituteId);
 
 public enum InstituteState { Free, Goal, Building, Candidate }
 
@@ -109,6 +118,9 @@ public sealed record InstituteRow(
     string BuildDisabledKey, int BuildDisabledArg,
     ImmutableArray<GoalOption> Options);
 
+/// <summary>What the model needs of the scenario: the calendar of the month index and whether the actor is a small country (the same rule as InstituteLayout).</summary>
+public sealed record InstituteContext(int StartYear, int StartMonth, bool SmallCountry);
+
 public sealed record InstitutesModel(bool Enabled, ImmutableArray<InstituteRow> Standing, ImmutableArray<InstituteRow> Candidates, int SlotsTotal, int SlotsBusy, double ResearchYearMillion);
 
 public static class InstitutesWindowModel
@@ -120,7 +132,47 @@ public static class InstitutesWindowModel
     /// <param name="researchIdxMonth">Research money per month in budget indices (research share of the budget in force).</param>
     /// <param name="nodeName">Plain name of a node by its number.</param>
     /// <param name="nodeDiscipline">Discipline index of a node by its number, -1 unknown.</param>
-    public static InstitutesModel Build(ActorView actor, int year, long month, double researchIdxMonth, MoneyFormat.Scale scale,
+    public static int YearOf(InstituteContext c, long month) => c.StartYear + (int)((c.StartMonth - 1 + month) / 12);
+
+    /// <summary>Same rule as InstituteLayout: small = budget index not above SmallCountryShare of the largest.</summary>
+    public static bool IsSmallCountry(Singularity.Core.Data.ScenarioData sc, int actor)
+    {
+        Fx6 largest = Fx6.Zero;
+        foreach (Fx6 b in sc.BudgetIndex) largest = b > largest ? b : largest;
+        return sc.BudgetIndex[actor] <= largest * new InstituteParams().SmallCountryShare;
+    }
+
+    /// <summary>The order of the core to start a project is applied in the month after the one the player sees (verified against the project start in the view, test InstituteQuote).</summary>
+    public const int StartLag = 1;
+
+    /// <summary>Share of research money a project takes per month: the same call as InstituteSystem.BuildRate, at the month the institute opens (start + months - 1).
+    /// TODO(TASK-0175): switch to the core quote of the view when the price rule changes; do not extend this client copy.</summary>
+    public static Fx6 QuoteRate(InstituteContext c, int totalLevels, int refYear, long startMonth, InstituteParams p) =>
+        InstituteMath.BuildRate(totalLevels, refYear - YearOf(c, startMonth + InstituteMath.BuildMonths(totalLevels, p) - 1), p);
+
+    /// <summary>The check of the core (InstituteSystem.CanBuild) on what the view carries; the month is the one the order will be checked in.</summary>
+    public static BuildCheck CheckBuild(InstituteView i, InstituteContext c, long month, InstituteParams p)
+    {
+        if (i.Standing) return BuildCheck.AlreadyStanding;
+        if (i.BuildStart >= 0) return BuildCheck.AlreadyBuilding;
+        if (YearOf(c, month) < i.RefYear - p.WindowYears) return BuildCheck.TooEarly;
+        if (c.SmallCountry && i.TotalLevels > p.SmallCountryLevelCap) return BuildCheck.SmallCountryCap;
+        return BuildCheck.Ok;
+    }
+
+    /// <summary>Locale key of the reason a project cannot start (null = it can); the argument of the key is given by <see cref="BuildWhyArg"/>.</summary>
+    public static string BuildWhyKey(BuildCheck b) => b switch
+    {
+        BuildCheck.AlreadyStanding => "why.inst.standing",
+        BuildCheck.AlreadyBuilding => "why.inst.building",
+        BuildCheck.TooEarly => "why.inst.early",
+        BuildCheck.SmallCountryCap => "why.inst.cap",
+        _ => "",
+    };
+
+    static int BuildWhyArg(BuildCheck b, InstituteView i, InstituteParams p) => b == BuildCheck.TooEarly ? i.RefYear - p.WindowYears : b == BuildCheck.SmallCountryCap ? p.SmallCountryLevelCap : 0;
+
+    public static InstitutesModel Build(ActorView actor, long month, double researchIdxMonth, MoneyFormat.Scale scale, InstituteContext ctx,
         Func<int, string> nodeName, Func<int, int> nodeDiscipline)
     {
         if (actor == null || actor.Institutes.IsDefault || scale == null)
@@ -147,7 +199,14 @@ public static class InstitutesWindowModel
                     if (taken.Contains(r.Node) && r.Node != inst.Goal) continue;
                     int d = nodeDiscipline(r.Node);
                     int level = d >= 0 && d < inst.Levels.Length ? inst.Levels[d] : 0;
-                    opts.Add(new GoalOption(r.Node, nodeName(r.Node), d, Math.Max(0, (r.Need - r.Have).ToDouble()), r.Threshold, BonusPct(level, p)));
+                    string better = "";
+                    if (level == 0 && d >= 0)
+                    {
+                        int best = 0;
+                        foreach (var o in actor.Institutes)
+                            if (o.Standing && o.Slot != inst.Slot && d < o.Levels.Length && o.Levels[d] > best && (o.Goal == 0 || o.Goal == r.Node)) { best = o.Levels[d]; better = o.Id; }
+                    }
+                    opts.Add(new GoalOption(r.Node, nodeName(r.Node), d, Math.Max(0, (r.Need - r.Have).ToDouble()), r.Threshold, BonusPct(level, p), better));
                 }
                 int gd = inst.Goal > 0 ? nodeDiscipline(inst.Goal) : -1;
                 int gl = gd >= 0 && gd < inst.Levels.Length ? inst.Levels[gd] : 0;
@@ -159,13 +218,13 @@ public static class InstitutesWindowModel
             else
             {
                 bool building = inst.BuildStart >= 0;
-                int ahead = Math.Max(0, inst.RefYear - year);
-                int months = InstituteMath.BuildMonths(inst.TotalLevels, p);
-                Fx6 rate = InstituteMath.BuildRate(inst.TotalLevels, ahead, p);
+                int months = building ? inst.BuildMonths : InstituteMath.BuildMonths(inst.TotalLevels, p);
+                // a running project: the share of the view; a candidate: the quote of the core function at its opening month (TODO(TASK-0175): the core quote)
+                Fx6 rate = building ? inst.BuildRate : QuoteRate(ctx, inst.TotalLevels, inst.RefYear, month + StartLag, p);
+                int ahead = building ? Math.Max(0, inst.RefYear - YearOf(ctx, inst.BuildStart + inst.BuildMonths - 1)) : Math.Max(0, inst.RefYear - YearOf(ctx, month + StartLag + months - 1));
                 double perMonth = MoneyFormat.Million1990(rate.ToDouble() * researchIdxMonth, scale);
-                string why = ""; int arg = 0;
-                if (building) why = "why.inst.building";
-                else if (year < inst.RefYear - p.WindowYears) { why = "why.inst.early"; arg = inst.RefYear - p.WindowYears; }
+                BuildCheck chk = CheckBuild(inst, ctx, month + StartLag, p);
+                string why = BuildWhyKey(chk); int arg = BuildWhyArg(chk, inst, p);
                 int left = building ? Math.Max(0, (int)(inst.BuildStart + inst.BuildMonths - month)) : 0;
                 cands.Add(new InstituteRow(inst.Slot, inst.Id, building ? InstituteState.Building : InstituteState.Candidate, lv, 0, "", 0, 0, 0, "", inst.ProposesBuild,
                     inst.RefYear, left, building ? inst.BuildMonths : months, true,

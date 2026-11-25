@@ -53,7 +53,8 @@ public static class MoneyFormat
         {
             unit = ru ? "млрд" : "B";
             double b = Math.Round(m / 1000.0, 1, MidpointRounding.AwayFromZero);
-            num = b >= 100 ? Math.Round(b, MidpointRounding.AwayFromZero).ToString("F0", CultureInfo.InvariantCulture) : b.ToString("F1", CultureInfo.InvariantCulture);
+            // «$31 млрд», not «$31,0 млрд» (dollars-1990.md): the digit after the comma only when it is not zero
+            num = b >= 100 || b == Math.Floor(b) ? Math.Round(b, MidpointRounding.AwayFromZero).ToString("F0", CultureInfo.InvariantCulture) : b.ToString("F1", CultureInfo.InvariantCulture);
         }
         else { unit = ru ? "трлн" : "T"; num = Math.Round(m / 1_000_000.0, 1, MidpointRounding.AwayFromZero).ToString("F1", CultureInfo.InvariantCulture); }
         if (decimalComma) num = num.Replace('.', ',');

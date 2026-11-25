@@ -42,10 +42,10 @@ public class LeverModelTests
         Assert.Equal("$850" + Nbsp + "млн", MoneyFormat.Format(850, true, true));
         Assert.Equal("$30,6" + Nbsp + "млрд", MoneyFormat.Format(30_600, true, true));
         Assert.Equal("$30.6" + Nbsp + "B", MoneyFormat.Format(30_600, false, false));
-        Assert.Equal("$31" + Nbsp + "млрд", MoneyFormat.Format(31_000, true, true).Replace(",0", ""));
+        Assert.Equal("$31" + Nbsp + "млрд", MoneyFormat.Format(31_000, true, true));
         Assert.Equal("$150" + Nbsp + "млрд", MoneyFormat.Format(150_400, true, true));
         Assert.Equal("$1,5" + Nbsp + "трлн", MoneyFormat.Format(1_458_000, true, true));
-        Assert.Equal("$1" + Nbsp + "млрд", MoneyFormat.Format(999.6, true, true).Replace("1,0", "1"));
+        Assert.Equal("$1" + Nbsp + "млрд", MoneyFormat.Format(999.6, true, true));
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public class LeverModelTests
     {
         // 999.6 million is 1 000 million after rounding, so it reads in billions and never as «$1000 млн»
         Assert.DoesNotContain("1000", MoneyFormat.Format(999.6, true, true));
-        Assert.StartsWith("$1,0", MoneyFormat.Format(999.6, true, true));
+        Assert.Equal("$1" + Nbsp + "млрд", MoneyFormat.Format(999.6, true, true));
         Assert.Equal("$0" + Nbsp + "млн", MoneyFormat.Format(0.2, true, true));
     }
 
@@ -177,6 +177,75 @@ public class LeverModelTests
         Assert.Equal(7, WhyLines.SubjectNode(kn));
     }
 
+    [Fact]
+    public void ToShares_KeepsAnUntouchedItemExactly_AndMaxForCountsItExactly()
+    {
+        var s = new BudgetShares(Fx6.FromRaw(284_000), Fx6.FromRaw(150_000), Fx6.FromRaw(100_000), Fx6.FromRaw(420_000), Fx6.FromRaw(46_000));
+        var n = BudgetWindowModel.ToShares(s, new[] { 28, 8, 42 });   // science 28.4 % shows as 28 % and is not touched
+        Assert.Equal(284_000, n.Research.Raw);
+        Assert.Equal(80_000, n.Effort.Raw);
+        Assert.Equal(420_000, n.Procurement.Raw);
+        Assert.True(n.IsValidWithReserve);
+        // the 0.4 pp the display rounds away still counts against the 100 % limit
+        Assert.Equal(10, BudgetWindowModel.MaxFor(s, new[] { 28, 10, 42 }, 1));   // 100 - 19.6 hidden - 28.4 - 42
+    }
+
+    // The price of a project is the call of the core at its opening month (item TASK-0175 will replace it with the core quote).
+    [Fact]
+    public void InstituteQuote_EqualsTheCoreRateOfTheStartedProject_ForAProjectOpeningBeforeItsHistoricalYear()
+    {
+        GameData data = ModLoader.Load(Path.Combine(Root(), "mods", "core"));
+        var sc = data.Scenarios[0];
+        int usa = sc.ActorIndex("USA");
+        var s = SliceSession.Create(data, ClientRun.Config(data, Root(), 7, "USA"));
+        for (long t0 = 0; t0 < 40; t0++) s.StepThroughMonth(t0);
+        var scale = Scale();
+        ActorView a = s.View.Actors.First(x => x.Actor == usa);
+        var ctx = new InstituteContext(sc.StartYear, sc.StartMonth, InstitutesWindowModel.IsSmallCountry(sc, usa));
+        var p = new Singularity.Core.Institutes.InstituteParams();
+        long month = s.View.Month;
+        var pick = a.Institutes.FirstOrDefault(i => !i.Standing && i.BuildStart < 0
+            && InstitutesWindowModel.CheckBuild(i, ctx, month + InstitutesWindowModel.StartLag, p) == Singularity.Core.Institutes.BuildCheck.Ok
+            && i.RefYear > InstitutesWindowModel.YearOf(ctx, month + 60));
+        Assert.NotNull(pick);   // a candidate that opens years before its historical year
+        Fx6 quoted = InstitutesWindowModel.QuoteRate(ctx, pick!.TotalLevels, pick.RefYear, month + InstitutesWindowModel.StartLag, p);
+        Assert.True(s.Submit(Singularity.Core.Commands.SourceClass.Player, 0, 1, new BuildInstitute(usa, pick.Slot)).Accepted);
+        for (long t1 = 40; t1 < 43; t1++) s.StepThroughMonth(t1);
+        var started = s.View.Actors.First(x => x.Actor == usa).Institutes.First(i => i.Slot == pick.Slot);
+        Assert.True(started.BuildStart >= 0);
+        Assert.Equal(month + InstitutesWindowModel.StartLag, started.BuildStart);
+        Assert.Equal(started.BuildRate, quoted);   // the core's own BuildRate of the started project
+        Assert.True(started.BuildRate.Raw > p.BuildRatePerLevel.Raw * pick.TotalLevels, "the project opens ahead of its year: the price is above the base rate");
+        // and the model shows the view's own rate for a running project
+        var research = 1.0;
+        var run = InstitutesWindowModel.Build(s.View.Actors.First(x => x.Actor == usa), s.View.Month, research, scale, ctx, n => "n", n => 0)
+            .Candidates.First(c => c.Slot == pick.Slot);
+        Assert.Equal(InstituteState.Building, run.State);
+        Assert.Equal((int)((started.BuildRate.Raw + 500) / 1000), run.RateTenthPercent);
+    }
+
+    [Theory]
+    [InlineData(Singularity.Core.Institutes.BuildCheck.AlreadyStanding, "why.inst.standing")]
+    [InlineData(Singularity.Core.Institutes.BuildCheck.AlreadyBuilding, "why.inst.building")]
+    [InlineData(Singularity.Core.Institutes.BuildCheck.TooEarly, "why.inst.early")]
+    [InlineData(Singularity.Core.Institutes.BuildCheck.SmallCountryCap, "why.inst.cap")]
+    [InlineData(Singularity.Core.Institutes.BuildCheck.Ok, "")]
+    public void EveryBuildCheck_HasAReasonInWords(Singularity.Core.Institutes.BuildCheck c, string key)
+    {
+        Assert.Equal(key, InstitutesWindowModel.BuildWhyKey(c));
+        var keys = Parse(File.ReadAllText(Path.Combine(Root(), "src", "Singularity.Client.Spike", "locale", "ui.csv"), Encoding.UTF8)).Select(r => r[0]).ToHashSet();
+        if (key != "") Assert.Contains(key, keys);
+    }
+
+    [Fact]
+    public void SmallCountryCap_IsCheckedBeforeTheClick()
+    {
+        var p = new Singularity.Core.Institutes.InstituteParams();
+        var big = new InstituteView(0, "x", false, 0, System.Collections.Immutable.ImmutableArray.Create(2, 2), -1, 0, Fx6.Zero, 1946, 4);
+        Assert.Equal(Singularity.Core.Institutes.BuildCheck.SmallCountryCap, InstitutesWindowModel.CheckBuild(big, new InstituteContext(1945, 9, true), 0, p));
+        Assert.Equal(Singularity.Core.Institutes.BuildCheck.Ok, InstitutesWindowModel.CheckBuild(big, new InstituteContext(1945, 9, false), 0, p));
+    }
+
     // The run-time check of the rule «fixture and live path share one function» (TASK-0111): a real session, the real view.
     [Fact]
     public void RealSession_FeedsBothModels_AndTheFirstGoalOrderIsAccepted()
@@ -197,7 +266,9 @@ public class LeverModelTests
         Assert.True(b.TotalYearMillion > 1_000, "the USA budget is billions of 1990 dollars a year");
 
         double research = inp.Budget.ToDouble() * inp.Shares.Research.ToDouble();
-        var m = InstitutesWindowModel.Build(a, 1946, s.View.Month, research, scale, n => "node" + n, n => 0);
+        var sc = data.Scenarios[0];
+        var ctx = new InstituteContext(sc.StartYear, sc.StartMonth, InstitutesWindowModel.IsSmallCountry(sc, usa));
+        var m = InstitutesWindowModel.Build(a, s.View.Month, research, scale, ctx, n => "node" + n, n => 0);
         Assert.True(m.Enabled);
         Assert.NotEmpty(m.Standing);
         foreach (var c in m.Candidates.Where(c => c.State == InstituteState.Candidate))

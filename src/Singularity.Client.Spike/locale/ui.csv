@@ -481,7 +481,7 @@ inst.pick,Choose a goal for «{0}»,Выберите цель для «{0}»
 inst.opt,"«{0}»: +{1} % to speed, {2} units left","«{0}»: +{1} % к скорости, осталось {2} ед."
 inst.opt.threshold,"«{0}»: +{1} % to speed, {2} units left; the discovery itself is a chance event","«{0}»: +{1} % к скорости, осталось {2} ед.; само открытие — случайное событие"
 inst.opt.none,No research in progress to choose from.,"Нет исследований в работе, из которых можно выбрать."
-inst.opt.price,Money goes to this goal first. The goal can be changed once in {0} months.,Деньги идут на эту цель в первую очередь. Цель можно менять раз в {0} мес.
+inst.opt.price,"Money goes to this goal first, so the rest of science gets less money while it is open; no date is promised. The goal can be changed once in {0} months.","Деньги идут на эту цель в первую очередь, поэтому остальной науке достаётся меньше, пока цель открыта; срок не обещается. Цель можно менять раз в {0} мес."
 inst.adviser,The adviser proposes: «{0}»,Советник предлагает: «{0}»
 inst.adviser.take,Take the proposal,Принять предложение
 inst.adviser.build,The adviser proposes to build this institute,Советник предлагает построить этот институт
@@ -510,3 +510,9 @@ bud.pp.unit,pp,п. п.
 inst.pick.change,Change the goal,Сменить цель
 inst.pick.short,Choose a goal,Выбрать цель
 lever.refused.word,Refused:,Отказ:
+inst.opt.nobonus,"«{0}»: this institute has no level in the area, so no speed bonus, only the priority of money; {1} units left","«{0}»: у этого института нет уровня в этой области — бонуса к скорости не будет, только приоритет денег; осталось {1} ед."
+inst.opt.better,The adviser suggests «{0}»: it has a level in this area.,Совет: «{0}» — у него есть уровень в этой области.
+why.inst.standing,the institute already stands,институт уже построен
+why.inst.cap,a small country builds at most {0} levels in one project,малая страна строит не больше {0} уровней за проект
+refusal.generic,the order was refused,приказ отклонён
+refusal.error,the order could not be sent,приказ не удалось отправить
