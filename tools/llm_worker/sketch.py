@@ -673,10 +673,7 @@ def _run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, s
     """One agy run. Returns (json path or None, md path or None, record). brain_dir: where this process finds the
     brain folders; inside_brain: the same folder as agy and its tool calls name it (differs when a Box is used)."""
     inside_brain = inside_brain or brain_dir
-    if not TASK_RE.match(task):
-        raise SketchError("bad_task", task)
-    if not 1 <= count <= MAX_COUNT:
-        raise SketchError("bad_count", f"1..{MAX_COUNT}")
+    _check_task_count(task, count)
     pf = check_prompt_file(prompt_file, root)
     brief = pf.read_text(encoding="utf-8")
     ref_paths = check_refs(list(refs), shots_dir)
@@ -788,8 +785,17 @@ def _run_sketch(task, prompt_file, refs=(), count=1, runs_dir=config.RUNS_DIR, s
     return path, md, record
 
 
+def _check_task_count(task, count):
+    """Cheap input checks; run_sketch calls them before it opens a Box (no sandbox tools needed to refuse)."""
+    if not TASK_RE.match(task):
+        raise SketchError("bad_task", task)
+    if not 1 <= count <= MAX_COUNT:
+        raise SketchError("bad_count", f"1..{MAX_COUNT}")
+
+
 def run_sketch(*args, brain_dir=BRAIN_DIR, runner=None, **kw):
     """_run_sketch inside a Box unless a runner is injected (tests)."""
+    _check_task_count(args[0] if args else kw.get("task", ""), args[3] if len(args) > 3 else kw.get("count", 1))
     if runner is not None or kw.get("dry_run"):  # a dry run checks inputs only and starts nothing: no Box needed
         return _run_sketch(*args, brain_dir=brain_dir, runner=runner, **kw)
     with private_box(cwd_writable=True) as (box, private_brain):

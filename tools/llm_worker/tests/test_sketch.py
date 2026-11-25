@@ -195,6 +195,17 @@ class SketchTest(unittest.TestCase):
             sketch.run_sketch("bad", self.prompt, root=self.root)
         self.assertEqual(c.exception.code, "bad_task")
 
+    def test_task_and_count_checked_before_sandbox(self):
+        def no_box(*a, **k):
+            raise sketch.SketchError("sandbox_unavailable", "test")
+        with mock.patch.object(sketch, "private_box", no_box):
+            with self.assertRaises(sketch.SketchError) as c:
+                sketch.run_sketch("bad", self.prompt, root=self.root)
+            self.assertEqual(c.exception.code, "bad_task")
+            with self.assertRaises(sketch.SketchError) as c:
+                sketch.run_sketch("TASK-0141", self.prompt, root=self.root, count=9)
+            self.assertEqual(c.exception.code, "bad_count")
+
     def test_rate_guard_refuses(self):
         guard = RateGuard(Path(self.tmp.name) / "u2.json", rpm=1, rpd=20)
         self.go(runner=self.runner(), guard=guard)
