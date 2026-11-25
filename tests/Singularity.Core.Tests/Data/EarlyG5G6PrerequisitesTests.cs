@@ -38,7 +38,7 @@ public class EarlyG5G6PrerequisitesTests
     {
         NodeTable n = Data.Nodes;
         for (int r = 0; r < n.Count; r++)
-            if (n.Number[r] >= 62)
+            if (n.Number[r] is >= 62 and <= 99)   // nodes 100+ (#575) are anchored by their own year
                 Assert.True(EarliestOpenYear(n, r) >= 1953, $"{n.Id[r]} opens in {EarliestOpenYear(n, r)}");
     }
 

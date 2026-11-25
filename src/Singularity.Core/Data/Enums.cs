@@ -17,6 +17,9 @@ public enum Dimension { Precision, Purity, QualityControl }
 /// <summary>Discovery mode: deterministic, hazard (hz) or key hazard node (★, decision #32).</summary>
 public enum Hazard { None, Hz, Key }
 
+/// <summary>Military value of a node for the product slice (SCIENCE_SLOTS §3.2): none, base (chain), prep (process), direct (changes perf or generation).</summary>
+public enum MilValue { None, Base, Prep, Direct }
+
 public enum ActorClass { Great, Middle, Small }
 
 public enum DesignVariant { Superior, Producible }
@@ -41,6 +44,9 @@ public static class DataNames
 
     public static readonly ImmutableArray<(string Name, Hazard Value)> Hazards =
         [("none", Hazard.None), ("hz", Hazard.Hz), ("key", Hazard.Key)];
+
+    public static readonly ImmutableArray<(string Name, MilValue Value)> MilValues =
+        [("none", MilValue.None), ("base", MilValue.Base), ("prep", MilValue.Prep), ("direct", MilValue.Direct)];
 
     public static readonly ImmutableArray<(string Name, ActorClass Value)> ActorClasses =
         [("great", ActorClass.Great), ("middle", ActorClass.Middle), ("small", ActorClass.Small)];

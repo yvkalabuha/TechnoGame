@@ -520,3 +520,236 @@ define:
     sources:
       - {url: "https://www.ge.com/news/press-releases/ge-initiates-testing-on-second-xa100-adaptive-cycle-engine", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
       - {url: "https://www.ge.com/news/reports/the-superjet-how-ges-adaptive-cycle-jet-engine-could-supercharge-military-aviation", accessed: "2026-11-24", check: opened, license: other, use: paraphrase}
+  - id: s9.fnd.stored_program_architecture
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/First_Draft_of_a_Report_on_the_EDVAC", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s9.eng.electronic_computer_g1
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/ENIAC", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s9.eng.stored_program_computer
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/EDSAC", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s6.prc.numerical_control_machining
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/History_of_numerical_control", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s9.prn.high_level_language_compiler
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Fortran", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s9.prn.finite_element_method
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Ray_W._Clough", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s9.cmp.transistor_computer_g2
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/IBM_7090", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s9.eng.mainframe_family_g3
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/CDC_6600", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s9.prn.computational_fluid_dynamics
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Computational_fluid_dynamics", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s9.cmp.microprocessor
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Intel_4004", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s9.eng.vector_supercomputer
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Cray-1", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s9.eng.massively_parallel_hpc
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/ASCI_Red", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s9.eng.gpu_accelerated_computing
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/CUDA", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s9.prn.deep_learning_science
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/AlphaFold", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s9.prn.point_contact_transistor
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/History_of_the_transistor", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s5.prc.zone_refining_semiconductor
+    epic: false
+    sources:
+      - {url: "https://patents.google.com/patent/US2739088", accessed: "2026-11-25", check: opened, license: PD, use: paraphrase}
+  - id: s9.cmp.silicon_transistor
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Gordon_Kidd_Teal", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s9.cmp.integrated_circuit
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Integrated_circuit", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s9.prc.planar_monolithic_ic_manufacturing
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Planar_process", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s9.prn.laser_principle
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Laser", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s9.prc.mos_lsi_manufacturing
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Self-aligned_gate", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s9.prn.vlsi_design_methodology
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Mead_%26_Conway_revolution", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s9.prc.euv_lithography
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Extreme_ultraviolet_lithography", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s8.eng.fire_control_radar_interceptor
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/North_American_F-86D_Sabre", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s8.eng.infrared_air_to_air_missile
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/AIM-9_Sidewinder", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s8.eng.inertial_navigation_system
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Draper_Laboratory", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s8.prn.pulse_doppler_look_down_radar
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/McDonnell_Douglas_F-4_Phantom_II", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s5.cmp.maraging_steel
+    epic: false
+    unconfirmed: true
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Maraging_steel", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s5.cmp.ablative_heat_shield
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/PGM-19_Jupiter", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s5.cmp.carbon_carbon_composite
+    epic: false
+    unconfirmed: true
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Reinforced_carbon%E2%80%93carbon", accessed: "2026-11-25", check: search-snippet, license: other, use: paraphrase}
+  - id: s5.prc.hot_isostatic_pressing
+    epic: false
+    unconfirmed: true
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Hot_isostatic_pressing", accessed: "2026-11-25", check: search-snippet, license: other, use: paraphrase}
+  - id: s5.cmp.thermal_barrier_coating
+    epic: false
+    unconfirmed: true
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Thermal_barrier_coating", accessed: "2026-11-25", check: search-snippet, license: other, use: paraphrase}
+  - id: s5.prc.additive_manufacturing_metal
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/3D_printing", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s7.eng.liquid_rocket_engine_g1
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/V-2_rocket", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s7.prn.composite_solid_propellant
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Solid-propellant_rocket", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s7.fnd.blunt_body_reentry
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Atmospheric_entry", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s7.eng.intercontinental_ballistic_missile
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/R-7_Semyorka", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s7.eng.cryogenic_hydrogen_engine
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/RL10", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s7.eng.staged_combustion_hydrogen_engine
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/RS-25", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s7.eng.reusable_booster_landing
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Falcon_9", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s10.eng.sounding_rocket_science
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/V-2_rocket", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s10.eng.artificial_satellite
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Sputnik_1", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s10.eng.scientific_satellite
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Explorer_1", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s10.eng.reconnaissance_satellite
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Corona_(satellite)", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s10.eng.crewed_orbital_flight
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Vostok_1", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s10.eng.crewed_lunar_landing
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Apollo_11", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s10.eng.satellite_navigation_gps
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Global_Positioning_System", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s10.eng.space_shuttle_orbiter
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/STS-1", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s10.eng.space_telescope
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Hubble_Space_Telescope", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s11.prc.gaseous_diffusion_enrichment
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Gaseous_diffusion", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s11.eng.fission_weapon_g1
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Trinity_(nuclear_test)", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s11.prn.neutron_transport_monte_carlo
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Monte_Carlo_method", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s5.cmp.zirconium_nuclear_cladding
+    epic: false
+    unconfirmed: true
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Zircaloy", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s11.eng.naval_nuclear_propulsion
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/USS_Nautilus_(SSN-571)", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s11.eng.light_water_power_reactor
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Shippingport_Atomic_Power_Station", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s11.prc.gas_centrifuge_enrichment
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/Gernot_Zippe", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}
+  - id: s11.prn.laser_inertial_confinement
+    epic: false
+    sources:
+      - {url: "https://en.wikipedia.org/wiki/National_Ignition_Facility", accessed: "2026-11-25", check: opened, license: other, use: paraphrase}

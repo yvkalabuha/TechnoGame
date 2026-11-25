@@ -49,9 +49,10 @@ public class TwoWorldsOnOnePoolTests
     // Re-recorded in TASK-0147 (train 2): nodes 82-99 (G5/G6 rev 3.1 chains) and the ahead-of-time cost defaults k 0.02, pow 2, max 10 (#465) change every trajectory on the current data; explanation: docs/simulation/golden-rerecord-train2.md.
     // Re-recorded in TASK-0180 (#555): requires of 11 early G5/G6 nodes (62, 63, 82, 83, 86, 90, 91, 92, 95, 97, 99) changed, so knowledge opens later and every trajectory moves; no schema change.
     // Re-recorded in TASK-0182: schema v15, new column pol.flt.gFront (the G_front a fleet sale was priced at); the old columns are unchanged (projection tests), so only the new column changes these digests.
+    // Re-recorded in TASK-0188 (#575): 57 new nodes 100-156 (9 new processes) change every trajectory on the current data; explanation in the task file.
     private static readonly Dictionary<ulong, string> Pinned = new()
     {
-        [1] = "364c79c71f58f3095d07d99248fc4d310297fab2b46b540d2456f529663d862b", [2] = "b5dbb54d5e4f9137caf6fae9775770399a6c55bdc867eec12e5306cc40907077", [3] = "36a28b34b8e8fd2adaca9ec239ccebd897e9a4347e086cf1813a26fc01c5536a", [4] = "d75449d1bd1b6263e72deb4f40395963e4cc076f74fd0aecc808822b29624d34", [5] = "6e0f8992b5f5b9cb6c8d04679cbc250825292326b96dbc941e869c20b01d66d2", [7] = "bef7d4f662bf51d4e61f4ce60fafe5bacbf106f8c224b9dc44d81ef57907891e",
+        [1] = "6eab6511ecc81817d2f9ce1542d040b9178f37795c359e6ad726e8cf22088992", [2] = "4dbd4904bac0659384052e2eecea9a9f9b7e01dac3dbd29d461adcc5c401e5da", [3] = "a85354af63c62bc8035db18d32a9e2afd015a90df80aabdc2119e2e6d8365910", [4] = "9a2018ccb7cc242ad76276a1288c33e53108e187f5bbadbec56cf204d9471974", [5] = "d2930e5abf5c022d46f81a3999de6f1e4ffaa3b7d732a03e09ea6d8f71b7deaf", [7] = "f0346228f469321a9c8f164365d5cb25b847f381dc1dd6b80d7562b1e904542e",
     };
 
     private static void AssertPinned(ulong seed, string[] actual, string what)

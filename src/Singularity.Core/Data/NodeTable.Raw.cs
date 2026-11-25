@@ -13,6 +13,8 @@ public sealed partial class NodeTable
         public required YSeq Requires;
         public YSeq? Informs;
         public int[] Directions = [];
+        public MilValue MilValue;
+        public (int Mask, Fx6 Bonus)[] Speed = [];
         public int Number, Gen, Tier, AnchorYear;
         public NodeType Type;
         public Discipline Discipline;
@@ -42,6 +44,8 @@ public sealed partial class NodeTable
             n.Cluster = m.Enum("cluster", DataNames.Clusters);
             n.Hazard = m.Enum("hazard", DataNames.Hazards);
             n.Directions = Core.Data.Directions.ReadForNode(m.Optional("directions"), n.Id);
+            n.MilValue = m.Optional("mil_value") is {} mv ? Scalars.Enum(mv, DataNames.MilValues) : MilValue.None;
+            n.Speed = ResearchSpeedEffects.Read(m.Optional("effects"), n.Id);
             n.Informs = m.Optional("informs") is {} inf ? Scalars.Seq(inf) : null;
             ReadCapability(m, n);
             ReadAnchor(m.Required("anchor"), n);

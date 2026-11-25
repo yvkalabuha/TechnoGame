@@ -594,6 +594,348 @@ node-s8-prn-adaptive_third_stream_fan =
     .anchor = GE ADVENT: двигатель (26.11.2013)
     .history = GE и ВВС США работают над адаптивным двигателем с 2007 года: сначала ADVENT, затем AETD. Второй двигатель XA100 запущен 26 августа 2021 года в Эвендейле, последний прототип по AETP; первый двигатель испытывался с декабря 2020 года. Третий поток GE описывает как средство теплового управления; в ноябре 2023 года сообщили о третьем цикле испытаний.
 
+node-s9-fnd-stored_program_architecture =
+    .name = Архитектура с хранимой программой
+    .short = Хран. прогр.
+    .anchor = Отчёт фон Неймана об EDVAC, 30.06.1945
+    .history = Отчёт фон Неймана об EDVAC, 30.06.1945: программа и данные в одной памяти.
+
+node-s9-eng-electronic_computer_g1 =
+    .name = Ламповая ЭВМ (ENIAC)
+    .short = ENIAC
+    .anchor = ENIAC, 15.02.1946
+    .history = ENIAC, открыт 15.02.1946, ~18 000 ламп; баллистические таблицы; быстрее ручного счёта на порядки.
+
+node-s9-eng-stored_program_computer =
+    .name = ЭВМ с хранимой программой (EDSAC)
+    .short = EDSAC
+    .anchor = EDSAC, первая программа 06.05.1949
+    .history = EDSAC, первая программа 06.05.1949; универсальная машина для расчётов науки.
+
+node-s6-prc-numerical_control_machining =
+    .name = Станки с числовым программным управлением
+    .short = ЧПУ-станки
+    .anchor = Станок с ЧПУ, MIT, 09.1952
+    .history = MIT (Servomechanisms Lab) публично показал станок с ЧПУ в сентябре 1952; работу финансировали ВВС США; путь к монолитным панелям авиации.
+
+node-s9-prn-high_level_language_compiler =
+    .name = Язык высокого уровня и компилятор (FORTRAN)
+    .short = FORTRAN
+    .anchor = Компилятор FORTRAN, 04.1957
+    .history = Первый компилятор FORTRAN, апрель 1957: инженеры пишут расчёты без машинных кодов.
+
+node-s9-prn-finite_element_method =
+    .name = Метод конечных элементов
+    .short = МКЭ
+    .anchor = Тёрнер, Клаф и др., 1956
+    .history = Turner, Clough, Martin, Topp, статья 1956: расчёт планера матрицами жёсткости; термин «конечные элементы» — Clough, 1960.
+
+node-s9-cmp-transistor_computer_g2 =
+    .name = Транзисторная ЭВМ (IBM 7090)
+    .short = IBM 7090
+    .anchor = IBM 7090, первая поставка 12.1959
+    .history = IBM 7090, первая поставка декабрь 1959, транзисторная; надёжность и скорость выше ламп.
+
+node-s9-eng-mainframe_family_g3 =
+    .name = Семейство мейнфреймов и суперЭВМ 3-го поколения (CDC 6600)
+    .short = CDC 6600
+    .anchor = CDC 6600, 09.1964
+    .history = CDC 6600 Сеймура Крэя (сентябрь 1964, около 1 Мфлопс) открыл эпоху суперкомпьютеров; семейство IBM System/360 вышло в апреле 1964 года (по памяти).
+
+node-s9-prn-computational_fluid_dynamics =
+    .name = Численная аэродинамика (панельные методы, CFD)
+    .short = Числ. аэро.
+    .anchor = Хесс и Смит, 1967
+    .history = Hess и Smith (Douglas Aircraft), 1967: первая работа с трёхмерной панельной моделью; обтекание без трубы.
+
+node-s9-cmp-microprocessor =
+    .name = Микропроцессор
+    .short = Микропроц.
+    .anchor = Intel 4004, 15.11.1971
+    .history = Intel 4004, 15.11.1971: процессор на одном кристалле; основа бортовых ЭВМ.
+
+node-s9-eng-vector_supercomputer =
+    .name = Векторный суперкомпьютер (Cray-1)
+    .short = Cray-1
+    .anchor = Cray-1, Лос-Аламос, 1976
+    .history = Cray-1, первая установка 1976 в Лос-Аламосе; расчёты течений и ядерных процессов.
+
+node-s9-eng-massively_parallel_hpc =
+    .name = Массово-параллельный суперкомпьютер (ASCI Red)
+    .short = ASCI Red
+    .anchor = ASCI Red, 1,06 Тфлопс, 12.1996
+    .history = ASCI Red, 1,06 Тфлопс, декабрь 1996; моделирование ядерного арсенала без испытаний.
+
+node-s9-eng-gpu_accelerated_computing =
+    .name = Ускорители GPU для науки (CUDA)
+    .short = GPU / CUDA
+    .anchor = Выпуск CUDA, 2007
+    .history = CUDA, выпущенная в 2007 году, позволила вести универсальные научные расчёты на видеочипах.
+
+node-s9-prn-deep_learning_science =
+    .name = Глубокое обучение в науке (AlphaFold 2)
+    .short = AlphaFold 2
+    .anchor = AlphaFold 2 побеждает на CASP14, 11.2020
+    .history = AlphaFold 2 выиграл CASP14 в ноябре 2020: предсказание структур белков.
+
+node-s9-prn-point_contact_transistor =
+    .name = Точечный транзистор
+    .short = Точ. транз.
+    .anchor = Бардин, Браттейн, 23.12.1947
+    .history = Бардин и Браттейн в Bell Labs 23 декабря 1947 года показали точечный транзистор: первый твердотельный усилитель.
+
+node-s5-prc-zone_refining_semiconductor =
+    .name = Зонная очистка германия и кремния
+    .short = Зон. очистка
+    .anchor = Патент Пфанна, подан 16.11.1951
+    .history = Pfann (Bell Labs): патент US2739088 подан 16.11.1951, выдан 1956; первая труба зонной очистки показана в 1953.
+
+node-s9-cmp-silicon_transistor =
+    .name = Кремниевый транзистор
+    .short = Si-транзист.
+    .anchor = Тил, Texas Instruments, 04.1954
+    .history = Teal (Texas Instruments), апрель 1954: первый коммерческий кремниевый транзистор.
+
+node-s9-cmp-integrated_circuit =
+    .name = Интегральная схема
+    .short = ИС
+    .anchor = Килби, 12.09.1958
+    .history = Kilby (Texas Instruments), 12.09.1958; военные заказы (ВВС США) ускорили развитие.
+
+node-s9-prc-planar_monolithic_ic_manufacturing =
+    .name = Планарная технология монолитных схем
+    .short = Планар. ИС
+    .anchor = Эрни, Fairchild, 1959
+    .history = Fairchild (Хорни, 1959) создала планарную технологию; серийные монолитные схемы вышли с 1961 года.
+
+node-s9-prn-laser_principle =
+    .name = Лазер
+    .short = Лазер
+    .anchor = Мейман, рубиновый лазер, 16.05.1960
+    .history = Maiman, 16.05.1960, рубиновый лазер; дальномеры и целеуказание.
+
+node-s9-prc-mos_lsi_manufacturing =
+    .name = Кремниевый затвор и МОП БИС
+    .short = МОП БИС
+    .anchor = Фаджин, Fairchild, 04.1968
+    .history = Fairchild, Faggin, рабочие кремний-затворные МОП транзисторы к апрелю 1968.
+
+node-s9-prn-vlsi_design_methodology =
+    .name = Проектирование СБИС (Mead–Conway)
+    .short = Проект. СБИС
+    .anchor = Учебник Мида-Конвей, 1979
+    .history = Учебник «Introduction to VLSI Systems», 1979: стандартизированное проектирование схем на ЭВМ.
+
+node-s9-prc-euv_lithography =
+    .name = Литография в крайнем ультрафиолете (EUV)
+    .short = EUV
+    .anchor = ASML EUV в серии, 2019
+    .history = Серийное производство микросхем с литографией в крайнем ультрафиолете (ASML) началось в 2019 году.
+
+node-s8-eng-fire_control_radar_interceptor =
+    .name = Бортовая РЛС управления огнём перехватчика
+    .short = РЛС УО
+    .anchor = F-86D, AN/APG-36, в строю 1951
+    .history = F-86D «Sabre Dog»: РЛС AN/APG-36 в носовом обтекателе, первый полёт 22.12.1949, в строю с 1951.
+
+node-s8-eng-infrared_air_to_air_missile =
+    .name = Ракета «воздух–воздух» с ИК-головкой (AIM-9)
+    .short = AIM-9
+    .anchor = Первый перехват AIM-9, 11.09.1953
+    .history = Ракета с инфракрасной головкой (будущая AIM-9) впервые перехватила мишень 11 сентября 1953 года; на вооружение флота США поступила в 1956 году.
+
+node-s8-eng-inertial_navigation_system =
+    .name = Инерциальная навигация
+    .short = Инерц. нав.
+    .anchor = Дрейпер, SPIRE, испытания 1953
+    .history = MIT Instrumentation Lab (Draper): система SPIRE, лётные испытания 1953.
+
+node-s8-prn-pulse_doppler_look_down_radar =
+    .name = Импульсно-доплеровская РЛС с обзором вниз
+    .short = Обзор вниз
+    .anchor = F-4J, AN/AWG-10, 1966
+    .history = F-4J (РЛС AN/AWG-10): поставки с 1966; первый истребитель с боевой возможностью «смотреть вниз — стрелять вниз».
+
+node-s5-cmp-maraging_steel =
+    .name = Мартенситно-стареющая сталь
+    .short = Мартенсит.
+    .anchor = Inco (Бибер), конец 1950-х
+    .history = Inco (Бибер) создала мартенситно-стареющую сталь в конце 1950-х годов для корпусов ракет и роторов; год оценочный.
+
+node-s5-cmp-ablative_heat_shield =
+    .name = Абляционный теплозащитный экран
+    .short = Абляц. экран
+    .anchor = Jupiter AM-3, 23.10.1957
+    .history = Ракета Jupiter AM-3 с абляционным экраном, 23.10.1957; затупленная форма Allen и Eggers — 1951.
+
+node-s5-cmp-carbon_carbon_composite =
+    .name = Углерод-углеродный композит
+    .short = С-С композит
+    .anchor = Chance Vought, около 1959
+    .history = Углерод-углеродный композит разработали для боевых частей МБР (Chance Vought, 1958-59 годы, по памяти); позже его применили на «Шаттле».
+
+node-s5-prc-hot_isostatic_pressing =
+    .name = Горячее изостатическое прессование
+    .short = ГИП
+    .anchor = Battelle, 1950-е
+    .history = Горячее изостатическое прессование изобрели в 1950-х годах в Battelle (год 1955 оценочный); метод уплотняет отливки и порошки.
+
+node-s5-cmp-thermal_barrier_coating =
+    .name = Теплозащитное покрытие лопаток
+    .short = ТЗП лопаток
+    .anchor = Керамические ТЗП, 1980-е
+    .history = Первые теплозащитные покрытия лопаток (алюминидные) относятся к 1970-м годам, улучшенные керамические к 1980-м; год 1980 оценка в этом диапазоне.
+
+node-s5-prc-additive_manufacturing_metal =
+    .name = Аддитивное производство металлов
+    .short = Адд. металл
+    .anchor = Поставка LEAP, 2016
+    .history = Лазерное сплавление изобретено в 1995 (Fraunhofer ILT); первый LEAP с напечатанными форсунками поставлен Airbus в 2016.
+
+node-s7-eng-liquid_rocket_engine_g1 =
+    .name = Жидкостный ракетный двигатель (А-4/V-2)
+    .short = А-4 / V-2
+    .anchor = Удачный пуск А-4, 03.10.1942
+    .history = Ракета А-4 (V-2) впервые успешно стартовала 3 октября 1942 года, боевое применение с сентября 1944 года.
+
+node-s7-prn-composite_solid_propellant =
+    .name = Смесевое твёрдое топливо
+    .short = Тв. топливо
+    .anchor = Atlantic Research, Al, 1954
+    .history = Parsons (Caltech) асфальт и перхлорат с 1942; Atlantic Research 1954 — алюминий в смеси.
+
+node-s7-fnd-blunt_body_reentry =
+    .name = Затупленное тело: теория входа в атмосферу
+    .short = Затуп. тело
+    .anchor = Аллен и Эггерс, NACA, 1951
+    .history = Аллен и Эггерс (NACA) показали в 1951 году, что затупленная форма снижает нагрев при входе в атмосферу.
+
+node-s7-eng-intercontinental_ballistic_missile =
+    .name = Межконтинентальная баллистическая ракета (Р-7)
+    .short = МБР
+    .anchor = Р-7, первый полёт 21.08.1957
+    .history = Р-7 впервые успешно пролетела 21 августа 1957 года: первая межконтинентальная баллистическая ракета.
+
+node-s7-eng-cryogenic_hydrogen_engine =
+    .name = Водородный криогенный двигатель (RL10)
+    .short = RL10
+    .anchor = RL10, первый полёт 27.11.1963
+    .history = Водородный двигатель RL10 совершил первый успешный полёт 27 ноября 1963 года на ступени Centaur.
+
+node-s7-eng-staged_combustion_hydrogen_engine =
+    .name = Двигатель замкнутого цикла на водороде (SSME)
+    .short = SSME / RS-25
+    .anchor = STS-1, 12.04.1981
+    .history = RS-25: многоразовый двигатель, первый полёт 12.04.1981 (STS-1), двухвальная схема с догоранием.
+
+node-s7-eng-reusable_booster_landing =
+    .name = Возвращаемая первая ступень (Falcon 9)
+    .short = Возвр. ступ.
+    .anchor = Посадка Falcon 9, 12.2015
+    .history = Первую успешную посадку ступени орбитальной ракеты (Falcon 9) выполнили в декабре 2015 года.
+
+node-s10-eng-sounding_rocket_science =
+    .name = Исследования верхней атмосферы на ракетах
+    .short = Зонд. ракеты
+    .anchor = Снимок с V-2 №13, 24.10.1946
+    .history = Первый снимок Земли из космоса сделан с ракеты V-2 №13 24 октября 1946 года в США.
+
+node-s10-eng-artificial_satellite =
+    .name = Искусственный спутник Земли
+    .short = Спутник
+    .anchor = Спутник-1, 04.10.1957
+    .history = Первый искусственный спутник Земли, «Спутник-1», запущен 4 октября 1957 года.
+
+node-s10-eng-scientific_satellite =
+    .name = Научный спутник (Explorer 1)
+    .short = Explorer 1
+    .anchor = Explorer 1, 31.01.1958
+    .history = Explorer 1 (31 января и 1 февраля 1958 года) обнаружил радиационные пояса Ван Аллена.
+
+node-s10-eng-reconnaissance_satellite =
+    .name = Спутник-разведчик (Corona)
+    .short = Corona
+    .anchor = Discoverer 14, 20.08.1960
+    .history = Discoverer 14 вернул капсулу с плёнкой с орбиты 20 августа 1960 года: первый успех спутника-разведчика (Corona).
+
+node-s10-eng-crewed_orbital_flight =
+    .name = Пилотируемый орбитальный полёт (Восток)
+    .short = Восток
+    .anchor = Восток-1, 12.04.1961
+    .history = «Восток-1» вывел первого человека на орбиту 12 апреля 1961 года.
+
+node-s10-eng-crewed_lunar_landing =
+    .name = Высадка на Луну (Apollo)
+    .short = Apollo
+    .anchor = Apollo 11, 20.07.1969
+    .history = Экспедиция Apollo 11 высадила двух астронавтов на Луну 20 июля 1969 года.
+
+node-s10-eng-satellite_navigation_gps =
+    .name = Спутниковая навигация (GPS)
+    .short = GPS
+    .anchor = Первый НАВСТАР Block I, 22.02.1978
+    .history = Первый спутник НАВСТАР Блок I, начало GPS, запущен 22 февраля 1978 года.
+
+node-s10-eng-space_shuttle_orbiter =
+    .name = Многоразовый космический корабль («Шаттл»)
+    .short = Шаттл
+    .anchor = STS-1, 12.04.1981
+    .history = Первый полёт многоразового корабля «Шаттл», STS-1, состоялся 12 апреля 1981 года.
+
+node-s10-eng-space_telescope =
+    .name = Космический телескоп (Hubble)
+    .short = Хаббл
+    .anchor = Хаббл, STS-31, 24.04.1990
+    .history = Космический телескоп «Хаббл» выведен на орбиту 24 апреля 1990 года (STS-31).
+
+node-s11-prc-gaseous_diffusion_enrichment =
+    .name = Газодиффузионное обогащение урана
+    .short = Диффузия
+    .anchor = K-25, Ок-Ридж, 1945
+    .history = Завод K-25 в Ок-Ридже начал обогащать уран газовой диффузией в 1945 году.
+
+node-s11-eng-fission_weapon_g1 =
+    .name = Ядерный заряд деления
+    .short = Ядер. заряд
+    .anchor = Trinity, 16.07.1945
+    .history = Испытание Trinity 16 июля 1945 года стало первым взрывом ядерного заряда деления.
+
+node-s11-prn-neutron_transport_monte_carlo =
+    .name = Метод Монте-Карло для переноса нейтронов
+    .short = Монте-Карло
+    .anchor = Улам, фон Нейман, ENIAC, 1948
+    .history = Улам, фон Нейман и Метрополис весной 1948 года рассчитали перенос нейтронов методом Монте-Карло на ENIAC.
+
+node-s5-cmp-zirconium_nuclear_cladding =
+    .name = Цирконий для оболочек ТВЭЛ (циркалой)
+    .short = Циркалой
+    .anchor = Циркалой, конец 1940-х
+    .history = Циркалой для реакторов подлодок с конца 1940-х (первый — 1940-е; год 1950 оценка).
+
+node-s11-eng-naval_nuclear_propulsion =
+    .name = Ядерная силовая установка подлодки
+    .short = Ядер. ПЛ
+    .anchor = «Наутилус», 17.01.1955
+    .history = Подводная лодка «Наутилус» 17 января 1955 года передала сигнал «Underway on nuclear power».
+
+node-s11-eng-light_water_power_reactor =
+    .name = Энергетический реактор с водой под давлением
+    .short = ВВЭР
+    .anchor = Шиппингпорт, 18.12.1957
+    .history = Станция Шиппингпорт выдала первую энергию 18 декабря 1957 года: энергетический реактор с водой под давлением.
+
+node-s11-prc-gas_centrifuge_enrichment =
+    .name = Газовая центрифуга для обогащения
+    .short = Центрифуга
+    .anchor = Циппе, Univ. of Virginia, 1960
+    .history = Zippe, вернувшись на Запад в 1956, в 1960 переехал в США (Univ. of Virginia) и воспроизвёл центрифугу; роторы из высокопрочной стали.
+
+node-s11-prn-laser_inertial_confinement =
+    .name = Инерциальный термоядерный синтез лазером (NIF)
+    .short = NIF
+    .anchor = NIF, зажигание, 08.08.2021
+    .history = На National Ignition Facility первая «зажжённая» плазма получена 8 августа 2021 года; выход энергии выше затраченной зафиксирован 5 декабря 2022 года (по памяти).
+
 # Product classes and the scenario.
 
 pc-jet_fighter =
