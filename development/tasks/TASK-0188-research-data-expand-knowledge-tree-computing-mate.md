@@ -1,7 +1,7 @@
 ---
 id: TASK-0188
 title: "Research + data: expand knowledge tree (computing, materials, rocketry, space, electronics, nuclear) with directions (#575)"
-status: APPROVED         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
+status: IN_PROGRESS         # PROPOSED | APPROVED | IN_PROGRESS | REVIEW | DONE | BLOCKED | REJECTED | DEFERRED
 level: light
 milestone: MS-M0
 agent: research-scientist
